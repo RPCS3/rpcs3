@@ -92,7 +92,7 @@ void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 	long filesize;
 
 	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
-	const wxString Bios( g_Conf.FullpathToBios() );
+	const wxString Bios( g_Conf->FullpathToBios() );
 	Bios1.Printf( L"%s.%s", Bios.c_str(), ext);
 
 	if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
@@ -102,7 +102,7 @@ void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
 		if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 		{
 			// Try for the old-style method (rom1.bin)
-			Bios1 = Path::Combine( g_Conf.Folders.Bios, (wxString)ext ) + L".bin";
+			Bios1 = Path::Combine( g_Conf->Folders.Bios, (wxString)ext ) + L".bin";
 			if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 			{
 				Console::Notice( "Load Bios Warning: %s not found (this is not an error!)", params wxString(ext).ToAscii().data() );
@@ -801,7 +801,7 @@ void memReset()
 	vtlb_VMap(0x00000000,0x00000000,0x20000000);
 	vtlb_VMapUnmap(0x20000000,0x60000000);
 
-	wxString Bios( g_Conf.FullpathToBios() );
+	wxString Bios( g_Conf->FullpathToBios() );
 
 	long filesize = Path::GetFileSize( Bios );
 	if( filesize <= 0 )

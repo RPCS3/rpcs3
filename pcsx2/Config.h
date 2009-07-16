@@ -222,4 +222,4 @@ protected:
 	void LoadSave( IniInterface& ini );
 };
 
-extern AppConfig g_Conf;
+extern AppConfig* g_Conf;

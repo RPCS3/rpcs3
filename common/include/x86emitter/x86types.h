@@ -18,13 +18,6 @@
 
 #pragma once
 
-//------------------------------------------------------------------
-#ifdef _MSC_VER
-#define __threadlocal __declspec(thread)
-#else
-#define __threadlocal __thread
-#endif
-
 // Register counts for x86/32 mode:
 static const uint iREGCNT_XMM = 8;
 static const uint iREGCNT_GPR = 8;

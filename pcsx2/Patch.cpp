@@ -627,9 +627,9 @@ void inifile_read( const char * name )
 	patchnumber = 0;
 	
 #ifdef _WIN32
-	sprintf( buffer, PATCHES_DIR "\\%s.pnach", name );
+	sprintf( buffer, "patches\\%s.pnach", name );
 #else
-	sprintf( buffer, PATCHES_DIR "/%s.pnach", name );
+	sprintf( buffer, "patches/%s.pnach", name );
 #endif
 
 	f1 = fopen( buffer, "rt" );

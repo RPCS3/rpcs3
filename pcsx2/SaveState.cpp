@@ -50,7 +50,7 @@ static void PostLoadPrep()
 
 wxString SaveState::GetFilename( int slot )
 {
-	return (g_Conf.Folders.Savestates +
+	return (g_Conf->Folders.Savestates +
 		wxsFormat( L"%8.8X.%3.3d", ElfCRC, slot )).GetFullPath();
 }
 
@@ -109,7 +109,7 @@ void SaveState::FreezeAll()
 
 	char descin[128];
 	wxString descout;
-	IsBIOS( g_Conf.FullpathToBios(), descout );
+	IsBIOS( g_Conf->FullpathToBios(), descout );
 	memcpy_fast( descin, descout.ToAscii().data(), 128 );
 	Freeze( descin );
 	

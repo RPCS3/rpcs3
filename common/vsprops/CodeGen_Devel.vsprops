@@ -11,7 +11,7 @@
 		EnableIntrinsicFunctions="true"
 		FavorSizeOrSpeed="1"
 		EnableFiberSafeOptimizations="true"
-		PreprocessorDefinitions="PCSX2_DEVEL;PCSX2_DEVBUILD;NDEBUG"
+		PreprocessorDefinitions="PCSX2_DEVEL;PCSX2_DEVBUILD;NDEBUG;_SECURE_SCL_=1;_SECURE_SCL_THROWS=1"
 		RuntimeLibrary="2"
 		BufferSecurityCheck="false"
 	/>

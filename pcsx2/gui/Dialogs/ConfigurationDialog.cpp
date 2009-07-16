@@ -70,7 +70,7 @@ Dialogs::ConfigurationDialog::~ConfigurationDialog()
 
 bool Dialogs::ConfigurationDialog::ApplySettings()
 {
-	AppConfig confcopy( g_Conf );
+	AppConfig confcopy( *g_Conf );
 
 	int pagecount = m_listbook.GetPageCount();
 	for( int i=0; i<pagecount; ++i )
@@ -79,9 +79,9 @@ bool Dialogs::ConfigurationDialog::ApplySettings()
 		if( !panel->Apply( confcopy ) ) return false;
 	}
 	
-	g_Conf = confcopy;
-	g_Conf.Apply();
-	g_Conf.Save();
+	*g_Conf = confcopy;
+	g_Conf->Apply();
+	g_Conf->Save();
 
 	return true;
 }

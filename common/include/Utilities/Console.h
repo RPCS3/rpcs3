@@ -116,6 +116,7 @@ namespace Console
 	extern bool __fastcall Status( const wxString& text );
 }
 
+using Console::Color_Black;
 using Console::Color_Red;
 using Console::Color_Green;
 using Console::Color_Blue;

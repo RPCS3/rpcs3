@@ -82,7 +82,7 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 
 	// Add in the recent files!
 
-	/*const StringListNode* cruise = g_Conf.RecentIsos;
+	/*const StringListNode* cruise = g_Conf->RecentIsos;
 	
 	int i = 0;
 	int threshold = 15;
@@ -117,8 +117,11 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 		mnuIso->Append( Menu_Iso_Recent+i, Path::GetFilename( ellipsized ), *cruise->item );
 	}*/
 	
-	g_RecentIsoList->UseMenu( mnuIso );
-	g_RecentIsoList->AddFilesToMenu( mnuIso );
+	if( g_RecentIsoList != NULL )
+	{
+		g_RecentIsoList->UseMenu( mnuIso );
+		g_RecentIsoList->AddFilesToMenu( mnuIso );
+	}
 	return mnuIso;
 }
 
@@ -156,22 +159,45 @@ void MainEmuFrame::PopulatePadMenu()
 	m_menuPad.Append( Menu_Pad_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
-#define ConnectMenu( id, handler ) \
-	Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
-
 // ------------------------------------------------------------------------
+// Close out the console log windows along with the main emu window.
+// Note: This event only happens after a close event has occured and was *not* veto'd.  Ie,
+// it means it's time to provide an unconditional closure of said window.
+//
+void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
+{
+	wxCloseEvent conevt( wxEVT_CLOSE_WINDOW );
+	conevt.SetCanVeto( false );	// tells the console to close rather than hide
+	wxGetApp().ProgramLog_PostEvent( conevt );
+	evt.Skip();
+}
+
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
-	if( g_Conf.ConLogBox.AutoDock )
-		m_logbox.SetPosition( g_Conf.ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 ) );
+	if( g_Conf->ConLogBox.AutoDock )
+	{
+		g_Conf->ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 );
+
+		// Send the move event our window ID, which allows the logbox to know that this
+		// move event comes from us, and needs a special handler.
+		wxCommandEvent evt( wxEVT_DockConsole );
+		wxGetApp().ConsoleLog_PostEvent( evt );
+	}
 
 	//evt.Skip();
+}
+
+void MainEmuFrame::OnLogBoxHidden()
+{
+	g_Conf->ConLogBox.Visible = false;
+	m_MenuItem_Console.Check( false );
 }
 
 // ------------------------------------------------------------------------
 void MainEmuFrame::ConnectMenus()
 {
-	Connect( wxEVT_MOVE, wxMoveEventHandler(MainEmuFrame::OnMoveAround) );
+	#define ConnectMenu( id, handler ) \
+		Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
 	ConnectMenu( Menu_Config_Settings,	Menu_ConfigSettings_Click );
 	ConnectMenu( Menu_RunWithoutDisc,	Menu_RunWithoutDisc_Click );
@@ -180,41 +206,32 @@ void MainEmuFrame::ConnectMenus()
 
 	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
 
-	ConnectMenu( Menu_RunELF, Menu_OpenELF_Click );
-	ConnectMenu( Menu_Run_Exit, Menu_Exit_Click );
+	ConnectMenu( Menu_RunELF,			Menu_OpenELF_Click );
+	ConnectMenu( Menu_Run_Exit,			Menu_Exit_Click );
 
-	ConnectMenu( Menu_SuspendExec, Menu_Suspend_Click );
-	ConnectMenu( Menu_ResumeExec, Menu_Resume_Click );
-	ConnectMenu( Menu_Reset, Menu_Reset_Click );
+	ConnectMenu( Menu_SuspendExec,		Menu_Suspend_Click );
+	ConnectMenu( Menu_ResumeExec,		Menu_Resume_Click );
+	ConnectMenu( Menu_Reset,			Menu_Reset_Click );
 
-	ConnectMenu( Menu_State_LoadOther, Menu_LoadStateOther_Click );
-	ConnectMenu( Menu_State_SaveOther, Menu_SaveStateOther_Click );
+	ConnectMenu( Menu_State_LoadOther,	Menu_LoadStateOther_Click );
+	ConnectMenu( Menu_State_SaveOther,	Menu_SaveStateOther_Click );
 
-	ConnectMenu( Menu_Config_Gamefixes, Menu_Gamefixes_Click );
-	ConnectMenu( Menu_Config_SpeedHacks, Menu_Speedhacks_Click );
+	ConnectMenu( Menu_Config_Gamefixes,	Menu_Gamefixes_Click );
+	ConnectMenu( Menu_Config_SpeedHacks,Menu_Speedhacks_Click );
 
 
-	ConnectMenu( Menu_Debug_Open, Menu_Debug_Open_Click );
-	ConnectMenu( Menu_Debug_MemoryDump, Menu_Debug_MemoryDump_Click );
-	ConnectMenu( Menu_Debug_Logging, Menu_Debug_Logging_Click );
+	ConnectMenu( Menu_Debug_Open,		Menu_Debug_Open_Click );
+	ConnectMenu( Menu_Debug_MemoryDump,	Menu_Debug_MemoryDump_Click );
+	ConnectMenu( Menu_Debug_Logging,	Menu_Debug_Logging_Click );
 
-	ConnectMenu( Menu_Console, Menu_ShowConsole );
+	ConnectMenu( Menu_Console,			Menu_ShowConsole );
 
-	ConnectMenu( Menu_About, Menu_ShowAboutBox );
-}
-
-// ------------------------------------------------------------------------
-void MainEmuFrame::OnLogBoxHidden()
-{
-	g_Conf.ConLogBox.Visible = false;
-	m_MenuItem_Console.Check( false );
+	ConnectMenu( Menu_About,			Menu_ShowAboutBox );
 }
 
 // ------------------------------------------------------------------------
 MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
     wxFrame(parent, id, title, pos, size, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
-
-	m_logbox( this, L"PCSX2 Log" ),
 
 	m_statusbar( *CreateStatusBar(2, 0) ),
 	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
@@ -237,9 +254,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
 {
-
-	wxGetApp().SetConsoleFrame( m_logbox );
-
 	// ------------------------------------------------------------------------
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
 	// can be factored into the window size (which ends up being background+status+menus)
@@ -279,32 +293,29 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	wxRect screenzone( wxPoint(), wxGetDisplaySize() );
 
 	// Use default window position if the configured windowpos is invalid (partially offscreen)
-	if( g_Conf.MainGuiPosition == wxDefaultPosition || !screenzone.Contains( wxRect( g_Conf.MainGuiPosition, GetSize() ) ) )
-		g_Conf.MainGuiPosition = GetPosition();
+	if( g_Conf->MainGuiPosition == wxDefaultPosition || !screenzone.Contains( wxRect( g_Conf->MainGuiPosition, GetSize() ) ) )
+		g_Conf->MainGuiPosition = GetPosition();
 	else
-		SetPosition( g_Conf.MainGuiPosition );
+		SetPosition( g_Conf->MainGuiPosition );
 
 	// ------------------------------------------------------------------------
 	// Sort out the console log window position (must be done after fitting the window
 	// sizer, to ensure correct 'docked mode' positioning).
 
-	g_Conf.ConLogBox.DisplaySize.Set(
-		std::min( std::max( g_Conf.ConLogBox.DisplaySize.GetWidth(), 160 ), screenzone.GetWidth() ),
-		std::min( std::max( g_Conf.ConLogBox.DisplaySize.GetHeight(), 160 ), screenzone.GetHeight() )
+	g_Conf->ConLogBox.DisplaySize.Set(
+		std::min( std::max( g_Conf->ConLogBox.DisplaySize.GetWidth(), 160 ), screenzone.GetWidth() ),
+		std::min( std::max( g_Conf->ConLogBox.DisplaySize.GetHeight(), 160 ), screenzone.GetHeight() )
 	);
 
-	if( g_Conf.ConLogBox.AutoDock )
+	if( g_Conf->ConLogBox.AutoDock )
 	{
-		g_Conf.ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 );
+		g_Conf->ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 );
 	}
-	else if( g_Conf.ConLogBox.DisplayPosition != wxDefaultPosition )
+	else if( g_Conf->ConLogBox.DisplayPosition != wxDefaultPosition )
 	{
-		if( !screenzone.Contains( wxRect( g_Conf.ConLogBox.DisplayPosition, wxSize( 75, 150 ) ) ) )
-			g_Conf.ConLogBox.DisplayPosition = wxDefaultPosition;
+		if( !screenzone.Contains( wxRect( g_Conf->ConLogBox.DisplayPosition, wxSize( 75, 150 ) ) ) )
+			g_Conf->ConLogBox.DisplayPosition = wxDefaultPosition;
 	}
-
-	m_logbox.SetSize( wxRect( g_Conf.ConLogBox.DisplayPosition, g_Conf.ConLogBox.DisplaySize ) );
-	m_logbox.Show( g_Conf.ConLogBox.Visible );
 
 	// ------------------------------------------------------------------------
 
@@ -376,11 +387,11 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	m_menuDebug.Append(Menu_Debug_MemoryDump,	_T("Memory Dump..."), wxEmptyString, wxITEM_NORMAL);
 	m_menuDebug.Append(Menu_Debug_Logging,		_T("Logging..."), wxEmptyString, wxITEM_NORMAL);
 
-	ConnectMenus();
-
-	m_MenuItem_Console.Check( g_Conf.ConLogBox.Visible );
+	m_MenuItem_Console.Check( g_Conf->ConLogBox.Visible );
 	
-	//g_RecentIsoList->AddFileToHistory( L"fail.iso" );
+	ConnectMenus();
+	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
+	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
 }
 
 void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
@@ -451,15 +462,19 @@ void MainEmuFrame::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
 {
-	LogOptionsDialog( this, wxID_ANY ).ShowModal();
+	//LogOptionsDialog( this, wxID_ANY ).ShowModal();
 }
 
 void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 {
-	m_logbox.Show( g_Conf.ConLogBox.Visible = event.IsChecked() );
+	// Use messages to relay open/close commands (thread-safe)
+	
+	g_Conf->ConLogBox.Visible = event.IsChecked();
+	wxCommandEvent evt( wxEVT_COMMAND_MENU_SELECTED, g_Conf->ConLogBox.Visible ? wxID_OPEN : wxID_CLOSE );
+	wxGetApp().ProgramLog_PostEvent( evt );
 }
 
 void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)
 {
-	AboutBoxDialog( this, wxID_ANY ).ShowModal();
+	//AboutBoxDialog( this, wxID_ANY ).ShowModal();
 }

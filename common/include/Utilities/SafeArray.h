@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "MemcpyFast.h"
+
 extern void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align);
 extern void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align);
 extern void pcsx2_aligned_free(void* pmem);

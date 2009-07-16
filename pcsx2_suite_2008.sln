@@ -92,8 +92,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Include", "Include", "{0FAD
 		common\include\PS2Etypes.h = common\include\PS2Etypes.h
 	EndProjectSection
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "setup", "setup\setup.vdproj", "{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxBase28", "3rdparty\wxWidgets\build\msw\wx_base_2008.vcproj", "{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C34487AF-228A-4D11-8E50-27803DF76873} = {C34487AF-228A-4D11-8E50-27803DF76873}
@@ -479,18 +477,6 @@ Global
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release|Win32.ActiveCfg = Release|Win32
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release|Win32.Build.0 = Release|Win32
 		{CDD9DB83-3BD9-4ED8-BB83-399A2F65F022}.Release|x64.ActiveCfg = Release|Win32
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Debug|Win32.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Debug|x64.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Devel|Win32.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Devel|x64.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE2|Win32.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE2|x64.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE4|Win32.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSE4|x64.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSSE3|Win32.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release SSSE3|x64.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release|Win32.ActiveCfg = Release
-		{14259DC9-2A12-4B05-A7D7-23C1A9FFEA03}.Release|x64.ActiveCfg = Release
 		{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}.Debug|Win32.ActiveCfg = Debug|Win32
 		{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}.Debug|Win32.Build.0 = Debug|Win32
 		{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}.Debug|x64.ActiveCfg = Debug|Win32

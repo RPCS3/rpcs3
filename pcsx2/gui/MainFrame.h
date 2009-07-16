@@ -130,7 +130,6 @@ protected:
 	void ConnectMenus();
 
 protected:
-	ConsoleLogFrame m_logbox;
     wxStatusBar& m_statusbar;
     wxStaticBitmap m_background;
 
@@ -154,8 +153,9 @@ protected:
 	// Menu Options for the Main Window! :D
 
 protected:
+	void OnCloseWindow(wxCloseEvent& evt);
 	void OnMoveAround( wxMoveEvent& evt );
-
+	
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);
 	void Menu_RunWithoutDisc_Click(wxCommandEvent &event);
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);

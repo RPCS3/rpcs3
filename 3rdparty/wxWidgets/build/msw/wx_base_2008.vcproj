@@ -41,7 +41,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/EHsc "
 				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib"
 				PreprocessorDefinitions="wxUSE_GUI=0;wxUSE_BASE=1;NDEBUG"
 				UsePrecompiledHeader="2"
@@ -105,7 +104,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/EHsc "
 				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib"
 				PreprocessorDefinitions="_DEBUG;__WXDEBUG__;wxUSE_BASE=1;wxUSE_GUI=0"
 				UsePrecompiledHeader="2"
@@ -170,7 +168,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/EHsc "
 				Optimization="3"
 				InlineFunctionExpansion="1"
 				FavorSizeOrSpeed="2"

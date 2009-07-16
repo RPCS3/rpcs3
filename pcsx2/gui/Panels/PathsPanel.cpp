@@ -76,23 +76,23 @@ void Panels::PathsPanel::MyBasePanel::AddDirPicker( wxBoxSizer& sizer, const wxD
 Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent, int id ) :
 	MyBasePanel( parent, id )
 {
-	AddDirPicker( s_main, g_Conf.Folders.Bios, PathDefs::GetBios,
+	AddDirPicker( s_main, g_Conf->Folders.Bios, PathDefs::GetBios,
 		_("Bios:"),			_("Select folder with PS2 Bios"),	Msg_Tooltips_Bios );
 
 	s_main.AddSpacer( BetweenFolderSpace );
-	AddDirPicker( s_main, g_Conf.Folders.Savestates, PathDefs::GetSavestates,
+	AddDirPicker( s_main, g_Conf->Folders.Savestates, PathDefs::GetSavestates,
 		_("Savestates:"),	_("Select folder for Savestates"),	Msg_Tooltips_Savestates );
 
 	s_main.AddSpacer( BetweenFolderSpace );
-	AddDirPicker( s_main, g_Conf.Folders.Snapshots, PathDefs::GetSnapshots,
+	AddDirPicker( s_main, g_Conf->Folders.Snapshots, PathDefs::GetSnapshots,
 		_("Snapshots:"),	_("Select a folder for Snapshots"),	Msg_Tooltips_Snapshots );
 
 	s_main.AddSpacer( BetweenFolderSpace );
-	AddDirPicker( s_main, g_Conf.Folders.Logs, PathDefs::GetLogs,
+	AddDirPicker( s_main, g_Conf->Folders.Logs, PathDefs::GetLogs,
 		_("Logs/Dumps:" ),	_("Select a folder for logs/dumps"), Msg_Tooltips_Logs );
 
 	s_main.AddSpacer( BetweenFolderSpace );
-	AddDirPicker( s_main, g_Conf.Folders.MemoryCards, PathDefs::GetMemoryCards,
+	AddDirPicker( s_main, g_Conf->Folders.MemoryCards, PathDefs::GetMemoryCards,
 		_("Memorycards:"),	_("Select a default Memorycards folder"), Msg_Tooltips_Memorycards );
 
 	s_main.AddSpacer( 5 );
@@ -107,11 +107,11 @@ Panels::PathsPanel::AdvancedPanel::AdvancedPanel( wxWindow& parent, int id ) :
 	wxStaticBoxSizer& advanced = *new wxStaticBoxSizer( wxVERTICAL, this, _("Advanced") );
 	AddStaticText( advanced, pxE(Msg_Dialog_AdvancedPaths), 420, wxALIGN_CENTRE );
 
-	AddDirPicker( advanced, g_Conf.Folders.Plugins, PathDefs::GetPlugins,
+	AddDirPicker( advanced, g_Conf->Folders.Plugins, PathDefs::GetPlugins,
 		_("Plugins:"),		_("Select folder for PCSX2 plugins"), Msg_Tooltips_PluginsPath );
 
 	advanced.AddSpacer( BetweenFolderSpace );
-	AddDirPicker( advanced, g_Conf.Folders.Settings, PathDefs::GetSettings,
+	AddDirPicker( advanced, g_Conf->Folders.Settings, PathDefs::GetSettings,
 		_("Settings:"),		_("Select a folder for PCSX2 settings/inis"), Msg_Tooltips_SettingsPath );
 
 	wxStaticBoxSizer& s_diag = *new wxStaticBoxSizer( wxVERTICAL, this, _("Default folder mode") );

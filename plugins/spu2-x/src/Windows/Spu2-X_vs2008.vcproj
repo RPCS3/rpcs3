@@ -295,7 +295,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;DEBUG_FAST;_USRDLL"
+				PreprocessorDefinitions="wxUSE_GUI=0;SPU2X_DEVBUILD;FLOAT_SAMPLES;DEBUG_FAST;_USRDLL"
 				ExceptionHandling="2"
 				UsePrecompiledHeader="0"
 			/>

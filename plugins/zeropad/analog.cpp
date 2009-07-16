@@ -16,7 +16,8 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
- #include "analog.h"
+#include "analog.h"
+
 PADAnalog g_lanalog[NUM_OF_PADS], g_ranalog[NUM_OF_PADS];
 
 namespace Analog

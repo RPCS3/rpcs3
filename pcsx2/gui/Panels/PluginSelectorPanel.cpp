@@ -212,7 +212,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent ) :
 	BaseApplicableConfigPanel( &parent )
 ,	m_FileList()
 ,	m_StatusPanel( *new StatusPanel( this,
-		wxDir::GetAllFiles( g_Conf.Folders.Plugins.ToString(), &m_FileList, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES )
+		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), &m_FileList, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES )
 	) )
 ,	m_ComboBoxes( *new ComboBoxPanel( this ) )
 ,	m_Uninitialized( true )
@@ -259,7 +259,7 @@ bool Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 		if( sel == wxNOT_FOUND ) continue;
 
 		wxFileName relative( m_FileList[(int)m_ComboBoxes.Get(i).GetClientData(sel)] );
-		relative.MakeRelativeTo( g_Conf.Folders.Plugins.ToString() );
+		relative.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
 	}
 
@@ -353,10 +353,10 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 				);
 
 				wxFileName left( m_FileList[evtidx] );
-				wxFileName right( g_Conf.FullpathTo(tbl_PluginInfo[i].id) );
+				wxFileName right( g_Conf->FullpathTo(tbl_PluginInfo[i].id) );
 
-				left.MakeRelativeTo( g_Conf.Folders.Plugins.ToString() );
-				right.MakeRelativeTo( g_Conf.Folders.Plugins.ToString() );
+				left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
+				right.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 
 				if( left == right )
 					m_ComboBoxes.Get(i).SetSelection( sel );

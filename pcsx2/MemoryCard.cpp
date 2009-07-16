@@ -61,7 +61,7 @@ bool MemoryCard::IsPresent( uint mcd )
 void MemoryCard::Load( uint mcd )
 {
 	jASSUME( mcd < 2 );
-	wxFileName fname( g_Conf.FullpathToMcd( mcd ) );
+	wxFileName fname( g_Conf->FullpathToMcd( mcd ) );
 	wxString str( fname.GetFullPath() );
 
 	if( !fname.FileExists() )

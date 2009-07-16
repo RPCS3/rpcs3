@@ -13,7 +13,7 @@
 		OmitFramePointers="true"
 		EnableFiberSafeOptimizations="true"
 		WholeProgramOptimization="true"
-		PreprocessorDefinitions="NDEBUG"
+		PreprocessorDefinitions="NDEBUG;_SECURE_SCL_=0;_SECURE_SCL_THROWS=0"
 		StringPooling="true"
 		MinimalRebuild="true"
 		RuntimeLibrary="2"

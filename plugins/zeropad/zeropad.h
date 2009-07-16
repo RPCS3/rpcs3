@@ -19,6 +19,9 @@
 #ifndef __PAD_H__
 #define __PAD_H__
 
+#define PADdefs
+#include "PS2Edefs.h"
+
 #include <stdio.h>
 #include <assert.h>
 
@@ -39,9 +42,6 @@
 #include <string>
 #include <pthread.h>
 using namespace std;
-
-#define PADdefs
-#include "PS2Edefs.h"
 
 #ifdef __LINUX__
 #include "joystick.h"

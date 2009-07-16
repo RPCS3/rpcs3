@@ -178,7 +178,7 @@ const wxChar* __fastcall pxExpandMsg( ExpandedMsgEnum key )
 {
 	const HashedExpansionPair& data( m_EnglishExpansions[key] );
 
-	int curlangid = wxLocale::GetLanguageInfo( g_Conf.LanguageId )->Language;
+	int curlangid = wxLocale::GetLanguageInfo( g_Conf->LanguageId )->Language;
 	if( IsEnglish( curlangid ) )
 		return data.Expanded;
 

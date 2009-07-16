@@ -155,7 +155,7 @@ bool IsBIOS(const wxString& filename, wxString& description)
 	uint fileOffset=0;
 	romdir rd;
 
-	wxFileName Bios( g_Conf.Folders.Bios + filename );
+	wxFileName Bios( g_Conf->Folders.Bios + filename );
 	wxFile fp( Bios.GetFullPath().c_str() );
 
 	if( !fp.IsOpened() ) return FALSE;
@@ -343,7 +343,7 @@ void LoadGSState(const wxString& file)
 		// file not found? try prefixing with sstates folder:
 		if( !Path::IsRooted( file ) )
 		{
-			f = new gzLoadingState( Path::Combine( g_Conf.Folders.Savestates, file ) );
+			f = new gzLoadingState( Path::Combine( g_Conf->Folders.Savestates, file ) );
 
 			// If this load attempt fails, then let the exception bubble up to
 			// the caller to deal with...
@@ -386,7 +386,7 @@ char* mystrlwr( char* string )
 
 static wxString GetGSStateFilename()
 {
-	return Path::Combine( g_Conf.Folders.Savestates, wxsFormat( L"/%8.8X.%d.gs", ElfCRC, StatesC ) );
+	return Path::Combine( g_Conf->Folders.Savestates, wxsFormat( L"/%8.8X.%d.gs", ElfCRC, StatesC ) );
 }
 
 void CycleFrameLimit(int dir)
@@ -530,7 +530,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 
 		// note: VK_F5-VK_F7 are reserved for GS
 		case 8:
-			GSmakeSnapshot( g_Conf.Folders.Snapshots.ToAscii().data() );
+			GSmakeSnapshot( g_Conf->Folders.Snapshots.ToAscii().data() );
 			break;
 
 		case 9: //gsdx "on the fly" renderer switching
@@ -588,7 +588,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 						name += L"_" + part2;
 
 					gsText.Printf( L"%s.%d.gs", name.c_str(), StatesC );
-					Text = Path::Combine( g_Conf.Folders.Savestates, gsText );
+					Text = Path::Combine( g_Conf->Folders.Savestates, gsText );
 				}
 				else
 				{

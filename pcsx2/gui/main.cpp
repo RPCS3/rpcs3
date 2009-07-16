@@ -28,11 +28,12 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
-AppConfig g_Conf;
+AppConfig* g_Conf = NULL;
 wxFileHistory* g_RecentIsoList = NULL;
 
 Pcsx2App::Pcsx2App()  :
-	m_ConsoleFrame( NULL )
+	m_ProgramLogBox( NULL )
+,	m_Ps2ConLogBox( NULL )
 ,	m_ConfigImages( 32, 32 )
 ,	m_ConfigImagesAreLoaded( false )
 ,	m_ToolbarImages( NULL )
@@ -62,7 +63,7 @@ void Pcsx2App::ReadUserModeSettings()
 	// Ensure proper scoping (IniLoader gets closed prior to delete)
 	{
 		IniLoader loader( *conf_usermode );
-		g_Conf.LoadSaveUserMode( loader );
+		g_Conf->LoadSaveUserMode( loader );
 	}
 
 	delete conf_usermode;
@@ -74,7 +75,7 @@ void Pcsx2App::ReadUserModeSettings()
 //
 bool Pcsx2App::TryOpenConfigCwd()
 {
-	wxDirName inipath_cwd( (wxDirName)wxGetCwd() + PathDefs::Settings );
+	wxDirName inipath_cwd( (wxDirName)wxGetCwd() + PathDefs::Base::Settings() );
 	if( !inipath_cwd.IsReadable() ) return false;
 
 	wxString inifile_cwd( Path::Combine( inipath_cwd, FilenameDefs::GetConfig() ) );
@@ -128,8 +129,9 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 bool Pcsx2App::OnInit()
 {
     wxInitAllImageHandlers();
-
 	wxApp::OnInit();
+
+	g_Conf = new AppConfig();
 
 	i18n_InitPlainEnglish();
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
@@ -156,12 +158,18 @@ bool Pcsx2App::OnInit()
 		wxConfigBase::Get()->SetRecordDefaults();
 	}
 
-	g_Conf.Load();
-	g_Conf.Apply();
+	g_Conf->Load();
+	g_Conf->Apply();
+	
+	m_ProgramLogBox = new ConsoleLogFrame( NULL, L"PCSX2 Program Log" );
+	m_Ps2ConLogBox = m_ProgramLogBox;
+	//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
 
     m_MainFrame = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
     SetTopWindow( m_MainFrame );
+    SetExitOnFrameDelete( true );
     m_MainFrame->Show();
+    
 
 	// Check to see if the user needs to perform initial setup:
 
@@ -169,7 +177,7 @@ bool Pcsx2App::OnInit()
 	const wxString pc( L"Please Configure" );
 	for( int pidx=0; pidx<Plugin_Count; ++pidx )
 	{
-		if( g_Conf.BaseFilenames[(PluginsEnum_t)pidx] == pc )
+		if( g_Conf->BaseFilenames[(PluginsEnum_t)pidx] == pc )
 		{
 			needsConfigured = true;
 			break;
@@ -186,7 +194,7 @@ bool Pcsx2App::OnInit()
 
 int Pcsx2App::OnExit()
 {
-	g_Conf.Save();
+	g_Conf->Save();
 	return wxApp::OnExit();
 }
 
@@ -230,11 +238,11 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 		return *m_Bitmap_Logo;
 
 	wxFileName mess;
-	bool useTheme = (g_Conf.DeskTheme != L"default");
+	bool useTheme = (g_Conf->DeskTheme != L"default");
 
 	if( useTheme )
 	{
-		wxDirName theme( PathDefs::GetThemes() + g_Conf.DeskTheme );
+		wxDirName theme( PathDefs::GetThemes() + g_Conf->DeskTheme );
 		wxFileName zipped( theme.GetFilename() );
 
 		zipped.SetExt( L"zip" );
@@ -272,11 +280,11 @@ wxImageList& Pcsx2App::GetImgList_Config()
 	if( !m_ConfigImagesAreLoaded )
 	{
 		wxFileName mess;
-		bool useTheme = (g_Conf.DeskTheme != L"default");
+		bool useTheme = (g_Conf->DeskTheme != L"default");
 
 		if( useTheme )
 		{
-			wxDirName theme( PathDefs::GetThemes() + g_Conf.DeskTheme );
+			wxDirName theme( PathDefs::GetThemes() + g_Conf->DeskTheme );
 			mess = theme.ToString();
 		}
 
@@ -288,7 +296,7 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		#undef  FancyLoadMacro
 		#define FancyLoadMacro( name ) \
 		{ \
-			EmbeddedImage<png_ConfigIcon_##name> temp( g_Conf.Listbook_ImageSize, g_Conf.Listbook_ImageSize ); \
+			EmbeddedImage<png_ConfigIcon_##name> temp( g_Conf->Listbook_ImageSize, g_Conf->Listbook_ImageSize ); \
 			m_ImageId.Config.name = m_ConfigImages.Add( LoadImageAny( \
 				img, useTheme, mess, L"ConfigIcon_" wxT(#name), temp ) \
 			); \
@@ -309,14 +317,14 @@ wxImageList& Pcsx2App::GetImgList_Toolbars()
 {
 	if( m_ToolbarImages == NULL )
 	{
-		const int imgSize = g_Conf.Toolbar_ImageSize ? 64 : 32;
+		const int imgSize = g_Conf->Toolbar_ImageSize ? 64 : 32;
 		m_ToolbarImages = new wxImageList( imgSize, imgSize );
 		wxFileName mess;
-		bool useTheme = (g_Conf.DeskTheme != L"default");
+		bool useTheme = (g_Conf->DeskTheme != L"default");
 
 		if( useTheme )
 		{
-			wxDirName theme( PathDefs::GetThemes() + g_Conf.DeskTheme );
+			wxDirName theme( PathDefs::GetThemes() + g_Conf->DeskTheme );
 			mess = theme.ToString();
 		}
 

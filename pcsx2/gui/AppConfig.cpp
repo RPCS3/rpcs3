@@ -31,25 +31,72 @@
 //
 namespace PathDefs
 {
-	const wxDirName Snapshots	( L"snaps" );
-	const wxDirName Savestates	( L"sstates" );
-	const wxDirName MemoryCards	( L"memcards" );
-	const wxDirName Settings	( L"inis" );
-	const wxDirName Plugins		( L"plugins" );
-	const wxDirName Logs		( L"logs" );
-	const wxDirName Dumps		( L"dumps" );
-	const wxDirName Themes		( L"themes" );
+	namespace Base
+	{
+		const wxDirName& Snapshots()
+		{
+			static const wxDirName retval( L"snaps" );
+			return retval;
+		}
+		
+		const wxDirName& Savestates()
+		{
+			static const wxDirName retval( L"sstates" );
+			return retval;
+		}
+
+		const wxDirName& MemoryCards()
+		{
+			static const wxDirName retval( L"memcards" );
+			return retval;
+		}
+		
+		const wxDirName& Settings()
+		{
+			static const wxDirName retval( L"inis" );
+			return retval;
+		}
+		
+		const wxDirName& Plugins()
+		{
+			static const wxDirName retval( L"plugins" );
+			return retval;
+		}
+		
+		const wxDirName& Logs()
+		{
+			static const wxDirName retval( L"logs" );
+			return retval;
+		}
+
+		const wxDirName& Dumps()
+		{
+			static const wxDirName retval( L"dumps" );
+			return retval;
+		}
+		
+		const wxDirName& Themes()
+		{
+			static const wxDirName retval( L"themes" );
+			return retval;
+		}
+
+	};
 
 	// Specifies the root folder for the application install.
 	// (currently it's the CWD, but in the future I intend to move all binaries to a "bin"
 	// sub folder, in which case the approot will become "..")
-	const wxDirName AppRoot( "." ); // L".." );
+	const wxDirName& AppRoot()
+	{
+		static const wxDirName retval( L"." );
+		return retval;
+	}
 
 	// Fetches the path location for user-consumable documents -- stuff users are likely to want to
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments()
 	{
-		if( g_Conf.UseAdminMode )
+		if( g_Conf->UseAdminMode )
 			return (wxDirName)wxGetCwd();
 		else
 			return (wxDirName)wxStandardPaths::Get().GetDocumentsDir() + (wxDirName)wxGetApp().GetAppName();
@@ -57,7 +104,7 @@ namespace PathDefs
 
 	wxDirName GetSnapshots()
 	{
-		return GetDocuments() + Snapshots;
+		return GetDocuments() + Base::Snapshots();
 	}
 
 	wxDirName GetBios()
@@ -67,32 +114,32 @@ namespace PathDefs
 
 	wxDirName GetSavestates()
 	{
-		return GetDocuments() + Savestates;
+		return GetDocuments() + Base::Savestates();
 	}
 
 	wxDirName GetMemoryCards()
 	{
-		return GetDocuments() + MemoryCards;
+		return GetDocuments() + Base::MemoryCards();
 	}
 
 	wxDirName GetPlugins()
 	{
-		return AppRoot + Plugins;
+		return AppRoot() + Base::Plugins();
 	}
 
 	wxDirName GetSettings()
 	{
-		return GetDocuments() + Settings;
+		return GetDocuments() + Base::Settings();
 	}
 
 	wxDirName GetThemes()
 	{
-		return AppRoot + Themes;
+		return AppRoot() + Base::Themes();
 	}
 
 	wxDirName GetLogs()
 	{
-		return GetDocuments() + Logs;
+		return GetDocuments() + Base::Logs();
 	}
 };
 
@@ -108,11 +155,19 @@ namespace FilenameDefs
 		return wxGetApp().GetAppName() + L".ini";
 	}
 
-	const wxFileName Memcard[2] =
+	const wxFileName& Memcard( int slot )
 	{
-		wxFileName( L"Mcd001.ps2" ),
-		wxFileName( L"Mcd002.ps2" )
-	};
+		static const wxFileName retval[2] =
+		{
+			wxFileName( L"Mcd001.ps2" ),
+			wxFileName( L"Mcd002.ps2" )
+		};
+		
+		if( IsDevBuild && ((uint)slot) < 2 )
+			throw Exception::IndexBoundsFault( L"FilenameDefs::Memcard", slot, 2 );
+			
+		return retval[slot];
+	}
 };
 
 // ------------------------------------------------------------------------
@@ -314,18 +369,6 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	ini.SetPath( L".." );
 }
 
-const wxString g_PluginNames[] =
-{
-	L"CDVD",
-	L"GS",
-	L"PAD1",
-	L"PAD2",
-	L"SPU2",
-	L"USB",
-	L"FW",
-	L"DEV9"
-};
-
 // ------------------------------------------------------------------------
 const wxFileName& AppConfig::FilenameOptions::operator[]( PluginsEnum_t pluginidx ) const
 {
@@ -339,7 +382,18 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Filenames" );
 
-	const wxFileName pc( L"Please Configure" );
+	static const wxFileName pc( L"Please Configure" );
+	static const wxString g_PluginNames[] =
+	{
+		L"CDVD",
+		L"GS",
+		L"PAD1",
+		L"PAD2",
+		L"SPU2",
+		L"USB",
+		L"FW",
+		L"DEV9"
+	};
 
 	for( int i=0; i<PluginId_Count; ++i )
 	{

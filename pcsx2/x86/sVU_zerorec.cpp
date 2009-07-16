@@ -568,9 +568,9 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 	u32 *mem;
 	u32 i;
 
-	g_Conf.Folders.Logs.Mkdir();
+	g_Conf->Folders.Logs.Mkdir();
 	AsciiFile eff(
-		Path::Combine( g_Conf.Folders.Logs, wxsFormat(L"svu%cdump%.4X.txt", s_vu?L'0':L'1', s_pFnHeader->startpc) ),
+		Path::Combine( g_Conf->Folders.Logs, wxsFormat(L"svu%cdump%.4X.txt", s_vu?L'0':L'1', s_pFnHeader->startpc) ),
 		wxFile::write
 	);
 

@@ -34,26 +34,12 @@
 namespace Path
 {
 
-#ifdef WIN32
-// Path Separator used when creating new paths.
-static const wxChar Separator( L'\\' );
-// Path separators used when breaking existing paths into parts and pieces.
-static const wxString Delimiters( L"\\/" );
-
-static const wxChar SeparatorExt( L'.' );
-
-#else
-static const wxChar Separator( '/');
-static const wxChar Delimiters( '/' );
-static const wxChar SeparatorExt( L'.' );
-#endif
-
 static bool IsPathSeparator( wxChar src )
 {
 #ifdef WIN32
-	return (src == Separator) || (src == L'/');
+	return (src == wxFileName::GetPathSeparator()) || (src == L'/');
 #else
-	return src == Separator;
+	return src == wxFileName::GetPathSeparator();
 #endif
 }
 
@@ -169,7 +155,7 @@ wxString ReplaceExtension( const wxString& src, const wxString& ext )
 {
 	wxString dest;
 
-	int pos = src.find_last_of( SeparatorExt );
+	int pos = src.find_last_of( L'.' );
 	if( pos == wxString::npos || pos == 0 )
 		dest = src;
 	else
@@ -213,7 +199,7 @@ wxString GetDirectory( const wxString& src )
 // Example /this/that/something.txt -> dest == "/"
 wxString GetRootDirectory( const wxString& src )
 {
-	int pos = src.find_first_of( Delimiters );
+	int pos = src.find_first_of( wxFileName::GetPathSeparators() );
 	if( pos == wxString::npos )
 		return wxString();
 	else

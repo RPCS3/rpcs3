@@ -153,9 +153,9 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	int numused, count;
 
 	Console::WriteLn( "dump1 %x:%x, %x", params startpc, psxpc, psxRegs.cycle );
-	g_Conf.Folders.Logs.Mkdir();
+	g_Conf->Folders.Logs.Mkdir();
 
-	wxString filename( Path::Combine( g_Conf.Folders.Logs, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
+	wxString filename( Path::Combine( g_Conf->Folders.Logs, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
 	AsciiFile f( filename, wxFile::write );
 
 	/*for ( i = startpc; i < s_nEndBlock; i += 4 ) {

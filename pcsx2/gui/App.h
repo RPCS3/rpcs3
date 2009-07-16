@@ -30,46 +30,66 @@ class IniInterface;
 
 extern wxFileHistory* g_RecentIsoList;
 
+class LogWriteEvent;
+
+DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1)
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 class ConsoleLogFrame : public wxFrame, public NoncopyableObject
 {
 protected:
-	wxTextCtrl&	m_TextCtrl;
+	class ColorArray : public NoncopyableObject
+	{
+	protected:
+		SafeArray<wxTextAttr> m_table;
+		wxTextAttr m_color_default;
 
+	public:
+		ColorArray();
+		const wxTextAttr& operator[]( Console::Colors coloridx ) const
+		{
+			return m_table[(int)coloridx];
+		}
+		
+		void SetFont( const wxFont& font );
+		const wxTextAttr& Default() { return m_table[0]; }
+	};
+
+protected:
+	wxTextCtrl&	m_TextCtrl;
+	ColorArray	m_ColorTable;
+	Console::Colors m_curcolor;
+	
 public:
 	// ctor & dtor
 	ConsoleLogFrame(MainEmuFrame *pParent, const wxString& szTitle);
 	virtual ~ConsoleLogFrame();
 
+	virtual void OnCloseWindow(wxCloseEvent& event);
+
+protected:
+
 	// menu callbacks
+	virtual void OnOpen (wxMenuEvent& event);
 	virtual void OnClose(wxMenuEvent& event);
 	virtual void OnSave (wxMenuEvent& event);
 	virtual void OnClear(wxMenuEvent& event);
-
-	virtual void OnCloseWindow(wxCloseEvent& event);
-
-	virtual void Write( const wxChar* text );
-	virtual void Write( const char* text );
-
-	void Newline();
-	void SetColor( Console::Colors color );
-	void ClearColor();
-
-protected:
-	// use standard ids for our commands!
-	enum
-	{
-		Menu_Close = wxID_CLOSE,
-		Menu_Save  = wxID_SAVE,
-		Menu_Clear = wxID_CLEAR
-	};
+	
+	void OnWrite( wxCommandEvent& event );
+	void OnNewline( wxCommandEvent& event );
+	void OnSetTitle( wxCommandEvent& event );
+	void OnDockedMove( wxCommandEvent& event );
 
 	// common part of OnClose() and OnCloseWindow()
 	virtual void DoClose();
 
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
+
+	virtual void Write( const wxString& text );
+	void SetColor( Console::Colors color );
+	void ClearColor();
 };
 
 
@@ -121,7 +141,8 @@ class Pcsx2App : public wxApp
 {
 protected:
 	MainEmuFrame* m_MainFrame;
-	ConsoleLogFrame* m_ConsoleFrame;
+	ConsoleLogFrame* m_ProgramLogBox;
+	ConsoleLogFrame* m_Ps2ConLogBox;
 	wxBitmap* m_Bitmap_Logo;
 
 	wxImageList	m_ConfigImages;
@@ -152,8 +173,20 @@ public:
 		return *m_MainFrame;
 	}
 
-	ConsoleLogFrame* GetConsoleFrame() const { return m_ConsoleFrame; }
-	void SetConsoleFrame( ConsoleLogFrame& frame ) { m_ConsoleFrame = &frame; }
+	void ProgramLog_PostEvent( wxEvent& evt )
+	{
+		if( m_ProgramLogBox == NULL ) return;
+		m_ProgramLogBox->GetEventHandler()->AddPendingEvent( evt );
+	}
+
+	void ConsoleLog_PostEvent( wxEvent& evt )
+	{
+		if( m_Ps2ConLogBox == NULL ) return;
+		m_Ps2ConLogBox->GetEventHandler()->AddPendingEvent( evt );
+	}
+
+	//ConsoleLogFrame* GetConsoleFrame() const { return m_ProgramLogBox; }
+	//void SetConsoleFrame( ConsoleLogFrame& frame ) { m_ProgramLogBox = &frame; }
 
 protected:
 	void ReadUserModeSettings();

@@ -7,26 +7,6 @@
 extern char MAIN_DIR[g_MaxPath];
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Obsolete Values in wxWidgets Branch!
-// The following set of macros has been superceeded by the PathDefs and FilenameDefs namespaces,
-// and furethermore by a set of user-configurable paths in g_Conf.
-//
-#define DEFAULT_INIS_DIR "inis"
-#define DEFAULT_BIOS_DIR "bios"
-#define DEFAULT_PLUGINS_DIR "plugins"
-
-#define MEMCARDS_DIR "memcards"
-#define PATCHES_DIR  "patches"
-
-#define SSTATES_DIR "sstates"
-#define LANGS_DIR "Langs"
-#define LOGS_DIR "logs"
-#define SNAPSHOTS_DIR "snaps"
-
-#define DEFAULT_MEMCARD1 "Mcd001.ps2"
-#define DEFAULT_MEMCARD2 "Mcd002.ps2"
-
 // Windows.h namespace pollution!
 #undef CreateDirectory
 
@@ -163,12 +143,8 @@ namespace Path
 //
 namespace PathDefs
 {
-	extern const wxDirName Snapshots;
-	extern const wxDirName Savestates;
-	extern const wxDirName MemoryCards;
-	extern const wxDirName Settings;
-	extern const wxDirName Plugins;
-	extern const wxDirName Themes;
+	// complete pathnames are returned by these functions
+	// For 99% of all code, you should use these.
 
 	extern wxDirName GetDocuments();
 	extern wxDirName GetSnapshots();
@@ -180,12 +156,24 @@ namespace PathDefs
 	extern wxDirName GetSettings();
 	extern wxDirName GetLogs();
 	extern wxDirName GetThemes();
+
+	// Base folder names used to extend out the documents/approot folder base into a complete
+	// path.  These are typically for internal AppConfig use only, barring a few special cases.
+	namespace Base
+	{
+		extern const wxDirName& Snapshots();
+		extern const wxDirName& Savestates();
+		extern const wxDirName& MemoryCards();
+		extern const wxDirName& Settings();
+		extern const wxDirName& Plugins();
+		extern const wxDirName& Themes();
+	}
 }
 
 namespace FilenameDefs
 {
 	extern wxFileName GetConfig();
-	extern const wxFileName Memcard[2];
+	extern const wxFileName& Memcard( int slot );
 };
 
 #endif

@@ -29,25 +29,6 @@
 
 #include "Pcsx2Types.h"
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
-// disabled in release builds. :)
-//
-#ifdef _MSC_VER
-#	pragma warning(disable:4244)	// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
-#	ifdef PCSX2_DEVBUILD
-#		undef _SECURE_SCL
-#		define _SECURE_SCL 1
-#		undef _SECURE_SCL_THROWS
-#		define _SECURE_SCL_THROWS 1
-#	else
-#		undef _SECURE_SCL
-#		define _SECURE_SCL 0
-#		undef _SECURE_SCL_THROWS
-#		define _SECURE_SCL_THROWS 0
-#	endif
-#endif
-
 #ifdef _MSC_VER
 #	include <intrin.h>
 #else
@@ -197,9 +178,10 @@
 #	define PCSX2_ALIGNED16(x) __declspec(align(16)) x
 #	define PCSX2_ALIGNED16_EXTERN(x) extern __declspec(align(16)) x
 
-#	define __naked __declspec(naked)
-#	define __unused /*unused*/
-#	define __noinline __declspec(noinline)
+#	define __naked			__declspec(naked)
+#	define __unused			/*unused*/
+#	define __noinline		__declspec(noinline)
+#	define __threadlocal	__declspec(thread)
 
 // Don't know if there are Visual C++ equivalents of these.
 #	define __hot
@@ -252,6 +234,7 @@ This theoretically unoptimizes. Not having much luck so far.
 #	define __noinline		__attribute__((noinline))
 #	define __hot			__attribute__((hot))
 #	define __cold			__attribute__((cold))
+#	define __threadlocal	__thread
 #	define likely(x)		__builtin_expect(!!(x), 1)
 #	define unlikely(x)		__builtin_expect(!!(x), 0)
 #endif
