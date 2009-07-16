@@ -1978,7 +1978,7 @@
 				Name="Dialogs"
 				>
 				<File
-					RelativePath="..\..\gui\AboutBoxDialog.cpp"
+					RelativePath="..\..\gui\Dialogs\AboutBoxDialog.cpp"
 					>
 				</File>
 				<File
@@ -1998,11 +1998,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\LogOptionsDialog.cpp"
+					RelativePath="..\..\gui\Dialogs\LogOptionsDialog.cpp"
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\LogOptionsDialog.h"
+					RelativePath="..\..\gui\Dialogs\LogOptionsDialog.h"
 					>
 				</File>
 				<File

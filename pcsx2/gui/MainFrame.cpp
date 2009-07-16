@@ -18,7 +18,7 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
-#include "LogOptionsDialog.h"
+#include "Dialogs/LogOptionsDialog.h"
 #include "Dialogs/ModalPopups.h"
 
 #include "Resources/EmbeddedImage.h"
@@ -161,7 +161,7 @@ void MainEmuFrame::PopulatePadMenu()
 
 // ------------------------------------------------------------------------
 // Close out the console log windows along with the main emu window.
-// Note: This event only happens after a close event has occured and was *not* veto'd.  Ie,
+// Note: This event only happens after a close event has occurred and was *not* veto'd.  Ie,
 // it means it's time to provide an unconditional closure of said window.
 //
 void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
@@ -176,13 +176,15 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
 	if( g_Conf->ConLogBox.AutoDock )
 	{
-		g_Conf->ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 );
+		g_Conf->ConLogBox.DisplayPosition = GetRect().GetTopRight();
 
 		// Send the move event our window ID, which allows the logbox to know that this
 		// move event comes from us, and needs a special handler.
 		wxCommandEvent evt( wxEVT_DockConsole );
 		wxGetApp().ConsoleLog_PostEvent( evt );
 	}
+	
+	g_Conf->MainGuiPosition = GetPosition();
 
 	//evt.Skip();
 }
@@ -462,7 +464,7 @@ void MainEmuFrame::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
 {
-	//LogOptionsDialog( this, wxID_ANY ).ShowModal();
+	LogOptionsDialog( this, wxID_ANY ).ShowModal();
 }
 
 void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
@@ -476,5 +478,5 @@ void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)
 {
-	//AboutBoxDialog( this, wxID_ANY ).ShowModal();
+	AboutBoxDialog( this, wxID_ANY ).ShowModal();
 }

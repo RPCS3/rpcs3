@@ -176,6 +176,7 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 			g_Conf->ConLogBox.AutoDock = true;
 		}
 	}
+	g_Conf->ConLogBox.DisplayPosition = GetPosition();
 	evt.Skip();
 }
 
@@ -288,6 +289,8 @@ void ConsoleLogFrame::Write( const wxString& text )
 
 	m_TextCtrl.AppendText( text );
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 namespace Console
 {
