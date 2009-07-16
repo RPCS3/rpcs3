@@ -158,7 +158,7 @@ void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 	{
 		if(sel.wms == 3)
 		{
-			if(GSTexture* t = CreateMskFix(tex->GetWidth(), cb->MskFix.x, cb->MskFix.z))
+			if(GSTexture* t = CreateMskFix(tex->m_size.x, cb->MskFix.x, cb->MskFix.z))
 			{
 				(*dev)->SetTexture(2, *(GSTexture9*)t);
 			}
@@ -166,7 +166,7 @@ void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 
 		if(sel.wmt == 3)
 		{
-			if(GSTexture* t = CreateMskFix(tex->GetHeight(), cb->MskFix.y, cb->MskFix.w))
+			if(GSTexture* t = CreateMskFix(tex->m_size.y, cb->MskFix.y, cb->MskFix.w))
 			{
 				(*dev)->SetTexture(3, *(GSTexture9*)t);
 			}
@@ -265,9 +265,9 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 	dev->PSSetSamplerState(ss);
 }
 
-void GSTextureFX9::SetupRS(int w, int h, const GSVector4i& scissor)
+void GSTextureFX9::SetupRS(const GSVector2i& size, const GSVector4i& scissor)
 {
-	((GSDevice9*)m_dev)->RSSet(w, h, &scissor);
+	((GSDevice9*)m_dev)->RSSet(size, &scissor);
 }
 
 void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds)
@@ -303,7 +303,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 			dss->StencilRef = 3;
 		}
 
-		if(!(dssel.zte && dssel.ztst == 1 && !dssel.zwe))
+		if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)
 		{
 			static const D3DCMPFUNC ztst[] = 
 			{
@@ -313,7 +313,7 @@ void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 				D3DCMP_GREATER
 			};
 
-			dss->DepthEnable = dssel.zte;
+			dss->DepthEnable = true;
 			dss->DepthWriteMask = dssel.zwe;
 			dss->DepthFunc = ztst[dssel.ztst];
 		}

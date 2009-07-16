@@ -815,7 +815,7 @@ REG64_(GIFReg, TEX1)
 	uint32 _PAD2:9;
 	uint32 L:2;
 	uint32 _PAD3:11;
-	uint32 K:12;
+	uint32 K:12; // TODO: 1:7:4 (signed? 16x scaled?)
 	uint32 _PAD4:20;
 REG_END2
 

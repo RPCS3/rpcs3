@@ -325,7 +325,7 @@ void GSRenderer::VSync(int field)
 
 	// present
 
-	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader);
+	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader, m_framelimit);
 
 	// snapshot
 
@@ -433,12 +433,6 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		}
 	}
-}
-
-
-void GSRenderer::SetFrameLimit(bool limit)
-{
-	m_dev->SetVSync(m_vsync && limit);
 }
 
 void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
@@ -579,28 +573,25 @@ void GSRenderer::GetAlphaMinMax()
 
 	if(PRIM->TME && context->TEX0.TCC)
 	{
-		uint32 bpp = GSLocalMemory::m_psm[context->TEX0.PSM].trbpp;
-		uint32 cbpp = GSLocalMemory::m_psm[context->TEX0.CPSM].trbpp;
-		uint32 pal = GSLocalMemory::m_psm[context->TEX0.PSM].pal;
-
-		if(bpp == 32)
+		switch(GSLocalMemory::m_psm[context->TEX0.PSM].fmt)
 		{
+		case 0:
 			a.y = 0;
 			a.w = 0xff;
-		}
-		else if(bpp == 24)
-		{
+			break;
+		case 1:
 			a.y = env.TEXA.AEM ? 0 : env.TEXA.TA0;
 			a.w = env.TEXA.TA0;
-		}
-		else if(bpp == 16)
-		{
+			break;
+		case 2:
 			a.y = env.TEXA.AEM ? 0 : min(env.TEXA.TA0, env.TEXA.TA1);
 			a.w = max(env.TEXA.TA0, env.TEXA.TA1);
-		}
-		else
-		{
+			break;
+		case 3:
 			m_mem.m_clut.GetAlphaMinMax32(a.y, a.w);
+			break;
+		default:
+			__assume(0);
 		}
 
 		switch(context->TEX0.TFX)
@@ -714,17 +705,25 @@ bool GSRenderer::TryAlphaTest(uint32& fm, uint32& zm)
 
 bool GSRenderer::IsLinear()
 {
-	float qmin = m_vt.m_min.t.z;
-	float qmax = m_vt.m_max.t.z;
+	const GIFRegTEX1& TEX1 = m_context->TEX1;
 
-	if(PRIM->FST)
+	bool mmin = TEX1.IsMinLinear();
+	bool mmag = TEX1.IsMagLinear();
+
+	if(mmag == mmin) return mmag;
+
+	float LODmin = (float)TEX1.K;
+	float LODmax = (float)TEX1.K;
+
+	if(!TEX1.LCM && !PRIM->FST) // if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
 	{
-		// assume Q = 1.0f => LOD > 0 (should not, but Q is very often bogus, 0 or DEN)
+		float f = (float)(1 << TEX1.L) / log(2.0f);
 
-		qmin = qmax = 1.0f;
+		LODmin += log(1.0f / abs(m_vt.m_min.t.z)) * f;
+		LODmax += log(1.0f / abs(m_vt.m_max.t.z)) * f;
 	}
 
-	return m_context->TEX1.IsLinear(qmin, qmax);
+	return LODmax <= 0 ? mmag : LODmin > 0 ? mmin : mmag || mmin;
 }
 
 bool GSRenderer::IsOpaque()

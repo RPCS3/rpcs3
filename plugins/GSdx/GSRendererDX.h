@@ -82,9 +82,21 @@ public:
 
 		GSTextureFX::OMDepthStencilSelector om_dssel;
 
+		if(context->TEST.ZTE)
+		{
+			om_dssel.ztst = context->TEST.ZTST;
+			om_dssel.zwe = !context->ZBUF.ZMSK;
+		}
+		else
+		{
+			om_dssel.ztst = ZTST_ALWAYS;
+			om_dssel.zwe = 0;
+		}
+/*
 		om_dssel.zte = context->TEST.ZTE;
 		om_dssel.ztst = context->TEST.ZTST;
 		om_dssel.zwe = !context->ZBUF.ZMSK;
+*/
 		om_dssel.date = context->FRAME.PSM != PSM_PSMCT24 ? context->TEST.DATE : 0;
 		om_dssel.fba = m_fba ? context->FBA.FBA : 0;
 
@@ -115,22 +127,17 @@ public:
 			}
 		}
 
-		om_bsel.wr = (context->FRAME.FBMSK & 0x000000ff) != 0x000000ff;
-		om_bsel.wg = (context->FRAME.FBMSK & 0x0000ff00) != 0x0000ff00;
-		om_bsel.wb = (context->FRAME.FBMSK & 0x00ff0000) != 0x00ff0000;
-		om_bsel.wa = (context->FRAME.FBMSK & 0xff000000) != 0xff000000;
+		om_bsel.wrgba = ~GSVector4i::load((int)context->FRAME.FBMSK).eq8(GSVector4i::xffffffff()).mask();
 
 		// vs
 
 		GSTextureFX::VSSelector vs_sel;
 
-		vs_sel.bppz = 0;
 		vs_sel.tme = PRIM->TME;
 		vs_sel.fst = PRIM->FST;
 		vs_sel.logz = m_logz ? 1 : 0;
-		vs_sel.prim = primclass;
 
-		if(om_dssel.zte && om_dssel.ztst > 0 && om_dssel.zwe)
+		if(om_dssel.ztst >= ZTST_ALWAYS && om_dssel.zwe)
 		{
 			if(context->ZBUF.PSM == PSM_PSMZ24)
 			{
@@ -139,7 +146,7 @@ public:
 					ASSERT(m_vt.m_min.p.z > 0xffffff);
 
 					vs_sel.bppz = 1;
-					om_dssel.ztst = 1;
+					om_dssel.ztst = ZTST_ALWAYS;
 				}
 			}
 			else if(context->ZBUF.PSM == PSM_PSMZ16 || context->ZBUF.PSM == PSM_PSMZ16S)
@@ -149,35 +156,22 @@ public:
 					ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
 
 					vs_sel.bppz = 2;
-					om_dssel.ztst = 1;
+					om_dssel.ztst = ZTST_ALWAYS;
 				}
 			}
 		}
 
 		GSTextureFX::VSConstantBuffer vs_cb;
 
-		float sx = 2.0f * rt->m_scale.x / (rt->GetWidth() * 16);
-		float sy = 2.0f * rt->m_scale.y / (rt->GetHeight() * 16);
+		float sx = 2.0f * rt->m_scale.x / (rt->m_size.x << 4);
+		float sy = 2.0f * rt->m_scale.y / (rt->m_size.y << 4);
 		float ox = (float)(int)context->XYOFFSET.OFX;
 		float oy = (float)(int)context->XYOFFSET.OFY;
-		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
-		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
+		float ox2 = 2.0f * m_pixelcenter.x / rt->m_size.x;
+		float oy2 = 2.0f * m_pixelcenter.y / rt->m_size.y;
 
 		vs_cb.VertexScale = GSVector4(sx, -sy, 1.0f / UINT_MAX, 0.0f);
 		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
-
-		if(PRIM->TME)
-		{
-			if(PRIM->FST)
-			{
-				vs_cb.TextureScale.x = 1.0f / (16 << context->TEX0.TW);
-				vs_cb.TextureScale.y = 1.0f / (16 << context->TEX0.TH);
-			}
-			else
-			{
-				vs_cb.TextureScale = GSVector2(1.0f, 1.0f);
-			}
-		}
 
 		// gs
 
@@ -224,7 +218,6 @@ public:
 
 		if(tex)
 		{
-			ps_sel.fst = PRIM->FST;
 			ps_sel.wms = context->CLAMP.WMS;
 			ps_sel.wmt = context->CLAMP.WMT;
 			ps_sel.fmt = tex->m_fmt;
@@ -234,46 +227,34 @@ public:
 			ps_sel.ltf = m_filter == 2 ? IsLinear() : m_filter;
 			ps_sel.rt = tex->m_target;
 
-			int w = tex->m_texture->GetWidth();
-			int h = tex->m_texture->GetHeight();
+			int w = tex->m_texture->m_size.x;
+			int h = tex->m_texture->m_size.y;
 
 			int tw = (int)(1 << context->TEX0.TW);
 			int th = (int)(1 << context->TEX0.TH);
 
-			ps_cb.WH = GSVector4(tw, th, w, h);
-			ps_cb.HalfTexel = GSVector4(-0.5f, 0.5f).xxyy() / GSVector4(w, h).xyxy();
-			ps_cb.MinF_TA.z = (float)(int)env.TEXA.TA0 / 255;
-			ps_cb.MinF_TA.w = (float)(int)env.TEXA.TA1 / 255;
+			GSVector4 WH(tw, th, w, h);
+
+			if(PRIM->FST)
+			{
+				vs_cb.TextureScale = GSVector4(1.0f / 16) / WH.xyxy();
+
+				ps_sel.fst = 1;
+			}
+
+			ps_cb.WH = WH;
+			ps_cb.HalfTexel = GSVector4(-0.5f, 0.5f).xxyy() / WH.zwzw();
+			ps_cb.MskFix = GSVector4i(context->CLAMP.MINU, context->CLAMP.MINV, context->CLAMP.MAXU, context->CLAMP.MAXV);
+
+			GSVector4 clamp(ps_cb.MskFix);
+			GSVector4 ta(env.TEXA & GSVector4i::x000000ff());
+
+			ps_cb.MinMax = clamp / WH.xyxy();
+			ps_cb.MinF_TA = (clamp + 0.5f).xyxy(ta) / WH.xyxy(GSVector4(255, 255));
 
 			ps_ssel.tau = (context->CLAMP.WMS + 3) >> 1;
 			ps_ssel.tav = (context->CLAMP.WMT + 3) >> 1;
 			ps_ssel.ltf = ps_sel.ltf;
-
-			switch(ps_sel.wms)
-			{
-			case CLAMP_REGION_CLAMP: 
-				ps_cb.MinMax.x = (float)(int)context->CLAMP.MINU / tw;
-				ps_cb.MinMax.z = (float)(int)context->CLAMP.MAXU / tw;
-				ps_cb.MinF_TA.x = ((float)(int)context->CLAMP.MINU + 0.5f) / tw;
-				break;
-			case CLAMP_REGION_REPEAT: 
-				ps_cb.MskFix.x = context->CLAMP.MINU;
-				ps_cb.MskFix.z = context->CLAMP.MAXU;
-				break;
-			}
-
-			switch(ps_sel.wmt)
-			{
-			case CLAMP_REGION_CLAMP: 
-				ps_cb.MinMax.y = (float)(int)context->CLAMP.MINV / th;
-				ps_cb.MinMax.w = (float)(int)context->CLAMP.MAXV / th;
-				ps_cb.MinF_TA.y = ((float)(int)context->CLAMP.MINV + 0.5f) / th;
-				break;
-			case CLAMP_REGION_REPEAT: 
-				ps_cb.MskFix.y = context->CLAMP.MINV;
-				ps_cb.MskFix.w = context->CLAMP.MAXV;
-				break;
-			}
 		}
 		else
 		{
@@ -282,10 +263,7 @@ public:
 
 		// rs
 
-		int w = rt->GetWidth();
-		int h = rt->GetHeight();
-
-		GSVector4i scissor = GSVector4i(GSVector4(rt->m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(0, 0, w, h));
+		GSVector4i scissor = GSVector4i(GSVector4(rt->m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(rt->GetSize()).zwxy());
 
 		//
 
@@ -296,7 +274,7 @@ public:
 		m_tfx->SetupVS(vs_sel, &vs_cb);
 		m_tfx->SetupGS(gs_sel);
 		m_tfx->SetupPS(ps_sel, &ps_cb, ps_ssel, tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
-		m_tfx->SetupRS(w, h, scissor);
+		m_tfx->SetupRS(rt->m_size, scissor);
 
 		// draw
 

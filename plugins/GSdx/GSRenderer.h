@@ -77,7 +77,6 @@ public:
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e);
-	virtual void SetFrameLimit(bool limit);
 
 	virtual bool CanUpscale() 
 	{
@@ -125,7 +124,7 @@ protected:
 				  PRIM->TME ? (int)m_context->TEX0.PSM : 0xff);
 			*/
 
-			if(GSUtil::EncodePSM(m_context->FRAME.PSM) != 3 && GSUtil::EncodePSM(m_context->ZBUF.PSM) != 3)
+			if(GSLocalMemory::m_psm[m_context->FRAME.PSM].fmt < 3 && GSLocalMemory::m_psm[m_context->ZBUF.PSM].fmt < 3)
 			{
 				// FIXME: berserk fpsm = 27 (8H)
 

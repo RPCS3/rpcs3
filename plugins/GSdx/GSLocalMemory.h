@@ -62,11 +62,10 @@ public:
 			readImage ri;
 			readTexture rtx, rtxNP, rtxP;
 			readTextureBlock rtxb, rtxbP;
-			short bpp, trbpp;
-			int pal; 
+			uint16 bpp, trbpp, pal, fmt; 
 			GSVector2i bs, pgs;
 			int* rowOffset[8];
-			int* blockOffset;
+			short* blockOffset;
 		};
 
 		uint8 dummy[128];
@@ -83,8 +82,8 @@ public:
 
 	struct BlockOffset
 	{
-		int row[256]; // yn (n = 0 8 16 ...)
-		int* col; // blockOffset*
+		short row[256]; // yn (n = 0 8 16 ...)
+		short* col; // blockOffset*
 		uint32 hash;
 	};
 
@@ -123,14 +122,14 @@ protected:
 	static int rowOffset8[2][2048];
 	static int rowOffset4[2][2048];
 
-	static int blockOffset32[256];
-	static int blockOffset32Z[256];
-	static int blockOffset16[256];
-	static int blockOffset16S[256];
-	static int blockOffset16Z[256];
-	static int blockOffset16SZ[256];
-	static int blockOffset8[256];
-	static int blockOffset4[256];
+	static short blockOffset32[256];
+	static short blockOffset32Z[256];
+	static short blockOffset16[256];
+	static short blockOffset16S[256];
+	static short blockOffset16Z[256];
+	static short blockOffset16SZ[256];
+	static short blockOffset8[256];
+	static short blockOffset4[256];
 
 	__forceinline static uint32 Expand24To32(uint32 c, const GIFRegTEXA& TEXA)
 	{
@@ -701,7 +700,7 @@ public:
 				uint32 rb = s[x] & 0x00f800f8;
 				uint32 ga = s[x] & 0x8000f800;
 
-				d[o[x]] = (ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3);
+				d[o[x]] = (uint16)((ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3));
 			}
 		}
 	}

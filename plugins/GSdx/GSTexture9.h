@@ -36,8 +36,6 @@ public:
 	virtual ~GSTexture9();
 
 	int GetType() const;
-	int GetWidth() const;
-	int GetHeight() const;
 	int GetFormat() const;
 
 	bool Update(const GSVector4i& r, const void* data, int pitch);

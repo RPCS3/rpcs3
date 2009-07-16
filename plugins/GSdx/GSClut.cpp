@@ -314,43 +314,56 @@ void GSClut::GetAlphaMinMax32(int& amin, int& amax)
 	{
 		m_read.adirty = false;
 
-		// uint32 bpp = GSLocalMemory::m_psm[m_read.TEX0.PSM].trbpp;
-		uint32 cbpp = GSLocalMemory::m_psm[m_read.TEX0.CPSM].trbpp;
-		uint32 pal = GSLocalMemory::m_psm[m_read.TEX0.PSM].pal;
-
-		if(cbpp == 24 && m_read.TEXA.AEM == 0)
+		if(GSLocalMemory::m_psm[m_read.TEX0.CPSM].trbpp == 24 && m_read.TEXA.AEM == 0)
 		{
 			m_read.amin = m_read.TEXA.TA0;
 			m_read.amax = m_read.TEXA.TA0;
 		}
 		else
 		{
-			int amin = 255;
-			int amax = 0;
-
 			const GSVector4i* p = (const GSVector4i*)m_buff32;
 
-			for(int i = 0, j = pal >> 4; i < j; i++)
+			GSVector4i amin, amax;
+
+			if(GSLocalMemory::m_psm[m_read.TEX0.PSM].pal == 256)
 			{
-				GSVector4i v0 = (p[i * 4 + 0] >> 24).ps32(p[i * 4 + 1] >> 24);
-				GSVector4i v1 = (p[i * 4 + 2] >> 24).ps32(p[i * 4 + 3] >> 24);
+				amin = GSVector4i::xffffffff();
+				amax = GSVector4i::zero();
 
-				GSVector4i v2 = v0.min_i16(v1);
-				GSVector4i v3 = v0.max_i16(v1);
+				for(int i = 0; i < 16; i++)
+				{
+					GSVector4i v0 = (p[i * 4 + 0] >> 24).ps32(p[i * 4 + 1] >> 24);
+					GSVector4i v1 = (p[i * 4 + 2] >> 24).ps32(p[i * 4 + 3] >> 24);
+					GSVector4i v2 = v0.pu16(v1);
 
-				v2 = v2.min_i16(v2.zwxy());
-				v3 = v3.max_i16(v3.zwxy());
-				v2 = v2.min_i16(v2.zwxyl());
-				v3 = v3.max_i16(v3.zwxyl());
-				v2 = v2.min_i16(v2.yxwzl());
-				v3 = v3.max_i16(v3.yxwzl());
+					amin = amin.min_u8(v2);
+					amax = amax.max_u8(v2);
+				}
+			}
+			else
+			{
+				ASSERT(GSLocalMemory::m_psm[m_read.TEX0.PSM].pal == 16);
 
-				amin = min(amin, v2.extract16<0>());
-				amax = max(amax, v3.extract16<0>());
+				GSVector4i v0 = (p[0] >> 24).ps32(p[1] >> 24);
+				GSVector4i v1 = (p[2] >> 24).ps32(p[3] >> 24);
+				GSVector4i v2 = v0.pu16(v1);
+
+				amin = v2;
+				amax = v2;
 			}
 
-			m_read.amin = amin;
-			m_read.amax = amax;
+			amin = amin.min_u8(amin.zwxy());
+			amax = amax.max_u8(amax.zwxy());
+			amin = amin.min_u8(amin.zwxyl());
+			amax = amax.max_u8(amax.zwxyl());
+			amin = amin.min_u8(amin.yxwzl());
+			amax = amax.max_u8(amax.yxwzl());
+
+			GSVector4i v0 = amin.upl8(amax).u8to16();
+			GSVector4i v1 = v0.yxwz();
+
+			m_read.amin = v0.min_i16(v1).extract16<0>();
+			m_read.amax = v0.max_i16(v1).extract16<1>();
 		}
 	}
 

@@ -12,7 +12,6 @@
 #define VS_BPPZ 0
 #define VS_TME 1
 #define VS_FST 1
-#define VS_PRIM 0
 #endif
 
 #ifndef GS_IIP
@@ -518,11 +517,6 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	else if(VS_BPPZ == 2) // 16
 	{
 		input.z = input.z & 0xffff;
-	}
-
-	if(VS_PRIM == 3) // sprite
-	{
-		//input.p.xy = (input.p.xy + 15) & ~15; // HACK
 	}
 
 	VS_OUTPUT output;

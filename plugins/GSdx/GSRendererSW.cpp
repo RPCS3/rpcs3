@@ -305,7 +305,7 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 	if(fwrite || ftest)
 	{
-		p.sel.fpsm = GSUtil::EncodePSM(context->FRAME.PSM);
+		p.sel.fpsm = GSLocalMemory::m_psm[context->FRAME.PSM].fmt;
 
 		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt.m_eq.rgba != 0xffff)
 		{
@@ -433,15 +433,15 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 	}
 
 	bool zwrite = p.zm != 0xffffffff;
-	bool ztest = context->TEST.ZTE && context->TEST.ZTST > 1;
+	bool ztest = context->TEST.ZTE && context->TEST.ZTST > ZTST_ALWAYS;
 
 	p.sel.zwrite = zwrite;
 	p.sel.ztest = ztest;
 
 	if(zwrite || ztest)
 	{
-		p.sel.zpsm = GSUtil::EncodePSM(context->ZBUF.PSM);
-		p.sel.ztst = ztest ? context->TEST.ZTST : 1;
+		p.sel.zpsm = GSLocalMemory::m_psm[context->ZBUF.PSM].fmt;
+		p.sel.ztst = ztest ? context->TEST.ZTST : ZTST_ALWAYS;
 		p.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
 	}
 }

@@ -98,7 +98,7 @@ protected:
 
 	struct SourceMap
 	{
-		hash_map<Source*, bool> m_surfaces;
+		hash_set<Source*> m_surfaces;
 		list<Source*> m_map[MAX_PAGES];
 		uint32 m_pages[16];
 		bool m_used;

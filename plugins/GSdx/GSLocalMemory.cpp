@@ -66,14 +66,14 @@ int GSLocalMemory::rowOffset16SZ[2048];
 int GSLocalMemory::rowOffset8[2][2048];
 int GSLocalMemory::rowOffset4[2][2048];
 
-int GSLocalMemory::blockOffset32[256];
-int GSLocalMemory::blockOffset32Z[256];
-int GSLocalMemory::blockOffset16[256];
-int GSLocalMemory::blockOffset16S[256];
-int GSLocalMemory::blockOffset16Z[256];
-int GSLocalMemory::blockOffset16SZ[256];
-int GSLocalMemory::blockOffset8[256];
-int GSLocalMemory::blockOffset4[256];
+short GSLocalMemory::blockOffset32[256];
+short GSLocalMemory::blockOffset32Z[256];
+short GSLocalMemory::blockOffset16[256];
+short GSLocalMemory::blockOffset16S[256];
+short GSLocalMemory::blockOffset16Z[256];
+short GSLocalMemory::blockOffset16SZ[256];
+short GSLocalMemory::blockOffset8[256];
+short GSLocalMemory::blockOffset4[256];
 
 //
 
@@ -159,42 +159,42 @@ GSLocalMemory::GSLocalMemory()
 
 	for(int x = 0; x < countof(blockOffset32); x++)
 	{
-		blockOffset32[x] = (int)BlockNumber32(x << 3, 0, 0, 32) - (int)BlockNumber32(0, 0, 0, 32);
+		blockOffset32[x] = (short)((int)BlockNumber32(x << 3, 0, 0, 32) - (int)BlockNumber32(0, 0, 0, 32));
 	}
 
 	for(int x = 0; x < countof(blockOffset32Z); x++)
 	{
-		blockOffset32Z[x] = (int)BlockNumber32Z(x << 3, 0, 0, 32) - (int)BlockNumber32Z(0, 0, 0, 32);
+		blockOffset32Z[x] = (short)((int)BlockNumber32Z(x << 3, 0, 0, 32) - (int)BlockNumber32Z(0, 0, 0, 32));
 	}
 
 	for(int x = 0; x < countof(blockOffset16); x++)
 	{
-		blockOffset16[x] = (int)BlockNumber16(x << 3, 0, 0, 32) - (int)BlockNumber16(0, 0, 0, 32);
+		blockOffset16[x] = (short)((int)BlockNumber16(x << 3, 0, 0, 32) - (int)BlockNumber16(0, 0, 0, 32));
 	}
 
 	for(int x = 0; x < countof(blockOffset16S); x++)
 	{
-		blockOffset16S[x] = (int)BlockNumber16S(x << 3, 0, 0, 32) - (int)BlockNumber16S(0, 0, 0, 32);
+		blockOffset16S[x] = (short)((int)BlockNumber16S(x << 3, 0, 0, 32) - (int)BlockNumber16S(0, 0, 0, 32));
 	}
 
 	for(int x = 0; x < countof(blockOffset16Z); x++)
 	{
-		blockOffset16Z[x] = (int)BlockNumber16Z(x << 3, 0, 0, 32) - (int)BlockNumber16Z(0, 0, 0, 32);
+		blockOffset16Z[x] = (short)((int)BlockNumber16Z(x << 3, 0, 0, 32) - (int)BlockNumber16Z(0, 0, 0, 32));
 	}
 
 	for(int x = 0; x < countof(blockOffset16SZ); x++)
 	{
-		blockOffset16SZ[x] = (int)BlockNumber16SZ(x << 3, 0, 0, 32) - (int)BlockNumber16SZ(0, 0, 0, 32);
+		blockOffset16SZ[x] = (short)((int)BlockNumber16SZ(x << 3, 0, 0, 32) - (int)BlockNumber16SZ(0, 0, 0, 32));
 	}
 
 	for(int x = 0; x < countof(blockOffset8); x++)
 	{
-		blockOffset8[x] = (int)BlockNumber8(x << 3, 0, 0, 32) - (int)BlockNumber8(0, 0, 0, 32);
+		blockOffset8[x] = (short)((int)BlockNumber8(x << 3, 0, 0, 32) - (int)BlockNumber8(0, 0, 0, 32));
 	}
 
 	for(int x = 0; x < countof(blockOffset4); x++)
 	{
-		blockOffset4[x] = (int)BlockNumber4(x << 3, 0, 0, 32) - (int)BlockNumber4(0, 0, 0, 32);
+		blockOffset4[x] = (short)((int)BlockNumber4(x << 3, 0, 0, 32) - (int)BlockNumber4(0, 0, 0, 32));
 	}
 
 	for(int i = 0; i < countof(m_psm); i++)
@@ -417,9 +417,6 @@ GSLocalMemory::GSLocalMemory()
 	m_psm[PSM_PSMZ16].rtxbP = &GSLocalMemory::ReadTextureBlock16Z;
 	m_psm[PSM_PSMZ16S].rtxbP = &GSLocalMemory::ReadTextureBlock16SZ;
 
-	m_psm[PSM_PSMT8].pal = m_psm[PSM_PSMT8H].pal = 256;
-	m_psm[PSM_PSMT4].pal = m_psm[PSM_PSMT4HL].pal = m_psm[PSM_PSMT4HH].pal = 16;
-
 	m_psm[PSM_PSMCT16].bpp = m_psm[PSM_PSMCT16S].bpp = 16;
 	m_psm[PSM_PSMT8].bpp = 8;
 	m_psm[PSM_PSMT4].bpp = 4;
@@ -431,6 +428,15 @@ GSLocalMemory::GSLocalMemory()
 	m_psm[PSM_PSMT4].trbpp = m_psm[PSM_PSMT4HL].trbpp = m_psm[PSM_PSMT4HH].trbpp = 4;
 	m_psm[PSM_PSMZ24].trbpp = 24;
 	m_psm[PSM_PSMZ16].trbpp = m_psm[PSM_PSMZ16S].trbpp = 16;
+
+	m_psm[PSM_PSMT8].pal = m_psm[PSM_PSMT8H].pal = 256;
+	m_psm[PSM_PSMT4].pal = m_psm[PSM_PSMT4HL].pal = m_psm[PSM_PSMT4HH].pal = 16;
+
+	for(int i = 0; i < countof(m_psm); i++) m_psm[i].fmt = 3;
+	m_psm[PSM_PSMCT32].fmt = m_psm[PSM_PSMZ32].fmt = 0;
+	m_psm[PSM_PSMCT24].fmt = m_psm[PSM_PSMZ24].fmt = 1;
+	m_psm[PSM_PSMCT16].fmt = m_psm[PSM_PSMZ16].fmt = 2;
+	m_psm[PSM_PSMCT16S].fmt = m_psm[PSM_PSMZ16S].fmt = 2;
 
 	m_psm[PSM_PSMCT16].bs = m_psm[PSM_PSMCT16S].bs = GSVector2i(16, 8);
 	m_psm[PSM_PSMT8].bs = GSVector2i(16, 16);
@@ -489,7 +495,7 @@ GSLocalMemory::BlockOffset* GSLocalMemory::GetBlockOffset(uint32 bp, uint32 bw, 
 
 	for(int i = 0; i < 256; i++)
 	{
-		o->row[i] = (int)bn(0, i << 3, bp, bw);
+		o->row[i] = (short)bn(0, i << 3, bp, bw);
 	}
 
 	o->col = m_psm[psm].blockOffset;

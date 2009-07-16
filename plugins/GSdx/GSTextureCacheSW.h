@@ -46,7 +46,7 @@ public:
 
 protected:
 	GSState* m_state;
-	hash_map<GSTexture*, bool> m_textures;
+	hash_set<GSTexture*> m_textures;
 	list<GSTexture*> m_map[MAX_PAGES];
 	uint32 m_pages[16];
 

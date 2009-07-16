@@ -79,8 +79,8 @@ public:
 	virtual bool Create(GSWnd* wnd, bool vsync);
 	virtual bool Reset(int w, int h, int mode);
 	virtual bool IsLost(bool update = false) {return false;}
-	virtual void Present(const GSVector4i& r, int shader);
-	virtual void Flip() {}
+	virtual void Present(const GSVector4i& r, int shader, bool limit);
+	virtual void Flip(bool limit) {}
 
 	virtual void BeginScene() {}
 	virtual void DrawPrimitive() {};
@@ -102,8 +102,6 @@ public:
 
 	virtual void StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 	virtual void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true) {}
-
-	virtual void SetVSync(bool vsync);
 
 	GSTexture* GetCurrent();
 

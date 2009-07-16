@@ -68,7 +68,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 	{
 		t = new GSTexture(m_state);
 
-		m_textures[t] = true;
+		m_textures.insert(t);
 
 		const GSLocalMemory::BlockOffset* bo = m_state->m_mem.GetBlockOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
@@ -100,12 +100,13 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 				list<GSTexture*>* m = &m_map[i << 5];
 
-				for(int j = 0; j < 32; j++)
+				unsigned long j;
+
+				while(_BitScanForward(&j, p))
 				{
-					if(p & (1 << j))
-					{
-						m[j].push_front(t);
-					}
+					p ^= 1 << j;
+
+					m[j].push_front(t);
 				}
 			}
 		}
@@ -125,7 +126,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 void GSTextureCacheSW::RemoveAll()
 {
-	for_each(m_textures.begin(), m_textures.end(), delete_first());
+	for_each(m_textures.begin(), m_textures.end(), delete_object());
 
 	m_textures.clear();
 
@@ -156,11 +157,11 @@ void GSTextureCacheSW::RemoveAt(GSTexture* t)
 
 void GSTextureCacheSW::IncAge()
 {
-	for(hash_map<GSTexture*, bool>::iterator i = m_textures.begin(); i != m_textures.end(); )
+	for(hash_set<GSTexture*>::iterator i = m_textures.begin(); i != m_textures.end(); )
 	{
-		hash_map<GSTexture*, bool>::iterator j = i++;
+		hash_set<GSTexture*>::iterator j = i++;
 
-		GSTexture* t = j->first;
+		GSTexture* t = *j;
 
 		if(++t->m_age > 30)
 		{
@@ -242,8 +243,8 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	GSVector2i bs = psm.bs;
 
-	int tw = max(1 << TEX0.TW, bs.x);
-	int th = max(1 << TEX0.TH, bs.y);
+	int tw = std::max<int>(1 << TEX0.TW, bs.x);
+	int th = std::max<int>(1 << TEX0.TH, bs.y);
 
 	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
 

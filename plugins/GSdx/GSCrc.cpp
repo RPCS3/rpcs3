@@ -89,6 +89,7 @@ CRC::Game CRC::m_games[] =
 	{0x7D8F539A, SoTC, EU, 0},
 	{0x3122B508, OnePieceGrandAdventure, US, 0},
 	{0x8DF14A24, OnePieceGrandAdventure, Unknown, 0},
+	{0xB049DD5E, OnePieceGrandBattle, US, 0},
 	{0x5D02CC5B, OnePieceGrandBattle, Unknown, 0},
 	{0x6F8545DB, ICO, US, 0},
 	{0xB01A4C95, ICO, JP, 0},

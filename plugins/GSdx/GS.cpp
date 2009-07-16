@@ -303,7 +303,7 @@ EXPORT_C GSsetFrameSkip(int frameskip)
 
 EXPORT_C GSsetFrameLimit(int limit)
 {
-	s_gs->SetFrameLimit(limit);
+	s_gs->SetFrameLimit(limit != 0);
 }
 
 #ifdef _WINDOWS

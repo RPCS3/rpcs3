@@ -28,6 +28,11 @@ public:
 	{
 		return x == v.x && y == v.y;
 	}
+
+	bool operator != (const GSVector2T& v) const
+	{
+		return x != v.x || y != v.y;
+	}
 };
 
 typedef GSVector2T<float> GSVector2;

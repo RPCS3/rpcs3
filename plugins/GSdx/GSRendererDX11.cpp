@@ -86,9 +86,11 @@ void GSRendererDX11::VertexKick(bool skip)
 	{
 		GSVector4i scissor = m_context->scissor.dx10;
 
+		GSVector4i pmin, pmax;
+
 		#if _M_SSE >= 0x401
 
-		GSVector4i pmin, pmax, v0, v1, v2;
+		GSVector4i v0, v1, v2;
 
 		switch(prim)
 		{
@@ -116,51 +118,52 @@ void GSRendererDX11::VertexKick(bool skip)
 			break;
 		}
 
-		GSVector4i test = (pmax < scissor) | (pmin > scissor.zwxy());
-
-		if(test.mask() & 0xff)
-		{
-			return;
-		}
-
 		#else
 
 		switch(prim)
 		{
 		case GS_POINTLIST:
-			if(v[0].p.x < scissor.x 
-			|| v[0].p.x > scissor.z
-			|| v[0].p.y < scissor.y 
-			|| v[0].p.y > scissor.w)
-			{
-				return;
-			}
+			pmin.x = v[0].p.x;
+			pmin.y = v[0].p.y;
+			pmax.x = v[0].p.x;
+			pmax.y = v[0].p.y;
 			break;
 		case GS_LINELIST:
 		case GS_LINESTRIP:
 		case GS_SPRITE:
-			if(v[0].p.x < scissor.x && v[1].p.x < scissor.x
-			|| v[0].p.x > scissor.z && v[1].p.x > scissor.z
-			|| v[0].p.y < scissor.y && v[1].p.y < scissor.y
-			|| v[0].p.y > scissor.w && v[1].p.y > scissor.w)
-			{
-				return;
-			}
+			pmin.x = std::min<uint16>(v[0].p.x, v[1].p.x);
+			pmin.y = std::min<uint16>(v[0].p.y, v[1].p.y);
+			pmax.x = std::max<uint16>(v[0].p.x, v[1].p.x);
+			pmax.y = std::max<uint16>(v[0].p.y, v[1].p.y);
 			break;
 		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
 		case GS_TRIANGLEFAN:
-			if(v[0].p.x < scissor.x && v[1].p.x < scissor.x && v[2].p.x < scissor.x
-			|| v[0].p.x > scissor.z && v[1].p.x > scissor.z && v[2].p.x > scissor.z
-			|| v[0].p.y < scissor.y && v[1].p.y < scissor.y && v[2].p.y < scissor.y
-			|| v[0].p.y > scissor.w && v[1].p.y > scissor.w && v[2].p.y > scissor.w)
-			{
-				return;
-			}
+			pmin.x = std::min<uint16>(std::min<uint16>(v[0].p.x, v[1].p.x), v[2].p.x);
+			pmin.y = std::min<uint16>(std::min<uint16>(v[0].p.y, v[1].p.y), v[2].p.y);
+			pmax.x = std::max<uint16>(std::max<uint16>(v[0].p.x, v[1].p.x), v[2].p.x);
+			pmax.y = std::max<uint16>(std::max<uint16>(v[0].p.y, v[1].p.y), v[2].p.y);
 			break;
 		}
 
 		#endif
+
+		GSVector4i test = (pmax < scissor) | (pmin > scissor.zwxy());
+
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+		case GS_SPRITE:
+			test |= pmin == pmax;
+			break;
+		}
+
+		if(test.mask() & 0xff)
+		{
+			return;
+		}
 
 		m_count += count;
 	}
@@ -196,10 +199,9 @@ void GSRendererDX11::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 	GSDevice11* dev = (GSDevice11*)m_dev;
 
-	int w = rt->GetWidth();
-	int h = rt->GetHeight();
+	const GSVector2i& size = rt->m_size;
 
-	if(GSTexture* t = dev->CreateRenderTarget(w, h))
+	if(GSTexture* t = dev->CreateRenderTarget(size.x, size.y))
 	{
 		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
@@ -215,7 +217,7 @@ void GSRendererDX11::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// ia
 
-		GSVector4 s = GSVector4(rt->m_scale.x / w, rt->m_scale.y / h);
+		GSVector4 s = GSVector4(rt->m_scale.x / size.x, rt->m_scale.y / size.y);
 		GSVector4 o = GSVector4(-1.0f, 1.0f);
 
 		GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
@@ -249,7 +251,7 @@ void GSRendererDX11::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// rs
 
-		dev->RSSet(w, h);
+		dev->RSSet(size);
 
 		// set
 

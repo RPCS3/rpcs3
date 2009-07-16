@@ -75,14 +75,14 @@ bool GSDevice::Reset(int w, int h, int mode)
 	return true;
 }
 
-void GSDevice::Present(const GSVector4i& r, int shader)
+void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
 {
 	GSVector4i cr = m_wnd->GetClientRect();
 
 	int w = std::max(cr.width(), 1);
 	int h = std::max(cr.height(), 1);
 
-	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
+	if(!m_backbuffer || m_backbuffer->m_size.x != w || m_backbuffer->m_size.y != h)
 	{
 		if(!Reset(w, h, DontCare))
 		{
@@ -99,7 +99,7 @@ void GSDevice::Present(const GSVector4i& r, int shader)
 		StretchRect(m_current, m_backbuffer, GSVector4(r), s_shader[shader]);
 	}
 
-	Flip();
+	Flip(limit);
 }
 
 GSTexture* GSDevice::Fetch(int type, int w, int h, int format)
@@ -240,7 +240,7 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 
 	GSTexture* t2 = *t;
 
-	if(t2 == NULL || t2->GetWidth() != w || t2->GetHeight() != h)
+	if(t2 == NULL || t2->m_size.x != w || t2->m_size.y != h)
 	{
 		delete t2;
 
@@ -250,9 +250,4 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 	}
 
 	return t2 != NULL;
-}
-
-void GSDevice::SetVSync(bool vsync)
-{
-	m_vsync = vsync;
 }

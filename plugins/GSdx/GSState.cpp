@@ -32,6 +32,7 @@ GSState::GSState(uint8* base, bool mt, void (*irq)())
 	, m_vprim(1)
 	, m_version(5)
 	, m_frameskip(0)
+	, m_framelimit(true)
 	, m_vkf(NULL)
 {
 	m_sssize = 0;
@@ -421,7 +422,7 @@ void GSState::GIFRegHandlerPRIM(GIFReg* r)
 
 	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(r->PRIM.PRIM))
 	{
-		if(((m_env.PRIM.u64 ^ r->PRIM.u64) & ~7) != 0)
+		if((m_env.PRIM.u32[0] ^ r->PRIM.u32[0]) & 0x7f8) // all fields except PRIM
 		{
 			Flush();
 		}
@@ -1663,13 +1664,13 @@ void GSState::SetGameCRC(uint32 crc, int options)
 	m_game = CRC::Lookup(crc);
 }
 
-void GSState::SetFrameSkip(int frameskip)
+void GSState::SetFrameSkip(int skip)
 {
-	if(m_frameskip != frameskip)
+	if(m_frameskip != skip)
 	{
-		m_frameskip = frameskip;
+		m_frameskip = skip;
 
-		if(frameskip)
+		if(skip)
 		{
 			m_fpGIFPackedRegHandlers[GIF_REG_PRIM] = &GSState::GIFPackedRegHandlerNOP;
 			m_fpGIFPackedRegHandlers[GIF_REG_RGBA] = &GSState::GIFPackedRegHandlerNOP;
@@ -1720,6 +1721,11 @@ void GSState::SetFrameSkip(int frameskip)
 			m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerPRMODE;
  		}
 	}
+}
+
+void GSState::SetFrameLimit(bool limit)
+{
+	m_framelimit = limit;
 }
 
 // GSTransferBuffer

@@ -185,16 +185,16 @@ bool GSDeviceOGL::Reset(int w, int h, int mode)
 	return true;
 }
 
-void GSDeviceOGL::Present(const GSVector4i& r, int shader)
+void GSDeviceOGL::Present(const GSVector4i& r, int shader, bool limit)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); CheckError();
 
 	// TODO: m_current => backbuffer
 
-	Flip();
+	Flip(limit);
 }
 
-void GSDeviceOGL::Flip()
+void GSDeviceOGL::Flip(bool limit)
 {
 	#ifdef _WINDOWS
 
@@ -438,16 +438,16 @@ void GSDeviceOGL::PSSetSamplerState(SamplerStateOGL* ss)
 	}
 }
 
-void GSDeviceOGL::RSSet(int width, int height, const GSVector4i* scissor)
+void GSDeviceOGL::RSSet(const GSVector2i& size, const GSVector4i* scissor)
 {
-	if(m_viewport.x != width || m_viewport.y != height)
+	if(m_viewport != size)
 	{
-		glViewport(0, 0, width, height); CheckError();
+		glViewport(0, 0, size.x, size.y); CheckError();
 
-		m_viewport = GSVector2i(width, height);
+		m_viewport = size;
 	}
 
-	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
+	GSVector4i r = scissor ? *scissor : GSVector4i(size).zwxy();
 
 	if(!m_scissor.eq(r))
 	{

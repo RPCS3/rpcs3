@@ -348,7 +348,7 @@ bool GSDevice9::IsLost(bool update)
 	return m_lost;
 }
 
-void GSDevice9::Flip()
+void GSDevice9::Flip(bool limit)
 {
 	m_dev->EndScene();
 
@@ -427,7 +427,7 @@ void GSDevice9::ClearRenderTarget(GSTexture* rt, uint32 c)
 
 void GSDevice9::ClearDepth(GSTexture* t, float c)
 {
-	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight());
+	GSTexture* rt = CreateRenderTarget(t->m_size.x, t->m_size.y);
 
 	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
@@ -448,7 +448,7 @@ void GSDevice9::ClearDepth(GSTexture* t, float c)
 
 void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 {
-	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight());
+	GSTexture* rt = CreateRenderTarget(t->m_size.x, t->m_size.y);
 
 	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
@@ -637,7 +637,7 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 
 	// rs
 
-	RSSet(ds.x, ds.y);
+	RSSet(ds);
 
 	//
 
@@ -865,9 +865,9 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 	}
 }
 
-void GSDevice9::RSSet(int width, int height, const GSVector4i* scissor)
+void GSDevice9::RSSet(const GSVector2i& size, const GSVector4i* scissor)
 {
-	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
+	GSVector4i r = scissor ? *scissor : GSVector4i(size).zwxy();
 
 	if(!m_scissor.eq(r))
 	{

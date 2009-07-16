@@ -135,6 +135,16 @@ void GSRendererDX9::VertexKick(bool skip)
 
 		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
 
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+		case GS_SPRITE:
+			test |= pmin == pmax;
+			break;
+		}
+
 		if(test.mask() & 3)
 		{
 			return;
@@ -206,10 +216,9 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 	GSDevice9* dev = (GSDevice9*)m_dev;
 
-	int w = rt->GetWidth();
-	int h = rt->GetHeight();
+	const GSVector2i& size = rt->m_size;
 
-	if(GSTexture* t = dev->CreateRenderTarget(w, h))
+	if(GSTexture* t = dev->CreateRenderTarget(size.x, size.y))
 	{
 		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
@@ -225,7 +234,7 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// ia
 
-		GSVector4 s = GSVector4(rt->m_scale.x / w, rt->m_scale.y / h);
+		GSVector4 s = GSVector4(rt->m_scale.x / size.x, rt->m_scale.y / size.y);
 		GSVector4 o = GSVector4(-1.0f, 1.0f);
 
 		GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
@@ -255,7 +264,7 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// rs
 
-		dev->RSSet(w, h);
+		dev->RSSet(size);
 
 		//
 
@@ -282,7 +291,7 @@ void GSRendererDX9::UpdateFBA(GSTexture* rt)
 
 	// ia
 
-	GSVector4 s = GSVector4(rt->m_scale.x / rt->GetWidth(), rt->m_scale.y / rt->GetHeight());
+	GSVector4 s = GSVector4(rt->m_scale.x / rt->m_size.x, rt->m_scale.y / rt->m_size.y);
 	GSVector4 o = GSVector4(-1.0f, 1.0f);
 
 	GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
@@ -310,7 +319,7 @@ void GSRendererDX9::UpdateFBA(GSTexture* rt)
 
 	// rs
 
-	dev->RSSet(rt->GetWidth(), rt->GetHeight());
+	dev->RSSet(rt->m_size);
 
 	//
 

@@ -445,11 +445,11 @@ void GSTextureCache::IncAge()
 {
 	int maxage = m_src.m_used ? 3 : 30;
 
-	for(hash_map<Source*, bool>::iterator i = m_src.m_surfaces.begin(); i != m_src.m_surfaces.end(); )
+	for(hash_set<Source*>::iterator i = m_src.m_surfaces.begin(); i != m_src.m_surfaces.end(); )
 	{
-		hash_map<Source*, bool>::iterator j = i++;
+		hash_set<Source*>::iterator j = i++;
 
-		Source* s = j->first;
+		Source* s = *j;
 
 		if(++s->m_age > maxage)
 		{
@@ -673,8 +673,8 @@ bool GSTextureCache::Source::Create(Target* dst)
 	}
 	else
 	{
-		sr.z /= st->GetWidth();
-		sr.w /= st->GetHeight();
+		sr.z /= st->m_size.x;
+		sr.w /= st->m_size.y;
 
 		m_renderer->m_dev->StretchRect(st, sr, dt, dr);
 	}
@@ -733,9 +733,12 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 	GSVector2i bs = GSLocalMemory::m_psm[m_TEX0.PSM].bs;
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+	int tw = std::max<int>(1 << m_TEX0.TW, bs.x);
+	int th = std::max<int>(1 << m_TEX0.TH, bs.y);
 
-	if(r.eq(GSVector4i(0, 0, 1 << m_TEX0.TW, 1 << m_TEX0.TH)))
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs); 
+
+	if(r.eq(GSVector4i(0, 0, tw, th)))
 	{
 		m_complete = true; // lame, but better than nothing
 	}
@@ -995,7 +998,7 @@ void GSTextureCache::Target::Update()
 
 void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMemory& mem)
 {
-	m_surfaces[s] = true;
+	m_surfaces.insert(s);
 
 	if(s->m_target)
 	{
@@ -1038,12 +1041,13 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 
 			list<Source*>* m = &m_map[i << 5];
 
-			for(int j = 0; j < 32; j++)
+			unsigned long j;
+
+			while(_BitScanForward(&j, p))
 			{
-				if(p & (1 << j))
-				{
-					m[j].push_front(s);
-				}
+				p ^= 1 << j;
+
+				m[j].push_front(s);
 			}
 		}
 	}
@@ -1051,7 +1055,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 
 void GSTextureCache::SourceMap::RemoveAll()
 {
-	for_each(m_surfaces.begin(), m_surfaces.end(), delete_first());
+	for_each(m_surfaces.begin(), m_surfaces.end(), delete_object());
 
 	m_surfaces.clear();
 

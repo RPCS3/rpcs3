@@ -35,6 +35,9 @@ GSTexture9::GSTexture9(IDirect3DSurface9* surface)
 
 		ASSERT(m_texture != NULL);
 	}
+
+	m_size.x = (int)m_desc.Width;
+	m_size.y = (int)m_desc.Height;
 }
 
 GSTexture9::GSTexture9(IDirect3DTexture9* texture)
@@ -46,6 +49,9 @@ GSTexture9::GSTexture9(IDirect3DTexture9* texture)
 	texture->GetSurfaceLevel(0, &m_surface);
 
 	ASSERT(m_surface != NULL);
+
+	m_size.x = (int)m_desc.Width;
+	m_size.y = (int)m_desc.Height;
 }
 
 GSTexture9::~GSTexture9()
@@ -59,16 +65,6 @@ int GSTexture9::GetType() const
 	if(m_desc.Pool == D3DPOOL_MANAGED) return GSTexture::Texture;
 	if(m_desc.Pool == D3DPOOL_SYSTEMMEM) return GSTexture::Offscreen;
 	return GSTexture::None;
-}
-
-int GSTexture9::GetWidth() const 
-{
-	return m_desc.Width;
-}
-
-int GSTexture9::GetHeight() const 
-{
-	return m_desc.Height;
 }
 
 int GSTexture9::GetFormat() const 

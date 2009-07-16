@@ -50,7 +50,7 @@ public:
 	void SetupGS(GSSelector sel);
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal);
 	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
-	void SetupRS(int w, int h, const GSVector4i& scissor);
+	void SetupRS(const GSVector2i& size, const GSVector4i& scissor);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds);
 	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 };

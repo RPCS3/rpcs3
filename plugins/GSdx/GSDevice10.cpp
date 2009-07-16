@@ -231,9 +231,9 @@ bool GSDevice10::Reset(int w, int h, int mode)
 	return true;
 }
 
-void GSDevice10::Flip()
+void GSDevice10::Flip(bool limit)
 {
-	m_swapchain->Present(m_vsync ? 1 : 0, 0);
+	m_swapchain->Present(m_vsync && limit ? 1 : 0, 0);
 }
 
 void GSDevice10::BeginScene()
@@ -456,7 +456,7 @@ void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 
 	// rs
 
-	RSSet(ds.x, ds.y);
+	RSSet(ds);
 
 	//
 
@@ -665,9 +665,9 @@ void GSDevice10::PSSetSamplerState(ID3D10SamplerState* ss0, ID3D10SamplerState* 
 	}
 }
 
-void GSDevice10::RSSet(int width, int height, const GSVector4i* scissor)
+void GSDevice10::RSSet(const GSVector2i& size, const GSVector4i* scissor)
 {
-	if(m_viewport.x != width || m_viewport.y != height)
+	if(m_viewport != size)
 	{
 		D3D10_VIEWPORT vp;
 
@@ -675,17 +675,17 @@ void GSDevice10::RSSet(int width, int height, const GSVector4i* scissor)
 		
 		vp.TopLeftX = 0;
 		vp.TopLeftY = 0;
-		vp.Width = width;
-		vp.Height = height;
+		vp.Width = size.x;
+		vp.Height = size.y;
 		vp.MinDepth = 0.0f;
 		vp.MaxDepth = 1.0f;
 
 		m_dev->RSSetViewports(1, &vp);
 
-		m_viewport = GSVector2i(width, height);
+		m_viewport = size;
 	}
 
-	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
+	GSVector4i r = scissor ? *scissor : GSVector4i(size).zwxy();
 
 	if(!m_scissor.eq(r))
 	{

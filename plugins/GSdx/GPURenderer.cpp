@@ -162,7 +162,7 @@ void GPURenderer::VSync()
 	
 	GetClientRect(m_hWnd, r);
 
-	m_dev->Present(r.fit(m_aspectratio), 0);
+	m_dev->Present(r.fit(m_aspectratio), 0, true);
 }
 
 bool GPURenderer::MakeSnapshot(const string& path)
