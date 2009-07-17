@@ -73,7 +73,7 @@ public:
 	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev);
 	virtual ~GSRenderer();
 
-	virtual bool Create(const string& title);
+	virtual bool Create(const string& title, int w, int h);
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e);

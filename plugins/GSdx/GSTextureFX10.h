@@ -36,7 +36,7 @@ class GSTextureFX10 : public GSTextureFX
 	CComPtr<ID3D10SamplerState> m_palette_ss;
 	// hash_map<uint32, CComPtr<ID3D10DepthStencilState> > m_om_dss;
 	CComPtr<ID3D10DepthStencilState> m_om_dss[32];
-	hash_map<uint32, CComPtr<ID3D10BlendState> > m_om_bs;	
+	hash_map<uint32, CComPtr<ID3D10BlendState> > m_om_bs;
 
 	VSConstantBuffer m_vs_cb_cache;
 	PSConstantBuffer m_ps_cb_cache;

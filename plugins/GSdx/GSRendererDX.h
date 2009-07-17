@@ -54,9 +54,9 @@ public:
 		delete m_tfx;
 	}
 
-	bool Create(const string& title)
+	bool Create(const string& title, int w, int h)
 	{
-		if(!__super::Create(title))
+		if(!__super::Create(title, w, h))
 			return false;
 
 		if(!m_tfx->Create(m_dev))

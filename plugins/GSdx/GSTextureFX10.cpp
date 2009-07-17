@@ -327,7 +327,6 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 
 	if(om_dss == NULL)
 	{
-
 		D3D10_DEPTH_STENCIL_DESC dsd;
 
 		memset(&dsd, 0, sizeof(dsd));

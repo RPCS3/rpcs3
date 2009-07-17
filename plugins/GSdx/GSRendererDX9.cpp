@@ -30,9 +30,9 @@ GSRendererDX9::GSRendererDX9(uint8* base, bool mt, void (*irq)())
 	InitVertexKick<GSRendererDX9>();
 }
 
-bool GSRendererDX9::Create(const string& title)
+bool GSRendererDX9::Create(const string& title, int w, int h)
 {
-	if(!__super::Create(title))
+	if(!__super::Create(title, w, h))
 		return false;
 
 	//

@@ -54,9 +54,9 @@ GSRenderer::~GSRenderer()
 	delete m_dev;
 }
 
-bool GSRenderer::Create(const string& title)
+bool GSRenderer::Create(const string& title, int w, int h)
 {
-	if(!m_wnd.Create(title.c_str()))
+	if(!m_wnd.Create(title.c_str(), w, h))
 	{
 		return false;
 	}

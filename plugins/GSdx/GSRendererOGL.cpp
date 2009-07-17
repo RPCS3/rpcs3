@@ -30,9 +30,9 @@ GSRendererOGL::GSRendererOGL(uint8* base, bool mt, void (*irq)())
 	InitVertexKick<GSRendererOGL>();
 }
 
-bool GSRendererOGL::Create(const string& title)
+bool GSRendererOGL::Create(const string& title, int w, int h)
 {
-	if(!__super::Create(title))
+	if(!__super::Create(title, w, h))
 		return false;
 
 	// TODO

@@ -139,7 +139,10 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	case 13: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
 	}
 
-	if(!s_gs->Create(title))
+	int w = theApp.GetConfig("ModeWidth", 0);
+	int h = theApp.GetConfig("ModeHeight", 0);
+
+	if(!s_gs->Create(title, w, h))
 	{
 		GSclose();
 

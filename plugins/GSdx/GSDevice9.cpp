@@ -108,7 +108,7 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	m_d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &m_d3dcaps);
 
-	if(!Reset(1, 1, theApp.GetConfig("ModeWidth", 0) > 0 ? Fullscreen : Windowed)) return false;
+	if(!Reset(1, 1, theApp.GetConfig("windowed", 1) ? Windowed : Fullscreen)) return false;
 
 	m_dev->Clear(0, NULL, D3DCLEAR_TARGET, 0, 1.0f, 0);
 

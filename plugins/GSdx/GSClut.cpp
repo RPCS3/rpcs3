@@ -394,14 +394,13 @@ __forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const uint32* RESTRICT src, uin
 	GSVector4i v2 = s[2];
 	GSVector4i v3 = s[3];
 
-	GSVector4i::sw64(v0, v1, v2, v3);
 	GSVector4i::sw16(v0, v1, v2, v3);
+	GSVector4i::sw32(v0, v1, v2, v3);
 	GSVector4i::sw16(v0, v2, v1, v3);
-	GSVector4i::sw16(v0, v1, v2, v3);
 
 	d[0] = v0;
-	d[1] = v1;
-	d[32] = v2;
+	d[1] = v2;
+	d[32] = v1;
 	d[33] = v3;
 }
 

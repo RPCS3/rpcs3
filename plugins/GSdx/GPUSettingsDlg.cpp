@@ -81,7 +81,7 @@ void GPUSettingsDlg::OnInit()
 		memset(&mode, 0, sizeof(mode));
 		m_modes.push_back(mode);
 
-		ComboBoxAppend(IDC_RESOLUTION, "Windowed", (LPARAM)&m_modes.back(), true);
+		ComboBoxAppend(IDC_RESOLUTION, "Please select...", (LPARAM)&m_modes.back(), true);
 
 		if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 		{
@@ -123,6 +123,8 @@ void GPUSettingsDlg::OnInit()
 	ComboBoxInit(IDC_DITHERING, g_dithering, countof(g_dithering), theApp.GetConfig("dithering", 1));
 	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
 	ComboBoxInit(IDC_SCALE, g_scale, countof(g_scale), theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
+
+	CheckDlgButton(m_hWnd, IDC_WINDOWED, theApp.GetConfig("windowed", 1));
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETRANGE, 0, MAKELPARAM(16, 1));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("swthreads", 1), 0));
@@ -176,6 +178,7 @@ bool GPUSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		}
 
 		theApp.SetConfig("swthreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
+		theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));
 	}
 
 	return __super::OnCommand(hWnd, id, code);
