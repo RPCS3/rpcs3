@@ -29,18 +29,6 @@
 using namespace Dialogs;
 
 // ------------------------------------------------------------------------
-wxMenu* MainEmuFrame::MakeLanguagesMenu() const
-{
-	wxMenu* menuLangs = new wxMenu();
-
-	// TODO : Index languages out of the resources and Langs folder.
-
-	menuLangs->Append(Menu_Language_Start, _T("English"), wxEmptyString, wxITEM_RADIO);
-
-	return menuLangs;
-}
-
-// ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeStatesMenu()
 {
 	wxMenu* mnuStates = new wxMenu();
@@ -136,27 +124,25 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
+	// Uncomment this when going logger stress testing (and them move the window around)
+	// ... makes for a good test of the message pump's responsiveness.
+	//Console::Notice( "Mess o' crashiness?  It can't be!" );
+
 	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
 	// like selecting or deselecting a window, which muck up docking logic.  We filter them
 	// out using 'lastpos' here. :)
 
 	static wxPoint lastpos( wxDefaultCoord, wxDefaultCoord );
-
-	Console::Status( "Mess o' crashiness?  It can't be!" );
-
 	if( lastpos == evt.GetPosition() ) return;
 	lastpos = evt.GetPosition();
+
 	if( g_Conf->ConLogBox.AutoDock )
 	{
 		g_Conf->ConLogBox.DisplayPosition = GetRect().GetTopRight();
-		//if( ConsoleLogFrame* frame = wxGetApp().GetProgramLog() )
-		//	frame->DockedMove();
-
 		wxCommandEvent conevt( wxEVT_DockConsole );
 		wxGetApp().ProgramLog_PostEvent( conevt );
 	}
 
-	//Console::Error( "XWindows Messages Suck: %d, %d", params GetPosition().x, GetPosition().y );
 	g_Conf->MainGuiPosition = evt.GetPosition();
 
 	//evt.Skip();
@@ -190,10 +176,6 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( Menu_State_LoadOther,	Menu_LoadStateOther_Click );
 	ConnectMenu( Menu_State_SaveOther,	Menu_SaveStateOther_Click );
-
-	ConnectMenu( Menu_Config_Gamefixes,	Menu_Gamefixes_Click );
-	ConnectMenu( Menu_Config_SpeedHacks,Menu_Speedhacks_Click );
-
 
 	ConnectMenu( Menu_Debug_Open,		Menu_Debug_Open_Click );
 	ConnectMenu( Menu_Debug_MemoryDump,	Menu_Debug_MemoryDump_Click );
@@ -312,7 +294,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(Menu_Config_Settings,	_("Settings..."),	wxEmptyString);
+	m_menuConfig.Append(Menu_Config_Settings,	_("Core Settings..."),	wxEmptyString);
 	m_menuConfig.AppendSeparator();
 
 	// Query installed "tertiary" plugins for name and menu options.
@@ -322,14 +304,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	m_menuConfig.Append(Menu_Config_FireWire,	_("Firewire"),	wxEmptyString);
 
 	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(Menu_SelectPlugins,		_("Plugin Selector..."), wxEmptyString);
-
-	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(Menu_Config_Memcards,	_("Memcards"),		_T("Memory card file locations and options"));
-	m_menuConfig.Append(Menu_Config_Gamefixes,	_("Gamefixes"),		_T("God of War and TriAce fixes are found here"));
-	m_menuConfig.Append(Menu_Config_SpeedHacks,	_("Speed Hacks"),	_T("Options to make Pcsx2 emulate faster, but less accurately"));
 	m_menuConfig.Append(Menu_Config_Patches,	_("Patches"),		wxEmptyString);
-	//m_menuConfig.Append(Menu_Config_Advanced,	_("Advanced"),		_T("Cpu, Fpu, and Recompiler options."), wxITEM_NORMAL);
 
 	// ------------------------------------------------------------------------
 
@@ -351,16 +326,12 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	// Ref will want this re-added eventually.
 	//m_menuMisc.Append(47, _T("Print CDVD Info..."), wxEmptyString, wxITEM_CHECK);
 
-	m_menuMisc.Append(Menu_Languages,	_T("Languages"),	MakeLanguagesMenu(), wxEmptyString);
-	m_menuMisc.AppendSeparator();
+	m_menuMisc.Append(Menu_About,		_T("About..."), wxEmptyString);
+	m_menuMisc.Append(Menu_Website,		_T("Pcsx2 Website..."), _T("Opens your web-browser!"));
 
-	m_menuMisc.Append(Menu_About,		_T("About..."), wxEmptyString, wxITEM_NORMAL);
-	m_menuMisc.Append(Menu_Website,		_T("Pcsx2 Website..."), _T("Opens your web-browser!"), wxITEM_NORMAL);
-
-
-	m_menuDebug.Append(Menu_Debug_Open,			_T("Open Debug Window..."), wxEmptyString, wxITEM_NORMAL);
-	m_menuDebug.Append(Menu_Debug_MemoryDump,	_T("Memory Dump..."), wxEmptyString, wxITEM_NORMAL);
-	m_menuDebug.Append(Menu_Debug_Logging,		_T("Logging..."), wxEmptyString, wxITEM_NORMAL);
+	m_menuDebug.Append(Menu_Debug_Open,			_T("Open Debug Window..."), wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_MemoryDump,	_T("Memory Dump..."), wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_Logging,		_T("Logging..."), wxEmptyString);
 
 	m_MenuItem_Console.Check( g_Conf->ConLogBox.Visible );
 
@@ -415,16 +386,6 @@ void MainEmuFrame::Menu_Resume_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Reset_Click(wxCommandEvent &event)
 {
-}
-
-void MainEmuFrame::Menu_Gamefixes_Click( wxCommandEvent& event )
-{
-	//GameFixesDialog( this, wxID_ANY ).ShowModal();
-}
-
-void MainEmuFrame::Menu_Speedhacks_Click( wxCommandEvent& event )
-{
-	//SpeedHacksDialog( this, wxID_ANY ).ShowModal();
 }
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)

@@ -101,9 +101,7 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 	parser.AddOption( wxEmptyString, L"cdvd",		L"uses filename as the CDVD plugin for this session only." );
 	parser.AddOption( wxEmptyString, L"gs",			L"uses filename as the GS plugin for this session only." );
 	parser.AddOption( wxEmptyString, L"spu",		L"uses filename as the SPU2 plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"pad",		L"uses filename as *both* PAD plugins for this session only." );
-	parser.AddOption( wxEmptyString, L"pad1",		L"uses filename as the PAD1 plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"pad2",		L"uses filename as the PAD2 plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"pad",		L"uses filename as the PAD plugin for this session only." );
 	parser.AddOption( wxEmptyString, L"dev9",		L"uses filename as the DEV9 plugin for this session only." );
 	parser.AddOption( wxEmptyString, L"usb",		L"uses filename as the USB plugin for this session only." );
 
@@ -129,7 +127,7 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 //////////////////////////////////////////////////////////////////////////////////////////
 // ConsoleThreadTest -- useful class for unit testing the thread safety and general performance
 // of the console logger.
-#if 0
+//
 class ConsoleTestThread : public Thread
 {
 	int Callback()
@@ -138,12 +136,14 @@ class ConsoleTestThread : public Thread
 		
 		while( true )
 		{
-			Console::WriteLn( wxsFormat( L"This is a threaded logging test.  Something bad could happen... %d", ++numtrack ) );
+			// Two lines, both formatted, and varied colors.  This makes for a fairly realistic
+			// worst case scenario (without being entirely unrealistic).
+			Console::WriteLn( wxsFormat( L"This is a threaded logging test. Something bad could happen... %d", ++numtrack ) );
+			Console::Status( wxsFormat( L"Testing high stress loads %s", L"(multi-color)" ) );
 			Sleep( 0 );
 		}
 	}
 };
-#endif
 
 // ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
@@ -182,7 +182,7 @@ bool Pcsx2App::OnInit()
 	g_Conf->Apply();
 	
 	m_ProgramLogBox = new ConsoleLogFrame( NULL, L"PCSX2 Program Log" );
-	m_Ps2ConLogBox = m_ProgramLogBox;
+	m_Ps2ConLogBox = m_ProgramLogBox;		// just use a single logger for now.
 	//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
 
     m_MainFrame = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
@@ -190,6 +190,7 @@ bool Pcsx2App::OnInit()
     SetExitOnFrameDelete( true );
     m_MainFrame->Show();
     
+    // Logger Stress Test: See ConsoleTestThread defined above for details
     //ConsoleTestThread* woo = new ConsoleTestThread();
     //woo->Start();
 

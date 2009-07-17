@@ -117,6 +117,7 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
 		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
 ,	m_ColorTable()
 ,	m_curcolor( Color_Black )
+,	m_msgcounter( 0 )
 {
 	m_TextCtrl.SetBackgroundColour( wxColor( 238, 240, 248 ) ); //wxColor( 48, 48, 64 ) );
 
@@ -299,11 +300,12 @@ void ConsoleLogFrame::Write( const wxString& text )
 
 	m_TextCtrl.AppendText( text );
 	
-	// cap at 256k for now:
+	// cap at 256k for now...
+	// fixme - 256k runs well on win32 but appears to be very sluggish on linux.  Might
+	// need platform dependent defaults here. - air
 	if( m_TextCtrl.GetLastPosition() > 0x40000 )
 	{
-		m_TextCtrl.AppendText( L"************************ REMOVING BUFFER CRAP *****************\n" );
-		m_TextCtrl.Remove( 0, 0x8000 );
+		m_TextCtrl.Remove( 0, 0x10000 );
 	}
 }
 
@@ -320,8 +322,6 @@ void ConsoleLogFrame::Newline()
 	Write( L"\n" );
 }
 
-static volatile long counter = 0;
-
 // ------------------------------------------------------------------------
 // Deadlock protection: High volume logs will over-tax our message pump and cause the
 // GUI to become inaccessible.  The cool solution would be a threaded log window, but wx
@@ -331,9 +331,9 @@ static volatile long counter = 0;
 // catch up.
 void ConsoleLogFrame::CountMessage()
 {
-	_InterlockedIncrement( &counter );
+	_InterlockedIncrement( &m_msgcounter );
 
-	if( counter > 0x10 )		// 0x10 -- arbitrary value that seems to work well on my C2Q 3.2ghz
+	if( m_msgcounter > 0x10 )		// 0x10 -- arbitrary value that seems to work well on my C2Q 3.2ghz
 	{
 		if( !wxThread::IsMain() )
 		{
@@ -341,8 +341,8 @@ void ConsoleLogFrame::CountMessage()
 			// pthreads semaphores instead of Sleep, but I haven't been able to conjure up
 			// such an alternative yet.
 
-			while( counter > 1 ) { Sleep(1); }
-			Sleep(1);		// give the main thread more time to catch up. :|
+			while( m_msgcounter > 1 ) { Sleep(1); }
+			Sleep(0);		// give the main thread more time to catch up. :|
 		}
 	}
 
@@ -350,7 +350,7 @@ void ConsoleLogFrame::CountMessage()
 
 void ConsoleLogFrame::DoMessage()
 {
-	int cur = _InterlockedDecrement( &counter );
+	int cur = _InterlockedDecrement( &m_msgcounter );
 	if( m_TextCtrl.IsFrozen() )
 	{
 		if( cur <= 1 && wxThread::IsMain() )

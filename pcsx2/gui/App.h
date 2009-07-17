@@ -62,6 +62,7 @@ protected:
 	wxTextCtrl&	m_TextCtrl;
 	ColorArray	m_ColorTable;
 	Console::Colors m_curcolor;
+	volatile long m_msgcounter;		// used to track queued messages and throttle load placed on the gui message pump
 
 public:
 	// ctor & dtor

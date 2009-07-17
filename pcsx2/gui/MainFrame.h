@@ -66,16 +66,11 @@ protected:
 		Menu_State_Save01,		// first of many save slots
 
 		// Config Subsection
-		Menu_SelectPlugins = 100,
+		Menu_Config_Settings = 100,
 		Menu_Config_CDVD,
 		Menu_Config_DEV9,
 		Menu_Config_USB,
 		Menu_Config_FireWire,
-
-		Menu_Config_Settings,
-		Menu_Config_Memcards,
-		Menu_Config_SpeedHacks,
-		Menu_Config_Gamefixes,
 		Menu_Config_Patches,
 
 		// Video Subsection
@@ -169,9 +164,6 @@ protected:
 	void Menu_Suspend_Click(wxCommandEvent &event);
 	void Menu_Resume_Click(wxCommandEvent &event);
 	void Menu_Reset_Click(wxCommandEvent &event);
-
-	void Menu_Gamefixes_Click( wxCommandEvent& event );
-	void Menu_Speedhacks_Click( wxCommandEvent& event );
 
 	void Menu_Debug_Open_Click(wxCommandEvent &event);
 	void Menu_Debug_MemoryDump_Click(wxCommandEvent &event);
