@@ -90,16 +90,20 @@ ConsoleLogFrame::ColorArray::ColorArray() :
 	m_table( 8 )
 {
 	// Standard R, G, B format:
-	new (&m_table[Color_Black]) wxTextAttr( wxColor(   0,   0,   0 ) );
-	new (&m_table[Color_Red])	wxTextAttr( wxColor( 128,   0,   0 ) );
-	new (&m_table[Color_Green])	wxTextAttr( wxColor(   0, 128,   0 ) );
-	new (&m_table[Color_Blue])	wxTextAttr( wxColor(   0,   0, 128 ) );
-	new (&m_table[Color_Yellow])wxTextAttr( wxColor( 180, 180,   0 ) );
-	new (&m_table[Color_Cyan])	wxTextAttr( wxColor(   0, 160, 160 ) );
-	new (&m_table[Color_Magenta])wxTextAttr( wxColor( 160,   0, 160 ) );
-	new (&m_table[Color_White])	wxTextAttr( wxColor( 160, 160, 160 ) );
+	new (&m_table[Color_Black])		wxTextAttr( wxColor(   0,   0,   0 ) );
+	new (&m_table[Color_Red])		wxTextAttr( wxColor( 128,   0,   0 ) );
+	new (&m_table[Color_Green])		wxTextAttr( wxColor(   0, 128,   0 ) );
+	new (&m_table[Color_Blue])		wxTextAttr( wxColor(   0,   0, 128 ) );
+	new (&m_table[Color_Yellow])	wxTextAttr( wxColor( 180, 180,   0 ) );
+	new (&m_table[Color_Cyan])		wxTextAttr( wxColor(   0, 160, 160 ) );
+	new (&m_table[Color_Magenta])	wxTextAttr( wxColor( 160,   0, 160 ) );
+	new (&m_table[Color_White])		wxTextAttr( wxColor( 160, 160, 160 ) );
 }
 
+// ------------------------------------------------------------------------
+// Threading: this function may employ the use of GDI objects in Win32, which means it's
+// not safe to be clled from anything but the main gUI thread.
+//
 void ConsoleLogFrame::ColorArray::SetFont( const wxFont& font )
 {
 	for( int i=0; i<8; ++i )
@@ -170,7 +174,7 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 		wxRect snapzone( topright - wxSize( 8,8 ), wxSize( 16,16 ) );
 
 		g_Conf->ConLogBox.AutoDock = snapzone.Contains( GetPosition() );
-		Console::WriteLn( "DockCheck: %d", params g_Conf->ConLogBox.AutoDock );
+		//Console::WriteLn( "DockCheck: %d", params g_Conf->ConLogBox.AutoDock );
 		if( g_Conf->ConLogBox.AutoDock )
 		{
 			SetPosition( topright + wxSize( 1,0 ) );
@@ -246,27 +250,26 @@ void ConsoleLogFrame::OnClear(wxMenuEvent& WXUNUSED(event))
 
 void ConsoleLogFrame::SetColor( Colors color )
 {
-	m_TextCtrl.SetDefaultStyle( m_ColorTable[color] );
+	if( color != m_curcolor )
+		m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor=color] );
 }
 
 void ConsoleLogFrame::ClearColor()
 {
+	m_curcolor = Color_Black;
 	m_TextCtrl.SetDefaultStyle( m_ColorTable.Default() );
 }
 
 void ConsoleLogFrame::OnWrite( wxCommandEvent& event )
 {
-	Colors color = (Colors)event.GetExtraLong();
-
-	if( color != m_curcolor )
-		m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor=color] );
-
-	Write( event.GetString() );
+	Write( (Colors)event.GetExtraLong(), event.GetString() );
+	DoMessage();
 }
 
 void ConsoleLogFrame::OnNewline( wxCommandEvent& event )
 {
-	Write( L"\n" );
+	Newline();
+	DoMessage();
 }
 
 void ConsoleLogFrame::OnSetTitle( wxCommandEvent& event )
@@ -276,7 +279,11 @@ void ConsoleLogFrame::OnSetTitle( wxCommandEvent& event )
 
 void ConsoleLogFrame::OnDockedMove( wxCommandEvent& event )
 {
-	Console::Error( "Dock Message: %d, %d", params g_Conf->ConLogBox.DisplayPosition.x, g_Conf->ConLogBox.DisplayPosition.y );
+	DockedMove();
+}
+
+void ConsoleLogFrame::DockedMove()
+{
 	if( g_Conf != NULL )
 		SetPosition( g_Conf->ConLogBox.DisplayPosition );
 }
@@ -284,21 +291,85 @@ void ConsoleLogFrame::OnDockedMove( wxCommandEvent& event )
 void ConsoleLogFrame::Write( const wxString& text )
 {
 	// remove selection (WriteText is in fact ReplaceSelection)
+
 #ifdef __WXMSW__
 	wxTextPos nLen = m_TextCtrl.GetLastPosition();
 	m_TextCtrl.SetSelection(nLen, nLen);
 #endif
 
 	m_TextCtrl.AppendText( text );
+	
+	// cap at 256k for now:
+	if( m_TextCtrl.GetLastPosition() > 0x40000 )
+	{
+		m_TextCtrl.AppendText( L"************************ REMOVING BUFFER CRAP *****************\n" );
+		m_TextCtrl.Remove( 0, 0x8000 );
+	}
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// Implementation note:  Calls SetColor and Write( text ).  Override those virtuals
+// and this one will magically follow suite. :)
+void ConsoleLogFrame::Write( Colors color, const wxString& text )
+{
+	SetColor( color );
+	Write( text );
+}
 
+void ConsoleLogFrame::Newline()
+{
+	Write( L"\n" );
+}
+
+static volatile long counter = 0;
+
+// ------------------------------------------------------------------------
+// Deadlock protection: High volume logs will over-tax our message pump and cause the
+// GUI to become inaccessible.  The cool solution would be a threaded log window, but wx
+// is entirely un-safe for that kind of threading.  So instead I use a message counter
+// that stalls non-GUI threads when they attempt to over-tax an already burdened log.
+// If too many messages get queued up, non-gui threads are stalled to allow the gui to
+// catch up.
+void ConsoleLogFrame::CountMessage()
+{
+	_InterlockedIncrement( &counter );
+
+	if( counter > 0x10 )		// 0x10 -- arbitrary value that seems to work well on my C2Q 3.2ghz
+	{
+		if( !wxThread::IsMain() )
+		{
+			// fixme : It'd be swell if this could be replaced with something that uses
+			// pthreads semaphores instead of Sleep, but I haven't been able to conjure up
+			// such an alternative yet.
+
+			while( counter > 1 ) { Sleep(1); }
+			Sleep(1);		// give the main thread more time to catch up. :|
+		}
+	}
+
+}
+
+void ConsoleLogFrame::DoMessage()
+{
+	int cur = _InterlockedDecrement( &counter );
+	if( m_TextCtrl.IsFrozen() )
+	{
+		if( cur <= 1 && wxThread::IsMain() )
+			m_TextCtrl.Thaw();
+	}
+	else if( cur >= 4 && wxThread::IsMain() )
+	{
+		m_TextCtrl.Freeze();
+	}
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// 
 namespace Console
 {
+	// thread-local console color storage.
 	__threadlocal Colors th_CurrentColor = Color_Black;
 
-	// ------------------------------------------------------------------------
 	void __fastcall SetTitle( const wxString& title )
 	{
 		wxCommandEvent evt( wxEVT_SetTitleText );
@@ -306,35 +377,34 @@ namespace Console
 		wxGetApp().ProgramLog_PostEvent( evt );
 	}
 
-	// ------------------------------------------------------------------------
 	void __fastcall SetColor( Colors color )
 	{
 		th_CurrentColor = color;
 	}
 
-	// ------------------------------------------------------------------------
 	void ClearColor()
 	{
 		th_CurrentColor = Color_Black;
 	}
 
-	// ------------------------------------------------------------------------
 	bool Newline()
 	{
 		if( emuLog != NULL )
 			fputs( "\n", emuLog );
 
+		wxGetApp().ProgramLog_CountMsg();
 		wxCommandEvent evt( wxEVT_LOG_Newline );
 		wxGetApp().ProgramLog_PostEvent( evt );
 
 		return false;
 	}
 
-	// ------------------------------------------------------------------------
 	bool __fastcall Write( const char* fmt )
 	{
 		if( emuLog != NULL )
 			fputs( fmt, emuLog );
+
+		wxGetApp().ProgramLog_CountMsg();
 
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( wxString::FromAscii( fmt ) );
@@ -344,14 +414,57 @@ namespace Console
 		return false;
 	}
 
-	// ------------------------------------------------------------------------
 	bool __fastcall Write( const wxString& fmt )
 	{
 		if( emuLog != NULL )
 			fputs( fmt.ToAscii().data(), emuLog );
 
+		wxGetApp().ProgramLog_CountMsg();
+
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmt );
+		evt.SetExtraLong( th_CurrentColor );
+		wxGetApp().ProgramLog_PostEvent( evt );
+
+		return false;
+	}
+	
+	bool __fastcall WriteLn( const char* fmt )
+	{
+		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
+		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
+		
+		if( emuLog != NULL )
+		{
+			fputs( fmt, emuLog );
+			fputs( "\n", emuLog );
+		}
+
+		wxGetApp().ProgramLog_CountMsg();
+
+		wxCommandEvent evt( wxEVT_LOG_Write );
+		evt.SetString( wxString::FromAscii( fmt ) + L"\n" );
+		evt.SetExtraLong( th_CurrentColor );
+		wxGetApp().ProgramLog_PostEvent( evt );
+
+		return false;
+	}
+
+	bool __fastcall WriteLn( const wxString& fmt )
+	{
+		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
+		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
+
+		if( emuLog != NULL )
+		{
+			fputs( fmt.ToAscii().data(), emuLog );
+			fputs( "\n", emuLog );
+		}
+
+		wxGetApp().ProgramLog_CountMsg();
+
+		wxCommandEvent evt( wxEVT_LOG_Write );
+		evt.SetString( fmt + L"\n" );
 		evt.SetExtraLong( th_CurrentColor );
 		wxGetApp().ProgramLog_PostEvent( evt );
 

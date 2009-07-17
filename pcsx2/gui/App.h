@@ -25,6 +25,8 @@
 
 #include "System.h"
 
+using namespace Threading;
+
 class MainEmuFrame;
 class IniInterface;
 
@@ -32,7 +34,7 @@ extern wxFileHistory* g_RecentIsoList;
 
 class LogWriteEvent;
 
-DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1)
+DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1);
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -66,7 +68,15 @@ public:
 	ConsoleLogFrame(MainEmuFrame *pParent, const wxString& szTitle);
 	virtual ~ConsoleLogFrame();
 
-	virtual void OnCloseWindow(wxCloseEvent& event);
+	virtual void Write( const wxString& text );
+	virtual void SetColor( Console::Colors color );
+	virtual void ClearColor();
+	virtual void DockedMove();
+
+	void Write( Console::Colors color, const wxString& text );
+	void Newline();
+	void CountMessage();
+	void DoMessage();
 
 protected:
 
@@ -75,6 +85,7 @@ protected:
 	virtual void OnClose(wxMenuEvent& event);
 	virtual void OnSave (wxMenuEvent& event);
 	virtual void OnClear(wxMenuEvent& event);
+	virtual void OnCloseWindow(wxCloseEvent& event);
 
 	void OnWrite( wxCommandEvent& event );
 	void OnNewline( wxCommandEvent& event );
@@ -86,10 +97,6 @@ protected:
 
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
-
-	virtual void Write( const wxString& text );
-	void SetColor( Console::Colors color );
-	void ClearColor();
 };
 
 
@@ -171,6 +178,22 @@ public:
 	{
 		wxASSERT( m_MainFrame != NULL );
 		return *m_MainFrame;
+	}
+
+	ConsoleLogFrame* GetProgramLog()
+	{
+		return m_ProgramLogBox;
+	}
+
+	ConsoleLogFrame* GetConsoleLog()
+	{
+		return m_Ps2ConLogBox;
+	}
+	
+	void ProgramLog_CountMsg()
+	{
+		if( m_ProgramLogBox == NULL ) return;
+		m_ProgramLogBox->CountMessage();
 	}
 
 	void ProgramLog_PostEvent( wxEvent& evt )

@@ -49,37 +49,19 @@ namespace Console
 		return false;
 	}
 
-	// ------------------------------------------------------------------------
-	bool __fastcall WriteLn( const char* fmt )
-	{
-		Write( fmt );
-		Newline();
-		return false;
-	}
-
 	bool __fastcall WriteLn( Colors color, const char* fmt )
 	{
 		SetColor( color );
-		Write( fmt );
-		Newline();
+		WriteLn( fmt );
 		ClearColor();
 
-		return false;
-	}
-
-	// ------------------------------------------------------------------------
-	bool __fastcall WriteLn( const wxString& fmt )
-	{
-		Write( fmt );
-		Newline();
 		return false;
 	}
 
 	bool __fastcall WriteLn( Colors color, const wxString& fmt )
 	{
 		SetColor( color );
-		Write( fmt );
-		Newline();
+		WriteLn( fmt );
 		ClearColor();
 		return false;
 	}
@@ -94,8 +76,10 @@ namespace Console
 
 	__forceinline void __fastcall _WriteLn( const char* fmt, va_list args )
 	{
-		_Write( fmt, args );
-		Newline();
+		ScopedLock locker( m_writelock );
+		vssprintf( m_format_buffer, fmt, args );
+		m_format_buffer += "\n";
+		Write( m_format_buffer.c_str() );
 	}
 
 	__forceinline void __fastcall _WriteLn( Colors color, const char* fmt, va_list args )

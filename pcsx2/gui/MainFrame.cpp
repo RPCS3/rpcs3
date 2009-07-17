@@ -78,44 +78,6 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 	wxMenu* mnuIso = new wxMenu();
 
 	mnuIso->Append( Menu_IsoBrowse, _("Browse..."), _("Select an Iso image from your hard drive.") );
-	//mnuIso->AppendSeparator();
-
-	// Add in the recent files!
-
-	/*const StringListNode* cruise = g_Conf->RecentIsos;
-
-	int i = 0;
-	int threshold = 15;
-	while( cruise != NULL && (--threshold >= 0) )
-	{
-		wxString ellipsized;
-
-		if( cruise->item->Length() > 64 )
-		{
-			// Ellipsize it!
-			wxFileName src( *cruise->item );
-			ellipsized = src.GetVolume() + wxFileName::GetVolumeSeparator() + wxFileName::GetPathSeparator() + L"...";
-
-			const wxArrayString& dirs( src.GetDirs() );
-			int totalLen = ellipsized.Length();
-			int i=dirs.Count()-1;
-
-			for( ; i; --i )
-			{
-				if( totalLen + dirs[i].Length() < 56 )
-					totalLen += dirs[i];
-			}
-
-			for( ; i<dirs.Count(); ++i )
-				ellipsized += wxFileName::GetPathSeparator() + dirs[i];
-
-			ellipsized += wxFileName::GetPathSeparator() + src.GetFullName();
-		}
-		else
-			ellipsized = *cruise->item;
-
-		mnuIso->Append( Menu_Iso_Recent+i, Path::GetFilename( ellipsized ), *cruise->item );
-	}*/
 
 	if( g_RecentIsoList != NULL )
 	{
@@ -180,16 +142,21 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 
 	static wxPoint lastpos( wxDefaultCoord, wxDefaultCoord );
 
+	Console::Status( "Mess o' crashiness?  It can't be!" );
+
 	if( lastpos == evt.GetPosition() ) return;
 	lastpos = evt.GetPosition();
 	if( g_Conf->ConLogBox.AutoDock )
 	{
 		g_Conf->ConLogBox.DisplayPosition = GetRect().GetTopRight();
+		//if( ConsoleLogFrame* frame = wxGetApp().GetProgramLog() )
+		//	frame->DockedMove();
+
 		wxCommandEvent conevt( wxEVT_DockConsole );
 		wxGetApp().ProgramLog_PostEvent( conevt );
 	}
 
-	Console::Error( "XWindows Messages Suck: %d, %d", params GetPosition().x, GetPosition().y );
+	//Console::Error( "XWindows Messages Suck: %d, %d", params GetPosition().x, GetPosition().y );
 	g_Conf->MainGuiPosition = evt.GetPosition();
 
 	//evt.Skip();

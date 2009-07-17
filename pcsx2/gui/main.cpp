@@ -126,6 +126,26 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 	return true;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// ConsoleThreadTest -- useful class for unit testing the thread safety and general performance
+// of the console logger.
+#if 0
+class ConsoleTestThread : public Thread
+{
+	int Callback()
+	{
+		static int numtrack = 0;
+		
+		while( true )
+		{
+			Console::WriteLn( wxsFormat( L"This is a threaded logging test.  Something bad could happen... %d", ++numtrack ) );
+			Sleep( 0 );
+		}
+	}
+};
+#endif
+
+// ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
 {
     wxInitAllImageHandlers();
@@ -170,6 +190,8 @@ bool Pcsx2App::OnInit()
     SetExitOnFrameDelete( true );
     m_MainFrame->Show();
     
+    //ConsoleTestThread* woo = new ConsoleTestThread();
+    //woo->Start();
 
 	// Check to see if the user needs to perform initial setup:
 

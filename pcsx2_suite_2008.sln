@@ -618,6 +618,6 @@ Global
 		{4639972E-424E-4E13-8B07-CA403C481346} = {88F517F9-CE1C-4005-9BDF-4481FEB55053}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		AMDCaProjectFile = C:\pcsx2dev\pcsx2\CodeAnalyst\pcsx2_suite_2008.caw
+		AMDCaProjectFile = E:\devpcsx2\fail\wx\CodeAnalyst\pcsx2_suite_2008.caw
 	EndGlobalSection
 EndGlobal

@@ -29,6 +29,9 @@ namespace Threading
 	///////////////////////////////////////////////////////////////
 	// Define some useful object handles - wait events, mutexes.
 
+	// pthread Cond is an evil api that is not suited for Pcsx2 needs.
+	// Let's not use it. Use mutexes and semaphores instead to create waits. (Air)
+#if 0
 	struct WaitEvent
 	{
 		pthread_cond_t cond;
@@ -40,6 +43,7 @@ namespace Threading
 		void Set();
 		void Wait();
 	};
+#endif
 
 	struct Semaphore
 	{
