@@ -65,6 +65,8 @@ public:
 		wxDirName Savestates;
 		wxDirName MemoryCards;
 		wxDirName Logs;
+		
+		wxDirName RunIso;		// last used location for Iso loading.
 
 		void LoadSave( IniInterface& conf );
 	};

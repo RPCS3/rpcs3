@@ -185,7 +185,7 @@ bool Pcsx2App::OnInit()
 	m_Ps2ConLogBox = m_ProgramLogBox;		// just use a single logger for now.
 	//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
 
-    m_MainFrame = new MainEmuFrame( NULL, wxID_ANY, wxEmptyString );
+    m_MainFrame = new MainEmuFrame( NULL, L"PCSX2" );
     SetTopWindow( m_MainFrame );
     SetExitOnFrameDelete( true );
     m_MainFrame->Show();

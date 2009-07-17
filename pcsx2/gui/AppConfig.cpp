@@ -356,8 +356,6 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Folders" );
 
-	const wxDirName def( L"default" );
-
 	IniEntry( Plugins,		PathDefs::GetPlugins() );
 	IniEntry( Settings,		PathDefs::GetSettings() );
 	IniEntry( Bios,			PathDefs::GetBios() );
@@ -365,6 +363,8 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniEntry( Savestates,	PathDefs::GetSavestates() );
 	IniEntry( MemoryCards,	PathDefs::GetMemoryCards() );
 	IniEntry( Logs,			PathDefs::GetLogs() );
+	
+	IniEntry( RunIso,		PathDefs::GetDocuments() );			// raw default is always the Documents folder.
 
 	ini.SetPath( L".." );
 }

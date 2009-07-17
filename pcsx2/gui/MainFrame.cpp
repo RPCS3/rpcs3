@@ -161,9 +161,8 @@ void MainEmuFrame::ConnectMenus()
 		Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
 	ConnectMenu( Menu_Config_Settings,	Menu_ConfigSettings_Click );
+	ConnectMenu( Menu_IsoBrowse,		Menu_RunIso_Click );
 	ConnectMenu( Menu_RunWithoutDisc,	Menu_RunWithoutDisc_Click );
-
-	ConnectMenu( Menu_IsoBrowse,		Menu_IsoBrowse_Click );
 
 	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
 
@@ -187,8 +186,8 @@ void MainEmuFrame::ConnectMenus()
 }
 
 // ------------------------------------------------------------------------
-MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos, const wxSize& size, long style):
-    wxFrame(parent, id, title, pos, size, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
+MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
+    wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
 
 	m_statusbar( *CreateStatusBar(2, 0) ),
 	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
@@ -326,12 +325,12 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, int id, const wxString& title, cons
 	// Ref will want this re-added eventually.
 	//m_menuMisc.Append(47, _T("Print CDVD Info..."), wxEmptyString, wxITEM_CHECK);
 
-	m_menuMisc.Append(Menu_About,		_T("About..."), wxEmptyString);
-	m_menuMisc.Append(Menu_Website,		_T("Pcsx2 Website..."), _T("Opens your web-browser!"));
+	m_menuMisc.Append(Menu_About,		_("About..."), wxEmptyString);
+	m_menuMisc.Append(Menu_Website,		_("Pcsx2 Website..."), _("Opens your web-browser!"));
 
-	m_menuDebug.Append(Menu_Debug_Open,			_T("Open Debug Window..."), wxEmptyString);
-	m_menuDebug.Append(Menu_Debug_MemoryDump,	_T("Memory Dump..."), wxEmptyString);
-	m_menuDebug.Append(Menu_Debug_Logging,		_T("Logging..."), wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_Open,			_("Open Debug Window..."), wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_MemoryDump,	_("Memory Dump..."), wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_Logging,		_("Logging..."), wxEmptyString);
 
 	m_MenuItem_Console.Check( g_Conf->ConLogBox.Visible );
 
@@ -345,18 +344,23 @@ void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 	Dialogs::ConfigurationDialog( this ).ShowModal();
 }
 
-void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 {
+	wxFileDialog ctrl( this, _("Run PS2 Iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
+		L"Iso Image (*.iso)|*.iso|(*.mdf)|*.mdf|Nero Image (*.nrg)|*.nrg", wxFD_FILE_MUST_EXIST );
+	ctrl.ShowModal();
+
+	Console::WriteLn( L"Test Iso Open: " + ctrl.GetFilename() );
 }
 
-void MainEmuFrame::Menu_IsoBrowse_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 {
 }
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
 {
-	Console::Status( "%d", params event.GetId() - g_RecentIsoList->GetBaseId() );
-	Console::WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
+	//Console::Status( "%d", params event.GetId() - g_RecentIsoList->GetBaseId() );
+	//Console::WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
 }
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)

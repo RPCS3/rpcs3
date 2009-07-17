@@ -29,7 +29,7 @@
 class MainEmuFrame: public wxFrame
 {
 public:
-    MainEmuFrame(wxWindow* parent, int id, const wxString& title, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize, long style=wxDEFAULT_FRAME_STYLE);
+    MainEmuFrame(wxWindow* parent, const wxString& title);
 
 	void OnLogBoxHidden();
 
@@ -150,8 +150,10 @@ protected:
 protected:
 	void OnCloseWindow(wxCloseEvent& evt);
 	void OnMoveAround( wxMoveEvent& evt );
-	
+
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);
+
+	void Menu_RunIso_Click(wxCommandEvent &event);
 	void Menu_RunWithoutDisc_Click(wxCommandEvent &event);
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
 	void Menu_IsoRecent_Click(wxCommandEvent &event);
