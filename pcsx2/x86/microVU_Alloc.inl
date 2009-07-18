@@ -708,7 +708,6 @@ microVUt(void) mVUallocCFLAGb(mV, int reg, int fInstance) {
 
 microVUt(void) mVUallocVIa(mV, int GPRreg, int _reg_) {
 	if (!_reg_)				{ XOR32RtoR(GPRreg, GPRreg); }
-	else if (isMMX(_reg_))	{ MOVD32MMXtoR(GPRreg, mmVI(_reg_)); }
 	else					{ MOVZX32Rm16toR(GPRreg, gprR, (_reg_ - 9) * 16); }
 }
 
@@ -719,7 +718,6 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 		MOV32ItoR(gprR, Roffset);
 	}
 	if (_reg_ == 0)			{ return; }
-	else if (isMMX(_reg_))	{ MOVD32RtoMMX(mmVI(_reg_), GPRreg); }
 	else if (_reg_ < 16)	{ MOV16RtoRm(gprR, GPRreg, (_reg_ - 9) * 16); }
 }
 

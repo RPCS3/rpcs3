@@ -124,15 +124,6 @@ declareAllVariables
 #define xmmT2	6 // Temp Reg?
 #define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
 
-#define mmxVI1	0 // Holds VI 1
-#define mmxVI2	1 // Holds VI 2
-#define mmxVI3	2 // Holds VI 3
-#define mmxVI4	3 // Holds VI 4
-#define mmxVI5	4 // Holds VI 5
-#define mmxVI6	5 // Holds VI 6
-#define mmxVI7	6 // Holds VI 7
-#define mmxVI8	7 // Holds VI 8
-
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
 #define gprR	2 // VI Reg Offset
@@ -240,10 +231,6 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUlogI()	 { mVUlog(", I"); }
 #define mVUlogQ()	 { mVUlog(", Q"); }
 #define mVUlogCLIP() { mVUlog("w.xyz vf%02d, vf%02dw", _Fs_, _Ft_); }
-
-// Store VI regs in mmx regs?
-#define isMMX(_VIreg_)	0 //(_VIreg_ >= 1 && _VIreg_ <=8)
-#define mmVI(_VIreg_)	(_VIreg_ - 1)
 
 // Debug Stuff...
 #ifdef mVUdebug

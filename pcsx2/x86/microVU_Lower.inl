@@ -666,11 +666,10 @@ mVUop(mVU_ISUB) {
 			SUB16RtoR(gprT1, gprT2);
 			mVUallocVIb(mVU, gprT1, _Id_);
 		}
-		else if (!isMMX(_Id_)) { 
+		else { 
 			XOR32RtoR(gprT1, gprT1);
 			mVUallocVIb(mVU, gprT1, _Id_);
 		}
-		else { PXORRtoR(mmVI(_Id_), mmVI(_Id_)); }
 	}
 	pass3 { mVUlog("ISUB vi%02d, vi%02d, vi%02d", _Fd_, _Fs_, _Ft_); }
 }

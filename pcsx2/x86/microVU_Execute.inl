@@ -75,10 +75,6 @@ void mVUdispatcherA(mV) {
 	SSE_MOVAPS_M128_to_XMM(xmmPQ, (uptr)&mVU->regs->VI[REG_Q].UL);
 	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmT1, 0); // wzyx = PPQQ
 
-	for (int i = 1; i < 16; i++) {
-		if (isMMX(i)) { MOVQMtoR(mmVI(i), (uptr)&mVU->regs->VI[i].UL); }
-	}
-
 	// Jump to Recompiled Code Block
 	JMPR(EAX);
 }
@@ -93,10 +89,6 @@ void mVUdispatcherB(mV) {
 	// Save Regs (Other Regs Saved in mVUcompile)
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
 
-	for (int i = 1; i < 16; i++) {
-		if (isMMX(i)) { MOVDMMXtoM((uptr)&mVU->regs->VI[i].UL, mmVI(i)); }
-	}
-
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
 	if (!isVU1) { CALLFunc((uptr)mVUcleanUpVU0); }
 	else		{ CALLFunc((uptr)mVUcleanUpVU1); }
@@ -107,7 +99,6 @@ void mVUdispatcherB(mV) {
 	POP32R(EBP);
 	POP32R(EBX);
 
-	if (isMMX(1)) EMMS();
 	RET();
 
 	mVUcacheCheck(x86Ptr, mVU->cache, 0x1000);
