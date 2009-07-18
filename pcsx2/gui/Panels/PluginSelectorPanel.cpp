@@ -251,7 +251,7 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel()
 	safe_delete( m_EnumeratorThread );
 }
 
-bool Panels::PluginSelectorPanel::Apply( AppConfig& conf )
+void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 {
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
@@ -262,8 +262,6 @@ bool Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 		relative.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
 	}
-
-	return true;
 }
 
 void Panels::PluginSelectorPanel::DoRefresh()

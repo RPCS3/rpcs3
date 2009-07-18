@@ -6,7 +6,7 @@
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
  *
- *  This program is distributed in the hope that it will be useful,
+ *  This program is distributed in the hopeb that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
@@ -18,15 +18,9 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
-#include "Dialogs/LogOptionsDialog.h"
-#include "Dialogs/ModalPopups.h"
 
 #include "Resources/EmbeddedImage.h"
 #include "Resources/AppIcon.h"
-
-#include "Dialogs/ConfigurationDialog.h"
-
-using namespace Dialogs;
 
 // ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeStatesMenu()
@@ -339,82 +333,3 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
 }
 
-void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
-{
-	Dialogs::ConfigurationDialog( this ).ShowModal();
-}
-
-void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
-{
-	wxFileDialog ctrl( this, _("Run PS2 Iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
-		L"Iso Image (*.iso)|*.iso|(*.mdf)|*.mdf|Nero Image (*.nrg)|*.nrg", wxFD_FILE_MUST_EXIST );
-	ctrl.ShowModal();
-
-	Console::WriteLn( L"Test Iso Open: " + ctrl.GetFilename() );
-}
-
-void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
-{
-	//Console::Status( "%d", params event.GetId() - g_RecentIsoList->GetBaseId() );
-	//Console::WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
-}
-
-void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_LoadStateOther_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
-{
-	Close();
-}
-
-void MainEmuFrame::Menu_Suspend_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_Resume_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_Reset_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
-{
-	LogOptionsDialog( this, wxID_ANY ).ShowModal();
-}
-
-void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
-{
-	// Use messages to relay open/close commands (thread-safe)
-
-	g_Conf->ConLogBox.Visible = event.IsChecked();
-	wxCommandEvent evt( wxEVT_COMMAND_MENU_SELECTED, g_Conf->ConLogBox.Visible ? wxID_OPEN : wxID_CLOSE );
-	wxGetApp().ProgramLog_PostEvent( evt );
-}
-
-void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)
-{
-	AboutBoxDialog( this, wxID_ANY ).ShowModal();
-}

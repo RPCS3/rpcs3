@@ -72,17 +72,26 @@ bool Dialogs::ConfigurationDialog::ApplySettings()
 {
 	AppConfig confcopy( *g_Conf );
 
-	int pagecount = m_listbook.GetPageCount();
-	for( int i=0; i<pagecount; ++i )
+	try
 	{
-		BaseApplicableConfigPanel* panel = (BaseApplicableConfigPanel*)m_listbook.GetPage(i);
-		if( !panel->Apply( confcopy ) ) return false;
+		int pagecount = m_listbook.GetPageCount();
+		for( int i=0; i<pagecount; ++i )
+		{
+			BaseApplicableConfigPanel* panel = (BaseApplicableConfigPanel*)m_listbook.GetPage(i);
+			panel->Apply( confcopy );
+		}
+		
+		*g_Conf = confcopy;
+		g_Conf->Apply();
+		g_Conf->Save();
 	}
-	
-	*g_Conf = confcopy;
-	g_Conf->Apply();
-	g_Conf->Save();
-
+	catch( Exception::CannotApplySettings& ex )
+	{
+		wxMessageBox( ex.DisplayMessage(), _("Cannot apply settings...") );
+		
+		// TODO : Automatically switch focus to the panel that failed.
+		return false;
+	}
 	return true;
 }
 

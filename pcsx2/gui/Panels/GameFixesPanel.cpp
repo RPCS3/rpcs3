@@ -52,9 +52,8 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent ) :
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::GodWar_Click ) );
 }
 
-bool Panels::GameFixesPanel::Apply( AppConfig& conf )
+void Panels::GameFixesPanel::Apply( AppConfig& conf )
 {
-	return true;
 }
 
 void Panels::GameFixesPanel::FPUCompareHack_Click(wxCommandEvent &event)

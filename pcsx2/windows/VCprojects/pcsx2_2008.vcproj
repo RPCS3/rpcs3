@@ -1967,6 +1967,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\MainMenuClicks.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\wxHelpers.cpp"
 				>
 			</File>
@@ -2136,6 +2140,10 @@
 			</File>
 			<File
 				RelativePath="..\WinCompressNTFS.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\WinSysExec.cpp"
 				>
 			</File>
 			<Filter

@@ -31,6 +31,28 @@
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"
 
+namespace Exception
+{
+	// --------------------------------------------------------------------------
+	// Exception used to perform an abort of Apply/Ok action on settings panels.
+	// When thrown, the user recieves a popup message containing the information
+	// specified in the exception message, and is returned to the settings dialog
+	// to correct the invalid input fields.
+	//
+	class CannotApplySettings : public BaseException
+	{
+	public:
+		virtual ~CannotApplySettings() throw() {}
+		CannotApplySettings( const CannotApplySettings& src ) : BaseException( src ) {}
+
+		explicit CannotApplySettings( const char* msg=wxLt("Cannot apply new settings, one of the settings is invalid.") ) :
+			BaseException( msg ) {}
+
+		explicit CannotApplySettings( const wxString& msg_eng, const wxString& msg_xlt ) :
+			BaseException( msg_eng, msg_xlt ) { }
+	};
+}
+
 namespace Panels
 {
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -46,17 +68,33 @@ namespace Panels
 	
 		// This method attempts to assign the settings for the panel into the given
 		// configuration structure (which is typically a copy of g_Conf).  If validation
-		// of form contents fails, the function returns false.
-		virtual bool Apply( AppConfig& conf )=0;
+		// of form contents fails, the function should throw Exception::CannotApplySettings.
+		// If no exceptions are thrown, then the operation is assumed a success. :)
+		virtual void Apply( AppConfig& conf )=0;
 	};
 
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class UsermodeSelectionPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		wxRadioButton* m_radio_user;
+		wxRadioButton* m_radio_cwd;
+
+	public:
+		virtual ~UsermodeSelectionPanel() { }
+		UsermodeSelectionPanel( wxWindow* parent );
+		
+		void Apply( AppConfig& conf );
+	};
+	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class SpeedHacksPanel : public BaseApplicableConfigPanel
 	{
 	public:
 		SpeedHacksPanel(wxWindow& parent);
-		bool Apply( AppConfig& conf );
+		void Apply( AppConfig& conf );
 
 	protected:
 		void IOPCycleDouble_Click(wxCommandEvent &event);
@@ -71,7 +109,7 @@ namespace Panels
 	{
 	public:
 		GameFixesPanel(wxWindow& parent);
-		bool Apply( AppConfig& conf );
+		void Apply( AppConfig& conf );
 		
 		void FPUCompareHack_Click(wxCommandEvent &event);
 		void FPUMultHack_Click(wxCommandEvent &event);
@@ -127,7 +165,7 @@ namespace Panels
 
 	public:
 		PathsPanel(wxWindow& parent);
-		bool Apply( AppConfig& conf );
+		void Apply( AppConfig& conf );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -219,7 +257,7 @@ namespace Panels
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 		
-		bool Apply( AppConfig& conf );
+		void Apply( AppConfig& conf );
 	
 	protected:
 		void DoRefresh();

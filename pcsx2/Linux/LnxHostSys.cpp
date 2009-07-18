@@ -22,13 +22,6 @@
 #include <signal.h>
 #include "Common.h"
 
-extern void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
-extern void __fastcall InstallLinuxExceptionHandler();
-extern void __fastcall ReleaseLinuxExceptionHandler();
-
-#define PCSX2_MEM_PROTECT_BEGIN() InstallLinuxExceptionHandler()
-#define PCSX2_MEM_PROTECT_END() ReleaseLinuxExceptionHandler()
-
 extern void SignalExit(int sig);
 
 static const uptr m_pagemask = getpagesize()-1;

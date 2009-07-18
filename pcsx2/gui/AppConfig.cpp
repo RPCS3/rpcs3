@@ -154,6 +154,11 @@ namespace FilenameDefs
 
 		return wxGetApp().GetAppName() + L".ini";
 	}
+	
+	wxFileName GetUsermodeConfig()
+	{
+		return L"usermode.ini";
+	}
 
 	const wxFileName& Memcard( int slot )
 	{
@@ -292,6 +297,18 @@ void AppConfig::LoadSave( IniInterface& ini )
 //
 void AppConfig::Apply()
 {
+	// Ensure existence of necessary documents folders.  Plugins and other parts
+	// of PCSX2 rely on them.
+
+	g_Conf->Folders.MemoryCards.Mkdir();
+	g_Conf->Folders.Savestates.Mkdir();
+	g_Conf->Folders.Snapshots.Mkdir();
+
+	// Update the compression attribute on the Memcards folder.
+	// Memcards generally compress very well via NTFS compression.
+	
+	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->MemoryCards.EnableNTFS );
+
 	if( !i18n_SetLanguage( LanguageId ) )
 	{
 		if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
@@ -306,7 +323,7 @@ void AppConfig::Apply()
 
 	wxConfigBase* cfg = wxConfigBase::Get( false );
 	wxASSERT( cfg != NULL );
-	
+
 	if( g_RecentIsoList != NULL )
 		g_RecentIsoList->Save( *cfg );
 	safe_delete( g_RecentIsoList );

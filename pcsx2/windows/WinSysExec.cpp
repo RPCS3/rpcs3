@@ -16,30 +16,12 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
+#include "PrecompiledHeader.h"
 #include "Win32.h"
+
 #include <winnt.h>
-
 #include "Common.h"
-#include "VUmicro.h"
 
-#include "iR5900.h"
-
-// temporary hack to keep this code compiling.
-//static const char* _( const char* src ) { return src; }
-
-
-static bool sinit = false;
-bool nDisableSC = false; // screensaver
-
-// This instance is not modified by command line overrides so
-// that command line plugins and stuff won't be saved into the
-// user's conf file accidentally.
-PcsxConfig winConfig;		// local storage of the configuration options.
-
-HWND hStatusWnd = NULL;
-AppData gApp;
-
-const char* g_pRunGSState = NULL;
 
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
@@ -60,45 +42,6 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 
 	return EXCEPTION_CONTINUE_EXECUTION;
 }
-
-static void CreateDirs()
-{
-	Path::CreateDirectory(MEMCARDS_DIR);
-	Path::CreateDirectory(SSTATES_DIR);
-	Path::CreateDirectory(SNAPSHOTS_DIR);
-}
-
-/*
-bool HostGuiInit()
-{
-	if( sinit ) return true;
-	sinit = true;
-
-	CreateDirs();
-
-	// Set the compression attribute on the Memcards folder.
-	// Memcards generally compress very well via NTFS compression.
-	
-	NTFS_CompressFile( MEMCARDS_DIR, Config.McdEnableNTFS );
-
-#ifdef OLD_TESTBUILD_STUFF
-	if( IsDevBuild && emuLog == NULL && g_TestRun.plogname != NULL )
-		emuLog = fopen(g_TestRun.plogname, "w");
-#endif
-	if( emuLog == NULL )
-		emuLog = fopen(LOGS_DIR "\\emuLog.txt","w");
-
-	PCSX2_MEM_PROTECT_BEGIN();
-	SysDetect();
-	if( !SysAllocateMem() )
-		return false;	// critical memory allocation failure;
-
-	SysAllocateDynarecs();
-	PCSX2_MEM_PROTECT_END();
-
-	return true;
-}
-*/
 
 namespace HostSys
 {

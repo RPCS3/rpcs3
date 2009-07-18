@@ -33,7 +33,7 @@ public:
 
 protected:
 	wxCheckBox& AddCheckBox( wxSizer& sizer, const wxString& label, wxWindowID id=wxID_ANY );
-	wxStaticText& AddStaticText(wxSizer& sizer, const wxString& label, int size=0 );
+	wxStaticText& AddStaticText(wxSizer& sizer, const wxString& label, int size=0, int alignFlags=wxALIGN_LEFT );
     void AddOkCancel( wxSizer& sizer, bool hasApply=false );
 };
 

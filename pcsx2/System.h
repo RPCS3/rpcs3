@@ -24,6 +24,7 @@
 #include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 #include "Misc.h"
 
+extern bool SysInit();
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
 extern void SysReset();					// Resets the various PS2 cpus, sub-systems, and recompilers.
 extern void SysUpdate();				// Called on VBlank (to update i.e. pads)
@@ -50,9 +51,29 @@ extern void SysExecute();
 // The allocated block has code execution privileges.
 // Returns NULL on allocation failure.
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
-
 extern void vSyncDebugStuff( uint frame );
 
+#ifdef __LINUX__
+
+	extern void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
+	extern void __fastcall InstallLinuxExceptionHandler();
+	extern void __fastcall ReleaseLinuxExceptionHandler();
+	static void NTFS_CompressFile( const wxString& file, bool compressStatus=true ) {}
+
+#	define PCSX2_MEM_PROTECT_BEGIN()	InstallLinuxExceptionHandler()
+#	define PCSX2_MEM_PROTECT_END()		ReleaseLinuxExceptionHandler()
+
+#elif defined( _WIN32 )
+
+	extern int SysPageFaultExceptionFilter(EXCEPTION_POINTERS* eps);
+	extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
+
+#	define PCSX2_MEM_PROTECT_BEGIN()	__try {
+#	define PCSX2_MEM_PROTECT_END()		} __except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}
+
+#else
+#	error PCSX2 - Unsupported operating system platform.
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Different types of message boxes that the emulator can employ from the friendly confines

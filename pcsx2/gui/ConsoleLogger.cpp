@@ -89,15 +89,18 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 ConsoleLogFrame::ColorArray::ColorArray() :
 	m_table( 8 )
 {
+	wxFont fixed( 8, wxMODERN, wxNORMAL, wxNORMAL );
+	wxFont fixedB( 8, wxMODERN, wxNORMAL, wxBOLD );
+
 	// Standard R, G, B format:
-	new (&m_table[Color_Black])		wxTextAttr( wxColor(   0,   0,   0 ) );
-	new (&m_table[Color_Red])		wxTextAttr( wxColor( 128,   0,   0 ) );
-	new (&m_table[Color_Green])		wxTextAttr( wxColor(   0, 128,   0 ) );
-	new (&m_table[Color_Blue])		wxTextAttr( wxColor(   0,   0, 128 ) );
-	new (&m_table[Color_Yellow])	wxTextAttr( wxColor( 180, 180,   0 ) );
-	new (&m_table[Color_Cyan])		wxTextAttr( wxColor(   0, 160, 160 ) );
-	new (&m_table[Color_Magenta])	wxTextAttr( wxColor( 160,   0, 160 ) );
-	new (&m_table[Color_White])		wxTextAttr( wxColor( 160, 160, 160 ) );
+	new (&m_table[Color_Black])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
+	new (&m_table[Color_Red])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixedB );
+	new (&m_table[Color_Green])		wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixed );
+	new (&m_table[Color_Blue])		wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixed );
+	new (&m_table[Color_Yellow])	wxTextAttr( wxColor( 160, 160,   0 ), wxNullColour, fixedB );
+	new (&m_table[Color_Cyan])		wxTextAttr( wxColor(   0, 140, 140 ), wxNullColour, fixed );
+	new (&m_table[Color_Magenta])	wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixed );
+	new (&m_table[Color_White])		wxTextAttr( wxColor( 128, 128, 128 ), wxNullColour, fixed );
 }
 
 // ------------------------------------------------------------------------
@@ -110,16 +113,18 @@ void ConsoleLogFrame::ColorArray::SetFont( const wxFont& font )
 		m_table[i].SetFont( font );
 }
 
+static const Console::Colors DefaultConsoleColor = Color_White;
+
 // ------------------------------------------------------------------------
 ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
 	wxFrame(parent, wxID_ANY, title)
 ,	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
 ,	m_ColorTable()
-,	m_curcolor( Color_Black )
+,	m_curcolor( DefaultConsoleColor )
 ,	m_msgcounter( 0 )
 {
-	m_TextCtrl.SetBackgroundColour( wxColor( 238, 240, 248 ) ); //wxColor( 48, 48, 64 ) );
+	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 
     // create menu
     wxMenuBar *pMenuBar = new wxMenuBar;
@@ -156,10 +161,10 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
 	Connect( wxEVT_MOVE, wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
 	Connect( wxEVT_SIZE, wxSizeEventHandler(ConsoleLogFrame::OnResize) );
 
-	Connect( wxEVT_LOG_Write, wxCommandEventHandler(ConsoleLogFrame::OnWrite) );
-	Connect( wxEVT_LOG_Newline, wxCommandEventHandler(ConsoleLogFrame::OnNewline) );
-	Connect( wxEVT_SetTitleText, wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
-	Connect( wxEVT_DockConsole, wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
+	Connect( wxEVT_LOG_Write,	wxCommandEventHandler(ConsoleLogFrame::OnWrite) );
+	Connect( wxEVT_LOG_Newline,	wxCommandEventHandler(ConsoleLogFrame::OnNewline) );
+	Connect( wxEVT_SetTitleText,wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
+	Connect( wxEVT_DockConsole,	wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
 }
 
 ConsoleLogFrame::~ConsoleLogFrame() { }
@@ -257,8 +262,8 @@ void ConsoleLogFrame::SetColor( Colors color )
 
 void ConsoleLogFrame::ClearColor()
 {
-	m_curcolor = Color_Black;
-	m_TextCtrl.SetDefaultStyle( m_ColorTable.Default() );
+	if( DefaultConsoleColor != m_curcolor )
+		m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor=DefaultConsoleColor] );
 }
 
 void ConsoleLogFrame::OnWrite( wxCommandEvent& event )
@@ -368,7 +373,7 @@ void ConsoleLogFrame::DoMessage()
 namespace Console
 {
 	// thread-local console color storage.
-	__threadlocal Colors th_CurrentColor = Color_Black;
+	__threadlocal Colors th_CurrentColor = DefaultConsoleColor;
 
 	void __fastcall SetTitle( const wxString& title )
 	{
@@ -384,7 +389,7 @@ namespace Console
 
 	void ClearColor()
 	{
-		th_CurrentColor = Color_Black;
+		th_CurrentColor = DefaultConsoleColor;
 	}
 
 	bool Newline()

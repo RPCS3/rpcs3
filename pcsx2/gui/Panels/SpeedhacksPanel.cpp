@@ -77,9 +77,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent ) :
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::IdleLoopFF_Click ) );
 }
 
-bool Panels::SpeedHacksPanel::Apply( AppConfig& conf )
+void Panels::SpeedHacksPanel::Apply( AppConfig& conf )
 {
-	return true;
 }
 
 void Panels::SpeedHacksPanel::IOPCycleDouble_Click(wxCommandEvent &event)

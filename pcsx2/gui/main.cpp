@@ -31,6 +31,23 @@ IMPLEMENT_APP(Pcsx2App)
 AppConfig* g_Conf = NULL;
 wxFileHistory* g_RecentIsoList = NULL;
 
+namespace Exception
+{
+	// --------------------------------------------------------------------------
+	// Exception used to perfom an "errorless" termination of the app during OnInit
+	// procedures.  This happens when a user cancels out of startup prompts/wizards.
+	//
+	class StartupAborted : public BaseException
+	{
+	public:
+		virtual ~StartupAborted() throw() {}
+		StartupAborted( const StartupAborted& src ) : BaseException( src ) {}
+
+		explicit StartupAborted( const wxString& msg_eng=L"Startup initialization was aborted by the user." ) :
+			BaseException( msg_eng, msg_eng ) { }	// english messages only for this exception.
+	};
+}
+
 Pcsx2App::Pcsx2App()  :
 	m_ProgramLogBox( NULL )
 ,	m_Ps2ConLogBox( NULL )
@@ -51,22 +68,38 @@ wxFileConfig* OpenConfig( const wxString& filename )
 
 void Pcsx2App::ReadUserModeSettings()
 {
-	wxString configfile( Path::Combine( wxGetCwd(), L"usermode.ini" ) );
+	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
+	usermodefile.SetPath( wxGetCwd() );
 
-	if( !wxFile::Exists( configfile ) )
+	wxFileConfig* conf_usermode = OpenConfig( usermodefile.GetFullPath() );
+
+	if( !wxFile::Exists( usermodefile.GetFullPath() ) )
 	{
-		Dialogs::PickUserModeDialog( m_MainFrame ).ShowModal();
+		// first time startup, so give the user the choice of user mode:
+		if( Dialogs::PickUserModeDialog( NULL ).ShowModal() == wxID_CANCEL )
+			throw Exception::StartupAborted( L"Startup aborted: User cancelled Usermode selection." );
+		
+		// Save user's new settings
+		if( conf_usermode != NULL )
+		{
+			IniSaver saver( *conf_usermode );
+			g_Conf->LoadSaveUserMode( saver );
+		}
+	}
+	else
+	{
+		// usermode.ini exists -- assume Documents mode, unless the ini explicitly
+		// specifies otherwise.
+		g_Conf->UseAdminMode = false;
+
+		if( conf_usermode != NULL )
+		{
+			IniLoader loader( *conf_usermode );
+			g_Conf->LoadSaveUserMode( loader );
+		}
 	}
 
-	wxFileConfig* conf_usermode = OpenConfig( Path::Combine( wxGetCwd(), L"usermode.ini" ) );
-
-	// Ensure proper scoping (IniLoader gets closed prior to delete)
-	{
-		IniLoader loader( *conf_usermode );
-		g_Conf->LoadSaveUserMode( loader );
-	}
-
-	delete conf_usermode;
+	safe_delete( conf_usermode );
 }
 
 // ------------------------------------------------------------------------
@@ -75,6 +108,8 @@ void Pcsx2App::ReadUserModeSettings()
 //
 bool Pcsx2App::TryOpenConfigCwd()
 {
+	ReadUserModeSettings();
+	
 	wxDirName inipath_cwd( (wxDirName)wxGetCwd() + PathDefs::Base::Settings() );
 	if( !inipath_cwd.IsReadable() ) return false;
 
@@ -167,23 +202,34 @@ bool Pcsx2App::OnInit()
 	//
 	//   Conveniently this dual mode setup applies equally well to most modern Linux distros.
 
-	if( !TryOpenConfigCwd() )
+	try
 	{
-		PathDefs::GetDocuments().Mkdir();
-		PathDefs::GetSettings().Mkdir();
+		if( !TryOpenConfigCwd() )
+		{
+			PathDefs::GetDocuments().Mkdir();
+			PathDefs::GetSettings().Mkdir();
 
-		// Allow wx to use our config, and enforces auto-cleanup as well
-		wxString confile( Path::Combine( PathDefs::GetSettings(), FilenameDefs::GetConfig() ) );
-		wxConfigBase::Set( OpenConfig( confile ) );
-		wxConfigBase::Get()->SetRecordDefaults();
+			// Allow wx to use our config, and enforces auto-cleanup as well
+			wxString confile( Path::Combine( PathDefs::GetSettings(), FilenameDefs::GetConfig() ) );
+			wxConfigBase::Set( OpenConfig( confile ) );
+			wxConfigBase::Get()->SetRecordDefaults();
+		}
+		g_Conf->Load();
+		g_Conf->Apply();
+
+		g_Conf->Folders.Logs.Mkdir();
+
+		m_ProgramLogBox = new ConsoleLogFrame( NULL, L"PCSX2 Program Log" );
+		m_Ps2ConLogBox = m_ProgramLogBox;		// just use a single logger for now.
+		m_ProgramLogBox->Hide();
+		//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
+
+		SysInit();
 	}
-
-	g_Conf->Load();
-	g_Conf->Apply();
-	
-	m_ProgramLogBox = new ConsoleLogFrame( NULL, L"PCSX2 Program Log" );
-	m_Ps2ConLogBox = m_ProgramLogBox;		// just use a single logger for now.
-	//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
+	catch( Exception::StartupAborted& )
+	{
+		return false;
+	}	
 
     m_MainFrame = new MainEmuFrame( NULL, L"PCSX2" );
     SetTopWindow( m_MainFrame );

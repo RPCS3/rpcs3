@@ -19,6 +19,7 @@
 #include "Win32.h"
 
 // Translates an Errno code into an exception.
+// Throws an exception based on the given error code (usually taken from ANSI C's errno)
 void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode )
 {
 	if( errcode == 0 ) return;
@@ -53,6 +54,8 @@ void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode
 	}
 }
 
+// Throws an exception based on the value returned from GetLastError.
+// Performs an option return value success/fail check on hresult.
 void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
 {
 	if( result != INVALID_HANDLE_VALUE ) return;
@@ -118,7 +121,13 @@ bool StreamException_LogLastError( const wxString& streamname, const wxChar* act
 	return false;
 }
 
-// Exceptions thrown: None.  Errors are logged to console.  Failures are considered non-critical
+// Sets the NTFS compression flag for a directory or file. This function does not operate
+// recursively.  Set compressStatus to false to decompress compressed files (and do nothing
+// to already decompressed files).
+//
+// Exceptions thrown: None.
+//   (Errors are logged to console.  Failures are considered non-critical)
+//
 void NTFS_CompressFile( const wxString& file, bool compressStatus )
 {
 	bool isFile = !wxDirExists( file );

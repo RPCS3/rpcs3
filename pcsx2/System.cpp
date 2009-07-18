@@ -30,97 +30,48 @@
 #include "R5900Exceptions.h"
 
 using namespace std;
-using namespace Console;
 
 // disable all session overrides by default...
 SessionOverrideFlags g_Session = {false};
 
 bool sysInitialized = false;
 
-// I can't believe I had to make my own version of trim.  C++'s STL is totally whack.
-// And I still had to fix it too.  I found three samples of trim online and *all* three
-// were buggy.  People really need to learn to code before they start posting trim
-// functions in their blogs.  (air)
-static void trim( string& line )
-{
-   if ( line.empty() )
-      return;
 
-   int string_size = line.length();
-   int beginning_of_string = 0;
-   int end_of_string = string_size - 1;
-   
-   bool encountered_characters = false;
-   
-   // find the start of characters in the string
-   while ( (beginning_of_string < string_size) && (!encountered_characters) )
-   {
-      if ( (line[ beginning_of_string ] != ' ') && (line[ beginning_of_string ] != '\t') )
-         encountered_characters = true;
-      else
-         ++beginning_of_string;
-   }
-
-   // test if no characters were found in the string
-   if ( beginning_of_string == string_size )
-      return;
-   
-   encountered_characters = false;
-
-   // find the character in the string
-   while ( (end_of_string > beginning_of_string) && (!encountered_characters) )
-   {
-      // if a space or tab was found then ignore it
-      if ( (line[ end_of_string ] != ' ') && (line[ end_of_string ] != '\t') )
-         encountered_characters = true;
-      else
-         --end_of_string;
-   }   
-   
-   // return the original string with all whitespace removed from its beginning and end
-   // + 1 at the end to add the space for the string delimiter
-   //line.substr( beginning_of_string, end_of_string - beginning_of_string + 1 );
-   line.erase( end_of_string+1, string_size );
-   line.erase( 0, beginning_of_string );
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
+// -----------------------------------------------------------------------
 // This function should be called once during program execution.
+//
 void SysDetect()
 {
+	using namespace Console;
+
 	if( sysInitialized ) return;
 	sysInitialized = true;
 
 	Notice("PCSX2 " PCSX2_VERSION " - compiled on " __DATE__ );
 	Notice("Savestate version: %x", params g_SaveVersion);
 
-	// fixme: This line is here for the purpose of creating external ASM code.  Yah. >_<
-	DevCon::Notice( "EE pc offset: 0x%x, IOP pc offset: 0x%x", params (u32)&cpuRegs.pc - (u32)&cpuRegs, (u32)&psxRegs.pc - (u32)&psxRegs );
-
 	cpudetectInit();
 
-	string family( cpuinfo.x86Fam );
-	trim( family );
-
-	SetColor( Console::Color_White );
+	SetColor( Color_Black );
 
 	WriteLn( "x86Init:" );
-	WriteLn(
-		"\tCPU vendor name =  %s\n"
-		"\tFamilyID  =  %x\n"
-		"\tx86Family =  %s\n"
-		"\tCPU speed =  %d.%03d Ghz\n"
-		"\tCores     =  %d physical [%d logical]\n"
-		"\tx86PType  =  %s\n"
-		"\tx86Flags  =  %8.8x %8.8x\n"
-		"\tx86EFlags =  %8.8x\n", params
-			cpuinfo.x86ID, cpuinfo.x86StepID, family.c_str(), 
+	WriteLn( wxsFormat(
+		L"\tCPU vendor name  =  %s\n"
+		L"\tFamilyID         =  %x\n"
+		L"\tx86Family        =  %s\n"
+		L"\tCPU speed        =  %d.%03d Ghz\n"
+		L"\tCores            =  %d physical [%d logical]\n"
+		L"\tx86PType         =  %s\n"
+		L"\tx86Flags         =  %8.8x %8.8x\n"
+		L"\tx86EFlags        =  %8.8x\n",
+			wxString::FromAscii( cpuinfo.x86ID ).c_str(), cpuinfo.x86StepID,
+			wxString::FromAscii( cpuinfo.x86Fam ).Trim().Trim(false).c_str(), 
 			cpuinfo.cpuspeed / 1000, cpuinfo.cpuspeed%1000,
 			cpuinfo.PhysicalCores, cpuinfo.LogicalCores,
-			cpuinfo.x86Type, cpuinfo.x86Flags, cpuinfo.x86Flags2,
+			wxString::FromAscii( cpuinfo.x86Type ).c_str(),
+			cpuinfo.x86Flags, cpuinfo.x86Flags2,
 			cpuinfo.x86EFlags
-	);
+	) );
 
 	WriteLn( "Features:" );
 	WriteLn(
@@ -492,4 +443,25 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 		}
 	}
 	return Mem;
+}
+
+// Ensures existence of necessary folders, and performs error handling if the
+// folders fail to create.
+static void InitFolderStructure()
+{
+
+}
+
+// Returns FALSE if the core/recompiler memory allocations failed.
+bool SysInit()
+{
+	PCSX2_MEM_PROTECT_BEGIN();
+	SysDetect();
+	if( !SysAllocateMem() )
+		return false;	// critical memory allocation failure;
+
+	SysAllocateDynarecs();
+	PCSX2_MEM_PROTECT_END();
+
+	return true;
 }

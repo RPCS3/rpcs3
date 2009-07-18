@@ -114,20 +114,8 @@ Panels::PathsPanel::AdvancedPanel::AdvancedPanel( wxWindow& parent, int id ) :
 	AddDirPicker( advanced, g_Conf->Folders.Settings, PathDefs::GetSettings,
 		_("Settings:"),		_("Select a folder for PCSX2 settings/inis"), Msg_Tooltips_SettingsPath );
 
-	wxStaticBoxSizer& s_diag = *new wxStaticBoxSizer( wxVERTICAL, this, _("Default folder mode") );
-
-	AddStaticText( s_diag,
-		L"This setting only affects folders which are set to use the default folder configurations for your "
-		L"operating system.  Any folders which are configured manually will override this option. ",
-	400, wxALIGN_CENTRE );
-
-	AddRadioButton( s_diag, _("Use to your Documents folder"),   _("Location: ") + wxStandardPaths::Get().GetDocumentsDir() );
-	AddRadioButton( s_diag, _("Use the current working folder"), _("Location: ") + wxGetCwd() );
-
-	s_diag.AddSpacer( 4 );
-
 	advanced.AddSpacer( 4 );
-	advanced.Add( &s_diag, SizerFlags::StdGroupie() );
+	advanced.Add( new UsermodeSelectionPanel( this ), SizerFlags::StdGroupie() );
 
 	s_main.Add( &advanced, SizerFlags::StdGroupie() );
 	s_main.AddSpacer( 5 );
@@ -150,7 +138,6 @@ Panels::PathsPanel::PathsPanel( wxWindow& parent ) :
 	SetSizerAndFit( &s_main );
 }
 
-bool Panels::PathsPanel::Apply( AppConfig& conf )
+void Panels::PathsPanel::Apply( AppConfig& conf )
 {
-	return true;
 }

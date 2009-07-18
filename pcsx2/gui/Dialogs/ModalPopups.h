@@ -22,6 +22,7 @@
 #include <wx/image.h>
 
 #include "wxHelpers.h"
+#include "Panels/ConfigurationPanels.h"
 
 namespace Dialogs
 {
@@ -38,8 +39,14 @@ namespace Dialogs
 	
 	class PickUserModeDialog : public wxDialogWithHelpers
 	{
+	protected:
+		Panels::UsermodeSelectionPanel* m_panel_usersel;
+
 	public:
 		PickUserModeDialog( wxWindow* parent, int id=wxID_ANY );
+
+	protected:
+		void OnOk_Click( wxCommandEvent& evt );
 	};
 }
 

@@ -175,9 +175,9 @@ wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxSizer& sizer, const wxString& la
 	return wxHelpers::AddCheckBoxTo( this, sizer, label, id );
 }
 
-wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int size )
+wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int size, int alignFlags )
 {
-	return wxHelpers::AddStaticTextTo( this, sizer, label, size );
+	return wxHelpers::AddStaticTextTo( this, sizer, label, size, alignFlags );
 }
 
 void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
