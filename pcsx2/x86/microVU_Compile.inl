@@ -512,8 +512,8 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 				// Check if branch-block has already been compiled
 				blockCreate(branchAddr/8);
 				pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
-				if (pBlock)			  { xJMP( pBlock->x86ptrStart ); }
-				else				  { mVUblockFetch(mVU, branchAddr, (uptr)&mVUregs); }
+				if (pBlock)	{ xJMP( pBlock->x86ptrStart ); }
+				else		{ mVUblockFetch(mVU, branchAddr, (uptr)&mVUregs); }
 			}
 			else {
 				uptr jumpAddr;

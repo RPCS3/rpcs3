@@ -758,3 +758,244 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 	if (!_reg_ && (_fxf_ < 3))	{ XOR32RtoR(GPRreg, GPRreg); }								\
 	else						{ MOV32MtoR(GPRreg, (uptr)&mVU->regs->VF[_reg_].UL[0]); }	\
 }
+
+//------------------------------------------------------------------
+// Reg Alloc
+//------------------------------------------------------------------
+
+struct microXMM {
+	int  reg;		// VF Reg Number Stored
+	int  xyzw;		// xyzw to write back
+	int  count;		// Count of when first cached
+	bool isNeeded;	// Is needed for current instruction
+	bool isTemp;	// Is Temp Reg
+};
+
+#define xmmTotal 6	// Don't allocate PQ/ACC?
+class microRegAlloc {
+private:
+	microXMM xmmReg[xmmTotal];
+	VURegs*  vuRegs;
+	int		 counter;
+	void clearReg(int reg) {
+		xmmReg[reg].reg		 = 0;
+		xmmReg[reg].count	 = 0;
+		xmmReg[reg].isNeeded = 0;
+		xmmReg[reg].isTemp	 = 1;
+	}
+	int findFreeRegRec(int startIdx) {
+		for (int i = startIdx; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded) {
+				if ((i+1) >= xmmTotal) return i;
+				int x = findFreeRegRec(i+1);
+				if (x == -1) return i;
+				return ((xmmReg[i].count < xmmReg[x].count) ? i : x);
+			}
+		}
+		return -1;
+	}
+	int findFreeReg() {
+		for (int i = 0; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded && xmmReg[i].isTemp) {
+				return i; // Reg is not needed and was a temp reg
+			}
+		}
+		int x = findFreeRegRec(0);
+		if (x < 0) { DevCon::Error("microVU Allocation Error!"); return 0; }
+		return x;
+	}
+
+public:
+	microRegAlloc(VURegs* vuRegsPtr) { 
+		vuRegs = vuRegsPtr;
+		reset(); 
+	}
+	void reset() {
+		for (int i = 0; i < xmmTotal; i++) {
+			clearReg(i);
+		}
+		counter = 0;
+	}
+	void writeBackReg(int reg) {
+		if (xmmReg[reg].reg && xmmReg[reg].xyzw) {
+			mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
+			for (int i = 0; i < xmmTotal; i++) {
+				if (i = reg) continue;
+				if (!xmmReg[i].isTemp && xmmReg[i].reg == xmmReg[reg].reg) {
+					clearReg(i); // Invalidate any Cached Regs
+				}
+			}
+			if (xmmReg[reg].xyzw == 0xf) { // Make Cached Reg
+				xmmReg[reg].count	 = counter;
+				xmmReg[reg].xyzw	 = 0;
+				xmmReg[reg].isNeeded = 0;
+				xmmReg[reg].isTemp	 = 0;
+				return;
+			}
+		}
+		clearReg(reg); // Clear Written Back Reg
+	}
+	void clearNeeded(int reg) {
+		xmmReg[reg].isNeeded = 0;
+	}
+	int allocReg(int vfReg = -1, bool writeBack = 0, int xyzw = 0, int vfWriteBack = 0) {
+		counter++;
+		for (int i = 0; i < xmmTotal; i++) {
+			if ((vfReg >= 0) && (!xmmReg[i].isTemp) && (xmmReg[i].reg == vfReg)) {
+				if (writeBack) {
+					int z = findFreeReg();
+					writeBackReg(z);
+					if		(xyzw == 8) SSE2_SHUFPD_XMM_to_XMM(z, i, 0);
+					else if (xyzw == 4) SSE2_SHUFPD_XMM_to_XMM(z, i, 1);
+					else if (xyzw == 2) SSE2_SHUFPD_XMM_to_XMM(z, i, 2);
+					else if (xyzw == 1) SSE2_SHUFPD_XMM_to_XMM(z, i, 3);
+					else if (z != i)	SSE_MOVAPS_XMM_to_XMM (z, i);
+					xmmReg[z].reg		= vfWriteBack;
+					xmmReg[z].count		= counter;
+					xmmReg[z].xyzw		= xyzw;
+					xmmReg[z].isNeeded	= 1;
+					xmmReg[z].isTemp	= 1;
+					return z;
+				}
+				xmmReg[i].isNeeded = 1;
+				return i;
+			}
+		}
+		int x = findFreeReg();
+		writeBackReg(x);
+		if (vfReg >= 0) {
+			if (writeBack) {
+				mVUloadReg(x, (uptr)&vuRegs->VF[vfReg].UL[0], xyzw);
+				xmmReg[x].reg		= vfWriteBack;
+				xmmReg[x].count		= counter;
+				xmmReg[x].xyzw		= xyzw;
+				xmmReg[x].isNeeded	= 1;
+				xmmReg[x].isTemp	= 1;
+			}
+			else {
+				SSE_MOVAPS_M128_to_XMM((uptr)&vuRegs->VF[vfReg].UL[0], x);
+				xmmReg[x].reg		= vfReg;
+				xmmReg[x].count		= counter;
+				xmmReg[x].xyzw		= 0;
+				xmmReg[x].isNeeded	= 1;
+				xmmReg[x].isTemp	= 0;
+			}
+		}
+		else { // Is Temp Reg
+			xmmReg[x].reg		= 0;
+			xmmReg[x].count		= counter;
+			xmmReg[x].xyzw		= 0;
+			xmmReg[x].isNeeded	= 1;
+			xmmReg[x].isTemp	= 1;
+		}
+		return x;
+	}
+};
+
+
+/*
+struct microXMM {
+	int  reg;		// VF Reg Number Stored
+	int  xyzw;		// Current xyzw Order
+	int  validXYZW;	// Vectors that are valid
+	bool isNeeded;	// Is needed for current instruction
+	bool isTemp;	// Is Temp Reg
+	bool isWritten; // The reg has been written to
+};
+
+#define xmmTotal 7	// Don't allocate Last XMM Reg for PQ instances (will change this later)
+class microRegAlloc {
+private:
+	microXMM xmmReg[xmmTotal];
+	VURegs*  vuRegs;
+	int		 vfStats[32];
+	int findFreeReg(int startIdx) {
+		for (int i = startIdx; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded && xmmReg[i].isTemp) {
+				return i; // Reg is not needed and was a temp reg
+			}
+		}
+		for (int i = startIdx; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded) {
+				if ((i+1) >= xmmTotal) return i;
+				int x = findFreeReg(i+1);
+				if (x == -1) return i;
+				return ((vfStats[xmmReg[i].reg] < vfStats[xmmReg[x].reg]) ? i : x);
+			}
+		}
+		return -1;
+	}
+
+public:
+	microRegAlloc(VURegs* vuRegsPtr) { 
+		vuRegs = vuRegsPtr;
+		reset(); 
+	}
+	void reset() {
+		for (int i = 0; i < xmmTotal; i++) {
+			xmmReg[i].reg		= 0;
+			xmmReg[i].isNeeded	= 0;
+			xmmReg[i].isTemp	= 1;
+		}
+	}
+	void loadStats(int* vfRegData) {
+		for (int i = 0; i < 32; i++) {
+			vfStats[i] = vfRegData[i];
+		}
+	}
+	void changeXYZW(int reg, int newXYZW) {
+		if (xmmReg[reg].xyzw != newXYZW) {
+			int shuffleReg = 0;
+			int xyzw = xmmReg[reg].xyzw;
+			if		(((xyzw >> 6) & 3) == ((newXYZW >> 0) & 3)) shuffleReg |= (3<<0);
+			else if (((xyzw >> 4) & 3) == ((newXYZW >> 0) & 3)) shuffleReg |= (2<<0);
+			else if (((xyzw >> 2) & 3) == ((newXYZW >> 0) & 3)) shuffleReg |= (1<<0);
+			if		(((xyzw >> 6) & 3) == ((newXYZW >> 2) & 3)) shuffleReg |= (3<<2);
+			else if (((xyzw >> 4) & 3) == ((newXYZW >> 2) & 3)) shuffleReg |= (2<<2);
+			else if (((xyzw >> 2) & 3) == ((newXYZW >> 2) & 3)) shuffleReg |= (1<<2);
+			if		(((xyzw >> 6) & 3) == ((newXYZW >> 4) & 3)) shuffleReg |= (3<<4);
+			else if (((xyzw >> 4) & 3) == ((newXYZW >> 4) & 3)) shuffleReg |= (2<<4);
+			else if (((xyzw >> 2) & 3) == ((newXYZW >> 4) & 3)) shuffleReg |= (1<<4);
+			if		(((xyzw >> 6) & 3) == ((newXYZW >> 6) & 3)) shuffleReg |= (3<<6);
+			else if (((xyzw >> 4) & 3) == ((newXYZW >> 6) & 3)) shuffleReg |= (2<<6);
+			else if (((xyzw >> 2) & 3) == ((newXYZW >> 6) & 3)) shuffleReg |= (1<<6);
+			SSE2_PSHUFD_XMM_to_XMM(reg, reg, shuffleReg);
+		}
+	}
+	int writeBack(int reg) {
+		if (!xmmReg[reg].isTemp && xmmReg[reg].reg && xmmReg[reg].isWritten) {
+			changeXYZW(reg, 0xe4);
+			SSE_MOVAPS_XMM_to_M128(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0]); // Write Back Reg to Mem
+		}
+	}
+	int allocReg(int vfReg, bool cache, int xyzw, int vfWriteBack) {
+		for (int i = 0; i < xmmTotal; i++) {
+			if (!xmmReg[i].isTemp && xmmReg[i].reg == vfReg) {
+				if ((xmmReg[i].validXYZW != 0xf) && xmmReg[i].isWritten) {
+					// write back partial reg
+					//if (!forWriting) { get reg from mem }
+				}
+				xmmReg[i].isWritten |= (forWriting) ? 1 : 0;
+				xmmReg[i].isNeeded = 1;
+				return i;
+			}
+		}
+		int x = findFreeReg(0);
+		if (!xmmReg[x].isTemp && xmmReg[x].reg && xmmReg[x].isWritten) {
+			changeXYZW(x, 0xe4);
+			SSE_MOVAPS_XMM_to_M128(x, (uptr)&vuRegs->VF[xmmReg[x].reg].UL[0]); // Write Back Reg to Mem
+		}
+		if (vfReg != -1) {
+			SSE_MOVAPS_M128_to_XMM((uptr)&vuRegs->VF[xmmReg[x].reg].UL[0], x); // Load Reg from Mem
+			xmmReg[x].isNeeded	= 1;
+			xmmReg[x].isTemp	= 0;
+			xmmReg[x].xyzw		= 0xe4;
+		}
+		else { // Is Temp Reg
+			xmmReg[x].isNeeded	= 1;
+			xmmReg[x].isTemp	= 1;
+		}
+		return x;
+	}
+};
+*/
