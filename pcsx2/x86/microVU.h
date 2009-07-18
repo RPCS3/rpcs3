@@ -150,7 +150,8 @@ struct microVU {
 	u32 progSize;		// VU Micro Memory Size (in u32's)
 	u32 cacheSize;		// VU Cache Size
 
-	microProgManager prog; // Micro Program Data
+	microProgManager prog;		// Micro Program Data
+	microRegAlloc*	 regAlloc;	// Reg Alloc Class
 
 	FILE*	logFile;	 // Log File Pointer
 	VURegs*	regs;		 // VU Regs Struct

@@ -156,3 +156,142 @@ struct microIR {
 	u32 startPC;		// Start PC for Cur Block
 	u32 sFlagHack;		// Optimize out all Status flag updates if microProgram doesn't use Status flags
 };
+
+//------------------------------------------------------------------
+// Reg Alloc
+//------------------------------------------------------------------
+
+void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW);
+void mVUloadReg(int reg, uptr offset, int xyzw);
+
+struct microXMM {
+	int  reg;		// VF Reg Number Stored
+	int  xyzw;		// xyzw to write back
+	int  count;		// Count of when first cached
+	bool isNeeded;	// Is needed for current instruction
+	bool isTemp;	// Is Temp Reg
+};
+
+#define xmmTotal 6	// Don't allocate PQ/ACC?
+class microRegAlloc {
+private:
+	microXMM xmmReg[xmmTotal];
+	VURegs*  vuRegs;
+	int		 counter;
+	void clearReg(int reg) {
+		xmmReg[reg].reg		 = 0;
+		xmmReg[reg].count	 = 0;
+		xmmReg[reg].isNeeded = 0;
+		xmmReg[reg].isTemp	 = 1;
+	}
+	int findFreeRegRec(int startIdx) {
+		for (int i = startIdx; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded) {
+				if ((i+1) >= xmmTotal) return i;
+				int x = findFreeRegRec(i+1);
+				if (x == -1) return i;
+				return ((xmmReg[i].count < xmmReg[x].count) ? i : x);
+			}
+		}
+		return -1;
+	}
+	int findFreeReg() {
+		for (int i = 0; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded && xmmReg[i].isTemp) {
+				return i; // Reg is not needed and was a temp reg
+			}
+		}
+		int x = findFreeRegRec(0);
+		if (x < 0) { DevCon::Error("microVU Allocation Error!"); return 0; }
+		return x;
+	}
+
+public:
+	microRegAlloc(VURegs* vuRegsPtr) { 
+		vuRegs = vuRegsPtr;
+		reset(); 
+	}
+	void reset() {
+		for (int i = 0; i < xmmTotal; i++) {
+			clearReg(i);
+		}
+		counter = 0;
+	}
+	void writeBackReg(int reg) {
+		if (xmmReg[reg].reg && (xmmReg[reg].xyzw || (xmmReg[reg].reg >= 32))) {
+			if (xmmReg[reg].reg == 32) SSE_MOVAPS_XMM_to_M128((uptr)&vuRegs->ACC.UL[0], reg);
+			else mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
+			for (int i = 0; i < xmmTotal; i++) {
+				if (i = reg) continue;
+				if (!xmmReg[i].isTemp && xmmReg[i].reg == xmmReg[reg].reg) {
+					clearReg(i); // Invalidate any Cached Regs
+				}
+			}
+			if (xmmReg[reg].xyzw == 0xf) { // Make Cached Reg
+				xmmReg[reg].count	 = counter;
+				xmmReg[reg].xyzw	 = 0;
+				xmmReg[reg].isNeeded = 0;
+				xmmReg[reg].isTemp	 = 0;
+				return;
+			}
+		}
+		clearReg(reg); // Clear Written Back Reg
+	}
+	void clearNeeded(int reg) {
+		xmmReg[reg].isNeeded = 0;
+	}
+	int allocReg(int vfReg = -1, bool writeBack = 0, int xyzw = 0, int vfWriteBack = 0) {
+		counter++;
+		for (int i = 0; i < xmmTotal; i++) {
+			if ((vfReg >= 0) && (!xmmReg[i].isTemp) && (xmmReg[i].reg == vfReg)) {
+				if (writeBack) {
+					int z = findFreeReg();
+					writeBackReg(z);
+					if		(xyzw == 8) SSE2_PSHUFD_XMM_to_XMM(z, i, 0);
+					else if (xyzw == 4) SSE2_PSHUFD_XMM_to_XMM(z, i, 1);
+					else if (xyzw == 2) SSE2_PSHUFD_XMM_to_XMM(z, i, 2);
+					else if (xyzw == 1) SSE2_PSHUFD_XMM_to_XMM(z, i, 3);
+					else if (z != i)	SSE_MOVAPS_XMM_to_XMM (z, i);
+					xmmReg[z].reg		= vfWriteBack;
+					xmmReg[z].count		= counter;
+					xmmReg[z].xyzw		= xyzw;
+					xmmReg[z].isNeeded	= 1;
+					xmmReg[z].isTemp	= 1;
+					return z;
+				}
+				xmmReg[i].count = counter;
+				xmmReg[i].isNeeded = 1;
+				return i;
+			}
+		}
+		int x = findFreeReg();
+		writeBackReg(x);
+		if (vfReg >= 0) {
+			if (writeBack) {
+				mVUloadReg(x, (uptr)&vuRegs->VF[vfReg].UL[0], xyzw);
+				xmmReg[x].reg		= vfWriteBack;
+				xmmReg[x].count		= counter;
+				xmmReg[x].xyzw		= xyzw;
+				xmmReg[x].isNeeded	= 1;
+				xmmReg[x].isTemp	= 1;
+			}
+			else {
+				if (vfReg == 32) SSE_MOVAPS_M128_to_XMM((uptr)&vuRegs->ACC.UL[0], x);
+				else			 SSE_MOVAPS_M128_to_XMM((uptr)&vuRegs->VF[vfReg].UL[0], x);
+				xmmReg[x].reg		= vfReg;
+				xmmReg[x].count		= counter;
+				xmmReg[x].xyzw		= 0;
+				xmmReg[x].isNeeded	= 1;
+				xmmReg[x].isTemp	= 0;
+			}
+		}
+		else { // Is Temp Reg
+			xmmReg[x].reg		= 0;
+			xmmReg[x].count		= counter;
+			xmmReg[x].xyzw		= 0;
+			xmmReg[x].isNeeded	= 1;
+			xmmReg[x].isTemp	= 1;
+		}
+		return x;
+	}
+};

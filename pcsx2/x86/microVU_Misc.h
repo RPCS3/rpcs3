@@ -118,10 +118,10 @@ declareAllVariables
 #define xmmT1	0 // Temp Reg
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
 #define xmmFt	2 // Holds the Value of Ft
-#define xmmACC	3 // Holds ACC
-#define xmmMax	4 // Holds mVU_maxvals
-#define xmmMin	5 // Holds mVU_minvals
-#define xmmT2	6 // Temp Reg?
+#define xmmT2	3 // Temp Reg?
+#define xmmT3	4 // Temp Reg?
+#define xmmT4	5 // Temp Reg?
+#define xmmACC	6 // Holds ACC
 #define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
 
 #define gprT1	0 // Temp Reg
@@ -141,7 +141,7 @@ declareAllVariables
 
 // Recursive Inline
 #ifndef __LINUX__
-#define __recInline __forceinline
+#define __recInline __releaseinline
 #else
 #define __recInline inline
 #endif

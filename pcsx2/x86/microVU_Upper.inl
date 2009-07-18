@@ -440,6 +440,47 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, int regT2, int xyzw, bool 
 #define mVU_FMAC28(operation, OPname) { mVU_FMAC6 (operation, OPname); pass1 { sFLAG.doFlag = 0; } }
 #define mVU_FMAC29(operation, OPname) { mVU_FMAC3 (operation, OPname); pass1 { sFLAG.doFlag = 0; } }
 
+#define opCase1 if (opCase == 1) // Normal
+#define opCase2 if (opCase == 2) // BC Opcodes
+#define opCase3 if (opCase == 3) // I  Opcodes
+#define opCase4 if (opCase == 4) // Q  Opcodes
+
+#define shuffleXYZW(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
+
+static void (*SSE_PS[]) (x86SSERegType, x86SSERegType) = { 
+	SSE_ADDPS_XMM_to_XMM, // 0
+	SSE_SUBPS_XMM_to_XMM, // 1
+	SSE_MULPS_XMM_to_XMM, // 2
+	SSE_MAXPS_XMM_to_XMM, // 3
+	SSE_MINPS_XMM_to_XMM  // 4
+};
+
+static void (*SSE_SS[]) (x86SSERegType, x86SSERegType) = { 
+	SSE_ADDSS_XMM_to_XMM, // 0 
+	SSE_SUBSS_XMM_to_XMM, // 1
+	SSE_MULSS_XMM_to_XMM, // 2
+	SSE_MAXSS_XMM_to_XMM, // 3
+	SSE_MINSS_XMM_to_XMM  // 4
+};
+
+void mVU_FMACa(microVU* mVU, int opCase, int opType, bool updateFlags) {
+	int Fs, Ft;
+	opCase1 { Ft = mVU->regAlloc->allocReg(_Ft_); if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleXYZW(_X_Y_Z_W)); } }
+	opCase2 { Ft = mVU->regAlloc->allocReg(_Ft_); mVU->regAlloc->clearNeeded(Ft); Ft = mVU->regAlloc->allocReg(); }
+	opCase3 { Ft = mVU->regAlloc->allocReg(); getIreg(Ft, 1); }
+	opCase4 { Ft = mVU->regAlloc->allocReg(); getQreg(Ft); }
+
+	Fs = mVU->regAlloc->allocReg(_Fs_, 1, _X_Y_Z_W, _Fd_);
+
+	if (_XYZW_SS) SSE_SS[opType](Fs, Ft);
+	else		  SSE_PS[opType](Fs, Ft);
+
+	opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleXYZW(_X_Y_Z_W)); } }
+
+	mVU->regAlloc->clearNeeded(Ft);
+	mVU->regAlloc->writeBackReg(Fs);
+}
+
 //------------------------------------------------------------------
 // Micro VU Micromode Upper instructions
 //------------------------------------------------------------------

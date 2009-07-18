@@ -69,8 +69,6 @@ void mVUdispatcherA(mV) {
 	SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
 
 	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
-	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
-	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
 	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_P].UL);
 	SSE_MOVAPS_M128_to_XMM(xmmPQ, (uptr)&mVU->regs->VI[REG_Q].UL);
 	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmT1, 0); // wzyx = PPQQ

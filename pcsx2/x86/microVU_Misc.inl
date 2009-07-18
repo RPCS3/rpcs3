@@ -26,12 +26,12 @@
 void mVUclamp1(int reg, int regT1, int xyzw) {
 	switch (xyzw) {
 		case 1: case 2: case 4: case 8:
-			SSE_MINSS_XMM_to_XMM(reg, xmmMax);
-			SSE_MAXSS_XMM_to_XMM(reg, xmmMin);
+			SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
+			SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
 			break;
 		default:
-			SSE_MINPS_XMM_to_XMM(reg, xmmMax);
-			SSE_MAXPS_XMM_to_XMM(reg, xmmMin);
+			SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
+			SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
 			break;
 	}
 }
@@ -43,15 +43,15 @@ void mVUclamp2(int reg, int regT1, int xyzw) {
 			case 1: case 2: case 4: case 8:
 				SSE_MOVSS_XMM_to_XMM(regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINSS_XMM_to_XMM(reg, xmmMax);
-				SSE_MAXSS_XMM_to_XMM(reg, xmmMin);
+				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
 				SSE_ORPS_XMM_to_XMM(reg, regT1);
 				break;
 			default:
 				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINPS_XMM_to_XMM(reg, xmmMax);
-				SSE_MAXPS_XMM_to_XMM(reg, xmmMin);
+				SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
 				SSE_ORPS_XMM_to_XMM(reg, regT1);
 				break;
 		}
@@ -294,8 +294,6 @@ microVUt(void) mVUbackupRegs(mV) {
 microVUt(void) mVUrestoreRegs(mV) {
 	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
-	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
-	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
 	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
 
