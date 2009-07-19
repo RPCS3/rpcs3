@@ -178,12 +178,6 @@ private:
 	microXMM xmmReg[xmmTotal];
 	VURegs*  vuRegs;
 	int		 counter;
-	void clearReg(int reg) {
-		xmmReg[reg].reg		 = 0;
-		xmmReg[reg].count	 = 0;
-		xmmReg[reg].isNeeded = 0;
-		xmmReg[reg].isTemp	 = 1;
-	}
 	int findFreeRegRec(int startIdx) {
 		for (int i = startIdx; i < xmmTotal; i++) {
 			if (!xmmReg[i].isNeeded) {
@@ -217,13 +211,18 @@ public:
 		}
 		counter = 0;
 	}
+	void flushAll() {
+		for (int i = 0; i < xmmTotal; i++) {
+			writeBackReg(i);
+		}
+	}
 	void writeBackReg(int reg) {
-		if (xmmReg[reg].reg && (xmmReg[reg].xyzw || (xmmReg[reg].reg >= 32))) {
+		if (xmmReg[reg].reg && xmmReg[reg].xyzw) {
 			if (xmmReg[reg].reg == 32) SSE_MOVAPS_XMM_to_M128((uptr)&vuRegs->ACC.UL[0], reg);
 			else mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
 			for (int i = 0; i < xmmTotal; i++) {
-				if (i = reg) continue;
-				if (!xmmReg[i].isTemp && xmmReg[i].reg == xmmReg[reg].reg) {
+				if (i == reg) continue;
+				if (!xmmReg[i].isTemp && (xmmReg[i].reg == xmmReg[reg].reg)) {
 					clearReg(i); // Invalidate any Cached Regs
 				}
 			}
@@ -240,23 +239,35 @@ public:
 	void clearNeeded(int reg) {
 		xmmReg[reg].isNeeded = 0;
 	}
-	int allocReg(int vfReg = -1, bool writeBack = 0, int xyzw = 0, int vfWriteBack = 0) {
+	void clearReg(int reg) {
+		xmmReg[reg].reg		 = 0;
+		xmmReg[reg].count	 = 0;
+		xmmReg[reg].xyzw	 = 0;
+		xmmReg[reg].isNeeded = 0;
+		xmmReg[reg].isTemp	 = 1;
+	}
+	int allocReg(int vfReg = -1, bool writeBack = 0, int xyzw = 0, int vfWriteBack = 0, bool cloneWrite = 1, bool needToLoad = 1) {
 		counter++;
 		for (int i = 0; i < xmmTotal; i++) {
 			if ((vfReg >= 0) && (!xmmReg[i].isTemp) && (xmmReg[i].reg == vfReg)) {
 				if (writeBack) {
-					int z = findFreeReg();
-					writeBackReg(z);
-					if		(xyzw == 8) SSE2_PSHUFD_XMM_to_XMM(z, i, 0);
-					else if (xyzw == 4) SSE2_PSHUFD_XMM_to_XMM(z, i, 1);
-					else if (xyzw == 2) SSE2_PSHUFD_XMM_to_XMM(z, i, 2);
-					else if (xyzw == 1) SSE2_PSHUFD_XMM_to_XMM(z, i, 3);
-					else if (z != i)	SSE_MOVAPS_XMM_to_XMM (z, i);
+					int z = i;
+					if (cloneWrite) {
+						z = findFreeReg();
+						writeBackReg(z);
+						if (needToLoad) {
+							if		(xyzw == 8) SSE2_PSHUFD_XMM_to_XMM(z, i, 0);
+							else if (xyzw == 4) SSE2_PSHUFD_XMM_to_XMM(z, i, 1);
+							else if (xyzw == 2) SSE2_PSHUFD_XMM_to_XMM(z, i, 2);
+							else if (xyzw == 1) SSE2_PSHUFD_XMM_to_XMM(z, i, 3);
+							else if (z != i)	SSE_MOVAPS_XMM_to_XMM (z, i);
+						}
+					}
 					xmmReg[z].reg		= vfWriteBack;
 					xmmReg[z].count		= counter;
 					xmmReg[z].xyzw		= xyzw;
 					xmmReg[z].isNeeded	= 1;
-					xmmReg[z].isTemp	= 1;
+					xmmReg[z].isTemp	= (cloneWrite) ? 1 : 0;
 					return z;
 				}
 				xmmReg[i].count = counter;
@@ -268,7 +279,10 @@ public:
 		writeBackReg(x);
 		if (vfReg >= 0) {
 			if (writeBack) {
-				mVUloadReg(x, (uptr)&vuRegs->VF[vfReg].UL[0], xyzw);
+				if (needToLoad) {
+					if (vfReg == 32) mVUloadReg(x, (uptr)&vuRegs->ACC.UL[0], xyzw);
+					else			 mVUloadReg(x, (uptr)&vuRegs->VF[vfReg].UL[0], xyzw);
+				}
 				xmmReg[x].reg		= vfWriteBack;
 				xmmReg[x].count		= counter;
 				xmmReg[x].xyzw		= xyzw;
@@ -276,8 +290,10 @@ public:
 				xmmReg[x].isTemp	= 1;
 			}
 			else {
-				if (vfReg == 32) SSE_MOVAPS_M128_to_XMM((uptr)&vuRegs->ACC.UL[0], x);
-				else			 SSE_MOVAPS_M128_to_XMM((uptr)&vuRegs->VF[vfReg].UL[0], x);
+				if (needToLoad) {
+					if (vfReg == 32) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->ACC.UL[0]);
+					else			 SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->VF[vfReg].UL[0]);
+				}
 				xmmReg[x].reg		= vfReg;
 				xmmReg[x].count		= counter;
 				xmmReg[x].xyzw		= 0;

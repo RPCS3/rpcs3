@@ -455,7 +455,7 @@ BOOL Open_Iso_File_Proc( std::string& outstr )
 	OPENFILENAME ofn;
 	char szFileName[ g_MaxPath ];
 	char szFileTitle[ g_MaxPath ];
-	char * filter = "ISO Files (*.ISO)\0*.ISO\0Blockdump Files (*.dump)\0*.dump\0ALL Files (*.*)\0*.*\0";
+	char * filter = "Compatible Disc Image Files (*.ISO, *.MDF)\0*.ISO;*.MDF\0Blockdump Files (*.dump)\0*.dump\0ALL Files (*.*)\0*.*\0";
 
 	memzero_obj( szFileName );
 	memzero_obj( szFileTitle );
@@ -1001,8 +1001,8 @@ void CreateMainMenu() {
 	ADDSUBMENUS(0, 1, _("&States"));
 	ADDSEPARATOR(0);
 	ADDMENUITEM(0, _("&Open ELF File..."), ID_FILEOPEN);
-	ADDMENUITEM(0, _("Run &ISO Image..."), ID_FILE_RUNISO);
 	ADDMENUITEM(0, _("Run &BIOS (No Disc)"), ID_FILE_RUNBIOS);
+	ADDMENUITEM(0, _("Run &ISO Image..."), ID_FILE_RUNISO);
 	ADDMENUITEM(0, _("&Run CD/DVD"), ID_FILE_RUNCD);
 	ADDSUBMENUS(1, 3, _("&Save"));
 	ADDSUBMENUS(1, 2, _("&Load"));
