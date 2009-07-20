@@ -160,6 +160,12 @@ declareAllVariables
 #define pass3 if (recPass == 2)
 #define pass4 if (recPass == 3)
 
+// Upper Opcode Cases
+#define opCase1 if (opCase == 1) // Normal Opcodes
+#define opCase2 if (opCase == 2) // BC Opcodes
+#define opCase3 if (opCase == 3) // I  Opcodes
+#define opCase4 if (opCase == 4) // Q  Opcodes
+
 // Define mVUquickSearch
 #ifndef __LINUX__
 PCSX2_ALIGNED16_EXTERN( u8 mVUsearchXMM[0x1000] );
@@ -178,25 +184,25 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUprogI	 mVU->prog.prog[progIndex]
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
 #define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
-#define mVUallocInfo mVU->prog.allocInfo
-#define mVUbranch	 mVUallocInfo.branch
-#define mVUcycles	 mVUallocInfo.cycles
-#define mVUcount	 mVUallocInfo.count
-#define mVUpBlock	 mVUallocInfo.pBlock
-#define mVUblock	 mVUallocInfo.block
-#define mVUregs		 mVUallocInfo.block.pState
-#define mVUregsTemp	 mVUallocInfo.regsTemp
-#define iPC			 mVUallocInfo.curPC
-#define mVUsFlagHack mVUallocInfo.sFlagHack
-#define mVUinfo		 mVUallocInfo.info[iPC / 2]
-#define mVUconstReg	 mVUallocInfo.constReg
+#define mVUir		 mVU->prog.IRinfo
+#define mVUbranch	 mVU->prog.IRinfo.branch
+#define mVUcycles	 mVU->prog.IRinfo.cycles
+#define mVUcount	 mVU->prog.IRinfo.count
+#define mVUpBlock	 mVU->prog.IRinfo.pBlock
+#define mVUblock	 mVU->prog.IRinfo.block
+#define mVUregs		 mVU->prog.IRinfo.block.pState
+#define mVUregsTemp	 mVU->prog.IRinfo.regsTemp
+#define iPC			 mVU->prog.IRinfo.curPC
+#define mVUsFlagHack mVU->prog.IRinfo.sFlagHack
+#define mVUconstReg	 mVU->prog.IRinfo.constReg
+#define mVUstartPC	 mVU->prog.IRinfo.startPC
+#define mVUinfo		 mVU->prog.IRinfo.info[iPC / 2]
 #define mVUstall	 mVUinfo.stall
 #define mVUup		 mVUinfo.uOp
 #define mVUlow		 mVUinfo.lOp
 #define sFLAG		 mVUinfo.sFlag
 #define mFLAG		 mVUinfo.mFlag
 #define cFLAG		 mVUinfo.cFlag
-#define mVUstartPC	 mVUallocInfo.startPC
 #define mVUflagInfo	 mVUregs.needExactMatch
 #define mVUrange	 mVUcurProg.ranges.range[mVUcurProg.ranges.total]
 #define xPC			 ((iPC / 2) * 8)
@@ -211,6 +217,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define Roffset		 (uptr)&mVU->regs->VI[9].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
+#define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 
 // Flag Info
 #define __Status	 (mVUflagInfo & (0xf<<0))

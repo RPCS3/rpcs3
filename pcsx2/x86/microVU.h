@@ -121,7 +121,7 @@ struct microProgram {
 
 #define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
 struct microProgManager {
-	microIR<mProgSize>	allocInfo;		// IR information
+	microIR<mProgSize>	IRinfo;			// IR information
 	microProgram*		prog;			// Store MicroPrograms in memory
 	int*				progList;		// List of program indexes ordered by age (ordered from newest to oldest)
 	int					max;			// Max Number of MicroPrograms minus 1
