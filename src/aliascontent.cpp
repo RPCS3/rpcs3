@@ -8,7 +8,7 @@ namespace YAML
 	{
 	}
 
-	void AliasContent::Parse(Scanner */*pScanner*/, const ParserState& /*state*/)
+	void AliasContent::Parse(Scanner * /*pScanner*/, const ParserState& /*state*/)
 	{
 	}
 

@@ -168,7 +168,7 @@
 				Name="Representation"
 				>
 				<File
-					RelativePath=".\src\alias.cpp"
+					RelativePath=".\src\aliascontent.cpp"
 					>
 				</File>
 				<File
@@ -294,7 +294,7 @@
 				Name="Representation"
 				>
 				<File
-					RelativePath=".\src\alias.h"
+					RelativePath=".\src\aliascontent.h"
 					>
 				</File>
 				<File
