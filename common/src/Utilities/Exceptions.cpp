@@ -40,14 +40,14 @@ namespace Exception
 		m_message( msg_xlt ),
 		m_stacktrace( wxEmptyString )		// unsupported yet
 	{
-		// Major hack. After a couple of tries, I'm still not managing to get Linux to catch these exceptions, so that the user actually
-		// gets the messages. Since Console is unavailable at this level, I'm using a simple printf, which of course, means it doesn't get
-		// logged. But at least the user sees it.
-		//
-		// I'll rip this out once I get Linux to actually catch these exceptions. Say, in BeginExecution or StartGui, like I would expect.
-		// -- arcum42
+		// Linux/GCC exception handling is still suspect (this is likely to do with GCC more
+		// than linux), and fails to propagate exceptions up the stack from EErec code.  This
+		// could likely be because of the EErec using EBP.  So to ensure the user at least
+		// gets a log of the error, we output to console here in the constructor.
+
 #ifdef __LINUX__
-        wxLogError( msg_eng.c_str() );
+        //wxLogError( msg_eng.c_str() );
+        Console::Error( msg_eng );
 #endif
 	}
 
@@ -58,7 +58,10 @@ namespace Exception
 		m_message( GetTranslation( msg_eng ) ),
 		m_stacktrace( wxEmptyString )		// unsupported yet
 	{
-        wxLogError( m_message_eng.c_str() );
+#ifdef __LINUX__
+        //wxLogError( m_message_eng.c_str() );
+        Console::Error( msg_eng );
+#endif
 	}
 
 	wxString BaseException::LogMessage() const

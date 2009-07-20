@@ -269,14 +269,15 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	// ------------------------------------------------------------------------
 
-	m_menuRun.Append(Menu_BootIso,		_("Run ISO"),				MakeIsoMenu(),	_("Performs a complete bootup sequence (recommended for best compat)"));
-	m_menuRun.Append(Menu_BootIsoFast,	_("Run ISO (skip Bios)"),	MakeIsoMenu(),	_("Skips PS2 startup screens when booting; may cause compat issues"));
-	m_menuRun.Append(Menu_BootQuickCDVD,_("Run CDVD"),				MakeCdvdMenu(),	_("Skips PS2 init screens when running cdvd images"));
-	m_menuRun.Append(Menu_BootFullCDVD,	_("Run CDVD (skip Bios)"),	MakeCdvdMenu(),	_("Skips PS2 startup screens when booting; may cause compat issues"));
-	m_menuRun.Append(Menu_RunWithoutDisc,_("Run without Disc"),						_("Use this to access the PS2 system configuration menu"));
-	m_menuRun.Append(Menu_RunELF,		_("Run ELF File..."),		wxEmptyString);
-	m_menuRun.AppendSeparator();
+	m_menuRun.Append(Menu_RunIso,		_("Run ISO"),				MakeIsoMenu() );
+	m_menuRun.Append(Menu_BootCDVD,		_("Run CDVD"),				MakeCdvdMenu() );
+	m_menuRun.Append(Menu_RunWithoutDisc,_("Run without Disc"),		_("Use this to access the PS2 system configuration menu"));
+	m_menuRun.Append(Menu_RunELF,		_("Run ELF File..."),		_("For running raw PS2 binaries."));
 
+	m_menuRun.AppendSeparator();
+	m_menuRun.Append(Menu_SkipBiosToggle,_("Skip Bios on Boot"),		_("Enable this to skip PS2 bootup screens (may hurt compat)"));
+
+	m_menuRun.AppendSeparator();
 	m_menuRun.Append(Menu_SuspendExec,	_("Suspend"),	_T("Stops emulation dead in its tracks"));
 	m_menuRun.Append(Menu_ResumeExec,	_("Resume"),	_T("Resumes suspended emulation"));
 	m_menuRun.Append(Menu_States,		_("States"),	MakeStatesMenu(), wxEmptyString);

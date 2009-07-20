@@ -2090,6 +2090,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Panels\MiscPanelStuff.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Panels\PathsPanel.cpp"
 					>
 				</File>

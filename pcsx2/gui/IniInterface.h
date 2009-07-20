@@ -52,7 +52,10 @@ public:
 	virtual void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() )=0;
 	virtual void Entry( const wxString& var, int& value, const int defvalue=0 )=0;
 	virtual void Entry( const wxString& var, uint& value, const uint defvalue=0 )=0;
-	virtual void Entry( const wxString& var, bool& value, const bool defvalue=0 )=0;
+	virtual void Entry( const wxString& var, bool& value, const bool defvalue=false )=0;
+
+	// This special form of Entry is provided for bitfields, which cannot be passed by reference.
+	virtual bool EntryBitfield( const wxString& var, bool value, const bool defvalue=false )=0;
 
 	virtual void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition )=0;
 	virtual void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize )=0;
@@ -78,12 +81,14 @@ public:
 
 	bool IsLoading() const { return true; }
 
-	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() );
+	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxEmptyString );
 	void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() );
 	void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() );
 	void Entry( const wxString& var, int& value, const int defvalue=0 );
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
+
+	bool EntryBitfield( const wxString& var, bool value, const bool defvalue=false );
 
 	void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition );
 	void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize );
@@ -115,6 +120,8 @@ public:
 	void Entry( const wxString& var, int& value, const int defvalue=0 );
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
+
+	bool EntryBitfield( const wxString& var, bool value, const bool defvalue=false );
 
 	void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition );
 	void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize );

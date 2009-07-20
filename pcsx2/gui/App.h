@@ -66,7 +66,7 @@ protected:
 
 public:
 	// ctor & dtor
-	ConsoleLogFrame(MainEmuFrame *pParent, const wxString& szTitle);
+	ConsoleLogFrame( MainEmuFrame *pParent, const wxString& szTitle, const AppConfig::ConsoleLogOptions& options );
 	virtual ~ConsoleLogFrame();
 
 	virtual void Write( const wxString& text );

@@ -23,33 +23,6 @@
 
 using namespace wxHelpers;
 
-Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent ) : 
-	BaseApplicableConfigPanel( parent )
-,	m_radio_user( NULL )
-,	m_radio_cwd( NULL )
-{
-	wxStaticBoxSizer& s_boxer = *new wxStaticBoxSizer( wxVERTICAL, this, _( "Usermode Selection" ) );
-	AddStaticText( s_boxer, 
-		L"Please select your preferred default location for PCSX2 user-level documents below "
-		L"(includes memory cards, screenshots, settings, and savestates).  "
-		L"These folder locations can be overridden at any time using the Core Settings panel.",
-	480, wxALIGN_CENTRE );
-
-	m_radio_user	= &AddRadioButton( s_boxer, _("User Documents (recommended)"),   _("Location: ") + wxStandardPaths::Get().GetDocumentsDir() );
-	m_radio_cwd		= &AddRadioButton( s_boxer, _("Current working folder (intended for developer use only)"), _("Location: ") + wxGetCwd() );
-
-	s_boxer.AddSpacer( 4 );
-	SetSizerAndFit( &s_boxer );
-}
-
-void Panels::UsermodeSelectionPanel::Apply( AppConfig& conf )
-{
-	if( !m_radio_cwd->GetValue() && !m_radio_user->GetValue() )
-		throw Exception::CannotApplySettings( wxLt( "You must select one of the available user modes before proceeding." ) );
-	conf.UseAdminMode = m_radio_cwd->GetValue();
-}
-
-
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
 ,	m_panel_usersel( new Panels::UsermodeSelectionPanel( this ) )
@@ -58,10 +31,7 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 
 	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown folder and needs to be configured."),
 		0, wxALIGN_CENTRE );
-	s_main.AddSpacer( 8 );
-	s_main.Add( m_panel_usersel, SizerFlags::StdGroupie() );
-
-	//new wxListCt
+	s_main.Add( m_panel_usersel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
 
 	AddOkCancel( s_main );
 	SetSizerAndFit( &s_main );
@@ -76,10 +46,8 @@ void Dialogs::PickUserModeDialog::OnOk_Click( wxCommandEvent& evt )
 	try
 	{
 		m_panel_usersel->Apply( confcopy );
-
 		*g_Conf = confcopy;
 		g_Conf->Apply();
-		g_Conf->Save();
 
 		Close();
 		evt.Skip();

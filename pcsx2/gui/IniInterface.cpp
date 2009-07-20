@@ -66,7 +66,7 @@ void IniLoader::Entry( const wxString& var, wxString& value, const wxString& def
 void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
 {
 	wxString dest;
-	m_Config.Read( var, &dest, wxString() );
+	m_Config.Read( var, &dest, wxEmptyString );
 
 	if( dest.IsEmpty() )
 		value = defvalue;
@@ -93,9 +93,18 @@ void IniLoader::Entry( const wxString& var, uint& value, const uint defvalue )
 
 void IniLoader::Entry( const wxString& var, bool& value, const bool defvalue )
 {
+	// TODO : Stricter value checking on enabled/disabled?
 	wxString dest;
 	m_Config.Read( var, &dest, defvalue ? L"enabled" : L"disabled" );
-	value = (dest == L"enabled") || (dest == L"1");
+	value = (dest == L"enabled") || (dest != L"0");
+}
+
+bool IniLoader::EntryBitfield( const wxString& var, bool value, const bool defvalue )
+{
+	// Note: 'value' param is used by inisaver only.
+	bool result;
+	Entry( var, result, defvalue );
+	return result;
 }
 
 void IniLoader::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
@@ -173,6 +182,12 @@ void IniSaver::Entry( const wxString& var, uint& value, const uint defvalue )
 void IniSaver::Entry( const wxString& var, bool& value, const bool defvalue )
 {
 	m_Config.Write( var, value ? L"enabled" : L"disabled" );
+}
+
+bool IniSaver::EntryBitfield( const wxString& var, bool value, const bool defvalue )
+{
+	m_Config.Write( var, value ? L"enabled" : L"disabled" );
+	return value;
 }
 
 void IniSaver::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )

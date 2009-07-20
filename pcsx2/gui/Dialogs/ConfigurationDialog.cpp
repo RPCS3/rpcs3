@@ -24,7 +24,6 @@
 #include "ConfigurationDialog.h"
 #include "Panels/ConfigurationPanels.h"
 
-#include <wx/bookctrl.h>
 #include <wx/artprov.h>
 
 using namespace wxHelpers;
@@ -48,9 +47,18 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
+	g_ApplyState.StartBook( &m_listbook );
+
+	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
 	m_listbook.AddPage( new PathsPanel( m_listbook ),			_("Folders"), false, cfgid.Paths );
+
+	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
 	m_listbook.AddPage( new PluginSelectorPanel( m_listbook ),	_("Plugins"), false, cfgid.Plugins );
+
+	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
 	m_listbook.AddPage( new SpeedHacksPanel( m_listbook ),		_("Speedhacks"), false, cfgid.Speedhacks );
+
+	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
 	m_listbook.AddPage( new GameFixesPanel( m_listbook ),		_("Game Fixes"), false, cfgid.Gamefixes );
 
 	mainSizer.Add( &m_listbook );
@@ -66,43 +74,20 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 
 Dialogs::ConfigurationDialog::~ConfigurationDialog()
 {
-}
-
-bool Dialogs::ConfigurationDialog::ApplySettings()
-{
-	AppConfig confcopy( *g_Conf );
-
-	try
-	{
-		int pagecount = m_listbook.GetPageCount();
-		for( int i=0; i<pagecount; ++i )
-		{
-			BaseApplicableConfigPanel* panel = (BaseApplicableConfigPanel*)m_listbook.GetPage(i);
-			panel->Apply( confcopy );
-		}
-		
-		*g_Conf = confcopy;
-		g_Conf->Apply();
-		g_Conf->Save();
-	}
-	catch( Exception::CannotApplySettings& ex )
-	{
-		wxMessageBox( ex.DisplayMessage(), _("Cannot apply settings...") );
-		
-		// TODO : Automatically switch focus to the panel that failed.
-		return false;
-	}
-	return true;
+	g_ApplyState.DoCleanup();
 }
 
 void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	evt.Skip();
-	if( ApplySettings() ) Close();
+	if( g_ApplyState.ApplyAll() )
+	{
+		Close();
+		evt.Skip();
+	}
 }
 
 void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
 	evt.Skip();
-	ApplySettings();
+	g_ApplyState.ApplyAll();
 }

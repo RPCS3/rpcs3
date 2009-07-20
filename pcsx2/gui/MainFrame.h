@@ -45,13 +45,13 @@ protected:
 		Menu_Misc,				// Misc options and help!
 
 		// Run SubSection
-		Menu_BootIsoFast = 20,	// Opens Recent Files sub-menu, and boots selected iso using QuickBoot
-		Menu_BootIso,			// Opens Recent Files sub-menu, and boots selected iso using FullBoot
-		Menu_IsoBrowse,			// sub-menu opened up by BootIso
-		Menu_BootQuickCDVD,		// opens a submenu filled by CDVD plugin (usually list of drives)
-		Menu_BootFullCDVD,		// opens a submenu filled by CDVD plugin (usually list of drives)
+		Menu_RunIso = 20,		// Opens submenu with Iso browser, and recent isos.
+		Menu_IsoBrowse,			// Open dialog, runs selected iso.
+		Menu_BootCDVD,			// opens a submenu filled by CDVD plugin (usually list of drives)
 		Menu_RunWithoutDisc,	// used to enter the bios (subs in cdvdnull)
 		Menu_RunELF,
+		Menu_SkipBiosToggle,	// enables the Bios Skip  speedhack
+		Menu_EnableSkipBios,	// check marked menu that toggles Skip Bios boot feature.
 		Menu_SuspendExec,		// suspends active emulation
 		Menu_ResumeExec,		// restores active emulation
 		Menu_Reset,				// Issues a complete reset.

@@ -219,9 +219,8 @@ bool Pcsx2App::OnInit()
 
 		g_Conf->Folders.Logs.Mkdir();
 
-		m_ProgramLogBox = new ConsoleLogFrame( NULL, L"PCSX2 Program Log" );
+		m_ProgramLogBox = new ConsoleLogFrame( NULL, L"PCSX2 Program Log", g_Conf->ConLogBox );
 		m_Ps2ConLogBox = m_ProgramLogBox;		// just use a single logger for now.
-		m_ProgramLogBox->Hide();
 		//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
 
 		SysInit();
@@ -264,6 +263,9 @@ bool Pcsx2App::OnInit()
 int Pcsx2App::OnExit()
 {
 	g_Conf->Save();
+	safe_delete( g_RecentIsoList );
+	safe_delete( m_Bitmap_Logo );
+	safe_delete( g_Conf );
 	return wxApp::OnExit();
 }
 

@@ -116,7 +116,7 @@ void ConsoleLogFrame::ColorArray::SetFont( const wxFont& font )
 static const Console::Colors DefaultConsoleColor = Color_White;
 
 // ------------------------------------------------------------------------
-ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
+ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, const AppConfig::ConsoleLogOptions& options ) :
 	wxFrame(parent, wxID_ANY, title)
 ,	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
@@ -141,14 +141,8 @@ ConsoleLogFrame::ConsoleLogFrame(MainEmuFrame *parent, const wxString& title) :
     CreateStatusBar();
     ClearColor();
 
-    // Sync with configuration settings:
-
-	wxASSERT_MSG( g_Conf != NULL, L"Console Log Frames must be created AFTER the configuration has been loaded" );
-	if( g_Conf != NULL )
-	{
-		SetSize( wxRect( g_Conf->ConLogBox.DisplayPosition, g_Conf->ConLogBox.DisplaySize ) );
-		Show( g_Conf->ConLogBox.Visible );
-	}
+	SetSize( wxRect( options.DisplayPosition, options.DisplaySize ) );
+	Show( options.Visible );
 
 	// Bind Events:
 

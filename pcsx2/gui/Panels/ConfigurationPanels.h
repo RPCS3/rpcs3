@@ -26,10 +26,19 @@
 
 #include <wx/image.h>
 #include <wx/statline.h>
+#include <wx/bookctrl.h>
+#include <list>
 
 #include "wxHelpers.h"
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"
+
+// Annoyances of C++ forward declarations.  Having to type in this red tape mess
+// is keeping me form eating a good sandwich right now... >_<
+namespace Panels
+{
+	class BaseApplicableConfigPanel;
+}
 
 namespace Exception
 {
@@ -41,31 +50,111 @@ namespace Exception
 	//
 	class CannotApplySettings : public BaseException
 	{
+	protected:
+		Panels::BaseApplicableConfigPanel* m_Panel;
+
 	public:
 		virtual ~CannotApplySettings() throw() {}
-		CannotApplySettings( const CannotApplySettings& src ) : BaseException( src ) {}
+		CannotApplySettings( const CannotApplySettings& src ) :
+			BaseException( src )
+		,	m_Panel( src.m_Panel ) {}
 
-		explicit CannotApplySettings( const char* msg=wxLt("Cannot apply new settings, one of the settings is invalid.") ) :
-			BaseException( msg ) {}
+		explicit CannotApplySettings( Panels::BaseApplicableConfigPanel* thispanel, const char* msg=wxLt("Cannot apply new settings, one of the settings is invalid.") ) :
+			BaseException( msg )
+		,	m_Panel( thispanel )
+		{}
 
-		explicit CannotApplySettings( const wxString& msg_eng, const wxString& msg_xlt ) :
-			BaseException( msg_eng, msg_xlt ) { }
+		explicit CannotApplySettings( Panels::BaseApplicableConfigPanel* thispanel, const wxString& msg_eng, const wxString& msg_xlt ) :
+			BaseException( msg_eng, msg_xlt )
+		,	m_Panel( thispanel )
+		{}
+		
+		Panels::BaseApplicableConfigPanel* GetPanel()
+		{
+			return m_Panel;
+		}
 	};
 }
 
 namespace Panels
 {
+
+	typedef std::list<BaseApplicableConfigPanel*> PanelApplyList_t;
+
+	struct StaticApplyState
+	{
+		// Static collection of ApplicableConfigPanels currently available to the user.
+		PanelApplyList_t PanelList;
+
+		// Current book page being initialized.  Any apply objects created will use
+		// this page as their "go here on error" page. (used to take the user to the 
+		// page with the option that failed apply validation).
+		int CurOwnerPage;
+		
+		// TODO : Rename me to CurOwnerBook, or rename the one above to ParentPage.
+		wxBookCtrlBase* ParentBook;
+		
+		StaticApplyState() :
+			PanelList()
+		,	CurOwnerPage( wxID_NONE )
+		,	ParentBook( NULL )
+		{
+		}
+		
+		void SetCurrentPage( int page )
+		{
+			CurOwnerPage = page;
+		}
+		
+		void ClearCurrentPage()
+		{
+			CurOwnerPage = wxID_NONE;
+		}
+		
+		void StartBook( wxBookCtrlBase* book );
+		bool ApplyAll();
+		void DoCleanup();
+	};
+
+	extern StaticApplyState g_ApplyState;
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Extends the Panel class to add an Apply() method, which is invoked from the parent
 	// window (usually the ConfigurationDialog) when either Ok or Apply is clicked.
 	//
+	// Thread Safety: None.  This class is only safe when used from the GUI thread, as it uses
+	//   static vars and assumes that only one Applicableconfig system is available to the
+	//   use rate any time (ie, a singular modal dialog).
+	// 
 	class BaseApplicableConfigPanel : public wxPanelWithHelpers
 	{
+	protected:
+		int m_OwnerPage;
+		wxBookCtrlBase* m_OwnerBook;
+
 	public:
-		virtual ~BaseApplicableConfigPanel() { }
+		virtual ~BaseApplicableConfigPanel()
+		{
+			g_ApplyState.PanelList.remove( this );
+		}
+
 		BaseApplicableConfigPanel( wxWindow* parent ) : 
-			wxPanelWithHelpers( parent, wxID_ANY ) { }
-	
+			wxPanelWithHelpers( parent, wxID_ANY )
+		,	m_OwnerPage( g_ApplyState.CurOwnerPage )
+		,	m_OwnerBook( g_ApplyState.ParentBook )
+		{
+			g_ApplyState.PanelList.push_back( this );
+		}
+
+		int GetOwnerPage() const { return m_OwnerPage; }
+		wxBookCtrlBase* GetOwnerBook() { return m_OwnerBook; }
+		
+		void SetFocusToMe()
+		{
+			if( (m_OwnerBook == NULL) || (m_OwnerPage == wxID_NONE) ) return;
+			m_OwnerBook->SetSelection( m_OwnerPage );
+		}
+
 		// This method attempts to assign the settings for the panel into the given
 		// configuration structure (which is typically a copy of g_Conf).  If validation
 		// of form contents fails, the function should throw Exception::CannotApplySettings.
@@ -124,18 +213,20 @@ namespace Panels
 	class PathsPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		class DirPickerPanel : public wxPanelWithHelpers
+		class DirPickerPanel : public BaseApplicableConfigPanel
 		{
 		protected:
-			wxDirName (*m_GetDefaultFunc)();
-			wxDirPickerCtrl* m_pickerCtrl;
-			wxCheckBox* m_checkCtrl;
+			FoldersEnum_t		m_FolderId;
+			wxDirPickerCtrl*	m_pickerCtrl;
+			wxCheckBox*			m_checkCtrl;
 
 		public:
-			DirPickerPanel( wxWindow* parent, const wxDirName& initPath, wxDirName (*getDefault)(), const wxString& label, const wxString& dialogLabel );
+			DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
+			void Apply( AppConfig& conf );
 
 		protected:
 			void UseDefaultPath_Click(wxCommandEvent &event);
+			void UpdateCheckStatus( bool someNoteworthyBoolean );
 		};
 
 		class MyBasePanel : public wxPanelWithHelpers
@@ -147,8 +238,8 @@ namespace Panels
 			MyBasePanel(wxWindow& parent, int id=wxID_ANY);
 
 		protected:
-			void AddDirPicker( wxBoxSizer& sizer, const wxDirName& initPath, wxDirName (*getDefaultFunc)(),
-				const wxString& label, const wxString& popupLabel, enum ExpandedMsgEnum tooltip );
+			void AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid, const wxString& label,
+				const wxString& popupLabel, enum ExpandedMsgEnum tooltip );
 		};
 
 		class StandardPanel : public MyBasePanel

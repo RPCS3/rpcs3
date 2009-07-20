@@ -134,6 +134,18 @@ namespace Path
 	extern void RemoveDirectory( const wxString& src );
 }
 
+enum FoldersEnum_t
+{
+	FolderId_Plugins = 0,
+	FolderId_Settings,
+	FolderId_Bios,
+	FolderId_Snapshots,
+	FolderId_Savestates,
+	FolderId_MemoryCards,
+	FolderId_Logs,
+	FolderId_COUNT
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // PathDefs Namespace -- contains default values for various pcsx2 path names and locations.
 //
@@ -156,6 +168,8 @@ namespace PathDefs
 	extern wxDirName GetSettings();
 	extern wxDirName GetLogs();
 	extern wxDirName GetThemes();
+
+	extern wxDirName Get( FoldersEnum_t folderidx );
 
 	// Base folder names used to extend out the documents/approot folder base into a complete
 	// path.  These are typically for internal AppConfig use only, barring a few special cases.

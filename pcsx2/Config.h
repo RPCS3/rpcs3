@@ -58,17 +58,33 @@ public:
 	// ------------------------------------------------------------------------
 	struct FolderOptions
 	{
-		wxDirName Plugins;
-		wxDirName Settings;
-		wxDirName Bios;
-		wxDirName Snapshots;
-		wxDirName Savestates;
-		wxDirName MemoryCards;
-		wxDirName Logs;
-		
+		wxDirName
+			Plugins,
+			Settings,
+			Bios,
+			Snapshots,
+			Savestates,
+			MemoryCards,
+			Logs;
+
 		wxDirName RunIso;		// last used location for Iso loading.
 
+		bool
+			UseDefaultPlugins:1,
+			UseDefaultSettings:1,
+			UseDefaultBios:1,
+			UseDefaultSnapshots:1,
+			UseDefaultSavestates:1,
+			UseDefaultMemoryCards:1,
+			UseDefaultLogs:1;
+
 		void LoadSave( IniInterface& conf );
+		void ApplyDefaults();
+
+		void Set( FoldersEnum_t folderidx, const wxString& src, bool useDefault );
+
+		const wxDirName& operator[]( FoldersEnum_t folderidx ) const;
+		const bool IsDefault( FoldersEnum_t folderidx ) const;
 	};
 
 	// ------------------------------------------------------------------------
@@ -167,19 +183,7 @@ public:
 		void LoadSave( IniInterface& conf );
 	};
 
-
 public:
-	AppConfig() :
-		Listbook_ImageSize( 32 )
-	,	Toolbar_ImageSize( 24 )
-	{
-	}
-
-	wxString FullpathToBios() const;
-	wxString FullpathToMcd( uint mcdidx ) const;
-	wxString FullpathTo( PluginsEnum_t pluginId ) const;
-
-
 	bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
 	wxPoint		MainGuiPosition;
 	bool		CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
@@ -213,7 +217,23 @@ public:
 	FilenameOptions			BaseFilenames;
 	McdSysOptions			MemoryCards;
 
+protected:
+	// indicates if the main AppConfig settings are valid (excludes the status of UseAdminMode,
+	// which is a special value that's initialized independently of the rest of the config)
+	bool m_IsLoaded;
+
 public:
+	AppConfig() :
+		Listbook_ImageSize( 32 )
+	,	Toolbar_ImageSize( 24 )
+	,	m_IsLoaded( false )
+	{
+	}
+
+	wxString FullpathToBios() const;
+	wxString FullpathToMcd( uint mcdidx ) const;
+	wxString FullpathTo( PluginsEnum_t pluginId ) const;
+
 	void Load();
 	void Save();
 	void Apply();

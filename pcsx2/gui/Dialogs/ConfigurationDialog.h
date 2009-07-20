@@ -37,7 +37,6 @@ namespace Dialogs
 		ConfigurationDialog(wxWindow* parent, int id=wxID_ANY);
 
 	protected:
-		bool ApplySettings();
 		void OnOk_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
 	};

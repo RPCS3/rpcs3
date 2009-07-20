@@ -80,7 +80,6 @@ namespace PathDefs
 			static const wxDirName retval( L"themes" );
 			return retval;
 		}
-
 	};
 
 	// Specifies the root folder for the application install.
@@ -141,7 +140,102 @@ namespace PathDefs
 	{
 		return GetDocuments() + Base::Logs();
 	}
+
+	wxDirName Get( FoldersEnum_t folderidx )
+	{
+		switch( folderidx )
+		{
+			case FolderId_Plugins:		return GetPlugins();
+			case FolderId_Settings:		return GetSettings();
+			case FolderId_Bios:			return GetBios();
+			case FolderId_Snapshots:	return GetSnapshots();
+			case FolderId_Savestates:	return GetSavestates();
+			case FolderId_MemoryCards:	return GetMemoryCards();
+			case FolderId_Logs:			return GetLogs();
+
+			jNO_DEFAULT
+		}
+		return wxDirName();
+	}
 };
+
+
+const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx ) const
+{
+	switch( folderidx )
+	{
+		case FolderId_Plugins:		return Plugins;
+		case FolderId_Settings:		return Settings;
+		case FolderId_Bios:			return Bios;
+		case FolderId_Snapshots:	return Snapshots;
+		case FolderId_Savestates:	return Savestates;
+		case FolderId_MemoryCards:	return MemoryCards;
+		case FolderId_Logs:			return Logs;
+		
+		jNO_DEFAULT
+	}
+	return Plugins;		// unreachable, but supresses warnings.
+}
+
+const bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
+{
+	switch( folderidx )
+	{
+		case FolderId_Plugins:		return UseDefaultPlugins;
+		case FolderId_Settings:		return UseDefaultSettings;
+		case FolderId_Bios:			return UseDefaultBios;
+		case FolderId_Snapshots:	return UseDefaultSnapshots;
+		case FolderId_Savestates:	return UseDefaultSavestates;
+		case FolderId_MemoryCards:	return UseDefaultMemoryCards;
+		case FolderId_Logs:			return UseDefaultLogs;
+		
+		jNO_DEFAULT
+	}
+	return false;
+}
+
+void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src, bool useDefault )
+{
+	switch( folderidx )
+	{
+		case FolderId_Plugins:
+			Plugins = src;
+			UseDefaultPlugins = useDefault;
+		break;
+
+		case FolderId_Settings:
+			Settings = src;
+			UseDefaultSettings = useDefault;
+		break;
+		
+		case FolderId_Bios:
+			Bios = src;
+			UseDefaultBios = useDefault;
+		break;
+		
+		case FolderId_Snapshots:
+			Snapshots = src;
+			UseDefaultSnapshots = useDefault;
+		break;
+		
+		case FolderId_Savestates:
+			Savestates = src;
+			UseDefaultSavestates = useDefault;
+		break;
+		
+		case FolderId_MemoryCards:
+			MemoryCards = src;
+			UseDefaultMemoryCards = useDefault;
+		break;
+		
+		case FolderId_Logs:
+			Logs = src;
+			UseDefaultLogs = useDefault;
+		break;
+
+		jNO_DEFAULT
+	}
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -256,6 +350,7 @@ wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( F
 // syntax errors. >_<
 //
 #define IniEntry( varname, defval ) ini.Entry( wxT(#varname), varname, defval )
+#define IniEntryBitfield( varname, defval ) varname = ini.EntryBitfield( wxT(#varname), defval )
 
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveUserMode( IniInterface& ini )
@@ -297,6 +392,8 @@ void AppConfig::LoadSave( IniInterface& ini )
 //
 void AppConfig::Apply()
 {
+	if( !m_IsLoaded ) return;
+
 	// Ensure existence of necessary documents folders.  Plugins and other parts
 	// of PCSX2 rely on them.
 
@@ -336,6 +433,8 @@ void AppConfig::Apply()
 // ------------------------------------------------------------------------
 void AppConfig::Load()
 {
+	m_IsLoaded = true;
+
 	// Note: Extra parenthesis resolves "I think this is a function" issues with C++.
 	IniLoader loader( (IniLoader()) );
 	LoadSave( loader );
@@ -343,6 +442,8 @@ void AppConfig::Load()
 
 void AppConfig::Save()
 {
+	if( !m_IsLoaded ) return;
+
 	IniSaver saver( (IniSaver()) );
 	LoadSave( saver );
 }
@@ -368,10 +469,24 @@ void AppConfig::SpeedhackOptions::LoadSave( IniInterface& ini )
 	ini.SetPath( L".." );
 }
 
+void AppConfig::FolderOptions::ApplyDefaults()
+{
+	if( UseDefaultPlugins )		Plugins		= PathDefs::GetPlugins();
+	if( UseDefaultSettings )	Settings	= PathDefs::GetSettings();
+	if( UseDefaultBios )		Bios		= PathDefs::GetBios();
+	if( UseDefaultSnapshots )	Snapshots	= PathDefs::GetSnapshots();
+	if( UseDefaultSavestates )	Savestates	= PathDefs::GetSavestates();
+	if( UseDefaultMemoryCards )	MemoryCards	= PathDefs::GetMemoryCards();
+	if( UseDefaultLogs )		Logs		= PathDefs::GetLogs();
+}
+
 // ------------------------------------------------------------------------
 void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Folders" );
+
+	if( ini.IsSaving() )
+		ApplyDefaults();
 
 	IniEntry( Plugins,		PathDefs::GetPlugins() );
 	IniEntry( Settings,		PathDefs::GetSettings() );
@@ -380,8 +495,19 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniEntry( Savestates,	PathDefs::GetSavestates() );
 	IniEntry( MemoryCards,	PathDefs::GetMemoryCards() );
 	IniEntry( Logs,			PathDefs::GetLogs() );
-	
+
 	IniEntry( RunIso,		PathDefs::GetDocuments() );			// raw default is always the Documents folder.
+
+	IniEntryBitfield( UseDefaultPlugins,		true );
+	IniEntryBitfield( UseDefaultSettings,		true );
+	IniEntryBitfield( UseDefaultBios,			true );
+	IniEntryBitfield( UseDefaultSnapshots,		true );
+	IniEntryBitfield( UseDefaultSavestates,		true );
+	IniEntryBitfield( UseDefaultMemoryCards,	true );
+	IniEntryBitfield( UseDefaultLogs,			true );
+
+	if( ini.IsLoading() )
+		ApplyDefaults();
 
 	ini.SetPath( L".." );
 }
