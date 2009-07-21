@@ -106,12 +106,21 @@ void mVU_printOP(microVU* mVU, int opCase, char* opName, bool isACC) {
 	opCase4 { if (isACC) { mVUlogACC(); } else { mVUlogFd(); } mVUlogQ();  }
 }
 
+// Sets Up Pass1 Info for Normal, BC, I, and Q Cases
+void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
+	opCase1 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, _Ft_); }
+	opCase2 { mVUanalyzeFMAC3(mVU, ((isACC) ? 0 : _Fd_), _Fs_, _Ft_); }
+	opCase3 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, 0); }
+	opCase4 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, 0); }
+	if (noFlagUpdate) { sFLAG.doFlag = 0; }
+}
+
 // Sets Up Ft Reg for Normal, BC, I, and Q Cases
 void setupFtReg(microVU* mVU, int& Ft, int opCase) {
 	opCase1 { Ft = mVU->regAlloc->allocReg(_Ft_); }
 	opCase2 { 
 		if (!_XYZW_SS) {
-			Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W);
+			Ft = mVU->regAlloc->allocReg(_Ft_, 0, 0xf);
 			mVUunpack_xyzw(Ft, Ft, _bc_);
 		}
 		else Ft = mVU->regAlloc->allocReg(_Ft_);
@@ -122,13 +131,7 @@ void setupFtReg(microVU* mVU, int& Ft, int opCase) {
 
 // Normal FMAC Opcodes
 void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, char* opName) {
-	pass1 {
-		opCase1 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, _Ft_); }
-		opCase2 { mVUanalyzeFMAC3(mVU, ((isACC) ? 0 : _Fd_), _Fs_, _Ft_); }
-		opCase3 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, 0); }
-		opCase4 { mVUanalyzeFMAC1(mVU, ((isACC) ? 0 : _Fd_), _Fs_, 0); }
-		if ((opType == 3) || (opType == 4)) { sFLAG.doFlag = 0; }
-	}
+	pass1 { setupPass1(mVU, opCase, isACC, ((opType == 3) || (opType == 4))); }
 	pass2 {
 		int Fs, Ft, ACC;
 		mVU->regAlloc->reset(); // Reset for Testing
@@ -169,12 +172,7 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, ch
 
 // MADDA/MSUBA Opcodes
 void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, char* opName) {
-	pass1 {
-		opCase1 { mVUanalyzeFMAC1(mVU, 0, _Fs_, _Ft_); }
-		opCase2 { mVUanalyzeFMAC3(mVU, 0, _Fs_, _Ft_); }
-		opCase3 { mVUanalyzeFMAC1(mVU, 0, _Fs_, 0); }
-		opCase4 { mVUanalyzeFMAC1(mVU, 0, _Fs_, 0); }
-	}
+	pass1 { setupPass1(mVU, opCase, 1, 0); }
 	pass2 {
 		int Fs, Ft, ACC;
 		mVU->regAlloc->reset(); // Reset for Testing
@@ -218,12 +216,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, char* opName) 
 
 // MADD Opcodes
 void mVU_FMACc(microVU* mVU, int recPass, int opCase, char* opName) {
-	pass1 {
-		opCase1 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, _Ft_); }
-		opCase2 { mVUanalyzeFMAC3(mVU, _Fd_, _Fs_, _Ft_); }
-		opCase3 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, 0); }
-		opCase4 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, 0); }
-	}
+	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
 		int Fs, Ft, ACC;
 		mVU->regAlloc->reset(); // Reset for Testing
@@ -255,12 +248,7 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, char* opName) {
 
 // MSUB Opcodes
 void mVU_FMACd(microVU* mVU, int recPass, int opCase, char* opName) {
-	pass1 {
-		opCase1 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, _Ft_); }
-		opCase2 { mVUanalyzeFMAC3(mVU, _Fd_, _Fs_, _Ft_); }
-		opCase3 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, 0); }
-		opCase4 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, 0); }
-	}
+	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
 		int Fs, Ft, Fd;
 		mVU->regAlloc->reset(); // Reset for Testing

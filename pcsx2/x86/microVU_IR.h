@@ -161,6 +161,7 @@ struct microIR {
 // Reg Alloc
 //------------------------------------------------------------------
 
+void mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW);
 void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW);
 void mVUloadReg(int reg, uptr offset, int xyzw);
 
@@ -223,7 +224,7 @@ public:
 	}
 	void writeBackReg(int reg) {
 		if ((xmmReg[reg].reg > 0) && xmmReg[reg].xyzw) { // Reg was modified and not Temp or vf0
-			if (xmmReg[reg].reg == 32) SSE_MOVAPS_XMM_to_M128((uptr)&vuRegs->ACC.UL[0], reg);
+			if (xmmReg[reg].reg == 32) mVUsaveReg(reg, (uptr)&vuRegs->ACC.UL[0], xmmReg[reg].xyzw, 1);
 			else mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
 			for (int i = 0; i < xmmTotal; i++) {
 				if (i == reg) continue;
@@ -241,20 +242,26 @@ public:
 		clearReg(reg); // Clear Reg
 	}
 	void clearNeeded(int reg) {
-		// ToDo: Merge Regs Support
 		xmmReg[reg].isNeeded = 0;
 		if (xmmReg[reg].xyzw) { // Reg was modified
 			if (xmmReg[reg].reg > 0) {
-				if (xmmReg[reg].xyzw < 0xf) writeBackReg(reg); // Always Write Back Partial Writes		
-				if (xmmReg[reg].reg > 0) {
-					for (int i = 0; i < xmmTotal; i++) { // Invalidate any other read-only regs of same vfReg
-						if (i == reg) continue;
-						if (xmmReg[i].reg == xmmReg[reg].reg) {
-							if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: clearNeeded()"); 
-							clearReg(i);
+				int mergeRegs = 0;
+				if (xmmReg[reg].xyzw < 0xf) { mergeRegs = 1; } // Try to merge partial writes
+				for (int i = 0; i < xmmTotal; i++) { // Invalidate any other read-only regs of same vfReg
+					if (i == reg) continue;
+					if (xmmReg[i].reg == xmmReg[reg].reg) {
+						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: clearNeeded() [%d]", params xmmReg[i].reg);
+						if (mergeRegs == 1) { 
+							mVUmergeRegs(i, reg, xmmReg[reg].xyzw, 1);
+							xmmReg[i].xyzw = 0xf;
+							xmmReg[i].count = counter;
+							mergeRegs = 2; 
 						}
+						else clearReg(i);
 					}
 				}
+				if (mergeRegs == 2) clearReg(reg);	   // Clear Current Reg if Merged
+				else if (mergeRegs) writeBackReg(reg); // Write Back Partial Writes if couldn't merge
 			}
 			else clearReg(reg); // If Reg was temp or vf0, then invalidate itself
 		}
@@ -263,7 +270,7 @@ public:
 		counter++;
 		if (vfLoadReg >= 0) { // Search For Cached Regs
 			for (int i = 0; i < xmmTotal; i++) {
-				if ((xmmReg[i].reg == vfLoadReg) && (!xmmReg[i].xyzw				   // Reg Was Not Modified
+				if ((xmmReg[i].reg == vfLoadReg) && (!xmmReg[i].xyzw					   // Reg Was Not Modified
 				|| (/*!xmmReg[i].isNeeded &&*/ xmmReg[i].reg && (xmmReg[i].xyzw==0xf)))) { // Reg Had All Vectors Modified and != VF0
 					int z = i;
 					if (vfWriteReg >= 0) { // Reg will be modified
@@ -296,7 +303,8 @@ public:
 		writeBackReg(x);
 
 		if (vfWriteReg >= 0) { // Reg Will Be Modified (allow partial reg loading)
-			if		(vfLoadReg == 32) mVUloadReg(x, (uptr)&vuRegs->ACC.UL[0], xyzw);
+			if	   ((vfLoadReg ==  0) && !(xyzw & 1)) { SSE2_PXOR_XMM_to_XMM(x, x); }
+			else if	(vfLoadReg == 32) mVUloadReg(x, (uptr)&vuRegs->ACC.UL[0], xyzw);
 			else if (vfLoadReg >=  0) mVUloadReg(x, (uptr)&vuRegs->VF[vfLoadReg].UL[0], xyzw);
 			xmmReg[x].reg  = vfWriteReg;
 			xmmReg[x].xyzw = xyzw;
