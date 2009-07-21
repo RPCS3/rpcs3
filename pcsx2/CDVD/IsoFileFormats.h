@@ -1,21 +1,60 @@
-#ifndef __LIBISO_H__
+/*  Pcsx2 - Pc Ps2 Emulator
+ *  Copyright (C) 2002-2009  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *  
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+ 
+ #ifndef __LIBISO_H__
 #define __LIBISO_H__
+
+#ifndef __USE_LARGEFILE64
+#define __USE_LARGEFILE64
+#endif
+
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE_SOURCE 
+#endif
+
+#ifndef _LARGEFILE64_SOURCE
+#define _LARGEFILE64_SOURCE
+#endif
+
+#define __USE_FILE_OFFSET64
+#define _FILE_OFFSET_BITS 64
 
 #ifdef _MSC_VER
 #pragma warning(disable:4018)
 #endif
 
-#define ISOTYPE_ILLEGAL	0
-#define ISOTYPE_CD		1
-#define ISOTYPE_DVD		2
-#define ISOTYPE_AUDIO	3
-#define ISOTYPE_DVDDL	4
+enum isoType
+{
+	ISOTYPE_ILLEGAL = 0,
+	ISOTYPE_CD,
+	ISOTYPE_DVD,
+	ISOTYPE_AUDIO,
+	ISOTYPE_DVDDL
+};
 
-#define ISOFLAGS_Z			0x0001
-#define ISOFLAGS_Z2			0x0002
-#define ISOFLAGS_BLOCKDUMP	0x0004
-#define ISOFLAGS_MULTI		0x0008
-#define ISOFLAGS_BZ2		0x0010
+enum isoFlags
+{
+	ISOFLAGS_Z =				0x0001,
+	ISOFLAGS_Z2	=			0x0002,
+	ISOFLAGS_BLOCKDUMP =	0x0004,
+	ISOFLAGS_MULTI =			0x0008,
+	ISOFLAGS_BZ2 =			0x0010
+};
 
 #define CD_FRAMESIZE_RAW	2352
 #define DATA_SIZE	(CD_FRAMESIZE_RAW-12)

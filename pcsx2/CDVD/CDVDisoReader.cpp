@@ -15,11 +15,13 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
+ 
 /*
  *  Original code from libcdvd by Hiryu & Sjeep (C) 2002
  *  Modified by Florin for PCSX2 emu
  *  Fixed CdRead by linuzappz
  */
+ 
 #include "PrecompiledHeader.h"
 #include <stdio.h>
 #include <stdlib.h>
