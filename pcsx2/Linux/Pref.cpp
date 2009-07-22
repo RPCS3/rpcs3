@@ -111,6 +111,7 @@ int LoadConfig()
 	GetValuel("vuFlagHack",		Config.Hacks.vuFlagHack);
 	GetValuel("vuMinMax",		Config.Hacks.vuMinMax);
 	GetValuel("IdleLoopFF",		Config.Hacks.IdleLoopFF);
+	//GetValuel("BlockDump", 		Config.Blockdump);
 	GetValuel("ESCExits",		Config.Hacks.ESCExits);
 
 	if (Config.Hacks.VUCycleSteal < 0 || Config.Hacks.VUCycleSteal > 4)
@@ -182,6 +183,7 @@ void SaveConfig()
 	SetValuel("INTCSTATSlow", Config.Hacks.INTCSTATSlow);
 	SetValuel("VUCycleSteal",  Config.Hacks.VUCycleSteal);
 	SetValuel("IdleLoopFF", Config.Hacks.IdleLoopFF);
+	//SetValuel("BlockDump", Config.Blockdump);
 	SetValuel("ESCExits", Config.Hacks.ESCExits);
 
 	SetValuel("Fixes",        Config.GameFixes);

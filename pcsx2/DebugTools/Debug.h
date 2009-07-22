@@ -112,6 +112,7 @@ extern bool SrcLog_MEMCARDS( const char* fmt, ... );
 extern bool SrcLog_PAD( const char* fmt, ... );
 extern bool SrcLog_GTE( const char* fmt, ... );
 extern bool SrcLog_CDR( const char* fmt, ... );
+extern bool SrcLog_CDVD( const char* fmt, ... );
 extern bool SrcLog_GPU( const char* fmt, ... );
 
 #define CPU_LOG  (varLog & 0x00000001) && SrcLog_CPU
@@ -146,6 +147,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define GTE_LOG  (varLog & 0x04000000) && SrcLog_GTE
 #define CDR_LOG  (varLog & 0x08000000) && SrcLog_CDR
 #define GPU_LOG  (varLog & 0x10000000) && SrcLog_GPU
+#define CDVD_LOG  SrcLog_CDVD
 
 // fixme - currently we don't log cache
 #define CACHE_LOG 0&&
@@ -181,6 +183,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define PAD_LOG  0&&
 #define GTE_LOG  0&&
 #define CDR_LOG  0&&
+#define CDVD_LOG  0&&
 #define GPU_LOG  0&&
 #define PSXCNT_LOG 0&&
 #define EECNT_LOG 0&&

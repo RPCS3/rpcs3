@@ -29,7 +29,7 @@
 
 #include "CDVDisoReader.h"
 
-char isoFileName[256];
+char isoFileName[g_MaxPath];
 
 u8 *pbuffer;
 int cdtype;
@@ -59,11 +59,11 @@ void lba_to_msf(s32 lba, u8* m, u8* s, u8* f)
 	*f = lba % 75;
 }
 
-#define btoi(b)	((b)/16*10 + (b)%16)	/* BCD to u_char */
-#define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
+//#define btoi(b)	((b)/16*10 + (b)%16)	/* BCD to u_char */
+//#define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
 
 
-#ifdef PCSX2_DEBUG
+/*#ifdef PCSX2_DEBUG
 void __Log(char *fmt, ...)
 {
 	va_list list;
@@ -76,11 +76,11 @@ void __Log(char *fmt, ...)
 }
 #else
 #define __Log 0&&
-#endif
+#endif*/
 
 s32 CALLBACK ISOinit()
 {
-#ifdef PCSX2_DEBUG
+/*#ifdef PCSX2_DEBUG
 	cdvdLog = fopen("logs/cdvdLog.txt", "w");
 	if (cdvdLog == NULL)
 	{
@@ -91,18 +91,18 @@ s32 CALLBACK ISOinit()
 			return -1;
 		}
 	}
-	setvbuf(cdvdLog, NULL,  _IONBF, 0);
+	setvbuf(cdvdLog, NULL,  _IONBF, 0);*/
 	CDVD_LOG("CDVDinit\n");
-#endif
+/*#endif*/
 
 	return 0;
 }
 
 void CALLBACK ISOshutdown()
 {
-#ifdef CDVD_LOG
+/*#ifdef CDVD_LOG
 	if (cdvdLog != NULL) fclose(cdvdLog);
-#endif
+#endif*/
 }
 
 s32 CALLBACK ISOopen(const char* pTitle)
@@ -116,12 +116,18 @@ s32 CALLBACK ISOopen(const char* pTitle)
 		return -1;
 	}
 
-	if (iso->type == ISOTYPE_DVD)
-		cdtype = CDVD_TYPE_PS2DVD;
-	else if (iso->type == ISOTYPE_AUDIO)
-		cdtype = CDVD_TYPE_CDDA;
-	else
-		cdtype = CDVD_TYPE_PS2CD;
+	switch (iso->type)
+	{
+		case ISOTYPE_DVD:
+			cdtype = CDVD_TYPE_PS2DVD;
+			break;
+		case ISOTYPE_AUDIO:
+			cdtype = CDVD_TYPE_CDDA;
+			break;
+		default:
+			cdtype = CDVD_TYPE_PS2CD;
+			break;
+	}
 
 	return 0;
 }
@@ -209,8 +215,7 @@ static void FindLayer1Start()
 			layer1start=-2;
 		}
 
-		if(layer1start>=0)
-			Console::Status("found at 0x%8.8x\n", params layer1start);
+		if(layer1start>=0) Console::Status("found at 0x%8.8x\n", params layer1start);
 	}
 }
 
@@ -346,11 +351,8 @@ s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
-	if (_lsn < 0)
-		lsn = iso->blocks + _lsn;
-
-	if(lsn > iso->blocks)
-		return -1;
+	if (_lsn < 0) lsn = iso->blocks + _lsn;
+	if (lsn > iso->blocks) return -1;
 
 	if(mode == CDVD_MODE_2352)
 	{
@@ -389,11 +391,8 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 {
 	int _lsn = lsn;
 
-	if (_lsn < 0)
-		lsn = iso->blocks + _lsn;
-
-	if(lsn > iso->blocks)
-		return -1;
+	if (_lsn < 0) lsn = iso->blocks + _lsn;
+	if (lsn > iso->blocks) return -1;
 
 	isoReadBlock(iso, cdbuffer + iso->blockofs, lsn);
 

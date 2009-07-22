@@ -36,7 +36,7 @@
 static int diskTypeCached=-1;
 
 int lastReadSize;
-static int plsn=0;
+static int plsn=0; // This never gets set, so it's always 0.
 
 static isoFile *blockDumpFile;
 
@@ -62,15 +62,14 @@ int CheckDiskTypeFS(int baseType)
 
 		buffer[size]='\0';
 
-		pos=strstr(buffer, "BOOT2");
-		if (pos==NULL){
-			pos=strstr(buffer, "BOOT");
-			if (pos==NULL) {
-				return CDVD_TYPE_ILLEGAL;
-			}
+		pos = strstr(buffer, "BOOT2");
+		if (pos == NULL)
+		{
+			pos = strstr(buffer, "BOOT");
+			if (pos == NULL)  return CDVD_TYPE_ILLEGAL;
 			return CDVD_TYPE_PSCD;
 		}
-		return (baseType==CDVD_TYPE_DETCTCD)?CDVD_TYPE_PS2CD:CDVD_TYPE_PS2DVD;
+		return (baseType==CDVD_TYPE_DETCTCD) ? CDVD_TYPE_PS2CD : CDVD_TYPE_PS2DVD;
 	}
 
 	if (IsoFS_findFile("PSX.EXE;1", &tocEntry) == TRUE)
@@ -90,8 +89,8 @@ static char bleh[2352];
 
 int FindDiskType(int mType)
 {
-	int dataTracks=0;
-	int audioTracks=0;
+	int dataTracks = 0;
+	int audioTracks = 0;
 
 	int iCDType = mType;
 
@@ -99,69 +98,71 @@ int FindDiskType(int mType)
 
 	CDVD.getTN(&tn);
 
-	if(tn.strack != tn.etrack) // multitrack == CD.
+	if (tn.strack != tn.etrack) // multitrack == CD.
 	{
 		iCDType = CDVD_TYPE_DETCTCD;
 	}
-	else if(mType<0)
+	else if (mType < 0)
 	{
 		cdvdTD td;
 		CDVD.getTD(0,&td);
-		if(td.lsn>452849)
+		if (td.lsn > 452849)
 		{
 			iCDType = CDVD_TYPE_DETCTDVDS;
 		}
-		else if(DoCDVDreadSector((u8*)bleh,16,CDVD_MODE_2048)==0)
+		else if (DoCDVDreadSector((u8*)bleh,16,CDVD_MODE_2048) == 0)
 		{
 			struct cdVolDesc* volDesc=(struct cdVolDesc *)bleh;
-			if(volDesc)
+			if (volDesc)
 			{                                 
-				if(volDesc->rootToc.tocSize==2048) iCDType = CDVD_TYPE_DETCTCD;
-				else                               iCDType = CDVD_TYPE_DETCTDVDS;
+				if(volDesc->rootToc.tocSize==2048) 
+					iCDType = CDVD_TYPE_DETCTCD;
+				else                             
+					iCDType = CDVD_TYPE_DETCTDVDS;
 			}
 		}
 	}
 
-	if(iCDType == CDVD_TYPE_DETCTDVDS)
+	if (iCDType == CDVD_TYPE_DETCTDVDS)
 	{
-		s32 dlt=0;
-		u32 l1s=0;
+		s32 dlt = 0;
+		u32 l1s = 0;
 
 		if(CDVD.getDualInfo(&dlt,&l1s)==0)
 		{
-			if(dlt>0)
-				iCDType = CDVD_TYPE_DETCTDVDD;
+			if (dlt > 0) iCDType = CDVD_TYPE_DETCTDVDD;
 		}
 	}
 
 	switch(iCDType)
 	{
-	case CDVD_TYPE_DETCTCD:
-		Console::Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
-		break;
-	case CDVD_TYPE_DETCTDVDS:
-		Console::Status(" * CDVD Disk Open: DVD, Single layer or unknown:");
-		break;
-	case CDVD_TYPE_DETCTDVDD:
-		Console::Status(" * CDVD Disk Open: DVD, Double layer:");
-		break;
-
+		case CDVD_TYPE_DETCTCD:
+			Console::Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
+			break;
+		
+		case CDVD_TYPE_DETCTDVDS:
+			Console::Status(" * CDVD Disk Open: DVD, Single layer or unknown:");
+			break;
+		
+		case CDVD_TYPE_DETCTDVDD:
+			Console::Status(" * CDVD Disk Open: DVD, Double layer:");
+			break;
 	}
 
-	audioTracks=dataTracks=0;
-	for(int i=tn.strack;i<=tn.etrack;i++)
+	audioTracks = dataTracks = 0;
+	for(int i = tn.strack; i <= tn.etrack; i++)
 	{
 		cdvdTD td,td2;
 		CDVD.getTD(i,&td);
 
-		if(tn.etrack>i)
+		if (tn.etrack > i)
 			CDVD.getTD(i+1,&td2);
 		else
 			CDVD.getTD(0,&td2);
 
 		int tlength = td2.lsn - td.lsn;
 
-		if(td.type==CDVD_AUDIO_TRACK) 
+		if (td.type == CDVD_AUDIO_TRACK) 
 		{
 			audioTracks++;
 			Console::Status(" * * Track %d: Audio (%d sectors)", params i,tlength);
@@ -173,24 +174,24 @@ int FindDiskType(int mType)
 		}
 	}
 
-	if(dataTracks>0)
+	if (dataTracks > 0)
 	{
 		iCDType=CheckDiskTypeFS(iCDType);
 	}
 
-	if(audioTracks>0)
+	if (audioTracks > 0)
 	{
-		if(iCDType==CDVD_TYPE_PS2CD)
+		switch (iCDType)
 		{
-			iCDType=CDVD_TYPE_PS2CDDA;
-		}
-		else if(iCDType==CDVD_TYPE_PSCD)
-		{
-			iCDType=CDVD_TYPE_PSCDDA;
-		}
-		else
-		{
-			iCDType=CDVD_TYPE_CDDA;
+			case CDVD_TYPE_PS2CD:
+				iCDType=CDVD_TYPE_PS2CDDA;
+				break;
+			case CDVD_TYPE_PSCD:
+				iCDType=CDVD_TYPE_PSCDDA;
+				break;
+			default:
+				iCDType=CDVD_TYPE_CDDA;
+				break;
 		}
 	}
 
@@ -210,25 +211,28 @@ void DetectDiskType()
 
 	switch(baseMediaType) // Paranoid mode: do not trust the plugin's detection system to work correctly.
 	{
-	case CDVD_TYPE_CDDA:
-	case CDVD_TYPE_PSCD:
-	case CDVD_TYPE_PS2CD:
-	case CDVD_TYPE_PSCDDA:
-	case CDVD_TYPE_PS2CDDA:
-		mType=CDVD_TYPE_DETCTCD;
-		break;
-	case CDVD_TYPE_DVDV:
-	case CDVD_TYPE_PS2DVD:
-		mType=CDVD_TYPE_DETCTDVDS;
-		break;
-	case CDVD_TYPE_DETCTDVDS:
-	case CDVD_TYPE_DETCTDVDD:
-	case CDVD_TYPE_DETCTCD:
-		mType=baseMediaType;
-		break;
-	case CDVD_TYPE_NODISC:
-		diskTypeCached = CDVD_TYPE_NODISC;
-		return;
+		case CDVD_TYPE_CDDA:
+		case CDVD_TYPE_PSCD:
+		case CDVD_TYPE_PS2CD:
+		case CDVD_TYPE_PSCDDA:
+		case CDVD_TYPE_PS2CDDA:
+			mType = CDVD_TYPE_DETCTCD;
+			break;
+		
+		case CDVD_TYPE_DVDV:
+		case CDVD_TYPE_PS2DVD:
+			mType = CDVD_TYPE_DETCTDVDS;
+			break;
+		
+		case CDVD_TYPE_DETCTDVDS:
+		case CDVD_TYPE_DETCTDVDD:
+		case CDVD_TYPE_DETCTCD:
+			mType = baseMediaType;
+			break;
+		
+		case CDVD_TYPE_NODISC:
+			diskTypeCached = CDVD_TYPE_NODISC;
+			return;
 	}
 
 	diskTypeCached = FindDiskType(mType);
@@ -239,7 +243,7 @@ void DetectDiskType()
 
 s32 DoCDVDinit()
 {
-	diskTypeCached=-1;
+	diskTypeCached = -1;
 
 	if(CDVD.initCount) *CDVD.initCount++; // used to handle the case where the plugin was inited at boot, but then iso takes over
 	return CDVD.init();
@@ -253,48 +257,22 @@ void DoCDVDshutdown()
 
 s32 DoCDVDopen(const char* pTitleFilename)
 {
-	int ret=0;
-
-	ret = CDVD.open(pTitleFilename);
-
+	int ret = CDVD.open(pTitleFilename);
 	int cdtype = DoCDVDdetectDiskType();
 
 	if((Config.Blockdump)&&(cdtype != CDVD_TYPE_NODISC))
 	{
-		char fname_only[MAX_PATH];
+		char fname_only[g_MaxPath];
 
 		if(CDVD.init == ISO.init)
 		{
 #ifdef _WIN32
-			char fname[MAX_PATH], ext[MAX_PATH];
+			char fname[MAX_PATH], ext[g_MaxPath];
 			_splitpath(isoFileName, NULL, NULL, fname, ext);
 			_makepath(fname_only, NULL, NULL, fname, NULL);
 #else
-			char* p, *plast;
-
-			plast = p = strchr(isoFileName, '/');
-			while (p != NULL)
-			{
-				plast = p;
-				p = strchr(p + 1, '/');
-			}
-
-			// Lets not create dumps in the plugin directory.
-			strcpy(fname_only, "../");
-			if (plast != NULL) 
-				strcat(fname_only, plast + 1);
-			else 
-				strcat(fname_only, isoFileName);
-
-			plast = p = strchr(fname_only, '.');
-
-			while (p != NULL)
-			{
-				plast = p;
-				p = strchr(p + 1, '.');
-			}
-
-			if (plast != NULL) *plast = 0;
+			getcwd(fname_only, ArraySize(fname_only)); // Base it out of the current directory for now.
+			strcat(fname_only, Path::GetFilenameWithoutExt(isoFileName).c_str());
 #endif
 		}
 		else
@@ -302,7 +280,8 @@ s32 DoCDVDopen(const char* pTitleFilename)
 			strcpy(fname_only, "Untitled");
 		}
 
-#if defined(_WIN32) && defined(ENABLE_TIMESTAMPS)
+#ifdef ENABLE_TIMESTAMPS
+#ifdef _WIN32
 		SYSTEMTIME time;
 		GetLocalTime(&time);
 
@@ -311,16 +290,27 @@ s32 DoCDVDopen(const char* pTitleFilename)
 			" (%04d-%02d-%02d %02d-%02d-%02d).dump",
 			time.wYear, time.wMonth, time.wDay,
 			time.wHour, time.wMinute, time.wSecond);
-
-		// TODO: implement this for linux
+#else
+		time_t rawtime;
+		struct tm * timeinfo;
+		
+		time(&rawtime);
+		timeinfo = localtime(&rawtime);
+		
+		sprintf(
+			fname_only+strlen(fname_only),
+			" (%04d-%02d-%02d %02d-%02d-%02d).dump",
+			timeinfo->tm_year + 1900, timeinfo->tm_mon, timeinfo->tm_mday,
+			timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+#endif
 #else
 		strcat(fname_only, ".dump");
 #endif
 		cdvdTD td;
 		CDVD.getTD(0, &td);
 
-		int blockofs=0;
-		int blocksize=0;
+		int blockofs = 0;
+		int blocksize = 0;
 		int blocks = td.lsn;
 
 		switch(cdtype)
@@ -332,6 +322,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 			blockofs = 24;
 			blocksize = 2048;
 			break;
+		
 		default:
 			blockofs = 0;
 			blocksize= 2352;
@@ -399,7 +390,7 @@ s32 DoCDVDgetBuffer(u8* buffer)
 {
 	int ret = CDVD.getBuffer2(buffer);
 
-	if(ret==0)
+	if (ret == 0)
 	{
 		if (blockDumpFile != NULL)
 		{
@@ -412,8 +403,7 @@ s32 DoCDVDgetBuffer(u8* buffer)
 
 s32 DoCDVDdetectDiskType()
 {
-	if(diskTypeCached<0)
-		DetectDiskType();
+	if(diskTypeCached<0) DetectDiskType();
 
 	return diskTypeCached;
 }

@@ -183,7 +183,7 @@ int _isoReadDtable(isoFile *iso)
 
 	for (int i = 0; i < iso->dtablesize; i++)
 	{
-		_seekfile(iso->handle, 16 + (iso->blocksize + 4)*i, SEEK_SET);
+		_seekfile(iso->handle, 16 + (iso->blocksize + 4) * i, SEEK_SET);
 		ret = _readfile(iso->handle, &iso->dtable[i], 4);
 		if (ret < 4) return -1;
 	}
@@ -220,7 +220,7 @@ int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
 		_readfile(iso->handle, &iso->blocks, 4);
 		_readfile(iso->handle, &iso->blockofs, 4);
 		_isoReadDtable(iso);
-		return detect(iso) == 1 ? 0 : -1;
+		return (detect(iso) == 1) ? 0 : -1;
 	}
 	else
 	{
@@ -266,7 +266,7 @@ isoFile *isoOpen(const char *filename)
 
 	Console::WriteLn("detected blocksize = %d", params iso->blocksize);
 
-	if (strlen(iso->filename) > 3 && strncmp(iso->filename + (strlen(iso->filename) - 3), "I00", 3) == 0)
+	if ((strlen(iso->filename) > 3) && strncmp(iso->filename + (strlen(iso->filename) - 3), "I00", 3) == 0)
 	{
 		int i;
 		
@@ -299,8 +299,7 @@ isoFile *isoOpen(const char *filename)
 	if (iso->flags == 0)
 	{
 		_seekfile(iso->handle, 0, SEEK_END);
-		iso->blocks = (u32)((_tellfile(iso->handle) - iso->offset) /
-		                    (iso->blocksize));
+		iso->blocks = (u32)((_tellfile(iso->handle) - iso->offset) / (iso->blocksize));
 	}
 
 	Console::WriteLn("isoOpen: %s ok", params iso->filename);
@@ -327,7 +326,6 @@ isoFile *isoCreate(const char *filename, int flags)
 	iso->flags = flags;
 	iso->offset = 0;
 	iso->blockofs = 24;
-	iso->blocksize = CD_FRAMESIZE_RAW;
 	iso->blocksize = 2048;
 
 	if (iso->flags & (ISOFLAGS_Z | ISOFLAGS_Z2 | ISOFLAGS_BZ2))
@@ -430,7 +428,7 @@ int _isoReadBlockD(isoFile *iso, u8 *dst, int lsn)
 	{
 		if (iso->dtable[i] != lsn) continue;
 
-		_seekfile(iso->handle, 16 + i*(iso->blocksize + 4) + 4, SEEK_SET);
+		_seekfile(iso->handle, 16 + i * (iso->blocksize + 4) + 4, SEEK_SET);
 		ret = _readfile(iso->handle, dst, iso->blocksize);
 		
 		if (ret < iso->blocksize) return -1;
@@ -449,7 +447,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
 
 	for (i = 0; i < 8; i++)
 	{
-		if (lsn >= iso->multih[i].slsn && lsn <= iso->multih[i].elsn)
+		if ((lsn >= iso->multih[i].slsn) && (lsn <= iso->multih[i].elsn))
 		{
 			break;
 		}
