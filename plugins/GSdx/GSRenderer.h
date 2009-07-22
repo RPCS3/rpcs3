@@ -115,7 +115,7 @@ protected:
 
 			if(!m_dev->IsLost())
 			{
-				m_vt.Update(m_vertices, m_count, PRIM, m_context);
+				m_vt.Update(m_vertices, m_count, GSUtil::GetPrimClass(PRIM->PRIM));
 
 				Draw();
 			}

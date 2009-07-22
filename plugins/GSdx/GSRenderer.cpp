@@ -26,6 +26,7 @@ GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
 	: GSState(base, mt, irq)
 	, m_dev(dev)
 	, m_shader(0)
+	, m_vt(this)
 {
 	m_interlace = theApp.GetConfig("interlace", 0);
 	m_aspectratio = theApp.GetConfig("aspectratio", 1);

@@ -29,6 +29,8 @@
 #include "xbyak/xbyak.h"
 #include "xbyak/xbyak_util.h"
 
+class GSState;
+
 __declspec(align(16)) class GSVertexTrace
 {
 	struct Vertex {GSVector4i c; GSVector4 p, t;};
@@ -83,7 +85,9 @@ __declspec(align(16)) class GSVertexTrace
 	GSVertexTraceMapHW9 m_map_hw9;
 	GSVertexTraceMapHW10 m_map_hw10;
 
-	uint32 Hash(const GIFRegPRIM* PRIM, const GSDrawingContext* context);
+	uint32 Hash(GS_PRIM_CLASS primclass);
+
+	const GSState* m_state;
 
 public:
 	GS_PRIM_CLASS m_primclass;
@@ -97,8 +101,10 @@ public:
 		struct {uint32 rgba:16, xyzf:4, stq:4;};
 	} m_eq;
 
-	void Update(const GSVertexSW* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
-	void Update(const GSVertexHW9* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
-	void Update(const GSVertexHW10* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
-	void Update(const GSVertexNull* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context) {}
+	GSVertexTrace(const GSState* state);
+
+	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass);
+	void Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass);
+	void Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primclass);
+	void Update(const GSVertexNull* v, int count, GS_PRIM_CLASS primclass) {}
 };

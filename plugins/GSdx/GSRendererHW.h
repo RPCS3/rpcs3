@@ -37,68 +37,86 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 	#pragma region hacks
 
-	typedef bool (GSRendererHW::*OI_Ptr)(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t);
+	typedef bool (GSRendererHW::*OI_Ptr)(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t);
 	typedef void (GSRendererHW::*OO_Ptr)();
 	typedef bool (GSRendererHW::*CU_Ptr)();
 
-	bool OI_FFXII(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	bool OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		static uint32* video = NULL;
-		static bool ok = false;
+		static int lines = 0;
 
-		if(prim == GS_POINTLIST && m_count >= 448 * 448 && m_count <= 448 * 512)
+		if(lines == 0)
 		{
-			// incoming pixels are stored in columns, one column is 16x512, total res 448x512 or 448x454
-
-			if(!video) video = new uint32[512 * 512];
-
-			for(int x = 0, i = 0, rows = m_count / 448; x < 448; x += 16)
+			if(m_vt.m_primclass == GS_LINE_CLASS && (m_count == 448 * 2 || m_count == 512 * 2))
 			{
-				uint32* dst = &video[x];
-
-				for(int y = 0; y < rows; y++, dst += 512)
+				lines = m_count / 2;
+			}
+		}
+		else
+		{
+			if(m_vt.m_primclass == GS_POINT_CLASS)
+			{
+				if(m_count >= 16 * 512)
 				{
-					for(int j = 0; j < 16; j++, i++)
+					// incoming pixels are stored in columns, one column is 16x512, total res 448x512 or 448x454
+
+					if(!video) video = new uint32[512 * 512];
+
+					int ox = m_context->XYOFFSET.OFX;
+					int oy = m_context->XYOFFSET.OFY;
+
+					for(int i = 0; i < m_count; i++)
 					{
-						dst[j] = m_vertices[i].c0;
+						int x = ((int)m_vertices[i].p.x - ox) >> 4;
+						int y = ((int)m_vertices[i].p.y - oy) >> 4;
+
+						// video[y * 448 + x] = m_vertices[i].c0;
+						video[(y << 8) + (y << 7) + (y << 6) + x] = m_vertices[i].c0;
 					}
+
+					return false;
+				}
+				else 
+				{
+					lines = 0;
 				}
 			}
+			else if(m_vt.m_primclass == GS_LINE_CLASS)
+			{
+				if(m_count == lines * 2)
+				{
+					// normally, this step would copy the video onto screen with 512 texture mapped horizontal lines,
+					// but we use the stored video data to create a new texture, and replace the lines with two triangles
 
-			ok = true;
+					m_dev->Recycle(t->m_texture);
 
-			return false;
-		}
-		else if(prim == GS_LINELIST && m_count == 512 * 2 && ok)
-		{
-			// normally, this step would copy the video onto screen with 512 texture mapped horizontal lines,
-			// but we use the stored video data to create a new texture, and replace the lines with two triangles
+					t->m_texture = m_dev->CreateTexture(512, 512);
 
-			ok = false;
+					t->m_texture->Update(GSVector4i(0, 0, 448, lines), video, 448 * 4);
 
-			m_dev->Recycle(t->m_texture);
+					m_vertices[0] = m_vertices[0];
+					m_vertices[1] = m_vertices[1];
+					m_vertices[2] = m_vertices[m_count - 2];
+					m_vertices[3] = m_vertices[1];
+					m_vertices[4] = m_vertices[2];
+					m_vertices[5] = m_vertices[m_count - 1];
 
-			t->m_texture = m_dev->CreateTexture(512, 512);
+					m_count = 6;
 
-			t->m_texture->Update(GSVector4i(0, 0, 448, 512), video, 512 * 4);
-
-			m_vertices[0] = m_vertices[0];
-			m_vertices[1] = m_vertices[1];
-			m_vertices[2] = m_vertices[m_count - 2];
-			m_vertices[3] = m_vertices[1];
-			m_vertices[4] = m_vertices[2];
-			m_vertices[5] = m_vertices[m_count - 1];
-
-			prim = GS_TRIANGLELIST;
-			m_count = 6;
-
-			return true;
+					m_vt.Update(m_vertices, m_count, GS_TRIANGLE_CLASS);
+				}
+				else 
+				{
+					lines = 0;
+				}
+			}
 		}
 
 		return true;
 	}
 
-	bool OI_FFX(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	bool OI_FFX(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 ZBP = m_context->ZBUF.Block();
@@ -114,7 +132,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
-	bool OI_MetalSlug6(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	bool OI_MetalSlug6(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		// missing red channel fix
 		
@@ -126,10 +144,12 @@ class GSRendererHW : public GSRendererT<Vertex>
 			}
 		}
 
+		m_vt.Update(m_vertices, m_count, m_vt.m_primclass);
+
 		return true;
 	}
 
-	bool OI_GodOfWar2(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	bool OI_GodOfWar2(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FBW = m_context->FRAME.FBW;
@@ -156,7 +176,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
-	bool OI_SimpsonsGame(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	bool OI_SimpsonsGame(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FBW = m_context->FRAME.FBW;
@@ -176,7 +196,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
-	bool OI_RozenMaidenGebetGarden(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	bool OI_RozenMaidenGebetGarden(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		if(!PRIM->TME)
 		{
@@ -222,9 +242,9 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
-	bool OI_PointListPalette(int& prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	bool OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
-		if(prim == GS_POINTLIST && !PRIM->TME)
+		if(m_vt.m_primclass == GS_POINT_CLASS && !PRIM->TME)
 		{
 			uint32 FBP = m_context->FRAME.Block();
 			uint32 FBW = m_context->FRAME.FBW;
@@ -586,9 +606,7 @@ protected:
 			s_n++;
 		}
 
-		int prim = PRIM->PRIM;
-
-		if(m_hacks.m_oi && !(this->*m_hacks.m_oi)(prim, rt->m_texture, ds->m_texture, tex))
+		if(m_hacks.m_oi && !(this->*m_hacks.m_oi)(rt->m_texture, ds->m_texture, tex))
 		{
 			return;
 		}
