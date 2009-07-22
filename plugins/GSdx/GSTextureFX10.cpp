@@ -189,14 +189,7 @@ void GSTextureFX10::SetupGS(GSSelector sel)
 	dev->GSSetShader(gs);
 }
 
-void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
-{
-	((GSDevice10*)m_dev)->PSSetShaderResources(tex, pal);
-
-	UpdatePS(sel, cb, ssel);
-}
-
-void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
+void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
 	GSDevice10* dev = (GSDevice10*)m_dev;
 
@@ -302,19 +295,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 	dev->PSSetSamplerState(ss0, ss1);
 }
 
-void GSTextureFX10::SetupRS(const GSVector2i& size, const GSVector4i& scissor)
-{
-	((GSDevice10*)m_dev)->RSSet(size, &scissor);
-}
-
-void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds)
-{
-	UpdateOM(dssel, bsel, afix);
-
-	((GSDevice10*)m_dev)->OMSetRenderTargets(rt, ds);
-}
-
-void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
+void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
 	GSDevice10* dev = (GSDevice10*)m_dev;
 /*

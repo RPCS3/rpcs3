@@ -46,10 +46,10 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	m_sel = p->sel;
 
 	m_env.vm = p->vm;
-	m_env.fbr = p->fbo->row;
-	m_env.zbr = p->zbo->row;
-	m_env.fbc = p->fbo->col[0];
-	m_env.zbc = p->zbo->col[0];
+	m_env.fbr = p->fbo->pixel.row;
+	m_env.zbr = p->zbo->pixel.row;
+	m_env.fbc = p->fbo->pixel.col[0];
+	m_env.zbc = p->zbo->pixel.col[0];
 	m_env.fzbr = p->fzbo->row;
 	m_env.fzbc = p->fzbo->col;
 	m_env.fm = GSVector4i(p->fm);

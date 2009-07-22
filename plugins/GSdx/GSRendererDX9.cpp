@@ -184,9 +184,9 @@ void GSRendererDX9::VertexKick(bool skip)
 	}
 }
 
-void GSRendererDX9::Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererDX9::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
-	switch(primclass)
+	switch(m_vt.m_primclass)
 	{
 	case GS_POINT_CLASS:
 		m_topology = D3DPT_POINTLIST;
@@ -207,7 +207,7 @@ void GSRendererDX9::Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, 
 
 	(*(GSDevice9*)m_dev)->SetRenderState(D3DRS_SHADEMODE, PRIM->IIP ? D3DSHADE_GOURAUD : D3DSHADE_FLAT); // TODO
 
-	__super::Draw(primclass, rt, ds, tex);
+	__super::Draw(rt, ds, tex);
 }
 
 void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
@@ -262,10 +262,6 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 		dev->PSSetShader(dev->m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL, 0);
 		dev->PSSetSamplerState(&dev->m_convert.pt);
 
-		// rs
-
-		dev->RSSet(size);
-
 		//
 
 		dev->DrawPrimitive();
@@ -316,10 +312,6 @@ void GSRendererDX9::UpdateFBA(GSTexture* rt)
 	// ps
 
 	dev->PSSetShader(dev->m_convert.ps[4], NULL, 0);
-
-	// rs
-
-	dev->RSSet(rt->m_size);
 
 	//
 

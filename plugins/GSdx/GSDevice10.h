@@ -55,7 +55,7 @@ class GSDevice10 : public GSDevice
 
 	//
 
-	CComPtr<ID3D10Device> m_dev;
+	CComPtr<ID3D10Device1> m_dev;
 	CComPtr<IDXGISwapChain> m_swapchain;
 
 	struct
@@ -130,10 +130,9 @@ public:
 	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 	void PSSetShader(ID3D10PixelShader* ps, ID3D10Buffer* ps_cb);
 	void PSSetSamplerState(ID3D10SamplerState* ss0, ID3D10SamplerState* ss1);
-	void RSSet(const GSVector2i& size, const GSVector4i* scissor = NULL);
 	void OMSetDepthStencilState(ID3D10DepthStencilState* dss, uint8 sref);
 	void OMSetBlendState(ID3D10BlendState* bs, float bf);
-	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 
 	ID3D10Device* operator->() {return m_dev;}
 	operator ID3D10Device*() {return m_dev;}

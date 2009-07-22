@@ -29,7 +29,7 @@
 class GSRendererDX11 : public GSRendererDX<GSVertexHW11>
 {
 protected:
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 
 	struct
 	{

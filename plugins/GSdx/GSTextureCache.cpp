@@ -69,7 +69,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			continue;
 		}
 
-		if(s->m_palette == NULL && psm.pal > 0 && !GSVector4i::compare(clut, s->m_clut, psm.pal * sizeof(clut[0])))
+		if(s->m_palette == NULL && psm.pal > 0 && !GSVector4i::compare64(clut, s->m_clut, psm.pal * sizeof(clut[0])))
 		{
 			continue;
 		}
@@ -120,7 +120,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			memcpy(src->m_clut, clut, psm.pal * sizeof(clut[0]));
 		}
 
-		m_src.Add(src, TEX0, m_renderer->m_mem);
+		m_src.Add(src, TEX0, m_renderer->m_context->offset.tex);
 	}
 
 	if(psm.pal > 0)
@@ -233,13 +233,11 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 	return dst;
 }
 
-void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& rect, bool target)
+void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect, bool target)
 {
-	uint32 bp = BITBLTBUF.DBP;
-	uint32 bw = BITBLTBUF.DBW;
-	uint32 psm = BITBLTBUF.DPSM;
-
-	const GSLocalMemory::BlockOffset* bo = m_renderer->m_mem.GetBlockOffset(bp, bw, psm);
+	uint32 bp = o->bp;
+	uint32 bw = o->bw;
+	uint32 psm = o->psm;
 
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
@@ -266,11 +264,11 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = bo->row[y >> 3];
+		uint32 base = o->block.row[y >> 3];
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 page = (base + bo->col[x >> 3]) >> 5;
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
@@ -355,10 +353,10 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 	}
 }
 
-void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
+void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 {
-	uint32 bp = BITBLTBUF.SBP;
-	uint32 psm = BITBLTBUF.SPSM;
+	uint32 bp = o->bp;
+	uint32 psm = o->psm;
 
 	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
 	{
@@ -743,7 +741,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 		m_complete = true; // lame, but better than nothing
 	}
 
-	const GSLocalMemory::BlockOffset* bo = m_renderer->m_mem.GetBlockOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM);
+	const GSOffset* o = m_renderer->m_context->offset.tex;
 
 	bool repeating = m_TEX0.IsRepeating();
 
@@ -751,11 +749,11 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = bo->row[y >> 3];
+		uint32 base = o->block.row[y >> 3];
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 block = base + bo->col[x >> 3];
+			uint32 block = base + o->block.col[x >> 3];
 
 			if(block < MAX_BLOCKS)
 			{
@@ -783,11 +781,11 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 		{
 			for(int y = r.top; y < r.bottom; y += bs.y)
 			{
-				uint32 base = bo->row[y >> 3];
+				uint32 base = o->block.row[y >> 3];
 
 				for(int x = r.left; x < r.right; x += bs.x)
 				{
-					uint32 block = base + bo->col[x >> 3];
+					uint32 block = base + o->block.col[x >> 3];
 
 					if(block < MAX_BLOCKS)
 					{
@@ -855,6 +853,8 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 	GSLocalMemory& mem = m_renderer->m_mem;
 
+	const GSOffset* o = m_renderer->m_context->offset.tex;
+
 	GSLocalMemory::readTexture rtx = psm.rtx;
 
 	if(m_fmt == GSTextureFX::FMT_8)
@@ -869,7 +869,7 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 		if((r > tr).mask() & 0xff00)
 		{
-			(mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+			(mem.*rtx)(o, r, buff, pitch, m_TEXA);
 
 			m_texture->Update(r.rintersect(tr), buff, pitch);
 		}
@@ -879,13 +879,13 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 			if(m_texture->Map(m, &r))
 			{
-				(mem.*rtx)(r, m.bits, m.pitch, m_TEX0, m_TEXA);
+				(mem.*rtx)(o, r, m.bits, m.pitch, m_TEXA);
 
 				m_texture->Unmap();
 			}
 			else
 			{
-				(mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+				(mem.*rtx)(o, r, buff, pitch, m_TEXA);
 
 				m_texture->Update(r, buff, pitch);
 			}
@@ -951,6 +951,8 @@ void GSTextureCache::Target::Update()
 
 		if(GSTexture* t = m_renderer->m_dev->CreateTexture(w, h))
 		{
+			const GSOffset* o = m_renderer->m_mem.GetOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM); // TODO: m_renderer->m_context->bo.tex;
+
 			GIFRegTEXA TEXA;
 
 			TEXA.AEM = 1;
@@ -961,7 +963,7 @@ void GSTextureCache::Target::Update()
 
 			if(t->Map(m))
 			{
-				m_renderer->m_mem.ReadTexture(r, m.bits,  m.pitch, m_TEX0, TEXA);
+				m_renderer->m_mem.ReadTexture(o, r, m.bits,  m.pitch, TEXA);
 
 				t->Unmap();
 			}
@@ -971,7 +973,7 @@ void GSTextureCache::Target::Update()
 				
 				int pitch = ((w + 3) & ~3) * 4;
 
-				m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA);
+				m_renderer->m_mem.ReadTexture(o, r, buff, pitch, TEXA);
 				
 				t->Update(r.rsize(), buff, pitch);
 			}
@@ -996,7 +998,7 @@ void GSTextureCache::Target::Update()
 
 // GSTextureCache::SourceMap
 
-void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMemory& mem)
+void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, const GSOffset* o)
 {
 	m_surfaces.insert(s);
 
@@ -1009,8 +1011,6 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 		return;
 	}
 
-	const GSLocalMemory::BlockOffset* bo = mem.GetBlockOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
-
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
 	GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
@@ -1020,11 +1020,11 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 
 	for(int y = 0; y < th; y += bs.y)
 	{
-		uint32 base = bo->row[y >> 3];
+		uint32 base = o->block.row[y >> 3];
 
 		for(int x = 0; x < tw; x += bs.x)
 		{
-			uint32 page = (base + bo->col[x >> 3]) >> 5;
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{

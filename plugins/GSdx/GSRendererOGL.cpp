@@ -64,7 +64,7 @@ void GSRendererOGL::VertexKick(bool skip)
 	}
 }
 
-void GSRendererOGL::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererOGL::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
 	GSDrawingEnvironment& env = m_env;
 	GSDrawingContext* context = m_context;

@@ -497,21 +497,19 @@ protected:
 	{
 		// printf("[%d] InvalidateVideoMem %d,%d - %d,%d %05x (%d)\n", (int)m_perfmon.GetFrame(), r.left, r.top, r.right, r.bottom, (int)BITBLTBUF.DBP, (int)BITBLTBUF.DPSM);
 
-		m_tc->InvalidateVideoMem(BITBLTBUF, r);
+		m_tc->InvalidateVideoMem(m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM), r);
 	}
 
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 	{
 		// printf("[%d] InvalidateLocalMem %d,%d - %d,%d %05x (%d)\n", (int)m_perfmon.GetFrame(), r.left, r.top, r.right, r.bottom, (int)BITBLTBUF.SBP, (int)BITBLTBUF.SPSM);
 
-		m_tc->InvalidateLocalMem(BITBLTBUF, r);
+		m_tc->InvalidateLocalMem(m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM), r);
 	}
 
 	void Draw()
 	{
 		if(IsBadFrame(m_skip)) return;
-
-		m_vt.Update(m_vertices, m_count, GSUtil::GetPrimClass(PRIM->PRIM), PRIM, m_context);
 
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
@@ -617,7 +615,7 @@ protected:
 
 		//
 
-		Draw(GSUtil::GetPrimClass(prim), rt->m_texture, ds->m_texture, tex);
+		Draw(rt->m_texture, ds->m_texture, tex);
 
 		//
 
@@ -629,28 +627,18 @@ protected:
 
 		GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(GSVector4i(m_context->scissor.in));
 
-		GIFRegBITBLTBUF BITBLTBUF;
-
-		BITBLTBUF.DBW = context->FRAME.FBW;
-
 		if(fm != 0xffffffff)
 		{
 			rt->m_valid = rt->m_valid.runion(r);
 
-			BITBLTBUF.DBP = context->FRAME.Block();
-			BITBLTBUF.DPSM = context->FRAME.PSM;
-
-			m_tc->InvalidateVideoMem(BITBLTBUF, r, false);
+			m_tc->InvalidateVideoMem(m_context->offset.fb, r, false);
 		}
 
 		if(zm != 0xffffffff)
 		{
 			ds->m_valid = ds->m_valid.runion(r);
 
-			BITBLTBUF.DBP = context->ZBUF.Block();
-			BITBLTBUF.DPSM = context->ZBUF.PSM;
-
-			m_tc->InvalidateVideoMem(BITBLTBUF, r, false);
+			m_tc->InvalidateVideoMem(m_context->offset.zb, r, false);
 		}
 
 		//
@@ -684,7 +672,7 @@ protected:
 		}
 	}
 
-	virtual void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) = 0;
+	virtual void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) = 0;
 
 	bool CanUpscale()
 	{

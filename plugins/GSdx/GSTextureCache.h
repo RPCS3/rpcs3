@@ -105,7 +105,7 @@ protected:
 
 		SourceMap() : m_used(false) {memset(m_pages, 0, sizeof(m_pages));}
 
-		void Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMemory& mem);
+		void Add(Source* s, const GIFRegTEX0& TEX0, const GSOffset* o);
 		void RemoveAll();
 		void RemoveAt(Source* s);
 
@@ -125,8 +125,8 @@ public:
 	Source* LookupSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
 	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used, bool fb = false);
 
-	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool target = true);
-	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
+	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r, bool target = true);
+	void InvalidateLocalMem(const GSOffset* o, const GSVector4i& r);
 
 	void IncAge();
 };

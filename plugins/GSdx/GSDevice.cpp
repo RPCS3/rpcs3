@@ -251,3 +251,46 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 
 	return t2 != NULL;
 }
+
+bool GSDevice::SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode)
+{
+	m_shader.level = level;
+
+	switch(level)
+	{
+	case D3D_FEATURE_LEVEL_9_1:
+	case D3D_FEATURE_LEVEL_9_2:
+		m_shader.model = "0x200";
+		m_shader.vs = compat_mode ? "vs_4_0_level_9_1" : "vs_2_0";
+		m_shader.ps = compat_mode ? "ps_4_0_level_9_1" : "ps_2_0";
+		break;
+	case D3D_FEATURE_LEVEL_9_3:
+		m_shader.model = "0x300";
+		m_shader.vs = compat_mode ? "vs_4_0_level_9_3" : "vs_3_0";
+		m_shader.ps = compat_mode ? "ps_4_0_level_9_3" : "ps_3_0";
+		break;
+	case D3D_FEATURE_LEVEL_10_0:
+		m_shader.model = "0x400";
+		m_shader.vs = "vs_4_0";
+		m_shader.gs = "gs_4_0";
+		m_shader.ps = "ps_4_0";
+		break;
+	case D3D_FEATURE_LEVEL_10_1:
+		m_shader.model = "0x401";
+		m_shader.vs = "vs_4_1";
+		m_shader.gs = "gs_4_1";
+		m_shader.ps = "ps_4_1";
+		break;
+	case D3D_FEATURE_LEVEL_11_0:
+		m_shader.model = "0x500";
+		m_shader.vs = "vs_5_0";
+		m_shader.gs = "gs_5_0";
+		m_shader.ps = "ps_5_0";
+		break;
+	default:
+		ASSERT(0);
+		return false;
+	}
+
+	return true;
+}

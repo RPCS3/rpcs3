@@ -168,16 +168,16 @@ void GSClut::WriteCLUT16S_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& T
 
 template<int n> void GSClut::WriteCLUT32_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	GSLocalMemory::PixelOffset* po = m_mem->GetPixelOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT32);
+	GSOffset* o = m_mem->GetOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT32);
 
-	uint32* RESTRICT s = &m_mem->m_vm32[po->row[TEXCLUT.COV]];
-	int* RESTRICT o = &po->col[0][TEXCLUT.COU << 4];
+	uint32* RESTRICT s = &m_mem->m_vm32[o->pixel.row[TEXCLUT.COV]];
+	int* RESTRICT col = &o->pixel.col[0][TEXCLUT.COU << 4];
 
 	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
 	for(int i = 0; i < n; i++)
 	{
-		uint32 c = s[o[i]];
+		uint32 c = s[col[i]];
 
 		clut[i] = (uint16)(c & 0xffff);
 		clut[i + 256] = (uint16)(c >> 16);
@@ -186,31 +186,31 @@ template<int n> void GSClut::WriteCLUT32_CSM2(const GIFRegTEX0& TEX0, const GIFR
 
 template<int n> void GSClut::WriteCLUT16_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	GSLocalMemory::PixelOffset* po = m_mem->GetPixelOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT16);
+	GSOffset* o = m_mem->GetOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT16);
 
-	uint16* RESTRICT s = &m_mem->m_vm16[po->row[TEXCLUT.COV]];
-	int* RESTRICT o = &po->col[0][TEXCLUT.COU << 4];
+	uint16* RESTRICT s = &m_mem->m_vm16[o->pixel.row[TEXCLUT.COV]];
+	int* RESTRICT col = &o->pixel.col[0][TEXCLUT.COU << 4];
 
 	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
 	for(int i = 0; i < n; i++)
 	{
-		clut[i] = s[o[i]];
+		clut[i] = s[col[i]];
 	}
 }
 
 template<int n> void GSClut::WriteCLUT16S_CSM2(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	GSLocalMemory::PixelOffset* po = m_mem->GetPixelOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT16S);
+	GSOffset* o = m_mem->GetOffset(TEX0.CBP, TEXCLUT.CBW, PSM_PSMCT16S);
 
-	uint16* RESTRICT s = &m_mem->m_vm16[po->row[TEXCLUT.COV]];
-	int* RESTRICT o = &po->col[0][TEXCLUT.COU << 4];
+	uint16* RESTRICT s = &m_mem->m_vm16[o->pixel.row[TEXCLUT.COV]];
+	int* RESTRICT col = &o->pixel.col[0][TEXCLUT.COU << 4];
 
 	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
 
 	for(int i = 0; i < n; i++)
 	{
-		clut[i] = s[o[i]];
+		clut[i] = s[col[i]];
 	}
 }
 

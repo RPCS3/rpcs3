@@ -148,17 +148,17 @@ void GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	dev->VSSetShader(i->second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
 }
 
-void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
+void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
 	GSDevice9* dev = (GSDevice9*)m_dev;
 
-	dev->PSSetShaderResources(tex, pal);
-
-	if(tex && (sel.wms == 3 || sel.wmt == 3))
+	if(cb->WH.z > 0 && cb->WH.w > 0 && (sel.wms == 3 || sel.wmt == 3))
 	{
+		GSVector4i size(cb->WH);
+
 		if(sel.wms == 3)
 		{
-			if(GSTexture* t = CreateMskFix(tex->m_size.x, cb->MskFix.x, cb->MskFix.z))
+			if(GSTexture* t = CreateMskFix(size.z, cb->MskFix.x, cb->MskFix.z))
 			{
 				(*dev)->SetTexture(2, *(GSTexture9*)t);
 			}
@@ -166,19 +166,12 @@ void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 
 		if(sel.wmt == 3)
 		{
-			if(GSTexture* t = CreateMskFix(tex->m_size.y, cb->MskFix.y, cb->MskFix.w))
+			if(GSTexture* t = CreateMskFix(size.w, cb->MskFix.y, cb->MskFix.w))
 			{
 				(*dev)->SetTexture(3, *(GSTexture9*)t);
 			}
 		}
 	}
-
-	UpdatePS(sel, cb, ssel);
-}
-
-void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
-{
-	GSDevice9* dev = (GSDevice9*)m_dev;
 
 	hash_map<uint32, CComPtr<IDirect3DPixelShader9> >::const_iterator i = m_ps.find(sel);
 
@@ -265,19 +258,7 @@ void GSTextureFX9::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 	dev->PSSetSamplerState(ss);
 }
 
-void GSTextureFX9::SetupRS(const GSVector2i& size, const GSVector4i& scissor)
-{
-	((GSDevice9*)m_dev)->RSSet(size, &scissor);
-}
-
-void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds)
-{
-	UpdateOM(dssel, bsel, afix);
-
-	((GSDevice9*)m_dev)->OMSetRenderTargets(rt, ds);
-}
-
-void GSTextureFX9::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
+void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
 	GSDevice9* dev = (GSDevice9*)m_dev;
 

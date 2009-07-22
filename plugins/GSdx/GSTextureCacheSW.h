@@ -56,8 +56,9 @@ public:
 
 	const GSTexture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
 
+	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r);
+
 	void RemoveAll();
 	void RemoveAt(GSTexture* t);
 	void IncAge();
-	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 };

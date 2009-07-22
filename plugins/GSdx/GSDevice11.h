@@ -55,11 +55,9 @@ class GSDevice11 : public GSDevice
 
 	//
 
-	D3D_FEATURE_LEVEL m_level;
 	CComPtr<ID3D11Device> m_dev;
 	CComPtr<ID3D11DeviceContext> m_ctx;
 	CComPtr<IDXGISwapChain> m_swapchain;
-	struct {string model, vs, gs, ps;} m_shader;
 
 	struct
 	{
@@ -133,10 +131,9 @@ public:
 	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 	void PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb);
 	void PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1);
-	void RSSet(const GSVector2i& size, const GSVector4i* scissor = NULL);
 	void OMSetDepthStencilState(ID3D11DepthStencilState* dss, uint8 sref);
 	void OMSetBlendState(ID3D11BlendState* bs, float bf);
-	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 
 	ID3D11Device* operator->() {return m_dev;}
 	operator ID3D11Device*() {return m_dev;}

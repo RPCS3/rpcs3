@@ -62,6 +62,7 @@ protected:
 	GSTexture* m_blend;
 	GSTexture* m_1x1;
 	GSTexture* m_current;
+	struct {D3D_FEATURE_LEVEL level; string model, vs, gs, ps;} m_shader;
 
 	virtual GSTexture* Create(int type, int w, int h, int format) = 0;
 
@@ -103,6 +104,9 @@ public:
 	virtual void StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
 	virtual void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true) {}
 
+	virtual void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1) {}
+	virtual void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL) {}
+
 	GSTexture* GetCurrent();
 
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
@@ -112,7 +116,7 @@ public:
 
 	bool IsRBSwapped() {return m_rbswapped;}
 
-	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src, const char* model)
+	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src)
 	{
 		dst.clear();
 
@@ -124,7 +128,7 @@ public:
 		T m;
 		
 		m.Name = "SHADER_MODEL";
-		m.Definition = model;
+		m.Definition = m_shader.model.c_str();
 
 		dst.push_back(m);
 
@@ -133,4 +137,6 @@ public:
 
 		dst.push_back(m);
 	}
+
+	bool SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode); // TODO: GSDeviceDX
 };

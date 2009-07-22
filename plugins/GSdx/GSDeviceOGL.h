@@ -138,11 +138,11 @@ public:
 	void IASetInputLayout(); // TODO
 	void IASetPrimitiveTopology(int topology);
 
+	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 	void PSSetSamplerState(SamplerStateOGL* ss);
-	void RSSet(const GSVector2i& size, const GSVector4i* scissor);
 	void OMSetDepthStencilState(DepthStencilStateOGL* dss);
 	void OMSetBlendState(BlendStateOGL* bs, float bf);
-	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 
 	static void CheckError() 
 	{

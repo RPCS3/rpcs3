@@ -35,7 +35,7 @@ protected:
 		CComPtr<ID3D10BlendState> bs;
 	} m_date;
 
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:

@@ -65,7 +65,7 @@ public:
 		return true;
 	}
 
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 	{
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
@@ -178,7 +178,7 @@ public:
 		GSTextureFX::GSSelector gs_sel;
 
 		gs_sel.iip = PRIM->IIP;
-		gs_sel.prim = primclass;
+		gs_sel.prim = m_vt.m_primclass;
 
 		// ps
 
@@ -265,16 +265,16 @@ public:
 
 		GSVector4i scissor = GSVector4i(GSVector4(rt->m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(rt->GetSize()).zwxy());
 
-		//
+		m_dev->OMSetRenderTargets(rt, ds, &scissor);
+		m_dev->PSSetShaderResources(tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
 
 		uint8 afix = context->ALPHA.FIX;
 
-		m_tfx->SetupOM(om_dssel, om_bsel, afix, rt, ds);
+		m_tfx->SetupOM(om_dssel, om_bsel, afix);
 		m_tfx->SetupIA(m_vertices, m_count, m_topology);
 		m_tfx->SetupVS(vs_sel, &vs_cb);
 		m_tfx->SetupGS(gs_sel);
-		m_tfx->SetupPS(ps_sel, &ps_cb, ps_ssel, tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
-		m_tfx->SetupRS(rt->m_size, scissor);
+		m_tfx->SetupPS(ps_sel, &ps_cb, ps_ssel);
 
 		// draw
 
@@ -304,7 +304,7 @@ public:
 				break;
 			}
 
-			m_tfx->UpdatePS(ps_sel, &ps_cb, ps_ssel);
+			m_tfx->SetupPS(ps_sel, &ps_cb, ps_ssel);
 
 			bool z = om_dssel.zwe;
 			bool r = om_bsel.wr;
@@ -329,7 +329,7 @@ public:
 				om_bsel.wb = b;
 				om_bsel.wa = a;
 
-				m_tfx->UpdateOM(om_dssel, om_bsel, afix);
+				m_tfx->SetupOM(om_dssel, om_bsel, afix);
 
 				m_dev->DrawPrimitive();
 			}

@@ -282,9 +282,6 @@ public:
 	virtual void SetupIA(const void* vertices, int count, int prim) = 0;
 	virtual void SetupVS(VSSelector sel, const VSConstantBuffer* cb) = 0;
 	virtual void SetupGS(GSSelector sel) = 0;
-	virtual void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal) = 0;
-	virtual void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel) = 0;
-	virtual void SetupRS(const GSVector2i& size, const GSVector4i& scissor) = 0;
-	virtual void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds) = 0;
-	virtual void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix) = 0;
+	virtual void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel) = 0;
+	virtual void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix) = 0;
 };

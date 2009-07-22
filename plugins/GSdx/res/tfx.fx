@@ -33,7 +33,7 @@
 #define PS_CLR1 0
 #define PS_FBA 0
 #define PS_AOUT 0
-#define PS_LTF 0
+#define PS_LTF 1
 #endif
 
 struct VS_INPUT
@@ -99,6 +99,15 @@ float4 sample_p(float u)
 {
 	return Palette.Sample(PaletteSampler, u);
 }
+
+#if SHADER_MODEL >= 0x401
+
+float4 gather_c(float2 uv)
+{
+	return Texture.Gather(TextureSampler, uv, int2(0, 0));
+}
+
+#endif
 
 #elif SHADER_MODEL <= 0x300
 
@@ -183,6 +192,7 @@ float4 wrapuv(float4 uv)
 {
 	if(PS_WMS == PS_WMT)
 	{
+/*
 		if(PS_WMS == 0)
 		{
 			uv = frac(uv);
@@ -191,7 +201,9 @@ float4 wrapuv(float4 uv)
 		{
 			uv = saturate(uv);
 		}
-		else if(PS_WMS == 2)
+		else
+*/ 
+		if(PS_WMS == 2)
 		{
 			uv = clamp(uv, MinMax.xyxy, MinMax.zwzw);
 		}
@@ -209,6 +221,7 @@ float4 wrapuv(float4 uv)
 	}
 	else
 	{
+/*	
 		if(PS_WMS == 0)
 		{
 			uv.xz = frac(uv.xz);
@@ -217,7 +230,9 @@ float4 wrapuv(float4 uv)
 		{
 			uv.xz = saturate(uv.xz);
 		}
-		else if(PS_WMS == 2)
+		else 
+*/		
+		if(PS_WMS == 2)
 		{
 			uv.xz = clamp(uv.xz, MinMax.xx, MinMax.zz);
 		}
@@ -230,7 +245,7 @@ float4 wrapuv(float4 uv)
 			uv.z = tex1D(UMSKFIX, uv.z);
 			#endif
 		}
-
+/*
 		if(PS_WMT == 0)
 		{
 			uv.yw = frac(uv.yw);
@@ -239,7 +254,9 @@ float4 wrapuv(float4 uv)
 		{
 			uv.yw = saturate(uv.yw);
 		}
-		else if(PS_WMT == 2)
+		else 
+*/
+		if(PS_WMT == 2)
 		{
 			uv.yw = clamp(uv.yw, MinMax.yy, MinMax.ww);
 		}
@@ -291,10 +308,18 @@ float4 sample_4a(float4 uv)
 {
 	float4 c;
 
+	#if SHADER_MODEL >= 0x401 && PS_LTF && PS_WMS < 2 && PS_WMT < 2
+	
+	c = gather_c(uv.xy); 
+	
+	#else
+
 	c.x = sample_c(uv.xy).a;
 	c.y = sample_c(uv.zy).a;
 	c.z = sample_c(uv.xw).a;
 	c.w = sample_c(uv.zw).a;
+	
+	#endif
 
 	#if SHADER_MODEL <= 0x300
 	if(PS_RT) c *= 128.0f / 255;

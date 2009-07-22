@@ -51,8 +51,18 @@ public:
 		GSVector4 ex;
 	} scissor;
 
+	struct 
+	{
+		GSOffset* fb;
+		GSOffset* zb;
+		GSOffset* tex;
+		GSPixelOffset4* fzb;
+	} offset;
+
 	GSDrawingContext()
 	{
+		memset(&offset, 0, sizeof(offset));
+
 		Reset();
 	}
 

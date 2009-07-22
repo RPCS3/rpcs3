@@ -23,33 +23,34 @@
 
 #include "stdafx.h"
 #include "GSVertexTrace.h"
+#include "GSUtil.h"
 
-void GSVertexTrace::Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
+uint32 GSVertexTrace::Hash(const GIFRegPRIM* PRIM, const GSDrawingContext* context)
 {
-	uint32 key = primclass | (PRIM->IIP << 2) | (PRIM->TME << 3) | (PRIM->FST << 4);
+	m_primclass = GSUtil::GetPrimClass(PRIM->PRIM);
+
+	uint32 hash = m_primclass | (PRIM->IIP << 2) | (PRIM->TME << 3) | (PRIM->FST << 4);
 
 	if(!(PRIM->TME && context->TEX0.TFX == TFX_DECAL && context->TEX0.TCC))
 	{
-		key |= 1 << 5;
+		hash |= 1 << 5;
 	}
 
-	m_map_sw[key](v, count, m_min, m_max);
+	return hash;
+}
+
+void GSVertexTrace::Update(const GSVertexSW* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
+{
+	m_map_sw[Hash(PRIM, context)](v, count, m_min, m_max);
 
 	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
 
 	m_alpha.valid = false;
 }
 
-void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
+void GSVertexTrace::Update(const GSVertexHW9* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
 {
-	uint32 key = primclass | (PRIM->IIP << 2) | (PRIM->TME << 3) | (PRIM->FST << 4);
-
-	if(!(PRIM->TME && context->TEX0.TFX == TFX_DECAL && context->TEX0.TCC))
-	{
-		key |= 1 << 5;
-	}
-
-	m_map_hw9[key](v, count, m_min, m_max);
+	m_map_hw9[Hash(PRIM, context)](v, count, m_min, m_max);
 
 	GSVector4 o(context->XYOFFSET);
 	GSVector4 s(1.0f / 16, 1.0f / 16, 1.0f, 1.0f);
@@ -77,16 +78,9 @@ void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primcl
 	m_alpha.valid = false;
 }
 
-void GSVertexTrace::Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
+void GSVertexTrace::Update(const GSVertexHW10* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
 {
-	uint32 key = primclass | (PRIM->IIP << 2) | (PRIM->TME << 3) | (PRIM->FST << 4);
-
-	if(!(PRIM->TME && context->TEX0.TFX == TFX_DECAL && context->TEX0.TCC))
-	{
-		key |= 1 << 5;
-	}
-
-	m_map_hw10[key](v, count, m_min, m_max);
+	m_map_hw10[Hash(PRIM, context)](v, count, m_min, m_max);
 
 	GSVector4 o(context->XYOFFSET);
 	GSVector4 s(1.0f / 16, 1.0f / 16, 2.0f, 1.0f);

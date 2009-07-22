@@ -535,11 +535,13 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 				fprintf(file, "%6d %6d | ", (int)((float)trlen * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
 
+				const GSOffset* o = mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
 				start = clock();
 
 				for(int j = 0; j < n; j++)
 				{
-					(mem.*rtx)(r, ptr, w * 4, TEX0, TEXA);
+					(mem.*rtx)(o, r, ptr, w * 4, TEXA);
 				}
 
 				end = clock();
@@ -552,7 +554,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 					for(int j = 0; j < n; j++)
 					{
-						(mem.*rtxP)(r, ptr, w, TEX0, TEXA);
+						(mem.*rtxP)(o, r, ptr, w, TEXA);
 					}
 
 					end = clock();

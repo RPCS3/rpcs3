@@ -554,9 +554,7 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 		}
 	}
 
-	GSVector2i bs = GSLocalMemory::m_psm[context->TEX0.PSM].bs;
-
-	r = vr.ralign<GSVector4i::Outside>(bs).rintersect(tr);
+	r = vr.rintersect(tr);
 }
 
 void GSRenderer::GetAlphaMinMax()
@@ -712,18 +710,22 @@ bool GSRenderer::IsLinear()
 
 	if(mmag == mmin) return mmag;
 
-	float LODmin = (float)TEX1.K;
-	float LODmax = (float)TEX1.K;
-
 	if(!TEX1.LCM && !PRIM->FST) // if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
 	{
+		float K = (float)TEX1.K / 16;
 		float f = (float)(1 << TEX1.L) / log(2.0f);
 
-		LODmin += log(1.0f / abs(m_vt.m_min.t.z)) * f;
-		LODmax += log(1.0f / abs(m_vt.m_max.t.z)) * f;
-	}
+		// TODO: abs(Qmin) may not be <= abs(Qmax), check the sign
 
-	return LODmax <= 0 ? mmag : LODmin > 0 ? mmin : mmag || mmin;
+		float LODmin = K + log(1.0f / abs(m_vt.m_max.t.z)) * f;
+		float LODmax = K + log(1.0f / abs(m_vt.m_min.t.z)) * f;
+
+		return LODmax <= 0 ? mmag : LODmin > 0 ? mmin : mmag || mmin;
+	}
+	else
+	{
+		return TEX1.K <= 0 ? mmag : TEX1.K > 0 ? mmin : mmag || mmin;
+	}
 }
 
 bool GSRenderer::IsOpaque()

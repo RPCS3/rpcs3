@@ -406,10 +406,17 @@ void GSDeviceOGL::IASetPrimitiveTopology(int topology)
 	m_topology = topology;
 }
 
+void GSDeviceOGL::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
+{
+	// TODO
+}
+
 void GSDeviceOGL::PSSetSamplerState(SamplerStateOGL* ss)
 {
 	if(ss && m_ps_ss != ss)
 	{
+		m_ps_ss = ss;
+
 		glActiveTexture(GL_TEXTURE0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, ss->wrap.s);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, ss->wrap.t);
@@ -433,27 +440,6 @@ void GSDeviceOGL::PSSetSamplerState(SamplerStateOGL* ss)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_POINT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_POINT);
-		
-		m_ps_ss = ss;
-	}
-}
-
-void GSDeviceOGL::RSSet(const GSVector2i& size, const GSVector4i* scissor)
-{
-	if(m_viewport != size)
-	{
-		glViewport(0, 0, size.x, size.y); CheckError();
-
-		m_viewport = size;
-	}
-
-	GSVector4i r = scissor ? *scissor : GSVector4i(size).zwxy();
-
-	if(!m_scissor.eq(r))
-	{
-		glScissor(r.left, r.top, r.width(), r.height()); CheckError();
-
-		m_scissor = r;
 	}
 }
 
@@ -461,6 +447,8 @@ void GSDeviceOGL::OMSetDepthStencilState(DepthStencilStateOGL* dss)
 {
 	if(m_dss != dss)
 	{
+		m_dss = dss;
+
 		if(dss->depth.enable)
 		{
 			glEnable(GL_DEPTH_TEST); CheckError();
@@ -483,8 +471,6 @@ void GSDeviceOGL::OMSetDepthStencilState(DepthStencilStateOGL* dss)
 		{
 			glDisable(GL_STENCIL_TEST); CheckError();
 		}
-
-		m_dss = dss;
 	}
 }
 
@@ -492,6 +478,9 @@ void GSDeviceOGL::OMSetBlendState(BlendStateOGL* bs, float bf)
 {
 	if(m_bs != bs || m_bf != bf)
 	{
+		m_bs = bs;
+		m_bf = bf;
+
 		if(bs->enable)
 		{
 			glEnable(GL_BLEND); CheckError();
@@ -505,13 +494,10 @@ void GSDeviceOGL::OMSetBlendState(BlendStateOGL* bs, float bf)
 		}
 		
 		glColorMask(bs->mask.r, bs->mask.g, bs->mask.b, bs->mask.a); CheckError();
-
-		m_bs = bs;
-		m_bf = bf;
 	}
 }
 
-void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
+void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor)
 {
 	GLuint rti = 0;
 	GLuint dsi = 0;
@@ -521,15 +507,31 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 
 	if(m_rt != rti)
 	{
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rti); CheckError();
-
 		m_rt = rti;
+
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rti); CheckError();
 	}
 
 	if(m_ds != dsi)
 	{
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, dsi); CheckError();
-
 		m_ds = dsi;
+
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, dsi); CheckError();
+	}
+
+	if(m_viewport != rt->m_size)
+	{
+		m_viewport = rt->m_size;
+
+		glViewport(0, 0, rt->m_size.x, rt->m_size.y); CheckError();
+	}
+
+	GSVector4i r = scissor ? *scissor : GSVector4i(rt->m_size).zwxy();
+
+	if(!m_scissor.eq(r))
+	{
+		m_scissor = r;
+
+		glScissor(r.left, r.top, r.width(), r.height()); CheckError();
 	}
 }

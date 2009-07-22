@@ -169,9 +169,9 @@ void GSRendererDX11::VertexKick(bool skip)
 	}
 }
 
-void GSRendererDX11::Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererDX11::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
-	switch(primclass)
+	switch(m_vt.m_primclass)
 	{
 	case GS_POINT_CLASS:
 		m_topology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
@@ -190,7 +190,7 @@ void GSRendererDX11::Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds,
 		__assume(0);
 	}
 
-	__super::Draw(primclass, rt, ds, tex);
+	__super::Draw(rt, ds, tex);
 }
 
 void GSRendererDX11::SetupDATE(GSTexture* rt, GSTexture* ds)
@@ -249,11 +249,7 @@ void GSRendererDX11::SetupDATE(GSTexture* rt, GSTexture* ds)
 		dev->PSSetShader(dev->m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL);
 		dev->PSSetSamplerState(dev->m_convert.pt, NULL);
 
-		// rs
-
-		dev->RSSet(size);
-
-		// set
+		// 
 
 		dev->DrawPrimitive();
 

@@ -22,6 +22,7 @@
 #pragma once
 
 #include "GSDrawingContext.h"
+#include "GSVertex.h"
 #include "GSVertexSW.h"
 #include "GSVertexHW.h"
 #include "GSFunctionMap.h"
@@ -82,7 +83,10 @@ __declspec(align(16)) class GSVertexTrace
 	GSVertexTraceMapHW9 m_map_hw9;
 	GSVertexTraceMapHW10 m_map_hw10;
 
+	uint32 Hash(const GIFRegPRIM* PRIM, const GSDrawingContext* context);
+
 public:
+	GS_PRIM_CLASS m_primclass;
 	Vertex m_min, m_max; // t.xy * 0x10000
 	VertexAlpha m_alpha; // source alpha range after tfx, GSRenderer::GetAlphaMinMax() updates it
 
@@ -93,7 +97,8 @@ public:
 		struct {uint32 rgba:16, xyzf:4, stq:4;};
 	} m_eq;
 
-	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
-	void Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
-	void Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
+	void Update(const GSVertexSW* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
+	void Update(const GSVertexHW9* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
+	void Update(const GSVertexHW10* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context);
+	void Update(const GSVertexNull* v, int count, const GIFRegPRIM* PRIM, const GSDrawingContext* context) {}
 };

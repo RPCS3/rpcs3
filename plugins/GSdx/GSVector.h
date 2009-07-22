@@ -1805,7 +1805,7 @@ public:
 		d = f.uph64(d);
 	}
 
-	__forceinline static bool compare(const void* dst, const void* src, int size)
+	__forceinline static bool compare16(const void* dst, const void* src, int size)
 	{
 		ASSERT((size & 15) == 0);
 
@@ -1814,19 +1814,43 @@ public:
 		GSVector4i* s = (GSVector4i*)src;
 		GSVector4i* d = (GSVector4i*)dst;
 
-		if(!d[0].eq(s[0]))
-		{
-			return false;
-		}
-
-		GSVector4i v = GSVector4i::xffffffff();
-
 		for(int i = 0; i < size; i++)
 		{
-			v &= d[i] == s[i];
+			if(!d[i].eq(s[i])) 
+			{
+				return false;
+			}
 		}
 
-		return v.alltrue();
+		return true;
+	}
+
+	__forceinline static bool compare64(const void* dst, const void* src, int size)
+	{
+		ASSERT((size & 63) == 0);
+
+		size >>= 6;
+
+		GSVector4i* s = (GSVector4i*)src;
+		GSVector4i* d = (GSVector4i*)dst;
+
+		for(int i = 0; i < size; i += 4)
+		{
+			GSVector4i v0 = (d[i * 4 + 0] == s[i * 4 + 0]);
+			GSVector4i v1 = (d[i * 4 + 1] == s[i * 4 + 1]);
+			GSVector4i v2 = (d[i * 4 + 2] == s[i * 4 + 2]);
+			GSVector4i v3 = (d[i * 4 + 3] == s[i * 4 + 3]);
+
+			v0 = v0 & v1;
+			v2 = v2 & v3;
+
+			if(!(v0 & v2).alltrue())
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	__forceinline static bool update(const void* dst, const void* src, int size)
