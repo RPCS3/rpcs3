@@ -304,7 +304,8 @@ bool GSDevice9::Reset(int w, int h, int mode)
 
 	if(!m_dev)
 	{
-		uint32 flags = D3DCREATE_MULTITHREADED | (m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING);
+		//D3DCREATE_MULTITHREADED flag shouldn't be needed
+		uint32 flags = m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING;
 
 		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
