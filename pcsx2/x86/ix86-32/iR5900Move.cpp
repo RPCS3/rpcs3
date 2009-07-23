@@ -442,15 +442,12 @@ void recMOVZtemp_consts(int info)
 		CMP8ItoR(EAX, 0xff);
 		j8Ptr[ 0 ] = JNE8( 0 );
 
-		if( g_cpuFlushedConstReg & (1<<_Rs_) ) mem = &cpuRegs.GPR.r[_Rs_].UL[0];
-		else {
-			mem = recAllocStackMem(8,8);
+		if( g_cpuFlushedConstReg & (1<<_Rs_) )
+			mem = &cpuRegs.GPR.r[_Rs_].UL[0];
+		else
+			mem = recGetImm64(g_cpuConstRegs[_Rs_].UL[1], g_cpuConstRegs[_Rs_].UL[0]);
 
-			mem[0] = g_cpuConstRegs[_Rs_].UL[0];
-			mem[1] = g_cpuConstRegs[_Rs_].UL[1];
-		}
-
-		MOVQMtoR(EEREC_D, (u32)mem);
+		MOVQMtoR(EEREC_D, (uptr)mem);
 		x86SetJ8( j8Ptr[ 0 ] ); 
 
 		_freeMMXreg(t0reg);
@@ -566,15 +563,12 @@ void recMOVNtemp_consts(int info)
 		CMP8ItoR(EAX, 0xff);
 		j8Ptr[ 0 ] = JE8( 0 );
 
-		if( g_cpuFlushedConstReg & (1<<_Rs_) ) mem = &cpuRegs.GPR.r[_Rs_].UL[0];
-		else {
-			mem = recAllocStackMem(8,8);
+		if( g_cpuFlushedConstReg & (1<<_Rs_) )
+			mem = &cpuRegs.GPR.r[_Rs_].UL[0];
+		else
+			mem = recGetImm64(g_cpuConstRegs[_Rs_].UL[1], g_cpuConstRegs[_Rs_].UL[0]);
 
-			mem[0] = g_cpuConstRegs[_Rs_].UL[0];
-			mem[1] = g_cpuConstRegs[_Rs_].UL[1];
-		}
-
-		MOVQMtoR(EEREC_D, (u32)mem);
+		MOVQMtoR(EEREC_D, (uptr)mem);
 		x86SetJ8( j8Ptr[ 0 ] ); 
 
 		_freeMMXreg(t0reg);

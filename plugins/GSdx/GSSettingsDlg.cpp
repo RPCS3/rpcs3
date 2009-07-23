@@ -79,7 +79,7 @@ void GSSettingsDlg::OnInit()
 		memset(&mode, 0, sizeof(mode));
 		m_modes.push_back(mode);
 
-		ComboBoxAppend(IDC_RESOLUTION, "Windowed", (LPARAM)&m_modes.back(), true);
+		ComboBoxAppend(IDC_RESOLUTION, "Please select...", (LPARAM)&m_modes.back(), true);
 
 		if(CComPtr<IDirect3D9> d3d = Direct3DCreate9(D3D_SDK_VERSION))
 		{
@@ -120,6 +120,7 @@ void GSSettingsDlg::OnInit()
 	ComboBoxInit(IDC_INTERLACE, g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
 	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
 
+	CheckDlgButton(m_hWnd, IDC_WINDOWED, theApp.GetConfig("windowed", 1));
 	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 2));
 	CheckDlgButton(m_hWnd, IDC_PALTEX, theApp.GetConfig("paltex", 1));
 	CheckDlgButton(m_hWnd, IDC_VSYNC, theApp.GetConfig("vsync", 0));
@@ -179,6 +180,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("AspectRatio", (int)data);
 		}
 
+		theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));
 		theApp.SetConfig("filter", (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER));
 		theApp.SetConfig("paltex", (int)IsDlgButtonChecked(m_hWnd, IDC_PALTEX));
 		theApp.SetConfig("vsync", (int)IsDlgButtonChecked(m_hWnd, IDC_VSYNC));
@@ -215,7 +217,7 @@ void GSSettingsDlg::UpdateControls()
 		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx11 ? SW_SHOW : SW_HIDE);
 		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO_OGL), ogl ? SW_SHOW : SW_HIDE);
 
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESOLUTION), dx9);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_WINDOWED), dx9);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native);

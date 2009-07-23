@@ -26,12 +26,12 @@
 void mVUclamp1(int reg, int regT1, int xyzw) {
 	switch (xyzw) {
 		case 1: case 2: case 4: case 8:
-			SSE_MINSS_XMM_to_XMM(reg, xmmMax);
-			SSE_MAXSS_XMM_to_XMM(reg, xmmMin);
+			SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
+			SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
 			break;
 		default:
-			SSE_MINPS_XMM_to_XMM(reg, xmmMax);
-			SSE_MAXPS_XMM_to_XMM(reg, xmmMin);
+			SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
+			SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
 			break;
 	}
 }
@@ -43,15 +43,15 @@ void mVUclamp2(int reg, int regT1, int xyzw) {
 			case 1: case 2: case 4: case 8:
 				SSE_MOVSS_XMM_to_XMM(regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINSS_XMM_to_XMM(reg, xmmMax);
-				SSE_MAXSS_XMM_to_XMM(reg, xmmMin);
+				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
 				SSE_ORPS_XMM_to_XMM(reg, regT1);
 				break;
 			default:
 				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINPS_XMM_to_XMM(reg, xmmMax);
-				SSE_MAXPS_XMM_to_XMM(reg, xmmMin);
+				SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
 				SSE_ORPS_XMM_to_XMM(reg, regT1);
 				break;
 		}
@@ -104,10 +104,16 @@ void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 	return;*/
 
 	switch ( xyzw ) {
-		case 5:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xe1); //WZXY
-					SSE_MOVSS_XMM_to_M32(offset+4, reg);
-					SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
-					SSE_MOVSS_XMM_to_M32(offset+12, reg);
+		case 5:		if (cpucaps.hasStreamingSIMD4Extensions) {
+						SSE4_EXTRACTPS_XMM_to_M32(offset+4,  reg, 1);
+						SSE4_EXTRACTPS_XMM_to_M32(offset+12, reg, 3);
+					}
+					else {
+						SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xe1); //WZXY
+						SSE_MOVSS_XMM_to_M32(offset+4, reg);
+						SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xff); //WWWW
+						SSE_MOVSS_XMM_to_M32(offset+12, reg);
+					}
 					break; // YW
 		case 6:		SSE2_PSHUFD_XMM_to_XMM(reg, reg, 0xc9);
 					SSE_MOVLPS_XMM_to_M64(offset+4, reg);
@@ -203,25 +209,33 @@ void mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 	}
 }
 
-// Modifies the Source Reg!
-void mVUmergeRegs(int dest, int src, int xyzw) {
+// Modifies the Source Reg! (ToDo: Optimize modXYZW = 1 cases)
+void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0) {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
-		if ( cpucaps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
+		if (cpucaps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf)) {
+			if (modXYZW) {
+				if		(xyzw == 1) { SSE4_INSERTPS_XMM_to_XMM(dest, src, _MM_MK_INSERTPS_NDX(0, 3, 0)); return; }
+				else if (xyzw == 2) { SSE4_INSERTPS_XMM_to_XMM(dest, src, _MM_MK_INSERTPS_NDX(0, 2, 0)); return; }
+				else if (xyzw == 4) { SSE4_INSERTPS_XMM_to_XMM(dest, src, _MM_MK_INSERTPS_NDX(0, 1, 0)); return; }
+			}
 			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3); 
 			SSE4_BLENDPS_XMM_to_XMM(dest, src, xyzw);
 		}
 		else {
 			switch (xyzw) {
-				case 1:  SSE_MOVHLPS_XMM_to_XMM(src, dest);
-						 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xc4);
+				case 1:  if (modXYZW) mVUunpack_xyzw(src, src, 0);
+						 SSE_MOVHLPS_XMM_to_XMM(src, dest);		 // src = Sw Sz Dw Dz
+						 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xc4); // 11 00 01 00
 						 break;
-				case 2:  SSE_MOVHLPS_XMM_to_XMM(src, dest);
+				case 2:  if (modXYZW) mVUunpack_xyzw(src, src, 0);
+						 SSE_MOVHLPS_XMM_to_XMM(src, dest);
 						 SSE_SHUFPS_XMM_to_XMM(dest, src, 0x64);
 						 break;
 				case 3:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xe4);
 						 break;
-				case 4:	 SSE_MOVSS_XMM_to_XMM(src, dest);
+				case 4:	 if (modXYZW) mVUunpack_xyzw(src, src, 0);
+						 SSE_MOVSS_XMM_to_XMM(src, dest);
 						 SSE2_MOVSD_XMM_to_XMM(dest, src);
 						 break;
 				case 5:	 SSE_SHUFPS_XMM_to_XMM(dest, src, 0xd8);
@@ -285,17 +299,14 @@ microVUt(void) mVUaddrFix(mV, int gprReg) {
 }
 
 // Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
-microVUt(void) mVUbackupRegs(mV) {
-	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
+microVUt(void) mVUbackupRegs(microVU* mVU) {
+	mVU->regAlloc->flushAll();
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->xmmPQb[0], xmmPQ);
 }
 
 // Restore Volatile Regs
-microVUt(void) mVUrestoreRegs(mV) {
-	SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
+microVUt(void) mVUrestoreRegs(microVU* mVU) {
 	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
-	SSE_MOVAPS_M128_to_XMM(xmmMax, (uptr)mVU_maxvals);
-	SSE_MOVAPS_M128_to_XMM(xmmMin, (uptr)mVU_minvals);
 	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
 
@@ -335,8 +346,8 @@ void MIN_MAX_(x86SSERegType to, x86SSERegType from, bool min) {
 // Warning: Modifies from and to's upper 3 vectors
 void MIN_MAX_SS(x86SSERegType to, x86SSERegType from, bool min) {
 	SSE_SHUFPS_XMM_to_XMM (to, from, 0);
-	SSE2_PAND_M128_to_XMM (to,	 (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (to,	 (uptr)MIN_MAX_MASK2);
+	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX_MASK1);
+	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX_MASK2);
 	SSE2_PSHUFD_XMM_to_XMM(from, to, 0xee);
 	if (min) SSE2_MINPD_XMM_to_XMM(to, from);
 	else	 SSE2_MAXPD_XMM_to_XMM(to, from);

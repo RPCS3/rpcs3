@@ -36,8 +36,6 @@ public:
 	GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface7* video);
 
 	int GetType() const;
-	int GetWidth() const;
-	int GetHeight() const;
 	int GetFormat() const;
 
 	bool Update(const GSVector4i& r, const void* data, int pitch);

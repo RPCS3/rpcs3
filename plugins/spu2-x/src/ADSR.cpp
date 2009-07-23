@@ -204,7 +204,7 @@ void V_VolumeSlide::Update()
 			Value -= PsxRates[(Increment^0x7f)-0x1b+off+32];
 		}
 		else
-			Value -= Increment;
+			Value -= Increment<<8;
 
 		if (Value < 0)
 		{
@@ -221,7 +221,7 @@ void V_VolumeSlide::Update()
 		if( (Mode & VOLFLAG_EXPONENTIAL) && (Value>=0x60000000))
 			Value += PsxRates[(Increment^0x7f)-0x18+32];
 		else
-			Value += Increment;
+			Value += Increment<<8;
 
 		if( Value < 0 )		// wrapped around the "top"?
 		{

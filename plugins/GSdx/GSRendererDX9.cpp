@@ -30,9 +30,9 @@ GSRendererDX9::GSRendererDX9(uint8* base, bool mt, void (*irq)())
 	InitVertexKick<GSRendererDX9>();
 }
 
-bool GSRendererDX9::Create(const string& title)
+bool GSRendererDX9::Create(const string& title, int w, int h)
 {
-	if(!__super::Create(title))
+	if(!__super::Create(title, w, h))
 		return false;
 
 	//
@@ -135,6 +135,16 @@ void GSRendererDX9::VertexKick(bool skip)
 
 		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
 
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+		case GS_SPRITE:
+			test |= pmin == pmax;
+			break;
+		}
+
 		if(test.mask() & 3)
 		{
 			return;
@@ -174,9 +184,9 @@ void GSRendererDX9::VertexKick(bool skip)
 	}
 }
 
-void GSRendererDX9::Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererDX9::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
-	switch(primclass)
+	switch(m_vt.m_primclass)
 	{
 	case GS_POINT_CLASS:
 		m_topology = D3DPT_POINTLIST;
@@ -197,7 +207,7 @@ void GSRendererDX9::Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, 
 
 	(*(GSDevice9*)m_dev)->SetRenderState(D3DRS_SHADEMODE, PRIM->IIP ? D3DSHADE_GOURAUD : D3DSHADE_FLAT); // TODO
 
-	__super::Draw(primclass, rt, ds, tex);
+	__super::Draw(rt, ds, tex);
 }
 
 void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
@@ -206,10 +216,9 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 	GSDevice9* dev = (GSDevice9*)m_dev;
 
-	int w = rt->GetWidth();
-	int h = rt->GetHeight();
+	const GSVector2i& size = rt->m_size;
 
-	if(GSTexture* t = dev->CreateRenderTarget(w, h))
+	if(GSTexture* t = dev->CreateRenderTarget(size.x, size.y))
 	{
 		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
@@ -225,7 +234,7 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// ia
 
-		GSVector4 s = GSVector4(rt->m_scale.x / w, rt->m_scale.y / h);
+		GSVector4 s = GSVector4(rt->m_scale.x / size.x, rt->m_scale.y / size.y);
 		GSVector4 o = GSVector4(-1.0f, 1.0f);
 
 		GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
@@ -253,10 +262,6 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 		dev->PSSetShader(dev->m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL, 0);
 		dev->PSSetSamplerState(&dev->m_convert.pt);
 
-		// rs
-
-		dev->RSSet(w, h);
-
 		//
 
 		dev->DrawPrimitive();
@@ -282,7 +287,7 @@ void GSRendererDX9::UpdateFBA(GSTexture* rt)
 
 	// ia
 
-	GSVector4 s = GSVector4(rt->m_scale.x / rt->GetWidth(), rt->m_scale.y / rt->GetHeight());
+	GSVector4 s = GSVector4(rt->m_scale.x / rt->m_size.x, rt->m_scale.y / rt->m_size.y);
 	GSVector4 o = GSVector4(-1.0f, 1.0f);
 
 	GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
@@ -307,10 +312,6 @@ void GSRendererDX9::UpdateFBA(GSTexture* rt)
 	// ps
 
 	dev->PSSetShader(dev->m_convert.ps[4], NULL, 0);
-
-	// rs
-
-	dev->RSSet(rt->GetWidth(), rt->GetHeight());
 
 	//
 

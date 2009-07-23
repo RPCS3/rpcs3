@@ -73,7 +73,7 @@ public:
 	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev);
 	virtual ~GSRenderer();
 
-	virtual bool Create(const string& title);
+	virtual bool Create(const string& title, int w, int h);
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e);
@@ -107,37 +107,23 @@ protected:
 
 	void FlushPrim() 
 	{
-		if(m_count > 0)
+		if(m_count == 0) return;
+
+		if(GSLocalMemory::m_psm[m_context->FRAME.PSM].fmt < 3 && GSLocalMemory::m_psm[m_context->ZBUF.PSM].fmt < 3)
 		{
-			/*
-			TRACE(_T("[%d] Draw f %05x (%d) z %05x (%d %d %d %d) t %05x %05x (%d)\n"), 
-				  (int)m_perfmon.GetFrame(), 
-				  (int)m_context->FRAME.Block(), 
-				  (int)m_context->FRAME.PSM, 
-				  (int)m_context->ZBUF.Block(), 
-				  (int)m_context->ZBUF.PSM, 
-				  m_context->TEST.ZTE, 
-				  m_context->TEST.ZTST, 
-				  m_context->ZBUF.ZMSK, 
-				  PRIM->TME ? (int)m_context->TEX0.TBP0 : 0xfffff, 
-				  PRIM->TME && m_context->TEX0.PSM > PSM_PSMCT16S ? (int)m_context->TEX0.CBP : 0xfffff, 
-				  PRIM->TME ? (int)m_context->TEX0.PSM : 0xff);
-			*/
+			// FIXME: berserk fpsm = 27 (8H)
 
-			if(GSUtil::EncodePSM(m_context->FRAME.PSM) != 3 && GSUtil::EncodePSM(m_context->ZBUF.PSM) != 3)
+			if(!m_dev->IsLost())
 			{
-				// FIXME: berserk fpsm = 27 (8H)
+				m_vt.Update(m_vertices, m_count, GSUtil::GetPrimClass(PRIM->PRIM));
 
-				if(!m_dev->IsLost())
-				{
-					Draw();
-				}
-
-				m_perfmon.Put(GSPerfMon::Draw, 1);
+				Draw();
 			}
 
-			m_count = 0;
+			m_perfmon.Put(GSPerfMon::Draw, 1);
 		}
+
+		m_count = 0;
 	}
 
 	void GrowVertexBuffer()

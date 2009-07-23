@@ -22,8 +22,9 @@
 #include <wx/datetime.h>
 
 #include "IopCommon.h"
-#include "CDVDiso.h"
+#include "IsoFStools.h"
 #include "CDVD_internal.h"
+#include "CDVDisoReader.h"
 
 static cdvdStruct cdvd;
 
@@ -406,28 +407,28 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 
 s32 cdvdGetToc(void* toc)
 {
-	s32 ret = CDVDgetTOC(toc);
+	s32 ret = CDVD.getTOC(toc);
 	if (ret == -1) ret = 0x80;	
 	return ret;
 }
 
 s32 cdvdReadSubQ(s32 lsn, cdvdSubQ* subq)
 {
-	s32 ret = CDVDreadSubQ(lsn, subq);
+	s32 ret = CDVD.readSubQ(lsn, subq);
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
 
 s32 cdvdCtrlTrayOpen()
 {
-	s32 ret = CDVDctrlTrayOpen();
+	s32 ret = CDVD.ctrlTrayOpen();
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
 
 s32 cdvdCtrlTrayClose()
 {
-	s32 ret = CDVDctrlTrayClose();
+	s32 ret = CDVD.ctrlTrayClose();
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
@@ -436,7 +437,7 @@ s32 cdvdCtrlTrayClose()
 // checks if tray was opened since last call to this func
 s32 cdvdGetTrayStatus()
 {
-	s32 ret = CDVDgetTrayStatus();
+	s32 ret = CDVD.getTrayStatus();
 	
 	if (ret == -1) 
 		return(CDVD_TRAY_CLOSE);
@@ -450,29 +451,7 @@ s32 cdvdGetTrayStatus()
 // Modified by (efp) - 16/01/2006
 static __forceinline void cdvdGetDiskType()
 {
-	// defs 0.9.0
-	if (CDVDnewDiskCB || (cdvd.Type != CDVD_TYPE_NODISC))  return;
-
-	// defs.0.8.1
-	if (cdvdGetTrayStatus() == CDVD_TRAY_OPEN)
-	{
-		cdvd.Type = CDVD_TYPE_NODISC;
-		return;
-	}
-
-	cdvd.Type = CDVDgetDiskType();
-	
-	// Is the type listed as a PS2 CD?
-	if (cdvd.Type == CDVD_TYPE_PS2CD) // && needReset == 1)
-	{
-		wxString str;
-		
-		if (GetPS2ElfName(str) == 1)
-		{
-			// Does the SYSTEM.CNF file only say "BOOT="? PS1 CD then.
-			cdvd.Type = CDVD_TYPE_PSCD;
-		}
-	} 
+	cdvd.Type = DoCDVDdetectDiskType();
 }
 
 // check whether disc is single or dual layer
@@ -485,36 +464,10 @@ static __forceinline void cdvdGetDiskType()
 //          0 if not on dual layer disc
 static s32 cdvdReadDvdDualInfo(s32* dualType, u32* layer1Start)
 {
-	u8 toc[2064];
 	*dualType = 0;
 	*layer1Start = 0;
-	
-	// if error getting toc, settle for single layer disc ;)
-	if(cdvdGetToc(toc))
-		return 0;
-	if(toc[14] & 0x60)
-	{
-		if(toc[14] & 0x10)
-		{
-			// otp dvd
-			*dualType = 2;
-			*layer1Start = (toc[25]<<16) + (toc[26]<<8) + (toc[27]) - 0x30000 + 1;
-		}
-		else
-		{
-			// ptp dvd
-			*dualType = 1;
-			*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
-		}
-	}
-	else
-	{
-		// single layer dvd
-		*dualType = 0;
-		*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
-	}
-	
-	return 1;
+
+	return CDVD.getDualInfo(dualType,layer1Start);
 }
 
 static uint cdvdBlockReadTime( CDVD_MODE_TYPE mode )
@@ -565,25 +518,19 @@ void SaveState::cdvdFreeze()
 		// seek is in progress!)
 
 		if( cdvd.Reading )
-			cdvd.RErr = CDVDreadTrack( cdvd.Readed ? cdvd.Sector : cdvd.SeekToSector, cdvd.ReadMode);
+			cdvd.RErr = DoCDVDreadTrack( cdvd.Readed ? cdvd.Sector : cdvd.SeekToSector, cdvd.ReadMode);
 	}
 }
 
 // Modified by (efp) - 16/01/2006
-void cdvdNewDiskCB()
+
+void cdvdDetectDisk()
 {
-	cdvd.Type = CDVDgetDiskType();
-	
+	cdvd.Type = DoCDVDdetectDiskType();
+
 	wxString str;
 	int result = GetPS2ElfName(str);
 
-	if (cdvd.Type == CDVD_TYPE_PS2CD) 
-	{
-		
-		 // Does the SYSTEM.CNF file only say "BOOT="? PS1 CD then.
-		if(result == 1) cdvd.Type = CDVD_TYPE_PSCD;
-	}
-	
 	// Now's a good time to reload the ELF info...
 	if( ElfCRC == 0 )
 	{
@@ -591,7 +538,13 @@ void cdvdNewDiskCB()
 		ElfApplyPatches();
 		GSsetGameCRC( ElfCRC, 0 );
 	}
+}
 
+void cdvdNewDiskCB()
+{
+	DoCDVDresetDiskTypeCache();
+
+	cdvdDetectDisk();
 }
 
 void mechaDecryptBytes( u32 madr, int size )
@@ -771,22 +724,32 @@ __forceinline void cdvdReadInterrupt()
 	}
 	else
 	{
+
 		if (cdvd.RErr == 0) 
-			cdr.pTransfer = CDVDgetBuffer();
+		{
+			cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);
+			cdr.pTransfer = cdr.Transfer;
+		}
 		else 
 			cdr.pTransfer = NULL;
 		
-		if (cdr.pTransfer == NULL)
+		if (cdr.RErr == -1)
 		{
 			cdvd.RetryCntP++;
 			Console::Error("CDVD READ ERROR, sector=%d", params cdvd.Sector);
 			
 			if (cdvd.RetryCntP <= cdvd.RetryCnt) 
 			{
-				cdvd.RErr = CDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
+				cdvd.RErr = DoCDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
 				CDVDREAD_INT(cdvd.ReadTime);
 				return;
 			}
+		}
+		else if(cdr.RErr == -2)
+		{
+			// not finished yet ... give it a bit more time
+			CDVDREAD_INT(cdvd.ReadTime);
+			return;
 		}
 		cdvd.Reading = false;
 	}
@@ -817,7 +780,7 @@ __forceinline void cdvdReadInterrupt()
 
 	cdvd.RetryCntP = 0;
 	cdvd.Reading = 1;
-	cdr.RErr = CDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
+	cdr.RErr = DoCDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
 	CDVDREAD_INT(cdvd.ReadTime);
 
 	return;
@@ -954,7 +917,7 @@ u8 cdvdRead(u8 key)
 			break;
 		
 		case 0x08:  // STATUS
-			CDR_LOG("cdvdRead0A(Status) %x", cdvd.Status);
+			CDR_LOG("cdvdRead08(Status) %x", cdvd.Status);
 			return cdvd.Status;
 			break;
 		
@@ -1148,7 +1111,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation
 			// (ie, not using the hard drive)
-			cdvd.RErr = CDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
+			cdvd.RErr = DoCDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
 
 			// Set the reading block flag.  If a seek is pending then Readed will
 			// take priority in the handler anyway.  If the read is contiguous then
@@ -1195,7 +1158,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation
 			// (ie, not using the hard drive)
-			cdvd.RErr = CDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
+			cdvd.RErr = DoCDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
 
 			// Set the reading block flag.  If a seek is pending then Readed will
 			// take priority in the handler anyway.  If the read is contiguous then
@@ -1230,7 +1193,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation
 			// (ie, not using the hard drive)
-			cdvd.RErr = CDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
+			cdvd.RErr = DoCDVDreadTrack( cdvd.SeekToSector, cdvd.ReadMode );
 
 			// Set the reading block flag.  If a seek is pending then Readed will
 			// take priority in the handler anyway.  If the read is contiguous then
@@ -1398,7 +1361,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 					cdvd.Result[4] = 0x01;//hour
 					cdvd.Result[5] = 0x30;//min
 					break;
-				
+
 				default:
 					SetResultSize(1);
 					cdvd.Result[0] = 0x80;

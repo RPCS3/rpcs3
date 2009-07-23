@@ -30,7 +30,7 @@
 #include "IopCommon.h"
 #include "HostGui.h"
 
-#include "CDVD/CDVDisodrv.h"
+#include "CDVD/IsoFSdrv.h"
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"
@@ -244,17 +244,17 @@ int GetPS2ElfName( wxString& name )
 	char *pos;
 	TocEntry tocEntry;
 
-	CDVDFS_init();
+	IsoFS_init();
 
 	// check if the file exists
-	if (CDVD_findfile("SYSTEM.CNF;1", &tocEntry) != TRUE){
+	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
 		Console::Error("Boot Error > SYSTEM.CNF not found");
 		return 0;//could not find; not a PS/PS2 cdvd
 	}
 
-	f=CDVDFS_open("SYSTEM.CNF;1", 1);
-	CDVDFS_read(f, buffer, g_MaxPath);
-	CDVDFS_close(f);
+	f=IsoFS_open("SYSTEM.CNF;1", 1);
+	IsoFS_read(f, buffer, g_MaxPath);
+	IsoFS_close(f);
 
 	buffer[tocEntry.fileSize]='\0';
 
@@ -422,6 +422,16 @@ void CycleFrameLimit(int dir)
 	newOptions = (Config.Options & ~PCSX2_FRAMELIMIT_MASK) | newFrameLimit;
 
 	gsResetFrameSkip();
+	
+	// Allows sync to vblank only when framelimit is on, if GS can.
+	if(GSsetFrameLimit == NULL)
+	{
+	DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
+	}
+	else
+	{
+		GSsetFrameLimit(newFrameLimit);
+	}
 
 	switch(newFrameLimit) {
 		case PCSX2_FRAMELIMIT_NORMAL:

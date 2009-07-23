@@ -140,7 +140,7 @@ void _eeOnWriteReg(int reg, int signext);
 void _deleteEEreg(int reg, int flush);
 
 // allocates memory on the instruction size and returns the pointer
-u32* recAllocStackMem(int size, int align);
+u32* recGetImm64(u32 hi, u32 lo);
 
 void _vuRegsCOP22(VURegs * VU, _VURegsNum *VUregsn);
 

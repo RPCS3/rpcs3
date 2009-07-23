@@ -75,24 +75,8 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc(m_hWnd, message, wParam, lParam);
 }
 
-bool GSWnd::Create(const string& title)
+bool GSWnd::Create(const string& title, int w, int h)
 {
-	GSVector4i r;
-
-	GetWindowRect(GetDesktopWindow(), r);
-
-	int w = r.width() / 3;
-	int h = r.width() / 4;
-
-	if(!GetSystemMetrics(SM_REMOTESESSION))
-	{
-		w *= 2;
-		h *= 2;
-	}
-
-	int x = (r.left + r.right - w) / 2;
-	int y = (r.top + r.bottom - h) / 2;
-
 	WNDCLASS wc;
 
 	memset(&wc, 0, sizeof(wc));
@@ -115,7 +99,32 @@ bool GSWnd::Create(const string& title)
 
 	DWORD style = WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_OVERLAPPEDWINDOW | WS_BORDER;
 
-	m_hWnd = CreateWindow(wc.lpszClassName, title.c_str(), style, x, y, w, h, NULL, NULL, wc.hInstance, (LPVOID)this);
+	GSVector4i r;
+
+	GetWindowRect(GetDesktopWindow(), r);
+
+	bool remote = !!GetSystemMetrics(SM_REMOTESESSION);
+
+	if(w <= 0 || h <= 0 || remote) 
+	{
+		w = r.width() / 3;
+		h = r.width() / 4;
+
+		if(!remote)
+		{
+			w *= 2;
+			h *= 2;
+		}
+	}
+
+	r.left = (r.left + r.right - w) / 2;
+	r.top = (r.top + r.bottom - h) / 2;
+	r.right = r.left + w;
+	r.bottom = r.top + h;
+
+	AdjustWindowRect(r, style, FALSE);
+
+	m_hWnd = CreateWindow(wc.lpszClassName, title.c_str(), style, r.left, r.top, r.width(), r.height(), NULL, NULL, wc.hInstance, (LPVOID)this);
 
 	if(!m_hWnd)
 	{

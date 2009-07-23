@@ -174,6 +174,9 @@ microVUt(void) mVUsetupBranch(mV, int* xStatus, int* xMac, int* xClip, int xCycl
 
 	// Shuffle P/Q regs since every block starts at instance #0
 	if (mVU->p || mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, shufflePQ); }
+
+	// Flush Allocated Regs
+	mVU->regAlloc->flushAll();
 }
 
 microVUt(void) mVUincCycles(mV, int x) {
@@ -367,6 +370,9 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 
 	// Setup Program Bounds/Range
 	mVUsetupRange(mVU, startPC, 1);
+	
+	// Reset regAlloc
+	mVU->regAlloc->reset();
 
 	// First Pass
 	iPC = startPC / 4;
@@ -512,8 +518,8 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 				// Check if branch-block has already been compiled
 				blockCreate(branchAddr/8);
 				pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
-				if (pBlock)			  { xJMP( pBlock->x86ptrStart ); }
-				else				  { mVUblockFetch(mVU, branchAddr, (uptr)&mVUregs); }
+				if (pBlock)	{ xJMP( pBlock->x86ptrStart ); }
+				else		{ mVUblockFetch(mVU, branchAddr, (uptr)&mVUregs); }
 			}
 			else {
 				uptr jumpAddr;

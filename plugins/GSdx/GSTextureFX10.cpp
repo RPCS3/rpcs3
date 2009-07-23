@@ -76,6 +76,13 @@ bool GSTextureFX10::Create(GSDevice* dev)
 
 	if(FAILED(hr)) return false;
 
+	// create layout
+
+	VSSelector sel;
+	VSConstantBuffer cb;
+
+	SetupVS(sel, &cb);
+
 	//
 
 	return true;
@@ -98,19 +105,17 @@ void GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(i == m_vs.end())
 	{
-		string str[4];
+		string str[3];
 
 		str[0] = format("%d", sel.bppz);
 		str[1] = format("%d", sel.tme);
 		str[2] = format("%d", sel.fst);
-		str[3] = format("%d", sel.prim);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
 			{"VS_BPPZ", str[0].c_str()},
 			{"VS_TME", str[1].c_str()},
 			{"VS_FST", str[2].c_str()},
-			{"VS_PRIM", str[3].c_str()},
 			{NULL, NULL},
 		};
 
@@ -184,14 +189,7 @@ void GSTextureFX10::SetupGS(GSSelector sel)
 	dev->GSSetShader(gs);
 }
 
-void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
-{
-	((GSDevice10*)m_dev)->PSSetShaderResources(tex, pal);
-
-	UpdatePS(sel, cb, ssel);
-}
-
-void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
+void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
 	GSDevice10* dev = (GSDevice10*)m_dev;
 
@@ -265,7 +263,7 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 
 		if(i != m_ps_ss.end())
 		{
-			ss0 = (*i).second;
+			ss0 = i->second;
 		}
 		else
 		{
@@ -297,25 +295,18 @@ void GSTextureFX10::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 	dev->PSSetSamplerState(ss0, ss1);
 }
 
-void GSTextureFX10::SetupRS(int w, int h, const GSVector4i& scissor)
-{
-	((GSDevice10*)m_dev)->RSSet(w, h, &scissor);
-}
-
-void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds)
-{
-	UpdateOM(dssel, bsel, afix);
-
-	((GSDevice10*)m_dev)->OMSetRenderTargets(rt, ds);
-}
-
-void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
+void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
 	GSDevice10* dev = (GSDevice10*)m_dev;
-
+/*
 	hash_map<uint32, CComPtr<ID3D10DepthStencilState> >::const_iterator i = m_om_dss.find(dssel);
 
 	if(i == m_om_dss.end())
+	{
+*/
+	CComPtr<ID3D10DepthStencilState>& om_dss = m_om_dss[dssel];
+
+	if(om_dss == NULL)
 	{
 		D3D10_DEPTH_STENCIL_DESC dsd;
 
@@ -336,7 +327,7 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 			dsd.BackFace.StencilDepthFailOp = D3D10_STENCIL_OP_KEEP;
 		}
 
-		if(!(dssel.zte && dssel.ztst == 1 && !dssel.zwe))
+		if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)
 		{
 			static const D3D10_COMPARISON_FUNC ztst[] = 
 			{
@@ -346,11 +337,11 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 				D3D10_COMPARISON_GREATER
 			};
 
-			dsd.DepthEnable = dssel.zte;
+			dsd.DepthEnable = true;
 			dsd.DepthWriteMask = dssel.zwe ? D3D10_DEPTH_WRITE_MASK_ALL : D3D10_DEPTH_WRITE_MASK_ZERO;
 			dsd.DepthFunc = ztst[dssel.ztst];
 		}
-
+/*
 		CComPtr<ID3D10DepthStencilState> dss;
 
 		(*dev)->CreateDepthStencilState(&dsd, &dss);
@@ -358,9 +349,13 @@ void GSTextureFX10::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 		m_om_dss[dssel] = dss;
 
 		i = m_om_dss.find(dssel);
+*/
+		(*dev)->CreateDepthStencilState(&dsd, &om_dss);
 	}
 
-	dev->OMSetDepthStencilState((*i).second, 1);
+//	dev->OMSetDepthStencilState(i->second, 1);
+
+	dev->OMSetDepthStencilState(om_dss, 1);
 
 	hash_map<uint32, CComPtr<ID3D10BlendState> >::const_iterator j = m_om_bs.find(bsel);
 

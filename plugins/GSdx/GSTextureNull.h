@@ -32,9 +32,8 @@ public:
 	GSTextureNull(int type, int w, int h, int format);
 
 	int GetType() const {return m_desc.type;}
-	int GetWidth() const {return m_desc.w;}
-	int GetHeight() const {return m_desc.h;}
 	int GetFormat() const {return m_desc.format;}
+
 	bool Update(const GSVector4i& r, const void* data, int pitch) {return true;}
 	bool Map(GSMap& m, const GSVector4i* r) {return false;}
 	void Unmap() {}

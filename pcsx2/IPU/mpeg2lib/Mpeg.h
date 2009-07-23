@@ -25,32 +25,43 @@
 #ifndef __MPEG_H__
 #define __MPEG_H__
 
-/* macroblock modes */
-#define MACROBLOCK_INTRA 1
-#define MACROBLOCK_PATTERN 2
-#define MACROBLOCK_MOTION_BACKWARD 4
-#define MACROBLOCK_MOTION_FORWARD 8
-#define MACROBLOCK_QUANT 16
-#define DCT_TYPE_INTERLACED 32
-/* motion_type */
-#define MOTION_TYPE_SHIFT 6
-#define MOTION_TYPE_MASK (3*64)
-#define MOTION_TYPE_BASE 64
-#define MC_FIELD (1*64)
-#define MC_FRAME (2*64)
-#define MC_16X8 (2*64)
-#define MC_DMV (3*64)
+enum macroblock_modes
+{
+	MACROBLOCK_INTRA = 1,
+	MACROBLOCK_PATTERN = 2,
+	MACROBLOCK_MOTION_BACKWARD = 4,
+	MACROBLOCK_MOTION_FORWARD = 8,
+	MACROBLOCK_QUANT = 16,
+	DCT_TYPE_INTERLACED = 32
+};
+
+enum motion_type
+{
+	MOTION_TYPE_SHIFT = 6,
+	MOTION_TYPE_MASK = (3*64),
+	MOTION_TYPE_BASE = 64,
+	MC_FIELD = (1*64),
+	MC_FRAME = (2*64),
+	MC_16X8 = (2*64),
+	MC_DMV = (3*64)
+};
 
 /* picture structure */
-#define TOP_FIELD 1
-#define BOTTOM_FIELD 2
-#define FRAME_PICTURE 3
-
+enum picture_structure
+{
+	TOP_FIELD = 1,
+	BOTTOM_FIELD = 2,
+	FRAME_PICTURE = 3
+};
+	
 /* picture coding type */
-#define I_TYPE 1
-#define P_TYPE 2
-#define B_TYPE 3
-#define D_TYPE 4
+enum picture_coding_type
+{
+	I_TYPE  =1,
+	P_TYPE = 2,
+	B_TYPE = 3,
+	D_TYPE = 4
+};
 
 struct macroblock_8{
 	unsigned char Y[16][16];	//0

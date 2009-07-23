@@ -76,6 +76,13 @@ bool GSTextureFX11::Create(GSDevice* dev)
 
 	if(FAILED(hr)) return false;
 
+	// create layout
+
+	VSSelector sel;
+	VSConstantBuffer cb;
+
+	SetupVS(sel, &cb);
+
 	//
 
 	return true;
@@ -98,19 +105,17 @@ void GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(i == m_vs.end())
 	{
-		string str[4];
+		string str[3];
 
 		str[0] = format("%d", sel.bppz);
 		str[1] = format("%d", sel.tme);
 		str[2] = format("%d", sel.fst);
-		str[3] = format("%d", sel.prim);
 
 		D3D11_SHADER_MACRO macro[] =
 		{
 			{"VS_BPPZ", str[0].c_str()},
 			{"VS_TME", str[1].c_str()},
 			{"VS_FST", str[2].c_str()},
-			{"VS_PRIM", str[3].c_str()},
 			{NULL, NULL},
 		};
 
@@ -186,14 +191,7 @@ void GSTextureFX11::SetupGS(GSSelector sel)
 	dev->GSSetShader(gs);
 }
 
-void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal)
-{
-	((GSDevice11*)m_dev)->PSSetShaderResources(tex, pal);
-
-	UpdatePS(sel, cb, ssel);
-}
-
-void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
+void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
 	GSDevice11* dev = (GSDevice11*)m_dev;
 
@@ -301,19 +299,7 @@ void GSTextureFX11::UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSampl
 	dev->PSSetSamplerState(ss0, ss1);
 }
 
-void GSTextureFX11::SetupRS(int w, int h, const GSVector4i& scissor)
-{
-	((GSDevice11*)m_dev)->RSSet(w, h, &scissor);
-}
-
-void GSTextureFX11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds)
-{
-	UpdateOM(dssel, bsel, afix);
-
-	((GSDevice11*)m_dev)->OMSetRenderTargets(rt, ds);
-}
-
-void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
+void GSTextureFX11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
 	GSDevice11* dev = (GSDevice11*)m_dev;
 
@@ -340,7 +326,7 @@ void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 			dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 		}
 
-		if(!(dssel.zte && dssel.ztst == 1 && !dssel.zwe))
+		if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)
 		{
 			static const D3D11_COMPARISON_FUNC ztst[] = 
 			{
@@ -350,7 +336,7 @@ void GSTextureFX11::UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel,
 				D3D11_COMPARISON_GREATER
 			};
 
-			dsd.DepthEnable = dssel.zte;
+			dsd.DepthEnable = true;
 			dsd.DepthWriteMask = dssel.zwe ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
 			dsd.DepthFunc = ztst[dssel.ztst];
 		}

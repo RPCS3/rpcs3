@@ -30,7 +30,8 @@ EXPORTS
 	GSreadFIFO2			
 	GSirqCallback		
 	GSsetGameCRC		
-	GSsetFrameSkip		
+	GSsetFrameSkip
+	GSsetFrameLimit		
 	GSgetLastTag
 	GSReplay
 	GSBenchmark

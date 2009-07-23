@@ -46,8 +46,8 @@ public:
 
 protected:
 	GSState* m_state;
-	hash_map<GSTexture*, bool> m_textures;
-	hash_map<GSTexture*, bool> m_map[MAX_PAGES];
+	hash_set<GSTexture*> m_textures;
+	list<GSTexture*> m_map[MAX_PAGES];
 	uint32 m_pages[16];
 
 public:
@@ -56,7 +56,9 @@ public:
 
 	const GSTexture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
 
+	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r);
+
 	void RemoveAll();
+	void RemoveAt(GSTexture* t);
 	void IncAge();
-	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 };

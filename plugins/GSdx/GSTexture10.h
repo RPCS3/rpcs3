@@ -36,8 +36,6 @@ public:
 	explicit GSTexture10(ID3D10Texture2D* texture);
 
 	int GetType() const;
-	int GetWidth() const;
-	int GetHeight() const;
 	int GetFormat() const;
 
 	bool Update(const GSVector4i& r, const void* data, int pitch);

@@ -29,6 +29,8 @@
 
 #include "R5900Exceptions.h"
 
+#include "CDVD/CDVD.h"
+
 using namespace std;
 
 // disable all session overrides by default...
@@ -346,6 +348,10 @@ void SysEndExecution()
 // use_bios - forces the game to boot through the PS2 bios, instead of bypassing it.
 void SysPrepareExecution( const wxString& elf_file, bool use_bios )
 {
+	// solve a little crash
+	if(CDVD.init == NULL)
+		CDVD = CDVD_plugin;
+
 	if( !g_EmulationInProgress )
 	{
 		try

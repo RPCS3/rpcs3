@@ -15,6 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
+ 
 /*
  *  Original code from libcdvd by Hiryu & Sjeep (C) 2002
  *  Modified by Florin for PCSX2 emu
@@ -22,10 +23,8 @@
 
 #include "PrecompiledHeader.h"
 
-#include "CDVDiso.h"
-#include "CDVDisodrv.h"
-
-CdRMode cdReadMode;
+#include "IsoFStools.h"
+#include "IsoFSdrv.h"
 
 struct fdtable{
 //int fd;
@@ -46,22 +45,12 @@ static int inited=FALSE;
 
 //////////////////////////////////////////////////////////////////////
 //						CDVDFS_init
-//	called by 80000592 sceCdInit()
 //////////////////////////////////////////////////////////////////////
-void CDVDFS_init(){
+void IsoFS_init()
+{
+	if (inited)	return; //might change in the future as a param; forceInit/Reset
 
-	if (inited)	return;//might change in the future as a param; forceInit/Reset
-
-	RPC_LOG("[CDVDisodrv:init] CDVD Filesystem v1.00");
-	RPC_LOG("[CDVDisodrv     ] \tby A.Lee (aka Hiryu) & Nicholas Van Veen (aka Sjeep)");
-	RPC_LOG("[CDVDisodrv     ] Initializing '%s' file driver.", "cdfs");
-
-	//CdInit(0);	already called by plugin loading system ;)
-	
-	cdReadMode.trycount = 0;
-	cdReadMode.spindlctrl = CdSpinStm;
-	cdReadMode.datapattern = CdSecS2048;	//isofs driver only needs
-											//2KB sectors
+	ISOFS_LOG("[IsoFSdrv:init] Initializing '%s' file driver.", "IsoFS");
 
 	memzero_obj( fd_table );
 	memzero_obj( fd_used );
@@ -73,14 +62,13 @@ void CDVDFS_init(){
 
 //////////////////////////////////////////////////////////////////////
 //						CDVDFS_open
-//	called by 80000001 fileio_open for devices: "cdrom:", "cdrom0:"
 //////////////////////////////////////////////////////////////////////
-int CDVDFS_open(const char *name, int mode){
+int IsoFS_open(const char *name, int mode){
 	int j;
 	static struct TocEntry tocEntry;
 
 	// check if the file exists
-	if (CDVD_findfile(name, &tocEntry) != TRUE)
+	if (IsoFS_findFile(name, &tocEntry) != TRUE)
 		return -1;
 
 	if(mode != 1) return -2;	//SCE_RDONLY
@@ -92,24 +80,23 @@ int CDVDFS_open(const char *name, int mode){
 	fd_used[j] = 1;
 	files_open++;
 
-	RPC_LOG("[CDVDisodrv:open] internal fd=%d", j);
+	ISOFS_LOG("[IsoFSdrv:open] internal fd=%d", j);
 
 	fd_table[j].fileSize = tocEntry.fileSize;
 	fd_table[j].LBA = tocEntry.fileLBA;
 	fd_table[j].filePos = 0;
 
-	RPC_LOG("[CDVDisodrv     ] tocEntry.fileSize = %d",tocEntry.fileSize);
+	ISOFS_LOG("[IsoFSdrv:open] tocEntry.fileSize = %d",tocEntry.fileSize);
    	return j;
 }
 
 //////////////////////////////////////////////////////////////////////
 //						CDVDFS_lseek
-//	called by 80000001 fileio_lseek for devices: "cdrom:", "cdrom0:"
 //////////////////////////////////////////////////////////////////////
-int CDVDFS_lseek(int fd, int offset, int whence){
+int IsoFS_lseek(int fd, int offset, int whence){
 
 	if ((fd >= 16) || (fd_used[fd]==0)){
-		RPC_LOG("[CDVDisodrv:lseek] ERROR: File does not appear to be open!");
+		ISOFS_LOG("[IsoFSdrv:lseek] ERROR: File does not appear to be open!");
 		return -1;
 	}
 
@@ -141,28 +128,27 @@ int CDVDFS_lseek(int fd, int offset, int whence){
 
 //////////////////////////////////////////////////////////////////////
 //						CDVDFS_read
-//	called by 80000001 fileio_read for devices: "cdrom:", "cdrom0:", "cdfs:"
 //////////////////////////////////////////////////////////////////////
-int CDVDFS_read( int fd, char *buffer, int size ){
-//	int start_sector;
+int IsoFS_read( int fd, char *buffer, int size )
+{
 	int off_sector;
-//	int num_sectors;
-
-	//static char local_buffer[2024*2048];	//4MB
 	static char lb[2048];					//2KB
+
 	//Start, Aligned, End
 	int  ssector, asector, esector;
 	int  ssize=0, asize,   esize;
 
-	if ((fd >= 16) || (fd_used[fd]==0)){
-		RPC_LOG("[CDVDisodrv:read] ERROR: File does not appear to be open!");
+	if ((fd >= 16) || (fd_used[fd]==0))
+	{
+		ISOFS_LOG("[IsoFSdrv:read] ERROR: File does not appear to be open!");
 		return -1;
 	}
 
 		// A few sanity checks
-	if (fd_table[fd].filePos > fd_table[fd].fileSize){
+	if (fd_table[fd].filePos > fd_table[fd].fileSize)
+	{
 		// We cant start reading from past the beginning of the file
-		return 0;	// File exists but we couldnt read anything from it
+		return 0;	// File exists but we couldn't read anything from it
 	}
 
 	if ((fd_table[fd].filePos + size) > fd_table[fd].fileSize)
@@ -171,7 +157,8 @@ int CDVDFS_read( int fd, char *buffer, int size ){
 	// Now work out where we want to start reading from
 	asector = ssector = fd_table[fd].LBA + (fd_table[fd].filePos >> 11);
 	off_sector = (fd_table[fd].filePos & 0x7FF);
-	if (off_sector){
+	if (off_sector)
+	{
 		ssize   = std::min(2048 - off_sector, size);
 		size   -= ssize;
 		asector++;
@@ -181,22 +168,27 @@ int CDVDFS_read( int fd, char *buffer, int size ){
 	esector=asector + (asize >> 11);
 	size += ssize;
 
-	RPC_LOG("[CDVDisodrv:read] read sectors 0x%08X to 0x%08X", ssector, esector-(esize==0));
+	ISOFS_LOG("[IsoFSdrv:read] read sectors 0x%08X to 0x%08X", ssector, esector-(esize==0));
 
-	if (ssize){	
-		if (CdRead(ssector, 1, lb, &cdReadMode) != TRUE){
-			RPC_LOG("[CDVDisodrv:    ] Couldn't Read from file for some reason");
+	if (ssize)
+	{	
+		if (IsoFS_readSectors(ssector, 1, lb) != TRUE)
+		{
+			ISOFS_LOG("[IsoFSdrv:read] Couldn't Read from file for some reason");
 			return 0;
 		}
 		memcpy_fast(buffer, lb + off_sector, ssize);
 	}
-	if (asize)	if (CdRead(asector, asize >> 11, buffer+ssize, &cdReadMode) != TRUE){
-		RPC_LOG("[CDVDisodrv:    ] Couldn't Read from file for some reason");
+	if (asize)	if (IsoFS_readSectors(asector, asize >> 11, buffer+ssize) != TRUE)
+	{
+		ISOFS_LOG("[IsoFSdrv:read] Couldn't Read from file for some reason");
 		return 0;
 	}
-	if (esize){
-		if (CdRead(esector, 1, lb, &cdReadMode) != TRUE){
-			RPC_LOG("[CDVDisodrv:    ] Couldn't Read from file for some reason");
+	if (esize)
+	{
+		if (IsoFS_readSectors(esector, 1, lb) != TRUE)
+		{
+			ISOFS_LOG("[IsoFSdrv:read] Couldn't Read from file for some reason");
 			return 0;
 		}
 		memcpy_fast(buffer+ssize+asize, lb, esize);
@@ -207,13 +199,13 @@ int CDVDFS_read( int fd, char *buffer, int size ){
 	off_sector = (fd_table[fd].filePos & 0x7FF);
 	num_sectors = ((off_sector + size) >> 11) + 1;
 
-	RPC_LOG("[CDVDisodrv:read] read sectors 0x%08X to 0x%08X",start_sector,start_sector+num_sectors);
+	RPC_LOG("[IsoFSdrv:read] read sectors 0x%08X to 0x%08X",start_sector,start_sector+num_sectors);
 
 	// Read the data (we only ever get 16KB max request at once)
 	if (CdRead(start_sector, num_sectors, local_buffer, &cdReadMode) != TRUE){
 
 		//RPC_LOG("sector = %d, start sector = %d",sector,start_sector);
-		RPC_LOG("[CDVDisodrv:    ] Couldn't Read from file for some reason");
+		RPC_LOG("[IsoFSdrv:    ] Couldn't Read from file for some reason");
 		return 0;
 	}
 	//CdSync(0);	hm, a wait function maybe...
@@ -226,26 +218,17 @@ int CDVDFS_read( int fd, char *buffer, int size ){
 }
 
 //////////////////////////////////////////////////////////////////////
-//						CDVDFS_write
-//	called by 80000001 fileio_write for devices: "cdrom:", "cdrom0:"
-//	hehe, this ain't a CD writing option :D
-//////////////////////////////////////////////////////////////////////
-int CDVDFS_write( int fd, char * buffer, int size ){
-   if(size == 0) return 0;
-   else 		 return -1;
-}
-
-//////////////////////////////////////////////////////////////////////
 //						CDVDFS_close
-//	called by 80000001 fileio_close for devices: "cdrom:", "cdrom0:"
 //////////////////////////////////////////////////////////////////////
-int CDVDFS_close( int fd){
+int IsoFS_close( int fd)
+{
 
-	if ((fd >= 16) || (fd_used[fd]==0)){
-		RPC_LOG("[CDVDisodrv:close] ERROR: File does not appear to be open!");
+	if ((fd >= 16) || (fd_used[fd]==0))
+	{
+		ISOFS_LOG("[IsoFSdrv:close] ERROR: File does not appear to be open!");
 		return -1;
 	}
-	RPC_LOG("[CDVDisodrv:close] internal fd %d", fd);
+	ISOFS_LOG("[IsoFSdrv:close] internal fd %d", fd);
 	fd_used[fd] = 0;
 	files_open--;
 

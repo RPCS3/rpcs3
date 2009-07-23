@@ -60,9 +60,9 @@ mVUop(mVU_DIV) {
 				MOV32ItoM((uptr)&mVU->divFlag, divD); // Zero divide (only when not 0/0)
 			x86SetJ8(bjmp);
 
-			SSE_XORPS_XMM_to_XMM(xmmFs, xmmFt);
+			SSE_XORPS_XMM_to_XMM (xmmFs, xmmFt);
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
-			SSE_ORPS_XMM_to_XMM(xmmFs, xmmMax); // If division by zero, then xmmFs = +/- fmax
+			SSE_ORPS_M128_to_XMM (xmmFs, (uptr)mVU_maxvals); // If division by zero, then xmmFs = +/- fmax
 
 			djmp = JMP8(0);
 		x86SetJ8(cjmp);
@@ -87,7 +87,7 @@ mVUop(mVU_SQRT) {
 		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
 		testNeg(xmmFt, gprT1, ajmp); // Check for negative sqrt
 
-		if (CHECK_VU_OVERFLOW) SSE_MINSS_XMM_to_XMM(xmmFt, xmmMax); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
+		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(xmmFt, (uptr)mVU_maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
 		SSE_SQRTSS_XMM_to_XMM(xmmFt, xmmFt);
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
 		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFt);
@@ -119,7 +119,7 @@ mVUop(mVU_RSQRT) {
 			x86SetJ8(cjmp);
 
 			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
-			SSE_ORPS_XMM_to_XMM(xmmFs, xmmMax); // xmmFs = +/-Max
+			SSE_ORPS_M128_to_XMM (xmmFs, (uptr)mVU_maxvals); // xmmFs = +/-Max
 
 			djmp = JMP8(0);
 		x86SetJ8(ajmp);
@@ -666,11 +666,10 @@ mVUop(mVU_ISUB) {
 			SUB16RtoR(gprT1, gprT2);
 			mVUallocVIb(mVU, gprT1, _Id_);
 		}
-		else if (!isMMX(_Id_)) { 
+		else { 
 			XOR32RtoR(gprT1, gprT1);
 			mVUallocVIb(mVU, gprT1, _Id_);
 		}
-		else { PXORRtoR(mmVI(_Id_), mmVI(_Id_)); }
 	}
 	pass3 { mVUlog("ISUB vi%02d, vi%02d, vi%02d", _Fd_, _Fs_, _Ft_); }
 }

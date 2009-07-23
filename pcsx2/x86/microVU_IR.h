@@ -156,3 +156,167 @@ struct microIR {
 	u32 startPC;		// Start PC for Cur Block
 	u32 sFlagHack;		// Optimize out all Status flag updates if microProgram doesn't use Status flags
 };
+
+//------------------------------------------------------------------
+// Reg Alloc
+//------------------------------------------------------------------
+
+void mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW);
+void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW);
+void mVUloadReg(int reg, uptr offset, int xyzw);
+
+struct microXMM {
+	int  reg;		// VF Reg Number Stored (-1 = Temp; 0 = vf0 and will not be written back; 32 = ACC)
+	int  xyzw;		// xyzw to write back (0 = Don't write back anything AND cached vfReg has all vectors valid)
+	int  count;		// Count of when last used
+	bool isNeeded;	// Is needed for current instruction
+};
+
+#define xmmTotal 7	// Don't allocate PQ?
+class microRegAlloc {
+private:
+	microXMM xmmReg[xmmTotal];
+	VURegs*  vuRegs;
+	int		 counter;
+	int findFreeRegRec(int startIdx) {
+		for (int i = startIdx; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded) {
+				if ((i+1) >= xmmTotal) return i;
+				int x = findFreeRegRec(i+1);
+				if (x == -1) return i;
+				return ((xmmReg[i].count < xmmReg[x].count) ? i : x);
+			}
+		}
+		return -1;
+	}
+	int findFreeReg() {
+		for (int i = 0; i < xmmTotal; i++) {
+			if (!xmmReg[i].isNeeded && (xmmReg[i].reg < 0)) {
+				return i; // Reg is not needed and was a temp reg
+			}
+		}
+		int x = findFreeRegRec(0);
+		if (x < 0) { DevCon::Error("microVU Allocation Error!"); return 0; }
+		return x;
+	}
+
+public:
+	microRegAlloc(VURegs* vuRegsPtr) { 
+		vuRegs = vuRegsPtr;
+		reset(); 
+	}
+	void reset() {
+		for (int i = 0; i < xmmTotal; i++) {
+			clearReg(i);
+		}
+		counter = 0;
+	}
+	void flushAll() {
+		for (int i = 0; i < xmmTotal; i++) {
+			writeBackReg(i);
+		}
+	}
+	void clearReg(int reg) {
+		xmmReg[reg].reg		 = -1;
+		xmmReg[reg].count	 =  0;
+		xmmReg[reg].xyzw	 =  0;
+		xmmReg[reg].isNeeded =  0;
+	}
+	void writeBackReg(int reg) {
+		if ((xmmReg[reg].reg > 0) && xmmReg[reg].xyzw) { // Reg was modified and not Temp or vf0
+			if (xmmReg[reg].reg == 32) mVUsaveReg(reg, (uptr)&vuRegs->ACC.UL[0], xmmReg[reg].xyzw, 1);
+			else mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
+			for (int i = 0; i < xmmTotal; i++) {
+				if (i == reg) continue;
+				if (xmmReg[i].reg == xmmReg[reg].reg) {
+					clearReg(i); // Invalidate any Cached Regs of same vf Reg
+				}
+			}
+			if (xmmReg[reg].xyzw == 0xf) { // Make Cached Reg if All Vectors were Modified
+				xmmReg[reg].count	 = counter;
+				xmmReg[reg].xyzw	 = 0;
+				xmmReg[reg].isNeeded = 0;
+				return;
+			}
+		}
+		clearReg(reg); // Clear Reg
+	}
+	void clearNeeded(int reg) {
+		xmmReg[reg].isNeeded = 0;
+		if (xmmReg[reg].xyzw) { // Reg was modified
+			if (xmmReg[reg].reg > 0) {
+				int mergeRegs = 0;
+				if (xmmReg[reg].xyzw < 0xf) { mergeRegs = 1; } // Try to merge partial writes
+				for (int i = 0; i < xmmTotal; i++) { // Invalidate any other read-only regs of same vfReg
+					if (i == reg) continue;
+					if (xmmReg[i].reg == xmmReg[reg].reg) {
+						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: clearNeeded() [%d]", params xmmReg[i].reg);
+						if (mergeRegs == 1) { 
+							mVUmergeRegs(i, reg, xmmReg[reg].xyzw, 1);
+							xmmReg[i].xyzw = 0xf;
+							xmmReg[i].count = counter;
+							mergeRegs = 2; 
+						}
+						else clearReg(i);
+					}
+				}
+				if (mergeRegs == 2) clearReg(reg);	   // Clear Current Reg if Merged
+				else if (mergeRegs) writeBackReg(reg); // Write Back Partial Writes if couldn't merge
+			}
+			else clearReg(reg); // If Reg was temp or vf0, then invalidate itself
+		}
+	}
+	int allocReg(int vfLoadReg = -1, int vfWriteReg = -1, int xyzw = 0, bool cloneWrite = 1) {
+		counter++;
+		if (vfLoadReg >= 0) { // Search For Cached Regs
+			for (int i = 0; i < xmmTotal; i++) {
+				if ((xmmReg[i].reg == vfLoadReg) && (!xmmReg[i].xyzw					   // Reg Was Not Modified
+				|| (/*!xmmReg[i].isNeeded &&*/ xmmReg[i].reg && (xmmReg[i].xyzw==0xf)))) { // Reg Had All Vectors Modified and != VF0
+					int z = i;
+					if (vfWriteReg >= 0) { // Reg will be modified
+						if (cloneWrite) {  // Clone Reg so as not to use the same Cached Reg
+							z = findFreeReg();
+							writeBackReg(z);
+							if (z!=i && xyzw==8) SSE_MOVAPS_XMM_to_XMM (z, i);
+							else if (xyzw == 4)  SSE2_PSHUFD_XMM_to_XMM(z, i, 1);
+							else if (xyzw == 2)  SSE2_PSHUFD_XMM_to_XMM(z, i, 2);
+							else if (xyzw == 1)  SSE2_PSHUFD_XMM_to_XMM(z, i, 3);
+							else if (z != i)	 SSE_MOVAPS_XMM_to_XMM (z, i);
+							xmmReg[i].count = counter; // Reg i was used, so update counter
+						}
+						else { // Don't clone reg, but shuffle to adjust for SS ops
+							if ((vfLoadReg != vfWriteReg) || (xyzw != 0xf)) { writeBackReg(z); }
+							else if	(xyzw == 4) SSE2_PSHUFD_XMM_to_XMM(z, i, 1);
+							else if (xyzw == 2) SSE2_PSHUFD_XMM_to_XMM(z, i, 2);
+							else if (xyzw == 1) SSE2_PSHUFD_XMM_to_XMM(z, i, 3);
+						}
+						xmmReg[z].reg  = vfWriteReg;
+						xmmReg[z].xyzw = xyzw;
+					}
+					xmmReg[z].count	   = counter;
+					xmmReg[z].isNeeded = 1;
+					return z;
+				}
+			}
+		}
+		int x = findFreeReg();
+		writeBackReg(x);
+
+		if (vfWriteReg >= 0) { // Reg Will Be Modified (allow partial reg loading)
+			if	   ((vfLoadReg ==  0) && !(xyzw & 1)) { SSE2_PXOR_XMM_to_XMM(x, x); }
+			else if	(vfLoadReg == 32) mVUloadReg(x, (uptr)&vuRegs->ACC.UL[0], xyzw);
+			else if (vfLoadReg >=  0) mVUloadReg(x, (uptr)&vuRegs->VF[vfLoadReg].UL[0], xyzw);
+			xmmReg[x].reg  = vfWriteReg;
+			xmmReg[x].xyzw = xyzw;
+		}
+		else { // Reg Will Not Be Modified (always load full reg for caching)
+			if		(vfLoadReg == 32) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->ACC.UL[0]);
+			else if (vfLoadReg >=  0) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->VF[vfLoadReg].UL[0]);
+			xmmReg[x].reg  = vfLoadReg;
+			xmmReg[x].xyzw = 0;
+		}
+		xmmReg[x].count	   = counter;
+		xmmReg[x].isNeeded = 1;
+		return x;
+	}
+};

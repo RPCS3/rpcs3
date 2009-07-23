@@ -45,12 +45,13 @@ public:
 	{
 		GSVector4 VertexScale;
 		GSVector4 VertexOffset;
-		GSVector2 TextureScale;
-		float _pad[2];
+		GSVector4 TextureScale;
 
 		struct VSConstantBuffer() 
 		{
-			memset(this, 0, sizeof(*this));
+			VertexScale = GSVector4::zero();
+			VertexOffset = GSVector4::zero();
+			TextureScale = GSVector4::zero();
 		}
 
 		__forceinline bool Update(const VSConstantBuffer* cb)
@@ -85,13 +86,12 @@ public:
 				uint32 tme:1;
 				uint32 fst:1;
 				uint32 logz:1;
-				uint32 prim:2;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x7f;}
+		operator uint32() {return key & 0x1f;}
 
 		VSSelector() : key(0) {}
 	};
@@ -107,7 +107,12 @@ public:
 
 		struct PSConstantBuffer() 
 		{
-			memset(this, 0, sizeof(*this));
+			FogColor_AREF = GSVector4::zero();
+			HalfTexel = GSVector4::zero();
+			WH = GSVector4::zero();
+			MinMax = GSVector4::zero();
+			MinF_TA = GSVector4::zero();
+			MskFix = GSVector4i::zero();
 		}
 
 		__forceinline bool Update(const PSConstantBuffer* cb)
@@ -122,7 +127,7 @@ public:
 			GSVector4i b4 = b[4];
 			GSVector4i b5 = b[5];
 
-			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue())
+			if(!((a[0] == b0) /*& (a[1] == b1)*/ & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue()) // if WH matches HalfTexel does too
 			{
 				a[0] = b0;
 				a[1] = b1;
@@ -212,7 +217,6 @@ public:
 		{
 			struct
 			{
-				uint32 zte:1;
 				uint32 ztst:2;
 				uint32 zwe:1;
 				uint32 date:1;
@@ -222,7 +226,7 @@ public:
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x3f;}
+		operator uint32() {return key & 0x1f;}
 
 		OMDepthStencilSelector() : key(0) {}
 	};
@@ -244,12 +248,24 @@ public:
 				uint32 wa:1;
 			};
 
+			struct
+			{
+				uint32 _pad:1;
+				uint32 abcd:8;
+				uint32 wrgba:4;
+			};
+
 			uint32 key;
 		};
 
 		operator uint32() {return key & 0x1fff;}
 
 		OMBlendSelector() : key(0) {}
+
+		bool IsCLR1() const
+		{
+			return (key & 0x19f) == 0x93; // abe == 1 && a == 1 && b == 2 && d == 1
+		}
 	};
 
 	#pragma pack(pop)
@@ -266,9 +282,6 @@ public:
 	virtual void SetupIA(const void* vertices, int count, int prim) = 0;
 	virtual void SetupVS(VSSelector sel, const VSConstantBuffer* cb) = 0;
 	virtual void SetupGS(GSSelector sel) = 0;
-	virtual void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal) = 0;
-	virtual void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel) = 0;
-	virtual void SetupRS(int w, int h, const GSVector4i& scissor) = 0;
-	virtual void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds) = 0;
-	virtual void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix) = 0;
+	virtual void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel) = 0;
+	virtual void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix) = 0;
 };

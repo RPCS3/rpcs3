@@ -63,13 +63,8 @@ void recADDI_(int info)
 
 	if ( info & PROCESS_EE_MMX ) {
 		if ( _Imm_ != 0 ) {
-
-			u32* ptempmem = recAllocStackMem(8, 8);
-			ptempmem[0] = (s32)_Imm_;
-			ptempmem[1] = 0;
-
 			if ( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-			PADDDMtoR(EEREC_T, (u32)ptempmem);
+			PADDDMtoR(EEREC_T, (uptr)recGetImm64(0, _Imm_));
 			if ( EEINST_ISLIVE1(_Rt_) ) _signExtendGPRtoMMX(EEREC_T, _Rt_, 0);
 			else EEINST_RESETHASLIVE1(_Rt_);
 		}
@@ -89,12 +84,8 @@ void recADDI_(int info)
 		SetMMXstate();
 
 		if ( _Imm_ != 0 ) {
-			u32* ptempmem = recAllocStackMem(8, 8);
-			ptempmem[0] = (s32)_Imm_;
-			ptempmem[1] = 0;
-
 			MOVDMtoMMX(rtreg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-			PADDDMtoR(rtreg, (u32)ptempmem);
+			PADDDMtoR(rtreg, (uptr)recGetImm64(0, _Imm_));
 
 			if ( EEINST_ISLIVE1(_Rt_) ) _signExtendGPRtoMMX(rtreg, _Rt_, 0);
 			else EEINST_RESETHASLIVE1(_Rt_);
@@ -162,13 +153,8 @@ void recDADDI_(int info)
 	if( info & PROCESS_EE_MMX ) {
 
 		if( _Imm_ != 0 ) {
-
-			// flush
-			u32* ptempmem = recAllocStackMem(8, 8);
-			ptempmem[0] = _Imm_;
-			ptempmem[1] = _Imm_ >= 0 ? 0 : 0xffffffff;
 			if( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-			PADDQMtoR(EEREC_T, (u32)ptempmem);
+			PADDQMtoR(EEREC_T, (uptr)recGetImm64(-(_Imm_ < 0), _Imm_));
 		}
 		else {
 			if( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
@@ -178,15 +164,12 @@ void recDADDI_(int info)
 	
 	if( (g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) ) {
 		int rtreg;
-		u32* ptempmem = recAllocStackMem(8, 8);
-		ptempmem[0] = _Imm_;
-		ptempmem[1] = _Imm_ >= 0 ? 0 : 0xffffffff;
 
 		rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_WRITE);
 		SetMMXstate();
 		
 		MOVQMtoR(rtreg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-		PADDQMtoR(rtreg, (u32)ptempmem);
+		PADDQMtoR(rtreg, (uptr)recGetImm64(-(_Imm_ < 0), _Imm_));
 	}
 	else {
 		if( _Rt_ == _Rs_ ) {
@@ -239,10 +222,7 @@ void recSLTIU_(int info)
 {
 	if( info & PROCESS_EE_MMX ) {
 		if( EEINST_ISSIGNEXT(_Rs_) ) {
-			u32* ptempmem = recAllocStackMem(8,4);
-			ptempmem[0] = ((s32)(_Imm_))^0x80000000;
-			ptempmem[1] = 0;
-			recSLTmemconstt(EEREC_T, EEREC_S, (u32)ptempmem, 0);
+			recSLTmemconstt(EEREC_T, EEREC_S, (uptr)recGetImm64(0, ((s32)_Imm_)^0x80000000), 0);
 			EEINST_SETSIGNEXT(_Rt_);
 			return;
 		}
@@ -292,10 +272,7 @@ void recSLTI_(int info)
 	if( info & PROCESS_EE_MMX) {
 		
 		if( EEINST_ISSIGNEXT(_Rs_) ) {
-			u32* ptempmem = recAllocStackMem(8,4);
-			ptempmem[0] = _Imm_;
-			ptempmem[1] = 0;
-			recSLTmemconstt(EEREC_T, EEREC_S, (u32)ptempmem, 1);
+			recSLTmemconstt(EEREC_T, EEREC_S, (uptr)recGetImm64(0, _Imm_), 1);
 			EEINST_SETSIGNEXT(_Rt_);
 			return;
 		}
@@ -347,12 +324,8 @@ void recLogicalOpI(int info, int op)
 		SetMMXstate();
 
 		if( _ImmU_ != 0 ) {
-			u32* ptempmem = recAllocStackMem(8, 8);
-			ptempmem[0] = _ImmU_;
-			ptempmem[1] = 0;
-
 			if( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-			LogicalOpMtoR(EEREC_T, (u32)ptempmem, op);
+			LogicalOpMtoR(EEREC_T, (uptr)recGetImm64(0, _ImmU_), op);
 		}
 		else {
 			if( op == 0 ) PXORRtoR(EEREC_T, EEREC_T);
@@ -367,21 +340,15 @@ void recLogicalOpI(int info, int op)
 
 		if( op == 0 ) {
 			if ( _ImmU_ != 0 ) {
-				u32* ptempmem = recAllocStackMem(8, 8);
-				ptempmem[0] = _ImmU_;
-				ptempmem[1] = 0;
 				MOVDMtoMMX(rtreg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-				PANDMtoR(rtreg, (u32)ptempmem);
+				PANDMtoR(rtreg, (uptr)recGetImm64(0, _ImmU_));
 			}
 			else PXORRtoR(rtreg, rtreg);
 		}
 		else {
 			MOVQMtoR(rtreg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
 			if ( _ImmU_ != 0 ) {
-				u32* ptempmem = recAllocStackMem(8, 8);
-				ptempmem[0] = _ImmU_;
-				ptempmem[1] = 0;
-				LogicalOpMtoR(rtreg, (u32)ptempmem, op);
+				LogicalOpMtoR(rtreg, (uptr)recGetImm64(0, _ImmU_), op);
 			}
 		}
 	}

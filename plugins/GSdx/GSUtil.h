@@ -22,6 +22,7 @@
 #pragma once
 
 #include "GS.h"
+#include "GSLocalMemory.h"
 
 class GSUtil
 {
@@ -31,26 +32,6 @@ public:
 	static bool HasSharedBits(uint32 spsm, uint32 dpsm);
 	static bool HasSharedBits(uint32 sbp, uint32 spsm, uint32 dbp, uint32 dpsm);
 	static bool HasCompatibleBits(uint32 spsm, uint32 dpsm);
-
-	static uint32 EncodePSM(uint32 psm)
-	{
-		switch(psm)
-		{
-		case PSM_PSMCT32: 
-		case PSM_PSMZ32: 
-			return 0;
-		case PSM_PSMCT24: 
-		case PSM_PSMZ24:
-			return 1;
-		case PSM_PSMCT16: 
-		case PSM_PSMCT16S: 
-		case PSM_PSMZ16:
-		case PSM_PSMZ16S:
-			return 2;
-		default:
-			return 3;
-		}
-	}
 
 	static bool CheckDirectX();
 	static bool CheckSSE();

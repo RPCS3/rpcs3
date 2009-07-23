@@ -118,20 +118,11 @@ declareAllVariables
 #define xmmT1	0 // Temp Reg
 #define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
 #define xmmFt	2 // Holds the Value of Ft
-#define xmmACC	3 // Holds ACC
-#define xmmMax	4 // Holds mVU_maxvals
-#define xmmMin	5 // Holds mVU_minvals
-#define xmmT2	6 // Temp Reg?
+#define xmmT2	3 // Temp Reg?
+#define xmmT3	4 // Temp Reg?
+#define xmmT4	5 // Temp Reg?
+#define xmmACC	6 // Holds ACC
 #define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
-
-#define mmxVI1	0 // Holds VI 1
-#define mmxVI2	1 // Holds VI 2
-#define mmxVI3	2 // Holds VI 3
-#define mmxVI4	3 // Holds VI 4
-#define mmxVI5	4 // Holds VI 5
-#define mmxVI6	5 // Holds VI 6
-#define mmxVI7	6 // Holds VI 7
-#define mmxVI8	7 // Holds VI 8
 
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
@@ -150,7 +141,7 @@ declareAllVariables
 
 // Recursive Inline
 #ifndef __LINUX__
-#define __recInline __forceinline
+#define __recInline __releaseinline
 #else
 #define __recInline inline
 #endif
@@ -168,6 +159,12 @@ declareAllVariables
 #define pass2 if (recPass == 1)
 #define pass3 if (recPass == 2)
 #define pass4 if (recPass == 3)
+
+// Upper Opcode Cases
+#define opCase1 if (opCase == 1) // Normal Opcodes
+#define opCase2 if (opCase == 2) // BC Opcodes
+#define opCase3 if (opCase == 3) // I  Opcodes
+#define opCase4 if (opCase == 4) // Q  Opcodes
 
 // Define mVUquickSearch
 #ifndef __LINUX__
@@ -187,25 +184,25 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUprogI	 mVU->prog.prog[progIndex]
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
 #define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
-#define mVUallocInfo mVU->prog.allocInfo
-#define mVUbranch	 mVUallocInfo.branch
-#define mVUcycles	 mVUallocInfo.cycles
-#define mVUcount	 mVUallocInfo.count
-#define mVUpBlock	 mVUallocInfo.pBlock
-#define mVUblock	 mVUallocInfo.block
-#define mVUregs		 mVUallocInfo.block.pState
-#define mVUregsTemp	 mVUallocInfo.regsTemp
-#define iPC			 mVUallocInfo.curPC
-#define mVUsFlagHack mVUallocInfo.sFlagHack
-#define mVUinfo		 mVUallocInfo.info[iPC / 2]
-#define mVUconstReg	 mVUallocInfo.constReg
+#define mVUir		 mVU->prog.IRinfo
+#define mVUbranch	 mVU->prog.IRinfo.branch
+#define mVUcycles	 mVU->prog.IRinfo.cycles
+#define mVUcount	 mVU->prog.IRinfo.count
+#define mVUpBlock	 mVU->prog.IRinfo.pBlock
+#define mVUblock	 mVU->prog.IRinfo.block
+#define mVUregs		 mVU->prog.IRinfo.block.pState
+#define mVUregsTemp	 mVU->prog.IRinfo.regsTemp
+#define iPC			 mVU->prog.IRinfo.curPC
+#define mVUsFlagHack mVU->prog.IRinfo.sFlagHack
+#define mVUconstReg	 mVU->prog.IRinfo.constReg
+#define mVUstartPC	 mVU->prog.IRinfo.startPC
+#define mVUinfo		 mVU->prog.IRinfo.info[iPC / 2]
 #define mVUstall	 mVUinfo.stall
 #define mVUup		 mVUinfo.uOp
 #define mVUlow		 mVUinfo.lOp
 #define sFLAG		 mVUinfo.sFlag
 #define mFLAG		 mVUinfo.mFlag
 #define cFLAG		 mVUinfo.cFlag
-#define mVUstartPC	 mVUallocInfo.startPC
 #define mVUflagInfo	 mVUregs.needExactMatch
 #define mVUrange	 mVUcurProg.ranges.range[mVUcurProg.ranges.total]
 #define xPC			 ((iPC / 2) * 8)
@@ -220,6 +217,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define Roffset		 (uptr)&mVU->regs->VI[9].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
+#define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 
 // Flag Info
 #define __Status	 (mVUflagInfo & (0xf<<0))
@@ -240,10 +238,6 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUlogI()	 { mVUlog(", I"); }
 #define mVUlogQ()	 { mVUlog(", Q"); }
 #define mVUlogCLIP() { mVUlog("w.xyz vf%02d, vf%02dw", _Fs_, _Ft_); }
-
-// Store VI regs in mmx regs?
-#define isMMX(_VIreg_)	0 //(_VIreg_ >= 1 && _VIreg_ <=8)
-#define mmVI(_VIreg_)	(_VIreg_ - 1)
 
 // Debug Stuff...
 #ifdef mVUdebug

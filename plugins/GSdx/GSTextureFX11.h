@@ -48,9 +48,6 @@ public:
 	void SetupIA(const void* vertices, int count, int prim);
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel);
-	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel, GSTexture* tex, GSTexture* pal);
-	void UpdatePS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
-	void SetupRS(int w, int h, const GSVector4i& scissor);
-	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix, GSTexture* rt, GSTexture* ds);
-	void UpdateOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
+	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 };

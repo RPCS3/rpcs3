@@ -195,7 +195,6 @@ void __Log(const char *fmt, ...)
 {
 	va_list list;
 
-	//if (padLog == NULL || !conf.log) return;
 	if (padLog == NULL) return;
 	va_start(list, fmt);
 	vfprintf(padLog, fmt, list);
@@ -393,10 +392,10 @@ u8  _PADpoll(u8 value)
 
 				stdpar[curPad][2] = status[curPad] >> 8;
 				stdpar[curPad][3] = status[curPad] & 0xff;
-				stdpar[curPad][4] = Analog::Pad(PAD_RX, curPad);
-				stdpar[curPad][5] = Analog::Pad(PAD_RY, curPad);
-				stdpar[curPad][6] = Analog::Pad(PAD_LX, curPad);
-				stdpar[curPad][7] = Analog::Pad(PAD_LY, curPad);
+				stdpar[curPad][4] = Analog::Pad(curPad, PAD_RX);
+				stdpar[curPad][5] = Analog::Pad(curPad, PAD_RY);
+				stdpar[curPad][6] = Analog::Pad(curPad, PAD_LX);
+				stdpar[curPad][7] = Analog::Pad(curPad, PAD_LY);
 			
 				if (padMode[curPad] == 1) 
 					cmdLen = 20;

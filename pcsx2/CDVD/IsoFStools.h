@@ -20,14 +20,13 @@
  *  Modified by Florin for PCSX2 emu
  */
 
-#ifndef __CDVDISO_H__
-#define __CDVDISO_H__
+#ifndef __ISOFSTOOLS_H__
+#define __ISOFSTOOLS_H__
 
-#include "CDVDlib.h"
+#include "IsoFScdvd.h"
 
-int CDVD_findfile(const char* fname, TocEntry* tocEntry);
-int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_dirs);
-int CDVD_GetDir_RPC_get_entries(TocEntry tocEntry[], int req_entries);
+int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_dirs);
+int IsoFS_getDirectories(TocEntry tocEntry[], int req_entries);
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -146,4 +145,4 @@ struct dirTocEntry
 #pragma pack()
 #endif
 
-#endif//__CDVDISO_H__
+#endif//__ISOFSTOOLS_H__

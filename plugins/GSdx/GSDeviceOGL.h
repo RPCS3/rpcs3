@@ -111,8 +111,8 @@ public:
 
 	bool Create(GSWnd* wnd, bool vsync);
 	bool Reset(int w, int h, int mode);
-	void Present(const GSVector4i& r, int shader);
-	void Flip();
+	void Present(const GSVector4i& r, int shader, bool limit);
+	void Flip(bool limit);
 
 	void BeginScene();
 	void DrawPrimitive();
@@ -138,11 +138,11 @@ public:
 	void IASetInputLayout(); // TODO
 	void IASetPrimitiveTopology(int topology);
 
+	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 	void PSSetSamplerState(SamplerStateOGL* ss);
-	void RSSet(int width, int height, const GSVector4i* scissor);
 	void OMSetDepthStencilState(DepthStencilStateOGL* dss);
 	void OMSetBlendState(BlendStateOGL* bs, float bf);
-	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 
 	static void CheckError() 
 	{

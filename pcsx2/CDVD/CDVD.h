@@ -18,7 +18,11 @@
 
 #pragma once
 
+
 #include "IopCommon.h"
+#include "CDVD/CDVDaccess.h"
+
+extern char isoFileName[];
 
 #define btoi(b)		((b)/16*10 + (b)%16)		/* BCD to u_char */
 #define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
@@ -97,7 +101,11 @@ extern void cdvdActionInterrupt();
 extern void cdvdReadInterrupt();
 
 // We really should not have a function with the exact same name as a callback except for case!
+extern void cdvdDetectDisk();
 extern void cdvdNewDiskCB();
 extern u8 cdvdRead(u8 key);
 extern void cdvdWrite(u8 key, u8 rt);
 
+extern CDVDplugin CDVD;
+extern CDVDplugin ISO;
+extern CDVDplugin NODISC;

@@ -87,12 +87,33 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 	scd.Windowed = TRUE;
 
 	uint32 flags = 0;
-
+	flags = D3D10_CREATE_DEVICE_SINGLETHREADED;  //disables thread safety, should be fine (speedup)
 #ifdef DEBUG
 	flags |= D3D10_CREATE_DEVICE_DEBUG;
 #endif
 
-	hr = D3D10CreateDeviceAndSwapChain(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, flags, D3D10_SDK_VERSION, &scd, &m_swapchain, &m_dev);
+	D3D10_FEATURE_LEVEL1 levels[] = 
+	{
+		D3D10_FEATURE_LEVEL_10_1, 
+		D3D10_FEATURE_LEVEL_10_0
+	};
+
+	for(int i = 0; i < countof(levels); i++)
+	{
+		hr = D3D10CreateDeviceAndSwapChain1(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, flags, levels[i], D3D10_1_SDK_VERSION, &scd, &m_swapchain, &m_dev);
+
+		if(SUCCEEDED(hr))
+		{
+			if(!SetFeatureLevel((D3D_FEATURE_LEVEL)levels[i], true))
+			{
+				return false;
+			}
+
+			break;
+		}
+	}
+
+	// hr = D3D10CreateDeviceAndSwapChain(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, flags, D3D10_SDK_VERSION, &scd, &m_swapchain, &m_dev);
 
 	if(FAILED(hr)) return false;
 
@@ -219,21 +240,24 @@ bool GSDevice10::Reset(int w, int h, int mode)
 	if(!__super::Reset(w, h, mode))
 		return false;
 
-	DXGI_SWAP_CHAIN_DESC scd;
-	memset(&scd, 0, sizeof(scd));
-	m_swapchain->GetDesc(&scd);
-	m_swapchain->ResizeBuffers(scd.BufferCount, w, h, scd.BufferDesc.Format, 0);
-	
-	CComPtr<ID3D10Texture2D> backbuffer;
-	m_swapchain->GetBuffer(0, __uuidof(ID3D10Texture2D), (void**)&backbuffer);
-	m_backbuffer = new GSTexture10(backbuffer);
+	if(m_swapchain)
+	{
+		DXGI_SWAP_CHAIN_DESC scd;
+		memset(&scd, 0, sizeof(scd));
+		m_swapchain->GetDesc(&scd);
+		m_swapchain->ResizeBuffers(scd.BufferCount, w, h, scd.BufferDesc.Format, 0);
+		
+		CComPtr<ID3D10Texture2D> backbuffer;
+		m_swapchain->GetBuffer(0, __uuidof(ID3D10Texture2D), (void**)&backbuffer);
+		m_backbuffer = new GSTexture10(backbuffer);
+	}
 
 	return true;
 }
 
-void GSDevice10::Flip()
+void GSDevice10::Flip(bool limit)
 {
-	m_swapchain->Present(m_vsync ? 1 : 0, 0);
+	m_swapchain->Present(m_vsync && limit ? 1 : 0, 0);
 }
 
 void GSDevice10::BeginScene()
@@ -454,10 +478,6 @@ void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, NULL);
 	PSSetShaderResources(st, NULL);
 
-	// rs
-
-	RSSet(ds.x, ds.y);
-
 	//
 
 	DrawPrimitive();
@@ -560,12 +580,12 @@ void GSDevice10::IASetVertexBuffer(ID3D10Buffer* vb, size_t stride)
 {
 	if(m_vb != vb || m_vb_stride != stride)
 	{
+		m_vb = vb;
+		m_vb_stride = stride;
+
 		uint32 offset = 0;
 
 		m_dev->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
-
-		m_vb = vb;
-		m_vb_stride = stride;
 	}
 }
 
@@ -573,9 +593,9 @@ void GSDevice10::IASetInputLayout(ID3D10InputLayout* layout)
 {
 	if(m_layout != layout)
 	{
-		m_dev->IASetInputLayout(layout);
-
 		m_layout = layout;
+
+		m_dev->IASetInputLayout(layout);
 	}
 }
 
@@ -583,9 +603,9 @@ void GSDevice10::IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY topology)
 {
 	if(m_topology != topology)
 	{
-		m_dev->IASetPrimitiveTopology(topology);
-
 		m_topology = topology;
+
+		m_dev->IASetPrimitiveTopology(topology);
 	}
 }
 
@@ -593,16 +613,16 @@ void GSDevice10::VSSetShader(ID3D10VertexShader* vs, ID3D10Buffer* vs_cb)
 {
 	if(m_vs != vs)
 	{
-		m_dev->VSSetShader(vs);
-
 		m_vs = vs;
+
+		m_dev->VSSetShader(vs);
 	}
 	
 	if(m_vs_cb != vs_cb)
 	{
-		m_dev->VSSetConstantBuffers(0, 1, &vs_cb);
-
 		m_vs_cb = vs_cb;
+
+		m_dev->VSSetConstantBuffers(0, 1, &vs_cb);
 	}
 }
 
@@ -610,9 +630,9 @@ void GSDevice10::GSSetShader(ID3D10GeometryShader* gs)
 {
 	if(m_gs != gs)
 	{
-		m_dev->GSSetShader(gs);
-
 		m_gs = gs;
+
+		m_dev->GSSetShader(gs);
 	}
 }
 
@@ -626,12 +646,12 @@ void GSDevice10::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 
 	if(m_ps_srv[0] != srv0 || m_ps_srv[1] != srv1)
 	{
+		m_ps_srv[0] = srv0;
+		m_ps_srv[1] = srv1;
+
 		ID3D10ShaderResourceView* srvs[] = {srv0, srv1};
 	
 		m_dev->PSSetShaderResources(0, 2, srvs);
-
-		m_ps_srv[0] = srv0;
-		m_ps_srv[1] = srv1;
 	}
 }
 
@@ -639,16 +659,16 @@ void GSDevice10::PSSetShader(ID3D10PixelShader* ps, ID3D10Buffer* ps_cb)
 {
 	if(m_ps != ps)
 	{
-		m_dev->PSSetShader(ps);
-
 		m_ps = ps;
+
+		m_dev->PSSetShader(ps);
 	}
 	
 	if(m_ps_cb != ps_cb)
 	{
-		m_dev->PSSetConstantBuffers(0, 1, &ps_cb);
-
 		m_ps_cb = ps_cb;
+
+		m_dev->PSSetConstantBuffers(0, 1, &ps_cb);
 	}
 }
 
@@ -656,42 +676,12 @@ void GSDevice10::PSSetSamplerState(ID3D10SamplerState* ss0, ID3D10SamplerState* 
 {
 	if(m_ps_ss[0] != ss0 || m_ps_ss[1] != ss1)
 	{
+		m_ps_ss[0] = ss0;
+		m_ps_ss[1] = ss1;
+
 		ID3D10SamplerState* sss[] = {ss0, ss1};
 
 		m_dev->PSSetSamplers(0, 2, sss);
-
-		m_ps_ss[0] = ss0;
-		m_ps_ss[1] = ss1;
-	}
-}
-
-void GSDevice10::RSSet(int width, int height, const GSVector4i* scissor)
-{
-	if(m_viewport.x != width || m_viewport.y != height)
-	{
-		D3D10_VIEWPORT vp;
-
-		memset(&vp, 0, sizeof(vp));
-		
-		vp.TopLeftX = 0;
-		vp.TopLeftY = 0;
-		vp.Width = width;
-		vp.Height = height;
-		vp.MinDepth = 0.0f;
-		vp.MaxDepth = 1.0f;
-
-		m_dev->RSSetViewports(1, &vp);
-
-		m_viewport = GSVector2i(width, height);
-	}
-
-	GSVector4i r = scissor ? *scissor : GSVector4i(0, 0, width, height);
-
-	if(!m_scissor.eq(r))
-	{
-		m_dev->RSSetScissorRects(1, r);
-
-		m_scissor = r;
 	}
 }
 
@@ -699,10 +689,10 @@ void GSDevice10::OMSetDepthStencilState(ID3D10DepthStencilState* dss, uint8 sref
 {
 	if(m_dss != dss || m_sref != sref)
 	{
-		m_dev->OMSetDepthStencilState(dss, sref);
-
 		m_dss = dss;
 		m_sref = sref;
+
+		m_dev->OMSetDepthStencilState(dss, sref);
 	}
 }
 
@@ -710,16 +700,16 @@ void GSDevice10::OMSetBlendState(ID3D10BlendState* bs, float bf)
 {
 	if(m_bs != bs || m_bf != bf)
 	{
+		m_bs = bs;
+		m_bf = bf;
+
 		float BlendFactor[] = {bf, bf, bf, 0};
 
 		m_dev->OMSetBlendState(bs, BlendFactor, 0xffffffff);
-
-		m_bs = bs;
-		m_bf = bf;
 	}
 }
 
-void GSDevice10::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
+void GSDevice10::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor)
 {
 	ID3D10RenderTargetView* rtv = NULL;
 	ID3D10DepthStencilView* dsv = NULL;
@@ -729,10 +719,37 @@ void GSDevice10::OMSetRenderTargets(GSTexture* rt, GSTexture* ds)
 
 	if(m_rtv != rtv || m_dsv != dsv)
 	{
-		m_dev->OMSetRenderTargets(1, &rtv, dsv);
-
 		m_rtv = rtv;
 		m_dsv = dsv;
+
+		m_dev->OMSetRenderTargets(1, &rtv, dsv);
+	}
+
+	if(m_viewport != rt->m_size)
+	{
+		m_viewport = rt->m_size;
+
+		D3D10_VIEWPORT vp;
+
+		memset(&vp, 0, sizeof(vp));
+		
+		vp.TopLeftX = 0;
+		vp.TopLeftY = 0;
+		vp.Width = rt->m_size.x;
+		vp.Height = rt->m_size.y;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+
+		m_dev->RSSetViewports(1, &vp);
+	}
+
+	GSVector4i r = scissor ? *scissor : GSVector4i(rt->m_size).zwxy();
+
+	if(!m_scissor.eq(r))
+	{
+		m_scissor = r;
+
+		m_dev->RSSetScissorRects(1, r);
 	}
 }
 
@@ -742,11 +759,11 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 
 	vector<D3D10_SHADER_MACRO> m;
 
-	PrepareShaderMacro(m, macro, "0x400");
+	PrepareShaderMacro(m, macro);
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "vs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.vs.c_str(), 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -781,11 +798,11 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 
 	vector<D3D10_SHADER_MACRO> m;
 
-	PrepareShaderMacro(m, macro, "0x400");
+	PrepareShaderMacro(m, macro);
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "gs_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.gs.c_str(), 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{
@@ -813,11 +830,11 @@ HRESULT GSDevice10::CompileShader(uint32 id, const string& entry, D3D10_SHADER_M
 
 	vector<D3D10_SHADER_MACRO> m;
 
-	PrepareShaderMacro(m, macro, "0x400");
+	PrepareShaderMacro(m, macro);
 
 	CComPtr<ID3D10Blob> shader, error;
 
-    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), "ps_4_0", 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX10CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
 	
 	if(error)
 	{

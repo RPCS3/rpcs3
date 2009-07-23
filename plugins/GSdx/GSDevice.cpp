@@ -75,14 +75,14 @@ bool GSDevice::Reset(int w, int h, int mode)
 	return true;
 }
 
-void GSDevice::Present(const GSVector4i& r, int shader)
+void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
 {
 	GSVector4i cr = m_wnd->GetClientRect();
 
 	int w = std::max(cr.width(), 1);
 	int h = std::max(cr.height(), 1);
 
-	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
+	if(!m_backbuffer || m_backbuffer->m_size.x != w || m_backbuffer->m_size.y != h)
 	{
 		if(!Reset(w, h, DontCare))
 		{
@@ -99,7 +99,7 @@ void GSDevice::Present(const GSVector4i& r, int shader)
 		StretchRect(m_current, m_backbuffer, GSVector4(r), s_shader[shader]);
 	}
 
-	Flip();
+	Flip(limit);
 }
 
 GSTexture* GSDevice::Fetch(int type, int w, int h, int format)
@@ -240,7 +240,7 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 
 	GSTexture* t2 = *t;
 
-	if(t2 == NULL || t2->GetWidth() != w || t2->GetHeight() != h)
+	if(t2 == NULL || t2->m_size.x != w || t2->m_size.y != h)
 	{
 		delete t2;
 
@@ -250,4 +250,47 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 	}
 
 	return t2 != NULL;
+}
+
+bool GSDevice::SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode)
+{
+	m_shader.level = level;
+
+	switch(level)
+	{
+	case D3D_FEATURE_LEVEL_9_1:
+	case D3D_FEATURE_LEVEL_9_2:
+		m_shader.model = "0x200";
+		m_shader.vs = compat_mode ? "vs_4_0_level_9_1" : "vs_2_0";
+		m_shader.ps = compat_mode ? "ps_4_0_level_9_1" : "ps_2_0";
+		break;
+	case D3D_FEATURE_LEVEL_9_3:
+		m_shader.model = "0x300";
+		m_shader.vs = compat_mode ? "vs_4_0_level_9_3" : "vs_3_0";
+		m_shader.ps = compat_mode ? "ps_4_0_level_9_3" : "ps_3_0";
+		break;
+	case D3D_FEATURE_LEVEL_10_0:
+		m_shader.model = "0x400";
+		m_shader.vs = "vs_4_0";
+		m_shader.gs = "gs_4_0";
+		m_shader.ps = "ps_4_0";
+		break;
+	case D3D_FEATURE_LEVEL_10_1:
+		m_shader.model = "0x401";
+		m_shader.vs = "vs_4_1";
+		m_shader.gs = "gs_4_1";
+		m_shader.ps = "ps_4_1";
+		break;
+	case D3D_FEATURE_LEVEL_11_0:
+		m_shader.model = "0x500";
+		m_shader.vs = "vs_5_0";
+		m_shader.gs = "gs_5_0";
+		m_shader.ps = "ps_5_0";
+		break;
+	default:
+		ASSERT(0);
+		return false;
+	}
+
+	return true;
 }

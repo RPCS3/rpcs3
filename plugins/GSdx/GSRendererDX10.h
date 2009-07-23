@@ -35,13 +35,13 @@ protected:
 		CComPtr<ID3D10BlendState> bs;
 	} m_date;
 
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
 	GSRendererDX10(uint8* base, bool mt, void (*irq)());
 
-	bool Create(const string& title);
+	bool Create(const string& title, int w, int h);
 
 	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

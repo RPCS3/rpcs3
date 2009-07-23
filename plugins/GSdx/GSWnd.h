@@ -34,7 +34,7 @@ public:
 	GSWnd();
 	virtual ~GSWnd();
 
-	bool Create(const string& title);
+	bool Create(const string& title, int w, int h);
 	bool Attach(HWND hWnd);
 
 	void* GetHandle() {return m_hWnd;}

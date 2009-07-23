@@ -53,11 +53,11 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 	
 	Source* src = NULL;
 
-	hash_map<Source*, bool>& m = m_src.m_map[TEX0.TBP0 >> 5];
+	list<Source*>& m = m_src.m_map[TEX0.TBP0 >> 5];
 
-	for(hash_map<Source*, bool>::iterator i = m.begin(); i != m.end(); i++)
+	for(list<Source*>::iterator i = m.begin(); i != m.end(); i++)
 	{
-		Source* s = i->first;
+		Source* s = *i;
 
 		if(((TEX0.u32[0] ^ s->m_TEX0.u32[0]) | ((TEX0.u32[1] ^ s->m_TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
@@ -69,10 +69,12 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			continue;
 		}
 
-		if(s->m_palette == NULL && psm.pal > 0 && !GSVector4i::compare(clut, s->m_clut, psm.pal * sizeof(clut[0])))
+		if(s->m_palette == NULL && psm.pal > 0 && !GSVector4i::compare64(clut, s->m_clut, psm.pal * sizeof(clut[0])))
 		{
 			continue;
 		}
+
+		m.splice(m.begin(), m, i);
 
 		src = s;
 
@@ -118,7 +120,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			memcpy(src->m_clut, clut, psm.pal * sizeof(clut[0]));
 		}
 
-		m_src.Add(src, TEX0, m_renderer->m_mem);
+		m_src.Add(src, TEX0, m_renderer->m_context->offset.tex);
 	}
 
 	if(psm.pal > 0)
@@ -231,13 +233,11 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 	return dst;
 }
 
-void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& rect, bool target)
+void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect, bool target)
 {
-	uint32 bp = BITBLTBUF.DBP;
-	uint32 bw = BITBLTBUF.DBW;
-	uint32 psm = BITBLTBUF.DPSM;
-
-	const GSLocalMemory::BlockOffset* bo = m_renderer->m_mem.GetBlockOffset(bp, bw, psm);
+	uint32 bp = o->bp;
+	uint32 bw = o->bw;
+	uint32 psm = o->psm;
 
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
@@ -245,13 +245,13 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 	if(!target)
 	{
-		const hash_map<Source*, bool>& m = m_src.m_map[bp >> 5];
+		const list<Source*>& m = m_src.m_map[bp >> 5];
 
-		for(hash_map<Source*, bool>::const_iterator i = m.begin(); i != m.end(); )
+		for(list<Source*>::const_iterator i = m.begin(); i != m.end(); )
 		{
-			hash_map<Source*, bool>::const_iterator j = i++;
+			list<Source*>::const_iterator j = i++;
 
-			Source* s = j->first;
+			Source* s = *j;
 
 			if(GSUtil::HasSharedBits(bp, psm, s->m_TEX0.TBP0, s->m_TEX0.PSM))
 			{
@@ -264,21 +264,21 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = bo->row[y >> 3];
+		uint32 base = o->block.row[y >> 3];
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 page = (base + bo->col[x >> 3]) >> 5;
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
-				const hash_map<Source*, bool>& m = m_src.m_map[page];
+				const list<Source*>& m = m_src.m_map[page];
 
-				for(hash_map<Source*, bool>::const_iterator i = m.begin(); i != m.end(); )
+				for(list<Source*>::const_iterator i = m.begin(); i != m.end(); )
 				{
-					hash_map<Source*, bool>::const_iterator j = i++;
+					list<Source*>::const_iterator j = i++;
 
-					Source* s = j->first;
+					Source* s = *j;
 
 					if(GSUtil::HasSharedBits(psm, s->m_TEX0.PSM))
 					{
@@ -353,10 +353,10 @@ void GSTextureCache::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 	}
 }
 
-void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
+void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 {
-	uint32 bp = BITBLTBUF.SBP;
-	uint32 psm = BITBLTBUF.SPSM;
+	uint32 bp = o->bp;
+	uint32 psm = o->psm;
 
 	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
 	{
@@ -368,7 +368,12 @@ void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 		{
 			if(GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
 			{
-				t->Read(r);
+				GSVector4i r2 = r.rintersect(t->m_valid);
+
+				if(!r2.rempty())
+				{
+					t->Read(r2);
+				}
 
 				return;
 			}
@@ -376,7 +381,12 @@ void GSTextureCache::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const 
 			{
 				// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
 
-				t->Read(GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2));
+				GSVector4i r2 = GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid);
+
+				if(!r2.rempty())
+				{
+					t->Read(r2);
+				}
 
 				return;
 			}
@@ -433,11 +443,11 @@ void GSTextureCache::IncAge()
 {
 	int maxage = m_src.m_used ? 3 : 30;
 
-	for(hash_map<Source*, bool>::iterator i = m_src.m_surfaces.begin(); i != m_src.m_surfaces.end(); )
+	for(hash_set<Source*>::iterator i = m_src.m_surfaces.begin(); i != m_src.m_surfaces.end(); )
 	{
-		hash_map<Source*, bool>::iterator j = i++;
+		hash_set<Source*>::iterator j = i++;
 
-		Source* s = j->first;
+		Source* s = *j;
 
 		if(++s->m_age > maxage)
 		{
@@ -447,7 +457,7 @@ void GSTextureCache::IncAge()
 
 	m_src.m_used = false;
 
-	maxage = 3;
+	maxage = 4; // ffx intro scene changes leave the old image untouched for a couple of frames and only then start using it
 
 	for(int type = 0; type < 2; type++)
 	{
@@ -661,8 +671,8 @@ bool GSTextureCache::Source::Create(Target* dst)
 	}
 	else
 	{
-		sr.z /= st->GetWidth();
-		sr.w /= st->GetHeight();
+		sr.z /= st->m_size.x;
+		sr.w /= st->m_size.y;
 
 		m_renderer->m_dev->StretchRect(st, sr, dt, dr);
 	}
@@ -721,14 +731,17 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 	GSVector2i bs = GSLocalMemory::m_psm[m_TEX0.PSM].bs;
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+	int tw = std::max<int>(1 << m_TEX0.TW, bs.x);
+	int th = std::max<int>(1 << m_TEX0.TH, bs.y);
 
-	if(r.eq(GSVector4i(0, 0, 1 << m_TEX0.TW, 1 << m_TEX0.TH)))
+	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs); 
+
+	if(r.eq(GSVector4i(0, 0, tw, th)))
 	{
 		m_complete = true; // lame, but better than nothing
 	}
 
-	const GSLocalMemory::BlockOffset* bo = m_renderer->m_mem.GetBlockOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM);
+	const GSOffset* o = m_renderer->m_context->offset.tex;
 
 	bool repeating = m_TEX0.IsRepeating();
 
@@ -736,11 +749,11 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = bo->row[y >> 3];
+		uint32 base = o->block.row[y >> 3];
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 block = base + bo->col[x >> 3];
+			uint32 block = base + o->block.col[x >> 3];
 
 			if(block < MAX_BLOCKS)
 			{
@@ -768,11 +781,11 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 		{
 			for(int y = r.top; y < r.bottom; y += bs.y)
 			{
-				uint32 base = bo->row[y >> 3];
+				uint32 base = o->block.row[y >> 3];
 
 				for(int x = r.left; x < r.right; x += bs.x)
 				{
-					uint32 block = base + bo->col[x >> 3];
+					uint32 block = base + o->block.col[x >> 3];
 
 					if(block < MAX_BLOCKS)
 					{
@@ -785,7 +798,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 			}
 		}
 
-		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * sizeof(uint32) * blocks);
+		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << (m_fmt == GSTextureFX::FMT_32 ? 2 : 0));
 
 		Flush(m_write.count);
 	}
@@ -840,6 +853,8 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 	GSLocalMemory& mem = m_renderer->m_mem;
 
+	const GSOffset* o = m_renderer->m_context->offset.tex;
+
 	GSLocalMemory::readTexture rtx = psm.rtx;
 
 	if(m_fmt == GSTextureFX::FMT_8)
@@ -854,7 +869,7 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 		if((r > tr).mask() & 0xff00)
 		{
-			(mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+			(mem.*rtx)(o, r, buff, pitch, m_TEXA);
 
 			m_texture->Update(r.rintersect(tr), buff, pitch);
 		}
@@ -864,13 +879,13 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 			if(m_texture->Map(m, &r))
 			{
-				(mem.*rtx)(r, m.bits, m.pitch, m_TEX0, m_TEXA);
+				(mem.*rtx)(o, r, m.bits, m.pitch, m_TEXA);
 
 				m_texture->Unmap();
 			}
 			else
 			{
-				(mem.*rtx)(r, buff, pitch, m_TEX0, m_TEXA);
+				(mem.*rtx)(o, r, buff, pitch, m_TEXA);
 
 				m_texture->Update(r, buff, pitch);
 			}
@@ -894,6 +909,7 @@ GSTextureCache::Target::Target(GSRenderer* r)
 	, m_type(-1)
 	, m_used(false)
 {
+	m_valid = GSVector4i::zero();
 }
 
 bool GSTextureCache::Target::Create(int w, int h, int type)
@@ -935,6 +951,8 @@ void GSTextureCache::Target::Update()
 
 		if(GSTexture* t = m_renderer->m_dev->CreateTexture(w, h))
 		{
+			const GSOffset* o = m_renderer->m_mem.GetOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM); // TODO: m_renderer->m_context->bo.tex;
+
 			GIFRegTEXA TEXA;
 
 			TEXA.AEM = 1;
@@ -945,7 +963,7 @@ void GSTextureCache::Target::Update()
 
 			if(t->Map(m))
 			{
-				m_renderer->m_mem.ReadTexture(r, m.bits,  m.pitch, m_TEX0, TEXA);
+				m_renderer->m_mem.ReadTexture(o, r, m.bits,  m.pitch, TEXA);
 
 				t->Unmap();
 			}
@@ -955,7 +973,7 @@ void GSTextureCache::Target::Update()
 				
 				int pitch = ((w + 3) & ~3) * 4;
 
-				m_renderer->m_mem.ReadTexture(r, buff, pitch, m_TEX0, TEXA);
+				m_renderer->m_mem.ReadTexture(o, r, buff, pitch, TEXA);
 				
 				t->Update(r.rsize(), buff, pitch);
 			}
@@ -980,20 +998,18 @@ void GSTextureCache::Target::Update()
 
 // GSTextureCache::SourceMap
 
-void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMemory& mem)
+void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, const GSOffset* o)
 {
-	m_surfaces[s] = true;
+	m_surfaces.insert(s);
 
 	if(s->m_target)
 	{
 		// TODO
 
-		m_map[TEX0.TBP0 >> 5][s] = true;
+		m_map[TEX0.TBP0 >> 5].push_front(s);
 
 		return;
 	}
-
-	const GSLocalMemory::BlockOffset* bo = mem.GetBlockOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
@@ -1004,11 +1020,11 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 
 	for(int y = 0; y < th; y += bs.y)
 	{
-		uint32 base = bo->row[y >> 3];
+		uint32 base = o->block.row[y >> 3];
 
 		for(int x = 0; x < tw; x += bs.x)
 		{
-			uint32 page = (base + bo->col[x >> 3]) >> 5;
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
@@ -1023,14 +1039,15 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 		{
 			m_pages[i] = 0;
 
-			hash_map<Source*, bool>* m = &m_map[i << 5];
+			list<Source*>* m = &m_map[i << 5];
 
-			for(int j = 0; j < 32; j++)
+			unsigned long j;
+
+			while(_BitScanForward(&j, p))
 			{
-				if(p & (1 << j))
-				{
-					m[j][s] = true;
-				}
+				p ^= 1 << j;
+
+				m[j].push_front(s);
 			}
 		}
 	}
@@ -1038,7 +1055,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, GSLocalMe
 
 void GSTextureCache::SourceMap::RemoveAll()
 {
-	for_each(m_surfaces.begin(), m_surfaces.end(), delete_first());
+	for_each(m_surfaces.begin(), m_surfaces.end(), delete_object());
 
 	m_surfaces.clear();
 
@@ -1052,19 +1069,15 @@ void GSTextureCache::SourceMap::RemoveAt(Source* s)
 {
 	m_surfaces.erase(s);
 
-	uint32 page = s->m_TEX0.TBP0 >> 5;
-
-	if(s->m_target)
+	for(uint32 start = s->m_TEX0.TBP0 >> 5, end = s->m_target ? start : countof(m_map) - 1; start <= end; start++)
 	{
-		// TODO
+		list<Source*>& m = m_map[start];
 
-		m_map[page].erase(s);
-	}
-	else
-	{
-		for(uint32 i = page; i < countof(m_map); i++)
+		for(list<Source*>::iterator i = m.begin(); i != m.end(); )
 		{
-			m_map[i].erase(s);
+			list<Source*>::iterator j = i++;
+
+			if(*j == s) {m.erase(j); break;}
 		}
 	}
 

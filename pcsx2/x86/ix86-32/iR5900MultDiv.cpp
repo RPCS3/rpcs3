@@ -266,20 +266,15 @@ void recWritebackConstHILO(u64 res, int writed, int upper)
 
 	if( g_pCurInstInfo->regs[XMMGPR_LO] & testlive ) {
 		if( !upper && (reglo = _allocCheckGPRtoMMX(g_pCurInstInfo, XMMGPR_LO, MODE_WRITE)) >= 0 ) {
-			u32* ptr = recAllocStackMem(8, 8);
-			ptr[0] = res & 0xffffffff;
-			ptr[1] = (res&0x80000000)?0xffffffff:0;
-			MOVQMtoR(reglo, (u32)ptr);
+			MOVQMtoR(reglo, (uptr)recGetImm64(res & 0x80000000 ? -1 : 0, (u32)res));
 		}
 		else {
 			reglo = _allocCheckGPRtoXMM(g_pCurInstInfo, XMMGPR_LO, MODE_WRITE|MODE_READ);
 
 			if( reglo >= 0 ) {
-				u32* ptr = recAllocStackMem(8, 8);
-				ptr[0] = res & 0xffffffff;
-				ptr[1] = (res&0x80000000)?0xffffffff:0;
-				if( upper ) SSE_MOVHPS_M64_to_XMM(reglo, (u32)ptr);
-				else SSE_MOVLPS_M64_to_XMM(reglo, (u32)ptr);
+				u32* ptr = recGetImm64(res & 0x80000000 ? -1 : 0, (u32)res);
+				if( upper ) SSE_MOVHPS_M64_to_XMM(reglo, (uptr)ptr);
+				else SSE_MOVLPS_M64_to_XMM(reglo, (uptr)ptr);
 			}
 			else {
 				MOV32ItoM(loaddr, res & 0xffffffff);
@@ -291,18 +286,13 @@ void recWritebackConstHILO(u64 res, int writed, int upper)
 	if( g_pCurInstInfo->regs[XMMGPR_HI] & testlive ) {
 
 		if( !upper && (reghi = _allocCheckGPRtoMMX(g_pCurInstInfo, XMMGPR_HI, MODE_WRITE)) >= 0 ) {
-			u32* ptr = recAllocStackMem(8, 8);
-			ptr[0] = res >> 32;
-			ptr[1] = (res>>63)?0xffffffff:0;
-			MOVQMtoR(reghi, (u32)ptr);
+			MOVQMtoR(reghi, (uptr)recGetImm64(res >> 63 ? -1 : 0, res >> 32));
 		}
 		else {
 			reghi = _allocCheckGPRtoXMM(g_pCurInstInfo, XMMGPR_HI, MODE_WRITE|MODE_READ);
 
 			if( reghi >= 0 ) {
-				u32* ptr = recAllocStackMem(8, 8);
-				ptr[0] = res >> 32;
-				ptr[1] = (res>>63)?0xffffffff:0;
+				u32* ptr = recGetImm64(res >> 63 ? -1 : 0, res >> 32);
 				if( upper ) SSE_MOVHPS_M64_to_XMM(reghi, (u32)ptr);
 				else SSE_MOVLPS_M64_to_XMM(reghi, (u32)ptr);
 			}

@@ -139,7 +139,10 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	case 13: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
 	}
 
-	if(!s_gs->Create(title))
+	int w = theApp.GetConfig("ModeWidth", 0);
+	int h = theApp.GetConfig("ModeHeight", 0);
+
+	if(!s_gs->Create(title, w, h))
 	{
 		GSclose();
 
@@ -291,7 +294,7 @@ EXPORT_C GSsetGameCRC(uint32 crc, int options)
 	s_gs->SetGameCRC(crc, options);
 }
 
-EXPORT_C GSgetLastTag(uint32* tag) 
+EXPORT_C GSgetLastTag(uint32* tag)
 {
 	s_gs->GetLastTag(tag);
 }
@@ -299,6 +302,11 @@ EXPORT_C GSgetLastTag(uint32* tag)
 EXPORT_C GSsetFrameSkip(int frameskip)
 {
 	s_gs->SetFrameSkip(frameskip);
+}
+
+EXPORT_C GSsetFrameLimit(int limit)
+{
+	s_gs->SetFrameLimit(limit != 0);
 }
 
 #ifdef _WINDOWS
@@ -527,11 +535,13 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 				fprintf(file, "%6d %6d | ", (int)((float)trlen * n / (end - start) / 1000), (int)((float)(w * h) * n / (end - start) / 1000));
 
+				const GSOffset* o = mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
 				start = clock();
 
 				for(int j = 0; j < n; j++)
 				{
-					(mem.*rtx)(r, ptr, w * 4, TEX0, TEXA);
+					(mem.*rtx)(o, r, ptr, w * 4, TEXA);
 				}
 
 				end = clock();
@@ -544,7 +554,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 					for(int j = 0; j < n; j++)
 					{
-						(mem.*rtxP)(r, ptr, w, TEX0, TEXA);
+						(mem.*rtxP)(o, r, ptr, w, TEXA);
 					}
 
 					end = clock();

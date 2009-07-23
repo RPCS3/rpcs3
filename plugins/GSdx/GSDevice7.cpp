@@ -136,7 +136,7 @@ bool GSDevice7::Reset(int w, int h, int mode)
 	return true;
 }
 
-void GSDevice7::Present(const GSVector4i& r, int shader)
+void GSDevice7::Present(const GSVector4i& r, int shader, bool limit)
 {
 	HRESULT hr;
 
@@ -145,7 +145,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader)
 	int w = std::max(cr.width(), 1);
 	int h = std::max(cr.height(), 1);
 
-	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
+	if(!m_backbuffer || m_backbuffer->m_size.x != w || m_backbuffer->m_size.y != h)
 	{
 		if(!Reset(w, h, DontCare))
 		{
@@ -177,7 +177,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader)
 
 	MapWindowPoints((HWND)m_wnd->GetHandle(), HWND_DESKTOP, (POINT*)&r2, 2);
 	
-	if(m_vsync)
+	if(m_vsync && limit)
 	{
 		hr = m_dd->WaitForVerticalBlank(DDWAITVB_BLOCKBEGIN, NULL);
 	}

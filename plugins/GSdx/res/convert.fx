@@ -12,18 +12,13 @@ struct VS_OUTPUT
 	float2 t : TEXCOORD0;
 };
 
-VS_OUTPUT vs_main(VS_INPUT input)
-{
-	VS_OUTPUT output;
-
-	output.p = input.p;
-	output.t = input.t;
-
-	return output;
-}
-
 Texture2D Texture;
-SamplerState Sampler;
+SamplerState TextureSampler;
+
+float4 sample_c(float2 uv)
+{
+	return Texture.Sample(TextureSampler, uv);
+}
 
 struct PS_INPUT
 {
@@ -31,70 +26,10 @@ struct PS_INPUT
 	float2 t : TEXCOORD0;
 };
 
-float4 ps_main0(PS_INPUT input) : SV_Target0
+struct PS_OUTPUT
 {
-	return Texture.Sample(Sampler, input.t);
-}
-
-uint ps_main1(PS_INPUT input) : SV_Target0
-{
-	float4 f = Texture.Sample(Sampler, input.t);
-
-	f.a *= 256.0f/127; // hm, 0.5 won't give us 1.0 if we just multiply with 2
-
-	uint4 i = f * float4(0x001f, 0x03e0, 0x7c00, 0x8000);
-
-	return (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);	
-}
-
-float4 ps_main2(PS_INPUT input) : SV_Target0
-{
-	clip(Texture.Sample(Sampler, input.t).a - (0.5 - 0.9f/256));
-
-	return 0;
-}
-
-float4 ps_main3(PS_INPUT input) : SV_Target0
-{
-	clip((0.5 - 0.9f/256) -  Texture.Sample(Sampler, input.t).a);
-
-	return 0;
-}
-
-float4 ps_main4(PS_INPUT input) : SV_Target0
-{
-	float4 c = Texture.Sample(Sampler, input.t);
-	
-	return fmod(c * 255 + 0.5f, 256) / 255;
-}
-
-float4 ps_crt(PS_INPUT input, uint i)
-{
-	float4 mask[4] = 
-	{
-		float4(1, 0, 0, 0), 
-		float4(0, 1, 0, 0), 
-		float4(0, 0, 1, 0), 
-		float4(1, 1, 1, 0)
-	};
-	
-	return Texture.Sample(Sampler, input.t) * saturate(mask[i] + 0.5f);
-}
-
-float4 ps_main5(PS_INPUT input) : SV_Target0 // triangular
-{
-	uint4 p = (uint4)input.p;
-
-	// return ps_crt(input, ((p.x + (p.y & 1) * 3) >> 1) % 3); 
-	return ps_crt(input, ((p.x + ((p.y >> 1) & 1) * 3) >> 1) % 3);
-}
-
-float4 ps_main6(PS_INPUT input) : SV_Target0 // diagonal
-{
-	uint4 p = (uint4)input.p;
-
-	return ps_crt(input, (p.x + (p.y % 3)) % 3);
-}
+	float4 c : SV_Target0;
+};
 
 #elif SHADER_MODEL <= 0x300
 
@@ -110,6 +45,26 @@ struct VS_OUTPUT
 	float2 t : TEXCOORD0;
 };
 
+struct PS_INPUT
+{
+	float4 p : VPOS;
+	float2 t : TEXCOORD0;
+};
+
+struct PS_OUTPUT
+{
+	float4 c : COLOR;
+};
+
+sampler Texture : register(s0);
+
+float4 sample_c(float2 uv)
+{
+	return tex2D(Texture, uv);
+}
+
+#endif
+
 VS_OUTPUT vs_main(VS_INPUT input)
 {
 	VS_OUTPUT output;
@@ -120,40 +75,16 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	return output;
 }
 
-sampler Texture : register(s0);
-
-float4 ps_main0(float2 t : TEXCOORD0) : COLOR
+PS_OUTPUT ps_main0(PS_INPUT input)
 {
-	return tex2D(Texture, t);
+	PS_OUTPUT output;
+	
+	output.c = sample_c(input.t);
+
+	return output;
 }
 
-float4 ps_main1(float2 t : TEXCOORD0) : COLOR
-{
-	float4 c = tex2D(Texture, t);
-	c.a *= 128.0f / 255; // *= 0.5f is no good here, need to do this in order to get 0x80 for 1.0f (instead of 0x7f)
-	return c;
-}
-
-float4 ps_main2(float2 t : TEXCOORD0) : COLOR
-{
-	clip(tex2D(Texture, t).a - (1.0f - 0.9f/256));
-
-	return 0;
-}
-
-float4 ps_main3(float2 t : TEXCOORD0) : COLOR
-{
-	clip((1.0f - 0.9f/256) -  tex2D(Texture, t).a);
-
-	return 0;
-}
-
-float4 ps_main4() : COLOR
-{
-	return 1;
-}
-
-float4 ps_crt(float2 t, int i)
+float4 ps_crt(PS_INPUT input, int i)
 {
 	float4 mask[4] = 
 	{
@@ -163,22 +94,143 @@ float4 ps_crt(float2 t, int i)
 		float4(1, 1, 1, 0)
 	};
 	
-	return tex2D(Texture, t) * saturate(mask[i] + 0.5f);
+	return sample_c(input.t) * saturate(mask[i] + 0.5f);
 }
 
-float4 ps_main5(float2 t : TEXCOORD0, float4 vPos : VPOS) : COLOR // triangular
-{
-	int4 p = (int4)vPos;
+#if SHADER_MODEL >= 0x400
 
-	// return ps_crt(t, ((p.x + (p.y % 2) * 3) / 2) % 3);
-	return ps_crt(t, ((p.x + ((p.y / 2) % 2) * 3) / 2) % 3);
+uint ps_main1(PS_INPUT input) : SV_Target0
+{
+	float4 c = sample_c(input.t);
+
+	c.a *= 256.0f / 127; // hm, 0.5 won't give us 1.0 if we just multiply with 2
+
+	uint4 i = c * float4(0x001f, 0x03e0, 0x7c00, 0x8000);
+
+	return (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);	
 }
 
-float4 ps_main6(float2 t : TEXCOORD0, float4 vPos : VPOS) : COLOR // diagonal
+PS_OUTPUT ps_main2(PS_INPUT input)
 {
-	int4 p = (int4)vPos;
+	PS_OUTPUT output;
+	
+	clip(sample_c(input.t).a - 128.0f / 255); // >= 0x80 pass
+	
+	output.c = 0;
 
-	return ps_crt(t, (p.x + (p.y % 3)) % 3);
+	return output;
+}
+
+PS_OUTPUT ps_main3(PS_INPUT input)
+{
+	PS_OUTPUT output;
+	
+	clip(127.95f / 255 - sample_c(input.t).a); // < 0x80 pass (== 0x80 should not pass)
+	
+	output.c = 0;
+
+	return output;
+}
+
+PS_OUTPUT ps_main4(PS_INPUT input)
+{
+	PS_OUTPUT output;
+	
+	output.c = fmod(sample_c(input.t) * 255 + 0.5f, 256) / 255;
+
+	return output;
+}
+
+PS_OUTPUT ps_main5(PS_INPUT input) // triangular
+{
+	PS_OUTPUT output;
+	
+	uint4 p = (uint4)input.p;
+
+	// output.c = ps_crt(input, ((p.x + (p.y & 1) * 3) >> 1) % 3); 
+	output.c = ps_crt(input, ((p.x + ((p.y >> 1) & 1) * 3) >> 1) % 3);
+
+	return output;
+}
+
+PS_OUTPUT ps_main6(PS_INPUT input) // diagonal
+{
+	PS_OUTPUT output;
+	
+	uint4 p = (uint4)input.p;
+
+	output.c = ps_crt(input, (p.x + (p.y % 3)) % 3);
+
+	return output;
+}
+
+#elif SHADER_MODEL <= 0x300
+
+PS_OUTPUT ps_main1(PS_INPUT input)
+{
+	PS_OUTPUT output;
+	
+	float4 c = sample_c(input.t);
+	
+	c.a *= 128.0f / 255; // *= 0.5f is no good here, need to do this in order to get 0x80 for 1.0f (instead of 0x7f)
+	
+	output.c = c;
+
+	return output;
+}
+
+PS_OUTPUT ps_main2(PS_INPUT input)
+{
+	PS_OUTPUT output;
+	
+	clip(sample_c(input.t).a - 255.0f / 255); // >= 0x80 pass
+	
+	output.c = 0;
+
+	return output;
+}
+
+PS_OUTPUT ps_main3(PS_INPUT input)
+{
+	PS_OUTPUT output;
+	
+	clip(254.95f / 255 - sample_c(input.t).a); // < 0x80 pass (== 0x80 should not pass)
+	
+	output.c = 0;
+
+	return output;
+}
+
+PS_OUTPUT ps_main4(PS_INPUT input)
+{
+	PS_OUTPUT output;
+	
+	output.c = 1;
+	
+	return output;
+}
+
+PS_OUTPUT ps_main5(PS_INPUT input) // triangular
+{
+	PS_OUTPUT output;
+	
+	int4 p = (int4)input.p;
+
+	// output.c = ps_crt(input, ((p.x + (p.y % 2) * 3) / 2) % 3);
+	output.c = ps_crt(input, ((p.x + ((p.y / 2) % 2) * 3) / 2) % 3);
+	
+	return output;
+}
+
+PS_OUTPUT ps_main6(PS_INPUT input) // diagonal
+{
+	PS_OUTPUT output;
+	
+	int4 p = (int4)input.p;
+
+	output.c = ps_crt(input, (p.x + (p.y % 3)) % 3);
+	
+	return output;
 }
 
 #endif

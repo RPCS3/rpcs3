@@ -1,0 +1,10 @@
+Instruction for installations: 
+
+Install NSIS (tested with 2.45)
+Install NSIS Script Advanced Uninstall Log NSIS Header (you can find it opn NSIS wiki)
+Create a folder
+Put the nsis script in said folder
+Put vcredist_x86.exe in said folder
+Put the pcsx2 folder in said folder (warning, leave only the files you want in the installer. All files from the pcsx2 folder will be added to the installer )
+Edit the NSIS script with a text editor, changing the installer name and putting the correct name for the menu item (2 times, both filename and link name)
+Compile the NSIS script

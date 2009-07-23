@@ -92,13 +92,13 @@ void PollForX11KeyboardInput(int pad)
 					case PAD_R_UP:
 					case PAD_L_LEFT:
 					case PAD_L_UP:
-						Analog::ConfigurePad(Analog::AnalogToPad(i), pad, DEF_VALUE);
+						Analog::ConfigurePad(pad, Analog::AnalogToPad(i), DEF_VALUE);
 						break;
 					case PAD_R_RIGHT:
 					case PAD_R_DOWN:
 					case PAD_L_RIGHT:
 					case PAD_L_DOWN:
-						Analog::ConfigurePad(Analog::AnalogToPad(i), pad, -DEF_VALUE);
+						Analog::ConfigurePad(pad, Analog::AnalogToPad(i), -DEF_VALUE);
 						break;
 				}
 				i += 0xff00;
@@ -123,7 +123,7 @@ void PollForX11KeyboardInput(int pad)
 				// Analog Controls.
 				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
-					Analog::ResetPad(Analog::AnalogToPad(i), pad);
+					Analog::ResetPad(pad, Analog::AnalogToPad(i));
 					i += 0xff00;
 				}
 				

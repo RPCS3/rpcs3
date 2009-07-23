@@ -1131,6 +1131,7 @@ void __forceinline finishmpeg2sliceIDEC(decoder_t* &decoder)
 }
 
 // This fixes Mana Khemia if uncommented, but needs testing.
+// Breaks Figital Devil Saga.
 //#define ALWAYS_RESUME_BEFORE_EXITING
 void mpeg2sliceIDEC(void* pdone)
 {
@@ -1231,6 +1232,7 @@ void mpeg2sliceIDEC(void* pdone)
 					{
 						g_pIPU0Pointer += read * 16;
 						g_nIPU0Data -= read;
+						
 					}
 				}
 
@@ -1239,7 +1241,7 @@ void mpeg2sliceIDEC(void* pdone)
 
 			NEEDBITS(decoder->bitstream_buf, decoder->bitstream_bits, decoder->bitstream_ptr);
 			mba_inc = 0;
-
+			
 			while (1)
 			{
 				if (decoder->bitstream_buf >= 0x10000000)
@@ -1269,7 +1271,7 @@ void mpeg2sliceIDEC(void* pdone)
 							#ifdef ALWAYS_RESUME_BEFORE_EXITING
 							if (!resumed) so_resume();
 							#endif
-
+							
 							finishmpeg2sliceIDEC(decoder);
 
 							*(int*)pdone = 1;

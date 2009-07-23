@@ -39,12 +39,6 @@ private:
 	int listI;
 
 public:
-	// Use instead of normal 'delete'
-	static void Delete(microBlockManager* &dead) {
-		if (!dead) return;
-		dead->~microBlockManager();
-		safe_delete(dead);
-	}
 	microBlockManager() { 
 		listI = -1;
 		blockList.block = NULL;
@@ -121,7 +115,7 @@ struct microProgram {
 
 #define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
 struct microProgManager {
-	microIR<mProgSize>	allocInfo;		// IR information
+	microIR<mProgSize>	IRinfo;			// IR information
 	microProgram*		prog;			// Store MicroPrograms in memory
 	int*				progList;		// List of program indexes ordered by age (ordered from newest to oldest)
 	int					max;			// Max Number of MicroPrograms minus 1
@@ -150,7 +144,8 @@ struct microVU {
 	u32 progSize;		// VU Micro Memory Size (in u32's)
 	u32 cacheSize;		// VU Cache Size
 
-	microProgManager prog; // Micro Program Data
+	microProgManager prog;		// Micro Program Data
+	microRegAlloc*	 regAlloc;	// Reg Alloc Class
 
 	FILE*	logFile;	 // Log File Pointer
 	VURegs*	regs;		 // VU Regs Struct

@@ -15,17 +15,20 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
+ 
 /*
  *  Original code from libcdvd by Hiryu & Sjeep (C) 2002
  *  Modified by Florin for PCSX2 emu
  *  Fixed CdRead by linuzappz
  */
+ 
 #include "PrecompiledHeader.h"
 
 #include <ctype.h>
 
-#include "CDVDiso.h"
-#include "CDVDisodrv.h"
+#include "IsoFStools.h"
+#include "IsoFSdrv.h"
+#include "CDVDaccess.h"
 
 struct dir_toc_data
 {
@@ -168,59 +171,14 @@ int TocEntryCompare(char* filename, char* extensions){
 #define CD_FRAMES            75 /* frames per second */
 #define CD_MSF_OFFSET       150 /* MSF numbering offset of first frame */
 
-int CdRead(u32 lsn, u32 sectors, void *buf, CdRMode *mode){
+int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf)
+{
 	u32	i;
-	u8*	buff;
-	int rmode;
-
-	switch (mode->datapattern) {
-		case CdSecS2048:
-			rmode = CDVD_MODE_2048; break;
-		case CdSecS2328:
-			rmode = CDVD_MODE_2328; break;
-		case CdSecS2340:
-			rmode = CDVD_MODE_2340; break;
-		default:
-			return 0;
-	}
 	
-	for (i=0; i<sectors; i++){
-		if (CDVDreadTrack(lsn+i, rmode)==-1)
-			return 0;
-		buff = CDVDgetBuffer();
-		if (buff==NULL) return 0;
-		switch (mode->datapattern){
-			case CdSecS2048:
-				memcpy_fast((void*)((uptr)buf+2048*i), buff, 2048);break;//only data
-			case CdSecS2328:
-				memcpy_fast((void*)((uptr)buf+2328*i), buff, 2328);break;//without sync & head & sub
-			case CdSecS2340:
-				memcpy_fast((void*)((uptr)buf+2340*i), buff, 2340);break;//without sync
-		}
+	for (i=0; i<sectors; i++)
+	{
+		if (DoCDVDreadSector((u8*)((uptr)buf+2048*i), lsn+i, CDVD_MODE_2048) == -1) return 0;
 	}
-	return 1;
-}
-
-int DvdRead(u32 lsn, u32 sectors, void *buf, CdRMode *mode){
-	u32	i;
-	u8*	buff;
-
-	for (i=lsn; i<(lsn+sectors); i++){
-		if (CDVDreadTrack(i, CDVD_MODE_2048)==-1)
-			return 0;
-		buff = CDVDgetBuffer();
-		if (buff==NULL) return 0;
-
-//		switch (mode->datapattern){
-//			case CdSecS2064:
-				((u32*)buf)[0] = i + 0x30000;
-				memcpy_fast((u8*)buf+12, buff, 2048); 
-				buf = (char*)buf + 2064; break;
-//			default:
-//				return 0;
-//		}
-	}
-
 	return 1;
 }
 
@@ -230,17 +188,18 @@ int DvdRead(u32 lsn, u32 sectors, void *buf, CdRMode *mode){
 * may also be exported  for use via RPC                       *
 **************************************************************/
 
-int CDVD_GetVolumeDescriptor(void){
+int IsoFS_getVolumeDescriptor(void)
+{
 	// Read until we find the last valid Volume Descriptor
 	int volDescSector;
 
 	cdVolDesc localVolDesc;
 
-	DbgCon::WriteLn("CDVD_GetVolumeDescriptor called");
+	DbgCon::WriteLn("IsoFS_GetVolumeDescriptor called");
 
 	for (volDescSector = 16; volDescSector<20; volDescSector++)
 	{
-		CdRead(volDescSector,1,&localVolDesc,&cdReadMode);
+		IsoFS_readSectors(volDescSector,1,&localVolDesc);
 //		CdSync(0x00);
 
 		// If this is still a volume Descriptor
@@ -267,7 +226,7 @@ int CDVD_GetVolumeDescriptor(void){
 	return TRUE;
 }
 
-int CDVD_findfile(const char* fname, TocEntry* tocEntry){
+int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 	char filename[g_MaxPath+1];
 	char pathname[JolietMaxPath+1];
 	char toc[2048];
@@ -284,24 +243,20 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 
 	dirTocEntry* tocEntryPointer;
 
-	DbgCon::WriteLn("CDVD_findfile called");
-
-	//make sure we have good cdReadMode
-	cdReadMode.trycount = 0;
-	cdReadMode.spindlctrl = CdSpinStm;
-	cdReadMode.datapattern = CdSecS2048;
+	DbgCon::WriteLn("IsoFS_findfile(\"%s\") called", params fname);
 
 	_splitpath2(fname, pathname, filename);
 
 	// Find the TOC for a specific directory
-	if (CDVD_GetVolumeDescriptor() != TRUE){
-		RPC_LOG("Could not get CD Volume Descriptor");
+	if (IsoFS_getVolumeDescriptor() != TRUE)
+	{
+		ISOFS_LOG("Could not get CD Volume Descriptor");
 		return -1;
 	}
 
 	// Read the TOC of the root directory
-	if (CdRead(CDVolDesc.rootToc.tocLBA,1,toc,&cdReadMode) != TRUE){
-		RPC_LOG("Couldn't Read from CD !");
+	if (IsoFS_readSectors(CDVolDesc.rootToc.tocLBA,1,toc) != TRUE){
+		ISOFS_LOG("Couldn't Read from CD !");
 		return -1;
 	}
 	//CdSync(0x00);
@@ -360,7 +315,7 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 					// then load another sector
 
 					current_sector++;
-					if (CdRead(current_sector,1,toc,&cdReadMode) != TRUE)
+					if (IsoFS_readSectors(current_sector,1,toc) != TRUE)
 					{
 						Console::Error("Couldn't Read from CD !");
 						return -1;
@@ -398,7 +353,7 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 		// If we havent found the directory name we wanted then fail
 		if (found_dir != TRUE)
 		{
-			Console::Notice( "CDVD_findfile: could not find dir" );
+			Console::Notice( "IsoFS_findfile: could not find dir" );
 			return -1;
 		}
 
@@ -406,7 +361,7 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 		dirname = strtok( NULL, "\\/" );
 
 		// Read the TOC of the found subdirectory
-		if (CdRead(localTocEntry.fileLBA,1,toc,&cdReadMode) != TRUE)
+		if (IsoFS_readSectors(localTocEntry.fileLBA,1,toc) != TRUE)
 		{
 			Console::Error("Couldn't Read from CD !");
 			return -1;
@@ -422,7 +377,7 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 		tocEntryPointer = (dirTocEntry*)((char*)tocEntryPointer + tocEntryPointer->length);
 	}
 
-	RPC_LOG("[RPC:cdvd] findfile: found dir, now looking for file");
+	ISOFS_LOG("[IsoFStools] findfile: found dir, now looking for file");
 
 	tocEntryPointer = (dirTocEntry*)toc;
 
@@ -453,7 +408,7 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 				strcpy(tocEntry->filename, localTocEntry.filename);
 				memcpy(tocEntry->date, localTocEntry.date, 7);
 
-				DbgCon::WriteLn("CDVD_findfile: found file");
+				DbgCon::WriteLn("IsoFS_findfile: found file");
 
 				return TRUE;
 			}
@@ -467,7 +422,7 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 		{
 			dir_lba++;
 
-			if (CdRead(dir_lba,1,toc,&cdReadMode) != TRUE){
+			if (IsoFS_readSectors(dir_lba,1,toc) != TRUE){
 				Console::Error("Couldn't Read from CD !");
 				return -1;
 			}
@@ -477,13 +432,13 @@ int CDVD_findfile(const char* fname, TocEntry* tocEntry){
 		}
 	}
 
-	DbgCon::Notice("CDVD_findfile: could not find file");
+	DbgCon::Notice("IsoFS_findfile: could not find file");
 
 	return FALSE;
 }
 
 // This is the RPC-ready function which takes the request to start the tocEntry retrieval
-int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_dirs){
+int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_dirs){
 //	int dir_depth = 1;
 	char toc[2048];
 	char* dirname;
@@ -501,16 +456,16 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 	getDirTocData.inc_dirs = inc_dirs;
 
 	// Find the TOC for a specific directory
-	if (CDVD_GetVolumeDescriptor() != TRUE){
-		RPC_LOG("[RPC:cdvd] Could not get CD Volume Descriptor");
+	if (IsoFS_getVolumeDescriptor() != TRUE){
+		ISOFS_LOG("[IsoFStools] Could not get CD Volume Descriptor");
 		return -1;
 	}
 
-	RPC_LOG("[RPC:cdvd] Getting Directory Listing for: \"%s\"", pathname);
+	ISOFS_LOG("[IsoFStools] Getting Directory Listing for: \"%s\"", pathname);
 
 	// Read the TOC of the root directory
-	if (CdRead(CDVolDesc.rootToc.tocLBA,1,toc,&cdReadMode) != TRUE){
-		RPC_LOG("[RPC:    ] Couldn't Read from CD !");
+	if (IsoFS_readSectors(CDVolDesc.rootToc.tocLBA,1,toc) != TRUE){
+		ISOFS_LOG("[IsoFStools] Couldn't Read from CD !");
 		return -1;
 	}
 	//CdSync(0x00);
@@ -526,12 +481,12 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 
 	// use strtok to get the next dir name
 
-	// if there isnt one, then assume we want the LBA
+	// if there isn't one, then assume we want the LBA
 	// for the current one, and exit the while loop
 
 	// if there is another dir name then increment dir_depth
 	// and look through dir table entries until we find the right name
-	// if we dont find the right name
+	// if we don't find the right name
 	// before finding an entry at a higher level (lower num), then return nothing
 
 	localTocEntry.fileLBA = CDVolDesc.rootToc.tocLBA;
@@ -550,8 +505,8 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 					// then load another sector
 
 					current_sector++;
-					if (CdRead(current_sector,1,toc,&cdReadMode) != TRUE){
-						RPC_LOG("[RPC:    ] Couldn't Read from CD !");
+					if (IsoFS_readSectors(current_sector,1,toc) != TRUE){
+						ISOFS_LOG("[IsoFStools] Couldn't Read from CD !");
 						
 						return -1;
 					}
@@ -573,8 +528,8 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 				if (strcmp(dirname,localTocEntry.filename) == 0){
 					// if the name matches then we've found the directory
 					found_dir = TRUE;
-					RPC_LOG("[RPC:    ] Found directory %s in subdir at sector %d",dirname,current_sector);
-					RPC_LOG("[RPC:    ] LBA of found subdirectory = %d",localTocEntry.fileLBA);
+					ISOFS_LOG("[IsoFStools] Found directory %s in subdir at sector %d",dirname,current_sector);
+					ISOFS_LOG("[IsoFStools] LBA of found subdirectory = %d",localTocEntry.fileLBA);
 					
 					break;
 				}
@@ -592,8 +547,8 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 		dirname = strtok( NULL, "\\/" );
 
 		// Read the TOC of the found subdirectory
-		if (CdRead(localTocEntry.fileLBA,1,toc,&cdReadMode) != TRUE){
-			RPC_LOG("[RPC:    ] Couldn't Read from CD !");
+		if (IsoFS_readSectors(localTocEntry.fileLBA,1,toc) != TRUE){
+			ISOFS_LOG("[IsoFStools] Couldn't Read from CD !");
 			return -1;
 		}
 		//CdSync(0x00);
@@ -644,8 +599,8 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 				// then load another sector
 				getDirTocData.current_sector++;
 
-				if (CdRead(getDirTocData.current_sector,1,toc,&cdReadMode) != TRUE){
-					RPC_LOG("[RPC:    ] Couldn't Read from CD !");
+				if (IsoFS_readSectors(getDirTocData.current_sector,1,toc) != TRUE){
+					ISOFS_LOG("[IsoFStools] Couldn't Read from CD !");
 					return -1;
 				}
 				//CdSync(0x00);
@@ -703,14 +658,14 @@ int CDVD_GetDir_RPC_request(char* pathname, char* extensions, unsigned int inc_d
 
 // This function can be called repeatedly after CDVD_GetDir_RPC_request to get the actual entries
 // buffer (tocEntry) must be 18KB in size, and this will be filled with a maximum of 128 entries in one go
-int CDVD_GetDir_RPC_get_entries(TocEntry tocEntry[], int req_entries){
+int IsoFS_getDirectories(TocEntry tocEntry[], int req_entries){
 	char toc[2048];
 	int toc_entry_num;
 
 	dirTocEntry* tocEntryPointer;
 
-	if (CdRead(getDirTocData.current_sector,1,toc,&cdReadMode) != TRUE){
-		RPC_LOG("[RPC:cdvd]	Couldn't Read from CD !");
+	if (IsoFS_readSectors(getDirTocData.current_sector,1,toc) != TRUE){
+		ISOFS_LOG("[IsoFStools]	Couldn't Read from CD !");
 		return -1;
 	}
 	//CdSync(0x00);
@@ -730,18 +685,21 @@ int CDVD_GetDir_RPC_get_entries(TocEntry tocEntry[], int req_entries){
 	if (req_entries > 128)
 		req_entries = 128;
 
-	for (toc_entry_num=0; toc_entry_num < req_entries;){
-		if ((tocEntryPointer->length == 0) || (getDirTocData.current_sector_offset >= 2048)){
+	for (toc_entry_num=0; toc_entry_num < req_entries;)
+	{
+		if ((tocEntryPointer->length == 0) || (getDirTocData.current_sector_offset >= 2048))
+		{
 			// decrease the number of dirs remaining
 			getDirTocData.num_sectors--;
 
-			if (getDirTocData.num_sectors > 0){
+			if (getDirTocData.num_sectors > 0)
+			{
 				// If we've run out of entries, but arent on the last sector
 				// then load another sector
 				getDirTocData.current_sector++;
 
-				if (CdRead(getDirTocData.current_sector,1,toc,&cdReadMode) != TRUE){
-					RPC_LOG("[RPC:cdvd]	Couldn't Read from CD !");
+				if (IsoFS_readSectors(getDirTocData.current_sector,1,toc) != TRUE){
+					ISOFS_LOG("[IsoFStools]	Couldn't Read from CD !");
 					return -1;
 				}
 				//CdSync(0x00);
@@ -751,7 +709,8 @@ int CDVD_GetDir_RPC_get_entries(TocEntry tocEntry[], int req_entries){
 
 //				continue;
 			}
-			else{
+			else
+			{
 				return (toc_entry_num);
 			}
 		}
@@ -792,27 +751,6 @@ int CDVD_GetDir_RPC_get_entries(TocEntry tocEntry[], int req_entries){
 				tocEntryPointer = (dirTocEntry*)(toc + getDirTocData.current_sector_offset);
 			}
 		}
-/*
-		if (strlen(getDirTocData.extension_list) > 0)
-		{
-			if (TocEntryCompare(tocEntry[toc_entry_num].filename, getDirTocData.extension_list) == TRUE)
-			{
-
-				// increment this here, rather than in the main for loop
-				// since this should count the number of matching entries
-				toc_entry_num++; 
-			}
-
-			getDirTocData.current_sector_offset += tocEntryPointer->length;
-			(char*)tocEntryPointer = toc + getDirTocData.current_sector_offset;
-		}
-		else
-		{
-			toc_entry_num++; 
-			getDirTocData.current_sector_offset += tocEntryPointer->length;
-			(char*)tocEntryPointer = toc + getDirTocData.current_sector_offset;
-		}
-*/
 	}
 	return (toc_entry_num);
 }

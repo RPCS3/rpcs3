@@ -1306,10 +1306,6 @@ void recSLTs_consts(int info, int sign)
 				PSRLQItoR(EEREC_D, 63);
 			}
 			else {
-				u32* ptempmem = recAllocStackMem(8,4);
-				ptempmem[0] = g_cpuConstRegs[_Rs_].UL[0]^0x80000000;
-				ptempmem[1] = 0;
-
 				if( EEREC_D != EEREC_T ) {
 					MOVDMtoMMX(EEREC_D, (u32)&s_sltconst);
 					PXORRtoR(EEREC_D, EEREC_T);
@@ -1318,7 +1314,7 @@ void recSLTs_consts(int info, int sign)
 					PXORMtoR(EEREC_D, (u32)&s_sltconst);
 				}
 
-				PCMPGTDMtoR(EEREC_D, (u32)ptempmem);
+				PCMPGTDMtoR(EEREC_D, (uptr)recGetImm64(0, g_cpuConstRegs[_Rs_].UL[0] ^ 0x80000000));
 
 				PUNPCKLDQRtoR(EEREC_D, EEREC_D);
 				PSRLQItoR(EEREC_D, 63);
@@ -1439,11 +1435,7 @@ void recSLTs_constt(int info, int sign)
 				recSLTmemconstt(EEREC_D, EEREC_S, (u32)_eeGetConstReg(_Rt_), 1);
 			}
 			else {
-				u32* ptempmem = recAllocStackMem(8,4);
-				ptempmem[0] = g_cpuConstRegs[_Rt_].UL[0]^0x80000000;
-				ptempmem[1] = 0;
-
-				recSLTmemconstt(EEREC_D, EEREC_S, (u32)ptempmem, 0);
+				recSLTmemconstt(EEREC_D, EEREC_S, (uptr)recGetImm64(0, g_cpuConstRegs[_Rt_].UL[0] ^ 0x80000000), 0);
 			}
 
 			return;

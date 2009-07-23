@@ -31,6 +31,9 @@ GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system)
 	m_desc.dwSize = sizeof(m_desc);
 
 	system->GetSurfaceDesc(&m_desc);
+
+	m_size.x = (int)m_desc.dwWidth;
+	m_size.y = (int)m_desc.dwHeight;
 }
 
 GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface7* video)
@@ -43,21 +46,14 @@ GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface
 	m_desc.dwSize = sizeof(m_desc);
 
 	video->GetSurfaceDesc(&m_desc);
+
+	m_size.x = (int)m_desc.dwWidth;
+	m_size.y = (int)m_desc.dwHeight;
 }
 
 int GSTexture7::GetType() const
 {
 	return m_type;
-}
-
-int GSTexture7::GetWidth() const 
-{
-	return m_desc.dwWidth;
-}
-
-int GSTexture7::GetHeight() const 
-{
-	return m_desc.dwHeight;
 }
 
 int GSTexture7::GetFormat() const 

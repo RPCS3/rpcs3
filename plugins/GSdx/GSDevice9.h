@@ -135,7 +135,7 @@ public:
 	bool Create(GSWnd* wnd, bool vsync);
 	bool Reset(int w, int h, int mode);
 	bool IsLost(bool update);
-	void Flip();
+	void Flip(bool limit);
 
 	void BeginScene();
 	void DrawPrimitive();
@@ -167,10 +167,9 @@ public:
 	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 	void PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len);
 	void PSSetSamplerState(Direct3DSamplerState9* ss);
-	void RSSet(int width, int height, const GSVector4i* scissor = NULL);
 	void OMSetDepthStencilState(Direct3DDepthStencilState9* dss);
 	void OMSetBlendState(Direct3DBlendState9* bs, uint32 bf);
-	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 
 	IDirect3DDevice9* operator->() {return m_dev;}
 	operator IDirect3DDevice9*() {return m_dev;}

@@ -25,12 +25,12 @@
  namespace Analog
 {
 	extern void Init();
-	extern u8 Pad(int padvalue, u8 i);
-	extern void SetPad(int padvalue, u8 i, u8 value);
-	extern void InvertPad(int padvalue, u8 i);
-	extern bool RevertPad(u8 padvalue);
-	extern void ResetPad(int padvalue, u8 i);
-	extern void ConfigurePad(int padvalue, u8 i, int value);
+	extern u8 Pad(int pad, u8 index);
+	extern void SetPad(u8 pad, int index, u8 value);
+	extern void InvertPad(u8 pad, int key);
+	extern bool RevertPad(u8 index);
+	extern void ResetPad( u8 pad, int key);
+	extern void ConfigurePad( u8 pad, int index, int value);
 	extern int KeypadToPad(u8 keypress);
-	extern int AnalogToPad(int padvalue);
+	extern int AnalogToPad(int index);
 }

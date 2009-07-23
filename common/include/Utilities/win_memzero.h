@@ -47,26 +47,35 @@
 // alignment of the stack at compile time, so I'm forced to use movups to store and
 // retrieve xmm0.
 
+// MSVC Template Issue:
+//  MSVC treats int template parameters like macro insertions.  That is, if you have a
+//  a template parameter in the form of "func<10-5>()", MSVC inserts 10-5 into the
+//  templated function, causing order-of-operation problems (sigh).  The normal fix would
+//  be to assign the template parameter to a static const int inside each function, but that
+//  won't fly with the enums optimization.  So in order to fix the problem I define a macro
+//  that encapsulates the template parameter inside parenthesis for us:
+
+#define MZFbytes (_bytes)
 
 // This is an implementation of the memzero_ptr fast memset routine (for zero-clears only).
-template< size_t bytes >
+template< size_t _bytes >
 static __forceinline void memzero_ptr( void *dest )
 {
-	if( bytes == 0 ) return;
+	if( MZFbytes == 0 ) return;
 
 	// This function only works on 32-bit alignments.  For anything else we just fall back
 	// on the compiler-provided implementation of memset...
 
-	if( (bytes & 0x3) != 0 )
+	if( (MZFbytes & 0x3) != 0 )
 	{
-		memset( dest, 0, bytes );
+		memset( dest, 0, MZFbytes );
 		return;
 	}
 
 	enum
 	{
-		remainder = bytes & 127,
-		bytes128 = bytes / 128
+		remainder = MZFbytes & 127,
+		bytes128 = MZFbytes / 128
 	};
 
 	// Initial check -- if the length is not a multiple of 16 then fall back on
@@ -74,7 +83,7 @@ static __forceinline void memzero_ptr( void *dest )
 	// manner isn't necessary in pcsx2 (meaning they aren't used in speed-critical
 	// scenarios).
 
-	if( (bytes & 0xf) == 0 )
+	if( (MZFbytes & 0xf) == 0 )
 	{
 		u64 _xmm_backup[2];
 
@@ -177,12 +186,12 @@ static __forceinline void memzero_ptr( void *dest )
 	}
 
 	// This function only works on 32-bit alignments.
-	jASSUME( (bytes & 0x3) == 0 );
+	jASSUME( (MZFbytes & 0x3) == 0 );
 	jASSUME( ((uptr)dest & 0x3) == 0 );
 
 	enum
 	{
-		remdat = bytes>>2
+		remdat = MZFbytes >> 2
 	};
 
 	// This case statement handles 5 special-case sizes (small blocks)
@@ -247,28 +256,28 @@ static __forceinline void memzero_ptr( void *dest )
 }
 
 // An optimized memset for 8 bit destination data.
-template< u8 data, size_t bytes >
+template< u8 data, size_t _bytes >
 static __forceinline void memset_8( void *dest )
 {
-	if( bytes == 0 ) return;
+	if( MZFbytes == 0 ) return;
 
-	if( (bytes & 0x3) != 0 )
+	if( (MZFbytes & 0x3) != 0 )
 	{
 		// unaligned data length.  No point in doing an optimized inline version (too complicated!)
 		// So fall back on the compiler implementation:
 
-		memset( dest, data, bytes );
+		memset( dest, data, MZFbytes );
 		return;
 	}
 
 	//u64 _xmm_backup[2];
 
-	/*static const size_t remainder = bytes & 127;
-	static const size_t bytes128 = bytes / 128;
+	/*static const size_t remainder = MZFbytes & 127;
+	static const size_t bytes128 = MZFbytes / 128;
 	if( bytes128 > 32 )
 	{
 		// This function only works on 128-bit alignments.
-		jASSUME( (bytes & 0xf) == 0 );
+		jASSUME( (MZFbytes & 0xf) == 0 );
 		jASSUME( ((uptr)dest & 0xf) == 0 );
 
 		__asm
@@ -313,11 +322,11 @@ static __forceinline void memset_8( void *dest )
 	}*/
 
 	// This function only works on 32-bit alignments of data copied.
-	jASSUME( (bytes & 0x3) == 0 );
+	jASSUME( (MZFbytes & 0x3) == 0 );
 
 	enum
 	{
-		remdat = bytes>>2,
+		remdat = MZFbytes >> 2,
 		data32 = data + (data<<8) + (data<<16) + (data<<24)
 	};
 
@@ -381,31 +390,31 @@ static __forceinline void memset_8( void *dest )
 	}
 }
 
-template< u16 data, size_t bytes >
+template< u16 data, size_t _bytes >
 static __forceinline void memset_16( void *dest )
 {
-	if( bytes == 0 ) return;
+	if( MZFbytes == 0 ) return;
 
-	if( (bytes & 0x1) != 0 )
+	if( (MZFbytes & 0x1) != 0 )
 		throw Exception::LogicError( "Invalid parameter passed to memset_16 - data length is not a multiple of 16 or 32 bits." );
 
-	if( (bytes & 0x3) != 0 )
+	if( (MZFbytes & 0x3) != 0 )
 	{
 		// Unaligned data length.  No point in doing an optimized inline version (too complicated with
 		// remainders and such).
 
-		_memset16_unaligned( dest, data, bytes );
+		_memset16_unaligned( dest, data, MZFbytes );
 		return;
 	}
 
 	//u64 _xmm_backup[2];
 
 	// This function only works on 32-bit alignments of data copied.
-	jASSUME( (bytes & 0x3) == 0 );
+	jASSUME( (MZFbytes & 0x3) == 0 );
 
 	enum
 	{
-		remdat = bytes>>2,
+		remdat = MZFbytes >> 2,
 		data32 = data + (data<<16)
 	};
 
@@ -469,12 +478,12 @@ static __forceinline void memset_16( void *dest )
 	}
 }
 
-template< u32 data, size_t bytes >
+template< u32 data, size_t MZFbytes >
 static __forceinline void memset_32( void *dest )
 {
-	if( bytes == 0 ) return;
+	if( MZFbytes == 0 ) return;
 
-	if( (bytes & 0x3) != 0 )
+	if( (MZFbytes & 0x3) != 0 )
 		throw Exception::LogicError( "Invalid parameter passed to memset_32 - data length is not a multiple of 32 bits." );
 
 
@@ -484,11 +493,11 @@ static __forceinline void memset_32( void *dest )
 	// If the data length is not a factor of 32 bits, the C++ optimizing compiler will
 	// probably just generate mysteriously broken code in Release builds. ;)
 
-	jASSUME( (bytes & 0x3) == 0 );
+	jASSUME( (MZFbytes & 0x3) == 0 );
 
 	enum
 	{
-		remdat = bytes>>2,
+		remdat = MZFbytes>>2,
 		data32 = data
 	};
 
@@ -582,3 +591,4 @@ static __forceinline void memset32_obj( T& object )
 	memset_32<data, sizeof(T)>( &object );
 }
 
+#undef MZFbytes

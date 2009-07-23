@@ -40,6 +40,7 @@
 #define IDC_WIDTH                       2036
 #define IDC_HEIGHT                      2037
 #define IDC_CONFIGURE                   2038
+#define IDC_WINDOWED                    2039
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
 #define IDR_MERGE_FX                    10002
@@ -51,7 +52,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        10004
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         2039
+#define _APS_NEXT_CONTROL_VALUE         2040
 #define _APS_NEXT_SYMED_VALUE           5000
 #endif
 #endif

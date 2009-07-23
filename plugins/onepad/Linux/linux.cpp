@@ -120,24 +120,6 @@ EXPORT_C_(void) PADupdate(int pad)
 						set_bit(status[pad], i); // pressed
 					break;
 				}
-				case PAD_JOYSTICK:
-				{
-					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
-					
-					switch (i)
-					{
-						case PAD_LX:
-						case PAD_LY:
-						case PAD_RX:
-						case PAD_RY:
-							if (abs(value) > (pjoy)->GetDeadzone(value))
-								Analog::ConfigurePad(i, pad, value);
-							else 
-								Analog::ResetPad(i, pad);
-							break;
-					}
-				break;
-				}
 			case PAD_HAT:
 				{
 					int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
@@ -158,12 +140,40 @@ EXPORT_C_(void) PADupdate(int pad)
 				{
 					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
 					
+					PAD_LOG("%s: %d (%d)\n", KeyName(cpad, i).c_str(), value, key_to_pov_sign(cpad, i));
 					if (key_to_pov_sign(cpad, i) && (value < -2048))
+					{
+						//PAD_LOG("%s Released+.\n", KeyName(cpad, i).c_str());
 						clear_bit(status[pad], i);
+					}
 					else if (!key_to_pov_sign(cpad, i) && (value > 2048))
+					{
+						//PAD_LOG("%s Released-\n", KeyName(cpad, i).c_str());
 						clear_bit(status[pad], i);
+					}
 					else
+					{
+						//PAD_LOG("%s Pressed.\n", KeyName(cpad, i).c_str());
 						set_bit(status[pad], i);
+					}
+					break;
+				}
+				case PAD_JOYSTICK:
+				{
+					int value = SDL_JoystickGetAxis((pjoy)->GetJoy(), key_to_axis(cpad, i));
+					
+					switch (i)
+					{
+						case PAD_LX:
+						case PAD_LY:
+						case PAD_RX:
+						case PAD_RY:
+							if (abs(value) > (pjoy)->GetDeadzone(value))
+								Analog::ConfigurePad(pad, i, value);
+							else 
+								Analog::ResetPad(pad, i);
+							break;
+					}
 					break;
 				}
 			default: break;

@@ -1344,11 +1344,11 @@ extern void SSSE3_PABSD_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
 #ifndef _MM_MK_INSERTPS_NDX
 #define _MM_MK_INSERTPS_NDX(srcField, dstField, zeroMask) (((srcField)<<6) | ((dstField)<<4) | (zeroMask))
 #endif
-
 extern void SSE4_DPPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8);
 extern void SSE4_DPPS_M128_to_XMM(x86SSERegType to, uptr from, u8 imm8);
 extern void SSE4_INSERTPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8);
 extern void SSE4_EXTRACTPS_XMM_to_R32(x86IntRegType to, x86SSERegType from, u8 imm8);
+extern void SSE4_EXTRACTPS_XMM_to_M32(uptr to, x86SSERegType from, u8 imm8);
 extern void SSE4_BLENDPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8);
 extern void SSE4_BLENDVPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
 extern void SSE4_BLENDVPS_M128_to_XMM(x86SSERegType to, uptr from);

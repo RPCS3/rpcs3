@@ -22,7 +22,7 @@ $pcsx2_prefix = " --prefix #{$main_dir}"
 $plugins_prefix = " --prefix #{$plugin_install_dir}"
 
 $plugin_list=["CDVDnull",  "dev9null", "FWnull", "USBnull", "SPU2null", "zerogs", "zzogl", "zeropad", "zerospu2", "PeopsSPU2", "CDVDiso", "CDVDisoEFP",  "CDVDlinuz"]
-$full_plugin_list=["CDVDnull",  "dev9null", "FWnull", "USBnull", "SPU2null", "zerogs", "zzogl", "zeropad", "zerospu2", "PeopsSPU2", "CDVDiso", "CDVDisoEFP",  "CDVDlinuz","GSnull","PadNull","wxpad"]
+$full_plugin_list=["CDVDnull",  "dev9null", "FWnull", "USBnull", "SPU2null", "zerogs", "zzogl", "zeropad", "zerospu2", "PeopsSPU2", "CDVDiso", "CDVDisoEFP",  "CDVDlinuz","GSnull","PadNull","onepad"]
 
 $pcsx2_build_types = {
 	"dev" => " --enable-devbuild ",

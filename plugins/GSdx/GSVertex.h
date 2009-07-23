@@ -51,17 +51,6 @@ __declspec(align(16)) struct GSVertex
 	GSVector4 GetUV() const {return GSVector4(GSVector4i::load(UV.u32[0]).upl16());}
 };
 
-struct GSVertexOld
-{
-	GIFRegRGBAQ		RGBAQ;
-	GIFRegST		ST;
-	GIFRegUV		UV;
-	GIFRegXYZ		XYZ;
-	GIFRegFOG		FOG;
-
-	GSVertexOld() {memset(this, 0, sizeof(*this));}
-};
-
 struct GSVertexP
 {
 	GSVector4 p;

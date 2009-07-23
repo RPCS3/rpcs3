@@ -210,6 +210,7 @@ public:
 	uint32 m_crc;
 	int m_options;
 	int m_frameskip;
+	bool m_framelimit;
 	CRC::Game m_game;
 	GSDump m_dump;
 
@@ -247,6 +248,7 @@ public:
 	int Defrost(const GSFreezeData* fd);
 	void GetLastTag(uint32* tag) {*tag = m_path3hack; m_path3hack = 0;}
 	virtual void SetGameCRC(uint32 crc, int options);
-	void SetFrameSkip(int frameskip);
+	void SetFrameSkip(int skip);
+	void SetFrameLimit(bool limit);
 };
 

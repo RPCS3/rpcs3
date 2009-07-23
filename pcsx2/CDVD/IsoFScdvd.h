@@ -1,5 +1,5 @@
 /*  Pcsx2 - Pc Ps2 Emulator
- *  Copyright (C) 2002-2009  Pcsx2 Team
+ *  Copyright (C) 2002-2008  Pcsx2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,22 +17,38 @@
  */
 /*
  *  Original code from libcdvd by Hiryu & Sjeep (C) 2002
+ *  Linux kernel headers
  *  Modified by Florin for PCSX2 emu
  */
 
-#ifndef __CDVDISODRV_H__
-#define __CDVDISODRV_H__
+#ifndef _ISOFSCDVD_H
+#define _ISOFSCDVD_H
 
-#include "CDVDlib.h"
+#include "Common.h"
 
-extern CdRMode cdReadMode;
+#if defined(_MSC_VER)
+#pragma pack(1)
+#endif
 
-/* Filing-system exported functions */
-void CDVDFS_init();
-int CDVDFS_open(const char *name, int mode);
-int CDVDFS_lseek(int fd, int offset, int whence);
-int CDVDFS_read( int fd, char * buffer, int size );
-int CDVDFS_write( int fd, char * buffer, int size );
-int CDVDFS_close( int fd);
+struct TocEntry
+{
+	u32	fileLBA;
+	u32 fileSize;
+	u8	fileProperties;
+	u8	padding1[3];
+	char	filename[128+1];
+	u8	date[7];
+#if defined(_MSC_VER)
+};
+#else
+} __attribute__((packed));
+#endif
 
-#endif//__CDVDISODRV_H__
+#if defined(_MSC_VER)
+#pragma pack()
+#endif
+
+int IsoFS_findFile(const char* fname, struct TocEntry* tocEntry);
+int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf);
+
+#endif // _ISOFSCDVD_H

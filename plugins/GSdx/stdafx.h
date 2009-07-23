@@ -53,6 +53,7 @@
 #include <list>
 #include <map>
 #include <hash_map>
+#include <hash_set>
 #include <algorithm>
 
 using namespace std;

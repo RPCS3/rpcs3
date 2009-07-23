@@ -29,8 +29,6 @@ class GSTextureOGL : public GSTexture
 	GLuint m_pbo;
 
 	int m_type;
-	int m_width;
-	int m_height;
 	int m_format;
 
 public:
@@ -38,8 +36,6 @@ public:
 	virtual ~GSTextureOGL();
 
 	int GetType() const;
-	int GetWidth() const;
-	int GetHeight() const;
 	int GetFormat() const;
 
 	bool Update(const GSVector4i& r, const void* data, int pitch);

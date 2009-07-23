@@ -29,7 +29,7 @@
 class GSRendererDX11 : public GSRendererDX<GSVertexHW11>
 {
 protected:
-	void Draw(GS_PRIM_CLASS primclass, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 
 	struct
 	{
@@ -42,7 +42,7 @@ protected:
 public:
 	GSRendererDX11(uint8* base, bool mt, void (*irq)());
 
-	bool Create(const string& title);
+	bool Create(const string& title, int w, int h);
 
 	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

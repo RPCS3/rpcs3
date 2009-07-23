@@ -23,33 +23,42 @@
 
 #include "stdafx.h"
 #include "GSVertexTrace.h"
+#include "GSUtil.h"
+#include "GSState.h"
 
-void GSVertexTrace::Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
+GSVertexTrace::GSVertexTrace(const GSState* state)
+	: m_state(state)
 {
-	uint32 key = primclass | (PRIM->IIP << 2) | (PRIM->TME << 3) | (PRIM->FST << 4);
+}
 
-	if(!(PRIM->TME && context->TEX0.TFX == TFX_DECAL && context->TEX0.TCC))
+uint32 GSVertexTrace::Hash(GS_PRIM_CLASS primclass)
+{
+	m_primclass = primclass;
+
+	uint32 hash = m_primclass | (m_state->PRIM->IIP << 2) | (m_state->PRIM->TME << 3) | (m_state->PRIM->FST << 4);
+
+	if(!(m_state->PRIM->TME && m_state->m_context->TEX0.TFX == TFX_DECAL && m_state->m_context->TEX0.TCC))
 	{
-		key |= 1 << 5;
+		hash |= 1 << 5;
 	}
 
-	m_map_sw[key](v, count, m_min, m_max);
+	return hash;
+}
+
+void GSVertexTrace::Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass)
+{
+	m_map_sw[Hash(primclass)](v, count, m_min, m_max);
 
 	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
 
 	m_alpha.valid = false;
 }
 
-void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
-{
-	uint32 key = primclass | (PRIM->IIP << 2) | (PRIM->TME << 3) | (PRIM->FST << 4);
+void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass)
+{	
+	m_map_hw9[Hash(primclass)](v, count, m_min, m_max);
 
-	if(!(PRIM->TME && context->TEX0.TFX == TFX_DECAL && context->TEX0.TCC))
-	{
-		key |= 1 << 5;
-	}
-
-	m_map_hw9[key](v, count, m_min, m_max);
+	const GSDrawingContext* context = m_state->m_context;
 
 	GSVector4 o(context->XYOFFSET);
 	GSVector4 s(1.0f / 16, 1.0f / 16, 1.0f, 1.0f);
@@ -57,9 +66,9 @@ void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primcl
 	m_min.p = (m_min.p - o) * s;
 	m_max.p = (m_max.p - o) * s;
 
-	if(PRIM->TME)
+	if(m_state->PRIM->TME)
 	{
-		if(PRIM->FST)
+		if(m_state->PRIM->FST)
 		{
 			s = GSVector4(1 << (16 - 4), 1).xxyy();
 		}
@@ -77,16 +86,11 @@ void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primcl
 	m_alpha.valid = false;
 }
 
-void GSVertexTrace::Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primclass, const GIFRegPRIM* PRIM, const GSDrawingContext* context)
+void GSVertexTrace::Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primclass)
 {
-	uint32 key = primclass | (PRIM->IIP << 2) | (PRIM->TME << 3) | (PRIM->FST << 4);
+	m_map_hw10[Hash(primclass)](v, count, m_min, m_max);
 
-	if(!(PRIM->TME && context->TEX0.TFX == TFX_DECAL && context->TEX0.TCC))
-	{
-		key |= 1 << 5;
-	}
-
-	m_map_hw10[key](v, count, m_min, m_max);
+	const GSDrawingContext* context = m_state->m_context;
 
 	GSVector4 o(context->XYOFFSET);
 	GSVector4 s(1.0f / 16, 1.0f / 16, 2.0f, 1.0f);
@@ -94,9 +98,9 @@ void GSVertexTrace::Update(const GSVertexHW10* v, int count, GS_PRIM_CLASS primc
 	m_min.p = (m_min.p - o) * s;
 	m_max.p = (m_max.p - o) * s;
 
-	if(PRIM->TME)
+	if(m_state->PRIM->TME)
 	{
-		if(PRIM->FST)
+		if(m_state->PRIM->FST)
 		{
 			s = GSVector4(1 << (16 - 4), 1).xxyy();
 		}

@@ -238,7 +238,7 @@ mVUop(mVULowerOP_T3_11)	{ doTableStuff(mVULowerOP_T3_11_OPCODE,	((mVUgetCode >> 
 mVUop(mVUopU)			{ doTableStuff(mVU_UPPER_OPCODE,		 (mVUgetCode & 0x3f)); } // Gets Upper Opcode
 mVUop(mVUopL)			{ doTableStuff(mVULOWER_OPCODE,			 (mVUgetCode >>  25)); } // Gets Lower Opcode
 mVUop(mVUunknown) { 
-	pass2 { Console::Error("microVU%d: Unknown Micro VU opcode called (%08x)\n", params getIndex, mVUgetCode); }
+	pass2 { Console::Error("microVU%d: Unknown Micro VU opcode called (%x) [%04x]\n", params getIndex, mVUgetCode, xPC); }
 	pass3 { mVUlog("Unknown", mVUgetCode); }
 }
 

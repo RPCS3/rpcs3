@@ -364,6 +364,7 @@ emitterT void SSE4_PINSRD_R32_to_XMM(x86SSERegType to, x86IntRegType from, u8 im
 
 emitterT void SSE4_INSERTPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8)	{ xINSERTPS( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
 emitterT void SSE4_EXTRACTPS_XMM_to_R32(x86IntRegType to, x86SSERegType from, u8 imm8)	{ xEXTRACTPS( xRegister32(to), xRegisterSSE(from), imm8 ); }
+emitterT void SSE4_EXTRACTPS_XMM_to_M32(uptr to, x86SSERegType from, u8 imm8)			{ xEXTRACTPS( (u32*)to, xRegisterSSE(from), imm8 ); }
 
 emitterT void SSE4_DPPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8)		{ xDP.PS( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
 emitterT void SSE4_DPPS_M128_to_XMM(x86SSERegType to, uptr from, u8 imm8)				{ xDP.PS( xRegisterSSE(to), (void*)from, imm8 ); }

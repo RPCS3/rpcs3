@@ -86,13 +86,7 @@ GSTexture* GSRendererSW::GetOutput(int i)
 {
 	const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
 
-	GIFRegTEX0 TEX0;
-
-	TEX0.TBP0 = DISPFB.Block();
-	TEX0.TBW = DISPFB.FBW;
-	TEX0.PSM = DISPFB.PSM;
-
-	int w = TEX0.TBW * 64;
+	int w = DISPFB.FBW * 64;
 	int h = GetFrameRect(i).bottom;
 
 	// TODO: round up bottom
@@ -105,7 +99,9 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 		GSVector4i r(0, 0, w, h);
 
-		m_mem.ReadTexture(r, buff, pitch, TEX0, m_env.TEXA);
+		const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[DISPFB.PSM];
+
+		(m_mem.*psm.rtx)(m_mem.GetOffset(DISPFB.Block(), DISPFB.FBW, DISPFB.PSM), r.ralign<GSVector4i::Outside>(psm.bs), buff, pitch, m_env.TEXA);
 
 		m_texture[i]->Update(r, buff, pitch);
 
@@ -113,7 +109,7 @@ GSTexture* GSRendererSW::GetOutput(int i)
 		{
 			if(s_save && s_n >= s_saven)
 			{
-				m_texture[i]->Save(format("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM));
+				m_texture[i]->Save(format("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)DISPFB.Block(), (int)DISPFB.PSM));
 			}
 
 			s_n++;
@@ -125,18 +121,14 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 void GSRendererSW::Draw()
 {
-	GS_PRIM_CLASS primclass = GSUtil::GetPrimClass(PRIM->PRIM);
-
-	m_vt.Update(m_vertices, m_count, primclass, PRIM, m_context);
-
 	if(m_dump) 
 	{
-		m_dump.Object(m_vertices, m_count, primclass);
+		m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
 	}
 
 	GSScanlineParam p;
 
-	GetScanlineParam(p, primclass);
+	GetScanlineParam(p, m_vt.m_primclass);
 
 	if((p.fm & p.zm) == 0xffffffff)
 	{
@@ -179,7 +171,7 @@ void GSRendererSW::Draw()
 
 	data.scissor = GSVector4i(m_context->scissor.in);
 	data.scissor.z = min(data.scissor.z, (int)m_context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
-	data.primclass = primclass;
+	data.primclass = m_vt.m_primclass;
 	data.vertices = m_vertices;
 	data.count = m_count;
 	data.param = &p;
@@ -190,30 +182,19 @@ void GSRendererSW::Draw()
 
 	m_rl.GetStats(stats);
 
-	m_perfmon.Put(GSPerfMon::Draw, 1);
 	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
 	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
 
 	GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(data.scissor);
 
-	GIFRegBITBLTBUF BITBLTBUF;
-
-	BITBLTBUF.DBW = m_context->FRAME.FBW;
-
 	if(p.fm != 0xffffffff)
 	{
-		BITBLTBUF.DBP = m_context->FRAME.Block();
-		BITBLTBUF.DPSM = m_context->FRAME.PSM;
-
-		m_tc->InvalidateVideoMem(BITBLTBUF, r);
+		m_tc->InvalidateVideoMem(m_context->offset.fb, r);
 	}
 
 	if(p.zm != 0xffffffff)
 	{
-		BITBLTBUF.DBP = m_context->ZBUF.Block();
-		BITBLTBUF.DPSM = m_context->ZBUF.PSM;
-
-		m_tc->InvalidateVideoMem(BITBLTBUF, r);
+		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
 	}
 
 	if(s_dump)
@@ -251,7 +232,7 @@ void GSRendererSW::Draw()
 
 void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 {
-	m_tc->InvalidateVideoMem(BITBLTBUF, r);
+	m_tc->InvalidateVideoMem(m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM), r);
 }
 
 void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
@@ -261,9 +242,9 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 	p.vm = m_mem.m_vm8;
 
-	p.fbo = m_mem.GetPixelOffset(context->FRAME.Block(), context->FRAME.FBW, context->FRAME.PSM);
-	p.zbo = m_mem.GetPixelOffset(context->ZBUF.Block(), context->FRAME.FBW, context->ZBUF.PSM);
-	p.fzbo = m_mem.GetPixelOffset4(context->FRAME, context->ZBUF);
+	p.fbo = context->offset.fb;
+	p.zbo = context->offset.zb;
+	p.fzbo = context->offset.fzb;
 
 	p.sel.key = 0;
 
@@ -305,7 +286,7 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 	if(fwrite || ftest)
 	{
-		p.sel.fpsm = GSUtil::EncodePSM(context->FRAME.PSM);
+		p.sel.fpsm = GSLocalMemory::m_psm[context->FRAME.PSM].fmt;
 
 		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt.m_eq.rgba != 0xffff)
 		{
@@ -322,7 +303,7 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 			p.sel.wms = context->CLAMP.WMS;
 			p.sel.wmt = context->CLAMP.WMT;
 
-			if(/*p.sel.iip == 0 &&*/ p.sel.tfx == TFX_MODULATE && p.sel.tcc && m_vt.m_eq.rgba == 0xffff && m_vt.m_min.c.eq(GSVector4i(128)))
+			if(p.sel.tfx == TFX_MODULATE && p.sel.tcc && m_vt.m_eq.rgba == 0xffff && m_vt.m_min.c.eq(GSVector4i(128)))
 			{
 				// modulate does not do anything when vertex color is 0x80
 
@@ -433,15 +414,15 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 	}
 
 	bool zwrite = p.zm != 0xffffffff;
-	bool ztest = context->TEST.ZTE && context->TEST.ZTST > 1;
+	bool ztest = context->TEST.ZTE && context->TEST.ZTST > ZTST_ALWAYS;
 
 	p.sel.zwrite = zwrite;
 	p.sel.ztest = ztest;
 
 	if(zwrite || ztest)
 	{
-		p.sel.zpsm = GSUtil::EncodePSM(context->ZBUF.PSM);
-		p.sel.ztst = ztest ? context->TEST.ZTST : 1;
+		p.sel.zpsm = GSLocalMemory::m_psm[context->ZBUF.PSM].fmt;
+		p.sel.ztst = ztest ? context->TEST.ZTST : ZTST_ALWAYS;
 		p.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
 	}
 }

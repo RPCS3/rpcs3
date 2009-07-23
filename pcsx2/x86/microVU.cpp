@@ -50,6 +50,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVU->prog.max		= mMaxProg - 1;
 	mVU->prog.prog		= (microProgram*)_aligned_malloc(sizeof(microProgram)*(mVU->prog.max+1), 64);
 	mVU->prog.progList	= new int[mMaxProg];
+	mVU->regAlloc		= new microRegAlloc(mVU->regs);
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 
 	mVU->cache = SysMmapEx((vuIndex ? 0x5f240000 : 0x5e240000), mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
@@ -107,12 +108,13 @@ microVUt(void) mVUclose(mV) {
 	if (mVU->prog.prog) {
 		for (int i = 0; i <= mVU->prog.max; i++) {
 			for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-				microBlockManager::Delete(mVU->prog.prog[i].block[j]);
+				safe_delete(mVU->prog.prog[i].block[j]);
 			}
 		}
 		safe_aligned_free(mVU->prog.prog);
 	}
 	safe_delete_array(mVU->prog.progList);
+	safe_delete(mVU->regAlloc);
 }
 
 // Clears Block Data in specified range
@@ -139,7 +141,7 @@ microVUf(void) mVUclearProg(int progIndex) {
 		mVUprogI.ranges.total		= -1;
 	}
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		microBlockManager::Delete(mVUprogI.block[i]);
+		safe_delete(mVUprogI.block[i]);
 	}
 }
 

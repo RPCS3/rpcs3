@@ -83,6 +83,7 @@ struct LogSources
 		DMA:1,
 		Bios:1,
 		ELF:1,
+		IsoFS:1,		// Iso Filesystem support
 		VU0:1,
 		COP0:1,		// TLB logs, PERF logs, Debug register logs
 		VIF:1,
@@ -140,6 +141,7 @@ extern bool SrcLog_PSXCNT( const char* fmt, ... );
 extern bool SrcLog_MEMCARDS( const char* fmt, ... );
 extern bool SrcLog_PAD( const char* fmt, ... );
 extern bool SrcLog_CDR( const char* fmt, ... );
+extern bool SrcLog_CDVD( const char* fmt, ... );
 extern bool SrcLog_GPU( const char* fmt, ... );
 
 #define CPU_LOG  (varLog.R5900) && SrcLog_CPU
@@ -158,6 +160,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define VUM_LOG  (varLog.VUMacro) && SrcLog_VUM
 #define RPC_LOG  (varLog.RPC) && SrcLog_RPC
 #define EECNT_LOG (varLog.Counters) && SrcLog_EECNT
+#define ISOFS_LOG  (varLog.IsoFS) && SrcLog_RPC
 
 #define PSXCPU_LOG  (varLog.R3000A) && SrcLog_PSXCPU
 #define PSXMEM_LOG  (varLog.IopMemory) && SrcLog_PSXMEM
@@ -171,6 +174,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define PAD_LOG  (varLog.Pad) && SrcLog_PAD
 #define CDR_LOG  (varLog.CDVD) && SrcLog_CDR
 #define GPU_LOG  (varLog.GPU) && SrcLog_GPU
+#define CDVD_LOG  SrcLog_CDVD
 
 // fixme - currently we don't log cache
 #define CACHE_LOG 0&&
@@ -195,7 +199,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define SIF_LOG  0&&
 #define IPU_LOG  0&&
 #define VUM_LOG  0&&
-#define RPC_LOG  0&&
+#define ISOFS_LOG  0&&
 
 #define PSXCPU_LOG  0&&
 #define PSXMEM_LOG  0&&
@@ -205,6 +209,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 
 #define PAD_LOG  0&&
 #define CDR_LOG  0&&
+#define CDVD_LOG  0&&
 #define GPU_LOG  0&&
 #define PSXCNT_LOG 0&&
 #define EECNT_LOG 0&&

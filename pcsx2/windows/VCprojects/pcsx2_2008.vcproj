@@ -1776,6 +1776,26 @@
 						RelativePath="..\..\CDVD\CDVD_internal.h"
 						>
 					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVDaccess.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVDaccess.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVDisoReader.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVDisoReader.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\CDVD\CDVDlib.h"
+						>
+					</File>
 				</Filter>
 			</Filter>
 			<Filter
@@ -2154,31 +2174,39 @@
 				Name="ISO"
 				>
 				<File
-					RelativePath="..\..\CDVD\CDVDiso.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\CDVDiso.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\CDVDisodrv.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\CDVDisodrv.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\CDVDlib.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\Elfheader.cpp"
 					>
 				</File>
 				<File
 					RelativePath="..\..\Elfheader.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFileFormats.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFileFormats.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFScdvd.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFSdrv.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFSdrv.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFStools.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFStools.h"
 					>
 				</File>
 			</Filter>

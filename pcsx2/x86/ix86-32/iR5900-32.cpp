@@ -74,24 +74,24 @@ u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
 // Static Private Variables - R5900 Dynarec
 
 #define X86
-static const int RECSTACK_SIZE = 0x00020000;
+static const int RECCONSTBUF_SIZE = 16384 * 2; // 64 bit consts in 32 bit units
 
 static u8 *recMem = NULL;			// the recompiled blocks will be here
-static u8* recStack = NULL;			// stack mem
+static u32* recConstBuf = NULL;			// 64-bit pseudo-immediates
 static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;		// and here
 static BASEBLOCK *recROM1 = NULL;		// also here
 static u32 *recRAMCopy = NULL;
 void JITCompile();
 static BaseBlocks recBlocks((uptr)JITCompile);
-static u8* recPtr = NULL, *recStackPtr = NULL;
+static u8* recPtr = NULL;
+static u32 *recConstBufPtr = NULL;
 EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
 
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
 u32 s_nEndBlock = 0; // what pc the current block ends	
-static u32 s_nHasDelay = 0;
 static bool s_nBlockFF;
 
 // save states for branches
@@ -208,13 +208,8 @@ u32* _eeGetConstReg(int reg)
 		return &cpuRegs.GPR.r[ reg ].UL[0];
 
 	// if written in the future, don't flush
-	if( _recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, reg) ) {
-		u32* ptempmem;
-		ptempmem = recAllocStackMem(8, 4);
-		ptempmem[0] = g_cpuConstRegs[ reg ].UL[0];
-		ptempmem[1] = g_cpuConstRegs[ reg ].UL[1];
-		return ptempmem;
-	}
+	if( _recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, reg) )
+		return recGetImm64(g_cpuConstRegs[reg].UL[1], g_cpuConstRegs[reg].UL[0]);
 	
 	_flushConstReg(reg);
 	return &cpuRegs.GPR.r[ reg ].UL[0];
@@ -340,19 +335,44 @@ int _flushUnusedConstReg()
 	return 0;
 }
 
-// ------------------------------------------------------------------------
-// recAllocStackMem -- an optimization trick to write data to a location so that
-// recompiled code can reference it later on during execution.
-//
-// Intended use is for setting up 64/128 bit SSE immediates, primarily.
-//
-u32* recAllocStackMem(int size, int align)
+// Some of the generated MMX code needs 64-bit immediates but x86 doesn't
+// provide this.  One of the reasons we are probably better off not doing
+// MMX register allocation for the EE.
+u32* recGetImm64(u32 hi, u32 lo)
 {
-	jASSUME( align == 4 || align == 8 || align == 16 );
+	u32 *imm64; // returned pointer
+	static u32 *imm64_cache[509];
+	int cacheidx = lo % (sizeof imm64_cache / sizeof *imm64_cache);
+	//static int count; count++;
 
-	recStackPtr = (u8*) ( (((uptr)recStackPtr) + (align-1)) & ~(align-1) );
-	recStackPtr += size;
-	return (u32*)(recStackPtr-size);
+	imm64 = imm64_cache[cacheidx];
+	if (imm64 && imm64[0] == lo && imm64[1] == hi)
+		return imm64;
+
+	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE) {
+		// TODO: flag an error in recompilation which would reset the recompiler
+		// immediately and recompile the current block again.  There is currently
+		// no way to do this, so have a last ditch attempt at making things sane
+		// and return some nonsense if that fails.
+		for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
+			if (p[0] == lo && p[1] == hi) {
+				imm64_cache[cacheidx] = p;
+				return p;
+			}
+
+		return recConstBuf;
+	}
+
+	imm64 = recConstBufPtr;
+	recConstBufPtr += 2;
+	imm64_cache[cacheidx] = imm64;
+
+	imm64[0] = lo;
+	imm64[1] = hi;
+
+	//Console::Notice("Consts allocated: %d of %u", params (recConstBufPtr - recConstBuf) / 2, count);
+
+	return imm64;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -365,7 +385,7 @@ static u8* m_recBlockAlloc = NULL;
 
 static const uint m_recBlockAllocSize = 
 	(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK))
-+	RECSTACK_SIZE + Ps2MemSize::Base;
++	RECCONSTBUF_SIZE * sizeof(u32) + Ps2MemSize::Base;
 
 static void recAlloc() 
 {
@@ -407,7 +427,7 @@ static void recAlloc()
 	recRAM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Base / 4) * sizeof(BASEBLOCK);
 	recROM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom / 4) * sizeof(BASEBLOCK);
 	recROM1 = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom1 / 4) * sizeof(BASEBLOCK);
-	recStack = (u8*)curpos; curpos += RECSTACK_SIZE;
+	recConstBuf = (u32*)curpos; curpos += RECCONSTBUF_SIZE * sizeof(u32);
 	recRAMCopy = (u32*)curpos;
 
 	if( s_pInstCache == NULL )
@@ -436,8 +456,10 @@ void recResetEE( void )
 
 	maxrecmem = 0;
 
-	memset_8<0xcc, REC_CACHEMEM>(recMem);	// 0xcc is INT3
-	memzero_ptr<m_recBlockAllocSize>( m_recBlockAlloc );
+	if (IsDevBuild)
+		memset_8<0xcc, REC_CACHEMEM>(recMem); // 0xcc is INT3
+	memzero_ptr<m_recBlockAllocSize - Ps2MemSize::Base>( m_recBlockAlloc ); // Excluding the 32mb ram copy
+	memzero_ptr<RECCONSTBUF_SIZE * sizeof(u32)>(recConstBuf);
 	memzero_obj( manual_page );
 	memzero_obj( manual_counter );
 	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
@@ -489,7 +511,7 @@ void recResetEE( void )
 	x86SetPtr(recMem);
 
 	recPtr = recMem;
-	recStackPtr = recStack;
+	recConstBufPtr = recConstBuf;
 	x86FpuState = FPU_STATE;
 
 	branch = 0;
@@ -504,7 +526,7 @@ static void recShutdown( void )
 	SafeSysMunmap( recMem, REC_CACHEMEM );
 	safe_aligned_free( m_recBlockAlloc );
 	recRAM = recROM = recROM1 = NULL;
-	recStack = NULL;
+	recConstBuf = NULL;
 	recRAMCopy = NULL;
 
 	safe_free( s_pInstCache );
@@ -1246,7 +1268,7 @@ void recRecompile( const u32 startpc )
 	if ( ( (uptr)recPtr - (uptr)recMem ) >= REC_CACHEMEM-0x40000 || dumplog == 0xffffffff) {
 		recResetEE();
 	}
-	if ( ( (uptr)recStackPtr - (uptr)recStack ) >= RECSTACK_SIZE-0x100 ) {
+	if ( (recConstBufPtr - recConstBuf) >= RECCONSTBUF_SIZE - 64 ) {
 		DevCon::WriteLn("EE recompiler stack reset");
 		recResetEE();
 	}
@@ -1300,7 +1322,6 @@ void recRecompile( const u32 startpc )
 	// go until the next branch
 	i = startpc;
 	s_nEndBlock = 0xffffffff;
-	s_nHasDelay = 0;
 	
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
@@ -1331,7 +1352,6 @@ void recRecompile( const u32 startpc )
 			case 0: // special
 				if( _Funct_ == 8 || _Funct_ == 9 ) { // JR, JALR
 					s_nEndBlock = i + 8;
-					s_nHasDelay = 1;
 					goto StartRecomp;
 				}
 				break;
@@ -1340,9 +1360,6 @@ void recRecompile( const u32 startpc )
 				
 				if( _Rt_ < 4 || (_Rt_ >= 16 && _Rt_ < 20) ) {
 					// branches
-					if( _Rt_ == 2 || _Rt_ == 3 || _Rt_ == 18 || _Rt_ == 19 ) s_nHasDelay = 1;
-					else s_nHasDelay = 2;
-
 					branchTo = _Imm_ * 4 + i + 4;
 					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 					else  s_nEndBlock = i+8;
@@ -1353,17 +1370,12 @@ void recRecompile( const u32 startpc )
 
 			case 2: // J
 			case 3: // JAL
-				s_nHasDelay = 1;
 				s_nEndBlock = i + 8;
 				goto StartRecomp;
 
 			// branches
 			case 4: case 5: case 6: case 7: 
 			case 20: case 21: case 22: case 23:
-
-				if( (cpuRegs.code >> 26) >= 20 ) s_nHasDelay = 1;
-				else s_nHasDelay = 2;
-
 				branchTo = _Imm_ * 4 + i + 4;
 				if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 				else  s_nEndBlock = i+8;
@@ -1385,9 +1397,6 @@ void recRecompile( const u32 startpc )
 				if( _Rs_ == 8 ) {
 					// BC1F, BC1T, BC1FL, BC1TL
 					// BC2F, BC2T, BC2FL, BC2TL
-					if( _Rt_ >= 2 ) s_nHasDelay = 1;
-					else s_nHasDelay = 2;
-
 					branchTo = _Imm_ * 4 + i + 4;
 					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 					else  s_nEndBlock = i+8;
@@ -1645,7 +1654,7 @@ StartRecomp:
 	}
 
 	assert( x86Ptr < recMem+REC_CACHEMEM );
-	assert( recStackPtr < recStack+RECSTACK_SIZE );
+	assert( recConstBufPtr < recConstBuf + RECCONSTBUF_SIZE );
 	assert( x86FpuState == 0 );
 
 	assert(x86Ptr - recPtr < 0x10000);

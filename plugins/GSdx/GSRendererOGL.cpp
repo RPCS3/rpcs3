@@ -30,9 +30,9 @@ GSRendererOGL::GSRendererOGL(uint8* base, bool mt, void (*irq)())
 	InitVertexKick<GSRendererOGL>();
 }
 
-bool GSRendererOGL::Create(const string& title)
+bool GSRendererOGL::Create(const string& title, int w, int h)
 {
-	if(!__super::Create(title))
+	if(!__super::Create(title, w, h))
 		return false;
 
 	// TODO
@@ -64,7 +64,7 @@ void GSRendererOGL::VertexKick(bool skip)
 	}
 }
 
-void GSRendererOGL::Draw(int prim, GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererOGL::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
 	GSDrawingEnvironment& env = m_env;
 	GSDrawingContext* context = m_context;
