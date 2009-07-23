@@ -34,10 +34,13 @@ int main(int argc, char *argv[])
 {
 	char *file = NULL;
 	char elfname[g_MaxPath];
+	string MainDirString;
 
 	efile = 0;
 	
-	getcwd(MAIN_DIR, ArraySize(MAIN_DIR)); /* store main dir */
+	/* store main dir */
+	MainDirString = Path::GetWorkingDirectory();
+	strcpy(MAIN_DIR, MainDirString.c_str());
 	Console::Notice("MAIN_DIR is %s", params MAIN_DIR);
 #ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");
@@ -51,12 +54,12 @@ int main(int argc, char *argv[])
 	sprintf(Config.InisDir, "%s/%s/", MAIN_DIR, DEFAULT_INIS_DIR);
 	sprintf(cfgfile, "%s/pcsx2.cfg", Config.InisDir);
 #else
-	mkdir("~/.pcsx2");
-	chdir("~/.pcsx2");
-	mkdir(DEFAULT_INIS_DIR, 0755);
+	Path::CreateDirectory(string("~/.pcsx2"));
+	Path::ChangeDirectory(string("~/.pcsx2"));
+	Path::CreateDirectory(string(DEFAULT_INIS_DIR));
 	sprintf(Config.InisDir, "~/.pcsx2/%s/", DEFAULT_INIS_DIR);
 	sprintf(cfgfile, "%s/pcsx2.cfg", Config.InisDir);
-	chdir(MAIN_DIR);
+	Path::ChangeDirectory(string(MAIN_DIR));
 #endif
 
 #ifdef PCSX2_DEVBUILD
@@ -143,8 +146,6 @@ int main(int argc, char *argv[])
 	if (file) strcpy(elfname, file);
 	if (!efile) efile = GetPS2ElfName(elfname);
 	loadElfFile(elfname);
-
-	//ExecuteCpu();
 
 	return 0;
 }
@@ -350,6 +351,7 @@ void OnFile_RunBIOS(GtkMenuItem *menuitem, gpointer user_data)
 void OnRunIso_Ok(GtkButton* button, gpointer user_data)
 {
 	gchar *File;
+	string curdir;
 	CDVD = ISO;
 
 	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));

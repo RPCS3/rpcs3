@@ -268,7 +268,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	textdomain(PACKAGE);
 #endif
 
-	_getcwd( g_WorkingFolder, g_MaxPath );
+	strcpy(g_WorkingFolder, Path::GetWorkingDirectory().c_str());
 
 	int argc;
 	TCHAR *const *const argv = _CommandLineToArgv( lpCmdLine, &argc );
@@ -286,7 +286,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			MessageBox( NULL, phelpmsg, "Pcsx2 Help", MB_OK);
 
 		case -1:	// exit...
-		return 0;
+			return 0;
 	}
 
 	try

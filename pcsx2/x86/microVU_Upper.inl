@@ -98,7 +98,7 @@ static void (*SSE_SS[]) (x86SSERegType, x86SSERegType) = {
 };
 
 // Prints Opcode to MicroProgram Logs
-void mVU_printOP(microVU* mVU, int opCase, char* opName, bool isACC) {
+void mVU_printOP(microVU* mVU, int opCase, const char* opName, bool isACC) {
 	mVUlog(opName);
 	opCase1 { if (isACC) { mVUlogACC(); } else { mVUlogFd(); } mVUlogFt(); }
 	opCase2 { if (isACC) { mVUlogACC(); } else { mVUlogFd(); } mVUlogBC(); }
@@ -130,7 +130,7 @@ void setupFtReg(microVU* mVU, int& Ft, int opCase) {
 }
 
 // Normal FMAC Opcodes
-void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, char* opName) {
+void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, isACC, ((opType == 3) || (opType == 4))); }
 	pass2 {
 		int Fs, Ft, ACC;
@@ -171,7 +171,7 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, ch
 }
 
 // MADDA/MSUBA Opcodes
-void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, char* opName) {
+void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, 1, 0); }
 	pass2 {
 		int Fs, Ft, ACC;
@@ -215,7 +215,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, char* opName) 
 }
 
 // MADD Opcodes
-void mVU_FMACc(microVU* mVU, int recPass, int opCase, char* opName) {
+void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
 		int Fs, Ft, ACC;
@@ -247,7 +247,7 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, char* opName) {
 }
 
 // MSUB Opcodes
-void mVU_FMACd(microVU* mVU, int recPass, int opCase, char* opName) {
+void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
 		int Fs, Ft, Fd;
@@ -335,7 +335,7 @@ mVUop(mVU_OPMSUB) {
 }
 
 // FTOI0/FTIO4/FTIO12/FTIO15 Opcodes
-void mVU_FTOIx(mP, uptr addr, char* opName) {
+void mVU_FTOIx(mP, uptr addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 { 
 		if (!_Ft_) return;
@@ -364,7 +364,7 @@ void mVU_FTOIx(mP, uptr addr, char* opName) {
 }
 
 // ITOF0/ITOF4/ITOF12/ITOF15 Opcodes
-void mVU_ITOFx(mP, uptr addr, char* opName) {
+void mVU_ITOFx(mP, uptr addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 { 
 		if (!_Ft_) return;

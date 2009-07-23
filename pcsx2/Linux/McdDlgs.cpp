@@ -20,7 +20,8 @@
 
 void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data) 
 {
-	char file[g_MaxPath], card[g_MaxPath];
+	string file;
+	char card[g_MaxPath];
 	DIR *dir;
 	struct dirent *entry;     
 	struct stat statinfo;
@@ -37,10 +38,10 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 	set_checked(MemDlg, "check_enable_mcd2", Config.Mcd[1].Enabled);
 	set_checked(MemDlg, "check_eject_mcds", Config.McdEnableEject);
 	
-	getcwd(file, ArraySize(file)); /* store current dir */
-	sprintf(card, "%s/%s", file, MEMCARDS_DIR );
-	chdir(card); /* change dirs so that plugins can find their config file*/
-	    
+	file = Path::GetCurrentDirectory();/* store current dir */
+	sprintf(card, "%s/%s", file.c_str(), MEMCARDS_DIR );
+	Path::ChangeDirectory(string(card));/* change dirs so that plugins can find their config file*/
+	
 	if ((dir = opendir(card)) == NULL)
 	{
 		Console::Error("ERROR: Could not open directory %s\n", params card);
@@ -72,8 +73,7 @@ void OnConf_Memcards(GtkMenuItem *menuitem, gpointer user_data)
 	}
 	
 	closedir(dir);
-
-	chdir(file);
+	Path::ChangeDirectory(file);
 	gtk_widget_show_all(MemDlg);
 	gtk_widget_set_sensitive(MainWindow, FALSE);
 	gtk_main();

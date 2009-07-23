@@ -136,6 +136,7 @@ struct PcsxConfig
 {
 public:
 	char Bios[g_MaxPath];
+
 	char GS[g_MaxPath];
 	char PAD1[g_MaxPath];
 	char PAD2[g_MaxPath];
@@ -144,9 +145,11 @@ public:
 	char DEV9[g_MaxPath];
 	char USB[g_MaxPath];
 	char FW[g_MaxPath];
+
 	char PluginsDir[g_MaxPath];
 	char BiosDir[g_MaxPath];
 	char InisDir[g_MaxPath]; // This is intended for the program to populate, and the plugins to read. Obviously can't be saved in the config file. :)
+
 	char Lang[g_MaxPath];
 
 	McdConfig Mcd[2];

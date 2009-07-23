@@ -156,6 +156,7 @@ void SaveConfig()
 	SetValue("Lang",    Config.Lang);
 	SetValue("PluginsDir", Config.PluginsDir);
 	SetValue("BiosDir",    Config.BiosDir);
+	
 	SetValuel("Ps2Out",     Config.PsxOut);
 	SetValuel("cdvdPrint",     Config.cdvdPrint);
 	

@@ -18,7 +18,6 @@
 
 #include "PrecompiledHeader.h"
 
-// TODO: fix this for linux! (hardcoded as _WIN32 only)
 #define ENABLE_TIMESTAMPS
 
 #ifdef _WIN32
@@ -53,9 +52,11 @@ int CheckDiskTypeFS(int baseType)
 	static struct TocEntry tocEntry;
 
 	IsoFS_init();
-
+	
+	f = IsoFS_open("SYSTEM.CNF;1", 1);
+	
 	// check if the file exists
-	if ((f=IsoFS_open("SYSTEM.CNF;1", 1)) >= 0)
+	if (f >= 0)
 	{
 		int size = IsoFS_read(f, buffer, 256);
 		IsoFS_close(f);
@@ -91,9 +92,7 @@ int FindDiskType(int mType)
 {
 	int dataTracks = 0;
 	int audioTracks = 0;
-
 	int iCDType = mType;
-
 	cdvdTN tn;
 
 	CDVD.getTN(&tn);
@@ -105,6 +104,7 @@ int FindDiskType(int mType)
 	else if (mType < 0)
 	{
 		cdvdTD td;
+		
 		CDVD.getTD(0,&td);
 		if (td.lsn > 452849)
 		{
@@ -153,6 +153,7 @@ int FindDiskType(int mType)
 	for(int i = tn.strack; i <= tn.etrack; i++)
 	{
 		cdvdTD td,td2;
+		
 		CDVD.getTD(i,&td);
 
 		if (tn.etrack > i)
@@ -260,20 +261,15 @@ s32 DoCDVDopen(const char* pTitleFilename)
 	int ret = CDVD.open(pTitleFilename);
 	int cdtype = DoCDVDdetectDiskType();
 
-	if((Config.Blockdump)&&(cdtype != CDVD_TYPE_NODISC))
+	if ((Config.Blockdump) && (cdtype != CDVD_TYPE_NODISC))
 	{
 		char fname_only[g_MaxPath];
 
-		if(CDVD.init == ISO.init)
+		if (CDVD.init == ISO.init)
 		{
-#ifdef _WIN32
-			char fname[MAX_PATH], ext[g_MaxPath];
-			_splitpath(isoFileName, NULL, NULL, fname, ext);
-			_makepath(fname_only, NULL, NULL, fname, NULL);
-#else
-			getcwd(fname_only, ArraySize(fname_only)); // Base it out of the current directory for now.
-			strcat(fname_only, Path::GetFilenameWithoutExt(isoFileName).c_str());
-#endif
+			// Base it out of the current directory for now.
+			string temp = Path::GetWorkingDirectory() + Path::GetFilenameWithoutExt(isoFileName);
+			strcpy(fname_only, temp.c_str());
 		}
 		else
 		{

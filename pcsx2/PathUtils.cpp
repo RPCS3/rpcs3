@@ -255,9 +255,29 @@ string GetRootDirectory( const string& src )
 void CreateDirectory( const string& src )
 {
 #ifdef _WIN32
-	_mkdir( src.c_str() );
+	_mkdir(src.c_str());
 #else
 	mkdir( src.c_str(), 0755);
+#endif
+}
+
+string GetWorkingDirectory(void)
+{
+	char curdir[g_MaxPath];
+#ifdef _WIN32
+	_getcwd(curdir, ArraySize(curdir));
+#else
+	getcwd(curdir, ArraySize(curdir));
+#endif
+	return string(curdir);
+}
+
+void ChangeDirectory(const string& src)
+{
+#ifdef _WIN32
+	_chdir(src.c_str() );
+#else
+	chdir(src.c_str());
 #endif
 }
 
