@@ -39,12 +39,6 @@ private:
 	int listI;
 
 public:
-	// Use instead of normal 'delete'
-	static void Delete(microBlockManager* &dead) {
-		if (!dead) return;
-		dead->~microBlockManager();
-		safe_delete(dead);
-	}
 	microBlockManager() { 
 		listI = -1;
 		blockList.block = NULL;

@@ -108,7 +108,7 @@ microVUt(void) mVUclose(mV) {
 	if (mVU->prog.prog) {
 		for (int i = 0; i <= mVU->prog.max; i++) {
 			for (u32 j = 0; j < (mVU->progSize / 2); j++) {
-				microBlockManager::Delete(mVU->prog.prog[i].block[j]);
+				safe_delete(mVU->prog.prog[i].block[j]);
 			}
 		}
 		safe_aligned_free(mVU->prog.prog);
@@ -141,7 +141,7 @@ microVUf(void) mVUclearProg(int progIndex) {
 		mVUprogI.ranges.total		= -1;
 	}
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		microBlockManager::Delete(mVUprogI.block[i]);
+		safe_delete(mVUprogI.block[i]);
 	}
 }
 

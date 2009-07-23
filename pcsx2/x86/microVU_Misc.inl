@@ -299,14 +299,13 @@ microVUt(void) mVUaddrFix(mV, int gprReg) {
 }
 
 // Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
-microVUt(void) mVUbackupRegs(mV) {
-	//SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
+microVUt(void) mVUbackupRegs(microVU* mVU) {
+	mVU->regAlloc->flushAll();
 	SSE_MOVAPS_XMM_to_M128((uptr)&mVU->xmmPQb[0], xmmPQ);
 }
 
 // Restore Volatile Regs
-microVUt(void) mVUrestoreRegs(mV) {
-	//SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
+microVUt(void) mVUrestoreRegs(microVU* mVU) {
 	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
 	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
