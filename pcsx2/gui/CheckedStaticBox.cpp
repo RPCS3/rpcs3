@@ -20,10 +20,10 @@
 #include "CheckedStaticBox.h"
 
 CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title, int id ) :
-	wxPanel( parent ),
-	m_MasterSizer( *new wxBoxSizer( wxVERTICAL ) ),
-	ThisToggle( *new wxCheckBox( this, id, title, wxPoint( 8, 0 ) ) ),
-	ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
+	wxPanelWithHelpers( parent, wxDefaultCoord )
+,	m_MasterSizer( *new wxBoxSizer( wxVERTICAL ) )
+,	ThisToggle( *new wxCheckBox( this, id, title, wxPoint( 8, 0 ) ) )
+,	ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
 {
 	m_MasterSizer.Add( &ThisToggle );
 	m_MasterSizer.Add( &ThisSizer, wxSizerFlags().Expand() );
@@ -39,9 +39,9 @@ CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxS
 // Adds a checkbox to this group panel's base sizer.
 // This is a helper function which saves some typographic red tape over using manual
 // checkbox creation and sizer appendage.
-wxCheckBox& CheckedStaticBox::AddCheckBox( const wxString& label, wxWindowID id )
+wxCheckBox& CheckedStaticBox::AddCheckBox( const wxString& label, const wxString& subtext, const wxString& tooltip )
 {
-	return wxHelpers::AddCheckBoxTo( this, ThisSizer, label, id );
+	return wxPanelWithHelpers::AddCheckBox( ThisSizer, label, subtext, tooltip );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

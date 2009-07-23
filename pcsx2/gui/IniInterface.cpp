@@ -99,10 +99,17 @@ void IniLoader::Entry( const wxString& var, bool& value, const bool defvalue )
 	value = (dest == L"enabled") || (dest != L"0");
 }
 
-bool IniLoader::EntryBitfield( const wxString& var, bool value, const bool defvalue )
+bool IniLoader::EntryBitBool( const wxString& var, bool value, const bool defvalue )
 {
 	// Note: 'value' param is used by inisaver only.
 	bool result;
+	Entry( var, result, defvalue );
+	return result;
+}
+
+int IniLoader::EntryBitfield( const wxString& var, int value, const int defvalue )
+{
+	int result;
 	Entry( var, result, defvalue );
 	return result;
 }
@@ -122,7 +129,7 @@ void IniLoader::Entry( const wxString& var, wxRect& value, const wxRect& defvalu
 	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
 }
 
-void IniLoader::EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
+void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
 {
 	wxString retval;
 	m_Config.Read( var, &retval, enumArray[defvalue] );
@@ -184,9 +191,15 @@ void IniSaver::Entry( const wxString& var, bool& value, const bool defvalue )
 	m_Config.Write( var, value ? L"enabled" : L"disabled" );
 }
 
-bool IniSaver::EntryBitfield( const wxString& var, bool value, const bool defvalue )
+bool IniSaver::EntryBitBool( const wxString& var, bool value, const bool defvalue )
 {
 	m_Config.Write( var, value ? L"enabled" : L"disabled" );
+	return value;
+}
+
+int IniSaver::EntryBitfield( const wxString& var, int value, const int defvalue )
+{
+	m_Config.Write( var, value );
 	return value;
 }
 
@@ -205,7 +218,7 @@ void IniSaver::Entry( const wxString& var, wxRect& value, const wxRect& defvalue
 	m_Config.Write( var, ToString( value ) );
 }
 
-void IniSaver::EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
+void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
 {
 	m_Config.Write( var, enumArray[value] );
 }

@@ -138,8 +138,8 @@ namespace Panels
 			g_ApplyState.PanelList.remove( this );
 		}
 
-		BaseApplicableConfigPanel( wxWindow* parent ) : 
-			wxPanelWithHelpers( parent, wxID_ANY )
+		BaseApplicableConfigPanel( wxWindow* parent, int idealWidth ) : 
+			wxPanelWithHelpers( parent, idealWidth )
 		,	m_OwnerPage( g_ApplyState.CurOwnerPage )
 		,	m_OwnerBook( g_ApplyState.ParentBook )
 		{
@@ -172,8 +172,23 @@ namespace Panels
 
 	public:
 		virtual ~UsermodeSelectionPanel() { }
-		UsermodeSelectionPanel( wxWindow* parent );
-		
+		UsermodeSelectionPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
+
+		void Apply( AppConfig& conf );
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class LanguageSelectionPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		LangPackList	m_langs;
+		wxComboBox*		m_picker;
+
+	public:
+		virtual ~LanguageSelectionPanel() { }
+		LanguageSelectionPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
+
 		void Apply( AppConfig& conf );
 	};
 	
@@ -181,15 +196,26 @@ namespace Panels
 	//
 	class SpeedHacksPanel : public BaseApplicableConfigPanel
 	{
+	protected:
+		wxSlider* m_slider_eecycle;
+		wxSlider* m_slider_vustealer;
+		wxStaticText* m_msg_eecycle;
+		wxStaticText* m_msg_vustealer;
+		
+		wxCheckBox* m_check_intc;
+		wxCheckBox* m_check_b1fc0;
+		wxCheckBox* m_check_IOPx2;
+
 	public:
-		SpeedHacksPanel(wxWindow& parent);
+		SpeedHacksPanel( wxWindow& parent, int idealWidth );
 		void Apply( AppConfig& conf );
 
 	protected:
-		void IOPCycleDouble_Click(wxCommandEvent &event);
-		void WaitCycleExt_Click(wxCommandEvent &event);
-		void INTCSTATSlow_Click(wxCommandEvent &event);
-		void IdleLoopFF_Click(wxCommandEvent &event);
+		const wxChar* GetEEcycleSliderMsg( int val );
+		const wxChar* GetVUcycleSliderMsg( int val );
+
+		void EECycleRate_Scroll(wxScrollEvent &event);
+		void VUCycleRate_Scroll(wxScrollEvent &event);
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -197,15 +223,8 @@ namespace Panels
 	class GameFixesPanel: public BaseApplicableConfigPanel
 	{
 	public:
-		GameFixesPanel(wxWindow& parent);
+		GameFixesPanel( wxWindow& parent, int idealWidth );
 		void Apply( AppConfig& conf );
-		
-		void FPUCompareHack_Click(wxCommandEvent &event);
-		void FPUMultHack_Click(wxCommandEvent &event);
-		void TriAce_Click(wxCommandEvent &event);
-		void GodWar_Click(wxCommandEvent &event);
-		void Ok_Click(wxCommandEvent &event);
-		void Cancel_Click(wxCommandEvent &event);
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -235,27 +254,27 @@ namespace Panels
 			wxBoxSizer& s_main;
 
 		public:
-			MyBasePanel(wxWindow& parent, int id=wxID_ANY);
+			MyBasePanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
 
 		protected:
-			void AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid, const wxString& label,
-				const wxString& popupLabel, enum ExpandedMsgEnum tooltip );
+			DirPickerPanel& AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid,
+				const wxString& label, const wxString& popupLabel );
 		};
 
 		class StandardPanel : public MyBasePanel
 		{
 		public:
-			StandardPanel(wxWindow& parent, int id=wxID_ANY);
+			StandardPanel( wxWindow& parent );
 		};
 
 		class AdvancedPanel : public MyBasePanel
 		{
 		public:
-			AdvancedPanel(wxWindow& parent, int id=wxID_ANY);
+			AdvancedPanel( wxWindow& parent, int idealWidth );
 		};
 
 	public:
-		PathsPanel(wxWindow& parent);
+		PathsPanel( wxWindow& parent, int idealWidth );
 		void Apply( AppConfig& conf );
 	};
 
@@ -342,7 +361,7 @@ namespace Panels
 
 	public:
 		virtual ~PluginSelectorPanel();
-		PluginSelectorPanel(wxWindow& parent);
+		PluginSelectorPanel( wxWindow& parent, int idealWidth );
 		virtual void OnShow( wxShowEvent& evt );
 		virtual void OnRefresh( wxCommandEvent& evt );
 		virtual void OnProgress( wxCommandEvent& evt );

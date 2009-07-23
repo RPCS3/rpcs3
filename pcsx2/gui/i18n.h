@@ -20,45 +20,33 @@
 
 #include <wx/wx.h>
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-enum ExpandedMsgEnum
-{
-	Msg_Dialog_AdvancedPaths,
-	Msg_Popup_MissingPlugins,
 
-	Msg_Tooltips_Savestates,
-	Msg_Tooltips_Snapshots,
-	Msg_Tooltips_Bios,
-	Msg_Tooltips_Logs,
-	Msg_Tooltips_Memorycards,
-	Msg_Tooltips_SettingsPath,
-	Msg_Tooltips_PluginsPath,
+class LangPackEnumeration
+{
+public:
+	wxLanguage wxLangId;
+	wxString englishName;
+	wxString xlatedName;
 	
-	ExpandedMsg_Count
+public:
+	LangPackEnumeration( wxLanguage langId );
+	LangPackEnumeration();
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// English Tables for "Translating" iconized UI descriptions.
-//
-struct HashedExpansionPair
-{
-	const wxChar* gettextKey;			// send this to wxGetTranslation()
-	const wxChar* Expanded;
-};
+typedef std::vector<LangPackEnumeration> LangPackList;
 
-struct EnglishExpansionEntry
-{
-	ExpandedMsgEnum Key;
-	const wxChar* gettextKey;			// send this to wxGetTranslation()
-	const wxChar* Expanded;
-};
-
-extern void i18n_InitPlainEnglish();
 extern bool i18n_SetLanguage( int wxLangId );
+extern void i18n_EnumeratePackages( LangPackList& langs );
 
-extern const wxChar* __fastcall pxExpandMsg( ExpandedMsgEnum key );
+extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent );
 extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
 
-#define pxE(n)		pxExpandMsg( n )
+//////////////////////////////////////////////////////////////////////////////////////////
+// Translation Feature: pxE is used as a method of dereferencing very long english text
+// descriptions via a "key" identifier.  In this way, the english text can be revised without
+// it breaking existing translation bindings.  Make sure to add pxE to your PO catalog's
+// source code identifiers, and then reference the source code to see what the current
+// english version is.
+//
+#define pxE(key,english)		pxExpandMsg( wxT(key), english )
 

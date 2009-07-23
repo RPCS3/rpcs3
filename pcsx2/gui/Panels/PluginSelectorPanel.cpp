@@ -66,7 +66,7 @@ DECLARE_EVENT_TYPE(wxEVT_EnumeratedNext, -1)
 DECLARE_EVENT_TYPE(wxEVT_EnumerationFinished, -1)
 
 DEFINE_EVENT_TYPE(wxEVT_EnumeratedNext)
-DEFINE_EVENT_TYPE(wxEVT_EnumerationFinished)
+DEFINE_EVENT_TYPE(wxEVT_EnumerationFinished);
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -158,7 +158,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent, int plu
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 
-	AddStaticText( s_main, _( "Enumerating available plugins..." ), 0, wxALIGN_CENTRE );
+	AddStaticText( s_main, _( "Enumerating available plugins..." ), wxALIGN_CENTRE );
 	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
 	s_main.Add( &m_label, SizerFlags::StdExpand() );
 
@@ -208,8 +208,8 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 }
 
 // ------------------------------------------------------------------------
-Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent ) :
-	BaseApplicableConfigPanel( &parent )
+Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWidth ) :
+	BaseApplicableConfigPanel( &parent, idealWidth )
 ,	m_FileList()
 ,	m_StatusPanel( *new StatusPanel( this,
 		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), &m_FileList, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES )
@@ -223,7 +223,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent ) :
 	s_main.Add( &m_ComboBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
 	s_main.AddSpacer( 4 );
-	AddStaticText( s_main, _("Tip: Any installed plugins that are not compatible with your hardware or operating system will be listed below a separator."), 388, wxALIGN_CENTRE );
+	AddStaticText( s_main, _("Tip: Installed plugins that are not compatible with your hardware or operating system will be listed below a separator."), wxALIGN_CENTRE );
 	s_main.AddSpacer( 4 );
 
 	s_main.Add( &m_StatusPanel, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
@@ -315,8 +315,11 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 
 	if( emptyBoxes > 0 )
 	{
-		wxMessageBox( pxE( Msg_Popup_MissingPlugins),
-			_("PCSX2 Error - Plugin components not found") );
+		wxMessageBox( pxE( "Popup Error:Missing Plugins",
+				L"Critical Error: A valid plugin for one or more components of PCSX2 could not be found. "
+				L"Your installation of PCSX2 is incomplete, and will be unable to run games."),
+			_("PCSX2 Error - Plugin components not found")
+		);
 	}
 
 	m_ComboBoxes.Show();

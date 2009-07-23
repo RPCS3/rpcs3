@@ -350,7 +350,8 @@ wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( F
 // syntax errors. >_<
 //
 #define IniEntry( varname, defval ) ini.Entry( wxT(#varname), varname, defval )
-#define IniEntryBitfield( varname, defval ) varname = ini.EntryBitfield( wxT(#varname), defval )
+#define IniBitfield( varname, defval ) varname = ini.EntryBitfield( wxT(#varname), varname, defval )
+#define IniBitBool( varname, defval ) varname = ini.EntryBitBool( wxT(#varname), varname, defval )
 
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveUserMode( IniInterface& ini )
@@ -365,7 +366,7 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini )
 void AppConfig::LoadSave( IniInterface& ini )
 {
 	IniEntry( MainGuiPosition,		wxDefaultPosition );
-	IniEntry( LanguageId,			wxLANGUAGE_DEFAULT );
+	ini.EnumEntry( L"LanguageId", LanguageId );
 	IniEntry( RecentFileCount,		6 );
 	IniEntry( DeskTheme,			L"default" );
 	IniEntry( Listbook_ImageSize,	32 );
@@ -466,6 +467,12 @@ void AppConfig::SpeedhackOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Speedhacks" );
 
+	IniBitfield( EECycleRate, 0 );
+	IniBitfield( VUCycleSteal, 0 );
+	IniBitBool( IopCycleRate_X2, false );
+	IniBitBool( IntcStat, false );
+	IniBitBool( BIFC0, false );
+
 	ini.SetPath( L".." );
 }
 
@@ -498,13 +505,13 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 
 	IniEntry( RunIso,		PathDefs::GetDocuments() );			// raw default is always the Documents folder.
 
-	IniEntryBitfield( UseDefaultPlugins,		true );
-	IniEntryBitfield( UseDefaultSettings,		true );
-	IniEntryBitfield( UseDefaultBios,			true );
-	IniEntryBitfield( UseDefaultSnapshots,		true );
-	IniEntryBitfield( UseDefaultSavestates,		true );
-	IniEntryBitfield( UseDefaultMemoryCards,	true );
-	IniEntryBitfield( UseDefaultLogs,			true );
+	IniBitBool( UseDefaultPlugins,		true );
+	IniBitBool( UseDefaultSettings,		true );
+	IniBitBool( UseDefaultBios,			true );
+	IniBitBool( UseDefaultSnapshots,	true );
+	IniBitBool( UseDefaultSavestates,	true );
+	IniBitBool( UseDefaultMemoryCards,	true );
+	IniBitBool( UseDefaultLogs,			true );
 
 	if( ini.IsLoading() )
 		ApplyDefaults();

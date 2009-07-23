@@ -21,62 +21,31 @@
 
 using namespace wxHelpers;
 
-#define FLAG_VU_ADD_SUB 0x1 //Tri-Ace - IDC_GAMEFIX2
-#define FLAG_VU_CLIP 0x2 // Persona3/4  - IDC_GAMEFIX4
-#define FLAG_FPU_Compare 0x4 // Digimon Rumble Arena - IDC_GAMEFIX3
-#define FLAG_FPU_MUL 0x8 //Tales of Destiny - IDC_GAMEFIX5
-
-Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent ) :
-	BaseApplicableConfigPanel( &parent )
+Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
+	BaseApplicableConfigPanel( &parent, idealWidth)
 {
-	wxStaticText* label_Title = new wxStaticText(
-		this, wxID_ANY, _T("Some games need special settings.\nConfigure them here."), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
-	);
-
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here."), wxALIGN_CENTRE );
+
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
+	AddCheckBox( groupSizer, _("DMA Execution Hack - for Fatal Frame.") );
+	AddCheckBox( groupSizer, _("FPU Compare Hack - for Digimon Rumble Arena 2.") );
+	AddCheckBox( groupSizer, _("FPU Multiply Hack - for Tales of Destiny.") );
+	AddCheckBox( groupSizer, _("VU Add Hack - for Tri-Ace games!") );
+	AddCheckBox( groupSizer, _("VU XGkick Hack - for Erementar Gerad") );
 
-	AddCheckBox( groupSizer, _T("FPU Compare Hack - Special fix for Digimon Rumble Arena 2.") );
-	AddCheckBox( groupSizer, _T("FPU Multiply Hack - Special fix for Tales of Destiny.") );
-	AddCheckBox( groupSizer, _T("VU Add / Sub Hack - Special fix for Tri-Ace games!") );
-	AddCheckBox( groupSizer, _T("VU Clip Hack - Special fix for God of War") );
+	mainSizer.Add( &groupSizer, wxSizerFlags().Centre() );
 
-	mainSizer.Add( label_Title, SizerFlags::StdCenter() );
-	mainSizer.Add( &groupSizer, SizerFlags::StdSpace() );
+	AddStaticText( mainSizer, pxE( "Gamefixes Dialog:Compat Warning",
+		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
+		L"will need to turn off fixes manually when changing games."
+	), wxALIGN_CENTRE );
 
 	SetSizerAndFit( &mainSizer );
 
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::FPUCompareHack_Click ) );
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::FPUMultHack_Click ) );
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::TriAce_Click ) );
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( GameFixesPanel::GodWar_Click ) );
 }
 
 void Panels::GameFixesPanel::Apply( AppConfig& conf )
 {
-}
-
-void Panels::GameFixesPanel::FPUCompareHack_Click(wxCommandEvent &event)
-{
-	//Config.GameFixes |= is_checked ? FLAG_FPU_Compare : 0;
-	event.Skip();
-}
-
-void Panels::GameFixesPanel::FPUMultHack_Click(wxCommandEvent &event)
-{
-	//Config.GameFixes |= is_checked ? FLAG_FPU_MUL : 0;
-	event.Skip();
-}
-
-void Panels::GameFixesPanel::TriAce_Click(wxCommandEvent &event)
-{
-	//Config.GameFixes |= is_checked ? FLAG_VU_ADD_SUB : 0;
-	event.Skip();
-}
-
-
-void Panels::GameFixesPanel::GodWar_Click(wxCommandEvent &event)
-{
-	//Config.GameFixes |= is_checked ? FLAG_VU_CLIP : 0;
-	event.Skip();
+	
 }

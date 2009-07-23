@@ -24,83 +24,186 @@
 
 using namespace wxHelpers;
 
-Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent ) :
-	BaseApplicableConfigPanel( &parent )
+static int pxGetTextHeight( const wxWindow* wind, int rows )
+{
+	wxClientDC dc(wx_const_cast(wxWindow *, wind));
+	dc.SetFont( wind->GetFont() );
+	return (dc.GetCharHeight() + 1 ) * rows;
+}
+
+const wxChar* Panels::SpeedHacksPanel::GetEEcycleSliderMsg( int val )
+{
+	switch( val )
+	{
+		case 1:
+			return pxE(	":Panels:Speedhacks:EECycleX1",
+				L"1 - Default cyclerate. This closely matches the actual speed of a real PS2 EmotionEngine."
+			);
+
+		case 2:
+			return pxE( ":Panels:Speedhacks:EECycleX2",
+				L"2 - Reduces the EE's cyclerate by about 33%.  Mild speedup for most games with high compatibility."
+			);
+
+		case 3:
+			return pxE( ":Panels:Speedhacks:EECycleX3",
+				L"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* cause studdering "
+				L"audio on many FMVs."
+			);
+			
+		jNO_DEFAULT
+	}
+	
+	return L"Unreachable Warning Suppressor!!";
+}
+
+const wxChar* Panels::SpeedHacksPanel::GetVUcycleSliderMsg( int val )
+{
+	switch( val )
+	{
+		case 0:
+			return pxE(	":Panels:Speedhacks:VUCycleStealOff",
+				L"0 - Disables VU Cycle Stealing.  Most compatible setting!"
+			);
+
+		case 1:
+			return pxE( ":Panels:Speedhacks:VUCycleSteal1",
+				L"1 - Mild VU Cycle Stealing.  High compatibility with some speedup for most games."
+			);
+
+		case 2:
+			return pxE( ":Panels:Speedhacks:VUCycleSteal2",
+				L"2 - Moderate VU Cycle Stealing.  Moderate compatibility with significant speedups in some games."
+			);
+
+		case 3:
+			// TODO: Mention specific games that benefit from this setting here.
+			return pxE( ":Panels:Speedhacks:VUCycleSteal3",
+				L"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause flickering "
+				L"visuals or slowdown in most games."
+			);
+			
+		jNO_DEFAULT
+	}
+	
+	return L"Unreachable Warning Suppressor!!";
+}
+
+Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
+	BaseApplicableConfigPanel( &parent, idealWidth )
 {
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+	wxFlexGridSizer& cycleHacksSizer = *new wxFlexGridSizer( 2 );
+	
+	cycleHacksSizer.AddGrowableCol( 0, 1 );
+	cycleHacksSizer.AddGrowableCol( 1, 1 );
 
-	wxStaticBoxSizer& sliderSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Cycle Hacks") );
-	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Misc Speed Hacks") );
+	wxStaticBoxSizer& cyclerateSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("EE Cyclerate") );
+	wxStaticBoxSizer& stealerSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("VU Cycle Stealing") );
+	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Other Hacks") );
 
-	wxStaticText* label_Title = new wxStaticText(
-		this, wxID_ANY,
-		L"These hacks will affect the speed of PCSX2, but compromise compatibility.\n"
-		L"If you have issues, disable all of these and try again.",
-		wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
+	AddStaticText( mainSizer, pxE( ":Panels:Speedhacks:Overview",
+		L"These hacks will usually improve the speed of PCSX2 emulation, but compromise compatibility. "
+		L"If you have issues, always try disabling these hacks first."
+	), wxALIGN_CENTRE );
+
+	const wxChar* tooltip;		// needed because we duplicate tooltips across multiple controls.
+	const wxSizerFlags sliderFlags( wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
+
+	// ------------------------------------------------------------------------
+	// EE Cyclerate Hack Section:
+	
+	m_slider_eecycle = new wxSlider( this, wxID_ANY, g_Conf->Speedhacks.EECycleRate+1, 1, 3,
+		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
+	
+	tooltip = pxE( ":Tooltips:Speedhacks:EECycleRate Slider",
+		L"Setting higher values on this slider effectively reduces the clock speed of the EmotionEngine's "
+		L"R5900 core cpu, and typically brings big speedups to games that fail to utilize "
+		L"the full potential of the real PS2 hardware."
 	);
+	
+	cyclerateSizer.Add( m_slider_eecycle, sliderFlags );
+	m_msg_eecycle = &AddStaticText( cyclerateSizer, GetEEcycleSliderMsg( g_Conf->Speedhacks.EECycleRate+1 ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
+	m_msg_eecycle->SetForegroundColour( wxColour( L"Red" ) );
+	m_msg_eecycle->SetSizeHints( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_eecycle, 4) ) );
 
-	mainSizer.Add( label_Title, SizerFlags::StdCenter() );
+	m_slider_eecycle->SetToolTip( tooltip );
+	m_msg_eecycle->SetToolTip( tooltip );
 
-	wxSlider* vuScale = new wxSlider(this, wxID_ANY, Config.Hacks.VUCycleSteal,  0, 4 );
-	wxSlider* eeScale = new wxSlider(this, wxID_ANY, Config.Hacks.EECycleRate,  0, 2);
+	// ------------------------------------------------------------------------
+	// VU Cycle Stealing Hack Section:
 
-	AddStaticText(sliderSizer, _T("EE Cycle"));
-	sliderSizer.Add( eeScale, wxEXPAND );
-	AddStaticText(sliderSizer, _T("Placeholder text for EE scale position."));
+	m_slider_vustealer = new wxSlider( this, wxID_ANY, g_Conf->Speedhacks.VUCycleSteal, 0, 4, wxDefaultPosition, wxDefaultSize,
+		wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
 
-	AddStaticText(sliderSizer, _T("VU Cycle"));
-	sliderSizer.Add( vuScale, wxEXPAND );
-	AddStaticText(sliderSizer, _T("Placeholder text for VU scale position."));
+	tooltip = pxE( ":Tooltips:Speedhacks:VUCycleStealing Slider",
+		L"This slider controls the amount of cycles the VU unit steals from the EmotionEngine.  Higher values increase the number of "
+		L"cycles stolen from the EE for each VU microprogram the game runs."
+	);
+	// Misc help text that I might find a home for later:
+	// Cycle stealing works by 'fast-forwarding' the EE by an arbitrary number of cycles whenever VU1 micro-programs
+	// are run, which works as a rough-guess skipping of what would normally be idle time spent running on the EE.
+		
+	stealerSizer.Add( m_slider_vustealer, wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
+	m_msg_vustealer = &AddStaticText(stealerSizer, GetVUcycleSliderMsg( g_Conf->Speedhacks.VUCycleSteal ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
+	m_msg_vustealer->SetForegroundColour( wxColour( L"Red" ) );
+	m_msg_vustealer->SetSizeHints( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_vustealer, 4) ) );
 
-	AddCheckBox(miscSizer, _T("Enable IOP x2 Cycle rate"));
-	AddStaticText(miscSizer, _T("    Small Speedup, and works well with most games."), 400);
+	m_slider_vustealer->SetToolTip( tooltip );
+	m_msg_vustealer->SetToolTip( tooltip );
 
-	AddCheckBox(miscSizer, _T("WaitCycles Sync Hack") );
-	AddStaticText(miscSizer, _T("    Small Speedup. Works well with most games, but it may cause certain games to crash, or freeze up during bootup or stage changes."), 400);
+	// ------------------------------------------------------------------------
+	// All other hacks Section:
 
-	AddCheckBox(miscSizer, _T("INTC Sync Hack") );
-	AddStaticText(miscSizer, _T("    Huge speedup in many games, and a pretty high compatability rate (some games still work better with EE sync hacks)."), 400);
+	m_check_intc = &AddCheckBox(miscSizer, _("Enable INTC Spin Detection"),
+		_("Huge speedup for some games, with almost no compatibility side effects. [Recommended]"),
+		pxE( ":Tooltips:Speedhacks:INTC",
+			L"This hack works best for games that use the INTC Status register to wait for vsyncs, which includes primarily non-3D "
+			L"RPG titles. Games that do not use this method of vsync will see little or no speeup from this hack."
+	) );
 
-	AddCheckBox(miscSizer, _T("Idle Loop Fast-Forward (experimental)") );
-	AddStaticText(miscSizer, _T("    Speedup for a few games, including FFX with no known side effects.  More later."), 400);
+	m_check_b1fc0 = &AddCheckBox(miscSizer, _("Enable BIFC0 Spin Detection"),
+		_("Moderate speedup for some games, with no known side effects. [Recommended]" ),
+		pxE( ":Tooltips:Speedhacks:BIFC0",
+			L"This hack works especially well for Final Fantasy X and Kingdom Hearts.  BIFC0 is the address of a specific block of "
+			L"code in the EE kernel that's run repeatedly when the EE is waiting for the IOP to complete a task.  This hack detects "
+			L"that and responds by fast-forwarding the EE until the IOP signals that the task is complete."
+	) );
 
-	//secondarySizer.Add( &sliderSizer, wxEXPAND );
-	//secondarySizer.Add( &miscSizer, wxEXPAND );
-	//mainSizer.Add( &secondarySizer, stdCenteredFlags );
-	mainSizer.Add( &sliderSizer, wxEXPAND );
-	mainSizer.Add( &miscSizer, wxEXPAND );
+	m_check_IOPx2 = &AddCheckBox(miscSizer, _("IOP x2 cycle rate hack"),
+		_("Small Speedup and works well with most games; may cause some games to hang during startup."),
+		pxE( ":Tooltips:Speedhacks:IOPx2",
+			L"Halves the cycle rate of the IOP, giving it an effective emulated speed of roughly 18 MHz. "
+			L"The speedup is very minor, so this hack is generally not recommended."
+		) );
+
+	cycleHacksSizer.Add( &cyclerateSizer, SizerFlags::TopLevelBox() );
+	cycleHacksSizer.Add( &stealerSizer, SizerFlags::TopLevelBox() );
+
+	mainSizer.Add( &cycleHacksSizer, wxSizerFlags().Expand() );
+	mainSizer.Add( &miscSizer, SizerFlags::TopLevelBox() );
 	SetSizerAndFit( &mainSizer );
 
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::IOPCycleDouble_Click ) );
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::WaitCycleExt_Click ) );
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::INTCSTATSlow_Click ) );
-	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( SpeedHacksPanel::IdleLoopFF_Click ) );
+	Connect( m_slider_eecycle->GetId(),		wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::EECycleRate_Scroll ) );
+	Connect( m_slider_vustealer->GetId(),	wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::VUCycleRate_Scroll ) );
 }
 
 void Panels::SpeedHacksPanel::Apply( AppConfig& conf )
 {
+	conf.Speedhacks.EECycleRate		= m_slider_eecycle->GetValue()-1;
+	conf.Speedhacks.VUCycleSteal	= m_slider_vustealer->GetValue();
+
+	conf.Speedhacks.BIFC0			= m_check_b1fc0->GetValue();
+	conf.Speedhacks.IopCycleRate_X2	= m_check_IOPx2->GetValue();
+	conf.Speedhacks.IntcStat		= m_check_intc->GetValue();
 }
 
-void Panels::SpeedHacksPanel::IOPCycleDouble_Click(wxCommandEvent &event)
+void Panels::SpeedHacksPanel::EECycleRate_Scroll(wxScrollEvent &event)
 {
-	//Config.Hacks.IOPCycleDouble = if it is clicked.
 	event.Skip();
 }
 
-void Panels::SpeedHacksPanel::WaitCycleExt_Click(wxCommandEvent &event)
+void Panels::SpeedHacksPanel::VUCycleRate_Scroll(wxScrollEvent &event)
 {
-	//Config.Hacks.WaitCycleExt = if it is clicked.
-	event.Skip();
-}
-
-void Panels::SpeedHacksPanel::INTCSTATSlow_Click(wxCommandEvent &event)
-{
-	//Config.Hacks.INTCSTATSlow = if it is clicked.
-	event.Skip();
-}
-
-void Panels::SpeedHacksPanel::IdleLoopFF_Click(wxCommandEvent &event)
-{
-	//Config.Hacks.IdleLoopFF = if it is clicked.
 	event.Skip();
 }

@@ -20,7 +20,7 @@
 
 #include "wxHelpers.h"
 
-class CheckedStaticBox : public wxPanel
+class CheckedStaticBox : public wxPanelWithHelpers
 {
 protected:
 	wxBoxSizer& m_MasterSizer;
@@ -35,7 +35,8 @@ public:
 	void SetValue( bool val );
 	bool GetValue() const;
 
-	wxCheckBox& AddCheckBox( const wxString& label, wxWindowID id=wxID_ANY );
+	using wxPanelWithHelpers::AddCheckBox;		// allows access to overloaded parent :)
+	wxCheckBox& AddCheckBox( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 
 public:
 	// Event handler for click events for the main checkbox (default behavior: enables/disables all child controls)

@@ -41,6 +41,7 @@ namespace Dialogs
 	{
 	protected:
 		Panels::UsermodeSelectionPanel* m_panel_usersel;
+		Panels::LanguageSelectionPanel* m_panel_langsel;
 
 	public:
 		PickUserModeDialog( wxWindow* parent, int id=wxID_ANY );

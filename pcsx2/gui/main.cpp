@@ -188,7 +188,6 @@ bool Pcsx2App::OnInit()
 
 	g_Conf = new AppConfig();
 
-	i18n_InitPlainEnglish();
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
 	// User/Admin Mode Dual Setup:

@@ -39,9 +39,11 @@ using namespace Panels;
 
 
 Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
-	wxDialogWithHelpers( parent, id, _T("PCSX2 Configuration"), true )
+	wxDialogWithHelpers( parent, id, _("PCSX2 Configuration"), true )
 ,	m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
 {
+	static const int IdealWidth = 460;
+
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 
 	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
@@ -50,16 +52,16 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	g_ApplyState.StartBook( &m_listbook );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new PathsPanel( m_listbook ),			_("Folders"), false, cfgid.Paths );
+	m_listbook.AddPage( new PathsPanel( m_listbook, IdealWidth ),			_("Folders"), false, cfgid.Paths );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new PluginSelectorPanel( m_listbook ),	_("Plugins"), false, cfgid.Plugins );
+	m_listbook.AddPage( new PluginSelectorPanel( m_listbook, IdealWidth ),	_("Plugins"), false, cfgid.Plugins );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new SpeedHacksPanel( m_listbook ),		_("Speedhacks"), false, cfgid.Speedhacks );
+	m_listbook.AddPage( new SpeedHacksPanel( m_listbook, IdealWidth ),		_("Speedhacks"), false, cfgid.Speedhacks );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new GameFixesPanel( m_listbook ),		_("Game Fixes"), false, cfgid.Gamefixes );
+	m_listbook.AddPage( new GameFixesPanel( m_listbook, IdealWidth ),		_("Game Fixes"), false, cfgid.Gamefixes );
 
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );

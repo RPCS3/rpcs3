@@ -222,18 +222,6 @@
 				RelativePath="..\..\src\Utilities\vssprintf.cpp"
 				>
 			</File>
-			<File
-				RelativePath="..\..\src\Utilities\Windows\WinHostSys.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\Utilities\Windows\WinMisc.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\Utilities\Windows\WinThreads.cpp"
-				>
-			</File>
 			<Filter
 				Name="Linux"
 				>
@@ -348,6 +336,22 @@
 							Name="VCCustomBuildTool"
 						/>
 					</FileConfiguration>
+				</File>
+			</Filter>
+			<Filter
+				Name="Windows"
+				>
+				<File
+					RelativePath="..\..\src\Utilities\Windows\WinHostSys.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\Utilities\Windows\WinMisc.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\Utilities\Windows\WinThreads.cpp"
+					>
 				</File>
 			</Filter>
 		</Filter>

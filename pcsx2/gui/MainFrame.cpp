@@ -27,8 +27,8 @@ wxMenu* MainEmuFrame::MakeStatesMenu()
 {
 	wxMenu* mnuStates = new wxMenu();
 
-	m_LoadStatesSubmenu.Append( Menu_State_LoadOther, _T("Other..."), wxEmptyString, wxITEM_NORMAL );
-	m_SaveStatesSubmenu.Append( Menu_State_SaveOther, _T("Other..."), wxEmptyString, wxITEM_NORMAL );
+	m_LoadStatesSubmenu.Append( Menu_State_LoadOther, _("Other..."), wxEmptyString, wxITEM_NORMAL );
+	m_SaveStatesSubmenu.Append( Menu_State_SaveOther, _("Other..."), wxEmptyString, wxITEM_NORMAL );
 
 	mnuStates->Append( Menu_State_Load, _("Load"), &m_LoadStatesSubmenu, wxEmptyString );
 	mnuStates->Append( Menu_State_Save, _("Save"), &m_SaveStatesSubmenu, wxEmptyString );
@@ -79,12 +79,12 @@ wxMenu* MainEmuFrame::MakeCdvdMenu()
 // ------------------------------------------------------------------------
 void MainEmuFrame::PopulateVideoMenu()
 {
-	m_menuVideo.Append( Menu_Video_Basics,	_T("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
+	m_menuVideo.Append( Menu_Video_Basics,	_("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
 	m_menuVideo.AppendSeparator();
 
 	// Populate options from the plugin here.
 
-	m_menuVideo.Append( Menu_Video_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
+	m_menuVideo.Append( Menu_Video_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
 // ------------------------------------------------------------------------
@@ -92,7 +92,7 @@ void MainEmuFrame::PopulateAudioMenu()
 {
 	// Populate options from the plugin here.
 
-	m_menuAudio.Append( Menu_Audio_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
+	m_menuAudio.Append( Menu_Audio_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
 // ------------------------------------------------------------------------
@@ -100,7 +100,7 @@ void MainEmuFrame::PopulatePadMenu()
 {
 	// Populate options from the plugin here.
 
-	m_menuPad.Append( Menu_Pad_Advanced,	_T("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
+	m_menuPad.Append( Menu_Pad_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
 // ------------------------------------------------------------------------
@@ -122,6 +122,11 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 	// ... makes for a good test of the message pump's responsiveness.
 	//Console::Notice( "Mess o' crashiness?  It can't be!" );
 
+	// evt.GetPosition() returns the client area position, not the window frame position.
+	// So read the window position directly... hope there's no problem with this too. :| --air
+
+	g_Conf->MainGuiPosition = GetPosition();
+
 	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
 	// like selecting or deselecting a window, which muck up docking logic.  We filter them
 	// out using 'lastpos' here. :)
@@ -136,8 +141,6 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 		wxCommandEvent conevt( wxEVT_DockConsole );
 		wxGetApp().ProgramLog_PostEvent( conevt );
 	}
-
-	g_Conf->MainGuiPosition = evt.GetPosition();
 
 	//evt.Skip();
 }
@@ -275,16 +278,16 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuRun.Append(Menu_RunELF,		_("Run ELF File..."),		_("For running raw PS2 binaries."));
 
 	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_SkipBiosToggle,_("Skip Bios on Boot"),		_("Enable this to skip PS2 bootup screens (may hurt compat)"));
+	m_menuRun.Append(Menu_SkipBiosToggle,_("Skip Bios on Boot"),	_("Enable this to skip PS2 bootup screens (may hurt compat)"));
 
 	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_SuspendExec,	_("Suspend"),	_T("Stops emulation dead in its tracks"));
-	m_menuRun.Append(Menu_ResumeExec,	_("Resume"),	_T("Resumes suspended emulation"));
+	m_menuRun.Append(Menu_SuspendExec,	_("Suspend"),	_("Stops emulation dead in its tracks"));
+	m_menuRun.Append(Menu_ResumeExec,	_("Resume"),	_("Resumes suspended emulation"));
 	m_menuRun.Append(Menu_States,		_("States"),	MakeStatesMenu(), wxEmptyString);
-	m_menuRun.Append(Menu_Reset,		_("Reset"),		_T("Resets emulation state and reloads plugins"));
+	m_menuRun.Append(Menu_Reset,		_("Reset"),		_("Resets emulation state and reloads plugins"));
 
 	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_Run_Exit,		_("Exit"),		_T("Closing PCSX2 may be hazardous to your health"));
+	m_menuRun.Append(Menu_Run_Exit,		_("Exit"),		_("Closing PCSX2 may be hazardous to your health"));
 
     // ------------------------------------------------------------------------
 
@@ -309,8 +312,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// ------------------------------------------------------------------------
 
 	m_menuMisc.Append( &m_MenuItem_Console );
-	m_menuMisc.Append(Menu_Patches,	_T("Enable Patches"), wxEmptyString, wxITEM_CHECK);
-	m_menuMisc.Append(Menu_Profiler,_T("Enable Profiler"), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(Menu_Patches,	_("Enable Patches"), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(Menu_Profiler,_("Enable Profiler"), wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	// No dialogs implemented for these yet...

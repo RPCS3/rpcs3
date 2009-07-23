@@ -55,13 +55,26 @@ public:
 	virtual void Entry( const wxString& var, bool& value, const bool defvalue=false )=0;
 
 	// This special form of Entry is provided for bitfields, which cannot be passed by reference.
-	virtual bool EntryBitfield( const wxString& var, bool value, const bool defvalue=false )=0;
+	virtual bool EntryBitBool( const wxString& var, bool value, const bool defvalue=false )=0;
+	virtual int  EntryBitfield( const wxString& var, int value, const int defvalue=0 )=0;
 
 	virtual void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition )=0;
 	virtual void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize )=0;
 	virtual void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect )=0;
 
-	virtual void EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue=0 )=0;
+	template< typename T >
+	void EnumEntry( const wxString& var, T& value, const wxChar* const* enumArray=NULL, const T defvalue=(T)0 )
+	{
+		int tstore = (int)value;
+		if( enumArray == NULL )
+			Entry( var, tstore, defvalue );
+		else
+			_EnumEntry( var, tstore, enumArray, defvalue );
+		value = (T)tstore;
+	}
+
+protected:
+	virtual void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )=0;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -88,13 +101,15 @@ public:
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
 
-	bool EntryBitfield( const wxString& var, bool value, const bool defvalue=false );
+	bool EntryBitBool( const wxString& var, bool value, const bool defvalue=false );
+	int  EntryBitfield( const wxString& var, int value, const int defvalue=0 );
 
 	void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition );
 	void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize );
 	void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect );
 
-	void EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue=0 );
+protected:
+	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue );
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -121,12 +136,14 @@ public:
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
 
-	bool EntryBitfield( const wxString& var, bool value, const bool defvalue=false );
+	bool EntryBitBool( const wxString& var, bool value, const bool defvalue=false );
+	int  EntryBitfield( const wxString& var, int value, const int defvalue=0 );
 
 	void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition );
 	void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize );
 	void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect );
 
-	void EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue=0 );
+protected:
+	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue );
 };
 

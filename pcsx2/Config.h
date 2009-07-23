@@ -175,10 +175,11 @@ public:
 	struct SpeedhackOptions
 	{
 		int
-			EECycleRate:3,		// EE cyclerate selector (1.0, 1.5, 2.0, 3.0)
+			EECycleRate:2,		// EE cyclerate selector (1.0, 1.5, 2.0)
+			VUCycleSteal:3,		// VU Cycle Stealer factor (0, 1, 2, or 3)
 			IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
-			ExtWaitcycles:1,	// enables extended waitcycles duration
-			IntcStat:1;			// tells Pcsx2 to fast-forward through intc_stat waits.
+			IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
+			BIFC0:1;			// enables BIFC0 detection and fast-forwarding
 
 		void LoadSave( IniInterface& conf );
 	};
@@ -189,7 +190,7 @@ public:
 	bool		CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
 
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
-	int			LanguageId;
+	wxLanguage	LanguageId;
 	
 	int			RecentFileCount;		// number of files displayed in the Recent Isos list.
 	

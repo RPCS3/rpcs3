@@ -23,37 +23,34 @@
 
 using namespace wxHelpers;
 
+
+
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
 ,	m_panel_usersel( new Panels::UsermodeSelectionPanel( this ) )
+,	m_panel_langsel( new Panels::LanguageSelectionPanel( this ) )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 
 	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown folder and needs to be configured."),
 		0, wxALIGN_CENTRE );
+
+	s_main.Add( m_panel_langsel, SizerFlags::StdCenter() );
 	s_main.Add( m_panel_usersel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
 
 	AddOkCancel( s_main );
 	SetSizerAndFit( &s_main );
 	
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickUserModeDialog::OnOk_Click ) );
+
+	// TODO : Add a command event handler for language changes, that dynamically re-update contents of this window.
 }
 
 void Dialogs::PickUserModeDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	AppConfig confcopy( *g_Conf );
-
-	try
+	if( Panels::g_ApplyState.ApplyAll() )
 	{
-		m_panel_usersel->Apply( confcopy );
-		*g_Conf = confcopy;
-		g_Conf->Apply();
-
 		Close();
 		evt.Skip();
-	}
-	catch( Exception::CannotApplySettings& ex )
-	{
-		wxMessageBox( ex.DisplayMessage() + L"\n" + _("You may press Cancel to close the program."), _("Cannot apply settings...") );
 	}
 }

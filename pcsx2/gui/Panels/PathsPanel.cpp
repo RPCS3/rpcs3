@@ -45,7 +45,7 @@ void Panels::PathsPanel::DirPickerPanel::UseDefaultPath_Click(wxCommandEvent &ev
 //
 Panels::PathsPanel::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid,
 		const wxString& label, const wxString& dialogLabel ) :
-	BaseApplicableConfigPanel( parent )
+	BaseApplicableConfigPanel( parent, wxDefaultCoord )
 ,	m_FolderId( folderid )
 {
 	const bool isDefault = g_Conf->Folders.IsDefault( m_FolderId );
@@ -73,93 +73,123 @@ Panels::PathsPanel::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnu
 
 void Panels::PathsPanel::DirPickerPanel::Apply( AppConfig& conf )
 {
-	throw Exception::CannotApplySettings( this );
 	conf.Folders.Set( m_FolderId, m_pickerCtrl->GetPath(), m_checkCtrl->GetValue() );
 }
 
 // ------------------------------------------------------------------------
-Panels::PathsPanel::MyBasePanel::MyBasePanel( wxWindow& parent, int id ) :
-	wxPanelWithHelpers( &parent, id )
+Panels::PathsPanel::MyBasePanel::MyBasePanel( wxWindow& parent, int idealWidth ) :
+	wxPanelWithHelpers( &parent, idealWidth-12 )
 ,	s_main( *new wxBoxSizer( wxVERTICAL ) )
 {
 }
 
-void Panels::PathsPanel::MyBasePanel::AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid, const wxString& label, const wxString& popupLabel, ExpandedMsgEnum tooltip )
+Panels::PathsPanel::DirPickerPanel& Panels::PathsPanel::MyBasePanel::AddDirPicker( wxBoxSizer& sizer,
+	FoldersEnum_t folderid, const wxString& label, const wxString& popupLabel )
 {
 	DirPickerPanel* dpan = new DirPickerPanel( this, folderid, label, popupLabel );
-	dpan->SetToolTip( pxE(tooltip) );
-	sizer.Add( dpan, SizerFlags::StdGroupie() );
+	sizer.Add( dpan, SizerFlags::SubGroup() );
+	return *dpan;
 }
 
 // ------------------------------------------------------------------------
-Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent, int id ) :
-	MyBasePanel( parent, id )
+Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent ) :
+	MyBasePanel( parent )
 {
 	// TODO : Replace the callback mess here with the new FolderId enumeration setup. :)
 
 	AddDirPicker( s_main, FolderId_Bios,
 		_("Bios:"),
-		_("Select folder with PS2 Bios"),	Msg_Tooltips_Bios );
+		_("Select folder with PS2 Bios") ).
+		SetToolTip( pxE( "Setting Tooltip:Bios Folder",
+			L"This folder is where PCSX2 looks to find PS2 bios files.  The actual bios used can be "
+			L"selected from the CPU dialog."
+		) );
 
 	s_main.AddSpacer( BetweenFolderSpace );
 	AddDirPicker( s_main, FolderId_Savestates,
 		_("Savestates:"),
-		_("Select folder for Savestates"),	Msg_Tooltips_Savestates );
+		_("Select folder for Savestates") ).
+		SetToolTip( pxE( "Setting Tooltip:Savestates Folder",
+			L"This folder is where PCSX2 records savestates; which are recorded either by using "
+			L"menus/toolbars, or by pressing F1/F3 (load/save)."
+		) );
 
 	s_main.AddSpacer( BetweenFolderSpace );
 	AddDirPicker( s_main, FolderId_Snapshots,
 		_("Snapshots:"),
-		_("Select a folder for Snapshots"),	Msg_Tooltips_Snapshots );
+		_("Select a folder for Snapshots") ).
+		SetToolTip( pxE( "Setting Tooltip:Snapshots Folder",
+			L"This folder is where PCSX2 saves screenshots.  Actual screenshot image format and style "
+			L"may vary depending on the GS plugin being used." 
+		) );
 
 	s_main.AddSpacer( BetweenFolderSpace );
 	AddDirPicker( s_main, FolderId_Logs,
 		_("Logs/Dumps:" ),
-		_("Select a folder for logs/dumps"), Msg_Tooltips_Logs );
+		_("Select a folder for logs/dumps") ).
+		SetToolTip( pxE( "Setting Tooltip:Logs Folder",
+			L"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most plugins will "
+			L"also adhere to this folder, however some older plugins may ignore it."
+		) );
 
 	s_main.AddSpacer( BetweenFolderSpace );
 	AddDirPicker( s_main, FolderId_MemoryCards,
 		_("Memorycards:"),
-		_("Select a default Memorycards folder"), Msg_Tooltips_Memorycards );
+		_("Select a default Memorycards folder") ).
+		SetToolTip( pxE( "Setting Tooltip:Memorycards Folder",
+			L"This is the default path where PCSX2 loads or creates its memory cards, and can be "
+			L"overridden in the MemoryCard Configuration by using absolute filenames."
+		) );
 
 	s_main.AddSpacer( 5 );
 	SetSizerAndFit( &s_main );
-
 }
 
 // ------------------------------------------------------------------------
-Panels::PathsPanel::AdvancedPanel::AdvancedPanel( wxWindow& parent, int id ) :
-	MyBasePanel( parent, id )
+Panels::PathsPanel::AdvancedPanel::AdvancedPanel( wxWindow& parent, int idealWidth ) :
+	MyBasePanel( parent, idealWidth-9 )
 {
 	wxStaticBoxSizer& advanced = *new wxStaticBoxSizer( wxVERTICAL, this, _("Advanced") );
-	AddStaticText( advanced, pxE(Msg_Dialog_AdvancedPaths), 420, wxALIGN_CENTRE );
+	AddStaticText( advanced, pxE( "Settings Dialog:Advanced Paths",
+		L"Warning!! These advanced options are provided for developers and advanced testers only. "
+		L"Changing these settings can cause program errors, so please be weary."
+	), wxALIGN_CENTRE );
 
 	AddDirPicker( advanced, FolderId_Plugins,
 		_("Plugins:"),
-		_("Select folder for PCSX2 plugins"), Msg_Tooltips_PluginsPath );
+		_("Select folder for PCSX2 plugins") ).
+		SetToolTip( pxE( "Setting Tooltip:Plugins Path",
+			L"This is the location where PCSX2 will expect to find its plugins. Plugins found in this folder "
+			L"will be enumerated and are selectable from the Plugins panel."
+		) );
 
 	advanced.AddSpacer( BetweenFolderSpace );
 	AddDirPicker( advanced, FolderId_Settings,
 		_("Settings:"),
-		_("Select a folder for PCSX2 settings/inis"), Msg_Tooltips_SettingsPath );
+		_("Select a folder for PCSX2 settings/inis") ).
+		SetToolTip( pxE( "Settings Tooltip:Settings Path",
+			L"This is the folder where PCSX2 saves all settings, including settings generated "
+			L"by most plugins.\n\nWarning: Some older versions of plugins may not respect this value."
+		) );
 
 	advanced.AddSpacer( 4 );
-	advanced.Add( new UsermodeSelectionPanel( this ), SizerFlags::StdGroupie() );
+	advanced.Add( new UsermodeSelectionPanel( this, GetIdealWidth()-9 ), SizerFlags::SubGroup() );
 
-	s_main.Add( &advanced, SizerFlags::StdGroupie() );
+	s_main.Add( &advanced, SizerFlags::SubGroup() );
 	s_main.AddSpacer( 5 );
 
 	SetSizerAndFit( &s_main );
 }
 
 // ------------------------------------------------------------------------
-Panels::PathsPanel::PathsPanel( wxWindow& parent ) :
-	BaseApplicableConfigPanel( &parent )
+Panels::PathsPanel::PathsPanel( wxWindow& parent, int idealWidth ) :
+	BaseApplicableConfigPanel( &parent, idealWidth )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 	wxNotebook& notebook = *new wxNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM | wxNB_FIXEDWIDTH );
 
 	notebook.AddPage( new StandardPanel( notebook ), _("Standard") );
-	notebook.AddPage( new AdvancedPanel( notebook ), _("Advanced") );
+	notebook.AddPage( new AdvancedPanel( notebook, GetIdealWidth() ), _("Advanced") );
 
 	s_main.Add( &notebook, SizerFlags::StdSpace() );
 

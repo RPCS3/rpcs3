@@ -18,115 +18,54 @@
 
 #include "PrecompiledHeader.h"
 #include "i18n.h"
-#include "HashMap.h"
 
 #include "Utilities/SafeArray.h"
-
-
-using namespace HashTools;
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Notes to Translators:
-//  * The first line of each entry consists of an enumerated index (used internally), and
-//    the gettext lookup string (which you'll find in the PO data).  The resulting translation
-//    should match the text underneath.
-//
-//  * Text marked as Tooltips are usually tertiary information that is not critical to PCSX2
-//    use, and translations are not required.
-//
-const EnglishExpansionEntry m_tbl_English[] =
-{
-	{ Msg_Dialog_AdvancedPaths, wxLt(L"Settings Dialog:Advanced Paths"),
-		L"Warning!! These advanced options are provided for developers and advanced testers only. "
-		L"Changing these settings can cause program errors, so please be weary."
-	},
-
-	{ Msg_Tooltips_SettingsPath, wxLt(L"Settings Tooltip:Settings Path"),
-		L"This is the folder where PCSX2 saves all settings, including settings generated "
-		L"by most plugins.\n\nWarning: Some older versions of plugins may not respect this value."
-	},
-	
-	{ Msg_Popup_MissingPlugins, wxLt(L"Popup Error:Missing Plugins"),
-		L"Critical Error: A valid plugin for one or more components of PCSX2 could not be found. "
-		L"Your installation of PCSX2 is incomplete, and will be unable to run games."
-	},
-
-	// ------------------------------------------------------------------------
-	// Begin Tooltips Section
-	// (All following texts are non-critical for a functional PCSX2 translation).
-
-	{ Msg_Tooltips_PluginsPath, wxLt(L"Setting Tooltip:Plugins Path"),
-		L"This is the location where PCSX2 will expect to find its plugins. Plugins found in this folder "
-		L"will be enumerated and are selectable from the Plugins panel."
-	},
-
-	{ Msg_Tooltips_Savestates,	wxLt(L"Setting Tooltip:Savestates Folder"),
-		L"This folder is where PCSX2 records savestates; which are recorded either by using "
-		L"menus/toolbars, or by pressing F1/F3 (load/save)."
-	},
-
-	{ Msg_Tooltips_Snapshots,	wxLt(L"Setting Tooltip:Snapshots Folder"),
-		L"This folder is where PCSX2 saves screenshots.  Actual screenshot image format and style "
-		L"may vary depending on the GS plugin being used."
-	},
-
-	{ Msg_Tooltips_Bios,		wxLt(L"Setting Tooltip:Bios Folder"),
-		L"This folder is where PCSX2 looks to find PS2 bios files.  The actual bios used can be "
-		L"selected from the CPU dialog."
-	},
-
-	{ Msg_Tooltips_Logs,		wxLt(L"Setting Tooltip:Logs Folder"),
-		L"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most plugins will "
-		L"also adhere to this folder, however some older plugins may ignore it."
-	},
-
-	{ Msg_Tooltips_Memorycards,	wxLt(L"Setting Tooltip:Memorycards Folder"),
-		L"This is the default path where PCSX2 loads or creates its memory cards, and can be "
-		L"overridden in the MemoryCard Configuration by using absolute filenames."
-	},
-
-};
-
-C_ASSERT( ArraySize( m_tbl_English ) == ExpandedMsg_Count );
-
-static HashMap<int,HashedExpansionPair> m_EnglishExpansions( -1, 0xcdcdcd, ArraySize( m_tbl_English ) );
 
 static bool IsEnglish( int id )
 {
 	return ( id == wxLANGUAGE_ENGLISH || id == wxLANGUAGE_ENGLISH_US );
 }
 
-// ------------------------------------------------------------------------
-// Builds an internal hashtable for English iconized description lookups.
-//
-void i18n_InitPlainEnglish()
+LangPackEnumeration::LangPackEnumeration( wxLanguage langId ) :
+	wxLangId( langId )
+,	englishName( wxLocale::GetLanguageName( wxLangId ) )
+,	xlatedName( IsEnglish( wxLangId ) ? wxEmptyString : wxGetTranslation( L"NativeName" ) )
 {
-	static bool IsInitialized = false;
-
-	IsInitialized = true;
-	for( int i=0; i<ExpandedMsg_Count; ++i )
-	{
-		HashedExpansionPair silly = { m_tbl_English[i].gettextKey, m_tbl_English[i].Expanded };
-		m_EnglishExpansions[m_tbl_English[i].Key] = silly;
-	}
 }
 
+LangPackEnumeration::LangPackEnumeration() :
+	wxLangId( wxLANGUAGE_DEFAULT )
+,	englishName( L" System Default" )		// left-side space forces it to sort to the front of the lists
+,	xlatedName()
+{
+	int sysLang( wxLocale::GetSystemLanguage() );
+	if( sysLang != wxLANGUAGE_UNKNOWN )
+		englishName += L"  [" + wxLocale::GetLanguageName( sysLang ) + L"]";
+}
+
+
 // ------------------------------------------------------------------------
 //
-static void i18n_DoPackageCheck( int wxLangId, wxArrayString& destEng, wxArrayString& destTrans )
+static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 {
-	// Note: wx auto-preserves the current locale for us
+	// Plain english is a special case that's built in, and we only want it added to the list
+	// once, so we check for wxLANGUAGE_ENGLISH and then ignore other IsEnglish ids below.
+	if( wxLangId == wxLANGUAGE_ENGLISH )
+		langs.push_back( LangPackEnumeration( wxLangId ) );
 
+	if( IsEnglish( wxLangId ) ) return;
+
+	// Note: wx auto-preserves the current locale for us
 	if( !wxLocale::IsAvailable( wxLangId ) ) return;
 	wxLocale* locale = new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING );
 
-	if( locale->IsOk() && locale->AddCatalog( L"pcsx2ident" ) )
-	{
-		// Should be a valid language, so add it to the list.
+	// Force the msgIdLanguage param to wxLANGUAGE_UNKNOWN to disable wx's automatic english
+	// matching logic, which will bypass the catalog loader for all english-based dialects, and
+	// (wrongly) enumerate a bunch of locales that don't actually exist.
 
-		destEng.Add( wxLocale::GetLanguageName( wxLangId ) );
-		destTrans.Add( wxGetTranslation( L"NativeName" ) );
-	}
+	if( locale->IsOk() && locale->AddCatalog( L"pcsx2ident", wxLANGUAGE_UNKNOWN, NULL ) )
+		langs.push_back( LangPackEnumeration( wxLangId ) );
+
 	delete locale;
 }
 
@@ -139,15 +78,18 @@ static void i18n_DoPackageCheck( int wxLangId, wxArrayString& destEng, wxArraySt
 // database.  Anything which hasn't been installed will fail to load.
 //
 // Because loading and hashing the entire pcsx2 translation for every possible language would
-// assinine and slow, I've decided to use a two-file translation system.  One file is very
-// small and simply contains the name of the language in the language native.  The second file
-// is loaded only if the user picks it (or if it's the default language of the OS).
+// assinine and slow, I've decided to use a two-file translation system.  One file (pcsx2ident.mo)
+// is very small and simply contains the name of the language in the language native.  The
+// second file (pcsx2.mo) is loaded only if the user picks the language (or if it's the default
+// language of the user's OS installation).
 //
-void i18n_EnumeratePackages( wxArrayString& englishNames, wxArrayString& xlatedNames)
+void i18n_EnumeratePackages( LangPackList& langs )
 {
+	langs.push_back( LangPackEnumeration() );
+	
 	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
 	{
-		i18n_DoPackageCheck( li, englishNames, xlatedNames );
+		i18n_DoPackageCheck( (wxLanguage)li, langs );
 	}
 
 	// Brilliant.  Because someone in the wx world didn't think to move wxLANGUAGE_USER_DEFINED
@@ -174,18 +116,16 @@ void i18n_EnumeratePackages( wxArrayString& englishNames, wxArrayString& xlatedN
 // (without this second pass many tooltips would just show up as "Savestate Tooltip" instead
 //  of something meaningful).
 //
-const wxChar* __fastcall pxExpandMsg( ExpandedMsgEnum key )
+const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent )
 {
-	const HashedExpansionPair& data( m_EnglishExpansions[key] );
-
 	int curlangid = wxLocale::GetLanguageInfo( g_Conf->LanguageId )->Language;
 	if( IsEnglish( curlangid ) )
-		return data.Expanded;
+		return englishContent;
 
-	const wxChar* retval = wxGetTranslation( data.gettextKey );
+	const wxChar* retval = wxGetTranslation( key );
 
 	// Check if the translation failed, and fall back on an english lookup.
-	return ( wxStrcmp( retval, data.gettextKey ) == 0 ) ? data.Expanded : retval;
+	return ( wxStrcmp( retval, key ) == 0 ) ? englishContent : retval;
 }
 
 // ------------------------------------------------------------------------
@@ -200,7 +140,7 @@ const wxChar* __fastcall pxGetTranslation( const wxChar* message )
 	{
 		if( wxStrlen( message ) > 96 )
 		{
-			Console::Notice( "pxGetTranslation: Long message detected, maybe use pxExpandMsg instead?" );
+			Console::Notice( "pxGetTranslation: Long message detected, maybe use pxE() instead?" );
 			Console::Status( wxsFormat( L"\tMessage: %s", message ) );
 		}
 	}
