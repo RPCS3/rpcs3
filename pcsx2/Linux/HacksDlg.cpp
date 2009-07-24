@@ -100,7 +100,7 @@ void on_Speed_Hacks(GtkMenuItem *menuitem, gpointer user_data)
 
 void on_Speed_Hack_OK(GtkButton *button, gpointer user_data)
 {
-	PcsxConfig::Hacks_t newhacks;
+	Hacks_t newhacks;
 	newhacks.EECycleRate = 0;
 	
 	newhacks.IOPCycleDouble = is_checked(SpeedHacksDlg, "check_iop_cycle_rate");

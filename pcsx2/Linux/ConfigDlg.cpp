@@ -58,7 +58,7 @@ static void ConfPlugin(plugin_types type, plugin_callback call, bool pullcombo =
 	
 	if (pullcombo) GetComboText(confs->Combo, confs->plist, plugin);
 	if (plugin == NULL) return;
-	drv = SysLoadLibrary( Path::Combine( Config.PluginsDir, plugin ).c_str() );
+	drv = SysLoadLibrary( Path::Combine( Config.Paths.Plugins, plugin ).c_str() );
 	if (drv == NULL) return;
 
 	if (call != PLUGIN_TEST)
@@ -229,7 +229,7 @@ void OnConfConf_PluginsPath(GtkButton *button, gpointer user_data)
 	char reply[g_MaxPath];
 
 	GetDirectory(ConfDlg, "Choose the Plugin Directory:", reply);
-	strcpy(Config.PluginsDir, reply);
+	strcpy(Config.Paths.Plugins, reply);
 
 	UpdateConfDlg();
 }
@@ -282,10 +282,10 @@ void FindPlugins()
 		confs->PluginNameList = NULL;
 	}
 
-	dir = opendir(Config.PluginsDir);
+	dir = opendir(Config.Paths.Plugins);
 	if (dir == NULL)
 	{
-		Msgbox::Alert("Could not open '%s' directory", params Config.PluginsDir);
+		Msgbox::Alert("Could not open '%s' directory", params Config.Paths.Plugins);
 		return;
 	}
 	while ((ent = readdir(dir)) != NULL)
@@ -293,7 +293,7 @@ void FindPlugins()
 		u32 version;
 		u32 type;
 
-		sprintf(plugin, "%s%s", Config.PluginsDir, ent->d_name);
+		sprintf(plugin, "%s%s", Config.Paths.Plugins, ent->d_name);
 
 		if (strstr(plugin, ".so") == NULL) continue;
 		Handle = SysLoadLibrary(plugin);

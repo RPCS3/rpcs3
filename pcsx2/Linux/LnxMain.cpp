@@ -432,12 +432,12 @@ void pcsx2_exit()
 	// with this the problem with plugins that are linked with the pthread
 	// library is solved
 
-	dir = opendir(Config.PluginsDir);
+	dir = opendir(Config.Paths.Plugins);
 	if (dir != NULL)
 	{
 		while ((ent = readdir(dir)) != NULL)
 		{
-			sprintf(plugin, "%s%s", Config.PluginsDir, ent->d_name);
+			sprintf(plugin, "%s%s", Config.Paths.Plugins, ent->d_name);
 
 			if (strstr(plugin, ".so") == NULL) continue;
 			Handle = SysLoadLibrary(plugin);
