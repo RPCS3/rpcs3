@@ -83,14 +83,14 @@ __forceinline const char *PluginName(int type)
 {
 	switch (type)
 	{
-		case GS: return Config.GS; 
-		case PAD1: return Config.PAD1; 
-		case PAD2: return Config.PAD2; 
-		case SPU2: return Config.SPU2; 
-		case CDVD: return Config.CDVD; 
-		case DEV9: return Config.DEV9; 
-		case USB: return Config.USB; 
-		case FW: return Config.FW; 
+		case GS: return Config.Plugins.GS; 
+		case PAD1: return Config.Plugins.PAD1; 
+		case PAD2: return Config.Plugins.PAD2; 
+		case SPU2: return Config.Plugins.SPU2; 
+		case CDVD: return Config.Plugins.CDVD; 
+		case DEV9: return Config.Plugins.DEV9; 
+		case USB: return Config.Plugins.USB; 
+		case FW: return Config.Plugins.FW; 
 		case BIOS: return Config.Bios; 
 	}
 	return NULL;

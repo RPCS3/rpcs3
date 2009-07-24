@@ -73,8 +73,8 @@ int LoadConfig()
 	GetValue("Lang", Config.Lang);
 	GetValuel("Ps2Out",     Config.PsxOut);
 	GetValuel("cdvdPrint",     Config.cdvdPrint);
-	GetValue("PluginsDir", Config.PluginsDir);
-	GetValue("BiosDir",    Config.BiosDir);
+	GetValue("PluginsDir", Config.Paths.Plugins);
+	GetValue("BiosDir",    Config.Paths.Bios);
 	
 	GetValuel("EnabledCard1", Config.Mcd[0].Enabled);
 	GetValue("Mcd1", Config.Mcd[0].Filename);
@@ -86,14 +86,14 @@ int LoadConfig()
 	
 	GetValuel("McdEnableEject", Config.McdEnableEject);
 	
-	GetValue("GS",   Config.GS);
-	GetValue("SPU2", Config.SPU2);
-	GetValue("CDVD", Config.CDVD);
-	GetValue("PAD1", Config.PAD1);
-	GetValue("PAD2", Config.PAD2);
-	GetValue("DEV9", Config.DEV9);
-	GetValue("USB",  Config.USB);
-	GetValue("FW",  Config.FW);
+	GetValue("GS",   Config.Plugins.GS);
+	GetValue("SPU2", Config.Plugins.SPU2);
+	GetValue("CDVD", Config.Plugins.CDVD);
+	GetValue("PAD1", Config.Plugins.PAD1);
+	GetValue("PAD2", Config.Plugins.PAD2);
+	GetValue("DEV9", Config.Plugins.DEV9);
+	GetValue("USB",  Config.Plugins.USB);
+	GetValue("FW",	 Config.Plugins.FW);
 
 	GetValuel("Patch",      Config.Patch);
 #ifdef PCSX2_DEVBUILD
@@ -154,8 +154,8 @@ void SaveConfig()
 
 	SetValue("Bios", Config.Bios);
 	SetValue("Lang",    Config.Lang);
-	SetValue("PluginsDir", Config.PluginsDir);
-	SetValue("BiosDir",    Config.BiosDir);
+	SetValue("PluginsDir", Config.Paths.Plugins);
+	SetValue("BiosDir",    Config.Paths.Bios);
 	
 	SetValuel("Ps2Out",     Config.PsxOut);
 	SetValuel("cdvdPrint",     Config.cdvdPrint);
@@ -167,14 +167,14 @@ void SaveConfig()
 	SetValue("Mcd2", Config.Mcd[1].Filename);
 	SetValuel("McdEnableEject", Config.McdEnableEject);
 
-	SetValue("GS",   Config.GS);
-	SetValue("SPU2", Config.SPU2);
-	SetValue("CDVD", Config.CDVD);
-	SetValue("PAD1", Config.PAD1);
-	SetValue("PAD2", Config.PAD2);
-	SetValue("DEV9", Config.DEV9);
-	SetValue("USB",  Config.USB);
-	SetValue("FW",  Config.FW);
+	SetValue("GS",   Config.Plugins.GS);
+	SetValue("SPU2", Config.Plugins.SPU2);
+	SetValue("CDVD", Config.Plugins.CDVD);
+	SetValue("PAD1", Config.Plugins.PAD1);
+	SetValue("PAD2", Config.Plugins.PAD2);
+	SetValue("DEV9", Config.Plugins.DEV9);
+	SetValue("USB",  Config.Plugins.USB);
+	SetValue("FW",  Config.Plugins.FW);
 
 	SetValuel("Options",        Config.Options);
 

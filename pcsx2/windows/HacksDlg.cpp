@@ -76,7 +76,7 @@ BOOL APIENTRY HacksProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				case IDOK:
 				{
-					PcsxConfig::Hacks_t newhacks;
+					Hacks_t newhacks;
 
 					newhacks.EECycleRate = 0;
 					for( int i=1; i<3; i++ )

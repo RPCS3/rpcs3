@@ -132,11 +132,8 @@ struct McdConfig
 	bool Enabled;
 };
 
-struct PcsxConfig
+struct PluginNames
 {
-public:
-	char Bios[g_MaxPath];
-
 	char GS[g_MaxPath];
 	char PAD1[g_MaxPath];
 	char PAD2[g_MaxPath];
@@ -145,10 +142,46 @@ public:
 	char DEV9[g_MaxPath];
 	char USB[g_MaxPath];
 	char FW[g_MaxPath];
+};
 
-	char PluginsDir[g_MaxPath];
-	char BiosDir[g_MaxPath];
-	char InisDir[g_MaxPath]; // This is intended for the program to populate, and the plugins to read. Obviously can't be saved in the config file. :)
+// This is intended to be where all the main paths for Pcsx2 are.
+// This may end up being moved to Paths.h. It may also be converted to strings.
+struct FilePaths
+{
+	char Working[g_MaxPath];
+	char Plugins[g_MaxPath];
+	char Bios[g_MaxPath];
+
+	// These are mainly placeholders for later.
+	char Isos[g_MaxPath];
+	char Dumps[g_MaxPath];
+
+	// This is intended for the program to populate, and the plugins to read. 
+	// Obviously can't be saved in the config file. :)
+	char Inis[g_MaxPath];
+};
+
+struct Hacks_t 
+{
+	int  EECycleRate;
+	bool IOPCycleDouble;
+	//bool WaitCycleExt;
+	bool INTCSTATSlow;
+	bool IdleLoopFF;
+	int  VUCycleSteal;
+	bool vuFlagHack;
+	bool vuMinMax;
+	bool ESCExits; // this is a hack!?
+};
+
+struct PcsxConfig
+{
+public:
+	// The Bios name isn't really a plugin name, so doesn't go with the Plugins.
+	char Bios[g_MaxPath];
+
+	PluginNames Plugins;
+	FilePaths Paths;
 
 	char Lang[g_MaxPath];
 
@@ -169,17 +202,9 @@ public:
 	int Mdec;
 	int Patch;
 	int CustomFps;
-	struct Hacks_t {
-		int  EECycleRate;
-		bool IOPCycleDouble;
-		//bool WaitCycleExt;
-		bool INTCSTATSlow;
-		bool IdleLoopFF;
-		int  VUCycleSteal;
-		bool vuFlagHack;
-		bool vuMinMax;
-		bool ESCExits; // this is a hack!?
-	} Hacks;
+
+	Hacks_t Hacks;
+
 	int GameFixes;
 	int CustomFrameSkip;
 	int CustomConsecutiveFrames;

@@ -21,9 +21,9 @@
 
 #define g_MaxPath 255			// 255 is safer with antiquated Win32 ASCII APIs.
 
-#ifdef __LINUX__
-extern char MAIN_DIR[g_MaxPath];
-#endif
+//#ifdef __LINUX__
+//extern char MAIN_DIR[g_MaxPath];
+//#endif
 
 #define DEFAULT_INIS_DIR "inis"
 #define DEFAULT_BIOS_DIR "bios"

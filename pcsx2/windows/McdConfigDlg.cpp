@@ -59,7 +59,7 @@ void DlgItem_GetText( HWND hwnd, int dlgId, string& dest )
 static const char* _stripPathInfo( const char* src )
 {
 	const char* retval = src;
-	const char* workingfold = g_WorkingFolder;
+	const char* workingfold = Config.Paths.Working;
 
 	while( (*retval != 0) && (*workingfold != 0) && (tolower(*retval) == tolower(*workingfold)) )
 	{
@@ -115,7 +115,7 @@ void MemcardConfig::Open_Mcd_Proc(HWND hW, int mcd)
 	if (GetOpenFileName ((LPOPENFILENAME)&ofn))
 	{
 		Edit_SetText(GetDlgItem(hW,mcd == 1 ? IDC_MCD_FILE1 : IDC_MCD_FILE2),
-			_stripPathInfo( Path::Combine( g_WorkingFolder, szFileName ).c_str() ) );
+			_stripPathInfo( Path::Combine( Config.Paths.Working, szFileName ).c_str() ) );
 	}
 }
 
@@ -146,13 +146,13 @@ BOOL CALLBACK MemcardConfig::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 			if( Config.Mcd[0].Filename[0] == 0 )
 			{
 				strcpy_s( Config.Mcd[0].Filename,
-					Path::Combine( g_WorkingFolder, m_Default_MemcardsDir[0] ).c_str() );
+					Path::Combine( Config.Paths.Working, m_Default_MemcardsDir[0] ).c_str() );
 			}
 
 			if( Config.Mcd[1].Filename[1] == 0 )
 			{
 				strcpy_s( Config.Mcd[1].Filename,
-					Path::Combine( g_WorkingFolder, m_Default_MemcardsDir[1] ).c_str() );
+					Path::Combine( Config.Paths.Working, m_Default_MemcardsDir[1] ).c_str() );
 			}
 
 			Edit_SetText( GetDlgItem(hWnd,IDC_MCD_FILE1), _stripPathInfo( Config.Mcd[0].Filename ) );
@@ -197,8 +197,8 @@ BOOL CALLBACK MemcardConfig::DialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 
 					// reassign text with the extra unnecessary path info stripped out.
 
-					_tcscpy( Config.Mcd[0].Filename, _stripPathInfo( Path::Combine( g_WorkingFolder, Config.Mcd[0].Filename ).c_str() ) );
-					_tcscpy( Config.Mcd[1].Filename, _stripPathInfo( Path::Combine( g_WorkingFolder, Config.Mcd[1].Filename ).c_str() ) );
+					_tcscpy( Config.Mcd[0].Filename, _stripPathInfo( Path::Combine( Config.Paths.Working, Config.Mcd[0].Filename ).c_str() ) );
+					_tcscpy( Config.Mcd[1].Filename, _stripPathInfo( Path::Combine( Config.Paths.Working, Config.Mcd[1].Filename ).c_str() ) );
 
 					if( g_EmulationInProgress )
 					{
@@ -247,10 +247,10 @@ void IniFile::MemcardSettings( PcsxConfig& conf )
 	SetCurrentSection( "Memorycards" );
 	
 	Entry( "Slot1_Path", conf.Mcd[0].Filename,
-		Path::Combine( g_WorkingFolder, m_Default_MemcardsDir[0] ) );
+		Path::Combine( Config.Paths.Working, m_Default_MemcardsDir[0] ) );
 
 	Entry( "Slot2_Path", conf.Mcd[1].Filename,
-		Path::Combine( g_WorkingFolder, m_Default_MemcardsDir[1] ) );
+		Path::Combine( Config.Paths.Working, m_Default_MemcardsDir[1] ) );
 
 	Entry( "Slot1_Enabled", conf.Mcd[0].Enabled, true );
 	Entry( "Slot2_Enabled", conf.Mcd[1].Enabled, true );

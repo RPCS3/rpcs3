@@ -239,7 +239,7 @@ void OnConfConf_BiosPath(GtkButton *button, gpointer user_data)
 	char reply[g_MaxPath];
 
 	GetDirectory(ConfDlg, "Choose the Bios Directory:", reply);
-	strcpy(Config.BiosDir, reply);
+	strcpy(Config.Paths.Bios, reply);
 
 	UpdateConfDlg();
 }
@@ -391,10 +391,10 @@ void FindPlugins()
 	}
 	closedir(dir);
 
-	dir = opendir(Config.BiosDir);
+	dir = opendir(Config.Paths.Bios);
 	if (dir == NULL)
 	{
-		Msgbox::Alert("Could not open '%s' directory", params Config.BiosDir);
+		Msgbox::Alert("Could not open '%s' directory", params Config.Paths.Bios);
 		return;
 	}
 
@@ -403,7 +403,7 @@ void FindPlugins()
 		struct stat buf;
 		char description[50];				//2002-09-28 (Florin)
 
-		sprintf(plugin, "%s%s", Config.BiosDir, ent->d_name);
+		sprintf(plugin, "%s%s", Config.Paths.Bios, ent->d_name);
 		if (stat(plugin, &buf) == -1) continue;
 		if (buf.st_size > (1024*4096)) continue;	//2002-09-28 (Florin)
 		if (!IsBIOS(ent->d_name, description)) continue;//2002-09-28 (Florin)

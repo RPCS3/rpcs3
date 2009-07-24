@@ -90,7 +90,7 @@ void loadBiosRom( const char *ext, u8 *dest, long maxSize )
 	string Bios1;
 	long filesize;
 
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
+	string Bios( Path::Combine( Config.Paths.Bios, Config.Bios ) );
 
 	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
 	ssprintf(Bios1, "%hs.%s", &Bios, ext);
@@ -101,7 +101,7 @@ void loadBiosRom( const char *ext, u8 *dest, long maxSize )
 		if( (filesize=Path::getFileSize( Bios1 ) ) <= 0 )
 		{
 			// Try for the old-style method (rom1.bin)
-			Bios1 = Path::Combine( Config.BiosDir, ext ) + ".bin";
+			Bios1 = Path::Combine( Config.Paths.Bios, ext ) + ".bin";
 			if( (filesize=Path::getFileSize( Bios1 ) ) <= 0 )
 			{
 				Console::Notice( "Bios Warning > %s not found.", params ext );
@@ -802,7 +802,7 @@ void memReset()
 	vtlb_VMapUnmap(0x20000000,0x60000000);
 
 	FILE *fp;
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
+	string Bios( Path::Combine( Config.Paths.Bios, Config.Bios ) );
 
 	long filesize;
 	if( ( filesize = Path::getFileSize( Bios ) ) <= 0 )

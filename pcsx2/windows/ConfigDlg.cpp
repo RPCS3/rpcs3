@@ -46,7 +46,7 @@ struct ComboInitializer
 	,	PS2E_GetLibName( NULL )
 	,	PS2E_GetLibVersion2( NULL )
 	{
-		Find = FindFirstFile( Path::Combine( Config.PluginsDir, "*.dll" ).c_str(), &FindData);
+		Find = FindFirstFile( Path::Combine( Config.Paths.Plugins, "*.dll" ).c_str(), &FindData);
 	}
 
 	~ComboInitializer()
@@ -62,7 +62,7 @@ struct ComboInitializer
 
 	bool LoadNextLibrary()
 	{
-		string tmpStr( Path::Combine( Config.PluginsDir, FindData.cFileName ) );
+		string tmpStr( Path::Combine( Config.Paths.Plugins, FindData.cFileName ) );
 		Lib = HostSys::LoadLibrary( tmpStr.c_str() );
 		if (Lib == NULL)
 		{
@@ -129,7 +129,7 @@ BOOL OnConfigureDialog(HWND hW) {
 		if( !tool.LoadNextLibrary() ) continue;
 
 		if( tool.CheckVersion( "GS", PS2E_LT_GS, PS2E_GS_VERSION ) )
-			tool.AddPlugin(hWC_GS, winConfig.GS);
+			tool.AddPlugin(hWC_GS, winConfig.Plugins.GS);
 
 		if (tool.type & PS2E_LT_PAD)
 		{
@@ -141,27 +141,27 @@ BOOL OnConfigureDialog(HWND hW) {
 				if( tool.CheckVersion( "PAD", PS2E_LT_PAD, PS2E_PAD_VERSION ) )
 				{
 					if (query() & 0x1)
-						tool.AddPlugin(hWC_PAD1, winConfig.PAD1);
+						tool.AddPlugin(hWC_PAD1, winConfig.Plugins.PAD1);
 					if (query() & 0x2)
-						tool.AddPlugin(hWC_PAD2, winConfig.PAD2);
+						tool.AddPlugin(hWC_PAD2, winConfig.Plugins.PAD2);
 				}
 			}
 		}
 
 		if( tool.CheckVersion( "SPU2", PS2E_LT_SPU2, PS2E_SPU2_VERSION ) )
-			tool.AddPlugin(hWC_SPU2, winConfig.SPU2);
+			tool.AddPlugin(hWC_SPU2, winConfig.Plugins.SPU2);
 
 		if( tool.CheckVersion( "CDVD", PS2E_LT_CDVD, PS2E_CDVD_VERSION ) )
-			tool.AddPlugin(hWC_CDVD, winConfig.CDVD);
+			tool.AddPlugin(hWC_CDVD, winConfig.Plugins.CDVD);
 
 		if( tool.CheckVersion( "DEV9", PS2E_LT_DEV9, PS2E_DEV9_VERSION ) )
-			tool.AddPlugin(hWC_DEV9, winConfig.DEV9);
+			tool.AddPlugin(hWC_DEV9, winConfig.Plugins.DEV9);
 
 		if( tool.CheckVersion( "USB", PS2E_LT_USB, PS2E_USB_VERSION ) )
-			tool.AddPlugin(hWC_USB, winConfig.USB);
+			tool.AddPlugin(hWC_USB, winConfig.Plugins.USB);
 
 		if( tool.CheckVersion( "FW", PS2E_LT_FW, PS2E_FW_VERSION ) )
-			tool.AddPlugin(hWC_FW, winConfig.FW);
+			tool.AddPlugin(hWC_FW, winConfig.Plugins.FW);
 
 	} while( tool.FindNext() );
 
@@ -177,7 +177,7 @@ BOOL OnConfigureDialog(HWND hW) {
 	HANDLE Find;
 
 	WIN32_FIND_DATA FindData;
-	Find = FindFirstFile( Path::Combine( Config.BiosDir, "*" ).c_str(), &FindData);
+	Find = FindFirstFile( Path::Combine( Config.Paths.Bios, "*" ).c_str(), &FindData);
 
 	do
 	{
@@ -268,21 +268,21 @@ char *GetComboSel(HWND hW, int id) {
 
 void OnOK(HWND hW) {
 	CheckComboSel(winConfig.Bios, IDC_LISTBIOS);
-	CheckComboSel(winConfig.GS,   IDC_LISTGS);
-	CheckComboSel(winConfig.PAD1, IDC_LISTPAD1);
-	CheckComboSel(winConfig.PAD2, IDC_LISTPAD2);
-	CheckComboSel(winConfig.SPU2, IDC_LISTSPU2);
-	CheckComboSel(winConfig.CDVD, IDC_LISTCDVD);
-	CheckComboSel(winConfig.DEV9, IDC_LISTDEV9);
-	CheckComboSel(winConfig.USB, IDC_LISTUSB);
-	CheckComboSel(winConfig.FW, IDC_LISTFW);
+	CheckComboSel(winConfig.Plugins.GS,   IDC_LISTGS);
+	CheckComboSel(winConfig.Plugins.PAD1, IDC_LISTPAD1);
+	CheckComboSel(winConfig.Plugins.PAD2, IDC_LISTPAD2);
+	CheckComboSel(winConfig.Plugins.SPU2, IDC_LISTSPU2);
+	CheckComboSel(winConfig.Plugins.CDVD, IDC_LISTCDVD);
+	CheckComboSel(winConfig.Plugins.DEV9, IDC_LISTDEV9);
+	CheckComboSel(winConfig.Plugins.USB, IDC_LISTUSB);
+	CheckComboSel(winConfig.Plugins.FW, IDC_LISTFW);
 	CleanUpCombos(hW);
 
 	EndDialog(hW, TRUE);
 
 	// Apply winConfig settings:
-	#define ApplyPluginPath( name ) strcpy( Config.name, winConfig.name )
-	ApplyPluginPath( Bios );
+	#define ApplyPluginPath( name ) strcpy( Config.Plugins.name, winConfig.Plugins.name )
+	strcpy( Config.Bios, winConfig.Bios );
 	ApplyPluginPath( GS );
 	ApplyPluginPath( PAD1 );
 	ApplyPluginPath( PAD2 );
@@ -306,7 +306,7 @@ static void ConfPlugin( HWND hW, int confs, const char* name )
 
 	if(pDLL==NULL) return;
 
-	drv = SysLoadLibrary( Path::Combine( Config.PluginsDir, pDLL ).c_str() );
+	drv = SysLoadLibrary( Path::Combine( Config.Paths.Plugins, pDLL ).c_str() );
 	if (drv == NULL) return;
 
 	conf = (void (*)()) SysLoadSym(drv, name);
@@ -385,7 +385,7 @@ static void TestPlugin( HWND hW, int confs, const char* name )
 
 	if (pDLL== NULL) return;
 
-	drv = SysLoadLibrary( Path::Combine( Config.PluginsDir, pDLL ).c_str() );
+	drv = SysLoadLibrary( Path::Combine( Config.Paths.Plugins, pDLL ).c_str() );
 	if (drv == NULL) return;
 
 	conf = (int (*)()) SysLoadSym(drv, name);
@@ -456,7 +456,7 @@ void SetPluginsDir(HWND hW) {
 	char Path[g_MaxPath];
 
 	if (SelectPath(hW, _("Select Plugins Directory"), Path) == -1) return;
-	strcpy(Config.PluginsDir, Path);
+	strcpy(Config.Paths.Plugins, Path);
 	CleanUpCombos(hW);
 	OnConfigureDialog(hW);
 }
@@ -465,7 +465,7 @@ void SetBiosDir(HWND hW) {
 	char Path[g_MaxPath];
 
 	if (SelectPath(hW, _("Select Bios Directory"), Path) == -1) return;
-	strcpy(Config.BiosDir, Path);
+	strcpy(Config.Paths.Bios, Path);
 	CleanUpCombos(hW);
 	OnConfigureDialog(hW);
 }

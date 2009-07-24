@@ -220,7 +220,7 @@ int IsBIOS(const char *filename, char *description)
 	unsigned int fileOffset=0, found=FALSE;
 	struct romdir rd;
 
-	string Bios( Path::Combine( Config.BiosDir, filename ) );
+	string Bios( Path::Combine( Config.Paths.Bios, filename ) );
 
 	int biosFileSize = Path::getFileSize( Bios );
 	if( biosFileSize <= 0) return FALSE;	

@@ -721,14 +721,14 @@ int LoadPlugins()
 {
 	if (plugins_loaded) return 0;
 
-	if (LoadGSplugin(	Path::Combine( Config.PluginsDir, Config.GS )) == -1) return -1;
-	if (LoadPAD1plugin(	Path::Combine( Config.PluginsDir, Config.PAD1 )) == -1) return -1;
-	if (LoadPAD2plugin(	Path::Combine( Config.PluginsDir, Config.PAD2 )) == -1) return -1;
-	if (LoadSPU2plugin(	Path::Combine( Config.PluginsDir, Config.SPU2 )) == -1) return -1;
-	if (LoadCDVDplugin(	Path::Combine( Config.PluginsDir, Config.CDVD )) == -1) return -1;
-	if (LoadDEV9plugin(	Path::Combine( Config.PluginsDir, Config.DEV9 )) == -1) return -1;
-	if (LoadUSBplugin(	Path::Combine( Config.PluginsDir, Config.USB )) == -1) return -1;
-	if (LoadFWplugin(	Path::Combine( Config.PluginsDir, Config.FW )) == -1) return -1;
+	if (LoadGSplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.GS )) == -1) return -1;
+	if (LoadPAD1plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD1 )) == -1) return -1;
+	if (LoadPAD2plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD2 )) == -1) return -1;
+	if (LoadSPU2plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.SPU2 )) == -1) return -1;
+	if (LoadCDVDplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.CDVD )) == -1) return -1;
+	if (LoadDEV9plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.DEV9 )) == -1) return -1;
+	if (LoadUSBplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.USB )) == -1) return -1;
+	if (LoadFWplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.FW )) == -1) return -1;
 
 	plugins_loaded = true;
 

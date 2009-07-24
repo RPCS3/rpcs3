@@ -197,12 +197,12 @@ void WinRun()
 
 	memcpy( &winConfig, &Config, sizeof( PcsxConfig ) );
 
-	_doPluginOverride( "GS", g_Startup.gsdll, Config.GS );
-	_doPluginOverride( "CDVD", g_Startup.cdvddll, Config.CDVD );
-	_doPluginOverride( "SPU2", g_Startup.spudll, Config.SPU2 );
-	_doPluginOverride( "PAD1", g_Startup.pad1dll, Config.PAD1 );
-	_doPluginOverride( "PAD2", g_Startup.pad2dll, Config.PAD2 );
-	_doPluginOverride( "DEV9", g_Startup.dev9dll, Config.DEV9 );
+	_doPluginOverride( "GS", g_Startup.gsdll, Config.Plugins.GS );
+	_doPluginOverride( "CDVD", g_Startup.cdvddll, Config.Plugins.CDVD );
+	_doPluginOverride( "SPU2", g_Startup.spudll, Config.Plugins.SPU2 );
+	_doPluginOverride( "PAD1", g_Startup.pad1dll, Config.Plugins.PAD1 );
+	_doPluginOverride( "PAD2", g_Startup.pad2dll, Config.Plugins.PAD2 );
+	_doPluginOverride( "DEV9", g_Startup.dev9dll, Config.Plugins.DEV9 );
 
 
 	if( Config.Profiler )
@@ -268,7 +268,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	textdomain(PACKAGE);
 #endif
 
-	strcpy(g_WorkingFolder, Path::GetWorkingDirectory().c_str());
+	//strcpy(g_WorkingFolder, Path::GetWorkingDirectory().c_str());
+	strcpy(Config.Paths.Working, Path::GetWorkingDirectory().c_str());
 
 	int argc;
 	TCHAR *const *const argv = _CommandLineToArgv( lpCmdLine, &argc );
@@ -739,7 +740,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			case ID_CONFIG_CONTROLLERS:
 				if (PAD1configure) PAD1configure();
 				if (PAD2configure) {
-					if (strcmp(Config.PAD1, Config.PAD2))PAD2configure();
+					if (strcmp(Config.Plugins.PAD1, Config.Plugins.PAD2))PAD2configure();
 				}
 				break;
 

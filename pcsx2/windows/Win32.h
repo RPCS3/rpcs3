@@ -43,7 +43,7 @@ int SysPageFaultExceptionFilter(EXCEPTION_POINTERS* eps);
 
 // --->>  Ini Configuration [ini.c]
 
-extern char g_WorkingFolder[g_MaxPath];
+//extern char g_WorkingFolder[g_MaxPath];
 extern const char* g_CustomConfigFile;
 
 bool LoadConfig();

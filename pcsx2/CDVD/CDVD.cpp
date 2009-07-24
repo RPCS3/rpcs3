@@ -77,7 +77,7 @@ FILE *_cdvdOpenMechaVer() {
 	FILE* fd;
 
 	// get the name of the bios file
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
+	string Bios( Path::Combine( Config.Paths.Bios, Config.Bios ) );
 	
 	// use the bios filename to get the name of the mecha ver file
 	// [TODO] : Upgrade this to use std::string!
@@ -125,7 +125,7 @@ FILE *_cdvdOpenNVM() {
 	FILE* fd;
 
 	// get the name of the bios file
-	string Bios( Path::Combine( Config.BiosDir, Config.Bios ) );
+	string Bios( Path::Combine( Config.Paths.Bios, Config.Bios ) );
 	
 	// use the bios filename to get the name of the nvm file
 	// [TODO] : Upgrade this to use std::string!
