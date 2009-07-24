@@ -51,8 +51,9 @@ install(
 )
 
 if(UNIX)
-	configure_file("yaml-cpp.pc.cmake" yaml-cpp.pc @ONLY)
-	install(FILES yaml-cpp.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+	set(PC_FILE ${CMAKE_BINARY_DIR}/yaml-cpp.pc)
+	configure_file("yaml-cpp.pc.cmake" ${PC_FILE} @ONLY)
+	install(FILES ${PC_FILE} DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 endif(UNIX)
 
 add_subdirectory (yaml-reader)
