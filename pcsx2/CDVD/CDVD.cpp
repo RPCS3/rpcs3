@@ -590,7 +590,7 @@ int cdvdReadSector() {
 		{
 			// dual layer ptp disc
 			layerNum = 1;
-			lsn = lsn-layer1Start + 0x30000;
+			lsn = lsn - layer1Start + 0x30000;
 		}
 		else if((dualType == 2) && (lsn >= layer1Start))
 		{
@@ -599,7 +599,8 @@ int cdvdReadSector() {
 			lsn = ~(layer1Start+0x30000 - 1);
 		}
 		else
-		{ // Assumed the other dualType is 0.
+		{ 
+			// Assumed the other dualType is 0.
 			// single layer disc
 			// or on first layer of dual layer disc
 			layerNum = 0;
@@ -624,8 +625,25 @@ int cdvdReadSector() {
 		mdest[11] = 0;
 
 		// normal 2048 bytes of sector data
-		memcpy_fast( &mdest[12], cdr.pTransfer, 2048);
-
+		if (cdr.pTransfer == NULL)
+		{
+			// Unlike CDVDiso, the internal IsoReadTrack function will pass an error if lsn is more
+			// then the number of blocks in the iso. If this happens, cdr.pTransfer will be NULL.
+			//
+			// Passing null to memcpy is a bad thing, and will result in, for example, the start of 
+			// Final Fantasy X-2 crashing. So we won't. 
+			
+			DevCon::WriteLn("Bad Transfer!");
+			for (int i = 12; i > 2060; i++)
+			{
+				mdest[i] = 0;
+			}
+		}
+		else
+		{
+			memcpy_fast( &mdest[12], cdr.pTransfer, 2048);
+		}
+		
 		// 4 bytes of edc (not calculated at present)
 		mdest[2060] = 0;
 		mdest[2061] = 0;
@@ -725,7 +743,10 @@ __forceinline void cdvdReadInterrupt()
 			cdr.pTransfer = cdr.Transfer;
 		}
 		else 
+		{
+			DevCon::WriteLn("Error reading track.");
 			cdr.pTransfer = NULL;
+		}
 		
 		if (cdr.RErr == -1)
 		{
