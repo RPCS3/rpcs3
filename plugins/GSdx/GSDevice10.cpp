@@ -420,7 +420,7 @@ void GSDevice10::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 {
 	D3D10_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
 
-	m_dev->CopySubresourceRegion(*(GSTexture10*)dt, 0, 0, 0, 0, *(GSTexture10*)st, 0, &box);
+	m_dev->CopySubresourceRegion(*(GSTexture10*)dt, 0, r.left, r.top, 0, *(GSTexture10*)st, 0, &box);
 }
 
 void GSDevice10::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)

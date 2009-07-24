@@ -951,7 +951,7 @@ void GSTextureCache::Target::Update()
 
 		if(GSTexture* t = m_renderer->m_dev->CreateTexture(w, h))
 		{
-			const GSOffset* o = m_renderer->m_mem.GetOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM); // TODO: m_renderer->m_context->bo.tex;
+			const GSOffset* o = m_renderer->m_mem.GetOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM);
 
 			GIFRegTEXA TEXA;
 

@@ -142,8 +142,8 @@ void GSDevice7::Present(const GSVector4i& r, int shader, bool limit)
 
 	GSVector4i cr = m_wnd->GetClientRect();
 
-	int w = std::max(cr.width(), 1);
-	int h = std::max(cr.height(), 1);
+	int w = std::max<int>(cr.width(), 1);
+	int h = std::max<int>(cr.height(), 1);
 
 	if(!m_backbuffer || m_backbuffer->m_size.x != w || m_backbuffer->m_size.y != h)
 	{
