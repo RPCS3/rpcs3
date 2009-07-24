@@ -148,17 +148,17 @@ struct PluginNames
 // This may end up being moved to Paths.h. It may also be converted to strings.
 struct FilePaths
 {
-	char Working[g_MaxPath];
+	string Working;
 	char Plugins[g_MaxPath];
 	char Bios[g_MaxPath];
 
 	// These are mainly placeholders for later.
-	char Isos[g_MaxPath];
-	char Dumps[g_MaxPath];
+	string Isos;
+	string Dumps;
 
 	// This is intended for the program to populate, and the plugins to read. 
 	// Obviously can't be saved in the config file. :)
-	char Inis[g_MaxPath];
+	string Inis;
 };
 
 struct Hacks_t 

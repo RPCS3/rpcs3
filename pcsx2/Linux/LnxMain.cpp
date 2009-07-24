@@ -37,8 +37,8 @@ int main(int argc, char *argv[])
 	efile = 0;
 	
 	/* store main dir */
-	strcpy(Config.Paths.Working, Path::GetWorkingDirectory().c_str());
-	Console::Notice("Config.Paths.Working is %s", params Config.Paths.Working);
+	Config.Paths.Working = Path::GetWorkingDirectory();
+	Console::Notice("Config.Paths.Working is %s", params Config.Paths.Working.c_str());
 #ifdef ENABLE_NLS
 	setlocale(LC_ALL, "");
 	bindtextdomain(PACKAGE, "Langs");
@@ -48,15 +48,15 @@ int main(int argc, char *argv[])
 	// Note: Config.Paths.Inis won't do anything till we set up windows and the plugins to use it.
 #ifndef LOCAL_PLUGIN_INIS
 	mkdir(DEFAULT_INIS_DIR, 0755);
-	sprintf(Config.Paths.Inis, "%s/%s/", Config.Paths.Working, DEFAULT_INIS_DIR);
-	sprintf(cfgfile, "%s/pcsx2.cfg", Config.Paths.Inis);
+	Config.Paths.Inis = Config.Paths.Working + "/" + string(DEFAULT_INIS_DIR) + "/";
+	sprintf(cfgfile, "%s/pcsx2.cfg", Config.Paths.Inis.c_str());
 #else
-	Path::CreateDirectory(string("~/.pcsx2"));
-	Path::ChangeDirectory(string("~/.pcsx2"));
-	Path::CreateDirectory(string(DEFAULT_INIS_DIR));
-	sprintf(Config.Paths.Inis, "~/.pcsx2/%s/", DEFAULT_INIS_DIR);
-	sprintf(cfgfile, "%s/pcsx2.cfg", Config.Paths.Inis);
-	Path::ChangeDirectory(string(Config.Paths.Working));
+	Path::CreateDirectory("~/.pcsx2");
+	Path::ChangeDirectory("~/.pcsx2");
+	Path::CreateDirectory(DEFAULT_INIS_DIR);
+	Config.Paths.Inis = "~/.pcsx2/" + DEFAULT_INIS_DIR + "/";
+	sprintf(cfgfile, "%s/pcsx2.cfg", Config.Paths.Inis.c_str());
+	Path::ChangeDirectory(Config.Paths.Working);
 #endif
 
 #ifdef PCSX2_DEVBUILD
@@ -81,10 +81,10 @@ int main(int argc, char *argv[])
 	{
 
 		memset(&Config, 0, sizeof(Config));
-		sprintf(Config.Paths.Bios, "%s/%s/", Config.Paths.Working, DEFAULT_BIOS_DIR);
-		sprintf(Config.Paths.Plugins, "%s/%s/", Config.Paths.Working, DEFAULT_PLUGINS_DIR);
-		sprintf(Config.Mcd[0].Filename, "%s/%s/%s", Config.Paths.Working, MEMCARDS_DIR, DEFAULT_MEMCARD1);
-		sprintf(Config.Mcd[1].Filename, "%s/%s/%s", Config.Paths.Working, MEMCARDS_DIR, DEFAULT_MEMCARD2);
+		sprintf(Config.Paths.Bios, "%s/%s/", Config.Paths.Working.c_str(), DEFAULT_BIOS_DIR);
+		sprintf(Config.Paths.Plugins, "%s/%s/", Config.Paths.Working.c_str(), DEFAULT_PLUGINS_DIR);
+		sprintf(Config.Mcd[0].Filename, "%s/%s/%s", Config.Paths.Working.c_str(), MEMCARDS_DIR, DEFAULT_MEMCARD1);
+		sprintf(Config.Mcd[1].Filename, "%s/%s/%s", Config.Paths.Working.c_str(), MEMCARDS_DIR, DEFAULT_MEMCARD2);
 		Config.Mcd[0].Enabled = 1;
 		Config.Mcd[1].Enabled = 1;
 		Config.McdEnableEject = 1;

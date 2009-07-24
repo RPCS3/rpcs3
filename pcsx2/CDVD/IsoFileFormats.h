@@ -19,26 +19,8 @@
  #ifndef __LIBISO_H__
 #define __LIBISO_H__
 
-#ifndef __USE_LARGEFILE64
-#define __USE_LARGEFILE64
-#endif
-
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE_SOURCE 
-#endif
-
-#ifndef _LARGEFILE64_SOURCE
-#define _LARGEFILE64_SOURCE
-#endif
-
-#define __USE_FILE_OFFSET64
-#define _FILE_OFFSET_BITS 64
-
-#ifdef _MSC_VER
-#pragma warning(disable:4018)
-#endif
-
 #include "CDVD.h"
+#include "IsoFileTools.h"
 
 enum isoType
 {
@@ -98,12 +80,5 @@ int  isoDetect(isoFile *iso);
 int  isoReadBlock(isoFile *iso, u8 *dst, int lsn);
 int  isoWriteBlock(isoFile *iso, u8 *src, int lsn);
 void isoClose(isoFile *iso);
-
-void *_openfile(const char *filename, int flags);
-u64 _tellfile(void *handle);
-int _seekfile(void *handle, u64 offset, int whence);
-int _readfile(void *handle, void *dst, int size);
-int _writefile(void *handle, void *src, int size);
-void _closefile(void *handle);
 
 #endif /* __LIBISO_H__ */

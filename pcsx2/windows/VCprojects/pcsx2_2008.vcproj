@@ -2488,6 +2488,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\CDVD\IsoFileTools.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFileTools.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\CDVD\IsoFScdvd.h"
 					>
 				</File>

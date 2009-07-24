@@ -269,7 +269,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #endif
 
 	//strcpy(g_WorkingFolder, Path::GetWorkingDirectory().c_str());
-	strcpy(Config.Paths.Working, Path::GetWorkingDirectory().c_str());
+	Config.Paths.Working = Path::GetWorkingDirectory();
 
 	int argc;
 	TCHAR *const *const argv = _CommandLineToArgv( lpCmdLine, &argc );

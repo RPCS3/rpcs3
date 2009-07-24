@@ -59,7 +59,7 @@ void DlgItem_GetText( HWND hwnd, int dlgId, string& dest )
 static const char* _stripPathInfo( const char* src )
 {
 	const char* retval = src;
-	const char* workingfold = Config.Paths.Working;
+	const char* workingfold = Config.Paths.Working.c_str();
 
 	while( (*retval != 0) && (*workingfold != 0) && (tolower(*retval) == tolower(*workingfold)) )
 	{
