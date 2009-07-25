@@ -24,15 +24,17 @@
 
 // Used for Result Clamping
 void mVUclamp1(int reg, int regT1, int xyzw) {
-	switch (xyzw) {
-		case 1: case 2: case 4: case 8:
-			SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
-			SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
-			break;
-		default:
-			SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
-			SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
-			break;
+	if (CHECK_VU_OVERFLOW) {
+		switch (xyzw) {
+			case 1: case 2: case 4: case 8:
+				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
+				break;
+			default:
+				SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
+				break;
+		}
 	}
 }
 
@@ -41,18 +43,18 @@ void mVUclamp2(int reg, int regT1, int xyzw) {
 	if (CHECK_VU_SIGN_OVERFLOW) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
-				SSE_MOVSS_XMM_to_XMM(regT1, reg);
+				SSE_MOVSS_XMM_to_XMM (regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
-				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
-				SSE_ORPS_XMM_to_XMM(reg, regT1);
+				SSE_MINSS_M32_to_XMM (reg,   (uptr)mVU_maxvals);
+				SSE_MAXSS_M32_to_XMM (reg,   (uptr)mVU_minvals);
+				SSE_ORPS_XMM_to_XMM  (reg, regT1);
 				break;
 			default:
 				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
-				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
-				SSE_ORPS_XMM_to_XMM(reg, regT1);
+				SSE_MINPS_M128_to_XMM(reg,   (uptr)mVU_maxvals);
+				SSE_MAXPS_M128_to_XMM(reg,   (uptr)mVU_minvals);
+				SSE_ORPS_XMM_to_XMM  (reg, regT1);
 				break;
 		}
 	}

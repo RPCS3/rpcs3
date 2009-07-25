@@ -68,7 +68,7 @@ mVUop(mVU_DIV) {
 		x86SetJ8(cjmp);
 			MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
 			SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
-			if (CHECK_VU_OVERFLOW) mVUclamp1(xmmFs, xmmFt, 8);
+			mVUclamp1(xmmFs, xmmFt, 8);
 		x86SetJ8(djmp);
 
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
@@ -124,7 +124,7 @@ mVUop(mVU_RSQRT) {
 			djmp = JMP8(0);
 		x86SetJ8(ajmp);
 			SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
-			if (CHECK_VU_OVERFLOW) mVUclamp1(xmmFs, xmmFt, 8);
+			mVUclamp1(xmmFs, xmmFt, 8);
 		x86SetJ8(djmp);
 
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);

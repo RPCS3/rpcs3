@@ -148,6 +148,7 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS((1 << (3 - _bc_)))); } }
+		opCase2 { if (opType == 2)				 { mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 
 		if (_XYZW_SS) SSE_SS[opType](mVU, Fs, Ft, -1, -1);
 		else		  SSE_PS[opType](mVU, Fs, Ft, -1, -1);
@@ -186,6 +187,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 		if (_XYZW_SS && _X_Y_Z_W != 8)			 { SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W)); }
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS((1 << (3 - _bc_)))); } }
+		opCase2 { if (opType == 2)				 { mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 
 		if (_XYZW_SS) SSE_SS[2](mVU, Fs, Ft, -1, -1);
 		else		  SSE_PS[2](mVU, Fs, Ft, -1, -1);
@@ -230,6 +232,7 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 		if (_XYZW_SS && _X_Y_Z_W != 8)			 { SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W)); }
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS((1 << (3 - _bc_)))); } }
+		opCase2 { mVUclamp1(Fs, -1, _X_Y_Z_W); } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 
 		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[0](mVU, Fs, ACC, -1, -1); }
 		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[0](mVU, Fs, ACC, -1, -1); }
