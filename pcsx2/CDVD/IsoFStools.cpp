@@ -140,7 +140,8 @@ void TocEntryCopy(TocEntry* tocEntry, const dirTocEntry* internalTocEntry){
 // Check if a TOC Entry matches our extension list
 int TocEntryCompare(char* filename, char* extensions){
 	static char ext_list[129];
-	char* token, ext_point;
+	char* token;
+	char* ext_point;
 
 	strncpy(ext_list,extensions,128);
 	ext_list[128]=0;
