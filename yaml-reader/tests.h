@@ -28,6 +28,7 @@ namespace Test {
 		bool SimpleMap();
 		bool FlowSeq();
 		bool FlowMap();
+		bool QuotedSimpleKeys();
 	}
 	
 	namespace Emitter {

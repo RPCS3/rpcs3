@@ -309,8 +309,8 @@ namespace YAML
 	{
 		std::string scalar;
 
-		// eat single or double quote
-		char quote = INPUT.get();
+		// peek at single or double quote (don't eat because we need to preserve (for the time being) the input position)
+		char quote = INPUT.peek();
 		bool single = (quote == '\'');
 
 		// setup the scanning parameters
@@ -330,6 +330,11 @@ namespace YAML
 			InsertSimpleKey();
 
 		int line = INPUT.line, column = INPUT.column;
+
+		// now eat that opening quote
+		INPUT.get();
+		
+		// and scan
 		scalar = ScanScalar(INPUT, params);
 		m_simpleKeyAllowed = false;
 

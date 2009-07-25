@@ -1,6 +1,7 @@
 #include "tests.h"
 #include "yaml.h"
 #include <sstream>
+#include <algorithm>
 
 namespace Test
 {
@@ -216,6 +217,34 @@ namespace Test
 			if(output != "0.278")
 				return false;
 
+			return true;
+		}
+
+		bool QuotedSimpleKeys()
+		{
+			std::string KeyValue[3] = { "\"double\": double\n", "'single': single\n", "plain: plain\n" };
+			
+			int perm[3] = { 0, 1, 2 };
+			do {
+				std::string input = KeyValue[perm[0]] + KeyValue[perm[1]] + KeyValue[perm[2]];
+
+				std::stringstream stream(input);
+				YAML::Parser parser(stream);
+				YAML::Node doc;
+				parser.GetNextDocument(doc);
+				
+				std::string output;
+				doc["double"] >> output;
+				if(output != "double")
+					return false;
+				doc["single"] >> output;
+				if(output != "single")
+					return false;
+				doc["plain"] >> output;
+				if(output != "plain")
+					return false;
+			} while(std::next_permutation(perm, perm + 3));
+				
 			return true;
 		}
 	}
