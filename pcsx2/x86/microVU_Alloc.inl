@@ -118,8 +118,7 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 //------------------------------------------------------------------
 
 #define getIreg(reg, modXYZW) {															\
-	MOV32MtoR(gprT1, (uptr)&mVU->regs->VI[REG_I].UL);									\
-	SSE2_MOVD_R_to_XMM(reg, gprT1);														\
+	SSE_MOVSS_M32_to_XMM(reg, (uptr)&mVU->regs->VI[REG_I].UL);							\
 	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT2, 8);								\
 	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw(reg, reg, 0); }	\
 }

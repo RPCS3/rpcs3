@@ -81,20 +81,22 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1, bool modXYZW = 1) {
 // Helper Macros and Functions
 //------------------------------------------------------------------
 
-static void (*SSE_PS[]) (x86SSERegType, x86SSERegType) = { 
-	SSE_ADDPS_XMM_to_XMM, // 0
-	SSE_SUBPS_XMM_to_XMM, // 1
-	SSE_MULPS_XMM_to_XMM, // 2
-	SSE_MAXPS_XMM_to_XMM, // 3
-	SSE_MINPS_XMM_to_XMM  // 4
+static void (*SSE_PS[]) (microVU*, int, int, int, int) = { 
+	SSE_ADDPS, // 0
+	SSE_SUBPS, // 1
+	SSE_MULPS, // 2
+	SSE_MAXPS, // 3
+	SSE_MINPS, // 4
+	SSE_ADD2PS // 5
 };
 
-static void (*SSE_SS[]) (x86SSERegType, x86SSERegType) = { 
-	SSE_ADDSS_XMM_to_XMM, // 0 
-	SSE_SUBSS_XMM_to_XMM, // 1
-	SSE_MULSS_XMM_to_XMM, // 2
-	SSE_MAXSS_XMM_to_XMM, // 3
-	SSE_MINSS_XMM_to_XMM  // 4
+static void (*SSE_SS[]) (microVU*, int, int, int, int) = { 
+	SSE_ADDSS, // 0 
+	SSE_SUBSS, // 1
+	SSE_MULSS, // 2
+	SSE_MAXSS, // 3
+	SSE_MINSS, // 4
+	SSE_ADD2SS // 5
 };
 
 // Prints Opcode to MicroProgram Logs
@@ -147,8 +149,8 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS((1 << (3 - _bc_)))); } }
 
-		if (_XYZW_SS) SSE_SS[opType](Fs, Ft);
-		else		  SSE_PS[opType](Fs, Ft);
+		if (_XYZW_SS) SSE_SS[opType](mVU, Fs, Ft, -1, -1);
+		else		  SSE_PS[opType](mVU, Fs, Ft, -1, -1);
 
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS((1 << (3 - _bc_)))); } }
@@ -185,22 +187,22 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS((1 << (3 - _bc_)))); } }
 
-		if (_XYZW_SS) SSE_SS[2](Fs, Ft);
-		else		  SSE_PS[2](Fs, Ft);
+		if (_XYZW_SS) SSE_SS[2](mVU, Fs, Ft, -1, -1);
+		else		  SSE_PS[2](mVU, Fs, Ft, -1, -1);
 
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS((1 << (3 - _bc_)))); } }
 
 		if (_XYZW_SS || _X_Y_Z_W == 0xf) {
-			if (_XYZW_SS) SSE_SS[opType](ACC, Fs);
-			else		  SSE_PS[opType](ACC, Fs);	  
+			if (_XYZW_SS) SSE_SS[opType](mVU, ACC, Fs, -1, -1);
+			else		  SSE_PS[opType](mVU, ACC, Fs, -1, -1);	  
 			mVUupdateFlags(mVU, ACC, Fs);
 			if (_XYZW_SS && _X_Y_Z_W != 8) SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W));
 		}
 		else {
 			int tempACC = mVU->regAlloc->allocReg();
 			SSE_MOVAPS_XMM_to_XMM(tempACC, ACC);
-			SSE_PS[opType](tempACC, Fs);
+			SSE_PS[opType](mVU, tempACC, Fs, -1, -1);
 			mVUmergeRegs(ACC, tempACC, _X_Y_Z_W);
 			mVU->regAlloc->clearNeeded(tempACC);
 		}
@@ -229,8 +231,8 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft,  Ft,  shuffleSS((1 << (3 - _bc_)))); } }
 
-		if (_XYZW_SS) { SSE_SS[2](Fs, Ft); SSE_SS[0](Fs, ACC); }
-		else		  { SSE_PS[2](Fs, Ft); SSE_PS[0](Fs, ACC); }
+		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[0](mVU, Fs, ACC, -1, -1); }
+		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[0](mVU, Fs, ACC, -1, -1); }
 
 		mVUupdateFlags(mVU, Fs, -1);
 
@@ -260,8 +262,8 @@ void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName) {
 		opCase1 { if (_XYZW_SS && _X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS(_X_Y_Z_W)); } }
 		opCase2 { if (_XYZW_SS && (!_bc_x))		 { SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, shuffleSS((1 << (3 - _bc_)))); } }
 
-		if (_XYZW_SS) { SSE_SS[2](Fs, Ft); SSE_SS[1](Fd, Fs); }
-		else		  { SSE_PS[2](Fs, Ft); SSE_PS[1](Fd, Fs); }
+		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[1](mVU, Fd, Fs, -1, -1); }
+		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[1](mVU, Fd, Fs, -1, -1); }
 
 		mVUupdateFlags(mVU, Fd, Fs);
 
@@ -315,8 +317,8 @@ mVUop(mVU_OPMSUB) {
 	pass1 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, _Ft_); }
 	pass2 {
 		mVU->regAlloc->reset(); // Reset for Testing
-		int Ft  = mVU->regAlloc->allocReg(_Ft_);
-		int Fs  = mVU->regAlloc->allocReg(_Fs_,  0, _X_Y_Z_W);
+		int Ft  = mVU->regAlloc->allocReg(_Ft_, 0, 0xf);
+		int Fs  = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
 		int ACC = mVU->regAlloc->allocReg(32, _Fd_, _X_Y_Z_W);
 
 		SSE2_PSHUFD_XMM_to_XMM(Fs, Fs, 0xC9); // WXZY
@@ -325,7 +327,7 @@ mVUop(mVU_OPMSUB) {
 		SSE_SUBPS_XMM_to_XMM(ACC, Fs);
 		mVUupdateFlags(mVU, ACC, Fs);
 
-		mVU->regAlloc->clearNeeded(32);
+		mVU->regAlloc->clearNeeded(ACC);
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
 		mVU->regAlloc->flushAll(); // Flush All for Testing
@@ -386,8 +388,8 @@ mVUop(mVU_CLIP) {
 	pass1 { mVUanalyzeFMAC4(mVU, _Fs_, _Ft_); }
 	pass2 {
 		mVU->regAlloc->reset(); // Reset for Testing
-		int Fs = mVU->regAlloc->allocReg(_Fs_);
-		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, 1);
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
+		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, 0x1);
 		int t1 = mVU->regAlloc->allocReg();
 
 		mVUunpack_xyzw(Ft, Ft, 0);
@@ -429,7 +431,7 @@ mVUop(mVU_CLIP) {
 //------------------------------------------------------------------
 
 mVUop(mVU_ADD)		{ mVU_FMACa(mVU, recPass, 1, 0, 0,	"ADD");    }
-mVUop(mVU_ADDi)		{ mVU_FMACa(mVU, recPass, 3, 0, 0,	"ADDi");   }
+mVUop(mVU_ADDi)		{ mVU_FMACa(mVU, recPass, 3, 5, 0,	"ADDi");   }
 mVUop(mVU_ADDq)		{ mVU_FMACa(mVU, recPass, 4, 0, 0,	"ADDq");   }
 mVUop(mVU_ADDx)		{ mVU_FMACa(mVU, recPass, 2, 0, 0,	"ADDx");   }
 mVUop(mVU_ADDy)		{ mVU_FMACa(mVU, recPass, 2, 0, 0,	"ADDy");   }
