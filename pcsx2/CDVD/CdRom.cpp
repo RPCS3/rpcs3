@@ -118,30 +118,13 @@ static __forceinline void SetResultSize(u8 size) {
 	cdr.ResultReady = 1;
 }
 
-static __forceinline s32 MSFtoLSN(u8 *Time) {
-	u32 lsn;
-
-	lsn = Time[2];
-	lsn+=(Time[1] - 2) * 75;
-	lsn+= Time[0] * 75 * 60;
-	return lsn;
-}
-
-static __forceinline void LSNtoMSF(u8 *Time, s32 lsn) {
-	lsn += 150;
-	Time[2] = lsn / 4500;			// minuten
-	lsn = lsn - Time[2] * 4500;		// minuten rest
-	Time[1] = lsn / 75;				// sekunden
-	Time[0] = lsn - Time[1] * 75;		// sekunden rest
-}
-
 static void ReadTrack() {
 	cdr.Prev[0] = itob(cdr.SetSector[0]);
 	cdr.Prev[1] = itob(cdr.SetSector[1]);
 	cdr.Prev[2] = itob(cdr.SetSector[2]);
 
 	CDR_LOG("KEY *** %x:%x:%x", cdr.Prev[0], cdr.Prev[1], cdr.Prev[2]);
-	cdr.RErr = DoCDVDreadTrack(MSFtoLSN(cdr.SetSector), CDVD_MODE_2340);
+	cdr.RErr = DoCDVDreadTrack(msf_to_lsn(cdr.SetSector), CDVD_MODE_2340);
 }
 
 // cdr.Stat:
@@ -351,7 +334,7 @@ void  cdrInterrupt() {
 				cdr.Stat = DiskError;
 				cdr.Result[0]|= 0x01;
 			} else {
-				LSNtoMSF(cdr.ResultTD, trackInfo.lsn);
+				lsn_to_msf(cdr.ResultTD, trackInfo.lsn);
 				cdr.Stat = Acknowledge;
 				cdr.Result[0] = cdr.StatP;
 				cdr.Result[1] = itob(cdr.ResultTD[0]);
@@ -397,11 +380,14 @@ void  cdrInterrupt() {
 					SetResultSize(4);
 					*(int*)cdr.Result = *(int*)Test20;
 					break;
+				
 				case 0x22:
 					SetResultSize(8);
 					*(int*)cdr.Result = *(int*)Test22;
 					break;
-				case 0x23: case 0x24:
+				
+				case 0x23: 
+				case 0x24:
 					SetResultSize(8);
 					*(int*)cdr.Result = *(int*)Test23;
 					break;
@@ -456,8 +442,7 @@ void  cdrInterrupt() {
 			break;
 
 		case READ_ACK:
-			if (!cdr.Reading)
-				return;
+			if (!cdr.Reading) return;
 
 			SetResultSize(1);
 			cdr.StatP|= 0x2;

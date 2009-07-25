@@ -27,6 +27,43 @@ extern char isoFileName[];
 #define btoi(b)		((b)/16*10 + (b)%16)		/* BCD to u_char */
 #define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
 
+static __forceinline s32 msf_to_lsn(u8 *Time) 
+{
+	u32 lsn;
+
+	lsn = Time[2];
+	lsn +=(Time[1] - 2) * 75;
+	lsn += Time[0] * 75 * 60;
+	return lsn;
+}
+
+static __forceinline s32 msf_to_lba(u8 m, u8 s, u8 f)
+{
+	u32 lsn;
+	lsn = f;
+	lsn += (s - 2) * 75;
+	lsn += m * 75 * 60;
+	return lsn;
+}
+
+static __forceinline void lsn_to_msf(u8 *Time, s32 lsn) 
+{
+	lsn += 150;
+	Time[2] = lsn / 4500;			// minuten
+	lsn = lsn - Time[2] * 4500;		// minuten rest
+	Time[1] = lsn / 75;				// sekunden
+	Time[0] = lsn - Time[1] * 75;		// sekunden rest
+}
+
+
+static __forceinline void lba_to_msf(s32 lba, u8* m, u8* s, u8* f)
+{
+	lba += 150;
+	*m = lba / (60 * 75);
+	*s = (lba / 75) % 60;
+	*f = lba % 75;
+}
+
 struct cdvdRTC {
 	u8 status;
 	u8 second;

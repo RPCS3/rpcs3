@@ -60,11 +60,13 @@ namespace Console
 	bool Write( Colors color, const char* fmt, VARG_PARAM dummy, ... )
 	{
 		varg_assert();
+		SetColor( color );
 
 		va_list list;
 		va_start(list,dummy);
 		Write( vfmt_string( fmt, list ).c_str() );
 		va_end(list);
+		ClearColor();
 
 		return false;
 	}

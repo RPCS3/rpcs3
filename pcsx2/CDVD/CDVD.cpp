@@ -294,11 +294,8 @@ s32 cdvdReadConfig(u8* config)
 }
 s32 cdvdWriteConfig(const u8* config)
 {
-	// make sure its in write mode
-	if(cdvd.CReadWrite != 1)
-		return 1;
-	// check if block index is in bounds
-	else if(cdvd.CBlockIndex >= cdvd.CNumBlocks)
+	// make sure its in write mode && the block index is in bounds
+	if ((cdvd.CReadWrite != 1) || (cdvd.CBlockIndex >= cdvd.CNumBlocks))
 		return 1;
 	else if(
 		((cdvd.COffset == 0) && (cdvd.CBlockIndex >= 4))||
@@ -543,14 +540,12 @@ void cdvdNewDiskCB()
 
 void mechaDecryptBytes( u32 madr, int size )
 {
-	int i;
-
 	int shiftAmount = (cdvd.decSet>>4) & 7;
 	int doXor = (cdvd.decSet) & 1;
 	int doShift = (cdvd.decSet) & 2;
 	
 	u8* curval = iopPhysMem( madr );
-	for( i=0; i<size; ++i, ++curval )
+	for( int i=0; i<size; ++i, ++curval )
 	{
 		if( doXor ) *curval ^= cdvd.Key[4];
 		if( doShift ) *curval = (*curval >> shiftAmount) | (*curval << (8-shiftAmount) );
@@ -600,9 +595,8 @@ int cdvdReadSector() {
 		}
 		else
 		{ 
-			// Assumed the other dualType is 0.
-			// single layer disc
-			// or on first layer of dual layer disc
+			// Assuming the other dualType is 0,
+			// single layer disc, or on first layer of dual layer disc.
 			layerNum = 0;
 			lsn += 0x30000;
 		}
@@ -634,7 +628,7 @@ int cdvdReadSector() {
 			// Final Fantasy X-2 crashing. So we won't. 
 			
 			DevCon::WriteLn("Bad Transfer!");
-			for (int i = 12; i > 2060; i++)
+			for (int i = 12; i <= 2060; i++)
 			{
 				mdest[i] = 0;
 			}
@@ -789,7 +783,6 @@ __forceinline void cdvdReadInterrupt()
 		cdvd.Ready = CDVD_READY2;
 
 		// All done! :D
-
 		return;
 	}
 

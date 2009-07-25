@@ -28,6 +28,10 @@
 int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_dirs);
 int IsoFS_getDirectories(TocEntry tocEntry[], int req_entries);
 
+#define CD_SECS              60 /* seconds per minute */
+#define CD_FRAMES            75 /* frames per second */
+#define CD_MSF_OFFSET       150 /* MSF numbering offset of first frame */
+
 #if defined(_MSC_VER)
 #pragma pack(1)
 #pragma warning(disable:4996) //ignore the stricmp deprecated warning

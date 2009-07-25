@@ -205,10 +205,7 @@ isoFile *isoCreate(const char *filename, int flags)
 		sprintf(Zfile, "%s.table", iso->filename);
 		iso->htable = _openfile(Zfile, O_WRONLY);
 		
-		if (iso->htable == NULL)
-		{
-			return NULL;
-		}
+		if (iso->htable == NULL) return NULL;
 	}
 
 	iso->handle = _openfile(iso->filename, O_WRONLY | O_CREAT);
@@ -361,7 +358,7 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 	else
 		ret = _isoReadBlock(iso, dst, lsn);
 	
-	if (ret == -1) return ret;
+	if (ret == -1) return -1;
 
 	if (iso->type == ISOTYPE_CD)
 	{
@@ -411,7 +408,7 @@ int isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 	else
 		ret = _isoWriteBlock(iso, src, lsn);
 	
-	if (ret == -1) return ret;
+	if (ret == -1) return -1;
 	return 0;
 }
 

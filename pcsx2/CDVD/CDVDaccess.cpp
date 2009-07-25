@@ -305,9 +305,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 		cdvdTD td;
 		CDVD.getTD(0, &td);
 
-		int blockofs = 0;
-		int blocksize = 0;
-		int blocks = td.lsn;
+		int blockofs = 0, blocksize = 0, blocks = td.lsn;
 
 		switch(cdtype)
 		{

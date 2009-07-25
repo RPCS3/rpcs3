@@ -54,15 +54,11 @@ int _seekfile(void *handle, u64 offset, int whence)
 {
 	u64 ofs = (u64)offset;
 	PLONG _ofs = (LONG*) & ofs;
+	
 //	Console::WriteLn("_seekfile %p, %d_%d", params handle, _ofs[1], _ofs[0]);
-	if (whence == SEEK_SET)
-	{
-		SetFilePointer(handle, _ofs[0], &_ofs[1], FILE_BEGIN);
-	}
-	else
-	{
-		SetFilePointer(handle, _ofs[0], &_ofs[1], FILE_END);
-	}
+	
+	SetFilePointer(handle, _ofs[0], &_ofs[1], (whence == SEEK_SET) ? FILE_BEGIN : FILE_END);
+	
 	return 0;
 }
 
@@ -70,9 +66,8 @@ int _readfile(void *handle, void *dst, int size)
 {
 	DWORD ret;
 
-//	Console::WriteLn("_readfile %p %d", params handle, size);
 	ReadFile(handle, dst, size, &ret, NULL);
-//	Console::WriteLn("_readfile ret %d; %d", params ret, GetLastError());
+//	Console::WriteLn("_readfile(%p, %d) = %d; %d", params handle, size, ret, GetLastError());
 	return ret;
 }
 
@@ -80,10 +75,9 @@ int _writefile(void *handle, void *src, int size)
 {
 	DWORD ret;
 
-//	Console::WriteLn("_writefile %p, %d", params handle, size);
 //	_seekfile(handle, _tellfile(handle));
 	WriteFile(handle, src, size, &ret, NULL);
-//	Console::WriteLn("_writefile ret %d", params ret);
+//	Console::WriteLn("_readfile(%p, %d) = %d", params handle, size, ret);
 	return ret;
 }
 
