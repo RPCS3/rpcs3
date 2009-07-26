@@ -2,8 +2,9 @@
 #include "exp.h"
 #include "indentation.h"
 #include "exceptions.h"
-#include <sstream>
 #include "stringsource.h"
+#include <sstream>
+#include <iomanip>
 
 namespace YAML
 {
@@ -82,7 +83,7 @@ namespace YAML
 				} else {
 					// TODO: for the common escaped characters, give their usual symbol
 					std::stringstream str;
-					str << "\\x" << std::hex << static_cast <int>(ch);
+					str << "\\x" << std::hex << std::setfill('0') << std::setw(2) << static_cast <int>(ch);
 					out << str.str();
 				}
 			}
