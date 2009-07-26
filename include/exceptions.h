@@ -61,16 +61,19 @@ namespace YAML
 	class Exception: public std::exception {
 	public:
 		Exception(int line_, int column_, const std::string& msg_)
-			: line(line_), column(column_), msg(msg_) {}
+			: line(line_), column(column_), msg(msg_) {
+				std::stringstream output;
+				output << "Error at line " << line+1 << ", column " << column+1 << ": " << msg;
+				what_ = output.str();
+			}
 		virtual ~Exception() throw() {}
-		virtual const char *what() const throw() {
-			std::stringstream output;
-			output << "Error at line " << line+1 << ", column " << column+1 << ": " << msg;
-			return output.str().c_str();
-		}
+		virtual const char *what() const throw() { return what_.c_str(); }
 
 		int line, column;
 		std::string msg;
+		
+	private:
+		std::string what_;
 	};
 
 	class ParserException: public Exception {
