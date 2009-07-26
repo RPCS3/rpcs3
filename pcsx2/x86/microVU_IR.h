@@ -211,9 +211,10 @@ public:
 		}
 		counter = 0;
 	}
-	void flushAll() {
+	void flushAll(bool clearState = 1) {
 		for (int i = 0; i < xmmTotal; i++) {
 			writeBackReg(i);
+			if (clearState) clearReg(i);
 		}
 	}
 	void clearReg(int reg) {

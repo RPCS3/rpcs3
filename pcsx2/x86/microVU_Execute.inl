@@ -68,7 +68,6 @@ void mVUdispatcherA(mV) {
 	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, 0);
 	SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
 
-	//SSE_MOVAPS_M128_to_XMM(xmmACC, (uptr)&mVU->regs->ACC.UL[0]);
 	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_P].UL);
 	SSE_MOVAPS_M128_to_XMM(xmmPQ, (uptr)&mVU->regs->VI[REG_Q].UL);
 	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmT1, 0); // wzyx = PPQQ
@@ -84,9 +83,6 @@ void mVUdispatcherB(mV) {
 	// Load EE's MXCSR state
 	SSE_LDMXCSR((uptr)&g_sseMXCSR);
 	
-	// Save Regs (Other Regs Saved in mVUcompile)
-	//SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->ACC.UL[0], xmmACC);
-
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
 	if (!isVU1) { CALLFunc((uptr)mVUcleanUpVU0); }
 	else		{ CALLFunc((uptr)mVUcleanUpVU1); }

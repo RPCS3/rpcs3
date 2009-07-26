@@ -119,7 +119,7 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 
 #define getIreg(reg, modXYZW) {															\
 	SSE_MOVSS_M32_to_XMM(reg, (uptr)&mVU->regs->VI[REG_I].UL);							\
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT2, 8);								\
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, -1, 8);									\
 	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw(reg, reg, 0); }	\
 }
 
@@ -136,38 +136,6 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 //------------------------------------------------------------------
 // Lower Instruction Allocator Helpers
 //------------------------------------------------------------------
-
-#define getReg(reg, _reg_) {										\
-	mVUloadReg(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W);	\
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT2, _X_Y_Z_W);	\
-}
-
-#define getZero(reg) {														\
-	if (_W)	{ mVUloadReg(reg, (uptr)&mVU->regs->VF[0].UL[0], _X_Y_Z_W); }	\
-	else	{ SSE_XORPS_XMM_to_XMM(reg, reg); }								\
-}
-
-#define getReg6(reg, _reg_) {			\
-	if (!_reg_)	{ getZero(reg); }		\
-	else		{ getReg(reg, _reg_); }	\
-}
-
-#define getReg5(reg, _reg_, _fxf_) {												\
-	if (!_reg_) {																	\
-		if (_fxf_ < 3) { SSE_XORPS_XMM_to_XMM(reg, reg); }							\
-		else { mVUloadReg(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], 1); }				\
-	}																				\
-	else {																			\
-		mVUloadReg(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], (1 << (3 - _fxf_)));		\
-		if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT2, (1 << (3 - _fxf_)));		\
-	}																				\
-}
-
-// Doesn't Clamp
-#define getReg7(reg, _reg_) {														\
-	if (!_reg_)	{ getZero(reg); }													\
-	else		{ mVUloadReg(reg, (uptr)&mVU->regs->VF[_reg_].UL[0], _X_Y_Z_W); }	\
-}
 
 // VF to GPR
 #define getReg8(GPRreg, _reg_, _fxf_) {														\

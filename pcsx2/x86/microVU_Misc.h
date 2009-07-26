@@ -115,13 +115,13 @@ declareAllVariables
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
 #define offsetReg	((_X) ? (0) : ((_Y) ? (1) : ((_Z) ? 2:  3)))
 
-#define xmmT1	0 // Temp Reg
-#define xmmFs	1 // Holds the Value of Fs (writes back result Fd)
-#define xmmFt	2 // Holds the Value of Ft
-#define xmmT2	3 // Temp Reg?
-#define xmmT3	4 // Temp Reg?
-#define xmmT4	5 // Temp Reg?
-#define xmmACC	6 // Holds ACC
+#define xmmT1	0 // Used for regAlloc
+#define xmmT2	1 // Used for regAlloc
+#define xmmT3	2 // Used for regAlloc
+#define xmmT4	3 // Used for regAlloc
+#define xmmT5	4 // Used for regAlloc
+#define xmmT6	5 // Used for regAlloc
+#define xmmT7	6 // Used for regAlloc
 #define xmmPQ	7 // Holds the Value and Backup Values of P and Q regs
 
 #define gprT1	0 // Temp Reg

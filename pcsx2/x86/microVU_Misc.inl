@@ -40,7 +40,7 @@ void mVUclamp1(int reg, int regT1, int xyzw) {
 
 // Used for Operand Clamping
 void mVUclamp2(int reg, int regT1, int xyzw) {
-	if (CHECK_VU_SIGN_OVERFLOW) {
+	if (CHECK_VU_SIGN_OVERFLOW && (regT1 >= 0)) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
 				SSE_MOVSS_XMM_to_XMM (regT1, reg);

@@ -46,13 +46,15 @@ mVUop(mVU_DIV) {
 	pass1 { mVUanalyzeFDIV(mVU, _Fs_, _Fsf_, _Ft_, _Ftf_, 7); }
 	pass2 { 
 		u8 *ajmp, *bjmp, *cjmp, *djmp;
-		getReg5(xmmFs, _Fs_, _Fsf_);
-		getReg5(xmmFt, _Ft_, _Ftf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
+		int t1 = mVU->regAlloc->allocReg();
 
-		testZero(xmmFt, xmmT1, gprT1); // Test if Ft is zero
+		testZero(Ft, t1, gprT1); // Test if Ft is zero
 		cjmp = JZ8(0); // Skip if not zero
 
-			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
+			testZero(Fs, t1, gprT1); // Test if Fs is zero
 			ajmp = JZ8(0);
 				MOV32ItoM((uptr)&mVU->divFlag, divI); // Set invalid flag (0/0)
 				bjmp = JMP8(0);
@@ -60,20 +62,25 @@ mVUop(mVU_DIV) {
 				MOV32ItoM((uptr)&mVU->divFlag, divD); // Zero divide (only when not 0/0)
 			x86SetJ8(bjmp);
 
-			SSE_XORPS_XMM_to_XMM (xmmFs, xmmFt);
-			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
-			SSE_ORPS_M128_to_XMM (xmmFs, (uptr)mVU_maxvals); // If division by zero, then xmmFs = +/- fmax
+			SSE_XORPS_XMM_to_XMM (Fs, Ft);
+			SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_signbit);
+			SSE_ORPS_M128_to_XMM (Fs, (uptr)mVU_maxvals); // If division by zero, then xmmFs = +/- fmax
 
 			djmp = JMP8(0);
 		x86SetJ8(cjmp);
 			MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
-			SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
-			mVUclamp1(xmmFs, xmmFt, 8);
+			SSE_DIVSS_XMM_to_XMM(Fs, Ft);
+			mVUclamp1(Fs, t1, 8);
 		x86SetJ8(djmp);
 
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, Fs);
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("DIV Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
@@ -82,16 +89,20 @@ mVUop(mVU_SQRT) {
 	pass1 { mVUanalyzeFDIV(mVU, 0, 0, _Ft_, _Ftf_, 7); }
 	pass2 { 
 		u8 *ajmp;
-		getReg5(xmmFt, _Ft_, _Ftf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
 
 		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
-		testNeg(xmmFt, gprT1, ajmp); // Check for negative sqrt
+		testNeg(Ft, gprT1, ajmp); // Check for negative sqrt
 
-		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(xmmFt, (uptr)mVU_maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
-		SSE_SQRTSS_XMM_to_XMM(xmmFt, xmmFt);
+		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(Ft, (uptr)mVU_maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
+		SSE_SQRTSS_XMM_to_XMM(Ft, Ft);
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFt);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, Ft);
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQRT Q, vf%02d%s", _Ft_, _Ftf_String); }
 }
@@ -100,17 +111,19 @@ mVUop(mVU_RSQRT) {
 	pass1 { mVUanalyzeFDIV(mVU, _Fs_, _Fsf_, _Ft_, _Ftf_, 13); }
 	pass2 { 
 		u8 *ajmp, *bjmp, *cjmp, *djmp;
-		getReg5(xmmFs, _Fs_, _Fsf_);
-		getReg5(xmmFt, _Ft_, _Ftf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
+		int t1 = mVU->regAlloc->allocReg();
 
 		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
-		testNeg(xmmFt, gprT1, ajmp); // Check for negative sqrt
+		testNeg(Ft, gprT1, ajmp); // Check for negative sqrt
 
-		SSE_SQRTSS_XMM_to_XMM(xmmFt, xmmFt);
-		testZero(xmmFt, xmmT1, gprT1); // Test if Ft is zero
+		SSE_SQRTSS_XMM_to_XMM(Ft, Ft);
+		testZero(Ft, t1, gprT1); // Test if Ft is zero
 		ajmp = JZ8(0); // Skip if not zero
 
-			testZero(xmmFs, xmmT1, gprT1); // Test if Fs is zero
+			testZero(Fs, t1, gprT1); // Test if Fs is zero
 			bjmp = JZ8(0); // Skip if none are
 				MOV32ItoM((uptr)&mVU->divFlag, divI); // Set invalid flag (0/0)
 				cjmp = JMP8(0);
@@ -118,18 +131,23 @@ mVUop(mVU_RSQRT) {
 				MOV32ItoM((uptr)&mVU->divFlag, divD); // Zero divide flag (only when not 0/0)
 			x86SetJ8(cjmp);
 
-			SSE_ANDPS_M128_to_XMM(xmmFs, (uptr)mVU_signbit);
-			SSE_ORPS_M128_to_XMM (xmmFs, (uptr)mVU_maxvals); // xmmFs = +/-Max
+			SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_signbit);
+			SSE_ORPS_M128_to_XMM (Fs, (uptr)mVU_maxvals); // xmmFs = +/-Max
 
 			djmp = JMP8(0);
 		x86SetJ8(ajmp);
-			SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
-			mVUclamp1(xmmFs, xmmFt, 8);
+			SSE_DIVSS_XMM_to_XMM(Fs, Ft);
+			mVUclamp1(Fs, t1, 8);
 		x86SetJ8(djmp);
 
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_MOVSS_XMM_to_XMM(xmmPQ, Fs);
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("RSQRT Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
@@ -138,21 +156,19 @@ mVUop(mVU_RSQRT) {
 // EATAN/EEXP/ELENG/ERCPR/ERLENG/ERSADD/ERSQRT/ESADD/ESIN/ESQRT/ESUM
 //------------------------------------------------------------------
 
-#define EATANhelper(addr) {						\
-	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);			\
-	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);			\
-	SSE_MOVAPS_XMM_to_XMM(xmmFt, xmmT1);		\
-	SSE_MULSS_M32_to_XMM(xmmFt, (uptr)addr);	\
-	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFt);			\
+#define EATANhelper(addr) {					\
+	SSE_MULSS_XMM_to_XMM (t2, Fs);			\
+	SSE_MULSS_XMM_to_XMM (t2, Fs);			\
+	SSE_MOVAPS_XMM_to_XMM(t1, t2);			\
+	SSE_MULSS_M32_to_XMM (t1, (uptr)addr);	\
+	SSE_ADDSS_XMM_to_XMM (PQ, t1);			\
 }
 
-microVUt(void) mVU_EATAN_(mV) {
-
-	// ToDo: Can Be Optimized Further? (takes approximately (~115 cycles + mem access time) on a c2d)
-	SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-	SSE_MULSS_M32_to_XMM(xmmPQ, (uptr)mVU_T1);
-	SSE_MOVAPS_XMM_to_XMM(xmmT1, xmmFs);
-
+// ToDo: Can Be Optimized Further? (takes approximately (~115 cycles + mem access time) on a c2d)
+microVUt(void) mVU_EATAN_(mV, int PQ, int Fs, int t1, int t2) {
+	SSE_MOVSS_XMM_to_XMM (PQ, Fs);
+	SSE_MULSS_M32_to_XMM (PQ, (uptr)mVU_T1);
+	SSE_MOVAPS_XMM_to_XMM(t2, Fs);
 	EATANhelper(mVU_T2);
 	EATANhelper(mVU_T3);
 	EATANhelper(mVU_T4);
@@ -160,23 +176,26 @@ microVUt(void) mVU_EATAN_(mV) {
 	EATANhelper(mVU_T6);
 	EATANhelper(mVU_T7);
 	EATANhelper(mVU_T8);
-
-	SSE_ADDSS_M32_to_XMM(xmmPQ, (uptr)mVU_Pi4);
-	SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6);
+	SSE_ADDSS_M32_to_XMM  (PQ, (uptr)mVU_Pi4);
+	SSE2_PSHUFD_XMM_to_XMM(PQ, PQ, mVUinfo.writeP ? 0x27 : 0xC6);
 }
 
 mVUop(mVU_EATAN) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 54); }
 	pass2 { 
-		getReg5(xmmFs, _Fs_, _Fsf_);
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+		int t1 = mVU->regAlloc->allocReg();
+		int t2 = mVU->regAlloc->allocReg();
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-		SSE_SUBSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
-		SSE_ADDSS_M32_to_XMM(xmmPQ, (uptr)mVU_one);
-		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmPQ);
-
-		mVU_EATAN_(mVU);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
+		SSE_SUBSS_M32_to_XMM  (Fs,    (uptr)mVU_one);
+		SSE_ADDSS_M32_to_XMM  (xmmPQ, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM  (Fs, xmmPQ);
+		mVU_EATAN_(mVU, xmmPQ, Fs, t1, t2);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->clearNeeded(t2);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EATAN P"); }
 }
@@ -184,16 +203,21 @@ mVUop(mVU_EATAN) {
 mVUop(mVU_EATANxy) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 54); }
 	pass2 { 
-		getReg6(xmmFt, _Fs_);
-		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFt, 0x01);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int t1 = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
+		int Fs = mVU->regAlloc->allocReg();
+		int t2 = mVU->regAlloc->allocReg();
+		SSE2_PSHUFD_XMM_to_XMM(Fs, t1, 0x01);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-		SSE_SUBSS_XMM_to_XMM(xmmFs, xmmFt); // y-x, not y-1? ><
-		SSE_ADDSS_XMM_to_XMM(xmmFt, xmmPQ);
-		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
-
-		mVU_EATAN_(mVU);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
+		SSE_SUBSS_XMM_to_XMM  (Fs, t1); // y-x, not y-1? ><
+		SSE_ADDSS_XMM_to_XMM  (t1, xmmPQ);
+		SSE_DIVSS_XMM_to_XMM  (Fs, t1);
+		mVU_EATAN_(mVU, xmmPQ, Fs, t1, t2);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->clearNeeded(t2);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EATANxy P"); }
 }
@@ -201,83 +225,95 @@ mVUop(mVU_EATANxy) {
 mVUop(mVU_EATANxz) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 54); }
 	pass2 { 
-		getReg6(xmmFt, _Fs_);
-		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFt, 0x02);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int t1 = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
+		int Fs = mVU->regAlloc->allocReg();
+		int t2 = mVU->regAlloc->allocReg();
+		SSE2_PSHUFD_XMM_to_XMM(Fs, t1, 0x02);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-		SSE_SUBSS_XMM_to_XMM(xmmFs, xmmFt);
-		SSE_ADDSS_XMM_to_XMM(xmmFt, xmmPQ);
-		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmFt);
-
-		mVU_EATAN_(mVU);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
+		SSE_SUBSS_XMM_to_XMM  (Fs, t1);
+		SSE_ADDSS_XMM_to_XMM  (t1, xmmPQ);
+		SSE_DIVSS_XMM_to_XMM  (Fs, t1);
+		mVU_EATAN_(mVU, xmmPQ, Fs, t1, t2);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->clearNeeded(t2);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EATANxz P"); }
 }
 
-#define eexpHelper(addr) {						\
-	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);			\
-	SSE_MOVAPS_XMM_to_XMM(xmmFt, xmmT1);		\
-	SSE_MULSS_M32_to_XMM(xmmFt, (uptr)addr);	\
-	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFt);			\
+#define eexpHelper(addr) {					\
+	SSE_MULSS_XMM_to_XMM (t2, Fs);			\
+	SSE_MOVAPS_XMM_to_XMM(t1, t2);			\
+	SSE_MULSS_M32_to_XMM (t1, (uptr)addr);	\
+	SSE_ADDSS_XMM_to_XMM (xmmPQ, t1);		\
 }
 
 mVUop(mVU_EEXP) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 44); }
 	pass2 { 
-		getReg5(xmmFs, _Fs_, _Fsf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+		int t1 = mVU->regAlloc->allocReg();
+		int t2 = mVU->regAlloc->allocReg();
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-		SSE_MULSS_M32_to_XMM(xmmPQ, (uptr)mVU_E1);
-		SSE_ADDSS_M32_to_XMM(xmmPQ, (uptr)mVU_one);
-		
-		SSE_MOVAPS_XMM_to_XMM(xmmFt, xmmFs);
-		SSE_MULSS_XMM_to_XMM(xmmFt, xmmFs);
-		SSE_MOVAPS_XMM_to_XMM(xmmT1, xmmFt);
-		SSE_MULSS_M32_to_XMM(xmmFt, (uptr)mVU_E2);
-		SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFt);
-
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
+		SSE_MULSS_M32_to_XMM  (xmmPQ, (uptr)mVU_E1);
+		SSE_ADDSS_M32_to_XMM  (xmmPQ, (uptr)mVU_one);
+		SSE_MOVAPS_XMM_to_XMM (t1, Fs);
+		SSE_MULSS_XMM_to_XMM  (t1, Fs);
+		SSE_MOVAPS_XMM_to_XMM (t2, t1);
+		SSE_MULSS_M32_to_XMM  (t1, (uptr)mVU_E2);
+		SSE_ADDSS_XMM_to_XMM  (xmmPQ, t1);
 		eexpHelper(mVU_E3);
 		eexpHelper(mVU_E4);
 		eexpHelper(mVU_E5);
-		
-		SSE_MULSS_XMM_to_XMM(xmmT1, xmmFs);
-		SSE_MULSS_M32_to_XMM(xmmT1, (uptr)mVU_E6);
-		SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmT1);
-		SSE_MULSS_XMM_to_XMM(xmmPQ, xmmPQ);
-		SSE_MULSS_XMM_to_XMM(xmmPQ, xmmPQ);
-		SSE_MOVSS_M32_to_XMM(xmmT1, (uptr)mVU_one);
-		SSE_DIVSS_XMM_to_XMM(xmmT1, xmmPQ);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmT1);
+		SSE_MULSS_XMM_to_XMM  (t2, Fs);
+		SSE_MULSS_M32_to_XMM  (t2, (uptr)mVU_E6);
+		SSE_ADDSS_XMM_to_XMM  (xmmPQ, t2);
+		SSE_MULSS_XMM_to_XMM  (xmmPQ, xmmPQ);
+		SSE_MULSS_XMM_to_XMM  (xmmPQ, xmmPQ);
+		SSE_MOVSS_M32_to_XMM  (t2, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM  (t2, xmmPQ);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, t2);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->clearNeeded(t2);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EEXP P"); }
 }
 
-microVUt(void) mVU_sumXYZ() { 
-	// xmmPQ.x =  x ^ 2 + y ^ 2 + z ^ 2
+// sumXYZ(): PQ.x = x ^ 2 + y ^ 2 + z ^ 2
+microVUt(void) mVU_sumXYZ(int PQ, int Fs) {
 	if( cpucaps.hasStreamingSIMD4Extensions ) {
-		SSE4_DPPS_XMM_to_XMM(xmmFs, xmmFs, 0x71);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE4_DPPS_XMM_to_XMM(Fs, Fs, 0x71);
+		SSE_MOVSS_XMM_to_XMM(PQ, Fs);
 	}
 	else {
-		SSE_MULPS_XMM_to_XMM(xmmFs, xmmFs); // wzyx ^ 2
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs); // x ^ 2
-		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFs, 0xe1); // wzyx -> wzxy
-		SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFs); // x ^ 2 + y ^ 2
-		SSE2_PSHUFD_XMM_to_XMM(xmmFs, xmmFs, 0xD2); // wzxy -> wxyz
-		SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFs); // x ^ 2 + y ^ 2 + z ^ 2
+		SSE_MULPS_XMM_to_XMM  (Fs, Fs);		  // wzyx ^ 2
+		SSE_MOVSS_XMM_to_XMM  (PQ, Fs);		  // x ^ 2
+		SSE2_PSHUFD_XMM_to_XMM(Fs, Fs, 0xe1); // wzyx -> wzxy
+		SSE_ADDSS_XMM_to_XMM  (PQ, Fs);		  // x ^ 2 + y ^ 2
+		SSE2_PSHUFD_XMM_to_XMM(Fs, Fs, 0xD2); // wzxy -> wxyz
+		SSE_ADDSS_XMM_to_XMM  (PQ, Fs);		  // x ^ 2 + y ^ 2 + z ^ 2
 	}
 }
 
 mVUop(mVU_ELENG) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 18); }
 	pass2 { 
-		getReg6(xmmFs, _Fs_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		mVU_sumXYZ();
-		SSE_SQRTSS_XMM_to_XMM(xmmPQ, xmmPQ);
+		mVU_sumXYZ(xmmPQ, Fs);
+		SSE_SQRTSS_XMM_to_XMM (xmmPQ, xmmPQ);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ELENG P"); }
 }
@@ -285,13 +321,16 @@ mVUop(mVU_ELENG) {
 mVUop(mVU_ERCPR) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 12); }
 	pass2 { 
-		getReg5(xmmFs, _Fs_, _Fsf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-		SSE_MOVSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
-		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmPQ);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM  (Fs, xmmPQ);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERCPR P"); }
 }
@@ -299,14 +338,17 @@ mVUop(mVU_ERCPR) {
 mVUop(mVU_ERLENG) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 24); }
 	pass2 { 
-		getReg6(xmmFs, _Fs_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		mVU_sumXYZ();
-		SSE_SQRTSS_XMM_to_XMM(xmmPQ, xmmPQ);
-		SSE_MOVSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
-		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmPQ);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		mVU_sumXYZ(xmmPQ, Fs);
+		SSE_SQRTSS_XMM_to_XMM (xmmPQ, xmmPQ);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM  (Fs, xmmPQ);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERLENG P"); }
 }
@@ -314,14 +356,16 @@ mVUop(mVU_ERLENG) {
 mVUop(mVU_ERSADD) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 18); }
 	pass2 { 
-		getReg6(xmmFs, _Fs_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		mVU_sumXYZ();
-		//SSE_RCPSS_XMM_to_XMM(xmmPQ, xmmPQ); // Lower Precision is bad?
-		SSE_MOVSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
-		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmPQ);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		mVU_sumXYZ(xmmPQ, Fs);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM  (Fs, xmmPQ);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERSADD P"); }
 }
@@ -329,13 +373,16 @@ mVUop(mVU_ERSADD) {
 mVUop(mVU_ERSQRT) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 18); }
 	pass2 { 
-		getReg5(xmmFs, _Fs_, _Fsf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE_SQRTSS_XMM_to_XMM(xmmPQ, xmmFs);
-		SSE_MOVSS_M32_to_XMM(xmmFs, (uptr)mVU_one);
-		SSE_DIVSS_XMM_to_XMM(xmmFs, xmmPQ);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_DIVSS_XMM_to_XMM  (Fs, xmmPQ);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERSQRT P"); }
 }
@@ -343,43 +390,50 @@ mVUop(mVU_ERSQRT) {
 mVUop(mVU_ESADD) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 11); }
 	pass2 { 
-		getReg6(xmmFs, _Fs_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		mVU_sumXYZ();
+		mVU_sumXYZ(xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESADD P"); }
 }
 
-#define esinHelper(addr) {						\
-	SSE_MULSS_XMM_to_XMM(xmmT1, xmmFt);			\
-	SSE_MOVAPS_XMM_to_XMM(xmmFs, xmmT1);		\
-	SSE_MULSS_M32_to_XMM(xmmFs, (uptr)addr);	\
-	SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFs);			\
+#define esinHelper(addr) {					\
+	SSE_MULSS_XMM_to_XMM (t2, t1);			\
+	SSE_MOVAPS_XMM_to_XMM(Fs, t2);			\
+	SSE_MULSS_M32_to_XMM (Fs, (uptr)addr);	\
+	SSE_ADDSS_XMM_to_XMM (xmmPQ, Fs);		\
 }
 
 mVUop(mVU_ESIN) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 29); }
 	pass2 { 
-		getReg5(xmmFs, _Fs_, _Fsf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+		int t1 = mVU->regAlloc->allocReg();
+		int t2 = mVU->regAlloc->allocReg();
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
-		//SSE_MULSS_M32_to_XMM(xmmPQ, (uptr)mVU_one); // Multiplying by 1 is redundant?
-		SSE_MOVAPS_XMM_to_XMM(xmmFt, xmmFs);
-		SSE_MULSS_XMM_to_XMM(xmmFs, xmmFt);
-		SSE_MOVAPS_XMM_to_XMM(xmmT1, xmmFs);
-		SSE_MULSS_XMM_to_XMM(xmmFs, xmmFt);
-		SSE_MOVAPS_XMM_to_XMM(xmmFt, xmmFs);
-		SSE_MULSS_M32_to_XMM(xmmFs, (uptr)mVU_S2);
-		SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmFs);
-
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
+		SSE_MOVAPS_XMM_to_XMM (t1, Fs);
+		SSE_MULSS_XMM_to_XMM  (Fs, t1);
+		SSE_MOVAPS_XMM_to_XMM (t2, Fs);
+		SSE_MULSS_XMM_to_XMM  (Fs, t1);
+		SSE_MOVAPS_XMM_to_XMM (t1, Fs);
+		SSE_MULSS_M32_to_XMM  (Fs, (uptr)mVU_S2);
+		SSE_ADDSS_XMM_to_XMM  (xmmPQ, Fs);
 		esinHelper(mVU_S3);
 		esinHelper(mVU_S4);
-		
-		SSE_MULSS_XMM_to_XMM(xmmT1, xmmFt);
-		SSE_MULSS_M32_to_XMM(xmmT1, (uptr)mVU_S5);
-		SSE_ADDSS_XMM_to_XMM(xmmPQ, xmmT1);
+		SSE_MULSS_XMM_to_XMM  (t2, t1);
+		SSE_MULSS_M32_to_XMM  (t2, (uptr)mVU_S5);
+		SSE_ADDSS_XMM_to_XMM  (xmmPQ, t2);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->clearNeeded(t2);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESIN P"); }
 } 
@@ -387,10 +441,13 @@ mVUop(mVU_ESIN) {
 mVUop(mVU_ESQRT) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 12); }
 	pass2 { 
-		getReg5(xmmFs, _Fs_, _Fsf_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE_SQRTSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESQRT P"); }
 }
@@ -398,14 +455,19 @@ mVUop(mVU_ESQRT) {
 mVUop(mVU_ESUM) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 12); }
 	pass2 { 
-		getReg6(xmmFs, _Fs_);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
+		int t1 = mVU->regAlloc->allocReg();
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE2_PSHUFD_XMM_to_XMM(xmmFt, xmmFs, 0x1b);
-		SSE_ADDPS_XMM_to_XMM(xmmFs, xmmFt);
-		SSE2_PSHUFD_XMM_to_XMM(xmmFt, xmmFs, 0x01);
-		SSE_ADDSS_XMM_to_XMM(xmmFs, xmmFt);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, xmmFs);
+		SSE2_PSHUFD_XMM_to_XMM(t1, Fs, 0x1b);
+		SSE_ADDPS_XMM_to_XMM  (Fs, t1);
+		SSE2_PSHUFD_XMM_to_XMM(t1, Fs, 0x01);
+		SSE_ADDSS_XMM_to_XMM  (Fs, t1);
+		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESUM P"); }
 }
@@ -691,11 +753,14 @@ mVUop(mVU_ISUBIU) {
 mVUop(mVU_MFIR) {
 	pass1 { if (!_Ft_) { mVUlow.isNOP = 1; } analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeReg2(_Ft_, mVUlow.VF_write, 1); }
 	pass2 { 
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		mVUallocVIa(mVU, gprT1, _Is_);
 		MOVSX32R16toR(gprT1, gprT1);
-		SSE2_MOVD_R_to_XMM(xmmT1, gprT1);
-		if (!_XYZW_SS) { mVUunpack_xyzw(xmmT1, xmmT1, 0); }
-		mVUsaveReg(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
+		SSE2_MOVD_R_to_XMM(Ft, gprT1);
+		if (!_XYZW_SS) { mVUunpack_xyzw(Ft, Ft, 0); }
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MFIR.%s vf%02d, vi%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -703,8 +768,11 @@ mVUop(mVU_MFIR) {
 mVUop(mVU_MFP) {
 	pass1 { mVUanalyzeMFP(mVU, _Ft_); }
 	pass2 { 
-		getPreg(xmmFt);
-		mVUsaveReg(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
+		getPreg(Ft);
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MFP.%s vf%02d, P", _XYZW_String, _Ft_); }
 }
@@ -712,8 +780,10 @@ mVUop(mVU_MFP) {
 mVUop(mVU_MOVE) {
 	pass1 { mVUanalyzeMOVE(mVU, _Fs_, _Ft_); }
 	pass2 { 
-		mVUloadReg(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], _X_Y_Z_W);
-		mVUsaveReg(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MOVE.%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -721,9 +791,14 @@ mVUop(mVU_MOVE) {
 mVUop(mVU_MR32) {
 	pass1 { mVUanalyzeMR32(mVU, _Fs_, _Ft_); }
 	pass2 { 
-		mVUloadReg(xmmT1, (uptr)&mVU->regs->VF[_Fs_].UL[0], (_X_Y_Z_W == 8) ? 4 : 15);
-		if (_X_Y_Z_W != 8) { SSE2_PSHUFD_XMM_to_XMM(xmmT1, xmmT1, 0x39); }
-		mVUsaveReg(xmmT1, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 0);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
+		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
+		if (_XYZW_SS) mVUunpack_xyzw(Ft, Fs, (_X ? 1 : (_Y ? 2 : (_Z ? 3 : 0))));
+		else		  SSE2_PSHUFD_XMM_to_XMM(Ft, Fs, 0x39);
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MR32.%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -731,8 +806,12 @@ mVUop(mVU_MR32) {
 mVUop(mVU_MTIR) {
 	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeReg5(_Fs_, _Fsf_, mVUlow.VF_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
 	pass2 { 
-		MOVZX32M16toR(gprT1, (uptr)&mVU->regs->VF[_Fs_].UL[_Fsf_]);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+		SSE2_MOVD_XMM_to_R(gprT1, Fs);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MTIR vi%02d, vf%02d%s", _Ft_, _Fs_, _Fsf_String); }
 }
@@ -818,7 +897,7 @@ mVUop(mVU_ISWR) {
 		else {
 			mVUallocVIa(mVU, gprT1, _Is_);
 			mVUallocVIa(mVU, gprT2, _It_);
-			mVUaddrFix(mVU, gprT1);
+			mVUaddrFix (mVU, gprT1);
 			if (_X) MOV32RtoRm(gprT1, gprT2, (uptr)mVU->regs->Mem);
 			if (_Y) MOV32RtoRm(gprT1, gprT2, (uptr)mVU->regs->Mem+4);
 			if (_Z) MOV32RtoRm(gprT1, gprT2, (uptr)mVU->regs->Mem+8);
@@ -835,17 +914,17 @@ mVUop(mVU_ISWR) {
 mVUop(mVU_LQ) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 0); }
 	pass2 { 
-		if (!_Is_) {
-			mVUloadReg(xmmFt, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W);
-			mVUsaveReg(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
-		}
-		else {
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
+		if (_Is_) {
 			mVUallocVIa(mVU, gprT1, _Is_);
 			ADD32ItoR(gprT1, _Imm11_);
 			mVUaddrFix(mVU, gprT1);
-			mVUloadReg2(xmmFt, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-			mVUsaveReg(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
+			mVUloadReg2(Ft, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 		}
+		else mVUloadReg(Ft, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W);
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("LQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Ft_, _Fs_, _Imm11_); }
 }
@@ -853,20 +932,24 @@ mVUop(mVU_LQ) {
 mVUop(mVU_LQD) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 1); }
 	pass2 { 
-		if (!_Is_ && !mVUlow.noWriteVF) {
-			mVUloadReg(xmmFt, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-			mVUsaveReg(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
-		}
-		else {
+		mVU->regAlloc->reset(); // Reset for Testing
+		if (_Is_) {
 			mVUallocVIa(mVU, gprT1, _Is_);
 			SUB16ItoR(gprT1, 1);
 			mVUallocVIb(mVU, gprT1, _Is_);
 			if (!mVUlow.noWriteVF) {
+				int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 				mVUaddrFix(mVU, gprT1);
-				mVUloadReg2(xmmFt, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-				mVUsaveReg(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
+				mVUloadReg2(Ft, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+				mVU->regAlloc->clearNeeded(Ft);
 			}
 		}
+		else if (!mVUlow.noWriteVF) {
+			int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
+			mVUloadReg(Ft, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+			mVU->regAlloc->clearNeeded(Ft);
+		}
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("LQD.%s vf%02d, --vi%02d", _XYZW_String, _Ft_, _Is_); }
 }
@@ -874,21 +957,25 @@ mVUop(mVU_LQD) {
 mVUop(mVU_LQI) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 1); }
 	pass2 { 
-		if (!_Is_ && !mVUlow.noWriteVF) {
-			mVUloadReg(xmmFt, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-			mVUsaveReg(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
-		}
-		else {
+		mVU->regAlloc->reset(); // Reset for Testing
+		if (_Is_) {
 			mVUallocVIa(mVU, (!mVUlow.noWriteVF) ? gprT1 : gprT2, _Is_);
 			if (!mVUlow.noWriteVF) {
+				int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 				MOV32RtoR(gprT2, gprT1);
 				mVUaddrFix(mVU, gprT1);
-				mVUloadReg2(xmmFt, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
-				mVUsaveReg(xmmFt, (uptr)&mVU->regs->VF[_Ft_].UL[0], _X_Y_Z_W, 1);
+				mVUloadReg2(Ft, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+				mVU->regAlloc->clearNeeded(Ft);
 			}
 			ADD16ItoR(gprT2, 1);
 			mVUallocVIb(mVU, gprT2, _Is_);
 		}
+		else if (!mVUlow.noWriteVF) {
+			int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
+			mVUloadReg(Ft, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+			mVU->regAlloc->clearNeeded(Ft);
+		}
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("LQI.%s vf%02d, vi%02d++", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -900,17 +987,17 @@ mVUop(mVU_LQI) {
 mVUop(mVU_SQ) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 0); }
 	pass2 { 
-		if (!_It_) {
-			getReg7(xmmFs, _Fs_);
-			mVUsaveReg(xmmFs, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W, 1);
-		}
-		else {
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
+		if (_It_) {
 			mVUallocVIa(mVU, gprT1, _It_);
 			ADD32ItoR(gprT1, _Imm11_);
 			mVUaddrFix(mVU, gprT1);
-			getReg7(xmmFs, _Fs_);
-			mVUsaveReg2(xmmFs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+			mVUsaveReg2(Fs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);		
 		}
+		else mVUsaveReg(Fs, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W, 1);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Fs_, _Ft_, _Imm11_); }
 }
@@ -918,18 +1005,18 @@ mVUop(mVU_SQ) {
 mVUop(mVU_SQD) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 1); }
 	pass2 { 
-		if (!_It_) {
-			getReg7(xmmFs, _Fs_);
-			mVUsaveReg(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
-		}
-		else {
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
+		if (_It_) {
 			mVUallocVIa(mVU, gprT1, _It_);
 			SUB16ItoR(gprT1, 1);
 			mVUallocVIb(mVU, gprT1, _It_);
 			mVUaddrFix(mVU, gprT1);
-			getReg7(xmmFs, _Fs_);
-			mVUsaveReg2(xmmFs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+			mVUsaveReg2(Fs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 		}
+		else mVUsaveReg(Fs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQD.%s vf%02d, --vi%02d", _XYZW_String, _Fs_, _Ft_); }
 }
@@ -937,19 +1024,19 @@ mVUop(mVU_SQD) {
 mVUop(mVU_SQI) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 1); }
 	pass2 { 
-		if (!_It_) {
-			getReg7(xmmFs, _Fs_);
-			mVUsaveReg(xmmFs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
-		}
-		else {
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
+		if (_It_) {
 			mVUallocVIa(mVU, gprT1, _It_);
 			MOV32RtoR(gprT2, gprT1);
 			mVUaddrFix(mVU, gprT1);
-			getReg7(xmmFs, _Fs_);
-			mVUsaveReg2(xmmFs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
+			mVUsaveReg2(Fs, gprT1, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 			ADD16ItoR(gprT2, 1);
-			mVUallocVIb(mVU, gprT2, _It_);
+			mVUallocVIb(mVU, gprT2, _It_);	
 		}
+		else mVUsaveReg(Fs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
+		mVU->regAlloc->clearNeeded(Fs);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQI.%s vf%02d, vi%02d++", _XYZW_String, _Fs_, _Ft_); }
 }
@@ -962,10 +1049,14 @@ mVUop(mVU_RINIT) {
 	pass1 { mVUanalyzeR1(mVU, _Fs_, _Fsf_); }
 	pass2 { 
 		if (_Fs_ || (_Fsf_ == 3)) {
-			getReg8(gprT1, _Fs_, _Fsf_);
+			mVU->regAlloc->reset(); // Reset for Testing
+			int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+			SSE2_MOVD_XMM_to_R(gprT1, Fs);
 			AND32ItoR(gprT1, 0x007fffff);
 			OR32ItoR (gprT1, 0x3f800000);
 			MOV32RtoM(Rmem, gprT1);
+			mVU->regAlloc->clearNeeded(Fs);
+			mVU->regAlloc->flushAll(); // Flush All for Testing
 		}
 		else MOV32ItoM(Rmem, 0x3f800000);
 	}
@@ -974,10 +1065,12 @@ mVUop(mVU_RINIT) {
 
 microVUt(void) mVU_RGET_(mV, int Rreg) {
 	if (!mVUlow.noWriteVF) {
-		if (_X) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[0], Rreg);
-		if (_Y) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[1], Rreg);
-		if (_Z) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[2], Rreg);
-		if (_W) MOV32RtoM((uptr)&mVU->regs->VF[_Ft_].UL[3], Rreg);
+		mVU->regAlloc->reset(); // Reset for Testing
+		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
+		SSE2_MOVD_R_to_XMM(Ft, Rreg);
+		if (!_XYZW_SS) mVUunpack_xyzw(Ft, Ft, 0);
+		mVU->regAlloc->clearNeeded(Ft);
+		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 }
 
@@ -1016,9 +1109,13 @@ mVUop(mVU_RXOR) {
 	pass1 { mVUanalyzeR1(mVU, _Fs_, _Fsf_); }
 	pass2 { 
 		if (_Fs_ || (_Fsf_ == 3)) {
-			getReg8(gprT1, _Fs_, _Fsf_);
+			mVU->regAlloc->reset(); // Reset for Testing
+			int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
+			SSE2_MOVD_XMM_to_R(gprT1, Fs);
 			AND32ItoR(gprT1, 0x7fffff);
 			XOR32RtoM(Rmem,  gprT1);
+			mVU->regAlloc->clearNeeded(Fs);
+			mVU->regAlloc->flushAll(); // Flush All for Testing
 		}
 	}
 	pass3 { mVUlog("RXOR R, vf%02d%s", _Fs_, _Fsf_String); }
