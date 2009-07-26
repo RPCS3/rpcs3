@@ -203,13 +203,6 @@ DEV9handler dev9Handler;
 USBhandler usbHandler;
 uptr pDsp;
 
-
-void PopulateListCtrls( const wxString& plugpath )
-{
-	//if( CheckVersion( "GS", PS2E_LT_GS, PS2E_GS_VERSION ) )
-	//	AddPlugin(hWC_GS, winConfig.GS);
-}
-
 // ------------------------------------------------------------------------
 int OpenPlugins(const char* pTitleFilename)
 {

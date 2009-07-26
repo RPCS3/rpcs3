@@ -29,50 +29,95 @@ using namespace Threading;
 
 class MainEmuFrame;
 class IniInterface;
+class LogWriteEvent;
 
 extern wxFileHistory* g_RecentIsoList;
 
-class LogWriteEvent;
-
 DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1);
+
+extern wxRect wxGetDisplayArea();
+extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
+
+static const bool EnableThreadedLoggingTest = true;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// ConsoleThreadTest -- useful class for unit testing the thread safety and general performance
+// of the console logger.
+//
+class ConsoleTestThread : public Thread
+{
+protected:
+	volatile bool m_done;
+	int Callback();
+
+public:	
+	ConsoleTestThread() :
+		m_done( false )
+	{
+	}
+	
+	~ConsoleTestThread()
+	{
+		m_done = true;
+	}
+};
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 class ConsoleLogFrame : public wxFrame, public NoncopyableObject
 {
+public:
+	typedef AppConfig::ConsoleLogOptions ConLogConfig;
+
 protected:
 	class ColorArray : public NoncopyableObject
 	{
 	protected:
-		SafeArray<wxTextAttr> m_table;
-		wxTextAttr m_color_default;
+		SafeArray<wxTextAttr>	m_table;
+		wxTextAttr				m_color_default;
 
 	public:
-		ColorArray();
+		virtual ~ColorArray();
+		ColorArray( int fontsize=8 );
+
+		void Create( int fontsize );
+		void Cleanup();
+
+		void SetFont( const wxFont& font );
+		void SetFont( int fontsize );
+
 		const wxTextAttr& operator[]( Console::Colors coloridx ) const
 		{
 			return m_table[(int)coloridx];
 		}
-
-		void SetFont( const wxFont& font );
-		const wxTextAttr& Default() { return m_table[0]; }
 	};
 
 protected:
-	wxTextCtrl&	m_TextCtrl;
-	ColorArray	m_ColorTable;
-	Console::Colors m_curcolor;
-	volatile long m_msgcounter;		// used to track queued messages and throttle load placed on the gui message pump
+	ConLogConfig	m_conf;
+	wxTextCtrl&		m_TextCtrl;
+	ColorArray		m_ColorTable;
+	Console::Colors	m_curcolor;
+	volatile long	m_msgcounter;		// used to track queued messages and throttle load placed on the gui message pump
+
+	Semaphore		m_semaphore;
+
+	// Threaded log spammer, useful for testing console logging performance.
+	ConsoleTestThread* m_threadlogger;
 
 public:
 	// ctor & dtor
-	ConsoleLogFrame( MainEmuFrame *pParent, const wxString& szTitle, const AppConfig::ConsoleLogOptions& options );
+	ConsoleLogFrame( MainEmuFrame *pParent, const wxString& szTitle, const ConLogConfig& options );
 	virtual ~ConsoleLogFrame();
 
 	virtual void Write( const wxString& text );
 	virtual void SetColor( Console::Colors color );
 	virtual void ClearColor();
 	virtual void DockedMove();
+
+	// Retreives the current configuration options settings for this box.
+	// (settings change if the user moves the window or changes the font size)
+	const ConLogConfig& GetConfig() const { return m_conf; }
 
 	void Write( Console::Colors color, const wxString& text );
 	void Newline();
@@ -86,12 +131,16 @@ protected:
 	virtual void OnClose(wxMenuEvent& event);
 	virtual void OnSave (wxMenuEvent& event);
 	virtual void OnClear(wxMenuEvent& event);
+
+	void OnFontSize(wxMenuEvent& event);
+
 	virtual void OnCloseWindow(wxCloseEvent& event);
 
 	void OnWrite( wxCommandEvent& event );
 	void OnNewline( wxCommandEvent& event );
 	void OnSetTitle( wxCommandEvent& event );
 	void OnDockedMove( wxCommandEvent& event );
+	void OnSemaphoreWait( wxCommandEvent& event );
 
 	// common part of OnClose() and OnCloseWindow()
 	virtual void DoClose();
@@ -169,6 +218,8 @@ public:
 	void OnInitCmdLine( wxCmdLineParser& parser );
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
 
+	bool PrepForExit();
+
 	const wxBitmap& GetLogoBitmap();
 	wxImageList& GetImgList_Config();
 	wxImageList& GetImgList_Toolbars();
@@ -189,6 +240,14 @@ public:
 	ConsoleLogFrame* GetConsoleLog()
 	{
 		return m_Ps2ConLogBox;
+	}
+
+	void CloseProgramLog()
+	{
+		m_ProgramLogBox->Close();
+
+		// disable future console log messages from being sent to the window.
+		m_ProgramLogBox = NULL;
 	}
 	
 	void ProgramLog_CountMsg()

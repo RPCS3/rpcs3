@@ -28,8 +28,8 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
-AppConfig* g_Conf = NULL;
-wxFileHistory* g_RecentIsoList = NULL;
+AppConfig*		g_Conf = NULL;
+wxFileHistory*	g_RecentIsoList = NULL;
 
 namespace Exception
 {
@@ -159,27 +159,6 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 	return true;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// ConsoleThreadTest -- useful class for unit testing the thread safety and general performance
-// of the console logger.
-//
-class ConsoleTestThread : public Thread
-{
-	int Callback()
-	{
-		static int numtrack = 0;
-		
-		while( true )
-		{
-			// Two lines, both formatted, and varied colors.  This makes for a fairly realistic
-			// worst case scenario (without being entirely unrealistic).
-			Console::WriteLn( wxsFormat( L"This is a threaded logging test. Something bad could happen... %d", ++numtrack ) );
-			Console::Status( wxsFormat( L"Testing high stress loads %s", L"(multi-color)" ) );
-			Sleep( 0 );
-		}
-	}
-};
-
 // ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
 {
@@ -218,9 +197,15 @@ bool Pcsx2App::OnInit()
 
 		g_Conf->Folders.Logs.Mkdir();
 
-		m_ProgramLogBox = new ConsoleLogFrame( NULL, L"PCSX2 Program Log", g_Conf->ConLogBox );
-		m_Ps2ConLogBox = m_ProgramLogBox;		// just use a single logger for now.
+	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
+		m_ProgramLogBox	= new ConsoleLogFrame( m_MainFrame, L"PCSX2 Program Log", g_Conf->ProgLogBox );
+		m_Ps2ConLogBox	= m_ProgramLogBox;		// just use a single logger for now.
 		//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
+
+
+		SetTopWindow( m_MainFrame );	// not really needed...
+		SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
+	    m_MainFrame->Show();
 
 		SysInit();
 	}
@@ -228,15 +213,6 @@ bool Pcsx2App::OnInit()
 	{
 		return false;
 	}	
-
-    m_MainFrame = new MainEmuFrame( NULL, L"PCSX2" );
-    SetTopWindow( m_MainFrame );
-    SetExitOnFrameDelete( true );
-    m_MainFrame->Show();
-    
-    // Logger Stress Test: See ConsoleTestThread defined above for details
-    //ConsoleTestThread* woo = new ConsoleTestThread();
-    //woo->Start();
 
 	// Check to see if the user needs to perform initial setup:
 
@@ -257,6 +233,14 @@ bool Pcsx2App::OnInit()
 	}*/
 
     return true;
+}
+
+// Common exit handler which can be called from any event (though really it should
+// be called only from CloseWindow handlers since that's the more appropriate way
+// to handle window closures)
+bool Pcsx2App::PrepForExit()
+{
+	return true;
 }
 
 int Pcsx2App::OnExit()

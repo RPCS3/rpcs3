@@ -51,8 +51,11 @@ public:
 		// Display position used if AutoDock is false (ignored otherwise)
 		wxPoint DisplayPosition;
 		wxSize DisplaySize;
+		
+		// Size of the font in points.
+		int FontSize;
 
-		void LoadSave( IniInterface& conf );
+		void LoadSave( IniInterface& conf, const wxChar* title );
 	};
 
 	// ------------------------------------------------------------------------
@@ -213,7 +216,8 @@ public:
 	SpeedhackOptions		Speedhacks;
 	GamefixOptions			Gamefixes;
 	VideoOptions			Video;
-	ConsoleLogOptions		ConLogBox;
+	ConsoleLogOptions		ProgLogBox;
+	ConsoleLogOptions		Ps2ConBox;
 	FolderOptions			Folders;
 	FilenameOptions			BaseFilenames;
 	McdSysOptions			MemoryCards;

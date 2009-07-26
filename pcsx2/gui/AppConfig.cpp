@@ -349,9 +349,9 @@ wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( F
 // GCC Note: wxT() macro is required when using string token pasting.  For some reason L generates
 // syntax errors. >_<
 //
-#define IniEntry( varname, defval ) ini.Entry( wxT(#varname), varname, defval )
-#define IniBitfield( varname, defval ) varname = ini.EntryBitfield( wxT(#varname), varname, defval )
-#define IniBitBool( varname, defval ) varname = ini.EntryBitBool( wxT(#varname), varname, defval )
+#define IniEntry( varname, defval )		ini.Entry( wxT(#varname), varname, defval )
+#define IniBitfield( varname, defval )	varname = ini.EntryBitfield( wxT(#varname), varname, defval )
+#define IniBitBool( varname, defval )	varname = ini.EntryBitBool( wxT(#varname), !!varname, defval )
 
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveUserMode( IniInterface& ini )
@@ -376,7 +376,9 @@ void AppConfig::LoadSave( IniInterface& ini )
 	IniEntry( CdvdVerboseReads,		false );
 
 	// Process various sub-components:
-	ConLogBox.LoadSave( ini );
+	ProgLogBox.LoadSave( ini, L"ProgramLog" );
+	Ps2ConBox.LoadSave( ini, L"Ps2Console" );
+	
 	Speedhacks.LoadSave( ini );
 	Folders.LoadSave( ini );
 	BaseFilenames.LoadSave( ini );
@@ -450,14 +452,15 @@ void AppConfig::Save()
 }
 
 // ------------------------------------------------------------------------
-void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini )
+void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* logger )
 {
-	ini.SetPath( L"ConsoleLog" );
+	ini.SetPath( logger );
 
 	IniEntry( Visible,			false );
 	IniEntry( AutoDock,			true );
 	IniEntry( DisplayPosition,	wxDefaultPosition );
 	IniEntry( DisplaySize,		wxSize( 540, 540 ) );
+	IniEntry( FontSize,			8 );
 	
 	ini.SetPath( L".." );
 }

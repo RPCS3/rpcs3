@@ -110,22 +110,23 @@ void MainEmuFrame::PopulatePadMenu()
 //
 void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 {
-	wxCloseEvent conevt( wxEVT_CLOSE_WINDOW );
-	conevt.SetCanVeto( false );	// tells the console to close rather than hide
-	wxGetApp().ProgramLog_PostEvent( conevt );
+	// Note Closure Veting would be handled here (user prompt confirmation
+	// of closing the app)
+
+	wxGetApp().PrepForExit();
 	evt.Skip();
 }
 
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 {
-	// Uncomment this when going logger stress testing (and them move the window around)
+	// Uncomment this when doing logger stress testing (and then move the window around
+	// while the logger spams itself)
 	// ... makes for a good test of the message pump's responsiveness.
-	//Console::Notice( "Mess o' crashiness?  It can't be!" );
+	Console::Notice( "Mess o' crashiness?  It can't be!" );
 
 	// evt.GetPosition() returns the client area position, not the window frame position.
-	// So read the window position directly... hope there's no problem with this too. :| --air
-
-	g_Conf->MainGuiPosition = GetPosition();
+	// So read the window's screen-relative position directly.
+	g_Conf->MainGuiPosition = GetScreenPosition();
 
 	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
 	// like selecting or deselecting a window, which muck up docking logic.  We filter them
@@ -135,11 +136,10 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 	if( lastpos == evt.GetPosition() ) return;
 	lastpos = evt.GetPosition();
 
-	if( g_Conf->ConLogBox.AutoDock )
+	if( g_Conf->ProgLogBox.AutoDock )
 	{
-		g_Conf->ConLogBox.DisplayPosition = GetRect().GetTopRight();
-		wxCommandEvent conevt( wxEVT_DockConsole );
-		wxGetApp().ProgramLog_PostEvent( conevt );
+		g_Conf->ProgLogBox.DisplayPosition = GetRect().GetTopRight();
+		wxGetApp().GetProgramLog()->SetPosition( g_Conf->ProgLogBox.DisplayPosition );
 	}
 
 	//evt.Skip();
@@ -147,7 +147,7 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 
 void MainEmuFrame::OnLogBoxHidden()
 {
-	g_Conf->ConLogBox.Visible = false;
+	g_Conf->ProgLogBox.Visible = false;
 	m_MenuItem_Console.Check( false );
 }
 
@@ -180,6 +180,24 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( Menu_Console,			Menu_ShowConsole );
 
 	ConnectMenu( Menu_About,			Menu_ShowAboutBox );
+}
+
+void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
+{
+	conf.DisplaySize.Set(
+		std::min( std::max( conf.DisplaySize.GetWidth(), 160 ), wxGetDisplayArea().GetWidth() ),
+		std::min( std::max( conf.DisplaySize.GetHeight(), 160 ), wxGetDisplayArea().GetHeight() )
+	);
+
+	if( conf.AutoDock )
+	{
+		conf.DisplayPosition = GetScreenPosition() + wxSize( GetSize().x, 0 );
+	}
+	else if( conf.DisplayPosition != wxDefaultPosition )
+	{
+		if( !wxGetDisplayArea().Contains( wxRect( conf.DisplayPosition, conf.DisplaySize ) ) )
+			conf.DisplayPosition = wxDefaultPosition;
+	}
 }
 
 // ------------------------------------------------------------------------
@@ -239,36 +257,18 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	joe.Add( &m_background );
 	SetSizerAndFit( &joe );
 
-	// Valid zone for window positioning.
-	// Top/Left boundaries are fairly strict, since any more offscreen and the window titlebar
-	// would be obscured from being grabbable.
-
-	wxRect screenzone( wxPoint(), wxGetDisplaySize() );
-
 	// Use default window position if the configured windowpos is invalid (partially offscreen)
-	if( g_Conf->MainGuiPosition == wxDefaultPosition || !screenzone.Contains( wxRect( g_Conf->MainGuiPosition, GetSize() ) ) )
-		g_Conf->MainGuiPosition = GetPosition();
+	if( g_Conf->MainGuiPosition == wxDefaultPosition || !pxIsValidWindowPosition( *this, g_Conf->MainGuiPosition) )
+		g_Conf->MainGuiPosition = GetScreenPosition();
 	else
 		SetPosition( g_Conf->MainGuiPosition );
 
-	// ------------------------------------------------------------------------
-	// Sort out the console log window position (must be done after fitting the window
-	// sizer, to ensure correct 'docked mode' positioning).
+	// Updating console log positions after the main window has been fitted to its sizer ensures
+	// proper docked positioning, since the main window's size is invalid until after the sizer
+	// has been set/fit.
 
-	g_Conf->ConLogBox.DisplaySize.Set(
-		std::min( std::max( g_Conf->ConLogBox.DisplaySize.GetWidth(), 160 ), screenzone.GetWidth() ),
-		std::min( std::max( g_Conf->ConLogBox.DisplaySize.GetHeight(), 160 ), screenzone.GetHeight() )
-	);
-
-	if( g_Conf->ConLogBox.AutoDock )
-	{
-		g_Conf->ConLogBox.DisplayPosition = GetPosition() + wxSize( GetSize().x, 0 );
-	}
-	else if( g_Conf->ConLogBox.DisplayPosition != wxDefaultPosition )
-	{
-		if( !screenzone.Contains( wxRect( g_Conf->ConLogBox.DisplayPosition, wxSize( 75, 150 ) ) ) )
-			g_Conf->ConLogBox.DisplayPosition = wxDefaultPosition;
-	}
+	InitLogBoxPosition( g_Conf->ProgLogBox );
+	InitLogBoxPosition( g_Conf->Ps2ConBox );
 
 	// ------------------------------------------------------------------------
 
@@ -330,7 +330,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuDebug.Append(Menu_Debug_MemoryDump,	_("Memory Dump..."), wxEmptyString);
 	m_menuDebug.Append(Menu_Debug_Logging,		_("Logging..."), wxEmptyString);
 
-	m_MenuItem_Console.Check( g_Conf->ConLogBox.Visible );
+	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 
 	ConnectMenus();
 	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );

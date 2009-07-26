@@ -3,7 +3,6 @@
 #include <wx/wx.h>
 #include <wx/filepicker.h>
 
-
 namespace wxHelpers
 {
 	extern wxCheckBox&		AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord );

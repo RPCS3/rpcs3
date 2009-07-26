@@ -28,12 +28,10 @@
 //
 class MainEmuFrame: public wxFrame
 {
-public:
-    MainEmuFrame(wxWindow* parent, const wxString& title);
-
-	void OnLogBoxHidden();
-
 protected:
+	// ------------------------------------------------------------------------
+	// All Menu Options for the Main Window! :D
+	// ------------------------------------------------------------------------
 
 	enum Identifiers
 	{
@@ -112,18 +110,10 @@ protected:
 		Menu_Language_Start = 1000
 	};
 
-	wxMenu* MakeStatesSubMenu( int baseid ) const;
-	wxMenu* MakeStatesMenu();
-	wxMenu* MakeLanguagesMenu() const;
-
-	wxMenu* MakeIsoMenu();
-	wxMenu* MakeCdvdMenu();
-
-	void PopulateVideoMenu();
-	void PopulateAudioMenu();
-	void PopulatePadMenu();
-	void ConnectMenus();
-
+	// ------------------------------------------------------------------------
+	// MainEmuFrame Protected Variables
+	// ------------------------------------------------------------------------
+	
 protected:
     wxStatusBar& m_statusbar;
     wxStaticBitmap m_background;
@@ -144,10 +134,17 @@ protected:
 
 	wxMenuItem& m_MenuItem_Console;
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// Menu Options for the Main Window! :D
+	// ------------------------------------------------------------------------
+	// MainEmuFrame Constructors and Member Methods
+	// ------------------------------------------------------------------------
+
+public:
+    MainEmuFrame(wxWindow* parent, const wxString& title);
+	void OnLogBoxHidden();
 
 protected:
+	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
+
 	void OnCloseWindow(wxCloseEvent& evt);
 	void OnMoveAround( wxMoveEvent& evt );
 
@@ -173,5 +170,20 @@ protected:
 
 	void Menu_ShowConsole(wxCommandEvent &event);
 	void Menu_ShowAboutBox(wxCommandEvent &event);
+
+	// ------------------------------------------------------------------------
+	// MainEmuFram Internal API for Populating Main Menu Contents
+	// ------------------------------------------------------------------------
+
+	wxMenu* MakeStatesSubMenu( int baseid ) const;
+	wxMenu* MakeStatesMenu();
+	wxMenu* MakeLanguagesMenu() const;
+	wxMenu* MakeIsoMenu();
+	wxMenu* MakeCdvdMenu();
+
+	void PopulateVideoMenu();
+	void PopulateAudioMenu();
+	void PopulatePadMenu();
+	void ConnectMenus();
 };
 
