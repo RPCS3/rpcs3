@@ -624,7 +624,7 @@ protected:
 		{
 			if(TryAlphaTest(fm, zm))
 			{
-				context->TEST.ATE = 0;
+				context->TEST.ATST = ATST_ALWAYS;
 			}
 		}
 

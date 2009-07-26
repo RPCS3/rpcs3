@@ -969,29 +969,6 @@ void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4
 	}
 }
 
-// FIXME: D3DXCompileShaderFromResource of d3dx9 v37 (march 2008) calls GetFullPathName on id for some reason and then crashes
-
-static HRESULT LoadShader(uint32 id, LPCSTR& data, uint32& size)
-{
-	CComPtr<ID3DXBuffer> shader, error;
-
-	HRSRC hRes = FindResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), RT_RCDATA);
-
-	if(!hRes) return E_FAIL;
-
-	size = SizeofResource(theApp.GetModuleHandle(), hRes);
-
-	if(size == 0) return E_FAIL;
-
-	HGLOBAL hResData  = LoadResource(theApp.GetModuleHandle(), hRes);
-
-	if(!hResData) return E_FAIL;
-
-	data = (LPCSTR)LockResource(hResData);
-
-	return S_OK;
-}
-
 HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
 {
 	vector<D3DXMACRO> m;
@@ -1002,16 +979,7 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), target, 0, &shader, &error, NULL);
-
-	LPCSTR data;
-	uint32 size;
-
-	hr = LoadShader(id, data, size);
-
-	if(FAILED(hr)) return E_FAIL;
-
-	hr = D3DXCompileShader(data, size, &m[0], NULL, entry.c_str(), m_shader.vs.c_str(), 0, &shader, &error, NULL);
+	hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), m_shader.vs.c_str(), 0, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{
@@ -1047,6 +1015,10 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 	{
 		flags |= D3DXSHADER_AVOID_FLOW_CONTROL;
 	}
+	else
+	{
+		flags |= D3DXSHADER_SKIPVALIDATION;
+	}
 
 	vector<D3DXMACRO> m;
 
@@ -1056,16 +1028,7 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 
 	CComPtr<ID3DXBuffer> shader, error;
 
-	// FIXME: hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), target, flags, &shader, &error, NULL);
-
-	LPCSTR data;
-	uint32 size;
-
-	hr = LoadShader(id, data, size);
-
-	if(FAILED(hr)) return E_FAIL;
-
-	hr = D3DXCompileShader(data, size, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), 0, &shader, &error, NULL);
+	hr = D3DXCompileShaderFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), flags, &shader, &error, NULL);
 
 	if(SUCCEEDED(hr))
 	{

@@ -86,8 +86,8 @@ bool GSDevice11::Create(GSWnd* wnd, bool vsync)
 	scd.SampleDesc.Quality = 0;
 	scd.Windowed = TRUE;
 
-	uint32 flags = 0;
-	flags = D3D11_CREATE_DEVICE_SINGLETHREADED;  //disables thread safety, should be fine (speedup)
+	uint32 flags = D3D11_CREATE_DEVICE_SINGLETHREADED;  //disables thread safety, should be fine (speedup)
+
 #ifdef DEBUG
 	flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif

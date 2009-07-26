@@ -1319,6 +1319,7 @@
     <ClCompile Include="GSPerfMon.cpp" />
     <ClCompile Include="GSRasterizer.cpp" />
     <ClCompile Include="GSRenderer.cpp" />
+    <ClCompile Include="GSRendererDX.cpp" />
     <ClCompile Include="GSRendererHW.cpp" />
     <ClCompile Include="GSRendererDX10.cpp" />
     <ClCompile Include="GSRendererDX11.cpp" />
@@ -1444,6 +1445,7 @@
     <ClInclude Include="GSPerfMon.h" />
     <ClInclude Include="GSRasterizer.h" />
     <ClInclude Include="GSRenderer.h" />
+    <ClInclude Include="GSRendererDX.h" />
     <ClInclude Include="GSRendererHW.h" />
     <ClInclude Include="GSRendererDX10.h" />
     <ClInclude Include="GSRendererDX11.h" />

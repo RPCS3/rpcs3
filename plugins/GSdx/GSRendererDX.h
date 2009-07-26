@@ -199,7 +199,6 @@ public:
 
 		if(context->TEST.ATE)
 		{
-			ps_sel.ate = 1;
 			ps_sel.atst = context->TEST.ATST;
 
 			switch(ps_sel.atst)
@@ -214,6 +213,10 @@ public:
 				ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
 				break;
 			}
+		}
+		else
+		{
+			ps_sel.atst = ATST_ALWAYS;
 		}
 
 		if(tex)

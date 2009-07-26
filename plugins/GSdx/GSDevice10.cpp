@@ -86,8 +86,8 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 	scd.SampleDesc.Quality = 0;
 	scd.Windowed = TRUE;
 
-	uint32 flags = 0;
-	flags = D3D10_CREATE_DEVICE_SINGLETHREADED;  //disables thread safety, should be fine (speedup)
+	uint32 flags = D3D10_CREATE_DEVICE_SINGLETHREADED;  //disables thread safety, should be fine (speedup)
+
 #ifdef DEBUG
 	flags |= D3D10_CREATE_DEVICE_DEBUG;
 #endif
@@ -112,8 +112,6 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 			break;
 		}
 	}
-
-	// hr = D3D10CreateDeviceAndSwapChain(NULL, D3D10_DRIVER_TYPE_HARDWARE, NULL, flags, D3D10_SDK_VERSION, &scd, &m_swapchain, &m_dev);
 
 	if(FAILED(hr)) return false;
 
