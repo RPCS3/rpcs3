@@ -260,6 +260,8 @@ namespace YAML
 		// write content
 		if(node.m_pContent)
 			node.m_pContent->Write(out);
+		else
+			out << "";
 
 		return out;
 	}
