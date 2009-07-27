@@ -58,11 +58,11 @@ namespace YAML
 
 		while(1) {
 			if(pScanner->empty())
-				throw ParserException(-1, -1, ErrorMsg::END_OF_MAP);
+				throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP);
 
 			Token token = pScanner->peek();
 			if(token.type != TT_KEY && token.type != TT_BLOCK_END)
-				throw ParserException(token.line, token.column, ErrorMsg::END_OF_MAP);
+				throw ParserException(token.mark, ErrorMsg::END_OF_MAP);
 
 			pScanner->pop();
 			if(token.type == TT_BLOCK_END)
@@ -91,7 +91,7 @@ namespace YAML
 
 		while(1) {
 			if(pScanner->empty())
-				throw ParserException(-1, -1, ErrorMsg::END_OF_MAP_FLOW);
+				throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP_FLOW);
 
 			Token& token = pScanner->peek();
 			// first check for end
@@ -102,7 +102,7 @@ namespace YAML
 
 			// now it better be a key
 			if(token.type != TT_KEY)
-				throw ParserException(token.line, token.column, ErrorMsg::END_OF_MAP_FLOW);
+				throw ParserException(token.mark, ErrorMsg::END_OF_MAP_FLOW);
 
 			pScanner->pop();
 
@@ -122,7 +122,7 @@ namespace YAML
 			if(nextToken.type == TT_FLOW_ENTRY)
 				pScanner->pop();
 			else if(nextToken.type != TT_FLOW_MAP_END)
-				throw ParserException(nextToken.line, nextToken.column, ErrorMsg::END_OF_MAP_FLOW);
+				throw ParserException(nextToken.mark, ErrorMsg::END_OF_MAP_FLOW);
 
 			// assign the map with the actual pointers
 			m_data[pKey.release()] = pValue.release();

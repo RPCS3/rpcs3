@@ -1,14 +1,15 @@
 #pragma once
 
+#include "conversion.h"
+#include "exceptions.h"
+#include "iterator.h"
+#include "mark.h"
+#include "noncopyable.h"
+#include "parserstate.h"
+#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
-#include "parserstate.h"
-#include "exceptions.h"
-#include "iterator.h"
-#include "conversion.h"
-#include "noncopyable.h"
-#include <iostream>
 
 namespace YAML
 {
@@ -30,8 +31,7 @@ namespace YAML
 		CONTENT_TYPE GetType() const;
 
 		// file location of start of this node
-		int GetLine() const { return m_line; }
-		int GetColumn() const { return m_column; }
+		const Mark GetMark() const { return m_mark; }
 
 		// accessors
 		Iterator begin() const;
@@ -85,7 +85,7 @@ namespace YAML
 		void ParseAlias(Scanner *pScanner, const ParserState& state);
 
 	private:
-		int m_line, m_column;
+		Mark m_mark;
 		std::string m_anchor, m_tag;
 		Content *m_pContent;
 		bool m_alias;

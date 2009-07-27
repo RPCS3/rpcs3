@@ -48,12 +48,13 @@ namespace YAML
 		bool IsWhitespaceToBeEaten(char ch);
 
 		struct SimpleKey {
-			SimpleKey(int pos_, int line_, int column_, int flowLevel_);
+			SimpleKey(const Mark& mark_, int flowLevel_);
 
 			void Validate();
 			void Invalidate();
-
-			int pos, line, column, flowLevel;
+			
+			Mark mark;
+			int flowLevel;
 			Token *pMapStart, *pKey;
 		};
 

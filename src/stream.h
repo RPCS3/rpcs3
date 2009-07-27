@@ -1,6 +1,7 @@
 #pragma once
 
 #include "noncopyable.h"
+#include "mark.h"
 #include <deque>
 #include <ios>
 #include <string>
@@ -28,13 +29,19 @@ namespace YAML
 		void eat(int n = 1);
 
 		static char eof() { return 0x04; }
+		
+		const Mark mark() const { return m_mark; }
+		int pos() const { return m_mark.pos; }
+		int line() const { return m_mark.line; }
+		int column() const { return m_mark.column; }
+		void ResetColumn() { m_mark.column = 0; }
 
-		int pos, line, column;
-	
 	private:
 		enum CharacterSet {utf8, utf16le, utf16be, utf32le, utf32be};
 
 		std::istream& m_input;
+		Mark m_mark;
+		
 		CharacterSet m_charSet;
 		unsigned char m_bufPushback[MAX_PARSER_PUSHBACK];
 		mutable size_t m_nPushedBack;

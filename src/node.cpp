@@ -47,8 +47,7 @@ namespace YAML
 			return;
 
 		// save location
-		m_line = pScanner->peek().line;
-		m_column = pScanner->peek().column;
+		m_mark = pScanner->peek().mark;
 
 		ParseHeader(pScanner, state);
 
@@ -119,7 +118,7 @@ namespace YAML
 	{
 		Token& token = pScanner->peek();
 		if(m_tag != "")
-			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_TAGS);
+			throw ParserException(token.mark, ErrorMsg::MULTIPLE_TAGS);
 
 		m_tag = state.TranslateTag(token.value);
 
@@ -132,7 +131,7 @@ namespace YAML
 	{
 		Token& token = pScanner->peek();
 		if(m_anchor != "")
-			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_ANCHORS);
+			throw ParserException(token.mark, ErrorMsg::MULTIPLE_ANCHORS);
 
 		m_anchor = token.value;
 		m_alias = false;
@@ -143,9 +142,9 @@ namespace YAML
 	{
 		Token& token = pScanner->peek();
 		if(m_anchor != "")
-			throw ParserException(token.line, token.column, ErrorMsg::MULTIPLE_ALIASES);
+			throw ParserException(token.mark, ErrorMsg::MULTIPLE_ALIASES);
 		if(m_tag != "")
-			throw ParserException(token.line, token.column, ErrorMsg::ALIAS_CONTENT);
+			throw ParserException(token.mark, ErrorMsg::ALIAS_CONTENT);
 
 		m_anchor = token.value;
 		m_alias = true;

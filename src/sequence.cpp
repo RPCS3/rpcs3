@@ -68,11 +68,11 @@ namespace YAML
 
 		while(1) {
 			if(pScanner->empty())
-				throw ParserException(-1, -1, ErrorMsg::END_OF_SEQ);
+				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ);
 
 			Token token = pScanner->peek();
 			if(token.type != TT_BLOCK_ENTRY && token.type != TT_BLOCK_END)
-				throw ParserException(token.line, token.column, ErrorMsg::END_OF_SEQ);
+				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ);
 
 			pScanner->pop();
 			if(token.type == TT_BLOCK_END)
@@ -111,7 +111,7 @@ namespace YAML
 
 		while(1) {
 			if(pScanner->empty())
-				throw ParserException(-1, -1, ErrorMsg::END_OF_SEQ_FLOW);
+				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ_FLOW);
 
 			// first check for end
 			if(pScanner->peek().type == TT_FLOW_SEQ_END) {
@@ -129,7 +129,7 @@ namespace YAML
 			if(token.type == TT_FLOW_ENTRY)
 				pScanner->pop();
 			else if(token.type != TT_FLOW_SEQ_END)
-				throw ParserException(token.line, token.column, ErrorMsg::END_OF_SEQ_FLOW);
+				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ_FLOW);
 		}
 	}
 

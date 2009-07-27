@@ -32,11 +32,11 @@ namespace YAML
 					break;
 
 				// document indicator?
-				if(INPUT.column == 0 && Exp::DocIndicator.Matches(INPUT)) {
+				if(INPUT.column() == 0 && Exp::DocIndicator.Matches(INPUT)) {
 					if(params.onDocIndicator == BREAK)
 						break;
 					else if(params.onDocIndicator == THROW)
-						throw ParserException(INPUT.line, INPUT.column, ErrorMsg::DOC_IN_SCALAR);
+						throw ParserException(INPUT.mark(), ErrorMsg::DOC_IN_SCALAR);
 				}
 
 				foundNonEmptyLine = true;
@@ -62,12 +62,12 @@ namespace YAML
 			// eof? if we're looking to eat something, then we throw
 			if(!INPUT) {
 				if(params.eatEnd)
-					throw ParserException(INPUT.line, INPUT.column, ErrorMsg::EOF_IN_SCALAR);
+					throw ParserException(INPUT.mark(), ErrorMsg::EOF_IN_SCALAR);
 				break;
 			}
 
 			// doc indicator?
-			if(params.onDocIndicator == BREAK && INPUT.column == 0 && Exp::DocIndicator.Matches(INPUT))
+			if(params.onDocIndicator == BREAK && INPUT.column() == 0 && Exp::DocIndicator.Matches(INPUT))
 				break;
 
 			// are we done via character match?
@@ -87,18 +87,18 @@ namespace YAML
 			// Phase #3: scan initial spaces
 
 			// first the required indentation
-			while(INPUT.peek() == ' ' && (INPUT.column < params.indent || (params.detectIndent && !foundNonEmptyLine)))
+			while(INPUT.peek() == ' ' && (INPUT.column() < params.indent || (params.detectIndent && !foundNonEmptyLine)))
 				INPUT.eat(1);
 
 			// update indent if we're auto-detecting
 			if(params.detectIndent && !foundNonEmptyLine)
-				params.indent = std::max(params.indent, INPUT.column);
+				params.indent = std::max(params.indent, INPUT.column());
 
 			// and then the rest of the whitespace
 			while(Exp::Blank.Matches(INPUT)) {
 				// we check for tabs that masquerade as indentation
-				if(INPUT.peek() == '\t'&& INPUT.column < params.indent && params.onTabInIndentation == THROW)
-					throw ParserException(INPUT.line, INPUT.column, ErrorMsg::TAB_IN_INDENTATION);
+				if(INPUT.peek() == '\t'&& INPUT.column() < params.indent && params.onTabInIndentation == THROW)
+					throw ParserException(INPUT.mark(), ErrorMsg::TAB_IN_INDENTATION);
 
 				if(!params.eatLeadingWhitespace)
 					break;
@@ -113,7 +113,7 @@ namespace YAML
 			// for block scalars, we always start with a newline, so we should ignore it (not fold or keep)
 			bool useNewLine = pastOpeningBreak;
 			// and for folded scalars, we don't fold the very last newline to a space
-			if(params.fold && !emptyLine && INPUT.column < params.indent)
+			if(params.fold && !emptyLine && INPUT.column() < params.indent)
 				useNewLine = false;
 
 			if(useNewLine) {
@@ -128,7 +128,7 @@ namespace YAML
 			pastOpeningBreak = true;
 
 			// are we done via indentation?
-			if(!emptyLine && INPUT.column < params.indent) {
+			if(!emptyLine && INPUT.column() < params.indent) {
 				params.leadingSpaces = true;
 				break;
 			}

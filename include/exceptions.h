@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mark.h"
 #include <exception>
 #include <string>
 #include <sstream>
@@ -60,16 +61,16 @@ namespace YAML
 
 	class Exception: public std::exception {
 	public:
-		Exception(int line_, int column_, const std::string& msg_)
-			: line(line_), column(column_), msg(msg_) {
+		Exception(const Mark& mark_, const std::string& msg_)
+			: mark(mark_), msg(msg_) {
 				std::stringstream output;
-				output << "Error at line " << line+1 << ", column " << column+1 << ": " << msg;
+				output << "Error at line " << mark.line+1 << ", column " << mark.column+1 << ": " << msg;
 				what_ = output.str();
 			}
 		virtual ~Exception() throw() {}
 		virtual const char *what() const throw() { return what_.c_str(); }
 
-		int line, column;
+		Mark mark;
 		std::string msg;
 		
 	private:
@@ -78,53 +79,53 @@ namespace YAML
 
 	class ParserException: public Exception {
 	public:
-		ParserException(int line_, int column_, const std::string& msg_)
-			: Exception(line_, column_, msg_) {}
+		ParserException(const Mark& mark_, const std::string& msg_)
+			: Exception(mark_, msg_) {}
 	};
 
 	class RepresentationException: public Exception {
 	public:
-		RepresentationException(int line_, int column_, const std::string& msg_)
-			: Exception(line_, column_, msg_) {}
+		RepresentationException(const Mark& mark_, const std::string& msg_)
+			: Exception(mark_, msg_) {}
 	};
 
 	// representation exceptions
 	class InvalidScalar: public RepresentationException {
 	public:
-		InvalidScalar(int line_, int column_)
-			: RepresentationException(line_, column_, ErrorMsg::INVALID_SCALAR) {}
+		InvalidScalar(const Mark& mark_)
+			: RepresentationException(mark_, ErrorMsg::INVALID_SCALAR) {}
 	};
 
 	class KeyNotFound: public RepresentationException {
 	public:
-		KeyNotFound(int line_, int column_)
-			: RepresentationException(line_, column_, ErrorMsg::KEY_NOT_FOUND) {}
+		KeyNotFound(const Mark& mark_)
+			: RepresentationException(mark_, ErrorMsg::KEY_NOT_FOUND) {}
 	};
 
 	template <typename T>
 	class TypedKeyNotFound: public KeyNotFound {
 	public:
-		TypedKeyNotFound(int line_, int column_, const T& key_)
-			: KeyNotFound(line_, column_), key(key_) {}
+		TypedKeyNotFound(const Mark& mark_, const T& key_)
+			: KeyNotFound(mark_), key(key_) {}
 		~TypedKeyNotFound() throw() {}
 
 		T key;
 	};
 
 	template <typename T>
-	TypedKeyNotFound <T> MakeTypedKeyNotFound(int line, int column, const T& key) {
-		return TypedKeyNotFound <T> (line, column, key);
+	TypedKeyNotFound <T> MakeTypedKeyNotFound(const Mark& mark, const T& key) {
+		return TypedKeyNotFound <T> (mark, key);
 	}
 
 	class BadDereference: public RepresentationException {
 	public:
 		BadDereference()
-			: RepresentationException(-1, -1, ErrorMsg::BAD_DEREFERENCE) {}
+		: RepresentationException(Mark::null(), ErrorMsg::BAD_DEREFERENCE) {}
 	};
 	
 	class EmitterException: public Exception {
 	public:
 		EmitterException(const std::string& msg_)
-		: Exception(-1, -1, msg_) {}
+		: Exception(Mark::null(), msg_) {}
 	};
 }

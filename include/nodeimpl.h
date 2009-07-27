@@ -15,7 +15,7 @@ namespace YAML
 	template <typename T>
 	inline void operator >> (const Node& node, T& value) {
 		if(!node.Read(value))
-			throw InvalidScalar(node.m_line, node.m_column);
+			throw InvalidScalar(node.m_mark);
 	}
 	
 	template <typename T>
@@ -51,7 +51,7 @@ namespace YAML
 			}
 		}
 		
-		throw MakeTypedKeyNotFound(m_line, m_column, key);
+		throw MakeTypedKeyNotFound(m_mark, key);
 	}
 	
 	template <typename T>

@@ -179,7 +179,7 @@ namespace YAML
 	}
 
 	Stream::Stream(std::istream& input)
-		: pos(0), line(0), column(0), m_input(input), m_nPushedBack(0),
+		: m_input(input), m_nPushedBack(0),
 		m_pPrefetched(new unsigned char[YAML_PREFETCH_SIZE]), 
 		m_nPrefetchedAvailable(0), m_nPrefetchedUsed(0)
 	{
@@ -248,11 +248,11 @@ namespace YAML
 	{
 		char ch = peek();
 		AdvanceCurrent();
-		column++;
+		m_mark.column++;
 		
 		if(ch == '\n') {
-			column = 0;
-			line++;
+			m_mark.column = 0;
+			m_mark.line++;
 		}
 		
 		return ch;
@@ -282,7 +282,7 @@ namespace YAML
 		if (!m_readahead.empty())
 		{
 			m_readahead.pop_front();
-			++pos;
+			m_mark.pos++;
 		}
 
 		ReadAheadTo(0);

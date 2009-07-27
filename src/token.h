@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mark.h"
 #include <ios>
 #include <string>
 #include <vector>
@@ -50,7 +51,7 @@ namespace YAML
 	};
 
 	struct Token {
-		Token(TOKEN_TYPE type_, int line_, int column_): status(TS_VALID), type(type_), line(line_), column(column_) {}
+		Token(TOKEN_TYPE type_, const Mark& mark_): status(TS_VALID), type(type_), mark(mark_) {}
 
 		friend std::ostream& operator << (std::ostream& out, const Token& token) {
 			out << TokenNames[token.type] << std::string(": ") << token.value;
@@ -61,7 +62,7 @@ namespace YAML
 
 		TOKEN_STATUS status;
 		TOKEN_TYPE type;
-		int line, column;
+		Mark mark;
 		std::string value;
 		std::vector <std::string> params;
 	};

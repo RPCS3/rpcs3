@@ -98,7 +98,7 @@ namespace YAML
 		VerifySimpleKey();
 
 		// maybe need to end some blocks
-		PopIndentTo(INPUT.column);
+		PopIndentTo(INPUT.column());
 
 		// *****
 		// And now branch based on the next few characters!
@@ -108,14 +108,14 @@ namespace YAML
 		if(!INPUT)
 			return EndStream();
 
-		if(INPUT.column == 0 && INPUT.peek() == Keys::Directive)
+		if(INPUT.column() == 0 && INPUT.peek() == Keys::Directive)
 			return ScanDirective();
 
 		// document token
-		if(INPUT.column == 0 && Exp::DocStart.Matches(INPUT))
+		if(INPUT.column() == 0 && Exp::DocStart.Matches(INPUT))
 			return ScanDocStart();
 
-		if(INPUT.column == 0 && Exp::DocEnd.Matches(INPUT))
+		if(INPUT.column() == 0 && Exp::DocEnd.Matches(INPUT))
 			return ScanDocEnd();
 
 		// flow start/end/entry
@@ -158,7 +158,7 @@ namespace YAML
 			return ScanPlainScalar();
 
 		// don't know what it is!
-		throw ParserException(INPUT.line, INPUT.column, ErrorMsg::UNKNOWN_TOKEN);
+		throw ParserException(INPUT.mark(), ErrorMsg::UNKNOWN_TOKEN);
 	}
 
 	// ScanToNextToken
@@ -230,8 +230,8 @@ namespace YAML
 	void Scanner::EndStream()
 	{
 		// force newline
-		if(INPUT.column > 0)
-			INPUT.column = 0;
+		if(INPUT.column() > 0)
+			INPUT.ResetColumn();
 
 		PopIndentTo(-1);
 		VerifyAllSimpleKeys();
@@ -257,9 +257,9 @@ namespace YAML
 		// now push
 		m_indents.push(column);
 		if(sequence)
-			m_tokens.push(Token(TT_BLOCK_SEQ_START, INPUT.line, INPUT.column));
+			m_tokens.push(Token(TT_BLOCK_SEQ_START, INPUT.mark()));
 		else
-			m_tokens.push(Token(TT_BLOCK_MAP_START, INPUT.line, INPUT.column));
+			m_tokens.push(Token(TT_BLOCK_MAP_START, INPUT.mark()));
 
 		return &m_tokens.back();
 	}
@@ -276,7 +276,7 @@ namespace YAML
 		// now pop away
 		while(!m_indents.empty() && m_indents.top() > column) {
 			m_indents.pop();
-			m_tokens.push(Token(TT_BLOCK_END, INPUT.line, INPUT.column));
+			m_tokens.push(Token(TT_BLOCK_END, INPUT.mark()));
 		}
 	}
 
@@ -309,13 +309,12 @@ namespace YAML
 	// . Does not parse any more tokens.
 	void Scanner::ThrowParserException(const std::string& msg) const
 	{
-		int line = -1, column = -1;
+		Mark mark = Mark::null();
 		if(!m_tokens.empty()) {
 			const Token& token = m_tokens.front();
-			line = token.line;
-			column = token.column;
+			mark = token.mark;
 		}
-		throw ParserException(line, column, msg);
+		throw ParserException(mark, msg);
 	}
 
 	void Scanner::ClearAnchors()

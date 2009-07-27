@@ -6,8 +6,8 @@
 
 namespace YAML
 {
-	Scanner::SimpleKey::SimpleKey(int pos_, int line_, int column_, int flowLevel_)
-		: pos(pos_), line(line_), column(column_), flowLevel(flowLevel_), pMapStart(0), pKey(0)
+	Scanner::SimpleKey::SimpleKey(const Mark& mark_, int flowLevel_)
+		: mark(mark_), flowLevel(flowLevel_), pMapStart(0), pKey(0)
 	{
 	}
 
@@ -32,15 +32,15 @@ namespace YAML
 	//   and saves it on a stack.
 	void Scanner::InsertSimpleKey()
 	{
-		SimpleKey key(INPUT.pos, INPUT.line, INPUT.column, m_flowLevel);
+		SimpleKey key(INPUT.mark(), m_flowLevel);
 
 		// first add a map start, if necessary
-		key.pMapStart = PushIndentTo(INPUT.column, false);
+		key.pMapStart = PushIndentTo(INPUT.column(), false);
 		if(key.pMapStart)
 			key.pMapStart->status = TS_UNVERIFIED;
 
 		// then add the (now unverified) key
-		m_tokens.push(Token(TT_KEY, INPUT.line, INPUT.column));
+		m_tokens.push(Token(TT_KEY, INPUT.mark()));
 		key.pKey = &m_tokens.back();
 		key.pKey->status = TS_UNVERIFIED;
 
@@ -78,7 +78,7 @@ namespace YAML
 			isValid = false;
 
 		// also needs to be less than 1024 characters and inline
-		if(INPUT.line != key.line || INPUT.pos - key.pos > 1024)
+		if(INPUT.line() != key.mark.line || INPUT.pos() - key.mark.pos > 1024)
 			isValid = false;
 
 		// invalidate key
