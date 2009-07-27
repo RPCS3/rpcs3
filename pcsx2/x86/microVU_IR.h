@@ -150,11 +150,11 @@ struct microIR {
 	microOp			 info[pSize/2];	// Info for Instructions in current block
 	microConstInfo	 constReg[16];	// Simple Const Propagation Info for VI regs within blocks
 	u8  branch;			
-	u32 cycles;			// Cycles for current block
-	u32 count;			// Number of VU 64bit instructions ran (starts at 0 for each block)
-	u32 curPC;			// Current PC
-	u32 startPC;		// Start PC for Cur Block
-	u32 sFlagHack;		// Optimize out all Status flag updates if microProgram doesn't use Status flags
+	u32 cycles;		// Cycles for current block
+	u32 count;		// Number of VU 64bit instructions ran (starts at 0 for each block)
+	u32 curPC;		// Current PC
+	u32 startPC;	// Start PC for Cur Block
+	u32 sFlagHack;	// Optimize out all Status flag updates if microProgram doesn't use Status flags
 };
 
 //------------------------------------------------------------------
