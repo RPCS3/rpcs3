@@ -46,7 +46,6 @@ mVUop(mVU_DIV) {
 	pass1 { mVUanalyzeFDIV(mVU, _Fs_, _Fsf_, _Ft_, _Ftf_, 7); }
 	pass2 { 
 		u8 *ajmp, *bjmp, *cjmp, *djmp;
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
 		int t1 = mVU->regAlloc->allocReg();
@@ -80,7 +79,6 @@ mVUop(mVU_DIV) {
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
 		mVU->regAlloc->clearNeeded(t1);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("DIV Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
@@ -89,7 +87,6 @@ mVUop(mVU_SQRT) {
 	pass1 { mVUanalyzeFDIV(mVU, 0, 0, _Ft_, _Ftf_, 7); }
 	pass2 { 
 		u8 *ajmp;
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
 
 		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
@@ -102,7 +99,6 @@ mVUop(mVU_SQRT) {
 		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
 
 		mVU->regAlloc->clearNeeded(Ft);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQRT Q, vf%02d%s", _Ft_, _Ftf_String); }
 }
@@ -111,7 +107,6 @@ mVUop(mVU_RSQRT) {
 	pass1 { mVUanalyzeFDIV(mVU, _Fs_, _Fsf_, _Ft_, _Ftf_, 13); }
 	pass2 { 
 		u8 *ajmp, *bjmp, *cjmp, *djmp;
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
 		int t1 = mVU->regAlloc->allocReg();
@@ -147,7 +142,6 @@ mVUop(mVU_RSQRT) {
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
 		mVU->regAlloc->clearNeeded(t1);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("RSQRT Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
@@ -195,7 +189,6 @@ mVUop(mVU_EATAN) {
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(t1);
 		mVU->regAlloc->clearNeeded(t2);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EATAN P"); }
 }
@@ -203,7 +196,6 @@ mVUop(mVU_EATAN) {
 mVUop(mVU_EATANxy) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 54); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int t1 = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
 		int Fs = mVU->regAlloc->allocReg();
 		int t2 = mVU->regAlloc->allocReg();
@@ -217,7 +209,6 @@ mVUop(mVU_EATANxy) {
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(t1);
 		mVU->regAlloc->clearNeeded(t2);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EATANxy P"); }
 }
@@ -225,7 +216,6 @@ mVUop(mVU_EATANxy) {
 mVUop(mVU_EATANxz) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 54); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int t1 = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
 		int Fs = mVU->regAlloc->allocReg();
 		int t2 = mVU->regAlloc->allocReg();
@@ -239,7 +229,6 @@ mVUop(mVU_EATANxz) {
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(t1);
 		mVU->regAlloc->clearNeeded(t2);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EATANxz P"); }
 }
@@ -254,7 +243,6 @@ mVUop(mVU_EATANxz) {
 mVUop(mVU_EEXP) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 44); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		int t1 = mVU->regAlloc->allocReg();
 		int t2 = mVU->regAlloc->allocReg();
@@ -282,7 +270,6 @@ mVUop(mVU_EEXP) {
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(t1);
 		mVU->regAlloc->clearNeeded(t2);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("EEXP P"); }
 }
@@ -306,14 +293,12 @@ microVUt(void) mVU_sumXYZ(int PQ, int Fs) {
 mVUop(mVU_ELENG) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 18); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		mVU_sumXYZ(xmmPQ, Fs);
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, xmmPQ);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ELENG P"); }
 }
@@ -321,7 +306,6 @@ mVUop(mVU_ELENG) {
 mVUop(mVU_ERCPR) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 12); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
@@ -330,7 +314,6 @@ mVUop(mVU_ERCPR) {
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERCPR P"); }
 }
@@ -338,7 +321,6 @@ mVUop(mVU_ERCPR) {
 mVUop(mVU_ERLENG) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 24); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		mVU_sumXYZ(xmmPQ, Fs);
@@ -348,7 +330,6 @@ mVUop(mVU_ERLENG) {
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERLENG P"); }
 }
@@ -356,7 +337,6 @@ mVUop(mVU_ERLENG) {
 mVUop(mVU_ERSADD) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 18); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		mVU_sumXYZ(xmmPQ, Fs);
@@ -365,7 +345,6 @@ mVUop(mVU_ERSADD) {
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERSADD P"); }
 }
@@ -373,7 +352,6 @@ mVUop(mVU_ERSADD) {
 mVUop(mVU_ERSQRT) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 18); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
@@ -382,7 +360,6 @@ mVUop(mVU_ERSQRT) {
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ERSQRT P"); }
 }
@@ -390,13 +367,11 @@ mVUop(mVU_ERSQRT) {
 mVUop(mVU_ESADD) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 11); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		mVU_sumXYZ(xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESADD P"); }
 }
@@ -411,7 +386,6 @@ mVUop(mVU_ESADD) {
 mVUop(mVU_ESIN) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 29); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		int t1 = mVU->regAlloc->allocReg();
 		int t2 = mVU->regAlloc->allocReg();
@@ -433,7 +407,6 @@ mVUop(mVU_ESIN) {
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(t1);
 		mVU->regAlloc->clearNeeded(t2);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESIN P"); }
 } 
@@ -441,13 +414,11 @@ mVUop(mVU_ESIN) {
 mVUop(mVU_ESQRT) {
 	pass1 { mVUanalyzeEFU1(mVU, _Fs_, _Fsf_, 12); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESQRT P"); }
 }
@@ -455,7 +426,6 @@ mVUop(mVU_ESQRT) {
 mVUop(mVU_ESUM) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 12); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		int t1 = mVU->regAlloc->allocReg();
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
@@ -467,7 +437,6 @@ mVUop(mVU_ESUM) {
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(t1);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("ESUM P"); }
 }
@@ -753,14 +722,12 @@ mVUop(mVU_ISUBIU) {
 mVUop(mVU_MFIR) {
 	pass1 { if (!_Ft_) { mVUlow.isNOP = 1; } analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeReg2(_Ft_, mVUlow.VF_write, 1); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		mVUallocVIa(mVU, gprT1, _Is_);
 		MOVSX32R16toR(gprT1, gprT1);
 		SSE2_MOVD_R_to_XMM(Ft, gprT1);
 		if (!_XYZW_SS) { mVUunpack_xyzw(Ft, Ft, 0); }
 		mVU->regAlloc->clearNeeded(Ft);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MFIR.%s vf%02d, vi%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -768,11 +735,9 @@ mVUop(mVU_MFIR) {
 mVUop(mVU_MFP) {
 	pass1 { mVUanalyzeMFP(mVU, _Ft_); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		getPreg(Ft);
 		mVU->regAlloc->clearNeeded(Ft);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MFP.%s vf%02d, P", _XYZW_String, _Ft_); }
 }
@@ -780,10 +745,8 @@ mVUop(mVU_MFP) {
 mVUop(mVU_MOVE) {
 	pass1 { mVUanalyzeMOVE(mVU, _Fs_, _Ft_); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W);
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MOVE.%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -791,14 +754,12 @@ mVUop(mVU_MOVE) {
 mVUop(mVU_MR32) {
 	pass1 { mVUanalyzeMR32(mVU, _Fs_, _Ft_); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		if (_XYZW_SS) mVUunpack_xyzw(Ft, Fs, (_X ? 1 : (_Y ? 2 : (_Z ? 3 : 0))));
 		else		  SSE2_PSHUFD_XMM_to_XMM(Ft, Fs, 0x39);
 		mVU->regAlloc->clearNeeded(Ft);
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MR32.%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -806,12 +767,10 @@ mVUop(mVU_MR32) {
 mVUop(mVU_MTIR) {
 	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeReg5(_Fs_, _Fsf_, mVUlow.VF_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_MOVD_XMM_to_R(gprT1, Fs);
 		mVUallocVIb(mVU, gprT1, _It_);
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("MTIR vi%02d, vf%02d%s", _Ft_, _Fs_, _Fsf_String); }
 }
@@ -914,7 +873,6 @@ mVUop(mVU_ISWR) {
 mVUop(mVU_LQ) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 0); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT1, _Is_);
@@ -924,7 +882,6 @@ mVUop(mVU_LQ) {
 		}
 		else mVUloadReg(Ft, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W);
 		mVU->regAlloc->clearNeeded(Ft);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("LQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Ft_, _Fs_, _Imm11_); }
 }
@@ -932,7 +889,6 @@ mVUop(mVU_LQ) {
 mVUop(mVU_LQD) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 1); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		if (_Is_) {
 			mVUallocVIa(mVU, gprT1, _Is_);
 			SUB16ItoR(gprT1, 1);
@@ -949,7 +905,6 @@ mVUop(mVU_LQD) {
 			mVUloadReg(Ft, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 			mVU->regAlloc->clearNeeded(Ft);
 		}
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("LQD.%s vf%02d, --vi%02d", _XYZW_String, _Ft_, _Is_); }
 }
@@ -957,7 +912,6 @@ mVUop(mVU_LQD) {
 mVUop(mVU_LQI) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 1); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		if (_Is_) {
 			mVUallocVIa(mVU, (!mVUlow.noWriteVF) ? gprT1 : gprT2, _Is_);
 			if (!mVUlow.noWriteVF) {
@@ -975,7 +929,6 @@ mVUop(mVU_LQI) {
 			mVUloadReg(Ft, (uptr)mVU->regs->Mem, _X_Y_Z_W);
 			mVU->regAlloc->clearNeeded(Ft);
 		}
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("LQI.%s vf%02d, vi%02d++", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -987,7 +940,6 @@ mVUop(mVU_LQI) {
 mVUop(mVU_SQ) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 0); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		if (_It_) {
 			mVUallocVIa(mVU, gprT1, _It_);
@@ -997,7 +949,6 @@ mVUop(mVU_SQ) {
 		}
 		else mVUsaveReg(Fs, (uptr)mVU->regs->Mem + getVUmem(_Imm11_), _X_Y_Z_W, 1);
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Fs_, _Ft_, _Imm11_); }
 }
@@ -1005,7 +956,6 @@ mVUop(mVU_SQ) {
 mVUop(mVU_SQD) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 1); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		if (_It_) {
 			mVUallocVIa(mVU, gprT1, _It_);
@@ -1016,7 +966,6 @@ mVUop(mVU_SQD) {
 		}
 		else mVUsaveReg(Fs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQD.%s vf%02d, --vi%02d", _XYZW_String, _Fs_, _Ft_); }
 }
@@ -1024,7 +973,6 @@ mVUop(mVU_SQD) {
 mVUop(mVU_SQI) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 1); }
 	pass2 { 
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		if (_It_) {
 			mVUallocVIa(mVU, gprT1, _It_);
@@ -1036,7 +984,6 @@ mVUop(mVU_SQI) {
 		}
 		else mVUsaveReg(Fs, (uptr)mVU->regs->Mem, _X_Y_Z_W, 1);
 		mVU->regAlloc->clearNeeded(Fs);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 	pass3 { mVUlog("SQI.%s vf%02d, vi%02d++", _XYZW_String, _Fs_, _Ft_); }
 }
@@ -1049,14 +996,12 @@ mVUop(mVU_RINIT) {
 	pass1 { mVUanalyzeR1(mVU, _Fs_, _Fsf_); }
 	pass2 { 
 		if (_Fs_ || (_Fsf_ == 3)) {
-			mVU->regAlloc->reset(); // Reset for Testing
 			int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 			SSE2_MOVD_XMM_to_R(gprT1, Fs);
 			AND32ItoR(gprT1, 0x007fffff);
 			OR32ItoR (gprT1, 0x3f800000);
 			MOV32RtoM(Rmem, gprT1);
 			mVU->regAlloc->clearNeeded(Fs);
-			mVU->regAlloc->flushAll(); // Flush All for Testing
 		}
 		else MOV32ItoM(Rmem, 0x3f800000);
 	}
@@ -1065,12 +1010,10 @@ mVUop(mVU_RINIT) {
 
 microVUt(void) mVU_RGET_(mV, int Rreg) {
 	if (!mVUlow.noWriteVF) {
-		mVU->regAlloc->reset(); // Reset for Testing
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		SSE2_MOVD_R_to_XMM(Ft, Rreg);
 		if (!_XYZW_SS) mVUunpack_xyzw(Ft, Ft, 0);
 		mVU->regAlloc->clearNeeded(Ft);
-		mVU->regAlloc->flushAll(); // Flush All for Testing
 	}
 }
 
@@ -1109,13 +1052,11 @@ mVUop(mVU_RXOR) {
 	pass1 { mVUanalyzeR1(mVU, _Fs_, _Fsf_); }
 	pass2 { 
 		if (_Fs_ || (_Fsf_ == 3)) {
-			mVU->regAlloc->reset(); // Reset for Testing
 			int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 			SSE2_MOVD_XMM_to_R(gprT1, Fs);
 			AND32ItoR(gprT1, 0x7fffff);
 			XOR32RtoM(Rmem,  gprT1);
 			mVU->regAlloc->clearNeeded(Fs);
-			mVU->regAlloc->flushAll(); // Flush All for Testing
 		}
 	}
 	pass3 { mVUlog("RXOR R, vf%02d%s", _Fs_, _Fsf_String); }

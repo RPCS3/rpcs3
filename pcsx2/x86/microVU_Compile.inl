@@ -259,6 +259,7 @@ microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip
 	int fClip	= (isEbit) ? findFlagInst(xClip,   0x7fffffff) : cI;
 	int qInst	= 0;
 	int pInst	= 0;
+	mVU->regAlloc->flushAll();
 
 	if (isEbit) {
 		mVUprint("mVUcompile ebit");
@@ -370,6 +371,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	mVUsetupRange(mVU, startPC, 1);
 	
 	// Reset regAlloc
+	mVU->regAlloc->flushAll();
 	mVU->regAlloc->reset();
 
 	// First Pass
@@ -435,7 +437,8 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
 		else						{ doSwapOp(mVU); }
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
-		
+		if (!doRegAlloc)			{ mVU->regAlloc->flushAll(); }
+
 		if (!mVUinfo.isBdelay) { incPC(1); }
 		else {
 			microBlock* bBlock = NULL;

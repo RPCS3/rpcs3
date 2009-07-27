@@ -136,7 +136,6 @@ struct microVU {
 	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
 	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)
 	PCSX2_ALIGNED16(u32 xmmPQb[4]);   // Backup for xmmPQ
-	PCSX2_ALIGNED16(u32 xmmVFb[4]);   // Backup for VF regs
 
 	u32 index;			// VU Index (VU0 or VU1)
 	u32 vuMemSize;		// VU Main  Memory Size (in bytes)

@@ -267,6 +267,9 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUdumpProg 0&&
 #endif
 
+// Reg Alloc
+#define doRegAlloc 1 // Set to 0 to flush every 64bit Instruction (Turns off regAlloc)
+
 // Speed Hacks
 #define CHECK_VU_CONSTHACK	0 // Only use for GoW (will be slower on other games)
 #define CHECK_VU_FLAGHACK	(u32)Config.Hacks.vuFlagHack	// (Can cause Infinite loops, SPS, etc...)
