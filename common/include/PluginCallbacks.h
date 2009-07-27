@@ -20,14 +20,413 @@
 #ifndef __PLUGINCALLBACKS_H__
 #define __PLUGINCALLBACKS_H__
 
-extern "C"
+#include "x86caps.h"		// fixme: x86caps.h needs to be implemented from the pcsx2 emitter cpucaps structs
+
+#ifndef __cplusplus
+extern "C" {
+#endif
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// HWND is our only operating system dependent type.  For it to be defined as accurately
+// as possible, this header file needs to be included after whatever window/GUI platform
+// headers you need (wxWidgets, Windows.h, GTK, etc).
+//
+// We could be lazy with this typedef, because window handles are always a (void*) on all
+// platforms that matter to us (windows, gtk, OSX).  But Windows has some type strictness
+// on its HWND define that could be useful, and well it's probably good practice to use
+// platform available defines when they exist.
+//
+#if defined( _WX_DEFS_H_ )
+
+	typedef WXWidget PS2E_HWND;
+
+#elif defined( _WINDEF_ )
+
+	// For Windows let's use HWND, since it has some type strictness applied to it.
+	typedef HWND PS2E_HWND;
+
+#else
+	// Unsupported platform... use void* as a best guess.  Should work fine for almost
+	// any GUI platform, and certainly works for any currently supported one.
+	typedef void* PS2E_HWND;
+#endif
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Plugin Type / Version Enumerations
+//
+enum PS2E_ComponentTypes
 {
-// General
-typedef u32  (CALLBACK* _PS2EgetLibType)(void);
-typedef u32  (CALLBACK* _PS2EgetLibVersion2)(u32 type);
-typedef char*(CALLBACK* _PS2EgetLibName)(void);
-typedef void (CALLBACK* _PS2EpassConfig)(PcsxConfig *Config);
-typedef void (CALLBACK* _PS2EpassIniPath)(const char *path);
+	PS2E_TYPE_GS=0,
+	PS2E_TYPE_PAD,
+	PS2E_TYPE_SPU2,
+	PS2E_TYPE_CDVD,
+	PS2E_TYPE_DEV9,
+	PS2E_TYPE_USB,
+	PS2E_TYPE_FW,
+	PS2E_TYPE_SIO,
+
+};
+
+enum PluginLibVersion
+{
+	PS2E_VER_GS		= 0x1000,
+	PS2E_VER_PAD	= 0x1000,
+	PS2E_VER_SPU2	= 0x1000,
+	PS2E_VER_CDVD	= 0x1000,
+	PS2E_VER_DEV9	= 0x1000,
+	PS2E_VER_USB	= 0x1000,
+	PS2E_VER_FW		= 0x1000,
+	PS2E_VER_SIO	= 0x1000
+};
+
+enum OSDIconTypes
+{
+	OSD_Icon_None = 0,
+	OSD_Icon_Error,
+	OSD_Icon_Notice,		// An exclamation point maybe?
+	
+	// [TODO] -- dunno.  What else?
+	
+	// Emulators implementing their own custom non-standard icon extensions should do so
+	// somewhere after OSD_Icon_ReserveEnd.  All values below this are 
+	OSD_Icon_ReserveEnd = 0x1000
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_VersionInfo
+// 
+// This structure is populated by the plugin via the PS2E_PluginLibAPI::GetVersion()
+// callback.  Specify -1 for any Version or Revision to disable/ignore it.  The emulator
+// will not factor that info into the display name of the plugin.
+//
+typedef struct PS2E_VersionInfo
+{
+	// Low/Mid/High versions combine to form a number in the format of: 2.3.1
+	// ... where 2 is the high version, 3 mid, and 1 low.
+	s16 VersionLow;
+	s16 VersionMid;
+	s16 VersionHigh;
+
+	// Revision typically refers a revision control system (such as SVN).  When displayed
+	// by the emulator it will have an 'r' prefixed before it.
+	s32 Revision;
+	
+} PS2E_VersionInfo;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_MachineInfo
+// 
+// This struct is populated by the emulator when the application is started, and is passed
+// to plugins via PS2E_PluginLibAPI::Init().  Plugins may optionally use this information
+// to determine compatibility or to select which special CPU-oriented builds and/or functions
+// to bind to callbacks.
+//
+// Fields marked as Optional can either be NULL or -1, denoting the field is unused/ignored.
+//
+typedef struct _PS2E_MachineInfo
+{
+	const x86CPU_INFO*	x86caps;
+
+	// brief name of the emulator (ex: "PCSX2") [required]
+	// Depending on the design of the emulator, this string may optionally include version
+	// information, however that is not recommended since it can inhibit backward support.
+	const char*	EmuName;
+
+	s16			EmuVersionLow;			// [optional]
+	s16			EmuVersionMid;			// [optional]
+	s16			EmuVersionHigh;			// [optional]
+	s32			EmuRevision;			// emulator's revision number. [optional]
+
+} PS2E_MachineInfo;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_SessionInfo
+// 
+// This struct is populated by the emulator prior to starting emulation, and is passed to
+// each plugin via a call to PS2E_PluginLibAPI::EmuStart().
+//
+typedef struct _PS2E_SessionInfo
+{
+	PS2E_HWND window;
+
+	u32* CycleEE;		// current EE cycle count
+	u32* CycleIOP;		// current IOP cycle count
+
+} PS2E_SessionInfo;
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_EmulatorAPI
+//
+// These functions are provided to the PS2 plugins by the emulator.  Plugins may call these
+// functions to perform operations or retrieve data.
+//
+typedef struct _PS2E_EmulatorAPI
+{
+	// TODO : Create the ConsoleLogger class.
+	// Provides a set of basic console functions for writing text to the emulator's
+	// console.  Some emulators may not support a console, in which case these functions
+	// will be NOPs.   For plain and simple to-disk logging, plugins should create and use
+	// their own logging facilities.
+	ConsoleLogger*  Console;
+
+	// OSD_WriteLn
+	// This function allows the plugin to post messages to the emulator's On-Screen Display.
+	// The OSD message will be displayed with the specified icon (optional) for the duration
+	// of a few seconds, or until other messages have scrolled it out of view.
+	// Implementation of the OSD is emulator specific, and there is no guarantee that the
+	// OSD will be honored at all.  If the emulator does not support OSD then this function
+	// call is treated as a NOP.
+	//
+	// Typically a plugin author should only use the OSD for infrequent notices that are
+	// potentially useful to users playing games (particuarly at fullscreen).  Troubleshooting
+	// and debug information is best dumped to console or to disk log.
+	//
+	// Parameters:
+	//  icon  - an icon identifier, typically from the PS2E_OSDIconTypes enumeration.  Specific
+	//     versions of emulators may provide their own icon extensions.  The emulator will
+	//     silently ignore unrecognized icon identifiers, thus retaining cross-compat.
+	//
+	//  msg   - string message displayed to the user.
+	void (CALLBACK* OSD_WriteLn)( int icon, const char* msg );
+	
+} PS2E_EmulatorAPI;
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_LibraryAPI
+//
+// The LibraryAPI is an overall library-scope set of functions that perform basic Init,
+// Shutdown, and global configuration operations.
+//
+// These are functions provided to the PS2 emulator from the plugin.  The emulator will
+// call these functions and expect the plugin to perform defined tasks.
+//
+// Threading:
+//   - get* callbacks in this struct are not bound to any particular thread. Implementations
+//     should not assume any specific thread affinity.
+//
+//   - set* callbacks in this struct are bound to the GUI thread of the emulator, and will
+//     always be invoked from that thread.
+//
+typedef struct _PS2E_LibraryAPI
+{
+	// GetInformation
+	// This function returns name and version information for the requested PS2 plugin
+	// type.  If the plugin does not support the requested type, it should return NULL.
+	// The returned pointer, if non-NULL, must be valid for the lifetime of the plugin
+	// (ie, must be either a static value [recommended] or a heap-allocated value).
+	//
+	// This function may be called multiple times by the emulator, so it should accommodate
+	// for such if it performs heap allocations or other initialization procedures.
+	// 
+	// See PS2E_VersionInfo for more details.
+	//
+	// Parameters:
+	//   type - indicates the ps2 plugin type that should be versioned.  If the plugin
+	//          does not support the requested bit, the function should return NULL.
+	//
+	const PS2E_VersionInfo* (CALLBACK* GetVersion)( u32 type );
+
+	// GetName
+	// Returns an ASCII-Z (zero-terminated) string name of the plugin.  The name should
+	// *not* include version or build information.  That info is returned separately
+	// via GetVersion.  The return value cannot be NULL.
+	//
+	// The pointer should reference a static/global scope char array, or an allocated
+	// heap pointer (not recommended).
+	//
+	// This function may be called multiple times by the emulator, so it should accommodate
+	// for such if it performs heap allocations or other initialization procedures.
+	const char* (CALLBACK* GetName)(void);
+
+	// SetSettingsFolder
+	// Callback is passed an ASCII-Z string representing the folder where the emulator's
+	// settings files are stored (may either be under the user's documents folder, or a
+	// location relative to the CWD of the emu application).
+	//
+	// Typically this callback is only issued once per plugin session.  Settings folder
+	// location may be change dynamically, however it is considered the responsibility
+	// of the emu to save the emulation state, shutdown plugins, and restart everything
+	// anew from the new settings in such an event.
+	void (CALLBACK* SetSettingsFolder)( const char* folder );
+	
+	// SetSnapshotsFolder
+	// This callback may be issued at any time.
+	void (CALLBACK* SetSnapshotsFolder)( const char* folder );
+	
+	// SetLogFolder
+	// This callback may be issued at any time.  It is the responsibility of the plugin
+	// to do the necessary actions to close existing disk logging facilities and re-open
+	// new facilities.
+	void (CALLBACK* SetLogFolder)( const char* folder );
+
+} PS2E_LibraryAPI;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_ComponentAPI
+//
+// The PluginTypeAPI is provided for every PS2 plugin type (see PS2E_PluginTypes enumeration).
+// For typical dlls which only provide one  plugin type of functionality, the plugin only
+// needs one instance of this struct.  For multi-type plugins, for example a plugin that
+// supports both DEV9 and FW together, an interface must be provided for each plugin type
+// supported.
+//
+// These are functions provided to the PS2 emulator from the plugin.  The emulator will
+// call these functions and expect the plugin to perform defined tasks.
+//
+typedef struct _PS2E_ComponentAPI
+{
+	// Init
+	// Init is called *once* for the duration of a loaded PS2 component, and is the partner
+	// to Shutdown, which is also called once prior to the component being unloaded.
+	// This function is roughly equivalent to DllMain on Windows platforms, in that it is
+	// called in connection with the DLL being loaded into memory, except that it is specific
+	// to the scope of a specific plugin component (allowing the user to selectively bind
+	// parts of a multi-component plugin, and leave other components unused).
+	// 
+	// Parameters:
+	//   xinfo - Machine info and capabilities, usable for cpu detection.  This pointer is 
+	//     valid for the duration of the plugin's tenure in memory.
+	//
+	// Returns:
+	//   A pointer to a static structure that contains the API for this plugin, or NULL if
+	//   the plugin failed initialization or is unsupported by the machine.
+	//
+	// Exceptions (C++ only):
+	//   [TODO]
+	u32 (CALLBACK* Init)( const PS2E_MachineInfo* xinfo );
+
+	// Shutdown
+	// This function is called *once* for the duration of a loaded plugin type, and is the
+	// partner to PS2E_Init, which is also called once after a plugin is loaded into memory.
+	// This function is roughly equivalent to DllMain on Windows platforms, in that it is
+	// called in connection with the DLL being loaded into memory.
+	//
+	// If PS2E_Init returns NULL, this method will not be called (which might seem obvious
+	// but bears saying anyway).
+	void (CALLBACK* Shutdown)();
+
+	// EmuStart
+	// This function is called by the emulator when an emulation session is started.  The
+	// plugin should take this opportunity to bind itself to the given window handle, open
+	// necessary audio/video/input devices, etc.
+	//
+	// Parameters:
+	//   session - provides relevant emulation session information.  Provided pointer is
+	//      valid until after the subsequent call to EmuClose()
+	//
+	// Threading: EmuStart is called from the GUI thread. All other emulation threads are
+	//   guaranteed to be suspended or closed at the time of this call (no locks required).
+	//   
+	void (CALLBACK* EmuStart)( const PS2E_SessionInfo *session );
+
+	// EmuClose
+	// This function is called by the emulator prior to stopping emulation.  The window
+	// handle specified in EmuStart is guaranteed to be valid at the time EmuClose is called,
+	// and the plugin should unload/unbind all window dependencies at this time.
+	//
+	// This function differs from the PS2E_LibraryAPI::EmuClose() function in that it is
+	// called for each component this plugin is bound to.  In most typical cases the LibraryAPI
+	// version is better and easier, but in the eventprovided to allow plugins to adhere to a specific plugin initialization
+	//      pattern, if needed.  However in most typical cases, the parameter can be
+	//      ignored and the library can simply initialize itself once for all types and
+	//      ignore subsequent calls.
+	//
+	// Threading: EmuClose is called from the GUI thread.  All other emulation threads are
+	//   guaranteed to be suspended or closed at the time of this call (no locks required).
+	//
+	void (CALLBACK* EmuClose)();
+
+	// CalcFreezeSize
+	// This function should calculate and return the amount of memory needed for the plugin
+	// to freeze its complete emulation state.  The value can be larger than the required
+	// amount of space, but cannot be smaller.
+	//
+	// The emulation state when this function is called is guaranteed to be the same as
+	// the following call to Freeze.
+	//
+	// Thread Safety:
+	//   May be called from any thread (GUI, Emu, GS, Unknown, etc).
+	//   All Emulation threads are halted at a PS2 logical vsync-end event.
+	//   No locking is necessary.
+	u32  (CALLBACK* CalcFreezeSize)();
+	
+	// Freeze
+	// This function should make a complete copy of the plugin's emulation state into the
+	// provided dest->Data pointer.  The plugin is allowed to reduce the dest->Size value
+	// but is not allowed to make it larger.  The plugin will only receive calls to Freeze
+	// and Thaw while a plugin is in an EmuStart() state.
+	//
+	// Parameters:
+	//   dest - a pointer to the Data/Size destination buffer (never NULL).
+	//
+	// Thread Safety:
+	//   May be called from any thread (GUI, Emu, GS, Unknown, etc).
+	//   All Emulation threads are halted at a PS2 logical vsync-end event.
+	//   No locking is necessary.
+	void (CALLBACK* Freeze)( PS2E_FreezeData* dest );
+	
+	// Thaw
+	// Plugin should restore a complete emulation state from the given FreezeData.  The
+	// plugin will only receive calls to Freeze and Thaw while a plugin is in an EmuStart()
+	// state.
+	//
+	// Thread Safety:
+	//   May be called from any thread (GUI, Emu, GS, Unknown, etc).
+	//   All Emulation threads are halted at a PS2 logical vsync-end event.
+	//   No locking is necessary.
+	void (CALLBACK* Thaw)( const PS2E_FreezeData* src );
+	
+	// Configure
+	// The plugin should open a modal dialog box with plugin-specific settings and prop-
+	// erties.  This function can be NULL, in which case the user's Configure option for
+	// this plugin is grayed out.
+	//
+	// All emulation is suspended and the plugin's state is saved to memory prior to this
+	// function being called.  Configure is only called outside the context of EmuStart()
+	// (after a call to EmuClose()).
+	//
+	// Plugin authors should ensure to re-read and re-apply all settings on EmuStart(),
+	// which will ensure that any user changes will be applied immediately.  For changes
+	// that can be applied without emulation suspension, see/use the GUI extensions for
+	// menu and toolbar shortcuts.
+	//
+	// Thread Safety:
+	//   Always called from the GUI thread, with emulation in a halted state (no locks
+	//   needed).
+	void (CALLBACK* Configure)();
+
+} PS2E_ComponentAPI;
+
+typedef struct _PS2E_FreezeData
+{
+	u32   Size;			// size of the data being frozen or thawed.  This value is allowed to be changed by Freeze().
+	void* Data;			// pointer to the data target (freeze) or source (thaw)
+
+} PS2E_FreezeData;
+
+// PS2E_InitAPI
+// Init is called *once* for the duration of a loaded plugin type, and is the partner
+// to Shutdown, which is also called once prior to the plugin being unloaded.
+// This function is roughly equivalent to DllMain on Windows platforms, in that it is
+// called in connection with the DLL being loaded into memory.
+// 
+// Parameters:
+//   xinfo - Machine info and capabilities, usable for cpu detection.  This pointer is 
+//     valid for the duration of the plugin's tenure in memory.
+//
+// Returns:
+//   A pointer to a static structure that contains the API for this plugin, or NULL if
+//   the plugin failed initialization or is unsupported by the machine.
+typedef const PS2E_PluginLibAPI* (CALLBACK* _PS2E_InitAPI)( const PS2E_MachineInfo* xinfo );
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+// Begin old legacy API here (present for reference purposes only, until all plugin API
+// specifics have been accounted for)
+//////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
+
 
 // GS
 // NOTE: GSreadFIFOX/GSwriteCSR functions CANNOT use XMM/MMX regs
@@ -428,6 +827,9 @@ extern _FWconfigure       FWconfigure;
 extern _FWfreeze          FWfreeze;
 extern _FWtest            FWtest;
 extern _FWabout           FWabout;
+
+#ifndef __cplusplus
 }
+#endif
 
 #endif // __PLUGINCALLBACKS_H__
