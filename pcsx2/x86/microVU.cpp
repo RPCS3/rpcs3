@@ -134,6 +134,7 @@ microVUf(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
 	mVUprogI.used	   = 0;
 	mVUprogI.isDead    = 1;
+	mVUprogI.isOld	   = 1;
 	mVUprogI.frame	   = mVU->prog.curFrame;
 	for (int j = 0; j <= mVUprogI.ranges.max; j++) {
 		mVUprogI.ranges.range[j][0]	= -1; // Set range to 
@@ -173,8 +174,9 @@ microVUf(int) mVUfindLeastUsedProg() {
 		if (mVU->prog.prog[i].isDead) {
 			mVU->prog.total++;
 			mVUcacheProg<vuIndex>(i); // Cache Micro Program
-			mVU->prog.prog[i].isDead	= 0;
-			mVU->prog.prog[i].used		= 1;
+			mVU->prog.prog[i].isDead = 0;
+			mVU->prog.prog[i].isOld  = 0;
+			mVU->prog.prog[i].used	 = 1;
 			mVUsortProg(mVU, i);
 			Console::Notice("microVU%d: Cached MicroPrograms = [%03d] [%03d]", params vuIndex, i+1, mVU->prog.total+1);
 			return i;
@@ -189,14 +191,15 @@ microVUf(int) mVUfindLeastUsedProg() {
 	}
 	mVU->prog.total -= ((mVU->prog.max+1)/4)-1;
 	mVUcacheProg<vuIndex>(pIdx); // Cache Micro Program
-	mVU->prog.prog[pIdx].isDead	   = 0;
-	mVU->prog.prog[pIdx].used	   = 1;
+	mVU->prog.prog[pIdx].isDead	= 0;
+	mVU->prog.prog[pIdx].isOld	= 0;
+	mVU->prog.prog[pIdx].used	= 1;
 	mVUsortProg(mVU, pIdx);
 	Console::Notice("microVU%d: Cached MicroPrograms = [%03d] [%03d]", params vuIndex, pIdx+1, mVU->prog.total+1);
 	return pIdx;
 }
 
-// Finds and Kills Programs if they haven't been used in a while.
+// Finds and Ages/Kills Programs if they haven't been used in a while.
 microVUt(void) mVUvsyncUpdate(mV) {
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		if (mVU->prog.prog[i].isDead) continue;
@@ -204,11 +207,15 @@ microVUt(void) mVUvsyncUpdate(mV) {
 			mVU->prog.prog[i].used  = 0;
 			mVU->prog.prog[i].frame = mVU->prog.curFrame;
 		}
-		if((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (60 * 7)) {
+		if((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (360 * 10)) {
 			mVU->prog.total--;
 			if (!mVU->index) mVUclearProg<0>(i);
 			else			 mVUclearProg<1>(i);
 			DevCon::Status("microVU%d: Killing Dead Program [%03d]", params mVU->index, i+1);
+		}
+		else if (!mVU->prog.prog[i].isOld && ((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (30 * 1))) {
+			mVU->prog.prog[i].isOld = 1;
+			//DevCon::Status("microVU%d: Aging Old Program [%03d]", params mVU->index, i+1);
 		}
 	}
 	mVU->prog.curFrame++;
@@ -227,15 +234,16 @@ microVUf(bool) mVUcmpPartial(int progIndex) {
 }
 
 // Compare Cached microProgram to mVU->regs->Micro
-microVUf(bool) mVUcmpProg(int progIndex, const bool cmpWholeProg) {
+microVUf(bool) mVUcmpProg(int progIndex, const bool checkOld, const bool cmpWholeProg) {
 	microVU* mVU = mVUx;
-	if (!mVUprogI.isDead) {
+	if (!mVUprogI.isDead && (checkOld == mVUprogI.isOld)) {
 		if ((cmpWholeProg && !memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize))
 		|| (!cmpWholeProg && mVUcmpPartial<vuIndex>(progIndex))) {
 			mVU->prog.cur = progIndex;
 			mVU->prog.cleared = 0;
 			mVU->prog.isSame = cmpWholeProg ? 1 : -1;
-			mVU->prog.prog[progIndex].used = 1;
+			mVU->prog.prog[progIndex].used	= 1;
+			mVU->prog.prog[progIndex].isOld	= 0;
 			return 1;
 		}
 	}
@@ -247,8 +255,12 @@ microVUf(int) mVUsearchProg() {
 	microVU* mVU = mVUx;
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = mVU->prog.max; i >= 0; i--) {
-			if (mVUcmpProg<vuIndex>(mVU->prog.progList[i], 0))
-				return 1;
+			if (mVUcmpProg<vuIndex>(mVU->prog.progList[i], 0, 0)) 
+				return 1; // Check Young Programs
+		}
+		for (int i = mVU->prog.max; i >= 0; i--) {
+			if (mVUcmpProg<vuIndex>(mVU->prog.progList[i], 1, 0)) 
+				return 1; // Check Old Programs
 		}
 		mVU->prog.cur = mVUfindLeastUsedProg<vuIndex>(); // If cleared and program not found, make a new program instance
 		mVU->prog.cleared = 0;

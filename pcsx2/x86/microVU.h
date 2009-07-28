@@ -110,7 +110,8 @@ struct microProgram {
 	microRange		   ranges;			   // The ranges of the microProgram that have already been recompiled
 	u32  frame;		// Frame # the program was last used on
 	u32  used;		// Program was used this frame?
-	bool isDead;	// Program is dead?
+	bool isDead;	// Program is Dead?
+	bool isOld;		// Program is Old? (Program hasn't been used in a while)
 };
 
 #define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
