@@ -191,84 +191,28 @@ typedef struct _PS2E_EmulatorAPI
 	
 } PS2E_EmulatorAPI;
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_LibraryAPI
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_FreezeData
 //
-// The LibraryAPI is an overall library-scope set of functions that perform basic Init,
-// Shutdown, and global configuration operations.
+// Structure used to pass savestate info between emulator and plugin.
 //
-// These are functions provided to the PS2 emulator from the plugin.  The emulator will
-// call these functions and expect the plugin to perform defined tasks.
-//
-// Threading:
-//   - get* callbacks in this struct are not bound to any particular thread. Implementations
-//     should not assume any specific thread affinity.
-//
-//   - set* callbacks in this struct are bound to the GUI thread of the emulator, and will
-//     always be invoked from that thread.
-//
-typedef struct _PS2E_LibraryAPI
+typedef struct _PS2E_FreezeData
 {
-	// GetInformation
-	// This function returns name and version information for the requested PS2 plugin
-	// type.  If the plugin does not support the requested type, it should return NULL.
-	// The returned pointer, if non-NULL, must be valid for the lifetime of the plugin
-	// (ie, must be either a static value [recommended] or a heap-allocated value).
-	//
-	// This function may be called multiple times by the emulator, so it should accommodate
-	// for such if it performs heap allocations or other initialization procedures.
-	// 
-	// See PS2E_VersionInfo for more details.
-	//
-	// Parameters:
-	//   type - indicates the ps2 plugin type that should be versioned.  If the plugin
-	//          does not support the requested bit, the function should return NULL.
-	//
-	const PS2E_VersionInfo* (CALLBACK* GetVersion)( u32 type );
+	u32   Size;			// size of the data being frozen or thawed.  This value is allowed to be changed by Freeze().
+	void* Data;			// pointer to the data target (freeze) or source (thaw)
 
-	// GetName
-	// Returns an ASCII-Z (zero-terminated) string name of the plugin.  The name should
-	// *not* include version or build information.  That info is returned separately
-	// via GetVersion.  The return value cannot be NULL.
-	//
-	// The pointer should reference a static/global scope char array, or an allocated
-	// heap pointer (not recommended).
-	//
-	// This function may be called multiple times by the emulator, so it should accommodate
-	// for such if it performs heap allocations or other initialization procedures.
-	const char* (CALLBACK* GetName)(void);
+} PS2E_FreezeData;
 
-	// SetSettingsFolder
-	// Callback is passed an ASCII-Z string representing the folder where the emulator's
-	// settings files are stored (may either be under the user's documents folder, or a
-	// location relative to the CWD of the emu application).
-	//
-	// Typically this callback is only issued once per plugin session.  Settings folder
-	// location may be change dynamically, however it is considered the responsibility
-	// of the emu to save the emulation state, shutdown plugins, and restart everything
-	// anew from the new settings in such an event.
-	void (CALLBACK* SetSettingsFolder)( const char* folder );
-	
-	// SetSnapshotsFolder
-	// This callback may be issued at any time.
-	void (CALLBACK* SetSnapshotsFolder)( const char* folder );
-	
-	// SetLogFolder
-	// This callback may be issued at any time.  It is the responsibility of the plugin
-	// to do the necessary actions to close existing disk logging facilities and re-open
-	// new facilities.
-	void (CALLBACK* SetLogFolder)( const char* folder );
-
-} PS2E_LibraryAPI;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // PS2E_ComponentAPI
 //
-// The PluginTypeAPI is provided for every PS2 plugin type (see PS2E_PluginTypes enumeration).
-// For typical dlls which only provide one  plugin type of functionality, the plugin only
-// needs one instance of this struct.  For multi-type plugins, for example a plugin that
-// supports both DEV9 and FW together, an interface must be provided for each plugin type
-// supported.
+// The PluginTypeAPI is provided for every PS2 component plugin (see PS2E_ComponentTypes
+// enumeration).  For typical dlls which only provide one  plugin type of functionality,
+// the plugin only needs one instance of this struct.  For multi-type plugins, for example
+// a plugin that supports both DEV9 and FW together, an interface must be provided for
+// each component supported.
 //
 // These are functions provided to the PS2 emulator from the plugin.  The emulator will
 // call these functions and expect the plugin to perform defined tasks.
@@ -296,7 +240,7 @@ typedef struct _PS2E_ComponentAPI
 	u32 (CALLBACK* Init)( const PS2E_MachineInfo* xinfo );
 
 	// Shutdown
-	// This function is called *once* for the duration of a loaded plugin type, and is the
+	// This function is called *once* for the duration of a loaded component, and is the
 	// partner to PS2E_Init, which is also called once after a plugin is loaded into memory.
 	// This function is roughly equivalent to DllMain on Windows platforms, in that it is
 	// called in connection with the DLL being loaded into memory.
@@ -323,13 +267,6 @@ typedef struct _PS2E_ComponentAPI
 	// This function is called by the emulator prior to stopping emulation.  The window
 	// handle specified in EmuStart is guaranteed to be valid at the time EmuClose is called,
 	// and the plugin should unload/unbind all window dependencies at this time.
-	//
-	// This function differs from the PS2E_LibraryAPI::EmuClose() function in that it is
-	// called for each component this plugin is bound to.  In most typical cases the LibraryAPI
-	// version is better and easier, but in the eventprovided to allow plugins to adhere to a specific plugin initialization
-	//      pattern, if needed.  However in most typical cases, the parameter can be
-	//      ignored and the library can simply initialize itself once for all types and
-	//      ignore subsequent calls.
 	//
 	// Threading: EmuClose is called from the GUI thread.  All other emulation threads are
 	//   guaranteed to be suspended or closed at the time of this call (no locks required).
@@ -397,18 +334,108 @@ typedef struct _PS2E_ComponentAPI
 
 } PS2E_ComponentAPI;
 
-typedef struct _PS2E_FreezeData
-{
-	u32   Size;			// size of the data being frozen or thawed.  This value is allowed to be changed by Freeze().
-	void* Data;			// pointer to the data target (freeze) or source (thaw)
 
-} PS2E_FreezeData;
+/////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_LibraryAPI
+//
+// The LibraryAPI is an overall library-scope set of functions that perform basic Init,
+// Shutdown, and global configuration operations.
+//
+// These are functions provided to the PS2 emulator from the plugin.  The emulator will
+// call these functions and expect the plugin to perform defined tasks.
+//
+// Threading:
+//   - get* callbacks in this struct are not bound to any particular thread. Implementations
+//     should not assume any specific thread affinity.
+//
+//   - set* callbacks in this struct are bound to the GUI thread of the emulator, and will
+//     always be invoked from that thread.
+//
+typedef struct _PS2E_LibraryAPI
+{
+	// GetName
+	// Returns an ASCII-Z (zero-terminated) string name of the plugin.  The name should
+	// *not* include version or build information.  That info is returned separately
+	// via GetVersion.  The return value cannot be NULL.
+	//
+	// The pointer should reference a static/global scope char array, or an allocated
+	// heap pointer (not recommended).
+	//
+	// This function may be called multiple times by the emulator, so it should accommodate
+	// for such if it performs heap allocations or other initialization procedures.
+	const char* (CALLBACK* GetName)(void);
+
+	// GetVersion
+	// This function returns name and version information for the requested PS2 component.
+	// If the plugin does not support the requested component, it should return NULL.
+	// The returned pointer, if non-NULL, must be either a static value [recommended] or a
+	// heap-allocated value, and valid for the lifetime of the plugin.
+	//
+	// This function may be called multiple times by the emulator, so it should accommodate
+	// for such if it performs heap allocations or other initialization procedures.
+	//
+	// Typically a plugin will return the same version for all supported components.  The
+	// component parameter is mostly provided to allow this function to serve a dual purpose
+	// of both component versioning and as a component enumerator.
+	// 
+	// See PS2E_VersionInfo for more details.
+	//
+	// Parameters:
+	//   component - indicates the ps2 component plugin to be versioned.  If the plugin
+	//       does not support the requested component, the function should return NULL.
+	//
+	const PS2E_VersionInfo* (CALLBACK* GetVersion)( u32 component );
+
+	// GetComponentAPI
+	// The emulator calls this function to fetch the API for the requested component.
+	// The plugin is expected to perform an "availability test" and return NULL if the
+	// plugin does not support the host machine's hardware or software installations.
+	//
+	// This function is only called for components which the plugin returned a non-NULL
+	// version information struct for in GetVersion().  IT may be called more than once
+	// per supported component, however, since it serves the dual purpose of both an API
+	// fetch and an availability test.
+	//
+	// Parameters:
+	//   component - indicates the ps2 component API to return.
+	//
+	// Exceptions:
+	//   C++ Plugins may alternately use exception handling to return more detailed
+	//   information on why the plugin failed it's availability test.  [TODO]
+	//
+	const PS2E_ComponentAPI* (CALLBACK* GetComponentAPI)( u32 component );
+
+	// SetSettingsFolder
+	// Callback is passed an ASCII-Z string representing the folder where the emulator's
+	// settings files are stored (may either be under the user's documents folder, or a
+	// location relative to the CWD of the emu application).
+	//
+	// Typically this callback is only issued once per plugin session.  Settings folder
+	// location may be change dynamically, however it is considered the responsibility
+	// of the emu to save the emulation state, shutdown plugins, and restart everything
+	// anew from the new settings in such an event.
+	void (CALLBACK* SetSettingsFolder)( const char* folder );
+	
+	// SetSnapshotsFolder
+	// This callback may be issued at any time.
+	void (CALLBACK* SetSnapshotsFolder)( const char* folder );
+	
+	// SetLogFolder
+	// This callback may be issued at any time.  It is the responsibility of the plugin
+	// to do the necessary actions to close existing disk logging facilities and re-open
+	// new facilities.
+	void (CALLBACK* SetLogFolder)( const char* folder );
+
+} PS2E_LibraryAPI;
 
 // PS2E_InitAPI
-// Init is called *once* for the duration of a loaded plugin type, and is the partner
-// to Shutdown, which is also called once prior to the plugin being unloaded.
-// This function is roughly equivalent to DllMain on Windows platforms, in that it is
-// called in connection with the DLL being loaded into memory.
+// Called by the emulator when the plugin is loaded into memory.  The emulator uses the
+// presence of this function to detect PS2E-v2 plugin API, and will direct all subsequent
+// calls through the returned LibraryAPI.  The function is allowed to return NULL if the
+// emulator's version information or machine capabilities are insufficient for the
+// plugin's needs.
+//
+// This function is called *once* for the duration of a loaded plugin.
 // 
 // Parameters:
 //   xinfo - Machine info and capabilities, usable for cpu detection.  This pointer is 
@@ -416,8 +443,13 @@ typedef struct _PS2E_FreezeData
 //
 // Returns:
 //   A pointer to a static structure that contains the API for this plugin, or NULL if
-//   the plugin failed initialization or is unsupported by the machine.
-typedef const PS2E_PluginLibAPI* (CALLBACK* _PS2E_InitAPI)( const PS2E_MachineInfo* xinfo );
+//   the plugin explicitly does not support the emulator version.
+//
+// Exceptions:
+//   C++ Plugins can use exceptions instead of NULL to return additional information on
+//   why the plugin failed to init the API.  [TODO]
+//
+typedef const PS2E_LibraryAPI* (CALLBACK* _PS2E_InitAPI)( const PS2E_MachineInfo* xinfo );
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
