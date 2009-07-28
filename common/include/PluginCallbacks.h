@@ -22,10 +22,6 @@
 
 #include "x86caps.h"		// fixme: x86caps.h needs to be implemented from the pcsx2 emitter cpucaps structs
 
-#ifndef __cplusplus
-extern "C" {
-#endif
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // HWND is our only operating system dependent type.  For it to be defined as accurately
 // as possible, this header file needs to be included after whatever window/GUI platform
@@ -38,17 +34,54 @@ extern "C" {
 //
 #if defined( _WX_DEFS_H_ )
 
-	typedef WXWidget PS2E_HWND;
+typedef WXWidget PS2E_HWND;
 
 #elif defined( _WINDEF_ )
 
-	// For Windows let's use HWND, since it has some type strictness applied to it.
-	typedef HWND PS2E_HWND;
+// For Windows let's use HWND, since it has some type strictness applied to it.
+typedef HWND PS2E_HWND;
 
 #else
-	// Unsupported platform... use void* as a best guess.  Should work fine for almost
-	// any GUI platform, and certainly works for any currently supported one.
-	typedef void* PS2E_HWND;
+// Unsupported platform... use void* as a best guess.  Should work fine for almost
+// any GUI platform, and certainly works for any currently supported one.
+typedef void* PS2E_HWND;
+#endif
+
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_THISPTR - (ps2 component scope 'this' object pointer type)
+//
+// This macro provides C++ plugin authors with a reasonably friendly way to automatically
+// typecast the session objects for your plugin to your internal type.  Just #define
+// PS2E_THISPTR to your internal structure type prior to loading this header file, and all
+// APIs will assume your struct type in their signature.  Since all pointer types are inter-
+// changeable, plugin APIs will retain full compatibility as long as PS2E_THISPTR is a
+// pointer type.
+//
+#ifndef PS2E_THISPTR
+#	define PS2E_THISPTR void*
+#else
+	// Ensure the user's defined PS2E_THISPTR retains the correct signature for our
+	// plugin API.
+	C_ASSERT( sizeof(PS2E_THISPTR) == sizeof(void*) );
+#endif
+
+// PS2E_LIB_THISPTR - (library scope version of PS2E_THISPTR)
+#ifndef PS2E_LIB_THISPTR
+#	define PS2E_LIB_THISPTR void*
+#else
+	// Ensure the user's defined PS2E_THISPTR retains the correct signature for our
+	// plugin API.
+	C_ASSERT( sizeof(PS2E_LIB_THISPTR) == sizeof(void*) );
+#endif
+
+// Use fastcall by default, since under most circumstances the object-model approach of the
+// API will benefit considerably from it.
+#define PS2E_CALLBACK __fastcall
+
+
+#ifndef __cplusplus
+extern "C" {
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -110,7 +143,7 @@ typedef struct PS2E_VersionInfo
 	// Revision typically refers a revision control system (such as SVN).  When displayed
 	// by the emulator it will have an 'r' prefixed before it.
 	s32 Revision;
-	
+
 } PS2E_VersionInfo;
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -178,8 +211,8 @@ typedef struct _PS2E_EmulatorAPI
 	// call is treated as a NOP.
 	//
 	// Typically a plugin author should only use the OSD for infrequent notices that are
-	// potentially useful to users playing games (particuarly at fullscreen).  Troubleshooting
-	// and debug information is best dumped to console or to disk log.
+	// potentially useful to users playing games (particularly at fullscreen).  Trouble-
+	// shooting and debug information is best dumped to console or to disk log.
 	//
 	// Parameters:
 	//  icon  - an icon identifier, typically from the PS2E_OSDIconTypes enumeration.  Specific
@@ -187,7 +220,7 @@ typedef struct _PS2E_EmulatorAPI
 	//     silently ignore unrecognized icon identifiers, thus retaining cross-compat.
 	//
 	//  msg   - string message displayed to the user.
-	void (CALLBACK* OSD_WriteLn)( int icon, const char* msg );
+	void (PS2E_CALLBACK* OSD_WriteLn)( int icon, const char* msg );
 	
 } PS2E_EmulatorAPI;
 
@@ -217,6 +250,8 @@ typedef struct _PS2E_FreezeData
 // These are functions provided to the PS2 emulator from the plugin.  The emulator will
 // call these functions and expect the plugin to perform defined tasks.
 //
+// Plugins are expected to use 
+//
 typedef struct _PS2E_ComponentAPI
 {
 	// Init
@@ -229,7 +264,8 @@ typedef struct _PS2E_ComponentAPI
 	// 
 	// Parameters:
 	//   xinfo - Machine info and capabilities, usable for cpu detection.  This pointer is 
-	//     valid for the duration of the plugin's tenure in memory.
+	//     valid for the duration of the plugin's tenure in memory, and is the same as the
+	//     xinfo pointer passed to PS2E_InitAPI()
 	//
 	// Returns:
 	//   A pointer to a static structure that contains the API for this plugin, or NULL if
@@ -237,7 +273,7 @@ typedef struct _PS2E_ComponentAPI
 	//
 	// Exceptions (C++ only):
 	//   [TODO]
-	u32 (CALLBACK* Init)( const PS2E_MachineInfo* xinfo );
+	u32 (PS2E_CALLBACK* Init)( PS2E_THISPTR thisptr, const PS2E_MachineInfo* xinfo );
 
 	// Shutdown
 	// This function is called *once* for the duration of a loaded component, and is the
@@ -247,7 +283,7 @@ typedef struct _PS2E_ComponentAPI
 	//
 	// If PS2E_Init returns NULL, this method will not be called (which might seem obvious
 	// but bears saying anyway).
-	void (CALLBACK* Shutdown)();
+	void (PS2E_CALLBACK* Shutdown)( PS2E_THISPTR thisptr );
 
 	// EmuStart
 	// This function is called by the emulator when an emulation session is started.  The
@@ -261,7 +297,7 @@ typedef struct _PS2E_ComponentAPI
 	// Threading: EmuStart is called from the GUI thread. All other emulation threads are
 	//   guaranteed to be suspended or closed at the time of this call (no locks required).
 	//   
-	void (CALLBACK* EmuStart)( const PS2E_SessionInfo *session );
+	void (PS2E_CALLBACK* EmuStart)( PS2E_THISPTR thisptr, const PS2E_SessionInfo *session );
 
 	// EmuClose
 	// This function is called by the emulator prior to stopping emulation.  The window
@@ -271,7 +307,7 @@ typedef struct _PS2E_ComponentAPI
 	// Threading: EmuClose is called from the GUI thread.  All other emulation threads are
 	//   guaranteed to be suspended or closed at the time of this call (no locks required).
 	//
-	void (CALLBACK* EmuClose)();
+	void (PS2E_CALLBACK* EmuClose)( PS2E_THISPTR thisptr );
 
 	// CalcFreezeSize
 	// This function should calculate and return the amount of memory needed for the plugin
@@ -285,7 +321,7 @@ typedef struct _PS2E_ComponentAPI
 	//   May be called from any thread (GUI, Emu, GS, Unknown, etc).
 	//   All Emulation threads are halted at a PS2 logical vsync-end event.
 	//   No locking is necessary.
-	u32  (CALLBACK* CalcFreezeSize)();
+	u32  (PS2E_CALLBACK* CalcFreezeSize)( PS2E_THISPTR thisptr );
 	
 	// Freeze
 	// This function should make a complete copy of the plugin's emulation state into the
@@ -300,7 +336,7 @@ typedef struct _PS2E_ComponentAPI
 	//   May be called from any thread (GUI, Emu, GS, Unknown, etc).
 	//   All Emulation threads are halted at a PS2 logical vsync-end event.
 	//   No locking is necessary.
-	void (CALLBACK* Freeze)( PS2E_FreezeData* dest );
+	void (PS2E_CALLBACK* Freeze)( PS2E_THISPTR thisptr, PS2E_FreezeData* dest );
 	
 	// Thaw
 	// Plugin should restore a complete emulation state from the given FreezeData.  The
@@ -311,7 +347,7 @@ typedef struct _PS2E_ComponentAPI
 	//   May be called from any thread (GUI, Emu, GS, Unknown, etc).
 	//   All Emulation threads are halted at a PS2 logical vsync-end event.
 	//   No locking is necessary.
-	void (CALLBACK* Thaw)( const PS2E_FreezeData* src );
+	void (PS2E_CALLBACK* Thaw)( PS2E_THISPTR thisptr, const PS2E_FreezeData* src );
 	
 	// Configure
 	// The plugin should open a modal dialog box with plugin-specific settings and prop-
@@ -330,7 +366,10 @@ typedef struct _PS2E_ComponentAPI
 	// Thread Safety:
 	//   Always called from the GUI thread, with emulation in a halted state (no locks
 	//   needed).
-	void (CALLBACK* Configure)();
+	void (PS2E_CALLBACK* Configure)( PS2E_THISPTR thisptr );
+
+	// Reserved area at the end of the structure, for future API expansion.
+	void* reserved[16];
 
 } PS2E_ComponentAPI;
 
@@ -363,7 +402,7 @@ typedef struct _PS2E_LibraryAPI
 	//
 	// This function may be called multiple times by the emulator, so it should accommodate
 	// for such if it performs heap allocations or other initialization procedures.
-	const char* (CALLBACK* GetName)(void);
+	const char* (PS2E_CALLBACK* GetName)( PS2E_LIB_THISPTR thisptr );
 
 	// GetVersion
 	// This function returns name and version information for the requested PS2 component.
@@ -384,7 +423,7 @@ typedef struct _PS2E_LibraryAPI
 	//   component - indicates the ps2 component plugin to be versioned.  If the plugin
 	//       does not support the requested component, the function should return NULL.
 	//
-	const PS2E_VersionInfo* (CALLBACK* GetVersion)( u32 component );
+	const PS2E_VersionInfo* (PS2E_CALLBACK* GetVersion)( PS2E_LIB_THISPTR thisptr, u32 component );
 
 	// GetComponentAPI
 	// The emulator calls this function to fetch the API for the requested component.
@@ -398,35 +437,86 @@ typedef struct _PS2E_LibraryAPI
 	//
 	// Parameters:
 	//   component - indicates the ps2 component API to return.
+	//   dest      - structure to fill with API functions
 	//
 	// Exceptions:
 	//   C++ Plugins may alternately use exception handling to return more detailed
 	//   information on why the plugin failed it's availability test.  [TODO]
 	//
-	const PS2E_ComponentAPI* (CALLBACK* GetComponentAPI)( u32 component );
+	PS2E_THISPTR (PS2E_CALLBACK* GetComponentAPI)( PS2E_LIB_THISPTR thisptr, u32 component, PS2E_ComponentAPI* dest );
 
 	// SetSettingsFolder
 	// Callback is passed an ASCII-Z string representing the folder where the emulator's
 	// settings files are stored (may either be under the user's documents folder, or a
 	// location relative to the CWD of the emu application).
 	//
-	// Typically this callback is only issued once per plugin session.  Settings folder
-	// location may be change dynamically, however it is considered the responsibility
-	// of the emu to save the emulation state, shutdown plugins, and restart everything
-	// anew from the new settings in such an event.
-	void (CALLBACK* SetSettingsFolder)( const char* folder );
-	
-	// SetSnapshotsFolder
-	// This callback may be issued at any time.
-	void (CALLBACK* SetSnapshotsFolder)( const char* folder );
+	// Typically this callback is only issued once per plugin session, aand prior to the
+	// opening of any PS2 components.  It is the responsibility of the emu to save the
+	// emulation state, shutdown plugins, and restart everything anew from the new settings
+	// in such an event as a dynamic change of the settings folder.
+	void (PS2E_CALLBACK* SetSettingsFolder)( PS2E_LIB_THISPTR thisptr, const char* folder );
 	
 	// SetLogFolder
 	// This callback may be issued at any time.  It is the responsibility of the plugin
 	// to do the necessary actions to close existing disk logging facilities and re-open
 	// new facilities.
-	void (CALLBACK* SetLogFolder)( const char* folder );
+	//
+	// Thread Safety:
+	//   This function is always called from the GUI thread.  All emulation threads are
+	//   suspended during the call, so no locking is required.
+	//
+	void (PS2E_CALLBACK* SetLogFolder)( PS2E_LIB_THISPTR thisptr, const char* folder );
 
+	// Reserved area at the end of the structure, for future API expansion.
+	void* reserved[12];
+	
 } PS2E_LibraryAPI;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_Image
+//
+// Simple RGBA image data container, for passing surface textures to the GS plugin, and
+// for receiving snapshots from the GS plugin.
+//
+// fixme - this might be more ideal as BGRA or ABGR fomat on Windows platforms?
+//
+typedef struct _PS2E_Image
+{
+	u32 width
+	u32 height;
+	u8* data;		// RGBA data.  top to bottom.
+
+} PS2E_Image;
+ 
+//////////////////////////////////////////////////////////////////////////////////////////
+// PS2E_ComponentAPI_GS
+//
+// Thread Safety:
+//   All GS callbacks are issued from the GS thread only, and are never issued concurrently.
+//   No locks are needed, and DirectX-based GS plugins can safely disable DX multithreading
+//   support for speedup (unless the plugin utilizes multiple threads of its own
+//   internally).
+//
+typedef struct _PS2E_ComponentAPI_GS
+{
+	// SetSnapshotsFolder
+	// Callback is passed an ASCII-Z string representing the folder where the emulator's
+	// snapshots are to be saved (typically located under user documents, but may be CWD
+	// or any user-specified location).
+	//
+	// Thread Safety:
+	//   This function is only called from the GUI thread, however other threads are not
+	//   suspended.
+	//
+	void (PS2E_CALLBACK* SetSnapshotsFolder)( PS2E_THISPTR thisptr, const char* folder );
+
+	// TakeSnapshot
+	// The GS plugin is to save the current frame into the given target image.  This
+	// function is always called immediately after a GSvsync(), ensuring that the current
+	// framebuffer is safely intact for capture.
+	void (PS2E_CALLBACK* TakeSnapshot)( PS2E_THISPTR thisptr, PS2E_Image* dest );
+	
+} PS2E_ComponentAPI_GS;
 
 // PS2E_InitAPI
 // Called by the emulator when the plugin is loaded into memory.  The emulator uses the
@@ -449,7 +539,10 @@ typedef struct _PS2E_LibraryAPI
 //   C++ Plugins can use exceptions instead of NULL to return additional information on
 //   why the plugin failed to init the API.  [TODO]
 //
-typedef const PS2E_LibraryAPI* (CALLBACK* _PS2E_InitAPI)( const PS2E_MachineInfo* xinfo );
+typedef const PS2E_LibraryAPI* (PS2E_CALLBACK* _PS2E_InitAPI)( const PS2E_MachineInfo* xinfo );
+
+// fixme!  [air dies of sleep deprivation]
+typedef PS2E_LIB_THISPTR* (PS2E_CALLBACK* _PS2E_GetInstance)( const PS2E_MachineInfo* xinfo );
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
