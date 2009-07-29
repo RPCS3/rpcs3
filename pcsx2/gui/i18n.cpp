@@ -118,8 +118,9 @@ void i18n_EnumeratePackages( LangPackList& langs )
 //
 const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent )
 {
-	int curlangid = wxLocale::GetLanguageInfo( g_Conf->LanguageId )->Language;
-	if( IsEnglish( curlangid ) )
+	const wxLanguageInfo* info = wxLocale::GetLanguageInfo( g_Conf->LanguageId );
+	
+	if( ( info == NULL ) || IsEnglish( info->Language ) )
 		return englishContent;
 
 	const wxChar* retval = wxGetTranslation( key );

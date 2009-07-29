@@ -12,7 +12,7 @@
 		FavorSizeOrSpeed="1"
 		OmitFramePointers="true"
 		WholeProgramOptimization="true"
-		PreprocessorDefinitions="NDEBUG"
+		PreprocessorDefinitions="NDEBUG;_SECURE_SCL=0"
 		StringPooling="true"
 		RuntimeLibrary="2"
 		BufferSecurityCheck="false"

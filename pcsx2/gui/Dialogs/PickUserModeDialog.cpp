@@ -24,16 +24,14 @@
 using namespace wxHelpers;
 
 
-
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
-,	m_panel_usersel( new Panels::UsermodeSelectionPanel( this ) )
-,	m_panel_langsel( new Panels::LanguageSelectionPanel( this ) )
+,	m_panel_usersel( new Panels::UsermodeSelectionPanel( this, 620 ) )
+,	m_panel_langsel( new Panels::LanguageSelectionPanel( this, 620 ) )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 
-	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown folder and needs to be configured."),
-		0, wxALIGN_CENTRE );
+	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
 
 	s_main.Add( m_panel_langsel, SizerFlags::StdCenter() );
 	s_main.Add( m_panel_usersel, wxSizerFlags().Expand().Border( wxALL, 8 ) );

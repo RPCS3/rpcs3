@@ -278,11 +278,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\x86emitter\types.h"
+				RelativePath="..\..\include\x86emitter\x86emitter.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\x86emitter\x86emitter.h"
+				RelativePath="..\..\include\x86emitter\x86types.h"
 				>
 			</File>
 			<Filter

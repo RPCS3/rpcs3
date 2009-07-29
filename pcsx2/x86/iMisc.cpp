@@ -34,7 +34,7 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR)
 	sseMXCSR &= 0xffff; // clear the upper 16 bits since they shouldn't be set
 	sseVUMXCSR &= 0xffff;
 
-	if( !cpucaps.hasStreamingSIMD2Extensions )
+	if( !x86caps.hasStreamingSIMD2Extensions )
 	{
 		// SSE1 cpus do not support Denormals Are Zero flag (throws an exception
 		// if we don't mask them off)

@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+  
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
 #include "IsoFStools.h"
@@ -25,135 +25,6 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
-
-#ifdef _WIN32
-#include <windows.h>
-
-void *_openfile(const char *filename, int flags)
-{
-	HANDLE handle;
-	wxString fn( wxString::FromAscii( filename ) );
-
-//	Console::WriteLn("_openfile %s, %d", params filename, flags & O_RDONLY);
-	if (flags & O_WRONLY)
-	{
-		int _flags = CREATE_NEW;
-		if (flags & O_CREAT) _flags = CREATE_ALWAYS;
-		handle = CreateFile(fn.c_str(), GENERIC_WRITE, 0, NULL, _flags, 0, NULL);
-	}
-	else
-	{
-		handle = CreateFile(fn.c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
-	}
-
-	return handle == INVALID_HANDLE_VALUE ? NULL : handle;
-}
-
-u64 _tellfile(void *handle)
-{
-	u64 ofs;
-	PLONG _ofs = (LONG*) & ofs;
-	_ofs[1] = 0;
-	_ofs[0] = SetFilePointer(handle, 0, &_ofs[1], FILE_CURRENT);
-	return ofs;
-}
-
-int _seekfile(void *handle, u64 offset, int whence)
-{
-	u64 ofs = (u64)offset;
-	PLONG _ofs = (LONG*) & ofs;
-//	Console::WriteLn("_seekfile %p, %d_%d", params handle, _ofs[1], _ofs[0]);
-	if (whence == SEEK_SET)
-	{
-		SetFilePointer(handle, _ofs[0], &_ofs[1], FILE_BEGIN);
-	}
-	else
-	{
-		SetFilePointer(handle, _ofs[0], &_ofs[1], FILE_END);
-	}
-	return 0;
-}
-
-int _readfile(void *handle, void *dst, int size)
-{
-	DWORD ret;
-
-//	Console::WriteLn("_readfile %p %d", params handle, size);
-	ReadFile(handle, dst, size, &ret, NULL);
-//	Console::WriteLn("_readfile ret %d; %d", params ret, GetLastError());
-	return ret;
-}
-
-int _writefile(void *handle, void *src, int size)
-{
-	DWORD ret;
-
-//	Console::WriteLn("_writefile %p, %d", params handle, size);
-//	_seekfile(handle, _tellfile(handle));
-	WriteFile(handle, src, size, &ret, NULL);
-//	Console::WriteLn("_writefile ret %d", params ret);
-	return ret;
-}
-
-void _closefile(void *handle)
-{
-	CloseHandle(handle);
-}
-
-#else
-
-void *_openfile(const char *filename, int flags)
-{
-//	Console::WriteLn("_openfile %s %x", params filename, flags);
-
-	if (flags & O_WRONLY)
-		return fopen64(filename, "wb");
-	else 
-		return fopen64(filename, "rb");
-}
-
-u64 _tellfile(void *handle)
-{
-	s64 cursize = ftell(handle);
-	
-	if (cursize == -1)
-	{
-		// try 64bit
-		cursize = ftello64(handle);
-		if (cursize < -1)
-		{
-			// zero top 32 bits
-			cursize &= 0xffffffff;
-		}
-	}
-	return cursize;
-}
-
-int _seekfile(void *handle, u64 offset, int whence)
-{
-	int seekerr = fseeko64(handle, offset, whence);
-	
-	if (seekerr == -1) Console::Error("Failed to seek.");
-	
-	return seekerr;
-}
-
-int _readfile(void *handle, void *dst, int size)
-{
-	return fread(dst, 1, size, handle);
-}
-
-int _writefile(void *handle, void *src, int size)
-{
-	return fwrite(src, 1, size, handle);
-}
-
-void _closefile(void *handle)
-{
-	fclose(handle);
-}
-
-#endif
 
 int detect(isoFile *iso)
 {
@@ -256,7 +127,7 @@ isoFile *isoOpen(const char *filename)
 	memset(iso, 0, sizeof(isoFile));
 	strcpy(iso->filename, filename);
 
-	iso->handle = _openfile(iso->filename, O_RDONLY);
+	iso->handle = _openfile( iso->filename, O_RDONLY);
 	if (iso->handle == NULL)
 	{
 		Console::Error("error loading %s", params iso->filename);
@@ -334,10 +205,7 @@ isoFile *isoCreate(const char *filename, int flags)
 		sprintf(Zfile, "%s.table", iso->filename);
 		iso->htable = _openfile(Zfile, O_WRONLY);
 		
-		if (iso->htable == NULL)
-		{
-			return NULL;
-		}
+		if (iso->htable == NULL) return NULL;
 	}
 
 	iso->handle = _openfile(iso->filename, O_WRONLY | O_CREAT);
@@ -490,7 +358,7 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 	else
 		ret = _isoReadBlock(iso, dst, lsn);
 	
-	if (ret == -1) return ret;
+	if (ret == -1) return -1;
 
 	if (iso->type == ISOTYPE_CD)
 	{
@@ -540,7 +408,7 @@ int isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 	else
 		ret = _isoWriteBlock(iso, src, lsn);
 	
-	if (ret == -1) return ret;
+	if (ret == -1) return -1;
 	return 0;
 }
 

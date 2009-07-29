@@ -26,42 +26,6 @@
 using namespace wxHelpers;
 using namespace Threading;
 
-struct PluginInfo
-{
-	const char* shortname;
-	PluginsEnum_t id;
-	int typemask;
-	int version;			// minimum version required / supported
-};
-
-// Yay, order of this array shouldn't be important. :)
-static const PluginInfo tbl_PluginInfo[] =
-{
-	{ "GS",		PluginId_GS,	PS2E_LT_GS,		PS2E_GS_VERSION },
-	{ "PAD",	PluginId_PAD,	PS2E_LT_PAD,	PS2E_PAD_VERSION },
-	{ "SPU2",	PluginId_SPU2,	PS2E_LT_SPU2,	PS2E_SPU2_VERSION },
-	{ "CDVD",	PluginId_CDVD,	PS2E_LT_CDVD,	PS2E_CDVD_VERSION },
-	{ "DEV9",	PluginId_DEV9,	PS2E_LT_DEV9,	PS2E_DEV9_VERSION },
-	{ "USB",	PluginId_USB,	PS2E_LT_USB,	PS2E_USB_VERSION },
-	{ "FW",		PluginId_FW,	PS2E_LT_FW,		PS2E_FW_VERSION },
-
-	// SIO is currently unused (legacy?)
-	//{ "SIO",	PluginId_SIO,	PS2E_LT_SIO,	PS2E_SIO_VERSION }
-
-};
-
-namespace Exception
-{
-	class NotPcsxPlugin : public Stream
-	{
-	public:
-		virtual ~NotPcsxPlugin() throw() {}
-		explicit NotPcsxPlugin( const wxString& objname ) :
-			Stream( objname, wxLt("Dynamic library is not a PCSX2 plugin (or is an unsupported m_version)") ) {}
-	};
-
-};
-
 DECLARE_EVENT_TYPE(wxEVT_EnumeratedNext, -1)
 DECLARE_EVENT_TYPE(wxEVT_EnumerationFinished, -1)
 
@@ -158,7 +122,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent, int plu
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 
-	AddStaticText( s_main, _( "Enumerating available plugins..." ), wxALIGN_CENTRE );
+	AddStaticText( s_main, _( "Enumerating available plugins..." ) );
 	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
 	s_main.Add( &m_label, SizerFlags::StdExpand() );
 
@@ -223,7 +187,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 	s_main.Add( &m_ComboBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
 	s_main.AddSpacer( 4 );
-	AddStaticText( s_main, _("Tip: Installed plugins that are not compatible with your hardware or operating system will be listed below a separator."), wxALIGN_CENTRE );
+	AddStaticText( s_main, _("Tip: Installed plugins that are not compatible with your hardware or operating system will be listed below a separator.") );
 	s_main.AddSpacer( 4 );
 
 	s_main.Add( &m_StatusPanel, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
@@ -315,7 +279,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 
 	if( emptyBoxes > 0 )
 	{
-		wxMessageBox( pxE( "Popup Error:Missing Plugins",
+		wxMessageBox( pxE( ".Popup Error:Missing Plugins",
 				L"Critical Error: A valid plugin for one or more components of PCSX2 could not be found. "
 				L"Your installation of PCSX2 is incomplete, and will be unable to run games."),
 			_("PCSX2 Error - Plugin components not found")

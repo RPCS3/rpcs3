@@ -174,7 +174,6 @@ public:
 				uint32 aem:1;
 				uint32 tfx:3;
 				uint32 tcc:1;
-				uint32 ate:1;
 				uint32 atst:3;
 				uint32 fog:1;
 				uint32 clr1:1;
@@ -187,7 +186,7 @@ public:
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x7fffff;}
+		operator uint32() {return key & 0x3fffff;}
 
 		PSSelector() : key(0) {}
 	};

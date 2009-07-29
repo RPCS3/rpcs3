@@ -24,35 +24,37 @@
 
 // Used for Result Clamping
 void mVUclamp1(int reg, int regT1, int xyzw) {
-	switch (xyzw) {
-		case 1: case 2: case 4: case 8:
-			SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
-			SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
-			break;
-		default:
-			SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
-			SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
-			break;
+	if (CHECK_VU_OVERFLOW) {
+		switch (xyzw) {
+			case 1: case 2: case 4: case 8:
+				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
+				break;
+			default:
+				SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
+				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
+				break;
+		}
 	}
 }
 
 // Used for Operand Clamping
 void mVUclamp2(int reg, int regT1, int xyzw) {
-	if (CHECK_VU_SIGN_OVERFLOW) {
+	if (CHECK_VU_SIGN_OVERFLOW && (regT1 >= 0)) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
-				SSE_MOVSS_XMM_to_XMM(regT1, reg);
+				SSE_MOVSS_XMM_to_XMM (regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
-				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
-				SSE_ORPS_XMM_to_XMM(reg, regT1);
+				SSE_MINSS_M32_to_XMM (reg,   (uptr)mVU_maxvals);
+				SSE_MAXSS_M32_to_XMM (reg,   (uptr)mVU_minvals);
+				SSE_ORPS_XMM_to_XMM  (reg, regT1);
 				break;
 			default:
 				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
-				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
-				SSE_ORPS_XMM_to_XMM(reg, regT1);
+				SSE_MINPS_M128_to_XMM(reg,   (uptr)mVU_maxvals);
+				SSE_MAXPS_M128_to_XMM(reg,   (uptr)mVU_minvals);
+				SSE_ORPS_XMM_to_XMM  (reg, regT1);
 				break;
 		}
 	}
@@ -104,7 +106,7 @@ void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 	return;*/
 
 	switch ( xyzw ) {
-		case 5:		if (cpucaps.hasStreamingSIMD4Extensions) {
+		case 5:		if (x86caps.hasStreamingSIMD4Extensions) {
 						SSE4_EXTRACTPS_XMM_to_M32(offset+4,  reg, 1);
 						SSE4_EXTRACTPS_XMM_to_M32(offset+12, reg, 3);
 					}
@@ -213,7 +215,7 @@ void mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0) {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
-		if (cpucaps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf)) {
+		if (x86caps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf)) {
 			if (modXYZW) {
 				if		(xyzw == 1) { SSE4_INSERTPS_XMM_to_XMM(dest, src, _MM_MK_INSERTPS_NDX(0, 3, 0)); return; }
 				else if (xyzw == 2) { SSE4_INSERTPS_XMM_to_XMM(dest, src, _MM_MK_INSERTPS_NDX(0, 2, 0)); return; }
@@ -317,67 +319,60 @@ microVUt(void) mVUrestoreRegs(microVU* mVU) {
 static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK1[4]) = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
 static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK2[4]) = {0x00000000, 0x40000000, 0x00000000, 0x40000000};
 
-// Warning: Modifies xmmT1 and xmmT2
-void MIN_MAX_(x86SSERegType to, x86SSERegType from, bool min) {
+// Warning: Modifies t1 and t2
+void MIN_MAX_PS(microVU* mVU, int to, int from, int t1, int t2, bool min) {
+	bool t1b = 0, t2b = 0;
+	if (t1 < 0) { t1 = mVU->regAlloc->allocReg(); t1b = 1; }
+	if (t2 < 0) { t2 = mVU->regAlloc->allocReg(); t2b = 1; }
 
 	// ZW
-	SSE2_PSHUFD_XMM_to_XMM(xmmT1, to, 0xfa);
-	SSE2_PAND_M128_to_XMM (xmmT1, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (xmmT1, (uptr)MIN_MAX_MASK2);
-	SSE2_PSHUFD_XMM_to_XMM(xmmT2, from, 0xfa);
-	SSE2_PAND_M128_to_XMM (xmmT2, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (xmmT2, (uptr)MIN_MAX_MASK2);
-	if (min) SSE2_MINPD_XMM_to_XMM(xmmT1, xmmT2);
-	else     SSE2_MAXPD_XMM_to_XMM(xmmT1, xmmT2);
+	SSE2_PSHUFD_XMM_to_XMM(t1, to, 0xfa);
+	SSE2_PAND_M128_to_XMM (t1, (uptr)MIN_MAX_MASK1);
+	SSE2_POR_M128_to_XMM  (t1, (uptr)MIN_MAX_MASK2);
+	SSE2_PSHUFD_XMM_to_XMM(t2, from, 0xfa);
+	SSE2_PAND_M128_to_XMM (t2, (uptr)MIN_MAX_MASK1);
+	SSE2_POR_M128_to_XMM  (t2, (uptr)MIN_MAX_MASK2);
+	if (min) SSE2_MINPD_XMM_to_XMM(t1, t2);
+	else     SSE2_MAXPD_XMM_to_XMM(t1, t2);
 
 	// XY
-	SSE2_PSHUFD_XMM_to_XMM(xmmT2, from, 0x50);
-	SSE2_PAND_M128_to_XMM (xmmT2, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (xmmT2, (uptr)MIN_MAX_MASK2);
+	SSE2_PSHUFD_XMM_to_XMM(t2, from, 0x50);
+	SSE2_PAND_M128_to_XMM (t2, (uptr)MIN_MAX_MASK1);
+	SSE2_POR_M128_to_XMM  (t2, (uptr)MIN_MAX_MASK2);
 	SSE2_PSHUFD_XMM_to_XMM(to, to, 0x50);
-	SSE2_PAND_M128_to_XMM (to,	  (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (to,	  (uptr)MIN_MAX_MASK2);
-	if (min) SSE2_MINPD_XMM_to_XMM(to, xmmT2);
-	else     SSE2_MAXPD_XMM_to_XMM(to, xmmT2);
+	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX_MASK1);
+	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX_MASK2);
+	if (min) SSE2_MINPD_XMM_to_XMM(to, t2);
+	else     SSE2_MAXPD_XMM_to_XMM(to, t2);
 
-	SSE_SHUFPS_XMM_to_XMM(to, xmmT1, 0x88);
+	SSE_SHUFPS_XMM_to_XMM(to, t1, 0x88);
+	if (t1b) mVU->regAlloc->clearNeeded(t1);
+	if (t2b) mVU->regAlloc->clearNeeded(t2);
 }
 
-// Warning: Modifies from and to's upper 3 vectors
-void MIN_MAX_SS(x86SSERegType to, x86SSERegType from, bool min) {
+// Warning: Modifies from's upper 3 vectors, and t1
+void MIN_MAX_SS(mV, int to, int from, int t1, bool min) {
+	bool t1b = 0;
+	if (t1 < 0) { t1 = mVU->regAlloc->allocReg(); t1b = 1; }
 	SSE_SHUFPS_XMM_to_XMM (to, from, 0);
 	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX_MASK1);
 	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX_MASK2);
-	SSE2_PSHUFD_XMM_to_XMM(from, to, 0xee);
-	if (min) SSE2_MINPD_XMM_to_XMM(to, from);
-	else	 SSE2_MAXPD_XMM_to_XMM(to, from);
-}
-
-void SSE_MAX2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) { 
-	if (CHECK_VU_MINMAXHACK) { SSE_MAXPS_XMM_to_XMM(to, from); }
-	else					 { MIN_MAX_(to, from, 0); }
-}
-void SSE_MIN2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) { 
-	if (CHECK_VU_MINMAXHACK) { SSE_MINPS_XMM_to_XMM(to, from); }
-	else					 { MIN_MAX_(to, from, 1); }
-}
-void SSE_MAX2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) { 
-	if (CHECK_VU_MINMAXHACK) { SSE_MAXSS_XMM_to_XMM(to, from); }
-	else					 { MIN_MAX_SS(to, from, 0); }	
-}
-void SSE_MIN2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) { 
-	if (CHECK_VU_MINMAXHACK) { SSE_MINSS_XMM_to_XMM(to, from); }
-	else					 { MIN_MAX_SS(to, from, 1); }
+	SSE2_PSHUFD_XMM_to_XMM(t1, to, 0xee);
+	if (min) SSE2_MINPD_XMM_to_XMM(to, t1);
+	else	 SSE2_MAXPD_XMM_to_XMM(to, t1);
+	if (t1b) mVU->regAlloc->clearNeeded(t1);
 }
 
 // Warning: Modifies all vectors in 'to' and 'from', and Modifies xmmT1 and xmmT2
-void SSE_ADD2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
-	
-	if (!CHECK_VUADDSUBHACK) { SSE_ADDSS_XMM_to_XMM(to, from); return; }
-	u8 *localptr[8];
+void ADD_SS(microVU* mVU, int to, int from, int t1, int t2) {
 
-	SSE_MOVAPS_XMM_to_XMM(xmmT1, to);
-	SSE_MOVAPS_XMM_to_XMM(xmmT2, from);
+	u8 *localptr[8];
+	bool t1b = 0, t2b = 0;
+	if (t1 < 0) { t1 = mVU->regAlloc->allocReg(); t1b = 1; }
+	if (t2 < 0) { t2 = mVU->regAlloc->allocReg(); t2b = 1; }
+
+	SSE_MOVAPS_XMM_to_XMM(t1, to);
+	SSE_MOVAPS_XMM_to_XMM(t2, from);
 	SSE2_MOVD_XMM_to_R(gprT2, to);
 	SHR32ItoR(gprT2, 23); 
 	SSE2_MOVD_XMM_to_R(gprT1, from);
@@ -435,14 +430,53 @@ void SSE_ADD2SS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
 	x86SetJ8(localptr[6]);
 	x86SetJ8(localptr[7]);
 
-	SSE_ANDPS_XMM_to_XMM(to,   xmmT1); //to contains mask
-	SSE_ANDPS_XMM_to_XMM(from, xmmT2); //from contains mask
+	SSE_ANDPS_XMM_to_XMM(to,   t1); // to   contains mask
+	SSE_ANDPS_XMM_to_XMM(from, t2); // from contains mask
 	SSE_ADDSS_XMM_to_XMM(to, from);
+	if (t1b) mVU->regAlloc->clearNeeded(t1);
+	if (t2b) mVU->regAlloc->clearNeeded(t2);
 }
 
-// Note: Wrapper function, Tri-Ace Games just need the SS implementation
-void SSE_ADD2PS_XMM_to_XMM(x86SSERegType to, x86SSERegType from) {
+void SSE_MAXPS(mV, int to, int from, int t1, int t2) {
+	if (CHECK_VU_MINMAXHACK) { SSE_MAXPS_XMM_to_XMM(to, from); }
+	else					 { MIN_MAX_PS(mVU, to, from, t1, t2, 0); }
+}
+void SSE_MINPS(mV, int to, int from, int t1, int t2) {
+	if (CHECK_VU_MINMAXHACK) { SSE_MINPS_XMM_to_XMM(to, from); }
+	else					 { MIN_MAX_PS(mVU, to, from, t1, t2, 1); }
+}
+void SSE_MAXSS(mV, int to, int from, int t1, int t2) { 
+	if (CHECK_VU_MINMAXHACK) { SSE_MAXSS_XMM_to_XMM(to, from); }
+	else					 { MIN_MAX_SS(mVU, to, from, t1, 0); }
+}
+void SSE_MINSS(mV, int to, int from, int t1, int t2) { 
+	if (CHECK_VU_MINMAXHACK) { SSE_MINSS_XMM_to_XMM(to, from); }
+	else					 { MIN_MAX_SS(mVU, to, from, t1, 1); }
+}
+void SSE_ADD2SS(mV, int to, int from, int t1, int t2) {
+	if (!CHECK_VUADDSUBHACK) { SSE_ADDSS_XMM_to_XMM(to, from); }
+	else					 { ADD_SS(mVU, to, from, t1, t2); }
+}
+void SSE_ADD2PS(mV, int to, int from, int t1, int t2) {
 	SSE_ADDPS_XMM_to_XMM(to, from);
+}
+void SSE_ADDPS(mV, int to, int from, int t1, int t2) {
+	SSE_ADDPS_XMM_to_XMM(to, from);
+}
+void SSE_ADDSS(mV, int to, int from, int t1, int t2) {
+	SSE_ADDSS_XMM_to_XMM(to, from);
+}
+void SSE_SUBPS(mV, int to, int from, int t1, int t2) {
+	SSE_SUBPS_XMM_to_XMM(to, from);
+}
+void SSE_SUBSS(mV, int to, int from, int t1, int t2) {
+	SSE_SUBSS_XMM_to_XMM(to, from);
+}
+void SSE_MULPS(mV, int to, int from, int t1, int t2) {
+	SSE_MULPS_XMM_to_XMM(to, from);
+}
+void SSE_MULSS(mV, int to, int from, int t1, int t2) {
+	SSE_MULSS_XMM_to_XMM(to, from);
 }
 
 //------------------------------------------------------------------

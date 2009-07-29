@@ -56,7 +56,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -184,7 +183,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -310,7 +308,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -681,7 +678,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				DataExecutionPrevention="0"
-				TargetMachine="17"
+				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"

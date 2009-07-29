@@ -769,9 +769,9 @@ REG64_(GIFReg, TEST)
 	uint32 _PAD1:13;
 	uint32 _PAD2:32;
 REG_END2
-	__forceinline bool DoFirstPass() {return !ATE || ATST != 0;} // not all pixels fail automatically
-	__forceinline bool DoSecondPass() {return ATE && ATST != 1 && AFAIL != 0;} // pixels may fail, write fb/z  
-	__forceinline bool NoSecondPass() {return ATE && ATST != 1 && AFAIL == 0;} // pixels may fail, no output
+	__forceinline bool DoFirstPass() {return !ATE || ATST != ATST_NEVER;} // not all pixels fail automatically
+	__forceinline bool DoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL != AFAIL_KEEP;} // pixels may fail, write fb/z  
+	__forceinline bool NoSecondPass() {return ATE && ATST != ATST_ALWAYS && AFAIL == AFAIL_KEEP;} // pixels may fail, no output
 REG_END2
 
 REG64_(GIFReg, TEX0)

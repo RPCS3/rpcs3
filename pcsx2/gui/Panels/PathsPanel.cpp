@@ -100,7 +100,7 @@ Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent ) :
 	AddDirPicker( s_main, FolderId_Bios,
 		_("Bios:"),
 		_("Select folder with PS2 Bios") ).
-		SetToolTip( pxE( "Setting Tooltip:Bios Folder",
+		SetToolTip( pxE( ".Tooltips:Folders:Bios",
 			L"This folder is where PCSX2 looks to find PS2 bios files.  The actual bios used can be "
 			L"selected from the CPU dialog."
 		) );
@@ -109,7 +109,7 @@ Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent ) :
 	AddDirPicker( s_main, FolderId_Savestates,
 		_("Savestates:"),
 		_("Select folder for Savestates") ).
-		SetToolTip( pxE( "Setting Tooltip:Savestates Folder",
+		SetToolTip( pxE( ".Tooltips:Folders:Savestates",
 			L"This folder is where PCSX2 records savestates; which are recorded either by using "
 			L"menus/toolbars, or by pressing F1/F3 (load/save)."
 		) );
@@ -118,7 +118,7 @@ Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent ) :
 	AddDirPicker( s_main, FolderId_Snapshots,
 		_("Snapshots:"),
 		_("Select a folder for Snapshots") ).
-		SetToolTip( pxE( "Setting Tooltip:Snapshots Folder",
+		SetToolTip( pxE( ".Tooltips:Folders:Snapshots",
 			L"This folder is where PCSX2 saves screenshots.  Actual screenshot image format and style "
 			L"may vary depending on the GS plugin being used." 
 		) );
@@ -127,7 +127,7 @@ Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent ) :
 	AddDirPicker( s_main, FolderId_Logs,
 		_("Logs/Dumps:" ),
 		_("Select a folder for logs/dumps") ).
-		SetToolTip( pxE( "Setting Tooltip:Logs Folder",
+		SetToolTip( pxE( ".Tooltips:Folders:Logs",
 			L"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most plugins will "
 			L"also adhere to this folder, however some older plugins may ignore it."
 		) );
@@ -136,7 +136,7 @@ Panels::PathsPanel::StandardPanel::StandardPanel( wxWindow& parent ) :
 	AddDirPicker( s_main, FolderId_MemoryCards,
 		_("Memorycards:"),
 		_("Select a default Memorycards folder") ).
-		SetToolTip( pxE( "Setting Tooltip:Memorycards Folder",
+		SetToolTip( pxE( ".Tooltips:Folders:Memorycards",
 			L"This is the default path where PCSX2 loads or creates its memory cards, and can be "
 			L"overridden in the MemoryCard Configuration by using absolute filenames."
 		) );
@@ -150,15 +150,15 @@ Panels::PathsPanel::AdvancedPanel::AdvancedPanel( wxWindow& parent, int idealWid
 	MyBasePanel( parent, idealWidth-9 )
 {
 	wxStaticBoxSizer& advanced = *new wxStaticBoxSizer( wxVERTICAL, this, _("Advanced") );
-	AddStaticText( advanced, pxE( "Settings Dialog:Advanced Paths",
+	AddStaticText( advanced, pxE( ".Panels:Folders:Advanced",
 		L"Warning!! These advanced options are provided for developers and advanced testers only. "
 		L"Changing these settings can cause program errors, so please be weary."
-	), wxALIGN_CENTRE );
+	) );
 
 	AddDirPicker( advanced, FolderId_Plugins,
 		_("Plugins:"),
 		_("Select folder for PCSX2 plugins") ).
-		SetToolTip( pxE( "Setting Tooltip:Plugins Path",
+		SetToolTip( pxE( ".Tooltips:Folders:Plugins",
 			L"This is the location where PCSX2 will expect to find its plugins. Plugins found in this folder "
 			L"will be enumerated and are selectable from the Plugins panel."
 		) );
@@ -167,7 +167,7 @@ Panels::PathsPanel::AdvancedPanel::AdvancedPanel( wxWindow& parent, int idealWid
 	AddDirPicker( advanced, FolderId_Settings,
 		_("Settings:"),
 		_("Select a folder for PCSX2 settings/inis") ).
-		SetToolTip( pxE( "Settings Tooltip:Settings Path",
+		SetToolTip( pxE( ".Tooltips:Folders:Settings",
 			L"This is the folder where PCSX2 saves all settings, including settings generated "
 			L"by most plugins.\n\nWarning: Some older versions of plugins may not respect this value."
 		) );

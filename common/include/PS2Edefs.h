@@ -704,10 +704,7 @@ typedef void (CALLBACK* _FWabout)();
 #ifdef PLUGINfuncs
 
 // GS
-extern _GSinit            GSinit;
 extern _GSopen            GSopen;
-extern _GSclose           GSclose;
-extern _GSshutdown        GSshutdown;
 extern _GSvsync           GSvsync;
 extern _GSgifTransfer1    GSgifTransfer1;
 extern _GSgifTransfer2    GSgifTransfer2;
@@ -717,7 +714,6 @@ extern _GSgifSoftReset    GSgifSoftReset;
 extern _GSreadFIFO        GSreadFIFO;
 extern _GSreadFIFO2       GSreadFIFO2;
 
-extern _GSkeyEvent        GSkeyEvent;
 extern _GSchangeSaveState GSchangeSaveState;
 extern _GSmakeSnapshot	   GSmakeSnapshot;
 extern _GSmakeSnapshot2   GSmakeSnapshot2;
@@ -734,40 +730,17 @@ extern _GSgetDriverInfo   GSgetDriverInfo;
 #ifdef _WINDOWS_
 extern _GSsetWindowInfo   GSsetWindowInfo;
 #endif
-extern _GSfreeze          GSfreeze;
-extern _GSconfigure       GSconfigure;
-extern _GStest            GStest;
-extern _GSabout           GSabout;
 
 // PAD1
-extern _PADinit           PAD1init;
 extern _PADopen           PAD1open;
-extern _PADclose          PAD1close;
-extern _PADshutdown       PAD1shutdown;
-extern _PADkeyEvent       PAD1keyEvent;
 extern _PADstartPoll      PAD1startPoll;
 extern _PADpoll           PAD1poll;
 extern _PADquery          PAD1query;
 extern _PADupdate         PAD1update;
 
 extern _PADgsDriverInfo   PAD1gsDriverInfo;
-extern _PADconfigure      PAD1configure;
-extern _PADtest           PAD1test;
-extern _PADabout          PAD1about;
-extern _PADfreeze         PAD1freeze;
 extern _PADsetSlot        PAD1setSlot;
 extern _PADqueryMtap      PAD1queryMtap;
-
-// PAD2
-extern _PADinit           PAD2init;
-extern _PADopen           PAD2open;
-extern _PADclose          PAD2close;
-extern _PADshutdown       PAD2shutdown;
-extern _PADkeyEvent       PAD2keyEvent;
-extern _PADstartPoll      PAD2startPoll;
-extern _PADpoll           PAD2poll;
-extern _PADquery          PAD2query;
-extern _PADupdate         PAD2update;
 
 extern _PADgsDriverInfo   PAD2gsDriverInfo;
 extern _PADconfigure      PAD2configure;
@@ -778,23 +751,13 @@ extern _PADsetSlot        PAD2setSlot;
 extern _PADqueryMtap      PAD2queryMtap;
 
 // SIO[2]
-extern _SIOinit           SIOinit[2][9];
 extern _SIOopen           SIOopen[2][9];
-extern _SIOclose          SIOclose[2][9];
-extern _SIOshutdown       SIOshutdown[2][9];
 extern _SIOstartPoll      SIOstartPoll[2][9];
 extern _SIOpoll           SIOpoll[2][9];
 extern _SIOquery          SIOquery[2][9];
 
-extern _SIOconfigure      SIOconfigure[2][9];
-extern _SIOtest           SIOtest[2][9];
-extern _SIOabout          SIOabout[2][9];
-
 // SPU2
-extern _SPU2init          SPU2init;
 extern _SPU2open          SPU2open;
-extern _SPU2close         SPU2close;
-extern _SPU2shutdown      SPU2shutdown;
 extern _SPU2write         SPU2write;
 extern _SPU2read          SPU2read;
 extern _SPU2readDMA4Mem   SPU2readDMA4Mem;
@@ -813,10 +776,6 @@ extern _SPU2setClockPtr   SPU2setClockPtr;
 extern _SPU2setTimeStretcher SPU2setTimeStretcher;
 
 extern _SPU2async         SPU2async;
-extern _SPU2freeze        SPU2freeze;
-extern _SPU2configure     SPU2configure;
-extern _SPU2test          SPU2test;
-extern _SPU2about         SPU2about;
 
 // CDVD
 struct CDVDplugin {
@@ -850,10 +809,7 @@ struct CDVDplugin {
 extern CDVDplugin CDVD_plugin; // _plugin because of
 
 // DEV9
-extern _DEV9init          DEV9init;
 extern _DEV9open          DEV9open;
-extern _DEV9close         DEV9close;
-extern _DEV9shutdown      DEV9shutdown;
 extern _DEV9read8         DEV9read8;
 extern _DEV9read16        DEV9read16;
 extern _DEV9read32        DEV9read32;
@@ -865,16 +821,8 @@ extern _DEV9writeDMA8Mem  DEV9writeDMA8Mem;
 extern _DEV9irqCallback   DEV9irqCallback;
 extern _DEV9irqHandler    DEV9irqHandler;
 
-extern _DEV9configure     DEV9configure;
-extern _DEV9freeze        DEV9freeze;
-extern _DEV9test          DEV9test;
-extern _DEV9about         DEV9about;
-
 // USB
-extern _USBinit           USBinit;
 extern _USBopen           USBopen;
-extern _USBclose          USBclose;
-extern _USBshutdown       USBshutdown;
 extern _USBread8          USBread8;
 extern _USBread16         USBread16;
 extern _USBread32         USBread32;
@@ -887,24 +835,12 @@ extern _USBirqCallback    USBirqCallback;
 extern _USBirqHandler     USBirqHandler;
 extern _USBsetRAM         USBsetRAM;
 
-extern _USBconfigure      USBconfigure;
-extern _USBfreeze         USBfreeze;
-extern _USBtest           USBtest;
-extern _USBabout          USBabout;
-
 // FW
-extern _FWinit            FWinit;
 extern _FWopen            FWopen;
-extern _FWclose           FWclose;
-extern _FWshutdown        FWshutdown;
 extern _FWread32          FWread32;
 extern _FWwrite32         FWwrite32;
 extern _FWirqCallback     FWirqCallback;
 
-extern _FWconfigure       FWconfigure;
-extern _FWfreeze          FWfreeze;
-extern _FWtest            FWtest;
-extern _FWabout           FWabout;
 #endif
 
 #ifdef __cplusplus

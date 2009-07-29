@@ -822,7 +822,7 @@ void SetFPUstate() {
 	_freeMMXreg(7);
 
 	if (x86FpuState == MMX_STATE) {
-		if (cpucaps.has3DNOWInstructionExtensions) 
+		if (x86caps.has3DNOWInstructionExtensions) 
 			FEMMS();
 		else
 			EMMS();

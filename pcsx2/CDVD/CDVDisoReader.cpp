@@ -30,79 +30,21 @@
 #include "CDVDisoReader.h"
 
 char isoFileName[g_MaxPath];
-
 u8 *pbuffer;
-int cdtype;
-
-static int psize;
-
-isoFile *iso;
-
-FILE *cdvdLog = NULL;
-
+static int psize, cdtype;
 u8 cdbuffer[2352] = {0};
-
-s32 msf_to_lba(u8 m, u8 s, u8 f)
-{
-	u32 lsn;
-	lsn = f;
-	lsn += (s - 2) * 75;
-	lsn += m * 75 * 60;
-	return lsn;
-}
-
-void lba_to_msf(s32 lba, u8* m, u8* s, u8* f)
-{
-	lba += 150;
-	*m = lba / (60 * 75);
-	*s = (lba / 75) % 60;
-	*f = lba % 75;
-}
-
-//#define btoi(b)	((b)/16*10 + (b)%16)	/* BCD to u_char */
-//#define itob(i)		((i)/10*16 + (i)%10)		/* u_char to BCD */
-
-
-/*#ifdef PCSX2_DEBUG
-void __Log(char *fmt, ...)
-{
-	va_list list;
-
-	if (cdvdLog == NULL) return;
-
-	va_start(list, fmt);
-	vfprintf(cdvdLog, fmt, list);
-	va_end(list);
-}
-#else
-#define __Log 0&&
-#endif*/
+isoFile *iso;
 
 s32 CALLBACK ISOinit()
 {
-/*#ifdef PCSX2_DEBUG
-	cdvdLog = fopen("logs/cdvdLog.txt", "w");
-	if (cdvdLog == NULL)
-	{
-		cdvdLog = fopen("cdvdLog.txt", "w");
-		if (cdvdLog == NULL)
-		{
-			Console::Error("Can't create cdvdLog.txt");
-			return -1;
-		}
-	}
-	setvbuf(cdvdLog, NULL,  _IONBF, 0);*/
-	CDVD_LOG("CDVDinit\n");
-/*#endif*/
+	CDVD_LOG("ISOinit\n");
 
 	return 0;
 }
 
 void CALLBACK ISOshutdown()
 {
-/*#ifdef CDVD_LOG
-	if (cdvdLog != NULL) fclose(cdvdLog);
-#endif*/
+	CDVD_LOG("ISOshutdown\n");
 }
 
 s32 CALLBACK ISOopen(const char* pTitle)
@@ -246,7 +188,7 @@ s32 CALLBACK ISOgetTOC(void* toc)
 	u8 type = ISOgetDiskType();
 	u8* tocBuff = (u8*)toc;
 
-	//__Log("CDVDgetTOC\n");
+	//CDVD_LOG("CDVDgetTOC\n");
 
 	if (type == CDVD_TYPE_DVDV || type == CDVD_TYPE_PS2DVD)
 	{

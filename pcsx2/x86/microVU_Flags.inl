@@ -215,9 +215,9 @@ microVUt(void) mVUsetupFlags(mV, int* xStatus, int* xMac, int* xClip, int cycles
 	if (__Clip) {
 		int bClip[4];
 		sortFlag(xClip, bClip, cycles);
-		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->clipFlag);
-		SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, shuffleClip);
-		SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT1);
+		SSE_MOVAPS_M128_to_XMM(xmmT2, (uptr)mVU->clipFlag);
+		SSE_SHUFPS_XMM_to_XMM (xmmT2, xmmT2, shuffleClip);
+		SSE_MOVAPS_XMM_to_M128((uptr)mVU->clipFlag, xmmT2);
 	}
 }
 

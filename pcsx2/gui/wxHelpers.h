@@ -7,7 +7,7 @@ namespace wxHelpers
 {
 	extern wxCheckBox&		AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord );
 	extern wxRadioButton&	AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord, bool isFirst = false );
-	extern wxStaticText&	AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_LEFT, int wrapLen=wxDefaultCoord );
+	extern wxStaticText&	AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int wrapLen=wxDefaultCoord );
 
 	namespace SizerFlags
 	{
@@ -127,7 +127,7 @@ public:
 	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
 
 	wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_LEFT, int size=wxDefaultCoord );
+	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
     void AddOkCancel( wxSizer& sizer, bool hasApply=false );
 
 protected:
@@ -147,7 +147,7 @@ public:
 
 	wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 	wxRadioButton&	AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_LEFT, int size=wxDefaultCoord );
+	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
 
 	int GetIdealWidth() const { return m_idealWidth; }
 	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }

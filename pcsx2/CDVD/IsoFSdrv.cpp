@@ -27,7 +27,7 @@
 #include "IsoFSdrv.h"
 
 struct fdtable{
-//int fd;
+//	int fd;
 	int fileSize;
 	int LBA;
 	int filePos;
@@ -68,8 +68,7 @@ int IsoFS_open(const char *name, int mode){
 	static struct TocEntry tocEntry;
 
 	// check if the file exists
-	if (IsoFS_findFile(name, &tocEntry) != TRUE)
-		return -1;
+	if (IsoFS_findFile(name, &tocEntry) != TRUE) return -1;
 
 	if(mode != 1) return -2;	//SCE_RDONLY
 
@@ -117,11 +116,12 @@ int IsoFS_lseek(int fd, int offset, int whence){
 		return -1;
 	}
 
-	if (fd_table[fd].filePos < 0)
-		fd_table[fd].filePos = 0;
+	if (fd_table[fd].filePos < 0) fd_table[fd].filePos = 0;
 
-	if (fd_table[fd].filePos > fd_table[fd].fileSize)
+	if (fd_table[fd].filePos > fd_table[fd].fileSize) 
+	{
 		fd_table[fd].filePos = fd_table[fd].fileSize;
+	}
 
 	return fd_table[fd].filePos;
 }
@@ -152,8 +152,10 @@ int IsoFS_read( int fd, char *buffer, int size )
 	}
 
 	if ((fd_table[fd].filePos + size) > fd_table[fd].fileSize)
+	{
 		size = fd_table[fd].fileSize - fd_table[fd].filePos;
-
+	}
+	
 	// Now work out where we want to start reading from
 	asector = ssector = fd_table[fd].LBA + (fd_table[fd].filePos >> 11);
 	off_sector = (fd_table[fd].filePos & 0x7FF);
@@ -179,7 +181,7 @@ int IsoFS_read( int fd, char *buffer, int size )
 		}
 		memcpy_fast(buffer, lb + off_sector, ssize);
 	}
-	if (asize)	if (IsoFS_readSectors(asector, asize >> 11, buffer+ssize) != TRUE)
+	if (asize && (IsoFS_readSectors(asector, asize >> 11, buffer+ssize) != TRUE))
 	{
 		ISOFS_LOG("[IsoFSdrv:read] Couldn't Read from file for some reason");
 		return 0;
@@ -228,6 +230,7 @@ int IsoFS_close( int fd)
 		ISOFS_LOG("[IsoFSdrv:close] ERROR: File does not appear to be open!");
 		return -1;
 	}
+	
 	ISOFS_LOG("[IsoFSdrv:close] internal fd %d", fd);
 	fd_used[fd] = 0;
 	files_open--;

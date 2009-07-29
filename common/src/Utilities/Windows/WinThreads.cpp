@@ -34,7 +34,7 @@ namespace Threading
 		DWORD vProcessCPUs;
 		DWORD vSystemCPUs;
 
-		cpuinfo.LogicalCores = 1;
+		x86caps.LogicalCores = 1;
 
 		if( !GetProcessAffinityMask (GetCurrentProcess (),
 			&vProcessCPUs, &vSystemCPUs) ) return;
@@ -48,12 +48,12 @@ namespace Threading
 				CPUs++;
 		}
 
-		cpuinfo.LogicalCores = CPUs;
+		x86caps.LogicalCores = CPUs;
 		if( LogicalCoresPerPhysicalCPU > CPUs) // for 1-socket HTT-disabled machines
 			LogicalCoresPerPhysicalCPU = CPUs;
 
-		cpuinfo.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-		//ptw32_smp_system = ( cpuinfo.LogicalCores > 1 ) ? TRUE : FALSE;
+		x86caps.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
+		//ptw32_smp_system = ( x86caps.LogicalCores > 1 ) ? TRUE : FALSE;
 	}
 
 	__forceinline void Timeslice()

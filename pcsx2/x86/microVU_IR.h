@@ -150,11 +150,11 @@ struct microIR {
 	microOp			 info[pSize/2];	// Info for Instructions in current block
 	microConstInfo	 constReg[16];	// Simple Const Propagation Info for VI regs within blocks
 	u8  branch;			
-	u32 cycles;			// Cycles for current block
-	u32 count;			// Number of VU 64bit instructions ran (starts at 0 for each block)
-	u32 curPC;			// Current PC
-	u32 startPC;		// Start PC for Cur Block
-	u32 sFlagHack;		// Optimize out all Status flag updates if microProgram doesn't use Status flags
+	u32 cycles;		// Cycles for current block
+	u32 count;		// Number of VU 64bit instructions ran (starts at 0 for each block)
+	u32 curPC;		// Current PC
+	u32 startPC;	// Start PC for Cur Block
+	u32 sFlagHack;	// Optimize out all Status flag updates if microProgram doesn't use Status flags
 };
 
 //------------------------------------------------------------------
@@ -181,7 +181,6 @@ private:
 	int findFreeRegRec(int startIdx) {
 		for (int i = startIdx; i < xmmTotal; i++) {
 			if (!xmmReg[i].isNeeded) {
-				if ((i+1) >= xmmTotal) return i;
 				int x = findFreeRegRec(i+1);
 				if (x == -1) return i;
 				return ((xmmReg[i].count < xmmReg[x].count) ? i : x);
@@ -211,9 +210,10 @@ public:
 		}
 		counter = 0;
 	}
-	void flushAll() {
+	void flushAll(bool clearState = 1) {
 		for (int i = 0; i < xmmTotal; i++) {
 			writeBackReg(i);
+			if (clearState) clearReg(i);
 		}
 	}
 	void clearReg(int reg) {
@@ -222,14 +222,17 @@ public:
 		xmmReg[reg].xyzw	 =  0;
 		xmmReg[reg].isNeeded =  0;
 	}
-	void writeBackReg(int reg) {
+	void writeBackReg(int reg, bool invalidateRegs = 1) {
 		if ((xmmReg[reg].reg > 0) && xmmReg[reg].xyzw) { // Reg was modified and not Temp or vf0
 			if (xmmReg[reg].reg == 32) mVUsaveReg(reg, (uptr)&vuRegs->ACC.UL[0], xmmReg[reg].xyzw, 1);
 			else mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
-			for (int i = 0; i < xmmTotal; i++) {
-				if (i == reg) continue;
-				if (xmmReg[i].reg == xmmReg[reg].reg) {
-					clearReg(i); // Invalidate any Cached Regs of same vf Reg
+			if (invalidateRegs) {
+				for (int i = 0; i < xmmTotal; i++) {
+					if ((i == reg) || xmmReg[i].isNeeded) continue;
+					if (xmmReg[i].reg == xmmReg[reg].reg) {
+						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: writeBackReg() [%d]", params xmmReg[i].reg);
+						clearReg(i); // Invalidate any Cached Regs of same vf Reg
+					}
 				}
 			}
 			if (xmmReg[reg].xyzw == 0xf) { // Make Cached Reg if All Vectors were Modified
@@ -270,8 +273,8 @@ public:
 		counter++;
 		if (vfLoadReg >= 0) { // Search For Cached Regs
 			for (int i = 0; i < xmmTotal; i++) {
-				if ((xmmReg[i].reg == vfLoadReg) && (!xmmReg[i].xyzw					   // Reg Was Not Modified
-				|| (/*!xmmReg[i].isNeeded &&*/ xmmReg[i].reg && (xmmReg[i].xyzw==0xf)))) { // Reg Had All Vectors Modified and != VF0
+				if ((xmmReg[i].reg == vfLoadReg) && (!xmmReg[i].xyzw // Reg Was Not Modified
+				||  (xmmReg[i].reg && (xmmReg[i].xyzw==0xf)))) {	 // Reg Had All Vectors Modified and != VF0
 					int z = i;
 					if (vfWriteReg >= 0) { // Reg will be modified
 						if (cloneWrite) {  // Clone Reg so as not to use the same Cached Reg
@@ -286,7 +289,7 @@ public:
 						}
 						else { // Don't clone reg, but shuffle to adjust for SS ops
 							if ((vfLoadReg != vfWriteReg) || (xyzw != 0xf)) { writeBackReg(z); }
-							else if	(xyzw == 4) SSE2_PSHUFD_XMM_to_XMM(z, i, 1);
+							if		(xyzw == 4) SSE2_PSHUFD_XMM_to_XMM(z, i, 1);
 							else if (xyzw == 2) SSE2_PSHUFD_XMM_to_XMM(z, i, 2);
 							else if (xyzw == 1) SSE2_PSHUFD_XMM_to_XMM(z, i, 3);
 						}

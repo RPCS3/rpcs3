@@ -24,7 +24,7 @@
 static const u32 IniVersion = 102;
 
 const char* g_CustomConfigFile;
-char g_WorkingFolder[g_MaxPath];		// Working folder at application startup
+//char g_WorkingFolder[g_MaxPath];		// Working folder at application startup
 
 // Returns TRUE if the user has invoked the -cfg command line option.
 static bool hasCustomConfig()
@@ -38,7 +38,7 @@ static wxString GetConfigFilename()
 	// Load a user-specified configuration, or use the ini relative to the application's working directory.
 	// (Our current working directory can change, so we use the one we detected at startup)
 
-	return Path::Combine( g_WorkingFolder, hasCustomConfig() ? g_CustomConfigFile : (DEFAULT_INIS_DIR "\\pcsx2.ini") );
+	return Path::Combine( Config.Paths.Working, hasCustomConfig() ? g_CustomConfigFile : (DEFAULT_INIS_DIR "\\pcsx2.ini") );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -189,9 +189,9 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 	Entry( "Bios", Conf.Bios );
 	Entry( "Language", Conf.Lang );
 	wxString plug = DEFAULT_PLUGINS_DIR;
-	Entry( "PluginsDir", Conf.PluginsDir, plug );
+	Entry( "PluginsDir", Conf.Paths.Plugins, plug );
 	wxString bios = DEFAULT_BIOS_DIR;
-	Entry( "BiosDir", Conf.BiosDir, bios );
+	Entry( "BiosDir", Conf.Paths.Bios, bios );
 	Entry( "CloseGsOnEscape", Conf.closeGSonEsc, true );
 
 	SetCurrentSection( "Console" );
@@ -209,14 +209,14 @@ void IniFile::DoConfig( PcsxConfig& Conf )
 
 	SetCurrentSection( "Plugins" );
 
-	Entry( "GS", Conf.GS );
-	Entry( "SPU2", Conf.SPU2 );
-	Entry( "CDVD", Conf.CDVD );
-	Entry( "PAD1", Conf.PAD1 );
-	Entry( "PAD2", Conf.PAD2 );
-	Entry( "DEV9", Conf.DEV9 );
-	Entry( "USB", Conf.USB );
-	Entry( "FW", Conf.FW );
+	Entry( "GS", Conf.Plugins.GS );
+	Entry( "SPU2", Conf.Plugins.SPU2 );
+	Entry( "CDVD", Conf.Plugins.CDVD );
+	Entry( "PAD1", Conf.Plugins.PAD1 );
+	Entry( "PAD2", Conf.Plugins.PAD2 );
+	Entry( "DEV9", Conf.Plugins.DEV9 );
+	Entry( "USB", Conf.Plugins.USB );
+	Entry( "FW", Conf.Plugins.FW );
 
 	//cpu
 	SetCurrentSection( "Cpu" );
@@ -309,14 +309,14 @@ void SaveConfig()
 {
 	PcsxConfig tmpConf = Config;
 
-	strcpy( tmpConf.GS, winConfig.GS );
-	strcpy( tmpConf.SPU2, winConfig.SPU2 );
-	strcpy( tmpConf.CDVD, winConfig.CDVD );
-	strcpy( tmpConf.PAD1, winConfig.PAD1 );
-	strcpy( tmpConf.PAD2, winConfig.PAD2 );
-	strcpy( tmpConf.DEV9, winConfig.DEV9 );
-	strcpy( tmpConf.USB, winConfig.USB );
-	strcpy( tmpConf.FW, winConfig.FW );
+	strcpy( tmpConf.Plugins.GS, winConfig.Plugins.GS );
+	strcpy( tmpConf.Plugins.SPU2, winConfig.Plugins.SPU2 );
+	strcpy( tmpConf.Plugins.CDVD, winConfig.Plugins.CDVD );
+	strcpy( tmpConf.Plugins.PAD1, winConfig.Plugins.PAD1 );
+	strcpy( tmpConf.Plugins.PAD2, winConfig.Plugins.PAD2 );
+	strcpy( tmpConf.Plugins.DEV9, winConfig.Plugins.DEV9 );
+	strcpy( tmpConf.Plugins.USB, winConfig.Plugins.USB );
+	strcpy( tmpConf.Plugins.FW, winConfig.Plugins.FW );
 
 	IniFileSaver().DoConfig( tmpConf );
 }

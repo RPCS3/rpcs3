@@ -391,13 +391,13 @@ static void recAlloc()
 {
 	// Hardware Requirements Check...
 
-	if ( !( cpucaps.hasMultimediaExtensions  ) )
+	if ( !( x86caps.hasMultimediaExtensions  ) )
 		throw Exception::HardwareDeficiency( "Processor doesn't support MMX" );
 
-	if ( !( cpucaps.hasStreamingSIMDExtensions ) )
+	if ( !( x86caps.hasStreamingSIMDExtensions ) )
 		throw Exception::HardwareDeficiency( "Processor doesn't support SSE" );
 
-	if ( !( cpucaps.hasStreamingSIMD2Extensions ) )
+	if ( !( x86caps.hasStreamingSIMD2Extensions ) )
 		throw Exception::HardwareDeficiency( "Processor doesn't support SSE2" );
 
 	if( recMem == NULL )
@@ -758,10 +758,10 @@ void recClear(u32 addr, u32 size)
                 __asm__("emms");
 #else
         #ifdef _MSC_VER
-                if (cpucaps.has3DNOWInstructionExtensions) __asm femms;
+                if (x86caps.has3DNOWInstructionExtensions) __asm femms;
                 else __asm emms;
         #else
-                if( cpucaps.has3DNOWInstructionExtensions )__asm__("femms");
+                if( x86caps.has3DNOWInstructionExtensions )__asm__("femms");
                 else 
                         __asm__("emms");
         #endif
@@ -960,7 +960,7 @@ void iFlushCall(int flushtype)
 		_flushConstRegs();
 
 	if (x86FpuState==MMX_STATE) {
-		if (cpucaps.has3DNOWInstructionExtensions) FEMMS();
+		if (x86caps.has3DNOWInstructionExtensions) FEMMS();
 		else EMMS();
 		x86FpuState=FPU_STATE;
 	}

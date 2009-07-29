@@ -113,10 +113,10 @@ void TocEntryCopy(TocEntry* tocEntry, const dirTocEntry* internalTocEntry){
 
 		filenamelen = internalTocEntry->filenameLength/2;
 
-		if (!(tocEntry->fileProperties & 0x02)){
+//		if (!(tocEntry->fileProperties & 0x02)){
 			// strip the ;1 from the filename
 //			filenamelen -= 2;//(Florin) nah, do not strip ;1
-		}
+//		}
 
 		for (i=0; i < filenamelen; i++)
 			tocEntry->filename[i] = internalTocEntry->filename[(i<<1)+1];
@@ -126,10 +126,10 @@ void TocEntryCopy(TocEntry* tocEntry, const dirTocEntry* internalTocEntry){
 	else{
 		filenamelen = internalTocEntry->filenameLength;
 
-		if (!(tocEntry->fileProperties & 0x02)){
+//		if (!(tocEntry->fileProperties & 0x02)){
 			// strip the ;1 from the filename
 //			filenamelen -= 2;//(Florin) nah, do not strip ;1
-		}
+//		}
 
 		// use normal string copy
 		strncpy(tocEntry->filename,internalTocEntry->filename,128);
@@ -140,9 +140,7 @@ void TocEntryCopy(TocEntry* tocEntry, const dirTocEntry* internalTocEntry){
 // Check if a TOC Entry matches our extension list
 int TocEntryCompare(char* filename, char* extensions){
 	static char ext_list[129];
-
 	char* token;
-
 	char* ext_point;
 
 	strncpy(ext_list,extensions,128);
@@ -167,15 +165,9 @@ int TocEntryCompare(char* filename, char* extensions){
 
 }
 
-#define CD_SECS              60 /* seconds per minute */
-#define CD_FRAMES            75 /* frames per second */
-#define CD_MSF_OFFSET       150 /* MSF numbering offset of first frame */
-
 int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf)
 {
-	u32	i;
-	
-	for (i=0; i<sectors; i++)
+	for (u32 i=0; i<sectors; i++)
 	{
 		if (DoCDVDreadSector((u8*)((uptr)buf+2048*i), lsn+i, CDVD_MODE_2048) == -1) return 0;
 	}
@@ -191,8 +183,7 @@ int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf)
 int IsoFS_getVolumeDescriptor(void)
 {
 	// Read until we find the last valid Volume Descriptor
-	int volDescSector;
-
+	s32 volDescSector;
 	cdVolDesc localVolDesc;
 
 	DbgCon::WriteLn("IsoFS_GetVolumeDescriptor called");
@@ -219,7 +210,8 @@ int IsoFS_getVolumeDescriptor(void)
 		DbgCon::WriteLn( Color_Green, "CD FileSystem is ISO9660" );
 	else if (CDVolDesc.filesystemType == 2)
 		DbgCon::WriteLn( Color_Green, "CD FileSystem is Joliet");
-	else DbgCon::Notice("Could not detect CD FileSystem type");
+	else 
+		DbgCon::Notice("Could not detect CD FileSystem type");
 
 	//	CdStop();
 
@@ -227,21 +219,11 @@ int IsoFS_getVolumeDescriptor(void)
 }
 
 int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
-	char filename[g_MaxPath+1];
-	char pathname[JolietMaxPath+1];
-	char toc[2048];
+	char filename[g_MaxPath+1], pathname[JolietMaxPath+1], toc[2048];
 	char* dirname;
-
-	TocEntry localTocEntry;	// used for internal checking only
-
-	int found_dir;
-
-	int num_dir_sectors;
-	int current_sector;
-
-	int dir_lba;
-
+	s32 found_dir, num_dir_sectors, current_sector, dir_lba;
 	dirTocEntry* tocEntryPointer;
+	TocEntry localTocEntry;	// used for internal checking only
 
 	DbgCon::WriteLn("IsoFS_findfile(\"%s\") called", params fname);
 
@@ -439,15 +421,12 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 
 // This is the RPC-ready function which takes the request to start the tocEntry retrieval
 int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_dirs){
-//	int dir_depth = 1;
 	char toc[2048];
 	char* dirname;
-	int found_dir;
-	int num_dir_sectors;
-	unsigned int toc_entry_num;
+	s32 found_dir, num_dir_sectors, current_sector;
+	u32 toc_entry_num;
 	dirTocEntry* tocEntryPointer;
 	TocEntry localTocEntry;
-	int current_sector;
 
 	// store the extension list statically for the retrieve function
 	strncpy(getDirTocData.extension_list, extensions, 128);
@@ -540,8 +519,7 @@ int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_d
 		}
 
 		// If we havent found the directory name we wanted then fail
-		if (found_dir != TRUE)
-			return -1;
+		if (found_dir != TRUE) return -1;
 
 		// Get next directory name
 		dirname = strtok( NULL, "\\/" );
@@ -660,8 +638,7 @@ int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_d
 // buffer (tocEntry) must be 18KB in size, and this will be filled with a maximum of 128 entries in one go
 int IsoFS_getDirectories(TocEntry tocEntry[], int req_entries){
 	char toc[2048];
-	int toc_entry_num;
-
+	s32 toc_entry_num;
 	dirTocEntry* tocEntryPointer;
 
 	if (IsoFS_readSectors(getDirTocData.current_sector,1,toc) != TRUE){
@@ -682,8 +659,7 @@ int IsoFS_getDirectories(TocEntry tocEntry[], int req_entries){
 		tocEntryPointer = (dirTocEntry*)(toc + getDirTocData.current_sector_offset);
 	}
 
-	if (req_entries > 128)
-		req_entries = 128;
+	if (req_entries > 128) req_entries = 128;
 
 	for (toc_entry_num=0; toc_entry_num < req_entries;)
 	{

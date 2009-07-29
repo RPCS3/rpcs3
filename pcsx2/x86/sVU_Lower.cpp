@@ -1560,7 +1560,7 @@ void recVUMI_WAITP(VURegs *VU, int info)
 void vuSqSumXYZ(int regd, int regs, int regtemp) // regd.x =  x ^ 2 + y ^ 2 + z ^ 2
 {
 	//Console::WriteLn("VU: SUMXYZ");
-	if( cpucaps.hasStreamingSIMD4Extensions )
+	if( x86caps.hasStreamingSIMD4Extensions )
 	{
 		SSE_MOVAPS_XMM_to_XMM(regd, regs);
 		if (CHECK_VU_EXTRA_OVERFLOW) vuFloat2(regd, regtemp, 0xf);
@@ -1572,7 +1572,7 @@ void vuSqSumXYZ(int regd, int regs, int regtemp) // regd.x =  x ^ 2 + y ^ 2 + z 
 		if (CHECK_VU_EXTRA_OVERFLOW) vuFloat2(regtemp, regd, 0xf);
 		SSE_MULPS_XMM_to_XMM(regtemp, regtemp); // xyzw ^ 2
 
-		if( cpucaps.hasStreamingSIMD3Extensions ) {
+		if( x86caps.hasStreamingSIMD3Extensions ) {
 			SSE3_HADDPS_XMM_to_XMM(regd, regtemp);
 			SSE_ADDPS_XMM_to_XMM(regd, regtemp); // regd.z = x ^ 2 + y ^ 2 + z ^ 2
 			SSE_MOVHLPS_XMM_to_XMM(regd, regd); // regd.x = regd.z
@@ -1721,7 +1721,7 @@ void recVUMI_ESUM( VURegs *VU, int info )
 	//Console::WriteLn("VU: ESUM");
 	assert( VU == &VU1 );
 
-	if( cpucaps.hasStreamingSIMD3Extensions ) {
+	if( x86caps.hasStreamingSIMD3Extensions ) {
 		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 		if (CHECK_VU_EXTRA_OVERFLOW) vuFloat_useEAX(info, EEREC_TEMP, 0xf);
 		SSE3_HADDPS_XMM_to_XMM(EEREC_TEMP, EEREC_TEMP);

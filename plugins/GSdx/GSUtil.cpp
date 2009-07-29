@@ -148,7 +148,7 @@ bool GSUtil::CheckSSE()
 
 bool GSUtil::IsDirect3D10Available()
 {
-	if(HMODULE hModule = LoadLibrary(_T("d3d10.dll")))
+	if(HMODULE hModule = LoadLibrary(_T("d3d10_1.dll")))
 	{
 		FreeLibrary(hModule);
 

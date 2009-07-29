@@ -355,7 +355,7 @@ void GSRenderer::VSync(int field)
 	}
 	else
 	{
-		if(m_dump)
+		if(m_dump)D3DFMT_D32
 		{
 			m_dump.VSync(field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), m_regs);
 		}
@@ -709,7 +709,10 @@ bool GSRenderer::IsLinear()
 	bool mmin = TEX1.IsMinLinear();
 	bool mmag = TEX1.IsMagLinear();
 
-	if(mmag == mmin) return mmag;
+	if(mmag == mmin || TEX1.MXL == 0) // MXL == 0 => MMIN ignored, tested it on ps2
+	{
+		return mmag;
+	}
 
 	if(!TEX1.LCM && !PRIM->FST) // if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
 	{
@@ -761,7 +764,7 @@ bool GSRenderer::IsOpaque()
 				amin = amax = 0x80;
 			}
 		}
-		else if(context->ALPHA.C == 1)
+		else if(context->ALPHA.C == 2)
 		{
 			amin = amax = context->ALPHA.FIX;
 		}

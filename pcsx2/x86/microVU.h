@@ -110,7 +110,8 @@ struct microProgram {
 	microRange		   ranges;			   // The ranges of the microProgram that have already been recompiled
 	u32  frame;		// Frame # the program was last used on
 	u32  used;		// Program was used this frame?
-	bool isDead;	// Program is dead?
+	bool isDead;	// Program is Dead?
+	bool isOld;		// Program is Old? (Program hasn't been used in a while)
 };
 
 #define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
@@ -136,7 +137,6 @@ struct microVU {
 	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
 	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)
 	PCSX2_ALIGNED16(u32 xmmPQb[4]);   // Backup for xmmPQ
-	PCSX2_ALIGNED16(u32 xmmVFb[4]);   // Backup for VF regs
 
 	u32 index;			// VU Index (VU0 or VU1)
 	u32 vuMemSize;		// VU Main  Memory Size (in bytes)

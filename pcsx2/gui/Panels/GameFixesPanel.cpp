@@ -25,7 +25,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth)
 {
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here."), wxALIGN_CENTRE );
+	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here.") );
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
 	AddCheckBox( groupSizer, _("DMA Execution Hack - for Fatal Frame.") );
@@ -36,10 +36,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 
 	mainSizer.Add( &groupSizer, wxSizerFlags().Centre() );
 
-	AddStaticText( mainSizer, pxE( "Gamefixes Dialog:Compat Warning",
+	AddStaticText( mainSizer, pxE( ".Panels:Gamefixes:Compat Warning",
 		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
 		L"will need to turn off fixes manually when changing games."
-	), wxALIGN_CENTRE );
+	));
 
 	SetSizerAndFit( &mainSizer );
 

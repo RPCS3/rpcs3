@@ -158,7 +158,7 @@ static __forceinline void SET_HWLOC_R5900() {
 	}
 	
 	if (x86FpuState==MMX_STATE) { 
-		if (cpucaps.has3DNOWInstructionExtensions) 
+		if (x86caps.has3DNOWInstructionExtensions) 
 			FEMMS(); 
 		else 
 			EMMS(); 

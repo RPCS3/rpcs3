@@ -66,13 +66,13 @@ void SysDetect()
 		L"\tx86PType         =  %s\n"
 		L"\tx86Flags         =  %8.8x %8.8x\n"
 		L"\tx86EFlags        =  %8.8x\n",
-			wxString::FromAscii( cpuinfo.x86ID ).c_str(), cpuinfo.x86StepID,
-			wxString::FromAscii( cpuinfo.x86Fam ).Trim().Trim(false).c_str(), 
-			cpuinfo.cpuspeed / 1000, cpuinfo.cpuspeed%1000,
-			cpuinfo.PhysicalCores, cpuinfo.LogicalCores,
-			wxString::FromAscii( cpuinfo.x86Type ).c_str(),
-			cpuinfo.x86Flags, cpuinfo.x86Flags2,
-			cpuinfo.x86EFlags
+			wxString::FromAscii( x86caps.VendorName ).c_str(), x86caps.StepID,
+			wxString::FromAscii( x86caps.FamilyName ).Trim().Trim(false).c_str(), 
+			x86caps.Speed / 1000, x86caps.Speed%1000,
+			x86caps.PhysicalCores, x86caps.LogicalCores,
+			wxString::FromAscii( x86caps.TypeName ).c_str(),
+			x86caps.Flags, x86caps.Flags2,
+			x86caps.EFlags
 	) );
 
 	WriteLn( "Features:" );
@@ -84,16 +84,16 @@ void SysDetect()
 		"\t%sDetected SSSE3\n"
 		"\t%sDetected SSE4.1\n"
 		"\t%sDetected SSE4.2\n", params
-			cpucaps.hasMultimediaExtensions     ? "" : "Not ",
-			cpucaps.hasStreamingSIMDExtensions  ? "" : "Not ",
-			cpucaps.hasStreamingSIMD2Extensions ? "" : "Not ",
-			cpucaps.hasStreamingSIMD3Extensions ? "" : "Not ",
-			cpucaps.hasSupplementalStreamingSIMD3Extensions ? "" : "Not ",
-			cpucaps.hasStreamingSIMD4Extensions  ? "" : "Not ",
-			cpucaps.hasStreamingSIMD4Extensions2 ? "" : "Not "
+			x86caps.hasMultimediaExtensions     ? "" : "Not ",
+			x86caps.hasStreamingSIMDExtensions  ? "" : "Not ",
+			x86caps.hasStreamingSIMD2Extensions ? "" : "Not ",
+			x86caps.hasStreamingSIMD3Extensions ? "" : "Not ",
+			x86caps.hasSupplementalStreamingSIMD3Extensions ? "" : "Not ",
+			x86caps.hasStreamingSIMD4Extensions  ? "" : "Not ",
+			x86caps.hasStreamingSIMD4Extensions2 ? "" : "Not "
 	);
 
-	if ( cpuinfo.x86ID[0] == 'A' ) //AMD cpu
+	if ( x86caps.VendorName[0] == 'A' ) //AMD cpu
 	{
 		WriteLn( " Extended AMD Features:" );
 		WriteLn(
@@ -101,10 +101,10 @@ void SysDetect()
 			"\t%sDetected 3DNOW\n"
 			"\t%sDetected 3DNOW2\n"
 			"\t%sDetected SSE4a\n", params
-			cpucaps.hasMultimediaExtensionsExt       ? "" : "Not ",
-			cpucaps.has3DNOWInstructionExtensions    ? "" : "Not ",
-			cpucaps.has3DNOWInstructionExtensionsExt ? "" : "Not ",
-			cpucaps.hasStreamingSIMD4ExtensionsA     ? "" : "Not "
+			x86caps.hasMultimediaExtensionsExt       ? "" : "Not ",
+			x86caps.has3DNOWInstructionExtensions    ? "" : "Not ",
+			x86caps.has3DNOWInstructionExtensionsExt ? "" : "Not ",
+			x86caps.hasStreamingSIMD4ExtensionsA     ? "" : "Not "
 		);
 	}
 

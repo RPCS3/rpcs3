@@ -260,7 +260,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 			return false;
 		}
 
-		m_tw = std::max<int>(psm.pal > 0 ? 5 : 3, TEX0.TW); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
+		m_tw = std::max<int>(TEX0.TW, psm.pal > 0 ? 5 : 3); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
 	}
 
 	GSLocalMemory& mem = m_state->m_mem;

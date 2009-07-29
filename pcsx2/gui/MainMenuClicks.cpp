@@ -41,12 +41,11 @@ void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 
 	if( ctrl.ShowModal() == wxID_CANCEL ) return;
 	g_Conf->Folders.RunIso = ctrl.GetPath();
-	
-	
 }
 
 void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 {
+	SysPrepareExecution( wxEmptyString, true );
 }
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)

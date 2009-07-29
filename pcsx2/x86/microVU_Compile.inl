@@ -31,30 +31,6 @@
 	}																											\
 }
 
-#define doBackupVF1() {																	\
-	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {										\
-		DevCon::Status("microVU%d: Backing Up VF Reg [%04x]", params getIndex, xPC);	\
-		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0]);	\
-		SSE_MOVAPS_XMM_to_M128((uptr)mVU->xmmVFb, xmmT1);								\
-	}																					\
-}
-
-#define doBackupVF2() {																	\
-	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {										\
-		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->xmmVFb);								\
-		SSE_MOVAPS_M128_to_XMM(xmmT2, (uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0]);	\
-		SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0], xmmT1);	\
-		SSE_MOVAPS_XMM_to_M128((uptr)mVU->xmmVFb, xmmT2);								\
-	}																					\
-}
-
-#define doBackupVF3() {																	\
-	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {										\
-		SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)mVU->xmmVFb);								\
-		SSE_MOVAPS_XMM_to_M128((uptr)&mVU->regs->VF[mVUlow.VF_write.reg].UL[0], xmmT1);	\
-	}																					\
-}
-
 #define startLoop() {								\
 	mVUdebug1();									\
 	memset(&mVUinfo,	 0, sizeof(mVUinfo));		\
@@ -68,13 +44,35 @@
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
 #define doUpperOp()			{ mVUopU(mVU, 1); mVUdivSet(mVU); }
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
-#define doSwapOp()			{ doBackupVF1(); mVUopL(mVU, 1); doBackupVF2(); incPC(1); doUpperOp(); doBackupVF3(); }
 #define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 #define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
 
 //------------------------------------------------------------------
 // Helper Functions
 //------------------------------------------------------------------
+
+microVUt(void) doSwapOp(mV) { 
+	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
+		DevCon::Status("microVU%d: Backing Up VF Reg [%04x]", params getIndex, xPC);
+		int t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
+		int t2 = mVU->regAlloc->allocReg();
+		SSE_MOVAPS_XMM_to_XMM(t2, t1);
+		mVU->regAlloc->clearNeeded(t1);
+		mVUopL(mVU, 1);
+		t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
+		SSE_XORPS_XMM_to_XMM(t2, t1);
+		SSE_XORPS_XMM_to_XMM(t1, t2);
+		SSE_XORPS_XMM_to_XMM(t2, t1);
+		mVU->regAlloc->clearNeeded(t1);
+		incPC(1); 
+		doUpperOp();
+		t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
+		SSE_MOVAPS_XMM_to_XMM(t1, t2);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->clearNeeded(t2);
+	}
+	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
+}
 
 // Used by mVUsetupRange
 microVUt(void) mVUcheckIsSame(mV) {
@@ -169,14 +167,14 @@ microVUt(void) mVUoptimizePipeState(mV) {
 microVUt(void) mVUsetupBranch(mV, int* xStatus, int* xMac, int* xClip, int xCycles) {
 	mVUprint("mVUsetupBranch");
 
+	// Flush Allocated Regs
+	mVU->regAlloc->flushAll();
+
 	// Shuffle Flag Instances
 	mVUsetupFlags(mVU, xStatus, xMac, xClip, xCycles);
 
 	// Shuffle P/Q regs since every block starts at instance #0
 	if (mVU->p || mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, shufflePQ); }
-
-	// Flush Allocated Regs
-	mVU->regAlloc->flushAll();
 }
 
 microVUt(void) mVUincCycles(mV, int x) {
@@ -261,6 +259,7 @@ microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip
 	int fClip	= (isEbit) ? findFlagInst(xClip,   0x7fffffff) : cI;
 	int qInst	= 0;
 	int pInst	= 0;
+	mVU->regAlloc->flushAll();
 
 	if (isEbit) {
 		mVUprint("mVUcompile ebit");
@@ -372,6 +371,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	mVUsetupRange(mVU, startPC, 1);
 	
 	// Reset regAlloc
+	mVU->regAlloc->flushAll();
 	mVU->regAlloc->reset();
 
 	// First Pass
@@ -435,9 +435,10 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		if (mVUup.mBit)				{ OR32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); }
 		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
 		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
-		else						{ doSwapOp(); }
+		else						{ doSwapOp(mVU); }
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
-		
+		if (!doRegAlloc)			{ mVU->regAlloc->flushAll(); }
+
 		if (!mVUinfo.isBdelay) { incPC(1); }
 		else {
 			microBlock* bBlock = NULL;

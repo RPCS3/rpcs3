@@ -19,16 +19,88 @@
 #include "PrecompiledHeader.h"
 #include "Utilities/RedtapeWindows.h"
 
+#include <wx/dynlib.h>
+#include <wx/dir.h>
+#include <wx/file.h>
+
 #include "IopCommon.h"
 #include "GS.h"
 #include "HostGui.h"
 #include "CDVD/CDVDisoReader.h"
 
-_GSinit            GSinit;
-_GSopen            GSopen;
-_GSclose           GSclose;
-_GSshutdown        GSshutdown;
+// ----------------------------------------------------------------------------
+// Yay, order of this array shouldn't be important. :)
+//
+const PluginInfo tbl_PluginInfo[] =
+{
+	{ "GS",		PluginId_GS,	PS2E_LT_GS,		PS2E_GS_VERSION },
+	{ "PAD",	PluginId_PAD,	PS2E_LT_PAD,	PS2E_PAD_VERSION },
+	{ "SPU2",	PluginId_SPU2,	PS2E_LT_SPU2,	PS2E_SPU2_VERSION },
+	{ "CDVD",	PluginId_CDVD,	PS2E_LT_CDVD,	PS2E_CDVD_VERSION },
+	{ "DEV9",	PluginId_DEV9,	PS2E_LT_DEV9,	PS2E_DEV9_VERSION },
+	{ "USB",	PluginId_USB,	PS2E_LT_USB,	PS2E_USB_VERSION },
+	{ "FW",		PluginId_FW,	PS2E_LT_FW,		PS2E_FW_VERSION },
+
+	// SIO is currently unused (legacy?)
+	//{ "SIO",	PluginId_SIO,	PS2E_LT_SIO,	PS2E_SIO_VERSION }
+
+};
+
+typedef void CALLBACK VoidMethod();
+;		// extra semicolon fixes VA-X intellisense breakage caused by CALLBACK in the above typedef >_<
+
+// ----------------------------------------------------------------------------
+struct LegacyApi_CommonMethod
+{
+	const char*		MethodName;
+
+	// fallback is used if the method is null.  If the method is null and fallback is null
+	// also, the plugin is considered incomplete or invalid, and an error is generated.
+	VoidMethod*	Fallback;
+
+	// returns the method name as a wxString, converted from UTF8.
+	wxString& GetMethodName( PluginsEnum_t pid ) const
+	{
+		return wxString::FromUTF8( tbl_PluginInfo[pid].shortname) + wxString::FromUTF8( MethodName );
+	}
+};
+
+// ----------------------------------------------------------------------------
+struct LegacyApi_ReqMethod
+{
+	const char*		MethodName;
+	VoidMethod**	Dest;		// Target function where the binding is saved.
+
+	// fallback is used if the method is null.  If the method is null and fallback is null
+	// also, the plugin is considered incomplete or invalid, and an error is generated.
+	VoidMethod*	Fallback;
+	
+	// returns the method name as a wxString, converted from UTF8.
+	wxString& GetMethodName( ) const
+	{
+		return wxString::FromUTF8( MethodName );
+	}
+};
+
+// ----------------------------------------------------------------------------
+struct LegacyApi_OptMethod
+{
+	const char*		MethodName;
+	VoidMethod**	Dest;		// Target function where the binding is saved.
+	
+	// returns the method name as a wxString, converted from UTF8.
+	wxString& GetMethodName() const { return wxString::FromUTF8( MethodName ); }
+};
+
+
+static s32  CALLBACK fallback_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
+static void CALLBACK fallback_keyEvent(keyEvent *ev) {}
+static void CALLBACK fallback_configure() {}
+static void CALLBACK fallback_about() {}
+static s32  CALLBACK fallback_test() { return 0; }
+
 _GSvsync           GSvsync;
+_GSopen            GSopen;
 _GSgifTransfer1    GSgifTransfer1;
 _GSgifTransfer2    GSgifTransfer2;
 _GSgifTransfer3    GSgifTransfer3;
@@ -36,8 +108,6 @@ _GSgetLastTag      GSgetLastTag;
 _GSgifSoftReset    GSgifSoftReset;
 _GSreadFIFO        GSreadFIFO;
 _GSreadFIFO2       GSreadFIFO2;
-
-_GSkeyEvent        GSkeyEvent;
 _GSchangeSaveState GSchangeSaveState;
 _GSmakeSnapshot	   GSmakeSnapshot;
 _GSmakeSnapshot2   GSmakeSnapshot2;
@@ -47,57 +117,41 @@ _GSsetBaseMem 	   GSsetBaseMem;
 _GSsetGameCRC		GSsetGameCRC;
 _GSsetFrameSkip	   GSsetFrameSkip;
 _GSsetFrameLimit   GSsetFrameLimit;
-_GSsetupRecording GSsetupRecording;
+_GSsetupRecording	GSsetupRecording;
 _GSreset		   GSreset;
 _GSwriteCSR		   GSwriteCSR;
 _GSgetDriverInfo   GSgetDriverInfo;
 #ifdef _WINDOWS_
 _GSsetWindowInfo   GSsetWindowInfo;
 #endif
-_GSfreeze          GSfreeze;
-_GSconfigure       GSconfigure;
-_GStest            GStest;
-_GSabout           GSabout;
 
-// PAD1
-_PADinit           PAD1init;
-_PADopen           PAD1open;
-_PADclose          PAD1close;
-_PADshutdown       PAD1shutdown;
-_PADkeyEvent       PAD1keyEvent;
-_PADstartPoll      PAD1startPoll;
-_PADpoll           PAD1poll;
-_PADquery          PAD1query;
-_PADupdate         PAD1update;
+static void CALLBACK GS_makeSnapshot(const char *path) {}
+static void CALLBACK GS_irqCallback(void (*callback)()) {}
+static void CALLBACK GS_printf(int timeout, char *fmt, ...)
+{
+	va_list list;
+	char msg[512];
 
-_PADgsDriverInfo   PAD1gsDriverInfo;
-_PADconfigure      PAD1configure;
-_PADtest           PAD1test;
-_PADabout          PAD1about;
-_PADfreeze         PAD1freeze;
-_PADsetSlot        PAD1setSlot;
-_PADqueryMtap      PAD1queryMtap;
+	va_start(list, fmt);
+	vsprintf(msg, fmt, list);
+	va_end(list);
 
-// PAD2
-_PADinit           PAD2init;
-_PADopen           PAD2open;
-_PADclose          PAD2close;
-_PADshutdown       PAD2shutdown;
-_PADkeyEvent       PAD2keyEvent;
-_PADstartPoll      PAD2startPoll;
-_PADpoll           PAD2poll;
-_PADquery          PAD2query;
-_PADupdate         PAD2update;
+	Console::WriteLn(msg);
+}
 
-_PADgsDriverInfo   PAD2gsDriverInfo;
-_PADconfigure      PAD2configure;
-_PADtest           PAD2test;
-_PADabout          PAD2about;
-_PADfreeze         PAD2freeze;
-_PADsetSlot        PAD2setSlot;
-_PADqueryMtap      PAD2queryMtap;
+// PAD
+_PADopen           PADopen;
+_PADstartPoll      PADstartPoll;
+_PADpoll           PADpoll;
+_PADquery          PADquery;
+_PADupdate         PADupdate;
+_PADkeyEvent       PADkeyEvent;
+_PADgsDriverInfo   PADgsDriverInfo;
+_PADsetSlot        PADsetSlot;
+_PADqueryMtap      PADqueryMtap;
 
 // SIO[2]
+/*
 _SIOinit           SIOinit[2][9];
 _SIOopen           SIOopen[2][9];
 _SIOclose          SIOclose[2][9];
@@ -108,13 +162,10 @@ _SIOquery          SIOquery[2][9];
 
 _SIOconfigure      SIOconfigure[2][9];
 _SIOtest           SIOtest[2][9];
-_SIOabout          SIOabout[2][9];
+_SIOabout          SIOabout[2][9];*/
 
 // SPU2
-_SPU2init          SPU2init;
 _SPU2open          SPU2open;
-_SPU2close         SPU2close;
-_SPU2shutdown      SPU2shutdown;
 _SPU2write         SPU2write;
 _SPU2read          SPU2read;
 _SPU2readDMA4Mem   SPU2readDMA4Mem;
@@ -130,23 +181,14 @@ _SPU2WriteMemAddr   SPU2WriteMemAddr;
 _SPU2irqCallback   SPU2irqCallback;
 
 _SPU2setClockPtr   SPU2setClockPtr;
-_SPU2setTimeStretcher SPU2setTimeStretcher;
-
 _SPU2async         SPU2async;
-_SPU2freeze        SPU2freeze;
-_SPU2configure     SPU2configure;
-_SPU2test          SPU2test;
-_SPU2about         SPU2about;
 
 // CDVD
 CDVDplugin CDVD_plugin = {0};
 CDVDplugin CDVD = {0};
 
 // DEV9
-_DEV9init          DEV9init;
 _DEV9open          DEV9open;
-_DEV9close         DEV9close;
-_DEV9shutdown      DEV9shutdown;
 _DEV9read8         DEV9read8;
 _DEV9read16        DEV9read16;
 _DEV9read32        DEV9read32;
@@ -158,16 +200,8 @@ _DEV9writeDMA8Mem  DEV9writeDMA8Mem;
 _DEV9irqCallback   DEV9irqCallback;
 _DEV9irqHandler    DEV9irqHandler;
 
-_DEV9configure     DEV9configure;
-_DEV9freeze        DEV9freeze;
-_DEV9test          DEV9test;
-_DEV9about         DEV9about;
-
 // USB
-_USBinit           USBinit;
-_USBopen           USBopen;
-_USBclose          USBclose;
-_USBshutdown       USBshutdown;
+_USBopen           USB9open;
 _USBread8          USBread8;
 _USBread16         USBread16;
 _USBread32         USBread32;
@@ -180,33 +214,241 @@ _USBirqCallback    USBirqCallback;
 _USBirqHandler     USBirqHandler;
 _USBsetRAM         USBsetRAM;
 
-_USBconfigure      USBconfigure;
-_USBfreeze         USBfreeze;
-_USBtest           USBtest;
-_USBabout          USBabout;
-
 // FW
-_FWinit            FWinit;
-_FWopen            FWopen;
-_FWclose           FWclose;
-_FWshutdown        FWshutdown;
+_FW9open           FW9open;
 _FWread32          FWread32;
 _FWwrite32         FWwrite32;
 _FWirqCallback     FWirqCallback;
-
-_FWconfigure       FWconfigure;
-_FWfreeze          FWfreeze;
-_FWtest            FWtest;
-_FWabout           FWabout;
 
 DEV9handler dev9Handler;
 USBhandler usbHandler;
 uptr pDsp;
 
-// ------------------------------------------------------------------------
-int OpenPlugins(const char* pTitleFilename)
+// ----------------------------------------------------------------------------
+// Important: Contents of this array must match the order of the contents of the
+// LegacyPluginAPI_Common structure defined in Plugins.h.
+//
+static const LegacyApi_CommonMethod s_MethMessCommon[] =
 {
-	return 0;
+	{	"init",			NULL	},
+	{	"close",		NULL	},
+	{	"shutdown",		NULL	},
+
+	{	"freeze",		(VoidMethod*)fallback_freeze	},
+	{	"test",			(VoidMethod*)fallback_test	},
+	{	"configure",	fallback_configure	},
+	{	"about",		fallback_about	},
+
+	{ NULL }
+
+};
+
+// ----------------------------------------------------------------------------
+//  GS Mess!
+// ----------------------------------------------------------------------------
+static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
+{
+	{	"GSvsync",			(VoidMethod**)&GSinit,			NULL	},
+	{	"GSvsync",			(VoidMethod**)&GSvsync,			NULL	},
+	{	"GSgifTransfer1",	(VoidMethod**)&GSgifTransfer1,	NULL	},
+	{	"GSgifTransfer2",	(VoidMethod**)&GSgifTransfer2,	NULL	},
+	{	"GSgifTransfer3",	(VoidMethod**)&GSgifTransfer3,	NULL	},
+	{	"GSreadFIFO2",		(VoidMethod**)&GSreadFIFO2,		NULL	},
+
+	{	"GSmakeSnapshot",	(VoidMethod**)&GSmakeSnapshot,	(VoidMethod*)GS_makeSnapshot },
+	{	"GSirqCallback",	(VoidMethod**)&GSirqCallback,	(VoidMethod*)GS_irqCallback },
+	{	"GSprintf",			(VoidMethod**)&GSprintf,		(VoidMethod*)GS_printf },
+	{	"GSsetBaseMem",		(VoidMethod**)&GSsetBaseMem,	NULL	},
+	{	"GSwriteCSR",		(VoidMethod**)&GSwriteCSR,		NULL	},
+	{ NULL }
+};
+
+static const LegacyApi_OptMethod s_MethMessOpt_GS[] =
+{
+	{	"GSgetDriverInfo"	},
+	{	"GSreset"			},
+	{	"GSsetupRecording"	},
+	{	"GSsetGameCRC"		},
+	{	"GSsetFrameSkip"	},
+	{	"GSsetFrameLimit"	},
+	{	"GSchangeSaveState"	},
+	{	"GSmakeSnapshot2"	},
+	#ifdef _WINDOWS_
+	{	"GSsetWindowInfo"	},
+	#endif
+	{	"GSgetLastTag"		},
+	{	"GSgifSoftReset"	},
+	{	"GSreadFIFO"		},
+	{ NULL }
+};
+
+static const LegacyApi_ReqMethod* const s_MethMessReq[] = 
+{
+	s_MethMessReq_GS,
+};
+
+static const LegacyApi_OptMethod* const s_MethMessOpt[] =
+{
+	s_MethMessOpt_GS
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+class PluginManager
+{
+protected:
+	bool m_initialized;
+	bool m_loaded;
+
+	LegacyPluginAPI_Common m_CommonBindings[PluginId_Count];
+	wxDynamicLibrary m_libs[PluginId_Count];
+
+public:
+	~PluginManager();
+	PluginManager() :
+		m_initialized( false )
+	,	m_loaded( false )
+	{
+	}
+
+	void LoadPlugins();
+	void UnloadPlugins();
+	
+protected:
+	void BindCommon( PluginsEnum_t pid );
+	void BindRequired( PluginsEnum_t pid );
+	void BindOptional( PluginsEnum_t pid );
+};
+
+void PluginManager::BindCommon( PluginsEnum_t pid )
+{
+	const LegacyApi_CommonMethod* current = s_MethMessCommon;
+	int fid = 0;		// function id
+	VoidMethod** target = (VoidMethod**)&m_CommonBindings[pid];
+
+	while( current->MethodName != NULL )
+	{
+		*target = (VoidMethod*)m_libs[pid].GetSymbol( current->GetMethodName( pid ) );
+		target++;
+		current++;
+	}
+}
+
+void PluginManager::BindRequired( PluginsEnum_t pid )
+{
+	const LegacyApi_ReqMethod* current = s_MethMessReq[pid];
+	const wxDynamicLibrary& lib = m_libs[pid];
+
+	while( current->MethodName != NULL )
+	{
+		*(current->Dest) = (VoidMethod*)lib.GetSymbol( current->GetMethodName() );
+		
+		if( *(current->Dest) == NULL )
+			*(current->Dest) = current->Fallback;
+			
+		if( *(current->Dest) == NULL )
+		{
+			throw Exception::NotPcsxPlugin( pid );
+		}
+		current++;
+	}
+}
+
+void PluginManager::BindOptional( PluginsEnum_t pid )
+{
+	const LegacyApi_OptMethod* current = s_MethMessOpt[pid];
+	const wxDynamicLibrary& lib = m_libs[pid];
+
+	while( current->MethodName != NULL )
+	{
+		*(current->Dest) = (VoidMethod*)lib.GetSymbol( current->GetMethodName() );
+		current++;
+	}
+}
+
+// Exceptions:
+//   FileNotFound - Thrown if one of th configured plugins doesn't exist.
+//   NotPcsxPlugin - Thrown if one of the configured plugins is an invalid or unsupported DLL
+void PluginManager::LoadPlugins()
+{
+	if( m_loaded ) return;
+	m_loaded = true;
+
+	for( int i=0; i<PluginId_Count; ++i )
+	{
+		PluginsEnum_t pid = (PluginsEnum_t)i;
+		wxString plugpath( g_Conf->FullpathTo( pid ) );
+
+		if( !wxFile::Exists( plugpath ) )
+			throw Exception::FileNotFound( plugpath );
+
+		if( !m_libs[i].Load( plugpath ) )
+			throw Exception::NotPcsxPlugin( plugpath );
+			
+		// Try to enumerate the new v2.0 plugin interface first.
+		// If that fails, fall back on the old style interface.
+
+		//m_libs[i].GetSymbol( L"PS2E_InitAPI" );
+		
+		// Bind Required Functions
+		// (generate critical error if binding fails)
+		
+		BindCommon( pid );
+		BindRequired( pid );
+		BindOptional( pid );
+		
+		// Bind Optional Functions
+		// (leave pointer null and do not generate error)
+		
+	}
+}
+
+void InitPlugins()
+{
+	/*if (plugins_initialized) return;
+
+	// Ensure plugins have been loaded....
+	LoadPlugins();*/
+
+	//if( !plugins_loaded ) throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
+
+	/*if (ReportError(GSinit(), "GSinit")) return -1;
+	if (ReportError(PAD1init(1), "PAD1init")) return -1;
+	if (ReportError(PAD2init(2), "PAD2init")) return -1;
+	if (ReportError(SPU2init(), "SPU2init")) return -1;
+
+	if (ReportError(DoCDVDinit(), "CDVDinit")) return -1;
+
+	if (ReportError(DEV9init(), "DEV9init")) return -1;
+	if (ReportError(USBinit(), "USBinit")) return -1;
+	if (ReportError(FWinit(), "FWinit")) return -1;
+
+	only_loading_elf = false;
+	plugins_initialized = true;
+	return 0;*/
+}
+
+// ----------------------------------------------------------------------------
+// Opens all plugins and initializes the CDVD plugin to use the given filename.  If the filename is null
+// then the cdvd plugin uses whatever file it has been configured to use.  If plugin have not been
+// initialized by an explicit call to InitializePlugins, this method will do so for you.
+//
+// fixme: the cdvd filename really should be passed to the cdvd plugin as a separate API call. >_<
+//
+void OpenPlugins(const char* cdvdFilename)
+{
+	/*if (!plugins_initialized)
+	{
+		if( InitPlugins() == -1 ) return -1;
+	}*/
+
+	/*if ((!OpenCDVD(pTitleFilename)) || (!OpenGS()) || (!OpenPAD1()) || (!OpenPAD2()) ||
+		(!OpenSPU2()) || (!OpenDEV9()) || (!OpenUSB()) || (!OpenFW()))
+		return -1;
+
+	if (!only_loading_elf) cdvdDetectDisk();
+
+	return 0;*/
 }
 
 
@@ -310,17 +552,6 @@ static __forceinline bool TestPS2Esyms(void* &drv, PluginTypes::PluginTypes type
 {
 	if (_TestPS2Esyms(drv, PS2E_LT[type],PS2E_VERSION[type],filename) < 0) return false;
 	return true;
-}
-
-void CALLBACK GS_printf(int timeout, char *fmt, ...) {
-	va_list list;
-	char msg[512];
-
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
-
-	Console::WriteLn(msg);
 }
 
 s32  CALLBACK GS_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
@@ -744,14 +975,14 @@ int LoadPlugins()
 {
 	if (plugins_loaded) return 0;
 
-	if (LoadGSplugin(	Path::Combine( Config.PluginsDir, Config.GS )) == -1) return -1;
-	if (LoadPAD1plugin(	Path::Combine( Config.PluginsDir, Config.PAD1 )) == -1) return -1;
-	if (LoadPAD2plugin(	Path::Combine( Config.PluginsDir, Config.PAD2 )) == -1) return -1;
-	if (LoadSPU2plugin(	Path::Combine( Config.PluginsDir, Config.SPU2 )) == -1) return -1;
-	if (LoadCDVDplugin(	Path::Combine( Config.PluginsDir, Config.CDVD )) == -1) return -1;
-	if (LoadDEV9plugin(	Path::Combine( Config.PluginsDir, Config.DEV9 )) == -1) return -1;
-	if (LoadUSBplugin(	Path::Combine( Config.PluginsDir, Config.USB )) == -1) return -1;
-	if (LoadFWplugin(	Path::Combine( Config.PluginsDir, Config.FW )) == -1) return -1;
+	if (LoadGSplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.GS )) == -1) return -1;
+	if (LoadPAD1plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD1 )) == -1) return -1;
+	if (LoadPAD2plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD2 )) == -1) return -1;
+	if (LoadSPU2plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.SPU2 )) == -1) return -1;
+	if (LoadCDVDplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.CDVD )) == -1) return -1;
+	if (LoadDEV9plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.DEV9 )) == -1) return -1;
+	if (LoadUSBplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.USB )) == -1) return -1;
+	if (LoadFWplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.FW )) == -1) return -1;
 
 	plugins_loaded = true;
 

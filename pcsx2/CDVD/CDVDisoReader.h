@@ -29,19 +29,6 @@
 #include "IsoFStools.h"
 #include "IsoFileFormats.h"
 
-//#define CDVD_LOG __Log
-
-//#ifndef MAX_PATH
-//#define MAX_PATH 255
-//#endif
-
-//extern FILE *cdvdLog;
-
-//void __Log(char *fmt, ...);
-
-//#define itob(i)		((i)/10*16 + (i)%10)	/* u_char to BCD */
-//#define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */
-
 extern char isoFileName[g_MaxPath];
 extern isoFile *iso;
 

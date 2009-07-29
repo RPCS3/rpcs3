@@ -748,11 +748,11 @@ void _unpackVFSS_xyzw(int dstreg, int srcreg, int xyzw)
 {
 	switch (xyzw) {
 		case 0: SSE_MOVSS_XMM_to_XMM(dstreg, srcreg); break;
-		case 1: if ( cpucaps.hasStreamingSIMD4Extensions ) SSE4_INSERTPS_XMM_to_XMM(dstreg, srcreg, _MM_MK_INSERTPS_NDX(1, 0, 0));	
+		case 1: if ( x86caps.hasStreamingSIMD4Extensions ) SSE4_INSERTPS_XMM_to_XMM(dstreg, srcreg, _MM_MK_INSERTPS_NDX(1, 0, 0));	
 				else SSE2_PSHUFLW_XMM_to_XMM(dstreg, srcreg, 0xee);
 				break;
 		case 2: SSE_MOVHLPS_XMM_to_XMM(dstreg, srcreg); break;
-		case 3: if ( cpucaps.hasStreamingSIMD4Extensions ) SSE4_INSERTPS_XMM_to_XMM(dstreg, srcreg, _MM_MK_INSERTPS_NDX(3, 0, 0));
+		case 3: if ( x86caps.hasStreamingSIMD4Extensions ) SSE4_INSERTPS_XMM_to_XMM(dstreg, srcreg, _MM_MK_INSERTPS_NDX(3, 0, 0));
 				else { SSE_MOVHLPS_XMM_to_XMM(dstreg, srcreg); SSE2_PSHUFLW_XMM_to_XMM(dstreg, dstreg, 0xee); }
 				break;
 	}
@@ -959,7 +959,7 @@ static VUMERGEFN s_VuMerge2[16] = {
 void VU_MERGE_REGS_CUSTOM(int dest, int src, int xyzw) {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
-		if ( cpucaps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
+		if ( x86caps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
 			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3); 
 			SSE4_BLENDPS_XMM_to_XMM(dest, src, xyzw);
 		}
@@ -970,7 +970,7 @@ void VU_MERGE_REGS_CUSTOM(int dest, int src, int xyzw) {
 void VU_MERGE_REGS_SAFE(int dest, int src, int xyzw) {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
-		if ( cpucaps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
+		if ( x86caps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf) ) {
 			xyzw = ((xyzw & 1) << 3) | ((xyzw & 2) << 1) | ((xyzw & 4) >> 1) | ((xyzw & 8) >> 3); 
 			SSE4_BLENDPS_XMM_to_XMM(dest, src, xyzw);
 		}
@@ -1004,7 +1004,7 @@ void vFloat1(int regd, int regTemp) { //1000
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
 }
 void vFloat1c(int regd, int regTemp) { //1000
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(1);
 	}
 	else {
@@ -1024,7 +1024,7 @@ void vFloat2(int regd, int regTemp) { //0100
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0xc6);
 }
 void vFloat2c(int regd, int regTemp) { //0100
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(2);
 	}
 	else {
@@ -1053,7 +1053,7 @@ void vFloat3b(int regd, int regTemp) { //1100 //regTemp is Modified
 	SSE2_MOVSD_XMM_to_XMM(regd, regTemp);
 }
 void vFloat3c(int regd, int regTemp) { //1100
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(3);
 	}
 	else {
@@ -1076,7 +1076,7 @@ void vFloat4(int regd, int regTemp) { //0010
 	SSE2_PSHUFLW_XMM_to_XMM(regd, regd, 0x4e);
 }
 void vFloat4c(int regd, int regTemp) { //0010
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(4);
 	}
 	else {
@@ -1099,7 +1099,7 @@ void vFloat5(int regd, int regTemp) { //1010
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x2d);
 }
 void vFloat5b(int regd, int regTemp) { //1010 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_NORMAL_SSE4(5);
 	}
 	else {
@@ -1113,7 +1113,7 @@ void vFloat5b(int regd, int regTemp) { //1010 //regTemp is Modified
 	}
 }
 void vFloat5c(int regd, int regTemp) { //1010
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(5);
 	}
 	else {
@@ -1139,7 +1139,7 @@ void vFloat6(int regd, int regTemp) { //0110
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0xc9);
 }
 void vFloat6b(int regd, int regTemp) { //0110 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_NORMAL_SSE4(6);
 	}
 	else {
@@ -1153,7 +1153,7 @@ void vFloat6b(int regd, int regTemp) { //0110 //regTemp is Modified
 	}
 }
 void vFloat6c(int regd, int regTemp) { //0110
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(6);
 	}
 	else {
@@ -1185,7 +1185,7 @@ void vFloat7_useEAX(int regd, int regTemp) { //1110 //EAX is Modified
 	SSE2_MOVD_XMM_to_R(EAX, regd);
 	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-	if ( cpucaps.hasStreamingSIMD4Extensions )
+	if ( x86caps.hasStreamingSIMD4Extensions )
 		SSE4_PINSRD_R32_to_XMM(regd, EAX, 0x00);
 	else {
 		SSE_PINSRW_R32_to_XMM(regd, EAX, 0);
@@ -1200,7 +1200,7 @@ void vFloat7b(int regd, int regTemp) { //1110 //regTemp is Modified
 	SSE_MOVSS_XMM_to_XMM(regd, regTemp);
 }
 void vFloat7c(int regd, int regTemp) { //1110
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(7);
 	}
 	else {
@@ -1220,7 +1220,7 @@ void vFloat7c(int regd, int regTemp) { //1110
 	}
 }
 void vFloat7c_useEAX(int regd, int regTemp) { //1110 //EAX is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(7);
 	}
 	else {
@@ -1239,7 +1239,7 @@ void vFloat8(int regd, int regTemp) { //0001
 	SSE_MAXSS_M32_to_XMM(regd, (uptr)g_minvals);
 }
 void vFloat8c(int regd, int regTemp) { //0001
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(8);
 	}
 	else {
@@ -1259,7 +1259,7 @@ void vFloat9(int regd, int regTemp) { //1001
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0x27);
 }
 void vFloat9b(int regd, int regTemp) { //1001 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_NORMAL_SSE4(9);
 	}
 	else {
@@ -1272,7 +1272,7 @@ void vFloat9b(int regd, int regTemp) { //1001 //regTemp is Modified
 	}
 }
 void vFloat9c(int regd, int regTemp) { //1001
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(9);
 	}
 	else {
@@ -1296,7 +1296,7 @@ void vFloat10(int regd, int regTemp) { //0101
 	SSE_SHUFPS_XMM_to_XMM(regd, regd, 0xc6);
 }
 void vFloat10b(int regd, int regTemp) { //0101 //regTemp is Modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_NORMAL_SSE4(10);
 	}
 	else {
@@ -1309,7 +1309,7 @@ void vFloat10b(int regd, int regTemp) { //0101 //regTemp is Modified
 	}
 }
 void vFloat10c(int regd, int regTemp) { //0101
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(10);
 	}
 	else {
@@ -1340,7 +1340,7 @@ void vFloat11_useEAX(int regd, int regTemp) { //1101 //EAX is Modified
 	SSE2_MOVD_XMM_to_R(EAX, regd);
 	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-	if ( cpucaps.hasStreamingSIMD4Extensions )
+	if ( x86caps.hasStreamingSIMD4Extensions )
 		SSE4_PINSRD_R32_to_XMM(regd, EAX, 0x00);
 	else {
 		SSE_PINSRW_R32_to_XMM(regd, EAX, 0);
@@ -1357,7 +1357,7 @@ void vFloat11b(int regd, int regTemp) { //1101 //regTemp is Modified
 	SSE2_MOVSD_XMM_to_XMM(regd, regTemp);
 }
 void vFloat11c(int regd, int regTemp) { //1101
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(11);
 	}
 	else {
@@ -1376,7 +1376,7 @@ void vFloat11c(int regd, int regTemp) { //1101
 	}
 }
 void vFloat11c_useEAX(int regd, int regTemp) { //1101 // EAX is modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(11);
 	}
 	else {
@@ -1407,7 +1407,7 @@ void vFloat12b(int regd, int regTemp) { //0011 //regTemp is Modified
 	SSE2_PUNPCKLQDQ_XMM_to_XMM(regd, regTemp);
 }
 void vFloat12c(int regd, int regTemp) { //0011
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(12);
 	}
 	else {
@@ -1438,7 +1438,7 @@ void vFloat13_useEAX(int regd, int regTemp) { //1011 // EAX is modified
 	SSE2_MOVD_XMM_to_R(EAX, regd);
 	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-	if ( cpucaps.hasStreamingSIMD4Extensions )
+	if ( x86caps.hasStreamingSIMD4Extensions )
 		SSE4_PINSRD_R32_to_XMM(regd, EAX, 0x00);
 	else {
 		SSE_PINSRW_R32_to_XMM(regd, EAX, 0);
@@ -1455,7 +1455,7 @@ void vFloat13b(int regd, int regTemp) { //1011 //regTemp is Modified
 	SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0x64);
 }
 void vFloat13c(int regd, int regTemp) { //1011
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(13);
 	}
 	else {
@@ -1474,7 +1474,7 @@ void vFloat13c(int regd, int regTemp) { //1011
 	}
 }
 void vFloat13c_useEAX(int regd, int regTemp) { //1011 // EAX is modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(13);
 	}
 	else {
@@ -1506,7 +1506,7 @@ void vFloat14_useEAX(int regd, int regTemp) { //0111 // EAX is modified
 	SSE2_MOVD_XMM_to_R(EAX, regd);
 	SSE_MINPS_M128_to_XMM(regd, (uptr)g_maxvals);
 	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
-	if ( cpucaps.hasStreamingSIMD4Extensions )
+	if ( x86caps.hasStreamingSIMD4Extensions )
 		SSE4_PINSRD_R32_to_XMM(regd, EAX, 0x00);
 	else {
 		SSE_PINSRW_R32_to_XMM(regd, EAX, 0);
@@ -1523,7 +1523,7 @@ void vFloat14b(int regd, int regTemp) { //0111 //regTemp is Modified
 	SSE_SHUFPS_XMM_to_XMM(regd, regTemp, 0xc4);
 }
 void vFloat14c(int regd, int regTemp) { //0111
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(14);
 	}
 	else {
@@ -1542,7 +1542,7 @@ void vFloat14c(int regd, int regTemp) { //0111
 	}
 }
 void vFloat14c_useEAX(int regd, int regTemp) { //0111 // EAX is modified
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(14);
 	}
 	else {
@@ -1563,7 +1563,7 @@ void vFloat15(int regd, int regTemp) { //1111
 	SSE_MAXPS_M128_to_XMM(regd, (uptr)g_minvals);
 }
 void vFloat15c(int regd, int regTemp) { //1111
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		CLAMP_SIGN_SSE4(15);
 	}
 	else {

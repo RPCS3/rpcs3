@@ -198,6 +198,9 @@
     <ClCompile Include="GSRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSRendererDX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSRendererHW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -516,6 +519,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSRendererDX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSRendererHW.h">

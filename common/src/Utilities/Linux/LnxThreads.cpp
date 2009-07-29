@@ -36,14 +36,14 @@ namespace Threading
 		if( numCPU > 0 )
 		{
 			isMultiCore = numCPU > 1;
-			cpuinfo.LogicalCores = numCPU;
-			cpuinfo.PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
+			x86caps.LogicalCores = numCPU;
+			x86caps.PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
 		}
 		else
 		{
 			// Indeterminate?
-			cpuinfo.LogicalCores = 1;
-			cpuinfo.PhysicalCores = 1;
+			x86caps.LogicalCores = 1;
+			x86caps.PhysicalCores = 1;
 		}
 	}
 

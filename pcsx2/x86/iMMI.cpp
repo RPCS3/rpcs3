@@ -257,7 +257,7 @@ void recPMTHL()
 
 	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READLO|XMMINFO_READHI|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		SSE4_BLENDPS_XMM_to_XMM(EEREC_LO, EEREC_S, 0x5);
 		SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_S, 0xdd);
 		SSE_SHUFPS_XMM_to_XMM(EEREC_HI, EEREC_HI, 0x72);
@@ -469,7 +469,7 @@ void recPMAXW()
 	if ( ! _Rd_ ) return;
 
 	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		if( EEREC_S == EEREC_T ) SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		else if( EEREC_D == EEREC_S ) SSE4_PMAXSD_XMM_to_XMM(EEREC_D, EEREC_T);
 		else if ( EEREC_D == EEREC_T ) SSE4_PMAXSD_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1196,7 +1196,7 @@ void recPABSW() //needs clamping
 	SSE2_PCMPEQD_XMM_to_XMM(t0reg, t0reg);
 	SSE2_PSLLD_I8_to_XMM(t0reg, 31);
 	SSE2_PCMPEQD_XMM_to_XMM(t0reg, EEREC_T); //0xffffffff if equal to 0x80000000
-	if( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+	if( x86caps.hasSupplementalStreamingSIMD3Extensions ) {
 		SSSE3_PABSD_XMM_to_XMM(EEREC_D, EEREC_T); //0x80000000 -> 0x80000000
 	}
 	else {
@@ -1224,7 +1224,7 @@ void recPABSH()
 	SSE2_PCMPEQW_XMM_to_XMM(t0reg, t0reg);
 	SSE2_PSLLW_I8_to_XMM(t0reg, 15);
 	SSE2_PCMPEQW_XMM_to_XMM(t0reg, EEREC_T); //0xffff if equal to 0x8000
-	if( cpucaps.hasSupplementalStreamingSIMD3Extensions ) {
+	if( x86caps.hasSupplementalStreamingSIMD3Extensions ) {
 		SSSE3_PABSW_XMM_to_XMM(EEREC_D, EEREC_T); //0x8000 -> 0x8000
 	}
 	else {
@@ -1247,7 +1247,7 @@ void recPMINW()
 	if ( ! _Rd_ ) return;
 
 	int info = eeRecompileCodeXMM( XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED );
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		if( EEREC_S == EEREC_T ) SSEX_MOVDQA_XMM_to_XMM(EEREC_D, EEREC_S);
 		else if( EEREC_D == EEREC_S ) SSE4_PMINSD_XMM_to_XMM(EEREC_D, EEREC_T);
 		else if ( EEREC_D == EEREC_T ) SSE4_PMINSD_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1735,7 +1735,7 @@ void recPMADDW()
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
 	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
-	if( !cpucaps.hasStreamingSIMD4Extensions ) {
+	if( !x86caps.hasStreamingSIMD4Extensions ) {
 		recCall( Interp::PMADDW, _Rd_ );
 		return;
 	}
@@ -1790,7 +1790,7 @@ void recPSLLVW()
 			SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
 		}
 		else {
-			if ( cpucaps.hasStreamingSIMD4Extensions ) {
+			if ( x86caps.hasStreamingSIMD4Extensions ) {
 				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0x88);
 				SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_D, EEREC_D);
 			}
@@ -1828,7 +1828,7 @@ void recPSLLVW()
 		SSE2_PSLLD_XMM_to_XMM(t1reg, t0reg);
 
 		// merge & sign extend
-		if ( cpucaps.hasStreamingSIMD4Extensions ) {
+		if ( x86caps.hasStreamingSIMD4Extensions ) {
 			SSE2_PUNPCKLDQ_XMM_to_XMM(EEREC_D, t1reg);
 			SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_D, EEREC_D);
 		}
@@ -1857,7 +1857,7 @@ void recPSRLVW()
 			SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
 		}
 		else {
-			if ( cpucaps.hasStreamingSIMD4Extensions ) {
+			if ( x86caps.hasStreamingSIMD4Extensions ) {
 				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0x88);
 				SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_D, EEREC_D);
 			}
@@ -1895,7 +1895,7 @@ void recPSRLVW()
 		SSE2_PSRLD_XMM_to_XMM(t1reg, t0reg);
 
 		// merge & sign extend
-		if ( cpucaps.hasStreamingSIMD4Extensions ) {
+		if ( x86caps.hasStreamingSIMD4Extensions ) {
 			SSE2_PUNPCKLDQ_XMM_to_XMM(EEREC_D, t1reg);
 			SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_D, EEREC_D);
 		}
@@ -1918,7 +1918,7 @@ void recPMSUBW()
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
 	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
-	if( !cpucaps.hasStreamingSIMD4Extensions ) {
+	if( !x86caps.hasStreamingSIMD4Extensions ) {
 		recCall( Interp::PMSUBW, _Rd_ );
 		return;
 	}
@@ -1972,7 +1972,7 @@ void recPMULTW()
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
 	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
-	if( !cpucaps.hasStreamingSIMD4Extensions ) {
+	if( !x86caps.hasStreamingSIMD4Extensions ) {
 		recCall( Interp::PMULTW, _Rd_ );
 		return;
 	}
@@ -2436,7 +2436,7 @@ void recPSRAVW()
 			SSEX_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
 		}
 		else {
-			if ( cpucaps.hasStreamingSIMD4Extensions ) {
+			if ( x86caps.hasStreamingSIMD4Extensions ) {
 				SSE2_PSHUFD_XMM_to_XMM(EEREC_D, EEREC_T, 0x88);
 				SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_D, EEREC_D);
 			}
@@ -2474,7 +2474,7 @@ void recPSRAVW()
 		SSE2_PSRAD_XMM_to_XMM(t1reg, t0reg);
 
 		// merge & sign extend
-		if ( cpucaps.hasStreamingSIMD4Extensions ) {
+		if ( x86caps.hasStreamingSIMD4Extensions ) {
 			SSE2_PUNPCKLDQ_XMM_to_XMM(EEREC_D, t1reg);
 			SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_D, EEREC_D);
 		}
@@ -2574,7 +2574,7 @@ void recPMULTUW()
 		}
 
 		// interleave & sign extend
-		if ( cpucaps.hasStreamingSIMD4Extensions ) {
+		if ( x86caps.hasStreamingSIMD4Extensions ) {
 			SSE2_PSHUFD_XMM_to_XMM(EEREC_LO, EEREC_HI, 0x88);
 			SSE2_PSHUFD_XMM_to_XMM(EEREC_HI, EEREC_HI, 0xdd);
 			SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_LO, EEREC_LO);
@@ -2629,7 +2629,7 @@ void recPMADDUW()
 	else SSE2_PADDQ_XMM_to_XMM(EEREC_HI, EEREC_LO);
 
 	// interleave & sign extend
-	if ( cpucaps.hasStreamingSIMD4Extensions ) {
+	if ( x86caps.hasStreamingSIMD4Extensions ) {
 		SSE2_PSHUFD_XMM_to_XMM(EEREC_LO, EEREC_HI, 0x88);
 		SSE2_PSHUFD_XMM_to_XMM(EEREC_HI, EEREC_HI, 0xdd);
 		SSE4_PMOVSXDQ_XMM_to_XMM(EEREC_LO, EEREC_LO);

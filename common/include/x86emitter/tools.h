@@ -22,79 +22,81 @@
 extern void cpudetectInit();
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// cpu capabilities structure
 //
-struct CAPABILITIES
+struct x86CPU_INFO
 {
-   u32 hasFloatingPointUnit;
-   u32 hasVirtual8086ModeEnhancements;
-   u32 hasDebuggingExtensions;
-   u32 hasPageSizeExtensions;
-   u32 hasTimeStampCounter;
-   u32 hasModelSpecificRegisters;
-   u32 hasPhysicalAddressExtension;
-   u32 hasCOMPXCHG8BInstruction;
-   u32 hasAdvancedProgrammableInterruptController;
-   u32 hasSEPFastSystemCall;
-   u32 hasMemoryTypeRangeRegisters;
-   u32 hasPTEGlobalFlag;
-   u32 hasMachineCheckArchitecture;
-   u32 hasConditionalMoveAndCompareInstructions;
-   u32 hasFGPageAttributeTable;
-   u32 has36bitPageSizeExtension;
-   u32 hasProcessorSerialNumber;
-   u32 hasCFLUSHInstruction;
-   u32 hasDebugStore;
-   u32 hasACPIThermalMonitorAndClockControl;
-   u32 hasMultimediaExtensions;
-   u32 hasFastStreamingSIMDExtensionsSaveRestore;
-   u32 hasStreamingSIMDExtensions;
-   u32 hasStreamingSIMD2Extensions;
-   u32 hasSelfSnoop;
-   u32 hasMultiThreading;			// is TRUE for both mutli-core and Hyperthreaded CPUs.
-   u32 hasThermalMonitor;
-   u32 hasIntel64BitArchitecture;
-   u32 hasStreamingSIMD3Extensions;
-   u32 hasSupplementalStreamingSIMD3Extensions;
-   u32 hasStreamingSIMD4Extensions;
-   u32 hasStreamingSIMD4Extensions2;
+	u32 FamilyID;		// Processor Family
+	u32 Model;			// Processor Model
+	u32 TypeID;			// Processor Type
+	u32 StepID;			// Stepping ID
+	u32 Flags;			// Feature Flags
+	u32 Flags2;			// More Feature Flags
+	u32 EFlags;			// Extended Feature Flags
+	u32 EFlags2;		// Extended Feature Flags pg2
+
+	u32 PhysicalCores;
+	u32 LogicalCores;
+
+	char VendorName[16];	   // Vendor/Creator ID
+	char TypeName[20];      // cpu type
+	char FamilyName[50];    // the original cpu name
+
+	// Speed - speed of cpu in mhz
+	// This is a rough "real" measure of the cpu speed, taken at application startup.
+	// Not to be considered totally accurate: Power saving CPUs and SpeedStep can skew
+	// results considerably.
+	u32 Speed;
+
+	// ----------------------------------------------------------------------------
+	//   x86 CPU Capabilities Section (all boolean flags!)
+	// ----------------------------------------------------------------------------
+
+   u32 hasFloatingPointUnit:1;
+   u32 hasVirtual8086ModeEnhancements:1;
+   u32 hasDebuggingExtensions:1;
+   u32 hasPageSizeExtensions:1;
+   u32 hasTimeStampCounter:1;
+   u32 hasModelSpecificRegisters:1;
+   u32 hasPhysicalAddressExtension:1;
+   u32 hasCOMPXCHG8BInstruction:1;
+   u32 hasAdvancedProgrammableInterruptController:1;
+   u32 hasSEPFastSystemCall:1;
+   u32 hasMemoryTypeRangeRegisters:1;
+   u32 hasPTEGlobalFlag:1;
+   u32 hasMachineCheckArchitecture:1;
+   u32 hasConditionalMoveAndCompareInstructions:1;
+   u32 hasFGPageAttributeTable:1;
+   u32 has36bitPageSizeExtension:1;
+   u32 hasProcessorSerialNumber:1;
+   u32 hasCFLUSHInstruction:1;
+   u32 hasDebugStore:1;
+   u32 hasACPIThermalMonitorAndClockControl:1;
+   u32 hasMultimediaExtensions:1;
+   u32 hasFastStreamingSIMDExtensionsSaveRestore:1;
+   u32 hasStreamingSIMDExtensions:1;
+   u32 hasStreamingSIMD2Extensions:1;
+   u32 hasSelfSnoop:1;
+   u32 hasMultiThreading:1;			// is TRUE for both multi-core and Hyperthreaded CPUs.
+   u32 hasThermalMonitor:1;
+   u32 hasIntel64BitArchitecture:1;
+   u32 hasStreamingSIMD3Extensions:1;
+   u32 hasSupplementalStreamingSIMD3Extensions:1;
+   u32 hasStreamingSIMD4Extensions:1;
+   u32 hasStreamingSIMD4Extensions2:1;
 
    // AMD-specific CPU Features
-   u32 hasMultimediaExtensionsExt;
-   u32 hasAMD64BitArchitecture;
-   u32 has3DNOWInstructionExtensionsExt;
-   u32 has3DNOWInstructionExtensions;
-   u32 hasStreamingSIMD4ExtensionsA;
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-struct CPUINFO
-{
-   u32 x86Family;	   // Processor Family
-   u32 x86Model;	   // Processor Model
-   u32 x86PType;	   // Processor Type
-   u32 x86StepID;	   // Stepping ID
-   u32 x86Flags;	   // Feature Flags
-   u32 x86Flags2;	   // More Feature Flags
-   u32 x86EFlags;	   // Extended Feature Flags
-   u32 x86EFlags2;	   // Extended Feature Flags pg2
-
-   u32 PhysicalCores;
-   u32 LogicalCores;
-
-   char x86ID[16];	   // Vendor ID  //the vendor creator (in %s)
-   char x86Type[20];   //cpu type in char format //the cpu type (in %s)
-   char x86Fam[50];    // family in char format //the original cpu name string (in %s)
-   u32 cpuspeed;      // speed of cpu //this will give cpu speed (in %d)
+   u32 hasMultimediaExtensionsExt:1;
+   u32 hasAMD64BitArchitecture:1;
+   u32 has3DNOWInstructionExtensionsExt:1;
+   u32 has3DNOWInstructionExtensions:1;
+   u32 hasStreamingSIMD4ExtensionsA:1;
 };
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
 
-extern CAPABILITIES cpucaps;
-extern CPUINFO cpuinfo;
+PCSX2_ALIGNED16_EXTERN( x86CPU_INFO x86caps );
 
 extern u8 g_globalMMXSaved, g_globalXMMSaved;
 extern bool g_EEFreezeRegs;

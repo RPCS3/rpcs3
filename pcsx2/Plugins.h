@@ -23,18 +23,56 @@
 #define PLUGINfuncs
 #include "PS2Edefs.h"
 
-// Loads plugins as specified in the Config global.
-int  LoadPlugins();
+struct PluginInfo
+{
+	const char* shortname;
+	PluginsEnum_t id;
+	int typemask;
+	int version;			// minimum version required / supported
+};
 
-// Unloads all plugin DLLs.  To change plugins, call ReleasePlugins followed by
-// changes to Config.Plugins filenames, and then call LoadPlugins.
+extern const PluginInfo tbl_PluginInfo[];
+
+namespace Exception
+{
+	class NotPcsxPlugin : public Stream
+	{
+	public:
+		virtual ~NotPcsxPlugin() throw() {}
+		explicit NotPcsxPlugin( const wxString& objname ) :
+		Stream( objname, wxLt("File is not a PCSX2 plugin") ) {}
+
+		explicit NotPcsxPlugin( const PluginsEnum_t& pid ) :
+		Stream( wxString::FromUTF8( tbl_PluginInfo[pid].shortname ), wxLt("File is not a PCSX2 plugin") ) {}
+	};
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// Important: Contents of this structure must match the order of the contents of the
+// s_MethMessCommon[] array defined in Plugins.cpp.
+//
+// Note: Open is excluded from this list because the GS and CDVD have custom signatures >_<
+//
+struct LegacyPluginAPI_Common
+{
+	s32  (CALLBACK* Init)();
+	void (CALLBACK* Close)();
+	void (CALLBACK* Shutdown)();
+
+	s32  (CALLBACK* Freeze)(int mode, freezeData *data);
+	s32  (CALLBACK* Test)();
+	void (CALLBACK* Configure)();
+	void (CALLBACK* About)();
+};
+
+void LoadPlugins();
 void ReleasePlugins();
 
-int  OpenPlugins(const char* pTitleFilename);
+void OpenPlugins(const char* pTitleFilename);
 void ClosePlugins( bool closegs );
 void CloseGS();
 
-int InitPlugins();
+void InitPlugins();
 void ShutdownPlugins();
 
 void PluginsResetGS();

@@ -197,7 +197,7 @@ void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 	if(i == m_ps.end())
 	{
-		string str[14];
+		string str[13];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -206,13 +206,12 @@ void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 		str[4] = format("%d", sel.aem);
 		str[5] = format("%d", sel.tfx);
 		str[6] = format("%d", sel.tcc);
-		str[7] = format("%d", sel.ate);
-		str[8] = format("%d", sel.atst);
-		str[9] = format("%d", sel.fog);
-		str[10] = format("%d", sel.clr1);
-		str[11] = format("%d", sel.fba);
-		str[12] = format("%d", sel.aout);
-		str[13] = format("%d", sel.ltf);
+		str[7] = format("%d", sel.atst);
+		str[8] = format("%d", sel.fog);
+		str[9] = format("%d", sel.clr1);
+		str[10] = format("%d", sel.fba);
+		str[11] = format("%d", sel.aout);
+		str[12] = format("%d", sel.ltf);
 
 		D3D10_SHADER_MACRO macro[] =
 		{
@@ -223,13 +222,12 @@ void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			{"PS_AEM", str[4].c_str()},
 			{"PS_TFX", str[5].c_str()},
 			{"PS_TCC", str[6].c_str()},
-			{"PS_ATE", str[7].c_str()},
-			{"PS_ATST", str[8].c_str()},
-			{"PS_FOG", str[9].c_str()},
-			{"PS_CLR1", str[10].c_str()},
-			{"PS_FBA", str[11].c_str()},
-			{"PS_AOUT", str[12].c_str()},
-			{"PS_LTF", str[13].c_str()},
+			{"PS_ATST", str[7].c_str()},
+			{"PS_FOG", str[8].c_str()},
+			{"PS_CLR1", str[9].c_str()},
+			{"PS_FBA", str[10].c_str()},
+			{"PS_AOUT", str[11].c_str()},
+			{"PS_LTF", str[12].c_str()},
 			{NULL, NULL},
 		};
 

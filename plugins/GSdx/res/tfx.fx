@@ -27,8 +27,7 @@
 #define PS_AEM 0
 #define PS_TFX 0
 #define PS_TCC 1
-#define PS_ATE 0
-#define PS_ATST 4
+#define PS_ATST 1
 #define PS_FOG 0
 #define PS_CLR1 0
 #define PS_FBA 0
@@ -100,15 +99,6 @@ float4 sample_p(float u)
 	return Palette.Sample(PaletteSampler, u);
 }
 
-#if SHADER_MODEL >= 0x401
-
-float4 gather_c(float2 uv)
-{
-	return Texture.Gather(TextureSampler, uv, int2(0, 0));
-}
-
-#endif
-
 #elif SHADER_MODEL <= 0x300
 
 #ifndef VS_BPPZ
@@ -126,7 +116,6 @@ float4 gather_c(float2 uv)
 #define PS_AEM 0
 #define PS_TFX 0
 #define PS_TCC 0
-#define PS_ATE 0
 #define PS_ATST 4
 #define PS_FOG 0
 #define PS_CLR1 0
@@ -304,23 +293,15 @@ float4x4 sample_4c(float4 uv)
 	return c;
 }
 
-float4 sample_4a(float4 uv, float2 st)
+float4 sample_4a(float4 uv)
 {
 	float4 c;
-/*
-	#if SHADER_MODEL >= 0x401 && PS_FMT == FMT_8 && PS_LTF && PS_WMS < 2 && PS_WMT < 2
-	
-	c = gather_c(st); // the order of samples returned might not be the same as ours
-	
-	#else
-*/
+
 	c.x = sample_c(uv.xy).a;
 	c.y = sample_c(uv.zy).a;
 	c.z = sample_c(uv.xw).a;
 	c.w = sample_c(uv.zw).a;
-/*	
-	#endif
-*/
+	
 	#if SHADER_MODEL <= 0x300
 	if(PS_RT) c *= 128.0f / 255;
 	#endif
@@ -379,19 +360,19 @@ float4 sample(float2 st, float q)
 
 		if(PS_FMT == FMT_8H)
 		{
-			c = sample_4p(sample_4a(uv, st.xy));
+			c = sample_4p(sample_4a(uv));
 		}
 		else if(PS_FMT == FMT_4HL)
 		{
-			c = sample_4p(fmod(sample_4a(uv, st.xy), 1.0f / 16));
+			c = sample_4p(fmod(sample_4a(uv), 1.0f / 16));
 		}
 		else if(PS_FMT == FMT_4HH)
 		{
-			c = sample_4p(fmod(sample_4a(uv, st.xy) * 16, 1.0f / 16));
+			c = sample_4p(fmod(sample_4a(uv) * 16, 1.0f / 16));
 		}
 		else if(PS_FMT == FMT_8)
 		{
-			c = sample_4p(sample_4a(uv, st.xy));
+			c = sample_4p(sample_4a(uv));
 		}
 		else
 		{
@@ -476,30 +457,31 @@ float4 tfx(float4 t, float4 c)
 
 void atst(float4 c)
 {
-	if(PS_ATE)
+	float a = trunc(c.a * 255);
+	
+	if(PS_ATST == 0) // never
 	{
-		float a = trunc(c.a * 255);
-		
-		if(PS_ATST == 0)
-		{
-			discard;
-		}
-		else if(PS_ATST == 2 || PS_ATST == 3) // l, le
-		{
-			clip(AREF - a);
-		}
-		else if(PS_ATST == 4) // e
-		{
-			clip(0.5f - abs(a - AREF));
-		}
-		else if(PS_ATST == 5 || PS_ATST == 6) // ge, g
-		{
-			clip(a - AREF);
-		}
-		else if(PS_ATST == 7) // ne
-		{
-			clip(abs(a - AREF) - 0.5f);
-		}
+		discard;
+	}
+	else if(PS_ATST == 1) // always
+	{
+		// nothing to do
+	}
+	else if(PS_ATST == 2 || PS_ATST == 3) // l, le
+	{
+		clip(AREF - a);
+	}
+	else if(PS_ATST == 4) // e
+	{
+		clip(0.5f - abs(a - AREF));
+	}
+	else if(PS_ATST == 5 || PS_ATST == 6) // ge, g
+	{
+		clip(a - AREF);
+	}
+	else if(PS_ATST == 7) // ne
+	{
+		clip(abs(a - AREF) - 0.5f);
 	}
 }
 

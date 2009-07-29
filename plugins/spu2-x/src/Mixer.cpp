@@ -574,7 +574,7 @@ struct VoiceMixSet
 	}
 };
 
-const VoiceMixSet VoiceMixSet::Empty( StereoOut32(), StereoOut32() );	// Don't use SteroOut32::Empty because C++ doesn't make any dep/order checks on global initializers.
+const VoiceMixSet VoiceMixSet::Empty( (StereoOut32()), (StereoOut32()) );	// Don't use SteroOut32::Empty because C++ doesn't make any dep/order checks on global initializers.
 
 static __forceinline void MixCoreVoices( VoiceMixSet& dest, const uint coreidx )
 {

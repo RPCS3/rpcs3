@@ -86,8 +86,8 @@ bool GSDevice11::Create(GSWnd* wnd, bool vsync)
 	scd.SampleDesc.Quality = 0;
 	scd.Windowed = TRUE;
 
-	uint32 flags = 0;
-	flags = D3D11_CREATE_DEVICE_SINGLETHREADED;  //disables thread safety, should be fine (speedup)
+	uint32 flags = D3D11_CREATE_DEVICE_SINGLETHREADED;  //disables thread safety, should be fine (speedup)
+
 #ifdef DEBUG
 	flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
@@ -417,7 +417,7 @@ void GSDevice11::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 {
 	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
 
-	m_ctx->CopySubresourceRegion(*(GSTexture11*)dt, 0, 0, 0, 0, *(GSTexture11*)st, 0, &box);
+	m_ctx->CopySubresourceRegion(*(GSTexture11*)dt, 0, r.left, r.top, 0, *(GSTexture11*)st, 0, &box);
 }
 
 void GSDevice11::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)

@@ -24,8 +24,7 @@
 
 using namespace x86Emitter;
 
-CAPABILITIES cpucaps;
-CPUINFO cpuinfo;
+PCSX2_ALIGNED16( x86CPU_INFO x86caps );
 
 static s32 iCpuId( u32 cmd, u32 *regs )
 {
@@ -119,7 +118,7 @@ static s64 CPUSpeedHz( u64 time )
 	u64 timeStart, timeStop;
 	s64 startTick, endTick;
 
-	if( ! cpucaps.hasTimeStampCounter )
+	if( ! x86caps.hasTimeStampCounter )
 		return 0; //check if function is supported
 
 	SetSingleAffinity();
@@ -169,20 +168,20 @@ void cpudetectInit()
    int num;
    char str[50];
 
-   memzero_obj( cpuinfo.x86ID );
-   cpuinfo.x86Family = 0;
-   cpuinfo.x86Model  = 0;
-   cpuinfo.x86PType  = 0;
-   cpuinfo.x86StepID = 0;
-   cpuinfo.x86Flags  = 0;
-   cpuinfo.x86EFlags = 0;
+   memzero_obj( x86caps.VendorName );
+   x86caps.FamilyID = 0;
+   x86caps.Model  = 0;
+   x86caps.TypeID  = 0;
+   x86caps.StepID = 0;
+   x86caps.Flags  = 0;
+   x86caps.EFlags = 0;
 
    if ( iCpuId( 0, regs ) == -1 ) return;
 
    cmds = regs[ 0 ];
-   ((u32*)cpuinfo.x86ID)[ 0 ] = regs[ 1 ];
-   ((u32*)cpuinfo.x86ID)[ 1 ] = regs[ 3 ];
-   ((u32*)cpuinfo.x86ID)[ 2 ] = regs[ 2 ];
+   ((u32*)x86caps.VendorName)[ 0 ] = regs[ 1 ];
+   ((u32*)x86caps.VendorName)[ 1 ] = regs[ 3 ];
+   ((u32*)x86caps.VendorName)[ 2 ] = regs[ 2 ];
 
    // Hack - prevents reg[2] & reg[3] from being optimized out of existance!
    num = sprintf(str, "\tx86Flags  =  %8.8x %8.8x\n", regs[3], regs[2]);
@@ -194,18 +193,18 @@ void cpudetectInit()
    {
       if ( iCpuId( 0x00000001, regs ) != -1 )
       {
-         cpuinfo.x86StepID =  regs[ 0 ]        & 0xf;
-         cpuinfo.x86Model  = (regs[ 0 ] >>  4) & 0xf;
-         cpuinfo.x86Family = (regs[ 0 ] >>  8) & 0xf;
-         cpuinfo.x86PType  = (regs[ 0 ] >> 12) & 0x3;
+         x86caps.StepID =  regs[ 0 ]        & 0xf;
+         x86caps.Model  = (regs[ 0 ] >>  4) & 0xf;
+         x86caps.FamilyID = (regs[ 0 ] >>  8) & 0xf;
+         x86caps.TypeID  = (regs[ 0 ] >> 12) & 0x3;
 		 LogicalCoresPerPhysicalCPU = ( regs[1] >> 16 ) & 0xff;
          x86_64_8BITBRANDID = regs[ 1 ] & 0xff;
-         cpuinfo.x86Flags  =  regs[ 3 ];
-         cpuinfo.x86Flags2 =  regs[ 2 ];
+         x86caps.Flags  =  regs[ 3 ];
+         x86caps.Flags2 =  regs[ 2 ];
       }
    }
    /* detect multicore for intel cpu */
-   if ((cmds >= 0x00000004) && !strcmp("GenuineIntel",cpuinfo.x86ID))
+   if ((cmds >= 0x00000004) && !strcmp("GenuineIntel",x86caps.VendorName))
    {
       if ( iCpuId( 0x00000004, regs ) != -1 )
       {
@@ -221,13 +220,13 @@ void cpudetectInit()
 		 if ( iCpuId( 0x80000001, regs ) != -1 )
          {
 			x86_64_12BITBRANDID = regs[1] & 0xfff;
-			cpuinfo.x86EFlags2 = regs[ 2 ];
-            cpuinfo.x86EFlags = regs[ 3 ];
+			x86caps.EFlags2 = regs[ 2 ];
+            x86caps.EFlags = regs[ 3 ];
 
          }
       }
       /* detect multicore for amd cpu */
-      if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",cpuinfo.x86ID))
+      if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",x86caps.VendorName))
       {
          if ( iCpuId( 0x80000008, regs ) != -1 )
          {
@@ -236,84 +235,84 @@ void cpudetectInit()
       }
    }
 
-	switch(cpuinfo.x86PType)
+	switch(x86caps.TypeID)
 	{
 		case 0:
-			strcpy( cpuinfo.x86Type, "Standard OEM");
+			strcpy( x86caps.TypeName, "Standard OEM");
 		break;
 		case 1:
-			strcpy( cpuinfo.x86Type, "Overdrive");
+			strcpy( x86caps.TypeName, "Overdrive");
 		break;
 		case 2:
-			strcpy( cpuinfo.x86Type, "Dual");
+			strcpy( x86caps.TypeName, "Dual");
 		break;
 		case 3:
-			strcpy( cpuinfo.x86Type, "Reserved");
+			strcpy( x86caps.TypeName, "Reserved");
 		break;
 		default:
-			strcpy( cpuinfo.x86Type, "Unknown");
+			strcpy( x86caps.TypeName, "Unknown");
 		break;
 	}
-	if ( cpuinfo.x86ID[ 0 ] == 'G' ){ cputype=0;}//trick lines but if you know a way better ;p
-	if ( cpuinfo.x86ID[ 0 ] == 'A' ){ cputype=1;}
+	if ( x86caps.VendorName[ 0 ] == 'G' ){ cputype=0;}//trick lines but if you know a way better ;p
+	if ( x86caps.VendorName[ 0 ] == 'A' ){ cputype=1;}
 
-	memzero_obj( cpuinfo.x86Fam );
-	iCpuId( 0x80000002, (u32*)cpuinfo.x86Fam);
-	iCpuId( 0x80000003, (u32*)(cpuinfo.x86Fam+16));
-	iCpuId( 0x80000004, (u32*)(cpuinfo.x86Fam+32));
+	memzero_obj( x86caps.FamilyName );
+	iCpuId( 0x80000002, (u32*)x86caps.FamilyName);
+	iCpuId( 0x80000003, (u32*)(x86caps.FamilyName+16));
+	iCpuId( 0x80000004, (u32*)(x86caps.FamilyName+32));
 
 	//capabilities
-	cpucaps.hasFloatingPointUnit                         = ( cpuinfo.x86Flags >>  0 ) & 1;
-	cpucaps.hasVirtual8086ModeEnhancements               = ( cpuinfo.x86Flags >>  1 ) & 1;
-	cpucaps.hasDebuggingExtensions                       = ( cpuinfo.x86Flags >>  2 ) & 1;
-	cpucaps.hasPageSizeExtensions                        = ( cpuinfo.x86Flags >>  3 ) & 1;
-	cpucaps.hasTimeStampCounter                          = ( cpuinfo.x86Flags >>  4 ) & 1;
-	cpucaps.hasModelSpecificRegisters                    = ( cpuinfo.x86Flags >>  5 ) & 1;
-	cpucaps.hasPhysicalAddressExtension                  = ( cpuinfo.x86Flags >>  6 ) & 1;
-	cpucaps.hasMachineCheckArchitecture                  = ( cpuinfo.x86Flags >>  7 ) & 1;
-	cpucaps.hasCOMPXCHG8BInstruction                     = ( cpuinfo.x86Flags >>  8 ) & 1;
-	cpucaps.hasAdvancedProgrammableInterruptController   = ( cpuinfo.x86Flags >>  9 ) & 1;
-	cpucaps.hasSEPFastSystemCall                         = ( cpuinfo.x86Flags >> 11 ) & 1;
-	cpucaps.hasMemoryTypeRangeRegisters                  = ( cpuinfo.x86Flags >> 12 ) & 1;
-	cpucaps.hasPTEGlobalFlag                             = ( cpuinfo.x86Flags >> 13 ) & 1;
-	cpucaps.hasMachineCheckArchitecture                  = ( cpuinfo.x86Flags >> 14 ) & 1;
-	cpucaps.hasConditionalMoveAndCompareInstructions     = ( cpuinfo.x86Flags >> 15 ) & 1;
-	cpucaps.hasFGPageAttributeTable                      = ( cpuinfo.x86Flags >> 16 ) & 1;
-	cpucaps.has36bitPageSizeExtension                    = ( cpuinfo.x86Flags >> 17 ) & 1;
-	cpucaps.hasProcessorSerialNumber                     = ( cpuinfo.x86Flags >> 18 ) & 1;
-	cpucaps.hasCFLUSHInstruction                         = ( cpuinfo.x86Flags >> 19 ) & 1;
-	cpucaps.hasDebugStore                                = ( cpuinfo.x86Flags >> 21 ) & 1;
-	cpucaps.hasACPIThermalMonitorAndClockControl         = ( cpuinfo.x86Flags >> 22 ) & 1;
-	cpucaps.hasMultimediaExtensions                      = ( cpuinfo.x86Flags >> 23 ) & 1; //mmx
-	cpucaps.hasFastStreamingSIMDExtensionsSaveRestore    = ( cpuinfo.x86Flags >> 24 ) & 1;
-	cpucaps.hasStreamingSIMDExtensions                   = ( cpuinfo.x86Flags >> 25 ) & 1; //sse
-	cpucaps.hasStreamingSIMD2Extensions                  = ( cpuinfo.x86Flags >> 26 ) & 1; //sse2
-	cpucaps.hasSelfSnoop                                 = ( cpuinfo.x86Flags >> 27 ) & 1;
-	cpucaps.hasMultiThreading                            = ( cpuinfo.x86Flags >> 28 ) & 1;
-	cpucaps.hasThermalMonitor                            = ( cpuinfo.x86Flags >> 29 ) & 1;
-	cpucaps.hasIntel64BitArchitecture                    = ( cpuinfo.x86Flags >> 30 ) & 1;
+	x86caps.hasFloatingPointUnit                         = ( x86caps.Flags >>  0 ) & 1;
+	x86caps.hasVirtual8086ModeEnhancements               = ( x86caps.Flags >>  1 ) & 1;
+	x86caps.hasDebuggingExtensions                       = ( x86caps.Flags >>  2 ) & 1;
+	x86caps.hasPageSizeExtensions                        = ( x86caps.Flags >>  3 ) & 1;
+	x86caps.hasTimeStampCounter                          = ( x86caps.Flags >>  4 ) & 1;
+	x86caps.hasModelSpecificRegisters                    = ( x86caps.Flags >>  5 ) & 1;
+	x86caps.hasPhysicalAddressExtension                  = ( x86caps.Flags >>  6 ) & 1;
+	x86caps.hasMachineCheckArchitecture                  = ( x86caps.Flags >>  7 ) & 1;
+	x86caps.hasCOMPXCHG8BInstruction                     = ( x86caps.Flags >>  8 ) & 1;
+	x86caps.hasAdvancedProgrammableInterruptController   = ( x86caps.Flags >>  9 ) & 1;
+	x86caps.hasSEPFastSystemCall                         = ( x86caps.Flags >> 11 ) & 1;
+	x86caps.hasMemoryTypeRangeRegisters                  = ( x86caps.Flags >> 12 ) & 1;
+	x86caps.hasPTEGlobalFlag                             = ( x86caps.Flags >> 13 ) & 1;
+	x86caps.hasMachineCheckArchitecture                  = ( x86caps.Flags >> 14 ) & 1;
+	x86caps.hasConditionalMoveAndCompareInstructions     = ( x86caps.Flags >> 15 ) & 1;
+	x86caps.hasFGPageAttributeTable                      = ( x86caps.Flags >> 16 ) & 1;
+	x86caps.has36bitPageSizeExtension                    = ( x86caps.Flags >> 17 ) & 1;
+	x86caps.hasProcessorSerialNumber                     = ( x86caps.Flags >> 18 ) & 1;
+	x86caps.hasCFLUSHInstruction                         = ( x86caps.Flags >> 19 ) & 1;
+	x86caps.hasDebugStore                                = ( x86caps.Flags >> 21 ) & 1;
+	x86caps.hasACPIThermalMonitorAndClockControl         = ( x86caps.Flags >> 22 ) & 1;
+	x86caps.hasMultimediaExtensions                      = ( x86caps.Flags >> 23 ) & 1; //mmx
+	x86caps.hasFastStreamingSIMDExtensionsSaveRestore    = ( x86caps.Flags >> 24 ) & 1;
+	x86caps.hasStreamingSIMDExtensions                   = ( x86caps.Flags >> 25 ) & 1; //sse
+	x86caps.hasStreamingSIMD2Extensions                  = ( x86caps.Flags >> 26 ) & 1; //sse2
+	x86caps.hasSelfSnoop                                 = ( x86caps.Flags >> 27 ) & 1;
+	x86caps.hasMultiThreading                            = ( x86caps.Flags >> 28 ) & 1;
+	x86caps.hasThermalMonitor                            = ( x86caps.Flags >> 29 ) & 1;
+	x86caps.hasIntel64BitArchitecture                    = ( x86caps.Flags >> 30 ) & 1;
 
 	//that is only for AMDs
-	cpucaps.hasMultimediaExtensionsExt                   = ( cpuinfo.x86EFlags >> 22 ) & 1; //mmx2
-	cpucaps.hasAMD64BitArchitecture                      = ( cpuinfo.x86EFlags >> 29 ) & 1; //64bit cpu
-	cpucaps.has3DNOWInstructionExtensionsExt             = ( cpuinfo.x86EFlags >> 30 ) & 1; //3dnow+
-	cpucaps.has3DNOWInstructionExtensions                = ( cpuinfo.x86EFlags >> 31 ) & 1; //3dnow
-	cpucaps.hasStreamingSIMD4ExtensionsA                 = ( cpuinfo.x86EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
+	x86caps.hasMultimediaExtensionsExt                   = ( x86caps.EFlags >> 22 ) & 1; //mmx2
+	x86caps.hasAMD64BitArchitecture                      = ( x86caps.EFlags >> 29 ) & 1; //64bit cpu
+	x86caps.has3DNOWInstructionExtensionsExt             = ( x86caps.EFlags >> 30 ) & 1; //3dnow+
+	x86caps.has3DNOWInstructionExtensions                = ( x86caps.EFlags >> 31 ) & 1; //3dnow
+	x86caps.hasStreamingSIMD4ExtensionsA                 = ( x86caps.EFlags2 >> 6 ) & 1; //INSERTQ / EXTRQ / MOVNT
 
 	InitCPUTicks();
 	u64 span = GetTickFrequency();
 
 	if( (span % 1000) < 400 )	// helps minimize rounding errors
-		cpuinfo.cpuspeed = (u32)( CPUSpeedHz( span / 1000 ) / 1000 );
+		x86caps.Speed = (u32)( CPUSpeedHz( span / 1000 ) / 1000 );
 	else
-		cpuinfo.cpuspeed = (u32)( CPUSpeedHz( span / 500 ) / 2000 );
+		x86caps.Speed = (u32)( CPUSpeedHz( span / 500 ) / 2000 );
 
 	// --> SSE3 / SSSE3 / SSE4.1 / SSE 4.2 detection <--
 
-	cpucaps.hasStreamingSIMD3Extensions  = ( cpuinfo.x86Flags2 >> 0 ) & 1; //sse3
-	cpucaps.hasSupplementalStreamingSIMD3Extensions = ( cpuinfo.x86Flags2 >> 9 ) & 1; //ssse3
-	cpucaps.hasStreamingSIMD4Extensions  = ( cpuinfo.x86Flags2 >> 19 ) & 1; //sse4.1
-	cpucaps.hasStreamingSIMD4Extensions2 = ( cpuinfo.x86Flags2 >> 20 ) & 1; //sse4.2
+	x86caps.hasStreamingSIMD3Extensions  = ( x86caps.Flags2 >> 0 ) & 1; //sse3
+	x86caps.hasSupplementalStreamingSIMD3Extensions = ( x86caps.Flags2 >> 9 ) & 1; //ssse3
+	x86caps.hasStreamingSIMD4Extensions  = ( x86caps.Flags2 >> 19 ) & 1; //sse4.1
+	x86caps.hasStreamingSIMD4Extensions2 = ( x86caps.Flags2 >> 20 ) & 1; //sse4.2
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// SIMD Instruction Support Detection
@@ -355,28 +354,28 @@ void cpudetectInit()
 		// more reliable gauge of the cpu's actual ability.  But since a difference in bit
 		// and actual ability may represent a cmos/bios problem, we report it to the user.
 
-		if( sse3_result != !!cpucaps.hasStreamingSIMD3Extensions )
+		if( sse3_result != !!x86caps.hasStreamingSIMD3Extensions )
 		{
 			Console::Notice( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( !!cpucaps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
+				params bool_to_char( !!x86caps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
 
-			cpucaps.hasStreamingSIMD3Extensions = sse3_result;
+			x86caps.hasStreamingSIMD3Extensions = sse3_result;
 		}
 
-		if( ssse3_result != !!cpucaps.hasSupplementalStreamingSIMD3Extensions )
+		if( ssse3_result != !!x86caps.hasSupplementalStreamingSIMD3Extensions )
 		{
 			Console::Notice( "SSSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( !!cpucaps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
+				params bool_to_char( !!x86caps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
 
-			cpucaps.hasSupplementalStreamingSIMD3Extensions = ssse3_result;
+			x86caps.hasSupplementalStreamingSIMD3Extensions = ssse3_result;
 		}
 
-		if( sse41_result != !!cpucaps.hasStreamingSIMD4Extensions )
+		if( sse41_result != !!x86caps.hasStreamingSIMD4Extensions )
 		{
 			Console::Notice( "SSE4 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( !!cpucaps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
+				params bool_to_char( !!x86caps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
 
-			cpucaps.hasStreamingSIMD4Extensions = sse41_result;
+			x86caps.hasStreamingSIMD4Extensions = sse41_result;
 		}
 
 	}
@@ -392,10 +391,10 @@ void cpudetectInit()
 	////////////////////////////////////////////////////////////////////////////////////////////
 	//  Core Counting!
 
-	if( !cpucaps.hasMultiThreading || LogicalCoresPerPhysicalCPU == 0 )
+	if( !x86caps.hasMultiThreading || LogicalCoresPerPhysicalCPU == 0 )
 		LogicalCoresPerPhysicalCPU = 1;
 
-	// This will assign values into cpuinfo.LogicalCores and PhysicalCores
+	// This will assign values into x86caps.LogicalCores and PhysicalCores
 	Threading::CountLogicalCores( LogicalCoresPerPhysicalCPU, PhysicalCoresPerPhysicalCPU );
 }
 

@@ -18,7 +18,6 @@
 
 #include "PrecompiledHeader.h"
 
-// TODO: fix this for linux! (hardcoded as _WIN32 only)
 #define ENABLE_TIMESTAMPS
 
 #ifdef _WIN32
@@ -26,7 +25,7 @@
 #endif
 
 #include <ctype.h>
-#include <time.h>
+#include <wx/datetime.h>
 
 #include "IopCommon.h"
 #include "IsoFStools.h"
@@ -53,9 +52,11 @@ int CheckDiskTypeFS(int baseType)
 	static struct TocEntry tocEntry;
 
 	IsoFS_init();
-
+	
+	f = IsoFS_open("SYSTEM.CNF;1", 1);
+	
 	// check if the file exists
-	if ((f=IsoFS_open("SYSTEM.CNF;1", 1)) >= 0)
+	if (f >= 0)
 	{
 		int size = IsoFS_read(f, buffer, 256);
 		IsoFS_close(f);
@@ -91,9 +92,7 @@ int FindDiskType(int mType)
 {
 	int dataTracks = 0;
 	int audioTracks = 0;
-
 	int iCDType = mType;
-
 	cdvdTN tn;
 
 	CDVD.getTN(&tn);
@@ -105,6 +104,7 @@ int FindDiskType(int mType)
 	else if (mType < 0)
 	{
 		cdvdTD td;
+		
 		CDVD.getTD(0,&td);
 		if (td.lsn > 452849)
 		{
@@ -153,6 +153,7 @@ int FindDiskType(int mType)
 	for(int i = tn.strack; i <= tn.etrack; i++)
 	{
 		cdvdTD td,td2;
+		
 		CDVD.getTD(i,&td);
 
 		if (tn.etrack > i)
@@ -260,58 +261,28 @@ s32 DoCDVDopen(const char* pTitleFilename)
 	int ret = CDVD.open(pTitleFilename);
 	int cdtype = DoCDVDdetectDiskType();
 
-	if((Config.Blockdump)&&(cdtype != CDVD_TYPE_NODISC))
+	if ((Config.Blockdump) && (cdtype != CDVD_TYPE_NODISC))
 	{
-		char fname_only[g_MaxPath];
+		// write blockdumps to the CWD for now.
 
-		if(CDVD.init == ISO.init)
-		{
-#ifdef _WIN32
-			char fname[MAX_PATH], ext[g_MaxPath];
-			_splitpath(isoFileName, NULL, NULL, fname, ext);
-			_makepath(fname_only, NULL, NULL, fname, NULL);
-#else
-			getcwd(fname_only, ArraySize(fname_only)); // Base it out of the current directory for now.
-			strcat(fname_only, Path::GetFilenameWithoutExt(isoFileName).c_str());
-#endif
-		}
-		else
-		{
-			strcpy(fname_only, "Untitled");
-		}
+		wxString temp( Path::Combine( wxGetCwd(), (CDVD.init == ISO.init) ? 
+			Path::GetFilenameWithoutExt(wxString::FromAscii(isoFileName)) : L"Untitled"
+		) );
 
 #ifdef ENABLE_TIMESTAMPS
-#ifdef _WIN32
-		SYSTEMTIME time;
-		GetLocalTime(&time);
+		wxDateTime curtime( wxDateTime::GetTimeNow() );
 
-		sprintf(
-			fname_only+strlen(fname_only),
-			" (%04d-%02d-%02d %02d-%02d-%02d).dump",
-			time.wYear, time.wMonth, time.wDay,
-			time.wHour, time.wMinute, time.wSecond);
-#else
-		time_t rawtime;
-		struct tm * timeinfo;
-		
-		time(&rawtime);
-		timeinfo = localtime(&rawtime);
-		
-		sprintf(
-			fname_only+strlen(fname_only),
-			" (%04d-%02d-%02d %02d-%02d-%02d).dump",
-			timeinfo->tm_year + 1900, timeinfo->tm_mon, timeinfo->tm_mday,
-			timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec);
+		temp += wxsFormat( L" (%04d-%02d-%02d %02d-%02d-%02d)",
+			curtime.GetYear(), curtime.GetMonth(), curtime.GetDay(),
+			curtime.GetHour(), curtime.GetMinute(), curtime.GetSecond()
+		);
 #endif
-#else
-		strcat(fname_only, ".dump");
-#endif
+		temp += L".dump";
+
 		cdvdTD td;
 		CDVD.getTD(0, &td);
 
-		int blockofs = 0;
-		int blocksize = 0;
-		int blocks = td.lsn;
+		int blockofs = 0, blocksize = 0, blocks = td.lsn;
 
 		switch(cdtype)
 		{
@@ -329,7 +300,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 			break;
 		}
 
-		blockDumpFile = isoCreate(fname_only, ISOFLAGS_BLOCKDUMP);
+		blockDumpFile = isoCreate(temp.ToAscii().data(), ISOFLAGS_BLOCKDUMP);
 		if (blockDumpFile) isoSetFormat(blockDumpFile, blockofs, blocksize, blocks);
 	}
 	else

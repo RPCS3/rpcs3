@@ -90,11 +90,11 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, int id
 ,	m_radio_cwd( NULL )
 {
 	wxStaticBoxSizer& s_boxer = *new wxStaticBoxSizer( wxVERTICAL, this, _( "Usermode Selection" ) );
-	AddStaticText( s_boxer,
+	AddStaticText( s_boxer, pxE( ".Panels:Usermode:Explained", 
 		L"Please select your preferred default location for PCSX2 user-level documents below "
 		L"(includes memory cards, screenshots, settings, and savestates).  "
-		L"These folder locations can be overridden at any time using the Core Settings panel.",
-	wxALIGN_CENTRE );
+		L"These folder locations can be overridden at any time using the Core Settings panel."
+	) );
 
 	m_radio_user	= &AddRadioButton( s_boxer, _("User Documents (recommended)"),   _("Location: ") + wxStandardPaths::Get().GetDocumentsDir() );
 	s_boxer.AddSpacer( 4 );

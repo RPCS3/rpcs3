@@ -298,11 +298,8 @@ s32 cdvdReadConfig(u8* config)
 }
 s32 cdvdWriteConfig(const u8* config)
 {
-	// make sure its in write mode
-	if(cdvd.CReadWrite != 1)
-		return 1;
-	// check if block index is in bounds
-	else if(cdvd.CBlockIndex >= cdvd.CNumBlocks)
+	// make sure its in write mode && the block index is in bounds
+	if ((cdvd.CReadWrite != 1) || (cdvd.CBlockIndex >= cdvd.CNumBlocks))
 		return 1;
 	else if(
 		((cdvd.COffset == 0) && (cdvd.CBlockIndex >= 4))||
@@ -549,14 +546,12 @@ void cdvdNewDiskCB()
 
 void mechaDecryptBytes( u32 madr, int size )
 {
-	int i;
-
 	int shiftAmount = (cdvd.decSet>>4) & 7;
 	int doXor = (cdvd.decSet) & 1;
 	int doShift = (cdvd.decSet) & 2;
 	
 	u8* curval = iopPhysMem( madr );
-	for( i=0; i<size; ++i, ++curval )
+	for( int i=0; i<size; ++i, ++curval )
 	{
 		if( doXor ) *curval ^= cdvd.Key[4];
 		if( doShift ) *curval = (*curval >> shiftAmount) | (*curval << (8-shiftAmount) );
@@ -596,7 +591,7 @@ int cdvdReadSector() {
 		{
 			// dual layer ptp disc
 			layerNum = 1;
-			lsn = lsn-layer1Start + 0x30000;
+			lsn = lsn - layer1Start + 0x30000;
 		}
 		else if((dualType == 2) && (lsn >= layer1Start))
 		{
@@ -605,9 +600,9 @@ int cdvdReadSector() {
 			lsn = ~(layer1Start+0x30000 - 1);
 		}
 		else
-		{ // Assumed the other dualType is 0.
-			// single layer disc
-			// or on first layer of dual layer disc
+		{ 
+			// Assuming the other dualType is 0,
+			// single layer disc, or on first layer of dual layer disc.
 			layerNum = 0;
 			lsn += 0x30000;
 		}
@@ -630,8 +625,25 @@ int cdvdReadSector() {
 		mdest[11] = 0;
 
 		// normal 2048 bytes of sector data
-		memcpy_fast( &mdest[12], cdr.pTransfer, 2048);
-
+		if (cdr.pTransfer == NULL)
+		{
+			// Unlike CDVDiso, the internal IsoReadTrack function will pass an error if lsn is more
+			// then the number of blocks in the iso. If this happens, cdr.pTransfer will be NULL.
+			//
+			// Passing null to memcpy is a bad thing, and will result in, for example, the start of 
+			// Final Fantasy X-2 crashing. So we won't. 
+			
+			DevCon::WriteLn("Bad Transfer!");
+			for (int i = 12; i <= 2060; i++)
+			{
+				mdest[i] = 0;
+			}
+		}
+		else
+		{
+			memcpy_fast( &mdest[12], cdr.pTransfer, 2048);
+		}
+		
 		// 4 bytes of edc (not calculated at present)
 		mdest[2060] = 0;
 		mdest[2061] = 0;
@@ -731,7 +743,10 @@ __forceinline void cdvdReadInterrupt()
 			cdr.pTransfer = cdr.Transfer;
 		}
 		else 
+		{
+			DevCon::WriteLn("Error reading track.");
 			cdr.pTransfer = NULL;
+		}
 		
 		if (cdr.RErr == -1)
 		{
@@ -774,7 +789,6 @@ __forceinline void cdvdReadInterrupt()
 		cdvd.Ready = CDVD_READY2;
 
 		// All done! :D
-
 		return;
 	}
 
