@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef MAP_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define MAP_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include "content.h"
 #include <map>
 
@@ -36,3 +40,5 @@ namespace YAML
 		node_map m_data;
 	};
 }
+
+#endif // MAP_H_62B23520_7C8E_11DE_8A39_0800200C9A66

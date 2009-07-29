@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef TOKEN_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define TOKEN_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include "mark.h"
 #include <ios>
 #include <string>
@@ -67,3 +71,5 @@ namespace YAML
 		std::vector <std::string> params;
 	};
 }
+
+#endif // TOKEN_H_62B23520_7C8E_11DE_8A39_0800200C9A66

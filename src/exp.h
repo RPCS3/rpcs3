@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef EXP_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define EXP_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include "regex.h"
 #include <string>
 #include <ios>
@@ -72,3 +76,5 @@ namespace YAML
 		const char FoldedScalar = '>';
 	}
 }
+
+#endif // EXP_H_62B23520_7C8E_11DE_8A39_0800200C9A66

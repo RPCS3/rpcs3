@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef SCANSCALAR_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define SCANSCALAR_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include <string>
 #include "regex.h"
 #include "stream.h"
@@ -33,3 +37,5 @@ namespace YAML
 
 	std::string ScanScalar(Stream& INPUT, ScanScalarParams& info);
 }
+
+#endif // SCANSCALAR_H_62B23520_7C8E_11DE_8A39_0800200C9A66

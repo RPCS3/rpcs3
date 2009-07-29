@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include "mark.h"
 #include <exception>
 #include <string>
@@ -129,3 +133,5 @@ namespace YAML
 		: Exception(Mark::null(), msg_) {}
 	};
 }
+
+#endif // EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66

@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef NONCOPYABLE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define NONCOPYABLE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 namespace YAML
 {
 	// this is basically boost::noncopyable
@@ -14,3 +18,5 @@ namespace YAML
 			const noncopyable& operator = (const noncopyable&);
 		};
 }
+
+#endif // NONCOPYABLE_H_62B23520_7C8E_11DE_8A39_0800200C9A66

@@ -1,3 +1,8 @@
+#pragma once
+
+#ifndef TESTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define TESTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
 #include <string>
 
 namespace YAML { class Emitter; }
@@ -76,3 +81,5 @@ namespace Test {
 		void UnexpectedValue(YAML::Emitter& out, std::string& desiredError);
 	}
 }
+
+#endif // TESTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66

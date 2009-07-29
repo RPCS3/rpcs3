@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef EMITTER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define EMITTER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include "emittermanip.h"
 #include "ostream.h"
 #include <memory>
@@ -84,3 +88,5 @@ namespace YAML
 		return emitter.SetLocalIndent(indent);
 	}
 }
+
+#endif // EMITTER_H_62B23520_7C8E_11DE_8A39_0800200C9A66

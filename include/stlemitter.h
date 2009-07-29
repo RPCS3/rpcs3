@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef STLEMITTER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define STLEMITTER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include <vector>
 #include <list>
 #include <map>
@@ -36,3 +40,5 @@ namespace YAML
 		return emitter;
 	}
 }
+
+#endif // STLEMITTER_H_62B23520_7C8E_11DE_8A39_0800200C9A66

@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef OSTREAM_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define OSTREAM_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include <string>
 
 namespace YAML
@@ -30,3 +34,5 @@ namespace YAML
 	ostream& operator << (ostream& out, const std::string& str);
 	ostream& operator << (ostream& out, char ch);
 }
+
+#endif // OSTREAM_H_62B23520_7C8E_11DE_8A39_0800200C9A66

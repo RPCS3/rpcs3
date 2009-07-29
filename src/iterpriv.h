@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef ITERPRIV_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define ITERPRIV_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include "ltnode.h"
 #include <vector>
 #include <map>
@@ -23,3 +27,5 @@ namespace YAML
 		std::map <Node *, Node *, ltnode>::const_iterator mapIter;
 	};
 }
+
+#endif // ITERPRIV_H_62B23520_7C8E_11DE_8A39_0800200C9A66

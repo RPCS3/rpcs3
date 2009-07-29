@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef STRINGSOURCE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define STRINGSOURCE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include <cstddef>
 
 namespace YAML
@@ -32,3 +36,5 @@ namespace YAML
 		std::size_t m_offset;
 	};
 }
+
+#endif // STRINGSOURCE_H_62B23520_7C8E_11DE_8A39_0800200C9A66

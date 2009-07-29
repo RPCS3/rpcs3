@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef SETTING_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define SETTING_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+
+
 #include <memory>
 #include <vector>
 #include "noncopyable.h"
@@ -95,3 +99,5 @@ namespace YAML
 		setting_changes m_settingChanges;
 	};
 }
+
+#endif // SETTING_H_62B23520_7C8E_11DE_8A39_0800200C9A66
