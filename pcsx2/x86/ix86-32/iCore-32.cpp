@@ -53,62 +53,62 @@ u32 _x86GetAddr(int type, int reg)
 	switch(type&~X86TYPE_VU1) 
 	{
 		case X86TYPE_GPR: 
-			ret = &cpuRegs.GPR.r[reg]; 
+			ret = (u32)&cpuRegs.GPR.r[reg]; 
 			break;
 		
 		case X86TYPE_VI: 
 			if (type & X86TYPE_VU1)
-				ret = &VU1.VI[reg];
+				ret = (u32)&VU1.VI[reg];
 			else
-				ret = &VU0.VI[reg];
+				ret = (u32)&VU0.VI[reg];
 			break;
 		
 		case X86TYPE_MEMOFFSET: 
-			ret =  0;
+			ret = 0;
 			break;
 		
 		case X86TYPE_VIMEMOFFSET: 
-			ret =  0;
+			ret = 0;
 			break;
 		
 		case X86TYPE_VUQREAD:
 			if  (type & X86TYPE_VU1)
-				ret = &VU1.VI[REG_Q];
+				ret = (u32)&VU1.VI[REG_Q];
 			else
-				ret =&VU0.VI[REG_Q];
+				ret = (u32)&VU0.VI[REG_Q];
 			break;
 		
 		case X86TYPE_VUPREAD: 
 			if  (type & X86TYPE_VU1)
-				ret = &VU1.VI[REG_P];
+				ret = (u32)&VU1.VI[REG_P];
 			else
-				ret =&VU0.VI[REG_P];
+				ret = (u32)&VU0.VI[REG_P];
 			break;
 		
 		case X86TYPE_VUQWRITE: 
 			if  (type & X86TYPE_VU1)
-				ret = &VU1.q;
+				ret = (u32)&VU1.q;
 			else
-				ret =&VU0.q;
+				ret = (u32)&VU0.q;
 			break;
 		
 		case X86TYPE_VUPWRITE: 
 			if  (type & X86TYPE_VU1)
-				ret = &VU1.p;
+				ret = (u32)&VU1.p;
 			else
-				ret =&VU0.p;
+				ret = (u32)&VU0.p;
 			break;
 		
 		case X86TYPE_PSX: 
-			ret =  (u32)&psxRegs.GPR.r[reg];
+			ret = (u32)&psxRegs.GPR.r[reg];
 			break;
 		
 		case X86TYPE_PCWRITEBACK:
-			ret =  (u32)&g_recWriteback;
+			ret = (u32)&g_recWriteback;
 			break;
 		
 		case X86TYPE_VUJUMP:
-			ret =  (u32)&g_recWriteback;
+			ret = (u32)&g_recWriteback;
 			break;
 
 		jNO_DEFAULT;

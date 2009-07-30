@@ -594,8 +594,8 @@ void memClearPageAddr(u32 vaddr)
 	vtlb_VMapUnmap(vaddr,0x1000); // -> whut ?
 
 #ifdef FULLTLB
-	memLUTRK[vaddr >> 12] = 0;
-	memLUTWK[vaddr >> 12] = 0;
+//	memLUTRK[vaddr >> 12] = 0;
+//	memLUTWK[vaddr >> 12] = 0;
 #endif
 }
 
