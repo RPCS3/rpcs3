@@ -371,7 +371,6 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	mVUsetupRange(mVU, startPC, 1);
 	
 	// Reset regAlloc
-	mVU->regAlloc->flushAll();
 	mVU->regAlloc->reset();
 
 	// First Pass
