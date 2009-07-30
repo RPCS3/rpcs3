@@ -374,6 +374,7 @@ emitterT void SSE4_BLENDVPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{
 emitterT void SSE4_BLENDVPS_M128_to_XMM(x86SSERegType to, uptr from)					{ xBLEND.VPS( xRegisterSSE(to), (void*)from ); }
 
 emitterT void SSE4_PMOVSXDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{ xPMOVSX.DQ( xRegisterSSE(to), xRegisterSSE(from) ); }
+emitterT void SSE4_PTEST_XMM_to_XMM(x86SSERegType to, x86SSERegType from)				{ xPTEST(xRegisterSSE(to), xRegisterSSE(from)); }
 
 emitterT void SSE_LDMXCSR( uptr from ) { xLDMXCSR( (u32*)from ); }
 

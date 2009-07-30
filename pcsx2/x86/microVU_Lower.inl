@@ -26,20 +26,25 @@
 // DIV/SQRT/RSQRT
 //------------------------------------------------------------------
 
-#define testZero(xmmReg, xmmTemp, gprTemp) {										\
-	SSE_XORPS_XMM_to_XMM(xmmTemp, xmmTemp);		/* Clear xmmTemp (make it 0) */		\
-	SSE_CMPEQPS_XMM_to_XMM(xmmTemp, xmmReg);	/* Set all F's if zero */			\
-	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmTemp);	/* Move the sign bits */			\
-	TEST32ItoR(gprTemp, 1);						/* Test "Is Zero" bit */			\
+// Test if Vector is +/- Zero
+#define testZero(xmmReg, xmmTemp, gprTemp) {				\
+	SSE_XORPS_XMM_to_XMM(xmmTemp, xmmTemp);					\
+	SSE_CMPEQSS_XMM_to_XMM(xmmTemp, xmmReg);				\
+	if (!cpucaps.hasStreamingSIMD4Extensions) {				\
+		SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmTemp);			\
+		TEST32ItoR(gprTemp, 1);								\
+	}														\
+	else SSE4_PTEST_XMM_to_XMM(xmmTemp, xmmTemp);			\
 }
 
-#define testNeg(xmmReg, gprTemp, aJump) {											\
-	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmReg);										\
-	TEST32ItoR(gprTemp, 1);								  /* Check sign bit */		\
-	aJump = JZ8(0);										  /* Skip if positive */	\
-		MOV32ItoM((uptr)&mVU->divFlag, divI);			  /* Set Invalid Flags */	\
-		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVU_absclip); /* Abs(xmmReg) */			\
-	x86SetJ8(aJump);																\
+// Test if Vector is Negative (Set Flags and Makes Positive)
+#define testNeg(xmmReg, gprTemp, aJump) {					\
+	SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmReg);				\
+	TEST32ItoR(gprTemp, 1);									\
+	aJump = JZ8(0);											\
+		MOV32ItoM((uptr)&mVU->divFlag, divI);				\
+		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVU_absclip);	\
+	x86SetJ8(aJump);										\
 }
 
 mVUop(mVU_DIV) {

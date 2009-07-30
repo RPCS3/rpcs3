@@ -1364,6 +1364,7 @@ extern void SSE4_PMINSD_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSE4_PMAXUD_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSE4_PMINUD_M128_to_XMM(x86SSERegType to, uptr from);
 extern void SSE4_PMULDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
+extern void SSE4_PTEST_XMM_to_XMM(x86SSERegType to, x86SSERegType from);
 
 //*********************
 // 3DNOW instructions * 
