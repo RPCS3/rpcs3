@@ -667,7 +667,7 @@ void psxHwWrite8(u32 add, u8 value) {
 
 		case 0x1f80380c:
 		{
-			bool flush = false;
+			//bool flush = false;
 
 			// Terminate lines on CR or full buffers, and ignore \n's if the string contents
 			// are empty (otherwise terminate on \n too!)

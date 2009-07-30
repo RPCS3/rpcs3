@@ -41,7 +41,7 @@ enum gifstate_t
 // Should be a gifstate_t rather then int, but I don't feel like possibly interfering with savestates right now.
 static int gifstate = GIF_STATE_READY;
 
-static u64 s_gstag = 0; // used for querying the last tag
+//static u64 s_gstag = 0; // used for querying the last tag
 
 // This should be a bool, as should the return value of hwDmacSrcChainWithStack.
 // Next time I feel like breaking the save state, it will be. --arcum42
