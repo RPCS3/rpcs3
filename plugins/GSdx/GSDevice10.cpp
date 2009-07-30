@@ -269,7 +269,7 @@ void GSDevice10::DrawPrimitive()
 
 void GSDevice10::EndScene()
 {
-	PSSetShaderResources(NULL, NULL);
+	//PSSetShaderResources(NULL, NULL);
 
 	// not clearing the rt/ds gives a little fps boost in complex games (5-10%)
 
