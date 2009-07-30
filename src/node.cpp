@@ -10,6 +10,7 @@
 #include "aliascontent.h"
 #include "iterpriv.h"
 #include "emitter.h"
+#include <stdexcept>
 
 namespace YAML
 {
@@ -85,6 +86,9 @@ namespace YAML
 				m_pContent = new Map;
 				break;
 			default:
+//				std::stringstream str;
+//				str << TokenNames[pScanner->peek().type];
+//				throw std::runtime_error(str.str());
 				break;
 		}
 

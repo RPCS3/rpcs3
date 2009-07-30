@@ -6,6 +6,7 @@
 
 #include "emittermanip.h"
 #include "ostream.h"
+#include "null.h"
 #include <memory>
 #include <string>
 
@@ -51,6 +52,7 @@ namespace YAML
 		Emitter& Write(const _Alias& alias);
 		Emitter& Write(const _Anchor& anchor);
 		Emitter& Write(const _Comment& comment);
+		Emitter& Write(const _Null& null);
 		
 	private:
 		enum ATOMIC_TYPE { AT_SCALAR, AT_SEQ, AT_BLOCK_SEQ, AT_FLOW_SEQ, AT_MAP, AT_BLOCK_MAP, AT_FLOW_MAP };

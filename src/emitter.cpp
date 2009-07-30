@@ -666,4 +666,16 @@ namespace YAML
 		Utils::WriteComment(m_stream, comment.content, m_pState->GetPostCommentIndent());
 		return *this;
 	}
+
+	Emitter& Emitter::Write(const _Null& /*null*/)
+	{
+		if(!good())
+			return *this;
+		
+		PreAtomicWrite();
+		EmitSeparationIfNecessary();
+		m_stream << "~";
+		PostAtomicWrite();
+		return *this;
+	}
 }

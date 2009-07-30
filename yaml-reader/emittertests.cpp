@@ -425,6 +425,19 @@ namespace Test
 			desiredOutput = "-\n  key 1: value 1\n  key 2: [a, b, c]\n-\n  ? [1, 2]\n  :\n    a: b";
 		}
 
+		void Null(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << YAML::Null;
+			out << YAML::BeginMap;
+			out << YAML::Key << "null value" << YAML::Value << YAML::Null;
+			out << YAML::Key << YAML::Null << YAML::Value << "null key";
+			out << YAML::EndMap;
+			out << YAML::EndSeq;
+			
+			desiredOutput = "- ~\n-\n  null value: ~\n  ~: null key";
+		}
+
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		

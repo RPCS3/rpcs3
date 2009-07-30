@@ -68,6 +68,7 @@ namespace Test {
 		void Indentation(YAML::Emitter& out, std::string& desiredOutput);
 		void SimpleGlobalSettings(YAML::Emitter& out, std::string& desiredOutput);
 		void ComplexGlobalSettings(YAML::Emitter& out, std::string& desiredOutput);
+		void Null(YAML::Emitter& out, std::string& desiredOutput);
 
 		// incorrect emitting
 		void ExtraEndSeq(YAML::Emitter& out, std::string& desiredError);

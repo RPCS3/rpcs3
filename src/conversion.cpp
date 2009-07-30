@@ -84,6 +84,12 @@ namespace YAML
 	}
 	
 	template <>
+	bool Converter<_Null>::Convert(const std::string& input, _Null& /*output*/)
+	{
+		return input.empty() || input == "~" || input == "null" || input == "Null" || input == "NULL";
+	}
+
+	template <>
 	bool Converter<std::wstring>::Convert(const std::string& input, std::wstring& output)
 	{
 		output.clear();

@@ -351,6 +351,7 @@ namespace Test
 		RunEmitterTest(&Emitter::Indentation, "indentation", passed);
 		RunEmitterTest(&Emitter::SimpleGlobalSettings, "simple global settings", passed);
 		RunEmitterTest(&Emitter::ComplexGlobalSettings, "complex global settings", passed);
+		RunEmitterTest(&Emitter::Null, "null", passed);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed);
