@@ -4,6 +4,7 @@
 #include "scanner.h"
 #include "token.h"
 #include "emitter.h"
+#include <stdexcept>
 
 namespace YAML
 {
@@ -80,6 +81,14 @@ namespace YAML
 
 			Node *pNode = new Node;
 			m_data.push_back(pNode);
+			
+			// check for null
+			if(!pScanner->empty()) {
+				const Token& token = pScanner->peek();
+				if(token.type == TT_BLOCK_ENTRY || token.type == TT_BLOCK_END)
+					continue;
+			}
+			
 			pNode->Parse(pScanner, state);
 		}
 	}

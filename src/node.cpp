@@ -264,7 +264,7 @@ namespace YAML
 		if(node.m_pContent)
 			node.m_pContent->Write(out);
 		else
-			out << "";
+			out << Null;
 
 		return out;
 	}
