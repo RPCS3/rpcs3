@@ -34,6 +34,9 @@ namespace Test {
 		bool FlowSeq();
 		bool FlowMap();
 		bool QuotedSimpleKeys();
+		bool NullBlockSeqEntry();
+		bool NullBlockMapKey();
+		bool NullBlockMapValue();
 	}
 	
 	namespace Emitter {

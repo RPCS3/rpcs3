@@ -33,10 +33,10 @@ namespace YAML
 		const RegEx DocStart = RegEx("---") + (BlankOrBreak || RegEx());
 		const RegEx DocEnd = RegEx("...") + (BlankOrBreak || RegEx());
 		const RegEx DocIndicator = DocStart || DocEnd;
-		const RegEx BlockEntry = RegEx('-') + BlankOrBreak;
+		const RegEx BlockEntry = RegEx('-') + (BlankOrBreak || RegEx());
 		const RegEx Key = RegEx('?'),
 		            KeyInFlow = RegEx('?') + BlankOrBreak;
-		const RegEx Value = RegEx(':') + BlankOrBreak,
+		const RegEx Value = RegEx(':') + (BlankOrBreak || RegEx()),
 		            ValueInFlow = RegEx(':') + BlankOrBreak;
 		const RegEx Comment = RegEx('#');
 		const RegEx AnchorEnd = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak;
@@ -48,7 +48,7 @@ namespace YAML
 		// . In the flow context ? is illegal and : and - must not be followed with a space.
 		const RegEx PlainScalar = !(BlankOrBreak || RegEx(",[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-?:", REGEX_OR) + Blank)),
 		            PlainScalarInFlow = !(BlankOrBreak || RegEx("?,[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-:", REGEX_OR) + Blank));
-		const RegEx EndScalar = RegEx(':') + BlankOrBreak,
+		const RegEx EndScalar = RegEx(':') + (BlankOrBreak || RegEx()),
 		            EndScalarInFlow = (RegEx(':') + BlankOrBreak) || RegEx(",?[]{}", REGEX_OR);
 
 		const RegEx EscSingleQuote = RegEx("\'\'");

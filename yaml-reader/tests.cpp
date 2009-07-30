@@ -263,7 +263,10 @@ namespace Test
 		RunParserTest(&Parser::FlowSeq, "flow seq", passed);
 		RunParserTest(&Parser::FlowMap, "flow map", passed);
 		RunParserTest(&Parser::QuotedSimpleKeys, "quoted simple keys", passed);
-
+		RunParserTest(&Parser::NullBlockSeqEntry, "null block seq entry", passed);
+		RunParserTest(&Parser::NullBlockMapKey, "null block map key", passed);
+		RunParserTest(&Parser::NullBlockMapValue, "null block map value", passed);
+		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed);
 		RunEncodingTest(&EncodeToUtf16LE, false, "UTF-16LE, no BOM", passed);

@@ -61,17 +61,21 @@ namespace YAML
 				throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP);
 
 			Token token = pScanner->peek();
-			if(token.type != TT_KEY && token.type != TT_BLOCK_END)
+			if(token.type != TT_KEY && token.type != TT_VALUE && token.type != TT_BLOCK_END)
 				throw ParserException(token.mark, ErrorMsg::END_OF_MAP);
 
-			pScanner->pop();
-			if(token.type == TT_BLOCK_END)
+			if(token.type == TT_BLOCK_END) {
+				pScanner->pop();
 				break;
+			}
 
 			std::auto_ptr <Node> pKey(new Node), pValue(new Node);
-
-			// grab key
-			pKey->Parse(pScanner, state);
+			
+			// grab key (if non-null)
+			if(token.type == TT_KEY) {
+				pScanner->pop();
+				pKey->Parse(pScanner, state);
+			}
 
 			// now grab value (optional)
 			if(!pScanner->empty() && pScanner->peek().type == TT_VALUE) {

@@ -247,5 +247,62 @@ namespace Test
 				
 			return true;
 		}
+
+		bool NullBlockSeqEntry()
+		{
+			std::string input = "- hello\n-\n- world";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::string output;
+			doc[0] >> output;
+			if(output != "hello")
+				return false;
+			doc[1] >> output;
+			if(output != "~")
+				return false;
+			doc[2] >> output;
+			if(output != "world")
+				return false;
+			
+			return true;
+		}
+		
+		bool NullBlockMapKey()
+		{
+			std::string input = ": empty key";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::string output;
+			doc[YAML::Null] >> output;
+			if(output != "empty key")
+				return false;
+			
+			return true;
+		}
+		
+		bool NullBlockMapValue()
+		{
+			std::string input = "empty value:";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::string output;
+			doc["empty value"] >> output;
+			if(output != "~")
+				return false;
+			
+			return true;
+		}
 	}
 }

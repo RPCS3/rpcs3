@@ -243,8 +243,11 @@ namespace YAML
 
 	bool Node::GetScalar(std::string& s) const
 	{
-		if(!m_pContent)
-			return false;
+		if(!m_pContent) {
+			s = "~";
+			return true;
+		}
+		
 		return m_pContent->GetScalar(s);
 	}
 

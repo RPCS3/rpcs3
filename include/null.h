@@ -7,6 +7,9 @@
 namespace YAML
 {
 	struct _Null {};
+	inline bool operator == (const _Null&, const _Null&) { return true; }
+	inline bool operator != (const _Null&, const _Null&) { return false; }
+	
 	extern _Null Null;
 }
 
