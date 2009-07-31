@@ -167,7 +167,7 @@ namespace YAML
 	{
 		while(1) {
 			// first eat whitespace
-			while(IsWhitespaceToBeEaten(INPUT.peek()))
+			while(INPUT && IsWhitespaceToBeEaten(INPUT.peek()))
 				INPUT.eat(1);
 
 			// then eat a comment
