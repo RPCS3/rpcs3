@@ -261,8 +261,7 @@ namespace Test
 			doc[0] >> output;
 			if(output != "hello")
 				return false;
-			doc[1] >> output;
-			if(output != "~")
+			if(!IsNull(doc[1]))
 				return false;
 			doc[2] >> output;
 			if(output != "world")
@@ -297,9 +296,7 @@ namespace Test
 			YAML::Node doc;
 			parser.GetNextDocument(doc);
 			
-			std::string output;
-			doc["empty value"] >> output;
-			if(output != "~")
+			if(!IsNull(doc["empty value"]))
 				return false;
 			
 			return true;

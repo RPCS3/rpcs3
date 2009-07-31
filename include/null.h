@@ -6,9 +6,13 @@
 
 namespace YAML
 {
+	class Node;
+	
 	struct _Null {};
 	inline bool operator == (const _Null&, const _Null&) { return true; }
 	inline bool operator != (const _Null&, const _Null&) { return false; }
+	
+	bool IsNull(const Node& node);
 	
 	extern _Null Null;
 }
