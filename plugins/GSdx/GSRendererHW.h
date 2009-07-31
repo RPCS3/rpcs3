@@ -495,7 +495,7 @@ protected:
 
 		GSTexture* t = NULL;
 
-		if(GSTextureCache::Target* rt = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::RenderTarget, true, true))
+		if(GSTextureCache::Target* rt = m_tc->LookupTarget(TEX0, m_width, m_height))
 		{
 			t = rt->m_texture;
 

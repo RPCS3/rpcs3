@@ -26,26 +26,10 @@
 
 class GSTextureCacheOGL : public GSTextureCache
 {
-	class SourceOGL : public Source
-	{
-	protected:
-		int Get8bitFormat() {return 0;} // TODO
-
-	public:
-		explicit SourceOGL(GSRenderer* r) : Source(r) {}
-	};
-
-	class TargetOGL : public Target
-	{
-	public:
-		explicit TargetOGL(GSRenderer* r) : Target(r) {}
-
-		void Read(const GSVector4i& r);
-	};
-
 protected:
-	Source* CreateSource() {return new SourceOGL(m_renderer);}
-	Target* CreateTarget() {return new TargetOGL(m_renderer);}
+	int Get8bitFormat() {return 0;} // TODO
+
+	void Read(Target* t, const GSVector4i& r) {} // TODO
 
 public:
 	GSTextureCacheOGL(GSRenderer* r);

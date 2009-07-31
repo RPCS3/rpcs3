@@ -29,46 +29,42 @@ GSTextureCache11::GSTextureCache11(GSRenderer* r)
 {
 }
 
-// Source11
-
-// Target11
-
-void GSTextureCache11::Target11::Read(const GSVector4i& r)
+void GSTextureCache11::Read(Target* t, const GSVector4i& r)
 {
-	if(m_type != RenderTarget) 
+	if(t->m_type != RenderTarget) 
 	{
 		// TODO
 
 		return; 
 	}
 
-	if(m_TEX0.PSM != PSM_PSMCT32 
-	&& m_TEX0.PSM != PSM_PSMCT24
-	&& m_TEX0.PSM != PSM_PSMCT16
-	&& m_TEX0.PSM != PSM_PSMCT16S)
+	const GIFRegTEX0& TEX0 = t->m_TEX0;
+
+	if(TEX0.PSM != PSM_PSMCT32 
+	&& TEX0.PSM != PSM_PSMCT24
+	&& TEX0.PSM != PSM_PSMCT16
+	&& TEX0.PSM != PSM_PSMCT16S)
 	{
 		//ASSERT(0);
 
 		return;
 	}
 
-	if(!m_dirty.empty())
+	if(!t->m_dirty.empty())
 	{
 		return;
 	}
 
-	// printf("GSRenderTarget::Read %d,%d - %d,%d (%08x)\n", r.left, r.top, r.right, r.bottom, m_TEX0.TBP0);
-
-	// m_renderer->m_perfmon.Put(GSPerfMon::ReadRT, 1);
+	// printf("GSRenderTarget::Read %d,%d - %d,%d (%08x)\n", r.left, r.top, r.right, r.bottom, TEX0.TBP0);
 
 	int w = r.width();
 	int h = r.height();
 
-	GSVector4 src = GSVector4(r) * GSVector4(m_texture->m_scale).xyxy() / GSVector4(m_texture->GetSize()).xyxy();
+	GSVector4 src = GSVector4(r) * GSVector4(t->m_texture->m_scale).xyxy() / GSVector4(t->m_texture->GetSize()).xyxy();
 
-	DXGI_FORMAT format = m_TEX0.PSM == PSM_PSMCT16 || m_TEX0.PSM == PSM_PSMCT16S ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT format = TEX0.PSM == PSM_PSMCT16 || TEX0.PSM == PSM_PSMCT16S ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
 
-	if(GSTexture* offscreen = m_renderer->m_dev->CopyOffscreen(m_texture, src, w, h, format))
+	if(GSTexture* offscreen = m_renderer->m_dev->CopyOffscreen(t->m_texture, src, w, h, format))
 	{
 		GSTexture::GSMap m;
 
@@ -76,9 +72,9 @@ void GSTextureCache11::Target11::Read(const GSVector4i& r)
 		{
 			// TODO: block level write
 
-			GSOffset* o = m_renderer->m_mem.GetOffset(m_TEX0.TBP0, m_TEX0.TBW, m_TEX0.PSM);
+			GSOffset* o = m_renderer->m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
-			switch(m_TEX0.PSM)
+			switch(TEX0.PSM)
 			{
 			case PSM_PSMCT32:
 				m_renderer->m_mem.WritePixel32(m.bits, m.pitch, o, r);

@@ -31,6 +31,7 @@ GSDevice::GSDevice()
 	, m_blend(NULL)
 	, m_1x1(NULL)
 {
+	memset(&m_vertices, 0, sizeof(m_vertices));
 }
 
 GSDevice::~GSDevice() 
@@ -119,6 +120,12 @@ GSTexture* GSDevice::Fetch(int type, int w, int h, int format)
 	}
 
 	return Create(type, w, h, format);
+}
+
+void GSDevice::EndScene()
+{
+	m_vertices.start += m_vertices.count;
+	m_vertices.count = 0;
 }
 
 void GSDevice::Recycle(GSTexture* t)

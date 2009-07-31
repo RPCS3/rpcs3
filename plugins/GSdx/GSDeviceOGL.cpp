@@ -203,19 +203,9 @@ void GSDeviceOGL::Flip(bool limit)
 	#endif
 }
 
-void GSDeviceOGL::BeginScene()
-{
-}
-
 void GSDeviceOGL::DrawPrimitive()
 {
 	glDrawArrays(m_topology, m_vertices.count, m_vertices.start); CheckError();
-}
-
-void GSDeviceOGL::EndScene()
-{
-	m_vertices.start += m_vertices.count;
-	m_vertices.count = 0;
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)

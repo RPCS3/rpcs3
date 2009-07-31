@@ -46,17 +46,12 @@ public:
 		virtual void Update();
 	};
 
-	class Target;
-
 	class Source : public Surface
 	{
 		struct {GSVector4i* rect; uint32 count;} m_write;
 
 		void Write(const GSVector4i& r);
 		void Flush(uint32 count);
-
-	protected:
-		virtual int Get8bitFormat() = 0;
 
 	public:
 		GSTexture* m_palette;
@@ -68,11 +63,9 @@ public:
 		bool m_complete;
 
 	public:
-		explicit Source(GSRenderer* renderer);
+		explicit Source(GSRenderer* r);
 		virtual ~Source();
 
-		virtual bool Create(bool paltex);
-		virtual bool Create(Target* dst);
 		virtual void Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect);
 	};
 
@@ -87,9 +80,7 @@ public:
 	public:
 		explicit Target(GSRenderer* r);
 
-		virtual bool Create(int w, int h, int type);
 		virtual void Update();
-		virtual void Read(const GSVector4i& r) = 0;
 	};
 
 protected:
@@ -113,8 +104,14 @@ protected:
 
 	list<Target*> m_dst[2];
 
-	virtual Source* CreateSource() = 0;
-	virtual Target* CreateTarget() = 0;
+	virtual Source* CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* t = NULL);
+	virtual Target* CreateTarget(const GIFRegTEX0& TEX0, int w, int h, int type);
+
+	virtual int Get8bitFormat() = 0;
+
+	// TODO: virtual void Write(Source* s, const GSVector4i& r) = 0;
+	// TODO: virtual void Write(Target* t, const GSVector4i& r) = 0;
+	virtual void Read(Target* t, const GSVector4i& r) = 0;
 
 public:
 	GSTextureCache(GSRenderer* r);
@@ -123,7 +120,8 @@ public:
 	void RemoveAll();
 
 	Source* LookupSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
-	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used, bool fb = false);
+	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used);
+	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h);
 
 	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r, bool target = true);
 	void InvalidateLocalMem(const GSOffset* o, const GSVector4i& r);

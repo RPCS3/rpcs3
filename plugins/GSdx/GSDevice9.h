@@ -61,28 +61,6 @@ struct Direct3DBlendState9
 
 class GSDevice9 : public GSDevice
 {
-private:
-	IDirect3DVertexBuffer9* m_vb;
-	size_t m_vb_stride;
-	IDirect3DVertexDeclaration9* m_layout;
-	D3DPRIMITIVETYPE m_topology;
-	IDirect3DVertexShader9* m_vs;
-	float* m_vs_cb;
-	int m_vs_cb_len;
-	IDirect3DTexture9* m_ps_srvs[2];
-	IDirect3DPixelShader9* m_ps;
-	float* m_ps_cb;
-	int m_ps_cb_len;
-	Direct3DSamplerState9* m_ps_ss;
-	GSVector4i m_scissor;
-	Direct3DDepthStencilState9* m_dss;
-	Direct3DBlendState9* m_bs;
-	uint32 m_bf;
-	IDirect3DSurface9* m_rtv;
-	IDirect3DSurface9* m_dsv;
-
-	//
-
 	GSTexture* Create(int type, int w, int h, int format);
 
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c);
@@ -96,13 +74,31 @@ private:
 	CComPtr<IDirect3D9> m_d3d;
 	CComPtr<IDirect3DDevice9> m_dev;
 	CComPtr<IDirect3DSwapChain9> m_swapchain;
+	CComPtr<IDirect3DVertexBuffer9> m_vb;
+	CComPtr<IDirect3DVertexBuffer9> m_vb_old;
 	bool m_lost;
 
 	struct
 	{
-		CComPtr<IDirect3DVertexBuffer9> vb, vb_old;
-		size_t stride, start, count, limit;
-	} m_vertices;
+		IDirect3DVertexBuffer9* vb;
+		size_t vb_stride;
+		IDirect3DVertexDeclaration9* layout;
+		D3DPRIMITIVETYPE topology;
+		IDirect3DVertexShader9* vs;
+		float* vs_cb;
+		int vs_cb_len;
+		IDirect3DTexture9* ps_srvs[2];
+		IDirect3DPixelShader9* ps;
+		float* ps_cb;
+		int ps_cb_len;
+		Direct3DSamplerState9* ps_ss;
+		GSVector4i scissor;
+		Direct3DDepthStencilState9* dss;
+		Direct3DBlendState9* bs;
+		uint32 bf;
+		IDirect3DSurface9* rtv;
+		IDirect3DSurface9* dsv;
+	} m_state;
 
 public: // TODO
 

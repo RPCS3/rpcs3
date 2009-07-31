@@ -114,9 +114,7 @@ public:
 	void Present(const GSVector4i& r, int shader, bool limit);
 	void Flip(bool limit);
 
-	void BeginScene();
 	void DrawPrimitive();
-	void EndScene();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);

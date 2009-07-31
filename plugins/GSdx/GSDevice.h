@@ -63,6 +63,7 @@ protected:
 	GSTexture* m_1x1;
 	GSTexture* m_current;
 	struct {D3D_FEATURE_LEVEL level; string model, vs, gs, ps;} m_shader;
+	struct {size_t stride, start, count, limit;} m_vertices;
 
 	virtual GSTexture* Create(int type, int w, int h, int format) = 0;
 
@@ -85,7 +86,7 @@ public:
 
 	virtual void BeginScene() {}
 	virtual void DrawPrimitive() {};
-	virtual void EndScene() {}
+	virtual void EndScene();
 
 	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}
 	virtual void ClearRenderTarget(GSTexture* t, uint32 c) {}

@@ -26,28 +26,6 @@
 
 class GSDevice10 : public GSDevice
 {
-	ID3D10Buffer* m_vb;
-	size_t m_vb_stride;
-	ID3D10InputLayout* m_layout;
-	D3D10_PRIMITIVE_TOPOLOGY m_topology;
-	ID3D10VertexShader* m_vs;
-	ID3D10Buffer* m_vs_cb;
-	ID3D10GeometryShader* m_gs;
-	ID3D10ShaderResourceView* m_ps_srv[2];
-	ID3D10PixelShader* m_ps;
-	ID3D10Buffer* m_ps_cb;
-	ID3D10SamplerState* m_ps_ss[2];
-	GSVector2i m_viewport;
-	GSVector4i m_scissor;
-	ID3D10DepthStencilState* m_dss;
-	uint8 m_sref;
-	ID3D10BlendState* m_bs;
-	float m_bf;
-	ID3D10RenderTargetView* m_rtv;
-	ID3D10DepthStencilView* m_dsv;
-
-	//
-
 	GSTexture* Create(int type, int w, int h, int format);
 
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c);
@@ -57,12 +35,31 @@ class GSDevice10 : public GSDevice
 
 	CComPtr<ID3D10Device1> m_dev;
 	CComPtr<IDXGISwapChain> m_swapchain;
+	CComPtr<ID3D10Buffer> m_vb;
+	CComPtr<ID3D10Buffer> m_vb_old;
 
 	struct
 	{
-		CComPtr<ID3D10Buffer> vb, vb_old;
-		size_t stride, start, count, limit;
-	} m_vertices;
+		ID3D10Buffer* vb;
+		size_t vb_stride;
+		ID3D10InputLayout* layout;
+		D3D10_PRIMITIVE_TOPOLOGY topology;
+		ID3D10VertexShader* vs;
+		ID3D10Buffer* vs_cb;
+		ID3D10GeometryShader* gs;
+		ID3D10ShaderResourceView* ps_srv[2];
+		ID3D10PixelShader* ps;
+		ID3D10Buffer* ps_cb;
+		ID3D10SamplerState* ps_ss[2];
+		GSVector2i viewport;
+		GSVector4i scissor;
+		ID3D10DepthStencilState* dss;
+		uint8 sref;
+		ID3D10BlendState* bs;
+		float bf;
+		ID3D10RenderTargetView* rtv;
+		ID3D10DepthStencilView* dsv;
+	} m_state;
 
 public: // TODO
 	CComPtr<ID3D10RasterizerState> m_rs;
@@ -99,9 +96,7 @@ public:
 	bool Reset(int w, int h, int mode);
 	void Flip(bool limit);
 
-	void BeginScene();
 	void DrawPrimitive();
-	void EndScene();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);

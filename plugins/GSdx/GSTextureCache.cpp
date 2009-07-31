@@ -106,21 +106,12 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 
 	if(src == NULL)
 	{
-		src = CreateSource();
+		src = CreateSource(TEX0, TEXA, dst);
 
-		if(!(dst ? src->Create(dst) : src->Create(m_paltex)))
+		if(src == NULL)
 		{
-			delete src;
-
 			return NULL;
 		}
-
-		if(psm.pal > 0)
-		{
-			memcpy(src->m_clut, clut, psm.pal * sizeof(clut[0]));
-		}
-
-		m_src.Add(src, TEX0, m_renderer->m_context->offset.tex);
 	}
 
 	if(psm.pal > 0)
@@ -144,7 +135,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 	return src;
 }
 
-GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used, bool fb)
+GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used)
 {
 	uint32 bp = TEX0.TBP0;
 
@@ -160,41 +151,20 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 			dst = t;
 
-			if(!fb) dst->m_TEX0 = TEX0;
+			dst->m_TEX0 = TEX0;
 
 			break;
 		}
 	}
 
-	if(dst == NULL && fb)
-	{
-		// HACK: try to find something close to the base pointer
-
-		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
-		{
-			Target* t = *i;
-
-			if(t->m_TEX0.TBP0 <= bp && bp < t->m_TEX0.TBP0 + 0x700 && (!dst || t->m_TEX0.TBP0 >= dst->m_TEX0.TBP0))
-			{
-				dst = t;
-			}
-		}
-	}
-
 	if(dst == NULL)
 	{
-		dst = CreateTarget();
+		dst = CreateTarget(TEX0, w, h, type);
 
-		dst->m_TEX0 = TEX0;
-
-		if(!dst->Create(w, h, type))
+		if(dst == NULL)
 		{
-			delete dst;
-
 			return NULL;
 		}
-
-		m_dst[type].push_front(dst);
 	}
 	else
 	{
@@ -212,12 +182,12 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 		{
 			hh *= 2;
 		}
-/*
-		if(hh < 512)
+
+		if(hh < 512 && m_renderer->m_context->SCISSOR.SCAY1 == 511) // vp2
 		{
 			hh = 512;
 		}
-*/
+
 		if(ww > 0 && hh > 0)
 		{
 			dst->m_texture->m_scale.x = (float)w / ww;
@@ -229,6 +199,52 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 	{
 		dst->m_used = true;
 	}
+
+	return dst;
+}
+
+GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int w, int h)
+{
+	uint32 bp = TEX0.TBP0;
+
+	Target* dst = NULL;
+
+	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); i++)
+	{
+		Target* t = *i;
+
+		if(bp == t->m_TEX0.TBP0)
+		{
+			dst = t;
+
+			break;
+		}
+		else 
+		{
+			// HACK: try to find something close to the base pointer
+
+			if(t->m_TEX0.TBP0 <= bp && bp < t->m_TEX0.TBP0 + 0x700 && (!dst || t->m_TEX0.TBP0 >= dst->m_TEX0.TBP0))
+			{
+				dst = t;
+			}
+		}
+	}
+
+	if(dst == NULL)
+	{
+		dst = CreateTarget(TEX0, w, h, RenderTarget);
+
+		if(dst == NULL)
+		{
+			return NULL;
+		}
+	}
+	else
+	{
+		dst->Update();
+	}
+
+	dst->m_used = true;
 
 	return dst;
 }
@@ -368,12 +384,7 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 		{
 			if(GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
 			{
-				GSVector4i r2 = r.rintersect(t->m_valid);
-
-				if(!r2.rempty())
-				{
-					t->Read(r2);
-				}
+				Read(t, r.rintersect(t->m_valid));
 
 				return;
 			}
@@ -381,12 +392,7 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 			{
 				// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
 
-				GSVector4i r2 = GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid);
-
-				if(!r2.rempty())
-				{
-					t->Read(r2);
-				}
+				Read(t, GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid));
 
 				return;
 			}
@@ -477,6 +483,241 @@ void GSTextureCache::IncAge()
 	}
 }
 
+GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
+{
+	Source* src = new Source(m_renderer);
+
+	src->m_TEX0 = TEX0;
+	src->m_TEXA = TEXA;
+
+	int tw = 1 << TEX0.TW;
+	int th = 1 << TEX0.TH;
+	int tp = (int)TEX0.TW << 6;
+
+	if(dst == NULL)
+	{
+		if(m_paltex && GSLocalMemory::m_psm[TEX0.PSM].pal > 0)
+		{
+			src->m_fmt = GSTextureFX::FMT_8;
+
+			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		}
+		else
+		{
+			src->m_fmt = GSTextureFX::FMT_32;
+
+			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th);
+		}
+	}
+	else
+	{
+		// TODO: clean up this mess
+
+		src->m_target = true;
+
+		if(dst->m_type != RenderTarget) 
+		{
+			// TODO
+
+			delete src;
+
+			return NULL; 
+		}
+
+		dst->Update();
+
+		// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
+
+		int w = (int)(dst->m_texture->m_scale.x * tw);
+		int h = (int)(dst->m_texture->m_scale.y * th); 
+
+		GSVector2i dstsize = dst->m_texture->GetSize();
+
+		// pitch conversion
+
+		if(dst->m_TEX0.TBW != TEX0.TBW) // && dst->m_TEX0.PSM == TEX0.PSM
+		{
+			// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
+
+			// ASSERT(dst->m_TEX0.TBW > TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
+
+			src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y);
+
+			GSVector4 size = GSVector4(dstsize).xyxy();
+			GSVector4 scale = GSVector4(dst->m_texture->m_scale).xyxy();
+
+			int bw = 64;
+			int bh = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
+
+			GSVector4i br(0, 0, bw, bh);
+
+			int sw = (int)dst->m_TEX0.TBW << 6;
+
+			int dw = (int)TEX0.TBW << 6;
+			int dh = 1 << TEX0.TH;
+
+			if(sw != 0)
+			for(int dy = 0; dy < dh; dy += bh)
+			{
+				for(int dx = 0; dx < dw; dx += bw)
+				{
+					int o = dy * dw / bh + dx;
+
+					int sx = o % sw;
+					int sy = o / sw;
+
+					GSVector4 sr = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
+					GSVector4 dr = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
+
+					m_renderer->m_dev->StretchRect(dst->m_texture, sr, src->m_texture, dr);
+
+					// TODO: this is quite a lot of StretchRect, do it with one Draw
+				}
+			}
+		}
+		else if(tw < tp)
+		{
+			// FIXME: timesplitters blurs the render target by blending itself over a couple of times
+
+			if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
+			{
+				return false;
+			}
+		}
+
+		// width/height conversion
+
+		GSVector2 scale = dst->m_texture->m_scale;
+
+		GSVector4 dr(0, 0, w, h);
+
+		if(w > dstsize.x) 
+		{
+			scale.x = (float)dstsize.x / tw;
+			dr.z = (float)dstsize.x * scale.x / dst->m_texture->m_scale.x;
+			w = dstsize.x;
+		}
+		
+		if(h > dstsize.y) 
+		{
+			scale.y = (float)dstsize.y / th;
+			dr.w = (float)dstsize.y * scale.y / dst->m_texture->m_scale.y;
+			h = dstsize.y;
+		}
+
+		GSVector4 sr(0, 0, w, h);
+
+		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
+		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h);
+
+		if(!src->m_texture)
+		{
+			src->m_texture = dt;
+		}
+
+		if((sr == dr).alltrue())
+		{
+			m_renderer->m_dev->CopyRect(st, dt, GSVector4i(0, 0, w, h));
+		}
+		else
+		{
+			sr.z /= st->m_size.x;
+			sr.w /= st->m_size.y;
+
+			m_renderer->m_dev->StretchRect(st, sr, dt, dr);
+		}
+
+		if(dt != src->m_texture)
+		{
+			m_renderer->m_dev->Recycle(src->m_texture);
+
+			src->m_texture = dt;
+		}
+
+		src->m_texture->m_scale = scale;
+
+		switch(TEX0.PSM)
+		{
+		default:
+			ASSERT(0);
+		case PSM_PSMCT32:
+			src->m_fmt = GSTextureFX::FMT_32;
+			break;
+		case PSM_PSMCT24:
+			src->m_fmt = GSTextureFX::FMT_24;
+			break;
+		case PSM_PSMCT16:
+		case PSM_PSMCT16S:
+			src->m_fmt = GSTextureFX::FMT_16;
+			break;
+		case PSM_PSMT8H:
+			src->m_fmt = GSTextureFX::FMT_8H;
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+			break;
+		case PSM_PSMT4HL:
+			src->m_fmt = GSTextureFX::FMT_4HL;
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+			break;
+		case PSM_PSMT4HH:
+			src->m_fmt = GSTextureFX::FMT_4HH;
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+			break;
+		}
+	}
+
+	if(src->m_texture == NULL)
+	{
+		ASSERT(0);
+
+		return NULL;
+	}
+
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
+
+	if(psm.pal > 0)
+	{
+		memcpy(src->m_clut, (const uint32*)m_renderer->m_mem.m_clut, psm.pal * sizeof(uint32));
+	}
+
+	m_src.Add(src, TEX0, m_renderer->m_context->offset.tex);
+
+	return src;
+}
+
+GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int w, int h, int type)
+{
+	Target* t = new Target(m_renderer);
+
+	t->m_TEX0 = TEX0;
+
+	// FIXME: initial data should be unswizzled from local mem in Update() if dirty
+
+	t->m_type = type;
+
+	if(type == RenderTarget)
+	{
+		t->m_texture = m_renderer->m_dev->CreateRenderTarget(w, h);
+
+		t->m_used = true; // FIXME
+	}
+	else if(type == DepthStencil)
+	{
+		t->m_texture = m_renderer->m_dev->CreateDepthStencil(w, h);
+	}
+
+	if(t->m_texture == NULL)
+	{
+		ASSERT(0);
+
+		return NULL;
+	}
+
+	m_dst[type].push_front(t);
+
+	return t;
+}
+
 // GSTextureCache::Surface
 
 GSTextureCache::Surface::Surface(GSRenderer* r)
@@ -524,197 +765,6 @@ GSTextureCache::Source::~Source()
 	_aligned_free(m_clut);
 
 	_aligned_free(m_write.rect);
-}
-
-bool GSTextureCache::Source::Create(bool paltex)
-{
-	m_TEX0 = m_renderer->m_context->TEX0;
-	m_TEXA = m_renderer->m_env.TEXA;
-
-	ASSERT(m_texture == NULL);
-
-	if(paltex && GSLocalMemory::m_psm[m_TEX0.PSM].pal > 0)
-	{
-		m_fmt = GSTextureFX::FMT_8;
-
-		m_texture = m_renderer->m_dev->CreateTexture(1 << m_TEX0.TW, 1 << m_TEX0.TH, Get8bitFormat());
-		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-	}
-	else
-	{
-		m_fmt = GSTextureFX::FMT_32;
-
-		m_texture = m_renderer->m_dev->CreateTexture(1 << m_TEX0.TW, 1 << m_TEX0.TH);
-	}
-
-	return m_texture != NULL;
-}
-
-bool GSTextureCache::Source::Create(Target* dst)
-{
-	m_target = true;
-
-	if(dst->m_type != RenderTarget) 
-	{
-		// TODO
-
-		return false; 
-	}
-
-	// TODO: clean up this mess
-
-	dst->Update();
-
-	// m_renderer->m_perfmon.Put(GSPerfMon::ConvertRT2T, 1);
-
-	m_TEX0 = m_renderer->m_context->TEX0;
-	m_TEXA = m_renderer->m_env.TEXA;
-
-	int tw = 1 << m_TEX0.TW;
-	int th = 1 << m_TEX0.TH;
-	int tp = (int)m_TEX0.TW << 6;
-
-	// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
-
-	int w = (int)(dst->m_texture->m_scale.x * tw);
-	int h = (int)(dst->m_texture->m_scale.y * th); 
-
-	GSVector2i dstsize = dst->m_texture->GetSize();
-
-	// pitch conversion
-
-	if(dst->m_TEX0.TBW != m_TEX0.TBW) // && dst->m_TEX0.PSM == m_TEX0.PSM
-	{
-		// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
-
-		// ASSERT(dst->m_TEX0.TBW > m_TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
-
-		ASSERT(m_texture == NULL);
-
-		m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y);
-
-		GSVector4 size = GSVector4(dstsize).xyxy();
-		GSVector4 scale = GSVector4(dst->m_texture->m_scale).xyxy();
-
-		int bw = 64;
-		int bh = m_TEX0.PSM == PSM_PSMCT32 || m_TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
-
-		GSVector4i br(0, 0, bw, bh);
-
-		int sw = (int)dst->m_TEX0.TBW << 6;
-
-		int dw = (int)m_TEX0.TBW << 6;
-		int dh = 1 << m_TEX0.TH;
-
-		if(sw != 0)
-		for(int dy = 0; dy < dh; dy += bh)
-		{
-			for(int dx = 0; dx < dw; dx += bw)
-			{
-				int o = dy * dw / bh + dx;
-
-				int sx = o % sw;
-				int sy = o / sw;
-
-				GSVector4 sr = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
-				GSVector4 dr = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
-
-				m_renderer->m_dev->StretchRect(dst->m_texture, sr, m_texture, dr);
-
-				// TODO: this is quite a lot of StretchRect, do it with one Draw
-			}
-		}
-	}
-	else if(tw < tp)
-	{
-		// FIXME: timesplitters blurs the render target by blending itself over a couple of times
-
-		if(tw == 256 && th == 128 && tp == 512 && (m_TEX0.TBP0 == 0 || m_TEX0.TBP0 == 0x00e00))
-		{
-			return false;
-		}
-	}
-
-	// width/height conversion
-
-	GSVector2 scale = dst->m_texture->m_scale;
-
-	GSVector4 dr(0, 0, w, h);
-
-	if(w > dstsize.x) 
-	{
-		scale.x = (float)dstsize.x / tw;
-		dr.z = (float)dstsize.x * scale.x / dst->m_texture->m_scale.x;
-		w = dstsize.x;
-	}
-	
-	if(h > dstsize.y) 
-	{
-		scale.y = (float)dstsize.y / th;
-		dr.w = (float)dstsize.y * scale.y / dst->m_texture->m_scale.y;
-		h = dstsize.y;
-	}
-
-	GSVector4 sr(0, 0, w, h);
-
-	GSTexture* st = m_texture ? m_texture : dst->m_texture;
-	GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h);
-
-	if(!m_texture)
-	{
-		m_texture = dt;
-	}
-
-	if((sr == dr).alltrue())
-	{
-		m_renderer->m_dev->CopyRect(st, dt, GSVector4i(0, 0, w, h));
-	}
-	else
-	{
-		sr.z /= st->m_size.x;
-		sr.w /= st->m_size.y;
-
-		m_renderer->m_dev->StretchRect(st, sr, dt, dr);
-	}
-
-	if(dt != m_texture)
-	{
-		m_renderer->m_dev->Recycle(m_texture);
-
-		m_texture = dt;
-	}
-
-	m_texture->m_scale = scale;
-
-	switch(m_TEX0.PSM)
-	{
-	default:
-		ASSERT(0);
-	case PSM_PSMCT32:
-		m_fmt = GSTextureFX::FMT_32;
-		break;
-	case PSM_PSMCT24:
-		m_fmt = GSTextureFX::FMT_24;
-		break;
-	case PSM_PSMCT16:
-	case PSM_PSMCT16S:
-		m_fmt = GSTextureFX::FMT_16;
-		break;
-	case PSM_PSMT8H:
-		m_fmt = GSTextureFX::FMT_8H;
-		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-		break;
-	case PSM_PSMT4HL:
-		m_fmt = GSTextureFX::FMT_4HL;
-		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-		break;
-	case PSM_PSMT4HH:
-		m_fmt = GSTextureFX::FMT_4HH;
-		m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-		break;
-	}
-
-	return true;
 }
 
 void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
@@ -910,28 +960,6 @@ GSTextureCache::Target::Target(GSRenderer* r)
 	, m_used(false)
 {
 	m_valid = GSVector4i::zero();
-}
-
-bool GSTextureCache::Target::Create(int w, int h, int type)
-{
-	ASSERT(m_texture == NULL);
-
-	// FIXME: initial data should be unswizzled from local mem in Update() if dirty
-
-	m_type = type;
-
-	if(type == RenderTarget)
-	{
-		m_texture = m_renderer->m_dev->CreateRenderTarget(w, h);
-
-		m_used = true;
-	}
-	else if(type == DepthStencil)
-	{
-		m_texture = m_renderer->m_dev->CreateDepthStencil(w, h);
-	}
-
-	return m_texture != NULL;
 }
 
 void GSTextureCache::Target::Update()

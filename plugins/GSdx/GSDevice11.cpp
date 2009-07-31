@@ -25,31 +25,11 @@
 #include "resource.h"
 
 GSDevice11::GSDevice11()
-	: m_vb(NULL)
-	, m_vb_stride(0)
-	, m_layout(NULL)
-	, m_topology(D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)
-	, m_vs(NULL)
-	, m_vs_cb(NULL)
-	, m_gs(NULL)
-	, m_ps(NULL)
-	, m_ps_cb(NULL)
-	, m_scissor(0, 0, 0, 0)
-	, m_viewport(0, 0)
-	, m_dss(NULL)
-	, m_sref(0)
-	, m_bs(NULL)
-	, m_bf(-1)
-	, m_rtv(NULL)
-	, m_dsv(NULL)
 {
-	memset(m_ps_srv, 0, sizeof(m_ps_srv));
-	memset(m_ps_ss, 0, sizeof(m_ps_ss));
+	memset(&m_state, 0, sizeof(m_state));
 
-	m_vertices.stride = 0;
-	m_vertices.start = 0;
-	m_vertices.count = 0;
-	m_vertices.limit = 0;
+	m_state.topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+	m_state.bf = -1;
 }
 
 GSDevice11::~GSDevice11()
@@ -257,25 +237,9 @@ void GSDevice11::Flip(bool limit)
 	m_swapchain->Present(m_vsync && limit ? 1 : 0, 0);
 }
 
-void GSDevice11::BeginScene()
-{
-}
-
 void GSDevice11::DrawPrimitive()
 {
 	m_ctx->Draw(m_vertices.count, m_vertices.start);
-}
-
-void GSDevice11::EndScene()
-{
-	//PSSetShaderResources(NULL, NULL);
-
-	// not clearing the rt/ds gives a little fps boost in complex games (5-10%)
-
-	// OMSetRenderTargets(NULL, NULL);
-
-	m_vertices.start += m_vertices.count;
-	m_vertices.count = 0;
 }
 
 void GSDevice11::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -482,6 +446,8 @@ void GSDevice11::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 	//
 
 	EndScene();
+
+	PSSetShaderResources(NULL, NULL);
 }
 
 void GSDevice11::DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c)
@@ -524,14 +490,15 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 
 	if(count * stride > m_vertices.limit * m_vertices.stride)
 	{
-		m_vertices.vb_old = m_vertices.vb;
-		m_vertices.vb = NULL;
+		m_vb_old = m_vb;
+		m_vb = NULL;
+
 		m_vertices.start = 0;
 		m_vertices.count = 0;
 		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
 	}
 
-	if(m_vertices.vb == NULL)
+	if(m_vb == NULL)
 	{
 		D3D11_BUFFER_DESC bd;
 
@@ -544,7 +511,7 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 
 		HRESULT hr;
 		
-		hr = m_dev->CreateBuffer(&bd, NULL, &m_vertices.vb);
+		hr = m_dev->CreateBuffer(&bd, NULL, &m_vb);
 
 		if(FAILED(hr)) return;
 	}
@@ -560,25 +527,25 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 
 	D3D11_MAPPED_SUBRESOURCE m;
 
-	if(SUCCEEDED(m_ctx->Map(m_vertices.vb, 0, type, 0, &m)))
+	if(SUCCEEDED(m_ctx->Map(m_vb, 0, type, 0, &m)))
 	{
 		GSVector4i::storent((uint8*)m.pData + m_vertices.start * stride, vertices, count * stride);
 
-		m_ctx->Unmap(m_vertices.vb, 0);
+		m_ctx->Unmap(m_vb, 0);
 	}
 
 	m_vertices.count = count;
 	m_vertices.stride = stride;
 
-	IASetVertexBuffer(m_vertices.vb, stride);
+	IASetVertexBuffer(m_vb, stride);
 }
 
 void GSDevice11::IASetVertexBuffer(ID3D11Buffer* vb, size_t stride)
 {
-	if(m_vb != vb || m_vb_stride != stride)
+	if(m_state.vb != vb || m_state.vb_stride != stride)
 	{
-		m_vb = vb;
-		m_vb_stride = stride;
+		m_state.vb = vb;
+		m_state.vb_stride = stride;
 
 		uint32 offset = 0;
 
@@ -588,9 +555,9 @@ void GSDevice11::IASetVertexBuffer(ID3D11Buffer* vb, size_t stride)
 
 void GSDevice11::IASetInputLayout(ID3D11InputLayout* layout)
 {
-	if(m_layout != layout)
+	if(m_state.layout != layout)
 	{
-		m_layout = layout;
+		m_state.layout = layout;
 
 		m_ctx->IASetInputLayout(layout);
 	}
@@ -598,9 +565,9 @@ void GSDevice11::IASetInputLayout(ID3D11InputLayout* layout)
 
 void GSDevice11::IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY topology)
 {
-	if(m_topology != topology)
+	if(m_state.topology != topology)
 	{
-		m_topology = topology;
+		m_state.topology = topology;
 
 		m_ctx->IASetPrimitiveTopology(topology);
 	}
@@ -608,16 +575,16 @@ void GSDevice11::IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY topology)
 
 void GSDevice11::VSSetShader(ID3D11VertexShader* vs, ID3D11Buffer* vs_cb)
 {
-	if(m_vs != vs)
+	if(m_state.vs != vs)
 	{
-		m_vs = vs;
+		m_state.vs = vs;
 
 		m_ctx->VSSetShader(vs, NULL, 0);
 	}
 	
-	if(m_vs_cb != vs_cb)
+	if(m_state.vs_cb != vs_cb)
 	{
-		m_vs_cb = vs_cb;
+		m_state.vs_cb = vs_cb;
 
 		m_ctx->VSSetConstantBuffers(0, 1, &vs_cb);
 	}
@@ -625,11 +592,11 @@ void GSDevice11::VSSetShader(ID3D11VertexShader* vs, ID3D11Buffer* vs_cb)
 
 void GSDevice11::GSSetShader(ID3D11GeometryShader* gs)
 {
-	if(m_gs != gs)
+	if(m_state.gs != gs)
 	{
-		m_ctx->GSSetShader(gs, NULL, 0);
+		m_state.gs = gs;
 
-		m_gs = gs;
+		m_ctx->GSSetShader(gs, NULL, 0);
 	}
 }
 
@@ -641,10 +608,10 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 	if(sr0) srv0 = *(GSTexture11*)sr0;
 	if(sr1) srv1 = *(GSTexture11*)sr1;
 
-	if(m_ps_srv[0] != srv0 || m_ps_srv[1] != srv1)
+	if(m_state.ps_srv[0] != srv0 || m_state.ps_srv[1] != srv1)
 	{
-		m_ps_srv[0] = srv0;
-		m_ps_srv[1] = srv1;
+		m_state.ps_srv[0] = srv0;
+		m_state.ps_srv[1] = srv1;
 
 		ID3D11ShaderResourceView* srvs[] = {srv0, srv1};
 	
@@ -654,16 +621,16 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 
 void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 {
-	if(m_ps != ps)
+	if(m_state.ps != ps)
 	{
-		m_ps = ps;
+		m_state.ps = ps;
 
 		m_ctx->PSSetShader(ps, NULL, 0);
 	}
 	
-	if(m_ps_cb != ps_cb)
+	if(m_state.ps_cb != ps_cb)
 	{
-		m_ps_cb = ps_cb;
+		m_state.ps_cb = ps_cb;
 
 		m_ctx->PSSetConstantBuffers(0, 1, &ps_cb);
 	}
@@ -671,10 +638,10 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 
 void GSDevice11::PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1)
 {
-	if(m_ps_ss[0] != ss0 || m_ps_ss[1] != ss1)
+	if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1)
 	{
-		m_ps_ss[0] = ss0;
-		m_ps_ss[1] = ss1;
+		m_state.ps_ss[0] = ss0;
+		m_state.ps_ss[1] = ss1;
 
 		ID3D11SamplerState* sss[] = {ss0, ss1};
 
@@ -684,25 +651,25 @@ void GSDevice11::PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* 
 
 void GSDevice11::OMSetDepthStencilState(ID3D11DepthStencilState* dss, uint8 sref)
 {
-	if(m_dss != dss || m_sref != sref)
+	if(m_state.dss != dss || m_state.sref != sref)
 	{
-		m_ctx->OMSetDepthStencilState(dss, sref);
+		m_state.dss = dss;
+		m_state.sref = sref;
 
-		m_dss = dss;
-		m_sref = sref;
+		m_ctx->OMSetDepthStencilState(dss, sref);
 	}
 }
 
 void GSDevice11::OMSetBlendState(ID3D11BlendState* bs, float bf)
 {
-	if(m_bs != bs || m_bf != bf)
+	if(m_state.bs != bs || m_state.bf != bf)
 	{
+		m_state.bs = bs;
+		m_state.bf = bf;
+
 		float BlendFactor[] = {bf, bf, bf, 0};
 
 		m_ctx->OMSetBlendState(bs, BlendFactor, 0xffffffff);
-
-		m_bs = bs;
-		m_bf = bf;
 	}
 }
 
@@ -714,17 +681,17 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 	if(rt) rtv = *(GSTexture11*)rt;
 	if(ds) dsv = *(GSTexture11*)ds;
 
-	if(m_rtv != rtv || m_dsv != dsv)
+	if(m_state.rtv != rtv || m_state.dsv != dsv)
 	{
-		m_rtv = rtv;
-		m_dsv = dsv;
+		m_state.rtv = rtv;
+		m_state.dsv = dsv;
 
 		m_ctx->OMSetRenderTargets(1, &rtv, dsv);
 	}
 
-	if(m_viewport != rt->m_size)
+	if(m_state.viewport != rt->m_size)
 	{
-		m_viewport = rt->m_size;
+		m_state.viewport = rt->m_size;
 
 		D3D11_VIEWPORT vp;
 
@@ -742,9 +709,9 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 
 	GSVector4i r = scissor ? *scissor : GSVector4i(rt->m_size).zwxy();
 
-	if(!m_scissor.eq(r))
+	if(!m_state.scissor.eq(r))
 	{
-		m_scissor = r;
+		m_state.scissor = r;
 
 		m_ctx->RSSetScissorRects(1, r);
 	}
