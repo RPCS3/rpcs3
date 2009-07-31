@@ -128,12 +128,12 @@ microVUt(void) getPreg(mV, int reg) {
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT1, 15);*/
 }
 
-microVUt(void) getQreg(mV, int reg) {
-	mVUunpack_xyzw(reg, xmmPQ, mVUinfo.readQ);
+microVUt(void) getQreg(int reg, int qInstance) {
+	mVUunpack_xyzw(reg, xmmPQ, qInstance);
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/
 }
 
-microVUt(void) writeQreg(mV, int reg, int qInstance) {
+microVUt(void) writeQreg(int reg, int qInstance) {
 	if (qInstance) {
 		if (!cpucaps.hasStreamingSIMD4Extensions) {
 			SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);

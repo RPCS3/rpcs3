@@ -132,7 +132,10 @@ void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
 		tempFt = Ft;
 	}
 	opCase3 { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getIreg(mVU, Ft, 1); }
-	opCase4 { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getQreg(mVU, Ft); }
+	opCase4 {
+		if (_XYZW_SS && !mVUinfo.readQ) { Ft = xmmPQ; tempFt = -1; }
+		else { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getQreg(Ft, mVUinfo.readQ); }
+	}
 }
 
 // Normal FMAC Opcodes

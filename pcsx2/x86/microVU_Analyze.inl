@@ -275,13 +275,18 @@ microVUt(void) mVUanalyzeR2(mV, int Ft, bool canBeNOP) {
 //------------------------------------------------------------------
 // Sflag - Status Flag Opcodes
 //------------------------------------------------------------------
-#define flagSet(xFLAG) {											\
-	int curPC = iPC;												\
-	for (int i = mVUcount, j = 0; i > 0; i--, j++) {				\
-		incPC2(-2);													\
-		if (sFLAG.doFlag) { xFLAG = 1; if (j >= 3) { break; } }		\
-	}																\
-	iPC = curPC;													\
+microVUt(void) flagSet(mV, bool setMacFlag) {
+	int curPC = iPC;
+	for (int i = mVUcount, j = 0; i > 0; i--, j++) {
+		j += mVUstall;
+		incPC2(-2);
+		if (sFLAG.doFlag && (j >= 3)) { 
+			if (setMacFlag) { mFLAG.doFlag = 1; }
+			else { sFLAG.doNonSticky = 1; }
+			break; 
+		}
+	}
+	iPC = curPC;
 }
 
 microVUt(void) mVUanalyzeSflag(mV, int It) {
@@ -289,14 +294,10 @@ microVUt(void) mVUanalyzeSflag(mV, int It) {
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
 	if (!It) { mVUlow.isNOP = 1; }
 	else {
-		mVUinfo.swapOps = 1;
 		mVUsFlagHack = 0; // Don't Optimize Out Status Flags for this block
-		flagSet(sFLAG.doNonSticky);
-		if (mVUcount < 4)	{ mVUpBlock->pState.needExactMatch |= 0xf; }
-		if (mVUcount >= 1)	{ incPC2(-2); mVUlow.useSflag = 1; incPC2(2); }
-		// Note: useSflag is used for status flag optimizations when a FSSET instruction is called.
-		// Do to stalls, it can only be set one instruction prior to the status flag read instruction
-		// if we were guaranteed no-stalls were to happen, it could be set 4 instruction prior.
+		mVUinfo.swapOps = 1;
+		flagSet(mVU, 0);
+		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf; }
 	}
 }
 
@@ -316,8 +317,8 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 	if (!It) { mVUlow.isNOP = 1; }
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
 		mVUinfo.swapOps = 1;
+		flagSet(mVU, 1);
 		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << 4; }
-		flagSet(mFLAG.doFlag);
 	}
 }
 

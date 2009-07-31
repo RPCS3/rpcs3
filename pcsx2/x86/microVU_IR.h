@@ -107,7 +107,6 @@ struct microLowerOp {
 	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
 	bool isNOP;		// This instruction is a NOP
 	bool isFSSET;	// This instruction is a FSSET
-	bool useSflag;	// This instruction uses/reads Sflag
 	bool noWriteVF;	// Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
 	bool backupVI;	// Backup VI reg to memory if modified before branch (branch uses old VI value unless opcode is ILW or ILWR)
 	bool memReadIs;	// Read Is (VI reg) from memory (used by branches)
@@ -245,6 +244,7 @@ public:
 		clearReg(reg); // Clear Reg
 	}
 	void clearNeeded(int reg) {
+		if ((reg < 0) || (reg >= xmmTotal)) return;
 		xmmReg[reg].isNeeded = 0;
 		if (xmmReg[reg].xyzw) { // Reg was modified
 			if (xmmReg[reg].reg > 0) {

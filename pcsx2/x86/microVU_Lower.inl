@@ -79,7 +79,7 @@ mVUop(mVU_DIV) {
 			mVUclamp1(Fs, t1, 8);
 		x86SetJ8(djmp);
 
-		writeQreg(mVU, Fs, mVUinfo.writeQ);
+		writeQreg(Fs, mVUinfo.writeQ);
 
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
@@ -99,7 +99,7 @@ mVUop(mVU_SQRT) {
 
 		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(Ft, (uptr)mVU_maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
 		SSE_SQRTSS_XMM_to_XMM(Ft, Ft);
-		writeQreg(mVU, Ft, mVUinfo.writeQ);
+		writeQreg(Ft, mVUinfo.writeQ);
 
 		mVU->regAlloc->clearNeeded(Ft);
 	}
@@ -138,7 +138,7 @@ mVUop(mVU_RSQRT) {
 			mVUclamp1(Fs, t1, 8);
 		x86SetJ8(djmp);
 
-		writeQreg(mVU, Fs, mVUinfo.writeQ);
+		writeQreg(Fs, mVUinfo.writeQ);
 
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
