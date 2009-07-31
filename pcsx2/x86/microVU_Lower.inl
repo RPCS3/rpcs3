@@ -51,8 +51,10 @@ mVUop(mVU_DIV) {
 	pass1 { mVUanalyzeFDIV(mVU, _Fs_, _Fsf_, _Ft_, _Ftf_, 7); }
 	pass2 { 
 		u8 *ajmp, *bjmp, *cjmp, *djmp;
+		int Ft;
+		if (_Ftf_) Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
+		else	   Ft = mVU->regAlloc->allocReg(_Ft_);
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
-		int Ft = mVU->regAlloc->allocReg(_Ft_, 0, (1 << (3 - _Ftf_)));
 		int t1 = mVU->regAlloc->allocReg();
 
 		testZero(Ft, t1, gprT1); // Test if Ft is zero
@@ -77,9 +79,7 @@ mVUop(mVU_DIV) {
 			mVUclamp1(Fs, t1, 8);
 		x86SetJ8(djmp);
 
-		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, Fs);
-		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+		writeQreg(mVU, Fs, mVUinfo.writeQ);
 
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
@@ -99,9 +99,7 @@ mVUop(mVU_SQRT) {
 
 		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(Ft, (uptr)mVU_maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
 		SSE_SQRTSS_XMM_to_XMM(Ft, Ft);
-		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, Ft);
-		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+		writeQreg(mVU, Ft, mVUinfo.writeQ);
 
 		mVU->regAlloc->clearNeeded(Ft);
 	}
@@ -140,9 +138,7 @@ mVUop(mVU_RSQRT) {
 			mVUclamp1(Fs, t1, 8);
 		x86SetJ8(djmp);
 
-		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
-		SSE_MOVSS_XMM_to_XMM(xmmPQ, Fs);
-		if (mVUinfo.writeQ) SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+		writeQreg(mVU, Fs, mVUinfo.writeQ);
 
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
@@ -741,7 +737,7 @@ mVUop(mVU_MFP) {
 	pass1 { mVUanalyzeMFP(mVU, _Ft_); }
 	pass2 { 
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
-		getPreg(Ft);
+		getPreg(mVU, Ft);
 		mVU->regAlloc->clearNeeded(Ft);
 	}
 	pass3 { mVUlog("MFP.%s vf%02d, P", _XYZW_String, _Ft_); }
@@ -759,7 +755,7 @@ mVUop(mVU_MOVE) {
 mVUop(mVU_MR32) {
 	pass1 { mVUanalyzeMR32(mVU, _Fs_, _Ft_); }
 	pass2 { 
-		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, 0xf);
+		int Fs = mVU->regAlloc->allocReg(_Fs_);
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		if (_XYZW_SS) mVUunpack_xyzw(Ft, Fs, (_X ? 1 : (_Y ? 2 : (_Z ? 3 : 0))));
 		else		  SSE2_PSHUFD_XMM_to_XMM(Ft, Fs, 0x39);

@@ -31,10 +31,12 @@
 	}																											\
 }
 
-#define startLoop() {								\
-	mVUdebug1();									\
-	memset(&mVUinfo,	 0, sizeof(mVUinfo));		\
-	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));	\
+#define startLoop() {																	\
+	if (curI & _Mbit_)	{ Console::Status("microVU%d: M-bit set!", params getIndex); }	\
+	if (curI & _Dbit_)	{ DevCon::Status ("microVU%d: D-bit set!", params getIndex); }	\
+	if (curI & _Tbit_)	{ DevCon::Status ("microVU%d: T-bit set!", params getIndex); }	\
+	memset(&mVUinfo,	 0, sizeof(mVUinfo));											\
+	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));										\
 }
 
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
