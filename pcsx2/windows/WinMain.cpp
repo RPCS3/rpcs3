@@ -373,16 +373,26 @@ void RunGui()
 	{
 		// Initially bypass GUI and start PCSX2 directly.
 		// Manually load plugins using the user's configured image (if non-elf).
+
+		int mode = g_Startup.BootMode & BootMode_ModeMask;
 		
-		if( g_Startup.Enabled && (g_Startup.BootMode != BootMode_Elf) )
+		if( g_Startup.Enabled && (mode != BootMode_Elf) )
 		{
+
+			if(mode == BootMode_Iso)
+				CDVD=ISO;
+			else if(mode == BootMode_NoDisc)
+				CDVD=NODISC;
+			else
+				CDVD=CDVD_plugin;
+
 			if (OpenPlugins(g_Startup.ImageName) == -1)
 				return;
 		}
 
 		SysPrepareExecution(
 			(g_Startup.BootMode == BootMode_Elf) ? g_Startup.ImageName : NULL, 
-			(g_Startup.BootMode == BootMode_Bios)
+			((g_Startup.BootMode & BootMode_Bios) != 0)
 		);
 	}
 

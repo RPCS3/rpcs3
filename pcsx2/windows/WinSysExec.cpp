@@ -66,7 +66,7 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 {
 	int tidx = 0;
-	g_Startup.BootMode = BootMode_Bios;
+	g_Startup.BootMode = BootMode_Normal;
 
 	while( tidx < tokenCount )
 	{

@@ -49,7 +49,8 @@ void CALLBACK ISOshutdown()
 
 s32 CALLBACK ISOopen(const char* pTitle)
 {
-	//if (pTitle != NULL) strcpy(isoFileName, pTitle);
+	if ((pTitle != NULL) && (strlen(pTitle) > 0))
+		strcpy(isoFileName, pTitle);
 
 	iso = isoOpen(isoFileName);
 	if (iso == NULL)
