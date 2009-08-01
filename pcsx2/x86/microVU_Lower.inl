@@ -355,6 +355,7 @@ mVUop(mVU_ERSQRT) {
 	pass2 { 
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+		SSE_ANDPS_M128_to_XMM (Fs, (uptr)mVU_absclip);
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
 		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
 		SSE_DIVSS_XMM_to_XMM  (Fs, xmmPQ);
@@ -417,6 +418,7 @@ mVUop(mVU_ESQRT) {
 	pass2 { 
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+		SSE_ANDPS_M128_to_XMM (Fs, (uptr)mVU_absclip);
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);

@@ -222,7 +222,7 @@ template<memtag tag> static __forceinline bool IS_REG(s32 reg)
 
 template<memtag tag> static __forceinline bool IS_REG(u32 reg)
 {
-	return (reg & tag);
+	return !!(reg & tag);
 }
 
 #define IS_EECONSTREG(reg) IS_REG<MEM_EECONSTTAG>(reg)
@@ -281,13 +281,13 @@ extern u32 _recIsRegWritten(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern u32 _recIsRegUsed(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern void _recFillRegister(EEINST& pinst, int type, int reg, int write);
 
-static __forceinline bool EEINST_ISLIVE64(u32 reg) { return (g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1)); }
-static __forceinline bool EEINST_ISLIVEXMM(u32 reg) { return (g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2)); }
-static __forceinline bool EEINST_ISLIVE1(u32 reg) { return (g_pCurInstInfo->regs[reg] & EEINST_LIVE1); }
-static __forceinline bool EEINST_ISLIVE2(u32 reg) { return (g_pCurInstInfo->regs[reg] & EEINST_LIVE2); }
+static __forceinline bool EEINST_ISLIVE64(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1)); }
+static __forceinline bool EEINST_ISLIVEXMM(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2)); }
+static __forceinline bool EEINST_ISLIVE1(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE1); }
+static __forceinline bool EEINST_ISLIVE2(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE2); }
 
-static __forceinline bool FPUINST_ISLIVE(u32 reg) { return (g_pCurInstInfo->fpuregs[reg] & EEINST_LIVE0); }
-static __forceinline bool FPUINST_LASTUSE(u32 reg) { return (g_pCurInstInfo->fpuregs[reg] & EEINST_LASTUSE); }
+static __forceinline bool FPUINST_ISLIVE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LIVE0); }
+static __forceinline bool FPUINST_LASTUSE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LASTUSE); }
 
 // if set, then the variable at this inst really has its upper 32 bits valid
 // The difference between EEINST_LIVE1 is that the latter is used in back propagation
