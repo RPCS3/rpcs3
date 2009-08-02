@@ -283,16 +283,7 @@ void SysClearExecutionCache()
 
 __forceinline void SysUpdate()
 {
-#ifdef __LINUX__
-	// Doing things the other way results in no keys functioning under Linux!
-	HostGui::KeyEvent(PAD1keyEvent());
-	HostGui::KeyEvent(PAD2keyEvent());
-#else
-	keyEvent* ev1 = PAD1keyEvent();
-	keyEvent* ev2 = PAD2keyEvent();
-
-	HostGui::KeyEvent( (ev1 != NULL) ? ev1 : ev2);
-#endif
+	HostGui::KeyEvent( PADkeyEvent() );
 }
 
 void SysExecute()
@@ -348,10 +339,6 @@ void SysEndExecution()
 // use_bios - forces the game to boot through the PS2 bios, instead of bypassing it.
 void SysPrepareExecution( const wxString& elf_file, bool use_bios )
 {
-	// solve a little crash
-	if(CDVD.init == NULL)
-		CDVD = CDVD_plugin;
-
 	if( !g_EmulationInProgress )
 	{
 		try
@@ -366,9 +353,7 @@ void SysPrepareExecution( const wxString& elf_file, bool use_bios )
 
 		g_Startup.BootMode = (elf_file) ? BootMode_Elf : BootMode_Normal;
 
-		if (OpenPlugins(NULL) == -1) { 
-			return; 
-		}
+		OpenPlugins(NULL);
 
 		if( elf_file.IsEmpty() )
 		{

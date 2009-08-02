@@ -32,6 +32,8 @@ DECLARE_EVENT_TYPE(wxEVT_EnumerationFinished, -1)
 DEFINE_EVENT_TYPE(wxEVT_EnumeratedNext)
 DEFINE_EVENT_TYPE(wxEVT_EnumerationFinished);
 
+typedef s32 (CALLBACK* PluginTestFnptr)();
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 class PluginEnumerator
@@ -92,7 +94,7 @@ public:
 	bool Test( int pluginTypeIndex ) const
 	{
 		// all test functions use the same parameterless API, so just pick one arbitrarily (I pick PAD!)
-		_PADtest testfunc = (_PADtest)m_plugin.GetSymbol( wxString::FromAscii( tbl_PluginInfo[pluginTypeIndex].shortname ) + L"test" );
+		PluginTestFnptr testfunc = (PluginTestFnptr)m_plugin.GetSymbol( wxString::FromAscii( tbl_PluginInfo[pluginTypeIndex].shortname ) + L"test" );
 		if( testfunc == NULL ) return false;
 		return (testfunc() == 0);
 	}

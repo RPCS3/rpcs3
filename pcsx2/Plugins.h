@@ -23,6 +23,8 @@
 #define PLUGINfuncs
 #include "PS2Edefs.h"
 
+#include <wx/dynlib.h>
+
 struct PluginInfo
 {
 	const char* shortname;
@@ -31,19 +33,14 @@ struct PluginInfo
 	int version;			// minimum version required / supported
 };
 
-extern const PluginInfo tbl_PluginInfo[];
-
 namespace Exception
 {
 	class NotPcsxPlugin : public Stream
 	{
 	public:
 		virtual ~NotPcsxPlugin() throw() {}
-		explicit NotPcsxPlugin( const wxString& objname ) :
-		Stream( objname, wxLt("File is not a PCSX2 plugin") ) {}
-
-		explicit NotPcsxPlugin( const PluginsEnum_t& pid ) :
-		Stream( wxString::FromUTF8( tbl_PluginInfo[pid].shortname ), wxLt("File is not a PCSX2 plugin") ) {}
+		explicit NotPcsxPlugin( const wxString& objname );
+		explicit NotPcsxPlugin( const PluginsEnum_t& pid );
 	};
 };
 
@@ -64,6 +61,54 @@ struct LegacyPluginAPI_Common
 	void (CALLBACK* Configure)();
 	void (CALLBACK* About)();
 };
+
+class SaveState;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+class PluginManager
+{
+protected:
+	bool m_initialized;
+	bool m_loaded;
+	
+	bool m_IsInitialized[PluginId_Count];
+	bool m_IsOpened[PluginId_Count];
+
+	LegacyPluginAPI_Common m_CommonBindings[PluginId_Count];
+	wxDynamicLibrary m_libs[PluginId_Count];
+
+public:
+	~PluginManager();
+	PluginManager() :
+		m_initialized( false )
+	,	m_loaded( false )
+	{
+		memzero_obj( m_IsInitialized );
+		memzero_obj( m_IsOpened );
+	}
+
+	void LoadPlugins();
+	void UnloadPlugins();
+	
+	void Init( PluginsEnum_t pid );
+	void Shutdown( PluginsEnum_t pid );
+	void Open( PluginsEnum_t pid );
+	void Close( PluginsEnum_t pid );
+	
+	void Freeze( PluginsEnum_t pid, int mode, freezeData* data );
+	void Freeze( PluginsEnum_t pid, SaveState& state );
+	void Freeze( SaveState& state );
+	
+protected:
+	void BindCommon( PluginsEnum_t pid );
+	void BindRequired( PluginsEnum_t pid );
+	void BindOptional( PluginsEnum_t pid );
+};
+
+extern const PluginInfo tbl_PluginInfo[];
+extern PluginManager* g_plugins;
+
 
 void LoadPlugins();
 void ReleasePlugins();

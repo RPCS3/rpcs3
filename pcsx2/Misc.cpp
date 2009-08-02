@@ -360,7 +360,7 @@ void LoadGSState(const wxString& file)
 		throw Exception::PluginFailure( "GS" );
 	}
 
-	ret = PAD1open((void *)&pDsp);
+	ret = PADopen((void *)&pDsp);
 
 	f->Freeze(g_nLeftGSFrames);
 	f->gsFreeze();
@@ -371,8 +371,8 @@ void LoadGSState(const wxString& file)
 
 	delete( f );
 
-	GSclose();
-	PAD1close();
+	g_plugins->Close( PluginId_GS );
+	g_plugins->Close( PluginId_PAD );
 }
 
 #endif
@@ -544,25 +544,14 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 			break;
 
 		case 9: //gsdx "on the fly" renderer switching
-			if (!renderswitch)
-			{
-				StateRecovery::MakeGsOnly();
-				g_EmulationInProgress = false;
-				CloseGS();
-				renderswitch = true;	//go to dx9 sw
-				StateRecovery::Recover();
-				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
-			}
-			else
-			{
-				StateRecovery::MakeGsOnly();
-				g_EmulationInProgress = false;
-				CloseGS();
-				renderswitch = false;	//return to default renderer
-				StateRecovery::Recover();
-				HostGui::BeginExecution(); //also sets g_EmulationInProgress to true later
-			}
+			StateRecovery::MakeGsOnly();
+			g_EmulationInProgress = false;
+			CloseGS();
+			renderswitch = !renderswitch;
+			StateRecovery::Recover();
+			HostGui::BeginExecution(); // also sets g_EmulationInProgress to true later
 			break;
+			
 #ifdef PCSX2_DEVBUILD
 		case 10:
 			// There's likely a better way to implement this, but this seemed useful.
@@ -576,38 +565,35 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 				GSprintf(10,"Logging Disabled.");
 
 			break;
+
 		case 11:
-			if( mtgsThread != NULL )
+			Console::Notice( "Cannot make gsstates in MTGS mode" );
+
+			// fixme : fix up gsstate mess and make it mtgs compatible -- air
+#ifdef _STGS_GSSTATE_CODE
+			wxString Text;
+			if( strgametitle[0] != 0 )
 			{
-				Console::Notice( "Cannot make gsstates in MTGS mode" );
+				// only take the first two words
+				wxString gsText;
+
+				wxStringTokenizer parts( strgametitle, L" " );
+
+				wxString name( parts.GetNextToken() );	// first part
+				wxString part2( parts.GetNextToken() );
+
+				if( !!part2 )
+					name += L"_" + part2;
+
+				gsText.Printf( L"%s.%d.gs", name.c_str(), StatesC );
+				Text = Path::Combine( g_Conf->Folders.Savestates, gsText );
 			}
 			else
 			{
-				wxString Text;
-				if( strgametitle[0] != 0 )
-				{
-					// only take the first two words
-					wxString gsText;
-
-					wxStringTokenizer parts( strgametitle, L" " );
-
-					wxString name( parts.GetNextToken() );	// first part
-					wxString part2( parts.GetNextToken() );
-
-					if( !!part2 )
-						name += L"_" + part2;
-
-					gsText.Printf( L"%s.%d.gs", name.c_str(), StatesC );
-					Text = Path::Combine( g_Conf->Folders.Savestates, gsText );
-				}
-				else
-				{
-					Text = GetGSStateFilename();
-				}
-
-				SaveGSState(Text);
+				Text = GetGSStateFilename();
 			}
 			break;
+#endif
 #endif
 
 		case 12:
@@ -622,11 +608,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 			{
 				g_Pcsx2Recording ^= 1;
 
-				if( mtgsThread != NULL )
-					mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
-				else if( GSsetupRecording != NULL )
-					GSsetupRecording(g_Pcsx2Recording, NULL);
-
+				mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
 				if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);
 			}
 			break;

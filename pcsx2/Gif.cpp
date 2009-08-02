@@ -111,33 +111,23 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 { 
 	psHu32(GIF_STAT) |= GIF_STAT_APATH3 | GIF_STAT_OPH;         
 
-	if( mtgsThread != NULL )
-	{ 
-		int sizetoread = qwc;
-		sizetoread = mtgsThread->PrepDataPacket( GIF_PATH_3, pMem, qwc );
-		u8* pgsmem = mtgsThread->GetDataPacketPtr();
+	int sizetoread = qwc;
+	sizetoread = mtgsThread->PrepDataPacket( GIF_PATH_3, pMem, qwc );
+	u8* pgsmem = mtgsThread->GetDataPacketPtr();
 
-		/* check if page of endmem is valid (dark cloud2) */
-		// fixme: this hack makes no sense, because the giftagDummy will
-		// process the full length of bytes regardess of how much we copy.
-		// So you'd think if we're truncating the copy to prevent DEPs, we 
-		// should truncate the gif packet size too.. (air)
+	/* check if page of endmem is valid (dark cloud2) */
+	// fixme: this hack makes no sense, because the giftagDummy will
+	// process the full length of bytes regardess of how much we copy.
+	// So you'd think if we're truncating the copy to prevent DEPs, we 
+	// should truncate the gif packet size too.. (air)
 
-		// fixed? PrepDataPacket now returns the actual size of the packet.
-		// VIF handles scratchpad wrapping also, so this code shouldn't be needed anymore.
+	// fixed? PrepDataPacket now returns the actual size of the packet.
+	// VIF handles scratchpad wrapping also, so this code shouldn't be needed anymore.
 
-		memcpy_aligned(pgsmem, pMem, sizetoread<<4); 
-		
-		mtgsThread->SendDataPacket();
-		return sizetoread;
-	} 
-	else 
-	{ 
-		GSGIFTRANSFER3(pMem, qwc);
-		gif->madr+= qwc*16;
-		gif->qwc -= qwc;
-		return qwc;
-	} 
+	memcpy_aligned(pgsmem, pMem, sizetoread<<4); 
+	
+	mtgsThread->SendDataPacket();
+	return sizetoread;
 } 
 
 int  _GIFchain() 

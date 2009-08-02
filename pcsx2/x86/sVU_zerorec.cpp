@@ -4353,22 +4353,6 @@ void recVUMI_JALR(VURegs* vuu, s32 info)
 	branch |= 4;
 }
 
-#ifdef PCSX2_DEVBUILD
-void vu1xgkick(u32* pMem, u32 addr)
-{
-	assert(addr < 0x4000);
-#ifdef SUPERVU_COUNT
-	StopSVUCounter();
-#endif
-
-	GSGIFTRANSFER1(pMem, addr);
-
-#ifdef SUPERVU_COUNT
-	StartSVUCounter();
-#endif
-}
-#endif
-
 void recVUMI_XGKICK_(VURegs *VU)
 {
 	assert(s_XGKICKReg > 0 && x86regs[s_XGKICKReg].inuse && x86regs[s_XGKICKReg].type == X86TYPE_VITEMP);
@@ -4381,18 +4365,8 @@ void recVUMI_XGKICK_(VURegs *VU)
 	PUSH32R(s_XGKICKReg);
 	PUSH32I((uptr)VU->Mem);
 
-	if (mtgsThread) {
-		CALLFunc((uptr)VU1XGKICK_MTGSTransfer);
-		ADD32ItoR(ESP, 8);
-	}
-	else {
-#ifdef PCSX2_DEVBUILD
-		CALLFunc((uptr)vu1xgkick);
-		ADD32ItoR(ESP, 8);
-#else
-		CALLFunc((uptr)GSgifTransfer1);
-#endif
-	}
+	CALLFunc((uptr)VU1XGKICK_MTGSTransfer);
+	ADD32ItoR(ESP, 8);
 	AND32ItoM((uptr)&psHu32(GIF_STAT), ~(GIF_STAT_APATH1 | GIF_STAT_OPH)); // Clear PATH1 GIF Status Flags
 	s_ScheduleXGKICK = 0;
 }

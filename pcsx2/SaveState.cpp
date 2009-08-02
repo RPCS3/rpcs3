@@ -63,21 +63,10 @@ SaveState::SaveState( const char* msg, const wxString& destination ) :
 
 s32 CALLBACK gsSafeFreeze( int mode, freezeData *data )
 {
-	if( mtgsThread != NULL )
-	{
-		if( mode == 2 )
-			return GSfreeze( 2, data );
-
-		// have to call in thread, otherwise weird stuff will start happening
-		mtgsThread->SendPointerPacket( GS_RINGTYPE_FREEZE, mode, data );
-		mtgsWaitGS();
-		return 0;
-	}
-	else
-	{
-		// Single threaded...
-		return GSfreeze( mode, data );
-	}
+	// have to call in the GS thread, otherwise weird stuff will start happening
+	mtgsThread->SendPointerPacket( GS_RINGTYPE_FREEZE, mode, data );
+	mtgsWaitGS();
+	return 0;
 }
 
 void SaveState::FreezeTag( const char* src )
@@ -174,11 +163,8 @@ void SaveState::FreezeAll()
 	// Sixth Block - Plugins Galore!
 	// -----------------------------
 	FreezePlugin( "GS", gsSafeFreeze );
-	FreezePlugin( "SPU2", SPU2freeze );
-	FreezePlugin( "DEV9", DEV9freeze );
-	FreezePlugin( "USB", USBfreeze );
-	FreezePlugin( "PAD1", PAD1freeze );
-	FreezePlugin( "PAD2", PAD2freeze );
+	
+	g_plugins->Freeze( *this );
 
 	if( IsLoading() )
 		PostLoadPrep();

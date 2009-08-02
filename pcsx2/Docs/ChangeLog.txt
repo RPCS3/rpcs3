@@ -533,7 +533,7 @@ v0.9.1:
 
  * 30/03/05:[*] Cleaned up a bit writes to VIFX regs
  			[-] Fixed a small bug in vif1 stalls
- 			[-] Commented readclock win32 code at CDVD.c
+ 			[-] Commented readclock win32 code at CDVD->c
 			[-] Fixed two small issues with branches in interp
  				(linuzappz)
 
@@ -1173,7 +1173,7 @@ v0.9.1:
                 (linuzappz)
  
  * 02/02/04:[-] Included stdarg.h in GRecCommon.h
- 			[+] Added some scmds to CDVD.c (auMatt) 
+ 			[+] Added some scmds to CDVD->c (auMatt) 
 			[+] cdvd.Status now changes to CDVD_STATUS_SEEK_COMPLETE,
 				after a CdRead CMD
                 (linuzappz)
@@ -1718,7 +1718,7 @@ v0.9.1:
                 that to you florin :)
                 (linuzappz)
 
- * 12/08/03:[*] Changed the time in CDVD.c and some WIN32 defines to __WIN32__
+ * 12/08/03:[*] Changed the time in CDVD->c and some WIN32 defines to __WIN32__
                 (Florin)
 
  * 08/08/03:[+] Started SMAP/DEV9 stuff
@@ -1730,7 +1730,7 @@ v0.9.1:
  v0.41:
  * 05/08/03:[-] Uncommented some sif WIP stuff :)
             [*] Addeded 0x00100008 PC for cpuExecuteBios as well
-            [-] Fixed silly bug in CDVD.c for DvdReads
+            [-] Fixed silly bug in CDVD->c for DvdReads
                 (linuzappz)
 
  v0.4:
@@ -1865,7 +1865,7 @@ v0.9.1:
             [!] sven shows one screen now, and others want to ;)
                 (linuzappz)
 
- * 29/06/03:[-] Removed the experimental code i added yesterday from CDVD.c/h
+ * 29/06/03:[-] Removed the experimental code i added yesterday from CDVD->c/h
             [*] Improved EE/IOP Rcnts
                 (linuzappz)
 
@@ -1885,13 +1885,13 @@ v0.9.1:
 
  * 26/06/03:[-] Really fixed HLE mode ;). (linuzappz)
 
- * 26/06/03:[-] Small CDVD.c corrections. (linuzappz)
+ * 26/06/03:[-] Small CDVD->c corrections. (linuzappz)
 
  * 24/06/03:[*] Fixed elf loader at least not to crash at bad elfs. (Florin)
 
  * 23/06/03:[*] Added "rom1.bin" as a valid file for rom1 filesystem. (Florin)
 
- * 23/06/03:[-] Small fix to CDVD.c, maybe fixed a time out problem
+ * 23/06/03:[-] Small fix to CDVD->c, maybe fixed a time out problem
                 with some cdvdman versions.
                 (linuzappz)
 
@@ -1902,10 +1902,10 @@ v0.9.1:
                 (linuzappz)
 
  * 17/06/03:[-] Fixed Sio2, PADs are working :D, Sio.c, PsxSio2.c
-            [-] Fixed language in CDVD.c, now's english again :)
+            [-] Fixed language in CDVD->c, now's english again :)
                 (linuzappz)
 
- * 16/06/03:[-] Better error handling over CDVD.c
+ * 16/06/03:[-] Better error handling over CDVD->c
             [+] ROM1 stuff, Memory.c/h, PsxMem.c, iR3000A.c, iR5900.c
             [!] PCSX2 now detects the rom1 in this way: ie.
                 you use scph10000.bin, then you must have
@@ -1915,7 +1915,7 @@ v0.9.1:
  * 16/06/03:[-] Rewrote the VIFtransfer and VIFdma again. Better speed and
                 compatibility this time (asadr).
 
- * 16/06/03:[*] Reoverwritten CDVD.c/h with my CDVD.c/h, 
+ * 16/06/03:[*] Reoverwritten CDVD->c/h with my CDVD->c/h, 
                 this is simpler, more direct and faster,
                 CdRom.c, PsxHw.c, R3000A.c, PsxCounters.c,
                 Memory.c
@@ -1939,11 +1939,11 @@ v0.9.1:
 
  * 11/06/03:[+] More functions on lle cdrom (cdread) (Florin)
 
- * 10/06/03:[+] Rudely overwritten linuzappz work in CDVD.c/.h
+ * 10/06/03:[+] Rudely overwritten linuzappz work in CDVD->c/.h
             [!] Sorry man, i think i did the best...i created a framework
                 with names and so on. Also we have to talk about;) (Florin)
 
- * 10/06/03:[+] Started CDVD.c/h, moved old CDVD.h to CDVDlib.h,
+ * 10/06/03:[+] Started CDVD->c/h, moved old CDVD->h to CDVDlib.h,
                 PsxMem.c, PsxCommon.h (linuzappz)
 
  * 10/06/03:[*] Added new SPU2 dma functions plugin.c
@@ -2434,7 +2434,7 @@ v0.9.1:
  v0.1:
  * 17/12/02: Small cleaning for release (linuzappz)
 
- * 17/12/02: Fixed a comment in CDVD.h (linuzappz)
+ * 17/12/02: Fixed a comment in CDVD->h (linuzappz)
 
  v0.046: 
  * 17/12/02: FIXED THAT BASTARD BUG with interpreter 

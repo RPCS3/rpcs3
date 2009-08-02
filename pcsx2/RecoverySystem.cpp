@@ -77,11 +77,10 @@ namespace StateRecovery {
 		return g_RecoveryState != NULL || g_gsRecoveryState != NULL;
 	}
 
-	// Exceptions:
 	void Recover()
 	{
 		// Just in case they weren't initialized earlier (no harm in calling this multiple times)
-		if( OpenPlugins(NULL) == -1 ) return;
+		OpenPlugins(NULL);
 
 		if( g_RecoveryState != NULL )
 		{

@@ -17,6 +17,8 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "CDVD/CDVD.h"
+
 #include "MainFrame.h"
 #include "Dialogs/ModalPopups.h"
 #include "Dialogs/ConfigurationDialog.h"
@@ -41,10 +43,13 @@ void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 
 	if( ctrl.ShowModal() == wxID_CANCEL ) return;
 	g_Conf->Folders.RunIso = ctrl.GetPath();
+	
+	//g_Conf->Save();
 }
 
 void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 {
+	CDVDsys_ChangeSource( CDVDsrc_NoDisc );
 	SysPrepareExecution( wxEmptyString, true );
 }
 

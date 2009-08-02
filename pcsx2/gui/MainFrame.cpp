@@ -122,7 +122,8 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 	// Uncomment this when doing logger stress testing (and then move the window around
 	// while the logger spams itself)
 	// ... makes for a good test of the message pump's responsiveness.
-	Console::Notice( "Mess o' crashiness?  It can't be!" );
+	if( EnableThreadedLoggingTest )
+		Console::Notice( "Threaded Logging Test!  (a window move event)" );
 
 	// evt.GetPosition() returns the client area position, not the window frame position.
 	// So read the window's screen-relative position directly.

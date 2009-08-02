@@ -390,7 +390,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 		key[15] = 0x01;
 	}
 	
-	Console::WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", params
+	Console::WriteLn( "CDVD->KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", params
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 
 	// Now's a good time to reload the ELF info...
@@ -404,28 +404,28 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 
 s32 cdvdGetToc(void* toc)
 {
-	s32 ret = CDVD.getTOC(toc);
+	s32 ret = CDVD->getTOC(toc);
 	if (ret == -1) ret = 0x80;	
 	return ret;
 }
 
 s32 cdvdReadSubQ(s32 lsn, cdvdSubQ* subq)
 {
-	s32 ret = CDVD.readSubQ(lsn, subq);
+	s32 ret = CDVD->readSubQ(lsn, subq);
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
 
 s32 cdvdCtrlTrayOpen()
 {
-	s32 ret = CDVD.ctrlTrayOpen();
+	s32 ret = CDVD->ctrlTrayOpen();
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
 
 s32 cdvdCtrlTrayClose()
 {
-	s32 ret = CDVD.ctrlTrayClose();
+	s32 ret = CDVD->ctrlTrayClose();
 	if (ret == -1) ret = 0x80;
 	return ret;
 }
@@ -434,7 +434,7 @@ s32 cdvdCtrlTrayClose()
 // checks if tray was opened since last call to this func
 s32 cdvdGetTrayStatus()
 {
-	s32 ret = CDVD.getTrayStatus();
+	s32 ret = CDVD->getTrayStatus();
 	
 	if (ret == -1) 
 		return(CDVD_TRAY_CLOSE);
@@ -464,7 +464,7 @@ static s32 cdvdReadDvdDualInfo(s32* dualType, u32* layer1Start)
 	*dualType = 0;
 	*layer1Start = 0;
 
-	return CDVD.getDualInfo(dualType,layer1Start);
+	return CDVD->getDualInfo(dualType,layer1Start);
 }
 
 static uint cdvdBlockReadTime( CDVD_MODE_TYPE mode )
@@ -519,8 +519,6 @@ void SaveState::cdvdFreeze()
 	}
 }
 
-// Modified by (efp) - 16/01/2006
-
 void cdvdDetectDisk()
 {
 	cdvd.Type = DoCDVDdetectDiskType();
@@ -533,7 +531,8 @@ void cdvdDetectDisk()
 	{
 		ElfCRC = loadElfCRC( str.ToAscii().data() );
 		ElfApplyPatches();
-		GSsetGameCRC( ElfCRC, 0 );
+		if( GSsetGameCRC != NULL )
+			GSsetGameCRC( ElfCRC, 0 );
 	}
 }
 
@@ -736,7 +735,6 @@ __forceinline void cdvdReadInterrupt()
 	}
 	else
 	{
-
 		if (cdvd.RErr == 0) 
 		{
 			cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);

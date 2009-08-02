@@ -38,7 +38,7 @@ DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1);
 extern wxRect wxGetDisplayArea();
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 
-static const bool EnableThreadedLoggingTest = true;
+static const bool EnableThreadedLoggingTest = false; //true;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // ConsoleThreadTest -- useful class for unit testing the thread safety and general performance

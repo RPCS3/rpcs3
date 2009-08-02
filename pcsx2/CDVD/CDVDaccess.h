@@ -19,10 +19,11 @@
 #ifndef __CDVD_ACCESS_H__
 #define __CDVD_ACCESS_H__
 
-extern s32  DoCDVDinit();
+extern void CDVDsys_Init();
+extern void CDVDsys_Shutdown();
+
 extern s32  DoCDVDopen(const char* pTitleFilename);
 extern void DoCDVDclose();
-extern void DoCDVDshutdown();
 extern s32  DoCDVDreadSector(u8* buffer, u32 lsn, int mode);
 extern s32  DoCDVDreadTrack(u32 lsn, int mode);
 extern s32  DoCDVDgetBuffer(u8* buffer);

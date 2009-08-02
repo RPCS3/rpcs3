@@ -132,6 +132,42 @@ struct cdvdStruct {
 	bool Spinning;		// indicates if the Cdvd is spinning or needs a spinup delay
 };
 
+
+struct CDVD_API
+{
+	struct
+	{
+		void (CALLBACK *close)();
+		
+		// Don't need init or shutdown.  iso/nodisc have no init/shutdown and plugin's
+		// is handled by the PluginManager.
+		
+		// Don't need pluign specific things like freeze, test, or other stuff here.
+		// Those are handled by the plugin manager specifically.
+
+	} Common;
+
+	_CDVDopen          open;
+	_CDVDreadTrack     readTrack;
+	_CDVDgetBuffer     getBuffer;
+	_CDVDreadSubQ      readSubQ;
+	_CDVDgetTN         getTN;
+	_CDVDgetTD         getTD;
+	_CDVDgetTOC        getTOC;
+	_CDVDgetDiskType   getDiskType;
+	_CDVDgetTrayStatus getTrayStatus;
+	_CDVDctrlTrayOpen  ctrlTrayOpen;
+	_CDVDctrlTrayClose ctrlTrayClose;
+	_CDVDnewDiskCB     newDiskCB;
+
+	// special functions, not in external interface yet
+	_CDVDreadSector    readSector;
+	_CDVDgetBuffer2    getBuffer2;
+	_CDVDgetDualInfo   getDualInfo;
+
+	wxString (*getUniqueFilename)();
+};
+
 extern void cdvdReset();
 extern void cdvdVsync();
 extern void cdvdActionInterrupt();
@@ -143,6 +179,21 @@ extern void cdvdNewDiskCB();
 extern u8 cdvdRead(u8 key);
 extern void cdvdWrite(u8 key, u8 rt);
 
-extern CDVDplugin CDVD;
-extern CDVDplugin ISO;
-extern CDVDplugin NODISC;
+// ----------------------------------------------------------------------------
+//  Multiple interface system for CDVD
+//  used to provide internal CDVDiso and NoDisc, and external plugin interfaces.
+//  ---------------------------------------------------------------------------
+
+enum CDVD_SourceType
+{
+	CDVDsrc_Iso,		// use built in ISO api
+	CDVDsrc_NoDisc,		// use built in CDVDnull
+	CDVDsrc_Plugin,		// use external plugin
+};
+
+extern void CDVDsys_ChangeSource( CDVD_SourceType type );
+extern CDVD_API* CDVD;		// currently active CDVD access mode api (either Iso, NoDisc, or Plugin)
+
+extern CDVD_API CDVDapi_Plugin;
+extern CDVD_API CDVDapi_Iso;
+extern CDVD_API CDVDapi_NoDisc;

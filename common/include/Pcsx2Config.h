@@ -44,7 +44,6 @@ extern SessionOverrideFlags g_Session;
 //////////////////////////////////////////////////////////////////////////
 // Pcsx2 User Configuration Options!
 
-#define PCSX2_GSMULTITHREAD		0x0001 // Use Multi-Threaded GS
 #define PCSX2_EEREC				0x0010
 #define PCSX2_VU0REC			0x0020
 #define PCSX2_VU1REC			0x0040
@@ -58,7 +57,6 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_FRAMELIMIT (Config.Options&PCSX2_FRAMELIMIT_MASK)
 
 //------------ CPU Options!!! ---------------
-#define CHECK_MULTIGS	(Config.Options&PCSX2_GSMULTITHREAD)
 #define CHECK_MICROVU0	(Config.Options&PCSX2_MICROVU0)
 #define CHECK_MICROVU1	(Config.Options&PCSX2_MICROVU1)
 #define CHECK_EEREC (!g_Session.ForceDisableEErec && Config.Options&PCSX2_EEREC)

@@ -113,21 +113,7 @@ static void _mtgsFreezeGIF( SaveState& state, GIFPath (&paths)[3] )
 void SaveState::mtgsFreeze()
 {
 	FreezeTag( "mtgs" );
-
-	if( mtgsThread != NULL )
-	{
-		mtgsThread->Freeze( *this );
-	}
-	else
-	{
-		// save some zero'd dummy info...
-		// This isn't ideal, and it could lead to problems in very rare
-		// circumstances, but most of the time should be perfectly fine.
-
-		GIFPath path[3];
-		memzero_obj( path );
-		_mtgsFreezeGIF( *this, path );
-	}
+	mtgsThread->Freeze( *this );
 }
 
 
@@ -220,7 +206,7 @@ void mtgsThreadObject::Start()
 {
 	Thread::Start();
 
-	// Wait for the thread to finish initialization (it runs GSinit, which can take
+	// Wait for the thread to finish initialization (it runs GSopen, which can take
 	// some time since it's creating a new window and all), and then check for errors.
 
 	m_post_InitDone.Wait();
@@ -231,6 +217,7 @@ void mtgsThreadObject::Start()
 
 mtgsThreadObject::~mtgsThreadObject()
 {
+	Close();
 }
 
 void mtgsThreadObject::Close()
@@ -525,8 +512,7 @@ int mtgsThreadObject::Callback()
 	#else
 	//tells GSdx to go into dx9 sw if "renderswitch" is set. Abusing the isMultiThread int
 	//for that so we don't need a new callback
-	if (!renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
-	else if (renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 2);
+	m_returncode = GSopen((void *)&pDsp, "PCSX2", renderswitch ? 2 : 1);
 	#endif
 	
 	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
@@ -620,8 +606,11 @@ int mtgsThreadObject::Callback()
 					//Console::Status( " << Frame Removed!" );
 					m_lock_FrameQueueCounter.Unlock();
 
-					if( PAD1update != NULL ) PAD1update(0);
-					if( PAD2update != NULL ) PAD2update(1);
+					if( PADupdate != NULL )
+					{
+						PADupdate(0);
+						PADupdate(1);
+					}
 				}
 				break;
 
@@ -646,7 +635,7 @@ int mtgsThreadObject::Callback()
 				{
 					freezeData* data = (freezeData*)(*(uptr*)&tag.data[1]);
 					int mode = tag.data[0];
-					GSfreeze( mode, data );
+					g_plugins->Freeze( PluginId_GS, mode, data );
 					break;
 				}
 
@@ -684,7 +673,7 @@ int mtgsThreadObject::Callback()
 				break;
 
 				case GS_RINGTYPE_QUIT:
-					GSclose();
+					g_plugins->Close( PluginId_GS );
 				return 0;
 
 #ifdef PCSX2_DEVBUILD
@@ -1099,9 +1088,6 @@ void mtgsWaitGS()
 
 bool mtgsOpen()
 {
-	// Check the config flag since our thread object has yet to be created
-	if( !CHECK_MULTIGS ) return false;
-
 	// better not be a thread already running, yo!
 	assert( mtgsThread == NULL );
 

@@ -52,6 +52,8 @@ int g_SaveGSStream = 0; // save GS stream; 1 - prepare, 2 - save
 int g_nLeftGSFrames = 0; // when saving, number of frames left
 gzSavingState* g_fGSSave;
 
+// fixme - need to take this concept and make it MTGS friendly.
+#ifdef _STGS_GSSTATE_CODE
 void GSGIFTRANSFER1(u32 *pMem, u32 addr) {
 	if( g_SaveGSStream == 2) {
 		u32 type = GSRUN_TRANS1;
@@ -91,22 +93,7 @@ __forceinline void GSVSYNC(void) {
 		g_fGSSave->Freeze( type );
 	}
 }
-#else
-
-__forceinline void GSGIFTRANSFER1(u32 *pMem, u32 addr) {
-	GSgifTransfer1(pMem, addr);
-}
-
-__forceinline void GSGIFTRANSFER2(u32 *pMem, u32 size) {
-	GSgifTransfer2(pMem, size);
-}
-
-__forceinline void GSGIFTRANSFER3(u32 *pMem, u32 size) {
-	GSgifTransfer3(pMem, size);
-}
-
-__forceinline void GSVSYNC(void) {
-}
+#endif
 #endif
 
 void _gs_ChangeTimings( u32 framerate, u32 iTicks )
@@ -136,10 +123,7 @@ void _gs_ChangeTimings( u32 framerate, u32 iTicks )
 
 void gsOnModeChanged( u32 framerate, u32 newTickrate )
 {
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket( GS_RINGTYPE_MODECHANGE, framerate, newTickrate, 0 );
-	else
-		_gs_ChangeTimings( framerate, newTickrate );
+	mtgsThread->SendSimplePacket( GS_RINGTYPE_MODECHANGE, framerate, newTickrate, 0 );
 }
 
 void gsSetVideoRegionType( u32 isPal )
@@ -218,34 +202,14 @@ void gsClose()
 {
 	if( !m_gsOpened ) return;
 	m_gsOpened = false;
-
-	// Throw an assert if our multigs setting and mtgsThread status
-	// aren't synched.  It shouldn't break the code anyway but it's a
-	// bad coding habit that we should catch and fix early.
-	assert( !!CHECK_MULTIGS == (mtgsThread != NULL ) );
-
-	if( mtgsThread != NULL )
-	{
-		mtgsThread->Close();
-		safe_delete( mtgsThread );
-	}
-	else
-		GSclose();
+	safe_delete( mtgsThread );
 }
 
 void gsReset()
 {
 	// Sanity check in case the plugin hasn't been initialized...
 	if( !m_gsOpened ) return;
-
-	if( mtgsThread != NULL )
-		mtgsThread->Reset();
-	else
-	{
-		Console::Notice( "GIF reset" );
-		GSreset();
-		GSsetFrameSkip(0);
-	}
+	mtgsThread->Reset();
 
 	gsOnModeChanged(
 		(Config.PsxType & 1) ? FRAMERATE_PAL : FRAMERATE_NTSC,
@@ -274,10 +238,7 @@ bool gsGIFSoftReset( int mask )
 		return false;
 	}
 
-	if( mtgsThread != NULL )
-		mtgsThread->GIFSoftReset( mask );
-	else
-		GSgifSoftReset( mask );
+	mtgsThread->GIFSoftReset( mask );
 
 	return true;
 }
@@ -314,12 +275,7 @@ void gsCSRwrite(u32 value)
 		// support soft resets.
 
 		if( !gsGIFSoftReset( 7 ) )
-		{
-			if( mtgsThread != NULL )
-				mtgsThread->SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
-			else
-				GSreset();
-		}
+			mtgsThread->SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 
 		CSRw |= 0x1f;
 		GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
@@ -332,12 +288,7 @@ void gsCSRwrite(u32 value)
 	else
 	{
 		CSRw |= value & 0x1f;
-
-		if( mtgsThread != NULL )
-			mtgsThread->SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
-		else
-			GSwriteCSR(CSRw);
-
+		mtgsThread->SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
 		GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
 	}
 
@@ -368,9 +319,7 @@ __forceinline void gsWrite8(u32 mem, u8 value)
 			gsCSRwrite((CSRw & ~0xff000000) | (value << 24)); break;
 		default:
 			*PS2GS_BASE(mem) = value;
-
-			if( mtgsThread != NULL )
-				mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE8, mem&0x13ff, value, 0);
+			mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE8, mem&0x13ff, value, 0);
 	}
 	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx", mem, value);
 }
@@ -417,9 +366,7 @@ __forceinline void gsWrite16(u32 mem, u16 value)
 	}
 
 	*(u16*)PS2GS_BASE(mem) = value;
-
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE16, mem&0x13ff, value, 0);
+	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE16, mem&0x13ff, value, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -444,9 +391,7 @@ __forceinline void gsWrite32(u32 mem, u32 value)
 	}
 
 	*(u32*)PS2GS_BASE(mem) = value;
-
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE32, mem&0x13ff, value, 0);
+	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE32, mem&0x13ff, value, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -482,9 +427,7 @@ void __fastcall gsWrite64_generic( u32 mem, const mem64_t* value )
 	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x", mem, srcval32[1], srcval32[0]);
 
 	*(u64*)PS2GS_BASE(mem) = *value;
-
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, srcval32[0], srcval32[1]);
+	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, srcval32[0], srcval32[1]);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -525,45 +468,9 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 	writeTo[0] = value[0];
 	writeTo[1] = value[1];
 
-	if( mtgsThread != NULL )
-	{
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem, srcval32[0], srcval32[1]);
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem+8, srcval32[2], srcval32[3]);
-	}
+	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem, srcval32[0], srcval32[1]);
+	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem+8, srcval32[2], srcval32[3]);
 }
-
-#if 0
-// This function is left in for now for debugging/reference purposes.
-__forceinline void gsWrite64(u32 mem, u64 value)
-{
-	GIF_LOG("GS write 64 at %8.8lx with data %8.8lx_%8.8lx", mem, ((u32*)&value)[1], (u32)value);
-
-	switch (mem)
-	{
-		case 0x12000010: // GS_SMODE1
-			gsSetVideoRegionType( (value & 0x6000) == 0x6000 );
-		break;
-
-		case 0x12000020: // GS_SMODE2
-			if(value & 0x1) Config.PsxType |= 2; // Interlaced
-			else Config.PsxType &= ~2;	// Non-Interlaced
-			break;
-
-		case 0x12001000: // GS_CSR
-			gsCSRwrite((u32)value);
-			return;
-
-		case 0x12001010: // GS_IMR
-			IMRwrite((u32)value);
-			return;
-	}
-
-	*(u64*)PS2GS_BASE(mem) = value;
-
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, (u32)value, (u32)(value>>32));
-}
-#endif
 
 __forceinline u8 gsRead8(u32 mem)
 {
@@ -604,20 +511,12 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 
 	//Console::WriteLn("LostTime on the EE!");
 
-	if( mtgsThread != NULL )
-	{
-		mtgsThread->SendSimplePacket(
-			GS_RINGTYPE_STARTTIME,
-			deltaTime,
-			0,
-			0
-		);
-	}
-	else
-	{
-		m_iSlowStart += deltaTime;
-		//m_justSkipped = false;
-	}
+	mtgsThread->SendSimplePacket(
+		GS_RINGTYPE_STARTTIME,
+		deltaTime,
+		0,
+		0
+	);
 }
 
 // FrameSkipper - Measures delta time between calls and issues frameskips
@@ -755,19 +654,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 void gsPostVsyncEnd( bool updategs )
 {
 	*(u32*)(PS2MEM_GS+0x1000) ^= 0x2000; // swap the vsync field
-
-	if( mtgsThread != NULL )
-		mtgsThread->PostVsyncEnd( updategs );
-	else
-	{
-		GSvsync((*(u32*)(PS2MEM_GS+0x1000)&0x2000));
-
-		// update here on single thread mode *OBSOLETE*
-		if( PAD1update != NULL ) PAD1update(0);
-		if( PAD2update != NULL ) PAD2update(1);
-
-		gsFrameSkip( !updategs );
-	}
+	mtgsThread->PostVsyncEnd( updategs );
 }
 
 void _gs_ResetFrameskip()
@@ -778,10 +665,7 @@ void _gs_ResetFrameskip()
 // Disables the GS Frameskip at runtime without any racy mess...
 void gsResetFrameSkip()
 {
-	if( mtgsThread != NULL )
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_FRAMESKIP, 0, 0, 0);
-	else
-		_gs_ResetFrameskip();
+	mtgsThread->SendSimplePacket(GS_RINGTYPE_FRAMESKIP, 0, 0, 0);
 }
 
 void gsDynamicSkipEnable()

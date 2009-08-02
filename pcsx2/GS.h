@@ -368,9 +368,4 @@ extern gzSavingState* g_fGSSave;
 
 void RunGSState(gzLoadingState& f);
 
-extern void GSGIFTRANSFER1(u32 *pMem, u32 addr); 
-extern void GSGIFTRANSFER2(u32 *pMem, u32 addr); 
-extern void GSGIFTRANSFER3(u32 *pMem, u32 addr);
-extern void GSVSYNC();
-
 #endif

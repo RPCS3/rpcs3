@@ -19,7 +19,6 @@
 #include "PrecompiledHeader.h"
 #include "Utilities/RedtapeWindows.h"
 
-#include <wx/dynlib.h>
 #include <wx/dir.h>
 #include <wx/file.h>
 
@@ -47,6 +46,7 @@ const PluginInfo tbl_PluginInfo[] =
 };
 
 typedef void CALLBACK VoidMethod();
+typedef void CALLBACK vMeth();		// shorthand for VoidMethod
 ;		// extra semicolon fixes VA-X intellisense breakage caused by CALLBACK in the above typedef >_<
 
 // ----------------------------------------------------------------------------
@@ -59,7 +59,7 @@ struct LegacyApi_CommonMethod
 	VoidMethod*	Fallback;
 
 	// returns the method name as a wxString, converted from UTF8.
-	wxString& GetMethodName( PluginsEnum_t pid ) const
+	wxString GetMethodName( PluginsEnum_t pid ) const
 	{
 		return wxString::FromUTF8( tbl_PluginInfo[pid].shortname) + wxString::FromUTF8( MethodName );
 	}
@@ -76,7 +76,7 @@ struct LegacyApi_ReqMethod
 	VoidMethod*	Fallback;
 	
 	// returns the method name as a wxString, converted from UTF8.
-	wxString& GetMethodName( ) const
+	wxString GetMethodName( ) const
 	{
 		return wxString::FromUTF8( MethodName );
 	}
@@ -89,7 +89,7 @@ struct LegacyApi_OptMethod
 	VoidMethod**	Dest;		// Target function where the binding is saved.
 	
 	// returns the method name as a wxString, converted from UTF8.
-	wxString& GetMethodName() const { return wxString::FromUTF8( MethodName ); }
+	wxString GetMethodName() const { return wxString::FromUTF8( MethodName ); }
 };
 
 
@@ -104,7 +104,6 @@ _GSopen            GSopen;
 _GSgifTransfer1    GSgifTransfer1;
 _GSgifTransfer2    GSgifTransfer2;
 _GSgifTransfer3    GSgifTransfer3;
-_GSgetLastTag      GSgetLastTag;
 _GSgifSoftReset    GSgifSoftReset;
 _GSreadFIFO        GSreadFIFO;
 _GSreadFIFO2       GSreadFIFO2;
@@ -120,10 +119,6 @@ _GSsetFrameLimit   GSsetFrameLimit;
 _GSsetupRecording	GSsetupRecording;
 _GSreset		   GSreset;
 _GSwriteCSR		   GSwriteCSR;
-_GSgetDriverInfo   GSgetDriverInfo;
-#ifdef _WINDOWS_
-_GSsetWindowInfo   GSsetWindowInfo;
-#endif
 
 static void CALLBACK GS_makeSnapshot(const char *path) {}
 static void CALLBACK GS_irqCallback(void (*callback)()) {}
@@ -146,9 +141,10 @@ _PADpoll           PADpoll;
 _PADquery          PADquery;
 _PADupdate         PADupdate;
 _PADkeyEvent       PADkeyEvent;
-_PADgsDriverInfo   PADgsDriverInfo;
 _PADsetSlot        PADsetSlot;
 _PADqueryMtap      PADqueryMtap;
+
+void PAD_update( u32 padslot ) { }
 
 // SIO[2]
 /*
@@ -183,9 +179,6 @@ _SPU2irqCallback   SPU2irqCallback;
 _SPU2setClockPtr   SPU2setClockPtr;
 _SPU2async         SPU2async;
 
-// CDVD
-CDVDplugin CDVD_plugin = {0};
-CDVDplugin CDVD = {0};
 
 // DEV9
 _DEV9open          DEV9open;
@@ -201,7 +194,7 @@ _DEV9irqCallback   DEV9irqCallback;
 _DEV9irqHandler    DEV9irqHandler;
 
 // USB
-_USBopen           USB9open;
+_USBopen           USBopen;
 _USBread8          USBread8;
 _USBread16         USBread16;
 _USBread32         USBread32;
@@ -215,7 +208,7 @@ _USBirqHandler     USBirqHandler;
 _USBsetRAM         USBsetRAM;
 
 // FW
-_FW9open           FW9open;
+_FWopen            FWopen;
 _FWread32          FWread32;
 _FWwrite32         FWwrite32;
 _FWirqCallback     FWirqCallback;
@@ -234,8 +227,8 @@ static const LegacyApi_CommonMethod s_MethMessCommon[] =
 	{	"close",		NULL	},
 	{	"shutdown",		NULL	},
 
-	{	"freeze",		(VoidMethod*)fallback_freeze	},
-	{	"test",			(VoidMethod*)fallback_test	},
+	{	"freeze",		(vMeth*)fallback_freeze	},
+	{	"test",			(vMeth*)fallback_test	},
 	{	"configure",	fallback_configure	},
 	{	"about",		fallback_about	},
 
@@ -248,77 +241,307 @@ static const LegacyApi_CommonMethod s_MethMessCommon[] =
 // ----------------------------------------------------------------------------
 static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 {
-	{	"GSvsync",			(VoidMethod**)&GSinit,			NULL	},
-	{	"GSvsync",			(VoidMethod**)&GSvsync,			NULL	},
-	{	"GSgifTransfer1",	(VoidMethod**)&GSgifTransfer1,	NULL	},
-	{	"GSgifTransfer2",	(VoidMethod**)&GSgifTransfer2,	NULL	},
-	{	"GSgifTransfer3",	(VoidMethod**)&GSgifTransfer3,	NULL	},
-	{	"GSreadFIFO2",		(VoidMethod**)&GSreadFIFO2,		NULL	},
+	{	"GSopen",			(vMeth**)&GSopen,			NULL	},
+	{	"GSvsync",			(vMeth**)&GSvsync,			NULL	},
+	{	"GSgifTransfer1",	(vMeth**)&GSgifTransfer1,	NULL	},
+	{	"GSgifTransfer2",	(vMeth**)&GSgifTransfer2,	NULL	},
+	{	"GSgifTransfer3",	(vMeth**)&GSgifTransfer3,	NULL	},
+	{	"GSreadFIFO2",		(vMeth**)&GSreadFIFO2,		NULL	},
 
-	{	"GSmakeSnapshot",	(VoidMethod**)&GSmakeSnapshot,	(VoidMethod*)GS_makeSnapshot },
-	{	"GSirqCallback",	(VoidMethod**)&GSirqCallback,	(VoidMethod*)GS_irqCallback },
-	{	"GSprintf",			(VoidMethod**)&GSprintf,		(VoidMethod*)GS_printf },
-	{	"GSsetBaseMem",		(VoidMethod**)&GSsetBaseMem,	NULL	},
-	{	"GSwriteCSR",		(VoidMethod**)&GSwriteCSR,		NULL	},
+	{	"GSmakeSnapshot",	(vMeth**)&GSmakeSnapshot,	(vMeth*)GS_makeSnapshot },
+	{	"GSirqCallback",	(vMeth**)&GSirqCallback,	(vMeth*)GS_irqCallback },
+	{	"GSprintf",			(vMeth**)&GSprintf,			(vMeth*)GS_printf },
+	{	"GSsetBaseMem",		(vMeth**)&GSsetBaseMem,		NULL	},
+	{	"GSwriteCSR",		(vMeth**)&GSwriteCSR,		NULL	},
 	{ NULL }
 };
 
 static const LegacyApi_OptMethod s_MethMessOpt_GS[] =
 {
-	{	"GSgetDriverInfo"	},
-	{	"GSreset"			},
-	{	"GSsetupRecording"	},
-	{	"GSsetGameCRC"		},
-	{	"GSsetFrameSkip"	},
-	{	"GSsetFrameLimit"	},
-	{	"GSchangeSaveState"	},
-	{	"GSmakeSnapshot2"	},
-	#ifdef _WINDOWS_
-	{	"GSsetWindowInfo"	},
-	#endif
-	{	"GSgetLastTag"		},
-	{	"GSgifSoftReset"	},
-	{	"GSreadFIFO"		},
+	{	"GSreset",			(vMeth**)&GSreset			},
+	{	"GSsetupRecording",	(vMeth**)&GSsetupRecording	},
+	{	"GSsetGameCRC",		(vMeth**)&GSsetGameCRC		},
+	{	"GSsetFrameSkip",	(vMeth**)&GSsetFrameSkip	},
+	{	"GSsetFrameLimit",	(vMeth**)&GSsetFrameLimit	},
+	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState	},
+	{	"GSmakeSnapshot2",	(vMeth**)&GSmakeSnapshot2	},
+	{	"GSgifSoftReset",	(vMeth**)&GSgifSoftReset	},
+	{	"GSreadFIFO",		(vMeth**)&GSreadFIFO		},
+	{ NULL }
+};
+
+// ----------------------------------------------------------------------------
+//  PAD Mess!
+// ----------------------------------------------------------------------------
+static const LegacyApi_ReqMethod s_MethMessReq_PAD[] =
+{
+	{	"PADopen",			(vMeth**)&PADopen,		NULL },
+	{	"PADstartPoll",		(vMeth**)&PADstartPoll,	NULL },
+	{	"PADpoll",			(vMeth**)&PADpoll,		NULL },
+	{	"PADquery",			(vMeth**)&PADquery,		NULL },
+	{	"PADkeyEvent",		(vMeth**)&PADkeyEvent,	NULL },
+
+	// fixme - Following functions are new as of some revison post-0.9.6, and
+	// are for multitap support only.  They should either be optional or offer
+	// NOP fallbacks, to allow older plugins to retain functionality.
+	{	"PADsetSlot",		(vMeth**)&PADsetSlot,	NULL },
+	{	"PADqueryMtap",		(vMeth**)&PADqueryMtap,	NULL },
+	{ NULL },
+};
+
+static const LegacyApi_OptMethod s_MethMessOpt_PAD[] =
+{
+	{	"PADupdate",		(vMeth**)&PADupdate },
+	{ NULL },
+};
+
+// ----------------------------------------------------------------------------
+//  CDVD Mess!
+// ----------------------------------------------------------------------------
+void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
+
+extern int lastReadSize;
+s32 CALLBACK CDVD_getBuffer2(u8* buffer)
+{
+	int ret;
+
+	// TEMP: until I fix all the plugins to use this function style
+	u8* pb = CDVD->getBuffer();
+	if(pb != NULL)
+	{
+		memcpy(buffer,pb,lastReadSize);
+		ret = 0;
+	}
+	else ret = -2;
+
+	return ret;
+}
+
+
+s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
+{
+	if(CDVD->readTrack(lsn,mode) < 0)
+		return -1;
+	
+	// TEMP: until all the plugins use the new CDVDgetBuffer style
+	switch (mode)
+	{
+	case CDVD_MODE_2352:
+		lastReadSize = 2352;
+		break;
+	case CDVD_MODE_2340:
+		lastReadSize = 2340;
+		break;
+	case CDVD_MODE_2328:
+		lastReadSize = 2328;
+		break;
+	case CDVD_MODE_2048:
+		lastReadSize = 2048;
+		break;
+	}
+	return CDVD->getBuffer2(buffer);
+}
+
+s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
+{
+	u8 toc[2064];
+
+	// if error getting toc, settle for single layer disc ;)
+	if(CDVD->getTOC(toc))
+		return 0;
+
+	if(toc[14] & 0x60)
+	{
+		if(toc[14] & 0x10)
+		{
+			// otp dvd
+			*dualType = 2;
+			*layer1Start = (toc[25]<<16) + (toc[26]<<8) + (toc[27]) - 0x30000 + 1;
+		}
+		else
+		{
+			// ptp dvd
+			*dualType = 1;
+			*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
+		}
+	}
+	else
+	{
+		// single layer dvd
+		*dualType = 0;
+		*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
+	}
+
+	return 1;
+}
+
+static void CALLBACK CDVDplugin_Close()
+{
+	g_plugins->Close( PluginId_CDVD );
+}
+
+CDVD_API CDVDapi_Plugin=
+{
+	{
+		CDVDplugin_Close
+	}, 
+
+	// The rest are filled in by the plugin manager	
+	NULL
+};
+CDVD_API* CDVD			= NULL;
+
+static const LegacyApi_ReqMethod s_MethMessReq_CDVD[] =
+{
+	{	"CDVDopen",			(vMeth**)&CDVDapi_Plugin.open,			NULL },
+	{	"CDVDreadTrack",	(vMeth**)&CDVDapi_Plugin.readTrack,		NULL },
+	{	"CDVDgetBuffer",	(vMeth**)&CDVDapi_Plugin.getBuffer,		NULL },
+	{	"CDVDreadSubQ",		(vMeth**)&CDVDapi_Plugin.readSubQ,		NULL },
+	{	"CDVDgetTN",		(vMeth**)&CDVDapi_Plugin.getTN,			NULL },
+	{	"CDVDgetTD",		(vMeth**)&CDVDapi_Plugin.getTD,			NULL },
+	{	"CDVDgetTOC",		(vMeth**)&CDVDapi_Plugin.getTOC,		NULL },
+	{	"CDVDgetDiskType",	(vMeth**)&CDVDapi_Plugin.getDiskType,	NULL },
+	{	"CDVDgetTrayStatus",(vMeth**)&CDVDapi_Plugin.getTrayStatus,	NULL },
+	{	"CDVDctrlTrayOpen",	(vMeth**)&CDVDapi_Plugin.ctrlTrayOpen,	NULL },
+	{	"CDVDctrlTrayClose",(vMeth**)&CDVDapi_Plugin.ctrlTrayClose,	NULL },
+	{	"CDVDnewDiskCB",	(vMeth**)&CDVDapi_Plugin.newDiskCB,		(vMeth*)CDVD_newDiskCB },
+
+	{	"CDVDreadSector",	(vMeth**)&CDVDapi_Plugin.readSector,	(vMeth*)CDVD_readSector },
+	{	"CDVDgetBuffer2",	(vMeth**)&CDVDapi_Plugin.getBuffer2,	(vMeth*)CDVD_getBuffer2 },
+	{	"CDVDgetDualInfo",	(vMeth**)&CDVDapi_Plugin.getDualInfo,	(vMeth*)CDVD_getDualInfo },
+	
+	{ NULL }
+};
+
+static const LegacyApi_OptMethod s_MethMessOpt_CDVD[] =
+{
+	{ NULL }
+};
+
+// ----------------------------------------------------------------------------
+//  SPU2 Mess!
+// ----------------------------------------------------------------------------
+static const LegacyApi_ReqMethod s_MethMessReq_SPU2[] =
+{
+	{	"SPU2open",				(vMeth**)SPU2open,			NULL },
+	{	"SPU2write",			(vMeth**)SPU2write,			NULL },
+	{	"SPU2read",				(vMeth**)SPU2read,			NULL },
+	{	"SPU2readDMA4Mem",		(vMeth**)SPU2readDMA4Mem,	NULL },
+	{	"SPU2readDMA7Mem",		(vMeth**)SPU2readDMA7Mem,	NULL },
+	{	"SPU2writeDMA4Mem",		(vMeth**)SPU2writeDMA4Mem,	NULL },
+	{	"SPU2writeDMA7Mem",		(vMeth**)SPU2writeDMA7Mem,	NULL },
+	{	"SPU2interruptDMA4",	(vMeth**)SPU2interruptDMA4,	NULL },
+	{	"SPU2interruptDMA7",	(vMeth**)SPU2interruptDMA7,	NULL },
+	{	"SPU2setDMABaseAddr",	(vMeth**)SPU2setDMABaseAddr,NULL },
+	{	"SPU2ReadMemAddr",		(vMeth**)SPU2ReadMemAddr,	NULL },
+	{	"SPU2irqCallback",		(vMeth**)SPU2irqCallback,	NULL },
+
+	{ NULL }
+};
+
+static const LegacyApi_OptMethod s_MethMessOpt_SPU2[] =
+{
+	{	"SPU2setClockPtr",		(vMeth**)SPU2setClockPtr	},
+	{	"SPU2async",			(vMeth**)SPU2async			},
+	{	"SPU2WriteMemAddr",		(vMeth**)SPU2WriteMemAddr	},
+	{	"SPU2setupRecording",	(vMeth**)SPU2setupRecording	},
+
+	{ NULL }
+};
+
+// ----------------------------------------------------------------------------
+//  DEV9 Mess!
+// ----------------------------------------------------------------------------
+static const LegacyApi_ReqMethod s_MethMessReq_DEV9[] =
+{
+	{	"DEV9open",			(vMeth**)&DEV9open,			NULL },
+	{	"DEV9read8",		(vMeth**)&DEV9read8,		NULL },
+	{	"DEV9read16",		(vMeth**)&DEV9read16,		NULL },
+	{	"DEV9read32",		(vMeth**)&DEV9read32,		NULL },
+	{	"DEV9write8",		(vMeth**)&DEV9write8,		NULL },
+	{	"DEV9write16",		(vMeth**)&DEV9write16,		NULL },
+	{	"DEV9write32",		(vMeth**)&DEV9write32,		NULL },
+	{	"DEV9readDMA8Mem",	(vMeth**)&DEV9readDMA8Mem,	NULL },
+	{	"DEV9writeDMA8Mem",	(vMeth**)&DEV9writeDMA8Mem,	NULL },
+	{	"DEV9irqCallback",	(vMeth**)&DEV9irqCallback,	NULL },
+	{	"DEV9irqHandler",	(vMeth**)&DEV9irqHandler,	NULL },
+	
+	{ NULL }
+};
+
+static const LegacyApi_OptMethod s_MethMessOpt_DEV9[] =
+{
+	{ NULL }
+};
+
+// ----------------------------------------------------------------------------
+//  USB Mess!
+// ----------------------------------------------------------------------------
+static const LegacyApi_ReqMethod s_MethMessReq_USB[] =
+{
+	{	"USBopen",			(vMeth**)&USBopen,			NULL },
+	{	"USBread8",			(vMeth**)&USBread8,			NULL },
+	{	"USBread16",		(vMeth**)&USBread16,		NULL },
+	{	"USBread32",		(vMeth**)&USBread32,		NULL },
+	{	"USBwrite8",		(vMeth**)&USBwrite8,		NULL },
+	{	"USBwrite16",		(vMeth**)&USBwrite16,		NULL },
+	{	"USBwrite32",		(vMeth**)&USBwrite32,		NULL },
+	{	"USBirqCallback",	(vMeth**)&USBirqCallback,	NULL },
+	{	"USBirqHandler",	(vMeth**)&USBirqHandler,	NULL },
+};
+
+static const LegacyApi_OptMethod s_MethMessOpt_USB[] =
+{
+	{	"USBasync",		(vMeth**)&USBasync },
+	{ NULL }
+};
+
+// ----------------------------------------------------------------------------
+//  FW Mess!
+// ----------------------------------------------------------------------------
+static const LegacyApi_ReqMethod s_MethMessReq_FW[] =
+{
+	{	"FWopen",			(vMeth**)&FWopen,			NULL },
+	{	"FWread32",			(vMeth**)&FWread32,			NULL },
+	{	"FWwrite32",		(vMeth**)&FWwrite32,		NULL },
+	{	"FWirqCallback",	(vMeth**)&FWirqCallback,	NULL },
+};
+
+static const LegacyApi_OptMethod s_MethMessOpt_FW[] =
+{
 	{ NULL }
 };
 
 static const LegacyApi_ReqMethod* const s_MethMessReq[] = 
 {
+	s_MethMessReq_CDVD,
 	s_MethMessReq_GS,
+	s_MethMessReq_PAD,
+	s_MethMessReq_SPU2,
+	s_MethMessReq_USB,
+	s_MethMessReq_FW,
+	s_MethMessReq_DEV9
 };
 
 static const LegacyApi_OptMethod* const s_MethMessOpt[] =
 {
-	s_MethMessOpt_GS
+	s_MethMessOpt_CDVD,
+	s_MethMessOpt_GS,
+	s_MethMessOpt_PAD,
+	s_MethMessOpt_SPU2,
+	s_MethMessOpt_USB,
+	s_MethMessOpt_FW,
+	s_MethMessOpt_DEV9
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-class PluginManager
-{
-protected:
-	bool m_initialized;
-	bool m_loaded;
+PluginManager *g_plugins = NULL;
 
-	LegacyPluginAPI_Common m_CommonBindings[PluginId_Count];
-	wxDynamicLibrary m_libs[PluginId_Count];
+Exception::NotPcsxPlugin::NotPcsxPlugin( const wxString& objname ) :
+	Stream( objname, wxLt("File is not a PCSX2 plugin") ) {}
 
-public:
-	~PluginManager();
-	PluginManager() :
-		m_initialized( false )
-	,	m_loaded( false )
-	{
-	}
+Exception::NotPcsxPlugin::NotPcsxPlugin( const PluginsEnum_t& pid ) :
+			Stream( wxString::FromUTF8( tbl_PluginInfo[pid].shortname ), wxLt("File is not a PCSX2 plugin") ) {}
 
-	void LoadPlugins();
-	void UnloadPlugins();
-	
-protected:
-	void BindCommon( PluginsEnum_t pid );
-	void BindRequired( PluginsEnum_t pid );
-	void BindOptional( PluginsEnum_t pid );
-};
 
 void PluginManager::BindCommon( PluginsEnum_t pid )
 {
@@ -401,6 +624,76 @@ void PluginManager::LoadPlugins()
 		// (leave pointer null and do not generate error)
 		
 	}
+}
+
+void PluginManager::Open( PluginsEnum_t pid )
+{
+	// Each Open needs to be called explicitly. >_<
+}
+
+void PluginManager::Close( PluginsEnum_t pid )
+{
+	if( m_IsOpened[pid] )
+	{
+		m_IsOpened[pid] = false;
+		m_CommonBindings[pid].Close();
+	}
+}
+
+void PluginManager::Init( PluginsEnum_t pid )
+{
+	if( !m_IsInitialized[pid] )
+	{
+		m_IsInitialized[pid] = true;
+		m_CommonBindings[pid].Init();
+	}
+}
+
+void PluginManager::Shutdown( PluginsEnum_t pid )
+{
+	if( m_IsInitialized[pid] )
+	{
+		m_IsInitialized[pid] = false;
+		m_CommonBindings[pid].Shutdown();
+	}
+}
+
+void PluginManager::Freeze( PluginsEnum_t pid, int mode, freezeData* data )
+{
+	m_CommonBindings[pid].Freeze( mode, data );
+}
+
+// ----------------------------------------------------------------------------
+// Thread Safety:
+//   This function should only be called by the Main GUI thread and the GS thread (for GS states only),
+//   as it has special handlers to ensure that GS freeze commands are executed appropriately on the
+//   GS thread.
+//
+void PluginManager::Freeze( PluginsEnum_t pid, SaveState& state )
+{
+	if( pid == PluginId_GS && wxThread::IsMain() )
+	{
+		// Need to send the GS freeze request on the GS thread.
+	}
+	else
+	{
+		state.FreezePlugin( tbl_PluginInfo[pid].shortname, m_CommonBindings[pid].Freeze );
+	}
+}
+
+// ----------------------------------------------------------------------------
+// This overload of Freeze performs savestate freeze operation on *all* plugins,
+// as according to the order in PluignsEnum_t.
+//
+// Thread Safety:
+//   This function should only be called by the Main GUI thread and the GS thread (for GS states only),
+//   as it has special handlers to ensure that GS freeze commands are executed appropriately on the
+//   GS thread.
+//
+void PluginManager::Freeze( SaveState& state )
+{
+	for( int i=0; i<PluginId_Count; ++i )
+		Freeze( (PluginsEnum_t)i, state );
 }
 
 void InitPlugins()
@@ -730,87 +1023,7 @@ int LoadSPU2plugin(const wxString& filename) {
 
 void *CDVDplugin;
 
-void CALLBACK CDVD_configure() {}
-void CALLBACK CDVD_about() {}
-s32  CALLBACK CDVD_test() { return 0; }
-void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
 
-extern int lastReadSize;
-s32 CALLBACK CDVD_getBuffer2(u8* buffer)
-{
-	int ret;
-
-
-	// TEMP: until I fix all the plugins to use this function style
-	u8* pb = CDVD.getBuffer();
-	if(pb!=NULL)
-	{
-		memcpy(buffer,pb,lastReadSize);
-		ret=0;
-	}
-	else ret= -1;
-
-	return ret;
-}
-
-
-s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
-{
-	if(CDVD.readTrack(lsn,mode)<0)
-		return -1;
-	
-	// TEMP: until all the plugins use the new CDVDgetBuffer style
-	switch (mode)
-	{
-	case CDVD_MODE_2352:
-		lastReadSize = 2352;
-		break;
-	case CDVD_MODE_2340:
-		lastReadSize = 2340;
-		break;
-	case CDVD_MODE_2328:
-		lastReadSize = 2328;
-		break;
-	case CDVD_MODE_2048:
-		lastReadSize = 2048;
-		break;
-	}
-	return CDVD.getBuffer2(buffer);
-}
-
-s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
-{
-	u8 toc[2064];
-
-	// if error getting toc, settle for single layer disc ;)
-	if(CDVD.getTOC(toc))
-		return 0;
-	if(toc[14] & 0x60)
-	{
-		if(toc[14] & 0x10)
-		{
-			// otp dvd
-			*dualType = 2;
-			*layer1Start = (toc[25]<<16) + (toc[26]<<8) + (toc[27]) - 0x30000 + 1;
-		}
-		else
-		{
-			// ptp dvd
-			*dualType = 1;
-			*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
-		}
-	}
-	else
-	{
-		// single layer dvd
-		*dualType = 0;
-		*layer1Start = (toc[21]<<16) + (toc[22]<<8) + (toc[23]) - 0x30000 + 1;
-	}
-
-	return 1;
-}
-
-int cdvdInitCount;
 int LoadCDVDplugin(const wxString& filename) {
 	void *drv;
 
@@ -842,7 +1055,7 @@ int LoadCDVDplugin(const wxString& filename) {
 	MapSymbol2_Fallback(CDVD,getBuffer2,CDVD_getBuffer2);
 	MapSymbol2_Fallback(CDVD,getDualInfo,CDVD_getDualInfo);
 
-	CDVD.initCount = &cdvdInitCount;
+	CDVD->initCount = &cdvdInitCount;
 	cdvdInitCount=0;
 
 	return 0;
@@ -1096,7 +1309,7 @@ bool OpenCDVD(const char* pTitleFilename)
 	if (!OpenStatus.CDVD && !only_loading_elf)
 	{
 		//First, we need the data.
-		CDVD.newDiskCB(cdvdNewDiskCB);
+		CDVD->newDiskCB(cdvdNewDiskCB);
 
 		if (DoCDVDopen(pTitleFilename) != 0) 
 		{ 

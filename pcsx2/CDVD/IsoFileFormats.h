@@ -16,7 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
  
- #ifndef __LIBISO_H__
+#ifndef __LIBISO_H__
 #define __LIBISO_H__
 
 #include "CDVD.h"
@@ -33,11 +33,11 @@ enum isoType
 
 enum isoFlags
 {
-	ISOFLAGS_Z =				0x0001,
-	ISOFLAGS_Z2	=			0x0002,
-	ISOFLAGS_BLOCKDUMP =	0x0004,
-	ISOFLAGS_MULTI =			0x0008,
-	ISOFLAGS_BZ2 =			0x0010
+	ISOFLAGS_Z			= 0x0001,
+	ISOFLAGS_Z2			= 0x0002,
+	ISOFLAGS_BLOCKDUMP	= 0x0004,
+	ISOFLAGS_MULTI		= 0x0008,
+	ISOFLAGS_BZ2		= 0x0010
 };
 
 #define CD_FRAMESIZE_RAW	2352

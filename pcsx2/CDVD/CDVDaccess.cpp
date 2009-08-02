@@ -32,12 +32,29 @@
 #include "IsoFSdrv.h"
 #include "CDVDisoReader.h"
 
+// ----------------------------------------------------------------------------
+// diskTypeCached
+// Internal disc type cache, to reduce the overhead of disc type checks, which are
+// performed quite liberally by many games (perhaps intended to keep the PS2 DVD
+// from spinning down due to idle activity?).
+// Cache is set to -1 for init and when the disc is removed/changed, which invokes
+// a new DiskTypeCheck.  Al subsequent checks use the non-negative value here.
+//
 static int diskTypeCached=-1;
 
+// used to bridge the gap between the old getBuffer api and the new getBuffer2 api.
 int lastReadSize;
-static int plsn=0; // This never gets set, so it's always 0.
 
+// Records last read block length for block dumping
+static int plsn = 0;
 static isoFile *blockDumpFile;
+
+// Assertion check for CDVD != NULL (in devel and debgu builds), because its handier than
+// relying on DEP exceptions -- and a little more reliable too.
+static void CheckNullCDVD()
+{
+	DevAssert( CDVD != NULL, "Invalid CDVD object state (null pointer exception)" );
+}
 
 /////////////////////////////////////////////////
 //
@@ -88,14 +105,14 @@ int CheckDiskTypeFS(int baseType)
 
 static char bleh[2352];
 
-int FindDiskType(int mType)
+static int FindDiskType(int mType)
 {
 	int dataTracks = 0;
 	int audioTracks = 0;
 	int iCDType = mType;
 	cdvdTN tn;
 
-	CDVD.getTN(&tn);
+	CDVD->getTN(&tn);
 
 	if (tn.strack != tn.etrack) // multitrack == CD.
 	{
@@ -104,8 +121,8 @@ int FindDiskType(int mType)
 	else if (mType < 0)
 	{
 		cdvdTD td;
-		
-		CDVD.getTD(0,&td);
+
+		CDVD->getTD(0,&td);
 		if (td.lsn > 452849)
 		{
 			iCDType = CDVD_TYPE_DETCTDVDS;
@@ -128,7 +145,7 @@ int FindDiskType(int mType)
 		s32 dlt = 0;
 		u32 l1s = 0;
 
-		if(CDVD.getDualInfo(&dlt,&l1s)==0)
+		if(CDVD->getDualInfo(&dlt,&l1s)==0)
 		{
 			if (dlt > 0) iCDType = CDVD_TYPE_DETCTDVDD;
 		}
@@ -154,12 +171,12 @@ int FindDiskType(int mType)
 	{
 		cdvdTD td,td2;
 		
-		CDVD.getTD(i,&td);
+		CDVD->getTD(i,&td);
 
 		if (tn.etrack > i)
-			CDVD.getTD(i+1,&td2);
+			CDVD->getTD(i+1,&td2);
 		else
-			CDVD.getTD(0,&td2);
+			CDVD->getTD(0,&td2);
 
 		int tlength = td2.lsn - td.lsn;
 
@@ -199,18 +216,21 @@ int FindDiskType(int mType)
 	return iCDType;
 }
 
-void DetectDiskType()
+static void DetectDiskType()
 {
-	if (CDVD.getTrayStatus() == CDVD_TRAY_OPEN)
+	if (CDVD->getTrayStatus() == CDVD_TRAY_OPEN)
 	{
 		diskTypeCached = CDVD_TYPE_NODISC;
 		return;
 	}
 
-	int baseMediaType = CDVD.getDiskType();
+	int baseMediaType = CDVD->getDiskType();
 	int mType = -1;
 
-	switch(baseMediaType) // Paranoid mode: do not trust the plugin's detection system to work correctly.
+	// Paranoid mode: do not trust the plugin's detection system to work correctly.
+	// (.. and there's no reason plugins should be doing their own detection anyway).
+
+	switch(baseMediaType)
 	{
 		case CDVD_TYPE_CDDA:
 		case CDVD_TYPE_PSCD:
@@ -239,35 +259,47 @@ void DetectDiskType()
 	diskTypeCached = FindDiskType(mType);
 }
 
+// ----------------------------------------------------------------------------
+// CDVDsys_ChangeSource
 //
-/////////////////////////////////////////////////
-
-s32 DoCDVDinit()
+void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
-	diskTypeCached = -1;
+	if( CDVD != NULL )
+		DoCDVDclose();
+		
+	switch( type )
+	{
+		case CDVDsrc_Iso:
+			CDVD = &CDVDapi_Iso;
+		break;
+		
+		case CDVDsrc_NoDisc:
+			CDVD = &CDVDapi_NoDisc;
+		break;
 
-	if(CDVD.initCount) *CDVD.initCount++; // used to handle the case where the plugin was inited at boot, but then iso takes over
-	return CDVD.init();
-}
+		case CDVDsrc_Plugin:
+			CDVD = &CDVDapi_Plugin;
+		break;
 
-void DoCDVDshutdown()
-{
-	if(CDVD.initCount) *CDVD.initCount--;
-	CDVD.shutdown();
+		jNO_DEFAULT;
+	}
 }
 
 s32 DoCDVDopen(const char* pTitleFilename)
 {
-	int ret = CDVD.open(pTitleFilename);
+	CheckNullCDVD();
+
+	int ret = CDVD->open(pTitleFilename);
 	int cdtype = DoCDVDdetectDiskType();
 
 	if ((Config.Blockdump) && (cdtype != CDVD_TYPE_NODISC))
 	{
-		// write blockdumps to the CWD for now.
+		// TODO: Add a blockdumps configurable folder, and use that instead of CWD().
 
-		wxString temp( Path::Combine( wxGetCwd(), (CDVD.init == ISO.init) ? 
-			Path::GetFilenameWithoutExt(wxString::FromAscii(isoFileName)) : L"Untitled"
-		) );
+		// TODO: "Untitled" should use pnach/slus name resolution, slus if no patch,
+		// and finally an "Untitled-[ElfCRC]" if no slus.
+
+		wxString temp( Path::Combine( wxGetCwd(), CDVD->getUniqueFilename() ) );
 
 #ifdef ENABLE_TIMESTAMPS
 		wxDateTime curtime( wxDateTime::GetTimeNow() );
@@ -280,7 +312,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 		temp += L".dump";
 
 		cdvdTD td;
-		CDVD.getTD(0, &td);
+		CDVD->getTD(0, &td);
 
 		int blockofs = 0, blocksize = 0, blocks = td.lsn;
 
@@ -313,26 +345,29 @@ s32 DoCDVDopen(const char* pTitleFilename)
 
 void DoCDVDclose()
 {
+	CheckNullCDVD();
 	if(blockDumpFile) isoClose(blockDumpFile);
-	CDVD.close();
+	if( CDVD->Common.close != NULL )
+		CDVD->Common.close();
 }
 
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 {
-	int ret = CDVD.readSector(buffer,lsn,mode);
+	CheckNullCDVD();
+	int ret = CDVD->readSector(buffer,lsn,mode);
 
-	if(ret==0)
+	if(ret == 0 && blockDumpFile != NULL )
 	{
-		if (blockDumpFile != NULL)
-		{
-			isoWriteBlock(blockDumpFile, buffer, plsn);
-		}
+		isoWriteBlock(blockDumpFile, buffer, lsn);
 	}
+
 	return ret;
 }
 
 s32 DoCDVDreadTrack(u32 lsn, int mode)
 {
+	CheckNullCDVD();
+
 	// TEMP: until all the plugins use the new CDVDgetBuffer style
 	switch (mode)
 	{
@@ -352,21 +387,17 @@ s32 DoCDVDreadTrack(u32 lsn, int mode)
 
 	//DevCon::Notice("CDVD readTrack(lsn=%d,mode=%d)",params lsn, lastReadSize);
 
-	return CDVD.readTrack(lsn,mode);
+	return CDVD->readTrack(lsn,mode);
 }
-
-// return can be NULL (for async modes)
 
 s32 DoCDVDgetBuffer(u8* buffer)
 {
-	int ret = CDVD.getBuffer2(buffer);
+	CheckNullCDVD();
+	int ret = CDVD->getBuffer2(buffer);
 
-	if (ret == 0)
+	if (ret == 0 && blockDumpFile != NULL)
 	{
-		if (blockDumpFile != NULL)
-		{
-			isoWriteBlock(blockDumpFile, buffer, plsn);
-		}
+		isoWriteBlock(blockDumpFile, buffer, lastReadSize);
 	}
 
 	return ret;
@@ -374,8 +405,8 @@ s32 DoCDVDgetBuffer(u8* buffer)
 
 s32 DoCDVDdetectDiskType()
 {
-	if(diskTypeCached<0) DetectDiskType();
-
+	CheckNullCDVD();
+	if(diskTypeCached < 0) DetectDiskType();
 	return diskTypeCached;
 }
 
@@ -389,10 +420,6 @@ void DoCDVDresetDiskTypeCache()
 // CDVD null interface for Run BIOS menu
 
 
-s32 CALLBACK NODISCinit()
-{
-	return 0;
-}
 
 s32 CALLBACK NODISCopen(const char* pTitle)
 {
@@ -400,10 +427,6 @@ s32 CALLBACK NODISCopen(const char* pTitle)
 }
 
 void CALLBACK NODISCclose()
-{
-}
-
-void CALLBACK NODISCshutdown()
 {
 }
 
@@ -453,10 +476,6 @@ s32 CALLBACK NODISCdummyS32()
 	return 0;
 }
 
-void CALLBACK NODISCdummyVOID()
-{
-}
-
 void CALLBACK NODISCnewDiskCB(void(CALLBACK*)())
 {
 }
@@ -476,11 +495,19 @@ s32 CALLBACK NODISCgetDualInfo(s32* dualType, u32* _layer1start)
 	return -1;
 }
 
-CDVDplugin NODISC = {
-	NODISCinit,
+wxString NODISCgetUniqueFilename()
+{
+	DevAssert( false, "NODISC is an invalid CDVD object for block dumping.. >_<" );
+	return L"epicfail";
+}
+
+CDVD_API CDVDapi_NoDisc =
+{
+	{
+		NODISCclose,
+	},
+
 	NODISCopen,
-	NODISCclose,
-	NODISCshutdown,
 	NODISCreadTrack,
 	NODISCgetBuffer,
 	NODISCreadSubQ,
@@ -492,9 +519,6 @@ CDVDplugin NODISC = {
 	NODISCdummyS32,
 	NODISCdummyS32,
 
-	NODISCdummyVOID,
-	NODISCdummyS32,
-	NODISCdummyVOID,
 	NODISCnewDiskCB,
 
 	NODISCreadSector,

@@ -38,9 +38,9 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 
 	AddOkCancel( s_main );
 	SetSizerAndFit( &s_main );
-	
-	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickUserModeDialog::OnOk_Click ) );
+	CenterOnScreen();
 
+	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickUserModeDialog::OnOk_Click ) );
 	// TODO : Add a command event handler for language changes, that dynamically re-update contents of this window.
 }
 

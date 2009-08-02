@@ -391,7 +391,7 @@ wxStaticText& wxPanelWithHelpers::AddStaticText(wxSizer& sizer, const wxString& 
 //
 wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
 {
-	return wxHelpers::AddRadioButtonTo( this, sizer, label, subtext, tooltip, GetIdealWidth()-8, m_StartNewRadioGroup );
+	wxRadioButton& result = wxHelpers::AddRadioButtonTo( this, sizer, label, subtext, tooltip, GetIdealWidth()-8, m_StartNewRadioGroup );
 	m_StartNewRadioGroup = false;
+	return result;
 }
-
