@@ -24,6 +24,9 @@
 #include <sys/mman.h>
 #include "x86/iR5900.h"
 
+// For Linux ISO loading
+#include "CDVD/CDVDisoReader.h"
+
 void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
 void __fastcall InstallLinuxExceptionHandler();
 void __fastcall ReleaseLinuxExceptionHandler();

@@ -17,7 +17,6 @@
  */
 
 #include "LnxMain.h"
-#include "CDVD/CDVDisoReader.h"
 
 using namespace R5900;
 

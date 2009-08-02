@@ -23,6 +23,9 @@
 #include "LnxMain.h"
 #include "HostGui.h"
 
+// For Linux ISO loading
+#include "CDVD/CDVDisoReader.h"
+
 extern bool applychanges;
 extern bool Slots[5];
 
