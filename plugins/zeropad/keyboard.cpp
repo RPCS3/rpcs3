@@ -31,16 +31,20 @@
 	return -1;
 }
 
+#ifdef _WINDOWS_
+WORD toCharTemp;
+#endif
+
 char* KeysymToChar(int keysym)
 {
- #ifdef __LINUX__
+#ifdef __LINUX__
 	return XKeysymToString(keysym);
 #else
-	LPWORD temp;
-
-	ToAscii((UINT) keysym, NULL, NULL, temp, NULL);
-	return (char*)temp;
-	#endif
+	// fixed this to return *valid* results, and not some pointer
+	// to the fourth oblivion-- air
+	ToAscii((UINT) keysym, NULL, NULL, &toCharTemp, NULL);
+	return (char*)(&toCharTemp);
+#endif
 }
 
 void PollForKeyboardInput(int pad)
