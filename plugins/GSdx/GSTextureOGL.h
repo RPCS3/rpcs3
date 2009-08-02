@@ -35,9 +35,6 @@ public:
 	GSTextureOGL(GLuint texture, int type, int width, int height, int format = 0);
 	virtual ~GSTextureOGL();
 
-	int GetType() const;
-	int GetFormat() const;
-
 	bool Update(const GSVector4i& r, const void* data, int pitch);
 	bool Map(GSMap& m, const GSVector4i* r);
 	void Unmap();

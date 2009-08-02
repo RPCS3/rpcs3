@@ -124,6 +124,22 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
+	// msaa
+
+	for(uint32 i = 2; i <= 16; i++)
+	{
+		DWORD quality[2] = {0, 0};
+
+		if(SUCCEEDED(m_d3d->CheckDeviceMultiSampleType(m_d3dcaps.AdapterOrdinal, m_d3dcaps.DeviceType, D3DFMT_A8R8G8B8, TRUE, (D3DMULTISAMPLE_TYPE)i, &quality[0])) && quality[0] > 0
+		&& SUCCEEDED(m_d3d->CheckDeviceMultiSampleType(m_d3dcaps.AdapterOrdinal, m_d3dcaps.DeviceType, D3DFMT_D24S8, TRUE, (D3DMULTISAMPLE_TYPE)i, &quality[1])) && quality[1] > 0)
+		{
+			m_msaa_desc.Count = i;
+			m_msaa_desc.Quality = std::min<DWORD>(quality[0] - 1, quality[1] - 1);
+
+			if(i >= m_msaa) break;
+		}
+	}
+
 	//
 
 	if(!Reset(1, 1, theApp.GetConfig("windowed", 1) ? Windowed : Fullscreen)) 
@@ -278,9 +294,13 @@ bool GSDevice9::Reset(int w, int h, int mode)
 
 	if(!m_dev)
 	{
-		//D3DCREATE_MULTITHREADED flag shouldn't be needed
 		uint32 flags = m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING;
 
+		if(flags & D3DCREATE_HARDWARE_VERTEXPROCESSING)
+		{
+			flags |= D3DCREATE_PUREDEVICE;
+		}
+ 
 		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
 		if(FAILED(hr)) return false;
@@ -423,7 +443,7 @@ void GSDevice9::ClearRenderTarget(GSTexture* rt, uint32 c)
 
 void GSDevice9::ClearDepth(GSTexture* t, float c)
 {
-	GSTexture* rt = CreateRenderTarget(t->m_size.x, t->m_size.y);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight(), t->IsMSAA());
 
 	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
@@ -444,7 +464,7 @@ void GSDevice9::ClearDepth(GSTexture* t, float c)
 
 void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 {
-	GSTexture* rt = CreateRenderTarget(t->m_size.x, t->m_size.y);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight(), t->IsMSAA());
 
 	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
@@ -463,20 +483,23 @@ void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 	Recycle(rt);
 }
 
-GSTexture* GSDevice9::Create(int type, int w, int h, int format)
+GSTexture* GSDevice9::Create(int type, int w, int h, bool msaa, int format)
 {
 	HRESULT hr;
 
 	CComPtr<IDirect3DTexture9> texture;
 	CComPtr<IDirect3DSurface9> surface;
 
+	// TODO: msaa
+
 	switch(type)
 	{
 	case GSTexture::RenderTarget:
-		hr = m_dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, (D3DFORMAT)format, D3DPOOL_DEFAULT, &texture, NULL);
+		if(msaa) hr = m_dev->CreateRenderTarget(w, h, (D3DFORMAT)format, (D3DMULTISAMPLE_TYPE)m_msaa_desc.Count, m_msaa_desc.Quality, FALSE, &surface, NULL);
+		else hr = m_dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, (D3DFORMAT)format, D3DPOOL_DEFAULT, &texture, NULL);
 		break;
 	case GSTexture::DepthStencil:
-		hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, D3DMULTISAMPLE_NONE, 0, FALSE, &surface, NULL);
+		hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, (D3DMULTISAMPLE_TYPE)m_msaa_desc.Count, m_msaa_desc.Quality, FALSE, &surface, NULL);
 		break;
 	case GSTexture::Texture:
 		hr = m_dev->CreateTexture(w, h, 1, 0, (D3DFORMAT)format, D3DPOOL_MANAGED, &texture, NULL);
@@ -514,14 +537,14 @@ GSTexture* GSDevice9::Create(int type, int w, int h, int format)
 	return t;
 }
 
-GSTexture* GSDevice9::CreateRenderTarget(int w, int h, int format)
+GSTexture* GSDevice9::CreateRenderTarget(int w, int h, bool msaa, int format)
 {
-	return __super::CreateRenderTarget(w, h, format ? format : D3DFMT_A8R8G8B8);
+	return __super::CreateRenderTarget(w, h, msaa, format ? format : D3DFMT_A8R8G8B8);
 }
 
-GSTexture* GSDevice9::CreateDepthStencil(int w, int h, int format)
+GSTexture* GSDevice9::CreateDepthStencil(int w, int h, bool msaa, int format)
 {
-	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8);
+	return __super::CreateDepthStencil(w, h, msaa, format ? format : D3DFMT_D24S8);
 }
 
 GSTexture* GSDevice9::CreateTexture(int w, int h, int format)
@@ -532,6 +555,22 @@ GSTexture* GSDevice9::CreateTexture(int w, int h, int format)
 GSTexture* GSDevice9::CreateOffscreen(int w, int h, int format)
 {
 	return __super::CreateOffscreen(w, h, format ? format : D3DFMT_A8R8G8B8);
+}
+
+GSTexture* GSDevice9::Resolve(GSTexture* t)
+{
+	ASSERT(t != NULL && t->IsMSAA());
+
+	if(GSTexture* dst = CreateRenderTarget(t->GetWidth(), t->GetHeight(), false, t->GetFormat()))
+	{
+		dst->SetScale(t->GetScale());
+
+		m_dev->StretchRect(*(GSTexture9*)t, NULL, *(GSTexture9*)dst, NULL, D3DTEXF_POINT);
+
+		return dst;
+	}
+
+	return NULL;
 }
 
 GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format)
@@ -550,11 +589,16 @@ GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, 
 		return false;
 	}
 
-	if(GSTexture* rt = CreateRenderTarget(w, h, format))
+	if(GSTexture* rt = CreateRenderTarget(w, h, false, format))
 	{
 		GSVector4 dr(0, 0, w, h);
 
-		StretchRect(src, sr, rt, dr, m_convert.ps[1], NULL, 0);
+		if(GSTexture* src2 = src->IsMSAA() ? Resolve(src) : src)
+		{
+			StretchRect(src2, sr, rt, dr, m_convert.ps[1], NULL, 0);
+
+			if(src2 != src) Recycle(src2);
+		}
 
 		dst = CreateOffscreen(w, h, format);
 
@@ -933,7 +977,7 @@ void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4
 		m_dev->SetDepthStencilSurface(dsv);
 	}
 
-	GSVector4i r = scissor ? *scissor : GSVector4i(rt->m_size).zwxy();
+	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
 
 	if(!m_state.scissor.eq(r))
 	{

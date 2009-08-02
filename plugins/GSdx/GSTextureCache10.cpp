@@ -60,7 +60,7 @@ void GSTextureCache10::Read(Target* t, const GSVector4i& r)
 	int w = r.width();
 	int h = r.height();
 
-	GSVector4 src = GSVector4(r) * GSVector4(t->m_texture->m_scale).xyxy() / GSVector4(t->m_texture->GetSize()).xyxy();
+	GSVector4 src = GSVector4(r) * GSVector4(t->m_texture->GetScale()).xyxy() / GSVector4(t->m_texture->GetSize()).xyxy();
 
 	DXGI_FORMAT format = TEX0.PSM == PSM_PSMCT16 || TEX0.PSM == PSM_PSMCT16S ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
 

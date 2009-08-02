@@ -145,7 +145,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader, bool limit)
 	int w = std::max<int>(cr.width(), 1);
 	int h = std::max<int>(cr.height(), 1);
 
-	if(!m_backbuffer || m_backbuffer->m_size.x != w || m_backbuffer->m_size.y != h)
+	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
 	{
 		if(!Reset(w, h, DontCare))
 		{
@@ -198,7 +198,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader, bool limit)
 	}
 }
 
-GSTexture* GSDevice7::Create(int type, int w, int h, int format)
+GSTexture* GSDevice7::Create(int type, int w, int h, bool msaa, int format)
 {
 	HRESULT hr;
 

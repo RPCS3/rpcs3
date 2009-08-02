@@ -208,7 +208,7 @@ bool GSRenderer::Merge(int field)
 			r += GSVector4i(0, 1).xyxy();
 		}
 
-		GSVector4 scale = GSVector4(tex[i]->m_scale).xyxy();
+		GSVector4 scale = GSVector4(tex[i]->GetScale()).xyxy();
 
 		src[i] = GSVector4(r) * scale / GSVector4(tex[i]->GetSize()).xyxy();
 
@@ -216,7 +216,7 @@ bool GSRenderer::Merge(int field)
 		
 		if(dr[i].top - baseline >= 4) // 2?
 		{
-			o.y = tex[i]->m_scale.y * (dr[i].top - baseline);
+			o.y = tex[i]->GetScale().y * (dr[i].top - baseline);
 
 			if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD)
 			{
@@ -251,7 +251,7 @@ bool GSRenderer::Merge(int field)
 			int field2 = 1 - ((m_interlace - 1) & 1);
 			int mode = (m_interlace - 1) >> 1;
 
-			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->m_scale.y : tex[0]->m_scale.y);
+			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
 		}
 	}
 

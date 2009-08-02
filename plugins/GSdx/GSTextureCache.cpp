@@ -190,8 +190,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 		if(ww > 0 && hh > 0)
 		{
-			dst->m_texture->m_scale.x = (float)w / ww;
-			dst->m_texture->m_scale.y = (float)h / hh;
+			dst->m_texture->SetScale(GSVector2((float)w / ww, (float)h / hh));
 		}
 	}
 
@@ -527,10 +526,19 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		dst->Update();
 
+		GSTexture* tmp = NULL;
+		
+		if(dst->m_texture->IsMSAA()) 
+		{
+			tmp = dst->m_texture;
+
+			dst->m_texture = m_renderer->m_dev->Resolve(dst->m_texture);
+		}
+
 		// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
 
-		int w = (int)(dst->m_texture->m_scale.x * tw);
-		int h = (int)(dst->m_texture->m_scale.y * th); 
+		int w = (int)(dst->m_texture->GetScale().x * tw);
+		int h = (int)(dst->m_texture->GetScale().y * th); 
 
 		GSVector2i dstsize = dst->m_texture->GetSize();
 
@@ -542,10 +550,10 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 			// ASSERT(dst->m_TEX0.TBW > TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
 
-			src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y);
+			src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
 
 			GSVector4 size = GSVector4(dstsize).xyxy();
-			GSVector4 scale = GSVector4(dst->m_texture->m_scale).xyxy();
+			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy();
 
 			int bw = 64;
 			int bh = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
@@ -588,28 +596,28 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		// width/height conversion
 
-		GSVector2 scale = dst->m_texture->m_scale;
+		GSVector2 scale = dst->m_texture->GetScale();
 
 		GSVector4 dr(0, 0, w, h);
 
 		if(w > dstsize.x) 
 		{
 			scale.x = (float)dstsize.x / tw;
-			dr.z = (float)dstsize.x * scale.x / dst->m_texture->m_scale.x;
+			dr.z = (float)dstsize.x * scale.x / dst->m_texture->GetScale().x;
 			w = dstsize.x;
 		}
 		
 		if(h > dstsize.y) 
 		{
 			scale.y = (float)dstsize.y / th;
-			dr.w = (float)dstsize.y * scale.y / dst->m_texture->m_scale.y;
+			dr.w = (float)dstsize.y * scale.y / dst->m_texture->GetScale().y;
 			h = dstsize.y;
 		}
 
 		GSVector4 sr(0, 0, w, h);
 
 		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
-		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h);
+		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
 
 		if(!src->m_texture)
 		{
@@ -622,8 +630,8 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		}
 		else
 		{
-			sr.z /= st->m_size.x;
-			sr.w /= st->m_size.y;
+			sr.z /= st->GetWidth();
+			sr.w /= st->GetHeight();
 
 			m_renderer->m_dev->StretchRect(st, sr, dt, dr);
 		}
@@ -635,7 +643,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			src->m_texture = dt;
 		}
 
-		src->m_texture->m_scale = scale;
+		src->m_texture->SetScale(scale);
 
 		switch(TEX0.PSM)
 		{
@@ -663,6 +671,13 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			src->m_fmt = GSTextureFX::FMT_4HH;
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 			break;
+		}
+
+		if(tmp != NULL)
+		{
+			m_renderer->m_dev->Recycle(dst->m_texture);
+
+			dst->m_texture = tmp;
 		}
 	}
 
@@ -697,13 +712,13 @@ GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int
 
 	if(type == RenderTarget)
 	{
-		t->m_texture = m_renderer->m_dev->CreateRenderTarget(w, h);
+		t->m_texture = m_renderer->m_dev->CreateRenderTarget(w, h, true);
 
 		t->m_used = true; // FIXME
 	}
 	else if(type == DepthStencil)
 	{
-		t->m_texture = m_renderer->m_dev->CreateDepthStencil(w, h);
+		t->m_texture = m_renderer->m_dev->CreateDepthStencil(w, h, true);
 	}
 
 	if(t->m_texture == NULL)
@@ -1008,7 +1023,7 @@ void GSTextureCache::Target::Update()
 
 			// m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, w * h * 4);
 
-			m_renderer->m_dev->StretchRect(t, m_texture, GSVector4(r) * GSVector4(m_texture->m_scale).xyxy());
+			m_renderer->m_dev->StretchRect(t, m_texture, GSVector4(r) * GSVector4(m_texture->GetScale()).xyxy());
 
 			m_renderer->m_dev->Recycle(t);
 		}

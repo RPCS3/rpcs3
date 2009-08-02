@@ -31,7 +31,7 @@ private:
 	CComPtr<IDirectDrawSurface7> m_primary;
 	bool m_lost;
 
-	GSTexture* Create(int type, int w, int h, int format);
+	GSTexture* Create(int type, int w, int h, bool msaa, int format);
 
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);

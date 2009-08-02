@@ -26,7 +26,6 @@
 
 class GSTexture7 : public GSTexture
 {
-	int m_type;
 	CComPtr<IDirectDrawSurface7> m_system;
 	CComPtr<IDirectDrawSurface7> m_video;
 	DDSURFACEDESC2 m_desc;
@@ -34,9 +33,6 @@ class GSTexture7 : public GSTexture
 public:
 	GSTexture7(int type, IDirectDrawSurface7* system);
 	GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface7* video);
-
-	int GetType() const;
-	int GetFormat() const;
 
 	bool Update(const GSVector4i& r, const void* data, int pitch);
 	bool Map(GSMap& m, const GSVector4i* r);

@@ -163,12 +163,12 @@ public:
 
 		GSTextureFX::VSConstantBuffer vs_cb;
 
-		float sx = 2.0f * rt->m_scale.x / (rt->m_size.x << 4);
-		float sy = 2.0f * rt->m_scale.y / (rt->m_size.y << 4);
+		float sx = 2.0f * rt->GetScale().x / (rt->GetWidth() << 4);
+		float sy = 2.0f * rt->GetScale().y / (rt->GetHeight() << 4);
 		float ox = (float)(int)context->XYOFFSET.OFX;
 		float oy = (float)(int)context->XYOFFSET.OFY;
-		float ox2 = 2.0f * m_pixelcenter.x / rt->m_size.x;
-		float oy2 = 2.0f * m_pixelcenter.y / rt->m_size.y;
+		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
+		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
 
 		vs_cb.VertexScale = GSVector4(sx, -sy, 1.0f / UINT_MAX, 0.0f);
 		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
@@ -230,8 +230,8 @@ public:
 			ps_sel.ltf = m_filter == 2 ? IsLinear() : m_filter;
 			ps_sel.rt = tex->m_target;
 
-			int w = tex->m_texture->m_size.x;
-			int h = tex->m_texture->m_size.y;
+			int w = tex->m_texture->GetWidth();
+			int h = tex->m_texture->GetHeight();
 
 			int tw = (int)(1 << context->TEX0.TW);
 			int th = (int)(1 << context->TEX0.TH);
@@ -266,7 +266,7 @@ public:
 
 		// rs
 
-		GSVector4i scissor = GSVector4i(GSVector4(rt->m_scale).xyxy() * context->scissor.in).rintersect(GSVector4i(rt->GetSize()).zwxy());
+		GSVector4i scissor = GSVector4i(GSVector4(rt->GetScale()).xyxy() * context->scissor.in).rintersect(GSVector4i(rt->GetSize()).zwxy());
 
 		m_dev->OMSetRenderTargets(rt, ds, &scissor);
 		m_dev->PSSetShaderResources(tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);

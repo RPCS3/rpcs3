@@ -60,7 +60,7 @@ void GSTextureCache9::Read(Target* t, const GSVector4i& r)
 	int w = r.width();
 	int h = r.height();
 
-	GSVector4 src = GSVector4(r) * GSVector4(t->m_texture->m_scale).xyxy() / GSVector4(t->m_texture->GetSize()).xyxy();
+	GSVector4 src = GSVector4(r) * GSVector4(t->m_texture->GetScale()).xyxy() / GSVector4(t->m_texture->GetSize()).xyxy();
 
 	if(GSTexture* offscreen = m_renderer->m_dev->CopyOffscreen(t->m_texture, src, w, h))
 	{

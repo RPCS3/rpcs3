@@ -50,7 +50,7 @@ class GSDevice : public GSAlignedClass<16>
 {
 	list<GSTexture*> m_pool;
 
-	GSTexture* Fetch(int type, int w, int h, int format);
+	GSTexture* Fetch(int type, int w, int h, bool msaa, int format);
 
 protected:
 	GSWnd* m_wnd;
@@ -64,8 +64,10 @@ protected:
 	GSTexture* m_current;
 	struct {D3D_FEATURE_LEVEL level; string model, vs, gs, ps;} m_shader;
 	struct {size_t stride, start, count, limit;} m_vertices;
+	uint32 m_msaa;
+	DXGI_SAMPLE_DESC m_msaa_desc;
 
-	virtual GSTexture* Create(int type, int w, int h, int format) = 0;
+	virtual GSTexture* Create(int type, int w, int h, bool msaa, int format) = 0;
 
 	virtual void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c) = 0;
 	virtual void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset) = 0;
@@ -93,10 +95,12 @@ public:
 	virtual void ClearDepth(GSTexture* t, float c) {}
 	virtual void ClearStencil(GSTexture* t, uint8 c) {}
 
-	virtual GSTexture* CreateRenderTarget(int w, int h, int format = 0);
-	virtual GSTexture* CreateDepthStencil(int w, int h, int format = 0);
+	virtual GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
+	virtual GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
 	virtual GSTexture* CreateTexture(int w, int h, int format = 0);
 	virtual GSTexture* CreateOffscreen(int w, int h, int format = 0);
+
+	virtual GSTexture* Resolve(GSTexture* t) {return NULL;}
 
 	virtual GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0) {return NULL;}
 

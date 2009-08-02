@@ -26,7 +26,7 @@
 
 class GSDevice10 : public GSDevice
 {
-	GSTexture* Create(int type, int w, int h, int format);
+	GSTexture* Create(int type, int w, int h, bool msaa, int format);
 
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
@@ -103,10 +103,12 @@ public:
 	void ClearDepth(GSTexture* t, float c);
 	void ClearStencil(GSTexture* t, uint8 c);
 
-	GSTexture* CreateRenderTarget(int w, int h, int format = 0);
-	GSTexture* CreateDepthStencil(int w, int h, int format = 0);
+	GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
+	GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateTexture(int w, int h, int format = 0);
 	GSTexture* CreateOffscreen(int w, int h, int format = 0);
+
+	GSTexture* Resolve(GSTexture* t);
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 

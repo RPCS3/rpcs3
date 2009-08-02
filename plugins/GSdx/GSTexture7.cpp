@@ -23,8 +23,7 @@
 #include "GSTexture7.h"
 
 GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system)
-	: m_type(type)
-	, m_system(system)
+	: m_system(system)
 {
 	memset(&m_desc, 0, sizeof(m_desc));
 
@@ -34,11 +33,14 @@ GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system)
 
 	m_size.x = (int)m_desc.dwWidth;
 	m_size.y = (int)m_desc.dwHeight;
+
+	m_type = type;
+
+	m_format = (int)m_desc.ddpfPixelFormat.dwFourCC;
 }
 
 GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface7* video)
-	: m_type(type)
-	, m_system(system)
+	: m_system(system)
 	, m_video(video)
 {
 	memset(&m_desc, 0, sizeof(m_desc));
@@ -49,16 +51,10 @@ GSTexture7::GSTexture7(int type, IDirectDrawSurface7* system, IDirectDrawSurface
 
 	m_size.x = (int)m_desc.dwWidth;
 	m_size.y = (int)m_desc.dwHeight;
-}
 
-int GSTexture7::GetType() const
-{
-	return m_type;
-}
+	m_type = type;
 
-int GSTexture7::GetFormat() const 
-{
-	return (int)m_desc.ddpfPixelFormat.dwFourCC;
+	m_format = (int)m_desc.ddpfPixelFormat.dwFourCC;
 }
 
 bool GSTexture7::Update(const GSVector4i& r, const void* data, int pitch)

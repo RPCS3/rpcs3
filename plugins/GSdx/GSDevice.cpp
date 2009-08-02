@@ -20,6 +20,7 @@
  */
 
 #include "StdAfx.h"
+#include "GSdx.h"
 #include "GSDevice.h"
 
 GSDevice::GSDevice() 
@@ -32,6 +33,11 @@ GSDevice::GSDevice()
 	, m_1x1(NULL)
 {
 	memset(&m_vertices, 0, sizeof(m_vertices));
+
+	m_msaa = theApp.GetConfig("msaa", 0);
+
+	m_msaa_desc.Count = 1;
+	m_msaa_desc.Quality = 0;
 }
 
 GSDevice::~GSDevice() 
@@ -83,7 +89,7 @@ void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
 	int w = std::max<int>(cr.width(), 1);
 	int h = std::max<int>(cr.height(), 1);
 
-	if(!m_backbuffer || m_backbuffer->m_size.x != w || m_backbuffer->m_size.y != h)
+	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
 	{
 		if(!Reset(w, h, DontCare))
 		{
@@ -103,15 +109,20 @@ void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
 	Flip(limit);
 }
 
-GSTexture* GSDevice::Fetch(int type, int w, int h, int format)
+GSTexture* GSDevice::Fetch(int type, int w, int h, bool msaa, int format)
 {
+	if(m_msaa < 2)
+	{
+		msaa = false;
+	}
+
 	GSVector2i size(w, h);
 
 	for(list<GSTexture*>::iterator i = m_pool.begin(); i != m_pool.end(); i++)
 	{
 		GSTexture* t = *i;
 
-		if(t->GetType() == type && t->GetFormat() == format && t->GetSize() == size)
+		if(t->GetType() == type && t->GetFormat() == format && t->GetSize() == size && t->IsMSAA() == msaa)
 		{
 			m_pool.erase(i);
 
@@ -119,7 +130,7 @@ GSTexture* GSDevice::Fetch(int type, int w, int h, int format)
 		}
 	}
 
-	return Create(type, w, h, format);
+	return Create(type, w, h, msaa, format);
 }
 
 void GSDevice::EndScene()
@@ -143,24 +154,24 @@ void GSDevice::Recycle(GSTexture* t)
 	}
 }
 
-GSTexture* GSDevice::CreateRenderTarget(int w, int h, int format)
+GSTexture* GSDevice::CreateRenderTarget(int w, int h, bool msaa, int format)
 {
-	return Fetch(GSTexture::RenderTarget, w, h, format);
+	return Fetch(GSTexture::RenderTarget, w, h, msaa, format);
 }
 
-GSTexture* GSDevice::CreateDepthStencil(int w, int h, int format)
+GSTexture* GSDevice::CreateDepthStencil(int w, int h, bool msaa, int format)
 {
-	return Fetch(GSTexture::DepthStencil, w, h, format);
+	return Fetch(GSTexture::DepthStencil, w, h, msaa, format);
 }
 
 GSTexture* GSDevice::CreateTexture(int w, int h, int format)
 {
-	return Fetch(GSTexture::Texture, w, h, format);
+	return Fetch(GSTexture::Texture, w, h, false, format);
 }
 
 GSTexture* GSDevice::CreateOffscreen(int w, int h, int format)
 {
-	return Fetch(GSTexture::Offscreen, w, h, format);
+	return Fetch(GSTexture::Offscreen, w, h, false, format);
 }
 
 void GSDevice::StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
@@ -177,7 +188,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 {
 	if(!m_merge || !(m_merge->GetSize() == fs))
 	{
-		m_merge = CreateRenderTarget(fs.x, fs.y);
+		m_merge = CreateRenderTarget(fs.x, fs.y, false);
 	}
 
 	// TODO: m_1x1
@@ -188,7 +199,25 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 	
 	if(m_merge)
 	{
-		DoMerge(st, sr, dr, m_merge, slbg, mmod, c);
+		GSTexture* tex[2] = {NULL, NULL};
+
+		for(int i = 0; i < countof(tex); i++)
+		{
+			if(st[i] != NULL)
+			{
+				tex[i] = st[i]->IsMSAA() ? Resolve(st[i]) : st[i];
+			}
+		}
+
+		DoMerge(tex, sr, dr, m_merge, slbg, mmod, c);
+
+		for(int i = 0; i < countof(tex); i++)
+		{
+			if(tex[i] != st[i])
+			{
+				Recycle(tex[i]);
+			}
+		}
 	}
 	else
 	{
@@ -202,7 +231,7 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 {
 	if(!m_weavebob || !(m_weavebob->GetSize() == ds))
 	{
-		m_weavebob = CreateRenderTarget(ds.x, ds.y);
+		m_weavebob = CreateRenderTarget(ds.x, ds.y, false);
 	}
 
 	if(mode == 0 || mode == 2) // weave or blend
@@ -217,7 +246,7 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 
 			if(!m_blend || !(m_blend->GetSize() == ds))
 			{
-				m_blend = CreateRenderTarget(ds.x, ds.y);
+				m_blend = CreateRenderTarget(ds.x, ds.y, false);
 			}
 
 			DoInterlace(m_weavebob, m_blend, 2, false, 0);
@@ -247,7 +276,7 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 
 	GSTexture* t2 = *t;
 
-	if(t2 == NULL || t2->m_size.x != w || t2->m_size.y != h)
+	if(t2 == NULL || t2->GetWidth() != w || t2->GetHeight() != h)
 	{
 		delete t2;
 

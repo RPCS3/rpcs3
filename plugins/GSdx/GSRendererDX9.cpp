@@ -216,9 +216,9 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 	GSDevice9* dev = (GSDevice9*)m_dev;
 
-	const GSVector2i& size = rt->m_size;
+	const GSVector2i& size = rt->GetSize();
 
-	if(GSTexture* t = dev->CreateRenderTarget(size.x, size.y))
+	if(GSTexture* t = dev->CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
 	{
 		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
@@ -234,7 +234,7 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// ia
 
-		GSVector4 s = GSVector4(rt->m_scale.x / size.x, rt->m_scale.y / size.y);
+		GSVector4 s = GSVector4(rt->GetScale().x / size.x, rt->GetScale().y / size.y);
 		GSVector4 o = GSVector4(-1.0f, 1.0f);
 
 		GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
@@ -258,7 +258,9 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 
 		// ps
 
-		dev->PSSetShaderResources(rt, NULL);
+		GSTexture* rt2 = rt->IsMSAA() ? dev->Resolve(rt) : rt;
+
+		dev->PSSetShaderResources(rt2, NULL);
 		dev->PSSetShader(dev->m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL, 0);
 		dev->PSSetSamplerState(&dev->m_convert.pt);
 
@@ -271,6 +273,8 @@ void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
 		dev->EndScene();
 
 		dev->Recycle(t);
+
+		if(rt2 != rt) dev->Recycle(rt2);
 	}
 }
 
@@ -287,7 +291,7 @@ void GSRendererDX9::UpdateFBA(GSTexture* rt)
 
 	// ia
 
-	GSVector4 s = GSVector4(rt->m_scale.x / rt->m_size.x, rt->m_scale.y / rt->m_size.y);
+	GSVector4 s = GSVector4(rt->GetScale().x / rt->GetWidth(), rt->GetScale().y / rt->GetHeight());
 	GSVector4 o = GSVector4(-1.0f, 1.0f);
 
 	GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());

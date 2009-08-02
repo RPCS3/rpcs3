@@ -38,6 +38,15 @@ GSTexture9::GSTexture9(IDirect3DSurface9* surface)
 
 	m_size.x = (int)m_desc.Width;
 	m_size.y = (int)m_desc.Height;
+
+	if(m_desc.Usage & D3DUSAGE_RENDERTARGET) m_type = RenderTarget;
+	else if(m_desc.Usage & D3DUSAGE_DEPTHSTENCIL) m_type = DepthStencil;
+	else if(m_desc.Pool == D3DPOOL_MANAGED) m_type = Texture;
+	else if(m_desc.Pool == D3DPOOL_SYSTEMMEM) m_type = Offscreen;
+
+	m_format = (int)m_desc.Format;
+
+	m_msaa = m_desc.MultiSampleType != D3DMULTISAMPLE_NONE;
 }
 
 GSTexture9::GSTexture9(IDirect3DTexture9* texture)
@@ -52,24 +61,19 @@ GSTexture9::GSTexture9(IDirect3DTexture9* texture)
 
 	m_size.x = (int)m_desc.Width;
 	m_size.y = (int)m_desc.Height;
+
+	if(m_desc.Usage & D3DUSAGE_RENDERTARGET) m_type = RenderTarget;
+	else if(m_desc.Usage & D3DUSAGE_DEPTHSTENCIL) m_type = DepthStencil;
+	else if(m_desc.Pool == D3DPOOL_MANAGED) m_type = Texture;
+	else if(m_desc.Pool == D3DPOOL_SYSTEMMEM) m_type = Offscreen;
+
+	m_format = (int)m_desc.Format;
+
+	m_msaa = m_desc.MultiSampleType > 1;
 }
 
 GSTexture9::~GSTexture9()
 {
-}
-
-int GSTexture9::GetType() const
-{
-	if(m_desc.Usage & D3DUSAGE_RENDERTARGET) return GSTexture::RenderTarget;
-	if(m_desc.Usage & D3DUSAGE_DEPTHSTENCIL) return GSTexture::DepthStencil;
-	if(m_desc.Pool == D3DPOOL_MANAGED) return GSTexture::Texture;
-	if(m_desc.Pool == D3DPOOL_SYSTEMMEM) return GSTexture::Offscreen;
-	return GSTexture::None;
-}
-
-int GSTexture9::GetFormat() const 
-{
-	return m_desc.Format;
 }
 
 bool GSTexture9::Update(const GSVector4i& r, const void* data, int pitch)
