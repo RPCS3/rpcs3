@@ -490,8 +490,6 @@ GSTexture* GSDevice9::Create(int type, int w, int h, bool msaa, int format)
 	CComPtr<IDirect3DTexture9> texture;
 	CComPtr<IDirect3DSurface9> surface;
 
-	// TODO: msaa
-
 	switch(type)
 	{
 	case GSTexture::RenderTarget:
@@ -499,7 +497,8 @@ GSTexture* GSDevice9::Create(int type, int w, int h, bool msaa, int format)
 		else hr = m_dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, (D3DFORMAT)format, D3DPOOL_DEFAULT, &texture, NULL);
 		break;
 	case GSTexture::DepthStencil:
-		hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, (D3DMULTISAMPLE_TYPE)m_msaa_desc.Count, m_msaa_desc.Quality, FALSE, &surface, NULL);
+		if(msaa) hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, (D3DMULTISAMPLE_TYPE)m_msaa_desc.Count, m_msaa_desc.Quality, FALSE, &surface, NULL);
+		else hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, D3DMULTISAMPLE_NONE, 0, FALSE, &surface, NULL);
 		break;
 	case GSTexture::Texture:
 		hr = m_dev->CreateTexture(w, h, 1, 0, (D3DFORMAT)format, D3DPOOL_MANAGED, &texture, NULL);
