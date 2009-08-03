@@ -80,9 +80,10 @@ declareAllVariables
 #define _Z	 ((mVU->code>>22) & 0x1)
 #define _W	 ((mVU->code>>21) & 0x1)
 
-#define _X_Y_Z_W	(((mVU->code >> 21 ) & 0xF ))
+#define _X_Y_Z_W	(((mVU->code >> 21 ) & 0xF))
 #define _XYZW_SS	(_X+_Y+_Z+_W==1)
 #define _XYZW_SS2	(_XYZW_SS && (_X_Y_Z_W != 8))
+#define _XYZW_PS	(_X_Y_Z_W == 0xf)
 
 #define _bc_	 (mVU->code & 0x3)
 #define _bc_x	((mVU->code & 0x3) == 0)

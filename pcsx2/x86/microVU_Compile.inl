@@ -46,7 +46,6 @@
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
 #define doUpperOp()			{ mVUopU(mVU, 1); mVUdivSet(mVU); }
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
-#define doIbit()			{ if (mVUup.iBit) { incPC(-1); MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); incPC(1); } }
 #define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
 
 //------------------------------------------------------------------
@@ -74,6 +73,19 @@ microVUt(void) doSwapOp(mV) {
 		mVU->regAlloc->clearNeeded(t2);
 	}
 	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
+}
+
+microVUt(void) doIbit(mV) { 
+	if (mVUup.iBit) { 
+		incPC(-1);
+		if (CHECK_VU_OVERFLOW && ((curI & 0x7fffffff) >= 0x7f800000)) {
+			Console::Status("microVU%d: Clamping I Reg", params mVU->index);
+			int tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
+			MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, tempI); 
+		}
+		else MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); 
+		incPC(1);
+	} 
 }
 
 // Used by mVUsetupRange
@@ -434,7 +446,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	for (x = 0; x < endCount; x++) {
 		if (mVUinfo.isEOB)			{ x = 0xffff; }
 		if (mVUup.mBit)				{ OR32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); }
-		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(); }
+		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(mVU); }
 		else if (!mVUinfo.swapOps)	{ incPC(1); doUpperOp(); doLowerOp(); }
 		else						{ doSwapOp(mVU); }
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }

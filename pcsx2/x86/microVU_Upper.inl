@@ -152,8 +152,10 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		}
 		else { Fs = mVU->regAlloc->allocReg(_Fs_, _Fd_, _X_Y_Z_W); }
 
-		opCase2 { if (opType == 2) { mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
-
+		opCase1 { if((opType == 2) && _XYZW_PS)	{ mVUclamp1(Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase2 { if (opType == 2)				{ mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
+		
 		if (_XYZW_SS) SSE_SS[opType](mVU, Fs, Ft, -1, -1);
 		else		  SSE_PS[opType](mVU, Fs, Ft, -1, -1);
 
