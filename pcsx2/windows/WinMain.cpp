@@ -195,7 +195,7 @@ void WinRun()
 	// Load the command line overrides for plugins.
 	// Back up the user's preferences in winConfig.
 
-	memcpy( &winConfig, &Config, sizeof( PcsxConfig ) );
+	winConfig = Config; // don't use memcpy
 
 	_doPluginOverride( "GS", g_Startup.gsdll, Config.Plugins.GS );
 	_doPluginOverride( "CDVD", g_Startup.cdvddll, Config.Plugins.CDVD );
