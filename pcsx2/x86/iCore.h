@@ -102,7 +102,11 @@
 
 #define X86TYPE_VU1 0x80
 
-#define X86_ISVI(type) ((type&~X86TYPE_VU1) == X86TYPE_VI)
+//#define X86_ISVI(type) ((type&~X86TYPE_VU1) == X86TYPE_VI)
+static __forceinline int X86_ISVI(int type)
+{
+	return ((type&~X86TYPE_VU1) == X86TYPE_VI);
+}
 
 struct _x86regs {
 	u8 inuse;
@@ -199,25 +203,37 @@ int _signExtendXMMtoM(u32 to, x86SSERegType from, int candestroy); // returns tr
 
 // only valid during writes. If write128, then upper 64bits are in an mmxreg
 // (mmreg&0xf). Constant is used from gprreg ((mmreg>>16)&0x1f)
-#define MEM_EECONSTTAG 0x0100 // argument is a GPR and comes from g_cpuConstRegs
-#define MEM_PSXCONSTTAG 0x0200
-#define MEM_MEMORYTAG 0x0400
-#define MEM_MMXTAG 0x0800	// mmreg is mmxreg
-#define MEM_XMMTAG 0x8000	// mmreg is xmmreg
-#define MEM_X86TAG 0x4000 // ignored most of the time
-#define MEM_GPRTAG 0x2000 // argument is a GPR reg
-#define MEM_CONSTTAG 0x1000 // argument is a const
+enum memtag
+{
+	MEM_EECONSTTAG = 0x0100, // argument is a GPR and comes from g_cpuConstRegs
+	MEM_PSXCONSTTAG = 0x0200,
+	MEM_MEMORYTAG = 0x0400,
+	MEM_MMXTAG = 0x0800,	// mmreg is mmxreg
+	MEM_XMMTAG = 0x8000,	// mmreg is xmmreg
+	MEM_X86TAG = 0x4000, // ignored most of the time
+	MEM_GPRTAG = 0x2000, // argument is a GPR reg
+	MEM_CONSTTAG = 0x1000 // argument is a const
+};
 
-#define IS_EECONSTREG(reg) (reg>=0&&((reg)&MEM_EECONSTTAG))
-#define IS_PSXCONSTREG(reg) (reg>=0&&((reg)&MEM_PSXCONSTTAG))
-#define IS_MMXREG(reg) (reg>=0&&((reg)&MEM_MMXTAG))
-#define IS_XMMREG(reg) (reg>=0&&((reg)&MEM_XMMTAG))
+template<memtag tag> static __forceinline bool IS_REG(s32 reg)
+{
+	return ((reg >= 0) && (reg & tag));
+}
 
-// fixme - these 4 are only called for u32 registers; should the reg>=0 really be there?
-#define IS_X86REG(reg) (reg>=0&&((reg)&MEM_X86TAG))
-#define IS_GPRREG(reg) (reg>=0&&((reg)&MEM_GPRTAG))
-#define IS_CONSTREG(reg) (reg>=0&&((reg)&MEM_CONSTTAG))
-#define IS_MEMORYREG(reg) (reg>=0&&((reg)&MEM_MEMORYTAG))
+template<memtag tag> static __forceinline bool IS_REG(u32 reg)
+{
+	return !!(reg & tag);
+}
+
+#define IS_EECONSTREG(reg) IS_REG<MEM_EECONSTTAG>(reg)
+#define IS_PSXCONSTREG(reg) IS_REG<MEM_PSXCONSTTAG>(reg)
+#define IS_MMXREG(reg) IS_REG<MEM_MMXTAG>(reg)
+#define IS_XMMREG(reg) IS_REG<MEM_XMMTAG>(reg)
+
+#define IS_X86REG(reg) IS_REG<MEM_X86TAG>(reg)
+#define IS_GPRREG(reg) IS_REG<MEM_GPRTAG>(reg)
+#define IS_CONSTREG(reg) IS_REG<MEM_CONSTTAG>(reg)
+#define IS_MEMORYREG(reg) IS_REG<MEM_MEMORYTAG>(reg)
 
 //////////////////////
 // Instruction Info //
@@ -265,13 +281,13 @@ extern u32 _recIsRegWritten(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern u32 _recIsRegUsed(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern void _recFillRegister(EEINST& pinst, int type, int reg, int write);
 
-#define EEINST_ISLIVE64(reg) (g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1))
-#define EEINST_ISLIVEXMM(reg) (g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2))
-#define EEINST_ISLIVE1(reg) (g_pCurInstInfo->regs[reg] & EEINST_LIVE1)
-#define EEINST_ISLIVE2(reg) (g_pCurInstInfo->regs[reg] & EEINST_LIVE2)
+static __forceinline bool EEINST_ISLIVE64(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1)); }
+static __forceinline bool EEINST_ISLIVEXMM(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2)); }
+static __forceinline bool EEINST_ISLIVE1(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE1); }
+static __forceinline bool EEINST_ISLIVE2(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE2); }
 
-#define FPUINST_ISLIVE(reg) (g_pCurInstInfo->fpuregs[reg] & EEINST_LIVE0)
-#define FPUINST_LASTUSE(reg) (g_pCurInstInfo->fpuregs[reg] & EEINST_LASTUSE)
+static __forceinline bool FPUINST_ISLIVE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LIVE0); }
+static __forceinline bool FPUINST_LASTUSE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LASTUSE); }
 
 // if set, then the variable at this inst really has its upper 32 bits valid
 // The difference between EEINST_LIVE1 is that the latter is used in back propagation
@@ -309,8 +325,8 @@ void SetMMXstate();
 void SetFPUstate();
 
 // max is 0x7f, when 0x80 is set, need to flush reg
-#define MMX_GET_CACHE(ptr, index) ((u8*)ptr)[index]
-#define MMX_SET_CACHE(ptr, ind3, ind2, ind1, ind0) ((u32*)ptr)[0] = (ind3<<24)|(ind2<<16)|(ind1<<8)|ind0;
+//#define MMX_GET_CACHE(ptr, index) ((u8*)ptr)[index]
+//#define MMX_SET_CACHE(ptr, ind3, ind2, ind1, ind0) ((u32*)ptr)[0] = (ind3<<24)|(ind2<<16)|(ind1<<8)|ind0;
 #define MMX_GPR 0
 #define MMX_HI	XMMGPR_HI
 #define MMX_LO	XMMGPR_LO
@@ -319,9 +335,20 @@ void SetFPUstate();
 #define MMX_COP0 96
 #define MMX_TEMP 0x7f
 
-#define MMX_IS32BITS(x) (((x)>=MMX_FPU&&(x)<MMX_COP0+32)||(x)==MMX_FPUACC)
-// If x is unsigned, the first part of this is always true, and it usually is.
-#define MMX_ISGPR(x) ((x) >= MMX_GPR && (x) < MMX_GPR+34)
+static __forceinline bool MMX_IS32BITS(s32 x) 
+{
+	return (((x >= MMX_FPU) && (x < MMX_COP0 + 32)) || (x == MMX_FPUACC));
+}
+
+static __forceinline bool MMX_ISGPR(s32 x) 
+{
+	return ((x >= MMX_GPR) && (x < MMX_GPR + 34)); 
+}
+
+static __forceinline bool MMX_ISGPR(u32 x) 
+{
+	return (x < MMX_GPR + 34);
+}
 
 struct _mmxregs {
 	u8 inuse;

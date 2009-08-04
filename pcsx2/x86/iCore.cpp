@@ -99,7 +99,7 @@ int  _getFreeXMMreg()
 	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].needed) continue;
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
-			if( !(g_pCurInstInfo->regs[xmmregs[i].reg] & (EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2)) ) {
+			if (!(EEINST_ISLIVEXMM(xmmregs[i].reg))) {
 				_freeXMMreg(i);
 				return i;
 			}
@@ -144,12 +144,10 @@ int  _getFreeXMMreg()
 }
 
 int _allocTempXMMreg(XMMSSEType type, int xmmreg) {
-	if (xmmreg == -1) {
+	if (xmmreg == -1) 
 		xmmreg = _getFreeXMMreg();
-	}
-	else {
+	else 
 		_freeXMMreg(xmmreg);
-	}
 
 	xmmregs[xmmreg].inuse = 1;
 	xmmregs[xmmreg].type = XMMTYPE_TEMP;

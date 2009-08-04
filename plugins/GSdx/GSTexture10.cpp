@@ -32,20 +32,15 @@ GSTexture10::GSTexture10(ID3D10Texture2D* texture)
 
 	m_size.x = (int)m_desc.Width;
 	m_size.y = (int)m_desc.Height;
-}
 
-int GSTexture10::GetType() const
-{
-	if(m_desc.BindFlags & D3D10_BIND_RENDER_TARGET) return GSTexture::RenderTarget;
-	if(m_desc.BindFlags & D3D10_BIND_DEPTH_STENCIL) return GSTexture::DepthStencil;
-	if(m_desc.BindFlags & D3D10_BIND_SHADER_RESOURCE) return GSTexture::Texture;
-	if(m_desc.Usage == D3D10_USAGE_STAGING) return GSTexture::Offscreen;
-	return GSTexture::None;
-}
+	if(m_desc.BindFlags & D3D10_BIND_RENDER_TARGET) m_type = RenderTarget;
+	else if(m_desc.BindFlags & D3D10_BIND_DEPTH_STENCIL) m_type = DepthStencil;
+	else if(m_desc.BindFlags & D3D10_BIND_SHADER_RESOURCE) m_type = Texture;
+	else if(m_desc.Usage == D3D10_USAGE_STAGING) m_type = Offscreen;
 
-int GSTexture10::GetFormat() const 
-{
-	return m_desc.Format;
+	m_format = (int)m_desc.Format;
+
+	m_msaa = m_desc.SampleDesc.Count > 1;
 }
 
 bool GSTexture10::Update(const GSVector4i& r, const void* data, int pitch)
@@ -162,6 +157,8 @@ GSTexture10::operator ID3D10ShaderResourceView*()
 {
 	if(!m_srv && m_dev && m_texture)
 	{
+		ASSERT(!m_msaa);
+
 		D3D10_SHADER_RESOURCE_VIEW_DESC* desc = NULL;
 
 		if(m_desc.Format == DXGI_FORMAT_R32G8X24_TYPELESS)

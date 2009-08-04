@@ -25,42 +25,23 @@
 #include "resource.h"
 
 GSDevice9::GSDevice9() 
-	: m_vb(NULL)
-	, m_vb_stride(0)
-	, m_layout(NULL)
-	, m_topology((D3DPRIMITIVETYPE)0)
-	, m_vs(NULL)
-	, m_vs_cb(NULL)
-	, m_vs_cb_len(0)
-	, m_ps(NULL)
-	, m_ps_cb(NULL)
-	, m_ps_cb_len(0)
-	, m_ps_ss(NULL)
-	, m_scissor(0, 0, 0, 0)
-	, m_dss(NULL)
-	, m_bs(NULL)
-	, m_bf(0xffffffff)
-	, m_rtv(NULL)
-	, m_dsv(NULL)
-	, m_lost(false)
+	: m_lost(false)
 {
 	m_rbswapped = true;
 
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
-	memset(m_ps_srvs, 0, sizeof(m_ps_srvs));
 
-	m_vertices.stride = 0;
-	m_vertices.start = 0;
-	m_vertices.count = 0;
-	m_vertices.limit = 0;
+	memset(&m_state, 0, sizeof(m_state));
+
+	m_state.bf = 0xffffffff;
 }
 
 GSDevice9::~GSDevice9()
 {
-	if(m_vs_cb) _aligned_free(m_vs_cb);
-	if(m_ps_cb) _aligned_free(m_ps_cb);
+	if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
+	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 }
 
 bool GSDevice9::Create(GSWnd* wnd, bool vsync)
@@ -112,9 +93,14 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	if(m_d3dcaps.VertexShaderVersion < (m_d3dcaps.PixelShaderVersion & ~0x10000))
 	{
-		ASSERT(0);
+		if(m_d3dcaps.VertexShaderVersion > D3DVS_VERSION(0, 0))
+		{
+			ASSERT(0);
 
-		return false;
+			return false;
+		}
+
+		// else vertex shader should be emulated in software (gma950)
 	}
 
 	m_d3dcaps.VertexShaderVersion = m_d3dcaps.PixelShaderVersion & ~0x10000;
@@ -136,6 +122,22 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 		MessageBox(NULL, s.c_str(), "GSdx", MB_OK);
 
 		return false;
+	}
+
+	// msaa
+
+	for(uint32 i = 2; i <= 16; i++)
+	{
+		DWORD quality[2] = {0, 0};
+
+		if(SUCCEEDED(m_d3d->CheckDeviceMultiSampleType(m_d3dcaps.AdapterOrdinal, m_d3dcaps.DeviceType, D3DFMT_A8R8G8B8, TRUE, (D3DMULTISAMPLE_TYPE)i, &quality[0])) && quality[0] > 0
+		&& SUCCEEDED(m_d3d->CheckDeviceMultiSampleType(m_d3dcaps.AdapterOrdinal, m_d3dcaps.DeviceType, D3DFMT_D24S8, TRUE, (D3DMULTISAMPLE_TYPE)i, &quality[1])) && quality[1] > 0)
+		{
+			m_msaa_desc.Count = i;
+			m_msaa_desc.Quality = std::min<DWORD>(quality[0] - 1, quality[1] - 1);
+
+			if(i >= m_msaa) break;
+		}
 	}
 
 	//
@@ -246,30 +248,18 @@ bool GSDevice9::Reset(int w, int h, int mode)
 
 	m_swapchain = NULL;
 
-	m_vertices.vb = NULL;
-	m_vertices.vb_old = NULL;
+	m_vb = NULL;
+	m_vb_old = NULL;
+
 	m_vertices.start = 0;
 	m_vertices.count = 0;
 
-	if(m_vs_cb) _aligned_free(m_vs_cb);
-	if(m_ps_cb) _aligned_free(m_ps_cb);
+	if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
+	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 
-	m_vb = NULL;
-	m_vb_stride = 0;
-	m_layout = NULL;
-	m_vs = NULL;
-	m_vs_cb = NULL;
-	m_vs_cb_len = 0;
-	m_ps = NULL;
-	m_ps_cb = NULL;
-	m_ps_cb_len = 0;
-	m_ps_ss = NULL;
-	m_scissor = GSVector4i::zero();
-	m_dss = NULL;
-	m_bs = NULL;
-	m_bf = 0xffffffff;
-	m_rtv = NULL;
-	m_dsv = NULL;
+	memset(&m_state, 0, sizeof(m_state));
+
+	m_state.bf = 0xffffffff;
 
 	memset(&m_pp, 0, sizeof(m_pp));
 
@@ -304,9 +294,13 @@ bool GSDevice9::Reset(int w, int h, int mode)
 
 	if(!m_dev)
 	{
-		//D3DCREATE_MULTITHREADED flag shouldn't be needed
 		uint32 flags = m_d3dcaps.VertexProcessingCaps ? D3DCREATE_HARDWARE_VERTEXPROCESSING : D3DCREATE_SOFTWARE_VERTEXPROCESSING;
 
+		if(flags & D3DCREATE_HARDWARE_VERTEXPROCESSING)
+		{
+			flags |= D3DCREATE_PUREDEVICE;
+		}
+ 
 		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
 		if(FAILED(hr)) return false;
@@ -403,7 +397,7 @@ void GSDevice9::DrawPrimitive()
 {
 	int prims = 0;
 
-	switch(m_topology)
+	switch(m_state.topology)
 	{
     case D3DPT_TRIANGLELIST:
 		prims = m_vertices.count / 3;
@@ -423,15 +417,14 @@ void GSDevice9::DrawPrimitive()
 		break;
 	}
 
-	m_dev->DrawPrimitive(m_topology, m_vertices.start, prims);
+	m_dev->DrawPrimitive(m_state.topology, m_vertices.start, prims);
 }
 
 void GSDevice9::EndScene()
 {
 	// m_dev->EndScene();
 
-	m_vertices.start += m_vertices.count;
-	m_vertices.count = 0;
+	__super::EndScene();
 }
 
 void GSDevice9::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -450,7 +443,7 @@ void GSDevice9::ClearRenderTarget(GSTexture* rt, uint32 c)
 
 void GSDevice9::ClearDepth(GSTexture* t, float c)
 {
-	GSTexture* rt = CreateRenderTarget(t->m_size.x, t->m_size.y);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight(), t->IsMSAA());
 
 	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
@@ -471,7 +464,7 @@ void GSDevice9::ClearDepth(GSTexture* t, float c)
 
 void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 {
-	GSTexture* rt = CreateRenderTarget(t->m_size.x, t->m_size.y);
+	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight(), t->IsMSAA());
 
 	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
@@ -490,7 +483,7 @@ void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 	Recycle(rt);
 }
 
-GSTexture* GSDevice9::Create(int type, int w, int h, int format)
+GSTexture* GSDevice9::Create(int type, int w, int h, bool msaa, int format)
 {
 	HRESULT hr;
 
@@ -500,10 +493,12 @@ GSTexture* GSDevice9::Create(int type, int w, int h, int format)
 	switch(type)
 	{
 	case GSTexture::RenderTarget:
-		hr = m_dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, (D3DFORMAT)format, D3DPOOL_DEFAULT, &texture, NULL);
+		if(msaa) hr = m_dev->CreateRenderTarget(w, h, (D3DFORMAT)format, (D3DMULTISAMPLE_TYPE)m_msaa_desc.Count, m_msaa_desc.Quality, FALSE, &surface, NULL);
+		else hr = m_dev->CreateTexture(w, h, 1, D3DUSAGE_RENDERTARGET, (D3DFORMAT)format, D3DPOOL_DEFAULT, &texture, NULL);
 		break;
 	case GSTexture::DepthStencil:
-		hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, D3DMULTISAMPLE_NONE, 0, FALSE, &surface, NULL);
+		if(msaa) hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, (D3DMULTISAMPLE_TYPE)m_msaa_desc.Count, m_msaa_desc.Quality, FALSE, &surface, NULL);
+		else hr = m_dev->CreateDepthStencilSurface(w, h, (D3DFORMAT)format, D3DMULTISAMPLE_NONE, 0, FALSE, &surface, NULL);
 		break;
 	case GSTexture::Texture:
 		hr = m_dev->CreateTexture(w, h, 1, 0, (D3DFORMAT)format, D3DPOOL_MANAGED, &texture, NULL);
@@ -541,14 +536,14 @@ GSTexture* GSDevice9::Create(int type, int w, int h, int format)
 	return t;
 }
 
-GSTexture* GSDevice9::CreateRenderTarget(int w, int h, int format)
+GSTexture* GSDevice9::CreateRenderTarget(int w, int h, bool msaa, int format)
 {
-	return __super::CreateRenderTarget(w, h, format ? format : D3DFMT_A8R8G8B8);
+	return __super::CreateRenderTarget(w, h, msaa, format ? format : D3DFMT_A8R8G8B8);
 }
 
-GSTexture* GSDevice9::CreateDepthStencil(int w, int h, int format)
+GSTexture* GSDevice9::CreateDepthStencil(int w, int h, bool msaa, int format)
 {
-	return __super::CreateDepthStencil(w, h, format ? format : D3DFMT_D24S8);
+	return __super::CreateDepthStencil(w, h, msaa, format ? format : D3DFMT_D24S8);
 }
 
 GSTexture* GSDevice9::CreateTexture(int w, int h, int format)
@@ -559,6 +554,22 @@ GSTexture* GSDevice9::CreateTexture(int w, int h, int format)
 GSTexture* GSDevice9::CreateOffscreen(int w, int h, int format)
 {
 	return __super::CreateOffscreen(w, h, format ? format : D3DFMT_A8R8G8B8);
+}
+
+GSTexture* GSDevice9::Resolve(GSTexture* t)
+{
+	ASSERT(t != NULL && t->IsMSAA());
+
+	if(GSTexture* dst = CreateRenderTarget(t->GetWidth(), t->GetHeight(), false, t->GetFormat()))
+	{
+		dst->SetScale(t->GetScale());
+
+		m_dev->StretchRect(*(GSTexture9*)t, NULL, *(GSTexture9*)dst, NULL, D3DTEXF_POINT);
+
+		return dst;
+	}
+
+	return NULL;
 }
 
 GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format)
@@ -577,11 +588,16 @@ GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, 
 		return false;
 	}
 
-	if(GSTexture* rt = CreateRenderTarget(w, h, format))
+	if(GSTexture* rt = CreateRenderTarget(w, h, false, format))
 	{
 		GSVector4 dr(0, 0, w, h);
 
-		StretchRect(src, sr, rt, dr, m_convert.ps[1], NULL, 0);
+		if(GSTexture* src2 = src->IsMSAA() ? Resolve(src) : src)
+		{
+			StretchRect(src2, sr, rt, dr, m_convert.ps[1], NULL, 0);
+
+			if(src2 != src) Recycle(src2);
+		}
 
 		dst = CreateOffscreen(w, h, format);
 
@@ -707,18 +723,19 @@ void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t co
 
 	if(count * stride > m_vertices.limit * m_vertices.stride)
 	{
-		m_vertices.vb_old = m_vertices.vb;
-		m_vertices.vb = NULL;
+		m_vb_old = m_vb;
+		m_vb = NULL;
+
 		m_vertices.start = 0;
 		m_vertices.count = 0;
 		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
 	}
 
-	if(m_vertices.vb == NULL)
+	if(m_vb == NULL)
 	{
 		HRESULT hr;
 		
-		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vertices.vb, NULL);
+		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vb, NULL);
 
 		if(FAILED(hr)) return;
 	}
@@ -734,25 +751,25 @@ void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t co
 
 	void* v = NULL;
 
-	if(SUCCEEDED(m_vertices.vb->Lock(m_vertices.start * stride, count * stride, &v, flags)))
+	if(SUCCEEDED(m_vb->Lock(m_vertices.start * stride, count * stride, &v, flags)))
 	{
 		GSVector4i::storent(v, vertices, count * stride);
 
-		m_vertices.vb->Unlock();
+		m_vb->Unlock();
 	}
 
 	m_vertices.count = count;
 	m_vertices.stride = stride;
 
-	IASetVertexBuffer(m_vertices.vb, stride);
+	IASetVertexBuffer(m_vb, stride);
 }
 
 void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride)
 {
-	if(m_vb != vb || m_vb_stride != stride)
+	if(m_state.vb != vb || m_state.vb_stride != stride)
 	{
-		m_vb = vb;
-		m_vb_stride = stride;
+		m_state.vb = vb;
+		m_state.vb_stride = stride;
 
 		m_dev->SetStreamSource(0, vb, 0, stride);
 	}
@@ -760,9 +777,9 @@ void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride)
 
 void GSDevice9::IASetInputLayout(IDirect3DVertexDeclaration9* layout)
 {
-	if(m_layout != layout)
+	if(m_state.layout != layout)
 	{
-		m_layout = layout;
+		m_state.layout = layout;
 
 		m_dev->SetVertexDeclaration(layout);
 	}
@@ -770,14 +787,14 @@ void GSDevice9::IASetInputLayout(IDirect3DVertexDeclaration9* layout)
 
 void GSDevice9::IASetPrimitiveTopology(D3DPRIMITIVETYPE topology)
 {
-	m_topology = topology;
+	m_state.topology = topology;
 }
 
 void GSDevice9::VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int vs_cb_len)
 {
-	if(m_vs != vs)
+	if(m_state.vs != vs)
 	{
-		m_vs = vs;
+		m_state.vs = vs;
 
 		m_dev->SetVertexShader(vs);
 	}
@@ -786,18 +803,18 @@ void GSDevice9::VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int 
 	{
 		int size = vs_cb_len * sizeof(float) * 4;
 		
-		if(m_vs_cb_len != vs_cb_len || m_vs_cb == NULL || memcmp(m_vs_cb, vs_cb, size))
+		if(m_state.vs_cb_len != vs_cb_len || m_state.vs_cb == NULL || memcmp(m_state.vs_cb, vs_cb, size))
 		{
-			if(m_vs_cb == NULL || m_vs_cb_len < vs_cb_len)
+			if(m_state.vs_cb == NULL || m_state.vs_cb_len < vs_cb_len)
 			{
-				if(m_vs_cb) _aligned_free(m_vs_cb);
+				if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
 
-				m_vs_cb = (float*)_aligned_malloc(size, 16);
+				m_state.vs_cb = (float*)_aligned_malloc(size, 16);
 			}
 
-			m_vs_cb_len = vs_cb_len;
+			m_state.vs_cb_len = vs_cb_len;
 
-			memcpy(m_vs_cb, vs_cb, size);
+			memcpy(m_state.vs_cb, vs_cb, size);
 
 			m_dev->SetVertexShaderConstantF(0, vs_cb, vs_cb_len);
 		}
@@ -812,16 +829,16 @@ void GSDevice9::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 	if(sr0) srv0 = *(GSTexture9*)sr0;
 	if(sr1) srv1 = *(GSTexture9*)sr1;
 
-	if(m_ps_srvs[0] != srv0)
+	if(m_state.ps_srvs[0] != srv0)
 	{
-		m_ps_srvs[0] = srv0;
+		m_state.ps_srvs[0] = srv0;
 
 		m_dev->SetTexture(0, srv0);
 	}
 
-	if(m_ps_srvs[1] != srv1)
+	if(m_state.ps_srvs[1] != srv1)
 	{
-		m_ps_srvs[1] = srv1;
+		m_state.ps_srvs[1] = srv1;
 
 		m_dev->SetTexture(1, srv1);
 	}
@@ -829,9 +846,9 @@ void GSDevice9::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 
 void GSDevice9::PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len)
 {
-	if(m_ps != ps)
+	if(m_state.ps != ps)
 	{
-		m_ps = ps;
+		m_state.ps = ps;
 
 		m_dev->SetPixelShader(ps);
 	}
@@ -840,18 +857,18 @@ void GSDevice9::PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int p
 	{
 		int size = ps_cb_len * sizeof(float) * 4;
 		
-		if(m_ps_cb_len != ps_cb_len || m_ps_cb == NULL || memcmp(m_ps_cb, ps_cb, size))
+		if(m_state.ps_cb_len != ps_cb_len || m_state.ps_cb == NULL || memcmp(m_state.ps_cb, ps_cb, size))
 		{
-			if(m_ps_cb == NULL || m_ps_cb_len < ps_cb_len)
+			if(m_state.ps_cb == NULL || m_state.ps_cb_len < ps_cb_len)
 			{
-				if(m_ps_cb) _aligned_free(m_ps_cb);
+				if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 
-				m_ps_cb = (float*)_aligned_malloc(size, 16);
+				m_state.ps_cb = (float*)_aligned_malloc(size, 16);
 			}
 
-			m_ps_cb_len = ps_cb_len;
+			m_state.ps_cb_len = ps_cb_len;
 
-			memcpy(m_ps_cb, ps_cb, size);
+			memcpy(m_state.ps_cb, ps_cb, size);
 
 			m_dev->SetPixelShaderConstantF(0, ps_cb, ps_cb_len);
 		}
@@ -860,9 +877,9 @@ void GSDevice9::PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int p
 
 void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 {
-	if(ss && m_ps_ss != ss)
+	if(ss && m_state.ps_ss != ss)
 	{
-		m_ps_ss = ss;
+		m_state.ps_ss = ss;
 
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSU, ss->AddressU);
 		m_dev->SetSamplerState(0, D3DSAMP_ADDRESSV, ss->AddressV);
@@ -885,9 +902,9 @@ void GSDevice9::PSSetSamplerState(Direct3DSamplerState9* ss)
 
 void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss)
 {
-	if(m_dss != dss)
+	if(m_state.dss != dss)
 	{
-		m_dss = dss;
+		m_state.dss = dss;
 
 		m_dev->SetRenderState(D3DRS_ZENABLE, dss->DepthEnable);
 		m_dev->SetRenderState(D3DRS_ZWRITEENABLE, dss->DepthWriteMask);
@@ -914,10 +931,10 @@ void GSDevice9::OMSetDepthStencilState(Direct3DDepthStencilState9* dss)
 
 void GSDevice9::OMSetBlendState(Direct3DBlendState9* bs, uint32 bf)
 {
-	if(m_bs != bs || m_bf != bf)
+	if(m_state.bs != bs || m_state.bf != bf)
 	{
-		m_bs = bs;
-		m_bf = bf;
+		m_state.bs = bs;
+		m_state.bf = bf;
 
 		m_dev->SetRenderState(D3DRS_ALPHABLENDENABLE, bs->BlendEnable);
 
@@ -945,25 +962,25 @@ void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4
 	if(rt) rtv = *(GSTexture9*)rt;
 	if(ds) dsv = *(GSTexture9*)ds;
 
-	if(m_rtv != rtv)
+	if(m_state.rtv != rtv)
 	{
-		m_rtv = rtv;
+		m_state.rtv = rtv;
 
 		m_dev->SetRenderTarget(0, rtv);
 	}
 
-	if(m_dsv != dsv)
+	if(m_state.dsv != dsv)
 	{
-		m_dsv = dsv;
+		m_state.dsv = dsv;
 
 		m_dev->SetDepthStencilSurface(dsv);
 	}
 
-	GSVector4i r = scissor ? *scissor : GSVector4i(rt->m_size).zwxy();
+	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
 
-	if(!m_scissor.eq(r))
+	if(!m_state.scissor.eq(r))
 	{
-		m_scissor = r;
+		m_state.scissor = r;
 
 		m_dev->SetScissorRect(r);
 	}

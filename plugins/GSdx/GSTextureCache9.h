@@ -26,26 +26,10 @@
 
 class GSTextureCache9 : public GSTextureCache
 {
-	class Source9 : public Source
-	{
-	protected:
-		int Get8bitFormat() {return D3DFMT_A8;}
-
-	public:
-		explicit Source9(GSRenderer* r) : Source(r) {}
-	};
-
-	class Target9 : public Target
-	{
-	public:
-		explicit Target9(GSRenderer* r) : Target(r) {}
-
-		void Read(const GSVector4i& r);
-	};
-
 protected:
-	Source* CreateSource() {return new Source9(m_renderer);}
-	Target* CreateTarget() {return new Target9(m_renderer);}
+	int Get8bitFormat() {return D3DFMT_A8;}
+
+	void Read(Target* t, const GSVector4i& r);
 
 public:
 	GSTextureCache9(GSRenderer* r);

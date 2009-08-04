@@ -28,12 +28,3 @@ GSTextureCacheOGL::GSTextureCacheOGL(GSRenderer* r)
 	: GSTextureCache(r)
 {
 }
-
-// SourceOGL
-
-// TargetOGL
-
-void GSTextureCacheOGL::TargetOGL::Read(const GSVector4i& r)
-{
-	// TODO
-}

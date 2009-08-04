@@ -80,9 +80,10 @@ declareAllVariables
 #define _Z	 ((mVU->code>>22) & 0x1)
 #define _W	 ((mVU->code>>21) & 0x1)
 
-#define _X_Y_Z_W	(((mVU->code >> 21 ) & 0xF ))
+#define _X_Y_Z_W	(((mVU->code >> 21 ) & 0xF))
 #define _XYZW_SS	(_X+_Y+_Z+_W==1)
 #define _XYZW_SS2	(_XYZW_SS && (_X_Y_Z_W != 8))
+#define _XYZW_PS	(_X_Y_Z_W == 0xf)
 
 #define _bc_	 (mVU->code & 0x3)
 #define _bc_x	((mVU->code & 0x3) == 0)
@@ -242,20 +243,8 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 // Debug Stuff...
 #ifdef mVUdebug
 #define mVUprint Console::Status
-#define mVUdebug1() {											\
-	if (curI & _Ibit_)	{ SysPrintf("microVU: I-bit set!\n"); }	\
-	if (curI & _Ebit_)	{ SysPrintf("microVU: E-bit set!\n"); }	\
-	if (curI & _Mbit_)	{ SysPrintf("microVU: M-bit set!\n"); }	\
-	if (curI & _Dbit_)	{ SysPrintf("microVU: D-bit set!\n"); }	\
-	if (curI & _Tbit_)	{ SysPrintf("microVU: T-bit set!\n"); }	\
-}
 #else
 #define mVUprint 0&&
-#define mVUdebug1() {																	\
-	if (curI & _Mbit_)	{ Console::Status("microVU%d: M-bit set!", params getIndex); }	\
-	if (curI & _Dbit_)	{ DevCon::Status ("microVU%d: D-bit set!", params getIndex); }	\
-	if (curI & _Tbit_)	{ DevCon::Status ("microVU%d: T-bit set!", params getIndex); }	\
-}
 #endif
 
 // Program Logging...

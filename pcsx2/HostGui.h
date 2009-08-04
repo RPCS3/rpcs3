@@ -23,10 +23,15 @@
 
 enum StartupMode
 {
-	BootMode_Bios,
-	BootMode_Quick,
-	BootMode_Elf,
-	BootMode_Normal
+	BootMode_Normal = 0,
+	BootMode_Elf    = 1, // not compatible with bios flag, probably
+	BootMode_Iso    = 2,
+	BootMode_NoDisc = 3, // nodisc implies bios.
+
+	BootMode_Quick  = 0,
+	BootMode_Bios   = 0x10000,
+
+	BootMode_ModeMask = 0xFFFF,
 };
 
 class StartupParams

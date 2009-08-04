@@ -21,3 +21,11 @@
 
 #include "StdAfx.h"
 #include "GSTexture.h"
+
+GSTexture::GSTexture() 
+	: m_scale(1, 1)
+	, m_size(0, 0)
+	, m_type(None)
+	, m_msaa(false)
+{
+}

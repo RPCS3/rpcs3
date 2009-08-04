@@ -25,8 +25,6 @@
 
 GSTextureOGL::GSTextureOGL(GLuint texture, int type, int width, int height, int format)
 	: m_texture(texture)
-	, m_type(type)
-	, m_format(format)
 {
 	m_size.x = width;
 	m_size.y = height;
@@ -34,6 +32,10 @@ GSTextureOGL::GSTextureOGL(GLuint texture, int type, int width, int height, int 
 	// TODO: offscreen type should be just a memory array, also returned in Map
 
 	glGenBuffers(1, &m_pbo); GSDeviceOGL::CheckError();
+
+	m_type = type;
+
+	m_format = format;
 }
 
 GSTextureOGL::~GSTextureOGL()
@@ -55,16 +57,6 @@ GSTextureOGL::~GSTextureOGL()
 			break;
 		}
 	}
-}
-
-int GSTextureOGL::GetType() const
-{
-	return m_type;
-}
-
-int GSTextureOGL::GetFormat() const 
-{
-	return m_format;
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)

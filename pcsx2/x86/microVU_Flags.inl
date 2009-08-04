@@ -34,18 +34,18 @@ microVUt(void) mVUstatusFlagOp(mV) {
 	int curPC = iPC;
 	int i = mVUcount;
 	bool runLoop = 1;
-	if (sFLAG.doFlag) { mVUlow.useSflag = 1; }
+	if (sFLAG.doFlag) { sFLAG.doNonSticky = 1; }
 	else {
 		for (; i > 0; i--) {
 			incPC2(-2);
-			if (mVUlow.useSflag) { runLoop = 0; break; }
-			if (sFLAG.doFlag)	 { mVUlow.useSflag = 1; break; }
+			if (sFLAG.doNonSticky) { runLoop = 0; break; }
+			else if (sFLAG.doFlag) { sFLAG.doNonSticky = 1; break; }
 		}
 	}
 	if (runLoop) {
 		for (; i > 0; i--) {
 			incPC2(-2);
-			if (mVUlow.useSflag) break;
+			if (sFLAG.doNonSticky) break;
 			sFLAG.doFlag = 0;
 		}
 	}

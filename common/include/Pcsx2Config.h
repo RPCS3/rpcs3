@@ -118,6 +118,10 @@ extern SessionOverrideFlags g_Session;
 
 #define EE_CONST_PROP // rec2 - enables constant propagation (faster)
 
+// These are broken, so don't enable.
+//#define PCSX2_CACHE_EMU_MEM
+//#define ENABLECACHE
+
 // Memory Card configuration, per slot.
 struct McdConfig
 {

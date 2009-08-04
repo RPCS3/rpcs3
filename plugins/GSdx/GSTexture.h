@@ -25,30 +25,38 @@
 
 class GSTexture
 {
-public:
+protected:
 	GSVector2 m_scale;
 	GSVector2i m_size;
+	int m_type;
+	int m_format;
+	bool m_msaa;
 
+public:
 	struct GSMap {uint8* bits; int pitch;};
 
 	enum {None, RenderTarget, DepthStencil, Texture, Offscreen};
 
 public:
-	GSTexture() : m_scale(1, 1), m_size(0, 0) {}
+	GSTexture();
 	virtual ~GSTexture() {}
 
 	virtual operator bool() {ASSERT(0); return false;}
-
-	virtual int GetType() const = 0;
-	virtual int GetFormat() const = 0;
 
 	virtual bool Update(const GSVector4i& r, const void* data, int pitch) = 0;
 	virtual bool Map(GSMap& m, const GSVector4i* r = NULL) = 0;
 	virtual void Unmap() = 0;
 	virtual bool Save(const string& fn, bool dds = false) = 0;
 
+	GSVector2 GetScale() const {return m_scale;}
+	void SetScale(const GSVector2& scale) {m_scale = scale;}
+
 	int GetWidth() const {return m_size.x;}
 	int GetHeight() const {return m_size.y;}
-
 	GSVector2i GetSize() const {return m_size;}
+
+	int GetType() const {return m_type;}
+	int GetFormat() const {return m_format;}
+
+	bool IsMSAA() const {return m_msaa;}
 };

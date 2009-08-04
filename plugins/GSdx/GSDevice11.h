@@ -26,29 +26,7 @@
 
 class GSDevice11 : public GSDevice
 {
-	ID3D11Buffer* m_vb;
-	size_t m_vb_stride;
-	ID3D11InputLayout* m_layout;
-	D3D11_PRIMITIVE_TOPOLOGY m_topology;
-	ID3D11VertexShader* m_vs;
-	ID3D11Buffer* m_vs_cb;
-	ID3D11GeometryShader* m_gs;
-	ID3D11ShaderResourceView* m_ps_srv[2];
-	ID3D11PixelShader* m_ps;
-	ID3D11Buffer* m_ps_cb;
-	ID3D11SamplerState* m_ps_ss[2];
-	GSVector2i m_viewport;
-	GSVector4i m_scissor;
-	ID3D11DepthStencilState* m_dss;
-	uint8 m_sref;
-	ID3D11BlendState* m_bs;
-	float m_bf;
-	ID3D11RenderTargetView* m_rtv;
-	ID3D11DepthStencilView* m_dsv;
-
-	//
-
-	GSTexture* Create(int type, int w, int h, int format);
+	GSTexture* Create(int type, int w, int h, bool msaa, int format);
 
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
@@ -58,12 +36,31 @@ class GSDevice11 : public GSDevice
 	CComPtr<ID3D11Device> m_dev;
 	CComPtr<ID3D11DeviceContext> m_ctx;
 	CComPtr<IDXGISwapChain> m_swapchain;
+	CComPtr<ID3D11Buffer> m_vb;
+	CComPtr<ID3D11Buffer> m_vb_old;
 
 	struct
 	{
-		CComPtr<ID3D11Buffer> vb, vb_old;
-		size_t stride, start, count, limit;
-	} m_vertices;
+		ID3D11Buffer* vb;
+		size_t vb_stride;
+		ID3D11InputLayout* layout;
+		D3D11_PRIMITIVE_TOPOLOGY topology;
+		ID3D11VertexShader* vs;
+		ID3D11Buffer* vs_cb;
+		ID3D11GeometryShader* gs;
+		ID3D11ShaderResourceView* ps_srv[2];
+		ID3D11PixelShader* ps;
+		ID3D11Buffer* ps_cb;
+		ID3D11SamplerState* ps_ss[2];
+		GSVector2i viewport;
+		GSVector4i scissor;
+		ID3D11DepthStencilState* dss;
+		uint8 sref;
+		ID3D11BlendState* bs;
+		float bf;
+		ID3D11RenderTargetView* rtv;
+		ID3D11DepthStencilView* dsv;
+	} m_state;
 
 public: // TODO
 	CComPtr<ID3D11RasterizerState> m_rs;
@@ -100,19 +97,19 @@ public:
 	bool Reset(int w, int h, int mode);
 	void Flip(bool limit);
 
-	void BeginScene();
 	void DrawPrimitive();
-	void EndScene();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);
 	void ClearDepth(GSTexture* t, float c);
 	void ClearStencil(GSTexture* t, uint8 c);
 
-	GSTexture* CreateRenderTarget(int w, int h, int format = 0);
-	GSTexture* CreateDepthStencil(int w, int h, int format = 0);
+	GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
+	GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateTexture(int w, int h, int format = 0);
 	GSTexture* CreateOffscreen(int w, int h, int format = 0);
+
+	GSTexture* Resolve(GSTexture* t);
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 

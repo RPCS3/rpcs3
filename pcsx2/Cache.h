@@ -45,4 +45,15 @@ void writeCache64(u32 mem, u64 value);
 void writeCache128(u32 mem, u64 *value);
 u8  *readCache(u32 mem);
 
+// Fixme - these two functions do nothing, and the cache code relies on these two functions.	
+static __forceinline u32 getMemR(s32 mem)
+{
+	return 0;//memLUTR[mem >> 12];
+}
+
+static __forceinline u32 getMemW(s32 mem)
+{
+	return 0;//memLUTW[mem>>12];
+}
+
 #endif /* __CACHE_H__ */

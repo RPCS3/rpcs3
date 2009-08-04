@@ -26,9 +26,8 @@ _cacheS pCache[64];
 namespace R5900{
 namespace Interpreter 
 {
-
-// fixme - this code no longer compiles if PCSX2_CACHE_EMU_MEM is defined - do we need it any more?
 #ifdef PCSX2_CACHE_EMU_MEM
+
 int getFreeCache(u32 mem, int mode, int * way) {
 	u8 * out;
 	u32 paddr;
@@ -37,15 +36,16 @@ int getFreeCache(u32 mem, int mode, int * way) {
 	int number;
 	int i = (mem >> 6) & 0x3F;
 	
-	paddr = memLUTR[mem >> 12];
-	taddr[0] = memLUTW[pCache[i].tag[0]>>12];
-	taddr[1] = memLUTW[pCache[i].tag[1]>>12];
+	paddr = getMemR(mem);
+	taddr[0] = getMemW(pCache[i].tag[0]);
+	taddr[1] = getMemW(pCache[i].tag[1]);
 
 	if (taddr[0] == paddr && (pCache[i].tag[0] & 0x20)) 
 	{
 		*way = 0;
 		return i;
-	}else if(taddr[1] == paddr && (pCache[i].tag[1] & 0x20)) 
+	}
+	else if(taddr[1] == paddr && (pCache[i].tag[1] & 0x20)) 
 	{
 		*way = 1;
 		return i;
@@ -66,8 +66,6 @@ int getFreeCache(u32 mem, int mode, int * way) {
 		((u64*)out)[6] = ((u64*)pCache[i].data[number][3].b8._8)[0];
 		((u64*)out)[7] = ((u64*)pCache[i].data[number][3].b8._8)[1];
 	}
-
-
 	
 	if(mode == 1)
 	{
@@ -89,8 +87,10 @@ int getFreeCache(u32 mem, int mode, int * way) {
 	((u64*)pCache[i].data[number][3].b8._8)[0] = ((u64*)out)[6];
 	((u64*)pCache[i].data[number][3].b8._8)[1] = ((u64*)out)[7];
 
-	if(pCache[i].tag[number] & 0x10) pCache[i].tag[number] &= ~(0x10);
-	else pCache[i].tag[number] |= 0x10;
+	if(pCache[i].tag[number] & 0x10)
+		pCache[i].tag[number] &= ~(0x10);
+	else 
+		pCache[i].tag[number] |= 0x10;
 	
 	pCache[i].tag[number] |= 0x20;
 	*way = number;
@@ -163,9 +163,9 @@ void CACHE() {
 			int index = (addr >> 6) & 0x3F;
 			u32 paddr[2];
 			int way;
-			u32 taddr = memLUTR[addr >> 12];
-			paddr[0] = memLUTW[pCache[index].tag[0] >> 12];
-			paddr[1] = memLUTW[pCache[index].tag[1] >> 12];
+			u32 taddr = getMemR(addr);
+			paddr[0] = getMemW(pCache[index].tag[0]);
+			paddr[1] = getMemW(pCache[index].tag[1]);
 
 			if(paddr[0] == taddr && (pCache[index].tag[0] & 0x20))
 			{
@@ -199,9 +199,9 @@ void CACHE() {
 			int index = (addr >> 6) & 0x3F;
 			u32 paddr[2];
 			int way;
-			u32 taddr = memLUTW[addr >> 12];
-			paddr[0] = memLUTW[pCache[index].tag[0] >> 12];
-			paddr[1] = memLUTW[pCache[index].tag[1] >> 12];
+			u32 taddr = getMemW(addr);
+			paddr[0] = getMemW(pCache[index].tag[0]);
+			paddr[1] = getMemW(pCache[index].tag[1]);
 
 			if(paddr[0] == taddr && (pCache[index].tag[0] & 0x20))
 			{
@@ -250,9 +250,9 @@ void CACHE() {
 			int index = (addr >> 6) & 0x3F;
 			u32 paddr[2];
 			int way;
-			u32 taddr = memLUTW[addr >> 12];
-			paddr[0] = memLUTW[pCache[index].tag[0] >> 12];
-			paddr[1] = memLUTW[pCache[index].tag[1] >> 12];
+			u32 taddr = getMemW(addr);
+			paddr[0] = getMemW(pCache[index].tag[0]);
+			paddr[1] = getMemW(pCache[index].tag[1]);
 
 			if(paddr[0] == taddr && (pCache[index].tag[0] & 0x20))
 			{
@@ -360,7 +360,7 @@ void CACHE() {
 
 			if(pCache[index].tag[way] & 0x60)	// Dirty
 			{
-				u32 paddr = memLUTW[pCache[index].tag[way] >> 12];
+				u32 paddr = getMemW(pCache[index].tag[way]);
 				char * t = (char *)(paddr);
 				out = (u8*)(t + (addr & 0xFC0));
 				((u64*)out)[0] = ((u64*)pCache[index].data[way][0].b8._8)[0];

@@ -1430,6 +1430,10 @@ int OpenPlugins(const char* pTitleFilename)
 {
 	if (!plugins_initialized)
 	{
+		// prevent a crash
+		if(CDVD.init == NULL)
+			CDVD = ISO; // CDVD_plugin;
+
 		if( InitPlugins() == -1 ) return -1;
 	}
 

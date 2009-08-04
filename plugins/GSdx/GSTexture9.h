@@ -35,9 +35,6 @@ public:
 	explicit GSTexture9(IDirect3DTexture9* texture);
 	virtual ~GSTexture9();
 
-	int GetType() const;
-	int GetFormat() const;
-
 	bool Update(const GSVector4i& r, const void* data, int pitch);
 	bool Map(GSMap& m, const GSVector4i* r);
 	void Unmap();

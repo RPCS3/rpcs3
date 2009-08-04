@@ -377,15 +377,28 @@ REG64_(GSReg, IMR)
 REG_END
 
 REG64_(GSReg, PMODE)
-	uint32 EN1:1;
-	uint32 EN2:1;
-	uint32 CRTMD:3;
-	uint32 MMOD:1;
-	uint32 AMOD:1;
-	uint32 SLBG:1;
-	uint32 ALP:8;
-	uint32 _PAD:16;
-	uint32 _PAD1:32;
+union
+{
+	struct
+	{
+		uint32 EN1:1;
+		uint32 EN2:1;
+		uint32 CRTMD:3;
+		uint32 MMOD:1;
+		uint32 AMOD:1;
+		uint32 SLBG:1;
+		uint32 ALP:8;
+		uint32 _PAD:16;
+		uint32 _PAD1:32;
+	};
+
+	struct
+	{
+		uint32 EN:2;
+		uint32 _PAD2:30;
+		uint32 _PAD3:32;
+	};
+};
 REG_END
 
 REG64_(GSReg, SIGLBLID)

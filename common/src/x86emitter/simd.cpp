@@ -114,7 +114,7 @@ const SimdImpl_DestRegEither<0x66,0xef> xPXOR;
 // [SSE-4.1] Performs a bitwise AND of dest against src, and sets the ZF flag
 // only if all bits in the result are 0.  PTEST also sets the CF flag according
 // to the following condition: (xmm2/m128 AND NOT xmm1) == 0;
-extern const Internal::SimdImpl_DestRegSSE<0x66,0x1738> xPTEST;
+const SimdImpl_DestRegSSE<0x66,0x1738>		xPTEST;
 
 const SimdImpl_Compare<SSE2_Equal>			xCMPEQ;
 const SimdImpl_Compare<SSE2_Less>			xCMPLT;

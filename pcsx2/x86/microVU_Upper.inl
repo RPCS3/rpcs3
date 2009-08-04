@@ -34,7 +34,7 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1 = -1, int regT2 = -1, bool 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
 	if (mVUsFlagHack) { sFLAG.doFlag = 0; }
 	if (!sFLAG.doFlag && !mFLAG.doFlag) { return; }
-	if (!(!mFLAG.doFlag || (_XYZW_SS && modXYZW))) { 
+	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) { 
 		if (regT2 < 0) { regT2 = mVU->regAlloc->allocReg(); regT2b = 1; }
 		SSE2_PSHUFD_XMM_to_XMM(regT2, reg, 0x1B); // Flip wzyx to xyzw
 	}
@@ -119,27 +119,31 @@ void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
 }
 
 // Sets Up Ft Reg for Normal, BC, I, and Q Cases
-void setupFtReg(microVU* mVU, int& Ft, int opCase) {
+void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
 	opCase1 { 
-		if (_XYZW_SS2) Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W);
-		else		   Ft = mVU->regAlloc->allocReg(_Ft_); 
+		if (_XYZW_SS2) { Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W); tempFt = Ft; }
+		else		   { Ft = mVU->regAlloc->allocReg(_Ft_);			  tempFt = -1; }
 	}
 	opCase2 { 
-		int tempFt = mVU->regAlloc->allocReg(_Ft_);
+		tempFt = mVU->regAlloc->allocReg(_Ft_);
 		Ft = mVU->regAlloc->allocReg();
 		mVUunpack_xyzw(Ft, tempFt, _bc_);
 		mVU->regAlloc->clearNeeded(tempFt);
+		tempFt = Ft;
 	}
-	opCase3 { Ft = mVU->regAlloc->allocReg(); getIreg(Ft, 1); }
-	opCase4 { Ft = mVU->regAlloc->allocReg(); getQreg(Ft); }
+	opCase3 { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getIreg(mVU, Ft, 1); }
+	opCase4 {
+		if (_XYZW_SS && !mVUinfo.readQ) { Ft = xmmPQ; tempFt = -1; }
+		else { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getQreg(Ft, mVUinfo.readQ); }
+	}
 }
 
 // Normal FMAC Opcodes
 void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, isACC, ((opType == 3) || (opType == 4))); }
 	pass2 {
-		int Fs, Ft, ACC;
-		setupFtReg(mVU, Ft, opCase);
+		int Fs, Ft, ACC, tempFt;
+		setupFtReg(mVU, Ft, tempFt, opCase);
 
 		if (isACC) {
 			Fs  = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
@@ -148,19 +152,21 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		}
 		else { Fs = mVU->regAlloc->allocReg(_Fs_, _Fd_, _X_Y_Z_W); }
 
-		opCase2 { if (opType == 2) { mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
-
+		opCase1 { if((opType == 2) && _XYZW_PS)	{ mVUclamp1(Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase2 { if (opType == 2)				{ mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
+		
 		if (_XYZW_SS) SSE_SS[opType](mVU, Fs, Ft, -1, -1);
 		else		  SSE_PS[opType](mVU, Fs, Ft, -1, -1);
 
 		if (isACC) {
 			if (_XYZW_SS) SSE_MOVSS_XMM_to_XMM(ACC, Fs);
 			else		  mVUmergeRegs(ACC, Fs, _X_Y_Z_W);
-			mVUupdateFlags(mVU, ACC, Fs, ((opCase==2) ? Ft : (((opCase==1) && _XYZW_SS2) ? Ft : -1)));
+			mVUupdateFlags(mVU, ACC, Fs, tempFt);
 			if (_XYZW_SS2) SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W));
 			mVU->regAlloc->clearNeeded(ACC);
 		}
-		else mVUupdateFlags(mVU, Fs, ((opCase==2) ? Ft : -1), (((opCase==1) && _XYZW_SS2) ? Ft : -1));
+		else mVUupdateFlags(mVU, Fs, tempFt);
 		
 		mVU->regAlloc->clearNeeded(Fs); // Always Clear Written Reg First
 		mVU->regAlloc->clearNeeded(Ft);
@@ -172,8 +178,8 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, 1, 0); }
 	pass2 {
-		int Fs, Ft, ACC;
-		setupFtReg(mVU, Ft, opCase);
+		int Fs, Ft, ACC, tempFt;
+		setupFtReg(mVU, Ft, tempFt, opCase);
 
 		Fs  = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		ACC = mVU->regAlloc->allocReg(32, 32, 0xf, 0);
@@ -185,16 +191,17 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 		else		  SSE_PS[2](mVU, Fs, Ft, -1, -1);
 
 		if (_XYZW_SS || _X_Y_Z_W == 0xf) {
-			if (_XYZW_SS) SSE_SS[opType](mVU, ACC, Fs, -1, -1);
-			else		  SSE_PS[opType](mVU, ACC, Fs, -1, -1);	  
-			mVUupdateFlags(mVU, ACC, Fs, ((opCase==2) ? Ft : (((opCase==1) && _XYZW_SS2) ? Ft : -1)));
+			if (_XYZW_SS) SSE_SS[opType](mVU, ACC, Fs, tempFt, -1);
+			else		  SSE_PS[opType](mVU, ACC, Fs, tempFt, -1);	  
+			mVUupdateFlags(mVU, ACC, Fs, tempFt);
 			if (_XYZW_SS && _X_Y_Z_W != 8) SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W));
 		}
 		else {
 			int tempACC = mVU->regAlloc->allocReg();
 			SSE_MOVAPS_XMM_to_XMM(tempACC, ACC);
-			SSE_PS[opType](mVU, tempACC, Fs, -1, -1);
+			SSE_PS[opType](mVU, tempACC, Fs, tempFt, -1);
 			mVUmergeRegs(ACC, tempACC, _X_Y_Z_W);
+			mVUupdateFlags(mVU, ACC, Fs, tempFt);
 			mVU->regAlloc->clearNeeded(tempACC);
 		}
 
@@ -209,8 +216,8 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
-		int Fs, Ft, ACC;
-		setupFtReg(mVU, Ft, opCase);
+		int Fs, Ft, ACC, tempFt;
+		setupFtReg(mVU, Ft, tempFt, opCase);
 
 		ACC = mVU->regAlloc->allocReg(32);
 		Fs  = mVU->regAlloc->allocReg(_Fs_, _Fd_, _X_Y_Z_W);
@@ -218,12 +225,12 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 		if (_XYZW_SS2) { SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W)); }
 		opCase2 { mVUclamp1(Fs, -1, _X_Y_Z_W); } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 
-		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[0](mVU, Fs, ACC, -1, -1); }
-		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[0](mVU, Fs, ACC, -1, -1); }
+		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[0](mVU, Fs, ACC, tempFt, -1); }
+		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[0](mVU, Fs, ACC, tempFt, -1); }
 
 		if (_XYZW_SS2) { SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W)); }
 
-		mVUupdateFlags(mVU, Fs, ((opCase==2) ? Ft : -1), (((opCase==1) && _XYZW_SS2) ? Ft : -1));
+		mVUupdateFlags(mVU, Fs, tempFt);
 
 		mVU->regAlloc->clearNeeded(Fs); // Always Clear Written Reg First
 		mVU->regAlloc->clearNeeded(Ft);
@@ -236,16 +243,16 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, 0, 0); }
 	pass2 {
-		int Fs, Ft, Fd;
-		setupFtReg(mVU, Ft, opCase);
+		int Fs, Ft, Fd, tempFt;
+		setupFtReg(mVU, Ft, tempFt, opCase);
 
-		Fs = mVU->regAlloc->allocReg(_Fs_, 0,  _X_Y_Z_W);
+		Fs = mVU->regAlloc->allocReg(_Fs_,  0, _X_Y_Z_W);
 		Fd = mVU->regAlloc->allocReg(32, _Fd_, _X_Y_Z_W);
 
-		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[1](mVU, Fd, Fs, -1, -1); }
-		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[1](mVU, Fd, Fs, -1, -1); }
+		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[1](mVU, Fd, Fs, tempFt, -1); }
+		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[1](mVU, Fd, Fs, tempFt, -1); }
 	
-		mVUupdateFlags(mVU, Fd, Fs, ((opCase==2) ? Ft : (((opCase==1) && _XYZW_SS2) ? Ft : -1)));
+		mVUupdateFlags(mVU, Fd, Fs, tempFt);
 
 		mVU->regAlloc->clearNeeded(Fd); // Always Clear Written Reg First
 		mVU->regAlloc->clearNeeded(Ft);

@@ -477,8 +477,6 @@ void recResetEE( void )
     __asm__("emms");
 #endif
 
-	#define GET_HWADDR(mem) 
-
 	for (int i = 0; i < 0x10000; i++)
 		recLUT_SetPage(recLUT, 0, 0, 0, i, 0);
 

@@ -334,8 +334,6 @@ emitterT void SSE2_PSHUFLW_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )		
 emitterT void SSE2_PSHUFHW_XMM_to_XMM( x86SSERegType to, x86SSERegType from, u8 imm8 )	{ xPSHUF.HW( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
 emitterT void SSE2_PSHUFHW_M128_to_XMM( x86SSERegType to, uptr from, u8 imm8 )			{ xPSHUF.HW( xRegisterSSE(to), (void*)from, imm8 ); }
 
-emitterT void SSE4_PMULDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)		{ xPMUL.DQ( xRegisterSSE(to), xRegisterSSE(from) ); }
-
 emitterT void SSE_UNPCKLPS_M128_to_XMM( x86SSERegType to, uptr from )			{ xUNPCK.LPS( xRegisterSSE(to), (void*)from ); }
 emitterT void SSE_UNPCKLPS_XMM_to_XMM( x86SSERegType to, x86SSERegType from )	{ xUNPCK.LPS( xRegisterSSE(to), xRegisterSSE(from) ); }
 emitterT void SSE_UNPCKHPS_M128_to_XMM( x86SSERegType to, uptr from )			{ xUNPCK.HPS( xRegisterSSE(to), (void*)from ); }
@@ -360,7 +358,7 @@ emitterT void SSE2_PMADDWD_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{ 
 emitterT void SSE3_HADDPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{ xHADD.PS( xRegisterSSE(to), xRegisterSSE(from) ); }
 emitterT void SSE3_HADDPS_M128_to_XMM(x86SSERegType to, uptr from)					{ xHADD.PS( xRegisterSSE(to), (void*)from ); }
 
-emitterT void SSE4_PINSRD_R32_to_XMM(x86SSERegType to, x86IntRegType from, u8 imm8)	{ xPINSR.D( xRegisterSSE(to), xRegister32(from), imm8 ); }
+emitterT void SSE4_PINSRD_R32_to_XMM(x86SSERegType to, x86IntRegType from, u8 imm8)		{ xPINSR.D( xRegisterSSE(to), xRegister32(from), imm8 ); }
 
 emitterT void SSE4_INSERTPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from, u8 imm8)	{ xINSERTPS( xRegisterSSE(to), xRegisterSSE(from), imm8 ); }
 emitterT void SSE4_EXTRACTPS_XMM_to_R32(x86IntRegType to, x86SSERegType from, u8 imm8)	{ xEXTRACTPS( xRegister32(to), xRegisterSSE(from), imm8 ); }
@@ -374,6 +372,8 @@ emitterT void SSE4_BLENDVPS_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{
 emitterT void SSE4_BLENDVPS_M128_to_XMM(x86SSERegType to, uptr from)					{ xBLEND.VPS( xRegisterSSE(to), (void*)from ); }
 
 emitterT void SSE4_PMOVSXDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)			{ xPMOVSX.DQ( xRegisterSSE(to), xRegisterSSE(from) ); }
+emitterT void SSE4_PMULDQ_XMM_to_XMM(x86SSERegType to, x86SSERegType from)				{ xPMUL.DQ( xRegisterSSE(to), xRegisterSSE(from) ); }
+emitterT void SSE4_PTEST_XMM_to_XMM(x86SSERegType to, x86SSERegType from)				{ xPTEST(xRegisterSSE(to), xRegisterSSE(from)); }
 
 emitterT void SSE_LDMXCSR( uptr from ) { xLDMXCSR( (u32*)from ); }
 

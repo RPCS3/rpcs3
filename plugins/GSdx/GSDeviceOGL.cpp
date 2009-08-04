@@ -203,19 +203,9 @@ void GSDeviceOGL::Flip(bool limit)
 	#endif
 }
 
-void GSDeviceOGL::BeginScene()
-{
-}
-
 void GSDeviceOGL::DrawPrimitive()
 {
 	glDrawArrays(m_topology, m_vertices.count, m_vertices.start); CheckError();
-}
-
-void GSDeviceOGL::EndScene()
-{
-	m_vertices.start += m_vertices.count;
-	m_vertices.count = 0;
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -262,7 +252,7 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 	glClear(GL_STENCIL_BUFFER_BIT); CheckError();
 }
 
-GSTexture* GSDeviceOGL::Create(int type, int w, int h, int format)
+GSTexture* GSDeviceOGL::Create(int type, int w, int h, bool msaa, int format)
 {
 	GLuint texture = 0;
 
@@ -306,14 +296,14 @@ GSTexture* GSDeviceOGL::Create(int type, int w, int h, int format)
 	return t;
 }
 
-GSTexture* GSDeviceOGL::CreateRenderTarget(int w, int h, int format)
+GSTexture* GSDeviceOGL::CreateRenderTarget(int w, int h, bool msaa, int format)
 {
-	return __super::CreateRenderTarget(w, h, format ? format : GL_RGBA8);
+	return __super::CreateRenderTarget(w, h, msaa, format ? format : GL_RGBA8);
 }
 
-GSTexture* GSDeviceOGL::CreateDepthStencil(int w, int h, int format)
+GSTexture* GSDeviceOGL::CreateDepthStencil(int w, int h, bool msaa, int format)
 {
-	return __super::CreateDepthStencil(w, h, format ? format : GL_DEPTH32F_STENCIL8); // TODO: GL_DEPTH24_STENCIL8_EXT, GL_DEPTH24_STENCIL8
+	return __super::CreateDepthStencil(w, h, msaa, format ? format : GL_DEPTH32F_STENCIL8); // TODO: GL_DEPTH24_STENCIL8_EXT, GL_DEPTH24_STENCIL8
 }
 
 GSTexture* GSDeviceOGL::CreateTexture(int w, int h, int format)
@@ -519,14 +509,14 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, dsi); CheckError();
 	}
 
-	if(m_viewport != rt->m_size)
+	if(m_viewport != rt->GetSize())
 	{
-		m_viewport = rt->m_size;
+		m_viewport = rt->GetSize();
 
-		glViewport(0, 0, rt->m_size.x, rt->m_size.y); CheckError();
+		glViewport(0, 0, rt->GetWidth(), rt->GetHeight()); CheckError();
 	}
 
-	GSVector4i r = scissor ? *scissor : GSVector4i(rt->m_size).zwxy();
+	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
 
 	if(!m_scissor.eq(r))
 	{

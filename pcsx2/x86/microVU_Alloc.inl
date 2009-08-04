@@ -26,17 +26,17 @@
 // Flag Allocators
 //------------------------------------------------------------------
 
-#define getFlagReg(regX, fInst) {														\
-	switch (fInst) {																	\
-		case 0: regX = gprF0;	break;													\
-		case 1: regX = gprF1;	break;													\
-		case 2: regX = gprF2;	break;													\
-		case 3: regX = gprF3;	break;													\
-		default:																		\
-			Console::Error("microVU: Flag Instance Error (fInst = %d)", params fInst);	\
-			regX = gprF0;																\
-			break;																		\
-	}																					\
+#define getFlagReg(regX, fInst) {										\
+	switch (fInst) {													\
+		case 0: regX = gprF0;	break;									\
+		case 1: regX = gprF1;	break;									\
+		case 2: regX = gprF2;	break;									\
+		case 3: regX = gprF3;	break;									\
+		default:														\
+			Console::Error("microVU Error: fInst = %d", params fInst);	\
+			regX = gprF0;												\
+			break;														\
+	}																	\
 }
 
 #define setBitSFLAG(bitTest, bitSet) {	\
@@ -114,31 +114,33 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 }
 
 //------------------------------------------------------------------
-// I/Q/P Reg Allocators
+// I/P/Q Reg Allocators
 //------------------------------------------------------------------
 
-#define getIreg(reg, modXYZW) {															\
-	SSE_MOVSS_M32_to_XMM(reg, (uptr)&mVU->regs->VI[REG_I].UL);							\
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, -1, 8);									\
-	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw(reg, reg, 0); }	\
+microVUt(void) getIreg(mV, int reg, bool modXYZW) {
+	SSE_MOVSS_M32_to_XMM(reg, (uptr)&mVU->regs->VI[REG_I].UL);
+	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, -1, 8);
+	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw(reg, reg, 0); }
 }
 
-#define getQreg(reg) {														\
-	mVUunpack_xyzw(reg, xmmPQ, mVUinfo.readQ);								\
-	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/	\
+microVUt(void) getPreg(mV, int reg) {
+	mVUunpack_xyzw(reg, xmmPQ, (2 + mVUinfo.readP));
+	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT1, 15);*/
 }
 
-#define getPreg(reg) {											\
-	mVUunpack_xyzw(reg, xmmPQ, (2 + mVUinfo.readP));			\
-	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT1, 15);*/	\
+microVUt(void) getQreg(int reg, int qInstance) {
+	mVUunpack_xyzw(reg, xmmPQ, qInstance);
+	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/
 }
 
-//------------------------------------------------------------------
-// Lower Instruction Allocator Helpers
-//------------------------------------------------------------------
-
-// VF to GPR
-#define getReg8(GPRreg, _reg_, _fxf_) {														\
-	if (!_reg_ && (_fxf_ < 3))	{ XOR32RtoR(GPRreg, GPRreg); }								\
-	else						{ MOV32MtoR(GPRreg, (uptr)&mVU->regs->VF[_reg_].UL[0]); }	\
+microVUt(void) writeQreg(int reg, int qInstance) {
+	if (qInstance) {
+		if (!x86caps.hasStreamingSIMD4Extensions) {
+			SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+			SSE_MOVSS_XMM_to_XMM(xmmPQ, reg);
+			SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
+		}
+		else SSE4_INSERTPS_XMM_to_XMM(xmmPQ, reg, _MM_MK_INSERTPS_NDX(0, 1, 0));
+	}
+	else SSE_MOVSS_XMM_to_XMM(xmmPQ, reg);
 }
