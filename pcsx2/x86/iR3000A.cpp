@@ -38,6 +38,8 @@
 
 #include "SamplProf.h"
 #include "NakedAsm.h"
+#include "AppConfig.h"
+
 
 using namespace x86Emitter;
 
@@ -778,7 +780,7 @@ void psxSetBranchImm( u32 imm )
 
 static __forceinline u32 psxScaleBlockCycles()
 {
-	return s_psxBlockCycles * (Config.Hacks.IOPCycleDouble ? 2 : 1);
+	return s_psxBlockCycles * (EmuConfig.Speedhacks.IopCycleRate_X2 ? 2 : 1);
 }
 
 static void iPsxBranchTest(u32 newpc, u32 cpuBranch)

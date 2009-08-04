@@ -24,6 +24,8 @@
 #include "iR5900.h"
 #include "IPU/IPU.h"
 
+#include "AppConfig.h"
+
 using namespace R5900;
 // fixme: currently should not be uncommented.
 //#define TEST_BROKEN_DUMP_ROUTINES

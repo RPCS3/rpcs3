@@ -50,6 +50,7 @@ BIOS
 #include "VUmicro.h"
 #include "GS.h"
 #include "IPU/IPU.h"
+#include "AppConfig.h"
 
 
 #ifdef ENABLECACHE
@@ -759,8 +760,8 @@ void memReset()
 		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0E, hwWrite64_page_0E, hwWrite128_generic
 	);
 
-	vtlbMemR32FP* page0F32( Config.Hacks.INTCSTATSlow ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
-	vtlbMemR64FP* page0F64( Config.Hacks.INTCSTATSlow ? hwRead64_generic_INTC_HACK : hwRead64_generic );
+	vtlbMemR32FP* page0F32( EmuConfig.Speedhacks.IntcStat ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
+	vtlbMemR64FP* page0F64( EmuConfig.Speedhacks.IntcStat ? hwRead64_generic_INTC_HACK : hwRead64_generic );
 
 	hw_by_page[0xf] = vtlb_RegisterHandler(
 		_ext_memRead8<1>, _ext_memRead16<1>, page0F32, page0F64, hwRead128_generic,

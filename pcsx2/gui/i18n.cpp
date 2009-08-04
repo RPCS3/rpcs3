@@ -18,6 +18,7 @@
 
 #include "PrecompiledHeader.h"
 #include "i18n.h"
+#include "AppConfig.h"
 
 #include "Utilities/SafeArray.h"
 

@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include "Pcsx2Config.h"
-
 extern FILE *emuLog;
 
 extern char* disVU0MicroUF(u32 code, u32 pc);

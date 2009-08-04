@@ -24,7 +24,6 @@
 #include "R5900.h"
 #include "VU.h"
 #include "iCore.h"
-#include "Pcsx2Config.h"
 
 #define PC_GETBLOCK(x) PC_GETBLOCK_(x, recLUT)
 

@@ -135,17 +135,13 @@ struct cdvdStruct {
 
 struct CDVD_API
 {
-	struct
-	{
-		void (CALLBACK *close)();
+	void (CALLBACK *close)();
 		
-		// Don't need init or shutdown.  iso/nodisc have no init/shutdown and plugin's
-		// is handled by the PluginManager.
-		
-		// Don't need pluign specific things like freeze, test, or other stuff here.
-		// Those are handled by the plugin manager specifically.
-
-	} Common;
+	// Don't need init or shutdown.  iso/nodisc have no init/shutdown and plugin's
+	// is handled by the PluginManager.
+	
+	// Don't need pluign specific things like freeze, test, or other stuff here.
+	// Those are handled by the plugin manager specifically.
 
 	_CDVDopen          open;
 	_CDVDreadTrack     readTrack;

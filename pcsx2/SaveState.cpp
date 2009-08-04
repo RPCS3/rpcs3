@@ -30,6 +30,7 @@
 #include "GS.h"
 #include "COP0.h"
 #include "Cache.h"
+#include "AppConfig.h"
 
 using namespace R5900;
 

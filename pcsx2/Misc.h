@@ -44,10 +44,6 @@ extern u32 g_sseVUMXCSR, g_sseMXCSR;
 extern void ProcessFKeys(int fkey,  struct KeyModifiers *keymod); // processes fkey related commands value 1-12
 extern bool IsBIOS(const wxString& filename, wxString& description);
 
-//extern const char *LabelAuthors;
-//extern const char *LabelGreets;
-void CycleFrameLimit(int dir);
-
 void SaveGSState(const wxString& file);
 void LoadGSState(const wxString& file);
 

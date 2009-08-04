@@ -343,15 +343,7 @@ wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 }
 
 wxString AppConfig::FullpathToBios() const				{ return Path::Combine( Folders.Bios, BaseFilenames.Bios ); }
-wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( Folders.MemoryCards, MemoryCards.Mcd[mcdidx].Filename ); }
-
-// ------------------------------------------------------------------------
-// GCC Note: wxT() macro is required when using string token pasting.  For some reason L generates
-// syntax errors. >_<
-//
-#define IniEntry( varname, defval )		ini.Entry( wxT(#varname), varname, defval )
-#define IniBitfield( varname, defval )	varname = ini.EntryBitfield( wxT(#varname), varname, defval )
-#define IniBitBool( varname, defval )	varname = ini.EntryBitBool( wxT(#varname), !!varname, defval )
+wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( Folders.MemoryCards, Mcd[mcdidx].Filename ); }
 
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveUserMode( IniInterface& ini )
@@ -373,18 +365,17 @@ void AppConfig::LoadSave( IniInterface& ini )
 	IniEntry( Toolbar_ImageSize,	24 );
 	IniEntry( Toolbar_ShowLabels,	true );
 
-	IniEntry( CdvdVerboseReads,		false );
-
 	// Process various sub-components:
 	ProgLogBox.LoadSave( ini, L"ProgramLog" );
 	Ps2ConBox.LoadSave( ini, L"Ps2Console" );
 	
-	Speedhacks.LoadSave( ini );
 	Folders.LoadSave( ini );
 	BaseFilenames.LoadSave( ini );
 
 	if( ini.IsSaving() && (g_RecentIsoList != NULL) )
 		g_RecentIsoList->Save( ini.GetConfig() );
+
+	EmuOptions.LoadSave( ini );
 
 	ini.Flush();
 }
@@ -407,7 +398,7 @@ void AppConfig::Apply()
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
 	
-	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->MemoryCards.EnableNTFS );
+	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->McdEnableNTFS );
 
 	if( !i18n_SetLanguage( LanguageId ) )
 	{
@@ -462,20 +453,6 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* lo
 	IniEntry( DisplaySize,		wxSize( 540, 540 ) );
 	IniEntry( FontSize,			8 );
 	
-	ini.SetPath( L".." );
-}
-
-// ------------------------------------------------------------------------
-void AppConfig::SpeedhackOptions::LoadSave( IniInterface& ini )
-{
-	ini.SetPath( L"Speedhacks" );
-
-	IniBitfield( EECycleRate, 0 );
-	IniBitfield( VUCycleSteal, 0 );
-	IniBitBool( IopCycleRate_X2, false );
-	IniBitBool( IntcStat, false );
-	IniBitBool( BIFC0, false );
-
 	ini.SetPath( L".." );
 }
 

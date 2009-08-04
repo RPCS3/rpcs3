@@ -292,7 +292,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 	int ret = CDVD->open(pTitleFilename);
 	int cdtype = DoCDVDdetectDiskType();
 
-	if ((Config.Blockdump) && (cdtype != CDVD_TYPE_NODISC))
+	if (EmuConfig.CdvdDumpBlocks && (cdtype != CDVD_TYPE_NODISC))
 	{
 		// TODO: Add a blockdumps configurable folder, and use that instead of CWD().
 
@@ -347,8 +347,8 @@ void DoCDVDclose()
 {
 	CheckNullCDVD();
 	if(blockDumpFile) isoClose(blockDumpFile);
-	if( CDVD->Common.close != NULL )
-		CDVD->Common.close();
+	if( CDVD->close != NULL )
+		CDVD->close();
 }
 
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
@@ -503,10 +503,7 @@ wxString NODISCgetUniqueFilename()
 
 CDVD_API CDVDapi_NoDisc =
 {
-	{
-		NODISCclose,
-	},
-
+	NODISCclose,
 	NODISCopen,
 	NODISCreadTrack,
 	NODISCgetBuffer,

@@ -476,7 +476,7 @@ void ElfApplyPatches()
 	// if patches found the following status msg will be overwritten
 	Console::SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
 
-	if( !Config.Patch ) return;
+	if( !EmuConfig.EnablePatches ) return;
 
 	if(LoadPatch( filename ) != 0)
 	{

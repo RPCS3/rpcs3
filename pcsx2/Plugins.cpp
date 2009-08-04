@@ -26,6 +26,7 @@
 #include "GS.h"
 #include "HostGui.h"
 #include "CDVD/CDVDisoReader.h"
+#include "AppConfig.h"
 
 // ----------------------------------------------------------------------------
 // Yay, order of this array shouldn't be important. :)
@@ -380,11 +381,9 @@ static void CALLBACK CDVDplugin_Close()
 	g_plugins->Close( PluginId_CDVD );
 }
 
-CDVD_API CDVDapi_Plugin=
+CDVD_API CDVDapi_Plugin =
 {
-	{
-		CDVDplugin_Close
-	}, 
+	CDVDplugin_Close,
 
 	// The rest are filled in by the plugin manager	
 	NULL

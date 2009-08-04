@@ -33,11 +33,12 @@
 
 using namespace std;
 
+Pcsx2Config EmuConfig = {0};
+
 // disable all session overrides by default...
 SessionOverrideFlags g_Session = {false};
 
 bool sysInitialized = false;
-
 
 // -----------------------------------------------------------------------
 // This function should be called once during program execution.
@@ -326,10 +327,10 @@ void SysExecute()
 // call to SysExecute.
 void SysEndExecution()
 {
-	if( Config.closeGSonEsc )
+	if( EmuConfig.closeGSonEsc )
 		StateRecovery::MakeGsOnly();
 
-	ClosePlugins( Config.closeGSonEsc );
+	ClosePlugins( EmuConfig.closeGSonEsc );
 	g_ReturnToGui = true;
 }
 
@@ -351,7 +352,7 @@ void SysPrepareExecution( const wxString& elf_file, bool use_bios )
 			return;
 		}
 
-		g_Startup.BootMode = (elf_file) ? BootMode_Elf : BootMode_Normal;
+		//g_Startup.BootMode = (elf_file) ? BootMode_Elf : BootMode_Normal;
 
 		OpenPlugins(NULL);
 

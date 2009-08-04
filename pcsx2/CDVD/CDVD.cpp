@@ -25,6 +25,8 @@
 #include "IsoFStools.h"
 #include "CDVD_internal.h"
 #include "CDVDisoReader.h"
+#include "gs.h"			// for gsRegionMode
+#include "AppConfig.h"
 
 static cdvdStruct cdvd;
 
@@ -861,7 +863,7 @@ u8 monthmap[13] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 void cdvdVsync() {
 	cdvd.RTCcount++;
-	if (cdvd.RTCcount < ((Config.PsxType & 1) ? 50 : 60)) return;
+	if (cdvd.RTCcount < ((gsRegionMode == Region_NTSC) ? 60 : 50)) return;
 	cdvd.RTCcount = 0;
 
 	cdvd.RTC.second++;
@@ -1113,7 +1115,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "CdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
-			if( Config.cdvdPrint )
+			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
@@ -1160,7 +1162,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "CdReadCDDA > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%xx(%x), ReadMode=%x(%x) (1074=%x)",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
-			if( Config.cdvdPrint )
+			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("CdAudioRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 			
@@ -1195,7 +1197,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "DvdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 			
-			if( Config.cdvdPrint )
+			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 			

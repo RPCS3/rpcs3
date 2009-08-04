@@ -207,8 +207,6 @@ void zeroEx()
 	char *fname = NULL;
 	int i;
 
-	if (!Config.PsxOut) return;
-
 	pc = psxRegs.pc;
 	while (iopMemRead32(pc) != 0x41e00000) pc-=4;
 

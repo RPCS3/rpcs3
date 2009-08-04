@@ -147,3 +147,10 @@ protected:
 	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue );
 };
 
+// ------------------------------------------------------------------------
+// GCC Note: wxT() macro is required when using string token pasting.  For some reason L generates
+// syntax errors. >_<
+//
+#define IniEntry( varname, defval )		ini.Entry( wxT(#varname), varname, defval )
+#define IniBitfield( varname, defval )	varname = ini.EntryBitfield( wxT(#varname), varname, defval )
+#define IniBitBool( varname, defval )	varname = ini.EntryBitBool( wxT(#varname), !!varname, defval )

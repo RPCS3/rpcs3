@@ -515,7 +515,7 @@ void recResetEE( void )
 	x86FpuState = FPU_STATE;
 
 	branch = 0;
-	SetCPUState(Config.sseMXCSR, Config.sseVUMXCSR);
+	SetCPUState(EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR);
 }
 
 static void recShutdown( void )
@@ -990,7 +990,7 @@ static u32 scaleBlockCycles_helper()
 	// caused by sync hacks and such, since games seem to care a lot more about
 	// these small blocks having accurate cycle counts.
 
-	if( s_nBlockCycles <= (5<<3) || (Config.Hacks.EECycleRate == 0) )
+	if( s_nBlockCycles <= (5<<3) || (EmuConfig.Speedhacks.EECycleRate == 0) )
 		return s_nBlockCycles >> 3;
 
 	uint scalarLow, scalarMid, scalarHigh;
@@ -998,7 +998,7 @@ static u32 scaleBlockCycles_helper()
 	// Note: larger blocks get a smaller scalar, to help keep
 	// them from becoming "too fat" and delaying branch tests.
 
-	switch( Config.Hacks.EECycleRate )
+	switch( EmuConfig.Speedhacks.EECycleRate )
 	{
 		case 0:	return s_nBlockCycles >> 3;
 
@@ -1052,7 +1052,7 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 	//    cpuRegs.cycle += blockcycles;
 	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
 
-	if (Config.Hacks.IdleLoopFF && s_nBlockFF) {
+	if (EmuConfig.Speedhacks.BIFC0 && s_nBlockFF) {
 		xMOV(eax, ptr32[&g_nextBranchCycle]);
 		xADD(ptr32[&cpuRegs.cycle], eeScaleBlockCycles());
 		xCMP(eax, ptr32[&cpuRegs.cycle]);

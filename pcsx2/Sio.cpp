@@ -684,19 +684,20 @@ void SaveState::sioFreeze()
 	}
 	Freeze( m_mcdCRCs );
 
-	if( IsLoading() && Config.McdEnableEject )
+	if( IsLoading() && EmuConfig.McdEnableEjection )
 	{
-		// Note: TOTA works with values as low as 20 here.
-		// It "times out" with values around 1800 (forces user to check the memcard
-		// twice to find it).  Other games could be different. :|
+		// Notes:
+		//  * TOTA works with values as low as 20 here.
+		//    It "times out" with values around 1800 (forces user to check the memcard
+		//    twice to find it).  Other games could be different. :|
+		//
+		//  * At 64: Disgaea 1 and 2, and Grandia 2 end up displaying a quick "no memcard!"
+		//    notice before finding the memorycard and re-enumerating it.  A very minor
+		//    annoyance, but no breakages.
 
-		// At 64: Disgaea 1 and 2, and Grandia 2 end up displaying a quick "no memcard!"
-		// notice before finding the memorycard and re-enumerating it.  A very minor
-		// annoyance, but no breakages.
-
-		// GuitarHero will break completely with almost any value here, by design, because
-		// it has a "rule" that the memcard should never be ejected during a song.  So by
-		// ejecting it, the game freezes (which is actually good emulation, but annoying!)
+		//  * GuitarHero will break completely with almost any value here, by design, because
+		//    it has a "rule" that the memcard should never be ejected during a song.  So by
+		//    ejecting it, the game freezes (which is actually good emulation, but annoying!)
 
 		for( int i=0; i<2; ++i )
 		{

@@ -23,6 +23,7 @@
 #include <wx/imaglist.h>
 #include <wx/docview.h>
 
+#include "AppConfig.h"
 #include "System.h"
 
 using namespace Threading;

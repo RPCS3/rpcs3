@@ -559,8 +559,7 @@ __forceinline void cpuTestHwInts() {
 void cpuExecuteBios()
 {
 	// Set the video mode to user's default request:
-	// (right now we always default to NTSC)
-	gsSetVideoRegionType( Config.PsxType & 1 );
+	gsSetRegionMode( (GS_RegionMode)EmuConfig.Video.DefaultRegionMode );
 
 	Console::Notice( "* PCSX2 *: ExecuteBios" );
 

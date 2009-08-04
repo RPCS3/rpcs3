@@ -19,7 +19,6 @@
 #pragma once
 
 #include "Paths.h"
-#include "Pcsx2Config.h"
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 #include "Misc.h"

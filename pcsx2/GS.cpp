@@ -100,10 +100,10 @@ void _gs_ChangeTimings( u32 framerate, u32 iTicks )
 {
 	m_iSlowStart = GetCPUTicks();
 
-	u32 frameSkipThreshold = Config.CustomFrameSkip*50;
-	if( Config.CustomFrameSkip == 0)
+	u32 frameSkipThreshold = EmuConfig.Video.FpsSkip*50;
+	if( frameSkipThreshold == 0)
 	{
-		// default: load the frameSkipThreshold with a value roughly 90% of our current framerate
+		// default: load the frameSkipThreshold with a value roughly 90% of the PS2 native framerate
 		frameSkipThreshold = ( framerate * 242 ) / 256;
 	}
 
@@ -126,22 +126,16 @@ void gsOnModeChanged( u32 framerate, u32 newTickrate )
 	mtgsThread->SendSimplePacket( GS_RINGTYPE_MODECHANGE, framerate, newTickrate, 0 );
 }
 
-void gsSetVideoRegionType( u32 isPal )
-{
-	if( isPal )
-	{
-		if( Config.PsxType & 1 ) return;
-		Console::WriteLn( "PAL Display Mode Initialized." );
-		Config.PsxType |= 1;
-	}
-	else
-	{
-		if( !(Config.PsxType & 1 ) ) return;
-		Console::WriteLn( "NTSC Display Mode Initialized." );
-		Config.PsxType &= ~1;
-	}
+static bool		gsIsInterlaced	= false;
+GS_RegionMode	gsRegionMode	= Region_NTSC;
 
-	// If we made it this far it means the refresh rate changed, so update the vsync timers:
+
+void gsSetRegionMode( GS_RegionMode region )
+{
+	if( gsRegionMode == region ) return;
+
+	gsRegionMode = region;
+	Console::WriteLn( "%s Display Mode Initialized.", params (( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC") );
 	UpdateVSyncRate();
 }
 
@@ -149,17 +143,16 @@ void gsSetVideoRegionType( u32 isPal )
 // Make sure framelimiter options are in sync with the plugin's capabilities.
 void gsInit()
 {
-	if( (CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_SKIP) && (GSsetFrameSkip == NULL) )
+	if( EmuConfig.Video.EnableFrameSkipping && (GSsetFrameSkip == NULL) )
 	{
-		Config.Options &= ~PCSX2_FRAMELIMIT_MASK;
-		Console::WriteLn("Notice: Disabling frameskip -- GS plugin does not support it.");
+		EmuConfig.Video.EnableFrameSkipping = false;
+		Console::WriteLn("Notice: Disabling frameskipping -- GS plugin does not support it.");
 	}
 }
 
 // Opens the gsRingbuffer thread.
 s32 gsOpen()
 {
-	u32 curFrameLimit = Config.Options & PCSX2_FRAMELIMIT_MASK;
 	if( m_gsOpened ) return 0;
 
 	//video
@@ -186,13 +179,16 @@ s32 gsOpen()
 		);
 	}*/
 	
+	// FIXME : This is the gs/vsync tie-in for framelimiting, but it really
+	// needs to be called from the hotkey framelimiter enable/disable too.
+	
 	if(GSsetFrameLimit == NULL)
 	{
 		DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
 	}
 	else
 	{
-		GSsetFrameLimit(curFrameLimit != PCSX2_FRAMELIMIT_NORMAL);
+		GSsetFrameLimit( EmuConfig.Video.EnableFrameLimiting );
 	}
 
 	return !m_gsOpened;
@@ -212,7 +208,7 @@ void gsReset()
 	mtgsThread->Reset();
 
 	gsOnModeChanged(
-		(Config.PsxType & 1) ? FRAMERATE_PAL : FRAMERATE_NTSC,
+		(gsRegionMode == Region_NTSC) ? FRAMERATE_NTSC : FRAMERATE_PAL,
 		UpdateVSyncRate()
 	);
 
@@ -329,14 +325,11 @@ __forceinline void _gsSMODEwrite( u32 mem, u32 value )
 	switch (mem)
 	{
 		case GS_SMODE1:
-			gsSetVideoRegionType( (value & 0x6000) == 0x6000 );
+			gsSetRegionMode( ((value & 0x6000) == 0x6000) ? Region_PAL : Region_NTSC );
 		break;
 
 		case GS_SMODE2:
-			if(value & 0x1)
-				Config.PsxType |= 2; // Interlaced
-			else
-				Config.PsxType &= ~2;	// Non-Interlaced
+			gsIsInterlaced = (value & 0x1);
 		break;
 	}
 }
@@ -519,6 +512,7 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 	);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
 // FrameSkipper - Measures delta time between calls and issues frameskips
 // it the time is too long.  Also regulates the status of the EE's framelimiter.
 
@@ -539,15 +533,15 @@ __forceinline void gsFrameSkip( bool forceskip )
 	static u8 FramesToRender = 0;
 	static u8 FramesToSkip = 0;
 
-	if( CHECK_FRAMELIMIT != PCSX2_FRAMELIMIT_SKIP ) return;
+	if( !EmuConfig.Video.EnableFrameSkipping ) return;
 
 	// FrameSkip and VU-Skip Magic!
 	// Skips a sequence of consecutive frames after a sequence of rendered frames
 
 	// This is the least number of consecutive frames we will render w/o skipping
-	const int noSkipFrames = ((Config.CustomConsecutiveFrames>0) ? Config.CustomConsecutiveFrames : 1);
+	const int noSkipFrames = ((EmuConfig.Video.ConsecutiveFrames>0) ? EmuConfig.Video.ConsecutiveFrames : 1);
 	// This is the number of consecutive frames we will skip
-	const int yesSkipFrames = ((Config.CustomConsecutiveSkip>0) ? Config.CustomConsecutiveSkip : 1);
+	const int yesSkipFrames = ((EmuConfig.Video.ConsecutiveSkip>0) ? EmuConfig.Video.ConsecutiveSkip : 1);
 
 	const u64 iEnd = GetCPUTicks();
 	const s64 uSlowExpectedEnd = m_iSlowStart + m_iSlowTicks;

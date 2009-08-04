@@ -16,13 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __GS_H__
-#define __GS_H__
-
-// GCC needs these includes
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#pragma once
 
 #include "Common.h"
 #include "Utilities/Threading.h"
@@ -32,7 +26,15 @@ PCSX2_ALIGNED16( extern u8 g_RealGSMem[0x2000] );
 #define GSIMR *((u32*)(g_RealGSMem+0x1010))
 #define GSSIGLBLID ((GSRegSIGBLID*)(g_RealGSMem+0x1080))
 
-/////////////////////////////////////////////////////////////////////////////
+enum GS_RegionMode
+{
+	Region_NTSC,
+	Region_PAL
+};
+
+extern GS_RegionMode gsRegionMode;
+
+/////////////////////////////////////////////////////////////////////////////////////////
 // MTGS GIFtag Parser - Declaration
 //
 // The MTGS needs a dummy "GS plugin" for processing SIGNAL, FINISH, and LABEL
@@ -291,7 +293,7 @@ extern s32 gsOpen();
 extern void gsClose();
 extern void gsReset();
 extern void gsOnModeChanged( u32 framerate, u32 newTickrate );
-extern void gsSetVideoRegionType( u32 isPal );
+extern void gsSetRegionMode( GS_RegionMode isPal );
 extern void gsResetFrameSkip();
 extern void gsSyncLimiterLostTime( s32 deltaTime );
 extern void gsDynamicSkipEnable();
@@ -368,4 +370,3 @@ extern gzSavingState* g_fGSSave;
 
 void RunGSState(gzLoadingState& f);
 
-#endif

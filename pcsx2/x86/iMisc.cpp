@@ -17,7 +17,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Pcsx2Config.h"
 
 u32 g_sseMXCSR = DEFAULT_sseMXCSR; 
 u32 g_sseVUMXCSR = DEFAULT_sseVUMXCSR;

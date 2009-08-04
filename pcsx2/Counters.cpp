@@ -227,7 +227,7 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, u32 framesPerSecond, u32 scans
 
 u32 UpdateVSyncRate()
 {
-	const char *limiterMsg = "Framelimiter rate updated (UpdateVSyncRate): %d.%d fps";
+	static const char *limiterMsg = "Framelimiter rate updated (UpdateVSyncRate): %d.%d fps";
 
 	// fixme - According to some docs, progressive-scan modes actually refresh slower than
 	// interlaced modes.  But I can't fathom how, since the refresh rate is a function of
@@ -237,7 +237,7 @@ u32 UpdateVSyncRate()
 	//#define VBLANK_NTSC			((Config.PsxType & 2) ? 59.94 : 59.82) //59.94 is more precise
 	//#define VBLANK_PAL			((Config.PsxType & 2) ? 50.00 : 49.76)
 
-	if(Config.PsxType & 1)
+	if( gsRegionMode == Region_PAL )
 	{
 		if( vSyncInfo.Framerate != FRAMERATE_PAL )
 			vSyncInfoCalc( &vSyncInfo, FRAMERATE_PAL, SCANLINES_TOTAL_PAL );
@@ -251,14 +251,14 @@ u32 UpdateVSyncRate()
 	hsyncCounter.CycleT = vSyncInfo.hRender; // Amount of cycles before the counter will be updated
 	vsyncCounter.CycleT = vSyncInfo.Render; // Amount of cycles before the counter will be updated
 
-	if (Config.CustomFps > 0)
+	if( EmuConfig.Video.EnableFrameLimiting && (EmuConfig.Video.FpsLimit > 0) )
 	{
-		s64 ticks = GetTickFrequency() / Config.CustomFps;
+		s64 ticks = GetTickFrequency() / EmuConfig.Video.FpsLimit;
 		if( m_iTicks != ticks )
 		{
 			m_iTicks = ticks;
 			gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-			Console::Status( limiterMsg, params Config.CustomFps, 0 );
+			Console::Status( limiterMsg, params EmuConfig.Video.FpsLimit, 0 );
 		}
 	}
 	else
@@ -288,8 +288,8 @@ void frameLimitReset()
 // See the GS FrameSkip function for details on why this is here and not in the GS.
 static __forceinline void frameLimit()
 {
-	if( CHECK_FRAMELIMIT == PCSX2_FRAMELIMIT_NORMAL ) return;
-	if( Config.CustomFps >= 999 ) return;	// means the user would rather just have framelimiting turned off...
+	// 999 means the user would rather just have framelimiting turned off...
+	if( !EmuConfig.Video.EnableFrameLimiting || EmuConfig.Video.FpsLimit >= 999 ) return;
 	
 	s64 sDeltaTime;
 	u64 uExpectedEnd;
@@ -351,7 +351,7 @@ static __forceinline void VSyncStart(u32 sCycle)
 	psxVBlankStart();
 
 	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
-	if (Config.Patch) applypatch(1); // Apply patches (ToDo: clean up patch code)
+	//if (Config.Patch) applypatch(1); // fixme - Apply patches
 
 	// INTC - VB Blank Start Hack --
 	// Hack fix!  This corrects a freezeup in Granda 2 where it decides to spin
@@ -802,7 +802,6 @@ void SaveState::rcntFreeze()
 	Freeze( vsyncCounter );
 	Freeze( nextCounter );
 	Freeze( nextsCounter );
-	Freeze( Config.PsxType );
 
 	if( IsLoading() )
 	{

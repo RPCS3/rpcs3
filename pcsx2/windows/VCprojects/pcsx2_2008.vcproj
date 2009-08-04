@@ -363,6 +363,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\Pcsx2Config.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\PrecompiledHeader.cpp"
 				>
 				<FileConfiguration
@@ -2275,6 +2279,10 @@
 				</File>
 			</Filter>
 		</Filter>
+		<File
+			RelativePath="..\..\gui\AppConfig.h"
+			>
+		</File>
 		<File
 			RelativePath="..\..\Common.h"
 			>

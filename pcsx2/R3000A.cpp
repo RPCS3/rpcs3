@@ -105,7 +105,8 @@ void psxException(u32 code, u32 bd) {
 		PSXMu32(psxRegs.CP0.n.EPC)&= ~0x02000000;
 	}*/
 
-	if (Config.PsxOut && !CHECK_EEREC) {
+	if (!CHECK_IOPREC)
+	{
 		u32 call = psxRegs.GPR.n.t1 & 0xff;
 		switch (psxRegs.pc & 0x1fffff) {
 			case 0xa0:

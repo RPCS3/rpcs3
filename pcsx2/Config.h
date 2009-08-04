@@ -32,116 +32,64 @@ enum PluginsEnum_t
 	PluginId_Count
 };
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Pcsx2 Application Configuration.
+/////////////////////////////////////////////////////////////////////////////////////////
+// Pcsx2Config
 //
-// [TODO] : Rename this once we get to the point where the old Pcsx2Config stuff isn't in
-// the way anymore. :)
+// This is intended to be a public class library, but is *not* meant to be shared data between
+// core emulation and plugins or interfaces.  Instead data is shared between gui interface and
+// emulator via an ini file, which allows data to be communicated in a manner independent of
+// class structure and somewhat independent of core emulator options changes.
 //
-class AppConfig
+class Pcsx2Config
 {
 public:
-	// ------------------------------------------------------------------------
-	struct ConsoleLogOptions
+	struct ProfilerSettings
 	{
-		bool Visible;
-		// if true, DisplayPos is ignored and the console is automatically docked to the main window.
-		bool AutoDock;
-		// Display position used if AutoDock is false (ignored otherwise)
-		wxPoint DisplayPosition;
-		wxSize DisplaySize;
-		
-		// Size of the font in points.
-		int FontSize;
+		bool
+			Enabled:1,			// universal toggle for the profiler.
+			RecBlocks_EE:1,		// Enables per-block profiling for the EE recompiler [unimplemented]
+			RecBlocks_IOP:1,	// Enables per-block profiling for the IOP recompiler [unimplemented]
+			RecBlocks_VU0:1,	// Enables per-block profiling for the VU0 recompiler [unimplemented]
+			RecBlocks_VU1:1;	// Enables per-block profiling for the VU1 recompiler [unimplemented]
 
-		void LoadSave( IniInterface& conf, const wxChar* title );
+		void LoadSave( IniInterface& conf );
 	};
 
-	// ------------------------------------------------------------------------
-	struct FolderOptions
+	struct RecompilerSettings
 	{
-		wxDirName
-			Plugins,
-			Settings,
-			Bios,
-			Snapshots,
-			Savestates,
-			MemoryCards,
-			Logs;
+		bool
+			EnableEE:1,
+			EnableIOP:1,
+			EnableVU0:1,
+			EnableVU1:1;
+			
+		bool
+			UseMicroVU0:1,
+			UseMicroVU1:1;
 
-		wxDirName RunIso;		// last used location for Iso loading.
+		void LoadSave( IniInterface& conf );
+
+	} Recompiler;
+
+	// ------------------------------------------------------------------------
+	struct CpuOptions
+	{
+		u32 sseMXCSR;
+		u32 sseVUMXCSR;
 
 		bool
-			UseDefaultPlugins:1,
-			UseDefaultSettings:1,
-			UseDefaultBios:1,
-			UseDefaultSnapshots:1,
-			UseDefaultSavestates:1,
-			UseDefaultMemoryCards:1,
-			UseDefaultLogs:1;
+			vuOverflow:1,
+			vuExtraOverflow:1,
+			vuSignOverflow:1,
+			vuUnderflow:1;
+			
+		bool
+			fpuOverflow:1,
+			fpuExtraOverflow:1,
+			fpuFullMode:1;
 
-		void LoadSave( IniInterface& conf );
-		void ApplyDefaults();
-
-		void Set( FoldersEnum_t folderidx, const wxString& src, bool useDefault );
-
-		const wxDirName& operator[]( FoldersEnum_t folderidx ) const;
-		const bool IsDefault( FoldersEnum_t folderidx ) const;
-	};
-
-	// ------------------------------------------------------------------------
-	struct FilenameOptions
-	{
-		wxFileName Bios;
-		wxFileName Plugins[PluginId_Count];
-
-		void LoadSave( IniInterface& conf );
-
-		const wxFileName& operator[]( PluginsEnum_t pluginidx ) const;
-	};
-
-	// ------------------------------------------------------------------------
-	// Options struct for each memory card.
-	//
-	struct McdOptions
-	{
-		wxFileName Filename;	// user-configured location of this memory card
-		bool Enabled;			// memory card enabled (if false, memcard will not show up in-game)
-	};
-
-	// ------------------------------------------------------------------------
-	struct McdSysOptions
-	{
-		McdOptions Mcd[2];
-		bool EnableNTFS;		// enables automatic ntfs compression of memory cards (Win32 only)
-		bool EnableEjection;	// enables simulated ejection of memory cards when loading savestates
-
-		void LoadSave( IniInterface& conf );
-	};
-
-	// ------------------------------------------------------------------------
-	struct CpuRecompilerOptions
-	{
-		struct
-		{
-			bool
-				Enabled:1,			// universal toggle for the profiler.
-				RecBlocks_EE:1,		// Enables per-block profiling for the EE recompiler [unimplemented]
-				RecBlocks_IOP:1,	// Enables per-block profiling for the IOP recompiler [unimplemented]
-				RecBlocks_VU1:1;	// Enables per-block profiling for the VU1 recompiler [unimplemented]
-
-		} Profiler;
-
-		struct
-		{
-			bool
-				EnableEE:1,
-				EnableIOP:1,
-				EnableVU0:1,
-				EnableVU1:1;
-
-		} Recompiler;
+		ProfilerSettings Profiler;
+		RecompilerSettings Recompiler;
 
 		void LoadSave( IniInterface& conf );
 	};
@@ -149,15 +97,19 @@ public:
 	// ------------------------------------------------------------------------
 	struct VideoOptions
 	{
-		bool MultithreadGS;		// Uses the multithreaded GS interface.
-		bool closeOnEsc;		// Closes the GS/Video port on escape (good for fullscreen activity)
-		bool UseFramelimiter;
+		bool EnableFrameLimiting;
+		bool EnableFrameSkipping;
 
-		int RegionMode;			// 0=NTSC and 1=PAL
-		int CustomFps;
-		int CustomFrameSkip;
-		int CustomConsecutiveFrames;
-		int CustomConsecutiveSkip;
+		// The region mode controls the default Maximum/Minimum FPS settings and also
+		// regulates the vsync rates (which in turn control the IOP's SPU2 tick sync and ensure
+		// proper audio playback speed).
+		int DefaultRegionMode;	// 0=NTSC and 1=PAL
+
+		int FpsTurbo;			// Limiting kicks in if fps goes beyond this (turbo enabled)
+		int FpsLimit;			// Limiting kicks in if fps goes beyond this line
+		int FpsSkip;			// Skipping kicks in if fps drops below this line
+		int ConsecutiveFrames;	// number of consecutive frames (fields) to render
+		int ConsecutiveSkip;	// number of consecutive frames (fields) to skip
 
 		void LoadSave( IniInterface& conf );
 	};
@@ -169,7 +121,9 @@ public:
 			VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
 			VuClipFlagHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 			FpuCompareHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
-			FpuMulHack:1;		// Fix for Tales of Destiny hangs.
+			FpuMulHack:1,		// Fix for Tales of Destiny hangs.
+			XgKickHack:1;		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+
 
 		void LoadSave();
 	};
@@ -182,71 +136,117 @@ public:
 			VUCycleSteal:3,		// VU Cycle Stealer factor (0, 1, 2, or 3)
 			IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
 			IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
-			BIFC0:1;			// enables BIFC0 detection and fast-forwarding
+			BIFC0:1,			// enables BIFC0 detection and fast-forwarding
+			
+			vuMinMax:1,			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
+			vuFlagHack:1;		// MicroVU specific flag hack; Can cause Infinite loops, SPS, etc...
 
 		void LoadSave( IniInterface& conf );
 	};
 
 public:
-	bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
-	wxPoint		MainGuiPosition;
 	bool		CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
+	bool		CdvdDumpBlocks;
+	bool		EnablePatches;
 
-	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
-	wxLanguage	LanguageId;
-	
-	int			RecentFileCount;		// number of files displayed in the Recent Isos list.
-	
-	// String value describing the desktop theme to use for pcsk2 (icons and background images)
-	// The theme name is used to look up files in the themes folder (relative to the executable).
-	wxString	DeskTheme;
+	// Closes the GS/Video port on escape (good for fullscreen activity)
+	bool		closeGSonEsc;
 
-	// Specifies the size of icons used in Listbooks; specifically the PCSX2 Properties dialog box.
-	// Realistic values range from 96x96 to 24x24.
-	int			Listbook_ImageSize;
+	// enables simulated ejection of memory cards when loading savestates
+	bool		McdEnableEjection;
 
-	// Specifies the size of each toolbar icon, in pixels (any value >= 2 is valid, but realistically
-	// values should be between 64 and 16 for usability reasons)
-	int			Toolbar_ImageSize;
-
-	// Enables display of toolbar text labels.
-	bool		Toolbar_ShowLabels;
-
-	CpuRecompilerOptions	Cpu;
+	CpuOptions	Cpu;
+	VideoOptions			Video;
 	SpeedhackOptions		Speedhacks;
 	GamefixOptions			Gamefixes;
-	VideoOptions			Video;
-	ConsoleLogOptions		ProgLogBox;
-	ConsoleLogOptions		Ps2ConBox;
-	FolderOptions			Folders;
-	FilenameOptions			BaseFilenames;
-	McdSysOptions			MemoryCards;
 
-protected:
-	// indicates if the main AppConfig settings are valid (excludes the status of UseAdminMode,
-	// which is a special value that's initialized independently of the rest of the config)
-	bool m_IsLoaded;
+	void Load( const wxString& srcfile );
+	void Load( const wxInputStream& srcstream );
+	void Save( const wxString& dstfile );
+	void Save( const wxOutputStream& deststream );
 
-public:
-	AppConfig() :
-		Listbook_ImageSize( 32 )
-	,	Toolbar_ImageSize( 24 )
-	,	m_IsLoaded( false )
-	{
-	}
-
-	wxString FullpathToBios() const;
-	wxString FullpathToMcd( uint mcdidx ) const;
-	wxString FullpathTo( PluginsEnum_t pluginId ) const;
-
-	void Load();
-	void Save();
-	void Apply();
-
-	void LoadSaveUserMode( IniInterface& ini );
-
-protected:
 	void LoadSave( IniInterface& ini );
 };
 
-extern AppConfig* g_Conf;
+//////////////////////////////////////////////////////////////////////////
+// Session Configuration Override Flags
+//
+// a handful of flags that can override user configurations for the current application session
+// only.  This allows us to do things like force-disable recompilers if the memory allocations
+// for them fail.
+struct SessionOverrideFlags
+{
+	bool
+		ForceDisableEErec:1,
+		ForceDisableIOPrec:1,
+		ForceDisableVU0rec:1,
+		ForceDisableVU1rec:1;
+};
+
+extern Pcsx2Config EmuConfig;
+extern SessionOverrideFlags g_Session;
+
+/////////////////////////////////////////////////////////////////////////////////////////
+// Helper Macros for Reading Emu Configurations.
+//
+
+// ------------ CPU / Recompiler Options ---------------
+
+#define CHECK_MICROVU0			(EmuConfig.Cpu.Recompiler.UseMicroVU0)
+#define CHECK_MICROVU1			(EmuConfig.Cpu.Recompiler.UseMicroVU1)
+#define CHECK_EEREC				(!g_Session.ForceDisableEErec && EmuConfig.Cpu.Recompiler.EnableEE)
+#define CHECK_IOPREC			(!g_Session.ForceDisableIOPrec && EmuConfig.Cpu.Recompiler.EnableIOP)
+#define CHECK_VU0REC			(!g_Session.ForceDisableVU0rec && EmuConfig.Cpu.Recompiler.EnableVU0)
+#define CHECK_VU1REC			(!g_Session.ForceDisableVU1rec && EmuConfig.Cpu.Recompiler.EnableVU1)
+
+//------------ SPECIAL GAME FIXES!!! ---------------
+#define CHECK_VUADDSUBHACK			(EmuConfig.Gamefixes.VuAddSubHack) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
+#define CHECK_FPUCOMPAREHACK		(EmuConfig.Gamefixes.FpuCompareHack) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+#define CHECK_VUCLIPFLAGHACK		(EmuConfig.Gamefixes.VuClipFlagHack) // Special Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
+#define CHECK_FPUMULHACK			(EmuConfig.Gamefixes.FpuMulHack) // Special Fix for Tales of Destiny hangs.
+#define CHECK_DMAEXECHACK			(false) //sVU-only, ignored // Special Fix for Fatal Frame; breaks Gust and Tri-Ace games.
+#define CHECK_XGKICKHACK			(EmuConfig.Gamefixes.XgKickHack) // Special Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics.
+
+//------------ Advanced Options!!! ---------------
+#define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.vuOverflow)
+#define CHECK_VU_EXTRA_OVERFLOW		(EmuConfig.Cpu.vuExtraOverflow) // If enabled, Operands are clamped before being used in the VU recs
+#define CHECK_VU_SIGN_OVERFLOW		(EmuConfig.Cpu.vuSignOverflow)
+#define CHECK_VU_UNDERFLOW			(EmuConfig.Cpu.vuUnderflow)
+#define CHECK_VU_EXTRA_FLAGS		0	// Always disabled now // Sets correct flags in the sVU recs
+#define CHECK_FPU_OVERFLOW			(EmuConfig.Cpu.fpuOverflow)
+#define CHECK_FPU_EXTRA_OVERFLOW	(EmuConfig.Cpu.fpuExtraOverflow) // If enabled, Operands are checked for infinities before being used in the FPU recs
+#define CHECK_FPU_EXTRA_FLAGS		1	// Always enabled now // Sets D/I flags on FPU instructions
+#define CHECK_FPU_FULL				(EmuConfig.Cpu.fpuFullMode)
+
+//------------ DEFAULT sseMXCSR VALUES!!! ---------------
+#define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
+#define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"
+
+//------------ EE Recompiler defines - Comment to disable a recompiler ---------------
+
+#define SHIFT_RECOMPILE		// Speed majorly reduced if disabled
+#define BRANCH_RECOMPILE	// Speed extremely reduced if disabled - more then shift
+
+// Disabling all the recompilers in this block is interesting, as it still runs at a reasonable rate.
+// It also adds a few glitches. Really reminds me of the old Linux 64-bit version. --arcum42
+#define ARITHMETICIMM_RECOMPILE
+#define ARITHMETIC_RECOMPILE
+#define MULTDIV_RECOMPILE
+#define JUMP_RECOMPILE
+#define LOADSTORE_RECOMPILE
+#define MOVE_RECOMPILE
+#define MMI_RECOMPILE
+#define MMI0_RECOMPILE
+#define MMI1_RECOMPILE
+#define MMI2_RECOMPILE
+#define MMI3_RECOMPILE
+#define FPU_RECOMPILE
+#define CP0_RECOMPILE
+#define CP2_RECOMPILE
+
+// You can't recompile ARITHMETICIMM without ARITHMETIC.
+#ifndef ARITHMETIC_RECOMPILE
+#undef ARITHMETICIMM_RECOMPILE
+#endif
+
+#define EE_CONST_PROP // rec2 - enables constant propagation (faster)

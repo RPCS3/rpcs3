@@ -1,25 +1,31 @@
 /*  Pcsx2 - Pc Ps2 Emulator
-*  Copyright (C) 2002-2008  Pcsx2 Team
-*
-*  This program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; either version 2 of the License, or
-*  (at your option) any later version.
-*  
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*  
-*  You should have received a copy of the GNU General Public License
-*  along with this program; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-*/
+ *  Copyright (C) 2002-2008  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *  
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
+// Note: This file is meant to be part of the HostGui/App, and not part of the
+// emu.  The emu accesses it from the SIO interface.  It's possible this could be
+// transformed into a plugin, although the benefit of such a system probably isn't
+// significant.
 
 #include "PrecompiledHeader.h"
 
 #include "System.h"
 #include "MemoryCard.h"
+#include "AppConfig.h"
 
 #include <wx/file.h>
 
@@ -35,7 +41,7 @@ void MemoryCard::Init()
 {
 	for( int i=0; i<2; i++ )
 	{
-		if( Config.Mcd[i].Enabled && !cardfile[i].IsOpened() )
+		if( g_Conf->Mcd[i].Enabled && !cardfile[i].IsOpened() )
 			Load( i );
 	}
 }
@@ -68,7 +74,7 @@ void MemoryCard::Load( uint mcd )
 		Create( str );
 
 #ifdef WIN32
-	NTFS_CompressFile( str, Config.McdEnableNTFS );
+	NTFS_CompressFile( str, g_Conf->McdEnableNTFS );
 #endif
 
 	cardfile[mcd].Open( str.c_str(), wxFile::write );

@@ -34,7 +34,7 @@
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"
-#include "sVU_zerorec.h"
+//#include "sVU_zerorec.h"
 #include "BaseblockEx.h"		// included for devbuild block dumping (which may or may not work anymore?)
 
 #include "GS.h"
@@ -42,11 +42,11 @@
 #include "Cache.h"
 
 #include "Dump.h"
+#include "AppConfig.h"
 
 using namespace std;
 using namespace R5900;
 
-PcsxConfig Config;
 u32 BiosVersion;
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
 bool renderswitch = 0;
@@ -389,82 +389,6 @@ static wxString GetGSStateFilename()
 	return Path::Combine( g_Conf->Folders.Savestates, wxsFormat( L"/%8.8X.%d.gs", ElfCRC, StatesC ) );
 }
 
-void CycleFrameLimit(int dir)
-{
-	const char* limitMsg;
-	u32 newOptions;
-	u32 curFrameLimit = Config.Options & PCSX2_FRAMELIMIT_MASK;
-	u32 newFrameLimit = 0;
-	static u32 oldFrameLimit = PCSX2_FRAMELIMIT_LIMIT;
-
-	if( dir == 0 ) {
-		// turn off limit or restore previous limit mode
-		if (curFrameLimit) {
-			oldFrameLimit = curFrameLimit;
-			newFrameLimit = 0;
-		} else
-			newFrameLimit = oldFrameLimit;
-	}
-	else if (dir > 0)	// next
-	{
-		newFrameLimit = curFrameLimit + PCSX2_FRAMELIMIT_LIMIT;
-		if( newFrameLimit > PCSX2_FRAMELIMIT_SKIP )
-			newFrameLimit = 0;
-	}
-	else	// previous
-	{
-		if( newFrameLimit == 0 )
-			newFrameLimit = PCSX2_FRAMELIMIT_SKIP;
-		else
-			newFrameLimit = curFrameLimit - PCSX2_FRAMELIMIT_LIMIT;
-	}
-
-	newOptions = (Config.Options & ~PCSX2_FRAMELIMIT_MASK) | newFrameLimit;
-
-	gsResetFrameSkip();
-	
-	// Allows sync to vblank only when framelimit is on, if GS can.
-	if(GSsetFrameLimit == NULL)
-	{
-	DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
-	}
-	else
-	{
-		GSsetFrameLimit(newFrameLimit);
-	}
-
-	switch(newFrameLimit) {
-		case PCSX2_FRAMELIMIT_NORMAL:
-			limitMsg = "None/Normal";
-			break;
-		case PCSX2_FRAMELIMIT_LIMIT:
-			limitMsg = "Limit";
-			break;
-		case PCSX2_FRAMELIMIT_SKIP:
-			if( GSsetFrameSkip == NULL )
-			{
-				newOptions &= ~PCSX2_FRAMELIMIT_MASK;
-				Console::Notice("Notice: GS Plugin does not support frameskipping.");
-				limitMsg = "None/Normal";
-			}
-			else
-			{
-				// When enabling Skipping we have to make sure Skipper (GS) and Limiter (EE)
-				// are properly synchronized.
-				gsDynamicSkipEnable();
-				limitMsg = "Skip";
-			}
-
-			break;
-	}
-	Threading::AtomicExchange( Config.Options, newOptions );
-
-	Console::Notice("Frame Limit Mode Changed: %s", params limitMsg );
-
-	// [Air]: Do we really want to save runtime changes to frameskipping?
-	//SaveConfig();
-}
-
 void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 {
 	assert(fkey >= 1 && fkey <= 12 );
@@ -535,7 +459,8 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 			break;
 
 		case 4:
-			CycleFrameLimit(keymod->shift ? -1 : 1);
+			// FIXME : Reimplement framelimiting using new oolean system
+			//CycleFrameLimit(keymod->shift ? -1 : 1);
 			break;
 
 		// note: VK_F5-VK_F7 are reserved for GS

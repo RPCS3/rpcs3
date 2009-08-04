@@ -92,6 +92,8 @@ const wxChar* Panels::SpeedHacksPanel::GetVUcycleSliderMsg( int val )
 Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
 {
+	const Pcsx2Config::SpeedhackOptions& opts( g_Conf->EmuOptions.Speedhacks );
+
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 	wxFlexGridSizer& cycleHacksSizer = *new wxFlexGridSizer( 2 );
 	
@@ -113,7 +115,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	// ------------------------------------------------------------------------
 	// EE Cyclerate Hack Section:
 	
-	m_slider_eecycle = new wxSlider( this, wxID_ANY, g_Conf->Speedhacks.EECycleRate+1, 1, 3,
+	m_slider_eecycle = new wxSlider( this, wxID_ANY, opts.EECycleRate+1, 1, 3,
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
 	
 	tooltip = pxE( ".Tooltips:Speedhacks:EECycleRate Slider",
@@ -123,7 +125,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	);
 	
 	cyclerateSizer.Add( m_slider_eecycle, sliderFlags );
-	m_msg_eecycle = &AddStaticText( cyclerateSizer, GetEEcycleSliderMsg( g_Conf->Speedhacks.EECycleRate+1 ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
+	m_msg_eecycle = &AddStaticText( cyclerateSizer, GetEEcycleSliderMsg( opts.EECycleRate+1 ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
 	m_msg_eecycle->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_eecycle->SetSizeHints( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_eecycle, 4) ) );
 
@@ -133,7 +135,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	// ------------------------------------------------------------------------
 	// VU Cycle Stealing Hack Section:
 
-	m_slider_vustealer = new wxSlider( this, wxID_ANY, g_Conf->Speedhacks.VUCycleSteal, 0, 4, wxDefaultPosition, wxDefaultSize,
+	m_slider_vustealer = new wxSlider( this, wxID_ANY, opts.VUCycleSteal, 0, 4, wxDefaultPosition, wxDefaultSize,
 		wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
 
 	tooltip = pxE( ".Tooltips:Speedhacks:VUCycleStealing Slider",
@@ -145,7 +147,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	// are run, which works as a rough-guess skipping of what would normally be idle time spent running on the EE.
 		
 	stealerSizer.Add( m_slider_vustealer, wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
-	m_msg_vustealer = &AddStaticText(stealerSizer, GetVUcycleSliderMsg( g_Conf->Speedhacks.VUCycleSteal ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
+	m_msg_vustealer = &AddStaticText(stealerSizer, GetVUcycleSliderMsg( opts.VUCycleSteal ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
 	m_msg_vustealer->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_vustealer->SetSizeHints( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_vustealer, 4) ) );
 
@@ -190,12 +192,13 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 
 void Panels::SpeedHacksPanel::Apply( AppConfig& conf )
 {
-	conf.Speedhacks.EECycleRate		= m_slider_eecycle->GetValue()-1;
-	conf.Speedhacks.VUCycleSteal	= m_slider_vustealer->GetValue();
+	Pcsx2Config::SpeedhackOptions& opts( conf.EmuOptions.Speedhacks );
+	opts.EECycleRate		= m_slider_eecycle->GetValue()-1;
+	opts.VUCycleSteal		= m_slider_vustealer->GetValue();
 
-	conf.Speedhacks.BIFC0			= m_check_b1fc0->GetValue();
-	conf.Speedhacks.IopCycleRate_X2	= m_check_IOPx2->GetValue();
-	conf.Speedhacks.IntcStat		= m_check_intc->GetValue();
+	opts.BIFC0				= m_check_b1fc0->GetValue();
+	opts.IopCycleRate_X2	= m_check_IOPx2->GetValue();
+	opts.IntcStat			= m_check_intc->GetValue();
 }
 
 void Panels::SpeedHacksPanel::EECycleRate_Scroll(wxScrollEvent &event)

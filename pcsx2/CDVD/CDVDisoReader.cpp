@@ -393,10 +393,8 @@ wxString ISOgetUniqueFilename()
 
 CDVD_API CDVDapi_Iso =
 {
-	{
-		ISOclose
-	},
-	
+	ISOclose,
+
 	ISOopen,
 	ISOreadTrack,
 	ISOgetBuffer, // emu shouldn't use this one.

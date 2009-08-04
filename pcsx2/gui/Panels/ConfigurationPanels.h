@@ -29,6 +29,7 @@
 #include <wx/bookctrl.h>
 #include <list>
 
+#include "AppConfig.h"
 #include "wxHelpers.h"
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"
