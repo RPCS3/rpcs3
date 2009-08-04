@@ -35,15 +35,20 @@ enum PluginsEnum_t
 /////////////////////////////////////////////////////////////////////////////////////////
 // Pcsx2Config
 //
-// This is intended to be a public class library, but is *not* meant to be shared data between
-// core emulation and plugins or interfaces.  Instead data is shared between gui interface and
-// emulator via an ini file, which allows data to be communicated in a manner independent of
-// class structure and somewhat independent of core emulator options changes.
+// This is intended to be a public class library between the core emulator and GUI only.
+// It is *not* meant to be shared data between core emulation and plugins, due to issues
+// with version incompatibilities if the structure formats are changed.
+// 
+// When GUI code performs modifications of this class, it must be done with strict thread
+// safety, since the emu runs on a separate thread.  Additionally many components of the
+// class require special emu-side resets or state save/recovery to be applied.  Please
+// use the provided functions to lock the emulation into a safe state and then apply
+// chances on the necessary scope (see Core_Pause, Core_ApplySettings, and Core_Resume).
 //
 class Pcsx2Config
 {
 public:
-	struct ProfilerSettings
+	struct ProfilerOptions
 	{
 		bool
 			Enabled:1,			// universal toggle for the profiler.
@@ -54,8 +59,9 @@ public:
 
 		void LoadSave( IniInterface& conf );
 	};
-
-	struct RecompilerSettings
+	
+	// ------------------------------------------------------------------------
+	struct RecompilerOptions
 	{
 		bool
 			EnableEE:1,
@@ -66,6 +72,11 @@ public:
 		bool
 			UseMicroVU0:1,
 			UseMicroVU1:1;
+
+		void Load( const wxString& srcfile );
+		void Load( const wxInputStream& srcstream );
+		void Save( const wxString& dstfile );
+		void Save( const wxOutputStream& deststream );
 
 		void LoadSave( IniInterface& conf );
 
@@ -88,8 +99,8 @@ public:
 			fpuExtraOverflow:1,
 			fpuFullMode:1;
 
-		ProfilerSettings Profiler;
-		RecompilerSettings Recompiler;
+		ProfilerOptions Profiler;
+		RecompilerOptions Recompiler;
 
 		void LoadSave( IniInterface& conf );
 	};
@@ -118,14 +129,13 @@ public:
 	struct GamefixOptions
 	{
 		bool
-			VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
+			VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
 			VuClipFlagHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 			FpuCompareHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
 			FpuMulHack:1,		// Fix for Tales of Destiny hangs.
 			XgKickHack:1;		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
 
-
-		void LoadSave();
+		void LoadSave( IniInterface& conf );
 	};
 
 	// ------------------------------------------------------------------------
@@ -145,20 +155,20 @@ public:
 	};
 
 public:
-	bool		CdvdVerboseReads;		// enables cdvd read activity verbosely dumped to the console
-	bool		CdvdDumpBlocks;
-	bool		EnablePatches;
+	bool		CdvdVerboseReads:1;		// enables cdvd read activity verbosely dumped to the console
+	bool		CdvdDumpBlocks:1;
+	bool		EnablePatches:1;
 
 	// Closes the GS/Video port on escape (good for fullscreen activity)
-	bool		closeGSonEsc;
+	bool		closeGSonEsc:1;
 
 	// enables simulated ejection of memory cards when loading savestates
-	bool		McdEnableEjection;
+	bool		McdEnableEjection:1;
 
-	CpuOptions	Cpu;
-	VideoOptions			Video;
-	SpeedhackOptions		Speedhacks;
-	GamefixOptions			Gamefixes;
+	CpuOptions			Cpu;
+	VideoOptions		Video;
+	SpeedhackOptions	Speedhacks;
+	GamefixOptions		Gamefixes;
 
 	void Load( const wxString& srcfile );
 	void Load( const wxInputStream& srcstream );
@@ -167,6 +177,21 @@ public:
 
 	void LoadSave( IniInterface& ini );
 };
+
+// Pauses the emulation state at the next PS2 vsync, and returns control to the calling
+// thread; or does nothing if the core is already suspended.  Calling this thread from the
+// Core thread will result in deadlock.
+extern void Core_Suspend();
+
+// Applies a full suite of new settings, which will automatically facilitate the necessary
+// resets of the core and components (including plugins, if needed).  The scope of resetting
+// is determined by comparing the current settings against the new settings.
+extern void Core_ApplySettings( const Pcsx2Config& src );
+
+// Resumes the core execution state, or does nothing is the core is already running.  If
+// settings were changed, resets will be performed as needed and emulation state resumed from
+// memory savestates.
+extern void Core_Resume();
 
 //////////////////////////////////////////////////////////////////////////
 // Session Configuration Override Flags
@@ -192,12 +217,12 @@ extern SessionOverrideFlags g_Session;
 
 // ------------ CPU / Recompiler Options ---------------
 
-#define CHECK_MICROVU0			(EmuConfig.Cpu.Recompiler.UseMicroVU0)
-#define CHECK_MICROVU1			(EmuConfig.Cpu.Recompiler.UseMicroVU1)
-#define CHECK_EEREC				(!g_Session.ForceDisableEErec && EmuConfig.Cpu.Recompiler.EnableEE)
-#define CHECK_IOPREC			(!g_Session.ForceDisableIOPrec && EmuConfig.Cpu.Recompiler.EnableIOP)
-#define CHECK_VU0REC			(!g_Session.ForceDisableVU0rec && EmuConfig.Cpu.Recompiler.EnableVU0)
-#define CHECK_VU1REC			(!g_Session.ForceDisableVU1rec && EmuConfig.Cpu.Recompiler.EnableVU1)
+#define CHECK_MICROVU0				(EmuConfig.Cpu.Recompiler.UseMicroVU0)
+#define CHECK_MICROVU1				(EmuConfig.Cpu.Recompiler.UseMicroVU1)
+#define CHECK_EEREC					(!g_Session.ForceDisableEErec && EmuConfig.Cpu.Recompiler.EnableEE)
+#define CHECK_IOPREC				(!g_Session.ForceDisableIOPrec && EmuConfig.Cpu.Recompiler.EnableIOP)
+#define CHECK_VU0REC				(!g_Session.ForceDisableVU0rec && EmuConfig.Cpu.Recompiler.EnableVU0)
+#define CHECK_VU1REC				(!g_Session.ForceDisableVU1rec && EmuConfig.Cpu.Recompiler.EnableVU1)
 
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define CHECK_VUADDSUBHACK			(EmuConfig.Gamefixes.VuAddSubHack) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
@@ -213,6 +238,7 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_VU_SIGN_OVERFLOW		(EmuConfig.Cpu.vuSignOverflow)
 #define CHECK_VU_UNDERFLOW			(EmuConfig.Cpu.vuUnderflow)
 #define CHECK_VU_EXTRA_FLAGS		0	// Always disabled now // Sets correct flags in the sVU recs
+
 #define CHECK_FPU_OVERFLOW			(EmuConfig.Cpu.fpuOverflow)
 #define CHECK_FPU_EXTRA_OVERFLOW	(EmuConfig.Cpu.fpuExtraOverflow) // If enabled, Operands are checked for infinities before being used in the FPU recs
 #define CHECK_FPU_EXTRA_FLAGS		1	// Always enabled now // Sets D/I flags on FPU instructions

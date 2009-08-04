@@ -25,38 +25,44 @@ void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Speedhacks" );
 
-	IniBitfield( EECycleRate, 0 );
-	IniBitfield( VUCycleSteal, 0 );
-	IniBitBool( IopCycleRate_X2, false );
-	IniBitBool( IntcStat, false );
-	IniBitBool( BIFC0, false );
+	IniBitfield( EECycleRate,		0 );
+	IniBitfield( VUCycleSteal,		0 );
+	IniBitBool( IopCycleRate_X2,	false );
+	IniBitBool( IntcStat,			false );
+	IniBitBool( BIFC0,				false );
 
 	ini.SetPath( L".." );
 }
 
-void Pcsx2Config::ProfilerSettings::LoadSave( IniInterface& ini )
+void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Profiler" );
+	
 	IniBitBool( Enabled,		false );
 	IniBitBool( RecBlocks_EE,	true );
 	IniBitBool( RecBlocks_IOP,	true );
 	IniBitBool( RecBlocks_VU0,	true );
 	IniBitBool( RecBlocks_VU1,	true );
+	
 	ini.SetPath( L".." );
 }
 
-void Pcsx2Config::RecompilerSettings::LoadSave( IniInterface& ini )
+void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"Recompiler" );
+	
 	IniBitBool( EnableEE,	true );
 	IniBitBool( EnableIOP,	true );
 	IniBitBool( EnableVU0,	true );
 	IniBitBool( EnableVU1,	true );
+	
 	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 {
+	ini.SetPath( L"CPU" );
+
 	IniEntry( sseMXCSR,				DEFAULT_sseMXCSR );
 	IniEntry( sseVUMXCSR,			DEFAULT_sseVUMXCSR );
 
@@ -71,17 +77,41 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 
 	Recompiler.LoadSave( ini );
 	Profiler.LoadSave( ini );
+	
+	ini.SetPath( L".." );
+}
+
+void Pcsx2Config::VideoOptions::LoadSave( IniInterface& ini )
+{
+	ini.SetPath( L"Video" );
+	
+	ini.SetPath( L".." );
+}
+
+void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
+{
+	ini.SetPath( L"Video" );
+
+	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::LoadSave( IniInterface& ini )
 {
 	ini.SetPath( L"EmuCore" );
-	IniEntry( CdvdVerboseReads,		false );
+	
+	IniBitBool( CdvdVerboseReads,		false );
+	IniBitBool( CdvdDumpBlocks,			false );
+	IniBitBool( EnablePatches,			false );
+
+	IniBitBool( closeGSonEsc,			false );
+	IniBitBool( McdEnableEjection,		false );
 
 	// Process various sub-components:
 
 	Speedhacks.LoadSave( ini );
 	Cpu.LoadSave( ini );
+	Video.LoadSave( ini );
+	Gamefixes.LoadSave( ini );
 	
 	ini.SetPath( L".." );
 	ini.Flush();
