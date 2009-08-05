@@ -359,13 +359,15 @@ microVUt(void) mVUtestCycles(mV) {
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
-	u32* jmp32 = JG32(0);
-		MOV32ItoR(gprT2, xPC);
-		if (isVU1)  CALLFunc((uptr)mVUwarning1);
-		//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
-		MOV32ItoR(gprR, Roffset); // Restore gprR
-		mVUendProgram(mVU, 0, NULL, NULL, NULL);
-	x86SetJ32(jmp32);
+	if (IsDevBuild || !isVU1) {
+		u32* jmp32 = JG32(0);
+			MOV32ItoR(gprT2, xPC);
+			if (isVU1)  CALLFunc((uptr)mVUwarning1);
+			//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
+			MOV32ItoR(gprR, Roffset); // Restore gprR
+			mVUendProgram(mVU, 0, NULL, NULL, NULL);
+		x86SetJ32(jmp32);
+	}
 }
 
 microVUt(void) mVUinitConstValues(mV) {
