@@ -75,15 +75,19 @@ microVUt(void) doSwapOp(mV) {
 	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
 }
 
-microVUt(void) doIbit(mV) { 
+microVUt(void) doIbit(microVU* mVU) { 
 	if (mVUup.iBit) { 
 		incPC(-1);
+		u32 tempI;
+		mVU->regAlloc->clearRegVF(33);
+
 		if (CHECK_VU_OVERFLOW && ((curI & 0x7fffffff) >= 0x7f800000)) {
 			Console::Status("microVU%d: Clamping I Reg", params mVU->index);
-			int tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
-			MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, tempI); 
+			tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
 		}
-		else MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, curI); 
+		else tempI = curI;
+		
+		MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, tempI);
 		incPC(1);
 	} 
 }
@@ -174,7 +178,9 @@ microVUt(void) mVUoptimizePipeState(mV) {
 	for (int i = 0; i < 16; i++) {
 		optimizeReg(mVUregs.VI[i]);
 	}
-	mVUregs.r = 0;
+	if (mVUregs.q) { optimizeReg(mVUregs.q); if (!mVUregs.q) { incQ(); } }
+	if (mVUregs.p) { optimizeReg(mVUregs.p); if (!mVUregs.p) { incP(); } }
+	mVUregs.r = 0; // There are no stalls on the R-reg, so its Safe to discard info
 }
 
 // Recompiles Code for Proper Flags and Q/P regs on Block Linkings
@@ -204,12 +210,12 @@ microVUt(void) mVUincCycles(mV, int x) {
 	}
 	if (mVUregs.q) {
 		if (mVUregs.q > 4) { calcCycles(mVUregs.q, x); if (mVUregs.q <= 4) { mVUinfo.doDivFlag = 1; } }
-		else { calcCycles(mVUregs.q, x); }
+		else			   { calcCycles(mVUregs.q, x); }
 		if (!mVUregs.q) { incQ(); }
 	}
 	if (mVUregs.p) {
 		calcCycles(mVUregs.p, x);
-		if (!mVUregs.p || (mVUregs.p && mVUregsTemp.p)) { incP(); }
+		if (!mVUregs.p || mVUregsTemp.p) { incP(); }
 	}
 	if (mVUregs.xgkick) {
 		calcCycles(mVUregs.xgkick, x);
@@ -277,7 +283,8 @@ microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip
 
 	if (isEbit) {
 		mVUprint("mVUcompile ebit");
-		memset(&mVUinfo, 0, sizeof(mVUinfo));
+		memset(&mVUinfo,	 0, sizeof(mVUinfo));
+		memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));
 		mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 		mVUcycles -= 100;
 		qInst = mVU->q;
@@ -430,13 +437,12 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	// Sets Up Flag instances
 	int xStatus[4], xMac[4], xClip[4];
 	int xCycles = mVUsetFlags(mVU, xStatus, xMac, xClip);
-	mVUtestCycles(mVU);
-
+	
 	// Fix up vi15 const info for propagation through blocks
 	mVUregs.vi15 = (mVUconstReg[15].isValid && !CHECK_VU_CONSTHACK) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
 
-	// Optimize the End Pipeline State for nicer Block Linking
-	mVUoptimizePipeState(mVU);
+	mVUoptimizePipeState(mVU); // Optimize the End Pipeline State for nicer Block Linking
+	mVUtestCycles(mVU);		   // Update VU Cycles and Exit Early if Necessary
 
 	// Second Pass
 	iPC = mVUstartPC;

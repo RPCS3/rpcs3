@@ -94,6 +94,11 @@ void mVUloadReg2(int reg, int gprReg, uptr offset, int xyzw) {
 	}
 }
 
+void mVUloadIreg(int reg, int xyzw, VURegs* vuRegs) {
+	SSE_MOVSS_M32_to_XMM(reg, (uptr)&vuRegs->VI[REG_I].UL);
+	if (!_XYZWss(xyzw)) SSE_SHUFPS_XMM_to_XMM(reg, reg, 0);
+}
+
 // Modifies the Source Reg!
 void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 	/*SSE_MOVAPS_M128_to_XMM(xmmT2, offset);

@@ -152,6 +152,7 @@ microVUt(int) mVUsetFlags(mV, int* xStatus, int* xMac, int* xClip) {
 	}
 
 	mVUregs.flags = ((__Clip) ? 0 : (xC << 2)) | ((__Status) ? 0 : xS);
+	iPC = endPC;
 	return cycles;
 }
 

@@ -120,18 +120,18 @@ void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
 
 // Sets Up Ft Reg for Normal, BC, I, and Q Cases
 void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
-	opCase1 { 
+	opCase1 {
 		if (_XYZW_SS2) { Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W); tempFt = Ft; }
 		else		   { Ft = mVU->regAlloc->allocReg(_Ft_);			  tempFt = -1; }
 	}
-	opCase2 { 
+	opCase2 {
 		tempFt = mVU->regAlloc->allocReg(_Ft_);
-		Ft = mVU->regAlloc->allocReg();
+		Ft	   = mVU->regAlloc->allocReg();
 		mVUunpack_xyzw(Ft, tempFt, _bc_);
 		mVU->regAlloc->clearNeeded(tempFt);
 		tempFt = Ft;
 	}
-	opCase3 { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getIreg(mVU, Ft, 1); }
+	opCase3 { Ft = mVU->regAlloc->allocReg(33, 0, _X_Y_Z_W); tempFt = Ft; }
 	opCase4 {
 		if (_XYZW_SS && !mVUinfo.readQ) { Ft = xmmPQ; tempFt = -1; }
 		else { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getQreg(Ft, mVUinfo.readQ); }

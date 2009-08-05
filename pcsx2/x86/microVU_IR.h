@@ -163,9 +163,10 @@ struct microIR {
 void mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW);
 void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW);
 void mVUloadReg(int reg, uptr offset, int xyzw);
+void mVUloadIreg(int reg, int xyzw, VURegs* vuRegs);
 
 struct microXMM {
-	int  reg;		// VF Reg Number Stored (-1 = Temp; 0 = vf0 and will not be written back; 32 = ACC)
+	int  reg;		// VF Reg Number Stored (-1 = Temp; 0 = vf0 and will not be written back; 32 = ACC; 33 = I reg)
 	int  xyzw;		// xyzw to write back (0 = Don't write back anything AND cached vfReg has all vectors valid)
 	int  count;		// Count of when last used
 	bool isNeeded;	// Is needed for current instruction
@@ -221,10 +222,16 @@ public:
 		xmmReg[reg].xyzw	 =  0;
 		xmmReg[reg].isNeeded =  0;
 	}
+	void clearRegVF(int VFreg) {
+		for (int i = 0; i < xmmTotal; i++) {
+			if (xmmReg[i].reg == VFreg) clearReg(i);
+		}
+	}
 	void writeBackReg(int reg, bool invalidateRegs = 1) {
 		if ((xmmReg[reg].reg > 0) && xmmReg[reg].xyzw) { // Reg was modified and not Temp or vf0
-			if (xmmReg[reg].reg == 32) mVUsaveReg(reg, (uptr)&vuRegs->ACC.UL[0], xmmReg[reg].xyzw, 1);
-			else mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
+			if		(xmmReg[reg].reg == 33) SSE_MOVSS_XMM_to_M32((uptr)&vuRegs->VI[REG_I].UL, reg);
+			else if (xmmReg[reg].reg == 32) mVUsaveReg(reg, (uptr)&vuRegs->ACC.UL[0],	 xmmReg[reg].xyzw, 1);
+			else							mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
 			if (invalidateRegs) {
 				for (int i = 0; i < xmmTotal; i++) {
 					if ((i == reg) || xmmReg[i].isNeeded) continue;
@@ -307,13 +314,15 @@ public:
 
 		if (vfWriteReg >= 0) { // Reg Will Be Modified (allow partial reg loading)
 			if	   ((vfLoadReg ==  0) && !(xyzw & 1)) { SSE2_PXOR_XMM_to_XMM(x, x); }
-			else if	(vfLoadReg == 32) mVUloadReg(x, (uptr)&vuRegs->ACC.UL[0], xyzw);
-			else if (vfLoadReg >=  0) mVUloadReg(x, (uptr)&vuRegs->VF[vfLoadReg].UL[0], xyzw);
+			else if	(vfLoadReg == 33) mVUloadIreg(x, xyzw, vuRegs);
+			else if	(vfLoadReg == 32) mVUloadReg (x, (uptr)&vuRegs->ACC.UL[0], xyzw);
+			else if (vfLoadReg >=  0) mVUloadReg (x, (uptr)&vuRegs->VF[vfLoadReg].UL[0], xyzw);
 			xmmReg[x].reg  = vfWriteReg;
 			xmmReg[x].xyzw = xyzw;
 		}
 		else { // Reg Will Not Be Modified (always load full reg for caching)
-			if		(vfLoadReg == 32) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->ACC.UL[0]);
+			if		(vfLoadReg == 33) mVUloadIreg(x, 0xf, vuRegs);
+			else if	(vfLoadReg == 32) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->ACC.UL[0]);
 			else if (vfLoadReg >=  0) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->VF[vfLoadReg].UL[0]);
 			xmmReg[x].reg  = vfLoadReg;
 			xmmReg[x].xyzw = 0;

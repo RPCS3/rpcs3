@@ -84,6 +84,7 @@ declareAllVariables
 #define _XYZW_SS	(_X+_Y+_Z+_W==1)
 #define _XYZW_SS2	(_XYZW_SS && (_X_Y_Z_W != 8))
 #define _XYZW_PS	(_X_Y_Z_W == 0xf)
+#define _XYZWss(x)	((x==8) || (x==4) || (x==2) || (x==1))
 
 #define _bc_	 (mVU->code & 0x3)
 #define _bc_x	((mVU->code & 0x3) == 0)
