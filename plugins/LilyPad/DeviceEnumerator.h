@@ -9,5 +9,5 @@ struct InitInfo {
 	HWND hWndButton;
 };
 
-void EnumDevices();
+void EnumDevices(int hideDXXinput);
 

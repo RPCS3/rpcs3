@@ -112,14 +112,26 @@ void Device::AddFFAxis(const wchar_t *displayName, int id) {
 	ffAxes[numFFAxes].id = id;
 	ffAxes[numFFAxes].displayName = wcsdup(displayName);
 	numFFAxes++;
+	int bindingsExist = 0;
 	for (int port=0; port<2; port++) {
 		for (int slot=0; slot<4; slot++) {
 			for (int i=0; i<pads[port][slot].numFFBindings; i++) {
 				ForceFeedbackBinding *b = pads[port][slot].ffBindings+i;
 				b->axes = (AxisEffectInfo*) realloc(b->axes, sizeof(AxisEffectInfo) * (numFFAxes));
 				memset(b->axes + (numFFAxes-1), 0, sizeof(AxisEffectInfo));
+				bindingsExist = 1;
 			}
 		}
+	}
+	// Generally the case when not loading a binding file.
+	if (!bindingsExist) {
+		int i = numFFAxes-1;
+		ForceFeedbackAxis temp = ffAxes[i];
+		while (i && temp.id < ffAxes[i-1].id) {
+			ffAxes[i] = ffAxes[i-1];
+			i--;
+		}
+		ffAxes[i] = temp;
 	}
 }
 
