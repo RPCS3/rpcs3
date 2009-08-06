@@ -131,6 +131,11 @@ struct Elf32_Rel {
 char args[256]="ez.m2v";	//to be accessed by other files
 uptr args_ptr;		//a big value; in fact, it is an address
 
+static bool isEmpty(int addr)
+{
+	return ((PS2MEM_BASE[addr] == 0) || (PS2MEM_BASE[addr] == 32));
+}
+
 //in a0 is passed the address of the command line args,
 //i.e. a pointer to an area like this:
 //+00 unknown/unused
@@ -142,19 +147,27 @@ uptr args_ptr;		//a big value; in fact, it is an address
 //+08+4*argc the program name(first param)						   <--
 //+08+4*argc+strlen(argv[0]+1) the rest of params; i.e. a copy of 'args'
 //                                         see above 'char args[256];'
+
+// The results of this function will normally be that it finds an arg at 13 chars, and another at 0.
+// It'd probably be easier to 0 out all 256 chars, split args, copy all the arguments in, and note
+// the locations of each split...  --arcum42
 static uint parseCommandLine( const char *filename )
 {
-	if ( ( args_ptr != 0xFFFFFFFF ) && ( args_ptr > 264 ) )
-	{	// 4 + 4 + 256
-		const char * p;
-		int  argc;
-		int i;
+	if ( ( args_ptr != 0xFFFFFFFF ) && ( args_ptr > (4 + 4 + 256) ) )
+	{
+		const char *p;
+		int argc, i, ret = 0;
 
 		args_ptr -= 256;
 
 		args[ 255 ] = 0;
-		memcpy( &PS2MEM_BASE[ args_ptr ], args, 256 );				//params 1, 2, etc copied
+		
+		// Copy the parameters into the section of memory at args_ptr, 
+		// then zero out anything past the end of args till 256 chars is reached.
+		memcpy( &PS2MEM_BASE[ args_ptr ], args, 256 );
 		memset( &PS2MEM_BASE[ args_ptr + strlen( args ) ], 0, 256 - strlen( args ) );
+		
+		// Set p to just the filename, no path.
 #ifdef _WIN32
 		p = strrchr( filename, '\\' );
 #else	//linux
@@ -166,45 +179,61 @@ static uint parseCommandLine( const char *filename )
 		else
 			p = filename;
 		
+		//DevCon::WriteLn("parseCommandLine: args = '%s'; p = '%s'", params args, p);
+		
 		args_ptr -= strlen( p ) + 1;
 		
-		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );						//fill param 0; i.e. name of the program
-
-		for ( i = strlen( p ) + 1 + 256, argc = 0; i > 0; i-- )
+		//fill param 0; i.e. name of the program
+		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );
+		
+		// We only filled 256 chars above. Lets not loop for more then that.
+		for ( i = /*strlen(p) + 1 + */256, argc = 0; i > 0; i-- )
 		{
-			while (i && ((PS2MEM_BASE[ args_ptr + i ] == 0) || (PS2MEM_BASE[ args_ptr + i ] == 32))) 
-			{ i--; }
+			// Decrease i until arg_ptr + i points at a spot that is not a space or 0 (or i is 0).
+			while (i && isEmpty(args_ptr + i ))  { i--; }
 			
+			// If the last char is a space, set it to 0.
 			if ( PS2MEM_BASE[ args_ptr + i + 1 ] == ' ') PS2MEM_BASE[ args_ptr + i + 1 ] = 0;
 			
-			while (i && (PS2MEM_BASE[ args_ptr + i ] != 0) && (PS2MEM_BASE[ args_ptr + i] != 32))
-			{ i--; }
+			// Decrease i until we run into another space or 0 (or i is 0). 
+			// (in other words, so far, we went backwards by a word.)
+			while (i && !isEmpty(args_ptr + i )) { i--; }
 			
-			if ((PS2MEM_BASE[ args_ptr + i ] != 0) && (PS2MEM_BASE[ args_ptr + i ] != 32))
-			{	//i==0
+			// if the spot we are on is not a space or null (ie, i<=0, given the last while statement):
+			if (!isEmpty(args_ptr + i ))
+			{
+				// Presumably increases the number of arguments, and lets the ps2 know about this argument.
 				argc++;
+				ret = args_ptr - 4 - 4 - argc * 4;
 				
-				if ( args_ptr - 4 - 4 - argc * 4 < 0 ) // fixme - Should this be cast to a signed int?
-					return 0;
-
+				//DevCon::WriteLn("parseCommandLine: i = %d", params i);
+				if (ret < 0 ) return 0;
 				((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i;
+				//DevCon::WriteLn("PS2MEM_BASE[%d / 4 - %d (%d)] = %d", params args_ptr, argc, (args_ptr / 4 - argc), (args_ptr + i));
 			}
 			else
 			{
-				if ( ( PS2MEM_BASE[ args_ptr + i + 1 ] != 0 ) && ( PS2MEM_BASE[ args_ptr + i + 1 ] != 32 ) )
+				// If we ran into a word.
+				if (!isEmpty(args_ptr + i + 1))
 				{
+					// Presumably increases the number of arguments, and lets the ps2 know about this argument.
 					argc++;
-					if ( args_ptr - 4 - 4 - argc * 4 < 0 ) // fixme - Should this be cast to a signed int?
-						return 0;
-
+					ret = args_ptr - 4 - 4 - argc * 4;
+					
+					//DevCon::WriteLn("parseCommandLine: i = %d", params i);
+					if (ret < 0 ) return 0;
 					((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i + 1;
+					//DevCon::WriteLn("PS2MEM_BASE[%d / 4 - %d (%d)] = %d", params args_ptr, argc, (args_ptr / 4 - argc), (args_ptr + i));
 				}
 			}
 		}
+		
+		// Pass the number of arguments, and if we have arguments.
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 1 ] = argc;		      //how many args
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 2 ] = ( argc > 0);	//have args?	//not used, cannot be filled at all
+		//DevCon::WriteLn("parseCommandLine: argc = %d", params argc);
 
-		return ( args_ptr - argc * 4 - 8 );
+		return ret;
 	}
 
 	return 0;
@@ -487,8 +516,11 @@ u32 loadElfCRC( const char* filename )
 	TocEntry toc;
 
 	IsoFS_init( );
-	if ( IsoFS_findFile( filename + strlen( "cdromN:" ), &toc ) == -1 )
-		return 0;
+	
+	Console::Status("loadElfCRC: %s", params filename);
+	
+	int mylen = strlen( "cdromN:" );
+	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
 
 	DevCon::Status( "loadElfFile: %d bytes", params toc.fileSize );
 	u32 crcval = ElfObject( filename, toc.fileSize ).GetCRC();
@@ -519,7 +551,7 @@ int loadElfFile(const char *filename)
 	if (strnicmp( filename, "cdrom0:", strlen( "cdromN:" ) ) &&
 		strnicmp( filename, "cdrom1:", strlen( "cdromN:" ) ) )
 	{
-		// Loading from a file (or non-cd image)
+		DevCon::WriteLn("Loading from a file (or non-cd image)");
 		struct stat sbuf;
 		if ( stat( filename, &sbuf ) != 0 )
 			return -1;
@@ -527,7 +559,7 @@ int loadElfFile(const char *filename)
 	}
 	else
 	{
-		// Loading from a CD rom or CD image.
+		DevCon::WriteLn("Loading from a CD rom or CD image");
 		TocEntry toc;
 		IsoFS_init( );
 		if ( IsoFS_findFile( filename + strlen( "cdromN:" ), &toc ) == -1 )
