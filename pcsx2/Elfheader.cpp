@@ -186,8 +186,9 @@ static uint parseCommandLine( const char *filename )
 		//fill param 0; i.e. name of the program
 		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );
 		
-		// We only filled 256 chars above. Lets not loop for more then that.
-		for ( i = /*strlen(p) + 1 + */256, argc = 0; i > 0; i-- )
+		// Looking closer, it does decrement args_ptr by strlen(p) + 1, so, while I'm not sure the filename should really be scanned over,
+		// I'll put it back to strlen(p) + 1 + 256 for the moment.
+		for ( i = strlen(p) + 1 + 256, argc = 0; i > 0; i-- )
 		{
 			// Decrease i until arg_ptr + i points at a spot that is not a space or 0 (or i is 0).
 			while (i && isEmpty(args_ptr + i ))  { i--; }
