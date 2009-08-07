@@ -100,12 +100,55 @@ bool GSUtil::HasCompatibleBits(uint32 spsm, uint32 dpsm)
 
 bool GSUtil::CheckDirectX()
 {
-	if(HINSTANCE hDll = LoadLibrary(format("d3dx9_%d.dll", D3DX_SDK_VERSION).c_str()))
+	OSVERSIONINFOEX version;
+	memset(&version, 0, sizeof(version));
+	version.dwOSVersionInfoSize = sizeof(version);
+	
+	if(GetVersionEx((OSVERSIONINFO*)&version))
+	{
+		printf("Windows %d.%d.%d",
+			version.dwMajorVersion, 
+			version.dwMinorVersion, 
+			version.dwBuildNumber);
+
+		if(version.wServicePackMajor > 0)
+		{
+			printf(" (%s %d.%d)",
+				version.szCSDVersion, 
+				version.wServicePackMajor,
+				version.wServicePackMinor);
+		}
+
+		printf("\n");
+	}
+
+	if(IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION))
+	{
+		D3DADAPTER_IDENTIFIER9 id;
+
+		if(S_OK == d3d->GetAdapterIdentifier(D3DADAPTER_DEFAULT, 0, &id))
+		{
+			printf("%s (%d.%d.%d.%d)\n",
+				id.Description, 
+				id.DriverVersion.HighPart >> 16, 
+				id.DriverVersion.HighPart & 0xffff, 
+				id.DriverVersion.LowPart >> 16, 
+				id.DriverVersion.LowPart & 0xffff);
+		}
+
+		d3d->Release();
+	}
+
+	string d3dx9_dll = format("d3dx9_%d.dll", D3DX_SDK_VERSION);
+
+	if(HINSTANCE hDll = LoadLibrary(d3dx9_dll.c_str()))
 	{
 		FreeLibrary(hDll);
 	}
 	else
 	{
+		printf("Cannot find %s\n", d3dx9_dll.c_str());
+
 		if(MessageBox(NULL, "You need to update directx, would you like to do it now?", "GSdx", MB_YESNO) == IDYES)
 		{
 			const char* url = "http://www.microsoft.com/downloads/details.aspx?FamilyId=2DA43D38-DB71-4C1B-BC6A-9B6652CD92A3";

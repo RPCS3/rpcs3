@@ -392,9 +392,9 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 				p.sel.pabe = 1;
 			}
 
-			if(PRIM->AA1 && (primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS))
+			if(m_aa1 && PRIM->AA1 && (primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS))
 			{
-				p.sel.aa1 = m_aa1 ? 1 : 0;
+				p.sel.aa1 = 1;
 			}
 		}
 

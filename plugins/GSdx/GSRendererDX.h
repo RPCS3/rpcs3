@@ -90,22 +90,24 @@ public:
 		else
 		{
 			om_dssel.ztst = ZTST_ALWAYS;
-			om_dssel.zwe = 0;
 		}
-/*
-		om_dssel.zte = context->TEST.ZTE;
-		om_dssel.ztst = context->TEST.ZTST;
-		om_dssel.zwe = !context->ZBUF.ZMSK;
-*/
-		om_dssel.date = context->FRAME.PSM != PSM_PSMCT24 ? context->TEST.DATE : 0;
-		om_dssel.fba = m_fba ? context->FBA.FBA : 0;
+
+		if(context->FRAME.PSM != PSM_PSMCT24)
+		{
+			om_dssel.date = context->TEST.DATE;
+		}
+
+		if(m_fba)
+		{
+			om_dssel.fba = context->FBA.FBA;
+		}
 
 		GSTextureFX::OMBlendSelector om_bsel;
 
-		om_bsel.abe = !IsOpaque();
-
-		if(om_bsel.abe)
+		if(!IsOpaque())
 		{
+			om_bsel.abe = PRIM->ABE || PRIM->AA1 && m_vt.m_primclass == GS_LINE_CLASS;
+
 			om_bsel.a = context->ALPHA.A;
 			om_bsel.b = context->ALPHA.B;
 			om_bsel.c = context->ALPHA.C;
