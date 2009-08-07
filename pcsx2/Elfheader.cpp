@@ -151,12 +151,14 @@ static bool isEmpty(int addr)
 // The results of this function will normally be that it finds an arg at 13 chars, and another at 0.
 // It'd probably be easier to 0 out all 256 chars, split args, copy all the arguments in, and note
 // the locations of each split...  --arcum42
+
 static uint parseCommandLine( const char *filename )
 {
 	if ( ( args_ptr != 0xFFFFFFFF ) && ( args_ptr > (4 + 4 + 256) ) )
 	{
 		const char *p;
 		int argc, i, ret = 0;
+		u32 args_end;
 
 		args_ptr -= 256;
 
@@ -166,6 +168,7 @@ static uint parseCommandLine( const char *filename )
 		// then zero out anything past the end of args till 256 chars is reached.
 		memcpy( &PS2MEM_BASE[ args_ptr ], args, 256 );
 		memset( &PS2MEM_BASE[ args_ptr + strlen( args ) ], 0, 256 - strlen( args ) );
+		args_end = args_ptr + strlen( args );
 		
 		// Set p to just the filename, no path.
 #ifdef _WIN32
@@ -186,9 +189,8 @@ static uint parseCommandLine( const char *filename )
 		//fill param 0; i.e. name of the program
 		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );
 		
-		// Looking closer, it does decrement args_ptr by strlen(p) + 1, so, while I'm not sure the filename should really be scanned over,
-		// I'll put it back to strlen(p) + 1 + 256 for the moment.
-		for ( i = strlen(p) + 1 + 256, argc = 0; i > 0; i-- )
+		// Start from the end of where we wrote to, not including all the zero'd out area.
+		for ( i = args_end - args_ptr + 1, argc = 0; i > 0; i-- )
 		{
 			// Decrease i until arg_ptr + i points at a spot that is not a space or 0 (or i is 0).
 			while (i && isEmpty(args_ptr + i ))  { i--; }
@@ -233,7 +235,7 @@ static uint parseCommandLine( const char *filename )
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 1 ] = argc;		      //how many args
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 2 ] = ( argc > 0);	//have args?	//not used, cannot be filled at all
 		//DevCon::WriteLn("parseCommandLine: argc = %d", params argc);
-
+		
 		return ret;
 	}
 
