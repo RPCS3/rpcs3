@@ -216,6 +216,19 @@ static void SetSingleAffinity()
 #endif
 }
 
+static void UnSetSingleAffinity()
+{
+#ifdef _WINDOWS_
+	HANDLE s_threadId = GetCurrentThread();
+	s_oldmask = SetThreadAffinityMask( s_threadId, 0xFFFFFFFF );
+
+	if( s_oldmask == ERROR_INVALID_PARAMETER )
+	{
+		Console::Notice("CpuDetect: UnSetThreadAffinityMask failed...");
+	}
+#endif
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 s64 CPUSpeedHz( u64 time )
@@ -489,5 +502,9 @@ void cpudetectInit()
 
 	// This will assign values into cpuinfo.LogicalCores and PhysicalCores
 	Threading::CountLogicalCores( LogicalCoresPerPhysicalCPU, PhysicalCoresPerPhysicalCPU );
+
+	// Undo previous SetSingleAffinity() here, so the host OS can handle load distribution
+	// (up to 25% faster on athlonx2, about 5% faster on core2)
+	UnSetSingleAffinity();
 }
 
