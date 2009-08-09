@@ -117,7 +117,7 @@ extern "C"
 PCSX2_ALIGNED16(u8 _readbits[80]);	//local buffer (ring buffer)
 u8* readbits = _readbits; // always can decrement by one 1qw
 
-#define SATURATE_4BITS(val) ((val)>15 ? 15 : (val))
+//#define SATURATE_4BITS(val) ((val)>15 ? 15 : (val))
 
 __forceinline void IPUProcessInterrupt()
 {
@@ -317,21 +317,20 @@ __forceinline u64 ipuRead64(u32 mem)
 void ipuSoftReset()
 {
 	mpeg2_init();
-
 	FIFOto_clear();
-	memzero_obj(fifo_output);
-	FOwritepos = 0;
-	FOreadpos = 0;
+	FIFOfrom_clear();
+	
 	coded_block_pattern = 0;
-
+	
 	ipuRegs->ctrl._u32 = 0;
+	ipuRegs->top = 0;
+	ipuCurCmd = 0xffffffff;
+	
 	g_BP.BP = 0;
-	g_BP.IFC = 0;
 	g_BP.FP = 0;
 	g_BP.bufferhasnew = 0;
-	ipuRegs->top = 0;
+	
 	g_nCmdIndex = 0;
-	ipuCurCmd = 0xffffffff;
 	g_nCmdPos[0] = 0;
 	g_nCmdPos[1] = 0;
 }
@@ -404,10 +403,10 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 static void ipuBCLR(u32 val)
 {
 	FIFOto_clear();
+	
 	g_BP.BP = val & 0x7F;
 	g_BP.FP = 0;
 	g_BP.bufferhasnew = 0;
-	g_BP.IFC = 0;
 	ipuRegs->ctrl.BUSY = 0;
 	ipuRegs->cmd.BUSY = 0;
 	memzero_ptr<80>(readbits);
@@ -1333,14 +1332,12 @@ int FIFOto_read(void *value)
 	}
 
 	// transfer 1 qword, split into two transfers
-	((u32*)value)[0] = fifo_input[FIreadpos];
-	fifo_input[FIreadpos] = 0;
-	((u32*)value)[1] = fifo_input[FIreadpos+1];
-	fifo_input[FIreadpos+1] = 0;
-	((u32*)value)[2] = fifo_input[FIreadpos+2];
-	fifo_input[FIreadpos+2] = 0;
-	((u32*)value)[3] = fifo_input[FIreadpos+3];
-	fifo_input[FIreadpos+3] = 0;
+	for (int i = 0; i <= 3; i++)
+	{
+		((u32*)value)[i] = fifo_input[FIreadpos + i];
+		fifo_input[FIreadpos + i] = 0;
+	}
+	
 	FIreadpos = (FIreadpos + 4) & 31;
 	g_BP.IFC--;
 	return 1;
@@ -1356,10 +1353,10 @@ int FIFOto_write(u32* pMem, int size)
 
 	while (transsize-- > 0)
 	{
-		fifo_input[FIwritepos] = pMem[0];
-		fifo_input[FIwritepos+1] = pMem[1];
-		fifo_input[FIwritepos+2] = pMem[2];
-		fifo_input[FIwritepos+3] = pMem[3];
+		for (int i = 0; i <= 3; i++)
+		{
+			fifo_input[FIwritepos + i] = pMem[i];
+		}
 		FIwritepos = (FIwritepos + 4) & 31;
 		pMem += 4;
 	}
@@ -1597,6 +1594,13 @@ int IPU1dma()
 	return totalqwc;
 }
 
+void FIFOfrom_clear()
+{
+	memzero_obj(fifo_output);
+	ipuRegs->ctrl.OFC = 0;
+	FOreadpos = 0;
+	FOwritepos = 0;
+}
 
 int FIFOfrom_write(const u32 *value, int size)
 {
@@ -1609,10 +1613,10 @@ int FIFOfrom_write(const u32 *value, int size)
 
 	while (transsize-- > 0)
 	{
-		fifo_output[FOwritepos] = ((u32*)value)[0];
-		fifo_output[FOwritepos+1] = ((u32*)value)[1];
-		fifo_output[FOwritepos+2] = ((u32*)value)[2];
-		fifo_output[FOwritepos+3] = ((u32*)value)[3];
+		for (int i = 0; i <= 3; i++)
+		{
+			fifo_output[FOwritepos + i] = ((u32*)value)[i];
+		}
 		FOwritepos = (FOwritepos + 4) & 31;
 		value += 4;
 	}
@@ -1627,14 +1631,11 @@ int FIFOfrom_write(const u32 *value, int size)
 static __forceinline void _FIFOfrom_readsingle(void *value)
 {
 	// transfer 1 qword, split into two transfers
-	((u32*)value)[0] = fifo_output[FOreadpos];
-	fifo_output[FOreadpos] = 0;
-	((u32*)value)[1] = fifo_output[FOreadpos+1];
-	fifo_output[FOreadpos+1] = 0;
-	((u32*)value)[2] = fifo_output[FOreadpos+2];
-	fifo_output[FOreadpos+2] = 0;
-	((u32*)value)[3] = fifo_output[FOreadpos+3];
-	fifo_output[FOreadpos+3] = 0;
+	for (int i = 0; i <= 3; i++)
+	{
+		((u32*)value)[i] = fifo_output[FOreadpos + i];
+		fifo_output[FOreadpos + i] = 0;
+	}
 	FOreadpos = (FOreadpos + 4) & 31;
 }
 
@@ -1657,8 +1658,6 @@ void FIFOfrom_read(void *value, int size)
 		size--;
 	}
 }
-
-
 
 int IPU0dma()
 {

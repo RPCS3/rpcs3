@@ -273,5 +273,6 @@ void FIFOfrom_read(void *value,int size);
 int FIFOto_read(void *value);
 int FIFOto_write(u32* pMem, int size);
 void FIFOto_clear();
+void FIFOfrom_clear();
 
 #endif
