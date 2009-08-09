@@ -1094,8 +1094,9 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 		break;
 		
 		case N_CD_READ: // CdRead
-			cdvd.SeekToSector =  (cdvd.Param[0] << 0) | (cdvd.Param[1] << 8) | (cdvd.Param[2]<< 16) | (cdvd.Param[3] << 24);
-			cdvd.nSectors =  (cdvd.Param[4] << 0) | (cdvd.Param[5] << 8) | (cdvd.Param[6]<< 16) | (cdvd.Param[7] << 24);
+			// Assign the seek to sector based on cdvd.Param[0]-[3], and the number of  sectors based on cdvd.Param[4]-[7].
+			cdvd.SeekToSector =  *(u32*) (cdvd.Param+0); 
+			cdvd.nSectors =  *(u32*)(cdvd.Param+4);
 			cdvd.RetryCnt = (cdvd.Param[8] == 0) ? 0x100 : cdvd.Param[8];
 			cdvd.SpindlCtrl = cdvd.Param[9];
 			cdvd.Speed = 24;
@@ -1129,8 +1130,9 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 		case N_CD_READ_CDDA: // CdReadCDDA
 		case N_CD_READ_XCDDA: // CdReadXCDDA
-			cdvd.SeekToSector =  (cdvd.Param[0] << 0) | (cdvd.Param[1] << 8) | (cdvd.Param[2]<< 16) | (cdvd.Param[3] << 24);
-			cdvd.nSectors =  (cdvd.Param[4] << 0) | (cdvd.Param[5] << 8) | (cdvd.Param[6]<< 16) | (cdvd.Param[7] << 24);
+			// Assign the seek to sector based on cdvd.Param[0]-[3], and the number of  sectors based on cdvd.Param[4]-[7].
+			cdvd.SeekToSector =  *(u32*) (cdvd.Param+0); 
+			cdvd.nSectors =  *(u32*)(cdvd.Param+4);
 		
 			if (cdvd.Param[8] == 0) 
 				cdvd.RetryCnt = 0x100;
@@ -1175,8 +1177,9 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 		break;
 
 		case N_DVD_READ: // DvdRead
-			cdvd.SeekToSector =  (cdvd.Param[0] << 0) | (cdvd.Param[1] << 8) | (cdvd.Param[2]<< 16) | (cdvd.Param[3] << 24);
-			cdvd.nSectors =  (cdvd.Param[4] << 0) | (cdvd.Param[5] << 8) | (cdvd.Param[6]<< 16) | (cdvd.Param[7] << 24);
+			// Assign the seek to sector based on cdvd.Param[0]-[3], and the number of  sectors based on cdvd.Param[4]-[7].
+			cdvd.SeekToSector =  *(u32*) (cdvd.Param+0); 
+			cdvd.nSectors =  *(u32*)(cdvd.Param+4);
 		
 			if (cdvd.Param[8] == 0) 
 				cdvd.RetryCnt = 0x100;

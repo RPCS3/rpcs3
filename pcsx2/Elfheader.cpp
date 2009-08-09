@@ -182,7 +182,6 @@ static uint parseCommandLine( const char *filename )
 		else
 			p = filename;
 		
-		//DevCon::WriteLn("parseCommandLine: args = '%s'; p = '%s'", params args, p);
 		
 		args_ptr -= strlen( p ) + 1;
 		
@@ -192,41 +191,34 @@ static uint parseCommandLine( const char *filename )
 		// Start from the end of where we wrote to, not including all the zero'd out area.
 		for ( i = args_end - args_ptr + 1, argc = 0; i > 0; i-- )
 		{
-			// Decrease i until arg_ptr + i points at a spot that is not a space or 0 (or i is 0).
 			while (i && isEmpty(args_ptr + i ))  { i--; }
 			
 			// If the last char is a space, set it to 0.
 			if ( PS2MEM_BASE[ args_ptr + i + 1 ] == ' ') PS2MEM_BASE[ args_ptr + i + 1 ] = 0;
 			
-			// Decrease i until we run into another space or 0 (or i is 0). 
-			// (in other words, so far, we went backwards by a word.)
 			while (i && !isEmpty(args_ptr + i )) { i--; }
 			
-			// if the spot we are on is not a space or null (ie, i<=0, given the last while statement):
-			if (!isEmpty(args_ptr + i ))
+			// Now that we've gone back a word, increase the number of arguments, 
+			// and mark the location of the argument. 
+			if (!isEmpty(args_ptr + i )) // i <= 0
 			{
-				// Presumably increases the number of arguments, and lets the ps2 know about this argument.
+				// If the spot we are on is not a space or null , use it.
 				argc++;
 				ret = args_ptr - 4 - 4 - argc * 4;
 				
-				//DevCon::WriteLn("parseCommandLine: i = %d", params i);
 				if (ret < 0 ) return 0;
 				((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i;
-				//DevCon::WriteLn("PS2MEM_BASE[%d / 4 - %d (%d)] = %d", params args_ptr, argc, (args_ptr / 4 - argc), (args_ptr + i));
 			}
 			else
 			{
-				// If we ran into a word.
 				if (!isEmpty(args_ptr + i + 1))
 				{
-					// Presumably increases the number of arguments, and lets the ps2 know about this argument.
+					// Otherwise, use the next character .
 					argc++;
 					ret = args_ptr - 4 - 4 - argc * 4;
 					
-					//DevCon::WriteLn("parseCommandLine: i = %d", params i);
 					if (ret < 0 ) return 0;
 					((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i + 1;
-					//DevCon::WriteLn("PS2MEM_BASE[%d / 4 - %d (%d)] = %d", params args_ptr, argc, (args_ptr / 4 - argc), (args_ptr + i));
 				}
 			}
 		}
@@ -234,7 +226,6 @@ static uint parseCommandLine( const char *filename )
 		// Pass the number of arguments, and if we have arguments.
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 1 ] = argc;		      //how many args
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 2 ] = ( argc > 0);	//have args?	//not used, cannot be filled at all
-		//DevCon::WriteLn("parseCommandLine: argc = %d", params argc);
 		
 		return ret;
 	}
