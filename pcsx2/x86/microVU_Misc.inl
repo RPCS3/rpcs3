@@ -39,8 +39,10 @@ void mVUclamp1(int reg, int regT1, int xyzw) {
 }
 
 // Used for Operand Clamping
-void mVUclamp2(int reg, int regT1, int xyzw) {
-	if (CHECK_VU_SIGN_OVERFLOW && (regT1 >= 0)) {
+void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw) {
+	if (CHECK_VU_SIGN_OVERFLOW) {
+		int regT1b = 0;
+		if (regT1 < 0) { regT1 = mVU->regAlloc->allocReg(); regT1b = 1; }
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
 				SSE_MOVSS_XMM_to_XMM (regT1, reg);
@@ -57,6 +59,7 @@ void mVUclamp2(int reg, int regT1, int xyzw) {
 				SSE_ORPS_XMM_to_XMM  (reg, regT1);
 				break;
 		}
+		if (regT1b) mVU->regAlloc->clearNeeded(regT1);
 	}
 	else mVUclamp1(reg, regT1, xyzw);
 }
@@ -355,7 +358,7 @@ void MIN_MAX_PS(microVU* mVU, int to, int from, int t1, int t2, bool min) {
 	if (t2b) mVU->regAlloc->clearNeeded(t2);
 }
 
-// Warning: Modifies from's upper 3 vectors, and t1
+// Warning: Modifies to's upper 3 vectors, and t1
 void MIN_MAX_SS(mV, int to, int from, int t1, bool min) {
 	bool t1b = 0;
 	if (t1 < 0) { t1 = mVU->regAlloc->allocReg(); t1b = 1; }
