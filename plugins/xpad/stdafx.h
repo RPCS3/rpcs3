@@ -38,6 +38,7 @@
 #include <shellapi.h>
 #include <atlbase.h>
 #include <xinput.h>
+#include <assert.h>
 
 // stdc
 

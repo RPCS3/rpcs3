@@ -8,7 +8,7 @@
 // Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
 // disabled in release builds. :)
 
-#ifdef _MSC_VER
+#if _MSC_VER < 1600
 #	pragma warning(disable:4244)	// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
 #	ifdef PCSX2_DEVBUILD
 #		define _SECURE_SCL 1

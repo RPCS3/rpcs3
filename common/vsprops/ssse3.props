@@ -1,6 +1,9 @@
 ﻿<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <SSEtype>SSSE3</SSEtype>
+  </PropertyGroup>
   <PropertyGroup>
-    <_PropertySheetDisplayName>sse3</_PropertySheetDisplayName>
+    <_PropertySheetDisplayName>ssse3</_PropertySheetDisplayName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -8,4 +11,9 @@
       <PreprocessorDefinitions>_M_SSE=0x301;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="SSEtype">
+      <Value>$(SSEtype)</Value>
+    </BuildMacro>
+  </ItemGroup>
 </Project>
