@@ -480,7 +480,7 @@ void CALLBACK NODISCdummyVOID()
 {
 }
 
-void CALLBACK NODISCnewDiskCB(void(CALLBACK*)())
+void CALLBACK NODISCnewDiskCB(__unused void (*callback)())
 {
 }
 

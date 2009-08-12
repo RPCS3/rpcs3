@@ -218,6 +218,7 @@ mtgsThreadObject::mtgsThreadObject() :
 
 void mtgsThreadObject::Start()
 {
+	m_post_InitDone.Reset();
 	Thread::Start();
 
 	// Wait for the thread to finish initialization (it runs GSinit, which can take

@@ -396,7 +396,7 @@ void CALLBACK ISOdummyVOID()
 {
 }
 
-void CALLBACK ISOnewDiskCB(void(CALLBACK*)())
+void CALLBACK ISOnewDiskCB(__unused void (*callback)())
 {
 }
 
