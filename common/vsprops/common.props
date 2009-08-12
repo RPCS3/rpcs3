@@ -21,6 +21,7 @@
       <AdditionalIncludeDirectories>"$(SolutionDir)3rdparty";"$(SolutionDir)3rdparty\w32pthreads\include";"$(SolutionDir)common\include";%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WIN32;_WIN32;__WIN32__;_WINDOWS;ENABLE_NLS;PACKAGE="pcsx2";TIXML_USE_STL;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
