@@ -2077,6 +2077,10 @@
 								>
 							</File>
 							<File
+								RelativePath="..\..\x86\microVU_Branch.inl"
+								>
+							</File>
+							<File
 								RelativePath="..\..\x86\microVU_Compile.inl"
 								>
 							</File>

@@ -22,23 +22,6 @@
 // Helper Macros
 //------------------------------------------------------------------
 
-#define branchCase(JMPcond) branchCaseFunct(mVU, bBlock, xStatus, xMac, xClip, xCycles, ajmp, JMPcond); break
-
-#define branchWarning() {																						\
-	if (mVUbranch) {																							\
-		Console::Error("microVU%d Warning: Branch in E-bit/Branch delay slot! [%04x]", params mVU->index, xPC);	\
-		mVUlow.isNOP = 1;																						\
-	}																											\
-}
-
-#define startLoop() {																	\
-	if (curI & _Mbit_)	{ Console::Status("microVU%d: M-bit set!", params getIndex); }	\
-	if (curI & _Dbit_)	{ DevCon::Status ("microVU%d: D-bit set!", params getIndex); }	\
-	if (curI & _Tbit_)	{ DevCon::Status ("microVU%d: T-bit set!", params getIndex); }	\
-	memset(&mVUinfo,	 0, sizeof(mVUinfo));											\
-	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));										\
-}
-
 #define calcCycles(reg, x)	{ reg = ((reg > x) ? (reg - x) : 0); }
 #define optimizeReg(rState) { rState = (rState==1) ? 0 : rState; }
 #define tCycles(dest, src)	{ dest = aMax(dest, src); }
@@ -46,51 +29,10 @@
 #define incQ()				{ mVU->q = (mVU->q+1) & 1; }
 #define doUpperOp()			{ mVUopU(mVU, 1); mVUdivSet(mVU); }
 #define doLowerOp()			{ incPC(-1); mVUopL(mVU, 1); incPC(1); }
-#define blockCreate(addr)	{ if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
 
 //------------------------------------------------------------------
 // Helper Functions
 //------------------------------------------------------------------
-
-microVUt(void) doSwapOp(mV) { 
-	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
-		DevCon::Status("microVU%d: Backing Up VF Reg [%04x]", params getIndex, xPC);
-		int t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
-		int t2 = mVU->regAlloc->allocReg();
-		SSE_MOVAPS_XMM_to_XMM(t2, t1);
-		mVU->regAlloc->clearNeeded(t1);
-		mVUopL(mVU, 1);
-		t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
-		SSE_XORPS_XMM_to_XMM(t2, t1);
-		SSE_XORPS_XMM_to_XMM(t1, t2);
-		SSE_XORPS_XMM_to_XMM(t2, t1);
-		mVU->regAlloc->clearNeeded(t1);
-		incPC(1); 
-		doUpperOp();
-		t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
-		SSE_MOVAPS_XMM_to_XMM(t1, t2);
-		mVU->regAlloc->clearNeeded(t1);
-		mVU->regAlloc->clearNeeded(t2);
-	}
-	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
-}
-
-microVUt(void) doIbit(microVU* mVU) { 
-	if (mVUup.iBit) { 
-		incPC(-1);
-		u32 tempI;
-		mVU->regAlloc->clearRegVF(33);
-
-		if (CHECK_VU_OVERFLOW && ((curI & 0x7fffffff) >= 0x7f800000)) {
-			Console::Status("microVU%d: Clamping I Reg", params mVU->index);
-			tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
-		}
-		else tempI = curI;
-		
-		MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, tempI);
-		incPC(1);
-	} 
-}
 
 // Used by mVUsetupRange
 microVUt(void) mVUcheckIsSame(mV) {
@@ -167,6 +109,61 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 	}
 }
 
+microVUt(void) startLoop(mV) {
+	if (curI & _Mbit_)	{ Console::Status("microVU%d: M-bit set!", params getIndex); }
+	if (curI & _Dbit_)	{ DevCon::Status ("microVU%d: D-bit set!", params getIndex); }
+	if (curI & _Tbit_)	{ DevCon::Status ("microVU%d: T-bit set!", params getIndex); }
+	memset(&mVUinfo,	 0, sizeof(mVUinfo));
+	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));
+}
+
+microVUt(void) doIbit(mV) { 
+	if (mVUup.iBit) { 
+		incPC(-1);
+		u32 tempI;
+		mVU->regAlloc->clearRegVF(33);
+
+		if (CHECK_VU_OVERFLOW && ((curI & 0x7fffffff) >= 0x7f800000)) {
+			Console::Status("microVU%d: Clamping I Reg", params mVU->index);
+			tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
+		}
+		else tempI = curI;
+		
+		MOV32ItoM((uptr)&mVU->regs->VI[REG_I].UL, tempI);
+		incPC(1);
+	} 
+}
+
+microVUt(void) doSwapOp(mV) { 
+	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
+		DevCon::Status("microVU%d: Backing Up VF Reg [%04x]", params getIndex, xPC);
+		int t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
+		int t2 = mVU->regAlloc->allocReg();
+		SSE_MOVAPS_XMM_to_XMM(t2, t1);
+		mVU->regAlloc->clearNeeded(t1);
+		mVUopL(mVU, 1);
+		t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg, mVUlow.VF_write.reg, 0xf, 0);
+		SSE_XORPS_XMM_to_XMM(t2, t1);
+		SSE_XORPS_XMM_to_XMM(t1, t2);
+		SSE_XORPS_XMM_to_XMM(t2, t1);
+		mVU->regAlloc->clearNeeded(t1);
+		incPC(1); 
+		doUpperOp();
+		t1 = mVU->regAlloc->allocReg(-1, mVUlow.VF_write.reg, 0xf);
+		SSE_MOVAPS_XMM_to_XMM(t1, t2);
+		mVU->regAlloc->clearNeeded(t1);
+		mVU->regAlloc->clearNeeded(t2);
+	}
+	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
+}
+
+microVUt(void) branchWarning(mV) {
+	if (mVUbranch) {
+		Console::Error("microVU%d Warning: Branch in E-bit/Branch delay slot! [%04x]", params mVU->index, xPC);
+		mVUlow.isNOP = 1;
+	}
+}
+
 // Optimizes the End Pipeline State Removing Unnecessary Info
 microVUt(void) mVUoptimizePipeState(mV) {
 	for (int i = 0; i < 32; i++) {
@@ -181,20 +178,6 @@ microVUt(void) mVUoptimizePipeState(mV) {
 	if (mVUregs.q) { optimizeReg(mVUregs.q); if (!mVUregs.q) { incQ(); } }
 	if (mVUregs.p) { optimizeReg(mVUregs.p); if (!mVUregs.p) { incP(); } }
 	mVUregs.r = 0; // There are no stalls on the R-reg, so its Safe to discard info
-}
-
-// Recompiles Code for Proper Flags and Q/P regs on Block Linkings
-microVUt(void) mVUsetupBranch(mV, int* xStatus, int* xMac, int* xClip, int xCycles) {
-	mVUprint("mVUsetupBranch");
-
-	// Flush Allocated Regs
-	mVU->regAlloc->flushAll();
-
-	// Shuffle Flag Instances
-	mVUsetupFlags(mVU, xStatus, xMac, xClip, xCycles);
-
-	// Shuffle P/Q regs since every block starts at instance #0
-	if (mVU->p || mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, shufflePQ); }
 }
 
 microVUt(void) mVUincCycles(mV, int x) {
@@ -269,87 +252,6 @@ microVUt(void) mVUsetCycles(mV) {
 	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
-#define sI ((mVUpBlock->pState.needExactMatch & 0x000f) ? 0 : ((mVUpBlock->pState.flags >> 0) & 3))
-#define cI ((mVUpBlock->pState.needExactMatch & 0x0f00) ? 0 : ((mVUpBlock->pState.flags >> 2) & 3))
-
-microVUt(void) mVUendProgram(mV, int isEbit, int* xStatus, int* xMac, int* xClip) {
-
-	int fStatus = (isEbit) ? findFlagInst(xStatus, 0x7fffffff) : sI;
-	int fMac	= (isEbit) ? findFlagInst(xMac,	   0x7fffffff) : 0;
-	int fClip	= (isEbit) ? findFlagInst(xClip,   0x7fffffff) : cI;
-	int qInst	= 0;
-	int pInst	= 0;
-	mVU->regAlloc->flushAll();
-
-	if (isEbit) {
-		mVUprint("mVUcompile ebit");
-		memset(&mVUinfo,	 0, sizeof(mVUinfo));
-		memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));
-		mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
-		mVUcycles -= 100;
-		qInst = mVU->q;
-		pInst = mVU->p;
-		if (mVUinfo.doDivFlag) {
-			sFLAG.doFlag = 1;
-			sFLAG.write  = fStatus;
-			mVUdivSet(mVU);
-		}
-		if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
-	}
-
-	// Save P/Q Regs
-	if (qInst) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe5); }
-	SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_Q].UL, xmmPQ);
-	if (isVU1) {
-		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, pInst ? 3 : 2);
-		SSE_MOVSS_XMM_to_M32((uptr)&mVU->regs->VI[REG_P].UL, xmmPQ);
-	}
-
-	// Save Flag Instances
-	mVUallocSFLAGc(gprT1, gprT2, fStatus);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
-	mVUallocMFLAGa(mVU, gprT1, fMac);
-	mVUallocCFLAGa(mVU, gprT2, fClip);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);
-	MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL,	gprT2);
-
-	if (isEbit || isVU1) { // Clear 'is busy' Flags
-		AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-		AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
-	}
-
-	if (isEbit != 2) { // Save PC, and Jump to Exit Point
-		MOV32ItoM((uptr)&mVU->regs->VI[REG_TPC].UL, xPC);
-		JMP32((uptr)mVU->exitFunct - ((uptr)x86Ptr + 5));
-	}
-}
-
-void branchCaseFunct(mV, microBlock* &bBlock, int* xStatus, int* xMac, int* xClip, int &xCycles, s32* &ajmp, int JMPcc) {
-	using namespace x86Emitter;
-	mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
-	xCMP(ptr16[&mVU->branch], 0);
-	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
-		mVUendProgram(mVU, 2, xStatus, xMac, xClip);
-		xForwardJump8 eJMP((JccComparisonType)JMPcc);
-			incPC(1); // Set PC to First instruction of Non-Taken Side
-			xMOV(ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);
-			xJMP(mVU->exitFunct);
-		eJMP.SetTarget();
-		incPC(-4); // Go Back to Branch Opcode to get branchAddr
-		iPC = branchAddr/4;
-		xMOV(ptr32[&mVU->regs->VI[REG_TPC].UL], xPC);
-		xJMP(mVU->exitFunct);
-	}
-	else { // Normal Conditional Branch
-		incPC2(1); // Check if Branch Non-Taken Side has already been recompiled
-		blockCreate(iPC/2);
-		bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);
-		incPC2(-1);
-		if (bBlock)	{ xJcc( xInvertCond((JccComparisonType)JMPcc), bBlock->x86ptrStart ); }
-		else		{ ajmp = xJcc32((JccComparisonType)JMPcc); }
-	}
-}
-
 void __fastcall mVUwarning0(u32 PC) { Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 void __fastcall mVUwarning1(u32 PC) { Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
 void __fastcall mVUprintPC1(u32 PC) { Console::Write("Block PC [%04x] ", params PC); }
@@ -365,18 +267,37 @@ microVUt(void) mVUtestCycles(mV) {
 			if (isVU1)  CALLFunc((uptr)mVUwarning1);
 			//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
 			MOV32ItoR(gprR, Roffset); // Restore gprR
-			mVUendProgram(mVU, 0, NULL, NULL, NULL);
+			mVUendProgram(mVU, NULL, 0);
 		x86SetJ32(jmp32);
 	}
 }
 
-microVUt(void) mVUinitConstValues(mV) {
+// Initialize VI Constants (vi15 propagates through blocks)
+microVUt(void) mVUinitConstValues(microVU* mVU) {
 	for (int i = 0; i < 16; i++) {
 		mVUconstReg[i].isValid	= 0;
 		mVUconstReg[i].regValue	= 0;
 	}
 	mVUconstReg[15].isValid  = mVUregs.vi15 >> 31;
 	mVUconstReg[15].regValue = mVUconstReg[15].isValid ? (mVUregs.vi15&0xffff) : 0;
+}
+
+// Initialize Variables
+microVUt(void) mVUinitFirstPass(microVU* mVU, microBlock* &pBlock, uptr pState, u8* thisPtr) {
+	mVUstartPC		= iPC;	// Block Start PC
+	mVUbranch		= 0;	// Branch Type
+	mVUcount		= 0;	// Number of instructions ran
+	mVUcycles		= 0;	// Skips "M" phase, and starts counting cycles at "T" stage
+	mVU->p			= 0;	// All blocks start at p index #0
+	mVU->q			= 0;	// All blocks start at q index #0
+	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
+	mVUblock.x86ptrStart = thisPtr;
+	pBlock			= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
+	mVUpBlock		= pBlock;
+	mVUregs.flags	= 0;
+	mVUflagInfo		= 0;
+	mVUsFlagHack	= CHECK_VU_FLAGHACK;
+	mVUinitConstValues(mVU);
 }
 
 //------------------------------------------------------------------
@@ -386,38 +307,20 @@ microVUt(void) mVUinitConstValues(mV) {
 microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
 	using namespace x86Emitter;
-	microBlock*	pBlock	 = NULL;
-	u8*			thisPtr  = x86Ptr;
-	const u32	endCount = (mVU->microMemSize / 8) - 1;
-
-	// Setup Program Bounds/Range
-	mVUsetupRange(mVU, startPC, 1);
-	
-	// Reset regAlloc
-	mVU->regAlloc->reset();
+	microFlagCycles mFC;
+	microBlock*		pBlock	 = NULL;
+	u8*				thisPtr  = x86Ptr;
+	const u32		endCount = (mVU->microMemSize / 8) - 1;
 
 	// First Pass
 	iPC = startPC / 4;
-	setCode();
-	mVUbranch	= 0;
-	mVUstartPC	= iPC;
-	mVUcount	= 0;
-	mVUcycles	= 0; // Skips "M" phase, and starts counting cycles at "T" stage
-	mVU->p		= 0; // All blocks start at p index #0
-	mVU->q		= 0; // All blocks start at q index #0
-	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
-	mVUblock.x86ptrStart = thisPtr;
-	pBlock			= mVUblocks[startPC/8]->add(&mVUblock); // Add this block to block manager
-	mVUpBlock		= pBlock;
-	mVUregs.flags	= 0;
-	mVUflagInfo		= 0;
-	mVUsFlagHack	= CHECK_VU_FLAGHACK;
-
-	mVUinitConstValues(mVU);
-
+	mVUsetupRange(mVU, startPC, 1);	// Setup Program Bounds/Range
+	mVU->regAlloc->reset();			// Reset regAlloc
+	mVUinitFirstPass(mVU, pBlock, pState, thisPtr);
+	
 	for (int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
-		startLoop();
+		startLoop(mVU);
 		mVUincCycles(mVU, 1);
 		mVUopU(mVU, 0);
 		if (curI & _Ebit_)	  { branch = 1; mVUup.eBit = 1; }
@@ -430,19 +333,16 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		mVUinfo.writeQ = !mVU->q;
 		mVUinfo.readP  =  mVU->p;
 		mVUinfo.writeP = !mVU->p;
-		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(); break; }
+		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(mVU); break; }
 		else if (branch == 1) { branch = 2; }
 		if		(mVUbranch)   { mVUsetFlagInfo(mVU); branch = 3; mVUbranch = 0; }
 		incPC(1);
 	}
 
-	// Sets Up Flag instances
-	int xStatus[4], xMac[4], xClip[4];
-	int xCycles = mVUsetFlags(mVU, xStatus, xMac, xClip);
-	
 	// Fix up vi15 const info for propagation through blocks
 	mVUregs.vi15 = (mVUconstReg[15].isValid && !CHECK_VU_CONSTHACK) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
-
+	
+	mVUsetFlags(mVU, mFC);	   // Sets Up Flag instances
 	mVUoptimizePipeState(mVU); // Optimize the End Pipeline State for nicer Block Linking
 	mVUtestCycles(mVU);		   // Update VU Cycles and Exit Early if Necessary
 
@@ -450,8 +350,8 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	iPC = mVUstartPC;
 	setCode();
 	mVUbranch = 0;
-	uint x;
-	for (x = 0; x < endCount; x++) {
+	u32 x = 0;
+	for (; x < endCount; x++) {
 		if (mVUinfo.isEOB)			{ x = 0xffff; }
 		if (mVUup.mBit)				{ OR32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); }
 		if (mVUlow.isNOP)			{ incPC(1); doUpperOp(); doIbit(mVU); }
@@ -459,111 +359,27 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		else						{ doSwapOp(mVU); }
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		if (!doRegAlloc)			{ mVU->regAlloc->flushAll(); }
-
-		if (!mVUinfo.isBdelay) { incPC(1); }
+		if (!mVUinfo.isBdelay)		{ incPC(1); }
 		else {
-			microBlock* bBlock = NULL;
-			s32* ajmp = 0;
 			mVUsetupRange(mVU, xPC, 0);
 			mVUdebugNOW(1);
-
 			switch (mVUbranch) {
-				case 3: branchCase(Jcc_Equal);			// IBEQ
-				case 4: branchCase(Jcc_GreaterOrEqual); // IBGEZ
-				case 5: branchCase(Jcc_Greater);		// IBGTZ
-				case 6: branchCase(Jcc_LessOrEqual);	// IBLEQ
-				case 7: branchCase(Jcc_Less);			// IBLTZ
-				case 8: branchCase(Jcc_NotEqual);		// IBNEQ
-				case 1: case 2: // B/BAL
-
-					mVUprint("mVUcompile B/BAL");
-					incPC(-3); // Go back to branch opcode (to get branch imm addr)
-
-					if (mVUup.eBit) { iPC = branchAddr/4; mVUendProgram(mVU, 1, xStatus, xMac, xClip); } // E-bit Branch
-					mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
-
-					// Check if branch-block has already been compiled
-					blockCreate(branchAddr/8);
-					pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
-					if (pBlock)	{ xJMP(pBlock->x86ptrStart); }
-					else		{ mVUcompile(mVU, branchAddr, (uptr)&mVUregs); }
-					return thisPtr;
-				case 9: case 10: // JR/JALR
-
-					mVUprint("mVUcompile JR/JALR");
-					incPC(-3); // Go back to jump opcode
-
-					if (mVUlow.constJump.isValid) {
-						if (mVUup.eBit) { // E-bit Jump
-							iPC = (mVUlow.constJump.regValue*2)&(mVU->progSize-1);
-							mVUendProgram(mVU, 1, xStatus, xMac, xClip);
-						}
-						else {
-							int jumpAddr = (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8);
-							mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
-							// Check if jump-to-block has already been compiled
-							blockCreate(jumpAddr/8);
-							pBlock = mVUblocks[jumpAddr/8]->search((microRegInfo*)&mVUregs);
-							if (pBlock)	{ xJMP(pBlock->x86ptrStart); }
-							else		{ mVUcompile(mVU, jumpAddr, (uptr)&mVUregs); }
-						}
-						return thisPtr;
-					}
-
-					if (mVUup.eBit) { // E-bit Jump
-						mVUendProgram(mVU, 2, xStatus, xMac, xClip);
-						MOV32MtoR(gprT1, (uptr)&mVU->branch);
-						MOV32RtoM((uptr)&mVU->regs->VI[REG_TPC].UL, gprT1);
-						xJMP(mVU->exitFunct);
-						return thisPtr;
-					}
-
-					memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
-					mVUsetupBranch(mVU, xStatus, xMac, xClip, xCycles);
-
-					mVUbackupRegs(mVU);
-					MOV32MtoR(gprT2, (uptr)&mVU->branch);	  // Get startPC (ECX first argument for __fastcall)
-					MOV32ItoR(gprR, (u32)&pBlock->pStateEnd); // Get pState (EDX second argument for __fastcall)
-
-					if (!mVU->index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
-					else			 xCALL(mVUcompileJIT<1>);
-					mVUrestoreRegs(mVU);
-					JMPR(gprT1);  // Jump to rec-code address
-					return thisPtr;
+				case 3: condBranch(mVU, mFC, pBlock, Jcc_Equal);		  return thisPtr; // IBEQ
+				case 4: condBranch(mVU, mFC, pBlock, Jcc_GreaterOrEqual); return thisPtr; // IBGEZ
+				case 5: condBranch(mVU, mFC, pBlock, Jcc_Greater);		  return thisPtr; // IBGTZ
+				case 6: condBranch(mVU, mFC, pBlock, Jcc_LessOrEqual);	  return thisPtr; // IBLEQ
+				case 7: condBranch(mVU, mFC, pBlock, Jcc_Less);			  return thisPtr; // IBLTZ
+				case 8: condBranch(mVU, mFC, pBlock, Jcc_NotEqual);		  return thisPtr; // IBNEQ
+				case 1: case 2:  normBranch(mVU, mFC);					  return thisPtr; // B/BAL
+				case 9: case 10: normJump  (mVU, mFC, pBlock);			  return thisPtr; // JR/JALR
 			}
-			// Conditional Branches
-			mVUprint("mVUcompile conditional branch");
-			if (mVUup.eBit) return thisPtr; // Handled in Branch Case
-			if (bBlock) {  // Branch non-taken has already been compiled
-				incPC(-3); // Go back to branch opcode (to get branch imm addr)
-
-				// Check if branch-block has already been compiled
-				blockCreate(branchAddr/8);
-				pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
-				if (pBlock)	{ xJMP( pBlock->x86ptrStart ); }
-				else		{ mVUblockFetch(mVU, branchAddr, (uptr)&mVUregs); }
-			}
-			else {
-				uptr jumpAddr;
-				u32 bPC = iPC; // mVUcompile can modify iPC and mVUregs so back them up
-				memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
-	
-				incPC2(1);  // Get PC for branch not-taken
-				mVUcompile(mVU, xPC, (uptr)&mVUregs);
-
-				iPC = bPC;
-				incPC(-3); // Go back to branch opcode (to get branch imm addr)
-				jumpAddr = (uptr)mVUblockFetch(mVU, branchAddr, (uptr)&pBlock->pStateEnd);
-				*ajmp = (jumpAddr - ((uptr)ajmp + 4));
-			}
-			return thisPtr;
 		}
 	}
 	if (x == endCount) { Console::Error("microVU%d: Possible infinite compiling loop!", params mVU->index); }
 
 	// E-bit End
 	mVUsetupRange(mVU, xPC-8, 0);
-	mVUendProgram(mVU, 1, xStatus, xMac, xClip);
+	mVUendProgram(mVU, &mFC, 1);
 	return thisPtr;
 }
 
@@ -584,4 +400,3 @@ microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 microVUx(void*) __fastcall mVUcompileJIT(u32 startPC, uptr pState) {
 	return mVUblockFetch(mVUx, startPC, pState);
 }
-

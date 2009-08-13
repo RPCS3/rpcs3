@@ -122,6 +122,13 @@ struct microFlagInst {
 	u8	 read;		  // Points to the instance that should be read by a lower instruction (t-stage read)
 };
 
+struct microFlagCycles {
+	int xStatus[4];
+	int xMac[4];
+	int xClip[4];
+	int cycles;
+};
+
 struct microOp {
 	u8	 stall;			 // Info on how much current instruction stalled
 	bool isEOB;			 // Cur Instruction is last instruction in block (End of Block)
