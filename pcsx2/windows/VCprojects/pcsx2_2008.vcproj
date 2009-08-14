@@ -2468,6 +2468,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\Tags.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\Threading.h"
 					>
 				</File>

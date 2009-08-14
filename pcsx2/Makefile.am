@@ -38,7 +38,7 @@ Hw.h           IopMem.h      Misc.h         R5900.h              SaveState.h  Th
 Dump.h        IopBios.h      IopSio2.h     NakedAsm.h     R5900Exceptions.h    Sif.h        VU.h           vtlb.h \
 COP0.h        Elfheader.h   IopBios2.h     Mdec.h        Patch.h        R5900OpcodeTables.h  Sifcmd.h     VUflags.h \
 Cache.h       Exceptions.h  IopCommon.h    MemcpyFast.h  Paths.h    Sio.h    Sio_internal.h    VUmicro.h \
-GS.h          IopCounters.h  Memory.h      Plugins.h      SPR.h                Stats.h      VUops.h
+GS.h          IopCounters.h  Memory.h      Plugins.h      SPR.h                Stats.h      VUops.h Tags.h
 #RedtapeWindows.h
 
 SUBDIRS = x86 . CDVD DebugTools IPU RDebug tinyxml Linux

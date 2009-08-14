@@ -45,6 +45,26 @@ public:
 	static u64 GetCRC( uint mcdId );
 };
 
+struct superblock
+{
+	char magic[28]; 			// 0x00
+	char version[12]; 		// 0x1c
+	u16 page_len; 			// 0x28
+	u16 pages_per_cluster; 	// 0x2a
+	u16 pages_per_block;		// 0x2c
+	u16 unused; 			// 0x2e
+	u32 clusters_per_card; 	// 0x30
+	u32 alloc_offset; 			// 0x34
+	u32 alloc_end; 			// 0x38
+	u32 rootdir_cluster;		// 0x3c
+	u32 backup_block1;		// 0x40
+	u32 backup_block2;		// 0x44
+	u32 ifc_list[32]; 			// 0x50
+	u32 bad_block_list[32]; 	// 0xd0
+	u8 card_type; 			// 0x150
+	u8 card_flags; 			// 0x151
+};
+
 #if 0		// unused code?
 struct McdBlock
 {

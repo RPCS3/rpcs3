@@ -649,6 +649,7 @@
     <ClInclude Include="..\..\Stats.h" />
     <ClInclude Include="..\..\StringUtils.h" />
     <ClInclude Include="..\..\System.h" />
+    <ClInclude Include="..\..\Tags.h" />
     <ClInclude Include="..\..\Threading.h" />
     <ClInclude Include="..\..\tinyxml\tinystr.h" />
     <ClInclude Include="..\..\tinyxml\tinyxml.h" />
