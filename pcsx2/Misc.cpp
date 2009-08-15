@@ -499,16 +499,6 @@ void CycleFrameLimit(int dir)
 	newOptions = (Config.Options & ~PCSX2_FRAMELIMIT_MASK) | newFrameLimit;
 
 	gsResetFrameSkip();
-	
-	// Allows sync to vblank only when framelimit is on, if GS can.
-	if(GSsetFrameLimit == NULL)
-	{
-	DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
-	}
-	else
-	{
-		GSsetFrameLimit(newFrameLimit);
-	}
 
 	switch(newFrameLimit) {
 		case PCSX2_FRAMELIMIT_NORMAL:
@@ -516,6 +506,15 @@ void CycleFrameLimit(int dir)
 			break;
 		case PCSX2_FRAMELIMIT_LIMIT:
 			limitMsg = "Limit";
+			//Tell GS plugin we want a frame limit, it can enable vsync then
+			if(GSsetFrameLimit == NULL)
+			{
+				DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
+			}
+			else
+			{
+				GSsetFrameLimit(newFrameLimit);
+			}
 			break;
 		case PCSX2_FRAMELIMIT_SKIP:
 			if( GSsetFrameSkip == NULL )
@@ -530,8 +529,16 @@ void CycleFrameLimit(int dir)
 				// are properly synchronized.
 				gsDynamicSkipEnable();
 				limitMsg = "Skip";
+				//Disables eventually enabled vsync
+				if(GSsetFrameLimit == NULL)
+				{
+					DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
+				}
+				else
+				{
+					GSsetFrameLimit(0);
+				}
 			}
-
 			break;
 	}
 	Threading::AtomicExchange( Config.Options, newOptions );
@@ -539,6 +546,7 @@ void CycleFrameLimit(int dir)
 	Console::Notice("Frame Limit Mode Changed: %s", params limitMsg );
 
 	// [Air]: Do we really want to save runtime changes to frameskipping?
+	// I'd rather do that, yeah :p (rama)
 	//SaveConfig();
 }
 
