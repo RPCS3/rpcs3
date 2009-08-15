@@ -73,14 +73,28 @@ enum pce_values
 
 enum tag_id
 {
-	TAG_REFE = 0,
-	TAG_CNT,
-	TAG_NEXT,
-	TAG_REF,
-	TAG_REFS,
-	TAG_CALL,
-	TAG_RET,
-	TAG_END
+	TAG_REFE = 0, 	// Transfer Packet According to ADDR field, clear STR, and end
+	TAG_CNT, 		// Transfer QWC following the tag.
+	TAG_NEXT,		// Transfer QWC following tag. TADR = ADDR
+	TAG_REF,			// Transfer QWC from ADDR field
+	TAG_REFS,		// Transfer QWC from ADDR field (Stall Control)
+	TAG_CALL,		// Transfer QWC following the tag, save succeeding tag
+	TAG_RET,			// Transfer QWC following the tag, load next tag
+	TAG_END			// Transfer QWC following the tag
+};
+
+enum chcr_flags
+{
+	CHCR_DIR = 0x1, 	// Direction: 0 - to memory, 1 - from memory. VIF1 & SIF2 only.
+	CHCR_MOD1 = 0x4, 
+	CHCR_MOD2 = 0x8,
+	CHCR_MOD = 0xC, 	// MOD1 & MOD2; Holds which of the Transfer modes above is used.
+	CHCR_ASP1 = 0x10,
+	CHCR_ASP2 = 0x20,
+	CHCR_ASP = 0x30, 	// ASP1 & ASP2; Address stack pointer. 0, 1, or 2 addresses.
+	CHCR_TTE = 0x40, 	// Tag Transfer Enable. 0 - Diable / 1 - Enable.
+	CHCR_TIE = 0x80, 	// Tag Interrupt Enable. 0 - Diable / 1 - Enable.
+	CHCR_STR = 0x100 	// Start. 0 while stopping DMA, 1 while it's running.
 };
 
 namespace ChainTags
@@ -113,20 +127,6 @@ namespace ChainTags
 	}
 }
 
-enum chcr_flags
-{
-	CHCR_DIR = 0x0,
-	CHCR_MOD1 = 0x4,
-	CHCR_MOD2 = 0x8,
-	CHCR_MOD = 0xC, // MOD1 & MOD2
-	CHCR_ASP1 = 0x10,
-	CHCR_ASP2 = 0x20,
-	CHCR_ASP = 0x30, // ASP1 & ASP2
-	CHCR_TTE = 0x40,
-	CHCR_TIE = 0x80,
-	CHCR_STR = 0x100
-};
-
 namespace CHCR
 {
 	// Query the flags in the channel control register.
@@ -154,18 +154,31 @@ namespace CHCR
 		return (TransferMode)((tag->chcr & CHCR_ASP) >> 2);
 	}
 
-	// Set the individual flags. Untested.
+	// Clear the individual flags.
 	template <class T>
-	static __forceinline void setSTR(T tag) { tag->chcr &= ~CHCR_STR; }
+	static __forceinline void clearSTR(T tag) { tag->chcr &= ~CHCR_STR; }
 	
 	template <class T>
-	static __forceinline void setTIE(T tag) { tag->chcr &= ~CHCR_TIE; }
+	static __forceinline void clearTIE(T tag) { tag->chcr &= ~CHCR_TIE; }
 	
 	template <class T>
-	static __forceinline void setTTE(T tag) { tag->chcr &= ~CHCR_TTE; }
+	static __forceinline void clearTTE(T tag) { tag->chcr &= ~CHCR_TTE; }
 	
 	template <class T>
-	static __forceinline void setDIR(T tag) { tag->chcr &= ~CHCR_DIR; }
+	static __forceinline void clearDIR(T tag) { tag->chcr &= ~CHCR_DIR; }
+	
+	// Set them.
+	template <class T>
+	static __forceinline void setSTR(T tag) { tag->chcr |= CHCR_STR; }
+	
+	template <class T>
+	static __forceinline void setTIE(T tag) { tag->chcr |= CHCR_TIE; }
+	
+	template <class T>
+	static __forceinline void setTTE(T tag) { tag->chcr |= CHCR_TTE; }
+	
+	template <class T>
+	static __forceinline void setDIR(T tag) { tag->chcr |= CHCR_DIR; }
 	
 	template <class T>
 	static __forceinline void setMOD(T tag, TransferMode mode)
@@ -182,7 +195,7 @@ namespace CHCR
 	}
 	
 	template <class T>
-	static __forceinline void ASP(T tag, u8 num)
+	static __forceinline void setASP(T tag, u8 num)
 	{
 		if (num & (1 << 0))
 			tag->chcr |= CHCR_ASP1; 
@@ -194,19 +207,6 @@ namespace CHCR
 		else
 			tag->chcr &= CHCR_ASP2;
 	}
-	
-	// Clear them. Untested.
-	template <class T>
-	static __forceinline void clearSTR(T tag) { tag->chcr |= CHCR_STR; }
-	
-	template <class T>
-	static __forceinline void clearTIE(T tag) { tag->chcr |= CHCR_TIE; }
-	
-	template <class T>
-	static __forceinline void clearTTE(T tag) { tag->chcr |= CHCR_TTE; }
-	
-	template <class T>
-	static __forceinline void clearDIR(T tag) { tag->chcr |= CHCR_DIR; }
 	
 	// Print information about a chcr tag.
 	template <class T>

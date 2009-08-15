@@ -1758,7 +1758,7 @@ void ipu0Interrupt()
 		g_nDMATransfer &= ~IPU_DMA_TIE0;
 	}
 	
-	CHCR::setSTR(ipu0dma);
+	CHCR::clearSTR(ipu0dma);
 
 	hwDmacIrq(DMAC_FROM_IPU);
 }
@@ -1776,7 +1776,7 @@ IPU_FORCEINLINE void ipu1Interrupt()
 	if (g_nDMATransfer & IPU_DMA_TIE1)
 		g_nDMATransfer &= ~IPU_DMA_TIE1;
 	else
-		CHCR::setSTR(ipu1dma);
+		CHCR::clearSTR(ipu1dma);
 
 	hwDmacIrq(DMAC_TO_IPU);
 }
