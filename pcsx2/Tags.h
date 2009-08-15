@@ -28,21 +28,37 @@ enum TransferMode
 	UNDEFINED_MODE
 };
 
+template <class T>
+static __forceinline void UpperTagTransfer(T tag, u32* ptag)
+{
+	// Transfer upper part of tag to CHCR bits 31-15
+	tag->chcr = (tag->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+}
+
+template <class T>
+static __forceinline void LowerTagTransfer(T tag, u32* ptag)
+{
+	//QWC set to lower 16bits of the tag
+	tag->qwc = (u16)ptag[0];
+}
+
 // Transfer a tag. 
 template <class T>
-static __forceinline bool TransferTag(const char *s, T tag, u32* &ptag)
+static __forceinline bool TransferTag(const char *s, T tag, u32* ptag)
 {
 	if (ptag == NULL)  					 // Is ptag empty?
 	{
 		Console::Error("%s BUSERR", params s);
-		tag->chcr = (tag->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);	// Transfer upper part of tag to CHCR bits 31-15
-		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;						// Set BEIS (BUSERR) in DMAC_STAT register
+		UpperTagTransfer(tag, ptag);
+		
+		// Set BEIS (BUSERR) in DMAC_STAT register
+		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; 
 		return false;
 	}
 	else
 	{
-		tag->chcr = (tag->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);	//Transfer upper part of tag to CHCR bits 31-15
-		tag->qwc  = (u16)ptag[0];									//QWC set to lower 16bits of the tag
+		UpperTagTransfer(tag, ptag);
+		LowerTagTransfer(tag, ptag);
 		return true;
 	}
 }
@@ -90,6 +106,11 @@ namespace ChainTags
 	{
 		return (tag[0] & 0x8000000);
 	}
+	
+	static __forceinline bool IRQ(u32 tag)
+	{
+		return (tag & 0x8000000);
+	}
 }
 
 enum chcr_flags
@@ -97,8 +118,10 @@ enum chcr_flags
 	CHCR_DIR = 0x0,
 	CHCR_MOD1 = 0x4,
 	CHCR_MOD2 = 0x8,
+	CHCR_MOD = 0xC, // MOD1 & MOD2
 	CHCR_ASP1 = 0x10,
 	CHCR_ASP2 = 0x20,
+	CHCR_ASP = 0x30, // ASP1 & ASP2
 	CHCR_TTE = 0x40,
 	CHCR_TIE = 0x80,
 	CHCR_STR = 0x100
@@ -122,19 +145,13 @@ namespace CHCR
 	template <class T>
 	static __forceinline TransferMode MOD(T tag)
 	{
-		u8 temp = 0;
-		if (tag->chcr & CHCR_MOD1) temp |= (1 << 0);
-		if (tag->chcr & CHCR_MOD2) temp |= (1 << 1);
-		return (TransferMode)temp;
+		return (TransferMode)((tag->chcr & CHCR_MOD) >> 2);
 	}
 	
 	template <class T>
 	static __forceinline u8 ASP(T tag)
 	{
-		u8 temp = 0;
-		if (tag->chcr & CHCR_ASP1) temp |= (1 << 0);
-		if (tag->chcr & CHCR_ASP2) temp |= (1 << 1);
-		return temp;
+		return (TransferMode)((tag->chcr & CHCR_ASP) >> 2);
 	}
 
 	// Set the individual flags. Untested.
