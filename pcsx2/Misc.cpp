@@ -237,6 +237,10 @@ bool IsBIOS(const wxString& filename, wxString& description)
 	return false;	//fail quietly
 }
 
+// return value:
+//   0 - Invalid or unknown disc.
+//   1 - PS1 CD
+//   2 - PS2 CD
 int GetPS2ElfName( wxString& name )
 {
 	int f;
@@ -262,7 +266,7 @@ int GetPS2ElfName( wxString& name )
 	if (pos==NULL){
 		pos=strstr(buffer, "BOOT");
 		if (pos==NULL) {
-			Console::Error("Boot Error > This is not a PS2 game!");
+			Console::Error("Boot failed: This is not a Playstation or PS2 game!");
 			return 0;
 		}
 		return 1;
@@ -453,7 +457,7 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 					wxsFormat( L"Error!  Could not load from saveslot %d\n", StatesC ) + ex.LogMessage(),
 
 					// translated message:
-					wxsFormat( L"Error loading saveslot %d.  Emulator reset.", StatesC )
+					wxsFormat( _("Error loading saveslot %d.  Emulator reset."), StatesC )
 				);
 			}
 			break;

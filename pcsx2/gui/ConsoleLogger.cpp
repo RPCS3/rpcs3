@@ -45,7 +45,7 @@ DEFINE_EVENT_TYPE(wxEVT_SemaphoreWait);
 using Console::Colors;
 
 // ----------------------------------------------------------------------------
-int ConsoleTestThread::Callback()
+sptr ConsoleTestThread::ExecuteTask()
 {
 	static int numtrack = 0;
 	
@@ -602,17 +602,72 @@ namespace Console
 	}
 }
 
+#define wxEVT_BOX_ALERT		78
+
+using namespace Threading;
+
+DEFINE_EVENT_TYPE( pxEVT_MSGBOX );
+
 namespace Msgbox
 {
+	struct InstanceData
+	{
+		Semaphore	WaitForMe;
+		int			result;
+		
+		InstanceData() :
+			WaitForMe(), result( 0 )
+		{
+		}
+	};
+
+	// parameters:
+	//   flags - messagebox type flags, such as wxOK, wxCANCEL, etc.
+	//
+	static int ThreadedMessageBox( int flags, const wxString& text )
+	{
+		// must pass the message to the main gui thread, and then stall this thread, to avoid
+		// threaded chaos where our thread keeps running while the popup is awaiting input.
+
+		InstanceData instdat;
+		wxCommandEvent tevt( pxEVT_MSGBOX );
+		tevt.SetString( text );
+		tevt.SetClientData( &instdat );
+		tevt.SetExtraLong( flags );
+		wxGetApp().AddPendingEvent( tevt );
+		instdat.WaitForMe.WaitNoCancel();		// Important! disable cancellation since we're using local stack vars.
+		return instdat.result;
+	}
+	
+	void OnEvent( wxCommandEvent& evt )
+	{
+		// Must be called from the GUI thread ONLY.
+		wxASSERT( wxThread::IsMain() );
+
+		int result = Alert( evt.GetString() );
+		InstanceData* instdat = (InstanceData*)evt.GetClientData();
+		instdat->result = result;
+		instdat->WaitForMe.Post();
+	}
+
 	bool Alert( const wxString& text )
 	{
-		wxMessageBox( text, L"Pcsx2 Message", wxOK, wxGetApp().GetTopWindow() );
+		if( wxThread::IsMain() )
+			wxMessageBox( text, L"Pcsx2 Message", wxOK, wxGetApp().GetTopWindow() );
+		else
+			ThreadedMessageBox( wxOK, text );
 		return false;
 	}
 
 	bool OkCancel( const wxString& text )
 	{
-		int result = wxMessageBox( text, L"Pcsx2 Message", wxOK | wxCANCEL, wxGetApp().GetTopWindow() );
-		return result == wxOK;
+		if( wxThread::IsMain() )
+		{
+			return wxOK == wxMessageBox( text, L"Pcsx2 Message", wxOK | wxCANCEL, wxGetApp().GetTopWindow() );
+		}
+		else
+		{
+			return wxOK == ThreadedMessageBox( wxOK | wxCANCEL, text );
+		}
 	}
 }

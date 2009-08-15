@@ -45,11 +45,11 @@ static const bool EnableThreadedLoggingTest = false; //true;
 // ConsoleThreadTest -- useful class for unit testing the thread safety and general performance
 // of the console logger.
 //
-class ConsoleTestThread : public Thread
+class ConsoleTestThread : public PersistentThread
 {
 protected:
 	volatile bool m_done;
-	int Callback();
+	sptr ExecuteTask();
 
 public:	
 	ConsoleTestThread() :
@@ -275,6 +275,7 @@ public:
 protected:
 	void ReadUserModeSettings();
 	bool TryOpenConfigCwd();
+	void OnMessageBox( wxCommandEvent& evt );
 };
 
 DECLARE_APP(Pcsx2App)

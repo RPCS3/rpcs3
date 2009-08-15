@@ -263,62 +263,6 @@
 			Name="Misc"
 			>
 			<File
-				RelativePath="..\..\AsciiString.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\AsciiString.h"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\Dump.cpp"
 				>
 			</File>
@@ -1096,6 +1040,14 @@
 			</File>
 			<File
 				RelativePath="..\..\x86\BaseblockEx.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\ps2\CoreEmuThread.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\ps2\CoreEmuThread.h"
 				>
 			</File>
 			<File
@@ -1972,10 +1924,6 @@
 			</File>
 			<File
 				RelativePath="..\..\gui\i18n.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\gui\i18n.h"
 				>
 			</File>
 			<File

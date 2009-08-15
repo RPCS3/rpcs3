@@ -1043,7 +1043,7 @@ static u32 eeScaleBlockCycles()
 //   setting "branch = 2";
 static void iBranchTest(u32 newpc, bool noDispatch)
 {
-	if( bExecBIOS ) CheckForBIOSEnd();
+	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
 	// Equiv code to:

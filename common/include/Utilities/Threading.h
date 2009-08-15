@@ -24,9 +24,28 @@
 
 #include "Pcsx2Defs.h"
 
+namespace Exception
+{
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// Thread termination exception, used to quickly terminate threads from anywhere in the
+	// thread's call stack.  This exception is handled by the PCSX2 PersistentThread class.  Threads
+	// not derived from that class will not handle this exception.
+	//
+	class ThreadTermination : public BaseException
+	{
+	public:
+		virtual ~ThreadTermination() throw() {}
+
+		ThreadTermination( const ThreadTermination& src ) : BaseException( src ) {}
+
+		explicit ThreadTermination() :
+		BaseException( "Thread terminated" ) { }
+	};
+}
+
 namespace Threading
 {
-	///////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////
 	// Define some useful object handles - wait events, mutexes.
 
 	// pthread Cond is an evil api that is not suited for Pcsx2 needs.
@@ -56,7 +75,8 @@ namespace Threading
 		void Post();
 		void Post( int multiple );
 		void Wait();
-		int Count();
+		void WaitNoCancel();
+		int  Count();
 	};
 
 	struct MutexLock
@@ -84,42 +104,42 @@ namespace Threading
 	extern void Sleep( int ms );
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// Thread - Helper class for the basics of starting/managing simple threads.
+	// PersistentThread - Helper class for the basics of starting/managing persistent threads.
 	//
-	// Use this as a base class for your threaded procedure, and implement the 'int Callback()'
-	// method.  Use Start() and Close() to start and shutdown the thread, and use m_post_event
+	// Use this as a base class for your threaded procedure, and implement the 'int ExecuteTask()'
+	// method.  Use Start() and Cancel() to start and shutdown the thread, and use m_post_event
 	// internally to post/receive events for the thread (make a public accessor for it in your
 	// derived class if your thread utilizes the post).
 	//
 	// Notes:
-	//  * To ensure thread safety against C++'s bizarre and not-thread-friendly object
-	//    constructors and destructors, you *must* use Start() and Close().  There is a built-
-	//    in Close() called on destruction, which should work for very simple threads (that
-	//    do not have any special shutdown code of their own), but 
-	// 
 	//  * Constructing threads as static vars isn't recommended since it can potentially con-
 	//    fuse w32pthreads, if the static initializers are executed out-of-order (C++ offers
-	//    no dependency options for ensuring correct static var initializations).
+	//    no dependency options for ensuring correct static var initializations).  Use heap
+	//    allocation to create thread objects instead.
 	//
-	class Thread : NoncopyableObject
+	class PersistentThread : NoncopyableObject
 	{
 	protected:
 		typedef int (*PlainJoeFP)();
-		pthread_t m_thread;
-		int m_returncode;		// value returned from the thread on close.
-		bool m_terminated;		// set true after the thread has been closed.
-		Semaphore m_post_event;	// general wait event that's needed by most threads.
+		pthread_t	m_thread;
+		sptr		m_returncode;		// value returned from the thread on close.
+
+		bool		m_running;
+		Semaphore	m_post_event;		// general wait event that's needed by most threads.
 
 	public:
-		virtual ~Thread();
-		Thread();
+		virtual ~PersistentThread();
+		PersistentThread();
 
 		virtual void Start();
-		virtual void Close();
+		virtual void Cancel( bool isBlocking = true );
 
 		// Gets the return code of the thread.
 		// Throws std::logic_error if the thread has not terminated.
-		int GetReturnCode() const;
+		virtual int GetReturnCode() const;
+		
+		virtual bool IsRunning() const;
+		virtual sptr Block();		
 
 	protected:
 		// Used to dispatch the thread callback function.
@@ -128,7 +148,20 @@ namespace Threading
 		static void* _internal_callback( void* func );
 
 		// Implemented by derived class to handle threading actions!
-		virtual int Callback()=0;
+		virtual sptr ExecuteTask()=0;
+
+	// ----------------------------------------------------------------------------
+	//        Static Methods (PersistentThread)
+	// ----------------------------------------------------------------------------
+	public:
+		// performs a test on the given thread handle, returning true if the thread exists
+		// or false if the thread is dead/done/never existed.
+		static bool Exists( pthread_t pid )
+		{
+			// passing 0 to pthread_kill is a NOP, and returns the status of the thread only.
+			return ( ESRCH != pthread_kill( pid, 0 ) );
+		}
+
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -136,21 +169,40 @@ namespace Threading
 	// Using this class provides an exception-safe (and generally clean) method of locking
 	// code inside a function or conditional block.
 	//
-	class ScopedLock : NoncopyableObject
+	class ScopedLock : public NoncopyableObject
 	{
 	protected:
 		MutexLock& m_lock;
+		bool m_IsLocked;
 
 	public:
 		virtual ~ScopedLock()
 		{
-			m_lock.Unlock();
+			if( m_IsLocked )
+				m_lock.Unlock();
 		}
 
 		ScopedLock( MutexLock& locker ) :
-		m_lock( locker )
+			m_lock( locker )
+		,	m_IsLocked( true )
 		{
 			m_lock.Lock();
+		}
+		
+		// Provides manual unlocking of a scoped lock prior to object destruction.
+		void Unlock()
+		{
+			if( !m_IsLocked ) return;
+			m_IsLocked = false;
+			m_lock.Unlock();
+		}
+		
+		// provides manual locking of a scoped lock, to re-lock after a manual unlocking.
+		void Lock()
+		{
+			if( m_IsLocked ) return;
+			m_lock.Lock();
+			m_IsLocked = true;
 		}
 	};
 
@@ -187,49 +239,49 @@ namespace Threading
 	//    into smaller sections.  For example, if you have 20,000 items to process, the task
 	//    can be divided into two threads of 10,000 items each.
 	// 
-	class BaseTaskThread : public Thread
+	class BaseTaskThread : public PersistentThread
 	{
 	protected:
-		volatile bool m_done;
+		volatile bool m_Done;
 		volatile bool m_TaskComplete;
+		Semaphore m_post_TaskComplete;
 
 	public:
 		virtual ~BaseTaskThread() {}
 		BaseTaskThread() :
-			m_done( false )
+			m_Done( false )
 		,	m_TaskComplete( false )
+		,	m_post_TaskComplete()
 		{
 		}
 
 		// Tells the thread to exit and then waits for thread termination.
-		// To force-terminate the thread without "nicely" waiting for the task to complete,
-		// explicitly use the Thread::Close parent implementation instead.
-		void Close()
+		sptr Block()
 		{
-			if( m_terminated ) return;
-			m_done = true;
+			if( !m_running ) return m_returncode;
+			m_Done = true;
 			m_post_event.Post();
-			pthread_join( m_thread, NULL );
+			return PersistentThread::Block();
 		}
 		
 		// Initiates the new task.  This should be called after your own StartTask has
 		// initialized internal variables / preparations for task execution.
 		void PostTask()
 		{
-			jASSUME( !m_terminated );
+			jASSUME( m_running );
 			m_TaskComplete = false;
+			m_post_TaskComplete.Reset();
 			m_post_event.Post();
 		}
 
 		// Blocks current thread execution pending the completion of the parallel task.
-		void WaitForResult() const
+		void WaitForResult()
 		{
-			if( m_terminated ) return;
-			while( !m_TaskComplete )
-			{
-				Timeslice();
-				SpinWait();
-			}
+			if( !m_running ) return;
+			if( !m_TaskComplete )
+				m_post_TaskComplete.Wait();
+			else
+				m_post_TaskComplete.Reset();
 		}
 		
 	protected:
@@ -237,18 +289,19 @@ namespace Threading
 		// all your necessary processing work here.
 		virtual void Task()=0;
 
-		int Callback()
+		sptr ExecuteTask()
 		{
 			do
 			{
 				// Wait for a job!
 				m_post_event.Wait();
 
-				if( m_done ) break;
+				if( m_Done ) break;
 				Task();
 				m_TaskComplete = true;
-			} while( !m_done );
-			
+				m_post_TaskComplete.Post();
+			} while( !m_Done );
+
 			return 0;
 		}
 	};

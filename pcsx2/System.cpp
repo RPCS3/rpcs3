@@ -33,7 +33,7 @@
 
 using namespace std;
 
-Pcsx2Config EmuConfig = {0};
+Pcsx2Config EmuConfig;
 
 // disable all session overrides by default...
 SessionOverrideFlags g_Session = {false};
@@ -332,54 +332,6 @@ void SysEndExecution()
 
 	ClosePlugins( EmuConfig.closeGSonEsc );
 	g_ReturnToGui = true;
-}
-
-// Runs an ELF image directly (ISO or ELF program or BIN)
-// Used by Run::FromCD, and Run->Execute when no active emulation state is present.
-// elf_file - if NULL, the CDVD plugin is queried for the ELF file.
-// use_bios - forces the game to boot through the PS2 bios, instead of bypassing it.
-void SysPrepareExecution( const wxString& elf_file, bool use_bios )
-{
-	if( !g_EmulationInProgress )
-	{
-		try
-		{
-			cpuReset();
-		}
-		catch( Exception::BaseException& ex )
-		{
-			Msgbox::Alert( ex.DisplayMessage() );
-			return;
-		}
-
-		//g_Startup.BootMode = (elf_file) ? BootMode_Elf : BootMode_Normal;
-
-		OpenPlugins(NULL);
-
-		if( elf_file.IsEmpty() )
-		{
-			if( !StateRecovery::HasState() )
-			{
-				// Not recovering a state, so need to execute the bios and load the ELF information.
-				// (note: gsRecoveries are done from ExecuteCpu)
-
-				wxString ename;
-				if( !use_bios )
-					GetPS2ElfName( ename );
-
-				loadElfFile( ename );
-			}
-		}
-		else
-		{
-			// Custom ELF specified (not using CDVD).
-			// Run the BIOS and load the ELF.
-			loadElfFile( elf_file );
-		}
-	}
-
-	StateRecovery::Recover();
-	HostGui::BeginExecution();
 }
 
 void SysRestorableReset()

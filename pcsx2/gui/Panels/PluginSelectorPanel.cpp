@@ -337,7 +337,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 // EnumThread Method Implementations
 
 Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master ) :
-	Thread()
+	PersistentThread()
 ,	Results( new EnumeratedPluginInfo[master.FileCount()] )
 ,	m_master( master )
 ,	m_cancel( false )
@@ -347,17 +347,17 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 Panels::PluginSelectorPanel::EnumThread::~EnumThread()
 {
 	safe_delete_array( Results );
-	Close();
+	Cancel();
 }
 
-void Panels::PluginSelectorPanel::EnumThread::Close()
+void Panels::PluginSelectorPanel::EnumThread::Cancel()
 {
 	m_cancel = true;
 	Threading::Sleep( 1 );
-	Thread::Close();
+	PersistentThread::Cancel();
 }
 
-int Panels::PluginSelectorPanel::EnumThread::Callback()
+sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 {
 	for( int curidx=0; curidx < m_master.FileCount() && !m_cancel; ++curidx )
 	{

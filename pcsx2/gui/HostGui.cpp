@@ -17,7 +17,7 @@
  */
  
 #include "PrecompiledHeader.h"
-#include "App.h"
+#include "Mainframe.h"
 
 // This API is likely obsolete for the most part, so I've just included a few dummies
 // to keep things compiling until I can get to the point of tying up loose ends.
@@ -44,6 +44,8 @@ namespace HostGui
 	
 	void BeginExecution()
 	{
+		wxASSERT( g_EmuThread != NULL );
+		g_EmuThread->Resume();
 	}
 	
 	void __fastcall KeyEvent( keyEvent* ev )

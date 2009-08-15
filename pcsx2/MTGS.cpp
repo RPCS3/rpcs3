@@ -177,7 +177,7 @@ typedef void (*GIFRegHandler)(const u32* data);
 static GIFRegHandler s_GSHandlers[3] = { RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL };
 
 mtgsThreadObject::mtgsThreadObject() :
-	Thread()
+	PersistentThread()
 ,	m_RingPos( 0 )
 ,	m_WritePos( 0 )
 
@@ -204,7 +204,7 @@ mtgsThreadObject::mtgsThreadObject() :
 
 void mtgsThreadObject::Start()
 {
-	Thread::Start();
+	PersistentThread::Start();
 
 	// Wait for the thread to finish initialization (it runs GSopen, which can take
 	// some time since it's creating a new window and all), and then check for errors.
@@ -217,10 +217,10 @@ void mtgsThreadObject::Start()
 
 mtgsThreadObject::~mtgsThreadObject()
 {
-	Close();
+	Cancel();
 }
 
-void mtgsThreadObject::Close()
+void mtgsThreadObject::Cancel()
 {
 	Console::WriteLn( "MTGS > Closing GS thread..." );
 	SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
@@ -499,7 +499,7 @@ struct PacketTagType
 #ifndef __LINUX__
 extern bool renderswitch;
 #endif
-int mtgsThreadObject::Callback()
+sptr mtgsThreadObject::ExecuteTask()
 {
 	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
 

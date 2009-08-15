@@ -35,8 +35,7 @@ extern void SysShutdownMem();
 
 extern void SysRestorableReset();		// Saves the current emulation state prior to spu reset.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
-extern void SysEndExecution();		// terminates plugins, saves GS state (if enabled), and signals emulation loop to end.
-extern void SysPrepareExecution( const wxString& elf_file, bool use_bios=false );
+extern void SysEndExecution();			// terminates plugins, saves GS state (if enabled), and signals emulation loop to end.
 
 // initiates high-speed execution of the emulation state.  This function is currently
 // designed to be run from an event loop, but will eventually be re-tooled with threading
@@ -82,6 +81,8 @@ extern void vSyncDebugStuff( uint frame );
 //
 namespace Msgbox
 {
+	extern void OnEvent( wxCommandEvent& evt );
+
 	// Pops up an alert Dialog Box with a singular "OK" button.
 	// Always returns false.  Replacement for SysMessage.
 	extern bool Alert( const wxString& text );
@@ -91,3 +92,4 @@ namespace Msgbox
 	extern bool OkCancel( const wxString& text );
 }
 
+DECLARE_EVENT_TYPE( pxEVT_MSGBOX, -1 );

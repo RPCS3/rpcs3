@@ -65,15 +65,4 @@ namespace Threading
 		// performance hint and isn't required).
 		__asm__ ( "pause" );
 	}
-
-	void* Thread::_internal_callback( void* itsme )
-	{
-		jASSUME( itsme != NULL );
-
-		Thread& owner = *((Thread*)itsme);
-		owner.m_returncode = owner.Callback();
-		owner.m_terminated = true;
-
-		return NULL;
-	}
 }

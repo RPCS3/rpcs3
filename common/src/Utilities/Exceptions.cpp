@@ -80,7 +80,7 @@ namespace Exception
 
 	wxString Stream::DisplayMessage() const
 	{
-		return m_message + L"\n" + StreamName.c_str();
+		return m_message + L"\n\n" + StreamName;
 	}
 
 	// ------------------------------------------------------------------------

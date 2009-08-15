@@ -306,7 +306,7 @@ namespace Panels
 			}
 		};
 	
-		class EnumThread : public Threading::Thread
+		class EnumThread : public Threading::PersistentThread
 		{
 		public:
 			EnumeratedPluginInfo* Results;		// array of plugin results.
@@ -317,10 +317,10 @@ namespace Panels
 		public:
 			virtual ~EnumThread();
 			EnumThread( PluginSelectorPanel& master );
-			void Close();
+			void Cancel();
 
 		protected:
-			int Callback();
+			sptr ExecuteTask();
 		};
 		
 		// This panel contains all of the plugin combo boxes.  We stick them

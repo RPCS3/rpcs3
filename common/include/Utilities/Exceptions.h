@@ -354,12 +354,16 @@ namespace Exception
 		explicit CreateStream(
 			const char* objname,
 			const char* msg=wxLt("File could not be created or opened") ) :
-		Stream( wxString::FromAscii( objname ), msg ) {}
+				Stream( wxString::FromAscii( objname ), msg ) {}
 
 		explicit CreateStream(
 			const wxString& objname=wxString(),
 			const char* msg=wxLt("File could not be created or opened") ) :
-		Stream( objname, msg ) {}	
+				Stream( objname, msg ) {}	
+
+		explicit CreateStream(
+			const wxString& objname, const wxString& msg_eng, const wxString& msg_xlt ) :
+				Stream( objname, msg_eng, msg_xlt ) {}	
 	};
 
 	// Exception thrown when an attempt to open a non-existent file is made.
@@ -373,8 +377,11 @@ namespace Exception
 		explicit FileNotFound(
 			const wxString& objname=wxString(),
 			const char* msg="File not found" ) :
+				CreateStream( objname, msg ) {}
+				
+		explicit FileNotFound( const wxString& objname, const wxString& msg_eng, const wxString& msg_xlt ) :
+			CreateStream( objname, msg_eng, msg_xlt ) {}	
 
-		CreateStream( objname, msg ) {}
 	};
 
 	class AccessDenied : public CreateStream

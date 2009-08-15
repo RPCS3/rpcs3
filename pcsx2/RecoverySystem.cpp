@@ -80,7 +80,7 @@ namespace StateRecovery {
 	void Recover()
 	{
 		// Just in case they weren't initialized earlier (no harm in calling this multiple times)
-		OpenPlugins(NULL);
+		OpenPlugins();
 
 		if( g_RecoveryState != NULL )
 		{

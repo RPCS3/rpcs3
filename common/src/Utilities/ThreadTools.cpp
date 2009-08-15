@@ -23,39 +23,93 @@ using namespace Threading;
 
 namespace Threading
 {
-	Thread::Thread() :
+	PersistentThread::PersistentThread() :
 		m_thread()
 	,	m_returncode( 0 )
-	,	m_terminated( false )
+	,	m_running( false )
 	,	m_post_event()
 	{
 	}
 
-	Thread::~Thread()
+	// Perform a blocking termination of the thread, to ensure full object cleanup.
+	PersistentThread::~PersistentThread()
 	{
-		Close();
+		Cancel( false );
 	}
 
-	void Thread::Start()
+	void PersistentThread::Start()
 	{
-		m_terminated = false;
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 			throw Exception::ThreadCreationError();
+
+		m_running = true;
 	}
 
-	void Thread::Close()
+	// Remarks:
+	//   Provision of non-blocking Cancel() is probably academic, since destroying a PersistentThread
+	//   object performs a blocking Cancel regardless of if you explicitly do a non-blocking Cancel()
+	//   prior, since the ExecuteTask() method requires a valid object state.  If you really need
+	//   fire-and-forget behavior on threads, use pthreads directly for now.
+	//   (TODO : make a DetachedThread class?)
+	//
+	// Parameters:
+	//   isBlocking - indicates if the Cancel action should block for thread completion or not.
+	//
+	void PersistentThread::Cancel( bool isBlocking )
 	{
-		if( !m_terminated )
-			pthread_cancel( m_thread );
-		pthread_join( m_thread, NULL );
+		if( !m_running ) return;
+		m_running = false;
+
+		pthread_cancel( m_thread );
+		if( isBlocking )
+			pthread_join( m_thread, (void**)&m_returncode );
+		else
+			pthread_detach( m_thread );
 	}
 
-	int Thread::GetReturnCode() const
+	// Blocks execution of the calling thread until this thread completes its task.  The
+	// caller should make sure to signal the thread to exit, or else blocking may deadlock the
+	// calling thread.  Classes which extend PersistentThread should override this method
+	// and signal any necessary thread exit variables prior to blocking.
+	//
+	// Returns the return code of the thread.
+	// This method is roughly the equivalent of pthread_join().
+	//
+	sptr PersistentThread::Block()
 	{
-		if( !m_terminated )
-			throw std::logic_error( "Thread is still running. No return code is available." );
+		bool isOwner = (pthread_self() == m_thread);
+		DevAssert( !isOwner, "Thread deadlock detected; Block() should never be called by the owner thread." );
+
+		pthread_join( m_thread, (void**)&m_returncode );
+		return m_returncode;
+	}
+	
+	bool PersistentThread::IsRunning() const
+	{
+		return ( m_running && (ESRCH != pthread_kill( m_thread, 0 )) );
+	}
+
+	// Exceptions:
+	//   InvalidOperation - thrown if the thread is still running or has never been started.
+	//
+	sptr PersistentThread::GetReturnCode() const
+	{
+		if( !m_running )
+			throw Exception::InvalidOperation( "Thread.GetReturnCode : thread has not been started." );
+
+		if( IsRunning() )
+			throw Exception::InvalidOperation( "Thread.GetReturnCode : thread is still running." );
 
 		return m_returncode;
+	}
+	
+	void* PersistentThread::_internal_callback( void* itsme )
+	{
+		jASSUME( itsme != NULL );
+
+		PersistentThread& owner = *((PersistentThread*)itsme);
+		owner.m_returncode = owner.ExecuteTask();
+		return (void*)owner.m_returncode;
 	}
 
 // pthread Cond is an evil api that is not suited for Pcsx2 needs.
@@ -121,6 +175,22 @@ namespace Threading
 	void Semaphore::Wait()
 	{
 		sem_wait( &sema );
+	}
+
+	// Performs an uncancellable wait on a semaphore; restoring the thread's previous cancel state
+	// after the wait has completed.  Useful for situations where the semaphore itself is stored on
+	// the stack and passed to another thread via GUI message or such, avoiding complications where
+	// the thread might be cancelled and the stack value becomes invalid.
+	//
+	// Performance note: this function has quite a bit more overhead compared to Semaphore::Wait(), so
+	// consider manually specifying the thread as uncancellable and using Wait() instead if you need
+	// to do a lot of no-cancel waits in a tight loop worker thread, for example.
+	void Semaphore::WaitNoCancel()
+	{
+		int oldstate;
+		pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
+		Wait();
+		pthread_setcancelstate( oldstate, NULL );
 	}
 
 	int Semaphore::Count()

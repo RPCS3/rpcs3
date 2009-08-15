@@ -48,7 +48,7 @@ static void _loadStateOrExcept( const wxString& file )
 
 	// Make sure the cpu and plugins are ready to be state-ified!
 	cpuReset();
-	OpenPlugins( NULL );
+	OpenPlugins();
 
 	joe.FreezeAll();
 

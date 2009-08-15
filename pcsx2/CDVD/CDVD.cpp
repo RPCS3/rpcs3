@@ -526,7 +526,7 @@ void cdvdDetectDisk()
 	cdvd.Type = DoCDVDdetectDiskType();
 
 	wxString str;
-	int result = GetPS2ElfName(str);
+	GetPS2ElfName(str);
 
 	// Now's a good time to reload the ELF info...
 	if( ElfCRC == 0 )

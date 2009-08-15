@@ -505,28 +505,27 @@ u32 loadElfCRC( const char* filename )
 	return crcval;
 }
 
-int loadElfFile(const wxString& filename)
+// Loads the elf binary data from the specified file into PS2 memory, and injects the ELF's
+// starting execution point into cpuRegs.pc.  If the filename is a cdrom URI in the form
+// of "cdrom0:" or "cdrom1:" then the CDVD is used as the source; otherwise the ELF is loaded
+// from the host filesystem.
+//
+// If the specified filename is empty then no action is taken (PS2 will continue booting
+// normally as if it has no CD
+//
+// Throws exception on error:
+//
+void loadElfFile(const wxString& filename)
 {
-	// Reset all recompilers prior to initiating a BIOS or new ELF.  The cleaner the
-	// slate, the happier the recompiler!
-
-	SysClearExecutionCache();
-
-	if( filename.IsEmpty() )
-	{
-		Console::Notice( "Running the PS2 BIOS..." );
-		return -1;
-	}
-
-	// We still need to run the BIOS stub, so that all the EE hardware gets initialized correctly.
-	cpuExecuteBios();
-
+	if( filename.IsEmpty() ) return;
+	
 	int elfsize;
 	Console::Status( wxsFormat( L"loadElfFile: %s", filename.c_str() ) );
 
 	const wxCharBuffer buffer( filename.ToAscii() );
 	const char* fnptr = buffer.data();
-
+	bool useCdvdSource=false;
+	
 	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
 		// Loading from a file (or non-cd image)
@@ -536,23 +535,25 @@ int loadElfFile(const wxString& filename)
 	else
 	{
 		// Loading from a CD rom or CD image.
+		useCdvdSource = true;
 		TocEntry toc;
 		IsoFS_init( );
 		if ( IsoFS_findFile( fnptr + strlen( "cdromN:" ), &toc ) == -1 )
-			return -1;
+			throw Exception::FileNotFound( filename, wxLt("ELF file was not found on the CDVD source media.") );
 		elfsize = toc.fileSize;
 	}
 
 	Console::Status( wxsFormat(L"loadElfFile: %d", elfsize) );
-	if( elfsize == 0 ) return -1;
+	if( elfsize == 0 )
+		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
 
 	ElfObject elfobj( filename, elfsize );
 
 	if( elfobj.proghead == NULL )
 	{
-		throw Exception::CpuStateShutdown(
-			wxsFormat( L"Invalid ELF header encountered in file:\n\t%s", elfobj.filename.c_str() ),
-			wxsFormat( L"Invalid ELF header, file: %s", elfobj.filename.c_str() )
+		throw Exception::BadStream( filename, useCdvdSource ?
+			wxLt("Invalid ELF file header.  The CD-Rom may be damaged, or the ISO image corrupted.") :
+			wxLt("Invalid ELF file.")
 		);
 	}
 
@@ -583,6 +584,6 @@ int loadElfFile(const wxString& filename)
 
 	ElfApplyPatches();
 	
-	return 0;
+	return;
 }
 

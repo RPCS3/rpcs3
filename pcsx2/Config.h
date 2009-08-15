@@ -32,6 +32,14 @@ enum PluginsEnum_t
 	PluginId_Count
 };
 
+// This macro is actually useful for about any and every possible application of C++
+// equality operators.
+#define OpEqu( field )		(field == right.field)
+
+//------------ DEFAULT sseMXCSR VALUES ---------------
+#define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
+#define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"
+
 /////////////////////////////////////////////////////////////////////////////////////////
 // Pcsx2Config
 //
@@ -50,28 +58,56 @@ class Pcsx2Config
 public:
 	struct ProfilerOptions
 	{
-		bool
-			Enabled:1,			// universal toggle for the profiler.
-			RecBlocks_EE:1,		// Enables per-block profiling for the EE recompiler [unimplemented]
-			RecBlocks_IOP:1,	// Enables per-block profiling for the IOP recompiler [unimplemented]
-			RecBlocks_VU0:1,	// Enables per-block profiling for the VU0 recompiler [unimplemented]
-			RecBlocks_VU1:1;	// Enables per-block profiling for the VU1 recompiler [unimplemented]
+		union
+		{
+			struct
+			{
+				bool
+					Enabled:1,			// universal toggle for the profiler.
+					RecBlocks_EE:1,		// Enables per-block profiling for the EE recompiler [unimplemented]
+					RecBlocks_IOP:1,	// Enables per-block profiling for the IOP recompiler [unimplemented]
+					RecBlocks_VU0:1,	// Enables per-block profiling for the VU0 recompiler [unimplemented]
+					RecBlocks_VU1:1;	// Enables per-block profiling for the VU1 recompiler [unimplemented]
+			};
+			u8 bits;
+		};
+
+		ProfilerOptions() : bits( 0 ) {}
 
 		void LoadSave( IniInterface& conf );
+
+		bool operator ==( const ProfilerOptions& right ) const
+		{
+			return OpEqu( bits );
+		}
+
+		bool operator !=( const ProfilerOptions& right ) const
+		{
+			return !this->operator ==( right );
+		}
 	};
 	
 	// ------------------------------------------------------------------------
 	struct RecompilerOptions
 	{
-		bool
-			EnableEE:1,
-			EnableIOP:1,
-			EnableVU0:1,
-			EnableVU1:1;
-			
-		bool
-			UseMicroVU0:1,
-			UseMicroVU1:1;
+		union
+		{
+			struct
+			{
+				bool
+					EnableEE:1,
+					EnableIOP:1,
+					EnableVU0:1,
+					EnableVU1:1;
+					
+				bool
+					UseMicroVU0:1,
+					UseMicroVU1:1;
+			};
+			u8 bits;
+		};
+		
+		RecompilerOptions() : bits( 0 ) { }
 
 		void Load( const wxString& srcfile );
 		void Load( const wxInputStream& srcstream );
@@ -80,29 +116,64 @@ public:
 
 		void LoadSave( IniInterface& conf );
 
+		bool operator ==( const RecompilerOptions& right ) const
+		{
+			return OpEqu( bits );
+		}
+
+		bool operator !=( const RecompilerOptions& right ) const
+		{
+			return !this->operator ==( right );
+		}
+
 	} Recompiler;
 
 	// ------------------------------------------------------------------------
 	struct CpuOptions
 	{
+		RecompilerOptions Recompiler;
+
 		u32 sseMXCSR;
 		u32 sseVUMXCSR;
 
-		bool
-			vuOverflow:1,
-			vuExtraOverflow:1,
-			vuSignOverflow:1,
-			vuUnderflow:1;
-			
-		bool
-			fpuOverflow:1,
-			fpuExtraOverflow:1,
-			fpuFullMode:1;
+		struct 
+		{
+			union
+			{
+				bool
+					vuOverflow:1,
+					vuExtraOverflow:1,
+					vuSignOverflow:1,
+					vuUnderflow:1;
+					
+				bool
+					fpuOverflow:1,
+					fpuExtraOverflow:1,
+					fpuFullMode:1;
+			};
+			u8 bits;
+		};
 
-		ProfilerOptions Profiler;
-		RecompilerOptions Recompiler;
+		CpuOptions() : 
+			sseMXCSR( DEFAULT_sseMXCSR )
+		,	sseVUMXCSR( DEFAULT_sseVUMXCSR )
+		,	bits( 0 )
+		{
+		}
 
 		void LoadSave( IniInterface& conf );
+		
+		bool operator ==( const CpuOptions& right ) const
+		{
+			return
+				OpEqu( sseMXCSR )	&& OpEqu( sseVUMXCSR )	&&
+				OpEqu( bits )		&& OpEqu( Recompiler );
+		}
+
+		bool operator !=( const CpuOptions& right ) const
+		{
+			return !this->operator ==( right );
+		}
 	};
 
 	// ------------------------------------------------------------------------
@@ -128,36 +199,77 @@ public:
 	// ------------------------------------------------------------------------
 	struct GamefixOptions
 	{
-		bool
-			VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
-			VuClipFlagHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
-			FpuCompareHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
-			FpuMulHack:1,		// Fix for Tales of Destiny hangs.
-			XgKickHack:1;		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+		union
+		{
+			struct 
+			{
+				bool
+					VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
+					VuClipFlagHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+					FpuCompareHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
+					FpuMulHack:1,		// Fix for Tales of Destiny hangs.
+					XgKickHack:1;		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+			};
+			u8 bits;
+		};
+
+		GamefixOptions() : bits( 0 ) {}
 
 		void LoadSave( IniInterface& conf );
+
+		bool operator ==( const GamefixOptions& right ) const
+		{
+			return OpEqu( bits );
+		}
+
+		bool operator !=( const GamefixOptions& right ) const
+		{
+			return !this->operator ==( right );
+		}
 	};
 
 	// ------------------------------------------------------------------------
 	struct SpeedhackOptions
 	{
-		int
-			EECycleRate:2,		// EE cyclerate selector (1.0, 1.5, 2.0)
-			VUCycleSteal:3,		// VU Cycle Stealer factor (0, 1, 2, or 3)
-			IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
-			IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
-			BIFC0:1,			// enables BIFC0 detection and fast-forwarding
-			
-			vuMinMax:1,			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
-			vuFlagHack:1;		// MicroVU specific flag hack; Can cause Infinite loops, SPS, etc...
+		union
+		{
+			struct 
+			{
+				int
+					EECycleRate:2,		// EE cyclerate selector (1.0, 1.5, 2.0)
+					VUCycleSteal:3,		// VU Cycle Stealer factor (0, 1, 2, or 3)
+					IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
+					IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
+					BIFC0:1,			// enables BIFC0 detection and fast-forwarding
+					
+					vuMinMax:1,			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
+					vuFlagHack:1;		// MicroVU specific flag hack; Can cause Infinite loops, SPS, etc...
+			};
+			u16	bits;
+		};
+
+		SpeedhackOptions() : bits( 0 ) {}
 
 		void LoadSave( IniInterface& conf );
+
+		bool operator ==( const SpeedhackOptions& right ) const
+		{
+			return OpEqu( bits );
+		}
+
+		bool operator !=( const SpeedhackOptions& right ) const
+		{
+			return !this->operator ==( right );
+		}
 	};
 
 public:
 	bool		CdvdVerboseReads:1;		// enables cdvd read activity verbosely dumped to the console
-	bool		CdvdDumpBlocks:1;
-	bool		EnablePatches:1;
+	bool		CdvdDumpBlocks:1;		// enables cdvd block dumping
+	bool		EnablePatches:1;		// enables patch detection and application
+
+	// when enabled performs bios stub execution, skipping full sony bios + splash screens
+	bool		SkipBiosSplash:1;
 
 	// Closes the GS/Video port on escape (good for fullscreen activity)
 	bool		closeGSonEsc:1;
@@ -169,6 +281,7 @@ public:
 	VideoOptions		Video;
 	SpeedhackOptions	Speedhacks;
 	GamefixOptions		Gamefixes;
+	ProfilerOptions		Profiler;
 
 	void Load( const wxString& srcfile );
 	void Load( const wxInputStream& srcstream );
@@ -177,21 +290,6 @@ public:
 
 	void LoadSave( IniInterface& ini );
 };
-
-// Pauses the emulation state at the next PS2 vsync, and returns control to the calling
-// thread; or does nothing if the core is already suspended.  Calling this thread from the
-// Core thread will result in deadlock.
-extern void Core_Suspend();
-
-// Applies a full suite of new settings, which will automatically facilitate the necessary
-// resets of the core and components (including plugins, if needed).  The scope of resetting
-// is determined by comparing the current settings against the new settings.
-extern void Core_ApplySettings( const Pcsx2Config& src );
-
-// Resumes the core execution state, or does nothing is the core is already running.  If
-// settings were changed, resets will be performed as needed and emulation state resumed from
-// memory savestates.
-extern void Core_Resume();
 
 //////////////////////////////////////////////////////////////////////////
 // Session Configuration Override Flags
@@ -243,10 +341,6 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_FPU_EXTRA_OVERFLOW	(EmuConfig.Cpu.fpuExtraOverflow) // If enabled, Operands are checked for infinities before being used in the FPU recs
 #define CHECK_FPU_EXTRA_FLAGS		1	// Always enabled now // Sets D/I flags on FPU instructions
 #define CHECK_FPU_FULL				(EmuConfig.Cpu.fpuFullMode)
-
-//------------ DEFAULT sseMXCSR VALUES!!! ---------------
-#define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
-#define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"
 
 //------------ EE Recompiler defines - Comment to disable a recompiler ---------------
 

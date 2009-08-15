@@ -76,7 +76,6 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 	IniBitBool( fpuFullMode,		false );
 
 	Recompiler.LoadSave( ini );
-	Profiler.LoadSave( ini );
 	
 	ini.SetPath( L".." );
 }
@@ -112,6 +111,7 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	Cpu.LoadSave( ini );
 	Video.LoadSave( ini );
 	Gamefixes.LoadSave( ini );
+	Profiler.LoadSave( ini );
 	
 	ini.SetPath( L".." );
 	ini.Flush();

@@ -167,8 +167,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( Menu_RunELF,			Menu_OpenELF_Click );
 	ConnectMenu( Menu_Run_Exit,			Menu_Exit_Click );
 
-	ConnectMenu( Menu_SuspendExec,		Menu_Suspend_Click );
-	ConnectMenu( Menu_ResumeExec,		Menu_Resume_Click );
+	ConnectMenu( Menu_PauseExec,		Menu_Pause_Click );
 	ConnectMenu( Menu_Reset,			Menu_Reset_Click );
 
 	ConnectMenu( Menu_State_LoadOther,	Menu_LoadStateOther_Click );
@@ -224,7 +223,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( Menu_State_Load01 ) ),
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( Menu_State_Save01 ) ),
 
-	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
+	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
+	
+	m_IsPaused( false )
 {
 	// ------------------------------------------------------------------------
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
@@ -275,15 +276,14 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	m_menuRun.Append(Menu_RunIso,		_("Run ISO"),				MakeIsoMenu() );
 	m_menuRun.Append(Menu_BootCDVD,		_("Run CDVD"),				MakeCdvdMenu() );
-	m_menuRun.Append(Menu_RunWithoutDisc,_("Run without Disc"),		_("Use this to access the PS2 system configuration menu"));
-	m_menuRun.Append(Menu_RunELF,		_("Run ELF File..."),		_("For running raw PS2 binaries."));
+	m_menuRun.Append(Menu_SkipBiosToggle,_("ELF Injection Hack"),	_("Skips PS2 splash screens when booting from Iso or CDVD media"));
 
 	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_SkipBiosToggle,_("Skip Bios on Boot"),	_("Enable this to skip PS2 bootup screens (may hurt compat)"));
+	m_menuRun.Append(Menu_RunWithoutDisc,_("Boot without Disc"),	_("Use this to access the PS2 system configuration menu"));
+	m_menuRun.Append(Menu_RunELF,		_("Run ELF File..."),		_("For running raw binaries"));
 
 	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_SuspendExec,	_("Suspend"),	_("Stops emulation dead in its tracks"));
-	m_menuRun.Append(Menu_ResumeExec,	_("Resume"),	_("Resumes suspended emulation"));
+	m_menuRun.Append(Menu_PauseExec,	_("Pause"),		_("Stops emulation dead in its tracks"));
 	m_menuRun.Append(Menu_States,		_("States"),	MakeStatesMenu(), wxEmptyString);
 	m_menuRun.Append(Menu_Reset,		_("Reset"),		_("Resets emulation state and reloads plugins"));
 
@@ -337,4 +337,3 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
 }
-

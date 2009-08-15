@@ -30,11 +30,12 @@ IMPLEMENT_APP(Pcsx2App)
 
 AppConfig*		g_Conf = NULL;
 wxFileHistory*	g_RecentIsoList = NULL;
+CoreEmuThread*	g_EmuThread = NULL;
 
 namespace Exception
 {
 	// --------------------------------------------------------------------------
-	// Exception used to perfom an "errorless" termination of the app during OnInit
+	// Exception used to perform an "errorless" termination of the app during OnInit
 	// procedures.  This happens when a user cancels out of startup prompts/wizards.
 	//
 	class StartupAborted : public BaseException
@@ -166,6 +167,7 @@ bool Pcsx2App::OnInit()
 	wxApp::OnInit();
 
 	g_Conf = new AppConfig();
+	g_EmuThread = new CoreEmuThread();
 
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
@@ -231,8 +233,15 @@ bool Pcsx2App::OnInit()
 	{
 		Dialogs::ConfigurationDialog( m_MainFrame ).ShowModal();
 	}*/
+	
+	Connect( pxEVT_MSGBOX, wxCommandEventHandler( Pcsx2App::OnMessageBox ) );
 
     return true;
+}
+
+void Pcsx2App::OnMessageBox( wxCommandEvent& evt )
+{
+	Msgbox::OnEvent( evt );
 }
 
 // Common exit handler which can be called from any event (though really it should

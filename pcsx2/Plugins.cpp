@@ -720,14 +720,7 @@ void InitPlugins()
 	return 0;*/
 }
 
-// ----------------------------------------------------------------------------
-// Opens all plugins and initializes the CDVD plugin to use the given filename.  If the filename is null
-// then the cdvd plugin uses whatever file it has been configured to use.  If plugin have not been
-// initialized by an explicit call to InitializePlugins, this method will do so for you.
-//
-// fixme: the cdvd filename really should be passed to the cdvd plugin as a separate API call. >_<
-//
-void OpenPlugins(const char* cdvdFilename)
+void OpenPlugins()
 {
 	/*if (!plugins_initialized)
 	{

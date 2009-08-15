@@ -113,7 +113,7 @@ extern PluginManager* g_plugins;
 void LoadPlugins();
 void ReleasePlugins();
 
-void OpenPlugins(const char* pTitleFilename);
+void OpenPlugins();
 void ClosePlugins( bool closegs );
 void CloseGS();
 

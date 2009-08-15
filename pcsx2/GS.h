@@ -154,7 +154,7 @@ enum GS_RINGTYPE
 ,	GS_RINGTYPE_QUIT
 };
 
-class mtgsThreadObject : public Threading::Thread
+class mtgsThreadObject : public Threading::PersistentThread
 {
 	friend class SaveState;
 
@@ -225,7 +225,7 @@ public:
 	virtual ~mtgsThreadObject();
 
 	void Start();
-	void Close();
+	void Cancel();
 	void Reset();
 	void GIFSoftReset( int mask );
 
@@ -276,7 +276,7 @@ protected:
 	uint _PrepForSimplePacket();
 	void _FinishSimplePacket( uint future_writepos );
 
-	int Callback();
+	sptr ExecuteTask();
 };
 
 extern mtgsThreadObject* mtgsThread;

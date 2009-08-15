@@ -23,6 +23,9 @@
 #include <wx/docview.h>
 
 #include "App.h"
+#include "PS2/CoreEmuThread.h"
+
+extern CoreEmuThread*	g_EmuThread;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -50,8 +53,7 @@ protected:
 		Menu_RunELF,
 		Menu_SkipBiosToggle,	// enables the Bios Skip  speedhack
 		Menu_EnableSkipBios,	// check marked menu that toggles Skip Bios boot feature.
-		Menu_SuspendExec,		// suspends active emulation
-		Menu_ResumeExec,		// restores active emulation
+		Menu_PauseExec,			// suspends/resumes active emulation
 		Menu_Reset,				// Issues a complete reset.
 		Menu_States,			// Opens states submenu
 		Menu_Run_Exit = wxID_EXIT,
@@ -134,6 +136,8 @@ protected:
 
 	wxMenuItem& m_MenuItem_Console;
 
+	bool m_IsPaused;
+	
 	// ------------------------------------------------------------------------
 	// MainEmuFrame Constructors and Member Methods
 	// ------------------------------------------------------------------------
@@ -141,6 +145,8 @@ protected:
 public:
     MainEmuFrame(wxWindow* parent, const wxString& title);
 	void OnLogBoxHidden();
+
+	bool IsPaused() const { return m_IsPaused; }
 
 protected:
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
@@ -160,8 +166,7 @@ protected:
 	void Menu_SaveStateOther_Click(wxCommandEvent &event);
 	void Menu_Exit_Click(wxCommandEvent &event);
 
-	void Menu_Suspend_Click(wxCommandEvent &event);
-	void Menu_Resume_Click(wxCommandEvent &event);
+	void Menu_Pause_Click(wxCommandEvent &event);
 	void Menu_Reset_Click(wxCommandEvent &event);
 
 	void Menu_Debug_Open_Click(wxCommandEvent &event);

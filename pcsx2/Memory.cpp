@@ -805,7 +805,7 @@ void memReset()
 	wxString Bios( g_Conf->FullpathToBios() );
 
 	long filesize = Path::GetFileSize( Bios );
-	if( filesize <= 0 )
+	if( filesize > 0 )
 	{
 		wxFile fp( Bios.c_str() );
 		fp.Read( PS2MEM_ROM, min( (long)Ps2MemSize::Rom, filesize ) );
@@ -813,7 +813,14 @@ void memReset()
 	else
 	{
 		// Translated: Bios file not found or not specified ... A bios is required for Pcsx2 to run!
-		throw Exception::FileNotFound( Bios, wxLt("Bios not found") );
+		throw Exception::FileNotFound( Bios,
+			L"Configured Bios file does not exist",
+			pxE( ".Error:BiosNotFound",
+				L"The configured BIOS file does not exist, or no BIOS has been configured.\n\n"
+				L"PCSX2 requires a PS2 BIOS to run; and the BIOS *must* be obtained from an actual PS2 unit\n"
+				L"that you own (borrowing doesn't count).  Please consult the FAQs and Guides for further instructions."
+			)
+		);
 	}
 
 	BiosVersion = GetBiosVersion();

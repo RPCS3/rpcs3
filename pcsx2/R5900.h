@@ -28,7 +28,7 @@ extern const char* const bios[256];
 
 extern s32 EEsCycle;
 extern u32 EEoCycle;
-extern u32 bExecBIOS;
+extern bool g_ExecBiosHack;
 
 union GPR_reg {   // Declare union type GPR register
 	u64 UD[2];      //128 bits

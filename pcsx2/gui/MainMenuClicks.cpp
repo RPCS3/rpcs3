@@ -17,6 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "HostGui.h"
 #include "CDVD/CDVD.h"
 
 #include "MainFrame.h"
@@ -37,20 +38,63 @@ static const wxChar* isoFilterTypes =
 
 void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 {
+	g_EmuThread->Suspend();
+
 	Console::Status( L"Default Folder: " + g_Conf->Folders.RunIso.ToString() );
 	wxFileDialog ctrl( this, _("Run PS2 Iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
 		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
 
 	if( ctrl.ShowModal() == wxID_CANCEL ) return;
 	g_Conf->Folders.RunIso = ctrl.GetPath();
-	
+
 	//g_Conf->Save();
+	
+	if( EmuConfig.SkipBiosSplash )
+	{
+		// Fetch the ELF filename and CD type from the CDVD provider.
+		wxString ename( ctrl.GetFilename() );
+		int result = GetPS2ElfName( ename );
+		g_EmuThread->SetElfFile( wxEmptyString );
+		switch( result )
+		{
+			case 0:
+				Msgbox::Alert( _("Boot failed: CDVD image is not a PS1 or PS2 game.") );
+			return;
+
+			case 1:
+				Msgbox::Alert( _("Boot failed: PCSX2 does not support emulation of PS1 games.") );
+			return;
+
+			case 2:
+				// PS2 game.  Valid!
+				g_EmuThread->SetElfFile( ename );
+			break;
+		}
+	}
 }
 
 void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 {
+	if( g_EmuThread->IsRunning() )
+	{
+		g_EmuThread->Suspend();
+
+		// [TODO] : Add one of 'dems checkboxes that read like "[x] don't show this stupid shit again, kthx."
+		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmEmuReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
+
+		if( !result )
+		{
+			if( !IsPaused() )
+				g_EmuThread->Resume();
+			return;
+		}
+	}
+
+	g_EmuThread->Reset();
 	CDVDsys_ChangeSource( CDVDsrc_NoDisc );
-	SysPrepareExecution( wxEmptyString, true );
+	g_EmuThread->Resume();
+
+	//HostGui::BeginExecution();
 }
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
@@ -76,11 +120,7 @@ void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 	Close();
 }
 
-void MainEmuFrame::Menu_Suspend_Click(wxCommandEvent &event)
-{
-}
-
-void MainEmuFrame::Menu_Resume_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_Pause_Click(wxCommandEvent &event)
 {
 }
 

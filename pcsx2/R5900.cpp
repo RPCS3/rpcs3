@@ -47,7 +47,7 @@ PCSX2_ALIGNED16(fpuRegisters fpuRegs);
 PCSX2_ALIGNED16(tlbs tlb[48]);
 R5900cpu *Cpu = NULL;
 
-u32 bExecBIOS = 0; // set if the BIOS has already been executed
+bool g_ExecBiosHack = false; // set if the BIOS has already been executed
 
 static bool cpuIsInitialized = false;
 static const uint eeWaitCycles = 3072;
@@ -556,21 +556,27 @@ __forceinline void cpuTestHwInts() {
 // memory and hardware.  It forcefully breaks execution when the stub is finished, prior
 // to the PS2 logos being displayed.  This allows us to "shortcut" right into a game
 // without having to wait through the logos or endure game/bios localization checks.
+//
+// Use of this function must be followed by the proper injection of the elf header's code
+// execution entry point into cpuRegs.pc.  Failure to modify cpuRegs.pc will result in the
+// bios continuing its normal unimpeeded splashscreen execution.
+//
 void cpuExecuteBios()
 {
 	// Set the video mode to user's default request:
 	gsSetRegionMode( (GS_RegionMode)EmuConfig.Video.DefaultRegionMode );
 
-	Console::Notice( "* PCSX2 *: ExecuteBios" );
+	Console::Status( "Executing Bios Stub..." );
 
-	bExecBIOS = TRUE;
-	while (cpuRegs.pc != 0x00200008 &&
-		   cpuRegs.pc != 0x00100008) {
+	g_ExecBiosHack = true;
+	while(	cpuRegs.pc != 0x00200008 &&
+			cpuRegs.pc != 0x00100008 )
+	{
 		g_nextBranchCycle = cpuRegs.cycle;
 		Cpu->ExecuteBlock();
 	}
+	g_ExecBiosHack = false;
 
-	bExecBIOS = FALSE;
 //    {
 //        FILE* f = fopen("eebios.bin", "wb");
 //        fwrite(PSM(0x80000000), 0x100000, 1, f);
@@ -586,12 +592,12 @@ void cpuExecuteBios()
 //	REC_CLEARM(0x00100008);
 //	REC_CLEARM(cpuRegs.pc);
 
-	// Reset the EErecs here, because the bios generates "slow" blocks that have hacky
-	// bBiosEnd checks in them and stuff.  This deletes them so that the recs replace them
+	// Reset the EErecs here, because the bios generates "slow" blocks that have
+	// g_ExecBiosHack checks in them.  This deletes them so that the recs replace them
 	// with new faster versions:
 	Cpu->Reset();
 
-	Console::Notice("* PCSX2 *: ExecuteBios Complete");
+	Console::Notice("Execute Bios Stub Complete");
 	//GSprintf(5, "PCSX2 " PCSX2_VERSION "\nExecuteBios Complete\n");
 }
 

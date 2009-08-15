@@ -72,20 +72,5 @@ namespace Threading
 	{
 		__asm { pause };
 	}
-
-	void* Thread::_internal_callback( void* itsme )
-	{
-		jASSUME( itsme != NULL );
-
-		//pthread_win32_thread_attach_np();
-
-		Thread& owner = *((Thread*)itsme);
-		owner.m_returncode = owner.Callback();
-		owner.m_terminated = true;
-
-		//pthread_win32_thread_detach_np();
-
-		return NULL;
-	}
 }
 
