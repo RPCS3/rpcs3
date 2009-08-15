@@ -22,6 +22,7 @@
 
 #include "IopCommon.h"
 #include "Sifcmd.h"
+#include "Tags.h"
 
 using namespace std;
 
@@ -305,33 +306,33 @@ __forceinline void SIF1Dma()
 
 					switch (id)
 					{
-						case 0: // refe
+						case TAG_REFE: // refe
 							SIF_LOG("   REFE %08X", ptag[1]);
 							sif1.end = 1;
 							sif1dma->madr = ptag[1];
 							sif1dma->tadr += 16;
 							break;
 
-						case 1: // cnt
+						case TAG_CNT: // cnt
 							SIF_LOG("   CNT");
 							sif1dma->madr = sif1dma->tadr + 16;
 							sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
 							break;
 
-						case 2: // next
+						case TAG_NEXT: // next
 							SIF_LOG("   NEXT %08X", ptag[1]);
 							sif1dma->madr = sif1dma->tadr + 16;
 							sif1dma->tadr = ptag[1];
 							break;
 
-						case 3: // ref
-						case 4: // refs
+						case TAG_REF: // ref
+						case TAG_REFS: // refs
 							SIF_LOG("   REF %08X", ptag[1]);
 							sif1dma->madr = ptag[1];
 							sif1dma->tadr += 16;
 							break;
 
-						case 7: // end
+						case TAG_END: // end
 							SIF_LOG("   END");
 							sif1.end = 1;
 							sif1dma->madr = sif1dma->tadr + 16;

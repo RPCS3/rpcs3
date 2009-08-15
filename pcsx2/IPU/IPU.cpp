@@ -26,6 +26,7 @@
 #include "coroutine.h"
 
 #include "Vif.h"
+#include "Tags.h"
 
 using namespace std;			// for min / max
 
@@ -1392,15 +1393,18 @@ static __forceinline bool IPU1chain(u32* &pMem, int &totalqwc)
 	return false;
 }
 
+// Remind me to give this a better name. --arcum42
 static __forceinline bool IncreaseTadr(u32 tag)
 {
-	switch (tag & 0x70000000)
+	u32 id = (tag >> 28) & 0x7;
+	
+	switch (id)
 	{
-		case 0x00000000:
+		case TAG_REFE:  // refe
 			ipu1dma->tadr += 16;
 			return true;
 		
-		case 0x70000000:
+		case TAG_END: // end
 			ipu1dma->tadr = ipu1dma->madr;
 			return true;
 	}
@@ -1408,6 +1412,48 @@ static __forceinline bool IncreaseTadr(u32 tag)
 }
 
 extern void gsInterrupt();
+
+static __forceinline bool ipuDmacSrcChain(DMACh *tag, u32 *ptag)
+{
+	u32 id = (ptag[0] >> 28) & 0x7;
+	
+	switch (id)
+	{
+		case TAG_REFE: // refe
+			// do not change tadr
+			tag->madr = ptag[1];
+			return true;
+			break;
+
+		case TAG_CNT: // cnt
+			tag->madr = tag->tadr + 16;
+			// Set the taddr to the next tag
+			tag->tadr += 16 + (tag->qwc << 4);
+			break;
+
+		case TAG_NEXT: // next
+			tag->madr = tag->tadr + 16;
+			tag->tadr = ptag[1];
+			break;
+
+		case TAG_REF: // ref
+			tag->madr = ptag[1];
+			tag->tadr += 16;
+			break;
+
+		case TAG_END: // end
+			// do not change tadr
+			tag->madr = tag->tadr + 16;
+			return true;
+			break;
+
+		default:
+			Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
+			break;
+	}
+	
+	return false;
+}
 
 int IPU1dma()
 {
@@ -1421,7 +1467,7 @@ int IPU1dma()
 	if (!(ipu1dma->chcr & 0x100) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
 
 	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
-
+	
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
 	while(gif->chcr & 0x100 && vif1Regs->mskpath3 == 0) 
 	{
@@ -1509,41 +1555,8 @@ int IPU1dma()
 
 		ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);      //Transfer upper part of tag to CHCR bits 31-15
 		ipu1dma->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
-
-		switch (ptag[0] & 0x70000000)
-		{
-			case 0x00000000: // refe
-				// do not change tadr
-				ipu1dma->madr = ptag[1];
-				done = TRUE;
-				break;
-
-			case 0x10000000: // cnt
-				ipu1dma->madr = ipu1dma->tadr + 16;
-				// Set the taddr to the next tag
-				ipu1dma->tadr += 16 + (ipu1dma->qwc << 4);
-				break;
-
-			case 0x20000000: // next
-				ipu1dma->madr = ipu1dma->tadr + 16;
-				ipu1dma->tadr = ptag[1];
-				break;
-
-			case 0x30000000: // ref
-				ipu1dma->madr = ptag[1];
-				ipu1dma->tadr += 16;
-				break;
-
-			case 0x70000000: // end
-				// do not change tadr
-				ipu1dma->madr = ipu1dma->tadr + 16;
-				done = TRUE;
-				break;
-
-			default:
-				Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
-				break;
-		}
+		
+		done = ipuDmacSrcChain(ipu1dma, ptag);
 
 		IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
 		        ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
@@ -1555,7 +1568,7 @@ int IPU1dma()
 		
 		if (ipu1dma->qwc == 0)
 		{
-			//if ((ipu1dma->chcr & 0x80) && (ptag[0] & 0x80000000))  	 //Check TIE bit of CHCR and IRQ bit of tag
+			//Check TIE bit of CHCR and IRQ bit of tag
 			if (g_nDMATransfer & IPU_DMA_DOTIE1)
 			{
 				Console::WriteLn("IPU1 TIE");

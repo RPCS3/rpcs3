@@ -32,6 +32,7 @@
 #include "VifDma.h"
 #include "SPR.h"
 #include "Sif.h"
+#include "Tags.h"
 
 using namespace R5900;
 
@@ -150,27 +151,27 @@ bool hwMFIFOWrite(u32 addr, u8 *data, u32 size) {
 
 bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 	switch (id) {
-		case 0: // Refe - Transfer Packet According to ADDR field
+		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
 			return true;										//End Transfer
 
-		case 1: // CNT - Transfer QWC following the tag.
+		case TAG_CNT: // CNT - Transfer QWC following the tag.
 			dma->madr = dma->tadr + 16;						//Set MADR to QW after Tag            
 			dma->tadr = dma->madr + (dma->qwc << 4);			//Set TADR to QW following the data
 			return false;
 
-		case 2: // Next - Transfer QWC following tag. TADR = ADDR
+		case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
 		{
 			u32 temp = dma->madr;								//Temporarily Store ADDR
 			dma->madr = dma->tadr + 16; 					  //Set MADR to QW following the tag
 			dma->tadr = temp;								//Copy temporarily stored ADDR to Tag
 			return false;
 		}
-		case 3: // Ref - Transfer QWC from ADDR field
-		case 4: // Refs - Transfer QWC from ADDR field (Stall Control) 
+		case TAG_REF: // Ref - Transfer QWC from ADDR field
+		case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control) 
 			dma->tadr += 16;									//Set TADR to next tag
 			return false;
 
-		case 5: // Call - Transfer QWC following the tag, save succeeding tag
+		case TAG_CALL: // Call - Transfer QWC following the tag, save succeeding tag
 		{
 			u32 temp = dma->madr;								//Temporarily Store ADDR
 															
@@ -191,7 +192,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 											
 			return false;
 		}
-		case 6: // Ret - Transfer QWC following the tag, load next tag
+		case TAG_RET: // Ret - Transfer QWC following the tag, load next tag
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
 
 			if ((dma->chcr & 0x30) == 0x20) {							//If ASR1 is NOT equal to 0 (Contains address)
@@ -211,7 +212,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 			}
 			return false;
 
-		case 7: // End - Transfer QWC following the tag 
+		case TAG_END: // End - Transfer QWC following the tag 
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
 			//Dont Increment tadr, breaks Soul Calibur II and III
 			return true;										//End Transfer
@@ -224,26 +225,26 @@ bool hwDmacSrcChain(DMACh *dma, int id) {
 	u32 temp;
 
 	switch (id) {
-		case 0: // Refe - Transfer Packet According to ADDR field
+		case TAG_REFE: // Refe - Transfer Packet According to ADDR field
 			return true;										//End Transfer
 
-		case 1: // CNT - Transfer QWC following the tag.
+		case TAG_CNT: // CNT - Transfer QWC following the tag.
 			dma->madr = dma->tadr + 16;						//Set MADR to QW after Tag            
 			dma->tadr = dma->madr + (dma->qwc << 4);			//Set TADR to QW following the data
 			return false;
 
-		case 2: // Next - Transfer QWC following tag. TADR = ADDR
+		case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
 			temp = dma->madr;								//Temporarily Store ADDR
 			dma->madr = dma->tadr + 16; 					  //Set MADR to QW following the tag
 			dma->tadr = temp;								//Copy temporarily stored ADDR to Tag
 			return false;
 
-		case 3: // Ref - Transfer QWC from ADDR field
-		case 4: // Refs - Transfer QWC from ADDR field (Stall Control) 
+		case TAG_REF: // Ref - Transfer QWC from ADDR field
+		case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control) 
 			dma->tadr += 16;									//Set TADR to next tag
 			return false;
 
-		case 7: // End - Transfer QWC following the tag
+		case TAG_END: // End - Transfer QWC following the tag
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
 			//Dont Increment tadr, breaks Soul Calibur II and III
 			return true;										//End Transfer

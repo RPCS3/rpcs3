@@ -25,6 +25,7 @@
 #include "Counters.h"
 
 #include "VifDma.h"
+#include "Tags.h"
 
 using std::min;
 
@@ -43,8 +44,7 @@ static int gifstate = GIF_STATE_READY;
 
 //static u64 s_gstag = 0; // used for querying the last tag
 
-// This should be a bool, as should the return value of hwDmacSrcChainWithStack.
-// Next time I feel like breaking the save state, it will be. --arcum42
+// This should be a bool. Next time I feel like breaking the save state, it will be. --arcum42
 static int gspath3done = 0;
 
 static u32 gscycles = 0, prevcycles = 0, mfifocycles = 0;
@@ -491,31 +491,31 @@ void mfifoGIFtransfer(int qwc)
 		gifqwc--;
 		switch (id) 
 		{
-			case 0: // Refe - Transfer Packet According to ADDR field
+			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
 				gif->tadr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));
 				gifstate = GIF_STATE_DONE;										//End Transfer
 				break;
 
-			case 1: // CNT - Transfer QWC following the tag.
+			case TAG_CNT: // CNT - Transfer QWC following the tag.
 				gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));						//Set MADR to QW after Tag            
 				gif->tadr = psHu32(DMAC_RBOR) + ((gif->madr + (gif->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
 				gifstate = GIF_STATE_READY;
 				break;
 
-			case 2: // Next - Transfer QWC following tag. TADR = ADDR
+			case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
 				temp = gif->madr;								//Temporarily Store ADDR
 				gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
 				gif->tadr = temp;								//Copy temporarily stored ADDR to Tag
 				gifstate = GIF_STATE_READY;
 				break;
 
-			case 3: // Ref - Transfer QWC from ADDR field
-			case 4: // Refs - Transfer QWC from ADDR field (Stall Control) 
+			case TAG_REF: // Ref - Transfer QWC from ADDR field
+			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control) 
 				gif->tadr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));							//Set TADR to next tag
 				gifstate = GIF_STATE_READY;
 				break;
 
-			case 7: // End - Transfer QWC following the tag
+			case TAG_END: // End - Transfer QWC following the tag
 				gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
 				gif->tadr = psHu32(DMAC_RBOR) + ((gif->madr + (gif->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
 				gifstate = GIF_STATE_DONE;						//End Transfer

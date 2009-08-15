@@ -78,19 +78,12 @@ namespace ChainTags
 	// Untested
 	static __forceinline pce_values PCE(u32 *tag)
 	{
-		u8 temp = 0;
-		if (tag[0] & (1 << 22)) temp |= (1 << 0);
-		if (tag[0] & (1 << 23)) temp |= (1 << 1);
-		return (pce_values)temp;
+		return (pce_values)((tag[0] >> 22) & 0x3);
 	}
 	
-	static __forceinline tag_id Id(u32* &tag)
+	static __forceinline tag_id Id(u32* tag)
 	{
-		u8 temp = 0;
-		if (tag[0] & (1 << 28)) temp |= (1 << 0);
-		if (tag[0] & (1 << 29)) temp |= (1 << 1);
-		if (tag[0] & (1 << 30)) temp |= (1 << 2);
-		return (tag_id)temp;
+		return (tag_id)((tag[0] >> 28) & 0x7);
 	}
 	
 	static __forceinline bool IRQ(u32 *tag)

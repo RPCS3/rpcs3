@@ -24,6 +24,7 @@
 #include "VUmicro.h"
 #include "Vif.h"
 #include "VifDma.h"
+#include "Tags.h"
 
 VIFregisters *vifRegs;
 u32* vifRow = NULL;
@@ -479,18 +480,18 @@ void mfifoVIF1transfer(int qwc)
 
 		switch (id)
 		{
-			case 0: // Refe - Transfer Packet According to ADDR field
+			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));
 				vif1.done = true;										//End Transfer
 				break;
 
-			case 1: // CNT - Transfer QWC following the tag.
+			case TAG_CNT: // CNT - Transfer QWC following the tag.
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));						//Set MADR to QW after Tag
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
 				vif1.done = false;
 				break;
 
-			case 2: // Next - Transfer QWC following tag. TADR = ADDR
+			case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
 			{
 				int temp = vif1ch->madr;								//Temporarily Store ADDR
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
@@ -500,13 +501,13 @@ void mfifoVIF1transfer(int qwc)
 				break;
 			}
 
-			case 3: // Ref - Transfer QWC from ADDR field
-			case 4: // Refs - Transfer QWC from ADDR field (Stall Control)
+			case TAG_REF: // Ref - Transfer QWC from ADDR field
+			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));							//Set TADR to next tag
 				vif1.done = false;
 				break;
 
-			case 7: // End - Transfer QWC following the tag
+			case TAG_END: // End - Transfer QWC following the tag
 				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
 				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
 				vif1.done = true;										//End Transfer
