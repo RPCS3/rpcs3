@@ -161,7 +161,8 @@ struct AppImageIds
 			Plugins,
 			Speedhacks,
 			Gamefixes,
-			Video;
+			Video,
+			Cpu;
 
 		ConfigIds() :
 			Paths( -1 )
@@ -169,6 +170,7 @@ struct AppImageIds
 		,	Speedhacks( -1 )
 		,	Gamefixes( -1 )
 		,	Video( -1 )
+		,	Cpu( -1 )
 		{
 		}
 	} Config;

@@ -192,7 +192,29 @@ namespace Panels
 
 		void Apply( AppConfig& conf );
 	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class CpuPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+
+	public:
+		CpuPanel( wxWindow& parent, int idealWidth );
+		void Apply( AppConfig& conf );
+	};
 	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class VideoPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+
+	public:
+		VideoPanel( wxWindow& parent, int idealWidth );
+		void Apply( AppConfig& conf );
+	};
+		
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class SpeedHacksPanel : public BaseApplicableConfigPanel
@@ -328,7 +350,8 @@ namespace Panels
 		class ComboBoxPanel : public wxPanelWithHelpers
 		{
 		protected:
-			wxComboBox* m_combobox[NumPluginTypes];
+			wxComboBox*		m_combobox[NumPluginTypes];
+			wxComboBox&		m_BiosBox;
 
 		public:
 			ComboBoxPanel( PluginSelectorPanel* parent );
@@ -356,7 +379,7 @@ namespace Panels
 	protected:
 		wxArrayString	m_FileList;	// list of potential plugin files
 		StatusPanel&	m_StatusPanel;
-		ComboBoxPanel&	m_ComboBoxes;
+		ComboBoxPanel&	m_ComponentBoxes;
 		bool			m_Uninitialized;
 		EnumThread*		m_EnumeratorThread;
 

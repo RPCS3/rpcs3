@@ -370,6 +370,7 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		FancyLoadMacro( Gamefixes );
 		FancyLoadMacro( Speedhacks );
 		FancyLoadMacro( Video );
+		FancyLoadMacro( Cpu );
 	}
 	m_ConfigImagesAreLoaded = true;
 	return m_ConfigImages;

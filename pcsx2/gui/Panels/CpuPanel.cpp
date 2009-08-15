@@ -17,3 +17,50 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "ConfigurationPanels.h"
+
+using namespace wxHelpers;
+
+Panels::CpuPanel::CpuPanel( wxWindow& parent, int idealWidth ) :
+	BaseApplicableConfigPanel( &parent, idealWidth )
+{
+	wxFlexGridSizer& s_main = *new wxFlexGridSizer( 2 );
+	
+	s_main.AddGrowableCol( 0, 1 );
+	s_main.AddGrowableCol( 1, 1 );
+	
+	// i18n: No point in translating PS2 CPU names :)
+	wxStaticBoxSizer& s_ee  = *new wxStaticBoxSizer( wxVERTICAL, this, L"EmotionEngine" );
+	wxStaticBoxSizer& s_iop = *new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" );
+	wxStaticBoxSizer& s_vu0 = *new wxStaticBoxSizer( wxVERTICAL, this, L"VU0" );
+	wxStaticBoxSizer& s_vu1 = *new wxStaticBoxSizer( wxVERTICAL, this, L"VU1" );
+	
+	m_StartNewRadioGroup = true;
+	AddRadioButton( s_ee, _("Interpreter"), wxEmptyString, _("Quite possibly the slowest thing in the universe.") );
+	AddRadioButton( s_ee, _("Recompiler") );
+
+	m_StartNewRadioGroup = true;
+	AddRadioButton( s_iop, _("Interpreter") );
+	AddRadioButton( s_iop, _("Recompiler") );
+
+	m_StartNewRadioGroup = true;
+	AddRadioButton( s_vu0, _("Interpreter") );
+	AddRadioButton( s_vu0, _("microVU Recompiler [new!]") );
+	AddRadioButton( s_vu0, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
+
+	m_StartNewRadioGroup = true;
+	AddRadioButton( s_vu1, _("Interpreter") );
+	AddRadioButton( s_vu1, _("microVU Recompiler [new!]") );
+	AddRadioButton( s_vu1, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
+	
+	s_main.Add( &s_ee, SizerFlags::StdExpand() );
+	s_main.Add( &s_iop, SizerFlags::StdExpand() );
+	s_main.Add( &s_vu0, SizerFlags::StdExpand() );
+	s_main.Add( &s_vu1, SizerFlags::StdExpand() );
+	
+	SetSizerAndFit( &s_main );
+}
+
+void Panels::CpuPanel::Apply( AppConfig& conf )
+{
+}

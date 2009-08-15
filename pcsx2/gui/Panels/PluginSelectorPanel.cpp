@@ -146,6 +146,7 @@ void Panels::PluginSelectorPanel::StatusPanel::Reset()
 // ------------------------------------------------------------------------
 Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent ) :
 	wxPanelWithHelpers( parent )
+,	m_BiosBox( *new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ) )
 {
 	wxFlexGridSizer& s_plugin = *new wxFlexGridSizer( NumPluginTypes, 3, 16, 10 );
 	s_plugin.SetFlexibleDirection( wxHORIZONTAL );
@@ -164,6 +165,9 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 		s_plugin.Add( new wxButton( this, wxID_ANY, L"Configure..." ) );
 	}
 
+	s_plugin.Add( new wxStaticText( this, wxID_ANY, L"BIOS" ), wxSizerFlags().Border( wxTOP | wxLEFT, 2 ) );
+	s_plugin.Add( &m_BiosBox, wxSizerFlags().Expand() );
+
 	SetSizerAndFit( &s_plugin );
 }
 
@@ -180,16 +184,16 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 ,	m_StatusPanel( *new StatusPanel( this,
 		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), &m_FileList, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES )
 	) )
-,	m_ComboBoxes( *new ComboBoxPanel( this ) )
+,	m_ComponentBoxes( *new ComboBoxPanel( this ) )
 ,	m_Uninitialized( true )
 ,	m_EnumeratorThread( NULL )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
+	
+	s_main.Add( &m_ComponentBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
-	s_main.Add( &m_ComboBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
-
-	s_main.AddSpacer( 4 );
-	AddStaticText( s_main, _("Tip: Installed plugins that are not compatible with your hardware or operating system will be listed below a separator.") );
+	//s_main.AddSpacer( 4 );
+	//AddStaticText( s_main, _("Tip: Installed plugins that are not compatible with your hardware or operating system will be listed below a separator.") );
 	s_main.AddSpacer( 4 );
 
 	s_main.Add( &m_StatusPanel, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
@@ -221,10 +225,10 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 {
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
-		int sel = m_ComboBoxes.Get(i).GetSelection();
+		int sel = m_ComponentBoxes.Get(i).GetSelection();
 		if( sel == wxNOT_FOUND ) continue;
 
-		wxFileName relative( m_FileList[(int)m_ComboBoxes.Get(i).GetClientData(sel)] );
+		wxFileName relative( m_FileList[(int)m_ComponentBoxes.Get(i).GetClientData(sel)] );
 		relative.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
 	}
@@ -236,7 +240,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 
 	// Disable all controls until enumeration is complete.
 
-	m_ComboBoxes.Hide();
+	m_ComponentBoxes.Hide();
 	m_StatusPanel.Show();
 
 	// Use a thread to load plugins.
@@ -258,7 +262,7 @@ void Panels::PluginSelectorPanel::OnShow( wxShowEvent& evt )
 
 void Panels::PluginSelectorPanel::OnRefresh( wxCommandEvent& evt )
 {
-	m_ComboBoxes.Reset();
+	m_ComponentBoxes.Reset();
 	DoRefresh();
 }
 
@@ -272,11 +276,11 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 	int emptyBoxes = 0;
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
-		if( m_ComboBoxes.Get(i).GetCount() <= 0 )
+		if( m_ComponentBoxes.Get(i).GetCount() <= 0 )
 			emptyBoxes++;
 
-		else if( m_ComboBoxes.Get(i).GetSelection() == wxNOT_FOUND )
-			m_ComboBoxes.Get(i).SetSelection( 0 );
+		else if( m_ComponentBoxes.Get(i).GetSelection() == wxNOT_FOUND )
+			m_ComponentBoxes.Get(i).SetSelection( 0 );
 	}
 
 	if( emptyBoxes > 0 )
@@ -288,7 +292,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 		);
 	}
 
-	m_ComboBoxes.Show();
+	m_ComponentBoxes.Show();
 	m_StatusPanel.Hide();
 	m_StatusPanel.Reset();
 }
@@ -314,7 +318,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 		{
 			if( result.PassedTest & tbl_PluginInfo[i].typemask )
 			{
-				int sel = m_ComboBoxes.Get(i).Append( wxsFormat( L"%s %s [%s]",
+				int sel = m_ComponentBoxes.Get(i).Append( wxsFormat( L"%s %s [%s]",
 					result.Name.c_str(), result.Version[i].c_str(), Path::GetFilenameWithoutExt( m_FileList[evtidx] ).c_str() ),
 					(void*)evtidx
 				);
@@ -326,7 +330,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 				right.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 
 				if( left == right )
-					m_ComboBoxes.Get(i).SetSelection( sel );
+					m_ComponentBoxes.Get(i).SetSelection( sel );
 			}
 		}
 	}

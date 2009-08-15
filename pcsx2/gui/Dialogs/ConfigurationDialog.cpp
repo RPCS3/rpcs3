@@ -52,16 +52,23 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	g_ApplyState.StartBook( &m_listbook );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new PathsPanel( m_listbook, IdealWidth ),			_("Folders"), false, cfgid.Paths );
+	m_listbook.AddPage( new CpuPanel( m_listbook, IdealWidth ),				_("CPU"), false, cfgid.Cpu );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new PluginSelectorPanel( m_listbook, IdealWidth ),	_("Plugins"), false, cfgid.Plugins );
+	m_listbook.AddPage( new VideoPanel( m_listbook, IdealWidth ),			_("GS/Video"), false, cfgid.Video );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
 	m_listbook.AddPage( new SpeedHacksPanel( m_listbook, IdealWidth ),		_("Speedhacks"), false, cfgid.Speedhacks );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
 	m_listbook.AddPage( new GameFixesPanel( m_listbook, IdealWidth ),		_("Game Fixes"), false, cfgid.Gamefixes );
+
+	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
+	m_listbook.AddPage( new PluginSelectorPanel( m_listbook, IdealWidth ),	_("Plugins"), false, cfgid.Plugins );
+
+	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
+	m_listbook.AddPage( new PathsPanel( m_listbook, IdealWidth ),			_("Folders"), false, cfgid.Paths );
+
 
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );

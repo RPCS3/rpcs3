@@ -17,3 +17,17 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "ConfigurationPanels.h"
+
+Panels::VideoPanel::VideoPanel( wxWindow& parent, int idealWidth ) :
+	BaseApplicableConfigPanel( &parent, idealWidth )
+{
+	// TODO:
+	// Framelimiting / Frameskipping / Vsync
+	// GS Window Options ( incl. Fullscreen )
+	// MTGS Forced Synchronization
+}
+
+void Panels::VideoPanel::Apply( AppConfig& conf )
+{
+}
