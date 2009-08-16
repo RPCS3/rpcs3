@@ -289,10 +289,14 @@ EXPORT_C GSirqCallback(void (*irq)())
 	s_irq = irq;
 }
 
-
-EXPORT_C_(int) GSsetupRecording(int start, void* pData)
+EXPORT_C_(int) GSsetupRecording(int start, void* data)
 {
-	s_gs->ToggleRecord();
+	GSKeyEventData e;
+
+	e.type = KEYPRESS;
+	e.key = VK_F12;
+
+	s_gs->KeyEvent(&e, start & 1);
 	
 	return 1;
 }

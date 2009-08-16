@@ -731,6 +731,7 @@
     <None Include="..\..\x86\ix86\ix86_inlines.inl" />
     <None Include="..\..\x86\microVU_Alloc.inl" />
     <None Include="..\..\x86\microVU_Analyze.inl" />
+    <None Include="..\..\x86\microVU_Branch.inl" />
     <None Include="..\..\x86\microVU_Compile.inl" />
     <None Include="..\..\x86\microVU_Execute.inl" />
     <None Include="..\..\x86\microVU_Flags.inl" />

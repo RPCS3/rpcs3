@@ -1110,6 +1110,9 @@
     <None Include="..\..\x86\microVU_Analyze.inl">
       <Filter>Ps2\EmotionEngine\VUmicro\Dynarec\microVU</Filter>
     </None>
+    <None Include="..\..\x86\microVU_Branch.inl">
+      <Filter>Ps2\EmotionEngine\VUmicro\Dynarec\microVU</Filter>
+    </None>
     <None Include="..\..\x86\microVU_Compile.inl">
       <Filter>Ps2\EmotionEngine\VUmicro\Dynarec\microVU</Filter>
     </None>

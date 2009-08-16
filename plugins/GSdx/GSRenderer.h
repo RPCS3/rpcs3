@@ -76,8 +76,7 @@ public:
 	virtual bool Create(const string& title, int w, int h);
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
-	virtual void KeyEvent(GSKeyEventData* e);
-	virtual void ToggleRecord();
+	virtual void KeyEvent(GSKeyEventData* e, int param = 0);
 	virtual bool CanUpscale() 
 	{
 		return !m_nativeres && m_regs->PMODE.EN != 0; // upscale ratio depends on the display size, with no output it may not be set correctly (ps2 logo to game transition)
