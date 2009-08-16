@@ -360,8 +360,11 @@ microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 	int bPC = iPC;
 	incPC2(-2);
 	for (i = 0; i < iEnd; i++) {
-		if (i == mVUcount) {
-			if (mVUpBlock->pState.viBackUp == xReg) infoVar = 1; 
+		if ((i == mVUcount) && (i < 5)) {
+			if (mVUpBlock->pState.viBackUp == xReg) {
+				infoVar = 1;
+				i++;
+			}
 			break; 
 		}
 		if ((mVUlow.VI_write.reg == xReg) && mVUlow.VI_write.used) {
@@ -374,13 +377,15 @@ microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 		break;
 	}
 	if (i) {
-		incPC2(2);
-		if (!infoVar) mVUlow.backupVI = 1;
+		if (!infoVar) {
+			incPC2(2);
+			mVUlow.backupVI = 1;
+			infoVar = 1;
+		}
 		iPC = bPC;
-		infoVar = 1;
 		DevCon::Status("microVU%d: Branch VI-Delay (%d) [%04x]", params getIndex, i, xPC);
 	}
-	iPC = bPC;
+	else iPC = bPC;
 }
 
 microVUt(void) mVUanalyzeBranch1(mV, int Is) {

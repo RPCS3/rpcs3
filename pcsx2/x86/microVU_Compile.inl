@@ -163,7 +163,7 @@ microVUt(void) branchWarning(mV) {
 		mVUlow.isNOP = 1;
 	}
 	if (mVUinfo.isBdelay) { // Check if VI Reg Written to on Branch Delay
-		if (mVUlow.VI_write.reg && mVUlow.VI_write.used) {
+		if (mVUlow.VI_write.reg && mVUlow.VI_write.used && !mVUlow.readFlags) {
 			mVUlow.backupVI = 1;
 			mVUregs.viBackUp = mVUlow.VI_write.reg;
 		}
