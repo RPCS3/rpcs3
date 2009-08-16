@@ -1398,9 +1398,7 @@ static __forceinline bool IPU1chain(int &totalqwc)
 // Remind me to give this a better name. --arcum42
 static __forceinline bool IncreaseTadr(u32 tag)
 {
-	u32 id = (tag >> 28) & 0x7;
-	
-	switch (id)
+	switch (Tag::Id(tag))
 	{
 		case TAG_REFE:  // refe
 			ipu1dma->tadr += 16;
@@ -1417,9 +1415,7 @@ extern void gsInterrupt();
 
 static __forceinline bool ipuDmacSrcChain(DMACh *tag, u32 *ptag)
 {
-	u32 id = (ptag[0] >> 28) & 0x7;
-	
-	switch (id)
+	switch (Tag::Id(ptag))
 	{
 		case TAG_REFE: // refe
 			// do not change tadr
@@ -1507,13 +1503,13 @@ int IPU1dma()
 			// Chain mode.
 			u32 tag = ipu1dma->chcr; // upper bits describe current tag
 
-			if (CHCR::TIE(ipu1dma) && ChainTags::IRQ(tag))
+			if (CHCR::TIE(ipu1dma) && Tag::IRQ(tag))
 			{
 				ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
 
 				IncreaseTadr(tag);
 
-				UpperTagTransfer(ipu1dma, ptag);
+				Tag::UpperTransfer(ipu1dma, ptag);
 				
 				IPU_LOG("IPU dmaIrq Set");
 				IPU_INT_TO(totalqwc * BIAS);
@@ -1554,7 +1550,7 @@ int IPU1dma()
 		ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
 		
 		// Transfer the tag.
-		if (!(TransferTag("IPU1", ipu1dma, ptag))) return totalqwc;
+		if (!(Tag::Transfer("IPU1", ipu1dma, ptag))) return totalqwc;
 		
 		ipu1cycles += 1; // Add 1 cycles from the QW read for the tag
 		
@@ -1564,7 +1560,7 @@ int IPU1dma()
 		        ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
 		
-		if (CHCR::TIE(ipu1dma) && ChainTags::IRQ(ptag))
+		if (CHCR::TIE(ipu1dma) && Tag::IRQ(ptag))
 			g_nDMATransfer |= IPU_DMA_DOTIE1;
 		else
 			g_nDMATransfer &= ~IPU_DMA_DOTIE1;
@@ -1585,7 +1581,7 @@ int IPU1dma()
 					IncreaseTadr(ptag[0]);
 
 					// Transfer the last of ptag into chcr.
-					UpperTagTransfer(ipu1dma, ptag);
+					Tag::UpperTransfer(ipu1dma, ptag);
 				}
 
 				IPU_INT_TO(ipu1cycles + totalqwc * BIAS);  // Should it be (ipu1cycles + totalqwc) * BIAS?

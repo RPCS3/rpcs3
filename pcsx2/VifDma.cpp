@@ -23,6 +23,7 @@
 #include "VUmicro.h"
 #include "GS.h"
 #include "VifDma.h"
+#include "Tags.h"
 
 #include <xmmintrin.h>
 #include <emmintrin.h>
@@ -425,23 +426,19 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 			{
 				vif->tag.addr += (((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + ((4 - ft->qsize) + unpacksize)) * 4;
 				dest += ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + (4 - ft->qsize) + unpacksize;
-				if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
-				{
-					vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
-					dest = (u32*)(VU->Mem + v->addr);
-				}
 			}
 			else
 			{
 				vif->tag.addr += ((4 - ft->qsize) + unpacksize) * 4;
 				dest += (4 - ft->qsize) + unpacksize;
-				if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
-				{
-					vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
-					dest = (u32*)(VU->Mem + v->addr);
-				}
-				
 			}
+			
+			if (vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+			{
+				vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
+				dest = (u32*)(VU->Mem + v->addr);
+			}
+			
 			cdata += unpacksize * ft->dsize;
 			vif->cl = 0;
 			VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
@@ -451,12 +448,14 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		else
 		{
 			vif->tag.addr += ((4 - ft->qsize) + unpacksize) * 4;
-			dest += (4 - ft->qsize) + unpacksize;		
-			if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+			dest += (4 - ft->qsize) + unpacksize;
+			
+			if (vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
 			{
 				vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
 				dest = (u32*)(VU->Mem + v->addr);
 			}
+			
 			cdata += unpacksize * ft->dsize;
 			VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 		}
@@ -468,7 +467,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 
 		if (vifRegs->cycle.cl >= vifRegs->cycle.wl)  // skipping write
 		{
-			if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+			if (vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
 			{
 				vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
 				dest = (u32*)(VU->Mem + v->addr);
@@ -498,7 +497,9 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 					dest += 4;
 					vif->tag.addr += 16;
 				}
-				if(vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
+				
+				// Hurrah for the 4th occurrance of this piece of code in this function...
+				if (vif->tag.addr >= (u32)(VIFdmanum ? 0x4000 : 0x1000)) 
 				{
 					vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
 					dest = (u32*)(VU->Mem + v->addr);
@@ -629,7 +630,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			       ((memlimit + (vifRegs->cycle.cl - vifRegs->cycle.wl) * 16) == tempsize) || 
 			       (tempsize == memlimit)))
 			{
-				//Its a red herring! so ignore it! SSE unpacks will be much quicker
+				//It's a red herring, so ignore it! SSE unpacks will be much quicker.
 				tempsize = 0;
 			}
 			else
@@ -985,6 +986,7 @@ static int __fastcall Vif0TransNull(u32 *data)  // Shouldnt go here
 	vif0.cmd = 0;
 	return 0;
 }
+
 static int __fastcall Vif0TransSTMask(u32 *data)  // STMASK
 {
 	SetNewMask(g_vif0Masks, g_vif0HasMask3, data[0], vif0Regs->mask);
@@ -1372,30 +1374,24 @@ int _chainVIF0()
 	int id, ret;
 
 	vif0ptag = (u32*)dmaGetAddr(vif0ch->tadr); //Set memory pointer to TADR
-	if (vif0ptag == NULL)  						//Is vif0ptag empty?
-	{
-		Console::Error("Vif0 Tag BUSERR");
-		vif0ch->chcr = (vif0ch->chcr & 0xFFFF) | ((*vif0ptag) & 0xFFFF0000);     //Transfer upper part of tag to CHCR bits 31-15
-		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
-		return -1;						   //Return -1 as an error has occurred
-	}
-
-	id = (vif0ptag[0] >> 28) & 0x7; //ID for DmaChain copied from bit 28 of the tag
-	vif0ch->qwc  = (u16)vif0ptag[0];       //QWC set to lower 16bits of the tag
-	vif0ch->madr = vif0ptag[1];            //MADR = ADDR field
-	g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
+	
+	if (!(Tag::Transfer("Vif0 Tag", vif0ch, vif0ptag))) return -1;
+	
+	vif0ch->madr = vif0ptag[1];		// MADR = ADDR field
+	id = Tag::Id(vif0ptag); 	// ID for DmaChain copied from bit 28 of the tag
+	g_vifCycles += 1; 				// Increase the QW read for the tag
+	
 	VIF_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
 	        vif0ptag[1], vif0ptag[0], vif0ch->qwc, id, vif0ch->madr, vif0ch->tadr);
 
-	vif0ch->chcr = (vif0ch->chcr & 0xFFFF) | ((*vif0ptag) & 0xFFFF0000);     //Transfer upper part of tag to CHCR bits 31-15
 	// Transfer dma tag if tte is set
-
-	if (vif0ch->chcr & 0x40)
+	if (CHCR::TTE(vif0ch))
 	{
 		if (vif0.vifstalled) 
 			ret = VIF0transfer(vif0ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset, 1);  //Transfer Tag on stall
 		else 
 			ret = VIF0transfer(vif0ptag + 2, 2, 1);  //Transfer Tag
+		
 		if (ret == -1) return -1;       //There has been an error
 		if (ret == -2) return -2;        //IRQ set by VIFTransfer
 	}
@@ -1407,7 +1403,7 @@ int _chainVIF0()
 
 	ret = _VIF0chain();											   //Transfers the data set by the switch
 
-	if ((vif0ch->chcr & 0x80) && (vif0ptag[0] >> 31))  			       //Check TIE bit of CHCR and IRQ bit of tag
+	if (CHCR::TIE(vif0ch) && Tag::IRQ(vif0ptag))  			       //Check TIE bit of CHCR and IRQ bit of tag
 	{
 		VIF_LOG("dmaIrq Set\n");
 
@@ -1446,9 +1442,9 @@ void  vif0Interrupt()
 		}
 	}
 
-	if ((vif0ch->chcr & 0x100) == 0) Console::WriteLn("Vif0 running when CHCR = %x", params vif0ch->chcr);
+	if (!CHCR::STR(vif0ch)) Console::WriteLn("Vif0 running when CHCR = %x", params vif0ch->chcr);
 
-	if ((vif0ch->chcr & 0x4) && (!vif0.done) && (!vif0.vifstalled))
+	if ((CHCR::MOD(vif0ch) == CHAIN_MODE) && (!vif0.done) && (!vif0.vifstalled))
 	{
 
 		if (!(psHu32(DMAC_CTRL) & 0x1))
@@ -1469,7 +1465,7 @@ void  vif0Interrupt()
 	if (vif0ch->qwc > 0) Console::WriteLn("VIF0 Ending with QWC left");
 	if (vif0.cmd != 0) Console::WriteLn("vif0.cmd still set %x", params vif0.cmd);
 	
-	vif0ch->chcr &= ~0x100;
+	CHCR::clearSTR(vif0ch);
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs->stat &= ~0xF000000; // FQC=0
 }
@@ -1658,7 +1654,7 @@ void vif0Reset()
 	memzero_obj(*vif0Regs);
 	SetNewMask(g_vif0Masks, g_vif0HasMask3, 0, 0xffffffff);
 	psHu64(VIF0_FIFO) = 0;
-	psHu64(0x10004008) = 0; // VIF0_FIFO + 8
+	psHu64(VIF0_FIFO + 8) = 0;
 	vif0Regs->stat &= ~VIF0_STAT_VPS;
 	vif0.done = true;
 	vif0Regs->stat &= ~0xF000000; // FQC=0
@@ -1866,7 +1862,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 
 	if ((vif1.cmd & 0x7f) == 0x51)
 	{
-		if (gif->chcr & 0x100 && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) //PATH3 is in image mode, so wait for end of transfer
+		if (CHCR::STR(gif) && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) //PATH3 is in image mode, so wait for end of transfer
 		{
 			vif1Regs->stat |= VIF1_STAT_VGW;
 			return 0;
@@ -1961,8 +1957,7 @@ static int  __fastcall Vif1TransUnpack(u32 *data)
 	if (vif1.vifpacketsize < vif1.tag.size)
 	{
 		int ret = vif1.tag.size;
-		/* size is less that the total size, transfer is
-		   'in pieces' */
+		/* size is less that the total size, transfer is  'in pieces' */
 		if(vif1Regs->offset != 0 || vif1.cl != 0) 
 		{
 			vif1.tag.size -= vif1.vifpacketsize - VIFalign(data, &vif1.tag, vif1.vifpacketsize, VIF1dmanum);
@@ -2073,7 +2068,7 @@ void Vif1MskPath3()  // MSKPATH3
 }
 static void Vif1CMDMskPath3()  // MSKPATH3
 {
-	if(vif1ch->chcr & 0x100)
+	if (CHCR::STR(vif1ch))
 	{
 		schedulepath3msk = 0x10 | ((vif1Regs->code >> 15) & 0x1);
 		vif1.vifstalled = true;
@@ -2101,7 +2096,7 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 	if ((vif1.cmd & 0x7f) == 0x13)
 	{
 		// Gif is already transferring so wait for it.
-		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr & 0x100)
+		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && CHCR::STR(gif))
 		{	
 			vif1Regs->stat |= VIF1_STAT_VGW;	
 			CPU_INT(2, 4);
@@ -2236,7 +2231,9 @@ int VIF1transfer(u32 *data, int size, int istag)
 			ret = Vif1TransTLB[vif1.cmd](data);
 			data += ret;
 			vif1.vifpacketsize -= ret;
-			if (vif1.cmd == 0) vif1Regs->stat &= ~VIF1_STAT_VPS_T; //We are once again waiting for a new vifcode as the command has cleared
+			
+			//We are once again waiting for a new vifcode as the command has cleared
+			if (vif1.cmd == 0) vif1Regs->stat &= ~VIF1_STAT_VPS_T; 
 			continue;
 		}
 
@@ -2303,8 +2300,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 		if (((vif1Regs->code >> 24) & 0x7f) != 0x7) vif1Regs->stat |= VIF1_STAT_VIS; // Note: commenting this out fixes WALL-E
 
-		if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
-			vif1.inprogress &= ~0x1;
+		if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1)) vif1.inprogress &= ~0x1;
 		
 		// spiderman doesn't break on qw boundaries
 		if (istag) return -2;
@@ -2334,8 +2330,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 	}
 	
 
-	if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1))
-		vif1.inprogress &= ~0x1;
+	if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1)) vif1.inprogress &= ~0x1;
 
 	return vif1.vifstalled ? -2 : 0;
 }
@@ -2406,7 +2401,7 @@ int  _VIF1chain()
 		return 0;
 	}
 
-	if (vif1.dmamode == VIF_NORMAL_MEM_MODE)
+	if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE)
 	{
 		vif1TransferFromMemory();
 		vif1.inprogress = 0;
@@ -2435,40 +2430,31 @@ int  _VIF1chain()
 
 bool _chainVIF1()
 {
-	return vif1.done;//Return Done
+	return vif1.done; // Return Done
 }
 
 __forceinline void vif1SetupTransfer()
 {
 	switch (vif1.dmamode)
 	{
-		case VIF_NORMAL_MODE: //Normal
-		case VIF_NORMAL_MEM_MODE: //Normal (From memory)
+		case VIF_NORMAL_TO_MEM_MODE:		// Normal
+		case VIF_NORMAL_FROM_MEM_MODE:	// Normal (From memory)
 			vif1.inprogress = 1;
 			vif1.done = true;
 			g_vifCycles = 2;
 			break;
 
-		case VIF_CHAIN_MODE: //Chain
+		case VIF_CHAIN_MODE:			// Chain
 			int id;
 			int ret;
 
 			vif1ptag = (u32*)dmaGetAddr(vif1ch->tadr); //Set memory pointer to TADR
-			if (vif1ptag == NULL)  						//Is vif0ptag empty?
-			{
-				Console::Error("Vif1 Tag BUSERR");
-				vif1ch->chcr = (vif1ch->chcr & 0xFFFF) | ((*vif1ptag) & 0xFFFF0000);     //Transfer upper part of tag to CHCR bits 31-15
-				psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
-				return;						   //Return -1 as an error has occurred
-			}
-
-			id = (vif1ptag[0] >> 28) & 0x7; //ID for DmaChain copied from bit 28 of the tag
 			
-			vif1ch->qwc  = (u16)vif1ptag[0];       //QWC set to lower 16bits of the tag
+			if (!(Tag::Transfer("Vif1 Tag", vif1ch, vif1ptag))) return;
+		
 			vif1ch->madr = vif1ptag[1];            //MADR = ADDR field
-			vif1ch->chcr = (vif1ch->chcr & 0xFFFF) | ((*vif1ptag) & 0xFFFF0000);     //Transfer upper part of tag to CHCR bits 31-15
-			
 			g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
+			id = Tag::Id(vif1ptag); //ID for DmaChain copied from bit 28 of the tag
 
 			// Transfer dma tag if tte is set
 
@@ -2488,7 +2474,7 @@ __forceinline void vif1SetupTransfer()
 
 			vif1.inprogress = 1;
 
-			if (vif1ch->chcr & 0x40)
+			if (CHCR::TTE(vif1ch))
 			{
 
 				if (vif1.vifstalled)
@@ -2506,12 +2492,13 @@ __forceinline void vif1SetupTransfer()
 			vif1.irqoffset = 0;
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, id);
 
-			if ((vif1ch->chcr & 0x80) && (vif1ptag[0] >> 31))  			       //Check TIE bit of CHCR and IRQ bit of tag
+			//Check TIE bit of CHCR and IRQ bit of tag
+			if ((CHCR::TIE(vif1ch)) && (Tag::IRQ(vif1ptag)))  			       
 			{
 				VIF_LOG("dmaIrq Set");
 
 				vif1.done = true;
-				return;												   //End Transfer
+				return;			//End Transfer
 			}
 			break;
 	}
@@ -2527,7 +2514,7 @@ __forceinline void vif1Interrupt()
 
 	if((vif1Regs->stat & VIF1_STAT_VGW))
 	{
-		if(gif->chcr & 0x100)
+		if (CHCR::STR(gif))
 		{			
 			CPU_INT(1, gif->qwc * BIAS);
 			return;
@@ -2536,7 +2523,7 @@ __forceinline void vif1Interrupt()
 	
 	}
 
-	if ((vif1ch->chcr & 0x100) == 0) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr);
+	if (!(CHCR::STR(vif1ch))) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr);
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
@@ -2601,7 +2588,7 @@ __forceinline void vif1Interrupt()
 	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
 	//Im guessing due to the full gs fifo before the reverse? (Refraction)
 	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
-	if(!vif1Regs->mskpath3 || (vif1ch->chcr & 0x1))vif1Regs->stat &= ~0x1F000000; // FQC=0
+	if (!vif1Regs->mskpath3 || (CHCR::DIR(vif1ch))) vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
 
 void dmaVIF1()
@@ -2617,7 +2604,7 @@ void dmaVIF1()
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
 	{
 		//Console::WriteLn("VIFMFIFO\n");
-		if (!(vif1ch->chcr & 0x4)) Console::WriteLn("MFIFO mode != Chain! %x", params vif1ch->chcr);
+		if (CHCR::MOD(vif1ch) != CHAIN_MODE) Console::WriteLn("MFIFO mode != Chain! %x", params vif1ch->chcr);
 		vifMFIFOInterrupt();
 		return;
 	}
@@ -2629,23 +2616,23 @@ void dmaVIF1()
 	}
 #endif
 
-	if (!(vif1ch->chcr & 0x4) || vif1ch->qwc > 0)   // Normal Mode
+	if ((CHCR::MOD(vif1ch) == NORMAL_MODE) || vif1ch->qwc > 0)   // Normal Mode
 	{
 
 		if ((psHu32(DMAC_CTRL) & 0xC0) == 0x40)
 			Console::WriteLn("DMA Stall Control on VIF1 normal");
 
-		if ((vif1ch->chcr & 0x1))  // to Memory
-			vif1.dmamode = VIF_NORMAL_MODE;
+		if ((CHCR::DIR(vif1ch)))  // to Memory
+			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
 		else
-			vif1.dmamode = VIF_NORMAL_MEM_MODE;
+			vif1.dmamode = VIF_NORMAL_FROM_MEM_MODE;
 	}
 	else 
 	{
 		vif1.dmamode = VIF_CHAIN_MODE;
 	}
 
-	if(vif1.dmamode != VIF_NORMAL_MEM_MODE)
+	if (vif1.dmamode != VIF_NORMAL_FROM_MEM_MODE)
 		vif1Regs->stat |= 0x10000000; // FQC=16
 	else 
 		vif1Regs->stat |= min((u16)16, vif1ch->qwc) << 24; // FQC=16
@@ -2677,14 +2664,16 @@ void vif1Write32(u32 mem, u32 value)
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 				vif1ch->qwc = 0; //?
 				psHu64(VIF1_FIFO) = 0;
-				psHu64(0x10005008) = 0; // VIF1_FIFO + 8
+				psHu64(VIF1_FIFO + 8) = 0;
 				vif1.done = true;
+				
 				if(vif1Regs->mskpath3)
 				{
 					vif1Regs->mskpath3 = 0;
 					psHu32(GIF_STAT) &= ~0x2;
-					if(gif->chcr & 0x100) CPU_INT(2, 4);	
+					if (CHCR::STR(gif)) CPU_INT(2, 4);	
 				}
+				
 				vif1Regs->err = 0;
 				vif1.inprogress = 0;
 				vif1Regs->stat &= ~(0x1F800000 | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
@@ -2741,7 +2730,7 @@ void vif1Write32(u32 mem, u32 value)
 							// Gets the timing right - Flatout
 							CPU_INT(1, vif1ch->qwc * BIAS);
 						}
-						vif1ch->chcr |= 0x100;
+						CHCR::setSTR(vif1ch);
 					}
 				}
 			}

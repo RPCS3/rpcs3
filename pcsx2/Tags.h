@@ -20,48 +20,7 @@
 // I kept seeing the same code over and over with different structure names
 // and the same members, and figured it'd be a good spot to use templates...
 
-enum TransferMode
-{
-	NORMAL_MODE = 0,
-	CHAIN_MODE,
-	INTERLEAVE_MODE,
-	UNDEFINED_MODE
-};
-
-template <class T>
-static __forceinline void UpperTagTransfer(T tag, u32* ptag)
-{
-	// Transfer upper part of tag to CHCR bits 31-15
-	tag->chcr = (tag->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
-}
-
-template <class T>
-static __forceinline void LowerTagTransfer(T tag, u32* ptag)
-{
-	//QWC set to lower 16bits of the tag
-	tag->qwc = (u16)ptag[0];
-}
-
-// Transfer a tag. 
-template <class T>
-static __forceinline bool TransferTag(const char *s, T tag, u32* ptag)
-{
-	if (ptag == NULL)  					 // Is ptag empty?
-	{
-		Console::Error("%s BUSERR", params s);
-		UpperTagTransfer(tag, ptag);
-		
-		// Set BEIS (BUSERR) in DMAC_STAT register
-		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; 
-		return false;
-	}
-	else
-	{
-		UpperTagTransfer(tag, ptag);
-		LowerTagTransfer(tag, ptag);
-		return true;
-	}
-}
+// Actually, looks like I didn't need templates after all... :)
 
 enum pce_values
 {
@@ -97,8 +56,73 @@ enum chcr_flags
 	CHCR_STR = 0x100 	// Start. 0 while stopping DMA, 1 while it's running.
 };
 
-namespace ChainTags
+enum TransferMode
 {
+	NORMAL_MODE = 0,
+	CHAIN_MODE,
+	INTERLEAVE_MODE,
+	UNDEFINED_MODE
+};
+
+namespace Tag
+{
+	// Transfer functions,
+	static __forceinline void UpperTransfer(DMACh *tag, u32* ptag)
+	{
+		// Transfer upper part of tag to CHCR bits 31-15
+		tag->chcr = (tag->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+	}
+
+	static __forceinline void LowerTransfer(DMACh *tag, u32* ptag)
+	{
+		//QWC set to lower 16bits of the tag
+		tag->qwc = (u16)ptag[0];
+	}
+
+	static __forceinline bool Transfer(const char *s, DMACh *tag, u32* ptag)
+	{
+		if (ptag == NULL)  					 // Is ptag empty?
+		{
+			Console::Error("%s BUSERR", params s);
+			UpperTransfer(tag, ptag);
+			
+			// Set BEIS (BUSERR) in DMAC_STAT register
+			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; 
+			return false;
+		}
+		else
+		{
+			UpperTransfer(tag, ptag);
+			LowerTransfer(tag, ptag);
+			return true;
+		}
+	}
+	
+	/*// Not sure if I'll need this one.
+	static __forceinline bool SafeTransfer(const char *s, DMACh *tag, u32* ptag)
+	{
+		if (ptag == NULL)  					 // Is ptag empty?
+		{
+			Console::Error("%s BUSERR", params s);
+			
+			// Set BEIS (BUSERR) in DMAC_STAT register
+			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; 
+			return false;
+		}
+		else
+		{
+			UpperTransfer(tag, ptag);
+			LowerTransfer(tag, ptag);
+			return true;
+		}
+	}*/
+	
+	static __forceinline void UnsafeTransfer(DMACh *tag, u32* ptag)
+	{
+		UpperTransfer(tag, ptag);
+		LowerTransfer(tag, ptag);
+	}
+	
 	// Untested
 	static __forceinline u16 QWC(u32 *tag)
 	{
@@ -116,6 +140,11 @@ namespace ChainTags
 		return (tag_id)((tag[0] >> 28) & 0x7);
 	}
 	
+	static __forceinline tag_id Id(u32 tag)
+	{
+		return (tag_id)((tag >> 28) & 0x7);
+	}
+	
 	static __forceinline bool IRQ(u32 *tag)
 	{
 		return !!(tag[0] & 0x8000000);
@@ -130,58 +159,34 @@ namespace ChainTags
 namespace CHCR
 {
 	// Query the flags in the channel control register.
-	template <class T>
-	static __forceinline bool STR(T tag) { return !!(tag->chcr & CHCR_STR); }
-	
-	template <class T>
-	static __forceinline bool TIE(T tag) { return !!(tag->chcr & CHCR_TIE); }
-	
-	template <class T>
-	static __forceinline bool TTE(T tag) { return !!(tag->chcr & CHCR_TTE); }
-	
-	template <class T>
-	static __forceinline u8 DIR(T tag) { return (tag->chcr & CHCR_DIR); }
-	
-	template <class T>
-	static __forceinline TransferMode MOD(T tag)
+	static __forceinline bool STR(DMACh *tag) { return !!(tag->chcr & CHCR_STR); }
+	static __forceinline bool TIE(DMACh *tag) { return !!(tag->chcr & CHCR_TIE); }
+	static __forceinline bool TTE(DMACh *tag) { return !!(tag->chcr & CHCR_TTE); }
+	static __forceinline u8 DIR(DMACh *tag) { return !!(tag->chcr & CHCR_DIR); }
+
+	static __forceinline TransferMode MOD(DMACh *tag)
 	{
 		return (TransferMode)((tag->chcr & CHCR_MOD) >> 2);
 	}
 	
-	template <class T>
-	static __forceinline u8 ASP(T tag)
+	static __forceinline u8 ASP(DMACh *tag)
 	{
 		return (TransferMode)((tag->chcr & CHCR_ASP) >> 2);
 	}
 
 	// Clear the individual flags.
-	template <class T>
-	static __forceinline void clearSTR(T tag) { tag->chcr &= ~CHCR_STR; }
-	
-	template <class T>
-	static __forceinline void clearTIE(T tag) { tag->chcr &= ~CHCR_TIE; }
-	
-	template <class T>
-	static __forceinline void clearTTE(T tag) { tag->chcr &= ~CHCR_TTE; }
-	
-	template <class T>
-	static __forceinline void clearDIR(T tag) { tag->chcr &= ~CHCR_DIR; }
+	static __forceinline void clearSTR(/*T*/DMACh *tag) { tag->chcr &= ~CHCR_STR; }
+	static __forceinline void clearTIE(DMACh *tag) { tag->chcr &= ~CHCR_TIE; }
+	static __forceinline void clearTTE(DMACh *tag) { tag->chcr &= ~CHCR_TTE; }
+	static __forceinline void clearDIR(DMACh *tag) { tag->chcr &= ~CHCR_DIR; }
 	
 	// Set them.
-	template <class T>
-	static __forceinline void setSTR(T tag) { tag->chcr |= CHCR_STR; }
+	static __forceinline void setSTR(DMACh *tag) { tag->chcr |= CHCR_STR; }
+	static __forceinline void setTIE(DMACh *tag) { tag->chcr |= CHCR_TIE; }
+	static __forceinline void setTTE(DMACh *tag) { tag->chcr |= CHCR_TTE; }
+	static __forceinline void setDIR(DMACh *tag) { tag->chcr |= CHCR_DIR; }
 	
-	template <class T>
-	static __forceinline void setTIE(T tag) { tag->chcr |= CHCR_TIE; }
-	
-	template <class T>
-	static __forceinline void setTTE(T tag) { tag->chcr |= CHCR_TTE; }
-	
-	template <class T>
-	static __forceinline void setDIR(T tag) { tag->chcr |= CHCR_DIR; }
-	
-	template <class T>
-	static __forceinline void setMOD(T tag, TransferMode mode)
+	static __forceinline void setMOD(DMACh *tag, TransferMode mode)
 	{
 		if (mode & (1 << 0))
 			tag->chcr |= CHCR_MOD1; 
@@ -194,8 +199,7 @@ namespace CHCR
 			tag->chcr &= CHCR_MOD2;
 	}
 	
-	template <class T>
-	static __forceinline void setASP(T tag, u8 num)
+	static __forceinline void setASP(DMACh *tag, u8 num)
 	{
 		if (num & (1 << 0))
 			tag->chcr |= CHCR_ASP1; 
@@ -209,8 +213,7 @@ namespace CHCR
 	}
 	
 	// Print information about a chcr tag.
-	template <class T>
-	static __forceinline void Print(const char*  s, T tag)
+	static __forceinline void Print(const char*  s, DMACh *tag)
 	{
 		u8 num_addr = ASP(tag);
 		TransferMode mode = MOD(tag);
@@ -231,5 +234,19 @@ namespace CHCR
 		if (TIE(tag)) Console::Write("TIE;");
 		if (STR(tag)) Console::Write(" (DMA started)."); else Console::Write(" (DMA stopped).");
 		Console::WriteLn("");
+	}
+}
+
+namespace QWC
+{
+	static __forceinline bool Empty(DMACh *tag)
+	{
+		return (tag->qwc == 0);
+	}
+	
+	
+	static __forceinline void Clear(DMACh *tag)
+	{
+		tag->qwc == 0;
 	}
 }
