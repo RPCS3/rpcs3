@@ -247,6 +247,6 @@ namespace QWC
 	
 	static __forceinline void Clear(DMACh *tag)
 	{
-		tag->qwc == 0;
+		tag->qwc = 0;
 	}
 }

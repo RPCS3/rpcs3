@@ -21,6 +21,15 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GSdx", "plugins\GSdx\GSdx.v
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xpad", "plugins\xpad\xpad.vcxproj", "{6F3C4136-5801-4EBC-AC6E-37DF6FAB150A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{06C9589C-DFD3-4CE8-B69A-32208C2767B2}"
+	ProjectSection(SolutionItems) = preProject
+		common\include\afxresmw.h = common\include\afxresmw.h
+		common\include\Pcsx2Api.h = common\include\Pcsx2Api.h
+		common\include\Pcsx2Config.h = common\include\Pcsx2Config.h
+		common\include\Pcsx2Defs.h = common\include\Pcsx2Defs.h
+		common\include\Pcsx2Types.h = common\include\Pcsx2Types.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
