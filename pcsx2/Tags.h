@@ -118,12 +118,12 @@ namespace ChainTags
 	
 	static __forceinline bool IRQ(u32 *tag)
 	{
-		return (tag[0] & 0x8000000);
+		return !!(tag[0] & 0x8000000);
 	}
 	
 	static __forceinline bool IRQ(u32 tag)
 	{
-		return (tag & 0x8000000);
+		return !!(tag & 0x8000000);
 	}
 }
 
@@ -131,13 +131,13 @@ namespace CHCR
 {
 	// Query the flags in the channel control register.
 	template <class T>
-	static __forceinline bool STR(T tag) { return (tag->chcr & CHCR_STR); }
+	static __forceinline bool STR(T tag) { return !!(tag->chcr & CHCR_STR); }
 	
 	template <class T>
-	static __forceinline bool TIE(T tag) { return (tag->chcr & CHCR_TIE); }
+	static __forceinline bool TIE(T tag) { return !!(tag->chcr & CHCR_TIE); }
 	
 	template <class T>
-	static __forceinline bool TTE(T tag) { return (tag->chcr & CHCR_TTE); }
+	static __forceinline bool TTE(T tag) { return !!(tag->chcr & CHCR_TTE); }
 	
 	template <class T>
 	static __forceinline u8 DIR(T tag) { return (tag->chcr & CHCR_DIR); }
