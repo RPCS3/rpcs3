@@ -79,16 +79,33 @@ microVUt(void) mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 
 // Recompiles Code for Proper Flags and Q/P regs on Block Linkings
 microVUt(void) mVUsetupBranch(mV, microFlagCycles& mFC) {
-	mVUprint("mVUsetupBranch");
-
-	// Flush Allocated Regs
-	mVU->regAlloc->flushAll();
-
-	// Shuffle Flag Instances
-	mVUsetupFlags(mVU, mFC);
+	
+	mVU->regAlloc->flushAll();	// Flush Allocated Regs
+	mVUsetupFlags(mVU, mFC);	// Shuffle Flag Instances
 
 	// Shuffle P/Q regs since every block starts at instance #0
 	if (mVU->p || mVU->q) { SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, shufflePQ); }
+}
+
+void normBranchCompile(microVU* mVU, u32 branchPC) {
+	using namespace x86Emitter;
+	microBlock* pBlock;
+	blockCreate(branchPC/8);
+	pBlock = mVUblocks[branchPC/8]->search((microRegInfo*)&mVUregs);
+	if (pBlock)	{ xJMP(pBlock->x86ptrStart); }
+	else		{ mVUcompile(mVU, branchPC, (uptr)&mVUregs); }
+}
+
+void normBranch(mV, microFlagCycles& mFC) {
+
+	incPC(-3); // Go back to branch opcode (to get branch imm addr)
+	
+	// E-bit Branch
+	if (mVUup.eBit) { iPC = branchAddr/4; mVUendProgram(mVU, &mFC, 1); return; }
+	
+	// Normal Branch
+	mVUsetupBranch(mVU, mFC);
+	normBranchCompile(mVU, branchAddr);
 }
 
 void condBranch(mV, microFlagCycles& mFC, microBlock* &pBlock, int JMPcc) {
@@ -115,14 +132,9 @@ void condBranch(mV, microFlagCycles& mFC, microBlock* &pBlock, int JMPcc) {
 		bBlock = mVUblocks[iPC/2]->search((microRegInfo*)&mVUregs);
 		incPC2(-1);
 		if (bBlock)	{ // Branch non-taken has already been compiled
-			xJcc( xInvertCond((JccComparisonType)JMPcc), bBlock->x86ptrStart );
-
-			// Check if branch-block has already been compiled
+			xJcc(xInvertCond((JccComparisonType)JMPcc), bBlock->x86ptrStart);
 			incPC(-3); // Go back to branch opcode (to get branch imm addr)
-			blockCreate(branchAddr/8);
-			pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
-			if (pBlock)	{ xJMP( pBlock->x86ptrStart ); }
-			else		{ mVUblockFetch(mVU, branchAddr, (uptr)&mVUregs); }
+			normBranchCompile(mVU, branchAddr);
 		}
 		else { 
 			s32* ajmp = xJcc32((JccComparisonType)JMPcc); 
@@ -141,41 +153,20 @@ void condBranch(mV, microFlagCycles& mFC, microBlock* &pBlock, int JMPcc) {
 	}
 }
 
-void normBranch(mV, microFlagCycles& mFC) {
-	using namespace x86Emitter;
-	microBlock* pBlock;
-	incPC(-3); // Go back to branch opcode (to get branch imm addr)
-
-	// E-bit Branch
-	if (mVUup.eBit) { iPC = branchAddr/4; mVUendProgram(mVU, &mFC, 1); return; }
-	mVUsetupBranch(mVU, mFC);
-
-	// Check if branch-block has already been compiled
-	blockCreate(branchAddr/8);
-	pBlock = mVUblocks[branchAddr/8]->search((microRegInfo*)&mVUregs);
-	if (pBlock)	{ xJMP(pBlock->x86ptrStart); }
-	else		{ mVUcompile(mVU, branchAddr, (uptr)&mVUregs); }
-}
-
 void normJump(mV, microFlagCycles& mFC, microBlock* &pBlock) {
 	using namespace x86Emitter;
 	mVUprint("mVUcompile JR/JALR");
 	incPC(-3); // Go back to jump opcode
 
-	if (mVUlow.constJump.isValid) {
+	if (mVUlow.constJump.isValid) { // Jump Address is Constant
 		if (mVUup.eBit) { // E-bit Jump
 			iPC = (mVUlow.constJump.regValue*2)&(mVU->progSize-1);
 			mVUendProgram(mVU, &mFC, 1);
+			return;
 		}
-		else {
-			int jumpAddr = (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8);
-			mVUsetupBranch(mVU, mFC);
-			// Check if jump-to-block has already been compiled
-			blockCreate(jumpAddr/8);
-			pBlock = mVUblocks[jumpAddr/8]->search((microRegInfo*)&mVUregs);
-			if (pBlock)	{ xJMP(pBlock->x86ptrStart); }
-			else		{ mVUcompile(mVU, jumpAddr, (uptr)&mVUregs); }
-		}
+		int jumpAddr = (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8);
+		mVUsetupBranch(mVU, mFC);
+		normBranchCompile(mVU, jumpAddr);
 		return;
 	}
 
@@ -191,8 +182,8 @@ void normJump(mV, microFlagCycles& mFC, microBlock* &pBlock) {
 	mVUsetupBranch(mVU, mFC);
 
 	mVUbackupRegs(mVU);
-	MOV32MtoR(gprT2, (uptr)&mVU->branch);	  // Get startPC (ECX first argument for __fastcall)
-	MOV32ItoR(gprR, (u32)&pBlock->pStateEnd); // Get pState (EDX second argument for __fastcall)
+	MOV32MtoR(gprT2, (uptr)&mVU->branch);	  // Get startPC (ECX 1st argument for __fastcall)
+	MOV32ItoR(gprR, (u32)&pBlock->pStateEnd); // Get pState  (EDX 2nd argument for __fastcall)
 
 	if (!mVU->index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
 	else			 xCALL(mVUcompileJIT<1>);
