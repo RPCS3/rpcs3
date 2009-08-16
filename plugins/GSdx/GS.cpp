@@ -289,6 +289,14 @@ EXPORT_C GSirqCallback(void (*irq)())
 	s_irq = irq;
 }
 
+
+EXPORT_C_(int) GSsetupRecording(int start, void* pData)
+{
+	s_gs->ToggleRecord();
+	
+	return 1;
+}
+
 EXPORT_C GSsetGameCRC(uint32 crc, int options)
 {
 	s_gs->SetGameCRC(crc, options);

@@ -403,6 +403,16 @@ bool GSRenderer::MakeSnapshot(const string& path)
 	return true;
 }
 
+void GSRenderer::ToggleRecord(void)
+{
+	if(m_capture.IsCapturing()){
+		m_capture.EndCapture();
+	}
+	else {
+		m_capture.BeginCapture(GetFPS());
+	}
+}
+
 void GSRenderer::KeyEvent(GSKeyEventData* e)
 {
 	if(e->type == KEYPRESS)

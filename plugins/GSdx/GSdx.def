@@ -28,7 +28,8 @@ EXPORTS
 	GSabout				
 	GSreadFIFO			
 	GSreadFIFO2			
-	GSirqCallback		
+	GSirqCallback
+	GSsetupRecording		
 	GSsetGameCRC		
 	GSsetFrameSkip
 	GSsetFrameLimit		
