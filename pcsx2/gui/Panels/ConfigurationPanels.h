@@ -356,6 +356,7 @@ namespace Panels
 		public:
 			ComboBoxPanel( PluginSelectorPanel* parent );
 			wxComboBox& Get( int i ) { return *m_combobox[i]; }
+			wxComboBox& GetBios() { return m_BiosBox; }
 			void Reset();
 		};
 
@@ -367,7 +368,7 @@ namespace Panels
 			int				m_progress;
 			
 		public:
-			StatusPanel( wxWindow* parent, int pluginCount );
+			StatusPanel( wxWindow* parent, int pluginCount, int biosCount );
 			void AdvanceProgress( const wxString& msg );
 			void Reset();
 		};
@@ -378,6 +379,7 @@ namespace Panels
 
 	protected:
 		wxArrayString	m_FileList;	// list of potential plugin files
+		wxArrayString	m_BiosList;
 		StatusPanel&	m_StatusPanel;
 		ComboBoxPanel&	m_ComponentBoxes;
 		bool			m_Uninitialized;

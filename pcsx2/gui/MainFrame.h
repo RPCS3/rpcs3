@@ -23,7 +23,7 @@
 #include <wx/docview.h>
 
 #include "App.h"
-#include "PS2/CoreEmuThread.h"
+#include "ps2/CoreEmuThread.h"
 
 extern CoreEmuThread*	g_EmuThread;
 

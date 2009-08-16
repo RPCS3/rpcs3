@@ -22,6 +22,8 @@
 #include "SaveState.h"
 
 #include "CDVD/IsoFSdrv.h"
+#include "ps2/BiosTools.h"
+
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"

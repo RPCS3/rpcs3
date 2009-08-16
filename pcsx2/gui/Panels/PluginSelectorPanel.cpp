@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "Plugins.h"
 #include "ConfigurationPanels.h"
+#include "ps2/BiosTools.h"
 
 #include <wx/dynlib.h>
 #include <wx/dir.h>
@@ -116,7 +117,7 @@ public:
 static const wxString failed_separator( L"--------   Unsupported Plugins  --------" );
 
 // ------------------------------------------------------------------------
-Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent, int pluginCount ) :
+Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent, int pluginCount, __unused int biosCount ) :
 	wxPanelWithHelpers( parent )
 ,	m_gauge( *new wxGauge( this, wxID_ANY, pluginCount ) )
 ,	m_label( *new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE | wxST_NO_AUTORESIZE ) )
@@ -146,8 +147,10 @@ void Panels::PluginSelectorPanel::StatusPanel::Reset()
 // ------------------------------------------------------------------------
 Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent ) :
 	wxPanelWithHelpers( parent )
-,	m_BiosBox( *new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ) )
+,	m_BiosBox( *new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY | wxCB_SORT ) )
 {
+	m_BiosBox.SetFont( wxFont( m_BiosBox.GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
+
 	wxFlexGridSizer& s_plugin = *new wxFlexGridSizer( NumPluginTypes, 3, 16, 10 );
 	s_plugin.SetFlexibleDirection( wxHORIZONTAL );
 	s_plugin.AddGrowableCol( 1 );		// expands combo boxes to full width.
@@ -182,7 +185,8 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 	BaseApplicableConfigPanel( &parent, idealWidth )
 ,	m_FileList()
 ,	m_StatusPanel( *new StatusPanel( this,
-		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), &m_FileList, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES )
+		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), &m_FileList, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ),
+		wxDir::GetAllFiles( g_Conf->Folders.Bios.ToString(), &m_BiosList, L"*.bin", wxDIR_FILES )
 	) )
 ,	m_ComponentBoxes( *new ComboBoxPanel( this ) )
 ,	m_Uninitialized( true )
@@ -195,7 +199,6 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 	//s_main.AddSpacer( 4 );
 	//AddStaticText( s_main, _("Tip: Installed plugins that are not compatible with your hardware or operating system will be listed below a separator.") );
 	s_main.AddSpacer( 4 );
-
 	s_main.Add( &m_StatusPanel, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
 	// refresh button used for diagnostics... (don't think there's a point to having one otherwise) --air
@@ -226,12 +229,46 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
 		int sel = m_ComponentBoxes.Get(i).GetSelection();
-		if( sel == wxNOT_FOUND ) continue;
+		if( sel == wxNOT_FOUND )
+		{
+			wxString plugname( wxString::FromAscii( tbl_PluginInfo[i].shortname ) );
+			
+			throw Exception::CannotApplySettings( this,
+				// English Log
+				wxsFormat( L"User did not specify a valid selection for the %s plugin.", plugname.c_str() ),
+
+				// Translated
+				wxsFormat( L"Please select a valid plugin for the %s.", plugname.c_str() ) + L"\n\n" +
+				pxE( ".Popup Error:Invalid Plugin Selection",	
+					L"All plugins must have valid selections for PCSX2 to run.  If you are unable to make\n"
+					L"a valid selection due to missing plugins or an incomplete install of PCSX2, then\n"
+					L"press cancel to close the Configuration panel."
+				)
+			);
+		}
 
 		wxFileName relative( m_FileList[(int)m_ComponentBoxes.Get(i).GetClientData(sel)] );
 		relative.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
 	}
+	
+	int sel = m_ComponentBoxes.GetBios().GetSelection();
+	if( sel == wxNOT_FOUND )
+	{
+		throw Exception::CannotApplySettings( this,
+			// English Log
+			L"User did not specify a valid BIOS selection.",
+
+			// Translated
+			pxE( ".Popup Error:Invalid BIOS Selection",	
+				L"Please select a valid BIOS before applying new settings.  If you are unable to make\n"
+				L"a valid selection then press cancel to close the Configuration panel."
+			)
+		);
+	}
+	wxFileName relative( m_BiosList[(int)m_ComponentBoxes.GetBios().GetClientData(sel)] );
+	relative.MakeRelativeTo( g_Conf->Folders.Bios.ToString() );
+	conf.BaseFilenames.Bios = relative.GetFullPath();
 }
 
 void Panels::PluginSelectorPanel::DoRefresh()
@@ -269,6 +306,26 @@ void Panels::PluginSelectorPanel::OnRefresh( wxCommandEvent& evt )
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 {
 	safe_delete( m_EnumeratorThread );
+
+	// -----------------
+	//  Enumerate BIOS
+	// -----------------
+
+	wxFileName right( g_Conf->FullpathToBios() );
+	right.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
+
+	for( size_t i=0; i<m_BiosList.GetCount(); ++i )
+	{
+		wxString description;
+		if( !IsBIOS(m_BiosList[i], description) ) continue;
+		int sel = m_ComponentBoxes.GetBios().Append( description, (void*)i );
+		
+		wxFileName left( m_BiosList[i] );
+		left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
+
+		if( left == right )
+			m_ComponentBoxes.GetBios().SetSelection( sel );
+	}
 
 	// fixme: Default plugins should be picked based on the timestamp of the DLL or something?
 	//  (for now we just force it to selection zero if nothing's selected)
@@ -394,7 +451,7 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 		yay.SetExtraLong( curidx );
 		m_master.GetEventHandler()->AddPendingEvent( yay );
 	}
-
+	
 	wxCommandEvent done( wxEVT_EnumerationFinished );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 

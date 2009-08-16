@@ -26,6 +26,7 @@
 #include "CDVD_internal.h"
 #include "CDVDisoReader.h"
 #include "gs.h"			// for gsRegionMode
+#include "ps2/BiosTools.h"
 #include "AppConfig.h"
 
 static cdvdStruct cdvd;

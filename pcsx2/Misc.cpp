@@ -47,7 +47,6 @@
 using namespace std;
 using namespace R5900;
 
-u32 BiosVersion;
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
 bool renderswitch = 0;
 
@@ -58,30 +57,13 @@ int StatesC = 0;
 extern wxString strgametitle;
 
 
-#define DIRENTRY_SIZE 16
-
-#if defined(_MSC_VER)
-#pragma pack(1)
-#endif
-
-struct romdir
-{
-	char fileName[10];
-	u16 extInfoSize;
-	u32 fileSize;
-#if defined(_MSC_VER)
-};
-#pragma pack()				//+22
-#else
-} __attribute__((packed));
-#endif
-
 // ------------------------------------------------------------------------
 // Force DevAssert to *not* inline for devel/debug builds (allows using breakpoints to trap
 // assertions), and force it to inline for release builds (optimizes it out completely since
 // IsDevBuild is false).  Since Devel builds typically aren't enabled with Global Optimization/
 // LTCG, this currently isn't even necessary.  But might as well, in case we decide at a later
 // date to re-enable LTCG for devel.
+//
 #ifdef PCSX2_DEVBUILD
 #	define DEVASSERT_INLINE __noinline
 #else
@@ -108,133 +90,6 @@ DEVASSERT_INLINE void DevAssert( bool condition, const char* msg )
 	{
 		throw Exception::AssertionFailure( msg );
 	}
-}
-
-u32 GetBiosVersion() {
-	unsigned int fileOffset=0;
-	s8 *ROMVER;
-	char vermaj[8];
-	char vermin[8];
-	struct romdir *rd;
-	u32 version;
-	int i;
-
-	for (i=0; i<512*1024; i++) {
-		rd = (struct romdir*)&psRu8(i);
-		if (strncmp(rd->fileName, "RESET", 5) == 0)
-			break; /* found romdir */
-	}
-	if (i == 512*1024) return -1;
-
-	while(strlen(rd->fileName) > 0){
-		if (strcmp(rd->fileName, "ROMVER") == 0){	// found romver
-			ROMVER = &psRs8(fileOffset);
-
-			strncpy(vermaj, (char *)(ROMVER+ 0), 2); vermaj[2] = 0;
-			strncpy(vermin, (char *)(ROMVER+ 2), 2); vermin[2] = 0;
-			version = strtol(vermaj, (char**)NULL, 0) << 8;
-			version|= strtol(vermin, (char**)NULL, 0);
-
-			return version;
-		}
-
-		if ((rd->fileSize % 0x10)==0)
-			fileOffset += rd->fileSize;
-		else
-			fileOffset += (rd->fileSize + 0x10) & 0xfffffff0;
-
-		rd++;
-	}
-
-	return -1;
-}
-
-//2002-09-22 (Florin)
-bool IsBIOS(const wxString& filename, wxString& description)
-{
-	uint fileOffset=0;
-	romdir rd;
-
-	wxFileName Bios( g_Conf->Folders.Bios + filename );
-	wxFile fp( Bios.GetFullPath().c_str() );
-
-	if( !fp.IsOpened() ) return FALSE;
-
-	int biosFileSize = fp.Length();
-	if( biosFileSize <= 0) return FALSE;
-
-	while( (fp.Tell() < 512*1024) && (fp.Read( &rd, DIRENTRY_SIZE ) == DIRENTRY_SIZE) )
-	{
-		if (strcmp(rd.fileName, "RESET") == 0)
-			break;	// found romdir
-	}
-
-	if ((strcmp(rd.fileName, "RESET") != 0) || (rd.fileSize == 0)) {
-		return FALSE;	//Unable to locate ROMDIR structure in file or a ioprpXXX.img
-	}
-
-	bool found = false;
-
-	while(strlen(rd.fileName) > 0)
-	{
-		if (strcmp(rd.fileName, "ROMVER") == 0)	// found romver
-		{
-			char aROMVER[14+1];		// ascii version loaded from disk.
-
-			uint filepos = fp.Tell();
-			fp.Seek( fileOffset );
-			if( fp.Read( &aROMVER, 14 ) == 0 ) break;
-			fp.Seek( filepos );	//go back
-
-			const char zonefail[2] = { aROMVER[4], '\0' };	// the default "zone" (unknown code)
-			const char* zone = zonefail;
-
-			switch(aROMVER[4])
-			{
-				case 'T': zone = "T10K  "; break;
-				case 'X': zone = "Test  "; break;
-				case 'J': zone = "Japan "; break;
-				case 'A': zone = "USA   "; break;
-				case 'E': zone = "Europe"; break;
-				case 'H': zone = "HK    "; break;
-				case 'P': zone = "Free  "; break;
-				case 'C': zone = "China "; break;
-			}
-
-			const wxString romver( wxString::FromAscii(aROMVER) );
-
-			description.Printf( L"%s v%c%c.%c%c(%c%c/%c%c/%c%c%c%c) %s", wxString::FromAscii(zone).ToAscii().data(),
-				romver[0], romver[1],	// ver major
-				romver[2], romver[3],	// ver minor
-				romver[12], romver[13],	// day
-				romver[10], romver[11],	// month
-				romver[6], romver[7], romver[8], romver[9],	// year!
-				(aROMVER[5]=='C') ? L"Console" : (aROMVER[5]=='D') ? L"Devel" : L""
-			);
-			found = true;
-		}
-
-		if ((rd.fileSize % 0x10)==0)
-			fileOffset += rd.fileSize;
-		else
-			fileOffset += (rd.fileSize + 0x10) & 0xfffffff0;
-
-		if (fp.Read( &rd, DIRENTRY_SIZE ) != DIRENTRY_SIZE) break;
-	}
-	fileOffset-=((rd.fileSize + 0x10) & 0xfffffff0) - rd.fileSize;
-
-	if (found)
-	{
-		if ( biosFileSize < (int)fileOffset)
-		{
-			description << ((biosFileSize*100)/(int)fileOffset) << L"%";
-			// we force users to have correct bioses,
-			// not that lame scph10000 of 513KB ;-)
-		}
-		return true;
-	}
-
-	return false;	//fail quietly
 }
 
 // return value:

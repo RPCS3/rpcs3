@@ -1043,6 +1043,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\ps2\BiosTools.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\ps2\BiosTools.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\ps2\CoreEmuThread.cpp"
 				>
 			</File>

@@ -16,8 +16,7 @@
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __MISC_H__
-#define __MISC_H__
+#pragma once
 
 struct KeyModifiers
 {
@@ -32,8 +31,6 @@ extern struct KeyModifiers keymodifiers;
 // So a rename to pDisplay is in the works, but it will not, in fact, be removed.
 extern uptr pDsp;	//Used in  GS, MTGS, Plugins, Misc
 
-u32 GetBiosVersion(); // Used in Misc, Memory
-extern u32 BiosVersion;  //  Used in Memory, Misc, CDVD
 int GetPS2ElfName( wxString& dest ); // Used in Misc, System, Linux, CDVD
 
 // Not sure what header these should go in. Probably not this one.
@@ -42,10 +39,7 @@ extern u32 g_sseVUMXCSR, g_sseMXCSR;
 
 // Used in Misc,and Windows/Linux files.
 extern void ProcessFKeys(int fkey,  struct KeyModifiers *keymod); // processes fkey related commands value 1-12
-extern bool IsBIOS(const wxString& filename, wxString& description);
 
 void SaveGSState(const wxString& file);
 void LoadGSState(const wxString& file);
-
-#endif /* __MISC_H__ */
 

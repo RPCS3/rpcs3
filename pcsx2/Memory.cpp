@@ -46,6 +46,7 @@ BIOS
 
 #include "IopCommon.h"
 #include "iR5900.h"
+#include "ps2/BiosTools.h"
 
 #include "VUmicro.h"
 #include "GS.h"
@@ -82,40 +83,6 @@ u16 ba0R16(u32 mem)
 		return ba6;
 	}
 	return 0;
-}
-
-
-// Attempts to load a BIOS rom file, by trying multiple combinations of base filename
-// and extension.  The bios specified in Config.Bios is used as the base.
-void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
-{
-	wxString Bios1;
-	long filesize;
-
-	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
-	const wxString Bios( g_Conf->FullpathToBios() );
-	Bios1.Printf( L"%s.%s", Bios.c_str(), ext);
-
-	if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
-	{
-		// Try the name properly extensioned next (name.rom1)
-		Bios1 = Path::ReplaceExtension( Bios, ext );
-		if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
-		{
-			// Try for the old-style method (rom1.bin)
-			Bios1 = Path::Combine( g_Conf->Folders.Bios, (wxString)ext ) + L".bin";
-			if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
-			{
-				Console::Notice( "Load Bios Warning: %s not found (this is not an error!)", params wxString(ext).ToAscii().data() );
-				return;
-			}
-		}
-	}
-
-	// if we made it this far, we have a successful file found:
-
-	wxFile fp( Bios1 );
-	fp.Read( dest, min( maxSize, filesize ) );
 }
 
 
@@ -802,35 +769,7 @@ void memReset()
 	vtlb_VMap(0x00000000,0x00000000,0x20000000);
 	vtlb_VMapUnmap(0x20000000,0x60000000);
 
-	wxString Bios( g_Conf->FullpathToBios() );
-
-	long filesize = Path::GetFileSize( Bios );
-	if( filesize > 0 )
-	{
-		wxFile fp( Bios.c_str() );
-		fp.Read( PS2MEM_ROM, min( (long)Ps2MemSize::Rom, filesize ) );
-	}
-	else
-	{
-		// Translated: Bios file not found or not specified ... A bios is required for Pcsx2 to run!
-		throw Exception::FileNotFound( Bios,
-			L"Configured Bios file does not exist",
-			pxE( ".Error:BiosNotFound",
-				L"The configured BIOS file does not exist, or no BIOS has been configured.\n\n"
-				L"PCSX2 requires a PS2 BIOS to run; and the BIOS *must* be obtained from an actual PS2 unit\n"
-				L"that you own (borrowing doesn't count).  Please consult the FAQs and Guides for further instructions."
-			)
-		);
-	}
-
-	BiosVersion = GetBiosVersion();
-	Console::Status("Bios Version %d.%d", params BiosVersion >> 8, BiosVersion & 0xff);
-
-	//injectIRX("host.irx");	//not fully tested; still buggy
-
-	loadBiosRom( L"rom1", PS2MEM_ROM1, Ps2MemSize::Rom1 );
-	loadBiosRom( L"rom2", PS2MEM_ROM2, Ps2MemSize::Rom2 );
-	loadBiosRom( L"erom", PS2MEM_EROM, Ps2MemSize::ERom );
+	LoadBIOS();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

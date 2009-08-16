@@ -400,6 +400,7 @@ void AppConfig::Apply()
 	
 	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->McdEnableNTFS );
 
+	bool prev = wxLog::EnableLogging( false );		// wx generates verbose errors if languages don't exist, so disable them here.
 	if( !i18n_SetLanguage( LanguageId ) )
 	{
 		if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
@@ -407,6 +408,7 @@ void AppConfig::Apply()
 			i18n_SetLanguage( wxLANGUAGE_ENGLISH );
 		}
 	}
+	wxLog::EnableLogging( prev );
 
 	// Always perform delete and reload of the Recent Iso List.  This handles cases where
 	// the recent file count has been changed, and it's a helluva lot easier than trying
