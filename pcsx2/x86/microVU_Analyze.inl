@@ -297,7 +297,7 @@ microVUt(void) mVUanalyzeSflag(mV, int It) {
 		mVUsFlagHack = 0; // Don't Optimize Out Status Flags for this block
 		mVUinfo.swapOps = 1;
 		flagSet(mVU, 0);
-		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf; }
+		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 1; }
 	}
 }
 
@@ -318,7 +318,7 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
 		mVUinfo.swapOps = 1;
 		flagSet(mVU, 1);
-		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << 4; }
+		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 2; }
 	}
 }
 
@@ -329,7 +329,7 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 microVUt(void) mVUanalyzeCflag(mV, int It) {
 	mVUinfo.swapOps = 1;
 	mVUlow.readFlags = 1;
-	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 0xf << 8; }
+	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 4; }
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
 }
 

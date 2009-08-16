@@ -100,21 +100,21 @@ microVUt(void) mVUsetFlags(mV, microFlagCycles& mFC) {
 		mFC.xClip  [i] = i;
 	}
 
-	if (!(mVUpBlock->pState.needExactMatch & 0x00f)) {
+	if (!(mVUpBlock->pState.needExactMatch & 1)) {
 		xS = (mVUpBlock->pState.flags >> 0) & 3;
 		mFC.xStatus[0] = -1; mFC.xStatus[1] = -1;
 		mFC.xStatus[2] = -1; mFC.xStatus[3] = -1;
 		mFC.xStatus[(xS-1)&3] = 0;
 	}
 
-	if (!(mVUpBlock->pState.needExactMatch & 0xf00)) {
+	if (!(mVUpBlock->pState.needExactMatch & 4)) {
 		xC = (mVUpBlock->pState.flags >> 2) & 3;
 		mFC.xClip[0] = -1; mFC.xClip[1] = -1;
 		mFC.xClip[2] = -1; mFC.xClip[3] = -1;
 		mFC.xClip[(xC-1)&3] = 0;
 	}
 
-	if (!(mVUpBlock->pState.needExactMatch & 0x0f0)) {
+	if (!(mVUpBlock->pState.needExactMatch & 2)) {
 		mFC.xMac[0] = -1; mFC.xMac[1] = -1;
 		mFC.xMac[2] = -1; mFC.xMac[3] = -1;
 	}
@@ -248,7 +248,7 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 		if		(mVUbranch)		{ branch = ((mVUbranch>8)?(5):((mVUbranch<3)?3:4)); aBranchAddr = branchAddr; mVUbranch = 0; }
 		incPC(1);
 	}
-	if (mVUcount < 4) { mVUflagInfo |= 0xfff; }
+	if (mVUcount < 4) { mVUflagInfo |= 0x7; }
 	iPC		  = oldPC;
 	mVUcount  = oldCount;
 	mVUbranch = oldBranch;
@@ -263,7 +263,7 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 microVUt(void) mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr, 4); incPC(1); }
 	branchType2 { 
-		if (!mVUlow.constJump.isValid) { mVUflagInfo |= 0xfff; } 
+		if (!mVUlow.constJump.isValid) { mVUflagInfo |= 0x7; } 
 		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8), 4); }
 	}
 	branchType3 {

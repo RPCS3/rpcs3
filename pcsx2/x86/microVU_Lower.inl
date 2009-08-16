@@ -458,7 +458,7 @@ mVUop(mVU_FCAND) {
 		mVUallocVIb(mVU, gprT1, 1);
 	}
 	pass3 { mVUlog("FCAND vi01, $%x", _Imm24_); }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUflagInfo |= 4; }
 }
 
 mVUop(mVU_FCEQ) {
@@ -471,7 +471,7 @@ mVUop(mVU_FCEQ) {
 		mVUallocVIb(mVU, gprT1, 1);
 	}
 	pass3 { mVUlog("FCEQ vi01, $%x", _Imm24_); }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUflagInfo |= 4; }
 }
 
 mVUop(mVU_FCGET) {
@@ -482,7 +482,7 @@ mVUop(mVU_FCGET) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FCGET vi%02d", _Ft_);	   }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUflagInfo |= 4; }
 }
 
 mVUop(mVU_FCOR) {
@@ -495,7 +495,7 @@ mVUop(mVU_FCOR) {
 		mVUallocVIb(mVU, gprT1, 1);
 	}
 	pass3 { mVUlog("FCOR vi01, $%x", _Imm24_); }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUflagInfo |= 4; }
 }
 
 mVUop(mVU_FCSET) {
@@ -520,7 +520,7 @@ mVUop(mVU_FMAND) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMAND vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUflagInfo |= 0xf << 4;   }
+	pass4 { mVUflagInfo |= 2;   }
 }
 
 mVUop(mVU_FMEQ) {
@@ -534,7 +534,7 @@ mVUop(mVU_FMEQ) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMEQ vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUflagInfo |= 0xf << 4;  }
+	pass4 { mVUflagInfo |= 2;  }
 }
 
 mVUop(mVU_FMOR) {
@@ -546,7 +546,7 @@ mVUop(mVU_FMOR) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMOR vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUflagInfo |= 0xf << 4;  }
+	pass4 { mVUflagInfo |= 2;  }
 }
 
 //------------------------------------------------------------------
@@ -561,7 +561,7 @@ mVUop(mVU_FSAND) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSAND vi%02d, $%x", _Ft_, _Imm12_); }
-	pass4 { mVUflagInfo |= 0xf; }
+	pass4 { mVUflagInfo |= 1; }
 }
 
 mVUop(mVU_FSOR) {
@@ -572,7 +572,7 @@ mVUop(mVU_FSOR) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSOR vi%02d, $%x", _Ft_, _Imm12_); }
-	pass4 { mVUflagInfo |= 0xf; }
+	pass4 { mVUflagInfo |= 1; }
 }
 
 mVUop(mVU_FSEQ) {
@@ -604,7 +604,7 @@ mVUop(mVU_FSEQ) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSEQ vi%02d, $%x", _Ft_, _Imm12_); }
-	pass4 { mVUflagInfo |= 0xf; }
+	pass4 { mVUflagInfo |= 1; }
 }
 
 mVUop(mVU_FSSET) {

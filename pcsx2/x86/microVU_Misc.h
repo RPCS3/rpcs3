@@ -222,9 +222,9 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 
 // Flag Info
-#define __Status	 (mVUflagInfo & (0xf<<0))
-#define __Mac		 (mVUflagInfo & (0xf<<4))
-#define __Clip		 (mVUflagInfo & (0xf<<8))
+#define __Status	 (mVUflagInfo & 1)
+#define __Mac		 (mVUflagInfo & 2)
+#define __Clip		 (mVUflagInfo & 4)
 
 // Pass 3 Helper Macros
 #define _Fsf_String	 ((_Fsf_ == 3) ? "w" : ((_Fsf_ == 2) ? "z" : ((_Fsf_ == 1) ? "y" : "x")))

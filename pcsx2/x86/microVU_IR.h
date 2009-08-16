@@ -34,8 +34,8 @@ union regInfo {
 #endif
 
 __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
-	u32 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
+	u8 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u8 q;
 	u8 p;
 	u8 r;
@@ -43,7 +43,7 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u8 VI[16];
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2
-	u8 padding[3];		// 160 bytes
+	u8 padding[6];		// 160 bytes
 #if defined(_MSC_VER)
 };
 #else

@@ -22,8 +22,8 @@ microVUt(void)  mVUincCycles(mV, int x);
 microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState);
 
 #define blockCreate(addr) { if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
-#define sI ((mVUpBlock->pState.needExactMatch & 0x000f) ? 0 : ((mVUpBlock->pState.flags >> 0) & 3))
-#define cI ((mVUpBlock->pState.needExactMatch & 0x0f00) ? 0 : ((mVUpBlock->pState.flags >> 2) & 3))
+#define sI ((mVUpBlock->pState.needExactMatch & 1) ? 3 : ((mVUpBlock->pState.flags >> 0) & 3))
+#define cI ((mVUpBlock->pState.needExactMatch & 4) ? 3 : ((mVUpBlock->pState.flags >> 2) & 3))
 
 microVUt(void) mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 

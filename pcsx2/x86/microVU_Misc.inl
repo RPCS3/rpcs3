@@ -542,5 +542,5 @@ void mVUcustomSearch() {
 
 	exitPoint.SetTarget();
 	xRET();
-	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadOnly, true );
+	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadOnly, true);
 }
