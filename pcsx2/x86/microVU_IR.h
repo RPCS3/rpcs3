@@ -40,6 +40,7 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u8 p;
 	u8 r;
 	u8 xgkick;
+	u8 viBackUp;
 	u8 VI[16];
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2

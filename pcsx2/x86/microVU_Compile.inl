@@ -162,6 +162,12 @@ microVUt(void) branchWarning(mV) {
 		Console::Error("microVU%d Warning: Branch in E-bit/Branch delay slot! [%04x]", params mVU->index, xPC);
 		mVUlow.isNOP = 1;
 	}
+	if (mVUinfo.isBdelay) { // Check if VI Reg Written to on Branch Delay
+		if (mVUlow.VI_write.reg && mVUlow.VI_write.used) {
+			mVUlow.backupVI = 1;
+			mVUregs.viBackUp = mVUlow.VI_write.reg;
+		}
+	}
 }
 
 // Optimizes the End Pipeline State Removing Unnecessary Info
@@ -294,6 +300,7 @@ microVUt(void) mVUinitFirstPass(microVU* mVU, microBlock* &pBlock, uptr pState, 
 	mVUblock.x86ptrStart = thisPtr;
 	pBlock			= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
 	mVUpBlock		= pBlock;
+	mVUregs.viBackUp= 0;
 	mVUregs.flags	= 0;
 	mVUflagInfo		= 0;
 	mVUsFlagHack	= CHECK_VU_FLAGHACK;

@@ -356,10 +356,14 @@ microVUt(void) mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 	if (!xReg) return;
 	int i;
-	int iEnd = aMin(5, mVUcount);
+	int iEnd = aMin(5, (mVUcount+1));
 	int bPC = iPC;
 	incPC2(-2);
 	for (i = 0; i < iEnd; i++) {
+		if (i == mVUcount) {
+			if (mVUpBlock->pState.viBackUp == xReg) infoVar = 1; 
+			break; 
+		}
 		if ((mVUlow.VI_write.reg == xReg) && mVUlow.VI_write.used) {
 			if (mVUlow.readFlags || i == 5) break;
 			if (i == 0) { incPC2(-2); continue;	}
@@ -371,7 +375,7 @@ microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 	}
 	if (i) {
 		incPC2(2);
-		mVUlow.backupVI = 1;
+		if (!infoVar) mVUlow.backupVI = 1;
 		iPC = bPC;
 		infoVar = 1;
 		DevCon::Status("microVU%d: Branch VI-Delay (%d) [%04x]", params getIndex, i, xPC);
