@@ -162,7 +162,7 @@ namespace CHCR
 	static __forceinline bool STR(DMACh *tag) { return !!(tag->chcr & CHCR_STR); }
 	static __forceinline bool TIE(DMACh *tag) { return !!(tag->chcr & CHCR_TIE); }
 	static __forceinline bool TTE(DMACh *tag) { return !!(tag->chcr & CHCR_TTE); }
-	static __forceinline u8 DIR(DMACh *tag) { return !!(tag->chcr & CHCR_DIR); }
+	static __forceinline u8 DIR(DMACh *tag) { return (tag->chcr & CHCR_DIR); }
 
 	static __forceinline TransferMode MOD(DMACh *tag)
 	{
@@ -175,7 +175,7 @@ namespace CHCR
 	}
 
 	// Clear the individual flags.
-	static __forceinline void clearSTR(/*T*/DMACh *tag) { tag->chcr &= ~CHCR_STR; }
+	static __forceinline void clearSTR(DMACh *tag) { tag->chcr &= ~CHCR_STR; }
 	static __forceinline void clearTIE(DMACh *tag) { tag->chcr &= ~CHCR_TIE; }
 	static __forceinline void clearTTE(DMACh *tag) { tag->chcr &= ~CHCR_TTE; }
 	static __forceinline void clearDIR(DMACh *tag) { tag->chcr &= ~CHCR_DIR; }
