@@ -140,6 +140,7 @@ __forceinline void SIF0Dma()
 			if (sif0.counter == 0) // If there's no more to transfer
 			{
 				// Note.. add normal mode here
+				// The if statement doesn't seem to match the description...
 				if (sif0.sifData.data & 0xC0000000) // If NORMAL mode or end of CHAIN, or interrupt then stop DMA
 				{
 					SIF_LOG(" IOP SIF Stopped");
@@ -153,7 +154,7 @@ __forceinline void SIF0Dma()
 					PSX_INT(IopEvt_SIF0, psxCycles);
 
 					sif0.sifData.data = 0;
-					done = TRUE;
+					done = true;
 				}
 				else  // Chain mode
 				{
@@ -173,7 +174,7 @@ __forceinline void SIF0Dma()
 						SIF_LOG("   END");
 					else
 						SIF_LOG("   CNT %08X, %08X", sif0.sifData.data, sif0.sifData.words);
-					done = FALSE;
+					done = false;
 				}
 			}
 			else // There's some data ready to transfer into the fifo..
@@ -220,7 +221,8 @@ __forceinline void SIF0Dma()
 
 			if (sif0dma->qwc == 0)
 			{
-				if (((sif0dma->chcr & 0x80000080) == 0x80000080) || (sif0.end)) // Stop on tag IRQ or END
+				// Stop if TIE & the IRQ are set, or at the end. (I'll try to convert this to use the tags code later.)
+				if (((sif0dma->chcr & 0x80000080) == 0x80000080) || (sif0.end)) 
 				{
 					if (sif0.end)
 						SIF_LOG(" EE SIF end"); 
@@ -229,7 +231,7 @@ __forceinline void SIF0Dma()
 
 					eesifbusy[0] = 0;
 					CPU_INT(5, cycles*BIAS);
-					done = TRUE;
+					done = true;
 				}
 				else if (sif0.fifoSize >= 4) // Read a tag
 				{
@@ -243,11 +245,12 @@ __forceinline void SIF0Dma()
 
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
 
-					if ((psHu32(DMAC_CTRL) & 0x30) != 0 && ((tag[0] >> 28)&3) == 0)
+					//  (tag[0] >> 28) & 3? Surely this is supposed to be (tag[0] >> 28) & 7? --arcum42
+					if ((psHu32(DMAC_CTRL) & 0x30) != 0 && ((tag[0] >> 28) & 3) == 0)
 						psHu32(DMAC_STADR) = sif0dma->madr + (sif0dma->qwc * 16);
 					sif0.chain = 1;
 					if (tag[0] & 0x40000000) sif0.end = 1;
-					done = FALSE;
+					done = false;
 
 				}
 			}
@@ -258,7 +261,6 @@ __forceinline void SIF0Dma()
 
 __forceinline void SIF1Dma()
 {
-	int id;
 	u32 *ptag;
 	bool done = FALSE;
 	int cycles = 0, psxCycles = 0;
@@ -272,12 +274,12 @@ __forceinline void SIF1Dma()
 
 			if (sif1dma->qwc == 0) // If there's no more to transfer
 			{
-				if ((sif1dma->chcr & 0xc) == 0 || sif1.end) // If NORMAL mode or end of CHAIN then stop DMA
+				if ((CHCR::MOD(sif1dma) == NORMAL_MODE) || sif1.end) // If NORMAL mode or end of CHAIN then stop DMA
 				{
 					// Stop & signal interrupts on EE
 					SIF_LOG("EE SIF1 End %x", sif1.end);
 					eesifbusy[1] = 0;
-					done = TRUE;
+					done = true;
 					CPU_INT(6, cycles*BIAS);
 					sif1.chain = 0;
 					sif1.end = 0;
@@ -285,7 +287,7 @@ __forceinline void SIF1Dma()
 				else // Chain mode
 				{
 					// Process DMA tag at sif1dma->tadr
-					done = FALSE;
+					done = false;
 					ptag = _dmaGetAddr(sif1dma, sif1dma->tadr, 6);
 					if (ptag == NULL) return;
 					
@@ -295,16 +297,15 @@ __forceinline void SIF1Dma()
 					sif1dma->chcr = (sif1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);     // Copy the tag
 					sif1dma->qwc = (u16)ptag[0];
 
-					if (sif1dma->chcr & 0x40)
+					if (CHCR::TTE(sif1dma))
 					{
 						Console::WriteLn("SIF1 TTE");
 						SIF1write(ptag + 2, 2);
 					}
 
 					sif1.chain = 1;
-					id = (ptag[0] >> 28) & 0x7;
 
-					switch (id)
+					switch (Tag::Id(ptag))
 					{
 						case TAG_REFE: // refe
 							SIF_LOG("   REFE %08X", ptag[1]);
@@ -342,7 +343,7 @@ __forceinline void SIF1Dma()
 						default:
 							Console::WriteLn("Bad addr1 source chain");
 					}
-					if ((sif1dma->chcr & 0x80) && (ptag[0] >> 31))
+					if ((CHCR::TIE(sif1dma)) && (Tag::IRQ(ptag)))
 					{
 						Console::WriteLn("SIF1 TIE");
 						sif1.end = 1;
@@ -355,7 +356,7 @@ __forceinline void SIF1Dma()
 				u32 *data;
 				
 				data = _dmaGetAddr(sif1dma, sif1dma->madr, 6);
-				if (data == NULL)	return;
+				if (data == NULL) return;
 				
 				//_dmaGetAddr(sif1dma, *data, sif1dma->madr, 6);
 
@@ -374,7 +375,7 @@ __forceinline void SIF1Dma()
 		{
 			int size = sif1.counter;
 
-			if (size > 0) // If we're reading something continue to do so
+			if (size > 0) // If we're reading something, continue to do so.
 			{
 				int readSize = size;
 
@@ -401,7 +402,7 @@ __forceinline void SIF1Dma()
 					iopsifbusy[1] = 0;
 					PSX_INT(IopEvt_SIF1, psxCycles);
 					sif1.tagMode = 0;
-					done = TRUE;
+					done = true;
 				}
 				else if (sif1.fifoSize >= 4) // Read a tag
 				{
@@ -411,7 +412,7 @@ __forceinline void SIF1Dma()
 					HW_DMA10_MADR = d.data & 0xffffff;
 					sif1.counter = d.words;
 					sif1.tagMode = (d.data >> 24) & 0xFF;
-					done = FALSE;
+					done = false;
 				}
 			}
 		}
@@ -433,14 +434,14 @@ __forceinline void  sif1Interrupt()
 
 __forceinline void  EEsif0Interrupt()
 {
-	sif0dma->chcr &= ~0x100;
 	hwDmacIrq(DMAC_SIF0);
+	CHCR::clearSTR(sif0dma);
 }
 
 __forceinline void  EEsif1Interrupt()
 {
 	hwDmacIrq(DMAC_SIF1);
-	sif1dma->chcr &= ~0x100;
+	CHCR::clearSTR(sif1dma);
 }
 
 __forceinline void dmaSIF0()
@@ -495,7 +496,7 @@ __forceinline void dmaSIF2()
 	SIF_LOG("dmaSIF2 chcr = %lx, madr = %lx, qwc  = %lx",
 	        sif2dma->chcr, sif2dma->madr, sif2dma->qwc);
 
-	sif2dma->chcr &= ~0x100;
+	CHCR::clearSTR(sif2dma);
 	hwDmacIrq(DMAC_SIF2);
 	Console::WriteLn("*PCSX2*: dmaSIF2");
 }

@@ -453,7 +453,7 @@ void mfifoVIF1transfer(int qwc)
 	{
 		ptag = (u32*)dmaGetAddr(vif1ch->tadr);
 
-		if (vif1ch->chcr & 0x40)
+		if (CHCR::TTE(vif1ch))
 		{
 			if (vif1.stallontag)
 				ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on Stall
@@ -467,15 +467,14 @@ void mfifoVIF1transfer(int qwc)
 				return;        //IRQ set by VIFTransfer
 			}
 		}
-
-		id = (ptag[0] >> 28) & 0x7;
-		vif1ch->qwc  = (ptag[0] & 0xffff);
-		vif1ch->madr = ptag[1];
-
-		vif1ch->chcr = (vif1ch->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+		
+		Tag::UnsafeTransfer(vif1ch, ptag);
 
 		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
 		        ptag[1], ptag[0], vif1ch->qwc, id, vif1ch->madr, vif1ch->tadr, vifqwc, spr0->madr);
+		
+		vif1ch->madr = ptag[1];
+		id =Tag::Id(ptag);
 		vifqwc--;
 
 		switch (id)
@@ -514,7 +513,7 @@ void mfifoVIF1transfer(int qwc)
 				break;
 		}
 
-		if ((vif1ch->chcr & 0x80) && (ptag[0] >> 31))
+		if ((CHCR::TIE(vif1ch)) && (Tag::IRQ(ptag)))
 		{
 			VIF_LOG("dmaIrq Set");
 			vif1.done = true;
@@ -530,28 +529,27 @@ void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
 	
-	if(schedulepath3msk) Vif1MskPath3();
+	if (schedulepath3msk) Vif1MskPath3();
 
-	if((vif1Regs->stat & VIF1_STAT_VGW))
+	if ((vif1Regs->stat & VIF1_STAT_VGW))
 	{
-		if(gif->chcr & 0x100)
+		if (CHCR::STR(gif))
 		{			
 			CPU_INT(10, 16);
 			return;
 		} 
-		else vif1Regs->stat &= ~VIF1_STAT_VGW;
+		else 
+		{
+			vif1Regs->stat &= ~VIF1_STAT_VGW;
+		}
 	
 	}
 
-	if((spr0->chcr & 0x100) && spr0->qwc == 0)
+	if ((CHCR::STR(spr0)) && (spr0->qwc == 0))
 	{
-		spr0->chcr &= ~0x100;
+		CHCR::clearSTR(spr0);
 		hwDmacIrq(DMAC_FROM_SPR);
 	}
-
-	
-
-	
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
@@ -561,7 +559,7 @@ void vifMFIFOInterrupt()
 		if (vif1Regs->stat & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
 			vif1Regs->stat &= ~0x1F000000; // FQC=0
-			vif1ch->chcr &= ~0x100;
+			CHCR::clearSTR(vif1ch);
 			return;
 		}
 	}
@@ -608,7 +606,7 @@ void vifMFIFOInterrupt()
 
 	vif1.done = 1;
 	g_vifCycles = 0;
-	vif1ch->chcr &= ~0x100;
+	CHCR::clearSTR(vif1ch);
 	hwDmacIrq(DMAC_VIF1);
 	VIF_LOG("vif mfifo dma end");
 
