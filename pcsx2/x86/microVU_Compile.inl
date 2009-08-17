@@ -258,8 +258,8 @@ microVUt(void) mVUsetCycles(mV) {
 	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
-void __fastcall mVUwarning0(u32 PC) { Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
-void __fastcall mVUwarning1(u32 PC) { Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x]", params PC); }
+void __fastcall mVUwarning0(mV)		{ Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", params xPC, mVU->prog.cur); }
+void __fastcall mVUwarning1(mV)		{ Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", params xPC, mVU->prog.cur); }
 void __fastcall mVUprintPC1(u32 PC) { Console::Write("Block PC [%04x] ", params PC); }
 void __fastcall mVUprintPC2(u32 PC) { Console::Write("[%04x]\n", params PC); }
 
@@ -269,7 +269,7 @@ microVUt(void) mVUtestCycles(mV) {
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 	if (IsDevBuild || !isVU1) {
 		u32* jmp32 = JG32(0);
-			MOV32ItoR(gprT2, xPC);
+			MOV32ItoR(gprT2, (uptr)mVU);
 			if (isVU1)  CALLFunc((uptr)mVUwarning1);
 			//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
 			MOV32ItoR(gprR, Roffset); // Restore gprR

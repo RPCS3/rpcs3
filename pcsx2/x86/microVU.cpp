@@ -207,13 +207,13 @@ microVUt(void) mVUvsyncUpdate(mV) {
 			mVU->prog.prog[i].used  = 0;
 			mVU->prog.prog[i].frame = mVU->prog.curFrame;
 		}
-		if((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (360 * 10)) {
+		else if (((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (360 * 10)) && (i != mVU->prog.cur)) {
 			mVU->prog.total--;
 			if (!mVU->index) mVUclearProg<0>(i);
 			else			 mVUclearProg<1>(i);
 			DevCon::Status("microVU%d: Killing Dead Program [%03d]", params mVU->index, i+1);
 		}
-		else if (!mVU->prog.prog[i].isOld && ((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (30 * 1))) {
+		else if (((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (30  *  1)) && !mVU->prog.prog[i].isOld) {
 			mVU->prog.prog[i].isOld = 1;
 			//DevCon::Status("microVU%d: Aging Old Program [%03d]", params mVU->index, i+1);
 		}
@@ -267,7 +267,8 @@ microVUf(int) mVUsearchProg() {
 		mVU->prog.isSame  = 1;
 		return 0;
 	}
-	mVU->prog.prog[mVU->prog.cur].used = 1;
+	mVU->prog.prog[mVU->prog.cur].used	= 1;
+	mVU->prog.prog[mVU->prog.cur].isOld	= 0;
 	return 1; // If !cleared, then we're still on the same program as last-time ;)
 }
 
