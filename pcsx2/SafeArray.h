@@ -30,16 +30,16 @@ extern void pcsx2_aligned_free(void* pmem);
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Safe deallocation macros -- always check pointer validity (non-null) when needed,
-// and set pointer to null after deallocation.
+// Safe deallocation macros -- checks pointer validity (non-null) when needed, and sets
+// pointer to null after deallocation.
 
 #define safe_delete( ptr ) \
-	((void) (( ( ptr != NULL ) && (delete ptr, !!0) ), ptr = NULL))
+	((void) (delete ptr), ptr = NULL)
 
 #define safe_delete_array( ptr ) \
-	((void) (( ( ptr != NULL ) && (delete[] ptr, !!0) ), ptr = NULL))
+	((void) (delete[] ptr), ptr = NULL)
 
-// fixme: I'm pretty sure modern libc implementations inder gcc and msvc check null status
+// fixme: I'm pretty sure modern libc implementations under gcc and msvc check null status
 // inside free(), meaning we shouldn't have to do it ourselves.  But legacy implementations
 // didn't always check, so best to be cautious unless absolutely certain it's being covered on
 // all ported platforms.
@@ -50,10 +50,10 @@ extern void pcsx2_aligned_free(void* pmem);
 // NULL status (our implementation under GCC, and microsoft's under MSVC), so no need to
 // do it here.
 #define safe_aligned_free( ptr ) \
-	( (void) ( _aligned_free( ptr ), ptr = NULL ) )
+	((void) ( _aligned_free( ptr ), ptr = NULL ))
 
 #define SafeSysMunmap( ptr, size ) \
-	( (void) ( HostSys::Munmap( (uptr)ptr, size ), ptr = NULL ) )
+	((void) ( HostSys::Munmap( (uptr)ptr, size ), ptr = NULL ))
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Handy little class for allocating a resizable memory block, complete with
