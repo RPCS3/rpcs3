@@ -170,6 +170,14 @@ microVUt(void) branchWarning(mV) {
 	}
 }
 
+microVUt(void) eBitWarning(mV) {
+	incPC(2);
+	if (curI & _Ebit_) {
+		Console::Error("microVU%d Warning: E-bit in Branch delay slot! [%04x]", params mVU->index, xPC);
+	}
+	incPC(-2);
+}
+
 // Optimizes the End Pipeline State Removing Unnecessary Info
 microVUt(void) mVUoptimizePipeState(mV) {
 	for (int i = 0; i < 32; i++) {
@@ -342,7 +350,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		mVUinfo.writeP = !mVU->p;
 		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(mVU); break; }
 		else if (branch == 1) { branch = 2; }
-		if		(mVUbranch)   { mVUsetFlagInfo(mVU); branch = 3; mVUbranch = 0; }
+		if		(mVUbranch)   { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
 		incPC(1);
 	}
 
