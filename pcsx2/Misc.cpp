@@ -503,6 +503,15 @@ void CycleFrameLimit(int dir)
 	switch(newFrameLimit) {
 		case PCSX2_FRAMELIMIT_NORMAL:
 			limitMsg = "None/Normal";
+			//Disables eventually enabled vsync
+			if(GSsetFrameLimit == NULL)
+			{
+				DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
+			}
+			else
+			{
+				GSsetFrameLimit(0);
+			}
 			break;
 		case PCSX2_FRAMELIMIT_LIMIT:
 			limitMsg = "Limit";
