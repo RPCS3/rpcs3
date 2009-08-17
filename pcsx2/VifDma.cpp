@@ -2604,10 +2604,11 @@ void dmaVIF1()
 	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
 	{
 		//Console::WriteLn("VIFMFIFO\n");
-		if (CHCR::MOD(vif1ch) != CHAIN_MODE) Console::WriteLn("MFIFO mode != Chain! %x", params vif1ch->chcr);
+		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
+		if (CHCR::MOD(vif1ch) == NORMAL_MODE) Console::WriteLn("MFIFO mode is normal (which isn't normal here)! %x", params vif1ch->chcr);
 		vifMFIFOInterrupt();
 		return;
-	}
+	} 
 
 #ifdef PCSX2_DEVBUILD
 	if ((psHu32(DMAC_CTRL) & 0xC0) == 0x40)   // STD == VIF1
