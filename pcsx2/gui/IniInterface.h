@@ -151,6 +151,6 @@ protected:
 // GCC Note: wxT() macro is required when using string token pasting.  For some reason L generates
 // syntax errors. >_<
 //
-#define IniEntry( varname, defval )		ini.Entry( wxT(#varname), varname, defval )
-#define IniBitfield( varname, defval )	varname = ini.EntryBitfield( wxT(#varname), varname, defval )
-#define IniBitBool( varname, defval )	varname = ini.EntryBitBool( wxT(#varname), !!varname, defval )
+#define IniEntry( varname )		ini.Entry( wxT(#varname), varname, defaults.varname )
+#define IniBitfield( varname )	varname = ini.EntryBitfield( wxT(#varname), varname, defaults.varname )
+#define IniBitBool( varname )	varname = ini.EntryBitBool( wxT(#varname), !!varname, defaults.varname )

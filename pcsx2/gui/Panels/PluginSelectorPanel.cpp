@@ -17,6 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "Utilities/ScopedPtr.h"
 #include "Plugins.h"
 #include "ConfigurationPanels.h"
 #include "ps2/BiosTools.h"
@@ -117,9 +118,9 @@ public:
 static const wxString failed_separator( L"--------   Unsupported Plugins  --------" );
 
 // ------------------------------------------------------------------------
-Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent, int pluginCount, __unused int biosCount ) :
+Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent ) :
 	wxPanelWithHelpers( parent )
-,	m_gauge( *new wxGauge( this, wxID_ANY, pluginCount ) )
+,	m_gauge( *new wxGauge( this, wxID_ANY, 10 ) )
 ,	m_label( *new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE | wxST_NO_AUTORESIZE ) )
 ,	m_progress( 0 )
 {
@@ -130,6 +131,11 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent, int plu
 	s_main.Add( &m_label, SizerFlags::StdExpand() );
 
 	SetSizerAndFit( &s_main );
+}
+
+void Panels::PluginSelectorPanel::StatusPanel::SetGaugeLength( int len )
+{
+	m_gauge.SetRange( len );
 }
 
 void Panels::PluginSelectorPanel::StatusPanel::AdvanceProgress( const wxString& msg )
@@ -183,15 +189,14 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 // ------------------------------------------------------------------------
 Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
-,	m_FileList()
-,	m_StatusPanel( *new StatusPanel( this,
-		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), &m_FileList, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ),
-		wxDir::GetAllFiles( g_Conf->Folders.Bios.ToString(), &m_BiosList, L"*.bin", wxDIR_FILES )
-	) )
+,	m_FileList( NULL )
+,	m_BiosList( NULL )
+,	m_StatusPanel( *new StatusPanel( this ) )
 ,	m_ComponentBoxes( *new ComboBoxPanel( this ) )
-,	m_Uninitialized( true )
 ,	m_EnumeratorThread( NULL )
 {
+	//ValidateEnumerationStatus();
+
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 	
 	s_main.Add( &m_ComponentBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
@@ -208,7 +213,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 
 	SetSizerAndFit( &s_main );
 
-	Connect( GetId(), wxEVT_SHOW, wxShowEventHandler( PluginSelectorPanel::OnShow ) );
+	Connect( GetId(), wxEVT_SHOW,		wxShowEventHandler( PluginSelectorPanel::OnShow ) );
 
 	Connect( wxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
 	Connect( wxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
@@ -222,6 +227,8 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel()
 	// Kill the thread if it's alive.
 
 	safe_delete( m_EnumeratorThread );
+	safe_delete( m_FileList );
+	safe_delete( m_BiosList );
 }
 
 void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
@@ -247,7 +254,7 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 			);
 		}
 
-		wxFileName relative( m_FileList[(int)m_ComponentBoxes.Get(i).GetClientData(sel)] );
+		wxFileName relative( GetFilename((int)m_ComponentBoxes.Get(i).GetClientData(sel)) );
 		relative.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
 	}
@@ -266,15 +273,13 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 			)
 		);
 	}
-	wxFileName relative( m_BiosList[(int)m_ComponentBoxes.GetBios().GetClientData(sel)] );
+	wxFileName relative( (*m_BiosList)[(int)m_ComponentBoxes.GetBios().GetClientData(sel)] );
 	relative.MakeRelativeTo( g_Conf->Folders.Bios.ToString() );
 	conf.BaseFilenames.Bios = relative.GetFullPath();
 }
 
 void Panels::PluginSelectorPanel::DoRefresh()
 {
-	m_Uninitialized = false;
-
 	// Disable all controls until enumeration is complete.
 
 	m_ComponentBoxes.Hide();
@@ -284,22 +289,64 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	safe_delete( m_EnumeratorThread );
 	m_EnumeratorThread = new EnumThread( *this );
 	m_EnumeratorThread->Start();
+
+	m_ComponentBoxes.Reset();
+}
+
+bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
+{
+	bool validated = true;
+	
+	// re-enumerate plugins and bioses, and if anything changed then we need to wipe
+	// the contents of the combo boxes and re-enumerate everything.
+
+	// Impl Note: ScopedPtr used so that resources get cleaned up if an exception
+	// occurs during file enumeration.
+	wxScopedPtr<wxArrayString> pluginlist( new wxArrayString() );
+	wxScopedPtr<wxArrayString> bioslist( new wxArrayString() );
+
+	int pluggers = EnumeratePluginsFolder( pluginlist.get() );
+
+	if( g_Conf->Folders.Bios.Exists() )
+		wxDir::GetAllFiles( g_Conf->Folders.Bios.ToString(), bioslist.get(), L"*.bin", wxDIR_FILES );
+
+	if( (m_FileList == NULL) || (*pluginlist != *m_FileList) )
+		validated = false;
+
+	if( (m_BiosList == NULL) || (*bioslist != *m_BiosList) )
+		validated = false;
+
+	delete m_FileList;
+	delete m_BiosList;
+	m_FileList = pluginlist.release();
+	m_BiosList = bioslist.release();
+
+	m_StatusPanel.SetGaugeLength( pluggers );
+
+	return validated;
 }
 
 // ------------------------------------------------------------------------
+
+// This overload of OnShow is invoked by wizards, since the wxWizard won't raise
+// SHOW events. >_<  (only called for show events and not hide events)
+void Panels::PluginSelectorPanel::OnShow()
+{
+	if( !ValidateEnumerationStatus() )
+		DoRefresh();
+}
+
 void Panels::PluginSelectorPanel::OnShow( wxShowEvent& evt )
 {
 	evt.Skip();
 	if( !evt.GetShow() ) return;
 
-	if( !m_Uninitialized ) return;
-
-	DoRefresh();
+	OnShow();
 }
 
 void Panels::PluginSelectorPanel::OnRefresh( wxCommandEvent& evt )
 {
-	m_ComponentBoxes.Reset();
+	ValidateEnumerationStatus();
 	DoRefresh();
 }
 
@@ -314,13 +361,13 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 	wxFileName right( g_Conf->FullpathToBios() );
 	right.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 
-	for( size_t i=0; i<m_BiosList.GetCount(); ++i )
+	for( size_t i=0; i<m_BiosList->GetCount(); ++i )
 	{
 		wxString description;
-		if( !IsBIOS(m_BiosList[i], description) ) continue;
+		if( !IsBIOS((*m_BiosList)[i], description) ) continue;
 		int sel = m_ComponentBoxes.GetBios().Append( description, (void*)i );
 		
-		wxFileName left( m_BiosList[i] );
+		wxFileName left( (*m_BiosList)[i] );
 		left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 
 		if( left == right )
@@ -358,15 +405,15 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 {
 	size_t evtidx = evt.GetExtraLong();
-	m_StatusPanel.AdvanceProgress( (evtidx < m_FileList.Count()-1) ?
-		m_FileList[evtidx + 1] : wxString(_("Completing tasks..."))
+	m_StatusPanel.AdvanceProgress( (evtidx < m_FileList->Count()-1) ?
+		(*m_FileList)[evtidx + 1] : wxString(_("Completing tasks..."))
 	);
 
 	EnumeratedPluginInfo& result( m_EnumeratorThread->Results[evtidx] );
 
 	if( result.TypeMask == 0 )
 	{
-		Console::Error( L"Some kinda plugin failure: " + m_FileList[evtidx] );
+		Console::Error( L"Some kinda plugin failure: " + (*m_FileList)[evtidx] );
 	}
 
 	for( int i=0; i<NumPluginTypes; ++i )
@@ -376,11 +423,11 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 			if( result.PassedTest & tbl_PluginInfo[i].typemask )
 			{
 				int sel = m_ComponentBoxes.Get(i).Append( wxsFormat( L"%s %s [%s]",
-					result.Name.c_str(), result.Version[i].c_str(), Path::GetFilenameWithoutExt( m_FileList[evtidx] ).c_str() ),
+					result.Name.c_str(), result.Version[i].c_str(), Path::GetFilenameWithoutExt( (*m_FileList)[evtidx] ).c_str() ),
 					(void*)evtidx
 				);
 
-				wxFileName left( m_FileList[evtidx] );
+				wxFileName left( (*m_FileList)[evtidx] );
 				wxFileName right( g_Conf->FullpathTo(tbl_PluginInfo[i].id) );
 
 				left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );

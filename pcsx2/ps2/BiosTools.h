@@ -20,5 +20,6 @@
 
 extern u32 BiosVersion;		//  Used by CDVD
 
+extern wxString BIOS_GetMsg_Required();
 extern void LoadBIOS();
 extern bool IsBIOS(const wxString& filename, wxString& description);

@@ -45,7 +45,7 @@ namespace Exception
 {
 	// --------------------------------------------------------------------------
 	// Exception used to perform an abort of Apply/Ok action on settings panels.
-	// When thrown, the user recieves a popup message containing the information
+	// When thrown, the user receives a popup message containing the information
 	// specified in the exception message, and is returned to the settings dialog
 	// to correct the invalid input fields.
 	//
@@ -79,7 +79,6 @@ namespace Exception
 
 namespace Panels
 {
-
 	typedef std::list<BaseApplicableConfigPanel*> PanelApplyList_t;
 
 	struct StaticApplyState
@@ -91,9 +90,13 @@ namespace Panels
 		// this page as their "go here on error" page. (used to take the user to the 
 		// page with the option that failed apply validation).
 		int CurOwnerPage;
-		
+
 		// TODO : Rename me to CurOwnerBook, or rename the one above to ParentPage.
 		wxBookCtrlBase* ParentBook;
+
+		// Crappy hack to handle the UseAdminMode option, which can't be part of AppConfig
+		// because AppConfig depends on this value to initialize itself.
+		bool UseAdminMode;
 		
 		StaticApplyState() :
 			PanelList()
@@ -106,14 +109,16 @@ namespace Panels
 		{
 			CurOwnerPage = page;
 		}
-		
+
 		void ClearCurrentPage()
 		{
 			CurOwnerPage = wxID_NONE;
 		}
 		
 		void StartBook( wxBookCtrlBase* book );
+		void StartWizard();
 		bool ApplyAll();
+		bool ApplyPage( int pageid );
 		void DoCleanup();
 	};
 
@@ -124,8 +129,8 @@ namespace Panels
 	// window (usually the ConfigurationDialog) when either Ok or Apply is clicked.
 	//
 	// Thread Safety: None.  This class is only safe when used from the GUI thread, as it uses
-	//   static vars and assumes that only one Applicableconfig system is available to the
-	//   use rate any time (ie, a singular modal dialog).
+	//   static vars and assumes that only one ApplicableConfig system is available to the
+	//   user at any time (ie, a singular modal dialog).
 	// 
 	class BaseApplicableConfigPanel : public wxPanelWithHelpers
 	{
@@ -156,6 +161,10 @@ namespace Panels
 			m_OwnerBook->SetSelection( m_OwnerPage );
 		}
 
+		// Returns true if this ConfigPanel belongs to the specified page.  Useful for doing
+		// selective application of options for specific pages.
+		bool IsOnPage( int pageid ) { return m_OwnerPage == pageid; }
+
 		// This method attempts to assign the settings for the panel into the given
 		// configuration structure (which is typically a copy of g_Conf).  If validation
 		// of form contents fails, the function should throw Exception::CannotApplySettings.
@@ -173,7 +182,7 @@ namespace Panels
 
 	public:
 		virtual ~UsermodeSelectionPanel() { }
-		UsermodeSelectionPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
+		UsermodeSelectionPanel( wxWindow& parent, int idealWidth=wxDefaultCoord, bool isFirstTime = true );
 
 		void Apply( AppConfig& conf );
 	};
@@ -188,7 +197,7 @@ namespace Panels
 
 	public:
 		virtual ~LanguageSelectionPanel() { }
-		LanguageSelectionPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
+		LanguageSelectionPanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
 
 		void Apply( AppConfig& conf );
 	};
@@ -251,53 +260,73 @@ namespace Panels
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
+	// DirPickerPanel
+	// A simple panel which provides a specialized configurable directory picker with a
+	// "[x] Use Default setting" option, which enables or disables the panel.
 	//
-	class PathsPanel : public BaseApplicableConfigPanel
+	class DirPickerPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		class DirPickerPanel : public BaseApplicableConfigPanel
-		{
-		protected:
-			FoldersEnum_t		m_FolderId;
-			wxDirPickerCtrl*	m_pickerCtrl;
-			wxCheckBox*			m_checkCtrl;
-
-		public:
-			DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
-			void Apply( AppConfig& conf );
-
-		protected:
-			void UseDefaultPath_Click(wxCommandEvent &event);
-			void UpdateCheckStatus( bool someNoteworthyBoolean );
-		};
-
-		class MyBasePanel : public wxPanelWithHelpers
-		{
-		protected:
-			wxBoxSizer& s_main;
-
-		public:
-			MyBasePanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
-
-		protected:
-			DirPickerPanel& AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid,
-				const wxString& label, const wxString& popupLabel );
-		};
-
-		class StandardPanel : public MyBasePanel
-		{
-		public:
-			StandardPanel( wxWindow& parent );
-		};
-
-		class AdvancedPanel : public MyBasePanel
-		{
-		public:
-			AdvancedPanel( wxWindow& parent, int idealWidth );
-		};
+		FoldersEnum_t		m_FolderId;
+		wxDirPickerCtrl*	m_pickerCtrl;
+		wxCheckBox*			m_checkCtrl;
 
 	public:
-		PathsPanel( wxWindow& parent, int idealWidth );
+		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
+		void Apply( AppConfig& conf );
+		void Reset();
+
+	protected:
+		void UseDefaultPath_Click(wxCommandEvent &event);
+		void UpdateCheckStatus( bool someNoteworthyBoolean );
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class BasePathsPanel : public wxPanelWithHelpers
+	{
+	protected:
+		wxBoxSizer& s_main;
+
+	public:
+		BasePathsPanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
+		virtual wxSizer& Sizer() { return s_main; }
+
+	protected:
+		DirPickerPanel& AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid,
+			const wxString& label, const wxString& popupLabel );
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class StandardPathsPanel : public BasePathsPanel
+	{
+	public:
+		StandardPathsPanel( wxWindow& parent );
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class AdvancedPathsPanel : public BasePathsPanel
+	{
+	protected:
+		DirPickerPanel& m_dirpick_plugins;
+		DirPickerPanel& m_dirpick_settings;
+		
+	public:
+		AdvancedPathsPanel( wxWindow& parent, int idealWidth );
+		void Reset();
+	};
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// TabbedPathsPanel
+	// This panel is a Tabbed (paged) panel which contains both Standard Paths and Advanced
+	// Paths panels.
+	//
+	class TabbedPathsPanel : public BaseApplicableConfigPanel
+	{
+	public:
+		TabbedPathsPanel( wxWindow& parent, int idealWidth );
 		void Apply( AppConfig& conf );
 	};
 
@@ -368,7 +397,9 @@ namespace Panels
 			int				m_progress;
 			
 		public:
-			StatusPanel( wxWindow* parent, int pluginCount, int biosCount );
+			StatusPanel( wxWindow* parent );
+			
+			void SetGaugeLength( int len );
 			void AdvanceProgress( const wxString& msg );
 			void Reset();
 		};
@@ -378,27 +409,30 @@ namespace Panels
 	// ------------------------------------------------------------------------
 
 	protected:
-		wxArrayString	m_FileList;	// list of potential plugin files
-		wxArrayString	m_BiosList;
+		wxArrayString*	m_FileList;	// list of potential plugin files
+		wxArrayString*	m_BiosList;
 		StatusPanel&	m_StatusPanel;
 		ComboBoxPanel&	m_ComponentBoxes;
-		bool			m_Uninitialized;
 		EnumThread*		m_EnumeratorThread;
 
 	public:
 		virtual ~PluginSelectorPanel();
 		PluginSelectorPanel( wxWindow& parent, int idealWidth );
-		virtual void OnShow( wxShowEvent& evt );
-		virtual void OnRefresh( wxCommandEvent& evt );
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 		
 		void Apply( AppConfig& conf );
-	
+		void OnShow();
+
 	protected:
+		virtual void OnShow( wxShowEvent& evt );
+		virtual void OnRefresh( wxCommandEvent& evt );
+
 		void DoRefresh();
-		int FileCount() const { return m_FileList.Count(); }
-		const wxString& GetFilename( int i ) const { return m_FileList[i]; }
+		bool ValidateEnumerationStatus();
+		
+		int FileCount() const { return m_FileList->Count(); }
+		const wxString& GetFilename( int i ) const { return (*m_FileList)[i]; }
 		friend class EnumThread;
 	};
 }

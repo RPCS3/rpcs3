@@ -18,6 +18,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Utilities/RedtapeWindows.h"
+#include "Utilities/ScopedPtr.h"
 
 #include <wx/dir.h>
 #include <wx/file.h>
@@ -46,9 +47,20 @@ const PluginInfo tbl_PluginInfo[] =
 
 };
 
+int EnumeratePluginsFolder( wxArrayString* dest )
+{
+	wxScopedPtr<wxArrayString> placebo;
+	wxArrayString* realdest = dest;
+	if( realdest == NULL )
+		placebo.reset( realdest = new wxArrayString() );
+
+	return g_Conf->Folders.Plugins.Exists() ?
+		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), realdest, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
+}
+
+
 typedef void CALLBACK VoidMethod();
 typedef void CALLBACK vMeth();		// shorthand for VoidMethod
-;		// extra semicolon fixes VA-X intellisense breakage caused by CALLBACK in the above typedef >_<
 
 // ----------------------------------------------------------------------------
 struct LegacyApi_CommonMethod

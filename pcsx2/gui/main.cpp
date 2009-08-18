@@ -21,6 +21,8 @@
 #include "MainFrame.h"
 #include "Dialogs/ModalPopups.h"
 
+#include "Utilities/ScopedPtr.h"
+
 #include "Resources/EmbeddedImage.h"
 #include "Resources/BackgroundLogo.h"
 
@@ -28,6 +30,7 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
+bool			UseAdminMode = false;
 AppConfig*		g_Conf = NULL;
 wxFileHistory*	g_RecentIsoList = NULL;
 CoreEmuThread*	g_EmuThread = NULL;
@@ -62,64 +65,34 @@ Pcsx2App::Pcsx2App()  :
 
 wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
 
-wxFileConfig* OpenConfig( const wxString& filename )
-{
-	return new wxFileConfig( wxEmptyString, wxEmptyString, filename, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
-}
-
 void Pcsx2App::ReadUserModeSettings()
 {
 	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
 	usermodefile.SetPath( wxGetCwd() );
-
-	wxFileConfig* conf_usermode = OpenConfig( usermodefile.GetFullPath() );
+	wxScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
 	if( !wxFile::Exists( usermodefile.GetFullPath() ) )
 	{
 		// first time startup, so give the user the choice of user mode:
-		if( Dialogs::PickUserModeDialog( NULL ).ShowModal() == wxID_CANCEL )
-			throw Exception::StartupAborted( L"Startup aborted: User cancelled Usermode selection." );
-		
+		//if( Dialogs::PickUserModeDialog( NULL ).ShowModal() == wxID_CANCEL )
+		FirstTimeWizard wiz( NULL );
+		if( !wiz.RunWizard( wiz.GetFirstPage() ) )
+			throw Exception::StartupAborted( L"Startup aborted: User canceled FirstTime Wizard." );
+
 		// Save user's new settings
-		if( conf_usermode != NULL )
-		{
-			IniSaver saver( *conf_usermode );
-			g_Conf->LoadSaveUserMode( saver );
-		}
+		IniSaver saver( *conf_usermode );
+		g_Conf->LoadSaveUserMode( saver );
+		g_Conf->Save();
 	}
 	else
 	{
 		// usermode.ini exists -- assume Documents mode, unless the ini explicitly
 		// specifies otherwise.
-		g_Conf->UseAdminMode = false;
+		UseAdminMode = false;
 
-		if( conf_usermode != NULL )
-		{
-			IniLoader loader( *conf_usermode );
-			g_Conf->LoadSaveUserMode( loader );
-		}
+		IniLoader loader( *conf_usermode );
+		g_Conf->LoadSaveUserMode( loader );
 	}
-
-	safe_delete( conf_usermode );
-}
-
-// ------------------------------------------------------------------------
-// returns true if a configuration file is present in the current working dir (cwd).
-// returns false if not (in which case the calling code should fall back on using OpenConfigUserLocal())
-//
-bool Pcsx2App::TryOpenConfigCwd()
-{
-	ReadUserModeSettings();
-	
-	wxDirName inipath_cwd( (wxDirName)wxGetCwd() + PathDefs::Base::Settings() );
-	if( !inipath_cwd.IsReadable() ) return false;
-
-	wxString inifile_cwd( Path::Combine( inipath_cwd, FilenameDefs::GetConfig() ) );
-	if( !Path::IsFile( inifile_cwd ) ) return false;
-	if( Path::GetFileSize( inifile_cwd ) <= 1 ) return false;
-
-	wxConfigBase::Set( OpenConfig( inifile_cwd ) );
-	return true;
 }
 
 void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
@@ -184,20 +157,9 @@ bool Pcsx2App::OnInit()
 
 	try
 	{
-		if( !TryOpenConfigCwd() )
-		{
-			PathDefs::GetDocuments().Mkdir();
-			PathDefs::GetSettings().Mkdir();
+		ReadUserModeSettings();
 
-			// Allow wx to use our config, and enforces auto-cleanup as well
-			wxString confile( Path::Combine( PathDefs::GetSettings(), FilenameDefs::GetConfig() ) );
-			wxConfigBase::Set( OpenConfig( confile ) );
-			wxConfigBase::Get()->SetRecordDefaults();
-		}
-		g_Conf->Load();
-		g_Conf->Apply();
-
-		g_Conf->Folders.Logs.Mkdir();
+		AppConfig_ReloadGlobalSettings();
 
 	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
 		m_ProgramLogBox	= new ConsoleLogFrame( m_MainFrame, L"PCSX2 Program Log", g_Conf->ProgLogBox );
@@ -216,24 +178,6 @@ bool Pcsx2App::OnInit()
 		return false;
 	}	
 
-	// Check to see if the user needs to perform initial setup:
-
-	/*bool needsConfigured = false;
-	const wxString pc( L"Please Configure" );
-	for( int pidx=0; pidx<Plugin_Count; ++pidx )
-	{
-		if( g_Conf->BaseFilenames[(PluginsEnum_t)pidx] == pc )
-		{
-			needsConfigured = true;
-			break;
-		}
-	}
-
-	if( needsConfigured )
-	{
-		Dialogs::ConfigurationDialog( m_MainFrame ).ShowModal();
-	}*/
-	
 	Connect( pxEVT_MSGBOX, wxCommandEventHandler( Pcsx2App::OnMessageBox ) );
 
     return true;

@@ -67,15 +67,14 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	m_listbook.AddPage( new PluginSelectorPanel( m_listbook, IdealWidth ),	_("Plugins"), false, cfgid.Plugins );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new PathsPanel( m_listbook, IdealWidth ),			_("Folders"), false, cfgid.Paths );
-
+	m_listbook.AddPage( new TabbedPathsPanel( m_listbook, IdealWidth ),			_("Folders"), false, cfgid.Paths );
 
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );
 
 	SetSizerAndFit( &mainSizer );
 
-	Center( wxCENTER_ON_SCREEN | wxBOTH );
+	CenterOnScreen();
 	
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnApply_Click ) );

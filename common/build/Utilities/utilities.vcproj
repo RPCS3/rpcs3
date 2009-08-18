@@ -401,6 +401,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\ScopedPtr.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\StringHelpers.h"
 				>
 			</File>

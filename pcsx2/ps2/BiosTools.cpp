@@ -47,6 +47,18 @@ struct romdir
 
 u32 BiosVersion;  //  Used in Memory, Misc, CDVD
 
+// Returns a string message telling the user to consult guides for obtaining a legal BIOS.
+// This message is in a function because it's used as part of several dialogs in PCSX2 (there
+// are multiple variations on the BIOS and BIOS folder checks).
+wxString BIOS_GetMsg_Required()
+{
+	return pxE( ".Popup:BiosDumpRequired",
+		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain \n"
+		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).\n"
+		L"Please consult the FAQs and Guides for further instructions."
+	);
+}
+
 // Returns the version information of the bios currently loaded into memory.
 static u32 GetBiosVersion()
 {
@@ -152,11 +164,8 @@ void LoadBIOS()
 		throw Exception::FileNotFound( Bios,
 			L"Configured Bios file does not exist",
 			
-			pxE( ".Error:BiosNotFound",
-				L"The configured BIOS file does not exist, or no BIOS has been configured.\n\n"
-				L"PCSX2 requires a PS2 BIOS to run; and the BIOS *must* be obtained from an actual PS2 unit\n"
-				L"that you own (borrowing doesn't count).  Please consult the FAQs and Guides for further instructions."
-			)
+			_("The configured BIOS file does not exist, or no BIOS has been configured.\n\n") +
+			BIOS_GetMsg_Required()
 		);
 	}
 
@@ -189,9 +198,8 @@ bool IsBIOS(const wxString& filename, wxString& description)
 			break;	// found romdir
 	}
 
-	if ((strcmp(rd.fileName, "RESET") != 0) || (rd.fileSize == 0)) {
+	if ((strcmp(rd.fileName, "RESET") != 0) || (rd.fileSize == 0))
 		return FALSE;	//Unable to locate ROMDIR structure in file or a ioprpXXX.img
-	}
 
 	bool found = false;
 
@@ -242,13 +250,13 @@ bool IsBIOS(const wxString& filename, wxString& description)
 
 		if (fp.Read( &rd, DIRENTRY_SIZE ) != DIRENTRY_SIZE) break;
 	}
-	fileOffset-=((rd.fileSize + 0x10) & 0xfffffff0) - rd.fileSize;
+	fileOffset -= ((rd.fileSize + 0x10) & 0xfffffff0) - rd.fileSize;
 
 	if (found)
 	{
 		if ( biosFileSize < (int)fileOffset)
 		{
-			description << ((biosFileSize*100)/(int)fileOffset) << L"%";
+			description += wxsFormat( L" %d%%", ((biosFileSize*100) / (int)fileOffset) );
 			// we force users to have correct bioses,
 			// not that lame scph10000 of 513KB ;-)
 		}

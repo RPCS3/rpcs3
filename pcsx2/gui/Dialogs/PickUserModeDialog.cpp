@@ -26,8 +26,8 @@ using namespace wxHelpers;
 
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
-,	m_panel_usersel( new Panels::UsermodeSelectionPanel( this, 620 ) )
-,	m_panel_langsel( new Panels::LanguageSelectionPanel( this, 620 ) )
+,	m_panel_usersel( new Panels::UsermodeSelectionPanel( *this, 620, false ) )
+,	m_panel_langsel( new Panels::LanguageSelectionPanel( *this, 620 ) )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 

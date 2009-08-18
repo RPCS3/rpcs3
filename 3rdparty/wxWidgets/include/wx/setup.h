@@ -918,7 +918,7 @@
 #define wxUSE_SPLASH 1
 
 // wizards
-#define wxUSE_WIZARDDLG 0
+#define wxUSE_WIZARDDLG 1
 
 // Compile in wxAboutBox() function showing the standard "About" dialog.
 //

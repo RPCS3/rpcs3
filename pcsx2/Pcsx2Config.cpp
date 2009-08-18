@@ -19,91 +19,152 @@
 #include "PrecompiledHeader.h"
 #include "IniInterface.h"
 #include "Config.h"
+#include "GS.h"
+
 #include <wx/fileconf.h>
+
+// all speedhacks are disabled by default
+Pcsx2Config::SpeedhackOptions::SpeedhackOptions() :
+	bitset( 0 )
+,	EECycleRate( 0 )
+,	VUCycleSteal( 0 )
+{
+}
 
 void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
 {
+	SpeedhackOptions defaults;
 	ini.SetPath( L"Speedhacks" );
 
-	IniBitfield( EECycleRate,		0 );
-	IniBitfield( VUCycleSteal,		0 );
-	IniBitBool( IopCycleRate_X2,	false );
-	IniBitBool( IntcStat,			false );
-	IniBitBool( BIFC0,				false );
+	IniBitfield( EECycleRate );
+	IniBitfield( VUCycleSteal );
+	IniBitBool( IopCycleRate_X2 );
+	IniBitBool( IntcStat );
+	IniBitBool( BIFC0 );
 
 	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )
 {
+	ProfilerOptions defaults;
 	ini.SetPath( L"Profiler" );
 	
-	IniBitBool( Enabled,		false );
-	IniBitBool( RecBlocks_EE,	true );
-	IniBitBool( RecBlocks_IOP,	true );
-	IniBitBool( RecBlocks_VU0,	true );
-	IniBitBool( RecBlocks_VU1,	true );
+	IniBitBool( Enabled );
+	IniBitBool( RecBlocks_EE );
+	IniBitBool( RecBlocks_IOP );
+	IniBitBool( RecBlocks_VU0 );
+	IniBitBool( RecBlocks_VU1 );
 	
 	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 {
+	RecompilerOptions defaults;
 	ini.SetPath( L"Recompiler" );
 	
-	IniBitBool( EnableEE,	true );
-	IniBitBool( EnableIOP,	true );
-	IniBitBool( EnableVU0,	true );
-	IniBitBool( EnableVU1,	true );
+	IniBitBool( EnableEE );
+	IniBitBool( EnableIOP );
+	IniBitBool( EnableVU0 );
+	IniBitBool( EnableVU1 );
 	
 	ini.SetPath( L".." );
 }
 
+Pcsx2Config::CpuOptions::CpuOptions() : 
+	bitset( 0 )
+,	sseMXCSR( DEFAULT_sseMXCSR )
+,	sseVUMXCSR( DEFAULT_sseVUMXCSR )
+{
+	vuOverflow	= true;
+	fpuOverflow	= true;
+}
+
 void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 {
+	CpuOptions defaults;
 	ini.SetPath( L"CPU" );
 
-	IniEntry( sseMXCSR,				DEFAULT_sseMXCSR );
-	IniEntry( sseVUMXCSR,			DEFAULT_sseVUMXCSR );
+	IniEntry( sseMXCSR );
+	IniEntry( sseVUMXCSR );
 
-	IniBitBool( vuOverflow,			true );
-	IniBitBool( vuExtraOverflow,	false );
-	IniBitBool( vuSignOverflow,		false );
-	IniBitBool( vuUnderflow,		false );
+	IniBitBool( vuOverflow );
+	IniBitBool( vuExtraOverflow );
+	IniBitBool( vuSignOverflow );
+	IniBitBool( vuUnderflow );
 
-	IniBitBool( fpuOverflow,		true );
-	IniBitBool( fpuExtraOverflow,	false );
-	IniBitBool( fpuFullMode,		false );
+	IniBitBool( fpuOverflow );
+	IniBitBool( fpuExtraOverflow );
+	IniBitBool( fpuFullMode );
 
 	Recompiler.LoadSave( ini );
 	
 	ini.SetPath( L".." );
 }
 
+Pcsx2Config::VideoOptions::VideoOptions() :
+	EnableFrameLimiting( false )
+,	EnableFrameSkipping( false )
+,	DefaultRegionMode( Region_NTSC )
+,	FpsTurbo( 60*4 )
+,	FpsLimit( 60 )
+,	FpsSkip( 55 )
+,	ConsecutiveFrames( 2 )
+,	ConsecutiveSkip( 1 )
+{
+}
+
 void Pcsx2Config::VideoOptions::LoadSave( IniInterface& ini )
 {
+	VideoOptions defaults;
 	ini.SetPath( L"Video" );
+	
+	IniEntry( EnableFrameLimiting );
+	IniEntry( EnableFrameSkipping );
+
+	static const wxChar * const ntsc_pal_str[2] =  { L"ntsc", L"pal" };
+	ini.EnumEntry( L"DefaultRegionMode", DefaultRegionMode, ntsc_pal_str, defaults.DefaultRegionMode );
+
+	IniEntry( FpsTurbo );
+	IniEntry( FpsLimit );
+	IniEntry( FpsSkip );
+	IniEntry( ConsecutiveFrames );
+	IniEntry( ConsecutiveSkip );
 	
 	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 {
-	ini.SetPath( L"Video" );
+	GamefixOptions defaults;
+	ini.SetPath( L"Gamefixes" );
+
+	IniBitBool( VuAddSubHack );
+	IniBitBool( VuClipFlagHack );
+	IniBitBool( FpuCompareHack );
+	IniBitBool( FpuMulHack );
+	IniBitBool( XgKickHack );
 
 	ini.SetPath( L".." );
 }
 
+Pcsx2Config::Pcsx2Config() :
+	bitset( 0 )
+{
+}
+	
 void Pcsx2Config::LoadSave( IniInterface& ini )
 {
+	Pcsx2Config defaults;
 	ini.SetPath( L"EmuCore" );
-	
-	IniBitBool( CdvdVerboseReads,		false );
-	IniBitBool( CdvdDumpBlocks,			false );
-	IniBitBool( EnablePatches,			false );
 
-	IniBitBool( closeGSonEsc,			false );
-	IniBitBool( McdEnableEjection,		false );
+	IniBitBool( CdvdVerboseReads );
+	IniBitBool( CdvdDumpBlocks );
+	IniBitBool( EnablePatches );
+
+	IniBitBool( closeGSonEsc );
+	IniBitBool( McdEnableEjection );
 
 	// Process various sub-components:
 

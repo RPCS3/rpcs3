@@ -18,6 +18,7 @@
 
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
+#include "ps2/BiosTools.h"
 
 #include <wx/stdpaths.h>
 
@@ -43,22 +44,35 @@ void Panels::StaticApplyState::StartBook( wxBookCtrlBase* book )
 	ParentBook = book;
 }
 
+void Panels::StaticApplyState::StartWizard()
+{
+	DevAssert( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
+}
+
 // -----------------------------------------------------------------------
+//
+// Parameters:
+//  pageid - identifier of the page to apply settings for.  All other pages will be
+//     skipped.  If pageid is negative (-1) then all pages are applied.
+//
 // Returns false if one of the panels fails input validation (in which case dialogs
 // should not be closed, etc).
 //
-bool Panels::StaticApplyState::ApplyAll()
+bool Panels::StaticApplyState::ApplyPage( int pageid )
 {
 	bool retval = true;
 	try
 	{
 		AppConfig confcopy( *g_Conf );
 
+		g_ApplyState.UseAdminMode = UseAdminMode;
+
 		PanelApplyList_t::iterator yay = PanelList.begin();
 		while( yay != PanelList.end() )
 		{
 			//DbgCon::Status( L"Writing settings for: " + (*yay)->GetLabel() );
-			(*yay)->Apply( confcopy );
+			if( (pageid < 0) || (*yay)->IsOnPage( pageid ) )
+				(*yay)->Apply( confcopy );
 			yay++;
 		}
 
@@ -66,6 +80,7 @@ bool Panels::StaticApplyState::ApplyAll()
 		// (conveniently skipping any option application! :D)
 
 		*g_Conf = confcopy;
+		UseAdminMode = g_ApplyState.UseAdminMode;
 		g_Conf->Apply();
 		g_Conf->Save();
 	}
@@ -77,28 +92,43 @@ bool Panels::StaticApplyState::ApplyAll()
 			ex.GetPanel()->SetFocusToMe();
 
 		retval = false;
-		
 	}
 	
-	return retval;
+	return retval;	
+}
+
+// Returns false if one of the panels fails input validation (in which case dialogs
+// should not be closed, etc).
+bool Panels::StaticApplyState::ApplyAll()
+{
+	return ApplyPage( -1 );
 }
 
 // -----------------------------------------------------------------------
-Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, int idealWidth ) : 
-	BaseApplicableConfigPanel( parent, idealWidth )
+Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int idealWidth, bool isFirstTime ) : 
+	BaseApplicableConfigPanel( &parent, idealWidth )
 ,	m_radio_user( NULL )
 ,	m_radio_cwd( NULL )
 {
-	wxStaticBoxSizer& s_boxer = *new wxStaticBoxSizer( wxVERTICAL, this, _( "Usermode Selection" ) );
-	AddStaticText( s_boxer, pxE( ".Panels:Usermode:Explained", 
+	const wxString usermodeExplained( pxE( ".Panels:Usermode:Explained", 
 		L"Please select your preferred default location for PCSX2 user-level documents below "
 		L"(includes memory cards, screenshots, settings, and savestates).  "
 		L"These folder locations can be overridden at any time using the Core Settings panel."
 	) );
+	
+	const wxString usermodeWarning( pxE( ".Panels:Usermode:Warning", 
+		L"You can change the preferred default location for PCSX2 user-level documents here "
+		L"(includes memory cards, screenshots, settings, and savestates).  "
+		L"This option only affects Standard Paths which are set to use the installation default value."
+	) );
+
+	wxStaticBoxSizer& s_boxer = *new wxStaticBoxSizer( wxVERTICAL, this, _( "Usermode Selection" ) );
+	AddStaticText( s_boxer, isFirstTime ? usermodeExplained : usermodeWarning );
 
 	m_radio_user	= &AddRadioButton( s_boxer, _("User Documents (recommended)"),   _("Location: ") + wxStandardPaths::Get().GetDocumentsDir() );
 	s_boxer.AddSpacer( 4 );
-	m_radio_cwd		= &AddRadioButton( s_boxer, _("Current working folder (intended for developer use only)"), _("Location: ") + wxGetCwd() );
+	m_radio_cwd		= &AddRadioButton( s_boxer, _("Current working folder (intended for developer use only)"), _("Location: ") + wxGetCwd(),
+		_("This setting requires administration privlidges from your operating system.") );
 
 	s_boxer.AddSpacer( 4 );
 	SetSizerAndFit( &s_boxer );
@@ -108,12 +138,13 @@ void Panels::UsermodeSelectionPanel::Apply( AppConfig& conf )
 {
 	if( !m_radio_cwd->GetValue() && !m_radio_user->GetValue() )
 		throw Exception::CannotApplySettings( this, wxLt( "You must select one of the available user modes before proceeding." ) );
-	conf.UseAdminMode = m_radio_cwd->GetValue();
+
+	g_ApplyState.UseAdminMode = m_radio_cwd->GetValue();
 }
 
 // -----------------------------------------------------------------------
-Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent, int idealWidth ) : 
-	BaseApplicableConfigPanel( parent, idealWidth )
+Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int idealWidth ) : 
+	BaseApplicableConfigPanel( &parent, idealWidth )
 ,	m_langs()
 ,	m_picker( NULL )
 {

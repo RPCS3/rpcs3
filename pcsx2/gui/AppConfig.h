@@ -20,6 +20,8 @@
 
 class IniInterface;
 
+extern bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Pcsx2 Application Configuration.
 //
@@ -40,12 +42,24 @@ public:
 		// Size of the font in points.
 		int FontSize;
 
+		ConsoleLogOptions();
 		void LoadSave( IniInterface& conf, const wxChar* title );
 	};
 
 	// ------------------------------------------------------------------------
 	struct FolderOptions
 	{
+		BITFIELD32()
+			bool
+				UseDefaultPlugins:1,
+				UseDefaultSettings:1,
+				UseDefaultBios:1,
+				UseDefaultSnapshots:1,
+				UseDefaultSavestates:1,
+				UseDefaultMemoryCards:1,
+				UseDefaultLogs:1;
+		}; };
+
 		wxDirName
 			Plugins,
 			Settings,
@@ -57,15 +71,7 @@ public:
 
 		wxDirName RunIso;		// last used location for Iso loading.
 
-		bool
-			UseDefaultPlugins:1,
-			UseDefaultSettings:1,
-			UseDefaultBios:1,
-			UseDefaultSnapshots:1,
-			UseDefaultSavestates:1,
-			UseDefaultMemoryCards:1,
-			UseDefaultLogs:1;
-
+		FolderOptions();
 		void LoadSave( IniInterface& conf );
 		void ApplyDefaults();
 
@@ -96,7 +102,6 @@ public:
 	};
 
 public:
-	bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
 	wxPoint		MainGuiPosition;
 
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
@@ -140,12 +145,7 @@ protected:
 	bool m_IsLoaded;
 
 public:
-	AppConfig() :
-		Listbook_ImageSize( 32 )
-	,	Toolbar_ImageSize( 24 )
-	,	m_IsLoaded( false )
-	{
-	}
+	AppConfig();
 
 	wxString FullpathToBios() const;
 	wxString FullpathToMcd( uint mcdidx ) const;
@@ -156,8 +156,15 @@ public:
 	void Apply();
 	void LoadSaveUserMode( IniInterface& ini );
 
+	wxString GetDefaultDocumentsFolder();
+
 protected:
 	void LoadSave( IniInterface& ini );
 };
+
+class wxFileConfig;		// forward declare.
+
+extern wxFileConfig* OpenFileConfig( const wxString& filename );
+extern void AppConfig_ReloadGlobalSettings( bool overwrite =  false );
 
 extern AppConfig* g_Conf;

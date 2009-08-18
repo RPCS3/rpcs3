@@ -1990,6 +1990,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Dialogs\FirstTimeWizard.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Dialogs\LogOptionsDialog.cpp"
 					>
 				</File>

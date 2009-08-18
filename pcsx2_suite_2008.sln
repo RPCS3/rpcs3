@@ -117,6 +117,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wxAdv28", "3rdparty\wxWidge
 		{C34487AF-228A-4D11-8E50-27803DF76873} = {C34487AF-228A-4D11-8E50-27803DF76873}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wx", "wx", "{62BF822E-6A12-49A8-BE8C-C55A9BCA24DA}"
+	ProjectSection(SolutionItems) = preProject
+		common\include\wx\folderdesc.txt = common\include\wx\folderdesc.txt
+		common\include\wx\scopedarray.h = common\include\wx\scopedarray.h
+		common\include\wx\scopedptr.h = common\include\wx\scopedptr.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -601,6 +608,7 @@ Global
 		{0FADC26C-0E9D-4DD7-84B1-BF4F7754E90C} = {88F517F9-CE1C-4005-9BDF-4481FEB55053}
 		{A51123F5-9505-4EAE-85E7-D320290A272C} = {88F517F9-CE1C-4005-9BDF-4481FEB55053}
 		{4639972E-424E-4E13-8B07-CA403C481346} = {88F517F9-CE1C-4005-9BDF-4481FEB55053}
+		{62BF822E-6A12-49A8-BE8C-C55A9BCA24DA} = {0FADC26C-0E9D-4DD7-84B1-BF4F7754E90C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		AMDCaProjectFile = E:\devpcsx2\fail\wx\CodeAnalyst\pcsx2_suite_2008.caw

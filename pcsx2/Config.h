@@ -36,6 +36,13 @@ enum PluginsEnum_t
 // equality operators.
 #define OpEqu( field )		(field == right.field)
 
+// Macro used for removing some of the redtape involved in defining bitfield/union helpers.
+//
+#define BITFIELD32()	\
+	union {				\
+		u32 bitset;		\
+		struct {
+
 //------------ DEFAULT sseMXCSR VALUES ---------------
 #define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
 #define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"
@@ -58,72 +65,57 @@ class Pcsx2Config
 public:
 	struct ProfilerOptions
 	{
-		union
-		{
-			struct
-			{
-				bool
-					Enabled:1,			// universal toggle for the profiler.
-					RecBlocks_EE:1,		// Enables per-block profiling for the EE recompiler [unimplemented]
-					RecBlocks_IOP:1,	// Enables per-block profiling for the IOP recompiler [unimplemented]
-					RecBlocks_VU0:1,	// Enables per-block profiling for the VU0 recompiler [unimplemented]
-					RecBlocks_VU1:1;	// Enables per-block profiling for the VU1 recompiler [unimplemented]
-			};
-			u8 bits;
-		};
+		BITFIELD32()
+			bool
+				Enabled:1,			// universal toggle for the profiler.
+				RecBlocks_EE:1,		// Enables per-block profiling for the EE recompiler [unimplemented]
+				RecBlocks_IOP:1,	// Enables per-block profiling for the IOP recompiler [unimplemented]
+				RecBlocks_VU0:1,	// Enables per-block profiling for the VU0 recompiler [unimplemented]
+				RecBlocks_VU1:1;	// Enables per-block profiling for the VU1 recompiler [unimplemented]
+		}; };
 
-		ProfilerOptions() : bits( 0 ) {}
-
+		// Default is Disabled, with all recs enabled underneath.
+		ProfilerOptions() : bitset( 0xfffffffe ) {}
 		void LoadSave( IniInterface& conf );
 
 		bool operator ==( const ProfilerOptions& right ) const
 		{
-			return OpEqu( bits );
+			return OpEqu( bitset );
 		}
 
 		bool operator !=( const ProfilerOptions& right ) const
 		{
-			return !this->operator ==( right );
+			return !OpEqu( bitset );
 		}
 	};
-	
+
 	// ------------------------------------------------------------------------
 	struct RecompilerOptions
 	{
-		union
-		{
-			struct
-			{
-				bool
-					EnableEE:1,
-					EnableIOP:1,
-					EnableVU0:1,
-					EnableVU1:1;
-					
-				bool
-					UseMicroVU0:1,
-					UseMicroVU1:1;
-			};
-			u8 bits;
-		};
+		BITFIELD32()
+			bool
+				EnableEE:1,
+				EnableIOP:1,
+				EnableVU0:1,
+				EnableVU1:1;
+				
+			bool
+				UseMicroVU0:1,
+				UseMicroVU1:1;
+		}; };
 		
-		RecompilerOptions() : bits( 0 ) { }
-
-		void Load( const wxString& srcfile );
-		void Load( const wxInputStream& srcstream );
-		void Save( const wxString& dstfile );
-		void Save( const wxOutputStream& deststream );
-
+		// All recs are enabled by default.
+		RecompilerOptions() : bitset( 0xffffffff ) { }
 		void LoadSave( IniInterface& conf );
 
 		bool operator ==( const RecompilerOptions& right ) const
 		{
-			return OpEqu( bits );
+			return OpEqu( bitset );
 		}
 
 		bool operator !=( const RecompilerOptions& right ) const
 		{
-			return !this->operator ==( right );
+			return !OpEqu( bitset );
 		}
 
 	} Recompiler;
@@ -136,38 +128,27 @@ public:
 		u32 sseMXCSR;
 		u32 sseVUMXCSR;
 
-		struct 
-		{
-			union
-			{
-				bool
-					vuOverflow:1,
-					vuExtraOverflow:1,
-					vuSignOverflow:1,
-					vuUnderflow:1;
-					
-				bool
-					fpuOverflow:1,
-					fpuExtraOverflow:1,
-					fpuFullMode:1;
-			};
-			u8 bits;
-		};
+		BITFIELD32()
+			bool
+				vuOverflow:1,
+				vuExtraOverflow:1,
+				vuSignOverflow:1,
+				vuUnderflow:1;
+				
+			bool
+				fpuOverflow:1,
+				fpuExtraOverflow:1,
+				fpuFullMode:1;
+		}; };
 
-		CpuOptions() : 
-			sseMXCSR( DEFAULT_sseMXCSR )
-		,	sseVUMXCSR( DEFAULT_sseVUMXCSR )
-		,	bits( 0 )
-		{
-		}
-
+		CpuOptions();
 		void LoadSave( IniInterface& conf );
 		
 		bool operator ==( const CpuOptions& right ) const
 		{
 			return
 				OpEqu( sseMXCSR )	&& OpEqu( sseVUMXCSR )	&&
-				OpEqu( bits )		&& OpEqu( Recompiler );
+				OpEqu( bitset )		&& OpEqu( Recompiler );
 		}
 
 		bool operator !=( const CpuOptions& right ) const
@@ -193,68 +174,59 @@ public:
 		int ConsecutiveFrames;	// number of consecutive frames (fields) to render
 		int ConsecutiveSkip;	// number of consecutive frames (fields) to skip
 
+		VideoOptions();
 		void LoadSave( IniInterface& conf );
 	};
 
 	// ------------------------------------------------------------------------
 	struct GamefixOptions
 	{
-		union
-		{
-			struct 
-			{
-				bool
-					VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
-					VuClipFlagHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
-					FpuCompareHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
-					FpuMulHack:1,		// Fix for Tales of Destiny hangs.
-					XgKickHack:1;		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
-			};
-			u8 bits;
-		};
+		BITFIELD32()
+			bool
+				VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
+				VuClipFlagHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+				FpuCompareHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
+				FpuMulHack:1,		// Fix for Tales of Destiny hangs.
+				XgKickHack:1;		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+		}; };
 
-		GamefixOptions() : bits( 0 ) {}
-
+		// all gamefixes are disabled by default.
+		GamefixOptions() : bitset( 0 ) {}
 		void LoadSave( IniInterface& conf );
 
 		bool operator ==( const GamefixOptions& right ) const
 		{
-			return OpEqu( bits );
+			return OpEqu( bitset );
 		}
 
 		bool operator !=( const GamefixOptions& right ) const
 		{
-			return !this->operator ==( right );
+			return !OpEqu( bitset );
 		}
 	};
 
 	// ------------------------------------------------------------------------
 	struct SpeedhackOptions
 	{
-		union
-		{
-			struct 
-			{
-				int
-					EECycleRate:2,		// EE cyclerate selector (1.0, 1.5, 2.0)
-					VUCycleSteal:3,		// VU Cycle Stealer factor (0, 1, 2, or 3)
-					IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
-					IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
-					BIFC0:1,			// enables BIFC0 detection and fast-forwarding
-					
-					vuMinMax:1,			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
-					vuFlagHack:1;		// MicroVU specific flag hack; Can cause Infinite loops, SPS, etc...
-			};
-			u16	bits;
-		};
+		BITFIELD32()
+			bool
+				IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
+				IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
+				BIFC0:1,			// enables BIFC0 detection and fast-forwarding
+				
+				vuMinMax:1,			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
+				vuFlagHack:1;		// MicroVU specific flag hack; Can cause Infinite loops, SPS, etc...
+		}; };
 
-		SpeedhackOptions() : bits( 0 ) {}
+		u8	EECycleRate;		// EE cyclerate selector (1.0, 1.5, 2.0)
+		u8	VUCycleSteal;		// VU Cycle Stealer factor (0, 1, 2, or 3)
 
+		SpeedhackOptions();
 		void LoadSave( IniInterface& conf );
 
 		bool operator ==( const SpeedhackOptions& right ) const
 		{
-			return OpEqu( bits );
+			return OpEqu( bitset ) && OpEqu( EECycleRate ) && OpEqu( VUCycleSteal );
 		}
 
 		bool operator !=( const SpeedhackOptions& right ) const
@@ -264,18 +236,22 @@ public:
 	};
 
 public:
-	bool		CdvdVerboseReads:1;		// enables cdvd read activity verbosely dumped to the console
-	bool		CdvdDumpBlocks:1;		// enables cdvd block dumping
-	bool		EnablePatches:1;		// enables patch detection and application
 
-	// when enabled performs bios stub execution, skipping full sony bios + splash screens
-	bool		SkipBiosSplash:1;
+	BITFIELD32()
+		bool
+			CdvdVerboseReads:1,		// enables cdvd read activity verbosely dumped to the console
+			CdvdDumpBlocks:1,		// enables cdvd block dumping
+			EnablePatches:1,		// enables patch detection and application
 
-	// Closes the GS/Video port on escape (good for fullscreen activity)
-	bool		closeGSonEsc:1;
+		// when enabled performs bios stub execution, skipping full sony bios + splash screens
+			SkipBiosSplash:1,
 
-	// enables simulated ejection of memory cards when loading savestates
-	bool		McdEnableEjection:1;
+		// Closes the GS/Video port on escape (good for fullscreen activity)
+			closeGSonEsc:1,
+
+		// enables simulated ejection of memory cards when loading savestates
+			McdEnableEjection:1;
+	}; };
 
 	CpuOptions			Cpu;
 	VideoOptions		Video;
@@ -283,12 +259,13 @@ public:
 	GamefixOptions		Gamefixes;
 	ProfilerOptions		Profiler;
 
+	Pcsx2Config();
+	void LoadSave( IniInterface& ini );
+
 	void Load( const wxString& srcfile );
 	void Load( const wxInputStream& srcstream );
 	void Save( const wxString& dstfile );
 	void Save( const wxOutputStream& deststream );
-
-	void LoadSave( IniInterface& ini );
 };
 
 //////////////////////////////////////////////////////////////////////////

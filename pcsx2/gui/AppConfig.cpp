@@ -95,10 +95,7 @@ namespace PathDefs
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments()
 	{
-		if( g_Conf->UseAdminMode )
-			return (wxDirName)wxGetCwd();
-		else
-			return (wxDirName)wxStandardPaths::Get().GetDocumentsDir() + (wxDirName)wxGetApp().GetAppName();
+		return (wxDirName)g_Conf->GetDefaultDocumentsFolder();
 	}
 
 	wxDirName GetSnapshots()
@@ -159,6 +156,13 @@ namespace PathDefs
 	}
 };
 
+wxString AppConfig::GetDefaultDocumentsFolder()
+{
+	if( UseAdminMode )
+		return wxGetCwd();
+	else
+		return Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
+}
 
 const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx ) const
 {
@@ -345,10 +349,32 @@ wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 wxString AppConfig::FullpathToBios() const				{ return Path::Combine( Folders.Bios, BaseFilenames.Bios ); }
 wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( Folders.MemoryCards, Mcd[mcdidx].Filename ); }
 
+AppConfig::AppConfig() :
+	MainGuiPosition( wxDefaultPosition )
+,	LanguageId( wxLANGUAGE_DEFAULT )
+,	RecentFileCount( 6 )
+,	DeskTheme( L"default" )
+,	Listbook_ImageSize( 32 )
+,	Toolbar_ImageSize( 24 )
+,	Toolbar_ShowLabels( true )
+
+,	McdEnableNTFS( true )
+
+,	ProgLogBox()
+,	Ps2ConBox()
+,	Folders()
+,	BaseFilenames()
+,	EmuOptions()
+,	m_IsLoaded( false )
+{
+}
+
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveUserMode( IniInterface& ini )
 {
-	IniEntry( UseAdminMode,		false );
+	AppConfig defaults;
+
+	ini.Entry( L"UseAdminMode", UseAdminMode, false );
 	ini.Entry( L"SettingsPath", Folders.Settings, PathDefs::GetSettings() );
 
 	ini.Flush();
@@ -357,18 +383,20 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini )
 // ------------------------------------------------------------------------
 void AppConfig::LoadSave( IniInterface& ini )
 {
-	IniEntry( MainGuiPosition,		wxDefaultPosition );
-	ini.EnumEntry( L"LanguageId", LanguageId );
-	IniEntry( RecentFileCount,		6 );
-	IniEntry( DeskTheme,			L"default" );
-	IniEntry( Listbook_ImageSize,	32 );
-	IniEntry( Toolbar_ImageSize,	24 );
-	IniEntry( Toolbar_ShowLabels,	true );
+	AppConfig defaults;
+
+	IniEntry( MainGuiPosition );
+	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
+	IniEntry( RecentFileCount );
+	IniEntry( DeskTheme );
+	IniEntry( Listbook_ImageSize );
+	IniEntry( Toolbar_ImageSize );
+	IniEntry( Toolbar_ShowLabels );
 
 	// Process various sub-components:
 	ProgLogBox.LoadSave( ini, L"ProgramLog" );
 	Ps2ConBox.LoadSave( ini, L"Ps2Console" );
-	
+
 	Folders.LoadSave( ini );
 	BaseFilenames.LoadSave( ini );
 
@@ -391,14 +419,14 @@ void AppConfig::Apply()
 	// Ensure existence of necessary documents folders.  Plugins and other parts
 	// of PCSX2 rely on them.
 
-	g_Conf->Folders.MemoryCards.Mkdir();
-	g_Conf->Folders.Savestates.Mkdir();
-	g_Conf->Folders.Snapshots.Mkdir();
+	Folders.MemoryCards.Mkdir();
+	Folders.Savestates.Mkdir();
+	Folders.Snapshots.Mkdir();
 
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
 	
-	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->McdEnableNTFS );
+	NTFS_CompressFile( Folders.MemoryCards.ToString(), McdEnableNTFS );
 
 	bool prev = wxLog::EnableLogging( false );		// wx generates verbose errors if languages don't exist, so disable them here.
 	if( !i18n_SetLanguage( LanguageId ) )
@@ -445,15 +473,25 @@ void AppConfig::Save()
 }
 
 // ------------------------------------------------------------------------
+AppConfig::ConsoleLogOptions::ConsoleLogOptions() :
+	Visible( false )
+,	AutoDock( true )
+,	DisplayPosition( wxDefaultPosition )
+,	DisplaySize( wxSize( 540, 540 ) )
+,	FontSize( 8 )
+{
+}
+	
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* logger )
 {
+	ConsoleLogOptions defaults;
 	ini.SetPath( logger );
 
-	IniEntry( Visible,			false );
-	IniEntry( AutoDock,			true );
-	IniEntry( DisplayPosition,	wxDefaultPosition );
-	IniEntry( DisplaySize,		wxSize( 540, 540 ) );
-	IniEntry( FontSize,			8 );
+	IniEntry( Visible );
+	IniEntry( AutoDock );
+	IniEntry( DisplayPosition );
+	IniEntry( DisplaySize );
+	IniEntry( FontSize );
 	
 	ini.SetPath( L".." );
 }
@@ -470,30 +508,45 @@ void AppConfig::FolderOptions::ApplyDefaults()
 }
 
 // ------------------------------------------------------------------------
+AppConfig::FolderOptions::FolderOptions() :
+	bitset( 0xffffffff )
+,	Plugins( PathDefs::GetPlugins() )
+,	Settings( PathDefs::GetSettings() )
+,	Bios( PathDefs::GetBios() )
+,	Snapshots( PathDefs::GetSnapshots() )
+,	Savestates( PathDefs::GetSavestates() )
+,	MemoryCards( PathDefs::GetMemoryCards() )
+,	Logs( PathDefs::GetLogs() )
+
+,	RunIso( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
+{
+}
+
 void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 {
+	FolderOptions defaults;
 	ini.SetPath( L"Folders" );
 
 	if( ini.IsSaving() )
 		ApplyDefaults();
 
-	IniEntry( Plugins,		PathDefs::GetPlugins() );
-	IniEntry( Settings,		PathDefs::GetSettings() );
-	IniEntry( Bios,			PathDefs::GetBios() );
-	IniEntry( Snapshots,	PathDefs::GetSnapshots() );
-	IniEntry( Savestates,	PathDefs::GetSavestates() );
-	IniEntry( MemoryCards,	PathDefs::GetMemoryCards() );
-	IniEntry( Logs,			PathDefs::GetLogs() );
+	IniBitBool( UseDefaultPlugins );
+	IniBitBool( UseDefaultSettings );
+	IniBitBool( UseDefaultBios );
+	IniBitBool( UseDefaultSnapshots );
+	IniBitBool( UseDefaultSavestates );
+	IniBitBool( UseDefaultMemoryCards );
+	IniBitBool( UseDefaultLogs );
 
-	IniEntry( RunIso,		PathDefs::GetDocuments() );			// raw default is always the Documents folder.
+	IniEntry( Plugins );
+	IniEntry( Settings );
+	IniEntry( Bios );
+	IniEntry( Snapshots );
+	IniEntry( Savestates );
+	IniEntry( MemoryCards );
+	IniEntry( Logs );
 
-	IniBitBool( UseDefaultPlugins,		true );
-	IniBitBool( UseDefaultSettings,		true );
-	IniBitBool( UseDefaultBios,			true );
-	IniBitBool( UseDefaultSnapshots,	true );
-	IniBitBool( UseDefaultSavestates,	true );
-	IniBitBool( UseDefaultMemoryCards,	true );
-	IniBitBool( UseDefaultLogs,			true );
+	IniEntry( RunIso );
 
 	if( ini.IsLoading() )
 		ApplyDefaults();
@@ -533,5 +586,31 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 	}
 
 	ini.SetPath( L".." );
+}
+
+wxFileConfig* OpenFileConfig( const wxString& filename )
+{
+	return new wxFileConfig( wxEmptyString, wxEmptyString, filename, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
+}
+
+// Parameters:
+//   overwrite - this option forces the current settings to overwrite any existing settings that might
+//      be saved to the configured ini/settings folder.
+//
+void AppConfig_ReloadGlobalSettings( bool overwrite )
+{
+	PathDefs::GetDocuments().Mkdir();
+	PathDefs::GetSettings().Mkdir();
+
+	// Allow wx to use our config, and enforces auto-cleanup as well
+	wxString confile( g_Conf->Folders.Settings.Combine( FilenameDefs::GetConfig() ).GetFullPath() );
+	delete wxConfigBase::Set( OpenFileConfig( confile ) );
+	wxConfigBase::Get()->SetRecordDefaults();
+
+	if( !overwrite )
+		g_Conf->Load();
+
+	g_Conf->Apply();
+	g_Conf->Folders.Logs.Mkdir();
 }
 

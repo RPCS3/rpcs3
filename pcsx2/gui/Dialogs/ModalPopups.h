@@ -18,11 +18,34 @@
 
 #pragma once
 
-#include <wx/wx.h>
-#include <wx/image.h>
-
-#include "wxHelpers.h"
 #include "Panels/ConfigurationPanels.h"
+
+#include <wx/image.h>
+#include <wx/wizard.h>
+
+class FirstTimeWizard : public wxWizard
+{
+protected:
+	wxWizardPageSimple& m_page_usermode;
+	//wxWizardPageSimple& m_page_paths;
+	wxWizardPageSimple& m_page_plugins;
+	
+	Panels::LanguageSelectionPanel&	m_panel_LangSel;
+	Panels::UsermodeSelectionPanel&	m_panel_UsermodeSel;
+	Panels::AdvancedPathsPanel&		m_panel_Paths;
+	Panels::PluginSelectorPanel&	m_panel_PluginSel;
+
+public:
+	FirstTimeWizard( wxWindow* parent );
+	virtual ~FirstTimeWizard();
+	
+	wxWizardPage *GetFirstPage() const { return &m_page_usermode; }
+
+protected:
+	virtual void OnPageChanging( wxWizardEvent& evt );
+	virtual void OnPageChanged( wxWizardEvent& evt );
+	virtual void OnUsermodeChanged( wxCommandEvent& evt );
+};
 
 namespace Dialogs
 {

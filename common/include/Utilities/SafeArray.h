@@ -31,39 +31,31 @@ extern void pcsx2_aligned_free(void* pmem);
 # 	define _aligned_realloc pcsx2_aligned_realloc
 #endif
 
-//////////////////////////////////////////////////////////////
-// Safe deallocation macros -- always check pointer validity (non-null)
-// and set pointer to null on deallocation.
+//////////////////////////////////////////////////////////////////////////////////////////
+// Safe deallocation macros -- checks pointer validity (non-null) when needed, and sets
+// pointer to null after deallocation.
 
 #define safe_delete( ptr ) \
-	if( ptr != NULL ) { \
-		delete ptr; \
-		ptr = NULL; \
-	}
+	((void) (delete ptr), ptr = NULL)
 
 #define safe_delete_array( ptr ) \
-	if( ptr != NULL ) { \
-		delete[] ptr; \
-		ptr = NULL; \
-	}
+	((void) (delete[] ptr), ptr = NULL)
 
+// fixme: I'm pretty sure modern libc implementations under gcc and msvc check null status
+// inside free(), meaning we shouldn't have to do it ourselves.  But legacy implementations
+// didn't always check, so best to be cautious unless absolutely certain it's being covered on
+// all ported platforms.
 #define safe_free( ptr ) \
-	if( ptr != NULL ) { \
-		free( ptr ); \
-		ptr = NULL; \
-	}
+	((void) (( ( ptr != NULL ) && (free( ptr ), !!0) ), ptr = NULL))
 
+// Implementation note: all known implementations of _aligned_free check the pointer for
+// NULL status (our implementation under GCC, and microsoft's under MSVC), so no need to
+// do it here.
 #define safe_aligned_free( ptr ) \
-	if( ptr != NULL ) { \
-		_aligned_free( ptr ); \
-		ptr = NULL; \
-	}
+	((void) ( _aligned_free( ptr ), ptr = NULL ))
 
 #define SafeSysMunmap( ptr, size ) \
-	if( ptr != NULL ) { \
-		HostSys::Munmap( (uptr)ptr, size ); \
-		ptr = NULL; \
-	}
+	((void) ( HostSys::Munmap( (uptr)ptr, size ), ptr = NULL ))
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
