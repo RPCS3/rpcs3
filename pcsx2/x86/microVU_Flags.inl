@@ -248,7 +248,7 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 		if		(mVUbranch)		{ branch = ((mVUbranch>8)?(5):((mVUbranch<3)?3:4)); aBranchAddr = branchAddr; mVUbranch = 0; }
 		incPC(1);
 	}
-	if (mVUcount < 4) { mVUflagInfo |= 0x7; }
+	if (mVUcount < 4) { mVUregs.needExactMatch |= 0x7; }
 	iPC		  = oldPC;
 	mVUcount  = oldCount;
 	mVUbranch = oldBranch;
@@ -263,18 +263,18 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 microVUt(void) mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr, 4); incPC(1); }
 	branchType2 { 
-		if (!mVUlow.constJump.isValid) { mVUflagInfo |= 0x7; } 
+		if (!mVUlow.constJump.isValid) { mVUregs.needExactMatch |= 0x7; } 
 		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8), 4); }
 	}
 	branchType3 {
 		incPC(-1); 
 		mVUflagPass(mVU, branchAddr, 4);
-		int backupFlagInfo = mVUflagInfo;
-		mVUflagInfo = 0;
+		int backupFlagInfo = mVUregs.needExactMatch;
+		mVUregs.needExactMatch = 0;
 		incPC(4); // Branch Not Taken
 		mVUflagPass(mVU, xPC, 4);
 		incPC(-3);		
-		mVUflagInfo |= backupFlagInfo;
+		mVUregs.needExactMatch |= backupFlagInfo;
 	}
 }
 

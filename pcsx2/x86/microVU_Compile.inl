@@ -170,10 +170,19 @@ microVUt(void) branchWarning(mV) {
 	}
 }
 
-microVUt(void) eBitWarning(mV) {
+microVUt(void) eBitPass1(mV, int& branch) {
+	if (!mVUregs.blockType) {
+		branch = 1; 
+		mVUup.eBit = 1;
+	}
+}
+
+microVUt(void) eBitWarning(mV, u32 endCount) {
+	if (endCount == 1) Console::Error("microVU%d Warning: Branch, E-bit, Branch! [%04x]", params mVU->index, xPC);
 	incPC(2);
 	if (curI & _Ebit_) {
-		Console::Error("microVU%d Warning: E-bit in Branch delay slot! [%04x]", params mVU->index, xPC);
+		DevCon::Status("microVU%d: E-bit in Branch delay slot! [%04x]", params mVU->index, xPC);
+		mVUregs.blockType = 1;
 	}
 	incPC(-2);
 }
@@ -297,21 +306,21 @@ microVUt(void) mVUinitConstValues(microVU* mVU) {
 }
 
 // Initialize Variables
-microVUt(void) mVUinitFirstPass(microVU* mVU, microBlock* &pBlock, uptr pState, u8* thisPtr) {
-	mVUstartPC		= iPC;	// Block Start PC
-	mVUbranch		= 0;	// Branch Type
-	mVUcount		= 0;	// Number of instructions ran
-	mVUcycles		= 0;	// Skips "M" phase, and starts counting cycles at "T" stage
-	mVU->p			= 0;	// All blocks start at p index #0
-	mVU->q			= 0;	// All blocks start at q index #0
+microVUt(void) mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
+	mVUstartPC				= iPC;	// Block Start PC
+	mVUbranch				= 0;	// Branch Type
+	mVUcount				= 0;	// Number of instructions ran
+	mVUcycles				= 0;	// Skips "M" phase, and starts counting cycles at "T" stage
+	mVU->p					= 0;	// All blocks start at p index #0
+	mVU->q					= 0;	// All blocks start at q index #0
 	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
-	mVUblock.x86ptrStart = thisPtr;
-	pBlock			= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
-	mVUpBlock		= pBlock;
-	mVUregs.viBackUp= 0;
-	mVUregs.flags	= 0;
-	mVUflagInfo		= 0;
-	mVUsFlagHack	= CHECK_VU_FLAGHACK;
+	mVUblock.x86ptrStart	= thisPtr;
+	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
+	mVUregs.blockType		= 0;
+	mVUregs.viBackUp		= 0;
+	mVUregs.flags			= 0;
+	mVUregs.needExactMatch	= 0;
+	mVUsFlagHack			= CHECK_VU_FLAGHACK;
 	mVUinitConstValues(mVU);
 }
 
@@ -323,22 +332,21 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
 	using namespace x86Emitter;
 	microFlagCycles mFC;
-	microBlock*		pBlock	 = NULL;
 	u8*				thisPtr  = x86Ptr;
-	const u32		endCount = (mVU->microMemSize / 8) - 1;
+	const u32		endCount = (((microRegInfo*)pState)->blockType) ? 1 : (mVU->microMemSize / 8);
 
 	// First Pass
 	iPC = startPC / 4;
 	mVUsetupRange(mVU, startPC, 1);	// Setup Program Bounds/Range
 	mVU->regAlloc->reset();			// Reset regAlloc
-	mVUinitFirstPass(mVU, pBlock, pState, thisPtr);
+	mVUinitFirstPass(mVU, pState, thisPtr);
 	
 	for (int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
 		startLoop(mVU);
 		mVUincCycles(mVU, 1);
 		mVUopU(mVU, 0);
-		if (curI & _Ebit_)	  { branch = 1; mVUup.eBit = 1; }
+		if (curI & _Ebit_)	  { eBitPass1(mVU, branch); }
 		if (curI & _DTbit_)	  { branch = 4; }
 		if (curI & _Mbit_)	  { mVUup.mBit = 1; }
 		if (curI & _Ibit_)	  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
@@ -350,7 +358,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		mVUinfo.writeP = !mVU->p;
 		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(mVU); break; }
 		else if (branch == 1) { branch = 2; }
-		if		(mVUbranch)   { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
+		if		(mVUbranch)   { mVUsetFlagInfo(mVU); eBitWarning(mVU, endCount); branch = 3; mVUbranch = 0; }
 		incPC(1);
 	}
 
@@ -379,18 +387,18 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 			mVUsetupRange(mVU, xPC, 0);
 			mVUdebugNOW(1);
 			switch (mVUbranch) {
-				case 3: condBranch(mVU, mFC, pBlock, Jcc_Equal);		  return thisPtr; // IBEQ
-				case 4: condBranch(mVU, mFC, pBlock, Jcc_GreaterOrEqual); return thisPtr; // IBGEZ
-				case 5: condBranch(mVU, mFC, pBlock, Jcc_Greater);		  return thisPtr; // IBGTZ
-				case 6: condBranch(mVU, mFC, pBlock, Jcc_LessOrEqual);	  return thisPtr; // IBLEQ
-				case 7: condBranch(mVU, mFC, pBlock, Jcc_Less);			  return thisPtr; // IBLTZ
-				case 8: condBranch(mVU, mFC, pBlock, Jcc_NotEqual);		  return thisPtr; // IBNEQ
-				case 1: case 2:  normBranch(mVU, mFC);					  return thisPtr; // B/BAL
-				case 9: case 10: normJump  (mVU, mFC, pBlock);			  return thisPtr; // JR/JALR
+				case 1: case 2:  normBranch(mVU, mFC);			  return thisPtr; // B/BAL
+				case 9: case 10: normJump  (mVU, mFC);			  return thisPtr; // JR/JALR
+				case 3: condBranch(mVU, mFC, Jcc_Equal);		  return thisPtr; // IBEQ
+				case 4: condBranch(mVU, mFC, Jcc_GreaterOrEqual); return thisPtr; // IBGEZ
+				case 5: condBranch(mVU, mFC, Jcc_Greater);		  return thisPtr; // IBGTZ
+				case 6: condBranch(mVU, mFC, Jcc_LessOrEqual);	  return thisPtr; // IBLEQ
+				case 7: condBranch(mVU, mFC, Jcc_Less);			  return thisPtr; // IBLTZ
+				case 8: condBranch(mVU, mFC, Jcc_NotEqual);		  return thisPtr; // IBNEQ
 			}
 		}
 	}
-	if (x == endCount) { Console::Error("microVU%d: Possible infinite compiling loop!", params mVU->index); }
+	if ((x == endCount) && (x!=1)) { Console::Error("microVU%d: Possible infinite compiling loop!", params mVU->index); }
 
 	// E-bit End
 	mVUsetupRange(mVU, xPC-8, 0);

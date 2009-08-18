@@ -89,6 +89,7 @@ public:
 				&&  (linkI->block->pState.flags		== pState->flags)
 				&&  (linkI->block->pState.xgkick	== pState->xgkick)
 				&&  (linkI->block->pState.viBackUp	== pState->viBackUp)
+				&&  (linkI->block->pState.blockType	== pState->blockType)
 				&& !(linkI->block->pState.needExactMatch & 5)) { return linkI->block; }
 				linkI = linkI->next;
 			}

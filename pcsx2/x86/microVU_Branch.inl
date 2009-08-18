@@ -108,7 +108,7 @@ void normBranch(mV, microFlagCycles& mFC) {
 	normBranchCompile(mVU, branchAddr);
 }
 
-void condBranch(mV, microFlagCycles& mFC, microBlock* &pBlock, int JMPcc) {
+void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 	using namespace x86Emitter;
 	mVUsetupBranch(mVU, mFC);
 	xCMP(ptr16[&mVU->branch], 0);
@@ -138,8 +138,8 @@ void condBranch(mV, microFlagCycles& mFC, microBlock* &pBlock, int JMPcc) {
 		}
 		else { 
 			s32* ajmp = xJcc32((JccComparisonType)JMPcc); 
-			uptr jumpAddr;
-			u32 bPC = iPC; // mVUcompile can modify iPC and mVUregs so back them up
+			u32 bPC = iPC; // mVUcompile can modify iPC, mVUpBlock, and mVUregs so back them up
+			microBlock* pBlock = mVUpBlock;
 			memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 
 			incPC2(1);  // Get PC for branch not-taken
@@ -147,13 +147,13 @@ void condBranch(mV, microFlagCycles& mFC, microBlock* &pBlock, int JMPcc) {
 
 			iPC = bPC;
 			incPC(-3); // Go back to branch opcode (to get branch imm addr)
-			jumpAddr = (uptr)mVUblockFetch(mVU, branchAddr, (uptr)&pBlock->pStateEnd);
+			uptr jumpAddr = (uptr)mVUblockFetch(mVU, branchAddr, (uptr)&pBlock->pStateEnd);
 			*ajmp = (jumpAddr - ((uptr)ajmp + 4));
 		}
 	}
 }
 
-void normJump(mV, microFlagCycles& mFC, microBlock* &pBlock) {
+void normJump(mV, microFlagCycles& mFC) {
 	using namespace x86Emitter;
 	mVUprint("mVUcompile JR/JALR");
 	incPC(-3); // Go back to jump opcode
@@ -178,12 +178,12 @@ void normJump(mV, microFlagCycles& mFC, microBlock* &pBlock) {
 		return;
 	}
 
-	memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
+	memcpy_fast(&mVUpBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	mVUsetupBranch(mVU, mFC);
 
 	mVUbackupRegs(mVU);
-	MOV32MtoR(gprT2, (uptr)&mVU->branch);	  // Get startPC (ECX 1st argument for __fastcall)
-	MOV32ItoR(gprR, (u32)&pBlock->pStateEnd); // Get pState  (EDX 2nd argument for __fastcall)
+	MOV32MtoR(gprT2, (uptr)&mVU->branch);		 // Get startPC (ECX 1st argument for __fastcall)
+	MOV32ItoR(gprR, (u32)&mVUpBlock->pStateEnd); // Get pState  (EDX 2nd argument for __fastcall)
 
 	if (!mVU->index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
 	else			 xCALL(mVUcompileJIT<1>);

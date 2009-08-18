@@ -44,7 +44,8 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u8 VI[16];
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2
-	u8 padding[6];		// 160 bytes
+	u8 blockType;		// 0 = Normal; 1 = Compile one instruction with E-bit termination
+	u8 padding[5];		// 160 bytes
 #if defined(_MSC_VER)
 };
 #else
