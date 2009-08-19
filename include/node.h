@@ -50,6 +50,9 @@ namespace YAML
 		bool Read(T& value) const;
 
 		template <typename T>
+		const T Read() const;
+
+		template <typename T>
 		friend void operator >> (const Node& node, T& value);
 
 		// just for maps

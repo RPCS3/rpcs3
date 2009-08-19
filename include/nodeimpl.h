@@ -17,6 +17,13 @@ namespace YAML
 	}
 	
 	template <typename T>
+	inline const T Node::Read() const {
+		T value;
+		*this >> value;
+		return value;
+	}
+	
+	template <typename T>
 	inline void operator >> (const Node& node, T& value) {
 		if(!node.Read(value))
 			throw InvalidScalar(node.m_mark);
