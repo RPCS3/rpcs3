@@ -22,6 +22,42 @@
 
 // Actually, looks like I didn't need templates after all... :)
 
+enum mfd_type 
+{
+	NO_MFD,
+	MFD_RESERVED,
+	MFD_VIF1,
+	MFD_GIF
+};
+
+enum sts_type 
+{
+	NO_STS,
+	STS_SIF0,
+	STS_fromSPR,
+	STS_fromIPU
+};
+
+enum std_type 
+{
+	NO_STD,
+	STD_VIF1,
+	STD_GIF,
+	STD_SIF1
+};
+
+enum d_ctrl_flags
+{
+	CTRL_DMAE = 0x1, // 0/1 - disables/enables all DMAs
+	CTRL_RELE = 0x2, // 0/1 - cycle stealing off/on
+	CTRL_MFD = 0xC, // Memory FIFO drain channel (mfd_type)
+	CTRL_STS = 0x30, // Stall Control source channel (sts type)
+	CTRL_STD = 0xC0, // Stall Controll drain channel (std_type)
+	CTRL_RCYC = 0x100 // Release cycle (8/16/32/64/128/256)
+	// When cycle stealing is on, the release cycle sets the period to release
+	// the bus to EE.
+};
+
 enum pce_values
 {
 	PCE_NOTHING = 0, 
@@ -32,6 +68,7 @@ enum pce_values
 
 enum tag_id
 {
+	TAG_CNTS = 0,	
 	TAG_REFE = 0, 	// Transfer Packet According to ADDR field, clear STR, and end
 	TAG_CNT, 		// Transfer QWC following the tag.
 	TAG_NEXT,		// Transfer QWC following tag. TADR = ADDR
@@ -171,7 +208,8 @@ namespace CHCR
 	
 	static __forceinline u8 ASP(DMACh *tag)
 	{
-		return (TransferMode)((tag->chcr & CHCR_ASP) >> 2);
+		
+		return (TransferMode)((tag->chcr & CHCR_ASP) >> 4);
 	}
 
 	// Clear the individual flags.
@@ -248,5 +286,27 @@ namespace QWC
 	static __forceinline void Clear(DMACh *tag)
 	{
 		tag->qwc = 0;
+	}
+}
+
+namespace D_CTRL
+{
+	static __forceinline bool DMAE() { return !!(psHu32(DMAC_CTRL) & CTRL_DMAE); }
+	static __forceinline bool RELE() { return !!(psHu32(DMAC_CTRL) & CTRL_RELE); }
+	static __forceinline bool MFD() 
+	{ 
+		return (mfd_type)((psHu32(DMAC_CTRL) & CTRL_MFD) >> 2);
+	}
+	static __forceinline bool STS() 
+	{ 
+		return (sts_type)((psHu32(DMAC_CTRL) & CTRL_STS) >> 2);
+	}
+	static __forceinline bool STD() 
+	{ 
+		return (std_type)((psHu32(DMAC_CTRL) & CTRL_STD) >> 2);
+	}
+	static __forceinline bool RCLC() 
+	{ 
+		return ((((psHu32(DMAC_CTRL) & CTRL_RCYC) >> 3) + 1) * 8);
 	}
 }

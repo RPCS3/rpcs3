@@ -1426,7 +1426,7 @@ void  vif0Interrupt()
 		if (vif0Regs->stat & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 		{
 			vif0Regs->stat &= ~0xF000000; // FQC=0
-			vif0ch->chcr &= ~0x100;
+			CHCR::clearSTR(vif0ch);
 			return;
 		}
 		
@@ -1608,7 +1608,7 @@ void vif0Write32(u32 mem, u32 value)
 						else
 							_VIF0chain();
 
-						vif0ch->chcr |= 0x100;
+						CHCR::setSTR(vif0ch);
 						CPU_INT(0, g_vifCycles); // Gets the timing right - Flatout
 					}
 				}
@@ -2535,7 +2535,7 @@ __forceinline void vif1Interrupt()
 			vif1Regs->stat &= ~0x1F000000; // FQC=0
 			
 			// One game doesnt like vif stalling at end, cant remember what. Spiderman isnt keen on it tho
-			vif1ch->chcr &= ~0x100;
+			CHCR::clearSTR(vif1ch);
 			return;
 		}
 		else if ((vif1ch->qwc > 0) || (vif1.irqoffset > 0))
@@ -2580,7 +2580,7 @@ __forceinline void vif1Interrupt()
 #endif
 
 	vif1Regs->stat &= ~VIF1_STAT_VPS; //Vif goes idle as the stall happened between commands;
-	vif1ch->chcr &= ~0x100;
+	CHCR::clearSTR(vif1ch);
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
 

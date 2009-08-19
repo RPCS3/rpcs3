@@ -177,16 +177,22 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 															
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
 			
-			if ((dma->chcr & 0x30) == 0x0) {						//Check if ASR0 is empty
+			switch(CHCR::ASP(dma))
+			{
+			case 0: {						//Check if ASR0 is empty
 				dma->asr0 = dma->madr + (dma->qwc << 4);			//If yes store Succeeding tag
 				dma->chcr = (dma->chcr & 0xffffffcf) | 0x10; //1 Address in call stack
+				break;
 			}
-			else if((dma->chcr & 0x30) == 0x10){
+			case 1: {
 				dma->chcr = (dma->chcr & 0xffffffcf) | 0x20; //2 Addresses in call stack
 				dma->asr1 = dma->madr + (dma->qwc << 4);	//If no store Succeeding tag in ASR1
-			}else {
+				break;
+			}
+			default:			{
 				Console::Notice("Call Stack Overflow (report if it fixes/breaks anything)");
 				return true;										//Return done
+			}
 			}
 			dma->tadr = temp;								//Set TADR to temporarily stored ADDR
 											
@@ -194,20 +200,29 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 		}
 		case TAG_RET: // Ret - Transfer QWC following the tag, load next tag
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
-
-			if ((dma->chcr & 0x30) == 0x20) {							//If ASR1 is NOT equal to 0 (Contains address)
+			switch(CHCR::ASP(dma))
+			{
+			case 2: {							//If ASR1 is NOT equal to 0 (Contains address)
 				dma->chcr = (dma->chcr & 0xffffffcf) | 0x10; //1 Address left in call stack
 				dma->tadr = dma->asr1;						//Read ASR1 as next tag
 				dma->asr1 = 0;								//Clear ASR1
-			} 
-			else {										//If ASR1 is empty (No address held)
-				if((dma->chcr & 0x30) == 0x10) {						   //Check if ASR0 is NOT equal to 0 (Contains address)
-					dma->chcr = (dma->chcr & 0xffffffcf);  //No addresses left in call stack
-					dma->tadr = dma->asr0;					//Read ASR0 as next tag
-					dma->asr0 = 0;							//Clear ASR0
-				} else {									//Else if ASR1 and ASR0 are empty
-					//dma->tadr += 16;						   //Clear tag address - Kills Klonoa 2
-					return true;								//End Transfer
+				break;
+				} 
+												//If ASR1 is empty (No address held)
+			case 1:{						   //Check if ASR0 is NOT equal to 0 (Contains address)
+				dma->chcr = (dma->chcr & 0xffffffcf);  //No addresses left in call stack
+				dma->tadr = dma->asr0;					//Read ASR0 as next tag
+				dma->asr0 = 0;							//Clear ASR0
+				break;
+				}
+			case 0: {									//Else if ASR1 and ASR0 are empty
+				//dma->tadr += 16;						   //Clear tag address - Kills Klonoa 2
+				return true;								//End Transfer
+				}
+			default: {									//Else if ASR1 and ASR0 are messed up
+				//Console::Error("TAG_RET: ASR 1 & 0 == 1. This shouldn't happen!");
+				//dma->tadr += 16;						   //Clear tag address - Kills Klonoa 2
+				return true;								//End Transfer
 				}
 			}
 			return false;
