@@ -68,7 +68,7 @@ namespace YAML
 		Exception(const Mark& mark_, const std::string& msg_)
 			: mark(mark_), msg(msg_) {
 				std::stringstream output;
-				output << "Error at line " << mark.line+1 << ", column " << mark.column+1 << ": " << msg;
+				output << "yaml-cpp: error at line " << mark.line+1 << ", column " << mark.column+1 << ": " << msg;
 				what_ = output.str();
 			}
 		virtual ~Exception() throw() {}
