@@ -20,7 +20,7 @@ namespace YAML
 
 	void Sequence::Clear()
 	{
-		for(unsigned i=0;i<m_data.size();i++)
+		for(std::size_t i=0;i<m_data.size();i++)
 			delete m_data[i];
 		m_data.clear();
 	}
@@ -37,14 +37,14 @@ namespace YAML
 		return true;
 	}
 
-	Node *Sequence::GetNode(unsigned i) const
+	Node *Sequence::GetNode(std::size_t i) const
 	{
 		if(i < m_data.size())
 			return m_data[i];
 		return 0;
 	}
 
-	unsigned Sequence::GetSize() const
+	std::size_t Sequence::GetSize() const
 	{
 		return m_data.size();
 	}
@@ -145,7 +145,7 @@ namespace YAML
 	void Sequence::Write(Emitter& out) const
 	{
 		out << BeginSeq;
-		for(unsigned i=0;i<m_data.size();i++)
+		for(std::size_t i=0;i<m_data.size();i++)
 			out << *m_data[i];
 		out << EndSeq;
 	}
@@ -157,13 +157,13 @@ namespace YAML
 
 	int Sequence::Compare(Sequence *pSeq)
 	{
-		unsigned n = m_data.size(), m = pSeq->m_data.size();
+		std::size_t n = m_data.size(), m = pSeq->m_data.size();
 		if(n < m)
 			return -1;
 		else if(n > m)
 			return 1;
 
-		for(unsigned i=0;i<n;i++) {
+		for(std::size_t i=0;i<n;i++) {
 			int cmp = m_data[i]->Compare(*pSeq->m_data[i]);
 			if(cmp != 0)
 				return cmp;

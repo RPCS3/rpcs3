@@ -40,7 +40,7 @@ namespace YAML
 		// accessors
 		Iterator begin() const;
 		Iterator end() const;
-		unsigned size() const;
+		std::size_t size() const;
 
 		// extraction of scalars
 		bool GetScalar(std::string& s) const;
@@ -55,18 +55,16 @@ namespace YAML
 		template <typename T>
 		friend void operator >> (const Node& node, T& value);
 
-		// just for maps
+		// retrieval for maps and sequences
 		template <typename T>
 		const Node *FindValue(const T& key) const;
-		const Node *FindValue(const char *key) const;
-		
+
 		template <typename T>
 		const Node& operator [] (const T& key) const;
+		
+		// specific to maps
+		const Node *FindValue(const char *key) const;
 		const Node& operator [] (const char *key) const;
-
-		// just for sequences
-		const Node& operator [] (unsigned u) const;
-		const Node& operator [] (int i) const;
 
 		// for anchors/aliases
 		const Node *Identity() const { return m_pIdentity; }
@@ -81,10 +79,17 @@ namespace YAML
 		friend bool operator < (const Node& n1, const Node& n2);
 
 	private:
+		// helper for sequences
+		template <typename, bool> friend struct _FindFromNodeAtIndex;
+		const Node *FindAtIndex(std::size_t i) const;
+		
 		// helper for maps
 		template <typename T>
 		const Node& GetValue(const T& key) const;
-		
+
+		template <typename T>
+		const Node *FindValueForKey(const T& key) const;
+
 		// helpers for parsing
 		void ParseHeader(Scanner *pScanner, const ParserState& state);
 		void ParseTag(Scanner *pScanner, const ParserState& state);

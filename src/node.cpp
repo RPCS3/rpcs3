@@ -126,7 +126,7 @@ namespace YAML
 
 		m_tag = state.TranslateTag(token.value);
 
-		for(unsigned i=0;i<token.params.size();i++)
+		for(std::size_t i=0;i<token.params.size();i++)
 			m_tag += token.params[i];
 		pScanner->pop();
 	}
@@ -209,7 +209,7 @@ namespace YAML
 	// size
 	// . Returns the size of this node, if it's a sequence node.
 	// . Otherwise, returns zero.
-	unsigned Node::size() const
+	std::size_t Node::size() const
 	{
 		if(!m_pContent)
 			return 0;
@@ -217,28 +217,12 @@ namespace YAML
 		return m_pContent->GetSize();
 	}
 
-	const Node& Node::operator [] (unsigned u) const
+	const Node *Node::FindAtIndex(std::size_t i) const
 	{
 		if(!m_pContent)
-			throw BadDereference();
-
-		Node *pNode = m_pContent->GetNode(u);
-		if(pNode)
-			return *pNode;
-
-		return GetValue(u);
-	}
-
-	const Node& Node::operator [] (int i) const
-	{
-		if(!m_pContent)
-			throw BadDereference();
-
-		Node *pNode = m_pContent->GetNode(i);
-		if(pNode)
-			return *pNode;
-
-		return GetValue(i);
+			return 0;
+		
+		return m_pContent->GetNode(i);
 	}
 
 	bool Node::GetScalar(std::string& s) const

@@ -54,7 +54,7 @@ namespace YAML
 		bool WriteSingleQuotedString(ostream& out, const std::string& str)
 		{
 			out << "'";
-			for(unsigned i=0;i<str.size();i++) {
+			for(std::size_t i=0;i<str.size();i++) {
 				char ch = str[i];
 				if(!IsPrintable(ch))
 					return false;
@@ -71,7 +71,7 @@ namespace YAML
 		bool WriteDoubleQuotedString(ostream& out, const std::string& str)
 		{
 			out << "\"";
-			for(unsigned i=0;i<str.size();i++) {
+			for(std::size_t i=0;i<str.size();i++) {
 				char ch = str[i];
 				if(IsPrintable(ch)) {
 					if(ch == '\"')
@@ -95,7 +95,7 @@ namespace YAML
 		{
 			out << "|\n";
 			out << IndentTo(indent);
-			for(unsigned i=0;i<str.size();i++) {
+			for(std::size_t i=0;i<str.size();i++) {
 				if(str[i] == '\n')
 					out << "\n" << IndentTo(indent);
 				else
@@ -108,7 +108,7 @@ namespace YAML
 		{
 			unsigned curIndent = out.col();
 			out << "#" << Indentation(postCommentIndent);
-			for(unsigned i=0;i<str.size();i++) {
+			for(std::size_t i=0;i<str.size();i++) {
 				if(str[i] == '\n')
 					out << "\n" << IndentTo(curIndent) << "#" << Indentation(postCommentIndent);
 				else
@@ -120,7 +120,7 @@ namespace YAML
 		bool WriteAlias(ostream& out, const std::string& str)
 		{
 			out << "*";
-			for(unsigned i=0;i<str.size();i++) {
+			for(std::size_t i=0;i<str.size();i++) {
 				if(!IsPrintable(str[i]) || str[i] == ' ' || str[i] == '\t' || str[i] == '\n' || str[i] == '\r')
 					return false;
 				
@@ -132,7 +132,7 @@ namespace YAML
 		bool WriteAnchor(ostream& out, const std::string& str)
 		{
 			out << "&";
-			for(unsigned i=0;i<str.size();i++) {
+			for(std::size_t i=0;i<str.size();i++) {
 				if(!IsPrintable(str[i]) || str[i] == ' ' || str[i] == '\t' || str[i] == '\n' || str[i] == '\r')
 					return false;
 				

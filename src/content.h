@@ -33,8 +33,8 @@ namespace YAML
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator&) const { return false; }
 		virtual bool GetEnd(std::vector <Node *>::const_iterator&) const { return false; }
 		virtual bool GetEnd(std::map <Node *, Node *, ltnode>::const_iterator&) const { return false; }
-		virtual Node *GetNode(unsigned) const { return 0; }
-		virtual unsigned GetSize() const { return 0; }
+		virtual Node *GetNode(std::size_t) const { return 0; }
+		virtual std::size_t GetSize() const { return 0; }
 		virtual bool IsScalar() const { return false; }
 		virtual bool IsMap() const { return false; }
 		virtual bool IsSequence() const { return false; }

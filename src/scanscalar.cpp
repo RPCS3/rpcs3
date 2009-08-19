@@ -136,13 +136,13 @@ namespace YAML
 
 		// post-processing
 		if(params.trimTrailingSpaces) {
-			unsigned pos = scalar.find_last_not_of(' ');
+			std::size_t pos = scalar.find_last_not_of(' ');
 			if(pos < scalar.size())
 				scalar.erase(pos + 1);
 		}
 
 		if(params.chomp <= 0) {
-			unsigned pos = scalar.find_last_not_of('\n');
+			std::size_t pos = scalar.find_last_not_of('\n');
 			if(params.chomp == 0 && pos + 1 < scalar.size())
 				scalar.erase(pos + 2);
 			else if(params.chomp == -1 && pos < scalar.size())

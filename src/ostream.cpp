@@ -43,8 +43,8 @@ namespace YAML
 
 	ostream& operator << (ostream& out, const char *str)
 	{
-		unsigned length = std::strlen(str);
-		for(unsigned i=0;i<length;i++)
+		std::size_t length = std::strlen(str);
+		for(std::size_t i=0;i<length;i++)
 			out.put(str[i]);
 		return out;
 	}

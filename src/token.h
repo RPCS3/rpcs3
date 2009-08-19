@@ -59,7 +59,7 @@ namespace YAML
 
 		friend std::ostream& operator << (std::ostream& out, const Token& token) {
 			out << TokenNames[token.type] << std::string(": ") << token.value;
-			for(unsigned i=0;i<token.params.size();i++)
+			for(std::size_t i=0;i<token.params.size();i++)
 				out << std::string(" ") << token.params[i];
 			return out;
 		}

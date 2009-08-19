@@ -22,7 +22,7 @@ namespace
 	template <typename T>
 	bool IsEntirely(const std::string& str, T func)
 	{
-		for(unsigned i=0;i<str.size();i++)
+		for(std::size_t i=0;i<str.size();i++)
 			if(!func(str[i]))
 				return false;
 

@@ -37,12 +37,12 @@ namespace YAML
 		return m_pRef->GetEnd(i);
 	}
 
-	Node* AliasContent::GetNode(unsigned n) const
+	Node* AliasContent::GetNode(std::size_t n) const
 	{
 		return m_pRef->GetNode(n);
 	}
 
-	unsigned AliasContent::GetSize() const
+	std::size_t AliasContent::GetSize() const
 	{
 		return m_pRef->GetSize();
 	}

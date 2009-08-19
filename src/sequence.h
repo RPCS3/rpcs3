@@ -20,8 +20,8 @@ namespace YAML
 		void Clear();
 		virtual bool GetBegin(std::vector <Node *>::const_iterator& it) const;
 		virtual bool GetEnd(std::vector <Node *>::const_iterator& it) const;
-		virtual Node *GetNode(unsigned i) const;
-		virtual unsigned GetSize() const;
+		virtual Node *GetNode(std::size_t i) const;
+		virtual std::size_t GetSize() const;
 
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(Emitter& out) const;

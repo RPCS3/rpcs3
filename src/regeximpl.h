@@ -125,7 +125,7 @@ namespace YAML
 	// OrOperator
 	template <typename Source>
 	inline int RegEx::MatchOpOr(const Source& source) const {
-		for(unsigned i=0;i<m_params.size();i++) {
+		for(std::size_t i=0;i<m_params.size();i++) {
 			int n = m_params[i].MatchUnchecked(source);
 			if(n >= 0)
 				return n;
@@ -140,7 +140,7 @@ namespace YAML
 	template <typename Source>
 	inline int RegEx::MatchOpAnd(const Source& source) const {
 		int first = -1;
-		for(unsigned i=0;i<m_params.size();i++) {
+		for(std::size_t i=0;i<m_params.size();i++) {
 			int n = m_params[i].MatchUnchecked(source);
 			if(n == -1)
 				return -1;
@@ -164,7 +164,7 @@ namespace YAML
 	template <typename Source>
 	inline int RegEx::MatchOpSeq(const Source& source) const {
 		int offset = 0;
-		for(unsigned i=0;i<m_params.size();i++) {
+		for(std::size_t i=0;i<m_params.size();i++) {
 			int n = m_params[i].Match(source + offset); // note Match, not MatchUnchecked because we need to check validity after the offset
 			if(n == -1)
 				return -1;
