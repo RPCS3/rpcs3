@@ -174,14 +174,15 @@ microVUt(void) branchWarning(mV) {
 }
 
 microVUt(void) eBitPass1(mV, int& branch) {
-	if (!mVUregs.blockType) {
+	if (mVUregs.blockType != 1) {
 		branch = 1; 
 		mVUup.eBit = 1;
 	}
 }
 
-microVUt(void) eBitWarning(mV, u32 endCount) {
-	if (endCount == 1) Console::Error("microVU%d Warning: Branch, E-bit, Branch! [%04x]", params mVU->index, xPC);
+microVUt(void) eBitWarning(mV) {
+	if (mVUpBlock->pState.blockType == 1) Console::Error("microVU%d Warning: Branch, E-bit, Branch! [%04x]",  params mVU->index, xPC);
+	if (mVUpBlock->pState.blockType == 2) Console::Error("microVU%d Warning: Branch, Branch, Branch! [%04x]", params mVU->index, xPC);
 	incPC(2);
 	if (curI & _Ebit_) {
 		DevCon::Status("microVU%d: E-bit in Branch delay slot! [%04x]", params mVU->index, xPC);
@@ -361,7 +362,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		mVUinfo.writeP = !mVU->p;
 		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(mVU); break; }
 		else if (branch == 1) { branch = 2; }
-		if		(mVUbranch)   { mVUsetFlagInfo(mVU); eBitWarning(mVU, endCount); branch = 3; mVUbranch = 0; }
+		if		(mVUbranch)   { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
 		incPC(1);
 	}
 
@@ -385,11 +386,13 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 		else						{ doSwapOp(mVU); }
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		if (!doRegAlloc)			{ mVU->regAlloc->flushAll(); }
-		if (!mVUinfo.isBdelay)		{ incPC(1); }
+		if (_isBlock2)				{ mVUsetupRange(mVU, xPC, 0); normJumpCompile(mVU, mFC, 1); return thisPtr; }
+		else if (!mVUinfo.isBdelay)	{ incPC(1); }
 		else {
 			mVUsetupRange(mVU, xPC, 0);
 			mVUdebugNOW(1);
-			switch (mVUbranch) {
+			incPC(-3); // Go back to branch opcode
+			switch (mVUlow.branch) {
 				case 1: case 2:  normBranch(mVU, mFC);			  return thisPtr; // B/BAL
 				case 9: case 10: normJump  (mVU, mFC);			  return thisPtr; // JR/JALR
 				case 3: condBranch(mVU, mFC, Jcc_Equal);		  return thisPtr; // IBEQ

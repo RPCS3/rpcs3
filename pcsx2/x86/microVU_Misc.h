@@ -206,6 +206,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mFLAG		 mVUinfo.mFlag
 #define cFLAG		 mVUinfo.cFlag
 #define mVUrange	 mVUcurProg.ranges.range[mVUcurProg.ranges.total]
+#define _isBlock2	 (mVUpBlock->pState.blockType == 2)
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }

@@ -389,30 +389,31 @@ microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 }
 
 // Branch in Branch Delay-Slots
-microVUt(void) mVUbranchCheck(mV) {
-	if (!mVUcount) return;
+microVUt(int) mVUbranchCheck(mV) {
+	if (!mVUcount) return 0;
 	incPC(-2);
 	if (mVUlow.branch) {
 		incPC(2);
-		Console::Error("microVU%d Warning: Branch in Branch delay slot! [%04x]", params mVU->index, xPC);
-		mVUlow.isNOP = 1;
+		mVUlow.evilBranch = 1;
+		mVUregs.blockType = 2;
+		DevCon::Status("microVU%d Warning: Branch in Branch delay slot! [%04x]", params mVU->index, xPC);
+		return 1;
 	}
-	else incPC(2);
+	incPC(2);
+	return 0;
 }
 
 microVUt(void) mVUanalyzeCondBranch1(mV, int Is) {
-	mVUbranchCheck(mVU);
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
-	if (!mVUstall) { 
+	if (!mVUstall && !mVUbranchCheck(mVU)) { 
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 	}
 }
 
 microVUt(void) mVUanalyzeCondBranch2(mV, int Is, int It) {
-	mVUbranchCheck(mVU);
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	analyzeVIreg1(It, mVUlow.VI_read[1]);
-	if (!mVUstall) {
+	if (!mVUstall && !mVUbranchCheck(mVU)) {
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 		analyzeBranchVI(mVU, It, mVUlow.memReadIt);
 	}

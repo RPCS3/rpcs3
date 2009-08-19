@@ -44,7 +44,7 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u8 VI[16];
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2
-	u8 blockType;		// 0 = Normal; 1 = Compile one instruction with E-bit termination
+	u8 blockType;		// 0 = Normal; 1 = Compile one instruction (E-bit End); 2 = Compile one instruction (Branch End)
 	u8 padding[5];		// 160 bytes
 #if defined(_MSC_VER)
 };
@@ -107,6 +107,7 @@ struct microLowerOp {
 	microVIreg VI_read[2];	  // VI regs read by this instruction
 	microConstInfo constJump; // Constant Reg Info for JR/JARL instructions
 	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
+	bool evilBranch;// This instruction is a Branch in a Branch Delay Slot
 	bool isNOP;		// This instruction is a NOP
 	bool isFSSET;	// This instruction is a FSSET
 	bool noWriteVF;	// Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)

@@ -96,10 +96,25 @@ void normBranchCompile(microVU* mVU, u32 branchPC) {
 	else		{ mVUcompile(mVU, branchPC, (uptr)&mVUregs); }
 }
 
+void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
+	using namespace x86Emitter;
+	memcpy_fast(&mVUpBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
+	mVUsetupBranch(mVU, mFC);
+	mVUbackupRegs(mVU);
+
+	if (isEvilJump) MOV32MtoR(gprT2, (uptr)&mVU->evilBranch);
+	else			MOV32MtoR(gprT2, (uptr)&mVU->branch);
+	MOV32ItoR(gprR, (u32)&mVUpBlock->pStateEnd);
+
+	if (!mVU->index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
+	else			 xCALL(mVUcompileJIT<1>);
+
+	mVUrestoreRegs(mVU);
+	JMPR(gprT1);  // Jump to rec-code address
+}
+
 void normBranch(mV, microFlagCycles& mFC) {
 
-	incPC(-3); // Go back to branch opcode (to get branch imm addr)
-	
 	// E-bit Branch
 	if (mVUup.eBit) { iPC = branchAddr/4; mVUendProgram(mVU, &mFC, 1); return; }
 	
@@ -112,6 +127,7 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 	using namespace x86Emitter;
 	mVUsetupBranch(mVU, mFC);
 	xCMP(ptr16[&mVU->branch], 0);
+	incPC(3);
 	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
 		mVUendProgram(mVU, &mFC, 2);
 		xForwardJump8 eJMP((JccComparisonType)JMPcc);
@@ -155,8 +171,6 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 
 void normJump(mV, microFlagCycles& mFC) {
 	using namespace x86Emitter;
-	mVUprint("mVUcompile JR/JALR");
-	incPC(-3); // Go back to jump opcode
 
 	if (mVUlow.constJump.isValid) { // Jump Address is Constant
 		if (mVUup.eBit) { // E-bit Jump
@@ -175,18 +189,6 @@ void normJump(mV, microFlagCycles& mFC) {
 		MOV32MtoR(gprT1, (uptr)&mVU->branch);
 		MOV32RtoM((uptr)&mVU->regs->VI[REG_TPC].UL, gprT1);
 		xJMP(mVU->exitFunct);
-		return;
 	}
-
-	memcpy_fast(&mVUpBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
-	mVUsetupBranch(mVU, mFC);
-
-	mVUbackupRegs(mVU);
-	MOV32MtoR(gprT2, (uptr)&mVU->branch);		 // Get startPC (ECX 1st argument for __fastcall)
-	MOV32ItoR(gprR, (u32)&mVUpBlock->pStateEnd); // Get pState  (EDX 2nd argument for __fastcall)
-
-	if (!mVU->index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
-	else			 xCALL(mVUcompileJIT<1>);
-	mVUrestoreRegs(mVU);
-	JMPR(gprT1);  // Jump to rec-code address
+	else normJumpCompile(mVU, mFC, 0);
 }
