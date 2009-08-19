@@ -31,6 +31,8 @@ class GSRendererDX : public GSRendererHW<Vertex>
 	GSVector2 m_pixelcenter;
 	bool m_logz;
 	bool m_fba;
+	int m_pixoff_x;
+	int m_pixoff_y;
 
 protected:
 	int m_topology;
@@ -47,6 +49,8 @@ public:
 	{
 		m_logz = !!theApp.GetConfig("logz", 0);
 		m_fba = !!theApp.GetConfig("fba", 1);
+		m_pixoff_x = theApp.GetConfig("pixoff_x", 0);
+		m_pixoff_y = theApp.GetConfig("pixoff_y", 0);
 	}
 
 	virtual ~GSRendererDX()
@@ -167,8 +171,8 @@ public:
 
 		float sx = 2.0f * rt->GetScale().x / (rt->GetWidth() << 4);
 		float sy = 2.0f * rt->GetScale().y / (rt->GetHeight() << 4);
-		float ox = (float)(int)context->XYOFFSET.OFX;
-		float oy = (float)(int)context->XYOFFSET.OFY;
+		float ox = (float)(int)context->XYOFFSET.OFX + m_pixoff_x;
+		float oy = (float)(int)context->XYOFFSET.OFY + m_pixoff_y;
 		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
 		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
 
