@@ -158,11 +158,14 @@ microVUt(void) doSwapOp(mV) {
 }
 
 microVUt(void) branchWarning(mV) {
-	if (mVUbranch) {
-		Console::Error("microVU%d Warning: Branch in E-bit/Branch delay slot! [%04x]", params mVU->index, xPC);
+	incPC(-2);
+	if (mVUup.eBit && mVUbranch) {
+		incPC(2);
+		Console::Error("microVU%d Warning: Branch in E-bit delay slot! [%04x]", params mVU->index, xPC);
 		mVUlow.isNOP = 1;
 	}
-	if (mVUinfo.isBdelay) { // Check if VI Reg Written to on Branch Delay
+	else incPC(2);
+	if (mVUinfo.isBdelay) { // Check if VI Reg Written to on Branch Delay Slot Instruction
 		if (mVUlow.VI_write.reg && mVUlow.VI_write.used && !mVUlow.readFlags) {
 			mVUlow.backupVI = 1;
 			mVUregs.viBackUp = mVUlow.VI_write.reg;

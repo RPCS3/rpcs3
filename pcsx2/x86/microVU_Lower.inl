@@ -1153,21 +1153,26 @@ mVUop(mVU_XGKICK) {
 // Branches/Jumps
 //------------------------------------------------------------------
 
-#define setBranchA(x, _x_) {															\
-	pass1 { if (_Imm11_ == 1 && !_x_) { mVUlow.isNOP = 1; return; } mVUbranch = x; }	\
-	pass2 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }						\
-	pass3 { mVUbranch = x; }															\
-	pass4 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }						\
+void setBranchA(mP, int x, int _x_) {
+	pass1 { 
+		if (_Imm11_ == 1 && !_x_) { mVUlow.isNOP = 1; return; } 
+		mVUbranch	  = x; 
+		mVUlow.branch = x;
+	}
+	pass2 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }
+	pass3 { mVUbranch = x; }
+	pass4 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }
 }
 
 mVUop(mVU_B) {
-	setBranchA(1, 0);
+	setBranchA(mX, 1, 0);
+	pass1 { mVUanalyzeNormBranch(mVU, 0, 0); }
 	pass3 { mVUlog("B [<a href=\"#addr%04x\">%04x</a>]", branchAddr, branchAddr); }
 }
 
 mVUop(mVU_BAL) {
-	setBranchA(2, _It_);
-	pass1 { analyzeVIreg2(_It_, mVUlow.VI_write, 1); setConstReg(_It_, bSaveAddr); }
+	setBranchA(mX, 2, _It_);
+	pass1 { mVUanalyzeNormBranch(mVU, _It_, 1); }
 	pass2 {
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb(mVU, gprT1, _It_);
@@ -1176,8 +1181,8 @@ mVUop(mVU_BAL) {
 }
 
 mVUop(mVU_IBEQ) {
-	setBranchA(3, 0);
-	pass1 { mVUanalyzeBranch2(mVU, _Is_, _It_); }
+	setBranchA(mX, 3, 0);
+	pass1 { mVUanalyzeCondBranch2(mVU, _Is_, _It_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
@@ -1189,8 +1194,8 @@ mVUop(mVU_IBEQ) {
 }
 
 mVUop(mVU_IBGEZ) {
-	setBranchA(4, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
+	setBranchA(mX, 4, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
@@ -1200,8 +1205,8 @@ mVUop(mVU_IBGEZ) {
 }
 
 mVUop(mVU_IBGTZ) {
-	setBranchA(5, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
+	setBranchA(mX, 5, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
@@ -1211,8 +1216,8 @@ mVUop(mVU_IBGTZ) {
 }
 
 mVUop(mVU_IBLEZ) {
-	setBranchA(6, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
+	setBranchA(mX, 6, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
@@ -1222,8 +1227,8 @@ mVUop(mVU_IBLEZ) {
 }
 
 mVUop(mVU_IBLTZ) {
-	setBranchA(7, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
+	setBranchA(mX, 7, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
@@ -1233,8 +1238,8 @@ mVUop(mVU_IBLTZ) {
 }
 
 mVUop(mVU_IBNE) {
-	setBranchA(8, 0);
-	pass1 { mVUanalyzeBranch2(mVU, _Is_, _It_); }
+	setBranchA(mX, 8, 0);
+	pass1 { mVUanalyzeCondBranch2(mVU, _Is_, _It_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);

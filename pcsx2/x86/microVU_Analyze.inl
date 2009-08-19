@@ -388,14 +388,28 @@ microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 	else iPC = bPC;
 }
 
-microVUt(void) mVUanalyzeBranch1(mV, int Is) {
+// Branch in Branch Delay-Slots
+microVUt(void) mVUbranchCheck(mV) {
+	if (!mVUcount) return;
+	incPC(-2);
+	if (mVUlow.branch) {
+		incPC(2);
+		Console::Error("microVU%d Warning: Branch in Branch delay slot! [%04x]", params mVU->index, xPC);
+		mVUlow.isNOP = 1;
+	}
+	else incPC(2);
+}
+
+microVUt(void) mVUanalyzeCondBranch1(mV, int Is) {
+	mVUbranchCheck(mVU);
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	if (!mVUstall) { 
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 	}
 }
 
-microVUt(void) mVUanalyzeBranch2(mV, int Is, int It) {
+microVUt(void) mVUanalyzeCondBranch2(mV, int Is, int It) {
+	mVUbranchCheck(mVU);
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	analyzeVIreg1(It, mVUlow.VI_read[1]);
 	if (!mVUstall) {
@@ -404,7 +418,17 @@ microVUt(void) mVUanalyzeBranch2(mV, int Is, int It) {
 	}
 }
 
+microVUt(void) mVUanalyzeNormBranch(mV, int It, bool isBAL) {
+	mVUbranchCheck(mVU);
+	if (isBAL) {
+		analyzeVIreg2(It, mVUlow.VI_write, 1); 
+		setConstReg(It, bSaveAddr);
+	}
+}
+
 microVUt(void) mVUanalyzeJump(mV, int Is, int It, bool isJALR) {
+	mVUbranchCheck(mVU);
+	mVUlow.branch = (isJALR) ? 10 : 9;
 	if (mVUconstReg[Is].isValid && !CHECK_VU_CONSTHACK) {
 		mVUlow.constJump.isValid  = 1;
 		mVUlow.constJump.regValue = mVUconstReg[Is].regValue;
