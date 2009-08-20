@@ -184,12 +184,12 @@ namespace Tag
 	
 	static __forceinline bool IRQ(u32 *tag)
 	{
-		return !!(tag[0] & 0x8000000);
+		return !!(tag[0] >> 31);
 	}
 	
 	static __forceinline bool IRQ(u32 tag)
 	{
-		return !!(tag & 0x8000000);
+		return !!(tag >> 31);
 	}
 }
 
