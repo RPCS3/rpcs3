@@ -178,7 +178,7 @@ const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 		
 		jNO_DEFAULT
 	}
-	return Plugins;		// unreachable, but supresses warnings.
+	return Plugins;		// unreachable, but suppresses warnings.
 }
 
 const bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
@@ -346,6 +346,12 @@ wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 	return Path::Combine( Folders.Plugins, BaseFilenames[pluginidx] );
 }
 
+wxString AppConfig::FullPathToConfig() const
+{
+	return g_Conf->Folders.Settings.Combine( FilenameDefs::GetConfig() ).GetFullPath();
+}
+
+
 wxString AppConfig::FullpathToBios() const				{ return Path::Combine( Folders.Bios, BaseFilenames.Bios ); }
 wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( Folders.MemoryCards, Mcd[mcdidx].Filename ); }
 
@@ -414,7 +420,9 @@ void AppConfig::LoadSave( IniInterface& ini )
 //
 void AppConfig::Apply()
 {
-	if( !m_IsLoaded ) return;
+	Folders.ApplyDefaults();
+
+	if( NULL == wxConfigBase::Get( false ) ) return;
 
 	// Ensure existence of necessary documents folders.  Plugins and other parts
 	// of PCSX2 rely on them.
@@ -428,16 +436,17 @@ void AppConfig::Apply()
 	
 	NTFS_CompressFile( Folders.MemoryCards.ToString(), McdEnableNTFS );
 
-	bool prev = wxLog::EnableLogging( false );		// wx generates verbose errors if languages don't exist, so disable them here.
-	if( !i18n_SetLanguage( LanguageId ) )
 	{
-		if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
+		wxDoNotLogInThisScope please;
+		if( !i18n_SetLanguage( LanguageId ) )
 		{
-			i18n_SetLanguage( wxLANGUAGE_ENGLISH );
+			if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
+			{
+				i18n_SetLanguage( wxLANGUAGE_ENGLISH );
+			}
 		}
 	}
-	wxLog::EnableLogging( prev );
-
+	
 	// Always perform delete and reload of the Recent Iso List.  This handles cases where
 	// the recent file count has been changed, and it's a helluva lot easier than trying
 	// to make a clone copy of this complex object. ;)
@@ -457,6 +466,8 @@ void AppConfig::Apply()
 // ------------------------------------------------------------------------
 void AppConfig::Load()
 {
+	if( NULL == wxConfigBase::Get( false ) ) return;
+
 	m_IsLoaded = true;
 
 	// Note: Extra parenthesis resolves "I think this is a function" issues with C++.
@@ -466,7 +477,7 @@ void AppConfig::Load()
 
 void AppConfig::Save()
 {
-	if( !m_IsLoaded ) return;
+	if( NULL == wxConfigBase::Get( false ) ) return;
 
 	IniSaver saver( (IniSaver()) );
 	LoadSave( saver );
@@ -603,8 +614,7 @@ void AppConfig_ReloadGlobalSettings( bool overwrite )
 	PathDefs::GetSettings().Mkdir();
 
 	// Allow wx to use our config, and enforces auto-cleanup as well
-	wxString confile( g_Conf->Folders.Settings.Combine( FilenameDefs::GetConfig() ).GetFullPath() );
-	delete wxConfigBase::Set( OpenFileConfig( confile ) );
+	delete wxConfigBase::Set( OpenFileConfig( g_Conf->FullPathToConfig() ) );
 	wxConfigBase::Get()->SetRecordDefaults();
 
 	if( !overwrite )

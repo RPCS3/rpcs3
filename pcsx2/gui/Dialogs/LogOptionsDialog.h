@@ -33,8 +33,7 @@ public:
 
 protected:
 	
-	/////////////////////////////////////////////////////////////////////////////////////
-	//
+	// ----------------------------------------------------------------------------
 	class iopLogOptionsPanel : public CheckedStaticBox
 	{
 	public:
@@ -43,8 +42,7 @@ protected:
 
 	};
 	
-	/////////////////////////////////////////////////////////////////////////////////////
-	//
+	// ----------------------------------------------------------------------------
 	class eeLogOptionsPanel : public CheckedStaticBox
 	{
 	public:
@@ -72,8 +70,6 @@ public:
 	void LogChecked(wxCommandEvent &event);
 	
 protected:
-	//DECLARE_EVENT_TABLE()
-
 };
 
 };	// end namespace Dialogs

@@ -420,6 +420,14 @@
 				RelativePath="..\..\include\Utilities\WinVersion.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\include\Utilities\wxBaseTools.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\wxGuiTools.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"

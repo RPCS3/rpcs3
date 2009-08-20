@@ -63,8 +63,10 @@ extern void pcsx2_aligned_free(void* pmem);
 // exception-based error handling and automatic cleanup.
 //
 template< typename T >
-class SafeArray : public NoncopyableObject
+class SafeArray
 {
+	DeclareNoncopyableObject(SafeArray)
+
 public:
 	static const int DefaultChunkSize = 0x1000 * sizeof(T);
 
@@ -218,8 +220,10 @@ protected:
 //  * Classes with destructors (they're not called, sorry!)
 //
 template< typename T >
-class SafeList : public NoncopyableObject
+class SafeList
 {
+	DeclareNoncopyableObject(SafeList)
+	
 public:
 	static const int DefaultChunkSize = 0x80 * sizeof(T);
 

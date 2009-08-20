@@ -26,25 +26,37 @@
 class FirstTimeWizard : public wxWizard
 {
 protected:
-	wxWizardPageSimple& m_page_usermode;
-	//wxWizardPageSimple& m_page_paths;
-	wxWizardPageSimple& m_page_plugins;
+	class UsermodePage : public wxWizardPageSimple
+	{
+	protected:
+		Panels::DirPickerPanel& m_dirpick_settings;
+		Panels::LanguageSelectionPanel& m_panel_LangSel;
+		Panels::UsermodeSelectionPanel& m_panel_UserSel;
+
+	public:
+		UsermodePage( wxWizard* parent );
+
+	protected:
+		void OnUsermodeChanged( wxCommandEvent& evt );
+	};
 	
-	Panels::LanguageSelectionPanel&	m_panel_LangSel;
-	Panels::UsermodeSelectionPanel&	m_panel_UsermodeSel;
-	Panels::AdvancedPathsPanel&		m_panel_Paths;
+protected:
+	UsermodePage&		m_page_usermode;
+	wxWizardPageSimple& m_page_plugins;
+	wxWizardPageSimple& m_page_bios;
+	
 	Panels::PluginSelectorPanel&	m_panel_PluginSel;
+	Panels::BiosSelectorPanel&		m_panel_BiosSel;
 
 public:
 	FirstTimeWizard( wxWindow* parent );
 	virtual ~FirstTimeWizard();
-	
+
 	wxWizardPage *GetFirstPage() const { return &m_page_usermode; }
 
 protected:
 	virtual void OnPageChanging( wxWizardEvent& evt );
 	virtual void OnPageChanged( wxWizardEvent& evt );
-	virtual void OnUsermodeChanged( wxCommandEvent& evt );
 };
 
 namespace Dialogs
@@ -72,5 +84,17 @@ namespace Dialogs
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );
 	};
+
+
+	class ImportSettingsDialog : public wxDialogWithHelpers
+	{
+	public:
+		ImportSettingsDialog( wxWindow* parent );
+		
+	protected:
+		void OnImport_Click( wxCommandEvent& evt );
+		void OnOverwrite_Click( wxCommandEvent& evt );
+	};
+
 }
 

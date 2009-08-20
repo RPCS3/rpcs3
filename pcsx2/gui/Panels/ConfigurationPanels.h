@@ -27,6 +27,8 @@
 #include <wx/image.h>
 #include <wx/statline.h>
 #include <wx/bookctrl.h>
+#include <wx/listbox.h>
+
 #include <list>
 
 #include "AppConfig.h"
@@ -118,7 +120,7 @@ namespace Panels
 		void StartBook( wxBookCtrlBase* book );
 		void StartWizard();
 		bool ApplyAll();
-		bool ApplyPage( int pageid );
+		bool ApplyPage( int pageid, bool saveOnSuccess=true );
 		void DoCleanup();
 	};
 
@@ -273,12 +275,26 @@ namespace Panels
 
 	public:
 		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
+		virtual ~DirPickerPanel() { }
+
 		void Apply( AppConfig& conf );
 		void Reset();
+		wxDirName GetPath() const { return wxDirName( m_pickerCtrl->GetPath() ); }
+		
+		DirPickerPanel& SetStaticDesc( const wxString& msg );
 
 	protected:
-		void UseDefaultPath_Click(wxCommandEvent &event);
+		void UseDefaultPath_Click( wxCommandEvent &event );
+		void Explore_Click( wxCommandEvent &event );
 		void UpdateCheckStatus( bool someNoteworthyBoolean );
+	};
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class SettingsDirPickerPanel : public DirPickerPanel
+	{
+	public:
+		SettingsDirPickerPanel( wxWindow* parent );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -290,7 +306,6 @@ namespace Panels
 
 	public:
 		BasePathsPanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
-		virtual wxSizer& Sizer() { return s_main; }
 
 	protected:
 		DirPickerPanel& AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid,
@@ -307,32 +322,46 @@ namespace Panels
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class AdvancedPathsPanel : public BasePathsPanel
+	class BaseSelectorPanel: public BaseApplicableConfigPanel
 	{
 	protected:
-		DirPickerPanel& m_dirpick_plugins;
-		DirPickerPanel& m_dirpick_settings;
+	
+	public:
+		virtual ~BaseSelectorPanel();
+		BaseSelectorPanel( wxWindow& parent, int idealWidth );
+
+		virtual bool Show( bool visible=true );
+		virtual void OnRefresh( wxCommandEvent& evt );
+		virtual void OnShown();
+		virtual void OnFolderChanged( wxFileDirPickerEvent& evt );
+
+	protected:
+		virtual void DoRefresh()=0;
+		virtual bool ValidateEnumerationStatus()=0;
+	};
+	
+	//////////////////////////////////////////////////////////////////////////////////////////
+	//
+	class BiosSelectorPanel : public BaseSelectorPanel
+	{
+	protected:
+		wxListBox&		m_ComboBox;
+		DirPickerPanel&	m_FolderPicker;
+		wxArrayString*	m_BiosList;
 		
 	public:
-		AdvancedPathsPanel( wxWindow& parent, int idealWidth );
-		void Reset();
-	};
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// TabbedPathsPanel
-	// This panel is a Tabbed (paged) panel which contains both Standard Paths and Advanced
-	// Paths panels.
-	//
-	class TabbedPathsPanel : public BaseApplicableConfigPanel
-	{
-	public:
-		TabbedPathsPanel( wxWindow& parent, int idealWidth );
-		void Apply( AppConfig& conf );
+		BiosSelectorPanel( wxWindow& parent, int idealWidth );
+		virtual ~BiosSelectorPanel();
+		
+	protected:
+		virtual void Apply( AppConfig& conf );
+		virtual void DoRefresh();
+		virtual bool ValidateEnumerationStatus();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class PluginSelectorPanel: public BaseApplicableConfigPanel
+	class PluginSelectorPanel: public BaseSelectorPanel
 	{
 	protected:
 		static const int NumPluginTypes = 7;
@@ -365,6 +394,7 @@ namespace Panels
 		protected:
 			PluginSelectorPanel& m_master;
 			volatile bool m_cancel;			
+
 		public:
 			virtual ~EnumThread();
 			EnumThread( PluginSelectorPanel& master );
@@ -380,12 +410,11 @@ namespace Panels
 		{
 		protected:
 			wxComboBox*		m_combobox[NumPluginTypes];
-			wxComboBox&		m_BiosBox;
-
+			DirPickerPanel& m_FolderPicker;
 		public:
 			ComboBoxPanel( PluginSelectorPanel* parent );
 			wxComboBox& Get( int i ) { return *m_combobox[i]; }
-			wxComboBox& GetBios() { return m_BiosBox; }
+			wxDirName GetPluginsPath() const { return m_FolderPicker.GetPath(); }
 			void Reset();
 		};
 
@@ -410,7 +439,6 @@ namespace Panels
 
 	protected:
 		wxArrayString*	m_FileList;	// list of potential plugin files
-		wxArrayString*	m_BiosList;
 		StatusPanel&	m_StatusPanel;
 		ComboBoxPanel&	m_ComponentBoxes;
 		EnumThread*		m_EnumeratorThread;
@@ -418,18 +446,16 @@ namespace Panels
 	public:
 		virtual ~PluginSelectorPanel();
 		PluginSelectorPanel( wxWindow& parent, int idealWidth );
-		virtual void OnProgress( wxCommandEvent& evt );
-		virtual void OnEnumComplete( wxCommandEvent& evt );
-		
+		virtual void CancelRefresh();
+
 		void Apply( AppConfig& conf );
-		void OnShow();
 
 	protected:
-		virtual void OnShow( wxShowEvent& evt );
-		virtual void OnRefresh( wxCommandEvent& evt );
+		virtual void OnProgress( wxCommandEvent& evt );
+		virtual void OnEnumComplete( wxCommandEvent& evt );
 
-		void DoRefresh();
-		bool ValidateEnumerationStatus();
+		virtual void DoRefresh();
+		virtual bool ValidateEnumerationStatus();
 		
 		int FileCount() const { return m_FileList->Count(); }
 		const wxString& GetFilename( int i ) const { return (*m_FileList)[i]; }

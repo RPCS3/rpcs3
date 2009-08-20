@@ -150,6 +150,7 @@ public:
 	wxString FullpathToBios() const;
 	wxString FullpathToMcd( uint mcdidx ) const;
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
+	wxString FullPathToConfig() const;
 
 	void Load();
 	void Save();

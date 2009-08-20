@@ -159,6 +159,7 @@ void MainEmuFrame::ConnectMenus()
 		Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
 	ConnectMenu( Menu_Config_Settings,	Menu_ConfigSettings_Click );
+	ConnectMenu( Menu_Config_BIOS,		Menu_SelectBios_Click );
 	ConnectMenu( Menu_IsoBrowse,		Menu_RunIso_Click );
 	ConnectMenu( Menu_RunWithoutDisc,	Menu_RunWithoutDisc_Click );
 
@@ -292,7 +293,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(Menu_Config_Settings,	_("Core Settings..."),	wxEmptyString);
+	m_menuConfig.Append(Menu_Config_Settings,	_("Settings") );
 	m_menuConfig.AppendSeparator();
 
 	// Query installed "tertiary" plugins for name and menu options.
@@ -302,7 +303,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuConfig.Append(Menu_Config_FireWire,	_("Firewire"),	wxEmptyString);
 
 	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(Menu_Config_Patches,	_("Patches"),		wxEmptyString);
+	m_menuConfig.Append(Menu_Config_Patches,	_("Patches"),	wxEmptyString);
+	m_menuConfig.Append(Menu_Config_BIOS,		_("BIOS") );
 
 	// ------------------------------------------------------------------------
 
@@ -313,8 +315,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// ------------------------------------------------------------------------
 
 	m_menuMisc.Append( &m_MenuItem_Console );
-	m_menuMisc.Append(Menu_Patches,	_("Enable Patches"), wxEmptyString, wxITEM_CHECK);
-	m_menuMisc.Append(Menu_Profiler,_("Enable Profiler"), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(Menu_Patches,		_("Enable Patches"),	wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(Menu_Profiler,	_("Enable Profiler"),	wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	// No dialogs implemented for these yet...
@@ -324,12 +326,15 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// Ref will want this re-added eventually.
 	//m_menuMisc.Append(47, _T("Print CDVD Info..."), wxEmptyString, wxITEM_CHECK);
 
-	m_menuMisc.Append(Menu_About,		_("About..."), wxEmptyString);
-	m_menuMisc.Append(Menu_Website,		_("Pcsx2 Website..."), _("Opens your web-browser!"));
+	m_menuMisc.Append(Menu_About,		_("About...") );
+	m_menuMisc.Append(Menu_Website,		_("Pcsx2 Website..."), _("Opens your web-browser to our favorite website."));
 
-	m_menuDebug.Append(Menu_Debug_Open,			_("Open Debug Window..."), wxEmptyString);
-	m_menuDebug.Append(Menu_Debug_MemoryDump,	_("Memory Dump..."), wxEmptyString);
-	m_menuDebug.Append(Menu_Debug_Logging,		_("Logging..."), wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_Open,			_("Open Debug Window..."),	wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
+	m_menuDebug.Append(Menu_Debug_Logging,		_("Logging..."),			wxEmptyString);
+
+	m_menuConfig.AppendSeparator();
+	m_menuDebug.Append(Menu_Debug_Usermode,		_("Change Usermode..."), _(" Advanced feature for managing multiple concurrent PCSX2 environments."));
 
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 

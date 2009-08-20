@@ -66,14 +66,18 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-class ConsoleLogFrame : public wxFrame, public NoncopyableObject
+class ConsoleLogFrame : public wxFrame
 {
+	DeclareNoncopyableObject(ConsoleLogFrame)
+
 public:
 	typedef AppConfig::ConsoleLogOptions ConLogConfig;
 
 protected:
-	class ColorArray : public NoncopyableObject
+	class ColorArray
 	{
+		DeclareNoncopyableObject(ColorArray)
+
 	protected:
 		SafeArray<wxTextAttr>	m_table;
 		wxTextAttr				m_color_default;

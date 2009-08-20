@@ -17,10 +17,10 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Utilities/ScopedPtr.h"
+#include "System.h"
 #include "Plugins.h"
+#include "Utilities/ScopedPtr.h"
 #include "ConfigurationPanels.h"
-#include "ps2/BiosTools.h"
 
 #include <wx/dynlib.h>
 #include <wx/dir.h>
@@ -28,8 +28,10 @@
 using namespace wxHelpers;
 using namespace Threading;
 
-DECLARE_EVENT_TYPE(wxEVT_EnumeratedNext, -1)
-DECLARE_EVENT_TYPE(wxEVT_EnumerationFinished, -1)
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE(wxEVT_EnumeratedNext, -1)
+	DECLARE_EVENT_TYPE(wxEVT_EnumerationFinished, -1)
+END_DECLARE_EVENT_TYPES()
 
 DEFINE_EVENT_TYPE(wxEVT_EnumeratedNext)
 DEFINE_EVENT_TYPE(wxEVT_EnumerationFinished);
@@ -65,6 +67,7 @@ public:
 		if( !m_plugin.Load( m_plugpath ) )
 			throw Exception::BadStream( m_plugpath, "File is not a valid dynamic library" );
 
+		wxDoNotLogInThisScope please;
 		m_GetLibType		= (_PS2EgetLibType)m_plugin.GetSymbol( L"PS2EgetLibType" );
 		m_GetLibName		= (_PS2EgetLibName)m_plugin.GetSymbol( L"PS2EgetLibName" );
 		m_GetLibVersion2	= (_PS2EgetLibVersion2)m_plugin.GetSymbol( L"PS2EgetLibVersion2" );
@@ -153,11 +156,13 @@ void Panels::PluginSelectorPanel::StatusPanel::Reset()
 // ------------------------------------------------------------------------
 Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent ) :
 	wxPanelWithHelpers( parent )
-,	m_BiosBox( *new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY | wxCB_SORT ) )
+,	m_FolderPicker(	*new DirPickerPanel( this, FolderId_Plugins,
+		_("Plugins Search Path:"),
+		_("Select a folder with PCSX2 plugins") )
+	)
 {
-	m_BiosBox.SetFont( wxFont( m_BiosBox.GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
-
-	wxFlexGridSizer& s_plugin = *new wxFlexGridSizer( NumPluginTypes, 3, 16, 10 );
+	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
+	wxFlexGridSizer& s_plugin( *new wxFlexGridSizer( NumPluginTypes, 3, 16, 10 ) );
 	s_plugin.SetFlexibleDirection( wxHORIZONTAL );
 	s_plugin.AddGrowableCol( 1 );		// expands combo boxes to full width.
 
@@ -174,10 +179,13 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 		s_plugin.Add( new wxButton( this, wxID_ANY, L"Configure..." ) );
 	}
 
-	s_plugin.Add( new wxStaticText( this, wxID_ANY, L"BIOS" ), wxSizerFlags().Border( wxTOP | wxLEFT, 2 ) );
-	s_plugin.Add( &m_BiosBox, wxSizerFlags().Expand() );
+	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder for PCSX2 plugins.") );
 
-	SetSizerAndFit( &s_plugin );
+	s_main.Add( &s_plugin, wxSizerFlags().Expand() );
+	s_main.AddSpacer( 6 );
+	s_main.Add( &m_FolderPicker, SizerFlags::StdExpand() );
+
+	SetSizerAndFit( &s_main );
 }
 
 void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
@@ -188,23 +196,20 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 
 // ------------------------------------------------------------------------
 Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
+	BaseSelectorPanel( parent, idealWidth )
 ,	m_FileList( NULL )
-,	m_BiosList( NULL )
 ,	m_StatusPanel( *new StatusPanel( this ) )
 ,	m_ComponentBoxes( *new ComboBoxPanel( this ) )
 ,	m_EnumeratorThread( NULL )
 {
-	//ValidateEnumerationStatus();
-
-	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
+	// note: the status panel is a floating window, so that it can be positioned in the
+	// center of the dialog after it's been fitted to the contents.
 	
+	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
 	s_main.Add( &m_ComponentBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
-	//s_main.AddSpacer( 4 );
-	//AddStaticText( s_main, _("Tip: Installed plugins that are not compatible with your hardware or operating system will be listed below a separator.") );
-	s_main.AddSpacer( 4 );
-	s_main.Add( &m_StatusPanel, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
+	m_StatusPanel.Hide();
+	m_ComponentBoxes.Hide();
 
 	// refresh button used for diagnostics... (don't think there's a point to having one otherwise) --air
 	//wxButton* refresh = new wxButton( this, wxID_ANY, L"Refresh" );
@@ -213,22 +218,13 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 
 	SetSizerAndFit( &s_main );
 
-	Connect( GetId(), wxEVT_SHOW,		wxShowEventHandler( PluginSelectorPanel::OnShow ) );
-
 	Connect( wxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
 	Connect( wxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
 }
 
 Panels::PluginSelectorPanel::~PluginSelectorPanel()
 {
-	// Random crashes on null function pointer if we don't clean up the event...
-	Disconnect( GetId(), wxEVT_SHOW, wxShowEventHandler( PluginSelectorPanel::OnShow ) );
-
-	// Kill the thread if it's alive.
-
-	safe_delete( m_EnumeratorThread );
-	safe_delete( m_FileList );
-	safe_delete( m_BiosList );
+	CancelRefresh();		// in case the enumeration thread is currently refreshing...
 }
 
 void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
@@ -255,27 +251,15 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 		}
 
 		wxFileName relative( GetFilename((int)m_ComponentBoxes.Get(i).GetClientData(sel)) );
-		relative.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
+		relative.MakeRelativeTo( conf.Folders.Plugins.ToString() );
 		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
 	}
-	
-	int sel = m_ComponentBoxes.GetBios().GetSelection();
-	if( sel == wxNOT_FOUND )
-	{
-		throw Exception::CannotApplySettings( this,
-			// English Log
-			L"User did not specify a valid BIOS selection.",
+}
 
-			// Translated
-			pxE( ".Popup Error:Invalid BIOS Selection",	
-				L"Please select a valid BIOS before applying new settings.  If you are unable to make\n"
-				L"a valid selection then press cancel to close the Configuration panel."
-			)
-		);
-	}
-	wxFileName relative( (*m_BiosList)[(int)m_ComponentBoxes.GetBios().GetClientData(sel)] );
-	relative.MakeRelativeTo( g_Conf->Folders.Bios.ToString() );
-	conf.BaseFilenames.Bios = relative.GetFullPath();
+void Panels::PluginSelectorPanel::CancelRefresh()
+{
+	safe_delete( m_EnumeratorThread );
+	safe_delete( m_FileList );
 }
 
 void Panels::PluginSelectorPanel::DoRefresh()
@@ -283,6 +267,9 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	// Disable all controls until enumeration is complete.
 
 	m_ComponentBoxes.Hide();
+	m_StatusPanel.SetSize( m_ComponentBoxes.GetSize().GetWidth() - 8, wxDefaultCoord );
+	//m_StatusPanel.SetSizer( m_StatusPanel.GetSizer(), false );
+	m_StatusPanel.CentreOnParent();
 	m_StatusPanel.Show();
 
 	// Use a thread to load plugins.
@@ -297,29 +284,20 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 {
 	bool validated = true;
 	
-	// re-enumerate plugins and bioses, and if anything changed then we need to wipe
+	// re-enumerate plugins, and if anything changed then we need to wipe
 	// the contents of the combo boxes and re-enumerate everything.
 
 	// Impl Note: ScopedPtr used so that resources get cleaned up if an exception
 	// occurs during file enumeration.
 	wxScopedPtr<wxArrayString> pluginlist( new wxArrayString() );
-	wxScopedPtr<wxArrayString> bioslist( new wxArrayString() );
 
-	int pluggers = EnumeratePluginsFolder( pluginlist.get() );
-
-	if( g_Conf->Folders.Bios.Exists() )
-		wxDir::GetAllFiles( g_Conf->Folders.Bios.ToString(), bioslist.get(), L"*.bin", wxDIR_FILES );
+	int pluggers = EnumeratePluginsInFolder( m_ComponentBoxes.GetPluginsPath(), pluginlist.get() );
 
 	if( (m_FileList == NULL) || (*pluginlist != *m_FileList) )
 		validated = false;
 
-	if( (m_BiosList == NULL) || (*bioslist != *m_BiosList) )
-		validated = false;
-
 	delete m_FileList;
-	delete m_BiosList;
 	m_FileList = pluginlist.release();
-	m_BiosList = bioslist.release();
 
 	m_StatusPanel.SetGaugeLength( pluggers );
 
@@ -327,52 +305,9 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 }
 
 // ------------------------------------------------------------------------
-
-// This overload of OnShow is invoked by wizards, since the wxWizard won't raise
-// SHOW events. >_<  (only called for show events and not hide events)
-void Panels::PluginSelectorPanel::OnShow()
-{
-	if( !ValidateEnumerationStatus() )
-		DoRefresh();
-}
-
-void Panels::PluginSelectorPanel::OnShow( wxShowEvent& evt )
-{
-	evt.Skip();
-	if( !evt.GetShow() ) return;
-
-	OnShow();
-}
-
-void Panels::PluginSelectorPanel::OnRefresh( wxCommandEvent& evt )
-{
-	ValidateEnumerationStatus();
-	DoRefresh();
-}
-
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 {
 	safe_delete( m_EnumeratorThread );
-
-	// -----------------
-	//  Enumerate BIOS
-	// -----------------
-
-	wxFileName right( g_Conf->FullpathToBios() );
-	right.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
-
-	for( size_t i=0; i<m_BiosList->GetCount(); ++i )
-	{
-		wxString description;
-		if( !IsBIOS((*m_BiosList)[i], description) ) continue;
-		int sel = m_ComponentBoxes.GetBios().Append( description, (void*)i );
-		
-		wxFileName left( (*m_BiosList)[i] );
-		left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
-
-		if( left == right )
-			m_ComponentBoxes.GetBios().SetSelection( sel );
-	}
 
 	// fixme: Default plugins should be picked based on the timestamp of the DLL or something?
 	//  (for now we just force it to selection zero if nothing's selected)
@@ -387,14 +322,13 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 			m_ComponentBoxes.Get(i).SetSelection( 0 );
 	}
 
-	if( emptyBoxes > 0 )
+	/*if( emptyBoxes > 0 )
 	{
-		wxMessageBox( pxE( ".Popup Error:Missing Plugins",
-				L"Critical Error: A valid plugin for one or more components of PCSX2 could not be found. "
-				L"Your installation of PCSX2 is incomplete, and will be unable to run games."),
-			_("PCSX2 Error - Plugin components not found")
+		Msgbox::Alert( pxE( ".Popup Error:Missing Plugins",
+				L"Critical Error: A valid plugin for one or more components of PCSX2 could not be found.\n"
+				L"If this is a fresh install of PCSX2 then your installation may be corrupted or incomplete.\n")
 		);
-	}
+	}*/
 
 	m_ComponentBoxes.Show();
 	m_StatusPanel.Hide();
@@ -454,21 +388,25 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 
 Panels::PluginSelectorPanel::EnumThread::~EnumThread()
 {
-	safe_delete_array( Results );
 	Cancel();
+	safe_delete_array( Results );
 }
 
 void Panels::PluginSelectorPanel::EnumThread::Cancel()
 {
 	m_cancel = true;
-	Threading::Sleep( 1 );
+	Sleep( 2 );
 	PersistentThread::Cancel();
 }
 
 sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 {
-	for( int curidx=0; curidx < m_master.FileCount() && !m_cancel; ++curidx )
+	Sleep( 10 );		// gives the gui thread some time to refresh
+
+	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
+		if( m_cancel ) return 0;
+
 		try
 		{
 			PluginEnumerator penum( m_master.GetFilename( curidx ) );
@@ -493,6 +431,8 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 		{
 			Console::Status( ex.LogMessage() );
 		}
+
+		pthread_testcancel();
 
 		wxCommandEvent yay( wxEVT_EnumeratedNext );
 		yay.SetExtraLong( curidx );

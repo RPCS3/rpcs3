@@ -25,6 +25,12 @@
 #include "Panels/ConfigurationPanels.h"
 
 #include <wx/artprov.h>
+#include <wx/listbook.h>
+#include <wx/listctrl.h>
+
+#ifdef __WXMSW__
+#	include <commctrl.h>		// needed for Vista icon spacing fix.
+#endif
 
 using namespace wxHelpers;
 using namespace Panels;
@@ -42,7 +48,7 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 Configuration"), true )
 ,	m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
 {
-	static const int IdealWidth = 460;
+	static const int IdealWidth = 500;
 
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 
@@ -67,15 +73,24 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	m_listbook.AddPage( new PluginSelectorPanel( m_listbook, IdealWidth ),	_("Plugins"), false, cfgid.Plugins );
 
 	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new TabbedPathsPanel( m_listbook, IdealWidth ),			_("Folders"), false, cfgid.Paths );
+	m_listbook.AddPage( new StandardPathsPanel( m_listbook ),				_("Folders"), false, cfgid.Paths );
 
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );
 
 	SetSizerAndFit( &mainSizer );
-
 	CenterOnScreen();
-	
+
+#ifdef __WXMSW__
+	// Depending on Windows version and user appearance settings, the default icon spacing can be
+	// way over generous.  This little bit of Win32-specific code ensures proper icon spacing, scaled
+	// to the size of the frame's ideal width.
+
+	ListView_SetIconSpacing( (HWND)m_listbook.GetListView()->GetHWND(),
+		(IdealWidth-6) / m_listbook.GetPageCount(), g_Conf->Listbook_ImageSize+32		// y component appears to be ignored
+	);
+#endif
+
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnApply_Click ) );
 }
@@ -98,4 +113,27 @@ void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
 	evt.Skip();
 	g_ApplyState.ApplyAll();
+}
+
+
+// ----------------------------------------------------------------------------
+Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent ) :
+	wxDialogWithHelpers( parent, wxID_ANY, _("BIOS Selector"), false )
+{
+	wxBoxSizer& bleh( *new wxBoxSizer( wxVERTICAL ) );
+	bleh.Add( new Panels::BiosSelectorPanel( *this, 500 ), SizerFlags::StdExpand() );
+	AddOkCancel( bleh, false );
+
+	SetSizerAndFit( &bleh );
+
+	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BiosSelectorDialog::OnOk_Click ) );
+}
+
+void Dialogs::BiosSelectorDialog::OnOk_Click( wxCommandEvent& evt )
+{
+	if( g_ApplyState.ApplyAll() )
+	{
+		Close();
+		evt.Skip();
+	}
 }

@@ -47,15 +47,15 @@ const PluginInfo tbl_PluginInfo[] =
 
 };
 
-int EnumeratePluginsFolder( wxArrayString* dest )
+int EnumeratePluginsInFolder( wxDirName& searchpath, wxArrayString* dest )
 {
 	wxScopedPtr<wxArrayString> placebo;
 	wxArrayString* realdest = dest;
 	if( realdest == NULL )
 		placebo.reset( realdest = new wxArrayString() );
 
-	return g_Conf->Folders.Plugins.Exists() ?
-		wxDir::GetAllFiles( g_Conf->Folders.Plugins.ToString(), realdest, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
+	return searchpath.Exists() ?
+		wxDir::GetAllFiles( searchpath.ToString(), realdest, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
 }
 
 

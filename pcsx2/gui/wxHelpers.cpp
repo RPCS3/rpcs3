@@ -177,12 +177,23 @@ namespace wxHelpers
 	{
 		// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
 		alignFlags |= wxST_NO_AUTORESIZE;
-        wxStaticText *temp = new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags );
-        if( size > 0 ) temp->Wrap( size );
+        wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
+        if( size > 0 ) temp.Wrap( size );
 
-        sizer.Add(temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
-        return *temp;
+        sizer.Add( &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+        return temp;
     }
+
+	wxStaticText& InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags, int size )
+	{
+		// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
+		alignFlags |= wxST_NO_AUTORESIZE;
+		wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
+		if( size > 0 ) temp.Wrap( size );
+
+		sizer.Insert( position, &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+		return temp;
+	}
 
 	// ------------------------------------------------------------------------
 	// Launches the specified file according to its mime type

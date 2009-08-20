@@ -67,6 +67,7 @@ protected:
 
 		// Config Subsection
 		Menu_Config_Settings = 100,
+		Menu_Config_BIOS,
 		Menu_Config_CDVD,
 		Menu_Config_DEV9,
 		Menu_Config_USB,
@@ -105,6 +106,7 @@ protected:
 		Menu_Debug_Open = 600,		// opens the debugger window / starts a debug session
 		Menu_Debug_MemoryDump,
 		Menu_Debug_Logging,			// dialog for selection additional log options
+		Menu_Debug_Usermode,
 		Menu_Languages,
 
 		// Language Menu
@@ -155,6 +157,7 @@ protected:
 	void OnMoveAround( wxMoveEvent& evt );
 
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);
+	void Menu_SelectBios_Click(wxCommandEvent &event);
 
 	void Menu_RunIso_Click(wxCommandEvent &event);
 	void Menu_RunWithoutDisc_Click(wxCommandEvent &event);

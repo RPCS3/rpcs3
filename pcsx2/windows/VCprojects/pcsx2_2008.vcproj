@@ -1994,6 +1994,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Dialogs\ImportSettingsDialog.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Dialogs\LogOptionsDialog.cpp"
 					>
 				</File>
@@ -2070,11 +2074,19 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Panels\BiosSelectorPanel.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Panels\ConfigurationPanels.h"
 					>
 				</File>
 				<File
 					RelativePath="..\..\gui\Panels\CpuPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\DirPickerPanel.cpp"
 					>
 				</File>
 				<File

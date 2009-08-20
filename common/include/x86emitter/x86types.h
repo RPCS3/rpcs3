@@ -636,8 +636,10 @@ __forceinline void xWrite( T val )
 	// speed benefits in the form of L1/L2 cache clutter, on any CPU.  They're also notably
 	// faster on P4's, and mildly faster on AMDs.  (Core2's and i7's don't care)
 	//
-	class xSmartJump : public NoncopyableObject
+	class xSmartJump
 	{
+		DeclareNoncopyableObject(xSmartJump)
+
 	protected:
 		u8* m_baseptr;				// base address of the instruction (passed to the instruction emitter)
 		JccComparisonType m_cc;		// comparison type of the instruction

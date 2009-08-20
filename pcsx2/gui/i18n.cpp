@@ -86,14 +86,13 @@ static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 //
 void i18n_EnumeratePackages( LangPackList& langs )
 {
-	bool prev = wxLog::EnableLogging( false );		// wx generates verbose errors if languages don't exist, so disable them here.
+	wxDoNotLogInThisScope here;		// wx generates verbose errors if languages don't exist, so disable them here.
 	langs.push_back( LangPackEnumeration() );
 	
 	for( int li=wxLANGUAGE_UNKNOWN+1; li<wxLANGUAGE_USER_DEFINED; ++li )
 	{
 		i18n_DoPackageCheck( (wxLanguage)li, langs );
 	}
-	wxLog::EnableLogging( prev );
 
 	// Brilliant.  Because someone in the wx world didn't think to move wxLANGUAGE_USER_DEFINED
 	// to a place where it wasn't butt right up against the main languages (like, say, start user

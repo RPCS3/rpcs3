@@ -58,7 +58,7 @@ void Panels::StaticApplyState::StartWizard()
 // Returns false if one of the panels fails input validation (in which case dialogs
 // should not be closed, etc).
 //
-bool Panels::StaticApplyState::ApplyPage( int pageid )
+bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 {
 	bool retval = true;
 	try
@@ -82,7 +82,8 @@ bool Panels::StaticApplyState::ApplyPage( int pageid )
 		*g_Conf = confcopy;
 		UseAdminMode = g_ApplyState.UseAdminMode;
 		g_Conf->Apply();
-		g_Conf->Save();
+		if( saveOnSuccess )
+			g_Conf->Save();
 	}
 	catch( Exception::CannotApplySettings& ex )
 	{

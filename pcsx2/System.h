@@ -92,4 +92,7 @@ namespace Msgbox
 	extern bool OkCancel( const wxString& text );
 }
 
-DECLARE_EVENT_TYPE( pxEVT_MSGBOX, -1 );
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE( pxEVT_MSGBOX, -1 );
+END_DECLARE_EVENT_TYPES()
+

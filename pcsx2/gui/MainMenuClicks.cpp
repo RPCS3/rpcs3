@@ -30,7 +30,18 @@ using namespace Dialogs;
 
 void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
-	Dialogs::ConfigurationDialog( this ).ShowModal();
+	if( Dialogs::ConfigurationDialog( this ).ShowModal() )
+	{
+		g_Conf->Save();
+	}
+}
+
+void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
+{
+	if( Dialogs::BiosSelectorDialog( this ).ShowModal() )
+	{
+		g_Conf->Save();
+	}
 }
 
 static const wxChar* isoFilterTypes =

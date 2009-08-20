@@ -21,9 +21,10 @@
 #include <wx/wx.h>
 #include <wx/image.h>
 #include <wx/propdlg.h>
-#include <wx/listbook.h>
 
 #include "wxHelpers.h"
+
+class wxListbook;
 
 namespace Dialogs
 {
@@ -39,5 +40,18 @@ namespace Dialogs
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
+	};
+	
+	
+	class BiosSelectorDialog : public wxDialogWithHelpers
+	{
+	protected:
+
+	public:
+		virtual ~BiosSelectorDialog() {}
+		BiosSelectorDialog(wxWindow* parent );
+
+	protected:
+		void OnOk_Click( wxCommandEvent& evt );
 	};
 }

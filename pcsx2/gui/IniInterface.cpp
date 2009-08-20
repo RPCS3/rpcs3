@@ -96,7 +96,7 @@ void IniLoader::Entry( const wxString& var, bool& value, const bool defvalue )
 	// TODO : Stricter value checking on enabled/disabled?
 	wxString dest;
 	m_Config.Read( var, &dest, defvalue ? L"enabled" : L"disabled" );
-	value = (dest == L"enabled") || (dest != L"0");
+	value = (dest == L"enabled") || (dest == L"1");
 }
 
 bool IniLoader::EntryBitBool( const wxString& var, bool value, const bool defvalue )

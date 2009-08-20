@@ -22,6 +22,7 @@
 
 #include "ModalPopups.h"
 #include "Panels/ConfigurationPanels.h"
+#include "wx//file.h"
 
 using namespace wxHelpers;
 using namespace Panels;
@@ -33,55 +34,91 @@ static T& MakeWizWidget( int pageid, wxWizardPage& src )
 	return *new T( src, 620 );
 }
 
+// ----------------------------------------------------------------------------
+Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
+	DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") ) 
+{
+	SetToolTip( pxE( ".Tooltips:Folders:Settings",
+		L"This is the folder where PCSX2 saves your settings, including settings generated "
+		L"by most plugins (some older plugins may not respect this value)."
+	) );
+	
+	// Insert this into the top of the staticboxsizer created by the constructor.
+	GetSizer()->Insert( 0,
+		new wxStaticText( this, wxID_ANY,
+			pxE( ".Dialogs:SettingsDirPicker",
+				L"You may optionally specify a location for your PCSX2 settings here.  If the location \n"
+				L"contains existing PCSX2 settings, you will be given the option to import or overwrite them."
+			), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
+		), wxSizerFlags().Expand().Border( wxBOTTOM, 6 )
+	);
+	
+	SetSizerAndFit( GetSizer(), false );
+}
+
+
+// ----------------------------------------------------------------------------
+FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
+	wxWizardPageSimple( (g_ApplyState.SetCurrentPage( 0 ), parent) )
+
+,	m_dirpick_settings( *new SettingsDirPickerPanel( this ) )
+,	m_panel_LangSel( *new LanguageSelectionPanel( *this, 608 ) )
+,	m_panel_UserSel( *new UsermodeSelectionPanel( *this, 608 ) )
+
+{
+	wxBoxSizer& usermodeSizer( *new wxBoxSizer( wxVERTICAL ) );
+	AddStaticTextTo( this, usermodeSizer, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
+
+	usermodeSizer.Add( &m_panel_LangSel, SizerFlags::StdCenter() );
+	usermodeSizer.Add( &m_panel_UserSel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
+
+	usermodeSizer.AddSpacer( 6 );
+	usermodeSizer.Add( &m_dirpick_settings, SizerFlags::SubGroup() );
+	SetSizerAndFit( &usermodeSizer );
+
+	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(FirstTimeWizard::UsermodePage::OnUsermodeChanged) );
+}
+
+void FirstTimeWizard::UsermodePage::OnUsermodeChanged( wxCommandEvent& evt )
+{
+	m_panel_UserSel.Apply( *g_Conf );	// this assigns the current user mode to g_ApplyState.UseAdminMode
+	if( g_ApplyState.UseAdminMode == UseAdminMode ) return;
+
+	UseAdminMode = g_ApplyState.UseAdminMode;
+	g_Conf->Folders.ApplyDefaults();
+	m_dirpick_settings.Reset();
+}
+
+// ----------------------------------------------------------------------------
 FirstTimeWizard::FirstTimeWizard( wxWindow* parent ) :
 	wxWizard( (g_ApplyState.StartWizard(), parent), wxID_ANY, _("PCSX2 First Time Configuration") )
-,	m_page_usermode( *new wxWizardPageSimple( this ) )
-//,	m_page_paths( *new wxWizardPageSimple( this, &m_page_usermode ) )
+,	m_page_usermode( *new UsermodePage( this ) )
 ,	m_page_plugins( *new wxWizardPageSimple( this, &m_page_usermode ) )
+,	m_page_bios( *new wxWizardPageSimple( this, &m_page_plugins ) )
 
-,	m_panel_LangSel( MakeWizWidget<LanguageSelectionPanel>( 0, m_page_usermode ) )
-,	m_panel_UsermodeSel( MakeWizWidget<UsermodeSelectionPanel>( 0, m_page_usermode ) )
-,	m_panel_Paths( MakeWizWidget<AdvancedPathsPanel>( 0, m_page_usermode ) )
 ,	m_panel_PluginSel( MakeWizWidget<PluginSelectorPanel>( 1, m_page_plugins ) )
+,	m_panel_BiosSel( MakeWizWidget<BiosSelectorPanel>( 2, m_page_bios ) )
 {
-	// Page 1 - User Mode and Language Selectors
-	wxBoxSizer& usermodeSizer( *new wxBoxSizer( wxVERTICAL ) );
-	AddStaticTextTo( &m_page_usermode, usermodeSizer, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
-	usermodeSizer.Add( &m_panel_LangSel, SizerFlags::StdCenter() );
-	usermodeSizer.Add( &m_panel_UsermodeSel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
-
-	//AddStaticTextTo( this, usermodeSizer, _( "Advanced users can optionally configure these folders." ) );
-	usermodeSizer.AddSpacer( 6 );
-	usermodeSizer.Add( &m_panel_Paths, wxSizerFlags().Expand().Border( wxALL, 4 ) );
-	m_page_usermode.SetSizerAndFit( &usermodeSizer );
-
-	// Page 2 - Advanced Paths Panel
-	/*wxBoxSizer& pathsSizer( *new wxBoxSizer( wxVERTICAL ) );
-	pathsSizer.Add( &m_panel_Paths, SizerFlags::StdExpand() );
-	m_page_paths.SetSizerAndFit( &pathsSizer );*/
-
-	// Page 3 - Plugins Panel
+	// Page 2 - Plugins Panel
 	wxBoxSizer& pluginSizer( *new wxBoxSizer( wxVERTICAL ) );
 	pluginSizer.Add( &m_panel_PluginSel, SizerFlags::StdExpand() );
 	m_page_plugins.SetSizerAndFit( &pluginSizer );
 
 	// Assign page indexes as client data
 	m_page_usermode.SetClientData	( (void*)0 );
-	//m_page_paths.SetClientData		( (void*)1 );
 	m_page_plugins.SetClientData	( (void*)1 );
+	m_page_bios.SetClientData		( (void*)2 );
 
 	// Build the forward chain:
 	//  (backward chain is built during initialization above)
 	m_page_usermode.SetNext	( &m_page_plugins );
-	//m_page_paths.SetNext	( &m_page_plugins );
+	m_page_plugins.SetNext	( &m_page_bios );
 
 	GetPageAreaSizer()->Add( &m_page_usermode );
 	CenterOnScreen();
 
-	Connect( wxEVT_WIZARD_PAGE_CHANGED,				wxWizardEventHandler( FirstTimeWizard::OnPageChanged ) );
-	Connect( wxEVT_WIZARD_PAGE_CHANGING,			wxWizardEventHandler( FirstTimeWizard::OnPageChanging ) );
-
-	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(FirstTimeWizard::OnUsermodeChanged) );
+	Connect( wxEVT_WIZARD_PAGE_CHANGED,		wxWizardEventHandler( FirstTimeWizard::OnPageChanged ) );
+	Connect( wxEVT_WIZARD_PAGE_CHANGING,	wxWizardEventHandler( FirstTimeWizard::OnPageChanging ) );
 }
 
 FirstTimeWizard::~FirstTimeWizard()
@@ -91,45 +128,48 @@ FirstTimeWizard::~FirstTimeWizard()
 
 void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 {
+	if( evt.GetPage() == NULL ) return;		// safety valve!
+
+	int page = (int)evt.GetPage()->GetClientData();
+
 	//evt.Skip();
 	if( evt.GetDirection() )
 	{
 		// Moving forward:
 		//   Apply settings from the current page...
 
-		int page = (int)evt.GetPage()->GetClientData();
-
 		if( page >= 0 )
 		{
-			if( !g_ApplyState.ApplyPage( page ) )
+			if( !g_ApplyState.ApplyPage( page, false ) )
 			{
 				evt.Veto();
 				return;
 			}
-			AppConfig_ReloadGlobalSettings( true );		// ... and overwrite any existing settings
-
-			// [TODO] : The user should be prompted if they want to overwrite existing
-			// settings or import them instead.
 		}
 
 		if( page == 0 )
 		{
-			// test plugins folder for validity.  If it doesn't exist or is empty then
-			// the user needs to "try again" :)
-			
-			if( !g_Conf->Folders.Plugins.Exists() )
+			if( wxFile::Exists( g_Conf->FullPathToConfig() ) )
 			{
-				Msgbox::Alert( _( "The selected plugins folder does not exist.  You must select a valid PCSX2 plugins folder that exists and contains plugins." ) );
-				evt.Veto();
-			}
-			else
-			{
-				if( 0 == EnumeratePluginsFolder(NULL) )
+				// Asks the user if they want to import or overwrite the existing settings.
+				
+				Dialogs::ImportSettingsDialog modal( this );
+				if( modal.ShowModal() != wxID_OK )
 				{
-					Msgbox::Alert( _( "The selected plugins folder is empty.  You must select a valid PCSX2 plugins folder that actually contains plugins." ) );
 					evt.Veto();
+					return;
 				}
 			}
+		}
+	}
+	else
+	{
+		// Moving Backward:
+		//   Some specific panels need per-init actions canceled.
+
+		if( page == 1 )
+		{
+			m_panel_PluginSel.CancelRefresh();
 		}
 	}
 }
@@ -139,19 +179,7 @@ void FirstTimeWizard::OnPageChanged( wxWizardEvent& evt )
 	// Plugin Selector needs a special OnShow hack, because Wizard child panels don't
 	// receive any Show events >_<
 	if( (sptr)evt.GetPage() == (sptr)&m_page_plugins )
-		m_panel_PluginSel.OnShow();
-}
-
-void FirstTimeWizard::OnUsermodeChanged( wxCommandEvent& evt )
-{
-	//wxLogError( L"Awesome" );
-
-	m_panel_UsermodeSel.Apply( *g_Conf );	// this assigns the current user mode to g_ApplyState.UseAdminMode
-	if( g_ApplyState.UseAdminMode == UseAdminMode ) return;
-
-	UseAdminMode = g_ApplyState.UseAdminMode;
-	g_Conf->Folders.ApplyDefaults();
-	m_panel_Paths.Reset();
+		m_panel_PluginSel.OnShown();
 }
 
 /*

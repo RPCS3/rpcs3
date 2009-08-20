@@ -117,8 +117,10 @@ namespace Threading
 	//    no dependency options for ensuring correct static var initializations).  Use heap
 	//    allocation to create thread objects instead.
 	//
-	class PersistentThread : NoncopyableObject
+	class PersistentThread
 	{
+		DeclareNoncopyableObject(PersistentThread)
+
 	protected:
 		typedef int (*PlainJoeFP)();
 		pthread_t	m_thread;
@@ -169,8 +171,10 @@ namespace Threading
 	// Using this class provides an exception-safe (and generally clean) method of locking
 	// code inside a function or conditional block.
 	//
-	class ScopedLock : public NoncopyableObject
+	class ScopedLock
 	{
+		DeclareNoncopyableObject(ScopedLock)
+	
 	protected:
 		MutexLock& m_lock;
 		bool m_IsLocked;

@@ -22,45 +22,6 @@
 
 extern void DevAssert( bool condition, const char* msg );
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// This class provides an easy and clean method for ensuring objects are not copyable.
-//
-class NoncopyableObject
-{
-protected:
-	NoncopyableObject() {}
-	~NoncopyableObject() {}		// intentionally non-virtual (code should never use this as a polymorphic type)
-
-// Programmer's note:
-//   No need to provide implementations for these methods since they should
-//   never be referenced anyway.  No references?  No Linker Errors!  Noncopyable!
-private:
-	// Copy me?  I think not!
-	explicit NoncopyableObject( const NoncopyableObject& );
-	// Assign me?  I think not!
-	const NoncopyableObject& operator=( const NoncopyableObject& );
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Base class used to implement type-safe sealed classes.
-// This class should never be used directly.  Use the Sealed macro instead, which ensures
-// all sealed classes derive from a unique BaseSealed (preventing them from accidentally
-// circumventing sealing by inheriting from multiple sealed classes.
-//
-template < int T >
-class __BaseSealed
-{
-protected:
-	__BaseSealed()
-	{
-	}
-};
-
-// Use this macro/class as a base to seal a class from being derived from.
-// This macro works by providing a unique base class with a protected constructor
-// for every class that derives from it. 
-#define Sealed private virtual __BaseSealed<__COUNTER__>
-
 namespace Exception
 {
 	//////////////////////////////////////////////////////////////////////////////////

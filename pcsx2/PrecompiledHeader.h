@@ -77,6 +77,7 @@ typedef int BOOL;
 #include "i18n.h"
 #include "Paths.h"
 #include "Config.h"
+#include "Utilities/wxBaseTools.h"
 #include "Utilities/Console.h"
 #include "Utilities/Exceptions.h"
 #include "Utilities/MemcpyFast.h"

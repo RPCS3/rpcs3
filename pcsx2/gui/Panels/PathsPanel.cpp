@@ -19,77 +19,10 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
-#include <wx/notebook.h>
 #include <wx/stdpaths.h>
 
 using namespace wxHelpers;
 static const int BetweenFolderSpace = 5;
-
-static wxString GetNormalizedConfigFolder( FoldersEnum_t folderId )
-{
-	const bool isDefault = g_Conf->Folders.IsDefault( folderId );
-	wxDirName normalized( isDefault ? g_Conf->Folders[folderId] : PathDefs::Get(folderId) );
-	normalized.Normalize( wxPATH_NORM_ALL );
-	return normalized.ToString();
-}	
-
-// Pass me TRUE if the default path is to be used, and the DirPcikerCtrl disabled from use.
-void Panels::DirPickerPanel::UpdateCheckStatus( bool someNoteworthyBoolean )
-{
-	m_pickerCtrl->Enable( !someNoteworthyBoolean );
-	if( someNoteworthyBoolean )
-	{
-		wxDirName normalized( PathDefs::Get( m_FolderId ) );
-		normalized.Normalize( wxPATH_NORM_ALL );
-		m_pickerCtrl->SetPath( normalized.ToString() );
-	}
-}
-
-void Panels::DirPickerPanel::UseDefaultPath_Click(wxCommandEvent &event)
-{
-	wxASSERT( m_pickerCtrl != NULL && m_checkCtrl != NULL );
-	UpdateCheckStatus( m_checkCtrl->IsChecked() );
-}
-
-// ------------------------------------------------------------------------
-// If initPath is NULL, then it's assumed the default folder is to be used, which is
-// obtained from invoking the specified getDefault() function.
-//
-Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid,
-		const wxString& label, const wxString& dialogLabel ) :
-	BaseApplicableConfigPanel( parent, wxDefaultCoord )
-,	m_FolderId( folderid )
-{
-	wxStaticBoxSizer& s_box = *new wxStaticBoxSizer( wxVERTICAL, this, label );
-
-	// Force the Dir Picker to use a text control.  This isn't standard on Linux/GTK but it's much
-	// more usable, so to hell with standards.
-
-	m_pickerCtrl = new wxDirPickerCtrl( this, wxID_ANY, GetNormalizedConfigFolder( m_FolderId ), dialogLabel,
-		wxDefaultPosition, wxDefaultSize, wxDIRP_USE_TEXTCTRL | wxDIRP_DIR_MUST_EXIST
-	);
-
-	s_box.Add( m_pickerCtrl, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5).Expand() );
-	m_checkCtrl = &AddCheckBox( s_box, _("Use installation default setting") );
-
-	const bool isDefault = g_Conf->Folders.IsDefault( m_FolderId );
-	m_checkCtrl->SetValue( isDefault );
-	UpdateCheckStatus( isDefault );
-
-	SetSizerAndFit( &s_box );
-
-	Connect( m_checkCtrl->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( DirPickerPanel::UseDefaultPath_Click ) );
-}
-
-void Panels::DirPickerPanel::Reset()
-{
-	m_pickerCtrl->SetPath( GetNormalizedConfigFolder( m_FolderId ) );
-}
-
-void Panels::DirPickerPanel::Apply( AppConfig& conf )
-{
-	conf.Folders.Set( m_FolderId, m_pickerCtrl->GetPath(), m_checkCtrl->GetValue() );
-}
 
 // ------------------------------------------------------------------------
 Panels::BasePathsPanel::BasePathsPanel( wxWindow& parent, int idealWidth ) :
@@ -110,16 +43,6 @@ Panels::DirPickerPanel& Panels::BasePathsPanel::AddDirPicker( wxBoxSizer& sizer,
 Panels::StandardPathsPanel::StandardPathsPanel( wxWindow& parent ) :
 	BasePathsPanel( parent )
 {
-	// TODO : Replace the callback mess here with the new FolderId enumeration setup. :)
-
-	AddDirPicker( s_main, FolderId_Bios,
-		_("Bios:"),
-		_("Select folder with PS2 Bios") ).
-		SetToolTip( pxE( ".Tooltips:Folders:Bios",
-			L"This folder is where PCSX2 looks to find PS2 bios files.  The actual bios used can be "
-			L"selected from the CPU dialog."
-		) );
-
 	s_main.AddSpacer( BetweenFolderSpace );
 	AddDirPicker( s_main, FolderId_Savestates,
 		_("Savestates:"),
@@ -160,78 +83,3 @@ Panels::StandardPathsPanel::StandardPathsPanel( wxWindow& parent ) :
 	SetSizerAndFit( &s_main );
 }
 
-// ------------------------------------------------------------------------
-Panels::AdvancedPathsPanel::AdvancedPathsPanel( wxWindow& parent, int idealWidth ) :
-	BasePathsPanel( parent, idealWidth-9 )
-
-,	m_dirpick_plugins(
-		AddDirPicker( s_main, FolderId_Plugins,
-			_("Plugins folder:"),
-			_("Select a PCSX2 plugins folder")
-		)
-	)
-
-,	m_dirpick_settings( (
-		s_main.AddSpacer( BetweenFolderSpace ),
-		AddDirPicker( s_main, FolderId_Settings,
-			_("Settings folder:"),
-			_("Select location to save PCSX2 settings to")
-		)
-	) )
-{
-	m_dirpick_plugins.SetToolTip( pxE( ".Tooltips:Folders:Plugins",
-		L"This is the location where PCSX2 will expect to find its plugins. Plugins found in this folder "
-		L"will be enumerated and are selectable from the Plugins panel."
-	) );
-
-	m_dirpick_settings.SetToolTip( pxE( ".Tooltips:Folders:Settings",
-		L"This is the folder where PCSX2 saves all settings, including settings generated "
-		L"by most plugins.\n\nWarning: Some older versions of plugins may not respect this value."
-	) );
-
-	SetSizerAndFit( &s_main );
-}
-
-void Panels::AdvancedPathsPanel::Reset()
-{
-	m_dirpick_plugins.Reset();
-	m_dirpick_settings.Reset();
-}
-
-// ------------------------------------------------------------------------
-Panels::TabbedPathsPanel::TabbedPathsPanel( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
-{
-	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
-	wxNotebook& notebook = *new wxNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNB_BOTTOM | wxNB_FIXEDWIDTH );
-
-	StandardPathsPanel& stah( *new StandardPathsPanel( notebook ) );
-	AdvancedPathsPanel& apah( *new AdvancedPathsPanel( notebook, GetIdealWidth() ) );
-	notebook.AddPage( &stah,	_("Standard") );
-	notebook.AddPage( &apah,	_("Advanced") );
-
-	// Advanced Tab uses the Advanced Panel with some extra features.
-	// This is because the extra features are not present on the Wizard version of the Advanced Panel.
-
-	wxStaticBoxSizer& advanced = *new wxStaticBoxSizer( wxVERTICAL, this, _("Advanced") );
-	AddStaticText( advanced, pxE( ".Panels:Folders:Advanced",
-		L"Warning!! These advanced options are provided for developers and advanced testers only. "
-		L"Changing these settings can cause program errors and may require administration privlidges, "
-		L"so please be weary."
-	) );
-
-	advanced.Add( new UsermodeSelectionPanel( *this, GetIdealWidth()-9 ), SizerFlags::SubGroup() );
-	advanced.AddSpacer( 4 );
-	advanced.Add( &apah.Sizer(), SizerFlags::SubGroup() );
-
-	apah.SetSizer( &advanced, false );
-	apah.Fit();
-
-	s_main.Add( &notebook, SizerFlags::StdSpace() );
-
-	SetSizerAndFit( &s_main );
-}
-
-void Panels::TabbedPathsPanel::Apply( AppConfig& conf )
-{
-}

@@ -109,7 +109,7 @@ protected:
 extern const PluginInfo tbl_PluginInfo[];
 extern PluginManager* g_plugins;
 
-extern int EnumeratePluginsFolder( wxArrayString* dest );
+extern int EnumeratePluginsInFolder( wxDirName& searchPath, wxArrayString* dest );
 
 
 void LoadPlugins();

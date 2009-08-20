@@ -30,11 +30,12 @@
 // who ever wrote the code of wxWidgets had a peculiar love of the 'private' keyword,
 // thus killing any possibility of subclassing in a useful manner.  (sigh)
 
-
-DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
-DECLARE_EVENT_TYPE(wxEVT_LOG_Newline, -1)
-DECLARE_EVENT_TYPE(wxEVT_SetTitleText, -1)
-DECLARE_EVENT_TYPE(wxEVT_SemaphoreWait, -1);
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
+	DECLARE_EVENT_TYPE(wxEVT_LOG_Newline, -1)
+	DECLARE_EVENT_TYPE(wxEVT_SetTitleText, -1)
+	DECLARE_EVENT_TYPE(wxEVT_SemaphoreWait, -1);
+END_DECLARE_EVENT_TYPES()
 
 DEFINE_EVENT_TYPE(wxEVT_LOG_Write)
 DEFINE_EVENT_TYPE(wxEVT_LOG_Newline)
