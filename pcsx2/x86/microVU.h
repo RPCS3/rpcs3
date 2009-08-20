@@ -159,6 +159,7 @@ struct microVU {
 	u32		VIbackup;	 // Holds a backup of a VI reg if modified before a branch
 	u32		VIxgkick;	 // Holds a backup of a VI reg used for xgkick-delays
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
+	u32		badBranch;	 // For Branches in Branch Delay Slots, holds Address the first Branch went to + 8
 	u32		evilBranch;	 // For Branches in Branch Delay Slots, holds Address to Jump to
 	u32		p;			 // Holds current P instance index
 	u32		q;			 // Holds current Q instance index

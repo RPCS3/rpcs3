@@ -206,14 +206,16 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mFLAG		 mVUinfo.mFlag
 #define cFLAG		 mVUinfo.cFlag
 #define mVUrange	 mVUcurProg.ranges.range[mVUcurProg.ranges.total]
-#define _isBlock2	 (mVUpBlock->pState.blockType == 2)
+#define isEvilBlock	 (mVUpBlock->pState.blockType == 2)
+#define isBadOrEvil  (mVUlow.badBranch || mVUlow.evilBranch)
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
-#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
+#define branchAddr	 ((xPC + 8  + (_Imm11_ * 8)) & (mVU->microMemSize-8))
+#define branchAddrN	 ((xPC + 16 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[mVUprogI.ranges.range[i][0]]))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL

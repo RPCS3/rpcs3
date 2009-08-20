@@ -393,6 +393,7 @@ microVUt(int) mVUbranchCheck(mV) {
 	if (!mVUcount) return 0;
 	incPC(-2);
 	if (mVUlow.branch) {
+		mVUlow.badBranch  = 1;
 		incPC(2);
 		mVUlow.evilBranch = 1;
 		mVUregs.blockType = 2;
