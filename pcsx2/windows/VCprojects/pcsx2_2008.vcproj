@@ -215,7 +215,7 @@
 				PreprocessorDefinitions="NDEBUG"
 				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="0"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				CompileAs="2"
