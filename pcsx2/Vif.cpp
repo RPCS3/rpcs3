@@ -469,13 +469,13 @@ void mfifoVIF1transfer(int qwc)
 		}
 		
 		Tag::UnsafeTransfer(vif1ch, ptag);
-
-		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
-		        ptag[1], ptag[0], vif1ch->qwc, id, vif1ch->madr, vif1ch->tadr, vifqwc, spr0->madr);
 		
 		vif1ch->madr = ptag[1];
 		id =Tag::Id(ptag);
 		vifqwc--;
+
+		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
+        ptag[1], ptag[0], vif1ch->qwc, id, vif1ch->madr, vif1ch->tadr, vifqwc, spr0->madr);
 
 		switch (id)
 		{

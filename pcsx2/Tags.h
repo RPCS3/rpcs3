@@ -293,19 +293,19 @@ namespace D_CTRL
 {
 	static __forceinline bool DMAE() { return !!(psHu32(DMAC_CTRL) & CTRL_DMAE); }
 	static __forceinline bool RELE() { return !!(psHu32(DMAC_CTRL) & CTRL_RELE); }
-	static __forceinline bool MFD() 
+	static __forceinline mfd_type MFD() 
 	{ 
 		return (mfd_type)((psHu32(DMAC_CTRL) & CTRL_MFD) >> 2);
 	}
-	static __forceinline bool STS() 
+	static __forceinline sts_type STS() 
 	{ 
-		return (sts_type)((psHu32(DMAC_CTRL) & CTRL_STS) >> 2);
+		return (sts_type)((psHu32(DMAC_CTRL) & CTRL_STS) >> 4);
 	}
-	static __forceinline bool STD() 
+	static __forceinline std_type STD() 
 	{ 
-		return (std_type)((psHu32(DMAC_CTRL) & CTRL_STD) >> 2);
+		return (std_type)((psHu32(DMAC_CTRL) & CTRL_STD) >> 6);
 	}
-	static __forceinline bool RCLC() 
+	static __forceinline int RCLC() 
 	{ 
 		return ((((psHu32(DMAC_CTRL) & CTRL_RCYC) >> 3) + 1) * 8);
 	}
