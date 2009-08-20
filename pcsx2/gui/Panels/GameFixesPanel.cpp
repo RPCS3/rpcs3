@@ -41,11 +41,11 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 		L"will need to turn off fixes manually when changing games."
 	));
 
-	SetSizerAndFit( &mainSizer );
+	SetSizer( &mainSizer );
 
 }
 
 void Panels::GameFixesPanel::Apply( AppConfig& conf )
 {
-	
+
 }

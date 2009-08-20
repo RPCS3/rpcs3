@@ -1,20 +1,20 @@
 /*  Pcsx2 - Pc Ps2 Emulator
-*  Copyright (C) 2009  Pcsx2 Team
-*
-*  This program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; either version 2 of the License, or
-*  (at your option) any later version.
-*  
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*  
-*  You should have received a copy of the GNU General Public License
-*  along with this program; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-*/
+ *  Copyright (C) 2009  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
 
 #pragma once
 
@@ -28,13 +28,14 @@
 
 // Note: If modXYZW is true, then it adjusts XYZW for Single Scalar operations
 microVUt(void) mVUupdateFlags(mV, int reg, int regT1 = -1, int regT2 = -1, bool modXYZW = 1) {
-	int sReg, mReg = gprT1, xyzw = _X_Y_Z_W, regT1b = 0, regT2b = 0;
+	int sReg, mReg = gprT1, regT1b = 0, regT2b = 0;
+	//int xyzw = _X_Y_Z_W;	// unused local, still needed? -- air
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
 	if (mVUsFlagHack) { sFLAG.doFlag = 0; }
 	if (!sFLAG.doFlag && !mFLAG.doFlag) { return; }
-	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) { 
+	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) {
 		if (regT2 < 0) { regT2 = mVU->regAlloc->allocReg(); regT2b = 1; }
 		SSE2_PSHUFD_XMM_to_XMM(regT2, reg, 0x1B); // Flip wzyx to xyzw
 	}
@@ -82,7 +83,7 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1 = -1, int regT2 = -1, bool 
 // Helper Macros and Functions
 //------------------------------------------------------------------
 
-static void (*SSE_PS[]) (microVU*, int, int, int, int) = { 
+static void (*SSE_PS[]) (microVU*, int, int, int, int) = {
 	SSE_ADDPS, // 0
 	SSE_SUBPS, // 1
 	SSE_MULPS, // 2
@@ -91,8 +92,8 @@ static void (*SSE_PS[]) (microVU*, int, int, int, int) = {
 	SSE_ADD2PS // 5
 };
 
-static void (*SSE_SS[]) (microVU*, int, int, int, int) = { 
-	SSE_ADDSS, // 0 
+static void (*SSE_SS[]) (microVU*, int, int, int, int) = {
+	SSE_ADDSS, // 0
 	SSE_SUBSS, // 1
 	SSE_MULSS, // 2
 	SSE_MAXSS, // 3
@@ -155,7 +156,7 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		opCase1 { if((opType == 2) && _XYZW_PS)	{ mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
 		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
 		opCase2 { if (opType == 2)				{ mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
-		
+
 		if (_XYZW_SS) SSE_SS[opType](mVU, Fs, Ft, -1, -1);
 		else		  SSE_PS[opType](mVU, Fs, Ft, -1, -1);
 
@@ -167,7 +168,7 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 			mVU->regAlloc->clearNeeded(ACC);
 		}
 		else mVUupdateFlags(mVU, Fs, tempFt);
-		
+
 		mVU->regAlloc->clearNeeded(Fs); // Always Clear Written Reg First
 		mVU->regAlloc->clearNeeded(Ft);
 	}
@@ -192,7 +193,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 
 		if (_XYZW_SS || _X_Y_Z_W == 0xf) {
 			if (_XYZW_SS) SSE_SS[opType](mVU, ACC, Fs, tempFt, -1);
-			else		  SSE_PS[opType](mVU, ACC, Fs, tempFt, -1);	  
+			else		  SSE_PS[opType](mVU, ACC, Fs, tempFt, -1);
 			mVUupdateFlags(mVU, ACC, Fs, tempFt);
 			if (_XYZW_SS && _X_Y_Z_W != 8) SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W));
 		}
@@ -248,10 +249,10 @@ void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName) {
 
 		Fs = mVU->regAlloc->allocReg(_Fs_,  0, _X_Y_Z_W);
 		Fd = mVU->regAlloc->allocReg(32, _Fd_, _X_Y_Z_W);
-		
+
 		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[1](mVU, Fd, Fs, tempFt, -1); }
 		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[1](mVU, Fd, Fs, tempFt, -1); }
-	
+
 		mVUupdateFlags(mVU, Fd, Fs, tempFt);
 
 		mVU->regAlloc->clearNeeded(Fd); // Always Clear Written Reg First
@@ -264,7 +265,7 @@ void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName) {
 // ABS Opcode
 mVUop(mVU_ABS) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
-	pass2 { 
+	pass2 {
 		if (!_Ft_) return;
 		int Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
 		SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_absclip);
@@ -274,7 +275,7 @@ mVUop(mVU_ABS) {
 }
 
 // OPMULA Opcode
-mVUop(mVU_OPMULA) { 
+mVUop(mVU_OPMULA) {
 	pass1 { mVUanalyzeFMAC1(mVU, 0, _Fs_, _Ft_); }
 	pass2 {
 		int Ft = mVU->regAlloc->allocReg(_Ft_,  0, _X_Y_Z_W);
@@ -291,7 +292,7 @@ mVUop(mVU_OPMULA) {
 }
 
 // OPMSUB Opcode
-mVUop(mVU_OPMSUB) { 
+mVUop(mVU_OPMSUB) {
 	pass1 { mVUanalyzeFMAC1(mVU, _Fd_, _Fs_, _Ft_); }
 	pass2 {
 		int Ft  = mVU->regAlloc->allocReg(_Ft_, 0, 0xf);
@@ -314,7 +315,7 @@ mVUop(mVU_OPMSUB) {
 // FTOI0/FTIO4/FTIO12/FTIO15 Opcodes
 void mVU_FTOIx(mP, uptr addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
-	pass2 { 
+	pass2 {
 		if (!_Ft_) return;
 		int Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
 		int t1 = mVU->regAlloc->allocReg();
@@ -341,14 +342,14 @@ void mVU_FTOIx(mP, uptr addr, const char* opName) {
 // ITOF0/ITOF4/ITOF12/ITOF15 Opcodes
 void mVU_ITOFx(mP, uptr addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
-	pass2 { 
+	pass2 {
 		if (!_Ft_) return;
 		int Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
-		
+
 		SSE2_CVTDQ2PS_XMM_to_XMM(Fs, Fs);
 		if (addr) { SSE_MULPS_M128_to_XMM(Fs, addr); }
 		//mVUclamp2(Fs, xmmT1, 15); // Clamp (not sure if this is needed)
-		
+
 		mVU->regAlloc->clearNeeded(Fs);
 	}
 	pass3 { mVUlog(opName); mVUlogFtFs(); }

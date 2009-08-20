@@ -50,10 +50,10 @@ const wxChar* Panels::SpeedHacksPanel::GetEEcycleSliderMsg( int val )
 				L"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* cause studdering "
 				L"audio on many FMVs."
 			);
-			
+
 		jNO_DEFAULT
 	}
-	
+
 	return L"Unreachable Warning Suppressor!!";
 }
 
@@ -82,10 +82,10 @@ const wxChar* Panels::SpeedHacksPanel::GetVUcycleSliderMsg( int val )
 				L"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause flickering "
 				L"visuals or slowdown in most games."
 			);
-			
+
 		jNO_DEFAULT
 	}
-	
+
 	return L"Unreachable Warning Suppressor!!";
 }
 
@@ -96,7 +96,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 	wxFlexGridSizer& cycleHacksSizer = *new wxFlexGridSizer( 2 );
-	
+
 	cycleHacksSizer.AddGrowableCol( 0, 1 );
 	cycleHacksSizer.AddGrowableCol( 1, 1 );
 
@@ -114,16 +114,16 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 
 	// ------------------------------------------------------------------------
 	// EE Cyclerate Hack Section:
-	
+
 	m_slider_eecycle = new wxSlider( this, wxID_ANY, opts.EECycleRate+1, 1, 3,
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
-	
+
 	tooltip = pxE( ".Tooltips:Speedhacks:EECycleRate Slider",
 		L"Setting higher values on this slider effectively reduces the clock speed of the EmotionEngine's "
 		L"R5900 core cpu, and typically brings big speedups to games that fail to utilize "
 		L"the full potential of the real PS2 hardware."
 	);
-	
+
 	cyclerateSizer.Add( m_slider_eecycle, sliderFlags );
 	m_msg_eecycle = &AddStaticText( cyclerateSizer, GetEEcycleSliderMsg( opts.EECycleRate+1 ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
 	m_msg_eecycle->SetForegroundColour( wxColour( L"Red" ) );
@@ -145,7 +145,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	// Misc help text that I might find a home for later:
 	// Cycle stealing works by 'fast-forwarding' the EE by an arbitrary number of cycles whenever VU1 micro-programs
 	// are run, which works as a rough-guess skipping of what would normally be idle time spent running on the EE.
-		
+
 	stealerSizer.Add( m_slider_vustealer, wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
 	m_msg_vustealer = &AddStaticText(stealerSizer, GetVUcycleSliderMsg( opts.VUCycleSteal ), wxALIGN_CENTRE, (GetIdealWidth()-24)/2 );
 	m_msg_vustealer->SetForegroundColour( wxColour( L"Red" ) );
@@ -184,7 +184,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 
 	mainSizer.Add( &cycleHacksSizer, wxSizerFlags().Expand() );
 	mainSizer.Add( &miscSizer, SizerFlags::TopLevelBox() );
-	SetSizerAndFit( &mainSizer );
+	SetSizer( &mainSizer );
 
 	Connect( m_slider_eecycle->GetId(),		wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::EECycleRate_Scroll ) );
 	Connect( m_slider_vustealer->GetId(),	wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::VUCycleRate_Scroll ) );

@@ -53,6 +53,8 @@ extern void vSyncDebugStuff( uint frame );
 
 #ifdef __LINUX__
 
+#	include <signal.h>
+
 	extern void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
 	extern void __fastcall InstallLinuxExceptionHandler();
 	extern void __fastcall ReleaseLinuxExceptionHandler();

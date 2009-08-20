@@ -106,7 +106,7 @@ namespace wxHelpers
 			return StdExpand();
 		}
 	};
-	
+
 	// This method is used internally to create multi line checkboxes and radio buttons.
 	void _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxString& subtext, const wxString& tooltip, int wrapLen )
 	{
@@ -134,7 +134,7 @@ namespace wxHelpers
 		sizer.Add( retval, SizerFlags::Checkbox() );
 
 		if( !tooltip.IsEmpty() )
-			retval->SetToolTip( tooltip );	
+			retval->SetToolTip( tooltip );
 
 		_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
 
@@ -154,7 +154,7 @@ namespace wxHelpers
 		sizer.Add( retval, SizerFlags::Checkbox() );
 
 		if( !tooltip.IsEmpty() )
-			retval->SetToolTip( tooltip );	
+			retval->SetToolTip( tooltip );
 
 		_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
 
@@ -200,9 +200,7 @@ namespace wxHelpers
 	//
 	void Launch( const wxString& filename )
 	{
-		if( !wxLaunchDefaultBrowser( filename ) )
-		{
-		}
+		wxLaunchDefaultBrowser( filename );
 	}
 
 	void Launch(const char *filename)
@@ -212,16 +210,13 @@ namespace wxHelpers
 
 	// ------------------------------------------------------------------------
 	// Launches a file explorer window on the specified path.  If the given path is not
-	// a qualified URI (with a prefix:// ), file:// is automatically prepended.
+	// a qualified URI (with a prefix:// ), file:// is automatically prepended.  This
+	// bypasses wxWidgets internal filename checking, which can end up launching things
+	// through browser more often than desired.
 	//
 	void Explore( const wxString& path )
 	{
-		if( wxLaunchDefaultBrowser(
-			!path.Contains( L"://") ? L"file://" + path : path )
-		)
-		{
-			// WARN_LOG
-		}
+		wxLaunchDefaultBrowser( !path.Contains( L"://") ? L"file://" + path : path );
 	}
 
 	void Explore(const char *path)

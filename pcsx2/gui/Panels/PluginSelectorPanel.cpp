@@ -133,7 +133,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent ) :
 	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
 	s_main.Add( &m_label, SizerFlags::StdExpand() );
 
-	SetSizerAndFit( &s_main );
+	SetSizer( &s_main );
 }
 
 void Panels::PluginSelectorPanel::StatusPanel::SetGaugeLength( int len )
@@ -185,13 +185,17 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 	s_main.AddSpacer( 6 );
 	s_main.Add( &m_FolderPicker, SizerFlags::StdExpand() );
 
-	SetSizerAndFit( &s_main );
+	SetSizer( &s_main );
 }
 
 void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 {
 	for( int i=0; i<NumPluginTypes; ++i )
+	{
 		m_combobox[i]->Clear();
+		m_combobox[i]->SetSelection( wxNOT_FOUND );
+		m_combobox[i]->SetValue( wxEmptyString );
+	}
 }
 
 // ------------------------------------------------------------------------
@@ -204,7 +208,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 {
 	// note: the status panel is a floating window, so that it can be positioned in the
 	// center of the dialog after it's been fitted to the contents.
-	
+
 	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
 	s_main.Add( &m_ComponentBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
@@ -216,7 +220,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 	//s_main.Add( refresh );
 	//Connect( refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnRefresh ) );
 
-	SetSizerAndFit( &s_main );
+	SetSizer( &s_main );
 
 	Connect( wxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
 	Connect( wxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
@@ -235,14 +239,14 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 		if( sel == wxNOT_FOUND )
 		{
 			wxString plugname( wxString::FromAscii( tbl_PluginInfo[i].shortname ) );
-			
+
 			throw Exception::CannotApplySettings( this,
 				// English Log
 				wxsFormat( L"User did not specify a valid selection for the %s plugin.", plugname.c_str() ),
 
 				// Translated
 				wxsFormat( L"Please select a valid plugin for the %s.", plugname.c_str() ) + L"\n\n" +
-				pxE( ".Popup Error:Invalid Plugin Selection",	
+				pxE( ".Popup Error:Invalid Plugin Selection",
 					L"All plugins must have valid selections for PCSX2 to run.  If you are unable to make\n"
 					L"a valid selection due to missing plugins or an incomplete install of PCSX2, then\n"
 					L"press cancel to close the Configuration panel."
@@ -283,7 +287,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 {
 	bool validated = true;
-	
+
 	// re-enumerate plugins, and if anything changed then we need to wipe
 	// the contents of the combo boxes and re-enumerate everything.
 
@@ -321,14 +325,6 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 		else if( m_ComponentBoxes.Get(i).GetSelection() == wxNOT_FOUND )
 			m_ComponentBoxes.Get(i).SetSelection( 0 );
 	}
-
-	/*if( emptyBoxes > 0 )
-	{
-		Msgbox::Alert( pxE( ".Popup Error:Missing Plugins",
-				L"Critical Error: A valid plugin for one or more components of PCSX2 could not be found.\n"
-				L"If this is a fresh install of PCSX2 then your installation may be corrupted or incomplete.\n")
-		);
-	}*/
 
 	m_ComponentBoxes.Show();
 	m_StatusPanel.Hide();
@@ -438,7 +434,7 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 		yay.SetExtraLong( curidx );
 		m_master.GetEventHandler()->AddPendingEvent( yay );
 	}
-	
+
 	wxCommandEvent done( wxEVT_EnumerationFinished );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 

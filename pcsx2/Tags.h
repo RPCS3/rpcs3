@@ -22,7 +22,7 @@
 
 // Actually, looks like I didn't need templates after all... :)
 
-enum mfd_type 
+enum mfd_type
 {
 	NO_MFD,
 	MFD_RESERVED,
@@ -30,7 +30,7 @@ enum mfd_type
 	MFD_GIF
 };
 
-enum sts_type 
+enum sts_type
 {
 	NO_STS,
 	STS_SIF0,
@@ -38,7 +38,7 @@ enum sts_type
 	STS_fromIPU
 };
 
-enum std_type 
+enum std_type
 {
 	NO_STD,
 	STD_VIF1,
@@ -60,7 +60,7 @@ enum d_ctrl_flags
 
 enum pce_values
 {
-	PCE_NOTHING = 0, 
+	PCE_NOTHING = 0,
 	PCE_RESERVED,
 	PCE_DISABLED,
 	PCE_ENABLED
@@ -68,7 +68,7 @@ enum pce_values
 
 enum tag_id
 {
-	TAG_CNTS = 0,	
+	TAG_CNTS = 0,
 	TAG_REFE = 0, 	// Transfer Packet According to ADDR field, clear STR, and end
 	TAG_CNT, 		// Transfer QWC following the tag.
 	TAG_NEXT,		// Transfer QWC following tag. TADR = ADDR
@@ -82,7 +82,7 @@ enum tag_id
 enum chcr_flags
 {
 	CHCR_DIR = 0x1, 	// Direction: 0 - to memory, 1 - from memory. VIF1 & SIF2 only.
-	CHCR_MOD1 = 0x4, 
+	CHCR_MOD1 = 0x4,
 	CHCR_MOD2 = 0x8,
 	CHCR_MOD = 0xC, 	// MOD1 & MOD2; Holds which of the Transfer modes above is used.
 	CHCR_ASP1 = 0x10,
@@ -122,9 +122,9 @@ namespace Tag
 		{
 			Console::Error("%s BUSERR", params s);
 			UpperTransfer(tag, ptag);
-			
+
 			// Set BEIS (BUSERR) in DMAC_STAT register
-			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; 
+			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;
 			return false;
 		}
 		else
@@ -134,16 +134,16 @@ namespace Tag
 			return true;
 		}
 	}
-	
+
 	/*// Not sure if I'll need this one.
 	static __forceinline bool SafeTransfer(const char *s, DMACh *tag, u32* ptag)
 	{
 		if (ptag == NULL)  					 // Is ptag empty?
 		{
 			Console::Error("%s BUSERR", params s);
-			
+
 			// Set BEIS (BUSERR) in DMAC_STAT register
-			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; 
+			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;
 			return false;
 		}
 		else
@@ -153,40 +153,40 @@ namespace Tag
 			return true;
 		}
 	}*/
-	
+
 	static __forceinline void UnsafeTransfer(DMACh *tag, u32* ptag)
 	{
 		UpperTransfer(tag, ptag);
 		LowerTransfer(tag, ptag);
 	}
-	
+
 	// Untested
 	static __forceinline u16 QWC(u32 *tag)
 	{
 		return (tag[0] & 0xffff);
 	}
-	
+
 	// Untested
 	static __forceinline pce_values PCE(u32 *tag)
 	{
 		return (pce_values)((tag[0] >> 22) & 0x3);
 	}
-	
+
 	static __forceinline tag_id Id(u32* tag)
 	{
 		return (tag_id)((tag[0] >> 28) & 0x7);
 	}
-	
+
 	static __forceinline tag_id Id(u32 tag)
 	{
 		return (tag_id)((tag >> 28) & 0x7);
 	}
-	
+
 	static __forceinline bool IRQ(u32 *tag)
 	{
 		return !!(tag[0] >> 31);
 	}
-	
+
 	static __forceinline bool IRQ(u32 tag)
 	{
 		return !!(tag >> 31);
@@ -205,10 +205,10 @@ namespace CHCR
 	{
 		return (TransferMode)((tag->chcr & CHCR_MOD) >> 2);
 	}
-	
+
 	static __forceinline u8 ASP(DMACh *tag)
 	{
-		
+
 		return (TransferMode)((tag->chcr & CHCR_ASP) >> 4);
 	}
 
@@ -217,47 +217,47 @@ namespace CHCR
 	static __forceinline void clearTIE(DMACh *tag) { tag->chcr &= ~CHCR_TIE; }
 	static __forceinline void clearTTE(DMACh *tag) { tag->chcr &= ~CHCR_TTE; }
 	static __forceinline void clearDIR(DMACh *tag) { tag->chcr &= ~CHCR_DIR; }
-	
+
 	// Set them.
 	static __forceinline void setSTR(DMACh *tag) { tag->chcr |= CHCR_STR; }
 	static __forceinline void setTIE(DMACh *tag) { tag->chcr |= CHCR_TIE; }
 	static __forceinline void setTTE(DMACh *tag) { tag->chcr |= CHCR_TTE; }
 	static __forceinline void setDIR(DMACh *tag) { tag->chcr |= CHCR_DIR; }
-	
+
 	static __forceinline void setMOD(DMACh *tag, TransferMode mode)
 	{
 		if (mode & (1 << 0))
-			tag->chcr |= CHCR_MOD1; 
+			tag->chcr |= CHCR_MOD1;
 		else
-			tag->chcr &= CHCR_MOD1; 
-			
-		if (mode & (1 << 1)) 
+			tag->chcr &= CHCR_MOD1;
+
+		if (mode & (1 << 1))
 			tag->chcr |= CHCR_MOD2;
 		else
 			tag->chcr &= CHCR_MOD2;
 	}
-	
+
 	static __forceinline void setASP(DMACh *tag, u8 num)
 	{
 		if (num & (1 << 0))
-			tag->chcr |= CHCR_ASP1; 
+			tag->chcr |= CHCR_ASP1;
 		else
-			tag->chcr &= CHCR_ASP2; 
-			
-		if (num & (1 << 1)) 
+			tag->chcr &= CHCR_ASP2;
+
+		if (num & (1 << 1))
 			tag->chcr |= CHCR_ASP1;
 		else
 			tag->chcr &= CHCR_ASP2;
 	}
-	
+
 	// Print information about a chcr tag.
 	static __forceinline void Print(const char*  s, DMACh *tag)
 	{
 		u8 num_addr = ASP(tag);
 		TransferMode mode = MOD(tag);
-		
-		Console::Write("%s chcr %s mem: ", params s, (DIR(tag)) ? "from" : "to");
-		
+
+		Console::Write("%s chcr %s mem: ", params s, CHCR::DIR(tag) ? "from" : "to");
+
 		if (mode == NORMAL_MODE)
 			Console::Write(" normal mode; ");
 		else if (mode == CHAIN_MODE)
@@ -266,7 +266,7 @@ namespace CHCR
 			Console::Write(" interleave mode; ");
 		else
 			Console::Write(" ?? mode; ");
-		
+
 		if (num_addr != 0) Console::Write("ASP = %d;", params num_addr);
 		if (TTE(tag)) Console::Write("TTE;");
 		if (TIE(tag)) Console::Write("TIE;");
@@ -281,8 +281,8 @@ namespace QWC
 	{
 		return (tag->qwc == 0);
 	}
-	
-	
+
+
 	static __forceinline void Clear(DMACh *tag)
 	{
 		tag->qwc = 0;
@@ -293,20 +293,20 @@ namespace D_CTRL
 {
 	static __forceinline bool DMAE() { return !!(psHu32(DMAC_CTRL) & CTRL_DMAE); }
 	static __forceinline bool RELE() { return !!(psHu32(DMAC_CTRL) & CTRL_RELE); }
-	static __forceinline mfd_type MFD() 
-	{ 
+	static __forceinline mfd_type MFD()
+	{
 		return (mfd_type)((psHu32(DMAC_CTRL) & CTRL_MFD) >> 2);
 	}
-	static __forceinline sts_type STS() 
-	{ 
+	static __forceinline sts_type STS()
+	{
 		return (sts_type)((psHu32(DMAC_CTRL) & CTRL_STS) >> 4);
 	}
-	static __forceinline std_type STD() 
-	{ 
+	static __forceinline std_type STD()
+	{
 		return (std_type)((psHu32(DMAC_CTRL) & CTRL_STD) >> 6);
 	}
-	static __forceinline int RCLC() 
-	{ 
+	static __forceinline int RCLC()
+	{
 		return ((((psHu32(DMAC_CTRL) & CTRL_RCYC) >> 3) + 1) * 8);
 	}
 }

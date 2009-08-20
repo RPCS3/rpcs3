@@ -19,7 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "System.h"
 #include "SaveState.h"
-#include "ElfHeader.h"
+#include "Elfheader.h"
 #include "Plugins.h"
 #include "CoreEmuThread.h"
 
@@ -79,7 +79,7 @@ void CoreEmuThread::StateCheck()
 {
 	{
 		ScopedLock locker( m_lock_ExecMode );
-		
+
 		switch( m_ExecMode )
 		{
 			case ExecMode_Idle:
@@ -91,14 +91,14 @@ void CoreEmuThread::StateCheck()
 			// These are not the case statements you're looking for.  Move along.
 			case ExecMode_Running: break;
 			case ExecMode_Suspended: break;
-			
+
 			case ExecMode_Suspending:
 				m_ExecMode = ExecMode_Suspended;
 				m_SuspendEvent.Post();
 			break;
 		}
 	}
-	
+
 	while( (m_ExecMode == ExecMode_Suspended) && !m_Done )
 	{
 		m_ResumeEvent.Wait();
@@ -108,7 +108,7 @@ void CoreEmuThread::StateCheck()
 void CoreEmuThread::Start()
 {
 	if( IsRunning() ) return;
-	
+
 	m_running			= false;
 	m_ExecMode			= ExecMode_Idle;
 	m_Done				= false;
@@ -169,7 +169,7 @@ void CoreEmuThread::Resume()
 		m_resetRecompilers = false;
 		m_resetProfilers = false;
 	}
-	
+
 	m_ExecMode = ExecMode_Running;
 	m_ResumeEvent.Post();
 }
@@ -191,10 +191,10 @@ void CoreEmuThread::Suspend( bool isBlocking )
 
 		if( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Idle) )
 			return;
-			
+
 		if( m_ExecMode == ExecMode_Running )
 			m_ExecMode = ExecMode_Suspending;
-		
+
 		DevAssert( m_ExecMode == ExecMode_Suspending, "ExecMode should be nothing other than Suspended..." );
 	}
 

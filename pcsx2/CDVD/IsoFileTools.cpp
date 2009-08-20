@@ -5,21 +5,21 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-  
+
 #include "PrecompiledHeader.h"
 #include "IsoFileTools.h"
 
- #ifdef _WIN32
+#ifdef _WIN32
 #include <windows.h>
 
 void *_openfile(const char *filename, int flags)
@@ -54,11 +54,11 @@ int _seekfile(void *handle, u64 offset, int whence)
 {
 	u64 ofs = (u64)offset;
 	PLONG _ofs = (LONG*) & ofs;
-	
+
 //	Console::WriteLn("_seekfile %p, %d_%d", params handle, _ofs[1], _ofs[0]);
-	
+
 	SetFilePointer(handle, _ofs[0], &_ofs[1], (whence == SEEK_SET) ? FILE_BEGIN : FILE_END);
-	
+
 	return 0;
 }
 
@@ -71,7 +71,7 @@ int _readfile(void *handle, void *dst, int size)
 	return ret;
 }
 
-int _writefile(void *handle, void *src, int size)
+int _writefile(void *handle, const void *src, int size)
 {
 	DWORD ret;
 
@@ -94,18 +94,19 @@ void *_openfile(const char *filename, int flags)
 
 	if (flags & O_WRONLY)
 		return fopen64(filename, "wb");
-	else 
+	else
 		return fopen64(filename, "rb");
 }
 
 u64 _tellfile(void *handle)
 {
-	s64 cursize = ftell(handle);
-	
+	FILE* fp = (FILE*)handle;
+	s64 cursize = ftell(fp);
+
 	if (cursize == -1)
 	{
 		// try 64bit
-		cursize = ftello64(handle);
+		cursize = ftello64(fp);
 		if (cursize < -1)
 		{
 			// zero top 32 bits
@@ -117,26 +118,26 @@ u64 _tellfile(void *handle)
 
 int _seekfile(void *handle, u64 offset, int whence)
 {
-	int seekerr = fseeko64(handle, offset, whence);
-	
+	int seekerr = fseeko64((FILE*)handle, offset, whence);
+
 	if (seekerr == -1) Console::Error("Failed to seek.");
-	
+
 	return seekerr;
 }
 
 int _readfile(void *handle, void *dst, int size)
 {
-	return fread(dst, 1, size, handle);
+	return fread(dst, 1, size, (FILE*)handle);
 }
 
-int _writefile(void *handle, void *src, int size)
+int _writefile(void *handle, const void *src, int size)
 {
-	return fwrite(src, 1, size, handle);
+	return fwrite(src, 1, size, (FILE*)handle);
 }
 
 void _closefile(void *handle)
 {
-	fclose(handle);
+	fclose((FILE*)handle);
 }
 
 #endif

@@ -15,9 +15,9 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
 #include "PrecompiledHeader.h"
-#include "Mainframe.h"
+#include "MainFrame.h"
 
 // This API is likely obsolete for the most part, so I've just included a few dummies
 // to keep things compiling until I can get to the point of tying up loose ends.
@@ -41,13 +41,13 @@ namespace HostGui
 	{
 		// Probably obsolete if we do a savestate dialog.
 	}
-	
+
 	void BeginExecution()
 	{
 		wxASSERT( g_EmuThread != NULL );
 		g_EmuThread->Resume();
 	}
-	
+
 	void __fastcall KeyEvent( keyEvent* ev )
 	{
 	}

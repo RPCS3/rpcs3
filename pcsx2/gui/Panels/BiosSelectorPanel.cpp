@@ -47,7 +47,7 @@ bool Panels::BaseSelectorPanel::Show( bool visible )
 {
 	if( visible )
 		OnShown();
-		
+
 	return BaseApplicableConfigPanel::Show( visible );
 }
 
@@ -66,7 +66,7 @@ void Panels::BaseSelectorPanel::OnFolderChanged( wxFileDirPickerEvent& evt )
 
 // ----------------------------------------------------------------------------
 Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth ) :
-	BaseSelectorPanel( parent, idealWidth-9 )
+	BaseSelectorPanel( parent, idealWidth-12 )
 ,	m_ComboBox( *new wxListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_SORT | wxLB_NEEDED_SB ) )
 ,	m_FolderPicker( *new DirPickerPanel( this, FolderId_Bios,
 		_("BIOS Search Path:"),						// static box label
@@ -77,16 +77,15 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth )
 	m_ComboBox.SetFont( wxFont( m_ComboBox.GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
 	m_ComboBox.SetMinSize( wxSize( wxDefaultCoord, std::max( m_ComboBox.GetMinSize().GetHeight(), 96 ) ) );
 
+	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms.") );
+
 	wxBoxSizer& sizer( *new wxBoxSizer( wxVERTICAL ) );
 	AddStaticText( sizer, _("Select a BIOS rom:"), wxALIGN_LEFT );
 	sizer.Add( &m_ComboBox, SizerFlags::StdExpand() );
-
 	sizer.AddSpacer( 6 );
-
-	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms.") );
 	sizer.Add( &m_FolderPicker, SizerFlags::StdExpand() );
 
-	SetSizerAndFit( &sizer );
+	SetSizer( &sizer );
 }
 
 Panels::BiosSelectorPanel::~BiosSelectorPanel()
@@ -110,7 +109,7 @@ bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
 
 	delete m_BiosList;
 	m_BiosList = bioslist.release();
-	
+
 	return validated;
 }
 
@@ -124,9 +123,9 @@ void Panels::BiosSelectorPanel::Apply( AppConfig& conf )
 			L"User did not specify a valid BIOS selection.",
 
 			// Translated
-			pxE( ".Popup Error:Invalid BIOS Selection",	
-				L"Please select a valid BIOS before applying new settings.  If you are unable to make\n"
-				L"a valid selection then press cancel to close the Configuration panel."
+			pxE( ".Popup Error:Invalid BIOS Selection",
+				L"Please select a valid BIOS.  If you are unable to make a valid selection "
+				L"then press cancel to close the Configuration panel."
 			)
 		);
 	}
@@ -145,7 +144,7 @@ void Panels::BiosSelectorPanel::DoRefresh()
 		wxString description;
 		if( !IsBIOS((*m_BiosList)[i], description) ) continue;
 		int sel = m_ComboBox.Append( description, (void*)i );
-		
+
 		wxFileName left( (*m_BiosList)[i] );
 		left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
 

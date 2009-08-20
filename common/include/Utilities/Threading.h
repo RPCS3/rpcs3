@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *	Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
- 
+
  #pragma once
 
 #include <errno.h> // EBUSY
@@ -99,7 +99,7 @@ namespace Threading
 
 	// For use in spin/wait loops.
 	extern void SpinWait();
-	
+
 	// sleeps the current thread for the given number of milliseconds.
 	extern void Sleep( int ms );
 
@@ -139,9 +139,9 @@ namespace Threading
 		// Gets the return code of the thread.
 		// Throws std::logic_error if the thread has not terminated.
 		virtual int GetReturnCode() const;
-		
+
 		virtual bool IsRunning() const;
-		virtual sptr Block();		
+		virtual sptr Block();
 
 	protected:
 		// Used to dispatch the thread callback function.
@@ -158,12 +158,7 @@ namespace Threading
 	public:
 		// performs a test on the given thread handle, returning true if the thread exists
 		// or false if the thread is dead/done/never existed.
-		static bool Exists( pthread_t pid )
-		{
-			// passing 0 to pthread_kill is a NOP, and returns the status of the thread only.
-			return ( ESRCH != pthread_kill( pid, 0 ) );
-		}
-
+		static bool Exists( pthread_t pid );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -174,7 +169,7 @@ namespace Threading
 	class ScopedLock
 	{
 		DeclareNoncopyableObject(ScopedLock)
-	
+
 	protected:
 		MutexLock& m_lock;
 		bool m_IsLocked;
@@ -192,7 +187,7 @@ namespace Threading
 		{
 			m_lock.Lock();
 		}
-		
+
 		// Provides manual unlocking of a scoped lock prior to object destruction.
 		void Unlock()
 		{
@@ -200,7 +195,7 @@ namespace Threading
 			m_IsLocked = false;
 			m_lock.Unlock();
 		}
-		
+
 		// provides manual locking of a scoped lock, to re-lock after a manual unlocking.
 		void Lock()
 		{
@@ -242,7 +237,7 @@ namespace Threading
 	//  * The best application of tasking threads is to divide a large loop over a linear array
 	//    into smaller sections.  For example, if you have 20,000 items to process, the task
 	//    can be divided into two threads of 10,000 items each.
-	// 
+	//
 	class BaseTaskThread : public PersistentThread
 	{
 	protected:
@@ -267,7 +262,7 @@ namespace Threading
 			m_post_event.Post();
 			return PersistentThread::Block();
 		}
-		
+
 		// Initiates the new task.  This should be called after your own StartTask has
 		// initialized internal variables / preparations for task execution.
 		void PostTask()
@@ -287,7 +282,7 @@ namespace Threading
 			else
 				m_post_TaskComplete.Reset();
 		}
-		
+
 	protected:
 		// Abstract method run when a task has been posted.  Implementing classes should do
 		// all your necessary processing work here.

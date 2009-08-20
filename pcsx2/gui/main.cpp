@@ -166,7 +166,6 @@ bool Pcsx2App::OnInit()
 		m_Ps2ConLogBox	= m_ProgramLogBox;		// just use a single logger for now.
 		//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
 
-
 		SetTopWindow( m_MainFrame );	// not really needed...
 		SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
 	    m_MainFrame->Show();
@@ -176,7 +175,7 @@ bool Pcsx2App::OnInit()
 	catch( Exception::StartupAborted& )
 	{
 		return false;
-	}	
+	}
 
 	Connect( pxEVT_MSGBOX, wxCommandEventHandler( Pcsx2App::OnMessageBox ) );
 

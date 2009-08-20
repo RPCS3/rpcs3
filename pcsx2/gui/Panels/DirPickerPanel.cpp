@@ -31,7 +31,7 @@ static wxString GetNormalizedConfigFolder( FoldersEnum_t folderId )
 	wxDirName normalized( isDefault ? PathDefs::Get(folderId) : g_Conf->Folders[folderId] );
 	normalized.Normalize( wxPATH_NORM_ALL );
 	return normalized.ToString();
-}	
+}
 
 // Pass me TRUE if the default path is to be used, and the DirPcikerCtrl disabled from use.
 void Panels::DirPickerPanel::UpdateCheckStatus( bool someNoteworthyBoolean )
@@ -71,7 +71,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 {
 	wxStaticBoxSizer& s_box( *new wxStaticBoxSizer( wxVERTICAL, this, label ) );
 	wxFlexGridSizer& s_lower( *new wxFlexGridSizer( 2, 0, 4 ) );
-	
+
 	s_lower.AddGrowableCol( 1 );
 
 	// Force the Dir Picker to use a text control.  This isn't standard on Linux/GTK but it's much
@@ -87,7 +87,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 	if( !wxDir::Exists( normalized ) )
 		wxMkdir( normalized );
 
-	m_pickerCtrl = new wxDirPickerCtrl( this, wxID_ANY, normalized, dialogLabel,
+	m_pickerCtrl = new wxDirPickerCtrl( this, wxID_ANY, wxEmptyString, dialogLabel,
 		wxDefaultPosition, wxDefaultSize, wxDIRP_USE_TEXTCTRL | wxDIRP_DIR_MUST_EXIST
 	);
 
@@ -99,12 +99,19 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 		L"" )
 	);
 
+#ifndef __WXGTK__
+	// GTK+ : The wx implementation of Explore isn't reliable, so let's not even put the
+	// button on the dialogs for now.
+
 	wxButton* b_explore( new wxButton( this, wxID_ANY, _("Open in Explorer") ) );
 	b_explore->SetToolTip( _("Open an explorer window to this folder.") );
 	s_lower.Add( b_explore, SizerFlags::StdButton().Align( wxALIGN_RIGHT ) );
+	Connect( b_explore->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( DirPickerPanel::Explore_Click ) );
+#endif
+
 	s_box.Add( &s_lower, wxSizerFlags().Expand() );
 
-	SetSizerAndFit( &s_box );
+	SetSizer( &s_box );
 
 	// Apply default values
 	const bool isDefault = g_Conf->Folders.IsDefault( m_FolderId );
@@ -112,13 +119,17 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 	m_pickerCtrl->Enable( !isDefault );
 
 	Connect( m_checkCtrl->GetId(),	wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( DirPickerPanel::UseDefaultPath_Click ) );
-	Connect( b_explore->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( DirPickerPanel::Explore_Click ) );
+
+	// Finally, assign the real value from the config.
+	//  (done here because wxGTK fails to init the control when provisioning the initial path
+	//   via the contructor)
+	m_pickerCtrl->SetPath( GetNormalizedConfigFolder( m_FolderId ) );
 }
 
 Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& msg )
 {
 	InsertStaticTextAt( this, *GetSizer(), 0, msg );
-	SetSizerAndFit( GetSizer(), false );
+	//SetSizer( GetSizer(), false );
 	return *this;
 }
 

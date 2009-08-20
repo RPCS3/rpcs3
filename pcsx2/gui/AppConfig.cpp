@@ -38,7 +38,7 @@ namespace PathDefs
 			static const wxDirName retval( L"snaps" );
 			return retval;
 		}
-		
+
 		const wxDirName& Savestates()
 		{
 			static const wxDirName retval( L"sstates" );
@@ -50,19 +50,19 @@ namespace PathDefs
 			static const wxDirName retval( L"memcards" );
 			return retval;
 		}
-		
+
 		const wxDirName& Settings()
 		{
 			static const wxDirName retval( L"inis" );
 			return retval;
 		}
-		
+
 		const wxDirName& Plugins()
 		{
 			static const wxDirName retval( L"plugins" );
 			return retval;
 		}
-		
+
 		const wxDirName& Logs()
 		{
 			static const wxDirName retval( L"logs" );
@@ -74,7 +74,7 @@ namespace PathDefs
 			static const wxDirName retval( L"dumps" );
 			return retval;
 		}
-		
+
 		const wxDirName& Themes()
 		{
 			static const wxDirName retval( L"themes" );
@@ -175,7 +175,7 @@ const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 		case FolderId_Savestates:	return Savestates;
 		case FolderId_MemoryCards:	return MemoryCards;
 		case FolderId_Logs:			return Logs;
-		
+
 		jNO_DEFAULT
 	}
 	return Plugins;		// unreachable, but suppresses warnings.
@@ -192,7 +192,7 @@ const bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
 		case FolderId_Savestates:	return UseDefaultSavestates;
 		case FolderId_MemoryCards:	return UseDefaultMemoryCards;
 		case FolderId_Logs:			return UseDefaultLogs;
-		
+
 		jNO_DEFAULT
 	}
 	return false;
@@ -211,27 +211,27 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 			Settings = src;
 			UseDefaultSettings = useDefault;
 		break;
-		
+
 		case FolderId_Bios:
 			Bios = src;
 			UseDefaultBios = useDefault;
 		break;
-		
+
 		case FolderId_Snapshots:
 			Snapshots = src;
 			UseDefaultSnapshots = useDefault;
 		break;
-		
+
 		case FolderId_Savestates:
 			Savestates = src;
 			UseDefaultSavestates = useDefault;
 		break;
-		
+
 		case FolderId_MemoryCards:
 			MemoryCards = src;
 			UseDefaultMemoryCards = useDefault;
 		break;
-		
+
 		case FolderId_Logs:
 			Logs = src;
 			UseDefaultLogs = useDefault;
@@ -252,10 +252,10 @@ namespace FilenameDefs
 
 		return wxGetApp().GetAppName() + L".ini";
 	}
-	
+
 	wxFileName GetUsermodeConfig()
 	{
-		return L"usermode.ini";
+		return wxFileName( L"usermode.ini" );
 	}
 
 	const wxFileName& Memcard( int slot )
@@ -265,10 +265,10 @@ namespace FilenameDefs
 			wxFileName( L"Mcd001.ps2" ),
 			wxFileName( L"Mcd002.ps2" )
 		};
-		
+
 		if( IsDevBuild && ((uint)slot) < 2 )
 			throw Exception::IndexBoundsFault( L"FilenameDefs::Memcard", slot, 2 );
-			
+
 		return retval[slot];
 	}
 };
@@ -433,7 +433,7 @@ void AppConfig::Apply()
 
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
-	
+
 	NTFS_CompressFile( Folders.MemoryCards.ToString(), McdEnableNTFS );
 
 	{
@@ -446,7 +446,7 @@ void AppConfig::Apply()
 			}
 		}
 	}
-	
+
 	// Always perform delete and reload of the Recent Iso List.  This handles cases where
 	// the recent file count has been changed, and it's a helluva lot easier than trying
 	// to make a clone copy of this complex object. ;)
@@ -492,7 +492,7 @@ AppConfig::ConsoleLogOptions::ConsoleLogOptions() :
 ,	FontSize( 8 )
 {
 }
-	
+
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* logger )
 {
 	ConsoleLogOptions defaults;
@@ -503,7 +503,7 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* lo
 	IniEntry( DisplayPosition );
 	IniEntry( DisplaySize );
 	IniEntry( FontSize );
-	
+
 	ini.SetPath( L".." );
 }
 

@@ -19,6 +19,10 @@
 #include "PrecompiledHeader.h"
 #include "Threading.h"
 
+#ifdef __LINUX__
+#	include <signal.h>		// for pthread_kill, which is in pthread.h on w32-pthreads
+#endif
+
 using namespace Threading;
 
 namespace Threading
@@ -83,7 +87,13 @@ namespace Threading
 		pthread_join( m_thread, (void**)&m_returncode );
 		return m_returncode;
 	}
-	
+
+	bool Exists( pthread_t pid )
+	{
+		// passing 0 to pthread_kill is a NOP, and returns the status of the thread only.
+		return ( ESRCH != pthread_kill( pid, 0 ) );
+	}
+
 	bool PersistentThread::IsRunning() const
 	{
 		return ( m_running && (ESRCH != pthread_kill( m_thread, 0 )) );
@@ -102,7 +112,7 @@ namespace Threading
 
 		return m_returncode;
 	}
-	
+
 	void* PersistentThread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
@@ -210,11 +220,11 @@ namespace Threading
 	{
 		if( isRecursive )
 		{
-			pthread_mutexattr_t mutexAttribute; 
+			pthread_mutexattr_t mutexAttribute;
 			int status = pthread_mutexattr_init( &mutexAttribute );
-			if (status != 0) { /* ... */ } 
-			status = pthread_mutexattr_settype( &mutexAttribute, PTHREAD_MUTEX_RECURSIVE); 
-			if (status != 0) { /* ... */} 
+			if (status != 0) { /* ... */ }
+			status = pthread_mutexattr_settype( &mutexAttribute, PTHREAD_MUTEX_RECURSIVE);
+			if (status != 0) { /* ... */}
 
 			int err = 0;
 			err = pthread_mutex_init( &mutex, &mutexAttribute );

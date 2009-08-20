@@ -71,7 +71,7 @@ class PluginManager
 protected:
 	bool m_initialized;
 	bool m_loaded;
-	
+
 	bool m_IsInitialized[PluginId_Count];
 	bool m_IsOpened[PluginId_Count];
 
@@ -90,16 +90,16 @@ public:
 
 	void LoadPlugins();
 	void UnloadPlugins();
-	
+
 	void Init( PluginsEnum_t pid );
 	void Shutdown( PluginsEnum_t pid );
 	void Open( PluginsEnum_t pid );
 	void Close( PluginsEnum_t pid );
-	
+
 	void Freeze( PluginsEnum_t pid, int mode, freezeData* data );
 	void Freeze( PluginsEnum_t pid, SaveState& state );
 	void Freeze( SaveState& state );
-	
+
 protected:
 	void BindCommon( PluginsEnum_t pid );
 	void BindRequired( PluginsEnum_t pid );
@@ -109,7 +109,7 @@ protected:
 extern const PluginInfo tbl_PluginInfo[];
 extern PluginManager* g_plugins;
 
-extern int EnumeratePluginsInFolder( wxDirName& searchPath, wxArrayString* dest );
+extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
 
 
 void LoadPlugins();

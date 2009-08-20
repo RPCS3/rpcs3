@@ -36,13 +36,13 @@ static T& MakeWizWidget( int pageid, wxWizardPage& src )
 
 // ----------------------------------------------------------------------------
 Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
-	DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") ) 
+	DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") )
 {
 	SetToolTip( pxE( ".Tooltips:Folders:Settings",
 		L"This is the folder where PCSX2 saves your settings, including settings generated "
 		L"by most plugins (some older plugins may not respect this value)."
 	) );
-	
+
 	// Insert this into the top of the staticboxsizer created by the constructor.
 	GetSizer()->Insert( 0,
 		new wxStaticText( this, wxID_ANY,
@@ -52,10 +52,9 @@ Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
 			), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
 		), wxSizerFlags().Expand().Border( wxBOTTOM, 6 )
 	);
-	
-	SetSizerAndFit( GetSizer(), false );
-}
 
+	//SetSizerAndFit( GetSizer(), false );
+}
 
 // ----------------------------------------------------------------------------
 FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
@@ -64,7 +63,6 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 ,	m_dirpick_settings( *new SettingsDirPickerPanel( this ) )
 ,	m_panel_LangSel( *new LanguageSelectionPanel( *this, 608 ) )
 ,	m_panel_UserSel( *new UsermodeSelectionPanel( *this, 608 ) )
-
 {
 	wxBoxSizer& usermodeSizer( *new wxBoxSizer( wxVERTICAL ) );
 	AddStaticTextTo( this, usermodeSizer, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
@@ -74,7 +72,7 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 
 	usermodeSizer.AddSpacer( 6 );
 	usermodeSizer.Add( &m_dirpick_settings, SizerFlags::SubGroup() );
-	SetSizerAndFit( &usermodeSizer );
+	SetSizer( &usermodeSizer );
 
 	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(FirstTimeWizard::UsermodePage::OnUsermodeChanged) );
 }
@@ -102,7 +100,12 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent ) :
 	// Page 2 - Plugins Panel
 	wxBoxSizer& pluginSizer( *new wxBoxSizer( wxVERTICAL ) );
 	pluginSizer.Add( &m_panel_PluginSel, SizerFlags::StdExpand() );
-	m_page_plugins.SetSizerAndFit( &pluginSizer );
+	m_page_plugins.SetSizer( &pluginSizer );
+
+	// Page 3 - Bios Panel
+	wxBoxSizer& biosSizer( *new wxBoxSizer( wxVERTICAL ) );
+	biosSizer.Add( &m_panel_BiosSel, SizerFlags::StdExpand() );
+	m_page_bios.SetSizer( &biosSizer );
 
 	// Assign page indexes as client data
 	m_page_usermode.SetClientData	( (void*)0 );
@@ -152,7 +155,7 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 			if( wxFile::Exists( g_Conf->FullPathToConfig() ) )
 			{
 				// Asks the user if they want to import or overwrite the existing settings.
-				
+
 				Dialogs::ImportSettingsDialog modal( this );
 				if( modal.ShowModal() != wxID_OK )
 				{

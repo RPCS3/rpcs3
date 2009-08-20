@@ -27,7 +27,7 @@ using namespace wxHelpers;
 Panels::StaticApplyState Panels::g_ApplyState;
 
 // -----------------------------------------------------------------------
-// This method should be called by the parent dalog box of a configuration 
+// This method should be called by the parent dalog box of a configuration
 // on dialog destruction.  It asserts if the ApplyList hasn't been cleaned up
 // and then cleans it up forcefully.
 //
@@ -88,14 +88,14 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 	catch( Exception::CannotApplySettings& ex )
 	{
 		wxMessageBox( ex.DisplayMessage(), _("Cannot apply settings...") );
-		
+
 		if( ex.GetPanel() != NULL )
 			ex.GetPanel()->SetFocusToMe();
 
 		retval = false;
 	}
-	
-	return retval;	
+
+	return retval;
 }
 
 // Returns false if one of the panels fails input validation (in which case dialogs
@@ -106,18 +106,18 @@ bool Panels::StaticApplyState::ApplyAll()
 }
 
 // -----------------------------------------------------------------------
-Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int idealWidth, bool isFirstTime ) : 
+Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int idealWidth, bool isFirstTime ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
 ,	m_radio_user( NULL )
 ,	m_radio_cwd( NULL )
 {
-	const wxString usermodeExplained( pxE( ".Panels:Usermode:Explained", 
+	const wxString usermodeExplained( pxE( ".Panels:Usermode:Explained",
 		L"Please select your preferred default location for PCSX2 user-level documents below "
 		L"(includes memory cards, screenshots, settings, and savestates).  "
 		L"These folder locations can be overridden at any time using the Core Settings panel."
 	) );
-	
-	const wxString usermodeWarning( pxE( ".Panels:Usermode:Warning", 
+
+	const wxString usermodeWarning( pxE( ".Panels:Usermode:Warning",
 		L"You can change the preferred default location for PCSX2 user-level documents here "
 		L"(includes memory cards, screenshots, settings, and savestates).  "
 		L"This option only affects Standard Paths which are set to use the installation default value."
@@ -132,7 +132,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int id
 		_("This setting requires administration privlidges from your operating system.") );
 
 	s_boxer.AddSpacer( 4 );
-	SetSizerAndFit( &s_boxer );
+	SetSizer( &s_boxer );
 }
 
 void Panels::UsermodeSelectionPanel::Apply( AppConfig& conf )
@@ -144,7 +144,7 @@ void Panels::UsermodeSelectionPanel::Apply( AppConfig& conf )
 }
 
 // -----------------------------------------------------------------------
-Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int idealWidth ) : 
+Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
 ,	m_langs()
 ,	m_picker( NULL )
@@ -171,8 +171,8 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int id
 	AddStaticText( s_lang, _("Select a language: "), wxALIGN_CENTRE_VERTICAL );
 	s_lang.AddSpacer( 5 );
 	s_lang.Add( m_picker, SizerFlags::StdSpace() );
-	
-	SetSizerAndFit( &s_lang );
+
+	SetSizer( &s_lang );
 }
 
 void Panels::LanguageSelectionPanel::Apply( AppConfig& conf )

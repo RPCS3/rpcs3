@@ -58,7 +58,7 @@ Panels::StandardPathsPanel::StandardPathsPanel( wxWindow& parent ) :
 		_("Select a folder for Snapshots") ).
 		SetToolTip( pxE( ".Tooltips:Folders:Snapshots",
 			L"This folder is where PCSX2 saves screenshots.  Actual screenshot image format and style "
-			L"may vary depending on the GS plugin being used." 
+			L"may vary depending on the GS plugin being used."
 		) );
 
 	s_main.AddSpacer( BetweenFolderSpace );
@@ -80,6 +80,6 @@ Panels::StandardPathsPanel::StandardPathsPanel( wxWindow& parent ) :
 		) );
 
 	s_main.AddSpacer( 5 );
-	SetSizerAndFit( &s_main );
+	SetSizer( &s_main );
 }
 

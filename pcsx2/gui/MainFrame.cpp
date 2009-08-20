@@ -225,7 +225,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( Menu_State_Save01 ) ),
 
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
-	
+
 	m_IsPaused( false )
 {
 	// ------------------------------------------------------------------------
@@ -293,7 +293,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(Menu_Config_Settings,	_("Settings") );
+	m_menuConfig.Append(Menu_Config_Settings,	_("General Settings") );
 	m_menuConfig.AppendSeparator();
 
 	// Query installed "tertiary" plugins for name and menu options.

@@ -47,7 +47,7 @@ const PluginInfo tbl_PluginInfo[] =
 
 };
 
-int EnumeratePluginsInFolder( wxDirName& searchpath, wxArrayString* dest )
+int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
 {
 	wxScopedPtr<wxArrayString> placebo;
 	wxArrayString* realdest = dest;
@@ -87,7 +87,7 @@ struct LegacyApi_ReqMethod
 	// fallback is used if the method is null.  If the method is null and fallback is null
 	// also, the plugin is considered incomplete or invalid, and an error is generated.
 	VoidMethod*	Fallback;
-	
+
 	// returns the method name as a wxString, converted from UTF8.
 	wxString GetMethodName( ) const
 	{
@@ -100,7 +100,7 @@ struct LegacyApi_OptMethod
 {
 	const char*		MethodName;
 	VoidMethod**	Dest;		// Target function where the binding is saved.
-	
+
 	// returns the method name as a wxString, converted from UTF8.
 	wxString GetMethodName() const { return wxString::FromUTF8( MethodName ); }
 };
@@ -335,7 +335,7 @@ s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
 {
 	if(CDVD->readTrack(lsn,mode) < 0)
 		return -1;
-	
+
 	// TEMP: until all the plugins use the new CDVDgetBuffer style
 	switch (mode)
 	{
@@ -397,7 +397,7 @@ CDVD_API CDVDapi_Plugin =
 {
 	CDVDplugin_Close,
 
-	// The rest are filled in by the plugin manager	
+	// The rest are filled in by the plugin manager
 	NULL
 };
 CDVD_API* CDVD			= NULL;
@@ -420,7 +420,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_CDVD[] =
 	{	"CDVDreadSector",	(vMeth**)&CDVDapi_Plugin.readSector,	(vMeth*)CDVD_readSector },
 	{	"CDVDgetBuffer2",	(vMeth**)&CDVDapi_Plugin.getBuffer2,	(vMeth*)CDVD_getBuffer2 },
 	{	"CDVDgetDualInfo",	(vMeth**)&CDVDapi_Plugin.getDualInfo,	(vMeth*)CDVD_getDualInfo },
-	
+
 	{ NULL }
 };
 
@@ -476,7 +476,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_DEV9[] =
 	{	"DEV9writeDMA8Mem",	(vMeth**)&DEV9writeDMA8Mem,	NULL },
 	{	"DEV9irqCallback",	(vMeth**)&DEV9irqCallback,	NULL },
 	{	"DEV9irqHandler",	(vMeth**)&DEV9irqHandler,	NULL },
-	
+
 	{ NULL }
 };
 
@@ -523,7 +523,7 @@ static const LegacyApi_OptMethod s_MethMessOpt_FW[] =
 	{ NULL }
 };
 
-static const LegacyApi_ReqMethod* const s_MethMessReq[] = 
+static const LegacyApi_ReqMethod* const s_MethMessReq[] =
 {
 	s_MethMessReq_CDVD,
 	s_MethMessReq_GS,
@@ -557,7 +557,6 @@ Exception::NotPcsxPlugin::NotPcsxPlugin( const PluginsEnum_t& pid ) :
 void PluginManager::BindCommon( PluginsEnum_t pid )
 {
 	const LegacyApi_CommonMethod* current = s_MethMessCommon;
-	int fid = 0;		// function id
 	VoidMethod** target = (VoidMethod**)&m_CommonBindings[pid];
 
 	while( current->MethodName != NULL )
@@ -576,10 +575,10 @@ void PluginManager::BindRequired( PluginsEnum_t pid )
 	while( current->MethodName != NULL )
 	{
 		*(current->Dest) = (VoidMethod*)lib.GetSymbol( current->GetMethodName() );
-		
+
 		if( *(current->Dest) == NULL )
 			*(current->Dest) = current->Fallback;
-			
+
 		if( *(current->Dest) == NULL )
 		{
 			throw Exception::NotPcsxPlugin( pid );
@@ -618,22 +617,22 @@ void PluginManager::LoadPlugins()
 
 		if( !m_libs[i].Load( plugpath ) )
 			throw Exception::NotPcsxPlugin( plugpath );
-			
+
 		// Try to enumerate the new v2.0 plugin interface first.
 		// If that fails, fall back on the old style interface.
 
 		//m_libs[i].GetSymbol( L"PS2E_InitAPI" );
-		
+
 		// Bind Required Functions
 		// (generate critical error if binding fails)
-		
+
 		BindCommon( pid );
 		BindRequired( pid );
 		BindOptional( pid );
-		
+
 		// Bind Optional Functions
 		// (leave pointer null and do not generate error)
-		
+
 	}
 }
 
@@ -780,20 +779,20 @@ namespace PluginTypes
 	};
 }
 
-int PS2E_LT[9] = { 
-PS2E_LT_GS, 
-PS2E_LT_PAD,PS2E_LT_PAD, PS2E_LT_PAD, 
-PS2E_LT_SPU2, 
-PS2E_LT_CDVD, 
+int PS2E_LT[9] = {
+PS2E_LT_GS,
+PS2E_LT_PAD,PS2E_LT_PAD, PS2E_LT_PAD,
+PS2E_LT_SPU2,
+PS2E_LT_CDVD,
 PS2E_LT_DEV9,
 PS2E_LT_USB,
 PS2E_LT_FW};
 
 int PS2E_VERSION[9] = {
-PS2E_GS_VERSION, 
-PS2E_PAD_VERSION,PS2E_PAD_VERSION, PS2E_PAD_VERSION, 
-PS2E_SPU2_VERSION, 
-PS2E_CDVD_VERSION, 
+PS2E_GS_VERSION,
+PS2E_PAD_VERSION,PS2E_PAD_VERSION, PS2E_PAD_VERSION,
+PS2E_SPU2_VERSION,
+PS2E_CDVD_VERSION,
 PS2E_DEV9_VERSION,
 PS2E_USB_VERSION,
 PS2E_FW_VERSION};
@@ -845,7 +844,7 @@ static int _TestPS2Esyms(void* drv, int type, int expected_version, const wxStri
 	return 0;
 }
 
-static __forceinline bool TestPS2Esyms(void* &drv, PluginTypes::PluginTypes type, const string& filename) 
+static __forceinline bool TestPS2Esyms(void* &drv, PluginTypes::PluginTypes type, const string& filename)
 {
 	if (_TestPS2Esyms(drv, PS2E_LT[type],PS2E_VERSION[type],filename) < 0) return false;
 	return true;
@@ -1210,7 +1209,7 @@ bool ReportError(int err, const char *str)
 {
 	if (err != 0)
 	{
-		Msgbox::Alert("%s error: %d", params str, err); 
+		Msgbox::Alert("%s error: %d", params str, err);
 		return true;
 	}
 	return false;
@@ -1220,7 +1219,7 @@ bool ReportError2(int err, const char *str)
 {
 	if (err != 0)
 	{
-		Msgbox::Alert("Error Opening %s Plugin", params str, err); 
+		Msgbox::Alert("Error Opening %s Plugin", params str, err);
 		return true;
 	}
 	return false;
@@ -1239,9 +1238,9 @@ int InitPlugins()
 	if (ReportError(PAD1init(1), "PAD1init")) return -1;
 	if (ReportError(PAD2init(2), "PAD2init")) return -1;
 	if (ReportError(SPU2init(), "SPU2init")) return -1;
-	
+
 	if (ReportError(DoCDVDinit(), "CDVDinit")) return -1;
-	
+
 	if (ReportError(DEV9init(), "DEV9init")) return -1;
 	if (ReportError(USBinit(), "USBinit")) return -1;
 	if (ReportError(FWinit(), "FWinit")) return -1;
@@ -1264,14 +1263,14 @@ void ShutdownPlugins()
 	if (PAD2shutdown != NULL) PAD2shutdown();
 
 	if (SPU2shutdown != NULL) SPU2shutdown();
-	
+
 	//if (CDVDshutdown != NULL) CDVDshutdown();
 	DoCDVDshutdown();
 
 	// safety measures, in case ISO is currently loaded.
 	if(cdvdInitCount>0)
 		CDVD_plugin.shutdown();
-	
+
 	if (DEV9shutdown != NULL) DEV9shutdown();
 	if (USBshutdown != NULL) USBshutdown();
 	if (FWshutdown != NULL) FWshutdown();
@@ -1286,13 +1285,13 @@ extern void spu2Irq();
 bool OpenGS()
 {
 	GSdriverInfo info;
-	
-	if (!OpenStatus.GS) 
+
+	if (!OpenStatus.GS)
 	{
-		if (ReportError2(gsOpen(), "GS")) 
-		{ 
+		if (ReportError2(gsOpen(), "GS"))
+		{
 			ClosePlugins(true);
-			return false; 
+			return false;
 		}
 
 		//Get the user input.
@@ -1315,18 +1314,18 @@ bool OpenCDVD(const char* pTitleFilename)
 		//First, we need the data.
 		CDVD->newDiskCB(cdvdNewDiskCB);
 
-		if (DoCDVDopen(pTitleFilename) != 0) 
-		{ 
-			if (g_Startup.BootMode != BootMode_Elf) 
-			{ 
-				Msgbox::Alert("Error Opening CDVD Plugin"); 
-				ClosePlugins(true); 
+		if (DoCDVDopen(pTitleFilename) != 0)
+		{
+			if (g_Startup.BootMode != BootMode_Elf)
+			{
+				Msgbox::Alert("Error Opening CDVD Plugin");
+				ClosePlugins(true);
 				return false;
 			}
-			else 
-			{ 
-				Console::Notice("Running ELF File Without CDVD Plugin Support!"); 
-				only_loading_elf = true; 
+			else
+			{
+				Console::Notice("Running ELF File Without CDVD Plugin Support!");
+				only_loading_elf = true;
 			}
 		}
 		OpenStatus.CDVD = true;
@@ -1338,10 +1337,10 @@ bool OpenPAD1()
 {
 	if (!OpenStatus.PAD1)
 	{
-		if (ReportError2(PAD1open((void *)&pDsp), "PAD1")) 
-		{ 
-			ClosePlugins(true); 
-			return false; 
+		if (ReportError2(PAD1open((void *)&pDsp), "PAD1"))
+		{
+			ClosePlugins(true);
+			return false;
 		}
 		OpenStatus.PAD1 = true;
 	}
@@ -1349,13 +1348,13 @@ bool OpenPAD1()
 }
 
 bool OpenPAD2()
-{	
+{
 	if (!OpenStatus.PAD2)
 	{
-		if (ReportError2(PAD2open((void *)&pDsp), "PAD2")) 
-		{ 
-			ClosePlugins(true); 
-			return false; 
+		if (ReportError2(PAD2open((void *)&pDsp), "PAD2"))
+		{
+			ClosePlugins(true);
+			return false;
 		}
 		OpenStatus.PAD2 = true;
 	}
@@ -1367,14 +1366,14 @@ bool OpenSPU2()
 	if (!OpenStatus.SPU2)
 	{
 		SPU2irqCallback(spu2Irq,spu2DMA4Irq,spu2DMA7Irq);
-		
+
 		if (SPU2setDMABaseAddr != NULL) SPU2setDMABaseAddr((uptr)psxM);
 		if (SPU2setClockPtr != NULL) SPU2setClockPtr(&psxRegs.cycle);
 
-		if (ReportError2(SPU2open((void*)&pDsp), "SPU2")) 
-		{ 
-			ClosePlugins(true); 
-			return false; 
+		if (ReportError2(SPU2open((void*)&pDsp), "SPU2"))
+		{
+			ClosePlugins(true);
+			return false;
 		}
 		OpenStatus.SPU2 = true;
 	}
@@ -1387,11 +1386,11 @@ bool OpenDEV9()
 	{
 		DEV9irqCallback(dev9Irq);
 		dev9Handler = DEV9irqHandler();
-		
-		if (ReportError2(DEV9open(&psxRegs.pc)/*((void *)&pDsp)*/, "DEV9")) 
-		{ 
-			ClosePlugins(true); 
-			return false; 
+
+		if (ReportError2(DEV9open(&psxRegs.pc)/*((void *)&pDsp)*/, "DEV9"))
+		{
+			ClosePlugins(true);
+			return false;
 		}
 		OpenStatus.DEV9 = true;
 	}
@@ -1404,11 +1403,11 @@ bool OpenUSB()
 		USBirqCallback(usbIrq);
 		usbHandler = USBirqHandler();
 		USBsetRAM(psxM);
-		
-		if (ReportError2(USBopen((void *)&pDsp), "USB")) 
-		{ 
-			ClosePlugins(true); 
-			return false; 
+
+		if (ReportError2(USBopen((void *)&pDsp), "USB"))
+		{
+			ClosePlugins(true);
+			return false;
 		}
 		OpenStatus.USB = true;
 	}
@@ -1420,11 +1419,11 @@ bool OpenFW()
 	if (!OpenStatus.FW)
 	{
 		FWirqCallback(fwIrq);
-		
-		if (ReportError2(FWopen((void *)&pDsp), "FW")) 
-		{ 
-			ClosePlugins(true); 
-			return false; 
+
+		if (ReportError2(FWopen((void *)&pDsp), "FW"))
+		{
+			ClosePlugins(true);
+			return false;
 		}
 		OpenStatus.FW = true;
 	}
@@ -1445,7 +1444,7 @@ int OpenPlugins(const char* pTitleFilename)
 	if ((!OpenCDVD(pTitleFilename)) || (!OpenGS()) || (!OpenPAD1()) || (!OpenPAD2()) ||
 	    (!OpenSPU2()) || (!OpenDEV9()) || (!OpenUSB()) || (!OpenFW()))
 		return -1;
-	
+
 	if (!only_loading_elf) cdvdDetectDisk();
 	return 0;
 }
@@ -1533,7 +1532,7 @@ void ReleasePlugins()
 	SysCloseLibrary(DEV9plugin); DEV9plugin = NULL;
 	SysCloseLibrary(USBplugin);  USBplugin = NULL;
 	SysCloseLibrary(FWplugin);   FWplugin = NULL;
-	
+
 	plugins_loaded = false;
 }
 
