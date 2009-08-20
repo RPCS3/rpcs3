@@ -204,6 +204,7 @@ mtgsThreadObject::mtgsThreadObject() :
 
 void mtgsThreadObject::Start()
 {
+	m_post_InitDone.Reset();
 	PersistentThread::Start();
 
 	// Wait for the thread to finish initialization (it runs GSopen, which can take

@@ -676,9 +676,6 @@
     <None Include="res\convert.fx">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="res\GSdx.rc2">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="res\interlace.fx">
       <Filter>Shaders</Filter>
     </None>

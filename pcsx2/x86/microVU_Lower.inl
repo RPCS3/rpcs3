@@ -458,7 +458,7 @@ mVUop(mVU_FCAND) {
 		mVUallocVIb(mVU, gprT1, 1);
 	}
 	pass3 { mVUlog("FCAND vi01, $%x", _Imm24_); }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUregs.needExactMatch |= 4; }
 }
 
 mVUop(mVU_FCEQ) {
@@ -471,7 +471,7 @@ mVUop(mVU_FCEQ) {
 		mVUallocVIb(mVU, gprT1, 1);
 	}
 	pass3 { mVUlog("FCEQ vi01, $%x", _Imm24_); }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUregs.needExactMatch |= 4; }
 }
 
 mVUop(mVU_FCGET) {
@@ -482,7 +482,7 @@ mVUop(mVU_FCGET) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FCGET vi%02d", _Ft_);	   }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUregs.needExactMatch |= 4; }
 }
 
 mVUop(mVU_FCOR) {
@@ -495,7 +495,7 @@ mVUop(mVU_FCOR) {
 		mVUallocVIb(mVU, gprT1, 1);
 	}
 	pass3 { mVUlog("FCOR vi01, $%x", _Imm24_); }
-	pass4 { mVUflagInfo |= 0xf << 8; }
+	pass4 { mVUregs.needExactMatch |= 4; }
 }
 
 mVUop(mVU_FCSET) {
@@ -520,7 +520,7 @@ mVUop(mVU_FMAND) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMAND vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUflagInfo |= 0xf << 4;   }
+	pass4 { mVUregs.needExactMatch |= 2;   }
 }
 
 mVUop(mVU_FMEQ) {
@@ -534,7 +534,7 @@ mVUop(mVU_FMEQ) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMEQ vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUflagInfo |= 0xf << 4;  }
+	pass4 { mVUregs.needExactMatch |= 2;  }
 }
 
 mVUop(mVU_FMOR) {
@@ -546,7 +546,7 @@ mVUop(mVU_FMOR) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMOR vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUflagInfo |= 0xf << 4;  }
+	pass4 { mVUregs.needExactMatch |= 2;  }
 }
 
 //------------------------------------------------------------------
@@ -561,7 +561,7 @@ mVUop(mVU_FSAND) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSAND vi%02d, $%x", _Ft_, _Imm12_); }
-	pass4 { mVUflagInfo |= 0xf; }
+	pass4 { mVUregs.needExactMatch |= 1; }
 }
 
 mVUop(mVU_FSOR) {
@@ -572,7 +572,7 @@ mVUop(mVU_FSOR) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSOR vi%02d, $%x", _Ft_, _Imm12_); }
-	pass4 { mVUflagInfo |= 0xf; }
+	pass4 { mVUregs.needExactMatch |= 1; }
 }
 
 mVUop(mVU_FSEQ) {
@@ -604,7 +604,7 @@ mVUop(mVU_FSEQ) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FSEQ vi%02d, $%x", _Ft_, _Imm12_); }
-	pass4 { mVUflagInfo |= 0xf; }
+	pass4 { mVUregs.needExactMatch |= 1; }
 }
 
 mVUop(mVU_FSSET) {
@@ -1149,109 +1149,166 @@ mVUop(mVU_XGKICK) {
 // Branches/Jumps
 //------------------------------------------------------------------
 
-#define setBranchA(x, _x_) {															\
-	pass1 { if (_Imm11_ == 1 && !_x_) { mVUlow.isNOP = 1; return; } mVUbranch = x; }	\
-	pass2 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }						\
-	pass3 { mVUbranch = x; }															\
-	pass4 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }						\
+void setBranchA(mP, int x, int _x_) {
+	pass1 { 
+		if (_Imm11_ == 1 && !_x_) { mVUlow.isNOP = 1; return; } 
+		mVUbranch	  = x; 
+		mVUlow.branch = x;
+	}
+	pass2 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }
+	pass3 { mVUbranch = x; }
+	pass4 { if (_Imm11_ == 1 && !_x_) { return; } mVUbranch = x; }
+}
+
+void condEvilBranch(mV, int JMPcc) {
+	using namespace x86Emitter;
+	if (mVUlow.badBranch) {
+		xMOV(ptr32[&mVU->branch], eax);
+		xMOV(ptr32[&mVU->badBranch], branchAddrN);
+		xCMP(ax, 0);
+		xForwardJump8 cJMP((JccComparisonType)JMPcc);
+			incPC(4); // Branch Not Taken
+			xMOV(ptr32[&mVU->badBranch], xPC);
+			incPC(-4);
+		cJMP.SetTarget();
+		return;
+	}
+	xMOV(ptr32[&mVU->evilBranch], branchAddr);
+	xCMP(ax, 0);
+	xForwardJump8 cJMP((JccComparisonType)JMPcc);
+		xMOV(eax, ptr32[&mVU->badBranch]); // Branch Not Taken
+		xMOV(ptr32[&mVU->evilBranch], eax);
+	cJMP.SetTarget();
 }
 
 mVUop(mVU_B) {
-	setBranchA(1, 0);
+	setBranchA(mX, 1, 0);
+	pass1 { mVUanalyzeNormBranch(mVU, 0, 0); }
+	pass2 { 
+		if (mVUlow.badBranch)  { MOV32ItoM((uptr)&mVU->badBranch,  branchAddrN); }
+		if (mVUlow.evilBranch) { MOV32ItoM((uptr)&mVU->evilBranch, branchAddr); } 
+	}
 	pass3 { mVUlog("B [<a href=\"#addr%04x\">%04x</a>]", branchAddr, branchAddr); }
 }
 
 mVUop(mVU_BAL) {
-	setBranchA(2, _It_);
-	pass1 { analyzeVIreg2(_It_, mVUlow.VI_write, 1); setConstReg(_It_, bSaveAddr); }
+	setBranchA(mX, 2, _It_);
+	pass1 { mVUanalyzeNormBranch(mVU, _It_, 1); }
 	pass2 {
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb(mVU, gprT1, _It_);
+		if (mVUlow.badBranch)  { MOV32ItoM((uptr)&mVU->badBranch,  branchAddrN); }
+		if (mVUlow.evilBranch) { MOV32ItoM((uptr)&mVU->evilBranch, branchAddr); } 
 	}
 	pass3 { mVUlog("BAL vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, branchAddr, branchAddr); }
 }
 
 mVUop(mVU_IBEQ) {
-	setBranchA(3, 0);
-	pass1 { mVUanalyzeBranch2(mVU, _Is_, _It_); }
+	using namespace x86Emitter;
+	setBranchA(mX, 3, 0);
+	pass1 { mVUanalyzeCondBranch2(mVU, _Is_, _It_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
+		
 		if (mVUlow.memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else { mVUallocVIa(mVU, gprT2, _It_); XOR32RtoR(gprT1, gprT2); }
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+
+		if (!(isBadOrEvil))	MOV32RtoM((uptr)&mVU->branch, gprT1);
+		else				condEvilBranch(mVU, Jcc_Equal);
 	}
 	pass3 { mVUlog("IBEQ vi%02d, vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, _Fs_, branchAddr, branchAddr); }
 }
 
 mVUop(mVU_IBGEZ) {
-	setBranchA(4, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
+	using namespace x86Emitter;
+	setBranchA(mX, 4, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
-		else mVUallocVIa(mVU, gprT1, _Is_);
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		if (mVUlow.memReadIs)	MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
+		else					mVUallocVIa(mVU, gprT1, _Is_);
+		if (!(isBadOrEvil))		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		else					condEvilBranch(mVU, Jcc_GreaterOrEqual);
 	}
 	pass3 { mVUlog("IBGEZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 
 mVUop(mVU_IBGTZ) {
-	setBranchA(5, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
+	using namespace x86Emitter;
+	setBranchA(mX, 5, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
-		else mVUallocVIa(mVU, gprT1, _Is_);
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		if (mVUlow.memReadIs)	MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
+		else					mVUallocVIa(mVU, gprT1, _Is_);
+		if (!(isBadOrEvil))		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		else					condEvilBranch(mVU, Jcc_Greater);
 	}
 	pass3 { mVUlog("IBGTZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 
 mVUop(mVU_IBLEZ) {
-	setBranchA(6, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
+	using namespace x86Emitter;
+	setBranchA(mX, 6, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
-		else mVUallocVIa(mVU, gprT1, _Is_);
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		if (mVUlow.memReadIs)	MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
+		else					mVUallocVIa(mVU, gprT1, _Is_);
+		if (!(isBadOrEvil))		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		else					condEvilBranch(mVU, Jcc_LessOrEqual);
 	}
 	pass3 { mVUlog("IBLEZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 
 mVUop(mVU_IBLTZ) {
-	setBranchA(7, 0);
-	pass1 { mVUanalyzeBranch1(mVU, _Is_); }
-	pass2 {
-		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
-		else mVUallocVIa(mVU, gprT1, _Is_);
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+	using namespace x86Emitter;
+	setBranchA(mX, 7, 0);
+	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
+	pass2 {	
+		if (mVUlow.memReadIs)	MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
+		else					mVUallocVIa(mVU, gprT1, _Is_);
+		if (!(isBadOrEvil))		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		else					condEvilBranch(mVU, Jcc_Less);
 	}
 	pass3 { mVUlog("IBLTZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
 
 mVUop(mVU_IBNE) {
-	setBranchA(8, 0);
-	pass1 { mVUanalyzeBranch2(mVU, _Is_, _It_); }
+	using namespace x86Emitter;
+	setBranchA(mX, 8, 0);
+	pass1 { mVUanalyzeCondBranch2(mVU, _Is_, _It_); }
 	pass2 {
 		if (mVUlow.memReadIs) MOV32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else mVUallocVIa(mVU, gprT1, _Is_);
+		
 		if (mVUlow.memReadIt) XOR32MtoR(gprT1, (uptr)&mVU->VIbackup);
 		else { mVUallocVIa(mVU, gprT2, _It_); XOR32RtoR(gprT1, gprT2); }
-		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		
+		if (!(isBadOrEvil))	MOV32RtoM((uptr)&mVU->branch, gprT1);
+		else				condEvilBranch(mVU, Jcc_NotEqual);
 	}
 	pass3 { mVUlog("IBNE vi%02d, vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, _Fs_, branchAddr, branchAddr); }
+}
+
+void normJumpPass2(mV) {
+	if (!mVUlow.constJump.isValid || mVUlow.evilBranch) {
+		mVUallocVIa(mVU, gprT1, _Is_);
+		SHL32ItoR(gprT1, 3);
+		AND32ItoR(gprT1, mVU->microMemSize - 8);
+		MOV32RtoM((uptr)&mVU->branch, gprT1);
+		if (!mVUlow.evilBranch) MOV32RtoM((uptr)&mVU->branch,	  gprT1);
+		else					MOV32RtoM((uptr)&mVU->evilBranch, gprT1);
+		if (mVUlow.badBranch) {
+			ADD32ItoR(gprT1, 8);
+			AND32ItoR(gprT1, mVU->microMemSize - 8);
+			MOV32RtoM((uptr)&mVU->badBranch,  gprT1);
+		}
+	}
 }
 
 mVUop(mVU_JR) {
 	mVUbranch = 9;
 	pass1 { mVUanalyzeJump(mVU, _Is_, 0, 0); }
-	pass2 {
-		if (!mVUlow.constJump.isValid) {
-			mVUallocVIa(mVU, gprT1, _Is_);
-			SHL32ItoR(gprT1, 3);
-			AND32ItoR(gprT1, mVU->microMemSize - 8);
-			MOV32RtoM((uptr)&mVU->branch, gprT1);
-		}
-	}
+	pass2 { normJumpPass2(mVU); }
 	pass3 { mVUlog("JR [vi%02d]", _Fs_); }
 }
 
@@ -1259,12 +1316,7 @@ mVUop(mVU_JALR) {
 	mVUbranch = 10;
 	pass1 { mVUanalyzeJump(mVU, _Is_, _It_, 1); }
 	pass2 {
-		if (!mVUlow.constJump.isValid) {
-			mVUallocVIa(mVU, gprT1, _Is_);
-			SHL32ItoR(gprT1, 3);
-			AND32ItoR(gprT1, mVU->microMemSize - 8);
-			MOV32RtoM((uptr)&mVU->branch, gprT1);
-		}
+		normJumpPass2(mVU);
 		MOV32ItoR(gprT1, bSaveAddr);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}

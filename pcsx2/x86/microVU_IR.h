@@ -34,16 +34,18 @@ union regInfo {
 #endif
 
 __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
-	u32 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
+	u8 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u8 q;
 	u8 p;
 	u8 r;
 	u8 xgkick;
+	u8 viBackUp;
 	u8 VI[16];
 	regInfo VF[32];
 	u8 flags;			// clip x2 :: status x2
-	u8 padding[3];		// 160 bytes
+	u8 blockType;		// 0 = Normal; 1,2 = Compile one instruction (E-bit/Branch Ending)
+	u8 padding[5];		// 160 bytes
 #if defined(_MSC_VER)
 };
 #else
@@ -105,6 +107,8 @@ struct microLowerOp {
 	microVIreg VI_read[2];	  // VI regs read by this instruction
 	microConstInfo constJump; // Constant Reg Info for JR/JARL instructions
 	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
+	bool badBranch; // This instruction is a Branch who has another branch in its Delay Slot
+	bool evilBranch;// This instruction is a Branch in a Branch Delay Slot (Instruction after badBranch)
 	bool isNOP;		// This instruction is a NOP
 	bool isFSSET;	// This instruction is a FSSET
 	bool noWriteVF;	// Don't write back the result of a lower op to VF reg if upper op writes to same reg (or if VF = 0)
@@ -120,6 +124,13 @@ struct microFlagInst {
 	u8	 write;		  // Points to the instance that should be written to (s-stage write)
 	u8	 lastWrite;	  // Points to the instance that was last written to (most up-to-date flag)
 	u8	 read;		  // Points to the instance that should be read by a lower instruction (t-stage read)
+};
+
+struct microFlagCycles {
+	int xStatus[4];
+	int xMac[4];
+	int xClip[4];
+	int cycles;
 };
 
 struct microOp {
@@ -163,9 +174,10 @@ struct microIR {
 void mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW);
 void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW);
 void mVUloadReg(int reg, uptr offset, int xyzw);
+void mVUloadIreg(int reg, int xyzw, VURegs* vuRegs);
 
 struct microXMM {
-	int  reg;		// VF Reg Number Stored (-1 = Temp; 0 = vf0 and will not be written back; 32 = ACC)
+	int  reg;		// VF Reg Number Stored (-1 = Temp; 0 = vf0 and will not be written back; 32 = ACC; 33 = I reg)
 	int  xyzw;		// xyzw to write back (0 = Don't write back anything AND cached vfReg has all vectors valid)
 	int  count;		// Count of when last used
 	bool isNeeded;	// Is needed for current instruction
@@ -221,10 +233,16 @@ public:
 		xmmReg[reg].xyzw	 =  0;
 		xmmReg[reg].isNeeded =  0;
 	}
+	void clearRegVF(int VFreg) {
+		for (int i = 0; i < xmmTotal; i++) {
+			if (xmmReg[i].reg == VFreg) clearReg(i);
+		}
+	}
 	void writeBackReg(int reg, bool invalidateRegs = 1) {
 		if ((xmmReg[reg].reg > 0) && xmmReg[reg].xyzw) { // Reg was modified and not Temp or vf0
-			if (xmmReg[reg].reg == 32) mVUsaveReg(reg, (uptr)&vuRegs->ACC.UL[0], xmmReg[reg].xyzw, 1);
-			else mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
+			if		(xmmReg[reg].reg == 33) SSE_MOVSS_XMM_to_M32((uptr)&vuRegs->VI[REG_I].UL, reg);
+			else if (xmmReg[reg].reg == 32) mVUsaveReg(reg, (uptr)&vuRegs->ACC.UL[0],	 xmmReg[reg].xyzw, 1);
+			else							mVUsaveReg(reg, (uptr)&vuRegs->VF[xmmReg[reg].reg].UL[0], xmmReg[reg].xyzw, 1);
 			if (invalidateRegs) {
 				for (int i = 0; i < xmmTotal; i++) {
 					if ((i == reg) || xmmReg[i].isNeeded) continue;
@@ -307,13 +325,15 @@ public:
 
 		if (vfWriteReg >= 0) { // Reg Will Be Modified (allow partial reg loading)
 			if	   ((vfLoadReg ==  0) && !(xyzw & 1)) { SSE2_PXOR_XMM_to_XMM(x, x); }
-			else if	(vfLoadReg == 32) mVUloadReg(x, (uptr)&vuRegs->ACC.UL[0], xyzw);
-			else if (vfLoadReg >=  0) mVUloadReg(x, (uptr)&vuRegs->VF[vfLoadReg].UL[0], xyzw);
+			else if	(vfLoadReg == 33) mVUloadIreg(x, xyzw, vuRegs);
+			else if	(vfLoadReg == 32) mVUloadReg (x, (uptr)&vuRegs->ACC.UL[0], xyzw);
+			else if (vfLoadReg >=  0) mVUloadReg (x, (uptr)&vuRegs->VF[vfLoadReg].UL[0], xyzw);
 			xmmReg[x].reg  = vfWriteReg;
 			xmmReg[x].xyzw = xyzw;
 		}
 		else { // Reg Will Not Be Modified (always load full reg for caching)
-			if		(vfLoadReg == 32) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->ACC.UL[0]);
+			if		(vfLoadReg == 33) mVUloadIreg(x, 0xf, vuRegs);
+			else if	(vfLoadReg == 32) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->ACC.UL[0]);
 			else if (vfLoadReg >=  0) SSE_MOVAPS_M128_to_XMM(x, (uptr)&vuRegs->VF[vfLoadReg].UL[0]);
 			xmmReg[x].reg  = vfLoadReg;
 			xmmReg[x].xyzw = 0;

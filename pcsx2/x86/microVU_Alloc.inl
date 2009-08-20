@@ -117,12 +117,6 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 // I/P/Q Reg Allocators
 //------------------------------------------------------------------
 
-microVUt(void) getIreg(mV, int reg, bool modXYZW) {
-	SSE_MOVSS_M32_to_XMM(reg, (uptr)&mVU->regs->VI[REG_I].UL);
-	if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, -1, 8);
-	if (!((_XYZW_SS && modXYZW) || (_X_Y_Z_W == 8))) { mVUunpack_xyzw(reg, reg, 0); }
-}
-
 microVUt(void) getPreg(mV, int reg) {
 	mVUunpack_xyzw(reg, xmmPQ, (2 + mVUinfo.readP));
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT1, 15);*/

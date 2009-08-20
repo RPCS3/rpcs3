@@ -289,6 +289,18 @@ EXPORT_C GSirqCallback(void (*irq)())
 	s_irq = irq;
 }
 
+EXPORT_C_(int) GSsetupRecording(int start, void* data)
+{
+	GSKeyEventData e;
+
+	e.type = KEYPRESS;
+	e.key = VK_F12;
+
+	s_gs->KeyEvent(&e, start & 1);
+	
+	return 1;
+}
+
 EXPORT_C GSsetGameCRC(uint32 crc, int options)
 {
 	s_gs->SetGameCRC(crc, options);

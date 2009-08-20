@@ -31,6 +31,8 @@ class GSRendererDX : public GSRendererHW<Vertex>
 	GSVector2 m_pixelcenter;
 	bool m_logz;
 	bool m_fba;
+	int m_pixoff_x;
+	int m_pixoff_y;
 
 protected:
 	int m_topology;
@@ -47,6 +49,8 @@ public:
 	{
 		m_logz = !!theApp.GetConfig("logz", 0);
 		m_fba = !!theApp.GetConfig("fba", 1);
+		m_pixoff_x = theApp.GetConfig("pixoff_x", 0);
+		m_pixoff_y = theApp.GetConfig("pixoff_y", 0);
 	}
 
 	virtual ~GSRendererDX()
@@ -90,22 +94,24 @@ public:
 		else
 		{
 			om_dssel.ztst = ZTST_ALWAYS;
-			om_dssel.zwe = 0;
 		}
-/*
-		om_dssel.zte = context->TEST.ZTE;
-		om_dssel.ztst = context->TEST.ZTST;
-		om_dssel.zwe = !context->ZBUF.ZMSK;
-*/
-		om_dssel.date = context->FRAME.PSM != PSM_PSMCT24 ? context->TEST.DATE : 0;
-		om_dssel.fba = m_fba ? context->FBA.FBA : 0;
+
+		if(context->FRAME.PSM != PSM_PSMCT24)
+		{
+			om_dssel.date = context->TEST.DATE;
+		}
+
+		if(m_fba)
+		{
+			om_dssel.fba = context->FBA.FBA;
+		}
 
 		GSTextureFX::OMBlendSelector om_bsel;
 
-		om_bsel.abe = !IsOpaque();
-
-		if(om_bsel.abe)
+		if(!IsOpaque())
 		{
+			om_bsel.abe = PRIM->ABE || PRIM->AA1 && m_vt.m_primclass == GS_LINE_CLASS;
+
 			om_bsel.a = context->ALPHA.A;
 			om_bsel.b = context->ALPHA.B;
 			om_bsel.c = context->ALPHA.C;
@@ -165,8 +171,8 @@ public:
 
 		float sx = 2.0f * rt->GetScale().x / (rt->GetWidth() << 4);
 		float sy = 2.0f * rt->GetScale().y / (rt->GetHeight() << 4);
-		float ox = (float)(int)context->XYOFFSET.OFX;
-		float oy = (float)(int)context->XYOFFSET.OFY;
+		float ox = (float)(int)context->XYOFFSET.OFX + m_pixoff_x;
+		float oy = (float)(int)context->XYOFFSET.OFY + m_pixoff_y;
 		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
 		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
 

@@ -214,7 +214,7 @@
 				PreprocessorDefinitions="NDEBUG;wxUSE_UNICODE=1"
 				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="0"
-				UsePrecompiledHeader="2"
+				UsePrecompiledHeader="0"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				CompileAs="2"
@@ -1480,6 +1480,10 @@
 							</File>
 							<File
 								RelativePath="..\..\x86\microVU_Analyze.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_Branch.inl"
 								>
 							</File>
 							<File

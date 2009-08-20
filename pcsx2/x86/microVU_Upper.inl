@@ -120,18 +120,18 @@ void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
 
 // Sets Up Ft Reg for Normal, BC, I, and Q Cases
 void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
-	opCase1 { 
+	opCase1 {
 		if (_XYZW_SS2) { Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W); tempFt = Ft; }
 		else		   { Ft = mVU->regAlloc->allocReg(_Ft_);			  tempFt = -1; }
 	}
-	opCase2 { 
+	opCase2 {
 		tempFt = mVU->regAlloc->allocReg(_Ft_);
-		Ft = mVU->regAlloc->allocReg();
+		Ft	   = mVU->regAlloc->allocReg();
 		mVUunpack_xyzw(Ft, tempFt, _bc_);
 		mVU->regAlloc->clearNeeded(tempFt);
 		tempFt = Ft;
 	}
-	opCase3 { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getIreg(mVU, Ft, 1); }
+	opCase3 { Ft = mVU->regAlloc->allocReg(33, 0, _X_Y_Z_W); tempFt = Ft; }
 	opCase4 {
 		if (_XYZW_SS && !mVUinfo.readQ) { Ft = xmmPQ; tempFt = -1; }
 		else { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getQreg(Ft, mVUinfo.readQ); }
@@ -152,9 +152,9 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		}
 		else { Fs = mVU->regAlloc->allocReg(_Fs_, _Fd_, _X_Y_Z_W); }
 
-		opCase1 { if((opType == 2) && _XYZW_PS)	{ mVUclamp1(Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
-		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
-		opCase2 { if (opType == 2)				{ mVUclamp1(Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
+		opCase1 { if((opType == 2) && _XYZW_PS)	{ mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase2 { if (opType == 2)				{ mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 		
 		if (_XYZW_SS) SSE_SS[opType](mVU, Fs, Ft, -1, -1);
 		else		  SSE_PS[opType](mVU, Fs, Ft, -1, -1);
@@ -185,7 +185,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 		ACC = mVU->regAlloc->allocReg(32, 32, 0xf, 0);
 
 		if (_XYZW_SS2) { SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W)); }
-		opCase2 { mVUclamp1(Fs, -1, _X_Y_Z_W); } // Clamp Needed for alot of games (TOTA, DoM, etc...)
+		opCase2 { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 
 		if (_XYZW_SS) SSE_SS[2](mVU, Fs, Ft, -1, -1);
 		else		  SSE_PS[2](mVU, Fs, Ft, -1, -1);
@@ -223,7 +223,7 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 		Fs  = mVU->regAlloc->allocReg(_Fs_, _Fd_, _X_Y_Z_W);
 
 		if (_XYZW_SS2) { SSE2_PSHUFD_XMM_to_XMM(ACC, ACC, shuffleSS(_X_Y_Z_W)); }
-		opCase2 { mVUclamp1(Fs, -1, _X_Y_Z_W); } // Clamp Needed for alot of games (TOTA, DoM, etc...)
+		opCase2 { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 
 		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[0](mVU, Fs, ACC, tempFt, -1); }
 		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[0](mVU, Fs, ACC, tempFt, -1); }
@@ -248,7 +248,7 @@ void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName) {
 
 		Fs = mVU->regAlloc->allocReg(_Fs_,  0, _X_Y_Z_W);
 		Fd = mVU->regAlloc->allocReg(32, _Fd_, _X_Y_Z_W);
-
+		
 		if (_XYZW_SS) { SSE_SS[2](mVU, Fs, Ft, -1, -1); SSE_SS[1](mVU, Fd, Fs, tempFt, -1); }
 		else		  { SSE_PS[2](mVU, Fs, Ft, -1, -1); SSE_PS[1](mVU, Fd, Fs, tempFt, -1); }
 	

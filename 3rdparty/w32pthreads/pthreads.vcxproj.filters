@@ -1,0 +1,137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Docs">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="attr.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="barrier.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cancel.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cleanup.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="condvar.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="create.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="dll.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="errno.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="exit.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fork.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="global.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="misc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="mutex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="nonportable.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="private.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ptw32pch.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="rwlock.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sched.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="semaphore.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="signal.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="spin.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="sync.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="tsd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ANNOUNCE">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="BUGS">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="CONTRIBUTORS">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="COPYING">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="FAQ">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="MAINTAINERS">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="NEWS">
+      <Filter>Docs</Filter>
+    </None>
+    <None Include="PCSX2.txt">
+      <Filter>Docs</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="config.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\implement.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\need_errno.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\pthread.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\sched.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\semaphore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ptw32pch.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

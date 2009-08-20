@@ -92,7 +92,7 @@ class xImpl_iMul : public ImplMulDivBase<G3Type_iMUL,0x59>
 	{
 		xOpWrite0F( (sizeof(ImmType) == 2) ? 0x66 : 0, is_s8( imm8 ) ? 0x6b : 0x69, param1, param2 );
 		if( is_s8( imm8 ) )
-			xWrite8( imm8 );
+			xWrite8( (u8)imm8 );
 		else
 			xWrite<ImmType>( imm8 );
 	}

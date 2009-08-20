@@ -21,8 +21,8 @@
 RAM
 ---
 0x00100000-0x01ffffff this is the physical address for the ram.its cached there
-0x20100000-0x21ffffff uncached
-0x30100000-0x31ffffff uncached & acceleretade
+0x20100000-0x21ffffff uncached 
+0x30100000-0x31ffffff uncached & accelerated
 0xa0000000-0xa1ffffff MIRROR might...???
 0x80000000-0x81ffffff MIRROR might... ????
 

@@ -7,7 +7,7 @@
 #include "RawInput.h"
 #include "XInput.h"
 
-void EnumDevices() {
+void EnumDevices(int hideDXXinput) {
 	// Needed for enumeration of some device types.
 	dm->ReleaseInput();
 	InputDeviceManager *oldDm = dm;
@@ -17,7 +17,7 @@ void EnumDevices() {
 	EnumWindowsMessagingDevices();
 	EnumRawInputDevices();
 	EnumXInputDevices();
-	EnumDirectInputDevices();
+	EnumDirectInputDevices(hideDXXinput);
 
 	dm->CopyBindings(oldDm->numDevices, oldDm->devices);
 

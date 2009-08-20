@@ -26,6 +26,7 @@
 #include "coroutine.h"
 
 #include "Vif.h"
+#include "Tags.h"
 
 using namespace std;			// for min / max
 
@@ -36,7 +37,7 @@ using namespace std;			// for min / max
 //#define IPU_INT0_FROM()  CPU_INT( DMAC_FROM_IPU, 0 )
 
 // IPU Inline'd IRQs : Calls the IPU interrupt handlers directly instead of
-// feeding them through the EE's branch test. (see IPU.H for details)
+// feeding them through the EE's branch test. (see IPU.h for details)
 
 #ifdef IPU_INLINE_IRQS
 #	define IPU_INT_TO( cycles )  ipu1Interrupt()
@@ -117,7 +118,7 @@ extern "C"
 PCSX2_ALIGNED16(u8 _readbits[80]);	//local buffer (ring buffer)
 u8* readbits = _readbits; // always can decrement by one 1qw
 
-#define SATURATE_4BITS(val) ((val)>15 ? 15 : (val))
+//#define SATURATE_4BITS(val) ((val)>15 ? 15 : (val))
 
 __forceinline void IPUProcessInterrupt()
 {
@@ -317,21 +318,20 @@ __forceinline u64 ipuRead64(u32 mem)
 void ipuSoftReset()
 {
 	mpeg2_init();
-
 	FIFOto_clear();
-	memzero_obj(fifo_output);
-	FOwritepos = 0;
-	FOreadpos = 0;
+	FIFOfrom_clear();
+	
 	coded_block_pattern = 0;
-
+	
 	ipuRegs->ctrl._u32 = 0;
+	ipuRegs->top = 0;
+	ipuCurCmd = 0xffffffff;
+	
 	g_BP.BP = 0;
-	g_BP.IFC = 0;
 	g_BP.FP = 0;
 	g_BP.bufferhasnew = 0;
-	ipuRegs->top = 0;
+	
 	g_nCmdIndex = 0;
-	ipuCurCmd = 0xffffffff;
 	g_nCmdPos[0] = 0;
 	g_nCmdPos[1] = 0;
 }
@@ -404,10 +404,10 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 static void ipuBCLR(u32 val)
 {
 	FIFOto_clear();
+	
 	g_BP.BP = val & 0x7F;
 	g_BP.FP = 0;
 	g_BP.bufferhasnew = 0;
-	g_BP.IFC = 0;
 	ipuRegs->ctrl.BUSY = 0;
 	ipuRegs->cmd.BUSY = 0;
 	memzero_ptr<80>(readbits);
@@ -811,7 +811,7 @@ void IPUCMD_WRITE(u32 val)
 
 		case SCE_IPU_FDEC:
 			IPU_LOG("IPU FDEC command. Skip 0x%X bits, FIFO 0x%X qwords, BP 0x%X, FP %d, CHCR 0x%x, %x",
-			        val & 0x3f, g_BP.IFC, (int)g_BP.BP, g_BP.FP, ((DMACh*)&PS2MEM_HW[0xb400])->chcr, cpuRegs.pc);
+			        val & 0x3f, g_BP.IFC, (int)g_BP.BP, g_BP.FP, ipu1dma->chcr, cpuRegs.pc);
 			g_BP.BP += val & 0x3F;
 			if (ipuFDEC(val)) return;
 			ipuRegs->cmd.BUSY = 0x80000000;
@@ -840,7 +840,7 @@ void IPUCMD_WRITE(u32 val)
 
 			if (ipuCSC(ipuRegs->cmd.DATA))
 			{
-				if (ipu0dma->qwc > 0 && (ipu0dma->chcr & 0x100))  IPU_INT0_FROM();
+				if (ipu0dma->qwc > 0 && (CHCR::STR(ipu0dma)))  IPU_INT0_FROM();
 				return;
 			}
 			break;
@@ -855,7 +855,7 @@ void IPUCMD_WRITE(u32 val)
 			if (ipuIDEC(val))
 			{
 				// idec done, ipu0 done too
-				if (ipu0dma->qwc > 0 && (ipu0dma->chcr & 0x100)) IPU_INT0_FROM();
+				if (ipu0dma->qwc > 0 && (CHCR::STR(ipu0dma))) IPU_INT0_FROM();
 				return;
 			}
 			ipuRegs->topbusy = 0x80000000;
@@ -867,7 +867,7 @@ void IPUCMD_WRITE(u32 val)
 		case SCE_IPU_BDEC:
 			if (ipuBDEC(val))
 			{
-				if (ipu0dma->qwc > 0 && (ipu0dma->chcr & 0x100)) IPU_INT0_FROM();
+				if (ipu0dma->qwc > 0 && (CHCR::STR(ipu0dma))) IPU_INT0_FROM();
 				if (ipuRegs->ctrl.SCD || ipuRegs->ctrl.ECD) hwIntcIrq(INTC_IPU);
 				return;
 			}
@@ -931,7 +931,7 @@ void IPUWorker()
 				hwIntcIrq(INTC_IPU);
 				return;
 			}
-			if ((ipu0dma->qwc > 0) && (ipu0dma->chcr & 0x100))  IPU_INT0_FROM();
+			if ((ipu0dma->qwc > 0) && (CHCR::STR(ipu0dma)))  IPU_INT0_FROM();
 			break;
 
 		case SCE_IPU_PACK:
@@ -957,7 +957,7 @@ void IPUWorker()
 			ipuCurCmd = 0xffffffff;
 
 			// CHECK!: IPU0dma remains when IDEC is done, so we need to clear it
-			if ((ipu0dma->qwc > 0) && (ipu0dma->chcr & 0x100)) IPU_INT0_FROM();
+			if ((ipu0dma->qwc > 0) && (CHCR::STR(ipu0dma))) IPU_INT0_FROM();
 			s_routine = NULL;
 			break;
 
@@ -974,7 +974,7 @@ void IPUWorker()
 			ipuRegs->cmd.BUSY = 0;
 			ipuCurCmd = 0xffffffff;
 
-			if ((ipu0dma->qwc > 0) && (ipu0dma->chcr & 0x100)) IPU_INT0_FROM();
+			if ((ipu0dma->qwc > 0) && (CHCR::STR(ipu0dma))) IPU_INT0_FROM();
 			s_routine = NULL;
 			if (ipuRegs->ctrl.SCD || ipuRegs->ctrl.ECD) hwIntcIrq(INTC_IPU);
 			return;
@@ -1328,19 +1328,18 @@ int FIFOto_read(void *value)
 	// wait until enough data
 	if (g_BP.IFC == 0)
 	{
+		// This is the only spot that wants a return value for IPU1dma.
 		if (IPU1dma() == 0) return 0;
 		assert(g_BP.IFC > 0);
 	}
 
 	// transfer 1 qword, split into two transfers
-	((u32*)value)[0] = fifo_input[FIreadpos];
-	fifo_input[FIreadpos] = 0;
-	((u32*)value)[1] = fifo_input[FIreadpos+1];
-	fifo_input[FIreadpos+1] = 0;
-	((u32*)value)[2] = fifo_input[FIreadpos+2];
-	fifo_input[FIreadpos+2] = 0;
-	((u32*)value)[3] = fifo_input[FIreadpos+3];
-	fifo_input[FIreadpos+3] = 0;
+	for (int i = 0; i <= 3; i++)
+	{
+		((u32*)value)[i] = fifo_input[FIreadpos + i];
+		fifo_input[FIreadpos + i] = 0;
+	}
+	
 	FIreadpos = (FIreadpos + 4) & 31;
 	g_BP.IFC--;
 	return 1;
@@ -1356,10 +1355,10 @@ int FIFOto_write(u32* pMem, int size)
 
 	while (transsize-- > 0)
 	{
-		fifo_input[FIwritepos] = pMem[0];
-		fifo_input[FIwritepos+1] = pMem[1];
-		fifo_input[FIwritepos+2] = pMem[2];
-		fifo_input[FIwritepos+3] = pMem[3];
+		for (int i = 0; i <= 3; i++)
+		{
+			fifo_input[FIwritepos + i] = pMem[i];
+		}
 		FIwritepos = (FIwritepos + 4) & 31;
 		pMem += 4;
 	}
@@ -1367,11 +1366,12 @@ int FIFOto_write(u32* pMem, int size)
 	return firsttrans;
 }
 
-static __forceinline bool IPU1chain(u32* &pMem, int &totalqwc) 
+static __forceinline bool IPU1chain(int &totalqwc) 
 {
 	if (ipu1dma->qwc > 0)
 	{
 		int qwc = ipu1dma->qwc; 
+		u32 *pMem;
 		
 		pMem = (u32*)dmaGetAddr(ipu1dma->madr); 
 		
@@ -1395,15 +1395,16 @@ static __forceinline bool IPU1chain(u32* &pMem, int &totalqwc)
 	return false;
 }
 
+// Remind me to give this a better name. --arcum42
 static __forceinline bool IncreaseTadr(u32 tag)
 {
-	switch (tag & 0x70000000)
+	switch (Tag::Id(tag))
 	{
-		case 0x00000000:
+		case TAG_REFE:  // refe
 			ipu1dma->tadr += 16;
 			return true;
 		
-		case 0x70000000:
+		case TAG_END: // end
 			ipu1dma->tadr = ipu1dma->madr;
 			return true;
 	}
@@ -1412,33 +1413,77 @@ static __forceinline bool IncreaseTadr(u32 tag)
 
 extern void gsInterrupt();
 
-int IPU1dma()
+static __forceinline bool ipuDmacSrcChain(DMACh *tag, u32 *ptag)
 {
-	u32 *ptag, *pMem;
-	bool done = FALSE;
-	int ipu1cycles = 0;
-	int totalqwc = 0;
+	switch (Tag::Id(ptag))
+	{
+		case TAG_REFE: // refe
+			// do not change tadr
+			tag->madr = ptag[1];
+			return true;
+			break;
 
-	assert(!(ipu1dma->chcr & 0x40));
+		case TAG_CNT: // cnt
+			tag->madr = tag->tadr + 16;
+			// Set the taddr to the next tag
+			tag->tadr += 16 + (tag->qwc << 4);
+			break;
 
-	if (!(ipu1dma->chcr & 0x100) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
+		case TAG_NEXT: // next
+			tag->madr = tag->tadr + 16;
+			tag->tadr = ptag[1];
+			break;
 
-	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
+		case TAG_REF: // ref
+			tag->madr = ptag[1];
+			tag->tadr += 16;
+			break;
 
-	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
-	while(gif->chcr & 0x100 && vif1Regs->mskpath3 == 0) 
+		case TAG_END: // end
+			// do not change tadr
+			tag->madr = tag->tadr + 16;
+			return true;
+			break;
+
+		default:
+			Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
+			break;
+	}
+	
+	return false;
+}
+
+static __forceinline void flushGIF()
+{
+	while(CHCR::STR(gif) && (vif1Regs->mskpath3 == 0)) 
 	{
 		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr, gif->tadr, gif->madr, gif->qwc);
 		gsInterrupt();
 	}
+}
+
+int IPU1dma()
+{
+	u32 *ptag; 
+	bool done = false;
+	int ipu1cycles = 0, totalqwc = 0;
+
+	assert(!(CHCR::TTE(ipu1dma)));
+	
+	if (!(CHCR::STR(ipu1dma)) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
+
+	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
+	
+	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
+	flushGIF();
 
 	// in kh, qwc == 0 when dma_actv1 is set
 	if ((g_nDMATransfer & IPU_DMA_ACTV1) && ipu1dma->qwc > 0)
 	{
-		if (IPU1chain(pMem, totalqwc)) return totalqwc;
+		if (IPU1chain(totalqwc)) return totalqwc;
 
 		//Check TIE bit of CHCR and IRQ bit of tag
-		if ((ipu1dma->chcr & 0x80) && (g_nDMATransfer & IPU_DMA_DOTIE1))
+		if (CHCR::TIE(ipu1dma) && (g_nDMATransfer & IPU_DMA_DOTIE1))
 		{
 			Console::WriteLn("IPU1 TIE");
 
@@ -1448,22 +1493,24 @@ int IPU1dma()
 			return totalqwc;
 		}
 
-		if (!(ipu1dma->chcr & 0xc))
+		if (CHCR::MOD(ipu1dma) == NORMAL_MODE) // If mode is normal mode.
 		{
 			IPU_INT_TO(totalqwc * BIAS);
 			return totalqwc;
 		}
 		else
 		{
+			// Chain mode.
 			u32 tag = ipu1dma->chcr; // upper bits describe current tag
 
-			if ((ipu1dma->chcr & 0x80) && (tag & 0x80000000))
+			if (CHCR::TIE(ipu1dma) && Tag::IRQ(tag))
 			{
 				ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
 
 				IncreaseTadr(tag);
 
-				ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+				Tag::UpperTransfer(ipu1dma, ptag);
+				
 				IPU_LOG("IPU dmaIrq Set");
 				IPU_INT_TO(totalqwc * BIAS);
 				g_nDMATransfer |= IPU_DMA_TIE1;
@@ -1480,7 +1527,8 @@ int IPU1dma()
 		g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
 	}
 	
-	if (((ipu1dma->chcr & 0xc) == 0) && (ipu1dma->qwc == 0))   // Normal Mode
+	// Normal Mode & qwc is finished
+	if ((CHCR::MOD(ipu1dma) == NORMAL_MODE) && (ipu1dma->qwc == 0))
 	{
 		//Console::WriteLn("ipu1 normal empty qwc?");
 		return totalqwc;
@@ -1492,7 +1540,7 @@ int IPU1dma()
 		IPU_LOG("dmaIPU1 Normal size=%d, addr=%lx, fifosize=%x",
 		        ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 		
-		if (!IPU1chain(pMem, totalqwc)) IPU_INT_TO((ipu1cycles + totalqwc) * BIAS);
+		if (!IPU1chain(totalqwc)) IPU_INT_TO((ipu1cycles + totalqwc) * BIAS);
 		
 		return totalqwc;
 	}
@@ -1500,70 +1548,31 @@ int IPU1dma()
 	{
 		// Chain Mode & ipu1dma->qwc is 0
 		ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
-		if (ptag == NULL)  					 //Is ptag empty?
-		{
-			Console::Error("IPU1 BUSERR");
-			ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);      //Transfer upper part of tag to CHCR bits 31-15
-			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;		 //If yes, set BEIS (BUSERR) in DMAC_STAT register
-			return totalqwc;
-		}
-
+		
+		// Transfer the tag.
+		if (!(Tag::Transfer("IPU1", ipu1dma, ptag))) return totalqwc;
+		
 		ipu1cycles += 1; // Add 1 cycles from the QW read for the tag
-
-		ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);      //Transfer upper part of tag to CHCR bits 31-15
-		ipu1dma->qwc  = (u16)ptag[0];			    //QWC set to lower 16bits of the tag
-
-		switch (ptag[0] & 0x70000000)
-		{
-			case 0x00000000: // refe
-				// do not change tadr
-				ipu1dma->madr = ptag[1];
-				done = TRUE;
-				break;
-
-			case 0x10000000: // cnt
-				ipu1dma->madr = ipu1dma->tadr + 16;
-				// Set the taddr to the next tag
-				ipu1dma->tadr += 16 + (ipu1dma->qwc << 4);
-				break;
-
-			case 0x20000000: // next
-				ipu1dma->madr = ipu1dma->tadr + 16;
-				ipu1dma->tadr = ptag[1];
-				break;
-
-			case 0x30000000: // ref
-				ipu1dma->madr = ptag[1];
-				ipu1dma->tadr += 16;
-				break;
-
-			case 0x70000000: // end
-				// do not change tadr
-				ipu1dma->madr = ipu1dma->tadr + 16;
-				done = TRUE;
-				break;
-
-			default:
-				Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
-				break;
-		}
+		
+		done = ipuDmacSrcChain(ipu1dma, ptag);
 
 		IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
 		        ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
-		if ((ipu1dma->chcr & 0x80) && ptag[0] & 0x80000000)
+		
+		if (CHCR::TIE(ipu1dma) && Tag::IRQ(ptag))
 			g_nDMATransfer |= IPU_DMA_DOTIE1;
 		else
 			g_nDMATransfer &= ~IPU_DMA_DOTIE1;
 		
 		if (ipu1dma->qwc == 0)
 		{
-			//if ((ipu1dma->chcr & 0x80) && (ptag[0] & 0x80000000))  	 //Check TIE bit of CHCR and IRQ bit of tag
+			//Check TIE bit of CHCR and IRQ bit of tag
 			if (g_nDMATransfer & IPU_DMA_DOTIE1)
 			{
 				Console::WriteLn("IPU1 TIE");
 				
-				if (IPU1chain(pMem, totalqwc)) return totalqwc;
+				if (IPU1chain(totalqwc)) return totalqwc;
 				
 				if (done)
 				{
@@ -1571,7 +1580,8 @@ int IPU1dma()
 
 					IncreaseTadr(ptag[0]);
 
-					ipu1dma->chcr = (ipu1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+					// Transfer the last of ptag into chcr.
+					Tag::UpperTransfer(ipu1dma, ptag);
 				}
 
 				IPU_INT_TO(ipu1cycles + totalqwc * BIAS);  // Should it be (ipu1cycles + totalqwc) * BIAS?
@@ -1582,14 +1592,14 @@ int IPU1dma()
 			{
 				//Britney Dance beat does a blank NEXT tag, for some odd reason the fix doesnt work if after IPU1Chain O_o
 				if (!done) IPU1dma();
-				if (IPU1chain(pMem, totalqwc)) return totalqwc;
+				if (IPU1chain(totalqwc)) return totalqwc;
 			}
 
 			IncreaseTadr(ptag[0]);
 		}
 		else
 		{
-			if (IPU1chain(pMem, totalqwc)) return totalqwc;
+			if (IPU1chain(totalqwc)) return totalqwc;
 		}
 	}
 
@@ -1597,6 +1607,13 @@ int IPU1dma()
 	return totalqwc;
 }
 
+void FIFOfrom_clear()
+{
+	memzero_obj(fifo_output);
+	ipuRegs->ctrl.OFC = 0;
+	FOreadpos = 0;
+	FOwritepos = 0;
+}
 
 int FIFOfrom_write(const u32 *value, int size)
 {
@@ -1609,10 +1626,10 @@ int FIFOfrom_write(const u32 *value, int size)
 
 	while (transsize-- > 0)
 	{
-		fifo_output[FOwritepos] = ((u32*)value)[0];
-		fifo_output[FOwritepos+1] = ((u32*)value)[1];
-		fifo_output[FOwritepos+2] = ((u32*)value)[2];
-		fifo_output[FOwritepos+3] = ((u32*)value)[3];
+		for (int i = 0; i <= 3; i++)
+		{
+			fifo_output[FOwritepos + i] = ((u32*)value)[i];
+		}
 		FOwritepos = (FOwritepos + 4) & 31;
 		value += 4;
 	}
@@ -1627,14 +1644,11 @@ int FIFOfrom_write(const u32 *value, int size)
 static __forceinline void _FIFOfrom_readsingle(void *value)
 {
 	// transfer 1 qword, split into two transfers
-	((u32*)value)[0] = fifo_output[FOreadpos];
-	fifo_output[FOreadpos] = 0;
-	((u32*)value)[1] = fifo_output[FOreadpos+1];
-	fifo_output[FOreadpos+1] = 0;
-	((u32*)value)[2] = fifo_output[FOreadpos+2];
-	fifo_output[FOreadpos+2] = 0;
-	((u32*)value)[3] = fifo_output[FOreadpos+3];
-	fifo_output[FOreadpos+3] = 0;
+	for (int i = 0; i <= 3; i++)
+	{
+		((u32*)value)[i] = fifo_output[FOreadpos + i];
+		fifo_output[FOreadpos + i] = 0;
+	}
 	FOreadpos = (FOreadpos + 4) & 31;
 }
 
@@ -1658,17 +1672,15 @@ void FIFOfrom_read(void *value, int size)
 	}
 }
 
-
-
 int IPU0dma()
 {
 	int readsize;
 	void* pMem;
 
-	if ((!(ipu0dma->chcr & 0x100) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
+	if ((!(CHCR::STR(ipu0dma)) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
 		return 0;
 
-	assert(!(ipu0dma->chcr&0x40));
+	assert(!(CHCR::TTE(ipu0dma)));
 
 	IPU_LOG("dmaIPU0 chcr = %lx, madr = %lx, qwc  = %lx",
 	        ipu0dma->chcr, ipu0dma->madr, ipu0dma->qwc);
@@ -1727,22 +1739,22 @@ void ipu0Interrupt()
 	{
 		// gif
 		g_nDMATransfer &= ~IPU_DMA_GIFSTALL;
-		if (((DMACh*)&PS2MEM_HW[0xA000])->chcr & 0x100) GIFdma();
+		if (CHCR::STR(gif)) GIFdma();
 	}
 
 	if (g_nDMATransfer & IPU_DMA_VIFSTALL)
 	{
 		// vif
 		g_nDMATransfer &= ~IPU_DMA_VIFSTALL;
-		if (((DMACh*)&PS2MEM_HW[0x9000])->chcr & 0x100)dmaVIF1();
+		if (CHCR::STR(vif1ch)) dmaVIF1();
 	}
 
 	if (g_nDMATransfer & IPU_DMA_TIE0)
 	{
 		g_nDMATransfer &= ~IPU_DMA_TIE0;
 	}
-
-	ipu0dma->chcr &= ~0x100;
+	
+	CHCR::clearSTR(ipu0dma);
 
 	hwDmacIrq(DMAC_FROM_IPU);
 }
@@ -1760,7 +1772,7 @@ IPU_FORCEINLINE void ipu1Interrupt()
 	if (g_nDMATransfer & IPU_DMA_TIE1)
 		g_nDMATransfer &= ~IPU_DMA_TIE1;
 	else
-		ipu1dma->chcr &= ~0x100;
+		CHCR::clearSTR(ipu1dma);
 
 	hwDmacIrq(DMAC_TO_IPU);
 }

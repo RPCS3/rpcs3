@@ -233,25 +233,17 @@ extern u8* g_pIPU0Pointer;
 PCSX2_ALIGNED16(extern macroblock_rgb32 rgb32);
 PCSX2_ALIGNED16(extern macroblock_8 mb8);
 
-void dmaIPU0();
-void dmaIPU1();
-
-int ipuInit();
-void ipuReset();
-void ipuShutdown();
-int  ipuFreeze(gzFile f, int Mode);
-bool ipuCanFreeze();
+extern int ipuInit();
+extern void ipuReset();
+extern void ipuShutdown();
+extern int  ipuFreeze(gzFile f, int Mode);
+extern bool ipuCanFreeze();
 
 
 extern u32 ipuRead32(u32 mem);
 extern u64 ipuRead64(u32 mem);
 extern void ipuWrite32(u32 mem,u32 value);
 extern void ipuWrite64(u32 mem,u64 value);
-
-int ipuConstRead32(u32 x86reg, u32 mem);
-void ipuConstRead64(u32 mem, int mmreg);
-void ipuConstWrite32(u32 mem, int mmreg);
-void ipuConstWrite64(u32 mem, int mmreg);
 
 extern void IPUCMD_WRITE(u32 val);
 extern void ipuSoftReset();
@@ -273,5 +265,6 @@ void FIFOfrom_read(void *value,int size);
 int FIFOto_read(void *value);
 int FIFOto_write(u32* pMem, int size);
 void FIFOto_clear();
+void FIFOfrom_clear();
 
 #endif

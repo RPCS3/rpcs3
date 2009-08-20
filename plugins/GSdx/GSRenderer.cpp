@@ -375,7 +375,7 @@ void GSRenderer::VSync(int field)
 
 				if(offscreen->Map(m))
 				{
-					m_capture.DeliverFrame(m.bits, m.pitch, m_dev->IsRBSwapped());
+					m_capture.DeliverFrame(m.bits, m.pitch, !m_dev->IsRBSwapped());
 
 					offscreen->Unmap();
 				}
@@ -403,7 +403,7 @@ bool GSRenderer::MakeSnapshot(const string& path)
 	return true;
 }
 
-void GSRenderer::KeyEvent(GSKeyEventData* e)
+void GSRenderer::KeyEvent(GSKeyEventData* e, int param)
 {
 	if(e->type == KEYPRESS)
 	{
@@ -423,8 +423,8 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			m_shader = (m_shader + 3 + step) % 3;
 			return;
 		case VK_F12:
-			if(m_capture.IsCapturing()) m_capture.EndCapture();
-			else m_capture.BeginCapture(GetFPS());
+			if(param) m_capture.BeginCapture(GetFPS());
+			else m_capture.EndCapture();
 			return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;

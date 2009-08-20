@@ -130,7 +130,11 @@ void SetLogSliderVal(HWND hWnd, int id, HWND hWndText, int val) {
 
 void RefreshEnabledDevices(int updateDeviceList) {
 	// Clears all device state.
-	if (updateDeviceList) EnumDevices();
+	static int lastXInputState = -1;
+	if (updateDeviceList || lastXInputState != config.gameApis.xInput) {
+		EnumDevices(config.gameApis.xInput);
+		lastXInputState = config.gameApis.xInput;
+	}
 
 	for (int i=0; i<dm->numDevices; i++) {
 		Device *dev = dm->devices[i];
@@ -1094,11 +1098,16 @@ int CreateEffectBinding(Device *dev, wchar_t *effectID, unsigned int port, unsig
 	if (port > 1 || slot>3 || motor > 1 || !dev->numFFEffectTypes) {
 		return -1;
 	}
-	if (!effectID) {
-		effectID = dev->ffEffectTypes[0].effectID;
+	ForceFeedbackEffectType *eff = 0;
+	if (effectID) {
+		eff = dev->GetForcefeedbackEffect(effectID);
 	}
-	ForceFeedbackEffectType *eff = dev->GetForcefeedbackEffect(effectID);
-	if (!eff) return -1;
+	if (!eff) {
+		eff = dev->ffEffectTypes;
+	}
+	if (!eff) {
+		return -1;
+	}
 	int effectIndex = eff - dev->ffEffectTypes;
 	dev->pads[port][slot].ffBindings = (ForceFeedbackBinding*) realloc(dev->pads[port][slot].ffBindings, (dev->pads[port][slot].numFFBindings+1) * sizeof(ForceFeedbackBinding));
 	int newIndex = dev->pads[port][slot].numFFBindings;
@@ -1404,7 +1413,14 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					if (index < (unsigned int) dm->numDevices) {
 						Device *dev = dm->devices[index];
 						ForceFeedbackBinding *b;
-						int count = CreateEffectBinding(dev, 0, port, slot, cmd-ID_BIG_MOTOR, &b);
+						wchar_t *effectID = 0;
+						if (dev->api == DI) {
+							// Constant effect.
+							if (cmd == ID_BIG_MOTOR) effectID = L"13541C20-8E33-11D0-9AD0-00A0C9A06E35";
+							// Square.
+							else effectID = L"13541C22-8E33-11D0-9AD0-00A0C9A06E35";
+						}
+						int count = CreateEffectBinding(dev, effectID, port, slot, cmd-ID_BIG_MOTOR, &b);
 						if (b) {
 							int needSet = 1;
 							if (dev->api == XINPUT && dev->numFFAxes == 2) {
@@ -1418,7 +1434,6 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 							}
 							else if (dev->api == DI) {
 								int bigIndex=0, littleIndex=0;
-								int constantEffect = 0, squareEffect = 0;
 								int j;
 								for (j=0; j<dev->numFFAxes; j++) {
 									// DI object instance.  0 is x-axis, 1 is y-axis.
@@ -1430,20 +1445,14 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 										littleIndex = j;
 									}
 								}
-								for (j=0; j<dev->numFFEffectTypes; j++) {
-									if (!wcsicmp(L"13541C20-8E33-11D0-9AD0-00A0C9A06E35", dev->ffEffectTypes[j].effectID)) constantEffect = j;
-									if (!wcsicmp(L"13541C22-8E33-11D0-9AD0-00A0C9A06E35", dev->ffEffectTypes[j].effectID)) squareEffect = j;
-								}
 								needSet = 0;
 								if (cmd == ID_BIG_MOTOR) {
 									b->axes[bigIndex].force = BASE_SENSITIVITY;
 									b->axes[littleIndex].force = 1;
-									b->effectIndex = constantEffect;
 								}
 								else {
 									b->axes[bigIndex].force = 1;
 									b->axes[littleIndex].force = BASE_SENSITIVITY;
-									b->effectIndex = squareEffect;
 								}
 							}
 							if (needSet) {
@@ -1695,7 +1704,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				selected = 0;
 				ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER, LVS_EX_FULLROWSELECT|LVS_EX_DOUBLEBUFFER);
 				SendMessage(hWndList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
-				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Disabled");
+				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Unplugged");
 				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Dualshock 2");
 				SendMessage(hWndCombo, CB_ADDSTRING, 0, (LPARAM) L"Guitar");
 			}

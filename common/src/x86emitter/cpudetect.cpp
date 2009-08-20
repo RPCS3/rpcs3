@@ -95,7 +95,7 @@ static void SetSingleAffinity()
 		if( availProcCpus & (1<<i) ) break;
 	}
 
-	HANDLE s_threadId = GetCurrentThread();
+	s_threadId = GetCurrentThread();
 	s_oldmask = SetThreadAffinityMask( s_threadId, (1UL<<i) );
 
 	if( s_oldmask == ERROR_INVALID_PARAMETER )

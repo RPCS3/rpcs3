@@ -84,6 +84,7 @@ declareAllVariables
 #define _XYZW_SS	(_X+_Y+_Z+_W==1)
 #define _XYZW_SS2	(_XYZW_SS && (_X_Y_Z_W != 8))
 #define _XYZW_PS	(_X_Y_Z_W == 0xf)
+#define _XYZWss(x)	((x==8) || (x==4) || (x==2) || (x==1))
 
 #define _bc_	 (mVU->code & 0x3)
 #define _bc_x	((mVU->code & 0x3) == 0)
@@ -204,15 +205,17 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define sFLAG		 mVUinfo.sFlag
 #define mFLAG		 mVUinfo.mFlag
 #define cFLAG		 mVUinfo.cFlag
-#define mVUflagInfo	 mVUregs.needExactMatch
 #define mVUrange	 mVUcurProg.ranges.range[mVUcurProg.ranges.total]
+#define isEvilBlock	 (mVUpBlock->pState.blockType == 2)
+#define isBadOrEvil  (mVUlow.badBranch || mVUlow.evilBranch)
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU->regs->Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU->code = curI; }
 #define incPC(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); setCode(); }
 #define incPC2(x)	 { iPC = ((iPC + x) & (mVU->progSize-1)); }
 #define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
-#define branchAddr	 ((xPC + 8 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
+#define branchAddr	 ((xPC + 8  + (_Imm11_ * 8)) & (mVU->microMemSize-8))
+#define branchAddrN	 ((xPC + 16 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[mVUprogI.ranges.range[i][0]]))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
@@ -221,9 +224,9 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 
 // Flag Info
-#define __Status	 (mVUflagInfo & (0xf<<0))
-#define __Mac		 (mVUflagInfo & (0xf<<4))
-#define __Clip		 (mVUflagInfo & (0xf<<8))
+#define __Status	 (mVUregs.needExactMatch & 1)
+#define __Mac		 (mVUregs.needExactMatch & 2)
+#define __Clip		 (mVUregs.needExactMatch & 4)
 
 // Pass 3 Helper Macros
 #define _Fsf_String	 ((_Fsf_ == 3) ? "w" : ((_Fsf_ == 2) ? "z" : ((_Fsf_ == 1) ? "y" : "x")))

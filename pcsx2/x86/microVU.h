@@ -83,12 +83,14 @@ public:
 		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
 			for (int i = 0; i <= listI; i++) {
-				if ((linkI->block->pState.q		 == pState->q)
-				&&  (linkI->block->pState.p		 == pState->p)
-				&&	(linkI->block->pState.vi15	 == pState->vi15)
-				&&  (linkI->block->pState.flags  == pState->flags)
-				&&  (linkI->block->pState.xgkick == pState->xgkick)
-				&& !(linkI->block->pState.needExactMatch & 0xf0f)) { return linkI->block; }
+				if ((linkI->block->pState.q			== pState->q)
+				&&  (linkI->block->pState.p			== pState->p)
+				&&	(linkI->block->pState.vi15		== pState->vi15)
+				&&  (linkI->block->pState.flags		== pState->flags)
+				&&  (linkI->block->pState.xgkick	== pState->xgkick)
+				&&  (linkI->block->pState.viBackUp	== pState->viBackUp)
+				&&  (linkI->block->pState.blockType	== pState->blockType)
+				&& !(linkI->block->pState.needExactMatch & 5)) { return linkI->block; }
 				linkI = linkI->next;
 			}
 		}
@@ -157,6 +159,8 @@ struct microVU {
 	u32		VIbackup;	 // Holds a backup of a VI reg if modified before a branch
 	u32		VIxgkick;	 // Holds a backup of a VI reg used for xgkick-delays
 	u32		branch;		 // Holds branch compare result (IBxx) OR Holds address to Jump to (JALR/JR)
+	u32		badBranch;	 // For Branches in Branch Delay Slots, holds Address the first Branch went to + 8
+	u32		evilBranch;	 // For Branches in Branch Delay Slots, holds Address to Jump to
 	u32		p;			 // Holds current P instance index
 	u32		q;			 // Holds current Q instance index
 	u32		totalCycles; // Total Cycles that mVU is expected to run for
@@ -206,5 +210,6 @@ typedef void (__fastcall *mVUrecCall)(u32, u32);
 #include "microVU_Lower.inl"
 #include "microVU_Tables.inl"
 #include "microVU_Flags.inl"
+#include "microVU_Branch.inl"
 #include "microVU_Compile.inl"
 #include "microVU_Execute.inl"
