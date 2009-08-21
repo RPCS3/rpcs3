@@ -1222,7 +1222,7 @@ static void Vif0CMDMPGTransfer()  // MPG
 static void Vif0CMDNull()  // invalid opcode
 {
 	// if ME1, then force the vif to interrupt
-	if ((vif0Regs->err & 0x4) == 0)    //Ignore vifcode and tag mismatch error
+	if (!(VIF_ERR::ME1(vif0Regs)))    //Ignore vifcode and tag mismatch error
 	{
 		Console::WriteLn("UNKNOWN VifCmd: %x", params vif0.cmd);
 		vif0Regs->stat |= 1 << 13;
@@ -1274,7 +1274,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 
 			if ((vif0.cmd & 0x7f) > 0x4A)
 			{
-				if ((vif0Regs->err & 0x4) == 0)    //Ignore vifcode and tag mismatch error
+				if (!(VIF_ERR::ME1(vif0Regs)))    //Ignore vifcode and tag mismatch error
 				{
 					Console::WriteLn("UNKNOWN VifCmd: %x", params vif0.cmd);
 					vif0Regs->stat |= 1 << 13;
@@ -1294,7 +1294,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 		{
 			vif0.cmd &= 0x7f;
 
-			if (!(vif0Regs->err & 0x1)) //i bit on vifcode and not masked by VIF0_ERR
+			if (!(VIF_ERR::MII(vif0Regs))) //i bit on vifcode and not masked by VIF0_ERR
 			{
 				VIF_LOG("Interrupt on VIFcmd: %x (INTC_MASK = %x)", vif0.cmd, psHu32(INTC_MASK));
 
@@ -2157,7 +2157,7 @@ static void Vif1CMDNull()  // invalid opcode
 {
 	// if ME1, then force the vif to interrupt
 
-	if ((vif1Regs->err & 0x4) == 0)   //Ignore vifcode and tag mismatch error
+	if (!(VIF_ERR::ME1(vif1Regs)))   //Ignore vifcode and tag mismatch error
 	{
 		Console::WriteLn("UNKNOWN VifCmd: %x\n", params vif1.cmd);
 		vif1Regs->stat |= 1 << 13;
@@ -2255,7 +2255,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 			if ((vif1.cmd & 0x7f) > 0x51)
 			{
-				if ((vif1Regs->err & 0x4) == 0)    //Ignore vifcode and tag mismatch error
+				if (!(VIF_ERR::ME1(vif1Regs)))    //Ignore vifcode and tag mismatch error
 				{
 					Console::WriteLn("UNKNOWN VifCmd: %x", params vif1.cmd);
 					vif1Regs->stat |= 1 << 13;
@@ -2273,7 +2273,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		{
 			vif1.cmd &= 0x7f;
 
-			if (!(vif1Regs->err & 0x1)) //i bit on vifcode and not masked by VIF1_ERR
+			if (!(VIF_ERR::MII(vif1Regs))) //i bit on vifcode and not masked by VIF1_ERR
 			{
 				VIF_LOG("Interrupt on VIFcmd: %x (INTC_MASK = %x)", vif1.cmd, psHu32(INTC_MASK));
 

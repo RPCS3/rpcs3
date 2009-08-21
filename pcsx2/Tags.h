@@ -22,6 +22,8 @@
 
 // Actually, looks like I didn't need templates after all... :)
 
+#include "Vif.h"
+
 enum mfd_type 
 {
 	NO_MFD,
@@ -287,6 +289,26 @@ namespace QWC
 	{
 		tag->qwc = 0;
 	}
+}
+
+enum vif_errors
+{
+	VIF_ERR_MII = 0x1,
+	VIF_ERR_ME0 = 0x2,
+	VIF_ERR_ME1 = 0x4
+};
+
+// Masks or unmasks errors
+namespace VIF_ERR
+{
+	// If true, interrupts by the i bit of Vifcode are masked.
+	static __forceinline bool MII(VIFregisters *tag) { return !!(tag->err & VIF_ERR_MII); }
+	
+	// If true, DMAtag Mismatch errors are masked. (We never check for this?)
+	static __forceinline bool ME0(VIFregisters *tag) { return !!(tag->err & VIF_ERR_ME0); }
+	
+	// If true, VifCode errors are masked.
+	static __forceinline bool ME1(VIFregisters *tag) { return !!(tag->err & VIF_ERR_ME1); }
 }
 
 namespace D_CTRL
