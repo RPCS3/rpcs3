@@ -27,6 +27,7 @@
 #include "Resources/BackgroundLogo.h"
 
 #include <wx/cmdline.h>
+#include <wx/stdpaths.h>
 
 IMPLEMENT_APP(Pcsx2App)
 
@@ -65,13 +66,35 @@ Pcsx2App::Pcsx2App()  :
 
 wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
 
+#include "HashMap.h"
+
+// User mode settings can't be stores in the CWD for two reasons:
+//   (a) the user may not have permission to do so (most obvious)
+//   (b) it would result in sloppy usermode.ini found all over a hard drive if people runs the
+//       exe from many locations (ugh).
+//
+// So better to use the registry on Win32 and a "default ini location" config file under Linux,
+// and store the usermode settings for the CWD based on the CWD's hash.
+//
 void Pcsx2App::ReadUserModeSettings()
 {
-	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
-	usermodefile.SetPath( wxGetCwd() );
+	wxString cwd( wxGetCwd() );
+	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length() );
+
+#ifdef __WXMSW__
+	if( true )		// fixme!!
+#else
+	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
+	if( !usrlocaldir.Exists() )
+		usrlocaldir.Mkdir();
+
+	wxFileName usermodefile( wxsFormat( L"%08x.usermode.ini", hashres ) );
+	usermodefile.SetPath( usrlocaldir.ToString() );
 	wxScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
 	if( !wxFile::Exists( usermodefile.GetFullPath() ) )
+#endif
+
 	{
 		// first time startup, so give the user the choice of user mode:
 		//if( Dialogs::PickUserModeDialog( NULL ).ShowModal() == wxID_CANCEL )

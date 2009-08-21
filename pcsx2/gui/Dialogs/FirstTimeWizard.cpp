@@ -183,18 +183,7 @@ void FirstTimeWizard::OnPageChanged( wxWizardEvent& evt )
 	// receive any Show events >_<
 	if( (sptr)evt.GetPage() == (sptr)&m_page_plugins )
 		m_panel_PluginSel.OnShown();
-}
 
-/*
-wxString biosfolder( Path::Combine( conf.GetDefaultDocumentsFolder(), conf.Folders.Bios ) );
-
-if( wxDir::Exists( biosfolder ) )
-{
-	if( wxDir::GetAllFiles( biosfolder, NULL, L"*.bin", wxDIR_FILES ) )
+	else if( (sptr)evt.GetPage() == (sptr)&m_page_bios )
+		m_panel_BiosSel.OnShown();
 }
-
-if( !wxDir::Exists( biosfolder ) )
-{
-	Msgbox::Alert( ("First Time Installation:\n\n") + BIOS_GetMsg_Required() );
-}
-*/

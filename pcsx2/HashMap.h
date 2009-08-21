@@ -178,6 +178,9 @@ extern const CommonHashClass GetCommonHash;
 struct CommonHashClass
 {
 public:
+	// GCC needs empty constructors on const instances, because it likes pointlessness.
+	CommonHashClass() {}
+
 	hash_key_t DoInt( u32 val ) const
 	{
 		u32 key = val;

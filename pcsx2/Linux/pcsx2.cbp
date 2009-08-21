@@ -169,6 +169,7 @@
 		<Unit filename="../GS.h" />
 		<Unit filename="../Gif.cpp" />
 		<Unit filename="../HashMap.h" />
+		<Unit filename="../HashTools.cpp" />
 		<Unit filename="../HostGui.h" />
 		<Unit filename="../Hw.cpp" />
 		<Unit filename="../Hw.h" />
