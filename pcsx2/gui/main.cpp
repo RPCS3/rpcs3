@@ -81,23 +81,19 @@ void Pcsx2App::ReadUserModeSettings()
 	wxString cwd( wxGetCwd() );
 	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length() );
 
-#ifdef __WXMSW__
-	if( true )		// fixme!!
-#else
 	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
 	if( !usrlocaldir.Exists() )
 		usrlocaldir.Mkdir();
 
-	wxFileName usermodefile( wxsFormat( L"%08x.usermode.ini", hashres ) );
+	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
 	usermodefile.SetPath( usrlocaldir.ToString() );
 	wxScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
-	if( !wxFile::Exists( usermodefile.GetFullPath() ) )
-#endif
+	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
 
+	if( !conf_usermode->HasGroup( groupname ) )
 	{
 		// first time startup, so give the user the choice of user mode:
-		//if( Dialogs::PickUserModeDialog( NULL ).ShowModal() == wxID_CANCEL )
 		FirstTimeWizard wiz( NULL );
 		if( !wiz.RunWizard( wiz.GetFirstPage() ) )
 			throw Exception::StartupAborted( L"Startup aborted: User canceled FirstTime Wizard." );
@@ -156,6 +152,13 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 	return true;
 }
 
+void Pcsx2App::CleanupMess()
+{
+	safe_delete( g_RecentIsoList );
+	safe_delete( m_Bitmap_Logo );
+	safe_delete( g_Conf );
+}
+
 // ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
 {
@@ -197,6 +200,8 @@ bool Pcsx2App::OnInit()
 	}
 	catch( Exception::StartupAborted& )
 	{
+		// Note: wx does not call OnExit() when returning false.
+		CleanupMess();
 		return false;
 	}
 
@@ -220,10 +225,10 @@ bool Pcsx2App::PrepForExit()
 
 int Pcsx2App::OnExit()
 {
-	g_Conf->Save();
-	safe_delete( g_RecentIsoList );
-	safe_delete( m_Bitmap_Logo );
-	safe_delete( g_Conf );
+	if( g_Conf != NULL )
+		g_Conf->Save();
+
+	CleanupMess();
 	return wxApp::OnExit();
 }
 

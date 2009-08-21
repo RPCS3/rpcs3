@@ -78,6 +78,18 @@ protected:
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
+//
+class IniScopedGroup
+{
+protected:
+	IniInterface& m_mom;
+
+public:
+	IniScopedGroup( IniInterface& mommy, const wxString& group );
+	virtual ~IniScopedGroup();
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // IniLoader class
 //
 // Implementation of the IniInterface base class, which maps ini actions to loading from

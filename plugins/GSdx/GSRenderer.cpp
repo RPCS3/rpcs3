@@ -355,7 +355,7 @@ void GSRenderer::VSync(int field)
 	}
 	else
 	{
-		if(m_dump)D3DFMT_D32
+		if(m_dump)
 		{
 			m_dump.VSync(field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), m_regs);
 		}

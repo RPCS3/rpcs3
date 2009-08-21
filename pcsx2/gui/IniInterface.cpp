@@ -49,6 +49,24 @@ void IniInterface::Flush()
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
+IniScopedGroup::IniScopedGroup( IniInterface& mommy, const wxString& group ) :
+	m_mom( mommy )
+{
+	if( IsDevBuild )
+	{
+		if( wxStringTokenize( group, L"/" ).Count() > 1 )
+			throw Exception::InvalidArgument( "Cannot nest more than one group deep per instance of IniScopedGroup." );
+	}
+	m_mom.SetPath( group );
+}
+
+IniScopedGroup::~IniScopedGroup()
+{
+	m_mom.SetPath( L".." );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 
 IniLoader::IniLoader( wxConfigBase& config ) : IniInterface( config )
 {

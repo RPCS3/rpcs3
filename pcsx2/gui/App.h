@@ -282,6 +282,7 @@ protected:
 	void ReadUserModeSettings();
 	bool TryOpenConfigCwd();
 	void OnMessageBox( wxCommandEvent& evt );
+	void CleanupMess();
 };
 
 DECLARE_APP(Pcsx2App)

@@ -133,7 +133,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent ) :
 	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
 	s_main.Add( &m_label, SizerFlags::StdExpand() );
 
-	SetSizer( &s_main );
+	SetSizerAndFit( &s_main );
 }
 
 void Panels::PluginSelectorPanel::StatusPanel::SetGaugeLength( int len )

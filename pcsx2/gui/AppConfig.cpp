@@ -378,7 +378,14 @@ AppConfig::AppConfig() :
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveUserMode( IniInterface& ini )
 {
-	AppConfig defaults;
+	// timestamping would be useful if we want to auto-purge unused entries after
+	// a period of time.  Dunno if it's needed.
+
+	/*wxString timestamp_now( wxsFormat( L"%s %s",
+		wxDateTime::Now().FormatISODate().c_str(), wxDateTime::Now().FormatISOTime().c_str() )
+	);
+
+	ini.GetConfig().Write( L"Timestamp", timestamp_now );*/
 
 	ini.Entry( L"UseAdminMode", UseAdminMode, false );
 	ini.Entry( L"SettingsPath", Folders.Settings, PathDefs::GetSettings() );
@@ -496,15 +503,13 @@ AppConfig::ConsoleLogOptions::ConsoleLogOptions() :
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* logger )
 {
 	ConsoleLogOptions defaults;
-	ini.SetPath( logger );
+	IniScopedGroup path( ini, logger );
 
 	IniEntry( Visible );
 	IniEntry( AutoDock );
 	IniEntry( DisplayPosition );
 	IniEntry( DisplaySize );
 	IniEntry( FontSize );
-
-	ini.SetPath( L".." );
 }
 
 void AppConfig::FolderOptions::ApplyDefaults()
@@ -536,7 +541,7 @@ AppConfig::FolderOptions::FolderOptions() :
 void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 {
 	FolderOptions defaults;
-	ini.SetPath( L"Folders" );
+	IniScopedGroup path( ini, L"Folders" );
 
 	if( ini.IsSaving() )
 		ApplyDefaults();
@@ -561,8 +566,6 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 
 	if( ini.IsLoading() )
 		ApplyDefaults();
-
-	ini.SetPath( L".." );
 }
 
 // ------------------------------------------------------------------------
@@ -576,7 +579,7 @@ const wxFileName& AppConfig::FilenameOptions::operator[]( PluginsEnum_t pluginid
 
 void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 {
-	ini.SetPath( L"Filenames" );
+	IniScopedGroup path( ini, L"Filenames" );
 
 	static const wxFileName pc( L"Please Configure" );
 	static const wxString g_PluginNames[] =
@@ -595,8 +598,6 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 	{
 		ini.Entry( g_PluginNames[i], Plugins[i], pc );
 	}
-
-	ini.SetPath( L".." );
 }
 
 wxFileConfig* OpenFileConfig( const wxString& filename )

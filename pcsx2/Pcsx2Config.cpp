@@ -34,42 +34,36 @@ Pcsx2Config::SpeedhackOptions::SpeedhackOptions() :
 void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
 {
 	SpeedhackOptions defaults;
-	ini.SetPath( L"Speedhacks" );
+	IniScopedGroup path( ini, L"Speedhacks" );
 
 	IniBitfield( EECycleRate );
 	IniBitfield( VUCycleSteal );
 	IniBitBool( IopCycleRate_X2 );
 	IniBitBool( IntcStat );
 	IniBitBool( BIFC0 );
-
-	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )
 {
 	ProfilerOptions defaults;
-	ini.SetPath( L"Profiler" );
+	IniScopedGroup path( ini, L"Profiler" );
 	
 	IniBitBool( Enabled );
 	IniBitBool( RecBlocks_EE );
 	IniBitBool( RecBlocks_IOP );
 	IniBitBool( RecBlocks_VU0 );
 	IniBitBool( RecBlocks_VU1 );
-	
-	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 {
 	RecompilerOptions defaults;
-	ini.SetPath( L"Recompiler" );
+	IniScopedGroup path( ini, L"Recompiler" );
 	
 	IniBitBool( EnableEE );
 	IniBitBool( EnableIOP );
 	IniBitBool( EnableVU0 );
 	IniBitBool( EnableVU1 );
-	
-	ini.SetPath( L".." );
 }
 
 Pcsx2Config::CpuOptions::CpuOptions() : 
@@ -84,7 +78,7 @@ Pcsx2Config::CpuOptions::CpuOptions() :
 void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 {
 	CpuOptions defaults;
-	ini.SetPath( L"CPU" );
+	IniScopedGroup path( ini, L"CPU" );
 
 	IniEntry( sseMXCSR );
 	IniEntry( sseVUMXCSR );
@@ -99,8 +93,6 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 	IniBitBool( fpuFullMode );
 
 	Recompiler.LoadSave( ini );
-	
-	ini.SetPath( L".." );
 }
 
 Pcsx2Config::VideoOptions::VideoOptions() :
@@ -118,7 +110,7 @@ Pcsx2Config::VideoOptions::VideoOptions() :
 void Pcsx2Config::VideoOptions::LoadSave( IniInterface& ini )
 {
 	VideoOptions defaults;
-	ini.SetPath( L"Video" );
+	IniScopedGroup path( ini, L"Video" );
 	
 	IniEntry( EnableFrameLimiting );
 	IniEntry( EnableFrameSkipping );
@@ -131,22 +123,18 @@ void Pcsx2Config::VideoOptions::LoadSave( IniInterface& ini )
 	IniEntry( FpsSkip );
 	IniEntry( ConsecutiveFrames );
 	IniEntry( ConsecutiveSkip );
-	
-	ini.SetPath( L".." );
 }
 
 void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 {
 	GamefixOptions defaults;
-	ini.SetPath( L"Gamefixes" );
+	IniScopedGroup path( ini, L"Gamefixes" );
 
 	IniBitBool( VuAddSubHack );
 	IniBitBool( VuClipFlagHack );
 	IniBitBool( FpuCompareHack );
 	IniBitBool( FpuMulHack );
 	IniBitBool( XgKickHack );
-
-	ini.SetPath( L".." );
 }
 
 Pcsx2Config::Pcsx2Config() :
@@ -157,7 +145,7 @@ Pcsx2Config::Pcsx2Config() :
 void Pcsx2Config::LoadSave( IniInterface& ini )
 {
 	Pcsx2Config defaults;
-	ini.SetPath( L"EmuCore" );
+	IniScopedGroup path( ini, L"EmuCore" );
 
 	IniBitBool( CdvdVerboseReads );
 	IniBitBool( CdvdDumpBlocks );
@@ -173,8 +161,7 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	Video.LoadSave( ini );
 	Gamefixes.LoadSave( ini );
 	Profiler.LoadSave( ini );
-	
-	ini.SetPath( L".." );
+
 	ini.Flush();
 }
 
