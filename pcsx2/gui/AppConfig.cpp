@@ -376,8 +376,10 @@ AppConfig::AppConfig() :
 }
 
 // ------------------------------------------------------------------------
-void AppConfig::LoadSaveUserMode( IniInterface& ini )
+void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 {
+	IniScopedGroup path( ini, cwdhash );
+
 	// timestamping would be useful if we want to auto-purge unused entries after
 	// a period of time.  Dunno if it's needed.
 
@@ -598,6 +600,8 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 	{
 		ini.Entry( g_PluginNames[i], Plugins[i], pc );
 	}
+
+	ini.Entry( L"BIOS", Bios, pc );
 }
 
 wxFileConfig* OpenFileConfig( const wxString& filename )

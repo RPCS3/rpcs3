@@ -57,6 +57,7 @@ public:
 protected:
 	virtual void OnPageChanging( wxWizardEvent& evt );
 	virtual void OnPageChanged( wxWizardEvent& evt );
+	virtual void OnDoubleClicked( wxCommandEvent& evt );
 };
 
 namespace Dialogs

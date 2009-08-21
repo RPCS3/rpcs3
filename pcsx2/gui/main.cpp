@@ -53,17 +53,6 @@ namespace Exception
 	};
 }
 
-Pcsx2App::Pcsx2App()  :
-	m_ProgramLogBox( NULL )
-,	m_Ps2ConLogBox( NULL )
-,	m_ConfigImages( 32, 32 )
-,	m_ConfigImagesAreLoaded( false )
-,	m_ToolbarImages( NULL )
-,	m_Bitmap_Logo( NULL )
-{
-	SetAppName( L"pcsx2" );
-}
-
 wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
 
 #include "HashMap.h"
@@ -100,7 +89,7 @@ void Pcsx2App::ReadUserModeSettings()
 
 		// Save user's new settings
 		IniSaver saver( *conf_usermode );
-		g_Conf->LoadSaveUserMode( saver );
+		g_Conf->LoadSaveUserMode( saver, groupname );
 		g_Conf->Save();
 	}
 	else
@@ -110,7 +99,7 @@ void Pcsx2App::ReadUserModeSettings()
 		UseAdminMode = false;
 
 		IniLoader loader( *conf_usermode );
-		g_Conf->LoadSaveUserMode( loader );
+		g_Conf->LoadSaveUserMode( loader, groupname );
 	}
 }
 
@@ -150,13 +139,6 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 	bool yay = parser.Found(L"nogui");
 
 	return true;
-}
-
-void Pcsx2App::CleanupMess()
-{
-	safe_delete( g_RecentIsoList );
-	safe_delete( m_Bitmap_Logo );
-	safe_delete( g_Conf );
 }
 
 // ------------------------------------------------------------------------
@@ -215,6 +197,13 @@ void Pcsx2App::OnMessageBox( wxCommandEvent& evt )
 	Msgbox::OnEvent( evt );
 }
 
+void Pcsx2App::CleanupMess()
+{
+	safe_delete( g_RecentIsoList );
+	safe_delete( m_Bitmap_Logo );
+	safe_delete( g_Conf );
+}
+
 // Common exit handler which can be called from any event (though really it should
 // be called only from CloseWindow handlers since that's the more appropriate way
 // to handle window closures)
@@ -230,6 +219,22 @@ int Pcsx2App::OnExit()
 
 	CleanupMess();
 	return wxApp::OnExit();
+}
+
+Pcsx2App::Pcsx2App()  :
+	m_ProgramLogBox( NULL )
+,	m_Ps2ConLogBox( NULL )
+,	m_ConfigImages( 32, 32 )
+,	m_ConfigImagesAreLoaded( false )
+,	m_ToolbarImages( NULL )
+,	m_Bitmap_Logo( NULL )
+{
+	SetAppName( L"pcsx2" );
+}
+
+Pcsx2App::~Pcsx2App()
+{
+	CleanupMess();
 }
 
 #include <wx/zipstrm.h>

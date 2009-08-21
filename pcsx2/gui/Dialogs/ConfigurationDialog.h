@@ -53,5 +53,6 @@ namespace Dialogs
 
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );
+		void OnDoubleClicked( wxCommandEvent& evt );
 	};
 }

@@ -352,7 +352,7 @@ namespace Panels
 	public:
 		BiosSelectorPanel( wxWindow& parent, int idealWidth );
 		virtual ~BiosSelectorPanel();
-		
+
 	protected:
 		virtual void Apply( AppConfig& conf );
 		virtual void DoRefresh();

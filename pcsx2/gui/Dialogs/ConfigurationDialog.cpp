@@ -121,12 +121,18 @@ Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent ) :
 	wxDialogWithHelpers( parent, wxID_ANY, _("BIOS Selector"), false )
 {
 	wxBoxSizer& bleh( *new wxBoxSizer( wxVERTICAL ) );
-	bleh.Add( new Panels::BiosSelectorPanel( *this, 500 ), SizerFlags::StdExpand() );
+	
+	Panels::BaseSelectorPanel* selpan = new Panels::BiosSelectorPanel( *this, 500 );
+	
+	bleh.Add( selpan, SizerFlags::StdExpand() );
 	AddOkCancel( bleh, false );
 
 	SetSizerAndFit( &bleh );
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BiosSelectorDialog::OnOk_Click ) );
+	Connect( wxEVT_COMMAND_LISTBOX_DOUBLECLICKED, wxCommandEventHandler(BiosSelectorDialog::OnDoubleClicked) );
+
+	selpan->OnShown();
 }
 
 void Dialogs::BiosSelectorDialog::OnOk_Click( wxCommandEvent& evt )
@@ -136,4 +142,14 @@ void Dialogs::BiosSelectorDialog::OnOk_Click( wxCommandEvent& evt )
 		Close();
 		evt.Skip();
 	}
+}
+
+void Dialogs::BiosSelectorDialog::OnDoubleClicked( wxCommandEvent& evt )
+{
+	wxWindow* forwardButton = FindWindow( wxID_OK );
+	if( forwardButton == NULL ) return;
+
+	wxCommandEvent nextpg( wxEVT_COMMAND_BUTTON_CLICKED, wxID_OK );
+	nextpg.SetEventObject( forwardButton );
+	forwardButton->GetEventHandler()->ProcessEvent( nextpg );
 }

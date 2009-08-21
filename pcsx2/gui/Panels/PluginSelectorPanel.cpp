@@ -133,6 +133,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent ) :
 	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
 	s_main.Add( &m_label, SizerFlags::StdExpand() );
 
+	// The status bar only looks right if I use SetSizerAndFit() here.
 	SetSizerAndFit( &s_main );
 }
 
@@ -254,9 +255,7 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 			);
 		}
 
-		wxFileName relative( GetFilename((int)m_ComponentBoxes.Get(i).GetClientData(sel)) );
-		relative.MakeRelativeTo( conf.Folders.Plugins.ToString() );
-		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = relative.GetFullPath();
+		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = GetFilename((int)m_ComponentBoxes.Get(i).GetClientData(sel));
 	}
 }
 
@@ -272,7 +271,6 @@ void Panels::PluginSelectorPanel::DoRefresh()
 
 	m_ComponentBoxes.Hide();
 	m_StatusPanel.SetSize( m_ComponentBoxes.GetSize().GetWidth() - 8, wxDefaultCoord );
-	//m_StatusPanel.SetSizer( m_StatusPanel.GetSizer(), false );
 	m_StatusPanel.CentreOnParent();
 	m_StatusPanel.Show();
 
@@ -360,8 +358,8 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 				wxFileName left( (*m_FileList)[evtidx] );
 				wxFileName right( g_Conf->FullpathTo(tbl_PluginInfo[i].id) );
 
-				left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
-				right.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
+				left.MakeAbsolute();
+				right.MakeAbsolute();
 
 				if( left == right )
 					m_ComponentBoxes.Get(i).SetSelection( sel );

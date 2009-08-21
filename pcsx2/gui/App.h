@@ -204,19 +204,20 @@ struct AppImageIds
 class Pcsx2App : public wxApp
 {
 protected:
-	MainEmuFrame* m_MainFrame;
-	ConsoleLogFrame* m_ProgramLogBox;
-	ConsoleLogFrame* m_Ps2ConLogBox;
-	wxBitmap* m_Bitmap_Logo;
+	MainEmuFrame*		m_MainFrame;
+	ConsoleLogFrame*	m_ProgramLogBox;
+	ConsoleLogFrame*	m_Ps2ConLogBox;
+	wxBitmap*			m_Bitmap_Logo;
 
-	wxImageList	m_ConfigImages;
-	bool		m_ConfigImagesAreLoaded;
+	wxImageList		m_ConfigImages;
+	bool			m_ConfigImagesAreLoaded;
 
-	wxImageList* m_ToolbarImages;		// dynamic (pointer) to allow for large/small redefinition.
-	AppImageIds m_ImageId;
+	wxImageList*	m_ToolbarImages;		// dynamic (pointer) to allow for large/small redefinition.
+	AppImageIds		m_ImageId;
 
 public:
 	Pcsx2App();
+	virtual ~Pcsx2App();
 
 	wxFrame* GetMainWindow() const;
 

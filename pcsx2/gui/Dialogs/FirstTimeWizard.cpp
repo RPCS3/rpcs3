@@ -122,11 +122,23 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent ) :
 
 	Connect( wxEVT_WIZARD_PAGE_CHANGED,		wxWizardEventHandler( FirstTimeWizard::OnPageChanged ) );
 	Connect( wxEVT_WIZARD_PAGE_CHANGING,	wxWizardEventHandler( FirstTimeWizard::OnPageChanging ) );
+
+	Connect( wxEVT_COMMAND_LISTBOX_DOUBLECLICKED, wxCommandEventHandler(FirstTimeWizard::OnDoubleClicked) );
 }
 
 FirstTimeWizard::~FirstTimeWizard()
 {
 	g_ApplyState.DoCleanup();
+}
+
+void FirstTimeWizard::OnDoubleClicked( wxCommandEvent& evt )
+{
+	wxWindow* forwardButton = FindWindow( wxID_FORWARD );
+	if( forwardButton == NULL ) return;
+
+	wxCommandEvent nextpg( wxEVT_COMMAND_BUTTON_CLICKED, wxID_FORWARD );
+	nextpg.SetEventObject( forwardButton );
+	forwardButton->GetEventHandler()->ProcessEvent( nextpg );
 }
 
 void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )

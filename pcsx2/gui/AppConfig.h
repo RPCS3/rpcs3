@@ -155,7 +155,7 @@ public:
 	void Load();
 	void Save();
 	void Apply();
-	void LoadSaveUserMode( IniInterface& ini );
+	void LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash );
 
 	wxString GetDefaultDocumentsFolder();
 

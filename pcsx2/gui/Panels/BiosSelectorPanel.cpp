@@ -129,15 +129,14 @@ void Panels::BiosSelectorPanel::Apply( AppConfig& conf )
 			)
 		);
 	}
-	wxFileName relative( (*m_BiosList)[(int)m_ComboBox.GetClientData(sel)] );
-	relative.MakeRelativeTo( g_Conf->Folders.Bios.ToString() );
-	conf.BaseFilenames.Bios = relative.GetFullPath();
+
+	conf.BaseFilenames.Bios = (*m_BiosList)[(int)m_ComboBox.GetClientData(sel)];
 }
 
 void Panels::BiosSelectorPanel::DoRefresh()
 {
 	wxFileName right( g_Conf->FullpathToBios() );
-	right.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
+	right.MakeAbsolute();
 
 	for( size_t i=0; i<m_BiosList->GetCount(); ++i )
 	{
@@ -146,7 +145,7 @@ void Panels::BiosSelectorPanel::DoRefresh()
 		int sel = m_ComboBox.Append( description, (void*)i );
 
 		wxFileName left( (*m_BiosList)[i] );
-		left.MakeRelativeTo( g_Conf->Folders.Plugins.ToString() );
+		left.MakeAbsolute();
 
 		if( left == right )
 			m_ComboBox.SetSelection( sel );
