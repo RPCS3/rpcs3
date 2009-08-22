@@ -558,7 +558,7 @@ void vifMFIFOInterrupt()
 		--vif1.irq;
 		if (vif1Regs->stat & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
-			vif1Regs->stat &= ~0x1F000000; // FQC=0
+			vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 			CHCR::clearSTR(vif1ch);
 			return;
 		}
@@ -577,7 +577,7 @@ void vifMFIFOInterrupt()
 					vifqwc = 0;
 					vif1.inprogress |= 0x10;
 					vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
-					hwDmacIrq(DMAC_14);
+					hwDmacIrq(DMAC_MFIFO_EMPTY);
 					return;
 				}
 
@@ -601,7 +601,7 @@ void vifMFIFOInterrupt()
 		//Console::WriteLn("Empty 2");
 		//vif1.inprogress |= 0x10;
 		vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
-		hwDmacIrq(DMAC_14);
+		hwDmacIrq(DMAC_MFIFO_EMPTY);
 	}*/
 
 	vif1.done = 1;

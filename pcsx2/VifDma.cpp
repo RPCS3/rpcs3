@@ -890,17 +890,17 @@ static void vuExecMicro(u32 addr, const u32 VIFdmanum)
 		VU->vifRegs->top = VU->vifRegs->tops & 0x3ff;
 
 		/* is DBF flag set in VIF_STAT? */
-		if (VU->vifRegs->stat & 0x80)
+		if (VU->vifRegs->stat & VIF_STAT_DBF)
 		{
 			/* it is, so set tops with base, and set the stat DBF flag */ 
 			VU->vifRegs->tops = VU->vifRegs->base;
-			VU->vifRegs->stat &= ~0x80;
+			VU->vifRegs->stat &= ~VIF_STAT_DBF;
 		}
 		else
 		{
 			/* it is not, so set tops with base + ofst,  and clear stat DBF flag */
 			VU->vifRegs->tops = VU->vifRegs->base + VU->vifRegs->ofst;
-			VU->vifRegs->stat |= 0x80;
+			VU->vifRegs->stat |= VIF_STAT_DBF;
 		}
 	}
 
@@ -2060,7 +2060,7 @@ void Vif1MskPath3()  // MSKPATH3
 	{
 		//Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
 		Path3progress = TRANSFER_MODE; 
-		psHu32(GIF_STAT) &= ~0x2;
+		psHu32(GIF_STAT) &= ~GIF_STAT_IMT;
 		CPU_INT(2, 4);		
 	}
 	
@@ -2467,7 +2467,7 @@ __forceinline void vif1SetupTransfer()
 				if ((vif1ch->madr + vif1ch->qwc * 16) >= psHu32(DMAC_STADR))
 				{
 					// stalled
-					hwDmacIrq(DMAC_13);
+					hwDmacIrq(DMAC_STALL_SIS);
 					return;
 				}
 			}
@@ -2671,7 +2671,7 @@ void vif1Write32(u32 mem, u32 value)
 				if(vif1Regs->mskpath3)
 				{
 					vif1Regs->mskpath3 = 0;
-					psHu32(GIF_STAT) &= ~0x2;
+					psHu32(GIF_STAT) &= ~GIF_STAT_IMT;
 					if (CHCR::STR(gif)) CPU_INT(2, 4);	
 				}
 				

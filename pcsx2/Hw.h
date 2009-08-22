@@ -287,12 +287,15 @@ enum INTCIrqs
 	INTC_TIM2,
 	INTC_TIM3,
 };
-	
-#define DMAC_STAT_SIS (1<<13) // stall condition
-#define DMAC_STAT_MEIS (1<<14) // mfifo empty
-#define DMAC_STAT_BEIS (1<<15) // bus error
-#define DMAC_STAT_SIM (1<<29) // stall mask
-#define DMAC_STAT_MEIM (1<<30) // mfifo mask
+
+enum dmac_conditions
+{
+	DMAC_STAT_SIS	= (1<<13),	 // stall condition
+	DMAC_STAT_MEIS	= (1<<14),	 // mfifo empty
+	DMAC_STAT_BEIS	= (1<<15),	 // bus error
+	DMAC_STAT_SIM	= (1<<29),	 // stall mask
+	DMAC_STAT_MEIM	= (1<<30)	 // mfifo mask
+};
 
 enum DMACIrqs
 {
@@ -306,9 +309,11 @@ enum DMACIrqs
 	DMAC_SIF2,
 	DMAC_FROM_SPR,
 	DMAC_TO_SPR,
-	DMAC_13		= 13, // Stall?
-	DMAC_14		= 14, // Transfer?
-	DMAC_ERROR	= 15,
+	
+	// We're setting error conditions through hwDmacIrq, so these correspond to the conditions above.
+	DMAC_STALL_SIS		= 13,
+	DMAC_MFIFO_EMPTY		= 14, // Transfer?
+	DMAC_BUS_ERROR	= 15
 };
 
 enum vif0_stat_flags
@@ -327,7 +332,6 @@ enum vif0_stat_flags
 	VIF0_STAT_ER0		= (1<<12),
 	VIF0_STAT_ER1		= (1<<13),
 	VIF0_STAT_FQC		= (15<<24)
-	
 };
 
 enum vif1_stat_flags
@@ -350,23 +354,49 @@ enum vif1_stat_flags
 	VIF1_STAT_FQC		= (31<<24)
 };
 
+// These are the stat flags that are the same for vif0 & vif1,
+// for occassions where we don't neccessarily know which we are using.
+enum vif_stat_flags 
+{
+	VIF_STAT_VPS_W 	= (1),
+	VIF_STAT_VPS_D 	= (2),
+	VIF_STAT_VPS_T		= (3),
+	VIF_STAT_VPS 		= (3),
+	VIF_STAT_VEW		= (1<<2),
+	VIF_STAT_MRK		= (1<<6),
+	VIF_STAT_DBF		= (1<<7),
+	VIF_STAT_VSS		= (1<<8),
+	VIF_STAT_VFS		= (1<<9),
+	VIF_STAT_VIS		= (1<<10),
+	VIF_STAT_INT		= (1<<11),
+	VIF_STAT_ER0		= (1<<12),
+	VIF_STAT_ER1		= (1<<13)
+};
+
 //GIF_STAT 
+enum gif_stat_flags
+{
+	GIF_STAT_M3R		= (1),		// GIF_MODE Mask
+	GIF_STAT_M3P		= (1<<1),	// VIF PATH3 Mask
+	GIF_STAT_IMT		= (1<<2),	// Intermittent Transfer Mode
+	GIF_STAT_PSE		= (1<<3),	// Temporary Transfer Stop
+	GIF_STAT_IP3		= (1<<5),	// Interrupted PATH3
+	GIF_STAT_P3Q		= (1<<6),	// PATH3 request Queued
+	GIF_STAT_P2Q		= (1<<7),	// PATH2 request Queued
+	GIF_STAT_P1Q		= (1<<8),	// PATH1 request Queued
+	GIF_STAT_OPH		= (1<<9),	// Output Path (Outputting Data)
+	GIF_STAT_APATH1	= (1<<10),	// Data Transfer Path 1 (In progress)
+	GIF_STAT_APATH2	= (2<<10),	// Data Transfer Path 2 (In progress)
+	GIF_STAT_APATH3	= (3<<10),	// Data Transfer Path 3 (In progress) (Mask too)
+	GIF_STAT_DIR		= (1<<12),	// Transfer Direction
+	GIF_STAT_FQC		= (31<<24)	// QWC in GIF-FIFO
+};
 
-#define GIF_STAT_M3R    (1)  //GIF_MODE Mask
-#define GIF_STAT_M3P    (1<<1) //VIF PATH3 Mask
-#define GIF_STAT_IMT    (1<<2) //Intermittent Transfer Mode
-#define GIF_STAT_PSE    (1<<3) //Temporary Transfer Stop
-#define GIF_STAT_IP3    (1<<5) //Interrupted PATH3
-#define GIF_STAT_P3Q    (1<<6) //PATH3 request Queued
-#define GIF_STAT_P2Q    (1<<7) //PATH2 request Queued
-#define GIF_STAT_P1Q    (1<<8) //PATH1 request Queued
-#define GIF_STAT_OPH    (1<<9) //Output Path (Outputting Data)
-#define GIF_STAT_APATH1 (1<<10) //Data Transfer Path 1 (In progress)
-#define GIF_STAT_APATH2 (2<<10) //Data Transfer Path 2 (In progress)
-#define GIF_STAT_APATH3 (3<<10) //Data Transfer Path 3 (In progress) (Mask too)
-#define GIF_STAT_DIR	(1<<12) //Transfer Direction
-#define GIF_STAT_FQC    (31<<24) //QWC in GIF-FIFO
-
+enum gif_mode_flags
+{
+	GIF_MODE_M3R	= (1),
+	GIF_MODE_IMT		= (1<<2)
+};
 //DMA interrupts & masks
 enum DMAInter
 {	

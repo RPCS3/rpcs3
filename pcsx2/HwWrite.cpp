@@ -726,10 +726,10 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 		
 			if (value & 0x1)
 				gsGIFReset();
-			else if( value & 8 )
-				psHu32(GIF_STAT) |= 8;
+			else if ( value & 8 )
+				psHu32(GIF_STAT) |= GIF_STAT_PSE;
 			else
-				psHu32(GIF_STAT) &= ~8;
+				psHu32(GIF_STAT) &= ~GIF_STAT_PSE;
 		break;
 
 		case GIF_MODE:
@@ -738,7 +738,7 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 			psHu32(GIF_MODE) = value;
 
 			// set/clear bits 0 and 2 as per the GIF_MODE value.
-			const u32 bitmask = 0x1 | 0x4;
+			const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
 			psHu32(GIF_STAT) &= ~bitmask;
 			psHu32(GIF_STAT) |= (u32)value & bitmask;
 		}
@@ -1076,16 +1076,16 @@ void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
 			else
 			{
 				if( value & 8 )
-					psHu32(GIF_STAT) |= 8;
+					psHu32(GIF_STAT) |= GIF_STAT_PSE;
 				else
-					psHu32(GIF_STAT) &= ~8;
+					psHu32(GIF_STAT) &= ~GIF_STAT_PSE;
 			}
 			break;
 
 		case GIF_MODE:
 		{
 			// set/clear bits 0 and 2 as per the GIF_MODE value.
-			const u32 bitmask = 0x1 | 0x4;
+			const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
 			
 			Console::Status("GIFMODE64 %x", params value);
 
