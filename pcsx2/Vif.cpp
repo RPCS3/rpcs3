@@ -576,7 +576,7 @@ void vifMFIFOInterrupt()
 				//	Console::WriteLn("Empty 1");
 					vifqwc = 0;
 					vif1.inprogress |= 0x10;
-					vif1Regs->stat &= ~0x1F000000; // FQC=0
+					vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 					hwDmacIrq(DMAC_14);
 					return;
 				}
@@ -600,7 +600,7 @@ void vifMFIFOInterrupt()
 	{
 		//Console::WriteLn("Empty 2");
 		//vif1.inprogress |= 0x10;
-		vif1Regs->stat &= ~0x1F000000; // FQC=0
+		vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 		hwDmacIrq(DMAC_14);
 	}*/
 
@@ -610,6 +610,6 @@ void vifMFIFOInterrupt()
 	hwDmacIrq(DMAC_VIF1);
 	VIF_LOG("vif mfifo dma end");
 
-	vif1Regs->stat &= ~0x1F000000; // FQC=0
+	vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 
 }

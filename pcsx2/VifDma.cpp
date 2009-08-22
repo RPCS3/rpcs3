@@ -1225,7 +1225,7 @@ static void Vif0CMDNull()  // invalid opcode
 	if (!(VIF_ERR::ME1(vif0Regs)))    //Ignore vifcode and tag mismatch error
 	{
 		Console::WriteLn("UNKNOWN VifCmd: %x", params vif0.cmd);
-		vif0Regs->stat |= 1 << 13;
+		vif0Regs->stat |= VIF0_STAT_ER1;
 		vif0.irq++;
 	}
 	vif0.cmd &= ~0x7f;
@@ -1277,7 +1277,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 				if (!(VIF_ERR::ME1(vif0Regs)))    //Ignore vifcode and tag mismatch error
 				{
 					Console::WriteLn("UNKNOWN VifCmd: %x", params vif0.cmd);
-					vif0Regs->stat |= 1 << 13;
+					vif0Regs->stat |= VIF0_STAT_ER1;
 					vif0.irq++;
 				}
 				vif0.cmd = 0;
@@ -1425,7 +1425,7 @@ void  vif0Interrupt()
 
 		if (vif0Regs->stat & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 		{
-			vif0Regs->stat &= ~0xF000000; // FQC=0
+			vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
 			CHCR::clearSTR(vif0ch);
 			return;
 		}
@@ -1467,7 +1467,7 @@ void  vif0Interrupt()
 	
 	CHCR::clearSTR(vif0ch);
 	hwDmacIrq(DMAC_VIF0);
-	vif0Regs->stat &= ~0xF000000; // FQC=0
+	vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
 }
 
 //  Vif1 Data Transfer Table
@@ -1559,10 +1559,10 @@ void vif0Write32(u32 mem, u32 value)
 				vif0ch->qwc = 0; //?
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 				psHu64(VIF0_FIFO) = 0;
-				psHu64(0x10004008) = 0; // VIF0_FIFO + 8
+				psHu64(VIF0_FIFO + 8) = 0; // VIF0_FIFO + 8
 				vif0.done = true;
 				vif0Regs->err = 0;
-				vif0Regs->stat &= ~(0xF000000 | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
+				vif0Regs->stat &= ~(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 			}
 			
 			if (value & 0x2)
@@ -1657,7 +1657,7 @@ void vif0Reset()
 	psHu64(VIF0_FIFO + 8) = 0;
 	vif0Regs->stat &= ~VIF0_STAT_VPS;
 	vif0.done = true;
-	vif0Regs->stat &= ~0xF000000; // FQC=0
+	vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
 }
 
 void SaveState::vif0Freeze()
@@ -2022,7 +2022,7 @@ static void Vif1CMDSTCycl()  // STCYCL
 static void Vif1CMDOffset()  // OFFSET
 {
 	vif1Regs->ofst  = vif1Regs->code & 0x3ff;
-	vif1Regs->stat &= ~0x80;
+	vif1Regs->stat &= ~VIF1_STAT_DBF;
 	vif1Regs->tops  = vif1Regs->base;
 	vif1.cmd &= ~0x7f;
 }
@@ -2160,7 +2160,7 @@ static void Vif1CMDNull()  // invalid opcode
 	if (!(VIF_ERR::ME1(vif1Regs)))   //Ignore vifcode and tag mismatch error
 	{
 		Console::WriteLn("UNKNOWN VifCmd: %x\n", params vif1.cmd);
-		vif1Regs->stat |= 1 << 13;
+		vif1Regs->stat |= VIF1_STAT_ER1;
 		vif1.irq++;
 	}
 	vif1.cmd = 0;
@@ -2258,7 +2258,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 				if (!(VIF_ERR::ME1(vif1Regs)))    //Ignore vifcode and tag mismatch error
 				{
 					Console::WriteLn("UNKNOWN VifCmd: %x", params vif1.cmd);
-					vif1Regs->stat |= 1 << 13;
+					vif1Regs->stat |= VIF1_STAT_ER1;
 					vif1.irq++;
 				}
 				vif1.cmd = 0;
@@ -2346,7 +2346,7 @@ void vif1TransferFromMemory()
 		Console::WriteLn("Vif1 Tag BUSERR");
 		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
 		vif1.done = true;
-		vif1Regs->stat &= ~0x1f000000;
+		vif1Regs->stat &= ~VIF1_STAT_FQC;
 		vif1ch->qwc = 0;
 		CPU_INT(1, 0);
 
@@ -2532,7 +2532,7 @@ __forceinline void vif1Interrupt()
 		--vif1.irq;
 		if (vif1Regs->stat & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
-			vif1Regs->stat &= ~0x1F000000; // FQC=0
+			vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 			
 			// One game doesnt like vif stalling at end, cant remember what. Spiderman isnt keen on it tho
 			CHCR::clearSTR(vif1ch);
@@ -2677,7 +2677,7 @@ void vif1Write32(u32 mem, u32 value)
 				
 				vif1Regs->err = 0;
 				vif1.inprogress = 0;
-				vif1Regs->stat &= ~(0x1F800000 | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
+				vif1Regs->stat &= ~(VIF1_STAT_FQC | VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
 			}
 			
 			if (value & 0x2)
@@ -2762,14 +2762,14 @@ void vif1Write32(u32 mem, u32 value)
 			vif1Regs->stat = (vif1Regs->stat & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
 			if (vif1Regs->stat & VIF1_STAT_FDR)
 			{
-				vif1Regs->stat |= 0x01000000; // FQC=1 - hack but it checks this is true before tranfer? (fatal frame)
+				vif1Regs->stat |= 0x01000000; // FQC=1 - hack but it checks this is true before transfer? (fatal frame)
 			}
 			else
 			{
 				vif1ch->qwc = 0;
 				vif1.vifstalled = false;
 				vif1.done = true;
-				vif1Regs->stat &= ~0x1F000000; // FQC=0
+				vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 			}
 			break;
 			
@@ -2809,11 +2809,11 @@ void vif1Reset()
 	memzero_obj(*vif1Regs);
 	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
 	psHu64(VIF1_FIFO) = 0;
-	psHu64(0x10005008) = 0; // VIF1_FIFO + 8
+	psHu64(VIF1_FIFO + 8) = 0;
 	vif1Regs->stat &= ~VIF1_STAT_VPS;
 	vif1.done = true;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-	vif1Regs->stat &= ~0x1F000000; // FQC=0
+	vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 }
 
 void SaveState::vif1Freeze()

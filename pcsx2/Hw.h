@@ -311,51 +311,44 @@ enum DMACIrqs
 	DMAC_ERROR = 15,
 };
 
-#define VIF0_STAT_VPS_W (1)
-#define VIF0_STAT_VPS_D (2)
-#define VIF0_STAT_VPS_T (3)
-#define VIF0_STAT_VPS	(3)
-#define VIF0_STAT_VEW	(1<<2)
-#define VIF0_STAT_MRK	(1<<6)
-#define VIF0_STAT_DBF	(1<<7)
-#define VIF0_STAT_VSS	(1<<8)
-#define VIF0_STAT_VFS	(1<<9)
-#define VIF0_STAT_VIS	(1<<10)
-#define VIF0_STAT_INT	(1<<11)
-#define VIF0_STAT_ER0	(1<<12)
-#define VIF0_STAT_ER1	(1<<13)
+enum vif0_stat_flags
+{
+	VIF0_STAT_VPS_W 	= (1),
+	VIF0_STAT_VPS_D 	= (2),
+	VIF0_STAT_VPS_T 		= (3),
+	VIF0_STAT_VPS 		= (3),
+	VIF0_STAT_VEW		= (1<<2),
+	VIF0_STAT_MRK		= (1<<6),
+	VIF0_STAT_DBF		= (1<<7),
+	VIF0_STAT_VSS		= (1<<8),
+	VIF0_STAT_VFS		= (1<<9),
+	VIF0_STAT_VIS		= (1<<10),
+	VIF0_STAT_INT		= (1<<11),
+	VIF0_STAT_ER0		= (1<<12),
+	VIF0_STAT_ER1		= (1<<13),
+	VIF0_STAT_FQC		= (15<<24)
+	
+};
 
-#define VIF1_STAT_VPS_W (1)
-#define VIF1_STAT_VPS_D (2)
-#define VIF1_STAT_VPS_T (3)
-#define VIF1_STAT_VPS	(3)
-#define VIF1_STAT_VEW	(1<<2)
-#define VIF1_STAT_VGW	(1<<3)
-#define VIF1_STAT_MRK	(1<<6)
-#define VIF1_STAT_DBF	(1<<7)
-#define VIF1_STAT_VSS	(1<<8)
-#define VIF1_STAT_VFS	(1<<9)
-#define VIF1_STAT_VIS	(1<<10)
-#define VIF1_STAT_INT	(1<<11)
-#define VIF1_STAT_ER0	(1<<12)
-#define VIF1_STAT_ER1	(1<<13)
-#define VIF1_STAT_FDR	(1<<23)
-
-#define VIF_STAT_VPS_W (1)
-#define VIF_STAT_VPS_D (2)
-#define VIF_STAT_VPS_T (3)
-#define VIF_STAT_VPS	(3)
-#define VIF_STAT_VEW	(1<<2)
-#define VIF_STAT_VGW	(1<<3)
-#define VIF_STAT_MRK	(1<<6)
-#define VIF_STAT_DBF	(1<<7)
-#define VIF_STAT_VSS	(1<<8)
-#define VIF_STAT_VFS	(1<<9)
-#define VIF_STAT_VIS	(1<<10)
-#define VIF_STAT_INT	(1<<11)
-#define VIF_STAT_ER0	(1<<12)
-#define VIF_STAT_ER1	(1<<13)
-#define VIF_STAT_FDR	(1<<23)
+enum vif1_stat_flags
+{
+	VIF1_STAT_VPS_W 	= (1),
+	VIF1_STAT_VPS_D 	= (2),
+	VIF1_STAT_VPS_T 		= (3),
+	VIF1_STAT_VPS 		= (3),
+	VIF1_STAT_VEW		= (1<<2),
+	VIF1_STAT_VGW		= (1<<3),
+	VIF1_STAT_MRK		= (1<<6),
+	VIF1_STAT_DBF		= (1<<7),
+	VIF1_STAT_VSS		= (1<<8),
+	VIF1_STAT_VFS		= (1<<9),
+	VIF1_STAT_VIS		= (1<<10),
+	VIF1_STAT_INT		= (1<<11),
+	VIF1_STAT_ER0		= (1<<12),
+	VIF1_STAT_ER1		= (1<<13),
+	VIF1_STAT_FDR 		= (1<<23),
+	VIF1_STAT_FQC		= (31<<24)
+};
 
 //GIF_STAT 
 

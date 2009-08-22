@@ -104,7 +104,7 @@ union tIPU_CTRL {
 		u32 AS : 1;		// Alternate scan
 		u32 IVF : 1;	// Intra VLC format
 		u32 QST : 1;	// Q scale step
-		u32 MP1 : 1;	// MPEG1 bit strea
+		u32 MP1 : 1;	// MPEG1 bit stream
 		u32 PCT : 3;	// Picture Type
 		u32 resv1 : 3;
 		u32 RST : 1;	// Reset
