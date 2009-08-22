@@ -130,6 +130,14 @@ microVUx(void) mVUcleanUp() {
 	mVU->cycles = mVU->totalCycles - mVU->cycles;
 	mVU->regs->cycle += mVU->cycles;
 	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * Config.Hacks.VUCycleSteal;
+	//static int ax = 0; ax++;
+	//if (!(ax % 100000)) {
+	//	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
+	//		if (mVUcurProg.block[i]) {
+	//			mVUcurProg.block[i]->printInfo();
+	//		}
+	//	}
+	//}
 }
 
 //------------------------------------------------------------------
