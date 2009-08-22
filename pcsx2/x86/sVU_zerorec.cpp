@@ -2747,7 +2747,7 @@ static void SuperVURecompile()
 					assert(pchild->blocks.size() == 0);
 
 					AND32ItoM((uptr)&VU0.VI[ REG_VPU_STAT ].UL, s_vu ? ~0x100 : ~0x001); // E flag
-					AND32ItoM((uptr)&VU->vifRegs->stat, ~0x4);
+					AND32ItoM((uptr)&VU->vifRegs->stat, ~VIF1_STAT_VEW);
 
 					MOV32ItoM((uptr)&VU->VI[REG_TPC], pchild->endpc);
 					JMP32((uptr)SuperVUEndProgram - ((uptr)x86Ptr + 5));
@@ -3044,7 +3044,7 @@ void VuBaseBlock::Recompile()
 		_freeXMMregs();
 		_freeX86regs();
 		AND32ItoM((uptr)&VU0.VI[ REG_VPU_STAT ].UL, s_vu ? ~0x100 : ~0x001); // E flag
-		AND32ItoM((uptr)&VU->vifRegs->stat, ~0x4);
+		AND32ItoM((uptr)&VU->vifRegs->stat, ~VIF1_STAT_VEW);
 		
 		if (!branch) MOV32ItoM((uptr)&VU->VI[REG_TPC], endpc);
 		

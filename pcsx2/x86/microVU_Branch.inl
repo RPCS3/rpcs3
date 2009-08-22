@@ -68,7 +68,7 @@ microVUt(void) mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 
 	if (isEbit || isVU1) { // Clear 'is busy' Flags
 		AND32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-		AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~0x4); // Clear VU 'is busy' signal for vif
+		AND32ItoM((uptr)&mVU->regs->vifRegs->stat, ~VIF1_STAT_VEW); // Clear VU 'is busy' signal for vif
 	}
 
 	if (isEbit != 2) { // Save PC, and Jump to Exit Point

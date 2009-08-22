@@ -96,12 +96,16 @@ PCSX2_ALIGNED16(u8 backVUmem [0x4000]);
 PCSX2_ALIGNED16(u8 cmpVUmem  [0x4000]);
 static u32 runCount = 0;
 #define VU3 ((VURegs)*((VURegs*)cmpVUregs))
+#define fABS(aInt)	 (aInt & 0x7fffffff)
+//#define cmpU(uA, uB) (fABS(uA) != fABS(uB))
+#define cmpU(uA, uB) (uA != uB)
 #define cmpA Console::Error
 #define cmpB Console::WriteLn
 #define cmpPrint(cond) {			\
 	if (cond) {						\
 		cmpA("%s", params str1);	\
 		cmpA("%s", params str2);	\
+		mVUdebugNow = 1;			\
 	}								\
 	else {							\
 		cmpB("%s", params str1);	\
@@ -163,12 +167,12 @@ namespace VU1micro
 			for (int i = 0; i < 32; i++) {
 				sprintf(str1, "VF%02d  = {%f, %f, %f, %f}", i, VU3.VF[i].F[0], VU3.VF[i].F[1], VU3.VF[i].F[2], VU3.VF[i].F[3]);
 				sprintf(str2, "VF%02d  = {%f, %f, %f, %f}", i, VU1.VF[i].F[0], VU1.VF[i].F[1], VU1.VF[i].F[2], VU1.VF[i].F[3]);
-				cmpPrint(((VU1.VF[i].UL[0] != VU3.VF[i].UL[0]) || (VU1.VF[i].UL[1] != VU3.VF[i].UL[1]) || (VU1.VF[i].UL[2] != VU3.VF[i].UL[2]) || (VU1.VF[i].UL[3] != VU3.VF[i].UL[3])));
+				cmpPrint((cmpU(VU1.VF[i].UL[0], VU3.VF[i].UL[0]) || cmpU(VU1.VF[i].UL[1], VU3.VF[i].UL[1]) || cmpU(VU1.VF[i].UL[2], VU3.VF[i].UL[2]) || cmpU(VU1.VF[i].UL[3], VU3.VF[i].UL[3])));
 			}
 
 			sprintf(str1, "ACC   = {%f, %f, %f, %f}", VU3.ACC.F[0], VU3.ACC.F[1], VU3.ACC.F[2], VU3.ACC.F[3]);
 			sprintf(str2, "ACC   = {%f, %f, %f, %f}", VU1.ACC.F[0], VU1.ACC.F[1], VU1.ACC.F[2], VU1.ACC.F[3]);
-			cmpPrint(((VU1.ACC.F[0] != VU3.ACC.F[0]) || (VU1.ACC.F[1] != VU3.ACC.F[1]) || (VU1.ACC.F[2] != VU3.ACC.F[2]) || (VU1.ACC.F[3] != VU3.ACC.F[3])));
+			cmpPrint((cmpU(VU1.ACC.UL[0], VU3.ACC.UL[0]) || cmpU(VU1.ACC.UL[1], VU3.ACC.UL[1]) || cmpU(VU1.ACC.UL[2], VU3.ACC.UL[2]) || cmpU(VU1.ACC.UL[3], VU3.ACC.UL[3])));
 
 			for (int i = 0; i < 16; i++) {
 				sprintf(str1, "VI%02d  = % 8d ($%08x)", i, (s16)VU3.VI[i].UL, VU3.VI[i].UL);
@@ -227,18 +231,21 @@ namespace VU1micro
 			cmpPrint((VU1.VI[REG_TPC].UL != VU3.VI[REG_TPC].UL));
 
 			SysPrintf("-----------------------------------------------\n\n");
+			
+			if (mVUdebugNow) {
 
-			mVUdebugNow = 1;
-			resetVUrec(1);
-			memcpy_fast((u8*)&VU1,		(u8*)backVUregs,	sizeof(VURegs));
-			memcpy_fast((u8*)VU1.Mem,	(u8*)backVUmem,		0x4000);
+				resetVUrec(1);
+				memcpy_fast((u8*)&VU1,		(u8*)backVUregs,	sizeof(VURegs));
+				memcpy_fast((u8*)VU1.Mem,	(u8*)backVUmem,		0x4000);
 
-			runVUrec(VU1.VI[REG_TPC].UL, 300000 /*0x7fffffff*/, 1);
+				runVUrec(VU1.VI[REG_TPC].UL, 300000 /*0x7fffffff*/, 1);
 
-			for (int i = 0; i < 10000000; i++) {
-				Sleep(1000);
+				for (int i = 0; i < 10000000; i++) {
+					Sleep(1000);
+				}
 			}
 		}
+
 		VUtestPause();
 		FreezeXMMRegs(0);
 	}

@@ -296,7 +296,7 @@ enum INTCIrqs
 
 enum DMACIrqs
 {
-	DMAC_VIF0 = 0,
+	DMAC_VIF0	= 0,
 	DMAC_VIF1,
 	DMAC_GIF,
 	DMAC_FROM_IPU,
@@ -306,16 +306,16 @@ enum DMACIrqs
 	DMAC_SIF2,
 	DMAC_FROM_SPR,
 	DMAC_TO_SPR,
-	DMAC_13 = 13, // Stall?
-	DMAC_14 = 14, // Transfer?
-	DMAC_ERROR = 15,
+	DMAC_13		= 13, // Stall?
+	DMAC_14		= 14, // Transfer?
+	DMAC_ERROR	= 15,
 };
 
 enum vif0_stat_flags
 {
 	VIF0_STAT_VPS_W 	= (1),
 	VIF0_STAT_VPS_D 	= (2),
-	VIF0_STAT_VPS_T 		= (3),
+	VIF0_STAT_VPS_T		= (3),
 	VIF0_STAT_VPS 		= (3),
 	VIF0_STAT_VEW		= (1<<2),
 	VIF0_STAT_MRK		= (1<<6),
@@ -334,7 +334,7 @@ enum vif1_stat_flags
 {
 	VIF1_STAT_VPS_W 	= (1),
 	VIF1_STAT_VPS_D 	= (2),
-	VIF1_STAT_VPS_T 		= (3),
+	VIF1_STAT_VPS_T		= (3),
 	VIF1_STAT_VPS 		= (3),
 	VIF1_STAT_VEW		= (1<<2),
 	VIF1_STAT_VGW		= (1<<3),
