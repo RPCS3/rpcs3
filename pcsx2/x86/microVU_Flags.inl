@@ -264,7 +264,7 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 microVUt(void) mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr, 4); incPC(1); }
 	branchType2 { 
-		if (!mVUlow.constJump.isValid) { mVUregs.needExactMatch |= 0x7; } 
+		if (!mVUlow.constJump.isValid || CHECK_VU_CONSTHACK) { mVUregs.needExactMatch |= 0x7; } 
 		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8), 4); }
 	}
 	branchType3 {
