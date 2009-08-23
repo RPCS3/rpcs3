@@ -543,6 +543,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\HidDevice.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\HidDevice.h"
+				>
+			</File>
+			<File
 				RelativePath=".\KeyboardHook.cpp"
 				>
 			</File>
