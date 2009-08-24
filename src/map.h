@@ -13,11 +13,17 @@ namespace YAML
 
 	class Map: public Content
 	{
+	private:
+		typedef std::map <Node *, Node *, ltnode> node_map;
+
 	public:
 		Map();
+		Map(const node_map& data);
 		virtual ~Map();
 
 		void Clear();
+		virtual Content *Clone() const;
+
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
 		virtual bool GetEnd(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
@@ -35,8 +41,7 @@ namespace YAML
 		void ParseBlock(Scanner *pScanner, const ParserState& state);
 		void ParseFlow(Scanner *pScanner, const ParserState& state);
 
-	protected:
-		typedef std::map <Node *, Node *, ltnode> node_map;
+	private:
 		node_map m_data;
 	};
 }

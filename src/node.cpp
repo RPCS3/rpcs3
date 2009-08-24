@@ -24,6 +24,13 @@ namespace YAML
 	{
 	}
 
+	Node::Node(const Mark& mark, const std::string& anchor, const std::string& tag, const Content *pContent)
+	: m_mark(mark), m_anchor(anchor), m_tag(tag), m_pContent(0), m_alias(false), m_pIdentity(this), m_referenced(false)
+	{
+		if(m_pContent)
+			m_pContent = pContent->Clone();
+	}
+
 	Node::~Node()
 	{
 		Clear();
@@ -37,6 +44,14 @@ namespace YAML
 		m_referenced = false;
 		m_anchor.clear();
 		m_tag.clear();
+	}
+	
+	std::auto_ptr<Node> Node::Clone() const
+	{
+		if(m_alias)
+			throw std::runtime_error("yaml-cpp: Can't clone alias");  // TODO: what to do about aliases?
+		
+		return std::auto_ptr<Node> (new Node(m_mark, m_anchor, m_tag, m_pContent));
 	}
 
 	void Node::Parse(Scanner *pScanner, const ParserState& state)

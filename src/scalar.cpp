@@ -12,8 +12,17 @@ namespace YAML
 	{
 	}
 
+	Scalar::Scalar(const std::string& data): m_data(data)
+	{
+	}
+
 	Scalar::~Scalar()
 	{
+	}
+
+	Content *Scalar::Clone() const
+	{
+		return new Scalar(m_data);
 	}
 
 	void Scalar::Parse(Scanner *pScanner, const ParserState& /*state*/)
@@ -43,3 +52,4 @@ namespace YAML
 			return 0;
 	}
 }
+

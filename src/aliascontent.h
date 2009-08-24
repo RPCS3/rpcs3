@@ -12,6 +12,8 @@ namespace YAML
 	{
 	public:
 		AliasContent(Content *pNodeContent);
+		
+		virtual Content *Clone() const;
 
 		virtual void Parse(Scanner* pScanner, const ParserState& state);
 		virtual void Write(Emitter&) const;

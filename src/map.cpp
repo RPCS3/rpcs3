@@ -12,6 +12,15 @@ namespace YAML
 	Map::Map()
 	{
 	}
+	
+	Map::Map(const node_map& data)
+	{
+		for(node_map::const_iterator it=data.begin();it!=data.end();++it) {
+			std::auto_ptr<Node> pKey = it->first->Clone();
+			std::auto_ptr<Node> pValue = it->second->Clone();
+			m_data[pKey.release()] = pValue.release();
+		}
+	}
 
 	Map::~Map()
 	{
@@ -27,6 +36,11 @@ namespace YAML
 		m_data.clear();
 	}
 
+	Content *Map::Clone() const
+	{
+		return new Map(m_data);
+	}
+	
 	bool Map::GetBegin(std::map <Node *, Node *, ltnode>::const_iterator& it) const
 	{
 		it = m_data.begin();

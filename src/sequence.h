@@ -15,9 +15,12 @@ namespace YAML
 	{
 	public:
 		Sequence();
+		Sequence(const std::vector<Node *>& data);
 		virtual ~Sequence();
 
 		void Clear();
+		virtual Content *Clone() const;
+
 		virtual bool GetBegin(std::vector <Node *>::const_iterator& it) const;
 		virtual bool GetEnd(std::vector <Node *>::const_iterator& it) const;
 		virtual Node *GetNode(std::size_t i) const;

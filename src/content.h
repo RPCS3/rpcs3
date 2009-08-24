@@ -25,6 +25,8 @@ namespace YAML
 	public:
 		Content();
 		virtual ~Content();
+		
+		virtual Content *Clone() const = 0;
 
 		virtual void Parse(Scanner *pScanner, const ParserState& state) = 0;
 		virtual void Write(Emitter& out) const = 0;

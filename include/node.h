@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
 namespace YAML
 {
@@ -30,6 +31,7 @@ namespace YAML
 		~Node();
 
 		void Clear();
+		std::auto_ptr<Node> Clone() const;
 		void Parse(Scanner *pScanner, const ParserState& state);
 
 		CONTENT_TYPE GetType() const;
@@ -89,6 +91,9 @@ namespace YAML
 
 		template <typename T>
 		const Node *FindValueForKey(const T& key) const;
+		
+		// helper for cloning
+		Node(const Mark& mark, const std::string& anchor, const std::string& tag, const Content *pContent);
 
 		// helpers for parsing
 		void ParseHeader(Scanner *pScanner, const ParserState& state);

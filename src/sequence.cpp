@@ -13,6 +13,12 @@ namespace YAML
 
 	}
 
+	Sequence::Sequence(const std::vector<Node *>& data)
+	{
+		for(std::size_t i=0;i<data.size();i++)
+			m_data.push_back(data[i]->Clone().release());
+	}
+
 	Sequence::~Sequence()
 	{
 		Clear();
@@ -23,6 +29,11 @@ namespace YAML
 		for(std::size_t i=0;i<m_data.size();i++)
 			delete m_data[i];
 		m_data.clear();
+	}
+
+	Content *Sequence::Clone() const
+	{
+		return new Sequence(m_data);
 	}
 
 	bool Sequence::GetBegin(std::vector <Node *>::const_iterator& it) const
