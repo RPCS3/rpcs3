@@ -39,7 +39,6 @@ namespace YAML
 
 	private:
 		void ParseBlock(Scanner *pScanner, const ParserState& state);
-		void ParseImplicit(Scanner *pScanner, const ParserState& state);
 		void ParseFlow(Scanner *pScanner, const ParserState& state);
 
 	protected:

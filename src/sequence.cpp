@@ -67,7 +67,6 @@ namespace YAML
 		// split based on start token
 		switch(pScanner->peek().type) {
 			case TT_BLOCK_SEQ_START: ParseBlock(pScanner, state); break;
-			case TT_BLOCK_ENTRY: ParseImplicit(pScanner, state); break;
 			case TT_FLOW_SEQ_START: ParseFlow(pScanner, state); break;
 			default: break;
 		}
@@ -100,26 +99,6 @@ namespace YAML
 					continue;
 			}
 			
-			pNode->Parse(pScanner, state);
-		}
-	}
-
-	void Sequence::ParseImplicit(Scanner *pScanner, const ParserState& state)
-	{
-		while(1) {
-			// we're actually *allowed* to have no tokens at some point
-			if(pScanner->empty())
-				break;
-
-			// and we end at anything other than a block entry
-			Token& token = pScanner->peek();
-			if(token.type != TT_BLOCK_ENTRY)
-				break;
-
-			pScanner->pop();
-
-			Node *pNode = new Node;
-			m_data.push_back(pNode);
 			pNode->Parse(pScanner, state);
 		}
 	}
