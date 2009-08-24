@@ -2,6 +2,13 @@ cmake_minimum_required(VERSION 2.6)
 
 project (YAML_CPP)
 
+set(LIB_TYPE SHARED)
+
+if(IPHONE)
+  set(CMAKE_OSX_SYSROOT iphoneos2.2.1)
+  set(LIB_TYPE)
+endif(IPHONE)
+
 if(CMAKE_COMPILER_IS_GNUCC)
   set(CMAKE_CXX_FLAGS "-O2 -Wall -pedantic -Wextra")
 endif(CMAKE_COMPILER_IS_GNUCC)
@@ -34,7 +41,8 @@ file(GLOB private_headers src/*.h)
 file(GLOB sources src/*.cpp)
 
 include_directories(${YAML_CPP_SOURCE_DIR}/include)
-add_library(yaml-cpp SHARED
+add_library(yaml-cpp
+	${LIB_TYPE}
 	${public_headers}
 	${private_headers}
 	${sources}
