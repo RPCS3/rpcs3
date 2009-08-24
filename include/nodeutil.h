@@ -33,7 +33,7 @@ namespace YAML
 	MAKE_INDEX_TYPE(long);
 	MAKE_INDEX_TYPE(unsigned long);
 
-#undef MAKE_INDEX_TYPE;
+#undef MAKE_INDEX_TYPE
 	
 	template <typename T>
 	struct is_index_type: public is_index_type_with_check<T, false> {};
