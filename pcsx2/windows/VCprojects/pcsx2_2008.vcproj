@@ -2105,6 +2105,10 @@
 								>
 							</File>
 							<File
+								RelativePath="..\..\x86\microVU_Macro.inl"
+								>
+							</File>
+							<File
 								RelativePath="..\..\x86\microVU_Misc.h"
 								>
 							</File>

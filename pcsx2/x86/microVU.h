@@ -222,3 +222,4 @@ typedef void (__fastcall *mVUrecCall)(u32, u32);
 #include "microVU_Branch.inl"
 #include "microVU_Compile.inl"
 #include "microVU_Execute.inl"
+#include "microVU_Macro.inl"
