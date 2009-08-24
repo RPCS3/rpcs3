@@ -248,6 +248,30 @@ namespace Test
 			return true;
 		}
 
+		bool CompressedMapAndSeq()
+		{
+			std::string input = "key:\n- one\n- two";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			const YAML::Node& seq = doc["key"];
+			if(seq.size() != 2)
+				return false;
+				
+			std::string output;
+			seq[0] >> output;
+			if(output != "one")
+				return false;
+			seq[1] >> output;
+			if(output != "two")
+				return false;
+
+			return true;
+		}
+
 		bool NullBlockSeqEntry()
 		{
 			std::string input = "- hello\n-\n- world";
@@ -297,6 +321,51 @@ namespace Test
 			parser.GetNextDocument(doc);
 			
 			if(!IsNull(doc["empty value"]))
+				return false;
+			
+			return true;
+		}
+
+		bool SimpleAlias()
+		{
+			std::string input = "- &alias test\n- *alias";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::string output;
+			doc[0] >> output;
+			if(output != "test")
+				return false;
+			
+			doc[1] >> output;
+			if(output != "test")
+				return false;
+			
+			if(doc.size() != 2)
+				return false;
+			
+			return true;
+		}
+		
+		bool AliasWithNull()
+		{
+			std::string input = "- &alias\n- *alias";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			if(!IsNull(doc[0]))
+				return false;
+			
+			if(!IsNull(doc[1]))
+				return false;
+			
+			if(doc.size() != 2)
 				return false;
 			
 			return true;

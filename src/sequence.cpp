@@ -83,11 +83,11 @@ namespace YAML
 				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ);
 
 			Token token = pScanner->peek();
-			if(token.type != TT_BLOCK_ENTRY && token.type != TT_BLOCK_END)
+			if(token.type != TT_BLOCK_ENTRY && token.type != TT_BLOCK_SEQ_END)
 				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ);
 
 			pScanner->pop();
-			if(token.type == TT_BLOCK_END)
+			if(token.type == TT_BLOCK_SEQ_END)
 				break;
 
 			Node *pNode = new Node;
@@ -96,7 +96,7 @@ namespace YAML
 			// check for null
 			if(!pScanner->empty()) {
 				const Token& token = pScanner->peek();
-				if(token.type == TT_BLOCK_ENTRY || token.type == TT_BLOCK_END)
+				if(token.type == TT_BLOCK_ENTRY || token.type == TT_BLOCK_SEQ_END)
 					continue;
 			}
 			

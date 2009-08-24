@@ -93,7 +93,6 @@ namespace YAML
 				break;
 			case TT_FLOW_SEQ_START:
 			case TT_BLOCK_SEQ_START:
-			case TT_BLOCK_ENTRY:
 				m_pContent = new Sequence;
 				break;
 			case TT_FLOW_MAP_START:
@@ -265,7 +264,7 @@ namespace YAML
 		// write content
 		if(node.m_pContent)
 			node.m_pContent->Write(out);
-		else
+		else if(!node.m_alias)
 			out << Null;
 
 		return out;

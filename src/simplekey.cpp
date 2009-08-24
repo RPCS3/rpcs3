@@ -35,7 +35,7 @@ namespace YAML
 		SimpleKey key(INPUT.mark(), m_flowLevel);
 
 		// first add a map start, if necessary
-		key.pMapStart = PushIndentTo(INPUT.column(), false);
+		key.pMapStart = PushIndentTo(INPUT.column(), IndentMarker::MAP);
 		if(key.pMapStart)
 			key.pMapStart->status = TS_UNVERIFIED;
 

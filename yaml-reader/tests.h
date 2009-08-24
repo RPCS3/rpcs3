@@ -34,9 +34,12 @@ namespace Test {
 		bool FlowSeq();
 		bool FlowMap();
 		bool QuotedSimpleKeys();
+		bool CompressedMapAndSeq();
 		bool NullBlockSeqEntry();
 		bool NullBlockMapKey();
 		bool NullBlockMapValue();
+		bool SimpleAlias();
+		bool AliasWithNull();
 	}
 	
 	namespace Emitter {
@@ -63,6 +66,7 @@ namespace Test {
 		void LongKeyFlowMap(YAML::Emitter& out, std::string& desiredOutput);
 		void BlockMapAsKey(YAML::Emitter& out, std::string& desiredOutput);
 		void AliasAndAnchor(YAML::Emitter& out, std::string& desiredOutput);
+		void AliasAndAnchorWithNull(YAML::Emitter& out, std::string& desiredOutput);
 		void ComplexDoc(YAML::Emitter& out, std::string& desiredOutput);
 		void STLContainers(YAML::Emitter& out, std::string& desiredOutput);
 		void SimpleComment(YAML::Emitter& out, std::string& desiredOutput);

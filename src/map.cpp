@@ -75,10 +75,10 @@ namespace YAML
 				throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP);
 
 			Token token = pScanner->peek();
-			if(token.type != TT_KEY && token.type != TT_VALUE && token.type != TT_BLOCK_END)
+			if(token.type != TT_KEY && token.type != TT_VALUE && token.type != TT_BLOCK_MAP_END)
 				throw ParserException(token.mark, ErrorMsg::END_OF_MAP);
 
-			if(token.type == TT_BLOCK_END) {
+			if(token.type == TT_BLOCK_MAP_END) {
 				pScanner->pop();
 				break;
 			}

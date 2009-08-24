@@ -272,6 +272,16 @@ namespace Test
 			desiredOutput = "- &fred\n  name: Fred\n  age: 42\n- *fred";
 		}
 
+		void AliasAndAnchorWithNull(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << YAML::Anchor("fred") << YAML::Null;
+			out << YAML::Alias("fred");
+			out << YAML::EndSeq;
+			
+			desiredOutput = "- &fred ~\n- *fred";
+		}
+
 		void ComplexDoc(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << YAML::BeginMap;

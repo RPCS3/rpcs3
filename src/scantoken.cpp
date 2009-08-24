@@ -19,7 +19,7 @@ namespace YAML
 		std::vector <std::string> params;
 
 		// pop indents and simple keys
-		PopIndentTo(-1);
+		PopAllIndents();
 		VerifyAllSimpleKeys();
 
 		m_simpleKeyAllowed = false;
@@ -59,7 +59,7 @@ namespace YAML
 	// DocStart
 	void Scanner::ScanDocStart()
 	{
-		PopIndentTo(-1);
+		PopAllIndents();
 		VerifyAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
@@ -72,7 +72,7 @@ namespace YAML
 	// DocEnd
 	void Scanner::ScanDocEnd()
 	{
-		PopIndentTo(-1);
+		PopAllIndents();
 		VerifyAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
@@ -135,7 +135,7 @@ namespace YAML
 		if(!m_simpleKeyAllowed)
 			throw ParserException(INPUT.mark(), ErrorMsg::BLOCK_ENTRY);
 
-		PushIndentTo(INPUT.column(), true);
+		PushIndentTo(INPUT.column(), IndentMarker::SEQ);
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -152,7 +152,7 @@ namespace YAML
 			if(!m_simpleKeyAllowed)
 				throw ParserException(INPUT.mark(), ErrorMsg::MAP_KEY);
 
-			PushIndentTo(INPUT.column(), false);
+			PushIndentTo(INPUT.column(), IndentMarker::MAP);
 		}
 
 		// can only put a simple key here if we're in block context
@@ -180,7 +180,7 @@ namespace YAML
 				if(!m_simpleKeyAllowed)
 					throw ParserException(INPUT.mark(), ErrorMsg::MAP_VALUE);
 
-				PushIndentTo(INPUT.column(), false);
+				PushIndentTo(INPUT.column(), IndentMarker::MAP);
 			}
 
 			// can only put a simple key here if we're in block context
@@ -277,7 +277,7 @@ namespace YAML
 		ScanScalarParams params;
 		params.end = (m_flowLevel > 0 ? Exp::EndScalarInFlow : Exp::EndScalar) || (Exp::BlankOrBreak + Exp::Comment);
 		params.eatEnd = false;
-		params.indent = (m_flowLevel > 0 ? 0 : m_indents.top() + 1);
+		params.indent = (m_flowLevel > 0 ? 0 : GetTopIndent() + 1);
 		params.fold = true;
 		params.eatLeadingWhitespace = true;
 		params.trimTrailingSpaces = true;
@@ -391,8 +391,8 @@ namespace YAML
 			throw ParserException(INPUT.mark(), ErrorMsg::CHAR_IN_BLOCK);
 
 		// set the initial indentation
-		if(m_indents.top() >= 0)
-			params.indent += m_indents.top();
+		if(GetTopIndent() >= 0)
+			params.indent += GetTopIndent();
 
 		params.eatLeadingWhitespace = false;
 		params.trimTrailingSpaces = false;

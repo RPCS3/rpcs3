@@ -34,14 +34,26 @@ namespace YAML
 		void ClearAnchors();
 
 	private:
+		struct IndentMarker {
+			enum INDENT_TYPE { MAP, SEQ, NONE };
+			IndentMarker(int column_, INDENT_TYPE type_): column(column_), type(type_) {}
+		
+			int column;
+			INDENT_TYPE type;
+		};
+	
+	private:	
 		// scanning
 		void EnsureTokensInQueue();
 		void ScanNextToken();
 		void ScanToNextToken();
 		void StartStream();
 		void EndStream();
-		Token *PushIndentTo(int column, bool sequence);
-		void PopIndentTo(int column);
+		Token *PushIndentTo(int column, IndentMarker::INDENT_TYPE type);
+		void PopIndentToHere();
+		void PopAllIndents();
+		void PopIndent();
+		int GetTopIndent() const;
 
 		// checking input
 		void InsertSimpleKey();
@@ -94,7 +106,7 @@ namespace YAML
 		int m_flowLevel;                // number of unclosed '[' and '{' indicators
 		bool m_isLastKeyValid;
 		std::stack <SimpleKey> m_simpleKeys;
-		std::stack <int> m_indents;
+		std::stack <IndentMarker> m_indents;
 		std::map <std::string, const Node *> m_anchors;
 	};
 }

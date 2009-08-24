@@ -46,6 +46,7 @@ namespace YAML
 		assert(!m_tokens.empty());  // should we be asserting here? I mean, we really just be checking
 		                            // if it's empty before peeking.
 
+//		std::cerr << "peek: (" << &m_tokens.front() << ") " << m_tokens.front() << "\n";
 		return m_tokens.front();
 	}
 
@@ -98,7 +99,7 @@ namespace YAML
 		VerifySimpleKey();
 
 		// maybe need to end some blocks
-		PopIndentTo(INPUT.column());
+		PopIndentToHere();
 
 		// *****
 		// And now branch based on the next few characters!
@@ -221,7 +222,7 @@ namespace YAML
 	{
 		m_startedStream = true;
 		m_simpleKeyAllowed = true;
-		m_indents.push(-1);
+		m_indents.push(IndentMarker(-1, IndentMarker::NONE));
 		m_anchors.clear();
 	}
 
@@ -233,7 +234,7 @@ namespace YAML
 		if(INPUT.column() > 0)
 			INPUT.ResetColumn();
 
-		PopIndentTo(-1);
+		PopAllIndents();
 		VerifyAllSimpleKeys();
 
 		m_simpleKeyAllowed = false;
@@ -244,40 +245,86 @@ namespace YAML
 	// . Pushes an indentation onto the stack, and enqueues the
 	//   proper token (sequence start or mapping start).
 	// . Returns the token it generates (if any).
-	Token *Scanner::PushIndentTo(int column, bool sequence)
+	Token *Scanner::PushIndentTo(int column, IndentMarker::INDENT_TYPE type)
 	{
 		// are we in flow?
 		if(m_flowLevel > 0)
 			return 0;
+		
+		IndentMarker indent(column, type);
+		const IndentMarker& lastIndent = m_indents.top();
 
 		// is this actually an indentation?
-		if(column <= m_indents.top())
+		if(indent.column < lastIndent.column)
+			return 0;
+		if(indent.column == lastIndent.column && !(indent.type == IndentMarker::SEQ && lastIndent.type == IndentMarker::MAP))
 			return 0;
 
 		// now push
-		m_indents.push(column);
-		if(sequence)
+		m_indents.push(indent);
+		if(type == IndentMarker::SEQ)
 			m_tokens.push(Token(TT_BLOCK_SEQ_START, INPUT.mark()));
-		else
+		else if(type == IndentMarker::MAP)
 			m_tokens.push(Token(TT_BLOCK_MAP_START, INPUT.mark()));
+		else
+			assert(false);
 
 		return &m_tokens.back();
 	}
 
-	// PopIndentTo
-	// . Pops indentations off the stack until we reach 'column' indentation,
+	// PopIndentToHere
+	// . Pops indentations off the stack until we reach the current indentation level,
 	//   and enqueues the proper token each time.
-	void Scanner::PopIndentTo(int column)
+	void Scanner::PopIndentToHere()
 	{
 		// are we in flow?
 		if(m_flowLevel > 0)
 			return;
 
 		// now pop away
-		while(!m_indents.empty() && m_indents.top() > column) {
-			m_indents.pop();
-			m_tokens.push(Token(TT_BLOCK_END, INPUT.mark()));
+		while(!m_indents.empty()) {
+			const IndentMarker& indent = m_indents.top();
+			if(indent.column < INPUT.column())
+				break;
+			if(indent.column == INPUT.column() && !(indent.type == IndentMarker::SEQ && !Exp::BlockEntry.Matches(INPUT)))
+				break;
+				
+			PopIndent();
 		}
+	}
+	
+	// PopAllIndents
+	// . Pops all indentations off the stack,
+	//   and enqueues the proper token each time.
+	void Scanner::PopAllIndents()
+	{
+		// are we in flow?
+		if(m_flowLevel > 0)
+			return;
+
+		// now pop away
+		while(!m_indents.empty())
+			PopIndent();
+	}
+	
+	// PopIndent
+	// . Pops a single indent, pushing the proper token
+	void Scanner::PopIndent()
+	{
+		IndentMarker::INDENT_TYPE type = m_indents.top().type;
+		m_indents.pop();
+		if(type == IndentMarker::SEQ)
+			m_tokens.push(Token(TT_BLOCK_SEQ_END, INPUT.mark()));
+		else if(type == IndentMarker::MAP)
+			m_tokens.push(Token(TT_BLOCK_MAP_END, INPUT.mark()));
+	}
+
+	// GetTopIndent
+	int Scanner::GetTopIndent() const
+	{
+		if(m_indents.empty())
+			return 0;
+		return m_indents.top().column;
 	}
 
 	// Save
