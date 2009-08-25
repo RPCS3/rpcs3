@@ -1519,7 +1519,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				dm->Update(&info);
 				dm->PostRead();
 				// Workaround for things that return 0 on first poll and something else ever after.
-				Sleep(40);
+				Sleep(80);
 				dm->Update(&info);
 				dm->PostRead();
 				SetTimer(hWnd, 1, 30, 0);
