@@ -161,6 +161,7 @@ public:
 
 protected:
 	void LoadSave( IniInterface& ini );
+	void LoadSaveMemcards( IniInterface& ini );
 };
 
 class wxFileConfig;		// forward declare.

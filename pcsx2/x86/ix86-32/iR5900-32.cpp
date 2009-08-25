@@ -108,7 +108,7 @@ static u32 dumplog = 0;
 #define dumplog 0
 #endif
 
-static void iBranchTest(u32 newpc = 0xffffffff, bool noDispatch=false);
+static void iBranchTest(u32 newpc = 0xffffffff);
 static void ClearRecLUT(BASEBLOCK* base, int count);
 static u32 eeScaleBlockCycles();
 
@@ -538,7 +538,9 @@ static void recShutdown( void )
 void recStep( void ) {
 }
 
-static __forceinline bool recEventTest()
+
+
+static void recEventTest()
 {
 #ifdef PCSX2_DEVBUILD
 	// dont' remove this check unless doing an official release
@@ -550,13 +552,12 @@ static __forceinline bool recEventTest()
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
 
-	// Perform counters, ints, and IOP updates:
-	bool retval = _cpuBranchTest_Shared();
+	// Perform counters, interrupts, and IOP updates:
+	_cpuBranchTest_Shared();
 
 #ifdef PCSX2_DEVBUILD
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
-	return retval;
 }
 
 ////////////////////////////////////////////////////
@@ -568,7 +569,7 @@ u32 g_EEDispatchTemp;
 
 // The address for all cleared blocks.  It recompiles the current pc and then
 // dispatches to the recompiled block address.
-static __declspec(naked) void JITCompile()
+static __naked void JITCompile()
 {
 	__asm {
 		mov esi, dword ptr [cpuRegs.pc]
@@ -582,7 +583,7 @@ static __declspec(naked) void JITCompile()
 	}
 }
 
-static __declspec(naked) void JITCompileInBlock()
+static __naked void JITCompileInBlock()
 {
 	__asm {
 		jmp JITCompile
@@ -601,34 +602,23 @@ static void __naked DispatcherReg()
 	}
 }
 
+// [TODO] : Replace these functions with x86Emitter-generated code and we can compound this
+// function and DispatcherReg() into a fast fall-through case (removes the DispatcerReg jump
+// in this function, since execution will just fall right into the DispatcherReg implementation).
+//
+static void __naked DispatcherEvent()
+{
+	__asm
+	{
+		call recEventTest;
+		jmp DispatcherReg;
+	}
+}
+
 void recExecute()
 {
 	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
 	// Manually pushing is faster, especially on Core2's and such. :)
-	do
-	{
-		g_EEFreezeRegs = true;
-		__asm
-		{
-			push ebx
-			push esi
-			push edi
-			push ebp
-
-			call DispatcherReg
-			
-			pop ebp
-			pop edi
-			pop esi
-			pop ebx
-		}
-		g_EEFreezeRegs = false;
-	}
-	while( !recEventTest() );
-}
-
-static void recExecuteBlock()
-{
 	g_EEFreezeRegs = true;
 	__asm
 	{
@@ -638,14 +628,13 @@ static void recExecuteBlock()
 		push ebp
 
 		call DispatcherReg
-
+		
 		pop ebp
 		pop edi
 		pop esi
 		pop ebx
 	}
 	g_EEFreezeRegs = false;
-	recEventTest();
 }
 
 #else // _MSC_VER
@@ -654,31 +643,6 @@ __forceinline void recExecute()
 {
 	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
 	// Manually pushing is faster, especially on Core2's and such. :)
-	do {
-		g_EEFreezeRegs = true;
-		__asm__
-		(
-			".intel_syntax noprefix\n"
-			"push ebx\n"
-			"push esi\n"
-			"push edi\n"
-			"push ebp\n"
-
-			"call DispatcherReg\n"
-			
-			"pop ebp\n"
-			"pop edi\n"
-			"pop esi\n"
-			"pop ebx\n"
-			".att_syntax\n"
-		);
-		g_EEFreezeRegs = false;
-	}
-	while( !recEventTest() );
-}
-
-static void recExecuteBlock()
-{
 	g_EEFreezeRegs = true;
 	__asm__
 	(
@@ -689,7 +653,7 @@ static void recExecuteBlock()
 		"push ebp\n"
 
 		"call DispatcherReg\n"
-
+		
 		"pop ebp\n"
 		"pop edi\n"
 		"pop esi\n"
@@ -697,8 +661,8 @@ static void recExecuteBlock()
 		".att_syntax\n"
 	);
 	g_EEFreezeRegs = false;
-	recEventTest();
 }
+
 #endif
 
 namespace R5900 {
@@ -1038,10 +1002,10 @@ static u32 eeScaleBlockCycles()
 //   jump is assumed to be static, in which case the block will be "hardlinked" after
 //   the first time it's dispatched.
 // 
-//   noDispatch - When set true, the jump to Dispatcher.  Used by the recs
+//   noDispatch - When set true, then jump to Dispatcher.  Used by the recs
 //   for blocks which perform exception checks without branching (it's enabled by
 //   setting "branch = 2";
-static void iBranchTest(u32 newpc, bool noDispatch)
+static void iBranchTest(u32 newpc)
 {
 	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
@@ -1050,13 +1014,46 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 	//    cpuRegs.cycle += blockcycles;
 	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
 
-	if (EmuConfig.Speedhacks.BIFC0 && s_nBlockFF) {
+	if (EmuConfig.Speedhacks.BIFC0 && s_nBlockFF)
+	{
 		xMOV(eax, ptr32[&g_nextBranchCycle]);
 		xADD(ptr32[&cpuRegs.cycle], eeScaleBlockCycles());
 		xCMP(eax, ptr32[&cpuRegs.cycle]);
 		xCMOVL(eax, ptr32[&cpuRegs.cycle]);
 		xMOV(ptr32[&cpuRegs.cycle], eax);
-	} else {
+
+		xJMP( DispatcherEvent );
+	}
+	else
+	{
+		// Optimization -- we need to load cpuRegs.pc on static block links, but doing it inside
+		// the if() block below (it would be paired with recBlocks.Link) breaks the sub/jcc
+		// pairing that modern CPUs optimize (applies to all P4+ and AMD X2+ CPUs).  So let's do
+		// it up here instead. :D
+		
+		if( newpc != 0xffffffff )
+			xMOV( ptr32[&cpuRegs.pc], newpc );
+
+		xMOV(eax, &cpuRegs.cycle);
+		xADD(eax, eeScaleBlockCycles());
+		xMOV(&cpuRegs.cycle, eax); // update cycles
+		xSUB(eax, &g_nextBranchCycle);
+
+		if (newpc == 0xffffffff)
+		{
+			xJNS( DispatcherEvent );
+			xJMP( DispatcherReg );
+		}
+		else
+		{
+			recBlocks.Link( HWADDR(newpc), xJcc32( Jcc_Signed ) );
+			xJMP( DispatcherEvent );
+		}
+	}
+	
+	/*
+	else
+	{
 		xMOV(eax, &cpuRegs.cycle);
 		xADD(eax, eeScaleBlockCycles());
 		xMOV(&cpuRegs.cycle, eax); // update cycles
@@ -1072,7 +1069,10 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 			}
 		}
 	}
-	xRET();
+	xCALL( recEventTest );
+	xJMP( DispatcherReg );
+
+	*/
 }
 
 static void checkcodefn()
@@ -1622,7 +1622,7 @@ StartRecomp:
 		// for actual branching instructions.
 
 		iFlushCall(FLUSH_EVERYTHING);
-		iBranchTest(0xffffffff, true);
+		iBranchTest();
 	}
 	else
 	{
@@ -1671,7 +1671,6 @@ R5900cpu recCpu = {
 	recResetEE,
 	recStep,
 	recExecute,
-	recExecuteBlock,
 	recClear,
 	recShutdown
 };

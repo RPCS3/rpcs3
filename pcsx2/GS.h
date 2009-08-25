@@ -178,7 +178,11 @@ protected:
 	uint m_WritePos;	// cur pos ee thread is writing to
 
 	// used to regulate thread startup and gsInit
-	Threading::Semaphore m_post_InitDone;
+	Threading::Semaphore m_sem_InitDone;
+
+	// used for quitting the ringbuffer thread only -- is posted by the ringbuffer when
+	// a QUIT message is processed (signals that the GS has been closed).
+	Threading::Semaphore m_sem_Quitter;
 
 	Threading::MutexLock m_lock_RingRestart;
 	
@@ -282,8 +286,7 @@ protected:
 extern mtgsThreadObject* mtgsThread;
 
 void mtgsWaitGS();
-bool mtgsOpen();
-//void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 );
+void mtgsOpen();
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff

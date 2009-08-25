@@ -19,6 +19,8 @@
 #include "PrecompiledHeader.h"
 #include "Threading.h"
 
+#include <wx/datetime.h>
+
 #ifdef __LINUX__
 #	include <signal.h>		// for pthread_kill, which is in pthread.h on w32-pthreads
 #endif
@@ -31,7 +33,7 @@ namespace Threading
 		m_thread()
 	,	m_returncode( 0 )
 	,	m_running( false )
-	,	m_post_event()
+	,	m_sem_event()
 	{
 	}
 
@@ -175,22 +177,30 @@ namespace Threading
 		sem_post( &sema );
 	}
 
+	// Valid on Win32 builds only!!  Attempts to use it on Linux will result in unresolved
+	// external linker errors.
+#if defined(_MSC_VER)
 	void Semaphore::Post( int multiple )
 	{
-#if defined(_MSC_VER)
 		sem_post_multiple( &sema, multiple );
-#endif
 	}
+#endif
 
 	void Semaphore::Wait()
 	{
 		sem_wait( &sema );
 	}
 
+	void Semaphore::Wait( const wxTimeSpan& timeout )
+	{
+		const timespec fail = { timeout.GetSeconds().GetLo(), 0 };
+		sem_timedwait( &sema, &fail );
+	}
+
 	// Performs an uncancellable wait on a semaphore; restoring the thread's previous cancel state
 	// after the wait has completed.  Useful for situations where the semaphore itself is stored on
 	// the stack and passed to another thread via GUI message or such, avoiding complications where
-	// the thread might be cancelled and the stack value becomes invalid.
+	// the thread might be canceled and the stack value becomes invalid.
 	//
 	// Performance note: this function has quite a bit more overhead compared to Semaphore::Wait(), so
 	// consider manually specifying the thread as uncancellable and using Wait() instead if you need

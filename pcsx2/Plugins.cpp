@@ -34,13 +34,15 @@
 //
 const PluginInfo tbl_PluginInfo[] =
 {
-	{ "GS",		PluginId_GS,	PS2E_LT_GS,		PS2E_GS_VERSION },
-	{ "PAD",	PluginId_PAD,	PS2E_LT_PAD,	PS2E_PAD_VERSION },
-	{ "SPU2",	PluginId_SPU2,	PS2E_LT_SPU2,	PS2E_SPU2_VERSION },
-	{ "CDVD",	PluginId_CDVD,	PS2E_LT_CDVD,	PS2E_CDVD_VERSION },
-	{ "DEV9",	PluginId_DEV9,	PS2E_LT_DEV9,	PS2E_DEV9_VERSION },
-	{ "USB",	PluginId_USB,	PS2E_LT_USB,	PS2E_USB_VERSION },
-	{ "FW",		PluginId_FW,	PS2E_LT_FW,		PS2E_FW_VERSION },
+	{ "GS",		PluginId_GS,	PS2E_LT_GS,		PS2E_GS_VERSION		},
+	{ "PAD",	PluginId_PAD,	PS2E_LT_PAD,	PS2E_PAD_VERSION	},
+	{ "SPU2",	PluginId_SPU2,	PS2E_LT_SPU2,	PS2E_SPU2_VERSION	},
+	{ "CDVD",	PluginId_CDVD,	PS2E_LT_CDVD,	PS2E_CDVD_VERSION	},
+	{ "USB",	PluginId_USB,	PS2E_LT_USB,	PS2E_USB_VERSION	},
+	{ "FW",		PluginId_FW,	PS2E_LT_FW,		PS2E_FW_VERSION		},
+	{ "DEV9",	PluginId_DEV9,	PS2E_LT_DEV9,	PS2E_DEV9_VERSION	},
+
+	{ NULL }
 
 	// SIO is currently unused (legacy?)
 	//{ "SIO",	PluginId_SIO,	PS2E_LT_SIO,	PS2E_SIO_VERSION }
@@ -74,7 +76,7 @@ struct LegacyApi_CommonMethod
 	// returns the method name as a wxString, converted from UTF8.
 	wxString GetMethodName( PluginsEnum_t pid ) const
 	{
-		return wxString::FromUTF8( tbl_PluginInfo[pid].shortname) + wxString::FromUTF8( MethodName );
+		return tbl_PluginInfo[pid].GetShortname() + wxString::FromUTF8( MethodName );
 	}
 };
 
@@ -148,6 +150,7 @@ static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 }
 
 // PAD
+_PADinit           PADinit;
 _PADopen           PADopen;
 _PADstartPoll      PADstartPoll;
 _PADpoll           PADpoll;
@@ -229,6 +232,11 @@ _FWirqCallback     FWirqCallback;
 DEV9handler dev9Handler;
 USBhandler usbHandler;
 uptr pDsp;
+
+static s32 CALLBACK _hack_PADinit()
+{
+	return PADinit( 3 );
+}
 
 // ----------------------------------------------------------------------------
 // Important: Contents of this array must match the order of the contents of the
@@ -434,28 +442,28 @@ static const LegacyApi_OptMethod s_MethMessOpt_CDVD[] =
 // ----------------------------------------------------------------------------
 static const LegacyApi_ReqMethod s_MethMessReq_SPU2[] =
 {
-	{	"SPU2open",				(vMeth**)SPU2open,			NULL },
-	{	"SPU2write",			(vMeth**)SPU2write,			NULL },
-	{	"SPU2read",				(vMeth**)SPU2read,			NULL },
-	{	"SPU2readDMA4Mem",		(vMeth**)SPU2readDMA4Mem,	NULL },
-	{	"SPU2readDMA7Mem",		(vMeth**)SPU2readDMA7Mem,	NULL },
-	{	"SPU2writeDMA4Mem",		(vMeth**)SPU2writeDMA4Mem,	NULL },
-	{	"SPU2writeDMA7Mem",		(vMeth**)SPU2writeDMA7Mem,	NULL },
-	{	"SPU2interruptDMA4",	(vMeth**)SPU2interruptDMA4,	NULL },
-	{	"SPU2interruptDMA7",	(vMeth**)SPU2interruptDMA7,	NULL },
-	{	"SPU2setDMABaseAddr",	(vMeth**)SPU2setDMABaseAddr,NULL },
-	{	"SPU2ReadMemAddr",		(vMeth**)SPU2ReadMemAddr,	NULL },
-	{	"SPU2irqCallback",		(vMeth**)SPU2irqCallback,	NULL },
+	{	"SPU2open",				(vMeth**)&SPU2open,			NULL },
+	{	"SPU2write",			(vMeth**)&SPU2write,		NULL },
+	{	"SPU2read",				(vMeth**)&SPU2read,			NULL },
+	{	"SPU2readDMA4Mem",		(vMeth**)&SPU2readDMA4Mem,	NULL },
+	{	"SPU2readDMA7Mem",		(vMeth**)&SPU2readDMA7Mem,	NULL },
+	{	"SPU2writeDMA4Mem",		(vMeth**)&SPU2writeDMA4Mem,	NULL },
+	{	"SPU2writeDMA7Mem",		(vMeth**)&SPU2writeDMA7Mem,	NULL },
+	{	"SPU2interruptDMA4",	(vMeth**)&SPU2interruptDMA4,NULL },
+	{	"SPU2interruptDMA7",	(vMeth**)&SPU2interruptDMA7,NULL },
+	{	"SPU2setDMABaseAddr",	(vMeth**)&SPU2setDMABaseAddr,NULL },
+	{	"SPU2ReadMemAddr",		(vMeth**)&SPU2ReadMemAddr,	NULL },
+	{	"SPU2irqCallback",		(vMeth**)&SPU2irqCallback,	NULL },
 
 	{ NULL }
 };
 
 static const LegacyApi_OptMethod s_MethMessOpt_SPU2[] =
 {
-	{	"SPU2setClockPtr",		(vMeth**)SPU2setClockPtr	},
-	{	"SPU2async",			(vMeth**)SPU2async			},
-	{	"SPU2WriteMemAddr",		(vMeth**)SPU2WriteMemAddr	},
-	{	"SPU2setupRecording",	(vMeth**)SPU2setupRecording	},
+	{	"SPU2setClockPtr",		(vMeth**)&SPU2setClockPtr	},
+	{	"SPU2async",			(vMeth**)&SPU2async			},
+	{	"SPU2WriteMemAddr",		(vMeth**)&SPU2WriteMemAddr	},
+	{	"SPU2setupRecording",	(vMeth**)&SPU2setupRecording},
 
 	{ NULL }
 };
@@ -499,6 +507,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_USB[] =
 	{	"USBwrite32",		(vMeth**)&USBwrite32,		NULL },
 	{	"USBirqCallback",	(vMeth**)&USBirqCallback,	NULL },
 	{	"USBirqHandler",	(vMeth**)&USBirqHandler,	NULL },
+	{ NULL }
 };
 
 static const LegacyApi_OptMethod s_MethMessOpt_USB[] =
@@ -516,6 +525,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_FW[] =
 	{	"FWread32",			(vMeth**)&FWread32,			NULL },
 	{	"FWwrite32",		(vMeth**)&FWwrite32,		NULL },
 	{	"FWirqCallback",	(vMeth**)&FWirqCallback,	NULL },
+	{ NULL }
 };
 
 static const LegacyApi_OptMethod s_MethMessOpt_FW[] =
@@ -525,10 +535,10 @@ static const LegacyApi_OptMethod s_MethMessOpt_FW[] =
 
 static const LegacyApi_ReqMethod* const s_MethMessReq[] =
 {
-	s_MethMessReq_CDVD,
 	s_MethMessReq_GS,
 	s_MethMessReq_PAD,
 	s_MethMessReq_SPU2,
+	s_MethMessReq_CDVD,
 	s_MethMessReq_USB,
 	s_MethMessReq_FW,
 	s_MethMessReq_DEV9
@@ -536,10 +546,10 @@ static const LegacyApi_ReqMethod* const s_MethMessReq[] =
 
 static const LegacyApi_OptMethod* const s_MethMessOpt[] =
 {
-	s_MethMessOpt_CDVD,
 	s_MethMessOpt_GS,
 	s_MethMessOpt_PAD,
 	s_MethMessOpt_SPU2,
+	s_MethMessOpt_CDVD,
 	s_MethMessOpt_USB,
 	s_MethMessOpt_FW,
 	s_MethMessOpt_DEV9
@@ -554,69 +564,23 @@ Exception::NotPcsxPlugin::NotPcsxPlugin( const PluginsEnum_t& pid ) :
 			Stream( wxString::FromUTF8( tbl_PluginInfo[pid].shortname ), wxLt("File is not a PCSX2 plugin") ) {}
 
 
-void PluginManager::BindCommon( PluginsEnum_t pid )
+PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
-	const LegacyApi_CommonMethod* current = s_MethMessCommon;
-	VoidMethod** target = (VoidMethod**)&m_CommonBindings[pid];
-
-	while( current->MethodName != NULL )
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
 	{
-		*target = (VoidMethod*)m_libs[pid].GetSymbol( current->GetMethodName( pid ) );
-		target++;
-		current++;
-	}
-}
+		const PluginsEnum_t pid = pi->id;
 
-void PluginManager::BindRequired( PluginsEnum_t pid )
-{
-	const LegacyApi_ReqMethod* current = s_MethMessReq[pid];
-	const wxDynamicLibrary& lib = m_libs[pid];
+		if( folders[pid].IsEmpty() )
+			throw Exception::InvalidArgument( "Invalid argument in PluginManager::ctor: Empty plugin filename." );
 
-	while( current->MethodName != NULL )
-	{
-		*(current->Dest) = (VoidMethod*)lib.GetSymbol( current->GetMethodName() );
+		m_info[pid].Filename = folders[pid];
 
-		if( *(current->Dest) == NULL )
-			*(current->Dest) = current->Fallback;
+		if( !wxFile::Exists( folders[pid] ) )
+			throw Exception::FileNotFound( folders[pid] );
 
-		if( *(current->Dest) == NULL )
-		{
-			throw Exception::NotPcsxPlugin( pid );
-		}
-		current++;
-	}
-}
-
-void PluginManager::BindOptional( PluginsEnum_t pid )
-{
-	const LegacyApi_OptMethod* current = s_MethMessOpt[pid];
-	const wxDynamicLibrary& lib = m_libs[pid];
-
-	while( current->MethodName != NULL )
-	{
-		*(current->Dest) = (VoidMethod*)lib.GetSymbol( current->GetMethodName() );
-		current++;
-	}
-}
-
-// Exceptions:
-//   FileNotFound - Thrown if one of th configured plugins doesn't exist.
-//   NotPcsxPlugin - Thrown if one of the configured plugins is an invalid or unsupported DLL
-void PluginManager::LoadPlugins()
-{
-	if( m_loaded ) return;
-	m_loaded = true;
-
-	for( int i=0; i<PluginId_Count; ++i )
-	{
-		PluginsEnum_t pid = (PluginsEnum_t)i;
-		wxString plugpath( g_Conf->FullpathTo( pid ) );
-
-		if( !wxFile::Exists( plugpath ) )
-			throw Exception::FileNotFound( plugpath );
-
-		if( !m_libs[i].Load( plugpath ) )
-			throw Exception::NotPcsxPlugin( plugpath );
+		if( !m_info[pid].Lib.Load( folders[pid] ) )
+			throw Exception::NotPcsxPlugin( folders[pid] );
 
 		// Try to enumerate the new v2.0 plugin interface first.
 		// If that fails, fall back on the old style interface.
@@ -632,45 +596,227 @@ void PluginManager::LoadPlugins()
 
 		// Bind Optional Functions
 		// (leave pointer null and do not generate error)
-
 	}
+	
+	// Hack for PAD's stupid parameter passed on Init
+	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
+	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
+}
+
+PluginManager::~PluginManager()
+{
+	Close();
+	Shutdown();
+	
+	// All library unloading done automatically.
+}
+
+void PluginManager::BindCommon( PluginsEnum_t pid )
+{
+	const LegacyApi_CommonMethod* current = s_MethMessCommon;
+	VoidMethod** target = (VoidMethod**)&m_info[pid].CommonBindings;
+
+	wxDoNotLogInThisScope please;
+
+	while( current->MethodName != NULL )
+	{
+		*target = (VoidMethod*)m_info[pid].Lib.GetSymbol( current->GetMethodName( pid ) );
+		
+		if( *target == NULL )
+			*target = current->Fallback;
+
+		if( *target == NULL )
+			throw Exception::NotPcsxPlugin( pid );
+		
+		target++;
+		current++;
+	}
+}
+
+void PluginManager::BindRequired( PluginsEnum_t pid )
+{
+	const LegacyApi_ReqMethod* current = s_MethMessReq[pid];
+	const wxDynamicLibrary& lib = m_info[pid].Lib;
+
+	wxDoNotLogInThisScope please;
+
+	while( current->MethodName != NULL )
+	{
+		*(current->Dest) = (VoidMethod*)lib.GetSymbol( current->GetMethodName() );
+
+		if( *(current->Dest) == NULL )
+			*(current->Dest) = current->Fallback;
+
+		if( *(current->Dest) == NULL )
+			throw Exception::NotPcsxPlugin( pid );
+
+		current++;
+	}
+}
+
+void PluginManager::BindOptional( PluginsEnum_t pid )
+{
+	const LegacyApi_OptMethod* current = s_MethMessOpt[pid];
+	const wxDynamicLibrary& lib = m_info[pid].Lib;
+
+	wxDoNotLogInThisScope please;
+
+	while( current->MethodName != NULL )
+	{
+		*(current->Dest) = (VoidMethod*)lib.GetSymbol( current->GetMethodName() );
+		current++;
+	}
+}
+
+// Exceptions:
+//   FileNotFound - Thrown if one of the configured plugins doesn't exist.
+//   NotPcsxPlugin - Thrown if one of the configured plugins is an invalid or unsupported DLL
+
+extern bool renderswitch;
+extern void spu2DMA4Irq();
+extern void spu2DMA7Irq();
+extern void spu2Irq();
+
+static bool OpenPlugin_CDVD()
+{
+	if( CDVDapi_Plugin.open( NULL ) ) return false;
+	CDVDapi_Plugin.newDiskCB( cdvdNewDiskCB );
+	return true;
+}
+
+static bool OpenPlugin_GS()
+{
+	//  Abusing the isMultiThread parameter for that so we don't need a new callback
+	return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+}
+
+static bool OpenPlugin_PAD()
+{
+	return !PADopen( (void*)&pDsp );
+}
+
+static bool OpenPlugin_SPU2()
+{
+	if( SPU2open( (void*)&pDsp ) ) return false;
+
+	SPU2irqCallback( spu2Irq, spu2DMA4Irq, spu2DMA7Irq );
+	if( SPU2setDMABaseAddr != NULL ) SPU2setDMABaseAddr((uptr)psxM);
+	if( SPU2setClockPtr != NULL ) SPU2setClockPtr(&psxRegs.cycle);
+	return true;
+}
+
+static bool OpenPlugin_DEV9()
+{
+	dev9Handler = NULL;
+
+	if( DEV9open( (void*)&pDsp ) ) return false;
+	DEV9irqCallback( dev9Irq );
+	dev9Handler = DEV9irqHandler();
+	return true;
+}
+
+static bool OpenPlugin_USB()
+{
+	usbHandler = NULL;
+
+	if( USBopen( (void*)&pDsp ) ) return false;
+	USBirqCallback( usbIrq );
+	usbHandler = USBirqHandler();
+	if( USBsetRAM != NULL )
+		USBsetRAM(psxM);
+	return true;
+}
+
+static bool OpenPlugin_FW()
+{
+	if( FWopen( (void*)&pDsp ) ) return false;
+	FWirqCallback( fwIrq );
+	return true;
 }
 
 void PluginManager::Open( PluginsEnum_t pid )
 {
+	if( m_info[pid].IsOpened ) return;
+	
 	// Each Open needs to be called explicitly. >_<
+
+	bool result = true;
+	switch( pid )
+	{
+		case PluginId_CDVD:	result = OpenPlugin_CDVD();	break;
+		case PluginId_GS:	result = OpenPlugin_GS();	break;
+		case PluginId_PAD:	result = OpenPlugin_PAD();	break;
+		case PluginId_SPU2:	result = OpenPlugin_SPU2();	break;
+		case PluginId_USB:	result = OpenPlugin_USB();	break;
+		case PluginId_FW:	result = OpenPlugin_FW();	break;
+		case PluginId_DEV9:	result = OpenPlugin_DEV9();	break;
+	}
+	if( !result )
+		throw Exception::PluginFailure( tbl_PluginInfo[pid].shortname, wxLt("%s plugin failed to open.") );
+
+	m_info[pid].IsOpened = true;
 }
 
 void PluginManager::Close( PluginsEnum_t pid )
 {
-	if( m_IsOpened[pid] )
+	if( !m_info[pid].IsOpened ) return;
+
+	m_info[pid].IsOpened = false;
+	m_info[pid].CommonBindings.Close();
+}
+
+void PluginManager::Close()
+{
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+		Close( pi->id );
+}
+
+// Initializes all plugins.  Plugin initialization should be done once for every new emulation
+// session.  During a session emulation can be paused/resumed using Open/Close, and should be
+// terminated using Shutdown().
+//
+// In a purist emulation sense, Init() and Shutdown() should only ever need be called for when
+// the PS2's hardware has received a *full* hard reset.  Soft resets typically should rely on
+// the PS2's bios/kernel to re-initialize hardware on the fly.
+//
+void PluginManager::Init()
+{
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
 	{
-		m_IsOpened[pid] = false;
-		m_CommonBindings[pid].Close();
+		const PluginsEnum_t pid = pi->id;
+
+		if( m_info[pid].IsInitialized ) continue;
+		m_info[pid].IsInitialized = true;
+		if( 0 != m_info[pid].CommonBindings.Init() )
+			throw Exception::PluginFailure( tbl_PluginInfo[pid].shortname, wxLt( "%s plugin: Initialization Failure" ) );
 	}
 }
 
-void PluginManager::Init( PluginsEnum_t pid )
+// Shuts down all plugins.  Plugins are closed first, if necessary.
+//
+// In a purist emulation sense, Init() and Shutdown() should only ever need be called for when
+// the PS2's hardware has received a *full* hard reset.  Soft resets typically should rely on
+// the PS2's bios/kernel to re-initialize hardware on the fly.
+//
+void PluginManager::Shutdown()
 {
-	if( !m_IsInitialized[pid] )
-	{
-		m_IsInitialized[pid] = true;
-		m_CommonBindings[pid].Init();
-	}
-}
+	Close();
 
-void PluginManager::Shutdown( PluginsEnum_t pid )
-{
-	if( m_IsInitialized[pid] )
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
 	{
-		m_IsInitialized[pid] = false;
-		m_CommonBindings[pid].Shutdown();
+		const PluginsEnum_t pid = pi->id;
+		if( !m_info[pid].IsInitialized ) continue;
+		m_info[pid].IsInitialized = false;
+		m_info[pid].CommonBindings.Shutdown();
 	}
 }
 
 void PluginManager::Freeze( PluginsEnum_t pid, int mode, freezeData* data )
 {
-	m_CommonBindings[pid].Freeze( mode, data );
+	m_info[pid].CommonBindings.Freeze( mode, data );
 }
 
 // ----------------------------------------------------------------------------
@@ -687,7 +833,7 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveState& state )
 	}
 	else
 	{
-		state.FreezePlugin( tbl_PluginInfo[pid].shortname, m_CommonBindings[pid].Freeze );
+		state.FreezePlugin( tbl_PluginInfo[pid].shortname, m_info[pid].CommonBindings.Freeze );
 	}
 }
 
@@ -702,585 +848,96 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveState& state )
 //
 void PluginManager::Freeze( SaveState& state )
 {
-	for( int i=0; i<PluginId_Count; ++i )
-		Freeze( (PluginsEnum_t)i, state );
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+		Freeze( pi->id, state );
+}
+
+// Creates an instance of a plugin manager, using the specified plugin filenames for sources.
+// Impl Note: Have to use this stupid effing 'friend' declaration because static members of
+// classes can't access their own protected members.  W-T-F?
+//
+PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] )
+{
+	PluginManager* retval = new PluginManager( folders );
+	retval->Init();
+	return retval;
+}
+
+PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
+{
+	wxString passins[PluginId_Count];
+	
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+		passins[pi->id] = folders[pi->id];
+
+	return PluginManager_Create( passins );
+}
+
+void LoadPlugins()
+{
+	wxString passins[PluginId_Count];
+
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+		passins[pi->id] = g_Conf->FullpathTo( pi->id );
+
+	g_plugins = PluginManager_Create( passins );
 }
 
 void InitPlugins()
 {
-	/*if (plugins_initialized) return;
+	if( g_plugins == NULL )
+		LoadPlugins();
 
-	// Ensure plugins have been loaded....
-	LoadPlugins();*/
-
-	//if( !plugins_loaded ) throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
-
-	/*if (ReportError(GSinit(), "GSinit")) return -1;
-	if (ReportError(PAD1init(1), "PAD1init")) return -1;
-	if (ReportError(PAD2init(2), "PAD2init")) return -1;
-	if (ReportError(SPU2init(), "SPU2init")) return -1;
-
-	if (ReportError(DoCDVDinit(), "CDVDinit")) return -1;
-
-	if (ReportError(DEV9init(), "DEV9init")) return -1;
-	if (ReportError(USBinit(), "USBinit")) return -1;
-	if (ReportError(FWinit(), "FWinit")) return -1;
-
-	only_loading_elf = false;
-	plugins_initialized = true;
-	return 0;*/
+	g_plugins->Init();
 }
 
+// All plugins except the CDVD are opened here.  The CDVD must be opened manually by
+// the GUI, depending on the user's menu/config in use.
+//
+// Exceptions:
+//   PluginFailure - if any plugin fails to initialize or open.
+//   ThreadCreationError - If the MTGS thread fails to be created.
+//
 void OpenPlugins()
 {
-	/*if (!plugins_initialized)
-	{
-		if( InitPlugins() == -1 ) return -1;
-	}*/
+	if( g_plugins == NULL )
+		InitPlugins();
 
-	/*if ((!OpenCDVD(pTitleFilename)) || (!OpenGS()) || (!OpenPAD1()) || (!OpenPAD2()) ||
-		(!OpenSPU2()) || (!OpenDEV9()) || (!OpenUSB()) || (!OpenFW()))
-		return -1;
+	mtgsOpen();
 
-	if (!only_loading_elf) cdvdDetectDisk();
-
-	return 0;*/
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+		g_plugins->Open( pi->id );
 }
 
 
 void ClosePlugins( bool closegs )
 {
+	if( g_plugins == NULL ) return;
+	safe_delete( mtgsThread );
+
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+		g_plugins->Close( pi->id );
 }
 
 void ShutdownPlugins()
 {
+	if( g_plugins == NULL ) return;
+	ClosePlugins( true );
+	g_plugins->Shutdown();
 }
 
-void CloseGS()
+void ReleasePlugins()
 {
+	safe_delete( g_plugins );
 }
-
 
 #ifdef _not_wxWidgets_Land_
 
-namespace PluginTypes
-{
-	enum PluginTypes
-	{
-		GS = 0,
-		PAD,
-		PAD1,
-		PAD2,
-		SPU2,
-		CDVD,
-		DEV9,
-		USB,
-		FW
-	};
-}
-
-int PS2E_LT[9] = {
-PS2E_LT_GS,
-PS2E_LT_PAD,PS2E_LT_PAD, PS2E_LT_PAD,
-PS2E_LT_SPU2,
-PS2E_LT_CDVD,
-PS2E_LT_DEV9,
-PS2E_LT_USB,
-PS2E_LT_FW};
-
-int PS2E_VERSION[9] = {
-PS2E_GS_VERSION,
-PS2E_PAD_VERSION,PS2E_PAD_VERSION, PS2E_PAD_VERSION,
-PS2E_SPU2_VERSION,
-PS2E_CDVD_VERSION,
-PS2E_DEV9_VERSION,
-PS2E_USB_VERSION,
-PS2E_FW_VERSION};
-
-#define Sfy(x) #x
-#define Strfy(x) Sfy(x)
-#define MapSymbolVarType(var,type,name) var = (type)SysLoadSym(drv,Strfy(name))
-#define MapSymbolVar(var,name) MapSymbolVarType(var,_##name,name)
-#define MapSymbolVar_Fallback(var,name,fallback) if((MapSymbolVar(var,name))==NULL) var = fallback
-#define MapSymbolVar_Error(var,name) if((MapSymbolVar(var,name))==NULL) \
-{ \
-	const char* errString = SysLibError(); \
-	Msgbox::Alert("%s: Error loading %hs: %s", params &filename, #name, errString); \
-	return -1; \
-}
-
-#define MapSymbol(name) MapSymbolVar(name,name)
-#define MapSymbol_Fallback(name,fallback) MapSymbolVar_Fallback(name,name,fallback)
-#define MapSymbol_Error(name) MapSymbolVar_Error(name,name)
-
-#define MapSymbol2(base,name) MapSymbolVar(base##_plugin.name,base##name)
-#define MapSymbol2_Fallback(base,name,fallback) MapSymbolVar_Fallback(base##_plugin.name,base##name,fallback)
-#define MapSymbol2_Error(base,name) MapSymbolVar_Error(base##_plugin.name,base##name)
-
-// for pad1/2
-#define MapSymbolPAD(var,name) MapSymbolVar(var##name,PAD##name)
-#define MapSymbolPAD_Fallback(var,name) if((MapSymbolVarType(var##name,_PAD##name,PAD##name))==NULL) var##name = var##_##name
-#define MapSymbolPAD_Error(var,name) MapSymbolVar_Error(var##name,PAD##name)
-
-void *GSplugin;
-
-static int _TestPS2Esyms(void* drv, int type, int expected_version, const wxString& filename)
-{
-	_PS2EgetLibType PS2EgetLibType;
-	_PS2EgetLibVersion2 PS2EgetLibVersion2;
-	_PS2EgetLibName PS2EgetLibName;
-
-	MapSymbol_Error(PS2EgetLibType);
-	MapSymbol_Error(PS2EgetLibVersion2);
-	MapSymbol_Error(PS2EgetLibName);
-
-	int actual_version = ((PS2EgetLibVersion2(type) >> 16)&0xff);
-
-	if( actual_version != expected_version) {
-		Msgbox::Alert("Can't load '%s', wrong PS2E version (%x != %x)", params filename.c_str(), actual_version, expected_version);
-		return -1;
-	}
-
-	return 0;
-}
-
-static __forceinline bool TestPS2Esyms(void* &drv, PluginTypes::PluginTypes type, const string& filename)
-{
-	if (_TestPS2Esyms(drv, PS2E_LT[type],PS2E_VERSION[type],filename) < 0) return false;
-	return true;
-}
-
-s32  CALLBACK GS_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
-void CALLBACK GS_keyEvent(keyEvent *ev) {}
-void CALLBACK GS_makeSnapshot(const char *path) {}
-void CALLBACK GS_irqCallback(void (*callback)()) {}
-void CALLBACK GS_configure() {}
-void CALLBACK GS_about() {}
-s32  CALLBACK GS_test() { return 0; }
-
-int LoadGSplugin(const wxString& filename)
-{
-	void *drv;
-
-	GSplugin = SysLoadLibrary(filename.c_str());
-	if (GSplugin == NULL) { Msgbox::Alert ("Could Not Load GS Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = GSplugin;
-	if (!TestPS2Esyms(drv, PluginTypes::GS, filename)) return -1;
-	MapSymbol_Error(GSinit);
-	MapSymbol_Error(GSshutdown);
-	MapSymbol_Error(GSopen);
-	MapSymbol_Error(GSclose);
-	MapSymbol_Error(GSgifTransfer1);
-	MapSymbol_Error(GSgifTransfer2);
-	MapSymbol_Error(GSgifTransfer3);
-	MapSymbol_Error(GSreadFIFO);
-	MapSymbol(GSgetLastTag);
-	MapSymbol(GSreadFIFO2); // optional
-	MapSymbol_Error(GSvsync);
-
-	MapSymbol_Fallback(GSkeyEvent,GS_keyEvent);
-	MapSymbol(GSchangeSaveState);
-	MapSymbol(GSgifSoftReset);
-	MapSymbol_Fallback(GSmakeSnapshot,GS_makeSnapshot);
-	MapSymbol_Fallback(GSirqCallback,GS_irqCallback);
-	MapSymbol_Fallback(GSprintf,GS_printf);
-	MapSymbol_Error(GSsetBaseMem);
-	MapSymbol(GSsetGameCRC);
-	MapSymbol_Error(GSreset);
-	MapSymbol_Error(GSwriteCSR);
-	MapSymbol(GSmakeSnapshot2);
-	MapSymbol(GSgetDriverInfo);
-
-	MapSymbol(GSsetFrameSkip);
-	MapSymbol(GSsetFrameLimit);
-	MapSymbol(GSsetupRecording);
-
-#ifdef _WIN32
-	MapSymbol(GSsetWindowInfo);
-#endif
-	MapSymbol_Fallback(GSfreeze,GS_freeze);
-	MapSymbol_Fallback(GSconfigure,GS_configure);
-	MapSymbol_Fallback(GSabout,GS_about);
-	MapSymbol_Fallback(GStest,GS_test);
-
-	return 0;
-}
-
-void *PAD1plugin;
-
-void CALLBACK PAD1_configure() {}
-void CALLBACK PAD1_about() {}
-s32  CALLBACK PAD1_test() { return 0; }
-s32  CALLBACK PAD1_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
-s32  CALLBACK PAD1_setSlot(u8 port, u8 slot) { return slot == 1; }
-s32  CALLBACK PAD1_queryMtap(u8 port) { return 0; }
-
-int LoadPAD1plugin(const wxString& filename) {
-	void *drv;
-
-	PAD1plugin = SysLoadLibrary(filename.c_str());
-	if (PAD1plugin == NULL) { Msgbox::Alert("Could Not Load PAD1 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = PAD1plugin;
-	if (!TestPS2Esyms(drv, PluginTypes::PAD, filename)) return -1;
-	MapSymbolPAD_Error(PAD1,init);
-	MapSymbolPAD_Error(PAD1,shutdown);
-	MapSymbolPAD_Error(PAD1,open);
-	MapSymbolPAD_Error(PAD1,close);
-	MapSymbolPAD_Error(PAD1,keyEvent);
-	MapSymbolPAD_Error(PAD1,startPoll);
-	MapSymbolPAD_Error(PAD1,poll);
-	MapSymbolPAD_Error(PAD1,query);
-	MapSymbolPAD(PAD1,update);
-
-	MapSymbolPAD(PAD1,gsDriverInfo);
-	MapSymbolPAD_Fallback(PAD1,configure);
-	MapSymbolPAD_Fallback(PAD1,about);
-	MapSymbolPAD_Fallback(PAD1,test);
-	MapSymbolPAD_Fallback(PAD1,freeze);
-	MapSymbolPAD_Fallback(PAD1,setSlot);
-	MapSymbolPAD_Fallback(PAD1,queryMtap);
-
-	return 0;
-}
-
-void *PAD2plugin;
-
-void CALLBACK PAD2_configure() {}
-void CALLBACK PAD2_about() {}
-s32  CALLBACK PAD2_test() { return 0; }
-s32  CALLBACK PAD2_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
-s32  CALLBACK PAD2_setSlot(u8 port, u8 slot) { return slot == 1; }
-s32  CALLBACK PAD2_queryMtap(u8 port) { return 0; }
-
-int LoadPAD2plugin(const wxString& filename) {
-	void *drv;
-
-	PAD2plugin = SysLoadLibrary(filename.c_str());
-	if (PAD2plugin == NULL) { Msgbox::Alert("Could Not Load PAD2 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = PAD2plugin;
-	if (!TestPS2Esyms(drv, PluginTypes::PAD, filename)) return -1;
-	MapSymbolPAD_Error(PAD2,init);
-	MapSymbolPAD_Error(PAD2,shutdown);
-	MapSymbolPAD_Error(PAD2,open);
-	MapSymbolPAD_Error(PAD2,close);
-	MapSymbolPAD_Error(PAD2,keyEvent);
-	MapSymbolPAD_Error(PAD2,startPoll);
-	MapSymbolPAD_Error(PAD2,poll);
-	MapSymbolPAD_Error(PAD2,query);
-	MapSymbolPAD(PAD2,update);
-
-	MapSymbolPAD(PAD2,gsDriverInfo);
-	MapSymbolPAD_Fallback(PAD2,configure);
-	MapSymbolPAD_Fallback(PAD2,about);
-	MapSymbolPAD_Fallback(PAD2,test);
-	MapSymbolPAD_Fallback(PAD2,freeze);
-	MapSymbolPAD_Fallback(PAD2,setSlot);
-	MapSymbolPAD_Fallback(PAD2,queryMtap);
-
-	return 0;
-}
-
-void *SPU2plugin;
-
-s32  CALLBACK SPU2_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
-void CALLBACK SPU2_configure() {}
-void CALLBACK SPU2_about() {}
-s32  CALLBACK SPU2_test() { return 0; }
-
-int LoadSPU2plugin(const wxString& filename) {
-	void *drv;
-
-	SPU2plugin = SysLoadLibrary(filename.c_str());
-	if (SPU2plugin == NULL) { Msgbox::Alert("Could Not Load SPU2 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = SPU2plugin;
-	if (!TestPS2Esyms(drv, PluginTypes::SPU2, filename)) return -1;
-	MapSymbol_Error(SPU2init);
-	MapSymbol_Error(SPU2shutdown);
-	MapSymbol_Error(SPU2open);
-	MapSymbol_Error(SPU2close);
-	MapSymbol_Error(SPU2write);
-	MapSymbol_Error(SPU2read);
-	MapSymbol_Error(SPU2readDMA4Mem);
-	MapSymbol_Error(SPU2writeDMA4Mem);
-	MapSymbol_Error(SPU2interruptDMA4);
-	MapSymbol_Error(SPU2readDMA7Mem);
-	MapSymbol_Error(SPU2writeDMA7Mem);
-	MapSymbol_Error(SPU2interruptDMA7);
-	MapSymbol(SPU2setDMABaseAddr);
-	MapSymbol_Error(SPU2ReadMemAddr);
-	MapSymbol_Error(SPU2WriteMemAddr);
-	MapSymbol_Error(SPU2irqCallback);
-
-	MapSymbol(SPU2setClockPtr);
-
-	MapSymbol(SPU2setupRecording);
-
-	MapSymbol_Fallback(SPU2freeze,SPU2_freeze);
-	MapSymbol_Fallback(SPU2configure,SPU2_configure);
-	MapSymbol_Fallback(SPU2about,SPU2_about);
-	MapSymbol_Fallback(SPU2test,SPU2_test);
-	MapSymbol(SPU2async);
-
-	return 0;
-}
-
-void *CDVDplugin;
-
-
-int LoadCDVDplugin(const wxString& filename) {
-	void *drv;
-
-	CDVDplugin = SysLoadLibrary(filename.c_str());
-	if (CDVDplugin == NULL) { Msgbox::Alert("Could Not Load CDVD Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = CDVDplugin;
-	if (!TestPS2Esyms(drv, PluginTypes::CDVD, filename)) return -1;
-	MapSymbol2_Error(CDVD,init);
-	MapSymbol2_Error(CDVD,shutdown);
-	MapSymbol2_Error(CDVD,open);
-	MapSymbol2_Error(CDVD,close);
-	MapSymbol2_Error(CDVD,readTrack);
-	MapSymbol2_Error(CDVD,getBuffer);
-	MapSymbol2_Error(CDVD,readSubQ);
-	MapSymbol2_Error(CDVD,getTN);
-	MapSymbol2_Error(CDVD,getTD);
-	MapSymbol2_Error(CDVD,getTOC);
-	MapSymbol2_Error(CDVD,getDiskType);
-	MapSymbol2_Error(CDVD,getTrayStatus);
-	MapSymbol2_Error(CDVD,ctrlTrayOpen);
-	MapSymbol2_Error(CDVD,ctrlTrayClose);
-
-	MapSymbol2_Fallback(CDVD,configure,CDVD_configure);
-	MapSymbol2_Fallback(CDVD,about,CDVD_about);
-	MapSymbol2_Fallback(CDVD,test,CDVD_test);
-	MapSymbol2_Fallback(CDVD,newDiskCB,CDVD_newDiskCB);
-
-	MapSymbol2_Fallback(CDVD,readSector,CDVD_readSector);
-	MapSymbol2_Fallback(CDVD,getBuffer2,CDVD_getBuffer2);
-	MapSymbol2_Fallback(CDVD,getDualInfo,CDVD_getDualInfo);
-
-	CDVD->initCount = &cdvdInitCount;
-	cdvdInitCount=0;
-
-	return 0;
-}
-
-void *DEV9plugin;
-
-s32  CALLBACK DEV9_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
-void CALLBACK DEV9_configure() {}
-void CALLBACK DEV9_about() {}
-s32  CALLBACK DEV9_test() { return 0; }
-
-int LoadDEV9plugin(const wxString& filename) {
-	void *drv;
-
-	DEV9plugin = SysLoadLibrary(filename.c_str());
-	if (DEV9plugin == NULL) { Msgbox::Alert("Could Not Load DEV9 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = DEV9plugin;
-	if (!TestPS2Esyms(drv, PluginTypes::DEV9, filename)) return -1;
-	MapSymbol_Error(DEV9init);
-	MapSymbol_Error(DEV9shutdown);
-	MapSymbol_Error(DEV9open);
-	MapSymbol_Error(DEV9close);
-	MapSymbol_Error(DEV9read8);
-	MapSymbol_Error(DEV9read16);
-	MapSymbol_Error(DEV9read32);
-	MapSymbol_Error(DEV9write8);
-	MapSymbol_Error(DEV9write16);
-	MapSymbol_Error(DEV9write32);
-	MapSymbol_Error(DEV9readDMA8Mem);
-	MapSymbol_Error(DEV9writeDMA8Mem);
-	MapSymbol_Error(DEV9irqCallback);
-	MapSymbol_Error(DEV9irqHandler);
-
-	MapSymbol_Fallback(DEV9freeze,DEV9_freeze);
-	MapSymbol_Fallback(DEV9configure,DEV9_configure);
-	MapSymbol_Fallback(DEV9about,DEV9_about);
-	MapSymbol_Fallback(DEV9test,DEV9_test);
-
-	return 0;
-}
-
-void *USBplugin;
-
-s32  CALLBACK USB_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
-void CALLBACK USB_configure() {}
-void CALLBACK USB_about() {}
-s32 CALLBACK USB_test() { return 0; }
-
-int LoadUSBplugin(const wxString& filename) {
-	void *drv;
-
-	USBplugin = SysLoadLibrary(filename.c_str());
-	if (USBplugin == NULL) { Msgbox::Alert("Could Not Load USB Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = USBplugin;
-	if (!TestPS2Esyms(drv, PluginTypes::USB, filename)) return -1;
-	MapSymbol_Error(USBinit);
-	MapSymbol_Error(USBshutdown);
-	MapSymbol_Error(USBopen);
-	MapSymbol_Error(USBclose);
-	MapSymbol_Error(USBread8);
-	MapSymbol_Error(USBread16);
-	MapSymbol_Error(USBread32);
-	MapSymbol_Error(USBwrite8);
-	MapSymbol_Error(USBwrite16);
-	MapSymbol_Error(USBwrite32);
-	MapSymbol_Error(USBirqCallback);
-	MapSymbol_Error(USBirqHandler);
-	MapSymbol_Error(USBsetRAM);
-
-	MapSymbol(USBasync);
-
-	MapSymbol_Fallback(USBfreeze,USB_freeze);
-	MapSymbol_Fallback(USBconfigure,USB_configure);
-	MapSymbol_Fallback(USBabout,USB_about);
-	MapSymbol_Fallback(USBtest,USB_test);
-
-	return 0;
-}
-void *FWplugin;
-
-s32  CALLBACK FW_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
-void CALLBACK FW_configure() {}
-void CALLBACK FW_about() {}
-s32 CALLBACK FW_test() { return 0; }
-
-int LoadFWplugin(const wxString& filename) {
-	void *drv;
-
-	FWplugin = SysLoadLibrary(filename.c_str());
-	if (FWplugin == NULL) { Msgbox::Alert("Could Not Load FW Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
-	drv = FWplugin;
-	if (!TestPS2Esyms(drv, PluginTypes::FW, filename)) return -1;
-	MapSymbol_Error(FWinit);
-	MapSymbol_Error(FWshutdown);
-	MapSymbol_Error(FWopen);
-	MapSymbol_Error(FWclose);
-	MapSymbol_Error(FWread32);
-	MapSymbol_Error(FWwrite32);
-	MapSymbol_Error(FWirqCallback);
-
-	MapSymbol_Fallback(FWfreeze,FW_freeze);
-	MapSymbol_Fallback(FWconfigure,FW_configure);
-	MapSymbol_Fallback(FWabout,FW_about);
-	MapSymbol_Fallback(FWtest,FW_test);
-
-	return 0;
-}
-
-struct PluginOpenStatusFlags
-{
-	u8	GS : 1
-	,	CDVD : 1
-	,	DEV9 : 1
-	,	USB : 1
-	,	SPU2 : 1
-	,	PAD1 : 1
-	,	PAD2 : 1
-	,	FW : 1;
-
-};
-
-static PluginOpenStatusFlags OpenStatus = {0};
-
-static bool plugins_loaded = false;
-static bool plugins_initialized = false;
-static bool only_loading_elf = false;
-
-int LoadPlugins()
-{
-	if (plugins_loaded) return 0;
-
-	if (LoadGSplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.GS )) == -1) return -1;
-	if (LoadPAD1plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD1 )) == -1) return -1;
-	if (LoadPAD2plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD2 )) == -1) return -1;
-	if (LoadSPU2plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.SPU2 )) == -1) return -1;
-	if (LoadCDVDplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.CDVD )) == -1) return -1;
-	if (LoadDEV9plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.DEV9 )) == -1) return -1;
-	if (LoadUSBplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.USB )) == -1) return -1;
-	if (LoadFWplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.FW )) == -1) return -1;
-
-	plugins_loaded = true;
-
-	return 0;
-}
-
-bool ReportError(int err, const char *str)
-{
-	if (err != 0)
-	{
-		Msgbox::Alert("%s error: %d", params str, err);
-		return true;
-	}
-	return false;
-}
-
-bool ReportError2(int err, const char *str)
-{
-	if (err != 0)
-	{
-		Msgbox::Alert("Error Opening %s Plugin", params str, err);
-		return true;
-	}
-	return false;
-}
-
-int InitPlugins()
-{
-	if (plugins_initialized) return 0;
-
-	// Ensure plugins have been loaded....
-	if (LoadPlugins() == -1) return -1;
-
-	//if( !plugins_loaded ) throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
-
-	if (ReportError(GSinit(), "GSinit")) return -1;
-	if (ReportError(PAD1init(1), "PAD1init")) return -1;
-	if (ReportError(PAD2init(2), "PAD2init")) return -1;
-	if (ReportError(SPU2init(), "SPU2init")) return -1;
-
-	if (ReportError(DoCDVDinit(), "CDVDinit")) return -1;
-
-	if (ReportError(DEV9init(), "DEV9init")) return -1;
-	if (ReportError(USBinit(), "USBinit")) return -1;
-	if (ReportError(FWinit(), "FWinit")) return -1;
-
-	only_loading_elf = false;
-	plugins_initialized = true;
-	return 0;
-}
-
-void ShutdownPlugins()
-{
-	if (!plugins_initialized) return;
-
-	mtgsWaitGS();
-	ClosePlugins( true );
-
-	if (GSshutdown != NULL) GSshutdown();
-
-	if (PAD1shutdown != NULL) PAD1shutdown();
-	if (PAD2shutdown != NULL) PAD2shutdown();
-
-	if (SPU2shutdown != NULL) SPU2shutdown();
-
-	//if (CDVDshutdown != NULL) CDVDshutdown();
-	DoCDVDshutdown();
-
-	// safety measures, in case ISO is currently loaded.
-	if(cdvdInitCount>0)
-		CDVD_plugin.shutdown();
-
-	if (DEV9shutdown != NULL) DEV9shutdown();
-	if (USBshutdown != NULL) USBshutdown();
-	if (FWshutdown != NULL) FWshutdown();
-
-	plugins_initialized = false;
-}
-
-extern void spu2DMA4Irq();
-extern void spu2DMA7Irq();
-extern void spu2Irq();
 
 bool OpenGS()
 {
@@ -1497,43 +1154,6 @@ void ClosePlugins( bool closegs )
 	CLOSE_PLUGIN( USB );
 	CLOSE_PLUGIN( FW );
 	CLOSE_PLUGIN( SPU2 );
-}
-
-//used to close the GS plugin window and pads, to switch gsdx renderer
-void CloseGS()
-{
-	if( CHECK_MULTIGS ) mtgsWaitGS();
-
-	CLOSE_PLUGIN( PAD1 );
-	CLOSE_PLUGIN( PAD2 );
-
-	if( OpenStatus.GS )
-	{
-		gsClose();
-		OpenStatus.GS = false;
-	}
-}
-
-void ReleasePlugins()
-{
-	if (!plugins_loaded) return;
-
-	if ((GSplugin == NULL) || (PAD1plugin == NULL) || (PAD2plugin == NULL) ||
-		(SPU2plugin == NULL) || (CDVDplugin == NULL) || (DEV9plugin == NULL) ||
-		(USBplugin == NULL) || (FWplugin == NULL)) return;
-
-	ShutdownPlugins();
-
-	SysCloseLibrary(GSplugin);   GSplugin = NULL;
-	SysCloseLibrary(PAD1plugin); PAD1plugin = NULL;
-	SysCloseLibrary(PAD2plugin); PAD2plugin = NULL;
-	SysCloseLibrary(SPU2plugin); SPU2plugin = NULL;
-	SysCloseLibrary(CDVDplugin); CDVDplugin = NULL;
-	SysCloseLibrary(DEV9plugin); DEV9plugin = NULL;
-	SysCloseLibrary(USBplugin);  USBplugin = NULL;
-	SysCloseLibrary(FWplugin);   FWplugin = NULL;
-
-	plugins_loaded = false;
 }
 
 void PluginsResetGS()

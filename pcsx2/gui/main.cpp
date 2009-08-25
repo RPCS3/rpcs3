@@ -150,6 +150,8 @@ bool Pcsx2App::OnInit()
 	g_Conf = new AppConfig();
 	g_EmuThread = new CoreEmuThread();
 
+	delete wxMessageOutput::Set( new wxMessageOutputDebug() );
+
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
 	// User/Admin Mode Dual Setup:

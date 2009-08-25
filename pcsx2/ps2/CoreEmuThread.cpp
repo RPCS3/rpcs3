@@ -27,18 +27,23 @@
 #include "R3000A.h"
 #include "VUmicro.h"
 
-sptr CoreEmuThread::ExecuteTask()
-{
-	while( !m_Done && (m_ExecMode != ExecMode_Running) )
-	{
-		m_ResumeEvent.Wait();
-	}
+static __threadlocal CoreEmuThread* tls_coreThread = NULL;
 
+CoreEmuThread& CoreEmuThread::Get()
+{
+	wxASSERT_MSG( tls_coreThread != NULL, L"This function must be called from the context of a running CoreEmuThread." );
+	return *tls_coreThread;
+}
+
+void CoreEmuThread::CpuInitializeMess()
+{
 	try
 	{
+		OpenPlugins();
 		cpuReset();
 		SysClearExecutionCache();
-		OpenPlugins();
+
+		GSsetGameCRC( ElfCRC, 0 );
 
 		if( StateRecovery::HasState() )
 		{
@@ -69,8 +74,24 @@ sptr CoreEmuThread::ExecuteTask()
 	{
 		Msgbox::Alert( ex.DisplayMessage() );
 	}
+}
+
+sptr CoreEmuThread::ExecuteTask()
+{
+	tls_coreThread = this;
+
+	while( !m_Done && (m_ExecMode != ExecMode_Running) )
+	{
+		m_ResumeEvent.Wait();
+	}
+
+	CpuInitializeMess();
 
 	StateCheck();
+
+	PCSX2_MEM_PROTECT_BEGIN();
+	Cpu->Execute();
+	PCSX2_MEM_PROTECT_END();
 
 	return 0;
 }

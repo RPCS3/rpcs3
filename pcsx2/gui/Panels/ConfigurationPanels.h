@@ -451,6 +451,7 @@ namespace Panels
 		void Apply( AppConfig& conf );
 
 	protected:
+		void OnConfigure_Clicked( wxCommandEvent& evt );
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 

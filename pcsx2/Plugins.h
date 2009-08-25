@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __PLUGINS_H__
-#define __PLUGINS_H__
+#pragma once
 
 #define PLUGINtypedefs
 #define PLUGINfuncs
@@ -31,6 +30,11 @@ struct PluginInfo
 	PluginsEnum_t id;
 	int typemask;
 	int version;			// minimum version required / supported
+	
+	wxString GetShortname() const
+	{
+		return wxString::FromUTF8( shortname );
+	}
 };
 
 namespace Exception
@@ -60,6 +64,17 @@ struct LegacyPluginAPI_Common
 	s32  (CALLBACK* Test)();
 	void (CALLBACK* Configure)();
 	void (CALLBACK* About)();
+	
+	LegacyPluginAPI_Common() :
+		Init	( NULL )
+	,	Close	( NULL )
+	,	Shutdown( NULL )
+	,	Freeze	( NULL )
+	,	Test	( NULL )
+	,	Configure( NULL )
+	,	About	( NULL )
+	{
+	}
 };
 
 class SaveState;
@@ -68,39 +83,52 @@ class SaveState;
 //
 class PluginManager
 {
+	DeclareNoncopyableObject( PluginManager )
+
 protected:
+	struct PluginStatus_t
+	{
+		bool		IsInitialized;
+		bool		IsOpened;
+		wxString	Filename;
+
+		LegacyPluginAPI_Common	CommonBindings;
+		wxDynamicLibrary		Lib;
+		
+		PluginStatus_t() :
+			IsInitialized( false )
+		,	IsOpened( false )
+		,	Filename()
+		,	CommonBindings()
+		,	Lib()
+		{
+		}
+	};
+
 	bool m_initialized;
-	bool m_loaded;
 
-	bool m_IsInitialized[PluginId_Count];
-	bool m_IsOpened[PluginId_Count];
-
-	LegacyPluginAPI_Common m_CommonBindings[PluginId_Count];
-	wxDynamicLibrary m_libs[PluginId_Count];
+	PluginStatus_t m_info[PluginId_Count];
 
 public:
 	~PluginManager();
-	PluginManager() :
-		m_initialized( false )
-	,	m_loaded( false )
-	{
-		memzero_obj( m_IsInitialized );
-		memzero_obj( m_IsOpened );
-	}
 
-	void LoadPlugins();
-	void UnloadPlugins();
-
-	void Init( PluginsEnum_t pid );
-	void Shutdown( PluginsEnum_t pid );
+	void Init();
+	void Shutdown();
 	void Open( PluginsEnum_t pid );
 	void Close( PluginsEnum_t pid );
+	void Close();
 
 	void Freeze( PluginsEnum_t pid, int mode, freezeData* data );
 	void Freeze( PluginsEnum_t pid, SaveState& state );
 	void Freeze( SaveState& state );
 
+	friend PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] );
+	friend PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] );
+
 protected:
+	// Internal constructor, should be called by Create only.
+	PluginManager( const wxString (&folders)[PluginId_Count] );
+
 	void BindCommon( PluginsEnum_t pid );
 	void BindRequired( PluginsEnum_t pid );
 	void BindOptional( PluginsEnum_t pid );
@@ -112,16 +140,12 @@ extern PluginManager* g_plugins;
 extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
 
 
-void LoadPlugins();
-void ReleasePlugins();
+extern void LoadPlugins();
+extern void ReleasePlugins();
 
-void OpenPlugins();
-void ClosePlugins( bool closegs );
-void CloseGS();
+extern void InitPlugins();
+extern void ShutdownPlugins();
 
-void InitPlugins();
-void ShutdownPlugins();
+extern void OpenPlugins();
+extern void ClosePlugins( bool closegs );
 
-void PluginsResetGS();
-
-#endif /* __PLUGINS_H__ */

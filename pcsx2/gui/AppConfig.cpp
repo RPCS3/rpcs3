@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 #include "IniInterface.h"
+#include "Plugins.h"
 
 #include <wx/stdpaths.h>
 
@@ -266,7 +267,7 @@ namespace FilenameDefs
 			wxFileName( L"Mcd002.ps2" )
 		};
 
-		if( IsDevBuild && ((uint)slot) < 2 )
+		if( IsDevBuild && ((uint)slot) >= 2 )
 			throw Exception::IndexBoundsFault( L"FilenameDefs::Memcard", slot, 2 );
 
 		return retval[slot];
@@ -373,6 +374,10 @@ AppConfig::AppConfig() :
 ,	EmuOptions()
 ,	m_IsLoaded( false )
 {
+	Mcd[0].Enabled = true;
+	Mcd[1].Enabled = true;
+	Mcd[0].Filename = FilenameDefs::Memcard(0);
+	Mcd[1].Filename = FilenameDefs::Memcard(1);
 }
 
 // ------------------------------------------------------------------------
@@ -393,6 +398,17 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 	ini.Entry( L"SettingsPath", Folders.Settings, PathDefs::GetSettings() );
 
 	ini.Flush();
+}
+
+// ------------------------------------------------------------------------
+void AppConfig::LoadSaveMemcards( IniInterface& ini )
+{
+	IniScopedGroup path( ini, L"MemoryCards" );
+
+	ini.Entry( L"Slot1Enable", Mcd[0].Enabled, true );
+	ini.Entry( L"Slot2Enable", Mcd[1].Enabled, true );
+	ini.Entry( L"Slot1Filename", Mcd[0].Filename, FilenameDefs::Memcard(0) );
+	ini.Entry( L"Slot2Filename", Mcd[1].Filename, FilenameDefs::Memcard(1) );
 }
 
 // ------------------------------------------------------------------------
@@ -584,22 +600,9 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 	IniScopedGroup path( ini, L"Filenames" );
 
 	static const wxFileName pc( L"Please Configure" );
-	static const wxString g_PluginNames[] =
-	{
-		L"CDVD",
-		L"GS",
-		L"PAD1",
-		L"PAD2",
-		L"SPU2",
-		L"USB",
-		L"FW",
-		L"DEV9"
-	};
 
 	for( int i=0; i<PluginId_Count; ++i )
-	{
-		ini.Entry( g_PluginNames[i], Plugins[i], pc );
-	}
+		ini.Entry( tbl_PluginInfo[i].GetShortname(), Plugins[i], pc );
 
 	ini.Entry( L"BIOS", Bios, pc );
 }

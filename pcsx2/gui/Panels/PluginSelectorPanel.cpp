@@ -36,7 +36,8 @@ END_DECLARE_EVENT_TYPES()
 DEFINE_EVENT_TYPE(wxEVT_EnumeratedNext)
 DEFINE_EVENT_TYPE(wxEVT_EnumerationFinished);
 
-typedef s32 (CALLBACK* PluginTestFnptr)();
+typedef s32		(CALLBACK* PluginTestFnptr)();
+typedef void	(CALLBACK* PluginConfigureFnptr)();
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -154,6 +155,9 @@ void Panels::PluginSelectorPanel::StatusPanel::Reset()
 	m_label.SetLabel( wxEmptyString );
 }
 
+// Id for all Configure buttons (any non-negative arbitrary integer will do)
+static const int ButtonId_Configure = 51;
+
 // ------------------------------------------------------------------------
 Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent ) :
 	wxPanelWithHelpers( parent )
@@ -170,14 +174,16 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
 		s_plugin.Add(
-			new wxStaticText( this, wxID_ANY, wxString::FromAscii( tbl_PluginInfo[i].shortname ) ),
+			new wxStaticText( this, wxID_ANY, tbl_PluginInfo[i].GetShortname() ),
 			wxSizerFlags().Border( wxTOP | wxLEFT, 2 )
 		);
 		s_plugin.Add(
 			m_combobox[i] = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ),
 			wxSizerFlags().Expand()
 		);
-		s_plugin.Add( new wxButton( this, wxID_ANY, L"Configure..." ) );
+		wxButton* bleh = new wxButton( this, ButtonId_Configure, L"Configure..." );
+		bleh->SetClientData( (void*)(int)tbl_PluginInfo[i].id );
+		s_plugin.Add( bleh );
 	}
 
 	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder for PCSX2 plugins.") );
@@ -225,6 +231,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 
 	Connect( wxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
 	Connect( wxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
+	Connect( ButtonId_Configure, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnConfigure_Clicked ) );
 }
 
 Panels::PluginSelectorPanel::~PluginSelectorPanel()
@@ -239,7 +246,7 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 		int sel = m_ComponentBoxes.Get(i).GetSelection();
 		if( sel == wxNOT_FOUND )
 		{
-			wxString plugname( wxString::FromAscii( tbl_PluginInfo[i].shortname ) );
+			wxString plugname( tbl_PluginInfo[i].GetShortname() );
 
 			throw Exception::CannotApplySettings( this,
 				// English Log
@@ -307,6 +314,17 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 }
 
 // ------------------------------------------------------------------------
+void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
+{
+	PluginsEnum_t pid = (PluginsEnum_t)(int)evt.GetClientData();
+
+	int sel = m_ComponentBoxes.Get(pid).GetSelection();
+	if( sel == wxNOT_FOUND ) return;
+	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes.Get(pid).GetClientData(sel)] );
+	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
+		configfunc();
+}
+
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 {
 	safe_delete( m_EnumeratorThread );

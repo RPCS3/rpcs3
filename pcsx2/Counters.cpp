@@ -28,6 +28,7 @@
 
 #include "GS.h"
 #include "VUmicro.h"
+#include "ps2/CoreEmuThread.h"
 
 using namespace Threading;
 
@@ -436,10 +437,10 @@ __forceinline void rcntUpdate_hScanline()
 	}
 }
 
-__forceinline bool rcntUpdate_vSync()
+__forceinline void rcntUpdate_vSync()
 {
 	s32 diff = (cpuRegs.cycle - vsyncCounter.sCycle);
-	if( diff < vsyncCounter.CycleT ) return false;
+	if( diff < vsyncCounter.CycleT ) return;
 
 	//iopBranchAction = 1;
 	if (vsyncCounter.Mode == MODE_VSYNC)
@@ -449,8 +450,8 @@ __forceinline bool rcntUpdate_vSync()
 		vsyncCounter.sCycle += vSyncInfo.Blank;
 		vsyncCounter.CycleT = vSyncInfo.Render;
 		vsyncCounter.Mode = MODE_VRENDER;
-
-		return true;
+		
+		CoreEmuThread::Get().StateCheck();
 	}
 	else	// VSYNC end / VRENDER begin
 	{
@@ -477,7 +478,6 @@ __forceinline bool rcntUpdate_vSync()
 		}
 #		endif
 	}
-	return false;
 }
 
 static __forceinline void _cpuTestTarget( int i )
@@ -518,14 +518,14 @@ static __forceinline void _cpuTestOverflow( int i )
 // forceinline note: this method is called from two locations, but one
 // of them is the interpreter, which doesn't count. ;)  So might as
 // well forceinline it!
-__forceinline bool rcntUpdate()
+__forceinline void rcntUpdate()
 {
-	bool retval = rcntUpdate_vSync();
+	rcntUpdate_vSync();
 
 	// Update counters so that we can perform overflow and target tests.
 	
-	for (int i=0; i<=3; i++) {
-		
+	for (int i=0; i<=3; i++)
+	{	
 		// We want to count gated counters (except the hblank which exclude below, and are
 		// counted by the hblank timer instead)
 
@@ -550,7 +550,6 @@ __forceinline bool rcntUpdate()
 	}
 
 	cpuRcntSet();
-	return retval;
 }
 
 static __forceinline void _rcntSetGate( int index )
@@ -582,8 +581,8 @@ __forceinline void rcntStartGate(bool isVblank, u32 sCycle)
 {
 	int i;
 
-	for (i=0; i <=3; i++) {
-
+	for (i=0; i <=3; i++)
+	{
 		//if ((mode == 0) && ((counters[i].mode & 0x83) == 0x83))
 		if (!isVblank && counters[i].mode.IsCounting && (counters[i].mode.ClockSource == 3) )
 		{

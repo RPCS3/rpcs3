@@ -83,7 +83,14 @@ void MemoryCard::Load( uint mcd )
 	{
 		// Translation note: detailed description should mention that the memory card will be disabled
 		// for the duration of this session.
-		Msgbox::Alert( wxsFormat( _("Could not load MemoryCard from file: %s"), str.c_str() ) ); 
+		Msgbox::Alert( pxE( ".Popup:MemoryCard:FailedtoOpen",
+			wxsFormat(
+				L"Could not load or create a MemoryCard from the file:\n\n%s\n\n"
+				L"The MemoryCard in slot %d has been automatically disabled.  You can correct the problem\n"
+				L"and re-enable the MemoryCard at any time using Config:MemoryCards from the main menu.",
+				str.c_str(), mcd
+			) )
+		); 
 	}
 }
 
@@ -106,7 +113,7 @@ void MemoryCard::Read( uint mcd, u8 *data, u32 adr, int size )
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon::Error( "MemoryCard > Ignoring attempted read from disabled card." );
+		DevCon::Error( "MemoryCard: Ignoring attempted read from disabled card." );
 		memset(data, 0, size);
 		return;
 	}
@@ -121,7 +128,7 @@ void MemoryCard::Save( uint mcd, const u8 *data, u32 adr, int size )
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon::Error( "MemoryCard > Ignoring attempted save/write to disabled card." );
+		DevCon::Error( "MemoryCard: Ignoring attempted save/write to disabled card." );
 		return;
 	}
 
@@ -152,12 +159,12 @@ void MemoryCard::Erase( uint mcd, u32 adr )
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon::Error( "MemoryCard > Ignoring seek for disabled card." );
+		DevCon::Error( "MemoryCard: Ignoring seek for disabled card." );
 		return;
 	}
 
 	Seek(mcfp, adr);
-	mcfp.Write( data, 528*16 );
+	mcfp.Write( data, sizeof(data) );
 }
 
 
@@ -172,12 +179,7 @@ void MemoryCard::Create( const wxString& mcdFile )
 	memset8_obj<0xff>( effeffs );
 
 	for( uint i=0; i<16384; i++ ) 
-	{
-		for( uint j=0; j<528; j++ )
-			fp.Write( effeffs, sizeof(effeffs) );
-
-		//for(j=0; j<16; j++) fputc(enc[j],fp);
-	}
+		fp.Write( effeffs, sizeof(effeffs) );
 }
 
 u64 MemoryCard::GetCRC( uint mcd )

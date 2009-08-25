@@ -48,7 +48,9 @@ using namespace std;
 using namespace R5900;
 
 static int g_Pcsx2Recording = 0; // true 1 if recording video and sound
-bool renderswitch = 0;
+
+// renderswitch - tells GSdx to go into dx9 sw if "renderswitch" is set.
+bool renderswitch = false;
 
 struct KeyModifiers keymodifiers = {false, false, false, false};
 
@@ -330,7 +332,11 @@ void ProcessFKeys(int fkey, struct KeyModifiers *keymod)
 		case 9: //gsdx "on the fly" renderer switching
 			StateRecovery::MakeGsOnly();
 			g_EmulationInProgress = false;
-			CloseGS();
+
+			// close GS and PAD together, because the PAD depends on the GS window.
+			g_plugins->Close( PluginId_PAD );
+			safe_delete( mtgsThread );
+
 			renderswitch = !renderswitch;
 			StateRecovery::Recover();
 			HostGui::BeginExecution(); // also sets g_EmulationInProgress to true later

@@ -228,7 +228,7 @@ extern bool eeEventTestIsActive;
 extern u32 s_iLastCOP0Cycle;
 extern u32 s_iLastPERFCycle[2];
 
-bool intEventTest();
+void intEventTest();
 void intSetBranch();
 
 // This is a special form of the interpreter's doBranch that is run from various
@@ -243,8 +243,7 @@ struct R5900cpu
 	void (*Allocate)();		// throws exceptions on failure.
 	void (*Reset)();
 	void (*Step)();
-	void (*Execute)();			/* executes up to a break */
-	void (*ExecuteBlock)();
+	void (*Execute)();
 	void (*Clear)(u32 Addr, u32 Size);
 	void (*Shutdown)();		// deallocates memory reserved by Allocate
 };
@@ -267,7 +266,7 @@ extern void cpuSetNextBranchDelta( s32 delta );
 extern int  cpuTestCycle( u32 startCycle, s32 delta );
 extern void cpuSetBranch();
 
-extern bool _cpuBranchTest_Shared();		// for internal use by the Dynarecs and Ints inside R5900:
+extern void _cpuBranchTest_Shared();		// for internal use by the Dynarecs and Ints inside R5900:
 
 extern void cpuTestINTCInts();
 extern void cpuTestDMACInts();

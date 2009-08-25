@@ -30,8 +30,6 @@ using namespace Threading;
 using namespace std;
 using namespace R5900;
 
-static bool m_gsOpened = false;
-
 u32 CSRw;
 
 PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
@@ -150,61 +148,10 @@ void gsInit()
 	}
 }
 
-// Opens the gsRingbuffer thread.
-s32 gsOpen()
-{
-	if( m_gsOpened ) return 0;
-
-	//video
-	// Only bind the gsIrq if we're not running the MTGS.
-	// The MTGS simulates its own gsIrq in order to maintain proper sync.
-
-	m_gsOpened = mtgsOpen();
-	if( !m_gsOpened )
-	{
-		// MTGS failed to init or is disabled.  Try the GS instead!
-		// ... and set the memptr again just in case (for switching between GS/MTGS on the fly)
-
-		GSsetBaseMem( PS2MEM_GS );
-		GSirqCallback( gsIrq );
-
-		m_gsOpened = !GSopen( &pDsp, "PCSX2", 0 );
-	}
-
-	/*if( m_gsOpened )
-	{
-		gsOnModeChanged(
-			(Config.PsxType & 1) ? FRAMERATE_PAL : FRAMERATE_NTSC,
-			UpdateVSyncRate()
-		);
-	}*/
-	
-	// FIXME : This is the gs/vsync tie-in for framelimiting, but it really
-	// needs to be called from the hotkey framelimiter enable/disable too.
-	
-	if(GSsetFrameLimit == NULL)
-	{
-		DevCon::Notice("Notice: GS Plugin does not implement GSsetFrameLimit.");
-	}
-	else
-	{
-		GSsetFrameLimit( EmuConfig.Video.EnableFrameLimiting );
-	}
-
-	return !m_gsOpened;
-}
-
-void gsClose()
-{
-	if( !m_gsOpened ) return;
-	m_gsOpened = false;
-	safe_delete( mtgsThread );
-}
-
 void gsReset()
 {
 	// Sanity check in case the plugin hasn't been initialized...
-	if( !m_gsOpened ) return;
+	if( mtgsThread == NULL ) return;
 	mtgsThread->Reset();
 
 	gsOnModeChanged(

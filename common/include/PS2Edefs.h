@@ -540,6 +540,7 @@ typedef void (CALLBACK* _GSmakeSnapshot2)(const char *path, int*, int);
 //typedef void (CALLBACK* _GSgetDriverInfo)(GSdriverInfo *info);
 
 // PAD
+typedef s32  (CALLBACK* _PADinit)(u32 flags);
 typedef s32  (CALLBACK* _PADopen)(void *pDsp);
 typedef u8   (CALLBACK* _PADstartPoll)(int pad);
 typedef u8   (CALLBACK* _PADpoll)(u8 value);

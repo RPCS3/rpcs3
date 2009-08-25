@@ -107,12 +107,11 @@ void Win32::RealVersionInfo::InitVersionString()
     int majorVersion = (DWORD)(LOBYTE(LOWORD(version)));
     int minorVersion = (DWORD)(HIBYTE(LOWORD(version)));
 
-	RealVersionInfo really;
 	wxString verName( wxString::FromAscii( GetVersionName( minorVersion, majorVersion ) ) );
 
 	bool IsCompatMode = false;
 
-	if( really.IsVista() )
+	if( IsVista() )
 	{
 		m_VersionString = L"Windows Vista";
 
@@ -131,7 +130,7 @@ void Win32::RealVersionInfo::InitVersionString()
 		else
 			m_VersionString += L" (32-bit)";
 	}
-	else if( really.IsXP() )
+	else if( IsXP() )
 	{
 		m_VersionString = wxsFormat( L"Windows XP v%d.%d", majorVersion, minorVersion );
 				

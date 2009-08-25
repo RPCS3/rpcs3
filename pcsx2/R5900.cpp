@@ -361,7 +361,7 @@ u32 g_nextBranchCycle = 0;
 
 // Shared portion of the branch test, called from both the Interpreter
 // and the recompiler.  (moved here to help alleviate redundant code)
-__forceinline bool _cpuBranchTest_Shared()
+__forceinline void _cpuBranchTest_Shared()
 {
 	eeEventTestIsActive = true;
 	g_nextBranchCycle = cpuRegs.cycle + eeWaitCycles;
@@ -373,12 +373,11 @@ __forceinline bool _cpuBranchTest_Shared()
 		iopBranchAction = true;
 
 	// ---- Counters -------------
-	bool vsyncEvent = false;
 	rcntUpdate_hScanline();
 
 	if( cpuTestCycle( nextsCounter, nextCounter ) )
 	{
-		vsyncEvent = rcntUpdate();
+		rcntUpdate();
 		_cpuTestPERF();
 	}
 
@@ -490,8 +489,6 @@ __forceinline bool _cpuBranchTest_Shared()
 		TESTINT(30, intcInterrupt);
 		TESTINT(31, dmacInterrupt);
 	}
-
-	return vsyncEvent;
 }
 
 __releaseinline void cpuTestINTCInts()
@@ -572,8 +569,7 @@ void cpuExecuteBios()
 	while(	cpuRegs.pc != 0x00200008 &&
 			cpuRegs.pc != 0x00100008 )
 	{
-		g_nextBranchCycle = cpuRegs.cycle;
-		Cpu->ExecuteBlock();
+		Cpu->Execute();
 	}
 	g_ExecBiosHack = false;
 

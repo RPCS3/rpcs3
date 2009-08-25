@@ -50,7 +50,10 @@ protected:
 	
 	MutexLock m_lock_elf_file;
 	MutexLock m_lock_ExecMode;
-	
+
+public:
+	static CoreEmuThread& Get();
+
 public:
 	CoreEmuThread() :
 		m_ExecMode( ExecMode_Idle )
@@ -80,7 +83,9 @@ public:
 	void Resume();
 	void ApplySettings( const Pcsx2Config& src );
 
-protected:
-	sptr ExecuteTask();
 	void StateCheck();
+
+protected:
+	void CpuInitializeMess();
+	sptr ExecuteTask();
 };

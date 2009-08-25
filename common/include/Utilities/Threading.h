@@ -43,6 +43,8 @@ namespace Exception
 	};
 }
 
+class wxTimeSpan;
+
 namespace Threading
 {
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -74,7 +76,9 @@ namespace Threading
 		void Reset();
 		void Post();
 		void Post( int multiple );
+		
 		void Wait();
+		void Wait( const wxTimeSpan& timeout );
 		void WaitNoCancel();
 		int  Count();
 	};
@@ -107,7 +111,7 @@ namespace Threading
 	// PersistentThread - Helper class for the basics of starting/managing persistent threads.
 	//
 	// Use this as a base class for your threaded procedure, and implement the 'int ExecuteTask()'
-	// method.  Use Start() and Cancel() to start and shutdown the thread, and use m_post_event
+	// method.  Use Start() and Cancel() to start and shutdown the thread, and use m_sem_event
 	// internally to post/receive events for the thread (make a public accessor for it in your
 	// derived class if your thread utilizes the post).
 	//
@@ -127,7 +131,7 @@ namespace Threading
 		sptr		m_returncode;		// value returned from the thread on close.
 
 		bool		m_running;
-		Semaphore	m_post_event;		// general wait event that's needed by most threads.
+		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
 
 	public:
 		virtual ~PersistentThread();
@@ -259,7 +263,7 @@ namespace Threading
 		{
 			if( !m_running ) return m_returncode;
 			m_Done = true;
-			m_post_event.Post();
+			m_sem_event.Post();
 			return PersistentThread::Block();
 		}
 
@@ -270,7 +274,7 @@ namespace Threading
 			jASSUME( m_running );
 			m_TaskComplete = false;
 			m_post_TaskComplete.Reset();
-			m_post_event.Post();
+			m_sem_event.Post();
 		}
 
 		// Blocks current thread execution pending the completion of the parallel task.
@@ -293,7 +297,7 @@ namespace Threading
 			do
 			{
 				// Wait for a job!
-				m_post_event.Wait();
+				m_sem_event.Wait();
 
 				if( m_Done ) break;
 				Task();
