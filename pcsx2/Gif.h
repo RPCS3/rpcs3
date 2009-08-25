@@ -36,9 +36,7 @@ void dmaGIF();
 void mfifoGIFtransfer(int qwc);
 void gifMFIFOInterrupt();
 
-// This code compiles now, but the padding still hasn't been checked,
-// So it isn't being linked in yet. --arcum42
-
+// Under construction; use with caution.
 union tGIF_CTRL
 {
 	struct
@@ -181,19 +179,45 @@ struct GIFregisters
 {
 	// To do: Pad to the correct positions and hook up.
 	tGIF_CTRL 	ctrl;
+	u32 padding[3];
 	tGIF_MODE 	mode;
+	u32 padding1[3];
 	tGIF_STAT		stat;
+	u32 padding2[7];
 	
 	tGIF_TAG0	tag0;
+	u32 padding3[3];
 	tGIF_TAG1	tag1;
+	u32 padding4[3];
 	u32			tag2;
+	u32 padding5[3];
 	u32			tag3;
+	u32 padding6[3];
 	
 	tGIF_CNT		cnt;
+	u32 padding7[3];
 	tGIF_P3CNT	p3cnt;
+	u32 padding8[3];
 	tGIF_P3TAG	p3tag;
+	u32 padding9[3];
 };
 
 #define gifRegs ((GIFregisters*)(PS2MEM_HW+0x3000))
+
+// Quick function to see if everythings in the write position.
+/*static void checkGifRegs()
+{
+	Console::WriteLn("psHu32(GIF_CTRL) == 0x%x; gifRegs->ctrl == 0x%x", params &psHu32(GIF_CTRL),&gifRegs->ctrl);
+	Console::WriteLn("psHu32(GIF_MODE) == 0x%x; gifRegs->mode == 0x%x", params &psHu32(GIF_MODE),&gifRegs->mode);
+	Console::WriteLn("psHu32(GIF_STAT) == 0x%x; gifRegs->stat == 0x%x", params &psHu32(GIF_STAT),&gifRegs->stat);
+	Console::WriteLn("psHu32(GIF_TAG0) == 0x%x; gifRegs->tag0 == 0x%x", params &psHu32(GIF_TAG0),&gifRegs->tag0);
+	Console::WriteLn("psHu32(GIF_TAG1) == 0x%x; gifRegs->tag1 == 0x%x", params &psHu32(GIF_TAG1),&gifRegs->tag1);
+	Console::WriteLn("psHu32(GIF_TAG2) == 0x%x; gifRegs->tag2 == 0x%x", params &psHu32(GIF_TAG2),&gifRegs->tag2);
+	Console::WriteLn("psHu32(GIF_TAG3) == 0x%x; gifRegs->tag3 == 0x%x", params &psHu32(GIF_TAG3),&gifRegs->tag3);
+	Console::WriteLn("psHu32(GIF_CNT) == 0x%x; gifRegs->cnt == 0x%x", params &psHu32(GIF_CNT),&gifRegs->cnt);
+	Console::WriteLn("psHu32(GIF_P3CNT) == 0x%x; gifRegs->p3cnt == 0x%x", params &psHu32(GIF_P3CNT),&gifRegs->p3cnt);
+	Console::WriteLn("psHu32(GIF_P3TAG) == 0x%x; gifRegs->p3tag == 0x%x", params &psHu32(GIF_P3TAG),&gifRegs->p3tag);
+
+}*/
 
 #endif
