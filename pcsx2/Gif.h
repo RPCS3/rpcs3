@@ -36,31 +36,33 @@ void dmaGIF();
 void mfifoGIFtransfer(int qwc);
 void gifMFIFOInterrupt();
 
-// This code isn't ready to be used yet, but after typing out all those bitflags, 
-// I wanted a copy saved. :)
-/*
+// This code compiles now, but the padding still hasn't been checked,
+// So it isn't being linked in yet. --arcum42
+
 union tGIF_CTRL
 {
 	struct
 	{
-		u32 RST :1,
-		u32 reserved :2,
-		u32 PSE :1,
-		u32 reserved2 :28
+		u32 RST : 1;
+		u32 reserved1 : 2;
+		u32 PSE : 1;
+		u32 reserved2 : 28;
 	};
 	u32 value;
 
 	tGIF_CTRL( u32 val ) : value( val )
+	{
+	}
 };
 
 union tGIF_MODE
 {
 	struct
 	{
-		u32 M3R :1,
-		u32 reserved :1,
-		u32 IMT :1,
-		u32 reserved2 :29
+		u32 M3R : 1;
+		u32 reserved1 : 1;
+		u32 IMT : 1;
+		u32 reserved2 : 29;
 	};
 	u32 value;
 
@@ -73,21 +75,21 @@ union tGIF_STAT
 {
 	struct
 	{
-		u32 M3R :1,
-		u32 M3P :1,
-		u32 IMT :1, 
-		u32 PSE :1,
-		u32 reserved :1,
-		u32 IP3 :1,
-		u32 P3Q :1,
-		u32 P2Q :1,
-		u32 P1Q :1,
-		u32 OPH :1,
-		u32 APATH : 2,
-		u32 DIR :1,
-		u32 reserved2 :11,
-		u32 FQC :5,
-		u32 reserved3 :3
+		u32 M3R : 1;
+		u32 M3P : 1;
+		u32 IMT : 1;
+		u32 PSE : 1;
+		u32 reserved1 : 1;
+		u32 IP3 : 1;
+		u32 P3Q : 1;
+		u32 P2Q : 1;
+		u32 P1Q : 1;
+		u32 OPH : 1;
+		u32 APATH : 2;
+		u32 DIR : 1;
+		u32 reserved2 : 11;
+		u32 FQC : 5;
+		u32 reserved3 : 3;
 	};
 	u32 value;
 
@@ -133,7 +135,7 @@ union tGIF_CNT
 	struct
 	{
 		u32 LOOPCNT : 15;
-		u32 reserved : 1;
+		u32 reserved1 : 1;
 		u32 REGCNT : 4;
 		u32 VUADDR : 2;
 		u32 reserved2 : 10;
@@ -151,7 +153,7 @@ union tGIF_P3CNT
 	struct
 	{
 		u32 P3CNT : 15;
-		reserved : 17;
+		u32 reserved1 : 17;
 	};
 	u32 value;
 
@@ -166,7 +168,7 @@ union tGIF_P3TAG
 	{
 		u32 LOOPCNT : 15;
 		u32 EOP : 1;
-		u32 reserved : 16;
+		u32 reserved1 : 16;
 	};
 	u32 value;
 
@@ -180,7 +182,7 @@ struct GIFregisters
 	// To do: Pad to the correct positions and hook up.
 	tGIF_CTRL 	ctrl;
 	tGIF_MODE 	mode;
-	tGIF_STAT	stat;
+	tGIF_STAT		stat;
 	
 	tGIF_TAG0	tag0;
 	tGIF_TAG1	tag1;
@@ -192,6 +194,6 @@ struct GIFregisters
 	tGIF_P3TAG	p3tag;
 };
 
-#define gifRegs ((GIFregisters*)(PS2MEM_HW+0x3000))*/
+#define gifRegs ((GIFregisters*)(PS2MEM_HW+0x3000))
 
 #endif
