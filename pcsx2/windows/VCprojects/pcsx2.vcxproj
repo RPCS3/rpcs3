@@ -593,6 +593,7 @@
     <ClInclude Include="..\..\Dump.h" />
     <ClInclude Include="..\..\Elfheader.h" />
     <ClInclude Include="..\..\Exceptions.h" />
+    <ClInclude Include="..\..\Gif.h" />
     <ClInclude Include="..\..\GS.h" />
     <ClInclude Include="..\..\HashMap.h" />
     <ClInclude Include="..\..\HostGui.h" />

@@ -21,6 +21,7 @@
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
+#include "Gif.h"
 #include "iR5900.h"
 #include "Counters.h"
 
@@ -28,15 +29,6 @@
 #include "Tags.h"
 
 using std::min;
-
-#define gifsplit 0x10000
-enum gifstate_t
-{
-	GIF_STATE_READY = 0,
-	GIF_STATE_STALL = 1,
-	GIF_STATE_DONE = 2,
-	GIF_STATE_EMPTY = 0x10
-};
 
 // A three-way toggle used to determine if the GIF is stalling (transferring) or done (finished).
 // Should be a gifstate_t rather then int, but I don't feel like possibly interfering with savestates right now.
@@ -97,9 +89,7 @@ __forceinline void gsInterrupt()
 	CHCR::clearSTR(gif);
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	
-	psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
-	psHu32(GIF_STAT) &= ~GIF_STAT_P3Q;
-	psHu32(GIF_STAT) &= ~GIF_STAT_FQC; // FQC=0
+	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); 
 	
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
@@ -569,7 +559,7 @@ void gifMFIFOInterrupt()
 		{
 			//Console::WriteLn("Empty");
 			gifstate |= GIF_STATE_EMPTY;
-			psHu32(GIF_STAT)&= ~GIF_STAT_IMT; // OPH=0 | APATH=0
+			psHu32(GIF_STAT) &= ~GIF_STAT_IMT; // OPH=0 | APATH=0
 			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			return;
 		}

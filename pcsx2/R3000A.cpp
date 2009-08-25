@@ -65,7 +65,6 @@ void psxReset()
 
 	psxHwReset();
 	psxBiosInit();
-	//psxExecuteBios();
 }
 
 void psxShutdown() {
@@ -135,7 +134,7 @@ void psxException(u32 code, u32 bd) {
 	}
 
 	/*if (psxRegs.CP0.n.Cause == 0x400 && (!(psxHu32(0x1450) & 0x8))) {
-		hwIntcIrq(1);
+		hwIntcIrq(INTC_SBUS);
 	}*/
 }
 
@@ -278,9 +277,3 @@ void iopTestIntc()
 		psxSetNextBranchDelta( 2 );
 }
 
-void psxExecuteBios() {
-/*	while (psxRegs.pc != 0x80030000)
-		psxCpu->ExecuteBlock();
-	PSX_LOG("*BIOS END*");
-*/
-}

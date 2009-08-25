@@ -2054,7 +2054,7 @@ void Vif1MskPath3()  // MSKPATH3
 
 	if (vif1Regs->mskpath3)
 	{
-		psHu32(GIF_STAT) |= 0x2;
+		psHu32(GIF_STAT) |= GIF_STAT_M3P;
 	}
 	else
 	{

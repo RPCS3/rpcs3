@@ -687,7 +687,7 @@ static BOOL __fastcall ipuCSC(u32 val)
 			if (g_nCmdPos[0] < 3072 / 8) return FALSE;
 
 			ipu_csc(&mb8, &rgb32, 0);
-			if (csc.OFM) ipu_dither2(&rgb32, &rgb16, csc.DTE);
+			if (csc.OFM) ipu_dither(&rgb32, &rgb16, csc.DTE);
 		}
 
 		if (csc.OFM)
@@ -741,7 +741,7 @@ static BOOL ipuPACK(u32 val)
 			if (g_nCmdPos[0] < 64) return FALSE;
 
 			ipu_csc(&mb8, &rgb32, 0);
-			ipu_dither2(&rgb32, &rgb16, csc.DTE);
+			ipu_dither(&rgb32, &rgb16, csc.DTE);
 
 			if (csc.OFM) ipu_vq(&rgb16, indx4);
 		}
@@ -1278,7 +1278,7 @@ void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn)
 	}
 }
 
-void __fastcall ipu_dither2(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb16, int dte)
+void __fastcall ipu_dither(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb16, int dte)
 {
 	int i, j;
 	for (i = 0; i < 16; ++i)
@@ -1291,11 +1291,6 @@ void __fastcall ipu_dither2(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb
 			rgb16->c[i][j].a = rgb32->c[i][j].a == 0x40;
 		}
 	}
-}
-
-void __fastcall ipu_dither(macroblock_8 *mb8, macroblock_rgb16 *rgb16, int dte)
-{
-	//Console::Error("IPU: Dither not implemented");
 }
 
 void __fastcall ipu_vq(macroblock_rgb16 *rgb16, u8* indx4)

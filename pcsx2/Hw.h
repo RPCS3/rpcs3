@@ -286,6 +286,8 @@ enum INTCIrqs
 	INTC_TIM1,
 	INTC_TIM2,
 	INTC_TIM3,
+	INTC_SFIFO,
+	INTVU0_WD
 };
 
 enum dmac_conditions
@@ -397,6 +399,7 @@ enum gif_mode_flags
 	GIF_MODE_M3R	= (1),
 	GIF_MODE_IMT		= (1<<2)
 };
+
 //DMA interrupts & masks
 enum DMAInter
 {	

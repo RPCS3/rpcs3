@@ -1210,9 +1210,8 @@ void mpeg2sliceIDEC(void* pdone)
 				}
 				else
 				{
-					//ipu_dither(decoder->mb8, decoder->rgb16, decoder->dte);
 					ipu_csc(decoder->mb8, decoder->rgb32, decoder->dte);
-					ipu_dither2(decoder->rgb32, decoder->rgb16, decoder->dte);
+					ipu_dither(decoder->rgb32, decoder->rgb16, decoder->dte);
 
 					g_nIPU0Data = 32;
 					g_pIPU0Pointer = (u8*)decoder->rgb16;

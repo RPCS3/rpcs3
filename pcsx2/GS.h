@@ -343,21 +343,18 @@ void gsConstRead64(u32 mem, int mmreg);
 void gsConstRead128(u32 mem, int xmmreg);
 
 void gsIrq();
-extern void gsInterrupt();
-void dmaGIF();
-void GIFdma();
-void mfifoGIFtransfer(int qwc);
-int _GIFchain();
-void  gifMFIFOInterrupt();
 
 extern u32 CSRw;
 extern u64 m_iSlowStart;
 
 // GS Playback
-#define GSRUN_TRANS1 1
-#define GSRUN_TRANS2 2
-#define GSRUN_TRANS3 3
-#define GSRUN_VSYNC 4
+enum gsrun
+{
+	GSRUN_TRANS1	= 1,
+	GSRUN_TRANS2,
+	GSRUN_TRANS3,
+	GSRUN_VSYNC
+};
 
 #ifdef PCSX2_DEVBUILD
 

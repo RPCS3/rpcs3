@@ -2254,6 +2254,11 @@
 						RelativePath="..\..\Gif.cpp"
 						>
 					</File>
+					
+					<File
+						RelativePath="..\..\Gif.h"
+						>
+					</File>
 					<Filter
 						Name="Vif"
 						>

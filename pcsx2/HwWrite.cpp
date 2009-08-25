@@ -26,6 +26,7 @@
 // The full suite of hardware APIs:
 #include "IPU/IPU.h"
 #include "GS.h"
+#include "Gif.h"
 #include "Counters.h"
 #include "Vif.h"
 #include "VifDma.h"
