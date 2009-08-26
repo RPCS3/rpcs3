@@ -101,7 +101,7 @@ protected:
 	};
 
 protected:
-	ConLogConfig	m_conf;
+	ConLogConfig&	m_conf;
 	wxTextCtrl&		m_TextCtrl;
 	ColorArray		m_ColorTable;
 	Console::Colors	m_curcolor;
@@ -114,7 +114,7 @@ protected:
 
 public:
 	// ctor & dtor
-	ConsoleLogFrame( MainEmuFrame *pParent, const wxString& szTitle, const ConLogConfig& options );
+	ConsoleLogFrame( MainEmuFrame *pParent, const wxString& szTitle, ConLogConfig& options );
 	virtual ~ConsoleLogFrame();
 
 	virtual void Write( const wxString& text );

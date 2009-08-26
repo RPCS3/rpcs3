@@ -224,7 +224,7 @@ enum MenuIDs_t
 };
 
 // ------------------------------------------------------------------------
-ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, const AppConfig::ConsoleLogOptions& options ) :
+ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, AppConfig::ConsoleLogOptions& options ) :
 	wxFrame(parent, wxID_ANY, title)
 ,	m_conf( options )
 ,	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,

@@ -68,14 +68,14 @@ static wxString pxGetStackTrace()
     return stackTrace;
 }
 
+static __threadlocal bool _reentrant_lock = false;
+
+#ifdef __WXDEBUG__
 wxString pxAppTraits::GetAssertStackTrace()
 {
 	return pxGetStackTrace();
 }
 
-static __threadlocal bool _reentrant_lock = false;
-
-#ifdef __WXDEBUG__
 // This override of wx's implementation provides thread safe assertion message reporting.  If we aren't
 // on the main gui thread then the assertion message box needs to be passed off to the main gui thread
 // via messages.

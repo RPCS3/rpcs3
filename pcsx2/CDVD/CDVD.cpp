@@ -393,7 +393,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 		key[15] = 0x01;
 	}
 
-	Console::WriteLn( "CDVD->KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", params
+	Console::WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", params
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 
 	// Now's a good time to reload the ELF info...

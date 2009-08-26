@@ -316,7 +316,7 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 // ------------------------------------------------------------------------
 void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 {
-	PluginsEnum_t pid = (PluginsEnum_t)(int)evt.GetClientData();
+	PluginsEnum_t pid = (PluginsEnum_t)(int)((wxEvtHandler*)evt.GetEventObject())->GetClientData();
 
 	int sel = m_ComponentBoxes.Get(pid).GetSelection();
 	if( sel == wxNOT_FOUND ) return;
