@@ -42,6 +42,8 @@ namespace Test {
 		bool AliasWithNull();
 		bool ExplicitDoc();
 		bool MultipleDocs();
+		bool ExplicitEndDoc();
+		bool MultipleDocsWithSomeExplicitIndicators();
 	}
 	
 	namespace Emitter {

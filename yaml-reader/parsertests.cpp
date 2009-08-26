@@ -418,5 +418,74 @@ namespace Test
 			
 			return true;
 		}
+		
+		bool ExplicitEndDoc()
+		{
+			std::string input = "- one\n- two\n...\n...";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			if(doc.size() != 2)
+				return false;
+			
+			std::string output;
+			doc[0] >> output;
+			if(output != "one")
+				return false;
+			doc[1] >> output;
+			if(output != "two")
+				return false;
+			
+			return true;
+		}
+		
+		bool MultipleDocsWithSomeExplicitIndicators()
+		{
+			std::string input =
+				"- one\n- two\n...\n"
+				"---\nkey: value\n...\n...\n"
+				"- three\n- four\n"
+				"---\nkey: value";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			std::string output;
+
+			parser.GetNextDocument(doc);
+			if(doc.size() != 2)
+				return false;
+			doc[0] >> output;
+			if(output != "one")
+				return false;
+			doc[1] >> output;
+			if(output != "two")
+				return false;
+			
+			parser.GetNextDocument(doc);
+			doc["key"] >> output;
+			if(output != "value")
+				return false;
+			
+			parser.GetNextDocument(doc);
+			if(doc.size() != 2)
+				return false;
+			doc[0] >> output;
+			if(output != "three")
+				return false;
+			doc[1] >> output;
+			if(output != "four")
+				return false;
+			
+			parser.GetNextDocument(doc);
+			doc["key"] >> output;
+			if(output != "value")
+				return false;
+			
+			return true;
+		}
 	}
 }

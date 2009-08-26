@@ -271,6 +271,8 @@ namespace Test
 		RunParserTest(&Parser::AliasWithNull, "alias with null", passed);
 		RunParserTest(&Parser::ExplicitDoc, "explicit doc", passed);
 		RunParserTest(&Parser::MultipleDocs, "multiple docs", passed);
+		RunParserTest(&Parser::ExplicitEndDoc, "explicit end doc", passed);
+		RunParserTest(&Parser::MultipleDocsWithSomeExplicitIndicators, "multiple docs with some explicit indicators", passed);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed);
