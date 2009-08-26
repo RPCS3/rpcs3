@@ -40,6 +40,8 @@ namespace Test {
 		bool NullBlockMapValue();
 		bool SimpleAlias();
 		bool AliasWithNull();
+		bool ExplicitDoc();
+		bool MultipleDocs();
 	}
 	
 	namespace Emitter {

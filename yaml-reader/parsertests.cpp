@@ -370,5 +370,53 @@ namespace Test
 			
 			return true;
 		}
+
+		bool ExplicitDoc()
+		{
+			std::string input = "---\n- one\n- two";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			if(doc.size() != 2)
+				return false;
+			
+			std::string output;
+			doc[0] >> output;
+			if(output != "one")
+				return false;
+			doc[1] >> output;
+			if(output != "two")
+				return false;
+			
+			return true;
+		}
+
+		bool MultipleDocs()
+		{
+			std::string input = "---\nname: doc1\n---\nname: doc2";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+
+			std::string output;
+			doc["name"] >> output;
+			if(output != "doc1")
+				return false;
+			
+			if(!parser)
+				return false;
+			
+			parser.GetNextDocument(doc);
+			doc["name"] >> output;
+			if(output != "doc2")
+				return false;
+			
+			return true;
+		}
 	}
 }

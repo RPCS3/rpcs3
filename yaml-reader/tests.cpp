@@ -269,6 +269,8 @@ namespace Test
 		RunParserTest(&Parser::NullBlockMapValue, "null block map value", passed);
 		RunParserTest(&Parser::SimpleAlias, "simple alias", passed);
 		RunParserTest(&Parser::AliasWithNull, "alias with null", passed);
+		RunParserTest(&Parser::ExplicitDoc, "explicit doc", passed);
+		RunParserTest(&Parser::MultipleDocs, "multiple docs", passed);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed);

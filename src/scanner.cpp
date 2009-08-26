@@ -294,7 +294,7 @@ namespace YAML
 	}
 	
 	// PopAllIndents
-	// . Pops all indentations off the stack,
+	// . Pops all indentations (except for the base empty one) off the stack,
 	//   and enqueues the proper token each time.
 	void Scanner::PopAllIndents()
 	{
@@ -303,8 +303,13 @@ namespace YAML
 			return;
 
 		// now pop away
-		while(!m_indents.empty())
+		while(!m_indents.empty()) {
+			const IndentMarker& indent = m_indents.top();
+			if(indent.type == IndentMarker::NONE)
+				break;
+			
 			PopIndent();
+		}
 	}
 	
 	// PopIndent
