@@ -617,22 +617,32 @@ static void __naked DispatcherEvent()
 
 void recExecute()
 {
-	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
-	// Manually pushing is faster, especially on Core2's and such. :)
 	g_EEFreezeRegs = true;
-	__asm
-	{
-		push ebx
-		push esi
-		push edi
-		push ebp
 
-		call DispatcherReg
-		
-		pop ebp
-		pop edi
-		pop esi
-		pop ebx
+	// Enter an endless loop, which is only escapable via C++ exception handling.
+	// The loop is needed because some things in the rec use "ret" as a shortcut to
+	// invoking DispatcherReg.  These things are code bits which are called infrequently,
+	// such as dyna_block_discard and dyna_page_reset.
+
+	while( true )
+	{
+		// Optimization note : Compared pushad against manually pushing the regs one-by-one.
+		// Manually pushing is faster, especially on Core2's and such. :)
+
+		__asm
+		{
+			push ebx
+			push esi
+			push edi
+			push ebp
+
+			call DispatcherReg
+			
+			pop ebp
+			pop edi
+			pop esi
+			pop ebx
+		}
 	}
 	g_EEFreezeRegs = false;
 }

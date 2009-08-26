@@ -75,6 +75,8 @@ extern void vSyncDebugStuff( uint frame );
 #	error PCSX2 - Unsupported operating system platform.
 #endif
 
+class pxMessageBoxEvent;
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Different types of message boxes that the emulator can employ from the friendly confines
 // of it's blissful unawareness of whatever GUI it runs under. :)  All message boxes exhibit
@@ -83,18 +85,18 @@ extern void vSyncDebugStuff( uint frame );
 //
 namespace Msgbox
 {
-	extern void OnEvent( wxCommandEvent& evt );
+	extern void OnEvent( pxMessageBoxEvent& evt );
 
-	// Pops up an alert Dialog Box with a singular "OK" button.
-	// Always returns false.  Replacement for SysMessage.
-	extern bool Alert( const wxString& text );
+	extern bool Alert( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_EXCLAMATION );
+	extern bool OkCancel( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=0 );
+	extern bool YesNo( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_QUESTION );
 
-	// Pops up a dialog box with Ok/Cancel buttons.  Returns the result of the inquiry,
-	// true if OK, false if cancel.
-	extern bool OkCancel( const wxString& text );
+	extern int Assertion( const wxString& text, const wxString& stacktrace );
+	extern void Except( const Exception::BaseException& src );
 }
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_MSGBOX, -1 );
+	DECLARE_EVENT_TYPE( pxEVT_CallStackBox, -1 );
 END_DECLARE_EVENT_TYPES()
 

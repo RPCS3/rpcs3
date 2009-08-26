@@ -1903,7 +1903,7 @@
 			Name="HostGUI"
 			>
 			<File
-				RelativePath="..\..\gui\App.h"
+				RelativePath="..\..\gui\AppAssert.cpp"
 				>
 			</File>
 			<File
@@ -1915,15 +1915,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\CheckedStaticBox.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\ConsoleLogger.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\gui\Resources\EmbeddedImage.h"
 				>
 			</File>
 			<File
@@ -1943,10 +1935,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\IniInterface.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\main.cpp"
 				>
 			</File>
@@ -1955,19 +1943,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\MainFrame.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\MainMenuClicks.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\gui\wxHelpers.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\gui\wxHelpers.h"
 				>
 			</File>
 			<Filter
@@ -2115,6 +2095,38 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Panels\VideoPanel.cpp"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Include"
+				>
+				<File
+					RelativePath="..\..\gui\App.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\CheckedStaticBox.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\ConsoleLogger.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\EmbeddedImage.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\IniInterface.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\MainFrame.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\wxHelpers.h"
 					>
 				</File>
 			</Filter>

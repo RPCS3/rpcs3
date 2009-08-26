@@ -141,6 +141,8 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 	return true;
 }
 
+typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
+
 // ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
 {
@@ -149,8 +151,6 @@ bool Pcsx2App::OnInit()
 
 	g_Conf = new AppConfig();
 	g_EmuThread = new CoreEmuThread();
-
-	delete wxMessageOutput::Set( new wxMessageOutputDebug() );
 
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
@@ -168,6 +168,7 @@ bool Pcsx2App::OnInit()
 	try
 	{
 		ReadUserModeSettings();
+		delete wxLog::SetActiveTarget( new pxLogConsole() );
 
 		AppConfig_ReloadGlobalSettings();
 
@@ -189,12 +190,16 @@ bool Pcsx2App::OnInit()
 		return false;
 	}
 
-	Connect( pxEVT_MSGBOX, wxCommandEventHandler( Pcsx2App::OnMessageBox ) );
+	#define pxMessageBoxEventThing(func) \
+		(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
+
+	Connect( pxEVT_MSGBOX,		pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
+	Connect( pxEVT_CallStackBox,pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
 
     return true;
 }
 
-void Pcsx2App::OnMessageBox( wxCommandEvent& evt )
+void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 {
 	Msgbox::OnEvent( evt );
 }

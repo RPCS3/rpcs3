@@ -25,25 +25,81 @@
 #include <wx/file.h>
 #include <wx/textfile.h>
 
-// This code was 'borrowed' from wxWidgets built in console log class and then heavily
-// modified to suite our needs.  I would have used some crafty subclassing instead except
-// who ever wrote the code of wxWidgets had a peculiar love of the 'private' keyword,
-// thus killing any possibility of subclassing in a useful manner.  (sigh)
+// Custom ConsoleLogger, because the built-in wxWidgets one is poop.
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Newline, -1)
 	DECLARE_EVENT_TYPE(wxEVT_SetTitleText, -1)
-	DECLARE_EVENT_TYPE(wxEVT_SemaphoreWait, -1);
+	DECLARE_EVENT_TYPE(wxEVT_SemaphoreWait, -1)
 END_DECLARE_EVENT_TYPES()
 
 DEFINE_EVENT_TYPE(wxEVT_LOG_Write)
 DEFINE_EVENT_TYPE(wxEVT_LOG_Newline)
 DEFINE_EVENT_TYPE(wxEVT_SetTitleText)
 DEFINE_EVENT_TYPE(wxEVT_DockConsole)
-DEFINE_EVENT_TYPE(wxEVT_SemaphoreWait);
+DEFINE_EVENT_TYPE(wxEVT_SemaphoreWait)
 
 using Console::Colors;
+
+// ----------------------------------------------------------------------------
+//
+void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
+{
+	switch ( level )
+	{
+		case wxLOG_Trace:
+		case wxLOG_Debug:
+			if( IsDebugBuild )
+			{
+				wxString str;
+				TimeStamp( &str );
+				str += szString;
+
+				#if defined(__WXMSW__) && !defined(__WXMICROWIN__)
+					// don't prepend debug/trace here: it goes to the
+					// debug window anyhow
+					str += wxT("\r\n");
+					OutputDebugString(str);
+				#else
+					// send them to stderr
+					wxFprintf(stderr, wxT("[%s] %s\n"),
+							  level == wxLOG_Trace ? wxT("Trace")
+												   : wxT("Debug"),
+							  str.c_str());
+					fflush(stderr);
+				#endif
+			}
+		break;
+
+		case wxLOG_FatalError:
+			// This one is unused by wx, and unused by PCSX2 (we prefer exceptions, thanks).
+			DevAssert( false, "Stop using FatalError and use assertions or exceptions instead." );
+		break;
+
+		case wxLOG_Status:
+			// Also unsed by wx, and unused by PCSX2 also (we prefer direct API calls to our main window!)
+			DevAssert( false, "Stop using wxLogStatus just access the Pcsx2App functions directly instead." );
+		break;
+
+		case wxLOG_Info:
+			if ( !GetVerbose() ) return;
+			// fallthrough!
+
+		case wxLOG_Message:
+			Console::WriteLn( wxString(L"wx > ") + szString );
+		break;
+
+		case wxLOG_Error:
+			Console::Error( wxString(L"wx > ") + szString );
+		break;
+
+		case wxLOG_Warning:
+			Console::Notice( wxString(L"wx > ") + szString );
+		break;
+    }
+}
+
 
 // ----------------------------------------------------------------------------
 sptr ConsoleTestThread::ExecuteTask()
@@ -603,72 +659,199 @@ namespace Console
 	}
 }
 
-#define wxEVT_BOX_ALERT		78
+DEFINE_EVENT_TYPE( pxEVT_MSGBOX );
+DEFINE_EVENT_TYPE( pxEVT_CallStackBox );
 
 using namespace Threading;
 
-DEFINE_EVENT_TYPE( pxEVT_MSGBOX );
+// Thread Safety: Must be called from the GUI thread ONLY.
+static int pxMessageDialog( const wxString& content, const wxString& caption, long flags )
+{
+	if( IsDevBuild && !wxThread::IsMain() )
+		throw Exception::InvalidOperation( "Function must be called by the main GUI thread only." );
+
+	// fixme: If the emulator is currently active and is running in fullscreen mode, then we
+	// need to either:
+	//  1) Exit fullscreen mode before issuing the popup.
+	//  2) Issue the popup with wxSTAY_ON_TOP specified so that the user will see it.
+	//
+	// And in either case the emulation should be paused/suspended for the user.
+	
+	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
+}
+
+// Thread Safety: Must be called from the GUI thread ONLY.
+// fixme: this function should use a custom dialog box that has a wxTextCtrl for the callstack, and
+// uses fixed-width (modern) fonts.
+static int pxCallstackDialog( const wxString& content, const wxString& caption, long flags )
+{
+	if( IsDevBuild && !wxThread::IsMain() )
+		throw Exception::InvalidOperation( "Function must be called by the main GUI thread only." );
+
+	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
+}
+
+struct MsgboxEventResult
+{
+	Semaphore	WaitForMe;
+	int			result;
+
+	MsgboxEventResult() :
+		WaitForMe(), result( 0 )
+	{
+	}
+};
+
+class pxMessageBoxEvent : public wxEvent
+{
+protected:
+	MsgboxEventResult&	m_Instdata;
+	wxString			m_Title;
+	wxString			m_Content;
+	long				m_Flags;
+
+public:
+	pxMessageBoxEvent() :
+		wxEvent( 0, pxEVT_MSGBOX )
+	,	m_Instdata( *(MsgboxEventResult*)NULL )
+	,	m_Title()
+	,	m_Content()
+	,	m_Flags( 0 )
+	{
+	}
+
+	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, long flags ) :
+		wxEvent( 0, pxEVT_MSGBOX )
+	,	m_Instdata( instdata )
+	,	m_Title( title )
+	,	m_Content( content )
+	,	m_Flags( flags )
+	{
+	}
+
+	pxMessageBoxEvent( const pxMessageBoxEvent& event ) :
+		wxEvent( event )
+	,	m_Instdata( event.m_Instdata )
+	,	m_Title( event.m_Title )
+	,	m_Content( event.m_Content )
+	,	m_Flags( event.m_Flags )
+	{
+	}
+
+	// Thread Safety: Must be called from the GUI thread ONLY.
+	void DoTheDialog()
+	{
+		int result;
+		
+		if( m_id == pxEVT_MSGBOX )
+			result = pxMessageDialog( m_Content, m_Title, m_Flags );
+		else
+			result = pxCallstackDialog( m_Content, m_Title, m_Flags );
+		m_Instdata.result = result;
+		m_Instdata.WaitForMe.Post();
+	}
+
+	virtual wxEvent *Clone() const { return new pxMessageBoxEvent(*this); }
+
+private:
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxMessageBoxEvent)
+};
+
+IMPLEMENT_DYNAMIC_CLASS( pxMessageBoxEvent, wxEvent )
 
 namespace Msgbox
 {
-	struct InstanceData
-	{
-		Semaphore	WaitForMe;
-		int			result;
-		
-		InstanceData() :
-			WaitForMe(), result( 0 )
-		{
-		}
-	};
-
 	// parameters:
 	//   flags - messagebox type flags, such as wxOK, wxCANCEL, etc.
 	//
-	static int ThreadedMessageBox( int flags, const wxString& text )
+	static int ThreadedMessageBox( const wxString& content, const wxString& title, long flags, int boxType=pxEVT_MSGBOX )
 	{
 		// must pass the message to the main gui thread, and then stall this thread, to avoid
 		// threaded chaos where our thread keeps running while the popup is awaiting input.
 
-		InstanceData instdat;
-		wxCommandEvent tevt( pxEVT_MSGBOX );
-		tevt.SetString( text );
-		tevt.SetClientData( &instdat );
-		tevt.SetExtraLong( flags );
+		MsgboxEventResult instdat;
+		pxMessageBoxEvent tevt( instdat, title, content, flags );
 		wxGetApp().AddPendingEvent( tevt );
 		instdat.WaitForMe.WaitNoCancel();		// Important! disable cancellation since we're using local stack vars.
 		return instdat.result;
 	}
 	
-	void OnEvent( wxCommandEvent& evt )
+	void OnEvent( pxMessageBoxEvent& evt )
 	{
-		// Must be called from the GUI thread ONLY.
-		wxASSERT( wxThread::IsMain() );
-
-		int result = Alert( evt.GetString() );
-		InstanceData* instdat = (InstanceData*)evt.GetClientData();
-		instdat->result = result;
-		instdat->WaitForMe.Post();
+		evt.DoTheDialog();
 	}
 
-	bool Alert( const wxString& text )
+	// Pops up an alert Dialog Box with a singular "OK" button.
+	// Always returns false.
+	bool Alert( const wxString& text, const wxString& caption, int icon )
 	{
+		icon |= wxOK;
 		if( wxThread::IsMain() )
-			wxMessageBox( text, L"Pcsx2 Message", wxOK, wxGetApp().GetTopWindow() );
+			pxMessageDialog( text, caption, icon );
 		else
-			ThreadedMessageBox( wxOK, text );
+			ThreadedMessageBox( text, caption, icon );
 		return false;
 	}
 
-	bool OkCancel( const wxString& text )
+	// Pops up a dialog box with Ok/Cancel buttons.  Returns the result of the inquiry,
+	// true if OK, false if cancel.
+	bool OkCancel( const wxString& text, const wxString& caption, int icon )
 	{
+		icon |= wxOK | wxCANCEL;
 		if( wxThread::IsMain() )
 		{
-			return wxOK == wxMessageBox( text, L"Pcsx2 Message", wxOK | wxCANCEL, wxGetApp().GetTopWindow() );
+			return wxID_OK == pxMessageDialog( text, caption, icon );
 		}
 		else
 		{
-			return wxOK == ThreadedMessageBox( wxOK | wxCANCEL, text );
+			return wxID_OK == ThreadedMessageBox( text, caption, icon );
 		}
 	}
+
+	bool YesNo( const wxString& text, const wxString& caption, int icon )
+	{
+		icon |= wxYES_NO;
+		if( wxThread::IsMain() )
+		{
+			return wxID_YES == pxMessageDialog( text, caption, icon );
+		}
+		else
+		{
+			return wxID_YES == ThreadedMessageBox( text, caption, icon );
+		}
+	}
+	
+	// [TODO] : This should probably be a fancier looking dialog box with the stacktrace
+	// displayed inside a wxTextCtrl.
+	static int CallStack( const wxString& errormsg, const wxString& stacktrace, const wxString& prompt, const wxString& caption, int buttons )
+	{
+		buttons |= wxICON_STOP;
+
+		wxString text( errormsg + L"\n\n" + stacktrace + L"\n" + prompt );
+
+		if( wxThread::IsMain() )
+		{
+			return pxCallstackDialog( text, caption, buttons );
+		}
+		else
+		{
+			return ThreadedMessageBox( text, caption, buttons, pxEVT_CallStackBox );
+		}
+	}
+	
+	int Assertion( const wxString& text, const wxString& stacktrace )
+	{
+		return CallStack( text, stacktrace, 
+			L"\nDo you want to stop the program?"
+			L"\nOr press [Cancel] to suppress further assertions.",
+			L"PCSX2 Assertion Failure",
+			wxYES_NO | wxCANCEL
+		);
+	}
+
+	void Except( const Exception::BaseException& src )
+	{
+		CallStack( src.DisplayMessage(), src.LogMessage(), wxEmptyString, L"PCSX2 Unhandled Exception", wxOK );
+	}
+	
 }
