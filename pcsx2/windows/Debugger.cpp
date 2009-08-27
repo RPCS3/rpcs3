@@ -367,7 +367,7 @@ void EnterRunningState(HWND hDlg)
 	EnableWindow(GetDlgItem(hDlg, IDC_DEBUG_STEP_EE), FALSE);
 	EnableWindow(GetDlgItem(hDlg, IDC_DEBUG_STEP), FALSE);
 	EnableWindow(GetDlgItem(hDlg, IDC_DEBUG_SKIP), FALSE);
-	OpenPlugins(NULL);
+	OpenPlugins();
 }
 
 static

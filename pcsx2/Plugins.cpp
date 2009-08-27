@@ -139,8 +139,12 @@ _SPU2test          SPU2test;
 _SPU2about         SPU2about;
 
 // CDVD
-CDVDplugin CDVD_plugin = {0};
-CDVDplugin CDVD = {0};
+_CDVDclose		CDVDclose;
+_CDVDinit		CDVDinit;
+_CDVDshutdown   CDVDshutdown;
+_CDVDconfigure	CDVDconfigure;
+_CDVDabout		CDVDabout;
+_CDVDtest		CDVDtest;
 
 // DEV9
 _DEV9init          DEV9init;
@@ -248,18 +252,18 @@ PS2E_FW_VERSION};
 	return -1; \
 }
 
-#define MapSymbol(name) MapSymbolVar(name,name)
-#define MapSymbol_Fallback(name,fallback) MapSymbolVar_Fallback(name,name,fallback)
-#define MapSymbol_Error(name) MapSymbolVar_Error(name,name)
+#define MapSymbol(name)							MapSymbolVar(name,name)
+#define MapSymbol_Fallback(name,fallback)		MapSymbolVar_Fallback(name,name,fallback)
+#define MapSymbol_Error(name)					MapSymbolVar_Error(name,name)
 
-#define MapSymbol2(base,name) MapSymbolVar(base##_plugin.name,base##name)
-#define MapSymbol2_Fallback(base,name,fallback) MapSymbolVar_Fallback(base##_plugin.name,base##name,fallback)
-#define MapSymbol2_Error(base,name) MapSymbolVar_Error(base##_plugin.name,base##name)
+#define MapSymbolCDVD(name)						MapSymbolVar(CDVDapi_Plugin.name,CDVD##name)
+#define MapSymbolCDVD_Fallback(name,fallback)	MapSymbolVar_Fallback(CDVDapi_Plugin.name,CDVD##name,fallback)
+#define MapSymbolCDVD_Error(name)				MapSymbolVar_Error(CDVDapi_Plugin.name,CDVD##name)
 
 // for pad1/2
-#define MapSymbolPAD(var,name) MapSymbolVar(var##name,PAD##name)
-#define MapSymbolPAD_Fallback(var,name) if((MapSymbolVarType(var##name,_PAD##name,PAD##name))==NULL) var##name = var##_##name
-#define MapSymbolPAD_Error(var,name) MapSymbolVar_Error(var##name,PAD##name)
+#define MapSymbolPAD(var,name)					MapSymbolVar(var##name,PAD##name)
+#define MapSymbolPAD_Fallback(var,name)			if((MapSymbolVarType(var##name,_PAD##name,PAD##name))==NULL) var##name = var##_##name
+#define MapSymbolPAD_Error(var,name)			MapSymbolVar_Error(var##name,PAD##name)
 
 void *GSplugin;
 
@@ -300,13 +304,13 @@ void CALLBACK GS_printf(int timeout, char *fmt, ...) {
 	Console::WriteLn(msg);
 }
 
-s32  CALLBACK GS_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
-void CALLBACK GS_keyEvent(keyEvent *ev) {}
-void CALLBACK GS_makeSnapshot(const char *path) {}
-void CALLBACK GS_irqCallback(void (*callback)()) {}
-void CALLBACK GS_configure() {}
-void CALLBACK GS_about() {}
-s32  CALLBACK GS_test() { return 0; }
+static s32  CALLBACK GS_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
+static void CALLBACK GS_keyEvent(keyEvent *ev) {}
+static void CALLBACK GS_makeSnapshot(const char *path) {}
+static void CALLBACK GS_irqCallback(void (*callback)()) {}
+static void CALLBACK GS_configure() {}
+static void CALLBACK GS_about() {}
+static s32  CALLBACK GS_test() { return 0; }
 
 int LoadGSplugin(const string& filename)
 {
@@ -356,14 +360,14 @@ int LoadGSplugin(const string& filename)
 	return 0;
 }
 
-void *PAD1plugin;
+static void *PAD1plugin;
 
-void CALLBACK PAD1_configure() {}
-void CALLBACK PAD1_about() {}
-s32  CALLBACK PAD1_test() { return 0; }
-s32  CALLBACK PAD1_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
-s32  CALLBACK PAD1_setSlot(u8 port, u8 slot) { return slot == 1; }
-s32  CALLBACK PAD1_queryMtap(u8 port) { return 0; }
+static void CALLBACK PAD1_configure() {}
+static void CALLBACK PAD1_about() {}
+static s32  CALLBACK PAD1_test() { return 0; }
+static s32  CALLBACK PAD1_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
+static s32  CALLBACK PAD1_setSlot(u8 port, u8 slot) { return slot == 1; }
+static s32  CALLBACK PAD1_queryMtap(u8 port) { return 0; }
 
 int LoadPAD1plugin(const string& filename) {
 	void *drv;
@@ -393,14 +397,14 @@ int LoadPAD1plugin(const string& filename) {
 	return 0;
 }
 
-void *PAD2plugin;
+static void *PAD2plugin;
 
-void CALLBACK PAD2_configure() {}
-void CALLBACK PAD2_about() {}
-s32  CALLBACK PAD2_test() { return 0; }
-s32  CALLBACK PAD2_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
-s32  CALLBACK PAD2_setSlot(u8 port, u8 slot) { return slot == 1; }
-s32  CALLBACK PAD2_queryMtap(u8 port) { return 0; }
+static void CALLBACK PAD2_configure() {}
+static void CALLBACK PAD2_about() {}
+static s32  CALLBACK PAD2_test() { return 0; }
+static s32  CALLBACK PAD2_freeze(int mode, freezeData *data) { if (mode == FREEZE_SIZE) data->size = 0; return 0; }
+static s32  CALLBACK PAD2_setSlot(u8 port, u8 slot) { return slot == 1; }
+static s32  CALLBACK PAD2_queryMtap(u8 port) { return 0; }
 
 int LoadPAD2plugin(const string& filename) {
 	void *drv;
@@ -430,12 +434,12 @@ int LoadPAD2plugin(const string& filename) {
 	return 0;
 }
 
-void *SPU2plugin;
+static void *SPU2plugin;
 
-s32  CALLBACK SPU2_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
-void CALLBACK SPU2_configure() {}
-void CALLBACK SPU2_about() {}
-s32  CALLBACK SPU2_test() { return 0; }
+static s32  CALLBACK SPU2_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
+static void CALLBACK SPU2_configure() {}
+static void CALLBACK SPU2_about() {}
+static s32  CALLBACK SPU2_test() { return 0; }
 
 int LoadSPU2plugin(const string& filename) {
 	void *drv;
@@ -474,37 +478,35 @@ int LoadSPU2plugin(const string& filename) {
 	return 0;
 }
 
-void *CDVDplugin;
+static void *CDVDplugin;
 
-void CALLBACK CDVD_configure() {}
-void CALLBACK CDVD_about() {}
-s32  CALLBACK CDVD_test() { return 0; }
-void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
+static void CALLBACK CDVD_configure() {}
+static void CALLBACK CDVD_about() {}
+static s32  CALLBACK CDVD_test() { return 0; }
+static void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
 
 extern int lastReadSize;
-s32 CALLBACK CDVD_getBuffer2(u8* buffer)
+static s32 CALLBACK CDVD_getBuffer2(u8* buffer)
 {
 	int ret;
 
-
 	// TEMP: until I fix all the plugins to use this function style
-	u8* pb = CDVD.getBuffer();
-	if(pb!=NULL)
+	u8* pb = CDVD->getBuffer();
+	if(pb != NULL)
 	{
 		memcpy(buffer,pb,lastReadSize);
-		ret=0;
+		ret = 0;
 	}
-	else ret= -1;
+	else ret = -2;
 
 	return ret;
 }
 
-
-s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
+static s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
 {
-	if(CDVD.readTrack(lsn,mode)<0)
+	if(CDVD->readTrack(lsn,mode) < 0)
 		return -1;
-	
+
 	// TEMP: until all the plugins use the new CDVDgetBuffer style
 	switch (mode)
 	{
@@ -521,16 +523,17 @@ s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
 		lastReadSize = 2048;
 		break;
 	}
-	return CDVD.getBuffer2(buffer);
+	return CDVD->getBuffer2(buffer);
 }
 
-s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
+static s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
 {
 	u8 toc[2064];
 
 	// if error getting toc, settle for single layer disc ;)
-	if(CDVD.getTOC(toc))
+	if(CDVD->getTOC(toc))
 		return 0;
+
 	if(toc[14] & 0x60)
 	{
 		if(toc[14] & 0x10)
@@ -556,7 +559,22 @@ s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
 	return 1;
 }
 
-int cdvdInitCount;
+static void CALLBACK CDVDplugin_Close()
+{
+	if( CDVDclose != NULL )
+		CDVDclose();
+}
+
+CDVD_API CDVDapi_Plugin =
+{
+	CDVDplugin_Close,
+
+	// The rest are filled in by the plugin manager below when the plugin is loaded.
+	NULL
+};
+
+CDVD_API* CDVD			= NULL;
+
 int LoadCDVDplugin(const string& filename) {
 	void *drv;
 
@@ -564,32 +582,29 @@ int LoadCDVDplugin(const string& filename) {
 	if (CDVDplugin == NULL) { Msgbox::Alert("Could Not Load CDVD Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = CDVDplugin;
 	if (!TestPS2Esyms(drv, PluginTypes::CDVD, filename)) return -1;
-	MapSymbol2_Error(CDVD,init);
-	MapSymbol2_Error(CDVD,shutdown);
-	MapSymbol2_Error(CDVD,open);
-	MapSymbol2_Error(CDVD,close);
-	MapSymbol2_Error(CDVD,readTrack);
-	MapSymbol2_Error(CDVD,getBuffer);
-	MapSymbol2_Error(CDVD,readSubQ);
-	MapSymbol2_Error(CDVD,getTN);
-	MapSymbol2_Error(CDVD,getTD);
-	MapSymbol2_Error(CDVD,getTOC);
-	MapSymbol2_Error(CDVD,getDiskType);
-	MapSymbol2_Error(CDVD,getTrayStatus);
-	MapSymbol2_Error(CDVD,ctrlTrayOpen);
-	MapSymbol2_Error(CDVD,ctrlTrayClose);
+	MapSymbol_Error(CDVDinit);
+	MapSymbol_Error(CDVDshutdown);
+	MapSymbolCDVD_Error(open);
+	MapSymbolCDVD_Error(close);
+	MapSymbolCDVD_Error(readTrack);
+	MapSymbolCDVD_Error(getBuffer);
+	MapSymbolCDVD_Error(readSubQ);
+	MapSymbolCDVD_Error(getTN);
+	MapSymbolCDVD_Error(getTD);
+	MapSymbolCDVD_Error(getTOC);
+	MapSymbolCDVD_Error(getDiskType);
+	MapSymbolCDVD_Error(getTrayStatus);
+	MapSymbolCDVD_Error(ctrlTrayOpen);
+	MapSymbolCDVD_Error(ctrlTrayClose);
 
-	MapSymbol2_Fallback(CDVD,configure,CDVD_configure);
-	MapSymbol2_Fallback(CDVD,about,CDVD_about);
-	MapSymbol2_Fallback(CDVD,test,CDVD_test);
-	MapSymbol2_Fallback(CDVD,newDiskCB,CDVD_newDiskCB);
+	MapSymbol_Fallback(CDVDconfigure,CDVD_configure);
+	MapSymbol_Fallback(CDVDabout,CDVD_about);
+	MapSymbol_Fallback(CDVDtest,CDVD_test);
+	MapSymbolCDVD_Fallback(newDiskCB,CDVD_newDiskCB);
 
-	MapSymbol2_Fallback(CDVD,readSector,CDVD_readSector);
-	MapSymbol2_Fallback(CDVD,getBuffer2,CDVD_getBuffer2);
-	MapSymbol2_Fallback(CDVD,getDualInfo,CDVD_getDualInfo);
-
-	CDVD.initCount = &cdvdInitCount;
-	cdvdInitCount=0;
+	MapSymbolCDVD_Fallback(readSector,CDVD_readSector);
+	MapSymbolCDVD_Fallback(getBuffer2,CDVD_getBuffer2);
+	MapSymbolCDVD_Fallback(getDualInfo,CDVD_getDualInfo);
 
 	return 0;
 }
@@ -715,7 +730,6 @@ static PluginOpenStatusFlags OpenStatus = {0};
 
 static bool plugins_loaded = false;
 static bool plugins_initialized = false;
-static bool only_loading_elf = false;
 
 int LoadPlugins()
 {
@@ -769,13 +783,12 @@ int InitPlugins()
 	if (ReportError(PAD2init(2), "PAD2init")) return -1;
 	if (ReportError(SPU2init(), "SPU2init")) return -1;
 	
-	if (ReportError(DoCDVDinit(), "CDVDinit")) return -1;
+	if (ReportError(CDVDinit(), "CDVDinit")) return -1;
 	
 	if (ReportError(DEV9init(), "DEV9init")) return -1;
 	if (ReportError(USBinit(), "USBinit")) return -1;
 	if (ReportError(FWinit(), "FWinit")) return -1;
 
-	only_loading_elf = false;
 	plugins_initialized = true;
 	return 0;
 }
@@ -794,13 +807,8 @@ void ShutdownPlugins()
 
 	if (SPU2shutdown != NULL) SPU2shutdown();
 	
-	//if (CDVDshutdown != NULL) CDVDshutdown();
-	DoCDVDshutdown();
+	if (CDVDshutdown != NULL) CDVDshutdown();
 
-	// safety measures, in case ISO is currently loaded.
-	if(cdvdInitCount>0)
-		CDVD_plugin.shutdown();
-	
 	if (DEV9shutdown != NULL) DEV9shutdown();
 	if (USBshutdown != NULL) USBshutdown();
 	if (FWshutdown != NULL) FWshutdown();
@@ -839,25 +847,20 @@ bool OpenGS()
 
 bool OpenCDVD(const char* pTitleFilename)
 {
+	// if this assertion fails it means you didn't call CDVDsys_ChangeSource.  You should.
+	// You really should.  Really.
+	jASSUME( CDVD != NULL );
+	
 	// Don't repetitively open the CDVD plugin if directly loading an elf file and open failed once already.
-	if (!OpenStatus.CDVD && !only_loading_elf)
+	if (!OpenStatus.CDVD)
 	{
-		//First, we need the data.
-		CDVD.newDiskCB(cdvdNewDiskCB);
+		CDVD->newDiskCB( cdvdNewDiskCB );
 
 		if (DoCDVDopen(pTitleFilename) != 0) 
 		{ 
-			if (g_Startup.BootMode != BootMode_Elf) 
-			{ 
-				Msgbox::Alert("Error Opening CDVD Plugin"); 
-				ClosePlugins(true); 
-				return false;
-			}
-			else 
-			{ 
-				Console::Notice("Running ELF File Without CDVD Plugin Support!"); 
-				only_loading_elf = true; 
-			}
+			Msgbox::Alert("Error Opening CDVD Plugin");
+			ClosePlugins(true); 
+			return false;
 		}
 		OpenStatus.CDVD = true;
 	}
@@ -961,22 +964,19 @@ bool OpenFW()
 	return true;
 }
 
-int OpenPlugins(const char* pTitleFilename)
+// Note: If the CDVD has not already been manually opened, then it will be opened here
+// using NULL as the source file (defaults to whatever's been previously configured into
+// the CDVD plugin, which is typically a drive letter)
+int OpenPlugins()
 {
-	if (!plugins_initialized)
-	{
-		// prevent a crash
-		if(CDVD.init == NULL)
-			CDVD = ISO; // CDVD_plugin;
+	if( InitPlugins() == -1 ) return -1;
 
-		if( InitPlugins() == -1 ) return -1;
-	}
-
-	if ((!OpenCDVD(pTitleFilename)) || (!OpenGS()) || (!OpenPAD1()) || (!OpenPAD2()) ||
-	    (!OpenSPU2()) || (!OpenDEV9()) || (!OpenUSB()) || (!OpenFW()))
+	if( !OpenGS() || !OpenPAD1() || !OpenPAD2() || !OpenCDVD(NULL) ||
+		!OpenSPU2() || !OpenDEV9() || !OpenUSB() || !OpenFW()
+	)
 		return -1;
 	
-	if (!only_loading_elf) cdvdDetectDisk();
+	cdvdDetectDisk();
 	return 0;
 }
 
@@ -1018,10 +1018,12 @@ void ClosePlugins( bool closegs )
 		}
 	}
 
+	CloseCDVD();
+
 	if( OpenStatus.CDVD )
 	{
 		DoCDVDclose();
-		OpenStatus.CDVD=false;
+		OpenStatus.CDVD = false;
 	}
 
 	CLOSE_PLUGIN( DEV9 );
@@ -1045,24 +1047,31 @@ void CloseGS()
 	}
 }
 
+void CloseCDVD()
+{
+	if( OpenStatus.CDVD )
+	{
+		DoCDVDclose();
+		OpenStatus.CDVD = false;
+	}
+}
+
+#define SafeSysCloseLib( lib )		((void)(SysCloseLibrary(GSplugin), GSplugin = NULL))
+
 void ReleasePlugins()
 {
 	if (!plugins_loaded) return;
 
-	if ((GSplugin == NULL) || (PAD1plugin == NULL) || (PAD2plugin == NULL) ||
-		(SPU2plugin == NULL) || (CDVDplugin == NULL) || (DEV9plugin == NULL) ||
-		(USBplugin == NULL) || (FWplugin == NULL)) return;
-
 	ShutdownPlugins();
 
-	SysCloseLibrary(GSplugin);   GSplugin = NULL;
-	SysCloseLibrary(PAD1plugin); PAD1plugin = NULL;
-	SysCloseLibrary(PAD2plugin); PAD2plugin = NULL;
-	SysCloseLibrary(SPU2plugin); SPU2plugin = NULL;
-	SysCloseLibrary(CDVDplugin); CDVDplugin = NULL;
-	SysCloseLibrary(DEV9plugin); DEV9plugin = NULL;
-	SysCloseLibrary(USBplugin);  USBplugin = NULL;
-	SysCloseLibrary(FWplugin);   FWplugin = NULL;
+	SafeSysCloseLib(GSplugin);
+	SafeSysCloseLib(PAD1plugin);
+	SafeSysCloseLib(PAD2plugin);
+	SafeSysCloseLib(SPU2plugin);
+	SafeSysCloseLib(CDVDplugin);
+	SafeSysCloseLib(DEV9plugin);
+	SafeSysCloseLib(USBplugin);
+	SafeSysCloseLib(FWplugin);
 	
 	plugins_loaded = false;
 }

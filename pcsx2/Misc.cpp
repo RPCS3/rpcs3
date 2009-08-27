@@ -299,6 +299,10 @@ int IsBIOS(const char *filename, char *description)
 	return FALSE;	//fail quietly
 }
 
+// return value:
+//   0 - Invalid or unknown disc.
+//   1 - PS1 CD
+//   2 - PS2 CD
 int GetPS2ElfName(char *name){
 	int f;
 	char buffer[g_MaxPath];//if a file is longer...it should be shorter :D
@@ -309,7 +313,7 @@ int GetPS2ElfName(char *name){
 
 	// check if the file exists
 	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
-		Console::Error("Boot Error > SYSTEM.CNF not found");
+		Console::Status("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
 		return 0;//could not find; not a PS/PS2 cdvd
 	}
 	
@@ -323,7 +327,7 @@ int GetPS2ElfName(char *name){
 	if (pos==NULL){
 		pos=strstr(buffer, "BOOT");
 		if (pos==NULL) {
-			Console::Error("Boot Error > This is not a PS2 game!");
+			Console::Error("PCSX2 Boot Error: This is not a PS2 game!");
 			return 0;
 		}
 		return 1;
@@ -434,8 +438,8 @@ void LoadGSState(const string& file)
 
 	delete( f );
 
-	GSclose();
 	PAD1close();
+	GSclose();
 }
 
 #endif

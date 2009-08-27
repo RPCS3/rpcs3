@@ -390,10 +390,6 @@ void SysEndExecution()
 // use_bios - forces the game to boot through the PS2 bios, instead of bypassing it.
 void SysPrepareExecution( const char* elf_file, bool use_bios )
 {
-	// solve a little crash
-	if(CDVD.init == NULL)
-		CDVD = CDVD_plugin;
-
 	if( !g_EmulationInProgress )
 	{
 		try
@@ -406,11 +402,8 @@ void SysPrepareExecution( const char* elf_file, bool use_bios )
 			return;
 		}
 
-		g_Startup.BootMode = (elf_file) ? BootMode_Elf : BootMode_Normal;
-
-		if (OpenPlugins(NULL) == -1) { 
-			return; 
-		}
+		if (OpenPlugins() == -1)
+			return;
 
 		if( elf_file == NULL )
 		{

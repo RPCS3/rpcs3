@@ -29,26 +29,23 @@
 
 #include "CDVDisoReader.h"
 
-char isoFileName[g_MaxPath];
-u8 *pbuffer;
+static char isoFileName[g_MaxPath];
+static u8 *pbuffer;
+static u8 cdbuffer[2352] = {0};
+static isoFile *iso = NULL;
+
 static int psize, cdtype;
-u8 cdbuffer[2352] = {0};
-isoFile *iso;
 
-s32 CALLBACK ISOinit()
+void CALLBACK ISOclose()
 {
-	CDVD_LOG("ISOinit\n");
-
-	return 0;
-}
-
-void CALLBACK ISOshutdown()
-{
-	CDVD_LOG("ISOshutdown\n");
+	isoClose(iso);
+	iso = NULL;
 }
 
 s32 CALLBACK ISOopen(const char* pTitle)
 {
+	ISOclose();		// just in case
+
 	if ((pTitle != NULL) && (strlen(pTitle) > 0))
 		strcpy(isoFileName, pTitle);
 
@@ -73,11 +70,6 @@ s32 CALLBACK ISOopen(const char* pTitle)
 	}
 
 	return 0;
-}
-
-void CALLBACK ISOclose()
-{
-	isoClose(iso);
 }
 
 s32 CALLBACK ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
@@ -392,19 +384,20 @@ s32 CALLBACK ISOdummyS32()
 	return 0;
 }
 
-void CALLBACK ISOdummyVOID()
+void CALLBACK ISOnewDiskCB(void(CALLBACK*)())
 {
 }
 
-void CALLBACK ISOnewDiskCB(__unused void (*callback)())
+string ISOgetUniqueFilename()
 {
+	return Path::GetFilenameWithoutExt( isoFileName );
 }
 
-CDVDplugin ISO = {
-	ISOinit,
-	ISOopen,
+CDVD_API CDVDapi_Iso =
+{
 	ISOclose,
-	ISOshutdown,
+
+	ISOopen,
 	ISOreadTrack,
 	ISOgetBuffer, // emu shouldn't use this one.
 	ISOreadSubQ,
@@ -412,13 +405,10 @@ CDVDplugin ISO = {
 	ISOgetTD,
 	ISOgetTOC,
 	ISOgetDiskType,
-	ISOdummyS32,
-	ISOdummyS32,
-	ISOdummyS32,
+	ISOdummyS32,	// trayStatus
+	ISOdummyS32,	// trayOpen
+	ISOdummyS32,	// trayClose
 
-	ISOdummyVOID,
-	ISOdummyS32,
-	ISOdummyVOID,
 	ISOnewDiskCB,
 
 	ISOreadSector,

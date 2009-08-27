@@ -24,19 +24,22 @@
 #include "PS2Edefs.h"
 
 // Loads plugins as specified in the Config global.
-int  LoadPlugins();
+extern int  LoadPlugins();
 
 // Unloads all plugin DLLs.  To change plugins, call ReleasePlugins followed by
 // changes to Config.Plugins filenames, and then call LoadPlugins.
-void ReleasePlugins();
+extern void ReleasePlugins();
 
-int  OpenPlugins(const char* pTitleFilename);
-void ClosePlugins( bool closegs );
-void CloseGS();
+extern int  OpenPlugins();
+extern bool OpenCDVD(const char* pTitleFilename);
 
-int InitPlugins();
-void ShutdownPlugins();
+extern void ClosePlugins( bool closegs );
+extern void CloseGS();
+extern void CloseCDVD();
 
-void PluginsResetGS();
+extern int InitPlugins();
+extern void ShutdownPlugins();
+
+extern void PluginsResetGS();
 
 #endif /* __PLUGINS_H__ */

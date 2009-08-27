@@ -21,29 +21,31 @@
 //////////////////////////////////////////////////////////////////////////////////////////
 // Startup Parameters.
 
-enum StartupMode
+enum StartupModeType
 {
-	BootMode_Normal = 0,
-	BootMode_Elf    = 1, // not compatible with bios flag, probably
-	BootMode_Iso    = 2,
-	BootMode_NoDisc = 3, // nodisc implies bios.
-
-	BootMode_Quick  = 0,
-	BootMode_Bios   = 0x10000,
-
-	BootMode_ModeMask = 0xFFFF,
+	Startup_FromCDVD   = 0,
+	Startup_FromELF    = 1, // not compatible with bios flag, probably
 };
+
+enum CDVD_SourceType;
 
 class StartupParams
 {
 public:
-	// Name of the CDVD or ELF image to load.
-	// if NULL, the CDVD configured settings are used.
+	// Name of the CDVD image to load.
+	// if NULL, the CDVD plugin configured settings are used.
 	const char* ImageName;
+	
+	// Name of the ELF file to load.  If null, the CDVD is booted instead.
+	const char* ElfFile;
 
-	bool NoGui;
-	bool Enabled;
-	StartupMode BootMode;
+	bool	NoGui;
+	bool	Enabled;
+	StartupModeType StartupMode;
+	CDVD_SourceType CdvdSource;
+
+	// Ignored when booting ELFs.
+	bool SkipBios;
 
 	// Plugin overrides
 	const char* gsdll, *cdvddll, *spudll;

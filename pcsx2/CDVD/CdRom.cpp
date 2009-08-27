@@ -315,7 +315,7 @@ void  cdrInterrupt() {
 			SetResultSize(3);
 			cdr.StatP|= 0x2;
 			cdr.Result[0] = cdr.StatP;
-			if (CDVD.getTN(&cdr.ResultTN) == -1) {
+			if (CDVD->getTN(&cdr.ResultTN) == -1) {
 				cdr.Stat = DiskError;
 				cdr.Result[0]|= 0x01;
 			} else {
@@ -330,7 +330,7 @@ void  cdrInterrupt() {
 			cdr.Track = btoi(cdr.Param[0]);
 			SetResultSize(4);
 			cdr.StatP|= 0x2;
-			if (CDVD.getTD(cdr.Track, &trackInfo) == -1) {
+			if (CDVD->getTD(cdr.Track, &trackInfo) == -1) {
 				cdr.Stat = DiskError;
 				cdr.Result[0]|= 0x01;
 			} else {
@@ -497,9 +497,9 @@ void  cdrReadInterrupt() {
 	cdr.StatP|= 0x22;
 	cdr.Result[0] = cdr.StatP;
 
-	SysPrintf("Reading From CDR");
+	Console::Status("Reading From CDR");
 	cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);
-	if (cdr.RErr == -1) 
+	if (cdr.RErr == -1)
 	{
 		CDR_LOG(" err\n");
 		memzero_ptr<2340>(cdr.Transfer);
@@ -509,6 +509,13 @@ void  cdrReadInterrupt() {
 		CDREAD_INT((cdr.Mode & 0x80) ? (cdReadTime / 2) : cdReadTime);
 		return;
 	}
+	else if(cdr.RErr == -2)
+	{
+		// async mode is not finished yet ... give it a bit more time
+		CDREAD_INT(cdReadTime / 4);
+		return;
+	}
+
 	cdr.Stat = DataReady;
 
 	CDR_LOG(" %x:%x:%x", cdr.Transfer[0], cdr.Transfer[1], cdr.Transfer[2]);

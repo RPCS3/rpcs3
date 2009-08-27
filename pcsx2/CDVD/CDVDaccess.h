@@ -16,13 +16,10 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#ifndef __CDVD_ACCESS_H__
-#define __CDVD_ACCESS_H__
+#pragma once
 
-extern s32  DoCDVDinit();
 extern s32  DoCDVDopen(const char* pTitleFilename);
 extern void DoCDVDclose();
-extern void DoCDVDshutdown();
 extern s32  DoCDVDreadSector(u8* buffer, u32 lsn, int mode);
 extern s32  DoCDVDreadTrack(u32 lsn, int mode);
 extern s32  DoCDVDgetBuffer(u8* buffer);
@@ -31,4 +28,3 @@ extern void DoCDVDnewDiskCB(void (*callback)());
 extern s32  DoCDVDdetectDiskType();
 extern void DoCDVDresetDiskTypeCache();
 
-#endif /* __CDVD_H__ */

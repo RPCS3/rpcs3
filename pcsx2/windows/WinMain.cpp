@@ -41,6 +41,8 @@
 #include "CDVD/CDVDisoReader.h"
 #include "CDVD/CDVD.h"
 
+#include "svnrev.h"
+
 unsigned int langsMax;
 static bool m_RestartGui = false;	// used to signal a GUI restart after DestroyWindow()
 static HBITMAP hbitmap_background = NULL;
@@ -64,23 +66,26 @@ BOOL APIENTRY CmdlineProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 //-------------------
 
 static const char* phelpmsg = 
-    "pcsx2 [options] [cdimage/elf file]\n\n"
-    "\t-cfg [file] {configuration file}\n"
-    "\t-bootmode [mode] {0 - quick (default), 1 - bios,  2 - load elf}\n"
-    "\t-nogui {disables display of the gui - skips right to opening the GS window}"
-    "\t-help {display this help file}\n"
-	"\t-loadgs [file] {Loads a gsstate}\n\n"
-	"Run without GUI Options:\n"
-    "\n"
+    "Command line : pcsx2 [options] [cdimage]\n\n"
+    "\t-cfg [file] {specify a custom configuration file}\n"
+    "\t-help       {display this help file}\n\n"
+	"Auto-Run Options :\n\n"
+	"\t-nogui      {disables display of the gui on exit (program auto-exits)}\n"
+	"\t-skipbios   {emulator will skip standard BIOS splash screens; does not apply to ELF}\n"
+	"\t-elf [file] {executes an ELF image}\n"
+	"\t-nodisc     {use this to boot into the PS2 system menu}\n"
+	"\t-usecdvd    {auto-boots from the configured CDVD plugin (ignores cdimage parameter)}\n"
 
-    "Plugin Overrides (specified dlls will be used in place of configured dlls):\n"
-    "\t-cdvd [dllpath] {specifies an override for the CDVD plugin}\n"
-    "\t-gs [dllpath] {specifies an override for the GS plugin}\n"
-    "\t-spu [dllpath] {specifies an override for the SPU2 plugin}\n"
-	"\t-pad [dllpath] {specifies an override for *both* pad plugins}\n"
-	"\t-pad1 [dllpath] {specifies an override for the PAD1 plugin only}\n"
-	"\t-pad2 [dllpath] {specifies an override for the PAD2 plugin only}\n"
-	"\t-dev9 [dllpath] {specifies an override for the DEV9 plugin}\n"
+	"\n\n"
+
+    "Plugin Overrides (specified dlls will be used in place of configured dlls):\n\n"
+    "\t-cdvd [dllpath]  {override for the CDVD plugin}\n"
+    "\t-gs [dllpath]    {override for the GS plugin}\n"
+    "\t-spu [dllpath]   {override for the SPU2 plugin}\n"
+	"\t-pad [dllpath]   {override for *both* pad plugins}\n"
+	"\t-pad1 [dllpath]  {override for the PAD1 plugin only}\n"
+	"\t-pad2 [dllpath]  {override for the PAD2 plugin only}\n"
+	"\t-dev9 [dllpath]  {override for the DEV9 plugin}\n"
     "\n";
 
 /// This code is courtesy of http://alter.org.ua/en/docs/win/args/
@@ -369,32 +374,21 @@ void RunGui()
 
 	LoadPatch( str_Default );
 
-	if( g_Startup.NoGui || g_Startup.Enabled )
+	if( g_Startup.Enabled )
 	{
 		// Initially bypass GUI and start PCSX2 directly.
-		// Manually load plugins using the user's configured image (if non-elf).
 
-		int mode = g_Startup.BootMode & BootMode_ModeMask;
-		
-		if( g_Startup.Enabled && (mode != BootMode_Elf) )
-		{
+		CDVDsys_ChangeSource( g_Startup.CdvdSource );
+		DoCDVDopen( g_Startup.ImageName );
 
-			if(mode == BootMode_Iso)
-				CDVD=ISO;
-			else if(mode == BootMode_NoDisc)
-				CDVD=NODISC;
-			else
-				CDVD=CDVD_plugin;
+		if (OpenPlugins() == -1)
+			return;
 
-			if (OpenPlugins(g_Startup.ImageName) == -1)
-				return;
-		}
-
-		SysPrepareExecution(
-			(g_Startup.BootMode == BootMode_Elf) ? g_Startup.ImageName : NULL, 
-			((g_Startup.BootMode & BootMode_Bios) != 0)
-		);
+		SysPrepareExecution( (g_Startup.StartupMode == Startup_FromELF) ? g_Startup.ImageName : NULL, !g_Startup.SkipBios );
 	}
+
+	// Just exit immediately if the user disabled the GUI
+	if( g_Startup.NoGui ) return;
 
 	do 
 	{
@@ -672,12 +666,38 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				// WM_DESTROY will do the shutdown work for us.
 				break;
 
-			case ID_FILEOPEN:
+			case ID_FILE_RUNELF_NODISC:
 			{
 				string outstr;
 				if( Open_File_Proc( outstr ) )
 				{
 					SysReset();
+					CDVDsys_ChangeSource( CDVDsrc_NoDisc );
+					SysPrepareExecution( outstr.c_str() );
+				}
+			}
+			break;
+
+			case ID_FILE_RUNELF_ISO:
+			{
+				string outstr, isostr;
+				if( Open_File_Proc( outstr ) && Open_Iso_File_Proc( isostr ) )
+				{
+					SysReset();
+					CDVDsys_ChangeSource( CDVDsrc_Iso );
+					OpenCDVD( isostr.c_str() );
+					SysPrepareExecution( outstr.c_str() );
+				}
+			}
+			break;
+
+			case ID_FILE_RUNELF_CD:
+			{
+				string outstr;
+				if( Open_File_Proc( outstr ) )
+				{
+					SysReset();
+					CDVDsys_ChangeSource( CDVDsrc_Plugin );
 					SysPrepareExecution( outstr.c_str() );
 				}
 			}
@@ -688,23 +708,19 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				string outstr;
 				if( Open_Iso_File_Proc( outstr ) )
 				{
-					strcpy(isoFileName,outstr.c_str());
-
-					//SysReset();
-
-					// SysReset shuts down plugins so it's best in here
-					CDVD = ISO;
+					SysReset();
+					CDVDsys_ChangeSource( CDVDsrc_Iso );
+					OpenCDVD( outstr.c_str() );
 					SysPrepareExecution( NULL );
 				}
 			}
 			break;
 
 			case ID_FILE_RUNBIOS:
-					//SysReset();
-					// SysReset shuts down plugins so it's best in here
-					CDVD = NODISC;
-					SysPrepareExecution( NULL, true );
-				break;
+				SysReset();
+				CDVDsys_ChangeSource( CDVDsrc_NoDisc );
+				SysPrepareExecution( NULL, true );
+			break;
 
 			case ID_RUN_EXECUTE:
 				// Execute without reset -- resumes existing states or runs the BIOS if
@@ -713,13 +729,10 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			break;
 
 			case ID_FILE_RUNCD:
-				//SysReset();
-				// SysReset shuts down plugins so it's best in here
-				CDVD = CDVD_plugin;
+				SysReset();
+				CDVDsys_ChangeSource( CDVDsrc_Plugin );
 				SysPrepareExecution( NULL );
 			break;
-
-
 
 			case ID_RUN_RESET:
 				SysReset();
@@ -759,7 +772,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				break;
 
 			case ID_CONFIG_CDVDROM:
-				if (CDVD_plugin.configure) CDVD_plugin.configure();
+				if( CDVDconfigure != NULL ) CDVDconfigure();
 				break;
 
 			case ID_CONFIG_DEV9:
@@ -1011,7 +1024,12 @@ void CreateMainMenu() {
 	ADDSEPARATOR(0);
 	ADDSUBMENUS(0, 1, _("&States"));
 	ADDSEPARATOR(0);
-	ADDMENUITEM(0, _("&Open ELF File..."), ID_FILEOPEN);
+
+	ADDSUBMENUS(0, 4, _("Run &ELF File...") );
+	ADDMENUITEM(4, _("ISO Image..."), ID_FILE_RUNELF_ISO);
+	ADDMENUITEM(4, _("CDVD Plugin"), ID_FILE_RUNELF_CD);
+	ADDMENUITEM(4, _("No Disc"), ID_FILE_RUNELF_NODISC);
+	
 	ADDMENUITEM(0, _("Run &BIOS (No Disc)"), ID_FILE_RUNBIOS);
 	ADDMENUITEM(0, _("Run &ISO Image..."), ID_FILE_RUNISO);
 	ADDMENUITEM(0, _("&Run CD/DVD"), ID_FILE_RUNCD);
@@ -1106,11 +1124,13 @@ void CreateMainWindow()
 	int w, h;
 
 #ifdef _MSC_VER
-	sprintf(COMPILER, "(VC%d)", (_MSC_VER+100)/200);//hacky:) works for VC6 & VC.NET
-#elif __BORLANDC__
-	sprintf(COMPILER, "(BC)");
+	// 1200 is VC 6.0, and all subsequent compilers are +100, ie:
+	//   1300 - VC 2003
+	//   1400 - VC 2005 ... etc!
+	sprintf( COMPILER, "%s (VC%d)", COMPILEDATE, (_MSC_VER/100)-6 );
 #endif
-	/* Load Background Bitmap from the ressource */
+
+	/* Load Background Bitmap from the resource */
 	if( hbitmap_background == NULL )
 		hbitmap_background = LoadBitmap(GetModuleHandle(NULL), MAKEINTRESOURCE(SPLASH_LOGO));
 
@@ -1128,11 +1148,11 @@ void CreateMainWindow()
 	RegisterClass(&wc);
 	GetObject(hbitmap_background, sizeof(bm), &bm);
 
-#ifdef PCSX2_DEVBUILD
-	sprintf(buf, _("PCSX2 %s - Compile Date - %s %s"), PCSX2_VERSION, COMPILEDATE, COMPILER);
-#else
-	sprintf(buf, _("PCSX2 %s"), PCSX2_VERSION);
-#endif
+	// use this for beta/svn builds.
+	sprintf(buf, "PCSX2 %s.r%d - %s", PCSX2_VERSION, SVN_REV, COMPILER);
+
+	// use this for official releases (ie, public release branches/tags only)
+	//sprintf(buf, "PCSX2 %s", PCSX2_VERSION);
 
 	hWnd = CreateWindow(
 		"PCSX2 Main",

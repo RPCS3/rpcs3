@@ -413,6 +413,9 @@
 #define ID_FILE_RUNISO					40105
 #define ID_BLOCKDUMP					40106
 #define ID_FILE_RUNBIOS					40107
+#define ID_FILE_RUNELF_NODISC			40108
+#define ID_FILE_RUNELF_ISO				40109
+#define ID_FILE_RUNELF_CD				40110
 #define ID_LANGS                        50000
 
 // Next default values for new objects

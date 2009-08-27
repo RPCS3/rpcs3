@@ -414,10 +414,10 @@ int isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 
 void isoClose(isoFile *iso)
 {
+	if (iso == NULL ) return;
 	if (iso->handle) _closefile(iso->handle);
 	if (iso->htable) _closefile(iso->htable);
-	if (iso->buffer) free(iso->buffer);
-	
-	free(iso);
+	safe_free( iso->buffer );
+	safe_free( iso );
 }
 

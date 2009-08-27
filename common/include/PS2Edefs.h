@@ -819,35 +819,12 @@ extern _SPU2test          SPU2test;
 extern _SPU2about         SPU2about;
 
 // CDVD
-struct CDVDplugin {
-	_CDVDinit          init;
-	_CDVDopen          open;
-	_CDVDclose         close;
-	_CDVDshutdown      shutdown;
-	_CDVDreadTrack     readTrack;
-	_CDVDgetBuffer     getBuffer;
-	_CDVDreadSubQ      readSubQ;
-	_CDVDgetTN         getTN;
-	_CDVDgetTD         getTD;
-	_CDVDgetTOC        getTOC;
-	_CDVDgetDiskType   getDiskType;
-	_CDVDgetTrayStatus getTrayStatus;
-	_CDVDctrlTrayOpen  ctrlTrayOpen;
-	_CDVDctrlTrayClose ctrlTrayClose;
-
-	_CDVDconfigure     configure;
-	_CDVDtest          test;
-	_CDVDabout         about;
-	_CDVDnewDiskCB     newDiskCB;
-
-	// special functions, not in external interface yet
-	_CDVDreadSector    readSector;
-	_CDVDgetBuffer2    getBuffer2;
-	_CDVDgetDualInfo   getDualInfo;
-
-	int* initCount;
-};
-extern CDVDplugin CDVD_plugin; // _plugin because of
+extern _CDVDclose		CDVDclose;
+extern _CDVDinit		CDVDinit;
+extern _CDVDshutdown   CDVDshutdown;
+extern _CDVDconfigure	CDVDconfigure;
+extern _CDVDabout		CDVDabout;
+extern _CDVDtest		CDVDtest;
 
 // DEV9
 extern _DEV9init          DEV9init;

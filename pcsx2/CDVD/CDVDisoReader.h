@@ -29,7 +29,4 @@
 #include "IsoFStools.h"
 #include "IsoFileFormats.h"
 
-extern char isoFileName[g_MaxPath];
-extern isoFile *iso;
-
 #endif

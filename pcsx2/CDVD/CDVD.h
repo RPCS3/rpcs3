@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __CDVD_H__
-#define __CDVD_H__
+#pragma once
 
 #include "IopCommon.h"
 #include "CDVD/CDVDaccess.h"
@@ -132,6 +131,38 @@ struct cdvdStruct {
 	bool Spinning;		// indicates if the Cdvd is spinning or needs a spinup delay
 };
 
+
+struct CDVD_API
+{
+	void (CALLBACK *close)();
+		
+	// Don't need init or shutdown.  iso/nodisc have no init/shutdown and plugin's
+	// is handled by the PluginManager.
+	
+	// Don't need plugin specific things like freeze, test, or other stuff here.
+	// Those are handled by the plugin manager specifically.
+
+	_CDVDopen          open;
+	_CDVDreadTrack     readTrack;
+	_CDVDgetBuffer     getBuffer;
+	_CDVDreadSubQ      readSubQ;
+	_CDVDgetTN         getTN;
+	_CDVDgetTD         getTD;
+	_CDVDgetTOC        getTOC;
+	_CDVDgetDiskType   getDiskType;
+	_CDVDgetTrayStatus getTrayStatus;
+	_CDVDctrlTrayOpen  ctrlTrayOpen;
+	_CDVDctrlTrayClose ctrlTrayClose;
+	_CDVDnewDiskCB     newDiskCB;
+
+	// special functions, not in external interface yet
+	_CDVDreadSector    readSector;
+	_CDVDgetBuffer2    getBuffer2;
+	_CDVDgetDualInfo   getDualInfo;
+
+	string (*getUniqueFilename)();
+};
+
 extern void cdvdReset();
 extern void cdvdVsync();
 extern void cdvdActionInterrupt();
@@ -146,8 +177,21 @@ extern void cdvdWrite(u8 key, u8 rt);
 // Platform dependent system time assignment (see WinMisc / LnxMisc)
 extern void cdvdSetSystemTime(cdvdStruct& setme);
 
-extern CDVDplugin CDVD;
-extern CDVDplugin ISO;
-extern CDVDplugin NODISC;
+// ----------------------------------------------------------------------------
+//  Multiple interface system for CDVD
+//  used to provide internal CDVDiso and NoDisc, and external plugin interfaces.
+//  ---------------------------------------------------------------------------
 
-#endif /* __CDVD_H__ */
+enum CDVD_SourceType
+{
+	CDVDsrc_Iso = 0,	// use built in ISO api
+	CDVDsrc_Plugin,		// use external plugin
+	CDVDsrc_NoDisc,		// use built in CDVDnull
+};
+
+extern void CDVDsys_ChangeSource( CDVD_SourceType type );
+extern CDVD_API* CDVD;		// currently active CDVD access mode api (either Iso, NoDisc, or Plugin)
+
+extern CDVD_API CDVDapi_Plugin;
+extern CDVD_API CDVDapi_Iso;
+extern CDVD_API CDVDapi_NoDisc;

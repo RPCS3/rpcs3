@@ -23,6 +23,7 @@
 #include "VUmicro.h"
 
 #include "iR5900.h"
+#include "cdvd/CDVD.h"
 
 static bool sinit = false;
 bool nDisableSC = false; // screensaver
@@ -66,7 +67,16 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 {
 	int tidx = 0;
-	g_Startup.BootMode = BootMode_Normal;
+	g_Startup.Enabled		= false;
+	g_Startup.NoGui			= false;
+	g_Startup.ImageName		= NULL;
+	g_Startup.ElfFile		= NULL;
+
+	g_Startup.StartupMode	= Startup_FromCDVD;
+	g_Startup.SkipBios		= true;
+	g_Startup.CdvdSource	= CDVDsrc_Plugin;
+
+	bool _legacy_ForceElfLoad = false;
 
 	while( tidx < tokenCount )
 	{
@@ -76,6 +86,15 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 		{
 			g_Startup.ImageName = command;
 			g_Startup.Enabled = true;
+			g_Startup.CdvdSource = CDVDsrc_Iso;
+
+			if( _legacy_ForceElfLoad )
+			{
+				// This retains compatibility with the older Bootmode command.
+				g_Startup.ElfFile = command;
+				g_Startup.StartupMode = Startup_FromELF;
+				g_Startup.CdvdSource = CDVDsrc_Plugin;
+			}
 			continue;
 		}
 
@@ -85,10 +104,22 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 
 		if( CmdSwitchIs( "help" ) )
 		{
-			return -1;
+			return 1;
 		}
         else if( CmdSwitchIs( "nogui" ) ) {
 			g_Startup.NoGui = true;
+			g_Startup.Enabled = true;
+		}
+		else if( CmdSwitchIs( "skipbios" ) ) {
+			g_Startup.SkipBios = true;
+		}
+		else if( CmdSwitchIs( "nodisc" ) ) {
+			g_Startup.CdvdSource = CDVDsrc_NoDisc;
+			g_Startup.Enabled = true;
+		}
+		else if( CmdSwitchIs( "usecd" ) ) {
+			g_Startup.CdvdSource = CDVDsrc_Plugin;
+			g_Startup.Enabled = true;
 		}
         else if( CmdSwitchIs( "highpriority" ) ) {
 			SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
@@ -106,12 +137,40 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 			if( CmdSwitchIs( "cfg" ) ) {
 				g_CustomConfigFile = param;
 			}
-			else if( CmdSwitchIs( "bootmode" ) ) {
-				g_Startup.BootMode = (StartupMode)atoi( param );
-				g_Startup.Enabled = true;
+			else if( CmdSwitchIs( "elf" ) ) {
+				g_Startup.StartupMode = Startup_FromELF;
+				g_Startup.ElfFile = param;
 			}
+
 			else if( CmdSwitchIs( "loadgs" ) ) {
 				g_pRunGSState = param;
+			}
+			
+			// legacy support for the old bootmode option >_<
+			else if( CmdSwitchIs( "bootmode" ) )
+			{
+				int mode = atoi( param );
+				g_Startup.Enabled = true;
+				g_Startup.SkipBios = !( mode & 0x10000 );
+				switch( mode & 0xf )
+				{
+					case 0:
+						g_Startup.CdvdSource = CDVDsrc_Plugin;
+					break;
+
+					case 1:
+						_legacy_ForceElfLoad = true;
+					break;
+
+					case 2:
+						g_Startup.CdvdSource = CDVDsrc_Iso;
+					break;
+
+					case 3:
+						g_Startup.CdvdSource = CDVDsrc_NoDisc;
+					break;
+				}
+					
 			}
 
 			// Options to configure plugins:
