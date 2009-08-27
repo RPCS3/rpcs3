@@ -132,7 +132,7 @@ int main(int argc, const char *argv[])
 	}
 
 	CDVDsys_ChangeSource( g_Startup.CdvdSource );
-	DoCDVDopen( g_Startup.ImageName );
+	if( !OpenCDVD( g_Startup.ImageName ) ) return -1;
 	if (OpenPlugins() == -1) return -1;
 
 	SysPrepareExecution( (g_Startup.StartupMode == Startup_FromELF) ? g_Startup.ImageName : NULL, !g_Startup.SkipBios );
@@ -329,8 +329,8 @@ void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 {
 	SysReset();
 	CDVDsys_ChangeSource( CDVDsrc_Plugin );
-	DoCDVDopen( NULL );
-	SysPrepareExecution(NULL);
+	if( OpenCDVD( NULL ) )
+		SysPrepareExecution(NULL);
 }
 
 void OnFile_RunBIOS(GtkMenuItem *menuitem, gpointer user_data)
@@ -350,8 +350,8 @@ void OnRunIso_Ok(GtkButton* button, gpointer user_data)
 
 	SysReset();
 	CDVDsys_ChangeSource( CDVDsrc_Iso );
-	DoCDVDopen( File );
-	SysPrepareExecution( NULL );
+	if( OpenCDVD( File ) );
+		SysPrepareExecution( NULL );
 }
 
 void OnRunIso_Cancel(GtkButton* button, gpointer user_data)
@@ -398,8 +398,8 @@ void OnRunElf_Ok(GtkButton* button, gpointer user_data)
 
 	SysReset();
 	CDVDsys_ChangeSource( source );
-	OpenCDVD( NULL );
-	SysPrepareExecution(elf_name);
+	if( OpenCDVD( NULL ) )
+		SysPrepareExecution(elf_name);
 }
 
 void OnRunElf_Cancel(GtkButton* button, gpointer user_data)

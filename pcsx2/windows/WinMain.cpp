@@ -689,8 +689,8 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					SysReset();
 					CDVDsys_ChangeSource( CDVDsrc_Iso );
-					OpenCDVD( isostr.c_str() );
-					SysPrepareExecution( outstr.c_str() );
+					if( OpenCDVD( isostr.c_str() ) )
+						SysPrepareExecution( outstr.c_str() );
 				}
 			}
 			break;
@@ -702,8 +702,8 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					SysReset();
 					CDVDsys_ChangeSource( CDVDsrc_Plugin );
-					OpenCDVD( NULL );		// manually open the CDVD plugin even though we don't really have to. (See RUNCD for details)
-					SysPrepareExecution( outstr.c_str() );
+					if( OpenCDVD( NULL ) )		// manually open the CDVD plugin even though we don't really have to. (See RUNCD for details)
+						SysPrepareExecution( outstr.c_str() );
 				}
 			}
 			break;
@@ -715,8 +715,8 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					SysReset();
 					CDVDsys_ChangeSource( CDVDsrc_Iso );
-					OpenCDVD( outstr.c_str() );
-					SysPrepareExecution( NULL );
+					if( OpenCDVD( outstr.c_str() ) )
+						SysPrepareExecution( NULL );
 				}
 			}
 			break;
@@ -729,7 +729,14 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 			case ID_RUN_EXECUTE:
 				// Execute without reset -- resumes existing states or runs the BIOS if
-				// the state is cleared/reset.
+				// the state is cleared/reset.  If the CDVD is NULL (system reset), then
+				// assume the cdvd plugin as the source. (retains legacy behavior)
+
+				if( CDVD == NULL )
+				{
+					CDVDsys_ChangeSource( CDVDsrc_Plugin );
+					if( !OpenCDVD( NULL ) ) break;
+				}
 				SysPrepareExecution( NULL, true );
 			break;
 
@@ -739,8 +746,8 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				// Note: manually open the CDVD plugin here, even though we don't really have to.
 				// This ensures that the CDVD plugin's popups (like cdvdiso's browser) don't get obscured
 				// by the GS window.
-				OpenCDVD( NULL );
-				SysPrepareExecution( NULL );
+				if( OpenCDVD( NULL ) )
+					SysPrepareExecution( NULL );
 			break;
 
 			case ID_RUN_RESET:

@@ -215,7 +215,7 @@
 				PreprocessorDefinitions="NDEBUG"
 				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="0"
-				UsePrecompiledHeader="0"
+				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="PrecompiledHeader.h"
 				PrecompiledHeaderFile="$(IntDir)\$(TargetName).pch"
 				CompileAs="2"
@@ -2254,7 +2254,6 @@
 						RelativePath="..\..\Gif.cpp"
 						>
 					</File>
-					
 					<File
 						RelativePath="..\..\Gif.h"
 						>

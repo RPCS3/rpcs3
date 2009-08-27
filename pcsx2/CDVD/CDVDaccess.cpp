@@ -118,7 +118,7 @@ static int FindDiskType(int mType)
 	}
 	else if (mType < 0)
 	{
-		static char bleh[2352];
+		static u8 bleh[2352];
 		cdvdTD td;
 
 		CDVD->getTD(0,&td);
@@ -126,14 +126,14 @@ static int FindDiskType(int mType)
 		{
 			iCDType = CDVD_TYPE_DETCTDVDS;
 		}
-		else if (DoCDVDreadSector((u8*)bleh,16,CDVD_MODE_2048) == 0)
+		else
 		{
-			struct cdVolDesc* volDesc=(struct cdVolDesc *)bleh;
-			if (volDesc)
-			{                                 
-				if(volDesc->rootToc.tocSize==2048) 
+			if (DoCDVDreadSector(bleh, 16, CDVD_MODE_2048) == 0)
+			{
+				const cdVolDesc& volDesc = (cdVolDesc&)bleh;
+				if(volDesc.rootToc.tocSize == 2048) 
 					iCDType = CDVD_TYPE_DETCTCD;
-				else                             
+				else
 					iCDType = CDVD_TYPE_DETCTDVDS;
 			}
 		}

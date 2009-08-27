@@ -814,6 +814,7 @@ void ShutdownPlugins()
 	
 	if (CDVDshutdown != NULL) CDVDshutdown();
 	cdvd_FileNameParam.clear();
+	CDVD = NULL;
 
 	if (DEV9shutdown != NULL) DEV9shutdown();
 	if (USBshutdown != NULL) USBshutdown();
