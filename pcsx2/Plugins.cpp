@@ -769,6 +769,10 @@ bool ReportError2(int err, const char *str)
 	return false;
 }
 
+// used to store non-null filename parameters passed to CDVD plugins, so that the
+// value can be retrieved when loading savestates and such.
+static string cdvd_FileNameParam;
+
 int InitPlugins()
 {
 	if (plugins_initialized) return 0;
@@ -796,6 +800,7 @@ int InitPlugins()
 void ShutdownPlugins()
 {
 	if (!plugins_initialized) return;
+	plugins_initialized = false;
 
 	mtgsWaitGS();
 	ClosePlugins( true );
@@ -808,12 +813,11 @@ void ShutdownPlugins()
 	if (SPU2shutdown != NULL) SPU2shutdown();
 	
 	if (CDVDshutdown != NULL) CDVDshutdown();
+	cdvd_FileNameParam.clear();
 
 	if (DEV9shutdown != NULL) DEV9shutdown();
 	if (USBshutdown != NULL) USBshutdown();
 	if (FWshutdown != NULL) FWshutdown();
-
-	plugins_initialized = false;
 }
 
 uptr pDsp;
@@ -845,7 +849,7 @@ bool OpenGS()
 	return true;
 }
 
-bool OpenCDVD(const char* pTitleFilename)
+bool OpenCDVD( const char* pTitleFilename )
 {
 	// if this assertion fails it means you didn't call CDVDsys_ChangeSource.  You should.
 	// You really should.  Really.
@@ -856,12 +860,19 @@ bool OpenCDVD(const char* pTitleFilename)
 	{
 		CDVD->newDiskCB( cdvdNewDiskCB );
 
-		if (DoCDVDopen(pTitleFilename) != 0) 
+		if( (pTitleFilename == NULL) && !cdvd_FileNameParam.empty() )
+			pTitleFilename = cdvd_FileNameParam.c_str();
+
+		if (DoCDVDopen(pTitleFilename) != 0)
 		{ 
 			Msgbox::Alert("Error Opening CDVD Plugin");
-			ClosePlugins(true); 
+			ClosePlugins(true);
 			return false;
 		}
+		
+		if( cdvd_FileNameParam.empty() && (pTitleFilename != NULL) )
+			cdvd_FileNameParam = pTitleFilename;
+
 		OpenStatus.CDVD = true;
 	}
 	return true;

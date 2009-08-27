@@ -421,7 +421,7 @@ BOOL Open_File_Proc( std::string& outstr )
 	OPENFILENAME ofn;
 	char szFileName[ g_MaxPath ];
 	char szFileTitle[ g_MaxPath ];
-	char * filter = "ELF Files (*.ELF)\0*.ELF\0ALL Files (*.*)\0*.*\0";
+	char * filter = "ELF Files (*.elf)\0*.elf\0All Files (*.*)\0*.*\0";
 
 	memzero_obj( szFileName );
 	memzero_obj( szFileTitle );
@@ -460,7 +460,11 @@ BOOL Open_Iso_File_Proc( std::string& outstr )
 	OPENFILENAME ofn;
 	char szFileName[ g_MaxPath ];
 	char szFileTitle[ g_MaxPath ];
-	char * filter = "Compatible Disc Image Files (*.ISO, *.MDF)\0*.ISO;*.MDF\0Blockdump Files (*.dump)\0*.dump\0ALL Files (*.*)\0*.*\0";
+	char * filter =
+		"All Supported (.iso .mdf .nrg .bin .img .dump)\0*.iso;*.mdf;*.nrg;*.bin;*.img,*.dump\0"
+		"Disc Images (.iso .mdf .nrg .bin .img)\0*.iso;*.mdf;*.nrg;*.bin;*.img\0"
+		"Blockdumps (.dump)\0*.dump\0"
+		"All Files (*.*)\0*.*\0";
 
 	memzero_obj( szFileName );
 	memzero_obj( szFileTitle );
@@ -698,6 +702,7 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					SysReset();
 					CDVDsys_ChangeSource( CDVDsrc_Plugin );
+					OpenCDVD( NULL );		// manually open the CDVD plugin even though we don't really have to. (See RUNCD for details)
 					SysPrepareExecution( outstr.c_str() );
 				}
 			}
@@ -731,6 +736,10 @@ LRESULT WINAPI MainWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			case ID_FILE_RUNCD:
 				SysReset();
 				CDVDsys_ChangeSource( CDVDsrc_Plugin );
+				// Note: manually open the CDVD plugin here, even though we don't really have to.
+				// This ensures that the CDVD plugin's popups (like cdvdiso's browser) don't get obscured
+				// by the GS window.
+				OpenCDVD( NULL );
 				SysPrepareExecution( NULL );
 			break;
 
