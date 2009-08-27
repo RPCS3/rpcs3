@@ -151,11 +151,31 @@ OnDelete                               (GtkWidget       *widget,
                                         gpointer         user_data);
 
 void
-OnFile_RunCD                           (GtkMenuItem     *menuitem,
+OnFile_LoadElf                         (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
-OnFile_LoadElf                         (GtkMenuItem     *menuitem,
+OnFile_RunElf_ISO                      (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
+OnFile_RunElf_CD                       (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
+OnFile_RunElf_NoDisc                   (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
+OnFile_RunBIOS                         (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
+OnFile_RunIso                          (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
+OnFile_RunCD                           (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
@@ -231,6 +251,10 @@ on_enable_patches1_activate            (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
 void
+OnFile_BlockDump                       (GtkMenuItem     *menuitem,
+                                        gpointer         user_data);
+
+void
 OnPrintCdvdInfo                        (GtkMenuItem     *menuitem,
                                         gpointer         user_data);
 
@@ -264,16 +288,4 @@ OnLogging_Ok                           (GtkButton       *button,
 
 void
 OnMemcards_Ok                          (GtkButton       *button,
-                                        gpointer         user_data);
-
-void
-OnFile_RunIso                          (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnFile_BlockDump                       (GtkMenuItem     *menuitem,
-                                        gpointer         user_data);
-
-void
-OnFile_RunBIOS                         (GtkMenuItem     *menuitem,
                                         gpointer         user_data);

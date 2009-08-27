@@ -2769,9 +2769,13 @@ create_MainWindow (void)
   GtkWidget *GtkMenuItem_File;
   GtkWidget *GtkMenuItem_File_menu;
   GtkWidget *GtkMenuItem_LoadElf;
+  GtkWidget *GtkMenuItem_LoadElf_menu;
+  GtkWidget *iso_image1;
+  GtkWidget *cdvd_plugin1;
+  GtkWidget *no_disc1;
+  GtkWidget *run_bios__no_disc_1;
   GtkWidget *run_iso1;
   GtkWidget *run_cd1;
-  GtkWidget *run_bios__no_disc_1;
   GtkWidget *separator2;
   GtkWidget *states1;
   GtkWidget *states1_menu;
@@ -2859,10 +2863,34 @@ create_MainWindow (void)
   gtk_widget_set_name (GtkMenuItem_File_menu, "GtkMenuItem_File_menu");
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (GtkMenuItem_File), GtkMenuItem_File_menu);
 
-  GtkMenuItem_LoadElf = gtk_menu_item_new_with_mnemonic (_("_Open ELF File.."));
+  GtkMenuItem_LoadElf = gtk_menu_item_new_with_mnemonic (_("_Run ELF File.."));
   gtk_widget_set_name (GtkMenuItem_LoadElf, "GtkMenuItem_LoadElf");
   gtk_widget_show (GtkMenuItem_LoadElf);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), GtkMenuItem_LoadElf);
+
+  GtkMenuItem_LoadElf_menu = gtk_menu_new ();
+  gtk_widget_set_name (GtkMenuItem_LoadElf_menu, "GtkMenuItem_LoadElf_menu");
+  gtk_menu_item_set_submenu (GTK_MENU_ITEM (GtkMenuItem_LoadElf), GtkMenuItem_LoadElf_menu);
+
+  iso_image1 = gtk_menu_item_new_with_mnemonic (_("Iso Image..."));
+  gtk_widget_set_name (iso_image1, "iso_image1");
+  gtk_widget_show (iso_image1);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_LoadElf_menu), iso_image1);
+
+  cdvd_plugin1 = gtk_menu_item_new_with_mnemonic (_("CDVD Plugin"));
+  gtk_widget_set_name (cdvd_plugin1, "cdvd_plugin1");
+  gtk_widget_show (cdvd_plugin1);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_LoadElf_menu), cdvd_plugin1);
+
+  no_disc1 = gtk_menu_item_new_with_mnemonic (_("No Disc"));
+  gtk_widget_set_name (no_disc1, "no_disc1");
+  gtk_widget_show (no_disc1);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_LoadElf_menu), no_disc1);
+
+  run_bios__no_disc_1 = gtk_menu_item_new_with_mnemonic (_("_Run Bios (No Disc)"));
+  gtk_widget_set_name (run_bios__no_disc_1, "run_bios__no_disc_1");
+  gtk_widget_show (run_bios__no_disc_1);
+  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_bios__no_disc_1);
 
   run_iso1 = gtk_menu_item_new_with_mnemonic (_("_Run Iso Image..."));
   gtk_widget_set_name (run_iso1, "run_iso1");
@@ -2873,11 +2901,6 @@ create_MainWindow (void)
   gtk_widget_set_name (run_cd1, "run_cd1");
   gtk_widget_show (run_cd1);
   gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_cd1);
-
-  run_bios__no_disc_1 = gtk_menu_item_new_with_mnemonic (_("_Run Bios (No Disc)"));
-  gtk_widget_set_name (run_bios__no_disc_1, "run_bios__no_disc_1");
-  gtk_widget_show (run_bios__no_disc_1);
-  gtk_container_add (GTK_CONTAINER (GtkMenuItem_File_menu), run_bios__no_disc_1);
 
   separator2 = gtk_separator_menu_item_new ();
   gtk_widget_set_name (separator2, "separator2");
@@ -3192,17 +3215,23 @@ create_MainWindow (void)
   g_signal_connect ((gpointer) MainWindow, "delete_event",
                     G_CALLBACK (OnDelete),
                     NULL);
-  g_signal_connect ((gpointer) GtkMenuItem_LoadElf, "activate",
-                    G_CALLBACK (OnFile_LoadElf),
+  g_signal_connect ((gpointer) iso_image1, "activate",
+                    G_CALLBACK (OnFile_RunElf_ISO),
+                    NULL);
+  g_signal_connect ((gpointer) cdvd_plugin1, "activate",
+                    G_CALLBACK (OnFile_RunElf_CD),
+                    NULL);
+  g_signal_connect ((gpointer) no_disc1, "activate",
+                    G_CALLBACK (OnFile_RunElf_NoDisc),
+                    NULL);
+  g_signal_connect ((gpointer) run_bios__no_disc_1, "activate",
+                    G_CALLBACK (OnFile_RunBIOS),
                     NULL);
   g_signal_connect ((gpointer) run_iso1, "activate",
                     G_CALLBACK (OnFile_RunIso),
                     NULL);
   g_signal_connect ((gpointer) run_cd1, "activate",
                     G_CALLBACK (OnFile_RunCD),
-                    NULL);
-  g_signal_connect ((gpointer) run_bios__no_disc_1, "activate",
-                    G_CALLBACK (OnFile_RunBIOS),
                     NULL);
   g_signal_connect ((gpointer) load_slot_0, "activate",
                     G_CALLBACK (OnStates_Load),
@@ -3326,9 +3355,13 @@ create_MainWindow (void)
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_File, "GtkMenuItem_File");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_File_menu, "GtkMenuItem_File_menu");
   GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_LoadElf, "GtkMenuItem_LoadElf");
+  GLADE_HOOKUP_OBJECT (MainWindow, GtkMenuItem_LoadElf_menu, "GtkMenuItem_LoadElf_menu");
+  GLADE_HOOKUP_OBJECT (MainWindow, iso_image1, "iso_image1");
+  GLADE_HOOKUP_OBJECT (MainWindow, cdvd_plugin1, "cdvd_plugin1");
+  GLADE_HOOKUP_OBJECT (MainWindow, no_disc1, "no_disc1");
+  GLADE_HOOKUP_OBJECT (MainWindow, run_bios__no_disc_1, "run_bios__no_disc_1");
   GLADE_HOOKUP_OBJECT (MainWindow, run_iso1, "run_iso1");
   GLADE_HOOKUP_OBJECT (MainWindow, run_cd1, "run_cd1");
-  GLADE_HOOKUP_OBJECT (MainWindow, run_bios__no_disc_1, "run_bios__no_disc_1");
   GLADE_HOOKUP_OBJECT (MainWindow, separator2, "separator2");
   GLADE_HOOKUP_OBJECT (MainWindow, states1, "states1");
   GLADE_HOOKUP_OBJECT (MainWindow, states1_menu, "states1_menu");

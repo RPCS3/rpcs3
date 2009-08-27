@@ -284,6 +284,7 @@ void StartGui()
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_browser1")), FALSE);
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "patch_finder2")), FALSE);
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_EnterDebugger")), FALSE);
+	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "iso_image1")), FALSE);
 #ifndef PCSX2_DEVBUILD
 	/*gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Logging")), FALSE);
 	gtk_widget_set_sensitive(GTK_WIDGET(lookup_widget(MainWindow, "GtkMenuItem_Arguments")), FALSE);*/
@@ -385,16 +386,16 @@ void OnFile_BlockDump(GtkMenuItem *menuitem, gpointer user_data)
 // Currently this OnRunElf function uses the CDVDplugin source.  It's also valid to use the
 // Iso and NoDisc sources when running ELF files, although those need new menu commands and
 // are outside the scope of my GTK capabilities. ;)  -- air
+
+static CDVD_SourceType source = CDVDsrc_NoDisc;
+
 void OnRunElf_Ok(GtkButton* button, gpointer user_data)
 {
-	gchar *File;
-
-	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
-	strcpy(g_Startup.ElfFile, File);
+	g_Startup.ElfFile = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
 	gtk_widget_destroy(FileSel);
 
 	SysReset();
-	CDVDsys_ChangeSource( CDVDsrc_Plugin );
+	CDVDsys_ChangeSource( source );
 	OpenCDVD( NULL );
 	SysPrepareExecution(g_Startup.ElfFile);
 }
@@ -404,7 +405,7 @@ void OnRunElf_Cancel(GtkButton* button, gpointer user_data)
 	gtk_widget_destroy(FileSel);
 }
 
-void OnFile_LoadElf(GtkMenuItem *menuitem, gpointer user_data)
+void OnFile_RunElf()
 {
 	GtkWidget *Ok, *Cancel;
 
@@ -420,6 +421,24 @@ void OnFile_LoadElf(GtkMenuItem *menuitem, gpointer user_data)
 
 	gtk_widget_show(FileSel);
 	gdk_window_raise(FileSel->window);
+}
+
+void OnFile_RunElf_NoDisc(GtkMenuItem *menuitem, gpointer user_data)
+{
+	source = CDVDsrc_NoDisc;
+	OnFile_RunElf();
+}
+
+void OnFile_RunElf_ISO(GtkMenuItem *menuitem, gpointer user_data)
+{
+	source = CDVDsrc_Iso;
+	OnFile_RunElf();
+}
+
+void OnFile_RunElf_CD(GtkMenuItem *menuitem, gpointer user_data)
+{
+	source = CDVDsrc_Plugin;
+	OnFile_RunElf();
 }
 
 void pcsx2_exit()

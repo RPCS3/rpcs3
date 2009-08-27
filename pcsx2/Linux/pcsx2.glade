@@ -4883,9 +4883,49 @@ Version x.x</property>
 		  <child>
 		    <widget class="GtkMenuItem" id="GtkMenuItem_LoadElf">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Open ELF File..</property>
+		      <property name="label" translatable="yes">_Run ELF File..</property>
 		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnFile_LoadElf"/>
+
+		      <child>
+			<widget class="GtkMenu" id="GtkMenuItem_LoadElf_menu">
+
+			  <child>
+			    <widget class="GtkMenuItem" id="iso_image1">
+			      <property name="visible">True</property>
+			      <property name="label" translatable="yes">Iso Image...</property>
+			      <property name="use_underline">True</property>
+			      <signal name="activate" handler="OnFile_RunElf_ISO" last_modification_time="Thu, 27 Aug 2009 09:17:37 GMT"/>
+			    </widget>
+			  </child>
+
+			  <child>
+			    <widget class="GtkMenuItem" id="cdvd_plugin1">
+			      <property name="visible">True</property>
+			      <property name="label" translatable="yes">CDVD Plugin</property>
+			      <property name="use_underline">True</property>
+			      <signal name="activate" handler="OnFile_RunElf_CD" last_modification_time="Thu, 27 Aug 2009 09:17:25 GMT"/>
+			    </widget>
+			  </child>
+
+			  <child>
+			    <widget class="GtkMenuItem" id="no_disc1">
+			      <property name="visible">True</property>
+			      <property name="label" translatable="yes">No Disc</property>
+			      <property name="use_underline">True</property>
+			      <signal name="activate" handler="OnFile_RunElf_NoDisc" last_modification_time="Thu, 27 Aug 2009 09:17:12 GMT"/>
+			    </widget>
+			  </child>
+			</widget>
+		      </child>
+		    </widget>
+		  </child>
+
+		  <child>
+		    <widget class="GtkMenuItem" id="run_bios_(no_disc)1">
+		      <property name="visible">True</property>
+		      <property name="label" translatable="yes">_Run Bios (No Disc)</property>
+		      <property name="use_underline">True</property>
+		      <signal name="activate" handler="OnFile_RunBIOS" last_modification_time="Wed, 15 Jul 2009 06:35:22 GMT"/>
 		    </widget>
 		  </child>
 
@@ -4904,15 +4944,6 @@ Version x.x</property>
 		      <property name="label" translatable="yes">_Run CD/DVD</property>
 		      <property name="use_underline">True</property>
 		      <signal name="activate" handler="OnFile_RunCD"/>
-		    </widget>
-		  </child>
-
-		  <child>
-		    <widget class="GtkMenuItem" id="run_bios_(no_disc)1">
-		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">_Run Bios (No Disc)</property>
-		      <property name="use_underline">True</property>
-		      <signal name="activate" handler="OnFile_RunBIOS" last_modification_time="Wed, 15 Jul 2009 06:35:22 GMT"/>
 		    </widget>
 		  </child>
 

@@ -8,6 +8,7 @@
 // Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
 // disabled in release builds. :)
 
+#if defined(_MSC_VER)
 #if _MSC_VER < 1600
 #	pragma warning(disable:4244)	// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
 #	ifdef PCSX2_DEVBUILD
@@ -16,6 +17,7 @@
 #	else
 #		define _SECURE_SCL 0
 #	endif
+#endif
 #endif
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
