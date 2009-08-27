@@ -211,10 +211,13 @@ bool ParseCommandLine(int argc, const char *argv[])
 			g_Startup.Enabled = true;
 			g_Startup.CdvdSource = CDVDsrc_Iso;
 
-			if( _legacy_ForceElfLoad )
+			if ( _legacy_ForceElfLoad )
 			{
 				// This retains compatibility with the older Bootmode switch.
-				g_Startup.ElfFile = file;
+				
+				// Not totally sure what this should be set to, 
+				// but I'll take compiling over everything working properly for the moment.
+				//g_Startup.ElfFile = file;
 				g_Startup.StartupMode = Startup_FromELF;
 				g_Startup.CdvdSource = CDVDsrc_Plugin;
 			}
@@ -242,32 +245,19 @@ void RunGui()
 	PCSX2_MEM_PROTECT_BEGIN();
 
 	LoadPatch( str_Default );
-	if( g_Startup.NoGui || g_Startup.Enabled )
+	if( g_Startup.NoGui )
 	{
 		// Initially bypass GUI and start PCSX2 directly.
-		// Manually load plugins using the user's configured image (if non-elf).
-
-		int mode = g_Startup.BootMode & BootMode_ModeMask;
+		CDVDsys_ChangeSource( g_Startup.CdvdSource );
+		DoCDVDopen( g_Startup.ImageName );
 		
-		if( g_Startup.Enabled && (mode != BootMode_Elf) )
-		{
-
-			if(mode == BootMode_Iso)
-				CDVD = ISO;
-			else if(mode == BootMode_NoDisc)
-				CDVD = NODISC;
-			else
-				CDVD = CDVD_plugin;
-
-			if (OpenPlugins(g_Startup.ImageName) == -1)
-				return;
-		}
-
-		SysPrepareExecution(
-			(g_Startup.BootMode == BootMode_Elf) ? g_Startup.ImageName : NULL, 
-			((g_Startup.BootMode & BootMode_Bios) != 0)
-		);
+		if (OpenPlugins() == -1) return;
+		
+		SysPrepareExecution( (g_Startup.StartupMode == Startup_FromELF) ? g_Startup.ImageName : NULL, !g_Startup.SkipBios );
 	}
+	
+	// Just exit immediately if the user disabled the GUI
+	if( g_Startup.NoGui ) return;
 	
 	StartGui();
 	

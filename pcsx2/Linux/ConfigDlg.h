@@ -26,15 +26,15 @@
 typedef enum
 {
 	NO_PLUGIN_TYPE = 0,
-	GS,
-	PAD1,
-	PAD2,
-	SPU2,
-	CDVD,
-	DEV9,
-	USB,
-	FW,
-	BIOS
+	PT_GS,
+	PT_PAD1,
+	PT_PAD2,
+	PT_SPU2,
+	PT_CDVD,
+	PT_DEV9,
+	PT_USB,
+	PT_FW,
+	PT_BIOS
 } plugin_types;
 
 typedef enum
@@ -67,15 +67,15 @@ __forceinline PluginConf *ConfS(int type)
 {
 	switch (type)
 	{
-		case GS: return &GSConfS; 
-		case PAD1: return &PAD1ConfS; 
-		case PAD2: return &PAD2ConfS; 
-		case SPU2: return &SPU2ConfS; 
-		case CDVD: return &CDVDConfS; 
-		case DEV9: return &DEV9ConfS; 
-		case USB: return &USBConfS; 
-		case FW: return &FWConfS; 
-		case BIOS: return &BiosConfS; 
+		case PT_GS: return &GSConfS; 
+		case PT_PAD1: return &PAD1ConfS; 
+		case PT_PAD2: return &PAD2ConfS; 
+		case PT_SPU2: return &SPU2ConfS; 
+		case PT_CDVD: return &CDVDConfS; 
+		case PT_DEV9: return &DEV9ConfS; 
+		case PT_USB: return &USBConfS; 
+		case PT_FW: return &FWConfS; 
+		case PT_BIOS: return &BiosConfS; 
 	}
 }
 
@@ -83,15 +83,15 @@ __forceinline const char *PluginName(int type)
 {
 	switch (type)
 	{
-		case GS: return Config.Plugins.GS; 
-		case PAD1: return Config.Plugins.PAD1; 
-		case PAD2: return Config.Plugins.PAD2; 
-		case SPU2: return Config.Plugins.SPU2; 
-		case CDVD: return Config.Plugins.CDVD; 
-		case DEV9: return Config.Plugins.DEV9; 
-		case USB: return Config.Plugins.USB; 
-		case FW: return Config.Plugins.FW; 
-		case BIOS: return Config.Bios; 
+		case PT_GS: return Config.Plugins.GS; 
+		case PT_PAD1: return Config.Plugins.PAD1; 
+		case PT_PAD2: return Config.Plugins.PAD2; 
+		case PT_SPU2: return Config.Plugins.SPU2; 
+		case PT_CDVD: return Config.Plugins.CDVD; 
+		case PT_DEV9: return Config.Plugins.DEV9; 
+		case PT_USB: return Config.Plugins.USB; 
+		case PT_FW: return Config.Plugins.FW; 
+		case PT_BIOS: return Config.Bios; 
 	}
 	return NULL;
 }
@@ -100,7 +100,7 @@ __forceinline const char *PluginCallbackName(int type, int call)
 {
 	switch (type)
 	{
-		case GS:
+		case PT_GS:
 			switch (call)
 			{
 				case PLUGIN_CONFIG: return "GSconfigure"; 
@@ -109,8 +109,8 @@ __forceinline const char *PluginCallbackName(int type, int call)
 				default: return NULL; 
 			}
 			break;
-		case PAD1:
-		case PAD2:
+		case PT_PAD1:
+		case PT_PAD2:
 			switch (call)
 			{
 				case PLUGIN_CONFIG: return "PADconfigure"; 
@@ -119,7 +119,7 @@ __forceinline const char *PluginCallbackName(int type, int call)
 				default: return NULL; 
 			}
 			break;
-		case SPU2:
+		case PT_SPU2:
 			switch (call)
 			{
 				case PLUGIN_CONFIG: return "SPU2configure"; 
@@ -128,7 +128,7 @@ __forceinline const char *PluginCallbackName(int type, int call)
 				default: return NULL; 
 			}
 			break;
-		case CDVD:
+		case PT_CDVD:
 			switch (call)
 			{
 				case PLUGIN_CONFIG: return "CDVDconfigure"; 
@@ -137,7 +137,7 @@ __forceinline const char *PluginCallbackName(int type, int call)
 				default: return NULL; 
 			}
 			break;
-		case DEV9:
+		case PT_DEV9:
 			switch (call)
 			{
 				case PLUGIN_CONFIG: return "DEV9configure"; 
@@ -146,7 +146,7 @@ __forceinline const char *PluginCallbackName(int type, int call)
 				default: return NULL; 
 			}
 			break;
-		case USB:
+		case PT_USB:
 			switch (call)
 			{
 				case PLUGIN_CONFIG: return "USBconfigure";
@@ -155,7 +155,7 @@ __forceinline const char *PluginCallbackName(int type, int call)
 				default: return NULL;
 			}
 			break;
-		case FW:
+		case PT_FW:
 			switch (call)
 			{
 				case PLUGIN_CONFIG: return "FWconfigure";
@@ -192,31 +192,31 @@ __forceinline plugin_types strToPluginType(char *s)
 	char *sub = NULL;
 	
 	sub = strstr(s, "GS");
-	if (sub != NULL) return GS;
+	if (sub != NULL) return PT_GS;
 	
 	sub = strstr(s, "SPU2");
-	if (sub != NULL) return SPU2;
+	if (sub != NULL) return PT_SPU2;
 	
 	sub = strstr(s, "PAD1");
-	if (sub != NULL) return PAD1;
+	if (sub != NULL) return PT_PAD1;
 	
 	sub = strstr(s, "PAD2");
-	if (sub != NULL) return PAD2;
+	if (sub != NULL) return PT_PAD2;
 	
 	sub = strstr(s, "CDVD");
-	if (sub != NULL) return CDVD;
+	if (sub != NULL) return PT_CDVD;
 	
 	sub = strstr(s, "DEV9");
-	if (sub != NULL) return DEV9;
+	if (sub != NULL) return PT_DEV9;
 	
 	sub = strstr(s, "USB");
-	if (sub != NULL) return USB;
+	if (sub != NULL) return PT_USB;
 	
 	sub = strstr(s, "FW");
-	if (sub != NULL) return FW;
+	if (sub != NULL) return PT_FW;
 	
 	sub = strstr(s, "Bios");
-	if (sub != NULL) return BIOS;
+	if (sub != NULL) return PT_BIOS;
 	return NO_PLUGIN_TYPE;
 }
 
@@ -224,15 +224,15 @@ __forceinline const char *PluginTypeToStr(int type)
 {
 	switch (type)
 	{
-		case GS: return "GS";
-		case SPU2: return "SPU2";
-		case PAD1: return "PAD1";
-		case PAD2: return "PAD2";
-		case CDVD: return "CDVD";
-		case DEV9: return "DEV9";
-		case USB: return "USB";
-		case FW: return "FW";
-		case BIOS: return "Bios";
+		case PT_GS: return "GS";
+		case PT_SPU2: return "SPU2";
+		case PT_PAD1: return "PAD1";
+		case PT_PAD2: return "PAD2";
+		case PT_CDVD: return "CDVD";
+		case PT_DEV9: return "DEV9";
+		case PT_USB: return "USB";
+		case PT_FW: return "FW";
+		case PT_BIOS: return "Bios";
 		default: return "";
 	}
 	return "";

@@ -1067,7 +1067,7 @@ void CloseCDVD()
 	}
 }
 
-#define SafeSysCloseLib( lib )		((void)(SysCloseLibrary(GSplugin), GSplugin = NULL))
+#define SafeSysCloseLib( lib )		((void)(SysCloseLibrary(lib), lib = NULL))
 
 void ReleasePlugins()
 {

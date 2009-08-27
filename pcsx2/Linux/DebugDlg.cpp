@@ -481,7 +481,7 @@ void Create_Debugger()
 void OnDebug_Debugger(GtkMenuItem *menuitem, gpointer user_data)
 {
 
-	if (OpenPlugins(NULL) == -1) return;
+	if (OpenPlugins() == -1) return;
 
 	dPC = cpuRegs.pc;
 	

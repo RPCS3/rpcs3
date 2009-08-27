@@ -26,11 +26,9 @@ GtkWidget *MsgDlg;
 const char* g_pRunGSState = NULL;
 
 int efile = 0;
-char elfname[g_MaxPath];
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
-	char elfname[g_MaxPath];
 
 	efile = 0;
 	
@@ -351,7 +349,7 @@ void OnRunIso_Ok(GtkButton* button, gpointer user_data)
 
 	SysReset();
 	CDVDsys_ChangeSource( CDVDsrc_Iso );
-	DoCDVDopen( FileSel );
+	DoCDVDopen( File );
 	SysPrepareExecution( NULL );
 }
 
@@ -392,13 +390,13 @@ void OnRunElf_Ok(GtkButton* button, gpointer user_data)
 	gchar *File;
 
 	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
-	strcpy(elfname, File);
+	strcpy(g_Startup.ElfFile, File);
 	gtk_widget_destroy(FileSel);
 
 	SysReset();
 	CDVDsys_ChangeSource( CDVDsrc_Plugin );
 	OpenCDVD( NULL );
-	SysPrepareExecution(elfname);
+	SysPrepareExecution(g_Startup.ElfFile);
 }
 
 void OnRunElf_Cancel(GtkButton* button, gpointer user_data)
@@ -447,7 +445,7 @@ void pcsx2_exit()
 		}
 	}
 
-	printf("PCSX2 Quitting\n");
+	Console::WriteLn("PCSX2 Quitting\n");
 
 	if (g_Startup.NoGui)
 	{

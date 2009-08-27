@@ -311,7 +311,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 		time(&rawtime);
 		timeinfo = localtime(&rawtime);
 		
-		ssprintf( fname, fname_only+" (%04d-%02d-%02d %02d-%02d-%02d).dump",
+		ssprintf( fname, (fname_only+" (%04d-%02d-%02d %02d-%02d-%02d).dump").c_str(),
 			timeinfo->tm_year + 1900, timeinfo->tm_mon, timeinfo->tm_mday,
 			timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec
 		);
