@@ -35,7 +35,6 @@ GtkWidget *MemWriteDlg, *MemEntry, *DataEntry;
 GtkAdjustment *DebugAdj;
 
 extern int efile;
-extern char elfname[g_MaxPath];
 
 int DebugMode; // 0 - EE | 1 - IOP
 static u32 dPC, dBPA = -1, dBPC = -1;

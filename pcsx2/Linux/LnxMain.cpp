@@ -391,13 +391,15 @@ static CDVD_SourceType source = CDVDsrc_NoDisc;
 
 void OnRunElf_Ok(GtkButton* button, gpointer user_data)
 {
-	g_Startup.ElfFile = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
+	char *elf_name;
+	
+	elf_name = gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
 	gtk_widget_destroy(FileSel);
 
 	SysReset();
 	CDVDsys_ChangeSource( source );
 	OpenCDVD( NULL );
-	SysPrepareExecution(g_Startup.ElfFile);
+	SysPrepareExecution(elf_name);
 }
 
 void OnRunElf_Cancel(GtkButton* button, gpointer user_data)
