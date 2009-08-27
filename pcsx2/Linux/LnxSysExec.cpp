@@ -87,74 +87,137 @@ __noinline void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void *
 	mmap_ClearCpuBlock( offset & ~m_pagemask );
 }
 
-bool ParseCommandLine(int argc, char *argv[], char *file)
+#define CmdSwitchIs( text ) ( stricmp( token, text ) == 0 )
+
+bool ParseCommandLine(int argc, const char *argv[])
 {
 	int i = 1;
-	g_Startup.BootMode = BootMode_Bios;
 	
+	g_Startup.Enabled		= false;
+	g_Startup.NoGui			= false;
+	g_Startup.ImageName		= NULL;
+	g_Startup.ElfFile		= NULL;
+
+	g_Startup.StartupMode	= Startup_FromCDVD;
+	g_Startup.SkipBios		= true;
+	g_Startup.CdvdSource	= CDVDsrc_Plugin;
+
+	bool _legacy_ForceElfLoad = false;
+
 	while (i < argc)
 	{
-		char* token = argv[i++];
+		const char* token = argv[i++];
 
-		if (stricmp(token, "-help") == 0 || stricmp(token, "--help") == 0 || stricmp(token, "-h") == 0)
+		if (CmdSwitchIs("-help") || CmdSwitchIs("--help") || CmdSwitchIs("-h"))
 		{
 			//Msgbox::Alert( phelpmsg );
 			return false;
 		}
-		else if (stricmp(token, "-nogui") == 0)
+		else if (CmdSwitchIs("-nogui"))
 		{
-			g_Startup.NoGui = FALSE;
+			g_Startup.NoGui = true;
+			g_Startup.Enabled = true;
 		}
-		else if (stricmp(token, "-loadgs") == 0)
+		else if( CmdSwitchIs( "skipbios" ) ) {
+			g_Startup.SkipBios = true;
+		}
+		else if( CmdSwitchIs( "nodisc" ) ) {
+			g_Startup.CdvdSource = CDVDsrc_NoDisc;
+			g_Startup.Enabled = true;
+		}
+		else if( CmdSwitchIs( "usecd" ) ) {
+			g_Startup.CdvdSource = CDVDsrc_Plugin;
+			g_Startup.Enabled = true;
+		}
+		else if( CmdSwitchIs( "elf" ) ) {
+			g_Startup.StartupMode = Startup_FromELF;
+			token = argv[i++];
+			g_Startup.ElfFile = token;
+			g_Startup.Enabled = true;
+		}
+
+		// depreciated command switch
+		else if (CmdSwitchIs("-bootmode")) 
+		{
+			token = argv[i++];
+			int mode = atoi( token );
+			g_Startup.Enabled = true;
+			g_Startup.SkipBios = !( mode & 0x10000 );
+			switch( mode & 0xf )
+			{
+				case 0:
+					g_Startup.CdvdSource = CDVDsrc_Plugin;
+				break;
+
+				case 1:
+					_legacy_ForceElfLoad = true;
+				break;
+
+				case 2:
+					g_Startup.CdvdSource = CDVDsrc_Iso;
+				break;
+
+				case 3:
+					g_Startup.CdvdSource = CDVDsrc_NoDisc;
+				break;
+			}
+		}
+
+		else if (CmdSwitchIs("-loadgs"))
 		{
 			g_pRunGSState = argv[i++];
 		}			
-		else if( strcmp(token, "-bootmode" ) == 0) 
-		{
-			token = argv[i++];
-			g_Startup.BootMode = (StartupMode)atoi( token);
-			g_Startup.Enabled = true;
-		}
-		else if (stricmp(token, "-gs") == 0)
+		else if (CmdSwitchIs("-gs"))
 		{
 			token = argv[i++];
 			g_Startup.gsdll = token;
 		}
-		else if (stricmp(token, "-cdvd") == 0)
+		else if (CmdSwitchIs("-cdvd"))
 		{
 			token = argv[i++];
 			g_Startup.cdvddll = token;
 		}
-		else if (stricmp(token, "-spu") == 0)
+		else if (CmdSwitchIs("-spu"))
 		{
 			token = argv[i++];
 			g_Startup.spudll = token;
 		}
-		else if (stricmp(token, "-pad") == 0)
+		else if (CmdSwitchIs("-pad"))
 		{
 			token = argv[i++];
 			g_Startup.pad1dll = token;
 			g_Startup.pad2dll = token;
 		}
-		else if (stricmp(token, "-pad1") == 0)
+		else if (CmdSwitchIs("-pad1"))
 		{
 			token = argv[i++];
 			g_Startup.pad1dll = token;
 		}
-		else if (stricmp(token, "-pad2") == 0)
+		else if (CmdSwitchIs("-pad2"))
 		{
 			token = argv[i++];
 			g_Startup.pad2dll = token;
 		}
-		else if (stricmp(token, "-loadgs") == 0)
+		else if (CmdSwitchIs("-loadgs"))
 		{
 			token = argv[i++];
 			g_pRunGSState = token;
 		}
 		else
 		{
-			file = token;
-			printf("opening file %s\n", file);
+			printf("opening file %s\n", token);
+
+			g_Startup.ImageName = token;
+			g_Startup.Enabled = true;
+			g_Startup.CdvdSource = CDVDsrc_Iso;
+
+			if( _legacy_ForceElfLoad )
+			{
+				// This retains compatibility with the older Bootmode switch.
+				g_Startup.ElfFile = file;
+				g_Startup.StartupMode = Startup_FromELF;
+				g_Startup.CdvdSource = CDVDsrc_Plugin;
+			}
 		}
 	}
 	return true;

@@ -140,6 +140,7 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 			else if( CmdSwitchIs( "elf" ) ) {
 				g_Startup.StartupMode = Startup_FromELF;
 				g_Startup.ElfFile = param;
+				g_Startup.Enabled = true;
 			}
 
 			else if( CmdSwitchIs( "loadgs" ) ) {

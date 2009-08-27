@@ -30,7 +30,6 @@ char elfname[g_MaxPath];
 
 int main(int argc, char *argv[])
 {
-	char *file = NULL;
 	char elfname[g_MaxPath];
 
 	efile = 0;
@@ -62,7 +61,7 @@ int main(int argc, char *argv[])
 	memset(&g_Startup, 0, sizeof(g_Startup));
 #endif
 	
-	if (!ParseCommandLine(argc, argv, file)) return 0;
+	if (!ParseCommandLine(argc, argv)) return 0;
 
 	// make gtk thread safe if using MTGS
 	if (CHECK_MULTIGS)
@@ -127,21 +126,18 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 #endif
-	
-	if (!g_Startup.NoGui && (file == NULL))
+
+	if( !g_Startup.Enabled )
 	{
 		StartGui();
 		return 0;
 	}
 
-	if (OpenPlugins(file) == -1) return -1;
+	CDVDsys_ChangeSource( g_Startup.CdvdSource );
+	DoCDVDopen( g_Startup.ImageName );
+	if (OpenPlugins() == -1) return -1;
 
-	SysReset();
-
-	cpuExecuteBios();
-	if (file) strcpy(elfname, file);
-	if (!efile) efile = GetPS2ElfName(elfname);
-	loadElfFile(elfname);
+	SysPrepareExecution( (g_Startup.StartupMode == Startup_FromELF) ? g_Startup.ImageName : NULL, !g_Startup.SkipBios );
 
 	return 0;
 }
@@ -332,15 +328,16 @@ void OnLanguage(GtkMenuItem *menuitem, gpointer user_data)
 
 void OnFile_RunCD(GtkMenuItem *menuitem, gpointer user_data)
 {
-	CDVD = CDVD_plugin;
-	//SysReset();
+	SysReset();
+	CDVDsys_ChangeSource( CDVDsrc_Plugin );
+	DoCDVDopen( NULL );
 	SysPrepareExecution(NULL);
 }
 
 void OnFile_RunBIOS(GtkMenuItem *menuitem, gpointer user_data)
 {
-	CDVD = NODISC;
 	SysReset();
+	CDVDsys_ChangeSource( CDVDsrc_NoDisc );
 	SysPrepareExecution(NULL, true);
 }
 
@@ -348,13 +345,13 @@ void OnRunIso_Ok(GtkButton* button, gpointer user_data)
 {
 	gchar *File;
 	string curdir;
-	CDVD = ISO;
 
 	File = (gchar*)gtk_file_selection_get_filename(GTK_FILE_SELECTION(FileSel));
-	strcpy(isoFileName, File);
 	gtk_widget_destroy(FileSel);
 
-	//SysReset();
+	SysReset();
+	CDVDsys_ChangeSource( CDVDsrc_Iso );
+	DoCDVDopen( FileSel );
 	SysPrepareExecution( NULL );
 }
 
@@ -387,6 +384,9 @@ void OnFile_BlockDump(GtkMenuItem *menuitem, gpointer user_data)
 	SaveConfig();
 }
 
+// Currently this OnRunElf function uses the CDVDplugin source.  It's also valid to use the
+// Iso and NoDisc sources when running ELF files, although those need new menu commands and
+// are outside the scope of my GTK capabilities. ;)  -- air
 void OnRunElf_Ok(GtkButton* button, gpointer user_data)
 {
 	gchar *File;
@@ -395,6 +395,9 @@ void OnRunElf_Ok(GtkButton* button, gpointer user_data)
 	strcpy(elfname, File);
 	gtk_widget_destroy(FileSel);
 
+	SysReset();
+	CDVDsys_ChangeSource( CDVDsrc_Plugin );
+	OpenCDVD( NULL );
 	SysPrepareExecution(elfname);
 }
 
@@ -407,7 +410,7 @@ void OnFile_LoadElf(GtkMenuItem *menuitem, gpointer user_data)
 {
 	GtkWidget *Ok, *Cancel;
 
-	FileSel = gtk_file_selection_new("Select Psx Elf File");
+	FileSel = gtk_file_selection_new("Select PS2 Elf File");
 
 	Ok = GTK_FILE_SELECTION(FileSel)->ok_button;
 	gtk_signal_connect(GTK_OBJECT(Ok), "clicked", GTK_SIGNAL_FUNC(OnRunElf_Ok), NULL);

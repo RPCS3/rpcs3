@@ -38,7 +38,7 @@
 // performed quite liberally by many games (perhaps intended to keep the PS2 DVD
 // from spinning down due to idle activity?).
 // Cache is set to -1 for init and when the disc is removed/changed, which invokes
-// a new DiskTypeCheck.  Al subsequent checks use the non-negative value here.
+// a new DiskTypeCheck.  All subsequent checks use the non-negative value here.
 //
 static int diskTypeCached = -1;
 
@@ -47,9 +47,9 @@ int lastReadSize;
 
 // Records last read block length for block dumping
 static int plsn = 0;
-static isoFile *blockDumpFile;
+static isoFile *blockDumpFile = NULL;
 
-// Assertion check for CDVD != NULL (in devel and debgu builds), because its handier than
+// Assertion check for CDVD != NULL (in devel and debug builds), because its handier than
 // relying on DEP exceptions -- and a little more reliable too.
 static void CheckNullCDVD()
 {
@@ -103,8 +103,6 @@ int CheckDiskTypeFS(int baseType)
 	return CDVD_TYPE_ILLEGAL; // << Only for discs which aren't ps2 at all.
 }
 
-static char bleh[2352];
-
 static int FindDiskType(int mType)
 {
 	int dataTracks = 0;
@@ -120,6 +118,7 @@ static int FindDiskType(int mType)
 	}
 	else if (mType < 0)
 	{
+		static char bleh[2352];
 		cdvdTD td;
 
 		CDVD->getTD(0,&td);

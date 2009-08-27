@@ -29,7 +29,7 @@
 extern bool applychanges;
 extern bool Slots[5];
 
-extern bool ParseCommandLine(int argc, char *argv[], char *file);
+extern bool ParseCommandLine(int argc, char *argv[], char **file);
 extern void MemoryCard_Init();
 
 void OnLanguage(GtkMenuItem *menuitem, gpointer user_data);
