@@ -74,7 +74,8 @@ int sortFlag(int* fFlag, int* bFlag, int cycles) {
 	return x; // Returns the number of Valid Flag Instances
 }
 
-#define sFlagCond ((sFLAG.doFlag && !mVUsFlagHack) || mVUlow.isFSSET || mVUinfo.doDivFlag)
+#define sFlagCond (sFLAG.doFlag || mVUlow.isFSSET || mVUinfo.doDivFlag)
+#define sHackCond (mVUsFlagHack && !sFLAG.doNonSticky)
 
 // Note: Flag handling is 'very' complex, it requires full knowledge of how microVU recs work, so don't touch!
 microVUt(void) mVUsetFlags(mV, microFlagCycles& mFC) {
@@ -143,6 +144,7 @@ microVUt(void) mVUsetFlags(mV, microFlagCycles& mFC) {
 		mFLAG.lastWrite = (xM-1) & 3;
 		cFLAG.lastWrite = (xC-1) & 3;
 
+		if (sHackCond)	  { sFLAG.doFlag = 0; }
 		if (sFlagCond)	  { mFC.xStatus[xS] = mFC.cycles + 4; xS = (xS+1) & 3; }
 		if (mFLAG.doFlag) { mFC.xMac   [xM] = mFC.cycles + 4; xM = (xM+1) & 3; }
 		if (cFLAG.doFlag) { mFC.xClip  [xC] = mFC.cycles + 4; xC = (xC+1) & 3; }

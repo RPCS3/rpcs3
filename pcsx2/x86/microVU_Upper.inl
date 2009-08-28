@@ -32,7 +32,6 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1 = -1, int regT2 = -1, bool 
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
-	if (mVUsFlagHack) { sFLAG.doFlag = 0; }
 	if (!sFLAG.doFlag && !mFLAG.doFlag) { return; }
 	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) { 
 		if (regT2 < 0) { regT2 = mVU->regAlloc->allocReg(); regT2b = 1; }
