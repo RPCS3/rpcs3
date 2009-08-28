@@ -47,16 +47,17 @@ extern "C"
 	void* SuperVUGetProgram(u32 startpc, int vuindex);
 	void SuperVUCleanupProgram(u32 startpc, int vuindex);
 	void svudispfn();
-		
+
 	// aR3000A.S
 	void iopJITCompile();
 	void iopJITCompileInBlock();
 	void iopDispatcherReg();
-		
+
 	// aR5900-32.S
 	void JITCompile();
 	void JITCompileInBlock();
 	void DispatcherReg();
+	void DispatcherEvent();
 }
 #endif
 

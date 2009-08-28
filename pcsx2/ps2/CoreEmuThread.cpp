@@ -17,6 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 #include "System.h"
 #include "SaveState.h"
 #include "Elfheader.h"

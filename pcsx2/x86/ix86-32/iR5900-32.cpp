@@ -91,7 +91,7 @@ static u32 s_nInstCacheSize = 0;
 
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
-u32 s_nEndBlock = 0; // what pc the current block ends	
+u32 s_nEndBlock = 0; // what pc the current block ends
 static bool s_nBlockFF;
 
 // save states for branches
@@ -187,7 +187,7 @@ void _eeFlushAllUnused()
 			continue;
 
 		if( i < 32 && GPR_IS_CONST1(i) ) _flushConstReg(i);
-		else {	
+		else {
 			_deleteMMXreg(MMX_GPR+i, 1);
 			_deleteGPRtoXMMreg(i, 1);
 		}
@@ -210,7 +210,7 @@ u32* _eeGetConstReg(int reg)
 	// if written in the future, don't flush
 	if( _recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, reg) )
 		return recGetImm64(g_cpuConstRegs[reg].UL[1], g_cpuConstRegs[reg].UL[0]);
-	
+
 	_flushConstReg(reg);
 	return &cpuRegs.GPR.r[ reg ].UL[0];
 }
@@ -223,7 +223,7 @@ void _eeMoveGPRtoR(x86IntRegType to, int fromgpr)
 		MOV32ItoR( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
-		
+
 		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, fromgpr, MODE_READ)) >= 0 && (xmmregs[mmreg].mode&MODE_WRITE)) {
 			SSE2_MOVD_XMM_to_R(to, mmreg);
 		}
@@ -243,7 +243,7 @@ void _eeMoveGPRtoM(u32 to, int fromgpr)
 		MOV32ItoM( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
-		
+
 		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, fromgpr, MODE_READ)) >= 0 ) {
 			SSEX_MOVD_XMM_to_M32(to, mmreg);
 		}
@@ -264,7 +264,7 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 		MOV32ItoRm( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
-		
+
 		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, fromgpr, MODE_READ)) >= 0 ) {
 			SSEX_MOVD_XMM_to_Rm(to, mmreg);
 		}
@@ -284,7 +284,7 @@ int _flushXMMunused()
 	int i;
 	for (i=0; i<iREGCNT_XMM; i++) {
 		if (!xmmregs[i].inuse || xmmregs[i].needed || !(xmmregs[i].mode&MODE_WRITE) ) continue;
-		
+
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
 			//if( !(g_pCurInstInfo->regs[xmmregs[i].reg]&EEINST_USED) ) {
 			if( !_recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, xmmregs[i].reg) ) {
@@ -303,7 +303,7 @@ int _flushMMXunused()
 	int i;
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (!mmxregs[i].inuse || mmxregs[i].needed || !(mmxregs[i].mode&MODE_WRITE) ) continue;
-		
+
 		if( MMX_ISGPR(mmxregs[i].reg) ) {
 			//if( !(g_pCurInstInfo->regs[mmxregs[i].reg-MMX_GPR]&EEINST_USED) ) {
 			if( !_recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, mmxregs[i].reg-MMX_GPR) ) {
@@ -383,11 +383,11 @@ static void __fastcall dyna_block_discard(u32 start,u32 sz);
 // memory allocation handle for the entire BASEBLOCK and stack allocations.
 static u8* m_recBlockAlloc = NULL;
 
-static const uint m_recBlockAllocSize = 
+static const uint m_recBlockAllocSize =
 	(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK))
 +	RECCONSTBUF_SIZE * sizeof(u32) + Ps2MemSize::Base;
 
-static void recAlloc() 
+static void recAlloc()
 {
 	// Hardware Requirements Check...
 
@@ -535,12 +535,13 @@ static void recShutdown( void )
 #pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
 #endif
 
-void recStep( void ) {
+void recStep( void )
+{
 }
 
-
-
-static void recEventTest()
+extern "C"
+{
+void recEventTest()
 {
 #ifdef PCSX2_DEVBUILD
 	// dont' remove this check unless doing an official release
@@ -558,6 +559,7 @@ static void recEventTest()
 #ifdef PCSX2_DEVBUILD
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
+}
 }
 
 ////////////////////////////////////////////////////
@@ -637,7 +639,7 @@ void recExecute()
 			push ebp
 
 			call DispatcherReg
-			
+
 			pop ebp
 			pop edi
 			pop esi
@@ -663,7 +665,7 @@ __forceinline void recExecute()
 		"push ebp\n"
 
 		"call DispatcherReg\n"
-		
+
 		"pop ebp\n"
 		"pop edi\n"
 		"pop esi\n"
@@ -734,7 +736,7 @@ void recClear(u32 addr, u32 size)
                 else __asm emms;
         #else
                 if( x86caps.has3DNOWInstructionExtensions )__asm__("femms");
-                else 
+                else
                         __asm__("emms");
         #endif
 #endif
@@ -831,7 +833,7 @@ void SetBranchReg( u32 reg )
 //			MOV32ItoM( (uptr)&cpuRegs.pc, g_cpuConstRegs[reg].UL[0] );
 //		else {
 //			int mmreg;
-//			
+//
 //			if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, reg, MODE_READ)) >= 0 ) {
 //				SSE_MOVSS_XMM_to_M32((u32)&cpuRegs.pc, mmreg);
 //			}
@@ -1011,7 +1013,7 @@ static u32 eeScaleBlockCycles()
 //   the jump is assumed to be to a register (dynamic).  For any other value the
 //   jump is assumed to be static, in which case the block will be "hardlinked" after
 //   the first time it's dispatched.
-// 
+//
 //   noDispatch - When set true, then jump to Dispatcher.  Used by the recs
 //   for blocks which perform exception checks without branching (it's enabled by
 //   setting "branch = 2";
@@ -1040,7 +1042,7 @@ static void iBranchTest(u32 newpc)
 		// the if() block below (it would be paired with recBlocks.Link) breaks the sub/jcc
 		// pairing that modern CPUs optimize (applies to all P4+ and AMD X2+ CPUs).  So let's do
 		// it up here instead. :D
-		
+
 		if( newpc != 0xffffffff )
 			xMOV( ptr32[&cpuRegs.pc], newpc );
 
@@ -1060,7 +1062,7 @@ static void iBranchTest(u32 newpc)
 			xJMP( DispatcherEvent );
 		}
 	}
-	
+
 	/*
 	else
 	{
@@ -1131,7 +1133,7 @@ void recompileNextInstruction(int delayslot)
 		x86SetJ8( j8Ptr[ 1 ] );
 		PUSH32I(s_pCurBlockEx->startpc);
 		ADD32ItoR(ESP, 4);
-		x86SetJ8( j8Ptr[ 2 ] );	
+		x86SetJ8( j8Ptr[ 2 ] );
 	}
 #endif
 #endif
@@ -1330,7 +1332,7 @@ void recRecompile( const u32 startpc )
 	// go until the next branch
 	i = startpc;
 	s_nEndBlock = 0xffffffff;
-	
+
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
 
@@ -1363,9 +1365,9 @@ void recRecompile( const u32 startpc )
 					goto StartRecomp;
 				}
 				break;
-				
+
 			case 1: // regimm
-				
+
 				if( _Rt_ < 4 || (_Rt_ >= 16 && _Rt_ < 20) ) {
 					// branches
 					branchTo = _Imm_ * 4 + i + 4;
@@ -1382,12 +1384,12 @@ void recRecompile( const u32 startpc )
 				goto StartRecomp;
 
 			// branches
-			case 4: case 5: case 6: case 7: 
+			case 4: case 5: case 6: case 7:
 			case 20: case 21: case 22: case 23:
 				branchTo = _Imm_ * 4 + i + 4;
 				if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 				else  s_nEndBlock = i+8;
-				
+
 				goto StartRecomp;
 
 			case 16: // cp0
@@ -1408,7 +1410,7 @@ void recRecompile( const u32 startpc )
 					branchTo = _Imm_ * 4 + i + 4;
 					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 					else  s_nEndBlock = i+8;
-					
+
 					goto StartRecomp;
 				}
 				break;
@@ -1461,7 +1463,7 @@ StartRecomp:
 					vucycle = 0;
 					usecop2 = 1;
 				}
-				
+
 				VU0.code = cpuRegs.code;
 				_vuRegsCOP22( &VU0, &g_pCurInstInfo->vuregs );
 				continue;
@@ -1521,7 +1523,7 @@ StartRecomp:
 			xMOV( ecx, inpage_ptr );
 			xMOV( edx, pgsz / 4 );
 			//xMOV( eax, startpc );		// uncomment this to access startpc (as eax) in dyna_block_discard
-			
+
 			u32 lpc = inpage_ptr;
 			u32 stg = pgsz;
 			while(stg>0)
@@ -1532,7 +1534,7 @@ StartRecomp:
 				stg -= 4;
 				lpc += 4;
 			}
-			
+
 			// Tweakpoint!  3 is a 'magic' number representing the number of times a counted block
 			// is re-protected before the recompiler gives up and sets it up as an uncounted (permanent)
 			// manual block.  Higher thresholds result in more recompilations for blocks that share code
@@ -1542,7 +1544,7 @@ StartRecomp:
 			// (ideally, perhaps, manual_counter should be reset to 0 every few minutes?)
 
 			if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3) {
-			
+
 				// Counted blocks add a weighted (by block size) value into manual_page each time they're
 				// run.  If the block gets run a lot, it resets and re-protects itself in the hope
 				// that whatever forced it to be manually-checked before was a 1-time deal.
@@ -1574,7 +1576,7 @@ StartRecomp:
 
 		}
 	}
-	
+
 	// Finally: Generate x86 recompiled code!
 	g_pCurInstInfo = s_pInstCache;
 	while (!branch && pc < s_nEndBlock) {

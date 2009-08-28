@@ -35,6 +35,8 @@
 					<Add option="-Wall" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
 					<Add option="-DNDEBUG" />
+					<Add directory="../../include" />
+					<Add directory="../../include/Utilities" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -51,6 +53,8 @@
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
 					<Add option="-DPCSX2_DEVBUILD" />
 					<Add option="-DNDEBUG" />
+					<Add directory="../../include" />
+					<Add directory="../../include/Utilities" />
 				</Compiler>
 			</Target>
 		</Build>
