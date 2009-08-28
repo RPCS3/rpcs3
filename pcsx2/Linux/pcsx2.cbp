@@ -109,7 +109,6 @@
 		<Unit filename="../../common/include/Pcsx2Config.h" />
 		<Unit filename="../../common/include/Pcsx2Defs.h" />
 		<Unit filename="../../common/include/Pcsx2Types.h" />
-		<Unit filename="../../common/include/Utilities/Dependencies.h" />
 		<Unit filename="../../common/include/wx/folderdesc.txt" />
 		<Unit filename="../../common/include/wx/scopedarray.h" />
 		<Unit filename="../../common/include/wx/scopedptr.h" />

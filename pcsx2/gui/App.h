@@ -123,7 +123,7 @@ public:
 
 	bool PrepForExit();
 
-	//void ( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
+	//void OnAssertionFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
 
 	const wxBitmap& GetLogoBitmap();
 	wxImageList& GetImgList_Config();
