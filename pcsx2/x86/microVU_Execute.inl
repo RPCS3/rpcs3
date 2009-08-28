@@ -40,9 +40,7 @@ void mVUdispatcherA(mV) {
 	SSE_LDMXCSR((uptr)&g_sseVUMXCSR);
 
 	// Load Regs
-	MOV32ItoR(gprR, Roffset); // Load VI Reg Offset
 	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
-	
 	MOV32RtoR(gprF1, gprF0);
 	SHR32ItoR(gprF1, 3);
 	AND32ItoR(gprF1, 0x18);

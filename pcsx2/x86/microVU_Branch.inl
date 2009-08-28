@@ -104,7 +104,7 @@ void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
 
 	if (isEvilJump) MOV32MtoR(gprT2, (uptr)&mVU->evilBranch);
 	else			MOV32MtoR(gprT2, (uptr)&mVU->branch);
-	MOV32ItoR(gprR, (u32)&mVUpBlock->pStateEnd);
+	MOV32ItoR(gprT3, (u32)&mVUpBlock->pStateEnd);
 
 	if (!mVU->index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
 	else			 xCALL(mVUcompileJIT<1>);

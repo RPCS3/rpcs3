@@ -197,12 +197,11 @@ microVUt(void) mVUsetupFlags(mV, microFlagCycles& mFC) {
 		else {
 			MOV32RtoR(gprT1,  getFlagReg1(bStatus[0])); 
 			MOV32RtoR(gprT2,  getFlagReg1(bStatus[1]));
-			MOV32RtoR(gprR,   getFlagReg1(bStatus[2]));
+			MOV32RtoR(gprT3,  getFlagReg1(bStatus[2]));
 			MOV32RtoR(gprF3,  getFlagReg1(bStatus[3]));
 			MOV32RtoR(gprF0,  gprT1);
 			MOV32RtoR(gprF1,  gprT2); 
-			MOV32RtoR(gprF2,  gprR); 
-			MOV32ItoR(gprR, Roffset); // Restore gprR
+			MOV32RtoR(gprF2,  gprT3);
 		}
 	}
 

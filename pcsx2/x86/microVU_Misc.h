@@ -128,7 +128,7 @@ declareAllVariables
 
 #define gprT1	0 // Temp Reg
 #define gprT2	1 // Temp Reg
-#define gprR	2 // VI Reg Offset
+#define gprT3	2 // Temp Reg
 #define gprF0	3 // Status Flag 0
 #define gprESP	4 // Don't use?
 #define gprF1	5 // Status Flag 1
@@ -219,7 +219,6 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[mVUprogI.ranges.range[i][0]]))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
-#define Roffset		 (uptr)&mVU->regs->VI[9].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 
@@ -287,6 +286,5 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 		MOV32ItoR(gprT2, xPC);							\
 		if (isEndPC) { CALLFunc((uptr)mVUprintPC2); }	\
 		else		 { CALLFunc((uptr)mVUprintPC1); }	\
-		MOV32ItoR(gprR, Roffset);						\
 	}													\
 }

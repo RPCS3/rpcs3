@@ -1030,23 +1030,22 @@ mVUop(mVU_RNEXT) {
 	pass1 { mVUanalyzeR2(mVU, _Ft_, 0); }
 	pass2 { 
 		// algorithm from www.project-fao.org
-		MOV32MtoR(gprR, Rmem);
-		MOV32RtoR(gprT1, gprR);
+		MOV32MtoR(gprT3, Rmem);
+		MOV32RtoR(gprT1, gprT3);
 		SHR32ItoR(gprT1, 4);
 		AND32ItoR(gprT1, 1);
 
-		MOV32RtoR(gprT2, gprR);
+		MOV32RtoR(gprT2, gprT3);
 		SHR32ItoR(gprT2, 22);
 		AND32ItoR(gprT2, 1);
 
-		SHL32ItoR(gprR, 1);
+		SHL32ItoR(gprT3, 1);
 		XOR32RtoR(gprT1, gprT2);
-		XOR32RtoR(gprR,  gprT1);
-		AND32ItoR(gprR, 0x007fffff);
-		OR32ItoR (gprR, 0x3f800000);
-		MOV32RtoM(Rmem, gprR);
-		mVU_RGET_(mVU, gprR);
-		MOV32ItoR(gprR, Roffset); // Restore gprR
+		XOR32RtoR(gprT3, gprT1);
+		AND32ItoR(gprT3, 0x007fffff);
+		OR32ItoR (gprT3, 0x3f800000);
+		MOV32RtoM(Rmem, gprT3);
+		mVU_RGET_(mVU,  gprT3);
 	}
 	pass3 { mVUlog("RNEXT.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
