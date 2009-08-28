@@ -40,6 +40,15 @@ namespace Dialogs
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
+
+		virtual void OnSomethingChanged( wxCommandEvent& evt )
+		{
+			evt.Skip();
+			if( (evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY) )
+			{
+				GetWindowChild( wxID_APPLY )->Enable();
+			}
+		}
 	};
 	
 	

@@ -31,7 +31,7 @@ extern struct KeyModifiers keymodifiers;
 // So a rename to pDisplay is in the works, but it will not, in fact, be removed.
 extern uptr pDsp;	//Used in  GS, MTGS, Plugins, Misc
 
-int GetPS2ElfName( wxString& dest ); // Used in Misc, System, Linux, CDVD
+extern int GetPS2ElfName( wxString& dest ); // Used in Misc, System, Linux, CDVD
 
 // Not sure what header these should go in. Probably not this one.
 void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);

@@ -122,8 +122,10 @@ public:
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
 
 	bool PrepForExit();
-
-	//void OnAssertionFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
+	
+#ifdef __WXDEBUG__
+	void OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
+#endif
 
 	const wxBitmap& GetLogoBitmap();
 	wxImageList& GetImgList_Config();

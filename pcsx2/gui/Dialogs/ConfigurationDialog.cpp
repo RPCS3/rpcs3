@@ -77,6 +77,8 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );
+	
+	GetWindowChild( wxID_APPLY )->Disable();
 
 	SetSizerAndFit( &mainSizer );
 	CenterOnScreen();
@@ -93,6 +95,23 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnApply_Click ) );
+
+	// ----------------------------------------------------------------------------
+	// Bind a variety of standard "something probably changed" events.  If the user invokes
+	// any of these, we'll automatically de-gray the Apply button for this dialog box. :)
+
+	#define ConnectSomethingChanged( command ) \
+		Connect( wxEVT_COMMAND_##command,	wxCommandEventHandler( ConfigurationDialog::OnSomethingChanged ) );
+
+	ConnectSomethingChanged( RADIOBUTTON_SELECTED );
+	ConnectSomethingChanged( COMBOBOX_SELECTED );
+	ConnectSomethingChanged( CHECKBOX_CLICKED );
+	ConnectSomethingChanged( BUTTON_CLICKED );
+	ConnectSomethingChanged( CHOICE_SELECTED );
+	ConnectSomethingChanged( LISTBOX_SELECTED );
+	ConnectSomethingChanged( SPINCTRL_UPDATED );
+	ConnectSomethingChanged( SLIDER_UPDATED );
+	ConnectSomethingChanged( DIRPICKER_CHANGED );
 }
 
 Dialogs::ConfigurationDialog::~ConfigurationDialog()
@@ -111,7 +130,7 @@ void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 
 void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
-	evt.Skip();
+	GetWindowChild( wxID_APPLY )->Disable();
 	g_ApplyState.ApplyAll();
 }
 

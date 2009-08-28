@@ -37,30 +37,58 @@ Panels::CpuPanel::CpuPanel( wxWindow& parent, int idealWidth ) :
 	
 	m_StartNewRadioGroup = true;
 	AddRadioButton( s_ee, _("Interpreter"), wxEmptyString, _("Quite possibly the slowest thing in the universe.") );
-	AddRadioButton( s_ee, _("Recompiler") );
+	m_Option_RecEE = &AddRadioButton( s_ee, _("Recompiler") );
 
 	m_StartNewRadioGroup = true;
 	AddRadioButton( s_iop, _("Interpreter") );
-	AddRadioButton( s_iop, _("Recompiler") );
+	m_Option_RecIOP = &AddRadioButton( s_iop, _("Recompiler") );
 
 	m_StartNewRadioGroup = true;
-	AddRadioButton( s_vu0, _("Interpreter") );
-	AddRadioButton( s_vu0, _("microVU Recompiler [new!]") );
-	AddRadioButton( s_vu0, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
+	AddRadioButton( s_vu0, _("Interpreter") ).SetValue( true );
+	m_Option_mVU0 = &AddRadioButton( s_vu0, _("microVU Recompiler [new!]") );
+	m_Option_sVU0 = &AddRadioButton( s_vu0, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
 
 	m_StartNewRadioGroup = true;
-	AddRadioButton( s_vu1, _("Interpreter") );
-	AddRadioButton( s_vu1, _("microVU Recompiler [new!]") );
-	AddRadioButton( s_vu1, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
+	AddRadioButton( s_vu1, _("Interpreter") ).SetValue( true );
+	m_Option_mVU1 = &AddRadioButton( s_vu1, _("microVU Recompiler [new!]") );
+	m_Option_sVU1 = &AddRadioButton( s_vu1, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
 	
 	s_main.Add( &s_ee, SizerFlags::StdExpand() );
 	s_main.Add( &s_iop, SizerFlags::StdExpand() );
 	s_main.Add( &s_vu0, SizerFlags::StdExpand() );
 	s_main.Add( &s_vu1, SizerFlags::StdExpand() );
+
+	// [TODO] : Add advanced CPU settings -- FPU/VU rounding, clamping, etc.
+
+	SetSizer( &s_main );
 	
-	SetSizerAndFit( &s_main );
+	// ----------------------------------------------------------------------------
+	// Apply current configuration options...
+	
+	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
+
+	m_Option_RecEE->SetValue( recOps.EnableEE );
+	m_Option_RecIOP->SetValue( recOps.EnableIOP );
+	
+	if( recOps.UseMicroVU0 )
+		m_Option_mVU0->SetValue( recOps.EnableVU0 );
+	else
+		m_Option_sVU0->SetValue( recOps.EnableVU0 );
+
+	if( recOps.UseMicroVU1 )
+		m_Option_mVU1->SetValue( recOps.EnableVU1 );
+	else
+		m_Option_sVU1->SetValue( recOps.EnableVU1 );
 }
 
 void Panels::CpuPanel::Apply( AppConfig& conf )
 {
+	Pcsx2Config::RecompilerOptions& recOps( conf.EmuOptions.Cpu.Recompiler );
+	recOps.EnableEE		= m_Option_RecEE->GetValue();
+	recOps.EnableIOP	= m_Option_RecIOP->GetValue();
+	recOps.EnableVU0	= m_Option_mVU0->GetValue() || m_Option_sVU0->GetValue();
+	recOps.EnableVU1	= m_Option_mVU1->GetValue() || m_Option_sVU1->GetValue();
+
+	recOps.UseMicroVU0	= m_Option_mVU0->GetValue();
+	recOps.UseMicroVU1	= m_Option_mVU1->GetValue();
 }

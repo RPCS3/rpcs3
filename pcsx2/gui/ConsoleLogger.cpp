@@ -453,7 +453,7 @@ void ConsoleLogFrame::OnClear(wxMenuEvent& WXUNUSED(event))
     m_TextCtrl.Clear();
 }
 
-void ConsoleLogFrame::OnFontSize(wxMenuEvent& evt )
+void ConsoleLogFrame::OnFontSize( wxMenuEvent& evt )
 {
 	int ptsize = 8;
 	switch( evt.GetId() )

@@ -241,6 +241,9 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel()
 
 void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 {
+	// user never entered plugins panel?  Skip application since combo boxes are invalid/uninitialized.
+	if( m_FileList == NULL ) return;
+
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
 		int sel = m_ComponentBoxes.Get(i).GetSelection();

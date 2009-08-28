@@ -408,6 +408,7 @@ CDVD_API CDVDapi_Plugin =
 	// The rest are filled in by the plugin manager
 	NULL
 };
+
 CDVD_API* CDVD			= NULL;
 
 static const LegacyApi_ReqMethod s_MethMessReq_CDVD[] =

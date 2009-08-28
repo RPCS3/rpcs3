@@ -48,13 +48,14 @@ void Panels::DirPickerPanel::UpdateCheckStatus( bool someNoteworthyBoolean )
 	}
 }
 
-void Panels::DirPickerPanel::UseDefaultPath_Click( wxCommandEvent &event )
+void Panels::DirPickerPanel::UseDefaultPath_Click( wxCommandEvent &evt )
 {
+	evt.Skip();
 	wxASSERT( m_pickerCtrl != NULL && m_checkCtrl != NULL );
 	UpdateCheckStatus( m_checkCtrl->IsChecked() );
 }
 
-void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &event )
+void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 {
 	wxHelpers::Explore( m_pickerCtrl->GetPath() );
 }

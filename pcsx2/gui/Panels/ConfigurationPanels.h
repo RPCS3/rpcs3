@@ -209,6 +209,13 @@ namespace Panels
 	class CpuPanel : public BaseApplicableConfigPanel
 	{
 	protected:
+		wxRadioButton* m_Option_RecEE;
+		wxRadioButton* m_Option_RecIOP;
+		wxRadioButton* m_Option_mVU0;
+		wxRadioButton* m_Option_mVU1;
+		
+		wxRadioButton* m_Option_sVU0;
+		wxRadioButton* m_Option_sVU1;
 
 	public:
 		CpuPanel( wxWindow& parent, int idealWidth );

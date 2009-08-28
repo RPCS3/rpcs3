@@ -387,7 +387,7 @@ void CALLBACK ISOnewDiskCB(void(CALLBACK*)())
 {
 }
 
-wxString ISOgetUniqueFilename(__unused void (*callback)())
+wxString ISOgetUniqueFilename()
 {
 	return Path::GetFilenameWithoutExt(wxString::FromAscii(isoFileName));
 }
