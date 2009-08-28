@@ -505,7 +505,7 @@ s32 CALLBACK NODISCgetDualInfo(s32* dualType, u32* _layer1start)
 	return -1;
 }
 
-const char* NODISCgetUniqueFilename()
+string NODISCgetUniqueFilename()
 {
 	DevAssert( false, "NODISC is an invalid CDVD object for block dumping.. >_<" );
 	return "epicfail";
