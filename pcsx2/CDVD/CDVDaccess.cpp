@@ -532,5 +532,5 @@ CDVD_API CDVDapi_NoDisc =
 	NODISCgetBuffer2,
 	NODISCgetDualInfo,
 
-	NULL
+	NODISCgetUniqueFilename
 };

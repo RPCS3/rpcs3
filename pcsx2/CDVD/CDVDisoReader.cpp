@@ -415,5 +415,5 @@ CDVD_API CDVDapi_Iso =
 	ISOgetBuffer2,
 	ISOgetDualInfo,
 
-	NULL
+	ISOgetUniqueFilename
 };
