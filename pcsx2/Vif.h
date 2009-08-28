@@ -24,6 +24,30 @@ struct vifCycle {
 	u8 pad[2];
 };
 
+//
+// Bitfield Structure
+//
+union tVIF_STAT {
+	struct {
+		u32 VPS : 2;
+		u32 VEW : 1;
+		u32 VGW : 1;
+		u32 reserved : 2;
+		u32 MRK : 1;
+		u32 DBF : 1;
+		u32 VSS : 1;
+		u32 VFS : 1;
+		u32 VIS : 1;
+		u32 INT : 1;
+		u32 ER0 : 1;
+		u32 ER1 : 1;
+		u32 reserved2 : 9;
+		u32 FDR : 1;
+		u32 FQC : 5;
+	};
+	u32 _u32;
+};
+
 // r0-r3 and c0-c3 would be more managable as arrays.
 struct VIFregisters {
 	u32 stat;
@@ -77,6 +101,26 @@ struct VIFregisters {
 	u32 offset;    // internal UNPACK offset
 	u32 addr;
 };
+
+enum vif_errors
+{
+	VIF_ERR_MII = 0x1,
+	VIF_ERR_ME0 = 0x2,
+	VIF_ERR_ME1 = 0x4
+};
+
+// Masks or unmasks errors
+namespace VIF_ERR
+{
+	// If true, interrupts by the i bit of Vifcode are masked.
+	static __forceinline bool MII(VIFregisters *tag) { return !!(tag->err & VIF_ERR_MII); }
+	
+	// If true, DMAtag Mismatch errors are masked. (We never check for this?)
+	static __forceinline bool ME0(VIFregisters *tag) { return !!(tag->err & VIF_ERR_ME0); }
+	
+	// If true, VifCode errors are masked.
+	static __forceinline bool ME1(VIFregisters *tag) { return !!(tag->err & VIF_ERR_ME1); }
+}
 
 extern "C"
 {

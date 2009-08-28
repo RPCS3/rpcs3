@@ -334,7 +334,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	u8 key_4, key_14;
 
 	// get main elf name
-	GetPS2ElfName(fname);
+	bool IsPs2 = (GetPS2ElfName(fname) == 2);
 	const wxCharBuffer crap( fname.ToAscii() );
 	const char* str = crap.data();
 	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
@@ -397,11 +397,12 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 
 	// Now's a good time to reload the ELF info...
-	if( ElfCRC == 0 )
+	if( IsPs2 && (ElfCRC == 0) )
 	{
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
-		GSsetGameCRC( ElfCRC, 0 );
+		if( GSsetGameCRC != NULL )
+			GSsetGameCRC( ElfCRC, 0 );
 	}
 }
 
@@ -527,10 +528,10 @@ void cdvdDetectDisk()
 	cdvd.Type = DoCDVDdetectDiskType();
 
 	wxString str;
-	GetPS2ElfName(str);
+	bool IsPs2 = (GetPS2ElfName(str) == 2);
 
 	// Now's a good time to reload the ELF info...
-	if( ElfCRC == 0 )
+	if( IsPs2 && (ElfCRC == 0) )
 	{
 		ElfCRC = loadElfCRC( str.ToAscii().data() );
 		ElfApplyPatches();
@@ -627,24 +628,7 @@ int cdvdReadSector() {
 		mdest[11] = 0;
 
 		// normal 2048 bytes of sector data
-		if (cdr.pTransfer == NULL)
-		{
-			// Unlike CDVDiso, the internal IsoReadTrack function will pass an error if lsn is more
-			// then the number of blocks in the iso. If this happens, cdr.pTransfer will be NULL.
-			//
-			// Passing null to memcpy is a bad thing, and will result in, for example, the start of
-			// Final Fantasy X-2 crashing. So we won't.
-
-			DevCon::WriteLn("Bad Transfer!");
-			for (int i = 12; i <= 2060; i++)
-			{
-				mdest[i] = 0;
-			}
-		}
-		else
-		{
-			memcpy_fast( &mdest[12], cdr.pTransfer, 2048);
-		}
+		memcpy_fast( &mdest[12], cdr.Transfer, 2048);
 
 		// 4 bytes of edc (not calculated at present)
 		mdest[2060] = 0;
@@ -654,7 +638,7 @@ int cdvdReadSector() {
 	}
 	else
 	{
-		memcpy_fast( mdest, cdr.pTransfer, cdvd.BlockSize);
+		memcpy_fast( mdest, cdr.Transfer, cdvd.BlockSize);
 	}
 
 	// decrypt sector's bytes
@@ -741,15 +725,8 @@ __forceinline void cdvdReadInterrupt()
 		if (cdvd.RErr == 0)
 		{
 			cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);
-			cdr.pTransfer = cdr.Transfer;
 		}
-		else
-		{
-			DevCon::WriteLn("Error reading track.");
-			cdr.pTransfer = NULL;
-		}
-
-		if (cdr.RErr == -1)
+		else if (cdr.RErr == -1)
 		{
 			cdvd.RetryCntP++;
 			Console::Error("CDVD READ ERROR, sector=%d", params cdvd.Sector);

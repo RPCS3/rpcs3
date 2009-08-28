@@ -322,7 +322,7 @@ static const LegacyApi_OptMethod s_MethMessOpt_PAD[] =
 void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
 
 extern int lastReadSize;
-s32 CALLBACK CDVD_getBuffer2(u8* buffer)
+static s32 CALLBACK CDVD_getBuffer2(u8* buffer)
 {
 	int ret;
 
@@ -338,8 +338,7 @@ s32 CALLBACK CDVD_getBuffer2(u8* buffer)
 	return ret;
 }
 
-
-s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
+static s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
 {
 	if(CDVD->readTrack(lsn,mode) < 0)
 		return -1;
@@ -363,7 +362,7 @@ s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
 	return CDVD->getBuffer2(buffer);
 }
 
-s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
+static s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
 {
 	u8 toc[2064];
 
@@ -964,28 +963,30 @@ bool OpenGS()
 	return true;
 }
 
-bool OpenCDVD(const char* pTitleFilename)
+bool OpenCDVD( const char* pTitleFilename )
 {
+	// if this assertion fails it means you didn't call CDVDsys_ChangeSource.  You should.
+	// You really should.  Really.
+	jASSUME( CDVD != NULL );
+	
 	// Don't repetitively open the CDVD plugin if directly loading an elf file and open failed once already.
-	if (!OpenStatus.CDVD && !only_loading_elf)
+	if (!OpenStatus.CDVD)
 	{
-		//First, we need the data.
-		CDVD->newDiskCB(cdvdNewDiskCB);
+		CDVD->newDiskCB( cdvdNewDiskCB );
+
+		if( (pTitleFilename == NULL) && !cdvd_FileNameParam.IsEmpty() )
+			pTitleFilename = cdvd_FileNameParam.c_str();
 
 		if (DoCDVDopen(pTitleFilename) != 0)
-		{
-			if (g_Startup.BootMode != BootMode_Elf)
-			{
-				Msgbox::Alert("Error Opening CDVD Plugin");
-				ClosePlugins(true);
-				return false;
-			}
-			else
-			{
-				Console::Notice("Running ELF File Without CDVD Plugin Support!");
-				only_loading_elf = true;
-			}
+		{ 
+			Msgbox::Alert("Error Opening CDVD Plugin");
+			ClosePlugins(true);
+			return false;
 		}
+		
+		if( cdvd_FileNameParam.IsEmpty() && (pTitleFilename != NULL) )
+			cdvd_FileNameParam = pTitleFilename;
+
 		OpenStatus.CDVD = true;
 	}
 	return true;
@@ -1088,22 +1089,19 @@ bool OpenFW()
 	return true;
 }
 
-int OpenPlugins(const char* pTitleFilename)
+// Note: If the CDVD has not already been manually opened, then it will be opened here
+// using NULL as the source file (defaults to whatever's been previously configured into
+// the CDVD plugin, which is typically a drive letter)
+int OpenPlugins()
 {
-	if (!plugins_initialized)
-	{
-		// prevent a crash
-		if(CDVD.init == NULL)
-			CDVD = ISO; // CDVD_plugin;
+	if( InitPlugins() == -1 ) return -1;
 
-		if( InitPlugins() == -1 ) return -1;
-	}
-
-	if ((!OpenCDVD(pTitleFilename)) || (!OpenGS()) || (!OpenPAD1()) || (!OpenPAD2()) ||
-	    (!OpenSPU2()) || (!OpenDEV9()) || (!OpenUSB()) || (!OpenFW()))
+	if( !OpenGS() || !OpenPAD1() || !OpenPAD2() || !OpenCDVD(NULL) ||
+		!OpenSPU2() || !OpenDEV9() || !OpenUSB() || !OpenFW()
+	)
 		return -1;
 
-	if (!only_loading_elf) cdvdDetectDisk();
+	cdvdDetectDisk();
 	return 0;
 }
 
@@ -1145,10 +1143,12 @@ void ClosePlugins( bool closegs )
 		}
 	}
 
+	CloseCDVD();
+
 	if( OpenStatus.CDVD )
 	{
 		DoCDVDclose();
-		OpenStatus.CDVD=false;
+		OpenStatus.CDVD = false;
 	}
 
 	CLOSE_PLUGIN( DEV9 );
@@ -1175,7 +1175,5 @@ void PluginsResetGS()
 	int ret = GSinit();
 	if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret);  }
 }
-
-#else
 
 #endif

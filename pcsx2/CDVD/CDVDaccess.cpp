@@ -25,6 +25,7 @@
 #endif
 
 #include <ctype.h>
+#include <time.h>
 #include <wx/datetime.h>
 
 #include "IopCommon.h"
@@ -38,18 +39,18 @@
 // performed quite liberally by many games (perhaps intended to keep the PS2 DVD
 // from spinning down due to idle activity?).
 // Cache is set to -1 for init and when the disc is removed/changed, which invokes
-// a new DiskTypeCheck.  Al subsequent checks use the non-negative value here.
+// a new DiskTypeCheck.  All subsequent checks use the non-negative value here.
 //
-static int diskTypeCached=-1;
+static int diskTypeCached = -1;
 
 // used to bridge the gap between the old getBuffer api and the new getBuffer2 api.
 int lastReadSize;
 
 // Records last read block length for block dumping
 static int plsn = 0;
-static isoFile *blockDumpFile;
+static isoFile *blockDumpFile = NULL;
 
-// Assertion check for CDVD != NULL (in devel and debgu builds), because its handier than
+// Assertion check for CDVD != NULL (in devel and debug builds), because its handier than
 // relying on DEP exceptions -- and a little more reliable too.
 static void CheckNullCDVD()
 {
@@ -103,8 +104,6 @@ int CheckDiskTypeFS(int baseType)
 	return CDVD_TYPE_ILLEGAL; // << Only for discs which aren't ps2 at all.
 }
 
-static char bleh[2352];
-
 static int FindDiskType(int mType)
 {
 	int dataTracks = 0;
@@ -120,6 +119,7 @@ static int FindDiskType(int mType)
 	}
 	else if (mType < 0)
 	{
+		static u8 bleh[2352];
 		cdvdTD td;
 
 		CDVD->getTD(0,&td);
@@ -127,14 +127,14 @@ static int FindDiskType(int mType)
 		{
 			iCDType = CDVD_TYPE_DETCTDVDS;
 		}
-		else if (DoCDVDreadSector((u8*)bleh,16,CDVD_MODE_2048) == 0)
+		else
 		{
-			struct cdVolDesc* volDesc=(struct cdVolDesc *)bleh;
-			if (volDesc)
-			{                                 
-				if(volDesc->rootToc.tocSize==2048) 
+			if (DoCDVDreadSector(bleh, 16, CDVD_MODE_2048) == 0)
+			{
+				const cdVolDesc& volDesc = (cdVolDesc&)bleh;
+				if(volDesc.rootToc.tocSize == 2048) 
 					iCDType = CDVD_TYPE_DETCTCD;
-				else                             
+				else
 					iCDType = CDVD_TYPE_DETCTDVDS;
 			}
 		}
@@ -264,8 +264,8 @@ static void DetectDiskType()
 //
 void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
-	if( CDVD != NULL )
-		DoCDVDclose();
+	if( g_plugins != NULL )
+		g_plugins->Close( PluginId_CDVD );
 		
 	switch( type )
 	{
@@ -349,6 +349,8 @@ void DoCDVDclose()
 	if(blockDumpFile) isoClose(blockDumpFile);
 	if( CDVD->close != NULL )
 		CDVD->close();
+
+	DoCDVDresetDiskTypeCache();
 }
 
 s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)

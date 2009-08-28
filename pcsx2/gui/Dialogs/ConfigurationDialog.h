@@ -46,7 +46,7 @@ namespace Dialogs
 			evt.Skip();
 			if( (evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY) )
 			{
-				GetWindowChild( wxID_APPLY )->Enable();
+				FindWindow( wxID_APPLY )->Enable();
 			}
 		}
 	};

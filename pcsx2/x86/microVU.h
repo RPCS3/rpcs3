@@ -96,6 +96,15 @@ public:
 		}
 		return NULL;
 	}
+	void printInfo() {
+		microBlockLink* linkI = &blockList;
+		for (int i = 0; i <= listI; i++) {
+			DevCon::Status("[Block #%d][q=%02d][p=%02d][xgkick=%d][vi15=%08x][viBackup=%02d][flags=%02x][exactMatch=%x]",
+			params i, linkI->block->pState.q, linkI->block->pState.p, linkI->block->pState.xgkick, linkI->block->pState.vi15,
+			linkI->block->pState.viBackUp, linkI->block->pState.flags, linkI->block->pState.needExactMatch);
+			linkI = linkI->next;
+		}
+	}
 };
 
 #define mMaxRanges 128
@@ -213,3 +222,4 @@ typedef void (__fastcall *mVUrecCall)(u32, u32);
 #include "microVU_Branch.inl"
 #include "microVU_Compile.inl"
 #include "microVU_Execute.inl"
+#include "microVU_Macro.inl"

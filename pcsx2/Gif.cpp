@@ -21,6 +21,7 @@
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
+#include "Gif.h"
 #include "iR5900.h"
 #include "Counters.h"
 
@@ -28,15 +29,6 @@
 #include "Tags.h"
 
 using std::min;
-
-#define gifsplit 0x10000
-enum gifstate_t
-{
-	GIF_STATE_READY = 0,
-	GIF_STATE_STALL = 1,
-	GIF_STATE_DONE = 2,
-	GIF_STATE_EMPTY = 0x10
-};
 
 // A three-way toggle used to determine if the GIF is stalling (transferring) or done (finished).
 // Should be a gifstate_t rather then int, but I don't feel like possibly interfering with savestates right now.
@@ -97,9 +89,7 @@ __forceinline void gsInterrupt()
 	CHCR::clearSTR(gif);
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	
-	psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
-	psHu32(GIF_STAT) &= ~GIF_STAT_P3Q;
-	psHu32(GIF_STAT) &= ~0x1F000000; // QFC=0
+	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); 
 	
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
@@ -227,18 +217,17 @@ void GIFdma()
 	psHu32(GIF_STAT) |= 0x10000000; // FQC=31, hack ;) [ used to be 0xE00; // OPH=1 | APATH=3]
 	
 	//Path2 gets priority in intermittent mode
-	if (((psHu32(GIF_STAT) & 0x100) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & 0x4) && (Path3progress == IMAGE_MODE)) 
+	if (((psHu32(GIF_STAT) & GIF_STAT_P1Q) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & GIF_MODE_IMT) && (Path3progress == IMAGE_MODE)) 
 	{
 		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
 		CPU_INT(2, 16);
 		return;
 	}
 
-	if (vif1Regs->mskpath3 || (psHu32(GIF_MODE) & 0x1)) 
+	if (vif1Regs->mskpath3 || (psHu32(GIF_MODE) & GIF_MODE_M3R)) 
 	{
 		if (gif->qwc == 0) 
 		{
-			//if ((gif->chcr & 0x10c) == 0x104) 
 			if ((CHCR::MOD(gif) == CHAIN_MODE) && CHCR::STR(gif))
 			{
 				if (!ReadTag(ptag, id)) return;
@@ -290,7 +279,7 @@ void GIFdma()
 				Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
 				gif->tadr -= 16;
-				hwDmacIrq(DMAC_13);
+				hwDmacIrq(DMAC_STALL_SIS);
 				CPU_INT(2, gscycles);
 				gscycles = 0;
 				return;
@@ -455,7 +444,7 @@ void mfifoGIFtransfer(int qwc)
 		if (gif->tadr == spr0->madr) 
 		{
 			//if( gifqwc > 1 ) DevCon::WriteLn("gif mfifo tadr==madr but qwc = %d", params gifqwc);
-			hwDmacIrq(DMAC_14);
+			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			gifstate |= GIF_STATE_EMPTY;			
 			return;
 		}
@@ -547,7 +536,7 @@ void gifMFIFOInterrupt()
 		return; 
 	}
 
-	if (((psHu32(GIF_STAT) & 0x100) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & 0x4) && Path3progress == IMAGE_MODE) //Path2 gets priority in intermittent mode
+	if (((psHu32(GIF_STAT) & GIF_STAT_P1Q) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & GIF_MODE_IMT) && Path3progress == IMAGE_MODE) //Path2 gets priority in intermittent mode
 	{
 		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
 		CPU_INT(11,mfifocycles);
@@ -560,8 +549,8 @@ void gifMFIFOInterrupt()
 		{
 			//Console::WriteLn("Empty");
 			gifstate |= GIF_STATE_EMPTY;
-			psHu32(GIF_STAT)&= ~0xE00; // OPH=0 | APATH=0
-			hwDmacIrq(DMAC_14);
+			psHu32(GIF_STAT) &= ~GIF_STAT_IMT; // OPH=0 | APATH=0
+			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			return;
 		}
 		mfifoGIFtransfer(0);
@@ -581,9 +570,7 @@ void gifMFIFOInterrupt()
 	gspath3done = 0;
 	gscycles = 0;
 	
-	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
-	psHu32(GIF_STAT) &= ~GIF_STAT_P3Q;
-	psHu32(GIF_STAT)&= ~0x1F000000; // QFC=0
+	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
 	
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	CHCR::clearSTR(gif);

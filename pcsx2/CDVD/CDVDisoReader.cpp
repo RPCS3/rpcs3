@@ -29,24 +29,25 @@
 
 #include "CDVDisoReader.h"
 
-char isoFileName[g_MaxPath];
-u8 *pbuffer;
-u8 cdbuffer[2352] = {0};
-isoFile *iso;
+static char isoFileName[g_MaxPath];
+static u8 *pbuffer;
+static u8 cdbuffer[2352] = {0};
+static isoFile *iso = NULL;
 
 static int psize, cdtype;
 
 void CALLBACK ISOclose()
 {
 	isoClose(iso);
+	iso = NULL;
 }
 
 s32 CALLBACK ISOopen(const char* pTitle)
 {
+	ISOclose();		// just in case
+
 	if ((pTitle != NULL) && (strlen(pTitle) > 0))
 		strcpy(isoFileName, pTitle);
-
-	ISOclose();		// just in case
 
 	iso = isoOpen(isoFileName);
 	if (iso == NULL)

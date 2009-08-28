@@ -201,7 +201,6 @@ void psxReset();
 void psxShutdown();
 void psxException(u32 code, u32 step);
 extern void psxBranchTest();
-void psxExecuteBios();
 void psxMemReset();
 
 // Subsets

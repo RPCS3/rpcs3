@@ -78,7 +78,7 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );
 	
-	GetWindowChild( wxID_APPLY )->Disable();
+	FindWindow( wxID_APPLY )->Disable();
 
 	SetSizerAndFit( &mainSizer );
 	CenterOnScreen();
@@ -130,7 +130,7 @@ void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 
 void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
-	GetWindowChild( wxID_APPLY )->Disable();
+	FindWindow( wxID_APPLY )->Disable();
 	g_ApplyState.ApplyAll();
 }
 

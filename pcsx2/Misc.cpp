@@ -109,7 +109,7 @@ int GetPS2ElfName( wxString& name )
 
 	// check if the file exists
 	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
-		Console::Error("Boot Error > SYSTEM.CNF not found");
+		Console::Status("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
 		return 0;//could not find; not a PS/PS2 cdvd
 	}
 
@@ -123,7 +123,7 @@ int GetPS2ElfName( wxString& name )
 	if (pos==NULL){
 		pos=strstr(buffer, "BOOT");
 		if (pos==NULL) {
-			Console::Error("Boot failed: This is not a Playstation or PS2 game!");
+			Console::Error("PCSX2 Boot Error: This is not a Playstation or PS2 game!");
 			return 0;
 		}
 		return 1;

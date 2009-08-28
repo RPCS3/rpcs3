@@ -84,7 +84,7 @@ void Pcsx2App::ReadUserModeSettings()
 	{
 		// first time startup, so give the user the choice of user mode:
 		FirstTimeWizard wiz( NULL );
-		if( !wiz.RunWizard( wiz.GetFirstPage() ) )
+		if( !wiz.RunWizard( wiz.GetUsermodePage() ) )
 			throw Exception::StartupAborted( L"Startup aborted: User canceled FirstTime Wizard." );
 
 		// Save user's new settings
@@ -100,6 +100,21 @@ void Pcsx2App::ReadUserModeSettings()
 
 		IniLoader loader( *conf_usermode );
 		g_Conf->LoadSaveUserMode( loader, groupname );
+		
+		if( !wxFile::Exists( g_Conf->FullPathToConfig() ) )
+		{
+			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
+			// (we skip the first page since it's a usermode.ini thing)
+
+			FirstTimeWizard wiz( NULL );
+			if( !wiz.RunWizard( wiz.GetPostUsermodePage() ) )
+				throw Exception::StartupAborted( L"Startup aborted: User canceled Configuration Wizard." );
+
+			// Save user's new settings
+			IniSaver saver( *conf_usermode );
+			g_Conf->LoadSaveUserMode( saver, groupname );
+			g_Conf->Save();
+		}
 	}
 }
 

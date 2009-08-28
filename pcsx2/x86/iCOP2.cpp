@@ -31,6 +31,8 @@
 
 extern void _vu0WaitMicro();
 
+#ifndef CHECK_MACROVU0
+
 #define _Ft_ _Rt_
 #define _Fs_ _Rd_
 #define _Fd_ _Sa_
@@ -39,60 +41,36 @@ extern void _vu0WaitMicro();
 #define _Ftf_ ((cpuRegs.code >> 23) & 0x03)
 #define _Cc_ (cpuRegs.code & 0x03)
 
-void recCop2BranchCall( void (*func)() )
-{
-	SetFPUstate();
-	recBranchCall( func );
-	_freeX86regs();
-}
-
-#define REC_COP2_FUNC( f ) \
-	void rec##f(s32 info) \
-	{ \
-		Console::Notice("Warning > cop2 "#f" called"); \
-		recCop2BranchCall( f ); \
+#define REC_COP2_VU0(f)									\
+	void recV##f( s32 info ) {							\
+		recVUMI_##f( &VU0, info );						\
 	}
 
-#define INTERPRETATE_COP2_FUNC(f) \
-void recV##f(s32 info) { \
-	MOV32ItoM((uptr)&cpuRegs.code, cpuRegs.code); \
-	MOV32ItoM((uptr)&cpuRegs.pc, pc); \
-	iFlushCall(FLUSH_EVERYTHING); \
-	CALLFunc((uptr)V##f); \
-	_freeX86regs(); \
-}
-
-#define REC_COP2_VU0(f) \
-void recV##f( s32 info ) { \
-	recVUMI_##f( &VU0, info ); \
-}
-
-#define REC_COP2_VU0_Q(f) \
-void recV##f( s32 info ) { \
-	recVUMI_##f( &VU0, info ); \
-}
-
-void rec_C2UNK( s32 info )
-{
-	Console::Error("Cop2 bad opcode: %x", params cpuRegs.code);
-}
-
-void _vuRegs_C2UNK(VURegs * VU, _VURegsNum *VUregsn)
-{
-	Console::Error("Cop2 bad _vuRegs code:%x", params cpuRegs.code);
+#define INTERPRETATE_COP2_FUNC(f)						\
+void recV##f(s32 info) {								\
+	MOV32ItoM((uptr)&cpuRegs.code, cpuRegs.code);		\
+	MOV32ItoM((uptr)&cpuRegs.pc, pc);					\
+	iFlushCall(FLUSH_EVERYTHING);						\
+	CALLFunc((uptr)V##f);								\
+	_freeX86regs();										\
 }
 
 void recCOP2(s32 info);
 void recCOP2_SPECIAL(s32 info);
 void recCOP2_BC2(s32 info);
 void recCOP2_SPECIAL2(s32 info);
-    
+void rec_C2UNK( s32 info ) {
+	Console::Error("Cop2 bad opcode: %x", params cpuRegs.code);
+}
+void _vuRegs_C2UNK(VURegs * VU, _VURegsNum *VUregsn) {
+	Console::Error("Cop2 bad _vuRegs code:%x", params cpuRegs.code);
+}
+
 static void recCFC2(s32 info)
 {
 	int mmreg;
 
-	if (cpuRegs.code & 1) 
-	{
+	if (cpuRegs.code & 1) {
 		iFlushCall(FLUSH_NOCONST);
 		CALLFunc((uptr)_vu0WaitMicro);
 	}
@@ -102,48 +80,30 @@ static void recCFC2(s32 info)
 	_deleteGPRtoXMMreg(_Rt_, 2);
 	mmreg = _checkMMXreg(MMX_GPR+_Rt_, MODE_WRITE);
 	
-	if( mmreg >= 0 ) 
-	{
-		if( _Fs_ >= 16 ) 
-			{
+	if (mmreg >= 0) {
+		if( _Fs_ >= 16 ) {
 			MOVDMtoMMX(mmreg, (uptr)&VU0.VI[ _Fs_ ].UL);
-			if( EEINST_ISLIVE1(_Rt_) ) 
-			{
-				_signExtendGPRtoMMX(mmreg, _Rt_, 0);
-			}
-			else
-			{
-				EEINST_RESETHASLIVE1(_Rt_);
-			}
+			if (EEINST_ISLIVE1(_Rt_)) { _signExtendGPRtoMMX(mmreg, _Rt_, 0); }
+			else					  { EEINST_RESETHASLIVE1(_Rt_); }
 		}
-		else 
-		{
-			MOVDMtoMMX(mmreg, (uptr)&VU0.VI[ _Fs_ ].UL);
-		}
+		else MOVDMtoMMX(mmreg, (uptr)&VU0.VI[ _Fs_ ].UL);
 		SetMMXstate();
 	}
-	else 
-	{
+	else {
 		MOV32MtoR(EAX, (uptr)&VU0.VI[ _Fs_ ].UL);
 		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
 
-		if(EEINST_ISLIVE1(_Rt_)) 
-		{
-			if( _Fs_ < 16 ) 
-			{
+		if(EEINST_ISLIVE1(_Rt_)) {
+			if( _Fs_ < 16 ) {
 				// no sign extending
 				MOV32ItoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1],0);
 			}
-			else 
-			{
+			else {
 				CDQ();
 				MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
 			}
 		}
-		else 
-		{
-			EEINST_RESETHASLIVE1(_Rt_);
-		}
+		else { EEINST_RESETHASLIVE1(_Rt_); }
 	}
 	
 	_eeOnWriteReg(_Rt_, 1);
@@ -253,8 +213,7 @@ static void recQMFC2(s32 info)
 {
 	int t0reg, fsreg;
 
-	if (cpuRegs.code & 1) 
-	{
+	if (cpuRegs.code & 1) {
 		iFlushCall(FLUSH_NOCONST);
 		CALLFunc((uptr)_vu0WaitMicro);
 	}
@@ -269,8 +228,7 @@ static void recQMFC2(s32 info)
 	fsreg = _checkXMMreg(XMMTYPE_VFREG, _Fs_, MODE_READ);
 
 	if( fsreg >= 0 ) {
-		if( xmmregs[fsreg].mode & MODE_WRITE ) 
-		{
+		if ( xmmregs[fsreg].mode & MODE_WRITE ) {
 			_xmmregs temp;
 			
 			t0reg = _allocGPRtoXMMreg(-1, _Rt_, MODE_WRITE);
@@ -281,8 +239,7 @@ static void recQMFC2(s32 info)
 			xmmregs[t0reg] = xmmregs[fsreg];
 			xmmregs[fsreg] = temp;
 		}
-		else 
-		{
+		else {
 			// swap regs
 			t0reg = _allocGPRtoXMMreg(-1, _Rt_, MODE_WRITE);
 
@@ -293,10 +250,8 @@ static void recQMFC2(s32 info)
 	else {
 		t0reg = _allocGPRtoXMMreg(-1, _Rt_, MODE_WRITE);
 		
-		if( t0reg >= 0 ) 
-			SSE_MOVAPS_M128_to_XMM( t0reg, (uptr)&VU0.VF[_Fs_].UD[0]);
-		else 
-			_recMove128MtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0], (uptr)&VU0.VF[_Fs_].UL[0]);
+		if (t0reg >= 0) SSE_MOVAPS_M128_to_XMM( t0reg, (uptr)&VU0.VF[_Fs_].UD[0]);
+		else			_recMove128MtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0], (uptr)&VU0.VF[_Fs_].UL[0]);
 	}
 
 	_clearNeededXMMregs();
@@ -378,10 +333,6 @@ static void recQMTC2(s32 info)
 //////////////////////////////////////////////////////////////////////////
 //    BC2: Instructions 
 //////////////////////////////////////////////////////////////////////////
-//REC_COP2_FUNC(BC2F);
-//REC_COP2_FUNC(BC2T);
-//REC_COP2_FUNC(BC2FL);
-//REC_COP2_FUNC(BC2TL);
 
 using namespace R5900::Dynarec;
 
@@ -393,8 +344,7 @@ static void _setupBranchTest()
 	// ((VU0.VI[REG_VPU_STAT].US[0] >> 8) & 1)
 	// BC2F checks if the statement is false, BC2T checks if the statement is true.
 
-	MOV32MtoR( EAX, (uptr)&VU0.VI[REG_VPU_STAT].UL );
-	TEST32ItoR( EAX, 0x100 );
+	TEST32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, 0x100);
 }
 
 void recBC2F( s32 info )
@@ -421,10 +371,10 @@ void recBC2TL( s32 info )
 	recDoBranchImm_Likely(JZ32(0));
 }
 
-
 //////////////////////////////////////////////////////////////////////////
 //    Special1 instructions 
 //////////////////////////////////////////////////////////////////////////
+
 //TODO: redirect all the opcodes to the ivu0micro same functions
 REC_COP2_VU0(IADD);
 REC_COP2_VU0(IADDI);
@@ -551,9 +501,9 @@ REC_COP2_VU0(MULAz);
 REC_COP2_VU0(MULAw);
 REC_COP2_VU0(OPMULA);
 REC_COP2_VU0(MOVE);
-REC_COP2_VU0_Q(DIV);
-REC_COP2_VU0_Q(SQRT);
-REC_COP2_VU0_Q(RSQRT);
+REC_COP2_VU0(DIV);
+REC_COP2_VU0(SQRT);
+REC_COP2_VU0(RSQRT);
 REC_COP2_VU0(MR32);
 REC_COP2_VU0(ABS);
 
@@ -718,3 +668,4 @@ void recCOP2_SPECIAL2(s32 info)
 	recCOP2SPECIAL2t[opc](info);
 }
 
+#endif // CHECK_MACROVU0

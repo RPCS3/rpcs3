@@ -52,7 +52,13 @@ public:
 	FirstTimeWizard( wxWindow* parent );
 	virtual ~FirstTimeWizard();
 
-	wxWizardPage *GetFirstPage() const { return &m_page_usermode; }
+	wxWizardPage *GetUsermodePage() const { return &m_page_usermode; }
+	wxWizardPage *GetPostUsermodePage() const { return &m_page_plugins; }
+
+	void ForceEnumPlugins()
+	{
+		m_panel_PluginSel.OnShown();
+	}
 
 protected:
 	virtual void OnPageChanging( wxWizardEvent& evt );

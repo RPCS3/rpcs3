@@ -185,8 +185,7 @@ extern int non_linear_quantizer_scale[];
 extern decoder_t g_decoder;
 
 void __fastcall ipu_csc(macroblock_8 *mb8, macroblock_rgb32 *rgb32, int sgn);
-void __fastcall ipu_dither(macroblock_8 *mb8, macroblock_rgb16 *rgb16, int dte);
-void __fastcall ipu_dither2(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb16, int dte);
+void __fastcall ipu_dither(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb16, int dte);
 void __fastcall ipu_vq(macroblock_rgb16 *rgb16, u8* indx4);
 void __fastcall ipu_copy(const macroblock_8 *mb8, macroblock_16 *mb16);
 

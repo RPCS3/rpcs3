@@ -29,6 +29,7 @@
 #include "COP0.h"
 
 #include "GS.h"
+#include "Gif.h"
 #include "IPU/IPU.h"
 #include "Vif.h"
 #include "VifDma.h"

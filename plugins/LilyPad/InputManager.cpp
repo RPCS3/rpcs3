@@ -379,12 +379,8 @@ Device *InputDeviceManager::GetActiveDevice(void *info, unsigned int *uid, int *
 			for (j=0; j<devices[i]->numVirtualControls; j++) {
 				if (devices[i]->virtualControlState[j] == devices[i]->oldVirtualControlState[j]) continue;
 				if (devices[i]->virtualControls[j].uid & UID_POV) continue;
-				// Fix for two things:
-				// Releasing button used to click on bind button, and
-				// DirectInput not updating control state.
-				//Note:  Handling latter not great for pressure sensitive button handling, but should still work...
-				// with some effort.
-				if (!(devices[i]->virtualControls[j].uid & (POV|RELAXIS))) {
+				// Fix for releasing button used to click on bind button
+				if (!((devices[i]->virtualControls[j].uid>>16) & (POV|RELAXIS|ABSAXIS))) {
 					if (abs(devices[i]->oldVirtualControlState[j]) > abs(devices[i]->virtualControlState[j])) {
 						devices[i]->oldVirtualControlState[j] = 0;
 					}
@@ -398,10 +394,15 @@ Device *InputDeviceManager::GetActiveDevice(void *info, unsigned int *uid, int *
 					if (devices[i]->virtualControls[j].uid & UID_AXIS) {
 						if ((((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;
 						// Very picky when binding entire axes.  Prefer binding half-axes.
-						if (!((devices[i]->oldVirtualControlState[j] < FULLY_DOWN/16 && devices[i]->virtualControlState[j] > FULLY_DOWN/8) ||
-							  (devices[i]->oldVirtualControlState[j] > 15*FULLY_DOWN/16 && devices[i]->virtualControlState[j] < 7*FULLY_DOWN/8)))
+						if (!((devices[i]->oldVirtualControlState[j] < FULLY_DOWN/32 && devices[i]->virtualControlState[j] > FULLY_DOWN/8) ||
+							  (devices[i]->oldVirtualControlState[j] > 31*FULLY_DOWN/32 && devices[i]->virtualControlState[j] < 7*FULLY_DOWN/8))) {
 									continue;
+						}
 						devices[i]->virtualControls[j].uid = devices[i]->virtualControls[j].uid;
+					}
+					else if ((((devices[i]->virtualControls[j].uid>>16)&0xFF) == ABSAXIS)) {
+						if (devices[i]->oldVirtualControlState[j] > 15*FULLY_DOWN/16)
+							continue;
 					}
 					bestDiff = diff;
 					*uid = devices[i]->virtualControls[j].uid;

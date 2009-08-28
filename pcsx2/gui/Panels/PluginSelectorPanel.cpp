@@ -278,6 +278,12 @@ void Panels::PluginSelectorPanel::CancelRefresh()
 void Panels::PluginSelectorPanel::DoRefresh()
 {
 	// Disable all controls until enumeration is complete.
+	// Show status bar for plugin enumeration.
+	
+	// fixme: the status bar doesn't always fit itself to the window correctly because
+	// sometimes this gets called before the parent window has been fully created.  I'm
+	// not quite sure how to fix (a delayed event/message might work tho implementing it
+	// may not be trivial) -- air
 
 	m_ComponentBoxes.Hide();
 	m_StatusPanel.SetSize( m_ComponentBoxes.GetSize().GetWidth() - 8, wxDefaultCoord );
@@ -316,7 +322,6 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 	return validated;
 }
 
-// ------------------------------------------------------------------------
 void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 {
 	PluginsEnum_t pid = (PluginsEnum_t)(int)((wxEvtHandler*)evt.GetEventObject())->GetClientData();

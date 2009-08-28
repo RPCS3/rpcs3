@@ -169,7 +169,7 @@ static void _vu0Exec(VURegs* VU)
 		if( VU->ebit-- == 1 ) {
 			_vuFlushAll(VU);
 			VU0.VI[REG_VPU_STAT].UL&= ~0x1; /* E flag */ 
-			vif0Regs->stat&= ~0x4;
+			vif0Regs->stat&= ~VIF0_STAT_VEW;
 		}
 	}
 }

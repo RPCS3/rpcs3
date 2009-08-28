@@ -59,6 +59,7 @@ extern SessionOverrideFlags g_Session;
 //------------ CPU Options!!! ---------------
 #define CHECK_MICROVU0	(Config.Options&PCSX2_MICROVU0)
 #define CHECK_MICROVU1	(Config.Options&PCSX2_MICROVU1)
+//#define CHECK_MACROVU0	// ifndef = Use sVU for VU macro, ifdef = Use mVU for VU macro
 #define CHECK_EEREC (!g_Session.ForceDisableEErec && Config.Options&PCSX2_EEREC)
 #define CHECK_VU0REC (!g_Session.ForceDisableVU0rec && Config.Options&PCSX2_VU0REC)
 #define CHECK_VU1REC (!g_Session.ForceDisableVU1rec && (Config.Options&PCSX2_VU1REC))

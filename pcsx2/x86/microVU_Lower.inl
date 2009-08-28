@@ -520,7 +520,7 @@ mVUop(mVU_FMAND) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMAND vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUregs.needExactMatch |= 2;   }
+	pass4 { mVUregs.needExactMatch |= 2; }
 }
 
 mVUop(mVU_FMEQ) {
@@ -534,7 +534,7 @@ mVUop(mVU_FMEQ) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMEQ vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUregs.needExactMatch |= 2;  }
+	pass4 { mVUregs.needExactMatch |= 2; }
 }
 
 mVUop(mVU_FMOR) {
@@ -546,7 +546,7 @@ mVUop(mVU_FMOR) {
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("FMOR vi%02d, vi%02d", _Ft_, _Fs_); }
-	pass4 { mVUregs.needExactMatch |= 2;  }
+	pass4 { mVUregs.needExactMatch |= 2; }
 }
 
 //------------------------------------------------------------------

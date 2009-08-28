@@ -33,7 +33,6 @@ microVUt(void) mVUupdateFlags(mV, int reg, int regT1 = -1, int regT2 = -1, bool 
 	static const u16 flipMask[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
 
 	//SysPrintf("Status = %d; Mac = %d\n", sFLAG.doFlag, mFLAG.doFlag);
-	if (mVUsFlagHack) { sFLAG.doFlag = 0; }
 	if (!sFLAG.doFlag && !mFLAG.doFlag) { return; }
 	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) {
 		if (regT2 < 0) { regT2 = mVU->regAlloc->allocReg(); regT2b = 1; }
@@ -173,6 +172,7 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		mVU->regAlloc->clearNeeded(Ft);
 	}
 	pass3 { mVU_printOP(mVU, opCase, opName, isACC); }
+	pass4 { if ((opType != 3) && (opType != 4)) mVUregs.needExactMatch |= 8; }
 }
 
 // MADDA/MSUBA Opcodes
@@ -211,6 +211,7 @@ void mVU_FMACb(microVU* mVU, int recPass, int opCase, int opType, const char* op
 		mVU->regAlloc->clearNeeded(Ft);
 	}
 	pass3 { mVU_printOP(mVU, opCase, opName, 1); }
+	pass4 { mVUregs.needExactMatch |= 8; }
 }
 
 // MADD Opcodes
@@ -238,6 +239,7 @@ void mVU_FMACc(microVU* mVU, int recPass, int opCase, const char* opName) {
 		mVU->regAlloc->clearNeeded(ACC);
 	}
 	pass3 { mVU_printOP(mVU, opCase, opName, 0); }
+	pass4 { mVUregs.needExactMatch |= 8; }
 }
 
 // MSUB Opcodes
@@ -260,6 +262,7 @@ void mVU_FMACd(microVU* mVU, int recPass, int opCase, const char* opName) {
 		mVU->regAlloc->clearNeeded(Fs);
 	}
 	pass3 { mVU_printOP(mVU, opCase, opName, 0); }
+	pass4 { mVUregs.needExactMatch |= 8; }
 }
 
 // ABS Opcode
@@ -289,6 +292,7 @@ mVUop(mVU_OPMULA) {
 		mVU->regAlloc->clearNeeded(Fs);
 	}
 	pass3 { mVUlog("OPMULA"); mVUlogACC(); mVUlogFt(); }
+	pass4 { mVUregs.needExactMatch |= 8; }
 }
 
 // OPMSUB Opcode
@@ -310,6 +314,7 @@ mVUop(mVU_OPMSUB) {
 
 	}
 	pass3 { mVUlog("OPMSUB"); mVUlogFd(); mVUlogFt(); }
+	pass4 { mVUregs.needExactMatch |= 8; }
 }
 
 // FTOI0/FTIO4/FTIO12/FTIO15 Opcodes

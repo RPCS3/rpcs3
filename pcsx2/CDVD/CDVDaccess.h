@@ -16,11 +16,7 @@
 *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 */
 
-#ifndef __CDVD_ACCESS_H__
-#define __CDVD_ACCESS_H__
-
-extern void CDVDsys_Init();
-extern void CDVDsys_Shutdown();
+#pragma once
 
 extern s32  DoCDVDopen(const char* pTitleFilename);
 extern void DoCDVDclose();
@@ -32,4 +28,3 @@ extern void DoCDVDnewDiskCB(void (*callback)());
 extern s32  DoCDVDdetectDiskType();
 extern void DoCDVDresetDiskTypeCache();
 
-#endif /* __CDVD_H__ */

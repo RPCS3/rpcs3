@@ -74,7 +74,8 @@ int sortFlag(int* fFlag, int* bFlag, int cycles) {
 	return x; // Returns the number of Valid Flag Instances
 }
 
-#define sFlagCond ((sFLAG.doFlag && !mVUsFlagHack) || mVUlow.isFSSET || mVUinfo.doDivFlag)
+#define sFlagCond (sFLAG.doFlag || mVUlow.isFSSET || mVUinfo.doDivFlag)
+#define sHackCond (mVUsFlagHack && !sFLAG.doNonSticky)
 
 // Note: Flag handling is 'very' complex, it requires full knowledge of how microVU recs work, so don't touch!
 microVUt(void) mVUsetFlags(mV, microFlagCycles& mFC) {
@@ -143,6 +144,7 @@ microVUt(void) mVUsetFlags(mV, microFlagCycles& mFC) {
 		mFLAG.lastWrite = (xM-1) & 3;
 		cFLAG.lastWrite = (xC-1) & 3;
 
+		if (sHackCond)	  { sFLAG.doFlag = 0; }
 		if (sFlagCond)	  { mFC.xStatus[xS] = mFC.cycles + 4; xS = (xS+1) & 3; }
 		if (mFLAG.doFlag) { mFC.xMac   [xM] = mFC.cycles + 4; xM = (xM+1) & 3; }
 		if (cFLAG.doFlag) { mFC.xClip  [xC] = mFC.cycles + 4; xC = (xC+1) & 3; }
@@ -238,8 +240,9 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 	iPC		  = startPC / 4;
 	mVUcount  = 0;
 	mVUbranch = 0;
-	for (int branch = 0; mVUcount < xCount; mVUcount++) {
+	for (int branch = 0; mVUcount < xCount; mVUcount=(mVUregs.needExactMatch&8)?(mVUcount+1):mVUcount) {
 		incPC(1);
+		mVUopU(mVU, 3);
 		if (  curI & _Ebit_  )	{ branch = 1; }
 		if (  curI & _DTbit_ )	{ branch = 6; }
 		if (!(curI & _Ibit_) )	{ incPC(-1); mVUopL(mVU, 3); incPC(1); }
@@ -263,18 +266,19 @@ void mVUflagPass(mV, u32 startPC, u32 xCount) {
 microVUt(void) mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr, 4); incPC(1); }
 	branchType2 { 
-		if (!mVUlow.constJump.isValid) { mVUregs.needExactMatch |= 0x7; } 
+		if (!mVUlow.constJump.isValid || CHECK_VU_CONSTHACK) { mVUregs.needExactMatch |= 0x7; } 
 		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8), 4); }
 	}
 	branchType3 {
-		incPC(-1); 
+		incPC(-1);
 		mVUflagPass(mVU, branchAddr, 4);
 		int backupFlagInfo = mVUregs.needExactMatch;
 		mVUregs.needExactMatch = 0;
 		incPC(4); // Branch Not Taken
 		mVUflagPass(mVU, xPC, 4);
-		incPC(-3);		
+		incPC(-3);
 		mVUregs.needExactMatch |= backupFlagInfo;
 	}
+	mVUregs.needExactMatch &= 0x7;
 }
 

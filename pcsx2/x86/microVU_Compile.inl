@@ -285,16 +285,19 @@ void __fastcall mVUprintPC1(u32 PC) { Console::Write("Block PC [%04x] ", params 
 void __fastcall mVUprintPC2(u32 PC) { Console::Write("[%04x]\n", params PC); }
 
 microVUt(void) mVUtestCycles(mV) {
+	u32* vu0jmp;
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 	if (IsDevBuild || !isVU1) {
 		u32* jmp32 = JG32(0);
+		if (!isVU1) { TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); vu0jmp = JZ32(0); }
 			MOV32ItoR(gprT2, (uptr)mVU);
 			if (isVU1)  CALLFunc((uptr)mVUwarning1);
 			//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
 			MOV32ItoR(gprR, Roffset); // Restore gprR
 			mVUendProgram(mVU, NULL, 0);
+		if (!isVU1) x86SetJ32(vu0jmp);
 		x86SetJ32(jmp32);
 	}
 }

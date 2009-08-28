@@ -305,8 +305,8 @@ namespace D_CTRL
 	{
 		return (std_type)((psHu32(DMAC_CTRL) & CTRL_STD) >> 6);
 	}
-	static __forceinline int RCLC()
-	{
+	static __forceinline int RCYC() 
+	{ 
 		return ((((psHu32(DMAC_CTRL) & CTRL_RCYC) >> 3) + 1) * 8);
 	}
 }

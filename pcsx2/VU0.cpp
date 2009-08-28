@@ -78,14 +78,17 @@ void _vu0WaitMicro() {
 	VU0.flags|= VUFLAG_BREAKONMFLAG;
 	VU0.flags&= ~VUFLAG_MFLAGSET;
 
-	do {
-		CpuVU0.ExecuteBlock();
-        // knockout kings 2002 loops here
-        if( VU0.cycle-startcycle > 0x1000 ) {
-			Console::Notice("VU0 perma-stall, breaking execution..."); // (email zero if gfx are bad)
-            break;
-        }
-	} while ((VU0.VI[REG_VPU_STAT].UL & 0x1) && (VU0.flags & VUFLAG_MFLAGSET) == 0);
+	if (!CHECK_MICROVU0) {
+		do {
+			CpuVU0.ExecuteBlock();
+			// knockout kings 2002 loops here
+			if( VU0.cycle-startcycle > 0x1000 ) {
+				Console::Notice("VU0 perma-stall, breaking execution..."); // (email zero if gfx are bad)
+				break;
+			}
+		} while ((VU0.VI[REG_VPU_STAT].UL & 0x1) && (VU0.flags & VUFLAG_MFLAGSET) == 0);
+	}
+	else CpuVU0.ExecuteBlock(); // Note: Need to test Knockout Kings 2002 with mVU!
 
 	//NEW
 	cpuRegs.cycle += (VU0.cycle-startcycle)*2;

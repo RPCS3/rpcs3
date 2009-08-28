@@ -118,6 +118,7 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent ) :
 	m_page_plugins.SetNext	( &m_page_bios );
 
 	GetPageAreaSizer()->Add( &m_page_usermode );
+	GetPageAreaSizer()->Add( &m_page_plugins );
 	CenterOnScreen();
 
 	Connect( wxEVT_WIZARD_PAGE_CHANGED,		wxWizardEventHandler( FirstTimeWizard::OnPageChanged ) );

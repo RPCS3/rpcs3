@@ -22,6 +22,7 @@
 #include <winnt.h>
 #include "Common.h"
 
+#include "cdvd/CDVD.h"
 
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
