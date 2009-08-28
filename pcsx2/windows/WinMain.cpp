@@ -461,7 +461,7 @@ BOOL Open_Iso_File_Proc( std::string& outstr )
 	char szFileName[ g_MaxPath ];
 	char szFileTitle[ g_MaxPath ];
 	char * filter =
-		"All Supported (.iso .mdf .nrg .bin .img .dump)\0*.iso;*.mdf;*.nrg;*.bin;*.img,*.dump\0"
+		"All Supported (.iso .mdf .nrg .bin .img .dump)\0*.iso;*.mdf;*.nrg;*.bin;*.img;*.dump\0"
 		"Disc Images (.iso .mdf .nrg .bin .img)\0*.iso;*.mdf;*.nrg;*.bin;*.img\0"
 		"Blockdumps (.dump)\0*.dump\0"
 		"All Files (*.*)\0*.*\0";
