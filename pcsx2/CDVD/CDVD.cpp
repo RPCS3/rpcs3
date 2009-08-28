@@ -714,36 +714,49 @@ __forceinline void cdvdReadInterrupt()
 	}
 	else
 	{
-		// Read Error -1 is only returned by readTrack, so handle it first here.
-		// If readTrack failed it means we don't have any valid data to fetch.
-		if (cdvd.RErr == -1)
+		if( cdvd.RErr == 0 )
 		{
-			cdvd.RetryCntP++;
-			Console::Error("CDVD READ ERROR, sector=%d", params cdvd.Sector);
-
-			if (cdvd.RetryCntP <= cdvd.RetryCnt)
+			while( (cdvd.RErr = DoCDVDgetBuffer(cdr.Transfer)), cdvd.RErr == -2 )
 			{
-				cdvd.RErr = DoCDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
-				CDVDREAD_INT(cdvd.ReadTime);
-				return;
+				// not finished yet ... block on the read until it finishes.
+				Threading::Sleep( 0 );
+				Threading::SpinWait();
 			}
 		}
 
-		cdvd.RErr = DoCDVDgetBuffer(cdr.Transfer);
-
-		if(cdvd.RErr == -2)
+		if (cdvd.RErr == -1)
 		{
-			// not finished yet ... give it a bit more time
-			CDVDREAD_INT(cdvd.ReadTime/4);
+			cdvd.RetryCntP++;
+
+			if (cdvd.RetryCntP <= cdvd.RetryCnt)
+			{
+				CDVD_LOG( "CDVD read err, retrying... (attempt %d of %d)", cdvd.RetryCntP, cdvd.RetryCnt );
+				cdvd.RErr = DoCDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
+				CDVDREAD_INT(cdvd.ReadTime);
+			}
+			else
+				Console::Error("CDVD READ ERROR, sector = 0x%08x", params cdvd.Sector);
+
 			return;
 		}
+
 		cdvd.Reading = false;
+		
+		// Any other value besides 0 should be considered invalid here (wtf is that wacky
+		// plugin trying to do?)
+		jASSUME( cdvd.RErr == 0 );
 	}
 
 	if (cdvdReadSector() == -1)
 	{
+		// This means that the BCR/DMA hasn't finished yet, and rather than fire off the 
+		// sector-finished notice too early (which might overwrite game data) we delay a
+		// bit and try to read the sector again later.
+		// An arbitrary delay of some number of cycles probably makes more sense here,
+		// but for now it's based on the cdvd.ReadTime value. -- air
+
 		assert((int)cdvd.ReadTime > 0 );
-		CDVDREAD_INT(cdvd.ReadTime);
+		CDVDREAD_INT(cdvd.ReadTime/4);
 		return;
 	}
 

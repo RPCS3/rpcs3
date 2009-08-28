@@ -35,13 +35,14 @@ enum isoFlags
 {
 	ISOFLAGS_Z =			0x0001,
 	ISOFLAGS_Z2	=			0x0002,
-	ISOFLAGS_BLOCKDUMP =	0x0004,
+	ISOFLAGS_BLOCKDUMP_V2 =	0x0004,
 	ISOFLAGS_MULTI =		0x0008,
-	ISOFLAGS_BZ2 =			0x0010
+	ISOFLAGS_BZ2 =			0x0010,
+	ISOFLAGS_BLOCKDUMP_V3 =	0x0020
 };
 
-#define CD_FRAMESIZE_RAW	2352
-#define DATA_SIZE	(CD_FRAMESIZE_RAW-12)
+static const int CD_FRAMESIZE_RAW	= 2352;
+static const int CD_DATA_SIZE		= CD_FRAMESIZE_RAW - 12;
 
 //#define itob(i)		((i)/10*16 + (i)%10)	/* u_char to BCD */
 //#define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */
@@ -73,12 +74,12 @@ struct isoFile
 };
 
 
-isoFile *isoOpen(const char *filename);
-isoFile *isoCreate(const char *filename, int mode);
-int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks);
-int  isoDetect(isoFile *iso);
-int  isoReadBlock(isoFile *iso, u8 *dst, int lsn);
-int  isoWriteBlock(isoFile *iso, u8 *src, int lsn);
-void isoClose(isoFile *iso);
+extern isoFile *isoOpen(const char *filename);
+extern isoFile *isoCreate(const char *filename, int mode);
+extern int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks);
+extern int  isoDetect(isoFile *iso);
+extern int  isoReadBlock(isoFile *iso, u8 *dst, int lsn);
+extern int  isoWriteBlock(isoFile *iso, u8 *src, int lsn);
+extern void isoClose(isoFile *iso);
 
 #endif /* __LIBISO_H__ */

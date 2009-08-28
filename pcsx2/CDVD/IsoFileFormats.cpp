@@ -29,12 +29,12 @@
 int detect(isoFile *iso)
 {
 	u8 buf[2448];
-	struct cdVolDesc *volDesc;
+	cdVolDesc *volDesc;
 
-	if (isoReadBlock(iso, buf + iso->blockofs, 16) == -1) return -1;
+	if (isoReadBlock(iso, buf, 16) == -1) return -1;
 	
-	volDesc = (struct cdVolDesc *)(buf + 24);
-	
+	volDesc = (cdVolDesc *) (( iso->flags & ISOFLAGS_BLOCKDUMP_V3 ) ? buf : (buf + 24));
+
 	if (strncmp((char*)volDesc->volID, "CD001", 5)) return 0;
 
 	if (volDesc->rootToc.tocSize == 2048)
@@ -87,7 +87,16 @@ int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
 	
 	if (strncmp(buf, "BDV2", 4) == 0)
 	{
-		iso->flags = ISOFLAGS_BLOCKDUMP;
+		iso->flags = ISOFLAGS_BLOCKDUMP_V2;
+		_readfile(iso->handle, &iso->blocksize, 4);
+		_readfile(iso->handle, &iso->blocks, 4);
+		_readfile(iso->handle, &iso->blockofs, 4);
+		_isoReadDtable(iso);
+		return (detect(iso) == 1) ? 0 : -1;
+	}
+	else if (strncmp(buf, "BDV3", 4) == 0)
+	{
+		iso->flags = ISOFLAGS_BLOCKDUMP_V3;
 		_readfile(iso->handle, &iso->blocksize, 4);
 		_readfile(iso->handle, &iso->blocks, 4);
 		_readfile(iso->handle, &iso->blockofs, 4);
@@ -111,7 +120,7 @@ int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
 	if (tryIsoType(iso, 2448, -8, 0)) return 0;				// RAWQ 2448
 
 	iso->offset = 0;
-	iso->blocksize = 2352;
+	iso->blocksize = CD_FRAMESIZE_RAW;
 	iso->blockofs = 0;
 	iso->type = ISOTYPE_AUDIO;
 	return 0;
@@ -232,12 +241,18 @@ int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks)
 	Console::WriteLn("blocksize = %d", params iso->blocksize);
 	Console::WriteLn("blocks = %d", params iso->blocks);
 	
-	if (iso->flags & ISOFLAGS_BLOCKDUMP)
+	if (iso->flags & ISOFLAGS_BLOCKDUMP_V2)
 	{
 		if (_writefile(iso->handle, "BDV2", 4) < 4) return -1;
 		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
 		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
 		if (_writefile(iso->handle, &blockofs, 4) < 4) return -1;
+	}
+	else if (iso->flags & ISOFLAGS_BLOCKDUMP_V3)
+	{
+		if (_writefile(iso->handle, "BDV3", 4) < 4) return -1;
+		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
+		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
 	}
 
 	return 0;
@@ -275,7 +290,7 @@ int _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->handle, ofs, SEEK_SET);
 	
-	ret = _readfile(iso->handle, dst, iso->blocksize);
+	ret = _readfile(iso->handle, dst + iso->blockofs, iso->blocksize);
 	
 	if (ret < iso->blocksize)
 	{
@@ -293,13 +308,13 @@ int _isoReadBlockD(isoFile *iso, u8 *dst, int lsn)
 //	Console::WriteLn("_isoReadBlockD %d, blocksize=%d, blockofs=%d\n", params lsn, iso->blocksize, iso->blockofs);
 	
 	memset(dst, 0, iso->blockofs);
-	for (int i = 0; i < iso->dtablesize;i++)
+	for (int i = 0; i < iso->dtablesize; i++)
 	{
 		if (iso->dtable[i] != lsn) continue;
 
 		_seekfile(iso->handle, 16 + i * (iso->blocksize + 4) + 4, SEEK_SET);
-		ret = _readfile(iso->handle, dst, iso->blocksize);
-		
+		ret = _readfile(iso->handle, dst + iso->blockofs, iso->blocksize);
+
 		if (ret < iso->blocksize) return -1;
 
 		return 0;
@@ -330,7 +345,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
 	
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->multih[i].handle, ofs, SEEK_SET);
-	ret = _readfile(iso->multih[i].handle, dst, iso->blocksize);
+	ret = _readfile(iso->multih[i].handle, dst + iso->blockofs, iso->blocksize);
 	
 	if (ret < iso->blocksize)
 	{
@@ -351,7 +366,9 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 		return -1;
 	}
 	
-	if (iso->flags & ISOFLAGS_BLOCKDUMP)
+	if (iso->flags & ISOFLAGS_BLOCKDUMP_V2)
+		ret = _isoReadBlockD(iso, dst, lsn);
+	else if( iso->flags & ISOFLAGS_BLOCKDUMP_V3 )
 		ret = _isoReadBlockD(iso, dst, lsn);
 	else if (iso->flags & ISOFLAGS_MULTI)
 		ret = _isoReadBlockM(iso, dst, lsn);
@@ -362,13 +379,8 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 
 	if (iso->type == ISOTYPE_CD)
 	{
-		// This is weird voodoo mess that does some kind of time adjustment on the
-		// block headers of CD-Rom images.  hackfixed it to work with 24 byte block
-		// offsets... no idea if it'll work with others.
-		DevAssert( iso->blockofs == 24, "Undocumented CD-Rom checkpoint." );
-
-		LSNtoMSF(dst - iso->blockofs + 12, lsn);
-		dst[15-iso->blockofs] = 2;
+		LSNtoMSF(dst + 12, lsn);
+		dst[15] = 2;
 	}
 
 	return 0;
@@ -381,7 +393,7 @@ int _isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
 
 	_seekfile(iso->handle, ofs, SEEK_SET);
-	ret = _writefile(iso->handle, src, iso->blocksize);
+	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
 	if (ret < iso->blocksize) return -1;
 
 	return 0;
@@ -395,7 +407,7 @@ int _isoWriteBlockD(isoFile *iso, u8 *src, int lsn)
 	
 	ret = _writefile(iso->handle, &lsn, 4);
 	if (ret < 4) return -1;
-	ret = _writefile(iso->handle, src, iso->blocksize);
+	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
 	
 //	Console::WriteLn("_isoWriteBlock %d", params ret);
 	
@@ -406,15 +418,10 @@ int _isoWriteBlockD(isoFile *iso, u8 *src, int lsn)
 
 int isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 {
-	int ret;
-
-	if (iso->flags & ISOFLAGS_BLOCKDUMP)
-		ret = _isoWriteBlockD(iso, src, lsn);
+	if (iso->flags & ISOFLAGS_BLOCKDUMP_V3)
+		return _isoWriteBlockD(iso, src, lsn);
 	else
-		ret = _isoWriteBlock(iso, src, lsn);
-	
-	if (ret == -1) return -1;
-	return 0;
+		return _isoWriteBlock(iso, src, lsn);
 }
 
 void isoClose(isoFile *iso)

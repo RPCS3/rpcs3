@@ -629,8 +629,8 @@ typedef u8*  (CALLBACK* _CDVDgetBuffer)();
 
 // Copies loaded data to the target buffer.
 // Returns -2 if the asynchronous read is still pending.
+// Returns -1 if the asyncronous read failed.
 // Returns 0 on success.
-// This function is not allowed to return -1 (reserved for use by readTrack)
 typedef s32  (CALLBACK* _CDVDgetBuffer2)(u8* buffer);
 
 typedef s32  (CALLBACK* _CDVDreadSubQ)(u32 lsn, cdvdSubQ* subq);

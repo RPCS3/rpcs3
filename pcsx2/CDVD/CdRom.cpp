@@ -497,25 +497,24 @@ void  cdrReadInterrupt() {
 	cdr.StatP|= 0x22;
 	cdr.Result[0] = cdr.StatP;
 
-	// Read Error -1 is only returned by readTrack, so handle it first here.
-	// If readTrack failed it means we don't have any valid data to fetch.
+	if( cdr.RErr == 0 )
+	{
+		while( (cdr.RErr = DoCDVDgetBuffer(cdr.Transfer)), cdr.RErr == -2 )
+		{
+			// not finished yet ... block on the read until it finishes.
+			Threading::Sleep( 0 );
+			Threading::SpinWait();
+		}
+	}
+
 	if (cdr.RErr == -1)
 	{
 		CDR_LOG(" err\n");
 		memzero_obj(cdr.Transfer);
 		cdr.Stat = DiskError;
-		cdr.Result[0]|= 0x01;
+		cdr.Result[0] |= 0x01;
 		ReadTrack();
 		CDREAD_INT((cdr.Mode & 0x80) ? (cdReadTime / 2) : cdReadTime);
-		return;
-	}
-
-	cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);
-
-	if(cdr.RErr == -2)
-	{
-		// async mode is not finished yet ... give it a bit more time
-		CDREAD_INT(cdReadTime / 4);
 		return;
 	}
 

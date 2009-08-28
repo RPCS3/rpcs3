@@ -485,7 +485,7 @@ static void CALLBACK CDVD_about() {}
 static s32  CALLBACK CDVD_test() { return 0; }
 static void CALLBACK CDVD_newDiskCB(void (*callback)()) {}
 
-extern int lastReadSize;
+extern int lastReadSize, lastLSN;
 static s32 CALLBACK CDVD_getBuffer2(u8* buffer)
 {
 	// TEMP: until I fix all the plugins to use this function style
@@ -517,6 +517,8 @@ static s32 CALLBACK CDVD_readSector(u8* buffer, u32 lsn, int mode)
 		lastReadSize = 2048;
 		break;
 	}
+
+	lastLSN = lsn;
 	return CDVD->getBuffer2(buffer);
 }
 
