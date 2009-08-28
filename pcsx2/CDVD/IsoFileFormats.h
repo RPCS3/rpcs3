@@ -33,10 +33,10 @@ enum isoType
 
 enum isoFlags
 {
-	ISOFLAGS_Z =				0x0001,
+	ISOFLAGS_Z =			0x0001,
 	ISOFLAGS_Z2	=			0x0002,
 	ISOFLAGS_BLOCKDUMP =	0x0004,
-	ISOFLAGS_MULTI =			0x0008,
+	ISOFLAGS_MULTI =		0x0008,
 	ISOFLAGS_BZ2 =			0x0010
 };
 
@@ -46,17 +46,17 @@ enum isoFlags
 //#define itob(i)		((i)/10*16 + (i)%10)	/* u_char to BCD */
 //#define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */
 
-typedef struct
+struct _multih
 {
 	u32 slsn;
 	u32 elsn;
 	void *handle;
-} _multih;
+};
 
-typedef struct
+struct isoFile
 {
 	char filename[256];
-	u32  type;
+	isoType type;
 	u32  flags;
 	u32  offset;
 	u32  blockofs;
@@ -70,7 +70,7 @@ typedef struct
 	_multih multih[8];
 	int  buflsn;
 	u8 *buffer;
-} isoFile;
+};
 
 
 isoFile *isoOpen(const char *filename);

@@ -714,11 +714,9 @@ __forceinline void cdvdReadInterrupt()
 	}
 	else
 	{
-		if (cdvd.RErr == 0)
-		{
-			cdr.RErr = DoCDVDgetBuffer(cdr.Transfer);
-		}
-		else if (cdr.RErr == -1)
+		// Read Error -1 is only returned by readTrack, so handle it first here.
+		// If readTrack failed it means we don't have any valid data to fetch.
+		if (cdvd.RErr == -1)
 		{
 			cdvd.RetryCntP++;
 			Console::Error("CDVD READ ERROR, sector=%d", params cdvd.Sector);
@@ -730,10 +728,13 @@ __forceinline void cdvdReadInterrupt()
 				return;
 			}
 		}
-		else if(cdr.RErr == -2)
+
+		cdvd.RErr = DoCDVDgetBuffer(cdr.Transfer);
+
+		if(cdvd.RErr == -2)
 		{
 			// not finished yet ... give it a bit more time
-			CDVDREAD_INT(cdvd.ReadTime);
+			CDVDREAD_INT(cdvd.ReadTime/4);
 			return;
 		}
 		cdvd.Reading = false;
@@ -764,7 +765,7 @@ __forceinline void cdvdReadInterrupt()
 
 	cdvd.RetryCntP = 0;
 	cdvd.Reading = 1;
-	cdr.RErr = DoCDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
+	cdvd.RErr = DoCDVDreadTrack(cdvd.Sector, cdvd.ReadMode);
 	CDVDREAD_INT(cdvd.ReadTime);
 
 	return;

@@ -362,8 +362,13 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 
 	if (iso->type == ISOTYPE_CD)
 	{
-		LSNtoMSF(dst + 12, lsn);
-		dst[15] = 2;
+		// This is weird voodoo mess that does some kind of time adjustment on the
+		// block headers of CD-Rom images.  hackfixed it to work with 24 byte block
+		// offsets... no idea if it'll work with others.
+		DevAssert( iso->blockofs == 24, "Undocumented CD-Rom checkpoint." );
+
+		LSNtoMSF(dst - iso->blockofs + 12, lsn);
+		dst[15-iso->blockofs] = 2;
 	}
 
 	return 0;
