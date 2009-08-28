@@ -355,11 +355,17 @@ void endMacroOp(int mode) {
 	microVU0.regAlloc->flushAll();
 }
 
-#define REC_COP2_mVU0(f, opName, mode)		\
-	void recV##f(s32 info) {				\
-		setupMacroOp(mode, opName);			\
-		mVU_##f(&microVU0, 1);				\
-		endMacroOp(mode);					\
+#define REC_COP2_mVU0(f, opName, mode)						\
+	void recV##f(s32 info) {								\
+		setupMacroOp(mode, opName);							\
+		if (mode & 4) {										\
+			mVU_##f(&microVU0, 0);							\
+			if (!microVU0.prog.IRinfo.info[0].lOp.isNOP) {	\
+				mVU_##f(&microVU0, 1);						\
+			}												\
+		}													\
+		else { mVU_##f(&microVU0, 1); }						\
+		endMacroOp(mode);									\
 	}
 
 //------------------------------------------------------------------
@@ -468,25 +474,25 @@ REC_COP2_VU0 (CLIP);
 REC_COP2_mVU0(DIV,		"DIV",		2);
 REC_COP2_mVU0(SQRT,		"SQRT",		2);
 REC_COP2_mVU0(RSQRT,	"RSQRT",	2);
-REC_COP2_VU0 (IADD);
-REC_COP2_VU0 (IADDI);
-REC_COP2_VU0 (IAND);
-REC_COP2_VU0 (IOR);
-REC_COP2_VU0 (ISUB);
-REC_COP2_VU0 (ILWR);
-REC_COP2_VU0 (ISWR);
-REC_COP2_VU0 (LQI);
-REC_COP2_VU0 (LQD);
-REC_COP2_VU0 (SQI);
-REC_COP2_VU0 (SQD);
+REC_COP2_mVU0(IADD,		"IADD",		4);
+REC_COP2_mVU0(IADDI,	"IADDI",	4);
+REC_COP2_mVU0(IAND,		"IAND",		4);
+REC_COP2_mVU0(IOR,		"IOR",		4);
+REC_COP2_mVU0(ISUB,		"ISUB",		4);
+REC_COP2_mVU0(ILWR,		"ILWR",		4);
+REC_COP2_mVU0(ISWR,		"ISWR",		0);
+REC_COP2_mVU0(LQI,		"LQI",		4);
+REC_COP2_mVU0(LQD,		"LQD",		4);
+REC_COP2_mVU0(SQI,		"SQI",		0);
+REC_COP2_mVU0(SQD,		"SQD",		0);
+REC_COP2_mVU0(MFIR,		"MFIR",		4);
+REC_COP2_mVU0(MTIR,		"MTIR",		4);
 REC_COP2_mVU0(MOVE,		"MOVE",		0);
-REC_COP2_VU0 (MFIR);
-REC_COP2_VU0 (MTIR);
 REC_COP2_mVU0(MR32,		"MR32",		0);
-REC_COP2_VU0 (RINIT);
-REC_COP2_VU0 (RGET);
-REC_COP2_VU0 (RNEXT);
-REC_COP2_VU0 (RXOR);
+REC_COP2_mVU0(RINIT,	"RINIT",	0);
+REC_COP2_mVU0(RGET,		"RGET",		4);
+REC_COP2_mVU0(RNEXT,	"RNEXT",	4);
+REC_COP2_mVU0(RXOR,		"RXOR",		0);
 
 //------------------------------------------------------------------
 // Macro VU - Misc...
