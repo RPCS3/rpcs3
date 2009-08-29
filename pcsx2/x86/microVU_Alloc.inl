@@ -77,13 +77,37 @@ microVUt(void) mVUallocSFLAGc(int reg, int regT, int fInstance) {
 	OR32RtoR(reg, regT);
 }
 
+// Denormalizes Status Flag
+microVUt(void) mVUallocSFLAGd(uptr memAddr, bool setAllflags) {
+	MOV32MtoR(gprF0, memAddr);
+	MOV32RtoR(gprF1, gprF0);
+	SHR32ItoR(gprF1, 3);
+	AND32ItoR(gprF1, 0x18);
+
+	MOV32RtoR(gprF2, gprF0);
+	SHL32ItoR(gprF2, 11);
+	AND32ItoR(gprF2, 0x1800);
+	OR32RtoR (gprF1, gprF2);
+
+	SHL32ItoR(gprF0, 14);
+	AND32ItoR(gprF0, 0x3cf0000);
+	OR32RtoR (gprF1, gprF0);
+
+	if (setAllflags) {
+		MOV32RtoR(gprF0, gprF1);
+		MOV32RtoR(gprF2, gprF1);
+		MOV32RtoR(gprF3, gprF1);
+	}
+}
+
 microVUt(void) mVUallocMFLAGa(mV, int reg, int fInstance) {
 	MOVZX32M16toR(reg, (uptr)&mVU->macFlag[fInstance]);
 }
 
 microVUt(void) mVUallocMFLAGb(mV, int reg, int fInstance) {
 	//AND32ItoR(reg, 0xffff);
-	MOV32RtoM((uptr)&mVU->macFlag[fInstance], reg);
+	if (fInstance < 4) MOV32RtoM((uptr)&mVU->macFlag[fInstance], reg);			// microVU
+	else			   MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL, reg);	// macroVU
 }
 
 microVUt(void) mVUallocCFLAGa(mV, int reg, int fInstance) {

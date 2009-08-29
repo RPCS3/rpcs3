@@ -59,8 +59,13 @@ microVUt(void) mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 	}
 
 	// Save Flag Instances
+#ifdef CHECK_MACROVU0
+	getFlagReg(fStatus, fStatus);
+	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	fStatus);
+#else
 	mVUallocSFLAGc(gprT1, gprT2, fStatus);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	gprT1);
+#endif
 	mVUallocMFLAGa(mVU, gprT1, fMac);
 	mVUallocCFLAGa(mVU, gprT2, fClip);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL,	gprT1);

@@ -41,18 +41,30 @@ void setupMacroOp(int mode, const char* opName) {
 	memset(&microVU0.prog.IRinfo.info[0], 0, sizeof(microVU0.prog.IRinfo.info[0]));
 	iFlushCall(FLUSH_EVERYTHING);
 	microVU0.regAlloc->reset();
-	if (mode & 1) { // Q-Reg will be Read
+	if (mode & 0x01) { // Q-Reg will be Read
 		SSE_MOVSS_M32_to_XMM(xmmPQ, (uptr)&microVU0.regs->VI[REG_Q].UL);
 	}
-	if (mode & 8) { // Clip Instruction
+	if (mode & 0x08) { // Clip Instruction
 		microVU0.prog.IRinfo.info[0].cFlag.write	 = 0xff;
 		microVU0.prog.IRinfo.info[0].cFlag.lastWrite = 0xff;
+	}
+	if (mode & 0x10) { // Update Status/Mac Flags
+		microVU0.prog.IRinfo.info[0].sFlag.doFlag		= 1;
+		microVU0.prog.IRinfo.info[0].sFlag.doNonSticky	= 1;
+		microVU0.prog.IRinfo.info[0].sFlag.write		= 0;
+		microVU0.prog.IRinfo.info[0].sFlag.lastWrite	= 0;
+		microVU0.prog.IRinfo.info[0].mFlag.doFlag		= 1;
+		microVU0.prog.IRinfo.info[0].mFlag.write		= 0xff;
+		MOV32MtoR(gprF0, (uptr)&microVU0.regs->VI[REG_STATUS_FLAG].UL);
 	}
 }
 
 void endMacroOp(int mode) {
-	if (mode & 2) { // Q-Reg was Written To
+	if (mode & 0x02) { // Q-Reg was Written To
 		SSE_MOVSS_XMM_to_M32((uptr)&microVU0.regs->VI[REG_Q].UL, xmmPQ);
+	}
+	if (mode & 0x10) { // Status/Mac Flags were Updated
+		MOV32RtoM((uptr)&microVU0.regs->VI[REG_STATUS_FLAG].UL, gprF0);
 	}
 	microVU0.regAlloc->flushAll();
 }
@@ -261,10 +273,16 @@ static void recCFC2() {
 	if (!_Rt_) return;
 	iFlushCall(FLUSH_EVERYTHING);
 
-	MOV32MtoR(EAX, (uptr)&microVU0.regs->VI[_Rd_].UL);
+	if (_Rd_ == REG_STATUS_FLAG) { // Normalize Status Flag
+		MOV32MtoR(gprF0, (uptr)&microVU0.regs->VI[REG_STATUS_FLAG].UL);
+		mVUallocSFLAGc(EAX, gprF0, 0);
+	}
+	else MOV32MtoR(EAX, (uptr)&microVU0.regs->VI[_Rd_].UL);
+
+	// FixMe: Should R-Reg have upper 9 bits 0?
 	MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0], EAX);
 
-	if( _Rd_ >= 16 ) {
+	if (_Rd_ >= 16) {
 		CDQ(); // Sign Extend
 		MOV32RtoM ((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
 	}
@@ -289,7 +307,14 @@ static void recCTC2() {
 			OR32ItoR (EAX, 0x3f800000);
 			MOV32RtoM((uptr)&microVU0.regs->VI[REG_R].UL, EAX);
 			break;
-		case REG_CMSAR1: // REG_CMSAR1
+		case REG_STATUS_FLAG:
+			if (_Rt_) { // Denormalizes flag into gprF1
+				mVUallocSFLAGd((uptr)&cpuRegs.GPR.r[_Rt_].UL[0], 0);
+				MOV32RtoM((uptr)&microVU0.regs->VI[_Rd_].UL, gprF1);
+			}
+			else MOV32ItoM((uptr)&microVU0.regs->VI[_Rd_].UL, 0);
+			break;
+		case REG_CMSAR1:
 			if (_Rt_) {
 				MOV32MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
 				PUSH32R(EAX);
