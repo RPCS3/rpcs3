@@ -222,7 +222,7 @@ __forceinline void SIF0Dma()
 			if (sif0dma->qwc == 0)
 			{
 				// Stop if TIE & the IRQ are set, or at the end. (I'll try to convert this to use the tags code later.)
-				if (((sif0dma->chcr & 0x80000080) == 0x80000080) || (sif0.end)) 
+				if (((sif0dma->chcr._u32 & 0x80000080) == 0x80000080) || (sif0.end)) 
 				{
 					if (sif0.end)
 						SIF_LOG(" EE SIF end"); 
@@ -241,7 +241,7 @@ __forceinline void SIF0Dma()
 
 					sif0dma->qwc = (u16)tag[0];
 					sif0dma->madr = tag[1];
-					sif0dma->chcr = (sif0dma->chcr & 0xffff) | (tag[0] & 0xffff0000);
+					sif0dma->chcr._u32 = (sif0dma->chcr._u32 & 0xffff) | (tag[0] & 0xffff0000);
 
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
 
@@ -274,7 +274,7 @@ __forceinline void SIF1Dma()
 
 			if (sif1dma->qwc == 0) // If there's no more to transfer
 			{
-				if ((CHCR::MOD(sif1dma) == NORMAL_MODE) || sif1.end) // If NORMAL mode or end of CHAIN then stop DMA
+				if ((sif1dma->chcr.MOD == NORMAL_MODE) || sif1.end) // If NORMAL mode or end of CHAIN then stop DMA
 				{
 					// Stop & signal interrupts on EE
 					SIF_LOG("EE SIF1 End %x", sif1.end);
@@ -294,10 +294,10 @@ __forceinline void SIF1Dma()
 					//_dmaGetAddr(sif1dma, *ptag, sif1dma->tadr, 6);
 					
 					
-					sif1dma->chcr = (sif1dma->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);     // Copy the tag
+					sif1dma->chcr._u32 = (sif1dma->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);     // Copy the tag
 					sif1dma->qwc = (u16)ptag[0];
 
-					if (CHCR::TTE(sif1dma))
+					if (sif1dma->chcr.TTE)
 					{
 						Console::WriteLn("SIF1 TTE");
 						SIF1write(ptag + 2, 2);
@@ -343,7 +343,7 @@ __forceinline void SIF1Dma()
 						default:
 							Console::WriteLn("Bad addr1 source chain");
 					}
-					if ((CHCR::TIE(sif1dma)) && (Tag::IRQ(ptag)))
+					if ((sif1dma->chcr.TIE) && (Tag::IRQ(ptag)))
 					{
 						Console::WriteLn("SIF1 TIE");
 						sif1.end = 1;
@@ -435,19 +435,19 @@ __forceinline void  sif1Interrupt()
 __forceinline void  EEsif0Interrupt()
 {
 	hwDmacIrq(DMAC_SIF0);
-	CHCR::clearSTR(sif0dma);
+	sif0dma->chcr.STR = 0;
 }
 
 __forceinline void  EEsif1Interrupt()
 {
 	hwDmacIrq(DMAC_SIF1);
-	CHCR::clearSTR(sif1dma);
+	sif1dma->chcr.STR = 0;
 }
 
 __forceinline void dmaSIF0()
 {
 	SIF_LOG("EE: dmaSIF0 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
-	        sif0dma->chcr, sif0dma->madr, sif0dma->qwc, sif0dma->tadr);
+	        sif0dma->chcr._u32, sif0dma->madr, sif0dma->qwc, sif0dma->tadr);
 
 	if (sif0.fifoReadPos != sif0.fifoWritePos)
 	{
@@ -470,7 +470,7 @@ __forceinline void dmaSIF0()
 __forceinline void dmaSIF1()
 {
 	SIF_LOG("EE: dmaSIF1 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
-	        sif1dma->chcr, sif1dma->madr, sif1dma->qwc, sif1dma->tadr);
+	        sif1dma->chcr._u32, sif1dma->madr, sif1dma->qwc, sif1dma->tadr);
 
 	if (sif1.fifoReadPos != sif1.fifoWritePos)
 	{
@@ -494,9 +494,9 @@ __forceinline void dmaSIF1()
 __forceinline void dmaSIF2()
 {
 	SIF_LOG("dmaSIF2 chcr = %lx, madr = %lx, qwc  = %lx",
-	        sif2dma->chcr, sif2dma->madr, sif2dma->qwc);
+	        sif2dma->chcr._u32, sif2dma->madr, sif2dma->qwc);
 
-	CHCR::clearSTR(sif2dma);
+	sif2dma->chcr.STR = 0;
 	hwDmacIrq(DMAC_SIF2);
 	Console::WriteLn("*PCSX2*: dmaSIF2");
 }

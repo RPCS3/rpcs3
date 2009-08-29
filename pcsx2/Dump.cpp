@@ -131,7 +131,7 @@ void iDumpRegisters(u32 startpc, u32 temp)
 	
 	for(i = 0; i < ArraySize(dmacs); ++i) {
 		DMACh* p = (DMACh*)(PS2MEM_HW+dmacs[i]);
-		__Log("dma%d c%x m%x q%x t%x s%x", i, p->chcr, p->madr, p->qwc, p->tadr, p->sadr);
+		__Log("dma%d c%x m%x q%x t%x s%x", i, p->chcr._u32, p->madr, p->qwc, p->tadr, p->sadr);
 	}
 	__Log("dmac %x %x %x %x", psHu32(DMAC_CTRL), psHu32(DMAC_STAT), psHu32(DMAC_RBSR), psHu32(DMAC_RBOR));
 	__Log("intc %x %x", psHu32(INTC_STAT), psHu32(INTC_MASK));

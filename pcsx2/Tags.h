@@ -107,7 +107,7 @@ namespace Tag
 	static __forceinline void UpperTransfer(DMACh *tag, u32* ptag)
 	{
 		// Transfer upper part of tag to CHCR bits 31-15
-		tag->chcr = (tag->chcr & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+		tag->chcr._u32 = (tag->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);
 	}
 
 	static __forceinline void LowerTransfer(DMACh *tag, u32* ptag)
@@ -193,100 +193,28 @@ namespace Tag
 	}
 }
 
-namespace CHCR
+// Print information about a chcr tag.
+static __forceinline void PrintCHCR(const char*  s, DMACh *tag)
 {
-	// Query the flags in the channel control register.
-	static __forceinline bool STR(DMACh *tag) { return !!(tag->chcr & CHCR_STR); }
-	static __forceinline bool TIE(DMACh *tag) { return !!(tag->chcr & CHCR_TIE); }
-	static __forceinline bool TTE(DMACh *tag) { return !!(tag->chcr & CHCR_TTE); }
-	static __forceinline u8 DIR(DMACh *tag) { return (tag->chcr & CHCR_DIR); }
-
-	static __forceinline TransferMode MOD(DMACh *tag)
-	{
-		return (TransferMode)((tag->chcr & CHCR_MOD) >> 2);
-	}
-	
-	static __forceinline u8 ASP(DMACh *tag)
-	{
+	u8 num_addr = tag->chcr.ASP;
+	u32 mode = tag->chcr.MOD;
 		
-		return (TransferMode)((tag->chcr & CHCR_ASP) >> 4);
-	}
-
-	// Clear the individual flags.
-	static __forceinline void clearSTR(DMACh *tag) { tag->chcr &= ~CHCR_STR; }
-	static __forceinline void clearTIE(DMACh *tag) { tag->chcr &= ~CHCR_TIE; }
-	static __forceinline void clearTTE(DMACh *tag) { tag->chcr &= ~CHCR_TTE; }
-	static __forceinline void clearDIR(DMACh *tag) { tag->chcr &= ~CHCR_DIR; }
-	
-	// Set them.
-	static __forceinline void setSTR(DMACh *tag) { tag->chcr |= CHCR_STR; }
-	static __forceinline void setTIE(DMACh *tag) { tag->chcr |= CHCR_TIE; }
-	static __forceinline void setTTE(DMACh *tag) { tag->chcr |= CHCR_TTE; }
-	static __forceinline void setDIR(DMACh *tag) { tag->chcr |= CHCR_DIR; }
-	
-	static __forceinline void setMOD(DMACh *tag, TransferMode mode)
-	{
-		if (mode & (1 << 0))
-			tag->chcr |= CHCR_MOD1; 
-		else
-			tag->chcr &= CHCR_MOD1; 
-			
-		if (mode & (1 << 1)) 
-			tag->chcr |= CHCR_MOD2;
-		else
-			tag->chcr &= CHCR_MOD2;
-	}
-	
-	static __forceinline void setASP(DMACh *tag, u8 num)
-	{
-		if (num & (1 << 0))
-			tag->chcr |= CHCR_ASP1; 
-		else
-			tag->chcr &= CHCR_ASP2; 
-			
-		if (num & (1 << 1)) 
-			tag->chcr |= CHCR_ASP1;
-		else
-			tag->chcr &= CHCR_ASP2;
-	}
-	
-	// Print information about a chcr tag.
-	static __forceinline void Print(const char*  s, DMACh *tag)
-	{
-		u8 num_addr = ASP(tag);
-		TransferMode mode = MOD(tag);
+	Console::Write("%s chcr %s mem: ", params s, (tag->chcr.DIR) ? "from" : "to");
 		
-		Console::Write("%s chcr %s mem: ", params s, (DIR(tag)) ? "from" : "to");
+	if (mode == NORMAL_MODE)
+		Console::Write(" normal mode; ");
+	else if (mode == CHAIN_MODE)
+		Console::Write(" chain mode; ");
+	else if (mode == INTERLEAVE_MODE)
+		Console::Write(" interleave mode; ");
+	else
+		Console::Write(" ?? mode; ");
 		
-		if (mode == NORMAL_MODE)
-			Console::Write(" normal mode; ");
-		else if (mode == CHAIN_MODE)
-			Console::Write(" chain mode; ");
-		else if (mode == INTERLEAVE_MODE)
-			Console::Write(" interleave mode; ");
-		else
-			Console::Write(" ?? mode; ");
-		
-		if (num_addr != 0) Console::Write("ASP = %d;", params num_addr);
-		if (TTE(tag)) Console::Write("TTE;");
-		if (TIE(tag)) Console::Write("TIE;");
-		if (STR(tag)) Console::Write(" (DMA started)."); else Console::Write(" (DMA stopped).");
-		Console::WriteLn("");
-	}
-}
-
-namespace QWC
-{
-	static __forceinline bool Empty(DMACh *tag)
-	{
-		return (tag->qwc == 0);
-	}
-	
-	
-	static __forceinline void Clear(DMACh *tag)
-	{
-		tag->qwc = 0;
-	}
+	if (num_addr != 0) Console::Write("ASP = %d;", params num_addr);
+	if (tag->chcr.TTE) Console::Write("TTE;");
+	if (tag->chcr.TIE) Console::Write("TIE;");
+	if (tag->chcr.STR) Console::Write(" (DMA started)."); else Console::Write(" (DMA stopped).");
+	Console::WriteLn("");
 }
 
 namespace D_CTRL

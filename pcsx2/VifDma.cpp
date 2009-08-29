@@ -1222,7 +1222,7 @@ static void Vif0CMDMPGTransfer()  // MPG
 static void Vif0CMDNull()  // invalid opcode
 {
 	// if ME1, then force the vif to interrupt
-	if (!(VIF_ERR::ME1(vif0Regs)))    //Ignore vifcode and tag mismatch error
+	if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 	{
 		Console::WriteLn("UNKNOWN VifCmd: %x", params vif0.cmd);
 		vif0Regs->stat |= VIF0_STAT_ER1;
@@ -1274,7 +1274,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 
 			if ((vif0.cmd & 0x7f) > 0x4A)
 			{
-				if (!(VIF_ERR::ME1(vif0Regs)))    //Ignore vifcode and tag mismatch error
+				if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 				{
 					Console::WriteLn("UNKNOWN VifCmd: %x", params vif0.cmd);
 					vif0Regs->stat |= VIF0_STAT_ER1;
@@ -1294,7 +1294,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 		{
 			vif0.cmd &= 0x7f;
 
-			if (!(VIF_ERR::MII(vif0Regs))) //i bit on vifcode and not masked by VIF0_ERR
+			if (!(vif0Regs->err.MII)) //i bit on vifcode and not masked by VIF0_ERR
 			{
 				VIF_LOG("Interrupt on VIFcmd: %x (INTC_MASK = %x)", vif0.cmd, psHu32(INTC_MASK));
 
@@ -1385,7 +1385,7 @@ int _chainVIF0()
 	        vif0ptag[1], vif0ptag[0], vif0ch->qwc, id, vif0ch->madr, vif0ch->tadr);
 
 	// Transfer dma tag if tte is set
-	if (CHCR::TTE(vif0ch))
+	if (vif0ch->chcr.TTE)
 	{
 		if (vif0.vifstalled) 
 			ret = VIF0transfer(vif0ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset, 1);  //Transfer Tag on stall
@@ -1403,7 +1403,7 @@ int _chainVIF0()
 
 	ret = _VIF0chain();											   //Transfers the data set by the switch
 
-	if (CHCR::TIE(vif0ch) && Tag::IRQ(vif0ptag))  			       //Check TIE bit of CHCR and IRQ bit of tag
+	if (vif0ch->chcr.TIE && Tag::IRQ(vif0ptag))  			       //Check TIE bit of CHCR and IRQ bit of tag
 	{
 		VIF_LOG("dmaIrq Set\n");
 
@@ -1426,7 +1426,7 @@ void  vif0Interrupt()
 		if (vif0Regs->stat & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 		{
 			vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
-			CHCR::clearSTR(vif0ch);
+			vif0ch->chcr.STR = 0;
 			return;
 		}
 		
@@ -1442,9 +1442,9 @@ void  vif0Interrupt()
 		}
 	}
 
-	if (!CHCR::STR(vif0ch)) Console::WriteLn("Vif0 running when CHCR = %x", params vif0ch->chcr);
+	if (!vif0ch->chcr.STR) Console::WriteLn("Vif0 running when CHCR = %x", params vif0ch->chcr._u32);
 
-	if ((CHCR::MOD(vif0ch) == CHAIN_MODE) && (!vif0.done) && (!vif0.vifstalled))
+	if ((vif0ch->chcr.STR == CHAIN_MODE) && (!vif0.done) && (!vif0.vifstalled))
 	{
 
 		if (!(psHu32(DMAC_CTRL) & 0x1))
@@ -1465,7 +1465,7 @@ void  vif0Interrupt()
 	if (vif0ch->qwc > 0) Console::WriteLn("VIF0 Ending with QWC left");
 	if (vif0.cmd != 0) Console::WriteLn("vif0.cmd still set %x", params vif0.cmd);
 	
-	CHCR::clearSTR(vif0ch);
+	vif0ch->chcr.STR = 0;
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
 }
@@ -1510,14 +1510,14 @@ void dmaVIF0()
 {
 	VIF_LOG("dmaVIF0 chcr = %lx, madr = %lx, qwc  = %lx\n"
 	        "        tadr = %lx, asr0 = %lx, asr1 = %lx\n",
-	        vif0ch->chcr, vif0ch->madr, vif0ch->qwc,
+	        vif0ch->chcr._u32, vif0ch->madr, vif0ch->qwc,
 	        vif0ch->tadr, vif0ch->asr0, vif0ch->asr1);
 
 	g_vifCycles = 0;
 
 	vif0Regs->stat |= 0x8000000; // FQC=8
 
-	if (!(vif0ch->chcr & 0x4) || vif0ch->qwc > 0)   // Normal Mode
+	if (!(vif0ch->chcr.MOD & 0x1) || vif0ch->qwc > 0)   // Normal Mode
 	{
 		if (_VIF0chain() == -2)
 		{
@@ -1561,7 +1561,7 @@ void vif0Write32(u32 mem, u32 value)
 				psHu64(VIF0_FIFO) = 0;
 				psHu64(VIF0_FIFO + 8) = 0; // VIF0_FIFO + 8
 				vif0.done = true;
-				vif0Regs->err = 0;
+				vif0Regs->err._u32 = 0;
 				vif0Regs->stat &= ~(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 			}
 			
@@ -1608,7 +1608,7 @@ void vif0Write32(u32 mem, u32 value)
 						else
 							_VIF0chain();
 
-						CHCR::setSTR(vif0ch);
+						vif0ch->chcr.STR = 1;
 						CPU_INT(0, g_vifCycles); // Gets the timing right - Flatout
 					}
 				}
@@ -1620,7 +1620,7 @@ void vif0Write32(u32 mem, u32 value)
 			VIF_LOG("VIF0_ERR write32 0x%8.8x", value);
 
 			/* Set VIF0_ERR with 'value' */
-			vif0Regs->err = value;
+			vif0Regs->err._u32 = value;
 			break;
 		
 		case VIF0_R0:
@@ -1862,7 +1862,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 
 	if ((vif1.cmd & 0x7f) == 0x51)
 	{
-		if (CHCR::STR(gif) && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) //PATH3 is in image mode, so wait for end of transfer
+		if (gif->chcr.STR && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) //PATH3 is in image mode, so wait for end of transfer
 		{
 			vif1Regs->stat |= VIF1_STAT_VGW;
 			return 0;
@@ -2068,7 +2068,7 @@ void Vif1MskPath3()  // MSKPATH3
 }
 static void Vif1CMDMskPath3()  // MSKPATH3
 {
-	if (CHCR::STR(vif1ch))
+	if (vif1ch->chcr.STR)
 	{
 		schedulepath3msk = 0x10 | ((vif1Regs->code >> 15) & 0x1);
 		vif1.vifstalled = true;
@@ -2096,7 +2096,7 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 	if ((vif1.cmd & 0x7f) == 0x13)
 	{
 		// Gif is already transferring so wait for it.
-		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && CHCR::STR(gif))
+		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr.STR)
 		{	
 			vif1Regs->stat |= VIF1_STAT_VGW;	
 			CPU_INT(2, 4);
@@ -2157,7 +2157,7 @@ static void Vif1CMDNull()  // invalid opcode
 {
 	// if ME1, then force the vif to interrupt
 
-	if (!(VIF_ERR::ME1(vif1Regs)))   //Ignore vifcode and tag mismatch error
+	if (!(vif1Regs->err.ME1))   //Ignore vifcode and tag mismatch error
 	{
 		Console::WriteLn("UNKNOWN VifCmd: %x\n", params vif1.cmd);
 		vif1Regs->stat |= VIF1_STAT_ER1;
@@ -2255,7 +2255,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 			if ((vif1.cmd & 0x7f) > 0x51)
 			{
-				if (!(VIF_ERR::ME1(vif1Regs)))    //Ignore vifcode and tag mismatch error
+				if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 				{
 					Console::WriteLn("UNKNOWN VifCmd: %x", params vif1.cmd);
 					vif1Regs->stat |= VIF1_STAT_ER1;
@@ -2273,7 +2273,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		{
 			vif1.cmd &= 0x7f;
 
-			if (!(VIF_ERR::MII(vif1Regs))) //i bit on vifcode and not masked by VIF1_ERR
+			if (!(vif1Regs->err.MII)) //i bit on vifcode and not masked by VIF1_ERR
 			{
 				VIF_LOG("Interrupt on VIFcmd: %x (INTC_MASK = %x)", vif1.cmd, psHu32(INTC_MASK));
 
@@ -2474,7 +2474,7 @@ __forceinline void vif1SetupTransfer()
 
 			vif1.inprogress = 1;
 
-			if (CHCR::TTE(vif1ch))
+			if (vif1ch->chcr.TTE)
 			{
 
 				if (vif1.vifstalled)
@@ -2493,7 +2493,7 @@ __forceinline void vif1SetupTransfer()
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, id);
 
 			//Check TIE bit of CHCR and IRQ bit of tag
-			if ((CHCR::TIE(vif1ch)) && (Tag::IRQ(vif1ptag)))  			       
+			if (vif1ch->chcr.TIE && (Tag::IRQ(vif1ptag)))  			       
 			{
 				VIF_LOG("dmaIrq Set");
 
@@ -2514,7 +2514,7 @@ __forceinline void vif1Interrupt()
 
 	if((vif1Regs->stat & VIF1_STAT_VGW))
 	{
-		if (CHCR::STR(gif))
+		if (gif->chcr.STR)
 		{			
 			CPU_INT(1, gif->qwc * BIAS);
 			return;
@@ -2523,7 +2523,7 @@ __forceinline void vif1Interrupt()
 	
 	}
 
-	if (!(CHCR::STR(vif1ch))) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr);
+	if (!(vif1ch->chcr.STR)) Console::WriteLn("Vif1 running when CHCR == %x", params vif1ch->chcr._u32);
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
@@ -2535,7 +2535,7 @@ __forceinline void vif1Interrupt()
 			vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 			
 			// One game doesnt like vif stalling at end, cant remember what. Spiderman isnt keen on it tho
-			CHCR::clearSTR(vif1ch);
+			vif1ch->chcr.STR = 0;
 			return;
 		}
 		else if ((vif1ch->qwc > 0) || (vif1.irqoffset > 0))
@@ -2580,7 +2580,7 @@ __forceinline void vif1Interrupt()
 #endif
 
 	vif1Regs->stat &= ~VIF1_STAT_VPS; //Vif goes idle as the stall happened between commands;
-	CHCR::clearSTR(vif1ch);
+	vif1ch->chcr.STR = 0;
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
 
@@ -2588,7 +2588,7 @@ __forceinline void vif1Interrupt()
 	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
 	//Im guessing due to the full gs fifo before the reverse? (Refraction)
 	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
-	if (!vif1Regs->mskpath3 || (CHCR::DIR(vif1ch))) vif1Regs->stat &= ~0x1F000000; // FQC=0
+	if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat &= ~0x1F000000; // FQC=0
 }
 
 void dmaVIF1()
@@ -2605,7 +2605,7 @@ void dmaVIF1()
 	{
 		//Console::WriteLn("VIFMFIFO\n");
 		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
-		if (CHCR::MOD(vif1ch) == NORMAL_MODE) Console::WriteLn("MFIFO mode is normal (which isn't normal here)! %x", params vif1ch->chcr);
+		if (vif1ch->chcr.MOD == NORMAL_MODE) Console::WriteLn("MFIFO mode is normal (which isn't normal here)! %x", params vif1ch->chcr);
 		vifMFIFOInterrupt();
 		return;
 	} 
@@ -2617,13 +2617,13 @@ void dmaVIF1()
 	}
 #endif
 
-	if ((CHCR::MOD(vif1ch) == NORMAL_MODE) || vif1ch->qwc > 0)   // Normal Mode
+	if ((vif1ch->chcr.MOD == NORMAL_MODE) || vif1ch->qwc > 0)   // Normal Mode
 	{
 
 		if ((psHu32(DMAC_CTRL) & 0xC0) == 0x40)
 			Console::WriteLn("DMA Stall Control on VIF1 normal");
 
-		if ((CHCR::DIR(vif1ch)))  // to Memory
+		if (vif1ch->chcr.DIR)  // to Memory
 			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
 		else
 			vif1.dmamode = VIF_NORMAL_FROM_MEM_MODE;
@@ -2672,10 +2672,10 @@ void vif1Write32(u32 mem, u32 value)
 				{
 					vif1Regs->mskpath3 = 0;
 					psHu32(GIF_STAT) &= ~GIF_STAT_IMT;
-					if (CHCR::STR(gif)) CPU_INT(2, 4);	
+					if (gif->chcr.STR) CPU_INT(2, 4);	
 				}
 				
-				vif1Regs->err = 0;
+				vif1Regs->err._u32 = 0;
 				vif1.inprogress = 0;
 				vif1Regs->stat &= ~(VIF1_STAT_FQC | VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
 			}
@@ -2731,7 +2731,7 @@ void vif1Write32(u32 mem, u32 value)
 							// Gets the timing right - Flatout
 							CPU_INT(1, vif1ch->qwc * BIAS);
 						}
-						CHCR::setSTR(vif1ch);
+						vif1ch->chcr.STR = 1;
 					}
 				}
 			}
@@ -2741,7 +2741,7 @@ void vif1Write32(u32 mem, u32 value)
 			VIF_LOG("VIF1_ERR write32 0x%8.8x", value);
 
 			/* Set VIF1_ERR with 'value' */
-			vif1Regs->err = value;
+			vif1Regs->err._u32 = value;
 			break;
 		
 		case VIF1_STAT:   // STAT

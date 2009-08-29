@@ -177,15 +177,15 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 															
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
 			
-			switch(CHCR::ASP(dma))
+			switch(dma->chcr.ASP)
 			{
 			case 0: {						//Check if ASR0 is empty
 				dma->asr0 = dma->madr + (dma->qwc << 4);			//If yes store Succeeding tag
-				dma->chcr = (dma->chcr & 0xffffffcf) | 0x10; //1 Address in call stack
+				dma->chcr._u32 = (dma->chcr._u32 & 0xffffffcf) | 0x10; //1 Address in call stack
 				break;
 			}
 			case 1: {
-				dma->chcr = (dma->chcr & 0xffffffcf) | 0x20; //2 Addresses in call stack
+				dma->chcr._u32 = (dma->chcr._u32 & 0xffffffcf) | 0x20; //2 Addresses in call stack
 				dma->asr1 = dma->madr + (dma->qwc << 4);	//If no store Succeeding tag in ASR1
 				break;
 			}
@@ -200,17 +200,17 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
 		}
 		case TAG_RET: // Ret - Transfer QWC following the tag, load next tag
 			dma->madr = dma->tadr + 16;						//Set MADR to data following the tag
-			switch(CHCR::ASP(dma))
+			switch(dma->chcr.ASP)
 			{
 			case 2: {							//If ASR1 is NOT equal to 0 (Contains address)
-				dma->chcr = (dma->chcr & 0xffffffcf) | 0x10; //1 Address left in call stack
+				dma->chcr._u32 = (dma->chcr._u32 & 0xffffffcf) | 0x10; //1 Address left in call stack
 				dma->tadr = dma->asr1;						//Read ASR1 as next tag
 				dma->asr1 = 0;								//Clear ASR1
 				break;
 				} 
 												//If ASR1 is empty (No address held)
 			case 1:{						   //Check if ASR0 is NOT equal to 0 (Contains address)
-				dma->chcr = (dma->chcr & 0xffffffcf);  //No addresses left in call stack
+				dma->chcr._u32 = (dma->chcr._u32 & 0xffffffcf);  //No addresses left in call stack
 				dma->tadr = dma->asr0;					//Read ASR0 as next tag
 				dma->asr0 = 0;							//Clear ASR0
 				break;

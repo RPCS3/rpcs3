@@ -47,8 +47,23 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value);
 // --- DMA ---
 //
 
+union tDMA_CHCR {
+	struct {
+		u32 DIR : 1;
+		u32 reserved1 : 1;
+		u32 MOD : 2;
+		u32 ASP : 2;
+		u32 TTE : 1; 
+		u32 TIE : 1; 
+		u32 STR : 1; 
+		u32 reserved2 : 7;
+		u32 TAG : 16;
+	};
+	u32 _u32;
+};
+
 struct DMACh {
-	u32 chcr;
+	tDMA_CHCR chcr;
 	u32 null0[3];
 	u32 madr;
 	u32 null1[3];
@@ -418,6 +433,137 @@ enum DMAInter
 	MEISintr = 0x40004000
 };
 
+union tDMAC_CTRL {
+	struct {
+		u32 DMAE : 1;
+		u32 RELE : 1;
+		u32 MFD : 2;
+		u32 STS : 2;
+		u32 STD : 2; 
+		u32 RCYC : 3; 
+		u32 reserved1 : 21;
+	};
+	u32 _u32;
+};
+
+union tDMAC_STAT {
+	struct {
+		u32 CIS0 : 1;
+		u32 CIS1 : 1;
+		u32 CIS2 : 1;
+		u32 CIS3 : 1;
+		u32 CIS4 : 1;
+		u32 CIS5 : 1;
+		u32 CIS6 : 1;
+		u32 CIS7 : 1;
+		u32 CIS8 : 1;
+		u32 CIS9 : 1;
+		u32 reserved1 : 3;
+		u32 SIS : 1;
+		u32 MEIS : 1;
+		u32 BEIS : 1;
+		u32 CIM0 : 1;
+		u32 CIM1 : 1;
+		u32 CIM2 : 1;
+		u32 CIM3 : 1;
+		u32 CIM4 : 1;
+		u32 CIM5 : 1;
+		u32 CIM6 : 1;
+		u32 CIM7 : 1;
+		u32 CIM8 : 1;
+		u32 CIM9 : 1;
+		u32 reserved2 : 3;
+		u32 SIM : 1;
+		u32 MEIM : 1;
+		u32 reserved3 : 1;
+	};
+	u32 _u32;
+};
+
+union tDMAC_PCR {
+	struct {
+		u32 CPC0 : 1;
+		u32 CPC1 : 1;
+		u32 CPC2 : 1;
+		u32 CPC3 : 1;
+		u32 CPC4 : 1;
+		u32 CPC5 : 1;
+		u32 CPC6 : 1;
+		u32 CPC7 : 1;
+		u32 CPC8 : 1;
+		u32 CPC9 : 1;
+		u32 reserved1 : 6;
+		u32 CDE0 : 1;
+		u32 CDE1 : 1;
+		u32 CDE2 : 1;
+		u32 CDE3 : 1;
+		u32 CDE4 : 1;
+		u32 CDE5 : 1;
+		u32 CDE6 : 1;
+		u32 CDE7 : 1;
+		u32 CDE8 : 1;
+		u32 CDE9 : 1;
+		u32 reserved2 : 5;
+		u32 PCE : 1;
+	};
+	u32 _u32;
+};
+
+union tDMAC_SQWC {
+	struct {
+		u32 SQWC : 8;
+		u32 reserved1 : 8;
+		u32 TQWC : 8;
+		u32 reserved2 : 8;
+	};
+	u32 _u32;
+};
+
+union tDMAC_RBSR {
+	struct {
+		u32 RMSK : 31;
+		u32 reserved1 : 1;
+	};
+	u32 _u32;
+};
+
+union tDMAC_RBOR {
+	struct {
+		u32 ADDR : 31;
+		u32 reserved1 : 1;
+	};
+	u32 _u32;
+};
+
+union tDMAC_STADR {
+	struct {
+		u32 ADDR : 31;
+		u32 reserved1 : 1;
+	};
+	u32 _u32;
+};
+
+struct DMACregisters
+{
+	// Note: not yet tested.
+	tDMAC_CTRL	ctrl;
+	u32 padding[3];
+	tDMAC_STAT	stat;
+	u32 padding1[3];
+	tDMAC_PCR	pcr;
+	u32 padding2[3];
+	
+	tDMAC_SQWC	sqwc;
+	u32 padding3[3];
+	tDMAC_RBSR	rbsr;
+	u32 padding4[3];
+	tDMAC_RBOR	rbor;
+	u32 padding5[3];
+	tDMAC_STADR	stadr;
+};
+
+#define dmacRegs ((DMACregisters*)(PS2MEM_HW+0xE000))
+
 #ifdef PCSX2_VIRTUAL_MEM
 
 #define dmaGetAddrBase(addr) (((addr) & 0x80000000) ? (void*)&PS2MEM_SCRATCH[(addr) & 0x3ff0] : (void*)(PS2MEM_BASE+TRANSFORM_ADDR(addr)))
@@ -485,7 +631,7 @@ static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num)
 	
 		// DMA End
 		psHu32(DMAC_STAT) |= 1<<num;  
-		dma->chcr &= ~0x100; 
+		dma->chcr.STR = 0; 
 	}
 	
 	return ptr;
