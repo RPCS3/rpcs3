@@ -87,11 +87,13 @@ microVUt(void) mVUallocMFLAGb(mV, int reg, int fInstance) {
 }
 
 microVUt(void) mVUallocCFLAGa(mV, int reg, int fInstance) {
-	MOV32MtoR(reg, (uptr)&mVU->clipFlag[fInstance]);
+	if (fInstance < 4) MOV32MtoR(reg, (uptr)&mVU->clipFlag[fInstance]);			// microVU
+	else			   MOV32MtoR(reg, (uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL);	// macroVU
 }
 
 microVUt(void) mVUallocCFLAGb(mV, int reg, int fInstance) {
-	MOV32RtoM((uptr)&mVU->clipFlag[fInstance], reg);
+	if (fInstance < 4) MOV32RtoM((uptr)&mVU->clipFlag[fInstance], reg);			// microVU
+	else			   MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL, reg);	// macroVU
 }
 
 //------------------------------------------------------------------
