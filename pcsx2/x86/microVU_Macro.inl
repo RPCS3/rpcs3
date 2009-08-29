@@ -23,6 +23,7 @@
 #include "R5900OpcodeTables.h"
 
 extern void _vu0WaitMicro();
+extern void _vu0FinishMicro();
 
 //------------------------------------------------------------------
 // Macro VU - Helper Macros / Functions
@@ -237,10 +238,11 @@ void recBC2TL() { _setupBranchTest(JZ32,  true);  }
 // Macro VU - COP2 Transfer Instructions
 //------------------------------------------------------------------
 
-void COP2_Interlock(bool cond) {
-	if (cond) {
+void COP2_Interlock(bool mBitSync) {
+	if (cpuRegs.code & 1) {
 		iFlushCall(FLUSH_NOCONST);
-		CALLFunc((uptr)_vu0WaitMicro);
+		if (mBitSync) CALLFunc((uptr)_vu0WaitMicro);
+		else		  CALLFunc((uptr)_vu0FinishMicro);
 	}
 }
 
@@ -255,7 +257,7 @@ void TEST_FBRST_RESET(uptr resetFunct, int vuIndex) {
 static void recCFC2() {
 
 	printCOP2("CFC2");
-	COP2_Interlock(cpuRegs.code & 1);
+	COP2_Interlock(0);
 	if (!_Rt_) return;
 	iFlushCall(FLUSH_EVERYTHING);
 
@@ -275,7 +277,7 @@ static void recCFC2() {
 static void recCTC2() {
 
 	printCOP2("CTC2");
-	COP2_Interlock(cpuRegs.code & 1);
+	COP2_Interlock(1);
 	if (!_Rd_) return;
 	iFlushCall(FLUSH_EVERYTHING);
 
@@ -318,7 +320,7 @@ static void recCTC2() {
 static void recQMFC2() {
 
 	printCOP2("QMFC2");
-	COP2_Interlock(cpuRegs.code & 1);
+	COP2_Interlock(0);
 	if (!_Rt_) return;
 	iFlushCall(FLUSH_EVERYTHING);
 
@@ -332,7 +334,7 @@ static void recQMFC2() {
 static void recQMTC2() {
 
 	printCOP2("QMTC2");
-	COP2_Interlock(cpuRegs.code & 1);
+	COP2_Interlock(1);
 	if (!_Rd_) return;
 	iFlushCall(FLUSH_EVERYTHING);
 
