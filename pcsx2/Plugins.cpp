@@ -56,8 +56,14 @@ int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
 	if( realdest == NULL )
 		placebo.reset( realdest = new wxArrayString() );
 
+#ifdef _WIN32
 	return searchpath.Exists() ?
 		wxDir::GetAllFiles( searchpath.ToString(), realdest, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
+#else
+	return searchpath.Exists() ?
+		wxDir::GetAllFiles( searchpath.ToString(), realdest, wxsFormat( L"*%s*", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
+
+#endif
 }
 
 
@@ -593,7 +599,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		// Bind Optional Functions
 		// (leave pointer null and do not generate error)
 	}
-	
+
 	// Hack for PAD's stupid parameter passed on Init
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
@@ -603,7 +609,7 @@ PluginManager::~PluginManager()
 {
 	Close();
 	Shutdown();
-	
+
 	// All library unloading done automatically.
 }
 
@@ -617,13 +623,13 @@ void PluginManager::BindCommon( PluginsEnum_t pid )
 	while( current->MethodName != NULL )
 	{
 		*target = (VoidMethod*)m_info[pid].Lib.GetSymbol( current->GetMethodName( pid ) );
-		
+
 		if( *target == NULL )
 			*target = current->Fallback;
 
 		if( *target == NULL )
 			throw Exception::NotPcsxPlugin( pid );
-		
+
 		target++;
 		current++;
 	}
@@ -733,7 +739,7 @@ static bool OpenPlugin_FW()
 void PluginManager::Open( PluginsEnum_t pid )
 {
 	if( m_info[pid].IsOpened ) return;
-	
+
 	// Each Open needs to be called explicitly. >_<
 
 	bool result = true;
@@ -863,7 +869,7 @@ PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] )
 PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
 {
 	wxString passins[PluginId_Count];
-	
+
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		passins[pi->id] = folders[pi->id];
@@ -964,7 +970,7 @@ bool OpenCDVD( const char* pTitleFilename )
 	// if this assertion fails it means you didn't call CDVDsys_ChangeSource.  You should.
 	// You really should.  Really.
 	jASSUME( CDVD != NULL );
-	
+
 	// Don't repetitively open the CDVD plugin if directly loading an elf file and open failed once already.
 	if (!OpenStatus.CDVD)
 	{
@@ -974,12 +980,12 @@ bool OpenCDVD( const char* pTitleFilename )
 			pTitleFilename = cdvd_FileNameParam.c_str();
 
 		if (DoCDVDopen(pTitleFilename) != 0)
-		{ 
+		{
 			Msgbox::Alert("Error Opening CDVD Plugin");
 			ClosePlugins(true);
 			return false;
 		}
-		
+
 		if( cdvd_FileNameParam.IsEmpty() && (pTitleFilename != NULL) )
 			cdvd_FileNameParam = pTitleFilename;
 

@@ -269,11 +269,13 @@
 		<Unit filename="../gui/AdvancedDialog.cpp" />
 		<Unit filename="../gui/AdvancedDialog.h" />
 		<Unit filename="../gui/App.h" />
+		<Unit filename="../gui/AppAssert.cpp" />
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />
 		<Unit filename="../gui/CheckedStaticBox.cpp" />
 		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
+		<Unit filename="../gui/ConsoleLogger.h" />
 		<Unit filename="../gui/Dialogs/AboutBoxDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
