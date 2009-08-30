@@ -38,7 +38,7 @@ void *_openfile(const char *filename, int flags)
 		handle = CreateFile(wxString::FromAscii(filename).c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 	}
 
-	return handle == INVALID_HANDLE_VALUE ? NULL : handle;
+	return (handle == INVALID_HANDLE_VALUE) ? NULL : handle;
 }
 
 u64 _tellfile(void *handle)

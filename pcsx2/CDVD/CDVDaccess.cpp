@@ -45,6 +45,7 @@ static int diskTypeCached = -1;
 
 // used to bridge the gap between the old getBuffer api and the new getBuffer2 api.
 int lastReadSize;
+int lastLSN;		// needed for block dumping
 
 // Records last read block length for block dumping
 static int plsn = 0;
@@ -57,11 +58,9 @@ static void CheckNullCDVD()
 	DevAssert( CDVD != NULL, "Invalid CDVD object state (null pointer exception)" );
 }
 
-/////////////////////////////////////////////////
-//
+//////////////////////////////////////////////////////////////////////////////////////////
 // Disk Type detection stuff (from cdvdGigaherz)
 //
-
 int CheckDiskTypeFS(int baseType)
 {
 	int		f;
@@ -119,7 +118,7 @@ static int FindDiskType(int mType)
 	}
 	else if (mType < 0)
 	{
-		static u8 bleh[2352];
+		static u8 bleh[CD_FRAMESIZE_RAW];
 		cdvdTD td;
 
 		CDVD->getTD(0,&td);
@@ -314,26 +313,26 @@ s32 DoCDVDopen(const char* pTitleFilename)
 		cdvdTD td;
 		CDVD->getTD(0, &td);
 
-		int blockofs = 0, blocksize = 0, blocks = td.lsn;
+		blockDumpFile = isoCreate(temp.ToAscii().data(), ISOFLAGS_BLOCKDUMP_V3);
 
-		switch(cdtype)
+		if( blockDumpFile != NULL )
 		{
-		case CDVD_TYPE_PS2DVD:
-		case CDVD_TYPE_DVDV:
-		case CDVD_TYPE_DETCTDVDS:
-		case CDVD_TYPE_DETCTDVDD:
-			blockofs = 24;
-			blocksize = 2048;
-			break;
-		
-		default:
-			blockofs = 0;
-			blocksize= 2352;
-			break;
-		}
+			int blockofs = 0, blocksize = CD_FRAMESIZE_RAW, blocks = td.lsn;
 
-		blockDumpFile = isoCreate(temp.ToAscii().data(), ISOFLAGS_BLOCKDUMP);
-		if (blockDumpFile) isoSetFormat(blockDumpFile, blockofs, blocksize, blocks);
+			// hack: Because of limitations of the current cdvd design, we can't query the blocksize
+			// of the underlying media.  So lets make a best guess:
+
+			switch(cdtype)
+			{
+				case CDVD_TYPE_PS2DVD:
+				case CDVD_TYPE_DVDV:
+				case CDVD_TYPE_DETCTDVDS:
+				case CDVD_TYPE_DETCTDVDD:
+					blocksize = 2048;
+				break;
+			}
+			isoSetFormat(blockDumpFile, blockofs, blocksize, blocks);
+		}
 	}
 	else
 	{
@@ -388,7 +387,7 @@ s32 DoCDVDreadTrack(u32 lsn, int mode)
 	}
 
 	//DevCon::Notice("CDVD readTrack(lsn=%d,mode=%d)",params lsn, lastReadSize);
-
+	lastLSN = lsn;
 	return CDVD->readTrack(lsn,mode);
 }
 
@@ -399,7 +398,7 @@ s32 DoCDVDgetBuffer(u8* buffer)
 
 	if (ret == 0 && blockDumpFile != NULL)
 	{
-		isoWriteBlock(blockDumpFile, buffer, lastReadSize);
+		isoWriteBlock(blockDumpFile, buffer, lastLSN);
 	}
 
 	return ret;
@@ -524,5 +523,5 @@ CDVD_API CDVDapi_NoDisc =
 	NODISCgetBuffer2,
 	NODISCgetDualInfo,
 
-	NULL
+	NODISCgetUniqueFilename
 };

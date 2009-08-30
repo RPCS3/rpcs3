@@ -29,32 +29,52 @@ struct vifCycle {
 //
 union tVIF_STAT {
 	struct {
-		u32 VPS : 2;
-		u32 VEW : 1;
-		u32 VGW : 1;
+		u32 VPS : 2; // Vif(0/1) status.
+		u32 VEW : 1; // E-bit wait (1 - wait, 0 - don't wait)
+		u32 VGW : 1; // Status waiting for the end of gif transfer (Vif1 only)
 		u32 reserved : 2;
-		u32 MRK : 1;
-		u32 DBF : 1;
-		u32 VSS : 1;
-		u32 VFS : 1;
-		u32 VIS : 1;
-		u32 INT : 1;
-		u32 ER0 : 1;
-		u32 ER1 : 1;
+		u32 MRK : 1; // Mark Detect
+		u32 DBF : 1; // Double Buffer Flag
+		u32 VSS : 1; // Stopped by STOP
+		u32 VFS : 1; // Stopped by ForceBreak
+		u32 VIS : 1; // Vif Interrupt Stall
+		u32 INT : 1; // Intereupt by the i bit.
+		u32 ER0 : 1;  // DmaTag Mismatch error.
+		u32 ER1 : 1; // VifCode error
 		u32 reserved2 : 9;
-		u32 FDR : 1;
-		u32 FQC : 5;
+		u32 FDR : 1; // VIF/FIFO transfer direction. (0 - memory -> Vif, 1 - Vif -> memory)
+		u32 FQC : 5; // Amount of data. Up to 8 qwords on Vif0, 16 on Vif1.
 	};
 	u32 _u32;
 };
 
-// r0-r3 and c0-c3 would be more managable as arrays.
+union tVIF_FBRST {
+	struct {
+		u32 RST : 1; // Resets Vif(0/1) when written.
+		u32 FBK : 1; // Causes a Forcebreak to Vif((0/1) when 1 is written. (Stall)
+		u32 STP : 1; // Stops after the end of the Vifcode in progress when written. (Stall)
+		u32 STC : 1; // Cancels the Vif(0/1) stall and clears Vif Stats VSS, VFS, VIS, INT, ER0 & ER1.
+		u32 reserved : 28;
+	};
+	u32 _u32;
+};
+
+union tVIF_ERR {
+	struct {
+		u32 MII : 1; // Masks Stat INT.
+		u32 ME0 : 1; // Masks Stat Err0.
+		u32 ME1 : 1; // Masks Stat Err1.
+		u32 reserved : 29;
+	};
+	u32 _u32;
+};
+
 struct VIFregisters {
 	u32 stat;
 	u32 pad0[3];
 	u32 fbrst;
 	u32 pad1[3];
-	u32 err;
+	tVIF_ERR err;
 	u32 pad2[3];
 	u32 mark;
 	u32 pad3[3];
@@ -102,7 +122,7 @@ struct VIFregisters {
 	u32 addr;
 };
 
-enum vif_errors
+/*enum vif_errors
 {
 	VIF_ERR_MII = 0x1,
 	VIF_ERR_ME0 = 0x2,
@@ -120,7 +140,7 @@ namespace VIF_ERR
 	
 	// If true, VifCode errors are masked.
 	static __forceinline bool ME1(VIFregisters *tag) { return !!(tag->err & VIF_ERR_ME1); }
-}
+}*/
 
 extern "C"
 {

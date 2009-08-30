@@ -295,9 +295,10 @@ s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 		return 0;
 	}
 
-	isoReadBlock(iso, cdbuffer + iso->blockofs, lsn);
+	isoReadBlock(iso, cdbuffer, lsn);
 
 	pbuffer = cdbuffer;
+	
 	switch (mode)
 	{
 	case CDVD_MODE_2352:
@@ -316,6 +317,11 @@ s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 		psize = 2048;
 		break;
 	}
+
+	// version 3 blockdumps have no pbuffer header, so lets reset back to the
+	// original pointer. :)
+	if( iso->flags & ISOFLAGS_BLOCKDUMP_V3 )
+		pbuffer = cdbuffer;
 
 	memcpy_fast(tempbuffer,pbuffer,psize);
 
@@ -329,9 +335,9 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 	if (_lsn < 0) lsn = iso->blocks + _lsn;
 	if (lsn > iso->blocks) return -1;
 
-	isoReadBlock(iso, cdbuffer + iso->blockofs, lsn);
-
+	isoReadBlock(iso, cdbuffer, lsn);
 	pbuffer = cdbuffer;
+
 	switch (mode)
 	{
 	case CDVD_MODE_2352:
@@ -350,6 +356,11 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 		psize = 2048;
 		break;
 	}
+
+	// version 3 blockdumps have no pbuffer header, so lets reset back to the
+	// original pointer. :)
+	if( iso->flags & ISOFLAGS_BLOCKDUMP_V3 )
+		pbuffer = cdbuffer;
 
 	return 0;
 }
@@ -415,5 +426,5 @@ CDVD_API CDVDapi_Iso =
 	ISOgetBuffer2,
 	ISOgetDualInfo,
 
-	NULL
+	ISOgetUniqueFilename
 };

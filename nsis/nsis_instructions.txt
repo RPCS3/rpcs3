@@ -1,10 +1,45 @@
-Instruction for installations: 
+-------------------------------------
+  PCSX2 NSIS Installer Instructions
+-------------------------------------
 
-Install NSIS (tested with 2.45)
-Install NSIS Script Advanced Uninstall Log NSIS Header (you can find it opn NSIS wiki)
-Create a folder
-Put the nsis script in said folder
-Put vcredist_x86.exe in said folder
-Put the pcsx2 folder in said folder (warning, leave only the files you want in the installer. All files from the pcsx2 folder will be added to the installer )
-Edit the NSIS script with a text editor, changing the installer name and putting the correct name for the menu item (2 times, both filename and link name)
-Compile the NSIS script
+ * Install NSIS (tested with 2.45)
+ * Install NSIS Script: Advanced Uninstall Log (you can find it on NSIS wiki)
+
+ * Download the latest Visual C++ Redistributable (currently 2008 SP1 as of this writing) and
+   save it to this nsis/ folder. 
+ 
+ * Load the PCSX2 Suite solution and rebuild all in the following targets:
+    * Release SSE2
+    * Release SSSE3 (only needed if packaging plugins)
+    * Release SSE4 (only needed if packaging plugins)
+    * Devel (optional)
+    
+    You may selectively unload plugins you do not wish to package prior to running the NSIS
+    script.
+
+ * Compile script, and Enjoy :)
+ 
+ 
+--------------------------------------------
+  Compilation Targets and Plugin Inclusion
+--------------------------------------------
+
+pcsx2-dev.exe is included into the installer as well *if* present (but is not required).
+The Release mode (without -dev) is required, and the script errors if it's missing.
+
+To include non-NULL plugins into the installer you must specify /DINC_PLUGINS on the command
+line when compiling the script.  The installer will include plugins only if they are present.
+If you do not build plugins, or remove some (or all) plugins before running the nsis script,
+only PCSX2 and whatever remaining plugins will be packaged.
+
+GSdx SSE2, SSSE3, and SSE4 versions are all included into the installer *if* they are present.
+You will need to follow the above instructions and compile all release targets to get all the
+GSdx DLLs.
+
+--------------------------------------------
+            TODO / Wish List!!
+--------------------------------------------
+
+ * pcsx2-dev should probably be an optional section, conditionally scripted only if the
+   file is present at compilation time, and packaged.
+ 

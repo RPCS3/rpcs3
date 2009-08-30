@@ -77,21 +77,47 @@ microVUt(void) mVUallocSFLAGc(int reg, int regT, int fInstance) {
 	OR32RtoR(reg, regT);
 }
 
+// Denormalizes Status Flag
+microVUt(void) mVUallocSFLAGd(uptr memAddr, bool setAllflags) {
+	MOV32MtoR(gprF0, memAddr);
+	MOV32RtoR(gprF1, gprF0);
+	SHR32ItoR(gprF1, 3);
+	AND32ItoR(gprF1, 0x18);
+
+	MOV32RtoR(gprF2, gprF0);
+	SHL32ItoR(gprF2, 11);
+	AND32ItoR(gprF2, 0x1800);
+	OR32RtoR (gprF1, gprF2);
+
+	SHL32ItoR(gprF0, 14);
+	AND32ItoR(gprF0, 0x3cf0000);
+	OR32RtoR (gprF1, gprF0);
+
+	if (setAllflags) {
+		MOV32RtoR(gprF0, gprF1);
+		MOV32RtoR(gprF2, gprF1);
+		MOV32RtoR(gprF3, gprF1);
+	}
+}
+
 microVUt(void) mVUallocMFLAGa(mV, int reg, int fInstance) {
 	MOVZX32M16toR(reg, (uptr)&mVU->macFlag[fInstance]);
 }
 
 microVUt(void) mVUallocMFLAGb(mV, int reg, int fInstance) {
 	//AND32ItoR(reg, 0xffff);
-	MOV32RtoM((uptr)&mVU->macFlag[fInstance], reg);
+	if (fInstance < 4) MOV32RtoM((uptr)&mVU->macFlag[fInstance], reg);			// microVU
+	else			   MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL, reg);	// macroVU
 }
 
 microVUt(void) mVUallocCFLAGa(mV, int reg, int fInstance) {
-	MOV32MtoR(reg, (uptr)&mVU->clipFlag[fInstance]);
+	if (fInstance < 4) MOV32MtoR(reg, (uptr)&mVU->clipFlag[fInstance]);			// microVU
+	else			   MOV32MtoR(reg, (uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL);	// macroVU
 }
 
 microVUt(void) mVUallocCFLAGb(mV, int reg, int fInstance) {
-	MOV32RtoM((uptr)&mVU->clipFlag[fInstance], reg);
+	if (fInstance < 4) MOV32RtoM((uptr)&mVU->clipFlag[fInstance], reg);			// microVU
+	else			   MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL, reg);	// macroVU
 }
 
 //------------------------------------------------------------------
@@ -100,17 +126,16 @@ microVUt(void) mVUallocCFLAGb(mV, int reg, int fInstance) {
 
 microVUt(void) mVUallocVIa(mV, int GPRreg, int _reg_) {
 	if (!_reg_)	{ XOR32RtoR(GPRreg, GPRreg); }
-	else		{ MOVZX32Rm16toR(GPRreg, gprR, (_reg_ - 9) * 16); }
+	else		{ MOVZX32M16toR(GPRreg, (uptr)&mVU->regs->VI[_reg_].UL); }
 }
 
 microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 	if (mVUlow.backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
-		MOVZX32M16toR(gprR, (uptr)&mVU->regs->VI[_reg_].UL);
-		MOV32RtoM((uptr)&mVU->VIbackup, gprR);
-		MOV32ItoR(gprR, Roffset);
+		MOVZX32M16toR(gprT3, (uptr)&mVU->regs->VI[_reg_].UL);
+		MOV32RtoM((uptr)&mVU->VIbackup, gprT3);
 	}
 	if		(_reg_ == 0) { return; }
-	else if (_reg_ < 16) { MOV16RtoRm(gprR, GPRreg, (_reg_ - 9) * 16); }
+	else if (_reg_ < 16) { MOV16RtoM((uptr)&mVU->regs->VI[_reg_].UL, GPRreg); }
 }
 
 //------------------------------------------------------------------

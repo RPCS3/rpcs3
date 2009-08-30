@@ -1,0 +1,1 @@
+!define SVNREV_ZEROSPU2      $WCREV$

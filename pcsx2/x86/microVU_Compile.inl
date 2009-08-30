@@ -295,7 +295,6 @@ microVUt(void) mVUtestCycles(mV) {
 			MOV32ItoR(gprT2, (uptr)mVU);
 			if (isVU1)  CALLFunc((uptr)mVUwarning1);
 			//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
-			MOV32ItoR(gprR, Roffset); // Restore gprR
 			mVUendProgram(mVU, NULL, 0);
 		if (!isVU1) x86SetJ32(vu0jmp);
 		x86SetJ32(jmp32);

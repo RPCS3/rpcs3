@@ -317,7 +317,6 @@ microVUt(void) mVUbackupRegs(microVU* mVU) {
 // Restore Volatile Regs
 microVUt(void) mVUrestoreRegs(microVU* mVU) {
 	SSE_MOVAPS_M128_to_XMM(xmmPQ,  (uptr)&mVU->xmmPQb[0]);
-	MOV32ItoR(gprR, Roffset); // Restore gprR
 }
 
 //------------------------------------------------------------------

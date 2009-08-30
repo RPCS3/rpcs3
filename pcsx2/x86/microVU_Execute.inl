@@ -40,26 +40,15 @@ void mVUdispatcherA(mV) {
 	SSE_LDMXCSR((uptr)&g_sseVUMXCSR);
 
 	// Load Regs
-	MOV32ItoR(gprR, Roffset); // Load VI Reg Offset
+#ifdef CHECK_MACROVU0
 	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
-	
 	MOV32RtoR(gprF1, gprF0);
-	SHR32ItoR(gprF1, 3);
-	AND32ItoR(gprF1, 0x18);
-
 	MOV32RtoR(gprF2, gprF0);
-	SHL32ItoR(gprF2, 11);
-	AND32ItoR(gprF2, 0x1800);
-	OR32RtoR (gprF1, gprF2);
-
-	SHL32ItoR(gprF0, 14);
-	AND32ItoR(gprF0, 0x3cf0000);
-	OR32RtoR (gprF1, gprF0);
-
-	MOV32RtoR(gprF0, gprF1);
-	MOV32RtoR(gprF2, gprF1);
-	MOV32RtoR(gprF3, gprF1);
-
+	MOV32RtoR(gprF3, gprF0);
+#else
+	mVUallocSFLAGd((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL, 1);
+#endif
+	
 	SSE_MOVAPS_M128_to_XMM(xmmT1, (uptr)&mVU->regs->VI[REG_MAC_FLAG].UL);
 	SSE_SHUFPS_XMM_to_XMM (xmmT1, xmmT1, 0);
 	SSE_MOVAPS_XMM_to_M128((uptr)mVU->macFlag, xmmT1);

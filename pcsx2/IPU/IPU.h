@@ -60,40 +60,6 @@ union tIPU_CMD {
 	};
 };
 
-enum ipu_ctrl_m_flags
-{
-	IPU_CTRL_IFC_M	= (0x0f<< 0),
-	IPU_CTRL_OFC_M	= (0x0f<< 4),
-	IPU_CTRL_CBP_M	= (0x3f<< 8),
-	IPU_CTRL_ECD_M	= (0x01<<14),
-	IPU_CTRL_SCD_M	= (0x01<<15),
-	IPU_CTRL_IDP_M	= (0x03<<16),
-	IPU_CTRL_AS_M		= (0x01<<20),
-	IPU_CTRL_IVF_M	= (0x01<<21),
-	IPU_CTRL_QST_M	= (0x01<<22),
-	IPU_CTRL_MP1_M	= (0x01<<23),
-	IPU_CTRL_PCT_M	= (0x07<<24),
-	IPU_CTRL_RST_M	= (0x01<<30),
-	IPU_CTRL_BUSY_M	= (0x01<<31)
-};
-
-enum ipu_ctrl_o_flags
-{
-	IPU_CTRL_IFC_O	= ( 0),
-	IPU_CTRL_OFC_O	= ( 4),
-	IPU_CTRL_CBP_O	= ( 8),
-	IPU_CTRL_ECD_O	= (14),
-	IPU_CTRL_SCD_O	= (15),
-	IPU_CTRL_IDP_O	= (16),
-	IPU_CTRL_AS_O		= (20),
-	IPU_CTRL_IVF_O	= (21),
-	IPU_CTRL_QST_O	= (22),
-	IPU_CTRL_MP1_O	= (23),
-	IPU_CTRL_PCT_O	= (24),
-	IPU_CTRL_RST_O	= (30),
-	IPU_CTRL_BUSY_O	= (31)
-};
-
 //
 // Bitfield Structure
 //
@@ -116,20 +82,6 @@ union tIPU_CTRL {
 		u32 BUSY : 1;	// Busy
 	};
 	u32 _u32;
-};
-
-enum ipu_bp_m_flags
-{
-	IPU_BP_BP_M	= (0x7f<< 0),
-	IPU_BP_IFC_M	= (0x0f<< 8),
-	IPU_BP_FP_M	= (0x03<<16)
-};
-
-enum ipu_bp_o_flags
-{
-	IPU_BP_BP_O	= ( 0),
-	IPU_BP_IFC_O	= ( 8),
-	IPU_BP_FP_O	= (16)
 };
 
 //

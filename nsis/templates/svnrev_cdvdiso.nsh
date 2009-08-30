@@ -1,0 +1,1 @@
+!define SVNREV_CDVDISO      $WCREV$

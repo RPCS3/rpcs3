@@ -57,9 +57,9 @@ __forceinline void gsInterrupt()
 {
 	GIF_LOG("gsInterrupt: %8.8x", cpuRegs.cycle);
 
-	if (!(CHCR::STR(gif)))
+	if (!(gif->chcr.STR))
 	{
-		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr, gif->qwc, done);
+		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr._u32, gif->qwc, done);
 		return;
 	}
 
@@ -86,7 +86,7 @@ __forceinline void gsInterrupt()
 
 	gspath3done = 0;
 	gscycles = 0;
-	CHCR::clearSTR(gif);
+	gif->chcr.STR = 0;
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	
 	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); 
@@ -150,7 +150,7 @@ static __forceinline void GIFchain()
 
 static __forceinline bool checkTieBit(u32* &ptag)
 {
-	if ((CHCR::TIE(gif)) && (Tag::IRQ(ptag)))  //Check TIE bit of CHCR and IRQ bit of tag
+	if (gif->chcr.TIE && (Tag::IRQ(ptag)))  //Check TIE bit of CHCR and IRQ bit of tag
 	{
 		GIF_LOG("dmaIrq Set");
 		gspath3done = 1;
@@ -228,7 +228,7 @@ void GIFdma()
 	{
 		if (gif->qwc == 0) 
 		{
-			if ((CHCR::MOD(gif) == CHAIN_MODE) && CHCR::STR(gif))
+			if ((gif->chcr.MOD == CHAIN_MODE) && gif->chcr.STR)
 			{
 				if (!ReadTag(ptag, id)) return;
 				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
@@ -251,10 +251,10 @@ void GIFdma()
 	}
 
 	// Transfer Dn_QWC from Dn_MADR to GIF
-	if ((CHCR::MOD(gif) == NORMAL_MODE) || (gif->qwc > 0)) // Normal Mode
+	if ((gif->chcr.MOD == NORMAL_MODE) || (gif->qwc > 0)) // Normal Mode
 	{ 
 		
-		if (((psHu32(DMAC_CTRL) & 0xC0) == 0x80) && (CHCR::MOD(gif) == NORMAL_MODE))
+		if (((psHu32(DMAC_CTRL) & 0xC0) == 0x80) && (gif->chcr.MOD == NORMAL_MODE))
 		{ 
 			Console::WriteLn("DMA Stall Control on GIF normal");
 		}
@@ -265,7 +265,7 @@ void GIFdma()
 		return;	
 	}
 	
-	if ((CHCR::MOD(gif) == CHAIN_MODE) && (gspath3done == 0)) // Chain Mode
+	if ((gif->chcr.MOD == CHAIN_MODE) && (gspath3done == 0)) // Chain Mode
 	{
 		if (!ReadTag(ptag, id)) return;
 		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
@@ -316,7 +316,7 @@ void dmaGIF()
 {
 	 //We used to add wait time for the buffer to fill here, fixing some timing problems in path 3 masking
 	//It takes the time of 24 QW for the BUS to become ready - The Punisher And Streetball
-	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
+	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr._u32, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
 
 	Path3progress = STOPPED_MODE;
 	gspath3done = 0; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
@@ -331,7 +331,7 @@ void dmaGIF()
 		return;
 	}	
 
-	if ((gif->qwc == 0) && ((CHCR::MOD(gif) != NORMAL_MODE)))
+	if ((gif->qwc == 0) && (gif->chcr.MOD != NORMAL_MODE))
 	{
 		u32 *ptag;
 		
@@ -437,7 +437,7 @@ void mfifoGIFtransfer(int qwc)
 		gifstate &= ~GIF_STATE_EMPTY;
 	}
 	
-	GIF_LOG("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr, gif->madr, gif->tadr);
+	GIF_LOG("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
 		
 	if (gif->qwc == 0) 
 	{
@@ -495,7 +495,7 @@ void mfifoGIFtransfer(int qwc)
 				break;
 			}
 			
-		if ((CHCR::TIE(gif)) && (Tag::IRQ(ptag)))
+		if ((gif->chcr.TIE) && (Tag::IRQ(ptag)))
 		{
 			SPR_LOG("dmaIrq Set");
 			gifstate = GIF_STATE_DONE;
@@ -515,7 +515,7 @@ void mfifoGIFtransfer(int qwc)
 	if ((gif->qwc == 0) && (gifstate == GIF_STATE_DONE)) gifstate = GIF_STATE_STALL;
 	CPU_INT(11,mfifocycles);
 		
-	SPR_LOG("mfifoGIFtransfer end %x madr %x, tadr %x", gif->chcr, gif->madr, gif->tadr);	
+	SPR_LOG("mfifoGIFtransfer end %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);	
 }
 
 void gifMFIFOInterrupt()
@@ -523,13 +523,13 @@ void gifMFIFOInterrupt()
 	mfifocycles = 0;
 	if (Path3progress == STOPPED_MODE) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 
-	if ((CHCR::STR(spr0)) && (spr0->qwc == 0))
+	if ((spr0->chcr.STR) && (spr0->qwc == 0))
 	{
-		CHCR::clearSTR(spr0);
+		spr0->chcr.STR = 0;
 		hwDmacIrq(DMAC_FROM_SPR);
 	}
 
-	if (!(CHCR::STR(gif))) 
+	if (!(gif->chcr.STR)) 
 	{ 
 		Console::WriteLn("WTF GIFMFIFO");
 		cpuRegs.interrupt &= ~(1 << 11); 
@@ -573,7 +573,7 @@ void gifMFIFOInterrupt()
 	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
 	
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
-	CHCR::clearSTR(gif);
+	gif->chcr.STR = 0;
 	gifstate = GIF_STATE_READY;
 	hwDmacIrq(DMAC_GIF);
 	clearFIFOstuff(false);

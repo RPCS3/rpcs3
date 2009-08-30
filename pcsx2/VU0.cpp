@@ -66,34 +66,30 @@ void COP2_Unknown()
 }
 
 //****************************************************************************
-void _vu0WaitMicro() {
-	int startcycle;
+
+__forceinline void _vu0run(bool breakOnMbit) {
 	
-	if ((VU0.VI[REG_VPU_STAT].UL & 0x1) == 0) {
-		return;
-	}
+	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
-	startcycle = VU0.cycle;
+	int startcycle = VU0.cycle;
+	VU0.flags &= ~VUFLAG_MFLAGSET;
 
-	VU0.flags|= VUFLAG_BREAKONMFLAG;
-	VU0.flags&= ~VUFLAG_MFLAGSET;
-
-	if (!CHECK_MICROVU0) {
-		do {
-			CpuVU0.ExecuteBlock();
-			// knockout kings 2002 loops here
-			if( VU0.cycle-startcycle > 0x1000 ) {
-				Console::Notice("VU0 perma-stall, breaking execution..."); // (email zero if gfx are bad)
-				break;
-			}
-		} while ((VU0.VI[REG_VPU_STAT].UL & 0x1) && (VU0.flags & VUFLAG_MFLAGSET) == 0);
-	}
-	else CpuVU0.ExecuteBlock(); // Note: Need to test Knockout Kings 2002 with mVU!
+	do {
+		// knockout kings 2002 loops here with sVU
+		if (breakOnMbit && (VU0.cycle-startcycle > 0x1000)) {
+			Console::Notice("VU0 perma-stall, breaking execution...");
+			break; // mVU will never get here (it handles mBit internally)
+		}
+		CpuVU0.ExecuteBlock();
+	} while ((VU0.VI[REG_VPU_STAT].UL & 1)						// E-bit Termination
+	  &&	(!breakOnMbit || !(VU0.flags & VUFLAG_MFLAGSET)));	// M-bit Break
 
 	//NEW
 	cpuRegs.cycle += (VU0.cycle-startcycle)*2;
-	VU0.flags&= ~VUFLAG_BREAKONMFLAG;
 }
+
+void _vu0WaitMicro()   { _vu0run(1); } // Runs VU0 Micro Until E-bit or M-Bit End
+void _vu0FinishMicro() { _vu0run(0); } // Runs VU0 Micro Until E-Bit End
 
 namespace R5900 {
 namespace Interpreter{

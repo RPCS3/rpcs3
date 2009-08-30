@@ -140,7 +140,7 @@ static __forceinline void _dmaSPR0()
 	}
 
 	// Transfer Dn_QWC from SPR to Dn_MADR
-	switch(CHCR::MOD(spr0))
+	switch(spr0->chcr.MOD)
 	{
 		case NORMAL_MODE:
 		{
@@ -192,7 +192,7 @@ static __forceinline void _dmaSPR0()
 					break;
 			}
 			SPR0chain();
-			if (CHCR::TIE(spr0) && Tag::IRQ(ptag))  			 //Check TIE bit of CHCR and IRQ bit of tag
+			if (spr0->chcr.TIE && Tag::IRQ(ptag))  			 //Check TIE bit of CHCR and IRQ bit of tag
 			{
 				//Console::WriteLn("SPR0 TIE");
 				done = TRUE;
@@ -229,23 +229,23 @@ void SPRFROMinterrupt()
 		{
 			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
 			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-			//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr, gif->madr, gif->tadr);
+			//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr._u32, gif->madr, gif->tadr);
 			mfifoGIFtransfer(mfifotransferred);
 			mfifotransferred = 0;
-			if (CHCR::STR(gif)) return;
+			if (gif->chcr.STR) return;
 		}
 		else if ((psHu32(DMAC_CTRL) & 0xC) == 0x8)   // VIF1 MFIFO
 		{
 			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("VIF MFIFO Write outside MFIFO area");
 			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-			//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", params vif1ch->chcr, vif1ch->madr, vif1ch->tadr);
+			//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", params vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
 			mfifoVIF1transfer(mfifotransferred);
 			mfifotransferred = 0;
-			if (CHCR::STR(vif1ch)) return;
+			if (vif1ch->chcr.STR) return;
 		}
 	}
 	if (spr0finished == 0) return;
-	CHCR::clearSTR(spr0);
+	spr0->chcr.STR = 0;
 	hwDmacIrq(DMAC_FROM_SPR);
 }
 
@@ -253,9 +253,9 @@ void SPRFROMinterrupt()
 void dmaSPR0()   // fromSPR
 {
 	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx",
-	        spr0->chcr, spr0->madr, spr0->qwc, spr0->sadr);
+	        spr0->chcr._u32, spr0->madr, spr0->qwc, spr0->sadr);
 
-	if ((CHCR::MOD(spr0) == CHAIN_MODE) && spr0->qwc == 0)
+	if ((spr0->chcr.MOD == CHAIN_MODE) && spr0->qwc == 0)
 	{
 		u32 *ptag;
 		ptag = (u32*) & PS2MEM_SCRATCH[spr0->sadr & 0x3fff];		//Set memory pointer to SADR
@@ -324,7 +324,7 @@ void _SPR1interleave()
 
 void _dmaSPR1()   // toSPR work function
 {
-	switch(CHCR::MOD(spr1))
+	switch(spr1->chcr.MOD)
 	{
 		case NORMAL_MODE:
 		{
@@ -338,7 +338,7 @@ void _dmaSPR1()   // toSPR work function
 		{
 			u32 *ptag;
 			int id;
-			bool done = FALSE;
+			bool done = false;
 
 			if (spr1->qwc > 0)
 			{
@@ -353,7 +353,7 @@ void _dmaSPR1()   // toSPR work function
 			
 			if (!(Tag::Transfer("SPR1 Tag", spr1, ptag)))
 			{
-				done = TRUE;
+				done = true;
 				spr1finished = (done) ? 1: 0;
 			}
 
@@ -361,7 +361,7 @@ void _dmaSPR1()   // toSPR work function
 			spr1->madr = ptag[1];						//MADR = ADDR field
 
 			// Transfer dma tag if tte is set
-			if (CHCR::TTE(spr1))
+			if (spr1->chcr.TTE)
 			{
 				SPR_LOG("SPR TTE: %x_%x\n", ptag[3], ptag[2]);
 				SPR1transfer(ptag, 4);				//Transfer Tag
@@ -373,12 +373,12 @@ void _dmaSPR1()   // toSPR work function
 			done = (hwDmacSrcChain(spr1, id) == 1);
 			SPR1chain();										//Transfers the data set by the switch
 
-			if (CHCR::TIE(spr1) && Tag::IRQ(ptag))  			//Check TIE bit of CHCR and IRQ bit of tag
+			if (spr1->chcr.TIE && Tag::IRQ(ptag))  			//Check TIE bit of CHCR and IRQ bit of tag
 			{
 				SPR_LOG("dmaIrq Set");
 
 				//Console::WriteLn("SPR1 TIE");
-				done = TRUE;
+				done = true;
 			}
 			
 			spr1finished = done;
@@ -403,10 +403,10 @@ void dmaSPR1()   // toSPR
 
 	SPR_LOG("dmaSPR1 chcr = 0x%x, madr = 0x%x, qwc  = 0x%x\n"
 	        "        tadr = 0x%x, sadr = 0x%x",
-	        spr1->chcr, spr1->madr, spr1->qwc,
+	        spr1->chcr._u32, spr1->madr, spr1->qwc,
 	        spr1->tadr, spr1->sadr);
 
-	if ((CHCR::MOD(spr1) == CHAIN_MODE) && (spr1->qwc == 0))
+	if ((spr1->chcr.MOD == CHAIN_MODE) && (spr1->qwc == 0))
 	{
 		u32 *ptag;
 		ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
@@ -423,7 +423,7 @@ void SPRTOinterrupt()
 {
 	_dmaSPR1();
 	if (spr1finished == 0) return;
-	CHCR::clearSTR(spr1);
+	spr1->chcr.STR = 0;
 	hwDmacIrq(DMAC_TO_SPR);
 }
 
