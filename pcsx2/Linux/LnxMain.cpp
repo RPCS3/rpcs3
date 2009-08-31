@@ -50,7 +50,7 @@ int main(int argc, const char *argv[])
 	Path::CreateDirectory("~/.pcsx2");
 	Path::ChangeDirectory("~/.pcsx2");
 	Path::CreateDirectory(DEFAULT_INIS_DIR);
-	Config.Paths.Inis = "~/.pcsx2/" + DEFAULT_INIS_DIR + "/";
+	Config.Paths.Inis = "~/.pcsx2/" + string(DEFAULT_INIS_DIR) + "/";
 	sprintf(cfgfile, "%s/pcsx2.cfg", Config.Paths.Inis.c_str());
 	Path::ChangeDirectory(Config.Paths.Working);
 #endif
