@@ -23,7 +23,7 @@ extern void DoCDVDclose();
 extern s32  DoCDVDreadSector(u8* buffer, u32 lsn, int mode);
 extern s32  DoCDVDreadTrack(u32 lsn, int mode);
 extern s32  DoCDVDgetBuffer(u8* buffer);
-extern s32  DoCDVDreadSubQ(u32 lsn, cdvdSubQ* subq);
+//extern s32  DoCDVDreadSubQ(u32 lsn, cdvdSubQ* subq);
 extern void DoCDVDnewDiskCB(void (*callback)());
 extern s32  DoCDVDdetectDiskType();
 extern void DoCDVDresetDiskTypeCache();

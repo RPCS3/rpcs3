@@ -117,11 +117,8 @@
 		<Unit filename="../CDVD/CDVD_internal.h" />
 		<Unit filename="../CDVD/CDVDaccess.cpp" />
 		<Unit filename="../CDVD/CDVDaccess.h" />
-		<Unit filename="../CDVD/CDVDiso.h" />
 		<Unit filename="../CDVD/CDVDisoReader.cpp" />
 		<Unit filename="../CDVD/CDVDisoReader.h" />
-		<Unit filename="../CDVD/CDVDisodrv.h" />
-		<Unit filename="../CDVD/CDVDlib.h" />
 		<Unit filename="../CDVD/CdRom.cpp" />
 		<Unit filename="../CDVD/CdRom.h" />
 		<Unit filename="../CDVD/IsoFScdvd.h" />
@@ -216,7 +213,7 @@
 		<Unit filename="../PathUtils.cpp" />
 		<Unit filename="../Paths.h" />
 		<Unit filename="../Pcsx2Config.cpp" />
-		<Unit filename="../Plugins.cpp" />
+		<Unit filename="../PluginManager.cpp" />
 		<Unit filename="../Plugins.h" />
 		<Unit filename="../PrecompiledHeader.h" />
 		<Unit filename="../R3000A.cpp" />
@@ -235,7 +232,6 @@
 		<Unit filename="../SamplProf.h" />
 		<Unit filename="../SaveState.cpp" />
 		<Unit filename="../SaveState.h" />
-		<Unit filename="../Saveslots.cpp" />
 		<Unit filename="../Sif.cpp" />
 		<Unit filename="../Sif.h" />
 		<Unit filename="../Sifcmd.h" />
@@ -302,6 +298,7 @@
 		<Unit filename="../gui/Panels/PluginSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/SpeedhacksPanel.cpp" />
 		<Unit filename="../gui/Panels/VideoPanel.cpp" />
+		<Unit filename="../gui/Plugins.cpp" />
 		<Unit filename="../gui/Resources/AppIcon.h" />
 		<Unit filename="../gui/Resources/BackgroundLogo.h" />
 		<Unit filename="../gui/Resources/ConfigIcon_Cpu.h" />
@@ -312,6 +309,7 @@
 		<Unit filename="../gui/Resources/ConfigIcon_Video.h" />
 		<Unit filename="../gui/Resources/EmbeddedImage.h" />
 		<Unit filename="../gui/Resources/ps2_silver.h" />
+		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
 		<Unit filename="../gui/main.cpp" />

@@ -23,8 +23,18 @@
 #include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 #include "Misc.h"
 
+// ----------------------------------------------------------------------------
+//  Multiple interface system for CDVD
+//  used to provide internal CDVDiso and NoDisc, and external plugin interfaces.
+//  ---------------------------------------------------------------------------
+enum CDVD_SourceType
+{
+	CDVDsrc_Iso = 0,	// use built in ISO api
+	CDVDsrc_Plugin,		// use external plugin
+	CDVDsrc_NoDisc,		// use built in CDVDnull
+};
+
 class CoreEmuThread;
-enum CDVD_SourceType;
 
 extern bool SysInit();
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.

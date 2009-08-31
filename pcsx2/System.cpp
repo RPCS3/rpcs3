@@ -70,7 +70,7 @@ void SysDetect()
 		L"\tx86Flags         =  %8.8x %8.8x\n"
 		L"\tx86EFlags        =  %8.8x\n",
 			wxString::FromAscii( x86caps.VendorName ).c_str(), x86caps.StepID,
-			wxString::FromAscii( x86caps.FamilyName ).Trim().Trim(false).c_str(), 
+			wxString::FromAscii( x86caps.FamilyName ).Trim().Trim(false).c_str(),
 			x86caps.Speed / 1000, x86caps.Speed%1000,
 			x86caps.PhysicalCores, x86caps.LogicalCores,
 			wxString::FromAscii( x86caps.TypeName ).c_str(),
@@ -134,7 +134,7 @@ bool SysAllocateMem()
 
 		// Failures on the core initialization of memory is bad, since it means the emulator is
 		// completely non-functional.
-		
+
 		//Msgbox::Alert( "Failed to allocate memory needed to run pcsx2.\n\nError: %s", params ex.cMessage() );
 		SysShutdownMem();
 		return false;
@@ -166,7 +166,7 @@ void SysAllocateDynarecs()
 	{
 		// TODO : Fix this message.  It should respond according to the user's
 		// currently configured recompiler.interpreter options, for example.
-		
+
 		/*Msgbox::Alert(
 			"The EE/IOP recompiler failed to initialize with the following error:\n\n"
 			"%s"
@@ -215,7 +215,7 @@ void SysAllocateDynarecs()
 		Msgbox::Alert(
 			"The VU1 recompiler failed to initialize with the following error:\n\n"
 			"%s"
-			"\n\nThe VU1 interpreter will be used for this session (will slow down most games).", params 
+			"\n\nThe VU1 interpreter will be used for this session (will slow down most games).", params
 			ex.cMessage()
 		);
 */

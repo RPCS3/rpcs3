@@ -75,6 +75,8 @@ void CoreEmuThread::CpuInitializeMess()
 // of SEH, and so these functions can be inlined.
 #ifdef _WIN32
 #	define __unique_stackframe __noinline
+#else
+#	define __unique_stackframe
 #endif
 
 // On Win32 this function invokes SEH, which requires it be in a function all by itself
