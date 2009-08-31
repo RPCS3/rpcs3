@@ -16,11 +16,33 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __R5900_H__
-#define __R5900_H__
+#pragma once
+
+//////////////////////////////////////////////////////////////////////////////////////////
+#pragma region Recompiler Stuffs
+
+// This code section contains recompiler vars that are used in "shared" code. Placing
+// them in iR5900.h would mean having to include that into more files than I care to
+// right now, so we're sticking them here for now until a better solution comes along.
 
 extern bool g_EEFreezeRegs;
+extern bool g_ExecBiosHack;
+extern volatile bool eeRecIsReset;
 
+namespace Exception
+{
+	// Implementation Note: this exception has no meaningful type information and we don't
+	// care to have it be caught by any BaseException handlers lying about, so let's not
+	// derive from BaseException :D
+	class RecompilerReset
+	{
+	public:
+		explicit RecompilerReset() { }
+	};
+}
+#pragma endregion
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // EE Bios function name tables.
 namespace R5900 {
 extern const char* const bios[256];
@@ -28,7 +50,6 @@ extern const char* const bios[256];
 
 extern s32 EEsCycle;
 extern u32 EEoCycle;
-extern bool g_ExecBiosHack;
 
 union GPR_reg {   // Declare union type GPR register
 	u64 UD[2];      //128 bits
@@ -254,7 +275,6 @@ extern R5900cpu recCpu;
 
 extern void cpuInit();
 extern void cpuReset();		// can throw Exception::FileNotFound.
-extern void cpuShutdown();
 extern void cpuExecuteBios();
 extern void cpuException(u32 code, u32 bd);
 extern void cpuTlbMissR(u32 addr, u32 bd);
@@ -295,5 +315,3 @@ extern void cpuTestTIMRInts();
 #define EXC_CODE_WATCH  EXC_CODE(23)
 #define EXC_CODE__MASK  0x0000007c
 #define EXC_CODE__SHIFT 2
-
-#endif /* __R5900_H__ */

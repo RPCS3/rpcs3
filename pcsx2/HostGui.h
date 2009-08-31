@@ -68,8 +68,6 @@ extern void States_Load( int num );
 extern void States_Save( int num );
 extern bool States_isSlotUsed(int num);
 
-extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // External Gui APIs (platform specific)
 //
@@ -87,14 +85,6 @@ extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (se
 // as keyboard events, menu/status updates, and cpu execution invocation.
 namespace HostGui
 {
-	// Signal for informing the GUI that the saveslot status has been altered.
-	// The guis hould re-enumerate the slot information displayed in the menu, or wherever.
-	extern void ResetMenuSlots();
-	
-	// Signals to the GUI that execution of the emulator should begin.  This can be either
-	// a blocking or non-blocking (threaded) action.
-	extern void BeginExecution();
-	
 	// Signals the gui with a keystroke.  Handle or discard or dispatch, or enjoy its
 	// pleasant flavor.
 	extern void __fastcall KeyEvent( keyEvent* ev );

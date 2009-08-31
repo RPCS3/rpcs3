@@ -30,7 +30,7 @@ namespace R5900Exception
 	// Translation note: EE Emulation exceptions are untranslated only.  There's really no
 	// point in providing translations for this hardcore mess. :)
 	//
-	class BaseExcept : public Ps2Generic
+	class BaseExcept : public virtual Ps2Generic
 	{
 	public:
 		const cpuRegisters cpuState;
@@ -39,8 +39,8 @@ namespace R5900Exception
 		virtual ~BaseExcept() throw()=0;
 
 		explicit BaseExcept( const wxString& msg ) :
-			Exception::Ps2Generic( L"(EE) " + msg ),
-			cpuState( cpuRegs )
+			Ps2Generic( L"(EE) " + msg )
+		,	cpuState( cpuRegs )
 		{
 		}
 		
@@ -105,18 +105,6 @@ namespace R5900Exception
 	
 	//////////////////////////////////////////////////////////////////////////////////
 	//
-	class SystemCall : public BaseExcept
-	{
-	public:
-		virtual ~SystemCall() throw() {}
-
-		explicit SystemCall() :
-			BaseExcept( L"SystemCall [SYSCALL]" )
-		{}
-	};
-
-	//////////////////////////////////////////////////////////////////////////////////
-	//
 	class Trap : public BaseExcept
 	{
 	public:
@@ -136,30 +124,6 @@ namespace R5900Exception
 		explicit Trap( u16 trapcode ) :
 			BaseExcept( L"Trap" ),
 			TrapCode( trapcode )
-		{}
-	};
-
-	//////////////////////////////////////////////////////////////////////////////////
-	//
-	class Break : public BaseExcept
-	{
-	public:
-		virtual ~Break() throw() {}
-
-		explicit Break() :
-			BaseExcept( L"Break Instruction" )
-		{}
-	};
-	
-	//////////////////////////////////////////////////////////////////////////////////
-	//
-	class Overflow : public BaseExcept
-	{
-	public:
-		virtual ~Overflow() throw() {}
-
-		explicit Overflow() :
-			BaseExcept( L"Overflow" )
 		{}
 	};
 

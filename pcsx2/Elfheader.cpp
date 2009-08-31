@@ -23,10 +23,6 @@
 
 using namespace std;
 
-#ifdef _MSC_VER
-#pragma warning(disable:4996) //ignore the stricmp deprecated warning
-#endif
-
 u32 ElfCRC;
 
 struct ELF_HEADER {

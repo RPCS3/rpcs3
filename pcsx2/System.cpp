@@ -18,9 +18,9 @@
 
 #include "PrecompiledHeader.h"
 
-#include "Common.h"
 #include "HostGui.h"
 
+#include "Common.h"
 #include "VUmicro.h"
 #include "iR5900.h"
 #include "R3000A.h"
@@ -30,13 +30,15 @@
 #include "R5900Exceptions.h"
 
 #include "CDVD/CDVD.h"
+#include "ps2/CoreEmuThread.h"
 
 using namespace std;
 
 Pcsx2Config EmuConfig;
 
 // disable all session overrides by default...
-SessionOverrideFlags g_Session = {false};
+SessionOverrideFlags	g_Session = {false};
+CoreEmuThread*			g_EmuThread;
 
 bool sysInitialized = false;
 
@@ -230,10 +232,9 @@ void SysAllocateDynarecs()
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // This should be called last thing before Pcsx2 exits.
+//
 void SysShutdownMem()
 {
-	cpuShutdown();
-
 	vuMicroMemShutdown();
 	psxMemShutdown();
 	memShutdown();
@@ -254,9 +255,6 @@ void SysShutdownDynarecs()
 }
 
 
-bool g_ReturnToGui = false;			// set to exit the execution of the emulator and return control to the GUI
-bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (set to false on reset)
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // Resets all PS2 cpu execution caches, which does not affect that actual PS2 state/condition.
 // This can be called at any time outside the context of a Cpu->Execute() block without
@@ -265,16 +263,8 @@ bool g_EmulationInProgress = false;	// Set TRUE if a game is actively running (s
 // Use this method to reset the recs when important global pointers like the MTGS are re-assigned.
 void SysClearExecutionCache()
 {
-	if( CHECK_EEREC )
-	{
-		Cpu = &recCpu;
-		psxCpu = &psxRec;
-	}
-	else
-	{
-		Cpu = &intCpu;
-		psxCpu = &psxInt;
-	}
+	Cpu		= CHECK_EEREC ? &recCpu : &intCpu;
+	psxCpu	= CHECK_IOPREC ? &psxRec : &psxInt;
 
 	Cpu->Reset();
 	psxCpu->Reset();
@@ -287,83 +277,118 @@ __forceinline void SysUpdate()
 	HostGui::KeyEvent( PADkeyEvent() );
 }
 
-void SysExecute()
+bool EmulationInProgress()
 {
-	g_EmulationInProgress = true;
-	g_ReturnToGui = false;
-
-	// Optimization: We hardcode two versions of the EE here -- one for recs and one for ints.
-	// This is because recs are performance critical, and being able to inline them into the
-	// function here helps a small bit (not much but every small bit counts!).
-
-	try
-	{
-		if( CHECK_EEREC )
-		{
-			while( !g_ReturnToGui )
-			{
-				recExecute();
-				SysUpdate();
-			}
-		}
-		else
-		{
-			while( !g_ReturnToGui )
-			{
-				Cpu->Execute();
-				SysUpdate();
-			}
-		}
-	}
-	catch( R5900Exception::BaseExcept& ex )
-	{
-		Console::Error( ex.LogMessage() );
-		Console::Error( fmt_string( "(EE) PC: 0x%8.8x  \tCycle: 0x%8.8x", ex.cpuState.pc, ex.cpuState.cycle ).c_str() );
-	}
+	return (g_EmuThread != NULL) && g_EmuThread->IsRunning();
 }
 
-// Function provided to escape the emulation state, by shutting down plugins and saving
-// the GS state.  The execution state is effectively preserved, and can be resumed with a
-// call to SysExecute.
+// Executes the specified cdvd source and optional elf file.  This command performs a
+// full closure of any existing VM state and starts a fresh VM with the requested
+// sources.
+void SysExecute( CoreEmuThread* newThread, CDVD_SourceType cdvdsrc )
+{
+	wxASSERT( newThread != NULL );
+	safe_delete( g_EmuThread );
+
+	CDVDsys_ChangeSource( cdvdsrc );
+	g_EmuThread = newThread;
+	g_EmuThread->Resume();
+}
+
+// Executes the emulator using a saved/existing virtual machine state and currently
+// configured CDVD source device.
+// Debug assertions:
+void SysExecute( CoreEmuThread* newThread )
+{
+	wxASSERT( newThread != NULL );
+	safe_delete( g_EmuThread );
+
+	g_EmuThread = newThread;
+	g_EmuThread->Resume();
+}
+
+// Once execution has been ended no action can be taken on the Virtual Machine (such as
+// saving states).  No assertions or exceptions.
 void SysEndExecution()
 {
 	if( EmuConfig.closeGSonEsc )
 		StateRecovery::MakeGsOnly();
 
-	ClosePlugins( EmuConfig.closeGSonEsc );
-	g_ReturnToGui = true;
+	safe_delete( g_EmuThread );
 }
+
+void SysSuspend()
+{
+	if( g_EmuThread != NULL )
+		g_EmuThread->Suspend();
+}
+
+void SysResume()
+{
+	if( g_EmuThread != NULL )
+		g_EmuThread->Resume();
+}
+
+
+// Function provided to escape the emulation state, by shutting down plugins and saving
+// the GS state.  The execution state is effectively preserved, and can be resumed with a
+// call to SysExecute.
+/*void SysEndExecution()
+{
+	if( EmuConfig.closeGSonEsc )
+		StateRecovery::MakeGsOnly();
+
+	ClosePlugins( EmuConfig.closeGSonEsc );
+}*/
 
 void SysRestorableReset()
 {
-	if( !g_EmulationInProgress ) return;
+	if( !EmulationInProgress() ) return;
 	StateRecovery::MakeFull();
+}
+
+// The calling function should trap and handle exceptions as needed.
+// Exceptions:
+//   Exception::StateLoadError - thrown when a fully recoverable exception ocurred.  The
+//   virtual machine memory state is fully intact.
+//
+//   Any other exception means the Virtual Memory state is indeterminate and probably
+//   invalid.
+void SysLoadState( const wxString& file )
+{
+	// we perform a full backup to memory first so that we can restore later if the
+	// load fails.  fixme: should this be made optional?  It could have significant
+	// speed impact on state loads on slower machines with low ram. >_<
+	StateRecovery::MakeFull();
+
+	gzLoadingState joe( file );		// this'll throw an StateLoadError.
+
+	GetPluginManager().Open();
+	cpuReset();
+	SysClearExecutionCache();
+
+	joe.FreezeAll();
+
+	if( GSsetGameCRC != NULL )
+		GSsetGameCRC(ElfCRC, g_ZeroGSOptions);
 }
 
 void SysReset()
 {
-	// fixme - this code  sets the statusbar but never returns control to the window message pump
-	// so the status bar won't receive the WM_PAINT messages needed to update itself anyway.
-	// Oops! (air)
+	Console::Status( _("Resetting...") );
 
-	HostGui::Notice( _("Resetting...") );
-	Console::SetTitle( _("Resetting...") );
-
-	g_EmulationInProgress = false;
-	StateRecovery::Clear();
-
-	cpuShutdown();
-	ShutdownPlugins();
-
+	safe_delete( g_EmuThread );
+	GetPluginManager().Shutdown();
 	ElfCRC = 0;
 
 	// Note : No need to call cpuReset() here.  It gets called automatically before the
 	// emulator resumes execution.
-
-	HostGui::Notice( _("Ready") );
-	Console::SetTitle( _("Emulation state is reset.") );
 }
 
+// Maps a block of memory for use as a recompiled code buffer, and ensures that the
+// allocation is below a certain memory address (specified in "bounds" parameter).
+// The allocated block has code execution privileges.
+// Returns NULL on allocation failure.
 u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 {
 	u8 *Mem = (u8*)HostSys::Mmap( base, size );

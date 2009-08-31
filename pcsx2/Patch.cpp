@@ -27,10 +27,6 @@
 #include "Patch.h"
 #include "VU.h"
 
-#ifdef _MSC_VER
-#pragma warning(disable:4996) //ignore the stricmp deprecated warning
-#endif
-
 IniPatch patch[ MAX_PATCH ];
 
 u32 SkipCount=0, IterationCount=0;

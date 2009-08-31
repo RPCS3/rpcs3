@@ -73,7 +73,7 @@ void MemoryCard::Load( uint mcd )
 	if( !fname.FileExists() )
 		Create( str );
 
-#ifdef WIN32
+#ifdef _WIN32
 	NTFS_CompressFile( str, g_Conf->McdEnableNTFS );
 #endif
 

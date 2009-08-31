@@ -146,6 +146,8 @@ namespace Threading
 
 		virtual bool IsRunning() const;
 		virtual sptr Block();
+		
+		bool IsSelf() const;
 
 	protected:
 		// Used to dispatch the thread callback function.

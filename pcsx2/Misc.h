@@ -37,9 +37,6 @@ extern int GetPS2ElfName( wxString& dest ); // Used in Misc, System, Linux, CDVD
 void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);
 extern u32 g_sseVUMXCSR, g_sseMXCSR;
 
-// Used in Misc,and Windows/Linux files.
-extern void ProcessFKeys(int fkey,  struct KeyModifiers *keymod); // processes fkey related commands value 1-12
-
 void SaveGSState(const wxString& file);
 void LoadGSState(const wxString& file);
 

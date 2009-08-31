@@ -17,6 +17,8 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "App.h"
+
 #include "Common.h"
 #include "HostGui.h"
 
@@ -40,52 +42,30 @@ bool States_isSlotUsed(int num)
 //////////////////////////////////////////////////////////////////////////////////////////
 // Save state load-from-file (or slot) helpers.
 
-// Internal use state loading function which does not trap exceptions.
-// The calling function should trap and handle exceptions as needed.
-static void _loadStateOrExcept( const wxString& file )
-{
-	gzLoadingState joe( file );		// this'll throw an StateLoadError.
-
-	// Make sure the cpu and plugins are ready to be state-ified!
-	cpuReset();
-	OpenPlugins();
-
-	joe.FreezeAll();
-
-	if( GSsetGameCRC != NULL )
-		GSsetGameCRC(ElfCRC, g_ZeroGSOptions);
-}
-
 // returns true if the new state was loaded, or false if nothing happened.
 void States_Load( const wxString& file )
 {
 	try
 	{
-		_loadStateOrExcept( file );
-		HostGui::Notice( wxsFormat( _("Loaded State %s"), file.c_str() ) );
+		SysLoadState( file );
+		HostGui::Notice( wxsFormat( _("Loaded State %s"),
+			wxFileName( file ).GetFullName().c_str() ) );
 	}
-	catch( Exception::StateLoadError& ex)
+	catch( Exception::BadSavedState& ex)
 	{
+		// At this point we can return control back to the user, no questions asked.
+		// StateLoadErrors are only thorwn if the load failed prior to any virtual machine
+		// memory contents being changed.  (usually missing file errors)
+
 		Console::Notice( ex.LogMessage() );
-
-		// At this point the cpu hasn't been reset, so we can return
-		// control to the user safely... (that's why we use a console notice instead of a popup)
-
-		return;
 	}
 	catch( Exception::BaseException& ex )
 	{
-		// The emulation state is ruined.  Might as well give them a popup and start the gui.
-		// Translation Tip: Since the savestate load was incomplete, the emulator has been reset.
-
-		Msgbox::Alert(
-			wxsFormat( _("Error loading savestate from file: %s"), file.c_str() ) +
-			L"\n\n" + _("Error details:") + ex.DisplayMessage()
-		);
-		SysReset();
-		return;
+		// VM state is probably ruined.  We'll need to recover from the in-memory backup.
+		StateRecovery::Recover();
 	}
-	HostGui::BeginExecution();
+
+	SysExecute( new AppEmuThread() );
 }
 
 void States_Load(int num)
@@ -94,39 +74,13 @@ void States_Load(int num)
 
 	if( !Path::IsFile( file ) )
 	{
-		Console::Notice( "Saveslot %d is empty.", params num );
+		Console::Notice( "Savestate slot %d is empty.", params num );
 		return;
 	}
 
-	try
-	{
-		_loadStateOrExcept( file );
-		HostGui::Notice( wxsFormat( _("Loaded State %d"), num ) );
-	}
-	catch( Exception::StateLoadError& ex)
-	{
-		Console::Notice( wxsFormat( L"Could not load savestate slot %d.\n\n%s", num, ex.LogMessage().c_str() ) );
-
-		// At this point the cpu hasn't been reset, so we can return
-		// control to the user safely... (that's why we use a console notice instead of a popup)
-
-		return;
-	}
-	catch( Exception::BaseException& ex )
-	{
-		// The emulation state is ruined.  Might as well give them a popup and start the gui.
-		// Translation Tip: Since the savestate load was incomplete, the emulator has been reset.
-
-		Msgbox::Alert(
-			wxsFormat( _("Error loading savestate from slot %d"), file.c_str() ) +
-			L"\n\n" + _("Error details:") + ex.DisplayMessage()
-		);
-
-		SysEndExecution();
-		return;
-	}
-
-	HostGui::BeginExecution();
+	Console::Status( "Loading savestate from slot %d...", params num );
+	States_Load( file );
+	HostGui::Notice( wxsFormat( _("Loaded State (slot %d)"), num ) );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -134,10 +88,17 @@ void States_Load(int num)
 
 void States_Save( const wxString& file )
 {
+	if( !EmulationInProgress() )
+	{
+		Msgbox::Alert( _("You need to start emulation first before you can save it's state.") );
+		return;
+	}
+
 	try
 	{
+		Console::Status( wxsFormat( L"Saving savestate to file: %s", file.c_str() ) );
 		StateRecovery::SaveToFile( file );
-		HostGui::Notice( wxsFormat( _("State saved to file: %s"), file.c_str() ) );
+		HostGui::Notice( wxsFormat( _("State saved to file: %s"), wxFileName( file ).GetFullName().c_str() ) );
 	}
 	catch( Exception::BaseException& ex )
 	{
@@ -153,32 +114,16 @@ void States_Save( const wxString& file )
 
 		Console::Error( wxsFormat(
 			L"An error occurred while trying to save to file %s\n", file.c_str() ) +
-			L"Your emulation state has not been saved!\n\nError: " + ex.LogMessage()
+			L"Your emulation state has not been saved!\n"
+			L"\nError: " + ex.LogMessage()
 		);
 	}
-
-	// Filename could be a valid slot, so still need to update
-	HostGui::ResetMenuSlots();
 }
 
 void States_Save(int num)
 {
-	try
-	{
-		StateRecovery::SaveToSlot( num );
-		HostGui::Notice( wxsFormat( _("State saved to slot %d"), num ) );
-	}
-	catch( Exception::BaseException& ex )
-	{
-		// TODO: Implement a "pause the action and issue a popup" thing here.
-		// *OR* some kind of GS overlay... [for now we use the console]
-
-		Console::Error( wxsFormat(
-			L"An error occurred while trying to save to slot %d\n", num ) +
-			L"Your emulation state has not been saved!\n\nError: " + ex.LogMessage()
-		);
-	}
-	HostGui::ResetMenuSlots();
+	Console::Status( "Saving savestate to slot %d...", params num );
+	States_Save( SaveState::GetFilename( num ) );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -196,7 +141,7 @@ void vSyncDebugStuff( uint frame )
 					g_TestRun.frame += 20;
 					if( g_TestRun.curimage >= g_TestRun.numimages ) {
 						// exit
-						SysEndExecution();
+						g_EmuThread->Cancel();
 					}
 				}
 				else {
@@ -206,7 +151,7 @@ void vSyncDebugStuff( uint frame )
 			}
 			else {
 				// exit
-				SysEndExecution();
+				g_EmuThread->Cancel();
 			}
 		}
 	}

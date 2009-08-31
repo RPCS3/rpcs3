@@ -17,7 +17,7 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "System.h"
+#include "App.h"
 #include "Plugins.h"
 #include "Utilities/ScopedPtr.h"
 #include "ConfigurationPanels.h"
@@ -38,6 +38,21 @@ DEFINE_EVENT_TYPE(wxEVT_EnumerationFinished);
 
 typedef s32		(CALLBACK* PluginTestFnptr)();
 typedef void	(CALLBACK* PluginConfigureFnptr)();
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+namespace Exception
+{
+	class NotEnumerablePlugin : public BadStream
+	{
+	public:
+		virtual ~NotEnumerablePlugin() throw() {}
+		explicit NotEnumerablePlugin( const wxString& objname=wxEmptyString ) :
+			BadStream( objname, "" )
+		,	BaseException( wxLt("File is not a PCSX2 plugin") )
+		{}
+	};
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -75,7 +90,7 @@ public:
 
 		if( m_GetLibType == NULL || m_GetLibName == NULL || m_GetLibVersion2 == NULL )
 		{
-			throw Exception::NotPcsxPlugin( m_plugpath );
+			throw Exception::NotEnumerablePlugin( m_plugpath );
 		}
 		m_type = m_GetLibType();
 	}
@@ -444,10 +459,6 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 			}
 		}
 		catch( Exception::BadStream& ex )
-		{
-			Console::Status( ex.LogMessage() );
-		}
-		catch( Exception::NotPcsxPlugin& ex )
 		{
 			Console::Status( ex.LogMessage() );
 		}

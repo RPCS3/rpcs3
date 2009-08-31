@@ -80,14 +80,9 @@ void sioInit()
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;
 	sio.packetsize = 0;
-	sio.terminator =0x55; // Command terminator 'U'
+	sio.terminator = 0x55; // Command terminator 'U'
 
 	MemoryCard::Init();
-}
-
-void psxSIOShutdown()
-{
-	MemoryCard::Shutdown();
 }
 
 u8 sioRead8() {
@@ -597,7 +592,7 @@ void InitializeSIO(u8 value)
 
 			if( sio.activeMemcardSlot[mcidx] != 0 )
 			{
-				// Might want to more agressively declare a card's non-existence here.
+				// Might want to more aggressively declare a card's non-existence here.
 				// As non-zero slots always report a failure, and have to read
 				// the FAT before writing, think this should be fine.
 				sio2.packet.recvVal1 = 0x1D100;
@@ -607,7 +602,7 @@ void InitializeSIO(u8 value)
 			{
 				m_PostSavestateCards[mcidx]--;
 				sio2.packet.recvVal1 = 0x1D100;
-				PAD_LOG( "START MEMCARD[%d] - post-savestate ejection - reported as missing!", sio.GetMemcardIndex() );
+				PAD_LOG( "START MEMCARD[%d] - post-savestate ejection - reporting as missing!", sio.GetMemcardIndex() );
 			}
 			else
 			{

@@ -23,34 +23,38 @@
 #include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
 #include "Misc.h"
 
+class CoreEmuThread;
+enum CDVD_SourceType;
+
 extern bool SysInit();
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
 extern void SysReset();					// Resets the various PS2 cpus, sub-systems, and recompilers.
 extern void SysUpdate();				// Called on VBlank (to update i.e. pads)
+
+extern void SysExecute( CoreEmuThread* newThread );
+extern void SysExecute( CoreEmuThread* newThread, CDVD_SourceType cdvdsrc );
+extern void SysEndExecution();
+
+extern void SysSuspend();
+extern void SysResume();
 
 extern bool SysAllocateMem();			// allocates memory for all PS2 systems; returns FALSe on critical error.
 extern void SysAllocateDynarecs();		// allocates memory for all dynarecs, and force-disables any failures.
 extern void SysShutdownDynarecs();
 extern void SysShutdownMem();
 
+extern void SysLoadState( const wxString& file );
 extern void SysRestorableReset();		// Saves the current emulation state prior to spu reset.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
-extern void SysEndExecution();			// terminates plugins, saves GS state (if enabled), and signals emulation loop to end.
-
-// initiates high-speed execution of the emulation state.  This function is currently
-// designed to be run from an event loop, but will eventually be re-tooled with threading
-// in mindunder the new GUI (assuming Linux approves!), which will make life easier *and*
-// improve overall performance too!
-extern void SysExecute();
 
 
-// Maps a block of memory for use as a recompiled code buffer, and ensures that the
-// allocation is below a certain memory address (specified in "bounds" parameter).
-// The allocated block has code execution privileges.
-// Returns NULL on allocation failure.
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 extern void vSyncDebugStuff( uint frame );
 
+extern CoreEmuThread*	g_EmuThread;
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 #ifdef __LINUX__
 
 #	include <signal.h>
@@ -91,7 +95,7 @@ namespace Msgbox
 	extern bool OkCancel( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=0 );
 	extern bool YesNo( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_QUESTION );
 
-	extern int Assertion( const wxString& text, const wxString& stacktrace );
+	extern int  Assertion( const wxString& text, const wxString& stacktrace );
 	extern void Except( const Exception::BaseException& src );
 }
 
@@ -99,4 +103,3 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_MSGBOX, -1 );
 	DECLARE_EVENT_TYPE( pxEVT_CallStackBox, -1 );
 END_DECLARE_EVENT_TYPES()
-

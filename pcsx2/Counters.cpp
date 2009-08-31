@@ -442,16 +442,22 @@ __forceinline void rcntUpdate_vSync()
 	s32 diff = (cpuRegs.cycle - vsyncCounter.sCycle);
 	if( diff < vsyncCounter.CycleT ) return;
 
-	//iopBranchAction = 1;
 	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
+		eeRecIsReset = false;
+		CoreEmuThread::Get().StateCheck();
+		if( eeRecIsReset )
+		{
+			eeRecIsReset = false;
+			cpuSetBranch();
+			throw Exception::RecompilerReset();
+		}
+
 		VSyncEnd(vsyncCounter.sCycle);
 
 		vsyncCounter.sCycle += vSyncInfo.Blank;
 		vsyncCounter.CycleT = vSyncInfo.Render;
 		vsyncCounter.Mode = MODE_VRENDER;
-		
-		CoreEmuThread::Get().StateCheck();
 	}
 	else	// VSYNC end / VRENDER begin
 	{

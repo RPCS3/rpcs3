@@ -37,6 +37,9 @@ extern int branch;		         // set for branch (also used by the SuperVU! .. why
 extern u32 target;		         // branch target
 extern u32 s_nBlockCycles;		// cycles of current block recompiling
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+
 #define REC_FUNC( f ) \
    void rec##f( void ) \
    { \
@@ -93,8 +96,6 @@ void SetBranchImm( u32 imm );
 void iFlushCall(int flushtype);
 void recBranchCall( void (*func)() );
 void recCall( void (*func)(), int delreg );
-
-extern void recExecute();		// same as recCpu.Execute(), but faster (can be inline'd)
 
 namespace R5900{
 namespace Dynarec {

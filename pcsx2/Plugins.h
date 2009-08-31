@@ -39,12 +39,45 @@ struct PluginInfo
 
 namespace Exception
 {
-	class NotPcsxPlugin : public Stream
+	class PluginError : public virtual RuntimeError
 	{
 	public:
-		virtual ~NotPcsxPlugin() throw() {}
-		explicit NotPcsxPlugin( const wxString& objname );
-		explicit NotPcsxPlugin( const PluginsEnum_t& pid );
+		const PluginsEnum_t PluginId;
+
+	public:
+		PluginError( PluginsEnum_t pid ) :
+			RuntimeError( "Generic plugin error" )
+		,	BaseException( "Generic plugin error" )
+		,	PluginId( pid )
+		{
+		}
+	};
+
+	class PluginFailure : public virtual RuntimeError
+	{
+	public:
+		wxString plugin_name;		// name of the plugin
+
+		virtual ~PluginFailure() throw() {}
+
+		explicit PluginFailure( const char* plugin, const char* msg="%s plugin encountered a critical error" ) :
+			RuntimeError( msg )
+		,	BaseException( msg )
+		,	plugin_name( wxString::FromAscii(plugin) ) {}
+
+		virtual wxString LogMessage() const;
+		virtual wxString DisplayMessage() const;
+	};
+
+	class InvalidPluginConfigured : public virtual PluginError, public virtual BadStream
+	{
+	public:
+		virtual ~InvalidPluginConfigured() throw() {}
+
+		explicit InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname,
+			const char* eng );
+		explicit InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname,
+			const wxString& eng_msg, const wxString& xlt_msg );
 	};
 };
 
@@ -80,8 +113,40 @@ struct LegacyPluginAPI_Common
 class SaveState;
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// IPluginManager
+// Provides a basic placebo "do-nothing" interface for plugin management.  This is used
+// to avoid NULL pointer exceptions/segfaults when referencing the plugin manager global
+// handle.
 //
-class PluginManager
+// Note: The Init and Freeze methods of this class will cause debug assertions, but Close
+// methods fail silently, on the premise that Close and Shutdown are typically run from
+// exception handlers or cleanup code, and null pointers should be silently ignored in
+// favor of continuing cleanup.
+//
+class PluginManagerBase
+{
+	DeclareNoncopyableObject( PluginManagerBase )
+
+public:
+	PluginManagerBase() {}
+	virtual ~PluginManagerBase() {}
+
+	virtual void Init() { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Shutdown() {}
+	virtual void Open() { }
+	virtual void Open( PluginsEnum_t pid ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Close( PluginsEnum_t pid ) {}
+	virtual void Close( bool closegs=true ) {}
+
+	virtual void Freeze( PluginsEnum_t pid, int mode, freezeData* data ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Freeze( PluginsEnum_t pid, SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Freeze( SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	
+};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+class PluginManager : public PluginManagerBase
 {
 	DeclareNoncopyableObject( PluginManager )
 
@@ -110,13 +175,14 @@ protected:
 	PluginStatus_t m_info[PluginId_Count];
 
 public:
-	~PluginManager();
+	virtual ~PluginManager();
 
 	void Init();
 	void Shutdown();
+	void Open();
 	void Open( PluginsEnum_t pid );
 	void Close( PluginsEnum_t pid );
-	void Close();
+	void Close( bool closegs=true );
 
 	void Freeze( PluginsEnum_t pid, int mode, freezeData* data );
 	void Freeze( PluginsEnum_t pid, SaveState& state );
@@ -137,15 +203,8 @@ protected:
 extern const PluginInfo tbl_PluginInfo[];
 extern PluginManager* g_plugins;
 
-extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
+extern PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] );
+extern PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] );
 
-
-extern void LoadPlugins();
-extern void ReleasePlugins();
-
-extern void InitPlugins();
-extern void ShutdownPlugins();
-
-extern void OpenPlugins();
-extern void ClosePlugins( bool closegs );
+extern PluginManagerBase& GetPluginManager();
 

@@ -112,69 +112,6 @@ static void iBranchTest(u32 newpc = 0xffffffff);
 static void ClearRecLUT(BASEBLOCK* base, int count);
 static u32 eeScaleBlockCycles();
 
-#ifdef PCSX2_VM_COISSUE
-static u8 _eeLoadWritesRs(u32 tempcode)
-{
-	switch(tempcode>>26) {
-		case 26: // ldl
-		case 27: // ldr
-		case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39:
-		case 55: // LD
-		case 30: // lq
-			return ((tempcode>>21)&0x1f)==((tempcode>>16)&0x1f); // rs==rt
-	}
-	return 0;
-}
-
-static u8 _eeIsLoadStoreCoIssue(u32 firstcode, u32 secondcode)
-{
-	switch(firstcode>>26) {
-		case 34: // lwl
-			return (secondcode>>26)==38;
-		case 38: // lwr
-			return (secondcode>>26)==34;
-		case 42: // swl
-			return (secondcode>>26)==46;
-		case 46: // swr
-			return (secondcode>>26)==42;
-		case 26: // ldl
-			return (secondcode>>26)==27;
-		case 27: // ldr
-			return (secondcode>>26)==26;
-		case 44: // sdl
-			return (secondcode>>26)==45;
-		case 45: // sdr
-			return (secondcode>>26)==44;
-
-		case 32: case 33: case 35: case 36: case 37: case 39:
-		case 55: // LD
-
-		// stores
-		case 40: case 41: case 43:
-		case 63: // sd
-			return (secondcode>>26)==(firstcode>>26);
-
-		case 30: // lq
-		case 31: // sq
-		case 49: // lwc1
-		case 57: // swc1
-		case 54: // lqc2
-		case 62: // sqc2
-			return (secondcode>>26)==(firstcode>>26);
-	}
-	return 0;
-}
-
-static u8 _eeIsLoadStoreCoX(u32 tempcode)
-{
-	switch( tempcode>>26 ) {
-		case 30: case 31: case 49: case 57: case 55: case 63:
-			return 1;
-	}
-	return 0;
-}
-#endif
-
 void _eeFlushAllUnused()
 {
 	int i;
@@ -446,13 +383,22 @@ static void recAlloc()
 	x86FpuState = FPU_STATE;
 }
 
+struct ManualPageTracking
+{
+	u16 page;
+	u8  counter;
+};
+
 PCSX2_ALIGNED16( static u16 manual_page[Ps2MemSize::Base >> 12] );
 PCSX2_ALIGNED16( static u8 manual_counter[Ps2MemSize::Base >> 12] );
+
+volatile bool eeRecIsReset = false;
 
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
 	Console::Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
+	eeRecIsReset = true;
 
 	maxrecmem = 0;
 
@@ -616,66 +562,70 @@ static void __naked DispatcherEvent()
 		jmp DispatcherReg;
 	}
 }
+#endif
 
-void recExecute()
+static void recExecute()
 {
-	g_EEFreezeRegs = true;
-
-	// Enter an endless loop, which is only escapable via C++ exception handling.
+	// Implementation Notes:
+	// This function enter an endless loop, which is only escapable via C++ exception handling.
 	// The loop is needed because some things in the rec use "ret" as a shortcut to
 	// invoking DispatcherReg.  These things are code bits which are called infrequently,
 	// such as dyna_block_discard and dyna_page_reset.
 
+	// Optimization note:
+	// Compared pushad against manually pushing the regs one-by-one.
+	// Manually pushing is faster, especially on Core2's and such. :)
+
+	g_EEFreezeRegs = true;
+
 	while( true )
 	{
-		// Optimization note : Compared pushad against manually pushing the regs one-by-one.
-		// Manually pushing is faster, especially on Core2's and such. :)
-
-		__asm
+		try
 		{
-			push ebx
-			push esi
-			push edi
-			push ebp
+#ifdef _MSC_VER
 
-			call DispatcherReg
+			__asm
+			{
+				push ebx
+				push esi
+				push edi
+				push ebp
 
-			pop ebp
-			pop edi
-			pop esi
-			pop ebx
-		}
-	}
-	g_EEFreezeRegs = false;
-}
+				call DispatcherReg
+
+				pop ebp
+				pop edi
+				pop esi
+				pop ebx
+			}
 
 #else // _MSC_VER
 
-__forceinline void recExecute()
-{
-	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
-	// Manually pushing is faster, especially on Core2's and such. :)
-	g_EEFreezeRegs = true;
-	__asm__
-	(
-		".intel_syntax noprefix\n"
-		"push ebx\n"
-		"push esi\n"
-		"push edi\n"
-		"push ebp\n"
+			__asm__
+			(
+				".intel_syntax noprefix\n"
+				"push ebx\n"
+				"push esi\n"
+				"push edi\n"
+				"push ebp\n"
 
-		"call DispatcherReg\n"
+				"call DispatcherReg\n"
 
-		"pop ebp\n"
-		"pop edi\n"
-		"pop esi\n"
-		"pop ebx\n"
-		".att_syntax\n"
-	);
+				"pop ebp\n"
+				"pop edi\n"
+				"pop esi\n"
+				"pop ebx\n"
+				".att_syntax\n"
+			);
+#endif
+		}
+		catch( Exception::RecompilerReset& )
+		{
+		}
+	}
+
 	g_EEFreezeRegs = false;
 }
-
-#endif
 
 namespace R5900 {
 namespace Dynarec {

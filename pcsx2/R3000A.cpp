@@ -69,7 +69,6 @@ void psxReset()
 
 void psxShutdown() {
 	psxBiosShutdown();
-	psxSIOShutdown();
 	//psxCpu->Shutdown();
 }
 

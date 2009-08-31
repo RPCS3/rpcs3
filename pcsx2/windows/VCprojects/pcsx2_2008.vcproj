@@ -1951,6 +1951,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\Saveslots.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\wxHelpers.cpp"
 				>
 			</File>
@@ -2134,16 +2138,32 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="System"
+				>
+				<File
+					RelativePath="..\..\gui\Plugins.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\WinCompressNTFS.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\WinSysExec.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
-			Name="HostSystem"
+			Name="SysCore"
 			>
 			<File
 				RelativePath="..\..\PathUtils.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\Plugins.cpp"
+				RelativePath="..\..\PluginManager.cpp"
 				>
 			</File>
 			<File
@@ -2155,23 +2175,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\Saveslots.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\SaveState.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\System.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\WinCompressNTFS.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\WinSysExec.cpp"
 				>
 			</File>
 			<Filter

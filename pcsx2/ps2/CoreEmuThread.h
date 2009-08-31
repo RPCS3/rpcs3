@@ -46,46 +46,27 @@ protected:
 	bool m_resetRecompilers;
 	bool m_resetProfilers;
 	
-	wxString m_elf_file;
-	
-	MutexLock m_lock_elf_file;
+	const wxString m_elf_file;
+
 	MutexLock m_lock_ExecMode;
 
 public:
 	static CoreEmuThread& Get();
 
 public:
-	CoreEmuThread() :
-		m_ExecMode( ExecMode_Idle )
-	,	m_Done( false )
-	,	m_ResumeEvent()
-	,	m_SuspendEvent()
-	,	m_resetRecompilers( false )
-	,	m_resetProfilers( false )
-	
-	,	m_elf_file()
-	,	m_lock_elf_file()
-	,	m_lock_ExecMode()
-	{
-	}
-	
-	void SetElfFile( const wxString& text )
-	{
-		ScopedLock lock( m_lock_elf_file );
-		m_elf_file = text;
-	}
-
-	void Start();
-	void Reset();
+	explicit CoreEmuThread( const wxString& elf_file=wxEmptyString );
+	virtual ~CoreEmuThread();
 
 	bool IsSuspended() const { return (m_ExecMode == ExecMode_Suspended); }
-	void Suspend( bool isBlocking = true );
-	void Resume();
-	void ApplySettings( const Pcsx2Config& src );
+	virtual void Suspend( bool isBlocking = true );
+	virtual void Resume();
+	virtual void ApplySettings( const Pcsx2Config& src );
+	virtual void StateCheck();
 
-	void StateCheck();
+	virtual void DoThreadCleanup();
 
 protected:
 	void CpuInitializeMess();
-	sptr ExecuteTask();
+	void CpuExecute();
+	virtual sptr ExecuteTask();
 };

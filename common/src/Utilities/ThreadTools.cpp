@@ -45,6 +45,8 @@ namespace Threading
 
 	void PersistentThread::Start()
 	{
+		if( m_running ) return;
+
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 			throw Exception::ThreadCreationError();
 
@@ -89,8 +91,13 @@ namespace Threading
 		pthread_join( m_thread, (void**)&m_returncode );
 		return m_returncode;
 	}
+	
+	bool PersistentThread::IsSelf() const
+	{
+		return pthread_self() == m_thread;
+	}
 
-	bool Exists( pthread_t pid )
+	bool PersistentThread::Exists( pthread_t pid )
 	{
 		// passing 0 to pthread_kill is a NOP, and returns the status of the thread only.
 		return ( ESRCH != pthread_kill( pid, 0 ) );

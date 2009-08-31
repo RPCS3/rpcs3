@@ -49,23 +49,29 @@ static const wxChar* isoFilterTypes =
 
 void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 {
-	g_EmuThread->Suspend();
+	SysSuspend();
 
 	Console::Status( L"Default Folder: " + g_Conf->Folders.RunIso.ToString() );
 	wxFileDialog ctrl( this, _("Run PS2 Iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
 		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
 
-	if( ctrl.ShowModal() == wxID_CANCEL ) return;
-	g_Conf->Folders.RunIso = ctrl.GetPath();
-
-	//g_Conf->Save();
+	if( ctrl.ShowModal() == wxID_CANCEL )
+	{
+		SysResume();
+		return;
+	}
 	
+	SysEndExecution();
+
+	g_Conf->Folders.RunIso = ctrl.GetPath();
+	g_Conf->Save();
+
+	wxString elf_file;
 	if( EmuConfig.SkipBiosSplash )
 	{
 		// Fetch the ELF filename and CD type from the CDVD provider.
 		wxString ename( ctrl.GetFilename() );
 		int result = GetPS2ElfName( ename );
-		g_EmuThread->SetElfFile( wxEmptyString );
 		switch( result )
 		{
 			case 0:
@@ -78,34 +84,32 @@ void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 
 			case 2:
 				// PS2 game.  Valid!
-				g_EmuThread->SetElfFile( ename );
+				elf_file = ename;
 			break;
 		}
 	}
+
+	SysExecute( new AppEmuThread( elf_file ), CDVDsrc_Iso );
 }
 
 void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 {
-	if( g_EmuThread->IsRunning() )
+	if( EmulationInProgress() )
 	{
-		g_EmuThread->Suspend();
+		SysSuspend();
 
 		// [TODO] : Add one of 'dems checkboxes that read like "[x] don't show this stupid shit again, kthx."
 		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmEmuReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
 
 		if( !result )
 		{
-			if( !IsPaused() )
-				g_EmuThread->Resume();
+			SysResume();
 			return;
 		}
 	}
 
-	g_EmuThread->Reset();
-	CDVDsys_ChangeSource( CDVDsrc_NoDisc );
-	g_EmuThread->Resume();
-
-	//HostGui::BeginExecution();
+	SysEndExecution();
+	SysExecute( new AppEmuThread(), CDVDsrc_NoDisc );
 }
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)

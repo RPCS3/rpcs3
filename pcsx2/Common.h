@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#pragma once
 
 #include "Pcsx2Defs.h"
 
@@ -42,4 +41,5 @@
 #include "Elfheader.h"
 #include "Patch.h"
 
-#endif /* __COMMON_H__ */
+extern bool EmulationInProgress();
+

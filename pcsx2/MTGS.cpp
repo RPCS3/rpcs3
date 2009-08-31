@@ -1088,7 +1088,6 @@ void mtgsWaitGS()
 void mtgsOpen()
 {
 	// better not be a thread already running, yo!
-	assert( mtgsThread == NULL );
 	if( mtgsThread != NULL ) return;
 
 	mtgsThread = new mtgsThreadObject();

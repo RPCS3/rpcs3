@@ -38,43 +38,58 @@ CoreEmuThread& CoreEmuThread::Get()
 
 void CoreEmuThread::CpuInitializeMess()
 {
-	try
-	{
-		OpenPlugins();
-		cpuReset();
-		SysClearExecutionCache();
+	GetPluginManager().Open();
+	cpuReset();
+	SysClearExecutionCache();
 
+	if( GSsetGameCRC != NULL )
 		GSsetGameCRC( ElfCRC, 0 );
 
-		if( StateRecovery::HasState() )
-		{
-			// no need to boot bios or detect CDs when loading savestates.
-			// [TODO] : It might be useful to detect game SLUS/CRC and compare it against
-			// the savestate info, and issue a warning to the user since, chances are, they
-			// don't really want to run a game with the wrong ISO loaded into the emu.
-			StateRecovery::Recover();
-		}
-		else
-		{
-			ScopedLock lock( m_lock_elf_file );
-			if( !m_elf_file.IsEmpty() )
-			{
-				// Skip Bios Hack -- Runs the PS2 BIOS stub, and then manually loads the ELF
-				// executable data, and injects the cpuRegs.pc with the address of the
-				// execution start point.
-				//
-				// This hack is necessary for non-CD ELF files, and is optional for game CDs
-				// (though not recommended for games because of rare ill side effects).
-
-				cpuExecuteBios();
-				loadElfFile( m_elf_file );
-			}
-		}
-	}
-	catch( Exception::BaseException& ex )
+	if( StateRecovery::HasState() )
 	{
-		Msgbox::Alert( ex.DisplayMessage() );
+		// no need to boot bios or detect CDs when loading savestates.
+		// [TODO] : It might be useful to detect game SLUS/CRC and compare it against
+		// the savestate info, and issue a warning to the user since, chances are, they
+		// don't really want to run a game with the wrong ISO loaded into the emu.
+		StateRecovery::Recover();
 	}
+	else
+	{
+		if( !m_elf_file.IsEmpty() )
+		{
+			// Skip Bios Hack -- Runs the PS2 BIOS stub, and then manually loads the ELF
+			// executable data, and injects the cpuRegs.pc with the address of the
+			// execution start point.
+			//
+			// This hack is necessary for non-CD ELF files, and is optional for game CDs
+			// (though not recommended for games because of rare ill side effects).
+
+			cpuExecuteBios();
+			loadElfFile( m_elf_file );
+		}
+	}
+}
+
+// special macro which disables inlining on functions that require their own function stackframe.
+// This is due to how Win32 handles structured exception handling.  Linux uses signals instead
+// of SEH, and so these functions can be inlined.
+#ifdef _WIN32
+#	define __unique_stackframe __noinline
+#endif
+
+// On Win32 this function invokes SEH, which requires it be in a function all by itself
+// with inlining disabled.
+__unique_stackframe
+void CoreEmuThread::CpuExecute()
+{
+	PCSX2_MEM_PROTECT_BEGIN();
+	Cpu->Execute();
+	PCSX2_MEM_PROTECT_END();
+}
+
+static void _cet_callback_cleanup( void* handle )
+{
+	((CoreEmuThread*)handle)->DoThreadCleanup();
 }
 
 sptr CoreEmuThread::ExecuteTask()
@@ -86,13 +101,11 @@ sptr CoreEmuThread::ExecuteTask()
 		m_ResumeEvent.Wait();
 	}
 
+	pthread_cleanup_push( _cet_callback_cleanup, this );
 	CpuInitializeMess();
-
 	StateCheck();
-
-	PCSX2_MEM_PROTECT_BEGIN();
-	Cpu->Execute();
-	PCSX2_MEM_PROTECT_END();
+	CpuExecute();
+	pthread_cleanup_pop( true );
 
 	return 0;
 }
@@ -127,28 +140,32 @@ void CoreEmuThread::StateCheck()
 	}
 }
 
-void CoreEmuThread::Start()
+CoreEmuThread::CoreEmuThread( const wxString& elf_file ) :
+	m_ExecMode( ExecMode_Idle )
+,	m_Done( false )
+,	m_ResumeEvent()
+,	m_SuspendEvent()
+,	m_resetRecompilers( false )
+,	m_resetProfilers( false )
+
+,	m_elf_file( elf_file )
+,	m_lock_ExecMode()
 {
-	if( IsRunning() ) return;
-
-	m_running			= false;
-	m_ExecMode			= ExecMode_Idle;
-	m_Done				= false;
-	m_resetProfilers	= false;
-	m_resetRecompilers	= false;
-	m_elf_file			= wxEmptyString;
-
-	m_ResumeEvent.Reset();
-	m_SuspendEvent.Reset();
 	PersistentThread::Start();
-
 	pthread_detach( m_thread );
 }
 
-void CoreEmuThread::Reset()
+// Invoked by the pthread_exit or pthread_cancel
+void CoreEmuThread::DoThreadCleanup()
+{
+	wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
+	m_running = false;
+	GetPluginManager().Close();
+}
+
+CoreEmuThread::~CoreEmuThread()
 {
 	Cancel();
-	StateRecovery::Clear();
 }
 
 // Resumes the core execution state, or does nothing is the core is already running.  If
@@ -156,7 +173,7 @@ void CoreEmuThread::Reset()
 // memory savestates.
 void CoreEmuThread::Resume()
 {
-	Start();
+	if( IsSelf() || !IsRunning() ) return;
 
 	{
 		ScopedLock locker( m_lock_ExecMode );
@@ -208,6 +225,8 @@ void CoreEmuThread::Resume()
 //
 void CoreEmuThread::Suspend( bool isBlocking )
 {
+	if( IsSelf() || !IsRunning() ) return;
+
 	{
 		ScopedLock locker( m_lock_ExecMode );
 
@@ -232,3 +251,4 @@ void CoreEmuThread::ApplySettings( const Pcsx2Config& src )
 	m_resetProfilers = (src.Profiler != EmuConfig.Profiler );
 	EmuConfig = src;
 }
+

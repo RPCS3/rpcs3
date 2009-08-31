@@ -17,7 +17,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Utilities/RedtapeWindows.h"
 #include "Utilities/ScopedPtr.h"
 
 #include <wx/dir.h>
@@ -27,7 +26,6 @@
 #include "GS.h"
 #include "HostGui.h"
 #include "CDVD/CDVDisoReader.h"
-#include "AppConfig.h"
 
 // ----------------------------------------------------------------------------
 // Yay, order of this array shouldn't be important. :)
@@ -48,24 +46,6 @@ const PluginInfo tbl_PluginInfo[] =
 	//{ "SIO",	PluginId_SIO,	PS2E_LT_SIO,	PS2E_SIO_VERSION }
 
 };
-
-int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
-{
-	wxScopedPtr<wxArrayString> placebo;
-	wxArrayString* realdest = dest;
-	if( realdest == NULL )
-		placebo.reset( realdest = new wxArrayString() );
-
-#ifdef _WIN32
-	return searchpath.Exists() ?
-		wxDir::GetAllFiles( searchpath.ToString(), realdest, wxsFormat( L"*%s", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
-#else
-	return searchpath.Exists() ?
-		wxDir::GetAllFiles( searchpath.ToString(), realdest, wxsFormat( L"*%s*", wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
-
-#endif
-}
-
 
 typedef void CALLBACK VoidMethod();
 typedef void CALLBACK vMeth();		// shorthand for VoidMethod
@@ -166,21 +146,7 @@ _PADkeyEvent       PADkeyEvent;
 _PADsetSlot        PADsetSlot;
 _PADqueryMtap      PADqueryMtap;
 
-void PAD_update( u32 padslot ) { }
-
-// SIO[2]
-/*
-_SIOinit           SIOinit[2][9];
-_SIOopen           SIOopen[2][9];
-_SIOclose          SIOclose[2][9];
-_SIOshutdown       SIOshutdown[2][9];
-_SIOstartPoll      SIOstartPoll[2][9];
-_SIOpoll           SIOpoll[2][9];
-_SIOquery          SIOquery[2][9];
-
-_SIOconfigure      SIOconfigure[2][9];
-_SIOtest           SIOtest[2][9];
-_SIOabout          SIOabout[2][9];*/
+static void PAD_update( u32 padslot ) { }
 
 // SPU2
 _SPU2open          SPU2open;
@@ -559,12 +525,35 @@ static const LegacyApi_OptMethod* const s_MethMessOpt[] =
 
 PluginManager *g_plugins = NULL;
 
-Exception::NotPcsxPlugin::NotPcsxPlugin( const wxString& objname ) :
-	Stream( objname, wxLt("File is not a PCSX2 plugin") ) {}
+//////////////////////////////////////////////////////////////////////////////////////////
 
-Exception::NotPcsxPlugin::NotPcsxPlugin( const PluginsEnum_t& pid ) :
-			Stream( wxString::FromUTF8( tbl_PluginInfo[pid].shortname ), wxLt("File is not a PCSX2 plugin") ) {}
+Exception::InvalidPluginConfigured::InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname, const char* eng ) :
+	BadStream( objname, eng )
+,	PluginError( pid )
+,	BaseException( eng )
+{}
 
+Exception::InvalidPluginConfigured::InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname,
+	const wxString& eng_msg, const wxString& xlt_msg ) :
+	BadStream( objname, eng_msg, xlt_msg )
+,	PluginError( pid )
+,	BaseException( eng_msg, xlt_msg )
+{}
+
+wxString Exception::PluginFailure::LogMessage() const
+{
+	return wxsFormat(
+		L"%s plugin has encountered an error.\n\n",
+		plugin_name.c_str()
+	) + m_stacktrace;
+}
+
+wxString Exception::PluginFailure::DisplayMessage() const
+{
+	return wxsFormat( m_message, plugin_name.c_str() );
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
@@ -574,15 +563,20 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		const PluginsEnum_t pid = pi->id;
 
 		if( folders[pid].IsEmpty() )
-			throw Exception::InvalidArgument( "Invalid argument in PluginManager::ctor: Empty plugin filename." );
+			throw Exception::InvalidArgument( "Empty plugin filename." );
 
 		m_info[pid].Filename = folders[pid];
 
 		if( !wxFile::Exists( folders[pid] ) )
-			throw Exception::FileNotFound( folders[pid] );
+			throw Exception::InvalidPluginConfigured( pid, folders[pid],
+				L"Plugin file not found",
+				_("The configured plugin file was not found")
+			);
 
 		if( !m_info[pid].Lib.Load( folders[pid] ) )
-			throw Exception::NotPcsxPlugin( folders[pid] );
+			throw Exception::InvalidPluginConfigured( pid, folders[pid],
+				wxLt("Configured plugin file is not a valid dynamic library")
+			);
 
 		// Try to enumerate the new v2.0 plugin interface first.
 		// If that fails, fall back on the old style interface.
@@ -599,7 +593,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		// Bind Optional Functions
 		// (leave pointer null and do not generate error)
 	}
-
+	
 	// Hack for PAD's stupid parameter passed on Init
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
@@ -609,7 +603,7 @@ PluginManager::~PluginManager()
 {
 	Close();
 	Shutdown();
-
+	
 	// All library unloading done automatically.
 }
 
@@ -623,13 +617,16 @@ void PluginManager::BindCommon( PluginsEnum_t pid )
 	while( current->MethodName != NULL )
 	{
 		*target = (VoidMethod*)m_info[pid].Lib.GetSymbol( current->GetMethodName( pid ) );
-
+		
 		if( *target == NULL )
 			*target = current->Fallback;
 
 		if( *target == NULL )
-			throw Exception::NotPcsxPlugin( pid );
-
+		{
+			throw Exception::InvalidPluginConfigured( pid, m_info[pid].Filename,
+				wxLt( "Configured plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
+		}
+		
 		target++;
 		current++;
 	}
@@ -650,7 +647,10 @@ void PluginManager::BindRequired( PluginsEnum_t pid )
 			*(current->Dest) = current->Fallback;
 
 		if( *(current->Dest) == NULL )
-			throw Exception::NotPcsxPlugin( pid );
+		{
+			throw Exception::InvalidPluginConfigured( pid, m_info[pid].Filename,
+				wxLt( "Configured plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
+		}
 
 		current++;
 	}
@@ -688,8 +688,18 @@ static bool OpenPlugin_CDVD()
 
 static bool OpenPlugin_GS()
 {
-	//  Abusing the isMultiThread parameter for that so we don't need a new callback
-	return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+	if( !mtgsThread->IsSelf() )
+	{
+		if( mtgsThread == NULL )
+			mtgsOpen();	// mtgsOpen raises its own exception on error
+
+		return true;
+	}
+	else
+		return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+
+	// Note: rederswitch is us abusing the isMultiThread parameter for that so
+	// we don't need a new callback
 }
 
 static bool OpenPlugin_PAD()
@@ -739,7 +749,7 @@ static bool OpenPlugin_FW()
 void PluginManager::Open( PluginsEnum_t pid )
 {
 	if( m_info[pid].IsOpened ) return;
-
+	
 	// Each Open needs to be called explicitly. >_<
 
 	bool result = true;
@@ -759,19 +769,44 @@ void PluginManager::Open( PluginsEnum_t pid )
 	m_info[pid].IsOpened = true;
 }
 
+void PluginManager::Open()
+{
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+		g_plugins->Open( pi->id );
+}
+
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
+
+	if( pid == PluginId_GS )
+	{
+		if( mtgsThread == NULL ) return;
+		
+		if( !mtgsThread->IsSelf() )
+		{
+			// force-close PAD before GS, because the PAD depends on the GS window.
+			Close( PluginId_PAD );
+
+			safe_delete( mtgsThread );
+			return;
+		}
+	}
 
 	m_info[pid].IsOpened = false;
 	m_info[pid].CommonBindings.Close();
 }
 
-void PluginManager::Close()
+void PluginManager::Close( bool closegs )
 {
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
-		Close( pi->id );
+	// Close plugins in reverse order of the initialization procedure.
+
+	for( int i=PluginId_Count-1; i>=0; --i )
+	{
+		if( closegs || (tbl_PluginInfo[i].id != PluginId_GS) )
+			Close( tbl_PluginInfo[i].id );
+	}
 }
 
 // Initializes all plugins.  Plugin initialization should be done once for every new emulation
@@ -806,10 +841,12 @@ void PluginManager::Shutdown()
 {
 	Close();
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
+	// Shutdown plugins in reverse order (probably doesn't matter...
+	//  ... but what the heck, right?)
+	
+	for( int i=PluginId_Count-1; i>=0; --i )
 	{
-		const PluginsEnum_t pid = pi->id;
+		const PluginsEnum_t pid = tbl_PluginInfo[i].id;
 		if( !m_info[pid].IsInitialized ) continue;
 		m_info[pid].IsInitialized = false;
 		m_info[pid].CommonBindings.Shutdown();
@@ -869,7 +906,7 @@ PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] )
 PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
 {
 	wxString passins[PluginId_Count];
-
+	
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		passins[pi->id] = folders[pi->id];
@@ -877,305 +914,12 @@ PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
 	return PluginManager_Create( passins );
 }
 
-void LoadPlugins()
+static PluginManagerBase s_pluginman_placebo;
+
+// retrieves a handle to the current plugin manager.  Plugin manager is assumed to be valid,
+// and debug-level assertions are performed on the validity of the handle.
+PluginManagerBase& GetPluginManager()
 {
-	wxString passins[PluginId_Count];
-
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
-		passins[pi->id] = g_Conf->FullpathTo( pi->id );
-
-	g_plugins = PluginManager_Create( passins );
+	if( g_plugins == NULL ) return s_pluginman_placebo;
+	return *g_plugins;
 }
-
-void InitPlugins()
-{
-	if( g_plugins == NULL )
-		LoadPlugins();
-
-	g_plugins->Init();
-}
-
-// All plugins except the CDVD are opened here.  The CDVD must be opened manually by
-// the GUI, depending on the user's menu/config in use.
-//
-// Exceptions:
-//   PluginFailure - if any plugin fails to initialize or open.
-//   ThreadCreationError - If the MTGS thread fails to be created.
-//
-void OpenPlugins()
-{
-	if( g_plugins == NULL )
-		InitPlugins();
-
-	mtgsOpen();
-
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
-		g_plugins->Open( pi->id );
-}
-
-
-void ClosePlugins( bool closegs )
-{
-	if( g_plugins == NULL ) return;
-	safe_delete( mtgsThread );
-
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
-		g_plugins->Close( pi->id );
-}
-
-void ShutdownPlugins()
-{
-	if( g_plugins == NULL ) return;
-	ClosePlugins( true );
-	g_plugins->Shutdown();
-}
-
-void ReleasePlugins()
-{
-	safe_delete( g_plugins );
-}
-
-#ifdef _not_wxWidgets_Land_
-
-
-bool OpenGS()
-{
-	GSdriverInfo info;
-
-	if (!OpenStatus.GS)
-	{
-		if (ReportError2(gsOpen(), "GS"))
-		{
-			ClosePlugins(true);
-			return false;
-		}
-
-		//Get the user input.
-		if (GSgetDriverInfo)
-		{
-			GSgetDriverInfo(&info);
-			if (PAD1gsDriverInfo) PAD1gsDriverInfo(&info);
-			if (PAD2gsDriverInfo) PAD2gsDriverInfo(&info);
-		}
-		OpenStatus.GS = true;
-	}
-	return true;
-}
-
-bool OpenCDVD( const char* pTitleFilename )
-{
-	// if this assertion fails it means you didn't call CDVDsys_ChangeSource.  You should.
-	// You really should.  Really.
-	jASSUME( CDVD != NULL );
-
-	// Don't repetitively open the CDVD plugin if directly loading an elf file and open failed once already.
-	if (!OpenStatus.CDVD)
-	{
-		CDVD->newDiskCB( cdvdNewDiskCB );
-
-		if( (pTitleFilename == NULL) && !cdvd_FileNameParam.IsEmpty() )
-			pTitleFilename = cdvd_FileNameParam.c_str();
-
-		if (DoCDVDopen(pTitleFilename) != 0)
-		{
-			Msgbox::Alert("Error Opening CDVD Plugin");
-			ClosePlugins(true);
-			return false;
-		}
-
-		if( cdvd_FileNameParam.IsEmpty() && (pTitleFilename != NULL) )
-			cdvd_FileNameParam = pTitleFilename;
-
-		OpenStatus.CDVD = true;
-	}
-	return true;
-}
-
-bool OpenPAD1()
-{
-	if (!OpenStatus.PAD1)
-	{
-		if (ReportError2(PAD1open((void *)&pDsp), "PAD1"))
-		{
-			ClosePlugins(true);
-			return false;
-		}
-		OpenStatus.PAD1 = true;
-	}
-	return true;
-}
-
-bool OpenPAD2()
-{
-	if (!OpenStatus.PAD2)
-	{
-		if (ReportError2(PAD2open((void *)&pDsp), "PAD2"))
-		{
-			ClosePlugins(true);
-			return false;
-		}
-		OpenStatus.PAD2 = true;
-	}
-	return true;
-}
-
-bool OpenSPU2()
-{
-	if (!OpenStatus.SPU2)
-	{
-		SPU2irqCallback(spu2Irq,spu2DMA4Irq,spu2DMA7Irq);
-
-		if (SPU2setDMABaseAddr != NULL) SPU2setDMABaseAddr((uptr)psxM);
-		if (SPU2setClockPtr != NULL) SPU2setClockPtr(&psxRegs.cycle);
-
-		if (ReportError2(SPU2open((void*)&pDsp), "SPU2"))
-		{
-			ClosePlugins(true);
-			return false;
-		}
-		OpenStatus.SPU2 = true;
-	}
-	return true;
-}
-
-bool OpenDEV9()
-{
-	if (!OpenStatus.DEV9)
-	{
-		DEV9irqCallback(dev9Irq);
-		dev9Handler = DEV9irqHandler();
-
-		if (ReportError2(DEV9open(&psxRegs.pc)/*((void *)&pDsp)*/, "DEV9"))
-		{
-			ClosePlugins(true);
-			return false;
-		}
-		OpenStatus.DEV9 = true;
-	}
-	return true;
-}
-bool OpenUSB()
-{
-	if (!OpenStatus.USB)
-	{
-		USBirqCallback(usbIrq);
-		usbHandler = USBirqHandler();
-		USBsetRAM(psxM);
-
-		if (ReportError2(USBopen((void *)&pDsp), "USB"))
-		{
-			ClosePlugins(true);
-			return false;
-		}
-		OpenStatus.USB = true;
-	}
-	return true;
-}
-
-bool OpenFW()
-{
-	if (!OpenStatus.FW)
-	{
-		FWirqCallback(fwIrq);
-
-		if (ReportError2(FWopen((void *)&pDsp), "FW"))
-		{
-			ClosePlugins(true);
-			return false;
-		}
-		OpenStatus.FW = true;
-	}
-	return true;
-}
-
-// Note: If the CDVD has not already been manually opened, then it will be opened here
-// using NULL as the source file (defaults to whatever's been previously configured into
-// the CDVD plugin, which is typically a drive letter)
-int OpenPlugins()
-{
-	if( InitPlugins() == -1 ) return -1;
-
-	if( !OpenGS() || !OpenPAD1() || !OpenPAD2() || !OpenCDVD(NULL) ||
-		!OpenSPU2() || !OpenDEV9() || !OpenUSB() || !OpenFW()
-	)
-		return -1;
-
-	cdvdDetectDisk();
-	return 0;
-}
-
-
-#define CLOSE_PLUGIN( name ) \
-	if( OpenStatus.name ) { \
-		name##close(); \
-		OpenStatus.name = false; \
-	}
-
-#define CLOSE_PLUGIN2( name ) \
-	if( OpenStatus.name ) { \
-	name.close(); \
-	OpenStatus.name = false; \
-	}
-
-
-void ClosePlugins( bool closegs )
-{
-	// Close pads first since they attach to the GS's window.
-
-	CLOSE_PLUGIN( PAD1 );
-	CLOSE_PLUGIN( PAD2 );
-
-	// GS plugin is special and is not always closed during emulation pauses.
-	// (that's because the GS is the most complicated plugin and to close it would
-	// require we save the GS state)
-
-	if( OpenStatus.GS )
-	{
-		if( closegs )
-		{
-			gsClose();
-			OpenStatus.GS = false;
-		}
-		else
-		{
-			mtgsWaitGS();
-		}
-	}
-
-	CloseCDVD();
-
-	if( OpenStatus.CDVD )
-	{
-		DoCDVDclose();
-		OpenStatus.CDVD = false;
-	}
-
-	CLOSE_PLUGIN( DEV9 );
-	CLOSE_PLUGIN( USB );
-	CLOSE_PLUGIN( FW );
-	CLOSE_PLUGIN( SPU2 );
-}
-
-void PluginsResetGS()
-{
-	// PADs are tied to the GS window, so shut them down together with the GS.
-
-	CLOSE_PLUGIN( PAD1 );
-	CLOSE_PLUGIN( PAD2 );
-
-	if( OpenStatus.GS )
-	{
-		gsClose();
-		OpenStatus.GS = false;
-	}
-
-	GSshutdown();
-
-	int ret = GSinit();
-	if (ret != 0) { Msgbox::Alert("GSinit error: %d", params ret);  }
-}
-
-#endif

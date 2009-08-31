@@ -84,20 +84,6 @@ namespace Exception
 	}
 
 	// ------------------------------------------------------------------------
-	wxString PluginFailure::LogMessage() const
-	{
-		return wxsFormat(
-			L"%s plugin has encountered an error.\n\n",
-			plugin_name.c_str()
-		) + m_stacktrace;
-	}
-
-	wxString PluginFailure::DisplayMessage() const
-	{
-		return wxsFormat( m_message, plugin_name.c_str() );
-	}
-
-	// ------------------------------------------------------------------------
 	wxString FreezePluginFailure::LogMessage() const
 	{
 		return wxsFormat(
@@ -124,7 +110,7 @@ namespace Exception
 		// m_message contains a recoverable savestate error which is helpful to the user.
 		return wxsFormat(
 			m_message + L"\n\n" +
-			wxsFormat( L"Unknown savestate version: 0x%x", Version )
+			wxsFormat( _("Cannot load savestate.  It is of an unknown or unsupported version."), Version )
 		);
 	}
 

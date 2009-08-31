@@ -24,10 +24,6 @@ using namespace std;
 #include "Patch.h"
 #include "System.h"
 
-#ifdef _MSC_VER
-#pragma warning(disable:4996) //ignore the stricmp deprecated warning
-#endif
-
 #if !defined(_WIN32)
 #ifndef strnicmp
 #define strnicmp strncasecmp

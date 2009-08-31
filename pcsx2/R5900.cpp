@@ -89,16 +89,6 @@ void cpuReset()
 	psxReset();
 }
 
-void cpuShutdown()
-{
-	mtgsWaitGS();
-
-	hwShutdown();
-//	biosShutdown();
-	psxShutdown();
-	disR5900FreeSyms();
-}
-
 __releaseinline void cpuException(u32 code, u32 bd)
 {
 	cpuRegs.branch = 0;		// Tells the interpreter that an exception occurred during a branch.
@@ -367,20 +357,18 @@ __forceinline void _cpuBranchTest_Shared()
 	eeEventTestIsActive = true;
 	g_nextBranchCycle = cpuRegs.cycle + eeWaitCycles;
 
-	EEsCycle += cpuRegs.cycle - EEoCycle;
-	EEoCycle = cpuRegs.cycle;
-
-	if( EEsCycle > 0 )
-		iopBranchAction = true;
-
 	// ---- Counters -------------
-	rcntUpdate_hScanline();
+	// Important: the vsync counter must be the first to be checked.  It includes emulation
+	// escape/suspend hooks, and it's really a good idea to suspend/resume emulation before
+	// doing any actual meaninful branchtest logic.
 
 	if( cpuTestCycle( nextsCounter, nextCounter ) )
 	{
 		rcntUpdate();
 		_cpuTestPERF();
 	}
+
+	rcntUpdate_hScanline();
 
 	_cpuTestTIMR();
 
@@ -398,6 +386,12 @@ __forceinline void _cpuBranchTest_Shared()
 	//
 	// * The IOP cannot always be run.  If we run IOP code every time through the
 	//   cpuBranchTest, the IOP generally starts to run way ahead of the EE.
+
+	EEsCycle += cpuRegs.cycle - EEoCycle;
+	EEoCycle = cpuRegs.cycle;
+
+	if( EEsCycle > 0 )
+		iopBranchAction = true;
 
 	psxBranchTest();
 

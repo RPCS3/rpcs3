@@ -19,6 +19,9 @@
 #include "PrecompiledHeader.h"
 #include "IniInterface.h"
 #include "MainFrame.h"
+#include "MemoryCard.h"
+#include "Plugins.h"
+
 #include "Dialogs/ModalPopups.h"
 
 #include "Utilities/ScopedPtr.h"
@@ -34,7 +37,6 @@ IMPLEMENT_APP(Pcsx2App)
 bool			UseAdminMode = false;
 AppConfig*		g_Conf = NULL;
 wxFileHistory*	g_RecentIsoList = NULL;
-CoreEmuThread*	g_EmuThread = NULL;
 
 namespace Exception
 {
@@ -52,6 +54,70 @@ namespace Exception
 			BaseException( msg_eng, msg_eng ) { }	// english messages only for this exception.
 	};
 }
+
+AppEmuThread::AppEmuThread( const wxString& elf_file ) :
+	CoreEmuThread( elf_file )
+{
+	MemoryCard::Init();
+}
+
+void AppEmuThread::Resume()
+{
+	if( wxGetApp().GetMainFrame().IsPaused() ) return;
+	CoreEmuThread::Resume();
+}
+
+sptr AppEmuThread::ExecuteTask()
+{
+	try
+	{
+		CoreEmuThread::ExecuteTask();
+	}
+	// ----------------------------------------------------------------------------
+	catch( Exception::FileNotFound& ex )
+	{
+		if( ex.StreamName == g_Conf->FullpathToBios() )
+		{
+			Msgbox::OkCancel( ex.DisplayMessage() +
+				_("\n\nPress Ok to go to the BIOS Configuration Panel.") );
+		}
+		else
+		{
+			// Probably a plugin.  Find out which one!
+			
+			const PluginInfo* pi = tbl_PluginInfo-1;
+			while( ++pi, pi->shortname != NULL )
+			{
+				const PluginsEnum_t pid = pi->id;
+				if( g_Conf->FullpathTo( pid ) == ex.StreamName ) break;
+			}
+
+			if( pi->shortname == NULL )
+			{
+				// Some other crap file failure >_<
+			}
+			
+			int result = Msgbox::OkCancel( ex.DisplayMessage() +
+				_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
+				
+			if( result == wxID_OK )
+			{
+			}
+		}
+	}
+	// ----------------------------------------------------------------------------
+	// [TODO] : Add exception handling here for debuggable PS2 exceptions that allows
+	// invocation of the PCSX2 debugger and such.
+	catch( Exception::BaseException& ex )
+	{
+		// Sent the exception back to the main gui thread?
+		GetPluginManager().Close();
+		Msgbox::Alert( ex.DisplayMessage() );
+	}
+	
+	return 0;
+}
+
 
 wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
 
@@ -165,7 +231,6 @@ bool Pcsx2App::OnInit()
 	wxApp::OnInit();
 
 	g_Conf = new AppConfig();
-	g_EmuThread = new CoreEmuThread();
 
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
@@ -236,6 +301,8 @@ bool Pcsx2App::PrepForExit()
 
 int Pcsx2App::OnExit()
 {
+	MemoryCard::Shutdown();
+
 	if( g_Conf != NULL )
 		g_Conf->Save();
 

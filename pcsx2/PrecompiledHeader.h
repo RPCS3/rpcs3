@@ -3,6 +3,12 @@
 
 //#pragma once		// no dice, causes problems in GCC PCH (which doesn't really work very well
 
+// Disable some pointless warnings...
+#ifdef _MSC_VER
+#	pragma warning(disable:4250) //'class' inherits 'method' via dominance
+#	pragma warning(disable:4996) //ignore the stricmp deprecated warning
+#endif
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Define PCSX2's own i18n helpers.  These override the wxWidgets helpers and provide
 // additional functionality.

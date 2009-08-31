@@ -28,13 +28,9 @@
 #include "AppConfig.h"
 #include "System.h"
 #include "ConsoleLogger.h"
+#include "ps2/CoreEmuThread.h"
 
 class IniInterface;
-
-extern wxFileHistory* g_RecentIsoList;
-
-extern wxRect wxGetDisplayArea();
-extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -183,8 +179,32 @@ protected:
 	bool TryOpenConfigCwd();
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void CleanupMess();
-
-
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+class AppEmuThread : public CoreEmuThread
+{
+public:
+	AppEmuThread( const wxString& elf_file=wxEmptyString );
+	virtual ~AppEmuThread() { }
+	
+	virtual void Resume();
+
+protected:
+	sptr ExecuteTask();
+};
+
+
+
 DECLARE_APP(Pcsx2App)
+
+extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
+extern void LoadPlugins();
+extern void InitPlugins();
+extern void OpenPlugins();
+
+extern wxRect wxGetDisplayArea();
+extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
+
+extern wxFileHistory*	g_RecentIsoList;
