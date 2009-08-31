@@ -89,6 +89,7 @@ static u8* recPtr = NULL;
 static u32 *recConstBufPtr = NULL;
 EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
+static bool recFailed;
 
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
@@ -354,10 +355,6 @@ u32* recGetImm64(u32 hi, u32 lo)
 	{
 		DevCon::Status( "EErec: Const Buffer overflow hack..." );
 	
-		// TODO: flag an error in recompilation which would reset the recompiler
-		// immediately and recompile the current block again.  There is currently
-		// no way to do this, so have a last ditch attempt at making things sane
-		// and return some nonsense if that fails.
 		for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
 		{
 			if (p[0] == lo && p[1] == hi) {
@@ -366,7 +363,8 @@ u32* recGetImm64(u32 hi, u32 lo)
 			}
 		}
 
-		Console::Error( "EErec: Const Buffer overflow hack failed.  Returning nonsense!" );
+		Console::Notice( "EErec: Const Buffer overflow hack failed.  Returning nonsense!" );
+		recFailed = true;
 		return recConstBuf;
 	}
 
@@ -1254,7 +1252,7 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 	mmap_MarkCountedRamPage( start );
 }
 
-void recRecompile( const u32 startpc )
+static void recRecompile2( const u32 startpc )
 {
 	u32 i = 0;
 	u32 branchTo;
@@ -1671,6 +1669,22 @@ StartRecomp:
 
 	s_pCurBlock = NULL;
 	s_pCurBlockEx = NULL;
+}
+
+// wrapper
+void recRecompile(u32 startpc)
+{
+	recFailed = false;
+	recRecompile2(startpc);
+	if (recFailed) {
+		recFailed = false;
+		recResetEE();
+		recRecompile2(startpc);
+	}
+	if (recFailed) {
+		Console::Error("Unrecoverable recompilation failure.");
+		*(int*)0 = 42;
+	}
 }
 
 R5900cpu recCpu = {
