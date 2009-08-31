@@ -350,17 +350,23 @@ u32* recGetImm64(u32 hi, u32 lo)
 	if (imm64 && imm64[0] == lo && imm64[1] == hi)
 		return imm64;
 
-	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE) {
+	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE)
+	{
+		DevCon::Status( "EErec: Const Buffer overflow hack..." );
+	
 		// TODO: flag an error in recompilation which would reset the recompiler
 		// immediately and recompile the current block again.  There is currently
 		// no way to do this, so have a last ditch attempt at making things sane
 		// and return some nonsense if that fails.
 		for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
+		{
 			if (p[0] == lo && p[1] == hi) {
 				imm64_cache[cacheidx] = p;
 				return p;
 			}
+		}
 
+		Console::Error( "EErec: Const Buffer overflow hack failed.  Returning nonsense!" );
 		return recConstBuf;
 	}
 
