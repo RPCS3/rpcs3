@@ -96,11 +96,12 @@ public:
 		}
 		return NULL;
 	}
-	void printInfo() {
+	void printInfo(int pc) {
+		if (listI < 7) return;
 		microBlockLink* linkI = &blockList;
 		for (int i = 0; i <= listI; i++) {
-			DevCon::Status("[Block #%d][q=%02d][p=%02d][xgkick=%d][vi15=%08x][viBackup=%02d][flags=%02x][exactMatch=%x]",
-			params i, linkI->block->pState.q, linkI->block->pState.p, linkI->block->pState.xgkick, linkI->block->pState.vi15,
+			DevCon::Status("[%04x][Block #%d][q=%02d][p=%02d][xgkick=%d][vi15=%08x][viBackup=%02d][flags=%02x][exactMatch=%x]",
+			params pc, i, linkI->block->pState.q, linkI->block->pState.p, linkI->block->pState.xgkick, linkI->block->pState.vi15,
 			linkI->block->pState.viBackUp, linkI->block->pState.flags, linkI->block->pState.needExactMatch);
 			linkI = linkI->next;
 		}
@@ -142,7 +143,7 @@ struct microProgManager {
 	microRegInfo		lpState;		// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUcacheSize (mMaxProg * (0x100000 * 0.5)) // 0.5mb per program
+#define mVUcacheSize ((mMaxProg < 20) ? (_1mb * 10) : (mMaxProg * (_1mb * 0.5))) // 0.5mb per program
 struct microVU {
 
 	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)

@@ -123,7 +123,7 @@ microVUx(void) mVUcleanUp() {
 	//if (!(ax % 100000)) {
 	//	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 	//		if (mVUcurProg.block[i]) {
-	//			mVUcurProg.block[i]->printInfo();
+	//			mVUcurProg.block[i]->printInfo(i*8);
 	//		}
 	//	}
 	//}
