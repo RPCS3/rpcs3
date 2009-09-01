@@ -57,7 +57,7 @@ void States_Load( const wxString& file )
 		// StateLoadErrors are only thorwn if the load failed prior to any virtual machine
 		// memory contents being changed.  (usually missing file errors)
 
-		Console::Notice( ex.LogMessage() );
+		Console::Notice( ex.FormatDiagnosticMessage() );
 	}
 	catch( Exception::BaseException& ex )
 	{
@@ -115,7 +115,7 @@ void States_Save( const wxString& file )
 		Console::Error( wxsFormat(
 			L"An error occurred while trying to save to file %s\n", file.c_str() ) +
 			L"Your emulation state has not been saved!\n"
-			L"\nError: " + ex.LogMessage()
+			L"\nError: " + ex.FormatDiagnosticMessage()
 		);
 	}
 }

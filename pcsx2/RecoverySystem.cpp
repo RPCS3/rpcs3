@@ -189,7 +189,7 @@ namespace StateRecovery {
 				L"PCSX2 encountered an error while trying to backup/suspend the PS2 VirtualMachine state. "
 				L"You may resume emulation without losing any data, however the machine state will not be "
 				L"able to recover if you make changes to your PCSX2 configuration.\n\n"
-				L"Details: %s", ex.DisplayMessage().c_str() )
+				L"Details: %s", ex.FormatDisplayMessage().c_str() )
 			);
 			safe_delete( g_RecoveryState );
 		}

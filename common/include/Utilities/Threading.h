@@ -31,15 +31,8 @@ namespace Exception
 	// thread's call stack.  This exception is handled by the PCSX2 PersistentThread class.  Threads
 	// not derived from that class will not handle this exception.
 	//
-	class ThreadTermination : public BaseException
+	class ThreadTermination
 	{
-	public:
-		virtual ~ThreadTermination() throw() {}
-
-		ThreadTermination( const ThreadTermination& src ) : BaseException( src ) {}
-
-		explicit ThreadTermination() :
-		BaseException( "Thread terminated" ) { }
 	};
 }
 

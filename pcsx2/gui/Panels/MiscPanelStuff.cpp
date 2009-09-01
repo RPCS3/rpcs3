@@ -87,7 +87,7 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 	}
 	catch( Exception::CannotApplySettings& ex )
 	{
-		wxMessageBox( ex.DisplayMessage(), _("Cannot apply settings...") );
+		wxMessageBox( ex.FormatDisplayMessage(), _("Cannot apply settings...") );
 
 		if( ex.GetPanel() != NULL )
 			ex.GetPanel()->SetFocusToMe();

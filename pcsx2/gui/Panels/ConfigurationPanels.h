@@ -58,19 +58,18 @@ namespace Exception
 
 	public:
 		virtual ~CannotApplySettings() throw() {}
-		CannotApplySettings( const CannotApplySettings& src ) :
-			BaseException( src )
-		,	m_Panel( src.m_Panel ) {}
 
-		explicit CannotApplySettings( Panels::BaseApplicableConfigPanel* thispanel, const char* msg=wxLt("Cannot apply new settings, one of the settings is invalid.") ) :
-			BaseException( msg )
-		,	m_Panel( thispanel )
-		{}
+		explicit CannotApplySettings( Panels::BaseApplicableConfigPanel* thispanel, const char* msg=wxLt("Cannot apply new settings, one of the settings is invalid.") )
+		{
+			BaseException::InitBaseEx( msg );
+			m_Panel = thispanel;
+		}
 
-		explicit CannotApplySettings( Panels::BaseApplicableConfigPanel* thispanel, const wxString& msg_eng, const wxString& msg_xlt ) :
-			BaseException( msg_eng, msg_xlt )
-		,	m_Panel( thispanel )
-		{}
+		explicit CannotApplySettings( Panels::BaseApplicableConfigPanel* thispanel, const wxString& msg_eng, const wxString& msg_xlt )
+		{
+			BaseException::InitBaseEx( msg_eng, msg_xlt );
+			m_Panel = thispanel;
+		}
 		
 		Panels::BaseApplicableConfigPanel* GetPanel()
 		{

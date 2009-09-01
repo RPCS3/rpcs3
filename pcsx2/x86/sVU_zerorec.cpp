@@ -351,7 +351,8 @@ void SuperVUAlloc(int vuindex)
 		{
 			throw Exception::OutOfMemory(
 				// untranslated diagnostic msg, use exception's default for translation
-				wxsFormat( L"Error > SuperVU failed to allocate recompiler memory (addr: 0x%x)", (u32)s_recVUMem )
+				wxsFormat( L"SuperVU failed to allocate recompiler memory (addr: 0x%x)", (u32)s_recVUMem ),
+				_("An out of memory error occured while attempting to reserve memory for the core recompilers.")
 			);
 		}
 

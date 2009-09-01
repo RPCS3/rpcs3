@@ -33,74 +33,84 @@ namespace R5900Exception
 	class BaseExcept : public virtual Ps2Generic
 	{
 	public:
-		const cpuRegisters cpuState;
+		cpuRegisters cpuState;
 
 	public:
 		virtual ~BaseExcept() throw()=0;
 
-		explicit BaseExcept( const wxString& msg ) :
-			Ps2Generic( L"(EE) " + msg )
-		,	cpuState( cpuRegs )
-		{
-		}
-		
 		u32 GetPc() const { return cpuState.pc; }
 		bool IsDelaySlot() const { return !!cpuState.IsDelaySlot; }
+
+	protected:
+		void Init( const wxString& msg )
+		{
+			m_message = L"(EE) " + msg;
+			cpuState = cpuRegs;
+		}
+
+		void Init( const char*msg )
+		{
+			m_message = wxString::FromUTF8( msg );
+			cpuState = cpuRegs;
+		}
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////
 	//
-	class AddressError : public BaseExcept
+	class BaseAddressError : public BaseExcept
 	{
 	public:
-		const bool OnWrite;
-		const u32 Address;
+		bool OnWrite;
+		u32 Address;
 
+	public:
+		virtual ~BaseAddressError() throw() {}
+		
+	protected:
+		void Init( u32 ps2addr, bool onWrite, const wxString& msg )
+		{
+			BaseExcept::Init( wxsFormat( msg+L", addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) );
+			OnWrite = onWrite;
+			Address = ps2addr;
+		}
+	};
+	
+	
+	class AddressError : public BaseAddressError
+	{
 	public:
 		virtual ~AddressError() throw() {}
 
-		explicit AddressError( u32 ps2addr, bool onWrite ) :
-			BaseExcept( wxsFormat( L"Address error, addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) ),
-			OnWrite( onWrite ),
-			Address( ps2addr )
-		{}
+		AddressError( u32 ps2addr, bool onWrite )
+		{
+			BaseAddressError::Init( ps2addr, onWrite, L"Address error" );
+		}
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////
 	//
-	class TLBMiss : public BaseExcept
+	class TLBMiss : public BaseAddressError
 	{
-	public:
-		const bool OnWrite;
-		const u32 Address;
-
 	public:
 		virtual ~TLBMiss() throw() {}
 
-		explicit TLBMiss( u32 ps2addr, bool onWrite ) :
-			BaseExcept( wxsFormat( L"Tlb Miss, addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) ),
-			OnWrite( onWrite ),
-			Address( ps2addr )
-		{}
+		TLBMiss( u32 ps2addr, bool onWrite )
+		{
+			BaseAddressError::Init( ps2addr, onWrite, L"TLB Miss" );
+		}
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////
 	//
-	class BusError : public BaseExcept
+	class BusError : public BaseAddressError
 	{
-	public:
-		const bool OnWrite;
-		const u32 Address;
-
 	public:
 		virtual ~BusError() throw() {}
 
-		//
-		explicit BusError( u32 ps2addr, bool onWrite ) :
-			BaseExcept( wxsFormat( L"Bus Error, addr=0x%x [%s]", ps2addr, onWrite ? L"store" : L"load" ) ),
-			OnWrite( onWrite ),
-			Address( ps2addr )
-		{}
+		BusError( u32 ps2addr, bool onWrite )
+		{
+			BaseAddressError::Init( ps2addr, onWrite, L"Bus Error" );
+		}
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////
@@ -108,23 +118,25 @@ namespace R5900Exception
 	class Trap : public BaseExcept
 	{
 	public:
-		const u16 TrapCode;
+		u16 TrapCode;
 
 	public:
 		virtual ~Trap() throw() {}
 
 		// Generates a trap for immediate-style Trap opcodes
-		explicit Trap() :
-			BaseExcept( L"Trap" ),
-			TrapCode( 0 )
-		{}
+		Trap()
+		{
+			BaseExcept::Init( "Trap" );
+			TrapCode = 0;
+		}
 
 		// Generates a trap for register-style Trap instructions, which contain an
 		// error code in the opcode
-		explicit Trap( u16 trapcode ) :
-			BaseExcept( L"Trap" ),
-			TrapCode( trapcode )
-		{}
+		explicit Trap( u16 trapcode )
+		{
+			BaseExcept::Init( "Trap" ),
+			TrapCode = trapcode;
+		}
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////
@@ -134,9 +146,10 @@ namespace R5900Exception
 	public:
 		virtual ~DebugBreakpoint() throw() {}
 
-		explicit DebugBreakpoint() :
-			BaseExcept( L"Debug Breakpoint" )
-		{}
+		explicit DebugBreakpoint()
+		{
+			BaseExcept::Init( "Debug Breakpoint" );
+		}
 	};
 }
 

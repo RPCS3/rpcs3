@@ -42,14 +42,15 @@ namespace Exception
 	class PluginError : public virtual RuntimeError
 	{
 	public:
-		const PluginsEnum_t PluginId;
+		PluginsEnum_t PluginId;
 
 	public:
-		PluginError( PluginsEnum_t pid ) :
-			RuntimeError( "Generic plugin error" )
-		,	BaseException( "Generic plugin error" )
-		,	PluginId( pid )
+		DEFINE_EXCEPTION_COPYTORS( PluginError )
+		PluginError() {}
+		PluginError( PluginsEnum_t pid, const char* msg="Generic plugin error" )
 		{
+			BaseException::InitBaseEx( msg );
+			PluginId = pid;
 		}
 	};
 
@@ -58,25 +59,27 @@ namespace Exception
 	public:
 		wxString plugin_name;		// name of the plugin
 
-		virtual ~PluginFailure() throw() {}
+	public:
+		DEFINE_EXCEPTION_COPYTORS( PluginFailure )
 
-		explicit PluginFailure( const char* plugin, const char* msg="%s plugin encountered a critical error" ) :
-			RuntimeError( msg )
-		,	BaseException( msg )
-		,	plugin_name( wxString::FromAscii(plugin) ) {}
+		explicit PluginFailure( const char* plugin, const char* msg="%s plugin encountered a critical error" )
+		{
+			BaseException::InitBaseEx( msg );
+			plugin_name = wxString::FromUTF8( plugin );
+		}
 
-		virtual wxString LogMessage() const;
-		virtual wxString DisplayMessage() const;
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
 	};
 
 	class InvalidPluginConfigured : public virtual PluginError, public virtual BadStream
 	{
 	public:
-		virtual ~InvalidPluginConfigured() throw() {}
+		DEFINE_EXCEPTION_COPYTORS( InvalidPluginConfigured )
 
-		explicit InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname,
-			const char* eng );
-		explicit InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname,
+		InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname, const char* eng );
+
+		InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname,
 			const wxString& eng_msg, const wxString& xlt_msg );
 	};
 };

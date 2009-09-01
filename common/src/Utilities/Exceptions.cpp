@@ -35,11 +35,11 @@ namespace Exception
 	// ------------------------------------------------------------------------
 	BaseException::~BaseException() throw() {}
 
-	BaseException::BaseException( const wxString& msg_eng, const wxString& msg_xlt ) :
-		m_message_eng( msg_eng ),
-		m_message( msg_xlt ),
-		m_stacktrace( wxEmptyString )		// unsupported yet
+	void BaseException::InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt )
 	{
+		m_message_diag = msg_eng;
+		m_message_user = msg_xlt;
+
 		// Linux/GCC exception handling is still suspect (this is likely to do with GCC more
 		// than linux), and fails to propagate exceptions up the stack from EErec code.  This
 		// could likely be because of the EErec using EBP.  So to ensure the user at least
@@ -53,69 +53,69 @@ namespace Exception
 
 	// given message is assumed to be a translation key, and will be stored in translated
 	// and untranslated forms.
-	BaseException::BaseException( const char* msg_eng ) :
-		m_message_eng( GetEnglish( msg_eng ) ),
-		m_message( GetTranslation( msg_eng ) ),
-		m_stacktrace( wxEmptyString )		// unsupported yet
+	void BaseException::InitBaseEx( const char* msg_eng )
 	{
+		m_message_diag = GetEnglish( msg_eng );
+		m_message_user = GetTranslation( msg_eng );
+
 #ifdef __LINUX__
-        //wxLogError( m_message_eng.c_str() );
+        //wxLogError( m_message_diag.c_str() );
         Console::Error( msg_eng );
 #endif
 	}
 
-	wxString BaseException::LogMessage() const
+	wxString BaseException::FormatDiagnosticMessage() const
 	{
-		return m_message_eng + L"\n\n" + m_stacktrace;
+		return m_message_diag + L"\n\n" + m_stacktrace;
 	}
 
 	// ------------------------------------------------------------------------
-	wxString Stream::LogMessage() const
+	wxString Stream::FormatDiagnosticMessage() const
 	{
 		return wxsFormat(
 			L"Stream exception: %s\n\tObject name: %s",
-			m_message_eng.c_str(), StreamName.c_str()
+			m_message_diag.c_str(), StreamName.c_str()
 		) + m_stacktrace;
 	}
 
-	wxString Stream::DisplayMessage() const
+	wxString Stream::FormatDisplayMessage() const
 	{
-		return m_message + L"\n\n" + StreamName;
+		return m_message_user + L"\n\n" + StreamName;
 	}
 
 	// ------------------------------------------------------------------------
-	wxString FreezePluginFailure::LogMessage() const
+	wxString FreezePluginFailure::FormatDiagnosticMessage() const
 	{
 		return wxsFormat(
 			L"%s plugin returned an error while %s the state.\n\n",
-			plugin_name.c_str(),
-			freeze_action.c_str()
+			PluginName.c_str(),
+			FreezeAction.c_str()
 		) + m_stacktrace;
 	}
 
-	wxString FreezePluginFailure::DisplayMessage() const
+	wxString FreezePluginFailure::FormatDisplayMessage() const
 	{
-		return m_message;
+		return m_message_user;
 	}
 
 	// ------------------------------------------------------------------------
-	wxString UnsupportedStateVersion::LogMessage() const
+	wxString UnsupportedStateVersion::FormatDiagnosticMessage() const
 	{
 		// Note: no stacktrace needed for this one...
 		return wxsFormat( L"Unknown or unsupported savestate version: 0x%x", Version );
 	}
 
-	wxString UnsupportedStateVersion::DisplayMessage() const
+	wxString UnsupportedStateVersion::FormatDisplayMessage() const
 	{
-		// m_message contains a recoverable savestate error which is helpful to the user.
+		// m_message_user contains a recoverable savestate error which is helpful to the user.
 		return wxsFormat(
-			m_message + L"\n\n" +
+			m_message_user + L"\n\n" +
 			wxsFormat( _("Cannot load savestate.  It is of an unknown or unsupported version."), Version )
 		);
 	}
 
 	// ------------------------------------------------------------------------
-	wxString StateCrcMismatch::LogMessage() const
+	wxString StateCrcMismatch::FormatDiagnosticMessage() const
 	{
 		// Note: no stacktrace needed for this one...
 		return wxsFormat(
@@ -125,10 +125,10 @@ namespace Exception
 		);
 	}
 
-	wxString StateCrcMismatch::DisplayMessage() const
+	wxString StateCrcMismatch::FormatDisplayMessage() const
 	{
 		return wxsFormat(
-			m_message + L"\n\n" +
+			m_message_user + L"\n\n" +
 			wxsFormat( 
 				L"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n",
 				Crc_Savestate, Crc_Cdvd
@@ -137,14 +137,14 @@ namespace Exception
 	}
 
 	// ------------------------------------------------------------------------
-	wxString IndexBoundsFault::LogMessage() const
+	wxString IndexBoundsFault::FormatDiagnosticMessage() const
 	{
 		return L"Index out of bounds on SafeArray: " + ArrayName +
 			wxsFormat( L"(index=%d, size=%d)", BadIndex, ArrayLength );
 	}
 
-	wxString IndexBoundsFault::DisplayMessage() const
+	wxString IndexBoundsFault::FormatDisplayMessage() const
 	{
-		return m_message;
+		return m_message_user;
 	}
 }

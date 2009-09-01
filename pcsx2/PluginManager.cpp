@@ -527,20 +527,22 @@ PluginManager *g_plugins = NULL;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-Exception::InvalidPluginConfigured::InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname, const char* eng ) :
-	BadStream( objname, eng )
-,	PluginError( pid )
-,	BaseException( eng )
-{}
+Exception::InvalidPluginConfigured::InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname, const char* eng )
+{
+	BaseException::InitBaseEx( eng );
+	StreamName = objname;
+	PluginId = pid;
+}
 
-Exception::InvalidPluginConfigured::InvalidPluginConfigured( const PluginsEnum_t& pid, const wxString& objname,
-	const wxString& eng_msg, const wxString& xlt_msg ) :
-	BadStream( objname, eng_msg, xlt_msg )
-,	PluginError( pid )
-,	BaseException( eng_msg, xlt_msg )
-{}
+Exception::InvalidPluginConfigured::InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname,
+	const wxString& eng_msg, const wxString& xlt_msg )
+{
+	BaseException::InitBaseEx( eng_msg, xlt_msg );
+	StreamName = objname;
+	PluginId = pid;
+}
 
-wxString Exception::PluginFailure::LogMessage() const
+wxString Exception::PluginFailure::FormatDiagnosticMessage() const
 {
 	return wxsFormat(
 		L"%s plugin has encountered an error.\n\n",
@@ -548,9 +550,9 @@ wxString Exception::PluginFailure::LogMessage() const
 	) + m_stacktrace;
 }
 
-wxString Exception::PluginFailure::DisplayMessage() const
+wxString Exception::PluginFailure::FormatDisplayMessage() const
 {
-	return wxsFormat( m_message, plugin_name.c_str() );
+	return wxsFormat( m_message_user, plugin_name.c_str() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

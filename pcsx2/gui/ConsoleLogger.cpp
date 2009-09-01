@@ -851,7 +851,7 @@ namespace Msgbox
 
 	void Except( const Exception::BaseException& src )
 	{
-		CallStack( src.DisplayMessage(), src.LogMessage(), wxEmptyString, L"PCSX2 Unhandled Exception", wxOK );
+		CallStack( src.FormatDisplayMessage(), src.FormatDiagnosticMessage(), wxEmptyString, L"PCSX2 Unhandled Exception", wxOK );
 	}
 	
 }

@@ -54,7 +54,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 
 	mVU->cache = SysMmapEx((vuIndex ? 0x5f240000 : 0x5e240000), mVU->cacheSize + 0x1000, 0, (vuIndex ? "Micro VU1" : "Micro VU0"));
-	if (!mVU->cache) throw Exception::OutOfMemory(L"microVU Error: Failed to allocate recompiler memory!");
+	if (!mVU->cache) throw Exception::OutOfMemory( "microVU Error: Failed to allocate recompiler memory!" );
 	
 	memset(mVU->cache, 0xcc, mVU->cacheSize + 0x1000);
 	memset(mVU->prog.prog, 0, sizeof(microProgram)*(mVU->prog.max+1));

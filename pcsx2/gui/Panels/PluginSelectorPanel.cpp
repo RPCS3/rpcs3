@@ -46,11 +46,7 @@ namespace Exception
 	class NotEnumerablePlugin : public BadStream
 	{
 	public:
-		virtual ~NotEnumerablePlugin() throw() {}
-		explicit NotEnumerablePlugin( const wxString& objname=wxEmptyString ) :
-			BadStream( objname, "" )
-		,	BaseException( wxLt("File is not a PCSX2 plugin") )
-		{}
+		DEFINE_STREAM_EXCEPTION( NotEnumerablePlugin, wxLt("File is not a PCSX2 plugin") );
 	};
 }
 
@@ -460,7 +456,7 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 		}
 		catch( Exception::BadStream& ex )
 		{
-			Console::Status( ex.LogMessage() );
+			Console::Status( ex.FormatDiagnosticMessage() );
 		}
 
 		pthread_testcancel();

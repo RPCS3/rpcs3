@@ -82,7 +82,7 @@ DEVASSERT_INLINE void DevAssert( bool condition, const char* msg )
 {
 	if( IsDevBuild && !condition )
 	{
-		throw Exception::AssertionFailure( msg );
+		throw Exception::LogicError( msg );
 	}
 }
 

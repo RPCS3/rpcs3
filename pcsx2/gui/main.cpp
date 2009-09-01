@@ -48,10 +48,12 @@ namespace Exception
 	{
 	public:
 		virtual ~StartupAborted() throw() {}
-		StartupAborted( const StartupAborted& src ) : BaseException( src ) {}
 
-		explicit StartupAborted( const wxString& msg_eng=L"Startup initialization was aborted by the user." ) :
-			BaseException( msg_eng, msg_eng ) { }	// english messages only for this exception.
+		StartupAborted( const wxString& msg_eng=L"Startup initialization was aborted by the user." )
+		{
+			// english messages only for this exception.
+			BaseException::InitBaseEx( msg_eng, msg_eng );
+		}
 	};
 }
 
@@ -78,7 +80,7 @@ sptr AppEmuThread::ExecuteTask()
 	{
 		if( ex.StreamName == g_Conf->FullpathToBios() )
 		{
-			Msgbox::OkCancel( ex.DisplayMessage() +
+			Msgbox::OkCancel( ex.FormatDisplayMessage() +
 				_("\n\nPress Ok to go to the BIOS Configuration Panel.") );
 		}
 		else
@@ -97,7 +99,7 @@ sptr AppEmuThread::ExecuteTask()
 				// Some other crap file failure >_<
 			}
 			
-			int result = Msgbox::OkCancel( ex.DisplayMessage() +
+			int result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
 				_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
 				
 			if( result == wxID_OK )
@@ -112,7 +114,7 @@ sptr AppEmuThread::ExecuteTask()
 	{
 		// Sent the exception back to the main gui thread?
 		GetPluginManager().Close();
-		Msgbox::Alert( ex.DisplayMessage() );
+		Msgbox::Alert( ex.FormatDisplayMessage() );
 	}
 	
 	return 0;

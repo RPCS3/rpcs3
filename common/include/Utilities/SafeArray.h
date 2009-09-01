@@ -154,7 +154,9 @@ public:
 						L"Out-of-memory on SafeArray block re-allocation.\n"
 						L"Old size: %d bytes, New size: %d bytes.",
 						m_size, newsize
-					)
+					),
+					// internationalized!
+					wxsFormat( _("Out of memory, trying to allocate %d bytes."), newsize )
 				);
 		}
 		m_size = newsize;
@@ -304,7 +306,9 @@ public:
 						L"Out-of-memory on SafeList block re-allocation.\n"
 						L"Old size: %d bytes, New size: %d bytes",
 						m_allocsize, newalloc
-					)
+					),
+					
+					wxsFormat( _("Out of memory, trying to allocate %d bytes."), newalloc )
 				);
 			}
 
