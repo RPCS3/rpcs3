@@ -249,7 +249,7 @@ void RunGui()
 	{
 		// Initially bypass GUI and start PCSX2 directly.
 		CDVDsys_ChangeSource( g_Startup.CdvdSource );
-		DoCDVDopen( g_Startup.ImageName );
+		if( !OpenCDVD( g_Startup.ImageName ) ) return;
 		
 		if (OpenPlugins() == -1) return;
 		
