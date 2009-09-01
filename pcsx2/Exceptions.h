@@ -37,11 +37,17 @@ private:
 	const NoncopyableObject& operator=( const NoncopyableObject& );
 };
 
+#ifdef __COUNTER__
+
+// Use this macro/class as a base to seal a class from being derived from.
+// This macro works by providing a unique base class with a protected constructor
+// for every class that derives from it. 
+#	define Sealed		private virtual __BaseSealed<__COUNTER__>
 
 // Base class used to implement type-safe sealed classes.
 // This class should never be used directly.  Use the Sealed
 // macro instead, which ensures all sealed classes derive from a unique BaseSealed
-// (preventing them from accidentally cirumventing sealing by inheriting from
+// (preventing them from accidentally circumventing sealing by inheriting from
 // multiple sealed classes.
 template < int T >
 class __BaseSealed
@@ -52,10 +58,9 @@ protected:
 	}
 };
 
-// Use this macro/class as a base to seal a class from being derrived from.
-// This macro works by providing a unique base class with a protected constructor
-// for every class that derives from it. 
-#define Sealed private virtual __BaseSealed<__COUNTER__>
+#else
+#	define Sealed		// old versions of GCC 4.2 and earlier >_<
+#endif
 
 namespace Exception
 {
@@ -66,7 +71,7 @@ namespace Exception
 	class BaseException
 	{
 	protected:
-		const std::string m_message;		// a "detailed" message of what disasterous thing has occured!
+		const std::string m_message;		// a "detailed" message of what disastrous thing has occurred!
 
 	public:
 		virtual ~BaseException() throw()=0;	// the =0; syntax forces this class into "abstract" mode.
