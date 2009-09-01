@@ -151,7 +151,9 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		}
 		else { Fs = mVU->regAlloc->allocReg(_Fs_, _Fd_, _X_Y_Z_W); }
 
-		opCase1 { if((opType == 2) && _XYZW_PS)	{ mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase1 { if((opType == 1) && _XYZW_PS) { mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Kingdom Hearts I (VU0)
+		opCase1 { if((opType == 1) && _XYZW_PS) { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Kingdom Hearts I (VU0)
+		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
 		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
 		opCase2 { if (opType == 2)				{ mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 		
