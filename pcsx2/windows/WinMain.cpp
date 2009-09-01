@@ -74,7 +74,7 @@ static const char* phelpmsg =
 	"\t-skipbios   {emulator will skip standard BIOS splash screens; does not apply to ELF}\n"
 	"\t-elf [file] {executes an ELF image}\n"
 	"\t-nodisc     {use this to boot into the PS2 system menu}\n"
-	"\t-usecdvd    {auto-boots from the configured CDVD plugin (ignores cdimage parameter)}\n"
+	"\t-usecd      {auto-boots from the configured CDVD plugin (ignores cdimage parameter)}\n"
 
 	"\n\n"
 

@@ -73,7 +73,7 @@ int ParseCommandLine( int tokenCount, TCHAR *const *const tokens )
 	g_Startup.ElfFile		= NULL;
 
 	g_Startup.StartupMode	= Startup_FromCDVD;
-	g_Startup.SkipBios		= true;
+	g_Startup.SkipBios		= false;
 	g_Startup.CdvdSource	= CDVDsrc_Plugin;
 
 	bool _legacy_ForceElfLoad = false;
