@@ -314,9 +314,22 @@ void ConsoleLogFrame::ClearColor()
 
 void ConsoleLogFrame::Write( const wxString& text )
 {
+	// Many platforms still do not provide thread-safe implementations of
+	// fputs or printf, so they need to be implemented here.
+	// fixme: these really should go in the global message handler but I haven't time to
+	//   do that right now.
+	if( emuLog != NULL )
+		fputs( text.ToUTF8().data(), emuLog );
+
+	// Linux has a handy dandy universal console...
+	// [TODO] make this a configurable option?  Do we care? :)
+	#ifdef __LINUX__
+	printf( (L"PCSX2 > " + text).ToUTF8().data() );
+	#endif
+
 	// remove selection (WriteText is in fact ReplaceSelection)
-	// TODO : Optimize this to only replaceslection if some selection
-	//   messages have been recieved since the last write.
+	// TODO : Optimize this to only replace selection if some selection
+	//   messages have been received since the last write.
 
 #ifdef __WXMSW__
 	wxTextPos nLen = m_TextCtrl.GetLastPosition();
@@ -351,7 +364,7 @@ void ConsoleLogFrame::DoClose()
 {
     // instead of closing just hide the window to be able to Show() it later
     Show(false);
-	if( wxFrame* main = wxGetApp().GetMainWindow() )
+	if( wxWindow* main = GetParent() )
 		wxStaticCast( main, MainEmuFrame )->OnLogBoxHidden();
 }
 
@@ -378,7 +391,7 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 	// Docking check!  If the window position is within some amount
 	// of the main window, enable docking.
 
-	if( wxFrame* main = wxGetApp().GetMainWindow() )
+	if( wxWindow* main = GetParent() )
 	{
 		wxPoint topright( main->GetRect().GetTopRight() );
 		wxRect snapzone( topright - wxSize( 8,8 ), wxSize( 16,16 ) );
@@ -580,9 +593,6 @@ namespace Console
 
 	bool Newline()
 	{
-		if( emuLog != NULL )
-			fputs( "\n", emuLog );
-
 		wxCommandEvent evt( wxEVT_LOG_Newline );
 		wxGetApp().ProgramLog_PostEvent( evt );
 		wxGetApp().ProgramLog_CountMsg();
@@ -592,9 +602,6 @@ namespace Console
 
 	bool __fastcall Write( const char* fmt )
 	{
-		if( emuLog != NULL )
-			fputs( fmt, emuLog );
-
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( wxString::FromAscii( fmt ) );
 		evt.SetExtraLong( th_CurrentColor );
@@ -606,9 +613,6 @@ namespace Console
 
 	bool __fastcall Write( const wxString& fmt )
 	{
-		if( emuLog != NULL )
-			fputs( fmt.ToAscii().data(), emuLog );
-
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmt );
 		evt.SetExtraLong( th_CurrentColor );
@@ -623,12 +627,6 @@ namespace Console
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
 		
-		if( emuLog != NULL )
-		{
-			fputs( fmt, emuLog );
-			fputs( "\n", emuLog );
-		}
-
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( wxString::FromAscii( fmt ) + L"\n" );
 		evt.SetExtraLong( th_CurrentColor );
@@ -642,12 +640,6 @@ namespace Console
 	{
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
-
-		if( emuLog != NULL )
-		{
-			fputs( fmt.ToAscii().data(), emuLog );
-			fputs( "\n", emuLog );
-		}
 
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmt + L"\n" );

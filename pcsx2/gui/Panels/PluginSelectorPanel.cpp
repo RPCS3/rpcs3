@@ -341,7 +341,11 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	if( sel == wxNOT_FOUND ) return;
 	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes.Get(pid).GetClientData(sel)] );
 	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
+	{
+		wxGetTopLevelParent( this )->Disable();
 		configfunc();
+		wxGetTopLevelParent( this )->Enable();
+	}
 }
 
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
@@ -432,11 +436,15 @@ void Panels::PluginSelectorPanel::EnumThread::Cancel()
 
 sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 {
+	DevCon::WriteLn( "Plugin Enumeration Thread started..." );
+
 	Sleep( 10 );		// gives the gui thread some time to refresh
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
 		if( m_cancel ) return 0;
+
+		Results[curidx].TypeMask = 0;
 
 		try
 		{
@@ -457,6 +465,7 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 		catch( Exception::BadStream& ex )
 		{
 			Console::Status( ex.FormatDiagnosticMessage() );
+			
 		}
 
 		pthread_testcancel();
@@ -469,5 +478,6 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 	wxCommandEvent done( wxEVT_EnumerationFinished );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 
+	DevCon::WriteLn( "Plugin Enumeration Thread complete!" );
 	return 0;
 }

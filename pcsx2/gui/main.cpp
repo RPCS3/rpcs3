@@ -125,6 +125,13 @@ wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
 
 #include "HashMap.h"
 
+void Pcsx2App::OpenWizardConsole()
+{
+	if( !IsDebugBuild ) return;
+	g_Conf->ProgLogBox.Visible = true;
+	m_ProgramLogBox	= new ConsoleLogFrame( NULL, L"PCSX2 Program Log", g_Conf->ProgLogBox );
+}
+
 // User mode settings can't be stores in the CWD for two reasons:
 //   (a) the user may not have permission to do so (most obvious)
 //   (b) it would result in sloppy usermode.ini found all over a hard drive if people runs the
@@ -151,6 +158,7 @@ void Pcsx2App::ReadUserModeSettings()
 	if( !conf_usermode->HasGroup( groupname ) )
 	{
 		// first time startup, so give the user the choice of user mode:
+		OpenWizardConsole();
 		FirstTimeWizard wiz( NULL );
 		if( !wiz.RunWizard( wiz.GetUsermodePage() ) )
 			throw Exception::StartupAborted( L"Startup aborted: User canceled FirstTime Wizard." );
@@ -174,6 +182,7 @@ void Pcsx2App::ReadUserModeSettings()
 			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
 			// (we skip the first page since it's a usermode.ini thing)
 
+			OpenWizardConsole();
 			FirstTimeWizard wiz( NULL );
 			if( !wiz.RunWizard( wiz.GetPostUsermodePage() ) )
 				throw Exception::StartupAborted( L"Startup aborted: User canceled Configuration Wizard." );
@@ -255,7 +264,15 @@ bool Pcsx2App::OnInit()
 		AppConfig_ReloadGlobalSettings();
 
 	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
+
+	    if( m_ProgramLogBox )
+	    {
+			delete m_ProgramLogBox;
+			g_Conf->ProgLogBox.Visible = true;
+		}
+
 		m_ProgramLogBox	= new ConsoleLogFrame( m_MainFrame, L"PCSX2 Program Log", g_Conf->ProgLogBox );
+
 		m_Ps2ConLogBox	= m_ProgramLogBox;		// just use a single logger for now.
 		//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
 

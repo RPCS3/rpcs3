@@ -179,6 +179,7 @@ protected:
 	bool TryOpenConfigCwd();
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void CleanupMess();
+	void OpenWizardConsole();
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
