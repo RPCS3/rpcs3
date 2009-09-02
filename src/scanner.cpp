@@ -104,7 +104,7 @@ namespace YAML
 		// *****
 		// And now branch based on the next few characters!
 		// *****
-
+		
 		// end of stream
 		if(!INPUT)
 			return EndStream();

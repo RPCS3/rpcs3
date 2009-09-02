@@ -33,6 +33,8 @@ namespace Test {
 		bool SimpleMap();
 		bool FlowSeq();
 		bool FlowMap();
+		bool FlowMapWithOmittedKey();
+		bool FlowMapWithOmittedValue();
 		bool QuotedSimpleKeys();
 		bool CompressedMapAndSeq();
 		bool NullBlockSeqEntry();

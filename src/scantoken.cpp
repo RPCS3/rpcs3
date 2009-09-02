@@ -181,6 +181,12 @@ namespace YAML
 					throw ParserException(INPUT.mark(), ErrorMsg::MAP_VALUE);
 
 				PushIndentTo(INPUT.column(), IndentMarker::MAP);
+			} else {
+				// we might have an empty key, so we should add it (as a simple key)
+				if(m_simpleKeyAllowed) {
+					InsertSimpleKey();
+					VerifySimpleKey();
+				}
 			}
 
 			// can only put a simple key here if we're in block context

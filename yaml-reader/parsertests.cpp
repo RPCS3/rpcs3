@@ -220,6 +220,42 @@ namespace Test
 			return true;
 		}
 
+		bool FlowMapWithOmittedKey()
+		{
+			std::string input = "{: omitted key}";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::string output;
+			doc[YAML::Null] >> output;
+			if(output != "omitted key")
+				return false;
+			
+			return true;
+		}
+
+		bool FlowMapWithOmittedValue()
+		{
+			std::string input = "{a: b, c:, d:}";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+
+			std::string output;
+			doc["a"] >> output;
+			if(output != "b")
+				return false;
+			if(!IsNull(doc["c"]))
+				return false;
+			if(!IsNull(doc["d"]))
+				return false;
+
+			return true;
+		}
+
 		bool QuotedSimpleKeys()
 		{
 			std::string KeyValue[3] = { "\"double\": double\n", "'single': single\n", "plain: plain\n" };

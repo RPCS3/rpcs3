@@ -37,7 +37,7 @@ namespace YAML
 		const RegEx Key = RegEx('?'),
 		            KeyInFlow = RegEx('?') + BlankOrBreak;
 		const RegEx Value = RegEx(':') + (BlankOrBreak || RegEx()),
-		            ValueInFlow = RegEx(':') + BlankOrBreak;
+		            ValueInFlow = RegEx(':') + (BlankOrBreak || RegEx(",}", REGEX_OR));
 		const RegEx Comment = RegEx('#');
 		const RegEx AnchorEnd = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak;
 
@@ -49,7 +49,7 @@ namespace YAML
 		const RegEx PlainScalar = !(BlankOrBreak || RegEx(",[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-?:", REGEX_OR) + Blank)),
 		            PlainScalarInFlow = !(BlankOrBreak || RegEx("?,[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-:", REGEX_OR) + Blank));
 		const RegEx EndScalar = RegEx(':') + (BlankOrBreak || RegEx()),
-		            EndScalarInFlow = (RegEx(':') + BlankOrBreak) || RegEx(",?[]{}", REGEX_OR);
+		            EndScalarInFlow = (RegEx(':') + (BlankOrBreak || RegEx(",]}", REGEX_OR))) || RegEx(",?[]{}", REGEX_OR);
 
 		const RegEx EscSingleQuote = RegEx("\'\'");
 		const RegEx EscBreak = RegEx('\\') + Break;
