@@ -544,24 +544,24 @@ Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid, const wxString& 
 
 wxString Exception::PluginLoadError::FormatDiagnosticMessage() const
 {
-	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname() ) +
+	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname().c_str() ) +
 		L"\n\n" + StreamName;
 }
 
 wxString Exception::PluginLoadError::FormatDisplayMessage() const
 {
-	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname() ) +
+	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() ) +
 		L"\n\n" + StreamName;
 }
 
 wxString Exception::PluginError::FormatDiagnosticMessage() const
 {
-	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname() );
+	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname().c_str() );
 }
 
 wxString Exception::PluginError::FormatDisplayMessage() const
 {
-	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname() );
+	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -698,14 +698,13 @@ static bool OpenPlugin_CDVD()
 
 static bool OpenPlugin_GS()
 {
-	if( !mtgsThread->IsSelf() )
+	if( mtgsThread == NULL )
 	{
-		if( mtgsThread == NULL )
-			mtgsOpen();	// mtgsOpen raises its own exception on error
-
+		mtgsOpen();	// mtgsOpen raises its own exception on error
 		return true;
 	}
-	else
+
+	if( mtgsThread->IsSelf() )
 		return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
 
 	// Note: rederswitch is us abusing the isMultiThread parameter for that so

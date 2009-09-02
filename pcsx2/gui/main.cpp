@@ -307,77 +307,27 @@ void Pcsx2App::CleanupMess()
 	safe_delete( g_Conf );
 }
 
-static int pxRunningEventLoopCount = 0;
-
-class pxEvtLoop : public wxEventLoop
+void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
 {
-protected:
-	struct pxRunningEventLoopCounter
+	try
 	{
-		pxRunningEventLoopCounter()		{ pxRunningEventLoopCount++; }
-		~pxRunningEventLoopCounter()	{ pxRunningEventLoopCount--; }
-	};
-
-public:
-	virtual int Run()
-	{
-		// event loops are not recursive, you need to create another loop!
-		wxCHECK_MSG( !IsRunning(), -1, _T("can't reenter a message loop") );
-
-		wxEventLoopActivator activate(wx_static_cast(wxEventLoop *, this));
-
-#if defined(__WXMSW__) && wxUSE_THREADS
-		pxRunningEventLoopCounter evtLoopCounter;
-#endif // __WXMSW__
-
-		while( true )
-		{
-			try
-			{
-				while( !m_shouldExit )
-				{
-					// give ourselves the possibility to do whatever we want!
-					OnNextIteration();
-
-					while( Pending() )
-					{
-						if( !Dispatch() )
-						{
-							m_shouldExit = true;
-							break;
-						}
-					}
-
-					if( wxTheApp )
-						wxTheApp->ProcessIdle();
-				}
-				break;
-			}
-			// ----------------------------------------------------------------------------
-			catch( Exception::PluginError& ex )
-			{
-			}
-			// ----------------------------------------------------------------------------
-			catch( Exception::RuntimeError& ex )
-			{
-				// Runtime errors which have been unhandled should still be safe to recover from,
-				// so lets issue a message to the user and then continue the message pump.
-
-				Console::Error( ex.FormatDiagnosticMessage() );
-				Msgbox::Alert( ex.FormatDisplayMessage() );
-			}
-		}
+		(handler->*func)(event);
 	}
-};
+	// ----------------------------------------------------------------------------
+	catch( Exception::PluginError& ex )
+	{
+	}
+	// ----------------------------------------------------------------------------
+	catch( Exception::RuntimeError& ex )
+	{
+		// Runtime errors which have been unhandled should still be safe to recover from,
+		// so lets issue a message to the user and then continue the message pump.
 
-// This overload performs universal exception handling for specific types of recoverable
-// errors that can be thrown from a multitude of events.
-int Pcsx2App::MainLoop()
-{
-	assert( m_mainLoop == NULL );
-	m_mainLoop = new pxEvtLoop();
-	return m_mainLoop->Run();
+		Console::Error( ex.FormatDiagnosticMessage() );
+		Msgbox::Alert( ex.FormatDisplayMessage() );
+	}
 }
+
 
 // Common exit handler which can be called from any event (though really it should
 // be called only from CloseWindow handlers since that's the more appropriate way

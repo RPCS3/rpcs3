@@ -181,7 +181,7 @@ protected:
 	void CleanupMess();
 	void OpenWizardConsole();
 
-	int MainLoop();
+	void HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const;
 
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior

@@ -577,7 +577,7 @@ namespace Console
 		// [TODO] make this a configurable option?  Do we care? :)
 #ifdef __LINUX__
 		// puts does automatic newlines, which we don't want here
-		fputs( L"PCSX2 > ", stdout );
+		fputs( "PCSX2 > ", stdout );
 		fputs( src, stdout );
 #endif
 
