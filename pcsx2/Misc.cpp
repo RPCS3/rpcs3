@@ -210,7 +210,7 @@ void LoadGSState(const wxString& file)
 	if (ret != 0)
 	{
 		delete f;
-		throw Exception::PluginFailure( "GS" );
+		throw Exception::PluginOpenError( PluginId_GS );
 	}
 
 	ret = PADopen((void *)&pDsp);

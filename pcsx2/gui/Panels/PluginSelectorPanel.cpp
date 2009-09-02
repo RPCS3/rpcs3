@@ -91,10 +91,7 @@ public:
 		m_type = m_GetLibType();
 	}
 
-	// Parameters:
-	//   pluginTypeIndex  - Value from 1 to 8 which represents the plugin's index.
-	//
-	bool CheckVersion( int pluginTypeIndex ) const
+	bool CheckVersion( PluginsEnum_t pluginTypeIndex ) const
 	{
 		const PluginInfo& info( tbl_PluginInfo[pluginTypeIndex] );
 		if( m_type & info.typemask )
@@ -436,36 +433,37 @@ void Panels::PluginSelectorPanel::EnumThread::Cancel()
 
 sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 {
-	DevCon::WriteLn( "Plugin Enumeration Thread started..." );
+	DevCon::Status( "Plugin Enumeration Thread started..." );
 
 	Sleep( 10 );		// gives the gui thread some time to refresh
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
 		if( m_cancel ) return 0;
-
-		Results[curidx].TypeMask = 0;
+		DbgCon::WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
 
 		try
 		{
-			PluginEnumerator penum( m_master.GetFilename( curidx ) );
 			EnumeratedPluginInfo& result( Results[curidx] );
+			result.TypeMask = 0;
+
+			PluginEnumerator penum( m_master.GetFilename( curidx ) );
 
 			result.Name = penum.GetName();
-			for( int pidx=0; pidx<NumPluginTypes; ++pidx )
+			for( int pidx=0; pidx<PluginId_Count; ++pidx )
 			{
-				result.TypeMask |= tbl_PluginInfo[pidx].typemask;
-				if( penum.CheckVersion( pidx ) )
+				const PluginsEnum_t pid = (PluginsEnum_t)pidx;
+				result.TypeMask |= tbl_PluginInfo[pid].typemask;
+				if( penum.CheckVersion( pid ) )
 				{
-					result.PassedTest |= tbl_PluginInfo[pidx].typemask;
-					penum.GetVersionString( result.Version[pidx], pidx );
+					result.PassedTest |= tbl_PluginInfo[pid].typemask;
+					penum.GetVersionString( result.Version[pid], pidx );
 				}
 			}
 		}
 		catch( Exception::BadStream& ex )
 		{
 			Console::Status( ex.FormatDiagnosticMessage() );
-			
 		}
 
 		pthread_testcancel();
@@ -478,6 +476,6 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 	wxCommandEvent done( wxEVT_EnumerationFinished );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 
-	DevCon::WriteLn( "Plugin Enumeration Thread complete!" );
+	DevCon::Status( "Plugin Enumeration Thread complete!" );
 	return 0;
 }

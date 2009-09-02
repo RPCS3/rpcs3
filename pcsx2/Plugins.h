@@ -52,35 +52,57 @@ namespace Exception
 			BaseException::InitBaseEx( msg );
 			PluginId = pid;
 		}
-	};
-
-	class PluginFailure : public virtual RuntimeError
-	{
-	public:
-		wxString plugin_name;		// name of the plugin
-
-	public:
-		DEFINE_EXCEPTION_COPYTORS( PluginFailure )
-
-		explicit PluginFailure( const char* plugin, const char* msg="%s plugin encountered a critical error" )
-		{
-			BaseException::InitBaseEx( msg );
-			plugin_name = wxString::FromUTF8( plugin );
-		}
 
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
 	};
 
-	class InvalidPluginConfigured : public virtual PluginError, public virtual BadStream
+	// Plugin load errors occur when initially trying to load plugins durign the
+	// creation of a PluginManager object.  The error may either be due to non-existence,
+	// corruption, or incompatible versioning.
+	class PluginLoadError : public virtual PluginError, public virtual BadStream
 	{
 	public:
-		DEFINE_EXCEPTION_COPYTORS( InvalidPluginConfigured )
+		DEFINE_EXCEPTION_COPYTORS( PluginLoadError )
 
-		InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname, const char* eng );
+		PluginLoadError( PluginsEnum_t pid, const wxString& objname, const char* eng );
 
-		InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname,
+		PluginLoadError( PluginsEnum_t pid, const wxString& objname,
 			const wxString& eng_msg, const wxString& xlt_msg );
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
+	};
+
+	// Thrown when a plugin fails it's init() callback.  The meaning of this error is entirely
+	// dependent on the plugin and, in most cases probably never happens (most plugins do little
+	// more than a couple basic memory reservations during init)
+	class PluginInitError : public virtual PluginError
+	{
+	public:
+		DEFINE_EXCEPTION_COPYTORS( PluginInitError )
+
+		explicit PluginInitError( PluginsEnum_t pid,
+			const char* msg=wxLt("%s plugin failed to initialize.  Your system may have insufficient memory or resources needed.") )
+		{
+			BaseException::InitBaseEx( msg );
+			PluginId = pid;
+		}
+	};
+
+	// Plugin failed to open.  Typically this is a non-critical error that means the plugin has
+	// not been configured properly by the user, but may also be indicative of a system
+	class PluginOpenError : public virtual PluginError
+	{
+	public:
+		DEFINE_EXCEPTION_COPYTORS( PluginOpenError )
+
+		explicit PluginOpenError( PluginsEnum_t pid,
+			const char* msg=wxLt("%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers.") )
+		{
+			BaseException::InitBaseEx( msg );
+			PluginId = pid;
+		}
 	};
 };
 

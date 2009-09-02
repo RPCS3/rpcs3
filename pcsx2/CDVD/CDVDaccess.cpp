@@ -263,8 +263,7 @@ static void DetectDiskType()
 //
 void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
-	if( g_plugins != NULL )
-		g_plugins->Close( PluginId_CDVD );
+	GetPluginManager().Close( PluginId_CDVD );
 		
 	switch( type )
 	{

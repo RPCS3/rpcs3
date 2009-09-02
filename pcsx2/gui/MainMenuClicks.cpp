@@ -89,6 +89,7 @@ void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 		}
 	}
 
+	InitPlugins();
 	SysExecute( new AppEmuThread( elf_file ), CDVDsrc_Iso );
 }
 
@@ -109,6 +110,7 @@ void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 	}
 
 	SysEndExecution();
+	InitPlugins();
 	SysExecute( new AppEmuThread(), CDVDsrc_NoDisc );
 }
 

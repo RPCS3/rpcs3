@@ -1915,6 +1915,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\AppRes.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\CheckedStaticBox.cpp"
 				>
 			</File>

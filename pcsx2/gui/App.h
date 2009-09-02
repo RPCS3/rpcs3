@@ -180,6 +180,22 @@ protected:
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void CleanupMess();
 	void OpenWizardConsole();
+
+	int MainLoop();
+
+	// ----------------------------------------------------------------------------
+	//      Override wx default exception handling behavior
+	// ----------------------------------------------------------------------------
+
+	// Just rethrow exceptions in the main loop, so that we can handle them properly in our
+	// custom catch clauses in OnRun().  (ranting note: wtf is the point of this functionality
+	// in wx?  Why would anyone ever want a generic catch-all exception handler that *isn't*
+	// the unhandled exception handler?  Using this as anything besides a re-throw is terrible
+	// program design and shouldn't even be allowed -- air)
+	bool OnExceptionInMainLoop() { throw; }
+
+	// Just rethrow unhandled exceptions to cause immediate debugger fail.
+	void OnUnhandledException() { throw; }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////

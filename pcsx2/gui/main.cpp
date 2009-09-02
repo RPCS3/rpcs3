@@ -23,14 +23,11 @@
 #include "Plugins.h"
 
 #include "Dialogs/ModalPopups.h"
-
 #include "Utilities/ScopedPtr.h"
-
-#include "Resources/EmbeddedImage.h"
-#include "Resources/BackgroundLogo.h"
 
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
+#include <wx/evtloop.h>
 
 IMPLEMENT_APP(Pcsx2App)
 
@@ -310,6 +307,78 @@ void Pcsx2App::CleanupMess()
 	safe_delete( g_Conf );
 }
 
+static int pxRunningEventLoopCount = 0;
+
+class pxEvtLoop : public wxEventLoop
+{
+protected:
+	struct pxRunningEventLoopCounter
+	{
+		pxRunningEventLoopCounter()		{ pxRunningEventLoopCount++; }
+		~pxRunningEventLoopCounter()	{ pxRunningEventLoopCount--; }
+	};
+
+public:
+	virtual int Run()
+	{
+		// event loops are not recursive, you need to create another loop!
+		wxCHECK_MSG( !IsRunning(), -1, _T("can't reenter a message loop") );
+
+		wxEventLoopActivator activate(wx_static_cast(wxEventLoop *, this));
+
+#if defined(__WXMSW__) && wxUSE_THREADS
+		pxRunningEventLoopCounter evtLoopCounter;
+#endif // __WXMSW__
+
+		while( true )
+		{
+			try
+			{
+				while( !m_shouldExit )
+				{
+					// give ourselves the possibility to do whatever we want!
+					OnNextIteration();
+
+					while( Pending() )
+					{
+						if( !Dispatch() )
+						{
+							m_shouldExit = true;
+							break;
+						}
+					}
+
+					if( wxTheApp )
+						wxTheApp->ProcessIdle();
+				}
+				break;
+			}
+			// ----------------------------------------------------------------------------
+			catch( Exception::PluginError& ex )
+			{
+			}
+			// ----------------------------------------------------------------------------
+			catch( Exception::RuntimeError& ex )
+			{
+				// Runtime errors which have been unhandled should still be safe to recover from,
+				// so lets issue a message to the user and then continue the message pump.
+
+				Console::Error( ex.FormatDiagnosticMessage() );
+				Msgbox::Alert( ex.FormatDisplayMessage() );
+			}
+		}
+	}
+};
+
+// This overload performs universal exception handling for specific types of recoverable
+// errors that can be thrown from a multitude of events.
+int Pcsx2App::MainLoop()
+{
+	assert( m_mainLoop == NULL );
+	m_mainLoop = new pxEvtLoop();
+	return m_mainLoop->Run();
+}
+
 // Common exit handler which can be called from any event (though really it should
 // be called only from CloseWindow handlers since that's the more appropriate way
 // to handle window closures)
@@ -320,6 +389,7 @@ bool Pcsx2App::PrepForExit()
 
 int Pcsx2App::OnExit()
 {
+	m_ProgramLogBox = NULL;
 	MemoryCard::Shutdown();
 
 	if( g_Conf != NULL )
@@ -345,146 +415,4 @@ Pcsx2App::~Pcsx2App()
 	CleanupMess();
 }
 
-#include <wx/zipstrm.h>
-#include <wx/wfstream.h>
-
-// ------------------------------------------------------------------------
-const wxImage& LoadImageAny(
-	wxImage& dest, bool useTheme, wxFileName& base, const wxChar* filename, IEmbeddedImage& onFail )
-{
-	if( useTheme )
-	{
-		base.SetName( filename );
-
-		base.SetExt( L"png" );
-		if( base.FileExists() )
-		{
-			if( dest.LoadFile( base.GetFullPath() ) ) return dest;
-		}
-
-		base.SetExt( L"jpg" );
-		if( base.FileExists() )
-		{
-			if( dest.LoadFile( base.GetFullPath() ) ) return dest;
-		}
-
-		base.SetExt( L"bmp" );
-		if( base.FileExists() )
-		{
-			if( dest.LoadFile( base.GetFullPath() ) ) return dest;
-		}
-	}
-
-	return dest = onFail.Get();
-}
-
-// ------------------------------------------------------------------------
-const wxBitmap& Pcsx2App::GetLogoBitmap()
-{
-	if( m_Bitmap_Logo != NULL )
-		return *m_Bitmap_Logo;
-
-	wxFileName mess;
-	bool useTheme = (g_Conf->DeskTheme != L"default");
-
-	if( useTheme )
-	{
-		wxDirName theme( PathDefs::GetThemes() + g_Conf->DeskTheme );
-		wxFileName zipped( theme.GetFilename() );
-
-		zipped.SetExt( L"zip" );
-		if( zipped.FileExists() )
-		{
-			// loading theme from zipfile.
-			//wxFileInputStream stream( zipped.ToString() )
-			//wxZipInputStream zstream( stream );
-
-			Console::Error( "Loading themes from zipfile is not supported yet.\nFalling back on default theme." );
-		}
-
-		// Overrides zipfile settings (fix when zipfile support added)
-		mess = theme.ToString();
-	}
-
-	wxImage img;
-	EmbeddedImage<png_BackgroundLogo> temp;	// because gcc can't allow non-const temporaries.
-	LoadImageAny( img, useTheme, mess, L"BackgroundLogo", temp );
-	m_Bitmap_Logo = new wxBitmap( img );
-
-	return *m_Bitmap_Logo;
-}
-
-#include "Resources/ConfigIcon_Cpu.h"
-#include "Resources/ConfigIcon_Video.h"
-#include "Resources/ConfigIcon_Speedhacks.h"
-#include "Resources/ConfigIcon_Gamefixes.h"
-#include "Resources/ConfigIcon_Paths.h"
-#include "Resources/ConfigIcon_Plugins.h"
-
-// ------------------------------------------------------------------------
-wxImageList& Pcsx2App::GetImgList_Config()
-{
-	if( !m_ConfigImagesAreLoaded )
-	{
-		wxFileName mess;
-		bool useTheme = (g_Conf->DeskTheme != L"default");
-
-		if( useTheme )
-		{
-			wxDirName theme( PathDefs::GetThemes() + g_Conf->DeskTheme );
-			mess = theme.ToString();
-		}
-
-		wxImage img;
-
-		// GCC Specific: wxT() macro is required when using string token pasting.  For some reason L
-		// generates syntax errors. >_<
-
-		#undef  FancyLoadMacro
-		#define FancyLoadMacro( name ) \
-		{ \
-			EmbeddedImage<png_ConfigIcon_##name> temp( g_Conf->Listbook_ImageSize, g_Conf->Listbook_ImageSize ); \
-			m_ImageId.Config.name = m_ConfigImages.Add( LoadImageAny( \
-				img, useTheme, mess, L"ConfigIcon_" wxT(#name), temp ) \
-			); \
-		}
-
-		FancyLoadMacro( Paths );
-		FancyLoadMacro( Plugins );
-		FancyLoadMacro( Gamefixes );
-		FancyLoadMacro( Speedhacks );
-		FancyLoadMacro( Video );
-		FancyLoadMacro( Cpu );
-	}
-	m_ConfigImagesAreLoaded = true;
-	return m_ConfigImages;
-}
-
-// ------------------------------------------------------------------------
-wxImageList& Pcsx2App::GetImgList_Toolbars()
-{
-	if( m_ToolbarImages == NULL )
-	{
-		const int imgSize = g_Conf->Toolbar_ImageSize ? 64 : 32;
-		m_ToolbarImages = new wxImageList( imgSize, imgSize );
-		wxFileName mess;
-		bool useTheme = (g_Conf->DeskTheme != L"default");
-
-		if( useTheme )
-		{
-			wxDirName theme( PathDefs::GetThemes() + g_Conf->DeskTheme );
-			mess = theme.ToString();
-		}
-
-		wxImage img;
-		#undef  FancyLoadMacro
-		#define FancyLoadMacro( name ) \
-		{ \
-			EmbeddedImage<png_ToolbarIcon_##name> temp( imgSize, imgSize ); \
-			m_ImageId.Toolbars.name = m_ConfigImages.Add( LoadImageAny( img, useTheme, mess, L"ToolbarIcon" wxT(#name), temp ) ); \
-		}
-
-	}
-	return *m_ToolbarImages;
-}
 

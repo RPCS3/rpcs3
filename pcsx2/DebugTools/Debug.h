@@ -19,6 +19,7 @@
 #pragma once
 
 extern FILE *emuLog;
+extern wxString emuLogName;
 
 extern char* disVU0MicroUF(u32 code, u32 pc);
 extern char* disVU0MicroLF(u32 code, u32 pc);

@@ -314,19 +314,6 @@ void ConsoleLogFrame::ClearColor()
 
 void ConsoleLogFrame::Write( const wxString& text )
 {
-	// Many platforms still do not provide thread-safe implementations of
-	// fputs or printf, so they need to be implemented here.
-	// fixme: these really should go in the global message handler but I haven't time to
-	//   do that right now.
-	if( emuLog != NULL )
-		fputs( text.ToUTF8().data(), emuLog );
-
-	// Linux has a handy dandy universal console...
-	// [TODO] make this a configurable option?  Do we care? :)
-	#ifdef __LINUX__
-	printf( (L"PCSX2 > " + text).ToUTF8().data() );
-	#endif
-
 	// remove selection (WriteText is in fact ReplaceSelection)
 	// TODO : Optimize this to only replace selection if some selection
 	//   messages have been received since the last write.
@@ -568,11 +555,38 @@ void ConsoleLogFrame::DoMessage()
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// 
+//
 namespace Console
 {
 	// thread-local console color storage.
-	__threadlocal Colors th_CurrentColor = DefaultConsoleColor;
+	static __threadlocal Colors th_CurrentColor = DefaultConsoleColor;
+
+	static Threading::MutexLock immediate_log_lock;
+
+	// performs immediate thread-safe (mutex locked) logging to disk and to the Linux console.
+	// Many platforms still do not provide thread-safe implementations of fputs or printf, so
+	// they are implemented here using a mutex lock for maximum safety.
+	static void _immediate_logger( const char* src )
+	{
+		ScopedLock locker( immediate_log_lock );
+
+		if( emuLog != NULL )
+			fputs( src, emuLog );	// fputs does not do automatic newlines, so it's ok!
+
+		// Linux has a handy dandy universal console...
+		// [TODO] make this a configurable option?  Do we care? :)
+#ifdef __LINUX__
+		// puts does automatic newlines, which we don't want here
+		fputs( L"PCSX2 > ", stdout );
+		fputs( src, stdout );
+#endif
+
+	}
+
+	static void _immediate_logger( const wxString& src )
+	{
+		_immediate_logger( src.ToUTF8().data() );
+	}
 
 	void __fastcall SetTitle( const wxString& title )
 	{
@@ -593,6 +607,8 @@ namespace Console
 
 	bool Newline()
 	{
+		_immediate_logger( "\n" );
+
 		wxCommandEvent evt( wxEVT_LOG_Newline );
 		wxGetApp().ProgramLog_PostEvent( evt );
 		wxGetApp().ProgramLog_CountMsg();
@@ -602,6 +618,8 @@ namespace Console
 
 	bool __fastcall Write( const char* fmt )
 	{
+		_immediate_logger( fmt );
+
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( wxString::FromAscii( fmt ) );
 		evt.SetExtraLong( th_CurrentColor );
@@ -613,6 +631,8 @@ namespace Console
 
 	bool __fastcall Write( const wxString& fmt )
 	{
+		_immediate_logger( fmt );
+
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmt );
 		evt.SetExtraLong( th_CurrentColor );
@@ -624,11 +644,14 @@ namespace Console
 	
 	bool __fastcall WriteLn( const char* fmt )
 	{
+		const wxString fmtline( wxString::FromAscii( fmt ) + L"\n" );
+		_immediate_logger( fmtline );
+
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
 		
 		wxCommandEvent evt( wxEVT_LOG_Write );
-		evt.SetString( wxString::FromAscii( fmt ) + L"\n" );
+		evt.SetString( fmtline );
 		evt.SetExtraLong( th_CurrentColor );
 		wxGetApp().ProgramLog_PostEvent( evt );
 		wxGetApp().ProgramLog_CountMsg();
@@ -638,11 +661,14 @@ namespace Console
 
 	bool __fastcall WriteLn( const wxString& fmt )
 	{
+		const wxString fmtline( fmt + L"\n" );
+		_immediate_logger( fmtline );
+
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
 
 		wxCommandEvent evt( wxEVT_LOG_Write );
-		evt.SetString( fmt + L"\n" );
+		evt.SetString( fmtline );
 		evt.SetExtraLong( th_CurrentColor );
 		wxGetApp().ProgramLog_PostEvent( evt );
 		wxGetApp().ProgramLog_CountMsg();

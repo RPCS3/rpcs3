@@ -98,7 +98,7 @@ namespace HostGui
 				SysSuspend();
 				StateRecovery::MakeGsOnly();
 
-				g_plugins->Close( PluginId_GS );
+				GetPluginManager().Close( PluginId_GS );
 				renderswitch = !renderswitch;
 
 				StateRecovery::Recover();

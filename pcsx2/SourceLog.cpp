@@ -35,6 +35,7 @@
 using namespace R5900;
 
 FILE *emuLog;
+wxString emuLogName;
 
 #ifdef PCSX2_DEVBUILD
 LogSources varLog;

@@ -22,6 +22,7 @@
 #include "Plugins.h"
 
 #include <wx/stdpaths.h>
+#include "DebugTools/Debug.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // PathDefs Namespace -- contains default values for various pcsx2 path names and locations.
@@ -630,5 +631,21 @@ void AppConfig_ReloadGlobalSettings( bool overwrite )
 
 	g_Conf->Apply();
 	g_Conf->Folders.Logs.Mkdir();
-}
 
+	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );
+
+	if( emuLog != NULL )
+	{
+		if( emuLogName != newlogname )
+		{
+			fclose( emuLog );
+			emuLog = NULL;
+		}
+	}
+	
+	if( emuLog == NULL )
+	{
+		emuLogName = newlogname;
+		emuLog = fopen( emuLogName.ToUTF8().data(), "wb" );
+	}
+}

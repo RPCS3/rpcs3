@@ -214,7 +214,7 @@ void mtgsThreadObject::Start()
 	m_sem_InitDone.Wait();
 
 	if( m_returncode != 0 )	// means the thread failed to init the GS plugin
-		throw Exception::PluginFailure( "GS", wxLt("%s plugin failed to open.") );
+		throw Exception::PluginOpenError( PluginId_GS );
 }
 
 mtgsThreadObject::~mtgsThreadObject()
@@ -507,7 +507,7 @@ sptr mtgsThreadObject::ExecuteTask()
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( NULL );
 
-	g_plugins->Open( PluginId_GS );
+	GetPluginManager().Open( PluginId_GS );
 	
 	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
 
@@ -629,7 +629,7 @@ sptr mtgsThreadObject::ExecuteTask()
 				{
 					freezeData* data = (freezeData*)(*(uptr*)&tag.data[1]);
 					int mode = tag.data[0];
-					g_plugins->Freeze( PluginId_GS, mode, data );
+					GetPluginManager().Freeze( PluginId_GS, mode, data );
 					break;
 				}
 
@@ -667,7 +667,7 @@ sptr mtgsThreadObject::ExecuteTask()
 				break;
 
 				case GS_RINGTYPE_QUIT:
-					g_plugins->Close( PluginId_GS );
+					GetPluginManager().Close( PluginId_GS );
 					m_sem_Quitter.Post();
 				return 0;
 

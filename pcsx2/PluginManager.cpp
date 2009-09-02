@@ -527,14 +527,14 @@ PluginManager *g_plugins = NULL;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
-Exception::InvalidPluginConfigured::InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname, const char* eng )
+Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid, const wxString& objname, const char* eng )
 {
 	BaseException::InitBaseEx( eng );
 	StreamName = objname;
 	PluginId = pid;
 }
 
-Exception::InvalidPluginConfigured::InvalidPluginConfigured( PluginsEnum_t pid, const wxString& objname,
+Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid, const wxString& objname,
 	const wxString& eng_msg, const wxString& xlt_msg )
 {
 	BaseException::InitBaseEx( eng_msg, xlt_msg );
@@ -542,17 +542,26 @@ Exception::InvalidPluginConfigured::InvalidPluginConfigured( PluginsEnum_t pid, 
 	PluginId = pid;
 }
 
-wxString Exception::PluginFailure::FormatDiagnosticMessage() const
+wxString Exception::PluginLoadError::FormatDiagnosticMessage() const
 {
-	return wxsFormat(
-		L"%s plugin has encountered an error.\n\n",
-		plugin_name.c_str()
-	) + m_stacktrace;
+	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname() ) +
+		L"\n\n" + StreamName;
 }
 
-wxString Exception::PluginFailure::FormatDisplayMessage() const
+wxString Exception::PluginLoadError::FormatDisplayMessage() const
 {
-	return wxsFormat( m_message_user, plugin_name.c_str() );
+	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname() ) +
+		L"\n\n" + StreamName;
+}
+
+wxString Exception::PluginError::FormatDiagnosticMessage() const
+{
+	return wxsFormat( m_message_diag, tbl_PluginInfo[PluginId].GetShortname() );
+}
+
+wxString Exception::PluginError::FormatDisplayMessage() const
+{
+	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -570,14 +579,13 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		m_info[pid].Filename = folders[pid];
 
 		if( !wxFile::Exists( folders[pid] ) )
-			throw Exception::InvalidPluginConfigured( pid, folders[pid],
-				L"Plugin file not found",
-				_("The configured plugin file was not found")
+			throw Exception::PluginLoadError( pid, folders[pid],
+				wxLt("The configured %s plugin file was not found")
 			);
 
 		if( !m_info[pid].Lib.Load( folders[pid] ) )
-			throw Exception::InvalidPluginConfigured( pid, folders[pid],
-				wxLt("Configured plugin file is not a valid dynamic library")
+			throw Exception::PluginLoadError( pid, folders[pid],
+				wxLt("The configured %s plugin file is not a valid dynamic library")
 			);
 
 		// Try to enumerate the new v2.0 plugin interface first.
@@ -625,8 +633,8 @@ void PluginManager::BindCommon( PluginsEnum_t pid )
 
 		if( *target == NULL )
 		{
-			throw Exception::InvalidPluginConfigured( pid, m_info[pid].Filename,
-				wxLt( "Configured plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
+			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
+				wxLt( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
 		}
 		
 		target++;
@@ -650,7 +658,7 @@ void PluginManager::BindRequired( PluginsEnum_t pid )
 
 		if( *(current->Dest) == NULL )
 		{
-			throw Exception::InvalidPluginConfigured( pid, m_info[pid].Filename,
+			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
 				wxLt( "Configured plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
 		}
 
@@ -766,7 +774,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 		case PluginId_DEV9:	result = OpenPlugin_DEV9();	break;
 	}
 	if( !result )
-		throw Exception::PluginFailure( tbl_PluginInfo[pid].shortname, wxLt("%s plugin failed to open.") );
+		throw Exception::PluginOpenError( pid );
 
 	m_info[pid].IsOpened = true;
 }
@@ -829,7 +837,7 @@ void PluginManager::Init()
 		if( m_info[pid].IsInitialized ) continue;
 		m_info[pid].IsInitialized = true;
 		if( 0 != m_info[pid].CommonBindings.Init() )
-			throw Exception::PluginFailure( tbl_PluginInfo[pid].shortname, wxLt( "%s plugin: Initialization Failure" ) );
+			throw Exception::PluginInitError( pid );
 	}
 }
 
