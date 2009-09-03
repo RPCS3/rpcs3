@@ -48,7 +48,8 @@ static void _loadStateOrExcept( const string& file )
 
 	// Make sure the cpu and plugins are ready to be state-ified!
 	cpuReset();
-	OpenPlugins();
+	if( OpenPlugins() == -1 )
+		throw Exception::PluginFailure( "Could not open all configured plugins." );
 
 	joe.FreezeAll();
 

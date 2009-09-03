@@ -851,7 +851,11 @@ bool OpenCDVD( const char* pTitleFilename )
 	// if this assertion fails it means you didn't call CDVDsys_ChangeSource.  You should.
 	// You really should.  Really.
 	jASSUME( CDVD != NULL );
-	
+
+	// hack to fix the new cdvd system, to ensure the plugin is always initialized when it's manually
+	// opened separately from the rest.
+	if( InitPlugins() == -1 ) return -1;
+
 	// Don't repetitively open the CDVD plugin if directly loading an elf file and open failed once already.
 	if (!OpenStatus.CDVD)
 	{
@@ -861,7 +865,7 @@ bool OpenCDVD( const char* pTitleFilename )
 			pTitleFilename = cdvd_FileNameParam.c_str();
 
 		if (DoCDVDopen(pTitleFilename) != 0)
-		{ 
+		{
 			Msgbox::Alert("Error Opening CDVD Plugin");
 			ClosePlugins(true);
 			return false;

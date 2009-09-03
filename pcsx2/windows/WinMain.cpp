@@ -368,8 +368,6 @@ static std::string str_Default( "default" );
 
 void RunGui()
 {
-    MSG msg;
-
 	PCSX2_MEM_PROTECT_BEGIN();
 
 	LoadPatch( str_Default );
@@ -378,9 +376,19 @@ void RunGui()
 	{
 		// Initially bypass GUI and start PCSX2 directly.
 
+		SysReset();
 		CDVDsys_ChangeSource( g_Startup.CdvdSource );
-		if( !OpenCDVD( g_Startup.ImageName ) ) return;
-		if( OpenPlugins() == -1 ) return;
+		if( !OpenCDVD( g_Startup.ImageName ) )
+		{
+			Console::Error( "CDVD Initialization returned error, aborting autorun..." );
+			return;
+		}
+
+		if( OpenPlugins() == -1 )
+		{
+			Console::Error( "Some plugin failed to open, aborting autorun..." );
+			return;
+		}
 
 		SysPrepareExecution( (g_Startup.StartupMode == Startup_FromELF) ? g_Startup.ImageName : NULL, !g_Startup.SkipBios );
 	}
@@ -395,6 +403,7 @@ void RunGui()
 
 		while( true )
 		{
+			MSG msg;
 			if( PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0 )
 			{
 				if( msg.message == WM_QUIT )
