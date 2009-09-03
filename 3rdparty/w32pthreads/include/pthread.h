@@ -742,6 +742,8 @@ struct ptw32_cleanup_t
 };
 
 #ifdef __CLEANUP_SEH
+#include <excpt.h>		// PCSX2: excpt.h is needed for AbnormalTermination() -- air
+
         /*
          * WIN32 SEH version of cancel cleanup.
          */

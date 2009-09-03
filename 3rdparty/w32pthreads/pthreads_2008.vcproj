@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="w32pthreads"
+	Name="w32pthreads.v2"
 	ProjectGUID="{26511268-2902-4997-8421-ECD7055F9E28}"
 	RootNamespace="pthreads"
 	Keyword="Win32Proj"
