@@ -108,8 +108,8 @@ namespace R5900
 
 			static const int FPU_Mult = 4*8;
 
-			static const int Store = 8;
-			static const int Load = 8;
+			static const int Store = 14;
+			static const int Load = 14;
 		}
 
 		using namespace Cycles;
