@@ -1,5 +1,6 @@
-#include "yaml.h"
 #include "tests.h"
+#include "spectests.h"
+#include "yaml.h"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -11,6 +12,9 @@ namespace Test
 	{
 		bool passed = true;
 		if(!RunParserTests())
+			passed = false;
+			
+		if(!RunSpecTests())
 			passed = false;
 		
 		if(!RunEmitterTests())
