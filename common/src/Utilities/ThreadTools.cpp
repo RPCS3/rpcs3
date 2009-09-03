@@ -29,22 +29,40 @@ using namespace Threading;
 
 namespace Threading
 {
+	static void _pt_callback_cleanup( void* handle )
+	{
+		((PersistentThread*)handle)->DoThreadCleanup();
+	}
+
 	PersistentThread::PersistentThread() :
 		m_thread()
-	,	m_returncode( 0 )
-	,	m_running( false )
 	,	m_sem_event()
+	,	m_returncode( 0 )
+	,	m_detached( false )
+	,	m_running( false )
 	{
 	}
 
-	// Perform a blocking termination of the thread, to ensure full object cleanup.
+	// This destructor performs basic "last chance" cleanup, which is a blocking
+	// join against non-detached threads.  Detached threads are unhandled.
+	// Extending classes should always implement their own thread closure process.
+	// This class must not be deleted from its own thread.  That would be like marrying
+	// your sister, and then cheating on her with your daughter.
 	PersistentThread::~PersistentThread()
 	{
-		Cancel( false );
+		wxASSERT( !IsSelf() );		// not allowed from our own thread.
+
+		if( !_InterlockedExchange( &m_detached, true ) )
+		{
+			pthread_join( m_thread, (void**)&m_returncode );
+			m_running = false;
+		}
 	}
 
+	// This function should not be called from the owner thread.
 	void PersistentThread::Start()
 	{
+		wxASSERT( !IsSelf() );		// not allowed from our own thread.
 		if( m_running ) return;
 
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
@@ -53,26 +71,43 @@ namespace Threading
 		m_running = true;
 	}
 
+	// This function should not be called from the owner thread.
+	void PersistentThread::Detach()
+	{
+		wxASSERT( !IsSelf() );		// not allowed from our own thread.
+		if( _InterlockedExchange( &m_detached, true ) ) return;
+		pthread_detach( m_thread );
+	}
+
 	// Remarks:
 	//   Provision of non-blocking Cancel() is probably academic, since destroying a PersistentThread
 	//   object performs a blocking Cancel regardless of if you explicitly do a non-blocking Cancel()
 	//   prior, since the ExecuteTask() method requires a valid object state.  If you really need
 	//   fire-and-forget behavior on threads, use pthreads directly for now.
-	//   (TODO : make a DetachedThread class?)
+	//
+	// This function should not be called from the owner thread.
 	//
 	// Parameters:
 	//   isBlocking - indicates if the Cancel action should block for thread completion or not.
 	//
 	void PersistentThread::Cancel( bool isBlocking )
 	{
-		if( !m_running ) return;
-		m_running = false;
+		wxASSERT( !IsSelf() );
+		if( _InterlockedExchange( &m_detached, true ) )
+		{
+			if( m_running )
+				Console::Notice( "Threading Warning: Attempted to cancel detached thread; Ignoring..." );
+			return;
+		}
 
 		pthread_cancel( m_thread );
+
 		if( isBlocking )
 			pthread_join( m_thread, (void**)&m_returncode );
 		else
 			pthread_detach( m_thread );
+
+		m_running = false;
 	}
 
 	// Blocks execution of the calling thread until this thread completes its task.  The
@@ -85,11 +120,21 @@ namespace Threading
 	//
 	sptr PersistentThread::Block()
 	{
-		bool isOwner = (pthread_self() == m_thread);
-		DevAssert( !isOwner, "Thread deadlock detected; Block() should never be called by the owner thread." );
+		DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
+		
+		if( _InterlockedExchange( &m_detached, true ) )
+		{
+			// already detached: if we're still running then its an invalid operation
+			if( m_running )
+				throw Exception::InvalidOperation( "Blocking on detached threads requires manual semaphore implementation." );
 
-		pthread_join( m_thread, (void**)&m_returncode );
-		return m_returncode;
+			return m_returncode;
+		}
+		else
+		{
+			pthread_join( m_thread, (void**)&m_returncode );
+			return m_returncode;
+		}
 	}
 	
 	bool PersistentThread::IsSelf() const
@@ -97,15 +142,12 @@ namespace Threading
 		return pthread_self() == m_thread;
 	}
 
-	bool PersistentThread::Exists( pthread_t pid )
-	{
-		// passing 0 to pthread_kill is a NOP, and returns the status of the thread only.
-		return ( ESRCH != pthread_kill( pid, 0 ) );
-	}
-
 	bool PersistentThread::IsRunning() const
 	{
-		return ( m_running && (ESRCH != pthread_kill( m_thread, 0 )) );
+		if( !!m_detached )
+			return !!m_running;
+		else
+			return ( ESRCH != pthread_kill( m_thread, 0 ) );
 	}
 
 	// Exceptions:
@@ -113,21 +155,28 @@ namespace Threading
 	//
 	sptr PersistentThread::GetReturnCode() const
 	{
-		if( !m_running )
-			throw Exception::InvalidOperation( "Thread.GetReturnCode : thread has not been started." );
-
 		if( IsRunning() )
 			throw Exception::InvalidOperation( "Thread.GetReturnCode : thread is still running." );
 
 		return m_returncode;
 	}
 
+	// invoked when canceling or exiting the thread.
+	void PersistentThread::DoThreadCleanup()
+	{
+		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
+		_InterlockedExchange( &m_running, false );
+	}
+
 	void* PersistentThread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
-
 		PersistentThread& owner = *((PersistentThread*)itsme);
+
+		pthread_cleanup_push( _pt_callback_cleanup, itsme );
 		owner.m_returncode = owner.ExecuteTask();
+		pthread_cleanup_pop( true );
+
 		return (void*)owner.m_returncode;
 	}
 

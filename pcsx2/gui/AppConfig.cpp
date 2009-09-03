@@ -359,6 +359,7 @@ wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( F
 
 AppConfig::AppConfig() :
 	MainGuiPosition( wxDefaultPosition )
+,	SettingsTabName( L"Cpu" )
 ,	LanguageId( wxLANGUAGE_DEFAULT )
 ,	RecentFileCount( 6 )
 ,	DeskTheme( L"default" )
@@ -418,6 +419,7 @@ void AppConfig::LoadSave( IniInterface& ini )
 	AppConfig defaults;
 
 	IniEntry( MainGuiPosition );
+	IniEntry( SettingsTabName );
 	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
 	IniEntry( RecentFileCount );
 	IniEntry( DeskTheme );

@@ -40,7 +40,7 @@ Panels::DirPickerPanel& Panels::BasePathsPanel::AddDirPicker( wxBoxSizer& sizer,
 }
 
 // ------------------------------------------------------------------------
-Panels::StandardPathsPanel::StandardPathsPanel( wxWindow& parent ) :
+Panels::StandardPathsPanel::StandardPathsPanel( wxWindow& parent, __unused int idealWidth ) :
 	BasePathsPanel( parent )
 {
 	s_main.AddSpacer( BetweenFolderSpace );

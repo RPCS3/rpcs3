@@ -219,7 +219,7 @@ void mtgsThreadObject::Start()
 
 mtgsThreadObject::~mtgsThreadObject()
 {
-	Cancel();
+	mtgsThreadObject::Cancel();
 }
 
 void mtgsThreadObject::Cancel()

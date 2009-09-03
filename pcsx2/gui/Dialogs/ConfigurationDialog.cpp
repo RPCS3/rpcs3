@@ -43,13 +43,22 @@ using namespace Panels;
 	static const int s_orient = wxBK_LEFT;
 #endif
 
+static const int IdealWidth = 500;
+
+template< typename T >
+void Dialogs::ConfigurationDialog::AddPage( const char* label, int iconid )
+{
+	const wxString labelstr( wxString::FromUTF8( label ) );
+	const int curidx = m_labels.Add( labelstr );
+	g_ApplyState.SetCurrentPage( curidx );
+	m_listbook.AddPage( new T( m_listbook, IdealWidth ),	wxGetTranslation( labelstr ),
+		( labelstr == g_Conf->SettingsTabName ), iconid );
+}
 
 Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 Configuration"), true )
 ,	m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
 {
-	static const int IdealWidth = 500;
-
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 
 	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
@@ -57,24 +66,13 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 
 	g_ApplyState.StartBook( &m_listbook );
 
-	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new CpuPanel( m_listbook, IdealWidth ),				_("CPU"), false, cfgid.Cpu );
-
-	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new VideoPanel( m_listbook, IdealWidth ),			_("GS/Video"), false, cfgid.Video );
-
-	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new SpeedHacksPanel( m_listbook, IdealWidth ),		_("Speedhacks"), false, cfgid.Speedhacks );
-
-	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new GameFixesPanel( m_listbook, IdealWidth ),		_("Game Fixes"), false, cfgid.Gamefixes );
-
-	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new PluginSelectorPanel( m_listbook, IdealWidth ),	_("Plugins"), false, cfgid.Plugins );
-
-	g_ApplyState.SetCurrentPage( m_listbook.GetPageCount() );
-	m_listbook.AddPage( new StandardPathsPanel( m_listbook ),				_("Folders"), false, cfgid.Paths );
-
+	AddPage<CpuPanel>			( wxLt("CPU"),			cfgid.Cpu );
+	AddPage<VideoPanel>			( wxLt("GS/Video"),		cfgid.Video );
+	AddPage<SpeedHacksPanel>	( wxLt("Speedhacks"),	cfgid.Speedhacks );
+	AddPage<GameFixesPanel>		( wxLt("Game Fixes"),	cfgid.Gamefixes );
+	AddPage<PluginSelectorPanel>( wxLt("Plugins"),		cfgid.Plugins );
+	AddPage<StandardPathsPanel>	( wxLt("Folders"),		cfgid.Paths );
+	
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );
 	
@@ -94,6 +92,7 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 #endif
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnOk_Click ) );
+	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnCancel_Click ) );
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnApply_Click ) );
 
 	// ----------------------------------------------------------------------------
@@ -121,17 +120,30 @@ Dialogs::ConfigurationDialog::~ConfigurationDialog()
 
 void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll() )
+	if( g_ApplyState.ApplyAll( false ) )
 	{
+		FindWindow( wxID_APPLY )->Disable();
+		g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];
+		g_Conf->Save();
+
 		Close();
 		evt.Skip();
 	}
 }
 
+void Dialogs::ConfigurationDialog::OnCancel_Click( wxCommandEvent& evt )
+{
+	evt.Skip();
+	g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];
+}
+
 void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
-	FindWindow( wxID_APPLY )->Disable();
-	g_ApplyState.ApplyAll();
+	if( g_ApplyState.ApplyAll( false ) )
+		FindWindow( wxID_APPLY )->Disable();
+
+	g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];
+	g_Conf->Save();
 }
 
 

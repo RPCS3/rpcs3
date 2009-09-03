@@ -33,7 +33,7 @@ static wxString GetNormalizedConfigFolder( FoldersEnum_t folderId )
 	return normalized.ToString();
 }
 
-// Pass me TRUE if the default path is to be used, and the DirPcikerCtrl disabled from use.
+// Pass me TRUE if the default path is to be used, and the DirPickerCtrl disabled from use.
 void Panels::DirPickerPanel::UpdateCheckStatus( bool someNoteworthyBoolean )
 {
 	m_pickerCtrl->Enable( !someNoteworthyBoolean );

@@ -100,9 +100,9 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 
 // Returns false if one of the panels fails input validation (in which case dialogs
 // should not be closed, etc).
-bool Panels::StaticApplyState::ApplyAll()
+bool Panels::StaticApplyState::ApplyAll( bool saveOnSuccess )
 {
-	return ApplyPage( -1 );
+	return ApplyPage( -1, saveOnSuccess );
 }
 
 // -----------------------------------------------------------------------

@@ -104,6 +104,10 @@ public:
 public:
 	wxPoint		MainGuiPosition;
 
+	// Because remembering the last used tab on the settings panel is cool (tab is remembered
+	// by it's UTF/ASCII name).
+	wxString	SettingsTabName;
+
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
 	wxLanguage	LanguageId;
 	

@@ -646,6 +646,9 @@ namespace Console
 	{
 		const wxString fmtline( wxString::FromAscii( fmt ) + L"\n" );
 		_immediate_logger( fmtline );
+		
+		if( emuLog != NULL )
+			fflush( emuLog );
 
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
@@ -663,6 +666,9 @@ namespace Console
 	{
 		const wxString fmtline( fmt + L"\n" );
 		_immediate_logger( fmtline );
+
+		if( emuLog != NULL )
+			fflush( emuLog );
 
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).

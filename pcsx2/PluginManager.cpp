@@ -704,8 +704,9 @@ static bool OpenPlugin_GS()
 		return true;
 	}
 
-	if( mtgsThread->IsSelf() )
-		return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+	if( !mtgsThread->IsSelf() ) return true;	// already opened?
+	
+	return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
 
 	// Note: rederswitch is us abusing the isMultiThread parameter for that so
 	// we don't need a new callback

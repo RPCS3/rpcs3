@@ -103,11 +103,9 @@ sptr CoreEmuThread::ExecuteTask()
 		m_ResumeEvent.Wait();
 	}
 
-	pthread_cleanup_push( _cet_callback_cleanup, this );
 	CpuInitializeMess();
 	StateCheck();
 	CpuExecute();
-	pthread_cleanup_pop( true );
 
 	return 0;
 }
@@ -154,20 +152,17 @@ CoreEmuThread::CoreEmuThread( const wxString& elf_file ) :
 ,	m_lock_ExecMode()
 {
 	PersistentThread::Start();
-	pthread_detach( m_thread );
 }
 
 // Invoked by the pthread_exit or pthread_cancel
 void CoreEmuThread::DoThreadCleanup()
 {
-	wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
-	m_running = false;
+	PersistentThread::DoThreadCleanup();
 	GetPluginManager().Close();
 }
 
 CoreEmuThread::~CoreEmuThread()
 {
-	Cancel();
 }
 
 // Resumes the core execution state, or does nothing is the core is already running.  If

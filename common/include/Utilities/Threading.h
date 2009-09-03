@@ -109,8 +109,8 @@ namespace Threading
 	// derived class if your thread utilizes the post).
 	//
 	// Notes:
-	//  * Constructing threads as static vars isn't recommended since it can potentially con-
-	//    fuse w32pthreads, if the static initializers are executed out-of-order (C++ offers
+	//  * Constructing threads as static global vars isn't recommended since it can potentially
+	//    confuse w32pthreads, if the static initializers are executed out-of-order (C++ offers
 	//    no dependency options for ensuring correct static var initializations).  Use heap
 	//    allocation to create thread objects instead.
 	//
@@ -121,17 +121,19 @@ namespace Threading
 	protected:
 		typedef int (*PlainJoeFP)();
 		pthread_t	m_thread;
+		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
 		sptr		m_returncode;		// value returned from the thread on close.
 
-		bool		m_running;
-		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
-
+		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
+		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.
+		
 	public:
 		virtual ~PersistentThread();
 		PersistentThread();
 
 		virtual void Start();
 		virtual void Cancel( bool isBlocking = true );
+		virtual void Detach();
 
 		// Gets the return code of the thread.
 		// Throws std::logic_error if the thread has not terminated.
@@ -142,6 +144,8 @@ namespace Threading
 		
 		bool IsSelf() const;
 
+		virtual void DoThreadCleanup();
+
 	protected:
 		// Used to dispatch the thread callback function.
 		// (handles some thread cleanup on Win32, and is basically a typecast
@@ -150,14 +154,6 @@ namespace Threading
 
 		// Implemented by derived class to handle threading actions!
 		virtual sptr ExecuteTask()=0;
-
-	// ----------------------------------------------------------------------------
-	//        Static Methods (PersistentThread)
-	// ----------------------------------------------------------------------------
-	public:
-		// performs a test on the given thread handle, returning true if the thread exists
-		// or false if the thread is dead/done/never existed.
-		static bool Exists( pthread_t pid );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////

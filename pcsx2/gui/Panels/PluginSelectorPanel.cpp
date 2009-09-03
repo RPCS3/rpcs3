@@ -420,7 +420,7 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 
 Panels::PluginSelectorPanel::EnumThread::~EnumThread()
 {
-	Cancel();
+	EnumThread::Cancel();
 	safe_delete_array( Results );
 }
 
@@ -435,7 +435,7 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 {
 	DevCon::Status( "Plugin Enumeration Thread started..." );
 
-	Sleep( 10 );		// gives the gui thread some time to refresh
+	wxGetApp().Ping();		// gives the gui thread some time to refresh
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{

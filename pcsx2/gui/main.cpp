@@ -31,6 +31,12 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
+DEFINE_EVENT_TYPE( pxEVT_SemaphorePing )
+
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
+END_DECLARE_EVENT_TYPES()
+
 bool			UseAdminMode = false;
 AppConfig*		g_Conf = NULL;
 wxFileHistory*	g_RecentIsoList = NULL;
@@ -77,8 +83,15 @@ sptr AppEmuThread::ExecuteTask()
 	{
 		if( ex.StreamName == g_Conf->FullpathToBios() )
 		{
-			Msgbox::OkCancel( ex.FormatDisplayMessage() +
+			GetPluginManager().Close();
+			bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
 				_("\n\nPress Ok to go to the BIOS Configuration Panel.") );
+		
+			if( result )
+			{
+				wxGetApp().PostMenuAction( Menu_Config_BIOS );
+				wxGetApp().Ping();
+			}
 		}
 		else
 		{
@@ -91,16 +104,17 @@ sptr AppEmuThread::ExecuteTask()
 				if( g_Conf->FullpathTo( pid ) == ex.StreamName ) break;
 			}
 
-			if( pi->shortname == NULL )
+			if( pi->shortname != NULL )
 			{
-				// Some other crap file failure >_<
-			}
-			
-			int result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
-				_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
-				
-			if( result == wxID_OK )
-			{
+				bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
+					_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
+					
+				if( result )
+				{
+					g_Conf->SettingsTabName = L"Plugins";
+					wxGetApp().PostMenuAction( Menu_Config_Settings );
+					wxGetApp().Ping();
+				}
 			}
 		}
 	}
@@ -163,6 +177,7 @@ void Pcsx2App::ReadUserModeSettings()
 		// Save user's new settings
 		IniSaver saver( *conf_usermode );
 		g_Conf->LoadSaveUserMode( saver, groupname );
+		AppConfig_ReloadGlobalSettings( true );
 		g_Conf->Save();
 	}
 	else
@@ -187,6 +202,7 @@ void Pcsx2App::ReadUserModeSettings()
 			// Save user's new settings
 			IniSaver saver( *conf_usermode );
 			g_Conf->LoadSaveUserMode( saver, groupname );
+			AppConfig_ReloadGlobalSettings( true );
 			g_Conf->Save();
 		}
 	}
@@ -242,6 +258,13 @@ bool Pcsx2App::OnInit()
 
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
+#define pxMessageBoxEventThing(func) \
+	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
+
+	Connect( pxEVT_MSGBOX,			pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
+	Connect( pxEVT_CallStackBox,	pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
+	Connect( pxEVT_SemaphorePing,	wxCommandEventHandler( Pcsx2App::OnSemaphorePing ) );
+
 	// User/Admin Mode Dual Setup:
 	//   Pcsx2 now supports two fundamental modes of operation.  The default is Classic mode,
 	//   which uses the Current Working Directory (CWD) for all user data files, and requires
@@ -270,9 +293,6 @@ bool Pcsx2App::OnInit()
 
 		m_ProgramLogBox	= new ConsoleLogFrame( m_MainFrame, L"PCSX2 Program Log", g_Conf->ProgLogBox );
 
-		m_Ps2ConLogBox	= m_ProgramLogBox;		// just use a single logger for now.
-		//m_Ps2ConLogBox = new ConsoleLogFrame( NULL, L"PS2 Console Log" );
-
 		SetTopWindow( m_MainFrame );	// not really needed...
 		SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
 	    m_MainFrame->Show();
@@ -286,13 +306,40 @@ bool Pcsx2App::OnInit()
 		return false;
 	}
 
-	#define pxMessageBoxEventThing(func) \
-		(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
-
-	Connect( pxEVT_MSGBOX,		pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-	Connect( pxEVT_CallStackBox,pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-
     return true;
+}
+
+// Allows for activating menu actions from anywhere in PCSX2.
+// And it's Thread Safe!
+void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
+{
+	wxASSERT( m_MainFrame != NULL );
+	if( m_MainFrame == NULL ) return;
+
+	wxCommandEvent joe( wxEVT_COMMAND_MENU_SELECTED, menu_id );
+	m_MainFrame->GetEventHandler()->AddPendingEvent( joe );
+}
+
+// Waits for the main GUI thread to respond.  If run from the main GUI thread, returns
+// immediately without error.
+void Pcsx2App::Ping() const
+{
+	if( wxThread::IsMain() ) return;
+
+	Semaphore sema;
+	wxCommandEvent bean( pxEVT_SemaphorePing );
+	bean.SetClientData( &sema );
+	wxGetApp().AddPendingEvent( bean );
+	sema.WaitNoCancel();
+}
+
+// ----------------------------------------------------------------------------
+//         Pcsx2App Event Handlers
+// ----------------------------------------------------------------------------
+
+void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
+{
+	((Semaphore*)evt.GetClientData())->Post();
 }
 
 void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
@@ -351,7 +398,6 @@ int Pcsx2App::OnExit()
 
 Pcsx2App::Pcsx2App()  :
 	m_ProgramLogBox( NULL )
-,	m_Ps2ConLogBox( NULL )
 ,	m_ConfigImages( 32, 32 )
 ,	m_ConfigImagesAreLoaded( false )
 ,	m_ToolbarImages( NULL )

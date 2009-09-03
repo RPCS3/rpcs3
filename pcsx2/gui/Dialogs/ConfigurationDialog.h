@@ -32,13 +32,18 @@ namespace Dialogs
 	{
 	protected:
 		wxListbook&		m_listbook;
+		wxArrayString	m_labels;
 
 	public:
 		virtual ~ConfigurationDialog();
 		ConfigurationDialog(wxWindow* parent, int id=wxID_ANY);
 
 	protected:
+		template< typename T >
+		void AddPage( const char* label, int iconid );
+
 		void OnOk_Click( wxCommandEvent& evt );
+		void OnCancel_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
 
 		virtual void OnSomethingChanged( wxCommandEvent& evt )

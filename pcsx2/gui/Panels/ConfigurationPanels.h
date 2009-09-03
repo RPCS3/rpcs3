@@ -118,7 +118,7 @@ namespace Panels
 		
 		void StartBook( wxBookCtrlBase* book );
 		void StartWizard();
-		bool ApplyAll();
+		bool ApplyAll( bool saveOnSuccess=true );
 		bool ApplyPage( int pageid, bool saveOnSuccess=true );
 		void DoCleanup();
 	};
@@ -323,7 +323,7 @@ namespace Panels
 	class StandardPathsPanel : public BasePathsPanel
 	{
 	public:
-		StandardPathsPanel( wxWindow& parent );
+		StandardPathsPanel( wxWindow& parent, int idealWidth );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -452,8 +452,8 @@ namespace Panels
 	public:
 		virtual ~PluginSelectorPanel();
 		PluginSelectorPanel( wxWindow& parent, int idealWidth );
-		virtual void CancelRefresh();
 
+		void CancelRefresh();		// used from destructor, stays non-virtual
 		void Apply( AppConfig& conf );
 
 	protected:
