@@ -95,8 +95,8 @@ public:
 		#if 0
 		int speakerConfig;
 
-		if( StereoExpansionDisabled )
-			speakerConfig = 2;
+		if( StereoExpansionEnabled )
+			speakerConfig = 2;  // better not mess with this in wavout :p (rama) 
 
 		// Any windows driver should support stereo at the software level, I should think!
 		jASSUME( speakerConfig > 1 );

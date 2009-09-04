@@ -7,8 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxresmw.h"
-
+#include "afxresmw.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -72,8 +71,8 @@ BEGIN
     PUSHBUTTON      "Configure Debug Options...",IDC_OPEN_CONFIG_DEBUG,14,131,108,14
     CHECKBOX        "Enable Debug Options",IDC_DEBUG_ENABLE,14,117,104,10,NOT WS_TABSTOP
     GROUPBOX        "",IDC_STATIC,6,107,129,46
-    CONTROL         "Disable Audio Expansion",IDC_EXPANSION_DISABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,152,135,10
-    LTEXT           "Audio expansion detects extended speaker setups like 5.1 and 2.1 audio, and expand the SPU2's stereo stream so that all speakers are used.  Disable this if the detection causes problems on your sound system.",IDC_STATIC,162,164,146,44
+    CONTROL         "Enable Audio Expansion",IDC_EXPANSION_ENABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,152,135,10
+    LTEXT           "Audio expansion to 5.1. Currently for XAudio2 only. WIP.",IDC_STATIC,162,164,146,44
 END
 
 IDD_DEBUG DIALOGEX 0, 0, 326, 525

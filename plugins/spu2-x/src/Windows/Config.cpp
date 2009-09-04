@@ -51,7 +51,7 @@ bool dspPluginEnabled = false;
 int  dspPluginModule = 0;
 wchar_t dspPlugin[256];
 
-bool StereoExpansionDisabled = true;
+bool StereoExpansionEnabled = false;
 
 /*****************************************************************************/
 
@@ -65,7 +65,7 @@ void ReadSettings()
 	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 
-	StereoExpansionDisabled = CfgReadBool( L"OUTPUT", L"Disable_StereoExpansion", false );
+	StereoExpansionEnabled = CfgReadBool( L"OUTPUT", L"Enable_StereoExpansion", false );
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 160);
 
 	wchar_t omodid[128];
@@ -115,7 +115,7 @@ void WriteSettings()
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
 	CfgWriteBool(L"OUTPUT",L"Disable_Timestretch", timeStretchDisabled);
-	CfgWriteBool(L"OUTPUT",L"Disable_StereoExpansion", StereoExpansionDisabled);
+	CfgWriteBool(L"OUTPUT",L"Enable_StereoExpansion", StereoExpansionEnabled);
 
 	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = L"default";
 	CfgWriteStr(L"WAVEOUT",L"Device",Config_WaveOut.Device);
@@ -172,7 +172,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 			
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
-			SET_CHECK(IDC_EXPANSION_DISABLE,StereoExpansionDisabled);
+			SET_CHECK(IDC_EXPANSION_ENABLE,StereoExpansionEnabled);
 			SET_CHECK(IDC_TS_DISABLE,		timeStretchDisabled);
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
 			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
@@ -226,7 +226,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
-				HANDLE_CHECK(IDC_EXPANSION_DISABLE,StereoExpansionDisabled);
+				HANDLE_CHECK(IDC_EXPANSION_ENABLE,StereoExpansionEnabled);
 				HANDLE_CHECKNB(IDC_TS_DISABLE,timeStretchDisabled);
 					EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), !timeStretchDisabled );
 				break;

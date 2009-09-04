@@ -109,24 +109,26 @@ private:
 		// virtual calls can't be made from the constructor's context.
 		void _init( IXAudio2* pXAudio2, uint chanConfig )
 		{			
-			WAVEFORMATEX wfx;
+			WAVEFORMATEXTENSIBLE wfx;
 
-			wfx.wFormatTag		= WAVE_FORMAT_PCM;
-			wfx.nSamplesPerSec	= SampleRate;
-			wfx.nChannels		= m_nChannels;
-			wfx.wBitsPerSample	= 16;
-			wfx.nBlockAlign		= 2*m_nChannels;
-			wfx.nAvgBytesPerSec	= SampleRate * wfx.nBlockAlign;
-			wfx.cbSize			= 0;
-
-			//wfx.SubFormat				= KSDATAFORMAT_SUBTYPE_PCM;
-			//wfx.dwChannelMask			= chanConfig;
+			memset(&wfx, 0, sizeof(WAVEFORMATEXTENSIBLE)); 
+			wfx.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
+			wfx.Format.nSamplesPerSec = SampleRate;
+			wfx.Format.nChannels = m_nChannels;
+			wfx.Format.wBitsPerSample = 16;
+			wfx.Format.nBlockAlign = wfx.Format.nChannels*wfx.Format.wBitsPerSample/8;
+			wfx.Format.nAvgBytesPerSec = SampleRate * wfx.Format.nBlockAlign;
+			wfx.Format.cbSize=22;
+			wfx.Samples.wValidBitsPerSample=0;
+			//wfx.dwChannelMask=SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT;
+			wfx.dwChannelMask=chanConfig;
+			wfx.SubFormat=KSDATAFORMAT_SUBTYPE_PCM;
 
 			//
 			// Create an XAudio2 voice to stream this wave
 			//
 			HRESULT hr;
-			if( FAILED(hr = pXAudio2->CreateSourceVoice( &pSourceVoice, &wfx,
+			if( FAILED(hr = pXAudio2->CreateSourceVoice( &pSourceVoice, (WAVEFORMATEX*)&wfx,
 				XAUDIO2_VOICE_NOSRC, 1.0f, this ) ) )
 			{
 				throw Exception::XAudio2Error( hr, "XAudio2 CreateSourceVoice failure." );
@@ -187,7 +189,17 @@ private:
 
 		void Init( IXAudio2* pXAudio2 )
 		{
-			_init( pXAudio2, SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT );
+			int chanMask = 0;
+			switch(m_nChannels)
+			{
+			case 1: chanMask |= SPEAKER_FRONT_CENTER; break;
+			case 2: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT; break;
+			case 3: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_LOW_FREQUENCY; break;
+			case 4: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
+			case 5: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
+			case 6: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT | SPEAKER_LOW_FREQUENCY; break;
+			}
+			_init( pXAudio2, chanMask );
 		}
 
 	protected:
@@ -247,21 +259,21 @@ public:
 			XAUDIO2_DEVICE_DETAILS deviceDetails;
 			pXAudio2->GetDeviceDetails( 0, &deviceDetails );
 
+			if( StereoExpansionEnabled )
+				deviceDetails.OutputFormat.Format.nChannels	= 6;
+
+			// Any windows driver should support stereo at the software level, I should think!
+			jASSUME( deviceDetails.OutputFormat.Format.nChannels > 1 );
+
 			//
 			// Create a mastering voice
 			//
-			if ( FAILED(hr = pXAudio2->CreateMasteringVoice( &pMasteringVoice, 0, SampleRate ) ) )
+			if ( FAILED(hr = pXAudio2->CreateMasteringVoice( &pMasteringVoice, deviceDetails.OutputFormat.Format.nChannels, SampleRate ) ) )
 			{
 				SysMessage( "Failed creating mastering voice: %#X\n", hr );
 				CoUninitialize();
 				return -1;
 			}
-
-			if( StereoExpansionDisabled )
-				deviceDetails.OutputFormat.Format.nChannels	= 2;
-
-			// Any windows driver should support stereo at the software level, I should think!
-			jASSUME( deviceDetails.OutputFormat.Format.nChannels > 1 );
 
 			switch( deviceDetails.OutputFormat.Format.nChannels )
 			{
@@ -288,7 +300,8 @@ public:
 				case 6:
 				case 7:
 					ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
-					voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );
+					voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );   //"normal" stereo upmix
+					//voiceContext = new StreamingVoice<Stereo51Out16DplII>( pXAudio2 );  //gigas PLII
 				break;
 
 				default:	// anything 8 or more gets the 7.1 treatment!
