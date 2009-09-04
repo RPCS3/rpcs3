@@ -98,7 +98,7 @@ __forceinline void dmacInterrupt()
 	if( ((psHu16(0xe012) & psHu16(0xe010)) == 0 ) && 
 		( psHu16(0xe010) & 0x8000) == 0 ) return;
 
-	if((psHu32(DMAC_CTRL) & 0x1) == 0) return;
+	if (!(dmacRegs->ctrl.DMAE)) return;
 	
 	HW_LOG("dmacInterrupt %x", (psHu16(0xe012) & psHu16(0xe010) || 
 								  psHu16(0xe010) & 0x8000));

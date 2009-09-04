@@ -72,7 +72,7 @@ __forceinline void gsInterrupt()
 
 	if ((gif->qwc > 0) || (gspath3done == 0)) 
 	{
-		if (!(psHu32(DMAC_CTRL) & 0x1)) 
+		if (!dmacRegs->ctrl.DMAE) 
 		{
 			Console::Notice("gs dma masked, re-scheduling...");
 			// re-raise the int shortly in the future
@@ -202,13 +202,13 @@ void GIFdma()
 	
 	gscycles = prevcycles;
 
-	if ((psHu32(GIF_CTRL) & 8))  // temporarily stop
+	if (gifRegs->ctrl.PSE)  // temporarily stop
 	{
 		Console::WriteLn("Gif dma temp paused?");
 		return;
 	}
 
-	if (((psHu32(DMAC_CTRL) & 0xC0) == 0x80) && (prevcycles != 0))  // STD == GIF
+	if ((dmacRegs->ctrl.STD == STD_GIF) && (prevcycles != 0))
 	{
 		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
@@ -227,14 +227,14 @@ void GIFdma()
 	psHu32(GIF_STAT) |= 0x10000000; // FQC=31, hack ;) [ used to be 0xE00; // OPH=1 | APATH=3]
 	
 	//Path2 gets priority in intermittent mode
-	if (((psHu32(GIF_STAT) & GIF_STAT_P1Q) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & GIF_MODE_IMT) && (Path3progress == IMAGE_MODE)) 
+	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && (Path3progress == IMAGE_MODE)) 
 	{
 		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
 		CPU_INT(2, 16);
 		return;
 	}
 
-	if (vif1Regs->mskpath3 || (psHu32(GIF_MODE) & GIF_MODE_M3R)) 
+	if (vif1Regs->mskpath3 || gifRegs->mode.M3R) 
 	{
 		if (gif->qwc == 0) 
 		{
@@ -264,7 +264,7 @@ void GIFdma()
 	if ((gif->chcr.MOD == NORMAL_MODE) || (gif->qwc > 0)) // Normal Mode
 	{ 
 		
-		if (((psHu32(DMAC_CTRL) & 0xC0) == 0x80) && (gif->chcr.MOD == NORMAL_MODE))
+		if ((dmacRegs->ctrl.STD == STD_GIF) && (gif->chcr.MOD == NORMAL_MODE))
 		{ 
 			Console::WriteLn("DMA Stall Control on GIF normal");
 		}
@@ -280,7 +280,7 @@ void GIFdma()
 		if (!ReadTag(ptag, id)) return;
 		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
 
-		if ((psHu32(DMAC_CTRL) & 0xC0) == 0x80) // STD == GIF
+		if (dmacRegs->ctrl.STD == STD_GIF)
 		{ 
 			// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
 			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > psHu32(DMAC_STADR)) && (id == 4)) 
@@ -333,8 +333,8 @@ void dmaGIF()
 	psHu32(GIF_STAT) |= GIF_STAT_P3Q;
 	psHu32(GIF_STAT) |= 0x10000000; // FQC=31, hack ;) [used to be 0xE00; // OPH=1 | APATH=3]
 	clearFIFOstuff(true);
-
-	if ((psHu32(DMAC_CTRL) & 0xC) == 0xC )  // GIF MFIFO
+	
+	if (dmacRegs->ctrl.MFD == MFD_GIF)  // GIF MFIFO
 	{
 		//Console::WriteLn("GIF MFIFO");
 		gifMFIFOInterrupt();
@@ -546,7 +546,7 @@ void gifMFIFOInterrupt()
 		return; 
 	}
 
-	if (((psHu32(GIF_STAT) & GIF_STAT_P1Q) || (vif1.cmd & 0x7f) == 0x50) && (psHu32(GIF_MODE) & GIF_MODE_IMT) && Path3progress == IMAGE_MODE) //Path2 gets priority in intermittent mode
+	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && Path3progress == IMAGE_MODE) //Path2 gets priority in intermittent mode
 	{
 		//GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
 		CPU_INT(11,mfifocycles);
@@ -559,7 +559,7 @@ void gifMFIFOInterrupt()
 		{
 			//Console::WriteLn("Empty");
 			gifstate |= GIF_STATE_EMPTY;
-			psHu32(GIF_STAT) &= ~GIF_STAT_IMT; // OPH=0 | APATH=0
+			gifRegs->stat.IMT = 0; // OPH=0 | APATH=0
 			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			return;
 		}

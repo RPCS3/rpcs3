@@ -22,6 +22,7 @@
 #include "Vif.h"
 #include "VUmicro.h"
 #include "GS.h"
+#include "Gif.h"
 #include "VifDma.h"
 #include "Tags.h"
 
@@ -1447,7 +1448,7 @@ void  vif0Interrupt()
 	if ((vif0ch->chcr.MOD == CHAIN_MODE) && (!vif0.done) && (!vif0.vifstalled))
 	{
 
-		if (!(psHu32(DMAC_CTRL) & 0x1))
+		if (!(dmacRegs->ctrl.DMAE))
 		{
 			Console::WriteLn("vif0 dma masked");
 			return;
@@ -2344,7 +2345,7 @@ void vif1TransferFromMemory()
 	if (pMem == NULL)  						//Is vif0ptag empty?
 	{
 		Console::WriteLn("Vif1 Tag BUSERR");
-		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;       //If yes, set BEIS (BUSERR) in DMAC_STAT register
+		dmacRegs->stat.BEIS = 1;      //If yes, set BEIS (BUSERR) in DMAC_STAT register
 		vif1.done = true;
 		vif1Regs->stat &= ~VIF1_STAT_FQC;
 		vif1ch->qwc = 0;
@@ -2461,7 +2462,7 @@ __forceinline void vif1SetupTransfer()
 			VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx\n",
 			        vif1ptag[1], vif1ptag[0], vif1ch->qwc, id, vif1ch->madr, vif1ch->tadr);
 
-			if (!vif1.done && ((psHu32(DMAC_CTRL) & 0xC0) == 0x40) && (id == 4))   // STD == VIF1
+			if (!vif1.done && ((dmacRegs->ctrl.STD == STD_VIF1) && (id == 4)))   // STD == VIF1
 			{
 				// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
 				if ((vif1ch->madr + vif1ch->qwc * 16) >= psHu32(DMAC_STADR))
@@ -2557,7 +2558,7 @@ __forceinline void vif1Interrupt()
 	if (!vif1.done)
 	{
 
-		if (!(psHu32(DMAC_CTRL) & 0x1))
+		if (!(dmacRegs->ctrl.DMAE))
 		{
 			Console::WriteLn("vif1 dma masked");
 			return;
@@ -2601,7 +2602,7 @@ void dmaVIF1()
 	g_vifCycles = 0;
 	vif1.inprogress = 0;
 	
-	if (((psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF MFIFO
+	if (dmacRegs->ctrl.MFD == MFD_VIF1)   // VIF MFIFO
 	{
 		//Console::WriteLn("VIFMFIFO\n");
 		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
@@ -2611,7 +2612,7 @@ void dmaVIF1()
 	} 
 
 #ifdef PCSX2_DEVBUILD
-	if ((psHu32(DMAC_CTRL) & 0xC0) == 0x40)   // STD == VIF1
+	if (dmacRegs->ctrl.STD == STD_VIF1)
 	{
 		//DevCon::WriteLn("VIF Stall Control Source = %x, Drain = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3);
 	}
@@ -2620,7 +2621,7 @@ void dmaVIF1()
 	if ((vif1ch->chcr.MOD == NORMAL_MODE) || vif1ch->qwc > 0)   // Normal Mode
 	{
 
-		if ((psHu32(DMAC_CTRL) & 0xC0) == 0x40)
+		if (dmacRegs->ctrl.STD == STD_VIF1)
 			Console::WriteLn("DMA Stall Control on VIF1 normal");
 
 		if (vif1ch->chcr.DIR)  // to Memory
@@ -2671,7 +2672,7 @@ void vif1Write32(u32 mem, u32 value)
 				if(vif1Regs->mskpath3)
 				{
 					vif1Regs->mskpath3 = 0;
-					psHu32(GIF_STAT) &= ~GIF_STAT_IMT;
+					gifRegs->stat.IMT = 0;
 					if (gif->chcr.STR) CPU_INT(2, 4);	
 				}
 				

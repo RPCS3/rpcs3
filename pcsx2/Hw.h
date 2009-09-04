@@ -62,6 +62,15 @@ union tDMA_CHCR {
 	u32 _u32;
 };
 
+union tDMA_SADR {
+	struct {
+		u32 ADDR : 14;
+		u32 reserved2 : 18;
+	};
+	u32 _u32;
+};
+
+
 struct DMACh {
 	tDMA_CHCR chcr;
 	u32 null0[3];
@@ -448,30 +457,12 @@ union tDMAC_CTRL {
 
 union tDMAC_STAT {
 	struct {
-		u32 CIS0 : 1;
-		u32 CIS1 : 1;
-		u32 CIS2 : 1;
-		u32 CIS3 : 1;
-		u32 CIS4 : 1;
-		u32 CIS5 : 1;
-		u32 CIS6 : 1;
-		u32 CIS7 : 1;
-		u32 CIS8 : 1;
-		u32 CIS9 : 1;
+		u32 CIS : 10;
 		u32 reserved1 : 3;
 		u32 SIS : 1;
 		u32 MEIS : 1;
 		u32 BEIS : 1;
-		u32 CIM0 : 1;
-		u32 CIM1 : 1;
-		u32 CIM2 : 1;
-		u32 CIM3 : 1;
-		u32 CIM4 : 1;
-		u32 CIM5 : 1;
-		u32 CIM6 : 1;
-		u32 CIM7 : 1;
-		u32 CIM8 : 1;
-		u32 CIM9 : 1;
+		u32 CIM : 10;
 		u32 reserved2 : 3;
 		u32 SIM : 1;
 		u32 MEIM : 1;
@@ -482,27 +473,9 @@ union tDMAC_STAT {
 
 union tDMAC_PCR {
 	struct {
-		u32 CPC0 : 1;
-		u32 CPC1 : 1;
-		u32 CPC2 : 1;
-		u32 CPC3 : 1;
-		u32 CPC4 : 1;
-		u32 CPC5 : 1;
-		u32 CPC6 : 1;
-		u32 CPC7 : 1;
-		u32 CPC8 : 1;
-		u32 CPC9 : 1;
+		u32 CPC : 10;
 		u32 reserved1 : 6;
-		u32 CDE0 : 1;
-		u32 CDE1 : 1;
-		u32 CDE2 : 1;
-		u32 CDE3 : 1;
-		u32 CDE4 : 1;
-		u32 CDE5 : 1;
-		u32 CDE6 : 1;
-		u32 CDE7 : 1;
-		u32 CDE8 : 1;
-		u32 CDE9 : 1;
+		u32 CDE : 10;
 		u32 reserved2 : 5;
 		u32 PCE : 1;
 	};
