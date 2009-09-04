@@ -138,7 +138,9 @@ namespace Msgbox
 {
 	bool Alert( const char* fmt )
 	{
-		MessageBox(0, fmt, _("Pcsx2 Msg"), 0);
+		Console::Notice( fmt );
+		if( !g_Startup.NoGui )
+			MessageBox(0, fmt, _("Pcsx2 Msg"), 0);
 		return false;
 	}
 
@@ -150,7 +152,10 @@ namespace Msgbox
 
 		va_list list;
 		va_start(list,dummy);
-		MessageBox(0, vfmt_string(fmt,list).c_str(), _("Pcsx2 Msg"), 0);
+		string woot( vfmt_string(fmt,list) );
+		Console::Notice( fmt );
+		if( !g_Startup.NoGui )
+			MessageBox(0, woot.c_str(), _("Pcsx2 Msg"), 0);
 		va_end(list);
 
 		return false;

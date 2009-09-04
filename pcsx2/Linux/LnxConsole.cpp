@@ -96,12 +96,9 @@ bool Alert(const char* fmt)
 {
 	GtkWidget *dialog;
 
+	Console::Error(fmt);
 	if (g_Startup.NoGui)
-	{
-		Console::Error(fmt);
 		return false;
-	}
-
 
 	dialog = gtk_message_dialog_new(GTK_WINDOW(MainWindow),
 	                                GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -128,11 +125,9 @@ bool Alert(const char* fmt, VARG_PARAM dummy, ...)
 	if (msg[msg.length()-1] == '\n')
 		msg[msg.length()-1] = 0;
 
+	Console::Error(msg.c_str());
 	if (g_Startup.NoGui)
-	{
-		Console::Error(msg.c_str());
 		return false;
-	}
 
 	dialog = gtk_message_dialog_new(GTK_WINDOW(MainWindow),
 	                                GTK_DIALOG_DESTROY_WITH_PARENT,

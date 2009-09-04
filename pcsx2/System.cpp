@@ -30,6 +30,7 @@
 #include "R5900Exceptions.h"
 
 #include "CDVD/CDVD.h"
+#include "svnrev.h"
 
 using namespace std;
 using namespace Console;
@@ -100,7 +101,7 @@ void SysDetect()
 	if( sysInitialized ) return;
 	sysInitialized = true;
 
-	Notice("PCSX2 " PCSX2_VERSION " - compiled on " __DATE__ );
+	Notice("PCSX2 " PCSX2_VERSION " (r%d) - compiled on " __DATE__, params SVN_REV );
 	Notice("Savestate version: %x", params g_SaveVersion);
 
 	// fixme: This line is here for the purpose of creating external ASM code.  Yah. >_<
@@ -118,7 +119,7 @@ void SysDetect()
 		"\tCPU vendor name =  %s\n"
 		"\tFamilyID  =  %x\n"
 		"\tx86Family =  %s\n"
-		"\tCPU speed =  %d.%03d Ghz\n"
+		"\tCPU speed =  %d.%03d ghz\n"
 		"\tCores     =  %d physical [%d logical]\n"
 		"\tx86PType  =  %s\n"
 		"\tx86Flags  =  %8.8x %8.8x\n"

@@ -316,6 +316,7 @@ int LoadGSplugin(const string& filename)
 {
 	void *drv;
 
+	DevCon::WriteLn( "\tLoading GS..." );
 	GSplugin = SysLoadLibrary(filename.c_str());
 	if (GSplugin == NULL) { Msgbox::Alert ("Could Not Load GS Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = GSplugin;
@@ -372,6 +373,7 @@ static s32  CALLBACK PAD1_queryMtap(u8 port) { return 0; }
 int LoadPAD1plugin(const string& filename) {
 	void *drv;
 
+	DevCon::WriteLn( "\tLoading PAD1..." );
 	PAD1plugin = SysLoadLibrary(filename.c_str());
 	if (PAD1plugin == NULL) { Msgbox::Alert("Could Not Load PAD1 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = PAD1plugin;
@@ -409,6 +411,7 @@ static s32  CALLBACK PAD2_queryMtap(u8 port) { return 0; }
 int LoadPAD2plugin(const string& filename) {
 	void *drv;
 
+	DevCon::WriteLn( "\tLoading PAD2..." );
 	PAD2plugin = SysLoadLibrary(filename.c_str());
 	if (PAD2plugin == NULL) { Msgbox::Alert("Could Not Load PAD2 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = PAD2plugin;
@@ -443,6 +446,8 @@ static s32  CALLBACK SPU2_test() { return 0; }
 
 int LoadSPU2plugin(const string& filename) {
 	void *drv;
+
+	DevCon::WriteLn( "\tLoading SPU2..." );
 
 	SPU2plugin = SysLoadLibrary(filename.c_str());
 	if (SPU2plugin == NULL) { Msgbox::Alert("Could Not Load SPU2 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
@@ -574,6 +579,8 @@ CDVD_API* CDVD			= NULL;
 int LoadCDVDplugin(const string& filename) {
 	void *drv;
 
+	DevCon::WriteLn( "\tLoading CDVD..." );
+
 	CDVDplugin = SysLoadLibrary(filename.c_str());
 	if (CDVDplugin == NULL) { Msgbox::Alert("Could Not Load CDVD Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = CDVDplugin;
@@ -615,6 +622,8 @@ s32  CALLBACK DEV9_test() { return 0; }
 int LoadDEV9plugin(const string& filename) {
 	void *drv;
 
+	DevCon::WriteLn( "\tLoading DEV9..." );
+
 	DEV9plugin = SysLoadLibrary(filename.c_str());
 	if (DEV9plugin == NULL) { Msgbox::Alert("Could Not Load DEV9 Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = DEV9plugin;
@@ -652,6 +661,8 @@ s32 CALLBACK USB_test() { return 0; }
 int LoadUSBplugin(const string& filename) {
 	void *drv;
 
+	DevCon::WriteLn( "\tLoading USB..." );
+
 	USBplugin = SysLoadLibrary(filename.c_str());
 	if (USBplugin == NULL) { Msgbox::Alert("Could Not Load USB Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
 	drv = USBplugin;
@@ -688,6 +699,8 @@ s32 CALLBACK FW_test() { return 0; }
 
 int LoadFWplugin(const string& filename) {
 	void *drv;
+
+	DevCon::WriteLn( "\tLoading FW..." );
 
 	FWplugin = SysLoadLibrary(filename.c_str());
 	if (FWplugin == NULL) { Msgbox::Alert("Could Not Load FW Plugin '%hs': %s", params &filename, SysLibError()); return -1; }
@@ -731,6 +744,8 @@ int LoadPlugins()
 {
 	if (plugins_loaded) return 0;
 
+	Console::Status( "Loading plugins..." );
+
 	if (LoadGSplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.GS )) == -1) return -1;
 	if (LoadPAD1plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD1 )) == -1) return -1;
 	if (LoadPAD2plugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.PAD2 )) == -1) return -1;
@@ -740,6 +755,7 @@ int LoadPlugins()
 	if (LoadUSBplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.USB )) == -1) return -1;
 	if (LoadFWplugin(	Path::Combine( Config.Paths.Plugins, Config.Plugins.FW )) == -1) return -1;
 
+	Console::Status( "Plugins loaded successfully." );
 	plugins_loaded = true;
 
 	return 0;
@@ -747,9 +763,10 @@ int LoadPlugins()
 
 bool ReportError(int err, const char *str)
 {
+	DevCon::WriteLn( "\tInit %s...", params str );
 	if (err != 0)
 	{
-		Msgbox::Alert("%s error: %d", params str, err); 
+		Msgbox::Alert("%s plugin failed to initialize.  Error Code: %d", params str, err); 
 		return true;
 	}
 	return false;
@@ -757,9 +774,10 @@ bool ReportError(int err, const char *str)
 
 bool ReportError2(int err, const char *str)
 {
+	DevCon::WriteLn( "\tOpening %s...", params str );
 	if (err != 0)
 	{
-		Msgbox::Alert("Error Opening %s Plugin", params str, err); 
+		Msgbox::Alert("%s plugin failed to open. Error code: %d", params str, err); 
 		return true;
 	}
 	return false;
@@ -776,18 +794,20 @@ int InitPlugins()
 	// Ensure plugins have been loaded....
 	if (LoadPlugins() == -1) return -1;
 
-	//if( !plugins_loaded ) throw Exception::InvalidOperation( "Bad coder mojo - InitPlugins called prior to plugins having been loaded." );
+	Console::Status( "Initializing plugins..." );
 
-	if (ReportError(GSinit(), "GSinit")) return -1;
-	if (ReportError(PAD1init(1), "PAD1init")) return -1;
-	if (ReportError(PAD2init(2), "PAD2init")) return -1;
-	if (ReportError(SPU2init(), "SPU2init")) return -1;
+	if (ReportError(GSinit(), "GS")) return -1;
+	if (ReportError(PAD1init(1), "PAD1")) return -1;
+	if (ReportError(PAD2init(2), "PAD2")) return -1;
+	if (ReportError(SPU2init(), "SPU2")) return -1;
 	
-	if (ReportError(CDVDinit(), "CDVDinit")) return -1;
+	if (ReportError(CDVDinit(), "CDVD")) return -1;
 	
-	if (ReportError(DEV9init(), "DEV9init")) return -1;
-	if (ReportError(USBinit(), "USBinit")) return -1;
-	if (ReportError(FWinit(), "FWinit")) return -1;
+	if (ReportError(DEV9init(), "DEV9")) return -1;
+	if (ReportError(USBinit(), "USB")) return -1;
+	if (ReportError(FWinit(), "FW")) return -1;
+
+	Console::Status( "Plugins initialized successfully." );
 
 	plugins_initialized = true;
 	return 0;
@@ -800,6 +820,8 @@ void ShutdownPlugins()
 
 	mtgsWaitGS();
 	ClosePlugins( true );
+
+	Console::Status( "Shutting down plugins..." );
 
 	if (GSshutdown != NULL) GSshutdown();
 
@@ -815,6 +837,8 @@ void ShutdownPlugins()
 	if (DEV9shutdown != NULL) DEV9shutdown();
 	if (USBshutdown != NULL) USBshutdown();
 	if (FWshutdown != NULL) FWshutdown();
+	
+	Console::Status( "Plugin shutdown complete." );
 }
 
 uptr pDsp;
@@ -983,11 +1007,13 @@ int OpenPlugins()
 {
 	if( InitPlugins() == -1 ) return -1;
 
+	Console::Status( "Opening Plugins..." );
 	if( !OpenGS() || !OpenPAD1() || !OpenPAD2() || !OpenCDVD(NULL) ||
 		!OpenSPU2() || !OpenDEV9() || !OpenUSB() || !OpenFW()
 	)
 		return -1;
-	
+
+	Console::Status( "Plugins opened successfully." );
 	cdvdDetectDisk();
 	return 0;
 }
@@ -995,6 +1021,7 @@ int OpenPlugins()
 
 #define CLOSE_PLUGIN( name ) \
 	if( OpenStatus.name ) { \
+		DevCon::WriteLn( "\tClosing " #name "..." ); \
 		name##close(); \
 		OpenStatus.name = false; \
 	}
@@ -1008,6 +1035,8 @@ int OpenPlugins()
 
 void ClosePlugins( bool closegs )
 {
+	Console::Status( "Closing plugins..." );
+
 	// Close pads first since they attach to the GS's window.
 
 	CLOSE_PLUGIN( PAD1 );
@@ -1016,6 +1045,8 @@ void ClosePlugins( bool closegs )
 	// GS plugin is special and is not always closed during emulation pauses.
 	// (that's because the GS is the most complicated plugin and to close it would
 	// require we save the GS state)
+
+	DevCon::WriteLn( "\tClosing GS..." );
 
 	if( OpenStatus.GS )
 	{
@@ -1030,6 +1061,7 @@ void ClosePlugins( bool closegs )
 		}
 	}
 
+	DevCon::WriteLn( "\tClosing CDVD..." );
 	CloseCDVD();
 
 	if( OpenStatus.CDVD )
@@ -1042,6 +1074,7 @@ void ClosePlugins( bool closegs )
 	CLOSE_PLUGIN( USB );
 	CLOSE_PLUGIN( FW );
 	CLOSE_PLUGIN( SPU2 );
+	Console::Status( "Plugins closed successfully." );
 }
 
 //used to close the GS plugin window and pads, to switch gsdx renderer
@@ -1054,6 +1087,7 @@ void CloseGS()
 
 	if( OpenStatus.GS )
 	{
+		DevCon::WriteLn( "\tClosing GS..." );
 		gsClose();
 		OpenStatus.GS = false;
 	}
@@ -1097,6 +1131,7 @@ void PluginsResetGS()
 
 	if( OpenStatus.GS )
 	{
+		DevCon::WriteLn( "\tClosing GS..." );
 		gsClose();
 		OpenStatus.GS = false;
 	}
