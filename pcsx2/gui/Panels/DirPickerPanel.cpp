@@ -114,17 +114,9 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 
 	SetSizer( &s_box );
 
-	// Apply default values
-	const bool isDefault = g_Conf->Folders.IsDefault( m_FolderId );
-	m_checkCtrl->SetValue( isDefault );
-	m_pickerCtrl->Enable( !isDefault );
-
 	Connect( m_checkCtrl->GetId(),	wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( DirPickerPanel::UseDefaultPath_Click ) );
 
-	// Finally, assign the real value from the config.
-	//  (done here because wxGTK fails to init the control when provisioning the initial path
-	//   via the contructor)
-	m_pickerCtrl->SetPath( GetNormalizedConfigFolder( m_FolderId ) );
+	Reset();	// forces default settings based on g_Conf
 }
 
 Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& msg )
@@ -136,6 +128,9 @@ Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& m
 
 void Panels::DirPickerPanel::Reset()
 {
+	const bool isDefault = g_Conf->Folders.IsDefault( m_FolderId );
+	m_checkCtrl->SetValue( isDefault );
+	m_pickerCtrl->Enable( !isDefault );
 	m_pickerCtrl->SetPath( GetNormalizedConfigFolder( m_FolderId ) );
 }
 

@@ -38,7 +38,6 @@ public:
 
 protected:
 	volatile ExecutionMode m_ExecMode;
-	volatile bool m_Done;
 
 	Semaphore m_ResumeEvent;
 	Semaphore m_SuspendEvent;

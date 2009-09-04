@@ -98,7 +98,7 @@ sptr CoreEmuThread::ExecuteTask()
 {
 	tls_coreThread = this;
 
-	while( !m_Done && (m_ExecMode != ExecMode_Running) )
+	while( m_ExecMode != ExecMode_Running )
 	{
 		m_ResumeEvent.Wait();
 	}
@@ -112,37 +112,35 @@ sptr CoreEmuThread::ExecuteTask()
 
 void CoreEmuThread::StateCheck()
 {
+	switch( m_ExecMode )
 	{
-		ScopedLock locker( m_lock_ExecMode );
+		case ExecMode_Idle:
+			// threads should never have an idle execution state set while the
+			// thread is in any way active or alive.
+			DevAssert( false, "Invalid execution state detected." );
+		break;
 
-		switch( m_ExecMode )
+		// These are not the case statements you're looking for.  Move along.
+		case ExecMode_Running:
+			pthread_testcancel();
+		break;
+
+		case ExecMode_Suspending:
 		{
-			case ExecMode_Idle:
-				// threads should never have an idle execution state set while the
-				// thread is in any way active or alive.
-				DevAssert( false, "Invalid execution state detected." );
-			break;
-
-			// These are not the case statements you're looking for.  Move along.
-			case ExecMode_Running: break;
-			case ExecMode_Suspended: break;
-
-			case ExecMode_Suspending:
-				m_ExecMode = ExecMode_Suspended;
-				m_SuspendEvent.Post();
-			break;
+			ScopedLock locker( m_lock_ExecMode );
+			m_ExecMode = ExecMode_Suspended;
+			m_SuspendEvent.Post();
 		}
-	}
 
-	while( (m_ExecMode == ExecMode_Suspended) && !m_Done )
-	{
-		m_ResumeEvent.Wait();
+		case ExecMode_Suspended:
+			while( m_ExecMode == ExecMode_Suspended )
+				m_ResumeEvent.Wait();
+		break;
 	}
 }
 
 CoreEmuThread::CoreEmuThread( const wxString& elf_file ) :
 	m_ExecMode( ExecMode_Idle )
-,	m_Done( false )
 ,	m_ResumeEvent()
 ,	m_SuspendEvent()
 ,	m_resetRecompilers( false )
@@ -163,6 +161,7 @@ void CoreEmuThread::DoThreadCleanup()
 
 CoreEmuThread::~CoreEmuThread()
 {
+	PersistentThread::Cancel();
 }
 
 // Resumes the core execution state, or does nothing is the core is already running.  If
@@ -194,10 +193,10 @@ void CoreEmuThread::Resume()
 				return;
 			}
 		}
-
-		DevAssert( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Idle),
-			"EmuCoreThread is not in a suspended or idle state?  wtf!" );
 	}
+
+	DevAssert( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Idle),
+		"EmuCoreThread is not in a suspended or idle state?  wtf!" );
 
 	if( m_resetRecompilers || m_resetProfilers )
 	{

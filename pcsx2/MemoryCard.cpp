@@ -70,14 +70,18 @@ void MemoryCard::Load( uint mcd )
 	wxFileName fname( g_Conf->FullpathToMcd( mcd ) );
 	wxString str( fname.GetFullPath() );
 
-	if( !fname.FileExists() )
+	const wxULongLong fsz = fname.GetSize();
+	if( (fsz == 0) || (fsz == wxInvalidSize) )
 		Create( str );
+
+	// [TODO] : Add memcard size detection and report it to the console log.
+	//   (8MB, 256Mb, whatever)
 
 #ifdef _WIN32
 	NTFS_CompressFile( str, g_Conf->McdEnableNTFS );
 #endif
 
-	cardfile[mcd].Open( str.c_str(), wxFile::write );
+	cardfile[mcd].Open( str.c_str(), wxFile::read_write );
 
 	if( !cardfile[mcd].IsOpened() )
 	{

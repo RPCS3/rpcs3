@@ -137,12 +137,30 @@ void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 	Close();
 }
 
-void MainEmuFrame::Menu_Pause_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_EmuClose_Click(wxCommandEvent &event)
 {
+	SysReset();
+	GetMenuBar()->Check( MenuId_Emu_Pause, false );
 }
 
-void MainEmuFrame::Menu_Reset_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_EmuPause_Click(wxCommandEvent &event)
 {
+	if( event.IsChecked() )
+		SysSuspend();
+	else
+		SysResume();
+}
+
+void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
+{
+	bool wasRunning = EmulationInProgress();
+	SysReset();
+
+	GetMenuBar()->Check( MenuId_Emu_Pause, false );
+
+	if( !wasRunning ) return;
+	InitPlugins();
+	SysExecute( new AppEmuThread() );
 }
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)

@@ -148,7 +148,6 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 
 	int page = (int)evt.GetPage()->GetClientData();
 
-	//evt.Skip();
 	if( evt.GetDirection() )
 	{
 		// Moving forward:
@@ -175,6 +174,8 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 					evt.Veto();
 					return;
 				}
+				m_panel_PluginSel.ReloadSettings();
+				m_panel_BiosSel.ReloadSettings();
 			}
 		}
 	}

@@ -113,6 +113,11 @@ bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
 	return validated;
 }
 
+void Panels::BiosSelectorPanel::ReloadSettings()
+{
+	m_FolderPicker.Reset();
+}
+
 void Panels::BiosSelectorPanel::Apply( AppConfig& conf )
 {
 	int sel = m_ComboBox.GetSelection();

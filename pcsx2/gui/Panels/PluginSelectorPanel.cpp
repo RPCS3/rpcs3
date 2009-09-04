@@ -247,6 +247,11 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel()
 	CancelRefresh();		// in case the enumeration thread is currently refreshing...
 }
 
+void Panels::PluginSelectorPanel::ReloadSettings()
+{
+	m_ComponentBoxes.GetDirPicker().Reset();
+}
+
 void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 {
 	// user never entered plugins panel?  Skip application since combo boxes are invalid/uninitialized.
@@ -370,6 +375,8 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 
 void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 {
+	if( m_FileList == NULL ) return;
+
 	size_t evtidx = evt.GetExtraLong();
 	m_StatusPanel.AdvanceProgress( (evtidx < m_FileList->Count()-1) ?
 		(*m_FileList)[evtidx + 1] : wxString(_("Completing tasks..."))

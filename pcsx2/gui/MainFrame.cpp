@@ -23,28 +23,26 @@
 #include "Resources/AppIcon.h"
 
 // ------------------------------------------------------------------------
-wxMenu* MainEmuFrame::MakeStatesMenu()
+/*wxMenu* MainEmuFrame::MakeStatesMenu()
 {
 	wxMenu* mnuStates = new wxMenu();
-
-	m_LoadStatesSubmenu.Append( Menu_State_LoadOther, _("Other..."), wxEmptyString, wxITEM_NORMAL );
-	m_SaveStatesSubmenu.Append( Menu_State_SaveOther, _("Other..."), wxEmptyString, wxITEM_NORMAL );
 
 	mnuStates->Append( Menu_State_Load, _("Load"), &m_LoadStatesSubmenu, wxEmptyString );
 	mnuStates->Append( Menu_State_Save, _("Save"), &m_SaveStatesSubmenu, wxEmptyString );
 	return mnuStates;
-}
+}*/
 
 // ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 {
 	wxMenu* mnuSubstates = new wxMenu();
 
-	mnuSubstates->Append( baseid,    _("Slot 0"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+1,  _("Slot 1"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+2,  _("Slot 2"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+3,  _("Slot 3"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+4,  _("Slot 4"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+1,	_("Slot 0"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+2,	_("Slot 1"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+3,	_("Slot 2"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+4,	_("Slot 3"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+5,	_("Slot 4"), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid,	_("Other..."), wxEmptyString, wxITEM_NORMAL );
 	return mnuSubstates;
 }
 
@@ -59,7 +57,7 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 {
 	wxMenu* mnuIso = new wxMenu();
 
-	mnuIso->Append( Menu_IsoBrowse, _("Browse..."), _("Select an Iso image from your hard drive.") );
+	mnuIso->Append( MenuId_IsoBrowse, _("Browse..."), _("Select an Iso image from your hard drive.") );
 
 	if( g_RecentIsoList != NULL )
 	{
@@ -73,37 +71,43 @@ wxMenu* MainEmuFrame::MakeIsoMenu()
 wxMenu* MainEmuFrame::MakeCdvdMenu()
 {
 	wxMenu* mnuCdvd = new wxMenu();
+	mnuCdvd->Append( MenuId_Src_Iso,	_("Iso image"),		wxEmptyString, wxITEM_RADIO );
+	mnuCdvd->Append( MenuId_Src_Cdvd,	_("Cdvd plugin"),	wxEmptyString, wxITEM_RADIO );
+	mnuCdvd->Append( MenuId_Src_NoDisc,	_("No disc"),		wxEmptyString, wxITEM_RADIO );
 	return mnuCdvd;
 }
 
 // ------------------------------------------------------------------------
+//     Video / Audio / Pad "Extensible" Menus
+// ------------------------------------------------------------------------
 void MainEmuFrame::PopulateVideoMenu()
 {
-	m_menuVideo.Append( Menu_Video_Basics,	_("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
+	m_menuVideo.Append( MenuId_Video_Basics,	_("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
 	m_menuVideo.AppendSeparator();
 
 	// Populate options from the plugin here.
 
-	m_menuVideo.Append( Menu_Video_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
+	m_menuVideo.Append( MenuId_Video_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
-// ------------------------------------------------------------------------
 void MainEmuFrame::PopulateAudioMenu()
 {
 	// Populate options from the plugin here.
 
-	m_menuAudio.Append( Menu_Audio_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
+	m_menuAudio.Append( MenuId_Audio_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
-// ------------------------------------------------------------------------
 void MainEmuFrame::PopulatePadMenu()
 {
 	// Populate options from the plugin here.
 
-	m_menuPad.Append( Menu_Pad_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
+	m_menuPad.Append( MenuId_Pad_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
 }
 
 // ------------------------------------------------------------------------
+//     MainFrame OnEvent Handlers
+// ------------------------------------------------------------------------
+
 // Close out the console log windows along with the main emu window.
 // Note: This event only happens after a close event has occurred and was *not* veto'd.  Ie,
 // it means it's time to provide an unconditional closure of said window.
@@ -158,29 +162,30 @@ void MainEmuFrame::ConnectMenus()
 	#define ConnectMenu( id, handler ) \
 		Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
-	ConnectMenu( Menu_Config_Settings,	Menu_ConfigSettings_Click );
-	ConnectMenu( Menu_Config_BIOS,		Menu_SelectBios_Click );
-	ConnectMenu( Menu_IsoBrowse,		Menu_RunIso_Click );
-	ConnectMenu( Menu_RunWithoutDisc,	Menu_RunWithoutDisc_Click );
+	ConnectMenu( MenuId_Config_Settings,	Menu_ConfigSettings_Click );
+	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
+	ConnectMenu( MenuId_IsoBrowse,			Menu_RunIso_Click );
+	ConnectMenu( MenuId_RunWithoutDisc,		Menu_RunWithoutDisc_Click );
 
 	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
 
-	ConnectMenu( Menu_RunELF,			Menu_OpenELF_Click );
-	ConnectMenu( Menu_Run_Exit,			Menu_Exit_Click );
+	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
+	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
-	ConnectMenu( Menu_PauseExec,		Menu_Pause_Click );
-	ConnectMenu( Menu_Reset,			Menu_Reset_Click );
+	ConnectMenu( MenuId_Emu_Pause,			Menu_EmuPause_Click );
+	ConnectMenu( MenuId_Emu_Close,			Menu_EmuClose_Click );
+	ConnectMenu( MenuId_Emu_Reset,			Menu_EmuReset_Click );
 
-	ConnectMenu( Menu_State_LoadOther,	Menu_LoadStateOther_Click );
-	ConnectMenu( Menu_State_SaveOther,	Menu_SaveStateOther_Click );
+	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
+	ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
 
-	ConnectMenu( Menu_Debug_Open,		Menu_Debug_Open_Click );
-	ConnectMenu( Menu_Debug_MemoryDump,	Menu_Debug_MemoryDump_Click );
-	ConnectMenu( Menu_Debug_Logging,	Menu_Debug_Logging_Click );
+	ConnectMenu( MenuId_Debug_Open,			Menu_Debug_Open_Click );
+	ConnectMenu( MenuId_Debug_MemoryDump,	Menu_Debug_MemoryDump_Click );
+	ConnectMenu( MenuId_Debug_Logging,		Menu_Debug_Logging_Click );
 
-	ConnectMenu( Menu_Console,			Menu_ShowConsole );
+	ConnectMenu( MenuId_Console,			Menu_ShowConsole );
 
-	ConnectMenu( Menu_About,			Menu_ShowAboutBox );
+	ConnectMenu( MenuId_About,				Menu_ShowAboutBox );
 }
 
 void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
@@ -212,7 +217,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	m_menubar( *new wxMenuBar() ),
 
-	m_menuRun( *new wxMenu() ),
+	m_menuBoot( *new wxMenu() ),
+	m_menuEmu( *new wxMenu() ),
 	m_menuConfig( *new wxMenu() ),
 	m_menuMisc( *new wxMenu() ),
 
@@ -221,31 +227,29 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuPad( *new wxMenu() ),
 	m_menuDebug( *new wxMenu() ),
 
-	m_LoadStatesSubmenu( *MakeStatesSubMenu( Menu_State_Load01 ) ),
-	m_SaveStatesSubmenu( *MakeStatesSubMenu( Menu_State_Save01 ) ),
+	m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) ),
+	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
 
-	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, Menu_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
-
-	m_IsPaused( false )
+	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
 {
 	// ------------------------------------------------------------------------
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
 	// can be factored into the window size (which ends up being background+status+menus)
 
-	m_menubar.Append( &m_menuRun,		_("Run") );
+	m_menubar.Append( &m_menuBoot,		_("Boot") );
+	m_menubar.Append( &m_menuEmu,		_("Emulation") );
 	m_menubar.Append( &m_menuConfig,	_("Config") );
 	m_menubar.Append( &m_menuVideo,		_("Video") );
 	m_menubar.Append( &m_menuAudio,		_("Audio") );
-	m_menubar.Append( &m_menuPad,		_("Pad") );
 	m_menubar.Append( &m_menuMisc,		_("Misc") );
 	m_menubar.Append( &m_menuDebug,		_("Debug") );
 	SetMenuBar( &m_menubar );
-
+	
 	// ------------------------------------------------------------------------
 
 	wxSize backsize( m_background.GetSize() );
 
-	SetTitle(_("Pcsx2"));
+	SetTitle(_("PCSX2"));
 
 	wxIcon myIcon;
 	myIcon.CopyFromBitmap( wxBitmap( EmbeddedImage<png_AppIcon>().Rescale( 32, 32 ) ) );
@@ -275,36 +279,60 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	// ------------------------------------------------------------------------
 
-	m_menuRun.Append(Menu_RunIso,		_("Run ISO"),				MakeIsoMenu() );
-	m_menuRun.Append(Menu_BootCDVD,		_("Run CDVD"),				MakeCdvdMenu() );
-	m_menuRun.Append(Menu_SkipBiosToggle,_("ELF Injection Hack"),	_("Skips PS2 splash screens when booting from Iso or CDVD media"));
+	m_menuBoot.Append(MenuId_Boot_Iso,		_("Run ISO"),
+		MakeIsoMenu() );
 
-	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_RunWithoutDisc,_("Boot without Disc"),	_("Use this to access the PS2 system configuration menu"));
-	m_menuRun.Append(Menu_RunELF,		_("Run ELF File..."),		_("For running raw binaries"));
+	m_menuBoot.AppendSeparator();
+	m_menuBoot.Append(MenuId_RunWithoutDisc,_("Boot without Disc"),
+		_("Use this to access the PS2 system configuration menu"));
 
-	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_PauseExec,	_("Pause"),		_("Stops emulation dead in its tracks"));
-	m_menuRun.Append(Menu_States,		_("States"),	MakeStatesMenu(), wxEmptyString);
-	m_menuRun.Append(Menu_Reset,		_("Reset"),		_("Resets emulation state and reloads plugins"));
+	m_menuBoot.Append(MenuId_Boot_ELF,		_("Run ELF File..."),
+		_("For running raw binaries"));
 
-	m_menuRun.AppendSeparator();
-	m_menuRun.Append(Menu_Run_Exit,		_("Exit"),		_("Closing PCSX2 may be hazardous to your health"));
+	m_menuBoot.AppendSeparator();
+	m_menuBoot.Append(MenuId_Cdvd_Source,	_("Select CDVD source"), MakeCdvdMenu() );
+	m_menuBoot.Append(MenuId_SkipBiosToggle,_("BIOS Skip Hack"),
+		_("Skips PS2 splash screens when booting from Iso or CDVD media"), wxITEM_CHECK );
+
+	m_menuBoot.AppendSeparator();
+	m_menuBoot.Append(MenuId_Exit,			_("Exit"),
+		_("Closing PCSX2 may be hazardous to your health"));
+
+	// ------------------------------------------------------------------------
+	m_menuEmu.Append(MenuId_Emu_Pause,		_("Pause"),
+		_("Stops emulation dead in its tracks"), wxITEM_CHECK );
+
+	m_menuEmu.AppendSeparator();
+	m_menuEmu.Append(MenuId_Emu_Reset,		_("Reset"),
+		_("Resets emulation state and re-runs current image"));
+
+	m_menuEmu.Append(MenuId_Emu_Close,		_("Close"),
+		_("Stops emulation and closes the GS window."));
+
+	m_menuEmu.AppendSeparator();
+	m_menuEmu.Append(MenuId_Emu_LoadStates,	_("Load state"), &m_LoadStatesSubmenu);
+	m_menuEmu.Append(MenuId_Emu_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
+
+	m_menuEmu.AppendSeparator();
+	m_menuEmu.Append(MenuId_EnablePatches,	_("Enable Patches"),
+		wxEmptyString, wxITEM_CHECK);
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(Menu_Config_Settings,	_("General Settings") );
+	m_menuConfig.Append(MenuId_Config_Settings,	_("General Settings") );
 	m_menuConfig.AppendSeparator();
+
+	m_menuConfig.Append(MenuId_Config_CDVD,		_("PAD"),		&m_menuPad );
 
 	// Query installed "tertiary" plugins for name and menu options.
-	m_menuConfig.Append(Menu_Config_CDVD,		_("CDVD"),		wxEmptyString);
-	m_menuConfig.Append(Menu_Config_DEV9,		_("Dev9"),		wxEmptyString);
-	m_menuConfig.Append(Menu_Config_USB,		_("USB"),		wxEmptyString);
-	m_menuConfig.Append(Menu_Config_FireWire,	_("Firewire"),	wxEmptyString);
+	m_menuConfig.Append(MenuId_Config_CDVD,		_("CDVD"),		wxEmptyString);
+	m_menuConfig.Append(MenuId_Config_DEV9,		_("Dev9"),		wxEmptyString);
+	m_menuConfig.Append(MenuId_Config_USB,		_("USB"),		wxEmptyString);
+	m_menuConfig.Append(MenuId_Config_FireWire,	_("Firewire"),	wxEmptyString);
 
 	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(Menu_Config_Patches,	_("Patches"),	wxEmptyString);
-	m_menuConfig.Append(Menu_Config_BIOS,		_("BIOS") );
+	m_menuConfig.Append(MenuId_Config_Patches,	_("Patches"),	wxEmptyString);
+	m_menuConfig.Append(MenuId_Config_BIOS,		_("BIOS") );
 
 	// ------------------------------------------------------------------------
 
@@ -315,8 +343,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// ------------------------------------------------------------------------
 
 	m_menuMisc.Append( &m_MenuItem_Console );
-	m_menuMisc.Append(Menu_Patches,		_("Enable Patches"),	wxEmptyString, wxITEM_CHECK);
-	m_menuMisc.Append(Menu_Profiler,	_("Enable Profiler"),	wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(MenuId_Profiler,		_("Show Profiler"),	wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	// No dialogs implemented for these yet...
@@ -326,15 +353,16 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// Ref will want this re-added eventually.
 	//m_menuMisc.Append(47, _T("Print CDVD Info..."), wxEmptyString, wxITEM_CHECK);
 
-	m_menuMisc.Append(Menu_About,		_("About...") );
-	m_menuMisc.Append(Menu_Website,		_("Pcsx2 Website..."), _("Opens your web-browser to our favorite website."));
+	m_menuMisc.Append(MenuId_Website,		_("Visit Website..."),
+		_("Opens your web-browser to our favorite website."));
+	m_menuMisc.Append(MenuId_About,		_("About...") );
 
-	m_menuDebug.Append(Menu_Debug_Open,			_("Open Debug Window..."),	wxEmptyString);
-	m_menuDebug.Append(Menu_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
-	m_menuDebug.Append(Menu_Debug_Logging,		_("Logging..."),			wxEmptyString);
+	m_menuDebug.Append(MenuId_Debug_Open,			_("Open Debug Window..."),	wxEmptyString);
+	m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
+	m_menuDebug.Append(MenuId_Debug_Logging,		_("Logging..."),			wxEmptyString);
 
-	m_menuConfig.AppendSeparator();
-	m_menuDebug.Append(Menu_Debug_Usermode,		_("Change Usermode..."), _(" Advanced feature for managing multiple concurrent PCSX2 environments."));
+	m_menuDebug.AppendSeparator();
+	m_menuDebug.Append(MenuId_Debug_Usermode,		_("Change Usermode..."), _(" Advanced feature for managing multiple concurrent PCSX2 environments."));
 
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 

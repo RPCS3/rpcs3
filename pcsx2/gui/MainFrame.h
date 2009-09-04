@@ -38,7 +38,8 @@ protected:
 
 	wxMenuBar& m_menubar;
 
-	wxMenu& m_menuRun;
+	wxMenu& m_menuBoot;
+	wxMenu& m_menuEmu;
 	wxMenu& m_menuConfig;
 	wxMenu& m_menuMisc;
 	wxMenu& m_menuDebug;
@@ -52,8 +53,6 @@ protected:
 
 	wxMenuItem& m_MenuItem_Console;
 
-	bool m_IsPaused;
-	
 	// ------------------------------------------------------------------------
 	//     MainEmuFrame Constructors and Member Methods
 	// ------------------------------------------------------------------------
@@ -62,7 +61,7 @@ public:
     MainEmuFrame(wxWindow* parent, const wxString& title);
 	void OnLogBoxHidden();
 
-	bool IsPaused() const { return m_IsPaused; }
+	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Emu_Pause ); }
 
 protected:
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
@@ -83,8 +82,9 @@ protected:
 	void Menu_SaveStateOther_Click(wxCommandEvent &event);
 	void Menu_Exit_Click(wxCommandEvent &event);
 
-	void Menu_Pause_Click(wxCommandEvent &event);
-	void Menu_Reset_Click(wxCommandEvent &event);
+	void Menu_EmuPause_Click(wxCommandEvent &event);
+	void Menu_EmuClose_Click(wxCommandEvent &event);
+	void Menu_EmuReset_Click(wxCommandEvent &event);
 
 	void Menu_Debug_Open_Click(wxCommandEvent &event);
 	void Menu_Debug_MemoryDump_Click(wxCommandEvent &event);

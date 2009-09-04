@@ -31,11 +31,11 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
-DEFINE_EVENT_TYPE( pxEVT_SemaphorePing )
-
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
 END_DECLARE_EVENT_TYPES()
+
+DEFINE_EVENT_TYPE( pxEVT_SemaphorePing )
 
 bool			UseAdminMode = false;
 AppConfig*		g_Conf = NULL;
@@ -89,7 +89,7 @@ sptr AppEmuThread::ExecuteTask()
 		
 			if( result )
 			{
-				wxGetApp().PostMenuAction( Menu_Config_BIOS );
+				wxGetApp().PostMenuAction( MenuId_Config_BIOS );
 				wxGetApp().Ping();
 			}
 		}
@@ -112,7 +112,7 @@ sptr AppEmuThread::ExecuteTask()
 				if( result )
 				{
 					g_Conf->SettingsTabName = L"Plugins";
-					wxGetApp().PostMenuAction( Menu_Config_Settings );
+					wxGetApp().PostMenuAction( MenuId_Config_Settings );
 					wxGetApp().Ping();
 				}
 			}
@@ -143,6 +143,8 @@ void Pcsx2App::OpenWizardConsole()
 	m_ProgramLogBox	= new ConsoleLogFrame( NULL, L"PCSX2 Program Log", g_Conf->ProgLogBox );
 }
 
+static bool m_ForceWizard = false;
+
 // User mode settings can't be stores in the CWD for two reasons:
 //   (a) the user may not have permission to do so (most obvious)
 //   (b) it would result in sloppy usermode.ini found all over a hard drive if people runs the
@@ -166,7 +168,7 @@ void Pcsx2App::ReadUserModeSettings()
 
 	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
 
-	if( !conf_usermode->HasGroup( groupname ) )
+	if( m_ForceWizard || !conf_usermode->HasGroup( groupname ) )
 	{
 		// first time startup, so give the user the choice of user mode:
 		OpenWizardConsole();
@@ -219,13 +221,15 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 
 	parser.AddOption( L"bootmode",	wxEmptyString,	L"0 - quick (default), 1 - bios, 2 - load elf", wxCMD_LINE_VAL_NUMBER );
 	parser.AddOption( wxEmptyString,L"cfg",			L"configuration file override", wxCMD_LINE_VAL_STRING );
+	
+	parser.AddSwitch( L"forcewiz",	wxEmptyString,	L"Forces PCSX2 to start the First-time Wizard" );
 
-	parser.AddOption( wxEmptyString, L"cdvd",		L"uses filename as the CDVD plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"gs",			L"uses filename as the GS plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"spu",		L"uses filename as the SPU2 plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"pad",		L"uses filename as the PAD plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"dev9",		L"uses filename as the DEV9 plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"usb",		L"uses filename as the USB plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"cdvd",		L"specify the CDVD plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"gs",			L"specify the GS plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"spu",		L"specify the SPU2 plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"pad",		L"specify the PAD plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"dev9",		L"specify the DEV9 plugin for this session only." );
+	parser.AddOption( wxEmptyString, L"usb",		L"specify the USB plugin for this session only." );
 
 	parser.SetSwitchChars( L"-" );
 }
@@ -241,7 +245,8 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 	// Suppress wxWidgets automatic options parsing since none of them pertain to Pcsx2 needs.
 	//wxApp::OnCmdLineParsed( parser );
 
-	bool yay = parser.Found(L"nogui");
+	//bool yay = parser.Found(L"nogui");
+	m_ForceWizard = parser.Found( L"forcewiz" );
 
 	return true;
 }

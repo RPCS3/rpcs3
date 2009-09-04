@@ -19,7 +19,9 @@
 #pragma once
 
 
-DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1);
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1)
+END_DECLARE_EVENT_TYPES()
 
 static const bool EnableThreadedLoggingTest = false; //true;
 

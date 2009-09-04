@@ -358,6 +358,7 @@ namespace Panels
 	public:
 		BiosSelectorPanel( wxWindow& parent, int idealWidth );
 		virtual ~BiosSelectorPanel();
+		void ReloadSettings();
 
 	protected:
 		virtual void Apply( AppConfig& conf );
@@ -417,10 +418,12 @@ namespace Panels
 		protected:
 			wxComboBox*		m_combobox[NumPluginTypes];
 			DirPickerPanel& m_FolderPicker;
+
 		public:
 			ComboBoxPanel( PluginSelectorPanel* parent );
 			wxComboBox& Get( int i ) { return *m_combobox[i]; }
 			wxDirName GetPluginsPath() const { return m_FolderPicker.GetPath(); }
+			DirPickerPanel& GetDirPicker() { return m_FolderPicker; }
 			void Reset();
 		};
 
@@ -455,6 +458,7 @@ namespace Panels
 
 		void CancelRefresh();		// used from destructor, stays non-virtual
 		void Apply( AppConfig& conf );
+		void ReloadSettings();
 
 	protected:
 		void OnConfigure_Clicked( wxCommandEvent& evt );
