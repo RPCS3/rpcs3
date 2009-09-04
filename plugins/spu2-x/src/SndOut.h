@@ -355,7 +355,6 @@ private:
 	
 	static int sndTempProgress;
 	static int m_dsp_progress;
-	static int m_dsp_writepos;
 
 	static int m_timestretch_progress;
 	static int m_timestretch_writepos;
