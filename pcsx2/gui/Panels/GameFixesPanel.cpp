@@ -28,11 +28,16 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here.") );
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
-	AddCheckBox( groupSizer, _("DMA Execution Hack - for Fatal Frame.") );
+	AddCheckBox( groupSizer, _("VU Add Hack - for Tri-Ace games!") );
+	AddCheckBox( groupSizer, _( "VU Clip Flag Hack - for Persona games, maybe others.") );
 	AddCheckBox( groupSizer, _("FPU Compare Hack - for Digimon Rumble Arena 2.") );
 	AddCheckBox( groupSizer, _("FPU Multiply Hack - for Tales of Destiny.") );
-	AddCheckBox( groupSizer, _("VU Add Hack - for Tri-Ace games!") );
-	AddCheckBox( groupSizer, _("VU XGkick Hack - for Erementar Gerad") );
+	AddCheckBox( groupSizer, _("DMA Execution Hack - for Fatal Frame.") );
+	AddCheckBox( groupSizer, _("VU XGkick Hack - for Erementar Gerad.") );
+
+	// I may as well add this, since these aren't hooked in yet. If the consensus is against it,
+	// I'll remove it.
+	AddCheckBox( groupSizer, _("MPEG Hack - for Mana Khemia 1.") );
 
 	mainSizer.Add( &groupSizer, wxSizerFlags().Centre() );
 

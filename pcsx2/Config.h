@@ -53,7 +53,7 @@ enum PluginsEnum_t
 // This is intended to be a public class library between the core emulator and GUI only.
 // It is *not* meant to be shared data between core emulation and plugins, due to issues
 // with version incompatibilities if the structure formats are changed.
-// 
+//
 // When GUI code performs modifications of this class, it must be done with strict thread
 // safety, since the emu runs on a separate thread.  Additionally many components of the
 // class require special emu-side resets or state save/recovery to be applied.  Please
@@ -98,12 +98,12 @@ public:
 				EnableIOP:1,
 				EnableVU0:1,
 				EnableVU1:1;
-				
+
 			bool
 				UseMicroVU0:1,
 				UseMicroVU1:1;
 		}; };
-		
+
 		// All recs are enabled by default.
 		RecompilerOptions() : bitset( 0xffffffff ) { }
 		void LoadSave( IniInterface& conf );
@@ -134,7 +134,7 @@ public:
 				vuExtraOverflow:1,
 				vuSignOverflow:1,
 				vuUnderflow:1;
-				
+
 			bool
 				fpuOverflow:1,
 				fpuExtraOverflow:1,
@@ -143,7 +143,7 @@ public:
 
 		CpuOptions();
 		void LoadSave( IniInterface& conf );
-		
+
 		bool operator ==( const CpuOptions& right ) const
 		{
 			return
@@ -184,10 +184,12 @@ public:
 		BITFIELD32()
 			bool
 				VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
-				VuClipFlagHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
-				FpuCompareHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
+				VuClipFlagHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
+				FpuCompareHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
 				FpuMulHack:1,		// Fix for Tales of Destiny hangs.
-				XgKickHack:1;		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+				DMAExeHack:1,       // Fix for Fatal Frame; breaks Gust and Tri-Ace games.
+				XgKickHack:1,		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+                MpegHack:1;         // Fix for Mana Khemia 1, breaks Digital Devil Saga.
 		}; };
 
 		// all gamefixes are disabled by default.
@@ -213,7 +215,7 @@ public:
 				IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
 				IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
 				BIFC0:1,			// enables BIFC0 detection and fast-forwarding
-				
+
 				vuMinMax:1,			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
 				vuFlagHack:1;		// MicroVU specific flag hack; Can cause Infinite loops, SPS, etc...
 		}; };

@@ -94,6 +94,8 @@ namespace Threading
 	//
 	void PersistentThread::Cancel( bool isBlocking )
 	{
+	    if( !m_running ) return;
+
 		if( _InterlockedExchange( &m_detached, true ) )
 		{
 			if( m_running )
