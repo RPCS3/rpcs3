@@ -81,7 +81,12 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 	SysExecute( new AppEmuThread(), g_Conf->CdvdSource );
 }
 
-extern const wxChar* isoFilterTypes;
+static const wxChar* isoFilterTypes =
+	L"All Supported (.iso .mdf .nrg .bin .img .dump)|*.iso;*.mdf;*.nrg;*.bin;*.img;*.dump|"
+	L"Disc Images (.iso .mdf .nrg .bin .img)|*.iso;*.mdf;*.nrg;*.bin;*.img|"
+	L"Blockdumps (.dump)|*.dump|"
+	L"All Files (*.*)|*.*";
+
 
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {

@@ -3949,6 +3949,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\resource.h"
+				>
+			</File>
+			<File
 				RelativePath=".\include\sched.h"
 				>
 			</File>
@@ -3993,6 +3997,34 @@
 			<File
 				RelativePath=".\PCSX2.txt"
 				>
+			</File>
+			<File
+				RelativePath=".\w32pthreads.v2.rc"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include&quot;"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include&quot;"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCResourceCompilerTool"
+						AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include&quot;"
+					/>
+				</FileConfiguration>
 			</File>
 		</Filter>
 	</Files>
