@@ -603,7 +603,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		// Bind Optional Functions
 		// (leave pointer null and do not generate error)
 	}
-	
+
 	// Hack for PAD's stupid parameter passed on Init
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
@@ -613,7 +613,7 @@ PluginManager::~PluginManager()
 {
 	Close();
 	Shutdown();
-	
+
 	// All library unloading done automatically.
 }
 
@@ -627,7 +627,7 @@ void PluginManager::BindCommon( PluginsEnum_t pid )
 	while( current->MethodName != NULL )
 	{
 		*target = (VoidMethod*)m_info[pid].Lib.GetSymbol( current->GetMethodName( pid ) );
-		
+
 		if( *target == NULL )
 			*target = current->Fallback;
 
@@ -636,7 +636,7 @@ void PluginManager::BindCommon( PluginsEnum_t pid )
 			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
 				wxLt( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
 		}
-		
+
 		target++;
 		current++;
 	}
@@ -759,7 +759,7 @@ static bool OpenPlugin_FW()
 void PluginManager::Open( PluginsEnum_t pid )
 {
 	if( m_info[pid].IsOpened ) return;
-	
+
 	// Each Open needs to be called explicitly. >_<
 
 	bool result = true;
@@ -793,7 +793,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 	if( pid == PluginId_GS )
 	{
 		if( mtgsThread == NULL ) return;
-		
+
 		if( !mtgsThread->IsSelf() )
 		{
 			// force-close PAD before GS, because the PAD depends on the GS window.
@@ -853,7 +853,7 @@ void PluginManager::Shutdown()
 
 	// Shutdown plugins in reverse order (probably doesn't matter...
 	//  ... but what the heck, right?)
-	
+
 	for( int i=PluginId_Count-1; i>=0; --i )
 	{
 		const PluginsEnum_t pid = tbl_PluginInfo[i].id;
@@ -916,7 +916,7 @@ PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] )
 PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
 {
 	wxString passins[PluginId_Count];
-	
+
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		passins[pi->id] = folders[pi->id];

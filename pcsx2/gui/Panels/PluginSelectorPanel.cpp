@@ -26,7 +26,12 @@
 #include <wx/dir.h>
 
 // Allows us to force-disable threading for debugging/troubleshooting
-static const bool DisableThreading = true;
+static const bool DisableThreading =
+#ifdef __LINUX__
+	true;		// linux appears to have threading issues with loadlibrary.
+#else
+	false;
+#endif
 
 using namespace wxHelpers;
 using namespace Threading;
@@ -287,12 +292,20 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 
 void Panels::PluginSelectorPanel::CancelRefresh()
 {
-	if (!DisableThreading) safe_delete( m_EnumeratorThread );
+	safe_delete( m_EnumeratorThread );
 	safe_delete( m_FileList );
 }
 
 void Panels::PluginSelectorPanel::DoRefresh()
 {
+	m_ComponentBoxes.Reset();
+	if( m_FileList == NULL )
+	{
+		wxCommandEvent evt;
+		OnEnumComplete( evt );
+		return;
+	}
+
 	// Disable all controls until enumeration is complete.
 	// Show status bar for plugin enumeration.
 
@@ -307,19 +320,13 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	m_StatusPanel.Show();
 
 	// Use a thread to load plugins.
-	if (!DisableThreading) safe_delete( m_EnumeratorThread );
+	safe_delete( m_EnumeratorThread );
 	m_EnumeratorThread = new EnumThread( *this );
 
 	if( DisableThreading )
-	{
-		m_ComponentBoxes.Reset();
-		m_EnumeratorThread->ExecuteTask();
-	}
+		m_EnumeratorThread->DoNextPlugin( 0 );
 	else
-	{
 		m_EnumeratorThread->Start();
-		m_ComponentBoxes.Reset();
-	}
 }
 
 bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
@@ -337,6 +344,12 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 
 	if( (m_FileList == NULL) || (*pluginlist != *m_FileList) )
 		validated = false;
+
+	if( pluggers == 0 )
+	{
+		safe_delete( m_FileList );
+		return validated;
+	}
 
 	delete m_FileList;
 	m_FileList = pluginlist.release();
@@ -363,7 +376,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 {
-	if (!DisableThreading) safe_delete( m_EnumeratorThread );
+	safe_delete( m_EnumeratorThread );
 
 	// fixme: Default plugins should be picked based on the timestamp of the DLL or something?
 	//  (for now we just force it to selection zero if nothing's selected)
@@ -388,7 +401,20 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 {
 	if( m_FileList == NULL ) return;
 
-	size_t evtidx = evt.GetExtraLong();
+	const size_t evtidx = evt.GetExtraLong();
+
+	if( DisableThreading )
+	{
+		const int nextidx = evtidx+1;
+		if( nextidx == m_FileList->Count() )
+		{
+			wxCommandEvent done( wxEVT_EnumerationFinished );
+			GetEventHandler()->AddPendingEvent( done );
+		}
+		else
+			m_EnumeratorThread->DoNextPlugin( nextidx );
+	}
+
 	m_StatusPanel.AdvanceProgress( (evtidx < m_FileList->Count()-1) ?
 		(*m_FileList)[evtidx + 1] : wxString(_("Completing tasks..."))
 	);
@@ -449,6 +475,39 @@ void Panels::PluginSelectorPanel::EnumThread::Cancel()
 	PersistentThread::Cancel();
 }
 
+void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
+{
+	DbgCon::WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
+
+	try
+	{
+		EnumeratedPluginInfo& result( Results[curidx] );
+		result.TypeMask = 0;
+
+		PluginEnumerator penum( m_master.GetFilename( curidx ) );
+
+		result.Name = penum.GetName();
+		for( int pidx=0; pidx<PluginId_Count; ++pidx )
+		{
+			const PluginsEnum_t pid = (PluginsEnum_t)pidx;
+			result.TypeMask |= tbl_PluginInfo[pid].typemask;
+			if( penum.CheckVersion( pid ) )
+			{
+				result.PassedTest |= tbl_PluginInfo[pid].typemask;
+				penum.GetVersionString( result.Version[pid], pidx );
+			}
+		}
+	}
+	catch( Exception::BadStream& ex )
+	{
+		Console::Status( ex.FormatDiagnosticMessage() );
+	}
+
+	wxCommandEvent yay( wxEVT_EnumeratedNext );
+	yay.SetExtraLong( curidx );
+	m_master.GetEventHandler()->AddPendingEvent( yay );
+}
+
 sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 {
 	DevCon::Status( "Plugin Enumeration Thread started..." );
@@ -458,37 +517,8 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
 		if( m_cancel ) return 0;
-		DbgCon::WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
-
-		try
-		{
-			EnumeratedPluginInfo& result( Results[curidx] );
-			result.TypeMask = 0;
-
-			PluginEnumerator penum( m_master.GetFilename( curidx ) );
-
-			result.Name = penum.GetName();
-			for( int pidx=0; pidx<PluginId_Count; ++pidx )
-			{
-				const PluginsEnum_t pid = (PluginsEnum_t)pidx;
-				result.TypeMask |= tbl_PluginInfo[pid].typemask;
-				if( penum.CheckVersion( pid ) )
-				{
-					result.PassedTest |= tbl_PluginInfo[pid].typemask;
-					penum.GetVersionString( result.Version[pid], pidx );
-				}
-			}
-		}
-		catch( Exception::BadStream& ex )
-		{
-			Console::Status( ex.FormatDiagnosticMessage() );
-		}
-
+		DoNextPlugin( curidx );
 		pthread_testcancel();
-
-		wxCommandEvent yay( wxEVT_EnumeratedNext );
-		yay.SetExtraLong( curidx );
-		m_master.GetEventHandler()->AddPendingEvent( yay );
 	}
 
 	wxCommandEvent done( wxEVT_EnumerationFinished );

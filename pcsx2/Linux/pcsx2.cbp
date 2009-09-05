@@ -109,9 +109,9 @@
 		<Unit filename="../../common/include/PS2Edefs.h" />
 		<Unit filename="../../common/include/PS2Etypes.h" />
 		<Unit filename="../../common/include/Pcsx2Api.h" />
- 		<Unit filename="../../common/include/Pcsx2Config.h" />
- 		<Unit filename="../../common/include/Pcsx2Defs.h" />
- 		<Unit filename="../../common/include/Pcsx2Types.h" />
+		<Unit filename="../../common/include/Pcsx2Config.h" />
+		<Unit filename="../../common/include/Pcsx2Defs.h" />
+		<Unit filename="../../common/include/Pcsx2Types.h" />
 		<Unit filename="../../common/include/PluginCallbacks.h" />
 		<Unit filename="../../common/include/wx/folderdesc.txt" />
 		<Unit filename="../../common/include/wx/scopedarray.h" />
@@ -134,8 +134,6 @@
 		<Unit filename="../CDVD/IsoFileFormats.h" />
 		<Unit filename="../CDVD/IsoFileTools.cpp" />
 		<Unit filename="../CDVD/IsoFileTools.h" />
-		<Unit filename="../CDVD/IsoFileTools.h.save" />
-		<Unit filename="../CDVD/Makefile.am" />
 		<Unit filename="../COP0.cpp" />
 		<Unit filename="../COP2.cpp" />
 		<Unit filename="../Cache.cpp" />
@@ -155,11 +153,7 @@
 		<Unit filename="../DebugTools/DisVUops.h" />
 		<Unit filename="../Docs/ChangeLog.txt" />
 		<Unit filename="../Docs/License.txt" />
-		<Unit filename="../Docs/PS2Edefs.txt" />
-		<Unit filename="../Docs/RemoteDebugging.txt" />
 		<Unit filename="../Docs/devblog.txt" />
-		<Unit filename="../Docs/readme 0.9.4.txt" />
-		<Unit filename="../Docs/readme Playground.txt" />
 		<Unit filename="../Dump.cpp" />
 		<Unit filename="../Dump.h" />
 		<Unit filename="../Elfheader.cpp" />

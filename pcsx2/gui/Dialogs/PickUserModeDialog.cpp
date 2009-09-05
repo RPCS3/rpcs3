@@ -22,12 +22,12 @@
 #include <wx/stdpaths.h>
 
 using namespace wxHelpers;
-
+using namespace Panels;
 
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
-,	m_panel_usersel( new Panels::UsermodeSelectionPanel( *this, 620, false ) )
-,	m_panel_langsel( new Panels::LanguageSelectionPanel( *this, 620 ) )
+,	m_panel_usersel( new UsermodeSelectionPanel( *this, 620, false ) )
+,	m_panel_langsel( new LanguageSelectionPanel( *this, 620 ) )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 
@@ -46,7 +46,7 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 
 void Dialogs::PickUserModeDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	if( Panels::g_ApplyState.ApplyAll(true) )
+	if( g_ApplyState.ApplyAll() )
 	{
 		Close();
 		evt.Skip();

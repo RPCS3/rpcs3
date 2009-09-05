@@ -70,7 +70,7 @@ namespace Exception
 			BaseException::InitBaseEx( msg_eng, msg_xlt );
 			m_Panel = thispanel;
 		}
-		
+
 		Panels::BaseApplicableConfigPanel* GetPanel()
 		{
 			return m_Panel;
@@ -88,7 +88,7 @@ namespace Panels
 		PanelApplyList_t PanelList;
 
 		// Current book page being initialized.  Any apply objects created will use
-		// this page as their "go here on error" page. (used to take the user to the 
+		// this page as their "go here on error" page. (used to take the user to the
 		// page with the option that failed apply validation).
 		int CurOwnerPage;
 
@@ -98,14 +98,14 @@ namespace Panels
 		// Crappy hack to handle the UseAdminMode option, which can't be part of AppConfig
 		// because AppConfig depends on this value to initialize itself.
 		bool UseAdminMode;
-		
+
 		StaticApplyState() :
 			PanelList()
 		,	CurOwnerPage( wxID_NONE )
 		,	ParentBook( NULL )
 		{
 		}
-		
+
 		void SetCurrentPage( int page )
 		{
 			CurOwnerPage = page;
@@ -115,7 +115,7 @@ namespace Panels
 		{
 			CurOwnerPage = wxID_NONE;
 		}
-		
+
 		void StartBook( wxBookCtrlBase* book );
 		void StartWizard();
 		bool ApplyAll( bool saveOnSuccess=true );
@@ -132,7 +132,7 @@ namespace Panels
 	// Thread Safety: None.  This class is only safe when used from the GUI thread, as it uses
 	//   static vars and assumes that only one ApplicableConfig system is available to the
 	//   user at any time (ie, a singular modal dialog).
-	// 
+	//
 	class BaseApplicableConfigPanel : public wxPanelWithHelpers
 	{
 	protected:
@@ -145,7 +145,7 @@ namespace Panels
 			g_ApplyState.PanelList.remove( this );
 		}
 
-		BaseApplicableConfigPanel( wxWindow* parent, int idealWidth ) : 
+		BaseApplicableConfigPanel( wxWindow* parent, int idealWidth ) :
 			wxPanelWithHelpers( parent, idealWidth )
 		,	m_OwnerPage( g_ApplyState.CurOwnerPage )
 		,	m_OwnerBook( g_ApplyState.ParentBook )
@@ -155,7 +155,7 @@ namespace Panels
 
 		int GetOwnerPage() const { return m_OwnerPage; }
 		wxBookCtrlBase* GetOwnerBook() { return m_OwnerBook; }
-		
+
 		void SetFocusToMe()
 		{
 			if( (m_OwnerBook == NULL) || (m_OwnerPage == wxID_NONE) ) return;
@@ -212,7 +212,7 @@ namespace Panels
 		wxRadioButton* m_Option_RecIOP;
 		wxRadioButton* m_Option_mVU0;
 		wxRadioButton* m_Option_mVU1;
-		
+
 		wxRadioButton* m_Option_sVU0;
 		wxRadioButton* m_Option_sVU1;
 
@@ -220,7 +220,7 @@ namespace Panels
 		CpuPanel( wxWindow& parent, int idealWidth );
 		void Apply( AppConfig& conf );
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class VideoPanel : public BaseApplicableConfigPanel
@@ -231,7 +231,7 @@ namespace Panels
 		VideoPanel( wxWindow& parent, int idealWidth );
 		void Apply( AppConfig& conf );
 	};
-		
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class SpeedHacksPanel : public BaseApplicableConfigPanel
@@ -241,7 +241,7 @@ namespace Panels
 		wxSlider* m_slider_vustealer;
 		wxStaticText* m_msg_eecycle;
 		wxStaticText* m_msg_vustealer;
-		
+
 		wxCheckBox* m_check_intc;
 		wxCheckBox* m_check_b1fc0;
 		wxCheckBox* m_check_IOPx2;
@@ -286,7 +286,7 @@ namespace Panels
 		void Apply( AppConfig& conf );
 		void Reset();
 		wxDirName GetPath() const { return wxDirName( m_pickerCtrl->GetPath() ); }
-		
+
 		DirPickerPanel& SetStaticDesc( const wxString& msg );
 
 	protected:
@@ -294,7 +294,7 @@ namespace Panels
 		void Explore_Click( wxCommandEvent &event );
 		void UpdateCheckStatus( bool someNoteworthyBoolean );
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class SettingsDirPickerPanel : public DirPickerPanel
@@ -331,7 +331,7 @@ namespace Panels
 	class BaseSelectorPanel: public BaseApplicableConfigPanel
 	{
 	protected:
-	
+
 	public:
 		virtual ~BaseSelectorPanel();
 		BaseSelectorPanel( wxWindow& parent, int idealWidth );
@@ -345,7 +345,7 @@ namespace Panels
 		virtual void DoRefresh()=0;
 		virtual bool ValidateEnumerationStatus()=0;
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class BiosSelectorPanel : public BaseSelectorPanel
@@ -354,7 +354,7 @@ namespace Panels
 		wxListBox&		m_ComboBox;
 		DirPickerPanel&	m_FolderPicker;
 		wxArrayString*	m_BiosList;
-		
+
 	public:
 		BiosSelectorPanel( wxWindow& parent, int idealWidth );
 		virtual ~BiosSelectorPanel();
@@ -392,7 +392,7 @@ namespace Panels
 			{
 			}
 		};
-	
+
 		class EnumThread : public Threading::PersistentThread
 		{
 		public:
@@ -400,15 +400,18 @@ namespace Panels
 
 		protected:
 			PluginSelectorPanel& m_master;
-			volatile bool m_cancel;			
+			volatile bool m_cancel;
 
 		public:
 			virtual ~EnumThread();
 			EnumThread( PluginSelectorPanel& master );
 			void Cancel();
+			void DoNextPlugin( int evtidx );
+
+		protected:
 			sptr ExecuteTask();
 		};
-		
+
 		// This panel contains all of the plugin combo boxes.  We stick them
 		// on a panel together so that we can hide/show the whole mess easily.
 		class ComboBoxPanel : public wxPanelWithHelpers
@@ -431,10 +434,10 @@ namespace Panels
 			wxGauge&		m_gauge;
 			wxStaticText&	m_label;
 			int				m_progress;
-			
+
 		public:
 			StatusPanel( wxWindow* parent );
-			
+
 			void SetGaugeLength( int len );
 			void AdvanceProgress( const wxString& msg );
 			void Reset();
@@ -465,7 +468,7 @@ namespace Panels
 
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
-		
+
 		int FileCount() const { return m_FileList->Count(); }
 		const wxString& GetFilename( int i ) const { return (*m_FileList)[i]; }
 		friend class EnumThread;

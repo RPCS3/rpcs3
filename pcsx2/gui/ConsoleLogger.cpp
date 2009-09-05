@@ -105,7 +105,7 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 sptr ConsoleTestThread::ExecuteTask()
 {
 	static int numtrack = 0;
-	
+
 	while( !m_done )
 	{
 		// Two lines, both formatted, and varied colors.  This makes for a fairly realistic
@@ -195,7 +195,7 @@ void ConsoleLogFrame::ColorArray::Cleanup()
 {
 	// The contents of m_table were created with placement new, and must be
 	// disposed of manually:
-	
+
 	for( int i=0; i<8; ++i )
 		m_table[i].~wxTextAttr();
 }
@@ -259,7 +259,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	wxMenu& menuAppear = *new wxMenu();
 	menuAppear.Append( wxID_ANY, _("Always on Top"),
 		_("When checked the log window will be visible over other foreground windows."), wxITEM_CHECK );
-	menuAppear.Append( wxID_ANY, _("Font Size"), &menuFontSizes ); 
+	menuAppear.Append( wxID_ANY, _("Font Size"), &menuFontSizes );
 
 	pMenuBar->Append(&menuLog,		_("&Log"));
 	pMenuBar->Append(&menuAppear,	_("&Appearance"));
@@ -290,7 +290,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( wxEVT_SetTitleText,	wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
 	Connect( wxEVT_DockConsole,		wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
 	Connect( wxEVT_SemaphoreWait,	wxCommandEventHandler(ConsoleLogFrame::OnSemaphoreWait) );
-	
+
 	if( m_threadlogger != NULL )
 		m_threadlogger->Start();
 }
@@ -324,7 +324,7 @@ void ConsoleLogFrame::Write( const wxString& text )
 #endif
 
 	m_TextCtrl.AppendText( text );
-	
+
 	// cap at 256k for now...
 	// fixme - 256k runs well on win32 but appears to be very sluggish on linux.  Might
 	// need platform dependent defaults here. - air
@@ -463,9 +463,9 @@ void ConsoleLogFrame::OnFontSize( wxMenuEvent& evt )
 		case MenuID_FontSize_Large:		ptsize = 10; break;
 		case MenuID_FontSize_Huge:		ptsize = 12; break;
 	}
-	
+
 	if( ptsize == m_conf.FontSize ) return;
-	
+
 	m_conf.FontSize = ptsize;
 	m_ColorTable.SetFont( ptsize );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor] );
@@ -530,13 +530,13 @@ void ConsoleLogFrame::CountMessage()
 
 // Thread Safety note: This function expects to be called from the Main GUI thread
 // only.  If called from a thread other than Main, it will generate an assertion failure.
-// 
+//
 void ConsoleLogFrame::DoMessage()
 {
 	wxASSERT_MSG( wxThread::IsMain(), L"DoMessage must only be called from the main gui thread!" );
 
 	int cur = _InterlockedDecrement( &m_msgcounter );
-	
+
 	// We need to freeze the control if there are more than 2 pending messages,
 	// otherwise the redraw of the console will prevent it from ever being able to
 	// catch up with the rate the queue is being filled, and the whole app could
@@ -641,7 +641,7 @@ namespace Console
 
 		return false;
 	}
-	
+
 	bool __fastcall WriteLn( const char* fmt )
 	{
 		const wxString fmtline( wxString::FromAscii( fmt ) + L"\n" );
@@ -652,7 +652,7 @@ namespace Console
 
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
-		
+
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmtline );
 		evt.SetExtraLong( th_CurrentColor );
@@ -700,7 +700,7 @@ static int pxMessageDialog( const wxString& content, const wxString& caption, lo
 	//  2) Issue the popup with wxSTAY_ON_TOP specified so that the user will see it.
 	//
 	// And in either case the emulation should be paused/suspended for the user.
-	
+
 	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
 }
 
@@ -766,7 +766,7 @@ public:
 	void DoTheDialog()
 	{
 		int result;
-		
+
 		if( m_id == pxEVT_MSGBOX )
 			result = pxMessageDialog( m_Content, m_Title, m_Flags );
 		else
@@ -799,7 +799,7 @@ namespace Msgbox
 		instdat.WaitForMe.WaitNoCancel();		// Important! disable cancellation since we're using local stack vars.
 		return instdat.result;
 	}
-	
+
 	void OnEvent( pxMessageBoxEvent& evt )
 	{
 		evt.DoTheDialog();
@@ -844,7 +844,7 @@ namespace Msgbox
 			return wxID_YES == ThreadedMessageBox( text, caption, icon );
 		}
 	}
-	
+
 	// [TODO] : This should probably be a fancier looking dialog box with the stacktrace
 	// displayed inside a wxTextCtrl.
 	static int CallStack( const wxString& errormsg, const wxString& stacktrace, const wxString& prompt, const wxString& caption, int buttons )
@@ -862,10 +862,10 @@ namespace Msgbox
 			return ThreadedMessageBox( text, caption, buttons, pxEVT_CallStackBox );
 		}
 	}
-	
+
 	int Assertion( const wxString& text, const wxString& stacktrace )
 	{
-		return CallStack( text, stacktrace, 
+		return CallStack( text, stacktrace,
 			L"\nDo you want to stop the program?"
 			L"\nOr press [Cancel] to suppress further assertions.",
 			L"PCSX2 Assertion Failure",
@@ -877,5 +877,5 @@ namespace Msgbox
 	{
 		CallStack( src.FormatDisplayMessage(), src.FormatDiagnosticMessage(), wxEmptyString, L"PCSX2 Unhandled Exception", wxOK );
 	}
-	
+
 }

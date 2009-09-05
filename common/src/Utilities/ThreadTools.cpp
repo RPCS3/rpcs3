@@ -50,6 +50,8 @@ namespace Threading
 	// your sister, and then cheating on her with your daughter.
 	PersistentThread::~PersistentThread()
 	{
+		if( !m_running ) return;
+
 		wxASSERT( !IsSelf() );		// not allowed from our own thread.
 
 		if( !_InterlockedExchange( &m_detached, true ) )
@@ -62,9 +64,7 @@ namespace Threading
 	// This function should not be called from the owner thread.
 	void PersistentThread::Start()
 	{
-		wxASSERT( !IsSelf() );		// not allowed from our own thread.
 		if( m_running ) return;
-
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 			throw Exception::ThreadCreationError();
 
@@ -74,8 +74,10 @@ namespace Threading
 	// This function should not be called from the owner thread.
 	void PersistentThread::Detach()
 	{
-		wxASSERT( !IsSelf() );		// not allowed from our own thread.
+		if( !m_running ) return;
 		if( _InterlockedExchange( &m_detached, true ) ) return;
+
+		wxASSERT( !IsSelf() );		// not allowed from our own thread.
 		pthread_detach( m_thread );
 	}
 
@@ -92,7 +94,6 @@ namespace Threading
 	//
 	void PersistentThread::Cancel( bool isBlocking )
 	{
-		wxASSERT( !IsSelf() );
 		if( _InterlockedExchange( &m_detached, true ) )
 		{
 			if( m_running )
@@ -100,6 +101,7 @@ namespace Threading
 			return;
 		}
 
+		wxASSERT( !IsSelf() );
 		pthread_cancel( m_thread );
 
 		if( isBlocking )
@@ -120,8 +122,6 @@ namespace Threading
 	//
 	sptr PersistentThread::Block()
 	{
-		DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
-		
 		if( _InterlockedExchange( &m_detached, true ) )
 		{
 			// already detached: if we're still running then its an invalid operation
@@ -132,11 +132,12 @@ namespace Threading
 		}
 		else
 		{
+			DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
 			pthread_join( m_thread, (void**)&m_returncode );
 			return m_returncode;
 		}
 	}
-	
+
 	bool PersistentThread::IsSelf() const
 	{
 		return pthread_self() == m_thread;
