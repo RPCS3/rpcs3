@@ -211,7 +211,7 @@ void mtgsThreadObject::Start()
 	// Wait for the thread to finish initialization (it runs GSopen, which can take
 	// some time since it's creating a new window and all), and then check for errors.
 
-	m_sem_InitDone.Wait();
+	m_sem_InitDone.WaitGui();
 
 	if( m_returncode != 0 )	// means the thread failed to init the GS plugin
 		throw Exception::PluginOpenError( PluginId_GS );

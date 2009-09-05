@@ -23,6 +23,7 @@
 #include "ps2/BiosTools.h"
 
 #include <wx/dir.h>
+#include <wx/listbox.h>
 
 using namespace wxHelpers;
 

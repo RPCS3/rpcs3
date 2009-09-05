@@ -70,6 +70,9 @@ namespace Threading
 		void Post();
 		void Post( int multiple );
 		
+#if wxUSE_GUI
+		void WaitGui();
+#endif
 		void Wait();
 		void Wait( const wxTimeSpan& timeout );
 		void WaitNoCancel();

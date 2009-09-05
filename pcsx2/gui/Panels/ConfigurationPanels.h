@@ -27,7 +27,6 @@
 #include <wx/image.h>
 #include <wx/statline.h>
 #include <wx/bookctrl.h>
-#include <wx/listbox.h>
 
 #include <list>
 
@@ -35,6 +34,8 @@
 #include "wxHelpers.h"
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"
+
+class wxListBox;
 
 // Annoyances of C++ forward declarations.  Having to type in this red tape mess
 // is keeping me form eating a good sandwich right now... >_<

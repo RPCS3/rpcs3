@@ -82,7 +82,7 @@ FILE *_cdvdOpenMechaVer() {
 	// get the name of the bios file
 
 	// use the bios filename to get the name of the mecha ver file
-	// [TODO] : Upgrade this to use std::string!
+	// [TODO] : Upgrade this to use wxstring!
 
 	strcpy(file, g_Conf->FullpathToBios().ToAscii().data() );
 
@@ -133,7 +133,7 @@ FILE *_cdvdOpenNVM() {
 	// get the name of the bios file
 
 	// use the bios filename to get the name of the nvm file
-	// [TODO] : Upgrade this to use std::string!
+	// [TODO] : Upgrade this to use wxString!
 
 	strcpy( file, g_Conf->FullpathToBios().ToAscii().data() );
 	ptr = file;

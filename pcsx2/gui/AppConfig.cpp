@@ -369,12 +369,14 @@ AppConfig::AppConfig() :
 
 ,	McdEnableNTFS( true )
 
+,	CurrentIso()
+,	CdvdSource( CDVDsrc_Iso )
+
 ,	ProgLogBox()
 ,	Ps2ConBox()
 ,	Folders()
 ,	BaseFilenames()
 ,	EmuOptions()
-,	m_IsLoaded( false )
 {
 	Mcd[0].Enabled = true;
 	Mcd[1].Enabled = true;
@@ -426,6 +428,10 @@ void AppConfig::LoadSave( IniInterface& ini )
 	IniEntry( Listbook_ImageSize );
 	IniEntry( Toolbar_ImageSize );
 	IniEntry( Toolbar_ShowLabels );
+	
+	IniEntry( CurrentIso );
+
+	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
 
 	// Process various sub-components:
 	ProgLogBox.LoadSave( ini, L"ProgramLog" );
@@ -433,9 +439,6 @@ void AppConfig::LoadSave( IniInterface& ini )
 
 	Folders.LoadSave( ini );
 	BaseFilenames.LoadSave( ini );
-
-	if( ini.IsSaving() && (g_RecentIsoList != NULL) )
-		g_RecentIsoList->Save( ini.GetConfig() );
 
 	EmuOptions.LoadSave( ini );
 
@@ -449,8 +452,6 @@ void AppConfig::LoadSave( IniInterface& ini )
 void AppConfig::Apply()
 {
 	Folders.ApplyDefaults();
-
-	if( NULL == wxConfigBase::Get( false ) ) return;
 
 	// Ensure existence of necessary documents folders.  Plugins and other parts
 	// of PCSX2 rely on them.
@@ -474,41 +475,6 @@ void AppConfig::Apply()
 			}
 		}
 	}
-
-	// Always perform delete and reload of the Recent Iso List.  This handles cases where
-	// the recent file count has been changed, and it's a helluva lot easier than trying
-	// to make a clone copy of this complex object. ;)
-
-	wxConfigBase* cfg = wxConfigBase::Get( false );
-	wxASSERT( cfg != NULL );
-
-	if( g_RecentIsoList != NULL )
-		g_RecentIsoList->Save( *cfg );
-	safe_delete( g_RecentIsoList );
-	g_RecentIsoList = new wxFileHistory( RecentFileCount );
-	g_RecentIsoList->Load( *cfg );
-
-	cfg->Flush();
-}
-
-// ------------------------------------------------------------------------
-void AppConfig::Load()
-{
-	if( NULL == wxConfigBase::Get( false ) ) return;
-
-	m_IsLoaded = true;
-
-	// Note: Extra parenthesis resolves "I think this is a function" issues with C++.
-	IniLoader loader( (IniLoader()) );
-	LoadSave( loader );
-}
-
-void AppConfig::Save()
-{
-	if( NULL == wxConfigBase::Get( false ) ) return;
-
-	IniSaver saver( (IniSaver()) );
-	LoadSave( saver );
 }
 
 // ------------------------------------------------------------------------
@@ -629,9 +595,9 @@ void AppConfig_ReloadGlobalSettings( bool overwrite )
 	wxConfigBase::Get()->SetRecordDefaults();
 
 	if( !overwrite )
-		g_Conf->Load();
+		wxGetApp().LoadSettings();
 
-	g_Conf->Apply();
+	wxGetApp().ApplySettings();
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );

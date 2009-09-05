@@ -39,7 +39,6 @@ DEFINE_EVENT_TYPE( pxEVT_SemaphorePing )
 
 bool			UseAdminMode = false;
 AppConfig*		g_Conf = NULL;
-wxFileHistory*	g_RecentIsoList = NULL;
 
 namespace Exception
 {
@@ -180,7 +179,7 @@ void Pcsx2App::ReadUserModeSettings()
 		IniSaver saver( *conf_usermode );
 		g_Conf->LoadSaveUserMode( saver, groupname );
 		AppConfig_ReloadGlobalSettings( true );
-		g_Conf->Save();
+		wxGetApp().SaveSettings();
 	}
 	else
 	{
@@ -205,7 +204,7 @@ void Pcsx2App::ReadUserModeSettings()
 			IniSaver saver( *conf_usermode );
 			g_Conf->LoadSaveUserMode( saver, groupname );
 			AppConfig_ReloadGlobalSettings( true );
-			g_Conf->Save();
+			wxGetApp().SaveSettings();
 		}
 	}
 }
@@ -311,6 +310,8 @@ bool Pcsx2App::OnInit()
 		return false;
 	}
 
+	ApplySettings();
+
     return true;
 }
 
@@ -354,7 +355,7 @@ void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 
 void Pcsx2App::CleanupMess()
 {
-	safe_delete( g_RecentIsoList );
+	SysReset();
 	safe_delete( m_Bitmap_Logo );
 	safe_delete( g_Conf );
 }
@@ -392,17 +393,20 @@ bool Pcsx2App::PrepForExit()
 int Pcsx2App::OnExit()
 {
 	m_ProgramLogBox = NULL;
+	m_MainFrame = NULL;
+
 	MemoryCard::Shutdown();
 
 	if( g_Conf != NULL )
-		g_Conf->Save();
+		SaveSettings();
 
 	CleanupMess();
 	return wxApp::OnExit();
 }
 
 Pcsx2App::Pcsx2App()  :
-	m_ProgramLogBox( NULL )
+	m_MainFrame( NULL )
+,	m_ProgramLogBox( NULL )
 ,	m_ConfigImages( 32, 32 )
 ,	m_ConfigImagesAreLoaded( false )
 ,	m_ToolbarImages( NULL )
@@ -417,3 +421,33 @@ Pcsx2App::~Pcsx2App()
 }
 
 
+void Pcsx2App::ApplySettings()
+{
+	g_Conf->Apply();
+	if( m_MainFrame != NULL )
+		m_MainFrame->ApplySettings();
+}
+
+void Pcsx2App::LoadSettings()
+{
+	wxConfigBase* conf = wxConfigBase::Get( false );
+	if( NULL == conf ) return;
+
+	IniLoader loader( *conf );
+	g_Conf->LoadSave( loader );
+
+	if( m_MainFrame != NULL )
+		m_MainFrame->m_RecentIsoList->Load( *conf );
+}
+
+void Pcsx2App::SaveSettings()
+{
+	wxConfigBase* conf = wxConfigBase::Get( false );
+	if( NULL == conf ) return;
+
+	IniSaver saver( *conf );
+	g_Conf->LoadSave( saver );
+
+	if( m_MainFrame != NULL )
+		m_MainFrame->m_RecentIsoList->Save( *conf );
+}

@@ -26,15 +26,14 @@
 
 class MainEmuFrame: public wxFrame
 {
-public:
-
 	// ------------------------------------------------------------------------
 	//     MainEmuFrame Protected Variables
 	// ------------------------------------------------------------------------
 	
 protected:
-    wxStatusBar& m_statusbar;
-    wxStaticBitmap m_background;
+	wxFileHistory*	m_RecentIsoList;
+    wxStatusBar&	m_statusbar;
+    wxStaticBitmap	m_background;
 
 	wxMenuBar& m_menubar;
 
@@ -59,10 +58,15 @@ protected:
 
 public:
     MainEmuFrame(wxWindow* parent, const wxString& title);
+    virtual ~MainEmuFrame();
+
 	void OnLogBoxHidden();
 
 	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Emu_Pause ); }
-
+	void UpdateIsoSrcFile();
+	void UpdateIsoSrcSelection();
+	void ApplySettings();
+	
 protected:
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
@@ -73,11 +77,12 @@ protected:
 	void Menu_SelectBios_Click(wxCommandEvent &event);
 
 	void Menu_RunIso_Click(wxCommandEvent &event);
-	void Menu_RunWithoutDisc_Click(wxCommandEvent &event);
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
 	void Menu_IsoRecent_Click(wxCommandEvent &event);
 
+	void Menu_BootCdvd_Click(wxCommandEvent &event);
 	void Menu_OpenELF_Click(wxCommandEvent &event);
+	void Menu_CdvdSource_Click(wxCommandEvent &event);
 	void Menu_LoadStateOther_Click(wxCommandEvent &event);
 	void Menu_SaveStateOther_Click(wxCommandEvent &event);
 	void Menu_Exit_Click(wxCommandEvent &event);
@@ -85,6 +90,8 @@ protected:
 	void Menu_EmuPause_Click(wxCommandEvent &event);
 	void Menu_EmuClose_Click(wxCommandEvent &event);
 	void Menu_EmuReset_Click(wxCommandEvent &event);
+
+	void Menu_ConfigPlugin_Click(wxCommandEvent &event);
 
 	void Menu_Debug_Open_Click(wxCommandEvent &event);
 	void Menu_Debug_MemoryDump_Click(wxCommandEvent &event);
@@ -100,12 +107,13 @@ protected:
 	wxMenu* MakeStatesSubMenu( int baseid ) const;
 	wxMenu* MakeStatesMenu();
 	wxMenu* MakeLanguagesMenu() const;
-	wxMenu* MakeIsoMenu();
 	wxMenu* MakeCdvdMenu();
 
 	void PopulateVideoMenu();
 	void PopulateAudioMenu();
 	void PopulatePadMenu();
 	void ConnectMenus();
+
+	friend class Pcsx2App;
 };
 

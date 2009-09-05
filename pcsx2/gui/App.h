@@ -54,13 +54,13 @@ enum MenuIdentifiers
 	// Run SubSection
 	MenuId_Cdvd_Source,
 	MenuId_Src_Iso,
-	MenuId_Src_Cdvd,
+	MenuId_Src_Plugin,
 	MenuId_Src_NoDisc,
 	MenuId_Boot_Iso,			// Opens submenu with Iso browser, and recent isos.
 	MenuId_IsoBrowse,			// Open dialog, runs selected iso.
 	MenuId_Boot_CDVD,			// opens a submenu filled by CDVD plugin (usually list of drives)
-	MenuId_RunWithoutDisc,		// used to enter the bios (subs in cdvdnull)
 	MenuId_Boot_ELF,
+	MenuId_Boot_Recent,			// Menu populated with recent source bootings
 	MenuId_SkipBiosToggle,		// enables the Bios Skip speedhack
 
 	
@@ -83,24 +83,30 @@ enum MenuIdentifiers
 	// Config Subsection
 	MenuId_Config_Settings,
 	MenuId_Config_BIOS,
+
+	// Plugin ID order is important.  Must match the order in tbl_PluginInfo.
+	MenuId_Config_GS,
+	MenuId_Config_PAD,
+	MenuId_Config_SPU2,
 	MenuId_Config_CDVD,
-	MenuId_Config_DEV9,
 	MenuId_Config_USB,
+	MenuId_Config_FW,
+	MenuId_Config_DEV9,
 	MenuId_Config_FireWire,
 	MenuId_Config_Patches,
 
 	// Video Subsection
-	// Top items are Pcsx2-controlled.  GS plugin items are inserted beneath.
+	// Top items are PCSX2-controlled.  GS plugin items are inserted beneath.
 	MenuId_Video_Basics,		// includes frame timings and skippings settings
 	MenuId_Video_Advanced,		// inserted at the bottom of the menu
 
 	// Audio subsection
-	// Top items are Pcsx2-controlled.  SPU2 plugin items are inserted beneath.
+	// Top items are PCSX2-controlled.  SPU2 plugin items are inserted beneath.
 	// [no items at this time]
 	MenuId_Audio_Advanced,		// inserted at the bottom of the menu
 
 	// Controller subsection
-	// Top items are Pcsx2-controlled.  Pad plugin items are inserted beneath.
+	// Top items are PCSX2-controlled.  Pad plugin items are inserted beneath.
 	// [no items at this time]
 	MenuId_Pad_Advanced,
 
@@ -116,6 +122,28 @@ enum MenuIdentifiers
 	MenuId_Debug_Usermode,
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+class ScopedWindowDisable
+{
+	DeclareNoncopyableObject( ScopedWindowDisable )
+
+protected:
+	wxWindow& m_window;
+
+public:
+	ScopedWindowDisable( wxWindow* whee ) :
+		m_window( *whee )
+	{
+		wxASSERT( whee != NULL );
+		m_window.Disable();
+	}
+	
+	~ScopedWindowDisable()
+	{
+		m_window.Enable();
+	}
+};
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -200,7 +228,6 @@ public:
 	int  OnExit();
 	void OnInitCmdLine( wxCmdLineParser& parser );
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
-
 	bool PrepForExit();
 	
 #ifdef __WXDEBUG__
@@ -221,6 +248,10 @@ public:
 
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	void Ping() const;
+
+	void ApplySettings();
+	void LoadSettings();
+	void SaveSettings();
 
 	// ----------------------------------------------------------------------------
 	//        Console / Program Logging Helpers
@@ -303,5 +334,3 @@ extern void OpenPlugins();
 
 extern wxRect wxGetDisplayArea();
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
-
-extern wxFileHistory*	g_RecentIsoList;

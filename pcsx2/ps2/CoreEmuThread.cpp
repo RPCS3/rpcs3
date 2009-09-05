@@ -41,6 +41,7 @@ void CoreEmuThread::CpuInitializeMess()
 	GetPluginManager().Open();
 	cpuReset();
 	SysClearExecutionCache();
+	GetPluginManager().Open();
 
 	if( GSsetGameCRC != NULL )
 		GSsetGameCRC( ElfCRC, 0 );
@@ -100,7 +101,7 @@ sptr CoreEmuThread::ExecuteTask()
 
 	while( m_ExecMode != ExecMode_Running )
 	{
-		m_ResumeEvent.Wait();
+		m_ResumeEvent.WaitGui();
 	}
 
 	CpuInitializeMess();
@@ -134,7 +135,7 @@ void CoreEmuThread::StateCheck()
 
 		case ExecMode_Suspended:
 			while( m_ExecMode == ExecMode_Suspended )
-				m_ResumeEvent.Wait();
+				m_ResumeEvent.WaitGui();
 		break;
 	}
 }
@@ -185,7 +186,7 @@ void CoreEmuThread::Resume()
 			if( m_resetRecompilers || m_resetProfilers )
 			{
 				locker.Unlock();		// no deadlocks please, thanks. :)
-				m_SuspendEvent.Wait();
+				m_SuspendEvent.WaitGui();
 			}
 			else
 			{
@@ -235,7 +236,7 @@ void CoreEmuThread::Suspend( bool isBlocking )
 		DevAssert( m_ExecMode == ExecMode_Suspending, "ExecMode should be nothing other than Suspended..." );
 	}
 
-	m_SuspendEvent.Wait();
+	m_SuspendEvent.WaitGui();
 }
 
 // Applies a full suite of new settings, which will automatically facilitate the necessary

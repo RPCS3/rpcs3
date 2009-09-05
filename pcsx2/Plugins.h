@@ -212,6 +212,8 @@ public:
 	void Freeze( PluginsEnum_t pid, int mode, freezeData* data );
 	void Freeze( PluginsEnum_t pid, SaveState& state );
 	void Freeze( SaveState& state );
+	
+	void Configure( PluginsEnum_t pid );
 
 	friend PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] );
 	friend PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] );

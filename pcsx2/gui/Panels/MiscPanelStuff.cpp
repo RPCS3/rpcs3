@@ -18,8 +18,10 @@
 
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
-#include "ps2/BiosTools.h"
 
+#include "App.h"
+
+#include "ps2/BiosTools.h"
 #include <wx/stdpaths.h>
 
 using namespace wxHelpers;
@@ -81,9 +83,9 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 
 		*g_Conf = confcopy;
 		UseAdminMode = g_ApplyState.UseAdminMode;
-		g_Conf->Apply();
+		wxGetApp().ApplySettings();
 		if( saveOnSuccess )
-			g_Conf->Save();
+			wxGetApp().SaveSettings();
 	}
 	catch( Exception::CannotApplySettings& ex )
 	{

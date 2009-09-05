@@ -33,6 +33,14 @@
 #include "IsoFSdrv.h"
 #include "CDVDisoReader.h"
 
+const wxChar* CDVD_SourceLabels[] =
+{
+	L"Iso",
+	L"Plugin",
+	L"NoDisc",
+	NULL
+};
+
 // ----------------------------------------------------------------------------
 // diskTypeCached
 // Internal disc type cache, to reduce the overhead of disc type checks, which are
@@ -61,7 +69,7 @@ static void CheckNullCDVD()
 //////////////////////////////////////////////////////////////////////////////////////////
 // Disk Type detection stuff (from cdvdGigaherz)
 //
-int CheckDiskTypeFS(int baseType)
+static int CheckDiskTypeFS(int baseType)
 {
 	int		f;
 	char	buffer[256];//if a file is longer...it should be shorter :D
@@ -258,14 +266,19 @@ static void DetectDiskType()
 	diskTypeCached = FindDiskType(mType);
 }
 
-// ----------------------------------------------------------------------------
-// CDVDsys_ChangeSource
-//
+static wxString			m_SourceFilename[3];
+static CDVD_SourceType	m_CurrentSourceType = CDVDsrc_NoDisc;
+
+void CDVDsys_SetFile( CDVD_SourceType srctype, const wxString& newfile )
+{
+	m_SourceFilename[srctype] = newfile;
+}
+
 void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
 	GetPluginManager().Close( PluginId_CDVD );
 		
-	switch( type )
+	switch( m_CurrentSourceType = type )
 	{
 		case CDVDsrc_Iso:
 			CDVD = &CDVDapi_Iso;
@@ -283,11 +296,13 @@ void CDVDsys_ChangeSource( CDVD_SourceType type )
 	}
 }
 
-s32 DoCDVDopen(const char* pTitleFilename)
+bool DoCDVDopen()
 {
 	CheckNullCDVD();
 
-	int ret = CDVD->open(pTitleFilename);
+	int ret = CDVD->open( m_SourceFilename[m_CurrentSourceType].IsEmpty() ? NULL : m_SourceFilename[m_CurrentSourceType].ToUTF8().data() );
+	if( ret == -1 ) return false;
+
 	int cdtype = DoCDVDdetectDiskType();
 
 	if (EmuConfig.CdvdDumpBlocks && (cdtype != CDVD_TYPE_NODISC))
@@ -297,7 +312,11 @@ s32 DoCDVDopen(const char* pTitleFilename)
 		// TODO: "Untitled" should use pnach/slus name resolution, slus if no patch,
 		// and finally an "Untitled-[ElfCRC]" if no slus.
 
-		wxString temp( Path::Combine( wxGetCwd(), CDVD->getUniqueFilename() ) );
+		wxString somepick( Path::GetFilenameWithoutExt( m_SourceFilename[m_CurrentSourceType] ) );
+		if( somepick.IsEmpty() )
+			somepick = L"Untitled";
+
+		wxString temp( Path::Combine( wxGetCwd(), somepick ) );
 
 #ifdef ENABLE_TIMESTAMPS
 		wxDateTime curtime( wxDateTime::GetTimeNow() );
@@ -338,7 +357,7 @@ s32 DoCDVDopen(const char* pTitleFilename)
 		blockDumpFile = NULL;
 	}
 
-	return ret;
+	return true;
 }
 
 void DoCDVDclose()
@@ -495,12 +514,6 @@ s32 CALLBACK NODISCgetDualInfo(s32* dualType, u32* _layer1start)
 	return -1;
 }
 
-wxString NODISCgetUniqueFilename()
-{
-	DevAssert( false, "NODISC is an invalid CDVD object for block dumping.. >_<" );
-	return L"epicfail";
-}
-
 CDVD_API CDVDapi_NoDisc =
 {
 	NODISCclose,
@@ -521,6 +534,4 @@ CDVD_API CDVDapi_NoDisc =
 	NODISCreadSector,
 	NODISCgetBuffer2,
 	NODISCgetDualInfo,
-
-	NODISCgetUniqueFilename
 };

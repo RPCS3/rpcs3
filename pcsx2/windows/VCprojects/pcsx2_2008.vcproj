@@ -1765,10 +1765,6 @@
 						>
 					</File>
 					<File
-						RelativePath="..\..\CDVD\CDVDlib.h"
-						>
-					</File>
-					<File
 						RelativePath="..\..\CDVD\IsoFileTools.cpp"
 						>
 					</File>

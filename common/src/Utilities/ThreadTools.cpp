@@ -20,6 +20,8 @@
 #include "Threading.h"
 
 #include <wx/datetime.h>
+#include <wx/thread.h>
+#include <wx/app.h>
 
 #ifdef __LINUX__
 #	include <signal.h>		// for pthread_kill, which is in pthread.h on w32-pthreads
@@ -242,6 +244,28 @@ namespace Threading
 	void Semaphore::Post( int multiple )
 	{
 		sem_post_multiple( &sema, multiple );
+	}
+#endif
+
+#if wxUSE_GUI
+	// This is a wxApp-safe implementation of Wait, which makes sure and executes the App's
+	// pending messages *if* the Wait is performed on the Main/GUI thread.  If the Wait is
+	// called from another thread, no message pumping is performed.
+	void Semaphore::WaitGui()
+	{
+		if( !wxThread::IsMain() || (wxTheApp == NULL) )
+			Wait();
+		else
+		{
+			// In order to avoid deadlock we need to make sure we cut some time
+			// to handle messages.  I choose 200ms:
+			
+			static const timespec fail = { 0, 200 * 1000000 };
+			do {
+				
+				wxTheApp->ProcessPendingEvents();
+			} while( sem_timedwait( &sema, &fail ) == ETIMEDOUT );
+		}
 	}
 #endif
 

@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "CDVD/CDVDaccess.h"
+
 class IniInterface;
 
 extern bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
@@ -130,6 +132,9 @@ public:
 
 	// enables automatic ntfs compression of memory cards (Win32 only)
 	bool		McdEnableNTFS;
+	
+	wxString		CurrentIso;
+	CDVD_SourceType CdvdSource;
 
 	McdOptions				Mcd[2];
 	ConsoleLogOptions		ProgLogBox;
@@ -143,11 +148,6 @@ public:
 	// used by emulation.  The gui allows temporary per-game and commandline level overrides.
 	Pcsx2Config				EmuOptions;
 
-protected:
-	// indicates if the main AppConfig settings are valid (excludes the status of UseAdminMode,
-	// which is a special value that's initialized independently of the rest of the config)
-	bool m_IsLoaded;
-
 public:
 	AppConfig();
 
@@ -156,16 +156,16 @@ public:
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
 	wxString FullPathToConfig() const;
 
-	void Load();
-	void Save();
-	void Apply();
 	void LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash );
 
 	wxString GetDefaultDocumentsFolder();
 
 protected:
+	void Apply();
 	void LoadSave( IniInterface& ini );
 	void LoadSaveMemcards( IniInterface& ini );
+	
+	friend class Pcsx2App;
 };
 
 class wxFileConfig;		// forward declare.

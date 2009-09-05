@@ -20,6 +20,18 @@
 #include "System.h"
 #include "IniInterface.h"
 
+static int _calcEnumLength( const wxChar* const* enumArray )
+{
+	int cnt = 0;
+	while( *enumArray != NULL )
+	{
+		enumArray++;
+		cnt++;
+	}
+
+	return cnt;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 IniInterface::IniInterface( wxConfigBase& config ) :
@@ -149,6 +161,14 @@ void IniLoader::Entry( const wxString& var, wxRect& value, const wxRect& defvalu
 
 void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
 {
+	// Confirm default value sanity...
+
+	const int cnt = _calcEnumLength( enumArray );
+	if( defvalue >= cnt )
+		throw Exception::IndexBoundsFault( L"IniLoader Enumeration DefaultValue", defvalue, cnt );
+
+	// Sanity confirmed, proceed with craziness!
+
 	wxString retval;
 	m_Config.Read( var, &retval, enumArray[defvalue] );
 
@@ -238,6 +258,22 @@ void IniSaver::Entry( const wxString& var, wxRect& value, const wxRect& defvalue
 
 void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
 {
+	const int cnt = _calcEnumLength( enumArray );
+	if( value >= cnt )
+	{
+		Console::Notice( wxsFormat(
+			L"Settings Warning: An illegal enumerated index was detected when saving '%s'\n"
+			L"\tIllegal Value: %d\n"
+			L"\tUsing Default: %d (%s)\n",
+			var.c_str(), value, defvalue, enumArray[defvalue] )
+		);
+
+		// Cause a debug assertion, since this is a fully recoverable error.
+		wxASSERT( value < cnt );
+		
+		value = defvalue;
+	}
+
 	m_Config.Write( var, enumArray[value] );
 }
 

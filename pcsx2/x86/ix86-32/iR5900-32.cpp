@@ -739,8 +739,8 @@ void recClear(u32 addr, u32 size)
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
 		if (pexblock->startpc >= addr && pexblock->startpc < addr + size * 4
 		 || pexblock->startpc < addr && blockend > addr) {
-			Console::Error("Impossible block clearing failure");
-			jASSUME(0);
+			Console::Error( "Impossible block clearing failure" );
+			wxASSERT_MSG( false, L"Impossible block clearing failure" );
 		}
 	}
 #endif

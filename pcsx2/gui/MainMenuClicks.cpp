@@ -32,7 +32,7 @@ void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
 	if( Dialogs::ConfigurationDialog( this ).ShowModal() )
 	{
-		g_Conf->Save();
+		wxGetApp().SaveSettings();
 	}
 }
 
@@ -40,18 +40,72 @@ void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
 {
 	if( Dialogs::BiosSelectorDialog( this ).ShowModal() )
 	{
-		g_Conf->Save();
+		wxGetApp().SaveSettings();
 	}
 }
 
-static const wxChar* isoFilterTypes =
-	L"Iso Image (*.iso)|*.iso|Bin Image|(*.bin)|MDF Image (*.mdf)|*.mdf|Nero Image (*.nrg)|*.nrg";
+void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
+{
+	switch( event.GetId() )
+	{
+		case MenuId_Src_Iso:	g_Conf->CdvdSource = CDVDsrc_Iso;		break;
+		case MenuId_Src_Plugin:	g_Conf->CdvdSource = CDVDsrc_Plugin;	break;
+		case MenuId_Src_NoDisc: g_Conf->CdvdSource = CDVDsrc_NoDisc;	break;
+		
+		jNO_DEFAULT
+	}
+	UpdateIsoSrcSelection();
+	wxGetApp().SaveSettings();
+}
 
-void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
+{
+	if( EmulationInProgress() )
+	{
+		SysSuspend();
+
+		// [TODO] : Add one of 'dems checkboxes that read like "[x] don't show this stupid shit again, kthx."
+		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmEmuReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
+
+		if( !result )
+		{
+			SysResume();
+			return;
+		}
+	}
+
+	SysEndExecution();
+	InitPlugins();
+
+	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
+	SysExecute( new AppEmuThread(), g_Conf->CdvdSource );
+}
+
+extern const wxChar* isoFilterTypes;
+
+void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
 	SysSuspend();
 
-	Console::Status( L"Default Folder: " + g_Conf->Folders.RunIso.ToString() );
+	wxFileDialog ctrl( this, _("Select CDVD source iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
+		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
+
+	if( ctrl.ShowModal() != wxID_CANCEL )
+	{
+		g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
+		g_Conf->CurrentIso = ctrl.GetPath();
+		wxGetApp().SaveSettings();
+
+		UpdateIsoSrcFile();
+	}
+
+	SysResume();
+}
+
+void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
+{
+	SysSuspend();
+
 	wxFileDialog ctrl( this, _("Run PS2 Iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
 		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
 
@@ -63,14 +117,17 @@ void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 	
 	SysEndExecution();
 
-	g_Conf->Folders.RunIso = ctrl.GetPath();
-	g_Conf->Save();
+	g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
+	g_Conf->CurrentIso = ctrl.GetPath();
+	wxGetApp().SaveSettings();
+
+	UpdateIsoSrcFile();
 
 	wxString elf_file;
 	if( EmuConfig.SkipBiosSplash )
 	{
 		// Fetch the ELF filename and CD type from the CDVD provider.
-		wxString ename( ctrl.GetFilename() );
+		wxString ename( g_Conf->CurrentIso );
 		int result = GetPS2ElfName( ename );
 		switch( result )
 		{
@@ -86,6 +143,8 @@ void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 				// PS2 game.  Valid!
 				elf_file = ename;
 			break;
+			
+			jNO_DEFAULT
 		}
 	}
 
@@ -93,7 +152,7 @@ void MainEmuFrame::Menu_RunIso_Click(wxCommandEvent &event)
 	SysExecute( new AppEmuThread( elf_file ), CDVDsrc_Iso );
 }
 
-void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
+/*void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 {
 	if( EmulationInProgress() )
 	{
@@ -112,7 +171,7 @@ void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
 	SysEndExecution();
 	InitPlugins();
 	SysExecute( new AppEmuThread(), CDVDsrc_NoDisc );
-}
+}*/
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
 {
@@ -161,6 +220,16 @@ void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 	if( !wasRunning ) return;
 	InitPlugins();
 	SysExecute( new AppEmuThread() );
+}
+
+void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
+{
+	typedef void	(CALLBACK* PluginConfigureFnptr)();
+	const PluginsEnum_t pid = (PluginsEnum_t)( event.GetId() - MenuId_Config_GS );
+
+	LoadPlugins();
+	ScopedWindowDisable disabler( this );
+	g_plugins->Configure( pid );
 }
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)

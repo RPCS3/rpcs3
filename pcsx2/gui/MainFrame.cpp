@@ -37,49 +37,66 @@ wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 {
 	wxMenu* mnuSubstates = new wxMenu();
 
-	mnuSubstates->Append( baseid+1,	_("Slot 0"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+2,	_("Slot 1"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+3,	_("Slot 2"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+4,	_("Slot 3"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid+5,	_("Slot 4"), wxEmptyString, wxITEM_NORMAL );
-	mnuSubstates->Append( baseid,	_("Other..."), wxEmptyString, wxITEM_NORMAL );
+	mnuSubstates->Append( baseid+1,	_("Slot 0") );
+	mnuSubstates->Append( baseid+2,	_("Slot 1") );
+	mnuSubstates->Append( baseid+3,	_("Slot 2") );
+	mnuSubstates->Append( baseid+4,	_("Slot 3") );
+	mnuSubstates->Append( baseid+5,	_("Slot 4") );
+	mnuSubstates->Append( baseid,	_("Other...") );
 	return mnuSubstates;
-}
-
-/*struct StringListNode
-{
-	wxString* item;
-	StringListNode* next;
-};*/
-
-// ------------------------------------------------------------------------
-wxMenu* MainEmuFrame::MakeIsoMenu()
-{
-	wxMenu* mnuIso = new wxMenu();
-
-	mnuIso->Append( MenuId_IsoBrowse, _("Browse..."), _("Select an Iso image from your hard drive.") );
-
-	if( g_RecentIsoList != NULL )
-	{
-		g_RecentIsoList->UseMenu( mnuIso );
-		g_RecentIsoList->AddFilesToMenu( mnuIso );
-	}
-	return mnuIso;
 }
 
 // ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeCdvdMenu()
 {
 	wxMenu* mnuCdvd = new wxMenu();
-	mnuCdvd->Append( MenuId_Src_Iso,	_("Iso image"),		wxEmptyString, wxITEM_RADIO );
-	mnuCdvd->Append( MenuId_Src_Cdvd,	_("Cdvd plugin"),	wxEmptyString, wxITEM_RADIO );
-	mnuCdvd->Append( MenuId_Src_NoDisc,	_("No disc"),		wxEmptyString, wxITEM_RADIO );
+	mnuCdvd->Append( MenuId_Src_Iso,		_("Iso"),		wxEmptyString, wxITEM_RADIO );
+	mnuCdvd->Append( MenuId_Src_Plugin,		_("Plugin"),	wxEmptyString, wxITEM_RADIO );
+	mnuCdvd->Append( MenuId_Src_NoDisc,		_("No disc"),	wxEmptyString, wxITEM_RADIO );
+
+	mnuCdvd->AppendSeparator();
+	mnuCdvd->Append( MenuId_IsoBrowse,		_("Iso Browser..."), _("Select the Iso source image.") );
+	mnuCdvd->Append( MenuId_Config_CDVD,	_("Plugin settings..."),
+		_("Opens the CDVD plugin configuration dialog") );
+
 	return mnuCdvd;
+}
+
+void MainEmuFrame::UpdateIsoSrcSelection()
+{
+	MenuIdentifiers cdsrc = MenuId_Src_Iso;
+
+	switch( g_Conf->CdvdSource )
+	{
+		case CDVDsrc_Iso:		cdsrc = MenuId_Src_Iso;		break;
+		case CDVDsrc_Plugin:	cdsrc = MenuId_Src_Plugin;	break;
+		case CDVDsrc_NoDisc:	cdsrc = MenuId_Src_NoDisc;	break;
+
+		jNO_DEFAULT
+	}
+
+	GetMenuBar()->Check( cdsrc, true );
+	m_statusbar.SetStatusText( CDVD_SourceLabels[g_Conf->CdvdSource], 1 );
+}
+
+void MainEmuFrame::UpdateIsoSrcFile()
+{
+	UpdateIsoSrcSelection();
+	const bool exists = wxFile::Exists( g_Conf->CurrentIso );
+	if( !exists )
+		g_Conf->CurrentIso.Clear();
+
+	wxString label;
+	label.Printf( L"%s -> %s", _("Iso"),
+		exists ? g_Conf->CurrentIso.c_str() : _("Empty")
+	);
+	GetMenuBar()->SetLabel( MenuId_Src_Iso, label );
 }
 
 // ------------------------------------------------------------------------
 //     Video / Audio / Pad "Extensible" Menus
 // ------------------------------------------------------------------------
+
 void MainEmuFrame::PopulateVideoMenu()
 {
 	m_menuVideo.Append( MenuId_Video_Basics,	_("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
@@ -164,12 +181,19 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( MenuId_Config_Settings,	Menu_ConfigSettings_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
-	ConnectMenu( MenuId_IsoBrowse,			Menu_RunIso_Click );
-	ConnectMenu( MenuId_RunWithoutDisc,		Menu_RunWithoutDisc_Click );
 
-	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
+	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED,
+		wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
 
+	Connect( MenuId_Config_GS, MenuId_Config_GS+PluginId_Count, wxEVT_COMMAND_MENU_SELECTED,
+		wxCommandEventHandler(MainEmuFrame::Menu_ConfigPlugin_Click) );
+
+	Connect( MenuId_Src_Iso, MenuId_Src_Iso+3, wxEVT_COMMAND_MENU_SELECTED,
+		wxCommandEventHandler(MainEmuFrame::Menu_CdvdSource_Click) );
+
+	ConnectMenu( MenuId_Boot_CDVD,			Menu_BootCdvd_Click );
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
+	ConnectMenu( MenuId_IsoBrowse,			Menu_IsoBrowse_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
 	ConnectMenu( MenuId_Emu_Pause,			Menu_EmuPause_Click );
@@ -210,6 +234,8 @@ void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
 MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
     wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
 
+	m_RecentIsoList( new wxFileHistory( g_Conf->RecentFileCount ) ),
+
 	m_statusbar( *CreateStatusBar(2, 0) ),
 	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
 
@@ -217,15 +243,15 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	m_menubar( *new wxMenuBar() ),
 
-	m_menuBoot( *new wxMenu() ),
-	m_menuEmu( *new wxMenu() ),
+	m_menuBoot	( *new wxMenu() ),
+	m_menuEmu	( *new wxMenu() ),
 	m_menuConfig( *new wxMenu() ),
-	m_menuMisc( *new wxMenu() ),
+	m_menuMisc	( *new wxMenu() ),
 
-	m_menuVideo( *new wxMenu() ),
-	m_menuAudio( *new wxMenu() ),
-	m_menuPad( *new wxMenu() ),
-	m_menuDebug( *new wxMenu() ),
+	m_menuVideo	( *new wxMenu() ),
+	m_menuAudio	( *new wxMenu() ),
+	m_menuPad	( *new wxMenu() ),
+	m_menuDebug	( *new wxMenu() ),
 
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) ),
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
@@ -257,8 +283,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
 	m_statusbar.SetStatusWidths(2, m_statusbar_widths);
-	m_statusbar.SetStatusText( _T("The Status is Good!"), 0);
-	m_statusbar.SetStatusText( _T("Good Status"), 1);
+	m_statusbar.SetStatusText( L"The Status is Good!", 0);
+	m_statusbar.SetStatusText( wxEmptyString, 1);
 
 	wxBoxSizer& joe( *new wxBoxSizer( wxVERTICAL ) );
 	joe.Add( &m_background );
@@ -279,15 +305,17 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	// ------------------------------------------------------------------------
 
-	m_menuBoot.Append(MenuId_Boot_Iso,		_("Run ISO"),
-		MakeIsoMenu() );
-
-	m_menuBoot.AppendSeparator();
-	m_menuBoot.Append(MenuId_RunWithoutDisc,_("Boot without Disc"),
+	m_menuBoot.Append(MenuId_Boot_CDVD,		_("Run CDVD"),
 		_("Use this to access the PS2 system configuration menu"));
 
 	m_menuBoot.Append(MenuId_Boot_ELF,		_("Run ELF File..."),
 		_("For running raw binaries"));
+
+	wxMenu* recentRunMenu = new wxMenu();
+	m_menuBoot.Append(MenuId_Boot_Recent,	_("Run Recent"), recentRunMenu);
+
+	m_RecentIsoList->UseMenu( recentRunMenu );
+	m_RecentIsoList->AddFilesToMenu( recentRunMenu );
 
 	m_menuBoot.AppendSeparator();
 	m_menuBoot.Append(MenuId_Cdvd_Source,	_("Select CDVD source"), MakeCdvdMenu() );
@@ -343,7 +371,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// ------------------------------------------------------------------------
 
 	m_menuMisc.Append( &m_MenuItem_Console );
-	m_menuMisc.Append(MenuId_Profiler,		_("Show Profiler"),	wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(MenuId_Profiler,			_("Show Profiler"),	wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	// No dialogs implemented for these yet...
@@ -353,20 +381,51 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// Ref will want this re-added eventually.
 	//m_menuMisc.Append(47, _T("Print CDVD Info..."), wxEmptyString, wxITEM_CHECK);
 
-	m_menuMisc.Append(MenuId_Website,		_("Visit Website..."),
+	m_menuMisc.Append(MenuId_Website,			_("Visit Website..."),
 		_("Opens your web-browser to our favorite website."));
-	m_menuMisc.Append(MenuId_About,		_("About...") );
+	m_menuMisc.Append(MenuId_About,				_("About...") );
 
-	m_menuDebug.Append(MenuId_Debug_Open,			_("Open Debug Window..."),	wxEmptyString);
+	m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
 	m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
-	m_menuDebug.Append(MenuId_Debug_Logging,		_("Logging..."),			wxEmptyString);
+	m_menuDebug.Append(MenuId_Debug_Logging,	_("Logging..."),			wxEmptyString);
 
 	m_menuDebug.AppendSeparator();
-	m_menuDebug.Append(MenuId_Debug_Usermode,		_("Change Usermode..."), _(" Advanced feature for managing multiple concurrent PCSX2 environments."));
+	m_menuDebug.Append(MenuId_Debug_Usermode,	_("Change Usermode..."),
+		_(" Advanced feature for managing multiple concurrent PCSX2 environments."));
 
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 
 	ConnectMenus();
 	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
+
+	UpdateIsoSrcFile();
+}
+
+MainEmuFrame::~MainEmuFrame()
+{
+	if( m_RecentIsoList != NULL )
+	{
+		m_RecentIsoList->Save( *wxConfigBase::Get( false ) );
+		safe_delete( m_RecentIsoList );
+	}
+}
+
+void MainEmuFrame::ApplySettings()
+{
+	// Always perform delete and reload of the Recent Iso List.  This handles cases where
+	// the recent file count has been changed, and it's a helluva lot easier than trying
+	// to make a clone copy of this complex object. ;)
+
+	wxConfigBase* cfg = wxConfigBase::Get( false );
+	wxASSERT( cfg != NULL );
+
+	if( m_RecentIsoList != NULL )
+		m_RecentIsoList->Save( *cfg );
+	safe_delete( m_RecentIsoList );
+	m_RecentIsoList = new wxFileHistory( g_Conf->RecentFileCount );
+	m_RecentIsoList->Load( *cfg );
+
+	UpdateIsoSrcFile();
+	cfg->Flush();
 }

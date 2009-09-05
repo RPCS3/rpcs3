@@ -708,7 +708,7 @@ static bool OpenPlugin_GS()
 	
 	return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
 
-	// Note: rederswitch is us abusing the isMultiThread parameter for that so
+	// Note: renderswitch is us abusing the isMultiThread parameter for that so
 	// we don't need a new callback
 }
 
@@ -765,7 +765,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 	bool result = true;
 	switch( pid )
 	{
-		case PluginId_CDVD:	result = OpenPlugin_CDVD();	break;
+		case PluginId_CDVD:	result = DoCDVDopen();		break;
 		case PluginId_GS:	result = OpenPlugin_GS();	break;
 		case PluginId_PAD:	result = OpenPlugin_PAD();	break;
 		case PluginId_SPU2:	result = OpenPlugin_SPU2();	break;
@@ -784,6 +784,8 @@ void PluginManager::Open()
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		g_plugins->Open( pi->id );
+		
+	cdvdDetectDisk();
 }
 
 void PluginManager::Close( PluginsEnum_t pid )
@@ -802,6 +804,11 @@ void PluginManager::Close( PluginsEnum_t pid )
 			safe_delete( mtgsThread );
 			return;
 		}
+	}
+	else if( pid == PluginId_CDVD )
+	{
+		DoCDVDclose();
+		return;
 	}
 
 	m_info[pid].IsOpened = false;
@@ -900,6 +907,11 @@ void PluginManager::Freeze( SaveState& state )
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		Freeze( pi->id, state );
+}
+
+void PluginManager::Configure( PluginsEnum_t pid )
+{
+	m_info[pid].CommonBindings.Configure();
 }
 
 // Creates an instance of a plugin manager, using the specified plugin filenames for sources.

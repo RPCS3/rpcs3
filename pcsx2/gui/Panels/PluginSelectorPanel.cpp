@@ -368,9 +368,8 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes.Get(pid).GetClientData(sel)] );
 	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
 	{
-		wxGetTopLevelParent( this )->Disable();
+		ScopedWindowDisable disabler( wxGetTopLevelParent( this ) );
 		configfunc();
-		wxGetTopLevelParent( this )->Enable();
 	}
 }
 

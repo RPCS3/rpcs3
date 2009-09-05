@@ -29,7 +29,6 @@
 
 #include "CDVDisoReader.h"
 
-static char isoFileName[g_MaxPath];
 static u8 *pbuffer;
 static u8 cdbuffer[2352] = {0};
 static isoFile *iso = NULL;
@@ -46,13 +45,16 @@ s32 CALLBACK ISOopen(const char* pTitle)
 {
 	ISOclose();		// just in case
 
-	if ((pTitle != NULL) && (strlen(pTitle) > 0))
-		strcpy(isoFileName, pTitle);
+	if( (pTitle == NULL) || (pTitle[0] == 0) )
+	{
+		Console::Error( "CDVDiso Error: No filename specified." );
+		return -1;
+	}
 
-	iso = isoOpen(isoFileName);
+	iso = isoOpen(pTitle);
 	if (iso == NULL)
 	{
-		Console::Error("Error loading %s\n", params isoFileName);
+		Console::Error( "CDVDiso Error: Failed loading  %s", params pTitle );
 		return -1;
 	}
 
@@ -399,11 +401,6 @@ void CALLBACK ISOnewDiskCB(void(CALLBACK*)())
 {
 }
 
-wxString ISOgetUniqueFilename()
-{
-	return Path::GetFilenameWithoutExt(wxString::FromAscii(isoFileName));
-}
-
 CDVD_API CDVDapi_Iso =
 {
 	ISOclose,
@@ -425,6 +422,4 @@ CDVD_API CDVDapi_Iso =
 	ISOreadSector,
 	ISOgetBuffer2,
 	ISOgetDualInfo,
-
-	ISOgetUniqueFilename
 };
