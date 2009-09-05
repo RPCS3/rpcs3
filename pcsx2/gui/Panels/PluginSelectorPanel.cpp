@@ -287,7 +287,7 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 
 void Panels::PluginSelectorPanel::CancelRefresh()
 {
-	safe_delete( m_EnumeratorThread );
+	if (!DisableThreading) safe_delete( m_EnumeratorThread );
 	safe_delete( m_FileList );
 }
 
@@ -295,7 +295,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 {
 	// Disable all controls until enumeration is complete.
 	// Show status bar for plugin enumeration.
-	
+
 	// fixme: the status bar doesn't always fit itself to the window correctly because
 	// sometimes this gets called before the parent window has been fully created.  I'm
 	// not quite sure how to fix (a delayed event/message might work tho implementing it
@@ -307,7 +307,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	m_StatusPanel.Show();
 
 	// Use a thread to load plugins.
-	safe_delete( m_EnumeratorThread );
+	if (!DisableThreading) safe_delete( m_EnumeratorThread );
 	m_EnumeratorThread = new EnumThread( *this );
 
 	if( DisableThreading )
@@ -363,7 +363,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 {
-	safe_delete( m_EnumeratorThread );
+	if (!DisableThreading) safe_delete( m_EnumeratorThread );
 
 	// fixme: Default plugins should be picked based on the timestamp of the DLL or something?
 	//  (for now we just force it to selection zero if nothing's selected)

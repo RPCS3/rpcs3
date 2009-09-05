@@ -106,9 +106,13 @@
 		<Linker>
 			<Add option="-Xlinker -zmuldefs" />
 		</Linker>
-		<Unit filename="../../common/include/Pcsx2Config.h" />
-		<Unit filename="../../common/include/Pcsx2Defs.h" />
-		<Unit filename="../../common/include/Pcsx2Types.h" />
+		<Unit filename="../../common/include/PS2Edefs.h" />
+		<Unit filename="../../common/include/PS2Etypes.h" />
+		<Unit filename="../../common/include/Pcsx2Api.h" />
+ 		<Unit filename="../../common/include/Pcsx2Config.h" />
+ 		<Unit filename="../../common/include/Pcsx2Defs.h" />
+ 		<Unit filename="../../common/include/Pcsx2Types.h" />
+		<Unit filename="../../common/include/PluginCallbacks.h" />
 		<Unit filename="../../common/include/wx/folderdesc.txt" />
 		<Unit filename="../../common/include/wx/scopedarray.h" />
 		<Unit filename="../../common/include/wx/scopedptr.h" />

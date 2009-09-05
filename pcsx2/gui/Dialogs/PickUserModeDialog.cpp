@@ -46,7 +46,7 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 
 void Dialogs::PickUserModeDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	if( Panels::g_ApplyState.ApplyAll() )
+	if( Panels::g_ApplyState.ApplyAll(true) )
 	{
 		Close();
 		evt.Skip();
