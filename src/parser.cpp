@@ -46,14 +46,14 @@ namespace YAML
 			return;
 
 		// first eat doc start (optional)
-		if(m_pScanner->peek().type == TT_DOC_START)
+		if(m_pScanner->peek().type == Token::DOC_START)
 			m_pScanner->pop();
 
 		// now parse our root node
 		document.Parse(m_pScanner, m_state);
 
 		// and finally eat any doc ends we see
-		while(!m_pScanner->empty() && m_pScanner->peek().type == TT_DOC_END)
+		while(!m_pScanner->empty() && m_pScanner->peek().type == Token::DOC_END)
 			m_pScanner->pop();
 
 		// clear anchors from the scanner, which are no longer relevant
@@ -71,7 +71,7 @@ namespace YAML
 				break;
 
 			Token& token = m_pScanner->peek();
-			if(token.type != TT_DIRECTIVE)
+			if(token.type != Token::DIRECTIVE)
 				break;
 
 			// we keep the directives from the last document if none are specified;

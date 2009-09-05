@@ -88,15 +88,15 @@ namespace YAML
 
 		// now split based on what kind of node we should be
 		switch(pScanner->peek().type) {
-			case TT_SCALAR:
+			case Token::SCALAR:
 				m_pContent = new Scalar;
 				break;
-			case TT_FLOW_SEQ_START:
-			case TT_BLOCK_SEQ_START:
+			case Token::FLOW_SEQ_START:
+			case Token::BLOCK_SEQ_START:
 				m_pContent = new Sequence;
 				break;
-			case TT_FLOW_MAP_START:
-			case TT_BLOCK_MAP_START:
+			case Token::FLOW_MAP_START:
+			case Token::BLOCK_MAP_START:
 				m_pContent = new Map;
 				break;
 			default:
@@ -124,9 +124,9 @@ namespace YAML
 				return;
 
 			switch(pScanner->peek().type) {
-				case TT_TAG: ParseTag(pScanner, state); break;
-				case TT_ANCHOR: ParseAnchor(pScanner, state); break;
-				case TT_ALIAS: ParseAlias(pScanner, state); break;
+				case Token::TAG: ParseTag(pScanner, state); break;
+				case Token::ANCHOR: ParseAnchor(pScanner, state); break;
+				case Token::ALIAS: ParseAlias(pScanner, state); break;
 				default: return;
 			}
 		}

@@ -14,17 +14,17 @@ namespace YAML
 	void Scanner::SimpleKey::Validate()
 	{
 		if(pMapStart)
-			pMapStart->status = TS_VALID;
+			pMapStart->status = Token::VALID;
 		if(pKey)
-			pKey->status = TS_VALID;
+			pKey->status = Token::VALID;
 	}
 
 	void Scanner::SimpleKey::Invalidate()
 	{
 		if(pMapStart)
-			pMapStart->status = TS_INVALID;
+			pMapStart->status = Token::INVALID;
 		if(pKey)
-			pKey->status = TS_INVALID;
+			pKey->status = Token::INVALID;
 	}
 
 	// InsertSimpleKey
@@ -37,12 +37,12 @@ namespace YAML
 		// first add a map start, if necessary
 		key.pMapStart = PushIndentTo(INPUT.column(), IndentMarker::MAP);
 		if(key.pMapStart)
-			key.pMapStart->status = TS_UNVERIFIED;
+			key.pMapStart->status = Token::UNVERIFIED;
 
 		// then add the (now unverified) key
-		m_tokens.push(Token(TT_KEY, INPUT.mark()));
+		m_tokens.push(Token(Token::KEY, INPUT.mark()));
 		key.pKey = &m_tokens.back();
-		key.pKey->status = TS_UNVERIFIED;
+		key.pKey->status = Token::UNVERIFIED;
 
 		m_simpleKeys.push(key);
 	}

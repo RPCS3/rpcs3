@@ -50,7 +50,7 @@ namespace YAML
 			params.push_back(param);
 		}
 		
-		Token token(TT_DIRECTIVE, mark);
+		Token token(Token::DIRECTIVE, mark);
 		token.value = name;
 		token.params = params;
 		m_tokens.push(token);
@@ -66,7 +66,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		INPUT.eat(3);
-		m_tokens.push(Token(TT_DOC_START, mark));
+		m_tokens.push(Token(Token::DOC_START, mark));
 	}
 
 	// DocEnd
@@ -79,7 +79,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		INPUT.eat(3);
-		m_tokens.push(Token(TT_DOC_END, mark));
+		m_tokens.push(Token(Token::DOC_END, mark));
 	}
 
 	// FlowStart
@@ -93,7 +93,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		char ch = INPUT.get();
-		TOKEN_TYPE type = (ch == Keys::FlowSeqStart ? TT_FLOW_SEQ_START : TT_FLOW_MAP_START);
+		Token::TYPE type = (ch == Keys::FlowSeqStart ? Token::FLOW_SEQ_START : Token::FLOW_MAP_START);
 		m_tokens.push(Token(type, mark));
 	}
 
@@ -109,7 +109,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		char ch = INPUT.get();
-		TOKEN_TYPE type = (ch == Keys::FlowSeqEnd ? TT_FLOW_SEQ_END : TT_FLOW_MAP_END);
+		Token::TYPE type = (ch == Keys::FlowSeqEnd ? Token::FLOW_SEQ_END : Token::FLOW_MAP_END);
 		m_tokens.push(Token(type, mark));
 	}
 
@@ -121,7 +121,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		INPUT.eat(1);
-		m_tokens.push(Token(TT_FLOW_ENTRY, mark));
+		m_tokens.push(Token(Token::FLOW_ENTRY, mark));
 	}
 
 	// BlockEntry
@@ -141,7 +141,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		INPUT.eat(1);
-		m_tokens.push(Token(TT_BLOCK_ENTRY, mark));
+		m_tokens.push(Token(Token::BLOCK_ENTRY, mark));
 	}
 
 	// Key
@@ -164,7 +164,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		INPUT.eat(1);
-		m_tokens.push(Token(TT_KEY, mark));
+		m_tokens.push(Token(Token::KEY, mark));
 	}
 
 	// Value
@@ -199,7 +199,7 @@ namespace YAML
 		// eat
 		Mark mark = INPUT.mark();
 		INPUT.eat(1);
-		m_tokens.push(Token(TT_VALUE, mark));
+		m_tokens.push(Token(Token::VALUE, mark));
 	}
 
 	// AnchorOrAlias
@@ -231,7 +231,7 @@ namespace YAML
 			throw ParserException(INPUT.mark(), alias ? ErrorMsg::CHAR_IN_ALIAS : ErrorMsg::CHAR_IN_ANCHOR);
 
 		// and we're done
-		Token token(alias ? TT_ALIAS : TT_ANCHOR, mark);
+		Token token(alias ? Token::ALIAS : Token::ANCHOR, mark);
 		token.value = name;
 		m_tokens.push(token);
 	}
@@ -268,7 +268,7 @@ namespace YAML
 			handle = "!";
 		}
 
-		Token token(TT_TAG, mark);
+		Token token(Token::TAG, mark);
 		token.value = handle;
 		token.params.push_back(suffix);
 		m_tokens.push(token);
@@ -305,7 +305,7 @@ namespace YAML
 		//if(Exp::IllegalCharInScalar.Matches(INPUT))
 		//	throw ParserException(INPUT.mark(), ErrorMsg::CHAR_IN_SCALAR);
 
-		Token token(TT_SCALAR, mark);
+		Token token(Token::SCALAR, mark);
 		token.value = scalar;
 		m_tokens.push(token);
 	}
@@ -344,7 +344,7 @@ namespace YAML
 		scalar = ScanScalar(INPUT, params);
 		m_simpleKeyAllowed = false;
 
-		Token token(TT_SCALAR, mark);
+		Token token(Token::SCALAR, mark);
 		token.value = scalar;
 		m_tokens.push(token);
 	}
@@ -409,7 +409,7 @@ namespace YAML
 		// simple keys always ok after block scalars (since we're gonna start a new line anyways)
 		m_simpleKeyAllowed = true;
 
-		Token token(TT_SCALAR, mark);
+		Token token(Token::SCALAR, mark);
 		token.value = scalar;
 		m_tokens.push(token);
 	}

@@ -66,8 +66,8 @@ namespace YAML
 
 		// split based on start token
 		switch(pScanner->peek().type) {
-			case TT_BLOCK_SEQ_START: ParseBlock(pScanner, state); break;
-			case TT_FLOW_SEQ_START: ParseFlow(pScanner, state); break;
+			case Token::BLOCK_SEQ_START: ParseBlock(pScanner, state); break;
+			case Token::FLOW_SEQ_START: ParseFlow(pScanner, state); break;
 			default: break;
 		}
 	}
@@ -82,11 +82,11 @@ namespace YAML
 				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ);
 
 			Token token = pScanner->peek();
-			if(token.type != TT_BLOCK_ENTRY && token.type != TT_BLOCK_SEQ_END)
+			if(token.type != Token::BLOCK_ENTRY && token.type != Token::BLOCK_SEQ_END)
 				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ);
 
 			pScanner->pop();
-			if(token.type == TT_BLOCK_SEQ_END)
+			if(token.type == Token::BLOCK_SEQ_END)
 				break;
 
 			Node *pNode = new Node;
@@ -95,7 +95,7 @@ namespace YAML
 			// check for null
 			if(!pScanner->empty()) {
 				const Token& token = pScanner->peek();
-				if(token.type == TT_BLOCK_ENTRY || token.type == TT_BLOCK_SEQ_END)
+				if(token.type == Token::BLOCK_ENTRY || token.type == Token::BLOCK_SEQ_END)
 					continue;
 			}
 			
@@ -113,7 +113,7 @@ namespace YAML
 				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ_FLOW);
 
 			// first check for end
-			if(pScanner->peek().type == TT_FLOW_SEQ_END) {
+			if(pScanner->peek().type == Token::FLOW_SEQ_END) {
 				pScanner->pop();
 				break;
 			}
@@ -125,9 +125,9 @@ namespace YAML
 
 			// now eat the separator (or could be a sequence end, which we ignore - but if it's neither, then it's a bad node)
 			Token& token = pScanner->peek();
-			if(token.type == TT_FLOW_ENTRY)
+			if(token.type == Token::FLOW_ENTRY)
 				pScanner->pop();
-			else if(token.type != TT_FLOW_SEQ_END)
+			else if(token.type != Token::FLOW_SEQ_END)
 				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ_FLOW);
 		}
 	}

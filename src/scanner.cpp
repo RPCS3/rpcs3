@@ -31,7 +31,7 @@ namespace YAML
 		EnsureTokensInQueue();
 		if(!m_tokens.empty()) {
 			// Saved anchors shouldn't survive popping the document end marker
-			if (m_tokens.front().type == TT_DOC_END) {
+			if (m_tokens.front().type == Token::DOC_END) {
 				ClearAnchors();
 			}
 			m_tokens.pop();
@@ -60,11 +60,11 @@ namespace YAML
 				Token& token = m_tokens.front();
 
 				// if this guy's valid, then we're done
-				if(token.status == TS_VALID)
+				if(token.status == Token::VALID)
 					return;
 
 				// here's where we clean up the impossible tokens
-				if(token.status == TS_INVALID) {
+				if(token.status == Token::INVALID) {
 					m_tokens.pop();
 					continue;
 				}
@@ -263,9 +263,9 @@ namespace YAML
 		// now push
 		m_indents.push(indent);
 		if(type == IndentMarker::SEQ)
-			m_tokens.push(Token(TT_BLOCK_SEQ_START, INPUT.mark()));
+			m_tokens.push(Token(Token::BLOCK_SEQ_START, INPUT.mark()));
 		else if(type == IndentMarker::MAP)
-			m_tokens.push(Token(TT_BLOCK_MAP_START, INPUT.mark()));
+			m_tokens.push(Token(Token::BLOCK_MAP_START, INPUT.mark()));
 		else
 			assert(false);
 
@@ -319,9 +319,9 @@ namespace YAML
 		IndentMarker::INDENT_TYPE type = m_indents.top().type;
 		m_indents.pop();
 		if(type == IndentMarker::SEQ)
-			m_tokens.push(Token(TT_BLOCK_SEQ_END, INPUT.mark()));
+			m_tokens.push(Token(Token::BLOCK_SEQ_END, INPUT.mark()));
 		else if(type == IndentMarker::MAP)
-			m_tokens.push(Token(TT_BLOCK_MAP_END, INPUT.mark()));
+			m_tokens.push(Token(Token::BLOCK_MAP_END, INPUT.mark()));
 	}
 
 	// GetTopIndent
