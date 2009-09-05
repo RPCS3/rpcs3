@@ -43,6 +43,8 @@ namespace YAML
 			bool isValid;
 			Token *pStartToken;
 		};
+		
+		enum FLOW_MARKER { FLOW_MAP, FLOW_SEQ };
 	
 	private:	
 		// scanning
@@ -51,6 +53,11 @@ namespace YAML
 		void ScanToNextToken();
 		void StartStream();
 		void EndStream();
+		
+		bool InFlowContext() const { return !m_flows.empty(); }
+		bool InBlockContext() const { return m_flows.empty(); }
+		int GetFlowLevel() const { return m_flows.size(); }
+		
 		IndentMarker *PushIndentTo(int column, IndentMarker::INDENT_TYPE type);
 		void PopIndentToHere();
 		void PopAllIndents();
@@ -58,6 +65,7 @@ namespace YAML
 		int GetTopIndent() const;
 
 		// checking input
+		bool CanInsertPotentialSimpleKey() const;
 		bool ExistsActiveSimpleKey() const;
 		void InsertPotentialSimpleKey();
 		void InvalidateSimpleKey();
@@ -109,10 +117,9 @@ namespace YAML
 		// state info
 		bool m_startedStream, m_endedStream;
 		bool m_simpleKeyAllowed;
-		int m_flowLevel;                // number of unclosed '[' and '{' indicators
-		bool m_isLastKeyValid;
 		std::stack <SimpleKey> m_simpleKeys;
 		std::stack <IndentMarker> m_indents;
+		std::stack <FLOW_MARKER> m_flows;
 		std::map <std::string, const Node *> m_anchors;
 	};
 }

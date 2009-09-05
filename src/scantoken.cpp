@@ -87,36 +87,50 @@ namespace YAML
 	{
 		// flows can be simple keys
 		InsertPotentialSimpleKey();
-		m_flowLevel++;
 		m_simpleKeyAllowed = true;
 
 		// eat
 		Mark mark = INPUT.mark();
 		char ch = INPUT.get();
-		Token::TYPE type = (ch == Keys::FlowSeqStart ? Token::FLOW_SEQ_START : Token::FLOW_MAP_START);
+		FLOW_MARKER flowType = (ch == Keys::FlowSeqStart ? FLOW_SEQ : FLOW_MAP);
+		m_flows.push(flowType);
+		Token::TYPE type = (flowType == FLOW_SEQ ? Token::FLOW_SEQ_START : Token::FLOW_MAP_START);
 		m_tokens.push(Token(type, mark));
 	}
 
 	// FlowEnd
 	void Scanner::ScanFlowEnd()
 	{
-		if(m_flowLevel == 0)
+		if(InBlockContext())
 			throw ParserException(INPUT.mark(), ErrorMsg::FLOW_END);
 
-		InvalidateSimpleKey();
-		m_flowLevel--;
+		// we might have a solo entry in the flow context
+		if(VerifySimpleKey())
+			m_tokens.push(Token(Token::VALUE, INPUT.mark()));
+
 		m_simpleKeyAllowed = false;
 
 		// eat
 		Mark mark = INPUT.mark();
 		char ch = INPUT.get();
-		Token::TYPE type = (ch == Keys::FlowSeqEnd ? Token::FLOW_SEQ_END : Token::FLOW_MAP_END);
+
+		// check that it matches the start
+		FLOW_MARKER flowType = (ch == Keys::FlowSeqEnd ? FLOW_SEQ : FLOW_MAP);
+		if(m_flows.top() != flowType)
+			throw ParserException(mark, ErrorMsg::FLOW_END);
+		m_flows.pop();
+		
+		Token::TYPE type = (flowType ? Token::FLOW_SEQ_END : Token::FLOW_MAP_END);
 		m_tokens.push(Token(type, mark));
 	}
 
 	// FlowEntry
 	void Scanner::ScanFlowEntry()
 	{
+		 // we might have a solo entry in the flow context
+		if(VerifySimpleKey())
+			m_tokens.push(Token(Token::VALUE, INPUT.mark()));
+		
 		m_simpleKeyAllowed = true;
 
 		// eat
@@ -129,7 +143,7 @@ namespace YAML
 	void Scanner::ScanBlockEntry()
 	{
 		// we better be in the block context!
-		if(m_flowLevel > 0)
+		if(InFlowContext())
 			throw ParserException(INPUT.mark(), ErrorMsg::BLOCK_ENTRY);
 
 		// can we put it here?
@@ -149,7 +163,7 @@ namespace YAML
 	void Scanner::ScanKey()
 	{
 		// handle keys diffently in the block context (and manage indents)
-		if(m_flowLevel == 0) {
+		if(InBlockContext()) {
 			if(!m_simpleKeyAllowed)
 				throw ParserException(INPUT.mark(), ErrorMsg::MAP_KEY);
 
@@ -157,10 +171,7 @@ namespace YAML
 		}
 
 		// can only put a simple key here if we're in block context
-		if(m_flowLevel == 0)
-			m_simpleKeyAllowed = true;
-		else
-			m_simpleKeyAllowed = false;
+		m_simpleKeyAllowed = InBlockContext();
 
 		// eat
 		Mark mark = INPUT.mark();
@@ -182,7 +193,7 @@ namespace YAML
 			m_simpleKeyAllowed = false;
 		} else {
 			// handle values diffently in the block context (and manage indents)
-			if(m_flowLevel == 0) {
+			if(InBlockContext()) {
 				if(!m_simpleKeyAllowed)
 					throw ParserException(INPUT.mark(), ErrorMsg::MAP_VALUE);
 
@@ -190,7 +201,7 @@ namespace YAML
 			}
 
 			// can only put a simple key here if we're in block context
-			m_simpleKeyAllowed = (m_flowLevel == 0);
+			m_simpleKeyAllowed = InBlockContext();
 		}
 
 		// eat
@@ -206,8 +217,7 @@ namespace YAML
 		std::string name;
 
 		// insert a potential simple key
-		if(m_simpleKeyAllowed)
-			InsertPotentialSimpleKey();
+		InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
@@ -239,8 +249,7 @@ namespace YAML
 		std::string handle, suffix;
 
 		// insert a potential simple key
-		if(m_simpleKeyAllowed)
-			InsertPotentialSimpleKey();
+		InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
@@ -278,9 +287,9 @@ namespace YAML
 
 		// set up the scanning parameters
 		ScanScalarParams params;
-		params.end = (m_flowLevel > 0 ? Exp::EndScalarInFlow : Exp::EndScalar) || (Exp::BlankOrBreak + Exp::Comment);
+		params.end = (InFlowContext() ? Exp::EndScalarInFlow : Exp::EndScalar) || (Exp::BlankOrBreak + Exp::Comment);
 		params.eatEnd = false;
-		params.indent = (m_flowLevel > 0 ? 0 : GetTopIndent() + 1);
+		params.indent = (InFlowContext() ? 0 : GetTopIndent() + 1);
 		params.fold = true;
 		params.eatLeadingWhitespace = true;
 		params.trimTrailingSpaces = true;
@@ -289,8 +298,7 @@ namespace YAML
 		params.onTabInIndentation = THROW;
 
 		// insert a potential simple key
-		if(m_simpleKeyAllowed)
-			InsertPotentialSimpleKey();
+		InsertPotentialSimpleKey();
 
 		Mark mark = INPUT.mark();
 		scalar = ScanScalar(INPUT, params);
@@ -329,8 +337,7 @@ namespace YAML
 		params.onDocIndicator = THROW;
 
 		// insert a potential simple key
-		if(m_simpleKeyAllowed)
-			InsertPotentialSimpleKey();
+		InsertPotentialSimpleKey();
 
 		Mark mark = INPUT.mark();
 

@@ -35,6 +35,8 @@ namespace Test {
 		bool FlowMap();
 		bool FlowMapWithOmittedKey();
 		bool FlowMapWithOmittedValue();
+		bool FlowMapWithSoloEntry();
+		bool FlowMapEndingWithSoloEntry();
 		bool QuotedSimpleKeys();
 		bool CompressedMapAndSeq();
 		bool NullBlockSeqEntry();

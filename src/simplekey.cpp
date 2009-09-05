@@ -31,6 +31,18 @@ namespace YAML
 		if(pKey)
 			pKey->status = Token::INVALID;
 	}
+	
+	// CanInsertPotentialSimpleKey
+	bool Scanner::CanInsertPotentialSimpleKey() const
+	{
+		if(!m_simpleKeyAllowed)
+			return false;
+		
+		if(InFlowContext() && m_flows.top() != FLOW_MAP)
+			return false;
+
+		return !ExistsActiveSimpleKey();
+	}
 
 	// ExistsActiveSimpleKey
 	// . Returns true if there's a potential simple key at our flow level
@@ -41,7 +53,7 @@ namespace YAML
 			return false;
 		
 		const SimpleKey& key = m_simpleKeys.top();
-		return key.flowLevel == m_flowLevel;
+		return key.flowLevel == GetFlowLevel();
 	}
 
 	// InsertPotentialSimpleKey
@@ -49,10 +61,10 @@ namespace YAML
 	//   and save it on a stack.
 	void Scanner::InsertPotentialSimpleKey()
 	{
-		if(ExistsActiveSimpleKey())
+		if(!CanInsertPotentialSimpleKey())
 			return;
 		
-		SimpleKey key(INPUT.mark(), m_flowLevel);
+		SimpleKey key(INPUT.mark(), GetFlowLevel());
 
 		// first add a map start, if necessary
 		key.pIndent = PushIndentTo(INPUT.column(), IndentMarker::MAP);
@@ -79,7 +91,7 @@ namespace YAML
 		
 		// grab top key
 		SimpleKey& key = m_simpleKeys.top();
-		if(key.flowLevel != m_flowLevel)
+		if(key.flowLevel != GetFlowLevel())
 			return;
 		
 		key.Invalidate();
@@ -91,28 +103,21 @@ namespace YAML
 	//   and if so, makes it valid.
 	bool Scanner::VerifySimpleKey()
 	{
-		m_isLastKeyValid = false;
 		if(m_simpleKeys.empty())
-			return m_isLastKeyValid;
+			return false;
 
 		// grab top key
 		SimpleKey key = m_simpleKeys.top();
 
 		// only validate if we're in the correct flow level
-		if(key.flowLevel != m_flowLevel)
+		if(key.flowLevel != GetFlowLevel())
 			return false;
 
 		m_simpleKeys.pop();
 
 		bool isValid = true;
 
-		// needs to be followed immediately by a value
-		if(m_flowLevel > 0 && !Exp::ValueInFlow.Matches(INPUT))
-			isValid = false;
-		if(m_flowLevel == 0 && !Exp::Value.Matches(INPUT))
-			isValid = false;
-
-		// also needs to be less than 1024 characters and inline
+		// needs to be less than 1024 characters and inline
 		if(INPUT.line() != key.mark.line || INPUT.pos() - key.mark.pos > 1024)
 			isValid = false;
 
@@ -122,7 +127,6 @@ namespace YAML
 		else
 			key.Invalidate();
 
-		m_isLastKeyValid = isValid;
 		return isValid;
 	}
 

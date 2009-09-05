@@ -268,6 +268,8 @@ namespace Test
 		RunParserTest(&Parser::FlowMap, "flow map", passed);
 		RunParserTest(&Parser::FlowMapWithOmittedKey, "flow map with omitted key", passed);
 		RunParserTest(&Parser::FlowMapWithOmittedValue, "flow map with omitted value", passed);
+		RunParserTest(&Parser::FlowMapWithSoloEntry, "flow map with solo entry", passed);
+		RunParserTest(&Parser::FlowMapEndingWithSoloEntry, "flow map ending with solo entry", passed);
 		RunParserTest(&Parser::QuotedSimpleKeys, "quoted simple keys", passed);
 		RunParserTest(&Parser::CompressedMapAndSeq, "compressed map and seq", passed);
 		RunParserTest(&Parser::NullBlockSeqEntry, "null block seq entry", passed);

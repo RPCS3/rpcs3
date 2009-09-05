@@ -235,7 +235,7 @@ namespace Test
 			
 			return true;
 		}
-
+		
 		bool FlowMapWithOmittedValue()
 		{
 			std::string input = "{a: b, c:, d:}";
@@ -256,6 +256,45 @@ namespace Test
 			return true;
 		}
 
+		bool FlowMapWithSoloEntry()
+		{
+			std::string input = "{a: b, c, d: e}";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::string output;
+			doc["a"] >> output;
+			if(output != "b")
+				return false;
+			if(!IsNull(doc["c"]))
+				return false;
+			doc["d"] >> output;
+			if(output != "e")
+				return false;
+			
+			return true;
+		}
+		
+		bool FlowMapEndingWithSoloEntry()
+		{
+			std::string input = "{a: b, c}";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::string output;
+			doc["a"] >> output;
+			if(output != "b")
+				return false;
+			if(!IsNull(doc["c"]))
+				return false;
+			
+			return true;
+		}
+		
 		bool QuotedSimpleKeys()
 		{
 			std::string KeyValue[3] = { "\"double\": double\n", "'single': single\n", "plain: plain\n" };

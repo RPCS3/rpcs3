@@ -8,7 +8,7 @@
 namespace YAML
 {
 	Scanner::Scanner(std::istream& in)
-		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false), m_flowLevel(0)
+		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false)
 	{
 	}
 
@@ -136,10 +136,10 @@ namespace YAML
 		if(Exp::BlockEntry.Matches(INPUT))
 			return ScanBlockEntry();
 
-		if((m_flowLevel == 0 ? Exp::Key : Exp::KeyInFlow).Matches(INPUT))
+		if((InBlockContext() ? Exp::Key : Exp::KeyInFlow).Matches(INPUT))
 			return ScanKey();
 
-		if((m_flowLevel == 0 ? Exp::Value : Exp::ValueInFlow).Matches(INPUT))
+		if((InBlockContext() ? Exp::Value : Exp::ValueInFlow).Matches(INPUT))
 			return ScanValue();
 
 		// alias/anchor
@@ -151,14 +151,14 @@ namespace YAML
 			return ScanTag();
 
 		// special scalars
-		if(m_flowLevel == 0 && (INPUT.peek() == Keys::LiteralScalar || INPUT.peek() == Keys::FoldedScalar))
+		if(InBlockContext() && (INPUT.peek() == Keys::LiteralScalar || INPUT.peek() == Keys::FoldedScalar))
 			return ScanBlockScalar();
 
 		if(INPUT.peek() == '\'' || INPUT.peek() == '\"')
 			return ScanQuotedScalar();
 
 		// plain scalars
-		if((m_flowLevel == 0 ? Exp::PlainScalar : Exp::PlainScalarInFlow).Matches(INPUT))
+		if((InBlockContext() ? Exp::PlainScalar : Exp::PlainScalarInFlow).Matches(INPUT))
 			return ScanPlainScalar();
 
 		// don't know what it is!
@@ -193,7 +193,7 @@ namespace YAML
 			InvalidateSimpleKey();
 
 			// new line - we may be able to accept a simple key now
-			if(m_flowLevel == 0)
+			if(InBlockContext())
 				m_simpleKeyAllowed = true;
         }
 	}
@@ -213,7 +213,7 @@ namespace YAML
 		if(ch == ' ')
 			return true;
 
-		if(ch == '\t' && (m_flowLevel >= 0 || !m_simpleKeyAllowed))
+		if(ch == '\t' && (InFlowContext() || !m_simpleKeyAllowed))
 			return true;
 
 		return false;
@@ -251,7 +251,7 @@ namespace YAML
 	Scanner::IndentMarker *Scanner::PushIndentTo(int column, IndentMarker::INDENT_TYPE type)
 	{
 		// are we in flow?
-		if(m_flowLevel > 0)
+		if(InFlowContext())
 			return 0;
 		
 		IndentMarker indent(column, type);
@@ -283,7 +283,7 @@ namespace YAML
 	void Scanner::PopIndentToHere()
 	{
 		// are we in flow?
-		if(m_flowLevel > 0)
+		if(InFlowContext())
 			return;
 
 		// now pop away
@@ -304,7 +304,7 @@ namespace YAML
 	void Scanner::PopAllIndents()
 	{
 		// are we in flow?
-		if(m_flowLevel > 0)
+		if(InFlowContext())
 			return;
 
 		// now pop away
