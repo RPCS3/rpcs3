@@ -406,8 +406,6 @@ namespace Panels
 			virtual ~EnumThread();
 			EnumThread( PluginSelectorPanel& master );
 			void Cancel();
-
-		protected:
 			sptr ExecuteTask();
 		};
 		

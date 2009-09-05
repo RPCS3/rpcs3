@@ -25,6 +25,9 @@
 #include <wx/dynlib.h>
 #include <wx/dir.h>
 
+// Allows us to force-disable threading for debugging/troubleshooting
+static const bool DisableThreading = true;
+
 using namespace wxHelpers;
 using namespace Threading;
 
@@ -306,9 +309,17 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	// Use a thread to load plugins.
 	safe_delete( m_EnumeratorThread );
 	m_EnumeratorThread = new EnumThread( *this );
-	m_EnumeratorThread->Start();
 
-	m_ComponentBoxes.Reset();
+	if( DisableThreading )
+	{
+		m_ComponentBoxes.Reset();
+		m_EnumeratorThread->ExecuteTask();
+	}
+	else
+	{
+		m_EnumeratorThread->Start();
+		m_ComponentBoxes.Reset();
+	}
 }
 
 bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
