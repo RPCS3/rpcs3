@@ -112,17 +112,16 @@ private:
 			WAVEFORMATEXTENSIBLE wfx;
 
 			memset(&wfx, 0, sizeof(WAVEFORMATEXTENSIBLE)); 
-			wfx.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-			wfx.Format.nSamplesPerSec = SampleRate;
-			wfx.Format.nChannels = m_nChannels;
-			wfx.Format.wBitsPerSample = 16;
-			wfx.Format.nBlockAlign = wfx.Format.nChannels*wfx.Format.wBitsPerSample/8;
-			wfx.Format.nAvgBytesPerSec = SampleRate * wfx.Format.nBlockAlign;
-			wfx.Format.cbSize=22;
-			wfx.Samples.wValidBitsPerSample=0;
-			//wfx.dwChannelMask=SPEAKER_FRONT_LEFT|SPEAKER_FRONT_RIGHT|SPEAKER_FRONT_CENTER|SPEAKER_LOW_FREQUENCY|SPEAKER_BACK_LEFT|SPEAKER_BACK_RIGHT;
-			wfx.dwChannelMask=chanConfig;
-			wfx.SubFormat=KSDATAFORMAT_SUBTYPE_PCM;
+			wfx.Format.wFormatTag		= WAVE_FORMAT_EXTENSIBLE;
+			wfx.Format.nSamplesPerSec	= SampleRate;
+			wfx.Format.nChannels		= m_nChannels;
+			wfx.Format.wBitsPerSample	= 16;
+			wfx.Format.nBlockAlign		= wfx.Format.nChannels*wfx.Format.wBitsPerSample/8;
+			wfx.Format.nAvgBytesPerSec	= SampleRate * wfx.Format.nBlockAlign;
+			wfx.Format.cbSize			= 22;
+			wfx.Samples.wValidBitsPerSample = 0;
+			wfx.dwChannelMask			= chanConfig;
+			wfx.SubFormat				= KSDATAFORMAT_SUBTYPE_PCM;
 
 			//
 			// Create an XAudio2 voice to stream this wave
@@ -192,12 +191,12 @@ private:
 			int chanMask = 0;
 			switch(m_nChannels)
 			{
-			case 1: chanMask |= SPEAKER_FRONT_CENTER; break;
-			case 2: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT; break;
-			case 3: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_LOW_FREQUENCY; break;
-			case 4: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
-			case 5: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
-			case 6: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT | SPEAKER_LOW_FREQUENCY; break;
+				case 1: chanMask |= SPEAKER_FRONT_CENTER; break;
+				case 2: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT; break;
+				case 3: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_LOW_FREQUENCY; break;
+				case 4: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
+				case 5: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
+				case 6: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT | SPEAKER_LOW_FREQUENCY; break;
 			}
 			_init( pXAudio2, chanMask );
 		}
