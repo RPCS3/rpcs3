@@ -95,12 +95,12 @@ namespace YAML
 		// get rid of whitespace, etc. (in between tokens it should be irrelevent)
 		ScanToNextToken();
 
-		// check the latest simple key
-		VerifySimpleKey();
-
 		// maybe need to end some blocks
 		PopIndentToHere();
 
+		// check the latest simple key
+		VerifySimpleKey();
+		
 		// *****
 		// And now branch based on the next few characters!
 		// *****
@@ -244,8 +244,8 @@ namespace YAML
 	// PushIndentTo
 	// . Pushes an indentation onto the stack, and enqueues the
 	//   proper token (sequence start or mapping start).
-	// . Returns the token it generates (if any).
-	Token *Scanner::PushIndentTo(int column, IndentMarker::INDENT_TYPE type)
+	// . Returns the indent marker it generates (if any).
+	Scanner::IndentMarker *Scanner::PushIndentTo(int column, IndentMarker::INDENT_TYPE type)
 	{
 		// are we in flow?
 		if(m_flowLevel > 0)
@@ -260,16 +260,18 @@ namespace YAML
 		if(indent.column == lastIndent.column && !(indent.type == IndentMarker::SEQ && lastIndent.type == IndentMarker::MAP))
 			return 0;
 
-		// now push
-		m_indents.push(indent);
+		// push a start token
 		if(type == IndentMarker::SEQ)
 			m_tokens.push(Token(Token::BLOCK_SEQ_START, INPUT.mark()));
 		else if(type == IndentMarker::MAP)
 			m_tokens.push(Token(Token::BLOCK_MAP_START, INPUT.mark()));
 		else
 			assert(false);
+		indent.pStartToken = &m_tokens.back();
 
-		return &m_tokens.back();
+		// and then the indent
+		m_indents.push(indent);
+		return &m_indents.top();
 	}
 
 	// PopIndentToHere
@@ -316,8 +318,12 @@ namespace YAML
 	// . Pops a single indent, pushing the proper token
 	void Scanner::PopIndent()
 	{
-		IndentMarker::INDENT_TYPE type = m_indents.top().type;
+		IndentMarker indent = m_indents.top();
+		IndentMarker::INDENT_TYPE type = indent.type;
 		m_indents.pop();
+		if(!indent.isValid)
+			return;
+		
 		if(type == IndentMarker::SEQ)
 			m_tokens.push(Token(Token::BLOCK_SEQ_END, INPUT.mark()));
 		else if(type == IndentMarker::MAP)

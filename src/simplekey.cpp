@@ -7,12 +7,15 @@
 namespace YAML
 {
 	Scanner::SimpleKey::SimpleKey(const Mark& mark_, int flowLevel_)
-		: mark(mark_), flowLevel(flowLevel_), pMapStart(0), pKey(0)
+		: mark(mark_), flowLevel(flowLevel_), pIndent(0), pMapStart(0), pKey(0)
 	{
 	}
 
 	void Scanner::SimpleKey::Validate()
 	{
+		// Note: pIndent will *not* be garbage here; see below
+		if(pIndent)
+			pIndent->isValid = true;
 		if(pMapStart)
 			pMapStart->status = Token::VALID;
 		if(pKey)
@@ -21,6 +24,8 @@ namespace YAML
 
 	void Scanner::SimpleKey::Invalidate()
 	{
+		// Note: pIndent might be a garbage pointer here, but that's ok
+		//       An indent will only be popped if the simple key is invalid
 		if(pMapStart)
 			pMapStart->status = Token::INVALID;
 		if(pKey)
@@ -35,9 +40,12 @@ namespace YAML
 		SimpleKey key(INPUT.mark(), m_flowLevel);
 
 		// first add a map start, if necessary
-		key.pMapStart = PushIndentTo(INPUT.column(), IndentMarker::MAP);
-		if(key.pMapStart)
+		key.pIndent = PushIndentTo(INPUT.column(), IndentMarker::MAP);
+		if(key.pIndent) {
+			key.pIndent->isValid = false;
+			key.pMapStart = key.pIndent->pStartToken;
 			key.pMapStart->status = Token::UNVERIFIED;
+		}
 
 		// then add the (now unverified) key
 		m_tokens.push(Token(Token::KEY, INPUT.mark()));
@@ -86,13 +94,6 @@ namespace YAML
 			key.Validate();
 		else
 			key.Invalidate();
-
-		// In block style, remember that we've pushed an indent for this potential simple key (if it was starting).
-		// If it was invalid, then we need to pop it off.
-		// Note: we're guaranteed to be popping the right one (i.e., there couldn't have been anything in
-		//       between) since keys have to be inline, and will be invalidated immediately on a newline.
-		if(!isValid && m_flowLevel == 0)
-			m_indents.pop();
 
 		m_isLastKeyValid = isValid;
 		return isValid;

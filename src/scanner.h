@@ -36,10 +36,12 @@ namespace YAML
 	private:
 		struct IndentMarker {
 			enum INDENT_TYPE { MAP, SEQ, NONE };
-			IndentMarker(int column_, INDENT_TYPE type_): column(column_), type(type_) {}
+			IndentMarker(int column_, INDENT_TYPE type_): column(column_), type(type_), isValid(true), pStartToken(0) {}
 		
 			int column;
 			INDENT_TYPE type;
+			bool isValid;
+			Token *pStartToken;
 		};
 	
 	private:	
@@ -49,7 +51,7 @@ namespace YAML
 		void ScanToNextToken();
 		void StartStream();
 		void EndStream();
-		Token *PushIndentTo(int column, IndentMarker::INDENT_TYPE type);
+		IndentMarker *PushIndentTo(int column, IndentMarker::INDENT_TYPE type);
 		void PopIndentToHere();
 		void PopAllIndents();
 		void PopIndent();
@@ -71,6 +73,7 @@ namespace YAML
 			
 			Mark mark;
 			int flowLevel;
+			IndentMarker *pIndent;
 			Token *pMapStart, *pKey;
 		};
 
