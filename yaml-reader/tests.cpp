@@ -275,6 +275,8 @@ namespace Test
 		RunParserTest(&Parser::NullBlockMapValue, "null block map value", passed);
 		RunParserTest(&Parser::SimpleAlias, "simple alias", passed);
 		RunParserTest(&Parser::AliasWithNull, "alias with null", passed);
+		RunParserTest(&Parser::AnchorInSimpleKey, "anchor in simple key", passed);
+		RunParserTest(&Parser::AliasAsSimpleKey, "alias as simple key", passed);
 		RunParserTest(&Parser::ExplicitDoc, "explicit doc", passed);
 		RunParserTest(&Parser::MultipleDocs, "multiple docs", passed);
 		RunParserTest(&Parser::ExplicitEndDoc, "explicit end doc", passed);

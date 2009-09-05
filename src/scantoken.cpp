@@ -20,7 +20,7 @@ namespace YAML
 
 		// pop indents and simple keys
 		PopAllIndents();
-		VerifyAllSimpleKeys();
+		PopAllSimpleKeys();
 
 		m_simpleKeyAllowed = false;
 
@@ -60,7 +60,7 @@ namespace YAML
 	void Scanner::ScanDocStart()
 	{
 		PopAllIndents();
-		VerifyAllSimpleKeys();
+		PopAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -73,7 +73,7 @@ namespace YAML
 	void Scanner::ScanDocEnd()
 	{
 		PopAllIndents();
-		VerifyAllSimpleKeys();
+		PopAllSimpleKeys();
 		m_simpleKeyAllowed = false;
 
 		// eat
@@ -86,7 +86,7 @@ namespace YAML
 	void Scanner::ScanFlowStart()
 	{
 		// flows can be simple keys
-		InsertSimpleKey();
+		InsertPotentialSimpleKey();
 		m_flowLevel++;
 		m_simpleKeyAllowed = true;
 
@@ -103,6 +103,7 @@ namespace YAML
 		if(m_flowLevel == 0)
 			throw ParserException(INPUT.mark(), ErrorMsg::FLOW_END);
 
+		InvalidateSimpleKey();
 		m_flowLevel--;
 		m_simpleKeyAllowed = false;
 
@@ -170,8 +171,13 @@ namespace YAML
 	// Value
 	void Scanner::ScanValue()
 	{
-		// does this follow a simple key?
-		if(m_isLastKeyValid) {
+		// just in case we have an empty key
+		InsertPotentialSimpleKey();
+		
+		// and check that simple key
+		bool isSimpleKey = VerifySimpleKey();
+		
+		if(isSimpleKey) {
 			// can't follow a simple key with another simple key (dunno why, though - it seems fine)
 			m_simpleKeyAllowed = false;
 		} else {
@@ -181,19 +187,10 @@ namespace YAML
 					throw ParserException(INPUT.mark(), ErrorMsg::MAP_VALUE);
 
 				PushIndentTo(INPUT.column(), IndentMarker::MAP);
-			} else {
-				// we might have an empty key, so we should add it (as a simple key)
-				if(m_simpleKeyAllowed) {
-					InsertSimpleKey();
-					VerifySimpleKey();
-				}
 			}
 
 			// can only put a simple key here if we're in block context
-			if(m_flowLevel == 0)
-				m_simpleKeyAllowed = true;
-			else
-				m_simpleKeyAllowed = false;
+			m_simpleKeyAllowed = (m_flowLevel == 0);
 		}
 
 		// eat
@@ -210,7 +207,7 @@ namespace YAML
 
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
-			InsertSimpleKey();
+			InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
@@ -243,7 +240,7 @@ namespace YAML
 
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
-			InsertSimpleKey();
+			InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = false;
 
 		// eat the indicator
@@ -293,7 +290,7 @@ namespace YAML
 
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
-			InsertSimpleKey();
+			InsertPotentialSimpleKey();
 
 		Mark mark = INPUT.mark();
 		scalar = ScanScalar(INPUT, params);
@@ -333,7 +330,7 @@ namespace YAML
 
 		// insert a potential simple key
 		if(m_simpleKeyAllowed)
-			InsertSimpleKey();
+			InsertPotentialSimpleKey();
 
 		Mark mark = INPUT.mark();
 

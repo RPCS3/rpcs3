@@ -46,7 +46,13 @@ namespace YAML
 		assert(!m_tokens.empty());  // should we be asserting here? I mean, we really just be checking
 		                            // if it's empty before peeking.
 
-//		std::cerr << "peek: (" << &m_tokens.front() << ") " << m_tokens.front() << "\n";
+#if 0
+		static Token *pLast = 0;
+		if(pLast != &m_tokens.front())
+			std::cerr << "peek: " << m_tokens.front() << "\n";
+		pLast = &m_tokens.front();
+#endif
+
 		return m_tokens.front();
 	}
 
@@ -98,9 +104,6 @@ namespace YAML
 		// maybe need to end some blocks
 		PopIndentToHere();
 
-		// check the latest simple key
-		VerifySimpleKey();
-		
 		// *****
 		// And now branch based on the next few characters!
 		// *****
@@ -187,7 +190,7 @@ namespace YAML
 			INPUT.eat(n);
 
 			// oh yeah, and let's get rid of that simple key
-			VerifySimpleKey();
+			InvalidateSimpleKey();
 
 			// new line - we may be able to accept a simple key now
 			if(m_flowLevel == 0)
@@ -235,7 +238,7 @@ namespace YAML
 			INPUT.ResetColumn();
 
 		PopAllIndents();
-		VerifyAllSimpleKeys();
+		PopAllSimpleKeys();
 
 		m_simpleKeyAllowed = false;
 		m_endedStream = true;
@@ -321,8 +324,10 @@ namespace YAML
 		IndentMarker indent = m_indents.top();
 		IndentMarker::INDENT_TYPE type = indent.type;
 		m_indents.pop();
-		if(!indent.isValid)
+		if(!indent.isValid) {
+			InvalidateSimpleKey();
 			return;
+		}
 		
 		if(type == IndentMarker::SEQ)
 			m_tokens.push(Token(Token::BLOCK_SEQ_END, INPUT.mark()));

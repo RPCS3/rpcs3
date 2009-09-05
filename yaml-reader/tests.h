@@ -42,6 +42,8 @@ namespace Test {
 		bool NullBlockMapValue();
 		bool SimpleAlias();
 		bool AliasWithNull();
+		bool AnchorInSimpleKey();
+		bool AliasAsSimpleKey();
 		bool ExplicitDoc();
 		bool MultipleDocs();
 		bool ExplicitEndDoc();

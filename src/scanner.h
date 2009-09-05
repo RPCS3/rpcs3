@@ -58,9 +58,12 @@ namespace YAML
 		int GetTopIndent() const;
 
 		// checking input
-		void InsertSimpleKey();
-		bool VerifySimpleKey(bool force = false);
-		void VerifyAllSimpleKeys();
+		bool ExistsActiveSimpleKey() const;
+		void InsertPotentialSimpleKey();
+		void InvalidateSimpleKey();
+		bool VerifySimpleKey();
+		void PopAllSimpleKeys();
+		
 		void ThrowParserException(const std::string& msg) const;
 
 		bool IsWhitespaceToBeEaten(char ch);

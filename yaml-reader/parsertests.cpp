@@ -407,6 +407,54 @@ namespace Test
 			return true;
 		}
 
+		bool AnchorInSimpleKey()
+		{
+			std::string input = "- &a b: c\n- *a";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			if(doc.size() != 2)
+				return false;
+	
+			std::string output;
+			doc[0]["b"] >> output;
+			if(output != "c")
+				return false;
+			
+			doc[1] >> output;
+			if(output != "b")
+				return false;
+			
+			return true;
+		}
+		
+		bool AliasAsSimpleKey()
+		{
+			std::string input = "- &a b\n- *a: c";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+
+			if(doc.size() != 2)
+				return false;
+			
+			std::string output;
+			doc[0] >> output;
+			if(output != "b")
+				return false;
+			
+			doc[1]["b"] >> output;
+			if(output != "c")
+				return false;
+
+			return true;
+		}
+		
 		bool ExplicitDoc()
 		{
 			std::string input = "---\n- one\n- two";

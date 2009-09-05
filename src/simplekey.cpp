@@ -32,11 +32,26 @@ namespace YAML
 			pKey->status = Token::INVALID;
 	}
 
-	// InsertSimpleKey
-	// . Adds a potential simple key to the queue,
-	//   and saves it on a stack.
-	void Scanner::InsertSimpleKey()
+	// ExistsActiveSimpleKey
+	// . Returns true if there's a potential simple key at our flow level
+	//   (there's allowed at most one per flow level, i.e., at the start of the flow start token)
+	bool Scanner::ExistsActiveSimpleKey() const
 	{
+		if(m_simpleKeys.empty())
+			return false;
+		
+		const SimpleKey& key = m_simpleKeys.top();
+		return key.flowLevel == m_flowLevel;
+	}
+
+	// InsertPotentialSimpleKey
+	// . If we can, add a potential simple key to the queue,
+	//   and save it on a stack.
+	void Scanner::InsertPotentialSimpleKey()
+	{
+		if(ExistsActiveSimpleKey())
+			return;
+		
 		SimpleKey key(INPUT.mark(), m_flowLevel);
 
 		// first add a map start, if necessary
@@ -55,11 +70,26 @@ namespace YAML
 		m_simpleKeys.push(key);
 	}
 
+	// InvalidateSimpleKey
+	// . Automatically invalidate the simple key in our flow level
+	void Scanner::InvalidateSimpleKey()
+	{
+		if(m_simpleKeys.empty())
+			return;
+		
+		// grab top key
+		SimpleKey& key = m_simpleKeys.top();
+		if(key.flowLevel != m_flowLevel)
+			return;
+		
+		key.Invalidate();
+		m_simpleKeys.pop();
+	}
+
 	// VerifySimpleKey
 	// . Determines whether the latest simple key to be added is valid,
 	//   and if so, makes it valid.
-	// . If 'force' is true, then we'll pop no matter what (whether we can verify it or not).
-	bool Scanner::VerifySimpleKey(bool force)
+	bool Scanner::VerifySimpleKey()
 	{
 		m_isLastKeyValid = false;
 		if(m_simpleKeys.empty())
@@ -69,11 +99,8 @@ namespace YAML
 		SimpleKey key = m_simpleKeys.top();
 
 		// only validate if we're in the correct flow level
-		if(key.flowLevel != m_flowLevel) {
-			if(force)
-				m_simpleKeys.pop();
+		if(key.flowLevel != m_flowLevel)
 			return false;
-		}
 
 		m_simpleKeys.pop();
 
@@ -99,11 +126,9 @@ namespace YAML
 		return isValid;
 	}
 
-	// VerifyAllSimplyKeys
-	// . Pops all simple keys (with checking, but if we can't verify one, then pop it anyways).
-	void Scanner::VerifyAllSimpleKeys()
+	void Scanner::PopAllSimpleKeys()
 	{
 		while(!m_simpleKeys.empty())
-			VerifySimpleKey(true);
+			m_simpleKeys.pop();
 	}
 }
