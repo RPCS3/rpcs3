@@ -10,15 +10,6 @@ namespace YAML
 {
 	// implementation of templated things
 	template <typename T>
-	inline bool Node::Read(T& value) const {
-		std::string scalar;
-		if(!GetScalar(scalar))
-			return false;
-		
-		return Convert(scalar, value);
-	}
-	
-	template <typename T>
 	inline const T Node::Read() const {
 		T value;
 		*this >> value;
@@ -32,7 +23,7 @@ namespace YAML
 
 	template <typename T>
 	inline void operator >> (const Node& node, T& value) {
-		if(!node.Read(value))
+		if(!ConvertScalar(node, value))
 			throw InvalidScalar(node.m_mark);
 	}
 	

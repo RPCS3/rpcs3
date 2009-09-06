@@ -10,36 +10,34 @@
 
 namespace YAML
 {
-	template <typename T>
-	struct Converter {
-		static bool Convert(const std::string& input, T& output);
-	};
-
-	template <typename T>
-	bool Convert(const std::string& input, T& output) {
-		return Converter<T>::Convert(input, output);
-	}
-	
-	// this is the one to specialize
-	template <typename T>
-	inline bool Converter<T>::Convert(const std::string& input, T& output) {
-		std::stringstream stream(input);
-		stream >> output;
-		return !stream.fail();
-	}
-
-	// specializations
-	template <>
-	inline bool Converter<std::string>::Convert(const std::string& input, std::string& output) {
+	inline bool Convert(const std::string& input, std::string& output) {
 		output = input;
 		return true;
 	}
-
-	template <>
-	bool Converter<bool>::Convert(const std::string& input, bool& output);
 	
-	template <>
-	bool Converter<_Null>::Convert(const std::string& input, _Null& output);
+	bool Convert(const std::string& input, bool& output);
+	bool Convert(const std::string& input, _Null& output);
+	
+#define YAML_MAKE_STREAM_CONVERT(type) \
+	inline bool Convert(const std::string& input, type& output) { \
+		std::stringstream stream(input); \
+		stream >> output; \
+		return !stream.fail(); \
+	}
+	
+	YAML_MAKE_STREAM_CONVERT(char)
+	YAML_MAKE_STREAM_CONVERT(unsigned char)
+	YAML_MAKE_STREAM_CONVERT(int)
+	YAML_MAKE_STREAM_CONVERT(unsigned int)
+	YAML_MAKE_STREAM_CONVERT(short)
+	YAML_MAKE_STREAM_CONVERT(unsigned short)
+	YAML_MAKE_STREAM_CONVERT(long)
+	YAML_MAKE_STREAM_CONVERT(unsigned long)
+	YAML_MAKE_STREAM_CONVERT(float)
+	YAML_MAKE_STREAM_CONVERT(double)
+	YAML_MAKE_STREAM_CONVERT(long double)
+	
+#undef YAML_MAKE_STREAM_CONVERT
 }
 
 #endif // CONVERSION_H_62B23520_7C8E_11DE_8A39_0800200C9A66

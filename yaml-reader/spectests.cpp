@@ -290,7 +290,49 @@ namespace Test {
 			YAML_ASSERT(doc["rbi"][0] == "Sammy Sosa");
 			YAML_ASSERT(doc["rbi"][1] == "Ken Griffey");
 			return true;
-		}		
+		}
+		
+		struct Pair {
+			Pair() {}
+			Pair(const std::string& f, const std::string& s): first(f), second(s) {}
+			std::string first, second;
+		};
+		
+		bool operator == (const Pair& p, const Pair& q) {
+			return p.first == q.first && p.second == q.second;
+		}
+		
+		void operator >> (const YAML::Node& node, Pair& p) {
+			node[0] >> p.first;
+			node[1] >> p.second;
+		}
+		
+		TEST MappingBetweenSequences()
+		{
+			std::string input =
+				"? - Detroit Tigers\n"
+				"  - Chicago cubs\n"
+				":\n"
+				"  - 2001-07-23\n"
+				"\n"
+				"? [ New York Yankees,\n"
+				"    Atlanta Braves ]\n"
+				": [ 2001-07-02, 2001-08-12,\n"
+				"    2001-08-14 ]";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago Cubs")].size() == 1);
+			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago Cubs")][0] == "2001-07-23");
+			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")].size() == 3);
+			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][0] == "2001-07-02");
+			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][1] == "2001-08-12");
+			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][2] == "2001-08-14");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -306,6 +348,7 @@ namespace Test {
 		RunSpecTest(&Spec::PlayByPlayFeed, "2.8", "Play by Play Feed from a Game", passed);
 		RunSpecTest(&Spec::SingleDocumentWithTwoComments, "2.9", "Single Document with Two Comments", passed);
 		RunSpecTest(&Spec::SimpleAnchor, "2.10", "Node for \"Sammy Sosa\" appears twice in this document", passed);
+		RunSpecTest(&Spec::MappingBetweenSequences, "2.11", "Mapping between Sequences", passed);
 		return passed;
 	}
 	

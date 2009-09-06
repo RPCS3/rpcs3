@@ -49,8 +49,7 @@ namespace
 
 namespace YAML
 {
-	template <>
-	bool Converter<bool>::Convert(const std::string& input, bool& b)
+	bool Convert(const std::string& input, bool& b)
 	{
 		// we can't use iostream bool extraction operators as they don't
 		// recognize all possible values in the table below (taken from
@@ -82,8 +81,7 @@ namespace YAML
 		return false;
 	}
 	
-	template <>
-	bool Converter<_Null>::Convert(const std::string& input, _Null& /*output*/)
+	bool Convert(const std::string& input, _Null& /*output*/)
 	{
 		return input.empty() || input == "~" || input == "null" || input == "Null" || input == "NULL";
 	}
