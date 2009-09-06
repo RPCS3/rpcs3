@@ -191,22 +191,12 @@ void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
 {
    int id = event.GetId() - MenuId_State_Load01 - 1;
-   if (id == -1) // Bad, I know. If I figure out why Load Other... gets connected here, I'll remove it.
-   {
-       Menu_LoadStateOther_Click(event);
-       return;
-   }
    Console::WriteLn("If this were hooked up, it would load slot %d.", params id);
 }
 
 void MainEmuFrame::Menu_SaveStates_Click(wxCommandEvent &event)
 {
    int id = event.GetId() - MenuId_State_Save01 - 1;
-   if (id == -1)
-   {
-       Menu_SaveStateOther_Click(event);
-       return;
-   }
    Console::WriteLn("If this were hooked up, it would save slot %d.", params id);
 }
 

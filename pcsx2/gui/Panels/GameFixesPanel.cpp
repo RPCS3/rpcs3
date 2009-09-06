@@ -63,27 +63,14 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 
 }
 
-// There's a better way to do this. This was quicker to hack in, though, and can always be replaced later.
-static void set_game_fix(int num, bool status)
-{
-    switch (num)
-    {
-        case 0: EmuConfig.Gamefixes.VuAddSubHack = status; break;
-        case 1: EmuConfig.Gamefixes.VuClipFlagHack = status; break;
-        case 2: EmuConfig.Gamefixes.FpuCompareHack = status; break;
-        case 3: EmuConfig.Gamefixes.FpuMulHack = status; break;
-        case 4: EmuConfig.Gamefixes.DMAExeHack = status; break;
-        case 5: EmuConfig.Gamefixes.XgKickHack = status; break;
-        case 6: EmuConfig.Gamefixes.MpegHack = status; break;
-        default: break;
-    }
-    return;
-}
-
+// I could still probably get rid of the for loop, but I think this is clearer.
 void Panels::GameFixesPanel::Apply( AppConfig& conf )
 {
     for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
     {
-        set_game_fix(i, game_fix_checkbox[i]->GetValue());
+        if (game_fix_checkbox[i]->GetValue())
+            EmuConfig.Gamefixes.bitset |= ( 1 << i);
+        else
+            EmuConfig.Gamefixes.bitset &= ~( 1 << i);
     }
 }

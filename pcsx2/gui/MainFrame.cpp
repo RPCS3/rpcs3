@@ -173,17 +173,18 @@ void MainEmuFrame::ConnectMenus()
 	#define ConnectMenu( id, handler ) \
 		Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
+
+	#define ConnectMenuRange( id_start, inc, handler ) \
+		Connect( id_start, id_start + inc, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
+
 	ConnectMenu( MenuId_Config_Settings,	Menu_ConfigSettings_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
 
-	Connect( wxID_FILE1, wxID_FILE1+20, wxEVT_COMMAND_MENU_SELECTED,
-		wxCommandEventHandler(MainEmuFrame::Menu_IsoRecent_Click) );
+    ConnectMenuRange(wxID_FILE1, 20, Menu_IsoRecent_Click);
 
-	Connect( MenuId_Config_GS, MenuId_Config_GS+PluginId_Count, wxEVT_COMMAND_MENU_SELECTED,
-		wxCommandEventHandler(MainEmuFrame::Menu_ConfigPlugin_Click) );
+    ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_IsoRecent_Click);
 
-	Connect( MenuId_Src_Iso, MenuId_Src_Iso+3, wxEVT_COMMAND_MENU_SELECTED,
-		wxCommandEventHandler(MainEmuFrame::Menu_CdvdSource_Click) );
+    ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
 
 	ConnectMenu( MenuId_Boot_CDVD,			Menu_BootCdvd_Click );
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
@@ -196,15 +197,11 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
 
-	for (int i = MenuId_State_Load01 + 1; i <= (MenuId_State_Load01 + 10); i++)
-        ConnectMenu(i, Menu_LoadStates_Click);
+    ConnectMenuRange(MenuId_State_Load01+1, 10, Menu_LoadStates_Click);
 
 	ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
 
-	for (int i = MenuId_State_Save01 + 1; i <= (MenuId_State_Save01 + 10); i++)
-        ConnectMenu(i, Menu_SaveStates_Click);
-
-	ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
+    ConnectMenuRange(MenuId_State_Save01+1, 10, Menu_SaveStates_Click);
 
 	ConnectMenu( MenuId_Debug_Open,			Menu_Debug_Open_Click );
 	ConnectMenu( MenuId_Debug_MemoryDump,	Menu_Debug_MemoryDump_Click );
