@@ -26,6 +26,11 @@ namespace YAML
 	}
 	
 	template <typename T>
+	Node::operator T() const {
+		return Read<T>();
+	}
+
+	template <typename T>
 	inline void operator >> (const Node& node, T& value) {
 		if(!node.Read(value))
 			throw InvalidScalar(node.m_mark);
@@ -80,6 +85,43 @@ namespace YAML
 	inline const Node& Node::operator [] (const char *key) const {
 		return GetValue(std::string(key));
 	}
+
+	template <typename T>
+	inline bool operator == (const T& value, const Node& node) {
+		return value == node.Read<T>();
+	}
+	
+	template <typename T>
+	inline bool operator == (const Node& node, const T& value) {
+		return value == node.Read<T>();
+	}
+	
+	template <typename T>
+	inline bool operator != (const T& value, const Node& node) {
+		return value != node.Read<T>();
+	}
+	
+	template <typename T>
+	inline bool operator != (const Node& node, const T& value) {
+		return value != node.Read<T>();
+	}
+
+	inline bool operator == (const char *value, const Node& node) {
+		return std::string(value) == node;
+	}
+	
+	inline bool operator == (const Node& node, const char *value) {
+		return std::string(value) == node;
+	}
+	
+	inline bool operator != (const char *value, const Node& node) {
+		return std::string(value) != node;
+	}
+	
+	inline bool operator != (const Node& node, const char *value) {
+		return std::string(value) != node;
+	}
+	
 }
 
 #endif // NODEIMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66

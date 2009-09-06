@@ -26,6 +26,7 @@ namespace YAML
 
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
 		virtual bool GetEnd(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
+		virtual std::size_t GetSize() const;
 		virtual void Parse(Scanner *pScanner, const ParserState& state);
 		virtual void Write(Emitter& out) const;
 

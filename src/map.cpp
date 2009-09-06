@@ -53,6 +53,11 @@ namespace YAML
 		return true;
 	}
 
+	std::size_t Map::GetSize() const
+	{
+		return m_data.size();
+	}
+
 	void Map::Parse(Scanner *pScanner, const ParserState& state)
 	{
 		Clear();

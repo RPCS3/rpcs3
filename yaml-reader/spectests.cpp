@@ -5,6 +5,8 @@
 #include <vector>
 #include <iostream>
 
+#define YAML_ASSERT(cond) do { if(!(cond)) return false; } while(false)
+
 namespace Test {
 	namespace {
 		void RunSpecTest(bool (*test)(), const std::string& index, const std::string& name, bool& passed) {
@@ -34,23 +36,14 @@ namespace Test {
 				"- Sammy Sosa\n"
 				"- Ken Griffey";
 			std::stringstream stream(input);
-			
 			YAML::Parser parser(stream);
 			YAML::Node doc;
 			parser.GetNextDocument(doc);
 			
-			if(doc.size() != 3)
-				return false;
-			std::string output;
-			doc[0] >> output;
-			if(output != "Mark McGwire")
-				return false;
-			doc[1] >> output;
-			if(output != "Sammy Sosa")
-				return false;
-			doc[2] >> output;
-			if(output != "Ken Griffey")
-				return false;
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0] == "Mark McGwire");
+			YAML_ASSERT(doc[1] == "Sammy Sosa");
+			YAML_ASSERT(doc[2] == "Ken Griffey");
 			return true;
 		}
 		
@@ -60,21 +53,14 @@ namespace Test {
 				"avg: 0.278 # Batting average\n"
 				"rbi: 147   # Runs Batted In";
 			std::stringstream stream(input);
-			
 			YAML::Parser parser(stream);
 			YAML::Node doc;
 			parser.GetNextDocument(doc);
 
-			std::string output;
-			doc["hr"] >> output;
-			if(output != "65")
-				return false;
-			doc["avg"] >> output;
-			if(output != "0.278")
-				return false;
-			doc["rbi"] >> output;
-			if(output != "147")
-				return false;
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["hr"] == "65");
+			YAML_ASSERT(doc["avg"] == "0.278");
+			YAML_ASSERT(doc["rbi"] == "147");
 			return true;
 		}
 	}
