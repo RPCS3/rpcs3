@@ -91,9 +91,8 @@ enum MenuIdentifiers
 	MenuId_Config_SPU2,
 	MenuId_Config_CDVD,
 	MenuId_Config_USB,
-	MenuId_Config_FW,
-	MenuId_Config_DEV9,
 	MenuId_Config_FireWire,
+	MenuId_Config_DEV9,
 	MenuId_Config_Patches,
 
 	// Video Subsection
