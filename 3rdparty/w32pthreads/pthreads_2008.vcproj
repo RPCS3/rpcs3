@@ -82,7 +82,6 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdpartyDLL.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
 			CharacterSet="2"
