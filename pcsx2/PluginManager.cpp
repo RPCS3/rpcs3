@@ -266,6 +266,9 @@ static const LegacyApi_OptMethod s_MethMessOpt_GS[] =
 // ----------------------------------------------------------------------------
 //  PAD Mess!
 // ----------------------------------------------------------------------------
+static s32 CALLBACK PAD_queryMtap( u8 slot ) { return 0; }
+static s32 CALLBACK PAD_setSlot(u8 port, u8 slot) { return 0; }
+
 static const LegacyApi_ReqMethod s_MethMessReq_PAD[] =
 {
 	{	"PADopen",			(vMeth**)&PADopen,		NULL },
@@ -277,8 +280,8 @@ static const LegacyApi_ReqMethod s_MethMessReq_PAD[] =
 	// fixme - Following functions are new as of some revison post-0.9.6, and
 	// are for multitap support only.  They should either be optional or offer
 	// NOP fallbacks, to allow older plugins to retain functionality.
-	{	"PADsetSlot",		(vMeth**)&PADsetSlot,	NULL },
-	{	"PADqueryMtap",		(vMeth**)&PADqueryMtap,	NULL },
+	{	"PADsetSlot",		(vMeth**)&PADsetSlot,	(vMeth*)PAD_setSlot },
+	{	"PADqueryMtap",		(vMeth**)&PADqueryMtap,	(vMeth*)PAD_queryMtap },
 	{ NULL },
 };
 
@@ -419,7 +422,6 @@ static const LegacyApi_ReqMethod s_MethMessReq_SPU2[] =
 	{	"SPU2writeDMA7Mem",		(vMeth**)&SPU2writeDMA7Mem,	NULL },
 	{	"SPU2interruptDMA4",	(vMeth**)&SPU2interruptDMA4,NULL },
 	{	"SPU2interruptDMA7",	(vMeth**)&SPU2interruptDMA7,NULL },
-	{	"SPU2setDMABaseAddr",	(vMeth**)&SPU2setDMABaseAddr,NULL },
 	{	"SPU2ReadMemAddr",		(vMeth**)&SPU2ReadMemAddr,	NULL },
 	{	"SPU2irqCallback",		(vMeth**)&SPU2irqCallback,	NULL },
 
@@ -431,6 +433,7 @@ static const LegacyApi_OptMethod s_MethMessOpt_SPU2[] =
 	{	"SPU2setClockPtr",		(vMeth**)&SPU2setClockPtr	},
 	{	"SPU2async",			(vMeth**)&SPU2async			},
 	{	"SPU2WriteMemAddr",		(vMeth**)&SPU2WriteMemAddr	},
+	{	"SPU2setDMABaseAddr",	(vMeth**)&SPU2setDMABaseAddr},
 	{	"SPU2setupRecording",	(vMeth**)&SPU2setupRecording},
 
 	{ NULL }
@@ -634,7 +637,9 @@ void PluginManager::BindCommon( PluginsEnum_t pid )
 		if( *target == NULL )
 		{
 			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
-				wxLt( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
+				wxsFormat( L"\nMethod binding failure on: %s\n", current->GetMethodName( pid ).c_str() ),
+				_( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." )
+			);
 		}
 
 		target++;
@@ -659,7 +664,9 @@ void PluginManager::BindRequired( PluginsEnum_t pid )
 		if( *(current->Dest) == NULL )
 		{
 			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
-				wxLt( "Configured plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2." ) );
+				wxsFormat( L"\nMethod binding failure on: %s\n", current->GetMethodName().c_str() ),
+				_( "Configured plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2." )
+			);
 		}
 
 		current++;
@@ -705,7 +712,7 @@ static bool OpenPlugin_GS()
 	}
 
 	if( !mtgsThread->IsSelf() ) return true;	// already opened?
-	
+
 	return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
 
 	// Note: renderswitch is us abusing the isMultiThread parameter for that so
@@ -784,7 +791,7 @@ void PluginManager::Open()
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		g_plugins->Open( pi->id );
-		
+
 	cdvdDetectDisk();
 }
 

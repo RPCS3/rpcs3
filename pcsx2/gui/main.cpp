@@ -85,7 +85,7 @@ sptr AppEmuThread::ExecuteTask()
 			GetPluginManager().Close();
 			bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
 				_("\n\nPress Ok to go to the BIOS Configuration Panel.") );
-		
+
 			if( result )
 			{
 				wxGetApp().PostMenuAction( MenuId_Config_BIOS );
@@ -95,7 +95,7 @@ sptr AppEmuThread::ExecuteTask()
 		else
 		{
 			// Probably a plugin.  Find out which one!
-			
+
 			const PluginInfo* pi = tbl_PluginInfo-1;
 			while( ++pi, pi->shortname != NULL )
 			{
@@ -107,7 +107,7 @@ sptr AppEmuThread::ExecuteTask()
 			{
 				bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
 					_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
-					
+
 				if( result )
 				{
 					g_Conf->SettingsTabName = L"Plugins";
@@ -126,7 +126,7 @@ sptr AppEmuThread::ExecuteTask()
 		GetPluginManager().Close();
 		Msgbox::Alert( ex.FormatDisplayMessage() );
 	}
-	
+
 	return 0;
 }
 
@@ -189,7 +189,7 @@ void Pcsx2App::ReadUserModeSettings()
 
 		IniLoader loader( *conf_usermode );
 		g_Conf->LoadSaveUserMode( loader, groupname );
-		
+
 		if( !wxFile::Exists( g_Conf->FullPathToConfig() ) )
 		{
 			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
@@ -220,7 +220,7 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 
 	parser.AddOption( L"bootmode",	wxEmptyString,	L"0 - quick (default), 1 - bios, 2 - load elf", wxCMD_LINE_VAL_NUMBER );
 	parser.AddOption( wxEmptyString,L"cfg",			L"configuration file override", wxCMD_LINE_VAL_STRING );
-	
+
 	parser.AddSwitch( L"forcewiz",	wxEmptyString,	L"Forces PCSX2 to start the First-time Wizard" );
 
 	parser.AddOption( wxEmptyString, L"cdvd",		L"specify the CDVD plugin for this session only." );
@@ -369,6 +369,8 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	// ----------------------------------------------------------------------------
 	catch( Exception::PluginError& ex )
 	{
+		Console::Error( ex.FormatDiagnosticMessage() );
+		Msgbox::Alert( ex.FormatDisplayMessage() );
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::RuntimeError& ex )
