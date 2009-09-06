@@ -51,7 +51,7 @@ void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 		case MenuId_Src_Iso:	g_Conf->CdvdSource = CDVDsrc_Iso;		break;
 		case MenuId_Src_Plugin:	g_Conf->CdvdSource = CDVDsrc_Plugin;	break;
 		case MenuId_Src_NoDisc: g_Conf->CdvdSource = CDVDsrc_NoDisc;	break;
-		
+
 		jNO_DEFAULT
 	}
 	UpdateIsoSrcSelection();
@@ -119,7 +119,7 @@ void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 		SysResume();
 		return;
 	}
-	
+
 	SysEndExecution();
 
 	g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
@@ -148,7 +148,7 @@ void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 				// PS2 game.  Valid!
 				elf_file = ename;
 			break;
-			
+
 			jNO_DEFAULT
 		}
 	}
@@ -188,12 +188,36 @@ void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 {
 }
 
+void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
+{
+   int id = event.GetId() - MenuId_State_Load01 - 1;
+   if (id == -1) // Bad, I know. If I figure out why Load Other... gets connected here, I'll remove it.
+   {
+       Menu_LoadStateOther_Click(event);
+       return;
+   }
+   Console::WriteLn("If this were hooked up, it would load slot %d.", params id);
+}
+
+void MainEmuFrame::Menu_SaveStates_Click(wxCommandEvent &event)
+{
+   int id = event.GetId() - MenuId_State_Save01 - 1;
+   if (id == -1)
+   {
+       Menu_SaveStateOther_Click(event);
+       return;
+   }
+   Console::WriteLn("If this were hooked up, it would save slot %d.", params id);
+}
+
 void MainEmuFrame::Menu_LoadStateOther_Click(wxCommandEvent &event)
 {
+   Console::WriteLn("If this were hooked up, it would load a savestate file.");
 }
 
 void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
 {
+   Console::WriteLn("If this were hooked up, it would save a savestate file.");
 }
 
 void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)

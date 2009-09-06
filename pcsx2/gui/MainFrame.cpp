@@ -27,26 +27,16 @@
 #endif
 
 // ------------------------------------------------------------------------
-/*wxMenu* MainEmuFrame::MakeStatesMenu()
-{
-	wxMenu* mnuStates = new wxMenu();
-
-	mnuStates->Append( Menu_State_Load, _("Load"), &m_LoadStatesSubmenu, wxEmptyString );
-	mnuStates->Append( Menu_State_Save, _("Save"), &m_SaveStatesSubmenu, wxEmptyString );
-	return mnuStates;
-}*/
-
-// ------------------------------------------------------------------------
 wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 {
 	wxMenu* mnuSubstates = new wxMenu();
 
-	mnuSubstates->Append( baseid+1,	_("Slot 0") );
-	mnuSubstates->Append( baseid+2,	_("Slot 1") );
-	mnuSubstates->Append( baseid+3,	_("Slot 2") );
-	mnuSubstates->Append( baseid+4,	_("Slot 3") );
-	mnuSubstates->Append( baseid+5,	_("Slot 4") );
-	mnuSubstates->Append( baseid,	_("Other...") );
+    for (int i = 0; i < 10; i++)
+    {
+        mnuSubstates->Append( baseid+i+1, wxsFormat(L"Slot %d", i) );
+    }
+	mnuSubstates->AppendSeparator();
+	mnuSubstates->Append( baseid - 1,	_("Other...") );
 	return mnuSubstates;
 }
 
@@ -205,6 +195,15 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Emu_Reset,			Menu_EmuReset_Click );
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
+
+	for (int i = MenuId_State_Load01 + 1; i <= (MenuId_State_Load01 + 10); i++)
+        ConnectMenu(i, Menu_LoadStates_Click);
+
+	ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
+
+	for (int i = MenuId_State_Save01 + 1; i <= (MenuId_State_Save01 + 10); i++)
+        ConnectMenu(i, Menu_SaveStates_Click);
+
 	ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
 
 	ConnectMenu( MenuId_Debug_Open,			Menu_Debug_Open_Click );

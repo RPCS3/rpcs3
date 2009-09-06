@@ -29,7 +29,7 @@ class MainEmuFrame: public wxFrame
 	// ------------------------------------------------------------------------
 	//     MainEmuFrame Protected Variables
 	// ------------------------------------------------------------------------
-	
+
 protected:
 	wxFileHistory*	m_RecentIsoList;
     wxStatusBar&	m_statusbar;
@@ -66,7 +66,7 @@ public:
 	void UpdateIsoSrcFile();
 	void UpdateIsoSrcSelection();
 	void ApplySettings();
-	
+
 protected:
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
@@ -83,6 +83,8 @@ protected:
 	void Menu_BootCdvd_Click(wxCommandEvent &event);
 	void Menu_OpenELF_Click(wxCommandEvent &event);
 	void Menu_CdvdSource_Click(wxCommandEvent &event);
+	void Menu_LoadStates_Click(wxCommandEvent &event);
+	void Menu_SaveStates_Click(wxCommandEvent &event);
 	void Menu_LoadStateOther_Click(wxCommandEvent &event);
 	void Menu_SaveStateOther_Click(wxCommandEvent &event);
 	void Menu_Exit_Click(wxCommandEvent &event);
