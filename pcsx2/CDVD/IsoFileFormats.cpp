@@ -136,7 +136,7 @@ isoFile *isoOpen(const char *filename)
 	memset(iso, 0, sizeof(isoFile));
 	strcpy(iso->filename, filename);
 
-	iso->handle = _openfile(iso->filename, O_RDONLY);
+	iso->handle = _openfile( iso->filename, O_RDONLY);
 	if (iso->handle == NULL)
 	{
 		Console::Error("error loading %s", params iso->filename);

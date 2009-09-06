@@ -113,8 +113,8 @@ extern int g_ZeroGSOptions;
 extern u32 g_sseMXCSR;
 extern u32 g_sseVUMXCSR;
 
-void SetRoundMode(u32 ee, u32 vu);
-int LoadPatch(const std::string& patchfile);
+extern void SetRoundMode(u32 ee, u32 vu);
+extern int LoadPatch(const wxString& patchfile);
 
 #endif /* __PATCH_H__ */
 

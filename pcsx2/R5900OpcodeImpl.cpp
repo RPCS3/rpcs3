@@ -34,12 +34,12 @@ static __forceinline s64 _add64_Overflow( s64 x, s64 y )
 	// other method below is like 5-10 times slower).
 
 	if( ((~(x^y))&(x^result)) < 0 )
-		throw R5900Exception::Overflow();
+		cpuException(0x30, cpuRegs.branch);		// fixme: is 0x30 right for overflow??
 
 	// the not-as-fast style!
 	//if( ((x >= 0) && (y >= 0) && (result <  0)) ||
 	//	((x <  0) && (y <  0) && (result >= 0)) )
-	//	throw R5900Exception::Overflow();
+	//	cpuException(0x30, cpuRegs.branch);
 
 	return result;
 }
@@ -54,7 +54,7 @@ static __forceinline s64 _add32_Overflow( s32 x, s32 y )
 
 	// If bit32 != bit31 then we have an overflow.
 	if( (result.UL[0]>>31) != (result.UL[1] & 1) )
-		throw R5900Exception::Overflow();
+		cpuException(0x30, cpuRegs.branch);
 
 	return result.SD[0];
 }

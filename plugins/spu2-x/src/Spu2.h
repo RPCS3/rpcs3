@@ -16,7 +16,9 @@
 #pragma once
 
 #include "BaseTypes.h"
-#include "PS2Edefs.h"
+#include "Pcsx2Defs.h"
+
+#include "Utilities/Exceptions.h"
 
 #ifdef __LINUX__
 #include <stdio.h>

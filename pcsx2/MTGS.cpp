@@ -18,8 +18,9 @@
 
 #include "PrecompiledHeader.h"
 
-#include <vector>
 #include <list>
+
+#include <wx/datetime.h>
 
 #include "Common.h"
 #include "VU.h"
@@ -113,21 +114,7 @@ static void _mtgsFreezeGIF( SaveState& state, GIFPath (&paths)[3] )
 void SaveState::mtgsFreeze()
 {
 	FreezeTag( "mtgs" );
-
-	if( mtgsThread != NULL )
-	{
-		mtgsThread->Freeze( *this );
-	}
-	else
-	{
-		// save some zero'd dummy info...
-		// This isn't ideal, and it could lead to problems in very rare
-		// circumstances, but most of the time should be perfectly fine.
-
-		GIFPath path[3];
-		memzero_obj( path );
-		_mtgsFreezeGIF( *this, path );
-	}
+	mtgsThread->Freeze( *this );
 }
 
 
@@ -191,11 +178,11 @@ typedef void (*GIFRegHandler)(const u32* data);
 static GIFRegHandler s_GSHandlers[3] = { RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL };
 
 mtgsThreadObject::mtgsThreadObject() :
-	Thread()
+	PersistentThread()
 ,	m_RingPos( 0 )
 ,	m_WritePos( 0 )
 
-,	m_post_InitDone()
+,	m_sem_InitDone()
 ,	m_lock_RingRestart()
 ,	m_PacketLocker( true )		// true - makes it a recursive lock
 
@@ -218,28 +205,31 @@ mtgsThreadObject::mtgsThreadObject() :
 
 void mtgsThreadObject::Start()
 {
-	m_post_InitDone.Reset();
-	Thread::Start();
+	m_sem_InitDone.Reset();
+	PersistentThread::Start();
 
-	// Wait for the thread to finish initialization (it runs GSinit, which can take
+	// Wait for the thread to finish initialization (it runs GSopen, which can take
 	// some time since it's creating a new window and all), and then check for errors.
 
-	m_post_InitDone.Wait();
+	m_sem_InitDone.WaitGui();
 
-	// means the thread failed to init the GS plugin
-	if ( m_returncode != 0 ) throw Exception::PluginFailure( "GS", "The GS plugin failed to open/initialize." );
+	if( m_returncode != 0 )	// means the thread failed to init the GS plugin
+		throw Exception::PluginOpenError( PluginId_GS );
 }
 
 mtgsThreadObject::~mtgsThreadObject()
 {
+	mtgsThreadObject::Cancel();
 }
 
-void mtgsThreadObject::Close()
+void mtgsThreadObject::Cancel()
 {
 	Console::WriteLn( "MTGS > Closing GS thread..." );
 	SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
 	SetEvent();
-	pthread_join( m_thread, NULL );
+	m_sem_Quitter.Wait( wxTimeSpan( 0, 0, 5, 0 ) );
+	Sleep( 2 );
+	PersistentThread::Cancel( true );
 }
 
 void mtgsThreadObject::Reset()
@@ -508,32 +498,21 @@ struct PacketTagType
 	u32 command;
 	u32 data[3];
 };
-// Until such time as there is a Gsdx port for Linux, or a Linux plugin needs the functionality,
-// lets only declare this for Windows.
-#ifndef __LINUX__
-extern bool renderswitch;
-#endif
-int mtgsThreadObject::Callback()
+
+sptr mtgsThreadObject::ExecuteTask()
 {
 	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
 
 	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( NULL );
-	
-	#ifdef __LINUX__
-	m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
-	#else
-	//tells GSdx to go into dx9 sw if "renderswitch" is set. Abusing the isMultiThread int
-	//for that so we don't need a new callback
-	if (!renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 1);
-	else if (renderswitch) m_returncode = GSopen((void *)&pDsp, "PCSX2", 2);
-	#endif
+
+	GetPluginManager().Open( PluginId_GS );
 	
 	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
 
 	GSCSRr = 0x551B4000; // 0x55190000
-	m_post_InitDone.Post();
+	m_sem_InitDone.Post();
 	if (m_returncode != 0) { return m_returncode; }		// error msg will be issued to the user by Plugins.c
 
 #ifdef RINGBUF_DEBUG_STACK
@@ -542,7 +521,7 @@ int mtgsThreadObject::Callback()
 
 	while( true )
 	{
-		m_post_event.Wait();
+		m_sem_event.Wait();
 
 		AtomicExchange( m_RingBufferIsBusy, 1 );
 
@@ -621,8 +600,11 @@ int mtgsThreadObject::Callback()
 					//Console::Status( " << Frame Removed!" );
 					m_lock_FrameQueueCounter.Unlock();
 
-					if( PAD1update != NULL ) PAD1update(0);
-					if( PAD2update != NULL ) PAD2update(1);
+					if( PADupdate != NULL )
+					{
+						PADupdate(0);
+						PADupdate(1);
+					}
 				}
 				break;
 
@@ -647,7 +629,7 @@ int mtgsThreadObject::Callback()
 				{
 					freezeData* data = (freezeData*)(*(uptr*)&tag.data[1]);
 					int mode = tag.data[0];
-					GSfreeze( mode, data );
+					GetPluginManager().Freeze( PluginId_GS, mode, data );
 					break;
 				}
 
@@ -685,7 +667,8 @@ int mtgsThreadObject::Callback()
 				break;
 
 				case GS_RINGTYPE_QUIT:
-					GSclose();
+					GetPluginManager().Close( PluginId_GS );
+					m_sem_Quitter.Post();
 				return 0;
 
 #ifdef PCSX2_DEVBUILD
@@ -726,7 +709,7 @@ void mtgsThreadObject::WaitGS()
 // For use in loops that wait on the GS thread to do certain things.
 void mtgsThreadObject::SetEvent()
 {
-	m_post_event.Post();
+	m_sem_event.Post();
 	m_CopyCommandTally = 0;
 	m_CopyDataTally = 0;
 }
@@ -1098,26 +1081,29 @@ void mtgsWaitGS()
 	mtgsThread->WaitGS();
 }
 
-bool mtgsOpen()
+// Exceptions:
+//   ThreadCreationError - Thready could not be created (indicates OS resource limitations)
+//   PluginFailure - GS plugin's "GSopen" call failed.
+//
+void mtgsOpen()
 {
-	// Check the config flag since our thread object has yet to be created
-	if( !CHECK_MULTIGS ) return false;
-
 	// better not be a thread already running, yo!
-	assert( mtgsThread == NULL );
+	if( mtgsThread != NULL ) return;
+
+	mtgsThread = new mtgsThreadObject();
 
 	try
 	{
-		mtgsThread = new mtgsThreadObject();
 		mtgsThread->Start();
 	}
-	catch( Exception::ThreadCreationError& )
+	catch( ... )
 	{
-		Console::Error( "MTGS > Thread creation failed!" );
-		mtgsThread = NULL;
-		return false;
+		// if the thread start fails for any reason then set the handle to null.
+		// The handle is used as a NULL test of thread running status, which is why
+		// we really need to do this. :)
+		safe_delete( mtgsThread );
+		throw;
 	}
-	return true;
 }
 
 

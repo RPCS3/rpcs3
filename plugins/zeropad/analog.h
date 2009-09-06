@@ -15,11 +15,14 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#pragma once
  
- #define NUM_OF_PADS 2
+#define NUM_OF_PADS 2
  
- #include "zeropad.h"
- namespace Analog
+#include "zeropad.h"
+
+namespace Analog
 {
 	extern void Init();
 	extern u8 Pad(int padvalue, u8 i);

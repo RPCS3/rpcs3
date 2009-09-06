@@ -6,7 +6,7 @@
 // The profiler does not have a Linux version yet.
 // So for now we turn it into duds for non-Win32 platforms.
 
-#ifdef _WIN32
+#ifdef WIN32
 
 void ProfilerInit();
 void ProfilerTerm();

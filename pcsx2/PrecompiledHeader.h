@@ -1,47 +1,38 @@
-#pragma once
+#ifndef PCSX2_PRECOMPILED_HEADER
+#define PCSX2_PRECOMPILED_HEADER
 
-#ifndef _PCSX2_PRECOMPILED_HEADER_
-#define _PCSX2_PRECOMPILED_HEADER_
-#endif // pragma once
+//#pragma once		// no dice, causes problems in GCC PCH (which doesn't really work very well
+
+// Disable some pointless warnings...
+#ifdef _MSC_VER
+#	pragma warning(disable:4250) //'class' inherits 'method' via dominance
+#	pragma warning(disable:4996) //ignore the stricmp deprecated warning
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Microsoft specific STL extensions for bounds checking and stuff: Enabled in devbuilds,
-// disabled in release builds. :)
+// Define PCSX2's own i18n helpers.  These override the wxWidgets helpers and provide
+// additional functionality.
+//
+#define WXINTL_NO_GETTEXT_MACRO
+#undef _
+#define _(s)		pxGetTranslation(_T(s))
 
-#if defined(_MSC_VER)
-#if _MSC_VER < 1600
-#	pragma warning(disable:4244)	// disable warning C4244: '=' : conversion from 'big' to 'small', possible loss of data
-#	ifdef PCSX2_DEVBUILD
-#		define _SECURE_SCL 1
-#		define _SECURE_SCL_THROWS 1
-#	else
-#		define _SECURE_SCL 0
-#	endif
-#endif
-#endif
+// macro provided for tagging translation strings, without actually running them through the
+// translator (which the _() does automatically, and sometimes we don't want that).  This is
+// a shorthand replacement for wxTRANSLATE.
+#define wxLt(a)		(a)
 
 #define NOMINMAX		// Disables other libs inclusion of their own min/max macros (we use std instead)
 
-#ifndef _WIN32
-#	include <unistd.h>		// Non-Windows platforms need this
-#endif
-
 //////////////////////////////////////////////////////////////////////////////////////////
-// Custom version of jNO_DEFAULT macro for devel builds.
-// Raises an exception if the default case is reached.  This notifies us that a jNO_DEFAULT
-// directive has been used incorrectly.
-//
-// MSVC Note: To stacktrace LogicError exceptions, add Exception::LogicError to the C++ First-
-// Chance Exception list (under Debug->Exceptions menu).
-//
-#ifdef PCSX2_DEVBUILD
-#define jNO_DEFAULT \
-{ \
-default: \
-	throw Exception::LogicError( "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
-	break; \
-}
-#endif
+// Welcome wxWidgets to the party!
+
+#include <wx/string.h>
+#include <wx/tokenzr.h>
+#include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
+#include <wx/intl.h>
+#include <wx/log.h>
+#include <wx/filename.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Include the STL junk that's actually handy.
@@ -66,28 +57,40 @@ default: \
 #include <sys/stat.h>
 #include <pthread.h>
 
+
 using std::string;		// we use it enough, so bring it into the global namespace.
 using std::min;
 using std::max;
 
 typedef int BOOL;
 
-#	undef TRUE
-#	undef FALSE
-#	define TRUE  1
-#	define FALSE 0
+#undef TRUE
+#undef FALSE
+#define TRUE  1
+#define FALSE 0
+
+#ifndef wxASSERT_MSG_A
+#	define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii(msg).c_str() );
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Begin Pcsx2 Includes: Add items here that are local to Pcsx2 but stay relatively
-// unchanged for long periods of time.
+// unchanged for long periods of time, or happen to be used by almost everything, so they
+// need a full recompile anyway, when modified (etc)
 
 #include "zlib/zlib.h"
 #include "Pcsx2Defs.h"
-#include "MemcpyFast.h"
-#include "StringUtils.h"
-#include "Exceptions.h"
+#include "i18n.h"
+#include "Paths.h"
+#include "Config.h"
+#include "Utilities/wxBaseTools.h"
+#include "Utilities/Console.h"
+#include "Utilities/Exceptions.h"
+#include "Utilities/MemcpyFast.h"
+#include "Utilities/General.h"
+#include "x86emitter/tools.h"
 
-////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section
 
 #if defined(_MSC_VER)
@@ -115,68 +118,4 @@ typedef int BOOL;
 
 #endif		// end GCC/Linux stuff
 
-// compile-time assert
-#ifndef C_ASSERT
-#	define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1]
-#endif
-
-#ifndef __LINUX__
-#	define __unused
-#endif
-
-/////////////////////////////////////////////////////////////////////////
-// GNU GetText / NLS 
-
-#ifdef ENABLE_NLS
-
-#ifdef _WIN32
-#include "libintlmsc.h"
-#else
-#include <locale.h>
-#include <libintl.h>
-#endif
-
-#undef _
-#define _(String) dgettext (PACKAGE, String)
-#ifdef gettext_noop
-#  define N_(String) gettext_noop (String)
-#else
-#  define N_(String) (String)
-#endif
-
-#else
-
-#define _(msgid) msgid
-#define N_(msgid) msgid
-
-#endif		// ENABLE_NLS
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Forceinline macro that is enabled for RELEASE/PUBLIC builds ONLY.  (compiler-picked in devel)
-// This is useful because forceinline can make certain types of debugging problematic since
-// functions that look like they should be called won't breakpoint since their code is inlined.
-// Henceforth, use __releaseinline for things which are generally large functions where trace
-// debugging from Devel builds is likely useful; but which should be inlined in an optimized
-// Release environment.
-//
-#ifdef PCSX2_DEVBUILD
-#	define __releaseinline
-#else
-#	define __releaseinline __forceinline
-#endif
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Dev / Debug conditionals --
-//   Consts for using if() statements instead of uglier #ifdef macros.
-
-#ifdef PCSX2_DEVBUILD
-static const bool IsDevBuild = true;
-#else
-static const bool IsDevBuild = false;
-#endif
-
-#ifdef PCSX2_DEBUG
-static const bool IsDebugBuild = true;
-#else
-static const bool IsDebugBuild = false;
 #endif

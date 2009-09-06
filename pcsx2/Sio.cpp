@@ -50,11 +50,7 @@ __forceinline void SIO_INT()
 // Could lets PCSX2 have its own options, if anyone ever
 // wants to add support for using the extra memcard slots.
 static bool IsMtapPresent( uint port ) {
-	switch(port) {
-		case 0: return 0 != PAD1queryMtap(port+1);
-		case 1: return 0 != PAD2queryMtap(port+1);
-	}
-	return 0;
+	return 0 != PADqueryMtap(port+1);
 }
 
 static void _ReadMcd(u8 *data, u32 adr, int size) {
@@ -84,14 +80,9 @@ void sioInit()
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;
 	sio.packetsize = 0;
-	sio.terminator =0x55; // Command terminator 'U'
+	sio.terminator = 0x55; // Command terminator 'U'
 
 	MemoryCard::Init();
-}
-
-void psxSIOShutdown()
-{
-	MemoryCard::Shutdown();
 }
 
 u8 sioRead8() {
@@ -126,11 +117,11 @@ void SIO_CommandWrite(u8 value,int way) {
 				switch (sio.CtrlReg&0x2002) {
 					case 0x0002:
 						sio.packetsize ++;	// Total packet size sent
-						sio.buf[sio.parp] = PAD1poll(value);
+						sio.buf[sio.parp] = PADpoll(value);
 						break;
 					case 0x2002:
 						sio.packetsize ++;	// Total packet size sent
-						sio.buf[sio.parp] = PAD2poll(value);
+						sio.buf[sio.parp] = PADpoll(value);
 						break;
 				}
 				if (!(sio.buf[sio.parp] & 0x0f)) {
@@ -144,8 +135,8 @@ void SIO_CommandWrite(u8 value,int way) {
 		case 2:
 			sio.parp++;
 			switch (sio.CtrlReg&0x2002) {
-				case 0x0002: sio.packetsize ++; sio.buf[sio.parp] = PAD1poll(value); break;
-				case 0x2002: sio.packetsize ++; sio.buf[sio.parp] = PAD2poll(value); break;
+				case 0x0002: sio.packetsize ++; sio.buf[sio.parp] = PADpoll(value); break;
+				case 0x2002: sio.packetsize ++; sio.buf[sio.parp] = PADpoll(value); break;
 			}
 			if (sio.parp == sio.bufcount) { sio.padst = 0; return; }
 			SIO_INT();
@@ -515,27 +506,23 @@ void InitializeSIO(u8 value)
 			sio.count = 0;
 			sio2.packet.recvVal1 = 0x1100; // Pad is present
 
-			switch (sio.CtrlReg&0x2002) {
-				case 0x0002:
-					if (!PAD1setSlot(1, 1+sio.activePadSlot[0]) && sio.activePadSlot[0]) {
+			if( (sio.CtrlReg & 2) == 2 )
+			{
+				int padslot = (sio.CtrlReg>>12) & 2;	// move 0x2000 bitmask into leftmost bits
+				if( padslot != 1 )
+				{
+					padslot >>= 1;	// transform 0/2 to be 0/1 values
+
+					if (!PADsetSlot(padslot+1, 1+sio.activePadSlot[padslot]) && sio.activePadSlot[padslot])
+					{
 						// Pad is not present.  Don't send poll, just return a bunch of 0's.
 						sio2.packet.recvVal1 = 0x1D100;
 						sio.padst = 3;
 					}
 					else {
-						sio.buf[0] = PAD1startPoll(1);
+						sio.buf[0] = PADstartPoll(padslot+1);
 					}
-					break;
-				case 0x2002:
-					if (!PAD2setSlot(2, 1+sio.activePadSlot[1]) && sio.activePadSlot[1]) {
-						// Pad is not present.  Don't send poll, just return a bunch of 0's.
-						sio2.packet.recvVal1 = 0x1D100;
-						sio.padst = 3;
-					}
-					else {
-						sio.buf[0] = PAD2startPoll(2);
-					}
-					break;
+				}
 			}
 
 			SIO_INT();
@@ -605,7 +592,7 @@ void InitializeSIO(u8 value)
 
 			if( sio.activeMemcardSlot[mcidx] != 0 )
 			{
-				// Might want to more agressively declare a card's non-existence here.
+				// Might want to more aggressively declare a card's non-existence here.
 				// As non-zero slots always report a failure, and have to read
 				// the FAT before writing, think this should be fine.
 				sio2.packet.recvVal1 = 0x1D100;
@@ -615,7 +602,7 @@ void InitializeSIO(u8 value)
 			{
 				m_PostSavestateCards[mcidx]--;
 				sio2.packet.recvVal1 = 0x1D100;
-				PAD_LOG( "START MEMCARD[%d] - post-savestate ejection - reported as missing!", sio.GetMemcardIndex() );
+				PAD_LOG( "START MEMCARD[%d] - post-savestate ejection - reporting as missing!", sio.GetMemcardIndex() );
 			}
 			else
 			{
@@ -692,19 +679,20 @@ void SaveState::sioFreeze()
 	}
 	Freeze( m_mcdCRCs );
 
-	if( IsLoading() && Config.McdEnableEject )
+	if( IsLoading() && EmuConfig.McdEnableEjection )
 	{
-		// Note: TOTA works with values as low as 20 here.
-		// It "times out" with values around 1800 (forces user to check the memcard
-		// twice to find it).  Other games could be different. :|
+		// Notes:
+		//  * TOTA works with values as low as 20 here.
+		//    It "times out" with values around 1800 (forces user to check the memcard
+		//    twice to find it).  Other games could be different. :|
+		//
+		//  * At 64: Disgaea 1 and 2, and Grandia 2 end up displaying a quick "no memcard!"
+		//    notice before finding the memorycard and re-enumerating it.  A very minor
+		//    annoyance, but no breakages.
 
-		// At 64: Disgaea 1 and 2, and Grandia 2 end up displaying a quick "no memcard!"
-		// notice before finding the memorycard and re-enumerating it.  A very minor
-		// annoyance, but no breakages.
-
-		// GuitarHero will break completely with almost any value here, by design, because
-		// it has a "rule" that the memcard should never be ejected during a song.  So by
-		// ejecting it, the game freezes (which is actually good emulation, but annoying!)
+		//  * GuitarHero will break completely with almost any value here, by design, because
+		//    it has a "rule" that the memcard should never be ejected during a song.  So by
+		//    ejecting it, the game freezes (which is actually good emulation, but annoying!)
 
 		for( int i=0; i<2; ++i )
 		{

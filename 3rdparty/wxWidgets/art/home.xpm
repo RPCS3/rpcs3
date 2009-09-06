@@ -1,0 +1,24 @@
+/* XPM */
+static const char * home_xpm[] = {
+/* columns rows colors chars-per-pixel */
+"16 15 3 1",
+". c Black",
+"X c #FFFFFF",
+"  c None",
+/* pixels */
+"      ....      ",
+"     .XXXX.     ",
+"    .XXXXXX.    ",
+"   .XXXXXXXX.   ",
+"  .XXXXXXXXXX.  ",
+" .............. ",
+" .XXXXXXXXXXXX. ",
+" .XXXXXXXXXXXX. ",
+" .XXXXXXXXXXXX. ",
+" .X.....X....X. ",
+" .X.   .X.  .X. ",
+" .X.   .X.  .X. ",
+" .X.....X.  .X. ",
+" .XXXXXXX.  .X. ",
+" .........  ... "
+};

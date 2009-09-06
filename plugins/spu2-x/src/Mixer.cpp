@@ -313,7 +313,7 @@ static s32 __forceinline GetNoiseValues()
 
 // Data is expected to be 16 bit signed (typical stuff!).
 // volume is expected to be 32 bit signed (31 bits with reverse phase)
-// Output is effectively 15 bit range, thanks to the signed volume.
+// Data is shifted up by 1 bit to give the output an effective 16 bit range.
 static __forceinline s32 ApplyVolume(s32 data, s32 volume)
 {
 	//return (volume * data) >> 15;
@@ -513,6 +513,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 
 	// Most games don't use much volume slide effects.  So only call the UpdateVolume
 	// methods when needed by checking the flag outside the method here...
+	// (Note: Ys 6 : Ark of Nephistm uses these effects)
 
 	vc.Volume.Update();
 
@@ -573,7 +574,7 @@ struct VoiceMixSet
 	}
 };
 
-const VoiceMixSet VoiceMixSet::Empty( StereoOut32::Empty, StereoOut32::Empty );
+const VoiceMixSet VoiceMixSet::Empty( (StereoOut32()), (StereoOut32()) );	// Don't use SteroOut32::Empty because C++ doesn't make any dep/order checks on global initializers.
 
 static __forceinline void MixCoreVoices( VoiceMixSet& dest, const uint coreidx )
 {
@@ -584,7 +585,7 @@ static __forceinline void MixCoreVoices( VoiceMixSet& dest, const uint coreidx )
 		StereoOut32 VVal( MixVoice( coreidx, voiceidx ) );
 
 		// Note: Results from MixVoice are ranged at 16 bits.
-		
+
 		dest.Dry.Left += VVal.Left & thiscore.VoiceGates[voiceidx].DryL;
 		dest.Dry.Right += VVal.Right & thiscore.VoiceGates[voiceidx].DryR;
 		dest.Wet.Left += VVal.Left & thiscore.VoiceGates[voiceidx].WetL;

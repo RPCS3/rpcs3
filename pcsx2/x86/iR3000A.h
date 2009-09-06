@@ -18,8 +18,7 @@
 #ifndef _R3000A_SUPERREC_
 #define _R3000A_SUPERREC_
 
-#include "ix86/ix86.h"
-
+#include "x86emitter/x86emitter.h"
 #include "R3000A.h"
 #include "iCore.h"
 

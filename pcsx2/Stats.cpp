@@ -23,8 +23,6 @@
 #include "IopCommon.h"
 #include "Stats.h"
 
-#include "Paths.h"
-
 void statsOpen() {
 	stats.vsyncCount = 0;
 	stats.vsyncTime = time(NULL);
@@ -35,6 +33,7 @@ void statsOpen() {
 }
 
 void statsClose() {
+/*
 	time_t t;
 	FILE *f;
 
@@ -55,6 +54,7 @@ void statsClose() {
 	else fprintf(f, "Recompiler Mode: VUrec1 %s, VUrec0 %s\n", 
 		CHECK_VU1REC ? "Enabled" : "Disabled", CHECK_VU0REC ? "Enabled" : "Disabled");
 	fclose(f);
+*/
 }
 
 void statsVSync() {

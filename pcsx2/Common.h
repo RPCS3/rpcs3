@@ -16,8 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#pragma once
 
 #include "Pcsx2Defs.h"
 
@@ -26,8 +25,6 @@
 //#define PSXCLK	 9216000	/* 36.864 Mhz */
 //#define PSXCLK	186864000	/* 36.864 Mhz */
 #define PS2CLK 294912000 //hz	/* 294.912 mhz */
-
-#define PCSX2_VERSION "beta"
 
 #include "System.h"
 
@@ -42,4 +39,5 @@
 #include "Elfheader.h"
 #include "Patch.h"
 
-#endif /* __COMMON_H__ */
+extern bool EmulationInProgress();
+

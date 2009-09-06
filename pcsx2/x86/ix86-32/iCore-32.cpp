@@ -21,7 +21,7 @@
 #include "iR5900.h"
 #include "Vif.h"
 #include "VU.h"
-#include "ix86/ix86.h"
+#include "x86emitter/x86emitter.h"
 #include "R3000A.h"
 
 #include <vector>
@@ -859,7 +859,7 @@ void SetFPUstate() {
 	_freeMMXreg(7);
 
 	if (x86FpuState == MMX_STATE) {
-		if (cpucaps.has3DNOWInstructionExtensions) 
+		if (x86caps.has3DNOWInstructionExtensions) 
 			FEMMS();
 		else
 			EMMS();

@@ -154,7 +154,7 @@ microVUt(void) getQreg(int reg, int qInstance) {
 
 microVUt(void) writeQreg(int reg, int qInstance) {
 	if (qInstance) {
-		if (!cpucaps.hasStreamingSIMD4Extensions) {
+		if (!x86caps.hasStreamingSIMD4Extensions) {
 			SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);
 			SSE_MOVSS_XMM_to_XMM(xmmPQ, reg);
 			SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);

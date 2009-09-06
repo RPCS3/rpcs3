@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -22,10 +22,6 @@
 #include "CDVD/IsoFSdrv.h"
 
 using namespace std;
-
-#ifdef _MSC_VER
-#pragma warning(disable:4996) //ignore the stricmp deprecated warning
-#endif
 
 u32 ElfCRC;
 
@@ -39,11 +35,11 @@ struct ELF_HEADER {
 	u32	e_shoff;        //Start of section headers (offset from file start)
 	u32	e_flags;        //Processor specific flags = 0x20924001 noreorder, mips
 	u16	e_ehsize;       //ELF header size (0x34 = 52 bytes)
-	u16	e_phentsize;    //Program headers entry size 
+	u16	e_phentsize;    //Program headers entry size
 	u16	e_phnum;        //Number of program headers
 	u16	e_shentsize;    //Section headers entry size
 	u16	e_shnum;        //Number of section headers
-	u16	e_shstrndx;     //Section header stringtable index	
+	u16	e_shstrndx;     //Section header stringtable index
 };
 
 struct ELF_PHR {
@@ -94,7 +90,7 @@ Type:
 5=HASH hash table
 6=DYNAMIC dynamic linking information
 7=NOTE
-8=NOBITS 
+8=NOBITS
 9=REL relocation entries
 10=SHLIB
 0x70000000=LOPROC processor specifc
@@ -127,6 +123,12 @@ struct Elf32_Rel {
 	u32	r_info;
 };
 
+#if 0
+// fixme: ELF command line option system.
+// It parses a command line and pastes it into PS2 memory, and then points the a0 register at it.
+// A user-written ELF can then load the data and respond accordingly.  Needs a rewrite using modern
+// string parsing utils. :)
+
 //2002-09-19 (Florin)
 char args[256]="ez.m2v";	//to be accessed by other files
 uptr args_ptr;		//a big value; in fact, it is an address
@@ -152,7 +154,7 @@ static bool isEmpty(int addr)
 // It'd probably be easier to 0 out all 256 chars, split args, copy all the arguments in, and note
 // the locations of each split...  --arcum42
 
-static uint parseCommandLine( const char *filename )
+static uint parseCommandLine( const wxString& filename )
 {
 	if ( ( args_ptr != 0xFFFFFFFF ) && ( args_ptr > (4 + 4 + 256) ) )
 	{
@@ -181,10 +183,10 @@ static uint parseCommandLine( const char *filename )
 			p++;
 		else
 			p = filename;
-		
+
 		
 		args_ptr -= strlen( p ) + 1;
-		
+
 		//fill param 0; i.e. name of the program
 		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );
 		
@@ -192,12 +194,12 @@ static uint parseCommandLine( const char *filename )
 		for ( i = args_end - args_ptr + 1, argc = 0; i > 0; i-- )
 		{
 			while (i && isEmpty(args_ptr + i ))  { i--; }
-			
+
 			// If the last char is a space, set it to 0.
 			if ( PS2MEM_BASE[ args_ptr + i + 1 ] == ' ') PS2MEM_BASE[ args_ptr + i + 1 ] = 0;
-			
+
 			while (i && !isEmpty(args_ptr + i )) { i--; }
-			
+
 			// Now that we've gone back a word, increase the number of arguments, 
 			// and mark the location of the argument. 
 			if (!isEmpty(args_ptr + i )) // i <= 0
@@ -232,11 +234,12 @@ static uint parseCommandLine( const char *filename )
 
 	return 0;
 }
+#endif
 //---------------
 
 struct ElfObject
 {
-	string filename;
+	wxString filename;
 	SafeArray<u8> data;
 	ELF_HEADER& header;
 	ELF_PHR* proghead;
@@ -246,9 +249,9 @@ struct ElfObject
 	// C++ does all the cleanup automagically for us.
 	~ElfObject() { }
 
-	ElfObject( const string& srcfile, uint hdrsize ) :
+	ElfObject( const wxString& srcfile, uint hdrsize ) :
 		filename( srcfile )
-	,	data( hdrsize, "ELF headers" )
+	,	data( hdrsize, L"ELF headers" )
 	,	header( *(ELF_HEADER*)data.GetPtr() )
 	,	proghead( NULL )
 	,	secthead( NULL )
@@ -257,7 +260,7 @@ struct ElfObject
 
 		if( header.e_phnum > 0 )
 			proghead = (ELF_PHR*)&data[header.e_phoff];
-			
+
 		if( header.e_shnum > 0 )
 			secthead = (ELF_SHR*)&data[header.e_shoff];
 
@@ -268,9 +271,9 @@ struct ElfObject
 			Console::Error( "ElfLoader Warning > Size of program headers is not standard" );
 
 		ELF_LOG( "type:      " );
-		switch( header.e_type ) 
+		switch( header.e_type )
 		{
-			default: 
+			default:
 				ELF_LOG( "unknown %x", header.e_type );
 				break;
 
@@ -282,14 +285,14 @@ struct ElfObject
 				ELF_LOG( "relocatable" );
 				break;
 
-			case 0x2: 
+			case 0x2:
 				ELF_LOG( "executable" );
 				break;
-		}  
+		}
 		ELF_LOG( "\n" );
 		ELF_LOG( "machine:   " );
-		
-		switch ( header.e_machine ) 
+
+		switch ( header.e_machine )
 		{
 			default:
 				ELF_LOG( "unknown" );
@@ -299,7 +302,7 @@ struct ElfObject
 				ELF_LOG( "mips_rs3000" );
 				break;
 		}
-		
+
 		ELF_LOG("\n");
 		ELF_LOG("version:   %d",header.e_version);
 		ELF_LOG("entry:     %08x",header.e_entry);
@@ -312,20 +315,21 @@ struct ElfObject
 		ELF_LOG("sh entsiz: %08x",header.e_shentsize);
 		ELF_LOG("sh num:    %08x",header.e_shnum);
 		ELF_LOG("sh strndx: %08x",header.e_shstrndx);
-		
+
 		ELF_LOG("\n");
 	}
 
 	void readFile()
 	{
 		int rsize = 0;
-		if ((strnicmp( filename.c_str(), "cdrom0:", strlen("cdromN:")) == 0) ||
-			(strnicmp( filename.c_str(), "cdrom1:", strlen("cdromN:")) == 0))
+		const wxCharBuffer work( filename.ToAscii() );
+		if ((strnicmp( work.data(), "cdrom0:", strlen("cdromN:")) == 0) ||
+			(strnicmp( work.data(), "cdrom1:", strlen("cdromN:")) == 0))
 		{
-			int fi = IsoFS_open(filename.c_str() + strlen("cdromN:"), 1);//RDONLY
+			int fi = IsoFS_open(work.data() + strlen("cdromN:"), 1);//RDONLY
 			
 			if (fi < 0) throw Exception::FileNotFound( filename );
-			
+
 			IsoFS_lseek( fi, 0, SEEK_SET );
 			rsize = IsoFS_read( fi, (char*)data.GetPtr(), data.GetSizeInBytes() );
 			IsoFS_close( fi );
@@ -334,9 +338,9 @@ struct ElfObject
 		{
 			FILE *f;
 
-			f = fopen( filename.c_str(), "rb" );
+			f = fopen( work.data(), "rb" );
 			if( f == NULL ) Exception::FileNotFound( filename );
-			
+
 			fseek( f, 0, SEEK_SET );
 			rsize = fread( data.GetPtr(), 1, data.GetSizeInBytes(), f );
 			fclose( f );
@@ -364,9 +368,9 @@ struct ElfObject
 
 		for( int i = 0 ; i < header.e_phnum ; i++ )
 		{
-			ELF_LOG( "Elf32 Program Header" );	
+			ELF_LOG( "Elf32 Program Header" );
 			ELF_LOG( "type:      " );
-			
+
 			switch ( proghead[ i ].p_type ) {
 				default:
 					ELF_LOG( "unknown %x", (int)proghead[ i ].p_type );
@@ -400,7 +404,7 @@ struct ElfObject
 				}
 				break;
 			}
-			
+
 			ELF_LOG("\n");
 			ELF_LOG("offset:    %08x",(int)proghead[i].p_offset);
 			ELF_LOG("vaddr:     %08x",(int)proghead[i].p_vaddr);
@@ -413,13 +417,13 @@ struct ElfObject
 		}
 	}
 
-	void loadSectionHeaders() 
+	void loadSectionHeaders()
 	{
 		if( secthead == NULL || header.e_shoff > (u32)data.GetLength() )
 			return;
 
 		const u8* sections_names = data.GetPtr( secthead[ (header.e_shstrndx == 0xffff ? 0 : header.e_shstrndx) ].sh_offset );
-			
+
 		int i_st = -1;
 		int i_dt = -1;
 
@@ -427,13 +431,14 @@ struct ElfObject
 		{
 			ELF_LOG( "Elf32 Section Header [%x] %s", i, &sections_names[ secthead[ i ].sh_name ] );
 
-			if ( secthead[i].sh_flags & 0x2 )
-				args_ptr = min( args_ptr, secthead[ i ].sh_addr & 0x1ffffff );
-			
+			// used by parseCommandLine
+			//if ( secthead[i].sh_flags & 0x2 )
+			//	args_ptr = min( args_ptr, secthead[ i ].sh_addr & 0x1ffffff );
+
 #ifdef PCSX2_DEVBULD
 			ELF_LOG("\n");
 			ELF_LOG("type:      ");
-			
+
 			switch ( secthead[ i ].sh_type )
 			{
 				case 0x0: ELF_LOG("null"); break;
@@ -445,7 +450,7 @@ struct ElfObject
 				case 0x9: ELF_LOG("rel"); break;
 				default: ELF_LOG("unknown %08x",secthead[i].sh_type); break;
 			}
-			
+
 			ELF_LOG("\n");
 			ELF_LOG("flags:     %08x", secthead[i].sh_flags);
 			ELF_LOG("addr:      %08x", secthead[i].sh_addr);
@@ -456,11 +461,11 @@ struct ElfObject
 			ELF_LOG("addralign: %08x", secthead[i].sh_addralign);
 			ELF_LOG("entsize:   %08x", secthead[i].sh_entsize);
 			// dump symbol table
-		
-			if( secthead[ i ].sh_type == 0x02 ) 
+
+			if( secthead[ i ].sh_type == 0x02 )
 			{
-				i_st = i; 
-				i_dt = secthead[i].sh_link; 
+				i_st = i;
+				i_dt = secthead[i].sh_link;
 			}
 #endif
 		}
@@ -485,21 +490,20 @@ struct ElfObject
 
 void ElfApplyPatches()
 {
-	string filename;
-	ssprintf( filename, "%8.8x", ElfCRC );
+	wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
 
 	// if patches found the following status msg will be overwritten
-	Console::SetTitle( fmt_string( "Game running [CRC=%hs]", &filename ) );
+	Console::SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
 
-	if( !Config.Patch ) return;
+	if( !EmuConfig.EnablePatches ) return;
 
 	if(LoadPatch( filename ) != 0)
 	{
-		Console::WriteLn("XML Loader returned an error. Trying to load a pnach...");
-		inifile_read( filename.c_str() );
+		Console::WriteLn( "XML Loader returned an error. Trying to load a pnach..." );
+		inifile_read( filename.ToAscii().data() );
 	}
-	else 
-		Console::WriteLn("XML Loading success. Will not load from pnach...");
+	else
+		Console::WriteLn( "XML Loading success. Will not load from pnach..." );
 
 	applypatch( 0 );
 }
@@ -517,81 +521,91 @@ u32 loadElfCRC( const char* filename )
 	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
 
 	DevCon::Status( "loadElfFile: %d bytes", params toc.fileSize );
-	u32 crcval = ElfObject( filename, toc.fileSize ).GetCRC();
+	u32 crcval = ElfObject( wxString::FromAscii( filename ), toc.fileSize ).GetCRC();
 	Console::Status( "loadElfFile: %s; CRC = %8.8X", params filename, crcval );
 
 	return crcval;
 }
 
-int loadElfFile(const char *filename)
+// Loads the elf binary data from the specified file into PS2 memory, and injects the ELF's
+// starting execution point into cpuRegs.pc.  If the filename is a cdrom URI in the form
+// of "cdrom0:" or "cdrom1:" then the CDVD is used as the source; otherwise the ELF is loaded
+// from the host filesystem.
+//
+// If the specified filename is empty then no action is taken (PS2 will continue booting
+// normally as if it has no CD
+//
+// Throws exception on error:
+//
+void loadElfFile(const wxString& filename)
 {
-	// Reset all recompilers prior to initiating a BIOS or new ELF.  The cleaner the
-	// slate, the happier the recompiler!
-
-	SysClearExecutionCache();
-
-	if( filename == NULL || filename[0] == 0 )
-	{
-		Console::Notice( "Running the PS2 BIOS..." );
-		return -1;
-	}
-
-	// We still need to run the BIOS stub, so that all the EE hardware gets initialized correctly.
-	cpuExecuteBios();
-
+	if( filename.IsEmpty() ) return;
+	
 	int elfsize;
+	Console::Status( wxsFormat( L"loadElfFile: %s", filename.c_str() ) );
 
-	Console::Status("loadElfFile: %s", params filename);
-	if (strnicmp( filename, "cdrom0:", strlen( "cdromN:" ) ) &&
-		strnicmp( filename, "cdrom1:", strlen( "cdromN:" ) ) )
+	const wxCharBuffer buffer( filename.ToAscii() );
+	const char* fnptr = buffer.data();
+	bool useCdvdSource=false;
+	
+	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
 		DevCon::WriteLn("Loading from a file (or non-cd image)");
-		struct stat sbuf;
-		if ( stat( filename, &sbuf ) != 0 )
-			return -1;
-		elfsize = sbuf.st_size;
+
+		elfsize = Path::GetFileSize( filename );
 	}
 	else
 	{
 		DevCon::WriteLn("Loading from a CD rom or CD image");
+		useCdvdSource = true;
 		TocEntry toc;
 		IsoFS_init( );
-		if ( IsoFS_findFile( filename + strlen( "cdromN:" ), &toc ) == -1 )
-			return -1;
+		if ( IsoFS_findFile( fnptr + strlen( "cdromN:" ), &toc ) == -1 )
+			throw Exception::FileNotFound( filename, wxLt("ELF file was not found on the CDVD source media.") );
 		elfsize = toc.fileSize;
 	}
 
-	Console::Status( "loadElfFile: %d", params elfsize);
+	Console::Status( wxsFormat(L"loadElfFile: %d", elfsize) );
+	if( elfsize == 0 )
+		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
+
 	ElfObject elfobj( filename, elfsize );
 
 	if( elfobj.proghead == NULL )
-		throw Exception::CpuStateShutdown( fmt_string( "%s > This ELF has no program headers; Pcsx2 can't run what doesn't exist...", filename ) );
+	{
+		throw Exception::BadStream( filename, useCdvdSource ?
+			wxLt("Invalid ELF file header.  The CD-Rom may be damaged, or the ISO image corrupted.") :
+			wxLt("Invalid ELF file.")
+		);
+	}
 
 	//2002-09-19 (Florin)
-	args_ptr = 0xFFFFFFFF;	//big value, searching for minimum
+	//args_ptr = 0xFFFFFFFF;	//big value, searching for minimum [used by parseCommandLine]
 
 	elfobj.loadProgramHeaders();
 	elfobj.loadSectionHeaders();
-	
-	cpuRegs.pc = elfobj.header.e_entry; //set pc to proper place 
+
+	cpuRegs.pc = elfobj.header.e_entry; //set pc to proper place
 	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
-	
+
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
 	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
-	cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename );
+	//cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename );		// see #ifdef'd out parseCommendLine for details.
 
-	for ( uint i = 0; i < 0x100000; i++ ) {
-		if ( strcmp( "rom0:OSDSYS", (char*)PSM( i ) ) == 0 ) {
-			strcpy( (char*)PSM( i ), filename );
-			DevCon::Status( "addr %x \"%s\" -> \"%s\"", params i, "rom0:OSDSYS", filename );
+	for( uint i = 0; i < 0x100000; i++ )
+	{
+		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
+		{
+			strcpy( (char*)PSM( i ), fnptr );
+			DevCon::Status( "loadElfFile: addr %x \"%s\" -> \"%s\"", params i, "rom0:OSDSYS", fnptr );
 		}
 	}
 
 	ElfCRC = elfobj.GetCRC();
-	Console::Status( "loadElfFile: %s; CRC = %8.8X", params filename, ElfCRC);
+	Console::Status( wxsFormat( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC ) );
 
 	ElfApplyPatches();
 	
-	return 0;
+	return;
 }
 

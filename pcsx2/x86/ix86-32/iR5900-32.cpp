@@ -44,7 +44,6 @@
 #include "vtlb.h"
 
 #include "SamplProf.h"
-#include "Paths.h"
 
 #include "NakedAsm.h"
 #include "Dump.h"
@@ -89,11 +88,10 @@ static u8* recPtr = NULL;
 static u32 *recConstBufPtr = NULL;
 EEINST* s_pInstCache = NULL;
 static u32 s_nInstCacheSize = 0;
-static bool recFailed;
 
 static BASEBLOCK* s_pCurBlock = NULL;
 static BASEBLOCKEX* s_pCurBlockEx = NULL;
-u32 s_nEndBlock = 0; // what pc the current block ends	
+u32 s_nEndBlock = 0; // what pc the current block ends
 static bool s_nBlockFF;
 
 // save states for branches
@@ -110,72 +108,9 @@ static u32 dumplog = 0;
 #define dumplog 0
 #endif
 
-static void iBranchTest(u32 newpc = 0xffffffff, bool noDispatch=false);
+static void iBranchTest(u32 newpc = 0xffffffff);
 static void ClearRecLUT(BASEBLOCK* base, int count);
 static u32 eeScaleBlockCycles();
-
-#ifdef PCSX2_VM_COISSUE
-static u8 _eeLoadWritesRs(u32 tempcode)
-{
-	switch(tempcode>>26) {
-		case 26: // ldl
-		case 27: // ldr
-		case 32: case 33: case 34: case 35: case 36: case 37: case 38: case 39:
-		case 55: // LD
-		case 30: // lq
-			return ((tempcode>>21)&0x1f)==((tempcode>>16)&0x1f); // rs==rt
-	}
-	return 0;
-}
-
-static u8 _eeIsLoadStoreCoIssue(u32 firstcode, u32 secondcode)
-{
-	switch(firstcode>>26) {
-		case 34: // lwl
-			return (secondcode>>26)==38;
-		case 38: // lwr
-			return (secondcode>>26)==34;
-		case 42: // swl
-			return (secondcode>>26)==46;
-		case 46: // swr
-			return (secondcode>>26)==42;
-		case 26: // ldl
-			return (secondcode>>26)==27;
-		case 27: // ldr
-			return (secondcode>>26)==26;
-		case 44: // sdl
-			return (secondcode>>26)==45;
-		case 45: // sdr
-			return (secondcode>>26)==44;
-
-		case 32: case 33: case 35: case 36: case 37: case 39:
-		case 55: // LD
-
-		// stores
-		case 40: case 41: case 43:
-		case 63: // sd
-			return (secondcode>>26)==(firstcode>>26);
-
-		case 30: // lq
-		case 31: // sq
-		case 49: // lwc1
-		case 57: // swc1
-		case 54: // lqc2
-		case 62: // sqc2
-			return (secondcode>>26)==(firstcode>>26);
-	}
-	return 0;
-}
-
-static u8 _eeIsLoadStoreCoX(u32 tempcode)
-{
-	switch( tempcode>>26 ) {
-		case 30: case 31: case 49: case 57: case 55: case 63:
-			return 1;
-	}
-	return 0;
-}
-#endif
 
 void _eeFlushAllUnused()
 {
@@ -189,7 +124,7 @@ void _eeFlushAllUnused()
 			continue;
 
 		if( i < 32 && GPR_IS_CONST1(i) ) _flushConstReg(i);
-		else {	
+		else {
 			_deleteMMXreg(MMX_GPR+i, 1);
 			_deleteGPRtoXMMreg(i, 1);
 		}
@@ -212,7 +147,7 @@ u32* _eeGetConstReg(int reg)
 	// if written in the future, don't flush
 	if( _recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, reg) )
 		return recGetImm64(g_cpuConstRegs[reg].UL[1], g_cpuConstRegs[reg].UL[0]);
-	
+
 	_flushConstReg(reg);
 	return &cpuRegs.GPR.r[ reg ].UL[0];
 }
@@ -225,7 +160,7 @@ void _eeMoveGPRtoR(x86IntRegType to, int fromgpr)
 		MOV32ItoR( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
-		
+
 		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, fromgpr, MODE_READ)) >= 0 && (xmmregs[mmreg].mode&MODE_WRITE)) {
 			SSE2_MOVD_XMM_to_R(to, mmreg);
 		}
@@ -245,7 +180,7 @@ void _eeMoveGPRtoM(u32 to, int fromgpr)
 		MOV32ItoM( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
-		
+
 		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, fromgpr, MODE_READ)) >= 0 ) {
 			SSEX_MOVD_XMM_to_M32(to, mmreg);
 		}
@@ -266,7 +201,7 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 		MOV32ItoRm( to, g_cpuConstRegs[fromgpr].UL[0] );
 	else {
 		int mmreg;
-		
+
 		if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, fromgpr, MODE_READ)) >= 0 ) {
 			SSEX_MOVD_XMM_to_Rm(to, mmreg);
 		}
@@ -286,7 +221,7 @@ int _flushXMMunused()
 	int i;
 	for (i=0; i<iREGCNT_XMM; i++) {
 		if (!xmmregs[i].inuse || xmmregs[i].needed || !(xmmregs[i].mode&MODE_WRITE) ) continue;
-		
+
 		if (xmmregs[i].type == XMMTYPE_GPRREG ) {
 			//if( !(g_pCurInstInfo->regs[xmmregs[i].reg]&EEINST_USED) ) {
 			if( !_recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, xmmregs[i].reg) ) {
@@ -305,7 +240,7 @@ int _flushMMXunused()
 	int i;
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (!mmxregs[i].inuse || mmxregs[i].needed || !(mmxregs[i].mode&MODE_WRITE) ) continue;
-		
+
 		if( MMX_ISGPR(mmxregs[i].reg) ) {
 			//if( !(g_pCurInstInfo->regs[mmxregs[i].reg-MMX_GPR]&EEINST_USED) ) {
 			if( !_recIsRegWritten(g_pCurInstInfo+1, (s_nEndBlock-pc)/4, XMMTYPE_GPRREG, mmxregs[i].reg-MMX_GPR) ) {
@@ -345,7 +280,6 @@ u32* recGetImm64(u32 hi, u32 lo)
 	u32 *imm64; // returned pointer
 	static u32 *imm64_cache[509];
 	int cacheidx = lo % (sizeof imm64_cache / sizeof *imm64_cache);
-	//static int count; count++;
 
 	imm64 = imm64_cache[cacheidx];
 	if (imm64 && imm64[0] == lo && imm64[1] == hi)
@@ -353,9 +287,10 @@ u32* recGetImm64(u32 hi, u32 lo)
 
 	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE)
 	{
-		DevCon::Status( "EErec: Const Buffer overflow hack..." );
+		Console::Status( "EErec const buffer filled; Resetting..." );
+		throw Exception::RecompilerReset();
 	
-		for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
+		/*for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
 		{
 			if (p[0] == lo && p[1] == hi) {
 				imm64_cache[cacheidx] = p;
@@ -363,9 +298,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 			}
 		}
 
-		Console::Notice( "EErec: Const Buffer overflow hack failed.  Returning nonsense!" );
-		recFailed = true;
-		return recConstBuf;
+		return recConstBuf;*/
 	}
 
 	imm64 = recConstBufPtr;
@@ -388,26 +321,26 @@ static void __fastcall dyna_block_discard(u32 start,u32 sz);
 // memory allocation handle for the entire BASEBLOCK and stack allocations.
 static u8* m_recBlockAlloc = NULL;
 
-static const uint m_recBlockAllocSize = 
+static const uint m_recBlockAllocSize =
 	(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK))
 +	RECCONSTBUF_SIZE * sizeof(u32) + Ps2MemSize::Base;
 
-static void recAlloc() 
+static void recAlloc()
 {
 	// Hardware Requirements Check...
 
-	if ( !( cpucaps.hasMultimediaExtensions  ) )
-		throw Exception::HardwareDeficiency( _( "Processor doesn't support MMX" ) );
+	if ( !( x86caps.hasMultimediaExtensions  ) )
+		throw Exception::HardwareDeficiency( "Processor doesn't support MMX" );
 
-	if ( !( cpucaps.hasStreamingSIMDExtensions ) )
-		throw Exception::HardwareDeficiency( _( "Processor doesn't support SSE" ) );
+	if ( !( x86caps.hasStreamingSIMDExtensions ) )
+		throw Exception::HardwareDeficiency( "Processor doesn't support SSE" );
 
-	if ( !( cpucaps.hasStreamingSIMD2Extensions ) )
-		throw Exception::HardwareDeficiency( _( "Processor doesn't support SSE2" ) );
+	if ( !( x86caps.hasStreamingSIMD2Extensions ) )
+		throw Exception::HardwareDeficiency( "Processor doesn't support SSE2" );
 
 	if( recMem == NULL )
 	{
-		// Note: the VUrec depends on being able to grab an allocatione below the 0x10000000 line,
+		// Note: the VUrec depends on being able to grab an allocation below the 0x10000000 line,
 		// so we give the EErec an address above that to try first as it's basemem address, hence
 		// the 0x20000000 pick.
 
@@ -451,13 +384,22 @@ static void recAlloc()
 	x86FpuState = FPU_STATE;
 }
 
+struct ManualPageTracking
+{
+	u16 page;
+	u8  counter;
+};
+
 PCSX2_ALIGNED16( static u16 manual_page[Ps2MemSize::Base >> 12] );
 PCSX2_ALIGNED16( static u8 manual_counter[Ps2MemSize::Base >> 12] );
+
+volatile bool eeRecIsReset = false;
 
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
 	Console::Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
+	eeRecIsReset = true;
 
 	maxrecmem = 0;
 
@@ -518,7 +460,7 @@ void recResetEE( void )
 	x86FpuState = FPU_STATE;
 
 	branch = 0;
-	SetCPUState(Config.sseMXCSR, Config.sseVUMXCSR);
+	SetCPUState(EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR);
 }
 
 static void recShutdown( void )
@@ -540,10 +482,13 @@ static void recShutdown( void )
 #pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
 #endif
 
-void recStep( void ) {
+void recStep( void )
+{
 }
 
-static __forceinline bool recEventTest()
+extern "C"
+{
+void recEventTest()
 {
 #ifdef PCSX2_DEVBUILD
 	// dont' remove this check unless doing an official release
@@ -555,13 +500,13 @@ static __forceinline bool recEventTest()
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
 
-	// Perform counters, ints, and IOP updates:
-	bool retval = _cpuBranchTest_Shared();
+	// Perform counters, interrupts, and IOP updates:
+	_cpuBranchTest_Shared();
 
 #ifdef PCSX2_DEVBUILD
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
-	return retval;
+}
 }
 
 ////////////////////////////////////////////////////
@@ -573,7 +518,7 @@ u32 g_EEDispatchTemp;
 
 // The address for all cleared blocks.  It recompiles the current pc and then
 // dispatches to the recompiled block address.
-static __declspec(naked) void JITCompile()
+static __naked void JITCompile()
 {
 	__asm {
 		mov esi, dword ptr [cpuRegs.pc]
@@ -587,7 +532,7 @@ static __declspec(naked) void JITCompile()
 	}
 }
 
-static __declspec(naked) void JITCompileInBlock()
+static __naked void JITCompileInBlock()
 {
 	__asm {
 		jmp JITCompile
@@ -606,105 +551,82 @@ static void __naked DispatcherReg()
 	}
 }
 
-void recExecute()
+// [TODO] : Replace these functions with x86Emitter-generated code and we can compound this
+// function and DispatcherReg() into a fast fall-through case (removes the DispatcerReg jump
+// in this function, since execution will just fall right into the DispatcherReg implementation).
+//
+static void __naked DispatcherEvent()
 {
-	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
-	// Manually pushing is faster, especially on Core2's and such. :)
-	do
-	{
-		g_EEFreezeRegs = true;
-		__asm
-		{
-			push ebx
-			push esi
-			push edi
-			push ebp
-
-			call DispatcherReg
-			
-			pop ebp
-			pop edi
-			pop esi
-			pop ebx
-		}
-		g_EEFreezeRegs = false;
-	}
-	while( !recEventTest() );
-}
-
-static void recExecuteBlock()
-{
-	g_EEFreezeRegs = true;
 	__asm
 	{
-		push ebx
-		push esi
-		push edi
-		push ebp
-
-		call DispatcherReg
-
-		pop ebp
-		pop edi
-		pop esi
-		pop ebx
+		call recEventTest;
+		jmp DispatcherReg;
 	}
-	g_EEFreezeRegs = false;
-	recEventTest();
 }
+#endif
+
+static void recExecute()
+{
+	// Implementation Notes:
+	// This function enter an endless loop, which is only escapable via C++ exception handling.
+	// The loop is needed because some things in the rec use "ret" as a shortcut to
+	// invoking DispatcherReg.  These things are code bits which are called infrequently,
+	// such as dyna_block_discard and dyna_page_reset.
+
+	// Optimization note:
+	// Compared pushad against manually pushing the regs one-by-one.
+	// Manually pushing is faster, especially on Core2's and such. :)
+
+	g_EEFreezeRegs = true;
+
+	while( true )
+	{
+		try
+		{
+#ifdef _MSC_VER
+
+			__asm
+			{
+				push ebx
+				push esi
+				push edi
+				push ebp
+
+				call DispatcherReg
+
+				pop ebp
+				pop edi
+				pop esi
+				pop ebx
+			}
 
 #else // _MSC_VER
 
-__forceinline void recExecute()
-{
-	// Optimization note : Compared pushad against manually pushing the regs one-by-one.
-	// Manually pushing is faster, especially on Core2's and such. :)
-	do {
-		g_EEFreezeRegs = true;
-		__asm__
-		(
-			".intel_syntax noprefix\n"
-			"push ebx\n"
-			"push esi\n"
-			"push edi\n"
-			"push ebp\n"
+			__asm__
+			(
+				".intel_syntax noprefix\n"
+				"push ebx\n"
+				"push esi\n"
+				"push edi\n"
+				"push ebp\n"
 
-			"call DispatcherReg\n"
-			
-			"pop ebp\n"
-			"pop edi\n"
-			"pop esi\n"
-			"pop ebx\n"
-			".att_syntax\n"
-		);
-		g_EEFreezeRegs = false;
-	}
-	while( !recEventTest() );
-}
+				"call DispatcherReg\n"
 
-static void recExecuteBlock()
-{
-	g_EEFreezeRegs = true;
-	__asm__
-	(
-		".intel_syntax noprefix\n"
-		"push ebx\n"
-		"push esi\n"
-		"push edi\n"
-		"push ebp\n"
-
-		"call DispatcherReg\n"
-
-		"pop ebp\n"
-		"pop edi\n"
-		"pop esi\n"
-		"pop ebx\n"
-		".att_syntax\n"
-	);
-	g_EEFreezeRegs = false;
-	recEventTest();
-}
+				"pop ebp\n"
+				"pop edi\n"
+				"pop esi\n"
+				"pop ebx\n"
+				".att_syntax\n"
+			);
 #endif
+		}
+		catch( Exception::RecompilerReset& )
+		{
+		}
+	}
+
+	g_EEFreezeRegs = false;
+}
 
 namespace R5900 {
 namespace Dynarec {
@@ -761,11 +683,11 @@ void recClear(u32 addr, u32 size)
                 __asm__("emms");
 #else
         #ifdef _MSC_VER
-                if (cpucaps.has3DNOWInstructionExtensions) __asm femms;
+                if (x86caps.has3DNOWInstructionExtensions) __asm femms;
                 else __asm emms;
         #else
-                if( cpucaps.has3DNOWInstructionExtensions )__asm__("femms");
-                else 
+                if( x86caps.has3DNOWInstructionExtensions )__asm__("femms");
+                else
                         __asm__("emms");
         #endif
 #endif
@@ -818,8 +740,8 @@ void recClear(u32 addr, u32 size)
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
 		if (pexblock->startpc >= addr && pexblock->startpc < addr + size * 4
 		 || pexblock->startpc < addr && blockend > addr) {
-			Console::Error("Impossible block clearing failure");
-			jASSUME(0);
+			Console::Error( "Impossible block clearing failure" );
+			wxASSERT_MSG( false, L"Impossible block clearing failure" );
 		}
 	}
 #endif
@@ -862,7 +784,7 @@ void SetBranchReg( u32 reg )
 //			MOV32ItoM( (uptr)&cpuRegs.pc, g_cpuConstRegs[reg].UL[0] );
 //		else {
 //			int mmreg;
-//			
+//
 //			if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, reg, MODE_READ)) >= 0 ) {
 //				SSE_MOVSS_XMM_to_M32((u32)&cpuRegs.pc, mmreg);
 //			}
@@ -963,7 +885,7 @@ void iFlushCall(int flushtype)
 		_flushConstRegs();
 
 	if (x86FpuState==MMX_STATE) {
-		if (cpucaps.has3DNOWInstructionExtensions) FEMMS();
+		if (x86caps.has3DNOWInstructionExtensions) FEMMS();
 		else EMMS();
 		x86FpuState=FPU_STATE;
 	}
@@ -993,7 +915,7 @@ static u32 scaleBlockCycles_helper()
 	// caused by sync hacks and such, since games seem to care a lot more about
 	// these small blocks having accurate cycle counts.
 
-	if( s_nBlockCycles <= (5<<3) || (Config.Hacks.EECycleRate == 0) )
+	if( s_nBlockCycles <= (5<<3) || (EmuConfig.Speedhacks.EECycleRate == 0) )
 		return s_nBlockCycles >> 3;
 
 	uint scalarLow, scalarMid, scalarHigh;
@@ -1001,7 +923,7 @@ static u32 scaleBlockCycles_helper()
 	// Note: larger blocks get a smaller scalar, to help keep
 	// them from becoming "too fat" and delaying branch tests.
 
-	switch( Config.Hacks.EECycleRate )
+	switch( EmuConfig.Speedhacks.EECycleRate )
 	{
 		case 0:	return s_nBlockCycles >> 3;
 
@@ -1042,26 +964,59 @@ static u32 eeScaleBlockCycles()
 //   the jump is assumed to be to a register (dynamic).  For any other value the
 //   jump is assumed to be static, in which case the block will be "hardlinked" after
 //   the first time it's dispatched.
-// 
-//   noDispatch - When set true, the jump to Dispatcher.  Used by the recs
+//
+//   noDispatch - When set true, then jump to Dispatcher.  Used by the recs
 //   for blocks which perform exception checks without branching (it's enabled by
 //   setting "branch = 2";
-static void iBranchTest(u32 newpc, bool noDispatch)
+static void iBranchTest(u32 newpc)
 {
-	if( bExecBIOS ) CheckForBIOSEnd();
+	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
 	// Equiv code to:
 	//    cpuRegs.cycle += blockcycles;
 	//    if( cpuRegs.cycle > g_nextBranchCycle ) { DoEvents(); }
 
-	if (Config.Hacks.IdleLoopFF && s_nBlockFF) {
+	if (EmuConfig.Speedhacks.BIFC0 && s_nBlockFF)
+	{
 		xMOV(eax, ptr32[&g_nextBranchCycle]);
 		xADD(ptr32[&cpuRegs.cycle], eeScaleBlockCycles());
 		xCMP(eax, ptr32[&cpuRegs.cycle]);
 		xCMOVL(eax, ptr32[&cpuRegs.cycle]);
 		xMOV(ptr32[&cpuRegs.cycle], eax);
-	} else {
+
+		xJMP( DispatcherEvent );
+	}
+	else
+	{
+		// Optimization -- we need to load cpuRegs.pc on static block links, but doing it inside
+		// the if() block below (it would be paired with recBlocks.Link) breaks the sub/jcc
+		// pairing that modern CPUs optimize (applies to all P4+ and AMD X2+ CPUs).  So let's do
+		// it up here instead. :D
+
+		if( newpc != 0xffffffff )
+			xMOV( ptr32[&cpuRegs.pc], newpc );
+
+		xMOV(eax, &cpuRegs.cycle);
+		xADD(eax, eeScaleBlockCycles());
+		xMOV(&cpuRegs.cycle, eax); // update cycles
+		xSUB(eax, &g_nextBranchCycle);
+
+		if (newpc == 0xffffffff)
+		{
+			xJNS( DispatcherEvent );
+			xJMP( DispatcherReg );
+		}
+		else
+		{
+			recBlocks.Link( HWADDR(newpc), xJcc32( Jcc_Signed ) );
+			xJMP( DispatcherEvent );
+		}
+	}
+
+	/*
+	else
+	{
 		xMOV(eax, &cpuRegs.cycle);
 		xADD(eax, eeScaleBlockCycles());
 		xMOV(&cpuRegs.cycle, eax); // update cycles
@@ -1077,7 +1032,10 @@ static void iBranchTest(u32 newpc, bool noDispatch)
 			}
 		}
 	}
-	xRET();
+	xCALL( recEventTest );
+	xJMP( DispatcherReg );
+
+	*/
 }
 
 static void checkcodefn()
@@ -1126,7 +1084,7 @@ void recompileNextInstruction(int delayslot)
 		x86SetJ8( j8Ptr[ 1 ] );
 		PUSH32I(s_pCurBlockEx->startpc);
 		ADD32ItoR(ESP, 4);
-		x86SetJ8( j8Ptr[ 2 ] );	
+		x86SetJ8( j8Ptr[ 2 ] );
 	}
 #endif
 #endif
@@ -1252,7 +1210,7 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 	mmap_MarkCountedRamPage( start );
 }
 
-static void recRecompile2( const u32 startpc )
+void recRecompile( const u32 startpc )
 {
 	u32 i = 0;
 	u32 branchTo;
@@ -1325,7 +1283,7 @@ static void recRecompile2( const u32 startpc )
 	// go until the next branch
 	i = startpc;
 	s_nEndBlock = 0xffffffff;
-	
+
 	while(1) {
 		BASEBLOCK* pblock = PC_GETBLOCK(i);
 
@@ -1358,9 +1316,9 @@ static void recRecompile2( const u32 startpc )
 					goto StartRecomp;
 				}
 				break;
-				
+
 			case 1: // regimm
-				
+
 				if( _Rt_ < 4 || (_Rt_ >= 16 && _Rt_ < 20) ) {
 					// branches
 					branchTo = _Imm_ * 4 + i + 4;
@@ -1377,12 +1335,12 @@ static void recRecompile2( const u32 startpc )
 				goto StartRecomp;
 
 			// branches
-			case 4: case 5: case 6: case 7: 
+			case 4: case 5: case 6: case 7:
 			case 20: case 21: case 22: case 23:
 				branchTo = _Imm_ * 4 + i + 4;
 				if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 				else  s_nEndBlock = i+8;
-				
+
 				goto StartRecomp;
 
 			case 16: // cp0
@@ -1403,7 +1361,7 @@ static void recRecompile2( const u32 startpc )
 					branchTo = _Imm_ * 4 + i + 4;
 					if( branchTo > startpc && branchTo < i ) s_nEndBlock = branchTo;
 					else  s_nEndBlock = i+8;
-					
+
 					goto StartRecomp;
 				}
 				break;
@@ -1456,7 +1414,7 @@ StartRecomp:
 					vucycle = 0;
 					usecop2 = 1;
 				}
-				
+
 				VU0.code = cpuRegs.code;
 				_vuRegsCOP22( &VU0, &g_pCurInstInfo->vuregs );
 				continue;
@@ -1516,7 +1474,7 @@ StartRecomp:
 			xMOV( ecx, inpage_ptr );
 			xMOV( edx, pgsz / 4 );
 			//xMOV( eax, startpc );		// uncomment this to access startpc (as eax) in dyna_block_discard
-			
+
 			u32 lpc = inpage_ptr;
 			u32 stg = pgsz;
 			while(stg>0)
@@ -1527,7 +1485,7 @@ StartRecomp:
 				stg -= 4;
 				lpc += 4;
 			}
-			
+
 			// Tweakpoint!  3 is a 'magic' number representing the number of times a counted block
 			// is re-protected before the recompiler gives up and sets it up as an uncounted (permanent)
 			// manual block.  Higher thresholds result in more recompilations for blocks that share code
@@ -1537,7 +1495,7 @@ StartRecomp:
 			// (ideally, perhaps, manual_counter should be reset to 0 every few minutes?)
 
 			if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3) {
-			
+
 				// Counted blocks add a weighted (by block size) value into manual_page each time they're
 				// run.  If the block gets run a lot, it resets and re-protects itself in the hope
 				// that whatever forced it to be manually-checked before was a 1-time deal.
@@ -1569,7 +1527,7 @@ StartRecomp:
 
 		}
 	}
-	
+
 	// Finally: Generate x86 recompiled code!
 	g_pCurInstInfo = s_pInstCache;
 	while (!branch && pc < s_nEndBlock) {
@@ -1627,7 +1585,7 @@ StartRecomp:
 		// for actual branching instructions.
 
 		iFlushCall(FLUSH_EVERYTHING);
-		iBranchTest(0xffffffff, true);
+		iBranchTest();
 	}
 	else
 	{
@@ -1671,28 +1629,11 @@ StartRecomp:
 	s_pCurBlockEx = NULL;
 }
 
-// wrapper
-void recRecompile(u32 startpc)
-{
-	recFailed = false;
-	recRecompile2(startpc);
-	if (recFailed) {
-		recFailed = false;
-		recResetEE();
-		recRecompile2(startpc);
-	}
-	if (recFailed) {
-		Console::Error("Unrecoverable recompilation failure.");
-		*(int*)0 = 42;
-	}
-}
-
 R5900cpu recCpu = {
 	recAlloc,
 	recResetEE,
 	recStep,
 	recExecute,
-	recExecuteBlock,
 	recClear,
 	recShutdown
 };

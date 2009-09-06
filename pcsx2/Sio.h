@@ -60,8 +60,6 @@ struct _sio {
 extern _sio sio;
 
 extern void sioInit();
-extern void sioShutdown();
-extern void psxSIOShutdown();
 extern u8 sioRead8();
 extern void sioWrite8(u8 value);
 extern void sioWriteCtrl16(u16 value);

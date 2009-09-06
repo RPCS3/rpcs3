@@ -82,69 +82,6 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug SSE2|x64"
-			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
-			UseOfMFC="1"
-			CharacterSet="2"
-			WholeProgramOptimization="0"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				UsePrecompiledHeader="2"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				DataExecutionPrevention="0"
-				TargetMachine="17"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release SSE2|Win32"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops"
@@ -182,71 +119,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release SSE2|x64"
-			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops"
-			UseOfMFC="1"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				UsePrecompiledHeader="2"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				DataExecutionPrevention="0"
-				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -334,9 +209,377 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release SSSE3|x64"
+			Name="Debug SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops"
+			UseOfMFC="0"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				UsePrecompiledHeader="2"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
+				ModuleDefinitionFile=".\GSdx.def"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug SSE4|Win32"
+			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops"
+			UseOfMFC="0"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				UsePrecompiledHeader="2"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				ModuleDefinitionFile=".\GSdx.def"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release SSE4|Win32"
+			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;.\vsprops\ProjectRootDir.vsprops"
+			UseOfMFC="0"
+			CharacterSet="2"
+			WholeProgramOptimization="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				UsePrecompiledHeader="2"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
+				ModuleDefinitionFile=".\GSdx.def"
+				TargetMachine="1"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug SSE2|x64"
+			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
+			UseOfMFC="1"
+			CharacterSet="2"
+			WholeProgramOptimization="0"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				UsePrecompiledHeader="2"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				DataExecutionPrevention="0"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release SSE2|x64"
+			ConfigurationType="2"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -397,11 +640,12 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug SSSE3|Win32"
+			Name="Release SSSE3|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops"
+			UseOfMFC="1"
 			CharacterSet="2"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -433,7 +677,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				ModuleDefinitionFile=".\GSdx.def"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -521,68 +765,6 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug SSE4|Win32"
-			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops"
-			UseOfMFC="0"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				UsePrecompiledHeader="2"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				ModuleDefinitionFile=".\GSdx.def"
-				TargetMachine="1"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Debug SSE4|x64"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops"
@@ -622,69 +804,6 @@
 				Name="VCLinkerTool"
 				DataExecutionPrevention="0"
 				TargetMachine="17"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release SSE4|Win32"
-			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;.\vsprops\ProjectRootDir.vsprops"
-			UseOfMFC="0"
-			CharacterSet="2"
-			WholeProgramOptimization="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				UsePrecompiledHeader="2"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				ModuleDefinitionFile=".\GSdx.def"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -773,62 +892,6 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug|Win32"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Debug|x64"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
@@ -869,62 +932,6 @@
 				ModuleDefinitionFile=""
 				DataExecutionPrevention="0"
 				TargetMachine="17"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCManifestTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|Win32"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1526,23 +1533,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1558,23 +1549,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1590,7 +1565,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1598,7 +1573,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2034,23 +2041,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2066,23 +2057,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2098,7 +2073,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2106,7 +2081,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2154,23 +2161,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2186,23 +2177,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2218,7 +2193,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2226,7 +2201,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2274,23 +2281,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2306,23 +2297,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2338,7 +2313,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2346,7 +2321,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2394,23 +2401,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2426,23 +2417,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2458,7 +2433,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2466,7 +2441,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2514,23 +2521,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2546,23 +2537,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2578,7 +2553,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2586,7 +2561,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2634,23 +2641,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2666,23 +2657,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2698,7 +2673,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2706,7 +2681,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2770,23 +2777,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2802,23 +2793,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2834,7 +2809,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2842,7 +2817,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2890,23 +2897,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2922,23 +2913,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2954,7 +2929,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2962,7 +2937,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3010,23 +3017,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3042,23 +3033,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3074,7 +3049,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3082,7 +3057,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3130,23 +3137,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3162,23 +3153,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3194,7 +3169,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3202,7 +3177,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3250,23 +3257,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3282,23 +3273,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3314,7 +3289,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3322,7 +3297,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3374,23 +3381,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3406,23 +3397,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3438,7 +3413,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3446,7 +3421,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3494,23 +3501,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3526,23 +3517,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3558,7 +3533,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3566,7 +3541,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3614,23 +3621,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3646,23 +3637,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3678,7 +3653,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3686,7 +3661,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3734,23 +3741,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3766,23 +3757,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3798,7 +3773,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3806,7 +3781,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3858,23 +3865,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3890,23 +3881,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3922,7 +3897,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3930,7 +3905,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3978,23 +3985,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4010,23 +4001,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4042,7 +4017,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4050,7 +4025,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4098,23 +4105,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4130,23 +4121,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4162,7 +4137,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4170,7 +4145,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4218,23 +4225,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4250,23 +4241,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4282,7 +4257,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4290,7 +4265,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4338,23 +4345,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4370,23 +4361,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4402,7 +4377,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4410,7 +4385,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4458,23 +4465,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4490,23 +4481,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4522,7 +4497,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4530,7 +4505,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4578,23 +4585,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4610,23 +4601,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4642,7 +4617,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4650,7 +4625,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4698,23 +4705,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE2|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release SSE2|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release SSE2|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4730,23 +4721,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSSE3|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug SSSE3|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug SSSE3|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4762,7 +4737,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug SSE4|x64"
+					Name="Release SSE4|Win32"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -4770,7 +4745,39 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release SSE4|Win32"
+					Name="Debug SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSE2|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSSE3|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="0"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug SSE4|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"

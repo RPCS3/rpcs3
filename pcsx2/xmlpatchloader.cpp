@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -23,10 +23,6 @@ using namespace std;
 
 #include "Patch.h"
 #include "System.h"
-
-#ifdef _MSC_VER
-#pragma warning(disable:4996) //ignore the stricmp deprecated warning
-#endif
 
 #if !defined(_WIN32)
 #ifndef strnicmp
@@ -71,25 +67,23 @@ Patch Patch::operator =(const Patch&p)
 vector<Group> groups;
 vector<Patch> patches;
 
-int LoadPatch( const string& crc)
+int LoadPatch( const wxString& crc )
 {
-	char pfile[256];
-	sprintf(pfile,"patches\\%hs.xml",&crc);
-
+	wxString pfile( Path::Combine( L"patches", crc ) + L".xml" );
 	patchnumber=0;
 
-	TiXmlDocument doc( pfile );
+	TiXmlDocument doc( pfile.ToAscii().data() );
 	bool loadOkay = doc.LoadFile();
 	if ( !loadOkay )
 	{
 		//Console::Error("XML Patch Loader: Could not load file '%s'. Error='%s'.", pfile, doc.ErrorDesc() );
 		return -1;
-	} 
-	else 
-	{
-		Console::WriteLn("XML Patch Loader: '%s' Found", params pfile);
 	}
-	
+	else
+	{
+		Console::WriteLn("XML Patch Loader: '%s' Found", params pfile.c_str() );
+	}
+
 	TiXmlNode *root = doc.FirstChild("GAME");
 	if(!root)
 	{
@@ -109,8 +103,9 @@ int LoadPatch( const string& crc)
 		return result;
 	}
 
-	Console::SetTitle(
-		((title==NULL) || (strlen(title)==0)) ? "<No Title>" : title );
+	wxString uTitle( wxString::FromAscii( title ) );
+	if( uTitle.IsEmpty() ) uTitle = L"<No Title>";
+	Console::SetTitle( uTitle );
 
 	return 0;
 }
@@ -145,12 +140,12 @@ int LoadGroup(TiXmlNode *group,int gParent)
 	}
 
 	string t;
-	
+
 	if(gtitle)
 		t.assign(gtitle);
 	else
 		t.clear();
-	
+
 	Group gp=Group(gParent,gEnabled,t);
 	groups.push_back(gp);
 
@@ -166,10 +161,10 @@ int LoadGroup(TiXmlNode *group,int gParent)
 	{
         TiXmlElement *rm=zerogs->ToElement();
         const char* pid = rm->FirstAttribute()->Value();
-		
-        if( pid != NULL ) 
+
+        if( pid != NULL )
 		sscanf(pid, "%x", &g_ZeroGSOptions);
-        else 
+        else
 		Console::WriteLn("zerogs attribute wrong");
     }
 
@@ -308,7 +303,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			patchnumber=0;
 			return -1;
 		}
-		
+
 		if(strcmp(place,"EE")==0)
 		{
 			patch[patchnumber].cpu= CPU_EE;
@@ -356,7 +351,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			pt.assign(ptitle);
 		else
 			pt.clear();
-		
+
 		Patch p=Patch(patchnumber,gIndex,penabled,pt);
 		patches.push_back(p);
 

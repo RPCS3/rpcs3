@@ -47,7 +47,7 @@ namespace HashTools {
 ///   Note:
 ///   The reason for this (perhaps seemingly) hogwash red tape is because you can define custom
 ///   equality behavior for individual hashmaps, which are independent of the type used.   The only
-///   obvious scenario where such a feature is useful is in 
+///   obvious scenario where such a feature is useful is in
 /// </remarks>
 /// <seealso cref="DEFINE_HASHCODE_UNARY"/>
 /// <seealso cref="DEFINE_HASH_API"/>
@@ -100,7 +100,7 @@ namespace HashTools {
 ///				return val.GetHashCode();		// this member function must be implemented by the user.
 ///			}
 ///		};
-/// 
+///
 ///		struct UnaryEquals
 ///		{
 ///			bool operator()(const Type s1, const Type s2) const
@@ -136,7 +136,7 @@ namespace HashTools {
 /// <remarks>
 ///   Use of this macro is only needed if the hashable type in question is a struct that is a private
 ///   local to the namespace of a containing class.
-/// </remarks>	
+/// </remarks>
 #define PRIVATE_HASHMAP( Key, T ) \
 	typedef SpecializedHashMap<Key, T> Key##HashMap; \
 	friend Key##HashMap;
@@ -178,6 +178,22 @@ extern const CommonHashClass GetCommonHash;
 struct CommonHashClass
 {
 public:
+	// GCC needs empty constructors on const instances, because it likes pointlessness.
+	CommonHashClass() {}
+
+	hash_key_t DoInt( u32 val ) const
+	{
+		u32 key = val;
+		key = ~key + (key << 15);
+		key = key ^ (key >> 12);
+		key = key + (key << 2);
+		key = key ^ (key >> 4);
+		key = key * 2057;
+		key = key ^ (key >> 16);
+
+		return val;
+	}
+
 	hash_key_t operator()(const std::string& src) const
 	{
 		return Hash( src.data(), src.length() );
@@ -187,7 +203,7 @@ public:
 	{
 		return Hash( (const char *)src.data(), src.length() * sizeof( wchar_t ) );
 	}
-	
+
 	// Returns a hashcode for a character.
 	// This has function has been optimized to return an even distribution
 	// across the range of an int value.  In theory that should be more rewarding
@@ -198,14 +214,14 @@ public:
 		int cs = (int)( c1 + (char)64 );
 		return ( cs + ( cs<<8 ) + ( cs << 16 ) + (cs << 24 ) );
 	}
-	
+
 	hash_key_t operator()( const wchar_t wc1 ) const
 	{
 		// Most unicode values are between 0 and 128, with 0-1024
 		// making up the bulk of the rest.  Everything else is spatially used.
 		/*int wcs = (int) ( wc1 + 0x2000 );
 		return wcs ^ ( wcs + 0x19000 );*/
-		
+
 		// or maybe I'll just feed it into the int hash:
 		return GetCommonHash( (u32)wc1 );
 	}
@@ -222,14 +238,7 @@ public:
 	/// </remarks>
 	hash_key_t operator()( const u32 val ) const
 	{
-		u32 key = val;
-		key = ~key + (key << 15);
-		key = key ^ (key >> 12);
-		key = key + (key << 2);
-		key = key ^ (key >> 4);
-		key = key * 2057;
-		key = key ^ (key >> 16);
-		return key;
+		return DoInt(val);
 	}
 
 	/// <summary>
@@ -244,7 +253,7 @@ public:
 	/// </remarks>
 	hash_key_t operator()( const s32 val ) const
 	{
-		return GetCommonHash((u32)val);
+		return DoInt(val);
 	}
 
 	/// <summary>
@@ -283,7 +292,7 @@ public:
 	{
 		return GetCommonHash((u64)val);
 	}
-	
+
 	hash_key_t operator()( const float val ) const
 	{
 		// floats do a fine enough job of being scattered about
@@ -366,7 +375,7 @@ public:
 	///		class Hasher : IHashable
 	///		{
 	///			int  someValue;
-	/// 	
+	///
 	///			virtual bool Equals( const IHashable& right ) const
 	/// 		{
 	///				// Use pointer comparison first since it's fast and accurate:
@@ -442,48 +451,48 @@ public:
 /// 	struct Point
 /// 	{
 /// 		int x, y;
-/// 		
+///
 /// 		// Empty constructor is necessary for HashMap.
 /// 		// This can either be initialized to zero, or uninitialized as here:
 /// 		Point() {}
-/// 		
+///
 /// 		// Copy Constructor is just always necessary.
 /// 		Point( const Point& src ) : first( src.first ), second( src.second ) {}
-/// 
+///
 /// 		// Standard content constructor (Not needed by HashMap)
 /// 		Point( int xpos, int ypos ) : x( xpos ), y( ypos ) {}
-/// 			
+///
 /// 		/****  Begin Hashmap Interface Implementation ****/
-/// 
+///
 /// 		// HashMap Requires both GetEmptyKey() and GetDeleteKey() instance member
 /// 		// methods to be defined.  These act as defaults.  The actual values used
 /// 		// can be overridden on an individual HashMap basis via the HashMap constructor.
-/// 
+///
 /// 		static Point GetEmptyKey() { return Point( -0xffffff, 0xffffff ); }
 /// 		static Point GetDeletedKey() { return Kerning( -0xffffee, 0xffffee ); }
-/// 
+///
 /// 		// HashMap Requires an Equality Overload.
 /// 		// The inequality overload is not required but is probably a good idea since
 /// 		// orphaned equality (without sibling inequality) operator overloads are ugly code.
-/// 
+///
 /// 		bool Equals( const Point& right ) const
 /// 		{
 /// 			return ( x == right.x ) && ( y == right.y );
 /// 		}
-/// 
+///
 /// 		hash_key_t GetHashCode() const
 /// 		{
 /// 			// This is a decent "universal" hash method for when you have multiple int types:
 /// 			return GetCommonHash( x ) ^ GetCommonHash( y );
 /// 		}
-/// 
+///
 /// 		// Use a macro to expose the hash API to the HashMap templates.
 /// 		// This macro creates MakeHashCode and Compare structs, which use the ()
 /// 		// operator to create "unary methods" for the GetHashCode and == operator above.
 /// 		// Feeling dizzy yet?  Don't worry.  Just follow this template.  It works!
-/// 		
+///
 /// 		DEFINE_HASH_API( Point );
-/// 		
+///
 /// 		/**** End HashMap Interface Implementation ****/
 /// 	};
 ///   </code>
@@ -506,15 +515,17 @@ public:
 	/// <remarks>
 	///   If found, the value associated with the requested key is copied into the <c>outval</c>
 	///   parameter.  This is a more favorable alternative to the indexer operator since the
-	///   indexer implementation can and will create new entries for every request that 
+	///   indexer implementation can and will create new entries for every request that
 	/// </remarks>
-	void TryGetValue( const Key& key, T& outval ) const
+	/*void TryGetValue( const Key& key, T& outval ) const
 	{
+		// GCC doesn't like this for some reason -- says const_iterator can't be found.
+		// Fortunately nothing uses these functions yet, so I just commented them out. --air
 		const_iterator iter = find( key );
 		if( iter != end() )
 			outval = iter->second;
-	}
-	
+	}*/
+
 	const T& GetValue( Key key ) const
 	{
 		return (this->find( key ))->second;
@@ -530,9 +541,10 @@ public:
 ///   hash keys.  The <see cref="HashMap" /> class isn't suited to the task since it requires the key type to
 ///   include a set of unary methods.  Obviously predicates cannot be added to fundamentals after the fact. :)
 ///   Note:
-///   Do not use <c>char *</c> or <c>wchar_t *</c> as key types.  Use <c>std::string</c> and <c>std::wstring</c> instead,
-///   as performance of those types will generally be superior.  For that matter, don't use this class at all!
-///   Use the string-specialized classes <see cref="Dictionary" /> and <see cref="UnicodeDictionary" />.
+///   Do not use <c>char *</c> or <c>wchar_t *</c> as key types.  Use <c>std::string</c> and <c>std::wstring</c>
+///   instead, as performance of those types will generally be superior due to string length caching.  For that
+///   matter, don't use this class at all! Use the string-specialized classes <see cref="Dictionary" /> and
+///   <see cref="UnicodeDictionary" />.
 /// </remarks>
 template< class Key, class T >
 class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
@@ -547,7 +559,7 @@ public:
 	///   Both the <c>emptyKey</c>a nd c>deletedKey</c> parameters must be unique values that
 	///   are *not* used as actual values in the set.
 	/// </remarks>
-	HashMap( Key emptyKey, Key deletedKey, int initialCapacity=33 ) :
+	HashMap( const Key& emptyKey, const Key& deletedKey, int initialCapacity=33 ) :
 		google::dense_hash_map<Key, T, CommonHashClass>( initialCapacity )
 	{
 		set_empty_key( emptyKey );
@@ -560,15 +572,16 @@ public:
 	/// <remarks>
 	///   If found, the value associated with the requested key is copied into the <c>outval</c>
 	///   parameter.  This is a more favorable alternative to the indexer operator since the
-	///   indexer implementation can and will create new entries for every request that 
+	///   indexer implementation can and will create new entries for every request that
 	/// </remarks>
-	void TryGetValue( const Key& key, T& outval ) const
+	/*void TryGetValue( const Key& key, T& outval ) const
 	{
+		// See above class for notes on why this is commented out.
 		const_iterator iter = find( key );
 		if( iter != end() )
 			outval = iter->second;
-	}
-	
+	}*/
+
 	const T& GetValue( Key key ) const
 	{
 		return (this->find( key ))->second;
@@ -589,8 +602,8 @@ class Dictionary : public HashMap<std::string, T>
 public:
 	virtual ~Dictionary() {}
 
-	Dictionary( int initialCapacity=33, std::string emptyKey = "@@-EMPTY-@@", std::string deletedKey = "@@-DELETED-@@" ) :
-		HashMap( emptyKey, deletedKey, initialCapacity)
+	Dictionary( int initialCapacity=33, const std::string& emptyKey = "@@-EMPTY-@@", const std::string& deletedKey = "@@-DELETED-@@" ) :
+		HashMap<std::string, T>( emptyKey, deletedKey, initialCapacity)
 	{
 	}
 private:
@@ -613,10 +626,10 @@ class UnicodeDictionary : public HashMap<std::wstring, T>
 public:
 	virtual ~UnicodeDictionary() {}
 
-	UnicodeDictionary( int initialCapacity=33, std::wstring emptyKey = "@@-EMPTY-@@", std::wstring deletedKey = "@@-DELETED-@@" ) :
-		HashMap( emptykey, deletedkey, initialCapacity)
+	UnicodeDictionary( int initialCapacity=33, const std::wstring& emptyKey = L"@@-EMPTY-@@", const std::wstring& deletedKey = L"@@-DELETED-@@" ) :
+		HashMap<std::wstring, T>( emptyKey, deletedKey, initialCapacity)
 	{
-	}		
+	}
 
 private:
 	UnicodeDictionary( const UnicodeDictionary& src ) {}

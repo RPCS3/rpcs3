@@ -35,9 +35,10 @@
 using namespace R5900;
 
 FILE *emuLog;
+wxString emuLogName;
 
 #ifdef PCSX2_DEVBUILD
-u32 varLog;
+LogSources varLog;
 
 // these used by the depreciated _old_Log only
 u16 logProtocol;
@@ -66,11 +67,12 @@ void __Log( const char* fmt, ... )
 	assert( length <= 2020 );
 	if( length > 2020 )
 	{
-		Msgbox::Alert("Source Log Stack Corruption Detected.  Program execution may become unstable.");
+		Msgbox::Alert( _("Source log buffer overrun") );
 		// fixme: should throw an exception here once we have proper exception handling implemented.
 	}
 
-	if (varLog & 0x80000000)		// log to console enabled?
+#ifdef PCSX2_DEVBUILD
+	if (varLog.LogToConsole)		// log to console enabled?
 	{
 		Console::Write(tmp);
 
@@ -82,6 +84,7 @@ void __Log( const char* fmt, ... )
 		//fputs( "\r\n", emuLog );
 		fflush( emuLog );
 	}
+#endif
 }
 
 static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, va_list list )
@@ -95,21 +98,21 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 	assert( length <= 2020 );
 	if( length > 2020 )
 	{
-		Msgbox::Alert("Source Log Stack Corruption Detected.  Program execution may become unstable.");
+		Msgbox::Alert( _("Source log buffer overrun") );
 		// fixme: should throw an exception here once we have proper exception handling implemented.
 	}
 
 #ifdef PCSX2_DEVBUILD
 #ifdef _WIN32
 	// Send log data to the (remote?) debugger.
-	if (connected && logProtocol<0x10)
+	// (not supported yet in the wxWidgets port)
+	/*if (connected && logProtocol<0x10)
 	{
 		sendTTYP(logProtocol, logSource, tmp);
-	}
-#endif
+	}*/
 #endif
 
-	if (varLog & 0x80000000)		// log to console enabled?
+	if (varLog.LogToConsole)		// log to console enabled?
 	{
 		Console::WriteLn(tmp);
 
@@ -119,6 +122,7 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 		fputs( "\n", emuLog );
 		fflush( emuLog );
 	}
+#endif
 }
 
 // Note: This function automatically appends a newline character always!
@@ -153,7 +157,6 @@ IMPLEMENT_SOURCE_LOG( BIOS, 'E', 0 )
 
 IMPLEMENT_SOURCE_LOG( CPU, 'E', 1 ) 
 IMPLEMENT_SOURCE_LOG( FPU, 'E', 1 ) 
-IMPLEMENT_SOURCE_LOG( MMI, 'E', 1 ) 
 IMPLEMENT_SOURCE_LOG( COP0, 'E', 1 )
 
 IMPLEMENT_SOURCE_LOG( MEM, 'E', 6 )

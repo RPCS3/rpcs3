@@ -24,6 +24,8 @@
 #include "iR5900.h"
 #include "IPU/IPU.h"
 
+#include "AppConfig.h"
+
 using namespace R5900;
 // fixme: currently should not be uncommented.
 //#define TEST_BROKEN_DUMP_ROUTINES
@@ -200,54 +202,45 @@ void iDumpVU1Registers()
 #endif
 ////////////////////////////////////////////////////
 
+#include "Utilities/AsciiFile.h"
+
 // Originally from iR5900-32.cpp
 void iDumpBlock( int startpc, u8 * ptr )
 {
-	FILE *f;
-	string filename;
-	u32 i, j;
-	EEINST* pcur;
 	u8 used[34];
 	u8 fpuused[33];
-	int numused, count, fpunumused;
+	int numused, fpunumused;
 
 	Console::Status( "dump1 %x:%x, %x", params startpc, pc, cpuRegs.cycle );
-	Path::CreateDirectory( "dumps" );
-#ifndef __LINUX__
-	ssprintf( filename, "dumps\\R5900dump%.8X.txt", startpc );
-#else
-	ssprintf( filename, "dumps/R5900dump%.8X.txt", startpc );
-#endif
-	
-	fflush( stdout );
-	
-//	f = fopen( "dump1", "wb" );
-//	fwrite( ptr, 1, (u32)x86Ptr - (u32)ptr, f );
-//	fclose( f );
-//
-//	sprintf( command, "objdump -D --target=binary --architecture=i386 dump1 > %s", filename );
-//	system( command );
 
-	f = fopen( filename.c_str(), "w" );
-
-	std::string output;
+	g_Conf->Folders.Logs.Mkdir();
+	AsciiFile eff(
+		Path::Combine( g_Conf->Folders.Logs, wxsFormat(L"R5900dump%.8X.txt", startpc) ),
+		wxFile::write
+	);
 
 	if( disR5900GetSym(startpc) != NULL )
-		fprintf(f, "%s\n", disR5900GetSym(startpc));
+	{
+		eff.Printf( disR5900GetSym( startpc ) );
+		eff.Printf( "\n" );
+	}
 	
-	for ( i = startpc; i < s_nEndBlock; i += 4 ) {
+	for ( uint i = startpc; i < s_nEndBlock; i += 4 )
+	{
+		string output;
 		disR5900Fasm( output, memRead32( i ), i );
-		fprintf( f, output.c_str() );
+		eff.Printf( output.c_str() );
 	}
 
 	// write the instruction info
 
-	fprintf(f, "\n\nlive0 - %x, live1 - %x, live2 - %x, lastuse - %x\nmmx - %x, xmm - %x, used - %x\n",
-		EEINST_LIVE0, EEINST_LIVE1, EEINST_LIVE2, EEINST_LASTUSE, EEINST_MMX, EEINST_XMM, EEINST_USED);
+	eff.Printf( "\n\nlive0 - %x, live1 - %x, live2 - %x, lastuse - %x\nmmx - %x, xmm - %x, used - %x\n",
+		EEINST_LIVE0, EEINST_LIVE1, EEINST_LIVE2, EEINST_LASTUSE, EEINST_MMX, EEINST_XMM, EEINST_USED
+	);
 
 	memzero_obj(used);
 	numused = 0;
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
+	for(uint i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( s_pInstCache->regs[i] & EEINST_USED ) {
 			used[i] = 1;
 			numused++;
@@ -256,44 +249,51 @@ void iDumpBlock( int startpc, u8 * ptr )
 
 	memzero_obj(fpuused);
 	fpunumused = 0;
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
+	for(uint i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
 		if( s_pInstCache->fpuregs[i] & EEINST_USED ) {
 			fpuused[i] = 1;
 			fpunumused++;
 		}
 	}
 
-	fprintf(f, "       ");
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
-		if( used[i] ) fprintf(f, "%2d ", i);
+	eff.Printf( "       " );
+	for(uint i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
+		if( used[i] ) eff.Printf( "%2d ", i );
 	}
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
-		if( fpuused[i] ) fprintf(f, "%2d ", i);
+	eff.Printf( "\n" );
+	for(uint i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
+		if( fpuused[i] ) eff.Printf( "%2d ", i );
 	}
-	fprintf(f, "\n");
 
-	fprintf(f, "       ");
-	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
+	eff.Printf( "\n" );
+	eff.Printf( "       " );
+
+	// TODO : Finish converting this over to wxWidgers wxFile stuff...
+	/*
+	int count;
+	EEINST* pcur;
+
+	for(uint i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( used[i] ) fprintf(f, "%s ", disRNameGPR[i]);
 	}
-	for(i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
+	for(uint i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
 		if( fpuused[i] ) fprintf(f, "%s ", i<32?"FR":"FA");
 	}
 	fprintf(f, "\n");
 
 	pcur = s_pInstCache+1;
-	for( i = 0; i < (s_nEndBlock-startpc)/4; ++i, ++pcur) {
+	for( uint i = 0; i < (s_nEndBlock-startpc)/4; ++i, ++pcur) {
 		fprintf(f, "%2d: %2.2x ", i+1, pcur->info);
 		
 		count = 1;
-		for(j = 0; j < ArraySize(s_pInstCache->regs); j++) {
+		for(uint j = 0; j < ArraySize(s_pInstCache->regs); j++) {
 			if( used[j] ) {
 				fprintf(f, "%2.2x%s", pcur->regs[j], ((count%8)&&count<numused)?"_":" ");
 				++count;
 			}
 		}
 		count = 1;
-		for(j = 0; j < ArraySize(s_pInstCache->fpuregs); j++) {
+		for(uint j = 0; j < ArraySize(s_pInstCache->fpuregs); j++) {
 			if( fpuused[j] ) {
 				fprintf(f, "%2.2x%s", pcur->fpuregs[j], ((count%8)&&count<fpunumused)?"_":" ");
 				++count;
@@ -301,5 +301,5 @@ void iDumpBlock( int startpc, u8 * ptr )
 		}
 		fprintf(f, "\n");
 	}
-	fclose( f );
+	fclose( f );*/
 }

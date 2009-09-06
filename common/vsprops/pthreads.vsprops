@@ -11,6 +11,6 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="w32pthreads.lib"
+		AdditionalDependencies="w32pthreads.v2.lib"
 	/>
 </VisualStudioPropertySheet>

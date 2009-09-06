@@ -570,19 +570,14 @@ typedef struct _ptw32_handle_t {
 #ifdef __cplusplus
 	// Added support for various operators so that the struct is
 	// more pthreads-compliant in behavior. (air)
-	const bool operator ==( const void* rightside )
+	const bool operator ==( const struct _ptw32_handle_t rightside ) const
 	{
-		return p == rightside;
+		return p == rightside.p;
 	}
 
-	const bool operator !=( const void* rightside )
+	const bool operator !=( const struct _ptw32_handle_t rightside ) const
 	{
-		return p != rightside;
-	}
-
-	bool operator =( void* rightside )
-	{
-		p = rightside;
+		return p != rightside.p;
 	}
 #endif
 
@@ -747,6 +742,8 @@ struct ptw32_cleanup_t
 };
 
 #ifdef __CLEANUP_SEH
+#include <excpt.h>		// PCSX2: excpt.h is needed for AbnormalTermination() -- air
+
         /*
          * WIN32 SEH version of cancel cleanup.
          */

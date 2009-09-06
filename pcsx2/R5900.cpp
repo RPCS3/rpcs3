@@ -36,8 +36,6 @@
 #include "SPR.h"
 #include "Sif.h"
 
-#include "Paths.h"
-
 #include "R5900Exceptions.h"
 
 using namespace R5900;	// for R5900 disasm tools
@@ -50,7 +48,7 @@ PCSX2_ALIGNED16(fpuRegisters fpuRegs);
 PCSX2_ALIGNED16(tlbs tlb[48]);
 R5900cpu *Cpu = NULL;
 
-u32 bExecBIOS = 0; // set if the BIOS has already been executed
+bool g_ExecBiosHack = false; // set if the BIOS has already been executed
 
 static bool cpuIsInitialized = false;
 static const uint eeWaitCycles = 3072;
@@ -89,16 +87,6 @@ void cpuReset()
 	vif1Reset();
 	rcntInit();
 	psxReset();
-}
-
-void cpuShutdown()
-{
-	mtgsWaitGS();
-
-	hwShutdown();
-//	biosShutdown();
-	psxShutdown();
-	disR5900FreeSyms();
 }
 
 __releaseinline void cpuException(u32 code, u32 bd)
@@ -364,26 +352,23 @@ u32 g_nextBranchCycle = 0;
 
 // Shared portion of the branch test, called from both the Interpreter
 // and the recompiler.  (moved here to help alleviate redundant code)
-__forceinline bool _cpuBranchTest_Shared()
+__forceinline void _cpuBranchTest_Shared()
 {
 	eeEventTestIsActive = true;
 	g_nextBranchCycle = cpuRegs.cycle + eeWaitCycles;
 
-	EEsCycle += cpuRegs.cycle - EEoCycle;
-	EEoCycle = cpuRegs.cycle;
-
-	if( EEsCycle > 0 )
-		iopBranchAction = true;
-
 	// ---- Counters -------------
-	bool vsyncEvent = false;
-	rcntUpdate_hScanline();
+	// Important: the vsync counter must be the first to be checked.  It includes emulation
+	// escape/suspend hooks, and it's really a good idea to suspend/resume emulation before
+	// doing any actual meaninful branchtest logic.
 
 	if( cpuTestCycle( nextsCounter, nextCounter ) )
 	{
-		vsyncEvent = rcntUpdate();
+		rcntUpdate();
 		_cpuTestPERF();
 	}
+
+	rcntUpdate_hScanline();
 
 	_cpuTestTIMR();
 
@@ -401,6 +386,12 @@ __forceinline bool _cpuBranchTest_Shared()
 	//
 	// * The IOP cannot always be run.  If we run IOP code every time through the
 	//   cpuBranchTest, the IOP generally starts to run way ahead of the EE.
+
+	EEsCycle += cpuRegs.cycle - EEoCycle;
+	EEoCycle = cpuRegs.cycle;
+
+	if( EEsCycle > 0 )
+		iopBranchAction = true;
 
 	psxBranchTest();
 
@@ -493,8 +484,6 @@ __forceinline bool _cpuBranchTest_Shared()
 		TESTINT(30, intcInterrupt);
 		TESTINT(31, dmacInterrupt);
 	}
-
-	return vsyncEvent;
 }
 
 __releaseinline void cpuTestINTCInts()
@@ -559,22 +548,26 @@ __forceinline void cpuTestHwInts() {
 // memory and hardware.  It forcefully breaks execution when the stub is finished, prior
 // to the PS2 logos being displayed.  This allows us to "shortcut" right into a game
 // without having to wait through the logos or endure game/bios localization checks.
+//
+// Use of this function must be followed by the proper injection of the elf header's code
+// execution entry point into cpuRegs.pc.  Failure to modify cpuRegs.pc will result in the
+// bios continuing its normal unimpeeded splashscreen execution.
+//
 void cpuExecuteBios()
 {
 	// Set the video mode to user's default request:
-	// (right now we always default to NTSC)
-	gsSetVideoRegionType( Config.PsxType & 1 );
+	gsSetRegionMode( (GS_RegionMode)EmuConfig.Video.DefaultRegionMode );
 
-	Console::Notice( "* PCSX2 *: ExecuteBios" );
+	Console::Status( "Executing Bios Stub..." );
 
-	bExecBIOS = TRUE;
-	while (cpuRegs.pc != 0x00200008 &&
-		   cpuRegs.pc != 0x00100008) {
-		g_nextBranchCycle = cpuRegs.cycle;
-		Cpu->ExecuteBlock();
+	g_ExecBiosHack = true;
+	while(	cpuRegs.pc != 0x00200008 &&
+			cpuRegs.pc != 0x00100008 )
+	{
+		Cpu->Execute();
 	}
+	g_ExecBiosHack = false;
 
-	bExecBIOS = FALSE;
 //    {
 //        FILE* f = fopen("eebios.bin", "wb");
 //        fwrite(PSM(0x80000000), 0x100000, 1, f);
@@ -590,12 +583,12 @@ void cpuExecuteBios()
 //	REC_CLEARM(0x00100008);
 //	REC_CLEARM(cpuRegs.pc);
 
-	// Reset the EErecs here, because the bios generates "slow" blocks that have hacky
-	// bBiosEnd checks in them and stuff.  This deletes them so that the recs replace them
+	// Reset the EErecs here, because the bios generates "slow" blocks that have
+	// g_ExecBiosHack checks in them.  This deletes them so that the recs replace them
 	// with new faster versions:
 	Cpu->Reset();
 
-	Console::Notice("* PCSX2 *: ExecuteBios Complete");
+	Console::Notice("Execute Bios Stub Complete");
 	//GSprintf(5, "PCSX2 " PCSX2_VERSION "\nExecuteBios Complete\n");
 }
 

@@ -19,6 +19,7 @@
 
 #Normal
 #export PCSX2OPTIONS="--prefix `pwd`"
+#export PCSX2OPTIONS="--with-wx"
 
 echo ---------------
 echo Building Pcsx2 

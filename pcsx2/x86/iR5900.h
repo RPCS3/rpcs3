@@ -19,12 +19,11 @@
 #ifndef __IR5900_H__
 #define __IR5900_H__
 
-#include "ix86/ix86.h"
-#include "ix86/ix86_sse_helpers.h"
+#include "x86emitter/x86emitter.h"
+#include "x86emitter/sse_helpers.h"
 #include "R5900.h"
 #include "VU.h"
 #include "iCore.h"
-#include "Pcsx2Config.h"
 
 #define PC_GETBLOCK(x) PC_GETBLOCK_(x, recLUT)
 
@@ -37,6 +36,9 @@ extern u32 pc;			         // recompiler pc (also used by the SuperVU! .. why? (a
 extern int branch;		         // set for branch (also used by the SuperVU! .. why? (air))
 extern u32 target;		         // branch target
 extern u32 s_nBlockCycles;		// cycles of current block recompiling
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
 
 #define REC_FUNC( f ) \
    void rec##f( void ) \
@@ -94,8 +96,6 @@ void SetBranchImm( u32 imm );
 void iFlushCall(int flushtype);
 void recBranchCall( void (*func)() );
 void recCall( void (*func)(), int delreg );
-
-extern void recExecute();		// same as recCpu.Execute(), but faster (can be inline'd)
 
 namespace R5900{
 namespace Dynarec {

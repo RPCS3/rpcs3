@@ -158,5 +158,4 @@ extern void mmap_ClearCpuBlock( uint offset );
 #define memWrite64 vtlb_memWrite64
 #define memWrite128 vtlb_memWrite128
 
-extern void loadBiosRom( const char *ext, u8 *dest, long maxSize );
 extern u16 ba0R16(u32 mem);

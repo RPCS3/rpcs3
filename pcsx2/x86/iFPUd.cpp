@@ -20,7 +20,7 @@
  
 #include "Common.h"
 #include "R5900OpcodeTables.h"
-#include "ix86/ix86.h"
+#include "x86emitter/x86emitter.h"
 #include "iR5900.h"
 #include "iFPU.h"
 
@@ -34,7 +34,7 @@
 #define FPU_FLAGS_UNDERFLOW 1 
  
 //if 1, result is not clamped (Gives correct results as in PS2,	
-//but can cause problems due to insuffecient clamping levels in the VUs)
+//but can cause problems due to insufficient clamping levels in the VUs)
 #define FPU_RESULT 1 
  
 //set I&D flags. also impacts other aspects of DIV/R/SQRT correctness

@@ -30,7 +30,7 @@
 #define testZero(xmmReg, xmmTemp, gprTemp) {				\
 	SSE_XORPS_XMM_to_XMM(xmmTemp, xmmTemp);					\
 	SSE_CMPEQSS_XMM_to_XMM(xmmTemp, xmmReg);				\
-	if (!cpucaps.hasStreamingSIMD4Extensions) {				\
+	if (!x86caps.hasStreamingSIMD4Extensions) {				\
 		SSE_MOVMSKPS_XMM_to_R32(gprTemp, xmmTemp);			\
 		TEST32ItoR(gprTemp, 1);								\
 	}														\
@@ -277,7 +277,7 @@ mVUop(mVU_EEXP) {
 
 // sumXYZ(): PQ.x = x ^ 2 + y ^ 2 + z ^ 2
 microVUt(void) mVU_sumXYZ(int PQ, int Fs) {
-	if( cpucaps.hasStreamingSIMD4Extensions ) {
+	if( x86caps.hasStreamingSIMD4Extensions ) {
 		SSE4_DPPS_XMM_to_XMM(Fs, Fs, 0x71);
 		SSE_MOVSS_XMM_to_XMM(PQ, Fs);
 	}
@@ -1124,16 +1124,12 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	mtgsThread->SendDataPacket();
 }
 
-void __fastcall mVU_XGKICK__(u32 addr) {
-	GSGIFTRANSFER1((u32*)microVU1.regs->Mem, ((addr<<4)&0x3fff));
-}
-
 microVUt(void) mVU_XGKICK_DELAY(mV, bool memVI) {
 	mVUbackupRegs(mVU);
 	if (memVI)		MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick);
 	else			mVUallocVIa(mVU, gprT2, _Is_);
-	if (mtgsThread)	CALLFunc((uptr)mVU_XGKICK_);
-	else			CALLFunc((uptr)mVU_XGKICK__);
+
+	CALLFunc((uptr)mVU_XGKICK_);
 	mVUrestoreRegs(mVU);
 }
 

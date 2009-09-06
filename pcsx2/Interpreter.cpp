@@ -74,8 +74,6 @@ static void execI()
 	opcode.interpret();
 }
 
-static bool EventRaised = false;
-
 static __forceinline void _doBranch_shared(u32 tar)
 {
 	branch2 = cpuRegs.branch = 1;
@@ -96,7 +94,7 @@ static void __fastcall doBranch( u32 target )
 	_doBranch_shared( target );
 	cpuRegs.cycle += cpuBlockCycles >> 3;
 	cpuBlockCycles &= (1<<3)-1;
-	EventRaised |= intEventTest();
+	intEventTest();
 }
 
 void __fastcall intDoBranch(u32 target)
@@ -108,7 +106,7 @@ void __fastcall intDoBranch(u32 target)
 	{
 		cpuRegs.cycle += cpuBlockCycles >> 3;
 		cpuBlockCycles &= (1<<3)-1;
-		EventRaised |= intEventTest();
+		intEventTest();
 	}
 }
 
@@ -371,10 +369,10 @@ void intReset()
 	branch2 = 0;
 }
 
- bool intEventTest()
+void intEventTest()
 {
 	// Perform counters, ints, and IOP updates:
-	return _cpuBranchTest_Shared();
+	_cpuBranchTest_Shared();
 }
 
 void intExecute()
@@ -384,20 +382,10 @@ void intExecute()
 	// Mem protection should be handled by the caller here so that it can be
 	// done in a more optimized fashion.
 
-	EventRaised = false;
-
-	while( !EventRaised )
+	while( true )
 	{
 		execI();
 	}
-}
-
-static void intExecuteBlock()
-{
-	g_EEFreezeRegs = false;
-
-	branch2 = 0;
-	while (!branch2) execI();
 }
 
 static void intStep()
@@ -418,7 +406,6 @@ R5900cpu intCpu = {
 	intReset,
 	intStep,
 	intExecute,
-	intExecuteBlock,
 	intClear,
 	intShutdown
 };

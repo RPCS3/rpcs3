@@ -675,7 +675,7 @@ void psxHwWrite8(u32 add, u8 value) {
 				( value == '\n' && g_pbufi != 0 ) )
 			{
 				g_pbuf[g_pbufi] = 0;
-				DevCon::WriteLn( Color_Cyan, g_pbuf );
+				DevCon::WriteLn( Color_Cyan, "%s", params g_pbuf );
 				g_pbufi = 0;
 			}
 			else if( value != '\n' )

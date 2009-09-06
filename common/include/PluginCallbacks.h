@@ -195,6 +195,37 @@ typedef struct _PS2E_SessionInfo
 } PS2E_SessionInfo;
 
 /////////////////////////////////////////////////////////////////////////////////////////
+//
+typedef struct _PS2E_CustomSettingsAPI
+{
+	int (PS2E_CALLBACK* GetInt)( const char* name );
+	
+	// GetBoolean
+	// Should return either 1 (true) or 0 (false).  Returning any non-zero value for true
+	// probably "works" but is not recommended, since C/C++ standard specifically defines
+	// the result of bool->int conversions as a 0 or 1 result.
+	int (PS2E_CALLBACK* GetBoolean)( const char* name );
+
+	// GetString
+	// Copies an ASCII-Z string into the dest pointer, to max length allowed.  The result
+	// is always safely zero-terminated (none of that snprintf crap where you have to
+	// zero-terminate yourself >_<).
+	//
+	int (PS2E_CALLBACK* GetString)( const char* name, char* dest, int maxlen );
+
+	// GetStringAlloc
+	// Provides an alternative to GetString, that can rerieve strings of arbitrary length.
+	// The plugin must provide a valid allocator callback, which takes a sice parameter and
+	// returns a pointer to an allocation large enough to hold the size.
+	//
+	// It is then the responsibility of the plugin to free the allocated pointer when it
+	// is done with it.
+	//
+	char* (PS2E_CALLBACK* GetStringAlloc)( const char* name, void* (*allocator)(int size) );
+	
+} PS2E_CustomSettingsAPI;
+
+/////////////////////////////////////////////////////////////////////////////////////////
 // PS2E_EmulatorAPI
 //
 // These functions are provided to the PS2 plugins by the emulator.  Plugins may call these
@@ -207,7 +238,7 @@ typedef struct _PS2E_EmulatorAPI
 	// console.  Some emulators may not support a console, in which case these functions
 	// will be NOPs.   For plain and simple to-disk logging, plugins should create and use
 	// their own logging facilities.
-	ConsoleLogger*  Console;
+	ConsoleLogger  Console;
 
 	// OSD_WriteLn
 	// This function allows the plugin to post messages to the emulator's On-Screen Display.
@@ -228,6 +259,18 @@ typedef struct _PS2E_EmulatorAPI
 	//
 	//  msg   - string message displayed to the user.
 	void (PS2E_CALLBACK* OSD_WriteLn)( int icon, const char* msg );
+	
+	// CustomSettings
+	// Provides an interface through which a plugin can retrieve custom setting values straight
+	// from the emulator's ini file itself; intended for advanced plugin/emu binding only, and
+	// should generally be accompanied with the appropriate version/name checks.
+	//
+	// Emulators may implement this as a direct match to the emu's ini file/registry contents
+	// (recommended), or may provide additional and/or alternative custom strings.  Direct
+	// ini.registry relationships are preferred since those are easy for a plugin author to
+	// reference without documentation.
+	//
+	PS2E_CustomSettingsAPI CustomSettings;
 	
 } PS2E_EmulatorAPI;
 
@@ -768,41 +811,6 @@ extern _PS2EgetLibType PS2EgetLibType;
 extern _PS2EgetLibVersion2 PS2EgetLibVersion2;
 extern _PS2EgetLibName PS2EgetLibName;
 extern _PS2EpassConfig PS2EpassConfig;
-
-// GS
-extern _GSinit            GSinit;
-extern _GSopen            GSopen;
-extern _GSclose           GSclose;
-extern _GSshutdown        GSshutdown;
-extern _GSvsync           GSvsync;
-extern _GSgifTransfer1    GSgifTransfer1;
-extern _GSgifTransfer2    GSgifTransfer2;
-extern _GSgifTransfer3    GSgifTransfer3;
-extern _GSgetLastTag      GSgetLastTag;
-extern _GSgifSoftReset    GSgifSoftReset;
-extern _GSreadFIFO        GSreadFIFO;
-extern _GSreadFIFO2       GSreadFIFO2;
-
-extern _GSkeyEvent        GSkeyEvent;
-extern _GSchangeSaveState GSchangeSaveState;
-extern _GSmakeSnapshot	   GSmakeSnapshot;
-extern _GSmakeSnapshot2   GSmakeSnapshot2;
-extern _GSirqCallback 	   GSirqCallback;
-extern _GSprintf      	   GSprintf;
-extern _GSsetBaseMem 	   GSsetBaseMem;
-extern _GSsetGameCRC		GSsetGameCRC;
-extern _GSsetFrameSkip	   GSsetFrameSkip;
-extern _GSsetupRecording GSsetupRecording;
-extern _GSreset		   GSreset;
-extern _GSwriteCSR		   GSwriteCSR;
-extern _GSgetDriverInfo   GSgetDriverInfo;
-#ifdef _WINDOWS_
-extern _GSsetWindowInfo   GSsetWindowInfo;
-#endif
-extern _GSfreeze          GSfreeze;
-extern _GSconfigure       GSconfigure;
-extern _GStest            GStest;
-extern _GSabout           GSabout;
 
 // PAD1
 extern _PADinit           PAD1init;

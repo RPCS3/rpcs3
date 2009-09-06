@@ -31,11 +31,11 @@ void *_openfile(const char *filename, int flags)
 	{
 		int _flags = CREATE_NEW;
 		if (flags & O_CREAT) _flags = CREATE_ALWAYS;
-		handle = CreateFile(filename, GENERIC_WRITE, 0, NULL, _flags, 0, NULL);
+		handle = CreateFile(wxString::FromAscii(filename).c_str(), GENERIC_WRITE, 0, NULL, _flags, 0, NULL);
 	}
 	else
 	{
-		handle = CreateFile(filename, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+		handle = CreateFile(wxString::FromAscii(filename).c_str(), GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
 	}
 
 	return (handle == INVALID_HANDLE_VALUE) ? NULL : handle;

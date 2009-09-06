@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="ProjectRootDir"
+	>
+	<UserMacro
+		Name="ProjectRootDir"
+		Value="$(ProjectDir)\..\.."
+	/>
+	<UserMacro
+		Name="SvnRootDir"
+		Value="$(ProjectRootDir)\..\.."
+	/>
+	<UserMacro
+		Name="SvnCommonDir"
+		Value="$(SvnRootDir)\common"
+	/>
+</VisualStudioPropertySheet>

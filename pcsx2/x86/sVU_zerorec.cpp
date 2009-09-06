@@ -24,7 +24,8 @@
 #include <vector>
 #include <list>
 #include <map>
-#include <algorithm>
+
+#include "Utilities/AsciiFile.h"
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -40,6 +41,7 @@
 #include "sVU_zerorec.h"
 #include "SamplProf.h"
 #include "NakedAsm.h"
+#include "AppConfig.h"
 
 using namespace std;
 
@@ -348,7 +350,9 @@ void SuperVUAlloc(int vuindex)
 		if (s_recVUMem == NULL)
 		{
 			throw Exception::OutOfMemory(
-			    fmt_string("SuperVU Error > failed to allocate recompiler memory (addr: 0x%x)", (u32)s_recVUMem)
+				// untranslated diagnostic msg, use exception's default for translation
+				wxsFormat( L"SuperVU failed to allocate recompiler memory (addr: 0x%x)", (u32)s_recVUMem ),
+				_("An out of memory error occured while attempting to reserve memory for the core recompilers.")
 			);
 		}
 
@@ -563,22 +567,20 @@ u32 SuperVUGetVIAddr(int reg, int read)
 
 void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 {
-	FILE *f;
-	char str[256];
 	u32 *mem;
 	u32 i;
 
-	Path::CreateDirectory("dumps");
-	string filename(Path::Combine("dumps", fmt_string("svu%cdump%.4X.txt", s_vu ? '0' : '1', s_pFnHeader->startpc)));
-	//Console::WriteLn( "dump1 %x => %s", params s_pFnHeader->startpc, filename );
+	g_Conf->Folders.Logs.Mkdir();
+	AsciiFile eff(
+		Path::Combine( g_Conf->Folders.Logs, wxsFormat(L"svu%cdump%.4X.txt", s_vu?L'0':L'1', s_pFnHeader->startpc) ),
+		wxFile::write
+	);
 
-	f = fopen(filename.c_str(), "w");
-
-	fprintf(f, "Format: upper_inst lower_inst\ntype f:vf_live_vars vf_used_vars i:vi_live_vars vi_used_vars inst_cycle pq_inst\n");
-	fprintf(f, "Type: %.2x - qread, %.2x - pread, %.2x - clip_write, %.2x - status_write\n"
-	        "%.2x - mac_write, %.2x -qflush\n",
-	        INST_Q_READ, INST_P_READ, INST_CLIP_WRITE, INST_STATUS_WRITE, INST_MAC_WRITE, INST_Q_WRITE);
-	fprintf(f, "XMM: Upper: read0 read1 write acc temp; Lower: read0 read1 write acc temp\n\n");
+	eff.Printf("Format: upper_inst lower_inst\ntype f:vf_live_vars vf_used_vars i:vi_live_vars vi_used_vars inst_cycle pq_inst\n");
+	eff.Printf("Type: %.2x - qread, %.2x - pread, %.2x - clip_write, %.2x - status_write\n"
+		"%.2x - mac_write, %.2x -qflush\n",
+		INST_Q_READ, INST_P_READ, INST_CLIP_WRITE, INST_STATUS_WRITE, INST_MAC_WRITE, INST_Q_WRITE);
+	eff.Printf("XMM: Upper: read0 read1 write acc temp; Lower: read0 read1 write acc temp\n\n");
 
 	list<VuBaseBlock*>::iterator itblock;
 	list<VuInstruction>::iterator itinst;
@@ -586,15 +588,15 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 
 	for(itblock = blocks.begin(); itblock != blocks.end(); itblock++)
 	{
-		fprintf(f, "block:%c %x-%x; children: ", ((*itblock)->type&BLOCKTYPE_HASEOP) ? '*' : ' ',
+		eff.Printf( "block:%c %x-%x; children: ", ((*itblock)->type&BLOCKTYPE_HASEOP) ? '*' : ' ',
 		        (*itblock)->startpc, (*itblock)->endpc - 8);
 		
 		for(itchild = (*itblock)->blocks.begin(); itchild != (*itblock)->blocks.end(); itchild++)
 		{
-			fprintf(f, "%x ", (*itchild)->startpc);
+			eff.Printf("%x ", (*itchild)->startpc);
 		}
-		fprintf(f, "; vuxyz = %x, vuxy = %x\n", (*itblock)->vuxyz&(*itblock)->insts.front().usedvars[1],
-		        (*itblock)->vuxy&(*itblock)->insts.front().usedvars[1]);
+		eff.Printf("; vuxyz = %x, vuxy = %x\n", (*itblock)->vuxyz&(*itblock)->insts.front().usedvars[1],
+			(*itblock)->vuxy&(*itblock)->insts.front().usedvars[1]);
 
 		itinst = (*itblock)->insts.begin();
 		i = (*itblock)->startpc;
@@ -606,56 +608,56 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 				if (itinst->nParentPc >= 0 && !(itinst->type&INST_DUMMY_))
 				{
 					// search for the parent
-					fprintf(f, "writeback 0x%x (%x)\n", itinst->type, itinst->nParentPc);
+					eff.Printf("writeback 0x%x (%x)\n", itinst->type, itinst->nParentPc);
 				}
 			}
 			else
 			{
 				mem = (u32*) & VU->Micro[i];
 				char* pstr = disVU1MicroUF(mem[1], i + 4);
-				fprintf(f, "%.4x: %-40s",  i, pstr);
-				if (mem[1] & 0x80000000) fprintf(f, " I=%f(%.8x)\n", *(float*)mem, mem[0]);
-				else fprintf(f, "%s\n", disVU1MicroLF(mem[0], i));
+				eff.Printf( "%.4x: %-40s",  i, pstr);
+				if (mem[1] & 0x80000000) eff.Printf( " I=%f(%.8x)\n", *(float*)mem, mem[0]);
+				else eff.Printf( "%s\n", disVU1MicroLF(mem[0], i));
 				i += 8;
 			}
 
 			++itinst;
 		}
 
-		fprintf(f, "\n");
+		eff.Printf("\n");
 
 		_x86regs* pregs;
 		if ((*itblock)->nStartx86 >= 0 || (*itblock)->nEndx86 >= 0)
 		{
-			fprintf(f, "X86: AX CX DX BX SP BP SI DI\n");
+			eff.Printf( "X86: AX CX DX BX SP BP SI DI\n");
 		}
 
 		if ((*itblock)->nStartx86 >= 0)
 		{
 			pregs = &s_vecRegArray[(*itblock)->nStartx86];
-			fprintf(f, "STR: ");
+			eff.Printf( "STR: ");
 			for (i = 0; i < iREGCNT_GPR; ++i)
 			{
 				if (pregs[i].inuse) 
-					fprintf(f, "%.2d ", pregs[i].reg);
+					eff.Printf( "%.2d ", pregs[i].reg);
 				else 
-					fprintf(f, "-1 ");
+					eff.Printf( "-1 ");
 			}
-			fprintf(f, "\n");
+			eff.Printf( "\n");
 		}
 
 		if ((*itblock)->nEndx86 >= 0)
 		{
-			fprintf(f, "END: ");
+			eff.Printf( "END: ");
 			pregs = &s_vecRegArray[(*itblock)->nEndx86];
 			for (i = 0; i < iREGCNT_GPR; ++i)
 			{
 				if (pregs[i].inuse) 
-					fprintf(f, "%.2d ", pregs[i].reg);
+					eff.Printf( "%.2d ", pregs[i].reg);
 				else 
-					fprintf(f, "-1 ");
+					eff.Printf( "-1 ");
 			}
-			fprintf(f, "\n");
+			eff.Printf( "\n");
 		}
 
 		itinst = (*itblock)->insts.begin();
@@ -667,19 +669,22 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 			}
 			else
 			{
+				char str[256];
 				sprintf(str, "%.4x:%x f:%.8x_%.8x", i, itinst->type, itinst->livevars[1], itinst->usedvars[1]);
-				fprintf(f, "%-46s i:%.8x_%.8x c:%d pq:%d\n", str,
+				eff.Printf( "%-46s i:%.8x_%.8x c:%d pq:%d\n", str,
 				        itinst->livevars[0], itinst->usedvars[0], (int)itinst->info.cycle, (int)itinst->pqcycles);
 
 				sprintf(str, "XMM r0:%d r1:%d w:%d a:%d t:%x;",
 				        itinst->vfread0[1], itinst->vfread1[1], itinst->vfwrite[1], itinst->vfacc[1], itinst->vffree[1]);
-				fprintf(f, "%-46s r0:%d r1:%d w:%d a:%d t:%x\n", str,
+				eff.Printf( "%-46s r0:%d r1:%d w:%d a:%d t:%x\n", str,
 				        itinst->vfread0[0], itinst->vfread1[0], itinst->vfwrite[0], itinst->vfacc[0], itinst->vffree[0]);
 				i += 8;
 			}
 		}
 
-#ifdef __LINUX__
+// 
+#if 0	// __LINUX__
+
 		// dump the asm
 		if ((*itblock)->pcode != NULL)
 		{
@@ -703,10 +708,8 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 		}
 #endif
 
-		fprintf(f, "\n---------------\n");
+		eff.Printf("\n---------------\n");
 	}
-
-	fclose(f);
 }
 
 // uncomment to count svu exec time
@@ -2549,9 +2552,9 @@ void SuperVUCleanupProgram(u32 startpc, int vuindex)
 
 	//VU cycle stealing hack, 3000 cycle maximum so it doesn't get out of hand
 	if (s_TotalVUCycles < 3000)
-		cpuRegs.cycle += s_TotalVUCycles * Config.Hacks.VUCycleSteal;
+		cpuRegs.cycle += s_TotalVUCycles * EmuConfig.Speedhacks.VUCycleSteal;
 	else
-		cpuRegs.cycle += 3000 * Config.Hacks.VUCycleSteal;
+		cpuRegs.cycle += 3000 * EmuConfig.Speedhacks.VUCycleSteal;
 
 	if ((int)s_writeQ > 0) VU->VI[REG_Q] = VU->q;
 	if ((int)s_writeP > 0)
@@ -4352,22 +4355,6 @@ void recVUMI_JALR(VURegs* vuu, s32 info)
 	branch |= 4;
 }
 
-#ifdef PCSX2_DEVBUILD
-void vu1xgkick(u32* pMem, u32 addr)
-{
-	assert(addr < 0x4000);
-#ifdef SUPERVU_COUNT
-	StopSVUCounter();
-#endif
-
-	GSGIFTRANSFER1(pMem, addr);
-
-#ifdef SUPERVU_COUNT
-	StartSVUCounter();
-#endif
-}
-#endif
-
 void recVUMI_XGKICK_(VURegs *VU)
 {
 	assert(s_XGKICKReg > 0 && x86regs[s_XGKICKReg].inuse && x86regs[s_XGKICKReg].type == X86TYPE_VITEMP);
@@ -4380,18 +4367,8 @@ void recVUMI_XGKICK_(VURegs *VU)
 	PUSH32R(s_XGKICKReg);
 	PUSH32I((uptr)VU->Mem);
 
-	if (mtgsThread) {
-		CALLFunc((uptr)VU1XGKICK_MTGSTransfer);
-		ADD32ItoR(ESP, 8);
-	}
-	else {
-#ifdef PCSX2_DEVBUILD
-		CALLFunc((uptr)vu1xgkick);
-		ADD32ItoR(ESP, 8);
-#else
-		CALLFunc((uptr)GSgifTransfer1);
-#endif
-	}
+	CALLFunc((uptr)VU1XGKICK_MTGSTransfer);
+	ADD32ItoR(ESP, 8);
 	AND32ItoM((uptr)&psHu32(GIF_STAT), ~(GIF_STAT_APATH1 | GIF_STAT_OPH)); // Clear PATH1 GIF Status Flags
 	s_ScheduleXGKICK = 0;
 }

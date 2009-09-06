@@ -16,7 +16,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
  
- #ifndef __LIBISO_H__
+#ifndef __LIBISO_H__
 #define __LIBISO_H__
 
 #include "CDVD.h"

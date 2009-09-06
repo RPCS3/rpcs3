@@ -47,9 +47,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories=""
 				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;NDEBUG;_USRDLL"
+				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="2"
 				FloatingPointModel="2"
 				UsePrecompiledHeader="0"
@@ -68,7 +68,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib soundtouch.lib"
+				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.dll"
 				GenerateManifest="true"
 				ModuleDefinitionFile=".\Spu2-X.def"
@@ -131,6 +131,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;_USRDLL"
+				ExceptionHandling="2"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\Debug/spu2-x.pch"
 			/>
@@ -147,7 +148,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib soundtouch.lib"
+				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile=".\Spu2-X.def"
 				RandomizedBaseAddress="1"
@@ -209,6 +210,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="FLOAT_SAMPLES;NDEBUG;_USRDLL"
+				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="2"
 				FloatingPointModel="2"
 				UsePrecompiledHeader="0"
@@ -228,7 +230,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib soundtouch.lib"
+				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
 				ModuleDefinitionFile=".\Spu2-X.def"
@@ -293,7 +295,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="SPU2X_DEVBUILD;FLOAT_SAMPLES;DEBUG_FAST;_USRDLL"
+				PreprocessorDefinitions="wxUSE_GUI=0;SPU2X_DEVBUILD;FLOAT_SAMPLES;DEBUG_FAST;_USRDLL"
+				ExceptionHandling="2"
 				UsePrecompiledHeader="0"
 			/>
 			<Tool
@@ -310,7 +313,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib soundtouch.lib"
+				AdditionalDependencies="winmm.lib dsound.lib comctl32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				LinkIncremental="2"
 				ModuleDefinitionFile=".\Spu2-X.def"

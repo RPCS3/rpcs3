@@ -51,7 +51,13 @@ typedef unsigned int uint;
 #ifdef HAVE_STDINT_H
 #include "stdint.h"
 
-typedef int8_t s8;
+// note: char and int8_t are not interchangable types on gcc, because int8_t apparently
+// maps to 'signed char' which (due to 1's compliment or something) is its own unique
+// type.  This creates cross-compiler inconsistencies, in addition to being entirely
+// unexpected behavior to any sane programmer, so we typecast s8 to char instead. :)
+
+//typedef int8_t s8;
+typedef char s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef int64_t s64;

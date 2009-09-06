@@ -24,13 +24,8 @@
 #define _PC_	// disables MIPS opcode macros.
 
 #include "IopCommon.h"
-#include "Paths.h"
 #include "Patch.h"
 #include "VU.h"
-
-#ifdef _MSC_VER
-#pragma warning(disable:4996) //ignore the stricmp deprecated warning
-#endif
 
 IniPatch patch[ MAX_PATCH ];
 
@@ -40,7 +35,7 @@ u32 PrevCheatType=0, PrevCheataddr = 0,LastType = 0;
 
 int g_ZeroGSOptions=0, patchnumber;
 
-char strgametitle[256]= {0};
+wxString strgametitle;
 
 //
 // Variables
@@ -461,19 +456,24 @@ void patchFunc_comment( char * text1, char * text2 )
 void patchFunc_gametitle( char * text1, char * text2 )
 {
 	Console::WriteLn( "gametitle: %s", params text2 );
-	sprintf(strgametitle,"%s",text2);
-	Console::SetTitle(strgametitle);
+	strgametitle.FromAscii( text2 );
+	Console::SetTitle( strgametitle );
 }
 
 void patchFunc_patch( char * cmd, char * param )
 {
-	char * pText;
+	char* pText;
 
 	if ( patchnumber >= MAX_PATCH )
 	{
+		// TODO : Use wxLogError for this, once we have full unicode compliance on cmd/params vars.
+		//wxLogError( L"Patch ERROR: Maximum number of patches reached: %s=%s", cmd, param );
 		Console::Error( "Patch ERROR: Maximum number of patches reached: %s=%s", params cmd, param );
 		return;
 	}
+
+	//SafeList<wxString> pieces;
+	//SplitString( pieces, param, "," );
 
 	pText = strtok( param, "," );
 	pText = param;
@@ -535,7 +535,10 @@ void inifile_command( char * cmd )
 	code = PatchTableExecute( command, parameter, commands );
 }
 
-void inifile_trim( char * buffer )
+#define  USE_CRAZY_BASHIT_INSANE_TRIM
+#ifdef USE_CRAZY_BASHIT_INSANE_TRIM
+
+void inifile_trim( char* buffer )
 {
 	char * pInit = buffer;
 	char * pEnd = NULL;
@@ -573,6 +576,33 @@ void inifile_trim( char * buffer )
 	buffer[ pEnd - pInit + 1 ] = '\0';
 }
 
+#else
+
+// New version of trim (untested), which I coded but can't use yet because the
+// rest of Patch needs to be more wxString-involved first.
+
+void inifile_trim( wxString& buffer )
+{
+	buffer.Trim( false );		// trims left side.
+	
+	if( buffer.Length() <= 1 )	// this I'm not sure about... - air
+	{
+		buffer.Clear();
+		return;
+	}
+
+	if( buffer.Left( 2 ) == "//" )
+	{
+		buffer.Clear();
+		return;
+	}
+
+	buffer.Trim(true);			// trims right side.
+}
+
+#endif
+
+
 void inisection_process( FILE * f1 )
 {
 	char buffer[ 1024 ];
@@ -593,9 +623,9 @@ void inifile_read( const char * name )
 	patchnumber = 0;
 	
 #ifdef _WIN32
-	sprintf( buffer, PATCHES_DIR "\\%s.pnach", name );
+	sprintf( buffer, "patches\\%s.pnach", name );
 #else
-	sprintf( buffer, PATCHES_DIR "/%s.pnach", name );
+	sprintf( buffer, "patches/%s.pnach", name );
 #endif
 
 	f1 = fopen( buffer, "rt" );
@@ -620,7 +650,7 @@ void inifile_read( const char * name )
 
 	if( !f1 )
 	{
-		Console::WriteLn("No patch found.Resuming execution without a patch (this is NOT an error)." );
+		Console::WriteLn("No patch found. Resuming execution without a patch (this is NOT an error)." );
 		return;
 	}
 
@@ -675,8 +705,8 @@ void patchFunc_roundmode( char * cmd, char * param )
 	int index;
 	char * pText;
 
-	u32 eetype = (Config.sseMXCSR & 0x6000);
-	u32 vutype = (Config.sseVUMXCSR & 0x6000);
+	u32 eetype = (EmuConfig.Cpu.sseMXCSR & 0x6000);
+	u32 vutype = (EmuConfig.Cpu.sseVUMXCSR & 0x6000);
 	
 	index = 0;
 	pText = strtok( param, ", " );
@@ -721,5 +751,5 @@ void patchFunc_zerogs(char* cmd, char* param)
 
 void SetRoundMode(u32 ee, u32 vu)
 {
-	SetCPUState( (Config.sseMXCSR & 0x9fff) | ee, (Config.sseVUMXCSR & 0x9fff) | vu);
+	SetCPUState( (EmuConfig.Cpu.sseMXCSR & 0x9fff) | ee, (EmuConfig.Cpu.sseVUMXCSR & 0x9fff) | vu);
 }

@@ -31,7 +31,6 @@
  
 #include "Pcsx2Types.h"
 #include "Pcsx2Defs.h"
-#include "Pcsx2Config.h"
 
 // Indicate to use the new versions.
 #define NEW_PLUGIN_APIS

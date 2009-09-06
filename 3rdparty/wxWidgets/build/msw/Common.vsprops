@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="wxCommon"
+	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)\$(ProjectName)"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		PreprocessorDefinitions="WIN32;__WXMSW__;_LIB;wxUSE_UNICODE=1"
+		ExceptionHandling="2"
+		CompileAs="0"
+	/>
+</VisualStudioPropertySheet>

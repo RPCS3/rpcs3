@@ -442,12 +442,10 @@ int CPCOND0() {
 
 void BC0F() {
 	if (CPCOND0() == 0) intDoBranch(_BranchTarget_); 
-	COP0_LOG( "COP0 > BC0F" );
 }
 
 void BC0T() {
 	if (CPCOND0() == 1) intDoBranch(_BranchTarget_); 
-	COP0_LOG( "COP0 > BC0T" );
 }
 	
 void BC0FL() {
@@ -456,7 +454,6 @@ void BC0FL() {
 	else 
 		cpuRegs.pc+= 4;
 	
-	COP0_LOG( "COP0 > BC0FL" );
 }
 
 void BC0TL() {
@@ -464,7 +461,6 @@ void BC0TL() {
 		intDoBranch(_BranchTarget_); 
 	else 
 		cpuRegs.pc+= 4;
-	COP0_LOG( "COP0 > BCOTL" );
 }
 
 void TLBR() {
@@ -474,7 +470,6 @@ void TLBR() {
 
 	int i = cpuRegs.CP0.n.Index&0x1f;
 
-	COP0_LOG("COP0 > TLBR");
 	cpuRegs.CP0.n.PageMask = tlb[i].PageMask;
 	cpuRegs.CP0.n.EntryHi = tlb[i].EntryHi&~(tlb[i].PageMask|0x1f00);
 	cpuRegs.CP0.n.EntryLo0 = (tlb[i].EntryLo0&~1)|((tlb[i].EntryHi>>12)&1);

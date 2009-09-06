@@ -62,13 +62,11 @@ extern StartupParams g_Startup;
 //
 // Most of these are implemented in SystemGui.cpp
 
-extern void States_Load( const string& file );
-extern void States_Save( const string& file );
+extern void States_Load( const wxString& file );
+extern void States_Save( const wxString& file );
 extern void States_Load( int num );
 extern void States_Save( int num );
 extern bool States_isSlotUsed(int num);
-
-extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (set to false on reset)
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // External Gui APIs (platform specific)
@@ -87,14 +85,6 @@ extern bool g_EmulationInProgress;	// Set TRUE if a game is actively running (se
 // as keyboard events, menu/status updates, and cpu execution invocation.
 namespace HostGui
 {
-	// Signal for informing the GUI that the saveslot status has been altered.
-	// The guis hould re-enumerate the slot information displayed in the menu, or wherever.
-	extern void ResetMenuSlots();
-	
-	// Signals to the GUI that execution of the emulator should begin.  This can be either
-	// a blocking or non-blocking (threaded) action.
-	extern void BeginExecution();
-	
 	// Signals the gui with a keystroke.  Handle or discard or dispatch, or enjoy its
 	// pleasant flavor.
 	extern void __fastcall KeyEvent( keyEvent* ev );
@@ -102,8 +92,8 @@ namespace HostGui
 	// For issuing notices to both the status bar and the console at the same time.
 	// Single-line text only please!  Multi-line msgs should be directed to the
 	// console directly, thanks.
-	extern void Notice( const std::string& text );
+	extern void Notice( const wxString& text );
 
 	// sets the contents of the pcsx2 window status bar.
-	extern void SetStatusMsg( const std::string& text );
+	extern void SetStatusMsg( const wxString& text );
 };

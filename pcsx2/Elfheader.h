@@ -24,9 +24,9 @@ extern char args[256];		//to be filled by GUI
 extern unsigned int args_ptr;
 
 //-------------------
-int loadElfFile(const char *filename);
-u32 loadElfCRC(const char *filename);
-void ElfApplyPatches();
+extern void loadElfFile(const wxString& filename);
+extern u32  loadElfCRC(const char *filename);
+extern void ElfApplyPatches();
 
 extern u32 ElfCRC;
 

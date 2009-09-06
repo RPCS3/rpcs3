@@ -85,7 +85,6 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"

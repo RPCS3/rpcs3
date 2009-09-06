@@ -25,12 +25,12 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "IPU.h"
+#include "IPU/IPU.h"
 
 #define W1 2841 /* 2048*sqrt (2)*cos (1*pi/16) */
 #define W2 2676 /* 2048*sqrt (2)*cos (2*pi/16) */
 #define W3 2408 /* 2048*sqrt (2)*cos (3*pi/16) */
-#define W5 1609 /* 2048*sqrt (2)*cos (5*pi/16) */ 
+#define W5 1609 /* 2048*sqrt (2)*cos (5*pi/16) */
 #define W6 1108 /* 2048*sqrt (2)*cos (6*pi/16) */
 #define W7 565  /* 2048*sqrt (2)*cos (7*pi/16) */
 #define clp(val,res)	res = (val < 0) ? 0 : ((val > 255) ? 255 : val);
@@ -265,7 +265,7 @@ void mpeg2_idct_mmx_init (void);
 void mpeg2_idct_init()
 {
 	   int i, j;
-	
+
 	mpeg2_idct_copy = mpeg2_idct_copy_c;
 	mpeg2_idct_add = mpeg2_idct_add_c;
 	for (i = -384; i < 640; i++)

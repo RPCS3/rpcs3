@@ -5,12 +5,12 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2 of the License, or
  *  (at your option) any later version.
- *  
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -19,24 +19,26 @@
 #include "PrecompiledHeader.h"
 
 #include <ctype.h>
-#include <time.h>
+#include <wx/datetime.h>
 
 #include "IopCommon.h"
 #include "IsoFStools.h"
 #include "CDVD_internal.h"
 #include "CDVDisoReader.h"
 #include "GS.h"			// for gsRegionMode
+#include "ps2/BiosTools.h"
+#include "AppConfig.h"
 
 static cdvdStruct cdvd;
 
 static __forceinline void SetResultSize(u8 size)
 {
 	cdvd.ResultC = size;
-	cdvd.ResultP = 0; 
+	cdvd.ResultP = 0;
 	cdvd.sDataIn&=~0x40;
 }
 
-static void CDVDREAD_INT(int eCycle) 
+static void CDVDREAD_INT(int eCycle)
 {
 	PSX_INT(IopEvt_CdvdRead, eCycle);
 }
@@ -78,29 +80,32 @@ FILE *_cdvdOpenMechaVer() {
 	FILE* fd;
 
 	// get the name of the bios file
-	string Bios( Path::Combine( Config.Paths.Bios, Config.Bios ) );
-	
-	// use the bios filename to get the name of the mecha ver file
-	// [TODO] : Upgrade this to use std::string!
 
-	strcpy(file, Bios.c_str());
+	// use the bios filename to get the name of the mecha ver file
+	// [TODO] : Upgrade this to use wxstring!
+
+	strcpy(file, g_Conf->FullpathToBios().ToAscii().data() );
+
 	ptr = file;
 	i = (int)strlen(file);
-	
+
 	while (i > 0) { if (ptr[i] == '.') break; i--; }
 	ptr[i+1] = '\0';
 	strcat(file, "MEC");
-	
+
 	// if file doesnt exist, create empty one
 	fd = fopen(file, "r+b");
 	if (fd == NULL) {
 		Console::Notice("MEC File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
-		if (fd == NULL) {
-			Msgbox::Alert("_cdvdOpenMechaVer: Error creating %s", params file);
-			exit(1);
+		if (fd == NULL)
+		{
+			Console::Error( "\tMEC File Creation failed!" );
+			throw Exception::CreateStream( file );
+			//Msgbox::Alert( "_cdvdOpenMechaVer: Error creating %s", params file);
+			//exit(1);
 		}
-		
+
 		fputc(0x03, fd);
 		fputc(0x06, fd);
 		fputc(0x02, fd);
@@ -126,56 +131,57 @@ FILE *_cdvdOpenNVM() {
 	FILE* fd;
 
 	// get the name of the bios file
-	string Bios( Path::Combine( Config.Paths.Bios, Config.Bios ) );
-	
-	// use the bios filename to get the name of the nvm file
-	// [TODO] : Upgrade this to use std::string!
 
-	strcpy( file, Bios.c_str() );
+	// use the bios filename to get the name of the nvm file
+	// [TODO] : Upgrade this to use wxString!
+
+	strcpy( file, g_Conf->FullpathToBios().ToAscii().data() );
 	ptr = file;
 	i = (int)strlen(file);
-	
+
 	while (i > 0) { if (ptr[i] == '.') break; i--; }
 	ptr[i+1] = '\0';
-	
+
 	strcat(file, "NVM");
-	
+
 	// if file doesnt exist, create empty one
 	fd = fopen(file, "r+b");
 	if (fd == NULL) {
 		Console::Notice("NVM File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
-		if (fd == NULL) {
-			Msgbox::Alert("_cdvdOpenNVM: Error creating %s", params file);
-			exit(1);
+		if (fd == NULL)
+		{
+			throw Exception::CreateStream( file );
+			//Msgbox::Alert("_cdvdOpenNVM: Error creating %s", params file);
+			//exit(1);
 		}
 		for (i=0; i<1024; i++) fputc(0, fd);
 	}
 	return fd;
 }
 
-// 
+//
 // the following 'cdvd' functions all return 0 if successful
-// 
+//
 
 s32 cdvdReadNVM(u8 *dst, int offset, int bytes) {
 	FILE* fd = _cdvdOpenNVM();
 	if (fd == NULL) return 1;
-	
+
 	fseek(fd, offset, SEEK_SET);
 	fread(dst, 1, bytes, fd);
 	fclose(fd);
-	
+
 	return 0;
 }
 s32 cdvdWriteNVM(const u8 *src, int offset, int bytes) {
 	FILE* fd = _cdvdOpenNVM();
 	if (fd == NULL) return 1;
-	
+
 	fseek(fd, offset, SEEK_SET);
 	fwrite(src, 1, bytes, fd);
 	fclose(fd);
-	
+
 	return 0;
 }
 
@@ -183,7 +189,7 @@ NVMLayout* getNvmLayout(void)
 {
 	NVMLayout* nvmLayout = NULL;
 	s32 nvmIdx;
-	
+
 	for(nvmIdx=0; nvmIdx<NVM_FORMAT_MAX; nvmIdx++)
 	{
 		if(nvmlayouts[nvmIdx].biosVer <= BiosVersion)
@@ -321,14 +327,16 @@ s32 cdvdWriteConfig(const u8* config)
 
 
 void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
-	char str[g_MaxPath];
+	wxString fname;
 	char exeName[12];
 	s32 numbers, letters;
 	u32 key_0_3;
 	u8 key_4, key_14;
 
 	// get main elf name
-	bool IsPs2 = (GetPS2ElfName(str) == 2);
+	bool IsPs2 = (GetPS2ElfName(fname) == 2);
+	const wxCharBuffer crap( fname.ToAscii() );
+	const char* str = crap.data();
 	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
 	DevCon::Notice("exeName = %s", params &str[8]);
 
@@ -482,13 +490,13 @@ void cdvdReset()
 	cdvd.Action = cdvdAction_None;
 	cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 
-	// any random valid date will do
-	cdvd.RTC.hour = 1;
-	cdvd.RTC.day = 25;
-	cdvd.RTC.month = 5;
-	cdvd.RTC.year = 7; //2007
-    
-	cdvdSetSystemTime( cdvd );
+	wxDateTime curtime( wxDateTime::GetTimeNow() );
+	cdvd.RTC.second = (u8)curtime.GetSecond();
+	cdvd.RTC.minute = (u8)curtime.GetMinute();
+	cdvd.RTC.hour = (u8)(curtime.GetHour()+1) % 24;
+	cdvd.RTC.day = (u8)curtime.GetDay();
+	cdvd.RTC.month = (u8)curtime.GetMonth();
+	cdvd.RTC.year = (u8)(curtime.GetYear() - 2000);
 }
 
 struct Freeze_v10Compat
@@ -519,13 +527,13 @@ void cdvdDetectDisk()
 {
 	cdvd.Type = DoCDVDdetectDiskType();
 
-	char str[g_MaxPath];
+	wxString str;
 	bool IsPs2 = (GetPS2ElfName(str) == 2);
 
 	// Now's a good time to reload the ELF info...
 	if( IsPs2 && (ElfCRC == 0) )
 	{
-		ElfCRC = loadElfCRC( str );
+		ElfCRC = loadElfCRC( str.ToAscii().data() );
 		ElfApplyPatches();
 		if( GSsetGameCRC != NULL )
 			GSsetGameCRC( ElfCRC, 0 );
@@ -847,7 +855,7 @@ u8 monthmap[13] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 void cdvdVsync() {
 	cdvd.RTCcount++;
-	if (cdvd.RTCcount < ((Config.PsxType & 1) ? 50 : 60)) return;
+	if (cdvd.RTCcount < ((gsRegionMode == Region_NTSC) ? 60 : 50)) return;
 	cdvd.RTCcount = 0;
 
 	cdvd.RTC.second++;
@@ -1100,7 +1108,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "CdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
-			if( Config.cdvdPrint )
+			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
@@ -1148,7 +1156,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			CDR_LOG( "CdReadCDDA > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%xx(%x), ReadMode=%x(%x) (1074=%x)",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
-			if( Config.cdvdPrint )
+			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("CdAudioRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
@@ -1183,8 +1191,8 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 			CDR_LOG( "DvdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
-			
-			if( Config.cdvdPrint )
+
+			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 

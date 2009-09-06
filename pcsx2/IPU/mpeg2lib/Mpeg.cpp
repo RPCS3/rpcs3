@@ -29,10 +29,10 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "IPU.h"
+#include "IPU/IPU.h"
+#include "IPU/coroutine.h"
 #include "Mpeg.h"
 #include "Vlc.h"
-#include "coroutine.h"
 
 int non_linear_quantizer_scale [] =
 {
@@ -203,7 +203,7 @@ static __forceinline int get_coded_block_pattern(decoder_t * const decoder)
 		tab = CBP_7 + (UBITS(decoder->bitstream_buf, 7) - 16);
 	else
 		tab = CBP_9 + UBITS(decoder->bitstream_buf, 9);
-	
+
 	DUMPBITS(decoder->bitstream_buf, decoder->bitstream_bits, tab->len);
 	return tab->cbp;
 }
@@ -361,7 +361,7 @@ normal_code:
 			/* escape code */
 
 			i += UBITS(bit_buf << 6, 6) - 64;
-			
+
 			if (i >= 64) break;	/* illegal, check needed to avoid buffer overflow */
 
 			j = scan[i];
@@ -881,14 +881,14 @@ entry_2:
 			/* escape code */
 
 			i += UBITS(bit_buf << 6, 6) - 64;
-			
+
 			if (i >= 64) break;	/* illegal, check needed to avoid buffer overflow */
 
 			j = scan[i];
 			DUMPBITS(bit_buf, bits, 12);
 			NEEDBITS(bit_buf, bits, bit_ptr);
 			val = SBITS(bit_buf, 8);
-			
+
 			if (!(val & 0x7f))
 			{
 				DUMPBITS(bit_buf, bits, 8);
@@ -957,14 +957,14 @@ static void __fastcall slice_intra_DCT(decoder_t * const decoder, const int cc,
 	NEEDBITS(decoder->bitstream_buf, decoder->bitstream_bits, decoder->bitstream_ptr);
 	/* Get the intra DC coefficient and inverse quantize it */
 
-	if (cc == 0) 
+	if (cc == 0)
 		decoder->dc_dct_pred[0] += get_luma_dc_dct_diff(decoder);
-	else 
+	else
 		decoder->dc_dct_pred[cc] += get_chroma_dc_dct_diff(decoder);
 
 	decoder->DCTblock[0] = decoder->dc_dct_pred[cc] << (3 - decoder->intra_dc_precision);
 
-	if (decoder->mpeg1) 
+	if (decoder->mpeg1)
 	{
 		get_mpeg1_intra_block(decoder);
 	}
@@ -987,9 +987,9 @@ static void __fastcall slice_non_intra_DCT(decoder_t * const decoder,
 	int last;
 	memzero_obj(decoder->DCTblock);
 
-	if (decoder->mpeg1) 
+	if (decoder->mpeg1)
 		last = get_mpeg1_non_intra_block(decoder);
-	else 
+	else
 		last = get_non_intra_block(decoder);
 
 	mpeg2_idct_add(last, decoder->DCTblock, dest, stride);
@@ -1009,14 +1009,14 @@ struct TGA_HEADER
 	s16 colourmaplength;	 // number of colours in palette
 	u8  colourmapbits;	 // number of bits per palette entry 15,16,24,32
 
-	s16 xstart;			// image x origin
-	s16 ystart;			// image y origin
-	s16 width;			 // image width in pixels
-	s16 height;			// image height in pixels
-	u8  bits;			// image bits per pixel 8,16,24,32
-	u8  descriptor;		 // image descriptor bits (vh flip bits)
+    s16 xstart;             // image x origin
+    s16 ystart;             // image y origin
+    s16 width;              // image width in pixels
+    s16 height;             // image height in pixels
+    u8  bits;               // image bits per pixel 8,16,24,32
+    u8  descriptor;         // image descriptor bits (vh flip bits)
 
-	// pixel data follows header
+    // pixel data follows header
 #if defined(_MSC_VER)
 };
 
@@ -1231,7 +1231,7 @@ void mpeg2sliceIDEC(void* pdone)
 					{
 						g_pIPU0Pointer += read * 16;
 						g_nIPU0Data -= read;
-						
+
 					}
 				}
 
@@ -1240,7 +1240,7 @@ void mpeg2sliceIDEC(void* pdone)
 
 			NEEDBITS(decoder->bitstream_buf, decoder->bitstream_bits, decoder->bitstream_ptr);
 			mba_inc = 0;
-			
+
 			while (1)
 			{
 				if (decoder->bitstream_buf >= 0x10000000)
@@ -1267,10 +1267,8 @@ void mpeg2sliceIDEC(void* pdone)
 
 						default:	/* end of slice/frame, or error? */
 						{
-							#ifdef ALWAYS_RESUME_BEFORE_EXITING
-							if (!resumed) so_resume();
-							#endif
-							
+							if ((!resumed) && (CHECK_MPEGHACK)) so_resume();
+
 							finishmpeg2sliceIDEC(decoder);
 
 							*(int*)pdone = 1;
@@ -1284,7 +1282,7 @@ void mpeg2sliceIDEC(void* pdone)
 
 			if (mba_inc)
 			{
-				decoder->dc_dct_pred[0] = 
+				decoder->dc_dct_pred[0] =
 				decoder->dc_dct_pred[1] =
 				decoder->dc_dct_pred[2] = 128 << decoder->intra_dc_precision;
 
@@ -1297,9 +1295,7 @@ void mpeg2sliceIDEC(void* pdone)
 		}
 	}
 
-	#ifdef ALWAYS_RESUME_BEFORE_EXITING
-	if (!resumed) so_resume();
-	#endif
+	if ((!resumed) && (CHECK_MPEGHACK)) so_resume();
 
 	finishmpeg2sliceIDEC(decoder);
 
@@ -1326,7 +1322,7 @@ void mpeg2_slice(void* pdone)
 
 	if (decoder->dcr)
 	{
-		decoder->dc_dct_pred[0] = 
+		decoder->dc_dct_pred[0] =
 		decoder->dc_dct_pred[1] =
 		decoder->dc_dct_pred[2] = 128 << decoder->intra_dc_precision;
 	}
@@ -1371,7 +1367,7 @@ void mpeg2_slice(void* pdone)
 	}
 
 	//Send The MacroBlock via DmaIpuFrom
-	
+
 	size = 0;	// Reset
 	ipuRegs->ctrl.SCD = 0;
 	coded_block_pattern = decoder->coded_block_pattern;

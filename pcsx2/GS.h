@@ -16,24 +16,25 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __GS_H__
-#define __GS_H__
-
-// GCC needs these includes
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#pragma once
 
 #include "Common.h"
-#include "Threading.h"
-
+#include "Utilities/Threading.h"
 
 PCSX2_ALIGNED16( extern u8 g_RealGSMem[0x2000] );
 #define GSCSRr *((u64*)(g_RealGSMem+0x1000))
 #define GSIMR *((u32*)(g_RealGSMem+0x1010))
 #define GSSIGLBLID ((GSRegSIGBLID*)(g_RealGSMem+0x1080))
 
-/////////////////////////////////////////////////////////////////////////////
+enum GS_RegionMode
+{
+	Region_NTSC,
+	Region_PAL
+};
+
+extern GS_RegionMode gsRegionMode;
+
+/////////////////////////////////////////////////////////////////////////////////////////
 // MTGS GIFtag Parser - Declaration
 //
 // The MTGS needs a dummy "GS plugin" for processing SIGNAL, FINISH, and LABEL
@@ -153,7 +154,7 @@ enum GS_RINGTYPE
 ,	GS_RINGTYPE_QUIT
 };
 
-class mtgsThreadObject : public Threading::Thread
+class mtgsThreadObject : public Threading::PersistentThread
 {
 	friend class SaveState;
 
@@ -177,7 +178,11 @@ protected:
 	uint m_WritePos;	// cur pos ee thread is writing to
 
 	// used to regulate thread startup and gsInit
-	Threading::Semaphore m_post_InitDone;
+	Threading::Semaphore m_sem_InitDone;
+
+	// used for quitting the ringbuffer thread only -- is posted by the ringbuffer when
+	// a QUIT message is processed (signals that the GS has been closed).
+	Threading::Semaphore m_sem_Quitter;
 
 	Threading::MutexLock m_lock_RingRestart;
 	
@@ -224,7 +229,7 @@ public:
 	virtual ~mtgsThreadObject();
 
 	void Start();
-	void Close();
+	void Cancel();
 	void Reset();
 	void GIFSoftReset( int mask );
 
@@ -275,14 +280,13 @@ protected:
 	uint _PrepForSimplePacket();
 	void _FinishSimplePacket( uint future_writepos );
 
-	int Callback();
+	sptr ExecuteTask();
 };
 
 extern mtgsThreadObject* mtgsThread;
 
 void mtgsWaitGS();
-bool mtgsOpen();
-//void mtgsRingBufSimplePacket( s32 command, u32 data0, u32 data1, u32 data2 );
+void mtgsOpen();
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff
@@ -292,7 +296,7 @@ extern s32 gsOpen();
 extern void gsClose();
 extern void gsReset();
 extern void gsOnModeChanged( u32 framerate, u32 newTickrate );
-extern void gsSetVideoRegionType( u32 isPal );
+extern void gsSetRegionMode( GS_RegionMode isPal );
 extern void gsResetFrameSkip();
 extern void gsSyncLimiterLostTime( s32 deltaTime );
 extern void gsDynamicSkipEnable();
@@ -366,9 +370,3 @@ extern gzSavingState* g_fGSSave;
 
 void RunGSState(gzLoadingState& f);
 
-extern void GSGIFTRANSFER1(u32 *pMem, u32 addr); 
-extern void GSGIFTRANSFER2(u32 *pMem, u32 addr); 
-extern void GSGIFTRANSFER3(u32 *pMem, u32 addr);
-extern void GSVSYNC();
-
-#endif

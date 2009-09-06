@@ -1,32 +1,39 @@
 /*  Pcsx2 - Pc Ps2 Emulator
-*  Copyright (C) 2002-2008  Pcsx2 Team
-*
-*  This program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation; either version 2 of the License, or
-*  (at your option) any later version.
-*  
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*  
-*  You should have received a copy of the GNU General Public License
-*  along with this program; if not, write to the Free Software
-*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-*/
+ *  Copyright (C) 2002-2008  Pcsx2 Team
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *  
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *  
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
+// Note: This file is meant to be part of the HostGui/App, and not part of the
+// emu.  The emu accesses it from the SIO interface.  It's possible this could be
+// transformed into a plugin, although the benefit of such a system probably isn't
+// significant.
 
 #include "PrecompiledHeader.h"
 
 #include "System.h"
 #include "MemoryCard.h"
-#include "Paths.h"
+#include "AppConfig.h"
+
+#include <wx/file.h>
 
 #ifdef WIN32
-extern void NTFS_CompressFile( const char* file, bool compressMode );
+extern void NTFS_CompressFile( const wxString& file, bool compressMode );
 #endif
 
-FILE* MemoryCard::cardfile[2] = { NULL, NULL };
+wxFile MemoryCard::cardfile[2];
 
 
 // Ensures memory card files are created/initialized.
@@ -34,8 +41,8 @@ void MemoryCard::Init()
 {
 	for( int i=0; i<2; i++ )
 	{
-		if( Config.Mcd[i].Enabled && cardfile[i] == NULL )
-			cardfile[i] = Load(i);
+		if( g_Conf->Mcd[i].Enabled && !cardfile[i].IsOpened() )
+			Load( i );
 	}
 }
 
@@ -48,88 +55,90 @@ void MemoryCard::Shutdown()
 void MemoryCard::Unload( uint mcd )
 {
 	jASSUME( mcd < 2 );
-
-	if(cardfile[mcd] == NULL) return;
-	fclose( cardfile[mcd] );
-	cardfile[mcd] = NULL;
+	cardfile[mcd].Close();
 }
 
 bool MemoryCard::IsPresent( uint mcd )
 {
 	jASSUME( mcd < 2 );
-	return cardfile[mcd] != NULL;
+	return cardfile[mcd].IsOpened();
 }
 
-FILE *MemoryCard::Load( uint mcd )
+void MemoryCard::Load( uint mcd )
 {
-	FILE *f;
-
 	jASSUME( mcd < 2 );
-	string str( Config.Mcd[mcd].Filename );
+	wxFileName fname( g_Conf->FullpathToMcd( mcd ) );
+	wxString str( fname.GetFullPath() );
 
-	if( str.empty() )
-		str = Path::Combine( MEMCARDS_DIR, fmt_string( "Mcd00%d.ps2", mcd ) );
+	const wxULongLong fsz = fname.GetSize();
+	if( (fsz == 0) || (fsz == wxInvalidSize) )
+		Create( str );
 
-	if( !Path::Exists(str) )
-		Create( str.c_str() );
+	// [TODO] : Add memcard size detection and report it to the console log.
+	//   (8MB, 256Mb, whatever)
 
-#ifdef WIN32
-	NTFS_CompressFile( str.c_str(), Config.McdEnableNTFS );
+#ifdef _WIN32
+	NTFS_CompressFile( str, g_Conf->McdEnableNTFS );
 #endif
 
-	f = fopen( str.c_str(), "r+b" );
+	cardfile[mcd].Open( str.c_str(), wxFile::read_write );
 
-	if (f == NULL)
+	if( !cardfile[mcd].IsOpened() )
 	{
-		Msgbox::Alert("Failed loading MemoryCard from file: %hs", params &str); 
-		return NULL;
+		// Translation note: detailed description should mention that the memory card will be disabled
+		// for the duration of this session.
+		Msgbox::Alert( pxE( ".Popup:MemoryCard:FailedtoOpen",
+			wxsFormat(
+				L"Could not load or create a MemoryCard from the file:\n\n%s\n\n"
+				L"The MemoryCard in slot %d has been automatically disabled.  You can correct the problem\n"
+				L"and re-enable the MemoryCard at any time using Config:MemoryCards from the main menu.",
+				str.c_str(), mcd
+			) )
+		); 
 	}
-
-	return f;
 }
 
-void MemoryCard::Seek( FILE *f, u32 adr )
+void MemoryCard::Seek( wxFile& f, u32 adr )
 {
-	u32 size;
-
-	fseek(f, 0, SEEK_END); size = ftell(f);
+	u32 size = f.Length();
+	
 	if (size == MCD_SIZE + 64)
-		fseek(f, adr + 64, SEEK_SET);
+		f.Seek( adr + 64 );
 	else if (size == MCD_SIZE + 3904)
-		fseek(f, adr + 3904, SEEK_SET);
+		f.Seek( adr + 3904 );
 	else
-		fseek(f, adr, SEEK_SET);
+		f.Seek( adr );
 }
 
 void MemoryCard::Read( uint mcd, u8 *data, u32 adr, int size )
 {
 	jASSUME( mcd < 2 );
-	FILE* const mcfp = cardfile[mcd];
+	wxFile& mcfp( cardfile[mcd] );
 
-	if( mcfp == NULL )
+	if( !mcfp.IsOpened() )
 	{
-		Console::Error( "MemoryCard > Ignoring attempted read from disabled card." );
+		DevCon::Error( "MemoryCard: Ignoring attempted read from disabled card." );
 		memset(data, 0, size);
 		return;
 	}
 	Seek(mcfp, adr);
-	fread(data, 1, size, mcfp);
+	mcfp.Read( data, size );
 }
 
 void MemoryCard::Save( uint mcd, const u8 *data, u32 adr, int size )
 {
 	jASSUME( mcd < 2 );
-	FILE* const mcfp = cardfile[mcd];
+	wxFile& mcfp( cardfile[mcd] );
 
-	if( mcfp == NULL )
+	if( !mcfp.IsOpened() )
 	{
-		Console::Error( "MemoryCard > Ignoring attempted save/write to disabled card." );
+		DevCon::Error( "MemoryCard: Ignoring attempted save/write to disabled card." );
 		return;
 	}
 
 	Seek(mcfp, adr);
 	u8 *currentdata = (u8 *)malloc(size);
-	fread(currentdata, 1, size, mcfp);
+	mcfp.Read( currentdata, size);
 
 	for (int i=0; i<size; i++)
 	{
@@ -139,7 +148,7 @@ void MemoryCard::Save( uint mcd, const u8 *data, u32 adr, int size )
 	}
 
 	Seek(mcfp, adr);
-	fwrite(currentdata, 1, size, mcfp);
+	mcfp.Write( currentdata, size );
 	free(currentdata);
 }
 
@@ -150,46 +159,46 @@ void MemoryCard::Erase( uint mcd, u32 adr )
 	memset8_obj<0xff>(data);		// clears to -1's
 
 	jASSUME( mcd < 2 );
-	FILE* const mcfp = cardfile[mcd];
+	wxFile& mcfp( cardfile[mcd] );
 
-	if( mcfp == NULL )
+	if( !mcfp.IsOpened() )
 	{
-		DevCon::Notice( "MemoryCard > Ignoring seek for disabled card." );
+		DevCon::Error( "MemoryCard: Ignoring seek for disabled card." );
 		return;
 	}
 
 	Seek(mcfp, adr);
-	fwrite(data, 1, 528*16, mcfp);
+	mcfp.Write( data, sizeof(data) );
 }
 
 
-void MemoryCard::Create( const char *mcdFile )
+void MemoryCard::Create( const wxString& mcdFile )
 {
 	//int enc[16] = {0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0,0,0,0};
 
-	FILE* fp = fopen( mcdFile, "wb" );
-	if( fp == NULL ) return;
+	wxFile fp( mcdFile, wxFile::write );
+	if( !fp.IsOpened() ) return;
+
+	u8 effeffs[528];
+	memset8_obj<0xff>( effeffs );
+
 	for( uint i=0; i<16384; i++ ) 
-	{
-		for( uint j=0; j<528; j++ ) fputc( 0xFF,fp );
-		//		for(j=0; j<16; j++) fputc(enc[j],fp);
-	}
-	fclose( fp );
+		fp.Write( effeffs, sizeof(effeffs) );
 }
 
 u64 MemoryCard::GetCRC( uint mcd )
 {
 	jASSUME( mcd < 2 );
 
-	FILE* const mcfp = cardfile[mcd];
-	if( mcfp == NULL ) return 0;
+	wxFile& mcfp( cardfile[mcd] );
+	if( !mcfp.IsOpened() ) return 0;
 
 	Seek( mcfp, 0 );
 
 	u64 retval = 0;
 	for( uint i=MC2_SIZE/sizeof(u64); i; --i )
 	{
-		u64 temp; fread( &temp, sizeof(temp), 1, mcfp );
+		u64 temp; mcfp.Read( &temp, sizeof(temp) );
 		retval ^= temp;
 	}
 

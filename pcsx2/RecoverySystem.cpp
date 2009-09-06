@@ -19,6 +19,7 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
+#include "ps2/CoreEmuThread.h"
 #include "HostGui.h"
 
 
@@ -52,7 +53,7 @@ class RecoveryZipSavingState : public gzSavingState, Sealed
 {
 public:
 	virtual ~RecoveryZipSavingState() { }
-	RecoveryZipSavingState( const string& filename );
+	RecoveryZipSavingState( const wxString& filename );
 
 	void gsFreeze();
 	void FreezePlugin( const char* name, s32 (CALLBACK* freezer)(int mode, freezeData *data) );
@@ -77,11 +78,10 @@ namespace StateRecovery {
 		return g_RecoveryState != NULL || g_gsRecoveryState != NULL;
 	}
 
-	// Exceptions:
 	void Recover()
 	{
-		// Just in case they weren't initialized earlier (no harm in calling this multiple times)
-		if( OpenPlugins() == -1 ) return;
+		wxASSERT( g_EmuThread != NULL );
+		wxASSERT( g_EmuThread->IsSelf() );
 
 		if( g_RecoveryState != NULL )
 		{
@@ -100,9 +100,7 @@ namespace StateRecovery {
 		}
 
 		StateRecovery::Clear();
-
-		// this needs to be called for every new game!
-		// (note: sometimes launching games through bios will give a crc of 0)
+		SysClearExecutionCache();
 
 		if( GSsetGameCRC != NULL )
 			GSsetGameCRC(ElfCRC, g_ZeroGSOptions);
@@ -112,37 +110,35 @@ namespace StateRecovery {
 	// (if one exists) and no recovery data was found.  This is needed because when a recovery
 	// state is made, the emulation state is usually reset so the only persisting state is
 	// the one in the memory save. :)
-	void SaveToFile( const string& file )
+	//
+	// Threading Notes:
+	//   This function can be invoked by any thread.  However, if it is run outside the context
+	//   of a CoreEmuThred then it 
+	void SaveToFile( const wxString& file )
 	{
+		SysSuspend();
+		if( g_RecoveryState == NULL )
+		{
+			RecoveryMemSavingState().FreezeAll();
+		}
+
+		SysResume();
+
 		if( g_RecoveryState != NULL )
 		{
-			// State is already saved into memory, and the emulator (and in-progress flag)
-			// have likely been cleared out.  So save from the Recovery buffer instead of
-			// doing a "standard" save:
-
-			gzFile fileptr = gzopen( file.c_str(), "wb" );
+			gzFile fileptr = gzopen( file.ToAscii().data(), "wb" );
 			if( fileptr == NULL )
-			{
-				Msgbox::Alert( _("File permissions error while trying to save to file:\n\t%ts"), params &file );
-				return;
-			}
+				throw Exception::CreateStream( file, "General savestate file creation error." );
+
 			gzwrite( fileptr, &g_SaveVersion, sizeof( u32 ) );
 			gzwrite( fileptr, g_RecoveryState->GetPtr(), g_RecoveryState->GetSizeInBytes() );
 			gzclose( fileptr );
 		}
-		else if( g_gsRecoveryState != NULL )
-		{
-			RecoveryZipSavingState( file ).FreezeAll();
-		}
 		else
 		{
-			if( !g_EmulationInProgress )
-			{
-				Msgbox::Alert( "You need to start a game first before you can save it's state." );
-				return;
-			}
-
-			States_Save( file );
+			if( !EmulationInProgress() ) return;
+			
+			RecoveryZipSavingState( file ).FreezeAll();
 		}
 	}
 
@@ -162,8 +158,7 @@ namespace StateRecovery {
 	void MakeGsOnly()
 	{
 		StateRecovery::Clear();
-		
-		if( !g_EmulationInProgress ) return;
+		if( !EmulationInProgress() ) return;
 
 		g_gsRecoveryState = new SafeArray<u8>();
 		JustGsSavingState eddie;
@@ -173,23 +168,29 @@ namespace StateRecovery {
 
 	// Creates a full recovery of the entire emulation state (CPU and all plugins).
 	// If a current recovery state is already present, then nothing is done (the
-	// existing recovery state takes precedence).
+	// existing recovery state takes precedence since if it were out-of-date it'd be
+	// deleted!).
 	void MakeFull()
 	{
 		if( g_RecoveryState != NULL ) return;
+		if( !EmulationInProgress() ) return;
+		
+		SysSuspend();
 
 		try
 		{
-			g_RecoveryState = new SafeArray<u8>( "Memory Savestate Recovery" );
+			g_RecoveryState = new SafeArray<u8>( L"Memory Savestate Recovery" );
 			RecoveryMemSavingState().FreezeAll();
 			safe_delete( g_gsRecoveryState );
-			g_EmulationInProgress = false;
 		}
 		catch( Exception::RuntimeError& ex )
 		{
-			Msgbox::Alert(
-				"Pcsx2 gamestate recovery failed. Some options may have been reverted to protect your game's state.\n"
-				"Error: %s", params ex.cMessage() );
+			Msgbox::Alert( wxsFormat(	// fixme: needs proper translation
+				L"PCSX2 encountered an error while trying to backup/suspend the PS2 VirtualMachine state. "
+				L"You may resume emulation without losing any data, however the machine state will not be "
+				L"able to recover if you make changes to your PCSX2 configuration.\n\n"
+				L"Details: %s", ex.FormatDisplayMessage().c_str() )
+			);
 			safe_delete( g_RecoveryState );
 		}
 	}
@@ -236,7 +237,7 @@ void RecoveryMemSavingState::FreezePlugin( const char* name, s32 (CALLBACK* free
 		memSavingState::FreezePlugin( name, freezer );
 }
 
-RecoveryZipSavingState::RecoveryZipSavingState( const string& filename ) : gzSavingState( filename )
+RecoveryZipSavingState::RecoveryZipSavingState( const wxString& filename ) : gzSavingState( filename )
 {
 }
 

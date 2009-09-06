@@ -586,7 +586,7 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 
 	ptr = (u8*)vtlb_GetPhyPtr(addr&0x1FFFFFF0);
 	if (ptr == NULL) {
-		Console::Error("*PCSX2*: DMA error: %8.8x", params addr);
+		Console::Error( "*PCSX2*: DMA error: %8.8x", params addr);
 		return NULL;
 	}
 	return ptr;

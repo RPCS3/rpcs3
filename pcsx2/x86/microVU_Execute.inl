@@ -118,7 +118,7 @@ microVUx(void) mVUcleanUp() {
 	mVUcacheCheck(x86Ptr, mVU->prog.x86start, (uptr)(mVU->prog.x86end - mVU->prog.x86start));
 	mVU->cycles = mVU->totalCycles - mVU->cycles;
 	mVU->regs->cycle += mVU->cycles;
-	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * Config.Hacks.VUCycleSteal;
+	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * EmuConfig.Speedhacks.VUCycleSteal;
 	//static int ax = 0; ax++;
 	//if (!(ax % 100000)) {
 	//	for (u32 i = 0; i < (mVU->progSize / 2); i++) {

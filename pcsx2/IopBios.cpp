@@ -177,6 +177,7 @@ void bios_write()  // 0x35/0x03
 	{
 		const char *ptr = Ra1;
 
+		// fixme: This should use %s with a length parameter (but I forget the exact syntax
 		while (a2 > 0) 
 		{
 			Console::Write("%c", params *ptr++);
@@ -206,7 +207,7 @@ void bios_printf() // 3f
 	iopMemWrite32(sp + 8, a2);
 	iopMemWrite32(sp + 12, a3);
 
-	// old code used phys... is tlb more correct?
+	// old code used phys... is iopMemRead32 more correct?
 	//psxMu32(sp) = a0;
 	//psxMu32(sp + 4) = a1;
 	//psxMu32(sp + 8) = a2;

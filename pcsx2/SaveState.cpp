@@ -22,6 +22,8 @@
 #include "SaveState.h"
 
 #include "CDVD/IsoFSdrv.h"
+#include "ps2/BiosTools.h"
+
 #include "VUmicro.h"
 #include "VU.h"
 #include "iCore.h"
@@ -30,6 +32,7 @@
 #include "GS.h"
 #include "COP0.h"
 #include "Cache.h"
+#include "AppConfig.h"
 
 using namespace R5900;
 
@@ -48,35 +51,25 @@ static void PostLoadPrep()
 	for(int i=0; i<48; i++) MapTLB(i);
 }
 
-string SaveState::GetFilename( int slot )
+wxString SaveState::GetFilename( int slot )
 {
-	return Path::Combine( SSTATES_DIR, fmt_string( "%8.8X.%3.3d", ElfCRC, slot ) );
+	return (g_Conf->Folders.Savestates +
+		wxsFormat( L"%8.8X.%3.3d", ElfCRC, slot )).GetFullPath();
 }
 
-SaveState::SaveState( const char* msg, const string& destination ) :
+SaveState::SaveState( const char* msg, const wxString& destination ) :
 	m_version( g_SaveVersion )
 ,	m_tagspace( 128 )
 {
-	Console::WriteLn( "%s %hs", params msg, &destination );
+	Console::WriteLn( "%s %s", params msg, destination.ToAscii().data() );
 }
 
 s32 CALLBACK gsSafeFreeze( int mode, freezeData *data )
 {
-	if( mtgsThread != NULL )
-	{
-		if( mode == 2 )
-			return GSfreeze( 2, data );
-
-		// have to call in thread, otherwise weird stuff will start happening
-		mtgsThread->SendPointerPacket( GS_RINGTYPE_FREEZE, mode, data );
-		mtgsWaitGS();
-		return 0;
-	}
-	else
-	{
-		// Single threaded...
-		return GSfreeze( mode, data );
-	}
+	// have to call in the GS thread, otherwise weird stuff will start happening
+	mtgsThread->SendPointerPacket( GS_RINGTYPE_FREEZE, mode, data );
+	mtgsWaitGS();
+	return 0;
 }
 
 void SaveState::FreezeTag( const char* src )
@@ -90,7 +83,10 @@ void SaveState::FreezeTag( const char* src )
 	if( strcmp( m_tagspace.GetPtr(), src ) != 0 )
 	{
 		assert( 0 );
-		throw Exception::BadSavedState( string( "Tag: " )+src );
+		throw Exception::BadSavedState(
+			// Untranslated diagnostic msg (use default msg for translation)
+			L"Savestate data corruption detected while reading tag: " + wxString::FromAscii(src)
+		);
 	}
 }
 
@@ -103,10 +99,10 @@ void SaveState::FreezeAll()
 	// doesn't match the bios currently being used (chances are it'll still
 	// work fine, but some games are very picky).
 
-	char descout[128], descin[128];
-	memzero_obj( descout );
-	IsBIOS( Config.Bios, descout );
-	memcpy_fast( descin, descout, 128 );
+	char descin[128];
+	wxString descout;
+	IsBIOS( g_Conf->FullpathToBios(), descout );
+	memcpy_fast( descin, descout.ToAscii().data(), 128 );
 	Freeze( descin );
 	
 	if( memcmp( descin, descout, 128 ) != 0 )
@@ -115,7 +111,7 @@ void SaveState::FreezeAll()
 			"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
 			"\t\tCurrent BIOS:   %s\n"
 			"\t\tSavestate BIOS: %s\n",
-			params descout, descin
+			params descout.ToAscii().data(), descin
 		);
 	}
 
@@ -170,11 +166,8 @@ void SaveState::FreezeAll()
 	// Sixth Block - Plugins Galore!
 	// -----------------------------
 	FreezePlugin( "GS", gsSafeFreeze );
-	FreezePlugin( "SPU2", SPU2freeze );
-	FreezePlugin( "DEV9", DEV9freeze );
-	FreezePlugin( "USB", USBfreeze );
-	FreezePlugin( "PAD1", PAD1freeze );
-	FreezePlugin( "PAD2", PAD2freeze );
+	
+	g_plugins->Freeze( *this );
 
 	if( IsLoading() )
 		PostLoadPrep();
@@ -183,7 +176,7 @@ void SaveState::FreezeAll()
 /////////////////////////////////////////////////////////////////////////////
 // gzipped to/from disk state saves implementation
 
-gzBaseStateInfo::gzBaseStateInfo( const char* msg, const string& filename ) :
+gzBaseStateInfo::gzBaseStateInfo( const char* msg, const wxString& filename ) :
   SaveState( msg, filename )
 , m_filename( filename )
 , m_file( NULL )
@@ -200,10 +193,10 @@ gzBaseStateInfo::~gzBaseStateInfo()
 }
 
 
-gzSavingState::gzSavingState( const string& filename ) :
-  gzBaseStateInfo( _("Saving state to: "), filename )
+gzSavingState::gzSavingState( const wxString& filename ) :
+  gzBaseStateInfo( "Saving state to: ", filename )
 {
-	m_file = gzopen(filename.c_str(), "wb");
+	m_file = gzopen(filename.ToAscii().data(), "wb");
 	if( m_file == NULL )
 		throw Exception::FileNotFound();
 
@@ -212,10 +205,10 @@ gzSavingState::gzSavingState( const string& filename ) :
 }
 
 
-gzLoadingState::gzLoadingState( const string& filename ) :
-  gzBaseStateInfo( _("Loading state from: "), filename )
+gzLoadingState::gzLoadingState( const wxString& filename ) :
+  gzBaseStateInfo( "Loading state from: ", filename )
 {
-	m_file = gzopen(filename.c_str(), "rb");
+	m_file = gzopen(filename.ToAscii().data(), "rb");
 	if( m_file == NULL )
 		throw Exception::FileNotFound();
 
@@ -297,15 +290,15 @@ void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int
 // uncompressed to/from memory state saves implementation
 
 memBaseStateInfo::memBaseStateInfo( SafeArray<u8>& memblock, const char* msg ) :
-  SaveState( msg, "Memory" )
-, m_memory( memblock )
-, m_idx( 0 )
+	SaveState( msg, L"Memory")
+,	m_memory( memblock )
+,	m_idx( 0 )
 {
 	// Always clear the MTGS thread state.
 	mtgsWaitGS();
 }
 
-memSavingState::memSavingState( SafeArray<u8>& save_to ) : memBaseStateInfo( save_to, _("Saving state to: ") )
+memSavingState::memSavingState( SafeArray<u8>& save_to ) : memBaseStateInfo( save_to, "Saving state to: " )
 {
 	save_to.ChunkSize = ReallocThreshold;
 	save_to.MakeRoomFor( MemoryBaseAllocSize );
@@ -325,7 +318,7 @@ void memSavingState::FreezeMem( void* data, int size )
 }
 
 memLoadingState::memLoadingState(SafeArray<u8>& load_from ) : 
-	memBaseStateInfo( load_from, _("Loading state from: ") )
+	memBaseStateInfo( load_from, "Loading state from: " )
 {
 }
 
@@ -374,7 +367,7 @@ void memLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(in
 	if( ( fP.size + m_idx ) > m_memory.GetSizeInBytes() )
 	{
 		assert(0);
-		throw Exception::BadSavedState( "memory" );
+		throw Exception::BadSavedState( L"memory");
 	}
 
 	fP.data = ((s8*)m_memory.GetPtr()) + m_idx;

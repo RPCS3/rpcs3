@@ -114,7 +114,7 @@ void mVUsaveReg(int reg, uptr offset, int xyzw, bool modXYZW) {
 	return;*/
 
 	switch ( xyzw ) {
-		case 5:		if (cpucaps.hasStreamingSIMD4Extensions) {
+		case 5:		if (x86caps.hasStreamingSIMD4Extensions) {
 						SSE4_EXTRACTPS_XMM_to_M32(offset+4,  reg, 1);
 						SSE4_EXTRACTPS_XMM_to_M32(offset+12, reg, 3);
 					}
@@ -223,7 +223,7 @@ void mVUsaveReg2(int reg, int gprReg, u32 offset, int xyzw) {
 void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0) {
 	xyzw &= 0xf;
 	if ( (dest != src) && (xyzw != 0) ) {
-		if (cpucaps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf)) {
+		if (x86caps.hasStreamingSIMD4Extensions && (xyzw != 0x8) && (xyzw != 0xf)) {
 			if (modXYZW) {
 				if		(xyzw == 1) { SSE4_INSERTPS_XMM_to_XMM(dest, src, _MM_MK_INSERTPS_NDX(0, 3, 0)); return; }
 				else if (xyzw == 2) { SSE4_INSERTPS_XMM_to_XMM(dest, src, _MM_MK_INSERTPS_NDX(0, 2, 0)); return; }

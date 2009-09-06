@@ -17,6 +17,7 @@
 .extern REGINFO
 .extern RECLUT
 .extern recRecompile
+.extern recEventTest
 
 //////////////////////////////////////////////////////////////////////////
 // The address for all cleared blocks.  It recompiles the current pc and then
@@ -48,3 +49,9 @@ DispatcherReg:
 	shr eax, 16
 	mov ecx, dword ptr [RECLUT+eax*4]
 	jmp dword ptr [ecx+ebx]
+
+.globl DispatcherEvent
+DispatcherEvent:
+
+		call recEventTest
+		jmp DispatcherReg

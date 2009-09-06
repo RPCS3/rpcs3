@@ -16,11 +16,37 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#ifndef __R5900_H__
-#define __R5900_H__
+#pragma once
+
+//////////////////////////////////////////////////////////////////////////////////////////
+#ifndef __LINUX__
+#pragma region Recompiler Stuffs
+#endif
+
+// This code section contains recompiler vars that are used in "shared" code. Placing
+// them in iR5900.h would mean having to include that into more files than I care to
+// right now, so we're sticking them here for now until a better solution comes along.
 
 extern bool g_EEFreezeRegs;
+extern bool g_ExecBiosHack;
+extern volatile bool eeRecIsReset;
 
+namespace Exception
+{
+	// Implementation Note: this exception has no meaningful type information and we don't
+	// care to have it be caught by any BaseException handlers lying about, so let's not
+	// derive from BaseException :D
+	class RecompilerReset
+	{
+	public:
+		explicit RecompilerReset() { }
+	};
+}
+#ifndef __LINUX__
+#pragma endregion
+#endif
+
+//////////////////////////////////////////////////////////////////////////////////////////
 // EE Bios function name tables.
 namespace R5900 {
 extern const char* const bios[256];
@@ -28,7 +54,6 @@ extern const char* const bios[256];
 
 extern s32 EEsCycle;
 extern u32 EEoCycle;
-extern u32 bExecBIOS;
 
 union GPR_reg {   // Declare union type GPR register
 	u64 UD[2];      //128 bits
@@ -56,7 +81,7 @@ union PERFregs {
 	{
 		union
 		{
-			struct  
+			struct
 			{
 				u32 pad0:1;			// LSB should always be zero (or undefined)
 				u32 EXL0:1;			// enable PCR0 during Level 1 exception handling
@@ -72,11 +97,11 @@ union PERFregs {
 				u32 S1:1;			// enable PCR1 during Supervisor mode execution
 				u32 U1:1;			// enable PCR1 during User-mode execution
 				u32 Event1:5;		// PCR1 event counter (all values except 1 ignored at this time)
-				
+
 				u32 Reserved:11;
 				u32 CTE:1;			// Counter enable bit, no counting if set to zero.
 			} b;
-			
+
 			u32 val;
 		} pccr;
 
@@ -95,7 +120,7 @@ union CP0regs {
 				u32 IE:1;		// Bit 0: Interrupt Enable flag.
 				u32 EXL:1;		// Bit 1: Exception Level, set on any exception not covered by ERL.
 				u32 ERL:1;		// Bit 2: Error level, set on Resetm NMI, perf/debug exceptions.
-				u32 KSU:2;		// Bits 3-4: Kernel [clear] / Supervisor [set] mode 
+				u32 KSU:2;		// Bits 3-4: Kernel [clear] / Supervisor [set] mode
 				u32 unused0:3;
 				u32 IM:8;		// Bits 10-15: Interrupt mask (bits 12,13,14 are unused)
 				u32 EIE:1;		// Bit 16: IE bit enabler.  When cleared, ints are disabled regardless of IE status.
@@ -161,7 +186,7 @@ union FPRreg {
 struct fpuRegisters {
 	FPRreg fpr[32];		// 32bit floating point registers
 	u32 fprc[32];		// 32bit floating point control registers
-	FPRreg ACC;			// 32 bit accumulator 
+	FPRreg ACC;			// 32 bit accumulator
 	u32 ACCflag;        // an internal accumulator overflow flag
 };
 
@@ -197,10 +222,10 @@ struct tlbs
 
 #define _PC_       cpuRegs.pc       // The next PC to be executed - only used in this header and R3000A.h
 
-#define _Funct_  ((cpuRegs.code      ) & 0x3F)  // The funct part of the instruction register 
-#define _Rd_     ((cpuRegs.code >> 11) & 0x1F)  // The rd part of the instruction register 
-#define _Rt_     ((cpuRegs.code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Rs_     ((cpuRegs.code >> 21) & 0x1F)  // The rs part of the instruction register 
+#define _Funct_  ((cpuRegs.code      ) & 0x3F)  // The funct part of the instruction register
+#define _Rd_     ((cpuRegs.code >> 11) & 0x1F)  // The rd part of the instruction register
+#define _Rt_     ((cpuRegs.code >> 16) & 0x1F)  // The rt part of the instruction register
+#define _Rs_     ((cpuRegs.code >> 21) & 0x1F)  // The rs part of the instruction register
 #define _Sa_     ((cpuRegs.code >>  6) & 0x1F)  // The sa part of the instruction register
 #define _Im_     ((u16)cpuRegs.code) // The immediate part of the instruction register
 #define _Target_ (cpuRegs.code & 0x03ffffff)    // The target part of the instruction register
@@ -228,7 +253,7 @@ extern bool eeEventTestIsActive;
 extern u32 s_iLastCOP0Cycle;
 extern u32 s_iLastPERFCycle[2];
 
-bool intEventTest();
+void intEventTest();
 void intSetBranch();
 
 // This is a special form of the interpreter's doBranch that is run from various
@@ -243,8 +268,7 @@ struct R5900cpu
 	void (*Allocate)();		// throws exceptions on failure.
 	void (*Reset)();
 	void (*Step)();
-	void (*Execute)();			/* executes up to a break */
-	void (*ExecuteBlock)();
+	void (*Execute)();
 	void (*Clear)(u32 Addr, u32 Size);
 	void (*Shutdown)();		// deallocates memory reserved by Allocate
 };
@@ -255,7 +279,6 @@ extern R5900cpu recCpu;
 
 extern void cpuInit();
 extern void cpuReset();		// can throw Exception::FileNotFound.
-extern void cpuShutdown();
 extern void cpuExecuteBios();
 extern void cpuException(u32 code, u32 bd);
 extern void cpuTlbMissR(u32 addr, u32 bd);
@@ -267,7 +290,7 @@ extern void cpuSetNextBranchDelta( s32 delta );
 extern int  cpuTestCycle( u32 startCycle, s32 delta );
 extern void cpuSetBranch();
 
-extern bool _cpuBranchTest_Shared();		// for internal use by the Dynarecs and Ints inside R5900:
+extern void _cpuBranchTest_Shared();		// for internal use by the Dynarecs and Ints inside R5900:
 
 extern void cpuTestINTCInts();
 extern void cpuTestDMACInts();
@@ -296,5 +319,3 @@ extern void cpuTestTIMRInts();
 #define EXC_CODE_WATCH  EXC_CODE(23)
 #define EXC_CODE__MASK  0x0000007c
 #define EXC_CODE__SHIFT 2
-
-#endif /* __R5900_H__ */

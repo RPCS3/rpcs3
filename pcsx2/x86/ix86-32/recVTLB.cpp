@@ -452,7 +452,7 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 		}
 
 		// Shortcut for the INTC_STAT register, which many games like to spin on heavily.
-		if( (bits == 32) && !Config.Hacks.INTCSTATSlow && (paddr == INTC_STAT) )
+		if( (bits == 32) && !EmuConfig.Speedhacks.IntcStat && (paddr == INTC_STAT) )
 		{
 			xMOV( eax, &psHu32( INTC_STAT ) );
 		}

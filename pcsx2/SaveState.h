@@ -48,10 +48,10 @@ protected:
 	SafeArray<char> m_tagspace;
 
 public:
-	SaveState( const char* msg, const string& destination );
+	SaveState( const char* msg, const wxString& destination );
 	virtual ~SaveState() { }
 
-	static string GetFilename( int slot );
+	static wxString GetFilename( int slot );
 
 	// Gets the version of savestate that this object is acting on.
 	// The version refers to the low 16 bits only (high 16 bits classifies Pcsx2 build types)
@@ -134,11 +134,11 @@ protected:
 class gzBaseStateInfo : public SaveState
 {
 protected:
-	const string m_filename;
+	const wxString m_filename;
 	gzFile m_file;		// used for reading/writing disk saves
 
 public:
-	gzBaseStateInfo( const char* msg, const string& filename );
+	gzBaseStateInfo( const char* msg, const wxString& filename );
 
 	virtual ~gzBaseStateInfo();
 };
@@ -147,7 +147,7 @@ class gzSavingState : public gzBaseStateInfo
 {
 public:
 	virtual ~gzSavingState() {}
-	gzSavingState( const string& filename ) ;
+	gzSavingState( const wxString& filename ) ;
 	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
 	void FreezeMem( void* data, int size );
 	bool IsSaving() const { return true; }
@@ -157,7 +157,7 @@ class gzLoadingState : public gzBaseStateInfo
 {
 public:
 	virtual ~gzLoadingState();
-	gzLoadingState( const string& filename ); 
+	gzLoadingState( const wxString& filename ); 
 
 	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
 	void FreezeMem( void* data, int size );
@@ -210,7 +210,7 @@ namespace StateRecovery
 {
 	extern bool HasState();
 	extern void Recover();
-	extern void SaveToFile( const string& file );
+	extern void SaveToFile( const wxString& file );
 	extern void SaveToSlot( uint num );
 	extern void MakeGsOnly();
 	extern void MakeFull();
