@@ -88,7 +88,7 @@ microVUt(void) mVUreset(mV) {
 	u8* z = (mVU->cache + 0x1000); // Dispatcher Code is in first page of cache
 	mVU->prog.x86start	= z;
 	mVU->prog.x86ptr	= z;
-	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - (mVU->cacheSize*.05)));
+	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - (_1mb * 3))); // 3mb "Safe Zone"
 
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		if (!mVU->index) mVUclearProg<0>(i);

@@ -275,7 +275,6 @@ namespace FilenameDefs
 	}
 };
 
-// ------------------------------------------------------------------------
 wxFileName wxDirName::Combine( const wxFileName& right ) const
 {
 	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wxDirName concatenation." );
@@ -291,7 +290,6 @@ wxFileName wxDirName::Combine( const wxFileName& right ) const
 	return result;
 }
 
-// ------------------------------------------------------------------------
 wxDirName wxDirName::Combine( const wxDirName& right ) const
 {
 	wxASSERT_MSG( IsDir() && right.IsDir(), L"Warning: Malformed directory name detected during wDirName concatenation." );
@@ -301,7 +299,6 @@ wxDirName wxDirName::Combine( const wxDirName& right ) const
 	return result;
 }
 
-// ------------------------------------------------------------------------
 wxDirName& wxDirName::Normalize( int flags, const wxString& cwd )
 {
 	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
@@ -310,7 +307,6 @@ wxDirName& wxDirName::Normalize( int flags, const wxString& cwd )
 	return *this;
 }
 
-// ------------------------------------------------------------------------
 wxDirName& wxDirName::MakeRelativeTo( const wxString& pathBase )
 {
 	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
@@ -319,7 +315,6 @@ wxDirName& wxDirName::MakeRelativeTo( const wxString& pathBase )
 	return *this;
 }
 
-// ------------------------------------------------------------------------
 wxDirName& wxDirName::MakeAbsolute( const wxString& cwd )
 {
 	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
@@ -328,7 +323,6 @@ wxDirName& wxDirName::MakeAbsolute( const wxString& cwd )
 	return *this;
 }
 
-// ------------------------------------------------------------------------
 void wxDirName::Rmdir()
 {
 	if( !Exists() ) return;
@@ -342,7 +336,6 @@ bool wxDirName::Mkdir()
 	return wxFileName::Mkdir();
 }
 
-// ------------------------------------------------------------------------
 wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 {
 	return Path::Combine( Folders.Plugins, BaseFilenames[pluginidx] );
@@ -482,7 +475,7 @@ AppConfig::ConsoleLogOptions::ConsoleLogOptions() :
 	Visible( false )
 ,	AutoDock( true )
 ,	DisplayPosition( wxDefaultPosition )
-,	DisplaySize( wxSize( 540, 540 ) )
+,	DisplaySize( wxSize( 680, 560 ) )
 ,	FontSize( 8 )
 {
 }

@@ -61,29 +61,31 @@ int  _SPR0chain()
 	pMem = (u32*)dmaGetAddr(spr0->madr);
 	if (pMem == NULL) return -1;
 
-	if ((psHu32(DMAC_CTRL) & 0xC) >= 0x8)   // 0x8 VIF1 MFIFO, 0xC GIF MFIFO
+	switch (dmacRegs->ctrl.MFD)
 	{
-		if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) 
-			Console::WriteLn("SPR MFIFO Write outside MFIFO area");
-		else 
-			mfifotransferred += spr0->qwc;
-		
-		hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
-		spr0->madr += spr0->qwc << 4;
-		spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-		
+		case MFD_VIF1:
+		case MFD_GIF:
+			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) 
+				Console::WriteLn("SPR MFIFO Write outside MFIFO area");
+			else 
+				mfifotransferred += spr0->qwc;
+			
+			hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+			spr0->madr += spr0->qwc << 4;
+			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+			break;
+			
+		case NO_MFD:
+		case MFD_RESERVED:
+			memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+			
+			// clear VU mem also!
+			TestClearVUs(spr0->madr, spr0->qwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
+			spr0->madr += spr0->qwc << 4;
+			break;
 	}
-	else
-	{
-		memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
-		
-		// clear VU mem also!
-		TestClearVUs(spr0->madr, spr0->qwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
-
-		spr0->madr += spr0->qwc << 4;
-	}
+	
 	spr0->sadr += spr0->qwc << 4;
-
 
 	return (spr0->qwc) * BIAS; // bus is 1/2 the ee speed
 }
@@ -98,8 +100,8 @@ __forceinline void SPR0chain()
 void _SPR0interleave()
 {
 	int qwc = spr0->qwc;
-	int sqwc = psHu32(DMAC_SQWC) & 0xff;
-	int tqwc = (psHu32(DMAC_SQWC) >> 16) & 0xff;
+	int sqwc = dmacRegs->sqwc.SQWC; 
+	int tqwc =  dmacRegs->sqwc.TQWC; 
 	u32 *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;
@@ -112,18 +114,22 @@ void _SPR0interleave()
 		spr0->qwc = std::min(tqwc, qwc);
 		qwc -= spr0->qwc;
 		pMem = (u32*)dmaGetAddr(spr0->madr);
-		if ((((psHu32(DMAC_CTRL) & 0xC) == 0xC) || // GIF MFIFO
-		        (psHu32(DMAC_CTRL) & 0xC) == 0x8))   // VIF1 MFIFO
-		{
-			hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
-			mfifotransferred += spr0->qwc;
-		}
-		else
-		{
-			// clear VU mem also!
-			TestClearVUs(spr0->madr, spr0->qwc << 2);
-			memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
-		}
+		
+		switch (dmacRegs->ctrl.MFD)
+ 		{
+			case MFD_VIF1:
+			case MFD_GIF:
+				hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+				mfifotransferred += spr0->qwc;
+				break;
+			
+			case NO_MFD:
+			case MFD_RESERVED:
+				// clear VU mem also!
+				TestClearVUs(spr0->madr, spr0->qwc << 2);
+				memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+				break;
+ 		}
 		spr0->sadr += spr0->qwc * 16;
 		spr0->madr += (sqwc + spr0->qwc) * 16;
 	}
@@ -134,7 +140,7 @@ void _SPR0interleave()
 
 static __forceinline void _dmaSPR0()
 {
-	if ((psHu32(DMAC_CTRL) & 0x30) == 0x20)   // STS == fromSPR
+	if (dmacRegs->ctrl.STS == STS_fromSPR)   // STS == fromSPR
 	{
 		Console::WriteLn("SPR0 stall %d", params(psHu32(DMAC_CTRL) >> 6)&3);
 	}
@@ -172,7 +178,7 @@ static __forceinline void _dmaSPR0()
 			SPR_LOG("spr0 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
 				ptag[1], ptag[0], spr0->qwc, id, spr0->madr, spr0->sadr);
 
-			if ((psHu32(DMAC_CTRL) & 0x30) == 0x20)   // STS == fromSPR
+			if (dmacRegs->ctrl.STS == STS_fromSPR)   // STS == fromSPR
 			{
 				Console::WriteLn("SPR stall control");
 			}
@@ -225,23 +231,30 @@ void SPRFROMinterrupt()
 
 	if(mfifotransferred != 0)
 	{
-		if ((psHu32(DMAC_CTRL) & 0xC) == 0xC)   // GIF MFIFO
+		switch (dmacRegs->ctrl.MFD)
 		{
-			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
-			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-			//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr._u32, gif->madr, gif->tadr);
-			mfifoGIFtransfer(mfifotransferred);
-			mfifotransferred = 0;
-			if (gif->chcr.STR) return;
-		}
-		else if ((psHu32(DMAC_CTRL) & 0xC) == 0x8)   // VIF1 MFIFO
-		{
-			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("VIF MFIFO Write outside MFIFO area");
-			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
-			//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", params vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
-			mfifoVIF1transfer(mfifotransferred);
-			mfifotransferred = 0;
-			if (vif1ch->chcr.STR) return;
+			case MFD_GIF:
+			{
+				if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
+				spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+				//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", params gif->chcr._u32, gif->madr, gif->tadr);
+				mfifoGIFtransfer(mfifotransferred);
+				mfifotransferred = 0;
+				if (gif->chcr.STR) return;
+				break;
+			}
+			case MFD_VIF1:
+			{
+				if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("VIF MFIFO Write outside MFIFO area");
+				spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+				//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", params vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
+				mfifoVIF1transfer(mfifotransferred);
+				mfifotransferred = 0;
+				if (vif1ch->chcr.STR) return;
+				break;
+			}
+			default:
+				break;
 		}
 	}
 	if (spr0finished == 0) return;
@@ -300,8 +313,8 @@ __forceinline void SPR1chain()
 void _SPR1interleave()
 {
 	int qwc = spr1->qwc;
-	int sqwc = psHu32(DMAC_SQWC) & 0xff;
-	int tqwc = (psHu32(DMAC_SQWC) >> 16) & 0xff;
+	int sqwc = dmacRegs->sqwc.SQWC; 
+	int tqwc =  dmacRegs->sqwc.TQWC; 
 	u32 *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;

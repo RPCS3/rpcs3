@@ -528,7 +528,9 @@ static const LegacyApi_OptMethod* const s_MethMessOpt[] =
 
 PluginManager *g_plugins = NULL;
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------------------------------
+//       Plugin-related Exception Implementations
+// ---------------------------------------------------------------------------------
 
 Exception::PluginLoadError::PluginLoadError( PluginsEnum_t pid, const wxString& objname, const char* eng )
 {
@@ -567,14 +569,20 @@ wxString Exception::PluginError::FormatDisplayMessage() const
 	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// ---------------------------------------------------------------------------------
+//          Plugin Manager Implementation
+// ---------------------------------------------------------------------------------
 
 PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
+	Console::Status( "Loading plugins..." );
+	
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 	{
 		const PluginsEnum_t pid = pi->id;
+
+		Console::WriteLn( "\tBinding %s\t: %s ", params tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
 
 		if( folders[pid].IsEmpty() )
 			throw Exception::InvalidArgument( "Empty plugin filename." );
@@ -610,6 +618,8 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	// Hack for PAD's stupid parameter passed on Init
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
+	
+	Console::Status( "Plugins loaded successfully.\n" );
 }
 
 PluginManager::~PluginManager()
@@ -767,6 +777,8 @@ void PluginManager::Open( PluginsEnum_t pid )
 {
 	if( m_info[pid].IsOpened ) return;
 
+	Console::WriteLn( "\tOpening %s", params tbl_PluginInfo[pid].shortname );
+
 	// Each Open needs to be called explicitly. >_<
 
 	bool result = true;
@@ -788,17 +800,20 @@ void PluginManager::Open( PluginsEnum_t pid )
 
 void PluginManager::Open()
 {
+	Console::Status( "Opening plugins..." );
+
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		g_plugins->Open( pi->id );
 
-	cdvdDetectDisk();
+	Console::Status( "Plugins opened successfully." );
 }
 
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
 
+	DevCon::Status( "\tClosing %s", params tbl_PluginInfo[pid].shortname );
 	if( pid == PluginId_GS )
 	{
 		if( mtgsThread == NULL ) return;
@@ -824,6 +839,8 @@ void PluginManager::Close( PluginsEnum_t pid )
 
 void PluginManager::Close( bool closegs )
 {
+	Console::Status( "Closing plugins..." );
+
 	// Close plugins in reverse order of the initialization procedure.
 
 	for( int i=PluginId_Count-1; i>=0; --i )
@@ -831,6 +848,8 @@ void PluginManager::Close( bool closegs )
 		if( closegs || (tbl_PluginInfo[i].id != PluginId_GS) )
 			Close( tbl_PluginInfo[i].id );
 	}
+
+	Console::Status( "Plugins closed successfully." );
 }
 
 // Initializes all plugins.  Plugin initialization should be done once for every new emulation
@@ -843,16 +862,25 @@ void PluginManager::Close( bool closegs )
 //
 void PluginManager::Init()
 {
+	bool printlog = false;
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 	{
 		const PluginsEnum_t pid = pi->id;
 
 		if( m_info[pid].IsInitialized ) continue;
+		if( !printlog )
+		{
+			Console::Status( "Initializing plugins..." );
+			printlog = true;
+		}
+		Console::WriteLn( "\tInit %s", params tbl_PluginInfo[pid].shortname );
 		m_info[pid].IsInitialized = true;
 		if( 0 != m_info[pid].CommonBindings.Init() )
 			throw Exception::PluginInitError( pid );
 	}
+	if( printlog )
+		Console::Status( "Plugins initialized successfully.\n" );
 }
 
 // Shuts down all plugins.  Plugins are closed first, if necessary.
@@ -865,6 +893,7 @@ void PluginManager::Shutdown()
 {
 	Close();
 
+	Console::Status( "Shutting down plugins..." );
 	// Shutdown plugins in reverse order (probably doesn't matter...
 	//  ... but what the heck, right?)
 
@@ -872,9 +901,11 @@ void PluginManager::Shutdown()
 	{
 		const PluginsEnum_t pid = tbl_PluginInfo[i].id;
 		if( !m_info[pid].IsInitialized ) continue;
+		DevCon::WriteLn( "\tShutdown %s", params tbl_PluginInfo[pid].shortname );
 		m_info[pid].IsInitialized = false;
 		m_info[pid].CommonBindings.Shutdown();
 	}
+	Console::Status( "Plugins shutdown successfully." );
 }
 
 void PluginManager::Freeze( PluginsEnum_t pid, int mode, freezeData* data )

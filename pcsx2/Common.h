@@ -26,8 +26,6 @@
 //#define PSXCLK	186864000	/* 36.864 Mhz */
 #define PS2CLK 294912000 //hz	/* 294.912 mhz */
 
-#define PCSX2_VERSION "beta"
-
 #include "System.h"
 
 #include "Plugins.h"

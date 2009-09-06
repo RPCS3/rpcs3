@@ -36,9 +36,9 @@ then
  CCASFLAGS+=" -m32 "
 else
  AC_DEFINE(NDEBUG,1,[NDEBUG])
- CFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value -m32 "
- CPPFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value -m32 "
- CXXFLAGS+="-O3 -fomit-frame-pointer -fPIC -Wall  -Wno-unused-value -m32 "
+ CFLAGS+="-O3 -fomit-frame-pointer -msse -msse2 -fPIC -Wall  -Wno-unused-value -m32 "
+ CPPFLAGS+="-O3 -fomit-frame-pointer -msse -msse2 -fPIC -Wall  -Wno-unused-value -m32 "
+ CXXFLAGS+="-O3 -fomit-frame-pointer -msse -msse2 -fPIC -Wall  -Wno-unused-value -m32 "
  CCASFLAGS+=" -m32 "
 fi
 AM_CONDITIONAL(DEBUGBUILD, test x$debug = xyes)

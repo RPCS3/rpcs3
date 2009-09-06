@@ -25,6 +25,8 @@
 #include "Windows/GSwin.h"
 #endif
 
+#include "Registers.h"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -39,7 +41,6 @@ extern "C"
 #include "Linux/GSLinux.h"
 #endif
 
-#include "GifTransfer.h"
 #include "null/GSnull.h"
 
 /*#ifdef _MSC_VER

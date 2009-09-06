@@ -280,24 +280,25 @@ u32* recGetImm64(u32 hi, u32 lo)
 	u32 *imm64; // returned pointer
 	static u32 *imm64_cache[509];
 	int cacheidx = lo % (sizeof imm64_cache / sizeof *imm64_cache);
-	//static int count; count++;
 
 	imm64 = imm64_cache[cacheidx];
 	if (imm64 && imm64[0] == lo && imm64[1] == hi)
 		return imm64;
 
-	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE) {
-		// TODO: flag an error in recompilation which would reset the recompiler
-		// immediately and recompile the current block again.  There is currently
-		// no way to do this, so have a last ditch attempt at making things sane
-		// and return some nonsense if that fails.
-		for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
+	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE)
+	{
+		Console::Status( "EErec const buffer filled; Resetting..." );
+		throw Exception::RecompilerReset();
+	
+		/*for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
+		{
 			if (p[0] == lo && p[1] == hi) {
 				imm64_cache[cacheidx] = p;
 				return p;
 			}
+		}
 
-		return recConstBuf;
+		return recConstBuf;*/
 	}
 
 	imm64 = recConstBufPtr;

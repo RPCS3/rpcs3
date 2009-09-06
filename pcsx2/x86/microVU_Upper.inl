@@ -118,6 +118,20 @@ void setupPass1(microVU* mVU, int opCase, bool isACC, bool noFlagUpdate) {
 	if (noFlagUpdate) { sFLAG.doFlag = 0; }
 }
 
+// Safer to force 0 as the result for X minus X than to do actual subtraction
+bool doSafeSub(microVU* mVU, int opCase, int opType, bool isACC) {
+	opCase1 {
+		if ((opType == 1) && (_Ft_ == _Fs_)) {
+			int Fs = mVU->regAlloc->allocReg(-1, isACC ? 32 : _Fd_, _X_Y_Z_W);
+			SSE2_PXOR_XMM_to_XMM(Fs, Fs); // Set to Positive 0
+			mVUupdateFlags(mVU, Fs, -1);
+			mVU->regAlloc->clearNeeded(Fs);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 // Sets Up Ft Reg for Normal, BC, I, and Q Cases
 void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
 	opCase1 {
@@ -142,6 +156,8 @@ void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
 void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, const char* opName) {
 	pass1 { setupPass1(mVU, opCase, isACC, ((opType == 3) || (opType == 4))); }
 	pass2 {
+		if (doSafeSub(mVU, opCase, opType, isACC)) return;
+		
 		int Fs, Ft, ACC, tempFt;
 		setupFtReg(mVU, Ft, tempFt, opCase);
 
@@ -152,7 +168,9 @@ void mVU_FMACa(microVU* mVU, int recPass, int opCase, int opType, bool isACC, co
 		}
 		else { Fs = mVU->regAlloc->allocReg(_Fs_, _Fd_, _X_Y_Z_W); }
 
-		opCase1 { if((opType == 2) && _XYZW_PS)	{ mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
+		opCase1 { if((opType == 1) && _XYZW_PS) { mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Kingdom Hearts I (VU0)
+		opCase1 { if((opType == 1) && _XYZW_PS) { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Kingdom Hearts I (VU0)
+		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp2(mVU, Ft, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
 		opCase1 { if((opType == 2) && _XYZW_PS) { mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for Ice Age 3 (VU0)
 		opCase2 { if (opType == 2)				{ mVUclamp2(mVU, Fs, -1, _X_Y_Z_W); } } // Clamp Needed for alot of games (TOTA, DoM, etc...)
 

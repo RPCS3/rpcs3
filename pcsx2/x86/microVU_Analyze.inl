@@ -315,7 +315,7 @@ microVUt(void) mVUanalyzeMflag(mV, int Is, int It) {
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
 	if (!It) { mVUlow.isNOP = 1; }
-	else { // Need set _doMac for 4 previous Ops (need to do all 4 because stalls could change the result needed)
+	else {
 		mVUinfo.swapOps = 1;
 		flagSet(mVU, 1);
 		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 2; }

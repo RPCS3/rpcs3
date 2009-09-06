@@ -302,6 +302,8 @@ bool Pcsx2App::OnInit()
 	    m_MainFrame->Show();
 
 		SysInit();
+		ApplySettings();
+		InitPlugins();
 	}
 	catch( Exception::StartupAborted& )
 	{
@@ -309,8 +311,6 @@ bool Pcsx2App::OnInit()
 		CleanupMess();
 		return false;
 	}
-
-	ApplySettings();
 
     return true;
 }

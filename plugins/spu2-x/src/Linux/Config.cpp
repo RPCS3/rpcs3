@@ -83,7 +83,7 @@ bool dspPluginEnabled = false;
 int  dspPluginModule = 0;
 wchar_t dspPlugin[256];
 
-bool StereoExpansionDisabled = true;
+bool StereoExpansionEnabled = false;
 
 /*****************************************************************************/
 

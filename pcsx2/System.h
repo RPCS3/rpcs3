@@ -24,6 +24,11 @@
 #include "Misc.h"
 #include "CDVD/CDVDaccess.h"
 
+static const int PCSX2_VersionHi	= 0;
+static const int PCSX2_VersionMid	= 9;
+static const int PCSX2_VersionLo	= 7;
+
+
 class CoreEmuThread;
 
 extern bool SysInit();

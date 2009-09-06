@@ -78,7 +78,7 @@ extern int  dspPluginModule;
 
 extern bool	dspPluginEnabled;
 extern bool timeStretchDisabled;
-extern bool StereoExpansionDisabled;
+extern bool StereoExpansionEnabled;
 
 class SoundtouchCfg
 {

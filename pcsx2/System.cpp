@@ -32,6 +32,10 @@
 #include "CDVD/CDVD.h"
 #include "ps2/CoreEmuThread.h"
 
+#ifndef __LINUX__
+#include "svnrev.h"
+#endif
+
 using namespace std;
 
 Pcsx2Config EmuConfig;
@@ -49,10 +53,9 @@ void SysDetect()
 {
 	using namespace Console;
 
-	if( sysInitialized ) return;
-	sysInitialized = true;
-
-	Notice("PCSX2 " PCSX2_VERSION " - compiled on " __DATE__ );
+	Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, params PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+		SVN_REV, SVN_MODS ? "(modded)" : ""
+	);
 	Notice("Savestate version: %x", params g_SaveVersion);
 
 	cpudetectInit();
@@ -64,7 +67,7 @@ void SysDetect()
 		L"\tCPU vendor name  =  %s\n"
 		L"\tFamilyID         =  %x\n"
 		L"\tx86Family        =  %s\n"
-		L"\tCPU speed        =  %d.%03d Ghz\n"
+		L"\tCPU speed        =  %d.%03d ghz\n"
 		L"\tCores            =  %d physical [%d logical]\n"
 		L"\tx86PType         =  %s\n"
 		L"\tx86Flags         =  %8.8x %8.8x\n"
@@ -424,6 +427,9 @@ static void InitFolderStructure()
 // Returns FALSE if the core/recompiler memory allocations failed.
 bool SysInit()
 {
+	if( sysInitialized ) return true;
+	sysInitialized = true;
+
 	PCSX2_MEM_PROTECT_BEGIN();
 	SysDetect();
 	if( !SysAllocateMem() )

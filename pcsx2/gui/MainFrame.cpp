@@ -22,6 +22,10 @@
 #include "Resources/EmbeddedImage.h"
 #include "Resources/AppIcon.h"
 
+#ifdef _WIN32
+#include "svnrev.h"
+#endif
+
 // ------------------------------------------------------------------------
 /*wxMenu* MainEmuFrame::MakeStatesMenu()
 {
@@ -275,7 +279,22 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	wxSize backsize( m_background.GetSize() );
 
-	SetTitle(_("PCSX2"));
+	wxString wintitle;
+	if( PCSX2_VersionLo & 1 )
+	{
+		// Odd versions: beta / development editions, which feature revision number and compile date.
+		wintitle.Printf( _("PCSX2  %d.%d.%d.%d%s (svn)  %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, wxString::FromUTF8(__DATE__).c_str() );
+	}
+	else
+	{
+		// evens: stable releases, with a simpler title.
+		wintitle.Printf( _("PCSX2  %d.%d.%d %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+			SVN_MODS ? _("(modded)") : wxEmptyString
+		);
+	}
+
+	SetTitle( wintitle );
 
 	wxIcon myIcon;
 	myIcon.CopyFromBitmap( wxBitmap( EmbeddedImage<png_AppIcon>().Rescale( 32, 32 ) ) );

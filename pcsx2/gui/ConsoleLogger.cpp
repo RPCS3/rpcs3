@@ -590,6 +590,8 @@ namespace Console
 
 	void __fastcall SetTitle( const wxString& title )
 	{
+		if( wxTheApp == NULL ) return;
+
 		wxCommandEvent evt( wxEVT_SetTitleText );
 		evt.SetString( title );
 		wxGetApp().ProgramLog_PostEvent( evt );
@@ -609,6 +611,8 @@ namespace Console
 	{
 		_immediate_logger( "\n" );
 
+		if( wxTheApp == NULL ) return false;
+
 		wxCommandEvent evt( wxEVT_LOG_Newline );
 		wxGetApp().ProgramLog_PostEvent( evt );
 		wxGetApp().ProgramLog_CountMsg();
@@ -619,6 +623,8 @@ namespace Console
 	bool __fastcall Write( const char* fmt )
 	{
 		_immediate_logger( fmt );
+
+		if( wxTheApp == NULL ) return false;
 
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( wxString::FromAscii( fmt ) );
@@ -632,6 +638,8 @@ namespace Console
 	bool __fastcall Write( const wxString& fmt )
 	{
 		_immediate_logger( fmt );
+
+		if( wxTheApp == NULL ) return false;
 
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmt );
@@ -653,6 +661,7 @@ namespace Console
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
 
+		if( wxTheApp == NULL ) return false;
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmtline );
 		evt.SetExtraLong( th_CurrentColor );
@@ -673,6 +682,7 @@ namespace Console
 		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
 		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
 
+		if( wxTheApp == NULL ) return false;
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmtline );
 		evt.SetExtraLong( th_CurrentColor );
