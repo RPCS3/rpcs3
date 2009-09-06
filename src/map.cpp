@@ -122,24 +122,21 @@ namespace YAML
 				pScanner->pop();
 				break;
 			}
-
-			// now it better be a key
-			if(token.type != Token::KEY)
-				throw ParserException(token.mark, ErrorMsg::END_OF_MAP_FLOW);
-
-			pScanner->pop();
-
+			
 			std::auto_ptr <Node> pKey(new Node), pValue(new Node);
 
-			// grab key
-			pKey->Parse(pScanner, state);
-
+			// grab key (if non-null)
+			if(token.type == Token::KEY) {
+				pScanner->pop();
+				pKey->Parse(pScanner, state);
+			}
+			
 			// now grab value (optional)
 			if(!pScanner->empty() && pScanner->peek().type == Token::VALUE) {
 				pScanner->pop();
 				pValue->Parse(pScanner, state);
 			}
-
+			
 			// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
 			Token& nextToken = pScanner->peek();
 			if(nextToken.type == Token::FLOW_ENTRY)

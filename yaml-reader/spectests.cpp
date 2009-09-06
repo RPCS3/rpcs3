@@ -325,8 +325,8 @@ namespace Test {
 			parser.GetNextDocument(doc);
 
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago Cubs")].size() == 1);
-			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago Cubs")][0] == "2001-07-23");
+			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago cubs")].size() == 1);
+			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago cubs")][0] == "2001-07-23");
 			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")].size() == 3);
 			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][0] == "2001-07-02");
 			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][1] == "2001-08-12");

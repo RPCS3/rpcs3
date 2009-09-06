@@ -182,9 +182,6 @@ namespace YAML
 	// Value
 	void Scanner::ScanValue()
 	{
-		// just in case we have an empty key
-		InsertPotentialSimpleKey();
-		
 		// and check that simple key
 		bool isSimpleKey = VerifySimpleKey();
 		
