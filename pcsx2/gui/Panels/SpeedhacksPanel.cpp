@@ -135,7 +135,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	// ------------------------------------------------------------------------
 	// VU Cycle Stealing Hack Section:
 
-	m_slider_vustealer = new wxSlider( this, wxID_ANY, opts.VUCycleSteal, 0, 4, wxDefaultPosition, wxDefaultSize,
+	m_slider_vustealer = new wxSlider( this, wxID_ANY, opts.VUCycleSteal, 0, 3, wxDefaultPosition, wxDefaultSize,
 		wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
 
 	tooltip = pxE( ".Tooltips:Speedhacks:VUCycleStealing Slider",
@@ -164,6 +164,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 			L"RPG titles. Games that do not use this method of vsync will see little or no speeup from this hack."
 	) );
 
+	m_check_intc->SetValue(opts.IntcStat);
+
 	m_check_b1fc0 = &AddCheckBox(miscSizer, _("Enable BIFC0 Spin Detection"),
 		_("Moderate speedup for some games, with no known side effects. [Recommended]" ),
 		pxE( ".Tooltips:Speedhacks:BIFC0",
@@ -172,12 +174,16 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 			L"that and responds by fast-forwarding the EE until the IOP signals that the task is complete."
 	) );
 
+	m_check_b1fc0->SetValue(opts.BIFC0);
+
 	m_check_IOPx2 = &AddCheckBox(miscSizer, _("IOP x2 cycle rate hack"),
 		_("Small Speedup and works well with most games; may cause some games to hang during startup."),
 		pxE( ".Tooltips:Speedhacks:IOPx2",
 			L"Halves the cycle rate of the IOP, giving it an effective emulated speed of roughly 18 MHz. "
 			L"The speedup is very minor, so this hack is generally not recommended."
 		) );
+
+	m_check_IOPx2->SetValue(opts.IopCycleRate_X2);
 
 	cycleHacksSizer.Add( &cyclerateSizer, SizerFlags::TopLevelBox() );
 	cycleHacksSizer.Add( &stealerSizer, SizerFlags::TopLevelBox() );
@@ -203,10 +209,12 @@ void Panels::SpeedHacksPanel::Apply( AppConfig& conf )
 
 void Panels::SpeedHacksPanel::EECycleRate_Scroll(wxScrollEvent &event)
 {
+    m_msg_eecycle->SetLabel(GetEEcycleSliderMsg(m_slider_eecycle->GetValue()));
 	event.Skip();
 }
 
 void Panels::SpeedHacksPanel::VUCycleRate_Scroll(wxScrollEvent &event)
 {
+    m_msg_vustealer->SetLabel(GetVUcycleSliderMsg(m_slider_vustealer->GetValue()));
 	event.Skip();
 }
