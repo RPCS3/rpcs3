@@ -333,6 +333,53 @@ namespace Test {
 			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][2] == "2001-08-14");
 			return true;
 		}
+		
+		TEST CompactNestedMapping()
+		{
+			std::string input =
+				"---\n"
+				"# Products purchased\n"
+				"- item    : Super Hoop\n"
+				"  quantity: 1\n"
+				"- item    : Basketball\n"
+				"  quantity: 4\n"
+				"- item    : Big Shoes\n"
+				"  quantity: 1";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0]["item"] == "Super Hoop");
+			YAML_ASSERT(doc[0]["quantity"] == 1);
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1]["item"] == "Basketball");
+			YAML_ASSERT(doc[1]["quantity"] == 4);
+			YAML_ASSERT(doc[2].size() == 2);
+			YAML_ASSERT(doc[2]["item"] == "Big Shoes");
+			YAML_ASSERT(doc[2]["quantity"] == 1);
+			return true;
+		}
+		
+		TEST InLiteralsNewlinesArePreserved()
+		{
+			std::string input =
+				"# ASCII Art\n"
+				"--- |\n"
+				"  \\//||\\/||\n"
+				"  // ||  ||__";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc ==
+						"\\//||\\/||\n"
+						"// ||  ||__");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -349,6 +396,8 @@ namespace Test {
 		RunSpecTest(&Spec::SingleDocumentWithTwoComments, "2.9", "Single Document with Two Comments", passed);
 		RunSpecTest(&Spec::SimpleAnchor, "2.10", "Node for \"Sammy Sosa\" appears twice in this document", passed);
 		RunSpecTest(&Spec::MappingBetweenSequences, "2.11", "Mapping between Sequences", passed);
+		RunSpecTest(&Spec::CompactNestedMapping, "2.12", "Compact Nested Mapping", passed);
+		RunSpecTest(&Spec::InLiteralsNewlinesArePreserved, "2.13", "In literals, newlines are preserved", passed);
 		return passed;
 	}
 	
