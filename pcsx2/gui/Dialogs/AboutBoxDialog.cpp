@@ -23,7 +23,7 @@
 #include "wxHelpers.h"
 
 #include "Resources/EmbeddedImage.h"
-#include "Resources/ps2_silver.h"
+#include "Resources/Dualshock.h"
 
 #include <wx/mstream.h>
 #include <wx/hyperlink.h>
@@ -47,10 +47,10 @@ public:
 
 
 AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
-	wxDialog( parent, id, _("About Pcsx2"), parent->GetPosition()-wxSize( 32, 32 ) ),
+	wxDialog( parent, id, _("About PCSX2"), parent->GetPosition()-wxSize( 32, 32 ) ),
 	m_bitmap_logo( this, wxID_ANY, wxGetApp().GetLogoBitmap(),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN ),
-	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( EmbeddedImage<png_ps2_silver>().Get() ),
+	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN )
 {
 	static const wxString LabelAuthors = wxString::FromAscii(

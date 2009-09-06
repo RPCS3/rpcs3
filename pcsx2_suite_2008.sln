@@ -4,6 +4,7 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pcsx2", "pcsx2\windows\VCprojects\pcsx2_2008.vcproj", "{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	ProjectSection(ProjectDependencies) = postProject
 		{48AD7E0A-25B1-4974-A1E3-03F8C438D34F} = {48AD7E0A-25B1-4974-A1E3-03F8C438D34F}
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213} = {677B7D11-D5E1-40B3-88B1-9A4DF83D2213}
 		{4639972E-424E-4E13-8B07-CA403C481346} = {4639972E-424E-4E13-8B07-CA403C481346}
 		{0318BA30-EF48-441A-9E10-DC85EFAE39F0} = {0318BA30-EF48-441A-9E10-DC85EFAE39F0}
 		{26511268-2902-4997-8421-ECD7055F9E28} = {26511268-2902-4997-8421-ECD7055F9E28}
@@ -39,7 +40,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bzip2", "3rdparty\bzip2\bzi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LilyPad", "plugins\LilyPad\LilyPad_VC2008.vcproj", "{E4081455-398C-4610-A87C-90A8A7D72DC3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads", "3rdparty\w32pthreads\pthreads_2008.vcproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "w32pthreads.v2", "3rdparty\w32pthreads\pthreads_2008.vcproj", "{26511268-2902-4997-8421-ECD7055F9E28}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroSPU2", "plugins\zerospu2\Windows\ZeroSPU2_2008.vcproj", "{7F059854-568D-4E08-9D00-1E78E203E4DC}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -123,6 +124,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wx", "wx", "{62BF822E-6A12-
 		common\include\wx\scopedarray.h = common\include\wx\scopedarray.h
 		common\include\wx\scopedptr.h = common\include\wx\scopedptr.h
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2cpp", "Tools\bin2cpp\bin2c.vcproj", "{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{2D6F0A62-A247-4CCF-947F-FCD54BE16103}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -572,6 +577,24 @@ Global
 		{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}.Release|Win32.ActiveCfg = Release|Win32
 		{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}.Release|Win32.Build.0 = Release|Win32
 		{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}.Release|x64.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Debug|Win32.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Debug|Win32.Build.0 = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Debug|x64.ActiveCfg = Debug|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Devel|Win32.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Devel|Win32.Build.0 = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Devel|x64.ActiveCfg = Debug|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSE2|Win32.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSE2|Win32.Build.0 = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSE2|x64.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSE4|Win32.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSE4|Win32.Build.0 = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSE4|x64.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSSE3|Win32.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSSE3|Win32.Build.0 = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release SSSE3|x64.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release|Win32.ActiveCfg = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release|Win32.Build.0 = Release|Win32
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -604,6 +627,7 @@ Global
 		{A51123F5-9505-4EAE-85E7-D320290A272C} = {88F517F9-CE1C-4005-9BDF-4481FEB55053}
 		{4639972E-424E-4E13-8B07-CA403C481346} = {88F517F9-CE1C-4005-9BDF-4481FEB55053}
 		{62BF822E-6A12-49A8-BE8C-C55A9BCA24DA} = {0FADC26C-0E9D-4DD7-84B1-BF4F7754E90C}
+		{677B7D11-D5E1-40B3-88B1-9A4DF83D2213} = {2D6F0A62-A247-4CCF-947F-FCD54BE16103}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		AMDCaProjectFile = E:\devpcsx2\fail\wx\CodeAnalyst\pcsx2_suite_2008.caw

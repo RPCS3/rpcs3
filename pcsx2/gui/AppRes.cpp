@@ -91,7 +91,7 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 	}
 
 	wxImage img;
-	EmbeddedImage<png_BackgroundLogo> temp;	// because gcc can't allow non-const temporaries.
+	EmbeddedImage<res_BackgroundLogo> temp;	// because gcc can't allow non-const temporaries.
 	LoadImageAny( img, useTheme, mess, L"BackgroundLogo", temp );
 	m_Bitmap_Logo = new wxBitmap( img );
 
@@ -120,7 +120,7 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		#undef  FancyLoadMacro
 		#define FancyLoadMacro( name ) \
 		{ \
-			EmbeddedImage<png_ConfigIcon_##name> temp( g_Conf->Listbook_ImageSize, g_Conf->Listbook_ImageSize ); \
+			EmbeddedImage<res_ConfigIcon_##name> temp( g_Conf->Listbook_ImageSize, g_Conf->Listbook_ImageSize ); \
 			m_ImageId.Config.name = m_ConfigImages.Add( LoadImageAny( \
 				img, useTheme, mess, L"ConfigIcon_" wxT(#name), temp ) \
 			); \
@@ -157,7 +157,7 @@ wxImageList& Pcsx2App::GetImgList_Toolbars()
 		#undef  FancyLoadMacro
 		#define FancyLoadMacro( name ) \
 		{ \
-			EmbeddedImage<png_ToolbarIcon_##name> temp( imgSize, imgSize ); \
+			EmbeddedImage<res_ToolbarIcon_##name> temp( imgSize, imgSize ); \
 			m_ImageId.Toolbars.name = m_ConfigImages.Add( LoadImageAny( img, useTheme, mess, L"ToolbarIcon" wxT(#name), temp ) ); \
 		}
 

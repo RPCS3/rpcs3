@@ -20,6 +20,10 @@
 		GenerateDebugInformation="true"
 		SubSystem="2"
 	/>
+	<Tool
+		Name="VCPreBuildEventTool"
+		CommandLine=""
+	/>
 	<UserMacro
 		Name="ProjectRootDir"
 		Value="$(ProjectDir)\..\.."

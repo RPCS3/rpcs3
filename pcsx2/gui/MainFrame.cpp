@@ -303,7 +303,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	SetTitle( wintitle );
 
 	wxIcon myIcon;
-	myIcon.CopyFromBitmap( wxBitmap( EmbeddedImage<png_AppIcon>().Rescale( 32, 32 ) ) );
+	myIcon.CopyFromBitmap( wxBitmap( EmbeddedImage<res_AppIcon>().Rescale( 32, 32 ) ) );
 	SetIcon( myIcon );
 
 	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };

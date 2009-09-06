@@ -54,25 +54,35 @@ long getfilesize( const char* filename )
 typedef unsigned char u8;
 typedef char s8;
 
+enum
+{
+	ARG_SRCFILE = 1,
+	ARG_DESTFILE,
+	ARG_CLASSNAME,
+};
+
 int main(int argc, char* argv[])
 {
 	FILE *source,*dest;
 	u8 buffer[BUF_LEN];
 	s8 Dummy[260];
+	s8 srcfile[260];
 	s8 classname[260];
 	int c;
 
-	if ( (argc < 3) )
+	if ( (argc <= ARG_SRCFILE) )
 	{
 
 		if ( ( argc == 2 ) && ( strcmp(argv[1],"/?")==0 ) )
 		{
 			puts(
-				" - <<< BIN2CPP V1.0 For Win32 >>> by the Pcsx2 Team - \n\n"
-				"USAGE: Bin2CPP  <BINARY file name> <TARGET file name> [CLASS]\n"
-				"  <TARGET> = without extension '.h' it will be added by program.\n"
-				"  <CLASS>  = name of the C++ class in the destination file name.\n"
-				"             (defaults to <TARGET> if unspecified)\n"
+				" - <<< BIN2CPP V1.1 For Win32 >>> by the PCSX2 Team - \n\n"
+				"USAGE: Bin2CPP  <SOURCE image> [TARGET file] [CLASS]\n"
+				"  <SOURCE> = without extension!\n"
+				"  [TARGET] = without extension '.h' it will be added by program.\n"
+				"             (defaults to <SOURCE> if unspecified)\n"
+				"  [CLASS]  = name of the C++ class in the destination file name.\n"
+				"             (defaults to res_<TARGET> if unspecified)\n"
 			);
 			return 0L;
 		}
@@ -86,28 +96,65 @@ int main(int argc, char* argv[])
 
 	}
 
-	if( (source=fopen( argv[1], "rb" )) == NULL )
+	// ----------------------------------------------------------------------------
+	//     Determine Source Name, and Open Source for Reading
+	// ----------------------------------------------------------------------------
+
+	strcpy(srcfile,argv[ARG_SRCFILE]);
+
+	int srcfn_len = strlen( srcfile );
+	if( srcfile[srcfn_len-4] != '.' )
 	{
-		printf("ERROR : I can't find source file   %s\n",argv[1]);
+		printf( "ERROR : Malformed source filename.  I'm a crap utility and I demand 3-letter extensions only!\n" );
+		return 18;
+	}
+
+	if( (source=fopen( srcfile, "rb" )) == NULL )
+	{
+		printf( "ERROR : I can't find source file   %s\n", srcfile );
 		return 20;
 	}
 	
-	const int filesize( getfilesize( argv[1] ) );
+	const int filesize( getfilesize( srcfile ) );
 
-	strcpy(Dummy,argv[2]);
-	strcat(Dummy,".h");               /* add suffix .h to target name */
+	char wxImgTypeUpper[24];
+	char wxImgTypeLower[24];
+	strcpy( wxImgTypeUpper, &srcfile[srcfn_len-3] );
+	//strcpy( wxImgTypeLower, argv[ARG_IMGEXT] );
+	strupr( wxImgTypeUpper );
+	//strupr( wxImgTypeLower );
+
+	if( strcmp( wxImgTypeUpper, "JPG" ) == 0 )
+		strcpy( wxImgTypeUpper, "JPEG" );		// because wxWidgets defines it as JPEG >_<
+
+	argv[ARG_SRCFILE][srcfn_len-4] = 0;
+
+	// ----------------------------------------------------------------------------
+	//     Determine Target Name, and Open Target File for Writing
+	// ----------------------------------------------------------------------------
+	
+	strcpy( Dummy, argv[(argc <= ARG_DESTFILE) ? ARG_SRCFILE : ARG_DESTFILE] );
+
+	strcat( Dummy,".h" );
 
 	if( (dest=fopen( Dummy, "wb+" )) == NULL )
 	{
-		printf("ERROR : I can't open destination file   %s\n",Dummy);
+		printf( "ERROR : I can't open destination file   %s\n", Dummy );
 		(void)_fcloseall();
 		return 0L;
 	}
 	
-	// reuse the target parameter for the classname only if argc==3.
-	strcpy( classname, argv[(argc==3) ? 2 : 3] );
-
-	char* wxImageType = "PNG";		// todo - base this on input extension
+	// ----------------------------------------------------------------------------
+	
+	printf( "Bin2CPP Output > %s\n", Dummy );
+	
+	if( argc <= ARG_CLASSNAME )
+	{
+		strcpy( classname, "res_" );
+		strcat( classname, argv[(argc <= ARG_DESTFILE) ? ARG_SRCFILE : ARG_DESTFILE] );
+	}
+	else
+		strcpy( classname, argv[ARG_CLASSNAME] );
 
 	/* It writes the header information */
 
@@ -121,12 +168,12 @@ int main(int argc, char* argv[])
 		"\tstatic const u8 Data[Length];\n"
 		"\tstatic wxBitmapType GetFormat() { return wxBITMAP_TYPE_%s; }\n};\n\n"
 		"const u8 %s::Data[Length] =\n{\n",
-		classname, filesize, wxImageType, classname
+		classname, filesize, wxImgTypeUpper, classname
 	);
 
 	if( ferror( dest ) )
 	{
-		printf( "ERROR writing on target file:  %s\n",argv[2] );
+		printf( "ERROR writing on target file:  %s\n", Dummy );
 		(void)_fcloseall();
 		return 20L;
 	}
