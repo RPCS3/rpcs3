@@ -93,7 +93,7 @@ public:
 	// ------------------------------------------------------------------------
 
 	void AssignCwd( const wxString& volume = wxEmptyString ) { wxFileName::AssignCwd( volume ); }
-	bool SetCwd() { wxFileName::SetCwd(); }
+	bool SetCwd() { return wxFileName::SetCwd(); }
 
 	// wxWidgets is missing the const qualifier for this one!  Shame!
 	void Rmdir();

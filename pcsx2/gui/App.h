@@ -64,7 +64,7 @@ enum MenuIdentifiers
 	MenuId_Boot_Recent,			// Menu populated with recent source bootings
 	MenuId_SkipBiosToggle,		// enables the Bios Skip speedhack
 
-	
+
 	MenuId_Emu_Pause,			// suspends/resumes active emulation, retains plugin states
 	MenuId_Emu_Close,			// Closes the emulator (states are preserved)
 	MenuId_Emu_Reset,			// Issues a complete reset (wipes preserved states)
@@ -139,7 +139,7 @@ public:
 		wxASSERT( whee != NULL );
 		m_window.Disable();
 	}
-	
+
 	~ScopedWindowDisable()
 	{
 		m_window.Enable();
@@ -230,7 +230,7 @@ public:
 	void OnInitCmdLine( wxCmdLineParser& parser );
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
 	bool PrepForExit();
-	
+
 #ifdef __WXDEBUG__
 	void OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
 #endif
@@ -272,13 +272,13 @@ public:
 
 	void ProgramLog_CountMsg()
 	{
-		if( m_ProgramLogBox == NULL ) return;
+		if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
 		m_ProgramLogBox->CountMessage();
 	}
 
 	void ProgramLog_PostEvent( wxEvent& evt )
 	{
-		if( m_ProgramLogBox == NULL ) return;
+		if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
 		m_ProgramLogBox->GetEventHandler()->AddPendingEvent( evt );
 	}
 
@@ -317,7 +317,7 @@ class AppEmuThread : public CoreEmuThread
 public:
 	AppEmuThread( const wxString& elf_file=wxEmptyString );
 	virtual ~AppEmuThread() { }
-	
+
 	virtual void Resume();
 
 protected:

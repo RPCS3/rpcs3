@@ -131,7 +131,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int id
 	m_radio_user	= &AddRadioButton( s_boxer, _("User Documents (recommended)"),   _("Location: ") + wxStandardPaths::Get().GetDocumentsDir() );
 	s_boxer.AddSpacer( 4 );
 	m_radio_cwd		= &AddRadioButton( s_boxer, _("Current working folder (intended for developer use only)"), _("Location: ") + wxGetCwd(),
-		_("This setting requires administration privlidges from your operating system.") );
+		_("This setting requires administration privileges from your operating system.") );
 
 	s_boxer.AddSpacer( 4 );
 	SetSizer( &s_boxer );

@@ -53,9 +53,14 @@ void SysDetect()
 {
 	using namespace Console;
 
+#ifdef __LINUX__
+    // Haven't rigged up getting the svn version yet... --arcum42
+	Notice("PCSX2 %d.%d.%d - compiled on " __DATE__, params PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo);
+#else
 	Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, params PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
+#endif
 	Notice("Savestate version: %x", params g_SaveVersion);
 
 	cpudetectInit();

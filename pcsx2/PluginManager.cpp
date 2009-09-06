@@ -791,6 +791,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 		case PluginId_USB:	result = OpenPlugin_USB();	break;
 		case PluginId_FW:	result = OpenPlugin_FW();	break;
 		case PluginId_DEV9:	result = OpenPlugin_DEV9();	break;
+		jNO_DEFAULT;
 	}
 	if( !result )
 		throw Exception::PluginOpenError( pid );

@@ -274,7 +274,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menubar.Append( &m_menuMisc,		_("Misc") );
 	m_menubar.Append( &m_menuDebug,		_("Debug") );
 	SetMenuBar( &m_menubar );
-	
+
 	// ------------------------------------------------------------------------
 
 	wxSize backsize( m_background.GetSize() );
@@ -282,16 +282,26 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	wxString wintitle;
 	if( PCSX2_VersionLo & 1 )
 	{
+#ifdef __LINUX__
+		// Linux isn't set up for svn version numbers yet.
+		wintitle.Printf( _("PCSX2  %d.%d.%d (svn)  %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+			 wxString::FromUTF8(__DATE__).c_str() );
+#else
 		// Odd versions: beta / development editions, which feature revision number and compile date.
 		wintitle.Printf( _("PCSX2  %d.%d.%d.%d%s (svn)  %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, wxString::FromUTF8(__DATE__).c_str() );
+#endif
 	}
 	else
 	{
+#ifdef __LINUX__
+		wintitle.Printf( _("PCSX2  %d.%d.%d"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo);
+#else
 		// evens: stable releases, with a simpler title.
 		wintitle.Printf( _("PCSX2  %d.%d.%d %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_MODS ? _("(modded)") : wxEmptyString
 		);
+#endif
 	}
 
 	SetTitle( wintitle );

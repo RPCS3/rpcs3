@@ -47,7 +47,7 @@ void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )
 {
 	ProfilerOptions defaults;
 	IniScopedGroup path( ini, L"Profiler" );
-	
+
 	IniBitBool( Enabled );
 	IniBitBool( RecBlocks_EE );
 	IniBitBool( RecBlocks_IOP );
@@ -59,14 +59,14 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 {
 	RecompilerOptions defaults;
 	IniScopedGroup path( ini, L"Recompiler" );
-	
+
 	IniBitBool( EnableEE );
 	IniBitBool( EnableIOP );
 	IniBitBool( EnableVU0 );
 	IniBitBool( EnableVU1 );
 }
 
-Pcsx2Config::CpuOptions::CpuOptions() : 
+Pcsx2Config::CpuOptions::CpuOptions() :
 	bitset( 0 )
 ,	sseMXCSR( DEFAULT_sseMXCSR )
 ,	sseVUMXCSR( DEFAULT_sseVUMXCSR )
@@ -111,7 +111,7 @@ void Pcsx2Config::VideoOptions::LoadSave( IniInterface& ini )
 {
 	VideoOptions defaults;
 	IniScopedGroup path( ini, L"Video" );
-	
+
 	IniEntry( EnableFrameLimiting );
 	IniEntry( EnableFrameSkipping );
 
@@ -134,14 +134,16 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( VuClipFlagHack );
 	IniBitBool( FpuCompareHack );
 	IniBitBool( FpuMulHack );
+	IniBitBool( DMAExeHack );
 	IniBitBool( XgKickHack );
+	IniBitBool( MpegHack );
 }
 
 Pcsx2Config::Pcsx2Config() :
 	bitset( 0 )
 {
 }
-	
+
 void Pcsx2Config::LoadSave( IniInterface& ini )
 {
 	Pcsx2Config defaults;
