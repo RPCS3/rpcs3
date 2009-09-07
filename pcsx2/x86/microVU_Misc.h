@@ -264,8 +264,8 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 
 // Speed Hacks
 #define CHECK_VU_CONSTHACK	1 // Disables Constant Propagation for Jumps
-#define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack)	// (Can cause Infinite loops, SPS, etc...)
-#define CHECK_VU_MINMAXHACK	(EmuConfig.Speedhacks.vuMinMax)		// (Can cause SPS, Black Screens,  etc...)
+#define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack) // (Can cause Infinite loops, SPS, etc...)
+#define CHECK_VU_MINMAXHACK	(EmuConfig.Speedhacks.vuMinMax)	  // (Can cause SPS, Black Screens,  etc...)
 
 // Unknown Data
 #define mVU_XGKICK_CYCLES ((CHECK_XGKICKHACK) ? 3 : 1)

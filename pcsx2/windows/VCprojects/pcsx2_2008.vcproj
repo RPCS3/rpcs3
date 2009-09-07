@@ -1471,10 +1471,6 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\x86\microVU_Alloc.h"
-								>
-							</File>
-							<File
 								RelativePath="..\..\x86\microVU_Alloc.inl"
 								>
 							</File>
@@ -1492,6 +1488,10 @@
 							</File>
 							<File
 								RelativePath="..\..\x86\microVU_Execute.inl"
+								>
+							</File>
+							<File
+								RelativePath="..\..\x86\microVU_IR.h"
 								>
 							</File>
 							<File
@@ -2414,7 +2414,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)"
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
 							Outputs="&quot;$(InputDir)\$(InputName).h"
 						/>
 					</FileConfiguration>
@@ -2424,7 +2424,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)"
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
 							Outputs="&quot;$(InputDir)\$(InputName).h"
 						/>
 					</FileConfiguration>
@@ -2434,7 +2434,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)"
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
 							Outputs="&quot;$(InputDir)\$(InputName).h"
 						/>
 					</FileConfiguration>

@@ -102,6 +102,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 
 	wxStaticBoxSizer& cyclerateSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("EE Cyclerate") );
 	wxStaticBoxSizer& stealerSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("VU Cycle Stealing") );
+	wxStaticBoxSizer& microVUSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("microVU Hacks") );
 	wxStaticBoxSizer& miscSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Other Hacks") );
 
 	AddStaticText( mainSizer, pxE( ".Panels:Speedhacks:Overview",
@@ -114,6 +115,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 
 	// ------------------------------------------------------------------------
 	// EE Cyclerate Hack Section:
+	// ------------------------------------------------------------------------
 
 	m_slider_eecycle = new wxSlider( this, wxID_ANY, opts.EECycleRate+1, 1, 3,
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
@@ -134,6 +136,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 
 	// ------------------------------------------------------------------------
 	// VU Cycle Stealing Hack Section:
+	// ------------------------------------------------------------------------
 
 	m_slider_vustealer = new wxSlider( this, wxID_ANY, opts.VUCycleSteal, 0, 3, wxDefaultPosition, wxDefaultSize,
 		wxHORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS );
@@ -155,7 +158,29 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	m_msg_vustealer->SetToolTip( tooltip );
 
 	// ------------------------------------------------------------------------
+	// microVU Hacks Section:
+	// ------------------------------------------------------------------------
+
+	m_check_vuFlagHack = &AddCheckBox(microVUSizer, _("mVU Flag Hack"),
+		_("Large Speedup and High Compatibility; may cause garbage graphics, SPS, etc..."),
+		pxE( ".Tooltips:Speedhacks:vuFlagHack",
+			L"Updates Status Flags only on blocks which will read them, instead of all the time."
+			L"This is safe most of the time, and Super VU does something similar by default."
+		) );
+
+	m_check_vuFlagHack->SetValue(opts.vuFlagHack);
+
+	m_check_vuMinMax = &AddCheckBox(microVUSizer, _("mVU Min/Max Hack"),
+		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc..."),
+		pxE( ".Tooltips:Speedhacks:vuMinMax",
+			L"Uses SSE's Min/Max Floating Point Operations instead of custom logical Min/Max routines."
+		) );
+	
+	m_check_vuMinMax->SetValue(opts.vuMinMax);
+
+	// ------------------------------------------------------------------------
 	// All other hacks Section:
+	// ------------------------------------------------------------------------
 
 	m_check_intc = &AddCheckBox(miscSizer, _("Enable INTC Spin Detection"),
 		_("Huge speedup for some games, with almost no compatibility side effects. [Recommended]"),
@@ -189,6 +214,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	cycleHacksSizer.Add( &stealerSizer, SizerFlags::TopLevelBox() );
 
 	mainSizer.Add( &cycleHacksSizer, wxSizerFlags().Expand() );
+	mainSizer.Add( &microVUSizer, SizerFlags::TopLevelBox() );
 	mainSizer.Add( &miscSizer, SizerFlags::TopLevelBox() );
 	SetSizer( &mainSizer );
 
@@ -205,6 +231,8 @@ void Panels::SpeedHacksPanel::Apply( AppConfig& conf )
 	opts.BIFC0				= m_check_b1fc0->GetValue();
 	opts.IopCycleRate_X2	= m_check_IOPx2->GetValue();
 	opts.IntcStat			= m_check_intc->GetValue();
+	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
+	opts.vuMinMax			= m_check_vuMinMax->GetValue();
 }
 
 void Panels::SpeedHacksPanel::EECycleRate_Scroll(wxScrollEvent &event)

@@ -215,12 +215,11 @@ public:
 				IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
 				IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
 				BIFC0:1,			// enables BIFC0 detection and fast-forwarding
-
-				vuMinMax:1,			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
-				vuFlagHack:1;		// MicroVU specific flag hack; Can cause Infinite loops, SPS, etc...
+				vuFlagHack:1,		// microVU specific flag hack; Can cause Infinite loops, SPS, etc...
+				vuMinMax:1;			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
 		}; };
 
-		u8	EECycleRate;		// EE cyclerate selector (1.0, 1.5, 2.0)
+		u8	EECycleRate;		// EE cycle rate selector (1.0, 1.5, 2.0)
 		u8	VUCycleSteal;		// VU Cycle Stealer factor (0, 1, 2, or 3)
 
 		SpeedhackOptions();
@@ -294,6 +293,7 @@ extern SessionOverrideFlags g_Session;
 
 // ------------ CPU / Recompiler Options ---------------
 
+#define CHECK_MACROVU0				// If defined uses mVU for VU Macro (COP2), else uses sVU
 #define CHECK_MICROVU0				(EmuConfig.Cpu.Recompiler.UseMicroVU0)
 #define CHECK_MICROVU1				(EmuConfig.Cpu.Recompiler.UseMicroVU1)
 #define CHECK_EEREC					(!g_Session.ForceDisableEErec && EmuConfig.Cpu.Recompiler.EnableEE)

@@ -246,6 +246,8 @@ namespace Panels
 		wxCheckBox* m_check_intc;
 		wxCheckBox* m_check_b1fc0;
 		wxCheckBox* m_check_IOPx2;
+		wxCheckBox* m_check_vuFlagHack;
+		wxCheckBox* m_check_vuMinMax;
 
 	public:
 		SpeedHacksPanel( wxWindow& parent, int idealWidth );
