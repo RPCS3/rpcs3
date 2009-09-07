@@ -832,6 +832,125 @@ namespace Test {
 			
 			return false;
 		}
+		
+		// 6.1
+		TEST IndentationSpaces()
+		{
+			std::string input =
+				"  # Leading comment line spaces are\n"
+				"   # neither content nor indentation.\n"
+				"    \n"
+				"Not indented:\n"
+				" By one space: |\n"
+				"    By four\n"
+				"      spaces\n"
+				" Flow style: [    # Leading spaces\n"
+				"   By two,        # in flow style\n"
+				"  Also by two,    # are neither\n"
+				"  \tStill by two   # content nor\n"
+				"    ]             # indentation.";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["Not indented"].size() == 2);
+			YAML_ASSERT(doc["Not indented"]["By one space"] == "By four\n  spaces\n");
+			YAML_ASSERT(doc["Not indented"]["Flow style"].size() == 3);
+			YAML_ASSERT(doc["Not indented"]["Flow style"][0] == "By two");
+			YAML_ASSERT(doc["Not indented"]["Flow style"][1] == "Also by two");
+			YAML_ASSERT(doc["Not indented"]["Flow style"][2] == "Still by two");
+			return true;
+		}
+		
+		// 6.2
+		TEST IndentationIndicators()
+		{
+			std::string input =
+				"? a\n"
+				": -\tb\n"
+				"  -  -\tc\n"
+				"     - d";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["a"].size() == 2);
+			YAML_ASSERT(doc["a"][0] == "b");
+			YAML_ASSERT(doc["a"][1].size() == 2);
+			YAML_ASSERT(doc["a"][1][0] == "c");
+			YAML_ASSERT(doc["a"][1][1] == "d");
+			return true;
+		}
+		
+		// 6.3
+		TEST SeparationSpaces()
+		{
+			std::string input =
+				"- foo:\t bar\n"
+				"- - baz\n"
+				"  -\tbaz";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["foo"] == "bar");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1][0] == "baz");
+			YAML_ASSERT(doc[1][1] == "baz");
+			return true;
+		}
+		
+		// 6.4
+		TEST LinePrefixes()
+		{
+			std::string input =
+				"plain: text\n"
+				"  lines\n"
+				"quoted: \"text\n"
+				"  \tlines\"\n"
+				"block: |\n"
+				"  text\n"
+				"   \tlines\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["plain"] == "text lines");
+			YAML_ASSERT(doc["quoted"] == "text lines");
+			YAML_ASSERT(doc["block"] == "text\n \tlines\n");
+			return true;
+		}
+		
+		// 6.5
+		TEST EmptyLines()
+		{
+			std::string input =
+				"Folding:\n"
+				"  \"Empty line\n"
+				"   \t\n"
+				"  as a line feed\"\n"
+				"Chomping: |\n"
+				"  Clipped empty lines\n"
+				" ";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["Folding"] == "Empty line\nas a line feed");
+			YAML_ASSERT(doc["Chomping"] == "Clipped empty lines\n");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -868,6 +987,12 @@ namespace Test {
 		RunSpecTest(&Spec::TabsAndSpaces, "5.12", "Tabs and Spaces", passed);
 		RunSpecTest(&Spec::EscapedCharacters, "5.13", "Escaped Characters", passed);
 		RunSpecTest(&Spec::InvalidEscapedCharacters, "5.14", "Invalid Escaped Characters", passed);
+		
+		RunSpecTest(&Spec::IndentationSpaces, "6.1", "Indentation Spaces", passed);
+		RunSpecTest(&Spec::IndentationIndicators, "6.2", "Indentation Indicators", passed);
+		RunSpecTest(&Spec::SeparationSpaces, "6.3", "Separation Spaces", passed);
+		RunSpecTest(&Spec::LinePrefixes, "6.4", "Line Prefixes", passed);
+		RunSpecTest(&Spec::EmptyLines, "6.5", "Empty Lines", passed);
 		return passed;
 	}
 	

@@ -171,8 +171,11 @@ namespace YAML
 	{
 		while(1) {
 			// first eat whitespace
-			while(INPUT && IsWhitespaceToBeEaten(INPUT.peek()))
+			while(INPUT && IsWhitespaceToBeEaten(INPUT.peek())) {
+				if(InBlockContext() && Exp::Tab.Matches(INPUT))
+					m_simpleKeyAllowed = false;
 				INPUT.eat(1);
+			}
 
 			// then eat a comment
 			if(Exp::Comment.Matches(INPUT)) {
@@ -202,18 +205,19 @@ namespace YAML
 	// Misc. helpers
 
 	// IsWhitespaceToBeEaten
-	// . We can eat whitespace if:
-	//   1. It's a space
-	//   2. It's a tab, and we're either:
-	//      a. In the flow context
-	//      b. In the block context but not where a simple key could be allowed
-	//         (i.e., not at the beginning of a line, or following '-', '?', or ':')
+	// . We can eat whitespace if it's a space or tab
+	// . Note: originally tabs in block context couldn't be eaten
+	//         "where a simple key could be allowed
+	//         (i.e., not at the beginning of a line, or following '-', '?', or ':')"
+	//   I think this is wrong, since tabs can be non-content whitespace; it's just
+	//   that they can't contribute to indentation, so once you've seen a tab in a
+	//   line, you can't start a simple key
 	bool Scanner::IsWhitespaceToBeEaten(char ch)
 	{
 		if(ch == ' ')
 			return true;
 
-		if(ch == '\t' && (InFlowContext() || !m_simpleKeyAllowed))
+		if(ch == '\t')
 			return true;
 
 		return false;
