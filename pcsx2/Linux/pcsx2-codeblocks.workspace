@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_workspace_file>
 	<Workspace title="pcsx2_suite_2008 workspace">
-		<Project filename="pcsx2.cbp">
+		<Project filename="pcsx2.cbp" active="1">
 			<Depends filename="../../common/build/x86emitter/x86emitter.cbp" />
 			<Depends filename="../../common/build/Utilities/Utilities.cbp" />
 			<Depends filename="../../3rdparty/zlib/zlib.cbp" />
+			<Depends filename="../../tools/bin2cpp/bin2cpp.cbp" />
 		</Project>
 		<Project filename="../../common/build/x86emitter/x86emitter.cbp" />
 		<Project filename="../../common/build/Utilities/Utilities.cbp" />
@@ -17,6 +18,7 @@
 		<Project filename="../../plugins/CDVDnull/Linux/CDVDnull.cbp" />
 		<Project filename="../../plugins/GSnull/Linux/GSnull.cbp" />
 		<Project filename="../../plugins/SPU2null/Linux/SPU2null.cbp" />
-		<Project filename="../../plugins/PadNull/Linux/PadNull.cbp" active="1" />
+		<Project filename="../../plugins/PadNull/Linux/PadNull.cbp" />
+		<Project filename="../../tools/bin2cpp/bin2cpp.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>

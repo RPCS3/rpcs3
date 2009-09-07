@@ -57,7 +57,7 @@ static const unsigned int LINE = 16;
 long getfilesize( const char* filename )
 {
 	struct stat result;
-	
+
 	stat( filename, &result );
 	return result.st_size;
 }
@@ -76,7 +76,6 @@ int main(int argc, char* argv[])
 	s8 Dummy[260];
 	s8 srcfile[260];
 	s8 classname[260];
-	int c;
 
 	if ( (argc <= ARG_SRCFILE) )
 	{
@@ -122,7 +121,7 @@ int main(int argc, char* argv[])
 		printf( "ERROR : I can't find source file   %s\n", srcfile );
 		return 20;
 	}
-	
+
 	const int filesize( getfilesize( srcfile ) );
 
 	char wxImgTypeUpper[24];
@@ -143,7 +142,7 @@ int main(int argc, char* argv[])
 	// ----------------------------------------------------------------------------
 	//     Determine Target Name, and Open Target File for Writing
 	// ----------------------------------------------------------------------------
-	
+
 	strcpy( Dummy, argv[(argc <= ARG_DESTFILE) ? ARG_SRCFILE : ARG_DESTFILE] );
 
 	strcat( Dummy,".h" );
@@ -154,18 +153,33 @@ int main(int argc, char* argv[])
 		(void)fcloseall();
 		return 0L;
 	}
-	
+
 	// ----------------------------------------------------------------------------
-	
+
 	printf( "Bin2CPP Output > %s\n", Dummy );
-	
+
+	const char* fnameonly = NULL;
 	if( argc <= ARG_CLASSNAME )
 	{
+		fnameonly = argv[(argc <= ARG_DESTFILE) ? ARG_SRCFILE : ARG_DESTFILE];
 		strcpy( classname, "res_" );
-		strcat( classname, argv[(argc <= ARG_DESTFILE) ? ARG_SRCFILE : ARG_DESTFILE] );
 	}
 	else
-		strcpy( classname, argv[ARG_CLASSNAME] );
+	{
+		fnameonly = argv[ARG_CLASSNAME];
+		classname[0] = 0;
+	}
+
+	{
+		int len = strlen(fnameonly);
+		const char* fnlast = &fnameonly[len];
+		while( --fnlast, --len, (len >= 0 && (*fnlast != '/')) );
+
+		fnameonly = fnlast+1;
+	}
+
+	strcpy( classname, "res_" );
+	strcat( classname, fnameonly );
 
 	/* It writes the header information */
 
@@ -193,10 +207,10 @@ int main(int argc, char* argv[])
 	do
 	{
 		fprintf(dest,"\t");
-		for ( c=0; c <= LINE; ++c )
+		for ( unsigned int c=0; c <= LINE; ++c )
 		{
 			if( fread( buffer, 1, 1, source ) == 0 ) break;
-			
+
 			if( c != 0 )
 				fprintf( dest, "," );
 			fprintf( dest,"0x%02x", *buffer );

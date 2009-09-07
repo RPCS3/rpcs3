@@ -9,4 +9,4 @@
 #   SrcImage - Complete filename with extension.
 #
 
-../../../Tools/bin2cpp/bin2cpp %1
+$1/tools/bin/bin2cpp $2
