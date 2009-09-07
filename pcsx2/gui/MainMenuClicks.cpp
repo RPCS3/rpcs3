@@ -212,6 +212,7 @@ void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 {
+	SysReset();
 	Close();
 }
 
