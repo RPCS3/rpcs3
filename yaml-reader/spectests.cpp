@@ -20,7 +20,7 @@ namespace {
 
 namespace Test {
 	namespace {
-		void RunSpecTest(TEST (*test)(), const std::string& index, const std::string& name, bool& passed) {
+		void RunSpecTest(TEST (*test)(), const std::string& index, const std::string& name, int& passed, int& total) {
 			TEST ret;
 			try {
 				ret = test();
@@ -29,13 +29,14 @@ namespace Test {
 				ret.error = "  Exception caught: " + e.msg;
 			}
 			
-			if(ret.ok) {
-				std::cout << "Spec test " << index << " passed: " << name << "\n";
-			} else {
-				passed = false;
+			if(!ret.ok) {
 				std::cout << "Spec test " << index << " failed: " << name << "\n";
 				std::cout << ret.error << "\n";
 			}
+			
+			if(ret.ok)
+				passed++;
+			total++;
 		}
 	}
 
@@ -955,45 +956,48 @@ namespace Test {
 
 	bool RunSpecTests()
 	{
-		bool passed = true;
-		RunSpecTest(&Spec::SeqScalars, "2.1", "Sequence of Scalars", passed);
-		RunSpecTest(&Spec::MappingScalarsToScalars, "2.2", "Mapping Scalars to Scalars", passed);
-		RunSpecTest(&Spec::MappingScalarsToSequences, "2.3", "Mapping Scalars to Sequences", passed);
-		RunSpecTest(&Spec::SequenceOfMappings, "2.4", "Sequence of Mappings", passed);
-		RunSpecTest(&Spec::SequenceOfSequences, "2.5", "Sequence of Sequences", passed);
-		RunSpecTest(&Spec::MappingOfMappings, "2.6", "Mapping of Mappings", passed);
-		RunSpecTest(&Spec::TwoDocumentsInAStream, "2.7", "Two Documents in a Stream", passed);
-		RunSpecTest(&Spec::PlayByPlayFeed, "2.8", "Play by Play Feed from a Game", passed);
-		RunSpecTest(&Spec::SingleDocumentWithTwoComments, "2.9", "Single Document with Two Comments", passed);
-		RunSpecTest(&Spec::SimpleAnchor, "2.10", "Node for \"Sammy Sosa\" appears twice in this document", passed);
-		RunSpecTest(&Spec::MappingBetweenSequences, "2.11", "Mapping between Sequences", passed);
-		RunSpecTest(&Spec::CompactNestedMapping, "2.12", "Compact Nested Mapping", passed);
-		RunSpecTest(&Spec::InLiteralsNewlinesArePreserved, "2.13", "In literals, newlines are preserved", passed);
-		RunSpecTest(&Spec::InFoldedScalarsNewlinesBecomeSpaces, "2.14", "In folded scalars, newlines become spaces", passed);
-		RunSpecTest(&Spec::FoldedNewlinesArePreservedForMoreIndentedAndBlankLines, "2.15", "Folded newlines are preserved for \"more indented\" and blank lines", passed);
-		RunSpecTest(&Spec::IndentationDeterminesScope, "2.16", "Indentation determines scope", passed);
-		RunSpecTest(&Spec::QuotedScalars, "2.17", "Quoted scalars", passed);
-		RunSpecTest(&Spec::MultiLineFlowScalars, "2.18", "Multi-line flow scalars", passed);
+		int passed = 0;
+		int total = 0;
+		RunSpecTest(&Spec::SeqScalars, "2.1", "Sequence of Scalars", passed, total);
+		RunSpecTest(&Spec::MappingScalarsToScalars, "2.2", "Mapping Scalars to Scalars", passed, total);
+		RunSpecTest(&Spec::MappingScalarsToSequences, "2.3", "Mapping Scalars to Sequences", passed, total);
+		RunSpecTest(&Spec::SequenceOfMappings, "2.4", "Sequence of Mappings", passed, total);
+		RunSpecTest(&Spec::SequenceOfSequences, "2.5", "Sequence of Sequences", passed, total);
+		RunSpecTest(&Spec::MappingOfMappings, "2.6", "Mapping of Mappings", passed, total);
+		RunSpecTest(&Spec::TwoDocumentsInAStream, "2.7", "Two Documents in a Stream", passed, total);
+		RunSpecTest(&Spec::PlayByPlayFeed, "2.8", "Play by Play Feed from a Game", passed, total);
+		RunSpecTest(&Spec::SingleDocumentWithTwoComments, "2.9", "Single Document with Two Comments", passed, total);
+		RunSpecTest(&Spec::SimpleAnchor, "2.10", "Node for \"Sammy Sosa\" appears twice in this document", passed, total);
+		RunSpecTest(&Spec::MappingBetweenSequences, "2.11", "Mapping between Sequences", passed, total);
+		RunSpecTest(&Spec::CompactNestedMapping, "2.12", "Compact Nested Mapping", passed, total);
+		RunSpecTest(&Spec::InLiteralsNewlinesArePreserved, "2.13", "In literals, newlines are preserved", passed, total);
+		RunSpecTest(&Spec::InFoldedScalarsNewlinesBecomeSpaces, "2.14", "In folded scalars, newlines become spaces", passed, total);
+		RunSpecTest(&Spec::FoldedNewlinesArePreservedForMoreIndentedAndBlankLines, "2.15", "Folded newlines are preserved for \"more indented\" and blank lines", passed, total);
+		RunSpecTest(&Spec::IndentationDeterminesScope, "2.16", "Indentation determines scope", passed, total);
+		RunSpecTest(&Spec::QuotedScalars, "2.17", "Quoted scalars", passed, total);
+		RunSpecTest(&Spec::MultiLineFlowScalars, "2.18", "Multi-line flow scalars", passed, total);
 		
-		RunSpecTest(&Spec::Invoice, "2.27", "Invoice", passed);
-		RunSpecTest(&Spec::LogFile, "2.28", "Log File", passed);
+		RunSpecTest(&Spec::Invoice, "2.27", "Invoice", passed, total);
+		RunSpecTest(&Spec::LogFile, "2.28", "Log File", passed, total);
 		
-		RunSpecTest(&Spec::BlockStructureIndicators, "5.3", "Block Structure Indicators", passed);
-		RunSpecTest(&Spec::FlowStructureIndicators, "5.4", "Flow Structure Indicators", passed);
-		RunSpecTest(&Spec::NodePropertyIndicators, "5.6", "Node Property Indicators", passed);
-		RunSpecTest(&Spec::BlockScalarIndicators, "5.7", "Block Scalar Indicators", passed);
-		RunSpecTest(&Spec::QuotedScalarIndicators, "5.8", "Quoted Scalar Indicators", passed);
-		RunSpecTest(&Spec::LineBreakCharacters, "5.11", "Line Break Characters", passed);
-		RunSpecTest(&Spec::TabsAndSpaces, "5.12", "Tabs and Spaces", passed);
-		RunSpecTest(&Spec::EscapedCharacters, "5.13", "Escaped Characters", passed);
-		RunSpecTest(&Spec::InvalidEscapedCharacters, "5.14", "Invalid Escaped Characters", passed);
+		RunSpecTest(&Spec::BlockStructureIndicators, "5.3", "Block Structure Indicators", passed, total);
+		RunSpecTest(&Spec::FlowStructureIndicators, "5.4", "Flow Structure Indicators", passed, total);
+		RunSpecTest(&Spec::NodePropertyIndicators, "5.6", "Node Property Indicators", passed, total);
+		RunSpecTest(&Spec::BlockScalarIndicators, "5.7", "Block Scalar Indicators", passed, total);
+		RunSpecTest(&Spec::QuotedScalarIndicators, "5.8", "Quoted Scalar Indicators", passed, total);
+		RunSpecTest(&Spec::LineBreakCharacters, "5.11", "Line Break Characters", passed, total);
+		RunSpecTest(&Spec::TabsAndSpaces, "5.12", "Tabs and Spaces", passed, total);
+		RunSpecTest(&Spec::EscapedCharacters, "5.13", "Escaped Characters", passed, total);
+		RunSpecTest(&Spec::InvalidEscapedCharacters, "5.14", "Invalid Escaped Characters", passed, total);
 		
-		RunSpecTest(&Spec::IndentationSpaces, "6.1", "Indentation Spaces", passed);
-		RunSpecTest(&Spec::IndentationIndicators, "6.2", "Indentation Indicators", passed);
-		RunSpecTest(&Spec::SeparationSpaces, "6.3", "Separation Spaces", passed);
-		RunSpecTest(&Spec::LinePrefixes, "6.4", "Line Prefixes", passed);
-		RunSpecTest(&Spec::EmptyLines, "6.5", "Empty Lines", passed);
-		return passed;
+		RunSpecTest(&Spec::IndentationSpaces, "6.1", "Indentation Spaces", passed, total);
+		RunSpecTest(&Spec::IndentationIndicators, "6.2", "Indentation Indicators", passed, total);
+		RunSpecTest(&Spec::SeparationSpaces, "6.3", "Separation Spaces", passed, total);
+		RunSpecTest(&Spec::LinePrefixes, "6.4", "Line Prefixes", passed, total);
+		RunSpecTest(&Spec::EmptyLines, "6.5", "Empty Lines", passed, total);
+
+		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
+		return passed == total;
 	}
 	
 }

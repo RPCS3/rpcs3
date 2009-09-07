@@ -534,4 +534,94 @@ namespace Test
 			out << YAML::EndSeq;
 		}
 	}
+	
+	namespace {
+		void RunEmitterTest(void (*test)(YAML::Emitter&, std::string&), const std::string& name, int& passed, int& total) {
+			YAML::Emitter out;
+			std::string desiredOutput;
+			test(out, desiredOutput);
+			std::string output = out.c_str();
+
+			if(output == desiredOutput) {
+				passed++;
+			} else {
+				std::cout << "Emitter test failed: " << name << "\n";
+				std::cout << "Output:\n";
+				std::cout << output << "<<<\n";
+				std::cout << "Desired output:\n";
+				std::cout << desiredOutput << "<<<\n";				
+			}
+			total++;
+		}
+		
+		void RunEmitterErrorTest(void (*test)(YAML::Emitter&, std::string&), const std::string& name, int& passed, int& total) {
+			YAML::Emitter out;
+			std::string desiredError;
+			test(out, desiredError);
+			std::string lastError = out.GetLastError();
+			if(!out.good() && lastError == desiredError) {
+				passed++;
+			} else {
+				std::cout << "Emitter test failed: " << name << "\n";
+				if(out.good())
+					std::cout << "No error detected\n";
+				else
+					std::cout << "Detected error: " << lastError << "\n";
+				std::cout << "Expected error: " << desiredError << "\n";
+			}
+			total++;
+		}
+	}
+	
+	bool RunEmitterTests()
+	{
+		int passed = 0;
+		int total = 0;
+		RunEmitterTest(&Emitter::SimpleScalar, "simple scalar", passed, total);
+		RunEmitterTest(&Emitter::SimpleSeq, "simple seq", passed, total);
+		RunEmitterTest(&Emitter::SimpleFlowSeq, "simple flow seq", passed, total);
+		RunEmitterTest(&Emitter::EmptyFlowSeq, "empty flow seq", passed, total);
+		RunEmitterTest(&Emitter::NestedBlockSeq, "nested block seq", passed, total);
+		RunEmitterTest(&Emitter::NestedFlowSeq, "nested flow seq", passed, total);
+		RunEmitterTest(&Emitter::SimpleMap, "simple map", passed, total);
+		RunEmitterTest(&Emitter::SimpleFlowMap, "simple flow map", passed, total);
+		RunEmitterTest(&Emitter::MapAndList, "map and list", passed, total);
+		RunEmitterTest(&Emitter::ListAndMap, "list and map", passed, total);
+		RunEmitterTest(&Emitter::NestedBlockMap, "nested block map", passed, total);
+		RunEmitterTest(&Emitter::NestedFlowMap, "nested flow map", passed, total);
+		RunEmitterTest(&Emitter::MapListMix, "map list mix", passed, total);
+		RunEmitterTest(&Emitter::SimpleLongKey, "simple long key", passed, total);
+		RunEmitterTest(&Emitter::SingleLongKey, "single long key", passed, total);
+		RunEmitterTest(&Emitter::ComplexLongKey, "complex long key", passed, total);
+		RunEmitterTest(&Emitter::AutoLongKey, "auto long key", passed, total);
+		RunEmitterTest(&Emitter::ScalarFormat, "scalar format", passed, total);
+		RunEmitterTest(&Emitter::AutoLongKeyScalar, "auto long key scalar", passed, total);
+		RunEmitterTest(&Emitter::LongKeyFlowMap, "long key flow map", passed, total);
+		RunEmitterTest(&Emitter::BlockMapAsKey, "block map as key", passed, total);
+		RunEmitterTest(&Emitter::AliasAndAnchor, "alias and anchor", passed, total);
+		RunEmitterTest(&Emitter::AliasAndAnchorWithNull, "alias and anchor with null", passed, total);
+		RunEmitterTest(&Emitter::ComplexDoc, "complex doc", passed, total);
+		RunEmitterTest(&Emitter::STLContainers, "STL containers", passed, total);
+		RunEmitterTest(&Emitter::SimpleComment, "simple comment", passed, total);
+		RunEmitterTest(&Emitter::MultiLineComment, "multi-line comment", passed, total);
+		RunEmitterTest(&Emitter::ComplexComments, "complex comments", passed, total);
+		RunEmitterTest(&Emitter::Indentation, "indentation", passed, total);
+		RunEmitterTest(&Emitter::SimpleGlobalSettings, "simple global settings", passed, total);
+		RunEmitterTest(&Emitter::ComplexGlobalSettings, "complex global settings", passed, total);
+		RunEmitterTest(&Emitter::Null, "null", passed, total);
+		
+		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
+		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
+		RunEmitterErrorTest(&Emitter::BadSingleQuoted, "bad single quoted string", passed, total);
+		RunEmitterErrorTest(&Emitter::InvalidAnchor, "invalid anchor", passed, total);
+		RunEmitterErrorTest(&Emitter::InvalidAlias, "invalid alias", passed, total);
+		RunEmitterErrorTest(&Emitter::MissingKey, "missing key", passed, total);
+		RunEmitterErrorTest(&Emitter::MissingValue, "missing value", passed, total);
+		RunEmitterErrorTest(&Emitter::UnexpectedKey, "unexpected key", passed, total);
+		RunEmitterErrorTest(&Emitter::UnexpectedValue, "unexpected value", passed, total);
+
+		std::cout << "Emitter tests: " << passed << "/" << total << " passed\n";
+		return passed == total;
+	}
 }
+
