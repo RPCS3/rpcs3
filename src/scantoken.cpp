@@ -290,7 +290,7 @@ namespace YAML
 		params.fold = true;
 		params.eatLeadingWhitespace = true;
 		params.trimTrailingSpaces = true;
-		params.chomp = CLIP;
+		params.chomp = STRIP;
 		params.onDocIndicator = BREAK;
 		params.onTabInIndentation = THROW;
 

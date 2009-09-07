@@ -141,11 +141,11 @@ namespace YAML
 				scalar.erase(pos + 1);
 		}
 
-		if(params.chomp <= 0) {
+		if(params.chomp == STRIP || params.chomp == CLIP) {
 			std::size_t pos = scalar.find_last_not_of('\n');
-			if(params.chomp == 0 && pos + 1 < scalar.size())
+			if(params.chomp == CLIP && pos + 1 < scalar.size())
 				scalar.erase(pos + 2);
-			else if(params.chomp == -1 && pos < scalar.size())
+			else if(params.chomp == STRIP && pos < scalar.size())
 				scalar.erase(pos + 1);
 		}
 
