@@ -247,9 +247,6 @@ public:
 		// when enabled performs bios stub execution, skipping full sony bios + splash screens
 			SkipBiosSplash:1,
 
-		// Closes the GS/Video port on escape (good for fullscreen activity)
-			closeGSonEsc:1,
-
 		// enables simulated ejection of memory cards when loading savestates
 			McdEnableEjection:1;
 	}; };

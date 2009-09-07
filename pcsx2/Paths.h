@@ -133,9 +133,6 @@ public:
 namespace Path
 {
 	extern bool IsRooted( const wxString& path );
-	extern bool IsDirectory( const wxString& path );
-	extern bool IsFile( const wxString& path );
-	extern bool Exists( const wxString& path );
 	extern int GetFileSize( const wxString& path );
 
 	extern wxString Combine( const wxString& srcPath, const wxString& srcFile );

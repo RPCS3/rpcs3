@@ -133,6 +133,9 @@ public:
 	// enables automatic ntfs compression of memory cards (Win32 only)
 	bool		McdEnableNTFS;
 	
+	// Closes the GS/Video port on escape (good for fullscreen activity)
+	bool		CloseGSonEsc;
+
 	wxString		CurrentIso;
 	CDVD_SourceType CdvdSource;
 

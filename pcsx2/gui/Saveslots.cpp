@@ -72,7 +72,7 @@ void States_Load(int num)
 {
 	wxString file( SaveState::GetFilename( num ) );
 
-	if( !Path::IsFile( file ) )
+	if( !wxFileExists( file ) )
 	{
 		Console::Notice( "Savestate slot %d is empty.", params num );
 		return;

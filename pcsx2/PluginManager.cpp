@@ -220,8 +220,10 @@ static const LegacyApi_CommonMethod s_MethMessCommon[] =
 	{	"close",		NULL	},
 	{	"shutdown",		NULL	},
 
+	{	"keyEvent",		(vMeth*)fallback_keyEvent },
+
 	{	"freeze",		(vMeth*)fallback_freeze	},
-	{	"test",			(vMeth*)fallback_test	},
+	{	"test",			(vMeth*)fallback_test },
 	{	"configure",	fallback_configure	},
 	{	"about",		fallback_about	},
 
@@ -946,6 +948,19 @@ void PluginManager::Freeze( SaveState& state )
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 		Freeze( pi->id, state );
+}
+
+bool PluginManager::KeyEvent( const keyEvent& evt )
+{
+	const PluginInfo* pi = tbl_PluginInfo-1;
+
+	while( ++pi, pi->shortname != NULL )
+	{
+		if( pi->id != PluginId_PAD )
+			m_info[pi->id].CommonBindings.KeyEvent( const_cast<keyEvent*>(&evt) );
+	}
+
+	return false;
 }
 
 void PluginManager::Configure( PluginsEnum_t pid )

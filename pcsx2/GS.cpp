@@ -634,6 +634,7 @@ struct GSStatePacket
 };
 
 // runs the GS
+// (this should really be part of the AppGui)
 void RunGSState( gzLoadingState& f )
 {
 	u32 newfield;
@@ -679,7 +680,9 @@ void RunGSState( gzLoadingState& f )
 				*(u32*)(PS2MEM_GS+0x1000) = (*(u32*)(PS2MEM_GS+0x1000) & ~(1<<13)) | newfield;
 
 				GSvsync(newfield);
-				SysUpdate();
+				
+				// fixme : Process pending app messages here.
+				//SysUpdate();
 
 				if( g_SaveGSStream != 3 )
 					return;

@@ -155,7 +155,6 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( CdvdDumpBlocks );
 	IniBitBool( EnablePatches );
 
-	IniBitBool( closeGSonEsc );
 	IniBitBool( McdEnableEjection );
 
 	// Process various sub-components:

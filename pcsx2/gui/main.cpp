@@ -60,7 +60,8 @@ namespace Exception
 }
 
 AppEmuThread::AppEmuThread( const wxString& elf_file ) :
-	CoreEmuThread( elf_file )
+	m_kevt()
+,	CoreEmuThread( elf_file )
 {
 	MemoryCard::Init();
 }
@@ -68,7 +69,59 @@ AppEmuThread::AppEmuThread( const wxString& elf_file ) :
 void AppEmuThread::Resume()
 {
 	if( wxGetApp().GetMainFrame().IsPaused() ) return;
+
+	// Clear the sticky key statuses, because hell knows what's changed while the PAD
+	// plugin was suspended.
+
+	m_kevt.m_shiftDown		= false;
+	m_kevt.m_controlDown	= false;
+	m_kevt.m_altDown		= false;
+
 	CoreEmuThread::Resume();
+}
+
+// fixme: this ID should be the ID of our wx-managed GS window (which is not
+// wx-managed yet, so let's just use some arbitrary value...)
+static const int pxID_Window_GS = 8030;
+
+void AppEmuThread::StateCheck()
+{
+	CoreEmuThread::StateCheck();
+
+	const keyEvent* ev = PADkeyEvent();
+
+	if( ev == NULL || (ev->key == 0) ) return;
+
+	GetPluginManager().KeyEvent( *ev );
+
+	m_kevt.SetEventType( ( ev->evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
+	m_kevt.SetId( pxID_Window_GS );
+
+	const bool isDown = (ev->evt == KEYPRESS);
+
+	#ifdef __WXMSW__
+		const int vkey = wxCharCodeMSWToWX( ev->key );
+	#elif defined( __WXGTK__ )
+		const int vkey = TranslateGDKtoWXK( ev->key );
+	#else
+	#	error Unsupported Target Platform.
+	#endif
+
+	switch (vkey)
+	{
+		case WXK_SHIFT:		m_kevt.m_shiftDown		= isDown; return;
+		case WXK_CONTROL:	m_kevt.m_controlDown	= isDown; return;
+		case WXK_MENU:		m_kevt.m_altDown		= isDown; return; 
+	}
+
+	// fixme: when the GS is wx-controlled, we should send the message to the GS window
+	// instead.
+
+	if( isDown )
+	{
+		m_kevt.m_keyCode = vkey;
+		wxGetApp().AddPendingEvent( m_kevt );
+	}
 }
 
 sptr AppEmuThread::ExecuteTask()
@@ -120,6 +173,7 @@ sptr AppEmuThread::ExecuteTask()
 	// ----------------------------------------------------------------------------
 	// [TODO] : Add exception handling here for debuggable PS2 exceptions that allows
 	// invocation of the PCSX2 debugger and such.
+	//
 	catch( Exception::BaseException& ex )
 	{
 		// Sent the exception back to the main gui thread?
@@ -144,7 +198,7 @@ void Pcsx2App::OpenWizardConsole()
 
 static bool m_ForceWizard = false;
 
-// User mode settings can't be stores in the CWD for two reasons:
+// User mode settings can't be stored in the CWD for two reasons:
 //   (a) the user may not have permission to do so (most obvious)
 //   (b) it would result in sloppy usermode.ini found all over a hard drive if people runs the
 //       exe from many locations (ugh).
@@ -159,7 +213,10 @@ void Pcsx2App::ReadUserModeSettings()
 
 	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
 	if( !usrlocaldir.Exists() )
+	{
+		Console::Status( L"Creating UserLocalData folder: " + usrlocaldir.ToString() );
 		usrlocaldir.Mkdir();
+	}
 
 	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
 	usermodefile.SetPath( usrlocaldir.ToString() );
@@ -211,7 +268,7 @@ void Pcsx2App::ReadUserModeSettings()
 
 void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 {
-	parser.SetLogo( L" >> Pcsx2  --  A Playstation2 Emulator for the PC\n");
+	parser.SetLogo( L" >> PCSX2  --  A Playstation2 Emulator for the PC\n");
 
 	parser.AddParam( L"CDVD/ELF", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
 
@@ -269,6 +326,8 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_CallStackBox,	pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
 	Connect( pxEVT_SemaphorePing,	wxCommandEventHandler( Pcsx2App::OnSemaphorePing ) );
 
+	Connect( pxID_Window_GS, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnKeyDown ) );
+
 	// User/Admin Mode Dual Setup:
 	//   Pcsx2 now supports two fundamental modes of operation.  The default is Classic mode,
 	//   which uses the Current Working Directory (CWD) for all user data files, and requires
@@ -282,8 +341,8 @@ bool Pcsx2App::OnInit()
 
 	try
 	{
-		ReadUserModeSettings();
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
+		ReadUserModeSettings();
 
 		AppConfig_ReloadGlobalSettings();
 

@@ -85,10 +85,6 @@ extern bool States_isSlotUsed(int num);
 // as keyboard events, menu/status updates, and cpu execution invocation.
 namespace HostGui
 {
-	// Signals the gui with a keystroke.  Handle or discard or dispatch, or enjoy its
-	// pleasant flavor.
-	extern void __fastcall KeyEvent( keyEvent* ev );
-
 	// For issuing notices to both the status bar and the console at the same time.
 	// Single-line text only please!  Multi-line msgs should be directed to the
 	// console directly, thanks.

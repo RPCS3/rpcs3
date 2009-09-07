@@ -43,30 +43,6 @@ static bool IsPathSeparator( wxChar src )
 #endif
 }
 
-bool Exists( const wxString& path )
-{
-	wxStructStat sbuf;
-	return wxStat( path.c_str(), &sbuf ) == 0;
-}
-
-// This function returns false if the path does not exist, or if the path exists and
-// is a file.
-bool IsDirectory( const wxString& path )
-{
-	wxStructStat sbuf;
-	if( wxStat( path.c_str(), &sbuf ) == -1 ) return false;
-	return !!(sbuf.st_mode & _S_IFDIR);
-}
-
-// This function returns false if the path does not exist, or if the path exists and
-// is a directory.
-bool IsFile( const wxString& path )
-{
-	wxStructStat sbuf;
-	if( wxStat( path.c_str(), &sbuf ) == -1 ) return false;
-	return !!(sbuf.st_mode & _S_IFREG);
-}
-
 // Returns the length of the file.
 // returns -1 if the file is not found.
 int GetFileSize( const wxString& path )

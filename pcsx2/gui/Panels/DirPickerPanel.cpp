@@ -116,6 +116,9 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 
 	Connect( m_checkCtrl->GetId(),	wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( DirPickerPanel::UseDefaultPath_Click ) );
 
+	// wx warns when paths don't exist, but this is typically normal when the wizard 
+	// creates its child controls.  So let's ignore them.
+	wxDoNotLogInThisScope please;
 	Reset();	// forces default settings based on g_Conf
 }
 

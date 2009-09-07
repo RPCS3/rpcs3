@@ -86,7 +86,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Include", "Include", "{0FAD
 		common\include\afxresmw.h = common\include\afxresmw.h
 		common\include\intrin_x86.h = common\include\intrin_x86.h
 		common\include\Pcsx2Api.h = common\include\Pcsx2Api.h
-		common\include\Pcsx2Config.h = common\include\Pcsx2Config.h
 		common\include\Pcsx2Defs.h = common\include\Pcsx2Defs.h
 		common\include\Pcsx2Types.h = common\include\Pcsx2Types.h
 		common\include\PluginCallbacks.h = common\include\PluginCallbacks.h
@@ -125,7 +124,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wx", "wx", "{62BF822E-6A12-
 		common\include\wx\scopedptr.h = common\include\wx\scopedptr.h
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2cpp", "Tools\bin2cpp\bin2c.vcproj", "{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2cpp", "tools\bin2cpp\bin2c.vcproj", "{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{2D6F0A62-A247-4CCF-947F-FCD54BE16103}"
 EndProject

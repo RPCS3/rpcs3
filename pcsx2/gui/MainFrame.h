@@ -102,6 +102,8 @@ protected:
 	void Menu_ShowConsole(wxCommandEvent &event);
 	void Menu_ShowAboutBox(wxCommandEvent &event);
 
+	bool _DoSelectIsoBrowser();
+
 	// ------------------------------------------------------------------------
 	//     MainEmuFram Internal API for Populating Main Menu Contents
 	// ------------------------------------------------------------------------

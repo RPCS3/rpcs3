@@ -287,12 +287,14 @@ public:
 protected:
 	void ReadUserModeSettings();
 	bool TryOpenConfigCwd();
-	void OnSemaphorePing( wxCommandEvent& evt );
-	void OnMessageBox( pxMessageBoxEvent& evt );
 	void CleanupMess();
 	void OpenWizardConsole();
 
 	void HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const;
+
+	void OnSemaphorePing( wxCommandEvent& evt );
+	void OnMessageBox( pxMessageBoxEvent& evt );
+	void OnKeyDown( wxKeyEvent& evt );
 
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior
@@ -313,11 +315,15 @@ protected:
 //
 class AppEmuThread : public CoreEmuThread
 {
+protected:
+	wxKeyEvent		m_kevt;
+
 public:
 	AppEmuThread( const wxString& elf_file=wxEmptyString );
 	virtual ~AppEmuThread() { }
 
 	virtual void Resume();
+	virtual void StateCheck();
 
 protected:
 	sptr ExecuteTask();
@@ -334,3 +340,5 @@ extern void OpenPlugins();
 
 extern wxRect wxGetDisplayArea();
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
+
+extern void ProcessFKeys(int fkey, struct KeyModifiers *keymod);

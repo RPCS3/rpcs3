@@ -72,9 +72,10 @@ namespace Threading
 		
 #if wxUSE_GUI
 		void WaitGui();
+		bool WaitGui( const wxTimeSpan& timeout );
 #endif
 		void Wait();
-		void Wait( const wxTimeSpan& timeout );
+		bool Wait( const wxTimeSpan& timeout );
 		void WaitNoCancel();
 		int  Count();
 	};
@@ -125,6 +126,7 @@ namespace Threading
 		typedef int (*PlainJoeFP)();
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
+		Semaphore	m_sem_finished;		// used for canceling and closing threads in a deadlock-safe manner
 		sptr		m_returncode;		// value returned from the thread on close.
 
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid

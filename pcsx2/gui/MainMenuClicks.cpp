@@ -58,12 +58,46 @@ void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 	wxGetApp().SaveSettings();
 }
 
+// Returns FALSE if the user cancelled the action.
+bool MainEmuFrame::_DoSelectIsoBrowser()
+{
+	static const wxChar* isoFilterTypes =
+		L"All Supported (.iso .mdf .nrg .bin .img .dump)|*.iso;*.mdf;*.nrg;*.bin;*.img;*.dump|"
+		L"Disc Images (.iso .mdf .nrg .bin .img)|*.iso;*.mdf;*.nrg;*.bin;*.img|"
+		L"Blockdumps (.dump)|*.dump|"
+		L"All Files (*.*)|*.*";
+
+	wxFileDialog ctrl( this, _("Select CDVD source iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
+		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
+
+	if( ctrl.ShowModal() != wxID_CANCEL )
+	{
+		g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
+		g_Conf->CurrentIso = ctrl.GetPath();
+		wxGetApp().SaveSettings();
+
+		UpdateIsoSrcFile();
+		return true;
+	}
+	
+	return false;
+}
+
 void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 {
+	SysSuspend();
+
+	if( !wxFileExists( g_Conf->CurrentIso ) )
+	{
+		if( !_DoSelectIsoBrowser() )
+		{
+			SysResume();
+			return;
+		}
+	}
+
 	if( EmulationInProgress() )
 	{
-		SysSuspend();
-
 		// [TODO] : Add one of 'dems checkboxes that read like "[x] don't show this stupid shit again, kthx."
 		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmEmuReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
 
@@ -81,29 +115,10 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 	SysExecute( new AppEmuThread(), g_Conf->CdvdSource );
 }
 
-static const wxChar* isoFilterTypes =
-	L"All Supported (.iso .mdf .nrg .bin .img .dump)|*.iso;*.mdf;*.nrg;*.bin;*.img;*.dump|"
-	L"Disc Images (.iso .mdf .nrg .bin .img)|*.iso;*.mdf;*.nrg;*.bin;*.img|"
-	L"Blockdumps (.dump)|*.dump|"
-	L"All Files (*.*)|*.*";
-
-
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
 	SysSuspend();
-
-	wxFileDialog ctrl( this, _("Select CDVD source iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
-		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
-
-	if( ctrl.ShowModal() != wxID_CANCEL )
-	{
-		g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
-		g_Conf->CurrentIso = ctrl.GetPath();
-		wxGetApp().SaveSettings();
-
-		UpdateIsoSrcFile();
-	}
-
+	_DoSelectIsoBrowser();
 	SysResume();
 }
 
@@ -111,22 +126,13 @@ void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 {
 	SysSuspend();
 
-	wxFileDialog ctrl( this, _("Run PS2 Iso..."), g_Conf->Folders.RunIso.ToString(), wxEmptyString,
-		isoFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
-
-	if( ctrl.ShowModal() == wxID_CANCEL )
+	if( !_DoSelectIsoBrowser() )
 	{
 		SysResume();
 		return;
 	}
 
 	SysEndExecution();
-
-	g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
-	g_Conf->CurrentIso = ctrl.GetPath();
-	wxGetApp().SaveSettings();
-
-	UpdateIsoSrcFile();
 
 	wxString elf_file;
 	if( EmuConfig.SkipBiosSplash )

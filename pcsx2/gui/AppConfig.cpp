@@ -333,6 +333,12 @@ void wxDirName::Rmdir()
 bool wxDirName::Mkdir()
 {
 	if( Exists() ) return true;
+	
+	// Recursively create child directories as needed:
+	wxDirName recurse( *this );
+	recurse.RemoveLastDir();
+	if( !recurse.Mkdir() ) return false;
+
 	return wxFileName::Mkdir();
 }
 
@@ -361,6 +367,7 @@ AppConfig::AppConfig() :
 ,	Toolbar_ShowLabels( true )
 
 ,	McdEnableNTFS( true )
+,	CloseGSonEsc( true )
 
 ,	CurrentIso()
 ,	CdvdSource( CDVDsrc_Iso )

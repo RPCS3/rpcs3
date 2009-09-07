@@ -280,11 +280,6 @@ void SysClearExecutionCache()
 	vuMicroCpuReset();
 }
 
-__forceinline void SysUpdate()
-{
-	HostGui::KeyEvent( PADkeyEvent() );
-}
-
 bool EmulationInProgress()
 {
 	return (g_EmuThread != NULL) && g_EmuThread->IsRunning();
@@ -319,9 +314,6 @@ void SysExecute( CoreEmuThread* newThread )
 // saving states).  No assertions or exceptions.
 void SysEndExecution()
 {
-	if( EmuConfig.closeGSonEsc )
-		StateRecovery::MakeGsOnly();
-
 	safe_delete( g_EmuThread );
 }
 
@@ -337,17 +329,6 @@ void SysResume()
 		g_EmuThread->Resume();
 }
 
-
-// Function provided to escape the emulation state, by shutting down plugins and saving
-// the GS state.  The execution state is effectively preserved, and can be resumed with a
-// call to SysExecute.
-/*void SysEndExecution()
-{
-	if( EmuConfig.closeGSonEsc )
-		StateRecovery::MakeGsOnly();
-
-	ClosePlugins( EmuConfig.closeGSonEsc );
-}*/
 
 void SysRestorableReset()
 {

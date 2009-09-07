@@ -31,6 +31,8 @@ using namespace Threading;
 
 namespace Threading
 {
+	static const timespec ts_msec_200 = { 0, 200 * 1000000 };
+
 	static void _pt_callback_cleanup( void* handle )
 	{
 		((PersistentThread*)handle)->DoThreadCleanup();
@@ -39,6 +41,7 @@ namespace Threading
 	PersistentThread::PersistentThread() :
 		m_thread()
 	,	m_sem_event()
+	,	m_sem_finished()
 	,	m_returncode( 0 )
 	,	m_detached( false )
 	,	m_running( false )
@@ -58,7 +61,11 @@ namespace Threading
 
 		if( !_InterlockedExchange( &m_detached, true ) )
 		{
-			pthread_join( m_thread, (void**)&m_returncode );
+#if wxUSE_GUI
+			m_sem_finished.WaitGui( wxTimeSpan( 0, 0, 3 ) );
+#else
+			m_sem_finished.Wait( wxTimeSpan( 0, 0, 3 ) );
+#endif
 			m_running = false;
 		}
 	}
@@ -109,7 +116,13 @@ namespace Threading
 		pthread_cancel( m_thread );
 
 		if( isBlocking )
-			pthread_join( m_thread, (void**)&m_returncode );
+		{
+#if wxUSE_GUI
+			m_sem_finished.WaitGui( wxTimeSpan( 0, 0, 3 ) );
+#else
+			m_sem_finished.Wait( wxTimeSpan( 0, 0, 3 ) );
+#endif
+		}
 		else
 			pthread_detach( m_thread );
 
@@ -137,7 +150,12 @@ namespace Threading
 		else
 		{
 			DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
-			pthread_join( m_thread, (void**)&m_returncode );
+
+#if wxUSE_GUI
+			m_sem_finished.WaitGui( wxTimeSpan( 0, 0, 3 ) );
+#else
+			m_sem_finished.Wait( wxTimeSpan( 0, 0, 3 ) );
+#endif
 			return m_returncode;
 		}
 	}
@@ -260,11 +278,34 @@ namespace Threading
 			// In order to avoid deadlock we need to make sure we cut some time
 			// to handle messages.  I choose 200ms:
 			
-			static const timespec fail = { 0, 200 * 1000000 };
 			do {
-				
 				wxTheApp->ProcessPendingEvents();
-			} while( sem_timedwait( &sema, &fail ) == ETIMEDOUT );
+			} while( sem_timedwait( &sema, &ts_msec_200 ) == ETIMEDOUT );
+		}
+	}
+
+	bool Semaphore::WaitGui( const wxTimeSpan& timeout )
+	{
+		if( !wxThread::IsMain() || (wxTheApp == NULL) )
+		{
+			return Wait( timeout );
+		}
+		else
+		{
+			wxTimeSpan countdown( (timeout) );
+
+			// In order to avoid deadlock we need to make sure we cut some time
+			// to handle messages.  I choose 200ms:
+
+			static const wxTimeSpan pass( 0, 0, 0, 200 );
+			do {
+				wxTheApp->ProcessPendingEvents();
+				if( sem_timedwait( &sema, &ts_msec_200 ) != ETIMEDOUT )
+					break;
+				countdown -= pass;
+			} while( countdown.GetMilliseconds() > 0 );
+
+			return countdown.GetMilliseconds() > 0;
 		}
 	}
 #endif
@@ -274,10 +315,10 @@ namespace Threading
 		sem_wait( &sema );
 	}
 
-	void Semaphore::Wait( const wxTimeSpan& timeout )
+	bool Semaphore::Wait( const wxTimeSpan& timeout )
 	{
 		const timespec fail = { timeout.GetSeconds().GetLo(), 0 };
-		sem_timedwait( &sema, &fail );
+		return sem_timedwait( &sema, &fail ) != ETIMEDOUT;
 	}
 
 	// Performs an uncancellable wait on a semaphore; restoring the thread's previous cancel state

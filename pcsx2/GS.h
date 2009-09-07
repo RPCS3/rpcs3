@@ -368,5 +368,5 @@ extern gzSavingState* g_fGSSave;
 
 #endif
 
-void RunGSState(gzLoadingState& f);
+extern void RunGSState(gzLoadingState& f);
 

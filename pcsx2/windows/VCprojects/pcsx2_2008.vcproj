@@ -567,60 +567,28 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="Linux"
+				Name="LinuxAsm"
 				>
 				<File
-					RelativePath="..\..\Linux\HostGui.cpp"
+					RelativePath="..\..\x86\aMicroVU.S"
 					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Devel|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
 				</File>
-				<Filter
-					Name="asm"
+				<File
+					RelativePath="..\..\x86\aR3000A.S"
 					>
-					<File
-						RelativePath="..\..\x86\aMicroVU.S"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\aR3000A.S"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\ix86-32\aR5900-32.S"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\aVif.S"
-						>
-					</File>
-					<File
-						RelativePath="..\..\x86\aVUzerorec.S"
-						>
-					</File>
-				</Filter>
+				</File>
+				<File
+					RelativePath="..\..\x86\ix86-32\aR5900-32.S"
+					>
+				</File>
+				<File
+					RelativePath="..\..\x86\aVif.S"
+					>
+				</File>
+				<File
+					RelativePath="..\..\x86\aVUzerorec.S"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="Utilities"
@@ -2075,6 +2043,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\Plugins.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\Saveslots.cpp"
 				>
 			</File>
@@ -2573,12 +2545,8 @@
 				</File>
 			</Filter>
 			<Filter
-				Name="System"
+				Name="Win32"
 				>
-				<File
-					RelativePath="..\..\gui\Plugins.cpp"
-					>
-				</File>
 				<File
 					RelativePath="..\WinCompressNTFS.cpp"
 					>
@@ -2586,6 +2554,38 @@
 				<File
 					RelativePath="..\WinSysExec.cpp"
 					>
+				</File>
+			</Filter>
+			<Filter
+				Name="Linux"
+				>
+				<File
+					RelativePath="..\..\Linux\LnxKeyCodes.cpp"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Devel|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
 				</File>
 			</Filter>
 		</Filter>

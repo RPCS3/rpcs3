@@ -118,6 +118,7 @@ struct LegacyPluginAPI_Common
 	void (CALLBACK* Close)();
 	void (CALLBACK* Shutdown)();
 
+	void (CALLBACK* KeyEvent)( keyEvent* evt );
 	s32  (CALLBACK* Freeze)(int mode, freezeData *data);
 	s32  (CALLBACK* Test)();
 	void (CALLBACK* Configure)();
@@ -167,6 +168,7 @@ public:
 	virtual void Freeze( PluginsEnum_t pid, SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
 	virtual void Freeze( SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
 	
+	virtual bool KeyEvent( const keyEvent& evt ) { return false; }
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -212,7 +214,8 @@ public:
 	void Freeze( PluginsEnum_t pid, int mode, freezeData* data );
 	void Freeze( PluginsEnum_t pid, SaveState& state );
 	void Freeze( SaveState& state );
-	
+
+	bool KeyEvent( const keyEvent& evt );
 	void Configure( PluginsEnum_t pid );
 
 	friend PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] );

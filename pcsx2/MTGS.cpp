@@ -224,7 +224,6 @@ mtgsThreadObject::~mtgsThreadObject()
 
 void mtgsThreadObject::Cancel()
 {
-	Console::WriteLn( "MTGS > Closing GS thread..." );
 	SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
 	SetEvent();
 	m_sem_Quitter.Wait( wxTimeSpan( 0, 0, 5, 0 ) );
@@ -241,7 +240,7 @@ void mtgsThreadObject::Reset()
 
 	AtomicExchange( m_RingPos, m_WritePos );
 
-	MTGS_LOG( "MTGS > Sending Reset...\n" );
+	MTGS_LOG( "MTGS: Sending Reset..." );
 	SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 	SendSimplePacket( GS_RINGTYPE_FRAMESKIP, 0, 0, 0 );
 
@@ -501,15 +500,13 @@ struct PacketTagType
 
 sptr mtgsThreadObject::ExecuteTask()
 {
-	Console::WriteLn("MTGS > Thread Started, Opening GS Plugin...");
-
 	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( NULL );
 
 	GetPluginManager().Open( PluginId_GS );
 	
-	Console::WriteLn( "MTGS > GSopen Finished, return code: 0x%x", params m_returncode );
+	DbgCon::WriteLn( "MTGS: GSopen Finished, return code: 0x%x", params m_returncode );
 
 	GSCSRr = 0x551B4000; // 0x55190000
 	m_sem_InitDone.Post();
@@ -642,14 +639,14 @@ sptr mtgsThreadObject::ExecuteTask()
 				}
 
 				case GS_RINGTYPE_RESET:
-					MTGS_LOG( "MTGS > Receiving Reset...\n" );
+					MTGS_LOG( "MTGS: Receiving Reset..." );
 					if( GSreset != NULL ) GSreset();
 					break;
 
 				case GS_RINGTYPE_SOFTRESET:
 				{
 					int mask = tag.data[0];
-					MTGS_LOG( "MTGS > Receiving GIF Soft Reset (mask: %d)\n", mask );
+					MTGS_LOG( "MTGS: Receiving GIF Soft Reset (mask: %d)", mask );
 					GSgifSoftReset( mask );
 					break;
 				}
@@ -1115,7 +1112,7 @@ void mtgsThreadObject::GIFSoftReset( int mask )
 
 	if( GSgifSoftReset == NULL ) return;
 
-	MTGS_LOG( "MTGS > Sending GIF Soft Reset (mask: %d)\n", mask );
+	MTGS_LOG( "MTGS: Sending GIF Soft Reset (mask: %d)", mask );
 	mtgsThread->SendSimplePacket( GS_RINGTYPE_SOFTRESET, mask, 0, 0 );
 }
 
