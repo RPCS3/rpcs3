@@ -380,12 +380,14 @@
 		<Unit filename="../x86/microVU.h" />
 		<Unit filename="../x86/microVU_Alloc.inl" />
 		<Unit filename="../x86/microVU_Analyze.inl" />
+		<Unit filename="../x86/microVU_Branch.inl" />
 		<Unit filename="../x86/microVU_Compile.inl" />
 		<Unit filename="../x86/microVU_Execute.inl" />
 		<Unit filename="../x86/microVU_Flags.inl" />
 		<Unit filename="../x86/microVU_IR.h" />
 		<Unit filename="../x86/microVU_Log.inl" />
 		<Unit filename="../x86/microVU_Lower.inl" />
+		<Unit filename="../x86/microVU_Macro.inl" />
 		<Unit filename="../x86/microVU_Misc.h" />
 		<Unit filename="../x86/microVU_Misc.inl" />
 		<Unit filename="../x86/microVU_Tables.inl" />

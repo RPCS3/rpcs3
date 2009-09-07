@@ -21,6 +21,9 @@
 
 #include <stdio.h>
 
+#define DEV9defs
+#include "PS2Edefs.h"
+
 #ifdef __LINUX__
 #include <gtk/gtk.h>
 #else
@@ -28,9 +31,6 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #endif
-
-#define DEV9defs
-#include "PS2Edefs.h"
 
 typedef struct {
   int Log;

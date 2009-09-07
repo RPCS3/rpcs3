@@ -15,10 +15,10 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  #ifndef __GIF_TRANSFER_H__
  #define __GIF_TRANSFER_H__
- 
+
 #include <assert.h>
 #include <algorithm>
 
@@ -136,7 +136,7 @@ struct GIFTAG
 
 struct GIFPath
 {
-	GIFTAG tag; 
+	GIFTAG tag;
 	u32 curreg;
 	u32 _pad[3];
 	u8 regs[16];
@@ -144,7 +144,7 @@ struct GIFPath
 	__forceinline void PrepRegs();
 	void SetTag(const void* mem);
 	u32 GetReg();
-	__forceinline bool StepReg();
+	bool StepReg();
 };
 
 extern GIFPath m_path[3];

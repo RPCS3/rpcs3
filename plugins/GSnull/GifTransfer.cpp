@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  // Processes a GIFtag & packet, and throws out some gsIRQs as needed.
 // Used to keep interrupts in sync with the EE, while the GS itself
 // runs potentially several frames behind.
@@ -38,18 +38,18 @@ PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
 static void RegHandlerSIGNAL(const u32* data)
 {
 	GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
-	
+
 	if ((CSRw & 0x1))  GSCSRr |= 1; // signal
-			
+
 	if (!(GSIMR & 0x100) ) GSirq();
 }
 
 static void RegHandlerFINISH(const u32* data)
 {
 	if ((CSRw & 0x2))  GSCSRr |= 2; // finish
-		
+
 	if (!(GSIMR & 0x200) ) GSirq();
-	
+
 }
 
 static void RegHandlerLABEL(const u32* data)
@@ -58,9 +58,9 @@ static void RegHandlerLABEL(const u32* data)
 }
 
 typedef void (*GIFRegHandler)(const u32* data);
-static GIFRegHandler s_GSHandlers[3] = 
-{ 
-	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL 
+static GIFRegHandler s_GSHandlers[3] =
+{
+	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL
 };
 
 __forceinline void GIFPath::PrepRegs()
@@ -94,16 +94,16 @@ void GIFPath::SetTag(const void* mem)
 	PrepRegs();
 }
 
-u32 GIFPath::GetReg() 
+u32 GIFPath::GetReg()
 {
 	return regs[curreg];
 }
 
-__forceinline bool GIFPath::StepReg()
+bool GIFPath::StepReg()
 {
-	if ((++curreg & 0xf) == tag.nreg) 
+	if ((++curreg & 0xf) == tag.nreg)
 	{
-		curreg = 0; 
+		curreg = 0;
 
 		if(--tag.nloop == 0)
 		{
@@ -129,8 +129,8 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 				Path3transfer = FALSE;
 			}
 
-			if( pathidx == 0 ) 
-			{                        
+			if( pathidx == 0 )
+			{
 				// hack: if too much data for VU1, just ignore.
 
 				// The GIF is evil : if nreg is 0, it's really 16.  Otherwise it's the value in nreg.
@@ -181,7 +181,7 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 					pMem += 8; //sizeof(GIFReg); -- 64 bits!
 				}
 				while(path.StepReg() && size > 0);
-			
+
 				if(size & 1) pMem += 8; //sizeof(GIFReg);
 
 				size /= 2;
@@ -229,7 +229,7 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 			// along the way (often means curreg was in a bad state or something)
 		}
 	}
-	
+
 	return size;
 }
 
@@ -237,7 +237,7 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 //#define DO_GIF_TRANSFERS
 
 void _GSgifTransfer1(u32 *pMem, u32 addr)
-{	
+{
 #ifdef DO_GIF_TRANSFERS
 	/* This needs looking at, since I quickly grabbed it from ZeroGS. */
 	addr &= 0x3fff;
