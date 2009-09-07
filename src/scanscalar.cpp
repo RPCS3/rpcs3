@@ -111,13 +111,8 @@ namespace YAML
 			bool nextMoreIndented = (INPUT.peek() == ' ');
 
 			// for block scalars, we always start with a newline, so we should ignore it (not fold or keep)
-			bool useNewLine = pastOpeningBreak;
-			// and for folded scalars, we don't fold the very last newline to a space
-			if(params.fold && !emptyLine && INPUT.column() < params.indent)
-				useNewLine = false;
-
-			if(useNewLine) {
-				if(params.fold && !emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented)
+			if(pastOpeningBreak) {
+				if(params.fold && !emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented && INPUT.column() >= params.indent)
 					scalar += " ";
 				else
 					scalar += "\n";

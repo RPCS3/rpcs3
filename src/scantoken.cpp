@@ -368,6 +368,7 @@ namespace YAML
 		params.fold = (indicator == Keys::FoldedScalar);
 
 		// eat chomping/indentation indicators
+		params.chomp = CLIP;
 		int n = Exp::Chomp.Match(INPUT);
 		for(int i=0;i<n;i++) {
 			char ch = INPUT.get();

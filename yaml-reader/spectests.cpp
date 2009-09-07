@@ -446,7 +446,7 @@ namespace Test {
 				"  home run record in 1998.\n"
 				"stats: |\n"
 				"  65 Home Runs\n"
-				"  0.278 Batting Average";
+				"  0.278 Batting Average\n";
 			std::stringstream stream(input);
 			YAML::Parser parser(stream);
 			YAML::Node doc;
@@ -454,8 +454,8 @@ namespace Test {
 			
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["name"] == "Mark McGwire");
-			YAML_ASSERT(doc["accomplishment"] == "Mark set a major league home run record in 1998.");
-			YAML_ASSERT(doc["stats"] == "65 Home Runs\n0.278 Batting Average");
+			YAML_ASSERT(doc["accomplishment"] == "Mark set a major league home run record in 1998.\n");
+			YAML_ASSERT(doc["stats"] == "65 Home Runs\n0.278 Batting Average\n");
 			return true;
 		}
 		
