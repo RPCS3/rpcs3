@@ -110,7 +110,7 @@ namespace YAML
 
 			// was this an empty line?
 			bool nextEmptyLine = Exp::Break.Matches(INPUT);
-			bool nextMoreIndented = (INPUT.peek() == ' ');
+			bool nextMoreIndented = Exp::Blank.Matches(INPUT);
 			if(params.fold && foldedNewlineCount == 0 && nextEmptyLine)
 				foldedNewlineStartedMoreIndented = moreIndented;
 
@@ -125,8 +125,9 @@ namespace YAML
 						scalar += "\n";
 					
 					if(!nextEmptyLine && foldedNewlineCount > 0) {
+						scalar += std::string(foldedNewlineCount - 1, '\n');
 						if(foldedNewlineStartedMoreIndented || nextMoreIndented)
-							scalar += std::string("\n", foldedNewlineCount);
+							scalar += "\n";
 						foldedNewlineCount = 0;
 					}
 				} else {

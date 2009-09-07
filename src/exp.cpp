@@ -83,7 +83,7 @@ namespace YAML
 
 			// now do the slash (we're not gonna check if it's a slash - you better pass one!)
 			switch(ch) {
-				case '0': return std::string("\x00", 1);
+				case '0': return std::string(1, '\x00');
 				case 'a': return "\x07";
 				case 'b': return "\x08";
 				case 't':

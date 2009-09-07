@@ -952,6 +952,65 @@ namespace Test {
 			YAML_ASSERT(doc["Chomping"] == "Clipped empty lines\n");
 			return true;
 		}
+		
+		// 6.6
+		TEST LineFolding()
+		{
+			std::string input =
+				">-\n"
+				"  trimmed\n"
+				"  \n"
+				" \n"
+				"\n"
+				"  as\n"
+				"  space";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc == "trimmed\n\n\nas space");
+			return true;
+		}
+		
+		// 6.7
+		TEST BlockFolding()
+		{
+			std::string input =
+				">\n"
+				"  foo \n"
+				" \n"
+				"  \t bar\n"
+				"\n"
+				"  baz\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc == "foo \n\n\t bar\n\nbaz\n");
+			return true;
+		}
+		
+		// 6.8
+		TEST FlowFolding()
+		{
+			std::string input =
+				"\"\n"
+				"  foo \n"
+				" \n"
+				"  \t bar\n"
+				"\n"
+				"  baz\n"
+				"\"";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc == " foo\nbar\nbaz ");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -995,6 +1054,9 @@ namespace Test {
 		RunSpecTest(&Spec::SeparationSpaces, "6.3", "Separation Spaces", passed, total);
 		RunSpecTest(&Spec::LinePrefixes, "6.4", "Line Prefixes", passed, total);
 		RunSpecTest(&Spec::EmptyLines, "6.5", "Empty Lines", passed, total);
+		RunSpecTest(&Spec::LineFolding, "6.6", "Line Folding", passed, total);
+		RunSpecTest(&Spec::BlockFolding, "6.7", "Block Folding", passed, total);
+		RunSpecTest(&Spec::FlowFolding, "6.8", "Flow Folding", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
