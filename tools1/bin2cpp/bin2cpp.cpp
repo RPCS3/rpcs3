@@ -34,15 +34,14 @@
 #include <ctype.h>
 
 #include <sys/stat.h>
+#include <string.h>
 
 #if defined (__linux__) && !defined(__LINUX__)  // some distributions are lower case
 #define __LINUX__
 #endif
 
-#ifdef __LINUX__
-#define _stat stat
-#define _fcloseall fcloseall
-#include <string.h>
+#if _MSC_VER
+#	pragma warning(disable:4996)	// The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name.
 #endif
 
 typedef unsigned char u8;
@@ -57,9 +56,9 @@ static const unsigned int LINE = 16;
 
 long getfilesize( const char* filename )
 {
-	struct _stat result;
+	struct stat result;
 	
-	_stat( filename, &result );
+	stat( filename, &result );
 	return result.st_size;
 }
 
@@ -127,16 +126,14 @@ int main(int argc, char* argv[])
 	const int filesize( getfilesize( srcfile ) );
 
 	char wxImgTypeUpper[24];
-	char wxImgTypeLower[24];
 	strcpy( wxImgTypeUpper, &srcfile[srcfn_len-3] );
-	//strcpy( wxImgTypeLower, argv[ARG_IMGEXT] );
-#ifdef __LINUX__
-	for (int i = 0; i < 24; i++)
+
+	int i = -1;
+	while(++i, wxImgTypeUpper[i] != 0)
 		wxImgTypeUpper[i] = toupper(wxImgTypeUpper[i]);
-#else
-	strupr( wxImgTypeUpper );
-#endif
-	//strupr( wxImgTypeLower );
+
+	//strcpy( wxImgTypeLower, argv[ARG_IMGEXT] );
+	//char wxImgTypeLower[24];
 
 	if( strcmp( wxImgTypeUpper, "JPG" ) == 0 )
 		strcpy( wxImgTypeUpper, "JPEG" );		// because wxWidgets defines it as JPEG >_<
@@ -154,7 +151,7 @@ int main(int argc, char* argv[])
 	if( (dest=fopen( Dummy, "wb+" )) == NULL )
 	{
 		printf( "ERROR : I can't open destination file   %s\n", Dummy );
-		(void)_fcloseall();
+		(void)fcloseall();
 		return 0L;
 	}
 	
@@ -188,7 +185,7 @@ int main(int argc, char* argv[])
 	if( ferror( dest ) )
 	{
 		printf( "ERROR writing on target file:  %s\n", Dummy );
-		(void)_fcloseall();
+		(void)fcloseall();
 		return 20L;
 	}
 
@@ -212,7 +209,7 @@ int main(int argc, char* argv[])
 
 	fprintf(dest,"};\n");
 
-	_fcloseall();
+	fcloseall();
 
 	return 0;
 }
