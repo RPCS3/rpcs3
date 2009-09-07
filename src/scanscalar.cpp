@@ -21,6 +21,8 @@ namespace YAML
 	{
 		bool foundNonEmptyLine = false, pastOpeningBreak = false;
 		bool emptyLine = false, moreIndented = false;
+		int foldedNewlineCount = 0;
+		bool foldedNewlineStartedMoreIndented = false;
 		std::string scalar;
 		params.leadingSpaces = false;
 
@@ -109,13 +111,27 @@ namespace YAML
 			// was this an empty line?
 			bool nextEmptyLine = Exp::Break.Matches(INPUT);
 			bool nextMoreIndented = (INPUT.peek() == ' ');
+			if(params.fold && foldedNewlineCount == 0 && nextEmptyLine)
+				foldedNewlineStartedMoreIndented = moreIndented;
 
 			// for block scalars, we always start with a newline, so we should ignore it (not fold or keep)
 			if(pastOpeningBreak) {
-				if(params.fold && !emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented && INPUT.column() >= params.indent)
-					scalar += " ";
-				else
+				if(params.fold) {
+					if(!emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented && INPUT.column() >= params.indent)
+						scalar += " ";
+					else if(nextEmptyLine)
+						foldedNewlineCount++;
+					else
+						scalar += "\n";
+					
+					if(!nextEmptyLine && foldedNewlineCount > 0) {
+						if(foldedNewlineStartedMoreIndented || nextMoreIndented)
+							scalar += std::string("\n", foldedNewlineCount);
+						foldedNewlineCount = 0;
+					}
+				} else {
 					scalar += "\n";
+				}
 			}
 
 			emptyLine = nextEmptyLine;
