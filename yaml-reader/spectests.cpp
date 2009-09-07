@@ -16,7 +16,7 @@ namespace {
 	};
 }
 
-#define YAML_ASSERT(cond) do { if(!(cond)) return "Assert failed: " #cond; } while(false)
+#define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
 
 namespace Test {
 	namespace {
@@ -26,7 +26,7 @@ namespace Test {
 				ret = test();
 			} catch(const YAML::Exception& e) {
 				ret.ok = false;
-				ret.error = e.msg;
+				ret.error = "  Exception caught: " + e.msg;
 			}
 			
 			if(ret.ok) {
@@ -40,6 +40,7 @@ namespace Test {
 	}
 
 	namespace Spec {
+		// 2.1
 		TEST SeqScalars() {
 			std::string input =
 				"- Mark McGwire\n"
@@ -57,6 +58,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.2
 		TEST MappingScalarsToScalars() {
 			std::string input =
 				"hr:  65    # Home runs\n"
@@ -74,6 +76,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.3
 		TEST MappingScalarsToSequences() {
 			std::string input =
 				"american:\n"
@@ -101,6 +104,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.4
 		TEST SequenceOfMappings()
 		{
 			std::string input =
@@ -129,6 +133,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.5
 		TEST SequenceOfSequences()
 		{
 			std::string input =
@@ -156,6 +161,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.6
 		TEST MappingOfMappings()
 		{
 			std::string input =
@@ -179,6 +185,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.7
 		TEST TwoDocumentsInAStream()
 		{
 			std::string input =
@@ -209,6 +216,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.8
 		TEST PlayByPlayFeed()
 		{
 			std::string input =
@@ -240,6 +248,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.9
 		TEST SingleDocumentWithTwoComments()
 		{
 			std::string input =
@@ -266,6 +275,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.10
 		TEST SimpleAnchor()
 		{
 			std::string input =
@@ -307,6 +317,7 @@ namespace Test {
 			node[1] >> p.second;
 		}
 		
+		// 2.11
 		TEST MappingBetweenSequences()
 		{
 			std::string input =
@@ -334,6 +345,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.12
 		TEST CompactNestedMapping()
 		{
 			std::string input =
@@ -363,6 +375,7 @@ namespace Test {
 			return true;
 		}
 		
+		// 2.13
 		TEST InLiteralsNewlinesArePreserved()
 		{
 			std::string input =
@@ -378,6 +391,406 @@ namespace Test {
 			YAML_ASSERT(doc ==
 						"\\//||\\/||\n"
 						"// ||  ||__");
+			return true;
+		}
+		
+		// 2.14
+		TEST InFoldedScalarsNewlinesBecomeSpaces()
+		{
+			std::string input =
+				"--- >\n"
+				"  Mark McGwire's\n"
+				"  year was crippled\n"
+				"  by a knee injury.";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc == "Mark McGwire's year was crippled by a knee injury.");
+			return true;
+		}
+		
+		// 2.15
+		TEST FoldedNewlinesArePreservedForMoreIndentedAndBlankLines()
+		{
+			std::string input =
+				">\n"
+				" Sammy Sosa completed another\n"
+				" fine season with great stats.\n"
+				" \n"
+				"   63 Home Runs\n"
+				"   0.288 Batting Average\n"
+				" \n"
+				" What a year!";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc ==
+						"Sammy Sosa completed another fine season with great stats.\n"
+						"  63 Home Runs\n"
+						"  0.288 Batting Average\n"
+						"What a year!");
+			return true;
+		}
+		
+		// 2.16
+		TEST IndentationDeterminesScope()
+		{
+			std::string input =
+				"name: Mark McGwire\n"
+				"accomplishment: >\n"
+				"  Mark set a major league\n"
+				"  home run record in 1998.\n"
+				"stats: |\n"
+				"  65 Home Runs\n"
+				"  0.278 Batting Average";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["name"] == "Mark McGwire");
+			YAML_ASSERT(doc["accomplishment"] == "Mark set a major league home run record in 1998.");
+			YAML_ASSERT(doc["stats"] == "65 Home Runs\n0.278 Batting Average");
+			return true;
+		}
+		
+		// 2.17
+		TEST QuotedScalars()
+		{
+			std::string input =
+				"unicode: \"Sosa did fine.\\u263A\"\n"
+				"control: \"\\b1998\\t1999\\t2000\\n\"\n"
+				"hex esc: \"\\x0d\\x0a is \\r\\n\"\n"
+				"\n"
+				"single: '\"Howdy!\" he cried.'\n"
+				"quoted: ' # Not a ''comment''.'\n"
+				"tie-fighter: '|\\-*-/|'";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 6);
+			YAML_ASSERT(doc["unicode"] == "Sosa did fine.\u263A");
+			YAML_ASSERT(doc["control"] == "\b1998\t1999\t2000\n");
+			YAML_ASSERT(doc["hex esc"] == "\x0d\x0a is \r\n");
+			YAML_ASSERT(doc["single"] == "\"Howdy!\" he cried.");
+			YAML_ASSERT(doc["quoted"] == " # Not a 'comment'.");
+			YAML_ASSERT(doc["tie-fighter"] == "|\\-*-/|");
+			return true;
+		}
+		
+		// 2.18
+		TEST MultiLineFlowScalars()
+		{
+			std::string input =
+				"plain:\n"
+				"  This unquoted scalar\n"
+				"  spans many lines.\n"
+				"\n"
+				"quoted: \"So does this\n"
+				"  quoted scalar.\\n\"";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["plain"] == "This unquoted scalar spans many lines.");
+			YAML_ASSERT(doc["quoted"] == "So does this quoted scalar.\n");
+			return true;
+		}
+		
+		// TODO: 2.19 - 2.26 tags
+		
+		// 2.27
+		TEST Invoice()
+		{
+			std::string input =
+				"--- !<tag:clarkevans.com,2002:invoice>\n"
+				"invoice: 34843\n"
+				"date   : 2001-01-23\n"
+				"bill-to: &id001\n"
+				"    given  : Chris\n"
+				"    family : Dumars\n"
+				"    address:\n"
+				"        lines: |\n"
+				"            458 Walkman Dr.\n"
+				"            Suite #292\n"
+				"        city    : Royal Oak\n"
+				"        state   : MI\n"
+				"        postal  : 48046\n"
+				"ship-to: *id001\n"
+				"product:\n"
+				"    - sku         : BL394D\n"
+				"      quantity    : 4\n"
+				"      description : Basketball\n"
+				"      price       : 450.00\n"
+				"    - sku         : BL4438H\n"
+				"      quantity    : 1\n"
+				"      description : Super Hoop\n"
+				"      price       : 2392.00\n"
+				"tax  : 251.42\n"
+				"total: 4443.52\n"
+				"comments:\n"
+				"    Late afternoon is best.\n"
+				"    Backup contact is Nancy\n"
+				"    Billsmer @ 338-4338.";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 8);
+			YAML_ASSERT(doc["invoice"] == 34843);
+			YAML_ASSERT(doc["date"] == "2001-01-23");
+			YAML_ASSERT(doc["bill-to"].size() == 3);
+			YAML_ASSERT(doc["bill-to"]["given"] == "Chris");
+			YAML_ASSERT(doc["bill-to"]["family"] == "Dumars");
+			YAML_ASSERT(doc["bill-to"]["address"].size() == 4);
+			YAML_ASSERT(doc["bill-to"]["address"]["lines"] == "458 Walkman Dr.\nSuite #292\n");
+			YAML_ASSERT(doc["bill-to"]["address"]["city"] == "Royal Oak");
+			YAML_ASSERT(doc["bill-to"]["address"]["state"] == "MI");
+			YAML_ASSERT(doc["bill-to"]["address"]["postal"] == "48046");
+			YAML_ASSERT(doc["ship-to"].size() == 3);
+			YAML_ASSERT(doc["ship-to"]["given"] == "Chris");
+			YAML_ASSERT(doc["ship-to"]["family"] == "Dumars");
+			YAML_ASSERT(doc["ship-to"]["address"].size() == 4);
+			YAML_ASSERT(doc["ship-to"]["address"]["lines"] == "458 Walkman Dr.\nSuite #292\n");
+			YAML_ASSERT(doc["ship-to"]["address"]["city"] == "Royal Oak");
+			YAML_ASSERT(doc["ship-to"]["address"]["state"] == "MI");
+			YAML_ASSERT(doc["ship-to"]["address"]["postal"] == "48046");
+			YAML_ASSERT(doc["product"].size() == 2);
+			YAML_ASSERT(doc["product"][0].size() == 4);
+			YAML_ASSERT(doc["product"][0]["sku"] == "BL394D");
+			YAML_ASSERT(doc["product"][0]["quantity"] == 4);
+			YAML_ASSERT(doc["product"][0]["description"] == "Basketball");
+			YAML_ASSERT(doc["product"][0]["price"] == "450.00");
+			YAML_ASSERT(doc["product"][1].size() == 4);
+			YAML_ASSERT(doc["product"][1]["sku"] == "BL4438H");
+			YAML_ASSERT(doc["product"][1]["quantity"] == 1);
+			YAML_ASSERT(doc["product"][1]["description"] == "Super Hoop");
+			YAML_ASSERT(doc["product"][1]["price"] == "2392.00");
+			YAML_ASSERT(doc["tax"] == "251.42");
+			YAML_ASSERT(doc["total"] == "4443.52");
+			YAML_ASSERT(doc["comments"] == "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.");
+			return true;
+		}
+		
+		// 2.28
+		TEST LogFile()
+		{
+			std::string input =
+				"---\n"
+				"Time: 2001-11-23 15:01:42 -5\n"
+				"User: ed\n"
+				"Warning:\n"
+				"  This is an error message\n"
+				"  for the log file\n"
+				"---\n"
+				"Time: 2001-11-23 15:02:31 -5\n"
+				"User: ed\n"
+				"Warning:\n"
+				"  A slightly different error\n"
+				"  message.\n"
+				"---\n"
+				"Date: 2001-11-23 15:03:17 -5\n"
+				"User: ed\n"
+				"Fatal:\n"
+				"  Unknown variable \"bar\"\n"
+				"Stack:\n"
+				"  - file: TopClass.py\n"
+				"    line: 23\n"
+				"    code: |\n"
+				"      x = MoreObject(\"345\\n\")\n"
+				"  - file: MoreClass.py\n"
+				"    line: 58\n"
+				"    code: |-\n"
+				"      foo = bar";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["Time"] == "2001-11-23 15:01:42 -5");
+			YAML_ASSERT(doc["User"] == "ed");
+			YAML_ASSERT(doc["Warning"] == "This is an error message for the log file");
+			
+			parser.GetNextDocument(doc);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["Time"] == "2001-11-23 15:02:31 -5");
+			YAML_ASSERT(doc["User"] == "ed");
+			YAML_ASSERT(doc["Warning"] == "A slightly different error message.");
+			
+			parser.GetNextDocument(doc);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc["Date"] == "2001-11-23 15:03:17 -5");
+			YAML_ASSERT(doc["User"] == "ed");
+			YAML_ASSERT(doc["Fatal"] == "Unknown variable \"bar\"");
+			YAML_ASSERT(doc["Stack"].size() == 2);
+			YAML_ASSERT(doc["Stack"][0].size() == 3);
+			YAML_ASSERT(doc["Stack"][0]["file"] == "TopClass.py");
+			YAML_ASSERT(doc["Stack"][0]["line"] == "23");
+			YAML_ASSERT(doc["Stack"][0]["code"] == "x = MoreObject(\"345\\n\")\n");
+			YAML_ASSERT(doc["Stack"][1].size() == 3);
+			YAML_ASSERT(doc["Stack"][1]["file"] == "MoreClass.py");
+			YAML_ASSERT(doc["Stack"][1]["line"] == "58");
+			YAML_ASSERT(doc["Stack"][1]["code"] == "foo = bar");
+			return true;
+		}
+		
+		// TODO: 5.1 - 5.2 BOM
+		
+		// 5.3
+		TEST BlockStructureIndicators()
+		{
+			std::string input =
+				"sequence:\n"
+				"- one\n"
+				"- two\n"
+				"mapping:\n"
+				"  ? sky\n"
+				"  : blue\n"
+				"  sea : green";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["sequence"].size() == 2);
+			YAML_ASSERT(doc["sequence"][0] == "one");
+			YAML_ASSERT(doc["sequence"][1] == "two");
+			YAML_ASSERT(doc["mapping"].size() == 2);
+			YAML_ASSERT(doc["mapping"]["sky"] == "blue");
+			YAML_ASSERT(doc["mapping"]["sea"] == "green");
+			return true;
+		}
+		
+		// 5.4
+		TEST FlowStructureIndicators()
+		{
+			std::string input =
+				"sequence: [ one, two, ]\n"
+				"mapping: { sky: blue, sea: green }";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["sequence"].size() == 2);
+			YAML_ASSERT(doc["sequence"][0] == "one");
+			YAML_ASSERT(doc["sequence"][1] == "two");
+			YAML_ASSERT(doc["mapping"].size() == 2);
+			YAML_ASSERT(doc["mapping"]["sky"] == "blue");
+			YAML_ASSERT(doc["mapping"]["sea"] == "green");
+			return true;
+		}
+		
+		// TODO: 5.5 comment only
+		
+		// 5.6
+		TEST NodePropertyIndicators()
+		{
+			std::string input =
+				"anchored: !local &anchor value\n"
+				"alias: *anchor";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["anchored"] == "value"); // TODO: assert tag
+			YAML_ASSERT(doc["alias"] == "value");
+			return true;
+		}
+		
+		// 5.7
+		TEST BlockScalarIndicators()
+		{
+			std::string input =
+				"literal: |\n"
+				"  some\n"
+				"  text\n"
+				"folded: >\n"
+				"  some\n"
+				"  text\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["literal"] == "some\ntext\n");
+			YAML_ASSERT(doc["folded"] == "some text\n");
+			return true;
+		}
+		
+		// 5.8
+		TEST QuotedScalarIndicators()
+		{
+			std::string input =
+				"single: 'text'\n"
+				"double: \"text\"";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["single"] == "text");
+			YAML_ASSERT(doc["double"] == "text");
+			return true;
+		}
+		
+		// TODO: 5.9 directive
+		// TODO: 5.10 reserved indicator
+		
+		// 5.11
+		TEST LineBreakCharacters()
+		{
+			std::string input =
+				"|\n"
+				"  Line break (no glyph)\n"
+				"  Line break (glyphed)\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc == "Line break (no glyph)\nLine break (glyphed)\n");
+			return true;
+		}
+		
+		// 5.12
+		TEST TabsAndSpaces()
+		{
+			std::string input =
+				"# Tabs and spaces\n"
+				"quoted: \"Quoted\t\"\n"
+				"block:	|\n"
+				"  void main() {\n"
+				"  \tprintf(\"Hello, world!\\n\");\n"
+				"  }";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["quoted"] == "Quoted\t");
+			YAML_ASSERT(doc["block"] ==
+						"void main() {\n"
+						"\tprintf(\"Hello, world!\\n\");\n"
+						"}");
 			return true;
 		}
 	}
@@ -398,6 +811,22 @@ namespace Test {
 		RunSpecTest(&Spec::MappingBetweenSequences, "2.11", "Mapping between Sequences", passed);
 		RunSpecTest(&Spec::CompactNestedMapping, "2.12", "Compact Nested Mapping", passed);
 		RunSpecTest(&Spec::InLiteralsNewlinesArePreserved, "2.13", "In literals, newlines are preserved", passed);
+		RunSpecTest(&Spec::InFoldedScalarsNewlinesBecomeSpaces, "2.14", "In folded scalars, newlines become spaces", passed);
+		RunSpecTest(&Spec::FoldedNewlinesArePreservedForMoreIndentedAndBlankLines, "2.15", "Folded newlines are preserved for \"more indented\" and blank lines", passed);
+		RunSpecTest(&Spec::IndentationDeterminesScope, "2.16", "Indentation determines scope", passed);
+		RunSpecTest(&Spec::QuotedScalars, "2.17", "Quoted scalars", passed);
+		RunSpecTest(&Spec::MultiLineFlowScalars, "2.18", "Multi-line flow scalars", passed);
+		
+		RunSpecTest(&Spec::Invoice, "2.27", "Invoice", passed);
+		RunSpecTest(&Spec::LogFile, "2.28", "Log File", passed);
+		
+		RunSpecTest(&Spec::BlockStructureIndicators, "5.3", "Block Structure Indicators", passed);
+		RunSpecTest(&Spec::FlowStructureIndicators, "5.4", "Flow Structure Indicators", passed);
+		RunSpecTest(&Spec::NodePropertyIndicators, "5.6", "Node Property Indicators", passed);
+		RunSpecTest(&Spec::BlockScalarIndicators, "5.7", "Block Scalar Indicators", passed);
+		RunSpecTest(&Spec::QuotedScalarIndicators, "5.8", "Quoted Scalar Indicators", passed);
+		RunSpecTest(&Spec::LineBreakCharacters, "5.11", "Line Break Characters", passed);
+		RunSpecTest(&Spec::TabsAndSpaces, "5.12", "Tabs and Spaces", passed);
 		return passed;
 	}
 	
