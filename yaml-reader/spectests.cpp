@@ -793,6 +793,45 @@ namespace Test {
 						"}");
 			return true;
 		}
+		
+		// 5.13
+		TEST EscapedCharacters()
+		{
+			std::string input =
+				"\"Fun with \\\\\n"
+				"\\\" \\a \\b \\e \\f \\\n"
+				"\\n \\r \\t \\v \\0 \\\n"
+				"\\  \\_ \\N \\L \\P \\\n"
+				"\\x41 \\u0041 \\U00000041\"";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc == "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \u2028 \u2029 A A A");
+			return true;
+		}
+		
+		// 5.14
+		TEST InvalidEscapedCharacters()
+		{
+			std::string input =
+				"Bad escapes:\n"
+				"  \"\\c\n"
+				"  \\xq-\"";
+			
+			std::stringstream stream(input);
+			try {
+				YAML::Parser parser(stream);
+				YAML::Node doc;
+				parser.GetNextDocument(doc);
+			} catch(const YAML::ParserException& e) {
+				YAML_ASSERT(e.msg == YAML::ErrorMsg::INVALID_ESCAPE + "c");
+				return true;
+			}
+			
+			return false;
+		}
 	}
 
 	bool RunSpecTests()
@@ -827,6 +866,8 @@ namespace Test {
 		RunSpecTest(&Spec::QuotedScalarIndicators, "5.8", "Quoted Scalar Indicators", passed);
 		RunSpecTest(&Spec::LineBreakCharacters, "5.11", "Line Break Characters", passed);
 		RunSpecTest(&Spec::TabsAndSpaces, "5.12", "Tabs and Spaces", passed);
+		RunSpecTest(&Spec::EscapedCharacters, "5.13", "Escaped Characters", passed);
+		RunSpecTest(&Spec::InvalidEscapedCharacters, "5.14", "Invalid Escaped Characters", passed);
 		return passed;
 	}
 	

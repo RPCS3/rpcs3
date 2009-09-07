@@ -83,7 +83,7 @@ namespace YAML
 				} else {
 					// TODO: for the common escaped characters, give their usual symbol
 					std::stringstream str;
-					str << "\\x" << std::hex << std::setfill('0') << std::setw(2) << static_cast <int>(ch);
+					str << "\\x" << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(static_cast<unsigned char>(ch));
 					out << str.str();
 				}
 			}
