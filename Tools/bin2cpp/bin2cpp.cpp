@@ -35,6 +35,19 @@
 
 #include <sys/stat.h>
 
+#if defined (__linux__) && !defined(__LINUX__)  // some distributions are lower case
+#define __LINUX__
+#endif
+
+#ifdef __LINUX__
+#define _stat stat
+#define _fcloseall fcloseall
+#include <string.h>
+#endif
+
+typedef unsigned char u8;
+typedef char s8;
+
 using namespace std;
 
 static const unsigned int BUF_LEN = 1;
@@ -49,10 +62,6 @@ long getfilesize( const char* filename )
 	_stat( filename, &result );
 	return result.st_size;
 }
-
-
-typedef unsigned char u8;
-typedef char s8;
 
 enum
 {
@@ -121,7 +130,12 @@ int main(int argc, char* argv[])
 	char wxImgTypeLower[24];
 	strcpy( wxImgTypeUpper, &srcfile[srcfn_len-3] );
 	//strcpy( wxImgTypeLower, argv[ARG_IMGEXT] );
+#ifdef __LINUX__
+	for (int i = 0; i < 24; i++)
+		wxImgTypeUpper[i] = toupper(wxImgTypeUpper[i]);
+#else
 	strupr( wxImgTypeUpper );
+#endif
 	//strupr( wxImgTypeLower );
 
 	if( strcmp( wxImgTypeUpper, "JPG" ) == 0 )
