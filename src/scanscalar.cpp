@@ -19,7 +19,8 @@ namespace YAML
 	//   and different places in the above flow.
 	std::string ScanScalar(Stream& INPUT, ScanScalarParams& params)
 	{
-		bool foundNonEmptyLine = false, pastOpeningBreak = false;
+		bool foundNonEmptyLine = false;
+		bool pastOpeningBreak = (params.fold == FOLD_FLOW);
 		bool emptyLine = false, moreIndented = false;
 		int foldedNewlineCount = 0;
 		bool foldedNewlineStartedMoreIndented = false;
@@ -29,6 +30,8 @@ namespace YAML
 		while(INPUT) {
 			// ********************************
 			// Phase #1: scan until line ending
+			
+			std::size_t lastNonWhitespaceChar = scalar.size();
 			while(!params.end.Matches(INPUT) && !Exp::Break.Matches(INPUT)) {
 				if(!INPUT)
 					break;
@@ -48,17 +51,22 @@ namespace YAML
 				if(params.escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
 					int n = Exp::EscBreak.Match(INPUT);
 					INPUT.eat(n);
+					lastNonWhitespaceChar = scalar.size();
 					continue;
 				}
 
 				// escape this?
 				if(INPUT.peek() == params.escape) {
 					scalar += Exp::Escape(INPUT);
+					lastNonWhitespaceChar = scalar.size();
 					continue;
 				}
 
 				// otherwise, just add the damn character
-				scalar += INPUT.get();
+				char ch = INPUT.get();
+				scalar += ch;
+				if(ch != ' ' && ch != '\t')
+					lastNonWhitespaceChar = scalar.size();
 			}
 
 			// eof? if we're looking to eat something, then we throw
@@ -79,7 +87,11 @@ namespace YAML
 					INPUT.eat(n);
 				break;
 			}
-
+			
+			// do we remove trailing whitespace?
+			if(params.fold == FOLD_FLOW)
+				scalar.erase(lastNonWhitespaceChar);
+			
 			// ********************************
 			// Phase #2: eat line ending
 			n = Exp::Break.Match(INPUT);
@@ -111,27 +123,36 @@ namespace YAML
 			// was this an empty line?
 			bool nextEmptyLine = Exp::Break.Matches(INPUT);
 			bool nextMoreIndented = Exp::Blank.Matches(INPUT);
-			if(params.fold && foldedNewlineCount == 0 && nextEmptyLine)
+			if(params.fold == FOLD_BLOCK && foldedNewlineCount == 0 && nextEmptyLine)
 				foldedNewlineStartedMoreIndented = moreIndented;
 
 			// for block scalars, we always start with a newline, so we should ignore it (not fold or keep)
 			if(pastOpeningBreak) {
-				if(params.fold) {
-					if(!emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented && INPUT.column() >= params.indent)
-						scalar += " ";
-					else if(nextEmptyLine)
-						foldedNewlineCount++;
-					else
+				switch(params.fold) {
+					case DONT_FOLD:
 						scalar += "\n";
-					
-					if(!nextEmptyLine && foldedNewlineCount > 0) {
-						scalar += std::string(foldedNewlineCount - 1, '\n');
-						if(foldedNewlineStartedMoreIndented || nextMoreIndented)
+						break;
+					case FOLD_BLOCK:
+						if(!emptyLine && !nextEmptyLine && !moreIndented && !nextMoreIndented && INPUT.column() >= params.indent)
+							scalar += " ";
+						else if(nextEmptyLine)
+							foldedNewlineCount++;
+						else
 							scalar += "\n";
-						foldedNewlineCount = 0;
-					}
-				} else {
-					scalar += "\n";
+						
+						if(!nextEmptyLine && foldedNewlineCount > 0) {
+							scalar += std::string(foldedNewlineCount - 1, '\n');
+							if(foldedNewlineStartedMoreIndented || nextMoreIndented)
+								scalar += "\n";
+							foldedNewlineCount = 0;
+						}
+						break;
+					case FOLD_FLOW:
+						if(nextEmptyLine)
+							scalar += "\n";
+						else if(!emptyLine && !nextEmptyLine)
+							scalar += " ";
+						break;
 				}
 			}
 

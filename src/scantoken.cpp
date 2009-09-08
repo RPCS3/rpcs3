@@ -287,7 +287,7 @@ namespace YAML
 		params.end = (InFlowContext() ? Exp::EndScalarInFlow : Exp::EndScalar) || (Exp::BlankOrBreak + Exp::Comment);
 		params.eatEnd = false;
 		params.indent = (InFlowContext() ? 0 : GetTopIndent() + 1);
-		params.fold = true;
+		params.fold = FOLD_BLOCK;
 		params.eatLeadingWhitespace = true;
 		params.trimTrailingSpaces = true;
 		params.chomp = STRIP;
@@ -327,7 +327,7 @@ namespace YAML
 		params.eatEnd = true;
 		params.escape = (single ? '\'' : '\\');
 		params.indent = 0;
-		params.fold = true;
+		params.fold = FOLD_FLOW;
 		params.eatLeadingWhitespace = true;
 		params.trimTrailingSpaces = false;
 		params.chomp = CLIP;
@@ -365,7 +365,7 @@ namespace YAML
 		// eat block indicator ('|' or '>')
 		Mark mark = INPUT.mark();
 		char indicator = INPUT.get();
-		params.fold = (indicator == Keys::FoldedScalar);
+		params.fold = (indicator == Keys::FoldedScalar ? FOLD_BLOCK : DONT_FOLD);
 
 		// eat chomping/indentation indicators
 		params.chomp = CLIP;
