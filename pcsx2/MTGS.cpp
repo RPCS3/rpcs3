@@ -222,13 +222,13 @@ mtgsThreadObject::~mtgsThreadObject()
 	mtgsThreadObject::Cancel();
 }
 
+// Closes the GS "forcefully" without waiting for it to finish rendering it's pending
+// queue of GS data.
 void mtgsThreadObject::Cancel()
 {
-	SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
-	SetEvent();
-	m_sem_Quitter.Wait( wxTimeSpan( 0, 0, 5, 0 ) );
-	Sleep( 2 );
-	PersistentThread::Cancel( true );
+	//SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
+	//SetEvent();
+	PersistentThread::Cancel();
 }
 
 void mtgsThreadObject::Reset()
@@ -498,24 +498,22 @@ struct PacketTagType
 	u32 data[3];
 };
 
-sptr mtgsThreadObject::ExecuteTask()
+extern bool renderswitch;
+
+void mtgsThreadObject::_close_gs()
 {
-	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
-	GSsetBaseMem( m_gsMem );
-	GSirqCallback( NULL );
+	if( g_plugins != NULL )
+		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
+}
 
-	GetPluginManager().Open( PluginId_GS );
-	
-	DbgCon::WriteLn( "MTGS: GSopen Finished, return code: 0x%x", params m_returncode );
+static void _clean_close_gs( void* obj )
+{
+	((mtgsThreadObject*)obj)->_close_gs();
+}
 
-	GSCSRr = 0x551B4000; // 0x55190000
-	m_sem_InitDone.Post();
-	if (m_returncode != 0) { return m_returncode; }		// error msg will be issued to the user by Plugins.c
-
-#ifdef RINGBUF_DEBUG_STACK
-	PacketTagType prevCmd;
-#endif
-
+void mtgsThreadObject::_RingbufferLoop()
+{
+	pthread_cleanup_push( _clean_close_gs, this );
 	while( true )
 	{
 		m_sem_event.Wait();
@@ -526,7 +524,7 @@ sptr mtgsThreadObject::ExecuteTask()
 		// ever be modified by this thread.
 		while( m_RingPos != volatize(m_WritePos))
 		{
-			assert( m_RingPos < m_RingBufferSize );
+			wxASSERT( m_RingPos < m_RingBufferSize );
 
 			const PacketTagType& tag = (PacketTagType&)m_RingBuffer[m_RingPos];
 			u32 ringposinc = 1;
@@ -540,7 +538,7 @@ sptr mtgsThreadObject::ExecuteTask()
 			{
 				Console::Error( "MTGS Ringbuffer Critical Failure ---> %x to %x (prevCmd: %x)\n", params stackpos, m_RingPos, prevCmd.command );
 			}
-			assert( stackpos == m_RingPos );
+			wxASSERT( stackpos == m_RingPos );
 			prevCmd = tag;
 			ringposStack.pop_back();
 			m_lock_Stack.Unlock();
@@ -664,14 +662,14 @@ sptr mtgsThreadObject::ExecuteTask()
 				break;
 
 				case GS_RINGTYPE_QUIT:
-					GetPluginManager().Close( PluginId_GS );
-					m_sem_Quitter.Post();
-				return 0;
+					// have to use some low level code, because all the standard Close api does is
+					// trigger this very ringbuffer message!
+				return;
 
 #ifdef PCSX2_DEVBUILD
 				default:
 					Console::Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", params tag.command, m_RingPos, m_WritePos);
-					assert(0);
+					wxASSERT_MSG( false, L"Bad packet encountered in the MTGS Ringbuffer." );
 					m_RingPos = m_WritePos;
 					continue;
 #else
@@ -681,12 +679,35 @@ sptr mtgsThreadObject::ExecuteTask()
 			}
 
 			uint newringpos = m_RingPos + ringposinc;
-			assert( newringpos <= m_RingBufferSize );
+			wxASSERT( newringpos <= m_RingBufferSize );
 			newringpos &= m_RingBufferMask;
 			AtomicExchange( m_RingPos, newringpos );
 		}
 		AtomicExchange( m_RingBufferIsBusy, 0 );
 	}
+	pthread_cleanup_pop( true );
+}
+
+sptr mtgsThreadObject::ExecuteTask()
+{
+	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
+	GSsetBaseMem( m_gsMem );
+	GSirqCallback( NULL );
+
+	Console::WriteLn( (wxString)L"\t\tForced software switch: " + (renderswitch ? L"Enabled" : L"Disabled") );
+	m_returncode = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+	DevCon::WriteLn( "MTGS: GSopen Finished, return code: 0x%x", params m_returncode );
+
+	GSCSRr = 0x551B4000; // 0x55190000
+	m_sem_InitDone.Post();
+	if (m_returncode != 0) { return m_returncode; }		// error msg will be issued to the user by Plugins.c
+
+#ifdef RINGBUF_DEBUG_STACK
+	PacketTagType prevCmd;
+#endif
+
+	_RingbufferLoop();
+	return 0;
 }
 
 // Waits for the GS to empty out the entire ring buffer contents.

@@ -450,7 +450,7 @@ __forceinline void rcntUpdate_vSync()
 		{
 			eeRecIsReset = false;
 			cpuSetBranch();
-			throw Exception::RecompilerReset();
+			throw Exception::ForceDispatcherReg();
 		}
 
 		VSyncEnd(vsyncCounter.sCycle);

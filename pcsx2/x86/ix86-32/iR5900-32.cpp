@@ -288,7 +288,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE)
 	{
 		Console::Status( "EErec const buffer filled; Resetting..." );
-		throw Exception::RecompilerReset();
+		throw Exception::ForceDispatcherReg();
 	
 		/*for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
 		{
@@ -579,50 +579,56 @@ static void recExecute()
 
 	g_EEFreezeRegs = true;
 
-	while( true )
+	try
 	{
-		try
+		while( true )
 		{
-#ifdef _MSC_VER
-
-			__asm
+			try
 			{
-				push ebx
-				push esi
-				push edi
-				push ebp
+	#ifdef _MSC_VER
 
-				call DispatcherReg
+				__asm
+				{
+					push ebx
+					push esi
+					push edi
+					push ebp
 
-				pop ebp
-				pop edi
-				pop esi
-				pop ebx
+					call DispatcherReg
+
+					pop ebp
+					pop edi
+					pop esi
+					pop ebx
+				}
+
+	#else // _MSC_VER
+
+				__asm__
+				(
+					".intel_syntax noprefix\n"
+					"push ebx\n"
+					"push esi\n"
+					"push edi\n"
+					"push ebp\n"
+
+					"call DispatcherReg\n"
+
+					"pop ebp\n"
+					"pop edi\n"
+					"pop esi\n"
+					"pop ebx\n"
+					".att_syntax\n"
+				);
+	#endif
 			}
-
-#else // _MSC_VER
-
-			__asm__
-			(
-				".intel_syntax noprefix\n"
-				"push ebx\n"
-				"push esi\n"
-				"push edi\n"
-				"push ebp\n"
-
-				"call DispatcherReg\n"
-
-				"pop ebp\n"
-				"pop edi\n"
-				"pop esi\n"
-				"pop ebx\n"
-				".att_syntax\n"
-			);
-#endif
+			catch( Exception::ForceDispatcherReg& )
+			{
+			}
 		}
-		catch( Exception::RecompilerReset& )
-		{
-		}
+	}
+	catch( Exception::ExitRecExecute& )
+	{
 	}
 
 	g_EEFreezeRegs = false;
@@ -750,27 +756,21 @@ void recClear(u32 addr, u32 size)
 		ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
 }
 
+static void ExitRec()
+{
+	throw Exception::ExitRecExecute();
+}
+
 // check for end of bios
 void CheckForBIOSEnd()
 {
-	MOV32MtoR(EAX, (int)&cpuRegs.pc);
+	xMOV( eax, &cpuRegs.pc );
 
-	CMP32ItoR(EAX, 0x00200008);
-	j8Ptr[0] = JE8(0);
+	xCMP( eax, 0x00200008 );
+	xJE( ExitRec );
 
-	CMP32ItoR(EAX, 0x00100008);
-	j8Ptr[1] = JE8(0);
-
-	// return
-	j8Ptr[2] = JMP8(0);
-
-	x86SetJ8( j8Ptr[0] );
-	x86SetJ8( j8Ptr[1] );
-
-	// bios end
-	RET();
-
-	x86SetJ8( j8Ptr[2] );
+	xCMP( eax, 0x00100008 );
+	xJE( ExitRec );
 }
 
 static int *s_pCode;

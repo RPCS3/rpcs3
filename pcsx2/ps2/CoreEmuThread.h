@@ -45,15 +45,13 @@ protected:
 	bool m_resetRecompilers;
 	bool m_resetProfilers;
 	
-	const wxString m_elf_file;
-
 	MutexLock m_lock_ExecMode;
 
 public:
 	static CoreEmuThread& Get();
 
 public:
-	explicit CoreEmuThread( const wxString& elf_file=wxEmptyString );
+	explicit CoreEmuThread();
 	virtual ~CoreEmuThread();
 
 	bool IsSuspended() const { return (m_ExecMode == ExecMode_Suspended); }

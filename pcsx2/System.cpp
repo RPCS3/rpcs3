@@ -362,9 +362,9 @@ void SysLoadState( const wxString& file )
 		GSsetGameCRC(ElfCRC, g_ZeroGSOptions);
 }
 
-void SysReset()
+void SysShutdown()
 {
-	Console::Status( _("Resetting...") );
+	Console::Status( "Resetting..." );
 
 	safe_delete( g_EmuThread );
 	GetPluginManager().Shutdown();

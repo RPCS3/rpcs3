@@ -36,10 +36,16 @@ namespace Exception
 	// Implementation Note: this exception has no meaningful type information and we don't
 	// care to have it be caught by any BaseException handlers lying about, so let's not
 	// derive from BaseException :D
-	class RecompilerReset
+	class ForceDispatcherReg
 	{
 	public:
-		explicit RecompilerReset() { }
+		explicit ForceDispatcherReg() { }
+	};
+
+	class ExitRecExecute
+	{
+	public:
+		explicit ExitRecExecute() { }
 	};
 }
 #ifndef __LINUX__

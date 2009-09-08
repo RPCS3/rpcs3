@@ -560,6 +560,7 @@ void cpuExecuteBios()
 
 	Console::Status( "Executing Bios Stub..." );
 
+	PCSX2_MEM_PROTECT_BEGIN();
 	g_ExecBiosHack = true;
 	while(	cpuRegs.pc != 0x00200008 &&
 			cpuRegs.pc != 0x00100008 )
@@ -567,6 +568,7 @@ void cpuExecuteBios()
 		Cpu->Execute();
 	}
 	g_ExecBiosHack = false;
+	PCSX2_MEM_PROTECT_END();
 
 //    {
 //        FILE* f = fopen("eebios.bin", "wb");

@@ -717,18 +717,10 @@ static bool OpenPlugin_CDVD()
 
 static bool OpenPlugin_GS()
 {
-	if( mtgsThread == NULL )
-	{
-		mtgsOpen();	// mtgsOpen raises its own exception on error
-		return true;
-	}
+	if( mtgsThread != NULL ) return true;
 
-	if( !mtgsThread->IsSelf() ) return true;	// already opened?
-
-	return !GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
-
-	// Note: renderswitch is us abusing the isMultiThread parameter for that so
-	// we don't need a new callback
+	mtgsOpen();	// mtgsOpen raises its own exception on error
+	return true;
 }
 
 static bool OpenPlugin_PAD()
@@ -815,29 +807,22 @@ void PluginManager::Open()
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
-
 	DevCon::Status( "\tClosing %s", params tbl_PluginInfo[pid].shortname );
+
 	if( pid == PluginId_GS )
 	{
 		if( mtgsThread == NULL ) return;
 
-		if( !mtgsThread->IsSelf() )
-		{
-			// force-close PAD before GS, because the PAD depends on the GS window.
-			Close( PluginId_PAD );
-
-			safe_delete( mtgsThread );
-			return;
-		}
+		// force-close PAD before GS, because the PAD depends on the GS window.
+		Close( PluginId_PAD );
+		safe_delete( mtgsThread );
 	}
 	else if( pid == PluginId_CDVD )
-	{
 		DoCDVDclose();
-		return;
-	}
+	else
+		m_info[pid].CommonBindings.Close();
 
 	m_info[pid].IsOpened = false;
-	m_info[pid].CommonBindings.Close();
 }
 
 void PluginManager::Close( bool closegs )

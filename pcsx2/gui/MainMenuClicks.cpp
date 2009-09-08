@@ -111,6 +111,8 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 	SysEndExecution();
 	InitPlugins();
 
+	EmuConfig.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
+
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	SysExecute( new AppEmuThread(), g_Conf->CdvdSource );
 }
@@ -134,33 +136,8 @@ void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 
 	SysEndExecution();
 
-	wxString elf_file;
-	if( EmuConfig.SkipBiosSplash )
-	{
-		// Fetch the ELF filename and CD type from the CDVD provider.
-		wxString ename( g_Conf->CurrentIso );
-		int result = GetPS2ElfName( ename );
-		switch( result )
-		{
-			case 0:
-				Msgbox::Alert( _("Boot failed: CDVD image is not a PS1 or PS2 game.") );
-			return;
-
-			case 1:
-				Msgbox::Alert( _("Boot failed: PCSX2 does not support emulation of PS1 games.") );
-			return;
-
-			case 2:
-				// PS2 game.  Valid!
-				elf_file = ename;
-			break;
-
-			jNO_DEFAULT
-		}
-	}
-
 	InitPlugins();
-	SysExecute( new AppEmuThread( elf_file ), CDVDsrc_Iso );
+	SysExecute( new AppEmuThread(), CDVDsrc_Iso );
 }
 
 /*void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
@@ -218,13 +195,13 @@ void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 {
-	SysReset();
+	SysShutdown();
 	Close();
 }
 
 void MainEmuFrame::Menu_EmuClose_Click(wxCommandEvent &event)
 {
-	SysReset();
+	SysEndExecution();
 	GetMenuBar()->Check( MenuId_Emu_Pause, false );
 }
 
@@ -239,7 +216,7 @@ void MainEmuFrame::Menu_EmuPause_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 {
 	bool wasRunning = EmulationInProgress();
-	SysReset();
+	SysShutdown();
 
 	GetMenuBar()->Check( MenuId_Emu_Pause, false );
 

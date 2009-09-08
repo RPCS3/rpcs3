@@ -128,9 +128,9 @@ static void FindLayer1Start()
 	{
 		// search for it
 		int off = iso->blockofs;
-		u8 tempbuffer[2352];
+		u8 tempbuffer[CD_FRAMESIZE_RAW];
 
-		Console::Status("CDVD ISO: searching for layer1...");
+		Console::Status("CDVDiso: searching for layer1...");
 		//tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
 		for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
 		{
@@ -148,11 +148,12 @@ static void FindLayer1Start()
 
 		if(layer1start == 0x200010)
 		{
-			Console::Status("Couldn't find second layer on dual layer... ignoring\n");
+			Console::Status("\tCouldn't find second layer on dual layer... ignoring");
 			layer1start=-2;
 		}
 
-		if(layer1start>=0) Console::Status("found at 0x%8.8x\n", params layer1start);
+		if(layer1start>=0)
+			Console::Status("\tfound at 0x%8.8x", params layer1start);
 	}
 }
 

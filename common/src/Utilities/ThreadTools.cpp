@@ -62,9 +62,9 @@ namespace Threading
 		if( !_InterlockedExchange( &m_detached, true ) )
 		{
 #if wxUSE_GUI
-			m_sem_finished.WaitGui( wxTimeSpan( 0, 0, 3 ) );
+			m_sem_finished.WaitGui();
 #else
-			m_sem_finished.Wait( wxTimeSpan( 0, 0, 3 ) );
+			m_sem_finished.Wait();
 #endif
 			m_running = false;
 		}
@@ -74,6 +74,7 @@ namespace Threading
 	void PersistentThread::Start()
 	{
 		if( m_running ) return;
+		m_sem_finished.Reset();
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 			throw Exception::ThreadCreationError();
 
@@ -107,8 +108,7 @@ namespace Threading
 
 		if( _InterlockedExchange( &m_detached, true ) )
 		{
-			if( m_running )
-				Console::Notice( "Threading Warning: Attempted to cancel detached thread; Ignoring..." );
+			Console::Notice( "Threading Warning: Attempted to cancel detached thread; Ignoring..." );
 			return;
 		}
 
@@ -118,9 +118,9 @@ namespace Threading
 		if( isBlocking )
 		{
 #if wxUSE_GUI
-			m_sem_finished.WaitGui( wxTimeSpan( 0, 0, 3 ) );
+			m_sem_finished.WaitGui();
 #else
-			m_sem_finished.Wait( wxTimeSpan( 0, 0, 3 ) );
+			m_sem_finished.Wait();
 #endif
 		}
 		else
@@ -152,9 +152,9 @@ namespace Threading
 			DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
 
 #if wxUSE_GUI
-			m_sem_finished.WaitGui( wxTimeSpan( 0, 0, 3 ) );
+			m_sem_finished.WaitGui();
 #else
-			m_sem_finished.Wait( wxTimeSpan( 0, 0, 3 ) );
+			m_sem_finished.Wait();
 #endif
 			return m_returncode;
 		}
@@ -189,6 +189,7 @@ namespace Threading
 	{
 		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
 		_InterlockedExchange( &m_running, false );
+		m_sem_finished.Post();
 	}
 
 	void* PersistentThread::_internal_callback( void* itsme )
@@ -280,7 +281,7 @@ namespace Threading
 			
 			do {
 				wxTheApp->ProcessPendingEvents();
-			} while( sem_timedwait( &sema, &ts_msec_200 ) == ETIMEDOUT );
+			} while( (sem_timedwait( &sema, &ts_msec_200 ) == -1) && (errno == ETIMEDOUT) );
 		}
 	}
 
@@ -300,7 +301,7 @@ namespace Threading
 			static const wxTimeSpan pass( 0, 0, 0, 200 );
 			do {
 				wxTheApp->ProcessPendingEvents();
-				if( sem_timedwait( &sema, &ts_msec_200 ) != ETIMEDOUT )
+				if( (sem_timedwait( &sema, &ts_msec_200 ) == -1) && (errno == ETIMEDOUT) )
 					break;
 				countdown -= pass;
 			} while( countdown.GetMilliseconds() > 0 );
@@ -318,7 +319,7 @@ namespace Threading
 	bool Semaphore::Wait( const wxTimeSpan& timeout )
 	{
 		const timespec fail = { timeout.GetSeconds().GetLo(), 0 };
-		return sem_timedwait( &sema, &fail ) != ETIMEDOUT;
+		return sem_timedwait( &sema, &fail ) != -1;
 	}
 
 	// Performs an uncancellable wait on a semaphore; restoring the thread's previous cancel state

@@ -59,9 +59,9 @@ namespace Exception
 	};
 }
 
-AppEmuThread::AppEmuThread( const wxString& elf_file ) :
-	m_kevt()
-,	CoreEmuThread( elf_file )
+AppEmuThread::AppEmuThread() :
+	CoreEmuThread()
+,	m_kevt()
 {
 	MemoryCard::Init();
 }
@@ -414,7 +414,7 @@ void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 
 void Pcsx2App::CleanupMess()
 {
-	SysReset();
+	SysShutdown();
 	safe_delete( m_Bitmap_Logo );
 	safe_delete( g_Conf );
 }

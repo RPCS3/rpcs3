@@ -137,6 +137,7 @@ struct LegacyPluginAPI_Common
 };
 
 class SaveState;
+class mtgsThreadObject;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // IPluginManager
@@ -228,6 +229,8 @@ protected:
 	void BindCommon( PluginsEnum_t pid );
 	void BindRequired( PluginsEnum_t pid );
 	void BindOptional( PluginsEnum_t pid );
+	
+	friend class mtgsThreadObject;
 };
 
 extern const PluginInfo tbl_PluginInfo[];

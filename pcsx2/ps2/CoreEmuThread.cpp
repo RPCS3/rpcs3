@@ -43,9 +43,6 @@ void CoreEmuThread::CpuInitializeMess()
 	SysClearExecutionCache();
 	GetPluginManager().Open();
 
-	if( GSsetGameCRC != NULL )
-		GSsetGameCRC( ElfCRC, 0 );
-
 	if( StateRecovery::HasState() )
 	{
 		// no need to boot bios or detect CDs when loading savestates.
@@ -56,7 +53,30 @@ void CoreEmuThread::CpuInitializeMess()
 	}
 	else
 	{
-		if( !m_elf_file.IsEmpty() )
+		wxString elf_file;
+		if( EmuConfig.SkipBiosSplash )
+		{
+			// Fetch the ELF filename and CD type from the CDVD provider.
+			wxString ename;
+			int result = GetPS2ElfName( ename );
+			switch( result )
+			{
+				case 0:
+					throw Exception::RuntimeError( wxLt("Fast Boot failed: CDVD image is not a PS1 or PS2 game.") );
+
+				case 1:
+					throw Exception::RuntimeError( wxLt("Fast Boot failed: PCSX2 does not support emulation of PS1 games.") );
+
+				case 2:
+					// PS2 game.  Valid!
+					elf_file = ename;
+				break;
+
+				jNO_DEFAULT
+			}
+		}
+
+		if( !elf_file.IsEmpty() )
 		{
 			// Skip Bios Hack -- Runs the PS2 BIOS stub, and then manually loads the ELF
 			// executable data, and injects the cpuRegs.pc with the address of the
@@ -66,9 +86,12 @@ void CoreEmuThread::CpuInitializeMess()
 			// (though not recommended for games because of rare ill side effects).
 
 			cpuExecuteBios();
-			loadElfFile( m_elf_file );
+			loadElfFile( elf_file );
 		}
 	}
+	
+	if( GSsetGameCRC != NULL )
+		GSsetGameCRC( ElfCRC, 0 );
 }
 
 // special macro which disables inlining on functions that require their own function stackframe.
@@ -140,14 +163,13 @@ void CoreEmuThread::StateCheck()
 	}
 }
 
-CoreEmuThread::CoreEmuThread( const wxString& elf_file ) :
+CoreEmuThread::CoreEmuThread() :
 	m_ExecMode( ExecMode_Idle )
 ,	m_ResumeEvent()
 ,	m_SuspendEvent()
 ,	m_resetRecompilers( false )
 ,	m_resetProfilers( false )
 
-,	m_elf_file( elf_file )
 ,	m_lock_ExecMode()
 {
 	PersistentThread::Start();
@@ -156,8 +178,8 @@ CoreEmuThread::CoreEmuThread( const wxString& elf_file ) :
 // Invoked by the pthread_exit or pthread_cancel
 void CoreEmuThread::DoThreadCleanup()
 {
-	PersistentThread::DoThreadCleanup();
 	GetPluginManager().Close();
+	PersistentThread::DoThreadCleanup();
 }
 
 CoreEmuThread::~CoreEmuThread()

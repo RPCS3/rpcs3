@@ -319,7 +319,7 @@ protected:
 	wxKeyEvent		m_kevt;
 
 public:
-	AppEmuThread( const wxString& elf_file=wxEmptyString );
+	AppEmuThread();
 	virtual ~AppEmuThread() { }
 
 	virtual void Resume();

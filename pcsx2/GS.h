@@ -180,10 +180,6 @@ protected:
 	// used to regulate thread startup and gsInit
 	Threading::Semaphore m_sem_InitDone;
 
-	// used for quitting the ringbuffer thread only -- is posted by the ringbuffer when
-	// a QUIT message is processed (signals that the GS has been closed).
-	Threading::Semaphore m_sem_Quitter;
-
 	Threading::MutexLock m_lock_RingRestart;
 	
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
@@ -251,17 +247,7 @@ public:
 
 	void PostVsyncEnd( bool updategs );
 
-	uptr FnPtr_SimplePacket() const
-	{
-#ifndef __LINUX__
-		__asm mov eax, SendSimplePacket
-#else
-		__asm__ (".intel_syntax noprefix\n"
-			     "mov eax, SendSimplePacket\n"
-			      ".att_syntax\n");
-#endif
-		//return (uptr)&SendSimplePacket;
-	}
+	void _close_gs();
 
 protected:
 	// Saves MMX/XMM regs, posts an event to the mtgsThread flag and releases a timeslice.
@@ -279,7 +265,7 @@ protected:
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();
 	void _FinishSimplePacket( uint future_writepos );
-
+	void _RingbufferLoop();
 	sptr ExecuteTask();
 };
 

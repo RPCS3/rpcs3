@@ -33,7 +33,7 @@ class CoreEmuThread;
 
 extern bool SysInit();
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
-extern void SysReset();					// Resets the various PS2 cpus, sub-systems, and recompilers.
+extern void SysShutdown();					// Resets the various PS2 cpus, sub-systems, and recompilers.
 
 extern void SysExecute( CoreEmuThread* newThread );
 extern void SysExecute( CoreEmuThread* newThread, CDVD_SourceType cdvdsrc );
