@@ -1011,6 +1011,118 @@ namespace Test {
 			YAML_ASSERT(doc == " foo\nbar\nbaz ");
 			return true;
 		}
+		
+		// 6.9
+		TEST SeparatedComment()
+		{
+			std::string input =
+				"key:    # Comment\n"
+				"  value";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["key"] == "value");
+			return true;
+		}
+		
+		// 6.10
+		TEST CommentLines()
+		{
+			std::string input =
+				"  # Comment\n"
+				"   \n"
+				"\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			
+			YAML_ASSERT(!parser);
+			return true;
+		}
+		
+		// 6.11
+		TEST MultiLineComments()
+		{
+			std::string input =
+				"key:    # Comment\n"
+				"        # lines\n"
+				"  value\n"
+				"\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["key"] == "value");
+			return true;
+		}
+
+		struct StringMap {
+			typedef std::map<std::string, std::string> Map;
+			Map _;
+		};
+		
+		bool operator == (const StringMap& m, const StringMap& n) {
+			return m._ == n._;
+		}
+		
+		void operator >> (const YAML::Node& node, StringMap& m) {
+			m._.clear();
+			for(YAML::Iterator it=node.begin();it!=node.end();++it) {
+				std::string key = it.first();
+				std::string value = it.second();
+				m._[key] = value;
+			}
+		}
+
+		
+		// 6.12
+		TEST SeparationSpacesII()
+		{
+			std::string input =
+				"{ first: Sammy, last: Sosa }:\n"
+				"# Statistics:\n"
+				"  hr:  # Home runs\n"
+				"     65\n"
+				"  avg: # Average\n"
+				"   0.278";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			StringMap key;
+			key._["first"] = "Sammy";
+			key._["last"] = "Sosa";
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[key].size() == 2);
+			YAML_ASSERT(doc[key]["hr"] == 65);
+			YAML_ASSERT(doc[key]["avg"] == "0.278");
+			return true;
+		}
+		
+		// TODO: 6.13 - 6.17 directives
+		// TODO: 6.18 - 6.28 tags
+
+		// 6.29
+		TEST NodeAnchors()
+		{
+			std::string input =
+				"First occurrence: &anchor Value\n"
+				"Second occurrence: *anchor";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["First occurrence"] == "Value");
+			YAML_ASSERT(doc["Second occurrence"] == "Value");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -1057,6 +1169,11 @@ namespace Test {
 		RunSpecTest(&Spec::LineFolding, "6.6", "Line Folding", passed, total);
 		RunSpecTest(&Spec::BlockFolding, "6.7", "Block Folding", passed, total);
 		RunSpecTest(&Spec::FlowFolding, "6.8", "Flow Folding", passed, total);
+		RunSpecTest(&Spec::SeparatedComment, "6.9", "Separated Comment", passed, total);
+		RunSpecTest(&Spec::CommentLines, "6.10", "Comment Lines", passed, total);
+		RunSpecTest(&Spec::SeparationSpacesII, "6.11", "Separation Spaces", passed, total);
+		
+		RunSpecTest(&Spec::NodeAnchors, "6.29", "Node Anchors", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
