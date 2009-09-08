@@ -198,6 +198,10 @@
 		<Unit filename="../IopSio2.cpp" />
 		<Unit filename="../IopSio2.h" />
 		<Unit filename="LnxHostSys.cpp" />
+		<Unit filename="LnxKeyCodes.cpp">
+			<Option link="0" />
+			<Option compiler="gcc" use="1" buildCommand="$compiler $options $includes `pkg-config gtk+-2.0 --cflags` -c $file -o $object" />
+		</Unit>
 		<Unit filename="../MMI.cpp" />
 		<Unit filename="../MTGS.cpp" />
 		<Unit filename="../Memory.cpp" />

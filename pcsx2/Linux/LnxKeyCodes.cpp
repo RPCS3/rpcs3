@@ -1,10 +1,10 @@
 
 #include "../PrecompiledHeader.h"
 
-#include <wx/gtk/private.h>
-#include <wx/gtk/win_gtk.h>
+//#include <wx/gtk/win_gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdk/gdkx.h>
+
 
 // Returns a WXK_* keycode, given osome kinda GKT input mess!
 u32 TranslateGDKtoWXK( u32 keysym )
@@ -149,108 +149,108 @@ u32 TranslateGDKtoWXK( u32 keysym )
         case GDK_KP_7:
         case GDK_KP_8:
         case GDK_KP_9:
-            key_code = (isChar ? '0' : WXK_NUMPAD0) + keysym - GDK_KP_0;
+            key_code = WXK_NUMPAD0 + keysym - GDK_KP_0;
             break;
 
         case GDK_KP_Space:
-            key_code = isChar ? ' ' : WXK_NUMPAD_SPACE;
+            key_code = WXK_NUMPAD_SPACE;
             break;
 
         case GDK_KP_Tab:
-            key_code = isChar ? WXK_TAB : WXK_NUMPAD_TAB;
+            key_code = WXK_NUMPAD_TAB;
             break;
 
         case GDK_KP_Enter:
-            key_code = isChar ? WXK_RETURN : WXK_NUMPAD_ENTER;
+            key_code = WXK_NUMPAD_ENTER;
             break;
 
         case GDK_KP_F1:
-            key_code = isChar ? WXK_F1 : WXK_NUMPAD_F1;
+            key_code = WXK_NUMPAD_F1;
             break;
 
         case GDK_KP_F2:
-            key_code = isChar ? WXK_F2 : WXK_NUMPAD_F2;
+            key_code = WXK_NUMPAD_F2;
             break;
 
         case GDK_KP_F3:
-            key_code = isChar ? WXK_F3 : WXK_NUMPAD_F3;
+            key_code = WXK_NUMPAD_F3;
             break;
 
         case GDK_KP_F4:
-            key_code = isChar ? WXK_F4 : WXK_NUMPAD_F4;
+            key_code = WXK_NUMPAD_F4;
             break;
 
         case GDK_KP_Home:
-            key_code = isChar ? WXK_HOME : WXK_NUMPAD_HOME;
+            key_code = WXK_NUMPAD_HOME;
             break;
 
         case GDK_KP_Left:
-            key_code = isChar ? WXK_LEFT : WXK_NUMPAD_LEFT;
+            key_code = WXK_NUMPAD_LEFT;
             break;
 
         case GDK_KP_Up:
-            key_code = isChar ? WXK_UP : WXK_NUMPAD_UP;
+            key_code = WXK_NUMPAD_UP;
             break;
 
         case GDK_KP_Right:
-            key_code = isChar ? WXK_RIGHT : WXK_NUMPAD_RIGHT;
+            key_code = WXK_NUMPAD_RIGHT;
             break;
 
         case GDK_KP_Down:
-            key_code = isChar ? WXK_DOWN : WXK_NUMPAD_DOWN;
+            key_code = WXK_NUMPAD_DOWN;
             break;
 
         case GDK_KP_Prior: // == GDK_KP_Page_Up
-            key_code = isChar ? WXK_PAGEUP : WXK_NUMPAD_PAGEUP;
+            key_code = WXK_NUMPAD_PAGEUP;
             break;
 
         case GDK_KP_Next: // == GDK_KP_Page_Down
-            key_code = isChar ? WXK_PAGEDOWN : WXK_NUMPAD_PAGEDOWN;
+            key_code = WXK_NUMPAD_PAGEDOWN;
             break;
 
         case GDK_KP_End:
-            key_code = isChar ? WXK_END : WXK_NUMPAD_END;
+            key_code = WXK_NUMPAD_END;
             break;
 
         case GDK_KP_Begin:
-            key_code = isChar ? WXK_HOME : WXK_NUMPAD_BEGIN;
+            key_code = WXK_NUMPAD_BEGIN;
             break;
 
         case GDK_KP_Insert:
-            key_code = isChar ? WXK_INSERT : WXK_NUMPAD_INSERT;
+            key_code = WXK_NUMPAD_INSERT;
             break;
 
         case GDK_KP_Delete:
-            key_code = isChar ? WXK_DELETE : WXK_NUMPAD_DELETE;
+            key_code = WXK_NUMPAD_DELETE;
             break;
 
         case GDK_KP_Equal:
-            key_code = isChar ? '=' : WXK_NUMPAD_EQUAL;
+            key_code = WXK_NUMPAD_EQUAL;
             break;
 
         case GDK_KP_Multiply:
-            key_code = isChar ? '*' : WXK_NUMPAD_MULTIPLY;
+            key_code = WXK_NUMPAD_MULTIPLY;
             break;
 
         case GDK_KP_Add:
-            key_code = isChar ? '+' : WXK_NUMPAD_ADD;
+            key_code = WXK_NUMPAD_ADD;
             break;
 
         case GDK_KP_Separator:
             // FIXME: what is this?
-            key_code = isChar ? '.' : WXK_NUMPAD_SEPARATOR;
+            key_code = WXK_NUMPAD_SEPARATOR;
             break;
 
         case GDK_KP_Subtract:
-            key_code = isChar ? '-' : WXK_NUMPAD_SUBTRACT;
+            key_code = WXK_NUMPAD_SUBTRACT;
             break;
 
         case GDK_KP_Decimal:
-            key_code = isChar ? '.' : WXK_NUMPAD_DECIMAL;
+            key_code = WXK_NUMPAD_DECIMAL;
             break;
 
         case GDK_KP_Divide:
-            key_code = isChar ? '/' : WXK_NUMPAD_DIVIDE;
+            key_code = WXK_NUMPAD_DIVIDE;
             break;
 
 
@@ -276,3 +276,4 @@ u32 TranslateGDKtoWXK( u32 keysym )
 
     return key_code;
 }
+
