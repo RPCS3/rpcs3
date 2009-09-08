@@ -1123,6 +1123,84 @@ namespace Test {
 			YAML_ASSERT(doc["Second occurrence"] == "Value");
 			return true;
 		}
+		
+		// 7.1
+		TEST AliasNodes()
+		{
+			std::string input =
+				"First occurrence: &anchor Foo\n"
+				"Second occurrence: *anchor\n"
+				"Override anchor: &anchor Bar\n"
+				"Reuse anchor: *anchor";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc["First occurrence"] == "Foo");
+			YAML_ASSERT(doc["Second occurrence"] == "Foo");
+			YAML_ASSERT(doc["Override anchor"] == "Bar");
+			YAML_ASSERT(doc["Reuse anchor"] == "Bar");
+			return true;
+		}
+		
+		// 7.2
+		TEST EmptyNodes()
+		{
+			std::string input =
+				"{\n"
+				"  foo : !!str,\n"
+				"  !!str : bar,\n"
+				"}";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["foo"] == ""); // TODO: check tag
+			YAML_ASSERT(doc[""] == "bar");
+			return true;
+		}
+		
+		// 7.3
+		TEST CompletelyEmptyNodes()
+		{
+			std::string input =
+				"{\n"
+				"  ? foo :,\n"
+				"  : bar,\n"
+				"}\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(IsNull(doc["foo"]));
+			YAML_ASSERT(doc[YAML::Null] == "bar");
+			return true;
+		}
+		
+		// 7.4
+		TEST DoubleQuotedImplicitKeys()
+		{
+			std::string input =
+				"\"implicit block key\" : [\n"
+				"  \"implicit flow key\" : value,\n"
+				" ]";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["implicit block key"].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"] == "value");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -1174,6 +1252,11 @@ namespace Test {
 		RunSpecTest(&Spec::SeparationSpacesII, "6.11", "Separation Spaces", passed, total);
 		
 		RunSpecTest(&Spec::NodeAnchors, "6.29", "Node Anchors", passed, total);
+		
+		RunSpecTest(&Spec::AliasNodes, "7.1", "Alias Nodes", passed, total);
+		RunSpecTest(&Spec::EmptyNodes, "7.2", "Empty Nodes", passed, total);
+		RunSpecTest(&Spec::CompletelyEmptyNodes, "7.3", "Completely Empty Nodes", passed, total);
+		RunSpecTest(&Spec::DoubleQuotedImplicitKeys, "7.4", "Double Quoted Implicit Keys", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
