@@ -84,6 +84,10 @@ void AppEmuThread::Resume()
 // wx-managed yet, so let's just use some arbitrary value...)
 static const int pxID_Window_GS = 8030;
 
+#ifdef __WXGTK__
+	extern int TranslateGDKtoWXK( u32 keysym );
+#endif
+
 void AppEmuThread::StateCheck()
 {
 	CoreEmuThread::StateCheck();
@@ -111,7 +115,7 @@ void AppEmuThread::StateCheck()
 	{
 		case WXK_SHIFT:		m_kevt.m_shiftDown		= isDown; return;
 		case WXK_CONTROL:	m_kevt.m_controlDown	= isDown; return;
-		case WXK_MENU:		m_kevt.m_altDown		= isDown; return; 
+		case WXK_MENU:		m_kevt.m_altDown		= isDown; return;
 	}
 
 	// fixme: when the GS is wx-controlled, we should send the message to the GS window

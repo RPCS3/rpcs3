@@ -7,9 +7,9 @@
 
 
 // Returns a WXK_* keycode, given osome kinda GKT input mess!
-u32 TranslateGDKtoWXK( u32 keysym )
+int TranslateGDKtoWXK( u32 keysym )
 {
-    u32 key_code;
+    int key_code;
 
     switch ( keysym )
     {
