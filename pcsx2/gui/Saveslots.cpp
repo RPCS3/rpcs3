@@ -74,11 +74,11 @@ void States_Load(int num)
 
 	if( !wxFileExists( file ) )
 	{
-		Console::Notice( "Savestate slot %d is empty.", params num );
+		Console::Notice( "Savestate slot %d is empty.", num );
 		return;
 	}
 
-	Console::Status( "Loading savestate from slot %d...", params num );
+	Console::Status( "Loading savestate from slot %d...", num );
 	States_Load( file );
 	HostGui::Notice( wxsFormat( _("Loaded State (slot %d)"), num ) );
 }
@@ -122,7 +122,7 @@ void States_Save( const wxString& file )
 
 void States_Save(int num)
 {
-	Console::Status( "Saving savestate to slot %d...", params num );
+	Console::Status( "Saving savestate to slot %d...", num );
 	States_Save( SaveState::GetFilename( num ) );
 }
 

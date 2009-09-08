@@ -89,7 +89,7 @@ void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
 {
 	jASSUME( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
 
-	DevCon::Notice( "ReadFIFO/GIF, addr=0x%x", params mem );
+	DevCon::Notice( "ReadFIFO/GIF, addr=0x%x", mem );
 
 	//out[0] = psHu64(mem  );
 	//out[1] = psHu64(mem+8);
@@ -190,7 +190,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 	// All addresses in this page map to 0x7000 and 0x7010:
 	mem &= 0x10;
 
-	IPU_LOG( "WriteFIFO/IPU, addr=0x%x", params mem );
+	IPU_LOG( "WriteFIFO/IPU, addr=0x%x", mem );
 
 	if( mem == 0 )
 	{

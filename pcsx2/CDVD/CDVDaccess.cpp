@@ -161,7 +161,7 @@ static int FindDiskType(int mType)
 	switch(iCDType)
 	{
 		case CDVD_TYPE_DETCTCD:
-			Console::Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):", params tn.etrack-tn.strack+1,tn.strack,tn.etrack);
+			Console::Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):", tn.etrack-tn.strack+1,tn.strack,tn.etrack);
 			break;
 		
 		case CDVD_TYPE_DETCTDVDS:
@@ -190,12 +190,12 @@ static int FindDiskType(int mType)
 		if (td.type == CDVD_AUDIO_TRACK) 
 		{
 			audioTracks++;
-			Console::Status(" * * Track %d: Audio (%d sectors)", params i,tlength);
+			Console::Status(" * * Track %d: Audio (%d sectors)", i,tlength);
 		}
 		else 
 		{
 			dataTracks++;
-			Console::Status(" * * Track %d: Data (Mode %d) (%d sectors)", params i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
+			Console::Status(" * * Track %d: Data (Mode %d) (%d sectors)", i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
 		}
 	}
 

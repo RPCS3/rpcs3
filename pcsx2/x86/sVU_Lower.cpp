@@ -1992,10 +1992,10 @@ void VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		
 	/*	if((size << 4) > (0x4000-(addr&0x3fff)))
 		{
-			//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", params (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
+			//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
 			memcpy_aligned(pmem, (u8*)pMem+addr, 0x4000-(addr&0x3fff));
 			size -= (0x4000-(addr&0x3fff)) >> 4;
-			//DevCon::Notice("Size left %x", params size);
+			//DevCon::Notice("Size left %x", size);
 			pmem += 0x4000-(addr&0x3fff);
 			memcpy_aligned(pmem, (u8*)pMem, size<<4);
 		}

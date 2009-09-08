@@ -120,7 +120,7 @@ namespace Tag
 	{
 		if (ptag == NULL)  					 // Is ptag empty?
 		{
-			Console::Error("%s BUSERR", params s);
+			Console::Error("%s BUSERR", s);
 			UpperTransfer(tag, ptag);
 
 			// Set BEIS (BUSERR) in DMAC_STAT register
@@ -140,7 +140,7 @@ namespace Tag
 	{
 		if (ptag == NULL)  					 // Is ptag empty?
 		{
-			Console::Error("%s BUSERR", params s);
+			Console::Error("%s BUSERR", s);
 
 			// Set BEIS (BUSERR) in DMAC_STAT register
 			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;
@@ -199,7 +199,7 @@ static __forceinline void PrintCHCR(const char*  s, DMACh *tag)
 	u8 num_addr = tag->chcr.ASP;
 	u32 mode = tag->chcr.MOD;
 
-	Console::Write("%s chcr %s mem: ", params s, (tag->chcr.DIR) ? "from" : "to");
+	Console::Write("%s chcr %s mem: ", s, (tag->chcr.DIR) ? "from" : "to");
 		
 	if (mode == NORMAL_MODE)
 		Console::Write(" normal mode; ");
@@ -210,7 +210,7 @@ static __forceinline void PrintCHCR(const char*  s, DMACh *tag)
 	else
 		Console::Write(" ?? mode; ");
 		
-	if (num_addr != 0) Console::Write("ASP = %d;", params num_addr);
+	if (num_addr != 0) Console::Write("ASP = %d;", num_addr);
 	if (tag->chcr.TTE) Console::Write("TTE;");
 	if (tag->chcr.TIE) Console::Write("TIE;");
 	if (tag->chcr.STR) Console::Write(" (DMA started)."); else Console::Write(" (DMA stopped).");

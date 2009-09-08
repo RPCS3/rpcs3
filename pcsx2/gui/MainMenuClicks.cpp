@@ -163,7 +163,7 @@ void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
 {
-	//Console::Status( "%d", params event.GetId() - g_RecentIsoList->GetBaseId() );
+	//Console::Status( "%d", event.GetId() - g_RecentIsoList->GetBaseId() );
 	//Console::WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
 }
 
@@ -174,13 +174,13 @@ void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
 {
    int id = event.GetId() - MenuId_State_Load01 - 1;
-   Console::WriteLn("If this were hooked up, it would load slot %d.", params id);
+   Console::WriteLn("If this were hooked up, it would load slot %d.", id);
 }
 
 void MainEmuFrame::Menu_SaveStates_Click(wxCommandEvent &event)
 {
    int id = event.GetId() - MenuId_State_Save01 - 1;
-   Console::WriteLn("If this were hooked up, it would save slot %d.", params id);
+   Console::WriteLn("If this were hooked up, it would save slot %d.", id);
 }
 
 void MainEmuFrame::Menu_LoadStateOther_Click(wxCommandEvent &event)

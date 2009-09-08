@@ -178,7 +178,7 @@ void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const
 	if( enumArray[i] == NULL )
 	{
 		Console::Notice( wxsFormat( L"Loadini Warning: Unrecognized value '%s' on key '%s'\n\tUsing the default setting of '%s'.",
-			params retval.c_str(), var.c_str(), enumArray[defvalue]
+			retval.c_str(), var.c_str(), enumArray[defvalue]
 		) );
 		value = defvalue;
 	}

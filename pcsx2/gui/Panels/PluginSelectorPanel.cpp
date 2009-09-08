@@ -108,7 +108,7 @@ public:
 			if ( ((version >> 16)&0xff) == tbl_PluginInfo[pluginTypeIndex].version )
 				return true;
 
-			Console::Notice("%s Plugin %s:  Version %x != %x", params info.shortname, m_plugpath.c_str(), 0xff&(version >> 16), info.version);
+			Console::Notice("%s Plugin %s:  Version %x != %x", info.shortname, m_plugpath.c_str(), 0xff&(version >> 16), info.version);
 		}
 		return false;
 	}

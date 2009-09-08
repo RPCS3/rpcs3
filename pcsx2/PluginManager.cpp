@@ -584,7 +584,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	{
 		const PluginsEnum_t pid = pi->id;
 
-		Console::WriteLn( "\tBinding %s\t: %s ", params tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
+		Console::WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
 
 		if( folders[pid].IsEmpty() )
 			throw Exception::InvalidArgument( "Empty plugin filename." );
@@ -771,7 +771,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 {
 	if( m_info[pid].IsOpened ) return;
 
-	Console::WriteLn( "\tOpening %s", params tbl_PluginInfo[pid].shortname );
+	Console::WriteLn( "\tOpening %s", tbl_PluginInfo[pid].shortname );
 
 	// Each Open needs to be called explicitly. >_<
 
@@ -807,7 +807,7 @@ void PluginManager::Open()
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
-	DevCon::Status( "\tClosing %s", params tbl_PluginInfo[pid].shortname );
+	DevCon::Status( "\tClosing %s", tbl_PluginInfo[pid].shortname );
 
 	if( pid == PluginId_GS )
 	{
@@ -862,7 +862,7 @@ void PluginManager::Init()
 			Console::Status( "Initializing plugins..." );
 			printlog = true;
 		}
-		Console::WriteLn( "\tInit %s", params tbl_PluginInfo[pid].shortname );
+		Console::WriteLn( "\tInit %s", tbl_PluginInfo[pid].shortname );
 		m_info[pid].IsInitialized = true;
 		if( 0 != m_info[pid].CommonBindings.Init() )
 			throw Exception::PluginInitError( pid );
@@ -889,7 +889,7 @@ void PluginManager::Shutdown()
 	{
 		const PluginsEnum_t pid = tbl_PluginInfo[i].id;
 		if( !m_info[pid].IsInitialized ) continue;
-		DevCon::WriteLn( "\tShutdown %s", params tbl_PluginInfo[pid].shortname );
+		DevCon::WriteLn( "\tShutdown %s", tbl_PluginInfo[pid].shortname );
 		m_info[pid].IsInitialized = false;
 		m_info[pid].CommonBindings.Shutdown();
 	}

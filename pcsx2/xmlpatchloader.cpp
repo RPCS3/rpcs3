@@ -81,7 +81,7 @@ int LoadPatch( const wxString& crc )
 	}
 	else
 	{
-		Console::WriteLn("XML Patch Loader: '%s' Found", params pfile.c_str() );
+		Console::WriteLn("XML Patch Loader: '%s' Found", pfile.c_str() );
 	}
 
 	TiXmlNode *root = doc.FirstChild("GAME");
@@ -95,7 +95,7 @@ int LoadPatch( const wxString& crc )
 
 	const char *title=rootelement->Attribute("title");
 	if(title)
-		Console::WriteLn("XML Patch Loader: Game Title: %s", params title);
+		Console::WriteLn("XML Patch Loader: Game Title: %s", title);
 
 	int result=LoadGroup(root,-1);
 	if(result) {
@@ -117,7 +117,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 
 	const char *gtitle=groupelement->Attribute("title");
 	if(gtitle)
-		Console::WriteLn("XML Patch Loader: Group Title: %s", params gtitle);
+		Console::WriteLn("XML Patch Loader: Group Title: %s", gtitle);
 
 	const char *enable=groupelement->Attribute("enabled");
 	bool gEnabled=true;
@@ -136,7 +136,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 		TiXmlElement *cmelement = comment->ToElement();
 		const char *comment = cmelement->GetText();
 		if(comment)
-			Console::WriteLn("XML Patch Loader: Group Comment:\n%s\n---", params comment);
+			Console::WriteLn("XML Patch Loader: Group Comment:\n%s\n---", comment);
 	}
 
 	string t;
@@ -240,7 +240,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 		const char *value=celement->Attribute("value");
 
 		if(ptitle) {
-			Console::WriteLn("XML Patch Loader: Patch title: %s", params ptitle);
+			Console::WriteLn("XML Patch Loader: Patch title: %s", ptitle);
 		}
 
 		bool penabled=gEnabled;

@@ -50,12 +50,12 @@ void MapTLB(int i)
 	u32 mask, addr;
 	u32 saddr, eaddr;
 
-	DevCon::WriteLn("MAP TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X", params
+	DevCon::WriteLn("MAP TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X",
 		i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
 
 	if (tlb[i].S)
 	{
-		DevCon::WriteLn("OMG SPRAM MAPPING %08X %08X\n",params tlb[i].VPN2,tlb[i].Mask);
+		DevCon::WriteLn("OMG SPRAM MAPPING %08X %08X\n", tlb[i].VPN2,tlb[i].Mask);
 		vtlb_VMapBuffer(tlb[i].VPN2, psS, 0x4000);
 	}
 
@@ -90,7 +90,7 @@ void MapTLB(int i)
 
 void UnmapTLB(int i)
 {
-	//Console::WriteLn("Clear TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X", params i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
+	//Console::WriteLn("Clear TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X", i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
 	u32 mask, addr;
 	u32 saddr, eaddr;
 
@@ -105,7 +105,7 @@ void UnmapTLB(int i)
 		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
 		saddr = tlb[i].VPN2 >> 12;
 		eaddr = saddr + tlb[i].Mask + 1;
-	//	Console::WriteLn("Clear TLB: %08x ~ %08x",params saddr,eaddr-1);
+	//	Console::WriteLn("Clear TLB: %08x ~ %08x",saddr,eaddr-1);
 		for (addr=saddr; addr<eaddr; addr++) {
 			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
 				memClearPageAddr(addr << 12);
@@ -118,7 +118,7 @@ void UnmapTLB(int i)
 		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
 		saddr = (tlb[i].VPN2 >> 12) + tlb[i].Mask + 1;
 		eaddr = saddr + tlb[i].Mask + 1;
-	//	Console::WriteLn("Clear TLB: %08x ~ %08x",params saddr,eaddr-1);
+	//	Console::WriteLn("Clear TLB: %08x ~ %08x",saddr,eaddr-1);
 		for (addr=saddr; addr<eaddr; addr++) {
 			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
 				memClearPageAddr(addr << 12);
@@ -212,10 +212,10 @@ static __forceinline bool PERF_ShouldCountEvent( uint evt )
 void COP0_DiagnosticPCCR()
 {
 	if( cpuRegs.PERF.n.pccr.b.Event0 >= 7 && cpuRegs.PERF.n.pccr.b.Event0 <= 10 )
-		Console::Notice( "PERF/PCR0 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event0 );
+		Console::Notice( "PERF/PCR0 Unsupported Update Event Mode = 0x%x", cpuRegs.PERF.n.pccr.b.Event0 );
 
 	if( cpuRegs.PERF.n.pccr.b.Event1 >= 7 && cpuRegs.PERF.n.pccr.b.Event1 <= 10 )
-		Console::Notice( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", params cpuRegs.PERF.n.pccr.b.Event1 );
+		Console::Notice( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", cpuRegs.PERF.n.pccr.b.Event1 );
 }
 extern int branch;
 __forceinline void COP0_UpdatePCCR()
@@ -339,7 +339,7 @@ void MFC0()
 	if ((_Rd_ != 9) && !_Rt_ ) return;
 	if (_Rd_ != 9) { COP0_LOG("%s", disR5900Current.getCString() ); }
 	
-	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MFC0 _Rd_ %x = %x", params _Rd_, cpuRegs.CP0.r[_Rd_]);
+	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MFC0 _Rd_ %x = %x", _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
 	{
 		case 12:
@@ -368,7 +368,7 @@ void MFC0()
 		break;
 
 		case 24: 
-			Console::WriteLn("MFC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
+			Console::WriteLn("MFC0 Breakpoint debug Registers code = %x", cpuRegs.code & 0x3FF);
 		break;
 
 		case 9:
@@ -388,7 +388,7 @@ void MFC0()
 void MTC0()
 {
 	COP0_LOG("%s\n", disR5900Current.getCString());
-	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MTC0 _Rd_ %x = %x", params _Rd_, cpuRegs.CP0.r[_Rd_]);
+	//if(bExecBIOS == FALSE && _Rd_ == 25) Console::WriteLn("MTC0 _Rd_ %x = %x", _Rd_, cpuRegs.CP0.r[_Rd_]);
 	switch (_Rd_)
 	{
 		case 9:
@@ -401,7 +401,7 @@ void MTC0()
 		break;
 		
 		case 24: 
-			Console::WriteLn("MTC0 Breakpoint debug Registers code = %x", params cpuRegs.code & 0x3FF);
+			Console::WriteLn("MTC0 Breakpoint debug Registers code = %x", cpuRegs.code & 0x3FF);
 		break;
 		
 		case 25: 

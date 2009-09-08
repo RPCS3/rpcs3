@@ -55,13 +55,13 @@ void SysDetect()
 
 #ifdef __LINUX__
     // Haven't rigged up getting the svn version yet... --arcum42
-	Notice("PCSX2 %d.%d.%d - compiled on " __DATE__, params PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo);
+	Notice("PCSX2 %d.%d.%d - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo);
 #else
-	Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, params PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+	Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
 #endif
-	Notice("Savestate version: %x", params g_SaveVersion);
+	Notice("Savestate version: %x", g_SaveVersion);
 
 	cpudetectInit();
 
@@ -94,7 +94,7 @@ void SysDetect()
 		"\t%sDetected SSE3\n"
 		"\t%sDetected SSSE3\n"
 		"\t%sDetected SSE4.1\n"
-		"\t%sDetected SSE4.2\n", params
+		"\t%sDetected SSE4.2\n", 
 			x86caps.hasMultimediaExtensions     ? "" : "Not ",
 			x86caps.hasStreamingSIMDExtensions  ? "" : "Not ",
 			x86caps.hasStreamingSIMD2Extensions ? "" : "Not ",
@@ -111,7 +111,7 @@ void SysDetect()
 			"\t%sDetected MMX2\n"
 			"\t%sDetected 3DNOW\n"
 			"\t%sDetected 3DNOW2\n"
-			"\t%sDetected SSE4a\n", params
+			"\t%sDetected SSE4a\n", 
 			x86caps.hasMultimediaExtensionsExt       ? "" : "Not ",
 			x86caps.has3DNOWInstructionExtensions    ? "" : "Not ",
 			x86caps.has3DNOWInstructionExtensionsExt ? "" : "Not ",
@@ -143,7 +143,7 @@ bool SysAllocateMem()
 		// Failures on the core initialization of memory is bad, since it means the emulator is
 		// completely non-functional.
 
-		//Msgbox::Alert( "Failed to allocate memory needed to run pcsx2.\n\nError: %s", params ex.cMessage() );
+		//Msgbox::Alert( "Failed to allocate memory needed to run pcsx2.\n\nError: %s", ex.cMessage() );
 		SysShutdownMem();
 		return false;
 	}
@@ -384,7 +384,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 
 	if( (Mem == NULL) || (bounds != 0 && (((uptr)Mem + size) > bounds)) )
 	{
-		DevCon::Notice( "First try failed allocating %s at address 0x%x", params caller, base );
+		DevCon::Notice( "First try failed allocating %s at address 0x%x", caller, base );
 
 		// memory allocation *must* have the top bit clear, so let's try again
 		// with NULL (let the OS pick something for us).
@@ -394,7 +394,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 		Mem = (u8*)HostSys::Mmap( NULL, size );
 		if( bounds != 0 && (((uptr)Mem + size) > bounds) )
 		{
-			DevCon::Error( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", params caller, Mem );
+			DevCon::Error( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", caller, Mem );
 			SafeSysMunmap( Mem, size );
 
 			// returns NULL, caller should throw an exception.

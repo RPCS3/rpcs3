@@ -1030,9 +1030,9 @@ void QFSRV() {				// JayteeMaster: changed a bit to avoid screw up
 		cpuRegs.GPR.r[_Rd_].UD[1] = cpuRegs.GPR.r[_Rt_].UD[1];
 		//saZero++;
 		//if( saZero >= 388800 )
-			//Console::WriteLn( "SA Is Zero, Bitch: %d zeros and counting.", params saZero );
+			//Console::WriteLn( "SA Is Zero, Bitch: %d zeros and counting.", saZero );
 	} else {
-		//Console::WriteLn( "SA Properly Valued at: %d (after %d zeros)", params sa_amt, saZero );
+		//Console::WriteLn( "SA Properly Valued at: %d (after %d zeros)", sa_amt, saZero );
 		//saZero = 0;
 		if (sa_amt < 64) {
 			/*

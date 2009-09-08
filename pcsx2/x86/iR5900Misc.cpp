@@ -148,32 +148,32 @@ void recMTSAH( void )
 	////////////////////////////////////////////////////
 	void recNULL( void )
 	{
-		Console::Error("EE: Unimplemented op %x", params cpuRegs.code);
+		Console::Error("EE: Unimplemented op %x", cpuRegs.code);
 	}
 
 	////////////////////////////////////////////////////
 	void recUnknown()
 	{
 		// TODO : Unknown ops should throw an exception.
-		Console::Error("EE: Unrecognized op %x", params cpuRegs.code);
+		Console::Error("EE: Unrecognized op %x", cpuRegs.code);
 	}
 
 	void recMMI_Unknown()
 	{
 		// TODO : Unknown ops should throw an exception.
-		Console::Error("EE: Unrecognized MMI op %x", params cpuRegs.code);
+		Console::Error("EE: Unrecognized MMI op %x", cpuRegs.code);
 	}
 
 	void recCOP0_Unknown()
 	{
 		// TODO : Unknown ops should throw an exception.
-		Console::Error("EE: Unrecognized COP0 op %x", params cpuRegs.code);
+		Console::Error("EE: Unrecognized COP0 op %x", cpuRegs.code);
 	}
 
 	void recCOP1_Unknown()
 	{
 		// TODO : Unknown ops should throw an exception.
-		Console::Error("EE: Unrecognized FPU/COP1 op %x", params cpuRegs.code);
+		Console::Error("EE: Unrecognized FPU/COP1 op %x", cpuRegs.code);
 	}
 
 	/**********************************************************

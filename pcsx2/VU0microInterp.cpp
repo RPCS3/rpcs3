@@ -54,7 +54,7 @@ static void _vu0Exec(VURegs* VU)
 
 	if(VU0.VI[REG_TPC].UL >= VU0.maxmicro){
 #ifdef CPU_LOG
-		Console::WriteLn("VU0 memory overflow!!: %x", params VU->VI[REG_TPC].UL);
+		Console::WriteLn("VU0 memory overflow!!: %x", VU->VI[REG_TPC].UL);
 #endif
 		VU0.VI[REG_VPU_STAT].UL&= ~0x1;
 		VU->cycle++;
@@ -113,7 +113,7 @@ static void _vu0Exec(VURegs* VU)
 			}
 			if (lregs.VFread0 == uregs.VFwrite ||
 				lregs.VFread1 == uregs.VFwrite) {
-//				Console::WriteLn("saving reg %d at pc=%x", params i, VU->VI[REG_TPC].UL);
+//				Console::WriteLn("saving reg %d at pc=%x", i, VU->VI[REG_TPC].UL);
 				_VF = VU->VF[uregs.VFwrite];
 				vfreg = uregs.VFwrite;
 			}
@@ -178,7 +178,7 @@ void vu0Exec(VURegs* VU)
 {
 	if (VU->VI[REG_TPC].UL >= VU->maxmicro) { 
 #ifdef CPU_LOG
-		Console::Notice("VU0 memory overflow!!: %x", params VU->VI[REG_TPC].UL);
+		Console::Notice("VU0 memory overflow!!: %x", VU->VI[REG_TPC].UL);
 #endif
 		VU0.VI[REG_VPU_STAT].UL&= ~0x1; 
 	} else { 

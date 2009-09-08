@@ -74,7 +74,7 @@ void psxShutdown() {
 
 void psxException(u32 code, u32 bd) {
 //	PSXCPU_LOG("psxException %x: %x, %x", code, psxHu32(0x1070), psxHu32(0x1074));
-	//Console::WriteLn("!! psxException %x: %x, %x", params code, psxHu32(0x1070), psxHu32(0x1074));
+	//Console::WriteLn("!! psxException %x: %x, %x", code, psxHu32(0x1070), psxHu32(0x1074));
 	// Set the Cause
 	psxRegs.CP0.n.Cause &= ~0x7f;
 	psxRegs.CP0.n.Cause |= code;
@@ -268,7 +268,7 @@ void iopTestIntc()
 
 		cpuSetNextBranchDelta( 16 );
 		iopBranchAction = true;
-		//Console::Error( "** IOP Needs an EE EventText, kthx **  %d", params psxCycleEE );
+		//Console::Error( "** IOP Needs an EE EventText, kthx **  %d", psxCycleEE );
 
 		// Note: No need to set the iop's branch delta here, since the EE
 		// will run an IOP branch test regardless.

@@ -103,13 +103,13 @@ static u32 runCount = 0;
 #define cmpB Console::WriteLn
 #define cmpPrint(cond) {			\
 	if (cond) {						\
-		cmpA("%s", params str1);	\
-		cmpA("%s", params str2);	\
+		cmpA("%s", str1);	\
+		cmpA("%s", str2);	\
 		mVUdebugNow = 1;			\
 	}								\
 	else {							\
-		cmpB("%s", params str1);	\
-		cmpB("%s", params str2);	\
+		cmpB("%s", str1);	\
+		cmpB("%s", str2);	\
 	}								\
 }
 
@@ -125,7 +125,7 @@ namespace VU1micro
 	{
 		if((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
 		assert((VU1.VI[ REG_TPC ].UL&7) == 0);
-		if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { Console::Error("VU1 memory overflow!!: %x", params  VU1.VI[REG_TPC].UL); }
+		if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { Console::Error("VU1 memory overflow!!: %x",  VU1.VI[REG_TPC].UL); }
 
 #ifdef DEBUG_COMPARE
 		SysPrintf("(%08d) StartPC = 0x%04x\n", runAmount, VU1.VI[REG_TPC].UL);
@@ -282,7 +282,7 @@ namespace VU1micro
 		if (useMVU1) runVUrec(VU1.VI[REG_TPC].UL, 3000000, 1);
 		else {
 			if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) { 
-				Console::Error("VU1 memory overflow!!: %x", params VU1.VI[REG_TPC].UL); 
+				Console::Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL); 
 			}
 			do { // while loop needed since not always will return finished
 				SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);

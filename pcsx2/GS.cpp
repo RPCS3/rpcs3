@@ -133,7 +133,7 @@ void gsSetRegionMode( GS_RegionMode region )
 	if( gsRegionMode == region ) return;
 
 	gsRegionMode = region;
-	Console::WriteLn( "%s Display Mode Initialized.", params (( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC") );
+	Console::WriteLn( "%s Display Mode Initialized.", (( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC") );
 	UpdateVSyncRate();
 }
 
@@ -209,7 +209,7 @@ void gsCSRwrite(u32 value)
 
 	// Our emulated GS has no FIFO...
 	/*if( value & 0x100 ) { // FLUSH
-		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", params value, GSCSRr);
+		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
 	}*/
 
 	if (value & 0x200) { // resetGS
@@ -226,7 +226,7 @@ void gsCSRwrite(u32 value)
 	} 
 	else if( value & 0x100 ) // FLUSH
 	{ 
-		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", params value, GSCSRr);
+		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
 	}
 	else
 	{
@@ -578,7 +578,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 			return;
 	}
 
-	//Console::WriteLn( "Consecutive Frames -- Lateness: %d", params (int)( sSlowDeltaTime / m_iSlowTicks ) );
+	//Console::WriteLn( "Consecutive Frames -- Lateness: %d", (int)( sSlowDeltaTime / m_iSlowTicks ) );
 
 	// -- Consecutive frames section --
 	// Force-render consecutive frames without skipping.

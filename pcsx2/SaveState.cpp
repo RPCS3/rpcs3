@@ -61,7 +61,7 @@ SaveState::SaveState( const char* msg, const wxString& destination ) :
 	m_version( g_SaveVersion )
 ,	m_tagspace( 128 )
 {
-	Console::WriteLn( "%s %s", params msg, destination.ToAscii().data() );
+	Console::WriteLn( "%s %s", msg, destination.ToAscii().data() );
 }
 
 s32 CALLBACK gsSafeFreeze( int mode, freezeData *data )
@@ -111,7 +111,7 @@ void SaveState::FreezeAll()
 			"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
 			"\t\tCurrent BIOS:   %s\n"
 			"\t\tSavestate BIOS: %s\n",
-			params descout.ToAscii().data(), descin
+			descout.ToAscii().data(), descin
 		);
 	}
 
@@ -249,7 +249,7 @@ void gzLoadingState::FreezeMem( void* data, int size )
 void gzSavingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int mode, freezeData *data) )
 {
 	freezeData fP = { 0, NULL };
-	Console::WriteLn( "\tSaving %s", params name );
+	Console::WriteLn( "\tSaving %s", name );
 
 	FreezeTag( name );
 
@@ -271,7 +271,7 @@ void gzSavingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int 
 void gzLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int mode, freezeData *data) )
 {
 	freezeData fP = { 0, NULL };
-	Console::WriteLn( "\tLoading %s", params name );
+	Console::WriteLn( "\tLoading %s", name );
 
 	FreezeTag( name );
 	Freeze( fP.size );
@@ -338,7 +338,7 @@ void memLoadingState::FreezeMem( void* data, int size )
 void memSavingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int mode, freezeData *data) )
 {
 	freezeData fP = { 0, NULL };
-	Console::WriteLn( "\tSaving %s", params name );
+	Console::WriteLn( "\tSaving %s", name );
 
 	if( freezer(FREEZE_SIZE, &fP) == -1 )
 		throw Exception::FreezePluginFailure( name, "saving" );
@@ -359,7 +359,7 @@ void memSavingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int
 void memLoadingState::FreezePlugin( const char* name, s32 (CALLBACK *freezer)(int mode, freezeData *data) )
 {
 	freezeData fP;
-	Console::WriteLn( "\tLoading %s", params name );
+	Console::WriteLn( "\tLoading %s", name );
 
 	Freeze( fP.size );
 	if( fP.size == 0 ) return;

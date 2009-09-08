@@ -95,7 +95,7 @@ void mVUdispatcherB(mV) {
 microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
-	//mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", params vuIndex, startPC, cycles);
+	//mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
 	
 	mVUsearchProg<vuIndex>(); // Find and set correct program
 	mVU->cycles		 = cycles;
@@ -112,8 +112,8 @@ microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 microVUx(void) mVUcleanUp() {
 	microVU* mVU = mVUx;
 	//mVUprint("microVU: Program exited successfully!");
-	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", params mVU->regs->VF[0].UL[0], mVU->regs->VF[0].UL[1], mVU->regs->VF[0].UL[2], mVU->regs->VF[0].UL[3]);
-	//mVUprint("microVU: VI0 = %x", params mVU->regs->VI[0].UL);
+	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", mVU->regs->VF[0].UL[0], mVU->regs->VF[0].UL[1], mVU->regs->VF[0].UL[2], mVU->regs->VF[0].UL[3]);
+	//mVUprint("microVU: VI0 = %x", mVU->regs->VI[0].UL);
 	mVU->prog.x86ptr = x86Ptr;
 	mVUcacheCheck(x86Ptr, mVU->prog.x86start, (uptr)(mVU->prog.x86end - mVU->prog.x86start));
 	mVU->cycles = mVU->totalCycles - mVU->cycles;

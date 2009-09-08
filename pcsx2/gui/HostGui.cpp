@@ -77,7 +77,7 @@ void Pcsx2App::OnKeyDown( wxKeyEvent& evt )
 			else
 				StatesC = (StatesC+1) % NUM_STATES;
 
-			Console::Notice( " > Selected savestate slot %d", params StatesC);
+			Console::Notice( " > Selected savestate slot %d", StatesC);
 
 			if( GSchangeSaveState != NULL )
 				GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).mb_str());
@@ -158,7 +158,7 @@ void Pcsx2App::OnKeyDown( wxKeyEvent& evt )
 			{
 #ifdef PCSX2_DEVBUILD
 				iDumpRegisters(cpuRegs.pc, 0);
-				Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", params cpuRegs.pc, psxRegs.pc);
+				Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", cpuRegs.pc, psxRegs.pc);
 #endif
 			}
 			else

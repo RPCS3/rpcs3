@@ -68,7 +68,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 			mVUcurProg.ranges.total = 0;
 			mVUrange[0] = 0;
 			mVUrange[1] = mVU->microMemSize - 8;
-			DevCon::Status("microVU%d: Prog Range List Full", params mVU->index);
+			DevCon::Status("microVU%d: Prog Range List Full", mVU->index);
 		}
 	}
 	else {
@@ -82,7 +82,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 				&& (mVUcurProg.ranges.range[i][1] <= rEnd)){
 					mVUcurProg.ranges.range[i][1] = pc;
 					mergedRange = 1;
-					//DevCon::Status("microVU%d: Prog Range Merging", params mVU->index);
+					//DevCon::Status("microVU%d: Prog Range Merging", mVU->index);
 				}
 			}
 			if (mergedRange) {
@@ -92,7 +92,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 			}
 		}
 		else {
-			DevCon::Status("microVU%d: Prog Range Wrap [%04x] [%d]", params mVU->index, mVUrange[0], mVUrange[1]);
+			DevCon::Status("microVU%d: Prog Range Wrap [%04x] [%d]", mVU->index, mVUrange[0], mVUrange[1]);
 			mVUrange[1] = mVU->microMemSize - 8;
 			if (mVUcurProg.ranges.total < mVUcurProg.ranges.max) {
 				mVUcurProg.ranges.total++;
@@ -103,16 +103,16 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 				mVUcurProg.ranges.total = 0;
 				mVUrange[0] = 0;
 				mVUrange[1] = mVU->microMemSize - 8;
-				DevCon::Status("microVU%d: Prog Range List Full", params mVU->index);
+				DevCon::Status("microVU%d: Prog Range List Full", mVU->index);
 			}
 		}
 	}
 }
 
 microVUt(void) startLoop(mV) {
-	if (curI & _Mbit_)	{ Console::Status("microVU%d: M-bit set!", params getIndex); }
-	if (curI & _Dbit_)	{ DevCon::Status ("microVU%d: D-bit set!", params getIndex); }
-	if (curI & _Tbit_)	{ DevCon::Status ("microVU%d: T-bit set!", params getIndex); }
+	if (curI & _Mbit_)	{ Console::Status("microVU%d: M-bit set!", getIndex); }
+	if (curI & _Dbit_)	{ DevCon::Status ("microVU%d: D-bit set!", getIndex); }
+	if (curI & _Tbit_)	{ DevCon::Status ("microVU%d: T-bit set!", getIndex); }
 	memset(&mVUinfo,	 0, sizeof(mVUinfo));
 	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));
 }
@@ -124,7 +124,7 @@ microVUt(void) doIbit(mV) {
 		mVU->regAlloc->clearRegVF(33);
 
 		if (CHECK_VU_OVERFLOW && ((curI & 0x7fffffff) >= 0x7f800000)) {
-			Console::Status("microVU%d: Clamping I Reg", params mVU->index);
+			Console::Status("microVU%d: Clamping I Reg", mVU->index);
 			tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
 		}
 		else tempI = curI;
@@ -136,7 +136,7 @@ microVUt(void) doIbit(mV) {
 
 microVUt(void) doSwapOp(mV) { 
 	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
-		DevCon::Status("microVU%d: Backing Up VF Reg [%04x]", params getIndex, xPC);
+		DevCon::Status("microVU%d: Backing Up VF Reg [%04x]", getIndex, xPC);
 		int t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
 		int t2 = mVU->regAlloc->allocReg();
 		SSE_MOVAPS_XMM_to_XMM(t2, t1);
@@ -161,7 +161,7 @@ microVUt(void) branchWarning(mV) {
 	incPC(-2);
 	if (mVUup.eBit && mVUbranch) {
 		incPC(2);
-		Console::Error("microVU%d Warning: Branch in E-bit delay slot! [%04x]", params mVU->index, xPC);
+		Console::Error("microVU%d Warning: Branch in E-bit delay slot! [%04x]", mVU->index, xPC);
 		mVUlow.isNOP = 1;
 	}
 	else incPC(2);
@@ -181,11 +181,11 @@ microVUt(void) eBitPass1(mV, int& branch) {
 }
 
 microVUt(void) eBitWarning(mV) {
-	if (mVUpBlock->pState.blockType == 1) Console::Error("microVU%d Warning: Branch, E-bit, Branch! [%04x]",  params mVU->index, xPC);
-	if (mVUpBlock->pState.blockType == 2) Console::Error("microVU%d Warning: Branch, Branch, Branch! [%04x]", params mVU->index, xPC);
+	if (mVUpBlock->pState.blockType == 1) Console::Error("microVU%d Warning: Branch, E-bit, Branch! [%04x]",  mVU->index, xPC);
+	if (mVUpBlock->pState.blockType == 2) Console::Error("microVU%d Warning: Branch, Branch, Branch! [%04x]", mVU->index, xPC);
 	incPC(2);
 	if (curI & _Ebit_) {
-		DevCon::Status("microVU%d: E-bit in Branch delay slot! [%04x]", params mVU->index, xPC);
+		DevCon::Status("microVU%d: E-bit in Branch delay slot! [%04x]", mVU->index, xPC);
 		mVUregs.blockType = 1;
 	}
 	incPC(-2);
@@ -279,10 +279,10 @@ microVUt(void) mVUsetCycles(mV) {
 	tCycles(mVUregs.xgkick,					mVUregsTemp.xgkick);
 }
 
-void __fastcall mVUwarning0(mV)		{ Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", params xPC, mVU->prog.cur); }
-void __fastcall mVUwarning1(mV)		{ Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", params xPC, mVU->prog.cur); }
-void __fastcall mVUprintPC1(u32 PC) { Console::Write("Block PC [%04x] ", params PC); }
-void __fastcall mVUprintPC2(u32 PC) { Console::Write("[%04x]\n", params PC); }
+void __fastcall mVUwarning0(mV)		{ Console::Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", xPC, mVU->prog.cur); }
+void __fastcall mVUwarning1(mV)		{ Console::Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", xPC, mVU->prog.cur); }
+void __fastcall mVUprintPC1(u32 PC) { Console::Write("Block PC [%04x] ", PC); }
+void __fastcall mVUprintPC2(u32 PC) { Console::Write("[%04x]\n", PC); }
 
 microVUt(void) mVUtestCycles(mV) {
 	u32* vu0jmp;
@@ -406,7 +406,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 			}
 		}
 	}
-	if ((x == endCount) && (x!=1)) { Console::Error("microVU%d: Possible infinite compiling loop!", params mVU->index); }
+	if ((x == endCount) && (x!=1)) { Console::Error("microVU%d: Possible infinite compiling loop!", mVU->index); }
 
 	// E-bit End
 	mVUsetupRange(mVU, xPC-8, 0);
@@ -418,7 +418,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
 	using namespace x86Emitter;
-	if (startPC > mVU->microMemSize-8) { DevCon::Error("microVU%d: invalid startPC [%04x]", params mVU->index, startPC); }
+	if (startPC > mVU->microMemSize-8) { DevCon::Error("microVU%d: invalid startPC [%04x]", mVU->index, startPC); }
 	startPC &= mVU->microMemSize-8;
 	
 	blockCreate(startPC/8);

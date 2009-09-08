@@ -58,52 +58,31 @@ namespace Console
 	// Writes a newline to the console.
 	extern bool Newline();
 
-	// Writes an unformatted string of text to the console (fast!)
-	// No newline is appended.
-	extern bool __fastcall Write( const char* text );
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended, and the console color reset to default
-	// after the log is written.
-	extern bool __fastcall Write( Colors color, const char* text );
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended.
-	extern bool __fastcall WriteLn( const char* text );
-
-	// Writes an unformatted string of text to the console (fast!)
-	// A newline is automatically appended, and the console color reset to default
-	// after the log is written.
-	extern bool __fastcall WriteLn( Colors color, const char* text );
-
 	// Writes a line of colored text to the console, with automatic newline appendage.
 	// The console color is reset to default when the operation is complete.
-	extern bool WriteLn( Colors color, const char* fmt, VARG_PARAM dummy, ... );
+	extern bool WriteLn( Colors color, const char* fmt, ... );
 
 	// Writes a formatted message to the console, with appended newline.
-	extern bool WriteLn( const char* fmt, VARG_PARAM dummy, ... );
+	extern bool WriteLn( const char* fmt, ... );
 
 	// Writes a line of colored text to the console (no newline).
 	// The console color is reset to default when the operation is complete.
-	extern bool Write( Colors color, const char* fmt, VARG_PARAM dummy, ... );
+	extern bool Write( Colors color, const char* fmt, ... );
 
 	// Writes a formatted message to the console (no newline)
-	extern bool Write( const char* fmt, VARG_PARAM dummy, ... );
+	extern bool Write( const char* fmt, ... );
 
 	// Displays a message in the console with red emphasis.
 	// Newline is automatically appended.
-	extern bool Error( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool __fastcall Error( const char* text );
+	extern bool Error( const char* fmt, ... );
 
 	// Displays a message in the console with yellow emphasis.
 	// Newline is automatically appended.
-	extern bool Notice( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool __fastcall Notice( const char* text );
+	extern bool Notice( const char* fmt, ... );
 
 	// Displays a message in the console with yellow emphasis.
 	// Newline is automatically appended.
-	extern bool Status( const char* fmt, VARG_PARAM dummy, ... );
-	extern bool __fastcall Status( const char* text );
+	extern bool Status( const char* fmt, ... );
 
 
 	extern bool __fastcall Write( const wxString& text );

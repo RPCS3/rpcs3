@@ -102,7 +102,7 @@ FILE *_cdvdOpenMechaVer() {
 		{
 			Console::Error( "\tMEC File Creation failed!" );
 			throw Exception::CreateStream( file );
-			//Msgbox::Alert( "_cdvdOpenMechaVer: Error creating %s", params file);
+			//Msgbox::Alert( "_cdvdOpenMechaVer: Error creating %s", file);
 			//exit(1);
 		}
 
@@ -152,7 +152,7 @@ FILE *_cdvdOpenNVM() {
 		if (fd == NULL)
 		{
 			throw Exception::CreateStream( file );
-			//Msgbox::Alert("_cdvdOpenNVM: Error creating %s", params file);
+			//Msgbox::Alert("_cdvdOpenNVM: Error creating %s", file);
 			//exit(1);
 		}
 		for (i=0; i<1024; i++) fputc(0, fd);
@@ -338,7 +338,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	const wxCharBuffer crap( fname.ToAscii() );
 	const char* str = crap.data();
 	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
-	DevCon::Notice("exeName = %s", params &str[8]);
+	DevCon::Notice("exeName = %s", &str[8]);
 
 	// convert the number characters to a real 32bit number
 	numbers =	((((exeName[5] - '0'))*10000)	+
@@ -393,7 +393,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 		key[15] = 0x01;
 	}
 
-	Console::WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", params
+	Console::WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", 
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 
 	// Now's a good time to reload the ELF info...
@@ -648,7 +648,7 @@ int cdvdReadSector() {
 	// be more correct. (air)
 	psxCpu->Clear( HW_DMA3_MADR, cdvd.BlockSize/4 );
 
-//	Console::WriteLn("sector %x;%x;%x", params PSXMu8(madr+0), PSXMu8(madr+1), PSXMu8(madr+2));
+//	Console::WriteLn("sector %x;%x;%x", PSXMu8(madr+0), PSXMu8(madr+1), PSXMu8(madr+2));
 
 	HW_DMA3_BCR_H16 -= (cdvd.BlockSize / (HW_DMA3_BCR_L16*4));
 	HW_DMA3_MADR += cdvd.BlockSize;
@@ -696,7 +696,7 @@ __forceinline void cdvdActionInterrupt()
 // inlined due to being referenced in only one place.
 __forceinline void cdvdReadInterrupt()
 {
-	//Console::WriteLn("cdvdReadInterrupt %x %x %x %x %x", params cpuRegs.interrupt, cdvd.Readed, cdvd.Reading, cdvd.nSectors, (HW_DMA3_BCR_H16 * HW_DMA3_BCR_L16) *4);
+	//Console::WriteLn("cdvdReadInterrupt %x %x %x %x %x", cpuRegs.interrupt, cdvd.Readed, cdvd.Reading, cdvd.nSectors, (HW_DMA3_BCR_H16 * HW_DMA3_BCR_L16) *4);
 
 	cdvd.Ready = CDVD_NOTREADY;
 	if (!cdvd.Readed)
@@ -743,7 +743,7 @@ __forceinline void cdvdReadInterrupt()
 				CDVDREAD_INT(cdvd.ReadTime);
 			}
 			else
-				Console::Error("CDVD READ ERROR, sector = 0x%08x", params cdvd.Sector);
+				Console::Error("CDVD READ ERROR, sector = 0x%08x", cdvd.Sector);
 
 			return;
 		}
@@ -1037,14 +1037,14 @@ u8 cdvdRead(u8 key)
 		case 0x3A: 	// DEC_SET
 			CDR_LOG("cdvdRead3A(DecSet) %x", cdvd.decSet);
 
-			Console::WriteLn("DecSet Read: %02X", params cdvd.decSet);
+			Console::WriteLn("DecSet Read: %02X", cdvd.decSet);
 			return cdvd.decSet;
 			break;
 
 		default:
 			// note: notify the console since this is a potentially serious emulation problem:
 			PSXHW_LOG("*Unknown 8bit read at address 0x1f4020%x", key);
-			Console::Error( "IOP Unknown 8bit read from addr 0x1f4020%x", params key );
+			Console::Error( "IOP Unknown 8bit read from addr 0x1f4020%x", key );
 			return 0;
 			break;
 	}
@@ -1068,14 +1068,14 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			// Seek to sector zero.  The cdvdStartSeek function will simulate
 			// spinup times if needed.
 
-			DevCon::Notice( "CdStandby : %d", params rt );
+			DevCon::Notice( "CdStandby : %d", rt );
 			cdvd.Action = cdvdAction_Standby;
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 			CDVD_INT( cdvdStartSeek( 0, MODE_DVDROM ) );
 		break;
 
 		case N_CD_STOP: // CdStop
-			DevCon::Notice( "CdStop : %d", params rt );
+			DevCon::Notice( "CdStop : %d", rt );
 			cdvd.Action = cdvdAction_Stop;
 			CDVD_INT( PSXCLK / 6 );		// 166ms delay?
 		break;
@@ -1110,7 +1110,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
-					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector,MODE_CDROM ) );
@@ -1158,7 +1158,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("CdAudioRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
-					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector, MODE_CDROM ) );
@@ -1194,7 +1194,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 			if( EmuConfig.CdvdVerboseReads )
 				Console::WriteLn("DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
-					params cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector, MODE_DVDROM ) );
@@ -1215,7 +1215,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			//the code below handles only CdGetToc!
 			//if(cdvd.Param[0]==0x01)
 			//{
-			DevCon::WriteLn("CDGetToc Param[0]=%d, Param[1]=%d", params cdvd.Param[0],cdvd.Param[1]);
+			DevCon::WriteLn("CDGetToc Param[0]=%d, Param[1]=%d", cdvd.Param[0],cdvd.Param[1]);
 			//}
 			cdvdGetToc( iopPhysMem( HW_DMA3_MADR ) );
 			cdvdSetIrq( (1<<Irq_CommandComplete) ); //| (1<<Irq_DataReady) );
@@ -1228,7 +1228,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			u8  arg0 = cdvd.Param[0];
 			u16 arg1 = cdvd.Param[1] | (cdvd.Param[2]<<8);
 			u32 arg2 = cdvd.Param[3] | (cdvd.Param[4]<<8) | (cdvd.Param[5]<<16) | (cdvd.Param[6]<<24);
-			DevCon::WriteLn("cdvdReadKey(%d, %d, %d)", params arg0, arg1, arg2);
+			DevCon::WriteLn("cdvdReadKey(%d, %d, %d)", arg0, arg1, arg2);
 			cdvdReadKey(arg0, arg1, arg2, cdvd.Key);
 			cdvd.KeyXor = 0x00;
 			cdvdSetIrq();
@@ -1236,12 +1236,12 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 		break;
 
 		case N_CD_CHG_SPDL_CTRL: // CdChgSpdlCtrl
-			Console::Notice("sceCdChgSpdlCtrl(%d)", params cdvd.Param[0]);
+			Console::Notice("sceCdChgSpdlCtrl(%d)", cdvd.Param[0]);
 			cdvdSetIrq();
 		break;
 
 		default:
-			Console::Notice("NCMD Unknown %x", params rt);
+			Console::Notice("NCMD Unknown %x", rt);
 			cdvdSetIrq();
 		break;
 	}
@@ -1270,7 +1270,7 @@ static __forceinline void cdvdWrite07(u8 rt)		// BREAK
 	// If we're already in a Ready state or already Breaking, then do nothing:
 	if ((cdvd.Ready != CDVD_NOTREADY) || (cdvd.Action == cdvdAction_Break)) return;
 
-	DbgCon::Notice("*PCSX2*: CDVD BREAK %x", params rt);
+	DbgCon::Notice("*PCSX2*: CDVD BREAK %x", rt);
 
 	// Aborts any one of several CD commands:
 	// Pause, Seek, Read, Status, Standby, and Stop
@@ -1298,7 +1298,7 @@ static __forceinline void cdvdWrite0A(u8 rt) { // STATUS
 
 static __forceinline void cdvdWrite0F(u8 rt) { // TYPE
 	CDR_LOG("cdvdWrite0F(Type) %x", rt);
-	DevCon::WriteLn("*PCSX2*: CDVD TYPE %x", params rt);
+	DevCon::WriteLn("*PCSX2*: CDVD TYPE %x", rt);
 }
 
 static __forceinline void cdvdWrite14(u8 rt) { // PS1 MODE??
@@ -1307,7 +1307,7 @@ static __forceinline void cdvdWrite14(u8 rt) { // PS1 MODE??
 	if (rt == 0xFE)
 		Console::Notice("*PCSX2*: go PS1 mode DISC SPEED = FAST");
 	else
-		Console::Notice("*PCSX2*: go PS1 mode DISC SPEED = %dX", params rt);
+		Console::Notice("*PCSX2*: go PS1 mode DISC SPEED = %dX", rt);
 
 	psxReset();
 	psxHu32(0x1f801450) = 0x8;
@@ -1374,7 +1374,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 				default:
 					SetResultSize(1);
 					cdvd.Result[0] = 0x80;
-					Console::WriteLn("*Unknown Mecacon Command param[0]=%02X", params cdvd.Param[0]);
+					Console::WriteLn("*Unknown Mecacon Command param[0]=%02X", cdvd.Param[0]);
 					break;
 			}
 			break;
@@ -1403,9 +1403,9 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			if(cdvd.Result[3] <= 7) cdvd.Result[5] += 1;
 			cdvd.Result[6] = itob(cdvd.RTC.month)+0x80; //Month
 			cdvd.Result[7] = itob(cdvd.RTC.year); //Year
-			/*Console::WriteLn("RTC Read Sec %x Min %x Hr %x Day %x Month %x Year %x", params cdvd.Result[1], cdvd.Result[2],
+			/*Console::WriteLn("RTC Read Sec %x Min %x Hr %x Day %x Month %x Year %x", cdvd.Result[1], cdvd.Result[2],
 				cdvd.Result[3], cdvd.Result[5], cdvd.Result[6], cdvd.Result[7]);
-			Console::WriteLn("RTC Read Real Sec %d Min %d Hr %d Day %d Month %d Year %d", params cdvd.RTC.second, cdvd.RTC.minute,
+			Console::WriteLn("RTC Read Real Sec %d Min %d Hr %d Day %d Month %d Year %d", cdvd.RTC.second, cdvd.RTC.minute,
 				cdvd.RTC.hour, cdvd.RTC.day, cdvd.RTC.month, cdvd.RTC.year);*/
 			break;
 
@@ -1421,9 +1421,9 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			if(cdvd.Param[cdvd.ParamP-5] <= 7) cdvd.RTC.day -= 1;
 			cdvd.RTC.month = btoi(cdvd.Param[cdvd.ParamP-2]-0x80);
 			cdvd.RTC.year = btoi(cdvd.Param[cdvd.ParamP-1]);
-			/*Console::WriteLn("RTC write incomming Sec %x Min %x Hr %x Day %x Month %x Year %x", params cdvd.Param[cdvd.ParamP-7], cdvd.Param[cdvd.ParamP-6],
+			/*Console::WriteLn("RTC write incomming Sec %x Min %x Hr %x Day %x Month %x Year %x", cdvd.Param[cdvd.ParamP-7], cdvd.Param[cdvd.ParamP-6],
 				cdvd.Param[cdvd.ParamP-5], cdvd.Param[cdvd.ParamP-3], cdvd.Param[cdvd.ParamP-2], cdvd.Param[cdvd.ParamP-1]);
-			Console::WriteLn("RTC Write Sec %d Min %d Hr %d Day %d Month %d Year %d", params cdvd.RTC.second, cdvd.RTC.minute,
+			Console::WriteLn("RTC Write Sec %d Min %d Hr %d Day %d Month %d Year %d", cdvd.RTC.second, cdvd.RTC.minute,
 				cdvd.RTC.hour, cdvd.RTC.day, cdvd.RTC.month, cdvd.RTC.year);*/
 			//memcpy_fast((u8*)&cdvd.RTC, cdvd.Param, 7);
 			break;
@@ -1625,7 +1625,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 
 			cdvdGetMechaVer(&cdvd.Result[1]);
 			cdvd.Result[0] = cdvdReadRegionParams(&cdvd.Result[3]);//size==8
-			Console::WriteLn("REGION PARAMS = %s %s", params mg_zones[cdvd.Result[1]], &cdvd.Result[3]);
+			Console::WriteLn("REGION PARAMS = %s %s", mg_zones[cdvd.Result[1]], &cdvd.Result[3]);
 			cdvd.Result[1] = 1 << cdvd.Result[1];	//encryption zone; see offset 0x1C in encrypted headers
 			//////////////////////////////////////////
 			cdvd.Result[2] = 0;						//??
@@ -1793,11 +1793,11 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 				}
 
 				Console::Write("[MG] ELF_size=0x%X Hdr_size=0x%X unk=0x%X flags=0x%X count=%d zones=",
-					params *(u32*)&cdvd.mg_buffer[0x10], *(u16*)&cdvd.mg_buffer[0x14], *(u16*)&cdvd.mg_buffer[0x16],
+					*(u32*)&cdvd.mg_buffer[0x10], *(u16*)&cdvd.mg_buffer[0x14], *(u16*)&cdvd.mg_buffer[0x16],
 					*(u16*)&cdvd.mg_buffer[0x18], *(u16*)&cdvd.mg_buffer[0x1A]);
 				for (i=0; i<8; i++)
 				{
-					if (cdvd.mg_buffer[0x1C] & (1<<i)) Console::Write("%s ", params mg_zones[i]);
+					if (cdvd.mg_buffer[0x1C] & (1<<i)) Console::Write("%s ", mg_zones[i]);
 				}
 				Console::Newline();
 
@@ -1829,7 +1829,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			SetResultSize(1);//in:5
 			cdvd.mg_size = 0;
 			cdvd.mg_datatype = 1;//header data
-			Console::WriteLn("[MG] hcode=%d cnum=%d a2=%d length=0x%X", params
+			Console::WriteLn("[MG] hcode=%d cnum=%d a2=%d length=0x%X", 
 				cdvd.Param[0], cdvd.Param[3], cdvd.Param[4], cdvd.mg_maxsize = cdvd.Param[1] | (((int)cdvd.Param[2])<<8));
 
 			cdvd.Result[0] = 0; // 0 complete ; 1 busy ; 0x80 error
@@ -1843,7 +1843,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 
 			cdvd.mg_maxsize = 0; // don't allow any write
 			cdvd.mg_size = 8+16*cdvd.mg_buffer[4];//new offset, i just moved the data
-			Console::WriteLn("[MG] BIT count=%d", params cdvd.mg_buffer[4]);
+			Console::WriteLn("[MG] BIT count=%d", cdvd.mg_buffer[4]);
 
 			cdvd.Result[0] = (cdvd.mg_datatype == 1) ? 0 : 0x80; // 0 complete ; 1 busy ; 0x80 error
 			cdvd.Result[1] = (cdvd.mg_size >> 0) & 0xFF;
@@ -1908,11 +1908,11 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 			// fake a 'correct' command
 			SetResultSize(1);		//in:0
 			cdvd.Result[0] = 0;		// 0 complete ; 1 busy ; 0x80 error
-			Console::WriteLn("SCMD Unknown %x", params rt);
+			Console::WriteLn("SCMD Unknown %x", rt);
 			break;
 	} // end switch
 
-	//Console::WriteLn("SCMD - 0x%x\n", params rt);
+	//Console::WriteLn("SCMD - 0x%x\n", rt);
 	cdvd.ParamP = 0;
 	cdvd.ParamC = 0;
 }
@@ -1934,7 +1934,7 @@ static __forceinline void cdvdWrite18(u8 rt) { // SDATAOUT
 static __forceinline void cdvdWrite3A(u8 rt) { // DEC-SET
 	CDR_LOG("cdvdWrite3A(DecSet) %x", rt);
 	cdvd.decSet = rt;
-	Console::WriteLn("DecSet Write: %02X", params cdvd.decSet);
+	Console::WriteLn("DecSet Write: %02X", cdvd.decSet);
 }
 
 void cdvdWrite(u8 key, u8 rt)
@@ -1954,7 +1954,7 @@ void cdvdWrite(u8 key, u8 rt)
 		case 0x18: cdvdWrite18(rt); break;
 		case 0x3A: cdvdWrite3A(rt); break;
 		default:
-			Console::Notice("IOP Unknown 8bit write to addr 0x1f4020%x = 0x%x", params key, rt);
+			Console::Notice("IOP Unknown 8bit write to addr 0x1f4020%x = 0x%x", key, rt);
 			break;
 	}
 }

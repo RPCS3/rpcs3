@@ -57,7 +57,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 
 		if((g_psxNextBranchCycle - psxNextsCounter) > (u32)psxNextCounter)
 		{
-			//DevCon::Notice("SPU2async Setting new counter branch, old %x new %x ((%x - %x = %x) > %x delta)", params g_psxNextBranchCycle, psxNextsCounter + psxNextCounter, g_psxNextBranchCycle, psxNextsCounter, (g_psxNextBranchCycle - psxNextsCounter), psxNextCounter);
+			//DevCon::Notice("SPU2async Setting new counter branch, old %x new %x ((%x - %x = %x) > %x delta)", g_psxNextBranchCycle, psxNextsCounter + psxNextCounter, g_psxNextBranchCycle, psxNextsCounter, (g_psxNextBranchCycle - psxNextsCounter), psxNextCounter);
 			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
 		}
 	}
@@ -76,7 +76,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 			break;
 
 		default:
-			Console::Error("*** DMA %c - SPU unknown *** %x addr = %x size = %x", params dmaNum, chcr, madr, bcr);
+			Console::Error("*** DMA %c - SPU unknown *** %x addr = %x size = %x", dmaNum, chcr, madr, bcr);
 			break;
 	}
 }
@@ -482,7 +482,7 @@ void IopDmaUpdate(u32 elapsed)
 
 s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
-	Console::Error("ERROR: Tried to read using DMA %d (%s). Ignoring.", params 0, channel, IopDmaNames[channel]);
+	Console::Error("ERROR: Tried to read using DMA %d (%s). Ignoring.", 0, channel, IopDmaNames[channel]);
 
 	*bytesProcessed = bytesLeft;
 	return 0;
@@ -490,7 +490,7 @@ s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 s32 errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
-	Console::Error("ERROR: Tried to write using DMA %d (%s). Ignoring.", params 0, channel, IopDmaNames[channel]);
+	Console::Error("ERROR: Tried to write using DMA %d (%s). Ignoring.", 0, channel, IopDmaNames[channel]);
 
 	*bytesProcessed = bytesLeft;
 	return 0;

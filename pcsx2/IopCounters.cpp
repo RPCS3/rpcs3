@@ -189,7 +189,7 @@ static void __fastcall _rcntTestTarget( int i )
 		psxCounters[i].count -= psxCounters[i].target;
 		if(!(psxCounters[i].mode & 0x40))
 		{
-			Console::WriteLn("Counter %x repeat intr not set on zero ret, ignoring target", params i);
+			Console::WriteLn("Counter %x repeat intr not set on zero ret, ignoring target", i);
 			psxCounters[i].target |= IOPCNT_FUTURE_TARGET;
 		}
 	} else psxCounters[i].target |= IOPCNT_FUTURE_TARGET;
@@ -639,7 +639,7 @@ __forceinline void psxRcntWmode32( int index, u32 value )
 		// Need to set a rate and target
 		if((counter.mode & 0x7) == 0x7 || (counter.mode & 0x7) == 0x1)
 		{
-			Console::WriteLn( "Gate set on IOP Counter %d, disabling", params index );
+			Console::WriteLn( "Gate set on IOP Counter %d, disabling", index );
 			counter.mode |= IOPCNT_STOPPED;
 		}
 	}

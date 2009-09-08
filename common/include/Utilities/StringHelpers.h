@@ -45,38 +45,6 @@ extern bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval=wx
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// dummy structure used to type-guard the dummy parameter that's been inserted to
-// allow us to use the va_list feature on references.
-struct _VARG_PARAM
-{
-	// just some value to make the struct length 32bits instead of 8 bits, so that the
-	// compiler generates somewhat more efficient code.
-	uint someval;
-};
-
-#ifdef PCSX2_DEBUG
-
-#define params va_arg_dummy,
-#define varg_assert()  // jASSUME( dummy == &va_arg_dummy );
-// typedef the Va-Arg value to be a value type in debug builds.  The value
-// type requires a little more overhead in terms of code generation, but is always
-// type-safe.  The compiler will generate errors for any forgotten params value.
-typedef _VARG_PARAM VARG_PARAM;
-
-#else
-
-#define params NULL,	// using null is faster / more compact!
-#define varg_assert()	jASSUME( dummy == NULL );
-// typedef the Va-Arg value to be a pointer in release builds.  Pointers
-// generate more compact code by a small margin, but aren't entirely type safe since
-// the compiler won't generate errors if you pass NULL or other values.
-typedef _VARG_PARAM const * VARG_PARAM;
-
-#endif
-
-extern const _VARG_PARAM va_arg_dummy;
-
-//////////////////////////////////////////////////////////////////////////////////////////
 // Custom internal sprintf functions, which are ASCII only (even in UNICODE builds)
 //
 // These functions are useful since they are ASCII always, even under Unicode.  Typically

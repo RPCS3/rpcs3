@@ -784,7 +784,7 @@ void ssappendf( std::string& dest, const char* format, ...)
 // the format string from the parameters used to fill the string's tokens. It looks
 // like this in practice:
 //
-//   ssprintf( dest, "Yo Joe, %d. In the Hizzou %s.", params intval, strval );
+//   ssprintf( dest, "Yo Joe, %d. In the Hizzou %s.", intval, strval );
 //
 // In addition to all standard printf formatting tokens, ssprintf also supports a new token
 // for std::string parameters as %hs (passed by reference/pointer).  I opted for %hs (using 'h'
@@ -792,7 +792,7 @@ void ssappendf( std::string& dest, const char* format, ...)
 // that these are passed by pointer so you *must* use the & operator most of the time.
 // Example:
 //
-//   ssprintf( dest, "Yo Joe, %hs.", params &strval );
+//   ssprintf( dest, "Yo Joe, %hs.", &strval );
 //
 // This can be a cavet of sorts since forgetting to use the & will always compile but
 // will cause undefined behavior and odd crashes (much like how the same thing happens
@@ -806,12 +806,10 @@ void ssappendf( std::string& dest, const char* format, ...)
 // anything, and none of the other 64-bit qualifiers aren't really standard anyway.
 // Example:
 //
-//   ssprintf( dest, "Yo Joe, %Ld, %Lx.", params int64, hex64 );
+//   ssprintf( dest, "Yo Joe, %Ld, %Lx.", int64, hex64 );
 //
 void ssprintf(std::string& str, const char* fmt, ...)
 {
-	//varg_assert();
-
 	va_list args;
 	va_start(args, fmt);
 	vssprintf(str, fmt, args);
@@ -821,8 +819,6 @@ void ssprintf(std::string& str, const char* fmt, ...)
 // See ssprintf for usage details and differences from sprintf formatting.
 std::string fmt_string( const char* fmt, ... )
 {
-	//varg_assert();
-
 	std::string retval;
 	va_list args;
 	va_start( args, fmt );
@@ -834,8 +830,6 @@ std::string fmt_string( const char* fmt, ... )
 
 std::string vfmt_string( const char* fmt, va_list args )
 {
-	//varg_assert();
-
 	std::string retval;
 	vssprintf( retval, fmt, args );
 	return retval;

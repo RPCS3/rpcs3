@@ -61,7 +61,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 	psHu8(mem) = (u8)value;
 	if ((psHu8(mem) & 0x1) && dmacRegs->ctrl.DMAE)
 	{
-		/*Console::WriteLn("Running DMA 8 %x", params psHu32(mem & ~0x1));*/
+		/*Console::WriteLn("Running DMA 8 %x", psHu32(mem & ~0x1));*/
 		func();
 	}
 }
@@ -151,7 +151,7 @@ void hwWrite8(u32 mem, u8 value)
 	}
 
 	if( mem >= IPU_CMD && mem < D0_CHCR )
-		DevCon::Notice( "hwWrite8 to 0x%x = 0x%x", params mem, value );
+		DevCon::Notice( "hwWrite8 to 0x%x = 0x%x", mem, value );
 
 	switch (mem) {
 		case RCNT0_COUNT: rcntWcount(0, value); break;
@@ -352,7 +352,7 @@ void hwWrite8(u32 mem, u8 value)
 __forceinline void hwWrite16(u32 mem, u16 value)
 {
 	if( mem >= IPU_CMD && mem < D0_CHCR )
-		Console::Notice( "hwWrite16 to %x", params mem );
+		Console::Notice( "hwWrite16 to %x", mem );
 
 	switch(mem)
 	{
@@ -746,7 +746,7 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 		break;
 
 		case GIF_STAT: // stat is readonly
-			DevCon::Notice("*PCSX2* GIFSTAT write value = 0x%x (readonly, ignored)", params value);
+			DevCon::Notice("*PCSX2* GIFSTAT write value = 0x%x (readonly, ignored)", value);
 		break;
 
 		default:
@@ -1070,7 +1070,7 @@ void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
 	switch (mem)
 	{
 		case GIF_CTRL:
-			DevCon::Status("GIF_CTRL write 64", params value);
+			DevCon::Status("GIF_CTRL write 64", value);
 			psHu32(mem) = value & 0x8;
 			if(value & 0x1)
 				gsGIFReset();
@@ -1088,7 +1088,7 @@ void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
 			// set/clear bits 0 and 2 as per the GIF_MODE value.
 			const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
 			
-			Console::Status("GIFMODE64 %x", params value);
+			Console::Status("GIFMODE64 %x", value);
 
 			psHu64(GIF_MODE) = value;
 			psHu32(GIF_STAT) &= ~bitmask;

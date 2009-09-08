@@ -22,37 +22,15 @@
 using namespace Threading;
 using namespace std;
 
-const _VARG_PARAM va_arg_dummy = { 0 };
-
 namespace Console
 {
 	MutexLock m_writelock;
 	std::string m_format_buffer;
 
-	// ------------------------------------------------------------------------
-	bool __fastcall Write( Colors color, const char* fmt )
-	{
-		SetColor( color );
-		Write( fmt );
-		ClearColor();
-
-		return false;
-	}
-
-	// ------------------------------------------------------------------------
 	bool __fastcall Write( Colors color, const wxString& fmt )
 	{
 		SetColor( color );
 		Write( fmt );
-		ClearColor();
-
-		return false;
-	}
-
-	bool __fastcall WriteLn( Colors color, const char* fmt )
-	{
-		SetColor( color );
-		WriteLn( fmt );
 		ClearColor();
 
 		return false;
@@ -71,7 +49,7 @@ namespace Console
 	{
 		ScopedLock locker( m_writelock );
 		vssprintf( m_format_buffer, fmt, args );
-		Write( m_format_buffer.c_str() );
+		Write( wxString::FromUTF8( m_format_buffer.c_str() ) );
 	}
 
 	__forceinline void __fastcall _WriteLn( const char* fmt, va_list args )
@@ -79,7 +57,7 @@ namespace Console
 		ScopedLock locker( m_writelock );
 		vssprintf( m_format_buffer, fmt, args );
 		m_format_buffer += "\n";
-		Write( m_format_buffer.c_str() );
+		Write( wxString::FromUTF8( m_format_buffer.c_str() ) );
 	}
 
 	__forceinline void __fastcall _WriteLn( Colors color, const char* fmt, va_list args )
@@ -90,24 +68,20 @@ namespace Console
 	}
 
 	// ------------------------------------------------------------------------
-	bool Write( const char* fmt, VARG_PARAM dummy, ... )
+	bool Write( const char* fmt, ... )
 	{
-		varg_assert();
-
 		va_list args;
-		va_start(args,dummy);
+		va_start(args,fmt);
 		_Write( fmt, args );
 		va_end(args);
 
 		return false;
 	}
 
-	bool Write( Colors color, const char* fmt, VARG_PARAM dummy, ... )
+	bool Write( Colors color, const char* fmt, ... )
 	{
-		varg_assert();
-
 		va_list args;
-		va_start(args,dummy);
+		va_start(args,fmt);
 		SetColor( color );
 		_Write( fmt, args );
 		ClearColor();
@@ -117,81 +91,50 @@ namespace Console
 	}
 
 	// ------------------------------------------------------------------------
-	bool WriteLn( const char* fmt, VARG_PARAM dummy, ... )
+	bool WriteLn( const char* fmt, ... )
 	{
-		varg_assert();
 		va_list args;
-		va_start(args,dummy);
+		va_start(args,fmt);
 		_WriteLn( fmt, args );
 		va_end(args);
 
 		return false;
 	}
 
-	// ------------------------------------------------------------------------
-	bool WriteLn( Colors color, const char* fmt, VARG_PARAM dummy, ... )
+	bool WriteLn( Colors color, const char* fmt, ... )
 	{
-		varg_assert();
-
 		va_list args;
-		va_start(args,dummy);
+		va_start(args,fmt);
 		_WriteLn( color, fmt, args );
 		va_end(args);
 		return false;
 	}
 
 	// ------------------------------------------------------------------------
-	bool Error( const char* fmt, VARG_PARAM dummy, ... )
+	bool Error( const char* fmt, ... )
 	{
-		varg_assert();
-
 		va_list args;
-		va_start(args,dummy);
+		va_start(args,fmt);
 		_WriteLn( Color_Red, fmt, args );
 		va_end(args);
 		return false;
 	}
 
-	// ------------------------------------------------------------------------
-	bool Notice( const char* fmt, VARG_PARAM dummy, ... )
+	bool Notice( const char* fmt, ... )
 	{
-		varg_assert();
-
 		va_list list;
-		va_start(list,dummy);
+		va_start(list,fmt);
 		_WriteLn( Color_Yellow, fmt, list );
 		va_end(list);
 		return false;
 	}
 
-	// ------------------------------------------------------------------------
-	bool Status( const char* fmt, VARG_PARAM dummy, ... )
+	bool Status( const char* fmt, ... )
 	{
-		varg_assert();
-
 		va_list list;
-		va_start(list,dummy);
+		va_start(list,fmt);
 		_WriteLn( Color_Green, fmt, list );
 		va_end(list);
-		return false;
-	}
-
-	// ------------------------------------------------------------------------
-	bool __fastcall Error( const char* fmt )
-	{
-		WriteLn( Color_Red, fmt );
-		return false;
-	}
-
-	bool __fastcall Notice( const char* fmt )
-	{
-		WriteLn( Color_Yellow, fmt );
-		return false;
-	}
-
-	bool __fastcall Status( const char* fmt )
-	{
-		WriteLn( Color_Green, fmt );
 		return false;
 	}
 

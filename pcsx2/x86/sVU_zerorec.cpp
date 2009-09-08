@@ -456,7 +456,7 @@ void SuperVUReset(int vuindex)
 	}
 	else
 	{
-		DbgCon::Status("SuperVU reset [VU%d] > Resetting the recs and junk", params vuindex);
+		DbgCon::Status("SuperVU reset [VU%d] > Resetting the recs and junk", vuindex);
 		list<VuFunctionHeader*>::iterator it;
 		if (recVUHeaders[vuindex]) memset(recVUHeaders[vuindex], 0, sizeof(VuFunctionHeader*) * (s_MemSize[vuindex] / 8));
 		if (recVUBlocks[vuindex]) memset(recVUBlocks[vuindex], 0, sizeof(VuBlockHeader) * (s_MemSize[vuindex] / 8));
@@ -690,7 +690,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 		{
 			char command[255];
 			FILE* fasm = fopen("mydump1", "wb");
-			//Console::WriteLn("writing: %x, %x", params (*itblock)->startpc, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode);
+			//Console::WriteLn("writing: %x, %x", (*itblock)->startpc, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode);
 			fwrite((*itblock)->pcode, 1, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode, fasm);
 			fclose(fasm);
 			sprintf(command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 > tempdump");
@@ -837,7 +837,7 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 {
 	assert(vuindex < 2);
 	assert(s_recVUPtr != NULL);
-	//Console::WriteLn("svu%c rec: %x", params '0'+vuindex, startpc);
+	//Console::WriteLn("svu%c rec: %x", '0'+vuindex, startpc);
 
 	// if recPtr reached the mem limit reset whole mem
 	if (((uptr)s_recVUPtr - (uptr)s_recVUMem) >= VU_EXESIZE - 0x40000)
@@ -946,7 +946,7 @@ static int _recbranchAddr(u32 vucode)
 	s32 bpc = pc + (_Imm11_ << 3);
 	/*
 		if ( bpc < 0 ) {
-			Console::WriteLn("zerorec branch warning: bpc < 0 ( %x ); Using unsigned imm11", params bpc);
+			Console::WriteLn("zerorec branch warning: bpc < 0 ( %x ); Using unsigned imm11", bpc);
 			bpc = pc + (_UImm11_ << 3);
 		}*/
 	bpc &= (s_MemSize[s_vu] - 1);
@@ -1032,7 +1032,7 @@ static VuInstruction* getDelayInst(VuInstruction* pInst)
 		}
 		else break;
 	}
-	if (delay > 1) DevCon::WriteLn("supervu: %d cycle branch delay detected: %x %x", params delay - 1, pc, s_pFnHeader->startpc);
+	if (delay > 1) DevCon::WriteLn("supervu: %d cycle branch delay detected: %x %x", delay - 1, pc, s_pFnHeader->startpc);
 	return pDelayInst;
 }
 #endif
@@ -1040,7 +1040,7 @@ static VuInstruction* getDelayInst(VuInstruction* pInst)
 static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const VUPIPELINES& pipes)
 {
 	// check if block already exists
-	//Console::WriteLn("startpc %x", params startpc);
+	//Console::WriteLn("startpc %x", startpc);
 	startpc &= (s_vu ? 0x3fff : 0xfff);
 	VuBlockHeader* pbh = &recVUBlocks[s_vu][startpc/8];
 
@@ -1205,7 +1205,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 					if ((ptr[0]&0xc0))
 					{
 						// sometimes full sticky bits are needed (simple series 2000 - oane chapara)
-						//Console::WriteLn("needSticky: %x-%x", params s_pFnHeader->startpc, startpc);
+						//Console::WriteLn("needSticky: %x-%x", s_pFnHeader->startpc, startpc);
 						needFullStatusFlag = 2;
 					}
 					break;
@@ -1217,7 +1217,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 
 		if (pc >= s_MemSize[s_vu])
 		{
-			Console::Error("inf vu0 prog %x", params  startpc);
+			Console::Error("inf vu0 prog %x",  startpc);
 			break;
 		}
 	}
@@ -3205,7 +3205,7 @@ void VuBaseBlock::Recompile()
 				break;
 
 			default:
-				DevCon::Error("Bad branch %x\n", params branch);
+				DevCon::Error("Bad branch %x\n", branch);
 				assert(0);
 				break;
 		}
@@ -3817,7 +3817,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 #ifdef PCSX2_DEVBUILD
 		if (regs[1].VIread & regs[0].VIwrite & ~((1 << REG_Q) | (1 << REG_P) | (1 << REG_VF0_FLAG) | (1 << REG_ACC_FLAG)))
 		{
-			Console::Notice("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x", params regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
+			Console::Notice("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x", regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
 		}
 #endif
 
@@ -3834,7 +3834,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 
 			if (vfwrite[0] == vfwrite[1])
 			{
-				//Console::WriteLn("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle %x", params s_pCurBlock->startpc);
+				//Console::WriteLn("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle %x", s_pCurBlock->startpc);
 			}
 
 			if (vfread0[0] == vfwrite[1] || vfread1[0] == vfwrite[1])

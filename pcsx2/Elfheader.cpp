@@ -390,7 +390,7 @@ struct ElfObject
 							size = proghead[ i ].p_filesz;
 
 						if( proghead[ i ].p_vaddr != proghead[ i ].p_paddr )
-							Console::Notice( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", params
+							Console::Notice( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x",
 								proghead[ i ].p_paddr, proghead[ i ].p_vaddr);
 
 						// used to be paddr
@@ -477,7 +477,7 @@ struct ElfObject
 
 			SymNames = (char*)data.GetPtr( secthead[ i_dt ].sh_offset );
 			eS = (Elf32_Sym*)data.GetPtr( secthead[ i_st ].sh_offset );
-			Console::WriteLn("found %d symbols", params secthead[ i_st ].sh_size / sizeof( Elf32_Sym ));
+			Console::WriteLn("found %d symbols", secthead[ i_st ].sh_size / sizeof( Elf32_Sym ));
 
 			for( uint i = 1; i < ( secthead[ i_st ].sh_size / sizeof( Elf32_Sym ) ); i++ ) {
 				if ( ( eS[ i ].st_value != 0 ) && ( ELF32_ST_TYPE( eS[ i ].st_info ) == 2 ) ) {
@@ -515,14 +515,14 @@ u32 loadElfCRC( const char* filename )
 
 	IsoFS_init( );
 	
-	Console::Status("loadElfCRC: %s", params filename);
+	Console::Status("loadElfCRC: %s", filename);
 	
 	int mylen = strlen( "cdromN:" );
 	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
 
-	DevCon::Status( "loadElfFile: %d bytes", params toc.fileSize );
+	DevCon::Status( "loadElfFile: %d bytes", toc.fileSize );
 	u32 crcval = ElfObject( wxString::FromAscii( filename ), toc.fileSize ).GetCRC();
-	Console::Status( "loadElfFile: %s; CRC = %8.8X", params filename, crcval );
+	Console::Status( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
 
 	return crcval;
 }
@@ -597,7 +597,7 @@ void loadElfFile(const wxString& filename)
 		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
 		{
 			strcpy( (char*)PSM( i ), fnptr );
-			DevCon::Status( "loadElfFile: addr %x \"%s\" -> \"%s\"", params i, "rom0:OSDSYS", fnptr );
+			DevCon::Status( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr );
 		}
 	}
 

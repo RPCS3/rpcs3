@@ -392,7 +392,7 @@ void _recvuFlushFDIV(VURegs * VU) {
 	if (VU->fdiv.enable == 0) return;
 
 	cycle = VU->fdiv.Cycle + 1 - (vucycle - VU->fdiv.sCycle); //VU->fdiv.Cycle contains the latency minus 1 (6 or 12)
-//	Console::WriteLn("waiting FDIV pipe %d", params cycle);
+//	Console::WriteLn("waiting FDIV pipe %d", cycle);
 	VU->fdiv.enable = 0;
 	vucycle+= cycle;
 }
@@ -403,7 +403,7 @@ void _recvuFlushEFU(VURegs * VU) {
 	if (VU->efu.enable == 0) return;
 
 	cycle = VU->efu.Cycle - (vucycle - VU->efu.sCycle);
-//	Console::WriteLn("waiting FDIV pipe %d", params cycle);
+//	Console::WriteLn("waiting FDIV pipe %d", cycle);
 	VU->efu.enable = 0;
 	vucycle+= cycle;
 }

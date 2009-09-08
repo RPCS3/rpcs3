@@ -129,7 +129,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		else if((code & 0x38000) == 0x18000)  
 			offset = 0x100; //Debug
 		else 
-			Console::Error("Unknown Level 2 Exception!! Cause %x", params code);
+			Console::Error("Unknown Level 2 Exception!! Cause %x", code);
 	}
 	
 	if (cpuRegs.CP0.n.Status.b.EXL == 0) 
@@ -150,7 +150,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 	else 
 	{
 		offset = 0x180; //Override the cause		
-		if (errLevel2) Console::Notice("cpuException: Status.EXL = 1 cause %x", params code);
+		if (errLevel2) Console::Notice("cpuException: Status.EXL = 1 cause %x", code);
 	}
 	
 	if (checkStatus)
@@ -164,7 +164,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 void cpuTlbMiss(u32 addr, u32 bd, u32 excode) 
 {
 	Console::Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
-		params cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
+		cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
 		
 	if (bd) Console::Notice("branch delay!!");
 
@@ -321,7 +321,7 @@ static __forceinline void _cpuTestTIMR()
 	if ( (cpuRegs.CP0.n.Status.val & 0x8000) &&
 		cpuRegs.CP0.n.Count >= cpuRegs.CP0.n.Compare && cpuRegs.CP0.n.Count < cpuRegs.CP0.n.Compare+1000 )
 	{
-		Console::Status("timr intr: %x, %x", params cpuRegs.CP0.n.Count, cpuRegs.CP0.n.Compare);
+		Console::Status("timr intr: %x, %x", cpuRegs.CP0.n.Count, cpuRegs.CP0.n.Compare);
 		cpuException(0x808000, cpuRegs.branch);
 	}
 }
@@ -398,7 +398,7 @@ __forceinline void _cpuBranchTest_Shared()
 	if( iopBranchAction )
 	{
 		//if( EEsCycle < -450 )
-		//	Console::WriteLn( " IOP ahead by: %d cycles", params -EEsCycle );
+		//	Console::WriteLn( " IOP ahead by: %d cycles", -EEsCycle );
 
 		// Experimental and Probably Unnecessry Logic -->
 		// Check if the EE already has an exception pending, and if so we shouldn't
@@ -422,7 +422,7 @@ __forceinline void _cpuBranchTest_Shared()
 			int cycleCount = std::min( EEsCycle, (s32)(eeWaitCycles>>4) );
 			int cyclesRun = cycleCount - psxCpu->ExecuteBlock( cycleCount );
 			EEsCycle -= cyclesRun;
-			//Console::Notice( "IOP Exception-Pending Execution -- EEsCycle: %d", params EEsCycle );
+			//Console::Notice( "IOP Exception-Pending Execution -- EEsCycle: %d", EEsCycle );
 		}
 		else*/
 		{
@@ -458,7 +458,7 @@ __forceinline void _cpuBranchTest_Shared()
 		// IOP extra timeslices in short order.
 
 		cpuSetNextBranchDelta( 48 );
-		//Console::Notice( "EE ahead of the IOP -- Rapid Branch!  %d", params EEsCycle );
+		//Console::Notice( "EE ahead of the IOP -- Rapid Branch!  %d", EEsCycle );
 	}
 
 	// The IOP could be running ahead/behind of us, so adjust the iop's next branch by its

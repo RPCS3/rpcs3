@@ -26,7 +26,7 @@ void *_openfile(const char *filename, int flags)
 {
 	HANDLE handle;
 
-//	Console::WriteLn("_openfile %s, %d", params filename, flags & O_RDONLY);
+//	Console::WriteLn("_openfile %s, %d", filename, flags & O_RDONLY);
 	if (flags & O_WRONLY)
 	{
 		int _flags = CREATE_NEW;
@@ -55,7 +55,7 @@ int _seekfile(void *handle, u64 offset, int whence)
 	u64 ofs = (u64)offset;
 	PLONG _ofs = (LONG*) & ofs;
 
-//	Console::WriteLn("_seekfile %p, %d_%d", params handle, _ofs[1], _ofs[0]);
+//	Console::WriteLn("_seekfile %p, %d_%d", handle, _ofs[1], _ofs[0]);
 
 	SetFilePointer(handle, _ofs[0], &_ofs[1], (whence == SEEK_SET) ? FILE_BEGIN : FILE_END);
 
@@ -67,7 +67,7 @@ int _readfile(void *handle, void *dst, int size)
 	DWORD ret;
 
 	ReadFile(handle, dst, size, &ret, NULL);
-//	Console::WriteLn("_readfile(%p, %d) = %d; %d", params handle, size, ret, GetLastError());
+//	Console::WriteLn("_readfile(%p, %d) = %d; %d", handle, size, ret, GetLastError());
 	return ret;
 }
 
@@ -77,7 +77,7 @@ int _writefile(void *handle, const void *src, int size)
 
 //	_seekfile(handle, _tellfile(handle));
 	WriteFile(handle, src, size, &ret, NULL);
-//	Console::WriteLn("_readfile(%p, %d) = %d", params handle, size, ret);
+//	Console::WriteLn("_readfile(%p, %d) = %d", handle, size, ret);
 	return ret;
 }
 
@@ -90,7 +90,7 @@ void _closefile(void *handle)
 
 void *_openfile(const char *filename, int flags)
 {
-//	Console::WriteLn("_openfile %s %x", params filename, flags);
+//	Console::WriteLn("_openfile %s %x", filename, flags);
 
 	if (flags & O_WRONLY)
 		return fopen64(filename, "wb");

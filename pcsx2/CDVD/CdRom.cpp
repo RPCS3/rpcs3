@@ -945,7 +945,7 @@ s32 cdvdDmaRead(s32 channel, u32* data, u32 wordsLeft, u32* wordsProcessed)
 	cdr.pTransfer+=wordsLeft;
 	*wordsProcessed = wordsLeft;
 
-	Console::Status("New IOP DMA handled CDVD DMA: channel %d, data %p, remaining %08x, processed %08x.", params channel,data,wordsLeft, *wordsProcessed);
+	Console::Status("New IOP DMA handled CDVD DMA: channel %d, data %p, remaining %08x, processed %08x.", channel,data,wordsLeft, *wordsProcessed);
 	return 0;
 }
 

@@ -54,7 +54,7 @@ s32 CALLBACK ISOopen(const char* pTitle)
 	iso = isoOpen(pTitle);
 	if (iso == NULL)
 	{
-		Console::Error( "CDVDiso Error: Failed loading  %s", params pTitle );
+		Console::Error( "CDVDiso Error: Failed loading  %s", pTitle );
 		return -1;
 	}
 
@@ -153,7 +153,7 @@ static void FindLayer1Start()
 		}
 
 		if(layer1start>=0)
-			Console::Status("\tfound at 0x%8.8x", params layer1start);
+			Console::Status("\tfound at 0x%8.8x", layer1start);
 	}
 }
 

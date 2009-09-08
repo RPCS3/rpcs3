@@ -59,7 +59,7 @@ __forceinline void gsInterrupt()
 
 	if (!(gif->chcr.STR))
 	{
-		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", params gif->chcr._u32, gif->qwc, done);
+		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", gif->chcr._u32, gif->qwc, done);
 		return;
 	}
 
@@ -200,7 +200,7 @@ void GIFdma()
 
 	if ((dmacRegs->ctrl.STD == STD_GIF) && (prevcycles != 0))
 	{
-		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
+		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
 		if ((gif->madr + (gif->qwc * 16)) > psHu32(DMAC_STADR)) 
 		{
@@ -276,7 +276,7 @@ void GIFdma()
 			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > psHu32(DMAC_STADR)) && (id == 4)) 
 			{
 				// stalled
-				Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", params (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
+				Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
 				gif->tadr -= 16;
 				hwDmacIrq(DMAC_STALL_SIS);
@@ -443,7 +443,7 @@ void mfifoGIFtransfer(int qwc)
 	{
 		if (gif->tadr == spr0->madr) 
 		{
-			//if( gifqwc > 1 ) DevCon::WriteLn("gif mfifo tadr==madr but qwc = %d", params gifqwc);
+			//if( gifqwc > 1 ) DevCon::WriteLn("gif mfifo tadr==madr but qwc = %d", gifqwc);
 			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			gifstate |= GIF_STATE_EMPTY;			
 			return;
@@ -506,8 +506,7 @@ void mfifoGIFtransfer(int qwc)
 	FreezeRegs(1); 
 	if (mfifoGIFchain() == -1) 
 	{
-		Console::WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", params
-				gif->qwc, gif->madr, gif->tadr);
+		Console::WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", gif->qwc, gif->madr, gif->tadr);
 		gifstate = GIF_STATE_STALL;
 	}
 	FreezeRegs(0); 
@@ -564,7 +563,7 @@ void gifMFIFOInterrupt()
 		return;
 	}
 #endif
-	//if(gifqwc > 0) Console::WriteLn("GIF MFIFO ending with stuff in it %x", params gifqwc);
+	//if(gifqwc > 0) Console::WriteLn("GIF MFIFO ending with stuff in it %x", gifqwc);
 	if (!gifmfifoirq) gifqwc = 0;
 
 	gspath3done = 0;

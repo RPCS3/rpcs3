@@ -177,23 +177,23 @@ void ipuShutdown()
 
 void ReportIPU()
 {
-	Console::WriteLn("g_nDMATransfer = 0x%x.", params g_nDMATransfer);
-	Console::WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", params FIreadpos, FIwritepos);
-	Console::WriteLn("fifo_input = 0x%x.", params fifo_input);
-	Console::WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", params FOreadpos, FOwritepos);
-	Console::WriteLn("fifo_output = 0x%x.", params fifo_output);
-	Console::WriteLn("g_BP = 0x%x.", params g_BP);
-	Console::WriteLn("niq = 0x%x, iq = 0x%x.", params niq, iq);
-	Console::WriteLn("vqclut = 0x%x.", params vqclut);
-	Console::WriteLn("s_thresh = 0x%x.", params s_thresh);
-	Console::WriteLn("coded_block_pattern = 0x%x.", params coded_block_pattern);
-	Console::WriteLn("g_decoder = 0x%x.", params g_decoder);
-	Console::WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", params mpeg2_scan_norm, mpeg2_scan_alt);
-	Console::WriteLn("g_nCmdPos = 0x%x.", params g_nCmdPos);
-	Console::WriteLn("g_nCmdIndex = 0x%x.", params g_nCmdIndex);
-	Console::WriteLn("ipuCurCmd = 0x%x.", params ipuCurCmd);
-	Console::WriteLn("_readbits = 0x%x.", params _readbits);
-	Console::WriteLn("temp will equal 0x%x.", params readbits - _readbits);
+	Console::WriteLn("g_nDMATransfer = 0x%x.", g_nDMATransfer);
+	Console::WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", FIreadpos, FIwritepos);
+	Console::WriteLn("fifo_input = 0x%x.", fifo_input);
+	Console::WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", FOreadpos, FOwritepos);
+	Console::WriteLn("fifo_output = 0x%x.", fifo_output);
+	Console::WriteLn("g_BP = 0x%x.", g_BP);
+	Console::WriteLn("niq = 0x%x, iq = 0x%x.", niq, iq);
+	Console::WriteLn("vqclut = 0x%x.", vqclut);
+	Console::WriteLn("s_thresh = 0x%x.", s_thresh);
+	Console::WriteLn("coded_block_pattern = 0x%x.", coded_block_pattern);
+	Console::WriteLn("g_decoder = 0x%x.", g_decoder);
+	Console::WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", mpeg2_scan_norm, mpeg2_scan_alt);
+	Console::WriteLn("g_nCmdPos = 0x%x.", g_nCmdPos);
+	Console::WriteLn("g_nCmdIndex = 0x%x.", g_nCmdIndex);
+	Console::WriteLn("ipuCurCmd = 0x%x.", ipuCurCmd);
+	Console::WriteLn("_readbits = 0x%x.", _readbits);
+	Console::WriteLn("temp will equal 0x%x.", readbits - _readbits);
 	Console::WriteLn("");
 }
 // fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
@@ -980,7 +980,7 @@ void IPUWorker()
 			return;
 
 		default:
-			Console::WriteLn("Unknown IPU command: %x", params ipuRegs->cmd.CMD);
+			Console::WriteLn("Unknown IPU command: %x", ipuRegs->cmd.CMD);
 			break;
 	}
 
@@ -1631,7 +1631,7 @@ int FIFOfrom_write(const u32 *value, int size)
 
 	ipuRegs->ctrl.OFC += firsttrans;
 	IPU0dma();
-	//Console::WriteLn("Written %d qwords, %d", params firsttrans,ipuRegs->ctrl.OFC);
+	//Console::WriteLn("Written %d qwords, %d", firsttrans,ipuRegs->ctrl.OFC);
 
 	return firsttrans;
 }

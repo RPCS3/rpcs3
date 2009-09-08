@@ -155,7 +155,7 @@ bool i18n_SetLanguage( int wxLangId )
 {
 	if( !wxLocale::IsAvailable( wxLangId ) )
 	{
-		Console::Notice( "Invalid Language Identifier (wxID=%d).", params wxLangId );
+		Console::Notice( "Invalid Language Identifier (wxID=%d).", wxLangId );
 		return false;
 	}
 

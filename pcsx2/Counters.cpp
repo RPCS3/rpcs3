@@ -259,7 +259,7 @@ u32 UpdateVSyncRate()
 		{
 			m_iTicks = ticks;
 			gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-			Console::Status( limiterMsg, params EmuConfig.Video.FpsLimit, 0 );
+			Console::Status( limiterMsg, EmuConfig.Video.FpsLimit, 0 );
 		}
 	}
 	else
@@ -269,7 +269,7 @@ u32 UpdateVSyncRate()
 		{
 			m_iTicks = ticks;
 			gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-			Console::Status( limiterMsg, params vSyncInfo.Framerate/50, (vSyncInfo.Framerate*2)%100 );
+			Console::Status( limiterMsg, vSyncInfo.Framerate/50, (vSyncInfo.Framerate*2)%100 );
 		}
 	}
 
@@ -478,7 +478,7 @@ __forceinline void rcntUpdate_vSync()
 		if( vblankinc > 1 )
 		{
 			if( hsc != vSyncInfo.hScanlinesPerFrame )
-				Console::WriteLn( " ** vSync > Abnormal Scanline Count: %d", params hsc );
+				Console::WriteLn( " ** vSync > Abnormal Scanline Count: %d", hsc );
 			hsc = 0;
 			vblankinc = 0;
 		}

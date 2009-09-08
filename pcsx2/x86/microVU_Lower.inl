@@ -1111,10 +1111,10 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	u32  size = mtgsThread->PrepDataPacket(GIF_PATH_1, data, (0x4000-addr) >> 4);
 	u8 *pDest = mtgsThread->GetDataPacketPtr();
 /*	if((size << 4) > (0x4000-(addr&0x3fff))) {
-		//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", params (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
+		//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
 		memcpy_aligned(pDest, microVU1.regs->Mem + addr, 0x4000-(addr&0x3fff));
 		size -= (0x4000-(addr&0x3fff)) >> 4;
-		//DevCon::Notice("Size left %x", params size);
+		//DevCon::Notice("Size left %x", size);
 		pDest += 0x4000-(addr&0x3fff);
 		memcpy_aligned(pDest, microVU1.regs->Mem, size<<4);
 	}

@@ -105,7 +105,7 @@ static void SetSingleAffinity()
 			"\tSystem Affinity : 0x%08x"
 			"\tProcess Affinity: 0x%08x"
 			"\tAttempted Thread Affinity CPU: i",
-			params availProcCpus, availSysCpus, i
+			availProcCpus, availSysCpus, i
 		);
 	}
 #endif
@@ -357,7 +357,7 @@ void cpudetectInit()
 		if( sse3_result != !!x86caps.hasStreamingSIMD3Extensions )
 		{
 			Console::Notice( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( !!x86caps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
+				bool_to_char( !!x86caps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
 
 			x86caps.hasStreamingSIMD3Extensions = sse3_result;
 		}
@@ -365,7 +365,7 @@ void cpudetectInit()
 		if( ssse3_result != !!x86caps.hasSupplementalStreamingSIMD3Extensions )
 		{
 			Console::Notice( "SSSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( !!x86caps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
+				bool_to_char( !!x86caps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
 
 			x86caps.hasSupplementalStreamingSIMD3Extensions = ssse3_result;
 		}
@@ -373,7 +373,7 @@ void cpudetectInit()
 		if( sse41_result != !!x86caps.hasStreamingSIMD4Extensions )
 		{
 			Console::Notice( "SSE4 Detection Inconsistency: cpuid=%s, test_result=%s",
-				params bool_to_char( !!x86caps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
+				bool_to_char( !!x86caps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
 
 			x86caps.hasStreamingSIMD4Extensions = sse41_result;
 		}

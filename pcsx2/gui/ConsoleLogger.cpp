@@ -384,7 +384,7 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 		wxRect snapzone( topright - wxSize( 8,8 ), wxSize( 16,16 ) );
 
 		m_conf.AutoDock = snapzone.Contains( GetPosition() );
-		//Console::WriteLn( "DockCheck: %d", params g_Conf->ConLogBox.AutoDock );
+		//Console::WriteLn( "DockCheck: %d", g_Conf->ConLogBox.AutoDock );
 		if( m_conf.AutoDock )
 		{
 			SetPosition( topright + wxSize( 1,0 ) );
@@ -620,21 +620,6 @@ namespace Console
 		return false;
 	}
 
-	bool __fastcall Write( const char* fmt )
-	{
-		_immediate_logger( fmt );
-
-		if( wxTheApp == NULL ) return false;
-
-		wxCommandEvent evt( wxEVT_LOG_Write );
-		evt.SetString( wxString::FromAscii( fmt ) );
-		evt.SetExtraLong( th_CurrentColor );
-		wxGetApp().ProgramLog_PostEvent( evt );
-		wxGetApp().ProgramLog_CountMsg();
-
-		return false;
-	}
-
 	bool __fastcall Write( const wxString& fmt )
 	{
 		_immediate_logger( fmt );
@@ -643,27 +628,6 @@ namespace Console
 
 		wxCommandEvent evt( wxEVT_LOG_Write );
 		evt.SetString( fmt );
-		evt.SetExtraLong( th_CurrentColor );
-		wxGetApp().ProgramLog_PostEvent( evt );
-		wxGetApp().ProgramLog_CountMsg();
-
-		return false;
-	}
-
-	bool __fastcall WriteLn( const char* fmt )
-	{
-		const wxString fmtline( wxString::FromAscii( fmt ) + L"\n" );
-		_immediate_logger( fmtline );
-		
-		if( emuLog != NULL )
-			fflush( emuLog );
-
-		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
-		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
-
-		if( wxTheApp == NULL ) return false;
-		wxCommandEvent evt( wxEVT_LOG_Write );
-		evt.SetString( fmtline );
 		evt.SetExtraLong( th_CurrentColor );
 		wxGetApp().ProgramLog_PostEvent( evt );
 		wxGetApp().ProgramLog_CountMsg();

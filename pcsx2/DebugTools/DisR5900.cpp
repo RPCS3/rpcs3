@@ -131,7 +131,7 @@ typedef void (*TdisR5900F)DisFInterface;
 
 // sap!  it stands for string append.  It's not a friendly name but for now it makes
 // the copy-paste marathon of code below more readable!
-#define _sap( str ) ssappendf( output, str, params 
+#define _sap( str ) ssappendf( output, str, 
 
 #define dName(i)	_sap("%-7s\t") i);
 #define dGPR128(i)	_sap("%8.8x_%8.8x_%8.8x_%8.8x (%s),") cpuRegs.GPR.r[i].UL[3], cpuRegs.GPR.r[i].UL[2], cpuRegs.GPR.r[i].UL[1], cpuRegs.GPR.r[i].UL[0], disRNameGPR[i])
@@ -766,7 +766,7 @@ MakeDisF(disVWAITQ,		dName("VWAITQ");)
 MakeDisF(disSYNC,		dName("SYNC");)  
 MakeDisF(disBREAK,		dName("BREAK");) 
 MakeDisF(disSYSCALL,	dName("SYSCALL"); dCode();)
-MakeDisF(disCACHE,		ssappendf(output, "%-7s, %x,", params "CACHE", _Rt_); dOfB();)
+MakeDisF(disCACHE,		ssappendf(output, "%-7s, %x,", "CACHE", _Rt_); dOfB();)
 MakeDisF(disPREF,		dName("PREF");) 
 
 MakeDisF(disMFSA,		dName("MFSA"); dGPR64(_Rd_); dSaR();)   

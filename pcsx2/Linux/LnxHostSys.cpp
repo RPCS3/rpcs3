@@ -47,7 +47,7 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 	// get bad virtual address
 	uptr offset = (u8*)info->si_addr - psM;
 
-	DevCon::Status( "Protected memory cleanup. Offset 0x%x", params offset );
+	DevCon::Status( "Protected memory cleanup. Offset 0x%x", offset );
 
 	if (offset>=Ps2MemSize::Base)
 	{

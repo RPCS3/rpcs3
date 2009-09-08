@@ -109,7 +109,7 @@ static void _vu1Exec(VURegs* VU)
 			}
 			if (lregs.VFread0 == uregs.VFwrite ||
 				lregs.VFread1 == uregs.VFwrite) {
-//				Console::WriteLn("saving reg %d at pc=%x", params i, VU->VI[REG_TPC].UL);
+//				Console::WriteLn("saving reg %d at pc=%x", i, VU->VI[REG_TPC].UL);
 				_VF = VU->VF[uregs.VFwrite];
 				vfreg = uregs.VFwrite;
 			}

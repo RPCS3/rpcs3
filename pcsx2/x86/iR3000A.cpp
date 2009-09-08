@@ -154,7 +154,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	u8 used[34];
 	int numused, count;
 
-	Console::WriteLn( "dump1 %x:%x, %x", params startpc, psxpc, psxRegs.cycle );
+	Console::WriteLn( "dump1 %x:%x, %x", startpc, psxpc, psxRegs.cycle );
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString filename( Path::Combine( g_Conf->Folders.Logs, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
@@ -830,7 +830,7 @@ static void checkcodefn()
 #else
     __asm__("movl %%eax, %[pctemp]" : : [pctemp]"m"(pctemp) );
 #endif
-	Console::WriteLn("iop code changed! %x", params pctemp);
+	Console::WriteLn("iop code changed! %x", pctemp);
 }
 #endif
 #endif

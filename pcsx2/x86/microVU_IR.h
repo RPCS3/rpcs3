@@ -247,7 +247,7 @@ public:
 				for (int i = 0; i < xmmTotal; i++) {
 					if ((i == reg) || xmmReg[i].isNeeded) continue;
 					if (xmmReg[i].reg == xmmReg[reg].reg) {
-						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: writeBackReg() [%d]", params xmmReg[i].reg);
+						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: writeBackReg() [%d]", xmmReg[i].reg);
 						clearReg(i); // Invalidate any Cached Regs of same vf Reg
 					}
 				}
@@ -271,7 +271,7 @@ public:
 				for (int i = 0; i < xmmTotal; i++) { // Invalidate any other read-only regs of same vfReg
 					if (i == reg) continue;
 					if (xmmReg[i].reg == xmmReg[reg].reg) {
-						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: clearNeeded() [%d]", params xmmReg[i].reg);
+						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon::Error("microVU Error: clearNeeded() [%d]", xmmReg[i].reg);
 						if (mergeRegs == 1) { 
 							mVUmergeRegs(i, reg, xmmReg[reg].xyzw, 1);
 							xmmReg[i].xyzw = 0xf;

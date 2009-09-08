@@ -157,7 +157,7 @@ void sio2_serialIn(u8 value){
 	sioWrite8(value);
 	
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
-		Console::Notice("*PCSX2*: sendSize >= %d", params BUFSIZE);
+		Console::Notice("*PCSX2*: sendSize >= %d", BUFSIZE);
 	} else {
 		sio2.buf[sio2.packet.sendSize] = sioRead8();
 		sio2.packet.sendSize++;
@@ -184,7 +184,7 @@ void sio2_fifoIn(u8 value){
 	SIODMAWrite(value);
 	
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
-		Console::WriteLn("*PCSX2*: sendSize >= %d", params BUFSIZE);
+		Console::WriteLn("*PCSX2*: sendSize >= %d", BUFSIZE);
 	} else {
 		sio2.buf[sio2.packet.sendSize] = sioRead8();
 		sio2.packet.sendSize++;

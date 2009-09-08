@@ -79,7 +79,7 @@ __forceinline DataType __fastcall MemOp_r0(u32 addr)
 	//has to: translate, find function, call function
 	u32 hand=(u8)vmv;
 	u32 paddr=ppf-hand+0x80000000;
-	//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
+	//Console::WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
 	//return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(vtlbdata.RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
 
 	switch( DataSize )
@@ -113,7 +113,7 @@ __forceinline void __fastcall MemOp_r1(u32 addr, DataType* data)
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
-		//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
+		//Console::WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
 		//return reinterpret_cast<TemplateHelper<DataSize,false>::HandlerType*>(RWFT[TemplateHelper<DataSize,false>::sidx][0][hand])(paddr,data);
 
 		switch( DataSize )
@@ -141,7 +141,7 @@ __forceinline void __fastcall MemOp_w0(u32 addr, DataType data)
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
-		//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
+		//Console::WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
 
 		switch( DataSize )
 		{
@@ -172,7 +172,7 @@ __forceinline void __fastcall MemOp_w1(u32 addr,const DataType* data)
 		//has to: translate, find function, call function
 		u32 hand=(u8)vmv;
 		u32 paddr=ppf-hand+0x80000000;
-		//Console::WriteLn("Translated 0x%08X to 0x%08X",params addr,paddr);
+		//Console::WriteLn("Translated 0x%08X to 0x%08X", addr,paddr);
 		switch( DataSize )
 		{
 			case 64: return ((vtlbMemW64FP*)vtlbdata.RWFT[3][1][hand])(paddr, data);
@@ -236,7 +236,7 @@ static const char* _getModeStr( u32 mode )
 // Generates a tlbMiss Exception
 static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 {
-	//Console::Error( "vtlb miss : addr 0x%X, mode %d [%s]", params addr, mode, _getModeStr(mode) );
+	//Console::Error( "vtlb miss : addr 0x%X, mode %d [%s]", addr, mode, _getModeStr(mode) );
 	//verify(false);
 	throw R5900Exception::TLBMiss( addr, !!mode );
 }
@@ -245,7 +245,7 @@ static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 // Eventually should generate a BusError exception.
 static __forceinline void vtlb_BusError(u32 addr,u32 mode)
 {
-	//Console::Error( "vtlb bus error : addr 0x%X, mode %d\n", params addr, _getModeStr(mode) );
+	//Console::Error( "vtlb bus error : addr 0x%X, mode %d\n", addr, _getModeStr(mode) );
 	//verify(false);
 	throw R5900Exception::BusError( addr, !!mode );
 }
@@ -295,17 +295,17 @@ template<u32 saddr>
 void __fastcall vtlbUnmappedPWrite128(u32 addr,const mem128_t* data) { vtlb_BusError(addr|saddr,1); }
 
 ///// VTLB mapping errors (unmapped address spaces)
-mem8_t __fastcall vtlbDefaultPhyRead8(u32 addr) { Console::Error("vtlbDefaultPhyRead8: 0x%X",params addr); verify(false); return -1; }
-mem16_t __fastcall vtlbDefaultPhyRead16(u32 addr)  { Console::Error("vtlbDefaultPhyRead16: 0x%X",params addr); verify(false); return -1; }
-mem32_t __fastcall vtlbDefaultPhyRead32(u32 addr) { Console::Error("vtlbDefaultPhyRead32: 0x%X",params addr); verify(false); return -1; }
-void __fastcall vtlbDefaultPhyRead64(u32 addr,mem64_t* data) { Console::Error("vtlbDefaultPhyRead64: 0x%X",params addr); verify(false); }
-void __fastcall vtlbDefaultPhyRead128(u32 addr,mem128_t* data) { Console::Error("vtlbDefaultPhyRead128: 0x%X",params addr); verify(false); }
+mem8_t __fastcall vtlbDefaultPhyRead8(u32 addr) { Console::Error("vtlbDefaultPhyRead8: 0x%X",addr); verify(false); return -1; }
+mem16_t __fastcall vtlbDefaultPhyRead16(u32 addr)  { Console::Error("vtlbDefaultPhyRead16: 0x%X",addr); verify(false); return -1; }
+mem32_t __fastcall vtlbDefaultPhyRead32(u32 addr) { Console::Error("vtlbDefaultPhyRead32: 0x%X",addr); verify(false); return -1; }
+void __fastcall vtlbDefaultPhyRead64(u32 addr,mem64_t* data) { Console::Error("vtlbDefaultPhyRead64: 0x%X",addr); verify(false); }
+void __fastcall vtlbDefaultPhyRead128(u32 addr,mem128_t* data) { Console::Error("vtlbDefaultPhyRead128: 0x%X",addr); verify(false); }
 
-void __fastcall vtlbDefaultPhyWrite8(u32 addr,mem8_t data) { Console::Error("vtlbDefaultPhyWrite8: 0x%X",params addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite16(u32 addr,mem16_t data) { Console::Error("vtlbDefaultPhyWrite16: 0x%X",params addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite32(u32 addr,mem32_t data) { Console::Error("vtlbDefaultPhyWrite32: 0x%X",params addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite64(u32 addr,const mem64_t* data) { Console::Error("vtlbDefaultPhyWrite64: 0x%X",params addr); verify(false); }
-void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console::Error("vtlbDefaultPhyWrite128: 0x%X",params addr); verify(false); }
+void __fastcall vtlbDefaultPhyWrite8(u32 addr,mem8_t data) { Console::Error("vtlbDefaultPhyWrite8: 0x%X",addr); verify(false); }
+void __fastcall vtlbDefaultPhyWrite16(u32 addr,mem16_t data) { Console::Error("vtlbDefaultPhyWrite16: 0x%X",addr); verify(false); }
+void __fastcall vtlbDefaultPhyWrite32(u32 addr,mem32_t data) { Console::Error("vtlbDefaultPhyWrite32: 0x%X",addr); verify(false); }
+void __fastcall vtlbDefaultPhyWrite64(u32 addr,const mem64_t* data) { Console::Error("vtlbDefaultPhyWrite64: 0x%X",addr); verify(false); }
+void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console::Error("vtlbDefaultPhyWrite128: 0x%X",addr); verify(false); }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////

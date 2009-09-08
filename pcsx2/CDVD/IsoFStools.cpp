@@ -225,7 +225,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 	dirTocEntry* tocEntryPointer;
 	TocEntry localTocEntry;	// used for internal checking only
 
-	DbgCon::WriteLn("IsoFS_findfile(\"%s\") called", params fname);
+	DbgCon::WriteLn("IsoFS_findfile(\"%s\") called", fname);
 
 	_splitpath2(fname, pathname, filename);
 

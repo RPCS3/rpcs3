@@ -180,7 +180,7 @@ void bios_write()  // 0x35/0x03
 		// fixme: This should use %s with a length parameter (but I forget the exact syntax
 		while (a2 > 0) 
 		{
-			Console::Write("%c", params *ptr++);
+			Console::Write("%c", *ptr++);
 			a2--;
 		}
 	}
@@ -293,13 +293,13 @@ _start:
 	// Note: Use Read to obtain a write pointer here, since we're just writing back the 
 	// temp buffer we saved earlier.
 	memcpy( (void*)iopVirtMemR<void>(sp), save, 4*4);
-	Console::Write( Color_Cyan, "%s", params tmp);
+	Console::Write( Color_Cyan, "%s", tmp);
 	pc0 = ra;
 }
 
 void bios_putchar ()  // 3d
 {
-    Console::Write( Color_Cyan, "%c", params a0 );
+    Console::Write( Color_Cyan, "%c", a0 );
     pc0 = ra;
 }
 

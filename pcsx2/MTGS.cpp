@@ -137,7 +137,7 @@ static void RegHandlerSIGNAL(const u32* data)
 
 static void RegHandlerFINISH(const u32* data)
 {
-	MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n", params data[0], data[1], CSRw);
+	MTGS_LOG("MTGS FINISH data %x_%x CSRw %x\n", data[0], data[1], CSRw);
 
 	if ((CSRw & 0x2))
 	{
@@ -396,7 +396,7 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 				/*if((path.tag.nloop > 0 || (!path.tag.eop && path.tag.nloop == 0)) && size == 0)
 				{
 					if(path1loop == true) return size - 0x400;
-					//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+					//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", path.tag.nloop, path.tag.eop, path.tag.flg);
 					size = 0x400;
 					pMem -= 0x4000;
 					path1loop = true;
@@ -405,7 +405,7 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 			/*else if(size == 0 && pathidx == 0)
 			{
 				if(path1loop == true) return size - 0x400;
-				//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+				//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", path.tag.nloop, path.tag.eop, path.tag.flg);
 				size = 0x400;
 				pMem -= 0x4000;
 				path1loop = true;
@@ -414,7 +414,7 @@ __forceinline int mtgsThreadObject::_gifTransferDummy( GIF_PATH pathidx, const u
 		/*else if(size == 0 && pathidx == 0)
 		{
 			if(path1loop == true) return size - 0x400;
-			//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", params path.tag.nloop, path.tag.eop, path.tag.flg);
+			//DevCon::Notice("Looping Nloop %x, Eop %x, FLG %x", path.tag.nloop, path.tag.eop, path.tag.flg);
 			size = 0x400;
 			pMem -= 0x4000;
 			path1loop = true;
@@ -471,7 +471,7 @@ void mtgsThreadObject::PostVsyncEnd( bool updategs )
 		if( m_WritePos == volatize( m_RingPos ) )
 		{
 			// MTGS ringbuffer is empty, but we still have queued frames in the counter?  Ouch!
-			Console::Error( "MTGS > Queued framecount mismatch = %d", params m_QueuedFrames );
+			Console::Error( "MTGS > Queued framecount mismatch = %d", m_QueuedFrames );
 			m_QueuedFrames = 0;
 			break;
 		}
@@ -536,7 +536,7 @@ void mtgsThreadObject::_RingbufferLoop()
 			uptr stackpos = ringposStack.back();
 			if( stackpos != m_RingPos )
 			{
-				Console::Error( "MTGS Ringbuffer Critical Failure ---> %x to %x (prevCmd: %x)\n", params stackpos, m_RingPos, prevCmd.command );
+				Console::Error( "MTGS Ringbuffer Critical Failure ---> %x to %x (prevCmd: %x)\n", stackpos, m_RingPos, prevCmd.command );
 			}
 			wxASSERT( stackpos == m_RingPos );
 			prevCmd = tag;
@@ -668,7 +668,7 @@ void mtgsThreadObject::_RingbufferLoop()
 
 #ifdef PCSX2_DEVBUILD
 				default:
-					Console::Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", params tag.command, m_RingPos, m_WritePos);
+					Console::Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
 					wxASSERT_MSG( false, L"Bad packet encountered in the MTGS Ringbuffer." );
 					m_RingPos = m_WritePos;
 					continue;
@@ -696,7 +696,7 @@ sptr mtgsThreadObject::ExecuteTask()
 
 	Console::WriteLn( (wxString)L"\t\tForced software switch: " + (renderswitch ? L"Enabled" : L"Disabled") );
 	m_returncode = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
-	DevCon::WriteLn( "MTGS: GSopen Finished, return code: 0x%x", params m_returncode );
+	DevCon::WriteLn( "MTGS: GSopen Finished, return code: 0x%x", m_returncode );
 
 	GSCSRr = 0x551B4000; // 0x55190000
 	m_sem_InitDone.Post();
@@ -915,7 +915,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 		gif->madr += (size - retval) * 16;
 		gif->qwc -= size - retval;
 	}
-	//if(retval < 0) DevCon::Notice("Increasing size from %x to %x path %x", params size, size-retval, pathidx+1);
+	//if(retval < 0) DevCon::Notice("Increasing size from %x to %x path %x", size, size-retval, pathidx+1);
 	size = size - retval;
 	m_packet_size = size;
 	size++;			// takes into account our command qword.
