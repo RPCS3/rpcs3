@@ -4271,40 +4271,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\src\png\pnggccrd.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						PrecompiledHeaderThrough=""
-						PrecompiledHeaderFile=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						PrecompiledHeaderThrough=""
-						PrecompiledHeaderFile=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						PrecompiledHeaderThrough=""
-						PrecompiledHeaderFile=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\src\png\pngget.c"
 				>
 				<FileConfiguration
@@ -4612,40 +4578,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\png\pngtrans.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						PrecompiledHeaderThrough=""
-						PrecompiledHeaderFile=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						PrecompiledHeaderThrough=""
-						PrecompiledHeaderFile=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Devel|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						UsePrecompiledHeader="0"
-						PrecompiledHeaderThrough=""
-						PrecompiledHeaderFile=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\src\png\pngvcrd.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
