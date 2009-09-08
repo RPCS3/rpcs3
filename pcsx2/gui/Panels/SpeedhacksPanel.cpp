@@ -161,7 +161,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	m_check_vuFlagHack = &AddCheckBox(microVUSizer, _("mVU Flag Hack"),
 		_("Large Speedup and High Compatibility; may cause garbage graphics, SPS, etc..."),
 		pxE( ".Tooltips:Speedhacks:vuFlagHack",
-			L"Updates Status Flags only on blocks which will read them, instead of all the time."
+			L"Updates Status Flags only on blocks which will read them, instead of all the time. "
 			L"This is safe most of the time, and Super VU does something similar by default."
 		) );
 
@@ -170,7 +170,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	m_check_vuMinMax = &AddCheckBox(microVUSizer, _("mVU Min/Max Hack"),
 		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc..."),
 		pxE( ".Tooltips:Speedhacks:vuMinMax",
-			L"Uses SSE's Min/Max Floating Point Operations instead of custom logical Min/Max routines."
+			L"Uses SSE's Min/Max Floating Point Operations instead of custom logical Min/Max routines. "
+			L"Known to break Gran Tourismo 4, Tekken 5."
 		) );
 	
 	m_check_vuMinMax->SetValue(opts.vuMinMax);

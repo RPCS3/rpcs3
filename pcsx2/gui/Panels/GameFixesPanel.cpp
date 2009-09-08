@@ -26,10 +26,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here.") );
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
-	game_fix_checkbox[0] = &AddCheckBox( groupSizer, _("VU Add Hack - for Tri-Ace games!") );
+	game_fix_checkbox[0] = &AddCheckBox( groupSizer, _("VU Add Hack - for Tri-Ace games!"), wxEmptyString, _("Star Ocean 3, Radiata Stories and Valkyrie Profile 2 need this.") );
 	game_fix_checkbox[0]->SetValue(EmuConfig.Gamefixes.VuAddSubHack);
 
-	game_fix_checkbox[1] = &AddCheckBox( groupSizer, _( "VU Clip Flag Hack - for Persona games, maybe others.") );
+	game_fix_checkbox[1] = &AddCheckBox( groupSizer, _( "VU Clip Flag Hack - Persona games. Only for SuperVU recompiler!") );
 	game_fix_checkbox[1]->SetValue(EmuConfig.Gamefixes.VuClipFlagHack);
 
 	game_fix_checkbox[2] = &AddCheckBox( groupSizer, _("FPU Compare Hack - for Digimon Rumble Arena 2.") );
@@ -46,7 +46,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 
 	// I may as well add this, since these aren't hooked in yet. If the consensus is against it,
 	// I'll remove it.
-	game_fix_checkbox[6] = &AddCheckBox( groupSizer, _("MPEG Hack - for Mana Khemia 1.") );
+	game_fix_checkbox[6] = &AddCheckBox( groupSizer, _("MPEG Hack - for Mana Khemia 1. Not working yet!") );
 	game_fix_checkbox[6]->SetValue(EmuConfig.Gamefixes.MpegHack);
 
 	mainSizer.Add( &groupSizer, wxSizerFlags().Centre() );

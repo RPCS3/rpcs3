@@ -34,20 +34,20 @@ Panels::CpuPanel::CpuPanel( wxWindow& parent, int idealWidth ) :
 	
 	m_StartNewRadioGroup = true;
 	AddRadioButton( s_ee, _("Interpreter"), wxEmptyString, _("Quite possibly the slowest thing in the universe.") );
-	m_Option_RecEE = &AddRadioButton( s_ee, _("Recompiler") );
+	m_Option_RecEE = &AddRadioButton( s_ee, _("Recompiler [Preferred]") );
 
 	m_StartNewRadioGroup = true;
 	AddRadioButton( s_iop, _("Interpreter") );
-	m_Option_RecIOP = &AddRadioButton( s_iop, _("Recompiler") );
+	m_Option_RecIOP = &AddRadioButton( s_iop, _("Recompiler [Preferred]") );
 
 	m_StartNewRadioGroup = true;
-	AddRadioButton( s_vu0, _("Interpreter") ).SetValue( true );
-	m_Option_mVU0 = &AddRadioButton( s_vu0, _("microVU Recompiler [new!]") );
+	AddRadioButton( s_vu0, _("Interpreter"), wxEmptyString, _("Vector Unit Interpreter. Slow and not very compatible. Only use for testing.") ).SetValue( true );
+	m_Option_mVU0 = &AddRadioButton( s_vu0, _("microVU Recompiler [Preferred]"), wxEmptyString, _("New Vector Unit recompiler.") );
 	m_Option_sVU0 = &AddRadioButton( s_vu0, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
 
 	m_StartNewRadioGroup = true;
-	AddRadioButton( s_vu1, _("Interpreter") ).SetValue( true );
-	m_Option_mVU1 = &AddRadioButton( s_vu1, _("microVU Recompiler [new!]") );
+	AddRadioButton( s_vu1, _("Interpreter"), wxEmptyString, _("Vector Unit Interpreter. Slow and not very compatible. Only use for testing.") ).SetValue( true );
+	m_Option_mVU1 = &AddRadioButton( s_vu1, _("microVU Recompiler [Preferred]"), wxEmptyString, _("New Vector Unit recompiler.") );
 	m_Option_sVU1 = &AddRadioButton( s_vu1, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
 	
 	s_main.Add( &s_ee, SizerFlags::StdExpand() );
