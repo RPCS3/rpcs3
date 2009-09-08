@@ -40,7 +40,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;;&quot;$(ProjectRootDir)\src\png&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;;&quot;$(ProjectRootDir)\src\png&quot;;&quot;$(SvnRootDir)\3rdparty\libjpeg&quot;"
 				PreprocessorDefinitions="_DEBUG;__WXDEBUG__;wxUSE_BASE=0;wxUSE_GUI=1"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="wx/wxprec.h"
