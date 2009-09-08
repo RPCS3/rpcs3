@@ -262,6 +262,9 @@ namespace Panels
 	//
 	class GameFixesPanel: public BaseApplicableConfigPanel
 	{
+	protected:
+		wxCheckBox*			m_checkbox[NUM_OF_GAME_FIXES];
+
 	public:
 		GameFixesPanel( wxWindow& parent, int idealWidth );
 		void Apply( AppConfig& conf );

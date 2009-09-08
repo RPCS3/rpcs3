@@ -17,7 +17,6 @@
 #include "ConfigurationPanels.h"
 
 using namespace wxHelpers;
-static wxCheckBox* game_fix_checkbox[NUM_OF_GAME_FIXES];
 
 Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth)
@@ -26,28 +25,53 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here.") );
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
-	game_fix_checkbox[0] = &AddCheckBox( groupSizer, _("VU Add Hack - for Tri-Ace games!"), wxEmptyString, _("Star Ocean 3, Radiata Stories and Valkyrie Profile 2 need this.") );
-	game_fix_checkbox[0]->SetValue(EmuConfig.Gamefixes.VuAddSubHack);
+	
+	// NOTE: Oder of checkboxes must match the order of the bits in the GamefixOptions structure!
+	// NOTE2: Don't make this static, because translations can change at run-time :)
 
-	game_fix_checkbox[1] = &AddCheckBox( groupSizer, _( "VU Clip Flag Hack - Persona games. Only for SuperVU recompiler!") );
-	game_fix_checkbox[1]->SetValue(EmuConfig.Gamefixes.VuClipFlagHack);
 
-	game_fix_checkbox[2] = &AddCheckBox( groupSizer, _("FPU Compare Hack - for Digimon Rumble Arena 2.") );
-	game_fix_checkbox[2]->SetValue(EmuConfig.Gamefixes.FpuCompareHack);
+	struct CheckTextMess
+	{
+		wxString label, tooltip;
+	};
+	const CheckTextMess check_text[NUM_OF_GAME_FIXES] = 
+	{
+		{
+			_("VU Add Hack - for Tri-Ace games!"),
+			_("Games that need this hack to boot:\n * Star Ocean 3\n * Radiata Stories\n * Valkyrie Profile 2")
+		},
+		{
+			_("VU Clip Flag Hack - for Persona games (SuperVU recompiler only!)"),
+			wxEmptyString
+		},
+		{
+			_("FPU Compare Hack - for Digimon Rumble Arena 2."),
+			wxEmptyString
+		},
+		{
+			_("FPU Multiply Hack - for Tales of Destiny."),
+			wxEmptyString
+		},
+		{
+			_("DMA Execution Hack - for Fatal Frame."),
+			wxEmptyString
+		},
+		{
+			_("VU XGkick Hack - for Erementar Gerad."),
+			wxEmptyString
+		},
+		{
+			_("MPEG Hack - for Mana Khemia 1."),
+			wxEmptyString
+		}
+	};
 
-	game_fix_checkbox[3] = &AddCheckBox( groupSizer, _("FPU Multiply Hack - for Tales of Destiny.") );
-	game_fix_checkbox[3]->SetValue(EmuConfig.Gamefixes.FpuMulHack);
-
-	game_fix_checkbox[4] = &AddCheckBox( groupSizer, _("DMA Execution Hack - for Fatal Frame.") );
-	game_fix_checkbox[4]->SetValue(EmuConfig.Gamefixes.DMAExeHack);
-
-	game_fix_checkbox[5] = &AddCheckBox( groupSizer, _("VU XGkick Hack - for Erementar Gerad.") );
-	game_fix_checkbox[5]->SetValue(EmuConfig.Gamefixes.XgKickHack);
-
-	// I may as well add this, since these aren't hooked in yet. If the consensus is against it,
-	// I'll remove it.
-	game_fix_checkbox[6] = &AddCheckBox( groupSizer, _("MPEG Hack - for Mana Khemia 1. Not working yet!") );
-	game_fix_checkbox[6]->SetValue(EmuConfig.Gamefixes.MpegHack);
+	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
+	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
+	{
+		m_checkbox[i] = &AddCheckBox( groupSizer, check_text[i].label, wxEmptyString, check_text[i].tooltip );
+		m_checkbox[i]->SetValue( !!(opts.bitset & (1 << i)) );
+	}
 
 	mainSizer.Add( &groupSizer, wxSizerFlags().Centre() );
 
@@ -63,11 +87,12 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 // I could still probably get rid of the for loop, but I think this is clearer.
 void Panels::GameFixesPanel::Apply( AppConfig& conf )
 {
+	Pcsx2Config::GamefixOptions& opts( conf.EmuOptions.Gamefixes );
     for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
     {
-        if (game_fix_checkbox[i]->GetValue())
-            EmuConfig.Gamefixes.bitset |= ( 1 << i);
+        if (m_checkbox[i]->GetValue())
+            opts.bitset |= (1 << i);
         else
-            EmuConfig.Gamefixes.bitset &= ~( 1 << i);
+            opts.bitset &= ~(1 << i);
     }
 }

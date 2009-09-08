@@ -17,10 +17,14 @@
 #include "MainFrame.h"
 
 #include "Resources/EmbeddedImage.h"
-#include "Resources/AppIcon.h"
+#include "Resources/AppIcon16.h"
+#include "Resources/AppIcon32.h"
+#include "Resources/AppIcon64.h"
+
+#include <wx/iconbndl.h>
 
 #ifdef _WIN32
-#include "svnrev.h"
+#	include "svnrev.h"
 #endif
 
 // ------------------------------------------------------------------------
@@ -299,10 +303,16 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	SetTitle( wintitle );
 
-	wxIcon myIcon;
-	myIcon.CopyFromBitmap( wxBitmap( EmbeddedImage<res_AppIcon>().Rescale( 32, 32 ) ) );
-	SetIcon( myIcon );
-
+	// Ideally the __WXMSW__ port should use the embedded IDI_ICON2 icon, because wxWidgets sucks and
+	// loses the transparency information when loading bitmaps into icons.  But for some reason
+	// I cannot get it to work despite following various examples to the letter.
+	
+	wxIconBundle bundle;
+	bundle.AddIcon( EmbeddedImage<res_AppIcon32>().GetIcon() );
+	bundle.AddIcon( EmbeddedImage<res_AppIcon64>().GetIcon() );
+	bundle.AddIcon( EmbeddedImage<res_AppIcon16>().GetIcon() );
+	SetIcons( bundle );
+	
 	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
 	m_statusbar.SetStatusWidths(2, m_statusbar_widths);
 	m_statusbar.SetStatusText( L"The Status is Good!", 0);

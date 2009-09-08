@@ -98,6 +98,13 @@ public:
 		return m_Image;
 	}
 
+	wxIcon GetIcon()
+	{
+		wxIcon retval;
+		retval.CopyFromBitmap( Get() );
+		return retval;
+	}
+
 	// ------------------------------------------------------------------------
 	// Performs a pixel resize of the loaded image and returns a new image handle (EmbeddedImage
 	// is left unmodified).  Useful for creating ugly versions of otherwise nice graphics.  Do
