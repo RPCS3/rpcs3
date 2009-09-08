@@ -18,16 +18,16 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
  /*
   * Theoretically, this header is for anything to do with keyboard input.
   * Pragmatically, event handing's going in here too.
   */
-  
- #include "keyboard.h"
- 
 
-__forceinline int FindKey(int key, int pad)
+ #include "keyboard.h"
+
+
+int FindKey(int key, int pad)
 {
 	for (int p = 0; p < MAX_SUB_KEYS; p++)
 		for (int i = 0; i < MAX_KEYS; i++)
@@ -71,7 +71,7 @@ void PollForX11KeyboardInput(int pad)
 	KeySym key;
 	int keyPress = 0, keyRelease = 0;
 	int i;
-	
+
 	// keyboard input
 	while (XPending(GSdsp) > 0)
 	{
@@ -82,7 +82,7 @@ void PollForX11KeyboardInput(int pad)
 				key = XLookupKeysym((XKeyEvent *) & E, 0);
 
 				i = FindKey(key, pad);
-			
+
 				// Analog controls.
 				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
@@ -103,10 +103,10 @@ void PollForX11KeyboardInput(int pad)
 				}
 				i += 0xff00;
 				}
-				
-				if (i != -1) 
+
+				if (i != -1)
 				{
-					clear_bit(keyRelease, i); 
+					clear_bit(keyRelease, i);
 					set_bit(keyPress, i);
 				}
 				//PAD_LOG("Key pressed:%d\n", i);
@@ -114,22 +114,22 @@ void PollForX11KeyboardInput(int pad)
 				event.evt = KEYPRESS;
 				event.key = key;
 				break;
-				
+
 			case KeyRelease:
 				key = XLookupKeysym((XKeyEvent *) & E, 0);
 
 				i = FindKey(key, pad);
-			
+
 				// Analog Controls.
 				if ((i > PAD_RY) && (i <= PAD_R_LEFT))
 				{
 					Analog::ResetPad(pad, Analog::AnalogToPad(i));
 					i += 0xff00;
 				}
-				
-				if (i != -1) 
+
+				if (i != -1)
 				{
-					clear_bit(keyPress, i); 
+					clear_bit(keyPress, i);
 					set_bit(keyRelease, i);
 				}
 
@@ -153,13 +153,13 @@ void PollForX11KeyboardInput(int pad)
 bool PollX11Keyboard(char* &temp, u32 &pkey)
 {
 	GdkEvent *ev = gdk_event_get();
-	
+
 	if (ev != NULL)
 	{
 		if (ev->type == GDK_KEY_PRESS)
 		{
-			
-			if (ev->key.keyval == GDK_Escape) 
+
+			if (ev->key.keyval == GDK_Escape)
 			{
 				temp = "Unknown";
 				pkey = NULL;
@@ -169,11 +169,11 @@ bool PollX11Keyboard(char* &temp, u32 &pkey)
 				temp = KeysymToChar(ev->key.keyval);
 				pkey = ev->key.keyval;
 			}
-			
+
 			return true;
 		}
 	}
-	
+
 	return false;
 }
 #else

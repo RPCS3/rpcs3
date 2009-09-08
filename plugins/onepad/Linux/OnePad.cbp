@@ -2,12 +2,12 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="PadNull" />
+		<Option title="OnePad" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../../bin/plugins/libPadnull.so.0.1.0" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../bin/plugins/libOnePAD.so.0.1.0" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -18,7 +18,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="../../../bin/plugins/libPadnull.so.0.1.0" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../bin/plugins/libOnePAD.so.0.1.0" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -35,33 +35,43 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="`pkg-config gtk+-2.0 --cflags`" />
+			<Add option="`pkg-config sdl --cflags`" />
 			<Add option="-fPIC" />
 			<Add option="-m32" />
 			<Add directory="../Linux" />
-			<Add directory="../../PadNull" />
+			<Add directory="../../onepad" />
 			<Add directory="../../../common/include" />
 		</Compiler>
 		<Linker>
 			<Add option="`pkg-config gtk+-2.0 --libs`" />
+			<Add option="`pkg-config sdl --libs`" />
 			<Add option="-shared" />
 		</Linker>
-		<Unit filename="Config.cpp" />
-		<Unit filename="Config.h" />
-		<Unit filename="PadLinux.cpp" />
-		<Unit filename="PadLinux.h" />
 		<Unit filename="callbacks.h" />
+		<Unit filename="gui.cpp" />
+		<Unit filename="ini.cpp" />
 		<Unit filename="interface.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="interface.h" />
-		<Unit filename="pad.glade" />
+		<Unit filename="linux.cpp" />
+		<Unit filename="linux.h" />
+		<Unit filename="onepad.glade" />
 		<Unit filename="support.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="support.h" />
-		<Unit filename="../Pad.cpp" />
-		<Unit filename="../Pad.h" />
-		<Unit filename="../ReadMe.txt" />
+		<Unit filename="../analog.cpp" />
+		<Unit filename="../analog.h" />
+		<Unit filename="../bitwise.h" />
+		<Unit filename="../controller.cpp" />
+		<Unit filename="../controller.h" />
+		<Unit filename="../joystick.cpp" />
+		<Unit filename="../joystick.h" />
+		<Unit filename="../keyboard.cpp" />
+		<Unit filename="../keyboard.h" />
+		<Unit filename="../onepad.cpp" />
+		<Unit filename="../onepad.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

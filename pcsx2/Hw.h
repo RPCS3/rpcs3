@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -50,9 +50,9 @@ union tDMA_CHCR {
 		u32 reserved1 : 1;
 		u32 MOD : 2;
 		u32 ASP : 2;
-		u32 TTE : 1; 
-		u32 TIE : 1; 
-		u32 STR : 1; 
+		u32 TTE : 1;
+		u32 TIE : 1;
+		u32 STR : 1;
 		u32 reserved2 : 7;
 		u32 TAG : 16;
 	};
@@ -86,7 +86,7 @@ struct DMACh {
 
 // HW defines
 enum HWaddress
-{	
+{
 	RCNT0_COUNT		=	0x10000000,
 	RCNT0_MODE		=	0x10000010,
 	RCNT0_TARGET	=	0x10000020,
@@ -120,7 +120,7 @@ enum HWaddress
 	GIF_CNT			=	0x10003080,
 	GIF_P3CNT		=	0x10003090,
 	GIF_P3TAG		=	0x100030A0,
-	
+
 	// Vif Memory Locations
 	VIF0_STAT		= 	0x10003800,
 	VIF0_FBRST		= 	0x10003810,
@@ -142,7 +142,7 @@ enum HWaddress
 	VIF0_C1			= 	0x10003950,
 	VIF0_C2			=	0x10003960,
 	VIF0_C3			= 	0x10003970,
-	
+
 	VIF1_STAT		=	0x10003c00,
 	VIF1_FBRST		=	0x10003c10,
 	VIF1_ERR		= 	0x10003c20,
@@ -166,7 +166,7 @@ enum HWaddress
 	VIF1_C1			=	0x10003d50,
 	VIF1_C2			= 	0x10003d60,
 	VIF1_C3			= 	0x10003d70,
-	
+
 	VIF0_FIFO		=	0x10004000,
 	VIF1_FIFO		=	0x10005000,
 	GIF_FIFO		=	0x10006000,
@@ -253,7 +253,7 @@ enum HWaddress
 	SIO_BGR			=	0x1000F150,
 	SIO_TXFIFO		=	0x1000F180,
 	SIO_RXFIFO		=	0x1000F1C0,
-	
+
 	SBUS_F200		=	0x1000F200,	//MSCOM
 	SBUS_F210		=	0x1000F210,	//SMCOM
 	SBUS_F220		=	0x1000F220,	//MSFLG
@@ -264,7 +264,7 @@ enum HWaddress
 
 	MCH_RICM		=	0x1000F430,
 	MCH_DRD			=	0x1000F440,
-	
+
 	DMAC_ENABLER	=	0x1000F520,
 	DMAC_ENABLEW	=	0x1000F590,
 
@@ -295,7 +295,7 @@ enum HWaddress
 enum INTCIrqs
 {
 	INTC_GS = 0,
-	INTC_SBUS, 
+	INTC_SBUS,
 	INTC_VBLANK_S,
 	INTC_VBLANK_E,
 	INTC_VIF0,
@@ -332,7 +332,7 @@ enum DMACIrqs
 	DMAC_SIF2,
 	DMAC_FROM_SPR,
 	DMAC_TO_SPR,
-	
+
 	// We're setting error conditions through hwDmacIrq, so these correspond to the conditions above.
 	DMAC_STALL_SIS		= 13,
 	DMAC_MFIFO_EMPTY		= 14, // Transfer?
@@ -379,7 +379,7 @@ enum vif1_stat_flags
 
 // These are the stat flags that are the same for vif0 & vif1,
 // for occassions where we don't neccessarily know which we are using.
-enum vif_stat_flags 
+enum vif_stat_flags
 {
 	VIF_STAT_VPS_W 	= (1),
 	VIF_STAT_VPS_D 	= (2),
@@ -396,7 +396,7 @@ enum vif_stat_flags
 	VIF_STAT_ER1		= (1<<13)
 };
 
-//GIF_STAT 
+//GIF_STAT
 enum gif_stat_flags
 {
 	GIF_STAT_M3R		= (1),		// GIF_MODE Mask
@@ -423,7 +423,7 @@ enum gif_mode_flags
 
 //DMA interrupts & masks
 enum DMAInter
-{	
+{
 	BEISintr = 0x8000,
 	VIF0intr = 0x10001,
 	VIF1intr = 0x20002,
@@ -445,8 +445,8 @@ union tDMAC_CTRL {
 		u32 RELE : 1;
 		u32 MFD : 2;
 		u32 STS : 2;
-		u32 STD : 2; 
-		u32 RCYC : 3; 
+		u32 STD : 2;
+		u32 RCYC : 3;
 		u32 reserved1 : 21;
 	};
 	u32 _u32;
@@ -522,7 +522,7 @@ struct DMACregisters
 	u32 padding1[3];
 	tDMAC_PCR	pcr;
 	u32 padding2[3];
-	
+
 	tDMAC_SQWC	sqwc;
 	u32 padding3[3];
 	tDMAC_RBSR	rbsr;
@@ -555,7 +555,7 @@ static __forceinline u8* dmaGetAddr(u32 mem)
 
 	p = (u8*)dmaGetAddrBase(mem);
 
-#ifdef _WIN32	
+#ifdef _WIN32
 	// do manual LUT since IPU/SPR seems to use addrs 0x3000xxxx quite often
 	// linux doesn't suffer from this because it has better vm support
 	if( memLUT[ (p-PS2MEM_BASE)>>12 ].aPFNs == NULL ) {
@@ -577,7 +577,7 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 	u8 *ptr;
 
 //	if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
-	
+
 	//  Need to check the physical address as well as just the "SPR" flag, as VTLB doesnt seem to handle it
 	if ((addr & 0x80000000) || (addr & 0x70000000) == 0x70000000) return (void*)&psS[addr & 0x3ff0];
 
@@ -589,21 +589,21 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 	return ptr;
 }
 
-#endif 
+#endif
 
-static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num) 
+static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num)
 {
-	u32 *ptr = (u32*)dmaGetAddr(addr); 
-	if (ptr == NULL)  
+	u32 *ptr = (u32*)dmaGetAddr(addr);
+	if (ptr == NULL)
 	{
 		// DMA Error
 		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; /* BUS error */
-	
+
 		// DMA End
-		psHu32(DMAC_STAT) |= 1<<num;  
-		dma->chcr.STR = 0; 
+		psHu32(DMAC_STAT) |= 1<<num;
+		dma->chcr.STR = 0;
 	}
-	
+
 	return ptr;
 }
 
