@@ -180,6 +180,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\yaml-reader\spectests.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\yaml-reader\tests.cpp"
 				>
 			</File>
@@ -189,6 +193,18 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\yaml-reader\emittertests.h"
+				>
+			</File>
+			<File
+				RelativePath=".\yaml-reader\parsertests.h"
+				>
+			</File>
+			<File
+				RelativePath=".\yaml-reader\spectests.h"
+				>
+			</File>
 			<File
 				RelativePath=".\yaml-reader\tests.h"
 				>

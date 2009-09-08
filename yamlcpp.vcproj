@@ -192,6 +192,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\src\null.cpp"
+					>
+				</File>
+				<File
 					RelativePath=".\src\scalar.cpp"
 					>
 				</File>

@@ -38,12 +38,12 @@ namespace YAML
 		struct flag { char c[2]; };
 		flag Convert(...);
 		
-		char (& operator,(flag, flag) )[1];
+		int operator,(flag, flag);
 		
 		template<typename T>
 		void operator,(flag, T const&);
 		
-		char (& operator,(char(&)[1], flag) )[1];
+		char operator,(int, flag);
 	}
 
 	template <typename T>
