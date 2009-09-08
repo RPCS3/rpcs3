@@ -2106,6 +2106,10 @@
 				Name="Resources"
 				>
 				<File
+					RelativePath="..\..\gui\Resources\AppIcon.ico"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Resources\AppIcon.png"
 					>
 					<FileConfiguration
@@ -2413,10 +2417,6 @@
 				</File>
 				<File
 					RelativePath=".\..\resource.h"
-					>
-				</File>
-				<File
-					RelativePath=".\..\testing.ico"
 					>
 				</File>
 				<File

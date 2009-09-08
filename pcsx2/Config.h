@@ -176,6 +176,7 @@ public:
 	};
 
 	// ------------------------------------------------------------------------
+	// NOTE: The GUI's GameFixes panel is dependent on the order of bits in this structure.
 	struct GamefixOptions
 	{
 		BITFIELD32()
