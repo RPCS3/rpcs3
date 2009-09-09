@@ -120,6 +120,12 @@ enum MenuIdentifiers
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
+// ScopedWindowDisable
+//
+// This class is a fix helper for WXGTK ports of PCSX2, which need the current window to
+// be disabled in order for plugin-created modal dialogs to receive messages.  This disabling
+// causes problems in Win32/MSW, where some plugins' modal dialogs will cause all PCSX2
+// windows to minimize on closure.
 //
 class ScopedWindowDisable
 {
@@ -132,13 +138,18 @@ public:
 	ScopedWindowDisable( wxWindow* whee ) :
 		m_window( *whee )
 	{
+	#ifdef __WXGTK__
 		wxASSERT( whee != NULL );
 		m_window.Disable();
+	#endif
 	}
 
 	~ScopedWindowDisable()
 	{
+#ifdef __WXGTK__
 		m_window.Enable();
+		m_window.SetFocus();
+#endif
 	}
 };
 
