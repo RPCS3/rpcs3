@@ -263,8 +263,13 @@ void CoreEmuThread::Suspend( bool isBlocking )
 // is determined by comparing the current settings against the new settings.
 void CoreEmuThread::ApplySettings( const Pcsx2Config& src )
 {
+	const bool isRunning = IsRunning();
+	Suspend();
+
 	m_resetRecompilers = ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers = (src.Profiler != EmuConfig.Profiler );
 	EmuConfig = src;
+
+	if( isRunning ) Resume();
 }
 

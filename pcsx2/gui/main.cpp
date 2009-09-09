@@ -36,6 +36,7 @@ DEFINE_EVENT_TYPE( pxEVT_SemaphorePing )
 
 bool			UseAdminMode = false;
 AppConfig*		g_Conf = NULL;
+ConfigOverrides OverrideOptions;
 
 namespace Exception
 {
@@ -125,6 +126,23 @@ void AppEmuThread::StateCheck()
 	}
 }
 
+static bool HandlePluginError( Exception::PluginError& ex )
+{
+	bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
+		_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
+
+	if( result )
+	{
+		g_Conf->SettingsTabName = L"Plugins";
+		wxGetApp().PostMenuAction( MenuId_Config_Settings );
+		wxGetApp().Ping();
+
+		// fixme: Send a message to the panel to select the failed plugin.
+		// fixme: handle case where user cancels the settings dialog. (should return FALSE).
+	}
+	return result;
+}
+
 sptr AppEmuThread::ExecuteTask()
 {
 	try
@@ -134,6 +152,7 @@ sptr AppEmuThread::ExecuteTask()
 	// ----------------------------------------------------------------------------
 	catch( Exception::FileNotFound& ex )
 	{
+		GetPluginManager().Close();
 		if( ex.StreamName == g_Conf->FullpathToBios() )
 		{
 			GetPluginManager().Close();
@@ -144,31 +163,19 @@ sptr AppEmuThread::ExecuteTask()
 			{
 				wxGetApp().PostMenuAction( MenuId_Config_BIOS );
 				wxGetApp().Ping();
+
+				// fixme: handle case where user cancels the settings dialog. (should return FALSE).
+				// fixme: automatically re-try emu startup here...
 			}
 		}
-		else
+	}
+	// ----------------------------------------------------------------------------
+	catch( Exception::PluginError& ex )
+	{
+		GetPluginManager().Close();
+		if( HandlePluginError( ex ) )
 		{
-			// Probably a plugin.  Find out which one!
-
-			const PluginInfo* pi = tbl_PluginInfo-1;
-			while( ++pi, pi->shortname != NULL )
-			{
-				const PluginsEnum_t pid = pi->id;
-				if( g_Conf->FullpathTo( pid ) == ex.StreamName ) break;
-			}
-
-			if( pi->shortname != NULL )
-			{
-				bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
-					_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
-
-				if( result )
-				{
-					g_Conf->SettingsTabName = L"Plugins";
-					wxGetApp().PostMenuAction( MenuId_Config_Settings );
-					wxGetApp().Ping();
-				}
-			}
+			// fixme: automatically re-try emu startup here...
 		}
 	}
 	// ----------------------------------------------------------------------------
@@ -269,29 +276,43 @@ void Pcsx2App::ReadUserModeSettings()
 
 void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 {
-	parser.SetLogo( L" >> PCSX2  --  A Playstation2 Emulator for the PC\n");
+	parser.SetLogo( (wxString)L" >>  PCSX2  --  A Playstation2 Emulator for the PC  <<\n\n" +
+		_("All options are for the current session only and will not be saved.\n")
+	);
 
-	parser.AddParam( L"CDVD/ELF", wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
+	parser.AddParam( _("IsoFile"), wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
 
-	parser.AddSwitch( L"h",		L"help",	L"displays this list of command line options", wxCMD_LINE_OPTION_HELP );
-	parser.AddSwitch( L"nogui",	L"nogui",	L"disables display of the gui and enables the Escape Hack." );
+	parser.AddSwitch( L"h",			L"help",	_("displays this list of command line options"), wxCMD_LINE_OPTION_HELP );
 
-	parser.AddOption( L"bootmode",	wxEmptyString,	L"0 - quick (default), 1 - bios, 2 - load elf", wxCMD_LINE_VAL_NUMBER );
-	parser.AddOption( wxEmptyString,L"cfg",			L"configuration file override", wxCMD_LINE_VAL_STRING );
+	parser.AddSwitch( wxEmptyString,L"nogui",	_("disables display of the gui while running games") );
+	parser.AddSwitch( wxEmptyString,L"skipbios",_("skips standard BIOS splash screens and software checks") );
+	parser.AddOption( wxEmptyString,L"elf",		_("executes an ELF image"), wxCMD_LINE_VAL_STRING );
+	parser.AddSwitch( wxEmptyString,L"nodisc",	_("boots an empty dvd tray; use to enter the PS2 system menu") );
+	parser.AddSwitch( wxEmptyString,L"usecd",	_("boots from the configured CDVD plugin (ignores IsoFile parameter)") );
 
-	parser.AddSwitch( L"forcewiz",	wxEmptyString,	L"Forces PCSX2 to start the First-time Wizard" );
+	parser.AddOption( wxEmptyString,L"cfgpath",	_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
+	parser.AddOption( wxEmptyString,L"cfg",		_("specifies the PCSX2 configuration file to use [not implemented]"), wxCMD_LINE_VAL_STRING );
 
-	parser.AddOption( wxEmptyString, L"cdvd",		L"specify the CDVD plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"gs",			L"specify the GS plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"spu",		L"specify the SPU2 plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"pad",		L"specify the PAD plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"dev9",		L"specify the DEV9 plugin for this session only." );
-	parser.AddOption( wxEmptyString, L"usb",		L"specify the USB plugin for this session only." );
+	parser.AddSwitch( wxEmptyString,L"forcewiz",_("Forces PCSX2 to start the First-time Wizard") );
 
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+	{
+		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
+			wxsFormat( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
+		);
+	}
+	
 	parser.SetSwitchChars( L"-" );
 }
 
-bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
+bool Pcsx2App::OnCmdLineError( wxCmdLineParser& parser )
+{
+	wxApp::OnCmdLineError( parser );
+	return false;
+}
+
+bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 {
 	if( parser.GetParamCount() >= 1 )
 	{
@@ -299,11 +320,36 @@ bool Pcsx2App::OnCmdLineParsed(wxCmdLineParser& parser)
 		parser.GetParam( 0 );
 	}
 
-	// Suppress wxWidgets automatic options parsing since none of them pertain to Pcsx2 needs.
+	// Suppress wxWidgets automatic options parsing since none of them pertain to PCSX2 needs.
 	//wxApp::OnCmdLineParsed( parser );
 
 	//bool yay = parser.Found(L"nogui");
 	m_ForceWizard = parser.Found( L"forcewiz" );
+
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+	{
+		wxString dest;
+		if( !parser.Found( pi->GetShortname().Lower(), &dest ) ) continue;
+
+		OverrideOptions.Filenames.Plugins[pi->id] = dest;
+
+		if( wxFileExists( dest ) )
+			Console::Notice( pi->GetShortname() + L" override: " + dest );
+		else
+		{
+			bool result = Msgbox::OkCancel(
+				wxsFormat( _("Plugin Override Error!  Specified %s plugin does not exist:\n\n"), pi->GetShortname().c_str() ) +
+				dest +
+				_("Press OK to use the default configured plugin, or Cancel to close."),
+				_("Plugin Override Error - PCSX2"), wxICON_ERROR
+			);
+
+			if( !result ) return false;
+		}
+	}
+	
+	parser.Found( L"cfgpath", &OverrideOptions.SettingsFolder );
 
 	return true;
 }
@@ -314,7 +360,7 @@ typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
 bool Pcsx2App::OnInit()
 {
     wxInitAllImageHandlers();
-	wxApp::OnInit();
+	if( !wxApp::OnInit() ) return false;
 
 	g_Conf = new AppConfig();
 
@@ -365,13 +411,18 @@ bool Pcsx2App::OnInit()
 		ApplySettings();
 		InitPlugins();
 	}
-	catch( Exception::StartupAborted& )
+	// ----------------------------------------------------------------------------
+	catch( Exception::StartupAborted& ex )
 	{
-		// Note: wx does not call OnExit() when returning false.
-		CleanupMess();
+		Console::Notice( ex.FormatDiagnosticMessage() );
 		return false;
 	}
-
+	// ----------------------------------------------------------------------------
+	catch( Exception::PluginError& ex )
+	{
+		if( !HandlePluginError( ex ) )
+			return false;
+	}
     return true;
 }
 
@@ -488,6 +539,9 @@ void Pcsx2App::ApplySettings()
 	g_Conf->Apply();
 	if( m_MainFrame != NULL )
 		m_MainFrame->ApplySettings();
+
+	if( g_EmuThread != NULL )
+		g_EmuThread->ApplySettings( g_Conf->EmuOptions );
 }
 
 void Pcsx2App::LoadSettings()

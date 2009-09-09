@@ -225,6 +225,7 @@ public:
 	int  OnExit();
 	void OnInitCmdLine( wxCmdLineParser& parser );
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
+	bool OnCmdLineError( wxCmdLineParser& parser );
 	bool PrepForExit();
 
 #ifdef __WXDEBUG__

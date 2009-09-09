@@ -18,6 +18,7 @@
 #include "CDVD/CDVDaccess.h"
 
 class IniInterface;
+class wxFileConfig;
 
 extern bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
 
@@ -168,7 +169,13 @@ protected:
 	friend class Pcsx2App;
 };
 
-class wxFileConfig;		// forward declare.
+struct ConfigOverrides
+{
+	AppConfig::FilenameOptions	Filenames;
+	wxString		SettingsFolder;
+};
+
+extern ConfigOverrides OverrideOptions;
 
 extern wxFileConfig* OpenFileConfig( const wxString& filename );
 extern void AppConfig_ReloadGlobalSettings( bool overwrite =  false );

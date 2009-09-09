@@ -54,7 +54,7 @@ namespace Exception
 		virtual wxString FormatDisplayMessage() const;
 	};
 
-	// Plugin load errors occur when initially trying to load plugins durign the
+	// Plugin load errors occur when initially trying to load plugins during the
 	// creation of a PluginManager object.  The error may either be due to non-existence,
 	// corruption, or incompatible versioning.
 	class PluginLoadError : public virtual PluginError, public virtual BadStream

@@ -51,8 +51,13 @@ void LoadPlugins()
 
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
-		passins[pi->id] = g_Conf->FullpathTo( pi->id );
+	{
+		passins[pi->id] = OverrideOptions.Filenames[pi->id].GetFullPath();
 
+		if( passins[pi->id].IsEmpty() || !wxFileExists( passins[pi->id] ) )
+			passins[pi->id] = g_Conf->FullpathTo( pi->id );
+	}
+	
 	g_plugins = PluginManager_Create( passins );
 }
 
