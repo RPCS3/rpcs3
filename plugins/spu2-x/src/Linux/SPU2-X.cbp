@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="SPU2-X" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/SPU2-X" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/SPU2-X" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="`pkg-config gtk+-2.0 --cflags`" />
+			<Add option="-fPIC" />
+			<Add option="-m32" />
+			<Add directory="../Linux" />
+			<Add directory="../../src" />
+			<Add directory="../3rdparty" />
+			<Add directory="../3rdparty/liba52" />
+			<Add directory="../../../../common/include" />
+		</Compiler>
+		<Linker>
+			<Add option="`pkg-config gtk+-2.0 --libs`" />
+			<Add option="-shared" />
+			<Add library="asound" />
+		</Linker>
+		<Unit filename="../3rdparty/liba52/a52.h" />
+		<Unit filename="../3rdparty/liba52/a52_internal.h" />
+		<Unit filename="../3rdparty/liba52/attributes.h" />
+		<Unit filename="../3rdparty/liba52/bit_allocate.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../3rdparty/liba52/bitstream.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../3rdparty/liba52/bitstream.h" />
+		<Unit filename="../3rdparty/liba52/config.h" />
+		<Unit filename="../3rdparty/liba52/configure.incl" />
+		<Unit filename="../3rdparty/liba52/downmix.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../3rdparty/liba52/imdct.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../3rdparty/liba52/inttypes.h" />
+		<Unit filename="../3rdparty/liba52/mm_accel.h" />
+		<Unit filename="../3rdparty/liba52/parse.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../3rdparty/liba52/tables.h" />
+		<Unit filename="../3rdparty/liba52/tendra.h" />
+		<Unit filename="../ADSR.cpp" />
+		<Unit filename="../BaseTypes.h" />
+		<Unit filename="../ConvertUTF.cpp" />
+		<Unit filename="../ConvertUTF.h" />
+		<Unit filename="../DPLII.h" />
+		<Unit filename="../Debug.cpp" />
+		<Unit filename="../Debug.h" />
+		<Unit filename="../Decoder.cpp" />
+		<Unit filename="../DllInterface.cpp" />
+		<Unit filename="../Dma.cpp" />
+		<Unit filename="../Dma.h" />
+		<Unit filename="Alsa.cpp" />
+		<Unit filename="Alsa.h" />
+		<Unit filename="Config.cpp" />
+		<Unit filename="Config.h" />
+		<Unit filename="ConfigSoundTouch.cpp" />
+		<Unit filename="Dialogs.cpp" />
+		<Unit filename="Dialogs.h" />
+		<Unit filename="Linux.cpp" />
+		<Unit filename="Linux.h" />
+		<Unit filename="../Lowpass.cpp" />
+		<Unit filename="../Lowpass.h" />
+		<Unit filename="../Mixer.cpp" />
+		<Unit filename="../ReadInput.cpp" />
+		<Unit filename="../RegLog.cpp" />
+		<Unit filename="../RegTable.cpp" />
+		<Unit filename="../RegTable.h" />
+		<Unit filename="../Reverb.cpp" />
+		<Unit filename="../SaveStateSPU.cpp" />
+		<Unit filename="../SndOut.cpp" />
+		<Unit filename="../SndOut.h" />
+		<Unit filename="../Spu2.cpp" />
+		<Unit filename="../Spu2.h" />
+		<Unit filename="../Spu2replay.cpp" />
+		<Unit filename="../Spu2replay.h" />
+		<Unit filename="../Timestretcher.cpp" />
+		<Unit filename="../Wavedump_wav.cpp" />
+		<Unit filename="../defs.h" />
+		<Unit filename="../regs.h" />
+		<Unit filename="../spdif.h" />
+		<Unit filename="../utf8.cpp" />
+		<Unit filename="../utf8.h" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

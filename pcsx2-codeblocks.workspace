@@ -20,6 +20,8 @@
 		<Project filename="plugins/SPU2null/Linux/SPU2null.cbp" />
 		<Project filename="plugins/PadNull/Linux/PadNull.cbp" />
 		<Project filename="plugins/onepad/Linux/OnePad.cbp" />
+		<Project filename="plugins/zerogs/opengl/Linux/ZeroGS.cbp" />
 		<Project filename="tools/bin2cpp/bin2cpp.cbp" />
+		<Project filename="plugins/spu2-x/src/Linux/SPU2-X.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>

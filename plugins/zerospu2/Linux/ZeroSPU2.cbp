@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ZeroSPU2" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="../../../bin/plugins/libZeroSPU2.so.0.1.0" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Debug/" />
+				<Option external_deps="../../../3rdparty/SoundTouch/libSoundTouch.a;" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="../../../bin/plugins/libZeroSPU2.so.0.1.0" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="`pkg-config gtk+-2.0 --cflags`" />
+			<Add option="-fPIC" />
+			<Add option="-m32" />
+			<Add option="-DVERSION=1" />
+			<Add directory="../Linux" />
+			<Add directory="../../zerospu2" />
+			<Add directory="../../../common/include" />
+			<Add directory="../../../3rdparty/SoundTouch" />
+			<Add directory="../../../3rdparty" />
+		</Compiler>
+		<Linker>
+			<Add option="`pkg-config gtk+-2.0 --libs`" />
+			<Add option="`pkg-config sdl --libs`" />
+			<Add option="-shared" />
+			<Add library="asound" />
+			<Add library="stdc++" />
+			<Add library="dl" />
+		</Linker>
+		<Unit filename="Alsa.cpp" />
+		<Unit filename="Linux.cpp" />
+		<Unit filename="Linux.h" />
+		<Unit filename="OSS.cpp" />
+		<Unit filename="callbacks.h" />
+		<Unit filename="interface.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="interface.h" />
+		<Unit filename="support.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="support.h" />
+		<Unit filename="zerospu2.glade" />
+		<Unit filename="../misc.h" />
+		<Unit filename="../reg.h" />
+		<Unit filename="../voices.cpp" />
+		<Unit filename="../zerodma.cpp" />
+		<Unit filename="../zerospu2.cpp" />
+		<Unit filename="../zerospu2.h" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
