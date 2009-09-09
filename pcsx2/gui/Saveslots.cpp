@@ -56,7 +56,7 @@ void States_Load( const wxString& file )
 
 		Console::Notice( ex.FormatDiagnosticMessage() );
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::BaseException& )
 	{
 		// VM state is probably ruined.  We'll need to recover from the in-memory backup.
 		StateRecovery::Recover();
