@@ -41,7 +41,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;"
 				PreprocessorDefinitions="wxUSE_GUI=0;wxUSE_BASE=1;NDEBUG"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="wx/wxprec.h"
@@ -104,7 +104,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;"
 				PreprocessorDefinitions="_DEBUG;__WXDEBUG__;wxUSE_BASE=1;wxUSE_GUI=0"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="wx/wxprec.h"
@@ -172,7 +172,7 @@
 				InlineFunctionExpansion="1"
 				FavorSizeOrSpeed="2"
 				WholeProgramOptimization="false"
-				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;"
 				PreprocessorDefinitions="wxUSE_GUI=0;wxUSE_BASE=1;NDEBUG"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="wx/wxprec.h"

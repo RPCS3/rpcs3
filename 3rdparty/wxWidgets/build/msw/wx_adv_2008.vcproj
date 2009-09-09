@@ -40,7 +40,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;;&quot;$(ProjectRootDir)\src\png&quot;"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;"
 				PreprocessorDefinitions="_DEBUG;__WXDEBUG__;wxUSE_BASE=0;wxUSE_GUI=1"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="wx/wxprec.h"
@@ -106,7 +106,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib;..\..\src\png"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;"
 				PreprocessorDefinitions="wxUSE_BASE=0;wxUSE_GUI=1"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="wx/wxprec.h"
@@ -169,7 +169,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\Include;..\..\Include\msvc;..\..\..\zlib;..\..\src\png"
+				AdditionalIncludeDirectories="&quot;$(ProjectRootDir)\include&quot;;&quot;$(ProjectRootDir)\include\msvc&quot;;&quot;$(SvnRootDir)\3rdparty\zlib&quot;"
 				PreprocessorDefinitions="wxUSE_BASE=0;wxUSE_GUI=1"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="wx/wxprec.h"
@@ -386,11 +386,11 @@
 			Name="Setup Headers"
 			>
 			<File
-				RelativePath="..\..\include\wx\univ\setup.h"
+				RelativePath="..\..\include\wx\msw\setup.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\wx\msw\setup.h"
+				RelativePath="..\..\include\wx\univ\setup.h"
 				>
 			</File>
 		</Filter>
