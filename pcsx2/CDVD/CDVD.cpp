@@ -78,7 +78,7 @@ FILE *_cdvdOpenMechaVer()
 
 	wxFileName mecfile(EmuConfig.BiosFilename);
 	mecfile.SetExt( L"mec" );
-	wxCharBuffer file( mecfile.GetFullPath().ToUTF8() );
+	const wxCharBuffer file( mecfile.GetFullPath().ToUTF8() );
 
 	// if file doesnt exist, create empty one
 	fd = fopen(file.data(), "r+b");
@@ -118,7 +118,7 @@ FILE *_cdvdOpenNVM()
 
 	wxFileName nvmfile(EmuConfig.BiosFilename);
 	nvmfile.SetExt( L"nvm" );
-	wxCharBuffer file( nvmfile.GetFullPath().ToUTF8() );
+	const wxCharBuffer file( nvmfile.GetFullPath().ToUTF8() );
 
 	// if file doesnt exist, create empty one
 	fd = fopen(file.data(), "r+b");

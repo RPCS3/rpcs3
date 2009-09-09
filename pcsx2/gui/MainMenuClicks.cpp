@@ -106,9 +106,11 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 	}
 
 	SysEndExecution();
-	InitPlugins();
 
-	EmuConfig.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
+	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
+	wxGetApp().SaveSettings();
+
+	InitPlugins();
 
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	SysExecute( new AppEmuThread(), g_Conf->CdvdSource );

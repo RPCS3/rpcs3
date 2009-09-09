@@ -365,16 +365,9 @@ static s32 CALLBACK CDVD_getDualInfo(s32* dualType, u32* layer1Start)
 	return 1;
 }
 
-static void CALLBACK CDVDplugin_Close()
-{
-	g_plugins->Close( PluginId_CDVD );
-}
-
 CDVD_API CDVDapi_Plugin =
 {
-	CDVDplugin_Close,
-
-	// The rest are filled in by the plugin manager
+	// All of these are filled by the plugin manager
 	NULL
 };
 
@@ -383,6 +376,7 @@ CDVD_API* CDVD			= NULL;
 static const LegacyApi_ReqMethod s_MethMessReq_CDVD[] =
 {
 	{	"CDVDopen",			(vMeth**)&CDVDapi_Plugin.open,			NULL },
+	{	"CDVDclose",		(vMeth**)&CDVDapi_Plugin.close,			NULL },
 	{	"CDVDreadTrack",	(vMeth**)&CDVDapi_Plugin.readTrack,		NULL },
 	{	"CDVDgetBuffer",	(vMeth**)&CDVDapi_Plugin.getBuffer,		NULL },
 	{	"CDVDreadSubQ",		(vMeth**)&CDVDapi_Plugin.readSubQ,		NULL },
