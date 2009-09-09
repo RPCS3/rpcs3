@@ -23,8 +23,8 @@
 //------------------------------------------------------------------
 
 // Used for Result Clamping
-void mVUclamp1(int reg, int regT1, int xyzw) {
-	if (CHECK_VU_OVERFLOW) {
+void mVUclamp1(int reg, int regT1, int xyzw, bool bClampE = 0) {
+	if ((!clampE && CHECK_VU_OVERFLOW) || (clampE && bClampE)) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
 				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
@@ -39,8 +39,8 @@ void mVUclamp1(int reg, int regT1, int xyzw) {
 }
 
 // Used for Operand Clamping
-void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw) {
-	if (CHECK_VU_SIGN_OVERFLOW) {
+void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw, bool bClampE = 0) {
+	if ((!clampE && CHECK_VU_SIGN_OVERFLOW) || (clampE && bClampE)) {
 		int regT1b = 0;
 		if (regT1 < 0) { regT1 = mVU->regAlloc->allocReg(); regT1b = 1; }
 		switch (xyzw) {
@@ -61,7 +61,15 @@ void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw) {
 		}
 		if (regT1b) mVU->regAlloc->clearNeeded(regT1);
 	}
-	else mVUclamp1(reg, regT1, xyzw);
+	else mVUclamp1(reg, regT1, xyzw, bClampE);
+}
+
+void mVUclamp3(microVU* mVU, int reg, int regT1, int xyzw) {
+	if (clampE) mVUclamp2(mVU, reg, regT1, xyzw, 1);
+}
+
+void mVUclamp4(int reg, int regT1, int xyzw) {
+	if (clampE) mVUclamp1(reg, regT1, xyzw, 1);
 }
 
 //------------------------------------------------------------------
@@ -444,46 +452,60 @@ void ADD_SS(microVU* mVU, int to, int from, int t1, int t2) {
 	if (t2b) mVU->regAlloc->clearNeeded(t2);
 }
 
-void SSE_MAXPS(mV, int to, int from, int t1, int t2) {
+#define clampOp(opX) {					\
+	/*mVUclamp3(mVU, to,   t1, 0xf);*/	\
+	/*mVUclamp3(mVU, from, t1, 0xf);*/	\
+	opX(to, from);						\
+	/*mVUclamp4(to, t1, 0xf);*/			\
+}
+
+void SSE_MAXPS(mV, int to, int from, int t1 = -1, int t2 = -1) {
 	if (CHECK_VU_MINMAXHACK) { SSE_MAXPS_XMM_to_XMM(to, from); }
 	else					 { MIN_MAX_PS(mVU, to, from, t1, t2, 0); }
 }
-void SSE_MINPS(mV, int to, int from, int t1, int t2) {
+void SSE_MINPS(mV, int to, int from, int t1 = -1, int t2 = -1) {
 	if (CHECK_VU_MINMAXHACK) { SSE_MINPS_XMM_to_XMM(to, from); }
 	else					 { MIN_MAX_PS(mVU, to, from, t1, t2, 1); }
 }
-void SSE_MAXSS(mV, int to, int from, int t1, int t2) { 
+void SSE_MAXSS(mV, int to, int from, int t1 = -1, int t2 = -1) { 
 	if (CHECK_VU_MINMAXHACK) { SSE_MAXSS_XMM_to_XMM(to, from); }
 	else					 { MIN_MAX_SS(mVU, to, from, t1, 0); }
 }
-void SSE_MINSS(mV, int to, int from, int t1, int t2) { 
+void SSE_MINSS(mV, int to, int from, int t1 = -1, int t2 = -1) { 
 	if (CHECK_VU_MINMAXHACK) { SSE_MINSS_XMM_to_XMM(to, from); }
 	else					 { MIN_MAX_SS(mVU, to, from, t1, 1); }
 }
-void SSE_ADD2SS(mV, int to, int from, int t1, int t2) {
-	if (!CHECK_VUADDSUBHACK) { SSE_ADDSS_XMM_to_XMM(to, from); }
+void SSE_ADD2SS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	if (!CHECK_VUADDSUBHACK) { clampOp(SSE_ADDSS_XMM_to_XMM); }
 	else					 { ADD_SS(mVU, to, from, t1, t2); }
 }
-void SSE_ADD2PS(mV, int to, int from, int t1, int t2) {
-	SSE_ADDPS_XMM_to_XMM(to, from);
+
+void SSE_ADD2PS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_ADDPS_XMM_to_XMM);
 }
-void SSE_ADDPS(mV, int to, int from, int t1, int t2) {
-	SSE_ADDPS_XMM_to_XMM(to, from);
+void SSE_ADDPS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_ADDPS_XMM_to_XMM);
 }
-void SSE_ADDSS(mV, int to, int from, int t1, int t2) {
-	SSE_ADDSS_XMM_to_XMM(to, from);
+void SSE_ADDSS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_ADDSS_XMM_to_XMM);
 }
-void SSE_SUBPS(mV, int to, int from, int t1, int t2) {
-	SSE_SUBPS_XMM_to_XMM(to, from);
+void SSE_SUBPS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_SUBPS_XMM_to_XMM);
 }
-void SSE_SUBSS(mV, int to, int from, int t1, int t2) {
-	SSE_SUBSS_XMM_to_XMM(to, from);
+void SSE_SUBSS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_SUBSS_XMM_to_XMM);
 }
-void SSE_MULPS(mV, int to, int from, int t1, int t2) {
-	SSE_MULPS_XMM_to_XMM(to, from);
+void SSE_MULPS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_MULPS_XMM_to_XMM);
 }
-void SSE_MULSS(mV, int to, int from, int t1, int t2) {
-	SSE_MULSS_XMM_to_XMM(to, from);
+void SSE_MULSS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_MULSS_XMM_to_XMM);
+}
+void SSE_DIVPS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_DIVPS_XMM_to_XMM);
+}
+void SSE_DIVSS(mV, int to, int from, int t1 = -1, int t2 = -1) {
+	clampOp(SSE_DIVSS_XMM_to_XMM);
 }
 
 //------------------------------------------------------------------

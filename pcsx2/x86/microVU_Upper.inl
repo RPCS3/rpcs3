@@ -132,8 +132,9 @@ bool doSafeSub(microVU* mVU, int opCase, int opType, bool isACC) {
 // Sets Up Ft Reg for Normal, BC, I, and Q Cases
 void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
 	opCase1 {
-		if (_XYZW_SS2) { Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W); tempFt = Ft; }
-		else		   { Ft = mVU->regAlloc->allocReg(_Ft_);			  tempFt = -1; }
+		if (_XYZW_SS2)   { Ft = mVU->regAlloc->allocReg(_Ft_, 0, _X_Y_Z_W);	tempFt = Ft; }
+		else if (clampE) { Ft = mVU->regAlloc->allocReg(_Ft_, 0, 0xf);		tempFt = Ft; }
+		else			 { Ft = mVU->regAlloc->allocReg(_Ft_);				tempFt = -1; }
 	}
 	opCase2 {
 		tempFt = mVU->regAlloc->allocReg(_Ft_);
@@ -144,7 +145,7 @@ void setupFtReg(microVU* mVU, int& Ft, int& tempFt, int opCase) {
 	}
 	opCase3 { Ft = mVU->regAlloc->allocReg(33, 0, _X_Y_Z_W); tempFt = Ft; }
 	opCase4 {
-		if (_XYZW_SS && !mVUinfo.readQ) { Ft = xmmPQ; tempFt = -1; }
+		if (!clampE && _XYZW_SS && !mVUinfo.readQ) { Ft = xmmPQ; tempFt = -1; }
 		else { Ft = mVU->regAlloc->allocReg(); tempFt = Ft; getQreg(Ft, mVUinfo.readQ); }
 	}
 }
@@ -301,7 +302,7 @@ mVUop(mVU_OPMULA) {
 
 		SSE2_PSHUFD_XMM_to_XMM(Fs, Fs, 0xC9); // WXZY
 		SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, 0xD2); // WYXZ
-		SSE_MULPS_XMM_to_XMM(Fs, Ft);
+		SSE_MULPS(mVU, Fs, Ft);
 		mVU->regAlloc->clearNeeded(Ft);
 		mVUupdateFlags(mVU, Fs);
 		mVU->regAlloc->clearNeeded(Fs);
@@ -320,8 +321,8 @@ mVUop(mVU_OPMSUB) {
 
 		SSE2_PSHUFD_XMM_to_XMM(Fs, Fs, 0xC9); // WXZY
 		SSE2_PSHUFD_XMM_to_XMM(Ft, Ft, 0xD2); // WYXZ
-		SSE_MULPS_XMM_to_XMM(Fs,  Ft);
-		SSE_SUBPS_XMM_to_XMM(ACC, Fs);
+		SSE_MULPS(mVU, Fs,  Ft);
+		SSE_SUBPS(mVU, ACC, Fs);
 		mVU->regAlloc->clearNeeded(Fs);
 		mVU->regAlloc->clearNeeded(Ft);
 		mVUupdateFlags(mVU, ACC);

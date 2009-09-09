@@ -220,6 +220,16 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 #define _1mb		 (0x100000)
 
+//#undef  CHECK_VU_OVERFLOW
+//#undef  CHECK_VU_EXTRA_OVERFLOW
+//#undef  CHECK_VU_SIGN_OVERFLOW
+//#undef  CHECK_VU_UNDERFLOW
+//#define CHECK_VU_OVERFLOW				1
+//#define CHECK_VU_EXTRA_OVERFLOW		1
+//#define CHECK_VU_SIGN_OVERFLOW		1
+//#define CHECK_VU_UNDERFLOW			1
+#define clampE		 0//CHECK_VU_EXTRA_OVERFLOW
+
 // Flag Info
 #define __Status	 (mVUregs.needExactMatch & 1)
 #define __Mac		 (mVUregs.needExactMatch & 2)
@@ -271,12 +281,12 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 
 
 // Cache Limit Check
-#define mVUcacheCheck(ptr, start, limit) {																 \
-	uptr diff = ptr - start;																			 \
-	if (diff >= limit) {																				 \
+#define mVUcacheCheck(ptr, start, limit) {														  \
+	uptr diff = ptr - start;																	  \
+	if (diff >= limit) {																		  \
 		Console::Status("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
-		mVUreset(mVU);																					 \
-	}																									 \
+		mVUreset(mVU);																			  \
+	}																							  \
 }
 
 #define mVUdebugNOW(isEndPC) {							\
