@@ -30,7 +30,7 @@ class CoreEmuThread;
 
 extern bool SysInit();
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
-extern void SysShutdown();					// Resets the various PS2 cpus, sub-systems, and recompilers.
+extern void SysReset();					// Resets the various PS2 cpus, sub-systems, and recompilers.
 
 extern void SysExecute( CoreEmuThread* newThread );
 extern void SysExecute( CoreEmuThread* newThread, CDVD_SourceType cdvdsrc );
@@ -43,6 +43,7 @@ extern bool SysAllocateMem();			// allocates memory for all PS2 systems; returns
 extern void SysAllocateDynarecs();		// allocates memory for all dynarecs, and force-disables any failures.
 extern void SysShutdownDynarecs();
 extern void SysShutdownMem();
+extern void SysShutdown();
 
 extern void SysLoadState( const wxString& file );
 extern void SysRestorableReset();		// Saves the current emulation state prior to spu reset.

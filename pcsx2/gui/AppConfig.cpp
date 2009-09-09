@@ -457,6 +457,8 @@ void AppConfig::Apply()
 	Folders.Savestates.Mkdir();
 	Folders.Snapshots.Mkdir();
 
+	g_Conf->EmuOptions.BiosFilename = g_Conf->FullpathToBios();
+
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
 

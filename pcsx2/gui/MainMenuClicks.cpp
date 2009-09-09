@@ -192,7 +192,7 @@ void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 {
-	SysShutdown();
+	SysReset();
 	Close();
 }
 
@@ -213,7 +213,7 @@ void MainEmuFrame::Menu_EmuPause_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 {
 	bool wasRunning = EmulationInProgress();
-	SysShutdown();
+	SysReset();
 
 	GetMenuBar()->Check( MenuId_Emu_Pause, false );
 

@@ -29,7 +29,7 @@ using namespace Threading;
 
 namespace Threading
 {
-	static const timespec ts_msec_200 = { 0, 200 * 1000000 };
+	static const wxTimeSpan ts_msec_250( 0, 0, 0, 250 );
 
 	static void _pt_callback_cleanup( void* handle )
 	{
@@ -275,11 +275,11 @@ namespace Threading
 		else
 		{
 			// In order to avoid deadlock we need to make sure we cut some time
-			// to handle messages.  I choose 200ms:
+			// to handle messages.
 			
 			do {
 				wxTheApp->ProcessPendingEvents();
-			} while( (sem_timedwait( &sema, &ts_msec_200 ) == -1) && (errno == ETIMEDOUT) );
+			} while( !Wait( ts_msec_250 ) );
 		}
 	}
 
@@ -294,14 +294,12 @@ namespace Threading
 			wxTimeSpan countdown( (timeout) );
 
 			// In order to avoid deadlock we need to make sure we cut some time
-			// to handle messages.  I choose 200ms:
+			// to handle messages.
 
-			static const wxTimeSpan pass( 0, 0, 0, 200 );
 			do {
 				wxTheApp->ProcessPendingEvents();
-				if( (sem_timedwait( &sema, &ts_msec_200 ) == -1) && (errno == ETIMEDOUT) )
-					break;
-				countdown -= pass;
+				if( Wait( ts_msec_250 ) ) break;
+				countdown -= ts_msec_250;
 			} while( countdown.GetMilliseconds() > 0 );
 
 			return countdown.GetMilliseconds() > 0;
@@ -316,7 +314,8 @@ namespace Threading
 
 	bool Semaphore::Wait( const wxTimeSpan& timeout )
 	{
-		const timespec fail = { timeout.GetSeconds().GetLo(), 0 };
+		wxDateTime megafail( wxDateTime::UNow() + timeout );
+		const timespec fail = { megafail.GetTicks(), megafail.GetMillisecond() * 1000000 };
 		return sem_timedwait( &sema, &fail ) != -1;
 	}
 

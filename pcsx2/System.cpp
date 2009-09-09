@@ -235,18 +235,19 @@ void SysAllocateDynarecs()
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// This should be called last thing before Pcsx2 exits.
+// This should be called last thing before PCSX2 exits.
 //
 void SysShutdownMem()
 {
+	if( sysInitialized )
+		SysShutdown();
+
 	vuMicroMemShutdown();
 	psxMemShutdown();
 	memShutdown();
 	vtlb_Core_Shutdown();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
 // This should generally be called right before calling SysShutdownMem(), although you can optionally
 // use it in conjunction with SysAllocDynarecs to allocate/free the dynarec resources on the fly (as
 // risky as it might be, since dynarecs could very well fail on the second attempt).
@@ -255,12 +256,25 @@ void SysShutdownDynarecs()
 	// Special SuperVU "complete" terminator.
 	SuperVUDestroy( -1 );
 
+	VU0micro::recShutdown();
+	VU1micro::recShutdown();
+
 	psxRec.Shutdown();
 	recCpu.Shutdown();
 }
 
+void SysShutdown()
+{
+	sysInitialized = false;
 
-//////////////////////////////////////////////////////////////////////////////////////////
+	Console::Status( "Shutting down PS2 virtual machine..." );
+	SysEndExecution();
+	safe_delete( g_plugins );
+
+	SysShutdownDynarecs();
+	SysShutdownMem();
+}
+
 // Resets all PS2 cpu execution caches, which does not affect that actual PS2 state/condition.
 // This can be called at any time outside the context of a Cpu->Execute() block without
 // bad things happening (recompilers will slow down for a brief moment since rec code blocks
@@ -312,6 +326,7 @@ void SysExecute( CoreEmuThread* newThread )
 void SysEndExecution()
 {
 	safe_delete( g_EmuThread );
+	GetPluginManager().Shutdown();
 }
 
 void SysSuspend()
@@ -359,12 +374,12 @@ void SysLoadState( const wxString& file )
 		GSsetGameCRC(ElfCRC, g_ZeroGSOptions);
 }
 
-void SysShutdown()
+void SysReset()
 {
-	Console::Status( "Resetting..." );
+	Console::Status( "Resetting PS2 virtual machine..." );
 
-	safe_delete( g_EmuThread );
-	GetPluginManager().Shutdown();
+	SysShutdown();
+	StateRecovery::Clear();
 	ElfCRC = 0;
 
 	// Note : No need to call cpuReset() here.  It gets called automatically before the
@@ -413,8 +428,10 @@ bool SysInit()
 	if( sysInitialized ) return true;
 	sysInitialized = true;
 
-	PCSX2_MEM_PROTECT_BEGIN();
 	SysDetect();
+
+	PCSX2_MEM_PROTECT_BEGIN();
+	Console::Status( "Initializing PS2 virtual machine..." );
 	if( !SysAllocateMem() )
 		return false;	// critical memory allocation failure;
 

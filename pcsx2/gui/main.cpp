@@ -75,6 +75,8 @@ void AppEmuThread::Resume()
 	m_kevt.m_controlDown	= false;
 	m_kevt.m_altDown		= false;
 
+	ApplySettings( g_Conf->EmuOptions );
+
 	CoreEmuThread::Resume();
 }
 
@@ -464,11 +466,20 @@ void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 	Msgbox::OnEvent( evt );
 }
 
+#include <wx/intl.h>
+
 void Pcsx2App::CleanupMess()
 {
-	SysShutdown();
 	safe_delete( m_Bitmap_Logo );
 	safe_delete( g_Conf );
+}
+
+// This cleanup procedure is issued by wxWidgets prior to destroying base windows and window
+// classes.
+void Pcsx2App::CleanUp()
+{
+	SysShutdown();
+	wxApp::CleanUp();
 }
 
 void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
@@ -531,6 +542,8 @@ Pcsx2App::Pcsx2App()  :
 Pcsx2App::~Pcsx2App()
 {
 	CleanupMess();
+	while( wxGetLocale() != NULL )
+		delete wxGetLocale();
 }
 
 

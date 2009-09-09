@@ -173,6 +173,25 @@ public:
 
 		VideoOptions();
 		void LoadSave( IniInterface& conf );
+		
+		bool operator ==( const VideoOptions& right ) const
+		{
+			return
+				OpEqu( EnableFrameSkipping )	&&
+				OpEqu( EnableFrameLimiting )	&&
+				OpEqu( DefaultRegionMode )		&&
+				OpEqu( FpsTurbo )				&&
+				OpEqu( FpsLimit )				&&
+				OpEqu( FpsSkip )				&&
+				OpEqu( ConsecutiveFrames )		&&
+				OpEqu( ConsecutiveSkip );
+		}
+
+		bool operator !=( const VideoOptions& right ) const
+		{
+			return !this->operator ==( right );
+		}
+
 	};
 
 	// ------------------------------------------------------------------------
@@ -255,6 +274,8 @@ public:
 	GamefixOptions		Gamefixes;
 	ProfilerOptions		Profiler;
 
+	wxFileName			BiosFilename;
+
 	Pcsx2Config();
 	void LoadSave( IniInterface& ini );
 
@@ -262,6 +283,23 @@ public:
 	void Load( const wxInputStream& srcstream );
 	void Save( const wxString& dstfile );
 	void Save( const wxOutputStream& deststream );
+
+	bool operator ==( const Pcsx2Config& right ) const
+	{
+		return
+			OpEqu( bitset )		&&
+			OpEqu( Cpu )		&&
+			OpEqu( Video )		&&
+			OpEqu( Speedhacks )	&&
+			OpEqu( Gamefixes )	&&
+			OpEqu( Profiler )	&&
+			OpEqu( BiosFilename );
+	}
+
+	bool operator !=( const Pcsx2Config& right ) const
+	{
+		return !this->operator ==( right );
+	}
 };
 
 //////////////////////////////////////////////////////////////////////////

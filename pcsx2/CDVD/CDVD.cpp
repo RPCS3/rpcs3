@@ -70,31 +70,22 @@ static int mg_BIToffset(u8 *buffer)
 	return ofs + 0x20;
 }
 
-FILE *_cdvdOpenMechaVer() {
-	char *ptr;
-	int i;
-	char file[g_MaxPath];
+FILE *_cdvdOpenMechaVer()
+{
 	FILE* fd;
 
 	// get the name of the bios file
 
-	// use the bios filename to get the name of the mecha ver file
-	// [TODO] : Upgrade this to use wxstring!
-
-	strcpy(file, g_Conf->FullpathToBios().ToAscii().data() );
-
-	ptr = file;
-	i = (int)strlen(file);
-
-	while (i > 0) { if (ptr[i] == '.') break; i--; }
-	ptr[i+1] = '\0';
-	strcat(file, "MEC");
+	wxFileName mecfile(EmuConfig.BiosFilename);
+	mecfile.SetExt( L"mec" );
+	wxCharBuffer file( mecfile.GetFullPath().ToUTF8() );
 
 	// if file doesnt exist, create empty one
-	fd = fopen(file, "r+b");
-	if (fd == NULL) {
+	fd = fopen(file.data(), "r+b");
+	if (fd == NULL)
+	{
 		Console::Notice("MEC File Not Found , Creating Blank File");
-		fd = fopen(file, "wb");
+		fd = fopen(file.data(), "wb");
 		if (fd == NULL)
 		{
 			Console::Error( "\tMEC File Creation failed!" );
@@ -121,38 +112,26 @@ s32 cdvdGetMechaVer(u8* ver)
 	return 0;
 }
 
-FILE *_cdvdOpenNVM() {
-	char *ptr;
-	int i;
-	char file[g_MaxPath];
+FILE *_cdvdOpenNVM()
+{
 	FILE* fd;
 
-	// get the name of the bios file
-
-	// use the bios filename to get the name of the nvm file
-	// [TODO] : Upgrade this to use wxString!
-
-	strcpy( file, g_Conf->FullpathToBios().ToAscii().data() );
-	ptr = file;
-	i = (int)strlen(file);
-
-	while (i > 0) { if (ptr[i] == '.') break; i--; }
-	ptr[i+1] = '\0';
-
-	strcat(file, "NVM");
+	wxFileName nvmfile(EmuConfig.BiosFilename);
+	nvmfile.SetExt( L"nvm" );
+	wxCharBuffer file( nvmfile.GetFullPath().ToUTF8() );
 
 	// if file doesnt exist, create empty one
-	fd = fopen(file, "r+b");
-	if (fd == NULL) {
+	fd = fopen(file.data(), "r+b");
+	if (fd == NULL)
+	{
 		Console::Notice("NVM File Not Found , Creating Blank File");
-		fd = fopen(file, "wb");
+		fd = fopen(file.data(), "wb");
 		if (fd == NULL)
 		{
+			Console::Error( "\tMEC File Creation failed!" );
 			throw Exception::CreateStream( file );
-			//Msgbox::Alert("_cdvdOpenNVM: Error creating %s", file);
-			//exit(1);
 		}
-		for (i=0; i<1024; i++) fputc(0, fd);
+		for (int i=0; i<1024; i++) fputc(0, fd);
 	}
 	return fd;
 }

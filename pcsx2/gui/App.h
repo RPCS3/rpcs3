@@ -234,6 +234,8 @@ public:
 
 	bool OnInit();
 	int  OnExit();
+	void CleanUp();
+
 	void OnInitCmdLine( wxCmdLineParser& parser );
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
 	bool OnCmdLineError( wxCmdLineParser& parser );

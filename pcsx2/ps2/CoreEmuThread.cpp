@@ -263,6 +263,8 @@ void CoreEmuThread::Suspend( bool isBlocking )
 // is determined by comparing the current settings against the new settings.
 void CoreEmuThread::ApplySettings( const Pcsx2Config& src )
 {
+	if( src == EmuConfig ) return;
+
 	const bool isRunning = IsRunning();
 	Suspend();
 
