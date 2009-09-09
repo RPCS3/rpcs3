@@ -260,7 +260,7 @@ public:
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	void Ping() const;
 
-	void ApplySettings();
+	void ApplySettings( const AppConfig& newconf );
 	void LoadSettings();
 	void SaveSettings();
 
@@ -305,7 +305,7 @@ protected:
 
 	void OnSemaphorePing( wxCommandEvent& evt );
 	void OnMessageBox( pxMessageBoxEvent& evt );
-	void OnKeyDown( wxKeyEvent& evt );
+	void OnEmuKeyDown( wxKeyEvent& evt );
 
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior

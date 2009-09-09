@@ -78,9 +78,8 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 		// If an exception is thrown above, this code below won't get run.
 		// (conveniently skipping any option application! :D)
 
-		*g_Conf = confcopy;
 		UseAdminMode = g_ApplyState.UseAdminMode;
-		wxGetApp().ApplySettings();
+		wxGetApp().ApplySettings( confcopy );
 		if( saveOnSuccess )
 			wxGetApp().SaveSettings();
 	}

@@ -53,8 +53,13 @@ static wxString GetGSStateFilename()
 	return Path::Combine( g_Conf->Folders.Savestates, wxsFormat( L"/%8.8X.%d.gs", ElfCRC, StatesC ) );
 }
 
-void Pcsx2App::OnKeyDown( wxKeyEvent& evt )
+// This handles KeyDown messages from the emu/gs window.
+void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 {
+	// Block "Stray" messages, which get sent after the emulation state has been killed off.
+	// (happens when user hits multiple keys quickly before the emu thread can respond)
+	if( !EmulationInProgress() ) return;
+
 	switch( evt.GetKeyCode() )
 	{
 		case WXK_ESCAPE:

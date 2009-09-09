@@ -22,7 +22,6 @@ using namespace std;
 namespace Console
 {
 	MutexLock m_writelock;
-	std::string m_format_buffer;
 
 	bool __fastcall Write( Colors color, const wxString& fmt )
 	{
@@ -44,14 +43,14 @@ namespace Console
 	// ------------------------------------------------------------------------
 	__forceinline void __fastcall _Write( const char* fmt, va_list args )
 	{
-		ScopedLock locker( m_writelock );
+		std::string m_format_buffer;
 		vssprintf( m_format_buffer, fmt, args );
 		Write( wxString::FromUTF8( m_format_buffer.c_str() ) );
 	}
 
 	__forceinline void __fastcall _WriteLn( const char* fmt, va_list args )
 	{
-		ScopedLock locker( m_writelock );
+		std::string m_format_buffer;
 		vssprintf( m_format_buffer, fmt, args );
 		m_format_buffer += "\n";
 		Write( wxString::FromUTF8( m_format_buffer.c_str() ) );

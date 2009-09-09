@@ -457,7 +457,7 @@ void AppConfig::Apply()
 	Folders.Savestates.Mkdir();
 	Folders.Snapshots.Mkdir();
 
-	g_Conf->EmuOptions.BiosFilename = g_Conf->FullpathToBios();
+	EmuOptions.BiosFilename = FullpathToBios();
 
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
@@ -596,7 +596,7 @@ void AppConfig_ReloadGlobalSettings( bool overwrite )
 	if( !overwrite )
 		wxGetApp().LoadSettings();
 
-	wxGetApp().ApplySettings();
+	wxGetApp().ApplySettings( *g_Conf );
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );

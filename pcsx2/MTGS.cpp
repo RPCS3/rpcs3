@@ -226,6 +226,7 @@ void mtgsThreadObject::Cancel()
 {
 	//SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
 	//SetEvent();
+	//m_sem_finished.WaitGui();	
 	PersistentThread::Cancel();
 }
 

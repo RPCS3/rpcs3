@@ -46,17 +46,6 @@ namespace Exception
 	public:
 		virtual ~BaseException() throw()=0;	// the =0; syntax forces this class into "abstract" mode.
 
-		/*
-		// copy construct
-		BaseException( const BaseException& src ) : 
-			m_message_diag( src.m_message_diag ),
-			m_message_user( src.m_message_user ),
-			m_stacktrace( src.m_stacktrace )
-		{ }
-
-		// trivial constructor, to appease the C++ multiple virtual inheritence gods. (CMVIGs!)
-		BaseException() {}*/
-
 		const wxString& DiagMsg() const { return m_message_diag; }
 		const wxString& UserMsg() const { return m_message_user; }
 

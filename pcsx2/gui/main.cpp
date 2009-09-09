@@ -375,7 +375,7 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_CallStackBox,	pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
 	Connect( pxEVT_SemaphorePing,	wxCommandEventHandler( Pcsx2App::OnSemaphorePing ) );
 
-	Connect( pxID_Window_GS, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnKeyDown ) );
+	Connect( pxID_Window_GS, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
 	// User/Admin Mode Dual Setup:
 	//   Pcsx2 now supports two fundamental modes of operation.  The default is Classic mode,
@@ -410,7 +410,7 @@ bool Pcsx2App::OnInit()
 	    m_MainFrame->Show();
 
 		SysInit();
-		ApplySettings();
+		ApplySettings( *g_Conf );
 		InitPlugins();
 	}
 	// ----------------------------------------------------------------------------
@@ -511,20 +511,23 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 // to handle window closures)
 bool Pcsx2App::PrepForExit()
 {
+	SysShutdown();
+	MemoryCard::Shutdown();
+	CleanupMess();
+
+	m_ProgramLogBox = NULL;
+	m_MainFrame = NULL;
+
 	return true;
 }
 
 int Pcsx2App::OnExit()
 {
-	m_ProgramLogBox = NULL;
-	m_MainFrame = NULL;
-
-	MemoryCard::Shutdown();
+	PrepForExit();
 
 	if( g_Conf != NULL )
 		SaveSettings();
 
-	CleanupMess();
 	return wxApp::OnExit();
 }
 
@@ -547,8 +550,30 @@ Pcsx2App::~Pcsx2App()
 }
 
 
-void Pcsx2App::ApplySettings()
+void Pcsx2App::ApplySettings( const AppConfig& newconf )
 {
+
+	if( &newconf != g_Conf )
+	{
+		// Need to unload the current emulation state if the user changed plugins, because
+		// the whole plugin system needs to be re-loaded.
+
+		const PluginInfo* pi = tbl_PluginInfo-1;
+		while( ++pi, pi->shortname != NULL )
+		{
+			if( newconf.FullpathTo( pi->id ) != g_Conf->FullpathTo( pi->id ) )
+				break;
+		}
+		if( pi->shortname != NULL )
+		{
+			// [TODO] : Post notice that this shuts down existing emulation.
+			SysEndExecution();
+			safe_delete( g_plugins );
+			LoadPlugins();
+		}
+		*g_Conf = newconf;
+	}
+
 	g_Conf->Apply();
 	if( m_MainFrame != NULL )
 		m_MainFrame->ApplySettings();

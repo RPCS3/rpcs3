@@ -378,7 +378,7 @@ void SysReset()
 {
 	Console::Status( "Resetting PS2 virtual machine..." );
 
-	SysShutdown();
+	SysEndExecution();
 	StateRecovery::Clear();
 	ElfCRC = 0;
 
