@@ -1,9 +1,7 @@
 #include "Global.h"
 #include "VKey.h"
-#include "DirectInput.h"
 #include <xinput.h>
 #include "InputManager.h"
-#include "DeviceEnumerator.h"
 
 // This way, I don't require that XInput junk be installed.
 typedef void (CALLBACK *_XInputEnable)(BOOL enable);

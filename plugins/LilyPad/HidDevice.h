@@ -35,5 +35,6 @@ struct HidDeviceInfo {
 };
 
 void UninitHid();
+int FindHids(HidDeviceInfo **foundDevs, int vid, int pid);
 
 #endif

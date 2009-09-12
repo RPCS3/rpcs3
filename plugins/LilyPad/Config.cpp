@@ -14,6 +14,7 @@
 #include "InputManager.h"
 #include "KeyboardQueue.h"
 #include "WndProcEater.h"
+#include "DualShock3.h"
 
 // Needed to know if raw input is available.  It requires XP or higher.
 #include "RawInput.h"
@@ -48,6 +49,7 @@ const GeneralSettingsBool BoolOptionsInfo[] = {
 
 	{L"DirectInput Game Devices", IDC_G_DI, 1},
 	{L"XInput", IDC_G_XI, 1},
+	{L"DualShock 3", IDC_G_DS3, 0},
 
 	{L"Multitap 1", IDC_MULTITAP1, 0},
 	{L"Multitap 2", IDC_MULTITAP2, 0},
@@ -151,8 +153,15 @@ void RefreshEnabledDevices(int updateDeviceList) {
 			(dev->type == MOUSE && dev->api == config.mouseApi) ||
 			(dev->type == OTHER &&
 				((dev->api == DI && config.gameApis.directInput) || 
+				 (dev->api == DS3 && config.gameApis.dualShock3) || 
 				 (dev->api == XINPUT && config.gameApis.xInput)))) {
-					dm->EnableDevice(i);
+					if (config.gameApis.dualShock3 && dev->api == DI && dev->displayName &&
+						!wcsnicmp(dev->displayName+3, L"PLAYSTATION(R)3", 15)) {
+							dm->DisableDevice(i);
+					}
+					else {
+						dm->EnableDevice(i);
+					}
 		}
 		else
 					dm->DisableDevice(i);
@@ -1485,6 +1494,9 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 						}
 						dm->Update(&info);
 						dm->PostRead();
+						Sleep(150);
+						dm->Update(&info);
+						dm->PostRead();
 						dev->SetEffect(ffb, 255);
 						SetTimer(hWnd, 1, 3000, 0);
 					}
@@ -1712,6 +1724,11 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 		RefreshEnabledDevicesAndDisplay(0, hWnd, 0);
 		UpdatePadList(hWnd);
 
+		if (!DualShock3Possible()) {
+			config.gameApis.dualShock3 = 0;
+			EnableWindow(GetDlgItem(hWnd, IDC_G_DS3), 0);
+		}
+
 		for (int j=0; j<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); j++) {
 			CheckDlgButton(hWnd, BoolOptionsInfo[j].ControlId, BST_CHECKED * config.bools[j]);
 		}
@@ -1818,6 +1835,21 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			}
 
 			int mtap = config.multitap[0] + 2*config.multitap[1];
+
+			if (IsDlgButtonChecked(hWnd, IDC_G_DS3) && !config.gameApis.dualShock3) {
+				if (IDOK !=
+					MessageBoxA(hWnd, 
+					"This open will attempt to connect directly to any connected\n"
+					"DualShock 3 devices.  It is completely experimental, and based\n"
+					"on no published specs.\n"
+					"Furthermore, It uses libusb to Initialize DS3 pads.  Libusb can\n"
+					"do odd things to USB and non-USB devices when it enumerates them.\n"
+					"I have no idea if it works with bluetooth or not.\n"
+					"Are you sure you wish to continue?", "Warning", MB_OKCANCEL | MB_ICONWARNING)) {
+						CheckDlgButton(hWnd, IDC_G_DS3, BST_UNCHECKED);
+				}
+
+			}
 
 			for (int j=0; j<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); j++) {
 				config.bools[j] = (IsDlgButtonChecked(hWnd, BoolOptionsInfo[j].ControlId) == BST_CHECKED);

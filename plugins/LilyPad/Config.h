@@ -39,6 +39,7 @@ public:
 			struct {
 				u8 directInput;
 				u8 xInput;
+				u8 dualShock3;
 			} gameApis;
 
 			u8 multitap[2];

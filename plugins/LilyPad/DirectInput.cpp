@@ -243,7 +243,7 @@ public:
 					memset(&dieffect, 0, sizeof(dieffect));
 					dieffect.dwSize = sizeof(dieffect);
 					dieffect.dwFlags = DIEFF_CARTESIAN | DIEFF_OBJECTIDS;
-					dieffect.dwDuration = 2000000;
+					dieffect.dwDuration = 1000000;
 					dieffect.dwGain = 10000;
 					dieffect.dwTriggerButton = DIEB_NOTRIGGER;
 					union {

@@ -20,6 +20,8 @@ typedef void (__stdcall *_HidD_GetHidGuid) (GUID* HidGuid);
 typedef BOOLEAN (__stdcall *_HidD_GetPreparsedData) (HANDLE HidDeviceObject, HIDP_PREPARSED_DATA **PreparsedData);
 typedef NTSTATUS (__stdcall *_HidP_GetCaps) (HIDP_PREPARSED_DATA* PreparsedData, HIDP_CAPS *caps);
 typedef BOOLEAN (__stdcall *_HidD_FreePreparsedData) (HIDP_PREPARSED_DATA *PreparsedData);
+typedef BOOLEAN (__stdcall *_HidD_GetFeature) (HANDLE  HidDeviceObject, PVOID  ReportBuffer, ULONG  ReportBufferLength);
+typedef BOOLEAN (__stdcall *_HidD_SetFeature) (HANDLE  HidDeviceObject, PVOID  ReportBuffer, ULONG  ReportBufferLength);
 
 GUID GUID_DEVINTERFACE_HID;
 _HidD_GetHidGuid pHidD_GetHidGuid;
@@ -27,6 +29,8 @@ _HidD_GetAttributes pHidD_GetAttributes;
 _HidD_GetPreparsedData pHidD_GetPreparsedData;
 _HidP_GetCaps pHidP_GetCaps;
 _HidD_FreePreparsedData pHidD_FreePreparsedData;
+_HidD_GetFeature pHidD_GetFeature;
+_HidD_SetFeature pHidD_SetFeature;
 
 HMODULE hModHid = 0;
 
@@ -40,7 +44,9 @@ int InitHid() {
 			(pHidD_GetAttributes = (_HidD_GetAttributes) GetProcAddress(hModHid, "HidD_GetAttributes")) &&
 			(pHidD_GetPreparsedData = (_HidD_GetPreparsedData) GetProcAddress(hModHid, "HidD_GetPreparsedData")) &&
 			(pHidP_GetCaps = (_HidP_GetCaps) GetProcAddress(hModHid, "HidP_GetCaps")) &&
-			(pHidD_FreePreparsedData = (_HidD_FreePreparsedData) GetProcAddress(hModHid, "HidD_FreePreparsedData"))) {
+			(pHidD_FreePreparsedData = (_HidD_FreePreparsedData) GetProcAddress(hModHid, "HidD_FreePreparsedData")) &&
+			(pHidD_GetFeature = (_HidD_GetFeature) GetProcAddress(hModHid, "HidD_GetFeature")) &&
+			(pHidD_SetFeature = (_HidD_SetFeature) GetProcAddress(hModHid, "HidD_SetFeature"))) {
 				pHidD_GetHidGuid(&GUID_DEVINTERFACE_HID);
 				return 1;
 		}
@@ -82,7 +88,7 @@ int FindHids(HidDeviceInfo **foundDevs, int vid, int pid) {
 						if (pHidD_GetPreparsedData(hfile, &pData)) {
 							if (HIDP_STATUS_SUCCESS == pHidP_GetCaps(pData, &caps)) {
 								if (numFoundDevs % 32 == 0) {
-									*foundDevs = (HidDeviceInfo*) realloc(foundDevs, sizeof(HidDeviceInfo) * (32 + numFoundDevs));
+									*foundDevs = (HidDeviceInfo*) realloc(*foundDevs, sizeof(HidDeviceInfo) * (32 + numFoundDevs));
 								}
 								HidDeviceInfo *dev = &foundDevs[0][numFoundDevs++];
 								dev->caps = caps;

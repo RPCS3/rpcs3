@@ -17,6 +17,8 @@
 #include "KeyboardQueue.h"
 #include "svnrev.h"
 #include "resource.h"
+#include "DualShock3.h"
+#include "HidDevice.h"
 
 #ifdef PCSX2_DEBUG
 #include "crtdbg.h"
@@ -260,6 +262,8 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 		while (openCount)
 			PADclose();
 		PADshutdown();
+		UninitHid();
+		UninitLibUsb();
 	}
 	return 1;
 }
@@ -969,20 +973,20 @@ u8 CALLBACK PADpoll(u8 value) {
 
 				u8 b1 = 0xFF, b2 = 0xFF;
 				for (i = 0; i<4; i++) {
-					b1 -= (sum->buttons[i]>=0xF0) << i;
+					b1 -= (sum->buttons[i]>=0x30) << i;
 				}
 				for (i = 0; i<8; i++) {
-					b2 -= (sum->buttons[i+4]>=0xF0) << i;
+					b2 -= (sum->buttons[i+4]>=0x30) << i;
 				}
 				if (config.padConfigs[query.port][query.slot].type == GuitarPad && !config.GH2) {
 					sum->sticks[0].horiz = -255;
 					// Not sure about this.  Forces wammy to be from 0 to 0x7F.
 					// if (sum->sticks[2].vert > 0) sum->sticks[2].vert = 0;
 				}
-				b1 -= ((sum->sticks[0].vert<=-0xF0) << 4);
-				b1 -= ((sum->sticks[0].horiz>=0xF0) << 5);
-				b1 -= ((sum->sticks[0].vert>=0xF0) << 6);
-				b1 -= ((sum->sticks[0].horiz<=-0xF0) << 7);
+				b1 -= ((sum->sticks[0].vert<=-0x30) << 4);
+				b1 -= ((sum->sticks[0].horiz>=0x30) << 5);
+				b1 -= ((sum->sticks[0].vert>=0x30) << 6);
+				b1 -= ((sum->sticks[0].horiz<=-0x30) << 7);
 				query.response[3] = b1;
 				query.response[4] = b2;
 

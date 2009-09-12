@@ -23,7 +23,8 @@
 #define IDC_M_RAW                       1109
 #define IDC_G_XI                        1110
 #define IDC_G_DI                        1111
-#define IDC_CLOSE_HACK2                 1112
+#define IDC_G_DS3                       1112
+#define IDC_CLOSE_HACK2                 1113
 #define IDC_DEBUG_FILE                  1114
 #define IDC_GUITAR1                     1115
 #define IDC_ANALOG_START1               1117
@@ -137,7 +138,7 @@
 #define IDC_FF_AXIS8_SCALE              0x1383
 
 // Next default values for new objects
-// 
+//
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        112

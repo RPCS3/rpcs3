@@ -544,6 +544,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\DualShock3.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\DualShock3.h"
+				>
+			</File>
+			<File
 				RelativePath=".\HidDevice.cpp"
 				>
 			</File>
@@ -573,6 +581,10 @@
 			</File>
 			<File
 				RelativePath=".\RawInput.h"
+				>
+			</File>
+			<File
+				RelativePath=".\usb.h"
 				>
 			</File>
 			<File

@@ -97,12 +97,13 @@ enum DeviceAPI {
 	WM = 2,
 	RAW = 3,
 	XINPUT = 4,
+	DS3 = 5,
 	// Not currently used.
-	LLHOOK = 5,
+	LLHOOK = 6,
 	// Not a real API, obviously.  Only used with keyboards,
 	// to ignore individual buttons.  Wrapper itself takes care
 	// of ignoring bound keys.  Otherwise, works normally.
-	IGNORE_KEYBOARD = 6,
+	IGNORE_KEYBOARD = 7,
 };
 
 enum DeviceType {

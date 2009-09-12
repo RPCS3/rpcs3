@@ -6,6 +6,8 @@
 #include "KeyboardHook.h"
 #include "RawInput.h"
 #include "XInput.h"
+#include "HidDevice.h"
+#include "DualShock3.h"
 
 void EnumDevices(int hideDXXinput) {
 	// Needed for enumeration of some device types.
@@ -13,6 +15,7 @@ void EnumDevices(int hideDXXinput) {
 	InputDeviceManager *oldDm = dm;
 	dm = new InputDeviceManager();
 
+	EnumDualShock3s();
 	EnumHookDevices();
 	EnumWindowsMessagingDevices();
 	EnumRawInputDevices();
