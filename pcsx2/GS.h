@@ -351,5 +351,7 @@ extern gzSavingState* g_fGSSave;
 
 #endif
 
+extern void SaveGSState(const wxString& file);
+extern void LoadGSState(const wxString& file);
 extern void RunGSState(gzLoadingState& f);
 

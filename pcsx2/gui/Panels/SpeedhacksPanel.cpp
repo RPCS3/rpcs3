@@ -16,7 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
-#include "Misc.h"
 #include "System.h"
 
 using namespace wxHelpers;

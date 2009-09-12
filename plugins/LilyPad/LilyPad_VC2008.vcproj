@@ -20,6 +20,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops"
 			UseOfMFC="0"

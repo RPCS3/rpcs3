@@ -14,7 +14,6 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Misc.h"
 #include "App.h"
 #include "Dialogs/ModalPopups.h"
 #include "wxHelpers.h"

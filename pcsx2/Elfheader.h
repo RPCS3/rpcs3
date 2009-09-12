@@ -24,6 +24,8 @@ extern unsigned int args_ptr;
 extern void loadElfFile(const wxString& filename);
 extern u32  loadElfCRC(const char *filename);
 extern void ElfApplyPatches();
+extern int  GetPS2ElfName( wxString& dest );
+
 
 extern u32 ElfCRC;
 

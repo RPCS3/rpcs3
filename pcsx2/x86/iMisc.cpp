@@ -50,3 +50,4 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR)
 #endif
 	//g_sseVUMXCSR = g_sseMXCSR|0x6000;
 }
+

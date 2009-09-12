@@ -17,7 +17,6 @@
 
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"		// to use threading stuff, include the Threading namespace in your file.
-#include "Misc.h"
 #include "CDVD/CDVDaccess.h"
 
 static const int PCSX2_VersionHi	= 0;

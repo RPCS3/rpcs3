@@ -164,10 +164,9 @@
 		<Unit filename="../FPU.cpp" />
 		<Unit filename="../FiFo.cpp" />
 		<Unit filename="../GS.cpp" />
-		<Unit filename="../GS.h" />
-		<Unit filename="../Gif.cpp" />
-		<Unit filename="../HashMap.h" />
-		<Unit filename="../HashTools.cpp" />
+    <Unit filename="../GS.h" />
+    <Unit filename="../GSstate.cpp" />
+    <Unit filename="../Gif.cpp" />
 		<Unit filename="../HostGui.h" />
 		<Unit filename="../Hw.cpp" />
 		<Unit filename="../Hw.h" />
@@ -209,8 +208,6 @@
 		<Unit filename="../Memory.h" />
 		<Unit filename="../MemoryCard.cpp" />
 		<Unit filename="../MemoryCard.h" />
-		<Unit filename="../Misc.cpp" />
-		<Unit filename="../Misc.h" />
 		<Unit filename="../NakedAsm.h" />
 		<Unit filename="../Patch.cpp" />
 		<Unit filename="../Patch.h" />
@@ -271,7 +268,8 @@
 		<Unit filename="../gui/AppAssert.cpp" />
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />
-		<Unit filename="../gui/AppRes.cpp" />
+    <Unit filename="../gui/AppMain.cpp" />
+    <Unit filename="../gui/AppRes.cpp" />
 		<Unit filename="../gui/CheckedStaticBox.cpp" />
 		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
@@ -370,7 +368,6 @@
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
-		<Unit filename="../gui/main.cpp" />
 		<Unit filename="../gui/wxHelpers.cpp" />
 		<Unit filename="../gui/wxHelpers.h" />
 		<Unit filename="../ps2/BiosTools.cpp" />

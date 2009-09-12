@@ -59,7 +59,7 @@ template< u16 data, typename T >
 static __forceinline void memset16_obj( T& obj )
 {
 	if( (sizeof(T) & 0x3) != 0 )
-		_memset_16_unaligned( &obj, data, sizeof( T ) );
+		_memset16_unaligned( &obj, data, sizeof( T ) );
 	else
 		memset32_obj<data + (data<<16)>( obj );
 }

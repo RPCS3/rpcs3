@@ -128,10 +128,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\include\wx\setup.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\include\wx\msw\setup.h"
 				>
 				<FileConfiguration
@@ -164,6 +160,10 @@
 						Outputs="..\..\lib\vc_lib\msw\wx\setup.h"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\include\wx\setup.h"
+				>
 			</File>
 		</Filter>
 		<Filter

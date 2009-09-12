@@ -66,3 +66,18 @@ __forceinline void pcsx2_aligned_free(void* pmem)
 	AlignedMallocHeader* header = (AlignedMallocHeader*)((uptr)pmem - headsize);
 	free( header->baseptr );
 }
+
+// ----------------------------------------------------------------------------
+// And for lack of a better home ...
+
+
+// Special unaligned memset used when all other optimized memsets fail (it's called from
+// memzero_obj and stuff).
+void _memset16_unaligned( void* dest, u16 data, size_t size )
+{
+	jASSUME( (size & 0x1) == 0 );
+
+	u16* dst = (u16*)dest;
+	for(int i=size; i; --i, ++dst )
+		*dst = data;
+}

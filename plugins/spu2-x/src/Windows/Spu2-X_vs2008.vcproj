@@ -265,6 +265,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			UseOfMFC="0"

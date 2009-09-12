@@ -21,6 +21,7 @@
 
 #include "Dialogs/ModalPopups.h"
 #include "Utilities/ScopedPtr.h"
+#include "Utilities/HashMap.h"
 
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
@@ -196,8 +197,6 @@ sptr AppEmuThread::ExecuteTask()
 
 
 wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
-
-#include "HashMap.h"
 
 void Pcsx2App::OpenWizardConsole()
 {

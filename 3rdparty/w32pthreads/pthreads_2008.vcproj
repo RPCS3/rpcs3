@@ -18,6 +18,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdpartyDLL.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"

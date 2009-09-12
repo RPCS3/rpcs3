@@ -18,7 +18,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\..\3rdparty.vsprops;.\Common.vsprops;..\..\..\3rdpartyDLL.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
+			InheritedPropertySheets=".\ProjectRootDir.vsprops;..\..\..\3rdparty.vsprops;.\Common.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"

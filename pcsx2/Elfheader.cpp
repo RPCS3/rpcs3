@@ -17,6 +17,7 @@
 
 #include "Common.h"
 #include "CDVD/IsoFSdrv.h"
+#include "DebugTools/Debug.h"
 
 using namespace std;
 
@@ -608,3 +609,79 @@ void loadElfFile(const wxString& filename)
 	return;
 }
 
+// return value:
+//   0 - Invalid or unknown disc.
+//   1 - PS1 CD
+//   2 - PS2 CD
+int GetPS2ElfName( wxString& name )
+{
+	int f;
+	char buffer[g_MaxPath];//if a file is longer...it should be shorter :D
+	char *pos;
+	TocEntry tocEntry;
+
+	IsoFS_init();
+
+	// check if the file exists
+	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
+		Console::Status("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
+		return 0;//could not find; not a PS/PS2 cdvd
+	}
+
+	f=IsoFS_open("SYSTEM.CNF;1", 1);
+	IsoFS_read(f, buffer, g_MaxPath);
+	IsoFS_close(f);
+
+	buffer[tocEntry.fileSize]='\0';
+
+	pos=strstr(buffer, "BOOT2");
+	if (pos==NULL){
+		pos=strstr(buffer, "BOOT");
+		if (pos==NULL) {
+			Console::Error("PCSX2 Boot Error: This is not a Playstation or PS2 game!");
+			return 0;
+		}
+		return 1;
+	}
+	pos+=strlen("BOOT2");
+	while (pos && *pos && pos<&buffer[g_MaxPath]
+		&& (*pos<'A' || (*pos>'Z' && *pos<'a') || *pos>'z'))
+		pos++;
+	if (!pos || *pos==0)
+		return 0;
+
+	// the filename is everything up to the first CR/LF/tab.. ?
+	// Or up to any whitespace?  (I'm opting for first CRLF/tab, although the old code
+	// apparently stopped on spaces too) --air
+	name = wxStringTokenizer( wxString::FromAscii( pos ) ).GetNextToken();
+
+#ifdef PCSX2_DEVBUILD
+	FILE *fp;
+	int i;
+
+	fp = fopen("System.map", "r");
+	if( fp == NULL ) return 2;
+
+	u32 addr;
+
+	Console::WriteLn("Loading System.map...");
+	while (!feof(fp)) {
+		fseek(fp, 8, SEEK_CUR);
+		buffer[0] = '0'; buffer[1] = 'x';
+		for (i=2; i<10; i++) buffer[i] = fgetc(fp); buffer[i] = 0;
+		addr = strtoul(buffer, (char**)NULL, 0);
+		fseek(fp, 3, SEEK_CUR);
+		for (i=0; i<g_MaxPath; i++) {
+			buffer[i] = fgetc(fp);
+			if (buffer[i] == '\n' || buffer[i] == 0) break;
+		}
+		if (buffer[i] == 0) break;
+		buffer[i] = 0;
+
+		R5900::disR5900AddSym(addr, buffer);
+	}
+	fclose(fp);
+#endif
+
+	return 2;
+}

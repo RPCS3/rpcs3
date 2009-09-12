@@ -238,3 +238,6 @@ extern PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Co
 
 extern PluginManagerBase& GetPluginManager();
 
+// Per ChickenLiver, this is being used to pass the GS plugins window handle to the Pad plugins.
+// So a rename to pDisplay is in the works, but it will not, in fact, be removed.
+extern uptr pDsp;

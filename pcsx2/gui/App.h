@@ -351,5 +351,3 @@ extern void OpenPlugins();
 
 extern wxRect wxGetDisplayArea();
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
-
-extern void ProcessFKeys(int fkey, struct KeyModifiers *keymod);
