@@ -17,7 +17,7 @@
 
 #include "GS.h"
 
-
+#ifdef PCSX2_DEVBUILD
 void SaveGSState(const wxString& file)
 {
 	if( g_SaveGSStream ) return;
@@ -150,3 +150,4 @@ void RunGSState( gzLoadingState& f )
 			it = packets.begin();
 	}
 }
+#endif
