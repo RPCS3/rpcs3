@@ -19,7 +19,6 @@
 
 #include "PrecompiledHeader.h"
 
-#include "Misc.h"
 #include "IPU.h"
 #include "yuv2rgb.h"
 
