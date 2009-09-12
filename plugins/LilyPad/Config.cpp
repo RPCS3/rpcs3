@@ -1439,6 +1439,15 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 									b->axes[1].force = BASE_SENSITIVITY;
 								}
 							}
+							else if (dev->api == DS3 && dev->numFFAxes == 2) {
+								needSet = 0;
+								if (cmd == ID_BIG_MOTOR) {
+									b->axes[0].force = BASE_SENSITIVITY;
+								}
+								else {
+									b->axes[1].force = BASE_SENSITIVITY;
+								}
+							}
 							else if (dev->api == DI) {
 								int bigIndex=0, littleIndex=0;
 								int j;
@@ -1494,7 +1503,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 						}
 						dm->Update(&info);
 						dm->PostRead();
-						Sleep(150);
+						Sleep(100);
 						dm->Update(&info);
 						dm->PostRead();
 						dev->SetEffect(ffb, 255);

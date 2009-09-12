@@ -120,7 +120,7 @@ struct LightState {
 struct DS3Command {
 	unsigned char id;
 	unsigned char unsure;
-	// Big is first, then small.
+	// Small is first, then big.
 	MotorState motors[2];
 	unsigned char noClue[4];
 	// 2 is pad 1 light, 4 is pad 2, 8 is pad 3, 16 is pad 4.  No clue about the others.
@@ -164,9 +164,9 @@ public:
 	int StartWrite() {
 		writeop.Offset = writeop.OffsetHigh = 0;
 		for (int i=0; i<2; i++) {
-			if (vibration[i]) {
+			if (vibration[i^1]) {
 				sendState.motors[i].duration = 0x7F;
-				int force = vibration[i] * 256/FULLY_DOWN;
+				int force = vibration[i^1] * 256/FULLY_DOWN;
 				if (force > 255) force = 255;
 				sendState.motors[i].force = (unsigned char) force;
 			}
