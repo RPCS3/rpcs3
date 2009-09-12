@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "PathDefs.h"
 #include "CDVD/CDVDaccess.h"
 
 class IniInterface;

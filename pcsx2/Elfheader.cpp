@@ -538,7 +538,7 @@ void loadElfFile(const wxString& filename)
 {
 	if( filename.IsEmpty() ) return;
 	
-	int elfsize;
+	wxULongLong elfsize;
 	Console::Status( wxsFormat( L"loadElfFile: %s", filename.c_str() ) );
 
 	const wxCharBuffer buffer( filename.ToAscii() );
@@ -548,8 +548,7 @@ void loadElfFile(const wxString& filename)
 	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
 		DevCon::WriteLn("Loading from a file (or non-cd image)");
-
-		elfsize = Path::GetFileSize( filename );
+		elfsize = wxFileName::GetSize( filename );
 	}
 	else
 	{
@@ -562,11 +561,14 @@ void loadElfFile(const wxString& filename)
 		elfsize = toc.fileSize;
 	}
 
-	Console::Status( wxsFormat(L"loadElfFile: %d", elfsize) );
+	if( elfsize.GetHi() != 0 )
+		throw Exception::BadStream( filename, wxLt("Illegal ELF file size, over 4GB: ") );
+
+	Console::Status( wxsFormat(L"loadElfFile: %d", elfsize.GetLo()) );
 	if( elfsize == 0 )
 		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
 
-	ElfObject elfobj( filename, elfsize );
+	ElfObject elfobj( filename, elfsize.GetLo() );
 
 	if( elfobj.proghead == NULL )
 	{

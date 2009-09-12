@@ -107,20 +107,20 @@ static u32 GetBiosVersion()
 // Parameters:
 //   ext - extension of the sub-component to load.  Valid options are rom1, rom2, AND erom.
 //
-static void loadBiosRom( const wxChar *ext, u8 *dest, long maxSize )
+static void loadBiosRom( const wxChar *ext, u8 *dest, u64 maxSize )
 {
 	wxString Bios1;
-	long filesize;
+	u64 filesize;
 
 	// Try first a basic extension concatenation (normally results in something like name.bin.rom1)
 	const wxString Bios( g_Conf->FullpathToBios() );
 	Bios1.Printf( L"%s.%s", Bios.c_str(), ext);
 
-	if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
+	if( (filesize=wxFileName::GetSize( Bios1 ).GetValue() ) <= 0 )
 	{
 		// Try the name properly extensioned next (name.rom1)
 		Bios1 = Path::ReplaceExtension( Bios, ext );
-		if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
+		if( (filesize=wxFileName::GetSize( Bios1 ).GetValue() ) <= 0 )
 		{
 			Console::Notice( "Load Bios Warning: %s not found (this is not an error!)", wxString(ext).ToAscii().data() );
 			return;
@@ -149,11 +149,11 @@ void LoadBIOS()
 	
 	wxString Bios( g_Conf->FullpathToBios() );
 
-	long filesize = Path::GetFileSize( Bios );
+	u64 filesize = wxFileName::GetSize( Bios ).GetValue();
 	if( filesize > 0 )
 	{
 		wxFile fp( Bios.c_str() );
-		fp.Read( PS2MEM_ROM, min( (long)Ps2MemSize::Rom, filesize ) );
+		fp.Read( PS2MEM_ROM, min( (u64)Ps2MemSize::Rom, filesize ) );
 	}
 	else
 	{

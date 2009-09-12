@@ -211,6 +211,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\PathUtils.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\StringHelpers.cpp"
 				>
 			</File>
@@ -386,6 +390,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\Utilities\MemcpyFast.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\Path.h"
 				>
 			</File>
 			<File

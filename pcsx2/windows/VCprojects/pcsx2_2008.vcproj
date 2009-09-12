@@ -1871,10 +1871,6 @@
 			Name="SysCore"
 			>
 			<File
-				RelativePath="..\..\PathUtils.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\PluginManager.cpp"
 				>
 			</File>

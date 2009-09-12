@@ -17,6 +17,7 @@
 #include "RedtapeWindows.h"
 #include "WinVersion.h"
 
+#include <ShTypes.h>
 #include <shlwapi.h>		// for IsOS()
 
 

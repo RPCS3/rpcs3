@@ -191,7 +191,7 @@ void LoadGSState(const wxString& file)
 	catch( Exception::FileNotFound& )
 	{
 		// file not found? try prefixing with sstates folder:
-		if( !Path::IsRooted( file ) )
+		if( !Path::IsRelative( file ) )
 		{
 			f = new gzLoadingState( Path::Combine( g_Conf->Folders.Savestates, file ) );
 

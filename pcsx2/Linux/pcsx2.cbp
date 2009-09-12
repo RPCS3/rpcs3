@@ -214,8 +214,7 @@
 		<Unit filename="../NakedAsm.h" />
 		<Unit filename="../Patch.cpp" />
 		<Unit filename="../Patch.h" />
-		<Unit filename="../PathUtils.cpp" />
-		<Unit filename="../Paths.h" />
+		<Unit filename="../PathDefs.h" />
 		<Unit filename="../Pcsx2Config.cpp" />
 		<Unit filename="../PluginManager.cpp" />
 		<Unit filename="../Plugins.h" />

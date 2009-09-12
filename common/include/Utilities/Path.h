@@ -13,17 +13,9 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _PCSX2_PATHS_H_
-#define _PCSX2_PATHS_H_
+#include <wx/filename.h>
 
 #define g_MaxPath 255			// 255 is safer with antiquated Win32 ASCII APIs.
-
-//#ifdef __LINUX__
-//extern char MAIN_DIR[g_MaxPath];
-//#endif
-
-// Windows.h namespace pollution!
-#undef CreateDirectory
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -32,8 +24,7 @@ class wxDirName : protected wxFileName
 public:
 	explicit wxDirName( const wxFileName& src )
 	{
-		wxASSERT_MSG( src.IsDir(), L"Warning: Creating a directory from what looks to be a filename..." );
-		Assign( src.GetPath() );
+		Assign( src.GetPath(), wxEmptyString );
 	}
 
 	wxDirName() : wxFileName() {}
@@ -67,7 +58,9 @@ public:
 	bool IsReadable() const { return IsDirReadable(); }
 	bool Exists() const { return DirExists(); }
 	bool IsOk() const { return wxFileName::IsOk(); }
-
+	bool IsRelative() const { return wxFileName::IsRelative(); }
+	bool IsAbsolute() const { return wxFileName::IsAbsolute(); }
+	
 	bool SameAs( const wxDirName& filepath ) const
 	{
 		return wxFileName::SameAs( filepath );
@@ -119,89 +112,21 @@ public:
 	wxFileName& GetFilename() { return *this; }
 };
 
-// remove windows.h namespace pollution:
-#undef GetFileSize
-#undef CreateDirectory
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // Path Namespace
 // Cross-platform utilities for manipulation of paths and filenames.
 //
 namespace Path
 {
-	extern bool IsRooted( const wxString& path );
-	extern int GetFileSize( const wxString& path );
-
-	extern wxString Combine( const wxString& srcPath, const wxString& srcFile );
-	extern wxString Combine( const wxDirName& srcPath, const wxFileName& srcFile );
-	extern wxString Combine( const wxString& srcPath, const wxDirName& srcFile );
-	extern wxString ReplaceExtension( const wxString& src, const wxString& ext );
-	extern wxString ReplaceFilename( const wxString& src, const wxString& newfilename );
-	extern wxString GetFilename( const wxString& src );
-	extern wxString GetDirectory( const wxString& src );
-	extern wxString GetFilenameWithoutExt( const wxString& src );
-	extern wxString GetRootDirectory( const wxString& src );
-
-	extern void CreateDirectory( const wxString& src );
-	extern void RemoveDirectory( const wxString& src );
+	extern bool		IsRelative( const wxString& path );
+	
+	extern wxString	Combine( const wxString& srcPath, const wxString& srcFile );
+	extern wxString	Combine( const wxDirName& srcPath, const wxFileName& srcFile );
+	extern wxString	Combine( const wxString& srcPath, const wxDirName& srcFile );
+	extern wxString	ReplaceExtension( const wxString& src, const wxString& ext );
+	extern wxString	ReplaceFilename( const wxString& src, const wxString& newfilename );
+	extern wxString	GetFilename( const wxString& src );
+	extern wxString	GetDirectory( const wxString& src );
+	extern wxString	GetFilenameWithoutExt( const wxString& src );
+	extern wxString	GetRootDirectory( const wxString& src );
 }
-	extern std::string GetWorkingDirectory(void);
-	extern void ChangeDirectory(const std::string& src);
-enum FoldersEnum_t
-{
-	FolderId_Plugins = 0,
-	FolderId_Settings,
-	FolderId_Bios,
-	FolderId_Snapshots,
-	FolderId_Savestates,
-	FolderId_MemoryCards,
-	FolderId_Logs,
-	FolderId_COUNT
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// PathDefs Namespace -- contains default values for various pcsx2 path names and locations.
-//
-// Note: The members of this namespace are intended for default value initialization only.
-// Most of the time you should use the path folder assignments in g_Conf instead, since those
-// are user-configurable.
-//
-namespace PathDefs
-{
-	// complete pathnames are returned by these functions
-	// For 99% of all code, you should use these.
-
-	extern wxDirName GetDocuments();
-	extern wxDirName GetSnapshots();
-	extern wxDirName GetBios();
-	extern wxDirName GetThemes();
-	extern wxDirName GetPlugins();
-	extern wxDirName GetSavestates();
-	extern wxDirName GetMemoryCards();
-	extern wxDirName GetSettings();
-	extern wxDirName GetLogs();
-	extern wxDirName GetThemes();
-
-	extern wxDirName Get( FoldersEnum_t folderidx );
-
-	// Base folder names used to extend out the documents/approot folder base into a complete
-	// path.  These are typically for internal AppConfig use only, barring a few special cases.
-	namespace Base
-	{
-		extern const wxDirName& Snapshots();
-		extern const wxDirName& Savestates();
-		extern const wxDirName& MemoryCards();
-		extern const wxDirName& Settings();
-		extern const wxDirName& Plugins();
-		extern const wxDirName& Themes();
-	}
-}
-
-namespace FilenameDefs
-{
-	extern wxFileName GetConfig();
-	extern wxFileName GetUsermodeConfig();
-	extern const wxFileName& Memcard( int slot );
-};
-
-#endif
