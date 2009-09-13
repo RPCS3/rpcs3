@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_workspace_file>
 	<Workspace title="pcsx2_suite_2008 workspace">
-		<Project filename="pcsx2/Linux/pcsx2.cbp" />
+		<Project filename="pcsx2/Linux/pcsx2.cbp">
+			<Depends filename="common/build/x86emitter/x86emitter.cbp" />
+			<Depends filename="common/build/Utilities/Utilities.cbp" />
+			<Depends filename="3rdparty/zlib/zlib.cbp" />
+			<Depends filename="tools/bin2cpp/bin2cpp.cbp" />
+		</Project>
 		<Project filename="common/build/x86emitter/x86emitter.cbp" />
 		<Project filename="common/build/Utilities/Utilities.cbp" />
 		<Project filename="3rdparty/SoundTouch/SoundTouch.cbp" />

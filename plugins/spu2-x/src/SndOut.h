@@ -59,7 +59,7 @@ struct StereoOut16
 		Right( right )
 	{
 	}
-	
+
 	StereoOut32 UpSample() const;
 
 	void ResampleFrom( const StereoOut32& src )
@@ -214,7 +214,7 @@ struct Stereo51Out16DplII
 
 		s32 XL = abs(ValL>>8);
 		s32 XR = abs(ValR>>8);
-		
+
 		if(XL>LMax) LMax = XL;
 		if(XR>RMax) RMax = XR;
 
@@ -264,7 +264,7 @@ struct Stereo51Out16DplII
 			s32 VL=(ValL>>4) * Cfl; //16.12
 			s32 VR=(ValR>>4) * Cfr;
 
-			s32 SC = (VL-VR)>>15;
+			//s32 SC = (VL-VR)>>15;
 
 			SL = (((VR/148 - VL/209)>>4)*Cfr)>>8;
 			SR = (((VR/209 - VL/148)>>4)*Cfl)>>8;
@@ -283,7 +283,7 @@ struct Stereo51Out16DplII
 		int AddCX  = (C * AddCLR)>>8;
 
 		Left	= (((L   * GainL  ))>>8) + AddCX;
-		Right	= (((R   * GainL  ))>>8) + AddCX;
+		Right	= (((R   * GainR  ))>>8) + AddCX;
 		Center	= (((C   * GainC  ))>>8);
 		LFE		= (((SUB * GainLFE))>>8);
 		LeftBack	= (((SL  * GainSL ))>>8);
@@ -310,7 +310,7 @@ struct Stereo71Out16
 		LFE = Center;
 		LeftBack = src.Left >> SndOutVolumeShift;
 		RightBack = src.Right >> SndOutVolumeShift;
-		
+
 		LeftSide = src.Left >> (SndOutVolumeShift+1);
 		RightSide = src.Right >> (SndOutVolumeShift+1);
 	}
@@ -352,7 +352,7 @@ private:
 
 	static StereoOut32* sndTempBuffer;
 	static StereoOut16* sndTempBuffer16;
-	
+
 	static int sndTempProgress;
 	static int m_dsp_progress;
 
@@ -381,7 +381,7 @@ private:
 	static void timeStretchWrite();
 	static void timeStretchUnderrun();
 	static s32 timeStretchOverrun();
-	
+
 	static void PredictDataWrite( int samples );
 	static float GetStatusPct();
 	static void UpdateTempoChange();
@@ -392,13 +392,13 @@ public:
 	static void Write( const StereoOut32& Sample );
 	static s32 Test();
 	static void ClearContents();
-	
+
 #ifdef _MSC_VER
 	static void Configure(HWND parent, u32 module );
 #else
 	static void Configure(uptr parent, u32 module );
 #endif
-	
+
 	// Note: When using with 32 bit output buffers, the user of this function is responsible
 	// for shifting the values to where they need to be manually.  The fixed point depth of
 	// the sample output is determined by the SndOutVolumeShift, which is the number of bits

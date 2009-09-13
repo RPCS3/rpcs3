@@ -2,9 +2,12 @@
 #ifndef _BASETYPES_H_
 #define _BASETYPES_H_
 
+#include "PS2Edefs.h"
+
 //system defines
 #ifdef __LINUX__
-#include <gtk/gtk.h>
+#	undef __LINUX__		// supress gtk's warnings on redefinition
+#	include <gtk/gtk.h>
 #else
 #	define WINVER 0x0501
 #	define _WIN32_WINNT 0x0501
@@ -26,8 +29,6 @@
 
 using std::string;
 using std::wstring;
-
-#include "PS2Edefs.h"
 
 //////////////////////////////////////////////////////////////////////////
 // Override Win32 min/max macros with the STL's type safe and macro
@@ -65,7 +66,7 @@ extern void SysMessage(const char *fmt, ...);
 #	define DevMsg MsgBox
 #else
 #	define DevCon 0&&Console
-#	define DevMsg 
+#	define DevMsg
 #endif
 
 #ifdef PCSX2_DEBUG
@@ -83,7 +84,7 @@ struct StereoOut32
 
 	s32 Left;
 	s32 Right;
-	
+
 	StereoOut32() :
 		Left( 0 ),
 		Right( 0 )
@@ -95,12 +96,12 @@ struct StereoOut32
 		Right( right )
 	{
 	}
-	
+
 	StereoOut32( const StereoOut16& src );
 	explicit StereoOut32( const StereoOutFloat& src );
-	
+
 	StereoOut16 DownSample() const;
-	
+
 	StereoOut32 operator+( const StereoOut32& right ) const
 	{
 		return StereoOut32(
@@ -109,7 +110,7 @@ struct StereoOut32
 		);
 	}
 
-	StereoOut32 operator/( int src ) const 
+	StereoOut32 operator/( int src ) const
 	{
 		return StereoOut32( Left / src, Right / src );
 	}

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -27,17 +27,23 @@ extern void DevAssert( bool condition, const char* msg );
 // exception.  Use this macro to dispose of these dangerous exceptions, and generate a
 // friendly error log in their wake.
 //
-#define DESTRUCTOR_CATCHALL \
+#define __DESTRUCTOR_CATCHALL( funcname ) \
 	catch( Exception::BaseException& ex ) \
 	{ \
-		Console::Error( "Unhandled BaseException in " __FUNCTION__ " (ignored!):" ); \
+		Console::Error( "Unhandled BaseException in %s (ignored!):", funcname ); \
 		Console::Error( ex.FormatDiagnosticMessage() ); \
 	} \
 	catch( std::exception& ex ) \
 	{ \
-		Console::Error( "Unhandled std::exception in " __FUNCTION__ " (ignored!):" ); \
+		Console::Error( "Unhandled std::exception in %s (ignored!):", funcname ); \
 		Console::Error( ex.what() ); \
-	} 
+	}
+
+#ifdef __GNUC__
+#	define DESTRUCTOR_CATCHALL		__DESTRUCTOR_CATCHALL( __PRETTY_FUNCTION__ )
+#else
+#	define DESTRUCTOR_CATCHALL		__DESTRUCTOR_CATCHALL( __FUNCTION__ )
+#endif
 
 namespace Exception
 {
@@ -89,7 +95,7 @@ namespace Exception
 		// Construction using one translation key.
 		void InitBaseEx( const char* msg_eng );
 	};
-	
+
 	// --------------------------------------------------------------------------------------
 	//  Ps2Generic Exception
 	// --------------------------------------------------------------------------------------
@@ -195,7 +201,7 @@ namespace Exception
 
 	public:
 		DEFINE_EXCEPTION_COPYTORS( IndexBoundsFault )
-		
+
 		IndexBoundsFault( const wxString& objname, int index, int arrsize )
 		{
 			BaseException::InitBaseEx( "Index is outside the bounds of an array." );
@@ -208,12 +214,12 @@ namespace Exception
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
 	};
-	
+
 	class ParseError : public RuntimeError
 	{
 	public:
 		DEFINE_RUNTIME_EXCEPTION( ParseError, "Parse error" );
-	};	
+	};
 
 	// ---------------------------------------------------------------------------------------
 	// Hardware/OS Exceptions:
@@ -344,7 +350,7 @@ namespace Exception
 	};
 
 	// Exception thrown by SaveState class when a plugin returns an error during state
-	// load or save. 
+	// load or save.
 	//
 	class FreezePluginFailure : public virtual RuntimeError
 	{
@@ -374,7 +380,7 @@ namespace Exception
 
 	public:
 		DEFINE_EXCEPTION_COPYTORS( UnsupportedStateVersion )
-		
+
 		explicit UnsupportedStateVersion( int version, const wxString& objname=wxEmptyString )
 		{
 			StreamName = objname;

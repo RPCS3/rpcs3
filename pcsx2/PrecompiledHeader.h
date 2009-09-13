@@ -90,6 +90,12 @@ typedef int BOOL;
 #include "Utilities/General.h"
 #include "x86emitter/tools.h"
 
+// Linux isn't set up for svn version numbers yet.
+#ifdef __LINUX__
+#	define SVN_REV 0
+#	define SVN_MODS 0
+#endif
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Compiler/OS specific macros and defines -- Begin Section
 

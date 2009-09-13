@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -29,7 +29,7 @@ struct PluginInfo
 	PluginsEnum_t id;
 	int typemask;
 	int version;			// minimum version required / supported
-	
+
 	wxString GetShortname() const
 	{
 		return wxString::FromUTF8( shortname );
@@ -127,7 +127,7 @@ struct LegacyPluginAPI_Common
 	s32  (CALLBACK* Test)();
 	void (CALLBACK* Configure)();
 	void (CALLBACK* About)();
-	
+
 	LegacyPluginAPI_Common() :
 		Init	( NULL )
 	,	Close	( NULL )
@@ -154,7 +154,7 @@ class EmuPluginBindings
 {
 protected:
 	PS2E_ComponentAPI_Mcd* Mcd;
-	
+
 public:
 	EmuPluginBindings() :
 		Mcd( NULL )
@@ -204,7 +204,7 @@ public:
 	virtual void Freeze( PluginsEnum_t pid, int mode, freezeData* data ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
 	virtual void Freeze( PluginsEnum_t pid, SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
 	virtual void Freeze( SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
-	
+
 	virtual bool KeyEvent( const keyEvent& evt ) { return false; }
 };
 
@@ -225,7 +225,7 @@ protected:
 
 		LegacyPluginAPI_Common	CommonBindings;
 		wxDynamicLibrary		Lib;
-		
+
 		PluginStatus_t() :
 			IsInitialized( false )
 		,	IsOpened( false )
@@ -268,7 +268,7 @@ protected:
 	void BindCommon( PluginsEnum_t pid );
 	void BindRequired( PluginsEnum_t pid );
 	void BindOptional( PluginsEnum_t pid );
-	
+
 	friend class mtgsThreadObject;
 };
 
@@ -282,7 +282,7 @@ extern PluginManagerBase& GetPluginManager();
 
 // Hack to expose internal MemoryCard plugin:
 
-extern "C" extern const PS2E_LibraryAPI* FileMcd_InitAPI( const PS2E_EmulatorInfo* emuinfo );
+extern "C" const PS2E_LibraryAPI* FileMcd_InitAPI( const PS2E_EmulatorInfo* emuinfo );
 
 // Per ChickenLiver, this is being used to pass the GS plugins window handle to the Pad plugins.
 // So a rename to pDisplay is in the works, but it will not, in fact, be removed.

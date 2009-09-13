@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -632,7 +632,7 @@ static void PS2E_CALLBACK pcsx2_OSD_WriteLn( int icon, const char* msg )
 PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
 	Console::Status( "Loading plugins..." );
-	
+
 	const PluginInfo* pi = tbl_PluginInfo-1;
 	while( ++pi, pi->shortname != NULL )
 	{
@@ -674,21 +674,21 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	// Hack for PAD's stupid parameter passed on Init
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
-	
+
 	Console::Status( "Plugins loaded successfully.\n" );
-	
+
 	// HACK!  Manually bind the Internal MemoryCard plugin for now, until
 	// we get things more completed in the new plugin api.
-	
+
 	static const PS2E_EmulatorInfo myself =
 	{
 		"PCSX2",
 
 		{ 0, PCSX2_VersionHi, PCSX2_VersionLo, SVN_REV },
-		
+
 		x86caps.PhysicalCores,
 		x86caps.LogicalCores,
-		
+
 		pcsx2_GetInt,
 		pcsx2_GetBoolean,
 		pcsx2_GetString,
@@ -712,7 +712,6 @@ PluginManager::~PluginManager()
 		Shutdown();
 	}
 	DESTRUCTOR_CATCHALL
-
 	// All library unloading done automatically.
 }
 
@@ -988,9 +987,9 @@ void PluginManager::Shutdown()
 		m_info[pid].IsInitialized = false;
 		m_info[pid].CommonBindings.Shutdown();
 	}
-	
+
 	// More memorycard hacks!!
-	
+
 	if( EmuPlugins.Mcd != NULL && m_mcdPlugin != NULL )
 	{
 		m_mcdPlugin->DeleteComponentInstance( (PS2E_THISPTR)EmuPlugins.Mcd );

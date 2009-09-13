@@ -279,26 +279,16 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	wxString wintitle;
 	if( PCSX2_VersionLo & 1 )
 	{
-#ifdef __LINUX__
-		// Linux isn't set up for svn version numbers yet.
-		wintitle.Printf( _("PCSX2  %d.%d.%d (svn)  %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
-			 wxString::FromUTF8(__DATE__).c_str() );
-#else
 		// Odd versions: beta / development editions, which feature revision number and compile date.
 		wintitle.Printf( _("PCSX2  %d.%d.%d.%d%s (svn)  %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, wxString::FromUTF8(__DATE__).c_str() );
-#endif
 	}
 	else
 	{
-#ifdef __LINUX__
-		wintitle.Printf( _("PCSX2  %d.%d.%d"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo);
-#else
 		// evens: stable releases, with a simpler title.
 		wintitle.Printf( _("PCSX2  %d.%d.%d %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_MODS ? _("(modded)") : wxEmptyString
 		);
-#endif
 	}
 
 	SetTitle( wintitle );
@@ -306,13 +296,13 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// Ideally the __WXMSW__ port should use the embedded IDI_ICON2 icon, because wxWidgets sucks and
 	// loses the transparency information when loading bitmaps into icons.  But for some reason
 	// I cannot get it to work despite following various examples to the letter.
-	
+
 	wxIconBundle bundle;
 	bundle.AddIcon( EmbeddedImage<res_AppIcon32>().GetIcon() );
 	bundle.AddIcon( EmbeddedImage<res_AppIcon64>().GetIcon() );
 	bundle.AddIcon( EmbeddedImage<res_AppIcon16>().GetIcon() );
 	SetIcons( bundle );
-	
+
 	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
 	m_statusbar.SetStatusWidths(2, m_statusbar_widths);
 	m_statusbar.SetStatusText( L"The Status is Good!", 0);

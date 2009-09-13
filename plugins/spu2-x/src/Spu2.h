@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
  * of the GNU Lesser General Public License as published by the Free Software Found-
  * ation, either version 3 of the License, or (at your option) any later version.
@@ -130,7 +130,7 @@ static const int pcm_DecodedSamplesPerBlock = 28;
 
 struct PcmCacheEntry
 {
-	bool Validated; 
+	bool Validated;
 	s16 Sampledata[pcm_DecodedSamplesPerBlock];
 };
 
@@ -144,10 +144,10 @@ extern short *_spu2mem;
 
 extern PcmCacheEntry* pcm_cache_data;
 
-extern s16 __forceinline * __fastcall GetMemPtr(u32 addr);
-extern s16 __forceinline __fastcall spu2M_Read( u32 addr );
-extern void __inline __fastcall spu2M_Write( u32 addr, s16 value );
-extern void __inline __fastcall spu2M_Write( u32 addr, u16 value );
+extern s16* __fastcall GetMemPtr(u32 addr);
+extern s16 __fastcall spu2M_Read( u32 addr );
+extern void __fastcall spu2M_Write( u32 addr, s16 value );
+extern void __fastcall spu2M_Write( u32 addr, u16 value );
 
 #define spu2Rs16(mmem)	(*(s16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))
 #define spu2Ru16(mmem)	(*(u16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))

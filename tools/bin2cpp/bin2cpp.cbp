@@ -5,8 +5,37 @@
 		<Option title="bin2cpp" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
+		<Option show_notes="0">
+			<notes>
+				<![CDATA[Built Targets:  Debug and Devel builds are carbon copies of Release.  Code::Blocks won't build bin2cpp automatically as a dependency of PCSX2 unless it has matching debug/devel configurations (that is, the depdendency only builds in Release modes, if the dependency only has a release target).  There's no point in having debug/devel builds other than that.]]>
+			</notes>
+		</Option>
 		<Build>
 			<Target title="Release">
+				<Option output="../bin/bin2cpp" prefix_auto="1" extension_auto="1" />
+				<Option object_output="./.objs/release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+			<Target title="Debug">
+				<Option output="../bin/bin2cpp" prefix_auto="1" extension_auto="1" />
+				<Option object_output="./.objs/release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+			<Target title="Devel">
 				<Option output="../bin/bin2cpp" prefix_auto="1" extension_auto="1" />
 				<Option object_output="./.objs/release/" />
 				<Option type="1" />

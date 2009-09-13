@@ -45,6 +45,7 @@
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
 					<Add option="-DNDEBUG" />
 					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-DPCSX2_DEVEL" />
 				</Compiler>
 				<ResourceCompiler>
 					<Add directory="$(ProjectRootDir)/gui" />
@@ -287,8 +288,8 @@
 		<Unit filename="../gui/MainFrame.cpp" />
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
-    <Unit filename="../gui/MemoryCardFile.cpp" />
-    <Unit filename="../gui/Panels/AudioPanel.cpp" />
+		<Unit filename="../gui/MemoryCardFile.cpp" />
+		<Unit filename="../gui/Panels/AudioPanel.cpp" />
 		<Unit filename="../gui/Panels/BiosSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/ConfigurationPanels.h" />
 		<Unit filename="../gui/Panels/CpuPanel.cpp" />
@@ -303,16 +304,19 @@
 		<Unit filename="../gui/Resources/AppIcon16.h" />
 		<Unit filename="../gui/Resources/AppIcon16.png">
 			<Option compile="1" />
+			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
 		<Unit filename="../gui/Resources/AppIcon32.h" />
 		<Unit filename="../gui/Resources/AppIcon32.png">
 			<Option compile="1" />
+			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
 		<Unit filename="../gui/Resources/AppIcon64.h" />
 		<Unit filename="../gui/Resources/AppIcon64.png">
 			<Option compile="1" />
+			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
 		<Unit filename="../gui/Resources/BackgroundLogo.h" />
