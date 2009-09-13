@@ -17,7 +17,9 @@
 
 #define PLUGINtypedefs
 #define PLUGINfuncs
+
 #include "PS2Edefs.h"
+#include "PluginCallbacks.h"
 
 #include <wx/dynlib.h>
 
@@ -34,6 +36,9 @@ struct PluginInfo
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//  Plugin-related Exceptions
+// --------------------------------------------------------------------------------------
 namespace Exception
 {
 	class PluginError : public virtual RuntimeError
@@ -103,7 +108,9 @@ namespace Exception
 	};
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  LegacyPluginAPI_Common
+// --------------------------------------------------------------------------------------
 // Important: Contents of this structure must match the order of the contents of the
 // s_MethMessCommon[] array defined in Plugins.cpp.
 //
@@ -136,8 +143,40 @@ struct LegacyPluginAPI_Common
 class SaveState;
 class mtgsThreadObject;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// IPluginManager
+// --------------------------------------------------------------------------------------
+//  PluginBindings
+// --------------------------------------------------------------------------------------
+// This structure is intended to be the "future" of PCSX2's plugin interface, and will hopefully
+// make the current PluginManager largely obsolete (with the exception of the general Load/Unload
+// management facilities)
+//
+class EmuPluginBindings
+{
+protected:
+	PS2E_ComponentAPI_Mcd* Mcd;
+	
+public:
+	EmuPluginBindings() :
+		Mcd( NULL )
+	{
+
+	}
+
+	bool McdIsPresent( uint port, uint slot );
+	void McdRead( uint port, uint slot, u8 *dest, u32 adr, int size );
+	void McdSave( uint port, uint slot, const u8 *src, u32 adr, int size );
+	void McdEraseBlock( uint port, uint slot, u32 adr );
+	u64 McdGetCRC( uint port, uint slot );
+
+	friend class PluginManager;
+};
+
+extern EmuPluginBindings EmuPlugins;
+
+
+// --------------------------------------------------------------------------------------
+//  PluginManagerBase Class
+// --------------------------------------------------------------------------------------
 // Provides a basic placebo "do-nothing" interface for plugin management.  This is used
 // to avoid NULL pointer exceptions/segfaults when referencing the plugin manager global
 // handle.
@@ -169,7 +208,9 @@ public:
 	virtual bool KeyEvent( const keyEvent& evt ) { return false; }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  PluginManager Class
+// --------------------------------------------------------------------------------------
 //
 class PluginManager : public PluginManagerBase
 {
@@ -197,7 +238,8 @@ protected:
 
 	bool m_initialized;
 
-	PluginStatus_t m_info[PluginId_Count];
+	PluginStatus_t			m_info[PluginId_Count];
+	const PS2E_LibraryAPI*	m_mcdPlugin;
 
 public:
 	virtual ~PluginManager();
@@ -238,6 +280,11 @@ extern PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Co
 
 extern PluginManagerBase& GetPluginManager();
 
+// Hack to expose internal MemoryCard plugin:
+
+extern "C" extern const PS2E_LibraryAPI* FileMcd_InitAPI( const PS2E_EmulatorInfo* emuinfo );
+
 // Per ChickenLiver, this is being used to pass the GS plugins window handle to the Pad plugins.
 // So a rename to pDisplay is in the works, but it will not, in fact, be removed.
 extern uptr pDsp;
+

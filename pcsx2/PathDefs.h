@@ -69,6 +69,6 @@ namespace FilenameDefs
 {
 	extern wxFileName GetConfig();
 	extern wxFileName GetUsermodeConfig();
-	extern const wxFileName& Memcard( int slot );
+	extern const wxFileName& Memcard( uint port, uint slot );
 };
 

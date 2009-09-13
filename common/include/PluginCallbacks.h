@@ -17,9 +17,41 @@
 #ifndef __PLUGINCALLBACKS_H__
 #define __PLUGINCALLBACKS_H__
 
-#include "x86caps.h"		// fixme: x86caps.h needs to be implemented from the pcsx2 emitter cpucaps structs
+// --------------------------------------------------------------------------------------
+//  <<< Important Notes to Plugin Authors >>>
+// --------------------------------------------------------------------------------------
+//  * Exceptions thrown by plugins may not be handled correctly if allowed to escape the
+//    scope of the plugin, and could result in odd crashes.  For C++ plugins this means
+//    ensuring that any code that uses 'new' or STL containers (string, list, vector, etc)
+//    are contained within a try{} block, since the STL can throw std::bad_alloc.
+//
+//  * Many callbacks are optional, and have been marked as such. Any optional callback can be
+//    left NULL.  Any callback not marked optional and left NULL will cause the emulator to
+//    invalidate the plugin on either enumeration or initialization.
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  <<< Important Notes to All Developers >>>
+// --------------------------------------------------------------------------------------
+//  * Callback APIs cannot involve LIB-C or STL objects (such as FILE or std::string).  The
+//    internal layout of these structures can vary between versions of GLIB-C / MSVCRT.
+//
+//  * Callback APIs cannot alloc/free memory across dynamic library boundaries.  An object
+//    allocated by a plugin must be freed by that plugin.
+//
+//  * C++ exception handling cannot be used by either plugin callbacks or emulator callbacks.
+//    This includes the Console callbacks, for example, since the nature of C++ RTTI could
+//    cause a C++ plugin wth its own catch handlers to catch exceptions of mismatched types
+//    from the emulator.
+//
+
+
+#ifndef BOOL
+	typedef int BOOL;
+#endif
+
+// --------------------------------------------------------------------------------------
+//  PS2E_HWND  -  OS-independent window handle
+// --------------------------------------------------------------------------------------
 // HWND is our only operating system dependent type.  For it to be defined as accurately
 // as possible, this header file needs to be included after whatever window/GUI platform
 // headers you need (wxWidgets, Windows.h, GTK, etc).
@@ -30,24 +62,19 @@
 // platform available defines when they exist.
 //
 #if defined( _WX_DEFS_H_ )
-
-typedef WXWidget PS2E_HWND;
-
+	typedef WXWidget PS2E_HWND;
 #elif defined( _WINDEF_ )
-
-// For Windows let's use HWND, since it has some type strictness applied to it.
-typedef HWND PS2E_HWND;
-
+	// For Windows let's use HWND, since it has some type strictness applied to it.
+	typedef HWND PS2E_HWND;
 #else
-// Unsupported platform... use void* as a best guess.  Should work fine for almost
-// any GUI platform, and certainly works for any currently supported one.
-typedef void* PS2E_HWND;
+	// Unsupported platform... use void* as a best guess.  Should work fine for almost
+	// any GUI platform, and certainly works for any currently supported one.
+	typedef void* PS2E_HWND;
 #endif
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_THISPTR - (ps2 component scope 'this' object pointer type)
-//
+// --------------------------------------------------------------------------------------
+//  PS2E_THISPTR - (ps2 component scope 'this' object pointer type)
+// --------------------------------------------------------------------------------------
 // This macro provides C++ plugin authors with a reasonably friendly way to automatically
 // typecast the session objects for your plugin to your internal type.  Just #define
 // PS2E_THISPTR to your internal structure type prior to loading this header file, and all
@@ -81,12 +108,13 @@ typedef void* PS2E_HWND;
 extern "C" {
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Plugin Type / Version Enumerations
-//
+// ------------------------------------------------------------------------------------
+//  Plugin Type / Version Enumerations
+// ------------------------------------------------------------------------------------
+
 enum PS2E_ComponentTypes
 {
-	PS2E_TYPE_GS=0,
+	PS2E_TYPE_GS = 0,
 	PS2E_TYPE_PAD,
 	PS2E_TYPE_SPU2,
 	PS2E_TYPE_CDVD,
@@ -94,7 +122,7 @@ enum PS2E_ComponentTypes
 	PS2E_TYPE_USB,
 	PS2E_TYPE_FW,
 	PS2E_TYPE_SIO,
-
+	PS2E_TYPE_Mcd,
 };
 
 enum PluginLibVersion
@@ -122,20 +150,21 @@ enum OSDIconTypes
 	OSD_Icon_ReserveEnd = 0x1000
 };
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_VersionInfo
-// 
+//-
+// --------------------------------------------------------------------------------------
+//  PS2E_VersionInfo
+// --------------------------------------------------------------------------------------
 // This structure is populated by the plugin via the PS2E_PluginLibAPI::GetVersion()
 // callback.  Specify -1 for any Version or Revision to disable/ignore it.  The emulator
 // will not factor that info into the display name of the plugin.
 //
-typedef struct PS2E_VersionInfo
+typedef struct _PS2E_VersionInfo
 {
 	// Low/Mid/High versions combine to form a number in the format of: 2.3.1
 	// ... where 2 is the high version, 3 mid, and 1 low.
-	s16 VersionLow;
-	s16 VersionMid;
 	s16 VersionHigh;
+	s16 VersionMid;
+	s16 VersionLow;
 
 	// Revision typically refers a revision control system (such as SVN).  When displayed
 	// by the emulator it will have an 'r' prefixed before it.
@@ -143,35 +172,9 @@ typedef struct PS2E_VersionInfo
 
 } PS2E_VersionInfo;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_MachineInfo
-// 
-// This struct is populated by the emulator when the application is started, and is passed
-// to plugins via PS2E_PluginLibAPI::Init().  Plugins may optionally use this information
-// to determine compatibility or to select which special CPU-oriented builds and/or functions
-// to bind to callbacks.
-//
-// Fields marked as Optional can either be NULL or -1, denoting the field is unused/ignored.
-//
-typedef struct _PS2E_MachineInfo
-{
-	const x86CPU_INFO*	x86caps;
-
-	// brief name of the emulator (ex: "PCSX2") [required]
-	// Depending on the design of the emulator, this string may optionally include version
-	// information, however that is not recommended since it can inhibit backward support.
-	const char*	EmuName;
-
-	s16			EmuVersionLow;			// [optional]
-	s16			EmuVersionMid;			// [optional]
-	s16			EmuVersionHigh;			// [optional]
-	s32			EmuRevision;			// emulator's revision number. [optional]
-
-} PS2E_MachineInfo;
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_SessionInfo
-// 
+// --------------------------------------------------------------------------------------
+//  PS2E_SessionInfo
+// --------------------------------------------------------------------------------------
 // This struct is populated by the emulator prior to starting emulation, and is passed to
 // each plugin via a call to PS2E_PluginLibAPI::EmuStart().
 //
@@ -191,51 +194,81 @@ typedef struct _PS2E_SessionInfo
 
 } PS2E_SessionInfo;
 
-/////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  PS2E_EmulatorInfo
+// --------------------------------------------------------------------------------------
+// This struct is populated by the emulator when the application is started, and is passed
+// to plugins via PS2E_InitAPI.  Plugins may optionally use this information to determine
+// compatibility or to select which special CPU-oriented builds and/or functions to bind
+// to callbacks.
 //
-typedef struct _PS2E_CustomSettingsAPI
+// The GetInt/GetBoolean/GetString/etc methods Provide an interface through which a plugin
+// can retrieve special emulator-specific settings and information, or fetch options straight
+// from the emulator's ini file itself.  These are intended for advanced plugin/emu binding
+// only, and should generally be accompanied with the appropriate version/name checks.
+//
+// Emulators may implement this as a direct match to the emu's ini file/registry contents
+// (recommended), or may provide additional and/or alternative custom strings.  Direct
+// ini.registry relationships are preferred since those are easy for a plugin author to
+// reference without documentation.
+//
+typedef struct _PS2E_EmulatorInfo
 {
-	int (PS2E_CALLBACK* GetInt)( const char* name );
+	// brief name of the emulator (ex: "PCSX2") [required]
+	// Depending on the design of the emulator, this string may optionally include version
+	// information, however that is not recommended since it can inhibit backward support.
+	const char*	EmuName;
+
+	// Version information.  All fields besides the emulator's name are optional.
+	struct _PS2E_VersionInfo	EmuVersion;
+
+	// Number of Physical Cores, as detected by the emulator.
+	// This should always match the real # of cores supported by hardware.
+	int		PhysicalCores;
 	
+	// Number of Logical Cores, as detected and/or managed by the emulator.
+	// This is not necessarily a reflection of real hardware capabilities.  The emu reserves
+	// the right to report this value as it deems appropriate, in management of threading
+	// resources.
+	int		LogicalCores;
+
+	// GetInt
+	// Self-explanatory.
+	//
+	// Returns:
+	//   0 - Value was retrieved successfully.
+	//   1 - Unknown value.  Contents of dest are unchanged.
+	BOOL (PS2E_CALLBACK* GetInt)( const char* name, int* dest );
+
 	// GetBoolean
-	// Should return either 1 (true) or 0 (false).  Returning any non-zero value for true
-	// probably "works" but is not recommended, since C/C++ standard specifically defines
-	// the result of bool->int conversions as a 0 or 1 result.
-	int (PS2E_CALLBACK* GetBoolean)( const char* name );
+	// Assigns *dest either 1 (true) or 0 (false).  Note to Emulators: Returning any non-
+	// zero value for true probably "works" but is not recommended, since C/C++ standard
+	// specifically defines the result of bool->int conversions as a 0 or 1 result.
+	//
+	// Returns:
+	//   0 - Value was retrieved successfully.
+	//   1 - Unknown value.  Contents of dest are unchanged.
+	BOOL (PS2E_CALLBACK* GetBoolean)( const char* name, BOOL* result );
 
 	// GetString
 	// Copies an ASCII-Z string into the dest pointer, to max length allowed.  The result
 	// is always safely zero-terminated (none of that snprintf crap where you have to
 	// zero-terminate yourself >_<).
 	//
-	int (PS2E_CALLBACK* GetString)( const char* name, char* dest, int maxlen );
+	// Returns:
+	//   0 - Value was retrieved successfully.
+	//   1 - Unknown value.  Contents of dest are unchanged.
+	BOOL (PS2E_CALLBACK* GetString)( const char* name, char* dest, int maxlen );
 
 	// GetStringAlloc
-	// Provides an alternative to GetString, that can rerieve strings of arbitrary length.
-	// The plugin must provide a valid allocator callback, which takes a sice parameter and
+	// Provides an alternative to GetString, that can retrieve strings of arbitrary length.
+	// The plugin must provide a valid allocator callback, which takes a size parameter and
 	// returns a pointer to an allocation large enough to hold the size.
 	//
 	// It is then the responsibility of the plugin to free the allocated pointer when it
 	// is done with it.
 	//
-	char* (PS2E_CALLBACK* GetStringAlloc)( const char* name, void* (*allocator)(int size) );
-	
-} PS2E_CustomSettingsAPI;
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_EmulatorAPI
-//
-// These functions are provided to the PS2 plugins by the emulator.  Plugins may call these
-// functions to perform operations or retrieve data.
-//
-typedef struct _PS2E_EmulatorAPI
-{
-	// TODO : Create the ConsoleLogger class.
-	// Provides a set of basic console functions for writing text to the emulator's
-	// console.  Some emulators may not support a console, in which case these functions
-	// will be NOPs.   For plain and simple to-disk logging, plugins should create and use
-	// their own logging facilities.
-	ConsoleLogger  Console;
+	char* (PS2E_CALLBACK* GetStringAlloc)( const char* name, void* (PS2E_CALLBACK *allocator)(int size) );
 
 	// OSD_WriteLn
 	// This function allows the plugin to post messages to the emulator's On-Screen Display.
@@ -255,26 +288,22 @@ typedef struct _PS2E_EmulatorAPI
 	//     silently ignore unrecognized icon identifiers, thus retaining cross-compat.
 	//
 	//  msg   - string message displayed to the user.
+	//
 	void (PS2E_CALLBACK* OSD_WriteLn)( int icon, const char* msg );
-	
-	// CustomSettings
-	// Provides an interface through which a plugin can retrieve custom setting values straight
-	// from the emulator's ini file itself; intended for advanced plugin/emu binding only, and
-	// should generally be accompanied with the appropriate version/name checks.
-	//
-	// Emulators may implement this as a direct match to the emu's ini file/registry contents
-	// (recommended), or may provide additional and/or alternative custom strings.  Direct
-	// ini.registry relationships are preferred since those are easy for a plugin author to
-	// reference without documentation.
-	//
-	PS2E_CustomSettingsAPI CustomSettings;
-	
-} PS2E_EmulatorAPI;
+
+	// TODO : Create the ConsoleLogger class.
+	// Provides a set of basic console functions for writing text to the emulator's
+	// console.  Some emulators may not support a console, in which case these functions
+	// will be NOPs.   For plain and simple to-disk logging, plugins should create and use
+	// their own logging facilities.
+	//ConsoleLogger  Console;
+
+} PS2E_EmulatorInfo;
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_FreezeData
-//
+// --------------------------------------------------------------------------------------
+//  PS2E_FreezeData 
+// --------------------------------------------------------------------------------------
 // Structure used to pass savestate info between emulator and plugin.
 //
 typedef struct _PS2E_FreezeData
@@ -285,9 +314,9 @@ typedef struct _PS2E_FreezeData
 } PS2E_FreezeData;
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_ComponentAPI
-//
+// --------------------------------------------------------------------------------------
+//  PS2E_ComponentAPI
+// --------------------------------------------------------------------------------------
 // The PluginTypeAPI is provided for every PS2 component plugin (see PS2E_ComponentTypes
 // enumeration).  For typical dlls which only provide one  plugin type of functionality,
 // the plugin only needs one instance of this struct.  For multi-type plugins, for example
@@ -382,15 +411,39 @@ typedef struct _PS2E_ComponentAPI
 	//   needed).
 	void (PS2E_CALLBACK* Configure)( PS2E_THISPTR thisptr );
 
+	// GetLastError
+	// This is an optional method with allows the emulator to retrieve extended formatted
+	// error information about a recent failed plugin call.  If implemented by the plugin,
+	// it should store message information in it's PS2E_THISPTR allocation, and free the
+	// string buffers when the plugin's instance is deleted.
+	//
+	// The plugin is allowed to return NULL for either msg_diag or msg_user (or both).
+	// Returned pointers should be static global arrays, and must be NULL terminated.  If
+	// only one message is provided, it will be used for both console log and popup.
+	//
+	// Parameters:
+	//   msg_diag - diagnostic message, which is english only and typically intended for
+	//      console or disk logging.
+	//
+	//   msg_user - optional translated user message, which is displayed as a popup to explain
+	//      to the user why the plugin failed to initialize.
+	//
+	// Thread safety:
+	//   * Thread Affinity: none.  May be called from any thread.
+	//   * Interlocking: Instance.  All calls from the emu are fully interlocked against
+	//     the plugin instance.
+	//
+	void (PS2E_CALLBACK* GetLastError)( PS2E_THISPTR thisptr, char* const* msg_diag, wchar_t* const* msg_user );
+
 	// Reserved area at the end of the structure, for future API expansion.
-	void* reserved[16];
+	void* reserved[8];
 
 } PS2E_ComponentAPI;
 
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_LibraryAPI
-//
+// --------------------------------------------------------------------------------------
+//  PS2E_LibraryAPI
+// --------------------------------------------------------------------------------------
 // The LibraryAPI is an overall library-scope set of functions that perform basic Init,
 // Shutdown, and global configuration operations.
 //
@@ -450,11 +503,7 @@ typedef struct _PS2E_LibraryAPI
 	// have provisions in its interface to allow for the forced disabling of extended CPU cap-
 	// abilities, for testing purposes.
 	//
-	// Exceptions:
-	//   C++ Plugins may alternately use exception handling to return more detailed
-	//   information on why the plugin failed it's availability test.  [TODO]
-	//
-	s32 (PS2E_CALLBACK* Test)( u32 component, const PS2E_MachineInfo* xinfo );
+	BOOL (PS2E_CALLBACK* Test)( u32 component, const PS2E_EmulatorInfo* xinfo );
 
 	// NewComponentInstance
 	// The emulator calls this function to fetch the API for the requested component.
@@ -477,9 +526,9 @@ typedef struct _PS2E_LibraryAPI
 	//   dest      - structure to fill with plugin function implementations.  Dest should
 	//      be manually typecast by the plugin to match the requested component.
 	//
-	// Exceptions:
-	//   C++ Plugins may alternately use exception handling to return more detailed
-	//   information on why the plugin failed it's availability test.  [TODO]
+	// OnError:
+	//   Plugins may optionally prepare more detailed information on why the plugin failed
+	//   it's availability test which the emu can request via GetLastError.
 	//
 	PS2E_THISPTR (PS2E_CALLBACK* NewComponentInstance)( u32 component );
 
@@ -518,9 +567,9 @@ typedef struct _PS2E_LibraryAPI
 	
 } PS2E_LibraryAPI;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_Image
-//
+// --------------------------------------------------------------------------------------
+//  PS2E_Image
+// --------------------------------------------------------------------------------------
 // Simple RGBA image data container, for passing surface textures to the GS plugin, and
 // for receiving snapshots from the GS plugin.
 //
@@ -528,15 +577,15 @@ typedef struct _PS2E_LibraryAPI
 //
 typedef struct _PS2E_Image
 {
-	u32 width
+	u32 width;
 	u32 height;
 	u8* data;		// RGBA data.  top to bottom.
 
 } PS2E_Image;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// PS2E_ComponentAPI_GS
-//
+// --------------------------------------------------------------------------------------
+//  PS2E_ComponentAPI_GS
+// --------------------------------------------------------------------------------------
 // Thread Safety:
 //   All GS callbacks are issued from the GS thread only, and are always called synchronously
 //   with all other component API functions.  No locks are needed, and DirectX-based GS
@@ -563,7 +612,10 @@ typedef struct _PS2E_ComponentAPI_GS
 	// The GS plugin is to save the current frame into the given target image.  This
 	// function is always called immediately after a GSvsync(), ensuring that the current
 	// framebuffer is safely intact for capture.
-	void (PS2E_CALLBACK* TakeSnapshot)( PS2E_THISPTR thisptr, PS2E_Image* dest );
+	//
+	// Returns TRUE if the snapshot succeeded, or FALSE if it failed (contents of dest
+	// are considered indeterminate and will be ignored by the emu).
+	BOOL (PS2E_CALLBACK* TakeSnapshot)( PS2E_THISPTR thisptr, PS2E_Image* dest );
 
 	// OSD_SetTexture
 	// Uploads a new OSD texture to the GS.  Display of the OSD should be performed at
@@ -581,9 +633,18 @@ typedef struct _PS2E_ComponentAPI_GS
 	//     honor the fade value of 0.0 (OSD is not displayed).
 	void (PS2E_CALLBACK* OSD_SetAlpha)( PS2E_THISPTR thisptr, float alphaOverall, float alphaFade );
 
+	// OSD_SetPosition
+	// Self-explanatory.
 	void (PS2E_CALLBACK* OSD_SetPosition)( PS2E_THISPTR thisptr, int xpos, int ypos );
 
-	void (PS2E_CALLBACK* GSvsync)(int field);
+	// GSvsync
+	//
+	// Returns FALSE if the plugin encountered a critical error while updating the display;
+	// indicating a device or emulation failure that should terminate the current emulation.
+	// (if any critical errors accumulated during GStransferTags or GStransferImage, they
+	//  should also be handled here by returning FALSE)
+	//
+	BOOL (PS2E_CALLBACK* GSvsync)(int field);
 	
 	//
 	//
@@ -594,6 +655,9 @@ typedef struct _PS2E_ComponentAPI_GS
 	// internally by the emulator in a thread-safe manner -- the GS plugin can safely
 	// ignore the tags (and there is no guarantee the emulator will even bother to
 	// pass the tags onto the GS).
+	//
+	// Returns FALSE if the plugin encountered a critical error while setting texture;
+	// indicating a device failure.
 	void (PS2E_CALLBACK* GStransferTags)(u128 *pMem, int tagcnt);
 
 	// GStransferPackedTag
@@ -605,35 +669,130 @@ typedef struct _PS2E_ComponentAPI_GS
 
 	// GStransferImage
 	// Uploads GIFtag image data.
+	//
+	// fixme: Make sure this is designed sufficiently to account for emulator-side texture
+	// caching.
 	void (PS2E_CALLBACK* GStransferImage)(u128 *pMem, u32 len_qwc);
 	
 	void* reserved[8];
 
 } PS2E_ComponentAPI_GS;
 
-// PS2E_InitAPI
+// --------------------------------------------------------------------------------------
+//  PS2E_ComponentAPI_Mcd
+// --------------------------------------------------------------------------------------
+// Thread Safety:
+//  * Thread affinity is not guaranteed.  Calls may be made from either the main emu thread
+//    or an IOP child thread (if the emulator uses one).
+//
+//  * No locking required: All calls to the memory cards are interlocked by the emulator.
+//
+typedef struct _PS2E_ComponentAPI_Mcd
+{
+	// Base Component API (inherited structure)
+	struct _PS2E_ComponentAPI Base;
+
+	// McdIsPresent
+	// Called by the emulator to detect the availability of a memory card.  This function
+	// will be called frequently -- essentially whenever the SIO port for the memory card
+	// has its status polled - so its overhead should be minimal when possible.
+	//
+	// Returns:
+	//   0 if the card is not available, or 1 if it is available.
+	//
+	// Exceptions:
+	//   None.  This function should not throw.
+	//
+	BOOL (PS2E_CALLBACK* McdIsPresent)( PS2E_THISPTR thisptr, uint port, uint slot );
+	
+	// McdRead
+	// Requests that a block of data be loaded from the memorycard into the specified dest
+	// buffer (which is allocated by the caller).  Bytes read should match the requested 
+	// size.  Reads *must* be performed synchronously (function cannot return until the
+	// read op has finished).
+	//
+	// Returns:
+	//   0 on failure, and 1 on success.  Emulator may use GetLastError to retrieve additional
+	//   information for logging or displaying to the user.
+	//
+	BOOL (PS2E_CALLBACK* McdRead)( PS2E_THISPTR thisptr, uint port, uint slot, u8 *dest, u32 adr, int size );
+	
+	// McdSave
+	// Saves the provided block of data to the memorycard at the specified seek address.
+	// Writes *must* be performed synchronously (function cannot return until the write op
+	// has finished).  Write cache flushing is optional.
+	//
+	// Returns:
+	//   0 on failure, and 1 on success.  Emulator may use GetLastError to retrieve additional
+	//   information for logging or displaying to the user.
+	//
+	BOOL (PS2E_CALLBACK* McdSave)( PS2E_THISPTR thisptr, uint port, uint slot, const u8 *src, u32 adr, int size );
+
+	// McdErase
+	// Saves "cleared" data to the memorycard at the specified seek address.  Cleared data
+	// is a series of 0xff values (all bits set to 1).
+	// Writes *must* be performed synchronously (function cannot return until the write op
+	// has finished).  Write cache flushing is optional.
+	//
+	// Returns:
+	//   0 on failure, and 1 on success.  Emulator may use GetLastError to retrieve additional
+	//   information for logging or displaying to the user.
+	//
+	BOOL (PS2E_CALLBACK* McdEraseBlock)( PS2E_THISPTR thisptr, uint port, uint slot, u32 adr );
+	
+	u64 (PS2E_CALLBACK* McdGetCRC)( PS2E_THISPTR thisptr, uint port, uint slot );
+
+	void* reserved[8];
+
+} PS2E_ComponentAPI_Mcd;
+
+
+// --------------------------------------------------------------------------------------
+//  PS2E_InitAPI
+// --------------------------------------------------------------------------------------
 // Called by the emulator when the plugin is loaded into memory.  The emulator uses the
 // presence of this function to detect PS2E-v2 plugin API, and will direct all subsequent
 // calls through the returned LibraryAPI.  The function is allowed to return NULL if the
 // emulator's version information or machine capabilities are insufficient for the
 // plugin's needs.
 //
+// Note: It is recommended that plugins query machine capabilities from the emulator rather
+// than the operating system or CPUID directly, since it allows the emulator the option of
+// overriding the reported capabilities, for diagnostic purposes.  (such behavior is not
+// required, however)
+//
 // This function is called *once* for the duration of a loaded plugin.
 // 
-// Parameters:
-//   xinfo - Machine info and capabilities, usable for cpu detection.  This pointer is 
-//     valid for the duration of the plugin's tenure in memory.
-//
 // Returns:
 //   A pointer to a static structure that contains the API for this plugin, or NULL if
-//   the plugin explicitly does not support the emulator version.
+//   the plugin explicitly does not support the emulator version or machine specs.
 //
-// Exceptions:
-//   C++ Plugins can use exceptions instead of NULL to return additional information on
-//   why the plugin failed to init the API.  [TODO]
+// OnError:
+//   Plugins may optionally prepare more detailed information on why the plugin failed
+//   it's availability test which the emu can request via PS2E_GetLastError.
 //
-typedef const PS2E_LibraryAPI* (PS2E_CALLBACK* _PS2E_InitAPI)( const PS2E_MachineInfo* xinfo );
+// Thread Safety:
+//  * Affinity: Called only from the Main/GUI thread.
+//  * Interlocking: Full interlocking garaunteed.
+//
+typedef const PS2E_LibraryAPI* (PS2E_CALLBACK* _PS2E_InitAPI)( const PS2E_EmulatorInfo* emuinfo );
 
+// --------------------------------------------------------------------------------------
+//  PS2E_GetLastError
+// --------------------------------------------------------------------------------------
+// Optional method which may be called by the emulator if the plugin returned NULL on 
+// PS2E_InitAPI.  Plugins may return NULL for either/both msg_diag and msg_user.  Returned
+// pointers should be static global arrays, and must be NULL terminated.  If only one
+// message is provided, it will be used for both console log and popup.
+//
+// Parameters:
+//   msg_diag - diagnostic message, which is english only and typically intended for console
+//      or disk logging.
+//
+//   msg_user - optional translated user message, which is displayed as a popup to explain
+//      to the user why the plugin failed to initialize.
+//
+typedef void (PS2E_CALLBACK* _PS2E_GetLastError)( char* const* msg_diag, wchar_t* const* msg_user  );
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -642,7 +801,7 @@ typedef const PS2E_LibraryAPI* (PS2E_CALLBACK* _PS2E_InitAPI)( const PS2E_Machin
 //////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////
 
-
+#if 0
 // PAD
 typedef s32  (CALLBACK* _PADinit)(char *configpath, u32 flags);
 typedef s32  (CALLBACK* _PADopen)(void *pDisplay);
@@ -809,166 +968,7 @@ extern _PS2EgetLibVersion2 PS2EgetLibVersion2;
 extern _PS2EgetLibName PS2EgetLibName;
 extern _PS2EpassConfig PS2EpassConfig;
 
-// PAD1
-extern _PADinit           PAD1init;
-extern _PADopen           PAD1open;
-extern _PADclose          PAD1close;
-extern _PADshutdown       PAD1shutdown;
-extern _PADkeyEvent       PAD1keyEvent;
-extern _PADstartPoll      PAD1startPoll;
-extern _PADpoll           PAD1poll;
-extern _PADquery          PAD1query;
-extern _PADupdate         PAD1update;
-
-extern _PADfreeze         PAD1freeze;
-extern _PADgsDriverInfo   PAD1gsDriverInfo;
-extern _PADconfigure      PAD1configure;
-extern _PADtest           PAD1test;
-extern _PADabout          PAD1about;
-
-// PAD2
-extern _PADinit           PAD2init;
-extern _PADopen           PAD2open;
-extern _PADclose          PAD2close;
-extern _PADshutdown       PAD2shutdown;
-extern _PADkeyEvent       PAD2keyEvent;
-extern _PADstartPoll      PAD2startPoll;
-extern _PADpoll           PAD2poll;
-extern _PADquery          PAD2query;
-extern _PADupdate         PAD2update;
-
-extern _PADfreeze         PAD2freeze;
-extern _PADgsDriverInfo   PAD2gsDriverInfo;
-extern _PADconfigure      PAD2configure;
-extern _PADtest           PAD2test;
-extern _PADabout          PAD2about;
-
-// SIO[2]
-extern _SIOinit           SIOinit[2][9];
-extern _SIOopen           SIOopen[2][9];
-extern _SIOclose          SIOclose[2][9];
-extern _SIOshutdown       SIOshutdown[2][9];
-extern _SIOstartPoll      SIOstartPoll[2][9];
-extern _SIOpoll           SIOpoll[2][9];
-extern _SIOquery          SIOquery[2][9];
-extern _SIOkeyEvent       SIOkeyEvent;
-
-extern _SIOfreeze         SIOfreeze[2][9];
-extern _SIOconfigure      SIOconfigure[2][9];
-extern _SIOtest           SIOtest[2][9];
-extern _SIOabout          SIOabout[2][9];
-
-// SPU2
-extern _SPU2init          SPU2init;
-extern _SPU2open          SPU2open;
-extern _SPU2close         SPU2close;
-extern _SPU2shutdown      SPU2shutdown;
-extern _SPU2write         SPU2write;
-extern _SPU2read          SPU2read;
-extern _SPU2readDMA4Mem   SPU2readDMA4Mem;
-extern _SPU2writeDMA4Mem  SPU2writeDMA4Mem;
-extern _SPU2interruptDMA4 SPU2interruptDMA4;
-extern _SPU2readDMA7Mem   SPU2readDMA7Mem;
-extern _SPU2writeDMA7Mem  SPU2writeDMA7Mem;
-extern _SPU2setDMABaseAddr SPU2setDMABaseAddr;
-extern _SPU2interruptDMA7 SPU2interruptDMA7;
-extern _SPU2ReadMemAddr   SPU2ReadMemAddr;
-extern _SPU2setupRecording SPU2setupRecording;
-extern _SPU2WriteMemAddr   SPU2WriteMemAddr;
-extern _SPU2irqCallback   SPU2irqCallback;
-
-extern _SPU2setClockPtr   SPU2setClockPtr;
-extern _SPU2setTimeStretcher SPU2setTimeStretcher;
-
-extern _SPU2keyEvent        SPU2keyEvent;
-extern _SPU2async         SPU2async;
-extern _SPU2freeze        SPU2freeze;
-extern _SPU2configure     SPU2configure;
-extern _SPU2test          SPU2test;
-extern _SPU2about         SPU2about;
-
-// CDVD
-extern _CDVDinit          CDVDinit;
-extern _CDVDopen          CDVDopen;
-extern _CDVDclose         CDVDclose;
-extern _CDVDshutdown      CDVDshutdown;
-extern _CDVDreadTrack     CDVDreadTrack;
-extern _CDVDgetBuffer     CDVDgetBuffer;
-extern _CDVDreadSubQ      CDVDreadSubQ;
-extern _CDVDgetTN         CDVDgetTN;
-extern _CDVDgetTD         CDVDgetTD;
-extern _CDVDgetTOC        CDVDgetTOC;
-extern _CDVDgetDiskType   CDVDgetDiskType;
-extern _CDVDgetTrayStatus CDVDgetTrayStatus;
-extern _CDVDctrlTrayOpen  CDVDctrlTrayOpen;
-extern _CDVDctrlTrayClose CDVDctrlTrayClose;
-
-extern _CDVDkeyEvent        CDVDkeyEvent;
-extern _CDVDfreeze          CDVDfreeze;
-extern _CDVDconfigure     CDVDconfigure;
-extern _CDVDtest          CDVDtest;
-extern _CDVDabout         CDVDabout;
-extern _CDVDnewDiskCB     CDVDnewDiskCB;
-
-// DEV9
-extern _DEV9init          DEV9init;
-extern _DEV9open          DEV9open;
-extern _DEV9close         DEV9close;
-extern _DEV9shutdown      DEV9shutdown;
-extern _DEV9read8         DEV9read8;
-extern _DEV9read16        DEV9read16;
-extern _DEV9read32        DEV9read32;
-extern _DEV9write8        DEV9write8;
-extern _DEV9write16       DEV9write16;
-extern _DEV9write32       DEV9write32;
-extern _DEV9readDMA8Mem   DEV9readDMA8Mem;
-extern _DEV9writeDMA8Mem  DEV9writeDMA8Mem;
-extern _DEV9irqCallback   DEV9irqCallback;
-extern _DEV9irqHandler    DEV9irqHandler;
-
-extern _DEV9keyEvent        DEV9keyEvent;
-extern _DEV9configure     DEV9configure;
-extern _DEV9freeze        DEV9freeze;
-extern _DEV9test          DEV9test;
-extern _DEV9about         DEV9about;
-
-// USB
-extern _USBinit           USBinit;
-extern _USBopen           USBopen;
-extern _USBclose          USBclose;
-extern _USBshutdown       USBshutdown;
-extern _USBread8          USBread8;
-extern _USBread16         USBread16;
-extern _USBread32         USBread32;
-extern _USBwrite8         USBwrite8;
-extern _USBwrite16        USBwrite16;
-extern _USBwrite32        USBwrite32;
-extern _USBasync          USBasync;
-
-extern _USBirqCallback    USBirqCallback;
-extern _USBirqHandler     USBirqHandler;
-extern _USBsetRAM         USBsetRAM;
-
-extern _USBkeyEvent       USBkeyEvent;
-extern _USBconfigure      USBconfigure;
-extern _USBfreeze         USBfreeze;
-extern _USBtest           USBtest;
-extern _USBabout          USBabout;
-
-// FW
-extern _FWinit            FWinit;
-extern _FWopen            FWopen;
-extern _FWclose           FWclose;
-extern _FWshutdown        FWshutdown;
-extern _FWread32          FWread32;
-extern _FWwrite32         FWwrite32;
-extern _FWirqCallback     FWirqCallback;
-
-extern _FWkeyEvent        FWkeyEvent;
-extern _FWconfigure       FWconfigure;
-extern _FWfreeze          FWfreeze;
-extern _FWtest            FWtest;
-extern _FWabout           FWabout;
+#endif
 
 #ifndef __cplusplus
 }

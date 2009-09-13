@@ -16,6 +16,8 @@
 #include "PrecompiledHeader.h"
 #include "Path.h"
 
+#include <wx/file.h>
+
 #ifdef __LINUX__
 #ifndef _S_IFDIR
 #define _S_IFDIR S_IFDIR
@@ -29,7 +31,7 @@
 #endif
 
 // ---------------------------------------------------------------------------------
-//      wxDirName Implementations
+//  wxDirName Implementations
 // ---------------------------------------------------------------------------------
 
 wxFileName wxDirName::Combine( const wxFileName& right ) const
@@ -101,13 +103,20 @@ bool wxDirName::Mkdir()
 
 
 // ---------------------------------------------------------------------------------
-//      Path namespace (wxFileName helpers)
+//  Path namespace (wxFileName helpers)
 // ---------------------------------------------------------------------------------
 
 
 bool Path::IsRelative( const wxString& path )
 {
 	return wxDirName( path ).IsRelative();
+}
+
+// Returns -1 if the file does not exist.
+s64 Path::GetFileSize( const wxString& path )
+{
+	if( !wxFile::Exists( path.c_str() ) ) return -1;
+	return (s64)wxFileName::GetSize( path ).GetValue();
 }
 
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)

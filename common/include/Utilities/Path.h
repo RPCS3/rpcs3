@@ -112,13 +112,17 @@ public:
 	wxFileName& GetFilename() { return *this; }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Path Namespace
-// Cross-platform utilities for manipulation of paths and filenames.
+// --------------------------------------------------------------------------------------
+//  Path Namespace 
+// --------------------------------------------------------------------------------------
+// Cross-platform utilities for manipulation of paths and filenames.  Mostly these fall
+// back on wxWidgets APIs internally, but are still helpful because some of wx's file stuff
+// has minor glitches, or requies sloppy wxFileName typecasting.
 //
 namespace Path
 {
 	extern bool		IsRelative( const wxString& path );
+	extern s64		GetFileSize( const wxString& path );
 	
 	extern wxString	Combine( const wxString& srcPath, const wxString& srcFile );
 	extern wxString	Combine( const wxDirName& srcPath, const wxFileName& srcFile );

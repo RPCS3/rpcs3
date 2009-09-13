@@ -18,9 +18,9 @@
 // this is all that needs to be called and will fill up the below structs
 extern void cpudetectInit();
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
 struct x86CPU_INFO
+// --------------------------------------------------------------------------------------
 {
 	u32 FamilyID;		// Processor Family
 	u32 Model;			// Processor Model

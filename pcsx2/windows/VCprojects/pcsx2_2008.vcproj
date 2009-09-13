@@ -683,15 +683,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\x86\BaseblockEx.h"
+					RelativePath="..\..\ps2\BiosTools.cpp"
 					>
 				</File>
 				<File
 					RelativePath="..\..\ps2\CoreEmuThread.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ps2\CoreEmuThread.h"
 					>
 				</File>
 				<Filter
@@ -1879,26 +1875,18 @@
 					</Filter>
 				</Filter>
 				<Filter
-					Name="MemoryCard"
+					Name="Include"
 					>
 					<File
-						RelativePath="..\..\MemoryCard.cpp"
-						>
-					</File>
-					<File
-						RelativePath="..\..\MemoryCard.h"
-						>
-					</File>
-				</Filter>
-				<Filter
-					Name="BIOS"
-					>
-					<File
-						RelativePath="..\..\ps2\BiosTools.cpp"
+						RelativePath="..\..\x86\BaseblockEx.h"
 						>
 					</File>
 					<File
 						RelativePath="..\..\ps2\BiosTools.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\ps2\CoreEmuThread.h"
 						>
 					</File>
 				</Filter>
@@ -1953,6 +1941,10 @@
 			</File>
 			<File
 				RelativePath="..\..\gui\MainMenuClicks.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\gui\MemoryCardFile.cpp"
 				>
 			</File>
 			<File

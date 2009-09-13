@@ -153,6 +153,8 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( EnablePatches );
 
 	IniBitBool( McdEnableEjection );
+	IniBitBool( MultitapPort0_Enabled );
+	IniBitBool( MultitapPort1_Enabled );
 
 	// Process various sub-components:
 

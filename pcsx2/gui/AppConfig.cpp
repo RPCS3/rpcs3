@@ -257,18 +257,31 @@ namespace FilenameDefs
 		return wxFileName( L"usermode.ini" );
 	}
 
-	const wxFileName& Memcard( int slot )
+	const wxFileName& Memcard( uint port, uint slot )
 	{
-		static const wxFileName retval[2] =
+		static const wxFileName retval[2][4] =
 		{
-			wxFileName( L"Mcd001.ps2" ),
-			wxFileName( L"Mcd002.ps2" )
+			{
+				wxFileName( L"Mcd001.ps2" ),
+				wxFileName( L"Mcd003.ps2" ),
+				wxFileName( L"Mcd005.ps2" ),
+				wxFileName( L"Mcd007.ps2" ),
+			},
+			{
+				wxFileName( L"Mcd002.ps2" ),
+				wxFileName( L"Mcd004.ps2" ),
+				wxFileName( L"Mcd006.ps2" ),
+				wxFileName( L"Mcd008.ps2" ),
+			}
 		};
 
-		if( IsDevBuild && ((uint)slot) >= 2 )
-			throw Exception::IndexBoundsFault( L"FilenameDefs::Memcard", slot, 2 );
+		if( IsDevBuild && (port >= 2) )
+			throw Exception::IndexBoundsFault( L"FilenameDefs::Memcard", port, 2 );
 
-		return retval[slot];
+		if( IsDevBuild && (slot >= 4) )
+			throw Exception::IndexBoundsFault( L"FilenameDefs::Memcard", slot, 4 );
+
+		return retval[port][slot];
 	}
 };
 
@@ -284,7 +297,10 @@ wxString AppConfig::FullPathToConfig() const
 
 
 wxString AppConfig::FullpathToBios() const				{ return Path::Combine( Folders.Bios, BaseFilenames.Bios ); }
-wxString AppConfig::FullpathToMcd( uint mcdidx ) const	{ return Path::Combine( Folders.MemoryCards, Mcd[mcdidx].Filename ); }
+wxString AppConfig::FullpathToMcd( uint port, uint slot ) const
+{
+	return Path::Combine( Folders.MemoryCards, Mcd[port][slot].Filename );
+}
 
 AppConfig::AppConfig() :
 	MainGuiPosition( wxDefaultPosition )
@@ -308,10 +324,14 @@ AppConfig::AppConfig() :
 ,	BaseFilenames()
 ,	EmuOptions()
 {
-	Mcd[0].Enabled = true;
-	Mcd[1].Enabled = true;
-	Mcd[0].Filename = FilenameDefs::Memcard(0);
-	Mcd[1].Filename = FilenameDefs::Memcard(1);
+	for( uint port=0; port<2; ++port )
+	{
+		for( uint slot=0; slot<4; ++slot )
+		{
+			Mcd[port][slot].Enabled		= (slot==0);	// enables main 2 slots
+			Mcd[port][slot].Filename	= FilenameDefs::Memcard( port, slot );
+		}
+	}
 }
 
 // ------------------------------------------------------------------------
@@ -337,12 +357,19 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveMemcards( IniInterface& ini )
 {
+	AppConfig defaults;
 	IniScopedGroup path( ini, L"MemoryCards" );
 
-	ini.Entry( L"Slot1Enable", Mcd[0].Enabled, true );
-	ini.Entry( L"Slot2Enable", Mcd[1].Enabled, true );
-	ini.Entry( L"Slot1Filename", Mcd[0].Filename, FilenameDefs::Memcard(0) );
-	ini.Entry( L"Slot2Filename", Mcd[1].Filename, FilenameDefs::Memcard(1) );
+	for( uint port=0; port<2; ++port )
+	{
+		for( int slot=0; slot<4; ++slot )
+		{
+			ini.Entry( wxsFormat( L"Port%d_Slot%d_Enable", port, slot ),
+				Mcd[port][slot].Enabled, defaults.Mcd[port][slot].Enabled );
+			ini.Entry( wxsFormat( L"Port%d_Slot%d_Filename", port, slot ),
+				Mcd[port][slot].Filename, defaults.Mcd[port][slot].Filename );
+		}
+	}
 }
 
 // ------------------------------------------------------------------------
@@ -362,6 +389,8 @@ void AppConfig::LoadSave( IniInterface& ini )
 	IniEntry( CurrentIso );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
+
+	LoadSaveMemcards( ini );
 
 	// Process various sub-components:
 	ProgLogBox.LoadSave( ini, L"ProgramLog" );

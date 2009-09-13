@@ -24,6 +24,38 @@
 #include "HostGui.h"
 #include "CDVD/CDVDisoReader.h"
 
+#if _MSC_VER
+#	include "svnrev.h"
+#endif
+
+EmuPluginBindings EmuPlugins;
+
+bool EmuPluginBindings::McdIsPresent( uint port, uint slot )
+{
+	return !!Mcd->McdIsPresent( (PS2E_THISPTR) Mcd, port, slot );
+}
+
+void EmuPluginBindings::McdRead( uint port, uint slot, u8 *dest, u32 adr, int size )
+{
+	Mcd->McdRead( (PS2E_THISPTR) Mcd, port, slot, dest, adr, size );
+}
+
+void EmuPluginBindings::McdSave( uint port, uint slot, const u8 *src, u32 adr, int size )
+{
+	Mcd->McdSave( (PS2E_THISPTR) Mcd, port, slot, src, adr, size );
+}
+
+void EmuPluginBindings::McdEraseBlock( uint port, uint slot, u32 adr )
+{
+	Mcd->McdEraseBlock( (PS2E_THISPTR) Mcd, port, slot, adr );
+}
+
+u64 EmuPluginBindings::McdGetCRC( uint port, uint slot )
+{
+	return Mcd->McdGetCRC( (PS2E_THISPTR) Mcd, port, slot );
+}
+
+
 // ----------------------------------------------------------------------------
 // Yay, order of this array shouldn't be important. :)
 //
@@ -37,11 +69,10 @@ const PluginInfo tbl_PluginInfo[] =
 	{ "FW",		PluginId_FW,	PS2E_LT_FW,		PS2E_FW_VERSION		},
 	{ "DEV9",	PluginId_DEV9,	PS2E_LT_DEV9,	PS2E_DEV9_VERSION	},
 
-	{ NULL }
+	{ NULL },
 
-	// SIO is currently unused (legacy?)
-	//{ "SIO",	PluginId_SIO,	PS2E_LT_SIO,	PS2E_SIO_VERSION }
-
+	// See PluginEnums_t for details on the MemoryCard plugin hack.
+	{ "Mcd",	PluginId_Mcd,	0,	0	},
 };
 
 typedef void CALLBACK VoidMethod();
@@ -562,6 +593,38 @@ wxString Exception::PluginError::FormatDisplayMessage() const
 	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() );
 }
 
+// --------------------------------------------------------------------------------------
+//  PCSX2 Callbacks passed to Plugins
+// --------------------------------------------------------------------------------------
+// This is currently unimplemented, and should be provided by the AppHost (gui) rather
+// than the EmuCore.  But as a quickhackfix until the new plugin API is fleshed out, this
+// will suit our needs nicely. :)
+
+static BOOL PS2E_CALLBACK pcsx2_GetInt( const char* name, int* dest )
+{
+	return FALSE;		// not implemented...
+}
+
+static BOOL PS2E_CALLBACK pcsx2_GetBoolean( const char* name, BOOL* result )
+{
+	return FALSE;		// not implemented...
+}
+
+static BOOL PS2E_CALLBACK pcsx2_GetString( const char* name, char* dest, int maxlen )
+{
+	return FALSE;		// not implemented...
+}
+
+static char* PS2E_CALLBACK pcsx2_GetStringAlloc( const char* name, void* (PS2E_CALLBACK* allocator)(int size) )
+{
+	return FALSE;		// not implemented...
+}
+
+static void PS2E_CALLBACK pcsx2_OSD_WriteLn( int icon, const char* msg )
+{
+	return;		// not implemented...
+}
+
 // ---------------------------------------------------------------------------------
 //          Plugin Manager Implementation
 // ---------------------------------------------------------------------------------
@@ -613,12 +676,42 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
 	
 	Console::Status( "Plugins loaded successfully.\n" );
+	
+	// HACK!  Manually bind the Internal MemoryCard plugin for now, until
+	// we get things more completed in the new plugin api.
+	
+	static const PS2E_EmulatorInfo myself =
+	{
+		"PCSX2",
+
+		{ 0, PCSX2_VersionHi, PCSX2_VersionLo, SVN_REV },
+		
+		x86caps.PhysicalCores,
+		x86caps.LogicalCores,
+		
+		pcsx2_GetInt,
+		pcsx2_GetBoolean,
+		pcsx2_GetString,
+		pcsx2_GetStringAlloc,
+		pcsx2_OSD_WriteLn
+	};
+
+	m_mcdPlugin = FileMcd_InitAPI( &myself );
+	if( m_mcdPlugin == NULL )
+	{
+		// fixme: use plugin's GetLastError (not implemented yet!)
+		throw Exception::PluginLoadError( PluginId_Mcd, wxEmptyString, "Internal Memorycard Plugin failed to load." );
+	}
 }
 
 PluginManager::~PluginManager()
 {
-	Close();
-	Shutdown();
+	try
+	{
+		Close();
+		Shutdown();
+	}
+	DESTRUCTOR_CATCHALL
 
 	// All library unloading done automatically.
 }
@@ -858,6 +951,17 @@ void PluginManager::Init()
 		if( 0 != m_info[pid].CommonBindings.Init() )
 			throw Exception::PluginInitError( pid );
 	}
+
+	if( EmuPlugins.Mcd == NULL )
+	{
+		EmuPlugins.Mcd = (PS2E_ComponentAPI_Mcd*)m_mcdPlugin->NewComponentInstance( PS2E_TYPE_Mcd );
+		if( EmuPlugins.Mcd == NULL )
+		{
+			// fixme: use plugin's GetLastError (not implemented yet!)
+			throw Exception::PluginInitError( PluginId_Mcd, "Internal Memorycard Plugin failed to initialize." );
+		}
+	}
+
 	if( printlog )
 		Console::Status( "Plugins initialized successfully.\n" );
 }
@@ -884,6 +988,15 @@ void PluginManager::Shutdown()
 		m_info[pid].IsInitialized = false;
 		m_info[pid].CommonBindings.Shutdown();
 	}
+	
+	// More memorycard hacks!!
+	
+	if( EmuPlugins.Mcd != NULL && m_mcdPlugin != NULL )
+	{
+		m_mcdPlugin->DeleteComponentInstance( (PS2E_THISPTR)EmuPlugins.Mcd );
+		EmuPlugins.Mcd = NULL;
+	}
+
 	Console::Status( "Plugins shutdown successfully." );
 }
 

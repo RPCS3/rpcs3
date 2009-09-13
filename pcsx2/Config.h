@@ -26,7 +26,13 @@ enum PluginsEnum_t
 	PluginId_USB,
 	PluginId_FW,
 	PluginId_DEV9,
-	PluginId_Count
+	PluginId_Count,
+	
+	// Memorycard plugin support is preliminary, and is only hacked/hardcoded in at this
+	// time.  So it's placed afer PluginId_Count so that it doesn't show up in the conf
+	// screens or other plugin tables.
+
+	PluginId_Mcd
 };
 
 // This macro is actually useful for about any and every possible application of C++
@@ -265,7 +271,10 @@ public:
 			SkipBiosSplash:1,
 
 		// enables simulated ejection of memory cards when loading savestates
-			McdEnableEjection:1;
+			McdEnableEjection:1,
+
+			MultitapPort0_Enabled:1,
+			MultitapPort1_Enabled:1;
 	}; };
 
 	CpuOptions			Cpu;
@@ -283,6 +292,12 @@ public:
 	void Load( const wxInputStream& srcstream );
 	void Save( const wxString& dstfile );
 	void Save( const wxOutputStream& deststream );
+
+	bool MultitapEnabled( uint port ) const
+	{
+		wxASSERT( port < 2 );
+		return (port==0) ? MultitapPort0_Enabled : MultitapPort1_Enabled;
+	}
 
 	bool operator ==( const Pcsx2Config& right ) const
 	{

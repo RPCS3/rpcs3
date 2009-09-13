@@ -19,9 +19,31 @@
 
 extern void DevAssert( bool condition, const char* msg );
 
+// --------------------------------------------------------------------------------------
+//  DESTRUCTOR_CATCHALL - safe destructor helper
+// --------------------------------------------------------------------------------------
+// In C++ destructors *really* need to be "nothrow" garaunteed, otherwise you can have
+// disasterous nested exception throws during the unwinding process of an originating
+// exception.  Use this macro to dispose of these dangerous exceptions, and generate a
+// friendly error log in their wake.
+//
+#define DESTRUCTOR_CATCHALL \
+	catch( Exception::BaseException& ex ) \
+	{ \
+		Console::Error( "Unhandled BaseException in " __FUNCTION__ " (ignored!):" ); \
+		Console::Error( ex.FormatDiagnosticMessage() ); \
+	} \
+	catch( std::exception& ex ) \
+	{ \
+		Console::Error( "Unhandled std::exception in " __FUNCTION__ " (ignored!):" ); \
+		Console::Error( ex.what() ); \
+	} 
+
 namespace Exception
 {
-	//////////////////////////////////////////////////////////////////////////////////
+	// --------------------------------------------------------------------------------------
+	//  BaseException
+	// --------------------------------------------------------------------------------------
 	// std::exception sucks, and isn't entirely cross-platform reliable in its implementation,
 	// so I made a replacement.  The internal messages are non-const, which means that a
 	// catch clause can optionally modify them and then re-throw to a top-level handler.
@@ -68,8 +90,9 @@ namespace Exception
 		void InitBaseEx( const char* msg_eng );
 	};
 	
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// Ps2Generic
+	// --------------------------------------------------------------------------------------
+	//  Ps2Generic Exception
+	// --------------------------------------------------------------------------------------
 	// This class is used as a base exception for things tossed by PS2 cpus (EE, IOP, etc).
 	//
 	// Implementation note: does not derive from BaseException, so that we can use different

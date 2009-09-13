@@ -138,7 +138,7 @@ public:
 	wxString		CurrentIso;
 	CDVD_SourceType CdvdSource;
 
-	McdOptions				Mcd[2];
+	McdOptions				Mcd[2][4];
 	ConsoleLogOptions		ProgLogBox;
 	ConsoleLogOptions		Ps2ConBox;
 	FolderOptions			Folders;
@@ -154,7 +154,7 @@ public:
 	AppConfig();
 
 	wxString FullpathToBios() const;
-	wxString FullpathToMcd( uint mcdidx ) const;
+	wxString FullpathToMcd( uint port, uint slot ) const;
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
 	wxString FullPathToConfig() const;
 

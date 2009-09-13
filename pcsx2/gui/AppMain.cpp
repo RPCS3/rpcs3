@@ -16,7 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "IniInterface.h"
 #include "MainFrame.h"
-#include "MemoryCard.h"
 #include "Plugins.h"
 
 #include "Dialogs/ModalPopups.h"
@@ -62,7 +61,6 @@ AppEmuThread::AppEmuThread() :
 	CoreEmuThread()
 ,	m_kevt()
 {
-	MemoryCard::Init();
 }
 
 void AppEmuThread::Resume()
@@ -511,7 +509,6 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 bool Pcsx2App::PrepForExit()
 {
 	SysShutdown();
-	MemoryCard::Shutdown();
 	CleanupMess();
 
 	m_ProgramLogBox = NULL;

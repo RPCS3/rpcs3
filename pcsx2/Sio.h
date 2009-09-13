@@ -15,7 +15,8 @@
 
 #pragma once
 
-struct _sio {
+struct _sio
+{
 	u16 StatReg;
 	u16 ModeReg;
 	u16 CtrlReg;
@@ -62,5 +63,4 @@ extern void sioWrite8(u8 value);
 extern void sioWriteCtrl16(u16 value);
 extern void sioInterrupt();
 extern void InitializeSIO(u8 value);
-extern void sioEjectCard( uint mcdId );
 

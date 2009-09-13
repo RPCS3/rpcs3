@@ -206,8 +206,6 @@
 		<Unit filename="../MTGS.cpp" />
 		<Unit filename="../Memory.cpp" />
 		<Unit filename="../Memory.h" />
-		<Unit filename="../MemoryCard.cpp" />
-		<Unit filename="../MemoryCard.h" />
 		<Unit filename="../NakedAsm.h" />
 		<Unit filename="../Patch.cpp" />
 		<Unit filename="../Patch.h" />
@@ -289,7 +287,8 @@
 		<Unit filename="../gui/MainFrame.cpp" />
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
-		<Unit filename="../gui/Panels/AudioPanel.cpp" />
+    <Unit filename="../gui/MemoryCardFile.cpp" />
+    <Unit filename="../gui/Panels/AudioPanel.cpp" />
 		<Unit filename="../gui/Panels/BiosSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/ConfigurationPanels.h" />
 		<Unit filename="../gui/Panels/CpuPanel.cpp" />

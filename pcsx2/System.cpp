@@ -29,8 +29,8 @@
 #include "CDVD/CDVD.h"
 #include "ps2/CoreEmuThread.h"
 
-#ifndef __LINUX__
-#include "svnrev.h"
+#if _MSC_VER
+#	include "svnrev.h"
 #endif
 
 using namespace std;
