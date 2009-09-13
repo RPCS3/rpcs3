@@ -6,12 +6,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -53,7 +53,7 @@ static unsigned char *make_utf8_string(const wchar_t *unicode)
             size += 3;
         }
         c = unicode[index++];
-    }	
+    }
 
     out = (unsigned char*)malloc(size + 1);
     if (out == NULL)
@@ -98,7 +98,7 @@ static wchar_t *make_unicode_string(const unsigned char *utf8)
         }
         size += 1;
         c = utf8[index++];
-    }	
+    }
 
     out = (wchar_t*)malloc((size + 1) * sizeof(wchar_t));
     if (out == NULL)
@@ -143,13 +143,13 @@ int utf8_encode(const char *from, char **to)
 	}
 
 	unicode = (wchar_t*)calloc(wchars + 1, sizeof(unsigned short));
-	if(unicode == NULL) 
+	if(unicode == NULL)
 	{
 		fprintf(stderr, "Out of memory processing string to UTF8\n");
 		return -1;
 	}
 
-	err = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, from, 
+	err = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, from,
 			strlen(from), unicode, wchars);
 	if(err != wchars)
 	{
@@ -158,7 +158,7 @@ int utf8_encode(const char *from, char **to)
 		return -1;
 	}
 
-	/* On NT-based windows systems, we could use WideCharToMultiByte(), but 
+	/* On NT-based windows systems, we could use WideCharToMultiByte(), but
 	 * MS doesn't actually have a consistent API across win32.
 	 */
 	*to = (char*)make_utf8_string(unicode);
@@ -172,11 +172,11 @@ int utf8_decode(const char *from, char **to)
     wchar_t *unicode;
     int chars, err;
 
-    /* On NT-based windows systems, we could use MultiByteToWideChar(CP_UTF8), but 
+    /* On NT-based windows systems, we could use MultiByteToWideChar(CP_UTF8), but
      * MS doesn't actually have a consistent API across win32.
      */
     unicode = make_unicode_string((unsigned char*)from);
-    if(unicode == NULL) 
+    if(unicode == NULL)
     {
         fprintf(stderr, "Out of memory processing string from UTF8 to UNICODE16\n");
         return -1;
@@ -193,14 +193,14 @@ int utf8_decode(const char *from, char **to)
     }
 
     *to = (char *)calloc(chars + 1, sizeof(unsigned char));
-    if(*to == NULL) 
+    if(*to == NULL)
     {
         fprintf(stderr, "Out of memory processing string to local charset\n");
         free(unicode);
         return -1;
     }
 
-    err = WideCharToMultiByte(GetConsoleCP(), WC_COMPOSITECHECK, unicode, 
+    err = WideCharToMultiByte(GetConsoleCP(), WC_COMPOSITECHECK, unicode,
             -1, *to, chars, NULL, NULL);
     if(err != chars)
     {
@@ -217,12 +217,11 @@ int utf8_decode(const char *from, char **to)
 
 #else /* End win32. Rest is for real operating systems */
 
-
 #ifdef HAVE_LANGINFO_CODESET
 #include <langinfo.h>
 #endif
 
-int iconvert(const char *fromcode, const char *tocode,
+extern int iconvert(const char *fromcode, const char *tocode,
 	     const char *from, size_t fromlen,
 	     char **to, size_t *tolen);
 
@@ -251,17 +250,17 @@ static int convert_buffer(const char *fromcode, const char *tocode,
 {
   int ret = -1;
 
-#ifdef HAVE_ICONV
+//#ifdef HAVE_ICONV
   ret = iconvert(fromcode, tocode, from, fromlen, to, tolen);
   if (ret != -1)
     return ret;
-#endif
+//#endif
 
-#ifndef HAVE_ICONV /* should be ifdef USE_CHARSET_CONVERT */
-  ret = charset_convert(fromcode, tocode, from, fromlen, to, tolen);
-  if (ret != -1)
-    return ret;
-#endif
+//#ifndef HAVE_ICONV /* should be ifdef USE_CHARSET_CONVERT */
+//  ret = charset_convert(fromcode, tocode, from, fromlen, to, tolen);
+ // if (ret != -1)
+ //   return ret;
+//#endif
 
   return ret;
 }

@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -67,8 +67,7 @@ void SetIrqCall()
 	has_to_call_irq=true;
 }
 
-#ifdef _MSC_VER
-void SysMessage(const char *fmt, ...) 
+void SysMessage(const char *fmt, ...)
 {
 	va_list list;
 	char tmp[512];
@@ -80,9 +79,6 @@ void SysMessage(const char *fmt, ...)
 	swprintf_s(wtmp, L"%S", tmp);
 	MessageBox(0, wtmp, L"SPU2-X System Message", 0);
 }
-#else
-extern void SysMessage(const char *fmt, ...);
-#endif
 
 __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 {
@@ -135,9 +131,9 @@ V_Core::V_Core()
 void V_Core::Reset()
 {
 	memset( this, 0, sizeof(V_Core) );
- 
+
 	const int c = (this == Cores) ? 0 : 1;
- 
+
 	Regs.STATX=0;
 	Regs.ATTR=0;
 	ExtVol = V_VolumeLR::Max;
@@ -158,7 +154,7 @@ void V_Core::Reset()
 	DryGate.SndR = -1;
 	WetGate.SndL = -1;
 	WetGate.SndR = -1;
-	
+
 	Regs.MMIX = 0xFFCF;
 	Regs.VMIXL = 0xFFFFFF;
 	Regs.VMIXR = 0xFFFFFF;
@@ -169,16 +165,16 @@ void V_Core::Reset()
 	FxEnable=0;
 	IRQA=0xFFFF0;
 	IRQEnable=1;
- 
+
 	for( uint v=0; v<NumVoices; ++v )
 	{
 		VoiceGates[v].DryL = -1;
 		VoiceGates[v].DryR = -1;
 		VoiceGates[v].WetL = -1;
 		VoiceGates[v].WetR = -1;
-	
+
 		Voices[v].Volume = V_VolumeSlideLR::Max;
-		
+
 		Voices[v].ADSR.Value = 0;
 		Voices[v].ADSR.Phase = 0;
 		Voices[v].Pitch = 0x3FFF;
@@ -188,7 +184,7 @@ void V_Core::Reset()
 	}
 	DMAICounter = 0;
 	AdmaInProgress = 0;
- 
+
 	Regs.STATX = 0x80;
 }
 
@@ -208,7 +204,7 @@ s32 V_Core::EffectsBufferIndexer( s32 offset ) const
 		pos = EffectsEndA+1 - (offset % EffectsBufferSize );
 	}
 	return pos;
-} 
+}
 
 void V_Core::UpdateFeedbackBuffersA()
 {
@@ -226,7 +222,7 @@ void V_Core::UpdateEffectsBufferSize()
 {
 	const s32 newbufsize = EffectsEndA - EffectsStartA + 1;
 	if( !RevBuffers.NeedsUpdated && newbufsize ==  EffectsBufferSize ) return;
-	
+
 	RevBuffers.NeedsUpdated = false;
 	EffectsBufferSize = newbufsize;
 
@@ -245,17 +241,17 @@ void V_Core::UpdateEffectsBufferSize()
 
 	UpdateFeedbackBuffersA();
 	UpdateFeedbackBuffersB();
-	
+
 	RevBuffers.IIR_DEST_A0 = EffectsBufferIndexer( Revb.IIR_DEST_A0 );
 	RevBuffers.IIR_DEST_A1 = EffectsBufferIndexer( Revb.IIR_DEST_A1 );
 	RevBuffers.IIR_DEST_B0 = EffectsBufferIndexer( Revb.IIR_DEST_B0 );
 	RevBuffers.IIR_DEST_B1 = EffectsBufferIndexer( Revb.IIR_DEST_B1 );
-	
+
 	RevBuffers.IIR_SRC_A0 = EffectsBufferIndexer( Revb.IIR_SRC_A0 );
 	RevBuffers.IIR_SRC_A1 = EffectsBufferIndexer( Revb.IIR_SRC_A1 );
 	RevBuffers.IIR_SRC_B0 = EffectsBufferIndexer( Revb.IIR_SRC_B0 );
 	RevBuffers.IIR_SRC_B1 = EffectsBufferIndexer( Revb.IIR_SRC_B1 );
-	
+
 	RevBuffers.MIX_DEST_A0 = EffectsBufferIndexer( Revb.MIX_DEST_A0 );
 	RevBuffers.MIX_DEST_A1 = EffectsBufferIndexer( Revb.MIX_DEST_A1 );
 	RevBuffers.MIX_DEST_B0 = EffectsBufferIndexer( Revb.MIX_DEST_B0 );
@@ -412,7 +408,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 		}
 
 		//Update DMA4 interrupt delay counter
-		if(Cores[0].DMAICounter>0) 
+		if(Cores[0].DMAICounter>0)
 		{
 			Cores[0].DMAICounter-=TickInterval;
 			if(Cores[0].DMAICounter<=0)
@@ -427,7 +423,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 		}
 
 		//Update DMA7 interrupt delay counter
-		if(Cores[1].DMAICounter>0) 
+		if(Cores[1].DMAICounter>0)
 		{
 			Cores[1].DMAICounter-=TickInterval;
 			if(Cores[1].DMAICounter<=0)
@@ -506,7 +502,7 @@ void V_VolumeSlide::RegSet( u16 src )
 	Value = GetVol32( src );
 }
 
-void SPU_ps1_write(u32 mem, u16 value) 
+void SPU_ps1_write(u32 mem, u16 value)
 {
 	bool show=true;
 
@@ -530,7 +526,7 @@ void SPU_ps1_write(u32 mem, u16 value)
 				Cores[0].Voices[voice].Volume.Right.RegSet( value << 1 );
 				Cores[0].Voices[voice].Volume.Right.Reg_VOL = value;
 			break;
-			
+
 			case 2:	Cores[0].Voices[voice].Pitch = value; break;
 			case 3:	Cores[0].Voices[voice].StartA = (u32)value<<8; break;
 
@@ -549,7 +545,7 @@ void SPU_ps1_write(u32 mem, u16 value)
 				Cores[0].Voices[voice].ADSR.ReleaseRate = (value & 0x1F);
 				Cores[0].Voices[voice].ADSR.Reg_ADSR2 = value;
 			break;
-			
+
 			case 6:
 				Cores[0].Voices[voice].ADSR.Value = ((s32)value<<16) | value;
 				ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
@@ -598,7 +594,7 @@ void SPU_ps1_write(u32 mem, u16 value)
 		case 0x1d90://         Channel FM (pitch lfo) mode (0-15)
 			SPU2_FastWrite(REG_S_PMON,value);
 		break;
-		
+
 		case 0x1d92://         Channel FM (pitch lfo) mode (16-23)
 			SPU2_FastWrite(REG_S_PMON+2,value);
 		break;
@@ -607,7 +603,7 @@ void SPU_ps1_write(u32 mem, u16 value)
 		case 0x1d94://         Channel Noise mode (0-15)
 			SPU2_FastWrite(REG_S_NON,value);
 		break;
-		
+
 		case 0x1d96://         Channel Noise mode (16-23)
 			SPU2_FastWrite(REG_S_NON+2,value);
 		break;
@@ -616,17 +612,17 @@ void SPU_ps1_write(u32 mem, u16 value)
 			SPU2_FastWrite(REG_S_VMIXEL,value);
 			SPU2_FastWrite(REG_S_VMIXER,value);
 		break;
-		
+
 		case 0x1d9a://         Channel Reverb mode (16-23)
 			SPU2_FastWrite(REG_S_VMIXEL+2,value);
 			SPU2_FastWrite(REG_S_VMIXER+2,value);
 		break;
-		
+
 		case 0x1d9c://         Channel Reverb mode (0-15)
 			SPU2_FastWrite(REG_S_VMIXL,value);
 			SPU2_FastWrite(REG_S_VMIXR,value);
 		break;
-		
+
 		case 0x1d9e://         Channel Reverb mode (16-23)
 			SPU2_FastWrite(REG_S_VMIXL+2,value);
 			SPU2_FastWrite(REG_S_VMIXR+2,value);
@@ -640,7 +636,7 @@ void SPU_ps1_write(u32 mem, u16 value)
 			SPU2_FastWrite(REG_A_ESA+2,val>>16);
 		}
 		break;
-		
+
 		case 0x1da4:
 			Cores[0].IRQA=(u32)value<<8;
 		break;
@@ -668,7 +664,7 @@ void SPU_ps1_write(u32 mem, u16 value)
 	spu2Ru16(mem)=value;
 }
 
-u16 SPU_ps1_read(u32 mem) 
+u16 SPU_ps1_read(u32 mem)
 {
 	bool show=true;
 	u16 value = spu2Ru16(mem);
@@ -687,13 +683,13 @@ u16 SPU_ps1_read(u32 mem)
 				//value=Cores[0].Voices[voice].VolumeL.Value;
 				value = Cores[0].Voices[voice].Volume.Left.Reg_VOL;
 			break;
-			
+
 			case 1: //VOLR (Volume R)
 				//value=Cores[0].Voices[voice].VolumeR.Mode;
 				//value=Cores[0].Voices[voice].VolumeR.Value;
 				value = Cores[0].Voices[voice].Volume.Right.Reg_VOL;
 			break;
-			
+
 			case 2:	value = Cores[0].Voices[voice].Pitch;		break;
 			case 3:	value = Cores[0].Voices[voice].StartA;		break;
 			case 4: value = Cores[0].Voices[voice].ADSR.Reg_ADSR1;	break;
@@ -802,13 +798,13 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 	if (mem & 0x400) { omem^=0x400; core=1; }
 
 	if (omem < 0x0180)	// Voice Params
-	{ 
+	{
 		const u32 voice = (omem & 0x1F0) >> 4;
 		const u32 param = (omem & 0xF) >> 1;
 		V_Voice& thisvoice = Cores[core].Voices[voice];
 
-		switch (param) 
-		{ 
+		switch (param)
+		{
 			case 0: //VOLL (Volume L)
 			case 1: //VOLR (Volume R)
 			{
@@ -852,7 +848,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 				thisvoice.ADSR.Value = (value << 16) | value;
 				ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
 			break;
-			
+
 			case 6:	thisvoice.Volume.Left.RegSet( value ); break;
 			case 7:	thisvoice.Volume.Right.RegSet( value ); break;
 
@@ -868,22 +864,22 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 		switch (address)
 		{
 			case 0:	// SSA (Waveform Start Addr) (hiword, 4 bits only)
-				thisvoice.StartA = ((value & 0x0F) << 16) | (thisvoice.StartA & 0xFFF8); 
+				thisvoice.StartA = ((value & 0x0F) << 16) | (thisvoice.StartA & 0xFFF8);
 				if( IsDevBuild )
-					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA; 
+					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA;
 			break;
-			
+
 			case 1:	// SSA (loword)
-				thisvoice.StartA = (thisvoice.StartA & 0x0F0000) | (value & 0xFFF8); 
+				thisvoice.StartA = (thisvoice.StartA & 0x0F0000) | (value & 0xFFF8);
 				if( IsDevBuild )
-					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA; 
+					DebugCores[core].Voices[voice].lastSetStartA = thisvoice.StartA;
 			break;
-			
-			case 2:	
+
+			case 2:
 				thisvoice.LoopStartA = ((value & 0x0F) << 16) | (thisvoice.LoopStartA & 0xFFF8);
 				thisvoice.LoopMode = 3;
 			break;
-			
+
 			case 3:
 				thisvoice.LoopStartA = (thisvoice.LoopStartA & 0x0F0000) | (value & 0xFFF8);
 				thisvoice.LoopMode = 3;
@@ -892,13 +888,13 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			case 4:
 				thisvoice.NextA = ((value & 0x0F) << 16) | (thisvoice.NextA & 0xFFF8);
 			break;
-			
+
 			case 5:
 				thisvoice.NextA = (thisvoice.NextA & 0x0F0000) | (value & 0xFFF8);
 			break;
 		}
 	}
-	else if((mem>=0x07C0) && (mem<0x07CE)) 
+	else if((mem>=0x07C0) && (mem<0x07CE))
 	{
 		*(regtable[mem>>1]) = value;
 		UpdateSpdifMode();
@@ -1040,10 +1036,10 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			break;
 
 			case REG_P_MMIX:
-	
+
 				// Each MMIX gate is assigned either 0 or 0xffffffff depending on the status
 				// of the MMIX bits.  I use -1 below as a shorthand for 0xffffffff. :)
-			
+
 				vx = value;
 				if (core == 0) vx&=0xFF0;
 				thiscore.WetGate.ExtR = (vx & 0x001) ? -1 : 0;
@@ -1081,7 +1077,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 				thiscore.Regs.ENDX&=0x00FF0000;
 			break;
 
-			case (REG_S_ENDX + 2):	
+			case (REG_S_ENDX + 2):
 				thiscore.Regs.ENDX&=0xFFFF;
 			break;
 
@@ -1109,16 +1105,16 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 				thiscore.UpdateEffectsBufferSize();
 				thiscore.ReverbX = 0;
 			break;
-			
+
 			// Master Volume Address Write!
-			
+
 			case REG_P_MVOLL:
 			case REG_P_MVOLR:
 			{
 				V_VolumeSlide& thisvol = (omem==REG_P_MVOLL) ? thiscore.MasterVol.Left : thiscore.MasterVol.Right;
 
 				if( value & 0x8000 )	// +Lin/-Lin/+Exp/-Exp
-				{ 
+				{
 					thisvol.Mode = (value & 0xE000) / 0x2000;
 					thisvol.Increment = (value & 0x7F); // | ((value & 0x800)/0x10);
 				}
@@ -1143,7 +1139,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			case REG_P_EVOLR:
 				thiscore.FxVol.Right = GetVol32( value );
 			break;
-			
+
 			case REG_P_AVOLL:
 				thiscore.ExtVol.Left = GetVol32( value );
 			break;
@@ -1151,7 +1147,7 @@ __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 			case REG_P_AVOLR:
 				thiscore.ExtVol.Right = GetVol32( value );
 			break;
-			
+
 			case REG_P_BVOLL:
 				thiscore.InpVol.Left = GetVol32( value );
 			break;
@@ -1186,7 +1182,7 @@ void StartVoices(int core, u32 value)
 	if( value == 0 ) return;
 
 	Cores[core].Regs.ENDX &= ~value;
-	
+
 	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
 		if ((value>>vc) & 1)

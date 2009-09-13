@@ -1130,9 +1130,6 @@ void __forceinline finishmpeg2sliceIDEC(decoder_t* &decoder)
 	waitForSCD();
 }
 
-// This fixes Mana Khemia if uncommented, but needs testing.
-// Breaks Figital Devil Saga.
-//#define ALWAYS_RESUME_BEFORE_EXITING
 void mpeg2sliceIDEC(void* pdone)
 {
 	u32 read;

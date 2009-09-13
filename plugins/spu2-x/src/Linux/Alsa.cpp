@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -34,7 +34,7 @@ protected:
 	snd_pcm_t *handle;
 	snd_pcm_uframes_t buffer_size;
 	snd_async_handler_t *pcm_callback;
-	
+
 	uint period_time;
 	uint buffer_time;
 
@@ -70,7 +70,7 @@ protected:
 
 		// Not sure if we just need an assert, or something like this:
 		//if( data->handle != snd_async_handler_get_pcm(pcm_callback) ) return;
-		
+
 		data->_InternalCallback();
 	}
 
@@ -87,60 +87,60 @@ public:
 		handle = NULL;
 		pcm_callback = NULL;
 		pspeed = SAMPLE_RATE;
-		
+
 		// buffer time and period time are in microseconds...
 		// (don't simplify the equation below -- it'll just cause integer rounding errors.
 		period_time = (SndOutPacketSize*1000) / (SampleRate / 1000);
 		buffer_time = period_time * NumBuffers;
 
 		int err;
-		
+
 		err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
-		if(err < 0) 
+		if(err < 0)
 		{
 			ERROR_LOG("Audio open error: %s\n", snd_strerror(err));
 			return -1;
 		}
-		
+
 		err = snd_pcm_nonblock(handle, 0);
-		if(err < 0) 
+		if(err < 0)
 		{
 			ERROR_LOG("Can't set blocking mode: %s\n", snd_strerror(err));
 			return -1;
 		}
-	    
+
 		snd_pcm_hw_params_alloca(&hwparams);
 		snd_pcm_sw_params_alloca(&swparams);
-		
+
 		err = snd_pcm_hw_params_any(handle, hwparams);
-		if (err < 0) 
+		if (err < 0)
 		{
 			ERROR_LOG("Broken configuration for this PCM: %s\n", snd_strerror(err));
 			return -1;
 		}
-		
+
 		err = snd_pcm_hw_params_set_access(handle, hwparams, SND_PCM_ACCESS_RW_INTERLEAVED);
-		if (err < 0) 
+		if (err < 0)
 		{
 			ERROR_LOG("Access type not available: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		err = snd_pcm_hw_params_set_format(handle, hwparams, format);
-		if (err < 0) 
+		if (err < 0)
 		{
 			ERROR_LOG("Sample format not available: %s\n", snd_strerror(err));
 			return -1;
 		}
-		
+
 		err = snd_pcm_hw_params_set_channels(handle, hwparams, pchannels);
-		if (err < 0) 
+		if (err < 0)
 		{
 			ERROR_LOG("Channels count not available: %s\n", snd_strerror(err));
 			return -1;
 		}
 		err = snd_pcm_hw_params_set_rate_near(handle, hwparams, &pspeed, 0);
-		if (err < 0) 
+		if (err < 0)
 		{
 			ERROR_LOG("Rate not available: %s\n", snd_strerror(err));
 			return -1;
@@ -151,31 +151,31 @@ public:
 			ERROR_LOG("Buffer time error: %s\n", snd_strerror(err));
 			return -1;
 		}
-	   
+
 		err = snd_pcm_hw_params_set_period_time_near(handle, hwparams, &period_time, 0);
 		if (err < 0)
 		{
 			ERROR_LOG("Period time error: %s\n", snd_strerror(err));
 			return -1;
 		}
-		
+
 		err = snd_pcm_hw_params(handle, hwparams);
-		if (err < 0) 
+		if (err < 0)
 		{
 			ERROR_LOG("Unable to install hw params: %s\n", snd_strerror(err));
 			return -1;
 		}
-	    
+
 		snd_pcm_status_alloca(&status);
 		err = snd_pcm_status(handle, status);
-		if(err < 0) 
+		if(err < 0)
 		{
 			ERROR_LOG("Unable to get status: %s\n", snd_strerror(err));
 			return -1;
 		}
 
 		// Bind our asynchronous callback magic:
-		
+
 		snd_async_add_pcm_handler( &pcm_callback, handle, ExternalCallback, this );
 
 		snd_pcm_start( handle );
@@ -199,7 +199,7 @@ public:
 	}
 
 	virtual bool Is51Out() const { return false; }
-	
+
 	s32  Test() const
 	{
 		return 0;
@@ -210,7 +210,7 @@ public:
 		if(handle == NULL) return 0;
 
 		// Returns the amount of free buffer space, in samples.
-		uint l = snd_pcm_avail_update(handle); 
+		uint l = snd_pcm_avail_update(handle);
 		if( l < 0 ) return 0;
 		return (l / 1000) * (SampleRate / 1000);
 	}

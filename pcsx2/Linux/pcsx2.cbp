@@ -164,9 +164,9 @@
 		<Unit filename="../FPU.cpp" />
 		<Unit filename="../FiFo.cpp" />
 		<Unit filename="../GS.cpp" />
-    <Unit filename="../GS.h" />
-    <Unit filename="../GSstate.cpp" />
-    <Unit filename="../Gif.cpp" />
+		<Unit filename="../GS.h" />
+		<Unit filename="../GSState.cpp" />
+		<Unit filename="../Gif.cpp" />
 		<Unit filename="../HostGui.h" />
 		<Unit filename="../Hw.cpp" />
 		<Unit filename="../Hw.h" />
@@ -268,8 +268,8 @@
 		<Unit filename="../gui/AppAssert.cpp" />
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />
-    <Unit filename="../gui/AppMain.cpp" />
-    <Unit filename="../gui/AppRes.cpp" />
+		<Unit filename="../gui/AppMain.cpp" />
+		<Unit filename="../gui/AppRes.cpp" />
 		<Unit filename="../gui/CheckedStaticBox.cpp" />
 		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />

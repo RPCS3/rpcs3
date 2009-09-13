@@ -7,9 +7,9 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/SPU2-X" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../../bin/plugins/SPU2-X.so" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
-				<Option type="1" />
+				<Option type="3" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
@@ -17,9 +17,9 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/SPU2-X" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../../bin/plugins/SPU2-X.so" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Release/" />
-				<Option type="1" />
+				<Option type="3" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
@@ -35,17 +35,43 @@
 			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="-fPIC" />
 			<Add option="-m32" />
+			<Add option="-liconv" />
+			<Add option="-msse2" />
 			<Add directory="../Linux" />
 			<Add directory="../../src" />
 			<Add directory="../3rdparty" />
 			<Add directory="../3rdparty/liba52" />
 			<Add directory="../../../../common/include" />
+			<Add directory="../../../../3rdparty/SoundTouch" />
+			<Add directory="../../../../3rdparty" />
 		</Compiler>
 		<Linker>
 			<Add option="`pkg-config gtk+-2.0 --libs`" />
 			<Add option="-shared" />
 			<Add library="asound" />
+			<Add library="stdc++" />
 		</Linker>
+		<Unit filename="../../../../3rdparty/SoundTouch/AAFilter.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/AAFilter.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/BPMDetect.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/FIFOSampleBuffer.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/FIFOSampleBuffer.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/FIFOSamplePipe.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/FIRFilter.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/FIRFilter.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/RateTransposer.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/RateTransposer.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/STTypes.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/SoundTouch.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/SoundTouch.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/TDStretch.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/TDStretch.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/WavFile.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/WavFile.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/cpu_detect.h" />
+		<Unit filename="../../../../3rdparty/SoundTouch/cpu_detect_x86_gcc.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/mmx_optimized.cpp" />
+		<Unit filename="../../../../3rdparty/SoundTouch/sse_optimized.cpp" />
 		<Unit filename="../3rdparty/liba52/a52.h" />
 		<Unit filename="../3rdparty/liba52/a52_internal.h" />
 		<Unit filename="../3rdparty/liba52/attributes.h" />
@@ -89,7 +115,6 @@
 		<Unit filename="ConfigSoundTouch.cpp" />
 		<Unit filename="Dialogs.cpp" />
 		<Unit filename="Dialogs.h" />
-		<Unit filename="Linux.cpp" />
 		<Unit filename="Linux.h" />
 		<Unit filename="../Lowpass.cpp" />
 		<Unit filename="../Lowpass.h" />
@@ -109,6 +134,7 @@
 		<Unit filename="../Timestretcher.cpp" />
 		<Unit filename="../Wavedump_wav.cpp" />
 		<Unit filename="../defs.h" />
+		<Unit filename="../iconvert.cpp" />
 		<Unit filename="../regs.h" />
 		<Unit filename="../spdif.h" />
 		<Unit filename="../utf8.cpp" />

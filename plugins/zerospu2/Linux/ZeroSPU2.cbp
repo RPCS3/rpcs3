@@ -9,7 +9,6 @@
 			<Target title="Debug">
 				<Option output="../../../bin/plugins/libZeroSPU2.so.0.1.0" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
-				<Option external_deps="../../../3rdparty/SoundTouch/libSoundTouch.a;" />
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
@@ -38,6 +37,7 @@
 			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="-fPIC" />
 			<Add option="-m32" />
+			<Add option="-msse2" />
 			<Add option="-DVERSION=1" />
 			<Add directory="../Linux" />
 			<Add directory="../../zerospu2" />
@@ -53,6 +53,27 @@
 			<Add library="stdc++" />
 			<Add library="dl" />
 		</Linker>
+		<Unit filename="../../../3rdparty/SoundTouch/AAFilter.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/AAFilter.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/BPMDetect.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/FIFOSampleBuffer.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/FIFOSampleBuffer.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/FIFOSamplePipe.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/FIRFilter.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/FIRFilter.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/RateTransposer.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/RateTransposer.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/STTypes.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/SoundTouch.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/SoundTouch.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/TDStretch.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/TDStretch.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/WavFile.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/WavFile.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/cpu_detect.h" />
+		<Unit filename="../../../3rdparty/SoundTouch/cpu_detect_x86_gcc.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/mmx_optimized.cpp" />
+		<Unit filename="../../../3rdparty/SoundTouch/sse_optimized.cpp" />
 		<Unit filename="Alsa.cpp" />
 		<Unit filename="Linux.cpp" />
 		<Unit filename="Linux.h" />
@@ -66,7 +87,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="support.h" />
-		<Unit filename="zerospu2.glade" />
 		<Unit filename="../misc.h" />
 		<Unit filename="../reg.h" />
 		<Unit filename="../voices.cpp" />
