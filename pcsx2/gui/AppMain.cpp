@@ -560,7 +560,7 @@ void Pcsx2App::ApplySettings( const AppConfig& newconf )
 		const PluginInfo* pi = tbl_PluginInfo-1;
 		while( ++pi, pi->shortname != NULL )
 		{
-			if( newconf.FullpathTo( pi->id ) != newconf.FullpathTo( pi->id ) )
+			if( newconf.FullpathTo( pi->id ) != g_Conf->FullpathTo( pi->id ) )
 				break;
 		}
 		if( pi->shortname != NULL )
@@ -568,9 +568,14 @@ void Pcsx2App::ApplySettings( const AppConfig& newconf )
 			// [TODO] : Post notice that this shuts down existing emulation.
 			SysEndExecution();
 			safe_delete( g_plugins );
+			// Think safe to do this earlier, but not positive.
+			// Have to update the config *before* loading the new plugins.
+			*g_Conf = newconf;
 			LoadPlugins();
 		}
-		*g_Conf = newconf;
+		else {
+			*g_Conf = newconf;
+		}
 	}
 
 	g_Conf->Apply();
