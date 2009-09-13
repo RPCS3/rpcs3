@@ -560,7 +560,7 @@ void Pcsx2App::ApplySettings( const AppConfig& newconf )
 		const PluginInfo* pi = tbl_PluginInfo-1;
 		while( ++pi, pi->shortname != NULL )
 		{
-			if( newconf.FullpathTo( pi->id ) != g_Conf->FullpathTo( pi->id ) )
+			if( newconf.FullpathTo( pi->id ) != newconf.FullpathTo( pi->id ) )
 				break;
 		}
 		if( pi->shortname != NULL )
