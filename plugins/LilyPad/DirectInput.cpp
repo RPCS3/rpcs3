@@ -108,6 +108,9 @@ public:
 
 	void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {
 		int index = 0;
+		if (!diEffects) {
+			return;
+		}
 		for (int port=0; port<2; port++) {
 			for (int slot=0; slot<4; slot++) {
 				unsigned int diff = binding - pads[port][slot].ffBindings;

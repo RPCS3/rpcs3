@@ -154,6 +154,7 @@ public:
 	unsigned char getState[49];
 	OVERLAPPED readop;
 	OVERLAPPED writeop;
+	int writeCount;
 
 	int writeQueued;
 	int StartRead() {
@@ -164,8 +165,8 @@ public:
 	int StartWrite() {
 		writeop.Offset = writeop.OffsetHigh = 0;
 		for (int i=0; i<2; i++) {
-			if (vibration[i^1]) {
-				sendState.motors[i].duration = 0x7F;
+			if ((i^writeCount)&1) {
+				sendState.motors[i].duration = 0x4F;
 				int force = vibration[i^1] * 256/FULLY_DOWN;
 				if (force > 255) force = 255;
 				sendState.motors[i].force = (unsigned char) force;
@@ -175,11 +176,13 @@ public:
 				sendState.motors[i].duration = 0;
 			}
 		}
+		writeCount++;
 		int res = WriteFile(hFile, &sendState, sizeof(sendState), 0, &writeop);
 		return (res || GetLastError() == ERROR_IO_PENDING);
 	}
 
 	DualShock3Device(int index, wchar_t *name, wchar_t *path) : Device(DS3, OTHER, name, path) {
+		writeCount = 0;
 		memset(&readop, 0, sizeof(readop));
 		memset(&writeop, 0, sizeof(writeop));
 		memset(&sendState, 0, sizeof(sendState));
@@ -200,8 +203,8 @@ public:
 		for (; i<20; i++) {
 			AddPhysicalControl(ABSAXIS, i, 0);
 		}
-		AddFFAxis(L"Slow Motor", 0);
-		AddFFAxis(L"Fast Motor", 1);
+		AddFFAxis(L"Big Motor", 0);
+		AddFFAxis(L"Small Motor", 1);
 		AddFFEffectType(L"Constant Effect", L"Constant", EFFECT_CONSTANT);
 		hFile = INVALID_HANDLE_VALUE;
 	}
@@ -224,10 +227,10 @@ public:
 			L"Up",
 			L"Start",
 			L"Select",
-			L"Left Thumb X",
-			L"Left Thumb Y",
-			L"Right Thumb X",
-			L"Right Thumb Y",
+			L"L-Stick X",
+			L"L-Stick Y",
+			L"R-Stick X",
+			L"R-Stick Y",
 		};
 		unsigned int i = (unsigned int) (c - physicalControls);
 		if (i < 20) {
@@ -296,7 +299,8 @@ public:
 			}
 			else if (res == WAIT_OBJECT_0+1) {
 				writeQueued--;
-				if (writeQueued) {
+				if (writeQueued | vibration[0] | vibration[1]) {
+					if (vibration[0] | vibration[1]) writeQueued = 3;
 					if (!StartWrite()) {
 						Deactivate();
 						return 0;
