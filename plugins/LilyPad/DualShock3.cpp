@@ -224,7 +224,7 @@ public:
 		for (i=0; i<16; i++) {
 			AddPhysicalControl(PSHBTN, i, 0);
 		}
-		for (; i<20; i++) {
+		for (; i<23; i++) {
 			AddPhysicalControl(ABSAXIS, i, 0);
 		}
 		AddFFAxis(L"Big Motor", 0);
@@ -255,9 +255,12 @@ public:
 			L"L-Stick Y",
 			L"R-Stick X",
 			L"R-Stick Y",
+			L"Left/Right Tilt",
+			L"Forward/Back Tilt",
+			L"???",
 		};
 		unsigned int i = (unsigned int) (c - physicalControls);
-		if (i < 20) {
+		if (i < sizeof(names)/sizeof(names[0])) {
 			return (wchar_t*)names[i];
 		}
 		return Device::GetPhysicalControlName(c);
@@ -315,6 +318,9 @@ public:
 				physicalControlState[17] = CharToAxis(getState[7]);
 				physicalControlState[18] = CharToAxis(getState[8]);
 				physicalControlState[19] = CharToAxis(getState[9]);
+				physicalControlState[20] = CharToAxis(getState[42]+128);
+				physicalControlState[21] = CharToAxis(getState[44]+128);
+				physicalControlState[22] = CharToAxis(getState[46]+128);
 				continue;
 			}
 			else if (res == WAIT_OBJECT_0+1) {
