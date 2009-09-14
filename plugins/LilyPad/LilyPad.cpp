@@ -153,9 +153,15 @@ public:
 	// Flags for which controls (buttons or axes) are locked, if any.
 	DWORD lockedState;
 
-	// Last vibration value.  Only used so as not to call vibration
+	// Last vibration value sent to controller.
+	// Only used so as not to call vibration
 	// functions when old and new values are both 0.
-	u8 vibrateVal[2];
+	u8 currentVibrate[2];
+
+	// Next vibrate val to send to controller.  If next and current are
+	// both 0, nothing is sent to the controller.  Otherwise, it's sent
+	// on every update.
+	u8 nextVibrate[2];
 
 	// Used to keep track of which pads I'm running.
 	// Note that initialized pads *can* be disabled.
@@ -459,6 +465,18 @@ void Update(unsigned int port, unsigned int slot) {
 	{
 		for (int port=0; port<2; port++) {
 			for (int slot=0; slot<4; slot++) {
+				for (int motor=0; motor<2; motor++) {
+					// TODO:  Probably be better to send all of these at once.
+					if (pads[port][slot].nextVibrate[motor] | pads[port][slot].currentVibrate[motor]) {
+						pads[port][slot].currentVibrate[motor] = pads[port][slot].nextVibrate[motor];
+						dm->SetEffect(port,slot, motor, pads[port][slot].nextVibrate[motor]);
+					}
+				}
+			}
+		}
+
+		for (int port=0; port<2; port++) {
+			for (int slot=0; slot<4; slot++) {
 				pads[port][slot].stateUpdated = 1;
 				if (config.padConfigs[port][slot].type == DisabledPad || !pads[port][slot].initialized) continue;
 				if (config.padConfigs[port][slot].type == GuitarPad) {
@@ -561,10 +579,7 @@ void CALLBACK PADupdate(int port) {
 }
 
 inline void SetVibrate(int port, int slot, int motor, u8 val) {
-	if (val || pads[port][slot].vibrateVal[motor]) {
-		dm->SetEffect(port,slot, motor, val);
-		pads[port][slot].vibrateVal[motor] = val;
-	}
+	pads[port][slot].nextVibrate[motor] = val;
 }
 
 u32 CALLBACK PS2EgetLibType(void) {

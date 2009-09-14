@@ -7,8 +7,16 @@
 #define VID 0x054c
 #define PID 0x0268
 
-#define CHECK_DELAY 5
-time_t lastDS3Check = 0;
+// Unresponsive period required before calling DS3Check().
+#define DEVICE_CHECK_DELAY 2
+// Unresponsive period required before calling DS3Enum().  Note that enum is always called on first check.
+#define DEVICE_ENUM_DELAY 10
+
+// Delay between when DS3Check() and DS3Enum() actually do stuff.
+#define DOUBLE_CHECK_DELAY 1
+#define DOUBLE_ENUM_DELAY 20
+unsigned int lastDS3Check = 0;
+unsigned int lastDS3Enum = 0;
 
 typedef void (__cdecl *_usb_init)(void);
 typedef int (__cdecl *_usb_close)(usb_dev_handle *dev);
@@ -33,7 +41,6 @@ HMODULE hModLibusb = 0;
 
 int DualShock3Possible();
 void EnumDualShock3s();
-
 
 void UninitLibUsb() {
 	if (hModLibusb) {
@@ -61,15 +68,31 @@ void TryInitDS3(usb_device *dev) {
 	}
 }
 
-void DS3Check() {
+void DS3Enum() {
+	unsigned int t = (unsigned int) time(0);
+	if (t - lastDS3Enum < DOUBLE_ENUM_DELAY) {
+		return;
+	}
+	lastDS3Enum = t;
 	pusb_find_busses();
 	pusb_find_devices();
+}
+
+void DS3Check() {
+	unsigned int t = (unsigned int) time(0);
+	if (t - lastDS3Check < DOUBLE_CHECK_DELAY) {
+		return;
+	}
+	if (!lastDS3Check) {
+		DS3Enum();
+	}
+	lastDS3Check = t;
+
 	usb_bus *bus = pusb_get_busses();
 	while (bus) {
 		TryInitDS3(bus->devices);
 		bus = bus->next;
 	}
-	lastDS3Check = time(0);
 }
 
 int InitLibUsb() {
@@ -156,32 +179,33 @@ public:
 	OVERLAPPED writeop;
 	int writeCount;
 
+	unsigned int dataLastReceived;
+
 	int writeQueued;
 	int StartRead() {
-		readop.Offset = readop.OffsetHigh = 0;
 		int res = ReadFile(hFile, &getState, sizeof(getState), 0, &readop);
 		return (res || GetLastError() == ERROR_IO_PENDING);
 	}
 	int StartWrite() {
-		writeop.Offset = writeop.OffsetHigh = 0;
-		for (int i=0; i<2; i++) {
-			if ((i^writeCount)&1) {
-				sendState.motors[i].duration = 0x4F;
-				int force = vibration[i^1] * 256/FULLY_DOWN;
-				if (force > 255) force = 255;
-				sendState.motors[i].force = (unsigned char) force;
-			}
-			else {
-				sendState.motors[i].force = 0;
-				sendState.motors[i].duration = 0;
-			}
+		sendState.motors[0].duration = 0x50;
+		sendState.motors[1].duration = 0x50;
+
+		int bigForce = vibration[0] * 256/FULLY_DOWN;
+		if (bigForce > 255) bigForce = 255;
+		sendState.motors[1].force = (unsigned char) bigForce;
+		sendState.motors[0].force = (unsigned char) (vibration[1] >= FULLY_DOWN/2);
+		// Can't seem to have them both non-zero at once.
+		if (sendState.motors[writeCount&1].force) {
+			sendState.motors[(writeCount&1)^1].force = 0;
+			sendState.motors[(writeCount&1)^1].duration = 0;
 		}
+
 		writeCount++;
 		int res = WriteFile(hFile, &sendState, sizeof(sendState), 0, &writeop);
 		return (res || GetLastError() == ERROR_IO_PENDING);
 	}
 
-	DualShock3Device(int index, wchar_t *name, wchar_t *path) : Device(DS3, OTHER, name, path) {
+	DualShock3Device(int index, wchar_t *name, wchar_t *path) : Device(DS3, OTHER, name, path, L"DualShock 3") {
 		writeCount = 0;
 		memset(&readop, 0, sizeof(readop));
 		memset(&writeop, 0, sizeof(writeop));
@@ -240,22 +264,17 @@ public:
 	}
 
 	int Activate(void *d) {
-		if (!lastDS3Check) {
-			DS3Check();
-		}
-		else {
-			lastDS3Check = time(0) - CHECK_DELAY+3;
-		}
 		if (active) Deactivate();
+		// Give grace period before get mad.
+		dataLastReceived = (unsigned int) time(0);
 		readop.hEvent = CreateEvent(0, 0, 0, 0);
 		writeop.hEvent = CreateEvent(0, 0, 0, 0);
 		hFile = CreateFileW(instanceID, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 		if (!readop.hEvent || !writeop.hEvent || hFile == INVALID_HANDLE_VALUE ||
-			!StartRead() || !StartWrite()) {
+			!StartRead()) {
 			Deactivate();
 			return 0;
 		}
-		writeQueued = 1;
 		active = 1;
 		AllocState();
 		return 1;
@@ -270,6 +289,7 @@ public:
 		while (1) {
 			DWORD res = WaitForMultipleObjects(2, h, 0, 0);
 			if (res == WAIT_OBJECT_0) {
+				dataLastReceived = (unsigned int) time(0);
 				// Do stuff.
 				if (!StartRead()) {
 					Deactivate();
@@ -305,12 +325,19 @@ public:
 						Deactivate();
 						return 0;
 					}
-				}
+				}//*/
 			}
 			else {
-				time_t test = time(0);
-				if (test - lastDS3Check >= CHECK_DELAY) {
+				unsigned int delta = (unsigned int) time(0) - dataLastReceived;
+				if (delta >= DEVICE_CHECK_DELAY) {
+					if (delta >= DEVICE_ENUM_DELAY) {
+						DS3Enum();
+					}
 					DS3Check();
+					if (!writeQueued) {
+						StartWrite();
+						writeQueued = 1;
+					}
 				}
 			}
 			break;

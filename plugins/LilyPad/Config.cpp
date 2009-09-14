@@ -1503,10 +1503,9 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 						}
 						dm->Update(&info);
 						dm->PostRead();
-						Sleep(100);
-						dm->Update(&info);
-						dm->PostRead();
 						dev->SetEffect(ffb, 255);
+						Sleep(200);
+						dm->Update(&info);
 						SetTimer(hWnd, 1, 3000, 0);
 					}
 				}
@@ -1848,12 +1847,15 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			if (IsDlgButtonChecked(hWnd, IDC_G_DS3) && !config.gameApis.dualShock3) {
 				if (IDOK !=
 					MessageBoxA(hWnd, 
-					"This open will attempt to connect directly to any connected\n"
+					"This option will attempt to connect directly to any connected\n"
 					"DualShock 3 devices.  It is completely experimental, and based\n"
 					"on no published specs.\n"
+					"\n"
 					"Furthermore, It uses libusb to Initialize DS3 pads.  Libusb can\n"
 					"do odd things to USB and non-USB devices when it enumerates them.\n"
+					"\n"
 					"I have no idea if it works with bluetooth or not.\n"
+					"\n"
 					"Are you sure you wish to continue?", "Warning", MB_OKCANCEL | MB_ICONWARNING)) {
 						CheckDlgButton(hWnd, IDC_G_DS3, BST_UNCHECKED);
 				}
