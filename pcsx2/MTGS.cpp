@@ -61,33 +61,22 @@ using namespace std;
 // them into an 8 bit array.
 __forceinline void GIFPath::PrepRegs()
 {
-	if( tag.nreg == 0 )
-	{
-		u32 tempreg = tag.regs[0];
-		for(u32 i=0; i<16; ++i, tempreg >>= 4)
-		{
-			if( i == 8 ) tempreg = tag.regs[1];
-			assert( (tempreg&0xf) < 0x64 );
-			regs[i] = tempreg & 0xf;
-		}
-	}
-	else
-	{
-		u32 tempreg = tag.regs[0];
-		for(u32 i=0; i<tag.nreg; ++i, tempreg >>= 4)
-		{
-			assert( (tempreg&0xf) < 0x64 );
-			regs[i] = tempreg & 0xf;
-		}
+	int loopEnd = ((tag.nreg-1)&0xf) + 1;
+	u32 tempreg = tag.regs[0];
+
+	for (int i = 0; i < loopEnd; i++) {
+		if (i == 8) tempreg = tag.regs[1];
+		regs[i] = tempreg & 0xf;
+		tempreg >>= 4;
 	}
 }
 
-void GIFPath::SetTag(const void* mem)
+void GIFPath::SetTag(const void* mem, bool doPrepRegs = 1)
 {
 	tag = *((GIFTAG*)mem);
 	curreg = 0;
 
-	PrepRegs();
+	if (doPrepRegs) PrepRegs();
 }
 
 u32 GIFPath::GetReg() 
@@ -244,6 +233,59 @@ void mtgsThreadObject::Reset()
 	SendSimplePacket( GS_RINGTYPE_FRAMESKIP, 0, 0, 0 );
 
 	memzero_obj( m_path );
+}
+
+#define incPmem(x) {											\
+	if ((pMem +  x) >= ptrEnd) pMem = (pMem + x) - 0x4000;		\
+	else pMem += x;												\
+	size += x;													\
+}
+
+__forceinline int mtgsThreadObject::_gifTransferDummy2(GIF_PATH pathidx, const u8* pMem, u32 size)
+{
+	GIFPath& path = m_path[pathidx];
+	u8* ptrEnd    = (u8*)pMem + (size<<4); // End of VU Mem
+	bool EOP	  = 0;
+	bool hasRegAD = 0;
+	size		  = 0;
+
+	while(!EOP && size < 0x4000) {
+		path.SetTag(pMem, !path.tag.flg);
+		EOP = path.tag.eop;
+		int numRegs = ((path.tag.nreg-1)&0xf)+1;
+		incPmem(16);
+		if (!path.tag.nloop) continue;
+		switch(path.tag.flg) {
+			case GIF_FLG_PACKED:
+				for (u32 i = 0; i < path.tag.nloop; i++) {
+					for (int j = 0; j < numRegs; j++) {
+						if (path.regs[j] == 0x0e) {
+							const int handler = pMem[8];
+							if (handler >= 0x60 && handler < 0x63) {
+								//DevCon::Status("GIF Tag Signal");
+								s_GSHandlers[handler&0x3]((const u32*)pMem);
+							}
+							hasRegAD = 1;
+						}
+						incPmem(16);
+					}
+					if (!hasRegAD) { // Optimization: No Need to Loop
+						incPmem((16 * numRegs * (path.tag.nloop-1)));
+						break;
+					}
+				}
+			break;
+			case GIF_FLG_REGLIST:
+				numRegs = (numRegs + 1) / 2;
+				incPmem((16 * numRegs * path.tag.nloop));
+			break;
+			case GIF_FLG_IMAGE:
+			case GIF_FLG_IMAGE2:
+				incPmem((16 * path.tag.nloop));
+			break;
+		}
+	}
+	return (size / 16);
 }
 
 // Processes a GIFtag & packet, and throws out some gsIRQs as needed.
@@ -905,17 +947,21 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 		size = (size+15)&(~15);
 	}*/
 
-	// retval has the amount of data *not* processed, so we only need to reserve
-	// enough room for size - retval:
-	int retval = _gifTransferDummy( pathidx, srcdata, size );
+	if (pathidx != GIF_PATH_1) {
+		// retval has the amount of data *not* processed, so we only need to reserve
+		// enough room for size - retval:
+		int retval = _gifTransferDummy( pathidx, srcdata, size );
 
-	if(pathidx == 2)
-	{
-		gif->madr += (size - retval) * 16;
-		gif->qwc -= size - retval;
+		if(pathidx == GIF_PATH_3)
+		{
+			gif->madr += (size - retval) * 16;
+			gif->qwc  -=  size - retval;
+		}
+		//if(retval < 0) DevCon::Notice("Increasing size from %x to %x path %x", size, size-retval, pathidx+1);
+		size = size - retval;
 	}
-	//if(retval < 0) DevCon::Notice("Increasing size from %x to %x path %x", size, size-retval, pathidx+1);
-	size = size - retval;
+	else size = _gifTransferDummy2(pathidx, srcdata, size);
+
 	m_packet_size = size;
 	size++;			// takes into account our command qword.
 

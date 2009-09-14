@@ -1104,28 +1104,28 @@ mVUop(mVU_XITOP) {
 
 void __fastcall mVU_XGKICK_(u32 addr) {
 	addr = (addr<<4) & 0x3fff; // Multiply addr by 16 to get real address
-	u32 *data = (u32*)(microVU1.regs->Mem + addr);
-	u32  size = mtgsThread->PrepDataPacket(GIF_PATH_1, data, (0x4000-addr) >> 4);
-	u8 *pDest = mtgsThread->GetDataPacketPtr();
-/*	if((size << 4) > (0x4000-(addr&0x3fff))) {
-		//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", (addr&0x3fff) + (size << 4), (0x4000-(addr&0x3fff)) >> 4, size - ((0x4000-(addr&0x3fff)) >> 4));
-		memcpy_aligned(pDest, microVU1.regs->Mem + addr, 0x4000-(addr&0x3fff));
-		size -= (0x4000-(addr&0x3fff)) >> 4;
-		//DevCon::Notice("Size left %x", size);
-		pDest += 0x4000-(addr&0x3fff);
+	u8* data  = (u8*)(microVU1.regs->Mem + addr);
+	u32 diff  = 0x4000 - addr;
+	u32 size  = mtgsThread->PrepDataPacket(GIF_PATH_1, data, diff >> 4);
+	u8* pDest = mtgsThread->GetDataPacketPtr();
+	
+	if((size << 4) > diff) {
+		//DevCon::Status("XGkick Wrap!");
+		memcpy_aligned(pDest, microVU1.regs->Mem + addr, diff);
+		size  -= diff >> 4;
+		pDest += diff;
 		memcpy_aligned(pDest, microVU1.regs->Mem, size<<4);
 	}
-	else { */
+	else {
 		memcpy_aligned(pDest, microVU1.regs->Mem + addr, size<<4);
-//	}
+	}
 	mtgsThread->SendDataPacket();
 }
 
 microVUt(void) mVU_XGKICK_DELAY(mV, bool memVI) {
 	mVUbackupRegs(mVU);
-	if (memVI)		MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick);
-	else			mVUallocVIa(mVU, gprT2, _Is_);
-
+	if (memVI)	MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick);
+	else		mVUallocVIa(mVU, gprT2, _Is_);
 	CALLFunc((uptr)mVU_XGKICK_);
 	mVUrestoreRegs(mVU);
 }
