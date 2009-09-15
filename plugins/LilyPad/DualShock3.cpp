@@ -1,20 +1,25 @@
 #include "Global.h"
-#include <time.h>
 #include "usb.h"
 #include "HidDevice.h"
 #include "InputManager.h"
+
 
 #define VID 0x054c
 #define PID 0x0268
 
 // Unresponsive period required before calling DS3Check().
-#define DEVICE_CHECK_DELAY 2
+#define DEVICE_CHECK_DELAY 2000
 // Unresponsive period required before calling DS3Enum().  Note that enum is always called on first check.
-#define DEVICE_ENUM_DELAY 10
+#define DEVICE_ENUM_DELAY 10000
 
 // Delay between when DS3Check() and DS3Enum() actually do stuff.
-#define DOUBLE_CHECK_DELAY 1
-#define DOUBLE_ENUM_DELAY 20
+#define DOUBLE_CHECK_DELAY 1000
+#define DOUBLE_ENUM_DELAY 20000
+
+// Send at least one message every 3 seconds - basically just makes sure the right light(s) are on.
+// Not really necessary.
+#define UPDATE_INTERVAL 3000
+
 unsigned int lastDS3Check = 0;
 unsigned int lastDS3Enum = 0;
 
@@ -68,25 +73,23 @@ void TryInitDS3(usb_device *dev) {
 	}
 }
 
-void DS3Enum() {
-	unsigned int t = (unsigned int) time(0);
-	if (t - lastDS3Enum < DOUBLE_ENUM_DELAY) {
+void DS3Enum(unsigned int time) {
+	if (time - lastDS3Enum < DOUBLE_ENUM_DELAY) {
 		return;
 	}
-	lastDS3Enum = t;
+	lastDS3Enum = time;
 	pusb_find_busses();
 	pusb_find_devices();
 }
 
-void DS3Check() {
-	unsigned int t = (unsigned int) time(0);
-	if (t - lastDS3Check < DOUBLE_CHECK_DELAY) {
+void DS3Check(unsigned int time) {
+	if (time - lastDS3Check < DOUBLE_CHECK_DELAY) {
 		return;
 	}
 	if (!lastDS3Check) {
-		DS3Enum();
+		DS3Enum(time);
 	}
-	lastDS3Check = t;
+	lastDS3Check = time;
 
 	usb_bus *bus = pusb_get_busses();
 	while (bus) {
@@ -178,35 +181,55 @@ public:
 	OVERLAPPED readop;
 	OVERLAPPED writeop;
 	int writeCount;
+	int lastWrite;
 
 	unsigned int dataLastReceived;
 
 	int writeQueued;
+	int writing;
+
 	int StartRead() {
 		int res = ReadFile(hFile, &getState, sizeof(getState), 0, &readop);
 		return (res || GetLastError() == ERROR_IO_PENDING);
 	}
-	int StartWrite() {
-		sendState.motors[0].duration = 0x50;
-		sendState.motors[1].duration = 0x50;
 
-		int bigForce = vibration[0] * 256/FULLY_DOWN;
-		if (bigForce > 255) bigForce = 255;
-		sendState.motors[1].force = (unsigned char) bigForce;
-		sendState.motors[0].force = (unsigned char) (vibration[1] >= FULLY_DOWN/2);
-		// Can't seem to have them both non-zero at once.
-		if (sendState.motors[writeCount&1].force) {
-			sendState.motors[(writeCount&1)^1].force = 0;
-			sendState.motors[(writeCount&1)^1].duration = 0;
+	void QueueWrite() {
+		// max of 2 queued writes allowed, one for either motor.
+		if (writeQueued < 2) {
+			writeQueued++;
+			StartWrite();
 		}
+	}
 
-		writeCount++;
-		int res = WriteFile(hFile, &sendState, sizeof(sendState), 0, &writeop);
-		return (res || GetLastError() == ERROR_IO_PENDING);
+	int StartWrite() {
+		if (!writing && writeQueued) {
+			lastWrite = GetTickCount();
+			writing++;
+			writeQueued--;
+			sendState.motors[0].duration = 0x50;
+			sendState.motors[1].duration = 0x50;
+
+			int bigForce = vibration[0] * 256/FULLY_DOWN;
+			if (bigForce > 255) bigForce = 255;
+			sendState.motors[1].force = (unsigned char) bigForce;
+			sendState.motors[0].force = (unsigned char) (vibration[1] >= FULLY_DOWN/2);
+			// Can't seem to have them both non-zero at once.
+			if (sendState.motors[writeCount&1].force) {
+				sendState.motors[(writeCount&1)^1].force = 0;
+				sendState.motors[(writeCount&1)^1].duration = 0;
+			}
+
+			writeCount++;
+			int res = WriteFile(hFile, &sendState, sizeof(sendState), 0, &writeop);
+			return (res || GetLastError() == ERROR_IO_PENDING);
+		}
+		return 1;
 	}
 
 	DualShock3Device(int index, wchar_t *name, wchar_t *path) : Device(DS3, OTHER, name, path, L"DualShock 3") {
 		writeCount = 0;
+		writing = 0;
+		writeQueued = 0;
 		memset(&readop, 0, sizeof(readop));
 		memset(&writeop, 0, sizeof(writeop));
 		memset(&sendState, 0, sizeof(sendState));
@@ -217,7 +240,6 @@ public:
 		sendState.lights[3-temp].dunno[0] = 1;
 		sendState.lights[3-temp].on = 1;
 		memset(ps2Vibration, 0, sizeof(ps2Vibration));
-		writeQueued = 0;
 		vibration[0] = vibration[1] = 0;
 		this->index = index;
 		int i;
@@ -269,7 +291,7 @@ public:
 	int Activate(void *d) {
 		if (active) Deactivate();
 		// Give grace period before get mad.
-		dataLastReceived = (unsigned int) time(0);
+		lastWrite = dataLastReceived = GetTickCount();
 		readop.hEvent = CreateEvent(0, 0, 0, 0);
 		writeop.hEvent = CreateEvent(0, 0, 0, 0);
 		hFile = CreateFileW(instanceID, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
@@ -289,15 +311,19 @@ public:
 			readop.hEvent,
 			writeop.hEvent
 		};
+		unsigned int time = GetTickCount();
+		if (time - lastWrite > UPDATE_INTERVAL) {
+			QueueWrite();
+		}
 		while (1) {
 			DWORD res = WaitForMultipleObjects(2, h, 0, 0);
 			if (res == WAIT_OBJECT_0) {
-				dataLastReceived = (unsigned int) time(0);
-				// Do stuff.
+				dataLastReceived = time;
 				if (!StartRead()) {
 					Deactivate();
 					return 0;
 				}
+
 				physicalControlState[0] = CharToButton(getState[25]);
 				physicalControlState[1] = CharToButton(getState[24]);
 				physicalControlState[2] = CharToButton(getState[23]);
@@ -324,26 +350,22 @@ public:
 				continue;
 			}
 			else if (res == WAIT_OBJECT_0+1) {
-				writeQueued--;
-				if (writeQueued | vibration[0] | vibration[1]) {
-					if (vibration[0] | vibration[1]) writeQueued = 3;
-					if (!StartWrite()) {
-						Deactivate();
-						return 0;
-					}
-				}//*/
+				writing = 0;
+				if (!writeQueued && (vibration[0] | vibration[1])) {
+					QueueWrite();
+				}
+				if (!StartWrite()) {
+					Deactivate();
+					return 0;
+				}
 			}
 			else {
-				unsigned int delta = (unsigned int) time(0) - dataLastReceived;
-				if (delta >= DEVICE_CHECK_DELAY) {
-					if (delta >= DEVICE_ENUM_DELAY) {
-						DS3Enum();
+				if (time-dataLastReceived >= DEVICE_CHECK_DELAY) {
+					if (time-dataLastReceived >= DEVICE_ENUM_DELAY) {
+						DS3Enum(time);
 					}
-					DS3Check();
-					if (!writeQueued) {
-						StartWrite();
-						writeQueued = 1;
-					}
+					DS3Check(time);
+					QueueWrite();
 				}
 			}
 			break;
@@ -364,12 +386,9 @@ public:
 				}
 			}
 		}
-		if (!writeQueued) {
-			StartWrite();
-		}
-		if (writeQueued<2) {
-			writeQueued++;
-		}
+		// Make sure at least 2 writes are queued, to update both motors.
+		QueueWrite();
+		QueueWrite();
 	}
 
 	void SetEffect(ForceFeedbackBinding *binding, unsigned char force) {
@@ -392,6 +411,7 @@ public:
 		if (writeop.hEvent) {
 			CloseHandle(writeop.hEvent);
 		}
+		writing = 0;
 		writeQueued = 0;
 		memset(ps2Vibration, 0, sizeof(ps2Vibration));
 		vibration[0] = vibration[1] = 0;

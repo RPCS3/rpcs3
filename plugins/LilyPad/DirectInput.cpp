@@ -524,11 +524,13 @@ BOOL IsXInputDevice( const GUID* pGuidProductFromDirectInput )
                     // If it does, then get the VID/PID from var.bstrVal
                     DWORD dwPid = 0, dwVid = 0;
                     WCHAR* strVid = wcsstr( var.bstrVal, L"VID_" );
-                    if( strVid && swscanf( strVid, L"VID_%4X", &dwVid ) != 1 )
-                        dwVid = 0;
+					if (strVid) {
+						dwVid = wcstoul(strVid+4, 0, 16);
+					}
                     WCHAR* strPid = wcsstr( var.bstrVal, L"PID_" );
-                    if( strPid && swscanf( strPid, L"PID_%4X", &dwPid ) != 1 )
-                        dwPid = 0;
+					if (strPid) {
+						dwPid = wcstoul(strPid+4, 0, 16);
+					}
 
                     // Compare the VID/PID to the DInput device
                     DWORD dwVidPid = MAKELONG( dwVid, dwPid );

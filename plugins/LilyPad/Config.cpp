@@ -156,7 +156,7 @@ void RefreshEnabledDevices(int updateDeviceList) {
 				 (dev->api == DS3 && config.gameApis.dualShock3) || 
 				 (dev->api == XINPUT && config.gameApis.xInput)))) {
 					if (config.gameApis.dualShock3 && dev->api == DI && dev->displayName &&
-						!wcsnicmp(dev->displayName+3, L"PLAYSTATION(R)3", 15)) {
+						!wcsicmp(dev->displayName, L"DX PLAYSTATION(R)3 Controller")) {
 							dm->DisableDevice(i);
 					}
 					else {
