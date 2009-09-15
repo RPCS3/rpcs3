@@ -160,6 +160,9 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 	assert( ret == 0 ); // vif stall code not implemented
 }
 
+// Dummy GIF-TAG Packet to Guarantee Count = 1
+PCSX2_ALIGNED16(u32 nloop0_packet[4]) = {0x8000, 0, 0, 0};
+
 void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 {
 	jASSUME( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
@@ -172,8 +175,7 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	psHu64(0x6008) = value[1];
 
 	FreezeRegs(1);
-	const uint count = mtgsThread->PrepDataPacket( GIF_PATH_3, value, 1 );
-	jASSUME( count == 1 );
+	const uint count = mtgsThread->PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);
 	u64* data = (u64*)mtgsThread->GetDataPacketPtr();
 	data[0] = value[0];
 	data[1] = value[1];

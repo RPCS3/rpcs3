@@ -98,8 +98,7 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 { 
 	psHu32(GIF_STAT) |= GIF_STAT_APATH3 | GIF_STAT_OPH;         
 
-	int sizetoread = qwc;
-	sizetoread = mtgsThread->PrepDataPacket( GIF_PATH_3, pMem, qwc );
+	int size   = mtgsThread->PrepDataPacket(GIF_PATH_3, pMem, qwc);
 	u8* pgsmem = mtgsThread->GetDataPacketPtr();
 
 	/* check if page of endmem is valid (dark cloud2) */
@@ -111,10 +110,10 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 	// fixed? PrepDataPacket now returns the actual size of the packet.
 	// VIF handles scratchpad wrapping also, so this code shouldn't be needed anymore.
 
-	memcpy_aligned(pgsmem, pMem, sizetoread<<4); 
+	memcpy_aligned(pgsmem, pMem, size<<4); 
 	
 	mtgsThread->SendDataPacket();
-	return sizetoread;
+	return size;
 } 
 
 int  _GIFchain() 
@@ -134,8 +133,8 @@ int  _GIFchain()
 		Console::Notice( "Hackfix - NULL GIFchain" );
 		return -1;
 	}
-	
-	return (WRITERING_DMA(pMem, qwc));
+
+	return WRITERING_DMA(pMem, qwc);
 }
 
 static __forceinline void GIFchain() 
@@ -384,7 +383,6 @@ static __forceinline int mfifoGIFrbTransfer()
 		/* it doesn't, so just transfer 'qwc*16' words from 'gif->madr' to GS */
 		src = (u32*)PSM(gif->madr);
 		if (src == NULL) return -1;
-		
 		mfifoqwc = WRITERING_DMA(src, mfifoqwc);
 		gif->madr = psHu32(DMAC_RBOR) + (gif->madr & psHu32(DMAC_RBSR));
 	}
@@ -410,7 +408,6 @@ static __forceinline int mfifoGIFchain()
 		int mfifoqwc = gif->qwc;
 		u32 *pMem = (u32*)dmaGetAddr(gif->madr);
 		if (pMem == NULL) return -1;
-
 		mfifoqwc = WRITERING_DMA(pMem, mfifoqwc);
 		mfifocycles += (mfifoqwc) * 2; /* guessing */
 	}

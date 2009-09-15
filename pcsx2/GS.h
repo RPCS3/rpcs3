@@ -89,28 +89,12 @@ struct GIFTAG
 struct GIFPath
 {
 	GIFTAG tag; 
-	u32 curreg;
+	u32 curreg; // Not Used Anymore
 	u32 _pad[3];
 	u8 regs[16];
 
-	__forceinline void PrepRegs();
-	void SetTag(const void* mem, bool doPrepRegs);
-	u32 GetReg();
-
-	__forceinline bool StepReg()
-	{
-		if((++curreg & 0xf) == tag.nreg) 
-		{
-			curreg = 0; 
-
-			if(--tag.nloop == 0)
-			{
-				return false;
-			}
-		}
-		
-		return true;
-	}
+	__forceinline void PrepRegs(bool doPrep);
+	__forceinline void SetTag(const void* mem);
 };
 
 
@@ -230,9 +214,8 @@ public:
 	// Used primarily for plugin startup/shutdown.
 	void WaitGS();
 
-	int PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size );
+	int PrepDataPacket( GIF_PATH pathidx, const u8*  srcdata, u32 size );
 	int	PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size );
-	int	PrepDataPacket( GIF_PATH pathidx, const u64* srcdata, u32 size );
 	void SendDataPacket();
 
 	void SendSimplePacket( GS_RINGTYPE type, int data0, int data1, int data2 );
@@ -257,8 +240,8 @@ protected:
 	// Processes a GIFtag & packet, and throws out some gsIRQs as needed.
 	// Used to keep interrupts in sync with the EE, while the GS itself
 	// runs potentially several frames behind.
-	int _gifTransferDummy ( GIF_PATH pathidx, const u8 *pMem, u32 size );
-	int _gifTransferDummy2( GIF_PATH pathidx, const u8 *pMem, u32 size );
+	int  gifTransferDummy(GIF_PATH pathidx, const u8 *pMem, u32 size);
+	int _gifTransferDummy(GIF_PATH pathidx, const u8 *pMem, u32 size);
 
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();
