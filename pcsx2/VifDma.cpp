@@ -59,7 +59,7 @@ static const unsigned int VIF1dmanum = 1;
 int g_vifCycles = 0;
 Path3Modes Path3progress = STOPPED_MODE; 
 
-u32 splittransfer[4];
+static PCSX2_ALIGNED16( u32 splittransfer[4] );
 u32 splitptr = 0;
 
 typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, u32 *data, int size);
