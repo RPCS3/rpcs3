@@ -234,6 +234,7 @@ void mtgsThreadObject::Reset()
 	size += (x) * 16;											 \
 	if ((pathidx==GIF_PATH_1)&&(pMem>=vuMemEnd)) pMem -= 0x4000; \
 }
+#define subVal(x) ((x) ? (x-1) : 0)
 
 __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8* pMem, u32 size) 
 {
@@ -278,14 +279,15 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 						if (size >= finish) goto endLoop;
 					}
 					if (!hasRegAD) { // Optimization: No Need to Loop
-						incPmem(numRegs * (path.tag.nloop-1));
+						incPmem(numRegs * subVal(path.tag.nloop));
 						break;
 					}
 				}
 				break;
 			case GIF_FLG_REGLIST:
 				numRegs = (numRegs + 1) / 2;
-				incPmem(numRegs * path.tag.nloop);
+				incPmem((numRegs - path.curreg) * path.tag.nloop);
+				incPmem((numRegs * subVal(path.tag.nloop)));
 				break;
 			case GIF_FLG_IMAGE:
 			case GIF_FLG_IMAGE2:
@@ -308,7 +310,10 @@ endLoop:
 		}
 		else path.tag.nloop -= diff;
 	}
-	else path.tag.nloop = 0;
+	else {
+		path.curreg	   = 0;
+		path.tag.nloop = 0;
+	}
 
 	if (pathidx == GIF_PATH_3) {
 		gif->madr +=  size;

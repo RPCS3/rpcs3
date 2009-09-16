@@ -149,10 +149,10 @@ void LogOptionsDialog::LogChecked(wxCommandEvent &evt)
 	// (which would seem bad).
 	wxCheckBox* checker = wxStaticCast( evt.GetEventObject(), wxCheckBox );
 
-	switch( checker->GetId() )
+	/*switch( checker->GetId() )
 	{
 		// [TODO] : Implement me!
-	}
+	}*/
 
 	evt.Skip();
 }
