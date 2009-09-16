@@ -88,8 +88,8 @@ struct GIFTAG
 
 struct GIFPath
 {
-	GIFTAG tag; 
-	u32 curreg; // Not Used Anymore
+	GIFTAG tag;
+	u32 curreg;
 	u32 _pad[3];
 	u8 regs[16];
 

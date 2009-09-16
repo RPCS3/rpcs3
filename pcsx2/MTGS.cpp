@@ -74,8 +74,8 @@ __forceinline void GIFPath::PrepRegs(bool doPrep = 1)
 
 __forceinline void GIFPath::SetTag(const void* mem)
 {
-	tag = *((GIFTAG*)mem);
-	curreg = 0;
+	tag		= *((GIFTAG*)mem);
+	curreg	= 0;
 }
 
 static void _mtgsFreezeGIF( SaveState& state, GIFPath (&paths)[3] )
@@ -230,37 +230,41 @@ void mtgsThreadObject::Reset()
 }
 
 #define incPmem(x) {											 \
-	pMem += (x*16);												 \
-	size += (x*16);												 \
+	pMem += (x) * 16;											 \
+	size += (x) * 16;											 \
 	if ((pathidx==GIF_PATH_1)&&(pMem>=vuMemEnd)) pMem -= 0x4000; \
 }
 
 __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8* pMem, u32 size) 
 {
 	GIFPath& path		= m_path[pathidx];
-	const u8*  vuMemEnd = pMem + (size<<4); // End of VU Mem
-	u32  finish			= (pathidx == GIF_PATH_1) ? 0x4000 : (size<<4);
+	u32 finish			= (pathidx == GIF_PATH_1) ? 0x4000 : (size<<4);
+	u32 oldSize			= 0;
+	u32 numRegs			= 0;
+	const u8* vuMemEnd	= pMem + (size<<4);	// End of VU Mem
+	bool pathContinue	= !!path.tag.nloop;	// Continue From Last Transfer
 	bool EOP			= 0;
 	bool hasRegAD		= 0;
 	size				= 0;
 
 	while(!EOP && size < finish) {
-		path.SetTag(pMem);
-		path.PrepRegs(!path.tag.flg);
-		EOP = (pathidx == GIF_PATH_2) ? 0 : path.tag.eop;
-		incPmem(1);
-		if (!path.tag.nloop) continue;
-		int numRegs = ((path.tag.nreg-1)&0xf)+1;
 
-		// Assume Path3progress as transfer mode here, and switch to IMAGE mode if needed.
-		// Path3progress gets reset to STOPPED on EOP only (ie, not on 'partial' transfers)
-		if( pathidx == GIF_PATH_3 )
-			Path3progress = TRANSFER_MODE;
+		if(!pathContinue) {
+			path.SetTag(pMem);
+			path.PrepRegs(!path.tag.flg);
+			incPmem(1);
+		}
+		pathContinue = 0;
+		oldSize		 = size;
+		numRegs		 = ((path.tag.nreg-1)&0xf)+1;
+		EOP			 = ((pathidx == GIF_PATH_2) ? 0 : path.tag.eop);
+		
+		if (!path.tag.nloop || size >= finish) continue;
 
 		switch(path.tag.flg) {
 			case GIF_FLG_PACKED:
 				for (u32 i = 0; i < path.tag.nloop; i++) {
-					for (int j = 0; j < numRegs; j++) {
+					for (u32 j = path.curreg; j < numRegs; j++) {
 						if (path.regs[j] == 0x0e) {
 							const int handler = pMem[8];
 							if (handler >= 0x60 && handler < 0x63) {
@@ -270,37 +274,50 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 							hasRegAD = 1;
 						}
 						incPmem(1);
-						if (size >= finish)
-							goto endLoop;
+						path.curreg = 0;
+						if (size >= finish) goto endLoop;
 					}
 					if (!hasRegAD) { // Optimization: No Need to Loop
 						incPmem(numRegs * (path.tag.nloop-1));
 						break;
 					}
 				}
-			break;
+				break;
 			case GIF_FLG_REGLIST:
 				numRegs = (numRegs + 1) / 2;
 				incPmem(numRegs * path.tag.nloop);
-			break;
+				break;
 			case GIF_FLG_IMAGE:
 			case GIF_FLG_IMAGE2:
-				if( pathidx == GIF_PATH_3 )
-					Path3progress = IMAGE_MODE;
 				incPmem(path.tag.nloop);
-			break;
+				break;
 		}
 	}
 endLoop:
-	// This handles cases where we skipped too far ahead because of bulky IMAGE tags
-	// or the RegAD tag (they don't check against 'finish' on every qwc like the others).
+
+	// This handles cases where we skipped too far ahead because of bulky IMAGE/REGLIST tags
+	// or PACKED tags w/o RegA+D (they don't compare 'size < finish' every qwc).
 	if (size > finish) size = finish;
+
+	// Sets information to resume partial transfers
+	if (!EOP && path.tag.nloop && pathidx) {
+		int diff = (size - oldSize) / 16;
+		if (!(path.tag.flg&2)) { // PACKED/REGLIST
+			path.curreg		= (diff % path.tag.nloop);
+			path.tag.nloop -= (diff / numRegs);
+		}
+		else path.tag.nloop -= diff;
+	}
+	else path.tag.nloop = 0;
 
 	if (pathidx == GIF_PATH_3) {
 		gif->madr +=  size;
 		gif->qwc  -= (size/16);
-		if( EOP ) Path3progress = STOPPED_MODE;
+		if (EOP)				 Path3progress = STOPPED_MODE;
+		else if (path.tag.flg&2) Path3progress = IMAGE_MODE;
+		else					 Path3progress = TRANSFER_MODE;
 	}
+
 	return (size / 16);
 }
 
