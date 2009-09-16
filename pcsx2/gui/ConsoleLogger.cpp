@@ -686,17 +686,6 @@ static int pxCallstackDialog( const wxString& content, const wxString& caption, 
 	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
 }
 
-struct MsgboxEventResult
-{
-	Semaphore	WaitForMe;
-	int			result;
-
-	MsgboxEventResult() :
-		WaitForMe(), result( 0 )
-	{
-	}
-};
-
 class pxMessageBoxEvent : public wxEvent
 {
 protected:

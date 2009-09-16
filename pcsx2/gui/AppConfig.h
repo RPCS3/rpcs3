@@ -21,7 +21,12 @@
 class IniInterface;
 class wxFileConfig;
 
-extern bool		UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
+extern bool			UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
+extern wxDirName	SettingsFolder;			// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
+extern bool			UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the UseAdminMode
+
+wxDirName GetSettingsFolder();
+wxString  GetSettingsFilename();
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Pcsx2 Application Configuration.
@@ -33,15 +38,15 @@ public:
 	// ------------------------------------------------------------------------
 	struct ConsoleLogOptions
 	{
-		bool Visible;
+		bool		Visible;
 		// if true, DisplayPos is ignored and the console is automatically docked to the main window.
-		bool AutoDock;
+		bool		AutoDock;
 		// Display position used if AutoDock is false (ignored otherwise)
-		wxPoint DisplayPosition;
-		wxSize DisplaySize;
+		wxPoint		DisplayPosition;
+		wxSize		DisplaySize;
 		
 		// Size of the font in points.
-		int FontSize;
+		int			FontSize;
 
 		ConsoleLogOptions();
 		void LoadSave( IniInterface& conf, const wxChar* title );
@@ -59,11 +64,10 @@ public:
 				UseDefaultSavestates:1,
 				UseDefaultMemoryCards:1,
 				UseDefaultLogs:1;
-		}; };
+		BITFIELD_END
 
 		wxDirName
 			Plugins,
-			Settings,
 			Bios,
 			Snapshots,
 			Savestates,
@@ -156,14 +160,10 @@ public:
 	wxString FullpathToBios() const;
 	wxString FullpathToMcd( uint port, uint slot ) const;
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
-	wxString FullPathToConfig() const;
 
 	void LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash );
 
-	wxString GetDefaultDocumentsFolder();
-
 protected:
-	void Apply();
 	void LoadSave( IniInterface& ini );
 	void LoadSaveMemcards( IniInterface& ini );
 	
@@ -181,4 +181,4 @@ extern ConfigOverrides OverrideOptions;
 extern wxFileConfig* OpenFileConfig( const wxString& filename );
 extern void AppConfig_ReloadGlobalSettings( bool overwrite =  false );
 
-extern AppConfig* g_Conf;
+extern wxScopedPtr<AppConfig> g_Conf;

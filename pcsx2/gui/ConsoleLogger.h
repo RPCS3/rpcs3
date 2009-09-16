@@ -58,7 +58,7 @@ public:
 	{
 	}
 	
-	~ConsoleTestThread()
+	~ConsoleTestThread() throw()
 	{
 		m_done = true;
 	}

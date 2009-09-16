@@ -33,7 +33,7 @@ bool States_isSlotUsed(int num)
 	if (ElfCRC == 0)
 		return false;
 	else
-		return wxFileExists( SaveState::GetFilename( num ) );
+		return wxFileExists( SaveStateBase::GetFilename( num ) );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -62,12 +62,12 @@ void States_Load( const wxString& file )
 		StateRecovery::Recover();
 	}
 
-	SysExecute( new AppEmuThread() );
+	wxGetApp().SysExecute();
 }
 
 void States_Load(int num)
 {
-	wxString file( SaveState::GetFilename( num ) );
+	wxString file( SaveStateBase::GetFilename( num ) );
 
 	if( !wxFileExists( file ) )
 	{
@@ -120,79 +120,5 @@ void States_Save( const wxString& file )
 void States_Save(int num)
 {
 	Console::Status( "Saving savestate to slot %d...", num );
-	States_Save( SaveState::GetFilename( num ) );
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-void vSyncDebugStuff( uint frame )
-{
-#ifdef OLD_TESTBUILD_STUFF
-	if( g_TestRun.enabled && g_TestRun.frame > 0 ) {
-		if( frame > g_TestRun.frame ) {
-			// take a snapshot
-			if( g_TestRun.pimagename != NULL && GSmakeSnapshot2 != NULL ) {
-				if( g_TestRun.snapdone ) {
-					g_TestRun.curimage++;
-					g_TestRun.snapdone = 0;
-					g_TestRun.frame += 20;
-					if( g_TestRun.curimage >= g_TestRun.numimages ) {
-						// exit
-						g_EmuThread->Cancel();
-					}
-				}
-				else {
-					// query for the image
-					GSmakeSnapshot2(g_TestRun.pimagename, &g_TestRun.snapdone, g_TestRun.jpgcapture);
-				}
-			}
-			else {
-				// exit
-				g_EmuThread->Cancel();
-			}
-		}
-	}
-
-	GSVSYNC();
-
-	if( g_SaveGSStream == 1 ) {
-		freezeData fP;
-
-		g_SaveGSStream = 2;
-		g_fGSSave->gsFreeze();
-
-		if (GSfreeze(FREEZE_SIZE, &fP) == -1) {
-			safe_delete( g_fGSSave );
-			g_SaveGSStream = 0;
-		}
-		else {
-			fP.data = (s8*)malloc(fP.size);
-			if (fP.data == NULL) {
-				safe_delete( g_fGSSave );
-				g_SaveGSStream = 0;
-			}
-			else {
-				if (GSfreeze(FREEZE_SAVE, &fP) == -1) {
-					safe_delete( g_fGSSave );
-					g_SaveGSStream = 0;
-				}
-				else {
-					g_fGSSave->Freeze( fP.size );
-					if (fP.size) {
-						g_fGSSave->FreezeMem( fP.data, fP.size );
-						free(fP.data);
-					}
-				}
-			}
-		}
-	}
-	else if( g_SaveGSStream == 2 ) {
-
-		if( --g_nLeftGSFrames <= 0 ) {
-			safe_delete( g_fGSSave );
-			g_SaveGSStream = 0;
-			Console::WriteLn("Done saving GS stream");
-		}
-	}
-#endif
+	States_Save( SaveStateBase::GetFilename( num ) );
 }

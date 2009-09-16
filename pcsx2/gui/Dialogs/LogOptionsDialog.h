@@ -14,9 +14,8 @@
  */
 
 #pragma once
- 
-#include <wx/wx.h>
-#include <wx/image.h>
+
+#include "App.h"
 
 #include "wxHelpers.h"
 #include "CheckedStaticBox.h"
@@ -26,7 +25,7 @@ namespace Dialogs {
 class LogOptionsDialog: public wxDialogWithHelpers
 {
 public:
-	LogOptionsDialog( wxWindow* parent, int id, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
+	LogOptionsDialog( wxWindow* parent=NULL, int id=DialogId_LogOptions );
 
 protected:
 	

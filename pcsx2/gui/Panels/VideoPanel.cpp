@@ -25,6 +25,6 @@ Panels::VideoPanel::VideoPanel( wxWindow& parent, int idealWidth ) :
 	// MTGS Forced Synchronization
 }
 
-void Panels::VideoPanel::Apply( AppConfig& conf )
+void Panels::VideoPanel::Apply()
 {
 }

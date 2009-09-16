@@ -144,8 +144,8 @@ void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 
 
 // ----------------------------------------------------------------------------
-Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent ) :
-	wxDialogWithHelpers( parent, wxID_ANY, _("BIOS Selector"), false )
+Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent, int id ) :
+	wxDialogWithHelpers( parent, id, _("BIOS Selector"), false )
 {
 	wxBoxSizer& bleh( *new wxBoxSizer( wxVERTICAL ) );
 	

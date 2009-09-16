@@ -33,7 +33,7 @@ namespace Dialogs
 
 	public:
 		virtual ~ConfigurationDialog();
-		ConfigurationDialog(wxWindow* parent, int id=wxID_ANY);
+		ConfigurationDialog(wxWindow* parent=NULL, int id=DialogId_CoreSettings);
 
 	protected:
 		template< typename T >
@@ -60,7 +60,7 @@ namespace Dialogs
 
 	public:
 		virtual ~BiosSelectorDialog() {}
-		BiosSelectorDialog(wxWindow* parent );
+		BiosSelectorDialog( wxWindow* parent=NULL, int id=DialogId_BiosSelector );
 
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );

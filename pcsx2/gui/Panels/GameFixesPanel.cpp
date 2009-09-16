@@ -85,9 +85,9 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 }
 
 // I could still probably get rid of the for loop, but I think this is clearer.
-void Panels::GameFixesPanel::Apply( AppConfig& conf )
+void Panels::GameFixesPanel::Apply()
 {
-	Pcsx2Config::GamefixOptions& opts( conf.EmuOptions.Gamefixes );
+	Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
     for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
     {
         if (m_checkbox[i]->GetValue())

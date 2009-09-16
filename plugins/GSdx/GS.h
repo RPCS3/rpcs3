@@ -1109,12 +1109,9 @@ __declspec(align(16)) struct GIFPath
 	{
 		if((++reg & 0xf) == nreg) 
 		{
-			reg = 0; 
-
+			reg = 0;
 			if(--nloop == 0)
-			{
 				return false;
-			}
 		}
 
 		return true;

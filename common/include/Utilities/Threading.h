@@ -130,7 +130,7 @@ namespace Threading
 		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.
 		
 	public:
-		virtual ~PersistentThread();
+		virtual ~PersistentThread() throw();
 		PersistentThread();
 
 		virtual void Start();
@@ -172,7 +172,7 @@ namespace Threading
 		bool m_IsLocked;
 
 	public:
-		virtual ~ScopedLock()
+		virtual ~ScopedLock() throw()
 		{
 			if( m_IsLocked )
 				m_lock.Unlock();
@@ -239,76 +239,34 @@ namespace Threading
 	{
 	protected:
 		volatile bool m_Done;
-		volatile bool m_TaskComplete;
+		volatile bool m_TaskPending;
 		Semaphore m_post_TaskComplete;
+		MutexLock m_lock_TaskComplete;
 
 	public:
-		virtual ~BaseTaskThread() {}
+		virtual ~BaseTaskThread() throw() {}
 		BaseTaskThread() :
 			m_Done( false )
-		,	m_TaskComplete( false )
+		,	m_TaskPending( false )
 		,	m_post_TaskComplete()
 		{
 		}
 
-		// Tells the thread to exit and then waits for thread termination.
-		sptr Block()
-		{
-			if( !m_running ) return m_returncode;
-			m_Done = true;
-			m_sem_event.Post();
-			return PersistentThread::Block();
-		}
-
-		// Initiates the new task.  This should be called after your own StartTask has
-		// initialized internal variables / preparations for task execution.
-		void PostTask()
-		{
-			jASSUME( m_running );
-			m_TaskComplete = false;
-			m_post_TaskComplete.Reset();
-			m_sem_event.Post();
-		}
-
-		// Blocks current thread execution pending the completion of the parallel task.
-		void WaitForResult()
-		{
-			if( !m_running ) return;
-			if( !m_TaskComplete )
-				m_post_TaskComplete.Wait();
-			else
-				m_post_TaskComplete.Reset();
-		}
+		sptr Block();
+		void PostTask();
+		void WaitForResult();
 
 	protected:
 		// Abstract method run when a task has been posted.  Implementing classes should do
 		// all your necessary processing work here.
 		virtual void Task()=0;
 
-		sptr ExecuteTask()
-		{
-			do
-			{
-				// Wait for a job!
-				m_sem_event.Wait();
-
-				if( m_Done ) break;
-				Task();
-				m_TaskComplete = true;
-				m_post_TaskComplete.Post();
-			} while( !m_Done );
-
-			return 0;
-		}
+		sptr ExecuteTask();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Our fundamental interlocking functions.  All other useful interlocks can be derived
 	// from these little beasties!
-
-	extern long pcsx2_InterlockedExchange(volatile long* Target, long srcval);
-	extern long pcsx2_InterlockedCompareExchange( volatile long* target, long srcval, long comp );
-	extern long pcsx2_InterlockedExchangeAdd( volatile long* target, long addval );
 
 	extern void AtomicExchange( volatile u32& Target, u32 value );
 	extern void AtomicExchangeAdd( volatile u32& Target, u32 value );

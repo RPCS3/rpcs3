@@ -19,14 +19,15 @@
 
 using namespace Threading;
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// CoreEmuThread
-//
+// --------------------------------------------------------------------------------------
+//  CoreEmuThread class
+// --------------------------------------------------------------------------------------
 class CoreEmuThread : public PersistentThread
 {
-public:
+protected:
 	enum ExecutionMode
 	{
+		ExecMode_NoThreadYet,
 		ExecMode_Idle,
 		ExecMode_Running,
 		ExecMode_Suspending,
@@ -34,22 +35,22 @@ public:
 	};
 
 protected:
-	volatile ExecutionMode m_ExecMode;
+	volatile ExecutionMode	m_ExecMode;
+	MutexLock				m_lock_ExecMode;
 
-	Semaphore m_ResumeEvent;
-	Semaphore m_SuspendEvent;
-
-	bool m_resetRecompilers;
-	bool m_resetProfilers;
+	bool			m_resetRecompilers;
+	bool			m_resetProfilers;
 	
-	MutexLock m_lock_ExecMode;
+	PluginManager&	m_plugins;
+	Semaphore		m_ResumeEvent;
+	Semaphore		m_SuspendEvent;
 
 public:
 	static CoreEmuThread& Get();
 
 public:
-	explicit CoreEmuThread();
-	virtual ~CoreEmuThread();
+	explicit CoreEmuThread( PluginManager& plugins );
+	virtual ~CoreEmuThread() throw();
 
 	bool IsSuspended() const { return (m_ExecMode == ExecMode_Suspended); }
 	virtual void Suspend( bool isBlocking = true );

@@ -483,7 +483,7 @@ struct Freeze_v10Compat
 	bool Spinning;
 };
 
-void SaveState::cdvdFreeze()
+void SaveStateBase::cdvdFreeze()
 {
 	FreezeTag( "cdvd" );
 	Freeze( cdvd );

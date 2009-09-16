@@ -195,7 +195,7 @@ void ReportIPU()
 }
 // fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
 
-void SaveState::ipuFreeze()
+void SaveStateBase::ipuFreeze()
 {
 	IPUProcessInterrupt();
 

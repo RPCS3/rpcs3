@@ -35,10 +35,10 @@ CoreEmuThread& CoreEmuThread::Get()
 
 void CoreEmuThread::CpuInitializeMess()
 {
-	GetPluginManager().Open();
+	m_plugins.Open();
 	cpuReset();
 	SysClearExecutionCache();
-	GetPluginManager().Open();
+	m_plugins.Open();
 
 	if( StateRecovery::HasState() )
 	{
@@ -133,53 +133,61 @@ sptr CoreEmuThread::ExecuteTask()
 
 void CoreEmuThread::StateCheck()
 {
+	ScopedLock locker( m_lock_ExecMode );
+
 	switch( m_ExecMode )
 	{
+		case ExecMode_NoThreadYet:
 		case ExecMode_Idle:
 			// threads should never have an idle execution state set while the
 			// thread is in any way active or alive.
 			DevAssert( false, "Invalid execution state detected." );
 		break;
 
-		// These are not the case statements you're looking for.  Move along.
 		case ExecMode_Running:
 			pthread_testcancel();
 		break;
 
 		case ExecMode_Suspending:
 		{
-			ScopedLock locker( m_lock_ExecMode );
+			m_plugins.Close();
 			m_ExecMode = ExecMode_Suspended;
 			m_SuspendEvent.Post();
-		}
+		} 
+		// fall through...
 
 		case ExecMode_Suspended:
+			m_lock_ExecMode.Unlock();
 			while( m_ExecMode == ExecMode_Suspended )
 				m_ResumeEvent.WaitGui();
+
+			m_plugins.Open();
 		break;
 	}
 }
 
-CoreEmuThread::CoreEmuThread() :
-	m_ExecMode( ExecMode_Idle )
-,	m_ResumeEvent()
-,	m_SuspendEvent()
+CoreEmuThread::CoreEmuThread( PluginManager& plugins ) :
+	m_ExecMode( ExecMode_NoThreadYet )
+,	m_lock_ExecMode()
+
 ,	m_resetRecompilers( false )
 ,	m_resetProfilers( false )
 
-,	m_lock_ExecMode()
+,	m_plugins( plugins )
+,	m_ResumeEvent()
+,	m_SuspendEvent()
+
 {
-	PersistentThread::Start();
 }
 
 // Invoked by the pthread_exit or pthread_cancel
 void CoreEmuThread::DoThreadCleanup()
 {
-	GetPluginManager().Close();
+	m_plugins.Shutdown();
 	PersistentThread::DoThreadCleanup();
 }
 
-CoreEmuThread::~CoreEmuThread()
+CoreEmuThread::~CoreEmuThread() throw()
 {
 	PersistentThread::Cancel();
 }
@@ -187,12 +195,25 @@ CoreEmuThread::~CoreEmuThread()
 // Resumes the core execution state, or does nothing is the core is already running.  If
 // settings were changed, resets will be performed as needed and emulation state resumed from
 // memory savestates.
+//
+// Exceptions (can occur on first call only):
+//   PluginInitError     - thrown if a plugin fails init (init is performed on the current thread
+//                         on the first time the thread is resumed from it's initial idle state)
+//   ThreadCreationError - Insufficient system resources to create thread.
+//
 void CoreEmuThread::Resume()
 {
-	if( IsSelf() || !IsRunning() ) return;
-
+	if( IsSelf() ) return;
+	
 	{
 		ScopedLock locker( m_lock_ExecMode );
+
+		if( m_ExecMode == ExecMode_NoThreadYet )
+		{
+			m_plugins.Init();
+			Start();
+			m_ExecMode = ExecMode_Idle;
+		}
 
 		if( m_ExecMode == ExecMode_Running )
 			return;

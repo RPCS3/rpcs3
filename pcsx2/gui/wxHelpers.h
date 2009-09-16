@@ -55,6 +55,7 @@ protected:
 
 public:
 	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
+	virtual ~wxDialogWithHelpers() throw();
 
 	wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
@@ -88,3 +89,6 @@ protected:
 		m_StartNewRadioGroup = true;
 	}
 };
+
+extern bool pxDialogExists( wxWindowID id );
+

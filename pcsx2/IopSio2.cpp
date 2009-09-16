@@ -199,7 +199,7 @@ u8 sio2_fifoOut(){
 	return 0; // No Data
 }
 
-void SaveState::sio2Freeze()
+void SaveStateBase::sio2Freeze()
 {
 	FreezeTag( "sio2" );
 	Freeze(sio2);

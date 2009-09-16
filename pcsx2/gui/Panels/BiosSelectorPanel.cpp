@@ -70,7 +70,6 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth )
 		_("BIOS Search Path:"),						// static box label
 		_("Select folder with PS2 BIOS roms")		// dir picker popup label
 	) )
-,	m_BiosList( NULL )
 {
 	m_ComboBox.SetFont( wxFont( m_ComboBox.GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
 	m_ComboBox.SetMinSize( wxSize( wxDefaultCoord, std::max( m_ComboBox.GetMinSize().GetHeight(), 96 ) ) );
@@ -88,7 +87,6 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth )
 
 Panels::BiosSelectorPanel::~BiosSelectorPanel()
 {
-	safe_delete( m_BiosList );
 }
 
 bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
@@ -102,11 +100,10 @@ bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
 	if( m_FolderPicker.GetPath().Exists() )
 		wxDir::GetAllFiles( m_FolderPicker.GetPath().ToString(), bioslist.get(), L"*.bin", wxDIR_FILES );
 
-	if( (m_BiosList == NULL) || (*bioslist != *m_BiosList) )
+	if( !m_BiosList || (*bioslist != *m_BiosList) )
 		validated = false;
 
-	delete m_BiosList;
-	m_BiosList = bioslist.release();
+	m_BiosList.swap( bioslist );
 
 	return validated;
 }
@@ -116,7 +113,7 @@ void Panels::BiosSelectorPanel::ReloadSettings()
 	m_FolderPicker.Reset();
 }
 
-void Panels::BiosSelectorPanel::Apply( AppConfig& conf )
+void Panels::BiosSelectorPanel::Apply()
 {
 	int sel = m_ComboBox.GetSelection();
 	if( sel == wxNOT_FOUND )
@@ -133,11 +130,13 @@ void Panels::BiosSelectorPanel::Apply( AppConfig& conf )
 		);
 	}
 
-	conf.BaseFilenames.Bios = (*m_BiosList)[(int)m_ComboBox.GetClientData(sel)];
+	g_Conf->BaseFilenames.Bios = (*m_BiosList)[(int)m_ComboBox.GetClientData(sel)];
 }
 
 void Panels::BiosSelectorPanel::DoRefresh()
 {
+	if( !m_BiosList ) return;
+
 	wxFileName right( g_Conf->FullpathToBios() );
 	right.MakeAbsolute();
 

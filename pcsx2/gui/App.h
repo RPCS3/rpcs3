@@ -30,6 +30,12 @@
 class IniInterface;
 
 
+BEGIN_DECLARE_EVENT_TYPES()
+	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_OpenModalDialog, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
+END_DECLARE_EVENT_TYPES()
+
 // ------------------------------------------------------------------------
 // All Menu Options for the Main Window! :D
 // ------------------------------------------------------------------------
@@ -119,6 +125,14 @@ enum MenuIdentifiers
 	MenuId_Debug_Usermode,
 };
 
+enum DialogIdentifiers
+{
+	DialogId_CoreSettings = 0x800,
+	DialogId_BiosSelector,
+	DialogId_LogOptions,
+	DialogId_About,
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // ScopedWindowDisable
 //
@@ -197,53 +211,89 @@ struct AppImageIds
 	} Toolbars;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-class pxAppTraits : public wxGUIAppTraits
+
+struct MsgboxEventResult
 {
-#ifdef __WXDEBUG__
-public:
-	virtual bool ShowAssertDialog(const wxString& msg);
+	Semaphore	WaitForMe;
+	int			result;
 
-protected:
-	virtual wxString GetAssertStackTrace();
-#endif
-
+	MsgboxEventResult() :
+		WaitForMe(), result( 0 )
+	{
+	}
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  Pcsx2App  -  main wxApp class
+// --------------------------------------------------------------------------------------
+
 class Pcsx2App : public wxApp
 {
 protected:
+	wxImageList						m_ConfigImages;
+
+	wxScopedPtr<wxImageList>		m_ToolbarImages;
+	wxScopedPtr<wxBitmap>			m_Bitmap_Logo;
+
+	wxScopedPtr<EmuCoreAllocations>	m_CoreAllocs;
+
+public:
+	wxScopedPtr<PluginManager>		m_CorePlugins;
+	wxScopedPtr<CoreEmuThread>		m_CoreThread;
+
+protected:
+	// Note: Pointers to frames should not be scoped because wxWidgets handles deletion
+	// of these objects internally.
 	MainEmuFrame*		m_MainFrame;
 	ConsoleLogFrame*	m_ProgramLogBox;
-	wxBitmap*			m_Bitmap_Logo;
 
-	wxImageList		m_ConfigImages;
-	bool			m_ConfigImagesAreLoaded;
-
-	wxImageList*	m_ToolbarImages;		// dynamic (pointer) to allow for large/small redefinition.
-	AppImageIds		m_ImageId;
+	bool				m_ConfigImagesAreLoaded;
+	AppImageIds			m_ImageId;
 
 public:
 	Pcsx2App();
 	virtual ~Pcsx2App();
 
-	wxFrame* GetMainWindow() const;
+	void ReloadPlugins();
 
-	bool OnInit();
-	int  OnExit();
-	void CleanUp();
+	void ApplySettings( const AppConfig* oldconf = NULL );
+	void LoadSettings();
+	void SaveSettings();
 
-	void OnInitCmdLine( wxCmdLineParser& parser );
-	bool OnCmdLineParsed( wxCmdLineParser& parser );
-	bool OnCmdLineError( wxCmdLineParser& parser );
+	void PostMenuAction( MenuIdentifiers menu_id ) const;
+	int  ThreadedModalDialog( DialogIdentifiers dialogId );
+	void Ping() const;
+
 	bool PrepForExit();
+	
+	// Executes the emulator using a saved/existing virtual machine state and currently
+	// configured CDVD source device.
+	// Debug assertions:
+	void SysExecute();
+	void SysExecute( CDVD_SourceType cdvdsrc );
 
-#ifdef __WXDEBUG__
-	void OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
-#endif
+	void SysResume()
+	{
+		if( !m_CoreThread ) return;
+		m_CoreThread->Resume();
+	}
+
+	void SysSuspend()
+	{
+		if( !m_CoreThread ) return;
+		m_CoreThread->Suspend();
+	}
+	
+	void SysReset()
+	{
+		m_CoreThread.reset();
+		m_CorePlugins.reset();
+	}
+
+	bool EmuInProgress() const
+	{
+		return m_CoreThread && m_CoreThread->IsRunning();
+	}
 
 	const wxBitmap& GetLogoBitmap();
 	wxImageList& GetImgList_Config();
@@ -253,16 +303,24 @@ public:
 
 	MainEmuFrame& GetMainFrame() const
 	{
+		wxASSERT( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
 		wxASSERT( m_MainFrame != NULL );
 		return *m_MainFrame;
 	}
 
-	void PostMenuAction( MenuIdentifiers menu_id ) const;
-	void Ping() const;
+	// --------------------------------------------------------------------------
+	//  Overrides of wxApp virtuals:
+	// --------------------------------------------------------------------------
+	bool OnInit();
+	int  OnExit();
 
-	void ApplySettings( const AppConfig& newconf );
-	void LoadSettings();
-	void SaveSettings();
+	void OnInitCmdLine( wxCmdLineParser& parser );
+	bool OnCmdLineParsed( wxCmdLineParser& parser );
+	bool OnCmdLineError( wxCmdLineParser& parser );
+
+#ifdef __WXDEBUG__
+	void OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg );
+#endif
 
 	// ----------------------------------------------------------------------------
 	//        Console / Program Logging Helpers
@@ -303,7 +361,9 @@ protected:
 
 	void HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const;
 
+	void OnReloadPlugins( wxCommandEvent& evt );
 	void OnSemaphorePing( wxCommandEvent& evt );
+	void OnOpenModalDialog( wxCommandEvent& evt );
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void OnEmuKeyDown( wxKeyEvent& evt );
 
@@ -322,15 +382,18 @@ protected:
 	void OnUnhandledException() { throw; }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+
+// --------------------------------------------------------------------------------------
+//  AppEmuThread class
+// --------------------------------------------------------------------------------------
+
 class AppEmuThread : public CoreEmuThread
 {
 protected:
 	wxKeyEvent		m_kevt;
 
 public:
-	AppEmuThread();
+	AppEmuThread( PluginManager& plugins );
 	virtual ~AppEmuThread() { }
 
 	virtual void Resume();
@@ -340,14 +403,29 @@ protected:
 	sptr ExecuteTask();
 };
 
-
-
 DECLARE_APP(Pcsx2App)
 
+class EntryGuard
+{
+public:
+	int& Counter;
+	EntryGuard( int& counter ) : Counter( counter )
+	{ ++Counter; }
+
+	virtual ~EntryGuard() throw()
+	{ --Counter; }
+	
+	bool IsReentrant() const { return Counter > 1; }
+};
+
 extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
-extern void LoadPlugins();
-extern void InitPlugins();
-extern void OpenPlugins();
+extern void LoadPluginsPassive();
+extern void LoadPluginsImmediate();
+extern void UnloadPlugins();
 
 extern wxRect wxGetDisplayArea();
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
+
+extern bool HandlePluginError( Exception::PluginError& ex );
+extern bool EmulationInProgress();
+

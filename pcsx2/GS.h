@@ -135,9 +135,16 @@ enum GS_RINGTYPE
 ,	GS_RINGTYPE_QUIT
 };
 
+
+struct MTGS_FreezeData
+{
+	freezeData*	fdata;
+	s32			retval;		// value returned from the call, valid only after an mtgsWaitGS()
+};
+
 class mtgsThreadObject : public Threading::PersistentThread
 {
-	friend class SaveState;
+	friend class SaveStateBase;
 
 protected:
 	// Size of the ringbuffer as a power of 2 -- size is a multiple of simd128s.
@@ -192,6 +199,10 @@ protected:
 #endif
 
 	// the MTGS "dummy" GIFtag info!
+	// fixme: The real PS2 has a single internal PATH and 3 logical sources, not 3 entirely
+	// separate paths.  But for that to work properly we need also interlocked path sources.
+	// That is, when the GIF selects a source, it sticks to that source until an EOP.  Currently
+	// this is not emulated!
 	GIFPath m_path[3];
 
 	// contains aligned memory allocations for gs and Ringbuffer.
@@ -203,7 +214,7 @@ protected:
 
 public:
 	mtgsThreadObject();
-	virtual ~mtgsThreadObject();
+	virtual ~mtgsThreadObject() throw();
 
 	void Start();
 	void Cancel();
@@ -222,12 +233,10 @@ public:
 	void SendPointerPacket( GS_RINGTYPE type, u32 data0, void* data1 );
 
 	u8* GetDataPacketPtr() const;
-	void Freeze( SaveState& state );
+	void Freeze( SaveStateBase& state );
 	void SetEvent();
 
 	void PostVsyncEnd( bool updategs );
-
-	void _close_gs();
 
 protected:
 	// Saves MMX/XMM regs, posts an event to the mtgsThread flag and releases a timeslice.
@@ -331,11 +340,10 @@ enum gsrun
 
 extern int g_SaveGSStream;
 extern int g_nLeftGSFrames;
-extern gzSavingState* g_fGSSave;
 
 #endif
 
 extern void SaveGSState(const wxString& file);
 extern void LoadGSState(const wxString& file);
-extern void RunGSState(gzLoadingState& f);
+extern void RunGSState( memLoadingState& f );
 

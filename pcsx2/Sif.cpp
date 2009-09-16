@@ -499,7 +499,7 @@ __forceinline void dmaSIF2()
 }
 
 
-void SaveState::sifFreeze()
+void SaveStateBase::sifFreeze()
 {
 	FreezeTag("SIFdma");
 

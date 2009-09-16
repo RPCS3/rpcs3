@@ -645,7 +645,7 @@ void SIO_FORCEINLINE sioInterrupt() {
 	psxHu32(0x1070)|=0x80;
 }
 
-void SaveState::sioFreeze()
+void SaveStateBase::sioFreeze()
 {
 	// CRCs for memory cards.
 	u64 m_mcdCRCs[2][8];

@@ -14,6 +14,7 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "Utilities/HashMap.h"
 #include "wxHelpers.h"
 
 #include <wx/cshelp.h>
@@ -276,12 +277,21 @@ void pxTextWrapperBase::Wrap( const wxWindow *win, const wxString& text, int wid
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+HashTools::HashMap< wxWindowID, int > m_DialogIdents( 0, wxID_ANY );
+
+bool pxDialogExists( wxWindowID id )
+{
+	int dest = 0;
+	m_DialogIdents.TryGetValue( id, dest );
+	return (dest > 0);
+}
+
 wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size ) :
 	wxDialog( parent, id, title, pos, size , wxDEFAULT_DIALOG_STYLE), //, (wxCAPTION | wxMAXIMIZE | wxCLOSE_BOX | wxRESIZE_BORDER) ),	// flags for resizable dialogs, currently unused.
 	m_hasContextHelp( hasContextHelp )
 {
+	++m_DialogIdents[GetId()];
+
 	if( hasContextHelp )
 		wxHelpProvider::Set( new wxSimpleHelpProvider() );
 
@@ -289,6 +299,12 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 	// that it should, so I presume the problem is in wxWidgets and that (hopefully!) an updated
 	// version will fix it later.  I tried to fix it using a manual Connect but it didn't do
 	// any good.
+}
+
+wxDialogWithHelpers::~wxDialogWithHelpers()
+{
+	--m_DialogIdents[GetId()];
+	wxASSERT( m_DialogIdents[GetId()] >= 0 );
 }
 
 // ------------------------------------------------------------------------

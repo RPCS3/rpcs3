@@ -19,6 +19,9 @@
 #include "Plugins.h"
 
 #include "Dialogs/ModalPopups.h"
+#include "Dialogs/ConfigurationDialog.h"
+#include "Dialogs/LogOptionsDialog.h"
+
 #include "Utilities/ScopedPtr.h"
 #include "Utilities/HashMap.h"
 
@@ -28,15 +31,16 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
-BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
-END_DECLARE_EVENT_TYPES()
+DEFINE_EVENT_TYPE( pxEVT_SemaphorePing );
+DEFINE_EVENT_TYPE( pxEVT_OpenModalDialog );
+DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
 
-DEFINE_EVENT_TYPE( pxEVT_SemaphorePing )
+bool					UseAdminMode = false;
+wxDirName				SettingsFolder;
+bool					UseDefaultSettingsFolder = true;
 
-bool			UseAdminMode = false;
-AppConfig*		g_Conf = NULL;
-ConfigOverrides OverrideOptions;
+wxScopedPtr<AppConfig>	g_Conf;
+ConfigOverrides			OverrideOptions;
 
 namespace Exception
 {
@@ -57,8 +61,8 @@ namespace Exception
 	};
 }
 
-AppEmuThread::AppEmuThread() :
-	CoreEmuThread()
+AppEmuThread::AppEmuThread( PluginManager& plugins ) :
+	CoreEmuThread( plugins )
 ,	m_kevt()
 {
 }
@@ -127,19 +131,50 @@ void AppEmuThread::StateCheck()
 	}
 }
 
-static bool HandlePluginError( Exception::PluginError& ex )
+// Executes the emulator using a saved/existing virtual machine state and currently
+// configured CDVD source device.
+void Pcsx2App::SysExecute()
 {
+	SysReset();
+	LoadPluginsImmediate();
+	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
+	m_CoreThread->Resume();
+}
+
+// Executes the specified cdvd source and optional elf file.  This command performs a
+// full closure of any existing VM state and starts a fresh VM with the requested
+// sources.
+void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
+{
+	SysReset();
+	LoadPluginsImmediate();
+	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
+	CDVDsys_ChangeSource( cdvdsrc );
+	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
+	m_CoreThread->Resume();
+}
+
+__forceinline bool EmulationInProgress()
+{
+	return wxGetApp().EmuInProgress();
+}
+
+
+bool HandlePluginError( Exception::PluginError& ex )
+{
+	if( pxDialogExists( DialogId_CoreSettings ) ) return true;
+
 	bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
-		_("\n\nPress Ok to go to the Plugin Configuration Panel.") );
+		_("\n\nPress Ok to go to the Plugin Configuration Panel.")
+	);
 
 	if( result )
 	{
 		g_Conf->SettingsTabName = L"Plugins";
-		wxGetApp().PostMenuAction( MenuId_Config_Settings );
-		wxGetApp().Ping();
 
 		// fixme: Send a message to the panel to select the failed plugin.
-		// fixme: handle case where user cancels the settings dialog. (should return FALSE).
+		if( Dialogs::ConfigurationDialog().ShowModal() == wxID_CANCEL )
+			return false;			
 	}
 	return result;
 }
@@ -162,11 +197,14 @@ sptr AppEmuThread::ExecuteTask()
 
 			if( result )
 			{
-				wxGetApp().PostMenuAction( MenuId_Config_BIOS );
-				wxGetApp().Ping();
-
-				// fixme: handle case where user cancels the settings dialog. (should return FALSE).
-				// fixme: automatically re-try emu startup here...
+				if( wxGetApp().ThreadedModalDialog( DialogId_BiosSelector ) == wxID_CANCEL )
+				{
+					// fixme: handle case where user cancels the settings dialog. (should return FALSE).
+				}
+				else
+				{
+					// fixme: automatically re-try emu startup here...
+				}
 			}
 		}
 	}
@@ -174,10 +212,13 @@ sptr AppEmuThread::ExecuteTask()
 	catch( Exception::PluginError& ex )
 	{
 		GetPluginManager().Close();
-		if( HandlePluginError( ex ) )
+		Console::Error( ex.FormatDiagnosticMessage() );
+		Msgbox::Alert( ex.FormatDisplayMessage(), _("Plugin Open Error") );
+		
+		/*if( HandlePluginError( ex ) )
 		{
 			// fixme: automatically re-try emu startup here...
-		}
+		}*/
 	}
 	// ----------------------------------------------------------------------------
 	// [TODO] : Add exception handling here for debuggable PS2 exceptions that allows
@@ -193,8 +234,6 @@ sptr AppEmuThread::ExecuteTask()
 	return 0;
 }
 
-
-wxFrame* Pcsx2App::GetMainWindow() const { return m_MainFrame; }
 
 void Pcsx2App::OpenWizardConsole()
 {
@@ -254,7 +293,7 @@ void Pcsx2App::ReadUserModeSettings()
 		IniLoader loader( *conf_usermode );
 		g_Conf->LoadSaveUserMode( loader, groupname );
 
-		if( !wxFile::Exists( g_Conf->FullPathToConfig() ) )
+		if( !wxFile::Exists( GetSettingsFilename() ) )
 		{
 			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
 			// (we skip the first page since it's a usermode.ini thing)
@@ -361,7 +400,7 @@ bool Pcsx2App::OnInit()
     wxInitAllImageHandlers();
 	if( !wxApp::OnInit() ) return false;
 
-	g_Conf = new AppConfig();
+	g_Conf.reset( new AppConfig() );
 
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
@@ -371,6 +410,8 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_MSGBOX,			pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
 	Connect( pxEVT_CallStackBox,	pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
 	Connect( pxEVT_SemaphorePing,	wxCommandEventHandler( Pcsx2App::OnSemaphorePing ) );
+	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
+	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
 
 	Connect( pxID_Window_GS, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
@@ -406,9 +447,51 @@ bool Pcsx2App::OnInit()
 		SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
 	    m_MainFrame->Show();
 
-		SysInit();
-		ApplySettings( *g_Conf );
-		InitPlugins();
+		SysDetect();
+		ApplySettings();
+
+		m_CoreAllocs.reset( new EmuCoreAllocations() );
+
+		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
+		{
+			wxString message( _("The following cpu recompilers failed to initialize and will not be available:\n\n") );
+
+			if( !m_CoreAllocs->RecSuccess_EE )
+			{
+				message += L"\t* R5900 (EE)\n";
+				g_Session.ForceDisableEErec = true;
+			}
+
+			if( !m_CoreAllocs->RecSuccess_IOP )
+			{
+				message += L"\t* R3000A (IOP)\n";
+				g_Session.ForceDisableIOPrec = true;
+			}
+
+			if( !m_CoreAllocs->RecSuccess_VU0 )
+			{
+				message += L"\t* VU0\n";
+				g_Session.ForceDisableVU0rec = true;
+			}
+
+			if( !m_CoreAllocs->RecSuccess_VU1 )
+			{
+				message += L"\t* VU1\n";
+				g_Session.ForceDisableVU1rec = true;
+			}
+
+			message += pxE( ".Popup Error:EmuCore:MemoryForRecs",
+				L"These errors are the result of memory allocation failures (see the program log for details). "
+				L"Closing out some memory hogging background tasks may resolve this error.\n\n"
+				L"These recompilers have been disabled and interpreters will be used in their place.  "
+				L"Interpreters can be very slow, so don't get too excited.  Press OK to continue or CANCEL to close PCSX2."
+			);
+
+			if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
+				return false;
+		}
+
+		LoadPluginsPassive();
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::StartupAborted& ex )
@@ -417,10 +500,16 @@ bool Pcsx2App::OnInit()
 		return false;
 	}
 	// ----------------------------------------------------------------------------
-	catch( Exception::PluginError& ex )
+	// Failures on the core initialization procedure (typically OutOfMemory errors) are bad,
+	// since it means the emulator is completely non-functional.  Let's pop up an error and
+	// exit gracefully-ish.
+	//
+	catch( Exception::RuntimeError& ex )
 	{
-		if( !HandlePluginError( ex ) )
-			return false;
+		Console::Error( ex.FormatDiagnosticMessage() );
+		Msgbox::Alert( ex.FormatDisplayMessage() + L"\n\nPress OK to close PCSX2.",
+			_("PCSX2 Critical Error"), wxICON_ERROR );
+		return false;
 	}
     return true;
 }
@@ -433,11 +522,27 @@ void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 	if( m_MainFrame == NULL ) return;
 
 	wxCommandEvent joe( wxEVT_COMMAND_MENU_SELECTED, menu_id );
-	m_MainFrame->GetEventHandler()->AddPendingEvent( joe );
+	if( wxThread::IsMain() )
+		m_MainFrame->GetEventHandler()->ProcessEvent( joe );
+	else
+		m_MainFrame->GetEventHandler()->AddPendingEvent( joe );
+}
+
+int Pcsx2App::ThreadedModalDialog( DialogIdentifiers dialogId )
+{
+	wxASSERT( !wxThread::IsMain() );		// don't call me from MainThread!
+
+	MsgboxEventResult result;
+	wxCommandEvent joe( pxEVT_OpenModalDialog, dialogId );
+	joe.SetClientData( &result );
+	AddPendingEvent( joe );
+	result.WaitForMe.WaitNoCancel();
+	return result.result;
 }
 
 // Waits for the main GUI thread to respond.  If run from the main GUI thread, returns
-// immediately without error.
+// immediately without error.  Use this on non-GUI threads to have them sleep until
+// the GUI has processed all its pending messages.
 void Pcsx2App::Ping() const
 {
 	if( wxThread::IsMain() ) return;
@@ -458,6 +563,53 @@ void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
 	((Semaphore*)evt.GetClientData())->Post();
 }
 
+void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
+{
+	using namespace Dialogs;
+	
+	MsgboxEventResult& evtres( *((MsgboxEventResult*)evt.GetClientData()) );
+	switch( evt.GetId() )
+	{
+		case DialogId_CoreSettings:
+		{
+			static int _guard = 0;
+			EntryGuard guard( _guard );
+			if( guard.IsReentrant() ) return;
+			evtres.result = ConfigurationDialog().ShowModal();
+		}
+		break;
+
+		case DialogId_BiosSelector:
+		{
+			static int _guard = 0;
+			EntryGuard guard( _guard );
+			if( guard.IsReentrant() ) return;
+			evtres.result = BiosSelectorDialog().ShowModal();
+		}
+		break;
+		
+		case DialogId_LogOptions:
+		{
+			static int _guard = 0;
+			EntryGuard guard( _guard );
+			if( guard.IsReentrant() ) return;
+			evtres.result = LogOptionsDialog().ShowModal();
+		}
+		break;
+		
+		case DialogId_About:
+		{
+			static int _guard = 0;
+			EntryGuard guard( _guard );
+			if( guard.IsReentrant() ) return;
+			evtres.result = AboutBoxDialog().ShowModal();
+		}
+		break;
+	}
+
+	evtres.WaitForMe.Post();
+}
+
 void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 {
 	Msgbox::OnEvent( evt );
@@ -467,16 +619,9 @@ void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 
 void Pcsx2App::CleanupMess()
 {
-	safe_delete( m_Bitmap_Logo );
-	safe_delete( g_Conf );
-}
-
-// This cleanup procedure is issued by wxWidgets prior to destroying base windows and window
-// classes.
-void Pcsx2App::CleanUp()
-{
-	SysShutdown();
-	wxApp::CleanUp();
+	m_CorePlugins.reset();
+	m_ProgramLogBox = NULL;
+	m_MainFrame = NULL;
 }
 
 void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
@@ -489,7 +634,11 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	catch( Exception::PluginError& ex )
 	{
 		Console::Error( ex.FormatDiagnosticMessage() );
-		Msgbox::Alert( ex.FormatDisplayMessage() );
+		if( !HandlePluginError( ex ) )
+		{
+			Console::Error( L"User-canceled plugin configuration after load failure.  Plugins not loaded!" );
+			Msgbox::Alert( _("Warning!  Plugins have not been loaded.  PCSX2 will be inoperable.") );
+		}
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::RuntimeError& ex )
@@ -505,14 +654,14 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 
 // Common exit handler which can be called from any event (though really it should
 // be called only from CloseWindow handlers since that's the more appropriate way
-// to handle window closures)
+// to handle cancelable window closures)
+//
+// returns true if the app can close, or false if the close event was canceled by
+// the glorious user, whomever (s)he-it might be.
 bool Pcsx2App::PrepForExit()
 {
-	SysShutdown();
+	m_CoreThread.reset();
 	CleanupMess();
-
-	m_ProgramLogBox = NULL;
-	m_MainFrame = NULL;
 
 	return true;
 }
@@ -521,8 +670,11 @@ int Pcsx2App::OnExit()
 {
 	PrepForExit();
 
-	if( g_Conf != NULL )
+	if( g_Conf )
 		SaveSettings();
+
+	while( wxGetLocale() != NULL )
+		delete wxGetLocale();
 
 	return wxApp::OnExit();
 }
@@ -540,47 +692,48 @@ Pcsx2App::Pcsx2App()  :
 
 Pcsx2App::~Pcsx2App()
 {
+	// Typically OnExit cleans everything up before we get here, *unless* we cancel
+	// out of program startup in OnInit (return false) -- then remaning cleanup needs
+	// to happen here in the destructor.
+
 	CleanupMess();
-	while( wxGetLocale() != NULL )
-		delete wxGetLocale();
 }
 
-
-void Pcsx2App::ApplySettings( const AppConfig& newconf )
+void Pcsx2App::ApplySettings( const AppConfig* oldconf )
 {
+	DevAssert( wxThread::IsMain(), "ApplySettings valid from the GUI thread only." );
 
-	if( &newconf != g_Conf )
+	// Ensure existence of necessary documents folders.  Plugins and other parts
+	// of PCSX2 rely on them.
+
+	g_Conf->Folders.MemoryCards.Mkdir();
+	g_Conf->Folders.Savestates.Mkdir();
+	g_Conf->Folders.Snapshots.Mkdir();
+
+	g_Conf->EmuOptions.BiosFilename = g_Conf->FullpathToBios();
+
+	// Update the compression attribute on the Memcards folder.
+	// Memcards generally compress very well via NTFS compression.
+
+	NTFS_CompressFile( g_Conf->Folders.MemoryCards.ToString(), g_Conf->McdEnableNTFS );
+
+	if( (oldconf == NULL) || (oldconf->LanguageId != g_Conf->LanguageId) )
 	{
-		// Need to unload the current emulation state if the user changed plugins, because
-		// the whole plugin system needs to be re-loaded.
-
-		const PluginInfo* pi = tbl_PluginInfo-1;
-		while( ++pi, pi->shortname != NULL )
+		wxDoNotLogInThisScope please;
+		if( !i18n_SetLanguage( g_Conf->LanguageId ) )
 		{
-			if( newconf.FullpathTo( pi->id ) != g_Conf->FullpathTo( pi->id ) )
-				break;
-		}
-		if( pi->shortname != NULL )
-		{
-			// [TODO] : Post notice that this shuts down existing emulation.
-			SysEndExecution();
-			safe_delete( g_plugins );
-			// Think safe to do this earlier, but not positive.
-			// Have to update the config *before* loading the new plugins.
-			*g_Conf = newconf;
-			LoadPlugins();
-		}
-		else {
-			*g_Conf = newconf;
+			if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
+			{
+				i18n_SetLanguage( wxLANGUAGE_ENGLISH );
+			}
 		}
 	}
 
-	g_Conf->Apply();
 	if( m_MainFrame != NULL )
 		m_MainFrame->ApplySettings();
 
-	if( g_EmuThread != NULL )
-		g_EmuThread->ApplySettings( g_Conf->EmuOptions );
+	if( m_CoreThread )
+		m_CoreThread->ApplySettings( g_Conf->EmuOptions );
 }
 
 void Pcsx2App::LoadSettings()

@@ -39,25 +39,16 @@ Pcsx2Config EmuConfig;
 
 // disable all session overrides by default...
 SessionOverrideFlags	g_Session = {false};
-CoreEmuThread*			g_EmuThread;
 
-bool sysInitialized = false;
-
-// -----------------------------------------------------------------------
 // This function should be called once during program execution.
-//
 void SysDetect()
 {
 	using namespace Console;
 
-#ifdef __LINUX__
-    // Haven't rigged up getting the svn version yet... --arcum42
-	Notice("PCSX2 %d.%d.%d - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo);
-#else
 	Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
-#endif
+
 	Notice("Savestate version: %x", g_SaveVersion);
 
 	cpudetectInit();
@@ -82,49 +73,51 @@ void SysDetect()
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
 	) );
+	
+	wxArrayString features[2];	// 2 lines, for readability!
+	
+	if( x86caps.hasMultimediaExtensions )			features[0].Add( L"MMX" );
+	if( x86caps.hasStreamingSIMDExtensions )		features[0].Add( L"SSE" );
+	if( x86caps.hasStreamingSIMD2Extensions )		features[0].Add( L"SSE2" );
+	if( x86caps.hasStreamingSIMD3Extensions )		features[0].Add( L"SSE3" );
+	if( x86caps.hasSupplementalStreamingSIMD3Extensions ) features[0].Add( L"SSSE3" );
+	if( x86caps.hasStreamingSIMD4Extensions )		features[0].Add( L"SSE4.1" );
+	if( x86caps.hasStreamingSIMD4Extensions2 )		features[0].Add( L"SSE4.2" );
 
-	WriteLn( "Features:" );
-	WriteLn(
-		"\t%sDetected MMX\n"
-		"\t%sDetected SSE\n"
-		"\t%sDetected SSE2\n"
-		"\t%sDetected SSE3\n"
-		"\t%sDetected SSSE3\n"
-		"\t%sDetected SSE4.1\n"
-		"\t%sDetected SSE4.2\n", 
-			x86caps.hasMultimediaExtensions     ? "" : "Not ",
-			x86caps.hasStreamingSIMDExtensions  ? "" : "Not ",
-			x86caps.hasStreamingSIMD2Extensions ? "" : "Not ",
-			x86caps.hasStreamingSIMD3Extensions ? "" : "Not ",
-			x86caps.hasSupplementalStreamingSIMD3Extensions ? "" : "Not ",
-			x86caps.hasStreamingSIMD4Extensions  ? "" : "Not ",
-			x86caps.hasStreamingSIMD4Extensions2 ? "" : "Not "
-	);
+	if( x86caps.hasMultimediaExtensionsExt )		features[1].Add( L"MMX2  " );
+	if( x86caps.has3DNOWInstructionExtensions )		features[1].Add( L"3DNOW " );
+	if( x86caps.has3DNOWInstructionExtensionsExt )	features[1].Add( L"3DNOW2" );
+	if( x86caps.hasStreamingSIMD4ExtensionsA )		features[1].Add( L"SSE4a " );
 
-	if ( x86caps.VendorName[0] == 'A' ) //AMD cpu
-	{
-		WriteLn( " Extended AMD Features:" );
-		WriteLn(
-			"\t%sDetected MMX2\n"
-			"\t%sDetected 3DNOW\n"
-			"\t%sDetected 3DNOW2\n"
-			"\t%sDetected SSE4a\n", 
-			x86caps.hasMultimediaExtensionsExt       ? "" : "Not ",
-			x86caps.has3DNOWInstructionExtensions    ? "" : "Not ",
-			x86caps.has3DNOWInstructionExtensionsExt ? "" : "Not ",
-			x86caps.hasStreamingSIMD4ExtensionsA     ? "" : "Not "
-		);
-	}
+	wxString result[2];
+	JoinString( result[0], features[0], L".. " );
+	JoinString( result[1], features[1], L".. " );
+
+	WriteLn( L"Features Detected:\n\t" + result[0] + (result[1].IsEmpty() ? wxEmptyString : (L"\n\t" + result[1])) + L"\n" );
+
+	//if ( x86caps.VendorName[0] == 'A' ) //AMD cpu
 
 	Console::ClearColor();
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Allocates memory for all PS2 systems.
-bool SysAllocateMem()
+// returns the translated error message for the Virtual Machine failing to allocate!
+static wxString GetMemoryErrorVM()
 {
-	// Allocate PS2 system ram space (required by interpreters and recompilers both)
+	return pxE( ".Popup Error:EmuCore::MemoryForVM",
+		L"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. "
+		L"Close out some memory hogging background tasks and try again."
+	);
+}
 
+EmuCoreAllocations::EmuCoreAllocations()
+{
+	Console::Status( "Initializing PS2 virtual machine..." );
+
+	RecSuccess_EE		= false;
+	RecSuccess_IOP		= false;
+	RecSuccess_VU0		= false;
+	RecSuccess_VU1		= false;
+	
 	try
 	{
 		vtlb_Core_Alloc();
@@ -132,147 +125,116 @@ bool SysAllocateMem()
 		psxMemAlloc();
 		vuMicroMemAlloc();
 	}
-	catch( Exception::OutOfMemory& )
+	// ----------------------------------------------------------------------------
+	catch( Exception::OutOfMemory& ex )
 	{
-		// TODO : Should this error be handled here or allowed to be handled by the main
-		// exception handler?
+		wxString newmsg( ex.UserMsg() + L"\n\n" + GetMemoryErrorVM() );
+		ex.UserMsg() = newmsg;
+		CleanupMess();
+		throw;
+	}
+	catch( std::bad_alloc& ex )
+	{
+		CleanupMess();
 
-		// Failures on the core initialization of memory is bad, since it means the emulator is
-		// completely non-functional.
+		// re-throw std::bad_alloc as something more friendly.
 
-		//Msgbox::Alert( "Failed to allocate memory needed to run pcsx2.\n\nError: %s", ex.cMessage() );
-		SysShutdownMem();
-		return false;
+		throw Exception::OutOfMemory(
+			wxsFormat(			// Diagnostic (english)
+				L"std::bad_alloc caught while trying to allocate memory for the PS2 Virtual Machine.\n"
+				L"Error Details: " + wxString::FromUTF8( ex.what() )
+			),
+
+			GetMemoryErrorVM()	// translated
+		);
 	}
 
-	return true;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Allocates memory for all recompilers, and force-disables any recs that fail to initialize.
-// This should be done asap, since the recompilers tend to demand a lot of system resources,
-// and prefer to have those resources at specific address ranges.  The sooner memory is
-// allocated, the better.
-//
-// Returns FALSE on *critical* failure (GUI should issue a msg and exit).
-void SysAllocateDynarecs()
-{
-	// Attempt to initialize the recompilers.
-	// Most users want to use recs anyway, and if they are using interpreters I don't think the
-	// extra few megs of allocation is going to be an issue.
+	Console::Status( "Allocating memory for recompilers..." );
 
 	try
 	{
-		// R5900 and R3000a must be rec-enabled together for now so if either fails they both fail.
 		recCpu.Allocate();
-		psxRec.Allocate();
+		RecSuccess_EE = true;
 	}
-	catch( Exception::BaseException& )
+	catch( Exception::BaseException& ex )
 	{
-		// TODO : Fix this message.  It should respond according to the user's
-		// currently configured recompiler.interpreter options, for example.
-
-		/*Msgbox::Alert(
-			"The EE/IOP recompiler failed to initialize with the following error:\n\n"
-			"%s"
-			"\n\nThe EE/IOP interpreter will be used instead (slow!).", params
-			ex.cMessage()
-		);*/
-
-		g_Session.ForceDisableEErec = true;
-
+		Console::Error( L"EE Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		recCpu.Shutdown();
+	}
+
+	try
+	{
+		psxRec.Allocate();
+		RecSuccess_IOP = true;
+	}
+	catch( Exception::BaseException& ex )
+	{
+		Console::Error( L"IOP Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		psxRec.Shutdown();
 	}
 
+	// hmm! : VU0 and VU1 pre-allocations should do sVU and mVU separately?  Sounds complicated. :(
+	
 	try
 	{
 		VU0micro::recAlloc();
+		RecSuccess_VU0 = true;
 	}
-	catch( Exception::BaseException& )
+	catch( Exception::BaseException& ex )
 	{
-
-		// TODO : Fix this message.  It should respond according to the user's
-		// currently configured recompiler.interpreter options, for example.
-/*
-		Msgbox::Alert(
-			"The VU0 recompiler failed to initialize with the following error:\n\n"
-			"%s"
-			"\n\nThe VU0 interpreter will be used for this session (may slow down some games).", params
-			ex.cMessage()
-		);
-*/
-
-		g_Session.ForceDisableVU0rec = true;
+		Console::Error( L"VU0 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		VU0micro::recShutdown();
 	}
 
 	try
 	{
 		VU1micro::recAlloc();
+		RecSuccess_VU1 = true;
 	}
-	catch( Exception::BaseException& )
+	catch( Exception::BaseException& ex )
 	{
-
-		// TODO : Fix this message.  It should respond according to the user's
-		// currently configured recompiler.interpreter options, for example.
-/*
-		Msgbox::Alert(
-			"The VU1 recompiler failed to initialize with the following error:\n\n"
-			"%s"
-			"\n\nThe VU1 interpreter will be used for this session (will slow down most games).", params
-			ex.cMessage()
-		);
-*/
-
-		g_Session.ForceDisableVU1rec = true;
+		Console::Error( L"VU1 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		VU1micro::recShutdown();
 	}
 
-	// If both VUrecs failed, then make sure the SuperVU is totally closed out:
-	if( !CHECK_VU0REC && !CHECK_VU1REC)
+	// If both VUrecs failed, then make sure the SuperVU is totally closed out, because it 
+	// actually initializes everything once and then shares it between both VU recs.
+	if( !RecSuccess_VU0 && !RecSuccess_VU1 )
+		SuperVUDestroy( -1 );
+}
+
+void EmuCoreAllocations::CleanupMess() throw()
+{
+	try
+	{
+		// Special SuperVU "complete" terminator.
 		SuperVUDestroy( -1 );
 
+		VU1micro::recShutdown();
+		VU0micro::recShutdown();
+
+		psxRec.Shutdown();
+		recCpu.Shutdown();
+
+		vuMicroMemShutdown();
+		psxMemShutdown();
+		memShutdown();
+		vtlb_Core_Shutdown();
+	}
+	DESTRUCTOR_CATCHALL
 }
 
-// This should be called last thing before PCSX2 exits.
-//
-void SysShutdownMem()
+EmuCoreAllocations::~EmuCoreAllocations() throw()
 {
-	if( sysInitialized )
-		SysShutdown();
-
-	vuMicroMemShutdown();
-	psxMemShutdown();
-	memShutdown();
-	vtlb_Core_Shutdown();
+	CleanupMess();
 }
 
-// This should generally be called right before calling SysShutdownMem(), although you can optionally
-// use it in conjunction with SysAllocDynarecs to allocate/free the dynarec resources on the fly (as
-// risky as it might be, since dynarecs could very well fail on the second attempt).
-void SysShutdownDynarecs()
+bool EmuCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const
 {
-	// Special SuperVU "complete" terminator.
-	SuperVUDestroy( -1 );
-
-	VU0micro::recShutdown();
-	VU1micro::recShutdown();
-
-	psxRec.Shutdown();
-	recCpu.Shutdown();
-}
-
-void SysShutdown()
-{
-	sysInitialized = false;
-
-	Console::Status( "Shutting down PS2 virtual machine..." );
-	SysEndExecution();
-	safe_delete( g_plugins );
-
-	SysShutdownDynarecs();
-	SysShutdownMem();
+	return	(recOpts.EnableEE && !RecSuccess_EE) ||
+			(recOpts.EnableIOP && !RecSuccess_IOP) ||
+			(recOpts.EnableVU0 && !RecSuccess_VU0) ||
+			(recOpts.EnableVU1 && !RecSuccess_VU1);
 }
 
 // Resets all PS2 cpu execution caches, which does not affect that actual PS2 state/condition.
@@ -291,63 +253,6 @@ void SysClearExecutionCache()
 	vuMicroCpuReset();
 }
 
-bool EmulationInProgress()
-{
-	return (g_EmuThread != NULL) && g_EmuThread->IsRunning();
-}
-
-// Executes the specified cdvd source and optional elf file.  This command performs a
-// full closure of any existing VM state and starts a fresh VM with the requested
-// sources.
-void SysExecute( CoreEmuThread* newThread, CDVD_SourceType cdvdsrc )
-{
-	wxASSERT( newThread != NULL );
-	safe_delete( g_EmuThread );
-
-	CDVDsys_ChangeSource( cdvdsrc );
-	g_EmuThread = newThread;
-	g_EmuThread->Resume();
-}
-
-// Executes the emulator using a saved/existing virtual machine state and currently
-// configured CDVD source device.
-// Debug assertions:
-void SysExecute( CoreEmuThread* newThread )
-{
-	wxASSERT( newThread != NULL );
-	safe_delete( g_EmuThread );
-
-	g_EmuThread = newThread;
-	g_EmuThread->Resume();
-}
-
-// Once execution has been ended no action can be taken on the Virtual Machine (such as
-// saving states).  No assertions or exceptions.
-void SysEndExecution()
-{
-	safe_delete( g_EmuThread );
-	GetPluginManager().Shutdown();
-}
-
-void SysSuspend()
-{
-	if( g_EmuThread != NULL )
-		g_EmuThread->Suspend();
-}
-
-void SysResume()
-{
-	if( g_EmuThread != NULL )
-		g_EmuThread->Resume();
-}
-
-
-void SysRestorableReset()
-{
-	if( !EmulationInProgress() ) return;
-	StateRecovery::MakeFull();
-}
-
 // The calling function should trap and handle exceptions as needed.
 // Exceptions:
 //   Exception::StateLoadError - thrown when a fully recoverable exception ocurred.  The
@@ -355,35 +260,19 @@ void SysRestorableReset()
 //
 //   Any other exception means the Virtual Memory state is indeterminate and probably
 //   invalid.
-void SysLoadState( const wxString& file )
+void SysLoadState( const wxString& srcfile )
 {
+	SafeArray<u8> buf;
+	memLoadingState joe( buf );		// this could throw n StateLoadError.
+
 	// we perform a full backup to memory first so that we can restore later if the
 	// load fails.  fixme: should this be made optional?  It could have significant
 	// speed impact on state loads on slower machines with low ram. >_<
 	StateRecovery::MakeFull();
 
-	gzLoadingState joe( file );		// this'll throw an StateLoadError.
-
-	GetPluginManager().Open();
-	cpuReset();
 	SysClearExecutionCache();
-
+	cpuReset();
 	joe.FreezeAll();
-
-	if( GSsetGameCRC != NULL )
-		GSsetGameCRC(ElfCRC, g_ZeroGSOptions);
-}
-
-void SysReset()
-{
-	Console::Status( "Resetting PS2 virtual machine..." );
-
-	SysEndExecution();
-	StateRecovery::Clear();
-	ElfCRC = 0;
-
-	// Note : No need to call cpuReset() here.  It gets called automatically before the
-	// emulator resumes execution.
 }
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the
@@ -413,30 +302,4 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 		}
 	}
 	return Mem;
-}
-
-// Ensures existence of necessary folders, and performs error handling if the
-// folders fail to create.
-static void InitFolderStructure()
-{
-
-}
-
-// Returns FALSE if the core/recompiler memory allocations failed.
-bool SysInit()
-{
-	if( sysInitialized ) return true;
-	sysInitialized = true;
-
-	SysDetect();
-
-	PCSX2_MEM_PROTECT_BEGIN();
-	Console::Status( "Initializing PS2 virtual machine..." );
-	if( !SysAllocateMem() )
-		return false;	// critical memory allocation failure;
-
-	SysAllocateDynarecs();
-	PCSX2_MEM_PROTECT_END();
-
-	return true;
 }

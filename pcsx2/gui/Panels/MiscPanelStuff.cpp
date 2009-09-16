@@ -60,37 +60,55 @@ void Panels::StaticApplyState::StartWizard()
 bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 {
 	bool retval = true;
+
+	// Save these settings so we can restore them if the Apply fails.
+
+	bool		oldAdminMode		= UseAdminMode;
+	wxDirName	oldSettingsFolder	= SettingsFolder;
+	bool		oldUseDefSet		= UseDefaultSettingsFolder;
+
+	AppConfig confcopy( *g_Conf );
+
 	try
 	{
-		AppConfig confcopy( *g_Conf );
-
-		g_ApplyState.UseAdminMode = UseAdminMode;
-
 		PanelApplyList_t::iterator yay = PanelList.begin();
 		while( yay != PanelList.end() )
 		{
 			//DbgCon::Status( L"Writing settings for: " + (*yay)->GetLabel() );
 			if( (pageid < 0) || (*yay)->IsOnPage( pageid ) )
-				(*yay)->Apply( confcopy );
+				(*yay)->Apply();
 			yay++;
 		}
 
 		// If an exception is thrown above, this code below won't get run.
 		// (conveniently skipping any option application! :D)
 
-		UseAdminMode = g_ApplyState.UseAdminMode;
-		wxGetApp().ApplySettings( confcopy );
+		wxGetApp().ApplySettings( &confcopy );
 		if( saveOnSuccess )
 			wxGetApp().SaveSettings();
 	}
 	catch( Exception::CannotApplySettings& ex )
 	{
+		UseAdminMode = oldAdminMode;
+		SettingsFolder = oldSettingsFolder;
+		UseDefaultSettingsFolder = oldUseDefSet;
+		*g_Conf = confcopy;
+
 		wxMessageBox( ex.FormatDisplayMessage(), _("Cannot apply settings...") );
 
 		if( ex.GetPanel() != NULL )
 			ex.GetPanel()->SetFocusToMe();
 
 		retval = false;
+	}
+	catch( ... )
+	{
+		UseAdminMode = oldAdminMode;
+		SettingsFolder = oldSettingsFolder;
+		UseDefaultSettingsFolder = oldUseDefSet;
+		*g_Conf = confcopy;
+
+		throw;
 	}
 
 	return retval;
@@ -133,12 +151,12 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int id
 	SetSizer( &s_boxer );
 }
 
-void Panels::UsermodeSelectionPanel::Apply( AppConfig& conf )
+void Panels::UsermodeSelectionPanel::Apply()
 {
 	if( !m_radio_cwd->GetValue() && !m_radio_user->GetValue() )
 		throw Exception::CannotApplySettings( this, wxLt( "You must select one of the available user modes before proceeding." ) );
 
-	g_ApplyState.UseAdminMode = m_radio_cwd->GetValue();
+	UseAdminMode = m_radio_cwd->GetValue();
 }
 
 // -----------------------------------------------------------------------
@@ -173,20 +191,20 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int id
 	SetSizer( &s_lang );
 }
 
-void Panels::LanguageSelectionPanel::Apply( AppConfig& conf )
+void Panels::LanguageSelectionPanel::Apply()
 {
 	// The combo box's order is sorted and may not match our m_langs order, so
 	// we have to do a string comparison to find a match:
 
 	wxString sel( m_picker->GetString( m_picker->GetSelection() ) );
 
-	conf.LanguageId = wxLANGUAGE_DEFAULT;	// use this if no matches found
+	g_Conf->LanguageId = wxLANGUAGE_DEFAULT;	// use this if no matches found
 	int size = m_langs.size();
 	for( int i=0; i<size; ++i )
 	{
 		if( m_langs[i].englishName == sel )
 		{
-			conf.LanguageId = m_langs[i].wxLangId;
+			g_Conf->LanguageId = m_langs[i].wxLangId;
 			break;
 		}
 	}

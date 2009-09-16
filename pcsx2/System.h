@@ -23,35 +23,45 @@ static const int PCSX2_VersionHi	= 0;
 static const int PCSX2_VersionMid	= 9;
 static const int PCSX2_VersionLo	= 7;
 
-
 class CoreEmuThread;
 
-extern bool SysInit();
+// --------------------------------------------------------------------------------------
+//  EmuCoreAllocations class
+// --------------------------------------------------------------------------------------
+class EmuCoreAllocations
+{
+public:
+	// This set of booleans defaults to false and are only set TRUE if the corresponding
+	// recompilers succeeded to initialize/allocate.  The host application should honor
+	// these booleans when selecting between recompiler or interpreter, since recompilers
+	// will fail to operate if these are "false."
+
+	bool	RecSuccess_EE:1,
+			RecSuccess_IOP:1,
+			RecSuccess_VU0:1,
+			RecSuccess_VU1:1;
+
+protected:
+
+public:
+	EmuCoreAllocations();
+	virtual ~EmuCoreAllocations() throw();
+
+	bool HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const;
+
+protected:
+	void CleanupMess() throw();
+};
+
+
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
-extern void SysReset();					// Resets the various PS2 cpus, sub-systems, and recompilers.
-
-extern void SysExecute( CoreEmuThread* newThread );
-extern void SysExecute( CoreEmuThread* newThread, CDVD_SourceType cdvdsrc );
-extern void SysEndExecution();
-
-extern void SysSuspend();
-extern void SysResume();
-
-extern bool SysAllocateMem();			// allocates memory for all PS2 systems; returns FALSe on critical error.
-extern void SysAllocateDynarecs();		// allocates memory for all dynarecs, and force-disables any failures.
-extern void SysShutdownDynarecs();
-extern void SysShutdownMem();
-extern void SysShutdown();
 
 extern void SysLoadState( const wxString& file );
-extern void SysRestorableReset();		// Saves the current emulation state prior to spu reset.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
 
 
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 extern void vSyncDebugStuff( uint frame );
-
-extern CoreEmuThread*	g_EmuThread;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //

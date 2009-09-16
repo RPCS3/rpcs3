@@ -34,12 +34,14 @@ using namespace wxHelpers;
 using namespace Threading;
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE(wxEVT_EnumeratedNext, -1)
-	DECLARE_EVENT_TYPE(wxEVT_EnumerationFinished, -1)
+	DECLARE_EVENT_TYPE(pxEVT_EnumeratedNext, -1)
+	DECLARE_EVENT_TYPE(pxEVT_EnumerationFinished, -1)
+	DECLARE_EVENT_TYPE(pxEVT_ShowStatusBar, -1)
 END_DECLARE_EVENT_TYPES()
 
-DEFINE_EVENT_TYPE(wxEVT_EnumeratedNext)
-DEFINE_EVENT_TYPE(wxEVT_EnumerationFinished);
+DEFINE_EVENT_TYPE(pxEVT_EnumeratedNext)
+DEFINE_EVENT_TYPE(pxEVT_EnumerationFinished);
+DEFINE_EVENT_TYPE(pxEVT_ShowStatusBar);
 
 typedef s32		(CALLBACK* PluginTestFnptr)();
 typedef void	(CALLBACK* PluginConfigureFnptr)();
@@ -55,8 +57,10 @@ namespace Exception
 	};
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  PluginEnumerator class
+// --------------------------------------------------------------------------------------
+
 class PluginEnumerator
 {
 protected:
@@ -74,15 +78,15 @@ public:
 	// Constructor!
 	//
 	// Possible Exceptions:
-	//   BadStream     - thrown if the provided file is simply not a loadable DLL.
-	//   NotPcsxPlugin - thrown if the DLL is not a PCSX2 plugin, or if it's of an unsupported version.
+	//   BadStream				- thrown if the provided file is simply not a loadable DLL.
+	//   NotEnumerablePlugin	- thrown if the DLL is not a PCSX2 plugin, or if it's of an unsupported version.
 	//
 	PluginEnumerator( const wxString& plugpath ) :
 		m_plugpath( plugpath )
 	,	m_plugin()
 	{
 		if( !m_plugin.Load( m_plugpath ) )
-			throw Exception::BadStream( m_plugpath, "File is not a valid dynamic library" );
+			throw Exception::BadStream( m_plugpath, "File is not a valid dynamic library." );
 
 		wxDoNotLogInThisScope please;
 		m_GetLibType		= (_PS2EgetLibType)m_plugin.GetSymbol( L"PS2EgetLibType" );
@@ -90,9 +94,8 @@ public:
 		m_GetLibVersion2	= (_PS2EgetLibVersion2)m_plugin.GetSymbol( L"PS2EgetLibVersion2" );
 
 		if( m_GetLibType == NULL || m_GetLibName == NULL || m_GetLibVersion2 == NULL )
-		{
 			throw Exception::NotEnumerablePlugin( m_plugpath );
-		}
+
 		m_type = m_GetLibType();
 	}
 
@@ -134,7 +137,10 @@ public:
 
 static const wxString failed_separator( L"--------   Unsupported Plugins  --------" );
 
-// ------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+//  PluginSelectorPanel  implementations
+// --------------------------------------------------------------------------------------
+
 Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent ) :
 	wxPanelWithHelpers( parent )
 ,	m_gauge( *new wxGauge( this, wxID_ANY, 10 ) )
@@ -221,10 +227,8 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 // ------------------------------------------------------------------------
 Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWidth ) :
 	BaseSelectorPanel( parent, idealWidth )
-,	m_FileList( NULL )
 ,	m_StatusPanel( *new StatusPanel( this ) )
 ,	m_ComponentBoxes( *new ComboBoxPanel( this ) )
-,	m_EnumeratorThread( NULL )
 {
 	// note: the status panel is a floating window, so that it can be positioned in the
 	// center of the dialog after it's been fitted to the contents.
@@ -242,8 +246,9 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 
 	SetSizer( &s_main );
 
-	Connect( wxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
-	Connect( wxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
+	Connect( pxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
+	Connect( pxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
+	Connect( pxEVT_ShowStatusBar,		wxCommandEventHandler( PluginSelectorPanel::OnShowStatusBar ) );
 	Connect( ButtonId_Configure, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnConfigure_Clicked ) );
 }
 
@@ -257,10 +262,19 @@ void Panels::PluginSelectorPanel::ReloadSettings()
 	m_ComponentBoxes.GetDirPicker().Reset();
 }
 
-void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
+static wxString GetApplyFailedMsg()
+{
+	return pxE( ".Popup Error:PluginSelector:ApplyFailed",
+		L"All plugins must have valid selections for PCSX2 to run.  If you are unable to make\n"
+		L"a valid selection due to missing plugins or an incomplete install of PCSX2, then\n"
+		L"press cancel to close the Configuration panel."
+	);
+}
+
+void Panels::PluginSelectorPanel::Apply()
 {
 	// user never entered plugins panel?  Skip application since combo boxes are invalid/uninitialized.
-	if( m_FileList == NULL ) return;
+	if( !m_FileList ) return;
 
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
@@ -271,32 +285,72 @@ void Panels::PluginSelectorPanel::Apply( AppConfig& conf )
 
 			throw Exception::CannotApplySettings( this,
 				// English Log
-				wxsFormat( L"User did not specify a valid selection for the %s plugin.", plugname.c_str() ),
+				wxsFormat( L"PluginSelectorPanel: Invalid or missing selection for the %s plugin.", plugname.c_str() ),
 
 				// Translated
-				wxsFormat( L"Please select a valid plugin for the %s.", plugname.c_str() ) + L"\n\n" +
-				pxE( ".Popup Error:Invalid Plugin Selection",
-					L"All plugins must have valid selections for PCSX2 to run.  If you are unable to make\n"
-					L"a valid selection due to missing plugins or an incomplete install of PCSX2, then\n"
-					L"press cancel to close the Configuration panel."
-				)
+				wxsFormat( L"Please select a valid plugin for the %s.", plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg()
 			);
 		}
 
-		conf.BaseFilenames.Plugins[tbl_PluginInfo[i].id] = GetFilename((int)m_ComponentBoxes.Get(i).GetClientData(sel));
+		g_Conf->BaseFilenames.Plugins[tbl_PluginInfo[i].id] = GetFilename((int)m_ComponentBoxes.Get(i).GetClientData(sel));
 	}
+
+	// ----------------------------------------------------------------------------
+	// Make sure folders are up to date, and try to load/reload plugins if needed...
+	
+	g_Conf->Folders.ApplyDefaults();
+
+	// Need to unload the current emulation state if the user changed plugins, because
+	// the whole plugin system needs to be re-loaded.
+
+	const PluginInfo* pi = tbl_PluginInfo-1;
+	while( ++pi, pi->shortname != NULL )
+	{
+		if( g_Conf->FullpathTo( pi->id ) != g_Conf->FullpathTo( pi->id ) )
+			break;
+	}
+
+	if( pi->shortname != NULL )
+	{
+		if( wxGetApp().m_CoreThread )
+		{
+			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
+		}
+
+		wxGetApp().SysReset();
+	}
+
+	if( !wxGetApp().m_CorePlugins )
+	{
+		try
+		{
+			LoadPluginsImmediate();
+		}
+		catch( Exception::PluginError& ex )
+		{
+			// Rethrow PluginLoadErrors as a failure to Apply...
+
+			wxString plugname( tbl_PluginInfo[ex.PluginId].GetShortname() );
+
+			throw Exception::CannotApplySettings( this,
+				// English Log
+				ex.FormatDiagnosticMessage(),
+
+				// Translated
+				wxsFormat( L"The selected %s plugin failed to load.", plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg()
+			);
+		}
+	}		
 }
 
 void Panels::PluginSelectorPanel::CancelRefresh()
 {
-	safe_delete( m_EnumeratorThread );
-	safe_delete( m_FileList );
 }
 
 void Panels::PluginSelectorPanel::DoRefresh()
 {
 	m_ComponentBoxes.Reset();
-	if( m_FileList == NULL )
+	if( !m_FileList )
 	{
 		wxCommandEvent evt;
 		OnEnumComplete( evt );
@@ -304,21 +358,17 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	}
 
 	// Disable all controls until enumeration is complete.
-	// Show status bar for plugin enumeration.
-
-	// fixme: the status bar doesn't always fit itself to the window correctly because
-	// sometimes this gets called before the parent window has been fully created.  I'm
-	// not quite sure how to fix (a delayed event/message might work tho implementing it
-	// may not be trivial) -- air
+	// Show status bar for plugin enumeration.  Use a pending event so that
+	// the window's size can get initialized properly before trying to custom-
+	// fit the status panel to it.
 
 	m_ComponentBoxes.Hide();
-	m_StatusPanel.SetSize( m_ComponentBoxes.GetSize().GetWidth() - 8, wxDefaultCoord );
-	m_StatusPanel.CentreOnParent();
-	m_StatusPanel.Show();
+	wxCommandEvent evt( pxEVT_ShowStatusBar );
+	GetEventHandler()->AddPendingEvent( evt );
 
 	// Use a thread to load plugins.
-	safe_delete( m_EnumeratorThread );
-	m_EnumeratorThread = new EnumThread( *this );
+	m_EnumeratorThread.reset( NULL );
+	m_EnumeratorThread.reset( new EnumThread( *this ) );
 
 	if( DisableThreading )
 		m_EnumeratorThread->DoNextPlugin( 0 );
@@ -328,6 +378,8 @@ void Panels::PluginSelectorPanel::DoRefresh()
 
 bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 {
+	m_EnumeratorThread.reset();			// make sure the thread is STOPPED, just in case...
+
 	bool validated = true;
 
 	// re-enumerate plugins, and if anything changed then we need to wipe
@@ -339,17 +391,16 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 
 	int pluggers = EnumeratePluginsInFolder( m_ComponentBoxes.GetPluginsPath(), pluginlist.get() );
 
-	if( (m_FileList == NULL) || (*pluginlist != *m_FileList) )
+	if( !m_FileList || (*pluginlist != *m_FileList) )
 		validated = false;
 
 	if( pluggers == 0 )
 	{
-		safe_delete( m_FileList );
+		m_FileList.reset();
 		return validated;
 	}
 
-	delete m_FileList;
-	m_FileList = pluginlist.release();
+	m_FileList.swap( pluginlist );
 
 	m_StatusPanel.SetGaugeLength( pluggers );
 
@@ -370,9 +421,16 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	}
 }
 
+void Panels::PluginSelectorPanel::OnShowStatusBar( wxCommandEvent& evt )
+{
+	m_StatusPanel.SetSize( m_ComponentBoxes.GetSize().GetWidth() - 8, wxDefaultCoord );
+	m_StatusPanel.CentreOnParent();
+	m_StatusPanel.Show();
+}
+
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 {
-	safe_delete( m_EnumeratorThread );
+	m_EnumeratorThread.reset();
 
 	// fixme: Default plugins should be picked based on the timestamp of the DLL or something?
 	//  (for now we just force it to selection zero if nothing's selected)
@@ -395,7 +453,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 
 void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 {
-	if( m_FileList == NULL ) return;
+	if( !m_FileList ) return;
 
 	const size_t evtidx = evt.GetExtraLong();
 
@@ -404,7 +462,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 		const int nextidx = evtidx+1;
 		if( nextidx == m_FileList->Count() )
 		{
-			wxCommandEvent done( wxEVT_EnumerationFinished );
+			wxCommandEvent done( pxEVT_EnumerationFinished );
 			GetEventHandler()->AddPendingEvent( done );
 		}
 		else
@@ -447,28 +505,16 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// EnumThread Method Implementations
+// --------------------------------------------------------------------------------------
+//  EnumThread   method implementations
+// --------------------------------------------------------------------------------------
 
 Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master ) :
 	PersistentThread()
-,	Results( new EnumeratedPluginInfo[master.FileCount()] )
+,	Results( master.FileCount(), L"PluginSelectorResults" )
 ,	m_master( master )
-,	m_cancel( false )
 {
-}
-
-Panels::PluginSelectorPanel::EnumThread::~EnumThread()
-{
-	EnumThread::Cancel();
-	safe_delete_array( Results );
-}
-
-void Panels::PluginSelectorPanel::EnumThread::Cancel()
-{
-	m_cancel = true;
-	Sleep( 2 );
-	PersistentThread::Cancel();
+	Results.MatchLengthToAllocatedSize();
 }
 
 void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
@@ -499,7 +545,7 @@ void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 		Console::Status( ex.FormatDiagnosticMessage() );
 	}
 
-	wxCommandEvent yay( wxEVT_EnumeratedNext );
+	wxCommandEvent yay( pxEVT_EnumeratedNext );
 	yay.SetExtraLong( curidx );
 	m_master.GetEventHandler()->AddPendingEvent( yay );
 }
@@ -509,15 +555,15 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 	DevCon::Status( "Plugin Enumeration Thread started..." );
 
 	wxGetApp().Ping();		// gives the gui thread some time to refresh
+	Sleep( 3 );
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
-		if( m_cancel ) return 0;
 		DoNextPlugin( curidx );
 		pthread_testcancel();
 	}
 
-	wxCommandEvent done( wxEVT_EnumerationFinished );
+	wxCommandEvent done( pxEVT_EnumerationFinished );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 
 	DevCon::Status( "Plugin Enumeration Thread complete!" );

@@ -76,10 +76,7 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 
 void FirstTimeWizard::UsermodePage::OnUsermodeChanged( wxCommandEvent& evt )
 {
-	m_panel_UserSel.Apply( *g_Conf );	// this assigns the current user mode to g_ApplyState.UseAdminMode
-	if( g_ApplyState.UseAdminMode == UseAdminMode ) return;
-
-	UseAdminMode = g_ApplyState.UseAdminMode;
+	m_panel_UserSel.Apply();
 	g_Conf->Folders.ApplyDefaults();
 	m_dirpick_settings.Reset();
 }
@@ -161,7 +158,7 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 
 		if( page == 0 )
 		{
-			if( wxFile::Exists( g_Conf->FullPathToConfig() ) )
+			if( wxFile::Exists( GetSettingsFilename() ) )
 			{
 				// Asks the user if they want to import or overwrite the existing settings.
 

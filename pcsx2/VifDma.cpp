@@ -1658,7 +1658,7 @@ void vif0Reset()
 	vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
 }
 
-void SaveState::vif0Freeze()
+void SaveStateBase::vif0Freeze()
 {
 	FreezeTag("VIFdma");
 
@@ -2803,7 +2803,7 @@ void vif1Reset()
 	vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 }
 
-void SaveState::vif1Freeze()
+void SaveStateBase::vif1Freeze()
 {
 	Freeze(vif1);
 

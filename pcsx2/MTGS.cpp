@@ -78,7 +78,7 @@ __forceinline void GIFPath::SetTag(const void* mem)
 	curreg	= 0;
 }
 
-static void _mtgsFreezeGIF( SaveState& state, GIFPath (&paths)[3] )
+static void _mtgsFreezeGIF( SaveStateBase& state, GIFPath (&paths)[3] )
 {
 	for(int i=0; i<3; i++ )
 	{
@@ -92,7 +92,7 @@ static void _mtgsFreezeGIF( SaveState& state, GIFPath (&paths)[3] )
 	}
 }
 
-void SaveState::mtgsFreeze()
+void SaveStateBase::mtgsFreeze()
 {
 	FreezeTag( "mtgs" );
 	mtgsThread->Freeze( *this );
@@ -388,15 +388,10 @@ struct PacketTagType
 
 extern bool renderswitch;
 
-void mtgsThreadObject::_close_gs()
+static void _clean_close_gs( void* obj )
 {
 	if( g_plugins != NULL )
 		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
-}
-
-static void _clean_close_gs( void* obj )
-{
-	((mtgsThreadObject*)obj)->_close_gs();
 }
 
 void mtgsThreadObject::_RingbufferLoop()
@@ -510,9 +505,9 @@ void mtgsThreadObject::_RingbufferLoop()
 
 				case GS_RINGTYPE_FREEZE:
 				{
-					freezeData* data = (freezeData*)(*(uptr*)&tag.data[1]);
+					MTGS_FreezeData* data = (MTGS_FreezeData*)(*(uptr*)&tag.data[1]);
 					int mode = tag.data[0];
-					GetPluginManager().Freeze( PluginId_GS, mode, data );
+					data->retval = GetPluginManager().DoFreeze( PluginId_GS, mode, data->fdata );
 					break;
 				}
 
@@ -576,11 +571,17 @@ void mtgsThreadObject::_RingbufferLoop()
 	pthread_cleanup_pop( true );
 }
 
+static void dummyIrqCallback()
+{
+	// dummy, because MTGS doesn't need this mess!
+	// (and zerogs does >_<)
+}
+
 sptr mtgsThreadObject::ExecuteTask()
 {
 	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( m_gsMem );
-	GSirqCallback( NULL );
+	GSirqCallback( dummyIrqCallback );
 
 	Console::WriteLn( (wxString)L"\t\tForced software switch: " + (renderswitch ? L"Enabled" : L"Disabled") );
 	m_returncode = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
@@ -780,14 +781,6 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	// Sanity checks! (within the confines of our ringbuffer please!)
 	jASSUME( size < m_RingBufferSize );
 	jASSUME( writepos < m_RingBufferSize );
-
-	//fixme: Vif sometimes screws up and size is unaligned, try this then (rama)
-	//Is this still a problem?  It should be fixed on the specific VIF command now. (air)
-	//It seems to be fixed in Fatal Frame, leaving the code here still in case we get that again (rama)
-	/*if( (size&15) != 0){
-		Console::Error( "MTGS problem, size unaligned"); 
-		size = (size+15)&(~15);
-	}*/
 
 	m_packet_size = gifTransferDummy(pathidx, srcdata, size);
 	size		  = m_packet_size + 1; // takes into account our command qword.
@@ -1009,7 +1002,7 @@ void mtgsThreadObject::GIFSoftReset( int mask )
 	mtgsThread->SendSimplePacket( GS_RINGTYPE_SOFTRESET, mask, 0, 0 );
 }
 
-void mtgsThreadObject::Freeze( SaveState& state )
+void mtgsThreadObject::Freeze( SaveStateBase& state )
 {
 	_mtgsFreezeGIF( state, this->m_path );
 }

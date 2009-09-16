@@ -40,57 +40,6 @@ static s64 m_iSlowTicks=0;
 static bool m_justSkipped = false;
 static bool m_StrictSkipping = false;
 
-#ifdef PCSX2_DEVBUILD
-
-// GS Playback
-int g_SaveGSStream = 0; // save GS stream; 1 - prepare, 2 - save
-int g_nLeftGSFrames = 0; // when saving, number of frames left
-gzSavingState* g_fGSSave;
-
-// fixme - need to take this concept and make it MTGS friendly.
-#ifdef _STGS_GSSTATE_CODE
-void GSGIFTRANSFER1(u32 *pMem, u32 addr) {
-	if( g_SaveGSStream == 2) {
-		u32 type = GSRUN_TRANS1;
-		u32 size = (0x4000-(addr))/16;
-		g_fGSSave->Freeze( type );
-		g_fGSSave->Freeze( size );
-		g_fGSSave->FreezeMem( ((u8*)pMem)+(addr), size*16 );
-	}
-	GSgifTransfer1(pMem, addr);
-}
-
-void GSGIFTRANSFER2(u32 *pMem, u32 size) {
-	if( g_SaveGSStream == 2) {
-		u32 type = GSRUN_TRANS2;
-		u32 _size = size;
-		g_fGSSave->Freeze( type );
-		g_fGSSave->Freeze( size );
-		g_fGSSave->FreezeMem( pMem, _size*16 );
-	}
-	GSgifTransfer2(pMem, size);
-}
-
-void GSGIFTRANSFER3(u32 *pMem, u32 size) {
-	if( g_SaveGSStream == 2 ) {
-		u32 type = GSRUN_TRANS3;
-		u32 _size = size;
-		g_fGSSave->Freeze( type );
-		g_fGSSave->Freeze( size );
-		g_fGSSave->FreezeMem( pMem, _size*16 );
-	}
-	GSgifTransfer3(pMem, size);
-}
-
-__forceinline void GSVSYNC(void) {
-	if( g_SaveGSStream == 2 ) {
-		u32 type = GSRUN_VSYNC;
-		g_fGSSave->Freeze( type );
-	}
-}
-#endif
-#endif
-
 void _gs_ChangeTimings( u32 framerate, u32 iTicks )
 {
 	m_iSlowStart = GetCPUTicks();
@@ -615,7 +564,7 @@ void gsDynamicSkipEnable()
 	frameLimitReset();
 }
 
-void SaveState::gsFreeze()
+void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
 	Freeze(CSRw);

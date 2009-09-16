@@ -82,13 +82,13 @@ bool MainEmuFrame::_DoSelectIsoBrowser()
 
 void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 {
-	SysSuspend();
+	wxGetApp().SysSuspend();
 
 	if( !wxFileExists( g_Conf->CurrentIso ) )
 	{
 		if( !_DoSelectIsoBrowser() )
 		{
-			SysResume();
+			wxGetApp().SysResume();
 			return;
 		}
 	}
@@ -100,65 +100,36 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 		if( !result )
 		{
-			SysResume();
+			wxGetApp().SysResume();
 			return;
 		}
 	}
-
-	SysEndExecution();
 
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
 	wxGetApp().SaveSettings();
 
-	InitPlugins();
-
-	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
-	SysExecute( new AppEmuThread(), g_Conf->CdvdSource );
+	wxGetApp().SysExecute( g_Conf->CdvdSource );
 }
 
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
-	SysSuspend();
+	wxGetApp().SysSuspend();
 	_DoSelectIsoBrowser();
-	SysResume();
+	wxGetApp().SysResume();
 }
 
 void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 {
-	SysSuspend();
+	wxGetApp().SysSuspend();
 
 	if( !_DoSelectIsoBrowser() )
 	{
-		SysResume();
+		wxGetApp().SysResume();
 		return;
 	}
 
-	SysEndExecution();
-
-	InitPlugins();
-	SysExecute( new AppEmuThread(), CDVDsrc_Iso );
+	wxGetApp().SysExecute( CDVDsrc_Iso );
 }
-
-/*void MainEmuFrame::Menu_RunWithoutDisc_Click(wxCommandEvent &event)
-{
-	if( EmulationInProgress() )
-	{
-		SysSuspend();
-
-		// [TODO] : Add one of 'dems checkboxes that read like "[x] don't show this stupid shit again, kthx."
-		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmEmuReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
-
-		if( !result )
-		{
-			SysResume();
-			return;
-		}
-	}
-
-	SysEndExecution();
-	InitPlugins();
-	SysExecute( new AppEmuThread(), CDVDsrc_NoDisc );
-}*/
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
 {
@@ -194,34 +165,32 @@ void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 {
-	SysReset();
 	Close();
 }
 
 void MainEmuFrame::Menu_EmuClose_Click(wxCommandEvent &event)
 {
-	SysEndExecution();
+	//wxGetApp()->
 	GetMenuBar()->Check( MenuId_Emu_Pause, false );
 }
 
 void MainEmuFrame::Menu_EmuPause_Click(wxCommandEvent &event)
 {
 	if( event.IsChecked() )
-		SysSuspend();
+		wxGetApp().SysSuspend();
 	else
-		SysResume();
+		wxGetApp().SysResume();
 }
 
 void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 {
 	bool wasRunning = EmulationInProgress();
-	SysReset();
+	wxGetApp().SysReset();
 
 	GetMenuBar()->Check( MenuId_Emu_Pause, false );
 
 	if( !wasRunning ) return;
-	InitPlugins();
-	SysExecute( new AppEmuThread() );
+	wxGetApp().SysExecute();
 }
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
@@ -229,8 +198,11 @@ void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 	typedef void	(CALLBACK* PluginConfigureFnptr)();
 	const PluginsEnum_t pid = (PluginsEnum_t)( event.GetId() - MenuId_Config_GS );
 
-	LoadPlugins();
-	ScopedWindowDisable disabler( this );
+	LoadPluginsImmediate();
+	if( g_plugins == NULL ) return;
+
+	wxWindowDisabler disabler;
+	//ScopedWindowDisable disabler( this );
 	g_plugins->Configure( pid );
 }
 

@@ -46,13 +46,15 @@ enum PluginsEnum_t
 		u32 bitset;		\
 		struct {
 
+#define BITFIELD_END	}; };
+
 //------------ DEFAULT sseMXCSR VALUES ---------------
 #define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
 #define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"
 
-/////////////////////////////////////////////////////////////////////////////////////////
-// Pcsx2Config
-//
+// --------------------------------------------------------------------------------------
+//  Pcsx2Config class
+// --------------------------------------------------------------------------------------
 // This is intended to be a public class library between the core emulator and GUI only.
 // It is *not* meant to be shared data between core emulation and plugins, due to issues
 // with version incompatibilities if the structure formats are changed.
@@ -75,7 +77,7 @@ public:
 				RecBlocks_IOP:1,	// Enables per-block profiling for the IOP recompiler [unimplemented]
 				RecBlocks_VU0:1,	// Enables per-block profiling for the VU0 recompiler [unimplemented]
 				RecBlocks_VU1:1;	// Enables per-block profiling for the VU1 recompiler [unimplemented]
-		}; };
+		BITFIELD_END
 
 		// Default is Disabled, with all recs enabled underneath.
 		ProfilerOptions() : bitset( 0xfffffffe ) {}
@@ -105,7 +107,7 @@ public:
 			bool
 				UseMicroVU0:1,
 				UseMicroVU1:1;
-		}; };
+		BITFIELD_END
 
 		// All recs are enabled by default.
 		RecompilerOptions() : bitset( 0xffffffff ) { }
@@ -142,7 +144,7 @@ public:
 				fpuOverflow:1,
 				fpuExtraOverflow:1,
 				fpuFullMode:1;
-		}; };
+		BITFIELD_END
 
 		CpuOptions();
 		void LoadSave( IniInterface& conf );
@@ -213,7 +215,7 @@ public:
 				DMAExeHack:1,       // Fix for Fatal Frame; breaks Gust and Tri-Ace games.
 				XgKickHack:1,		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
                 MpegHack:1;         // Fix for Mana Khemia 1, breaks Digital Devil Saga.
-		}; };
+		BITFIELD_END
 
 		// all gamefixes are disabled by default.
 		GamefixOptions() : bitset( 0 ) {}
@@ -240,7 +242,7 @@ public:
 				BIFC0:1,			// enables BIFC0 detection and fast-forwarding
 				vuFlagHack:1,		// microVU specific flag hack; Can cause Infinite loops, SPS, etc...
 				vuMinMax:1;			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
-		}; };
+		BITFIELD_END
 
 		u8	EECycleRate;		// EE cycle rate selector (1.0, 1.5, 2.0)
 		u8	VUCycleSteal;		// VU Cycle Stealer factor (0, 1, 2, or 3)
@@ -275,7 +277,7 @@ public:
 
 			MultitapPort0_Enabled:1,
 			MultitapPort1_Enabled:1;
-	}; };
+	BITFIELD_END
 
 	CpuOptions			Cpu;
 	VideoOptions		Video;

@@ -798,7 +798,7 @@ __forceinline u32 rcntCycle(int index)
 		return counters[index].count;
 }
 
-void SaveState::rcntFreeze()
+void SaveStateBase::rcntFreeze()
 {
 	Freeze( counters );
 	Freeze( hsyncCounter );

@@ -56,6 +56,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype)-dbg.dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -119,7 +120,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -245,7 +245,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
+				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype)-dbg.dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -308,6 +308,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype)-dbg.dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -371,7 +372,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>

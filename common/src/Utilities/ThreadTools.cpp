@@ -51,7 +51,7 @@ namespace Threading
 	// Extending classes should always implement their own thread closure process.
 	// This class must not be deleted from its own thread.  That would be like marrying
 	// your sister, and then cheating on her with your daughter.
-	PersistentThread::~PersistentThread()
+	PersistentThread::~PersistentThread() throw()
 	{
 		if( !m_running ) return;
 
@@ -202,8 +202,67 @@ namespace Threading
 		return (void*)owner.m_returncode;
 	}
 
-// pthread Cond is an evil api that is not suited for Pcsx2 needs.
-// Let's not use it. (Air)
+// --------------------------------------------------------------------------------------
+//  BaseTaskThread Implementations
+// --------------------------------------------------------------------------------------
+
+	// Tells the thread to exit and then waits for thread termination.
+	sptr BaseTaskThread::Block()
+	{
+		if( !IsRunning() ) return m_returncode;
+		m_Done = true;
+		m_sem_event.Post();
+		return PersistentThread::Block();
+	}
+
+	// Initiates the new task.  This should be called after your own StartTask has
+	// initialized internal variables / preparations for task execution.
+	void BaseTaskThread::PostTask()
+	{
+		wxASSERT( !m_detached );
+
+		ScopedLock locker( m_lock_TaskComplete );
+		m_TaskPending = true;
+		m_post_TaskComplete.Reset();
+		m_sem_event.Post();
+	}
+	
+	// Blocks current thread execution pending the completion of the parallel task.
+	void BaseTaskThread::WaitForResult()
+	{
+		if( m_detached || !m_running ) return;
+		if( m_TaskPending )
+		#ifdef wxUSE_GUI
+			m_post_TaskComplete.WaitGui();
+		#else
+			m_post_TaskComplete.Wait();
+		#endif
+
+		m_post_TaskComplete.Reset();
+	}
+
+	sptr BaseTaskThread::ExecuteTask()
+	{
+		while( !m_Done )
+		{
+			// Wait for a job -- or get a pthread_cancel.  I'm easy.
+			m_sem_event.Wait();
+
+			Task();
+			m_lock_TaskComplete.Lock();
+			m_TaskPending = false;
+			m_post_TaskComplete.Post();
+			m_lock_TaskComplete.Unlock();
+		};
+
+		return 0;
+	}
+
+// --------------------------------------------------------------------------------------
+//  pthread Cond is an evil api that is not suited for Pcsx2 needs.
+//  Let's not use it. (Air)
+// --------------------------------------------------------------------------------------
+
 #if 0
 	WaitEvent::WaitEvent()
 	{
@@ -234,6 +293,10 @@ namespace Threading
 	}
 #endif
 
+// --------------------------------------------------------------------------------------
+//  Semaphore Implementations
+// --------------------------------------------------------------------------------------
+	
 	Semaphore::Semaphore()
 	{
 		sem_init( &sema, false, 0 );
@@ -257,12 +320,19 @@ namespace Threading
 
 	// Valid on Win32 builds only!!  Attempts to use it on Linux will result in unresolved
 	// external linker errors.
-#if defined(_MSC_VER)
 	void Semaphore::Post( int multiple )
 	{
+#if defined(_MSC_VER)
 		sem_post_multiple( &sema, multiple );
-	}
+#else
+		// Only w32pthreads has the post_multiple, but it's easy enough to fake:
+		while( multiple > 0 )
+		{
+			multiple--;
+			sem_post( &sema );
+		}
 #endif
+	}
 
 #if wxUSE_GUI
 	// This is a wxApp-safe implementation of Wait, which makes sure and executes the App's
@@ -278,7 +348,7 @@ namespace Threading
 			// to handle messages.
 			
 			do {
-				wxTheApp->ProcessPendingEvents();
+				wxTheApp->Yield();
 			} while( !Wait( ts_msec_250 ) );
 		}
 	}
@@ -297,7 +367,7 @@ namespace Threading
 			// to handle messages.
 
 			do {
-				wxTheApp->ProcessPendingEvents();
+				wxTheApp->Yield();
 				if( Wait( ts_msec_250 ) ) break;
 				countdown -= ts_msec_250;
 			} while( countdown.GetMilliseconds() > 0 );
@@ -342,6 +412,10 @@ namespace Threading
 		return retval;
 	}
 
+// --------------------------------------------------------------------------------------
+//  MutexLock Implementations
+// --------------------------------------------------------------------------------------
+
 	MutexLock::MutexLock()
 	{
 		int err = 0;
@@ -383,74 +457,58 @@ namespace Threading
 		pthread_mutex_unlock( &mutex );
 	}
 
-	//////////////////////////////////////////////////////////////////////
-	// define some overloads for InterlockedExchanges
-	// for commonly used types, like u32 and s32.
-
-	__forceinline long pcsx2_InterlockedExchange( volatile long* target, long srcval )
-	{
-		return _InterlockedExchange( target, srcval );
-	}
-
-	__forceinline long pcsx2_InterlockedCompareExchange( volatile long* target, long srcval, long comp )
-	{
-		// Use the pthreads-win32 implementation...
-		return _InterlockedCompareExchange( target, srcval, comp );
-	}
-
-	__forceinline long pcsx2_InterlockedExchangeAdd( volatile long* target, long srcval )
-	{
-		return _InterlockedExchangeAdd( target, srcval );
-	}
+// --------------------------------------------------------------------------------------
+//  InterlockedExchanges / AtomicExchanges (PCSX2's Helper versions)
+// --------------------------------------------------------------------------------------
+// define some overloads for InterlockedExchanges for commonly used types, like u32 and s32.
 
 	__forceinline void AtomicExchange( volatile u32& Target, u32 value )
 	{
-		pcsx2_InterlockedExchange( (volatile long*)&Target, value );
+		_InterlockedExchange( (volatile long*)&Target, value );
 	}
 
 	__forceinline void AtomicExchangeAdd( volatile u32& Target, u32 value )
 	{
-		pcsx2_InterlockedExchangeAdd( (volatile long*)&Target, value );
+		_InterlockedExchangeAdd( (volatile long*)&Target, value );
 	}
 
 	__forceinline void AtomicIncrement( volatile u32& Target )
 	{
-		pcsx2_InterlockedExchangeAdd( (volatile long*)&Target, 1 );
+		_InterlockedExchangeAdd( (volatile long*)&Target, 1 );
 	}
 
 	__forceinline void AtomicDecrement( volatile u32& Target )
 	{
-		pcsx2_InterlockedExchangeAdd( (volatile long*)&Target, -1 );
+		_InterlockedExchangeAdd( (volatile long*)&Target, -1 );
 	}
 
 	__forceinline void AtomicExchange( volatile s32& Target, s32 value )
 	{
-		pcsx2_InterlockedExchange( (volatile long*)&Target, value );
+		_InterlockedExchange( (volatile long*)&Target, value );
 	}
 
 	__forceinline void AtomicExchangeAdd( s32& Target, u32 value )
 	{
-		pcsx2_InterlockedExchangeAdd( (volatile long*)&Target, value );
+		_InterlockedExchangeAdd( (volatile long*)&Target, value );
 	}
 
 	__forceinline void AtomicIncrement( volatile s32& Target )
 	{
-		pcsx2_InterlockedExchangeAdd( (volatile long*)&Target, 1 );
+		_InterlockedExchangeAdd( (volatile long*)&Target, 1 );
 	}
 
 	__forceinline void AtomicDecrement( volatile s32& Target )
 	{
-		pcsx2_InterlockedExchangeAdd( (volatile long*)&Target, -1 );
+		_InterlockedExchangeAdd( (volatile long*)&Target, -1 );
 	}
 
 	__forceinline void _AtomicExchangePointer( const void ** target, const void* value )
 	{
-		pcsx2_InterlockedExchange( (volatile long*)target, (long)value );
+		_InterlockedExchange( (volatile long*)target, (long)value );
 	}
 
 	__forceinline void _AtomicCompareExchangePointer( const void ** target, const void* value, const void* comparand )
 	{
-		pcsx2_InterlockedCompareExchange( (volatile long*)target, (long)value, (long)comparand );
+		_InterlockedCompareExchange( (volatile long*)target, (long)value, (long)comparand );
 	}
-
 }

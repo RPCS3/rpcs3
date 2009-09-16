@@ -26,23 +26,27 @@
 
 using namespace wxHelpers;
 
-namespace Dialogs {
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Helper class for creating wxStaticText labels which are aligned to center.
-// (automates the passing of wxDefaultSize and wxDefaultPosition)
-//
-class StaticTextCentered : public wxStaticText
+namespace Dialogs
 {
-public:
-	StaticTextCentered( wxWindow* parent, const wxString& text, int id=wxID_ANY ) :
-		wxStaticText( parent, id, text, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER )
+	// Helper class for creating wxStaticText labels which are aligned to center.
+	// (automates the passing of wxDefaultSize and wxDefaultPosition)
+	//
+	class StaticTextCentered : public wxStaticText
 	{
-	}
-};
+	public:
+		StaticTextCentered( wxWindow* parent, const wxString& text, int id=wxID_ANY ) :
+			wxStaticText( parent, id, text, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER )
+		{
+		}
+	};
 
+}
 
-AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
+// --------------------------------------------------------------------------------------
+//  AboutBoxDialog  Implementation
+// --------------------------------------------------------------------------------------
+
+Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	wxDialog( parent, id, _("About PCSX2"), parent->GetPosition()-wxSize( 32, 32 ) ),
 	m_bitmap_logo( this, wxID_ANY, wxGetApp().GetLogoBitmap(),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN ),
@@ -120,5 +124,3 @@ AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), SizerFlags::StdCenter() );
 	SetSizerAndFit( &mainSizer );
 }
-
-}	// end namespace Dialogs

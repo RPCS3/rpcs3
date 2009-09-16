@@ -40,6 +40,5 @@
 // Some homeless externs.  This is as good a spot as any for now...
 
 
-extern bool EmulationInProgress();
 extern void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);
 extern u32  g_sseVUMXCSR, g_sseMXCSR;

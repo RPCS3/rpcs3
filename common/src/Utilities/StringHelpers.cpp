@@ -17,7 +17,6 @@
 
 const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
 
-//////////////////////////////////////////////////////////////////////////////////////////
 // Splits a string into parts and adds the parts into the given SafeList.
 // This list is not cleared, so concatenating many splits into a single large list is
 // the 'default' behavior, unless you manually clear the SafeList prior to subsequent calls.
@@ -31,7 +30,13 @@ void SplitString( SafeList<wxString>& dest, const wxString& src, const wxString&
 		dest.Add( parts.GetNextToken() );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+void SplitString( wxArrayString& dest, const wxString& src, const wxString& delims )
+{
+	wxStringTokenizer parts( src, delims );
+	while( parts.HasMoreTokens() )
+		dest.Add( parts.GetNextToken() );
+}
+
 // Joins a list of strings into one larger string, using the given string concatenation
 // character as a separator.  If you want to be able to split the string later then the
 // concatenation string needs to be a single character.
@@ -48,7 +53,16 @@ void JoinString( wxString& dest, const SafeList<wxString>& src, const wxString& 
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
+void JoinString( wxString& dest, const wxArrayString& src, const wxString& separator )
+{
+	for( int i=0, len=src.GetCount(); i<len; ++i )
+	{
+		if( i != 0 )
+			dest += separator;
+		dest += src[i];
+	}
+}
+
 // Attempts to parse and return a value for the given template type, and throws a ParseError
 // exception if the parse fails.  The template type can be anything that is supported/
 // implemented via one of the TryParse() method overloads.
@@ -65,9 +79,9 @@ T Parse( const wxString& src, const wxString& separators=L",")
 }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// ToString helpers for wxString!
-//
+// --------------------------------------------------------------------------------------
+//  ToString helpers for wxString!
+// --------------------------------------------------------------------------------------
 
 // Converts a wxPoint into a comma-delimited string!
 wxString ToString( const wxPoint& src, const wxString& separator )
@@ -87,9 +101,9 @@ wxString ToString( const wxRect& src, const wxString& separator )
 	return ToString( src.GetLeftTop(), separator ) << separator << ToString( src.GetSize(), separator );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Parse helpers for wxString!
-//
+// --------------------------------------------------------------------------------------
+//  Parse helpers for wxString!
+// --------------------------------------------------------------------------------------
 
 bool TryParse( wxPoint& dest, wxStringTokenizer& parts )
 {

@@ -138,7 +138,7 @@ void vuMicroMemReset()
 	VU1.vifRegs  = vif1Regs;
 }
 
-void SaveState::vuMicroFreeze()
+void SaveStateBase::vuMicroFreeze()
 {
 	FreezeTag( "vuMicro" );
 

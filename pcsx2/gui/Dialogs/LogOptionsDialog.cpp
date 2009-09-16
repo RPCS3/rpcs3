@@ -112,8 +112,8 @@ LogOptionsDialog::iopLogOptionsPanel::iopLogOptionsPanel( wxWindow* parent ) :
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-LogOptionsDialog::LogOptionsDialog(wxWindow* parent, int id, const wxPoint& pos, const wxSize& size):
-	wxDialogWithHelpers( parent, id, _("Logging"), true, pos, size )
+LogOptionsDialog::LogOptionsDialog(wxWindow* parent, int id):
+	wxDialogWithHelpers( parent, id, _("Logging"), true )
 {
 	eeLogOptionsPanel& eeBox = *new eeLogOptionsPanel( this );
 	iopLogOptionsPanel& iopSizer = *new iopLogOptionsPanel( this );

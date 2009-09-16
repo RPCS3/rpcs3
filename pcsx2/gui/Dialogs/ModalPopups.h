@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "App.h"
 #include "Panels/ConfigurationPanels.h"
 
 #include <wx/image.h>
@@ -68,7 +69,7 @@ namespace Dialogs
 	class AboutBoxDialog: public wxDialog
 	{
 	public:
-		AboutBoxDialog( wxWindow* parent, int id );
+		AboutBoxDialog( wxWindow* parent=NULL, int id=DialogId_About );
 
 	protected:
 		wxStaticBitmap m_bitmap_logo;

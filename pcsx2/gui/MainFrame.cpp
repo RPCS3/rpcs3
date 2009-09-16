@@ -126,10 +126,12 @@ void MainEmuFrame::PopulatePadMenu()
 //
 void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 {
-	// Note Closure Veting would be handled here (user prompt confirmation
+	// Note Closure Vetoing would be handled here (user prompt confirmation
 	// of closing the app)
 
-	wxGetApp().PrepForExit();
+	if( !wxGetApp().PrepForExit() )
+		evt.Veto( true );
+
 	evt.Skip();
 }
 

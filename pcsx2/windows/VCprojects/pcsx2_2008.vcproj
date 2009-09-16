@@ -20,7 +20,6 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets=".\vsprops\common.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\common\vsprops\pthreads.vsprops;.\vsprops\devbuild.vsprops;..\..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
 			UseOfMFC="0"

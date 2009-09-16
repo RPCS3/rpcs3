@@ -52,8 +52,7 @@ namespace Console
 	{
 		std::string m_format_buffer;
 		vssprintf( m_format_buffer, fmt, args );
-		m_format_buffer += "\n";
-		Write( wxString::FromUTF8( m_format_buffer.c_str() ) );
+		WriteLn( wxString::FromUTF8( m_format_buffer.c_str() ) );
 	}
 
 	__forceinline void __fastcall _WriteLn( Colors color, const char* fmt, va_list args )

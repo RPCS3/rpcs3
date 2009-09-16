@@ -29,6 +29,9 @@ extern const wxRect wxDefaultRect;
 // This should prove useful....
 #define wxsFormat wxString::Format
 
+extern void SplitString( wxArrayString& dest, const wxString& src, const wxString& delims );
+extern void JoinString( wxString& dest, const wxArrayString& src, const wxString& separator );
+
 extern wxString ToString( const wxPoint& src, const wxString& separator=L"," );
 extern wxString ToString( const wxSize& src, const wxString& separator=L"," );
 extern wxString ToString( const wxRect& src, const wxString& separator=L"," );

@@ -101,15 +101,6 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 	int size   = mtgsThread->PrepDataPacket(GIF_PATH_3, pMem, qwc);
 	u8* pgsmem = mtgsThread->GetDataPacketPtr();
 
-	/* check if page of endmem is valid (dark cloud2) */
-	// fixme: this hack makes no sense, because the giftagDummy will
-	// process the full length of bytes regardess of how much we copy.
-	// So you'd think if we're truncating the copy to prevent DEPs, we 
-	// should truncate the gif packet size too.. (air)
-
-	// fixed? PrepDataPacket now returns the actual size of the packet.
-	// VIF handles scratchpad wrapping also, so this code shouldn't be needed anymore.
-
 	memcpy_aligned(pgsmem, pMem, size<<4); 
 	
 	mtgsThread->SendDataPacket();
@@ -572,7 +563,7 @@ void gifMFIFOInterrupt()
 	clearFIFOstuff(false);
 }
 
-void SaveState::gifFreeze()
+void SaveStateBase::gifFreeze()
 {
 	FreezeTag( "GIFdma" );
 

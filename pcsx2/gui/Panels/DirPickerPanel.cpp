@@ -93,8 +93,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 
 	m_checkCtrl = &AddCheckBox( s_lower, _("Use default setting") );
 	m_checkCtrl->SetToolTip( pxE( ".Tooltip:DirPicker:UseDefault",
-		L"When checked this folder will automatically reflect the default associated with PCSX2's current usermode setting. "
-		L"" )
+		L"When checked this folder will automatically reflect the default associated with PCSX2's current usermode setting. " )
 	);
 
 #ifndef __WXGTK__
@@ -134,7 +133,7 @@ void Panels::DirPickerPanel::Reset()
 	m_pickerCtrl->SetPath( GetNormalizedConfigFolder( m_FolderId ) );
 }
 
-void Panels::DirPickerPanel::Apply( AppConfig& conf )
+void Panels::DirPickerPanel::Apply()
 {
-	conf.Folders.Set( m_FolderId, m_pickerCtrl->GetPath(), m_checkCtrl->GetValue() );
+	g_Conf->Folders.Set( m_FolderId, m_pickerCtrl->GetPath(), m_checkCtrl->GetValue() );
 }

@@ -248,7 +248,7 @@ protected:
 	}
 
 public:
-	virtual ~SafeList()
+	virtual ~SafeList() throw()
 	{
 		safe_free( m_ptr );
 	}
@@ -286,6 +286,11 @@ public:
 	// Returns the size of the list, in bytes.  This includes mapped items only.
 	// The actual size of the allocation may differ.
 	int GetSizeInBytes() const { return m_length * sizeof(T); }
+
+	void MatchLengthToAllocatedSize()
+	{
+		m_length = m_allocsize;
+	}
 
 	// Ensures that the allocation is large enough to fit data of the
 	// amount requested.  The memory allocation is not resized smaller.
@@ -398,7 +403,9 @@ protected:
 	}
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  SafeAlignedArray class
+// --------------------------------------------------------------------------------------
 // Handy little class for allocating a resizable memory block, complete with
 // exception-based error handling and automatic cleanup.
 // This one supports aligned data allocations too!

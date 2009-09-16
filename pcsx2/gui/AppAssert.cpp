@@ -68,10 +68,6 @@ static wxString pxGetStackTrace()
 static __threadlocal bool _reentrant_lock = false;
 
 #ifdef __WXDEBUG__
-wxString pxAppTraits::GetAssertStackTrace()
-{
-	return pxGetStackTrace();
-}
 
 // This override of wx's implementation provides thread safe assertion message reporting.  If we aren't
 // on the main gui thread then the assertion message box needs to be passed off to the main gui thread
@@ -101,8 +97,8 @@ void Pcsx2App::OnAssertFailure( const wxChar *file, int line, const wxChar *func
 	// make life easier for people using VC++ IDE by using this format, which allows double-click
 	// response times from the Output window...
 	dbgmsg.Printf( L"%s(%d) : assertion failed%s%s: %s", file, line,
-		(func==NULL) ? L"" : L" in ", 
-		(func==NULL) ? L"" : func, 
+		(func==NULL) ? wxEmptyString : L" in ", 
+		(func==NULL) ? wxEmptyString : func, 
 		message.c_str()
 	);
 

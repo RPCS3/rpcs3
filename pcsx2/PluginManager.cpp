@@ -593,6 +593,34 @@ wxString Exception::PluginError::FormatDisplayMessage() const
 	return wxsFormat( m_message_user, tbl_PluginInfo[PluginId].GetShortname().c_str() );
 }
 
+wxString Exception::FreezePluginFailure::FormatDiagnosticMessage() const
+{
+	return wxsFormat(
+		L"%s plugin returned an error while saving the state.\n\n",
+		tbl_PluginInfo[PluginId].shortname
+	) + m_stacktrace;
+}
+
+wxString Exception::FreezePluginFailure::FormatDisplayMessage() const
+{
+	// [TODO]
+	return m_message_user;
+}
+
+wxString Exception::ThawPluginFailure::FormatDiagnosticMessage() const
+{
+	return wxsFormat(
+		L"%s plugin returned an error while loading the state.\n\n",
+		tbl_PluginInfo[PluginId].shortname
+	) + m_stacktrace;
+}
+
+wxString Exception::ThawPluginFailure::FormatDisplayMessage() const
+{
+	// [TODO]
+	return m_message_user;
+}
+
 // --------------------------------------------------------------------------------------
 //  PCSX2 Callbacks passed to Plugins
 // --------------------------------------------------------------------------------------
@@ -702,6 +730,8 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		// fixme: use plugin's GetLastError (not implemented yet!)
 		throw Exception::PluginLoadError( PluginId_Mcd, wxEmptyString, "Internal Memorycard Plugin failed to load." );
 	}
+
+	g_plugins = this;
 }
 
 PluginManager::~PluginManager()
@@ -713,6 +743,9 @@ PluginManager::~PluginManager()
 	}
 	DESTRUCTOR_CATCHALL
 	// All library unloading done automatically.
+	
+	if( g_plugins == this )
+		g_plugins = NULL;
 }
 
 void PluginManager::BindCommon( PluginsEnum_t pid )
@@ -890,7 +923,7 @@ void PluginManager::Open()
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
-	DevCon::Status( "\tClosing %s", tbl_PluginInfo[pid].shortname );
+	Console::Status( "\tClosing %s", tbl_PluginInfo[pid].shortname );
 
 	if( pid == PluginId_GS )
 	{
@@ -910,7 +943,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 
 void PluginManager::Close( bool closegs )
 {
-	Console::Status( "Closing plugins..." );
+	DbgCon::Status( "Closing plugins..." );
 
 	// Close plugins in reverse order of the initialization procedure.
 
@@ -920,7 +953,7 @@ void PluginManager::Close( bool closegs )
 			Close( tbl_PluginInfo[i].id );
 	}
 
-	Console::Status( "Plugins closed successfully." );
+	DbgCon::Status( "Plugins closed successfully." );
 }
 
 // Initializes all plugins.  Plugin initialization should be done once for every new emulation
@@ -974,8 +1007,8 @@ void PluginManager::Init()
 void PluginManager::Shutdown()
 {
 	Close();
+	DbgCon::Status( "Shutting down plugins..." );
 
-	Console::Status( "Shutting down plugins..." );
 	// Shutdown plugins in reverse order (probably doesn't matter...
 	//  ... but what the heck, right?)
 
@@ -990,52 +1023,82 @@ void PluginManager::Shutdown()
 
 	// More memorycard hacks!!
 
-	if( EmuPlugins.Mcd != NULL && m_mcdPlugin != NULL )
+	if( (EmuPlugins.Mcd != NULL) && (m_mcdPlugin != NULL) )
 	{
 		m_mcdPlugin->DeleteComponentInstance( (PS2E_THISPTR)EmuPlugins.Mcd );
 		EmuPlugins.Mcd = NULL;
 	}
 
-	Console::Status( "Plugins shutdown successfully." );
+	DbgCon::Status( "Plugins shutdown successfully." );
 }
 
-void PluginManager::Freeze( PluginsEnum_t pid, int mode, freezeData* data )
+// For internal use only, unless you're the MTGS.  Then it's for you too!
+// Returns false if the plugin returned an error.
+bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 {
-	m_info[pid].CommonBindings.Freeze( mode, data );
-}
-
-// ----------------------------------------------------------------------------
-// Thread Safety:
-//   This function should only be called by the Main GUI thread and the GS thread (for GS states only),
-//   as it has special handlers to ensure that GS freeze commands are executed appropriately on the
-//   GS thread.
-//
-void PluginManager::Freeze( PluginsEnum_t pid, SaveState& state )
-{
-	if( pid == PluginId_GS && wxThread::IsMain() )
+	if( (pid == PluginId_GS) && wxThread::IsMain() )
 	{
-		// Need to send the GS freeze request on the GS thread.
+		MTGS_FreezeData woot = { data, 0 };
+		// GS needs some thread safety love...
+		mtgsThread->SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &woot );
+		mtgsWaitGS();
+		return woot.retval != -1;
 	}
 	else
 	{
-		state.FreezePlugin( tbl_PluginInfo[pid].shortname, m_info[pid].CommonBindings.Freeze );
+		return m_info[pid].CommonBindings.Freeze( mode, data ) != -1;
 	}
 }
 
-// ----------------------------------------------------------------------------
-// This overload of Freeze performs savestate freeze operation on *all* plugins,
-// as according to the order in PluignsEnum_t.
-//
 // Thread Safety:
 //   This function should only be called by the Main GUI thread and the GS thread (for GS states only),
 //   as it has special handlers to ensure that GS freeze commands are executed appropriately on the
 //   GS thread.
 //
-void PluginManager::Freeze( SaveState& state )
+void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 {
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
-		Freeze( pi->id, state );
+	Console::WriteLn( "\t%s %s", state.IsSaving() ? "Saving" : "Loading",
+		tbl_PluginInfo[pid].shortname );
+
+	freezeData fP = { 0, NULL };
+	if( !DoFreeze( pid, FREEZE_SIZE, &fP ) )
+		fP.size = 0;
+
+	int fsize = fP.size;
+	state.Freeze( fsize );
+
+	if( state.IsLoading() && (fsize == 0) )
+	{
+		// no state data to read, but the plugin expects some state data.
+		// Issue a warning to console...
+		if( fP.size != 0 )
+			Console::Notice( "\tWarning: No data for this plugin was found. Plugin status may be unpredictable." );
+		return;
+
+		// Note: Size mismatch check could also be done here on loading, but
+		// some plugins may have built-in version support for non-native formats or
+		// older versions of a different size... or could give different sizes depending
+		// on the status of the plugin when loading, so let's ignore it.
+	}
+	
+	fP.size = fsize;
+	if( fP.size == 0 ) return;
+
+	state.PrepBlock( fP.size );
+	fP.data = (s8*)state.GetBlockPtr();
+	
+	if( state.IsSaving() )
+	{
+		if( !DoFreeze(pid, FREEZE_SAVE, &fP) )
+			throw Exception::FreezePluginFailure( pid );
+	}
+	else
+	{
+		if( !DoFreeze(pid, FREEZE_LOAD, &fP) )
+			throw Exception::ThawPluginFailure( pid );
+	}
+
+	state.CommitBlock( fP.size );
 }
 
 bool PluginManager::KeyEvent( const keyEvent& evt )
@@ -1062,9 +1125,7 @@ void PluginManager::Configure( PluginsEnum_t pid )
 //
 PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] )
 {
-	PluginManager* retval = new PluginManager( folders );
-	retval->Init();
-	return retval;
+	return new PluginManager( folders );
 }
 
 PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )

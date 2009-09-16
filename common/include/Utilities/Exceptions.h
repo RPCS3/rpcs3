@@ -300,7 +300,7 @@ namespace Exception
 	class BadStream : public virtual Stream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( BadStream, wxLt("File data is corrupted or incomplete, or the stream connection closed unexpectedly") )
+		DEFINE_STREAM_EXCEPTION( BadStream, wxLt("File data is corrupted or incomplete, or the stream connection closed unexpectedly.") )
 	};
 
 	// A generic exception for odd-ball stream creation errors.
@@ -308,7 +308,7 @@ namespace Exception
 	class CreateStream : public virtual Stream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( CreateStream, wxLt("File could not be created or opened") )
+		DEFINE_STREAM_EXCEPTION( CreateStream, wxLt("File could not be created or opened.") )
 	};
 
 	// Exception thrown when an attempt to open a non-existent file is made.
@@ -317,13 +317,13 @@ namespace Exception
 	class FileNotFound : public virtual CreateStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( FileNotFound, wxLt("File not found") )
+		DEFINE_STREAM_EXCEPTION( FileNotFound, wxLt("File not found.") )
 	};
 
 	class AccessDenied : public virtual CreateStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( AccessDenied, wxLt("Permission denied to file") )
+		DEFINE_STREAM_EXCEPTION( AccessDenied, wxLt("Permission denied to file.") )
 	};
 
 	// EndOfStream can be used either as an error, or used just as a shortcut for manual
@@ -332,7 +332,7 @@ namespace Exception
 	class EndOfStream : public virtual Stream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( EndOfStream, wxLt("Unexpected end of file") );
+		DEFINE_STREAM_EXCEPTION( EndOfStream, wxLt("Unexpected end of file or stream.") );
 	};
 
 	// ---------------------------------------------------------------------------------------
@@ -346,29 +346,7 @@ namespace Exception
 	class BadSavedState : public virtual BadStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( BadSavedState, wxLt("Savestate data is corrupted or incomplete") )
-	};
-
-	// Exception thrown by SaveState class when a plugin returns an error during state
-	// load or save.
-	//
-	class FreezePluginFailure : public virtual RuntimeError
-	{
-	public:
-		wxString PluginName;		// name of the plugin
-		wxString FreezeAction;
-
-	public:
-		DEFINE_EXCEPTION_COPYTORS( FreezePluginFailure )
-
-		explicit FreezePluginFailure( const char* plugin, const char* action )
-		{
-			PluginName = wxString::FromUTF8( plugin );
-			FreezeAction = wxString::FromUTF8( action );
-		}
-
-		virtual wxString FormatDiagnosticMessage() const;
-		virtual wxString FormatDisplayMessage() const;
+		DEFINE_STREAM_EXCEPTION( BadSavedState, wxLt("Savestate data is corrupted or incomplete.") )
 	};
 
 	// thrown when the savestate being loaded isn't supported.

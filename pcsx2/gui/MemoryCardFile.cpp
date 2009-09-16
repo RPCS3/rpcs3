@@ -32,10 +32,6 @@ struct Component_FileMcd;
 
 #include <wx/file.h>
 
-#ifdef _WIN32
-	extern void NTFS_CompressFile( const wxString& file, bool compressMode );
-#endif
-
 static const int MCD_SIZE = 1024 *  8  * 16;
 static const int MC2_SIZE = 1024 * 528 * 16;
 
@@ -106,9 +102,7 @@ FileMemoryCard::FileMemoryCard()
 			// [TODO] : Add memcard size detection and report it to the console log.
 			//   (8MB, 256Mb, whatever)
 
-			#ifdef _WIN32
 			NTFS_CompressFile( str, g_Conf->McdEnableNTFS );
-			#endif
 
 			if( !m_file[port][slot].Open( str.c_str(), wxFile::read_write ) )
 			{

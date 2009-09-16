@@ -106,6 +106,39 @@ namespace Exception
 			PluginId = pid;
 		}
 	};
+	
+	// This exception is thrown when a plugin returns an error while trying to save itself.
+	// Typically this should be a very rare occurance since a plugin typically shoudn't
+	// be doing memory allocations or file access during state saving.
+	//
+	class FreezePluginFailure : public virtual PluginError
+	{
+	public:
+		DEFINE_EXCEPTION_COPYTORS( FreezePluginFailure )
+
+		explicit FreezePluginFailure( PluginsEnum_t pid)
+		{
+			PluginId = pid;
+		}
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
+	};
+
+	class ThawPluginFailure : public virtual PluginError, public virtual BadSavedState
+	{
+	public:
+		DEFINE_EXCEPTION_COPYTORS( ThawPluginFailure )
+
+		explicit ThawPluginFailure( PluginsEnum_t pid )
+		{
+			PluginId = pid;
+		}
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
+	};
+
 };
 
 // --------------------------------------------------------------------------------------
@@ -140,7 +173,7 @@ struct LegacyPluginAPI_Common
 	}
 };
 
-class SaveState;
+class SaveStateBase;
 class mtgsThreadObject;
 
 // --------------------------------------------------------------------------------------
@@ -201,9 +234,12 @@ public:
 	virtual void Close( PluginsEnum_t pid ) {}
 	virtual void Close( bool closegs=true ) {}
 
-	virtual void Freeze( PluginsEnum_t pid, int mode, freezeData* data ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
-	virtual void Freeze( PluginsEnum_t pid, SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
-	virtual void Freeze( SaveState& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
+	{
+		wxASSERT_MSG( false, L"Null PluginManager!" );
+		return false;
+	}
 
 	virtual bool KeyEvent( const keyEvent& evt ) { return false; }
 };
@@ -238,8 +274,10 @@ protected:
 
 	bool m_initialized;
 
-	PluginStatus_t			m_info[PluginId_Count];
 	const PS2E_LibraryAPI*	m_mcdPlugin;
+
+public:		// hack until we unsuck plugins...
+	PluginStatus_t			m_info[PluginId_Count];
 
 public:
 	virtual ~PluginManager();
@@ -251,9 +289,8 @@ public:
 	void Close( PluginsEnum_t pid );
 	void Close( bool closegs=true );
 
-	void Freeze( PluginsEnum_t pid, int mode, freezeData* data );
-	void Freeze( PluginsEnum_t pid, SaveState& state );
-	void Freeze( SaveState& state );
+	void Freeze( PluginsEnum_t pid, SaveStateBase& state );
+	bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data );
 
 	bool KeyEvent( const keyEvent& evt );
 	void Configure( PluginsEnum_t pid );

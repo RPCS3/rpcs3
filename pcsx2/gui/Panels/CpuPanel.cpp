@@ -78,9 +78,9 @@ Panels::CpuPanel::CpuPanel( wxWindow& parent, int idealWidth ) :
 		m_Option_sVU1->SetValue( recOps.EnableVU1 );
 }
 
-void Panels::CpuPanel::Apply( AppConfig& conf )
+void Panels::CpuPanel::Apply()
 {
-	Pcsx2Config::RecompilerOptions& recOps( conf.EmuOptions.Cpu.Recompiler );
+	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 	recOps.EnableEE		= m_Option_RecEE->GetValue();
 	recOps.EnableIOP	= m_Option_RecIOP->GetValue();
 	recOps.EnableVU0	= m_Option_mVU0->GetValue() || m_Option_sVU0->GetValue();

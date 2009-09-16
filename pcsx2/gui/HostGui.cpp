@@ -33,7 +33,7 @@ namespace HostGui
 	// Sets the status bar message without mirroring the output to the console.
 	void SetStatusMsg( const wxString& text )
 	{
-		wxGetApp().GetMainWindow()->SetStatusText( text );
+		wxGetApp().GetMainFrame().SetStatusText( text );
 	}
 
 	void Notice( const wxString& text )
@@ -63,10 +63,7 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 	switch( evt.GetKeyCode() )
 	{
 		case WXK_ESCAPE:
-			if( g_Conf->CloseGSonEsc )
-				StateRecovery::MakeGsOnly();
-
-			SysEndExecution();
+			m_CoreThread->Suspend();
 		break;
 	
 		case WXK_F1:
@@ -82,7 +79,7 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 			Console::Notice( " > Selected savestate slot %d", StatesC);
 
 			if( GSchangeSaveState != NULL )
-				GSchangeSaveState(StatesC, SaveState::GetFilename(StatesC).mb_str());
+				GSchangeSaveState(StatesC, SaveStateBase::GetFilename(StatesC).mb_str());
 		break;
 
 		case WXK_F3:
@@ -100,15 +97,10 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 		break;
 
 		case WXK_F9: //gsdx "on the fly" renderer switching
-
-			SysSuspend();
-			StateRecovery::MakeGsOnly();
-
-			GetPluginManager().Close( PluginId_GS );
+			m_CoreThread->Suspend();
+			m_CorePlugins->Close( PluginId_GS );
 			renderswitch = !renderswitch;
-
-			StateRecovery::Recover();
-			SysResume();
+			m_CoreThread->Resume();
 		break;
 			
 #ifdef PCSX2_DEVBUILD

@@ -13,8 +13,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SAVESTATE_H_
-#define _SAVESTATE_H_
+#pragma once
 
 // This shouldn't break Win compiles, but it does.
 #ifdef __LINUX__
@@ -28,25 +27,53 @@
 //  the lower 16 bit value.  IF the change is breaking of all compatibility with old
 //  states, increment the upper 16 bit value, and clear the lower 16 bits to 0.
 
-static const u32 g_SaveVersion = 0x8b410001;
+static const u32 g_SaveVersion = 0x8b410002;
 
 // this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
 extern s32 CALLBACK gsSafeFreeze( int mode, freezeData *data );
 
-// This class provides the base API for both loading and saving savestates.
-// Normally you'll want to use one of the four "functional" derived classes rather
-// than this class directly: gzLoadingState, gzSavingState (gzipped disk-saved
+
+enum FreezeSectionId
+{
+	FreezeId_End,
+
+	FreezeId_Memory,
+	FreezeId_Registers,
+
+	// A BIOS tag should always be saved in conjunction with Memory or Registers tags,
+	// but can be skipped if the savestate has only plugins.
+	FreezeId_Bios,
+
+	FreezeId_Plugin,
+
+	// anything here and beyond we can skip, with a warning
+	FreezeId_Unknown,
+};
+
+// --------------------------------------------------------------------------------------
+//  SaveStateBase class
+// --------------------------------------------------------------------------------------
+// Provides the base API for both loading and saving savestates.  Normally you'll want to
+// use one of the four "functional" derived classes rather than this class directly: gzLoadingState, gzSavingState (gzipped disk-saved
 // states), and memLoadingState, memSavingState (uncompressed memory states).
-class SaveState
+class SaveStateBase
 {
 protected:
+	SafeArray<u8>& m_memory;
+	char m_tagspace[32];
+
 	u32 m_version;		// version of the savestate being loaded.
-	SafeArray<char> m_tagspace;
+
+	int m_idx;		// current read/write index of the allocation
+	int m_sectid;
+	int m_pid;
+	
+	bool m_DidBios;
 
 public:
-	SaveState( const char* msg, const wxString& destination );
-	virtual ~SaveState() { }
+	SaveStateBase( SafeArray<u8>& memblock );
+	virtual ~SaveStateBase() { }
 
 	static wxString GetFilename( int slot );
 
@@ -78,14 +105,28 @@ public:
 		FreezeMem( &data, sizeof( T ) - sizeOfNewStuff );
 	}
 
+	void PrepBlock( int size );
+
+	u8* GetBlockPtr()
+	{
+		return &m_memory[m_idx];
+	}
+
+	void CommitBlock( int size )
+	{
+		m_idx += size;
+	}
+
+	bool FreezeSection();
+
 	// Freezes an identifier value into the savestate for troubleshooting purposes.
 	// Identifiers can be used to determine where in a savestate that data has become
 	// skewed (if the value does not match then the error occurs somewhere prior to that
 	// position).
 	void FreezeTag( const char* src );
 
-	// Loads or saves a plugin.  Plugin name is for console logging purposes.
-	virtual void FreezePlugin( const char* name, s32 (CALLBACK* freezer)(int mode, freezeData *data) )=0; 
+	// Returns true if this object is a StateLoading type object.
+	bool IsLoading() const { return !IsSaving(); }
 
 	// Loads or saves a memory block.
 	virtual void FreezeMem( void* data, int size )=0;
@@ -93,17 +134,17 @@ public:
 	// Returns true if this object is a StateSaving type object.
 	virtual bool IsSaving() const=0;
 
-	// Returns true if this object is a StateLoading type object.
-	bool IsLoading() const { return !IsSaving(); }
-
-	// note: gsFreeze() needs to be public because of the GSState recorder.
-
 public:
-	virtual void gsFreeze();
+	// note: gsFreeze() needs to be public because of the GSState recorder.
+	void gsFreeze();
 
 protected:
 
 	// Load/Save functions for the various components of our glorious emulator!
+
+	void FreezeBios();
+	void FreezeMainMemory();
+	void FreezeRegisters();
 
 	void rcntFreeze();
 	void vuMicroFreeze();
@@ -125,57 +166,11 @@ protected:
 
 };
 
-/////////////////////////////////////////////////////////////////////////////////
-// Class Declarations for Savestates using zlib
+// --------------------------------------------------------------------------------------
+//  Saving and Loading Specialized Implementations...
+// --------------------------------------------------------------------------------------
 
-class gzBaseStateInfo : public SaveState
-{
-protected:
-	const wxString m_filename;
-	gzFile m_file;		// used for reading/writing disk saves
-
-public:
-	gzBaseStateInfo( const char* msg, const wxString& filename );
-
-	virtual ~gzBaseStateInfo();
-};
-
-class gzSavingState : public gzBaseStateInfo
-{
-public:
-	virtual ~gzSavingState() {}
-	gzSavingState( const wxString& filename ) ;
-	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
-	void FreezeMem( void* data, int size );
-	bool IsSaving() const { return true; }
-};
-
-class gzLoadingState : public gzBaseStateInfo
-{
-public:
-	virtual ~gzLoadingState();
-	gzLoadingState( const wxString& filename ); 
-
-	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
-	void FreezeMem( void* data, int size );
-	bool IsSaving() const { return false; }
-	bool Finished() const { return !!gzeof( m_file ); }
-};
-
-//////////////////////////////////////////////////////////////////////////////////
-
-class memBaseStateInfo : public SaveState
-{
-protected:
-	SafeArray<u8>& m_memory;
-	int m_idx;		// current read/write index of the allocation
-
-public:
-	virtual ~memBaseStateInfo() { }
-	memBaseStateInfo( SafeArray<u8>& memblock, const char* msg );
-};
-
-class memSavingState : public memBaseStateInfo
+class memSavingState : public SaveStateBase
 {
 protected:
 	static const int ReallocThreshold = 0x200000;	// 256k reallocation block size.
@@ -185,22 +180,21 @@ public:
 	virtual ~memSavingState() { }
 	memSavingState( SafeArray<u8>& save_to );
 	
-	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
 	// Saving of state data to a memory buffer
 	void FreezeMem( void* data, int size );
 	bool IsSaving() const { return true; }
 };
 
-class memLoadingState : public memBaseStateInfo
+class memLoadingState : public SaveStateBase
 {
 public:
 	virtual ~memLoadingState();
-	memLoadingState(SafeArray<u8>& load_from );
+	memLoadingState( const SafeArray<u8>& load_from );
 
-	void FreezePlugin( const char* name, s32(CALLBACK *freezer)(int mode, freezeData *data) );
 	// Loading of state data from a memory buffer...
 	void FreezeMem( void* data, int size );
 	bool IsSaving() const { return false; }
+	bool IsFinished() const { return m_idx >= m_memory.GetSizeInBytes(); }
 };
 
 namespace StateRecovery
@@ -209,10 +203,7 @@ namespace StateRecovery
 	extern void Recover();
 	extern void SaveToFile( const wxString& file );
 	extern void SaveToSlot( uint num );
-	extern void MakeGsOnly();
 	extern void MakeFull();
 	extern void Clear();
 }
-
-#endif
 

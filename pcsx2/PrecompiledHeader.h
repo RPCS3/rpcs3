@@ -83,6 +83,7 @@ typedef int BOOL;
 #include "i18n.h"
 #include "Config.h"
 #include "Utilities/wxBaseTools.h"
+#include "Utilities/ScopedPtr.h"
 #include "Utilities/Path.h"
 #include "Utilities/Console.h"
 #include "Utilities/Exceptions.h"

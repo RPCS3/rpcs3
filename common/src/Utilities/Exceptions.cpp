@@ -104,29 +104,15 @@ namespace Exception
 	wxString Stream::FormatDiagnosticMessage() const
 	{
 		return wxsFormat(
-			L"Stream exception: %s\n\tObject name: %s",
+			L"Stream exception: %s\n\tFile/Object: %s",
 			m_message_diag.c_str(), StreamName.c_str()
 		) + m_stacktrace;
 	}
 
 	wxString Stream::FormatDisplayMessage() const
 	{
-		return m_message_user + L"\n\n" + StreamName;
-	}
-
-	// ------------------------------------------------------------------------
-	wxString FreezePluginFailure::FormatDiagnosticMessage() const
-	{
-		return wxsFormat(
-			L"%s plugin returned an error while %s the state.\n\n",
-			PluginName.c_str(),
-			FreezeAction.c_str()
-		) + m_stacktrace;
-	}
-
-	wxString FreezePluginFailure::FormatDisplayMessage() const
-	{
-		return m_message_user;
+		return m_message_user + L"\n\n" +
+			wxsFormat( _("Name: %s"), StreamName.c_str() );
 	}
 
 	// ------------------------------------------------------------------------

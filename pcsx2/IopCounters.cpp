@@ -748,7 +748,7 @@ void psxRcntSetGates()
 		psxvblankgate &= ~(1<<3);
 }
 
-void SaveState::psxRcntFreeze()
+void SaveStateBase::psxRcntFreeze()
 {
 	FreezeTag( "iopCounters" );
 

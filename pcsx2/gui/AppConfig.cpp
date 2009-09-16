@@ -94,7 +94,10 @@ namespace PathDefs
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments()
 	{
-		return (wxDirName)g_Conf->GetDefaultDocumentsFolder();
+		if( UseAdminMode )
+			return (wxDirName)wxGetCwd();
+		else
+			return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
 	}
 
 	wxDirName GetSnapshots()
@@ -155,20 +158,12 @@ namespace PathDefs
 	}
 };
 
-wxString AppConfig::GetDefaultDocumentsFolder()
-{
-	if( UseAdminMode )
-		return wxGetCwd();
-	else
-		return Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
-}
-
 const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx ) const
 {
 	switch( folderidx )
 	{
 		case FolderId_Plugins:		return Plugins;
-		case FolderId_Settings:		return Settings;
+		case FolderId_Settings:		return SettingsFolder;
 		case FolderId_Bios:			return Bios;
 		case FolderId_Snapshots:	return Snapshots;
 		case FolderId_Savestates:	return Savestates;
@@ -185,7 +180,7 @@ const bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
 	switch( folderidx )
 	{
 		case FolderId_Plugins:		return UseDefaultPlugins;
-		case FolderId_Settings:		return UseDefaultSettings;
+		case FolderId_Settings:		return UseDefaultSettingsFolder;
 		case FolderId_Bios:			return UseDefaultBios;
 		case FolderId_Snapshots:	return UseDefaultSnapshots;
 		case FolderId_Savestates:	return UseDefaultSavestates;
@@ -207,8 +202,8 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 		break;
 
 		case FolderId_Settings:
-			Settings = src;
-			UseDefaultSettings = useDefault;
+			SettingsFolder = src;
+			UseDefaultSettingsFolder = useDefault;
 		break;
 
 		case FolderId_Bios:
@@ -240,8 +235,9 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  Default Filenames
+// --------------------------------------------------------------------------------------
 namespace FilenameDefs
 {
 	wxFileName GetConfig()
@@ -290,9 +286,14 @@ wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 	return Path::Combine( Folders.Plugins, BaseFilenames[pluginidx] );
 }
 
-wxString AppConfig::FullPathToConfig() const
+wxDirName GetSettingsFolder()
 {
-	return g_Conf->Folders.Settings.Combine( FilenameDefs::GetConfig() ).GetFullPath();
+	return UseDefaultSettingsFolder ? PathDefs::GetSettings() : SettingsFolder;
+}
+
+wxString GetSettingsFilename()
+{
+	return GetSettingsFolder().Combine( FilenameDefs::GetConfig() ).GetFullPath();
 }
 
 
@@ -349,7 +350,8 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 	ini.GetConfig().Write( L"Timestamp", timestamp_now );*/
 
 	ini.Entry( L"UseAdminMode", UseAdminMode, false );
-	ini.Entry( L"SettingsPath", Folders.Settings, PathDefs::GetSettings() );
+	ini.Entry( L"UseDefaultSettingsFolder", UseDefaultSettingsFolder, true );
+	ini.Entry( L"SettingsFolder", SettingsFolder, PathDefs::GetSettings() );
 
 	ini.Flush();
 }
@@ -405,40 +407,6 @@ void AppConfig::LoadSave( IniInterface& ini )
 }
 
 // ------------------------------------------------------------------------
-// Performs necessary operations to ensure that the current g_Conf settings (and other config-stored
-// globals) are applied to the pcsx2 main window and primary emulation subsystems (if active).
-//
-void AppConfig::Apply()
-{
-	Folders.ApplyDefaults();
-
-	// Ensure existence of necessary documents folders.  Plugins and other parts
-	// of PCSX2 rely on them.
-
-	Folders.MemoryCards.Mkdir();
-	Folders.Savestates.Mkdir();
-	Folders.Snapshots.Mkdir();
-
-	EmuOptions.BiosFilename = FullpathToBios();
-
-	// Update the compression attribute on the Memcards folder.
-	// Memcards generally compress very well via NTFS compression.
-
-	NTFS_CompressFile( Folders.MemoryCards.ToString(), McdEnableNTFS );
-
-	{
-		wxDoNotLogInThisScope please;
-		if( !i18n_SetLanguage( LanguageId ) )
-		{
-			if( !i18n_SetLanguage( wxLANGUAGE_DEFAULT ) )
-			{
-				i18n_SetLanguage( wxLANGUAGE_ENGLISH );
-			}
-		}
-	}
-}
-
-// ------------------------------------------------------------------------
 AppConfig::ConsoleLogOptions::ConsoleLogOptions() :
 	Visible( false )
 ,	AutoDock( true )
@@ -463,7 +431,6 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* lo
 void AppConfig::FolderOptions::ApplyDefaults()
 {
 	if( UseDefaultPlugins )		Plugins		= PathDefs::GetPlugins();
-	if( UseDefaultSettings )	Settings	= PathDefs::GetSettings();
 	if( UseDefaultBios )		Bios		= PathDefs::GetBios();
 	if( UseDefaultSnapshots )	Snapshots	= PathDefs::GetSnapshots();
 	if( UseDefaultSavestates )	Savestates	= PathDefs::GetSavestates();
@@ -475,7 +442,6 @@ void AppConfig::FolderOptions::ApplyDefaults()
 AppConfig::FolderOptions::FolderOptions() :
 	bitset( 0xffffffff )
 ,	Plugins( PathDefs::GetPlugins() )
-,	Settings( PathDefs::GetSettings() )
 ,	Bios( PathDefs::GetBios() )
 ,	Snapshots( PathDefs::GetSnapshots() )
 ,	Savestates( PathDefs::GetSavestates() )
@@ -503,7 +469,6 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniBitBool( UseDefaultLogs );
 
 	IniEntry( Plugins );
-	IniEntry( Settings );
 	IniEntry( Bios );
 	IniEntry( Snapshots );
 	IniEntry( Savestates );
@@ -552,13 +517,13 @@ void AppConfig_ReloadGlobalSettings( bool overwrite )
 	PathDefs::GetSettings().Mkdir();
 
 	// Allow wx to use our config, and enforces auto-cleanup as well
-	delete wxConfigBase::Set( OpenFileConfig( g_Conf->FullPathToConfig() ) );
+	delete wxConfigBase::Set( OpenFileConfig( GetSettingsFilename() ) );
 	wxConfigBase::Get()->SetRecordDefaults();
 
 	if( !overwrite )
 		wxGetApp().LoadSettings();
 
-	wxGetApp().ApplySettings( *g_Conf );
+	wxGetApp().ApplySettings();
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );

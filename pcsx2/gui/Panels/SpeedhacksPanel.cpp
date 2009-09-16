@@ -219,9 +219,9 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	Connect( m_slider_vustealer->GetId(),	wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::VUCycleRate_Scroll ) );
 }
 
-void Panels::SpeedHacksPanel::Apply( AppConfig& conf )
+void Panels::SpeedHacksPanel::Apply()
 {
-	Pcsx2Config::SpeedhackOptions& opts( conf.EmuOptions.Speedhacks );
+	Pcsx2Config::SpeedhackOptions& opts( g_Conf->EmuOptions.Speedhacks );
 	opts.EECycleRate		= m_slider_eecycle->GetValue()-1;
 	opts.VUCycleSteal		= m_slider_vustealer->GetValue();
 

@@ -550,6 +550,9 @@ template< class Key, class T >
 class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
 {
 public:
+	using dense_hash_map<Key, T, CommonHashClass>::operator[];
+	using dense_hash_map<Key, T, CommonHashClass>::const_iterator;
+
 	virtual ~HashMap() {}
 
 	/// <summary>
@@ -574,13 +577,13 @@ public:
 	///   parameter.  This is a more favorable alternative to the indexer operator since the
 	///   indexer implementation can and will create new entries for every request that
 	/// </remarks>
-	/*void TryGetValue( const Key& key, T& outval ) const
+	void TryGetValue( const Key& key, T& outval ) const
 	{
 		// See above class for notes on why this is commented out.
 		const_iterator iter = find( key );
 		if( iter != end() )
 			outval = iter->second;
-	}*/
+	}
 
 	const T& GetValue( Key key ) const
 	{

@@ -437,7 +437,7 @@ void SPRTOinterrupt()
 	hwDmacIrq(DMAC_TO_SPR);
 }
 
-void SaveState::sprFreeze()
+void SaveStateBase::sprFreeze()
 {
 	FreezeTag("SPRdma");
 

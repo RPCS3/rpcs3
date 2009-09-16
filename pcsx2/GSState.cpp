@@ -19,6 +19,55 @@
 #include <list>
 
 #ifdef PCSX2_DEVBUILD
+
+// GS Playback
+int g_SaveGSStream = 0; // save GS stream; 1 - prepare, 2 - save
+int g_nLeftGSFrames = 0; // when saving, number of frames left
+static wxScopedPtr<memSavingState> g_fGSSave;
+
+// fixme - need to take this concept and make it MTGS friendly.
+#ifdef _STGS_GSSTATE_CODE
+void GSGIFTRANSFER1(u32 *pMem, u32 addr) {
+	if( g_SaveGSStream == 2) {
+		u32 type = GSRUN_TRANS1;
+		u32 size = (0x4000-(addr))/16;
+		g_fGSSave->Freeze( type );
+		g_fGSSave->Freeze( size );
+		g_fGSSave->FreezeMem( ((u8*)pMem)+(addr), size*16 );
+	}
+	GSgifTransfer1(pMem, addr);
+}
+
+void GSGIFTRANSFER2(u32 *pMem, u32 size) {
+	if( g_SaveGSStream == 2) {
+		u32 type = GSRUN_TRANS2;
+		u32 _size = size;
+		g_fGSSave->Freeze( type );
+		g_fGSSave->Freeze( size );
+		g_fGSSave->FreezeMem( pMem, _size*16 );
+	}
+	GSgifTransfer2(pMem, size);
+}
+
+void GSGIFTRANSFER3(u32 *pMem, u32 size) {
+	if( g_SaveGSStream == 2 ) {
+		u32 type = GSRUN_TRANS3;
+		u32 _size = size;
+		g_fGSSave->Freeze( type );
+		g_fGSSave->Freeze( size );
+		g_fGSSave->FreezeMem( pMem, _size*16 );
+	}
+	GSgifTransfer3(pMem, size);
+}
+
+__forceinline void GSVSYNC(void) {
+	if( g_SaveGSStream == 2 ) {
+		u32 type = GSRUN_VSYNC;
+		g_fGSSave->Freeze( type );
+	}
+}
+#endif
+
 void SaveGSState(const wxString& file)
 {
 	if( g_SaveGSStream ) return;
@@ -26,7 +75,8 @@ void SaveGSState(const wxString& file)
 	Console::WriteLn( "Saving GS State..." );
 	Console::WriteLn( wxsFormat( L"\t%s", file.c_str() ) );
 
-	g_fGSSave = new gzSavingState( file );
+	SafeArray<u8> buf;
+	g_fGSSave.reset( new memSavingState( buf ) );
 
 	g_SaveGSStream = 1;
 	g_nLeftGSFrames = 2;
@@ -37,46 +87,35 @@ void SaveGSState(const wxString& file)
 void LoadGSState(const wxString& file)
 {
 	int ret;
-	gzLoadingState* f;
 
 	Console::Status( "Loading GS State..." );
 
-	try
-	{
-		f = new gzLoadingState( file );
-	}
-	catch( Exception::FileNotFound& )
-	{
-		// file not found? try prefixing with sstates folder:
-		if( !Path::IsRelative( file ) )
-		{
-			//f = new gzLoadingState( Path::Combine( g_Conf->Folders.Savestates, file ) );
+	wxString src( file );
 
-			// If this load attempt fails, then let the exception bubble up to
-			// the caller to deal with...
-		}
-	}
+	/*if( !wxFileName::FileExists( src ) )
+		src = Path::Combine( g_Conf->Folders.Savestates, src );*/
+		
+	if( !wxFileName::FileExists( src ) )
+		return;
+	
+	SafeArray<u8> buf;
+	memLoadingState f( buf );
 
 	// Always set gsIrq callback -- GS States are always exclusionary of MTGS mode
 	GSirqCallback( gsIrq );
 
 	ret = GSopen(&pDsp, "PCSX2", 0);
 	if (ret != 0)
-	{
-		delete f;
 		throw Exception::PluginOpenError( PluginId_GS );
-	}
 
 	ret = PADopen((void *)&pDsp);
 
-	f->Freeze(g_nLeftGSFrames);
-	f->gsFreeze();
+	f.Freeze(g_nLeftGSFrames);
+	f.gsFreeze();
 
-	f->FreezePlugin( "GS", gsSafeFreeze );
+	GetPluginManager().Freeze( PluginId_GS, f );
 
-	RunGSState( *f );
-
-	delete( f );
+	RunGSState( f );
 
 	g_plugins->Close( PluginId_GS );
 	g_plugins->Close( PluginId_PAD );
@@ -90,12 +129,12 @@ struct GSStatePacket
 
 // runs the GS
 // (this should really be part of the AppGui)
-void RunGSState( gzLoadingState& f )
+void RunGSState( memLoadingState& f )
 {
 	u32 newfield;
 	std::list< GSStatePacket > packets;
 
-	while( !f.Finished() )
+	while( !f.IsFinished() )
 	{
 		int type, size;
 		f.Freeze( type );
@@ -152,3 +191,77 @@ void RunGSState( gzLoadingState& f )
 	}
 }
 #endif
+
+//////////////////////////////////////////////////////////////////////////////////////////
+//
+void vSyncDebugStuff( uint frame )
+{
+#ifdef OLD_TESTBUILD_STUFF
+	if( g_TestRun.enabled && g_TestRun.frame > 0 ) {
+		if( frame > g_TestRun.frame ) {
+			// take a snapshot
+			if( g_TestRun.pimagename != NULL && GSmakeSnapshot2 != NULL ) {
+				if( g_TestRun.snapdone ) {
+					g_TestRun.curimage++;
+					g_TestRun.snapdone = 0;
+					g_TestRun.frame += 20;
+					if( g_TestRun.curimage >= g_TestRun.numimages ) {
+						// exit
+						g_EmuThread->Cancel();
+					}
+				}
+				else {
+					// query for the image
+					GSmakeSnapshot2(g_TestRun.pimagename, &g_TestRun.snapdone, g_TestRun.jpgcapture);
+				}
+			}
+			else {
+				// exit
+				g_EmuThread->Cancel();
+			}
+		}
+	}
+
+	GSVSYNC();
+
+	if( g_SaveGSStream == 1 ) {
+		freezeData fP;
+
+		g_SaveGSStream = 2;
+		g_fGSSave->gsFreeze();
+
+		if (GSfreeze(FREEZE_SIZE, &fP) == -1) {
+			safe_delete( g_fGSSave );
+			g_SaveGSStream = 0;
+		}
+		else {
+			fP.data = (s8*)malloc(fP.size);
+			if (fP.data == NULL) {
+				safe_delete( g_fGSSave );
+				g_SaveGSStream = 0;
+			}
+			else {
+				if (GSfreeze(FREEZE_SAVE, &fP) == -1) {
+					safe_delete( g_fGSSave );
+					g_SaveGSStream = 0;
+				}
+				else {
+					g_fGSSave->Freeze( fP.size );
+					if (fP.size) {
+						g_fGSSave->FreezeMem( fP.data, fP.size );
+						free(fP.data);
+					}
+				}
+			}
+		}
+	}
+	else if( g_SaveGSStream == 2 ) {
+
+		if( --g_nLeftGSFrames <= 0 ) {
+			safe_delete( g_fGSSave );
+			g_SaveGSStream = 0;
+			Console::WriteLn("Done saving GS stream");
+		}
+	}
+#endif
+}

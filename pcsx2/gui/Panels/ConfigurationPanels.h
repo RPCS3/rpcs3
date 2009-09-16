@@ -93,10 +93,6 @@ namespace Panels
 		// TODO : Rename me to CurOwnerBook, or rename the one above to ParentPage.
 		wxBookCtrlBase* ParentBook;
 
-		// Crappy hack to handle the UseAdminMode option, which can't be part of AppConfig
-		// because AppConfig depends on this value to initialize itself.
-		bool UseAdminMode;
-
 		StaticApplyState() :
 			PanelList()
 		,	CurOwnerPage( wxID_NONE )
@@ -168,7 +164,7 @@ namespace Panels
 		// configuration structure (which is typically a copy of g_Conf).  If validation
 		// of form contents fails, the function should throw Exception::CannotApplySettings.
 		// If no exceptions are thrown, then the operation is assumed a success. :)
-		virtual void Apply( AppConfig& conf )=0;
+		virtual void Apply()=0;
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -183,7 +179,7 @@ namespace Panels
 		virtual ~UsermodeSelectionPanel() { }
 		UsermodeSelectionPanel( wxWindow& parent, int idealWidth=wxDefaultCoord, bool isFirstTime = true );
 
-		void Apply( AppConfig& conf );
+		void Apply();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -198,7 +194,7 @@ namespace Panels
 		virtual ~LanguageSelectionPanel() { }
 		LanguageSelectionPanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
 
-		void Apply( AppConfig& conf );
+		void Apply();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -216,7 +212,7 @@ namespace Panels
 
 	public:
 		CpuPanel( wxWindow& parent, int idealWidth );
-		void Apply( AppConfig& conf );
+		void Apply();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -227,7 +223,7 @@ namespace Panels
 
 	public:
 		VideoPanel( wxWindow& parent, int idealWidth );
-		void Apply( AppConfig& conf );
+		void Apply();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -248,7 +244,7 @@ namespace Panels
 
 	public:
 		SpeedHacksPanel( wxWindow& parent, int idealWidth );
-		void Apply( AppConfig& conf );
+		void Apply();
 
 	protected:
 		const wxChar* GetEEcycleSliderMsg( int val );
@@ -267,7 +263,7 @@ namespace Panels
 
 	public:
 		GameFixesPanel( wxWindow& parent, int idealWidth );
-		void Apply( AppConfig& conf );
+		void Apply();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -286,7 +282,7 @@ namespace Panels
 		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
 		virtual ~DirPickerPanel() { }
 
-		void Apply( AppConfig& conf );
+		void Apply();
 		void Reset();
 		wxDirName GetPath() const { return wxDirName( m_pickerCtrl->GetPath() ); }
 
@@ -354,9 +350,9 @@ namespace Panels
 	class BiosSelectorPanel : public BaseSelectorPanel
 	{
 	protected:
+		wxScopedPtr<wxArrayString>	m_BiosList;
 		wxListBox&		m_ComboBox;
 		DirPickerPanel&	m_FolderPicker;
-		wxArrayString*	m_BiosList;
 
 	public:
 		BiosSelectorPanel( wxWindow& parent, int idealWidth );
@@ -364,7 +360,7 @@ namespace Panels
 		void ReloadSettings();
 
 	protected:
-		virtual void Apply( AppConfig& conf );
+		virtual void Apply();
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
 	};
@@ -399,16 +395,18 @@ namespace Panels
 		class EnumThread : public Threading::PersistentThread
 		{
 		public:
-			EnumeratedPluginInfo* Results;		// array of plugin results.
+			SafeList<EnumeratedPluginInfo> Results;		// array of plugin results.
 
 		protected:
 			PluginSelectorPanel& m_master;
-			volatile bool m_cancel;
 
 		public:
-			virtual ~EnumThread();
+			virtual ~EnumThread() throw()
+			{
+				PersistentThread::Cancel();
+			}
+
 			EnumThread( PluginSelectorPanel& master );
-			void Cancel();
 			void DoNextPlugin( int evtidx );
 
 		protected:
@@ -447,25 +445,27 @@ namespace Panels
 		};
 
 	// ------------------------------------------------------------------------
-	// PluginSelectorPanel Members
+	//  PluginSelectorPanel Members
 	// ------------------------------------------------------------------------
 
 	protected:
-		wxArrayString*	m_FileList;	// list of potential plugin files
 		StatusPanel&	m_StatusPanel;
 		ComboBoxPanel&	m_ComponentBoxes;
-		EnumThread*		m_EnumeratorThread;
+
+		wxScopedPtr<wxArrayString>	m_FileList;	// list of potential plugin files
+		wxScopedPtr<EnumThread>		m_EnumeratorThread;
 
 	public:
 		virtual ~PluginSelectorPanel();
 		PluginSelectorPanel( wxWindow& parent, int idealWidth );
 
 		void CancelRefresh();		// used from destructor, stays non-virtual
-		void Apply( AppConfig& conf );
+		void Apply();
 		void ReloadSettings();
 
 	protected:
 		void OnConfigure_Clicked( wxCommandEvent& evt );
+		void OnShowStatusBar( wxCommandEvent& evt );
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 
