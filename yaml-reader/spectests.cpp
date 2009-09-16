@@ -477,7 +477,7 @@ namespace Test {
 			parser.GetNextDocument(doc);
 			
 			YAML_ASSERT(doc.size() == 6);
-			YAML_ASSERT(doc["unicode"] == "Sosa did fine.\u263A");
+			YAML_ASSERT(doc["unicode"] == "Sosa did fine.\xe2\x98\xba");
 			YAML_ASSERT(doc["control"] == "\b1998\t1999\t2000\n");
 			YAML_ASSERT(doc["hex esc"] == "\x0d\x0a is \r\n");
 			YAML_ASSERT(doc["single"] == "\"Howdy!\" he cried.");
@@ -809,7 +809,7 @@ namespace Test {
 			YAML::Node doc;
 			parser.GetNextDocument(doc);
 			
-			YAML_ASSERT(doc == "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \u2028 \u2029 A A A");
+			YAML_ASSERT(doc == "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \xe2\x80\xa8 \xe2\x80\xa9 A A A");
 			return true;
 		}
 		

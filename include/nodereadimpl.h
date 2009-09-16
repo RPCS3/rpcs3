@@ -9,7 +9,7 @@ namespace YAML
 
 	// Note: this doesn't work on gcc 3.2, but does on gcc 3.4 and above. I'm not sure about 3.3.
 	
-#if (__GNUC__ < 3 || (__GNUC__ == 3 && __GNUC_MINOR__ <= 3))
+#if __GNUC__ && (__GNUC__ < 3 || (__GNUC__ == 3 && __GNUC_MINOR__ <= 3))
 	// trick doesn't work? Just fall back to ConvertScalar.
 	// This means that we can't use any user-defined types as keys in a map
 	template <typename T>
