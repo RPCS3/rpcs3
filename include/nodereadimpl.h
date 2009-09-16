@@ -6,7 +6,18 @@ namespace YAML
 	// (the goal is to call ConvertScalar if we can, and fall back to operator >> if not)
 	// thanks to litb from stackoverflow.com
 	// http://stackoverflow.com/questions/1386183/how-to-call-a-templated-function-if-it-exists-and-something-else-otherwise/1386390#1386390
+
+	// Note: this doesn't work on gcc 3.2, but does on gcc 3.4 and above. I'm not sure about 3.3.
 	
+#if (__GNUC__ < 3 || (__GNUC__ == 3 && __GNUC_MINOR__ <= 3))
+	// trick doesn't work? Just fall back to ConvertScalar.
+	// This means that we can't use any user-defined types as keys in a map
+	template <typename T>
+	inline bool Node::Read(T& value) const {
+		return ConvertScalar(*this, value);
+	}
+#else
+	// usual case: the trick!
 	template<bool>
 	struct read_impl;
 	
@@ -52,6 +63,7 @@ namespace YAML
 
 		return read_impl<sizeof (fallback::flag(), Convert(std::string(), value), fallback::flag()) != 1>::read(*this, value);
 	}
+#endif // done with trick
 	
 	// the main conversion function
 	template <typename T>

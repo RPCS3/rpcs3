@@ -79,22 +79,22 @@ namespace YAML
 
 	template <typename T>
 	inline bool operator == (const T& value, const Node& node) {
-		return value == node.Read<T>();
+		return value == node.operator T();
 	}
 	
 	template <typename T>
 	inline bool operator == (const Node& node, const T& value) {
-		return value == node.Read<T>();
+		return value == node.operator T();
 	}
 	
 	template <typename T>
 	inline bool operator != (const T& value, const Node& node) {
-		return value != node.Read<T>();
+		return value != node.operator T();
 	}
 	
 	template <typename T>
 	inline bool operator != (const Node& node, const T& value) {
-		return value != node.Read<T>();
+		return value != node.operator T();
 	}
 
 	inline bool operator == (const char *value, const Node& node) {
