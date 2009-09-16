@@ -151,6 +151,8 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( CdvdVerboseReads );
 	IniBitBool( CdvdDumpBlocks );
 	IniBitBool( EnablePatches );
+	
+	IniBitBool( SkipBiosSplash );
 
 	IniBitBool( McdEnableEjection );
 	IniBitBool( MultitapPort0_Enabled );
