@@ -2010,7 +2010,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 }
 
 int CALLBACK PropSheetProc(HWND hWnd, UINT msg, LPARAM lParam) {
-	hWndProp = hWnd;
+	if (hWnd) hWndProp = hWnd;
 	return 0;
 }
 
