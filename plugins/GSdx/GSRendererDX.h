@@ -41,8 +41,8 @@ protected:
 	virtual void UpdateFBA(GSTexture* rt) {}
 
 public:
-	GSRendererDX(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc, GSTextureFX* tfx, const GSVector2& pixelcenter = GSVector2(0, 0))
-		: GSRendererHW<Vertex>(base, mt, irq, dev, tc)
+	GSRendererDX(uint8* base, bool mt, void (*irq)(), GSTextureCache* tc, GSTextureFX* tfx, const GSVector2& pixelcenter = GSVector2(0, 0))
+		: GSRendererHW<Vertex>(base, mt, irq, tc)
 		, m_tfx(tfx)
 		, m_pixelcenter(pixelcenter)
 		, m_topology(-1)
@@ -58,9 +58,9 @@ public:
 		delete m_tfx;
 	}
 
-	bool Create(const string& title, int w, int h)
+	bool CreateDevice(GSDevice* dev)
 	{
-		if(!__super::Create(title, w, h))
+		if(!__super::CreateDevice(dev))
 			return false;
 
 		if(!m_tfx->Create(m_dev))

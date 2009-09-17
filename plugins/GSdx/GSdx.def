@@ -11,7 +11,8 @@ EXPORTS
 	GSsetBaseMem		
 	GSinit				
 	GSshutdown			
-	GSopen				
+	GSopen
+	GSopen2				
 	GSclose				
 	GSreset				
 	GSwriteCSR			

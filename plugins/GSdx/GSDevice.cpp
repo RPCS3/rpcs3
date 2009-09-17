@@ -79,7 +79,7 @@ bool GSDevice::Reset(int w, int h, int mode)
 
 	m_current = NULL; // current is special, points to other textures, no need to delete
 
-	return true;
+	return m_wnd != NULL;
 }
 
 void GSDevice::Present(const GSVector4i& r, int shader, bool limit)

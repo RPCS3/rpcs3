@@ -703,8 +703,8 @@ protected:
 	}
 
 public:
-	GSRendererHW(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc)
-		: GSRendererT<Vertex>(base, mt, irq, dev)
+	GSRendererHW(uint8* base, bool mt, void (*irq)(), GSTextureCache* tc)
+		: GSRendererT<Vertex>(base, mt, irq)
 		, m_tc(tc)
 		, m_width(1024)
 		, m_height(1024)

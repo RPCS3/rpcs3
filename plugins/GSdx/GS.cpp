@@ -78,17 +78,24 @@ EXPORT_C_(INT32) GSinit()
 		return -1;
 	}
 
+#ifdef _WINDOWS
+
+	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	if(!GSUtil::CheckDirectX())
+	{
+		return -1;
+	}
+
+#endif
+
 	return 0;
 }
 
 EXPORT_C GSshutdown()
 {
-}
-
-EXPORT_C GSclose()
-{
 	delete s_gs; 
-	
+
 	s_gs = NULL;
 
 #ifdef _WINDOWS
@@ -103,59 +110,101 @@ EXPORT_C GSclose()
 #endif
 }
 
+EXPORT_C GSclose()
+{
+	if( !s_gs ) return;
+
+	s_gs->ResetDevice();
+
+	if( s_gs->m_dev )
+		s_gs->m_dev->Reset(1, 1, GSDevice::Windowed);
+
+	delete s_gs->m_dev;
+	s_gs->m_dev = NULL;
+
+	s_gs->m_wnd.Detach();
+}
+
 static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 {
 	GSclose();
 
-#ifdef _WINDOWS
-
-	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
-	if(!GSUtil::CheckDirectX())
-	{
-		return -1;
-	}
-
-#endif
+	GSDevice* dev = NULL;
 
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gs = new GSRendererDX9(s_basemem, !!mt, s_irq); break;
-	case 1: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice9()); break;
-	case 2: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice9()); break;
-	case 3: s_gs = new GSRendererDX10(s_basemem, !!mt, s_irq); break;
-	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice10()); break;
-	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice10()); break;
-	case 6: s_gs = new GSRendererDX11(s_basemem, !!mt, s_irq); break;
-	case 7: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice11()); break;
-	case 8: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice11()); break;
-	#if 0
-	case 9: s_gs = new GSRendererOGL(s_basemem, !!mt, s_irq); break;
-	case 10: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
-	case 11: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
-	#endif
-	case 12: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
-	case 13: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
+	case 0: case 1: case 2: dev = new GSDevice9(); break;
+	case 3: case 4: case 5: dev = new GSDevice10(); break;
+	case 6: case 7: case 8: dev = new GSDevice11(); break;
+#if 0
+	case 9: case 10: case 11: dev = new GSDeviceOGL(); break;
+#endif
+	case 12: case 13: new GSDeviceNull(); break;
 	}
 
-	int w = theApp.GetConfig("ModeWidth", 0);
-	int h = theApp.GetConfig("ModeHeight", 0);
+	if( !dev ) return -1;
 
-	if(!s_gs->Create(title, w, h))
+	if( !s_gs )
+	{
+		switch(renderer)
+		{
+		default: 
+		case 0: s_gs = new GSRendererDX9(s_basemem, !!mt, s_irq); break;
+		case 3: s_gs = new GSRendererDX10(s_basemem, !!mt, s_irq); break;
+		case 6: s_gs = new GSRendererDX11(s_basemem, !!mt, s_irq); break;
+#if 0
+		case 9: s_gs = new GSRendererOGL(s_basemem, !!mt, s_irq); break;
+#endif
+		case 2: case 5: case 8: case 11: case 13:
+			s_gs = new GSRendererNull(s_basemem, !!mt, s_irq); break;
+
+		case 1: case 4: case 7: case 10: case 12:
+			s_gs = new GSRendererSW(s_basemem, !!mt, s_irq); break;
+		}
+	}
+
+	if( *(HWND*)dsp == NULL )
+	{
+		// old-style API expects us to create and manage our own window:
+		
+		int w = theApp.GetConfig("ModeWidth", 0);
+		int h = theApp.GetConfig("ModeHeight", 0);
+
+		if(!s_gs->CreateWnd(title, w, h))
+		{
+			GSclose();
+			return -1;
+		}
+
+		s_gs->m_wnd.Show();
+		*(HWND*)dsp = (HWND)s_gs->m_wnd.GetHandle();
+	}
+	else
+	{
+		s_gs->m_wnd.Attach( *(HWND*)dsp, false );
+	}
+
+	if( !s_gs->CreateDevice(dev) )
 	{
 		GSclose();
-
 		return -1;
 	}
-
-	s_gs->m_wnd.Show();
-
-	*(HWND*)dsp = (HWND)s_gs->m_wnd.GetHandle();
 
 	// if(mt) _mm_setcsr(MXCSR);
 
 	return 0;
+}
+
+EXPORT_C_(INT32) GSopen2(void* dsp, INT32 forceSoftware )
+{
+	int renderer = theApp.GetConfig("renderer", 0);
+	if( forceSoftware )
+	{
+		renderer = 1;
+	}
+
+	return GSopen( dsp, NULL, true, renderer );
 }
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
@@ -174,6 +223,7 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 		renderer = theApp.GetConfig("renderer", 0);
 	}
 
+	*(HWND*)dsp = NULL;
 	return GSopen(dsp, title, mt, renderer);
 }
 

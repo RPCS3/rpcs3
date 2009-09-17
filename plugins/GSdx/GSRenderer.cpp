@@ -22,9 +22,9 @@
 #include "StdAfx.h"
 #include "GSRenderer.h"
 
-GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
+GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)())
 	: GSState(base, mt, irq)
-	, m_dev(dev)
+	, m_dev(NULL)
 	, m_shader(0)
 	, m_vt(this)
 {
@@ -55,21 +55,26 @@ GSRenderer::~GSRenderer()
 	delete m_dev;
 }
 
-bool GSRenderer::Create(const string& title, int w, int h)
+bool GSRenderer::CreateWnd(const string& title, int w, int h)
 {
 	if(!m_wnd.Create(title.c_str(), w, h))
 	{
 		return false;
 	}
+	return true;
+}
 
-	ASSERT(m_dev);
+bool GSRenderer::CreateDevice(GSDevice* dev)
+{
+	ASSERT(dev);
+	ASSERT(!m_dev);
 
-	if(!m_dev->Create(&m_wnd, m_vsync))
+	if(!dev->Create(&m_wnd, m_vsync))
 	{
 		return false;
 	}
 
-	Reset();
+	m_dev = dev;
 
 	return true;
 }
@@ -316,7 +321,11 @@ void GSRenderer::VSync(int field)
 			s += " | Recording...";
 		}
 
-		m_wnd.SetWindowText(s.c_str());
+		if( !m_wnd.SetWindowText(s.c_str()) )
+		{
+			// We don't have window title rights, or the window has no title,
+			// so let's use actual OSD!
+		}
 	}
 
 	if(m_frameskip)

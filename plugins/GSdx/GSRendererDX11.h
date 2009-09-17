@@ -42,7 +42,7 @@ protected:
 public:
 	GSRendererDX11(uint8* base, bool mt, void (*irq)());
 
-	bool Create(const string& title, int w, int h);
+	bool CreateDevice(GSDevice* dev);
 
 	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

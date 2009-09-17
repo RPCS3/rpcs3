@@ -25,14 +25,14 @@
 #include "resource.h"
 
 GSRendererOGL::GSRendererOGL(uint8* base, bool mt, void (*irq)())
-	: GSRendererHW<GSVertexOGL>(base, mt, irq, new GSDeviceOGL(), new GSTextureCacheOGL(this))
+	: GSRendererHW<GSVertexOGL>(base, mt, irq, new GSTextureCacheOGL(this))
 {
 	InitVertexKick<GSRendererOGL>();
 }
 
-bool GSRendererOGL::Create(const string& title, int w, int h)
+bool GSRendererOGL::CreateDevice(GSDevice* dev)
 {
-	if(!__super::Create(title, w, h))
+	if(!__super::CreateDevice(dev))
 		return false;
 
 	// TODO
