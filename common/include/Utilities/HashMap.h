@@ -550,12 +550,10 @@ template< class Key, class T >
 class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
 {
 public:
-#ifndef _MSC_VER
-	typedef typename google::dense_hash_map<Key, T, CommonHashClass> __super;
-#endif
+	typedef typename google::dense_hash_map<Key, T, CommonHashClass> _parent;
 
-	using __super::operator[];
-	using __super::end;
+	using _parent::operator[];
+	using _parent::end;
 	typedef typename __super::const_iterator const_iterator;
 
 	virtual ~HashMap() {}
