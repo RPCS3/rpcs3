@@ -32,7 +32,7 @@ GSDialog::GSDialog(UINT id)
 
 INT_PTR GSDialog::DoModal()
 {
-	return DialogBoxParam(theApp.GetModuleHandle(), MAKEINTRESOURCE(m_id), NULL, DialogProc, (LPARAM)this);
+	return DialogBoxParam(theApp.GetModuleHandle(), MAKEINTRESOURCE(m_id), GetActiveWindow(), DialogProc, (LPARAM)this);
 }
 
 INT_PTR CALLBACK GSDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)

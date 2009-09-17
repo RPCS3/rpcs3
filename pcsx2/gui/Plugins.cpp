@@ -173,17 +173,22 @@ void Pcsx2App::ReloadPlugins()
 
 // Posts a message to the App to reload plugins.  Plugins are loaded via a background thread
 // which is started on a pending event, so don't expect them to be ready  "right now."
+// If plugins are already loaded then no action is performed.
 void LoadPluginsPassive()
 {
+	if( g_plugins ) return;
+
 	wxCommandEvent evt( pxEVT_ReloadPlugins );
 	wxGetApp().AddPendingEvent( evt );
 }
 
 // Blocks until plugins have been successfully loaded, or throws an exception if
-// the user cancels the loading procedure after error.
+// the user cancels the loading procedure after error.  If plugins are already loaded
+// then no action is performed.
 void LoadPluginsImmediate()
 {
 	wxASSERT( wxThread::IsMain() );
+	if( g_plugins ) return;
 
 	static int _reentrant = 0;
 	EntryGuard guard( _reentrant );
