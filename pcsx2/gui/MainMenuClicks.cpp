@@ -196,7 +196,22 @@ void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 {
 	typedef void	(CALLBACK* PluginConfigureFnptr)();
-	const PluginsEnum_t pid = (PluginsEnum_t)( event.GetId() - MenuId_Config_GS );
+	const int eventId = event.GetId();
+	PluginsEnum_t pid;
+	switch (eventId) {
+		case MenuId_Video_Advanced:
+			pid = PluginId_GS;
+			break;
+		case MenuId_Audio_Advanced:
+			pid = PluginId_SPU2;
+			break;
+		case MenuId_Pad_Advanced:
+			pid = PluginId_PAD;
+			break;
+		default:
+			pid = (PluginsEnum_t)( event.GetId() - MenuId_Config_GS );
+			break;
+	}
 
 	LoadPluginsImmediate();
 	if( g_plugins == NULL ) return;

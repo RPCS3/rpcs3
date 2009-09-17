@@ -185,9 +185,13 @@ void MainEmuFrame::ConnectMenus()
 
     ConnectMenuRange(wxID_FILE1, 20, Menu_IsoRecent_Click);
 
-    ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_IsoRecent_Click);
+    ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_ConfigPlugin_Click);
 
     ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
+
+	ConnectMenu( MenuId_Video_Advanced,		Menu_ConfigPlugin_Click);
+	ConnectMenu( MenuId_Audio_Advanced,		Menu_ConfigPlugin_Click);
+	ConnectMenu( MenuId_Pad_Advanced,		Menu_ConfigPlugin_Click);
 
 	ConnectMenu( MenuId_Boot_CDVD,			Menu_BootCdvd_Click );
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
@@ -374,7 +378,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuConfig.Append(MenuId_Config_Settings,	_("General Settings") );
 	m_menuConfig.AppendSeparator();
 
-	m_menuConfig.Append(MenuId_Config_CDVD,		_("PAD"),		&m_menuPad );
+	m_menuConfig.Append(MenuId_Config_PAD,		_("PAD"),		&m_menuPad );
 
 	// Query installed "tertiary" plugins for name and menu options.
 	m_menuConfig.Append(MenuId_Config_CDVD,		_("CDVD"),		wxEmptyString);

@@ -27,18 +27,18 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // TEXTINCLUDE
 //
 
-1 TEXTINCLUDE
+1 TEXTINCLUDE 
 BEGIN
     "resource.h\0"
 END
 
-2 TEXTINCLUDE
+2 TEXTINCLUDE 
 BEGIN
     "#include <winres.h>\r\n"
     "\0"
 END
 
-3 TEXTINCLUDE
+3 TEXTINCLUDE 
 BEGIN
     "\r\n"
     "\0"
@@ -212,16 +212,17 @@ BEGIN
     GROUPBOX        "Game Device APIs",IDC_STATIC,16,79,191,61
     CONTROL         "DirectInput",IDC_G_DI,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,91,65,10
     CONTROL         "XInput (Xbox 360 controllers only)",IDC_G_XI,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,103,125,10
-    CONTROL         "DualShock 3 (Requires libusb)",IDC_G_DS3,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,115,110,10
+    CONTROL         "DualShock 3 native mode (Requires libusb)",IDC_G_DS3,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,115,151,10
     CONTROL         "Monitor when in background",IDC_BACKGROUND,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,22,127,106,10
-    GROUPBOX        "Mouse API",IDC_STATIC,216,16,192,85
+    GROUPBOX        "Mouse API",IDC_STATIC,216,16,192,86
     CONTROL         "Windows messaging (Recommended)",IDC_M_WM,"Button",BS_AUTORADIOBUTTON | WS_GROUP,223,27,134,10
     CONTROL         "Raw input (XP and later only)",IDC_M_RAW,"Button",BS_AUTORADIOBUTTON,223,39,112,10
     CONTROL         "DirectInput",IDC_M_DI,"Button",BS_AUTORADIOBUTTON,223,51,112,10
     CONTROL         "Disable",IDC_M_DISABLE,"Button",BS_AUTORADIOBUTTON,223,63,39,10
     CONTROL         "Start without mouse focus",IDC_MOUSE_UNFOCUS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,223,75,97,10
     CONTROL         "Always hide cursor",IDC_FORCE_HIDE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,223,87,71,10
-    GROUPBOX        "Advanced",IDC_STATIC,216,111,192,28
+    GROUPBOX        "Advanced",IDC_STATIC,215,111,192,29
     CONTROL         "Allow binding multiple PS2 controls to one PC control",IDC_MULTIPLE_BINDING,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,223,124,182,10
     GROUPBOX        "Pads",IDC_STATIC,7,150,410,67
@@ -276,7 +277,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO
+GUIDELINES DESIGNINFO 
 BEGIN
     IDD_CONFIG, DIALOG
     BEGIN

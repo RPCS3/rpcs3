@@ -1853,6 +1853,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					"\n"
 					"Furthermore, It uses libusb to Initialize DS3 pads.  Libusb can\n"
 					"do odd things to USB and non-USB devices when it enumerates them.\n"
+					"That having been said, I know of no serious problems with it.\n"
 					"\n"
 					"I have no idea if it works with bluetooth or not.\n"
 					"\n"

@@ -278,6 +278,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="Winmm.lib ntdll.lib setupapi.lib ole32.lib advapi32.lib user32.lib kernel32.lib Comdlg32.lib dinput8.lib dxguid.lib comctl32.lib"
+				OutputFile="..\..\bin\plugins\$(ProjectName).dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateManifest="false"

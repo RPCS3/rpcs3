@@ -60,7 +60,9 @@ void TryInitDS3(usb_device *dev) {
 			usb_dev_handle *handle = pusb_open(dev);
 			if (handle) {
 				char junk[20];
-				pusb_control_msg(handle, 0xa1, 1, 0x03f2, 0, junk, 17, 1000);
+				// This looks like HidD_GetFeature with a feature report id of 0xF2 to me and a length of 17.
+				// That doesn't work, however, and 17 is shorter than the report length.
+				pusb_control_msg(handle, 0xa1, 1, 0x03f2, dev->config->interface->altsetting->bInterfaceNumber, junk, 17, 1000);
 				pusb_close(handle);
 			}
 		}
