@@ -1919,6 +1919,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\FrameForGS.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\HostGui.cpp"
 				>
 			</File>

@@ -377,8 +377,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	{
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
-		if( GSsetGameCRC != NULL )
-			GSsetGameCRC( ElfCRC, 0 );
+		GSsetGameCRC( ElfCRC, 0 );
 	}
 }
 
@@ -511,8 +510,7 @@ void cdvdDetectDisk()
 	{
 		ElfCRC = loadElfCRC( str.ToAscii().data() );
 		ElfApplyPatches();
-		if( GSsetGameCRC != NULL )
-			GSsetGameCRC( ElfCRC, 0 );
+		GSsetGameCRC( ElfCRC, 0 );
 	}
 }
 

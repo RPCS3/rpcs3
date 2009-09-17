@@ -130,6 +130,7 @@ static s32  CALLBACK fallback_test() { return 0; }
 
 _GSvsync           GSvsync;
 _GSopen            GSopen;
+_GSopen2           GSopen2;
 _GSgifTransfer1    GSgifTransfer1;
 _GSgifTransfer2    GSgifTransfer2;
 _GSgifTransfer3    GSgifTransfer3;
@@ -150,6 +151,7 @@ _GSreset		   GSreset;
 _GSwriteCSR		   GSwriteCSR;
 
 static void CALLBACK GS_makeSnapshot(const char *path) {}
+static void CALLBACK GS_setGameCRC(u32 crc, int gameopts) {}
 static void CALLBACK GS_irqCallback(void (*callback)()) {}
 static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 {
@@ -276,14 +278,15 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 	{	"GSprintf",			(vMeth**)&GSprintf,			(vMeth*)GS_printf },
 	{	"GSsetBaseMem",		(vMeth**)&GSsetBaseMem,		NULL	},
 	{	"GSwriteCSR",		(vMeth**)&GSwriteCSR,		NULL	},
+	{	"GSsetGameCRC",		(vMeth**)&GSsetGameCRC,		(vMeth*)GS_setGameCRC },
 	{ NULL }
 };
 
 static const LegacyApi_OptMethod s_MethMessOpt_GS[] =
 {
+	{	"GSopen2",			(vMeth**)&GSopen2			},
 	{	"GSreset",			(vMeth**)&GSreset			},
 	{	"GSsetupRecording",	(vMeth**)&GSsetupRecording	},
-	{	"GSsetGameCRC",		(vMeth**)&GSsetGameCRC		},
 	{	"GSsetFrameSkip",	(vMeth**)&GSsetFrameSkip	},
 	{	"GSsetFrameLimit",	(vMeth**)&GSsetFrameLimit	},
 	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState	},
@@ -734,7 +737,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	g_plugins = this;
 }
 
-PluginManager::~PluginManager()
+PluginManager::~PluginManager() throw()
 {
 	try
 	{
@@ -834,8 +837,8 @@ static bool OpenPlugin_CDVD()
 static bool OpenPlugin_GS()
 {
 	if( mtgsThread != NULL ) return true;
-
 	mtgsOpen();	// mtgsOpen raises its own exception on error
+	GSsetGameCRC( ElfCRC, 0 );
 	return true;
 }
 

@@ -126,13 +126,11 @@ void MainEmuFrame::PopulatePadMenu()
 //
 void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 {
-	// Note Closure Vetoing would be handled here (user prompt confirmation
-	// of closing the app)
-
 	if( !wxGetApp().PrepForExit() )
-		evt.Veto( true );
+		evt.Veto( evt.CanVeto() );
 
 	evt.Skip();
+	//Destroy();
 }
 
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
@@ -430,13 +428,17 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	UpdateIsoSrcFile();
 }
 
-MainEmuFrame::~MainEmuFrame()
+MainEmuFrame::~MainEmuFrame() throw()
 {
-	if( m_RecentIsoList != NULL )
+	try
 	{
-		m_RecentIsoList->Save( *wxConfigBase::Get( false ) );
-		safe_delete( m_RecentIsoList );
+		if( m_RecentIsoList != NULL )
+		{
+			m_RecentIsoList->Save( *wxConfigBase::Get( false ) );
+			safe_delete( m_RecentIsoList );
+		}
 	}
+	DESTRUCTOR_CATCHALL
 }
 
 void MainEmuFrame::ApplySettings()

@@ -22,12 +22,14 @@
 
 #include <wx/apptrait.h>
 
+class IniInterface;
+class MainEmuFrame;
+class GSFrame;
+
 #include "AppConfig.h"
 #include "System.h"
 #include "ConsoleLogger.h"
 #include "ps2/CoreEmuThread.h"
-
-class IniInterface;
 
 
 BEGIN_DECLARE_EVENT_TYPES()
@@ -245,6 +247,7 @@ protected:
 	// Note: Pointers to frames should not be scoped because wxWidgets handles deletion
 	// of these objects internally.
 	MainEmuFrame*		m_MainFrame;
+	GSFrame*			m_gsFrame;
 	ConsoleLogFrame*	m_ProgramLogBox;
 
 	bool				m_ConfigImagesAreLoaded;

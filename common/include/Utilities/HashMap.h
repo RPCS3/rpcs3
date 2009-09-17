@@ -554,7 +554,7 @@ public:
 
 	using _parent::operator[];
 	using _parent::end;
-	typedef typename __super::const_iterator const_iterator;
+	typedef typename _parent::const_iterator const_iterator;
 
 	virtual ~HashMap() {}
 

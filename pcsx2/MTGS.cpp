@@ -588,8 +588,14 @@ sptr mtgsThreadObject::ExecuteTask()
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( dummyIrqCallback );
 
-	Console::WriteLn( (wxString)L"\t\tForced software switch: " + (renderswitch ? L"Enabled" : L"Disabled") );
-	m_returncode = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+	if( renderswitch )
+		Console::WriteLn( "\t\tForced software switch enabled." );
+	
+	if( GSopen2 != NULL )
+		m_returncode = GSopen2( (void*)&pDsp, !!renderswitch );
+	else
+		m_returncode = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+
 	DevCon::WriteLn( "MTGS: GSopen Finished, return code: 0x%x", m_returncode );
 
 	GSCSRr = 0x551B4000; // 0x55190000

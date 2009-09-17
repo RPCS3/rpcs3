@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "MainFrame.h"
 
 #include <wx/dir.h>
 #include <wx/file.h>

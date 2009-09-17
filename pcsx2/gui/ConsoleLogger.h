@@ -24,7 +24,6 @@ static const bool EnableThreadedLoggingTest = false; //true;
 
 using namespace Threading;
 
-class MainEmuFrame;
 class LogWriteEvent;
 
 

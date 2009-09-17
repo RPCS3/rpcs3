@@ -150,6 +150,21 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
 	LoadPluginsImmediate();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	CDVDsys_ChangeSource( cdvdsrc );
+	
+	if( m_gsFrame == NULL && GSopen2 != NULL )
+	{
+		// Yay, we get to open and manage our OWN window!!!
+		// (work-in-progress)
+
+		m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
+		m_gsFrame->SetFocus();
+		pDsp = (uptr)m_gsFrame->GetHandle();
+		m_gsFrame->Show();
+		
+		// The "in the main window" quickie hack...
+		//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
+	}
+
 	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
 	m_CoreThread->Resume();
 }
@@ -188,7 +203,7 @@ sptr AppEmuThread::ExecuteTask()
 	// ----------------------------------------------------------------------------
 	catch( Exception::FileNotFound& ex )
 	{
-		GetPluginManager().Close();
+		m_plugins.Close();
 		if( ex.StreamName == g_Conf->FullpathToBios() )
 		{
 			GetPluginManager().Close();
@@ -211,7 +226,7 @@ sptr AppEmuThread::ExecuteTask()
 	// ----------------------------------------------------------------------------
 	catch( Exception::PluginError& ex )
 	{
-		GetPluginManager().Close();
+		m_plugins.Close();
 		Console::Error( ex.FormatDiagnosticMessage() );
 		Msgbox::Alert( ex.FormatDisplayMessage(), _("Plugin Open Error") );
 		
@@ -227,7 +242,7 @@ sptr AppEmuThread::ExecuteTask()
 	catch( Exception::BaseException& ex )
 	{
 		// Sent the exception back to the main gui thread?
-		GetPluginManager().Close();
+		m_plugins.Close();
 		Msgbox::Alert( ex.FormatDisplayMessage() );
 	}
 
@@ -619,7 +634,15 @@ void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 
 void Pcsx2App::CleanupMess()
 {
-	m_CorePlugins.reset();
+	m_CorePlugins->Close();
+	m_CorePlugins->Shutdown();
+	
+	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
+	// likely due to some pending message in the queue that references lilypad procs.
+	// We don't need to unload plugins anyway tho -- shutdown is plenty safe enough for 
+	// closing out all the windows.  So just leave it be and let the plugins get unloaded
+	// during the wxApp destructor. -- air
+	
 	m_ProgramLogBox = NULL;
 	m_MainFrame = NULL;
 }
@@ -681,6 +704,7 @@ int Pcsx2App::OnExit()
 
 Pcsx2App::Pcsx2App()  :
 	m_MainFrame( NULL )
+,	m_gsFrame( NULL )
 ,	m_ProgramLogBox( NULL )
 ,	m_ConfigImages( 32, 32 )
 ,	m_ConfigImagesAreLoaded( false )

@@ -21,11 +21,20 @@
 
 #include "App.h"
 
-class MainEmuFrame: public wxFrame
+class GSFrame : public wxFrame
 {
-	// ------------------------------------------------------------------------
-	//     MainEmuFrame Protected Variables
-	// ------------------------------------------------------------------------
+protected:
+
+public:
+	GSFrame(wxWindow* parent, const wxString& title);
+	virtual ~GSFrame() throw();
+};
+
+class MainEmuFrame : public wxFrame
+{
+// ------------------------------------------------------------------------
+//     MainEmuFrame Protected Variables
+// ------------------------------------------------------------------------
 
 protected:
 	wxFileHistory*	m_RecentIsoList;
@@ -49,13 +58,13 @@ protected:
 
 	wxMenuItem& m_MenuItem_Console;
 
-	// ------------------------------------------------------------------------
-	//     MainEmuFrame Constructors and Member Methods
-	// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+//     MainEmuFrame Constructors and Member Methods
+// ------------------------------------------------------------------------
 
 public:
     MainEmuFrame(wxWindow* parent, const wxString& title);
-    virtual ~MainEmuFrame();
+    virtual ~MainEmuFrame() throw();
 
 	void OnLogBoxHidden();
 
@@ -101,9 +110,9 @@ protected:
 
 	bool _DoSelectIsoBrowser();
 
-	// ------------------------------------------------------------------------
-	//     MainEmuFram Internal API for Populating Main Menu Contents
-	// ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+//     MainEmuFram Internal API for Populating Main Menu Contents
+// ------------------------------------------------------------------------
 
 	wxMenu* MakeStatesSubMenu( int baseid ) const;
 	wxMenu* MakeStatesMenu();

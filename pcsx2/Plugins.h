@@ -280,7 +280,7 @@ public:		// hack until we unsuck plugins...
 	PluginStatus_t			m_info[PluginId_Count];
 
 public:
-	virtual ~PluginManager();
+	virtual ~PluginManager() throw();
 
 	void Init();
 	void Shutdown();

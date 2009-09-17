@@ -87,8 +87,7 @@ void CoreEmuThread::CpuInitializeMess()
 		}
 	}
 	
-	if( GSsetGameCRC != NULL )
-		GSsetGameCRC( ElfCRC, 0 );
+	GSsetGameCRC( ElfCRC, 0 );
 }
 
 // special macro which disables inlining on functions that require their own function stackframe.
