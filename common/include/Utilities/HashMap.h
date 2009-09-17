@@ -550,8 +550,13 @@ template< class Key, class T >
 class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
 {
 public:
-	using dense_hash_map<Key, T, CommonHashClass>::operator[];
-	using dense_hash_map<Key, T, CommonHashClass>::const_iterator;
+#ifndef _MSC_VER
+	typedef typename google::dense_hash_map<Key, T, CommonHashClass> __super;
+#endif
+
+	using __super::operator[];
+	using __super::end;
+	typedef typename __super::const_iterator const_iterator;
 
 	virtual ~HashMap() {}
 
@@ -579,8 +584,7 @@ public:
 	/// </remarks>
 	void TryGetValue( const Key& key, T& outval ) const
 	{
-		// See above class for notes on why this is commented out.
-		const_iterator iter = find( key );
+		const_iterator iter( find(key) );
 		if( iter != end() )
 			outval = iter->second;
 	}

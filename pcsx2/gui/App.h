@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -265,7 +265,7 @@ public:
 	void Ping() const;
 
 	bool PrepForExit();
-	
+
 	// Executes the emulator using a saved/existing virtual machine state and currently
 	// configured CDVD source device.
 	// Debug assertions:
@@ -283,7 +283,7 @@ public:
 		if( !m_CoreThread ) return;
 		m_CoreThread->Suspend();
 	}
-	
+
 	void SysReset()
 	{
 		m_CoreThread.reset();
@@ -394,7 +394,7 @@ protected:
 
 public:
 	AppEmuThread( PluginManager& plugins );
-	virtual ~AppEmuThread() { }
+	virtual ~AppEmuThread() throw() { }
 
 	virtual void Resume();
 	virtual void StateCheck();
@@ -414,7 +414,7 @@ public:
 
 	virtual ~EntryGuard() throw()
 	{ --Counter; }
-	
+
 	bool IsReentrant() const { return Counter > 1; }
 };
 

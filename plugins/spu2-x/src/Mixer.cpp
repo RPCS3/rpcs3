@@ -1,6 +1,6 @@
 /* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
  * Developed and maintained by the Pcsx2 Development Team.
- * 
+ *
  * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
  *
  * SPU2-X is free software: you can redistribute it and/or modify it under the terms
@@ -45,14 +45,17 @@ static const s32 tbl_XA_Factor[5][2] =
 //   caller to  extend the inputs so that they make use of all 32 bits of
 //   precision.
 //
-__forceinline s32 MulShr32( s32 srcval, s32 mulval )
+#ifdef MSC_VER
+__forceinline		// gcc can't inline this function, presumably because of it's exceeding complexity?
+#endif
+s32 MulShr32( s32 srcval, s32 mulval )
 {
 	s64 tmp = ((s64)srcval * mulval );
-	return ((s32*)&tmp)[1];
 
 	// Performance note: Using the temp var and memory reference
 	// actually ends up being roughly 2x faster than using a bitshift.
 	// It won't fly on big endian machines though... :)
+	return ((s32*)&tmp)[1];
 }
 
 __forceinline s32 clamp_mix( s32 x, u8 bitshift )
@@ -60,9 +63,12 @@ __forceinline s32 clamp_mix( s32 x, u8 bitshift )
 	return GetClamped( x, -0x8000<<bitshift, 0x7fff<<bitshift );
 }
 
-__forceinline StereoOut32 clamp_mix( const StereoOut32& sample, u8 bitshift )
+#if _MSC_VER
+__forceinline		// gcc forceinline fails here... ?
+#endif
+StereoOut32 clamp_mix( const StereoOut32& sample, u8 bitshift )
 {
-	return StereoOut32( 
+	return StereoOut32(
 		GetClamped( sample.Left, -0x8000<<bitshift, 0x7fff<<bitshift ),
 		GetClamped( sample.Right, -0x8000<<bitshift, 0x7fff<<bitshift )
 	);
@@ -145,9 +151,9 @@ static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 	for( int i=0; i<2; i++ )
 	{
 		if( Cores[i].IRQEnable && (vc.NextA==Cores[i].IRQA ) )
-		{ 
+		{
 			if( IsDevBuild )
-				ConLog(" * SPU2 Core %d: IRQ Called (IRQ passed).\n", i); 
+				ConLog(" * SPU2 Core %d: IRQ Called (IRQ passed).\n", i);
 
 			Spdif.Info = 4 << i;
 			SetIrqCall();
@@ -171,7 +177,7 @@ int g_counter_cache_ignores = 0;
 #define XAFLAG_LOOP			(1ul<<1)
 #define XAFLAG_LOOP_START	(1ul<<2)
 
-static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint voiceidx ) 
+static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint voiceidx )
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
@@ -252,7 +258,7 @@ static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint 
 		vc.SCurrent = 0;
 		if( (vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode )
 			vc.LoopStartA = vc.NextA;
-			
+
 		goto _Increment;
 	}
 
@@ -272,10 +278,10 @@ static s32 __forceinline GetNoiseValues()
 {
 	static s32 Seed = 0x41595321;
 	s32 retval = 0x8000;
-	
-	if( Seed&0x100 ) 
+
+	if( Seed&0x100 )
 		retval = (Seed&0xff) << 8;
-	else if( Seed&0xffff ) 
+	else if( Seed&0xffff )
 		retval = 0x7fff;
 
 #ifdef _WIN32
@@ -349,7 +355,7 @@ static void __forceinline UpdatePitch( uint coreidx, uint voiceidx )
 		pitch = vc.Pitch;
 	else
 		pitch = (vc.Pitch*(32768 + abs(Cores[coreidx].Voices[voiceidx-1].OutX)))>>15;
-	
+
 	vc.SP+=pitch;
 }
 
@@ -398,7 +404,7 @@ static s32 __forceinline GetVoiceValues_Linear( V_Core& thiscore, uint voiceidx 
 	if(Interpolation==0)
 	{
 		return ApplyVolume( vc.PV1, vc.ADSR.Value );
-	} 
+	}
 	else //if(Interpolation==1) //must be linear
 	{
 		s32 t0 = vc.PV2 - vc.PV1;
@@ -471,15 +477,15 @@ static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, uint voice
 /////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                     //
 
-static __forceinline StereoOut32 ReadInputPV( uint core ) 
+static __forceinline StereoOut32 ReadInputPV( uint core )
 {
 	V_Core& thiscore( Cores[core] );
 	u32 pitch = AutoDMAPlayRate[core];
 
 	if(pitch==0) pitch=48000;
-	
+
 	thiscore.ADMAPV += pitch;
-	while(thiscore.ADMAPV>=48000) 
+	while(thiscore.ADMAPV>=48000)
 	{
 		ReadInput( core, thiscore.ADMAP );
 		thiscore.ADMAPV -= 48000;
@@ -520,7 +526,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	// SPU2 Note: The spu2 continues to process voices for eternity, always, so we
 	// have to run through all the motions of updating the voice regardless of it's
 	// audible status.  Otherwise IRQs might not trigger and emulation might fail.
-	
+
 	if( vc.ADSR.Phase > 0 )
 	{
 		UpdatePitch( coreidx, voiceidx );
@@ -556,7 +562,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 
 		if (voiceidx==1)      spu2M_WriteFast( 0x400 + (coreidx<<12) + OutPos, 0 );
 		else if (voiceidx==3) spu2M_WriteFast( 0x600 + (coreidx<<12) + OutPos, 0 );
-		
+
 		return StereoOut32( 0, 0 );
 	}
 }
@@ -565,7 +571,7 @@ struct VoiceMixSet
 {
 	static const VoiceMixSet Empty;
 	StereoOut32 Dry, Wet;
-	
+
 	VoiceMixSet() {}
 	VoiceMixSet( const StereoOut32& dry, const StereoOut32& wet ) :
 		Dry( dry ),
@@ -600,15 +606,15 @@ static StereoOut32 __fastcall MixCore( const uint coreidx, const VoiceMixSet& in
 
 	// Saturate final result to standard 16 bit range.
 	const VoiceMixSet Voices( clamp_mix( inVoices.Dry ), clamp_mix( inVoices.Wet ) );
-	
+
 	// Write Mixed results To Output Area
 	spu2M_WriteFast( 0x1000 + (coreidx<<12) + OutPos, Voices.Dry.Left );
 	spu2M_WriteFast( 0x1200 + (coreidx<<12) + OutPos, Voices.Dry.Right );
 	spu2M_WriteFast( 0x1400 + (coreidx<<12) + OutPos, Voices.Wet.Left );
 	spu2M_WriteFast( 0x1600 + (coreidx<<12) + OutPos, Voices.Wet.Right );
-	
+
 	// Write mixed results to logfile (if enabled)
-	
+
 	WaveDump::WriteCore( coreidx, CoreSrc_DryVoiceMix, Voices.Dry );
 	WaveDump::WriteCore( coreidx, CoreSrc_WetVoiceMix, Voices.Wet );
 
@@ -618,7 +624,7 @@ static StereoOut32 __fastcall MixCore( const uint coreidx, const VoiceMixSet& in
 		Input.Left & thiscore.DryGate.InpL,
 		Input.Right & thiscore.DryGate.InpR
 	);
-	
+
 	// Mix in the Voice data
 	TD.Left += Voices.Dry.Left & thiscore.DryGate.SndL;
 	TD.Right += Voices.Dry.Right & thiscore.DryGate.SndR;
@@ -626,7 +632,7 @@ static StereoOut32 __fastcall MixCore( const uint coreidx, const VoiceMixSet& in
 	// Mix in the External (nothing/core0) data
 	TD.Left += Ext.Left & thiscore.DryGate.ExtL;
 	TD.Right += Ext.Right & thiscore.DryGate.ExtR;
-	
+
 	if( !EffectsDisabled )
 	{
 		//Reverb pointer advances regardless of the FxEnable bit...
@@ -639,10 +645,10 @@ static StereoOut32 __fastcall MixCore( const uint coreidx, const VoiceMixSet& in
 				Input.Left & thiscore.WetGate.InpL,
 				Input.Right & thiscore.WetGate.InpR
 			);
-			
+
 			TW.Left += Voices.Wet.Left & thiscore.WetGate.SndL;
 			TW.Right += Voices.Wet.Right & thiscore.WetGate.SndR;
-			TW.Left += Ext.Left & thiscore.WetGate.ExtL; 
+			TW.Left += Ext.Left & thiscore.WetGate.ExtL;
 			TW.Right += Ext.Right & thiscore.WetGate.ExtR;
 
 			WaveDump::WriteCore( coreidx, CoreSrc_PreReverb, TW );
@@ -653,7 +659,7 @@ static StereoOut32 __fastcall MixCore( const uint coreidx, const VoiceMixSet& in
 			// causes slight overflows in some games, and the volume boost is required.
 			// (like all over volumes on SPU2, reverb coefficients and stuff are signed,
 			// range -50% to 50%, thus *2 is needed)
-			
+
 			RV.Left  *= 2;
 			RV.Right *= 2;
 
@@ -674,7 +680,7 @@ static StereoOut32 __fastcall MixCore( const uint coreidx, const VoiceMixSet& in
 // used to throttle the output rate of cache stat reports
 static int p_cachestat_counter=0;
 
-__forceinline void Mix() 
+__forceinline void Mix()
 {
 	// Note: Playmode 4 is SPDIF, which overrides other inputs.
 	StereoOut32 InputData[2] =
@@ -682,7 +688,7 @@ __forceinline void Mix()
 		(PlayMode&4) ? StereoOut32::Empty : ReadInputPV( 0 ),
 		(PlayMode&8) ? StereoOut32::Empty : ReadInputPV( 1 )
 	};
-	
+
 	WaveDump::WriteCore( 0, CoreSrc_Input, InputData[0] );
 	WaveDump::WriteCore( 1, CoreSrc_Input, InputData[1] );
 
@@ -736,7 +742,7 @@ __forceinline void Mix()
 		spdif_update();
 
 	SndBuffer::Write( Out );
-	
+
 	// Update AutoDMA output positioning
 	OutPos++;
 	if (OutPos>=0x200) OutPos=0;
@@ -752,7 +758,7 @@ __forceinline void Mix()
 				g_counter_cache_misses,
 				g_counter_cache_ignores );
 
-			g_counter_cache_hits = 
+			g_counter_cache_hits =
 			g_counter_cache_misses =
 			g_counter_cache_ignores = 0;
 		}

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -68,10 +68,10 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	AddPage<GameFixesPanel>		( wxLt("Game Fixes"),	cfgid.Gamefixes );
 	AddPage<PluginSelectorPanel>( wxLt("Plugins"),		cfgid.Plugins );
 	AddPage<StandardPathsPanel>	( wxLt("Folders"),		cfgid.Paths );
-	
+
 	mainSizer.Add( &m_listbook );
 	AddOkCancel( mainSizer, true );
-	
+
 	FindWindow( wxID_APPLY )->Disable();
 
 	SetSizerAndFit( &mainSizer );
@@ -109,7 +109,7 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	ConnectSomethingChanged( DIRPICKER_CHANGED );
 }
 
-Dialogs::ConfigurationDialog::~ConfigurationDialog()
+Dialogs::ConfigurationDialog::~ConfigurationDialog() throw()
 {
 	g_ApplyState.DoCleanup();
 }
@@ -148,9 +148,9 @@ Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("BIOS Selector"), false )
 {
 	wxBoxSizer& bleh( *new wxBoxSizer( wxVERTICAL ) );
-	
+
 	Panels::BaseSelectorPanel* selpan = new Panels::BiosSelectorPanel( *this, 500 );
-	
+
 	bleh.Add( selpan, SizerFlags::StdExpand() );
 	AddOkCancel( bleh, false );
 

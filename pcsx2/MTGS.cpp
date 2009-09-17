@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -104,10 +104,10 @@ static void RegHandlerSIGNAL(const u32* data)
 	MTGS_LOG("MTGS SIGNAL data %x_%x CSRw %x IMR %x CSRr\n",data[0], data[1], CSRw, GSIMR, GSCSRr);
 
 	GSSIGLBLID->SIGID = (GSSIGLBLID->SIGID&~data[1])|(data[0]&data[1]);
-	
+
 	if ((CSRw & 0x1))
 	{
-		if (!(GSIMR&0x100) )  
+		if (!(GSIMR&0x100) )
 		{
 			gsIrq();
 		}
@@ -198,7 +198,7 @@ void mtgsThreadObject::Start()
 		throw Exception::PluginOpenError( PluginId_GS );
 }
 
-mtgsThreadObject::~mtgsThreadObject()
+mtgsThreadObject::~mtgsThreadObject() throw()
 {
 	mtgsThreadObject::Cancel();
 }
@@ -209,7 +209,7 @@ void mtgsThreadObject::Cancel()
 {
 	//SendSimplePacket( GS_RINGTYPE_QUIT, 0, 0, 0 );
 	//SetEvent();
-	//m_sem_finished.WaitGui();	
+	//m_sem_finished.WaitGui();
 	PersistentThread::Cancel();
 }
 
@@ -236,7 +236,7 @@ void mtgsThreadObject::Reset()
 }
 #define subVal(x) ((x) ? (x-1) : 0)
 
-__forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8* pMem, u32 size) 
+__forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	GIFPath& path		= m_path[pathidx];
 	u32 finish			= (pathidx == GIF_PATH_1) ? 0x4000 : (size<<4);
@@ -259,7 +259,7 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 		oldSize		 = size;
 		numRegs		 = ((path.tag.nreg-1)&0xf)+1;
 		EOP			 = ((pathidx == GIF_PATH_2) ? 0 : path.tag.eop);
-		
+
 		if (!path.tag.nloop || size >= finish) continue;
 
 		switch(path.tag.flg) {
@@ -335,8 +335,8 @@ __forceinline int mtgsThreadObject::gifTransferDummy(GIF_PATH pathidx, const u8*
 	static uptr profStartPtr = 0;
 	static uptr profEndPtr = 0;
 	if (profStartPtr == 0) {
-		__asm 
-		{ 
+		__asm
+		{
 	__beginfunc:
 			mov profStartPtr, offset __beginfunc;
 			mov profEndPtr, offset __endfunc;
@@ -348,7 +348,7 @@ __forceinline int mtgsThreadObject::gifTransferDummy(GIF_PATH pathidx, const u8*
 	int retSize = _gifTransferDummy(pathidx, pMem, size);
 
 #ifdef PCSX2_GSRING_SAMPLING_STATS
-	__asm 
+	__asm
 	{
 		__endfunc:
 				nop;
@@ -436,8 +436,8 @@ void mtgsThreadObject::_RingbufferLoop()
 			{
 				case GS_RINGTYPE_RESTART:
 					AtomicExchange(m_RingPos, 0);
-					
-					// stall for a bit to let the MainThread have time to update the g_pGSWritePos. 
+
+					// stall for a bit to let the MainThread have time to update the g_pGSWritePos.
 					m_lock_RingRestart.Lock();
 					m_lock_RingRestart.Unlock();
 				continue;
@@ -680,12 +680,12 @@ void mtgsThreadObject::SendDataPacket()
 	{
 		// The ringbuffer is current in a resting state, so if enough copies have
 		// queued up then go ahead and initiate the GS thread..
-		
+
 		// Optimization notes:  What we're doing here is initiating a "burst" mode on
 		// the thread, which improves its cache hit performance and makes it more friendly
-		// to other threads in Pcsx2 and such.  Primary is the Command Tally, and then a 
+		// to other threads in Pcsx2 and such.  Primary is the Command Tally, and then a
 		// secondary data size threshold for games that do lots of texture swizzling.
-		
+
 		// 16 was the best value I found so far.
 		// tested values:
 		//  24 - very slow on HT machines (+5% drop in fps)
@@ -736,7 +736,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	ringtx_s_max = max(ringtx_s_max,size);
 	ringtx_c++;
 	u32 tx_sz;
-	
+
 	if (_BitScanReverse(&tx_sz,size))
 	{
 		u32 tx_algn;
@@ -779,7 +779,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	// is reading it.
 
 	uint writepos = m_WritePos;
-	
+
 	// Checks if a previous copy was started without an accompanying call to GSRINGBUF_DONECOPY
 	jASSUME( m_packet_size == 0 );
 
@@ -803,7 +803,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 			// readpos is out past the end of the future write pos, or until it wraps
 			// around (in which case writepos will be >= readpos)
 
-			PrepEventWait(); 
+			PrepEventWait();
 			while( true )
 			{
 				uint readpos = volatize(m_RingPos);
@@ -820,7 +820,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 		// the start of the ring buffer (it's a lot easier than trying
 		// to wrap the packet around the end of the buffer).
 
-		// We have to be careful not to leapfrog our read-position.  If it's 
+		// We have to be careful not to leapfrog our read-position.  If it's
 		// greater than the current write position then we need to stall
 		// until it loops around to the beginning of the buffer
 
@@ -958,7 +958,7 @@ void mtgsThreadObject::SendPointerPacket( GS_RINGTYPE type, u32 data0, void* dat
 	tag.data[0] = data0;
 	*(uptr*)&tag.data[1] = (uptr)data1;
 
-	_FinishSimplePacket( thefuture );	
+	_FinishSimplePacket( thefuture );
 }
 
 // Waits for the GS to empty out the entire ring buffer contents.

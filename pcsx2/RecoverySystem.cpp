@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -19,7 +19,7 @@
 #include "App.h"
 #include "HostGui.h"
 
-static wxScopedPtr<SafeArray<u8>> g_RecoveryState;
+static wxScopedPtr< SafeArray<u8> > g_RecoveryState;
 
 namespace StateRecovery {
 
@@ -53,7 +53,7 @@ namespace StateRecovery {
 	{
 		SaveToFile( SaveStateBase::GetFilename( num ) );
 	}
-	
+
 	// Creates a full recovery of the entire emulation state (CPU and all plugins).
 	// If a current recovery state is already present, then nothing is done (the
 	// existing recovery state takes precedence since if it were out-of-date it'd be
@@ -62,7 +62,7 @@ namespace StateRecovery {
 	{
 		if( g_RecoveryState ) return;
 		if( !EmulationInProgress() ) return;
-		
+
 		try
 		{
 			g_RecoveryState.reset( new SafeArray<u8>( L"Memory Savestate Recovery" ) );

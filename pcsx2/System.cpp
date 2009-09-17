@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "PrecompiledHeader.h"
 
 #include "HostGui.h"
@@ -73,9 +73,9 @@ void SysDetect()
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
 	) );
-	
+
 	wxArrayString features[2];	// 2 lines, for readability!
-	
+
 	if( x86caps.hasMultimediaExtensions )			features[0].Add( L"MMX" );
 	if( x86caps.hasStreamingSIMDExtensions )		features[0].Add( L"SSE" );
 	if( x86caps.hasStreamingSIMD2Extensions )		features[0].Add( L"SSE2" );
@@ -93,7 +93,7 @@ void SysDetect()
 	JoinString( result[0], features[0], L".. " );
 	JoinString( result[1], features[1], L".. " );
 
-	WriteLn( L"Features Detected:\n\t" + result[0] + (result[1].IsEmpty() ? wxEmptyString : (L"\n\t" + result[1])) + L"\n" );
+	WriteLn( L"Features Detected:\n\t" + result[0] + (result[1].IsEmpty() ? L"" : (L"\n\t" + result[1])) + L"\n" );
 
 	//if ( x86caps.VendorName[0] == 'A' ) //AMD cpu
 
@@ -117,7 +117,7 @@ EmuCoreAllocations::EmuCoreAllocations()
 	RecSuccess_IOP		= false;
 	RecSuccess_VU0		= false;
 	RecSuccess_VU1		= false;
-	
+
 	try
 	{
 		vtlb_Core_Alloc();
@@ -174,7 +174,7 @@ EmuCoreAllocations::EmuCoreAllocations()
 	}
 
 	// hmm! : VU0 and VU1 pre-allocations should do sVU and mVU separately?  Sounds complicated. :(
-	
+
 	try
 	{
 		VU0micro::recAlloc();
@@ -197,7 +197,7 @@ EmuCoreAllocations::EmuCoreAllocations()
 		VU1micro::recShutdown();
 	}
 
-	// If both VUrecs failed, then make sure the SuperVU is totally closed out, because it 
+	// If both VUrecs failed, then make sure the SuperVU is totally closed out, because it
 	// actually initializes everything once and then shares it between both VU recs.
 	if( !RecSuccess_VU0 && !RecSuccess_VU1 )
 		SuperVUDestroy( -1 );
