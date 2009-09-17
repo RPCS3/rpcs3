@@ -282,6 +282,7 @@
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.h" />
 		<Unit filename="../gui/Dialogs/ModalPopups.h" />
 		<Unit filename="../gui/Dialogs/PickUserModeDialog.cpp" />
+		<Unit filename="../gui/FrameForGS.cpp" />
 		<Unit filename="../gui/HostGui.cpp" />
 		<Unit filename="../gui/IniInterface.cpp" />
 		<Unit filename="../gui/IniInterface.h" />

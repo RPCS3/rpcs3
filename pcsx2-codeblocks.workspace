@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <CodeBlocks_workspace_file>
 	<Workspace title="pcsx2_suite_2008 workspace">
-		<Project filename="pcsx2/Linux/pcsx2.cbp">
+		<Project filename="pcsx2/Linux/pcsx2.cbp" active="1">
 			<Depends filename="common/build/x86emitter/x86emitter.cbp" />
 			<Depends filename="common/build/Utilities/Utilities.cbp" />
 			<Depends filename="3rdparty/zlib/zlib.cbp" />
@@ -22,6 +22,6 @@
 		<Project filename="plugins/onepad/Linux/OnePad.cbp" />
 		<Project filename="plugins/zerogs/opengl/Linux/ZeroGS.cbp" />
 		<Project filename="tools/bin2cpp/bin2cpp.cbp" />
-		<Project filename="plugins/spu2-x/src/Linux/SPU2-X.cbp" active="1" />
+		<Project filename="plugins/spu2-x/src/Linux/SPU2-X.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>
