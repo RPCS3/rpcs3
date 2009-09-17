@@ -165,6 +165,8 @@ namespace Threading
 
 	bool PersistentThread::IsRunning() const
 	{
+	    if (!m_running) return false;
+	    
 		if( !!m_detached )
 			return !!m_running;
 		else
