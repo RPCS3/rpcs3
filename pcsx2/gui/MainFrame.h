@@ -37,7 +37,7 @@ class MainEmuFrame : public wxFrame
 // ------------------------------------------------------------------------
 
 protected:
-	wxFileHistory*	m_RecentIsoList;
+	wxScopedPtr<wxFileHistory>	m_RecentIsoList;
     wxStatusBar&	m_statusbar;
     wxStaticBitmap	m_background;
 

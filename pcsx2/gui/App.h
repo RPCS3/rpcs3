@@ -36,6 +36,7 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_OpenModalDialog, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_LoadPluginsComplete, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // ------------------------------------------------------------------------
@@ -365,6 +366,7 @@ protected:
 	void HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const;
 
 	void OnReloadPlugins( wxCommandEvent& evt );
+	void OnLoadPluginsComplete( wxCommandEvent& evt );
 	void OnSemaphorePing( wxCommandEvent& evt );
 	void OnOpenModalDialog( wxCommandEvent& evt );
 	void OnMessageBox( pxMessageBoxEvent& evt );

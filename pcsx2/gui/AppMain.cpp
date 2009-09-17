@@ -27,13 +27,14 @@
 
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
-#include <wx/evtloop.h>
+#include <wx/intl.h>
 
 IMPLEMENT_APP(Pcsx2App)
 
 DEFINE_EVENT_TYPE( pxEVT_SemaphorePing );
 DEFINE_EVENT_TYPE( pxEVT_OpenModalDialog );
 DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
+DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
 
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
@@ -427,6 +428,7 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_SemaphorePing,	wxCommandEventHandler( Pcsx2App::OnSemaphorePing ) );
 	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
 	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
+	Connect( pxEVT_LoadPluginsComplete,	wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
 
 	Connect( pxID_Window_GS, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
@@ -630,12 +632,13 @@ void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 	Msgbox::OnEvent( evt );
 }
 
-#include <wx/intl.h>
-
 void Pcsx2App::CleanupMess()
 {
-	m_CorePlugins->Close();
-	m_CorePlugins->Shutdown();
+	if( m_CorePlugins )
+	{
+		m_CorePlugins->Close();
+		m_CorePlugins->Shutdown();
+	}
 	
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.
@@ -768,7 +771,7 @@ void Pcsx2App::LoadSettings()
 	IniLoader loader( *conf );
 	g_Conf->LoadSave( loader );
 
-	if( m_MainFrame != NULL )
+	if( m_MainFrame != NULL && m_MainFrame->m_RecentIsoList )
 		m_MainFrame->m_RecentIsoList->Load( *conf );
 }
 
@@ -780,6 +783,6 @@ void Pcsx2App::SaveSettings()
 	IniSaver saver( *conf );
 	g_Conf->LoadSave( saver );
 
-	if( m_MainFrame != NULL )
+	if( m_MainFrame != NULL && m_MainFrame->m_RecentIsoList )
 		m_MainFrame->m_RecentIsoList->Save( *conf );
 }

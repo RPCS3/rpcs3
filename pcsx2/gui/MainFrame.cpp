@@ -432,11 +432,8 @@ MainEmuFrame::~MainEmuFrame() throw()
 {
 	try
 	{
-		if( m_RecentIsoList != NULL )
-		{
+		if( m_RecentIsoList )
 			m_RecentIsoList->Save( *wxConfigBase::Get( false ) );
-			safe_delete( m_RecentIsoList );
-		}
 	}
 	DESTRUCTOR_CATCHALL
 }
@@ -450,10 +447,10 @@ void MainEmuFrame::ApplySettings()
 	wxConfigBase* cfg = wxConfigBase::Get( false );
 	wxASSERT( cfg != NULL );
 
-	if( m_RecentIsoList != NULL )
+	if( m_RecentIsoList )
 		m_RecentIsoList->Save( *cfg );
-	safe_delete( m_RecentIsoList );
-	m_RecentIsoList = new wxFileHistory( g_Conf->RecentFileCount );
+	m_RecentIsoList.reset();
+	m_RecentIsoList.reset( new wxFileHistory( g_Conf->RecentFileCount ) );
 	m_RecentIsoList->Load( *cfg );
 
 	UpdateIsoSrcFile();
