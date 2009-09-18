@@ -574,7 +574,7 @@ namespace Console
 		// [TODO] make this a configurable option?  Do we care? :)
 #ifdef __LINUX__
 		// puts does automatic newlines, which we don't want here
-		fputs( "PCSX2 > ", stdout );
+		//fputs( "PCSX2 > ", stdout );
 		fputs( src, stdout );
 #endif
 
@@ -635,6 +635,7 @@ namespace Console
 	bool __fastcall WriteLn( const wxString& fmt )
 	{
 		const wxString fmtline( fmt + L"\n" );
+		_immediate_logger( "PCSX2 >  ");
 		_immediate_logger( fmtline );
 
 		if( emuLog != NULL )

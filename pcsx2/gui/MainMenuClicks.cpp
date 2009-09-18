@@ -144,13 +144,15 @@ void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
 {
    int id = event.GetId() - MenuId_State_Load01 - 1;
-   Console::WriteLn("If this were hooked up, it would load slot %d.", id);
+   Console::WriteLn("Loading slot %d.", id);
+   States_Load(id);
 }
 
 void MainEmuFrame::Menu_SaveStates_Click(wxCommandEvent &event)
 {
    int id = event.GetId() - MenuId_State_Save01 - 1;
-   Console::WriteLn("If this were hooked up, it would save slot %d.", id);
+   Console::WriteLn("Saving to slot %d.", id);
+   States_Save(id);
 }
 
 void MainEmuFrame::Menu_LoadStateOther_Click(wxCommandEvent &event)
