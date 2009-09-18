@@ -22,12 +22,11 @@
 #pragma once
 
 #include "GSRendererHW.h"
-#include "GSTextureFX.h"
+//#include "GSTextureFX.h"
 
 template<class Vertex> 
 class GSRendererDX : public GSRendererHW<Vertex>
 {
-	GSTextureFX* m_tfx;
 	GSVector2 m_pixelcenter;
 	bool m_logz;
 	bool m_fba;
@@ -41,9 +40,8 @@ protected:
 	virtual void UpdateFBA(GSTexture* rt) {}
 
 public:
-	GSRendererDX(uint8* base, bool mt, void (*irq)(), GSTextureCache* tc, GSTextureFX* tfx, const GSVector2& pixelcenter = GSVector2(0, 0))
+	GSRendererDX(uint8* base, bool mt, void (*irq)(), GSTextureCache* tc, const GSVector2& pixelcenter = GSVector2(0, 0))
 		: GSRendererHW<Vertex>(base, mt, irq, tc)
-		, m_tfx(tfx)
 		, m_pixelcenter(pixelcenter)
 		, m_topology(-1)
 	{
@@ -55,7 +53,6 @@ public:
 
 	virtual ~GSRendererDX()
 	{
-		delete m_tfx;
 	}
 
 	bool CreateDevice(GSDevice* dev)
@@ -63,16 +60,15 @@ public:
 		if(!__super::CreateDevice(dev))
 			return false;
 
-		if(!m_tfx->Create(m_dev))
-			return false;
-
 		return true;
 	}
 
-	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+	__forceinline void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 	{
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
+
+		GSDeviceDX& dev = (GSDeviceDX&)*m_dev;
 
 		//
 
@@ -80,11 +76,11 @@ public:
 
 		//
 
-		m_dev->BeginScene();
+		dev.BeginScene();
 
 		// om
 
-		GSTextureFX::OMDepthStencilSelector om_dssel;
+		GSDeviceDX::OMDepthStencilSelector om_dssel;
 
 		if(context->TEST.ZTE)
 		{
@@ -106,7 +102,7 @@ public:
 			om_dssel.fba = context->FBA.FBA;
 		}
 
-		GSTextureFX::OMBlendSelector om_bsel;
+		GSDeviceDX::OMBlendSelector om_bsel;
 
 		if(!IsOpaque())
 		{
@@ -137,7 +133,7 @@ public:
 
 		// vs
 
-		GSTextureFX::VSSelector vs_sel;
+		GSDeviceDX::VSSelector vs_sel;
 
 		vs_sel.tme = PRIM->TME;
 		vs_sel.fst = PRIM->FST;
@@ -167,7 +163,7 @@ public:
 			}
 		}
 
-		GSTextureFX::VSConstantBuffer vs_cb;
+		GSDeviceDX::VSConstantBuffer vs_cb;
 
 		float sx = 2.0f * rt->GetScale().x / (rt->GetWidth() << 4);
 		float sy = 2.0f * rt->GetScale().y / (rt->GetHeight() << 4);
@@ -181,16 +177,16 @@ public:
 
 		// gs
 
-		GSTextureFX::GSSelector gs_sel;
+		GSDeviceDX::GSSelector gs_sel;
 
 		gs_sel.iip = PRIM->IIP;
 		gs_sel.prim = m_vt.m_primclass;
 
 		// ps
 
-		GSTextureFX::PSSelector ps_sel;
-		GSTextureFX::PSSamplerSelector ps_ssel;
-		GSTextureFX::PSConstantBuffer ps_cb;
+		GSDeviceDX::PSSelector ps_sel;
+		GSDeviceDX::PSSamplerSelector ps_ssel;
+		GSDeviceDX::PSConstantBuffer ps_cb;
 
 		ps_sel.clr1 = om_bsel.IsCLR1();
 		ps_sel.fba = context->FBA.FBA;
@@ -274,22 +270,22 @@ public:
 
 		GSVector4i scissor = GSVector4i(GSVector4(rt->GetScale()).xyxy() * context->scissor.in).rintersect(GSVector4i(rt->GetSize()).zwxy());
 
-		m_dev->OMSetRenderTargets(rt, ds, &scissor);
-		m_dev->PSSetShaderResources(tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
+		dev.OMSetRenderTargets(rt, ds, &scissor);
+		dev.PSSetShaderResources(tex ? tex->m_texture : NULL, tex ? tex->m_palette : NULL);
 
 		uint8 afix = context->ALPHA.FIX;
 
-		m_tfx->SetupOM(om_dssel, om_bsel, afix);
-		m_tfx->SetupIA(m_vertices, m_count, m_topology);
-		m_tfx->SetupVS(vs_sel, &vs_cb);
-		m_tfx->SetupGS(gs_sel);
-		m_tfx->SetupPS(ps_sel, &ps_cb, ps_ssel);
+		dev.SetupOM(om_dssel, om_bsel, afix);
+		dev.SetupIA(m_vertices, m_count, m_topology);
+		dev.SetupVS(vs_sel, &vs_cb);
+		dev.SetupGS(gs_sel);
+		dev.SetupPS(ps_sel, &ps_cb, ps_ssel);
 
 		// draw
 
 		if(context->TEST.DoFirstPass())
 		{
-			m_dev->DrawPrimitive();
+			dev.DrawPrimitive();
 		}
 
 		if(context->TEST.DoSecondPass())
@@ -313,7 +309,7 @@ public:
 				break;
 			}
 
-			m_tfx->SetupPS(ps_sel, &ps_cb, ps_ssel);
+			dev.SetupPS(ps_sel, &ps_cb, ps_ssel);
 
 			bool z = om_dssel.zwe;
 			bool r = om_bsel.wr;
@@ -338,13 +334,13 @@ public:
 				om_bsel.wb = b;
 				om_bsel.wa = a;
 
-				m_tfx->SetupOM(om_dssel, om_bsel, afix);
+				dev.SetupOM(om_dssel, om_bsel, afix);
 
-				m_dev->DrawPrimitive();
+				dev.DrawPrimitive();
 			}
 		}
 
-		m_dev->EndScene();
+		dev.EndScene();
 
 		if(om_dssel.fba) UpdateFBA(rt);
 	}

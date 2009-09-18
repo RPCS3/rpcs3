@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "GSDevice.h"
+#include "GSDeviceDX.h"
 #include "GSTexture11.h"
 
-class GSDevice11 : public GSDevice
+class GSDevice11 : public GSDeviceDX
 {
 	GSTexture* Create(int type, int w, int h, bool msaa, int format);
 
@@ -89,11 +89,28 @@ public: // TODO
 		CComPtr<ID3D11Buffer> cb;
 	} m_interlace;
 
+	// Shaders...
+
+	CComPtr<ID3D11InputLayout> m_il;
+	hash_map<uint32, CComPtr<ID3D11VertexShader> > m_vs;
+	CComPtr<ID3D11Buffer> m_vs_cb;
+	hash_map<uint32, CComPtr<ID3D11GeometryShader> > m_gs;
+	hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps;
+	CComPtr<ID3D11Buffer> m_ps_cb;
+	hash_map<uint32, CComPtr<ID3D11SamplerState> > m_ps_ss;
+	CComPtr<ID3D11SamplerState> m_palette_ss;
+	hash_map<uint32, CComPtr<ID3D11DepthStencilState> > m_om_dss;	
+	hash_map<uint32, CComPtr<ID3D11BlendState> > m_om_bs;	
+
+	VSConstantBuffer m_vs_cb_cache;
+	PSConstantBuffer m_ps_cb_cache;
+
 public:
 	GSDevice11();
 	virtual ~GSDevice11();
 
 	bool Create(GSWnd* wnd, bool vsync);
+	bool CreateTextureFX();
 	bool Reset(int w, int h, int mode);
 	void Flip(bool limit);
 
@@ -131,6 +148,12 @@ public:
 	void OMSetDepthStencilState(ID3D11DepthStencilState* dss, uint8 sref);
 	void OMSetBlendState(ID3D11BlendState* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
+
+	void SetupIA(const void* vertices, int count, int prim);
+	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
+	void SetupGS(GSSelector sel);
+	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 
 	ID3D11Device* operator->() {return m_dev;}
 	operator ID3D11Device*() {return m_dev;}

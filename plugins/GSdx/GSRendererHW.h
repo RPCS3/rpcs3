@@ -478,6 +478,7 @@ protected:
 
 	void ResetDevice() 
 	{
+		__super::ResetDevice();
 		m_tc->RemoveAll();
 	}
 

@@ -24,7 +24,6 @@
 #include "GSRendererDX.h"
 #include "GSVertexHW.h"
 #include "GSTextureCache11.h"
-#include "GSTextureFX11.h"
 
 class GSRendererDX11 : public GSRendererDX<GSVertexHW11>
 {

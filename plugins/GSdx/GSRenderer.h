@@ -74,7 +74,11 @@ public:
 
 	virtual bool CreateWnd(const string& title, int w, int h);
 	virtual bool CreateDevice(GSDevice* dev);
-	virtual void ResetDevice() {}
+	virtual void ResetDevice()
+	{
+		InvalidateTextureCache();
+		ResetPrim();
+	}
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e, int param = 0);

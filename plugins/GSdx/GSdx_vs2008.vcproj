@@ -1450,10 +1450,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\GSTextureFX.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\GSTextureFX10.cpp"
 				>
 				<FileConfiguration
@@ -1740,6 +1736,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceDX.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDeviceNull.h"
 				>
 			</File>
@@ -1864,10 +1864,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\GSTexture11.h"
-				>
-			</File>
-			<File
 				RelativePath=".\GSTexture7.h"
 				>
 			</File>
@@ -1900,19 +1896,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\GSTextureFX.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSTextureFX10.h"
-				>
-			</File>
-			<File
 				RelativePath=".\GSTextureFX11.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSTextureFX9.h"
 				>
 			</File>
 			<File

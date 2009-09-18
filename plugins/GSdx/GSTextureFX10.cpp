@@ -20,22 +20,11 @@
  */
 
 #include "stdafx.h"
-#include "GSTextureFX10.h"
+#include "GSDevice10.h"
 #include "resource.h"
 
-GSTextureFX10::GSTextureFX10()
+bool GSDevice10::CreateTextureFX()
 {
-	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
-	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
-}
-
-bool GSTextureFX10::Create(GSDevice* dev)
-{
-	if(!__super::Create(dev))
-	{
-		return false;
-	}
-
 	HRESULT hr;
 
 	D3D10_BUFFER_DESC bd;
@@ -46,7 +35,7 @@ bool GSTextureFX10::Create(GSDevice* dev)
 	bd.Usage = D3D10_USAGE_DEFAULT;
 	bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
 
-	hr = (*(GSDevice10*)dev)->CreateBuffer(&bd, NULL, &m_vs_cb);
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_vs_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -56,7 +45,7 @@ bool GSTextureFX10::Create(GSDevice* dev)
 	bd.Usage = D3D10_USAGE_DEFAULT;
 	bd.BindFlags = D3D10_BIND_CONSTANT_BUFFER;
 
-	hr = (*(GSDevice10*)dev)->CreateBuffer(&bd, NULL, &m_ps_cb);
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_ps_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -72,7 +61,7 @@ bool GSTextureFX10::Create(GSDevice* dev)
 	sd.MaxAnisotropy = 16; 
 	sd.ComparisonFunc = D3D10_COMPARISON_NEVER;
 
-	hr = (*(GSDevice10*)dev)->CreateSamplerState(&sd, &m_palette_ss);
+	hr = m_dev->CreateSamplerState(&sd, &m_palette_ss);
 
 	if(FAILED(hr)) return false;
 
@@ -82,25 +71,19 @@ bool GSTextureFX10::Create(GSDevice* dev)
 	VSConstantBuffer cb;
 
 	SetupVS(sel, &cb);
-
-	//
-
+	
 	return true;
 }
 
-void GSTextureFX10::SetupIA(const void* vertices, int count, int prim)
+void GSDevice10::SetupIA(const void* vertices, int count, int prim)
 {
-	GSDevice10* dev = (GSDevice10*)m_dev;
-
-	dev->IASetVertexBuffer(vertices, sizeof(GSVertexHW10), count);
-	dev->IASetInputLayout(m_il);
-	dev->IASetPrimitiveTopology((D3D10_PRIMITIVE_TOPOLOGY)prim);
+	IASetVertexBuffer(vertices, sizeof(GSVertexHW10), count);
+	IASetInputLayout(m_il);
+	IASetPrimitiveTopology((D3D10_PRIMITIVE_TOPOLOGY)prim);
 }
 
-void GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
+void GSDevice10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	GSDevice10* dev = (GSDevice10*)m_dev;
-
 	hash_map<uint32, CComPtr<ID3D10VertexShader> >::const_iterator i = m_vs.find(sel);
 
 	if(i == m_vs.end())
@@ -132,7 +115,7 @@ void GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		CComPtr<ID3D10InputLayout> il;
 		CComPtr<ID3D10VertexShader> vs;
 
-		dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
+		CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
 		if(m_il == NULL)
 		{
@@ -146,16 +129,14 @@ void GSTextureFX10::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(m_vs_cb_cache.Update(cb))
 	{
-		(*dev)->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
+		m_dev->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
 	}
 
-	dev->VSSetShader(i->second, m_vs_cb);
+	VSSetShader(i->second, m_vs_cb);
 }
 
-void GSTextureFX10::SetupGS(GSSelector sel)
+void GSDevice10::SetupGS(GSSelector sel)
 {
-	GSDevice10* dev = (GSDevice10*)m_dev;
-
 	ID3D10GeometryShader* gs = NULL;
 
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)) // geometry shader works in every case, but not needed
@@ -180,19 +161,17 @@ void GSTextureFX10::SetupGS(GSSelector sel)
 				{NULL, NULL},
 			};
 
-			dev->CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
+			CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
 
 			m_gs[sel] = gs;
 		}
 	}
 
-	dev->GSSetShader(gs);
+	GSSetShader(gs);
 }
 
-void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
+void GSDevice10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
-	GSDevice10* dev = (GSDevice10*)m_dev;
-
 	hash_map<uint32, CComPtr<ID3D10PixelShader> >::const_iterator i = m_ps.find(sel);
 
 	if(i == m_ps.end())
@@ -233,7 +212,7 @@ void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 		CComPtr<ID3D10PixelShader> ps;
 		
-		dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
+		CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
 
@@ -242,10 +221,10 @@ void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 	if(m_ps_cb_cache.Update(cb))
 	{
-		(*dev)->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
+		m_dev->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
 	}
 
-	dev->PSSetShader(i->second, m_ps_cb);
+	PSSetShader(i->second, m_ps_cb);
 
 	ID3D10SamplerState* ss0 = NULL;
 	ID3D10SamplerState* ss1 = NULL;
@@ -279,7 +258,7 @@ void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			sd.MaxAnisotropy = 16; 
 			sd.ComparisonFunc = D3D10_COMPARISON_NEVER;
 
-			(*dev)->CreateSamplerState(&sd, &ss0);
+			m_dev->CreateSamplerState(&sd, &ss0);
 
 			m_ps_ss[ssel] = ss0;
 		}
@@ -290,12 +269,11 @@ void GSTextureFX10::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 		}
 	}
 
-	dev->PSSetSamplerState(ss0, ss1);
+	PSSetSamplerState(ss0, ss1);
 }
 
-void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
+void GSDevice10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
-	GSDevice10* dev = (GSDevice10*)m_dev;
 /*
 	hash_map<uint32, CComPtr<ID3D10DepthStencilState> >::const_iterator i = m_om_dss.find(dssel);
 
@@ -342,18 +320,18 @@ void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 /*
 		CComPtr<ID3D10DepthStencilState> dss;
 
-		(*dev)->CreateDepthStencilState(&dsd, &dss);
+		m_dev->CreateDepthStencilState(&dsd, &dss);
 
 		m_om_dss[dssel] = dss;
 
 		i = m_om_dss.find(dssel);
 */
-		(*dev)->CreateDepthStencilState(&dsd, &om_dss);
+		m_dev->CreateDepthStencilState(&dsd, &om_dss);
 	}
 
-//	dev->OMSetDepthStencilState(i->second, 1);
+//	OMSetDepthStencilState(i->second, 1);
 
-	dev->OMSetDepthStencilState(om_dss, 1);
+	OMSetDepthStencilState(om_dss, 1);
 
 	hash_map<uint32, CComPtr<ID3D10BlendState> >::const_iterator j = m_om_bs.find(bsel);
 
@@ -487,12 +465,12 @@ void GSTextureFX10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 
 		CComPtr<ID3D10BlendState> bs;
 
-		(*dev)->CreateBlendState(&bd, &bs);
+		m_dev->CreateBlendState(&bd, &bs);
 
 		m_om_bs[bsel] = bs;
 
 		j = m_om_bs.find(bsel);
 	}
 
-	dev->OMSetBlendState(j->second, (float)(int)afix / 0x80);
+	OMSetBlendState(j->second, (float)(int)afix / 0x80);
 }

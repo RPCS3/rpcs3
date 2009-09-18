@@ -40,6 +40,8 @@ GSDevice9::GSDevice9()
 
 GSDevice9::~GSDevice9()
 {
+	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
+
 	if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 }
@@ -208,7 +210,12 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
-	//
+	// create shader layout
+
+	VSSelector sel;
+	VSConstantBuffer cb;
+
+	SetupVS(sel, &cb);
 
 	return true;
 }

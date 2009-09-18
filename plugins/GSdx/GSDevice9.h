@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "GSDevice.h"
+#include "GSDeviceDX.h"
 #include "GSTexture9.h"
 
 struct Direct3DSamplerState9
@@ -59,7 +59,7 @@ struct Direct3DBlendState9
     UINT8 RenderTargetWriteMask;
 };
 
-class GSDevice9 : public GSDevice
+class GSDevice9 : public GSDeviceDX
 {
 	GSTexture* Create(int type, int w, int h, bool msaa, int format);
 
@@ -124,6 +124,19 @@ public: // TODO
 		CComPtr<IDirect3DPixelShader9> ps[4];
 	} m_interlace;
 
+	// Shaders...
+
+	CComPtr<IDirect3DVertexDeclaration9> m_il;
+	hash_map<uint32, CComPtr<IDirect3DVertexShader9> > m_vs;
+	D3DXHANDLE m_vs_params;
+	hash_map<uint32, CComPtr<IDirect3DPixelShader9> > m_ps;
+	hash_map<uint32, Direct3DSamplerState9* > m_ps_ss;
+	hash_map<uint32, Direct3DDepthStencilState9* > m_om_dss;	
+	hash_map<uint32, Direct3DBlendState9* > m_om_bs;	
+	hash_map<uint32, GSTexture*> m_mskfix;
+
+	GSTexture* CreateMskFix(uint32 size, uint32 msk, uint32 fix);
+	
 public:
 	GSDevice9();
 	virtual ~GSDevice9();
@@ -174,4 +187,10 @@ public:
 
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
+
+	void SetupIA(const void* vertices, int count, int prim);
+	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
+	void SetupGS(GSSelector sel) {}
+	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 };

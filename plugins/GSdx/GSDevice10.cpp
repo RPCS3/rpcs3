@@ -27,6 +27,8 @@
 GSDevice10::GSDevice10()
 {
 	memset(&m_state, 0, sizeof(m_state));
+	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
+	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
 
 	m_state.topology = D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	m_state.bf = -1;
@@ -225,6 +227,8 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 	Reset(1, 1, Windowed);
 
 	//
+
+	CreateTextureFX();
 
 	return true;
 }
