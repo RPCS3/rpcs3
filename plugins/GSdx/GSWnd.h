@@ -39,6 +39,7 @@ public:
 	bool Create(const string& title, int w, int h);
 	bool Attach(HWND hWnd, bool isManaged=true);
 	void Detach();
+	bool IsManaged() const { return m_IsManaged; }
 
 	void* GetHandle() {return m_hWnd;}
 

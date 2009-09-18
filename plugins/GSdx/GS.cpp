@@ -38,6 +38,7 @@ static HRESULT s_hr = E_FAIL;
 static GSRenderer* s_gs = NULL;
 static void (*s_irq)() = NULL;
 static uint8* s_basemem = NULL;
+static int s_renderer = -1;
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -101,6 +102,7 @@ EXPORT_C GSshutdown()
 	delete s_gs; 
 
 	s_gs = NULL;
+	s_renderer = -1;
 
 #ifdef _WINDOWS
 
@@ -134,6 +136,31 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 	try
 	{
+		GSFreezeData tempsave = { 0, NULL };
+
+		if(s_gs && (s_renderer != renderer))
+		{
+			// This isn't a "normal" suspend resume case -- We need to swap renderers, but
+			// we have to preserve the GSState at the same time, so quick-save it to the
+			// tempsave, and then recover below after the new GSRenderer is in place.
+
+			s_gs->Freeze(&tempsave, true);
+
+			tempsave.data = (uint8*)_aligned_malloc( tempsave.size, 16 );
+
+			if(!tempsave.data)
+			{
+				throw std::bad_alloc("Failed allocating buffer for device-change savestate.");
+			}
+
+			s_gs->Freeze( &tempsave, false );
+
+			delete s_gs;
+
+			s_gs = NULL;
+			s_renderer = -1;
+		}
+
 		switch(renderer)
 		{
 		default: 
@@ -165,6 +192,13 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 			case 1: case 4: case 7: case 10: case 12:
 				s_gs = new GSRendererSW(); break;
 			}
+
+			s_renderer = renderer;
+		}
+
+		if(tempsave.data)
+		{
+			s_gs->Defrost(&tempsave);
 		}
 	}
 	catch( std::exception& ex )
@@ -344,7 +378,14 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
-	GSSettingsDlg().DoModal();
+	if( GSSettingsDlg().DoModal() == IDOK )
+	{
+		if( s_gs != NULL && s_gs->m_wnd.IsManaged() )
+		{
+			// Legacy apps like gsdxgui expect this...
+			GSshutdown();
+		}
+	}
 }
 
 EXPORT_C_(INT32) GStest()

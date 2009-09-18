@@ -68,6 +68,9 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 		// DestroyWindow(m_hWnd);
 		return 0;
 	case WM_DESTROY:
+		// This kills the emulator when GS is closed, which *really* isn't desired behavior,
+		// especially in STGS mode (worked in MTGS mode since it only quit the thread, but even
+		// that wasn't needed).
 		//PostQuitMessage(0);
 		return 0;
 	default:
