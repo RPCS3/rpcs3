@@ -22,7 +22,7 @@
 #include "stdafx.h"
 #include "GSState.h"
 
-GSState::GSState(uint8* base, bool mt, void (*irq)())
+GSState::GSState(bool mt, void (*irq)())
 	: m_mt(mt)
 	, m_irq(irq)
 	, m_crc(0)
@@ -84,10 +84,6 @@ GSState::GSState(uint8* base, bool mt, void (*irq)())
 	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].reg)) * 3;
 	m_sssize += sizeof(m_q);
 
-	ASSERT(base);
-
-	m_regs = (GSPrivRegSet*)(base + 0x12000000);
-
 	PRIM = &m_env.PRIM;
 //	CSR->rREV = 0x20;
 	m_env.PRMODECONT.AC = 1;
@@ -100,6 +96,13 @@ GSState::GSState(uint8* base, bool mt, void (*irq)())
 GSState::~GSState()
 {
 }
+
+void GSState::SetRegsMem( uint8* basemem )
+{
+	ASSERT(basemem);
+	m_regs = (GSPrivRegSet*)basemem;
+}
+
 
 void GSState::Reset()
 {

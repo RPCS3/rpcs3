@@ -38,7 +38,7 @@ protected:
 	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
-	GSRendererDX10(uint8* base, bool mt, void (*irq)());
+	GSRendererDX10(bool mt, void (*irq)());
 
 	bool CreateDevice(GSDevice* dev);
 

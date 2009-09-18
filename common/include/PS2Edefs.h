@@ -511,7 +511,7 @@ typedef char*(CALLBACK* _PS2EgetLibName)(void);
 // NOTE: GSreadFIFOX/GSwriteCSR functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
 typedef s32  (CALLBACK* _GSopen)(void *pDsp, char *Title, int multithread);
-typedef s32  (CALLBACK* _GSopen2)( void *pDsp, u32 forceSoftware );
+typedef s32  (CALLBACK* _GSopen2)( void *pDsp, u32 flags );
 typedef void (CALLBACK* _GSvsync)(int field);
 typedef void (CALLBACK* _GSgifTransfer1)(u32 *pMem, u32 addr);
 typedef void (CALLBACK* _GSgifTransfer2)(u32 *pMem, u32 size);

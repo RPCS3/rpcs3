@@ -68,7 +68,11 @@ EXPORT_C_(uint32) PS2EgetCpuPlatform()
 
 EXPORT_C GSsetBaseMem(uint8* mem)
 {
-	s_basemem = mem - 0x12000000;
+	s_basemem = mem;
+	if( s_gs )
+	{
+		s_gs->SetRegsMem( s_basemem );
+	}
 }
 
 EXPORT_C_(INT32) GSinit()
@@ -116,9 +120,6 @@ EXPORT_C GSclose()
 
 	s_gs->ResetDevice();
 
-	if( s_gs->m_dev )
-		s_gs->m_dev->Reset(1, 1, GSDevice::Windowed);
-
 	delete s_gs->m_dev;
 	s_gs->m_dev = NULL;
 
@@ -131,38 +132,51 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 
 	GSDevice* dev = NULL;
 
-	switch(renderer)
-	{
-	default: 
-	case 0: case 1: case 2: dev = new GSDevice9(); break;
-	case 3: case 4: case 5: dev = new GSDevice10(); break;
-	case 6: case 7: case 8: dev = new GSDevice11(); break;
-#if 0
-	case 9: case 10: case 11: dev = new GSDeviceOGL(); break;
-#endif
-	case 12: case 13: new GSDeviceNull(); break;
-	}
-
-	if( !dev ) return -1;
-
-	if( !s_gs )
+	try
 	{
 		switch(renderer)
 		{
 		default: 
-		case 0: s_gs = new GSRendererDX9(s_basemem, !!mt, s_irq); break;
-		case 3: s_gs = new GSRendererDX10(s_basemem, !!mt, s_irq); break;
-		case 6: s_gs = new GSRendererDX11(s_basemem, !!mt, s_irq); break;
-#if 0
-		case 9: s_gs = new GSRendererOGL(s_basemem, !!mt, s_irq); break;
-#endif
-		case 2: case 5: case 8: case 11: case 13:
-			s_gs = new GSRendererNull(s_basemem, !!mt, s_irq); break;
+		case 0: case 1: case 2: dev = new GSDevice9(); break;
+		case 3: case 4: case 5: dev = new GSDevice10(); break;
+		case 6: case 7: case 8: dev = new GSDevice11(); break;
+	#if 0
+		case 9: case 10: case 11: dev = new GSDeviceOGL(); break;
+	#endif
+		case 12: case 13: new GSDeviceNull(); break;
+		}
 
-		case 1: case 4: case 7: case 10: case 12:
-			s_gs = new GSRendererSW(s_basemem, !!mt, s_irq); break;
+		if( !dev ) return -1;
+
+		if( !s_gs )
+		{
+			switch(renderer)
+			{
+			default: 
+			case 0: s_gs = new GSRendererDX9(!!mt, s_irq); break;
+			case 3: s_gs = new GSRendererDX10(!!mt, s_irq); break;
+			case 6: s_gs = new GSRendererDX11(!!mt, s_irq); break;
+	#if 0
+			case 9: s_gs = new GSRendererOGL(!!mt, s_irq); break;
+	#endif
+			case 2: case 5: case 8: case 11: case 13:
+				s_gs = new GSRendererNull(!!mt, s_irq); break;
+
+			case 1: case 4: case 7: case 10: case 12:
+				s_gs = new GSRendererSW(!!mt, s_irq); break;
+			}
 		}
 	}
+	catch( std::exception& ex )
+	{
+		// Allowing std exceptions to escape the scope of the plugin callstack could
+		// be problematic, because of differing typeids between DLL and EXE compilations.
+
+		printf( "GSdx error: Exception caught in GSopen: %s", ex.what() );
+		return -1;
+	}
+
+	s_gs->SetRegsMem( s_basemem );
 
 	if( *(HWND*)dsp == NULL )
 	{
@@ -196,10 +210,13 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	return 0;
 }
 
-EXPORT_C_(INT32) GSopen2(void* dsp, INT32 forceSoftware )
+EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 {
+	theApp.SetConfig("windowed", flags & 1);
+	theApp.SetConfig("vsync", flags & 2);
+
 	int renderer = theApp.GetConfig("renderer", 0);
-	if( forceSoftware )
+	if( flags & 4 )
 	{
 		renderer = 1;
 	}

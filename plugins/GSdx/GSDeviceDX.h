@@ -267,9 +267,9 @@ public:
 		return __super::Create( wnd, vsync );
 	}
 	
-	virtual bool Reset(int w, int h, int mode)
+	virtual bool Reset(int w, int h)
 	{
-		return __super::Reset( w, h, mode );
+		return __super::Reset( w, h );
 	}
 	
 	//virtual void Present(const GSVector4i& r, int shader, bool limit);

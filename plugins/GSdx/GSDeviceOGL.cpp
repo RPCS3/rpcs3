@@ -150,14 +150,14 @@ bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
 */
 	GSVector4i r = wnd->GetClientRect();
 
-	Reset(r.width(), r.height(), Windowed);
+	Reset(r.width(), r.height());
 
 	return true;
 }
 
-bool GSDeviceOGL::Reset(int w, int h, int mode)
+bool GSDeviceOGL::Reset(int w, int h)
 {
-	if(!__super::Reset(w, h, mode))
+	if(!__super::Reset(w, h))
 		return false;
 
 	glCullFace(GL_FRONT_AND_BACK); CheckError();

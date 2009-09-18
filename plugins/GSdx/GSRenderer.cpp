@@ -22,8 +22,8 @@
 #include "StdAfx.h"
 #include "GSRenderer.h"
 
-GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)())
-	: GSState(base, mt, irq)
+GSRenderer::GSRenderer(bool mt, void (*irq)())
+	: GSState(mt, irq)
 	, m_dev(NULL)
 	, m_shader(0)
 	, m_vt(this)
@@ -47,10 +47,10 @@ GSRenderer::GSRenderer(uint8* base, bool mt, void (*irq)())
 
 GSRenderer::~GSRenderer()
 {
-	if(m_dev)
+	/*if(m_dev)
 	{
 		m_dev->Reset(1, 1, GSDevice::Windowed);
-	}
+	}*/
 
 	delete m_dev;
 }

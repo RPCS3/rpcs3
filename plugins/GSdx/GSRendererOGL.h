@@ -31,7 +31,7 @@ protected:
 	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 
 public:
-	GSRendererOGL(uint8* base, bool mt, void (*irq)());
+	GSRendererOGL(bool mt, void (*irq)());
 
 	bool CreateDevice(GSDevice* dev);
 

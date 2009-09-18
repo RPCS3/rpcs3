@@ -41,7 +41,7 @@ public:
 	virtual ~GSDevice7();
 
 	bool Create(GSWnd* wnd, bool vsync);
-	bool Reset(int w, int h, int mode);
+	bool Reset(int w, int h);
 	bool IsLost(bool update) {return m_lost;}
 	void Present(const GSVector4i& r, int shader, bool limit);
 };

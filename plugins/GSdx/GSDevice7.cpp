@@ -76,14 +76,14 @@ bool GSDevice7::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
-	Reset(1, 1, Windowed);
+	Reset(1, 1);
 
 	return true;
 }
 
-bool GSDevice7::Reset(int w, int h, int mode)
+bool GSDevice7::Reset(int w, int h)
 {
-	if(!__super::Reset(w, h, mode))
+	if(!__super::Reset(w, h))
 		return false;
 
     DDSURFACEDESC2 desc;
@@ -147,7 +147,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader, bool limit)
 
 	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
 	{
-		if(!Reset(w, h, DontCare))
+		if(!Reset(w, h))
 		{
 			return;
 		}

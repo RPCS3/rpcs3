@@ -40,8 +40,8 @@ protected:
 	virtual void UpdateFBA(GSTexture* rt) {}
 
 public:
-	GSRendererDX(uint8* base, bool mt, void (*irq)(), GSTextureCache* tc, const GSVector2& pixelcenter = GSVector2(0, 0))
-		: GSRendererHW<Vertex>(base, mt, irq, tc)
+	GSRendererDX(bool mt, void (*irq)(), GSTextureCache* tc, const GSVector2& pixelcenter = GSVector2(0, 0))
+		: GSRendererHW<Vertex>(mt, irq, tc)
 		, m_pixelcenter(pixelcenter)
 		, m_topology(-1)
 	{

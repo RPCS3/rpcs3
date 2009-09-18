@@ -109,7 +109,7 @@ public:
 
 	bool Create(GSWnd* wnd, bool vsync);
 	bool CreateTextureFX();
-	bool Reset(int w, int h, int mode);
+	bool Reset(int w, int h);
 	void Flip(bool limit);
 
 	void DrawPrimitive();

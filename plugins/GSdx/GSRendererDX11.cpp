@@ -24,8 +24,8 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererDX11::GSRendererDX11(uint8* base, bool mt, void (*irq)())
-	: GSRendererDX<GSVertexHW11>(base, mt, irq, new GSTextureCache11(this), GSVector2(-0.5f, -0.5f))
+GSRendererDX11::GSRendererDX11(bool mt, void (*irq)())
+	: GSRendererDX<GSVertexHW11>(mt, irq, new GSTextureCache11(this), GSVector2(-0.5f, -0.5f))
 {
 	InitVertexKick<GSRendererDX11>();
 }

@@ -592,7 +592,7 @@ sptr mtgsThreadObject::ExecuteTask()
 		Console::WriteLn( "\t\tForced software switch enabled." );
 	
 	if( GSopen2 != NULL )
-		m_returncode = GSopen2( (void*)&pDsp, !!renderswitch );
+		m_returncode = GSopen2( (void*)&pDsp, 1 | (renderswitch ? 4 : 0) );
 	else
 		m_returncode = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
 

@@ -24,8 +24,8 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererOGL::GSRendererOGL(uint8* base, bool mt, void (*irq)())
-	: GSRendererHW<GSVertexOGL>(base, mt, irq, new GSTextureCacheOGL(this))
+GSRendererOGL::GSRendererOGL(bool mt, void (*irq)())
+	: GSRendererHW<GSVertexOGL>(mt, irq, new GSTextureCacheOGL(this))
 {
 	InitVertexKick<GSRendererOGL>();
 }
