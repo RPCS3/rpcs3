@@ -316,13 +316,7 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
-	GSSettingsDlg dlg;
-
-	if(IDOK == dlg.DoModal())
-	{
-		GSshutdown();
-		GSinit();
-	}
+	GSSettingsDlg().DoModal();
 }
 
 EXPORT_C_(INT32) GStest()
