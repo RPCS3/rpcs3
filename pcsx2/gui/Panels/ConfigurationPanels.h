@@ -250,6 +250,7 @@ namespace Panels
 		const wxChar* GetEEcycleSliderMsg( int val );
 		const wxChar* GetVUcycleSliderMsg( int val );
 
+		void Slider_Click(wxScrollEvent &event);
 		void EECycleRate_Scroll(wxScrollEvent &event);
 		void VUCycleRate_Scroll(wxScrollEvent &event);
 	};

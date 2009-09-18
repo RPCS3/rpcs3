@@ -216,6 +216,17 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	mainSizer.Add( &miscSizer, SizerFlags::TopLevelBox() );
 	SetSizer( &mainSizer );
 
+	// There has to be a cleaner way to do this...
+	int ids[2] = {m_slider_eecycle->GetId(), m_slider_vustealer->GetId()};
+	for (int i=0; i<2; i++) {
+		Connect( ids[i], wxEVT_SCROLL_PAGEUP,	wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
+		Connect( ids[i], wxEVT_SCROLL_PAGEDOWN,	wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
+		Connect( ids[i], wxEVT_SCROLL_LINEUP,	wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
+		Connect( ids[i], wxEVT_SCROLL_LINEDOWN,	wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
+		Connect( ids[i], wxEVT_SCROLL_TOP,		wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
+		Connect( ids[i], wxEVT_SCROLL_BOTTOM,	wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
+	}
+
 	Connect( m_slider_eecycle->GetId(),		wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::EECycleRate_Scroll ) );
 	Connect( m_slider_vustealer->GetId(),	wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::VUCycleRate_Scroll ) );
 }
@@ -231,6 +242,28 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
 	opts.vuMinMax			= m_check_vuMinMax->GetValue();
+}
+
+void Panels::SpeedHacksPanel::Slider_Click(wxScrollEvent &event) {
+	wxSlider* slider = (wxSlider*) event.GetEventObject();
+	int value = slider->GetValue();
+	int eventType = event.GetEventType();
+	if (eventType == wxEVT_SCROLL_PAGEUP || eventType == wxEVT_SCROLL_LINEUP) {
+		if (value > slider->GetMin()) {
+			slider->SetValue(value-1);
+		}
+	}
+	else if (eventType == wxEVT_SCROLL_TOP) {
+		slider->SetValue(slider->GetMin());
+	}
+	else if (eventType == wxEVT_SCROLL_PAGEDOWN || eventType == wxEVT_SCROLL_LINEDOWN) {
+		if (value < slider->GetMax()) {
+			slider->SetValue(value+1);
+		}
+	}
+	else if (eventType == wxEVT_SCROLL_BOTTOM) {
+		slider->SetValue(slider->GetMax());
+	}
 }
 
 void Panels::SpeedHacksPanel::EECycleRate_Scroll(wxScrollEvent &event)
