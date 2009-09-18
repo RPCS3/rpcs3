@@ -15,6 +15,9 @@
 					<Add option="-g" />
 					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
 				</Compiler>
+				<Linker>
+					<Add library="../../../../deps/debug/libsoundtouch-dbg.a" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="../../../../bin/plugins/SPU2-X.so" prefix_auto="0" extension_auto="0" />
@@ -27,6 +30,7 @@
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add library="../../../../deps/libsoundtouch.a" />
 				</Linker>
 			</Target>
 		</Build>
@@ -51,27 +55,6 @@
 			<Add library="asound" />
 			<Add library="stdc++" />
 		</Linker>
-		<Unit filename="../../../../3rdparty/SoundTouch/AAFilter.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/AAFilter.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/BPMDetect.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/FIFOSampleBuffer.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/FIFOSampleBuffer.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/FIFOSamplePipe.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/FIRFilter.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/FIRFilter.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/RateTransposer.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/RateTransposer.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/STTypes.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/SoundTouch.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/SoundTouch.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/TDStretch.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/TDStretch.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/WavFile.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/WavFile.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/cpu_detect.h" />
-		<Unit filename="../../../../3rdparty/SoundTouch/cpu_detect_x86_gcc.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/mmx_optimized.cpp" />
-		<Unit filename="../../../../3rdparty/SoundTouch/sse_optimized.cpp" />
 		<Unit filename="../3rdparty/liba52/a52.h" />
 		<Unit filename="../3rdparty/liba52/a52_internal.h" />
 		<Unit filename="../3rdparty/liba52/attributes.h" />

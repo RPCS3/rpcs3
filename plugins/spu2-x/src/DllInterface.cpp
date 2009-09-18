@@ -250,7 +250,9 @@ EXPORT_C_(void) SPU2close()
 	if( !spu2open ) return;
 	FileLog("[%10d] SPU2 Close\n",Cycles);
 
+#ifndef __LINUX__
 	DspCloseLibrary();
+#endif
 	spdif_shutdown();
 	SndBuffer::Cleanup();
 

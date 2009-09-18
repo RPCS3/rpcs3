@@ -328,6 +328,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 		ssFreeze--;
 		return;
 	}
+#ifndef __LINUX__
 	else if( dspPluginEnabled )
 	{
 		// Convert in, send to winamp DSP, and convert out.
@@ -357,6 +358,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 			);
 		}
 	}
+#endif
 	else
 	{
 		if( !timeStretchDisabled )
