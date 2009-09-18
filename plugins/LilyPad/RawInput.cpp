@@ -6,7 +6,6 @@
 #include "WindowsKeyboard.h"
 #include "WindowsMouse.h"
 
-#include "Config.h"
 
 typedef BOOL (CALLBACK *_RegisterRawInputDevices)(PCRAWINPUTDEVICE pRawInputDevices, UINT uiNumDevices, UINT cbSize);
 typedef UINT (CALLBACK *_GetRawInputDeviceInfo)(HANDLE hDevice, UINT uiCommand, LPVOID pData, PUINT pcbSize);

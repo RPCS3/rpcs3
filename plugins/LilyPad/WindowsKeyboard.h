@@ -1,5 +1,3 @@
-#include "InputManager.h"
-
 // Shared functionality for WM and RAW keyboards.
 class WindowsKeyboard : public Device {
 public:

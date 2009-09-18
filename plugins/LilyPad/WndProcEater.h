@@ -1,5 +1,3 @@
-#include "Global.h"
-
 #define EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES	1
 
 /* Need this to let window be subclassed multiple times but still clean up nicely.

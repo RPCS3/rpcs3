@@ -1,17 +1,9 @@
 #include "Global.h"
-#include <Dbt.h>
-#include <commctrl.h>
 
-#include "Config.h"
 #include "PS2Edefs.h"
 #include "Resource.h"
 #include "Diagnostics.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include "DeviceEnumerator.h"
-#include "InputManager.h"
 #include "KeyboardQueue.h"
 #include "WndProcEater.h"
 #include "DualShock3.h"

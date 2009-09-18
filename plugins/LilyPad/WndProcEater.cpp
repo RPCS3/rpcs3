@@ -1,3 +1,4 @@
+#include "Global.h"
 #include "WndProcEater.h"
 
 static HWND hWndEaten = 0;

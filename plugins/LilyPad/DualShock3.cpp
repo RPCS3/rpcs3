@@ -1,7 +1,6 @@
 #include "Global.h"
 #include "usb.h"
 #include "HidDevice.h"
-#include "InputManager.h"
 
 
 #define VID 0x054c
