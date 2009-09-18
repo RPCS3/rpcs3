@@ -68,7 +68,7 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 		// DestroyWindow(m_hWnd);
 		return 0;
 	case WM_DESTROY:
-		PostQuitMessage(0);
+		//PostQuitMessage(0);
 		return 0;
 	default:
 		break;
@@ -150,6 +150,12 @@ bool GSWnd::Attach(HWND hWnd, bool isManaged)
 
 void GSWnd::Detach()
 {
+	if(m_hWnd && m_IsManaged)
+	{
+		// close the window, since it's under GSdx care.  It's not taking messages anyway, and
+		// that means its big, ugly, and in the way.
+		DestroyWindow(m_hWnd);
+	}
 	m_hWnd = NULL;
 	m_IsManaged = true;
 }

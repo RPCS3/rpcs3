@@ -22,7 +22,6 @@
 #pragma once
 
 #include "GSRendererHW.h"
-//#include "GSTextureFX.h"
 
 template<class Vertex> 
 class GSRendererDX : public GSRendererHW<Vertex>

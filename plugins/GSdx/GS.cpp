@@ -171,6 +171,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 	{
 		// Allowing std exceptions to escape the scope of the plugin callstack could
 		// be problematic, because of differing typeids between DLL and EXE compilations.
+		// ('new' could throw std::alloc)
 
 		printf( "GSdx error: Exception caught in GSopen: %s", ex.what() );
 		return -1;
@@ -248,7 +249,7 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 
 	if( retval == 0 && s_gs )
 	{
-		s_gs->SetMultithreaded( false );
+		s_gs->SetMultithreaded( !!mt );
 	}
 	
 	return retval;
