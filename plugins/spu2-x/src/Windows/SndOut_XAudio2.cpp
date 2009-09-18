@@ -111,15 +111,15 @@ private:
 		{			
 			WAVEFORMATEXTENSIBLE wfx;
 
-			memset(&wfx, 0, sizeof(WAVEFORMATEXTENSIBLE)); 
+			memset(&wfx, 0, sizeof(WAVEFORMATEXTENSIBLE));
 			wfx.Format.wFormatTag		= WAVE_FORMAT_EXTENSIBLE;
 			wfx.Format.nSamplesPerSec	= SampleRate;
 			wfx.Format.nChannels		= m_nChannels;
 			wfx.Format.wBitsPerSample	= 16;
 			wfx.Format.nBlockAlign		= wfx.Format.nChannels*wfx.Format.wBitsPerSample/8;
 			wfx.Format.nAvgBytesPerSec	= SampleRate * wfx.Format.nBlockAlign;
-			wfx.Format.cbSize			= 22;
-			wfx.Samples.wValidBitsPerSample = 0;
+			wfx.Format.cbSize			= sizeof(WAVEFORMATEXTENSIBLE)-sizeof(WAVEFORMATEX);
+			wfx.Samples.wValidBitsPerSample = 16;
 			wfx.dwChannelMask			= chanConfig;
 			wfx.SubFormat				= KSDATAFORMAT_SUBTYPE_PCM;
 
