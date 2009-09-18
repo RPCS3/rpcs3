@@ -24,8 +24,8 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererDX9::GSRendererDX9(bool mt, void (*irq)())
-	: GSRendererDX<GSVertexHW9>(mt, irq, new GSTextureCache9(this))
+GSRendererDX9::GSRendererDX9()
+	: GSRendererDX<GSVertexHW9>(new GSTextureCache9(this))
 {
 	InitVertexKick<GSRendererDX9>();
 }

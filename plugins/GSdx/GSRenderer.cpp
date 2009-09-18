@@ -22,8 +22,8 @@
 #include "StdAfx.h"
 #include "GSRenderer.h"
 
-GSRenderer::GSRenderer(bool mt, void (*irq)())
-	: GSState(mt, irq)
+GSRenderer::GSRenderer()
+	: GSState()
 	, m_dev(NULL)
 	, m_shader(0)
 	, m_vt(this)

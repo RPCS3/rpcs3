@@ -44,7 +44,7 @@ protected:
 	void GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass);
 
 public:
-	GSRendererSW(bool mt, void (*irq)());
+	GSRendererSW();
 	virtual ~GSRendererSW();
 
 	template<uint32 prim, uint32 tme, uint32 fst> 

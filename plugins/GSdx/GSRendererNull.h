@@ -37,8 +37,8 @@ protected:
 	}
 
 public:
-	GSRendererNull(bool mt, void (*irq)())
-		: GSRendererT<GSVertexNull>(mt, irq)
+	GSRendererNull()
+		: GSRendererT<GSVertexNull>()
 	{
 		InitVertexKick<GSRendererNull>();
 	}

@@ -69,7 +69,7 @@ public:
 	int s_saven;
 
 public:
-	GSRenderer(bool mt, void (*irq)());
+	GSRenderer();
 	virtual ~GSRenderer();
 
 	virtual bool CreateWnd(const string& title, int w, int h);
@@ -217,8 +217,8 @@ protected:
 	virtual void Draw() = 0;
 
 public:
-	GSRendererT(bool mt, void (*irq)())
-		: GSRenderer(mt, irq)
+	GSRendererT()
+		: GSRenderer()
 		, m_vertices(NULL)
 		, m_count(0)
 		, m_maxcount(0)

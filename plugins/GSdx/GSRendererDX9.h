@@ -45,7 +45,7 @@ protected:
 	void UpdateFBA(GSTexture* rt);
 
 public:
-	GSRendererDX9(bool mt, void (*irq)());
+	GSRendererDX9();
 
 	bool CreateDevice(GSDevice* dev);
 

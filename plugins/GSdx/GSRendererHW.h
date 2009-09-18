@@ -704,8 +704,8 @@ protected:
 	}
 
 public:
-	GSRendererHW(bool mt, void (*irq)(), GSTextureCache* tc)
-		: GSRendererT<Vertex>(mt, irq)
+	GSRendererHW(GSTextureCache* tc)
+		: GSRendererT<Vertex>()
 		, m_tc(tc)
 		, m_width(1024)
 		, m_height(1024)

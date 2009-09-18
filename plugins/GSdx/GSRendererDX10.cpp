@@ -24,8 +24,8 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererDX10::GSRendererDX10(bool mt, void (*irq)())
-	: GSRendererDX<GSVertexHW10>(mt, irq, new GSTextureCache10(this), GSVector2(-0.5f, -0.5f))
+GSRendererDX10::GSRendererDX10()
+	: GSRendererDX<GSVertexHW10>(new GSTextureCache10(this), GSVector2(-0.5f, -0.5f))
 {
 	InitVertexKick<GSRendererDX10>();
 }

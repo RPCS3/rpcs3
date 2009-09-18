@@ -39,7 +39,7 @@ protected:
 	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
-	GSRendererDX11(bool mt, void (*irq)());
+	GSRendererDX11();
 
 	bool CreateDevice(GSDevice* dev);
 

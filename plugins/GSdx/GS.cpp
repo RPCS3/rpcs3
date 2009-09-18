@@ -126,7 +126,7 @@ EXPORT_C GSclose()
 	s_gs->m_wnd.Detach();
 }
 
-static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
+static INT32 _GSopen(void* dsp, char* title, int renderer)
 {
 	GSclose();
 
@@ -153,17 +153,17 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 			switch(renderer)
 			{
 			default: 
-			case 0: s_gs = new GSRendererDX9(!!mt, s_irq); break;
-			case 3: s_gs = new GSRendererDX10(!!mt, s_irq); break;
-			case 6: s_gs = new GSRendererDX11(!!mt, s_irq); break;
+			case 0: s_gs = new GSRendererDX9(); break;
+			case 3: s_gs = new GSRendererDX10(); break;
+			case 6: s_gs = new GSRendererDX11(); break;
 	#if 0
-			case 9: s_gs = new GSRendererOGL(!!mt, s_irq); break;
+			case 9: s_gs = new GSRendererOGL(); break;
 	#endif
 			case 2: case 5: case 8: case 11: case 13:
-				s_gs = new GSRendererNull(!!mt, s_irq); break;
+				s_gs = new GSRendererNull(); break;
 
 			case 1: case 4: case 7: case 10: case 12:
-				s_gs = new GSRendererSW(!!mt, s_irq); break;
+				s_gs = new GSRendererSW(); break;
 			}
 		}
 	}
@@ -176,7 +176,8 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 		return -1;
 	}
 
-	s_gs->SetRegsMem( s_basemem );
+	s_gs->SetRegsMem(s_basemem);
+	s_gs->SetIrqCallback(s_irq);
 
 	if( *(HWND*)dsp == NULL )
 	{
@@ -196,6 +197,7 @@ static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
 	}
 	else
 	{
+		s_gs->SetMultithreaded( true );
 		s_gs->m_wnd.Attach( *(HWND*)dsp, false );
 	}
 
@@ -221,7 +223,7 @@ EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 		renderer = 1;
 	}
 
-	return GSopen( dsp, NULL, true, renderer );
+	return _GSopen( dsp, NULL, renderer );
 }
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
@@ -241,7 +243,15 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 	}
 
 	*(HWND*)dsp = NULL;
-	return GSopen(dsp, title, mt, renderer);
+
+	int retval = _GSopen(dsp, title, renderer);
+
+	if( retval == 0 && s_gs )
+	{
+		s_gs->SetMultithreaded( false );
+	}
+	
+	return retval;
 }
 
 EXPORT_C GSreset()
@@ -348,6 +358,10 @@ EXPORT_C GSabout()
 EXPORT_C GSirqCallback(void (*irq)())
 {
 	s_irq = irq;
+	if( s_gs )
+	{
+		s_gs->SetIrqCallback(s_irq);
+	}
 }
 
 EXPORT_C_(int) GSsetupRecording(int start, void* data)
@@ -409,7 +423,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		GSsetBaseMem(regs);
 
 		HWND hWnd = NULL;
-		GSopen(&hWnd, "", true, renderer);
+		GSopen(&hWnd, "", renderer);
 
 		uint32 crc;
 		fread(&crc, 4, 1, fp);

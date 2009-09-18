@@ -22,9 +22,10 @@
 #include "stdafx.h"
 #include "GSState.h"
 
-GSState::GSState(bool mt, void (*irq)())
-	: m_mt(mt)
-	, m_irq(irq)
+GSState::GSState()
+	: m_mt(false)
+	, m_irq(NULL)
+	, m_regs(NULL)
 	, m_crc(0)
 	, m_options(0)
 	, m_path3hack(0)
@@ -97,12 +98,38 @@ GSState::~GSState()
 {
 }
 
-void GSState::SetRegsMem( uint8* basemem )
+void GSState::SetRegsMem(uint8* basemem)
 {
 	ASSERT(basemem);
 	m_regs = (GSPrivRegSet*)basemem;
 }
 
+void GSState::SetIrqCallback(void (*irq)())
+{
+	m_irq = irq;
+}
+
+void GSState::SetMultithreaded( bool isMT )
+{
+	// Some older versions of PCSX2 didn't properly set the irq callback to NULL
+	// in multithreaded mode (possibly because ZeroGS itself would assert in such
+	// cases), and didn't bind them to a dummy callback either.  PCSX2 handles all
+	// IRQs internally when multithreaded anyway -- so let's ignore them here:
+	
+	m_mt = isMT;
+	if( isMT )
+	{
+		m_fpGIFRegHandlers[GIF_A_D_REG_SIGNAL] = &GSState::GIFRegHandlerNull;
+		m_fpGIFRegHandlers[GIF_A_D_REG_FINISH] = &GSState::GIFRegHandlerNull;
+		m_fpGIFRegHandlers[GIF_A_D_REG_LABEL] = &GSState::GIFRegHandlerNull;
+	}
+	else
+	{
+		m_fpGIFRegHandlers[GIF_A_D_REG_SIGNAL] = &GSState::GIFRegHandlerSIGNAL;
+		m_fpGIFRegHandlers[GIF_A_D_REG_FINISH] = &GSState::GIFRegHandlerFINISH;
+		m_fpGIFRegHandlers[GIF_A_D_REG_LABEL] = &GSState::GIFRegHandlerLABEL;
+	}
+}
 
 void GSState::Reset()
 {
@@ -915,8 +942,6 @@ void GSState::GIFRegHandlerHWREG(GIFReg* r)
 
 void GSState::GIFRegHandlerSIGNAL(GIFReg* r)
 {
-	if(m_mt) return;
-
 	m_regs->SIGLBLID.SIGID = (m_regs->SIGLBLID.SIGID & ~r->SIGNAL.IDMSK) | (r->SIGNAL.ID & r->SIGNAL.IDMSK);
 
 	if(m_regs->CSR.wSIGNAL) m_regs->CSR.rSIGNAL = 1;
@@ -925,16 +950,12 @@ void GSState::GIFRegHandlerSIGNAL(GIFReg* r)
 
 void GSState::GIFRegHandlerFINISH(GIFReg* r)
 {
-	if(m_mt) return;
-
 	if(m_regs->CSR.wFINISH) m_regs->CSR.rFINISH = 1;
 	if(!m_regs->IMR.FINISHMSK && m_irq) m_irq();
 }
 
 void GSState::GIFRegHandlerLABEL(GIFReg* r)
 {
-	if(m_mt) return;
-
 	m_regs->SIGLBLID.LBLID = (m_regs->SIGLBLID.LBLID & ~r->LABEL.IDMSK) | (r->LABEL.ID & r->LABEL.IDMSK);
 }
 
