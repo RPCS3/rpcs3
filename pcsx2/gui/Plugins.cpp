@@ -25,6 +25,90 @@
 #include "HostGui.h"
 #include "AppConfig.h"
 
+using namespace Threading;
+
+// --------------------------------------------------------------------------------------
+//  LoadPluginsTask
+// --------------------------------------------------------------------------------------
+// On completion the thread sends a pxEVT_LoadPluginsComplete message, which contains a
+// handle to this thread object.  If the load is successful, the Result var is set to
+// non-NULL.  If NULL, an error occurred and the thread loads the exception into either
+// Ex_PluginError or Ex_RuntimeError.
+//
+class LoadPluginsTask : public Threading::PersistentThread
+{
+public:
+	Exception::PluginError* Ex_PluginError;
+	Exception::RuntimeError* Ex_RuntimeError;
+	PluginManager* Result;
+
+protected:
+	wxString m_folders[PluginId_Count];
+
+public:
+	LoadPluginsTask( const wxString (&folders)[PluginId_Count] ) :
+		Ex_PluginError( NULL )
+	,	Ex_RuntimeError( NULL )
+	,	Result( NULL )
+	{
+		for(int i=0; i<PluginId_Count; ++i )
+			m_folders[i] = folders[i];
+
+		Start();
+	}
+
+	virtual ~LoadPluginsTask() throw();
+
+protected:
+	int ExecuteTask();
+};
+
+static wxScopedPtr<LoadPluginsTask> _loadTask;
+
+LoadPluginsTask::~LoadPluginsTask() throw()
+{
+	_loadTask.release();
+	PersistentThread::Cancel();
+	_loadTask.reset();
+}
+
+int LoadPluginsTask::ExecuteTask()
+{
+	wxGetApp().Ping();
+	Sleep(3);
+
+	wxCommandEvent evt( pxEVT_LoadPluginsComplete );
+	evt.SetClientData( this );
+
+	try
+	{
+		// This is for testing of the error handler... uncomment for fun?
+		//throw Exception::PluginError( PluginId_PAD, "This one is for testing the error handler!" );
+
+		Result = PluginManager_Create( m_folders );
+	}
+	catch( Exception::PluginError& ex )
+	{
+		Ex_PluginError = new Exception::PluginError( ex );
+	}
+	catch( Exception::RuntimeError& innerEx )
+	{
+		// Runtime errors are typically recoverable, so handle them here
+		// and prep them for re-throw on the main thread.
+		Ex_RuntimeError = new Exception::RuntimeError(
+			L"A runtime error occurred on the LoadPlugins thread.\n" + innerEx.FormatDiagnosticMessage(),
+			innerEx.FormatDisplayMessage()
+		);
+	}
+	// anything else leave unhandled so that the debugger catches it!
+
+	wxGetApp().AddPendingEvent( evt );
+	return 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////
+
+
 int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
 {
 	wxScopedPtr<wxArrayString> placebo;
@@ -45,69 +129,29 @@ int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
 		wxDir::GetAllFiles( searchpath.ToString(), realdest, wxsFormat( pattern, wxDynamicLibrary::GetDllExt()), wxDIR_FILES ) : 0;
 }
 
-using namespace Threading;
-
 void Pcsx2App::OnReloadPlugins( wxCommandEvent& evt )
 {
 	ReloadPlugins();
 }
 
+void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
+{
+	// scoped ptr ensures the thread object is cleaned up even on exception:
+	wxScopedPtr<LoadPluginsTask> killTask( (LoadPluginsTask*)evt.GetClientData() );
+	m_CorePlugins.reset( killTask->Result );
+
+	if( !m_CorePlugins )
+	{
+		if( killTask->Ex_PluginError != NULL )
+			throw *killTask->Ex_PluginError;
+		if( killTask->Ex_RuntimeError != NULL )
+			throw *killTask->Ex_RuntimeError;	// Re-Throws generic threaded errors
+	}
+}
+
 void Pcsx2App::ReloadPlugins()
 {
-	class LoadPluginsTask : public Threading::BaseTaskThread
-	{
-	public:
-		PluginManager* Result;
-		Exception::PluginError* Ex_PluginError;
-		Exception::RuntimeError* Ex_RuntimeError;
-
-	protected:
-		const wxString (&m_folders)[PluginId_Count];
-
-	public:
-		LoadPluginsTask( const wxString (&folders)[PluginId_Count] ) :
-			Result( NULL )
-		,	Ex_PluginError( NULL )
-		,	Ex_RuntimeError( NULL )
-		,	m_folders( folders )
-		{
-		}
-
-		virtual ~LoadPluginsTask() throw()
-		{
-			BaseTaskThread::Cancel();
-		}
-
-	protected:
-		void Task()
-		{
-			wxGetApp().Ping();
-			Sleep(3);
-
-			try
-			{
-				//throw Exception::PluginError( PluginId_PAD, "This one is for testing the error handler!" );
-				Result = PluginManager_Create( m_folders );
-			}
-			catch( Exception::PluginError& ex )
-			{
-				Result = NULL;
-				Ex_PluginError = new Exception::PluginError( ex );
-			}
-			catch( Exception::RuntimeError& innerEx )
-			{
-				// Runtime errors are typically recoverable, so handle them here
-				// and prep them for re-throw on the main thread.
-				Result = NULL;
-				Ex_RuntimeError = new Exception::RuntimeError(
-					L"A runtime error occurred on the LoadPlugins thread.\n" + innerEx.FormatDiagnosticMessage(),
-					innerEx.FormatDisplayMessage()
-				);
-			}
-
-			// anything else leave unhandled so that the debugger catches it!
-		}
-	};
+	if( _loadTask ) return;
 
 	m_CoreThread.reset();
 	m_CorePlugins.reset();
@@ -123,41 +167,39 @@ void Pcsx2App::ReloadPlugins()
 			passins[pi->id] = g_Conf->FullpathTo( pi->id );
 	}
 
-	LoadPluginsTask task( passins );
-	task.Start();
-	task.PostTask();
-	task.WaitForResult();
-
-	if( task.Result == NULL )
-	{
-		if( task.Ex_PluginError != NULL )
-			throw *task.Ex_PluginError;
-		if( task.Ex_RuntimeError != NULL )
-			throw *task.Ex_RuntimeError;	// Re-Throws generic threaded errors
-	}
-	
-	m_CorePlugins.reset( task.Result );
+	_loadTask.reset( new LoadPluginsTask( passins ) );
+	// ...  and when it finishes it posts up a OnLoadPluginsComplete().  Bye. :)
 }
 
 // Posts a message to the App to reload plugins.  Plugins are loaded via a background thread
 // which is started on a pending event, so don't expect them to be ready  "right now."
+// If plugins are already loaded then no action is performed.
 void LoadPluginsPassive()
 {
+	if( g_plugins ) return;
+
 	wxCommandEvent evt( pxEVT_ReloadPlugins );
 	wxGetApp().AddPendingEvent( evt );
 }
 
 // Blocks until plugins have been successfully loaded, or throws an exception if
-// the user cancels the loading procedure after error.
+// the user cancels the loading procedure after error.  If plugins are already loaded
+// then no action is performed.
 void LoadPluginsImmediate()
 {
 	wxASSERT( wxThread::IsMain() );
+	if( g_plugins ) return;
 
 	static int _reentrant = 0;
 	EntryGuard guard( _reentrant );
 
 	wxASSERT( !guard.IsReentrant() );
 	wxGetApp().ReloadPlugins();
+	while( _loadTask )
+	{
+		Sleep( 10 );
+		wxGetApp().ProcessPendingEvents();
+	}
 }
 
 void UnloadPlugins()

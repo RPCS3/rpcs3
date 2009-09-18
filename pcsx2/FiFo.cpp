@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -52,7 +52,7 @@ extern int FOreadpos;
 void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
 {
 	jASSUME( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
-	
+
 	VIF_LOG("ReadFIFO/VIF0 0x%08X", mem);
 	//out[0] = psHu64(mem  );
 	//out[1] = psHu64(mem+8);
@@ -93,7 +93,7 @@ void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
 	//out[1] = psHu64(mem+8);
 
 	out[0] = psHu64(0x6000);
-	out[1] = psHu64(0x6008);	
+	out[1] = psHu64(0x6008);
 }
 
 void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
@@ -126,24 +126,24 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 	jASSUME( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
 
 	VIF_LOG("WriteFIFO/VIF0, addr=0x%08X", mem);
-	
+
 	//psHu64(mem  ) = value[0];
 	//psHu64(mem+8) = value[1];
 
 	psHu64(0x4000) = value[0];
 	psHu64(0x4008) = value[1];
-	
+
 	vif0ch->qwc += 1;
 	int ret = VIF0transfer((u32*)value, 4, 0);
 	assert( ret == 0 ); // vif stall code not implemented
 }
-		
+
 void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 {
 	jASSUME( (mem >= VIF1_FIFO) && (mem < GIF_FIFO) );
 
 	VIF_LOG("WriteFIFO/VIF1, addr=0x%08X", mem);
-	
+
 	//psHu64(mem  ) = value[0];
 	//psHu64(mem+8) = value[1];
 
@@ -175,14 +175,14 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	psHu64(0x6008) = value[1];
 
 	FreezeRegs(1);
-	const uint count = mtgsThread->PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);
+	mtgsThread->PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);
 	u64* data = (u64*)mtgsThread->GetDataPacketPtr();
 	data[0] = value[0];
 	data[1] = value[1];
 	mtgsThread->SendDataPacket();
 	FreezeRegs(0);
 }
-		
+
 void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 {
 	jASSUME( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );

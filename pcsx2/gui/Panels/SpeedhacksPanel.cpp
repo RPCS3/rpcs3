@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -47,7 +47,8 @@ const wxChar* Panels::SpeedHacksPanel::GetEEcycleSliderMsg( int val )
 				L"audio on many FMVs."
 			);
 
-		jNO_DEFAULT
+		default:
+            break;
 	}
 
 	return L"Unreachable Warning Suppressor!!";
@@ -78,8 +79,8 @@ const wxChar* Panels::SpeedHacksPanel::GetVUcycleSliderMsg( int val )
 				L"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause flickering "
 				L"visuals or slowdown in most games."
 			);
-
-		jNO_DEFAULT
+        default:
+            break;
 	}
 
 	return L"Unreachable Warning Suppressor!!";
@@ -172,7 +173,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 			L"Uses SSE's Min/Max Floating Point Operations instead of custom logical Min/Max routines. "
 			L"Known to break Gran Tourismo 4, Tekken 5."
 		) );
-	
+
 	m_check_vuMinMax->SetValue(opts.vuMinMax);
 
 	// ------------------------------------------------------------------------

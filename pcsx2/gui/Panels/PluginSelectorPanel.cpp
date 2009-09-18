@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -297,7 +297,7 @@ void Panels::PluginSelectorPanel::Apply()
 
 	// ----------------------------------------------------------------------------
 	// Make sure folders are up to date, and try to load/reload plugins if needed...
-	
+
 	g_Conf->Folders.ApplyDefaults();
 
 	// Need to unload the current emulation state if the user changed plugins, because
@@ -340,7 +340,7 @@ void Panels::PluginSelectorPanel::Apply()
 				wxsFormat( L"The selected %s plugin failed to load.", plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg()
 			);
 		}
-	}		
+	}
 }
 
 void Panels::PluginSelectorPanel::CancelRefresh()
@@ -416,7 +416,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes.Get(pid).GetClientData(sel)] );
 	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
 	{
-		ScopedWindowDisable disabler( wxGetTopLevelParent( this ) );
+		wxWindowDisabler disabler;
 		configfunc();
 	}
 }

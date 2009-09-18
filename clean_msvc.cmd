@@ -9,4 +9,4 @@
 :: so, don't go running this batch file in your root c:\ folder.  It's probably not a wise action.
 :: Enjoy. :)
 
-del /s *.ncb;*.ilk;*.pdb;*.bsc;*.sbr;*.res
+del /s *.ncb;*.ilk;*.pdb;*.bsc;*.sbr;*.res;*.pch
