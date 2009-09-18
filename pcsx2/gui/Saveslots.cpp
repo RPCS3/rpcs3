@@ -62,7 +62,7 @@ void States_Load( const wxString& file )
 		StateRecovery::Recover();
 	}
 
-	wxGetApp().SysExecute();
+	SysExecute();
 }
 
 void States_Load(int num)

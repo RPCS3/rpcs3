@@ -29,7 +29,7 @@ void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
 	if( Dialogs::ConfigurationDialog( this ).ShowModal() )
 	{
-		wxGetApp().SaveSettings();
+		AppSaveSettings();
 	}
 }
 
@@ -37,7 +37,7 @@ void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
 {
 	if( Dialogs::BiosSelectorDialog( this ).ShowModal() )
 	{
-		wxGetApp().SaveSettings();
+		AppSaveSettings();
 	}
 }
 
@@ -52,7 +52,7 @@ void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 		jNO_DEFAULT
 	}
 	UpdateIsoSrcSelection();
-	wxGetApp().SaveSettings();
+	AppSaveSettings();
 }
 
 // Returns FALSE if the user cancelled the action.
@@ -71,7 +71,7 @@ bool MainEmuFrame::_DoSelectIsoBrowser()
 	{
 		g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
 		g_Conf->CurrentIso = ctrl.GetPath();
-		wxGetApp().SaveSettings();
+		AppSaveSettings();
 
 		UpdateIsoSrcFile();
 		return true;
@@ -82,13 +82,13 @@ bool MainEmuFrame::_DoSelectIsoBrowser()
 
 void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 {
-	wxGetApp().SysSuspend();
+	SysSuspend();
 
 	if( !wxFileExists( g_Conf->CurrentIso ) )
 	{
 		if( !_DoSelectIsoBrowser() )
 		{
-			wxGetApp().SysResume();
+			SysResume();
 			return;
 		}
 	}
@@ -100,41 +100,53 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 		if( !result )
 		{
-			wxGetApp().SysResume();
+			SysResume();
 			return;
 		}
 	}
 
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
-	wxGetApp().SaveSettings();
+	AppSaveSettings();
 
-	wxGetApp().SysExecute( g_Conf->CdvdSource );
+	SysExecute( g_Conf->CdvdSource );
 }
 
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
-	wxGetApp().SysSuspend();
+	SysSuspend();
 	_DoSelectIsoBrowser();
-	wxGetApp().SysResume();
+	SysResume();
 }
 
 void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 {
-	wxGetApp().SysSuspend();
+	SysSuspend();
 
 	if( !_DoSelectIsoBrowser() )
 	{
-		wxGetApp().SysResume();
+		SysResume();
 		return;
 	}
 
-	wxGetApp().SysExecute( CDVDsrc_Iso );
+	SysExecute( CDVDsrc_Iso );
 }
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
 {
 	//Console::Status( "%d", event.GetId() - g_RecentIsoList->GetBaseId() );
 	//Console::WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
+}
+
+#include "IniInterface.h"
+
+void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent &event )
+{
+	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
+
+	wxConfigBase* conf = wxConfigBase::Get( false );
+	if( NULL == conf ) return;
+	IniSaver saver( *conf );
+	g_Conf->EmuOptions.LoadSave( saver );
 }
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
@@ -179,20 +191,20 @@ void MainEmuFrame::Menu_EmuClose_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_EmuPause_Click(wxCommandEvent &event)
 {
 	if( event.IsChecked() )
-		wxGetApp().SysSuspend();
+		SysSuspend();
 	else
-		wxGetApp().SysResume();
+		SysResume();
 }
 
 void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 {
 	bool wasRunning = EmulationInProgress();
-	wxGetApp().SysReset();
+	SysReset();
 
 	GetMenuBar()->Check( MenuId_Emu_Pause, false );
 
 	if( !wasRunning ) return;
-	wxGetApp().SysExecute();
+	SysExecute();
 }
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)

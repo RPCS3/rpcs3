@@ -144,7 +144,7 @@ namespace Exception
 	explicit classname( const wxString& msg_eng )		{ BaseException::InitBaseEx( msg_eng, wxEmptyString ); }
 
 	// ---------------------------------------------------------------------------------------
-	// Generalized Exceptions: RuntimeError / LogicError / AssertionFailure
+	// Generalized Exceptions: RuntimeError / LogicError / ObjectIsNull
 	// ---------------------------------------------------------------------------------------
 
 	class RuntimeError : public virtual BaseException
@@ -159,6 +159,24 @@ namespace Exception
 	{
 	public:
 		DEFINE_LOGIC_EXCEPTION( LogicError, wxLt("An unhandled logic error has occurred.") )
+	};
+
+	class ObjectIsNull : public RuntimeError
+	{
+	public:
+		wxString ObjectName;
+
+		DEFINE_EXCEPTION_COPYTORS( ObjectIsNull )
+
+		explicit ObjectIsNull( const char* objname="unspecified" )
+		{
+			m_message_diag = wxString::FromUTF8( objname );
+			// overridden message formatters only use the diagnostic version...
+		}
+		
+
+		virtual wxString FormatDisplayMessage() const;
+		virtual wxString FormatDiagnosticMessage() const;
 	};
 
 	// ---------------------------------------------------------------------------------------

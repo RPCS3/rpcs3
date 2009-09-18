@@ -163,11 +163,8 @@ public:
 
 	void LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash );
 
-protected:
 	void LoadSave( IniInterface& ini );
 	void LoadSaveMemcards( IniInterface& ini );
-	
-	friend class Pcsx2App;
 };
 
 struct ConfigOverrides
@@ -179,6 +176,6 @@ struct ConfigOverrides
 extern ConfigOverrides OverrideOptions;
 
 extern wxFileConfig* OpenFileConfig( const wxString& filename );
-extern void AppConfig_ReloadGlobalSettings( bool overwrite =  false );
+extern void AppConfig_OnChangedSettingsFolder( bool overwrite =  false );
 
 extern wxScopedPtr<AppConfig> g_Conf;

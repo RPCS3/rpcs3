@@ -132,44 +132,6 @@ void AppEmuThread::StateCheck()
 	}
 }
 
-// Executes the emulator using a saved/existing virtual machine state and currently
-// configured CDVD source device.
-void Pcsx2App::SysExecute()
-{
-	SysReset();
-	LoadPluginsImmediate();
-	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
-	m_CoreThread->Resume();
-}
-
-// Executes the specified cdvd source and optional elf file.  This command performs a
-// full closure of any existing VM state and starts a fresh VM with the requested
-// sources.
-void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
-{
-	SysReset();
-	LoadPluginsImmediate();
-	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
-	CDVDsys_ChangeSource( cdvdsrc );
-	
-	if( m_gsFrame == NULL && GSopen2 != NULL )
-	{
-		// Yay, we get to open and manage our OWN window!!!
-		// (work-in-progress)
-
-		m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
-		m_gsFrame->SetFocus();
-		pDsp = (uptr)m_gsFrame->GetHandle();
-		m_gsFrame->Show();
-		
-		// The "in the main window" quickie hack...
-		//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
-	}
-
-	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
-	m_CoreThread->Resume();
-}
-
 __forceinline bool EmulationInProgress()
 {
 	return wxGetApp().EmuInProgress();
@@ -297,8 +259,8 @@ void Pcsx2App::ReadUserModeSettings()
 		// Save user's new settings
 		IniSaver saver( *conf_usermode );
 		g_Conf->LoadSaveUserMode( saver, groupname );
-		AppConfig_ReloadGlobalSettings( true );
-		wxGetApp().SaveSettings();
+		AppConfig_OnChangedSettingsFolder( true );
+		AppSaveSettings();
 	}
 	else
 	{
@@ -322,8 +284,8 @@ void Pcsx2App::ReadUserModeSettings()
 			// Save user's new settings
 			IniSaver saver( *conf_usermode );
 			g_Conf->LoadSaveUserMode( saver, groupname );
-			AppConfig_ReloadGlobalSettings( true );
-			wxGetApp().SaveSettings();
+			AppConfig_OnChangedSettingsFolder( true );
+			AppSaveSettings();
 		}
 	}
 }
@@ -448,7 +410,7 @@ bool Pcsx2App::OnInit()
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
 		ReadUserModeSettings();
 
-		AppConfig_ReloadGlobalSettings();
+		AppConfig_OnChangedSettingsFolder();
 
 	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
 
@@ -465,7 +427,7 @@ bool Pcsx2App::OnInit()
 	    m_MainFrame->Show();
 
 		SysDetect();
-		ApplySettings();
+		AppApplySettings();
 
 		m_CoreAllocs.reset( new EmuCoreAllocations() );
 
@@ -697,7 +659,7 @@ int Pcsx2App::OnExit()
 	PrepForExit();
 
 	if( g_Conf )
-		SaveSettings();
+		AppSaveSettings();
 
 	while( wxGetLocale() != NULL )
 		delete wxGetLocale();
@@ -726,7 +688,7 @@ Pcsx2App::~Pcsx2App()
 	CleanupMess();
 }
 
-void Pcsx2App::ApplySettings( const AppConfig* oldconf )
+void AppApplySettings( const AppConfig* oldconf )
 {
 	DevAssert( wxThread::IsMain(), "ApplySettings valid from the GUI thread only." );
 
@@ -756,14 +718,11 @@ void Pcsx2App::ApplySettings( const AppConfig* oldconf )
 		}
 	}
 
-	if( m_MainFrame != NULL )
-		m_MainFrame->ApplySettings();
-
-	if( m_CoreThread )
-		m_CoreThread->ApplySettings( g_Conf->EmuOptions );
+	TryInvoke( MainFrame, ApplySettings() );
+	TryInvoke( CoreThread, ApplySettings( g_Conf->EmuOptions ) );
 }
 
-void Pcsx2App::LoadSettings()
+void AppLoadSettings()
 {
 	wxConfigBase* conf = wxConfigBase::Get( false );
 	if( NULL == conf ) return;
@@ -771,11 +730,10 @@ void Pcsx2App::LoadSettings()
 	IniLoader loader( *conf );
 	g_Conf->LoadSave( loader );
 
-	if( m_MainFrame != NULL && m_MainFrame->m_RecentIsoList )
-		m_MainFrame->m_RecentIsoList->Load( *conf );
+	TryInvoke( MainFrame, LoadRecentIsoList( *conf ) );
 }
 
-void Pcsx2App::SaveSettings()
+void AppSaveSettings()
 {
 	wxConfigBase* conf = wxConfigBase::Get( false );
 	if( NULL == conf ) return;
@@ -783,6 +741,74 @@ void Pcsx2App::SaveSettings()
 	IniSaver saver( *conf );
 	g_Conf->LoadSave( saver );
 
-	if( m_MainFrame != NULL && m_MainFrame->m_RecentIsoList )
-		m_MainFrame->m_RecentIsoList->Save( *conf );
+	TryInvoke( MainFrame, SaveRecentIsoList( *conf ) );
+}
+
+// --------------------------------------------------------------------------------------
+//  Sys/Core API and Shortcuts (for wxGetApp())
+// --------------------------------------------------------------------------------------
+
+// Executes the emulator using a saved/existing virtual machine state and currently
+// configured CDVD source device.
+void Pcsx2App::SysExecute()
+{
+	SysReset();
+	LoadPluginsImmediate();
+	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
+	m_CoreThread->Resume();
+}
+
+// Executes the specified cdvd source and optional elf file.  This command performs a
+// full closure of any existing VM state and starts a fresh VM with the requested
+// sources.
+void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
+{
+	SysReset();
+	LoadPluginsImmediate();
+	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
+	CDVDsys_ChangeSource( cdvdsrc );
+	
+	if( m_gsFrame == NULL && GSopen2 != NULL )
+	{
+		// Yay, we get to open and manage our OWN window!!!
+		// (work-in-progress)
+
+		m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
+		m_gsFrame->SetFocus();
+		pDsp = (uptr)m_gsFrame->GetHandle();
+		m_gsFrame->Show();
+		
+		// The "in the main window" quickie hack...
+		//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
+	}
+
+	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
+	m_CoreThread->Resume();
+}
+
+// Executes the emulator using a saved/existing virtual machine state and currently
+// configured CDVD source device.
+void SysExecute()
+{
+	wxGetApp().SysExecute();
+}
+
+void SysExecute( CDVD_SourceType cdvdsrc )
+{
+	wxGetApp().SysExecute( cdvdsrc );
+}
+
+void SysResume()
+{
+	TryInvoke( CoreThread, Resume() );
+}
+
+void SysSuspend()
+{
+	TryInvoke( CoreThread, Suspend() );
+}
+
+void SysReset()
+{
+	wxGetApp().SysReset();
 }

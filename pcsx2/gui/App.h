@@ -136,42 +136,9 @@ enum DialogIdentifiers
 	DialogId_About,
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// ScopedWindowDisable
-//
-// This class is a fix helper for WXGTK ports of PCSX2, which need the current window to
-// be disabled in order for plugin-created modal dialogs to receive messages.  This disabling
-// causes problems in Win32/MSW, where some plugins' modal dialogs will cause all PCSX2
-// windows to minimize on closure.
-//
-class ScopedWindowDisable
-{
-	DeclareNoncopyableObject( ScopedWindowDisable )
-
-protected:
-	wxWindow& m_window;
-
-public:
-	ScopedWindowDisable( wxWindow* whee ) :
-		m_window( *whee )
-	{
-	#ifdef __WXGTK__
-		wxASSERT( whee != NULL );
-		m_window.Disable();
-	#endif
-	}
-
-	~ScopedWindowDisable()
-	{
-#ifdef __WXGTK__
-		m_window.Enable();
-		m_window.SetFocus();
-#endif
-	}
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  AppImageIds  - Config and Toolbar Images and Icons
+// --------------------------------------------------------------------------------------
 struct AppImageIds
 {
 	struct ConfigIds
@@ -213,7 +180,6 @@ struct AppImageIds
 		}
 	} Toolbars;
 };
-
 
 struct MsgboxEventResult
 {
@@ -260,34 +226,14 @@ public:
 
 	void ReloadPlugins();
 
-	void ApplySettings( const AppConfig* oldconf = NULL );
-	void LoadSettings();
-	void SaveSettings();
-
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	int  ThreadedModalDialog( DialogIdentifiers dialogId );
 	void Ping() const;
 
 	bool PrepForExit();
 
-	// Executes the emulator using a saved/existing virtual machine state and currently
-	// configured CDVD source device.
-	// Debug assertions:
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc );
-
-	void SysResume()
-	{
-		if( !m_CoreThread ) return;
-		m_CoreThread->Resume();
-	}
-
-	void SysSuspend()
-	{
-		if( !m_CoreThread ) return;
-		m_CoreThread->Suspend();
-	}
-
 	void SysReset()
 	{
 		m_CoreThread.reset();
@@ -310,6 +256,22 @@ public:
 		wxASSERT( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
 		wxASSERT( m_MainFrame != NULL );
 		return *m_MainFrame;
+	}
+	
+	MainEmuFrame& GetMainFrameOrExcept() const
+	{
+		if( m_MainFrame == NULL )
+			throw Exception::ObjectIsNull( "main application frame" );
+
+		return *m_MainFrame;
+	}
+
+	CoreEmuThread& GetCoreThreadOrExcept() const
+	{
+		if( !m_CoreThread )
+			throw Exception::ObjectIsNull( "core emulation thread" );
+
+		return *m_CoreThread;
 	}
 
 	// --------------------------------------------------------------------------
@@ -433,4 +395,22 @@ extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& wind
 
 extern bool HandlePluginError( Exception::PluginError& ex );
 extern bool EmulationInProgress();
+
+#define TryInvoke( obj, runme ) \
+{ \
+    try { \
+		wxGetApp().Get##obj##OrExcept().runme; \
+	} \
+	catch( Exception::ObjectIsNull& ) { } \
+}
+
+extern void AppLoadSettings();
+extern void AppSaveSettings();
+extern void AppApplySettings( const AppConfig* oldconf=NULL );
+
+extern void SysSuspend();
+extern void SysResume();
+extern void SysReset();
+extern void SysExecute();
+extern void SysExecute( CDVD_SourceType cdvdsrc );
 
