@@ -67,6 +67,7 @@ void SetIrqCall()
 	has_to_call_irq=true;
 }
 
+#ifndef __LINUX__
 void SysMessage(const char *fmt, ...)
 {
 	va_list list;
@@ -79,6 +80,19 @@ void SysMessage(const char *fmt, ...)
 	swprintf_s(wtmp, L"%S", tmp);
 	MessageBox(0, wtmp, L"SPU2-X System Message", 0);
 }
+#else
+void SysMessage(const char *fmt, ...)
+{
+	va_list list;
+	char tmp[512];
+	wchar_t wtmp[512];
+
+	va_start(list,fmt);
+	sprintf(tmp,fmt,list);
+	va_end(list);
+	printf("%s", tmp);
+}
+#endif
 
 __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 {
@@ -791,7 +805,10 @@ static __forceinline u16 GetLoWord( s32& src )
 	return ((u16*)&src)[0];
 }
 
-__forceinline void SPU2_FastWrite( u32 rmem, u16 value )
+#ifndef __LINUX__
+__forceinline 
+#endif
+void SPU2_FastWrite( u32 rmem, u16 value )
 {
 	u32 vx=0, vc=0, core=0, omem, mem;
 	omem=mem=rmem & 0x7FF; //FFFF;

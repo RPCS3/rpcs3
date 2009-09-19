@@ -1,3 +1,4 @@
+#include "Global.h"
 // This is undoubtedly completely unnecessary.
 #include "KeyboardQueue.h"
 

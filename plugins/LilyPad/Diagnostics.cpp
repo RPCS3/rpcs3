@@ -1,10 +1,7 @@
 #include "Global.h"
-#include "InputManager.h"
 #include "DeviceEnumerator.h"
 #include "resource.h"
 #include "KeyboardQueue.h"
-#include <math.h>
-#include <commctrl.h>
 
 Device *dev;
 

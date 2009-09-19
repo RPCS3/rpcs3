@@ -120,7 +120,7 @@ void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 	{
 		FindWindow( wxID_APPLY )->Disable();
 		g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];
-		wxGetApp().SaveSettings();
+		AppSaveSettings();
 
 		Close();
 		evt.Skip();
@@ -139,7 +139,7 @@ void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 		FindWindow( wxID_APPLY )->Disable();
 
 	g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];
-	wxGetApp().SaveSettings();
+	AppSaveSettings();
 }
 
 

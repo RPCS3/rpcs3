@@ -511,7 +511,7 @@ wxFileConfig* OpenFileConfig( const wxString& filename )
 //   overwrite - this option forces the current settings to overwrite any existing settings that might
 //      be saved to the configured ini/settings folder.
 //
-void AppConfig_ReloadGlobalSettings( bool overwrite )
+void AppConfig_OnChangedSettingsFolder( bool overwrite )
 {
 	PathDefs::GetDocuments().Mkdir();
 	PathDefs::GetSettings().Mkdir();
@@ -521,9 +521,9 @@ void AppConfig_ReloadGlobalSettings( bool overwrite )
 	wxConfigBase::Get()->SetRecordDefaults();
 
 	if( !overwrite )
-		wxGetApp().LoadSettings();
+		AppLoadSettings();
 
-	wxGetApp().ApplySettings();
+	AppApplySettings();
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );

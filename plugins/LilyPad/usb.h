@@ -3,9 +3,6 @@
 #ifndef __USB_H__
 #define __USB_H__
 
-#include <stdlib.h>
-#include <windows.h>
-
 /*
  * 'interface' is defined somewhere in the Windows header files. This macro
  * is deleted here to avoid conflicts and compile errors.

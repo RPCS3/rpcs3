@@ -35,7 +35,7 @@ using namespace Threading;
 // non-NULL.  If NULL, an error occurred and the thread loads the exception into either
 // Ex_PluginError or Ex_RuntimeError.
 //
-class LoadPluginsTask : public Threading::PersistentThread
+class LoadPluginsTask : public PersistentThread
 {
 public:
 	Exception::PluginError* Ex_PluginError;

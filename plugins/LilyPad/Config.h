@@ -1,9 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "InputManager.h"
-#include "PS2Etypes.h"
-
 extern u8 ps2e;
 
 enum PadType {

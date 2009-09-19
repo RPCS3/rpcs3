@@ -55,10 +55,24 @@ using namespace std;
 //
 // Yeah, it's a lot of work, but the performance gains are huge, even on HT cpus.
 
+
+// the MTGS "dummy" GIFtag info!
+// fixme: The real PS2 has a single internal PATH and 3 logical sources, not 3 entirely
+// separate paths.  But for that to work properly we need also interlocked path sources.
+// That is, when the GIF selects a source, it sticks to that source until an EOP.  Currently
+// this is not emulated!
+PCSX2_ALIGNED16( static GIFPath s_path[3] );
+
+GIFPath::GIFPath()
+{
+	memzero_obj( *this );
+}
+
 // unpack the registers
 // registers are stored as a sequence of 4 bit values in the
 // upper 64 bits of the GIFTAG.  That sucks for us, so we unpack
 // them into an 8 bit array.
+//
 __forceinline void GIFPath::PrepRegs(bool doPrep = 1)
 {
 	if (!doPrep) return;
@@ -181,7 +195,6 @@ mtgsThreadObject::mtgsThreadObject() :
 ,	m_RingBuffer( m_RingBufferSize + (Ps2MemSize::GSregs/sizeof(u128)) )
 ,	m_gsMem( (u8*)m_RingBuffer.GetPtr( m_RingBufferSize ) )
 {
-	memzero_obj( m_path );
 }
 
 void mtgsThreadObject::Start()
@@ -226,7 +239,7 @@ void mtgsThreadObject::Reset()
 	SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 	SendSimplePacket( GS_RINGTYPE_FRAMESKIP, 0, 0, 0 );
 
-	memzero_obj( m_path );
+	memzero_obj( s_path );
 }
 
 #define incPmem(x) {											 \
@@ -238,7 +251,7 @@ void mtgsThreadObject::Reset()
 
 __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
-	GIFPath& path		= m_path[pathidx];
+	GIFPath& path		= s_path[pathidx];
 	u32 finish			= (pathidx == GIF_PATH_1) ? 0x4000 : (size<<4);
 	u32 oldSize			= 0;
 	u32 numRegs			= 0;
@@ -1003,9 +1016,9 @@ void mtgsOpen()
 
 void mtgsThreadObject::GIFSoftReset( int mask )
 {
-	if(mask & 1) memzero_obj(m_path[0]);
-	if(mask & 2) memzero_obj(m_path[1]);
-	if(mask & 4) memzero_obj(m_path[2]);
+	if(mask & 1) memzero_obj(s_path[0]);
+	if(mask & 2) memzero_obj(s_path[1]);
+	if(mask & 4) memzero_obj(s_path[2]);
 
 	if( GSgifSoftReset == NULL ) return;
 
@@ -1015,7 +1028,7 @@ void mtgsThreadObject::GIFSoftReset( int mask )
 
 void mtgsThreadObject::Freeze( SaveStateBase& state )
 {
-	_mtgsFreezeGIF( state, this->m_path );
+	_mtgsFreezeGIF( state, s_path );
 }
 
 // this function is needed because of recompiled calls from iGS.cpp

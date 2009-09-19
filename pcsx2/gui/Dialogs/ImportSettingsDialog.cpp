@@ -55,14 +55,14 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent ) :
 
 void Dialogs::ImportSettingsDialog::OnImport_Click( __unused wxCommandEvent& evt )
 {
-	AppConfig_ReloadGlobalSettings( false );	// ... and import existing settings
+	AppConfig_OnChangedSettingsFolder( false );	// ... and import existing settings
 	g_Conf->Folders.Bios.Mkdir();
 	EndModal( wxID_OK );
 }
 
 void Dialogs::ImportSettingsDialog::OnOverwrite_Click( __unused wxCommandEvent& evt )
 {
-	AppConfig_ReloadGlobalSettings( true );		// ... and overwrite any existing settings
+	AppConfig_OnChangedSettingsFolder( true );		// ... and overwrite any existing settings
 	g_Conf->Folders.Bios.Mkdir();
 	EndModal( wxID_OK );
 }

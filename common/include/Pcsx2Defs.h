@@ -227,7 +227,11 @@ This theoretically unoptimizes. Not having much luck so far.
 #	define __fastcall		__attribute__((fastcall))
 #	define __unused			__attribute__((unused))
 #	define _inline			__inline__ __attribute__((unused))
-#	define __forceinline	__attribute__((always_inline,unused))
+#	ifdef NDEBUG
+#		define __forceinline	__attribute__((always_inline,unused))
+#	else
+#		define __forceinline	// no forceinlines in debug builds
+#	endif
 #	define __noinline		__attribute__((noinline))
 #	define __hot			__attribute__((hot))
 #	define __cold			__attribute__((cold))

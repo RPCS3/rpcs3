@@ -63,6 +63,9 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 	IniBitBool( EnableIOP );
 	IniBitBool( EnableVU0 );
 	IniBitBool( EnableVU1 );
+
+	IniBitBool( UseMicroVU0 );
+	IniBitBool( UseMicroVU1 );
 }
 
 Pcsx2Config::CpuOptions::CpuOptions() :

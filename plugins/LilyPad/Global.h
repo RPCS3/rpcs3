@@ -3,6 +3,8 @@
 // dll size by over 100k while avoiding any dependencies on updated CRT dlls.
 #pragma once
 
+#define DIRECTINPUT_VERSION 0x0800
+
 #ifdef NO_CRT
 #define _CRT_ALLOCATION_DEFINED
 #endif
@@ -27,6 +29,15 @@
 
 
 #include <windows.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+
+#include <commctrl.h>
+// Only needed for DBT_DEVNODES_CHANGED
+#include <Dbt.h>
+
 #include "PS2Etypes.h"
 #include "PS2Edefs.h"
 
@@ -66,7 +77,17 @@ EXPORT_C_(s32) PADfreeze(int mode, freezeData *data);
 EXPORT_C_(s32) PADsetSlot(u8 port, u8 slot);
 EXPORT_C_(s32) PADqueryMtap(u8 port);
 
+#include "InputManager.h"
+#include "Config.h"
 #ifdef NO_CRT
+
+#define malloc MyMalloc
+#define calloc MyCalloc
+#define free MyFree
+#define realloc MyRealloc
+#define wcsdup MyWcsdup
+#define wcsicmp MyWcsicmp
+
 inline void * malloc(size_t size) {
 	return HeapAlloc(GetProcessHeap(), 0, size);
 }

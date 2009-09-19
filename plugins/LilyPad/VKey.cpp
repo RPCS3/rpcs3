@@ -1,6 +1,5 @@
-#include "VKey.h"
 #include "Global.h"
-#include <stdio.h>
+#include "VKey.h"
 
 wchar_t *GetVKStringW(unsigned char vk) {
 	int flag;

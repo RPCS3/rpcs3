@@ -101,6 +101,23 @@ namespace Exception
 	}
 
 	// ------------------------------------------------------------------------
+	wxString ObjectIsNull::FormatDiagnosticMessage() const
+	{
+		return wxsFormat(
+			L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
+			m_message_diag.c_str()
+		) + m_stacktrace;
+	}
+
+	wxString ObjectIsNull::FormatDisplayMessage() const
+	{
+		return wxsFormat(
+			L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
+			m_message_diag.c_str()
+		);
+	}
+
+	// ------------------------------------------------------------------------
 	wxString Stream::FormatDiagnosticMessage() const
 	{
 		return wxsFormat(

@@ -1,9 +1,7 @@
 #include "Global.h"
 
 #include "KeyboardHook.h"
-#include "InputManager.h"
 #include "WindowsKeyboard.h"
-#include "Config.h"
 #include "VKey.h"
 #include "WndProcEater.h"
 #include "DeviceEnumerator.h"

@@ -88,6 +88,19 @@ void MainEmuFrame::UpdateIsoSrcFile()
 	GetMenuBar()->SetLabel( MenuId_Src_Iso, label );
 }
 
+void MainEmuFrame::LoadRecentIsoList( wxConfigBase& conf )
+{
+	if( m_RecentIsoList )
+		m_RecentIsoList->Load( conf );
+}
+
+void MainEmuFrame::SaveRecentIsoList( wxConfigBase& conf )
+{
+	if( m_RecentIsoList )
+		m_RecentIsoList->Load( conf );
+}
+
+
 // ------------------------------------------------------------------------
 //     Video / Audio / Pad "Extensible" Menus
 // ------------------------------------------------------------------------
@@ -174,18 +187,15 @@ void MainEmuFrame::ConnectMenus()
 	#define ConnectMenu( id, handler ) \
 		Connect( id, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
-
 	#define ConnectMenuRange( id_start, inc, handler ) \
 		Connect( id_start, id_start + inc, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
 	ConnectMenu( MenuId_Config_Settings,	Menu_ConfigSettings_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
 
-    ConnectMenuRange(wxID_FILE1, 20, Menu_IsoRecent_Click);
-
-    ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_ConfigPlugin_Click);
-
-    ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
+	ConnectMenuRange(wxID_FILE1, 20, Menu_IsoRecent_Click);
+	ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_ConfigPlugin_Click);
+	ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
 
 	ConnectMenu( MenuId_Video_Advanced,		Menu_ConfigPlugin_Click);
 	ConnectMenu( MenuId_Audio_Advanced,		Menu_ConfigPlugin_Click);
@@ -194,6 +204,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Boot_CDVD,			Menu_BootCdvd_Click );
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
 	ConnectMenu( MenuId_IsoBrowse,			Menu_IsoBrowse_Click );
+	ConnectMenu( MenuId_SkipBiosToggle,		Menu_SkipBiosToggle_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
 	ConnectMenu( MenuId_Emu_Pause,			Menu_EmuPause_Click );
@@ -440,6 +451,8 @@ MainEmuFrame::~MainEmuFrame() throw()
 
 void MainEmuFrame::ApplySettings()
 {
+	GetMenuBar()->Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
+
 	// Always perform delete and reload of the Recent Iso List.  This handles cases where
 	// the recent file count has been changed, and it's a helluva lot easier than trying
 	// to make a clone copy of this complex object. ;)
@@ -452,7 +465,6 @@ void MainEmuFrame::ApplySettings()
 	m_RecentIsoList.reset();
 	m_RecentIsoList.reset( new wxFileHistory( g_Conf->RecentFileCount ) );
 	m_RecentIsoList->Load( *cfg );
-
 	UpdateIsoSrcFile();
 	cfg->Flush();
 }

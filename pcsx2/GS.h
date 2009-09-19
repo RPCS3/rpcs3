@@ -93,6 +93,8 @@ struct GIFPath
 	u32 _pad[3];
 	u8 regs[16];
 
+	GIFPath();
+
 	__forceinline void PrepRegs(bool doPrep);
 	__forceinline void SetTag(const void* mem);
 };
@@ -197,13 +199,6 @@ protected:
 #ifdef RINGBUF_DEBUG_STACK
 	Threading::MutexLock m_lock_Stack;
 #endif
-
-	// the MTGS "dummy" GIFtag info!
-	// fixme: The real PS2 has a single internal PATH and 3 logical sources, not 3 entirely
-	// separate paths.  But for that to work properly we need also interlocked path sources.
-	// That is, when the GIF selects a source, it sticks to that source until an EOP.  Currently
-	// this is not emulated!
-	GIFPath m_path[3];
 
 	// contains aligned memory allocations for gs and Ringbuffer.
 	SafeAlignedArray<u128,16> m_RingBuffer;

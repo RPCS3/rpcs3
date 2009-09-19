@@ -103,6 +103,6 @@ void configure()
 	ReadSettings();
 }
 
-void SysMessage(char const*, ...)
+void MessageBox(char const*, ...)
 {
 }

@@ -565,6 +565,7 @@ namespace Console
 	// they are implemented here using a mutex lock for maximum safety.
 	static void _immediate_logger( const char* src )
 	{
+	    
 		ScopedLock locker( immediate_log_lock );
 
 		if( emuLog != NULL )
@@ -574,8 +575,16 @@ namespace Console
 		// [TODO] make this a configurable option?  Do we care? :)
 #ifdef __LINUX__
 		// puts does automatic newlines, which we don't want here
-		//fputs( "PCSX2 > ", stdout );
-		fputs( src, stdout );
+		
+		/*if (strchr(src, '\n')) 
+		{   
+		    fputs( "PCSX2 > ", stdout );
+            fputs( src , stdout);
+		}
+		else
+		{*/
+            fputs( src, stdout );
+		//}
 #endif
 
 	}
@@ -635,7 +644,7 @@ namespace Console
 	bool __fastcall WriteLn( const wxString& fmt )
 	{
 		const wxString fmtline( fmt + L"\n" );
-		_immediate_logger( "PCSX2 >  ");
+		//_immediate_logger( "PCSX2 >  ");
 		_immediate_logger( fmtline );
 
 		if( emuLog != NULL )

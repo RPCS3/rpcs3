@@ -1,7 +1,6 @@
-#include "InputManager.h"
 #include "Global.h"
+#include "InputManager.h"
 #include "KeyboardQueue.h"
-#include <math.h>
 
 InputDeviceManager *dm = 0;
 

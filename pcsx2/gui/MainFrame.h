@@ -72,6 +72,9 @@ public:
 	void UpdateIsoSrcFile();
 	void UpdateIsoSrcSelection();
 	void ApplySettings();
+	
+	void LoadRecentIsoList( wxConfigBase& conf );
+	void SaveRecentIsoList( wxConfigBase& conf );
 
 protected:
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
@@ -85,6 +88,7 @@ protected:
 	void Menu_RunIso_Click(wxCommandEvent &event);
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
 	void Menu_IsoRecent_Click(wxCommandEvent &event);
+	void Menu_SkipBiosToggle_Click(wxCommandEvent &event);
 
 	void Menu_BootCdvd_Click(wxCommandEvent &event);
 	void Menu_OpenELF_Click(wxCommandEvent &event);

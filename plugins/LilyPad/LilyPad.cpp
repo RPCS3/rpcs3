@@ -1,17 +1,10 @@
 #include "Global.h"
-#include <math.h>
-#include <Dbt.h>
-#include <stdio.h>
 
 // For escape timer, so as not to break GSDX+DX9.
 #include <time.h>
 
 #define PADdefs
-#include "PS2Etypes.h"
-#include "PS2Edefs.h"
 
-#include "Config.h"
-#include "InputManager.h"
 #include "DeviceEnumerator.h"
 #include "WndProcEater.h"
 #include "KeyboardQueue.h"
@@ -596,27 +589,26 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 
 // Used in about and config screens.
 void GetNameAndVersionString(wchar_t *out) {
-#ifdef PCSX2_DEBUG
-	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
-#elif (_MSC_VER != 1400)
-	wsprintfW(out, L"LilyPad svn %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
-#else
+#ifdef NO_CRT
 	wsprintfW(out, L"LilyPad %i.%i.%i", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+#elif defined(PCSX2_DEBUG)
+	wsprintfW(out, L"LilyPad Debug %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
+#else
+	wsprintfW(out, L"LilyPad svn %i.%i.%i (r%i)", (VERSION>>8)&0xFF, VERSION&0xFF, (VERSION>>24)&0xFF, SVN_REV);
 #endif
 }
 
 char* CALLBACK PSEgetLibName() {
-#ifdef PCSX2_DEBUG
+#ifdef NO_CRT
+	return "LilyPad";
+#elif defined(PCSX2_DEBUG)
 	static char version[50];
 	sprintf(version, "LilyPad Debug (r%i)", SVN_REV);
 	return version;
 #else
-	#if (_MSC_VER != 1400)
-		static char version[50];
-		sprintf(version, "LilyPad svn (r%i)", SVN_REV);
-		return version;
-	#endif
-	return "LilyPad";
+	static char version[50];
+	sprintf(version, "LilyPad svn (r%i)", SVN_REV);
+	return version;
 #endif
 }
 
@@ -1412,18 +1404,6 @@ u32 CALLBACK PSEgetLibVersion() {
 	return (VERSION & 0xFFFFFF);
 }
 
-// Little funkiness to handle rounding floating points to ints without the C runtime.
-// Unfortunately, means I can't use /GL optimization option when NO_CRT is defined.
-#ifdef NO_CRT
-extern "C" long _cdecl _ftol();
-extern "C" long _cdecl _ftol2_sse() {
-	return _ftol();
-}
-extern "C" long _cdecl _ftol2() {
-	return _ftol();
-}
-#endif
-
 s32 CALLBACK PADqueryMtap(u8 port) {
 	port--;
 	if (port > 1) return 0;
@@ -1441,3 +1421,16 @@ s32 CALLBACK PADsetSlot(u8 port, u8 slot) {
 	// First slot always allowed.
 	return pads[port][slot].enabled | !slot;
 }
+
+// Little funkiness to handle rounding floating points to ints without the C runtime.
+// Unfortunately, means I can't use /GL optimization option when NO_CRT is defined.
+#ifdef NO_CRT
+extern "C" long _cdecl _ftol();
+extern "C" long _cdecl _ftol2_sse() {
+	return _ftol();
+}
+extern "C" long _cdecl _ftol2() {
+	return _ftol();
+}
+#endif
+
