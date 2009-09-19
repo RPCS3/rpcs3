@@ -1975,12 +1975,7 @@ void VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	u32 size;
     u8* data = ((u8*)pMem + (addr&0x3fff));
 	
-	// fixme: The gifTagDummy function in the MTGS (called by PrepDataPacket) has a
-	// hack that aborts the packet if it goes past the end of VU1 memory.
-	// Chances are this should be a "loops around memory" situation, and the packet
-	// should be continued starting at addr zero (0).
-
-	size = mtgsThread->PrepDataPacket(GIF_PATH_1, data, (0x4000-(addr&0x3fff)) >> 4);
+	size = mtgsThread->PrepDataPacket(GIF_PATH_1, data, 0x4000 / 16 );
     jASSUME( size > 0 );
 	
 	u8* pmem = mtgsThread->GetDataPacketPtr();

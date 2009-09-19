@@ -73,34 +73,39 @@ enum GIF_REG
 	GIF_REG_NOP		= 0x0f,
 };
 
+// GIFTAG
+// Members of this structure are in CAPS to help visually denote that they are representative
+// of actual hw register states of the GIF, unlike the internal tracking vars in GIFPath, which
+// are modified during the GIFtag unpacking process.
 struct GIFTAG
 {
-	u32 nloop : 15;
-	u32 eop : 1;
+	u32 NLOOP : 15;
+	u32 EOP : 1;
 	u32 dummy0 : 16;
 	u32 dummy1 : 14;
-	u32 pre : 1;
-	u32 prim : 11;
-	u32 flg : 2;
-	u32 nreg : 4;
-	u32 regs[2];
+	u32 PRE : 1;
+	u32 PRIM : 11;
+	u32 FLG : 2;
+	u32 NREG : 4;
+	u32 REGS[2];
 };
 
 struct GIFPath
 {
-	GIFTAG tag;
+	const GIFTAG tag;	// The "original tag -- modification allowed only by SetTag(), so let's make it const.
+	u8 regs[16];		// positioned after tag ensures 16-bit aligned (in case we SSE optimize later)
+
+	u32 nloop;			// local copy nloop counts toward zero, and leaves the tag copy unmodified.
 	u32 curreg;
-	u32 _pad[3];
-	u8 regs[16];
 
 	GIFPath();
 
-	__forceinline void PrepRegs(bool doPrep);
+	__forceinline void PrepPackedRegs();
 	__forceinline void SetTag(const void* mem);
 	__forceinline bool StepReg() {
-		if ((++curreg & 0xf) == tag.nreg) {
+		if ((++curreg & 0xf) == tag.NREG) {
 			curreg = 0; 
-			if (--tag.nloop == 0) {
+			if (--nloop == 0) {
 				return false;
 			}
 		}
@@ -246,11 +251,11 @@ public:
 	void PostVsyncEnd( bool updategs );
 
 protected:
-	// Saves MMX/XMM regs, posts an event to the mtgsThread flag and releases a timeslice.
+	// Saves MMX/XMM REGS, posts an event to the mtgsThread flag and releases a timeslice.
 	// For use in surrounding loops that wait on the mtgs.
 	void PrepEventWait();
 
-	// Restores MMX/XMM regs.  For use in surrounding loops that wait on the mtgs.
+	// Restores MMX/XMM REGS.  For use in surrounding loops that wait on the mtgs.
 	void PostEventWait() const;
 
 	// Processes a GIFtag & packet, and throws out some gsIRQs as needed.

@@ -94,7 +94,7 @@ public:
 	template<typename T>
 	void Freeze( T& data )
 	{
-		FreezeMem( &data, sizeof( T ) );
+		FreezeMem( const_cast<void*>((void*)&data), sizeof( T ) );
 	}
 
 	// FreezeLegacy can be used to load structures short of their full size, which is

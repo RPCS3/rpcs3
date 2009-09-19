@@ -1103,21 +1103,23 @@ mVUop(mVU_XITOP) {
 //------------------------------------------------------------------
 
 void __fastcall mVU_XGKICK_(u32 addr) {
-	addr = (addr<<4) & 0x3fff; // Multiply addr by 16 to get real address
-	u8* data  = (u8*)(microVU1.regs->Mem + addr);
-	u32 diff  = 0x4000 - addr;
-	u32 size  = mtgsThread->PrepDataPacket(GIF_PATH_1, data, diff >> 4);
+	addr &= 0x3ff;
+	u8* data  = microVU1.regs->Mem + (addr*16);
+	u32 diff  = 0x400 - addr;
+	u32 size  = mtgsThread->PrepDataPacket(GIF_PATH_1, data, 0x400);
 	u8* pDest = mtgsThread->GetDataPacketPtr();
 	
-	if((size << 4) > diff) {
+	if(size > diff) {
+		// fixme: one of these days the following *16's will get cleaned up when we introduce
+		// a special qwc/simd16 optimized version of memcpy_aligned. :)
 		//DevCon::Status("XGkick Wrap!");
-		memcpy_aligned(pDest, microVU1.regs->Mem + addr, diff);
-		size  -= diff >> 4;
-		pDest += diff;
-		memcpy_aligned(pDest, microVU1.regs->Mem, size<<4);
+		memcpy_aligned(pDest, microVU1.regs->Mem + addr, diff*16);
+		size  -= diff;
+		pDest += diff*16;
+		memcpy_aligned(pDest, microVU1.regs->Mem, size*16);
 	}
 	else {
-		memcpy_aligned(pDest, microVU1.regs->Mem + addr, size<<4);
+		memcpy_aligned(pDest, microVU1.regs->Mem + addr, size*16);
 	}
 	mtgsThread->SendDataPacket();
 }
