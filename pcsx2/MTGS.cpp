@@ -270,6 +270,7 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 {
 	GIFPath&	path	  =  s_path[pathidx];	// Current Path
 	const u8*	vuMemEnd  =  pMem + (size<<4);	// End of VU1 Mem
+	if (pathidx==GIF_PATH_1) size = 0x400;		// VU1 mem size
 	u32			startSize =  size;				// Start Size
 
 	while (size > 0) {
