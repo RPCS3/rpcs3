@@ -1184,7 +1184,7 @@
 							</Filter>
 						</Filter>
 						<Filter
-							Name="Interpretter"
+							Name="Interpreter"
 							>
 							<File
 								RelativePath="..\..\COP0.cpp"

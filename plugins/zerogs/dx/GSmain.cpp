@@ -17,7 +17,7 @@
  */
 #if defined(_WIN32) || defined(_WIN32)
 #include <d3dx9.h>
-#include <dxerr9.h>
+#include <dxerr.h>
 #endif
 
 #include <stdarg.h>

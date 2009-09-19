@@ -65,7 +65,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib ddraw.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.dll"
 				SuppressStartupBanner="true"
 				AdditionalLibraryDirectories="..\"
@@ -133,7 +133,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib ddraw.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				AdditionalLibraryDirectories="..\"
 				IgnoreDefaultLibraryNames=""
@@ -212,7 +212,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="zlib.lib ddraw.lib dxerr9.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
+				AdditionalDependencies="zlib.lib ddraw.lib dxerr.lib dxguid.lib d3dx9.lib d3d9.lib odbc32.lib odbccp32.lib winmm.lib Vfw32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
