@@ -65,7 +65,7 @@ __forceinline void gsInterrupt()
 		if (Path3progress != IMAGE_MODE) vif1Regs->stat &= ~VIF1_STAT_VGW;
 	}
 
-	if (Path3progress == STOPPED_MODE) psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
+	if (Path3progress == STOPPED_MODE) gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 
 	if ((gif->qwc > 0) || (gspath3done == 0)) 
 	{
@@ -119,7 +119,7 @@ int  _GIFchain()
 		gsGIFSoftReset(4);
 
 		//must increment madr and clear qwc, else it loops
-		gif->madr+= gif->qwc*16;
+		gif->madr += gif->qwc * 16;
 		gif->qwc = 0;
 		Console::Notice( "Hackfix - NULL GIFchain" );
 		return -1;
@@ -151,12 +151,11 @@ static __forceinline bool ReadTag(u32* &ptag, u32 &id)
 {
 	ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 	
-	// If this messes things up, uncommenting the "Safe" will set it back to the way it was.
-	if (!(Tag::/*Safe*/Transfer("Gif", gif, ptag))) return false;
+	if (!(Tag::Transfer("Gif", gif, ptag))) return false;
 	gif->madr = ptag[1];				    //MADR = ADDR field
 		
 	id = Tag::Id(ptag);		//ID for DmaChain copied from bit 28 of the tag
-	gscycles+=2; // Add 1 cycles from the QW read for the tag
+	gscycles += 2; // Add 1 cycles from the QW read for the tag
 			
 	gspath3done = hwDmacSrcChainWithStack(gif, id);
 	return true;
@@ -201,7 +200,8 @@ void GIFdma()
 	}
 
 	clearFIFOstuff(true);
-	psHu32(GIF_STAT) |= 0x10000000; // FQC=31, hack ;) [ used to be 0xE00; // OPH=1 | APATH=3]
+	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
+	//psHu32(GIF_STAT) |= 0x10000000;
 	
 	//Path2 gets priority in intermittent mode
 	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && (Path3progress == IMAGE_MODE)) 
@@ -308,7 +308,9 @@ void dmaGIF()
 	Path3progress = STOPPED_MODE;
 	gspath3done = 0; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
 	psHu32(GIF_STAT) |= GIF_STAT_P3Q;
-	psHu32(GIF_STAT) |= 0x10000000; // FQC=31, hack ;) [used to be 0xE00; // OPH=1 | APATH=3]
+	gifRegs->stat.P3Q = 1;
+	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) ( 31? 16! arcum42) [used to be 0xE00; // OPH=1 | APATH=3]
+	//psHu32(GIF_STAT) |= 0x10000000; 
 	clearFIFOstuff(true);
 	
 	if (dmacRegs->ctrl.MFD == MFD_GIF)  // GIF MFIFO

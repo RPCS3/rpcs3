@@ -137,7 +137,7 @@ void _SPR0interleave()
 
 static __forceinline void _dmaSPR0()
 {
-	if (dmacRegs->ctrl.STS == STS_fromSPR)   // STS == fromSPR
+	if (dmacRegs->ctrl.STS == STS_fromSPR)
 	{
 		Console::WriteLn("SPR0 stall %d", (psHu32(DMAC_CTRL) >> 6)&3);
 	}
@@ -183,7 +183,7 @@ static __forceinline void _dmaSPR0()
 			switch (id)
 			{
 				case TAG_CNTS: // CNTS - Transfer QWC following the tag (Stall Control)
-					if ((psHu32(DMAC_CTRL) & 0x30) == 0x20) psHu32(DMAC_STADR) = spr0->madr + (spr0->qwc * 16);					//Copy MADR to DMAC_STADR stall addr register
+					if (dmacRegs->ctrl.STS == STS_fromSPR) psHu32(DMAC_STADR) = spr0->madr + (spr0->qwc * 16);					//Copy MADR to DMAC_STADR stall addr register
 					break;
 
 				case TAG_CNT: // CNT - Transfer QWC following the tag.

@@ -26,8 +26,6 @@ StartupParams g_Startup;
 //////////////////////////////////////////////////////////////////////////////////////////
 // Save Slot Detection System
 
-static int Slots[5] = { -1, -1, -1, -1, -1 };
-
 bool States_isSlotUsed(int num)
 {
 	if (ElfCRC == 0)

@@ -190,7 +190,7 @@ __forceinline void SIF0Dma()
 		if (eesifbusy[0] == 1) // If EE SIF enabled and there's something to transfer
 		{
 			int size = sif0dma->qwc;
-			if ((psHu32(DMAC_CTRL) & 0x30) == 0x10)   // STS == fromSIF0
+			if (dmacRegs->ctrl.STS == STS_SIF0)   // STS == fromSIF0
 			{
 				SIF_LOG("SIF0 stall control");
 			}
@@ -243,7 +243,7 @@ __forceinline void SIF0Dma()
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
 
 					//  (tag[0] >> 28) & 3? Surely this is supposed to be (tag[0] >> 28) & 7? --arcum42
-					if ((psHu32(DMAC_CTRL) & 0x30) != 0 && ((tag[0] >> 28) & 3) == 0)
+					if ((dmacRegs->ctrl.STS != NO_STS) && ((tag[0] >> 28) & 3) == 0)
 						psHu32(DMAC_STADR) = sif0dma->madr + (sif0dma->qwc * 16);
 					sif0.chain = 1;
 					if (tag[0] & 0x40000000) sif0.end = 1;
@@ -266,8 +266,8 @@ __forceinline void SIF1Dma()
 		if (eesifbusy[1] == 1) // If EE SIF1 is enabled
 		{
 
-			if ((psHu32(DMAC_CTRL) & 0xC0) == 0xC0)
-				SIF_LOG("SIF1 stall control"); // STS == fromSIF1
+			if (dmacRegs->ctrl.STD == STD_SIF1)
+				SIF_LOG("SIF1 stall control"); // STD == fromSIF1
 
 			if (sif1dma->qwc == 0) // If there's no more to transfer
 			{
