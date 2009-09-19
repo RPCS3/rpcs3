@@ -97,6 +97,20 @@ struct GIFPath
 
 	__forceinline void PrepRegs(bool doPrep);
 	__forceinline void SetTag(const void* mem);
+	__forceinline bool StepReg()
+	{
+		u32 numRegs = ((tag.nreg-1)&0xf)+1;
+		if ((++curreg & 0xf) == numRegs) {
+			curreg = 0; 
+			if (--tag.nloop == 0) {
+				return false;
+			}
+		}
+		return true;
+	}
+	__forceinline u8 GetReg() {
+		return regs[curreg&0xf];
+	}
 };
 
 
