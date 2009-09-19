@@ -134,6 +134,11 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 	GSDevice* dev = NULL;
 
+	if( renderer == -1 )
+	{
+		renderer = theApp.GetConfig("renderer", 0);
+	}
+
 	try
 	{
 		GSFreezeData tempsave = { 0, NULL };
@@ -199,6 +204,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 		if(tempsave.data)
 		{
 			s_gs->Defrost(&tempsave);
+			_aligned_free(tempsave.data);
 		}
 	}
 	catch( std::exception& ex )
@@ -440,6 +446,75 @@ EXPORT_C GSsetFrameLimit(int limit)
 
 #ifdef _WINDOWS
 
+// Returns false if the window's been closed or an invalid packet was encountered.
+static __forceinline bool LoopDatPacket_Thingamajig(HWND hWnd, uint8 (&regs)[0x2000], vector<uint8>& buff, FILE* fp, long start)
+{
+	switch(fgetc(fp))
+	{
+	case EOF:
+		fseek(fp, start, 0);
+		return !!IsWindowVisible(hWnd);
+
+	case 0:
+	{
+		uint32 index = fgetc(fp);
+		uint32 size;
+
+		fread(&size, 4, 1, fp);
+
+		switch(index)
+		{
+		case 0:
+		{
+			if(buff.size() < 0x4000) buff.resize(0x4000);
+			uint32 addr = 0x4000 - size;
+			fread(&buff[0] + addr, size, 1, fp);
+			GSgifTransfer1(&buff[0], addr);
+		}
+		break;
+		
+		case 1:
+			if(buff.size() < size) buff.resize(size);
+			fread(&buff[0], size, 1, fp);
+			GSgifTransfer2(&buff[0], size / 16);
+		break;
+		
+		case 2:
+			if(buff.size() < size) buff.resize(size);
+			fread(&buff[0], size, 1, fp);
+			GSgifTransfer3(&buff[0], size / 16);
+		break;
+		}
+	}
+	break;
+
+	case 1:
+		GSvsync(fgetc(fp));
+		return !!IsWindowVisible(hWnd);
+
+	case 2:
+	{
+		uint32 size;
+		fread(&size, 4, 1, fp);
+		if(buff.size() < size) buff.resize(size);
+		GSreadFIFO2(&buff[0], size / 16);
+	}
+	break;
+
+	case 3:
+		fread(regs, 0x2000, 1, fp);
+	break;
+
+	default:
+		return false;
+	}
+
+	return true;
+}
+
+// lpszCmdLine:
+//   First parameter is the renderer.
+//   Second parameter is the gs file to load and run.
 EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 {
 	int renderer = -1;
@@ -465,7 +540,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		GSsetBaseMem(regs);
 
 		HWND hWnd = NULL;
-		GSopen(&hWnd, "", renderer);
+		_GSopen(&hWnd, "", renderer);
 
 		uint32 crc;
 		fread(&crc, 4, 1, fp);
@@ -482,57 +557,9 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 		long start = ftell(fp);
 
-		unsigned int index, size, addr;
-
 		GSvsync(1);
 
-		while(1)
-		{
-			switch(fgetc(fp))
-			{
-			case EOF:
-				fseek(fp, start, 0);
-				if(!IsWindowVisible(hWnd)) return;
-				break;
-			case 0:
-				index = fgetc(fp);
-				fread(&size, 4, 1, fp);
-				switch(index)
-				{
-				case 0:
-					if(buff.size() < 0x4000) buff.resize(0x4000);
-					addr = 0x4000 - size;
-					fread(&buff[0] + addr, size, 1, fp);
-					GSgifTransfer1(&buff[0], addr);
-					break;
-				case 1:
-					if(buff.size() < size) buff.resize(size);
-					fread(&buff[0], size, 1, fp);
-					GSgifTransfer2(&buff[0], size / 16);
-					break;
-				case 2:
-					if(buff.size() < size) buff.resize(size);
-					fread(&buff[0], size, 1, fp);
-					GSgifTransfer3(&buff[0], size / 16);
-					break;
-				}
-				break;
-			case 1:
-				GSvsync(fgetc(fp));
-				if(!IsWindowVisible(hWnd)) return;
-				break;
-			case 2:
-				fread(&size, 4, 1, fp);
-				if(buff.size() < size) buff.resize(size);
-				GSreadFIFO2(&buff[0], size / 16);
-				break;
-			case 3:
-				fread(regs, 0x2000, 1, fp);
-				break;
-			default:
-				return;
-			}
-		}
+		while( LoopDatPacket_Thingamajig(hWnd, regs, buff, fp, start) ) ;
 
 		GSclose();
 
