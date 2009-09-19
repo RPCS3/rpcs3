@@ -65,20 +65,6 @@ void recCall( void (*func)(), int delreg )
 
 using namespace R5900::Dynarec::OpcodeImpl;
 
-#ifdef PCSX2_VM_COISSUE
-// coissued insts
-void (*recBSC_co[64] )() = {
-	recNULL,	recNULL,     recNULL, recNULL,  recNULL, recNULL, recNULL,  recNULL,
-	recNULL,	recNULL,     recNULL, recNULL,  recNULL, recNULL, recNULL,  recNULL,
-	recNULL,	recNULL,     recNULL, recNULL,  recNULL, recNULL, recNULL,  recNULL,
-	recNULL,    recNULL,     recLDL_co,  recLDR_co,   recNULL, recNULL, recLQ_co,    recSQ_co,
-	recLB_co,   recLH_co,    recLWL_co,  recLW_co,    recLBU_co,  recLHU_co,  recLWR_co,   recLWU_co,
-	recSB_co,   recSH_co,    recSWL_co,  recSW_co,    recSDL_co,  recSDR_co,  recSWR_co,   recNULL,
-	recNULL,    recLWC1_co,  recNULL, recNULL,  recNULL, recNULL, recLQC2_co,  recLD_co,
-	recNULL,    recSWC1_co,  recNULL, recNULL,  recNULL, recNULL, recSQC2_co,  recSD_co
-};
-#endif
-
 
 ////////////////////////////////////////////////
 // Back-Prob Function Tables - Gathering Info //

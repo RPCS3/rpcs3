@@ -239,16 +239,17 @@ template<memtag tag> static __forceinline bool IS_REG(u32 reg)
 #define EEINST_LIVE1	2	// if cur var's next 32 bits are needed
 #define EEINST_LIVE2	4	// if cur var's next 64 bits are needed
 #define EEINST_LASTUSE	8	// if var isn't written/read anymore
-#define EEINST_MMX		0x10	// var will be used in mmx ops
+//#define EEINST_MMX		0x10	// var will be used in mmx ops (disabled, see below)
 #define EEINST_XMM		0x20	// var will be used in xmm ops (takes precedence
 #define EEINST_USED		0x40
 
+// MMX is disabled by setting this to 0, which seems a general speedup and fixes several
+// random tlb miss problems.
+#define EEINST_MMX		0
+
+
 #define EEINSTINFO_COP1		1
 #define EEINSTINFO_COP2		2
-#ifdef PCSX2_VM_COISSUE
-#define EEINSTINFO_NOREC	4 // if set, inst is recompiled alone
-#define EEINSTINFO_COREC	8 // if set, inst is recompiled with another similar inst
-#endif
 #define EEINSTINFO_MMX		EEINST_MMX
 #define EEINSTINFO_XMM		EEINST_XMM
 
