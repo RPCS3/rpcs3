@@ -24,7 +24,6 @@
 #include "GSRendererDX.h"
 #include "GSVertexHW.h"
 #include "GSTextureCache9.h"
-#include "GSTextureFX9.h"
 
 class GSRendererDX9 : public GSRendererDX<GSVertexHW9>
 {
@@ -46,9 +45,9 @@ protected:
 	void UpdateFBA(GSTexture* rt);
 
 public:
-	GSRendererDX9(uint8* base, bool mt, void (*irq)());
+	GSRendererDX9();
 
-	bool Create(const string& title, int w, int h);
+	bool CreateDevice(GSDevice* dev);
 
 	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

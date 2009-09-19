@@ -24,15 +24,15 @@
 #include "GSCrc.h"
 #include "resource.h"
 
-GSRendererDX9::GSRendererDX9(uint8* base, bool mt, void (*irq)())
-	: GSRendererDX<GSVertexHW9>(base, mt, irq, new GSDevice9(), new GSTextureCache9(this), new GSTextureFX9())
+GSRendererDX9::GSRendererDX9()
+	: GSRendererDX<GSVertexHW9>(new GSTextureCache9(this))
 {
 	InitVertexKick<GSRendererDX9>();
 }
 
-bool GSRendererDX9::Create(const string& title, int w, int h)
+bool GSRendererDX9::CreateDevice(GSDevice* dev)
 {
-	if(!__super::Create(title, w, h))
+	if(!__super::CreateDevice(dev))
 		return false;
 
 	//

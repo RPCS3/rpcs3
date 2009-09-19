@@ -81,7 +81,7 @@ public:
 	enum {Windowed, Fullscreen, DontCare};
 
 	virtual bool Create(GSWnd* wnd, bool vsync);
-	virtual bool Reset(int w, int h, int mode);
+	virtual bool Reset(int w, int h);
 	virtual bool IsLost(bool update = false) {return false;}
 	virtual void Present(const GSVector4i& r, int shader, bool limit);
 	virtual void Flip(bool limit) {}

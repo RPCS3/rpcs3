@@ -24,8 +24,8 @@
 
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
-GSRendererSW::GSRendererSW(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
-	: GSRendererT(base, mt, irq, dev)
+GSRendererSW::GSRendererSW()
+	: GSRendererT()
 {
 	m_tc = new GSTextureCacheSW(this);
 

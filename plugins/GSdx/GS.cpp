@@ -38,6 +38,7 @@ static HRESULT s_hr = E_FAIL;
 static GSRenderer* s_gs = NULL;
 static void (*s_irq)() = NULL;
 static uint8* s_basemem = NULL;
+static int s_renderer = -1;
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -68,7 +69,11 @@ EXPORT_C_(uint32) PS2EgetCpuPlatform()
 
 EXPORT_C GSsetBaseMem(uint8* mem)
 {
-	s_basemem = mem - 0x12000000;
+	s_basemem = mem;
+	if( s_gs )
+	{
+		s_gs->SetRegsMem( s_basemem );
+	}
 }
 
 EXPORT_C_(INT32) GSinit()
@@ -78,18 +83,26 @@ EXPORT_C_(INT32) GSinit()
 		return -1;
 	}
 
+#ifdef _WINDOWS
+
+	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	if(!GSUtil::CheckDirectX())
+	{
+		return -1;
+	}
+
+#endif
+
 	return 0;
 }
 
 EXPORT_C GSshutdown()
 {
-}
-
-EXPORT_C GSclose()
-{
 	delete s_gs; 
-	
+
 	s_gs = NULL;
+	s_renderer = -1;
 
 #ifdef _WINDOWS
 
@@ -103,59 +116,149 @@ EXPORT_C GSclose()
 #endif
 }
 
-static INT32 GSopen(void* dsp, char* title, int mt, int renderer)
+EXPORT_C GSclose()
+{
+	if( !s_gs ) return;
+
+	s_gs->ResetDevice();
+
+	delete s_gs->m_dev;
+	s_gs->m_dev = NULL;
+
+	s_gs->m_wnd.Detach();
+}
+
+static INT32 _GSopen(void* dsp, char* title, int renderer)
 {
 	GSclose();
 
-#ifdef _WINDOWS
+	GSDevice* dev = NULL;
 
-	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
-	if(!GSUtil::CheckDirectX())
+	try
 	{
+		GSFreezeData tempsave = { 0, NULL };
+
+		if(s_gs && (s_renderer != renderer))
+		{
+			// This isn't a "normal" suspend resume case -- We need to swap renderers, but
+			// we have to preserve the GSState at the same time, so quick-save it to the
+			// tempsave, and then recover below after the new GSRenderer is in place.
+
+			s_gs->Freeze(&tempsave, true);
+
+			tempsave.data = (uint8*)_aligned_malloc( tempsave.size, 16 );
+
+			if(!tempsave.data)
+			{
+				throw std::bad_alloc("Failed allocating buffer for device-change savestate.");
+			}
+
+			s_gs->Freeze( &tempsave, false );
+
+			delete s_gs;
+
+			s_gs = NULL;
+			s_renderer = -1;
+		}
+
+		switch(renderer)
+		{
+		default: 
+		case 0: case 1: case 2: dev = new GSDevice9(); break;
+		case 3: case 4: case 5: dev = new GSDevice10(); break;
+		case 6: case 7: case 8: dev = new GSDevice11(); break;
+	#if 0
+		case 9: case 10: case 11: dev = new GSDeviceOGL(); break;
+	#endif
+		case 12: case 13: new GSDeviceNull(); break;
+		}
+
+		if( !dev ) return -1;
+
+		if( !s_gs )
+		{
+			switch(renderer)
+			{
+			default: 
+			case 0: s_gs = new GSRendererDX9(); break;
+			case 3: s_gs = new GSRendererDX10(); break;
+			case 6: s_gs = new GSRendererDX11(); break;
+	#if 0
+			case 9: s_gs = new GSRendererOGL(); break;
+	#endif
+			case 2: case 5: case 8: case 11: case 13:
+				s_gs = new GSRendererNull(); break;
+
+			case 1: case 4: case 7: case 10: case 12:
+				s_gs = new GSRendererSW(); break;
+			}
+
+			s_renderer = renderer;
+		}
+
+		if(tempsave.data)
+		{
+			s_gs->Defrost(&tempsave);
+		}
+	}
+	catch( std::exception& ex )
+	{
+		// Allowing std exceptions to escape the scope of the plugin callstack could
+		// be problematic, because of differing typeids between DLL and EXE compilations.
+		// ('new' could throw std::alloc)
+
+		printf( "GSdx error: Exception caught in GSopen: %s", ex.what() );
 		return -1;
 	}
 
-#endif
+	s_gs->SetRegsMem(s_basemem);
+	s_gs->SetIrqCallback(s_irq);
 
-	switch(renderer)
+	if( *(HWND*)dsp == NULL )
 	{
-	default: 
-	case 0: s_gs = new GSRendererDX9(s_basemem, !!mt, s_irq); break;
-	case 1: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice9()); break;
-	case 2: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice9()); break;
-	case 3: s_gs = new GSRendererDX10(s_basemem, !!mt, s_irq); break;
-	case 4: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice10()); break;
-	case 5: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice10()); break;
-	case 6: s_gs = new GSRendererDX11(s_basemem, !!mt, s_irq); break;
-	case 7: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDevice11()); break;
-	case 8: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDevice11()); break;
-	#if 0
-	case 9: s_gs = new GSRendererOGL(s_basemem, !!mt, s_irq); break;
-	case 10: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
-	case 11: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceOGL()); break;
-	#endif
-	case 12: s_gs = new GSRendererSW(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
-	case 13: s_gs = new GSRendererNull(s_basemem, !!mt, s_irq, new GSDeviceNull()); break;
+		// old-style API expects us to create and manage our own window:
+		
+		int w = theApp.GetConfig("ModeWidth", 0);
+		int h = theApp.GetConfig("ModeHeight", 0);
+
+		if(!s_gs->CreateWnd(title, w, h))
+		{
+			GSclose();
+			return -1;
+		}
+
+		s_gs->m_wnd.Show();
+		*(HWND*)dsp = (HWND)s_gs->m_wnd.GetHandle();
+	}
+	else
+	{
+		s_gs->SetMultithreaded( true );
+		s_gs->m_wnd.Attach( *(HWND*)dsp, false );
 	}
 
-	int w = theApp.GetConfig("ModeWidth", 0);
-	int h = theApp.GetConfig("ModeHeight", 0);
-
-	if(!s_gs->Create(title, w, h))
+	if( !s_gs->CreateDevice(dev) )
 	{
 		GSclose();
-
 		return -1;
 	}
-
-	s_gs->m_wnd.Show();
-
-	*(HWND*)dsp = (HWND)s_gs->m_wnd.GetHandle();
 
 	// if(mt) _mm_setcsr(MXCSR);
 
 	return 0;
+}
+
+EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
+{
+	theApp.SetConfig("windowed", flags & 1);
+	theApp.SetConfig("vsync", flags & 2);
+
+	int renderer = theApp.GetConfig("renderer", 0);
+	if( flags & 4 )
+	{
+		renderer = 1;
+	}
+
+	return _GSopen( dsp, NULL, renderer );
 }
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
@@ -174,7 +277,16 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 		renderer = theApp.GetConfig("renderer", 0);
 	}
 
-	return GSopen(dsp, title, mt, renderer);
+	*(HWND*)dsp = NULL;
+
+	int retval = _GSopen(dsp, title, renderer);
+
+	if( retval == 0 && s_gs )
+	{
+		s_gs->SetMultithreaded( !!mt );
+	}
+	
+	return retval;
 }
 
 EXPORT_C GSreset()
@@ -266,12 +378,13 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
-	GSSettingsDlg dlg;
-
-	if(IDOK == dlg.DoModal())
+	if( GSSettingsDlg().DoModal() == IDOK )
 	{
-		GSshutdown();
-		GSinit();
+		if( s_gs != NULL && s_gs->m_wnd.IsManaged() )
+		{
+			// Legacy apps like gsdxgui expect this...
+			GSshutdown();
+		}
 	}
 }
 
@@ -287,6 +400,10 @@ EXPORT_C GSabout()
 EXPORT_C GSirqCallback(void (*irq)())
 {
 	s_irq = irq;
+	if( s_gs )
+	{
+		s_gs->SetIrqCallback(s_irq);
+	}
 }
 
 EXPORT_C_(int) GSsetupRecording(int start, void* data)
@@ -348,7 +465,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		GSsetBaseMem(regs);
 
 		HWND hWnd = NULL;
-		GSopen(&hWnd, "", true, renderer);
+		GSopen(&hWnd, "", renderer);
 
 		uint32 crc;
 		fread(&crc, 4, 1, fp);

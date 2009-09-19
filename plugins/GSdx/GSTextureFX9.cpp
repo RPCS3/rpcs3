@@ -20,38 +20,11 @@
  */
 
 #include "stdafx.h"
-#include "GSTextureFX9.h"
+#include "GSDevice9.h"
 #include "resource.h"
 
-GSTextureFX9::GSTextureFX9()
-{
-}
 
-GSTextureFX9::~GSTextureFX9()
-{
-	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
-}
-
-bool GSTextureFX9::Create(GSDevice* dev)
-{
-	if(!__super::Create(dev))
-	{
-		return false;
-	}
-
-	// create layout
-
-	VSSelector sel;
-	VSConstantBuffer cb;
-
-	SetupVS(sel, &cb);
-
-	//
-
-	return true;
-}
-
-GSTexture* GSTextureFX9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
+GSTexture* GSDevice9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 {
 	GSTexture* t = NULL;
 
@@ -65,7 +38,7 @@ GSTexture* GSTextureFX9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 	}
 	else
 	{
-		t = m_dev->CreateTexture(size, 1, D3DFMT_R32F);
+		t = CreateTexture(size, 1, D3DFMT_R32F);
 
 		if(t)
 		{
@@ -88,20 +61,16 @@ GSTexture* GSTextureFX9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 	return t;
 }
 
-void GSTextureFX9::SetupIA(const void* vertices, int count, int prim)
+void GSDevice9::SetupIA(const void* vertices, int count, int prim)
 {
-	GSDevice9* dev = (GSDevice9*)m_dev;
-
-	dev->IASetVertexBuffer(vertices, sizeof(GSVertexHW9), count);
-	dev->IASetInputLayout(m_il);
-	dev->IASetPrimitiveTopology((D3DPRIMITIVETYPE)prim);
+	IASetVertexBuffer(vertices, sizeof(GSVertexHW9), count);
+	IASetInputLayout(m_il);
+	IASetPrimitiveTopology((D3DPRIMITIVETYPE)prim);
 }
 
-void GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
+void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	GSDevice9* dev = (GSDevice9*)m_dev;
-
-	hash_map<uint32, CComPtr<IDirect3DVertexShader9> >::const_iterator i = m_vs.find(sel);
+	hash_map< uint32, CComPtr<IDirect3DVertexShader9> >::const_iterator i = m_vs.find(sel);
 
 	if(i == m_vs.end())
 	{
@@ -133,7 +102,7 @@ void GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		CComPtr<IDirect3DVertexDeclaration9> il;
 		CComPtr<IDirect3DVertexShader9> vs;
 
-		dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
+		CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
 		if(m_il == NULL)
 		{
@@ -145,13 +114,11 @@ void GSTextureFX9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		i = m_vs.find(sel);
 	}
 
-	dev->VSSetShader(i->second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+	VSSetShader(i->second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
 }
 
-void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
+void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
-	GSDevice9* dev = (GSDevice9*)m_dev;
-
 	if(cb->WH.z > 0 && cb->WH.w > 0 && (sel.wms == 3 || sel.wmt == 3))
 	{
 		GSVector4i size(cb->WH);
@@ -160,7 +127,7 @@ void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 		{
 			if(GSTexture* t = CreateMskFix(size.z, cb->MskFix.x, cb->MskFix.z))
 			{
-				(*dev)->SetTexture(2, *(GSTexture9*)t);
+				m_dev->SetTexture(2, *(GSTexture9*)t);
 			}
 		}
 
@@ -168,7 +135,7 @@ void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 		{
 			if(GSTexture* t = CreateMskFix(size.w, cb->MskFix.y, cb->MskFix.w))
 			{
-				(*dev)->SetTexture(3, *(GSTexture9*)t);
+				m_dev->SetTexture(3, *(GSTexture9*)t);
 			}
 		}
 	}
@@ -211,14 +178,14 @@ void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 
 		CComPtr<IDirect3DPixelShader9> ps;
 
-		dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
+		CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
 
 		i = m_ps.find(sel);
 	}
 
-	dev->PSSetShader(i->second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+	PSSetShader(i->second, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
 
 	Direct3DSamplerState9* ss = NULL;
 
@@ -253,13 +220,11 @@ void GSTextureFX9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSampler
 		}
 	}
 
-	dev->PSSetSamplerState(ss);
+	PSSetSamplerState(ss);
 }
 
-void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
+void GSDevice9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
-	GSDevice9* dev = (GSDevice9*)m_dev;
-
 	Direct3DDepthStencilState9* dss = NULL;
 
 	hash_map<uint32, Direct3DDepthStencilState9*>::const_iterator i = m_om_dss.find(dssel);
@@ -302,7 +267,7 @@ void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, u
 		i = m_om_dss.find(dssel);
 	}
 
-	dev->OMSetDepthStencilState(i->second);
+	OMSetDepthStencilState(i->second);
 
 	hash_map<uint32, Direct3DBlendState9*>::const_iterator j = m_om_bs.find(bsel);
 
@@ -439,5 +404,5 @@ void GSTextureFX9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, u
 		j = m_om_bs.find(bsel);
 	}
 
-	dev->OMSetBlendState(j->second, afix >= 0x80 ? 0xffffff : 0x020202 * afix);
+	OMSetBlendState(j->second, afix >= 0x80 ? 0xffffff : 0x020202 * afix);
 }

@@ -24,7 +24,6 @@
 #include "GSRendererHW.h"
 #include "GSVertexHW.h"
 #include "GSTextureCacheOGL.h"
-// TODO: #include "GSTextureFXOGL.h"
 
 class GSRendererOGL : public GSRendererHW<GSVertexOGL>
 {
@@ -32,9 +31,9 @@ protected:
 	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 
 public:
-	GSRendererOGL(uint8* base, bool mt, void (*irq)());
+	GSRendererOGL();
 
-	bool Create(const string& title, int w, int h);
+	bool CreateDevice(GSDevice* dev);
 
 	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

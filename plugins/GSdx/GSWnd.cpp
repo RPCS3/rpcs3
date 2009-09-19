@@ -25,6 +25,8 @@
 
 GSWnd::GSWnd()
 	: m_hWnd(NULL)
+	, m_IsManaged(true)
+	, m_HasFrame(true)
 {
 }
 
@@ -66,7 +68,10 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 		// DestroyWindow(m_hWnd);
 		return 0;
 	case WM_DESTROY:
-		PostQuitMessage(0);
+		// This kills the emulator when GS is closed, which *really* isn't desired behavior,
+		// especially in STGS mode (worked in MTGS mode since it only quit the thread, but even
+		// that wasn't needed).
+		//PostQuitMessage(0);
 		return 0;
 	default:
 		break;
@@ -77,6 +82,8 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 
 bool GSWnd::Create(const string& title, int w, int h)
 {
+	if(m_hWnd) return true;
+	
 	WNDCLASS wc;
 
 	memset(&wc, 0, sizeof(wc));
@@ -134,13 +141,26 @@ bool GSWnd::Create(const string& title, int w, int h)
 	return true;
 }
 
-bool GSWnd::Attach(HWND hWnd)
+bool GSWnd::Attach(HWND hWnd, bool isManaged)
 {
 	// TODO: subclass
 
 	m_hWnd = hWnd;
+	m_IsManaged = isManaged;
 
 	return true;
+}
+
+void GSWnd::Detach()
+{
+	if(m_hWnd && m_IsManaged)
+	{
+		// close the window, since it's under GSdx care.  It's not taking messages anyway, and
+		// that means its big, ugly, and in the way.
+		DestroyWindow(m_hWnd);
+	}
+	m_hWnd = NULL;
+	m_IsManaged = true;
 }
 
 GSVector4i GSWnd::GetClientRect()
@@ -152,13 +172,21 @@ GSVector4i GSWnd::GetClientRect()
 	return r;
 }
 
-void GSWnd::SetWindowText(const char* title)
+// Returns FALSE if the window has no title, or if th window title is under the strict
+// management of the emulator.
+bool GSWnd::SetWindowText(const char* title)
 {
+	if( !m_IsManaged ) return false;
+
 	::SetWindowText(m_hWnd, title);
+
+	return m_HasFrame;
 }
 
 void GSWnd::Show()
 {
+	if( !m_IsManaged ) return;
+
 	//SetWindowPos(&wndTop, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
 	
 	SetForegroundWindow(m_hWnd);
@@ -170,14 +198,20 @@ void GSWnd::Show()
 
 void GSWnd::Hide()
 {
+	if( !m_IsManaged ) return;
+
 	ShowWindow(m_hWnd, SW_HIDE);
 }
 
 void GSWnd::HideFrame()
 {
+	if( !m_IsManaged ) return;
+
 	SetWindowLong(m_hWnd, GWL_STYLE, GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
 	
 	SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 	
 	SetMenu(m_hWnd, NULL);
+	
+	m_HasFrame = false;
 }

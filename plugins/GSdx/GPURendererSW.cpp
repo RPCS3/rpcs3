@@ -37,6 +37,8 @@ GPURendererSW::~GPURendererSW()
 
 void GPURendererSW::ResetDevice() 
 {
+	__super::ResetDevice();
+
 	delete m_texture;
 
 	m_texture = NULL;

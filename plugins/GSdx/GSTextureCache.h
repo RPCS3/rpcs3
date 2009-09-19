@@ -28,6 +28,17 @@ class GSTextureCache
 public:
 	enum {RenderTarget, DepthStencil};
 
+	enum TextureFormatType
+	{
+		FMT_32,
+		FMT_24,
+		FMT_16,
+		FMT_8H,
+		FMT_4HL,
+		FMT_4HH,
+		FMT_8,
+	};
+
 	class Surface : public GSAlignedClass<16>
 	{
 	protected:

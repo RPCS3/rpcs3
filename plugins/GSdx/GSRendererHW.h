@@ -478,6 +478,7 @@ protected:
 
 	void ResetDevice() 
 	{
+		__super::ResetDevice();
 		m_tc->RemoveAll();
 	}
 
@@ -703,8 +704,8 @@ protected:
 	}
 
 public:
-	GSRendererHW(uint8* base, bool mt, void (*irq)(), GSDevice* dev, GSTextureCache* tc)
-		: GSRendererT<Vertex>(base, mt, irq, dev)
+	GSRendererHW(GSTextureCache* tc)
+		: GSRendererT<Vertex>()
 		, m_tc(tc)
 		, m_width(1024)
 		, m_height(1024)

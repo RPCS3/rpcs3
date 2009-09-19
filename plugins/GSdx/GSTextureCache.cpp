@@ -21,7 +21,6 @@
 
 #include "StdAfx.h"
 #include "GSTextureCache.h"
-#include "GSTextureFX.h"
 
 GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
@@ -497,14 +496,14 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	{
 		if(m_paltex && GSLocalMemory::m_psm[TEX0.PSM].pal > 0)
 		{
-			src->m_fmt = GSTextureFX::FMT_8;
+			src->m_fmt = FMT_8;
 
 			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 		}
 		else
 		{
-			src->m_fmt = GSTextureFX::FMT_32;
+			src->m_fmt = FMT_32;
 
 			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th);
 		}
@@ -650,25 +649,25 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		default:
 			ASSERT(0);
 		case PSM_PSMCT32:
-			src->m_fmt = GSTextureFX::FMT_32;
+			src->m_fmt = FMT_32;
 			break;
 		case PSM_PSMCT24:
-			src->m_fmt = GSTextureFX::FMT_24;
+			src->m_fmt = FMT_24;
 			break;
 		case PSM_PSMCT16:
 		case PSM_PSMCT16S:
-			src->m_fmt = GSTextureFX::FMT_16;
+			src->m_fmt = FMT_16;
 			break;
 		case PSM_PSMT8H:
-			src->m_fmt = GSTextureFX::FMT_8H;
+			src->m_fmt = FMT_8H;
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 			break;
 		case PSM_PSMT4HL:
-			src->m_fmt = GSTextureFX::FMT_4HL;
+			src->m_fmt = FMT_4HL;
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 			break;
 		case PSM_PSMT4HH:
-			src->m_fmt = GSTextureFX::FMT_4HH;
+			src->m_fmt = FMT_4HH;
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 			break;
 		}
@@ -863,7 +862,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 			}
 		}
 
-		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << (m_fmt == GSTextureFX::FMT_32 ? 2 : 0));
+		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << (m_fmt == FMT_32 ? 2 : 0));
 
 		Flush(m_write.count);
 	}
@@ -922,7 +921,7 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 	GSLocalMemory::readTexture rtx = psm.rtx;
 
-	if(m_fmt == GSTextureFX::FMT_8)
+	if(m_fmt == FMT_8)
 	{
 		pitch >>= 2;
 		rtx = psm.rtxP;

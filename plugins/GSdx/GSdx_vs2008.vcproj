@@ -22,7 +22,7 @@
 		<Configuration
 			Name="Debug SSE2|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -57,6 +57,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype)-dbg.dll"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Debug&quot;"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -85,7 +86,7 @@
 		<Configuration
 			Name="Release SSE2|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -120,6 +121,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Release&quot;"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -148,7 +150,7 @@
 		<Configuration
 			Name="Release SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -183,6 +185,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Release&quot;"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -211,7 +214,7 @@
 		<Configuration
 			Name="Debug SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -246,6 +249,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype)-dbg.dll"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Debug&quot;"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -274,7 +278,7 @@
 		<Configuration
 			Name="Debug SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -309,6 +313,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype)-dbg.dll"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Debug&quot;"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -337,7 +342,7 @@
 		<Configuration
 			Name="Release SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;.\vsprops\ProjectRootDir.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -372,6 +377,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Release&quot;"
 				ModuleDefinitionFile=".\GSdx.def"
 				TargetMachine="1"
 			/>
@@ -432,6 +438,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Debug&quot;"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -490,6 +497,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\Release&quot;"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1198,10 +1206,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\GSdx.def"
-				>
-			</File>
-			<File
 				RelativePath=".\GSFunctionMap.cpp"
 				>
 			</File>
@@ -1452,10 +1456,6 @@
 						AssemblerOutput="4"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath=".\GSTextureFX.cpp"
-				>
 			</File>
 			<File
 				RelativePath=".\GSTextureFX10.cpp"
@@ -1744,6 +1744,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceDX.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDeviceNull.h"
 				>
 			</File>
@@ -1868,10 +1872,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\GSTexture11.h"
-				>
-			</File>
-			<File
 				RelativePath=".\GSTexture7.h"
 				>
 			</File>
@@ -1904,19 +1904,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\GSTextureFX.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSTextureFX10.h"
-				>
-			</File>
-			<File
 				RelativePath=".\GSTextureFX11.h"
-				>
-			</File>
-			<File
-				RelativePath=".\GSTextureFX9.h"
 				>
 			</File>
 			<File
@@ -1977,6 +1965,10 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\GSdx.def"
+				>
+			</File>
 			<File
 				RelativePath=".\GSdx.rc"
 				>

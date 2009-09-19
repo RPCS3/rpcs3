@@ -40,6 +40,8 @@ GSDevice9::GSDevice9()
 
 GSDevice9::~GSDevice9()
 {
+	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
+
 	if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 }
@@ -142,7 +144,7 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 
 	//
 
-	if(!Reset(1, 1, theApp.GetConfig("windowed", 1) ? Windowed : Fullscreen)) 
+	if(!Reset(1, 1)) 
 	{
 		return false;
 	}
@@ -208,18 +210,24 @@ bool GSDevice9::Create(GSWnd* wnd, bool vsync)
 		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
-	//
+	// create shader layout
+
+	VSSelector sel;
+	VSConstantBuffer cb;
+
+	SetupVS(sel, &cb);
 
 	return true;
 }
 
-bool GSDevice9::Reset(int w, int h, int mode)
+bool GSDevice9::Reset(int w, int h)
 {
-	if(!__super::Reset(w, h, mode))
+	if(!__super::Reset(w, h))
 		return false;
 
 	HRESULT hr;
 
+	int mode = theApp.GetConfig("windowed", 1) ? Windowed : Fullscreen;
 	if(mode == DontCare)
 	{
 		mode = m_pp.Windowed ? Windowed : Fullscreen;

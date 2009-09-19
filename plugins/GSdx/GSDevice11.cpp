@@ -27,6 +27,8 @@
 GSDevice11::GSDevice11()
 {
 	memset(&m_state, 0, sizeof(m_state));
+	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
+	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
 
 	m_state.topology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	m_state.bf = -1;
@@ -221,16 +223,17 @@ bool GSDevice11::Create(GSWnd* wnd, bool vsync)
 
 	//
 
-	Reset(1, 1, Windowed);
+	Reset(1, 1);
 
 	//
 
+	CreateTextureFX();
 	return true;
 }
 
-bool GSDevice11::Reset(int w, int h, int mode)
+bool GSDevice11::Reset(int w, int h)
 {
-	if(!__super::Reset(w, h, mode))
+	if(!__super::Reset(w, h))
 		return false;
 
 	if(m_swapchain)

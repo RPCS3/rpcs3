@@ -46,7 +46,6 @@ protected:
 	bool m_aa1;
 	bool m_blur;
 
-	virtual void ResetDevice() {}
 	virtual GSTexture* GetOutput(int i) = 0;
 
 	GSVertexTrace m_vt;
@@ -70,10 +69,16 @@ public:
 	int s_saven;
 
 public:
-	GSRenderer(uint8* base, bool mt, void (*irq)(), GSDevice* dev);
+	GSRenderer();
 	virtual ~GSRenderer();
 
-	virtual bool Create(const string& title, int w, int h);
+	virtual bool CreateWnd(const string& title, int w, int h);
+	virtual bool CreateDevice(GSDevice* dev);
+	virtual void ResetDevice()
+	{
+		InvalidateTextureCache();
+		ResetPrim();
+	}
 	virtual void VSync(int field);
 	virtual bool MakeSnapshot(const string& path);
 	virtual void KeyEvent(GSKeyEventData* e, int param = 0);
@@ -212,8 +217,8 @@ protected:
 	virtual void Draw() = 0;
 
 public:
-	GSRendererT(uint8* base, bool mt, void (*irq)(), GSDevice* dev)
-		: GSRenderer(base, mt, irq, dev)
+	GSRendererT()
+		: GSRenderer()
 		, m_vertices(NULL)
 		, m_count(0)
 		, m_maxcount(0)

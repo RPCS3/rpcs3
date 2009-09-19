@@ -215,7 +215,7 @@ public:
 	GSDump m_dump;
 
 public:
-	GSState(uint8* base, bool mt, void (*irq)());
+	GSState();
 	virtual ~GSState();
 
 	void ResetHandlers();
@@ -250,5 +250,8 @@ public:
 	virtual void SetGameCRC(uint32 crc, int options);
 	void SetFrameSkip(int skip);
 	void SetFrameLimit(bool limit);
+	void SetRegsMem(uint8* basemem);
+	void SetIrqCallback(void (*irq)());
+	void SetMultithreaded(bool isMT=true);
 };
 

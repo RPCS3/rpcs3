@@ -59,7 +59,7 @@ bool GSDevice::Create(GSWnd* wnd, bool vsync)
 	return true;
 }
 
-bool GSDevice::Reset(int w, int h, int mode)
+bool GSDevice::Reset(int w, int h)
 {
 	for_each(m_pool.begin(), m_pool.end(), delete_object());
 	
@@ -79,7 +79,7 @@ bool GSDevice::Reset(int w, int h, int mode)
 
 	m_current = NULL; // current is special, points to other textures, no need to delete
 
-	return true;
+	return m_wnd != NULL;
 }
 
 void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
@@ -91,7 +91,7 @@ void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
 
 	if(!m_backbuffer || m_backbuffer->GetWidth() != w || m_backbuffer->GetHeight() != h)
 	{
-		if(!Reset(w, h, DontCare))
+		if(!Reset(w, h))
 		{
 			return;
 		}

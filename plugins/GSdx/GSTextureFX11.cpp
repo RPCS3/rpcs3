@@ -20,22 +20,11 @@
  */
 
 #include "stdafx.h"
-#include "GSTextureFX11.h"
+#include "GSDevice11.h"
 #include "resource.h"
 
-GSTextureFX11::GSTextureFX11()
+bool GSDevice11::CreateTextureFX()
 {
-	memset(&m_vs_cb_cache, 0, sizeof(m_vs_cb_cache));
-	memset(&m_ps_cb_cache, 0, sizeof(m_ps_cb_cache));
-}
-
-bool GSTextureFX11::Create(GSDevice* dev)
-{
-	if(!__super::Create(dev))
-	{
-		return false;
-	}
-
 	HRESULT hr;
 
 	D3D11_BUFFER_DESC bd;
@@ -46,7 +35,7 @@ bool GSTextureFX11::Create(GSDevice* dev)
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-	hr = (*(GSDevice11*)dev)->CreateBuffer(&bd, NULL, &m_vs_cb);
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_vs_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -56,7 +45,7 @@ bool GSTextureFX11::Create(GSDevice* dev)
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-	hr = (*(GSDevice11*)dev)->CreateBuffer(&bd, NULL, &m_ps_cb);
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_ps_cb);
 
 	if(FAILED(hr)) return false;
 
@@ -72,7 +61,7 @@ bool GSTextureFX11::Create(GSDevice* dev)
 	sd.MaxAnisotropy = 16; 
 	sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
-	hr = (*(GSDevice11*)dev)->CreateSamplerState(&sd, &m_palette_ss);
+	hr = m_dev->CreateSamplerState(&sd, &m_palette_ss);
 
 	if(FAILED(hr)) return false;
 
@@ -88,19 +77,15 @@ bool GSTextureFX11::Create(GSDevice* dev)
 	return true;
 }
 
-void GSTextureFX11::SetupIA(const void* vertices, int count, int prim)
+void GSDevice11::SetupIA(const void* vertices, int count, int prim)
 {
-	GSDevice11* dev = (GSDevice11*)m_dev;
-
-	dev->IASetVertexBuffer(vertices, sizeof(GSVertexHW11), count);
-	dev->IASetInputLayout(m_il);
-	dev->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)prim);
+	IASetVertexBuffer(vertices, sizeof(GSVertexHW11), count);
+	IASetInputLayout(m_il);
+	IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)prim);
 }
 
-void GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
+void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	GSDevice11* dev = (GSDevice11*)m_dev;
-
 	hash_map<uint32, CComPtr<ID3D11VertexShader> >::const_iterator i = m_vs.find(sel);
 
 	if(i == m_vs.end())
@@ -132,7 +117,7 @@ void GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		CComPtr<ID3D11InputLayout> il;
 		CComPtr<ID3D11VertexShader> vs;
 
-		dev->CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
+		CompileShader(IDR_TFX_FX, "vs_main", macro, &vs, layout, countof(layout), &il);
 
 		if(m_il == NULL)
 		{
@@ -146,18 +131,16 @@ void GSTextureFX11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(m_vs_cb_cache.Update(cb))
 	{
-		ID3D11DeviceContext* ctx = *dev;
+		ID3D11DeviceContext* ctx = m_ctx;
 
 		ctx->UpdateSubresource(m_vs_cb, 0, NULL, cb, 0, 0);
 	}
 
-	dev->VSSetShader(i->second, m_vs_cb);
+	VSSetShader(i->second, m_vs_cb);
 }
 
-void GSTextureFX11::SetupGS(GSSelector sel)
+void GSDevice11::SetupGS(GSSelector sel)
 {
-	GSDevice11* dev = (GSDevice11*)m_dev;
-
 	ID3D11GeometryShader* gs = NULL;
 
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)) // geometry shader works in every case, but not needed
@@ -182,19 +165,17 @@ void GSTextureFX11::SetupGS(GSSelector sel)
 				{NULL, NULL},
 			};
 
-			dev->CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
+			CompileShader(IDR_TFX_FX, "gs_main", macro, &gs);
 
 			m_gs[sel] = gs;
 		}
 	}
 
-	dev->GSSetShader(gs);
+	GSSetShader(gs);
 }
 
-void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
+void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
 {
-	GSDevice11* dev = (GSDevice11*)m_dev;
-
 	hash_map<uint32, CComPtr<ID3D11PixelShader> >::const_iterator i = m_ps.find(sel);
 
 	if(i == m_ps.end())
@@ -235,7 +216,7 @@ void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 		CComPtr<ID3D11PixelShader> ps;
 		
-		dev->CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
+		CompileShader(IDR_TFX_FX, "ps_main", macro, &ps);
 
 		m_ps[sel] = ps;
 
@@ -244,12 +225,12 @@ void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 
 	if(m_ps_cb_cache.Update(cb))
 	{
-		ID3D11DeviceContext* ctx = *dev;
+		ID3D11DeviceContext* ctx = m_ctx;
 
 		ctx->UpdateSubresource(m_ps_cb, 0, NULL, cb, 0, 0);
 	}
 
-	dev->PSSetShader(i->second, m_ps_cb);
+	PSSetShader(i->second, m_ps_cb);
 
 	ID3D11SamplerState* ss0 = NULL;
 	ID3D11SamplerState* ss1 = NULL;
@@ -283,7 +264,7 @@ void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 			sd.MaxAnisotropy = 16; 
 			sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 
-			(*dev)->CreateSamplerState(&sd, &ss0);
+			m_dev->CreateSamplerState(&sd, &ss0);
 
 			m_ps_ss[ssel] = ss0;
 		}
@@ -294,13 +275,11 @@ void GSTextureFX11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSample
 		}
 	}
 
-	dev->PSSetSamplerState(ss0, ss1);
+	PSSetSamplerState(ss0, ss1);
 }
 
-void GSTextureFX11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
+void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
-	GSDevice11* dev = (GSDevice11*)m_dev;
-
 	hash_map<uint32, CComPtr<ID3D11DepthStencilState> >::const_iterator i = m_om_dss.find(dssel);
 
 	if(i == m_om_dss.end())
@@ -341,14 +320,14 @@ void GSTextureFX11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 
 		CComPtr<ID3D11DepthStencilState> dss;
 
-		(*dev)->CreateDepthStencilState(&dsd, &dss);
+		m_dev->CreateDepthStencilState(&dsd, &dss);
 
 		m_om_dss[dssel] = dss;
 
 		i = m_om_dss.find(dssel);
 	}
 
-	dev->OMSetDepthStencilState(i->second, 1);
+	OMSetDepthStencilState(i->second, 1);
 
 	hash_map<uint32, CComPtr<ID3D11BlendState> >::const_iterator j = m_om_bs.find(bsel);
 
@@ -482,12 +461,12 @@ void GSTextureFX11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, 
 
 		CComPtr<ID3D11BlendState> bs;
 
-		(*dev)->CreateBlendState(&bd, &bs);
+		m_dev->CreateBlendState(&bd, &bs);
 
 		m_om_bs[bsel] = bs;
 
 		j = m_om_bs.find(bsel);
 	}
 
-	dev->OMSetBlendState(j->second, (float)(int)afix / 0x80);
+	OMSetBlendState(j->second, (float)(int)afix / 0x80);
 }
