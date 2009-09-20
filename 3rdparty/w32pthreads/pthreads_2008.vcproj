@@ -6,7 +6,6 @@
 	ProjectGUID="{26511268-2902-4997-8421-ECD7055F9E28}"
 	RootNamespace="pthreads"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

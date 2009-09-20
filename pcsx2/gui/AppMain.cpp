@@ -17,6 +17,7 @@
 #include "IniInterface.h"
 #include "MainFrame.h"
 #include "Plugins.h"
+#include "SaveState.h"
 
 #include "Dialogs/ModalPopups.h"
 #include "Dialogs/ConfigurationDialog.h"
@@ -63,15 +64,24 @@ namespace Exception
 }
 
 AppEmuThread::AppEmuThread( PluginManager& plugins ) :
-	CoreEmuThread( plugins )
+	SysCoreThread( plugins )
 ,	m_kevt()
 {
 }
 
+AppEmuThread::~AppEmuThread() throw()
+{
+	AppInvoke( MainFrame, ApplySettings() );
+}
+
+void AppEmuThread::Suspend( bool isBlocking )
+{
+	SysCoreThread::Suspend( isBlocking );
+	AppInvoke( MainFrame, ApplySettings() );
+}
+
 void AppEmuThread::Resume()
 {
-	if( wxGetApp().GetMainFrame().IsPaused() ) return;
-
 	// Clear the sticky key statuses, because hell knows what's changed while the PAD
 	// plugin was suspended.
 
@@ -81,12 +91,17 @@ void AppEmuThread::Resume()
 
 	ApplySettings( g_Conf->EmuOptions );
 
-	CoreEmuThread::Resume();
+	if( GSopen2 != NULL )
+		wxGetApp().OpenGsFrame();
+
+	SysCoreThread::Resume();
+	AppInvoke( MainFrame, ApplySettings() );
 }
 
-// fixme: this ID should be the ID of our wx-managed GS window (which is not
-// wx-managed yet, so let's just use some arbitrary value...)
-static const int pxID_Window_GS = 8030;
+// This is used when the GS plugin is handling its own window.  Messages from the PAD
+// are piped through to an app-level message handler, which dispatches them through 
+// the universal Accelerator table.
+static const int pxID_PadHandler_Keydown = 8030;
 
 #ifdef __WXGTK__
 	extern int TranslateGDKtoWXK( u32 keysym );
@@ -94,7 +109,7 @@ static const int pxID_Window_GS = 8030;
 
 void AppEmuThread::StateCheck()
 {
-	CoreEmuThread::StateCheck();
+	SysCoreThread::StateCheck();
 
 	const keyEvent* ev = PADkeyEvent();
 
@@ -103,7 +118,6 @@ void AppEmuThread::StateCheck()
 	GetPluginManager().KeyEvent( *ev );
 
 	m_kevt.SetEventType( ( ev->evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
-	m_kevt.SetId( pxID_Window_GS );
 
 	const bool isDown = (ev->evt == KEYPRESS);
 
@@ -122,19 +136,18 @@ void AppEmuThread::StateCheck()
 		case WXK_MENU:		m_kevt.m_altDown		= isDown; return;
 	}
 
-	// fixme: when the GS is wx-controlled, we should send the message to the GS window
-	// instead.
-
-	if( isDown )
-	{
-		m_kevt.m_keyCode = vkey;
-		wxGetApp().AddPendingEvent( m_kevt );
-	}
+	m_kevt.m_keyCode = vkey;
+	wxGetApp().PostPadKey( m_kevt );
 }
 
 __forceinline bool EmulationInProgress()
 {
 	return wxGetApp().EmuInProgress();
+}
+
+__forceinline bool SysHasValidState()
+{
+	return wxGetApp().EmuInProgress() || StateRecovery::HasState();
 }
 
 
@@ -161,7 +174,7 @@ sptr AppEmuThread::ExecuteTask()
 {
 	try
 	{
-		CoreEmuThread::ExecuteTask();
+		SysCoreThread::ExecuteTask();
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::FileNotFound& ex )
@@ -392,7 +405,7 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
 	Connect( pxEVT_LoadPluginsComplete,	wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
 
-	Connect( pxID_Window_GS, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
+	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
 	// User/Admin Mode Dual Setup:
 	//   Pcsx2 now supports two fundamental modes of operation.  The default is Classic mode,
@@ -429,7 +442,7 @@ bool Pcsx2App::OnInit()
 		SysDetect();
 		AppApplySettings();
 
-		m_CoreAllocs.reset( new EmuCoreAllocations() );
+		m_CoreAllocs.reset( new SysCoreAllocations() );
 
 		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
 		{
@@ -505,6 +518,20 @@ void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 		m_MainFrame->GetEventHandler()->ProcessEvent( joe );
 	else
 		m_MainFrame->GetEventHandler()->AddPendingEvent( joe );
+}
+
+void Pcsx2App::PostPadKey( wxKeyEvent& evt )
+{
+	if( m_gsFrame == NULL )
+	{
+		evt.SetId( pxID_PadHandler_Keydown );
+		wxGetApp().AddPendingEvent( evt );
+	}
+	else
+	{
+		evt.SetId( m_gsFrame->GetId() );
+		m_gsFrame->AddPendingEvent( evt );
+	}
 }
 
 int Pcsx2App::ThreadedModalDialog( DialogIdentifiers dialogId )
@@ -594,6 +621,26 @@ void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
 	Msgbox::OnEvent( evt );
 }
 
+HashTools::HashMap<int, const GlobalCommandDescriptor*> GlobalAccels( 0, 0xffffffff );
+
+void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
+{
+	const GlobalCommandDescriptor* cmd = NULL;
+	GlobalAccels.TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
+	if( cmd == NULL )
+	{
+		evt.Skip();
+		return;
+	}
+
+	if( cmd != NULL )
+	{
+		DbgCon::WriteLn( "(app) Invoking command: %s", cmd->Id );
+		cmd->Invoke();
+	}
+
+}
+
 void Pcsx2App::CleanupMess()
 {
 	if( m_CorePlugins )
@@ -677,12 +724,14 @@ Pcsx2App::Pcsx2App()  :
 ,	m_Bitmap_Logo( NULL )
 {
 	SetAppName( L"pcsx2" );
+	BuildCommandHash();
+	InitDefaultGlobalAccelerators();
 }
 
 Pcsx2App::~Pcsx2App()
 {
 	// Typically OnExit cleans everything up before we get here, *unless* we cancel
-	// out of program startup in OnInit (return false) -- then remaning cleanup needs
+	// out of program startup in OnInit (return false) -- then remaining cleanup needs
 	// to happen here in the destructor.
 
 	CleanupMess();
@@ -718,8 +767,8 @@ void AppApplySettings( const AppConfig* oldconf )
 		}
 	}
 
-	TryInvoke( MainFrame, ApplySettings() );
-	TryInvoke( CoreThread, ApplySettings( g_Conf->EmuOptions ) );
+	AppInvoke( MainFrame, ApplySettings() );
+	AppInvoke( CoreThread, ApplySettings( g_Conf->EmuOptions ) );
 }
 
 void AppLoadSettings()
@@ -730,7 +779,7 @@ void AppLoadSettings()
 	IniLoader loader( *conf );
 	g_Conf->LoadSave( loader );
 
-	TryInvoke( MainFrame, LoadRecentIsoList( *conf ) );
+	AppInvoke( MainFrame, LoadRecentIsoList( *conf ) );
 }
 
 void AppSaveSettings()
@@ -741,7 +790,7 @@ void AppSaveSettings()
 	IniSaver saver( *conf );
 	g_Conf->LoadSave( saver );
 
-	TryInvoke( MainFrame, SaveRecentIsoList( *conf ) );
+	AppInvoke( MainFrame, SaveRecentIsoList( *conf ) );
 }
 
 // --------------------------------------------------------------------------------------
@@ -768,22 +817,37 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	CDVDsys_ChangeSource( cdvdsrc );
 	
-	if( m_gsFrame == NULL && GSopen2 != NULL )
-	{
-		// Yay, we get to open and manage our OWN window!!!
-		// (work-in-progress)
-
-		m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
-		m_gsFrame->SetFocus();
-		pDsp = (uptr)m_gsFrame->GetHandle();
-		m_gsFrame->Show();
-		
-		// The "in the main window" quickie hack...
-		//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
-	}
-
 	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
 	m_CoreThread->Resume();
+}
+
+void Pcsx2App::OpenGsFrame()
+{
+	if( m_gsFrame != NULL ) return;
+	
+	m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
+	m_gsFrame->SetFocus();
+	pDsp = (uptr)m_gsFrame->GetHandle();
+	m_gsFrame->Show();
+
+	// The "in the main window" quickie hack...
+	//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
+}
+
+void Pcsx2App::OnGsFrameClosed()
+{
+	if( m_CoreThread != NULL )
+		m_CoreThread->Suspend();
+	m_gsFrame = NULL;
+}
+
+
+// Writes text to console and updates the window status bar and/or HUD or whateverness.
+void SysStatus( const wxString& text )
+{
+	// mirror output to the console!
+	Console::Status( text.c_str() );
+	AppInvoke( MainFrame, SetStatusText( text ) );
 }
 
 // Executes the emulator using a saved/existing virtual machine state and currently
@@ -800,12 +864,12 @@ void SysExecute( CDVD_SourceType cdvdsrc )
 
 void SysResume()
 {
-	TryInvoke( CoreThread, Resume() );
+	AppInvoke( CoreThread, Resume() );
 }
 
 void SysSuspend()
 {
-	TryInvoke( CoreThread, Suspend() );
+	AppInvoke( CoreThread, Suspend() );
 }
 
 void SysReset()

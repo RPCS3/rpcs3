@@ -54,39 +54,15 @@ public:
 
 extern StartupParams g_Startup;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Core Gui APIs  (shared by all platforms)
-//
-// Most of these are implemented in SystemGui.cpp
-
 extern void States_Load( const wxString& file );
 extern void States_Save( const wxString& file );
-extern void States_Load( int num );
-extern void States_Save( int num );
 extern bool States_isSlotUsed(int num);
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// External Gui APIs (platform specific)
-//
-// The following section contains API declarations for GUI callback functions that the
-// Pcsx2 core expects and needs to be implemented by Pcsx2 platform dependent code
-// (Win32/Linux).  If anything in this header comes up as a missing external during link,
-// it means that the necessary platform dependent files are not being compiled, or the
-// platform code is incomplete.
-//
-// These APIs have been namespaced to help simplify and organize the process of implementing
-// them and resolving linker errors.
-//
+extern void States_FreezeCurrentSlot();
+extern void States_DefrostCurrentSlot();
+extern void States_FreezeCurrentSlot();
+extern void States_CycleSlotForward();
+extern void States_CycleSlotBackward();
 
-// Namespace housing gui-level implementations relating to events and signals such
-// as keyboard events, menu/status updates, and cpu execution invocation.
-namespace HostGui
-{
-	// For issuing notices to both the status bar and the console at the same time.
-	// Single-line text only please!  Multi-line msgs should be directed to the
-	// console directly, thanks.
-	extern void Notice( const wxString& text );
-
-	// sets the contents of the pcsx2 window status bar.
-	extern void SetStatusMsg( const wxString& text );
-};
+extern void States_SetCurrentSlot( int slot );
+extern int  States_GetCurrentSlot( int slot );

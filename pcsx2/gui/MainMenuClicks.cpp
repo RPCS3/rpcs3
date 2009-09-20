@@ -155,16 +155,14 @@ void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
 {
-   int id = event.GetId() - MenuId_State_Load01 - 1;
-   Console::WriteLn("Loading slot %d.", id);
-   States_Load(id);
+	States_SetCurrentSlot( event.GetId() - MenuId_State_Load01 - 1 );
+	States_DefrostCurrentSlot();
 }
 
 void MainEmuFrame::Menu_SaveStates_Click(wxCommandEvent &event)
 {
-   int id = event.GetId() - MenuId_State_Save01 - 1;
-   Console::WriteLn("Saving to slot %d.", id);
-   States_Save(id);
+	States_SetCurrentSlot( event.GetId() - MenuId_State_Load01 - 1 );
+	States_FreezeCurrentSlot();
 }
 
 void MainEmuFrame::Menu_LoadStateOther_Click(wxCommandEvent &event)
@@ -182,28 +180,29 @@ void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 	Close();
 }
 
-void MainEmuFrame::Menu_EmuClose_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 {
-	//wxGetApp()->
-	GetMenuBar()->Check( MenuId_Emu_Pause, false );
-}
+	if( !SysHasValidState() ) return;
 
-void MainEmuFrame::Menu_EmuPause_Click(wxCommandEvent &event)
-{
-	if( event.IsChecked() )
-		SysSuspend();
-	else
+	bool result = false;
+	AppInvokeBool( CoreThread, IsSuspended(), result );
+
+	if( result )
 		SysResume();
+	else
+		SysSuspend();
 }
 
 void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 {
-	bool wasRunning = EmulationInProgress();
+	bool wasInProgress = EmulationInProgress();
+	bool wasSuspended;
+
+	AppInvokeBool( CoreThread, IsSuspended(), wasSuspended );
+
 	SysReset();
 
-	GetMenuBar()->Check( MenuId_Emu_Pause, false );
-
-	if( !wasRunning ) return;
+	if( !wasInProgress || wasSuspended ) return;
 	SysExecute();
 }
 

@@ -6,7 +6,6 @@
 	ProjectGUID="{6F3C4136-5801-4EBC-AC6E-37DF6FAB150A}"
 	RootNamespace="xpad"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

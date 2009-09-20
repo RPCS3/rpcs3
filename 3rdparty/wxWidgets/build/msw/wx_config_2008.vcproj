@@ -5,7 +5,6 @@
 	Name="wxConfig28"
 	ProjectGUID="{C34487AF-228A-4D11-8E50-27803DF76873}"
 	RootNamespace="wxConfig"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

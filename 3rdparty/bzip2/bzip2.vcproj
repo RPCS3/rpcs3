@@ -5,7 +5,6 @@
 	Name="bzip2"
 	ProjectGUID="{F4EB4AB2-C595-4B05-8BC0-059024BC796C}"
 	RootNamespace="bzip2"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

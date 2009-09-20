@@ -87,11 +87,11 @@ void GSSettingsDlg::OnInit()
 			uint32 h = theApp.GetConfig("ModeHeight", 0);
 			uint32 hz = theApp.GetConfig("ModeRefreshRate", 0);
 
-			uint32 n = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8);
+			uint32 n = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_R5G6B5);
 
 			for(uint32 i = 0; i < n; i++)
 			{
-				if(S_OK == d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_X8R8G8B8, i, &mode))
+				if(S_OK == d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_R5G6B5, i, &mode))
 				{
 					m_modes.push_back(mode);
 

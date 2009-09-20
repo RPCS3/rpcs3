@@ -24,10 +24,16 @@
 class GSFrame : public wxFrame
 {
 protected:
+	AcceleratorDictionary m_Accels;
 
 public:
 	GSFrame(wxWindow* parent, const wxString& title);
 	virtual ~GSFrame() throw();
+	
+protected:
+	void InitDefaultAccelerators();
+	void OnCloseWindow( wxCloseEvent& evt );
+	void OnKeyDown( wxKeyEvent& evt );
 };
 
 class MainEmuFrame : public wxFrame
@@ -68,10 +74,11 @@ public:
 
 	void OnLogBoxHidden();
 
-	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Emu_Pause ); }
+	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Emu_SuspendResume ); }
 	void UpdateIsoSrcFile();
 	void UpdateIsoSrcSelection();
 	void ApplySettings();
+	void ReloadRecentLists();
 	
 	void LoadRecentIsoList( wxConfigBase& conf );
 	void SaveRecentIsoList( wxConfigBase& conf );
@@ -99,8 +106,7 @@ protected:
 	void Menu_SaveStateOther_Click(wxCommandEvent &event);
 	void Menu_Exit_Click(wxCommandEvent &event);
 
-	void Menu_EmuPause_Click(wxCommandEvent &event);
-	void Menu_EmuClose_Click(wxCommandEvent &event);
+	void Menu_SuspendResume_Click(wxCommandEvent &event);
 	void Menu_EmuReset_Click(wxCommandEvent &event);
 
 	void Menu_ConfigPlugin_Click(wxCommandEvent &event);

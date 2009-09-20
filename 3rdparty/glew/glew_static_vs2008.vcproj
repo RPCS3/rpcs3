@@ -5,7 +5,6 @@
 	Name="glew_static"
 	ProjectGUID="{067D7863-393B-494F-B296-4A8853EB3D1D}"
 	RootNamespace="glew_static"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

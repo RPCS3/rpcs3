@@ -15,22 +15,67 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "GS.h"
 
+#include "wx/utils.h"
+
+
+void GSFrame::InitDefaultAccelerators()
+{
+	typedef KeyAcceleratorCode AAC;
+
+	m_Accels.Map( AAC( WXK_F1 ),				"States_FreezeCurrentSlot" );
+	m_Accels.Map( AAC( WXK_F3 ),				"States_DefrostCurrentSlot");
+	m_Accels.Map( AAC( WXK_F2 ),				"States_CycleSlotForward" );
+	m_Accels.Map( AAC( WXK_F2 ).Shift(),		"States_CycleSlotBackward" );
+	
+	m_Accels.Map( AAC( WXK_F4 ),				"Frameskip_Toggle" );
+	m_Accels.Map( AAC( WXK_TAB ),				"Framelimiter_TurboToggle" );
+	m_Accels.Map( AAC( WXK_TAB ).Shift(),		"Framelimiter_MasterToggle" );
+	
+	m_Accels.Map( AAC( WXK_ESCAPE ),			"Emu_Suspend" );
+	m_Accels.Map( AAC( WXK_F8 ),				"Emu_TakeSnapshot" );
+	m_Accels.Map( AAC( WXK_F9 ),				"Emu_RenderswitchToggle" );
+	
+	m_Accels.Map( AAC( WXK_F10 ),				"Emu_LoggingToggle" );
+	m_Accels.Map( AAC( WXK_F11 ),				"Emu_FreezeGS" );
+	m_Accels.Map( AAC( WXK_F12 ),				"Emu_RecordingToggle" );
+}
 
 GSFrame::GSFrame(wxWindow* parent, const wxString& title):
 	wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxSize( 640, 480 ), wxDEFAULT_FRAME_STYLE )
 {
+	InitDefaultAccelerators();
 	//new wxStaticText( "" );
 
-	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(GSFrame::OnCloseWindow) );
+	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(GSFrame::OnCloseWindow) );
+	Connect( wxEVT_KEY_DOWN,		wxKeyEventHandler(GSFrame::OnKeyDown) );
 }
 
 GSFrame::~GSFrame() throw()
 {
+	AppInvoke( CoreThread, Suspend() );		// Just in case...!
 }
 
-/*void GSFrame::OnCloseWindow(wxCloseEvent& evt)
+void GSFrame::OnCloseWindow(wxCloseEvent& evt)
 {
-	evt.Skip();
+	wxGetApp().OnGsFrameClosed();
+	evt.Skip();		// and close it.
 }
-*/
+
+void GSFrame::OnKeyDown( wxKeyEvent& evt )
+{
+	const GlobalCommandDescriptor* cmd = NULL;
+	m_Accels.TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
+	if( cmd == NULL )
+	{
+		evt.Skip();		// Let the global APP handle it if it wants
+		return;
+	}
+	
+	if( cmd != NULL )
+	{
+		DbgCon::WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
+		cmd->Invoke();
+	}
+}

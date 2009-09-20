@@ -26,8 +26,9 @@
 // them.  For tools which require only wxBase, see wxBaseTools.h
 // ----------------------------------------------------------------------------
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// pxTextWrapperBase
+// --------------------------------------------------------------------------------------
+//  pxTextWrapperBase
+// --------------------------------------------------------------------------------------
 // this class is used to wrap the text on word boundary: wrapping is done by calling
 // OnStartLine() and OnOutputLine() functions.  This class by itself can be used as a
 // line counting tool, but produces no formatted text output.
@@ -87,8 +88,9 @@ protected:
     }
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// pxTextWrapper
+// --------------------------------------------------------------------------------------
+//  pxTextWrapper
+// --------------------------------------------------------------------------------------
 // This class extends pxTextWrapperBase and adds the ability to retrieve the formatted
 // result of word wrapping.
 //
@@ -119,3 +121,7 @@ protected:
         m_text += L'\n';
     }
 };
+
+
+extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
+extern wxRect wxGetDisplayArea();

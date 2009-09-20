@@ -5,7 +5,6 @@
 	Name="SPU2-X"
 	ProjectGUID="{5307BBB7-EBB9-4AA4-8CB6-A94EC473C8C4}"
 	RootNamespace="spu2x"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform

@@ -207,8 +207,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_SkipBiosToggle,		Menu_SkipBiosToggle_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
-	ConnectMenu( MenuId_Emu_Pause,			Menu_EmuPause_Click );
-	ConnectMenu( MenuId_Emu_Close,			Menu_EmuClose_Click );
+	ConnectMenu( MenuId_Emu_SuspendResume,	Menu_SuspendResume_Click );
 	ConnectMenu( MenuId_Emu_Reset,			Menu_EmuReset_Click );
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
@@ -364,23 +363,24 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 		_("Closing PCSX2 may be hazardous to your health"));
 
 	// ------------------------------------------------------------------------
-	m_menuEmu.Append(MenuId_Emu_Pause,		_("Pause"),
-		_("Stops emulation dead in its tracks"), wxITEM_CHECK );
+	m_menuEmu.Append(MenuId_Emu_SuspendResume,		_("Suspend"),
+		_("Stops emulation dead in its tracks") )->Enable( SysHasValidState() );
 
 	m_menuEmu.AppendSeparator();
-	m_menuEmu.Append(MenuId_Emu_Reset,		_("Reset"),
-		_("Resets emulation state and re-runs current image"));
 
-	m_menuEmu.Append(MenuId_Emu_Close,		_("Close"),
-		_("Stops emulation and closes the GS window."));
+	//m_menuEmu.Append(MenuId_Emu_Close,		_("Close"),
+	//	_("Stops emulation and closes the GS window."));
 
-	m_menuEmu.AppendSeparator();
 	m_menuEmu.Append(MenuId_Emu_LoadStates,	_("Load state"), &m_LoadStatesSubmenu);
 	m_menuEmu.Append(MenuId_Emu_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
 
 	m_menuEmu.AppendSeparator();
 	m_menuEmu.Append(MenuId_EnablePatches,	_("Enable Patches"),
 		wxEmptyString, wxITEM_CHECK);
+
+	m_menuEmu.AppendSeparator();
+	m_menuEmu.Append(MenuId_Emu_Reset,		_("Reset"),
+		_("Resets emulation state and re-runs current image"));
 
     // ------------------------------------------------------------------------
 
@@ -398,6 +398,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_Patches,	_("Patches"),	wxEmptyString);
 	m_menuConfig.Append(MenuId_Config_BIOS,		_("BIOS") );
+
+	m_menuConfig.AppendSeparator();
+	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Reset all..."),
+		_("Clears all PCSX2 settings and re-runs the startup wizard."));
 
 	// ------------------------------------------------------------------------
 
@@ -426,10 +430,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
 	m_menuDebug.Append(MenuId_Debug_Logging,	_("Logging..."),			wxEmptyString);
 
-	m_menuDebug.AppendSeparator();
-	m_menuDebug.Append(MenuId_Debug_Usermode,	_("Change Usermode..."),
-		_(" Advanced feature for managing multiple concurrent PCSX2 environments."));
-
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 
 	ConnectMenus();
@@ -449,10 +449,10 @@ MainEmuFrame::~MainEmuFrame() throw()
 	DESTRUCTOR_CATCHALL
 }
 
-void MainEmuFrame::ApplySettings()
+// This should be called whenever major changes to the ini configs have occurred,
+// or when the recent file count mismatches the max filecount.
+void MainEmuFrame::ReloadRecentLists()
 {
-	GetMenuBar()->Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
-
 	// Always perform delete and reload of the Recent Iso List.  This handles cases where
 	// the recent file count has been changed, and it's a helluva lot easier than trying
 	// to make a clone copy of this complex object. ;)
@@ -467,4 +467,20 @@ void MainEmuFrame::ApplySettings()
 	m_RecentIsoList->Load( *cfg );
 	UpdateIsoSrcFile();
 	cfg->Flush();
+}
+
+void MainEmuFrame::ApplySettings()
+{
+	GetMenuBar()->Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
+	GetMenuBar()->Enable( MenuId_Emu_SuspendResume, SysHasValidState() );
+
+	bool result = false;
+	AppInvokeBool( CoreThread, IsSuspended(), result );
+	GetMenuBar()->SetLabel( MenuId_Emu_SuspendResume, result ? _("Resume") :_("Suspend") );
+
+	if( m_RecentIsoList )
+	{
+		if( m_RecentIsoList->GetMaxFiles() != g_Conf->RecentFileCount )
+			ReloadRecentLists();
+	}
 }

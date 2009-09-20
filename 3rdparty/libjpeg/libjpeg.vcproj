@@ -6,7 +6,6 @@
 	ProjectGUID="{BC236261-77E8-4567-8D09-45CD02965EB6}"
 	RootNamespace="libjpeg"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

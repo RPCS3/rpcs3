@@ -443,7 +443,7 @@ __forceinline void rcntUpdate_vSync()
 	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
 		eeRecIsReset = false;
-		CoreEmuThread::Get().StateCheck();
+		SysCoreThread::Get().StateCheck();
 		if( eeRecIsReset )
 		{
 			eeRecIsReset = false;

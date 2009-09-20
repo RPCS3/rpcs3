@@ -5,7 +5,6 @@
 	Name="zlib"
 	ProjectGUID="{2F6C0388-20CB-4242-9F6C-A6EBB6A83F47}"
 	RootNamespace="zlib"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

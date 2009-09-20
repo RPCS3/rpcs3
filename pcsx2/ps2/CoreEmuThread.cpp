@@ -25,15 +25,15 @@
 #include "R3000A.h"
 #include "VUmicro.h"
 
-static __threadlocal CoreEmuThread* tls_coreThread = NULL;
+static __threadlocal SysCoreThread* tls_coreThread = NULL;
 
-CoreEmuThread& CoreEmuThread::Get()
+SysCoreThread& SysCoreThread::Get()
 {
-	wxASSERT_MSG( tls_coreThread != NULL, L"This function must be called from the context of a running CoreEmuThread." );
+	wxASSERT_MSG( tls_coreThread != NULL, L"This function must be called from the context of a running SysCoreThread." );
 	return *tls_coreThread;
 }
 
-void CoreEmuThread::CpuInitializeMess()
+void SysCoreThread::CpuInitializeMess()
 {
 	m_plugins.Open();
 	cpuReset();
@@ -102,7 +102,7 @@ void CoreEmuThread::CpuInitializeMess()
 // On Win32 this function invokes SEH, which requires it be in a function all by itself
 // with inlining disabled.
 __unique_stackframe
-void CoreEmuThread::CpuExecute()
+void SysCoreThread::CpuExecute()
 {
 	PCSX2_MEM_PROTECT_BEGIN();
 	Cpu->Execute();
@@ -111,10 +111,10 @@ void CoreEmuThread::CpuExecute()
 
 static void _cet_callback_cleanup( void* handle )
 {
-	((CoreEmuThread*)handle)->DoThreadCleanup();
+	((SysCoreThread*)handle)->DoThreadCleanup();
 }
 
-sptr CoreEmuThread::ExecuteTask()
+sptr SysCoreThread::ExecuteTask()
 {
 	tls_coreThread = this;
 
@@ -130,7 +130,7 @@ sptr CoreEmuThread::ExecuteTask()
 	return 0;
 }
 
-void CoreEmuThread::StateCheck()
+void SysCoreThread::StateCheck()
 {
 	ScopedLock locker( m_lock_ExecMode );
 
@@ -165,7 +165,7 @@ void CoreEmuThread::StateCheck()
 	}
 }
 
-CoreEmuThread::CoreEmuThread( PluginManager& plugins ) :
+SysCoreThread::SysCoreThread( PluginManager& plugins ) :
 	m_ExecMode( ExecMode_NoThreadYet )
 ,	m_lock_ExecMode()
 
@@ -180,13 +180,13 @@ CoreEmuThread::CoreEmuThread( PluginManager& plugins ) :
 }
 
 // Invoked by the pthread_exit or pthread_cancel
-void CoreEmuThread::DoThreadCleanup()
+void SysCoreThread::DoThreadCleanup()
 {
 	m_plugins.Shutdown();
 	PersistentThread::DoThreadCleanup();
 }
 
-CoreEmuThread::~CoreEmuThread() throw()
+SysCoreThread::~SysCoreThread() throw()
 {
 	PersistentThread::Cancel();
 }
@@ -200,7 +200,7 @@ CoreEmuThread::~CoreEmuThread() throw()
 //                         on the first time the thread is resumed from it's initial idle state)
 //   ThreadCreationError - Insufficient system resources to create thread.
 //
-void CoreEmuThread::Resume()
+void SysCoreThread::Resume()
 {
 	if( IsSelf() ) return;
 	
@@ -259,7 +259,7 @@ void CoreEmuThread::Resume()
 //      is mostly useful for starting certain non-Emu related gui activities (improves gui
 //      responsiveness).
 //
-void CoreEmuThread::Suspend( bool isBlocking )
+void SysCoreThread::Suspend( bool isBlocking )
 {
 	if( IsSelf() || !IsRunning() ) return;
 
@@ -281,7 +281,7 @@ void CoreEmuThread::Suspend( bool isBlocking )
 // Applies a full suite of new settings, which will automatically facilitate the necessary
 // resets of the core and components (including plugins, if needed).  The scope of resetting
 // is determined by comparing the current settings against the new settings.
-void CoreEmuThread::ApplySettings( const Pcsx2Config& src )
+void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	if( src == EmuConfig ) return;
 

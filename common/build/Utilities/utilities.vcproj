@@ -6,7 +6,7 @@
 	ProjectGUID="{4639972E-424E-4E13-8B07-CA403C481346}"
 	RootNamespace="x86emitter"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -223,6 +223,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\Utilities\vssprintf.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\Utilities\wxGuiTools.cpp"
 				>
 			</File>
 			<Filter

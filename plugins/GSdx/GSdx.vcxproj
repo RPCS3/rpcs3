@@ -813,6 +813,7 @@
     <ClInclude Include="GSDevice11.h" />
     <ClInclude Include="GSDevice7.h" />
     <ClInclude Include="GSDevice9.h" />
+    <ClInclude Include="GSDeviceDX.h" />
     <ClInclude Include="GSDeviceNull.h" />
     <ClInclude Include="GSDeviceOGL.h" />
     <ClInclude Include="GSDialog.h" />

@@ -34,17 +34,13 @@ bool States_isSlotUsed(int num)
 		return wxFileExists( SaveStateBase::GetFilename( num ) );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Save state load-from-file (or slot) helpers.
-
 // returns true if the new state was loaded, or false if nothing happened.
 void States_Load( const wxString& file )
 {
 	try
 	{
 		SysLoadState( file );
-		HostGui::Notice( wxsFormat( _("Loaded State %s"),
-			wxFileName( file ).GetFullName().c_str() ) );
+		SysStatus( wxsFormat( _("Loaded State %s"), wxFileName( file ).GetFullName().c_str() ) );
 	}
 	catch( Exception::BadSavedState& ex)
 	{
@@ -63,24 +59,7 @@ void States_Load( const wxString& file )
 	SysExecute();
 }
 
-void States_Load(int num)
-{
-	wxString file( SaveStateBase::GetFilename( num ) );
-
-	if( !wxFileExists( file ) )
-	{
-		Console::Notice( "Savestate slot %d is empty.", num );
-		return;
-	}
-
-	Console::Status( "Loading savestate from slot %d...", num );
-	States_Load( file );
-	HostGui::Notice( wxsFormat( _("Loaded State (slot %d)"), num ) );
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
 // Save state save-to-file (or slot) helpers.
-
 void States_Save( const wxString& file )
 {
 	if( !EmulationInProgress() )
@@ -93,7 +72,7 @@ void States_Save( const wxString& file )
 	{
 		Console::Status( wxsFormat( L"Saving savestate to file: %s", file.c_str() ) );
 		StateRecovery::SaveToFile( file );
-		HostGui::Notice( wxsFormat( _("State saved to file: %s"), wxFileName( file ).GetFullName().c_str() ) );
+		SysStatus( wxsFormat( _("State saved to file: %s"), wxFileName( file ).GetFullName().c_str() ) );
 	}
 	catch( Exception::BaseException& ex )
 	{
@@ -115,8 +94,62 @@ void States_Save( const wxString& file )
 	}
 }
 
-void States_Save(int num)
+// --------------------------------------------------------------------------------------
+//  Saveslot Section
+// --------------------------------------------------------------------------------------
+
+static int StatesC = 0;
+static const int StateSlotsCount = 10;
+
+void States_FreezeCurrentSlot()
 {
-	Console::Status( "Saving savestate to slot %d...", num );
-	States_Save( SaveStateBase::GetFilename( num ) );
+	Console::Status( "Saving savestate to slot %d...", StatesC );
+	States_Save( SaveStateBase::GetFilename( StatesC ) );
 }
+
+void States_DefrostCurrentSlot()
+{
+	wxString file( SaveStateBase::GetFilename( StatesC ) );
+
+	if( !wxFileExists( file ) )
+	{
+		Console::Notice( "Savestate slot %d is empty.", StatesC );
+		return;
+	}
+
+	Console::Status( "Loading savestate from slot %d...", StatesC );
+	States_Load( file );
+	SysStatus( wxsFormat( _("Loaded State (slot %d)"), StatesC ) );
+}
+
+static void OnSlotChanged()
+{
+	Console::Notice( " > Selected savestate slot %d", StatesC);
+
+	if( GSchangeSaveState != NULL )
+		GSchangeSaveState(StatesC, SaveStateBase::GetFilename(StatesC).mb_str());
+}
+
+int States_GetCurrentSlot()
+{
+	return StatesC;
+}
+
+void States_SetCurrentSlot( int slot )
+{
+	StatesC = std::min( std::max( slot, 0 ), StateSlotsCount );
+	OnSlotChanged();
+}
+
+void States_CycleSlotForward()
+{
+	StatesC = (StatesC+1) % StateSlotsCount;
+	OnSlotChanged();
+}
+
+void States_CycleSlotBackward()
+{
+	StatesC = (StatesC+StateSlotsCount-1) % StateSlotsCount;
+	OnSlotChanged();
+}
+

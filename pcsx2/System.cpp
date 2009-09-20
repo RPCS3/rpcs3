@@ -109,7 +109,7 @@ static wxString GetMemoryErrorVM()
 	);
 }
 
-EmuCoreAllocations::EmuCoreAllocations()
+SysCoreAllocations::SysCoreAllocations()
 {
 	Console::Status( "Initializing PS2 virtual machine..." );
 
@@ -203,7 +203,7 @@ EmuCoreAllocations::EmuCoreAllocations()
 		SuperVUDestroy( -1 );
 }
 
-void EmuCoreAllocations::CleanupMess() throw()
+void SysCoreAllocations::CleanupMess() throw()
 {
 	try
 	{
@@ -224,12 +224,12 @@ void EmuCoreAllocations::CleanupMess() throw()
 	DESTRUCTOR_CATCHALL
 }
 
-EmuCoreAllocations::~EmuCoreAllocations() throw()
+SysCoreAllocations::~SysCoreAllocations() throw()
 {
 	CleanupMess();
 }
 
-bool EmuCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const
+bool SysCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const
 {
 	return	(recOpts.EnableEE && !RecSuccess_EE) ||
 			(recOpts.EnableIOP && !RecSuccess_IOP) ||

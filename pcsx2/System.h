@@ -23,12 +23,12 @@ static const int PCSX2_VersionHi	= 0;
 static const int PCSX2_VersionMid	= 9;
 static const int PCSX2_VersionLo	= 7;
 
-class CoreEmuThread;
+class SysCoreThread;
 
 // --------------------------------------------------------------------------------------
-//  EmuCoreAllocations class
+//  SysCoreAllocations class
 // --------------------------------------------------------------------------------------
-class EmuCoreAllocations
+class SysCoreAllocations
 {
 public:
 	// This set of booleans defaults to false and are only set TRUE if the corresponding
@@ -44,8 +44,8 @@ public:
 protected:
 
 public:
-	EmuCoreAllocations();
-	virtual ~EmuCoreAllocations() throw();
+	SysCoreAllocations();
+	virtual ~SysCoreAllocations() throw();
 
 	bool HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const;
 

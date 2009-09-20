@@ -20,9 +20,9 @@
 using namespace Threading;
 
 // --------------------------------------------------------------------------------------
-//  CoreEmuThread class
+//  SysCoreThread class
 // --------------------------------------------------------------------------------------
-class CoreEmuThread : public PersistentThread
+class SysCoreThread : public PersistentThread
 {
 protected:
 	enum ExecutionMode
@@ -46,11 +46,11 @@ protected:
 	Semaphore		m_SuspendEvent;
 
 public:
-	static CoreEmuThread& Get();
+	static SysCoreThread& Get();
 
 public:
-	explicit CoreEmuThread( PluginManager& plugins );
-	virtual ~CoreEmuThread() throw();
+	explicit SysCoreThread( PluginManager& plugins );
+	virtual ~SysCoreThread() throw();
 
 	bool IsSuspended() const { return (m_ExecMode == ExecMode_Suspended); }
 	virtual void Suspend( bool isBlocking = true );

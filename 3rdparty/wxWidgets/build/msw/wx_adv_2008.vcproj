@@ -5,7 +5,6 @@
 	Name="wxAdv28"
 	ProjectGUID="{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}"
 	RootNamespace="wxAdvanced"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform

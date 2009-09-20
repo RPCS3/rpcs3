@@ -17,7 +17,7 @@
 
 #include "Dependencies.h"
 
-extern void DevAssert( bool condition, const char* msg );
+extern bool DevAssert( bool condition, const char* msg );
 
 // --------------------------------------------------------------------------------------
 //  DESTRUCTOR_CATCHALL - safe destructor helper

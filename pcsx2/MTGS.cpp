@@ -81,12 +81,10 @@ __forceinline void GIFPath::PrepPackedRegs()
 
 	u32 tempreg = tag.REGS[0];
 	numregs		= ((tag.NREG-1)&0xf) + 1;
-	hasADreg	= 0;
 	
 	for (u32 i = 0; i < numregs; i++) {
 		if (i == 8) tempreg = tag.REGS[1];
 		regs[i] = tempreg & 0xf;
-		if (regs[i] == 0x0e) hasADreg = 1;
 		tempreg >>= 4;
 	}
 }
@@ -107,7 +105,6 @@ static void _mtgsFreezeGIF( SaveStateBase& state, GIFPath (&paths)[3] )
 		state.Freeze( paths[i].nloop );
 		state.Freeze( paths[i].curreg );
 		state.Freeze( paths[i].numregs );
-		state.Freeze( paths[i].hasADreg );
 	}
 
 	for(int i=0; i<3; i++ )

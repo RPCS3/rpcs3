@@ -19,18 +19,20 @@
 #include <wx/fileconf.h>
 #include <wx/imaglist.h>
 #include <wx/docview.h>
-
 #include <wx/apptrait.h>
 
 class IniInterface;
 class MainEmuFrame;
 class GSFrame;
 
+#include "Utilities/HashMap.h"
+#include "Utilities/wxGuiTools.h"
+
 #include "AppConfig.h"
 #include "System.h"
 #include "ConsoleLogger.h"
-#include "ps2/CoreEmuThread.h"
 
+#include "ps2/CoreEmuThread.h"
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
@@ -71,7 +73,7 @@ enum MenuIdentifiers
 	MenuId_SkipBiosToggle,		// enables the Bios Skip speedhack
 
 
-	MenuId_Emu_Pause,			// suspends/resumes active emulation, retains plugin states
+	MenuId_Emu_SuspendResume,			// suspends/resumes active emulation, retains plugin states
 	MenuId_Emu_Close,			// Closes the emulator (states are preserved)
 	MenuId_Emu_Reset,			// Issues a complete reset (wipes preserved states)
 	MenuId_Emu_LoadStates,		// Opens load states submenu
@@ -125,7 +127,7 @@ enum MenuIdentifiers
 	MenuId_Debug_Open,			// opens the debugger window / starts a debug session
 	MenuId_Debug_MemoryDump,
 	MenuId_Debug_Logging,		// dialog for selection additional log options
-	MenuId_Debug_Usermode,
+	MenuId_Config_ResetAll,
 };
 
 enum DialogIdentifiers
@@ -135,6 +137,93 @@ enum DialogIdentifiers
 	DialogId_LogOptions,
 	DialogId_About,
 };
+
+// --------------------------------------------------------------------------------------
+//  KeyAcceleratorCode
+//  A custom keyboard accelerator that I like better than wx's wxAcceleratorEntry.
+// --------------------------------------------------------------------------------------
+struct KeyAcceleratorCode
+{
+	union
+	{
+		struct  
+		{
+			u16		keycode;
+			u16		win:1,		// win32 only.
+					cmd:1,		// ctrl in win32, Command in Mac
+					alt:1,
+					shift:1;
+		};
+		u32  val32;
+	};
+	
+	KeyAcceleratorCode() : val32( 0 ) {}
+	KeyAcceleratorCode( const wxKeyEvent& evt );
+	
+	KeyAcceleratorCode( wxKeyCode code )
+	{
+		val32 = 0;
+		keycode = code;
+	}
+	
+	KeyAcceleratorCode& Shift()
+	{
+		shift = true;
+		return *this;
+	}
+
+	KeyAcceleratorCode& Alt()
+	{
+		alt = true;
+		return *this;
+	}
+
+	KeyAcceleratorCode& Win()
+	{
+		win = true;
+		return *this;
+	}
+
+	KeyAcceleratorCode& Cmd()
+	{
+		cmd = true;
+		return *this;
+	}
+	
+	wxString ToString() const;
+};
+
+
+// --------------------------------------------------------------------------------------
+//  GlobalCommandDescriptor
+//  Describes a global command which can be invoked from the main GUI or GUI plugins.
+// --------------------------------------------------------------------------------------
+
+struct GlobalCommandDescriptor
+{
+	const char* Id;					// Identifier string
+	void		(*Invoke)();		// Do it!!  Do it NOW!!!
+
+	const char*	Fullname;			// Name displayed in pulldown menus
+	const char*	Tooltip;			// text displayed in toolbar tooltips and menu status bars.
+
+	int			ToolbarIconId;		// not implemented yet, leave 0 for now.
+};
+
+typedef HashTools::Dictionary<const GlobalCommandDescriptor*>	CommandDictionary;
+
+class AcceleratorDictionary : public HashTools::HashMap<int, const GlobalCommandDescriptor*>
+{
+protected:
+
+public:
+	typedef HashMap<int, const GlobalCommandDescriptor*> _parent;
+	using _parent::operator[];
+
+	AcceleratorDictionary();
+	void Map( const KeyAcceleratorCode& acode, const char *searchfor );
+};
+
 
 // --------------------------------------------------------------------------------------
 //  AppImageIds  - Config and Toolbar Images and Icons
@@ -198,17 +287,21 @@ struct MsgboxEventResult
 
 class Pcsx2App : public wxApp
 {
+public:
+	CommandDictionary				GlobalCommands;
+	AcceleratorDictionary			GlobalAccels;
+
 protected:
 	wxImageList						m_ConfigImages;
 
 	wxScopedPtr<wxImageList>		m_ToolbarImages;
 	wxScopedPtr<wxBitmap>			m_Bitmap_Logo;
 
-	wxScopedPtr<EmuCoreAllocations>	m_CoreAllocs;
+	wxScopedPtr<SysCoreAllocations>	m_CoreAllocs;
 
 public:
 	wxScopedPtr<PluginManager>		m_CorePlugins;
-	wxScopedPtr<CoreEmuThread>		m_CoreThread;
+	wxScopedPtr<SysCoreThread>		m_CoreThread;
 
 protected:
 	// Note: Pointers to frames should not be scoped because wxWidgets handles deletion
@@ -226,6 +319,7 @@ public:
 
 	void ReloadPlugins();
 
+	void PostPadKey( wxKeyEvent& evt );
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	int  ThreadedModalDialog( DialogIdentifiers dialogId );
 	void Ping() const;
@@ -266,13 +360,16 @@ public:
 		return *m_MainFrame;
 	}
 
-	CoreEmuThread& GetCoreThreadOrExcept() const
+	SysCoreThread& GetCoreThreadOrExcept() const
 	{
 		if( !m_CoreThread )
 			throw Exception::ObjectIsNull( "core emulation thread" );
 
 		return *m_CoreThread;
 	}
+	
+	void OpenGsFrame();
+	void OnGsFrameClosed();
 
 	// --------------------------------------------------------------------------
 	//  Overrides of wxApp virtuals:
@@ -298,6 +395,8 @@ public:
 
 	void CloseProgramLog()
 	{
+		if( m_ProgramLogBox == NULL ) return;
+
 		m_ProgramLogBox->Close();
 
 		// disable future console log messages from being sent to the window.
@@ -320,6 +419,8 @@ public:
 	//void SetConsoleFrame( ConsoleLogFrame& frame ) { m_ProgramLogBox = &frame; }
 
 protected:
+	void InitDefaultGlobalAccelerators();
+	void BuildCommandHash();
 	void ReadUserModeSettings();
 	bool TryOpenConfigCwd();
 	void CleanupMess();
@@ -354,15 +455,16 @@ protected:
 //  AppEmuThread class
 // --------------------------------------------------------------------------------------
 
-class AppEmuThread : public CoreEmuThread
+class AppEmuThread : public SysCoreThread
 {
 protected:
 	wxKeyEvent		m_kevt;
 
 public:
 	AppEmuThread( PluginManager& plugins );
-	virtual ~AppEmuThread() throw() { }
+	virtual ~AppEmuThread() throw();
 
+	virtual void Suspend( bool isBlocking=true );
 	virtual void Resume();
 	virtual void StateCheck();
 
@@ -385,32 +487,57 @@ public:
 	bool IsReentrant() const { return Counter > 1; }
 };
 
+
 extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
 extern void LoadPluginsPassive();
 extern void LoadPluginsImmediate();
 extern void UnloadPlugins();
 
-extern wxRect wxGetDisplayArea();
-extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
-
 extern bool HandlePluginError( Exception::PluginError& ex );
 extern bool EmulationInProgress();
-
-#define TryInvoke( obj, runme ) \
-{ \
-    try { \
-		wxGetApp().Get##obj##OrExcept().runme; \
-	} \
-	catch( Exception::ObjectIsNull& ) { } \
-}
+extern bool SysHasValidState();
 
 extern void AppLoadSettings();
 extern void AppSaveSettings();
 extern void AppApplySettings( const AppConfig* oldconf=NULL );
 
+extern void SysStatus( const wxString& text );
 extern void SysSuspend();
 extern void SysResume();
 extern void SysReset();
 extern void SysExecute();
 extern void SysExecute( CDVD_SourceType cdvdsrc );
 
+
+// --------------------------------------------------------------------------------------
+//  AppInvoke  macro
+// -------------------------------------------------------------------------------------- 
+// This handy macro provides a safe way to invoke functions on objects that may or may not
+// exist.  If the object is null, the function is not called.  Useful for calling things that
+// are cosmetic optional, such as logging or status bars.
+//
+// Performance Note:  This macro uses exception handling, and should not be used in the
+//   context of tight loops or performant code.
+//
+// Parameters:
+//   obj   - name of the object.  The name must have a matching accessor in Pcsx2App in the
+//           format of GetSomethingOrExcept(), where 'Something' would be the object name.
+//   runme - The function to call, complete with parameters.  Note that parameters that
+//           perform actions (such as creating new objects or something) won't be run unless
+//           the 'obj' itself exists.
+//
+#define AppInvoke( obj, runme ) \
+do { \
+	try { \
+		wxGetApp().Get##obj##OrExcept().runme; \
+	} \
+	catch( Exception::ObjectIsNull& ) { } \
+} while( false )
+
+#define AppInvokeBool( obj, runme, dest ) \
+{ \
+	try { \
+		(dest) = wxGetApp().Get##obj##OrExcept().runme; \
+	} \
+	catch( Exception::ObjectIsNull& ) { } \
+} while( false )

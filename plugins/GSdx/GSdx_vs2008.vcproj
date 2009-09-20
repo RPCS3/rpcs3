@@ -6,7 +6,6 @@
 	ProjectGUID="{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
 	RootNamespace="GSdx"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

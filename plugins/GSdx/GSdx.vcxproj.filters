@@ -476,6 +476,9 @@
     <ClInclude Include="GSDevice9.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSDeviceDX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSDeviceNull.h">
       <Filter>Header Files</Filter>
     </ClInclude>

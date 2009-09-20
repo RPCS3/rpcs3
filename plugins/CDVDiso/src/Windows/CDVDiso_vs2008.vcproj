@@ -5,7 +5,7 @@
 	Name="CDVDiso"
 	ProjectGUID="{5F78E90B-BD22-47B1-9CA5-7A80F4DF5EF3}"
 	RootNamespace="CDVDiso"
-	TargetFrameworkVersion="131072"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -58,7 +58,6 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="bzip2.lib zlib.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
-				GenerateManifest="false"
 				ModuleDefinitionFile=".\CDVDiso.def"
 				TargetMachine="1"
 			/>
@@ -197,7 +196,6 @@
 				AdditionalDependencies="bzip2.lib zlib.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="2"
-				GenerateManifest="false"
 				ModuleDefinitionFile=".\CDVDiso.def"
 				GenerateDebugInformation="true"
 				TargetMachine="1"

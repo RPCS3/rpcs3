@@ -5,7 +5,6 @@
 	Name="wxBase28"
 	ProjectGUID="{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}"
 	RootNamespace="wxBase28"
-	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform

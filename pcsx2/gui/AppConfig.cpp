@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "MainFrame.h"
 #include "IniInterface.h"
 #include "Plugins.h"
 
@@ -524,6 +525,8 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 		AppLoadSettings();
 
 	AppApplySettings();
+	AppInvoke( MainFrame, ReloadRecentLists() );
+
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );

@@ -5,7 +5,7 @@
 	Name="pcsx2"
 	ProjectGUID="{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	RootNamespace="pcsx2"
-	TargetFrameworkVersion="131072"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -1923,7 +1923,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\HostGui.cpp"
+				RelativePath="..\..\gui\GlobalCommands.cpp"
 				>
 			</File>
 			<File

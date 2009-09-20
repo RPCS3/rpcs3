@@ -48,137 +48,143 @@ wxString GetTranslation( const char* msg )
 // information for troubleshooting purposes.
 //
 // From a debugging environment, you can trap your DevAssert by either breakpointing the
-// exception throw below, or by adding either Exception::AssertionFailure or
-// Exception::LogicError to your First-Chance Exception catch list (Visual Studio, under
-// the Debug->Exceptions menu/dialog).
+// exception throw below, or by adding Exception::LogicError to your First-Chance Exception
+// catch list (Visual Studio, under the Debug->Exceptions menu/dialog).  You should have
+// LogicErrors enabled as First-Chance exceptions regardless, so do it now. :)
 //
-DEVASSERT_INLINE void DevAssert( bool condition, const char* msg )
+// Returns:
+//   FALSE if the assertion succeeded (condition is valid), or true if the assertion
+//   failed.  The true clause is only reachable in release builds, and can be used by code
+//   to provide a "stable" escape clause for unexpected behavior.
+//
+DEVASSERT_INLINE bool DevAssert( bool condition, const char* msg )
 {
-	if( IsDevBuild && !condition )
-	{
+	if( condition ) return false;
+	if( IsDevBuild )
 		throw Exception::LogicError( msg );
-	}
+
+	wxASSERT_MSG_A( false, msg );
+	return true;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-namespace Exception
+// --------------------------------------------------------------------------------------
+//  Exception Namespace Implementations  (Format message handlers for general exceptions)
+// --------------------------------------------------------------------------------------
+
+Exception::BaseException::~BaseException() throw() {}
+
+void Exception::BaseException::InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt )
 {
-	BaseException::~BaseException() throw() {}
+	m_message_diag = msg_eng;
+	m_message_user = msg_xlt;
 
-	void BaseException::InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt )
-	{
-		m_message_diag = msg_eng;
-		m_message_user = msg_xlt;
-
-		// Linux/GCC exception handling is still suspect (this is likely to do with GCC more
-		// than linux), and fails to propagate exceptions up the stack from EErec code.  This
-		// could likely be because of the EErec using EBP.  So to ensure the user at least
-		// gets a log of the error, we output to console here in the constructor.
+	// Linux/GCC exception handling is still suspect (this is likely to do with GCC more
+	// than linux), and fails to propagate exceptions up the stack from EErec code.  This
+	// could likely be because of the EErec using EBP.  So to ensure the user at least
+	// gets a log of the error, we output to console here in the constructor.
 
 #ifdef __LINUX__
-        //wxLogError( msg_eng.c_str() );
-        Console::Error( msg_eng );
+    //wxLogError( msg_eng.c_str() );
+    Console::Error( msg_eng );
 #endif
-	}
+}
 
-	// given message is assumed to be a translation key, and will be stored in translated
-	// and untranslated forms.
-	void BaseException::InitBaseEx( const char* msg_eng )
-	{
-		m_message_diag = GetEnglish( msg_eng );
-		m_message_user = GetTranslation( msg_eng );
+// given message is assumed to be a translation key, and will be stored in translated
+// and untranslated forms.
+void Exception::BaseException::InitBaseEx( const char* msg_eng )
+{
+	m_message_diag = GetEnglish( msg_eng );
+	m_message_user = GetTranslation( msg_eng );
 
 #ifdef __LINUX__
-        //wxLogError( m_message_diag.c_str() );
-        Console::Error( msg_eng );
+    //wxLogError( m_message_diag.c_str() );
+    Console::Error( msg_eng );
 #endif
-	}
+}
 
-	wxString BaseException::FormatDiagnosticMessage() const
-	{
-		return m_message_diag + L"\n\n" + m_stacktrace;
-	}
+wxString Exception::BaseException::FormatDiagnosticMessage() const
+{
+	return m_message_diag + L"\n\n" + m_stacktrace;
+}
 
-	// ------------------------------------------------------------------------
-	wxString ObjectIsNull::FormatDiagnosticMessage() const
-	{
-		return wxsFormat(
-			L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
-			m_message_diag.c_str()
-		) + m_stacktrace;
-	}
+// ------------------------------------------------------------------------
+wxString Exception::ObjectIsNull::FormatDiagnosticMessage() const
+{
+	return wxsFormat(
+		L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
+		m_message_diag.c_str()
+	) + m_stacktrace;
+}
 
-	wxString ObjectIsNull::FormatDisplayMessage() const
-	{
-		return wxsFormat(
-			L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
-			m_message_diag.c_str()
-		);
-	}
+wxString Exception::ObjectIsNull::FormatDisplayMessage() const
+{
+	return wxsFormat(
+		L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
+		m_message_diag.c_str()
+	);
+}
 
-	// ------------------------------------------------------------------------
-	wxString Stream::FormatDiagnosticMessage() const
-	{
-		return wxsFormat(
-			L"Stream exception: %s\n\tFile/Object: %s",
-			m_message_diag.c_str(), StreamName.c_str()
-		) + m_stacktrace;
-	}
+// ------------------------------------------------------------------------
+wxString Exception::Stream::FormatDiagnosticMessage() const
+{
+	return wxsFormat(
+		L"Stream exception: %s\n\tFile/Object: %s",
+		m_message_diag.c_str(), StreamName.c_str()
+	) + m_stacktrace;
+}
 
-	wxString Stream::FormatDisplayMessage() const
-	{
-		return m_message_user + L"\n\n" +
-			wxsFormat( _("Name: %s"), StreamName.c_str() );
-	}
+wxString Exception::Stream::FormatDisplayMessage() const
+{
+	return m_message_user + L"\n\n" +
+		wxsFormat( _("Name: %s"), StreamName.c_str() );
+}
 
-	// ------------------------------------------------------------------------
-	wxString UnsupportedStateVersion::FormatDiagnosticMessage() const
-	{
-		// Note: no stacktrace needed for this one...
-		return wxsFormat( L"Unknown or unsupported savestate version: 0x%x", Version );
-	}
+// ------------------------------------------------------------------------
+wxString Exception::UnsupportedStateVersion::FormatDiagnosticMessage() const
+{
+	// Note: no stacktrace needed for this one...
+	return wxsFormat( L"Unknown or unsupported savestate version: 0x%x", Version );
+}
 
-	wxString UnsupportedStateVersion::FormatDisplayMessage() const
-	{
-		// m_message_user contains a recoverable savestate error which is helpful to the user.
-		return wxsFormat(
-			m_message_user + L"\n\n" +
-			wxsFormat( _("Cannot load savestate.  It is of an unknown or unsupported version."), Version )
-		);
-	}
+wxString Exception::UnsupportedStateVersion::FormatDisplayMessage() const
+{
+	// m_message_user contains a recoverable savestate error which is helpful to the user.
+	return wxsFormat(
+		m_message_user + L"\n\n" +
+		wxsFormat( _("Cannot load savestate.  It is of an unknown or unsupported version."), Version )
+	);
+}
 
-	// ------------------------------------------------------------------------
-	wxString StateCrcMismatch::FormatDiagnosticMessage() const
-	{
-		// Note: no stacktrace needed for this one...
-		return wxsFormat(
-			L"Game/CDVD does not match the savestate CRC.\n"
-			L"\tCdvd CRC: 0x%X\n\tGame CRC: 0x%X\n",
+// ------------------------------------------------------------------------
+wxString Exception::StateCrcMismatch::FormatDiagnosticMessage() const
+{
+	// Note: no stacktrace needed for this one...
+	return wxsFormat(
+		L"Game/CDVD does not match the savestate CRC.\n"
+		L"\tCdvd CRC: 0x%X\n\tGame CRC: 0x%X\n",
+		Crc_Savestate, Crc_Cdvd
+	);
+}
+
+wxString Exception::StateCrcMismatch::FormatDisplayMessage() const
+{
+	return wxsFormat(
+		m_message_user + L"\n\n" +
+		wxsFormat( 
+			L"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n",
 			Crc_Savestate, Crc_Cdvd
-		);
-	}
+		)
+	);
+}
 
-	wxString StateCrcMismatch::FormatDisplayMessage() const
-	{
-		return wxsFormat(
-			m_message_user + L"\n\n" +
-			wxsFormat( 
-				L"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n",
-				Crc_Savestate, Crc_Cdvd
-			)
-		);
-	}
+// ------------------------------------------------------------------------
+wxString Exception::IndexBoundsFault::FormatDiagnosticMessage() const
+{
+	return L"Index out of bounds on SafeArray: " + ArrayName +
+		wxsFormat( L"(index=%d, size=%d)", BadIndex, ArrayLength );
+}
 
-	// ------------------------------------------------------------------------
-	wxString IndexBoundsFault::FormatDiagnosticMessage() const
-	{
-		return L"Index out of bounds on SafeArray: " + ArrayName +
-			wxsFormat( L"(index=%d, size=%d)", BadIndex, ArrayLength );
-	}
-
-	wxString IndexBoundsFault::FormatDisplayMessage() const
-	{
-		return m_message_user;
-	}
+wxString Exception::IndexBoundsFault::FormatDisplayMessage() const
+{
+	return m_message_user;
 }

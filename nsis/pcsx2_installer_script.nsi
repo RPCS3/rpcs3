@@ -30,10 +30,11 @@
 
 ; ----------------------------------------
 
-!define APP_NAME "PCSX2 Beta r${SVNREV}"
+!define APP_NAME "PCSX2 0.9.7.r${SVNREV}"
+!define APP_FILENAME "pcsx2-0.9.7.r${SVNREV}"
 
 !define INSTDIR_REG_ROOT "HKLM"
-!define INSTDIR_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\PCSX2-beta-r${SVNREV}"
+!define INSTDIR_REG_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 
 
 ; ----------------------------------------
@@ -52,7 +53,7 @@ Function CheckVCRedist
    ClearErrors
    ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{9A25302D-30C0-39D9-BD6F-21E6EC160475}" "Version"
 
-   ; if VS 2005+ redist SP1 not installed, install it
+   ; if VS 2008+ redist SP1 not installed, install it
    IfErrors 0 VSRedistInstalled
    StrCpy $R0 "-1"
 
@@ -61,21 +62,39 @@ VSRedistInstalled:
    
 FunctionEnd
 
+; -------------------------------------
+; Safe directory deletion code. :)
+; 
+Function un.DeleteDirIfEmpty
+  FindFirst $R0 $R1 "$0\*.*"
+  strcmp $R1 "." 0 NoDelete
+   FindNext $R0 $R1
+   strcmp $R1 ".." 0 NoDelete
+    ClearErrors
+    FindNext $R0 $R1
+    IfErrors 0 NoDelete
+     FindClose $R0
+     Sleep 1000
+     RMDir "$0"
+  NoDelete:
+   FindClose $R0
+FunctionEnd
+
 ; ----------------------------------------
 ; The name of the installer
-Name "PCSX2 Beta r${SVNREV}"
+Name "${APP_NAME}"
 
-OutFile "pcsx2-beta-${SVNREV}-setup.exe"
+OutFile "${APP_FILENAME}-setup.exe"
 
 ; The default installation directory
-InstallDir "$PROGRAMFILES\pcsx2-r${SVNREV}"
+InstallDir "$PROGRAMFILES\PCSX2 0.9.7 beta"
 
 ; Registry key to check for directory (so if you install again, it will 
 ; overwrite the old one automatically)
 InstallDirRegKey HKLM "Software\pcsx2" "Install_Dir"
 
-; Request application privileges for Windows Vista
-RequestExecutionLevel admin
+; Request application privileges for Windows Vista (shouldn't be needed anymore!  -- air)
+;RequestExecutionLevel admin
 
 ; Pages
 
@@ -92,37 +111,48 @@ RequestExecutionLevel admin
 
 ; ----------------------------------------
 ; Basic section (emulation proper)
-Section "PCSX2 Beta r${SVNREV} (required)"
+Section "${APP_NAME} (required)"
 
   SectionIn RO
   
   ; Put file there. It's catched by the uninstaller script
   SetOutPath $INSTDIR
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
-
-  SetOutPath $INSTDIR
-  File /oname=pcsx2-r${SVNREV}.exe      ..\bin\pcsx2.exe
-  File ..\bin\w32pthreads.dll
-  File ..\bin\gnu_gettext.dll
-  
+  File           /oname=pcsx2-r${SVNREV}.exe      ..\bin\pcsx2.exe
   File /nonfatal /oname=pcsx2-dev-r${SVNREV}.exe  ..\bin\pcsx2-dev.exe
+  File ..\bin\w32pthreads.v2.dll
+  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+
+  ; -- Languages and Patches --
 
   SetOutPath $INSTDIR\Langs
-  File /r ..\bin\Langs\*.mo
+  !insertmacro UNINSTALL.LOG_OPEN_INSTALL
+  File /nonfatal /r ..\bin\Langs\*.mo
+  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
   SetOutPath $INSTDIR\Patches
+  !insertmacro UNINSTALL.LOG_OPEN_INSTALL
   File /r ..\bin\Patches\*.pnach
+  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
+
 
   ; NULL plugins are required, and really there should be more but we don't have working
-  ; SPU2 or GS null plugins right now.
+  ; SPU2 or GS null plugins right now.  (note: no install logging performed here -- nulls
+  ; are removed manually by name)
   
+  SetOutPath $INSTDIR\Plugins
   File ..\bin\Plugins\USBnull.dll
   File ..\bin\Plugins\DEV9null.dll
   File ..\bin\Plugins\FWnull.dll
   File ..\bin\Plugins\CDVDnull.dll
 
+  ; -- Other plugins --
+
 !ifdef INC_PLUGINS
+
   SetOutPath $INSTDIR\Plugins
+  !insertmacro UNINSTALL.LOG_OPEN_INSTALL
+
   File /nonfatal /oname=gsdx-sse2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse2.dll
   File /nonfatal /oname=gsdx-ssse3-r${SVNREV_GSDX}.dll   ..\bin\Plugins\gsdx-ssse3.dll 
   File /nonfatal /oname=gsdx-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse4.dll  
@@ -132,20 +162,19 @@ Section "PCSX2 Beta r${SVNREV} (required)"
 
   File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll     ..\bin\Plugins\zerogs.dll     
   File /nonfatal /oname=zerospu2-r${SVNREV_ZEROSPU2}.dll ..\bin\Plugins\zerospu2.dll   
+
+  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 !endif
 
-  SetOutPath $INSTDIR
-  !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
-  
   ; Write the installation path into the registry
   WriteRegStr HKLM Software\pcsx2 "Install_Dir" "$INSTDIR"
   
   ; Write the uninstall keys for Windows
   WriteRegStr HKLM "${INSTDIR_REG_KEY}" "DisplayName" "PCSX2 - Playstation 2 Emulator"
-  WriteRegStr HKLM "${INSTDIR_REG_KEY}" "UninstallString" '"$INSTDIR\uninstall-r${SVNREV}.exe"'
+  WriteRegStr HKLM "${INSTDIR_REG_KEY}" "UninstallString" '"$INSTDIR\${UNINST_EXE}-r${SVNREV}.exe"'
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}" "NoModify" 1
   WriteRegDWORD HKLM "${INSTDIR_REG_KEY}" "NoRepair" 1
-  WriteUninstaller "uninstall-r${SVNREV}.exe"
+  WriteUninstaller "${UNINST_EXE}-r${SVNREV}.exe"
 
 SectionEnd
 
@@ -175,12 +204,13 @@ Section "Start Menu Shortcuts"
 
   SetOutPath $INSTDIR
     
-  ; Need to change name too, for each version
   CreateDirectory "$SMPROGRAMS\pcsx2"
-  CreateShortCut "$SMPROGRAMS\pcsx2\Uninstall-r${SVNREV}.lnk"  "$INSTDIR\uninstall-r${SVNREV}.exe"  "" "$INSTDIR\uninstall-r${SVNREV}.exe" 0
-  CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-r${SVNREV}.lnk"      "$INSTDIR\pcsx2-r${SVNREV}.exe"      "" "$INSTDIR\pcsx2-r${SVNREV}.exe" 0
-  CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
-    "PCSX2 Devel (has debugging and memory dumping)"
+  CreateShortCut "$SMPROGRAMS\pcsx2\${UNINST_EXE}-r${SVNREV}.lnk"  "$INSTDIR\${UNINST_EXE}-r${SVNREV}.exe"  "" "$INSTDIR\${UNINST_EXE}-r${SVNREV}.exe" 0
+  CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-r${SVNREV}.lnk"          "$INSTDIR\pcsx2-r${SVNREV}.exe"          "" "$INSTDIR\pcsx2-r${SVNREV}.exe" 0
+
+  IfFileExists ..\bin\pcsx2-dev.exe 0 +2
+    CreateShortCut "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"  "$INSTDIR\pcsx2-dev-r${SVNREV}.exe"  "" "$INSTDIR\pcsx2-dev-r${SVNREV}.exe" 0 "" "" \
+      "PCSX2 Devel (has additional logging support)"
 
 SectionEnd
 
@@ -205,34 +235,71 @@ FunctionEnd
 ; --------------------------------------
 ; Uninstaller
 
-Section "Un.Safe uninstall (Removes only files installed by this installer)"
+Function .removeShorties
+
+    ; Remove shortcuts, if any
+    Delete "$SMPROGRAMS\pcsx2\${UNINST_EXE}-r${SVNREV}.lnk"
+    Delete "$SMPROGRAMS\pcsx2\pcsx2-r${SVNREV}.lnk"
+    Delete "$SMPROGRAMS\pcsx2\pcsx2-dev-r${SVNREV}.lnk"
+    
+    StrCpy $0 "$SMPROGRAMS\pcsx2"
+    Call un.DeleteDirIfEmpty
+
+FunctionEnd
+
+; Languages, patches, and null plugins should only be removed if all previous versions of 
+; PCSX2 have been uninstalled.  And we know that's happened when the pcsx2\versions registry
+; key is empty.
+Function .removeSharedJunk
+    !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Langs"
+    !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Patches"
+
+    Delete "$INSTDIR\Plugins\USBnull.dll"
+    Delete "$INSTDIR\Plugins\DEV9null.dll"
+    Delete "$INSTDIR\Plugins\FWnull.dll"
+    Delete "$INSTDIR\Plugins\CDVDnull.dll"
+FunctionEnd
+
+
+Section "Un.Basic Removal (removes only files installed by this package) ${APP_NAME}"
+
+  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR"
+
+  MessageBox MB_YESNO "Also remove plugins that were installed with this package?" IDYES true IDNO false
+  true:
+    !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
+  false:
+
+  !insertmacro UNINSTALL.LOG_END_UNINSTALL
 
   ; Remove registry keys
   DeleteRegKey HKLM ${INSTDIR_REG_KEY}
+
+  Call .removeShorties
+
+  DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
+
+  ; And remove the install dir but only if it's clean of user content:
+  StrCpy $0 "$INSTDIR"
+  Call un.DeleteDirIfEmpty
+
+SectionEnd
+
+Section Un.Full Removal (completely removes all PCSX2 program files and folders)
+
+  MessageBox MB_YESNO "WARNING!  This will remove *all* files in $INSTDIR -- are you sure you want to proceed?" IDYES true IDNO false
+  true:
+
+  RMDir /r "$INSTDIR"
+  Call .removeShorties
+
+  DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
   DeleteRegKey HKLM Software\pcsx2
 
-  ; Remove shortcuts, if any
-  Delete "$SMPROGRAMS\pcsx2\*.*"
-  RMDir "$SMPROGRAMS\pcsx2"
-
-  !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR"
-  DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
-
-SectionEnd
-
-; This option lets you COMPLETELY uninstall by deleting the main folder. Caution! :)
-Section /o "Un.Complete Uninstall.  *Completely* removes all files and folders."
-
-  MessageBox MB_YESNO "WANRING!  You have chosen to remove ALL files in the installation folder, including all saves, screenshots, plugins, patches, and bios files. Do you want to proceed?" IDYES true IDNO false
-  true:
-  Delete "$SMPROGRAMS\pcsx2\*.*"
-  RMDir "$SMPROGRAMS\pcsx2"
-  RMDir /r "$INSTDIR"
-  DeleteRegKey ${INSTDIR_REG_ROOT} "${INSTDIR_REG_KEY}"
   false:
-
 SectionEnd
 
+; --------------------------------------
 Function UN.onInit
 
          ;begin uninstall, could be added on top of uninstall section instead

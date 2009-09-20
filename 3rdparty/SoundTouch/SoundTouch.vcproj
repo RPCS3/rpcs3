@@ -5,7 +5,6 @@
 	Name="SoundTouch"
 	ProjectGUID="{E9B51944-7E6D-4BCD-83F2-7BBD5A46182D}"
 	RootNamespace="SoundTouch"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform

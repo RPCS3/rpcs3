@@ -6,7 +6,6 @@
 	ProjectGUID="{A51123F5-9505-4EAE-85E7-D320290A272C}"
 	RootNamespace="x86emitter"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform
