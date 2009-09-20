@@ -1917,7 +1917,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	}
 	else
 	{
-		psHu32(GIF_STAT) &= ~(GIF_STAT_APATH2 | GIF_STAT_OPH);
+		gifRegs->stat._u32 &= ~(GIF_STAT_APATH2 | GIF_STAT_OPH);
 		ret = vif1.tag.size;
 		vif1.tag.size = 0;
 		vif1.cmd = 0;

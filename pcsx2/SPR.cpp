@@ -62,14 +62,14 @@ int  _SPR0chain()
 	{
 		case MFD_VIF1:
 		case MFD_GIF:
-			if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) 
+			if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) 
 				Console::WriteLn("SPR MFIFO Write outside MFIFO area");
 			else 
 				mfifotransferred += spr0->qwc;
 			
 			hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
 			spr0->madr += spr0->qwc << 4;
-			spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+			spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
 			break;
 			
 		case NO_MFD:
@@ -139,7 +139,7 @@ static __forceinline void _dmaSPR0()
 {
 	if (dmacRegs->ctrl.STS == STS_fromSPR)
 	{
-		Console::WriteLn("SPR0 stall %d", (psHu32(DMAC_CTRL) >> 6)&3);
+		Console::WriteLn("SPR0 stall %d", dmacRegs->ctrl.STS);
 	}
 
 	// Transfer Dn_QWC from SPR to Dn_MADR
@@ -183,7 +183,7 @@ static __forceinline void _dmaSPR0()
 			switch (id)
 			{
 				case TAG_CNTS: // CNTS - Transfer QWC following the tag (Stall Control)
-					if (dmacRegs->ctrl.STS == STS_fromSPR) psHu32(DMAC_STADR) = spr0->madr + (spr0->qwc * 16);					//Copy MADR to DMAC_STADR stall addr register
+					if (dmacRegs->ctrl.STS == STS_fromSPR) dmacRegs->stadr.ADDR = spr0->madr + (spr0->qwc * 16);					//Copy MADR to DMAC_STADR stall addr register
 					break;
 
 				case TAG_CNT: // CNT - Transfer QWC following the tag.
@@ -232,8 +232,8 @@ void SPRFROMinterrupt()
 		{
 			case MFD_GIF:
 			{
-				if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
-				spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+				if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
+				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
 				//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
 				mfifoGIFtransfer(mfifotransferred);
 				mfifotransferred = 0;
@@ -243,7 +243,7 @@ void SPRFROMinterrupt()
 			case MFD_VIF1:
 			{
 				if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("VIF MFIFO Write outside MFIFO area");
-				spr0->madr = psHu32(DMAC_RBOR) + (spr0->madr & psHu32(DMAC_RBSR));
+				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
 				//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
 				mfifoVIF1transfer(mfifotransferred);
 				mfifotransferred = 0;

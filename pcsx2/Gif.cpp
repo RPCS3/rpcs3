@@ -86,7 +86,7 @@ __forceinline void gsInterrupt()
 	gif->chcr.STR = 0;
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	
-	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); 
+	gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); 
 	
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
@@ -188,7 +188,7 @@ void GIFdma()
 	{
 		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
-		if ((gif->madr + (gif->qwc * 16)) > psHu32(DMAC_STADR)) 
+		if ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) 
 		{
 			CPU_INT(2, gscycles);
 			gscycles = 0;
@@ -201,12 +201,11 @@ void GIFdma()
 
 	clearFIFOstuff(true);
 	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // OPH=1 | APATH=3]
-	//psHu32(GIF_STAT) |= 0x10000000;
 	
 	//Path2 gets priority in intermittent mode
 	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && (Path3progress == IMAGE_MODE)) 
 	{
-		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", psHu32(GIF_STAT) & 0x100, (vif1.cmd & 0x7f), psHu32(GIF_MODE), Path3progress);
+		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", gifRegs->stat.P1Q, (vif1.cmd & 0x7f), gifRegs->mode._u32, Path3progress);
 		CPU_INT(2, 16);
 		return;
 	}
@@ -260,7 +259,7 @@ void GIFdma()
 		if (dmacRegs->ctrl.STD == STD_GIF)
 		{ 
 			// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
-			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > psHu32(DMAC_STADR)) && (id == 4)) 
+			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) && (id == 4)) 
 			{
 				// stalled
 				Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
@@ -307,10 +306,10 @@ void dmaGIF()
 
 	Path3progress = STOPPED_MODE;
 	gspath3done = 0; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
-	psHu32(GIF_STAT) |= GIF_STAT_P3Q;
+
 	gifRegs->stat.P3Q = 1;
 	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) ( 31? 16! arcum42) [used to be 0xE00; // OPH=1 | APATH=3]
-	//psHu32(GIF_STAT) |= 0x10000000; 
+
 	clearFIFOstuff(true);
 	
 	if (dmacRegs->ctrl.MFD == MFD_GIF)  // GIF MFIFO
@@ -345,9 +344,9 @@ static __forceinline int mfifoGIFrbTransfer()
 	u32 *src;
 
 	/* Check if the transfer should wrap around the ring buffer */
-	if ((gif->madr+mfifoqwc*16) > (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16)) 
+	if ((gif->madr + mfifoqwc * 16) > (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16)) 
 	{
-		int s1 = ((psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)+16) - gif->madr) >> 4;
+		int s1 = ((dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16) - gif->madr) >> 4;
 		int s2 = (mfifoqwc - s1);
 		// fixme - I don't think these should use WRITERING_DMA, since our source
 		// isn't the DmaGetAddr(gif->madr) address that WRITERING_DMA expects.
@@ -360,7 +359,7 @@ static __forceinline int mfifoGIFrbTransfer()
 		if (s1 == (mfifoqwc - s2)) 
 		{
 			/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
-			src = (u32*)PSM(psHu32(DMAC_RBOR));
+			src = (u32*)PSM(dmacRegs->rbor.ADDR);
 			if (src == NULL) return -1;
 			s2 = WRITERING_DMA(src, s2);
 		} 
@@ -377,7 +376,7 @@ static __forceinline int mfifoGIFrbTransfer()
 		src = (u32*)PSM(gif->madr);
 		if (src == NULL) return -1;
 		mfifoqwc = WRITERING_DMA(src, mfifoqwc);
-		gif->madr = psHu32(DMAC_RBOR) + (gif->madr & psHu32(DMAC_RBSR));
+		gif->madr = dmacRegs->rbor.ADDR + (gif->madr & dmacRegs->rbsr.RMSK);
 	}
 
 	gifqwc -= mfifoqwc;
@@ -391,8 +390,8 @@ static __forceinline int mfifoGIFchain()
 	/* Is QWC = 0? if so there is nothing to transfer */
 	if (gif->qwc == 0) return 0;
 
-	if (gif->madr >= psHu32(DMAC_RBOR) &&
-		gif->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR))) 
+	if (gif->madr >= dmacRegs->rbor.ADDR &&
+		gif->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)) 
 	{
 		if (mfifoGIFrbTransfer() == -1) return -1;
 	} 
@@ -406,6 +405,11 @@ static __forceinline int mfifoGIFchain()
 	}
 
 	return 0;
+}
+
+static u32 qwctag(u32 mask)
+{
+	return (dmacRegs->rbor.ADDR + (mask & dmacRegs->rbsr.RMSK));
 }
 
 void mfifoGIFtransfer(int qwc) 
@@ -436,7 +440,7 @@ void mfifoGIFtransfer(int qwc)
 			return;
 		}
 		
-		gif->tadr = psHu32(DMAC_RBOR) + (gif->tadr & psHu32(DMAC_RBSR));
+		gif->tadr = qwctag(gif->tadr);
 		ptag = (u32*)dmaGetAddr(gif->tadr);
 			
 		Tag::UnsafeTransfer(gif, ptag);
@@ -449,35 +453,36 @@ void mfifoGIFtransfer(int qwc)
 				ptag[1], ptag[0], gif->qwc, id, gif->madr, gif->tadr, gifqwc, spr0->madr);
 
 		gifqwc--;
+
 		switch (id) 
 		{
 			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
-				gif->tadr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));
+				gif->tadr = qwctag(gif->tadr + 16);
 				gifstate = GIF_STATE_DONE;										//End Transfer
 				break;
 
 			case TAG_CNT: // CNT - Transfer QWC following the tag.
-				gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));						//Set MADR to QW after Tag            
-				gif->tadr = psHu32(DMAC_RBOR) + ((gif->madr + (gif->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
+				gif->madr = qwctag(gif->tadr + 16);						//Set MADR to QW after Tag            
+				gif->tadr = qwctag(gif->madr + (gif->qwc << 4));			//Set TADR to QW following the data
 				gifstate = GIF_STATE_READY;
 				break;
 
 			case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
 				temp = gif->madr;								//Temporarily Store ADDR
-				gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
+				gif->madr = qwctag(gif->tadr + 16); 					  //Set MADR to QW following the tag
 				gif->tadr = temp;								//Copy temporarily stored ADDR to Tag
 				gifstate = GIF_STATE_READY;
 				break;
 
 			case TAG_REF: // Ref - Transfer QWC from ADDR field
 			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control) 
-				gif->tadr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));							//Set TADR to next tag
+				gif->tadr = qwctag(gif->tadr + 16);							//Set TADR to next tag
 				gifstate = GIF_STATE_READY;
 				break;
 
 			case TAG_END: // End - Transfer QWC following the tag
-				gif->madr = psHu32(DMAC_RBOR) + ((gif->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
-				gif->tadr = psHu32(DMAC_RBOR) + ((gif->madr + (gif->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
+				gif->madr = qwctag(gif->tadr + 16);		//Set MADR to data following the tag
+				gif->tadr = qwctag(gif->madr + (gif->qwc << 4));			//Set TADR to QW following the data
 				gifstate = GIF_STATE_DONE;						//End Transfer
 				break;
 			}
@@ -556,7 +561,7 @@ void gifMFIFOInterrupt()
 	gspath3done = 0;
 	gscycles = 0;
 	
-	psHu32(GIF_STAT) &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
+	gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
 	
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
 	gif->chcr.STR = 0;

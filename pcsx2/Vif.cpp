@@ -338,8 +338,8 @@ void __fastcall UNPACK_V4_8u(u32 *dest, u32 *data, int size)
 
 static __forceinline int mfifoVIF1rbTransfer()
 {
-	u32 maddr = psHu32(DMAC_RBOR);
-	u32 ret, msize = psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR) + 16;
+	u32 maddr = dmacRegs->rbor.ADDR;
+	u32 ret, msize = dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16;
 	u16 mfifoqwc = std::min(vif1ch->qwc, vifqwc);
 	u32 *src;
 
@@ -398,8 +398,8 @@ static __forceinline int mfifo_VIF1chain()
 		return 0;
 	}
 
-	if (vif1ch->madr >= psHu32(DMAC_RBOR) &&
-	        vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
+	if (vif1ch->madr >= dmacRegs->rbor.ADDR &&
+	        vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
 	{
 		u16 startqwc = vif1ch->qwc;
 		ret = mfifoVIF1rbTransfer();
@@ -420,6 +420,11 @@ static __forceinline int mfifo_VIF1chain()
 	return ret;
 }
 
+static u32 qwctag(u32 mask)
+{
+	return (dmacRegs->rbor.ADDR + (mask & dmacRegs->rbsr.RMSK));
+}
+
 void mfifoVIF1transfer(int qwc)
 {
 	u32 *ptag;
@@ -434,7 +439,7 @@ void mfifoVIF1transfer(int qwc)
 		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr._u32, vif1.vifstalled, vif1.done);
 		if (vif1.inprogress & 0x10)
 		{
-			if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
+			if (vif1ch->madr >= dmacRegs->rbor.ADDR && vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
 				CPU_INT(10, 0);
 			else
 				CPU_INT(10, vif1ch->qwc * BIAS);
@@ -477,35 +482,35 @@ void mfifoVIF1transfer(int qwc)
 		switch (id)
 		{
 			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
-				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));
+				vif1ch->tadr = qwctag(vif1ch->tadr + 16);
 				vif1.done = true;										//End Transfer
 				break;
 
 			case TAG_CNT: // CNT - Transfer QWC following the tag.
-				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));						//Set MADR to QW after Tag
-				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
+				vif1ch->madr = qwctag(vif1ch->tadr + 16);						//Set MADR to QW after Tag
+				vif1ch->tadr = qwctag(vif1ch->madr + (vif1ch->qwc << 4));			//Set TADR to QW following the data
 				vif1.done = false;
 				break;
 
 			case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
 			{
 				int temp = vif1ch->madr;								//Temporarily Store ADDR
-				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR)); 					  //Set MADR to QW following the tag
+				vif1ch->madr = qwctag(vif1ch->tadr + 16); 					  //Set MADR to QW following the tag
 				vif1ch->tadr = temp;								//Copy temporarily stored ADDR to Tag
-				if ((temp & psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("Next tag = %x outside ring %x size %x", temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
+				if ((temp & dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console::WriteLn("Next tag = %x outside ring %x size %x", temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
 				vif1.done = false;
 				break;
 			}
 
 			case TAG_REF: // Ref - Transfer QWC from ADDR field
 			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
-				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));							//Set TADR to next tag
+				vif1ch->tadr =qwctag(vif1ch->tadr + 16);							//Set TADR to next tag
 				vif1.done = false;
 				break;
 
 			case TAG_END: // End - Transfer QWC following the tag
-				vif1ch->madr = psHu32(DMAC_RBOR) + ((vif1ch->tadr + 16) & psHu32(DMAC_RBSR));		//Set MADR to data following the tag
-				vif1ch->tadr = psHu32(DMAC_RBOR) + ((vif1ch->madr + (vif1ch->qwc << 4)) & psHu32(DMAC_RBSR));			//Set TADR to QW following the data
+				vif1ch->madr = qwctag(vif1ch->tadr + 16);		//Set MADR to data following the tag
+				vif1ch->tadr = qwctag(vif1ch->madr + (vif1ch->qwc << 4));			//Set TADR to QW following the data
 				vif1.done = true;										//End Transfer
 				break;
 		}
@@ -579,7 +584,7 @@ void vifMFIFOInterrupt()
 				}
 
 				 mfifoVIF1transfer(0);
-				 if (vif1ch->madr >= psHu32(DMAC_RBOR) && vif1ch->madr <= (psHu32(DMAC_RBOR) + psHu32(DMAC_RBSR)))
+				 if (vif1ch->madr >= dmacRegs->rbor.ADDR && vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
 					CPU_INT(10, 0);
 				else
 					CPU_INT(10, vif1ch->qwc * BIAS);
