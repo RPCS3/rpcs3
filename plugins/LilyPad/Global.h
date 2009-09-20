@@ -29,7 +29,16 @@
 
 
 #include <windows.h>
+
+#ifdef PCSX2_DEBUG
+#define _CRTDBG_MAPALLOC
+#define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
+#include <crtdbg.h>
+#else
+#include <stdlib.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <math.h>

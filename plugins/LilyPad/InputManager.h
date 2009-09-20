@@ -149,18 +149,11 @@ struct ForceFeedbackAxis {
 	int id;
 };
 
-// Note:  Unbound controls don't need to be listed, though they can be.
-// Nonexistent controls can be listed as well (Like listing 5 buttons
-// even for three button mice, as some APIs make it impossible to figure
-// out which buttons you really have).
-
 // Used both for active devices and for sets of settings for devices.
 // Way things work:
 // LoadSettings() will delete all device info, then load settings to get
 // one set of generic devices.  Then I enumerate all devices.  Then I merge
 // them, moving settings from the generic devices to the enumerated ones.
-
-// Can't refresh without loading settings.
 
 struct PadBindings {
 	Binding *bindings;
@@ -168,6 +161,19 @@ struct PadBindings {
 	ForceFeedbackBinding *ffBindings;
 	int numFFBindings;
 };
+
+struct InitInfo {
+	// 1 when binding key to ignore.
+	int bindingIgnore;
+	// 1 when binding.
+	int binding;
+
+	HWND hWndTop;
+	HWND hWnd;
+	// For config screen, need to eat button's message handling.
+	HWND hWndButton;
+};
+
 
 // Mostly self-contained, but bindings are modified by config.cpp, to make
 // updating the ListView simpler.
@@ -246,8 +252,7 @@ public:
 
 	void CalcVirtualState();
 
-	// args are OS dependent.
-	inline virtual int Activate(void *args) {
+	virtual int Activate(InitInfo *args) {
 		return 0;
 	}
 
@@ -298,8 +303,8 @@ public:
 	~InputDeviceManager();
 
 	void AddDevice(Device *d);
-	Device *GetActiveDevice(void *info, unsigned int *uid, int *index, int *value);
-	void Update(void *attachInfo);
+	Device *GetActiveDevice(InitInfo *info, unsigned int *uid, int *index, int *value);
+	void Update(InitInfo *initInfo);
 
 	// Called after reading state, after Update().
 	void PostRead();

@@ -155,7 +155,7 @@ public:
 		}
 	}
 
-	int Activate(void *d) {
+	int Activate(InitInfo *initInfo) {
 		int i;
 		IDirectInput8 *di8 = GetDirectInput();
 		Deactivate();
@@ -208,16 +208,15 @@ public:
 			}
 			free(formats);
 		}
-		InitInfo *info = (InitInfo*)d;
 		// Note:  Have to use hWndTop to properly hide cursor for mouse device.
 		if (type == OTHER) {
-			did->SetCooperativeLevel(info->hWndTop, DISCL_BACKGROUND | DISCL_EXCLUSIVE);
+			did->SetCooperativeLevel(initInfo->hWndTop, DISCL_BACKGROUND | DISCL_EXCLUSIVE);
 		}
 		else if (type == KEYBOARD) {
-			did->SetCooperativeLevel(info->hWndTop, DISCL_FOREGROUND);
+			did->SetCooperativeLevel(initInfo->hWndTop, DISCL_FOREGROUND);
 		}
 		else {
-			did->SetCooperativeLevel(info->hWndTop, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
+			did->SetCooperativeLevel(initInfo->hWndTop, DISCL_FOREGROUND | DISCL_EXCLUSIVE);
 		}
 		if (did->Acquire() != DI_OK) {
 			did->Release();

@@ -12,10 +12,6 @@
 #include "DualShock3.h"
 #include "HidDevice.h"
 
-#ifdef PCSX2_DEBUG
-#include "crtdbg.h"
-#endif
-
 // LilyPad version.
 #define VERSION ((0<<8) | 10 | (0<<24))
 
@@ -404,7 +400,7 @@ void Update(unsigned int port, unsigned int slot) {
 		s[i&1][i>>1] = pads[i&1][i>>1].lockedSum;
 	}
 	InitInfo info = {
-		0, hWnd, hWnd, 0
+		0, 0, hWnd, hWnd, 0
 	};
 
 	dm->Update(&info);
@@ -694,7 +690,7 @@ s32 CALLBACK PADinit(u32 flags) {
 
 	#ifdef PCSX2_DEBUG
 	int tmpFlag = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
-	tmpFlag |= _CRTDBG_LEAK_CHECK_DF;
+	tmpFlag |= _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF;
 	_CrtSetDbgFlag( tmpFlag );
 	#endif
 
@@ -838,6 +834,29 @@ void CALLBACK PADconfigure() {
 	Configure();
 }
 
+
+DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
+	wchar_t newTitle[200];
+	if (hWnd) {
+		int len = GetWindowTextW(hWnd, newTitle, 200);
+		if (len > 0 && len < 199) {
+			wchar_t *end;
+			if (end = wcsstr(newTitle, L" | State ")) *end = 0;
+			SetWindowTextW(hWnd, newTitle);
+		}
+	}
+	return 0;
+}
+
+void SaveStateChanged() {
+	if (config.saveStateTitle) {
+		// GSDX only checks its window's message queue at certain points or something, so
+		// have to do this in another thread to prevent deadlock.
+		HANDLE hThread = CreateThread(0, 0, RenameWindowThreadProc, 0, 0, 0);
+		if (hThread) CloseHandle(hThread);
+	}
+}
+
 s32 CALLBACK PADopen(void *pDsp) {
 	if (openCount++) return 0;
 	DEBUG_TEXT_OUT("LilyPad opened\n\n");
@@ -865,6 +884,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 		if (config.forceHide) {
 			EatWndProc(hWnd, HideCursorProc, 0);
 		}
+		SaveStateChanged();
 	}
 
 	if (restoreFullScreen) {
@@ -948,19 +968,7 @@ u8 CALLBACK PADpoll(u8 value) {
 		DEBUG_OUT(query.response[1+query.lastByte]);
 		return query.response[++query.lastByte];
 	}
-	/*
-	{
-		query.numBytes = 35;
-		u8 test[35] = {0xFF, 0x80, 0x5A,
-			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
-			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
-			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80,
-			0x73, 0x5A, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80
-		};
-		memcpy(query.response, test, sizeof(test));
-		DEBUG_OUT(query.response[1+query.lastByte]);
-		return query.response[++query.lastByte];
-	}//*/
+
 	int i;
 	Pad *pad = &pads[query.port][query.slot];
 	if (query.lastByte == 0) {
@@ -1213,9 +1221,6 @@ u32 CALLBACK PADquery() {
 	return 3;
 }
 
-//void CALLBACK PADgsDriverInfo(GSdriverInfo *info) {
-//}
-
 INT_PTR CALLBACK AboutDialogProc(HWND hWndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	if (uMsg == WM_INITDIALOG) {
 		wchar_t idString[100];
@@ -1235,19 +1240,6 @@ void CALLBACK PADabout() {
 }
 
 s32 CALLBACK PADtest() {
-	return 0;
-}
-
-DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
-	wchar_t newTitle[200];
-	if (hWnd) {
-		int len = GetWindowTextW(hWnd, newTitle, 200);
-		if (len > 0 && len < 199) {
-			wchar_t *end;
-			if (end = wcsstr(newTitle, L" | State ")) *end = 0;
-			SetWindowTextW(hWnd, newTitle);
-		}
-	}
 	return 0;
 }
 
@@ -1289,12 +1281,7 @@ keyEvent* CALLBACK PADkeyEvent() {
 	if (ev.key == VK_F2 && ev.evt == KEYPRESS) {
 		saveStateIndex += 1 - 2*shiftDown;
 		saveStateIndex = (saveStateIndex+10)%10;
-		if (config.saveStateTitle) {
-			// GSDX only checks its window's message queue at certain points or something, so
-			// have to do this in another thread to prevent deadlock.
-			HANDLE hThread = CreateThread(0, 0, RenameWindowThreadProc, 0, 0, 0);
-			if (hThread) CloseHandle(hThread);
-		}
+		SaveStateChanged();
 	}
 
 	// So don't change skip mode on alt-F4.

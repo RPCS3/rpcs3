@@ -73,12 +73,11 @@ public:
 		this->hDevice = hDevice;
 	}
 
-	int Activate(void *d) {
-		InitInfo *info = (InitInfo*)d;
+	int Activate(InitInfo *initInfo) {
 		Deactivate();
-		HWND hWnd = info->hWnd;
-		if (info->hWndButton) {
-			hWnd = info->hWndButton;
+		HWND hWnd = initInfo->hWnd;
+		if (initInfo->hWndButton) {
+			hWnd = initInfo->hWndButton;
 		}
 		active = 1;
 		if (!rawKeyboardActivatedCount++) {
@@ -118,12 +117,11 @@ public:
 		this->hDevice = hDevice;
 	}
 
-	int Activate(void *d) {
-		InitInfo *info = (InitInfo*)d;
+	int Activate(InitInfo *initInfo) {
 		Deactivate();
-		HWND hWnd = info->hWnd;
-		if (info->hWndButton) {
-			hWnd = info->hWndButton;
+		HWND hWnd = initInfo->hWnd;
+		if (initInfo->hWndButton) {
+			hWnd = initInfo->hWndButton;
 		}
 
 		active = 1;

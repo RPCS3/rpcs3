@@ -347,7 +347,7 @@ void InputDeviceManager::AddDevice(Device *d) {
 	devices[numDevices++] = d;
 }
 
-void InputDeviceManager::Update(void *info) {
+void InputDeviceManager::Update(InitInfo *info) {
 	for (int i=0; i<numDevices; i++) {
 		if (devices[i]->enabled) {
 			if (!devices[i]->active) {
@@ -368,7 +368,7 @@ void InputDeviceManager::PostRead() {
 	}
 }
 
-Device *InputDeviceManager::GetActiveDevice(void *info, unsigned int *uid, int *index, int *value) {
+Device *InputDeviceManager::GetActiveDevice(InitInfo *info, unsigned int *uid, int *index, int *value) {
 	int i, j;
 	Update(info);
 	int bestDiff = FULLY_DOWN/2;

@@ -36,14 +36,13 @@ public:
 		return 1;
 	}
 
-	int Activate(void *d) {
+	int Activate(InitInfo *initInfo) {
 		if (ikhd) ikhd->Deactivate();
-		InitInfo *info = (InitInfo*) d;
-		binding = info->bindingIgnore;
-		if (info->hWndButton)
-			EatWndProc(info->hWndButton, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
+		binding = initInfo->bindingIgnore;
+		if (initInfo->hWndButton)
+			EatWndProc(initInfo->hWndButton, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
 		else
-			EatWndProc(info->hWnd, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
+			EatWndProc(initInfo->hWnd, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
 		InitState();
 		ikhd = this;
 		active = 1;

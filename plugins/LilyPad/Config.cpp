@@ -154,8 +154,9 @@ void RefreshEnabledDevices(int updateDeviceList) {
 						dm->EnableDevice(i);
 					}
 		}
-		else
-					dm->DisableDevice(i);
+		else {
+			dm->DisableDevice(i);
+		}
 	}
 }
 
@@ -1278,7 +1279,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 		else {
 			unsigned int uid;
 			int value;
-			InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, selected)};
+			InitInfo info = {selected==0x7F, 1, hWndProp, hWnd, GetDlgItem(hWnd, selected)};
 			Device *dev = dm->GetActiveDevice(&info, &uid, &index, &value);
 			if (dev) {
 				int command = selected;
@@ -1482,7 +1483,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				if (selIndex >= 0) {
 					if (GetBinding(port, slot, selIndex, dev, b, ffb)) {
 						selected = 0xFF;
-						InitInfo info = {0, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
+						InitInfo info = {0, 1, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
 						EatWndProc(info.hWndButton, DoNothingWndProc, 0);
 						for (int i=0; i<dm->numDevices; i++) {
 							if (dm->devices[i] != dev) {
@@ -1519,7 +1520,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					}
 				}
 
-				InitInfo info = {selected==0x7F, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
+				InitInfo info = {selected==0x7F, 1, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
 				EatWndProc(info.hWndButton, DoNothingWndProc, 0);
 				int w = timeGetTime();
 				dm->Update(&info);

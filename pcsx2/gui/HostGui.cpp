@@ -63,6 +63,7 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 	switch( evt.GetKeyCode() )
 	{
 		case WXK_ESCAPE:
+			GetMainFrame().GetMenuBar()->Check( MenuId_Emu_Pause, true );
 			m_CoreThread->Suspend();
 		break;
 	

@@ -20,8 +20,8 @@ wchar_t *WindowsKeyboard::GetPhysicalControlName(PhysicalControl *control) {
 }
 
 void WindowsKeyboard::UpdateKey(int vkey, int state) {
-	if (vkey > 4 && vkey < 256) {
-		physicalControlState[vkey] = (state << 16);
+	if (vkey > 7 && vkey < 256) {
+		physicalControlState[vkey] = state * FULLY_DOWN;
 	}
 }
 

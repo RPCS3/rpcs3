@@ -286,7 +286,7 @@ public:
 		return Device::GetPhysicalControlName(c);
 	}
 
-	int Activate(void *d) {
+	int Activate(InitInfo *initInfo) {
 		if (active) Deactivate();
 		// Give grace period before get mad.
 		lastWrite = dataLastReceived = GetTickCount();

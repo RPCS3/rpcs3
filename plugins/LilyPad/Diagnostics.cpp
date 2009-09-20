@@ -36,7 +36,7 @@ INT_PTR CALLBACK DiagDialog(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM 
 			//break;
 		case WM_TIMER:
 			{
-				InitInfo info = {0, hWnd, hWnd, hWndList};
+				InitInfo info = {0, 1, hWnd, hWnd, hWndList};
 				dm->Update(&info);
 				LVITEMW item;
 				item.mask = LVIF_TEXT;

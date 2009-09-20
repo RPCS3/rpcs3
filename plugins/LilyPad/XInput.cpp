@@ -78,7 +78,7 @@ public:
 		return Device::GetPhysicalControlName(c);
 	}
 
-	int Activate(void *d) {
+	int Activate(InitInfo *initInfo) {
 		if (active) Deactivate();
 		if (!xInputActiveCount) {
 			pXInputEnable(1);
