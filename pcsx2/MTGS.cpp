@@ -260,6 +260,7 @@ void mtgsThreadObject::Reset()
 
 #define aMin(x, y)   ((x < y) ? (x)   : (y))
 #define subVal(x, y) ((x > y) ? (x-y) :  0 )
+#define optPrint(x, y) { if (x > y) DevCon::Status("Loops Optimized = %d", x); }
 
 __forceinline void gsHandler(const u8* pMem) {
 	const int handler = pMem[8];
@@ -268,18 +269,6 @@ __forceinline void gsHandler(const u8* pMem) {
 		s_GSHandlers[handler&0x3]((const u32*)pMem);
 	}
 }
-
-// Optimization to reduce idle loops
-#define nloopOpt(_nloop, _numregs, _hasADreg)							\
-	if (!_hasADreg && ((_numregs * _nloop) <= size)) {					\
-		/*DevCon::Status("loops optimized = %d", (_nloop * _numregs));*/\
-		u32 temp1 = (_numregs - path.curreg);							\
-		u32 temp2 = (_numregs * subVal(_nloop, 1));						\
-		incTag((temp1*16), temp1);										\
-		incTag((temp2*16), temp2);										\
-		_nloop = 0;														\
-	}																	\
-	else
 
 // Parameters:
 //   size (path1)   - difference between the end of VU memory and pMem.
@@ -306,7 +295,15 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 			switch(path.tag.FLG) {
 				case GIF_FLG_PACKED:
 					path.PrepPackedRegs();
-					nloopOpt(path.nloop, path.numregs, path.hasADreg) {
+					if((path.numregs * path.nloop) < (size-1)) {
+						//optPrint((path.numregs*path.nloop), 500);
+						u32 temp1 = (path.numregs - path.curreg);
+						u32 temp2 = (path.numregs * subVal(path.nloop, 1));
+						u32 temp3 = temp1 + temp2;
+						incTag((temp3*16), temp3);
+						path.nloop = 0;
+					}
+					else {
 						do {
 							if (path.GetReg() == 0xe) {
 								gsHandler(pMem);
@@ -317,8 +314,16 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 					break;
 				case GIF_FLG_REGLIST:
 				{
-					u32 numRegs = (((path.tag.NREG-1)&0xf)+2)/2;
-					nloopOpt(path.nloop, numRegs, 0) {
+					u32 numregs = (((path.tag.NREG-1)&0xf)+2)/2;
+					if((numregs * path.nloop) < (size-1)) {
+						//optPrint((numregs*path.nloop), 500);
+						u32 temp1 = (numregs - (((path.curreg&0xf)+1)/2));
+						u32 temp2 = (numregs * subVal(path.nloop, 1));
+						u32 temp3 = temp1 + temp2;
+						incTag((temp3*16), temp3);
+						path.nloop = 0;
+					}
+					else {
 						size *= 2;
 						do { incTag(8, 1); }
 						while(path.StepReg() && size > 0);
