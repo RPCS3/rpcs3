@@ -295,42 +295,22 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 			switch(path.tag.FLG) {
 				case GIF_FLG_PACKED:
 					path.PrepPackedRegs();
-					if((path.numregs * path.nloop) < (size-1)) {
-						//optPrint((path.numregs*path.nloop), 500);
-						u32 temp1 = (path.numregs - path.curreg);
-						u32 temp2 = (path.numregs * subVal(path.nloop, 1));
-						u32 temp3 = temp1 + temp2;
-						incTag((temp3*16), temp3);
-						path.nloop = 0;
-					}
-					else {
-						do {
-							if (path.GetReg() == 0xe) {
-								gsHandler(pMem);
-							}
-							incTag(16, 1);
-						} while(path.StepReg() && size > 0);
-					}
-					break;
+					do {
+						if (path.GetReg() == 0xe) {
+							gsHandler(pMem);
+						}
+						incTag(16, 1);
+					} while(path.StepReg() && size > 0);
+				break;
 				case GIF_FLG_REGLIST:
 				{
-					u32 numregs = (((path.tag.NREG-1)&0xf)+2)/2;
-					if((numregs * path.nloop) < (size-1)) {
-						//optPrint((numregs*path.nloop), 500);
-						u32 temp1 = (numregs - (((path.curreg&0xf)+1)/2));
-						u32 temp2 = (numregs * subVal(path.nloop, 1));
-						u32 temp3 = temp1 + temp2;
-						incTag((temp3*16), temp3);
-						path.nloop = 0;
-					}
-					else {
-						size *= 2;
-						do { incTag(8, 1); }
-						while(path.StepReg() && size > 0);
+					size *= 2;
 
-						if (size & 1) { incTag(8, 1); }
-						size /= 2;
-					}
+					do { incTag(8, 1); }
+					while(path.StepReg() && size > 0);
+
+					if (size & 1) { incTag(8, 1); }
+					size /= 2;
 				}
 				break;
 				case GIF_FLG_IMAGE:
