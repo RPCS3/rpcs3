@@ -433,7 +433,7 @@ void MTC0()
 }
 
 int CPCOND0() {
-	return (((psHu16(DMAC_STAT) | ~psHu16(DMAC_PCR)) & 0x3ff) == 0x3ff);
+	return ((dmacRegs->stat.CIS | ~dmacRegs->pcr.CPC) == 0x3ff);
 }
 
 //#define CPCOND0	1

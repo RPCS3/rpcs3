@@ -121,7 +121,7 @@ namespace Tag
 			UpperTransfer(tag, ptag);
 
 			// Set BEIS (BUSERR) in DMAC_STAT register
-			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;
+			dmacRegs->stat.BEIS = 1;
 			return false;
 		}
 		else
@@ -131,25 +131,6 @@ namespace Tag
 			return true;
 		}
 	}
-
-	/*// Not sure if I'll need this one.
-	static __forceinline bool SafeTransfer(const char *s, DMACh *tag, u32* ptag)
-	{
-		if (ptag == NULL)  					 // Is ptag empty?
-		{
-			Console::Error("%s BUSERR", s);
-
-			// Set BEIS (BUSERR) in DMAC_STAT register
-			psHu32(DMAC_STAT) |= DMAC_STAT_BEIS;
-			return false;
-		}
-		else
-		{
-			UpperTransfer(tag, ptag);
-			LowerTransfer(tag, ptag);
-			return true;
-		}
-	}*/
 
 	static __forceinline void UnsafeTransfer(DMACh *tag, u32* ptag)
 	{
@@ -214,24 +195,3 @@ static __forceinline void PrintCHCR(const char*  s, DMACh *tag)
 	Console::WriteLn("");
 }
 
-namespace D_CTRL
-{
-	static __forceinline bool DMAE() { return !!(psHu32(DMAC_CTRL) & CTRL_DMAE); }
-	static __forceinline bool RELE() { return !!(psHu32(DMAC_CTRL) & CTRL_RELE); }
-	static __forceinline mfd_type MFD()
-	{
-		return (mfd_type)((psHu32(DMAC_CTRL) & CTRL_MFD) >> 2);
-	}
-	static __forceinline sts_type STS()
-	{
-		return (sts_type)((psHu32(DMAC_CTRL) & CTRL_STS) >> 4);
-	}
-	static __forceinline std_type STD()
-	{
-		return (std_type)((psHu32(DMAC_CTRL) & CTRL_STD) >> 6);
-	}
-	static __forceinline int RCYC() 
-	{ 
-		return ((((psHu32(DMAC_CTRL) & CTRL_RCYC) >> 3) + 1) * 8);
-	}
-}

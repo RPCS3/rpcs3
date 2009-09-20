@@ -46,25 +46,14 @@ using namespace std;			// for min / max
 #	define IPU_FORCEINLINE __forceinline
 #endif
 
-#define IPU_DMA_GIFSTALL 1
-#define IPU_DMA_TIE0 2
-#define IPU_DMA_TIE1 4
-#define IPU_DMA_ACTV1 8
-#define IPU_DMA_DOTIE1 16
-#define IPU_DMA_FIREINT0 32
-#define IPU_DMA_FIREINT1 64
-#define IPU_DMA_VIFSTALL 128
-
 // FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
 // FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
 // since coroutine is such a pita.  (air)
 
-static int g_nDMATransfer = 0;
 int g_nIPU0Data = 0; // data left to transfer
 u8* g_pIPU0Pointer = NULL;
 int g_nCmdPos[2] = {0}, g_nCmdIndex = 0;
 int ipuCurCmd = 0xffffffff;
-
 
 int FOreadpos = 0, FOwritepos = 0;
 static int FIreadpos = 0, FIwritepos = 0;
@@ -158,6 +147,7 @@ int ipuInit()
 	memzero_obj(*ipuRegs);
 	memzero_obj(g_BP);
 	init_g_decoder();
+	g_nDMATransfer._u32 = 0;
 
 	return 0;
 }
@@ -165,7 +155,7 @@ int ipuInit()
 void ipuReset()
 {
 	memzero_obj(*ipuRegs);
-	g_nDMATransfer = 0;
+	g_nDMATransfer._u32 = 0;
 }
 
 void ipuShutdown()
@@ -174,7 +164,7 @@ void ipuShutdown()
 
 void ReportIPU()
 {
-	Console::WriteLn("g_nDMATransfer = 0x%x.", g_nDMATransfer);
+	Console::WriteLn("g_nDMATransfer = 0x%x.", g_nDMATransfer._u32);
 	Console::WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", FIreadpos, FIwritepos);
 	Console::WriteLn("fifo_input = 0x%x.", fifo_input);
 	Console::WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", FOreadpos, FOwritepos);
@@ -204,7 +194,7 @@ void SaveStateBase::ipuFreeze()
 	// old versions saved the IPU regs, but they're already saved as part of HW!
 	//FreezeMem(ipuRegs, sizeof(IPUregisters));
 
-	Freeze(g_nDMATransfer);
+	Freeze(g_nDMATransfer._u32);
 	Freeze(FIreadpos);
 	Freeze(FIwritepos);
 	Freeze(fifo_input);
@@ -1380,7 +1370,7 @@ static __forceinline bool IPU1chain(int &totalqwc)
 		
 		if (ipu1dma->qwc > 0) 
 		{ 
-			g_nDMATransfer |= IPU_DMA_ACTV1; 
+			g_nDMATransfer.ACTV1 = 1; 
 			return true; 
 		} 
 	} 
@@ -1464,24 +1454,26 @@ int IPU1dma()
 	
 	if (!(ipu1dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
 
-	assert(!(g_nDMATransfer & IPU_DMA_TIE1));
+	assert(g_nDMATransfer.TIE1 == 0);
 	
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
 	flushGIF();
 
 	// in kh, qwc == 0 when dma_actv1 is set
-	if ((g_nDMATransfer & IPU_DMA_ACTV1) && ipu1dma->qwc > 0)
+	if ((g_nDMATransfer.ACTV1) && ipu1dma->qwc > 0)
 	{
 		if (IPU1chain(totalqwc)) return totalqwc;
 
 		//Check TIE bit of CHCR and IRQ bit of tag
-		if (ipu1dma->chcr.TIE && (g_nDMATransfer & IPU_DMA_DOTIE1))
+		if (ipu1dma->chcr.TIE && (g_nDMATransfer.DOTIE1))
 		{
 			Console::WriteLn("IPU1 TIE");
 
 			IPU_INT_TO(totalqwc * BIAS);
-			g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
-			g_nDMATransfer |= IPU_DMA_TIE1;
+			g_nDMATransfer.TIE1 = 1;
+			g_nDMATransfer.DOTIE1 = 0;
+			g_nDMATransfer.ACTV1 = 0;
+
 			return totalqwc;
 		}
 
@@ -1505,7 +1497,7 @@ int IPU1dma()
 				
 				IPU_LOG("IPU dmaIrq Set");
 				IPU_INT_TO(totalqwc * BIAS);
-				g_nDMATransfer |= IPU_DMA_TIE1;
+				g_nDMATransfer.TIE1 = 1;
 				return totalqwc;
 			}
 
@@ -1516,7 +1508,8 @@ int IPU1dma()
 			}
 		}
 
-		g_nDMATransfer &= ~(IPU_DMA_ACTV1 | IPU_DMA_DOTIE1);
+		g_nDMATransfer.DOTIE1 = 0;
+		g_nDMATransfer.ACTV1 = 0;
 	}
 	
 	// Normal Mode & qwc is finished
@@ -1551,16 +1544,12 @@ int IPU1dma()
 		IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
 		        ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
-		
-		if (ipu1dma->chcr.TIE && Tag::IRQ(ptag))
-			g_nDMATransfer |= IPU_DMA_DOTIE1;
-		else
-			g_nDMATransfer &= ~IPU_DMA_DOTIE1;
+		g_nDMATransfer.DOTIE1 = (ipu1dma->chcr.TIE && Tag::IRQ(ptag));
 		
 		if (ipu1dma->qwc == 0)
 		{
 			//Check TIE bit of CHCR and IRQ bit of tag
-			if (g_nDMATransfer & IPU_DMA_DOTIE1)
+			if (g_nDMATransfer.DOTIE1)
 			{
 				Console::WriteLn("IPU1 TIE");
 				
@@ -1577,7 +1566,7 @@ int IPU1dma()
 				}
 
 				IPU_INT_TO(ipu1cycles + totalqwc * BIAS);  // Should it be (ipu1cycles + totalqwc) * BIAS?
-				g_nDMATransfer |= IPU_DMA_TIE1;
+				g_nDMATransfer.TIE1 = 1;
 				return totalqwc;
 			}
 			else
@@ -1679,22 +1668,30 @@ int IPU0dma()
 
 	assert((ipu0dma->chcr._u32 & 0xC) == 0);
 	pMem = (u32*)dmaGetAddr(ipu0dma->madr);
+
 	readsize = min(ipu0dma->qwc, (u16)ipuRegs->ctrl.OFC);
 	FIFOfrom_read(pMem, readsize);
+
 	ipu0dma->madr += readsize << 4;
 	ipu0dma->qwc -= readsize; // note: qwc is u16
+
 	if (ipu0dma->qwc == 0)
 	{
-		if ((psHu32(DMAC_CTRL) & 0x30) == 0x30)   // STS == fromIPU
+		if (dmacRegs->ctrl.STS == STS_fromIPU)   // STS == fromIPU
 		{
-			psHu32(DMAC_STADR) = ipu0dma->madr;
-			switch (psHu32(DMAC_CTRL) & 0xC0)
+			dmacRegs->stadr.ADDR = ipu0dma->madr;
+			switch (dmacRegs->ctrl.STD)
 			{
-				case 0x80: // GIF
-					g_nDMATransfer |= IPU_DMA_GIFSTALL;
+				case NO_STD:
 					break;
-				case 0x40: // VIF
-					g_nDMATransfer |= IPU_DMA_VIFSTALL;
+				case STD_GIF: // GIF
+					g_nDMATransfer.GIFSTALL = 1;
+					break;
+				case STD_VIF1: // VIF
+					g_nDMATransfer.VIFSTALL = 1;
+					break;
+				case STD_SIF1:
+					g_nDMATransfer.SIFSTALL = 1;
 					break;
 			}
 		}
@@ -1721,33 +1718,42 @@ void ipu0Interrupt()
 {
 	IPU_LOG("ipu0Interrupt: %x", cpuRegs.cycle);
 
-	if (g_nDMATransfer & IPU_DMA_FIREINT0)
+	if (g_nDMATransfer.FIREINT0)
 	{
+		g_nDMATransfer.FIREINT0 = 0;
 		hwIntcIrq(INTC_IPU);
-		g_nDMATransfer &= ~IPU_DMA_FIREINT0;
 	}
 
-	if (g_nDMATransfer & IPU_DMA_GIFSTALL)
+	if (g_nDMATransfer.GIFSTALL)
 	{
 		// gif
-		g_nDMATransfer &= ~IPU_DMA_GIFSTALL;
+		g_nDMATransfer.GIFSTALL = 0;
 		if (gif->chcr.STR) GIFdma();
 	}
 
-	if (g_nDMATransfer & IPU_DMA_VIFSTALL)
+	if (g_nDMATransfer.VIFSTALL)
 	{
 		// vif
-		g_nDMATransfer &= ~IPU_DMA_VIFSTALL;
+		g_nDMATransfer.VIFSTALL = 0;
 		if (vif1ch->chcr.STR) dmaVIF1();
 	}
 
-	if (g_nDMATransfer & IPU_DMA_TIE0)
+	if (g_nDMATransfer.SIFSTALL)
 	{
-		g_nDMATransfer &= ~IPU_DMA_TIE0;
+		// sif
+		g_nDMATransfer.SIFSTALL = 0;
+
+		// Not totally sure whether this needs to be done or not, so I'm
+		// leaving it commented out for the moment.
+		//if (sif1dma->chcr.STR) SIF1Dma();
+	}
+
+	if (g_nDMATransfer.TIE0)
+	{
+		g_nDMATransfer.TIE0 = 0;
 	}
 	
 	ipu0dma->chcr.STR = 0;
-
 	hwDmacIrq(DMAC_FROM_IPU);
 }
 
@@ -1755,14 +1761,14 @@ IPU_FORCEINLINE void ipu1Interrupt()
 {
 	IPU_LOG("ipu1Interrupt %x:", cpuRegs.cycle);
 
-	if (g_nDMATransfer & IPU_DMA_FIREINT1)
+	if (g_nDMATransfer.FIREINT1)
 	{
 		hwIntcIrq(INTC_IPU);
-		g_nDMATransfer &= ~IPU_DMA_FIREINT1;
+		g_nDMATransfer.FIREINT1 = 0;
 	}
 
-	if (g_nDMATransfer & IPU_DMA_TIE1)
-		g_nDMATransfer &= ~IPU_DMA_TIE1;
+	if (g_nDMATransfer.TIE1)
+		g_nDMATransfer.TIE1 = 0;
 	else
 		ipu1dma->chcr.STR = 0;
 

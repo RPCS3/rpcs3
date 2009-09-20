@@ -154,6 +154,25 @@ union tIPU_CMD_CSC
 	}
 };
 
+union tIPU_DMA
+{
+	struct
+	{
+		u32 GIFSTALL  : 1;
+		u32 TIE0 :1;
+		u32 TIE1 : 1;
+		u32 ACTV1 : 1;
+		u32 DOTIE1  : 1;
+		u32 FIREINT0 : 1;
+		u32 FIREINT1 : 1;
+		u32 VIFSTALL : 1;
+		u32 SIFSTALL : 1;
+	};
+	u32 _u32;
+};
+
+static tIPU_DMA g_nDMATransfer;
+
 enum SCE_IPU
 {
 	SCE_IPU_BCLR = 0x0

@@ -84,7 +84,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 	} 
 
 	psHu16(mem) = (u16)value;
-	if ((psHu16(mem) & 0x100) && (psHu32(DMAC_CTRL) & 0x1))
+	if ((psHu16(mem) & 0x100) && dmacRegs->ctrl.DMAE)
 	{
 		//Console::WriteLn("16bit DMA Start");
 		func();
