@@ -96,7 +96,9 @@ struct GIFPath
 	u8 regs[16];		// positioned after tag ensures 16-bit aligned (in case we SSE optimize later)
 
 	u32 nloop;			// local copy nloop counts toward zero, and leaves the tag copy unmodified.
-	u32 curreg;
+	u32 curreg;			// reg we left of on (for traversing through loops)
+	u32 numregs;		// number of regs (when NREG is 0, numregs is 16)
+	u8  hasADreg;		// has an A+D reg, if it doesn't have one, then it no need to check for gs interrupts
 
 	GIFPath();
 

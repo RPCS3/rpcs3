@@ -77,14 +77,16 @@ __forceinline void GIFPath::PrepPackedRegs()
 	// Only unpack registers if we're starting a new pack.  Otherwise the unpacked
 	// array should have already been initialized by a previous partial transfer.
 
-	if( curreg != 0 ) return;
+	if (curreg != 0) return;
 
-	int loopEnd = ((tag.NREG-1)&0xf) + 1;
 	u32 tempreg = tag.REGS[0];
-
-	for (int i = 0; i < loopEnd; i++) {
+	numregs		= ((tag.NREG-1)&0xf) + 1;
+	hasADreg	= 0;
+	
+	for (u32 i = 0; i < numregs; i++) {
 		if (i == 8) tempreg = tag.REGS[1];
 		regs[i] = tempreg & 0xf;
+		if (regs[i] == 0x0e) hasADreg = 1;
 		tempreg >>= 4;
 	}
 }
@@ -102,7 +104,10 @@ static void _mtgsFreezeGIF( SaveStateBase& state, GIFPath (&paths)[3] )
 	for(int i=0; i<3; i++ )
 	{
 		state.Freeze( paths[i].tag );
+		state.Freeze( paths[i].nloop );
 		state.Freeze( paths[i].curreg );
+		state.Freeze( paths[i].numregs );
+		state.Freeze( paths[i].hasADreg );
 	}
 
 	for(int i=0; i<3; i++ )
@@ -247,7 +252,7 @@ void mtgsThreadObject::Reset()
 	memzero_obj( s_path );
 }
 
-#define incTag(x, y) do {											 \
+#define incTag(x, y) do {										 \
 	pMem += (x);												 \
 	size -= (y);												 \
 	if ((pathidx==GIF_PATH_1)&&(pMem>=vuMemEnd)) pMem -= 0x4000; \
@@ -264,8 +269,21 @@ __forceinline void gsHandler(const u8* pMem) {
 	}
 }
 
+// Optimization to reduce idle loops
+#define nloopOpt(_nloop, _numregs, _hasADreg)							\
+	if (!_hasADreg && ((_numregs * _nloop) <= size)) {					\
+		/*DevCon::Status("loops optimized = %d", (_nloop * _numregs));*/\
+		u32 temp1 = (_numregs - path.curreg);							\
+		u32 temp2 = (_numregs * subVal(_nloop, 1));						\
+		incTag((temp1*16), temp1);										\
+		incTag((temp2*16), temp2);										\
+		_nloop = 0;														\
+	}																	\
+	else
+
 // Parameters:
-//   size  - max size of incoming data stream, in qwc (simd128)
+//   size (path1)   - difference between the end of VU memory and pMem.
+//   size (path2/3) - max size of incoming data stream, in qwc (simd128)
 __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8* pMem, u32 size)
 {
 	GIFPath&	path	  =  s_path[pathidx];	// Current Path
@@ -288,24 +306,19 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 			switch(path.tag.FLG) {
 				case GIF_FLG_PACKED:
 					path.PrepPackedRegs();
-					do {
-						if (path.GetReg() == 0xe) {
-							gsHandler(pMem);
-						}
-						incTag(16, 1);
-					} while(path.StepReg() && size > 0);
-				break;
+					nloopOpt(path.nloop, path.numregs, path.hasADreg) {
+						do {
+							if (path.GetReg() == 0xe) {
+								gsHandler(pMem);
+							}
+							incTag(16, 1);
+						} while(path.StepReg() && size > 0);
+					}
+					break;
 				case GIF_FLG_REGLIST:
 				{
 					u32 numRegs = (((path.tag.NREG-1)&0xf)+2)/2;
-					if((numRegs * path.nloop) <= size) {
-						u32 temp1 = (numRegs - path.curreg);
-						u32 temp2 = (numRegs * subVal(path.nloop, 1));
-						incTag((temp1*16), temp1);
-						incTag((temp2*16), temp2);
-						path.nloop = 0;
-					}
-					else {
+					nloopOpt(path.nloop, numRegs, 0) {
 						size *= 2;
 						do { incTag(8, 1); }
 						while(path.StepReg() && size > 0);
