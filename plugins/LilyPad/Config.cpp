@@ -1,7 +1,6 @@
 #include "Global.h"
 
 #include "PS2Edefs.h"
-#include "Resource.h"
 #include "Diagnostics.h"
 #include "DeviceEnumerator.h"
 #include "KeyboardQueue.h"
@@ -783,14 +782,12 @@ int SaveSettings(wchar_t *file=0) {
 	return !noError;
 }
 
-static int loaded = 0;
-
 u8 GetPrivateProfileBool(wchar_t *s1, wchar_t *s2, int def, wchar_t *ini) {
 	return (0!=GetPrivateProfileIntW(s1, s2, def, ini));
 }
 
 int LoadSettings(int force, wchar_t *file) {
-	if (loaded && !force) return 0;
+	if (dm && !force) return 0;
 	CreateDirectory(L"inis", 0);
 	// Could just do ClearDevices() instead, but if I ever add any extra stuff,
 	// this will still work.
@@ -826,6 +823,7 @@ int LoadSettings(int force, wchar_t *file) {
 	if (config.closeHacks&1) config.closeHacks &= ~2;
 
 	config.keyboardApi = (DeviceAPI)GetPrivateProfileIntW(L"General Settings", L"Keyboard Mode", WM, file);
+	if (!config.keyboardApi) config.keyboardApi = WM;
 	config.mouseApi = (DeviceAPI) GetPrivateProfileIntW(L"General Settings", L"Mouse Mode", 0, file);
 
 	config.volume = GetPrivateProfileInt(L"General Settings", L"Volume", 100, file);
@@ -857,8 +855,6 @@ int LoadSettings(int force, wchar_t *file) {
 			config.padConfigs[port][slot].autoAnalog = GetPrivateProfileBool(temp, L"Auto Analog", 0, file);
 		}
 	}
-
-	loaded = 1;
 
 	int i=0;
 	int multipleBinding = config.multipleBinding;
@@ -1845,6 +1841,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 					"\n"
 					"Furthermore, It uses libusb to Initialize DS3 pads.  Libusb can\n"
 					"do odd things to USB and non-USB devices when it enumerates them.\n"
+					"\n"
 					"That having been said, I know of no serious problems with it.\n"
 					"\n"
 					"I have no idea if it works with bluetooth or not.\n"
@@ -1867,20 +1864,8 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			}
 
 			for (i=0; i<4; i++) {
-				if (IsDlgButtonChecked(hWnd, IDC_KB_DISABLE+i) == BST_CHECKED) {
-					if (i != NO_API || config.keyboardApi == NO_API || IDOK == MessageBoxA(hWnd, 
-						"Disabling keyboard input will prevent LilyPad from passing any\n"
-						"keyboard input on to PCSX2.\n"
-						"\n"
-						"This is only meant to be used if you're using two different\n"
-						"pad plugins. If both pads are set to LilyPad, then GS and PCSX2   \n"
-						"keyboard shortcuts will not work.\n"
-						"\n"
-						"Are you sure you want to do this?", "Warning", MB_OKCANCEL | MB_ICONWARNING)) {
-						
-							config.keyboardApi = (DeviceAPI)i;
-					}
-					CheckRadioButton(hWnd, IDC_KB_DISABLE, IDC_KB_RAW, IDC_KB_DISABLE + config.keyboardApi);
+				if (i && IsDlgButtonChecked(hWnd, IDC_KB_DISABLE+i) == BST_CHECKED) {
+					config.keyboardApi = (DeviceAPI)i;
 				}
 				if (IsDlgButtonChecked(hWnd, IDC_M_DISABLE+i) == BST_CHECKED) {
 					config.mouseApi = (DeviceAPI)i;
@@ -2006,8 +1991,8 @@ int CALLBACK PropSheetProc(HWND hWnd, UINT msg, LPARAM lParam) {
 	return 0;
 }
 
-void CALLBACK PADconfigure() {
-	// Can end up here without PadConfigure() being called first.
+void Configure() {
+	// Can end up here without PADinit() being called first.
 	LoadSettings();
 	// Can also end up here after running emulator a bit, and possibly
 	// disabling some devices due to focus changes, or releasing mouse.
@@ -2044,7 +2029,6 @@ void CALLBACK PADconfigure() {
 }
 
 void UnloadConfigs() {
-	loaded = 0;
 	if (dm) {
 		delete dm;
 		dm = 0;

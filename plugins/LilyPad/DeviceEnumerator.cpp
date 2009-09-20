@@ -14,10 +14,10 @@ void EnumDevices(int hideDXXinput) {
 	InputDeviceManager *oldDm = dm;
 	dm = new InputDeviceManager();
 
-	EnumDualShock3s();
 	EnumHookDevices();
 	EnumWindowsMessagingDevices();
 	EnumRawInputDevices();
+	EnumDualShock3s();
 	EnumXInputDevices();
 	EnumDirectInputDevices(hideDXXinput);
 

@@ -43,9 +43,6 @@ _usb_control_msg pusb_control_msg;
 
 HMODULE hModLibusb = 0;
 
-int DualShock3Possible();
-void EnumDualShock3s();
-
 void UninitLibUsb() {
 	if (hModLibusb) {
 		FreeLibrary(hModLibusb);

@@ -41,6 +41,10 @@
 #include "PS2Etypes.h"
 #include "PS2Edefs.h"
 
+#include "resource.h"
+#include "InputManager.h"
+#include "Config.h"
+
 extern HINSTANCE hInst;
 // Needed for config screen
 void GetNameAndVersionString(wchar_t *out);
@@ -77,8 +81,6 @@ EXPORT_C_(s32) PADfreeze(int mode, freezeData *data);
 EXPORT_C_(s32) PADsetSlot(u8 port, u8 slot);
 EXPORT_C_(s32) PADqueryMtap(u8 port);
 
-#include "InputManager.h"
-#include "Config.h"
 #ifdef NO_CRT
 
 #define malloc MyMalloc

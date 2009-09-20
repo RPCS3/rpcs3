@@ -73,9 +73,8 @@ void SetVolume(int volume);
 
 int LoadSettings(int force = 0, wchar_t *file = 0);
 
-void CALLBACK PADconfigure();
-
 // Refreshes the set of enabled devices.
 void RefreshEnabledDevices(int updateDeviceList = 0);
 
+void Configure();
 #endif

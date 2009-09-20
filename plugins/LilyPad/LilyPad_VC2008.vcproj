@@ -70,11 +70,9 @@
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
-				GenerateManifest="false"
 				ModuleDefinitionFile=".\LilyPad.def"
 				GenerateDebugInformation="true"
 				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -242,7 +240,6 @@
 				EnableCOMDATFolding="2"
 				EntryPointSymbol=""
 				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -332,7 +329,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbc32.lib odbccp32.lib dinput8.lib dxguid.lib comctl32.lib"
+				AdditionalDependencies="ntdll.lib Setupapi.lib Winmm.lib ole32.lib advapi32.lib user32.lib kernel32.lib Comdlg32.lib dinput8.lib dxguid.lib comctl32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)64.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
@@ -432,7 +429,6 @@
 				LinkTimeCodeGeneration="0"
 				EntryPointSymbol="DllMain"
 				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -440,6 +436,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -490,8 +487,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="3"
 				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="2"
+				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				EnableFiberSafeOptimizations="true"
 				WholeProgramOptimization="false"
@@ -504,8 +500,6 @@
 				FloatingPointModel="2"
 				UsePrecompiledHeader="2"
 				PrecompiledHeaderThrough="Global.h"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 				CallingConvention="1"
 				DisableSpecificWarnings="4995, 4996"
 			/>
@@ -522,10 +516,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbc32.lib odbccp32.lib dinput8.lib dxguid.lib comctl32.lib"
+				AdditionalDependencies="ntdll.lib Setupapi.lib Winmm.lib ole32.lib advapi32.lib user32.lib kernel32.lib Comdlg32.lib dinput8.lib dxguid.lib comctl32.lib"
 				OutputFile="$(OutDir)\$(ProjectName)64.dll"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
+				IgnoreAllDefaultLibraries="true"
 				ModuleDefinitionFile=".\LilyPad.def"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -538,6 +533,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				EmbedManifest="false"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"

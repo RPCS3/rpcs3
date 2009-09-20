@@ -9,7 +9,6 @@
 #include "WndProcEater.h"
 #include "KeyboardQueue.h"
 #include "svnrev.h"
-#include "resource.h"
 #include "DualShock3.h"
 #include "HidDevice.h"
 
@@ -117,6 +116,8 @@ struct ButtonSum {
 	Stick sticks[3];
 };
 
+#define PAD_SAVE_STATE_VERSION	2
+
 // Freeze data, for a single pad.  Basically has all pad state that
 // a PS2 can set.
 struct PadFreezeData {
@@ -133,6 +134,16 @@ struct PadFreezeData {
 
 	// Vibration indices.
 	u8 vibrateI[2];
+
+	// Last vibration value sent to controller.
+	// Only used so as not to call vibration
+	// functions when old and new values are both 0.
+	u8 currentVibrate[2];
+
+	// Next vibrate val to send to controller.  If next and current are
+	// both 0, nothing is sent to the controller.  Otherwise, it's sent
+	// on every update.
+	u8 nextVibrate[2];
 };
 
 class Pad : public PadFreezeData {
@@ -145,16 +156,6 @@ public:
 
 	// Flags for which controls (buttons or axes) are locked, if any.
 	DWORD lockedState;
-
-	// Last vibration value sent to controller.
-	// Only used so as not to call vibration
-	// functions when old and new values are both 0.
-	u8 currentVibrate[2];
-
-	// Next vibrate val to send to controller.  If next and current are
-	// both 0, nothing is sent to the controller.  Otherwise, it's sent
-	// on every update.
-	u8 nextVibrate[2];
 
 	// Used to keep track of which pads I'm running.
 	// Note that initialized pads *can* be disabled.
@@ -830,12 +831,17 @@ DWORD WINAPI MaximizeWindowThreadProc(void *lpParameter) {
 	return 0;
 }
 
+void CALLBACK PADconfigure() {
+	if (openCount) {
+		return;
+	}
+	Configure();
+}
+
 s32 CALLBACK PADopen(void *pDsp) {
 	if (openCount++) return 0;
 	DEBUG_TEXT_OUT("LilyPad opened\n\n");
 
-	// Not really needed, shouldn't do anything.
-	if (LoadSettings()) return -1;
 	miceEnabled = !config.mouseUnfocus;
 	if (!hWnd) {
 		if (IsWindow((HWND)pDsp)) {
@@ -1310,8 +1316,6 @@ keyEvent* CALLBACK PADkeyEvent() {
 	return &ev;
 }
 
-#define PAD_SAVE_STATE_VERSION	1
-
 struct PadPluginFreezeData {
 	char format[8];
 	// Currently all different versions are incompatible.
@@ -1322,7 +1326,6 @@ struct PadPluginFreezeData {
 	u8 port;
 	// active slot for port
 	u8 slot;
-	// Currently only use padData[0].  Save room for all 4 slots for simplicity.
 	PadFreezeData padData[4];
 	QueryInfo query;
 };
