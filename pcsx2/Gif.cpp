@@ -34,7 +34,7 @@ static int gifstate = GIF_STATE_READY;
 //static u64 s_gstag = 0; // used for querying the last tag
 
 // This should be a bool. Next time I feel like breaking the save state, it will be. --arcum42
-static int gspath3done = 0;
+static bool gspath3done = false;
 
 static u32 gscycles = 0, prevcycles = 0, mfifocycles = 0;
 static u32 gifqwc = 0;
@@ -67,7 +67,7 @@ __forceinline void gsInterrupt()
 
 	if (Path3progress == STOPPED_MODE) gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
 
-	if ((gif->qwc > 0) || (gspath3done == 0)) 
+	if ((gif->qwc > 0) || (!gspath3done)) 
 	{
 		if (!dmacRegs->ctrl.DMAE) 
 		{
@@ -81,7 +81,7 @@ __forceinline void gsInterrupt()
 		return;
 	}
 
-	gspath3done = 0;
+	gspath3done = false;
 	gscycles = 0;
 	gif->chcr.STR = 0;
 	vif1Regs->stat &= ~VIF1_STAT_VGW;
@@ -140,7 +140,7 @@ static __forceinline bool checkTieBit(u32* &ptag)
 	if (gif->chcr.TIE && (Tag::IRQ(ptag)))  //Check TIE bit of CHCR and IRQ bit of tag
 	{
 		GIF_LOG("dmaIrq Set");
-		gspath3done = 1;
+		gspath3done = true;
 		return true;
 	}
 	
@@ -251,7 +251,7 @@ void GIFdma()
 		return;	
 	}
 	
-	if ((gif->chcr.MOD == CHAIN_MODE) && (gspath3done == 0)) // Chain Mode
+	if ((gif->chcr.MOD == CHAIN_MODE) && (!gspath3done)) // Chain Mode
 	{
 		if (!ReadTag(ptag, id)) return;
 		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
@@ -277,7 +277,7 @@ void GIFdma()
 
 	prevcycles = 0;
 	
-	if ((gspath3done == 0) && (gif->qwc == 0))
+	if ((!gspath3done) && (gif->qwc == 0))
 	{
 		ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 		
@@ -305,7 +305,7 @@ void dmaGIF()
 	GIF_LOG("dmaGIFstart chcr = %lx, madr = %lx, qwc  = %lx\n tadr = %lx, asr0 = %lx, asr1 = %lx", gif->chcr._u32, gif->madr, gif->qwc, gif->tadr, gif->asr0, gif->asr1);
 
 	Path3progress = STOPPED_MODE;
-	gspath3done = 0; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
+	gspath3done = false; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
 
 	gifRegs->stat.P3Q = 1;
 	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) ( 31? 16! arcum42) [used to be 0xE00; // OPH=1 | APATH=3]
@@ -332,7 +332,7 @@ void dmaGIF()
 	}
 
 	//Halflife sets a QWC amount in chain mode, no tadr set.
-	if (gif->qwc > 0) gspath3done = 1;
+	if (gif->qwc > 0) gspath3done = true;
 	
 	GIFdma();
 }
@@ -558,7 +558,7 @@ void gifMFIFOInterrupt()
 	//if(gifqwc > 0) Console::WriteLn("GIF MFIFO ending with stuff in it %x", gifqwc);
 	if (!gifmfifoirq) gifqwc = 0;
 
-	gspath3done = 0;
+	gspath3done = false;
 	gscycles = 0;
 	
 	gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0

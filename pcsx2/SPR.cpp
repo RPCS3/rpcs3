@@ -23,9 +23,8 @@
 
 extern void mfifoGIFtransfer(int);
 
-/* Both of these should be bools. Again, next savestate break. --arcum42 */
-static int spr0finished = 0;
-static int spr1finished = 0;
+static bool spr0finished = false;
+static bool spr1finished = false;
 
 static u32 mfifotransferred = 0;
 
@@ -132,7 +131,7 @@ void _SPR0interleave()
 	}
 
 	spr0->qwc = 0;
-	spr0finished = 1;
+	spr0finished = true;
 }
 
 static __forceinline void _dmaSPR0()
@@ -148,7 +147,7 @@ static __forceinline void _dmaSPR0()
 		case NORMAL_MODE:
 		{
 			SPR0chain();
-			spr0finished = 1;
+			spr0finished = true;
 			return;
 		}
 		case CHAIN_MODE:
@@ -160,7 +159,7 @@ static __forceinline void _dmaSPR0()
 			if (spr0->qwc > 0)
 			{
 				SPR0chain();
-				spr0finished = 1;
+				spr0finished = true;
 				return;
 			}
 			// Destination Chain Mode
@@ -201,7 +200,7 @@ static __forceinline void _dmaSPR0()
 				done = TRUE;
 			}
 				
-			spr0finished = (done) ? 1 : 0;
+			spr0finished = done;
 			
 			if (!done)
 			{
@@ -254,7 +253,7 @@ void SPRFROMinterrupt()
 				break;
 		}
 	}
-	if (spr0finished == 0) return;
+	if (!spr0finished) return;
 	spr0->chcr.STR = 0;
 	hwDmacIrq(DMAC_FROM_SPR);
 }
@@ -329,7 +328,7 @@ void _SPR1interleave()
 	}
 
 	spr1->qwc = 0;
-	spr1finished = 1;
+	spr1finished = true;
 }
 
 void _dmaSPR1()   // toSPR work function
@@ -341,7 +340,7 @@ void _dmaSPR1()   // toSPR work function
 			//int cycles = 0;
 			// Transfer Dn_QWC from Dn_MADR to SPR1
 			SPR1chain();
-			spr1finished = 1;
+			spr1finished = true;
 			return;
 		}
 		case CHAIN_MODE:
@@ -354,7 +353,7 @@ void _dmaSPR1()   // toSPR work function
 			{
 				// Transfer Dn_QWC from Dn_MADR to SPR1
 				SPR1chain();
-				spr1finished = 1;
+				spr1finished = true;
 				return;
 			}
 			// Chain Mode
@@ -364,7 +363,7 @@ void _dmaSPR1()   // toSPR work function
 			if (!(Tag::Transfer("SPR1 Tag", spr1, ptag)))
 			{
 				done = true;
-				spr1finished = (done) ? 1: 0;
+				spr1finished = done;
 			}
 
 			id = Tag::Id(ptag);
@@ -432,7 +431,7 @@ void dmaSPR1()   // toSPR
 void SPRTOinterrupt()
 {
 	_dmaSPR1();
-	if (spr1finished == 0) return;
+	if (!spr1finished) return;
 	spr1->chcr.STR = 0;
 	hwDmacIrq(DMAC_TO_SPR);
 }

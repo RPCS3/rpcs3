@@ -23,9 +23,8 @@ using namespace R3000A;
 // Dma8     in PsxSpd.c
 // Dma11/12 in PsxSio2.c
 
-// Should be a bool, and will be next time I break savestate. --arcum42
-int iopsifbusy[2] = { 0, 0 };
-extern int eesifbusy[2];
+bool iopsifbusy[2] = { false, false };
+extern bool eesifbusy[2];
 
 static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _SPU2writeDMA4Mem spu2WriteFunc, _SPU2readDMA4Mem spu2ReadFunc)
 {
@@ -166,10 +165,10 @@ void psxDma9(u32 madr, u32 bcr, u32 chcr)
 {
 	SIF_LOG("IOP: dmaSIF0 chcr = %lx, madr = %lx, bcr = %lx, tadr = %lx",	chcr, madr, bcr, HW_DMA9_TADR);
 
-	iopsifbusy[0] = 1;
+	iopsifbusy[0] = true;
 	psHu32(SBUS_F240) |= 0x2000;
 
-	if (eesifbusy[0] == 1)
+	if (eesifbusy[0])
 	{
 		SIF0Dma();
 		psHu32(SBUS_F240) &= ~0x20;
@@ -181,10 +180,10 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 {
 	SIF_LOG("IOP: dmaSIF1 chcr = %lx, madr = %lx, bcr = %lx",	chcr, madr, bcr);
 
-	iopsifbusy[1] = 1;
+	iopsifbusy[1] = true;
 	psHu32(SBUS_F240) |= 0x4000;
 
-	if (eesifbusy[1] == 1)
+	if (eesifbusy[1])
 	{
 		FreezeXMMRegs(1);
 		SIF1Dma();

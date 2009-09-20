@@ -59,8 +59,8 @@ struct _sif1
 static _sif0 sif0;
 static _sif1 sif1;
 
-int eesifbusy[2] = { 0, 0 };
-extern int iopsifbusy[2];
+bool eesifbusy[2] = { false, false };
+extern bool iopsifbusy[2];
 
 void sifInit()
 {
@@ -132,7 +132,7 @@ __forceinline void SIF0Dma()
 
 	do
 	{
-		if (iopsifbusy[0] == 1) // If EE SIF0 is enabled
+		if (iopsifbusy[0]) // If EE SIF0 is enabled
 		{
 			if (sif0.counter == 0) // If there's no more to transfer
 			{
@@ -143,7 +143,7 @@ __forceinline void SIF0Dma()
 					SIF_LOG(" IOP SIF Stopped");
 
 					// Stop & signal interrupts on IOP
-					iopsifbusy[0] = 0;
+					iopsifbusy[0] = false;
 					
 					// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
 					// So when we're all done, the equation looks like thus:
@@ -187,7 +187,7 @@ __forceinline void SIF0Dma()
 			}
 		}
 
-		if (eesifbusy[0] == 1) // If EE SIF enabled and there's something to transfer
+		if (eesifbusy[0]) // If EE SIF enabled and there's something to transfer
 		{
 			int size = sif0dma->qwc;
 			if (dmacRegs->ctrl.STS == STS_SIF0)   // STS == fromSIF0
@@ -226,7 +226,7 @@ __forceinline void SIF0Dma()
 					else
 						SIF_LOG(" EE SIF interrupt");
 
-					eesifbusy[0] = 0;
+					eesifbusy[0] = false;
 					CPU_INT(5, cycles*BIAS);
 					done = true;
 				}
@@ -263,7 +263,7 @@ __forceinline void SIF1Dma()
 	int cycles = 0, psxCycles = 0;
 	do
 	{
-		if (eesifbusy[1] == 1) // If EE SIF1 is enabled
+		if (eesifbusy[1]) // If EE SIF1 is enabled
 		{
 
 			if (dmacRegs->ctrl.STD == STD_SIF1)
@@ -275,7 +275,7 @@ __forceinline void SIF1Dma()
 				{
 					// Stop & signal interrupts on EE
 					SIF_LOG("EE SIF1 End %x", sif1.end);
-					eesifbusy[1] = 0;
+					eesifbusy[1] = false;
 					done = true;
 					CPU_INT(6, cycles*BIAS);
 					sif1.chain = 0;
@@ -368,7 +368,7 @@ __forceinline void SIF1Dma()
 			}
 		}
 
-		if (iopsifbusy[1] == 1) // If IOP SIF enabled and there's something to transfer
+		if (iopsifbusy[1]) // If IOP SIF enabled and there's something to transfer
 		{
 			int size = sif1.counter;
 
@@ -396,7 +396,7 @@ __forceinline void SIF1Dma()
 					else
 						SIF_LOG(" IOP SIF interrupt");
 					
-					iopsifbusy[1] = 0;
+					iopsifbusy[1] = false;
 					PSX_INT(IopEvt_SIF1, psxCycles);
 					sif1.tagMode = 0;
 					done = true;
@@ -452,8 +452,8 @@ __forceinline void dmaSIF0()
 	}
 
 	psHu32(SBUS_F240) |= 0x2000;
-	eesifbusy[0] = 1;
-	if (iopsifbusy[0] == 1)
+	eesifbusy[0] = true;
+	if (iopsifbusy[0])
 	{
 		FreezeXMMRegs(1);
 		hwIntcIrq(INTC_SBUS);
@@ -475,8 +475,8 @@ __forceinline void dmaSIF1()
 	}
 
 	psHu32(SBUS_F240) |= 0x4000;
-	eesifbusy[1] = 1;
-	if (iopsifbusy[1] == 1)
+	eesifbusy[1] = true;
+	if (iopsifbusy[1])
 	{
 		FreezeXMMRegs(1);
 		SIF1Dma();
