@@ -13,7 +13,6 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "PrecompiledHeader.h"
 
 #include <cmath>
@@ -26,7 +25,7 @@
 /*****************************************/
 
 
-__inline void vuUpdateDI(VURegs * VU) {
+void vuUpdateDI(VURegs * VU) {
 //	u32 Flag_S = 0;
 //	u32 Flag_I = 0;
 //	u32 Flag_D = 0;
@@ -41,7 +40,7 @@ __inline void vuUpdateDI(VURegs * VU) {
 //	VU->statusflag|= (Flag_D | (VU0.VI[REG_STATUS_FLAG].US[0] >> 5)) << 11;
 }
 
-__forceinline u32 VU_MAC_UPDATE( int shift, VURegs * VU, float f)
+static __releaseinline u32 VU_MAC_UPDATE( int shift, VURegs * VU, float f )
 {
 	u32 v = *(u32*)&f; 
 	int exp = (v >> 23) & 0xff; 
@@ -112,7 +111,7 @@ __forceinline void VU_MACw_CLEAR(VURegs * VU)
 	VU->macflag&= ~(0x1111<<0);
 }
 
-void VU_STAT_UPDATE(VURegs * VU) {
+__releaseinline void VU_STAT_UPDATE(VURegs * VU) {
 	int newflag = 0 ;
 	if (VU->macflag & 0x000F) newflag = 0x1;
 	if (VU->macflag & 0x00F0) newflag |= 0x2;

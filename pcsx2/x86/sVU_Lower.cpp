@@ -23,7 +23,6 @@
 #include "iFPU.h"
 #include "iCOP0.h"
 #include "VUmicro.h"
-#include "VUflags.h"
 #include "sVU_Micro.h"
 #include "sVU_Debug.h"
 #include "sVU_zerorec.h"

@@ -180,16 +180,5 @@ PCSX2_ALIGNED16_EXTERN(VURegs VU0);
 
 #define VU1 (*g_pVU1)
 
+extern u32* GET_VU_MEM(VURegs* VU, u32 addr);
 
-#ifdef _WIN32
-extern __forceinline u32* GET_VU_MEM(VURegs* VU, u32 addr)
-#else
-static __forceinline u32* GET_VU_MEM(VURegs* VU, u32 addr)
-#endif
-{
-	if( VU == g_pVU1 ) return (u32*)(VU1.Mem+(addr&0x3fff));
-	
-	if( addr >= 0x4000 ) return (u32*)(VU0.Mem+(addr&0x43f0)); // get VF and VI regs (they're mapped to 0x4xx0 in VU0 mem!)
-	
-	return (u32*)(VU0.Mem+(addr&0x0fff)); // for addr 0x0000 to 0x4000 just wrap around
-}

@@ -15,16 +15,7 @@
 
 #pragma once
 #include "VU.h"
-
-extern __forceinline u32 VU_MAC_UPDATE( int shift, VURegs * VU, float f);
-extern __forceinline u32  VU_MACx_UPDATE(VURegs * VU, float x);
-extern __forceinline u32  VU_MACy_UPDATE(VURegs * VU, float y);
-extern __forceinline u32  VU_MACz_UPDATE(VURegs * VU, float z);
-extern __forceinline u32  VU_MACw_UPDATE(VURegs * VU, float w);
-extern __forceinline void VU_MACx_CLEAR(VURegs * VU);
-extern __forceinline void VU_MACy_CLEAR(VURegs * VU);
-extern __forceinline void VU_MACz_CLEAR(VURegs * VU);
-extern __forceinline void VU_MACw_CLEAR(VURegs * VU);
+#include "VUflags.h"
 
 #define float_to_int4(x)	(s32)((float)x * (1.0f / 0.0625f))
 #define float_to_int12(x)	(s32)((float)x * (1.0f / 0.000244140625f))
@@ -36,14 +27,11 @@ extern __forceinline void VU_MACw_CLEAR(VURegs * VU);
 
 #define	MAC_Reset( VU ) VU->VI[REG_MAC_FLAG].UL = VU->VI[REG_MAC_FLAG].UL & (~0xFFFF)
 
-void _vuSetCycleFlags(VURegs * VU);
-void _vuFlushFDIV(VURegs * VU);
-void _vuFlushEFU(VURegs * VU);
-void _vuTestPipes(VURegs * VU);
-void _vuTestUpperStalls(VURegs * VU, _VURegsNum *VUregsn);
-void _vuTestLowerStalls(VURegs * VU, _VURegsNum *VUregsn);
-void _vuAddUpperStalls(VURegs * VU, _VURegsNum *VUregsn);
-void _vuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn);
+extern void _vuTestPipes(VURegs * VU);
+extern void _vuTestUpperStalls(VURegs * VU, _VURegsNum *VUregsn);
+extern void _vuTestLowerStalls(VURegs * VU, _VURegsNum *VUregsn);
+extern void _vuAddUpperStalls(VURegs * VU, _VURegsNum *VUregsn);
+extern void _vuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn);
 
 /******************************/
 /*   VU Upper instructions    */

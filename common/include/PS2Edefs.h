@@ -618,7 +618,7 @@ typedef s32  (CALLBACK* _CDVDctrlTrayClose)();
 typedef s32  (CALLBACK* _CDVDreadSector)(u8* buffer, u32 lsn, int mode);
 typedef s32  (CALLBACK* _CDVDgetDualInfo)(s32* dualType, u32* _layer1start);
 
-typedef void (CALLBACK* _CDVDnewDiskCB)(void (CALLBACK* callback)());
+typedef void (CALLBACK* _CDVDnewDiskCB)(void (*callback)());
 
 
 // DEV9

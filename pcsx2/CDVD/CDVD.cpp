@@ -514,7 +514,7 @@ void cdvdDetectDisk()
 	}
 }
 
-void CALLBACK cdvdNewDiskCB()
+void cdvdNewDiskCB()
 {
 	DoCDVDresetDiskTypeCache();
 

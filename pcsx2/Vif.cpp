@@ -48,7 +48,92 @@ __forceinline static int _limit(int a, int max)
 {
 	return (a > max) ? max : a;
 }
-	
+
+static __forceinline u32 setVifRowRegs(u32 reg, u32 data)
+{
+	switch (reg)
+	{
+		case 0:
+			vifRegs->r0 = data;
+			break;
+		case 1:
+			vifRegs->r1 = data;
+			break;
+		case 2:
+			vifRegs->r2 = data;
+			break;
+		case 3:
+			vifRegs->r3 = data;
+			break;
+			jNO_DEFAULT;
+	}
+	return data;
+}
+
+static __forceinline u32 getVifRowRegs(u32 reg)
+{
+	switch (reg)
+	{
+		case 0:
+			return vifRegs->r0;
+			break;
+		case 1:
+			return vifRegs->r1;
+			break;
+		case 2:
+			return vifRegs->r2;
+			break;
+		case 3:
+			return vifRegs->r3;
+			break;
+			jNO_DEFAULT;
+	}
+	return 0;	// unreachable...
+}
+
+static __forceinline u32 setVifColRegs(u32 reg, u32 data)
+{
+	switch (reg)
+	{
+		case 0:
+			vifRegs->c0 = data;
+			break;
+		case 1:
+			vifRegs->c1 = data;
+			break;
+		case 2:
+			vifRegs->c2 = data;
+			break;
+		case 3:
+			vifRegs->c3 = data;
+			break;
+			jNO_DEFAULT;
+	}
+	return data;
+}
+
+static __forceinline u32 getVifColRegs(u32 reg)
+{
+	switch (reg)
+	{
+		case 0:
+			return vifRegs->c0;
+			break;
+		case 1:
+			return vifRegs->c1;
+			break;
+		case 2:
+			return vifRegs->c2;
+			break;
+		case 3:
+			return vifRegs->c3;
+			break;
+			jNO_DEFAULT;
+	}
+	return 0;	// unreachable...
+}
+
+
 static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data)
 {
 	int n;
