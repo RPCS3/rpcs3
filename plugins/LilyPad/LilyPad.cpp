@@ -12,6 +12,10 @@
 #include "DualShock3.h"
 #include "HidDevice.h"
 
+#define WMA_FORCE_UPDATE (WM_APP + 0x537)
+#define FORCE_UPDATE_WPARAM ((WPARAM)0x74328943)
+#define FORCE_UPDATE_LPARAM ((LPARAM)0x89437437)
+
 // LilyPad version.
 #define VERSION ((0<<8) | 10 | (0<<24))
 
@@ -25,10 +29,14 @@ u8 miceEnabled;
 int openCount = 0;
 
 int activeWindow = 0;
+int windowThreadId = 0;
+int updateQueued = 0;
 
 int bufSize = 0;
 unsigned char outBuf[50];
 unsigned char inBuf[50];
+
+//		windowThreadId = GetWindowThreadProcessId(hWnd, 0);
 
 #define MODE_DIGITAL 0x41
 #define MODE_ANALOG 0x73
@@ -161,7 +169,7 @@ public:
 
 	// Set to 1 if the state of this pad has been updated since its state
 	// was last queried.
-	u8 stateUpdated;
+	char stateUpdated;
 
 	// initialized and not disabled (and mtap state for slots > 0).
 	u8 enabled;
@@ -358,30 +366,22 @@ void CapSum(ButtonSum *sum) {
 // Only matters when GS thread updates is disabled (Just like summed pad values
 // for pads beyond the first slot).  Also, it's set to 4 and decremented by 1 on each read,
 // so it's less likely I'll control state on a PADkeyEvent call.
-u8 padReadKeyUpdated = 0;
+char padReadKeyUpdated[4] = {0, 0, 0, 0};
 
 #define LOCK_DIRECTION 2
 #define LOCK_BUTTONS 4
 #define LOCK_BOTH 1
 
-int deviceUpdateQueued = 0;
-void QueueDeviceUpdate(int updateList=0) {
-	deviceUpdateQueued = deviceUpdateQueued | 1 | (updateList<<1);
-};
-
-
 void Update(unsigned int port, unsigned int slot) {
-	if (deviceUpdateQueued) {
-		UpdateEnabledDevices((deviceUpdateQueued & 0x2)==0x2);
-		deviceUpdateQueued = 0;
-	}
-	if (port > 2) return;
-	u8 *stateUpdated;
-	if (port < 2)
+	char *stateUpdated;
+	if (port < 2) {
 		stateUpdated = &pads[port][slot].stateUpdated;
-	else
-		stateUpdated = &padReadKeyUpdated;
-	if (*stateUpdated) {
+	}
+	else if (port < 6) {
+		stateUpdated = padReadKeyUpdated+port-2;
+	}
+	else return;
+	if (*stateUpdated > 0) {
 		stateUpdated[0] --;
 		return;
 	}
@@ -389,6 +389,21 @@ void Update(unsigned int port, unsigned int slot) {
 	static unsigned int LastCheck = 0;
 	unsigned int t = timeGetTime();
 	if (t - LastCheck < 15) return;
+
+	if (windowThreadId != GetCurrentThreadId()) {
+		if (stateUpdated[0] < 0) {
+			if (!updateQueued) {
+				updateQueued = 1;
+				PostMessage(hWnd, WMA_FORCE_UPDATE, FORCE_UPDATE_WPARAM, FORCE_UPDATE_LPARAM);
+			}
+		}
+		else {
+			stateUpdated[0] --;
+		}
+		return;
+	}
+	updateQueued = 0;
+
 	LastCheck = t;
 
 	int i;
@@ -425,7 +440,7 @@ void Update(unsigned int port, unsigned int slot) {
 						else if ((state>>15) && !(dev->oldVirtualControlState[b->controlIndex]>>15)) {
 							if (cmd == 0x0F) {
 								miceEnabled = !miceEnabled;
-								QueueDeviceUpdate();
+								UpdateEnabledDevices();
 							}
 							else if (cmd == 0x0C) {
 								lockStateChanged[port][slot] |= LOCK_BUTTONS;
@@ -561,11 +576,12 @@ void Update(unsigned int port, unsigned int slot) {
 		pads[i&1][i>>1].sum = s[i&1][i>>1];
 	}
 	pads[port][slot].stateUpdated--;
-	padReadKeyUpdated = 4;
+	padReadKeyUpdated[0] = padReadKeyUpdated[1] = padReadKeyUpdated[2] = 1;
+	*stateUpdated = 0;
 }
 
 void CALLBACK PADupdate(int port) {
-	if (config.GSThreadUpdates) Update(port, 0);
+	Update(port+3, 0);
 }
 
 inline void SetVibrate(int port, int slot, int motor, u8 val) {
@@ -755,6 +771,14 @@ static const u8 setNativeMode[7] =  {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A};
 // changes.
 ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
 	switch (uMsg) {
+		case WMA_FORCE_UPDATE:
+			if (wParam == FORCE_UPDATE_WPARAM && lParam == FORCE_UPDATE_LPARAM) {
+				if (updateQueued) {
+					updateQueued = 0;
+					Update(5, 0);
+				}
+				return NO_WND_PROC;
+			}
 		case WM_SETTEXT:
 			if (config.saveStateTitle) {
 				wchar_t text[200];
@@ -775,15 +799,17 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			break;
 		case WM_DEVICECHANGE:
 			if (wParam == DBT_DEVNODES_CHANGED) {
-				QueueDeviceUpdate(1);
+				UpdateEnabledDevices(1);
 			}
 			break;
 		case WM_ACTIVATEAPP:
 			// Release any buttons PCSX2 may think are down when
 			// losing/gaining focus.
-			ReleaseModifierKeys();
+			if (!wParam) {
+				ReleaseModifierKeys();
+			}
 			activeWindow = wParam != 0;
-			QueueDeviceUpdate();
+			UpdateEnabledDevices();
 			break;
 		case WM_CLOSE:
 			if (config.closeHacks & 1) {
@@ -885,6 +911,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 			EatWndProc(hWnd, HideCursorProc, 0);
 		}
 		SaveStateChanged();
+		windowThreadId = GetWindowThreadProcessId(hWnd, 0);
 	}
 
 	if (restoreFullScreen) {
@@ -911,14 +938,13 @@ s32 CALLBACK PADopen(void *pDsp) {
 
 	// activeWindow = (GetAncestor(hWnd, GA_ROOT) == GetAncestor(GetForegroundWindow(), GA_ROOT));
 	activeWindow = 1;
-	QueueDeviceUpdate();
+	UpdateEnabledDevices();
 	return 0;
 }
 
 void CALLBACK PADclose() {
 	if (openCount && !--openCount) {
 		DEBUG_TEXT_OUT("LilyPad closed\n\n");
-		deviceUpdateQueued = 0;
 		dm->ReleaseInput();
 		ReleaseEatenProc();
 		hWnd = 0;
@@ -987,9 +1013,7 @@ u8 CALLBACK PADpoll(u8 value) {
 		case 0x42:
 			query.response[2] = 0x5A;
 			{
-				if (!config.GSThreadUpdates) {
-					Update(query.port, query.slot);
-				}
+				Update(query.port, query.slot);
 				ButtonSum *sum = &pad->sum;
 
 				u8 b1 = 0xFF, b2 = 0xFF;
@@ -1252,9 +1276,7 @@ keyEvent* CALLBACK PADkeyEvent() {
 	}
 	eventCount = 0;
 
-	if (!config.GSThreadUpdates) {
-		Update(2, 0);
-	}
+	Update(2, 0);
 	static char shiftDown = 0;
 	static char altDown = 0;
 	static keyEvent ev;

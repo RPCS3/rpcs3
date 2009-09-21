@@ -40,7 +40,6 @@
 #define IDC_GH2_HACK                    1125
 #define IDC_FORCEFEEDBACK_HACK1         1126
 #define IDC_VISTA_VOLUME                1126
-#define IDC_GS_THREAD_INPUT             1128
 #define IDC_SAVE_STATE_TITLE            1129
 #define IDC_PAD_LIST                    1133
 #define IDC_COMBO1                      1134

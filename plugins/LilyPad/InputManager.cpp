@@ -156,21 +156,24 @@ void Device::CalcVirtualState() {
 		int val = physicalControlState[i];
 		if (c->type & BUTTON) {
 			virtualControlState[index] = val;
-			if (!(virtualControlState[index]>>15) != !(oldVirtualControlState[index]>>15) && c->vkey) {
-				// Check for alt-F4 to avoid toggling skip mode incorrectly.
-				if (c->vkey == VK_F4) {
-					for (int i=0; i<numPhysicalControls; i++) {
-						if (virtualControlState[physicalControls[i].baseVirtualControlIndex] &&
-							(physicalControls[i].vkey == VK_MENU ||
-							 physicalControls[i].vkey == VK_RMENU ||
-							 physicalControls[i].vkey == VK_LMENU)) {
-								 return;
+			// DirectInput keyboard events only.
+			if (this->api == DI && this->type == KEYBOARD) {
+				if (!(virtualControlState[index]>>15) != !(oldVirtualControlState[index]>>15) && c->vkey) {
+					// Check for alt-F4 to avoid toggling skip mode incorrectly.
+					if (c->vkey == VK_F4) {
+						for (int i=0; i<numPhysicalControls; i++) {
+							if (virtualControlState[physicalControls[i].baseVirtualControlIndex] &&
+								(physicalControls[i].vkey == VK_MENU ||
+								 physicalControls[i].vkey == VK_RMENU ||
+								 physicalControls[i].vkey == VK_LMENU)) {
+									 return;
+							}
 						}
 					}
+					int event = KEYPRESS;
+					if (!(virtualControlState[index]>>15)) event = KEYRELEASE;
+					QueueKeyEvent(c->vkey, event);
 				}
-				int event = KEYPRESS;
-				if (!(virtualControlState[index]>>15)) event = KEYRELEASE;
-				QueueKeyEvent(c->vkey, event);
 			}
 		}
 		else if (c->type & ABSAXIS) {

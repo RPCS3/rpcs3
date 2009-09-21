@@ -41,7 +41,6 @@ public:
 
 			u8 multitap[2];
 
-			u8 GSThreadUpdates;
 			u8 escapeFullscreenHack;
 			u8 disableScreenSaver;
 			u8 debug;

@@ -45,7 +45,6 @@ const GeneralSettingsBool BoolOptionsInfo[] = {
 	{L"Multitap 1", IDC_MULTITAP1, 0},
 	{L"Multitap 2", IDC_MULTITAP2, 0},
 
-	{L"GS Thread Updates", IDC_GS_THREAD_INPUT, 1},
 	{L"Escape Fullscreen Hack", IDC_ESCAPE_FULLSCREEN_HACK, 1},
 	{L"Disable Screen Saver", IDC_DISABLE_SCREENSAVER, 1},
 	{L"Logging", IDC_DEBUG_FILE, 0},
@@ -817,8 +816,6 @@ int LoadSettings(int force, wchar_t *file) {
 	for (int i=0; i<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); i++) {
 		config.bools[i] = GetPrivateProfileBool(L"General Settings", BoolOptionsInfo[i].name, BoolOptionsInfo[i].defaultValue, file);
 	}
-
-	if (!ps2e) config.GSThreadUpdates = 0;
 
 	config.closeHacks = (u8)GetPrivateProfileIntW(L"General Settings", L"Close Hacks", 0, file);
 	if (config.closeHacks&1) config.closeHacks &= ~2;
@@ -1732,10 +1729,6 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 
 		CheckDlgButton(hWnd, IDC_CLOSE_HACK1, BST_CHECKED * (config.closeHacks&1));
 		CheckDlgButton(hWnd, IDC_CLOSE_HACK2, BST_CHECKED * ((config.closeHacks&2)>>1));
-
-		if (!ps2e) {
-			EnableWindow(GetDlgItem(hWnd, IDC_GS_THREAD_INPUT), 0);
-		}
 
 		if (config.osVersion < 6) EnableWindow(GetDlgItem(hWnd, IDC_VISTA_VOLUME), 0);
 

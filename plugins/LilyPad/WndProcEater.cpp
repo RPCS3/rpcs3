@@ -45,7 +45,6 @@ void ReleaseEatenProc() {
 	while (numExtraProcs) ReleaseExtraProc(extraProcs[0].proc);
 }
 
-extern int deviceUpdateQueued;
 LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	ExtraWndProcResult res = CONTINUE_BLISSFULLY;
 	LRESULT out = 0;
@@ -58,7 +57,7 @@ LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		// Note:  Second bit of deviceUpdateQueued is only set when I receive a device change
 		// notification, which is handled in the GS thread in one of the extraProcs, so this
 		// is all I need to prevent bad things from happening while updating devices.  No mutex needed.
-		if ((deviceUpdateQueued&2) && (extraProcs[i].flags & EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) continue;
+		// if ((deviceUpdateQueued&2) && (extraProcs[i].flags & EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) continue;
 
 		ExtraWndProcResult res2 = extraProcs[i].proc(hWnd, uMsg, wParam, lParam, &out);
 		if (res2 != res) {

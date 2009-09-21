@@ -21,7 +21,16 @@ wchar_t *WindowsKeyboard::GetPhysicalControlName(PhysicalControl *control) {
 
 void WindowsKeyboard::UpdateKey(int vkey, int state) {
 	if (vkey > 7 && vkey < 256) {
-		physicalControlState[vkey] = state * FULLY_DOWN;
+		int newState = state * FULLY_DOWN;
+		if (newState != physicalControlState[vkey]) {
+			// Check for alt-F4 to avoid toggling skip mode incorrectly.
+			if (vkey != VK_F4 || !(physicalControls[VK_MENU].vkey || physicalControls[VK_MENU].vkey || physicalControls[VK_MENU].vkey)) {
+				int event = KEYPRESS;
+				if (!newState) event = KEYRELEASE;
+				QueueKeyEvent(vkey, event);
+			}
+		}
+		physicalControlState[vkey] = newState;
 	}
 }
 
