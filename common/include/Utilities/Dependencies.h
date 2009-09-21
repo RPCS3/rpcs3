@@ -41,7 +41,7 @@
 #	define DeclareNoncopyableObject(classname)	\
 	private:									\
 	explicit classname(const classname&);		\
-	classname& operator=(const classname&);
+	classname& operator=(const classname&)
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////

@@ -635,7 +635,7 @@ __forceinline void xWrite( T val )
 	//
 	class xSmartJump
 	{
-		DeclareNoncopyableObject(xSmartJump)
+		DeclareNoncopyableObject(xSmartJump);
 
 	protected:
 		u8* m_baseptr;				// base address of the instruction (passed to the instruction emitter)

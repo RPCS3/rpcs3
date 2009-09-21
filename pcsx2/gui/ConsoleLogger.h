@@ -26,11 +26,31 @@ using namespace Threading;
 
 class LogWriteEvent;
 
+// --------------------------------------------------------------------------------------
+//  PipeRedirectionBase
+// --------------------------------------------------------------------------------------
+// Implementations for this class are found in Win/Lnx specific modules.  Class creation
+// should be done using NewPipeRedir() only (hence the protected constructor in this class).
+//
+class PipeRedirectionBase
+{
+	DeclareNoncopyableObject( PipeRedirectionBase );
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// pxLogConsole
+public:
+	virtual ~PipeRedirectionBase() throw()=0;	// abstract destructor, forces abstract class behavior
+
+protected:
+	PipeRedirectionBase() {}
+};
+
+extern PipeRedirectionBase* NewPipeRedir();
+
+// --------------------------------------------------------------------------------------
+//  pxLogConsole
+// --------------------------------------------------------------------------------------
 // This is a custom logging facility that pipes wxLog messages to our very own console
-// log window.
+// log window.  Useful for catching and redirecting wx's internal logs (although like
+// 3/4ths of them are worthless and we would probably rather ignore them anyway).
 //
 class pxLogConsole : public wxLog
 {
@@ -41,10 +61,12 @@ protected:
     virtual void DoLog(wxLogLevel level, const wxChar *szString, time_t t);
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// ConsoleThreadTest -- useful class for unit testing the thread safety and general performance
-// of the console logger.
-//
+
+// --------------------------------------------------------------------------------------
+//  ConsoleThreadTest -- useful class for unit testing the thread safety and general performance
+//  of the console logger.
+// --------------------------------------------------------------------------------------
+
 class ConsoleTestThread : public PersistentThread
 {
 protected:
@@ -63,12 +85,12 @@ public:
 	}
 };
 
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  ConsoleLogFrame  --  Because the one built in wx is poop.
+// --------------------------------------------------------------------------------------
 class ConsoleLogFrame : public wxFrame
 {
-	DeclareNoncopyableObject(ConsoleLogFrame)
+	DeclareNoncopyableObject(ConsoleLogFrame);
 
 public:
 	typedef AppConfig::ConsoleLogOptions ConLogConfig;
@@ -76,7 +98,7 @@ public:
 protected:
 	class ColorArray
 	{
-		DeclareNoncopyableObject(ColorArray)
+		DeclareNoncopyableObject(ColorArray);
 
 	protected:
 		SafeArray<wxTextAttr>	m_table;

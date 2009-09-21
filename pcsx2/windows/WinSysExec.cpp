@@ -15,11 +15,9 @@
 
 #include "PrecompiledHeader.h"
 #include "Win32.h"
-
 #include <winnt.h>
-#include "Common.h"
 
-#include "cdvd/CDVD.h"
+#include "Common.h"
 
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
@@ -39,42 +37,4 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	mmap_ClearCpuBlock( offset );
 
 	return EXCEPTION_CONTINUE_EXECUTION;
-}
-
-namespace HostSys
-{
-	void *Mmap(uptr base, u32 size)
-	{
-		return VirtualAlloc((void*)base, size, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-	}
-
-	void Munmap(uptr base, u32 size)
-	{
-		if( base == NULL ) return;
-		VirtualFree((void*)base, size, MEM_DECOMMIT);
-		VirtualFree((void*)base, 0, MEM_RELEASE);
-	}
-
-	void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
-	{
-		DWORD winmode = 0;
-
-		switch( mode )
-		{
-			case Protect_NoAccess:
-				winmode = ( allowExecution ) ? PAGE_EXECUTE : PAGE_NOACCESS;
-			break;
-			
-			case Protect_ReadOnly:
-				winmode = ( allowExecution ) ? PAGE_EXECUTE_READ : PAGE_READONLY;
-			break;
-			
-			case Protect_ReadWrite:
-				winmode = ( allowExecution ) ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE;
-			break;
-		}
-
-		DWORD OldProtect;	// enjoy my uselessness, yo!
-		VirtualProtect( baseaddr, size, winmode, &OldProtect );
-	}
 }

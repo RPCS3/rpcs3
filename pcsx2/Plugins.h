@@ -221,7 +221,7 @@ extern EmuPluginBindings EmuPlugins;
 //
 class PluginManagerBase
 {
-	DeclareNoncopyableObject( PluginManagerBase )
+	DeclareNoncopyableObject( PluginManagerBase );
 
 public:
 	PluginManagerBase() {}
@@ -250,7 +250,7 @@ public:
 //
 class PluginManager : public PluginManagerBase
 {
-	DeclareNoncopyableObject( PluginManager )
+	DeclareNoncopyableObject( PluginManager );
 
 protected:
 	struct PluginStatus_t

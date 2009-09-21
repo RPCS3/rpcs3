@@ -1890,6 +1890,14 @@
 					</File>
 				</Filter>
 			</Filter>
+			<Filter
+				Name="Windows"
+				>
+				<File
+					RelativePath="..\WinSysExec.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="AppHost"
@@ -2528,7 +2536,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\WinSysExec.cpp"
+					RelativePath="..\WinConsolePipe.cpp"
 					>
 				</File>
 			</Filter>

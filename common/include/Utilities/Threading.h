@@ -117,7 +117,7 @@ namespace Threading
 	//
 	class PersistentThread
 	{
-		DeclareNoncopyableObject(PersistentThread)
+		DeclareNoncopyableObject(PersistentThread);
 
 	protected:
 		typedef int (*PlainJoeFP)();
@@ -165,7 +165,7 @@ namespace Threading
 	//
 	class ScopedLock
 	{
-		DeclareNoncopyableObject(ScopedLock)
+		DeclareNoncopyableObject(ScopedLock);
 
 	protected:
 		MutexLock& m_lock;

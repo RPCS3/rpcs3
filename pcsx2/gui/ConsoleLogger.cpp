@@ -22,7 +22,7 @@
 #include <wx/file.h>
 #include <wx/textfile.h>
 
-// Custom ConsoleLogger, because the built-in wxWidgets one is poop.
+using Console::Colors;
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
@@ -37,7 +37,8 @@ DEFINE_EVENT_TYPE(wxEVT_SetTitleText)
 DEFINE_EVENT_TYPE(wxEVT_DockConsole)
 DEFINE_EVENT_TYPE(wxEVT_SemaphoreWait)
 
-using Console::Colors;
+// C++ requires abstract destructors to exist, even thought hey're abstract.
+PipeRedirectionBase::~PipeRedirectionBase() throw() {}
 
 // ----------------------------------------------------------------------------
 //

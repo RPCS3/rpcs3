@@ -393,7 +393,16 @@ bool Pcsx2App::OnInit()
 
 	g_Conf.reset( new AppConfig() );
 
-	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
+	try
+	{
+		m_PipeRedirHandle.reset( NewPipeRedir() );
+		wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
+	}
+	catch( Exception::RuntimeError& ex )
+	{
+		// Entirely non-critical errors.  Log 'em and move along.
+		Console::Error( ex.FormatDiagnosticMessage() );
+	}
 
 #define pxMessageBoxEventThing(func) \
 	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
@@ -420,6 +429,8 @@ bool Pcsx2App::OnInit()
 
 	try
 	{
+		InitDefaultGlobalAccelerators();
+
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
 		ReadUserModeSettings();
 
@@ -725,7 +736,6 @@ Pcsx2App::Pcsx2App()  :
 {
 	SetAppName( L"pcsx2" );
 	BuildCommandHash();
-	InitDefaultGlobalAccelerators();
 }
 
 Pcsx2App::~Pcsx2App()

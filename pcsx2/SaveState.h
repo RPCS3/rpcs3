@@ -16,9 +16,7 @@
 #pragma once
 
 // This shouldn't break Win compiles, but it does.
-#ifdef __LINUX__
 #include "PS2Edefs.h"
-#endif
 #include "System.h"
 
 // Savestate Versioning!

@@ -296,10 +296,10 @@ protected:
 
 	wxScopedPtr<wxImageList>		m_ToolbarImages;
 	wxScopedPtr<wxBitmap>			m_Bitmap_Logo;
-
-	wxScopedPtr<SysCoreAllocations>	m_CoreAllocs;
+	wxScopedPtr<PipeRedirectionBase>m_PipeRedirHandle;
 
 public:
+	wxScopedPtr<SysCoreAllocations>	m_CoreAllocs;
 	wxScopedPtr<PluginManager>		m_CorePlugins;
 	wxScopedPtr<SysCoreThread>		m_CoreThread;
 
