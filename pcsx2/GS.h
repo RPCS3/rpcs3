@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -88,6 +88,8 @@ struct GIFTAG
 	u32 FLG : 2;
 	u32 NREG : 4;
 	u32 REGS[2];
+
+	GIFTAG() {}
 };
 
 struct GIFPath
@@ -106,7 +108,7 @@ struct GIFPath
 	__forceinline void SetTag(const void* mem);
 	__forceinline bool StepReg() {
 		if ((++curreg & 0xf) == tag.NREG) {
-			curreg = 0; 
+			curreg = 0;
 			if (--nloop == 0) {
 				return false;
 			}
@@ -190,10 +192,10 @@ protected:
 	Threading::Semaphore m_sem_InitDone;
 
 	Threading::MutexLock m_lock_RingRestart;
-	
+
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
 	Threading::MutexLock m_PacketLocker;
-	
+
 	// Used to delay the sending of events.  Performance is better if the ringbuffer
 	// has more than one command in it when the thread is kicked.
 	int m_CopyCommandTally;

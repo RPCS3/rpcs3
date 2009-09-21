@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -17,7 +17,6 @@
 // it built into their CRT/libc.
 
 #include "PrecompiledHeader.h"
-
 
 struct AlignedMallocHeader
 {
@@ -73,11 +72,16 @@ __forceinline void pcsx2_aligned_free(void* pmem)
 
 // Special unaligned memset used when all other optimized memsets fail (it's called from
 // memzero_obj and stuff).
-void _memset16_unaligned( void* dest, u16 data, size_t size )
+__forceinline void _memset16_unaligned( void* dest, u16 data, size_t size )
 {
 	jASSUME( (size & 0x1) == 0 );
 
 	u16* dst = (u16*)dest;
 	for(int i=size; i; --i, ++dst )
 		*dst = data;
+}
+
+__forceinline void HostSys::Munmap( void* base, u32 size )
+{
+	Munmap( (uptr)base, size );
 }

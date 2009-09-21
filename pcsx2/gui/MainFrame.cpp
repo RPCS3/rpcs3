@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "ConsoleLogger.h"
 
 #include "Resources/EmbeddedImage.h"
 #include "Resources/AppIcon16.h"

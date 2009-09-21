@@ -63,7 +63,8 @@ using namespace std;
 // this is not emulated!
 PCSX2_ALIGNED16( static GIFPath s_path[3] );
 
-GIFPath::GIFPath()
+GIFPath::GIFPath() :
+	tag()
 {
 	memzero_obj( *this );
 }
@@ -81,7 +82,7 @@ __forceinline void GIFPath::PrepPackedRegs()
 
 	u32 tempreg = tag.REGS[0];
 	numregs		= ((tag.NREG-1)&0xf) + 1;
-	
+
 	for (u32 i = 0; i < numregs; i++) {
 		if (i == 8) tempreg = tag.REGS[1];
 		regs[i] = tempreg & 0xf;
@@ -283,7 +284,7 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 			path.SetTag(pMem);
 			incTag(16, 1);
 
-			if (pathidx == GIF_PATH_3) {			
+			if (pathidx == GIF_PATH_3) {
 				if (path.tag.FLG&2) Path3progress = IMAGE_MODE;
 				else				Path3progress = TRANSFER_MODE;
 			}
@@ -320,19 +321,19 @@ __forceinline int mtgsThreadObject::_gifTransferDummy(GIF_PATH pathidx, const u8
 				break;
 			}
 		}
-		
+
 		if (path.tag.EOP && !path.nloop) {
-			if (pathidx != GIF_PATH_2) {				
+			if (pathidx != GIF_PATH_2) {
 				break;
 			}
-		} 
+		}
 	}
 
 	size = (startSize - size);
 
 	if (pathidx == GIF_PATH_3) {
 		if (path.tag.EOP && !path.nloop) {
-			Path3progress = STOPPED_MODE;	
+			Path3progress = STOPPED_MODE;
 		}
 		gif->madr += size * 16;
 		gif->qwc  -= size;
@@ -607,7 +608,7 @@ sptr mtgsThreadObject::ExecuteTask()
 
 	if( renderswitch )
 		Console::WriteLn( "\t\tForced software switch enabled." );
-	
+
 	if( GSopen2 != NULL )
 		m_returncode = GSopen2( (void*)&pDsp, 1 | (renderswitch ? 4 : 0) );
 	else

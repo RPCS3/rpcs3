@@ -102,6 +102,7 @@
 		<Unit filename="../../src/Utilities/StringHelpers.cpp" />
 		<Unit filename="../../src/Utilities/ThreadTools.cpp" />
 		<Unit filename="../../src/Utilities/vssprintf.cpp" />
+		<Unit filename="../../src/Utilities/wxGuiTools.cpp" />
 		<Unit filename="../../src/Utilities/x86/MemcpyFast.S" />
 		<Extensions>
 			<envvars />

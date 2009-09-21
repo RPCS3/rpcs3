@@ -24,13 +24,15 @@
 class IniInterface;
 class MainEmuFrame;
 class GSFrame;
+class ConsoleLogFrame;
+class PipeRedirectionBase;
 
 #include "Utilities/HashMap.h"
 #include "Utilities/wxGuiTools.h"
 
 #include "AppConfig.h"
 #include "System.h"
-#include "ConsoleLogger.h"
+//#include "ConsoleLogger.h"
 
 #include "ps2/CoreEmuThread.h"
 
@@ -146,7 +148,7 @@ struct KeyAcceleratorCode
 {
 	union
 	{
-		struct  
+		struct
 		{
 			u16		keycode;
 			u16		win:1,		// win32 only.
@@ -156,16 +158,16 @@ struct KeyAcceleratorCode
 		};
 		u32  val32;
 	};
-	
+
 	KeyAcceleratorCode() : val32( 0 ) {}
 	KeyAcceleratorCode( const wxKeyEvent& evt );
-	
+
 	KeyAcceleratorCode( wxKeyCode code )
 	{
 		val32 = 0;
 		keycode = code;
 	}
-	
+
 	KeyAcceleratorCode& Shift()
 	{
 		shift = true;
@@ -189,7 +191,7 @@ struct KeyAcceleratorCode
 		cmd = true;
 		return *this;
 	}
-	
+
 	wxString ToString() const;
 };
 
@@ -217,7 +219,7 @@ class AcceleratorDictionary : public HashTools::HashMap<int, const GlobalCommand
 protected:
 
 public:
-	typedef HashMap<int, const GlobalCommandDescriptor*> _parent;
+	typedef HashTools::HashMap<int, const GlobalCommandDescriptor*> _parent;
 	using _parent::operator[];
 
 	AcceleratorDictionary();
@@ -351,7 +353,7 @@ public:
 		wxASSERT( m_MainFrame != NULL );
 		return *m_MainFrame;
 	}
-	
+
 	MainEmuFrame& GetMainFrameOrExcept() const
 	{
 		if( m_MainFrame == NULL )
@@ -367,7 +369,7 @@ public:
 
 		return *m_CoreThread;
 	}
-	
+
 	void OpenGsFrame();
 	void OnGsFrameClosed();
 
@@ -386,37 +388,12 @@ public:
 #endif
 
 	// ----------------------------------------------------------------------------
-	//        Console / Program Logging Helpers
+	//   Console / Program Logging Helpers
 	// ----------------------------------------------------------------------------
-	ConsoleLogFrame* GetProgramLog()
-	{
-		return m_ProgramLogBox;
-	}
-
-	void CloseProgramLog()
-	{
-		if( m_ProgramLogBox == NULL ) return;
-
-		m_ProgramLogBox->Close();
-
-		// disable future console log messages from being sent to the window.
-		m_ProgramLogBox = NULL;
-	}
-
-	void ProgramLog_CountMsg()
-	{
-		if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
-		m_ProgramLogBox->CountMessage();
-	}
-
-	void ProgramLog_PostEvent( wxEvent& evt )
-	{
-		if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
-		m_ProgramLogBox->GetEventHandler()->AddPendingEvent( evt );
-	}
-
-	//ConsoleLogFrame* GetConsoleFrame() const { return m_ProgramLogBox; }
-	//void SetConsoleFrame( ConsoleLogFrame& frame ) { m_ProgramLogBox = &frame; }
+	ConsoleLogFrame* GetProgramLog();
+	void CloseProgramLog();
+	void ProgramLog_CountMsg();
+	void ProgramLog_PostEvent( wxEvent& evt );
 
 protected:
 	void InitDefaultGlobalAccelerators();
@@ -511,7 +488,7 @@ extern void SysExecute( CDVD_SourceType cdvdsrc );
 
 // --------------------------------------------------------------------------------------
 //  AppInvoke  macro
-// -------------------------------------------------------------------------------------- 
+// --------------------------------------------------------------------------------------
 // This handy macro provides a safe way to invoke functions on objects that may or may not
 // exist.  If the object is null, the function is not called.  Useful for calling things that
 // are cosmetic optional, such as logging or status bars.

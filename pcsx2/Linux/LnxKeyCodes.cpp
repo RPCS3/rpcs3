@@ -1,5 +1,6 @@
 
 #include "../PrecompiledHeader.h"
+#include "ConsoleLogger.h"
 
 //#include <wx/gtk/win_gtk.h>
 #include <gdk/gdkkeysyms.h>

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 #include "MainFrame.h"
+#include "ConsoleLogger.h"
 #include "Utilities/Console.h"
 #include "DebugTools/Debug.h"
 
@@ -551,6 +552,32 @@ void ConsoleLogFrame::DoMessage()
 	}
 }
 
+ConsoleLogFrame* Pcsx2App::GetProgramLog()
+{
+	return m_ProgramLogBox;
+}
+
+void Pcsx2App::CloseProgramLog()
+{
+	if( m_ProgramLogBox == NULL ) return;
+
+	m_ProgramLogBox->Close();
+
+	// disable future console log messages from being sent to the window.
+	m_ProgramLogBox = NULL;
+}
+
+void Pcsx2App::ProgramLog_CountMsg()
+{
+	if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
+	m_ProgramLogBox->CountMessage();
+}
+
+void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
+{
+	if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
+	m_ProgramLogBox->GetEventHandler()->AddPendingEvent( evt );
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -566,7 +593,7 @@ namespace Console
 	// they are implemented here using a mutex lock for maximum safety.
 	static void _immediate_logger( const char* src )
 	{
-	    
+
 		ScopedLock locker( immediate_log_lock );
 
 		if( emuLog != NULL )
@@ -576,9 +603,9 @@ namespace Console
 		// [TODO] make this a configurable option?  Do we care? :)
 #ifdef __LINUX__
 		// puts does automatic newlines, which we don't want here
-		
-		/*if (strchr(src, '\n')) 
-		{   
+
+		/*if (strchr(src, '\n'))
+		{
 		    fputs( "PCSX2 > ", stdout );
             fputs( src , stdout);
 		}

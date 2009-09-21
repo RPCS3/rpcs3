@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -15,14 +15,13 @@
 
 #pragma once
 
+#include "App.h"
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1)
 END_DECLARE_EVENT_TYPES()
 
 static const bool EnableThreadedLoggingTest = false; //true;
-
-using namespace Threading;
 
 class LogWriteEvent;
 
@@ -67,18 +66,18 @@ protected:
 //  of the console logger.
 // --------------------------------------------------------------------------------------
 
-class ConsoleTestThread : public PersistentThread
+class ConsoleTestThread : public Threading::PersistentThread
 {
 protected:
 	volatile bool m_done;
 	sptr ExecuteTask();
 
-public:	
+public:
 	ConsoleTestThread() :
 		m_done( false )
 	{
 	}
-	
+
 	~ConsoleTestThread() throw()
 	{
 		m_done = true;

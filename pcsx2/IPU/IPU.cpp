@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -45,6 +45,8 @@ using namespace std;			// for min / max
 #	define IPU_INT_FROM( cycles )  CPU_INT( DMAC_FROM_IPU, cycles )
 #	define IPU_FORCEINLINE __forceinline
 #endif
+
+static tIPU_DMA g_nDMATransfer;
 
 // FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
 // FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
@@ -307,17 +309,17 @@ void ipuSoftReset()
 	mpeg2_init();
 	FIFOto_clear();
 	FIFOfrom_clear();
-	
+
 	coded_block_pattern = 0;
-	
+
 	ipuRegs->ctrl._u32 = 0;
 	ipuRegs->top = 0;
 	ipuCurCmd = 0xffffffff;
-	
+
 	g_BP.BP = 0;
 	g_BP.FP = 0;
 	g_BP.bufferhasnew = 0;
-	
+
 	g_nCmdIndex = 0;
 	g_nCmdPos[0] = 0;
 	g_nCmdPos[1] = 0;
@@ -391,7 +393,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 static void ipuBCLR(u32 val)
 {
 	FIFOto_clear();
-	
+
 	g_BP.BP = val & 0x7F;
 	g_BP.FP = 0;
 	g_BP.bufferhasnew = 0;
@@ -1321,7 +1323,7 @@ int FIFOto_read(void *value)
 		((u32*)value)[i] = fifo_input[FIreadpos + i];
 		fifo_input[FIreadpos + i] = 0;
 	}
-	
+
 	FIreadpos = (FIreadpos + 4) & 31;
 	g_BP.IFC--;
 	return 1;
@@ -1348,32 +1350,32 @@ int FIFOto_write(u32* pMem, int size)
 	return firsttrans;
 }
 
-static __forceinline bool IPU1chain(int &totalqwc) 
+static __forceinline bool IPU1chain(int &totalqwc)
 {
 	if (ipu1dma->qwc > 0)
 	{
-		int qwc = ipu1dma->qwc; 
+		int qwc = ipu1dma->qwc;
 		u32 *pMem;
-		
-		pMem = (u32*)dmaGetAddr(ipu1dma->madr); 
-		
-		if (pMem == NULL) 
-		{ 
-			Console::Error("ipu1dma NULL!"); 
-			return true; 
-		} 
-		
-		qwc = FIFOto_write(pMem, qwc); 
-		ipu1dma->madr += qwc<< 4; 
-		ipu1dma->qwc -= qwc; 
-		totalqwc += qwc; 
-		
-		if (ipu1dma->qwc > 0) 
-		{ 
-			g_nDMATransfer.ACTV1 = 1; 
-			return true; 
-		} 
-	} 
+
+		pMem = (u32*)dmaGetAddr(ipu1dma->madr);
+
+		if (pMem == NULL)
+		{
+			Console::Error("ipu1dma NULL!");
+			return true;
+		}
+
+		qwc = FIFOto_write(pMem, qwc);
+		ipu1dma->madr += qwc<< 4;
+		ipu1dma->qwc -= qwc;
+		totalqwc += qwc;
+
+		if (ipu1dma->qwc > 0)
+		{
+			g_nDMATransfer.ACTV1 = 1;
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -1385,7 +1387,7 @@ static __forceinline bool IncreaseTadr(u32 tag)
 		case TAG_REFE:  // refe
 			ipu1dma->tadr += 16;
 			return true;
-		
+
 		case TAG_END: // end
 			ipu1dma->tadr = ipu1dma->madr;
 			return true;
@@ -1431,13 +1433,13 @@ static __forceinline bool ipuDmacSrcChain(DMACh *tag, u32 *ptag)
 			Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
 			break;
 	}
-	
+
 	return false;
 }
 
 static __forceinline void flushGIF()
 {
-	while(gif->chcr.STR && (vif1Regs->mskpath3 == 0)) 
+	while(gif->chcr.STR && (vif1Regs->mskpath3 == 0))
 	{
 		GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
 		gsInterrupt();
@@ -1446,16 +1448,16 @@ static __forceinline void flushGIF()
 
 int IPU1dma()
 {
-	u32 *ptag; 
+	u32 *ptag;
 	bool done = false;
 	int ipu1cycles = 0, totalqwc = 0;
 
 	assert(!ipu1dma->chcr.TTE);
-	
+
 	if (!(ipu1dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
 
 	assert(g_nDMATransfer.TIE1 == 0);
-	
+
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
 	flushGIF();
 
@@ -1494,7 +1496,7 @@ int IPU1dma()
 				IncreaseTadr(tag);
 
 				Tag::UpperTransfer(ipu1dma, ptag);
-				
+
 				IPU_LOG("IPU dmaIrq Set");
 				IPU_INT_TO(totalqwc * BIAS);
 				g_nDMATransfer.TIE1 = 1;
@@ -1511,7 +1513,7 @@ int IPU1dma()
 		g_nDMATransfer.DOTIE1 = 0;
 		g_nDMATransfer.ACTV1 = 0;
 	}
-	
+
 	// Normal Mode & qwc is finished
 	if ((ipu1dma->chcr.MOD == NORMAL_MODE) && (ipu1dma->qwc == 0))
 	{
@@ -1524,37 +1526,37 @@ int IPU1dma()
 	{
 		IPU_LOG("dmaIPU1 Normal size=%d, addr=%lx, fifosize=%x",
 		        ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
-		
+
 		if (!IPU1chain(totalqwc)) IPU_INT_TO((ipu1cycles + totalqwc) * BIAS);
-		
+
 		return totalqwc;
 	}
 	else
 	{
 		// Chain Mode & ipu1dma->qwc is 0
 		ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
-		
+
 		// Transfer the tag.
 		if (!(Tag::Transfer("IPU1", ipu1dma, ptag))) return totalqwc;
-		
+
 		ipu1cycles += 1; // Add 1 cycles from the QW read for the tag
-		
+
 		done = ipuDmacSrcChain(ipu1dma, ptag);
 
 		IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
 		        ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
 		g_nDMATransfer.DOTIE1 = (ipu1dma->chcr.TIE && Tag::IRQ(ptag));
-		
+
 		if (ipu1dma->qwc == 0)
 		{
 			//Check TIE bit of CHCR and IRQ bit of tag
 			if (g_nDMATransfer.DOTIE1)
 			{
 				Console::WriteLn("IPU1 TIE");
-				
+
 				if (IPU1chain(totalqwc)) return totalqwc;
-				
+
 				if (done)
 				{
 					ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
@@ -1752,7 +1754,7 @@ void ipu0Interrupt()
 	{
 		g_nDMATransfer.TIE0 = 0;
 	}
-	
+
 	ipu0dma->chcr.STR = 0;
 	hwDmacIrq(DMAC_FROM_IPU);
 }

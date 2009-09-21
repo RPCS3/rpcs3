@@ -113,7 +113,6 @@
 		<Unit filename="../../common/include/PS2Edefs.h" />
 		<Unit filename="../../common/include/PS2Etypes.h" />
 		<Unit filename="../../common/include/Pcsx2Api.h" />
-		<Unit filename="../../common/include/Pcsx2Config.h" />
 		<Unit filename="../../common/include/Pcsx2Defs.h" />
 		<Unit filename="../../common/include/Pcsx2Types.h" />
 		<Unit filename="../../common/include/PluginCallbacks.h" />
@@ -284,7 +283,7 @@
 		<Unit filename="../gui/Dialogs/ModalPopups.h" />
 		<Unit filename="../gui/Dialogs/PickUserModeDialog.cpp" />
 		<Unit filename="../gui/FrameForGS.cpp" />
-		<Unit filename="../gui/HostGui.cpp" />
+		<Unit filename="../gui/GlobalCommands.cpp" />
 		<Unit filename="../gui/IniInterface.cpp" />
 		<Unit filename="../gui/IniInterface.h" />
 		<Unit filename="../gui/MainFrame.cpp" />
@@ -369,7 +368,6 @@
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
 		<Unit filename="../gui/Resources/EmbeddedImage.h" />
-		<Unit filename="../gui/Resources/ps2_silver.h" />
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />

@@ -60,11 +60,11 @@ namespace Implementations
 	{
 		// FIXME : Reimplement framelimiting using new double-switch boolean system
 	}
-	
+
 	void Framelimiter_TurboToggle()
 	{
 	}
-	
+
 	void Framelimiter_MasterToggle()
 	{
 	}
@@ -74,18 +74,18 @@ namespace Implementations
 		AppInvoke( CoreThread, Suspend() );
 		AppInvoke( MainFrame, ApplySettings() );
 	}
-	
+
 	void Emu_Resume()
 	{
 		AppInvoke( CoreThread, Resume() );
 		AppInvoke( MainFrame, ApplySettings() );
 	}
-	
+
 	void Emu_TakeSnapshot()
 	{
 		GSmakeSnapshot( g_Conf->Folders.Snapshots.ToAscii().data() );
 	}
-	
+
 	void Emu_RenderToggle()
 	{
 		AppInvoke( CoreThread, Suspend() );
@@ -144,7 +144,7 @@ namespace Implementations
 		mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
 		if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);
 	}
-	
+
 	void Cpu_DumpRegisters()
 	{
 #ifdef PCSX2_DEVBUILD
@@ -158,7 +158,7 @@ namespace Implementations
 //  CommandDeclarations table
 // --------------------------------------------------------------------------------------
 
-static const GlobalCommandDescriptor CommandDeclarations[] = 
+static const GlobalCommandDescriptor CommandDeclarations[] =
 {
 	{	"States_FreezeCurrentSlot",
 		States_FreezeCurrentSlot,
@@ -171,25 +171,25 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 		wxLt( "Load state" ),
 		wxLt( "Loads a virtual machine state from the current slot." ),
 	},
-	
+
 	{	"States_CycleSlotForward",
 		States_CycleSlotForward,
 		wxLt( "Cycle to next slot" ),
 		wxLt( "Cycles the current save slot in +1 fashion!" ),
 	},
-	
+
 	{	"States_CycleSlotBackward",
 		States_CycleSlotBackward,
 		wxLt( "Cycle to prev slot" ),
 		wxLt( "Cycles the current save slot in -1 fashion!" ),
 	},
-	
+
 	{	"Frameskip_Toggle",
 		Implementations::Frameskip_Toggle,
 		NULL,
 		NULL,
 	},
-	
+
 	{	"Framelimiter_TurboToggle",
 		Implementations::Framelimiter_TurboToggle,
 		NULL,
@@ -236,15 +236,15 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 		NULL,
 		NULL,
 	},
-	
-	
+
+
 	// Command Declarations terminator:
 	// (must always be last in list!!)
 	{ NULL }
 };
 
 AcceleratorDictionary::AcceleratorDictionary() :
-	HashMap( 0, 0xffffffff )
+	_parent( 0, 0xffffffff )
 {
 }
 
@@ -252,7 +252,7 @@ void AcceleratorDictionary::Map( const KeyAcceleratorCode& acode, const char *se
 {
 	const GlobalCommandDescriptor* result = NULL;
 	TryGetValue( acode.val32, result );
-	
+
 	if( result != NULL )
 	{
 		Console::Notice( wxsFormat(
@@ -284,7 +284,7 @@ void Pcsx2App::BuildCommandHash()
 		GlobalCommands[curcmd->Id] = curcmd;
 		curcmd++;
 	}
-	
+
 }
 
 void Pcsx2App::InitDefaultGlobalAccelerators()

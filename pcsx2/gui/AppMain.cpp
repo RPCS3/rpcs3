@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -18,6 +18,7 @@
 #include "MainFrame.h"
 #include "Plugins.h"
 #include "SaveState.h"
+#include "ConsoleLogger.h"
 
 #include "Dialogs/ModalPopups.h"
 #include "Dialogs/ConfigurationDialog.h"
@@ -99,7 +100,7 @@ void AppEmuThread::Resume()
 }
 
 // This is used when the GS plugin is handling its own window.  Messages from the PAD
-// are piped through to an app-level message handler, which dispatches them through 
+// are piped through to an app-level message handler, which dispatches them through
 // the universal Accelerator table.
 static const int pxID_PadHandler_Keydown = 8030;
 
@@ -165,7 +166,7 @@ bool HandlePluginError( Exception::PluginError& ex )
 
 		// fixme: Send a message to the panel to select the failed plugin.
 		if( Dialogs::ConfigurationDialog().ShowModal() == wxID_CANCEL )
-			return false;			
+			return false;
 	}
 	return result;
 }
@@ -205,7 +206,7 @@ sptr AppEmuThread::ExecuteTask()
 		m_plugins.Close();
 		Console::Error( ex.FormatDiagnosticMessage() );
 		Msgbox::Alert( ex.FormatDisplayMessage(), _("Plugin Open Error") );
-		
+
 		/*if( HandlePluginError( ex ) )
 		{
 			// fixme: automatically re-try emu startup here...
@@ -331,7 +332,7 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 			wxsFormat( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
 		);
 	}
-	
+
 	parser.SetSwitchChars( L"-" );
 }
 
@@ -377,7 +378,7 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 			if( !result ) return false;
 		}
 	}
-	
+
 	parser.Found( L"cfgpath", &OverrideOptions.SettingsFolder );
 
 	return true;
@@ -583,7 +584,7 @@ void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
 void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 {
 	using namespace Dialogs;
-	
+
 	MsgboxEventResult& evtres( *((MsgboxEventResult*)evt.GetClientData()) );
 	switch( evt.GetId() )
 	{
@@ -604,7 +605,7 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 			evtres.result = BiosSelectorDialog().ShowModal();
 		}
 		break;
-		
+
 		case DialogId_LogOptions:
 		{
 			static int _guard = 0;
@@ -613,7 +614,7 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 			evtres.result = LogOptionsDialog().ShowModal();
 		}
 		break;
-		
+
 		case DialogId_About:
 		{
 			static int _guard = 0;
@@ -659,13 +660,13 @@ void Pcsx2App::CleanupMess()
 		m_CorePlugins->Close();
 		m_CorePlugins->Shutdown();
 	}
-	
+
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.
-	// We don't need to unload plugins anyway tho -- shutdown is plenty safe enough for 
+	// We don't need to unload plugins anyway tho -- shutdown is plenty safe enough for
 	// closing out all the windows.  So just leave it be and let the plugins get unloaded
 	// during the wxApp destructor. -- air
-	
+
 	m_ProgramLogBox = NULL;
 	m_MainFrame = NULL;
 }
@@ -826,7 +827,7 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
 	LoadPluginsImmediate();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	CDVDsys_ChangeSource( cdvdsrc );
-	
+
 	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
 	m_CoreThread->Resume();
 }
@@ -834,7 +835,7 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
 void Pcsx2App::OpenGsFrame()
 {
 	if( m_gsFrame != NULL ) return;
-	
+
 	m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
 	m_gsFrame->SetFocus();
 	pDsp = (uptr)m_gsFrame->GetHandle();

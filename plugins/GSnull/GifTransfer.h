@@ -132,6 +132,8 @@ struct GIFTAG
 	u32 flg : 2;
 	u32 nreg : 4;
 	u32 regs[2];
+
+	GIFTAG() {}
 };
 
 struct GIFPath

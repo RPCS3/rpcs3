@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -39,10 +39,7 @@ namespace HostSys
 
 	extern void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution=false );
 
-	static __forceinline void Munmap( void* base, u32 size )
-	{
-		Munmap( (uptr)base, size );
-	}
+	extern void Munmap( void* base, u32 size );
 }
 
 
