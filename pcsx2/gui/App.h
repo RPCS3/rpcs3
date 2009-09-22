@@ -443,8 +443,9 @@ public:
 	virtual ~AppEmuThread() throw();
 
 	virtual void Suspend( bool isBlocking=true );
-	virtual void Resume();
 	virtual void StateCheck();
+	virtual void ApplySettings( const Pcsx2Config& src );
+	virtual void OnResumeReady();
 
 protected:
 	sptr ExecuteTask();

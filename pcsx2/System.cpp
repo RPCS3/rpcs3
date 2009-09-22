@@ -35,7 +35,7 @@
 
 using namespace std;
 
-Pcsx2Config EmuConfig;
+const Pcsx2Config EmuConfig;
 
 // disable all session overrides by default...
 SessionOverrideFlags	g_Session = {false};

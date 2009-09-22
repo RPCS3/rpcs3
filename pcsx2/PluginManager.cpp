@@ -145,7 +145,6 @@ _GSprintf      	   GSprintf;
 _GSsetBaseMem 	   GSsetBaseMem;
 _GSsetGameCRC		GSsetGameCRC;
 _GSsetFrameSkip	   GSsetFrameSkip;
-_GSsetFrameLimit   GSsetFrameLimit;
 _GSsetupRecording	GSsetupRecording;
 _GSreset		   GSreset;
 _GSwriteCSR		   GSwriteCSR;
@@ -153,6 +152,7 @@ _GSwriteCSR		   GSwriteCSR;
 static void CALLBACK GS_makeSnapshot(const char *path) {}
 static void CALLBACK GS_setGameCRC(u32 crc, int gameopts) {}
 static void CALLBACK GS_irqCallback(void (*callback)()) {}
+static void CALLBACK GS_setFrameSkip(int frameskip) {}
 static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 {
 	va_list list;
@@ -279,6 +279,8 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 	{	"GSsetBaseMem",		(vMeth**)&GSsetBaseMem,		NULL	},
 	{	"GSwriteCSR",		(vMeth**)&GSwriteCSR,		NULL	},
 	{	"GSsetGameCRC",		(vMeth**)&GSsetGameCRC,		(vMeth*)GS_setGameCRC },
+
+	{	"GSsetFrameSkip",	(vMeth**)&GSsetFrameSkip,	(vMeth*)GS_setFrameSkip	},
 	{ NULL }
 };
 
@@ -287,8 +289,6 @@ static const LegacyApi_OptMethod s_MethMessOpt_GS[] =
 	{	"GSopen2",			(vMeth**)&GSopen2			},
 	{	"GSreset",			(vMeth**)&GSreset			},
 	{	"GSsetupRecording",	(vMeth**)&GSsetupRecording	},
-	{	"GSsetFrameSkip",	(vMeth**)&GSsetFrameSkip	},
-	{	"GSsetFrameLimit",	(vMeth**)&GSsetFrameLimit	},
 	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState	},
 	{	"GSmakeSnapshot2",	(vMeth**)&GSmakeSnapshot2	},
 	{	"GSgifSoftReset",	(vMeth**)&GSgifSoftReset	},

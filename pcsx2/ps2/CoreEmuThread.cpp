@@ -238,6 +238,8 @@ void SysCoreThread::Resume()
 	DevAssert( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Idle),
 		"EmuCoreThread is not in a suspended or idle state?  wtf!" );
 
+	OnResumeReady();
+
 	if( m_resetRecompilers || m_resetProfilers )
 	{
 		SysClearExecutionCache();
@@ -285,13 +287,13 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	if( src == EmuConfig ) return;
 
-	const bool isRunning = IsRunning();
+	const bool isSuspended = IsSuspended();
 	Suspend();
 
 	m_resetRecompilers = ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers = (src.Profiler != EmuConfig.Profiler );
-	EmuConfig = src;
+	const_cast<Pcsx2Config&>(EmuConfig) = src;
 
-	if( isRunning ) Resume();
+	if( !isSuspended ) Resume();
 }
 

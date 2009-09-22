@@ -79,23 +79,24 @@ void AppEmuThread::Suspend( bool isBlocking )
 {
 	SysCoreThread::Suspend( isBlocking );
 	AppInvoke( MainFrame, ApplySettings() );
-}
 
-void AppEmuThread::Resume()
-{
-	// Clear the sticky key statuses, because hell knows what's changed while the PAD
-	// plugin was suspended.
+	// Clear the sticky key statuses, because hell knows what'll change while the PAD
+	// plugin is suspended.
 
 	m_kevt.m_shiftDown		= false;
 	m_kevt.m_controlDown	= false;
 	m_kevt.m_altDown		= false;
+}
+
+void AppEmuThread::OnResumeReady()
+{
+	DevAssert( wxThread::IsMain(), "SysCoreThread can only be resumed from the main/gui thread." );
 
 	ApplySettings( g_Conf->EmuOptions );
 
 	if( GSopen2 != NULL )
 		wxGetApp().OpenGsFrame();
 
-	SysCoreThread::Resume();
 	AppInvoke( MainFrame, ApplySettings() );
 }
 
@@ -139,6 +140,18 @@ void AppEmuThread::StateCheck()
 
 	m_kevt.m_keyCode = vkey;
 	wxGetApp().PostPadKey( m_kevt );
+}
+
+void AppEmuThread::ApplySettings( const Pcsx2Config& src )
+{
+	// Re-entry guard protects against cases where code wants to manually set core settings
+	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is
+	// usually the desired behavior) will be ignored.
+
+	static int localc = 0;
+	EntryGuard guard( localc );
+	if(guard.IsReentrant()) return;
+	SysCoreThread::ApplySettings( src );
 }
 
 __forceinline bool EmulationInProgress()

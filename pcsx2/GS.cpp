@@ -87,11 +87,7 @@ void gsSetRegionMode( GS_RegionMode region )
 // Make sure framelimiter options are in sync with the plugin's capabilities.
 void gsInit()
 {
-	if( EmuConfig.Video.EnableFrameSkipping && (GSsetFrameSkip == NULL) )
-	{
-		EmuConfig.Video.EnableFrameSkipping = false;
-		Console::WriteLn("Notice: Disabling frameskipping -- GS plugin does not support it.");
-	}
+	memzero_obj(g_RealGSMem);
 }
 
 void gsReset()

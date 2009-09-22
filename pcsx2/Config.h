@@ -334,7 +334,7 @@ struct SessionOverrideFlags
 		ForceDisableVU1rec:1;
 };
 
-extern Pcsx2Config EmuConfig;
+extern const Pcsx2Config EmuConfig;
 extern SessionOverrideFlags g_Session;
 
 /////////////////////////////////////////////////////////////////////////////////////////
