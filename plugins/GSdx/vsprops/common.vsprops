@@ -21,7 +21,7 @@
 		AdditionalDependencies="JITProfiling.lib d3d11.lib d3dx11.lib d3d10_1.lib d3dx10.lib d3d9.lib d3dx9.lib ddraw.lib dxguid.lib winmm.lib strmiids.lib xinput.lib cg.lib cgGL.lib glut32.lib glew_static.lib"
 		OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 		AdditionalLibraryDirectories="./vtune"
-		DelayLoadDLLs="d3d9.dll;d3dx9_41.dll;d3d10.dll;d3d10_1.dll;d3dx10_41.dll;d3d11.dll;d3dx11_41.dll;cg.dll;cgGL.dll;glut32.dll"
+		DelayLoadDLLs="d3d9.dll;d3dx9_42.dll;d3d10.dll;d3d10_1.dll;d3dx10_42.dll;d3d11.dll;d3dx11_42.dll;cg.dll;cgGL.dll;glut32.dll"
 		GenerateDebugInformation="true"
 		SubSystem="2"
 		RandomizedBaseAddress="1"
