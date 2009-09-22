@@ -72,14 +72,14 @@ namespace Exception
 
 using namespace Threading;
 
-static void CreatePipe( HANDLE& ph_Pipe, HANDLE& ph_File )
+static __forceinline void CreatePipe( HANDLE& ph_Pipe, HANDLE& ph_File )
 {
 	// Create a threadsafe unique name for the Pipe
 	static int s32_Counter = 0;
 
 	wxString s_PipeName;
 	s_PipeName.Printf( L"\\\\.\\pipe\\pcsxPipe%X_%X_%X_%X",
-					  GetCurrentProcessId(), GetCurrentThreadId(), GetTickCount(), s32_Counter++);
+					  GetCurrentProcessId(), GetCurrentThreadId(), GetTickCount(), ++s32_Counter);
 
 	SECURITY_ATTRIBUTES k_Secur;
 	k_Secur.nLength              = sizeof(SECURITY_ATTRIBUTES);
@@ -108,8 +108,10 @@ static void CreatePipe( HANDLE& ph_Pipe, HANDLE& ph_File )
 
 // Reads from the Pipe and appends the read data to ps_Data
 // returns TRUE if something was printed to console, or false if the stdout/err were idle.
-static bool ReadPipe(HANDLE h_Pipe, Console::Colors color )
+static __forceinline bool ReadPipe(HANDLE h_Pipe, Console::Colors color )
 {
+	if( h_Pipe == INVALID_HANDLE_VALUE ) return false;
+
 	// IMPORTANT: Check if there is data that can be read.
 	// The first console output will be lost if ReadFile() is called before data becomes available!
 	// It does not make any sense but the following 5 lines are indispensable!!
@@ -143,22 +145,19 @@ static bool ReadPipe(HANDLE h_Pipe, Console::Colors color )
 class WinPipeThread : public PersistentThread
 {
 protected:
-	const HANDLE&	mh_OutPipe;
-	const HANDLE&	mh_ErrPipe;
+	const HANDLE& m_outpipe;
+	const Console::Colors m_color;
 
 public:
-	WinPipeThread( const HANDLE& outpipe, const HANDLE& errpipe ) :
-		mh_OutPipe( outpipe )
-	,	mh_ErrPipe( errpipe )
-	//,	mk_OverOut( overout )
-	//,	mk_OverErr( overerr )
+	WinPipeThread( const HANDLE& outpipe, Console::Colors color ) :
+		m_outpipe( outpipe )
+	,	m_color( color )
 	{
 	}
 	
 	virtual ~WinPipeThread() throw()
 	{
 		PersistentThread::Cancel();
-		SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
 	}
 	
 protected:
@@ -166,12 +165,12 @@ protected:
 	{
 		try
 		{
+			SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
 			while( true )
 			{
 				Sleep( 100 );
 				pthread_testcancel();
-				ReadPipe(mh_OutPipe, Color_Black );
-				ReadPipe(mh_ErrPipe, Color_Red );
+				ReadPipe(m_outpipe, m_color );
 			}
 		}
 		catch( Exception::Win32Error& ex )
@@ -189,88 +188,94 @@ class WinPipeRedirection : public PipeRedirectionBase
 	DeclareNoncopyableObject( WinPipeRedirection );
 
 protected:
-	HANDLE		mh_OutPipe;
-	HANDLE		mh_ErrPipe;
-	HANDLE		mh_OutFile;
-	HANDLE		mh_ErrFile;
-
-	int			m_hCrtOut;
-	int			m_hCrtErr;
-
-	FILE*		h_fpOut;
-	FILE*		h_fpErr;
+	HANDLE		m_pipe;
+	HANDLE		m_file;
+	int			m_crtFile;
+	FILE*		m_fp;
 
 	WinPipeThread m_Thread;
 
 public:
-	WinPipeRedirection();
+	WinPipeRedirection( FILE* stdstream );
 	virtual ~WinPipeRedirection() throw();
+	
+	void Cleanup() throw();
 };
 
-WinPipeRedirection::WinPipeRedirection() :
-	mh_OutPipe(INVALID_HANDLE_VALUE)
-,	mh_ErrPipe(INVALID_HANDLE_VALUE)
-,	mh_OutFile(INVALID_HANDLE_VALUE)
-,	mh_ErrFile(INVALID_HANDLE_VALUE)
-,	m_hCrtOut(-1)
-,	m_hCrtErr(-1)
-,	h_fpOut(NULL)
-,	h_fpErr(NULL)
-
-,	m_Thread( mh_OutPipe, mh_ErrPipe )
+WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
+	m_pipe(INVALID_HANDLE_VALUE)
+,	m_file(INVALID_HANDLE_VALUE)
+,	m_crtFile(-1)
+,	m_fp(NULL)
+,	m_Thread( m_pipe, (stdstream == stderr) ? Color_Red : Color_Black )
 {
-	CreatePipe(mh_OutPipe, mh_OutFile ); 
-	CreatePipe(mh_ErrPipe, mh_ErrFile );
+	try
+	{
+		wxASSERT( stdstream == stderr || stdstream == stdout );
+		DWORD stdhandle = ( stdstream == stderr ) ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE;
 
-	SetStdHandle( STD_OUTPUT_HANDLE, mh_OutFile );
-	SetStdHandle( STD_ERROR_HANDLE, mh_ErrFile );
+		CreatePipe( m_pipe, m_file );
+		SetStdHandle( stdhandle, m_file );
 
-	m_hCrtOut = _open_osfhandle( (intptr_t)GetStdHandle(STD_OUTPUT_HANDLE), _O_TEXT );
-	m_hCrtErr = _open_osfhandle( (intptr_t)GetStdHandle(STD_ERROR_HANDLE), _O_TEXT );
+		// In some cases GetStdHandle can fail, even when the one we just assigned above is valid.
+		HANDLE newhandle = GetStdHandle(stdhandle);
+		if( newhandle == INVALID_HANDLE_VALUE )
+			throw Exception::Win32Error( "GetStdHandle failed." );
 
-	h_fpOut = _fdopen( m_hCrtOut, "w" );
-	h_fpErr = _fdopen( m_hCrtErr, "w" );
+		if( newhandle == NULL )
+			throw Exception::RuntimeError( "GetStdHandle returned NULL." );		// not a Win32error (no error code)
 
-	*stdout = *h_fpOut;
-	*stderr = *h_fpErr;
+		m_crtFile	= _open_osfhandle( (intptr_t)newhandle, _O_TEXT );
+		m_fp		= _fdopen( m_crtFile, "w" );
 
-	setvbuf( stdout, NULL, _IONBF, 0 );
-	setvbuf( stderr, NULL, _IONBF, 0 );
+		*stdstream = *m_fp;
+		setvbuf( stdstream, NULL, _IONBF, 0 );
 
-	m_Thread.Start();
+		m_Thread.Start();
+	}
+	catch( ... )
+	{
+		Cleanup(); throw;
+	}
 }
 
-WinPipeRedirection::~WinPipeRedirection() throw()
+WinPipeRedirection::~WinPipeRedirection()
+{
+	Cleanup();
+}
+
+void WinPipeRedirection::Cleanup() throw()
 {
 	m_Thread.Cancel();
 
-	#define safe_CloseHandle( ptr ) \
-		((void) (( ( ptr != INVALID_HANDLE_VALUE ) && (!!CloseHandle( ptr ), !!0) ), ptr = INVALID_HANDLE_VALUE))
-
-	safe_CloseHandle(mh_OutPipe);
-	safe_CloseHandle(mh_ErrPipe);
-
-	if( h_fpOut != NULL )
+	if( m_fp != NULL )
 	{
-		fclose( h_fpOut );
-		h_fpOut = NULL;
-	}
-	
-	if( h_fpErr != NULL )
-	{
-		fclose( h_fpErr );
-		h_fpErr = NULL;
+		fclose( m_fp );
+		m_fp = NULL;
 	}
 
-	#define safe_close( ptr ) \
-		((void) (( ( ptr != -1 ) && (!!_close( ptr ), !!0) ), ptr = -1))
+	// crtFile is closed implicitly when closing m_fp
+	// m_file is closed implicitly when closing crtFile
 
-	// CrtOut and CrtErr are closed implicitly when closing fpOut/fpErr
-	// OutFile and ErrFile are closed implicitly when closing m_hCrtOut/Err
+	if( m_pipe != INVALID_HANDLE_VALUE )
+	{
+		CloseHandle( m_pipe );
+		m_pipe = INVALID_HANDLE_VALUE;
+	}
 }
 
 // The win32 specific implementation of PipeRedirection.
-PipeRedirectionBase* NewPipeRedir()
+PipeRedirectionBase* NewPipeRedir( FILE* stdstream )
 {
-	return new WinPipeRedirection();
+	try
+	{
+		return new WinPipeRedirection( stdstream );
+	}
+	catch( Exception::RuntimeError& ex )
+	{
+		// Entirely non-critical errors.  Log 'em and move along.
+		Console::Error( ex.FormatDiagnosticMessage() );
+	}
+	
+	return NULL;
 }

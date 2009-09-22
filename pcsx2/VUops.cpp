@@ -318,22 +318,20 @@ __forceinline void _vuAddLowerStalls(VURegs * VU, _VURegsNum *VUregsn) {
 #ifndef INT_VUDOUBLEHACK
 static float __fastcall vuDouble(u32 f)
 {
-	switch(f & 0x7f800000){
+	switch(f & 0x7f800000)
+	{
 		case 0x0:
 			f &= 0x80000000;
 			return *(float*)&f;
 			break;
 		case 0x7f800000: 
 		{
-			u32 d;
-			d = (f & 0x80000000)|0x7f7fffff;
+			u32 d = (f & 0x80000000)|0x7f7fffff;
 			return *(float*)&d;
 			break;
 		}
-		default:
-			return *(float*)&f;
-			break;
 	}	
+	return *(float*)&f;
 }
 #else
 static __forceinline float vuDouble(u32 f)

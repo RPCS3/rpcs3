@@ -121,7 +121,7 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent ) :
 	Connect( wxEVT_COMMAND_LISTBOX_DOUBLECLICKED, wxCommandEventHandler(FirstTimeWizard::OnDoubleClicked) );
 }
 
-FirstTimeWizard::~FirstTimeWizard()
+FirstTimeWizard::~FirstTimeWizard() throw()
 {
 	g_ApplyState.DoCleanup();
 }

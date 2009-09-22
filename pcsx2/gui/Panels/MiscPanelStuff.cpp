@@ -30,7 +30,7 @@ Panels::StaticApplyState Panels::g_ApplyState;
 // on dialog destruction.  It asserts if the ApplyList hasn't been cleaned up
 // and then cleans it up forcefully.
 //
-void Panels::StaticApplyState::DoCleanup()
+void Panels::StaticApplyState::DoCleanup() throw()
 {
 	wxASSERT_MSG( PanelList.size() != 0, L"PanelList list hasn't been cleaned up." );
 	PanelList.clear();

@@ -47,19 +47,18 @@ namespace Dialogs
 // --------------------------------------------------------------------------------------
 
 Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
-	wxDialog( parent, id, _("About PCSX2"), parent->GetPosition()-wxSize( 32, 32 ) ),
-	m_bitmap_logo( this, wxID_ANY, wxGetApp().GetLogoBitmap(),
-		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN ),
-	m_bitmap_ps2system( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
+	wxDialogWithHelpers( parent, id, _("About PCSX2"), false ),
+	m_bitmap_dualshock( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN )
 {
-	static const wxString LabelAuthors = wxString::FromAscii(
-		"PCSX2, a PS2 emulator\n\n"
-		"Active Devs: Arcum42, Refraction,"
-		"drk||raziel, cottonvibes, gigaherz,"
-		"rama, Jake.Stine, saqib, Tmkk"
+	static const wxString LabelAuthors = wxString::FromUTF8(
+		"Developers"
 		"\n\n"
-		"Inactive devs: Alexey silinov, Aumatt,"
+		"v0.9.6+: Arcum42, Refraction,"
+		"drk||raziel, cottonvibes, gigaherz,"
+		"rama, Jake.Stine, saqib, Tmkk, pseudonym"
+		"\n\n"
+		"Previous versions: Alexey silinov, Aumatt,"
 		"Florin, goldfinger, Linuzappz, loser,"
 		"Nachbrenner, shadow, Zerofrog"
 		"\n\n"
@@ -70,18 +69,22 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		"Webmasters: CKemu, Falcon4ever"
 	);
 
-	static const wxString LabelGreets = wxString::FromAscii(
-		"Contributors: Hiryu and Sjeep for libcvd (the iso parsing and\n"
-		"filesystem driver code), nneeve, pseudonym\n"
-		"\n"
-		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp),\n"
-		"Gabest (Gsdx, Cdvdolio, Xpad)\n"
-		"\n"
-		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime,\n"
+	static const wxString LabelGreets = wxString::FromUTF8(
+		"Contributors"
+		"\n\n"
+		"Hiryu and Sjeep for libcvd (the iso parsing and"
+		"filesystem driver code), nneeve (fpu and vu help)"
+		"\n\n"
+		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp),"
+		"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
+		"\n\n"
+		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime,"
 		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth"
 	);
 
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+
+	AddStaticText( mainSizer, _("PCSX2  -  Playstation 2 Emulator") );
 
 	// This sizer holds text of the authors and a logo!
 	wxBoxSizer& AuthLogoSizer = *new wxBoxSizer( wxHORIZONTAL );
@@ -95,20 +98,19 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	StaticTextCentered* label_auth   = new StaticTextCentered( this, LabelAuthors );
 	StaticTextCentered* label_greets = new StaticTextCentered( this, LabelGreets );
 
-	label_auth->Wrap( m_bitmap_logo.GetSize().GetWidth() / 2 );
-	label_greets->Wrap( (m_bitmap_logo.GetSize().GetWidth() * 4) / 3 );
+	label_auth->Wrap( 340 );
+	label_greets->Wrap( 200 );
 
-	aboutUs.Add( label_auth, SizerFlags::StdSpace() );
+	aboutUs.Add( label_auth, SizerFlags::StdExpand() );
 	contribs.Add( label_greets, SizerFlags::StdExpand() );
 
 	AuthLogoSizer.Add( &aboutUs );
 	AuthLogoSizer.AddSpacer( 7 );
-	AuthLogoSizer.Add( &m_bitmap_logo, wxSizerFlags().Border( wxALL, 4 ) );
+	AuthLogoSizer.Add( &contribs );
 
 	ContribSizer.AddStretchSpacer( 1 );
-	ContribSizer.Add( &m_bitmap_ps2system, SizerFlags::StdSpace() );
+	ContribSizer.Add( &m_bitmap_dualshock, SizerFlags::StdSpace() );
 	ContribSizer.AddStretchSpacer( 1 );
-	ContribSizer.Add( &contribs, wxSizerFlags(7).HorzBorder().Expand() );
 
 	mainSizer.Add( &AuthLogoSizer, SizerFlags::StdSpace() );
 
@@ -123,4 +125,6 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 
 	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), SizerFlags::StdCenter() );
 	SetSizerAndFit( &mainSizer );
+	
+	CenterOnScreen();
 }

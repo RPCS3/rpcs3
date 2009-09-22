@@ -298,7 +298,8 @@ protected:
 
 	wxScopedPtr<wxImageList>		m_ToolbarImages;
 	wxScopedPtr<wxBitmap>			m_Bitmap_Logo;
-	wxScopedPtr<PipeRedirectionBase>m_PipeRedirHandle;
+	wxScopedPtr<PipeRedirectionBase>m_StdoutRedirHandle;
+	wxScopedPtr<PipeRedirectionBase>m_StderrRedirHandle;
 
 public:
 	wxScopedPtr<SysCoreAllocations>	m_CoreAllocs;

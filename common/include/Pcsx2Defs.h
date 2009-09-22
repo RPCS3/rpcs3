@@ -70,7 +70,11 @@
 #		endif
 #	else
 #		define jBREAKPOINT() __debugbreak();
-#		define jASSUME(exp) do { if(exp) ; else jBREAKPOINT(); } while(0);
+#		ifdef wxASSERT
+#			define jASSUME(exp) wxASSERT(exp)
+#		else
+#			define jASSUME(exp) do { if(exp) ; else jBREAKPOINT(); } while(0);
+#		endif
 #	endif
 #endif
 

@@ -282,7 +282,7 @@ int TranslateGDKtoWXK( u32 keysym )
 //   window, same as the Win32 one.  Not sure how doable it is, and it's not as urgent
 //   anyway since Linux has better generic console support and commandline piping.
 //
-PipeRedirectionBase* NewPipeRedir()
+PipeRedirectionBase* NewPipeRedir( FILE* stdstream )
 {
 	return NULL;
 }

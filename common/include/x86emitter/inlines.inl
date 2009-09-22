@@ -203,7 +203,7 @@ namespace x86Emitter
 				Factor++;
 			else
 			{
-				jASSUME( Index.IsEmpty() );		// or die if we already have an index!
+				DevAssert( Index.IsEmpty(), "x86Emitter: Only one scaled index register is allowed in an address modifier." );
 				Index = src;
 				Factor = 2;
 			}
@@ -213,7 +213,7 @@ namespace x86Emitter
 		else if( Index.IsEmpty() )
 			Index = src;
 		else
-			assert( false );	// oops, only 2 regs allowed per ModRm!
+			wxASSERT_MSG( false, L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
 
 		return *this;
 	}
@@ -237,7 +237,7 @@ namespace x86Emitter
 		else if( Index == src.Index )
 			Factor++;
 		else
-			assert( false );	// oops, only 2 regs allowed!
+			wxASSERT_MSG( false, L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
 
 		return *this;
 	}
@@ -283,7 +283,7 @@ namespace x86Emitter
 		{
 			if( !is_s8( displacement ) )
 			{
-				assert( false );
+				wxASSERT( false );
 // Don't ask. --arcum42
 #if !defined(__LINUX__) || !defined(DEBUG)
 

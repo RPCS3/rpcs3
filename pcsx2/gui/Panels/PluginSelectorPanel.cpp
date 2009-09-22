@@ -303,12 +303,10 @@ void Panels::PluginSelectorPanel::Apply()
 	// Need to unload the current emulation state if the user changed plugins, because
 	// the whole plugin system needs to be re-loaded.
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
-	{
+	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( g_Conf->FullpathTo( pi->id ) != g_Conf->FullpathTo( pi->id ) )
 			break;
-	}
+	} while( ++pi, pi->shortname != NULL );
 
 	if( pi->shortname != NULL )
 	{

@@ -48,7 +48,7 @@ protected:
 
 public:
 	FirstTimeWizard( wxWindow* parent );
-	virtual ~FirstTimeWizard();
+	virtual ~FirstTimeWizard() throw();
 
 	wxWizardPage *GetUsermodePage() const { return &m_page_usermode; }
 	wxWizardPage *GetPostUsermodePage() const { return &m_page_plugins; }
@@ -66,15 +66,15 @@ protected:
 
 namespace Dialogs
 {
-	class AboutBoxDialog: public wxDialog
+	class AboutBoxDialog: public wxDialogWithHelpers
 	{
 	public:
 		AboutBoxDialog( wxWindow* parent=NULL, int id=DialogId_About );
+		virtual ~AboutBoxDialog() throw() {}
 
 	protected:
-		wxStaticBitmap m_bitmap_logo;
-		wxStaticBitmap m_bitmap_ps2system;
-
+		//wxStaticBitmap m_bitmap_logo;
+		wxStaticBitmap m_bitmap_dualshock;
 	};
 	
 	class PickUserModeDialog : public wxDialogWithHelpers
@@ -85,6 +85,7 @@ namespace Dialogs
 
 	public:
 		PickUserModeDialog( wxWindow* parent, int id=wxID_ANY );
+		virtual ~PickUserModeDialog() throw() {}
 
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );
@@ -95,6 +96,7 @@ namespace Dialogs
 	{
 	public:
 		ImportSettingsDialog( wxWindow* parent );
+		virtual ~ImportSettingsDialog() throw() {}
 		
 	protected:
 		void OnImport_Click( wxCommandEvent& evt );

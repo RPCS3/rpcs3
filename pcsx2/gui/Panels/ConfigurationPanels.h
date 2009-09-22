@@ -114,7 +114,7 @@ namespace Panels
 		void StartWizard();
 		bool ApplyAll( bool saveOnSuccess=true );
 		bool ApplyPage( int pageid, bool saveOnSuccess=true );
-		void DoCleanup();
+		void DoCleanup() throw();
 	};
 
 	extern StaticApplyState g_ApplyState;

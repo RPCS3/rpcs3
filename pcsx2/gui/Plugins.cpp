@@ -158,14 +158,13 @@ void Pcsx2App::ReloadPlugins()
 
 	wxString passins[PluginId_Count];
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
 		passins[pi->id] = OverrideOptions.Filenames[pi->id].GetFullPath();
 
 		if( passins[pi->id].IsEmpty() || !wxFileExists( passins[pi->id] ) )
 			passins[pi->id] = g_Conf->FullpathTo( pi->id );
-	}
+	} while( ++pi, pi->shortname != NULL );
 
 	_loadTask.reset( new LoadPluginsTask( passins ) );
 	// ...  and when it finishes it posts up a OnLoadPluginsComplete().  Bye. :)

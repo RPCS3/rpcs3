@@ -664,8 +664,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
 	Console::Status( "Loading plugins..." );
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
 		const PluginsEnum_t pid = pi->id;
 
@@ -700,7 +699,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 
 		// Bind Optional Functions
 		// (leave pointer null and do not generate error)
-	}
+	} while( ++pi, pi->shortname != NULL );
 
 	// Hack for PAD's stupid parameter passed on Init
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
@@ -916,9 +915,9 @@ void PluginManager::Open()
 {
 	Console::Status( "Opening plugins..." );
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
+	const PluginInfo* pi = tbl_PluginInfo; do {
 		g_plugins->Open( pi->id );
+	} while( ++pi, pi->shortname != NULL );
 
 	Console::Status( "Plugins opened successfully." );
 }
@@ -970,8 +969,7 @@ void PluginManager::Close( bool closegs )
 void PluginManager::Init()
 {
 	bool printlog = false;
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
 		const PluginsEnum_t pid = pi->id;
 
@@ -985,7 +983,7 @@ void PluginManager::Init()
 		m_info[pid].IsInitialized = true;
 		if( 0 != m_info[pid].CommonBindings.Init() )
 			throw Exception::PluginInitError( pid );
-	}
+	} while( ++pi, pi->shortname != NULL );
 
 	if( EmuPlugins.Mcd == NULL )
 	{
@@ -1106,13 +1104,10 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 
 bool PluginManager::KeyEvent( const keyEvent& evt )
 {
-	const PluginInfo* pi = tbl_PluginInfo-1;
-
-	while( ++pi, pi->shortname != NULL )
-	{
+	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( pi->id != PluginId_PAD )
 			m_info[pi->id].CommonBindings.KeyEvent( const_cast<keyEvent*>(&evt) );
-	}
+	} while( ++pi, pi->shortname != NULL );
 
 	return false;
 }
@@ -1135,9 +1130,9 @@ PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
 {
 	wxString passins[PluginId_Count];
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
+	const PluginInfo* pi = tbl_PluginInfo; do {
 		passins[pi->id] = folders[pi->id];
+	} while( ++pi, pi->shortname != NULL );
 
 	return PluginManager_Create( passins );
 }

@@ -42,7 +42,7 @@ protected:
 	PipeRedirectionBase() {}
 };
 
-extern PipeRedirectionBase* NewPipeRedir();
+extern PipeRedirectionBase* NewPipeRedir( FILE* stdstream );
 
 // --------------------------------------------------------------------------------------
 //  pxLogConsole

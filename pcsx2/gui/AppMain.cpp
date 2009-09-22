@@ -325,13 +325,11 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 
 	parser.AddSwitch( wxEmptyString,L"forcewiz",_("Forces PCSX2 to start the First-time Wizard") );
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
-	{
+	const PluginInfo* pi = tbl_PluginInfo; do {
 		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
 			wxsFormat( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
 		);
-	}
+	} while( ++pi, pi->shortname != NULL );
 
 	parser.SetSwitchChars( L"-" );
 }
@@ -356,8 +354,7 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 	//bool yay = parser.Found(L"nogui");
 	m_ForceWizard = parser.Found( L"forcewiz" );
 
-	const PluginInfo* pi = tbl_PluginInfo-1;
-	while( ++pi, pi->shortname != NULL )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
 		wxString dest;
 		if( !parser.Found( pi->GetShortname().Lower(), &dest ) ) continue;
@@ -377,7 +374,7 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 
 			if( !result ) return false;
 		}
-	}
+	} while( ++pi, pi->shortname != NULL );
 
 	parser.Found( L"cfgpath", &OverrideOptions.SettingsFolder );
 
@@ -394,16 +391,9 @@ bool Pcsx2App::OnInit()
 
 	g_Conf.reset( new AppConfig() );
 
-	try
-	{
-		m_PipeRedirHandle.reset( NewPipeRedir() );
-		wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
-	}
-	catch( Exception::RuntimeError& ex )
-	{
-		// Entirely non-critical errors.  Log 'em and move along.
-		Console::Error( ex.FormatDiagnosticMessage() );
-	}
+	m_StdoutRedirHandle.reset( NewPipeRedir(stdout) );
+	m_StderrRedirHandle.reset( NewPipeRedir(stderr) );
+	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
 #define pxMessageBoxEventThing(func) \
 	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
