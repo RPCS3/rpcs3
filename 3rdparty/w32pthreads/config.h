@@ -23,7 +23,8 @@
 #undef NEED_DUPLICATEHANDLE
 
 /* Define if you don't have Win32 _beginthreadex. (eg. WinCE) */
-#undef NEED_CREATETHREAD
+// PCSX2 : This is preferred when using the shared CRT, which we do! -- air
+#define NEED_CREATETHREAD
 
 /* Define if you don't have Win32 errno. (eg. WinCE) */
 #undef NEED_ERRNO

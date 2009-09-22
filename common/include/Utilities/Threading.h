@@ -149,6 +149,8 @@ namespace Threading
 		virtual void DoThreadCleanup();
 
 	protected:
+		void SetName( __unused const char* name );
+		
 		// Used to dispatch the thread callback function.
 		// (handles some thread cleanup on Win32, and is basically a typecast
 		// on linux).

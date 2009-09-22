@@ -166,14 +166,16 @@ protected:
 		try
 		{
 			SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
+			SetName( (m_color == Color_Red) ? "Redirect_Stderr" :" Redirect_Stdout" );
+
 			while( true )
 			{
 				Sleep( 100 );
 				pthread_testcancel();
-				ReadPipe(m_outpipe, m_color );
+				ReadPipe( m_outpipe, m_color );
 			}
 		}
-		catch( Exception::Win32Error& ex )
+		catch( Exception::RuntimeError& ex )
 		{
 			// Log error, and fail silently.  It's not really important if the
 			// pipe fails.  PCSX2 will run fine without it in any case.
@@ -220,13 +222,18 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 		// In some cases GetStdHandle can fail, even when the one we just assigned above is valid.
 		HANDLE newhandle = GetStdHandle(stdhandle);
 		if( newhandle == INVALID_HANDLE_VALUE )
-			throw Exception::Win32Error( "GetStdHandle failed." );
+			throw Exception::Win32Error( "PipeRedirection: GetStdHandle failed." );
 
 		if( newhandle == NULL )
-			throw Exception::RuntimeError( "GetStdHandle returned NULL." );		// not a Win32error (no error code)
+			throw Exception::RuntimeError( "PipeRedirection: GetStdHandle returned NULL." );		// not a Win32error (no error code)
 
 		m_crtFile	= _open_osfhandle( (intptr_t)newhandle, _O_TEXT );
+		if( m_crtFile == -1 ) 
+			throw Exception::RuntimeError( "PipeRedirection: _open_osfhandle returned -1." );
+
 		m_fp		= _fdopen( m_crtFile, "w" );
+		if( m_fp == NULL )
+			throw Exception::RuntimeError( "PipeRedirection: _fdopen returned NULL." );
 
 		*stdstream = *m_fp;
 		setvbuf( stdstream, NULL, _IONBF, 0 );

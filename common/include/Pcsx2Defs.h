@@ -227,14 +227,17 @@ This theoretically unoptimizes. Not having much luck so far.
 #	define __naked		// GCC lacks the naked specifier
 #	define CALLBACK	// CALLBACK is a win32-specific mess
 
-// GCC uses attributes for a lot of things that Visual C+ doesn't.
+// Inlining note: GCC needs ((unused)) attributes defined on inlined functions to suppress
+// warnings when a static inlined function isn't used in the scope of a single file (which
+// happens *by design* like all the friggen time >_<)
+
 #	define __fastcall		__attribute__((fastcall))
 #	define __unused			__attribute__((unused))
 #	define _inline			__inline__ __attribute__((unused))
 #	ifdef NDEBUG
 #		define __forceinline	__attribute__((always_inline,unused))
 #	else
-#		define __forceinline	// no forceinlines in debug builds
+#		define __forceinline	__attribute__((unused))
 #	endif
 #	define __noinline		__attribute__((noinline))
 #	define __hot			__attribute__((hot))

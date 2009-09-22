@@ -602,6 +602,8 @@ static void dummyIrqCallback()
 
 sptr mtgsThreadObject::ExecuteTask()
 {
+	SetName( "MTGS" );
+
 	memcpy_aligned( m_gsMem, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( m_gsMem );
 	GSirqCallback( dummyIrqCallback );

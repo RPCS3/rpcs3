@@ -116,6 +116,7 @@ static void _cet_callback_cleanup( void* handle )
 
 sptr SysCoreThread::ExecuteTask()
 {
+	SetName( "EE Core" );
 	tls_coreThread = this;
 
 	while( m_ExecMode != ExecMode_Running )
