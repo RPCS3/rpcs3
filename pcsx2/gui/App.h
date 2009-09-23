@@ -105,6 +105,9 @@ enum MenuIdentifiers
 	MenuId_Config_DEV9,
 	MenuId_Config_Patches,
 
+	MenuId_Config_Multitap0Toggle,
+	MenuId_Config_Multitap1Toggle,
+
 	// Video Subsection
 	// Top items are PCSX2-controlled.  GS plugin items are inserted beneath.
 	MenuId_Video_Basics,		// includes frame timings and skippings settings

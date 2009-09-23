@@ -139,6 +139,13 @@ void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
 
 #include "IniInterface.h"
 
+void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent &event )
+{
+	g_Conf->EmuOptions.MultitapPort0_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap0Toggle );
+	g_Conf->EmuOptions.MultitapPort1_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap1Toggle );
+	AppSaveSettings();
+}
+
 void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent &event )
 {
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );

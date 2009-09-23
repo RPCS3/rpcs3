@@ -194,6 +194,9 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Config_Settings,	Menu_ConfigSettings_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
 
+	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
+	ConnectMenu( MenuId_Config_Multitap1Toggle,	Menu_MultitapToggle_Click );
+
 	ConnectMenuRange(wxID_FILE1, 20, Menu_IsoRecent_Click);
 	ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_ConfigPlugin_Click);
 	ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
@@ -401,6 +404,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuConfig.Append(MenuId_Config_BIOS,		_("BIOS") );
 
 	m_menuConfig.AppendSeparator();
+	m_menuConfig.Append(MenuId_Config_Multitap0Toggle,	_("Multitap 1"),	wxEmptyString, wxITEM_CHECK );
+	m_menuConfig.Append(MenuId_Config_Multitap1Toggle,	_("Multitap 2"),	wxEmptyString, wxITEM_CHECK );
+
+	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Reset all..."),
 		_("Clears all PCSX2 settings and re-runs the startup wizard."));
 
@@ -473,6 +480,10 @@ void MainEmuFrame::ReloadRecentLists()
 void MainEmuFrame::ApplySettings()
 {
 	GetMenuBar()->Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
+
+	GetMenuBar()->Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
+	GetMenuBar()->Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );
+
 	GetMenuBar()->Enable( MenuId_Emu_SuspendResume, SysHasValidState() );
 
 	bool result = false;
