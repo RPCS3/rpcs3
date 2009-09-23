@@ -366,6 +366,9 @@ void CapSum(ButtonSum *sum) {
 // Only matters when GS thread updates is disabled (Just like summed pad values
 // for pads beyond the first slot).  Also, it's set to 4 and decremented by 1 on each read,
 // so it's less likely I'll control state on a PADkeyEvent call.
+
+// Values, in order, correspond to PADkeyEvent, PADupdate(0), PADupdate(1), and
+// WndProc(WMA_FORCE_UPDATE).  Last is always 0.
 char padReadKeyUpdated[4] = {0, 0, 0, 0};
 
 #define LOCK_DIRECTION 2
@@ -575,9 +578,8 @@ void Update(unsigned int port, unsigned int slot) {
 	for (i=0; i<8; i++) {
 		pads[i&1][i>>1].sum = s[i&1][i>>1];
 	}
-	pads[port][slot].stateUpdated--;
 	padReadKeyUpdated[0] = padReadKeyUpdated[1] = padReadKeyUpdated[2] = 1;
-	*stateUpdated = 0;
+	stateUpdated[0]--;
 }
 
 void CALLBACK PADupdate(int port) {
