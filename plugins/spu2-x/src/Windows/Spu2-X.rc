@@ -67,7 +67,7 @@ BEGIN
     LTEXT           "(speedup!) Skips reverb and stereo delay effects processing, but won't sound as good in most games.",IDC_STATIC,26,60,104,36
     LTEXT           "(currently requires manual configuration via the ini file)",IDC_STATIC,162,229,146,20
     CTEXT           "100 ms (avg)",IDC_LATENCY_LABEL,215,62,58,9
-    LTEXT           "(small speedup) Timestretching helps reduce latency and usually eliminates audio skips.",IDC_STATIC,162,109,146,20
+    LTEXT           "Timestretching helps reduce latency and usually eliminates audio skips.",IDC_STATIC,162,109,146,20
     CONTROL         116,IDC_STATIC,"Static",SS_BITMAP,7,196,117,52,WS_EX_CLIENTEDGE
     PUSHBUTTON      "Advanced...",IDC_OPEN_CONFIG_SOUNDTOUCH,219,130,84,12
     PUSHBUTTON      "Configure Debug Options...",IDC_OPEN_CONFIG_DEBUG,14,131,108,14
