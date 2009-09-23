@@ -76,7 +76,7 @@ protected:
 
 FileMemoryCard::FileMemoryCard()
 {
-	memset8_obj<0xff>( m_effeffs );
+	memset8<0xff>( m_effeffs );
 
 	for( int port=0; port<2; ++port )
 	{

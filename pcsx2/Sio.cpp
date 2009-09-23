@@ -86,8 +86,8 @@ static u8 sio_xor( const u8 *buf, uint length )
 
 void sioInit()
 {
-	memzero_obj(sio);
-	memzero_obj(m_PostSavestateCards);
+	memzero(sio);
+	memzero(m_PostSavestateCards);
 
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;
@@ -171,7 +171,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				PAD_LOG("RESET MEMORY CARD");
 
 				sio.bufcount =  8;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio.buf[3] = sio.terminator;
 				sio.buf[2] = '+';
 				sio.mcdst = 99;
@@ -179,7 +179,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				break;
 			case 0x12: // RESET
 				sio.bufcount =  8;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio.buf[3] = sio.terminator;
 				sio.buf[2] = '+';
 				sio.mcdst = 99;
@@ -189,7 +189,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				break;
 			case 0x81: // COMMIT
 				sio.bufcount =  8;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio.mcdst = 99;
 				sio.buf[3] = sio.terminator;
 				sio.buf[2] = '+';
@@ -205,7 +205,7 @@ void SIO_CommandWrite(u8 value,int way) {
 			case 0x22:
 			case 0x23: // SECTOR SET
                 sio.bufcount =  8; sio.mcdst = 99; sio.sector=0; sio.k=0;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio2.packet.recvVal3 = 0x8c;
 				sio.buf[8]=sio.terminator;
 				sio.buf[7]='+';
@@ -219,7 +219,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				break;
 			case 0x26:
 				sio.bufcount = 12; sio.mcdst = 99; sio2.packet.recvVal3 = 0x83;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				memcpy(&sio.buf[2], &mc_command_0x26, sizeof(mc_command_0x26));
 				sio.buf[12]=sio.terminator;
 				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
@@ -228,7 +228,7 @@ void SIO_CommandWrite(u8 value,int way) {
 			case 0x28:
 			case 0xBF:
 				sio.bufcount =  4; sio.mcdst = 99; sio2.packet.recvVal3 = 0x8b;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
 				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
@@ -243,7 +243,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				if(value==0x43) sio.lastsector = sio.sector; // Reading
 
 				sio.bufcount =133; sio.mcdst = 99;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio.buf[133]=sio.terminator;
 				sio.buf[132]='+';
 				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
@@ -257,24 +257,24 @@ void SIO_CommandWrite(u8 value,int way) {
 			case 0xf3:
 			case 0xf7:
 				sio.bufcount = 4; sio.mcdst = 99;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio.buf[4]=sio.terminator;
 				sio.buf[3]='+';
 				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x52:
-				sio.rdwr = 1; memset8_obj<0xff>(sio.buf);
+				sio.rdwr = 1; memset8<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
 				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			case 0x57:
-				sio.rdwr = 2; memset8_obj<0xff>(sio.buf);
+				sio.rdwr = 2; memset8<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
 				MEMCARDS_LOG("MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 				break;
 			default:
 				sio.mcdst = 0;
-				memset8_obj<0xff>(sio.buf);
+				memset8<0xff>(sio.buf);
 				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
 				MEMCARDS_LOG("Unknown MC(%d) command 0x%02X", sio.GetMemcardIndex()+1, value);
 			}
@@ -332,7 +332,7 @@ void SIO_CommandWrite(u8 value,int way) {
 			case 0x42:
 				if (sio.parp==2) {
 					sio.bufcount=5+value;
-					memset8_obj<0xff>(sio.buf);
+					memset8<0xff>(sio.buf);
 					sio.buf[sio.bufcount-1]='+';
 					sio.buf[sio.bufcount]=sio.terminator;
 					MEMCARDS_LOG("MC(%d) WRITE command, size=0x%02X", sio.GetMemcardIndex()+1, value);
@@ -409,7 +409,7 @@ void SIO_CommandWrite(u8 value,int way) {
 					case 17:
 					case 19:
 						sio.bufcount=13;
-						memset8_obj<0xff>(sio.buf);
+						memset8<0xff>(sio.buf);
 						sio.buf[12] = 0; // Xor value of data from index 4 to 11
 						sio.buf[3]='+';
 						sio.buf[13] = sio.terminator;
@@ -418,13 +418,13 @@ void SIO_CommandWrite(u8 value,int way) {
 					case  7:
 					case 11:
 						sio.bufcount=13;
-						memset8_obj<0xff>(sio.buf);
+						memset8<0xff>(sio.buf);
 						sio.buf[12]='+';
 						sio.buf[13] = sio.terminator;
 						break;
 					default:
 						sio.bufcount=4;
-						memset8_obj<0xff>(sio.buf);
+						memset8<0xff>(sio.buf);
 						sio.buf[3]='+';
 						sio.buf[4] = sio.terminator;
 					}

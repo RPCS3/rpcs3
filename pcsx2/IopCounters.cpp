@@ -113,7 +113,7 @@ static void _rcntSet( int cntidx )
 void psxRcntInit() {
 	int i;
 
-	memzero_obj( psxCounters );
+	memzero( psxCounters );
 
 	for (i=0; i<3; i++) {
 		psxCounters[i].rate = 1;

@@ -521,8 +521,8 @@ void inifile_command( char * cmd )
 
 	if ( ! pEqual ) pEqual = cmd+strlen(cmd); // fastmemory doesn't have =
 
-	memzero_obj( command );
-	memzero_obj( parameter );
+	memzero( command );
+	memzero( parameter );
 		
 	strncpy( command, cmd, pEqual - cmd );
 	strncpy( parameter, pEqual + 1, sizeof( parameter ) );

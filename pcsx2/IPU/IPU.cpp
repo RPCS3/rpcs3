@@ -132,12 +132,12 @@ __forceinline void mpeg2_init()
 	{
 		mpeg2_idct_init();
 		yuv2rgb_init();
-		memzero_obj(mb8.Y);
-		memzero_obj(mb8.Cb);
-		memzero_obj(mb8.Cr);
-		memzero_obj(mb16.Y);
-		memzero_obj(mb16.Cb);
-		memzero_obj(mb16.Cr);
+		memzero(mb8.Y);
+		memzero(mb8.Cb);
+		memzero(mb8.Cr);
+		memzero(mb16.Y);
+		memzero(mb16.Cb);
+		memzero(mb16.Cr);
 		mpeg2_inited = TRUE;
 	}
 }
@@ -146,8 +146,8 @@ __forceinline void mpeg2_init()
 // Register accesses (run on EE thread)
 int ipuInit()
 {
-	memzero_obj(*ipuRegs);
-	memzero_obj(g_BP);
+	memzero(*ipuRegs);
+	memzero(g_BP);
 	init_g_decoder();
 	g_nDMATransfer._u32 = 0;
 
@@ -156,7 +156,7 @@ int ipuInit()
 
 void ipuReset()
 {
-	memzero_obj(*ipuRegs);
+	memzero(*ipuRegs);
 	g_nDMATransfer._u32 = 0;
 }
 
@@ -499,8 +499,8 @@ static __forceinline BOOL ipuBDEC(u32 val)
 	g_decoder.dcr = bdec.DCR;
 	g_decoder.macroblock_modes |= bdec.MBI ? MACROBLOCK_INTRA : MACROBLOCK_PATTERN;
 
-	memzero_obj(mb8);
-	memzero_obj(mb16);
+	memzero(mb8);
+	memzero(mb16);
 
 	s_routine = so_create(mpeg2_slice, &s_RoutineDone, s_tempstack, sizeof(s_tempstack));
 	assert(s_routine != NULL);
@@ -1300,7 +1300,7 @@ void __fastcall ipu_copy(const macroblock_8 *mb8, macroblock_16 *mb16)
 ///////////////////// IPU DMA ////////////////////////
 void FIFOto_clear()
 {
-	memzero_obj(fifo_input);
+	memzero(fifo_input);
 	g_BP.IFC = 0;
 	ipuRegs->ctrl.IFC = 0;
 	FIreadpos = 0;
@@ -1592,7 +1592,7 @@ int IPU1dma()
 
 void FIFOfrom_clear()
 {
-	memzero_obj(fifo_output);
+	memzero(fifo_output);
 	ipuRegs->ctrl.OFC = 0;
 	FOreadpos = 0;
 	FOwritepos = 0;

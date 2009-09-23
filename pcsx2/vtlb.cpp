@@ -489,7 +489,7 @@ void vtlb_VMapUnmap(u32 vaddr,u32 sz)
 void vtlb_Init()
 {
 	vtlbHandlerCount=0;
-	memzero_obj(vtlbdata.RWFT);
+	memzero(vtlbdata.RWFT);
 
 	//Register default handlers
 	//Unmapped Virt handlers _MUST_ be registered first.

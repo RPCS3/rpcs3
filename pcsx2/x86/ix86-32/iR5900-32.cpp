@@ -404,8 +404,8 @@ void recResetEE( void )
 		memset_8<0xcc, REC_CACHEMEM>(recMem); // 0xcc is INT3
 	memzero_ptr<m_recBlockAllocSize - Ps2MemSize::Base>( m_recBlockAlloc ); // Excluding the 32mb ram copy
 	memzero_ptr<RECCONSTBUF_SIZE * sizeof(u32)>(recConstBuf);
-	memzero_obj( manual_page );
-	memzero_obj( manual_counter );
+	memzero( manual_page );
+	memzero( manual_counter );
 	ClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
 		(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4)));
 

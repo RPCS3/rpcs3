@@ -50,8 +50,8 @@ void IsoFS_init()
 
 	ISOFS_LOG("[IsoFSdrv:init] Initializing '%s' file driver.", "IsoFS");
 
-	memzero_obj( fd_table );
-	memzero_obj( fd_used );
+	memzero( fd_table );
+	memzero( fd_used );
 
 	inited = TRUE;
 

@@ -164,7 +164,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	// write the instruction info
 	f.Printf("\n\nlive0 - %x, lastuse - %x used - %x\n", EEINST_LIVE0, EEINST_LASTUSE, EEINST_USED);
 
-	memzero_obj(used);
+	memzero(used);
 	numused = 0;
 	for(i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( s_pInstCache->regs[i] & EEINST_USED ) {

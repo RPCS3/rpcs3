@@ -885,6 +885,6 @@ void mmap_ClearCpuBlock( uint offset )
 void mmap_ResetBlockTracking()
 {
 	DevCon::WriteLn( "vtlb/mmap: Block Tracking reset..." );
-	memzero_obj( m_PageProtectInfo );
+	memzero( m_PageProtectInfo );
 	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
 }

@@ -87,7 +87,7 @@ void gsSetRegionMode( GS_RegionMode region )
 // Make sure framelimiter options are in sync with the plugin's capabilities.
 void gsInit()
 {
-	memzero_obj(g_RealGSMem);
+	memzero(g_RealGSMem);
 }
 
 void gsReset()
@@ -99,7 +99,7 @@ void gsReset()
 		UpdateVSyncRate()
 	);
 
-	memzero_obj(g_RealGSMem);
+	memzero(g_RealGSMem);
 
 	GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now
 	GSIMR = 0x7f00;

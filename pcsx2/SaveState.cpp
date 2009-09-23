@@ -41,7 +41,7 @@ static void PreLoadPrep()
 
 static void PostLoadPrep()
 {
-	memzero_obj(pCache);
+	memzero(pCache);
 //	WriteCP0Status(cpuRegs.CP0.n.Status.val);
 	for(int i=0; i<48; i++) MapTLB(i);
 }
@@ -78,7 +78,7 @@ void SaveStateBase::FreezeTag( const char* src )
 {
 	wxASSERT( strlen(src) < (sizeof( m_tagspace )-1) );
 
-	memzero_obj( m_tagspace );
+	memzero( m_tagspace );
 	strcpy( m_tagspace, src );
 	Freeze( m_tagspace );
 
@@ -98,10 +98,14 @@ void SaveStateBase::FreezeBios()
 	// doesn't match the bios currently being used (chances are it'll still
 	// work fine, but some games are very picky).
 	
-	char descin[128];
+	char descin[128], desccmp[128];
 	wxString descout;
 	IsBIOS( g_Conf->FullpathToBios(), descout );
-	memcpy_fast( descin, descout.ToAscii().data(), 128 );
+	memzero( descin );
+	memzero( desccmp );
+
+	memcpy_fast( descin, descout.ToAscii().data(), descout.Length() );
+	memcpy_fast( desccmp, descout.ToAscii().data(), descout.Length() );
 
 	// ... and only freeze bios info once per state, since the user msg could
 	// become really annoying on a corrupted state or something.  (have to always
@@ -112,7 +116,7 @@ void SaveStateBase::FreezeBios()
 
 	if( !m_DidBios )
 	{
-		if( memcmp( descin, descout.ToAscii().data(), 128 ) != 0 )
+		if( memcmp( descin, desccmp, 128 ) != 0 )
 		{
 			Console::Error(
 				"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
@@ -246,15 +250,15 @@ bool SaveStateBase::FreezeSection()
 			FreezeTag( "HardwareRegisters" );
 			int seekpos = m_idx+4;
 			int sectsize;
-			Freeze( sectsize );
 
+			Freeze( sectsize );
 			FreezeRegisters();
 			
 			int realsectsize = m_idx - seekpos;
 			if( IsSaving() )
 			{
 				// write back the section length...
-				*((u32*)m_memory.GetPtr(seekpos)) = realsectsize - 4;
+				*((u32*)m_memory.GetPtr(seekpos-4)) = realsectsize;
 			}
 			else	// IsLoading!!
 			{
@@ -275,8 +279,8 @@ bool SaveStateBase::FreezeSection()
 			FreezeTag( "Plugin" );
 			int seekpos = m_idx+4;
 			int sectsize;
+
 			Freeze( sectsize );
-			
 			Freeze( m_pid );
 			g_plugins->Freeze( (PluginsEnum_t)m_pid, *this );
 
@@ -284,7 +288,7 @@ bool SaveStateBase::FreezeSection()
 			if( IsSaving() )
 			{
 				// write back the section length...
-				*((u32*)m_memory.GetPtr(seekpos)) = realsectsize - 4;
+				*((u32*)m_memory.GetPtr(seekpos-4)) = realsectsize;
 			}
 			else
 			{

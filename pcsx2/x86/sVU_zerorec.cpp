@@ -165,7 +165,7 @@ class VuInstruction
 	public:
 		VuInstruction()
 		{
-			memzero_obj(*this);
+			memzero(*this);
 			nParentPc = -1;
 			vicached = -1;
 		}
@@ -294,9 +294,9 @@ VuBaseBlock::VuBaseBlock()
 	cycles = 0;
 	pcode = NULL;
 	id = 0;
-	memzero_obj(pChildJumps);
-	memzero_obj(startregs);
-	memzero_obj(endregs);
+	memzero(pChildJumps);
+	memzero(startregs);
+	memzero(endregs);
 	allocX86Regs = nStartx86 = nEndx86 = -1;
 	prevFlagsOutOfBlock = 0;
 }
@@ -863,10 +863,10 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 	// analyze the global graph
 	s_listBlocks.clear();
 	VUPIPELINES pipes;
-	memzero_obj(pipes.fmac);
-	memzero_obj(pipes.fdiv);
-	memzero_obj(pipes.efu);
-	memzero_obj(pipes.ialu);
+	memzero(pipes.fmac);
+	memzero(pipes.fdiv);
+	memzero(pipes.efu);
+	memzero(pipes.ialu);
 	SuperVUBuildBlocks(NULL, startpc, pipes);
 
 	// fill parents

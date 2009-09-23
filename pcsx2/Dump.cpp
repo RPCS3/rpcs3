@@ -234,7 +234,7 @@ void iDumpBlock( int startpc, u8 * ptr )
 		EEINST_LIVE0, EEINST_LIVE1, EEINST_LIVE2, EEINST_LASTUSE, EEINST_MMX, EEINST_XMM, EEINST_USED
 	);
 
-	memzero_obj(used);
+	memzero(used);
 	numused = 0;
 	for(uint i = 0; i < ArraySize(s_pInstCache->regs); ++i) {
 		if( s_pInstCache->regs[i] & EEINST_USED ) {
@@ -243,7 +243,7 @@ void iDumpBlock( int startpc, u8 * ptr )
 		}
 	}
 
-	memzero_obj(fpuused);
+	memzero(fpuused);
 	fpunumused = 0;
 	for(uint i = 0; i < ArraySize(s_pInstCache->fpuregs); ++i) {
 		if( s_pInstCache->fpuregs[i] & EEINST_USED ) {

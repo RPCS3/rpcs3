@@ -49,7 +49,7 @@ using namespace std;
 static int s_xmmchecknext = 0;
 
 void _initXMMregs() {
-	memzero_obj( xmmregs );
+	memzero( xmmregs );
 	g_xmmAllocCounter = 0;
 	s_xmmchecknext = 0;
 }
@@ -1028,9 +1028,9 @@ int _allocCheckGPRtoX86(EEINST* pinst, int gprreg, int mode)
 
 void _recClearInst(EEINST* pinst)
 {
-	memzero_obj( *pinst );
-	memset8_obj<EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2>( pinst->regs );
-	memset8_obj<EEINST_LIVE0>( pinst->fpuregs );
+	memzero( *pinst );
+	memset8<EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2>( pinst->regs );
+	memset8<EEINST_LIVE0>( pinst->fpuregs );
 }
 
 // returns nonzero value if reg has been written between [startpc, endpc-4]

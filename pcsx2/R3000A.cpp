@@ -51,7 +51,7 @@ PCSX2_ALIGNED16(psxRegisters psxRegs);
 
 void psxReset()
 {
-	memzero_obj(psxRegs);
+	memzero(psxRegs);
 
 	psxRegs.pc = 0xbfc00000; // Start in bootstrap
 	psxRegs.CP0.n.Status = 0x10900000; // COP0 enabled | BEV = 1 | TS = 1

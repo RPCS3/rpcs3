@@ -39,7 +39,7 @@ static int g_x86checknext;
 // use special x86 register allocation for ia32
 
 void _initX86regs() {
-	memzero_obj(x86regs);
+	memzero(x86regs);
 	g_x86AllocCounter = 0;
 	g_x86checknext = 0;
 }
@@ -467,7 +467,7 @@ static int s_mmxchecknext = 0;
 
 void _initMMXregs()
 {
-	memzero_obj(mmxregs);
+	memzero(mmxregs);
 	g_mmxAllocCounter = 0;
 	s_mmxchecknext = 0;
 }

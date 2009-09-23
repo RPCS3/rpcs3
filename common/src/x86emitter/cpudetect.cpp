@@ -166,7 +166,7 @@ void cpudetectInit()
    int num;
    char str[50];
 
-   memzero_obj( x86caps.VendorName );
+   memzero( x86caps.VendorName );
    x86caps.FamilyID = 0;
    x86caps.Model  = 0;
    x86caps.TypeID  = 0;
@@ -254,7 +254,7 @@ void cpudetectInit()
 	if ( x86caps.VendorName[ 0 ] == 'G' ){ cputype=0;}//trick lines but if you know a way better ;p
 	if ( x86caps.VendorName[ 0 ] == 'A' ){ cputype=1;}
 
-	memzero_obj( x86caps.FamilyName );
+	memzero( x86caps.FamilyName );
 	iCpuId( 0x80000002, (u32*)x86caps.FamilyName);
 	iCpuId( 0x80000003, (u32*)(x86caps.FamilyName+16));
 	iCpuId( 0x80000004, (u32*)(x86caps.FamilyName+32));

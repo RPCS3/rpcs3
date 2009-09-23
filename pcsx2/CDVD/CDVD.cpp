@@ -453,7 +453,7 @@ static uint cdvdBlockReadTime( CDVD_MODE_TYPE mode )
 
 void cdvdReset()
 {
-	memzero_obj(cdvd);
+	memzero(cdvd);
 
 	cdvd.Type = CDVD_TYPE_NODISC;
 	cdvd.Spinning = false;

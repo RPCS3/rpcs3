@@ -96,9 +96,9 @@ void vuMicroMemReset()
 	memMapVUmicro();
 
 	// === VU0 Initialization ===
-	memzero_obj(VU0.ACC);
-	memzero_obj(VU0.VF);
-	memzero_obj(VU0.VI);
+	memzero(VU0.ACC);
+	memzero(VU0.VF);
+	memzero(VU0.VI);
     VU0.VF[0].f.x = 0.0f;
 	VU0.VF[0].f.y = 0.0f;
 	VU0.VF[0].f.z = 0.0f;
@@ -119,9 +119,9 @@ void vuMicroMemReset()
 	VU0.vifRegs = vif0Regs;
 
 	// === VU1 Initialization ===
-	memzero_obj(VU1.ACC);
-	memzero_obj(VU1.VF);
-	memzero_obj(VU1.VI);
+	memzero(VU1.ACC);
+	memzero(VU1.VF);
+	memzero(VU1.VI);
 	VU1.VF[0].f.x = 0.0f;
 	VU1.VF[0].f.y = 0.0f;
 	VU1.VF[0].f.z = 0.0f;

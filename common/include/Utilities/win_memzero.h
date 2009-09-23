@@ -562,28 +562,28 @@ static __forceinline void memset_32( void *dest )
 // Structures, static arrays, etc.  No need to include sizeof() crap, this does it automatically
 // for you!
 template< typename T >
-static __forceinline void memzero_obj( T& object )
+static __forceinline void memzero( T& object )
 {
 	memzero_ptr<sizeof(T)>( &object );
 }
 
 // This method clears an object with the given 8 bit value.
 template< u8 data, typename T >
-static __forceinline void memset8_obj( T& object )
+static __forceinline void memset8( T& object )
 {
 	memset_8<data, sizeof(T)>( &object );
 }
 
 // This method clears an object with the given 16 bit value.
 template< u16 data, typename T >
-static __forceinline void memset16_obj( T& object )
+static __forceinline void memset16( T& object )
 {
 	memset_16<data, sizeof(T)>( &object );
 }
 
 // This method clears an object with the given 32 bit value.
 template< u32 data, typename T >
-static __forceinline void memset32_obj( T& object )
+static __forceinline void memset32( T& object )
 {
 	memset_32<data, sizeof(T)>( &object );
 }

@@ -285,8 +285,7 @@ void SysLoadState( const wxString& srcfile )
 
 	SysClearExecutionCache();
 	cpuReset();
-	//joe.FreezeAll();
-	StateRecovery::Recover();
+	joe.FreezeAll();
 }
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the

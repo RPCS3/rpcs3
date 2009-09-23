@@ -199,7 +199,7 @@ PCSX2_ALIGNED16( static GifPathStruct s_gifPath ) =
 
 GIFPath::GIFPath() : tag()
 {
-	memzero_obj( *this );
+	memzero( *this );
 }
 
 __forceinline bool GIFPath::StepReg()
@@ -379,14 +379,14 @@ __forceinline int GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 // Clears all GIFpath data to zero.
 void GIFPath_Reset()
 {
-	memzero_obj( s_gifPath.path );
+	memzero( s_gifPath.path );
 }
 
 // This is a hackfix tool provided for "canceling" the contents of the GIFpath when
 // invalid GIFdma states are encountered (tpyically needed for PATH3 only).
 __forceinline void GIFPath_Clear( GIF_PATH pathidx )
 {
-	memzero_obj(s_gifPath.path[pathidx]);
+	memzero(s_gifPath.path[pathidx]);
 	if( GSgifSoftReset == NULL ) return;
 	mtgsThread.SendSimplePacket( GS_RINGTYPE_SOFTRESET, (1<<pathidx), 0, 0 );
 }

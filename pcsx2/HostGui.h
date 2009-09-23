@@ -49,7 +49,7 @@ public:
 	const char* gsdll, *cdvddll, *spudll;
 	const char* pad1dll, *pad2dll, *dev9dll;
 
-	StartupParams() { memzero_obj(*this); }
+	StartupParams() { memzero(*this); }
 };
 
 extern StartupParams g_Startup;

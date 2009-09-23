@@ -508,7 +508,7 @@ void  cdrReadInterrupt() {
 	if (cdr.RErr == -1)
 	{
 		CDR_LOG(" err\n");
-		memzero_obj(cdr.Transfer);
+		memzero(cdr.Transfer);
 		cdr.Stat = DiskError;
 		cdr.Result[0] |= 0x01;
 		ReadTrack();
@@ -955,7 +955,7 @@ void cdvdDmaInterrupt(s32 channel)
 #endif
 
 void cdrReset() {
-	memzero_obj(cdr);
+	memzero(cdr);
 	cdr.CurTrack=1;
 	cdr.File=1; cdr.Channel=1;
 	cdReadTime = (PSXCLK / 1757) * BIAS; 
