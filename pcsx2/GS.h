@@ -16,7 +16,7 @@
 #pragma once
 
 #include "Common.h"
-#include "SysThreads.h"
+#include "System/SysThreads.h"
 
 PCSX2_ALIGNED16( extern u8 g_RealGSMem[Ps2MemSize::GSregs] );
 

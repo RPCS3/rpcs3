@@ -202,7 +202,7 @@ static volatile long gsIsOpened = 0;
 
 static void _clean_close_gs( void* obj )
 {
-	int result = InterlockedExchange( &gsIsOpened, 0 );
+	int result = _InterlockedExchange( &gsIsOpened, 0 );
 	if( result && (g_plugins != NULL) )
 		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
 }

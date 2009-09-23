@@ -242,6 +242,8 @@
 		<Unit filename="../StringUtils.h" />
 		<Unit filename="../System.cpp" />
 		<Unit filename="../System.h" />
+		<Unit filename="../System/SysThreads.cpp" />
+		<Unit filename="../System/SysThreads.h" />
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />
 		<Unit filename="../Utilities/folderdesc.txt" />
@@ -362,11 +364,7 @@
 			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
-		<Unit filename="../gui/Resources/Dualshock.png">
-			<Option compile="1" />
-			<Option weight="0" />
-			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
-		</Unit>
+		<Unit filename="../gui/Resources/Dualshock.jpg" />
 		<Unit filename="../gui/Resources/EmbeddedImage.h" />
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
@@ -375,8 +373,7 @@
 		<Unit filename="../gui/wxHelpers.h" />
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
-		<Unit filename="../ps2/CoreEmuThread.cpp" />
-		<Unit filename="../ps2/CoreEmuThread.h" />
+		<Unit filename="../ps2/GIFpath.cpp" />
 		<Unit filename="../ps2/Iop/IopHwRead.cpp" />
 		<Unit filename="../ps2/Iop/IopHwWrite.cpp" />
 		<Unit filename="../ps2/Iop/IopHw_Internal.h" />
