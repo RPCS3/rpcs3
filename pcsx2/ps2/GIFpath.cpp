@@ -102,11 +102,11 @@ struct GIFPath
 	int ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
 };
 
-typedef void (*GIFRegHandler)(const u32* data);
+typedef void (__fastcall *GIFRegHandler)(const u32* data);
 
 struct GifPathStruct
 {
-	const GIFRegHandler	Handlers[3];
+	const GIFRegHandler	Handlers[0x100-0x60];		// handlers for 0x60->0x100
 	GIFPath				path[3];
 	
 	__forceinline GIFPath& operator[]( int idx ) { return path[idx]; }
@@ -130,7 +130,7 @@ struct GifPathStruct
 //   raised once the EE has reset the *IMR* mask for SIGNAL -- meaning setting the bit to 1
 //   (disabled/masked) and then back to 0 (enabled/unmasked).
 //
-static void RegHandlerSIGNAL(const u32* data)
+static void __fastcall RegHandlerSIGNAL(const u32* data)
 {
 	GIF_LOG("MTGS SIGNAL data %x_%x CSRw %x IMR %x CSRr\n",data[0], data[1], CSRw, GSIMR, GSCSRr);
 
@@ -156,7 +156,7 @@ static void RegHandlerSIGNAL(const u32* data)
 //   However!  We should properly emulate handling partial-DMA transfers on PATH2 and
 //   PATH3 of the GIF, which means only signaling FINISH if nloop==0.
 //
-static void RegHandlerFINISH(const u32* data)
+static void __fastcall RegHandlerFINISH(const u32* data)
 {
 	GIF_LOG("GIFpath FINISH data %x_%x CSRw %x\n", data[0], data[1], CSRw);
 
@@ -169,15 +169,28 @@ static void RegHandlerFINISH(const u32* data)
 	}
 }
 
-static void RegHandlerLABEL(const u32* data)
+static void __fastcall RegHandlerLABEL(const u32* data)
 {
 	GIF_LOG( "GIFpath LABEL" );
 	GSSIGLBLID.LBLID = (GSSIGLBLID.LBLID&~data[1])|(data[0]&data[1]);
 }
 
+static void __fastcall RegHandlerUNMAPPED(const u32* data)
+{
+	Console::Notice( "Unmapped GIFtag Register Index: Ignoring." );
+}
+
+#define INSERT_UNMAPPED_4	RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED,
+#define INSERT_UNMAPPED_16	INSERT_UNMAPPED_4 INSERT_UNMAPPED_4 INSERT_UNMAPPED_4 INSERT_UNMAPPED_4
+#define INSERT_UNMAPPED_64	INSERT_UNMAPPED_16 INSERT_UNMAPPED_16 INSERT_UNMAPPED_16 INSERT_UNMAPPED_16
+
 PCSX2_ALIGNED16( static GifPathStruct s_gifPath ) = 
 {
-	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL
+	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL, RegHandlerUNMAPPED,
+	
+	// Rest are mapped to Unmapped
+	INSERT_UNMAPPED_4  INSERT_UNMAPPED_4  INSERT_UNMAPPED_4
+	INSERT_UNMAPPED_64 INSERT_UNMAPPED_64 INSERT_UNMAPPED_16
 };
 
 // --------------------------------------------------------------------------------------
@@ -240,16 +253,18 @@ void SaveStateBase::gifPathFreeze()
 
 static __forceinline void gsHandler(const u8* pMem) {
 	const int handler = pMem[8];
-	if (handler >= 0x60 && handler < 0x63) {
-		//DevCon::Status("GIF Tag Interrupt");
+	if (handler >= 0x60) {
+		// Question: What happens if an app writes to uncharted register space
+		// on real PS2 hardware (handler 0x63 and higher)?  Probably a silent
+		// ignorance, but not tested so just guessing... --air
 		s_gifPath.Handlers[handler&0x3]((const u32*)pMem);
 	}
 }
 
-#define incTag(x, y) do {										 \
-	pMem += (x);												 \
-	size -= (y);												 \
-	if ((pathidx==GIF_PATH_1)&&(pMem>=vuMemEnd)) pMem -= 0x4000; \
+#define incTag(x, y) do {				\
+	pMem += (x);						\
+	size -= (y);						\
+	if (pMem>=vuMemEnd) pMem -= 0x4000;	\
 } while(false)
 
 #define aMin(x, y)   ((x < y) ? (x)   : (y))
