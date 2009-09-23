@@ -1887,12 +1887,12 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 		FreezeRegs(1);
 		// copy 16 bytes the fast way:
 		const u64* src = (u64*)splittransfer[0];
-		mtgsThread->PrepDataPacket(GIF_PATH_2, nloop0_packet, 1);
-		u64* dst = (u64*)mtgsThread->GetDataPacketPtr();
+		mtgsThread.PrepDataPacket(GIF_PATH_2, nloop0_packet, 1);
+		u64* dst = (u64*)mtgsThread.GetDataPacketPtr();
 		dst[0] = src[0];
 		dst[1] = src[1];
 
-		mtgsThread->SendDataPacket();
+		mtgsThread.SendDataPacket();
 		FreezeRegs(0);
 
 		if (vif1.tag.size == 0) vif1.cmd = 0;
@@ -1928,9 +1928,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	FreezeRegs(1);
 
 	// Round ret up, just in case it's not 128bit aligned.
-	const uint count = mtgsThread->PrepDataPacket(GIF_PATH_2, data, (ret + 3) >> 2);
-	memcpy_fast(mtgsThread->GetDataPacketPtr(), data, count << 4);
-	mtgsThread->SendDataPacket();
+	const uint count = mtgsThread.PrepDataPacket(GIF_PATH_2, data, (ret + 3) >> 2);
+	memcpy_fast(mtgsThread.GetDataPacketPtr(), data, count << 4);
+	mtgsThread.SendDataPacket();
 
 	FreezeRegs(0);
 

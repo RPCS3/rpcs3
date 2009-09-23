@@ -828,16 +828,14 @@ extern void spu2Irq();
 
 static bool OpenPlugin_CDVD()
 {
-	if( CDVDapi_Plugin.open( NULL ) ) return false;
+	if( CDVDapi_Plugin.open(NULL) ) return false;
 	CDVDapi_Plugin.newDiskCB( cdvdNewDiskCB );
 	return true;
 }
 
 static bool OpenPlugin_GS()
 {
-	if( mtgsThread != NULL ) return true;
-	mtgsOpen();	// mtgsOpen raises its own exception on error
-	GSsetGameCRC( ElfCRC, 0 );
+	mtgsThread.Resume();
 	return true;
 }
 
@@ -848,7 +846,7 @@ static bool OpenPlugin_PAD()
 
 static bool OpenPlugin_SPU2()
 {
-	if( SPU2open( (void*)&pDsp ) ) return false;
+	if( SPU2open((void*)&pDsp) ) return false;
 
 	SPU2irqCallback( spu2Irq, spu2DMA4Irq, spu2DMA7Irq );
 	if( SPU2setDMABaseAddr != NULL ) SPU2setDMABaseAddr((uptr)psxM);
@@ -870,7 +868,7 @@ static bool OpenPlugin_USB()
 {
 	usbHandler = NULL;
 
-	if( USBopen( (void*)&pDsp ) ) return false;
+	if( USBopen((void*)&pDsp) ) return false;
 	USBirqCallback( usbIrq );
 	usbHandler = USBirqHandler();
 	if( USBsetRAM != NULL )
@@ -880,7 +878,7 @@ static bool OpenPlugin_USB()
 
 static bool OpenPlugin_FW()
 {
-	if( FWopen( (void*)&pDsp ) ) return false;
+	if( FWopen((void*)&pDsp) ) return false;
 	FWirqCallback( fwIrq );
 	return true;
 }
@@ -916,8 +914,11 @@ void PluginManager::Open()
 	Console::Status( "Opening plugins..." );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
-		g_plugins->Open( pi->id );
+		Open( pi->id );
 	} while( ++pi, pi->shortname != NULL );
+
+	mtgsThread.WaitForOpen();
+	mtgsThread.PollStatus();
 
 	Console::Status( "Plugins opened successfully." );
 }
@@ -929,11 +930,9 @@ void PluginManager::Close( PluginsEnum_t pid )
 
 	if( pid == PluginId_GS )
 	{
-		if( mtgsThread == NULL ) return;
-
 		// force-close PAD before GS, because the PAD depends on the GS window.
 		Close( PluginId_PAD );
-		safe_delete( mtgsThread );
+		mtgsThread.Suspend();
 	}
 	else if( pid == PluginId_CDVD )
 		DoCDVDclose();
@@ -1007,6 +1006,8 @@ void PluginManager::Init()
 //
 void PluginManager::Shutdown()
 {
+	mtgsThread.Cancel();	// speedier shutdown!
+
 	Close();
 	DbgCon::Status( "Shutting down plugins..." );
 
@@ -1039,10 +1040,10 @@ bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 {
 	if( (pid == PluginId_GS) && wxThread::IsMain() )
 	{
-		MTGS_FreezeData woot = { data, 0 };
 		// GS needs some thread safety love...
-		mtgsThread->SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &woot );
-		mtgsWaitGS();
+
+		MTGS_FreezeData woot = { data, 0 };
+		mtgsThread.Freeze( mode, woot );
 		return woot.retval != -1;
 	}
 	else

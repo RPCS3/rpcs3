@@ -98,12 +98,12 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 { 
 	psHu32(GIF_STAT) |= GIF_STAT_APATH3 | GIF_STAT_OPH;         
 
-	int size   = mtgsThread->PrepDataPacket(GIF_PATH_3, pMem, qwc);
-	u8* pgsmem = mtgsThread->GetDataPacketPtr();
+	int size   = mtgsThread.PrepDataPacket(GIF_PATH_3, pMem, qwc);
+	u8* pgsmem = mtgsThread.GetDataPacketPtr();
 
 	memcpy_aligned(pgsmem, pMem, size<<4); 
 	
-	mtgsThread->SendDataPacket();
+	mtgsThread.SendDataPacket();
 	return size;
 } 
 
@@ -116,7 +116,7 @@ int  _GIFchain()
 	if (pMem == NULL) 
 	{
 		// reset path3, fixes dark cloud 2
-		gsGIFSoftReset(4);
+		GIFPath_Clear( GIF_PATH_3 );
 
 		//must increment madr and clear qwc, else it loops
 		gif->madr += gif->qwc * 16;

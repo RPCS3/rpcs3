@@ -120,6 +120,8 @@ struct u128
 	u128( u32 src ) :
 		lo( src )
 	,	hi( 0 ) {}
+
+	u128() {}
 };
 
 struct s128
@@ -136,6 +138,8 @@ struct s128
 	s128( s32 src ) :
 		lo( src )
 	,	hi( 0 ) {}
+
+	s128() {}
 };
 
 #else

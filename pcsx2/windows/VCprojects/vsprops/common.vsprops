@@ -6,7 +6,7 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		AdditionalIncludeDirectories="./;../../;../../x86;&quot;../../x86/ix86-32&quot;;../libs;../../IPU"
+		AdditionalIncludeDirectories="./;../../;../../x86;&quot;../../x86/ix86-32&quot;;../../IPU;../../System"
 		PreprocessorDefinitions="__i386__;TIXML_USE_STL;_SCL_SECURE_NO_WARNINGS"
 		RuntimeTypeInfo="false"
 		PrecompiledHeaderFile="$(IntDir)/pcsx2.pch"

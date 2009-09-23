@@ -36,12 +36,12 @@ enum FreezeSectionId
 {
 	FreezeId_End,
 
-	FreezeId_Memory,
-	FreezeId_Registers,
-
 	// A BIOS tag should always be saved in conjunction with Memory or Registers tags,
 	// but can be skipped if the savestate has only plugins.
 	FreezeId_Bios,
+
+	FreezeId_Memory,
+	FreezeId_Registers,
 
 	FreezeId_Plugin,
 
@@ -159,9 +159,7 @@ protected:
 	void psxRcntFreeze();
 	void sio2Freeze();
 
-	// called by gsFreeze automatically.
-	void mtgsFreeze();
-
+	void gifPathFreeze();		// called by gsFreeze
 };
 
 // --------------------------------------------------------------------------------------

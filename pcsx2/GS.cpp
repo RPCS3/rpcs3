@@ -67,7 +67,7 @@ void _gs_ChangeTimings( u32 framerate, u32 iTicks )
 
 void gsOnModeChanged( u32 framerate, u32 newTickrate )
 {
-	mtgsThread->SendSimplePacket( GS_RINGTYPE_MODECHANGE, framerate, newTickrate, 0 );
+	mtgsThread.SendSimplePacket( GS_RINGTYPE_MODECHANGE, framerate, newTickrate, 0 );
 }
 
 static bool		gsIsInterlaced	= false;
@@ -92,9 +92,7 @@ void gsInit()
 
 void gsReset()
 {
-	// Sanity check in case the plugin hasn't been initialized...
-	if( mtgsThread == NULL ) return;
-	mtgsThread->Reset();
+	mtgsThread.ResetGS();
 
 	gsOnModeChanged(
 		(gsRegionMode == Region_NTSC) ? FRAMERATE_NTSC : FRAMERATE_PAL,
@@ -110,36 +108,8 @@ void gsReset()
 	psHu32(GIF_MODE) = 0;
 }
 
-bool gsGIFSoftReset( int mask )
-{
-	if( GSgifSoftReset == NULL )
-	{
-		static bool warned = false;
-		if( !warned )
-		{
-			Console::Notice( "GIF Warning > Soft reset requested, but the GS plugin doesn't support it!" );
-			//warned = true;
-		}
-		return false;
-	}
-
-	mtgsThread->GIFSoftReset( mask );
-
-	return true;
-}
-
 void gsGIFReset()
 {
-	// fixme - should this be here? (air)
-	//memzero_obj(g_RealGSMem);
-	// none of this should be here, its a GIF reset, not GS, only the dma side of it is reset. (Refraction)
-
-	// perform a soft reset (but do not do a full reset if the soft reset API is unavailable)
-	//gsGIFSoftReset( 7 );
-
-
-	//GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now
-	//GSIMR = 0x7f00;
 	psHu32(GIF_STAT) = 0;
 	psHu32(GIF_CTRL) = 0;
 	psHu32(GIF_MODE) = 0;
@@ -147,33 +117,35 @@ void gsGIFReset()
 
 void gsCSRwrite(u32 value)
 {
-	
-
-	// Our emulated GS has no FIFO...
-	/*if( value & 0x100 ) { // FLUSH
-		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
-	}*/
-
 	if (value & 0x200) { // resetGS
 
-		// perform a soft reset -- and fall back to doing a full reset if the plugin doesn't
-		// support soft resets.
+		// perform a soft reset -- which is a clearing of all GIFpaths -- and fall back to doing
+		// a full reset if the plugin doesn't support soft resets.
 
-		if( !gsGIFSoftReset( 7 ) )
-			mtgsThread->SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
-
+		if( GSgifSoftReset != NULL )
+		{
+			GIFPath_Clear( GIF_PATH_1 );
+			GIFPath_Clear( GIF_PATH_2 );
+			GIFPath_Clear( GIF_PATH_3 );
+		}
+		else
+		{
+			mtgsThread.SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
+		}
+	
 		CSRw |= 0x1f;
 		GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 - GS is always at a finish state as we don't have a FIFO(saqib)
 		GSIMR = 0x7F00; //This is bits 14-8 thats all that should be 1
 	} 
 	else if( value & 0x100 ) // FLUSH
 	{ 
+		// Our emulated GS has no FIFO, but if it did, it would flush it here...
 		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
 	}
 	else
 	{
 		CSRw |= value & 0x1f;
-		mtgsThread->SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
+		mtgsThread.SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
 		GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
 	}
 
@@ -204,7 +176,7 @@ __forceinline void gsWrite8(u32 mem, u8 value)
 			gsCSRwrite((CSRw & ~0xff000000) | (value << 24)); break;
 		default:
 			*PS2GS_BASE(mem) = value;
-			mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE8, mem&0x13ff, value, 0);
+			mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE8, mem&0x13ff, value, 0);
 	}
 	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx", mem, value);
 }
@@ -248,7 +220,7 @@ __forceinline void gsWrite16(u32 mem, u16 value)
 	}
 
 	*(u16*)PS2GS_BASE(mem) = value;
-	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE16, mem&0x13ff, value, 0);
+	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE16, mem&0x13ff, value, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -273,7 +245,7 @@ __forceinline void gsWrite32(u32 mem, u32 value)
 	}
 
 	*(u32*)PS2GS_BASE(mem) = value;
-	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE32, mem&0x13ff, value, 0);
+	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE32, mem&0x13ff, value, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -309,7 +281,7 @@ void __fastcall gsWrite64_generic( u32 mem, const mem64_t* value )
 	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x", mem, srcval32[1], srcval32[0]);
 
 	*(u64*)PS2GS_BASE(mem) = *value;
-	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, srcval32[0], srcval32[1]);
+	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, srcval32[0], srcval32[1]);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -350,8 +322,8 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 	writeTo[0] = value[0];
 	writeTo[1] = value[1];
 
-	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem, srcval32[0], srcval32[1]);
-	mtgsThread->SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem+8, srcval32[2], srcval32[3]);
+	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem, srcval32[0], srcval32[1]);
+	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem+8, srcval32[2], srcval32[3]);
 }
 
 __forceinline u8 gsRead8(u32 mem)
@@ -393,7 +365,7 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 
 	//Console::WriteLn("LostTime on the EE!");
 
-	mtgsThread->SendSimplePacket(
+	mtgsThread.SendSimplePacket(
 		GS_RINGTYPE_STARTTIME,
 		deltaTime,
 		0,
@@ -537,7 +509,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 void gsPostVsyncEnd( bool updategs )
 {
 	*(u32*)(PS2MEM_GS+0x1000) ^= 0x2000; // swap the vsync field
-	mtgsThread->PostVsyncEnd( updategs );
+	mtgsThread.PostVsyncEnd( updategs );
 }
 
 void _gs_ResetFrameskip()
@@ -548,7 +520,7 @@ void _gs_ResetFrameskip()
 // Disables the GS Frameskip at runtime without any racy mess...
 void gsResetFrameSkip()
 {
-	mtgsThread->SendSimplePacket(GS_RINGTYPE_FRAMESKIP, 0, 0, 0);
+	mtgsThread.SendSimplePacket(GS_RINGTYPE_FRAMESKIP, 0, 0, 0);
 }
 
 void gsDynamicSkipEnable()
@@ -564,5 +536,5 @@ void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
 	Freeze(CSRw);
-	mtgsFreeze();
+	gifPathFreeze();
 }

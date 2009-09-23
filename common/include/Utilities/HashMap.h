@@ -549,9 +549,9 @@ public:
 template< class Key, class T >
 class HashMap : public google::dense_hash_map<Key, T, CommonHashClass>
 {
-public:
 	typedef typename google::dense_hash_map<Key, T, CommonHashClass> _parent;
 
+public:
 	using _parent::operator[];
 	using _parent::end;
 	typedef typename _parent::const_iterator const_iterator;

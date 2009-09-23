@@ -263,6 +263,20 @@ void SysClearExecutionCache()
 void SysLoadState( const wxString& srcfile )
 {
 	SafeArray<u8> buf;
+	gzFile gzfp = gzopen( srcfile.ToUTF8().data(), "rb" );
+	if( gzfp == NULL )
+		throw Exception::BadSavedState( srcfile, "File not found, or permission denied!" );
+
+	int curidx = 0;
+	do
+	{
+		buf.MakeRoomFor( curidx+327680 );
+		gzread( gzfp, buf.GetPtr(curidx), 327680 );
+		curidx += 327680;
+	} while( !gzeof(gzfp) );
+
+	gzclose( gzfp );
+
 	memLoadingState joe( buf );		// this could throw n StateLoadError.
 
 	// we perform a full backup to memory first so that we can restore later if the
@@ -272,7 +286,8 @@ void SysLoadState( const wxString& srcfile )
 
 	SysClearExecutionCache();
 	cpuReset();
-	joe.FreezeAll();
+	//joe.FreezeAll();
+	StateRecovery::Recover();
 }
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the

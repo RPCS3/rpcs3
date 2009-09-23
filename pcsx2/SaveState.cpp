@@ -112,7 +112,7 @@ void SaveStateBase::FreezeBios()
 
 	if( !m_DidBios )
 	{
-		if( memcmp( descin, descout, 128 ) != 0 )
+		if( memcmp( descin, descout.ToAscii().data(), 128 ) != 0 )
 		{
 			Console::Error(
 				"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
@@ -144,8 +144,8 @@ void SaveStateBase::FreezeMainMemory()
 
 void SaveStateBase::FreezeRegisters()
 {
-	if( IsLoading() )
-		PreLoadPrep();
+	//if( IsLoading() )
+	//	PreLoadPrep();
 
 	// Second Block - Various CPU Registers and States
 	// -----------------------------------------------
@@ -206,7 +206,7 @@ bool SaveStateBase::FreezeSection()
 			FreezeTag( "BiosVersion" );
 			Freeze( sectlen );
 
-			if( sectlen != MainMemorySizeInBytes )
+			if( sectlen != 128 )
 			{
 				throw Exception::BadSavedState( wxEmptyString,
 					L"Invalid size encountered on BiosVersion section.",
@@ -223,6 +223,7 @@ bool SaveStateBase::FreezeSection()
 		{
 			FreezeTag( "MainMemory" );
 
+			int seekpos = m_idx+4;
 			int sectlen = MainMemorySizeInBytes;
 			Freeze( sectlen );
 			if( sectlen != MainMemorySizeInBytes )
@@ -234,6 +235,8 @@ bool SaveStateBase::FreezeSection()
 			}
 
 			FreezeMainMemory();
+			int realsectsize = m_idx - seekpos;
+			wxASSERT( sectlen == realsectsize );
 			m_sectid++;
 		}
 		break;
@@ -241,7 +244,7 @@ bool SaveStateBase::FreezeSection()
 		case FreezeId_Registers:
 		{
 			FreezeTag( "HardwareRegisters" );
-			int seekpos = m_idx;
+			int seekpos = m_idx+4;
 			int sectsize;
 			Freeze( sectsize );
 
@@ -263,13 +266,14 @@ bool SaveStateBase::FreezeSection()
 					);
 				}
 			}
+			m_sectid++;
 		}
 		break;
 		
 		case FreezeId_Plugin:
 		{
 			FreezeTag( "Plugin" );
-			int seekpos = m_idx;
+			int seekpos = m_idx+4;
 			int sectsize;
 			Freeze( sectsize );
 			
@@ -296,34 +300,33 @@ bool SaveStateBase::FreezeSection()
 
 			// following increments only affect Saving mode, are ignored by Loading mode.
 			m_pid++;
-			if( m_pid > PluginId_Count )
-				m_sectid++;
+			if( m_pid >= PluginId_Count )
+				m_sectid = FreezeId_End;
 		}
 		break;
 
 		case FreezeId_Unknown:
 		default:
-			if( IsSaving() )
-				m_sectid = FreezeId_End;
-			else
-			{
-				// Skip unknown sections with a warning log.
-				// Maybe it'll work!  (haha?)
+			wxASSERT( IsSaving() );
 
-				int size;
-				Freeze( m_tagspace );
-				Freeze( size );
-				m_tagspace[sizeof(m_tagspace)-1] = 0;
+			// Skip unknown sections with a warning log.
+			// Maybe it'll work!  (haha?)
 
-				Console::Notice(
-					"Warning: Unknown tag encountered while loading savestate; going to ignore it!\n"
-					"\tTagname: %s, Size: %d", m_tagspace, size
-				);
-				m_idx += size;
-			}
+			int size;
+			Freeze( m_tagspace );
+			Freeze( size );
+			m_tagspace[sizeof(m_tagspace)-1] = 0;
+
+			Console::Notice(
+				"Warning: Unknown tag encountered while loading savestate; going to ignore it!\n"
+				"\tTagname: %s, Size: %d", m_tagspace, size
+			);
+			m_idx += size;
 		break;
 	}
-	
+
+	wxSafeYield( NULL );
+
 	return true;
 }
 
@@ -332,7 +335,7 @@ void SaveStateBase::FreezeAll()
 	m_sectid	= (int)FreezeId_End+1;
 	m_pid		= PluginId_GS;
 
-	while( FreezeSection() ) ;
+	while( FreezeSection() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////

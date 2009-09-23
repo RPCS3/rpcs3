@@ -2059,8 +2059,8 @@ void _vuXGKICK(VURegs * VU)
 
 	u8* data = ((u8*)VU->Mem + ((VU->VI[_Is_].US[0]*16) & 0x3fff));
 	u32 size;
-	size = mtgsThread->PrepDataPacket( GIF_PATH_1, data, (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4);
-	u8* pmem = mtgsThread->GetDataPacketPtr();
+	size = mtgsThread.PrepDataPacket( GIF_PATH_1, data, (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4);
+	u8* pmem = mtgsThread.GetDataPacketPtr();
 	
 	if((size << 4) > (u32)(0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)))
 	{
@@ -2074,7 +2074,7 @@ void _vuXGKICK(VURegs * VU)
 	else {
 		memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), size<<4);
 	}
-	mtgsThread->SendDataPacket();
+	mtgsThread.SendDataPacket();
 }
 
 void _vuXTOP(VURegs * VU) {

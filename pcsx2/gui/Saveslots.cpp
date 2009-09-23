@@ -37,6 +37,8 @@ bool States_isSlotUsed(int num)
 // returns true if the new state was loaded, or false if nothing happened.
 void States_Load( const wxString& file )
 {
+	SysSuspend();
+
 	try
 	{
 		SysLoadState( file );

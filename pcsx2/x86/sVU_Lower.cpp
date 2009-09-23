@@ -1974,10 +1974,10 @@ void VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 	u32 size;
     u8* data = ((u8*)pMem + (addr&0x3fff));
 	
-	size = mtgsThread->PrepDataPacket(GIF_PATH_1, data, (0x4000-(addr&0x3fff)) / 16);
+	size = mtgsThread.PrepDataPacket(GIF_PATH_1, data, (0x4000-(addr&0x3fff)) / 16);
     jASSUME( size > 0 );
 	
-	u8* pmem = mtgsThread->GetDataPacketPtr();
+	u8* pmem = mtgsThread.GetDataPacketPtr();
 	
 	if((size << 4) > (0x4000-(addr&0x3fff))) 
 	{
@@ -1992,6 +1992,6 @@ void VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 		memcpy_aligned(pmem, (u8*)pMem+addr, size<<4);
 	}
 
-	mtgsThread->SendDataPacket();
+	mtgsThread.SendDataPacket();
 }
 //------------------------------------------------------------------

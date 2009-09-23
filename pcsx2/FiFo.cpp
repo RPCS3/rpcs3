@@ -175,11 +175,11 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	psHu64(0x6008) = value[1];
 
 	FreezeRegs(1);
-	mtgsThread->PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);
-	u64* data = (u64*)mtgsThread->GetDataPacketPtr();
+	mtgsThread.PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);
+	u64* data = (u64*)mtgsThread.GetDataPacketPtr();
 	data[0] = value[0];
 	data[1] = value[1];
-	mtgsThread->SendDataPacket();
+	mtgsThread.SendDataPacket();
 	FreezeRegs(0);
 }
 

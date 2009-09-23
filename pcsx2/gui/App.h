@@ -219,10 +219,11 @@ typedef HashTools::Dictionary<const GlobalCommandDescriptor*>	CommandDictionary;
 
 class AcceleratorDictionary : public HashTools::HashMap<int, const GlobalCommandDescriptor*>
 {
+	typedef HashTools::HashMap<int, const GlobalCommandDescriptor*> _parent;
+
 protected:
 
 public:
-	typedef HashTools::HashMap<int, const GlobalCommandDescriptor*> _parent;
 	using _parent::operator[];
 
 	AcceleratorDictionary();
@@ -438,6 +439,8 @@ protected:
 
 class AppEmuThread : public SysCoreThread
 {
+	typedef SysCoreThread _parent;
+
 protected:
 	wxKeyEvent		m_kevt;
 
@@ -446,7 +449,7 @@ public:
 	virtual ~AppEmuThread() throw();
 
 	virtual void Suspend( bool isBlocking=true );
-	virtual void StateCheck();
+	virtual void StateCheck( bool isCancelable=true );
 	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void OnResumeReady();
 
@@ -484,7 +487,7 @@ extern void AppSaveSettings();
 extern void AppApplySettings( const AppConfig* oldconf=NULL );
 
 extern void SysStatus( const wxString& text );
-extern void SysSuspend();
+extern void SysSuspend( bool closePlugins = true );
 extern void SysResume();
 extern void SysReset();
 extern void SysExecute();

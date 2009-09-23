@@ -18,6 +18,9 @@
 
 #include "App.h"
 #include "HostGui.h"
+#include "zlib/zlib.h"
+
+using namespace Threading;
 
 static wxScopedPtr< SafeArray<u8> > g_RecoveryState;
 
@@ -38,11 +41,68 @@ namespace StateRecovery {
 		StateRecovery::Clear();
 		SysClearExecutionCache();
 	}
+	
+	SafeArray<u8> gzSavingBuffer;
+
+	class gzThreadClass : public PersistentThread
+	{
+		typedef PersistentThread _parent;
+
+	protected:
+		gzFile m_file;
+
+	public:
+		gzThreadClass( const wxString& file ) :
+			m_file( gzopen( file.ToUTF8().data(), "wb" ) )
+		{
+			if( m_file == NULL )
+				throw Exception::CreateStream( file, "Cannot create savestate file for writing." );
+				
+			Start();
+		}
+		
+		virtual void DoThreadCleanup()
+		{
+			gzSavingBuffer.Dispose();
+			if( m_file != NULL )
+			{
+				gzclose( m_file );
+				m_file = NULL;
+			}
+			
+			_parent::DoThreadCleanup();
+		}
+		
+		virtual ~gzThreadClass() throw()
+		{
+			// fixme: something a little more graceful than Block, perhaps?
+			Block();
+		}
+		
+	protected:
+		int ExecuteTask()
+		{
+			if( (m_file == NULL) || (gzSavingBuffer.GetSizeInBytes() == 0) ) return 0 ;
+			SetName( "Savestate::gzipper" );
+			gzwrite( m_file, gzSavingBuffer.GetPtr(), gzSavingBuffer.GetSizeInBytes() );
+			
+			return 0;
+		}
+	};
+
+	wxScopedPtr<gzThreadClass> gzThread;
 
 	void SaveToFile( const wxString& file )
 	{
-		SafeArray<u8> buf;
-		memSavingState( buf ).FreezeAll();
+		SysSuspend( false );
+		gzThread.reset( NULL );		// blocks on any existing gzipping business.
+
+		memSavingState( gzSavingBuffer ).FreezeAll();
+
+		// start that encoding thread:
+		gzThread.reset( new gzThreadClass( file ) );
+		
+		SysResume();
 	}
 
 	// Saves recovery state info to the given saveslot, or saves the active emulation state

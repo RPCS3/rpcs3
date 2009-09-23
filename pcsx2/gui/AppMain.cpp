@@ -77,7 +77,7 @@ AppEmuThread::~AppEmuThread() throw()
 
 void AppEmuThread::Suspend( bool isBlocking )
 {
-	SysCoreThread::Suspend( isBlocking );
+	_parent::Suspend( isBlocking );
 	AppInvoke( MainFrame, ApplySettings() );
 
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
@@ -90,7 +90,9 @@ void AppEmuThread::Suspend( bool isBlocking )
 
 void AppEmuThread::OnResumeReady()
 {
-	DevAssert( wxThread::IsMain(), "SysCoreThread can only be resumed from the main/gui thread." );
+	if( !DevAssert( wxThread::IsMain(), "SysCoreThread can only be resumed from the main/gui thread." ) ) return;
+
+	if( m_shortSuspend ) return;
 
 	ApplySettings( g_Conf->EmuOptions );
 
@@ -109,18 +111,15 @@ static const int pxID_PadHandler_Keydown = 8030;
 	extern int TranslateGDKtoWXK( u32 keysym );
 #endif
 
-void AppEmuThread::StateCheck()
+void AppEmuThread::StateCheck( bool isCancelable )
 {
-	SysCoreThread::StateCheck();
+	_parent::StateCheck( isCancelable );
 
 	const keyEvent* ev = PADkeyEvent();
-
 	if( ev == NULL || (ev->key == 0) ) return;
 
 	GetPluginManager().KeyEvent( *ev );
-
 	m_kevt.SetEventType( ( ev->evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
-
 	const bool isDown = (ev->evt == KEYPRESS);
 
 	#ifdef __WXMSW__
@@ -881,9 +880,12 @@ void SysResume()
 	AppInvoke( CoreThread, Resume() );
 }
 
-void SysSuspend()
+void SysSuspend( bool closePlugins )
 {
-	AppInvoke( CoreThread, Suspend() );
+	if( closePlugins )
+		AppInvoke( CoreThread, Suspend(closePlugins) );
+	else
+		AppInvoke( CoreThread, ShortSuspend() );
 }
 
 void SysReset()

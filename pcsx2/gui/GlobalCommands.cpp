@@ -141,7 +141,7 @@ namespace Implementations
 	{
 		g_Pcsx2Recording ^= 1;
 
-		mtgsThread->SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
+		mtgsThread.SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
 		if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);
 	}
 
@@ -157,6 +157,10 @@ namespace Implementations
 // --------------------------------------------------------------------------------------
 //  CommandDeclarations table
 // --------------------------------------------------------------------------------------
+// This is our manualized introspection/reflection table.  In a cool language like C# we'd
+// have just grabbed this info from enumerating the members of a class and assigning
+// properties to each method in the class.  But since this is C++, we have to do the the
+// goold old fashioned way! :)
 
 static const GlobalCommandDescriptor CommandDeclarations[] =
 {

@@ -16,117 +16,22 @@
 #pragma once
 
 #include "Common.h"
-#include "Utilities/Threading.h"
+#include "SysThreads.h"
 
-PCSX2_ALIGNED16( extern u8 g_RealGSMem[0x2000] );
-#define GSCSRr *((u64*)(g_RealGSMem+0x1000))
-#define GSIMR *((u32*)(g_RealGSMem+0x1010))
-#define GSSIGLBLID ((GSRegSIGBLID*)(g_RealGSMem+0x1080))
+PCSX2_ALIGNED16( extern u8 g_RealGSMem[Ps2MemSize::GSregs] );
+
+#define PS2MEM_GS		g_RealGSMem
+#define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
+
+#define GSCSRr		((u64&)*(g_RealGSMem+0x1000))
+#define GSIMR		((u32&)*(g_RealGSMem+0x1010))
+#define GSSIGLBLID	((GSRegSIGBLID&)*(g_RealGSMem+0x1080))
 
 enum GS_RegionMode
 {
 	Region_NTSC,
 	Region_PAL
 };
-
-extern GS_RegionMode gsRegionMode;
-
-/////////////////////////////////////////////////////////////////////////////////////////
-// MTGS GIFtag Parser - Declaration
-//
-// The MTGS needs a dummy "GS plugin" for processing SIGNAL, FINISH, and LABEL
-// commands.  These commands trigger gsIRQs, which need to be handled accurately
-// in synch with the EE (which can be running several frames ahead of the MTGS)
-//
-// Yeah, it's a lot of work, but the performance gains are huge, even on HT cpus.
-
-struct GSRegSIGBLID
-{
-	u32 SIGID;
-	u32 LBLID;
-};
-
-enum GIF_FLG
-{
-	GIF_FLG_PACKED	= 0,
-	GIF_FLG_REGLIST	= 1,
-	GIF_FLG_IMAGE	= 2,
-	GIF_FLG_IMAGE2	= 3
-};
-
-enum GIF_REG
-{
-	GIF_REG_PRIM	= 0x00,
-	GIF_REG_RGBA	= 0x01,
-	GIF_REG_STQ		= 0x02,
-	GIF_REG_UV		= 0x03,
-	GIF_REG_XYZF2	= 0x04,
-	GIF_REG_XYZ2	= 0x05,
-	GIF_REG_TEX0_1	= 0x06,
-	GIF_REG_TEX0_2	= 0x07,
-	GIF_REG_CLAMP_1	= 0x08,
-	GIF_REG_CLAMP_2	= 0x09,
-	GIF_REG_FOG		= 0x0a,
-	GIF_REG_XYZF3	= 0x0c,
-	GIF_REG_XYZ3	= 0x0d,
-	GIF_REG_A_D		= 0x0e,
-	GIF_REG_NOP		= 0x0f,
-};
-
-// GIFTAG
-// Members of this structure are in CAPS to help visually denote that they are representative
-// of actual hw register states of the GIF, unlike the internal tracking vars in GIFPath, which
-// are modified during the GIFtag unpacking process.
-struct GIFTAG
-{
-	u32 NLOOP : 15;
-	u32 EOP : 1;
-	u32 dummy0 : 16;
-	u32 dummy1 : 14;
-	u32 PRE : 1;
-	u32 PRIM : 11;
-	u32 FLG : 2;
-	u32 NREG : 4;
-	u32 REGS[2];
-
-	GIFTAG() {}
-};
-
-struct GIFPath
-{
-	const GIFTAG tag;	// The "original tag -- modification allowed only by SetTag(), so let's make it const.
-	u8 regs[16];		// positioned after tag ensures 16-bit aligned (in case we SSE optimize later)
-
-	u32 nloop;			// local copy nloop counts toward zero, and leaves the tag copy unmodified.
-	u32 curreg;			// reg we left of on (for traversing through loops)
-	u32 numregs;		// number of regs (when NREG is 0, numregs is 16)
-	u8  hasADreg;		// has an A+D reg, if it doesn't have one, then it no need to check for gs interrupts
-
-	GIFPath();
-
-	__forceinline void PrepPackedRegs();
-	__forceinline void SetTag(const void* mem);
-	__forceinline bool StepReg() {
-		if ((++curreg & 0xf) == tag.NREG) {
-			curreg = 0;
-			if (--nloop == 0) {
-				return false;
-			}
-		}
-		return true;
-	}
-	__forceinline u8 GetReg() {
-		return regs[curreg&0xf];
-	}
-};
-
-
-/////////////////////////////////////////////////////////////////////////////
-// MTGS Threaded Class Declaration
-
-// Uncomment this to enable the MTGS debug stack, which tracks to ensure reads
-// and writes stay synchronized.  Warning: the debug stack is VERY slow.
-//#define RINGBUF_DEBUG_STACK
 
 enum GIF_PATH
 {
@@ -135,6 +40,18 @@ enum GIF_PATH
 	GIF_PATH_3,
 };
 
+extern int  GIFPath_ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size);
+extern void GIFPath_Reset();
+extern void GIFPath_Clear( GIF_PATH pathidx );
+
+extern GS_RegionMode gsRegionMode;
+
+/////////////////////////////////////////////////////////////////////////////
+// MTGS Threaded Class Declaration
+
+// Uncomment this to enable the MTGS debug stack, which tracks to ensure reads
+// and writes stay synchronized.  Warning: the debug stack is VERY slow.
+//#define RINGBUF_DEBUG_STACK
 
 enum GS_RINGTYPE
 {
@@ -154,8 +71,8 @@ enum GS_RINGTYPE
 ,	GS_RINGTYPE_SOFTRESET	// issues a soft reset for the GIF
 ,	GS_RINGTYPE_WRITECSR
 ,	GS_RINGTYPE_MODECHANGE	// for issued mode changes.
+,	GS_RINGTYPE_CRC
 ,	GS_RINGTYPE_STARTTIME	// special case for min==max fps frameskip settings
-,	GS_RINGTYPE_QUIT
 };
 
 
@@ -165,42 +82,27 @@ struct MTGS_FreezeData
 	s32			retval;		// value returned from the call, valid only after an mtgsWaitGS()
 };
 
-class mtgsThreadObject : public Threading::PersistentThread
+class mtgsThreadObject : public SysSuspendableThread
 {
-	friend class SaveStateBase;
-
-protected:
-	// Size of the ringbuffer as a power of 2 -- size is a multiple of simd128s.
-	// (actual size is 1<<m_RingBufferSizeFactor simd vectors [128-bit values])
-	// A value of 19 is a 8meg ring buffer.  18 would be 4 megs, and 20 would be 16 megs.
-	// Default was 2mb, but some games with lots of MTGS activity want 8mb to run fast (rama)
-	static const uint m_RingBufferSizeFactor = 19;
-
-	// size of the ringbuffer in simd128's.
-	static const uint m_RingBufferSize = 1<<m_RingBufferSizeFactor;
-
-	// Mask to apply to ring buffer indices to wrap the pointer from end to
-	// start (the wrapping is what makes it a ringbuffer, yo!)
-	static const uint m_RingBufferMask = m_RingBufferSize - 1;
+	typedef SysSuspendableThread _parent;
 
 protected:
 	// note: when g_pGSRingPos == g_pGSWritePos, the fifo is empty
 	uint m_RingPos;		// cur pos gs is reading from
 	uint m_WritePos;	// cur pos ee thread is writing to
 
-	// used to regulate thread startup and gsInit
-	Threading::Semaphore m_sem_InitDone;
-
-	Threading::MutexLock m_lock_RingRestart;
+	Semaphore m_sem_OpenDone;
+	MutexLock m_lock_RingRestart;
 
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
-	Threading::MutexLock m_PacketLocker;
+	MutexLock m_PacketLocker;
 
 	// Used to delay the sending of events.  Performance is better if the ringbuffer
 	// has more than one command in it when the thread is kicked.
 	int m_CopyCommandTally;
 	int m_CopyDataTally;
-	volatile u32 m_RingBufferIsBusy;
+	volatile bool m_RingBufferIsBusy;
+	volatile bool m_LoadState;
 
 	// Counts the number of vsync frames queued in the MTGS ringbuffer.  This is used to
 	// throttle the number of frames allowed to be rendered ahead of time for games that
@@ -209,7 +111,7 @@ protected:
 
 	// Protection lock for the frame queue counter -- needed because we can't safely
 	// AtomicExchange from two threads.
-	Threading::MutexLock m_lock_FrameQueueCounter;
+	MutexLock m_lock_FrameQueueCounter;
 
 	// These vars maintain instance data for sending Data Packets.
 	// Only one data packet can be constructed and uploaded at a time.
@@ -221,40 +123,39 @@ protected:
 	Threading::MutexLock m_lock_Stack;
 #endif
 
-	// contains aligned memory allocations for gs and Ringbuffer.
-	SafeAlignedArray<u128,16> m_RingBuffer;
-
-	// mtgs needs its own memory space separate from the PS2.  The PS2 memory is in
-	// sync with the EE while this stays in sync with the GS (ie, it lags behind)
-	u8* const m_gsMem;
-
 public:
 	mtgsThreadObject();
 	virtual ~mtgsThreadObject() throw();
 
 	void Start();
-	void Cancel();
-	void Reset();
-	void GIFSoftReset( int mask );
+	void PollStatus();
 
 	// Waits for the GS to empty out the entire ring buffer contents.
 	// Used primarily for plugin startup/shutdown.
 	void WaitGS();
+	void ResetGS();
 
 	int PrepDataPacket( GIF_PATH pathidx, const u8*  srcdata, u32 size );
 	int	PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size );
 	void SendDataPacket();
+	void SendGameCRC( u32 crc );
+	void WaitForOpen();
+	void Freeze( int mode, MTGS_FreezeData& data );
 
 	void SendSimplePacket( GS_RINGTYPE type, int data0, int data1, int data2 );
 	void SendPointerPacket( GS_RINGTYPE type, u32 data0, void* data1 );
 
 	u8* GetDataPacketPtr() const;
-	void Freeze( SaveStateBase& state );
 	void SetEvent();
-
 	void PostVsyncEnd( bool updategs );
 
 protected:
+	void OpenPlugin();
+	void OnSuspendInThread();
+	void OnResumeInThread();
+
+	void OnResumeReady();
+
 	// Saves MMX/XMM REGS, posts an event to the mtgsThread flag and releases a timeslice.
 	// For use in surrounding loops that wait on the mtgs.
 	void PrepEventWait();
@@ -262,23 +163,15 @@ protected:
 	// Restores MMX/XMM REGS.  For use in surrounding loops that wait on the mtgs.
 	void PostEventWait() const;
 
-	// Processes a GIFtag & packet, and throws out some gsIRQs as needed.
-	// Used to keep interrupts in sync with the EE, while the GS itself
-	// runs potentially several frames behind.
-	int  gifTransferDummy(GIF_PATH pathidx, const u8 *pMem, u32 size);
-	int _gifTransferDummy(GIF_PATH pathidx, const u8 *pMem, u32 size);
-
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();
 	void _FinishSimplePacket( uint future_writepos );
-	void _RingbufferLoop();
 	sptr ExecuteTask();
 };
 
-extern mtgsThreadObject* mtgsThread;
+PCSX2_ALIGNED16_EXTERN( mtgsThreadObject mtgsThread );
 
 void mtgsWaitGS();
-void mtgsOpen();
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff
@@ -301,7 +194,6 @@ extern void _gs_ChangeTimings( u32 framerate, u32 iTicks );
 
 
 // used for resetting GIF fifo
-bool gsGIFSoftReset( int mask );
 void gsGIFReset();
 void gsCSRwrite(u32 value);
 

@@ -20,10 +20,11 @@
 // --------------------------------------------------------------------------------------
 //  <<< Important Notes to Plugin Authors >>>
 // --------------------------------------------------------------------------------------
-//  * Exceptions thrown by plugins may not be handled correctly if allowed to escape the
-//    scope of the plugin, and could result in odd crashes.  For C++ plugins this means
-//    ensuring that any code that uses 'new' or STL containers (string, list, vector, etc)
-//    are contained within a try{} block, since the STL can throw std::bad_alloc.
+//  * C++ only: Exceptions thrown by plugins may not be handled correctly if allowed to
+//    escape the scope of the plugin, and could result in unexpected behavior or odd crashes.
+//    For C++ plugins this means ensuring that any code that uses 'new' or STL containers
+//    (string, list, vector, etc) are contained within a try{} block, since the STL can
+//    throw std::bad_alloc.
 //
 //  * Many callbacks are optional, and have been marked as such. Any optional callback can be
 //    left NULL.  Any callback not marked optional and left NULL will cause the emulator to
@@ -39,9 +40,9 @@
 //    allocated by a plugin must be freed by that plugin.
 //
 //  * C++ exception handling cannot be used by either plugin callbacks or emulator callbacks.
-//    This includes the Console callbacks, for example, since the nature of C++ RTTI could
-//    cause a C++ plugin wth its own catch handlers to catch exceptions of mismatched types
-//    from the emulator.
+//    This includes the emulator's Console callbacks, for example, since the nature of C++
+//    ID-based RTTI could cause a C++ plugin with its own catch handlers to catch exceptions
+//    of mismatched types from the emulator.
 //
 
 
@@ -700,9 +701,6 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	// Returns:
 	//   0 if the card is not available, or 1 if it is available.
 	//
-	// Exceptions:
-	//   None.  This function should not throw.
-	//
 	BOOL (PS2E_CALLBACK* McdIsPresent)( PS2E_THISPTR thisptr, uint port, uint slot );
 
 	// McdRead
@@ -802,9 +800,6 @@ typedef struct _PS2E_ComponentAPI_Pad
 	// Returns:
 	//   0 if the card is not available, or 1 if it is available.
 	//
-	// Exceptions:
-	//   None.  This function should not throw.
-	//
 	BOOL (PS2E_CALLBACK* PadIsPresent)( PS2E_THISPTR thisptr, uint port, uint slot );
 
 	// PadStartPoll
@@ -812,9 +807,6 @@ typedef struct _PS2E_ComponentAPI_Pad
 	//
 	// Returns:
 	//   First byte in response to the poll (Typically 0xff).
-	//
-	// Exceptions:
-	//   None.  This function should not throw.
 	//
 	u8 (PS2E_CALLBACK* PadStartPoll)( PS2E_THISPTR thisptr, uint port, uint slot );
 
@@ -824,9 +816,6 @@ typedef struct _PS2E_ComponentAPI_Pad
 	// Returns:
 	//   Next byte in response to the poll.
 	//
-	// Exceptions:
-	//   None.  This function should not throw.
-	//
 	u8 (PS2E_CALLBACK* PadPoll)( PS2E_THISPTR thisptr, u8 value );
 
 	// PadKeyEvent
@@ -835,9 +824,6 @@ typedef struct _PS2E_ComponentAPI_Pad
 	// Returns:
 	//   PS2E_KeyEvent:  Key being pressed or released.  Should stay valid until next call to
 	//                   PadKeyEvent or plugin is closed with EmuClose.
-	//
-	// Exceptions:
-	//   None.  This function should not throw.
 	//
 	typedef PS2E_KeyEvent* (CALLBACK* PadKeyEvent)();
 

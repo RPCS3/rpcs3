@@ -492,7 +492,7 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="EmuCore"
+			Name="System"
 			>
 			<File
 				RelativePath="..\..\Dump.cpp"
@@ -532,6 +532,14 @@
 			</File>
 			<File
 				RelativePath="..\..\System.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\System\SysThreads.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\System\SysThreads.h"
 				>
 			</File>
 			<Filter
@@ -683,10 +691,6 @@
 				</File>
 				<File
 					RelativePath="..\..\ps2\BiosTools.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\ps2\CoreEmuThread.cpp"
 					>
 				</File>
 				<Filter
@@ -1449,6 +1453,10 @@
 					Name="GS"
 					>
 					<File
+						RelativePath="..\..\ps2\GIFpath.cpp"
+						>
+					</File>
+					<File
 						RelativePath="..\..\GS.cpp"
 						>
 					</File>
@@ -1882,10 +1890,6 @@
 					</File>
 					<File
 						RelativePath="..\..\ps2\BiosTools.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\ps2\CoreEmuThread.h"
 						>
 					</File>
 				</Filter>
@@ -2370,7 +2374,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)"
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
 							Outputs="&quot;$(InputDir)\$(InputName).h"
 						/>
 					</FileConfiguration>
@@ -2380,7 +2384,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)"
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
 							Outputs="&quot;$(InputDir)\$(InputName).h"
 						/>
 					</FileConfiguration>
@@ -2390,7 +2394,7 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)"
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
 							Outputs="&quot;$(InputDir)\$(InputName).h"
 						/>
 					</FileConfiguration>

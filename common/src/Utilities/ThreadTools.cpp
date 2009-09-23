@@ -123,8 +123,6 @@ namespace Threading
 		}
 		else
 			pthread_detach( m_thread );
-
-		m_running = false;
 	}
 
 	// Blocks execution of the calling thread until this thread completes its task.  The
@@ -137,25 +135,15 @@ namespace Threading
 	//
 	sptr PersistentThread::Block()
 	{
-		if( _InterlockedExchange( &m_detached, true ) )
-		{
-			// already detached: if we're still running then its an invalid operation
-			if( m_running )
-				throw Exception::InvalidOperation( "Blocking on detached threads requires manual semaphore implementation." );
+		DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
 
-			return m_returncode;
-		}
-		else
-		{
-			DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
-
+		if( m_running )
 #if wxUSE_GUI
 			m_sem_finished.WaitGui();
 #else
 			m_sem_finished.Wait();
 #endif
-			return m_returncode;
-		}
+		return m_returncode;
 	}
 
 	bool PersistentThread::IsSelf() const

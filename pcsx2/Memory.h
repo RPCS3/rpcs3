@@ -38,9 +38,6 @@ extern u8  *psS; //0.015 mb, scratch pad
 #define PS2MEM_EROM		psER
 #define PS2MEM_SCRATCH	psS
 
-#define PS2MEM_GS	g_RealGSMem
-#define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
-
 // Various useful locations
 #define spr0 ((DMACh*)&PS2MEM_HW[0xD000])
 #define spr1 ((DMACh*)&PS2MEM_HW[0xD400])
@@ -56,11 +53,6 @@ extern u8  *psS; //0.015 mb, scratch pad
 
 #define ipu0dma ((DMACh *)&PS2MEM_HW[0xb000])
 #define ipu1dma ((DMACh *)&PS2MEM_HW[0xb400])
-
-// From Gif.h
-#define GSCSRr *((u64*)(g_RealGSMem+0x1000))
-#define GSIMR *((u32*)(g_RealGSMem+0x1010))
-#define GSSIGLBLID ((GSRegSIGBLID*)(g_RealGSMem+0x1080))
 
 #define PSM(mem)	(vtlb_GetPhyPtr((mem)&0x1fffffff)) //pcsx2 is a competition.The one with most hacks wins :D
 

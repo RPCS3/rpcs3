@@ -53,18 +53,20 @@ wxString GetTranslation( const char* msg )
 // LogicErrors enabled as First-Chance exceptions regardless, so do it now. :)
 //
 // Returns:
-//   FALSE if the assertion succeeded (condition is valid), or true if the assertion
+//   TRUE if the assertion succeeded (condition is valid), or FALSE if the assertion
 //   failed.  The true clause is only reachable in release builds, and can be used by code
 //   to provide a "stable" escape clause for unexpected behavior.
 //
 DEVASSERT_INLINE bool DevAssert( bool condition, const char* msg )
 {
-	if( condition ) return false;
-	if( IsDevBuild )
-		throw Exception::LogicError( msg );
+	if( condition ) return true;
 
 	wxASSERT_MSG_A( false, msg );
-	return true;
+
+	if( IsDevBuild && !IsDebugBuild )
+		throw Exception::LogicError( msg );
+
+	return false;
 }
 
 // --------------------------------------------------------------------------------------
