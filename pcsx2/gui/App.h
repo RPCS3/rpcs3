@@ -32,9 +32,7 @@ class PipeRedirectionBase;
 
 #include "AppConfig.h"
 #include "System.h"
-//#include "ConsoleLogger.h"
-
-#include "ps2/CoreEmuThread.h"
+#include "System/SysThreads.h"
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )

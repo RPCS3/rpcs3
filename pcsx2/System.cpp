@@ -27,7 +27,6 @@
 #include "R5900Exceptions.h"
 
 #include "CDVD/CDVD.h"
-#include "ps2/CoreEmuThread.h"
 
 #if _MSC_VER
 #	include "svnrev.h"

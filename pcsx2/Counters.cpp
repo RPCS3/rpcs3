@@ -26,7 +26,6 @@
 
 #include "GS.h"
 #include "VUmicro.h"
-#include "ps2/CoreEmuThread.h"
 
 using namespace Threading;
 
