@@ -391,7 +391,7 @@ void Update(unsigned int port, unsigned int slot) {
 
 	static unsigned int LastCheck = 0;
 	unsigned int t = timeGetTime();
-	if (t - LastCheck < 15) return;
+	if (t - LastCheck < 15 || !openCount) return;
 
 	if (windowThreadId != GetCurrentThreadId()) {
 		if (stateUpdated[0] < 0) {
@@ -804,13 +804,13 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				UpdateEnabledDevices(1);
 			}
 			break;
-		case WM_ACTIVATEAPP:
+		case WM_ACTIVATE:
 			// Release any buttons PCSX2 may think are down when
 			// losing/gaining focus.
 			if (!wParam) {
 				ReleaseModifierKeys();
 			}
-			activeWindow = wParam != 0;
+			activeWindow = (LOWORD(wParam) != WA_INACTIVE);
 			UpdateEnabledDevices();
 			break;
 		case WM_CLOSE:
@@ -947,8 +947,8 @@ s32 CALLBACK PADopen(void *pDsp) {
 void CALLBACK PADclose() {
 	if (openCount && !--openCount) {
 		DEBUG_TEXT_OUT("LilyPad closed\n\n");
-		dm->ReleaseInput();
 		ReleaseEatenProc();
+		dm->ReleaseInput();
 		hWnd = 0;
 		ClearKeyQueue();
 	}
