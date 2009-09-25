@@ -905,6 +905,13 @@ s32 CALLBACK PADopen(void *pDsp) {
 		}
 		else {
 			openCount = 0;
+			MessageBoxA(0,
+				"Invalid Window handle passed to LilyPad.\n"
+				"\n"
+				"Either your emulator or gs plugin is buggy,\n"
+				"Despite the fact the emulator is about to\n"
+				"blame LilyPad for failing to initialize.",
+				"Non-LilyPad Error", MB_OK | MB_ICONERROR);
 			return -1;
 		}
 		while (GetWindowLong (hWnd, GWL_STYLE) & WS_CHILD)
