@@ -1,10 +1,11 @@
 #include "Global.h"
+#include "InputManager.h"
+#include "Config.h"
 
 #include "KeyboardHook.h"
 #include "WindowsKeyboard.h"
 #include "VKey.h"
 #include "WndProcEater.h"
-#include "DeviceEnumerator.h"
 
 extern HINSTANCE hInst;
 LRESULT CALLBACK IgnoreKeyboardHook(int code, WPARAM wParam, LPARAM lParam);

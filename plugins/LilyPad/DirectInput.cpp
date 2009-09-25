@@ -1,8 +1,9 @@
 #include "Global.h"
+#include <dinput.h>
+#include "InputManager.h"
 
 #include "VKey.h"
 #include "DirectInput.h"
-#include <dinput.h>
 #include "DeviceEnumerator.h"
 #include "PS2Etypes.h"
 
@@ -597,7 +598,13 @@ BOOL CALLBACK EnumCallback (LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef) {
 	}
 	IDirectInputDevice8 *did;
 	if (DI_OK == di8->CreateDevice(lpddi->guidInstance, &did, 0)) {
-		dm->AddDevice(new DirectInputDevice(type, did, fullName, instanceID, productID, lpddi->guidInstance));
+		DirectInputDevice *dev = new DirectInputDevice(type, did, fullName, instanceID, productID, lpddi->guidInstance);
+		if (dev->numPhysicalControls || dev->numFFAxes) {
+			dm->AddDevice(dev);
+		}
+		else {
+			delete dev;
+		}
 	}
 	free(fullName);
 	return DIENUM_CONTINUE;

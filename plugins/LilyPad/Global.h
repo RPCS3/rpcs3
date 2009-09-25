@@ -7,6 +7,11 @@
 
 #ifdef NO_CRT
 #define _CRT_ALLOCATION_DEFINED
+
+inline void * malloc(size_t size);
+inline void * calloc(size_t num, size_t size);
+inline void free(void * mem);
+inline void * realloc(void *mem, size_t size);
 #endif
 
 #define UNICODE
@@ -50,10 +55,6 @@
 #include "PS2Etypes.h"
 #include "PS2Edefs.h"
 
-#include "resource.h"
-#include "InputManager.h"
-#include "Config.h"
-
 extern HINSTANCE hInst;
 // Needed for config screen
 void GetNameAndVersionString(wchar_t *out);
@@ -92,10 +93,6 @@ EXPORT_C_(s32) PADqueryMtap(u8 port);
 
 #ifdef NO_CRT
 
-#define malloc MyMalloc
-#define calloc MyCalloc
-#define free MyFree
-#define realloc MyRealloc
 #define wcsdup MyWcsdup
 #define wcsicmp MyWcsicmp
 
@@ -110,7 +107,7 @@ inline void * calloc(size_t num, size_t size) {
 	return out;
 }
 
-inline void free(__inout_opt void * mem) {
+inline void free(void * mem) {
 	if (mem) HeapFree(GetProcessHeap(), 0, mem);
 }
 
@@ -126,20 +123,20 @@ inline void * realloc(void *mem, size_t size) {
 	return HeapReAlloc(GetProcessHeap(), 0, mem, size);
 }
 
-inline wchar_t * __cdecl wcsdup(const wchar_t *in) {
-	size_t size = sizeof(wchar_t) * (1+wcslen(in));
-	wchar_t *out = (wchar_t*) malloc(size);
-	if (out)
-		memcpy(out, in, size);
-	return out;
-}
-
 inline void * __cdecl operator new(size_t lSize) {
 	return HeapAlloc(GetProcessHeap(), 0, lSize);
 }
 
 inline void __cdecl operator delete(void *pBlock) {
 	HeapFree(GetProcessHeap(), 0, pBlock);
+}
+
+inline wchar_t * __cdecl wcsdup(const wchar_t *in) {
+	size_t size = sizeof(wchar_t) * (1+wcslen(in));
+	wchar_t *out = (wchar_t*) malloc(size);
+	if (out)
+		memcpy(out, in, size);
+	return out;
 }
 
 inline int __cdecl wcsicmp(const wchar_t *s1, const wchar_t *s2) {

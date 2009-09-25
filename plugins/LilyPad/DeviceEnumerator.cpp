@@ -1,4 +1,6 @@
 #include "Global.h"
+#include "InputManager.h"
+
 #include "DeviceEnumerator.h"
 #include "WindowsMessaging.h"
 #include "DirectInput.h"

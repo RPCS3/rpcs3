@@ -9,6 +9,7 @@
 #define BASE_SENSITIVITY (1<<16)
 #define FULLY_DOWN (1<<16)
 
+#define DEFAULT_DEADZONE (BASE_SENSITIVITY/0x10)
 
 /* Idea is for this file and the associated cpp file to be Windows independent.
  * Still more effort than it's worth to port to Linux, however.
@@ -34,16 +35,19 @@ enum ControlType {
 	// that range is treated as -1 (Though 36000-37000 is treated
 	// like 0 to 1000, just in case).
 	POV = 16,
+	PRESSURE_BTN = 32,
 };
 
 // Masks to determine button type.  Don't need one for POV.
-#define BUTTON 12
+#define BUTTON (PSHBTN | TGLBTN | PRESSURE_BTN)
+#define BINARY_BUTTON (PSHBTN | TGLBTN)
 #define AXIS 3
 
 struct Binding {
 	int controlIndex;
 	int command;
 	int sensitivity;
+	int deadZone;
 	unsigned char turbo;
 };
 

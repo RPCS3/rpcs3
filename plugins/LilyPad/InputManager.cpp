@@ -392,6 +392,10 @@ Device *InputDeviceManager::GetActiveDevice(InitInfo *info, unsigned int *uid, i
 				if (((devices[i]->virtualControls[j].uid>>16) & 0xFF) == RELAXIS) {
 					diff = diff/4+1;
 				}
+				// Less pressure needed to bind DS3 buttons.
+				if (devices[i]->api == DS3 && (((devices[i]->virtualControls[j].uid>>16) & 0xFF) & BUTTON)) {
+					diff *= 4;
+				}
 				if (diff > bestDiff) {
 					if (devices[i]->virtualControls[j].uid & UID_AXIS) {
 						if ((((devices[i]->virtualControls[j].uid>>16)&0xFF) != ABSAXIS)) continue;

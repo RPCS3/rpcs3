@@ -1,6 +1,7 @@
 #include "Global.h"
-#include "VKey.h"
 #include <xinput.h>
+#include "VKey.h"
+#include "InputManager.h"
 
 // This way, I don't require that XInput junk be installed.
 typedef void (CALLBACK *_XInputEnable)(BOOL enable);
@@ -36,9 +37,13 @@ public:
 		memset(&xInputVibration, 0, sizeof(xInputVibration));
 		this->index = index;
 		int i;
-		for (i=0; i<16; i++) {
+		for (i=0; i<14; i++) {
 			// The i > 9 accounts for the 2 bit skip in button flags.
 			AddPhysicalControl(PSHBTN, i + 2*(i > 9), 0);
+		}
+		for (i=14; i<16; i++) {
+			// The i > 9 accounts for the 2 bit skip in button flags.
+			AddPhysicalControl(PRESSURE_BTN, i + 2*(i > 9), 0);
 		}
 		for (; i<20; i++) {
 			AddPhysicalControl(ABSAXIS, i + 2, 0);

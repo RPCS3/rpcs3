@@ -1,4 +1,6 @@
 #include "Global.h"
+#include "InputManager.h"
+
 #include "usb.h"
 #include "HidDevice.h"
 
@@ -242,7 +244,12 @@ public:
 		this->index = index;
 		int i;
 		for (i=0; i<16; i++) {
-			AddPhysicalControl(PSHBTN, i, 0);
+			if (i != 14 && i != 15 && i != 8 && i != 9) {
+				AddPhysicalControl(PRESSURE_BTN, i, 0);
+			}
+			else {
+				AddPhysicalControl(PSHBTN, i, 0);
+			}
 		}
 		for (; i<23; i++) {
 			AddPhysicalControl(ABSAXIS, i, 0);

@@ -1,4 +1,5 @@
 #include "Global.h"
+#include "InputManager.h"
 #include "VKey.h"
 #include "WindowsKeyboard.h"
 #include "KeyboardQueue.h"

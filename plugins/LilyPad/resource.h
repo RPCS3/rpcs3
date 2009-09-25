@@ -55,6 +55,10 @@
 #define IDC_DPAD                        0x1008
 #define IDC_LSTICK                      0x1009
 #define IDC_RSTICK                      0x100A
+#define IDC_SLIDER_DEADZONE             0x1010
+#define IDC_AXIS_DEADZONE               0x1014
+#define IDC_LABEL_SENSITIVITY           0x1020
+#define IDC_LABEL_DEADZONE              0x1021
 #define ID_LOCK_BUTTONS                 0x10FC
 #define ID_LOCK                         0x10FD
 #define ID_LOCK_DIRECTION               0x10FE

@@ -1,6 +1,9 @@
 #include "Global.h"
 
-#include "PS2Edefs.h"
+#include "resource.h"
+#include "InputManager.h"
+#include "Config.h"
+
 #include "Diagnostics.h"
 #include "DeviceEnumerator.h"
 #include "KeyboardQueue.h"
@@ -96,6 +99,7 @@ void SetLogSliderVal(HWND hWnd, int id, HWND hWndText, int val) {
 	int sliderPos = 0;
 	wchar_t temp[30];
 	EnableWindow(hWndSlider, val != 0);
+	EnableWindow(hWndText, val != 0);
 	EnableWindow(GetDlgItem(hWnd, id+1), val != 0);
 	if (!val) val = BASE_SENSITIVITY;
 	CheckDlgButton(hWnd, id+1, BST_CHECKED * (val<0));
@@ -268,7 +272,7 @@ inline void GetSettingsFileName(wchar_t *out) {
 }
 
 int GetBinding(int port, int slot, int index, Device *&dev, Binding *&b, ForceFeedbackBinding *&ffb);
-int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int slot, int command, int sensitivity, int turbo);
+int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int slot, int command, int sensitivity, int turbo, int deadZone);
 
 int CreateEffectBinding(Device *dev, wchar_t *effectName, unsigned int port, unsigned int slot, unsigned int motor, ForceFeedbackBinding **binding);
 
@@ -283,6 +287,8 @@ void SelChanged(int port, int slot) {
 	// Second value is now turbo.
 	int turbo = -1;
 	int sensitivity = 0;
+	int deadZone = 0;
+	int nonButtons = 0;
 	// Set if sensitivity != 0, but need to disable flip anyways.
 	// Only used to relative axes.
 	int disableFlip = 0;
@@ -350,6 +356,10 @@ void SelChanged(int port, int slot) {
 							else {
 								sensitivity += b->sensitivity;
 							}
+							if (((control->uid >> 16)&0xFF) != PSHBTN && ((control->uid >> 16)&0xFF) != TGLBTN) {
+								deadZone += b->deadZone;
+								nonButtons++;
+							}
 						}
 						else disableFlip = 1;
 					}
@@ -360,6 +370,7 @@ void SelChanged(int port, int slot) {
 		if ((bFound && ffbFound) || ffbFound > 1) {
 			ffb = 0;
 			turbo = -1;
+			deadZone = 0;
 			sensitivity = 0;
 			disableFlip = 1;
 			bFound = ffbFound = 0;
@@ -367,6 +378,9 @@ void SelChanged(int port, int slot) {
 		else if (bFound) {
 			turbo++;
 			sensitivity /= bFound;
+			if (nonButtons) {
+				deadZone /= nonButtons;
+			}
 			if (bFound > 1) disableFlip = 1;
 			else if (flipped) {
 				sensitivity = -sensitivity;
@@ -417,8 +431,9 @@ void SelChanged(int port, int slot) {
 			ShowWindow(hWndTemp, enable);
 		}
 	}
-	if (!ffb) { 
+	if (!ffb) {
 		SetLogSliderVal(hWnd, IDC_SLIDER1, GetDlgItem(hWnd, IDC_AXIS_SENSITIVITY1), sensitivity);
+		SetLogSliderVal(hWnd, IDC_SLIDER_DEADZONE, GetDlgItem(hWnd, IDC_AXIS_DEADZONE), deadZone);
 
 		if (disableFlip) EnableWindow(GetDlgItem(hWnd, IDC_FLIP1), 0);
 
@@ -570,7 +585,7 @@ int ListBoundEffect(int port, int slot, Device *dev, ForceFeedbackBinding *b) {
 }
 
 // Only for use with control bindings.  Affects all highlighted bindings.
-void ChangeValue(int port, int slot, int *newSensitivity, int *turbo) {
+void ChangeValue(int port, int slot, int *newSensitivity, int *newTurbo, int *newDeadZone) {
 	if (!hWnds[port][slot]) return;
 	HWND hWndList = GetDlgItem(hWnds[port][slot], IDC_LIST);
 	int count = ListView_GetSelectedCount(hWndList);
@@ -590,8 +605,11 @@ void ChangeValue(int port, int slot, int *newSensitivity, int *turbo) {
 			else
 				b->sensitivity = *newSensitivity;
 		}
-		if (turbo) {
-			b->turbo = *turbo;
+		if (newDeadZone) {
+			b->deadZone = *newDeadZone;
+		}
+		if (newTurbo) {
+			b->turbo = *newTurbo;
 		}
 	}
 	PropSheet_Changed(hWndProp, hWnds[port][slot]);
@@ -758,7 +776,7 @@ int SaveSettings(wchar_t *file=0) {
 					Binding *b = dev->pads[port][slot].bindings+j;
 					VirtualControl *c = &dev->virtualControls[b->controlIndex];
 					wsprintfW(temp, L"Binding %i", bindingCount++);
-					wsprintfW(temp2, L"0x%08X, %i, %i, %i, %i, %i", c->uid, port, b->command, b->sensitivity, b->turbo, slot);
+					wsprintfW(temp2, L"0x%08X, %i, %i, %i, %i, %i, %i", c->uid, port, b->command, b->sensitivity, b->turbo, slot, b->deadZone);
 					noError &= WritePrivateProfileStringW(id, temp, temp2, file);
 				}
 				for (int j=0; j<dev->pads[port][slot].numFFBindings; j++) {
@@ -891,7 +909,7 @@ int LoadSettings(int force, wchar_t *file) {
 			}
 			last = 1;
 			unsigned int uid;
-			int port, command, sensitivity, turbo, slot = 0;
+			int port, command, sensitivity, turbo, slot = 0, deadZone = 0;
 			int w = 0;
 			char string[1000];
 			while (temp2[w]) {
@@ -899,12 +917,12 @@ int LoadSettings(int force, wchar_t *file) {
 				w++;
 			}
 			string[w] = 0;
-			int len = sscanf(string, " %i , %i , %i , %i , %i , %i", &uid, &port, &command, &sensitivity, &turbo, &slot);
+			int len = sscanf(string, " %i , %i , %i , %i , %i , %i , %i", &uid, &port, &command, &sensitivity, &turbo, &slot, &deadZone);
 			if (len >= 5 && type) {
 				VirtualControl *c = dev->GetVirtualControl(uid);
 				if (!c) c = dev->AddVirtualControl(uid, -1);
 				if (c) {
-					BindCommand(dev, uid, port, slot, command, sensitivity, turbo);
+					BindCommand(dev, uid, port, slot, command, sensitivity, turbo, deadZone);
 				}
 			}
 		}
@@ -1119,12 +1137,20 @@ int CreateEffectBinding(Device *dev, wchar_t *effectID, unsigned int port, unsig
 	return ListBoundEffect(port, slot, dev, b);
 }
 
-int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int slot, int command, int sensitivity, int turbo) {
+int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int slot, int command, int sensitivity, int turbo, int deadZone) {
 	// Checks needed because I use this directly when loading bindings.
 	if (port > 1 || slot>3) {
 		return -1;
 	}
 	if (!sensitivity) sensitivity = BASE_SENSITIVITY;
+	else if (!deadZone) {
+		if (dev->api != DS3 || !((uid>>16) & PRESSURE_BTN)) {
+			deadZone = DEFAULT_DEADZONE;
+		}
+		else {
+			deadZone = 1;
+		}
+	}
 	// Relative axes can have negative sensitivity.
 	else if (((uid>>16) & 0xFF) == RELAXIS) {
 		sensitivity = abs(sensitivity);
@@ -1146,6 +1172,7 @@ int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int s
 	b->controlIndex = controlIndex;
 	b->turbo = turbo;
 	b->sensitivity = sensitivity;
+	b->deadZone = deadZone;
 	// Where it appears in listview.
 	int count = ListBoundCommand(port, slot, dev, b);
 
@@ -1253,8 +1280,8 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			slot = (int)((PROPSHEETPAGE *)lParam)->lParam >> 1;
 			hWnds[port][slot] = hWnd;
 			SendMessage(hWndList, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, LVS_EX_FULLROWSELECT);
-			HWND hWndSlider = GetDlgItem(hWnd, IDC_SLIDER1);
-			SetupLogSlider(hWndSlider);
+			SetupLogSlider(GetDlgItem(hWnd, IDC_SLIDER1));
+			SetupLogSlider(GetDlgItem(hWnd, IDC_SLIDER_DEADZONE));
 			if (port || slot)
 				EnableWindow(GetDlgItem(hWnd, ID_IGNORE), 0);
 
@@ -1286,14 +1313,15 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				UnselectAll(hWndList);
 				int index = -1;
 				if (command == 0x7F && dev->api == IGNORE_KEYBOARD) {
-					index = BindCommand(dev, uid, 0, 0, command, BASE_SENSITIVITY, 0);
+					index = BindCommand(dev, uid, 0, 0, command, BASE_SENSITIVITY, 0, 0);
 				}
 				else if (command < 0x30) {
-					index = BindCommand(dev, uid, port, slot, command, BASE_SENSITIVITY, 0);
+					index = BindCommand(dev, uid, port, slot, command, BASE_SENSITIVITY, 0, 0);
 				}
 				if (index >= 0) {
 					PropSheet_Changed(hWndProp, hWnds[port][slot]);
 					ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
+					ListView_EnsureVisible(hWndList, index, 0);
 				}
 			}
 		}
@@ -1355,7 +1383,10 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 			int id = GetDlgCtrlID((HWND)lParam);
 			int val = GetLogSliderVal(hWnd, id);
 			if (id == IDC_SLIDER1) {
-				ChangeValue(port, slot, &val, 0);
+				ChangeValue(port, slot, &val, 0, 0);
+			}
+			else if (id == IDC_SLIDER_DEADZONE) {
+				ChangeValue(port, slot, 0, 0, &val);
 			}
 			else {
 				ChangeEffect(port, slot, id, &val, 0);
@@ -1377,7 +1408,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 						uid = (uid&0x00FFFFFF) | axisUIDs[cbsel];
 						Binding backup = *b;
 						DeleteSelected(port, slot);
-						int index = BindCommand(dev, uid, port, slot, backup.command, backup.sensitivity, backup.turbo);
+						int index = BindCommand(dev, uid, port, slot, backup.command, backup.sensitivity, backup.turbo, backup.deadZone);
 						ListView_SetItemState(hWndList, index, LVIS_SELECTED, LVIS_SELECTED);
 						PropSheet_Changed(hWndProp, hWnd);
 					}
@@ -1464,6 +1495,7 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 							}
 							UnselectAll(hWndList);
 							ListView_SetItemState(hWndList, count, LVIS_SELECTED, LVIS_SELECTED);
+							ListView_EnsureVisible(hWndList, count, 0);
 						}
 						PropSheet_Changed(hWndProp, hWnd);
 					}
@@ -1532,11 +1564,11 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				// Don't allow setting it back to indeterminate.
 				SendMessage(GetDlgItem(hWnd, IDC_TURBO), BM_SETSTYLE, BS_AUTOCHECKBOX, 0);
 				int turbo = (IsDlgButtonChecked(hWnd, IDC_TURBO) == BST_CHECKED);
-				ChangeValue(port, slot, 0, &turbo);
+				ChangeValue(port, slot, 0, &turbo, 0);
 			}
-			else if (cmd == IDC_FLIP1 || cmd == IDC_TURBO) {
+			else if (cmd == IDC_FLIP1) {
 				int val = GetLogSliderVal(hWnd, IDC_SLIDER1);
-				ChangeValue(port, slot, &val, 0);
+				ChangeValue(port, slot, &val, 0, 0);
 			}
 			else if (cmd >= IDC_FF_AXIS1_ENABLED && cmd < IDC_FF_AXIS8_ENABLED + 16) {
 				int index = (cmd - IDC_FF_AXIS1_ENABLED)/16;
@@ -1825,26 +1857,7 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 			}
 
 			int mtap = config.multitap[0] + 2*config.multitap[1];
-
-			if (IsDlgButtonChecked(hWnd, IDC_G_DS3) && !config.gameApis.dualShock3) {
-				if (IDOK !=
-					MessageBoxA(hWnd, 
-					"This option will attempt to connect directly to any connected\n"
-					"DualShock 3 devices.  It is completely experimental, and based\n"
-					"on no published specs.\n"
-					"\n"
-					"Furthermore, It uses libusb to Initialize DS3 pads.  Libusb can\n"
-					"do odd things to USB and non-USB devices when it enumerates them.\n"
-					"\n"
-					"That having been said, I know of no serious problems with it.\n"
-					"\n"
-					"I have no idea if it works with bluetooth or not.\n"
-					"\n"
-					"Are you sure you wish to continue?", "Warning", MB_OKCANCEL | MB_ICONWARNING)) {
-						CheckDlgButton(hWnd, IDC_G_DS3, BST_UNCHECKED);
-				}
-
-			}
+			int vistaVol = config.vistaVolume;
 
 			for (int j=0; j<sizeof(BoolOptionsInfo)/sizeof(BoolOptionsInfo[0]); j++) {
 				config.bools[j] = (IsDlgButtonChecked(hWnd, BoolOptionsInfo[j].ControlId) == BST_CHECKED);
@@ -1854,7 +1867,12 @@ INT_PTR CALLBACK GeneralDialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, L
 				((IsDlgButtonChecked(hWnd, IDC_CLOSE_HACK2) == BST_CHECKED)<<1);
 
 			if (!config.vistaVolume) {
-				SetVolume(100);
+				if (vistaVol) {
+					// Restore volume if just disabled.  Don't touch, otherwise, just in case
+					// sound plugin plays with it.
+					SetVolume(100);
+				}
+				config.vistaVolume = 100;
 			}
 
 			for (i=0; i<4; i++) {

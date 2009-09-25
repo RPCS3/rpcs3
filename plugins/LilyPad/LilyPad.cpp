@@ -2,6 +2,9 @@
 
 // For escape timer, so as not to break GSDX+DX9.
 #include <time.h>
+#include "resource.h"
+#include "InputManager.h"
+#include "Config.h"
 
 #define PADdefs
 
@@ -328,21 +331,24 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 }
 
 void ProcessButtonBinding(Binding *b, ButtonSum *sum, int value) {
+	if (value < b->deadZone || !value) return;
+
 	int sensitivity = b->sensitivity;
 	if (sensitivity < 0) {
 		sensitivity = -sensitivity;
 		value = (1<<16)-value;
 	}
-	if (value > 0) {
-		/* Note:  Value ranges of FULLY_DOWN, and sensitivity of
-		 *  BASE_SENSITIVITY corresponds to an axis/button being exactly fully down.
-		 *  Math in next line takes care of those two conditions, rounding as necessary.
-		 *  Done using __int64s because overflows will occur when
-		 *  sensitivity > BASE_SENSITIVITY and/or value > FULLY_DOWN.  Latter only happens
-		 *  for relative axis.
-		 */
-		AddForce(sum, b->command, (int)((((sensitivity*(255*(__int64)value)) + BASE_SENSITIVITY/2)/BASE_SENSITIVITY + FULLY_DOWN/2)/FULLY_DOWN));
-	}
+	if (value < 0) return;
+
+	/* Note:  Value ranges of FULLY_DOWN, and sensitivity of
+	 *  BASE_SENSITIVITY corresponds to an axis/button being exactly fully down.
+	 *  Math in next line takes care of those two conditions, rounding as necessary.
+	 *  Done using __int64s because overflows will occur when
+	 *  sensitivity > BASE_SENSITIVITY and/or value > FULLY_DOWN.  Latter only happens
+	 *  for relative axis.
+	 */
+	int force = (int)((((sensitivity*(255*(__int64)value)) + BASE_SENSITIVITY/2)/BASE_SENSITIVITY + FULLY_DOWN/2)/FULLY_DOWN);
+	AddForce(sum, b->command, force);
 }
 
 // Restricts d-pad/analog stick values to be from -255 to 255 and button values to be from 0 to 255.
@@ -1020,20 +1026,20 @@ u8 CALLBACK PADpoll(u8 value) {
 
 				u8 b1 = 0xFF, b2 = 0xFF;
 				for (i = 0; i<4; i++) {
-					b1 -= (sum->buttons[i]>=0x10) << i;
+					b1 -= (sum->buttons[i]   > 0) << i;
 				}
 				for (i = 0; i<8; i++) {
-					b2 -= (sum->buttons[i+4]>=0x10) << i;
+					b2 -= (sum->buttons[i+4] > 0) << i;
 				}
 				if (config.padConfigs[query.port][query.slot].type == GuitarPad && !config.GH2) {
 					sum->sticks[0].horiz = -255;
 					// Not sure about this.  Forces wammy to be from 0 to 0x7F.
 					// if (sum->sticks[2].vert > 0) sum->sticks[2].vert = 0;
 				}
-				b1 -= ((sum->sticks[0].vert<=-0x10) << 4);
-				b1 -= ((sum->sticks[0].horiz>=0x10) << 5);
-				b1 -= ((sum->sticks[0].vert>=0x10) << 6);
-				b1 -= ((sum->sticks[0].horiz<=-0x10) << 7);
+				b1 -= ((sum->sticks[0].vert  < 0) << 4);
+				b1 -= ((sum->sticks[0].horiz > 0) << 5);
+				b1 -= ((sum->sticks[0].vert  > 0) << 6);
+				b1 -= ((sum->sticks[0].horiz < 0) << 7);
 				query.response[3] = b1;
 				query.response[4] = b2;
 

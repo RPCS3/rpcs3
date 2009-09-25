@@ -2,6 +2,9 @@
 #include "DeviceEnumerator.h"
 #include "KeyboardQueue.h"
 
+#include "resource.h"
+#include "InputManager.h"
+
 Device *dev;
 
 INT_PTR CALLBACK DiagDialog(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM lParam) {
