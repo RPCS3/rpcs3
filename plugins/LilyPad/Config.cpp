@@ -606,7 +606,9 @@ void ChangeValue(int port, int slot, int *newSensitivity, int *newTurbo, int *ne
 				b->sensitivity = *newSensitivity;
 		}
 		if (newDeadZone) {
-			b->deadZone = *newDeadZone;
+			if (b->deadZone) {
+				b->deadZone = *newDeadZone;
+			}
 		}
 		if (newTurbo) {
 			b->turbo = *newTurbo;
@@ -1143,12 +1145,15 @@ int BindCommand(Device *dev, unsigned int uid, unsigned int port, unsigned int s
 		return -1;
 	}
 	if (!sensitivity) sensitivity = BASE_SENSITIVITY;
+	if ((uid>>16) & (PSHBTN|TGLBTN)) {
+		deadZone = 0;
+	}
 	else if (!deadZone) {
-		if (dev->api != DS3 || !((uid>>16) & PRESSURE_BTN)) {
-			deadZone = DEFAULT_DEADZONE;
+		if ((uid>>16) & PRESSURE_BTN) {
+			deadZone = 1;
 		}
 		else {
-			deadZone = 1;
+			deadZone = DEFAULT_DEADZONE;
 		}
 	}
 	// Relative axes can have negative sensitivity.
