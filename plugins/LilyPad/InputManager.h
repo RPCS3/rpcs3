@@ -9,7 +9,7 @@
 #define BASE_SENSITIVITY (1<<16)
 #define FULLY_DOWN (1<<16)
 
-#define DEFAULT_DEADZONE (BASE_SENSITIVITY/0x10)
+#define DEFAULT_DEADZONE (BASE_SENSITIVITY * 201/1000)
 
 /* Idea is for this file and the associated cpp file to be Windows independent.
  * Still more effort than it's worth to port to Linux, however.
