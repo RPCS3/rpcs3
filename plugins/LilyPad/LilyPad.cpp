@@ -533,12 +533,12 @@ void Update(unsigned int port, unsigned int slot) {
 				}
 
 				if (pads[port][slot].mode == 0x41) {
-					s[port][slot].sticks[0].horiz +=
-						s[port][slot].sticks[1].horiz +
-						s[port][slot].sticks[2].horiz;
-					s[port][slot].sticks[0].vert +=
-						s[port][slot].sticks[1].vert +
-						s[port][slot].sticks[2].vert;
+					for (int i=1; i<=2; i++) {
+						if (abs(s[port][slot].sticks[i].horiz) >= 100)
+							s[port][slot].sticks[0].horiz += s[port][slot].sticks[i].horiz;
+						if (abs(s[port][slot].sticks[i].vert) >= 100)
+							s[port][slot].sticks[0].vert += s[port][slot].sticks[i].vert;
+					}
 				}
 
 				CapSum(&s[port][slot]);
