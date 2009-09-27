@@ -17,6 +17,7 @@
 #define __IPU_H__
 
 #include "mpeg2lib/Mpeg.h"
+#include "coroutine.h"
 
 // IPU_INLINE_IRQS
 // Scheduling ints into the future is a purist approach to emulation, and
@@ -33,7 +34,6 @@
 
 //#define IPU_INLINE_IRQS
 
-
 #ifdef _MSC_VER
 #pragma pack(1)
 #endif
@@ -43,7 +43,7 @@
 #define ipucase( src ) case ipumsk(src)
 
 //
-// Bitfield Structure
+// Bitfield Structures
 //
 union tIPU_CMD {
 	struct {
@@ -57,9 +57,6 @@ union tIPU_CMD {
 	};
 };
 
-//
-// Bitfield Structure
-//
 union tIPU_CTRL {
 	struct {
 		u32 IFC : 4;	// Input FIFO counter
@@ -81,9 +78,6 @@ union tIPU_CTRL {
 	u32 _u32;
 };
 
-//
-// Bitfield Structure
-//
 struct tIPU_BP {
 	u32 BP;		// Bit stream point
 	u16 IFC;	// Input FIFO counter
@@ -203,6 +197,8 @@ extern tIPU_BP g_BP;
 extern int coded_block_pattern;
 extern int g_nIPU0Data; // or 0x80000000 whenever transferring
 extern u8* g_pIPU0Pointer;
+extern int FOreadpos;
+extern void FIFOfrom_readsingle(void *value);
 
 // The IPU can only do one task at once and never uses other buffers so these
 // should be made available to functions in other modules to save registers.
@@ -214,7 +210,6 @@ extern void ipuReset();
 extern void ipuShutdown();
 extern int  ipuFreeze(gzFile f, int Mode);
 extern bool ipuCanFreeze();
-
 
 extern u32 ipuRead32(u32 mem);
 extern u64 ipuRead64(u32 mem);

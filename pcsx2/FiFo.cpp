@@ -15,13 +15,12 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-#include "Hw.h"
-#include "GS.h"
 
+#include "GS.h"
 #include "Vif.h"
 #include "VifDma.h"
+#include "IPU/IPU.h"
 
 //////////////////////////////////////////////////////////////////////////
 /////////////////////////// Quick & dirty FIFO :D ////////////////////////
@@ -38,13 +37,6 @@
 // 0x5000 - 0x6000 : VIF1  (all registers map to 0x5000)
 // 0x6000 - 0x7000 : GS    (all registers map to 0x6000)
 // 0x7000 - 0x8000 : IPU   (registers map to 0x7000 and 0x7010, respectively)
-
-extern int FIFOto_write(u32* pMem, int size);
-extern void FIFOfrom_readsingle(void *value);
-
-extern int g_nIPU0Data;
-extern u8* g_pIPU0Pointer;
-extern int FOreadpos;
 
 //////////////////////////////////////////////////////////////////////////
 // ReadFIFO Pages

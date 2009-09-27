@@ -18,9 +18,7 @@
 #include "Common.h"
 
 #include "IPU.h"
-#include "mpeg2lib/Mpeg.h"
 #include "yuv2rgb.h"
-#include "coroutine.h"
 
 #include "Vif.h"
 #include "Tags.h"
@@ -343,6 +341,8 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 			break;
 
 		ipucase(IPU_CTRL): // IPU_CTRL
+            // CTRL = the first 16 bits of ctrl [0x8000ffff], + value for the next 16 bits,
+            // minus the reserved bits. (18-19; 27-29) [0x47f30000]
 			ipuRegs->ctrl._u32 = (value & 0x47f30000) | (ipuRegs->ctrl._u32 & 0x8000ffff);
 			if (ipuRegs->ctrl.IDP == 3)
 			{

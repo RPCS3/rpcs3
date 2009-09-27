@@ -16,11 +16,11 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "Vif.h"
-#include "VUmicro.h"
 #include "GS.h"
 #include "Gif.h"
+#include "Vif.h"
 #include "VifDma.h"
+#include "VUmicro.h"
 #include "Tags.h"
 
 #include <xmmintrin.h>

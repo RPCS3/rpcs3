@@ -16,7 +16,8 @@
 #ifndef __GIF_H__
 #define __GIF_H__
 
-#define gifsplit 0x10000
+const int gifsplit = 0x10000;
+
 enum gifstate_t
 {
 	GIF_STATE_READY = 0,
@@ -25,15 +26,38 @@ enum gifstate_t
 	GIF_STATE_EMPTY = 0x10
 };
 
+enum Path3Modes //0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
+{
+	IMAGE_MODE = 0,
+	TRANSFER_MODE = 1,
+	STOPPED_MODE = 2
+};
 
-extern void gsInterrupt();
-int _GIFchain();
-void GIFdma();
-void dmaGIF();
-void mfifoGIFtransfer(int qwc);
-void gifMFIFOInterrupt();
+//GIF_STAT
+enum gif_stat_flags
+{
+	GIF_STAT_M3R		= (1),		// GIF_MODE Mask
+	GIF_STAT_M3P		= (1<<1),	// VIF PATH3 Mask
+	GIF_STAT_IMT		= (1<<2),	// Intermittent Transfer Mode
+	GIF_STAT_PSE		= (1<<3),	// Temporary Transfer Stop
+	GIF_STAT_IP3		= (1<<5),	// Interrupted PATH3
+	GIF_STAT_P3Q		= (1<<6),	// PATH3 request Queued
+	GIF_STAT_P2Q		= (1<<7),	// PATH2 request Queued
+	GIF_STAT_P1Q		= (1<<8),	// PATH1 request Queued
+	GIF_STAT_OPH		= (1<<9),	// Output Path (Outputting Data)
+	GIF_STAT_APATH1	= (1<<10),	// Data Transfer Path 1 (In progress)
+	GIF_STAT_APATH2	= (2<<10),	// Data Transfer Path 2 (In progress)
+	GIF_STAT_APATH3	= (3<<10),	// Data Transfer Path 3 (In progress) (Mask too)
+	GIF_STAT_DIR		= (1<<12),	// Transfer Direction
+	GIF_STAT_FQC		= (31<<24)	// QWC in GIF-FIFO
+};
 
-// Under construction; use with caution.
+enum gif_mode_flags
+{
+	GIF_MODE_M3R	= (1),
+	GIF_MODE_IMT		= (1<<2)
+};
+
 union tGIF_CTRL
 {
 	struct
@@ -174,7 +198,6 @@ union tGIF_P3TAG
 
 struct GIFregisters
 {
-	// To do: Pad to the correct positions and hook up.
 	tGIF_CTRL 	ctrl;
 	u32 padding[3];
 	tGIF_MODE 	mode;
@@ -201,20 +224,13 @@ struct GIFregisters
 
 #define gifRegs ((GIFregisters*)(PS2MEM_HW+0x3000))
 
-// Quick function to see if everythings in the write position.
-/*static void checkGifRegs()
-{
-	Console::WriteLn("psHu32(GIF_CTRL) == 0x%x; gifRegs->ctrl == 0x%x", params &psHu32(GIF_CTRL),&gifRegs->ctrl);
-	Console::WriteLn("psHu32(GIF_MODE) == 0x%x; gifRegs->mode == 0x%x", params &psHu32(GIF_MODE),&gifRegs->mode);
-	Console::WriteLn("psHu32(GIF_STAT) == 0x%x; gifRegs->stat == 0x%x", params &psHu32(GIF_STAT),&gifRegs->stat);
-	Console::WriteLn("psHu32(GIF_TAG0) == 0x%x; gifRegs->tag0 == 0x%x", params &psHu32(GIF_TAG0),&gifRegs->tag0);
-	Console::WriteLn("psHu32(GIF_TAG1) == 0x%x; gifRegs->tag1 == 0x%x", params &psHu32(GIF_TAG1),&gifRegs->tag1);
-	Console::WriteLn("psHu32(GIF_TAG2) == 0x%x; gifRegs->tag2 == 0x%x", params &psHu32(GIF_TAG2),&gifRegs->tag2);
-	Console::WriteLn("psHu32(GIF_TAG3) == 0x%x; gifRegs->tag3 == 0x%x", params &psHu32(GIF_TAG3),&gifRegs->tag3);
-	Console::WriteLn("psHu32(GIF_CNT) == 0x%x; gifRegs->cnt == 0x%x", params &psHu32(GIF_CNT),&gifRegs->cnt);
-	Console::WriteLn("psHu32(GIF_P3CNT) == 0x%x; gifRegs->p3cnt == 0x%x", params &psHu32(GIF_P3CNT),&gifRegs->p3cnt);
-	Console::WriteLn("psHu32(GIF_P3TAG) == 0x%x; gifRegs->p3tag == 0x%x", params &psHu32(GIF_P3TAG),&gifRegs->p3tag);
+extern Path3Modes Path3progress;
 
-}*/
+extern void gsInterrupt();
+int _GIFchain();
+void GIFdma();
+void dmaGIF();
+void mfifoGIFtransfer(int qwc);
+void gifMFIFOInterrupt();
 
 #endif

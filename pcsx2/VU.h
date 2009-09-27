@@ -16,20 +16,23 @@
 #pragma once
 #include "Vif.h"
 
-#define REG_STATUS_FLAG	16
-#define REG_MAC_FLAG	17
-#define REG_CLIP_FLAG	18
-#define REG_ACC_FLAG	19 // dummy flag that indicates that VFACC is written/read (nothing to do with VI[19])
-#define REG_R			20
-#define REG_I			21
-#define REG_Q			22
-#define REG_P           23 // only exists in micromode 
-#define REG_VF0_FLAG	24 // dummy flag that indicates VF0 is read (nothing to do with VI[24])
-#define REG_TPC			26
-#define REG_CMSAR0		27
-#define REG_FBRST		28
-#define REG_VPU_STAT	29
-#define REG_CMSAR1		31
+enum VURegFlags
+{
+    REG_STATUS_FLAG	= 16,
+    REG_MAC_FLAG	= 17,
+    REG_CLIP_FLAG	= 18,
+    REG_ACC_FLAG	= 19, // dummy flag that indicates that VFACC is written/read (nothing to do with VI[19])
+    REG_R			= 20,
+    REG_I			= 21,
+    REG_Q			= 22,
+    REG_P           = 23, // only exists in micromode 
+    REG_VF0_FLAG	= 24, // dummy flag that indicates VF0 is read (nothing to do with VI[24])
+    REG_TPC			= 26,
+    REG_CMSAR0		= 27,
+    REG_FBRST		= 28,
+    REG_VPU_STAT	= 29,
+    REG_CMSAR1		= 31
+};
 
 //interpreter hacks, WIP
 //#define INT_VUSTALLHACK //some games work without those, big speedup
@@ -150,14 +153,16 @@ struct VURegs {
 	{
 	}
 };
-
-#define VUPIPE_NONE		0
-#define VUPIPE_FMAC		1
-#define VUPIPE_FDIV		2
-#define VUPIPE_EFU		3
-#define VUPIPE_IALU		4
-#define VUPIPE_BRANCH	5
-#define VUPIPE_XGKICK	6
+enum VUPipeState
+{
+    VUPIPE_NONE = 0,
+    VUPIPE_FMAC,
+    VUPIPE_FDIV,
+    VUPIPE_EFU,
+    VUPIPE_IALU,
+    VUPIPE_BRANCH,
+    VUPIPE_XGKICK
+};
 
 #define VUREG_READ		0x1
 #define VUREG_WRITE		0x2

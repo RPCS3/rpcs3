@@ -780,6 +780,7 @@ void AppApplySettings( const AppConfig* oldconf )
 		}
 	}
 
+    // Both AppInvokes cause unhandled runtime errors in Linux.
 	AppInvoke( MainFrame, ApplySettings() );
 	AppInvoke( CoreThread, ApplySettings( g_Conf->EmuOptions ) );
 }

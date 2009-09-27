@@ -34,12 +34,12 @@ extern void SIF1Dma();
 extern void dmaSIF0();
 extern void dmaSIF1();
 extern void dmaSIF2();
-extern void  sif1Interrupt();
-extern void  sif0Interrupt();
-extern void  EEsif1Interrupt();
-extern void  EEsif0Interrupt();
+extern void sif1Interrupt();
+extern void sif0Interrupt();
+extern void EEsif1Interrupt();
+extern void EEsif0Interrupt();
 extern int  EEsif2Interrupt();
-int  sifFreeze(gzFile f, int Mode);
+int sifFreeze(gzFile f, int Mode);
 
 
 #endif /* __SIF_H__ */

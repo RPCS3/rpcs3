@@ -16,9 +16,61 @@
 #ifndef __VIF_H__
 #define __VIF_H__
 
-struct vifCycle {
-	u8 cl, wl;
-	u8 pad[2];
+enum vif0_stat_flags
+{
+	VIF0_STAT_VPS_W 	= (1),
+	VIF0_STAT_VPS_D 	= (2),
+	VIF0_STAT_VPS_T		= (3),
+	VIF0_STAT_VPS 		= (3),
+	VIF0_STAT_VEW		= (1<<2),
+	VIF0_STAT_MRK		= (1<<6),
+	VIF0_STAT_DBF		= (1<<7),
+	VIF0_STAT_VSS		= (1<<8),
+	VIF0_STAT_VFS		= (1<<9),
+	VIF0_STAT_VIS		= (1<<10),
+	VIF0_STAT_INT		= (1<<11),
+	VIF0_STAT_ER0		= (1<<12),
+	VIF0_STAT_ER1		= (1<<13),
+	VIF0_STAT_FQC		= (15<<24)
+};
+
+enum vif1_stat_flags
+{
+	VIF1_STAT_VPS_W 	= (1),
+	VIF1_STAT_VPS_D 	= (2),
+	VIF1_STAT_VPS_T		= (3),
+	VIF1_STAT_VPS 		= (3),
+	VIF1_STAT_VEW		= (1<<2),
+	VIF1_STAT_VGW		= (1<<3),
+	VIF1_STAT_MRK		= (1<<6),
+	VIF1_STAT_DBF		= (1<<7),
+	VIF1_STAT_VSS		= (1<<8),
+	VIF1_STAT_VFS		= (1<<9),
+	VIF1_STAT_VIS		= (1<<10),
+	VIF1_STAT_INT		= (1<<11),
+	VIF1_STAT_ER0		= (1<<12),
+	VIF1_STAT_ER1		= (1<<13),
+	VIF1_STAT_FDR 		= (1<<23),
+	VIF1_STAT_FQC		= (31<<24)
+};
+
+// These are the stat flags that are the same for vif0 & vif1,
+// for occassions where we don't neccessarily know which we are using.
+enum vif_stat_flags
+{
+	VIF_STAT_VPS_W 	= (1),
+	VIF_STAT_VPS_D 	= (2),
+	VIF_STAT_VPS_T		= (3),
+	VIF_STAT_VPS 		= (3),
+	VIF_STAT_VEW		= (1<<2),
+	VIF_STAT_MRK		= (1<<6),
+	VIF_STAT_DBF		= (1<<7),
+	VIF_STAT_VSS		= (1<<8),
+	VIF_STAT_VFS		= (1<<9),
+	VIF_STAT_VIS		= (1<<10),
+	VIF_STAT_INT		= (1<<11),
+	VIF_STAT_ER0		= (1<<12),
+	VIF_STAT_ER1		= (1<<13)
 };
 
 //
@@ -64,6 +116,11 @@ union tVIF_ERR {
 		u32 reserved : 29;
 	};
 	u32 _u32;
+};
+
+struct vifCycle {
+	u8 cl, wl;
+	u8 pad[2];
 };
 
 struct VIFregisters {
@@ -119,26 +176,6 @@ struct VIFregisters {
 	u32 addr;
 };
 
-/*enum vif_errors
-{
-	VIF_ERR_MII = 0x1,
-	VIF_ERR_ME0 = 0x2,
-	VIF_ERR_ME1 = 0x4
-};
-
-// Masks or unmasks errors
-namespace VIF_ERR
-{
-	// If true, interrupts by the i bit of Vifcode are masked.
-	static __forceinline bool MII(VIFregisters *tag) { return !!(tag->err & VIF_ERR_MII); }
-	
-	// If true, DMAtag Mismatch errors are masked. (We never check for this?)
-	static __forceinline bool ME0(VIFregisters *tag) { return !!(tag->err & VIF_ERR_ME0); }
-	
-	// If true, VifCode errors are masked.
-	static __forceinline bool ME1(VIFregisters *tag) { return !!(tag->err & VIF_ERR_ME1); }
-}*/
-
 extern "C"
 {
 	// these use cdecl for Asm code references.
@@ -147,11 +184,6 @@ extern "C"
 	extern u32* vifRow;
 	extern u32* _vifCol;
 }
-
-//extern u32 setVifRowRegs(u32 reg, u32 data);
-//extern u32 getVifRowRegs(u32 reg);
-//extern u32 setVifColRegs(u32 reg, u32 data);
-//extern u32 getVifColRegs(u32 reg);
 
 #define vif0Regs ((VIFregisters*)&PS2MEM_HW[0x3800])
 #define vif1Regs ((VIFregisters*)&PS2MEM_HW[0x3c00])
@@ -175,6 +207,5 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask);
 #define XMM_COL			xmm7
 
 #define XMM_R3			XMM_COL
-
 
 #endif /* __VIF_H__ */

@@ -31,8 +31,10 @@
 #include "Common.h"
 
 #include "GS.h"
-#include "R5900.h"
+#include "Gif.h"
 #include "VU.h"
+
+#include "R5900.h"
 #include "iR5900.h"
 
 #include "sVU_zerorec.h"

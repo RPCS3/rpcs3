@@ -19,10 +19,10 @@
 #include "VU.h"
 #include "GS.h"
 #include "Gif.h"
+#include "VifDma.h"
+
 #include "iR5900.h"
 #include "Counters.h"
-
-#include "VifDma.h"
 #include "Tags.h"
 
 using std::min;

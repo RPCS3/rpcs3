@@ -30,7 +30,6 @@
 
 #include "Common.h"
 #include "IPU/IPU.h"
-#include "IPU/coroutine.h"
 #include "Mpeg.h"
 #include "Vlc.h"
 
