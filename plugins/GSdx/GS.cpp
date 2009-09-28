@@ -562,11 +562,11 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		while( LoopDatPacket_Thingamajig(hWnd, regs, buff, fp, start) ) ;
 
 		GSclose();
-
 		GSshutdown();
 
 		fclose(fp);
 	}
+	PostQuitMessage(0);
 }
 
 EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
@@ -770,6 +770,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 	//
 
 	fclose(file);
+	PostQuitMessage(0);
 }
 
 #endif
