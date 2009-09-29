@@ -699,7 +699,10 @@ __forceinline void rcntWmode(int index, u32 value)
 	}
 	else counters[index].sCycleT = cpuRegs.cycle;
 
-	counters[index].modeval &= ~(value & 0xc00); //Clear status flags, the ps2 only clears what is given in the value
+	// Clear OverflowReached and TargetReached flags (0xc00 mask), but *only* if they are set to 1 in the
+	// given value.  (yes, the bits are cleared when written with '1's).
+
+	counters[index].modeval &= ~(value & 0xc00); 
 	counters[index].modeval = (counters[index].modeval & 0xc00) | (value & 0x3ff);
 	EECNT_LOG("EE Counter[%d] writeMode = %x   passed value=%x", index, counters[index].modeval, value );
 

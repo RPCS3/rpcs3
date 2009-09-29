@@ -676,12 +676,12 @@ void memReset()
 
 	hw_by_page[0x0] = vtlb_RegisterHandler(
 		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_00, hwRead64_page_00, hwRead128_page_00,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_00, hwWrite64_generic, hwWrite128_generic
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_00, hwWrite64_page_00, hwWrite128_generic
 	);
 
 	hw_by_page[0x1] = vtlb_RegisterHandler(
 		_ext_memRead8<1>, _ext_memRead16<1>, hwRead32_page_01, hwRead64_page_01, hwRead128_page_01,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_01, hwWrite64_generic, hwWrite128_generic
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_01, hwWrite64_page_01, hwWrite128_generic
 	);
 
 	hw_by_page[0x2] = vtlb_RegisterHandler(

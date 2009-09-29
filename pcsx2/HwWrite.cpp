@@ -1045,6 +1045,20 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 /////////////////////////////////////////////////////////////////////////
 // HW Write 64 bit
 
+// Page 0 of HW memory houses registers for Counters 0 and 1
+void __fastcall hwWrite64_page_00( u32 mem, const mem64_t* srcval )
+{
+	hwWrite32_page_00( mem, (u32)*srcval );		// just ignore upper 32 bits.
+	*((u64*)&PS2MEM_HW[mem]) = *srcval;
+}
+
+// Page 1 of HW memory houses registers for Counters 2 and 3
+void __fastcall hwWrite64_page_01( u32 mem, const mem64_t* srcval )
+{
+	hwWrite32_page_01( mem, (u32)*srcval );		// just ignore upper 32 bits.
+	*((u64*)&PS2MEM_HW[mem]) = *srcval;
+}
+
 void __fastcall hwWrite64_page_02( u32 mem, const mem64_t* srcval )
 {
 	//hwWrite64( mem, *srcval );  return;

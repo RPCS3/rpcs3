@@ -564,6 +564,8 @@ extern void __fastcall hwWrite32_page_0E( u32 mem, mem32_t value );
 extern void __fastcall hwWrite32_page_0F( u32 mem, mem32_t value );
 extern void __fastcall hwWrite32_generic( u32 mem, mem32_t value );
 
+extern void __fastcall hwWrite64_page_00( u32 mem, const mem64_t* srcval );
+extern void __fastcall hwWrite64_page_01( u32 mem, const mem64_t* srcval );
 extern void __fastcall hwWrite64_page_02( u32 mem, const mem64_t* srcval );
 extern void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval );
 extern void __fastcall hwWrite64_page_0E( u32 mem, const mem64_t* srcval );
