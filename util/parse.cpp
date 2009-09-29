@@ -11,9 +11,8 @@ int main(int argc, char **argv)
 	std::istream& input = (argc > 1 ? fin : std::cin);
 	try {
 		YAML::Parser parser(input);
-		while(parser) {
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
+		YAML::Node doc;
+		while(parser.GetNextDocument(doc)) {
 			YAML::Emitter emitter;
 			emitter << doc;
 			std::cout << emitter.c_str() << "\n";

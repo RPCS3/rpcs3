@@ -33,7 +33,7 @@ namespace YAML
 	// GetNextDocument
 	// . Reads the next document in the queue (of tokens).
 	// . Throws a ParserException on error.
-	void Parser::GetNextDocument(Node& document)
+	bool Parser::GetNextDocument(Node& document)
 	{
 		// clear node
 		document.Clear();
@@ -43,7 +43,7 @@ namespace YAML
 
 		// we better have some tokens in the queue
 		if(m_pScanner->empty())
-			return;
+			return false;
 
 		// first eat doc start (optional)
 		if(m_pScanner->peek().type == Token::DOC_START)
@@ -58,6 +58,8 @@ namespace YAML
 
 		// clear anchors from the scanner, which are no longer relevant
 		m_pScanner->ClearAnchors();
+		
+		return true;
 	}
 
 	// ParseDirectives
