@@ -213,7 +213,7 @@ pthread_win32_process_detach_np ()
 {
   if (ptw32_processInitialized)
     {
-      ptw32_thread_t * sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
+      ptw32_thread_t * sp = ptw32_selfThread;
 
       if (sp != NULL)
 	{
@@ -224,7 +224,8 @@ pthread_win32_process_detach_np ()
 	  if (sp->detachState == PTHREAD_CREATE_DETACHED)
 	    {
 	      ptw32_threadDestroy (sp->ptHandle);
-	      TlsSetValue (ptw32_selfThreadKey->key, NULL);
+	      free(ptw32_selfThread);
+	      ptw32_selfThread = NULL;
 	    }
 	}
 
@@ -277,7 +278,7 @@ pthread_win32_thread_detach_np ()
        * Don't use pthread_self() - to avoid creating an implicit POSIX thread handle
        * unnecessarily.
        */
-      ptw32_thread_t * sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
+      ptw32_thread_t * sp = ptw32_selfThread;
 
       if (sp != NULL) // otherwise Win32 thread with no implicit POSIX handle.
 	{
@@ -294,8 +295,8 @@ pthread_win32_thread_detach_np ()
 	  if (sp->detachState == PTHREAD_CREATE_DETACHED)
 	    {
 	      ptw32_threadDestroy (sp->ptHandle);
-
-	      TlsSetValue (ptw32_selfThreadKey->key, NULL);
+		  free(ptw32_selfThread);
+	      ptw32_selfThread = NULL;
 	    }
 	}
     }

@@ -165,7 +165,7 @@ ptw32_threadStart (void *vthreadParms)
     }
 #endif
 
-  pthread_setspecific (ptw32_selfThreadKey, sp);
+  ptw32_selfThread = sp;
 
   sp->state = PThreadStateRunning;
 

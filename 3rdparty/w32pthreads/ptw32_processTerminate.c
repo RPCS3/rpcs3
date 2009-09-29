@@ -66,23 +66,9 @@ ptw32_processTerminate (void)
     {
       ptw32_thread_t * tp, * tpNext;
 
-      if (ptw32_selfThreadKey != NULL)
-	{
-	  /*
-	   * Release ptw32_selfThreadKey
-	   */
-	  pthread_key_delete (ptw32_selfThreadKey);
-
-	  ptw32_selfThreadKey = NULL;
-	}
-
       if (ptw32_cleanupKey != NULL)
 	{
-	  /*
-	   * Release ptw32_cleanupKey
-	   */
 	  pthread_key_delete (ptw32_cleanupKey);
-
 	  ptw32_cleanupKey = NULL;
 	}
 

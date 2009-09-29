@@ -23,4 +23,8 @@
 		SubSystem="2"
 		ImportLibrary="$(OutDir)\$(ProjectName).lib"
 	/>
+	<Tool
+		Name="VCResourceCompilerTool"
+		AdditionalIncludeDirectories="&quot;$(SvnRootDir)/common/include&quot;"
+	/>
 </VisualStudioPropertySheet>

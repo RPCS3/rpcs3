@@ -136,7 +136,7 @@ struct ptw32_thread_t_
   void *parms;
   int ptErrno;
   int detachState;
-  pthread_mutex_t threadLock;	/* Used for serialised access to public thread state */
+  pthread_mutex_t threadLock;	/* Used for serialized access to public thread state */
   int sched_priority;		/* As set, not as currently is */
   pthread_mutex_t cancelLock;	/* Used for async-cancel safety */
   int cancelState;
@@ -528,10 +528,11 @@ extern "C"
 {
 #endif				/* __cplusplus */
 
+extern __declspec(thread) ptw32_thread_t* ptw32_selfThread;
+
 extern int ptw32_processInitialized;
 extern ptw32_thread_t * ptw32_threadReuseTop;
 extern ptw32_thread_t * ptw32_threadReuseBottom;
-extern pthread_key_t ptw32_selfThreadKey;
 extern pthread_key_t ptw32_cleanupKey;
 extern pthread_cond_t ptw32_cond_list_head;
 extern pthread_cond_t ptw32_cond_list_tail;

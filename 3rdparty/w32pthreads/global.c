@@ -37,18 +37,18 @@
 
 #include "ptw32pch.h"
 
+__declspec(thread) ptw32_thread_t* ptw32_selfThread = NULL;
 
 int ptw32_processInitialized = PTW32_FALSE;
 ptw32_thread_t * ptw32_threadReuseTop = PTW32_THREAD_REUSE_EMPTY;
 ptw32_thread_t * ptw32_threadReuseBottom = PTW32_THREAD_REUSE_EMPTY;
-pthread_key_t ptw32_selfThreadKey = NULL;
 pthread_key_t ptw32_cleanupKey = NULL;
 pthread_cond_t ptw32_cond_list_head = NULL;
 pthread_cond_t ptw32_cond_list_tail = NULL;
 
 int ptw32_concurrency = 0;
 
-/* What features have been auto-detaected */
+/* What features have been auto-detected */
 int ptw32_features = 0;
 
 BOOL ptw32_smp_system = PTW32_TRUE;  /* Safer if assumed true initially. */

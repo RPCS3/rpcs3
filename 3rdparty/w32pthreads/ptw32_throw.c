@@ -53,7 +53,7 @@ ptw32_throw (DWORD exception)
    * Don't use pthread_self() to avoid creating an implicit POSIX thread handle
    * unnecessarily.
    */
-  ptw32_thread_t * sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
+  ptw32_thread_t * sp = ptw32_selfThread;
 
 #ifdef __CLEANUP_SEH
   DWORD exceptionInformation[3];
@@ -81,7 +81,7 @@ ptw32_throw (DWORD exception)
 	  exitCode = (unsigned) PTHREAD_CANCELED;
 	  break;
 	case PTW32_EPS_EXIT:
-	  exitCode = (unsigned) sp->exitStatus;;
+	  exitCode = (unsigned) sp->exitStatus;
 	  break;
 	}
 
