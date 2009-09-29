@@ -34,8 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 
 /* TLS_OUT_OF_INDEXES not defined on WinCE */
@@ -98,7 +97,11 @@ pthread_key_create (pthread_key_t * key, void (*destructor) (void *))
        *
        * The mutex will only be created when it is first locked.
        */
-      newkey->keyLock = PTHREAD_MUTEX_INITIALIZER;
+	  #ifdef PTW32_STATIC_MUTEXS
+        newkey->keyLock = PTHREAD_MUTEX_INITIALIZER;
+      #else
+		pthread_mutex_init (&newkey->keyLock, NULL);
+	  #endif
       newkey->destructor = destructor;
     }
 

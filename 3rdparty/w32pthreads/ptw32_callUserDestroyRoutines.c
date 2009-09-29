@@ -35,8 +35,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 #ifdef __cplusplus
 # if ! defined (_MSC_VER) && ! (defined(__GNUC__) && __GNUC__ < 3) && ! defined(__WATCOMC__)

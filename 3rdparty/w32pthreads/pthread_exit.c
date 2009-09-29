@@ -35,8 +35,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 #ifndef _UWIN
 //#   include <process.h>
 #endif
@@ -65,7 +64,13 @@ pthread_exit (void *value_ptr)
       * ------------------------------------------------------
       */
 {
-  ptw32_thread_t * sp = ptw32_selfThread;
+  ptw32_thread_t * sp;
+
+  /*
+   * Don't use pthread_self() to avoid creating an implicit POSIX thread handle
+   * unnecessarily.
+   */
+  sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
 
 #ifdef _UWIN
   if (--pthread_count <= 0)

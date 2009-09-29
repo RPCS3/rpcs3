@@ -34,11 +34,9 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
-
-void
+INLINE void
 pthread_testcancel (void)
      /*
       * ------------------------------------------------------
@@ -68,8 +66,14 @@ pthread_testcancel (void)
       * ------------------------------------------------------
       */
 {
-  pthread_t self = pthread_self ();
-  ptw32_thread_t * sp = (ptw32_thread_t *) self.p;
+  ptw32_thread_t * sp;
+  if( ptw32_testcancel_enable == 0 ) return;
+
+  // Don't use pthread_self here, to avoid unnecessary object query or creation.
+  // If ptw32_selfThread is NULL, then it's a sure bet no one's tried to cancel
+  // this thread, since that would have spawned a selfThread object! -- air
+
+	sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
 
   if (sp == NULL)
     {
@@ -85,6 +89,8 @@ pthread_testcancel (void)
     {
       return;
     }
+
+  _InterlockedDecrement( &ptw32_testcancel_enable );
 
   (void) pthread_mutex_lock (&sp->cancelLock);
 

@@ -8,9 +8,10 @@
 		Name="VCCLCompilerTool"
 		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\w32pthreads\include&quot;"
 		PreprocessorDefinitions="WIN32_PTHREADS;__CLEANUP_SEH"
+		ExceptionHandling="2"
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="w32pthreads.v2.lib"
+		AdditionalDependencies="w32pthreads.v3.lib"
 	/>
 </VisualStudioPropertySheet>

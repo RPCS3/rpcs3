@@ -34,8 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 /*
  * Handle to kernel32.dll 
@@ -51,8 +50,6 @@ BOOL
 pthread_win32_process_attach_np ()
 {
   BOOL result = TRUE;
-  DWORD_PTR vProcessCPUs;
-  DWORD_PTR vSystemCPUs;
 
   if( ptw32_processInitialized ) return TRUE;
 
@@ -64,92 +61,6 @@ pthread_win32_process_attach_np ()
 
   ptw32_features = 0;
 
-
-#if defined(NEED_PROCESS_AFFINITY_MASK)
-
-  ptw32_smp_system = PTW32_FALSE;
-
-#else
-
-  if (GetProcessAffinityMask (GetCurrentProcess (),
-			      &vProcessCPUs, &vSystemCPUs))
-    {
-      int CPUs = 0;
-      DWORD_PTR bit;
-
-      for (bit = 1; bit != 0; bit <<= 1)
-	{
-	  if (vSystemCPUs & bit)
-	    {
-	      CPUs++;
-	    }
-	}
-      ptw32_smp_system = (CPUs > 1);
-    }
-  else
-    {
-      ptw32_smp_system = PTW32_FALSE;
-    }
-
-#endif
-
-#if 0
-
-#ifdef WINCE
-
-  /*
-   * Load COREDLL and try to get address of InterlockedCompareExchange
-   */
-  ptw32_h_kernel32 = LoadLibrary (TEXT ("COREDLL.DLL"));
-
-#else
-
-  /*
-   * Load KERNEL32 and try to get address of InterlockedCompareExchange
-   */
-  ptw32_h_kernel32 = LoadLibrary (TEXT ("KERNEL32.DLL"));
-
-#endif
-
-// We're only using pthreads' inline version of InterlockedExchange
-  ptw32_interlocked_compare_exchange =
-    (PTW32_INTERLOCKED_LONG (WINAPI *)
-     (PTW32_INTERLOCKED_LPLONG, PTW32_INTERLOCKED_LONG,
-      PTW32_INTERLOCKED_LONG))
-#if defined(NEED_UNICODE_CONSTS)
-    GetProcAddress (ptw32_h_kernel32,
-		    (const TCHAR *) TEXT ("InterlockedCompareExchange"));
-#else
-    GetProcAddress (ptw32_h_kernel32, (LPCSTR) "InterlockedCompareExchange");
-#endif
-
-  if (ptw32_interlocked_compare_exchange == NULL)
-    {
-      ptw32_interlocked_compare_exchange = ptw32_InterlockedCompareExchange;
-
-      /*
-       * If InterlockedCompareExchange is not being used, then free
-       * the kernel32.dll handle now, rather than leaving it until
-       * DLL_PROCESS_DETACH.
-       *
-       * Note: this is not a pedantic exercise in freeing unused
-       * resources!  It is a work-around for a bug in Windows 95
-       * (see microsoft knowledge base article, Q187684) which
-       * does Bad Things when FreeLibrary is called within
-       * the DLL_PROCESS_DETACH code, in certain situations.
-       * Since w95 just happens to be a platform which does not
-       * provide InterlockedCompareExchange, the bug will be
-       * effortlessly avoided.
-       */
-      (void) FreeLibrary (ptw32_h_kernel32);
-      ptw32_h_kernel32 = 0;
-    }
-  else
-    {
-      ptw32_features |= PTW32_SYSTEM_INTERLOCKED_COMPARE_EXCHANGE;
-    }
-
-#endif
 
   /*
    * Load QUSEREX.DLL and try to get address of QueueUserAPCEx
@@ -213,7 +124,7 @@ pthread_win32_process_detach_np ()
 {
   if (ptw32_processInitialized)
     {
-      ptw32_thread_t * sp = ptw32_selfThread;
+      ptw32_thread_t * sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
 
       if (sp != NULL)
 	{
@@ -224,8 +135,7 @@ pthread_win32_process_detach_np ()
 	  if (sp->detachState == PTHREAD_CREATE_DETACHED)
 	    {
 	      ptw32_threadDestroy (sp->ptHandle);
-	      free(ptw32_selfThread);
-	      ptw32_selfThread = NULL;
+	      TlsSetValue (ptw32_selfThreadKey->key, NULL);
 	    }
 	}
 
@@ -278,7 +188,7 @@ pthread_win32_thread_detach_np ()
        * Don't use pthread_self() - to avoid creating an implicit POSIX thread handle
        * unnecessarily.
        */
-      ptw32_thread_t * sp = ptw32_selfThread;
+      ptw32_thread_t * sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
 
       if (sp != NULL) // otherwise Win32 thread with no implicit POSIX handle.
 	{
@@ -295,8 +205,8 @@ pthread_win32_thread_detach_np ()
 	  if (sp->detachState == PTHREAD_CREATE_DETACHED)
 	    {
 	      ptw32_threadDestroy (sp->ptHandle);
-		  free(ptw32_selfThread);
-	      ptw32_selfThread = NULL;
+
+	      TlsSetValue (ptw32_selfThreadKey->key, NULL);
 	    }
 	}
     }

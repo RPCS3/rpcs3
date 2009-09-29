@@ -7,8 +7,7 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxresmw.h"
-
+#include "afxresmw.h"
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -51,7 +50,7 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,8,2,0
+ FILEVERSION 2,8,3,0
  PRODUCTVERSION 2,8,0,0
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
@@ -69,10 +68,10 @@ BEGIN
         BEGIN
             VALUE "Comments", "Built for PCSX2 (SEH, CDECL, Align16)"
             VALUE "FileDescription", "POSIX Threads for Win32"
-            VALUE "FileVersion", "2.8.pxr2"
+            VALUE "FileVersion", "2.8.pxr3"
             VALUE "InternalName", "w32pthreads"
             VALUE "LegalCopyright", "Copyright (C) 2009"
-            VALUE "OriginalFilename", "w32pthreads.v2"
+            VALUE "OriginalFilename", "w32pthreads.v3"
             VALUE "ProductName", "w32pthreads"
             VALUE "ProductVersion", "2.8"
         END
@@ -93,8 +92,7 @@ END
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
-
-
+
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 

@@ -685,6 +685,10 @@ struct pthread_once_t_
  * ====================
  * ====================
  */
+
+// Note: Static mutexes are useful in C but a bad idea in C++, and add overhead to all
+// mutex lockers (bad!), so C++ code should idisable them and use C++ initializers instead.
+
 #define PTHREAD_MUTEX_INITIALIZER ((pthread_mutex_t) -1)
 #define PTHREAD_RECURSIVE_MUTEX_INITIALIZER ((pthread_mutex_t) -2)
 #define PTHREAD_ERRORCHECK_MUTEX_INITIALIZER ((pthread_mutex_t) -3)
@@ -951,7 +955,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_join (pthread_t thread,
 
 PTW32_DLLPORT pthread_t PTW32_CDECL pthread_self (void);
 
-PTW32_DLLPORT int PTW32_CDECL pthread_cancel (pthread_t thread);
+extern int PTW32_CDECL pthread_cancel (pthread_t thread);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_setcancelstate (int state,
                                     int *oldstate);
@@ -959,7 +963,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_setcancelstate (int state,
 PTW32_DLLPORT int PTW32_CDECL pthread_setcanceltype (int type,
                                    int *oldtype);
 
-PTW32_DLLPORT void PTW32_CDECL pthread_testcancel (void);
+extern void PTW32_CDECL pthread_testcancel (void);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_once (pthread_once_t * once_control,
                           void (*init_routine) (void));
@@ -1025,17 +1029,22 @@ PTW32_DLLPORT int PTW32_CDECL pthread_mutex_init (pthread_mutex_t * mutex,
 
 PTW32_DLLPORT int PTW32_CDECL pthread_mutex_destroy (pthread_mutex_t * mutex);
 
-PTW32_DLLPORT int PTW32_CDECL pthread_mutex_lock (pthread_mutex_t * mutex);
+extern int PTW32_CDECL pthread_mutex_lock (pthread_mutex_t * mutex);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_mutex_timedlock(pthread_mutex_t *mutex,
                                     const struct timespec *abstime);
 
-PTW32_DLLPORT int PTW32_CDECL pthread_mutex_trylock (pthread_mutex_t * mutex);
+extern int PTW32_CDECL pthread_mutex_trylock (pthread_mutex_t * mutex);
 
-PTW32_DLLPORT int PTW32_CDECL pthread_mutex_unlock (pthread_mutex_t * mutex);
+extern int PTW32_CDECL pthread_mutex_unlock (pthread_mutex_t * mutex);
 
+#ifdef PTW32_ALLOW_SPIN
 /*
  * Spinlock Functions
+ *
+ * These are disabled by default; they are not part of the "required" portion of pthreads 
+ * implementations, and they are generally a bad idea for anything except the most controlled
+ * of threaded environments (which hardly exist in modern computing).
  */
 PTW32_DLLPORT int PTW32_CDECL pthread_spin_init (pthread_spinlock_t * lock, int pshared);
 
@@ -1046,6 +1055,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_spin_lock (pthread_spinlock_t * lock);
 PTW32_DLLPORT int PTW32_CDECL pthread_spin_trylock (pthread_spinlock_t * lock);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_spin_unlock (pthread_spinlock_t * lock);
+#endif
 
 /*
  * Barrier Functions
@@ -1058,6 +1068,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_barrier_destroy (pthread_barrier_t * barri
 
 PTW32_DLLPORT int PTW32_CDECL pthread_barrier_wait (pthread_barrier_t * barrier);
 
+#ifdef PTW32_ALLOW_COND
 /*
  * Condition Variable Attribute Functions
  */
@@ -1074,7 +1085,6 @@ PTW32_DLLPORT int PTW32_CDECL pthread_condattr_setpshared (pthread_condattr_t * 
 /*
  * Condition Variable Functions
  */
-#ifdef PCSX2_ALLOW_COND
 PTW32_DLLPORT int PTW32_CDECL pthread_cond_init (pthread_cond_t * cond,
                                const pthread_condattr_t * attr);
 

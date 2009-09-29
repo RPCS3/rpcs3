@@ -1,6 +1,7 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by w32pthreads.v2.rc
+// Used by w32pthreads.rc
+//
 
 // Next default values for new objects
 // 

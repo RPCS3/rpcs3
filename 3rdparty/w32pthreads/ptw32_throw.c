@@ -35,8 +35,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 /*
  * ptw32_throw
@@ -53,7 +52,7 @@ ptw32_throw (DWORD exception)
    * Don't use pthread_self() to avoid creating an implicit POSIX thread handle
    * unnecessarily.
    */
-  ptw32_thread_t * sp = ptw32_selfThread;
+  ptw32_thread_t * sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
 
 #ifdef __CLEANUP_SEH
   DWORD exceptionInformation[3];
@@ -81,7 +80,7 @@ ptw32_throw (DWORD exception)
 	  exitCode = (unsigned) PTHREAD_CANCELED;
 	  break;
 	case PTW32_EPS_EXIT:
-	  exitCode = (unsigned) sp->exitStatus;
+	  exitCode = (unsigned) sp->exitStatus;;
 	  break;
 	}
 

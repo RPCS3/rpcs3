@@ -34,13 +34,9 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#ifndef _UWIN
-//#   include <process.h>
-#endif
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
-int
+INLINE int
 pthread_mutex_lock (pthread_mutex_t * mutex)
 {
   int result = 0;
@@ -60,7 +56,7 @@ pthread_mutex_lock (pthread_mutex_t * mutex)
    * again inside the guarded section of ptw32_mutex_check_need_init()
    * to avoid race conditions.
    */
-  if (*mutex >= PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
+  if (ptw32_static_mutex_enable && (*mutex >= PTHREAD_ERRORCHECK_MUTEX_INITIALIZER))
     {
       if ((result = ptw32_mutex_check_need_init (mutex)) != 0)
 	{

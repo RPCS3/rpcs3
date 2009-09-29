@@ -452,6 +452,7 @@ namespace Panels
 	protected:
 		StatusPanel&	m_StatusPanel;
 		ComboBoxPanel&	m_ComponentBoxes;
+		bool			m_Canceled;
 
 		wxScopedPtr<wxArrayString>	m_FileList;	// list of potential plugin files
 		wxScopedPtr<EnumThread>		m_EnumeratorThread;

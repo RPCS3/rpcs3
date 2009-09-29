@@ -34,11 +34,10 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 
-int
+INLINE int
 pthread_mutex_unlock (pthread_mutex_t * mutex)
 {
   int result = 0;
@@ -55,7 +54,7 @@ pthread_mutex_unlock (pthread_mutex_t * mutex)
    * race condition. If another thread holds the
    * lock then we shouldn't be in here.
    */
-  if (mx < PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
+  if (!ptw32_static_mutex_enable || (mx < PTHREAD_ERRORCHECK_MUTEX_INITIALIZER))
     {
       if (mx->kind == PTHREAD_MUTEX_NORMAL)
 	{

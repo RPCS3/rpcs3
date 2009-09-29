@@ -34,8 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 pthread_t
 pthread_self (void)
@@ -61,7 +60,14 @@ pthread_self (void)
 {
   pthread_t self;
   pthread_t nil = {NULL, 0};
-  ptw32_thread_t * sp = ptw32_selfThread;
+  ptw32_thread_t * sp;
+
+#ifdef _UWIN
+  if (!ptw32_selfThreadKey)
+    return nil;
+#endif
+
+  sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
 
   if (sp != NULL)
     {
@@ -121,7 +127,8 @@ pthread_self (void)
 	   * because the new handle is not yet public.
 	   */
 	  sp->sched_priority = GetThreadPriority (sp->threadH);
-      ptw32_selfThread = ptw32_new().p;
+
+          pthread_setspecific (ptw32_selfThreadKey, (void *) sp);
 	}
     }
 

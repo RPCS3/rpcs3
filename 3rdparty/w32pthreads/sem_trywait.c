@@ -41,12 +41,11 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
+#include "ptw32pch.h"
 #include "semaphore.h"
-#include "implement.h"
 
 
-int
+INLINE int
 sem_trywait (sem_t * sem)
      /*
       * ------------------------------------------------------

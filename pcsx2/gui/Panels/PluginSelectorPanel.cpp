@@ -558,6 +558,7 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
 		DoNextPlugin( curidx );
+		if( (curidx & 3) == 3 ) wxGetApp().Ping();		// gives the gui thread some time to refresh
 		pthread_testcancel();
 	}
 

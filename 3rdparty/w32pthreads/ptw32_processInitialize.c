@@ -35,8 +35,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 
 int
@@ -80,8 +79,10 @@ ptw32_processInitialize (void)
   /*
    * Initialize Keys
    */
-  if (pthread_key_create (&ptw32_cleanupKey, NULL) != 0)
+  if ((pthread_key_create (&ptw32_selfThreadKey, NULL) != 0) ||
+      (pthread_key_create (&ptw32_cleanupKey, NULL) != 0))
     {
+
       ptw32_processTerminate ();
     }
 

@@ -44,6 +44,7 @@
 #define _WIN32_WINNT 0x400
 
 #include <windows.h>
+#include <intrin.h>
 
 /*
  * In case windows.h doesn't define it (e.g. WinCE perhaps)
@@ -136,7 +137,7 @@ struct ptw32_thread_t_
   void *parms;
   int ptErrno;
   int detachState;
-  pthread_mutex_t threadLock;	/* Used for serialized access to public thread state */
+  pthread_mutex_t threadLock;	/* Used for serialised access to public thread state */
   int sched_priority;		/* As set, not as currently is */
   pthread_mutex_t cancelLock;	/* Used for async-cancel safety */
   int cancelState;
@@ -181,6 +182,12 @@ struct pthread_attr_t_
  * ====================
  * ====================
  */
+
+#ifdef PTW32_STATIC_MUTEXS
+#	define ptw32_static_mutex_enable (1)
+#else
+#	define ptw32_static_mutex_enable (0)
+#endif
 
 struct sem_t_
 {
@@ -528,7 +535,8 @@ extern "C"
 {
 #endif				/* __cplusplus */
 
-extern __declspec(thread) ptw32_thread_t* ptw32_selfThread;
+PTW32_DLLPORT long ptw32_testcancel_enable;
+PTW32_DLLPORT pthread_key_t ptw32_selfThreadKey;
 
 extern int ptw32_processInitialized;
 extern ptw32_thread_t * ptw32_threadReuseTop;
@@ -542,8 +550,6 @@ extern int ptw32_mutex_default_kind;
 extern int ptw32_concurrency;
 
 extern int ptw32_features;
-
-extern BOOL ptw32_smp_system;  /* True: SMP system, False: Uni-processor system */
 
 extern CRITICAL_SECTION ptw32_thread_reuse_lock;
 extern CRITICAL_SECTION ptw32_mutex_test_init_lock;
@@ -568,21 +574,14 @@ extern int pthread_count;
   int ptw32_is_attr (const pthread_attr_t * attr);
 
   int ptw32_cond_check_need_init (pthread_cond_t * cond);
-  int ptw32_mutex_check_need_init (pthread_mutex_t * mutex);
+  PTW32_DLLPORT int ptw32_mutex_check_need_init (pthread_mutex_t * mutex);
   int ptw32_rwlock_check_need_init (pthread_rwlock_t * rwlock);
-
-  PTW32_INTERLOCKED_LONG WINAPI
-    ptw32_InterlockedCompareExchange (volatile PTW32_INTERLOCKED_LPLONG location,
-				      PTW32_INTERLOCKED_LONG value,
-				      PTW32_INTERLOCKED_LONG comparand);
-
-  LONG WINAPI
-    ptw32_InterlockedExchange (volatile PTW32_INTERLOCKED_LPLONG location,
-			       LONG value);
 
   DWORD
     ptw32_RegisterCancelation (PAPCFUNC callback,
 			       HANDLE threadH, DWORD callback_arg);
+
+  PTW32_DLLPORT void ptw32_PrepCancel( ptw32_thread_t* tp );
 
   int ptw32_processInitialize (void);
 
@@ -640,7 +639,7 @@ extern int pthread_count;
 #endif
 
 /* Declared in private.c */
-  void ptw32_throw (DWORD exception);
+  PTW32_DLLPORT void ptw32_throw (DWORD exception);
 
 #ifdef __cplusplus
 }
@@ -675,11 +674,11 @@ extern "C"
  */
 // Default to inlining the pthreads versions... (air)
 #ifndef PTW32_INTERLOCKED_COMPARE_EXCHANGE
-#define PTW32_INTERLOCKED_COMPARE_EXCHANGE ptw32_InterlockedCompareExchange
+#define PTW32_INTERLOCKED_COMPARE_EXCHANGE _InterlockedCompareExchange
 #endif
 
 #ifndef PTW32_INTERLOCKED_EXCHANGE
-#define PTW32_INTERLOCKED_EXCHANGE ptw32_InterlockedExchange
+#define PTW32_INTERLOCKED_EXCHANGE _InterlockedExchange
 #endif
 
 

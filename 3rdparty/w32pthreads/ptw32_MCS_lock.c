@@ -89,8 +89,7 @@
  * }
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 /*
  * ptw32_mcs_flag_set -- notify another thread about an event.

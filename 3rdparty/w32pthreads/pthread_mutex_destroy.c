@@ -34,8 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 
 int
@@ -51,7 +50,7 @@ pthread_mutex_destroy (pthread_mutex_t * mutex)
   /*
    * Check to see if we have something to delete.
    */
-  if (*mutex < PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
+  if (!ptw32_static_mutex_enable || (*mutex < PTHREAD_ERRORCHECK_MUTEX_INITIALIZER))
     {
       mx = *mutex;
 
@@ -120,7 +119,7 @@ pthread_mutex_destroy (pthread_mutex_t * mutex)
       /*
        * Check again.
        */
-      if (*mutex >= PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
+      if (ptw32_static_mutex_enable && (*mutex >= PTHREAD_ERRORCHECK_MUTEX_INITIALIZER))
 	{
 	  /*
 	   * This is all we need to do to destroy a statically

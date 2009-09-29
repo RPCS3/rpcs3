@@ -34,8 +34,8 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
+#include <assert.h>
 
 static struct pthread_mutexattr_t_ ptw32_recursive_mutexattr_s =
   {PTHREAD_PROCESS_PRIVATE, PTHREAD_MUTEX_RECURSIVE};
@@ -50,6 +50,9 @@ ptw32_mutex_check_need_init (pthread_mutex_t * mutex)
 {
   register int result = 0;
   register pthread_mutex_t mtx;
+
+  // Make sure static mutexes are enabled.
+  assert( ptw32_static_mutex_enable );
 
   /*
    * The following guarded test is specifically for statically
@@ -72,6 +75,7 @@ ptw32_mutex_check_need_init (pthread_mutex_t * mutex)
    * the number of processors + 1.
    *
    */
+   
   EnterCriticalSection (&ptw32_mutex_test_init_lock);
 
   /*

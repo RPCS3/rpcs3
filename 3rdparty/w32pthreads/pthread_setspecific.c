@@ -34,8 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
+#include "ptw32pch.h"
 
 
 int
@@ -68,16 +67,40 @@ pthread_setspecific (pthread_key_t key, const void *value)
   pthread_t self;
   int result = 0;
 
-  /*
-   * Using pthread_self will implicitly create
-   * an instance of pthread_t for the current
-   * thread if one wasn't explicitly created
-   */
-  self = pthread_self ();
-  if (self.p == NULL)
-  {
-    return ENOENT;
-  }
+  if (key != ptw32_selfThreadKey)
+    {
+      /*
+       * Using pthread_self will implicitly create
+       * an instance of pthread_t for the current
+       * thread if one wasn't explicitly created
+       */
+      self = pthread_self ();
+      if (self.p == NULL)
+	{
+	  return ENOENT;
+	}
+    }
+  else
+    {
+      /*
+       * Resolve catch-22 of registering thread with selfThread
+       * key
+       */
+      ptw32_thread_t * sp = (ptw32_thread_t *) pthread_getspecific (ptw32_selfThreadKey);
+
+      if (sp == NULL)
+        {
+	  if (value == NULL)
+	    {
+	      return ENOENT;
+	    }
+          self = *((pthread_t *) value);
+        }
+      else
+        {
+	  self = sp->ptHandle;
+        }
+    }
 
   result = 0;
 

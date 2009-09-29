@@ -34,69 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
-
-#if defined(_M_IX86) || defined(_X86_)
-#define PTW32_PROGCTR(Context)  ((Context).Eip)
-#endif
-
-#if defined (_M_IA64)
-#define PTW32_PROGCTR(Context)  ((Context).StIIP)
-#endif
-
-#if defined(_MIPS_)
-#define PTW32_PROGCTR(Context)  ((Context).Fir)
-#endif
-
-#if defined(_ALPHA_)
-#define PTW32_PROGCTR(Context)  ((Context).Fir)
-#endif
-
-#if defined(_PPC_)
-#define PTW32_PROGCTR(Context)  ((Context).Iar)
-#endif
-
-#if defined(_AMD64_)
-#define PTW32_PROGCTR(Context)  ((Context).Rip)
-#endif
-
-#if !defined(PTW32_PROGCTR)
-#error Module contains CPU-specific code; modify and recompile.
-#endif
-
-static void
-ptw32_cancel_self (void)
-{
-  ptw32_throw (PTW32_EPS_CANCEL);
-
-  /* Never reached */
-}
-
-static void CALLBACK
-ptw32_cancel_callback (DWORD unused)
-{
-  ptw32_throw (PTW32_EPS_CANCEL);
-
-  /* Never reached */
-}
-
-/*
- * ptw32_RegisterCancelation() -
- * Must have args of same type as QueueUserAPCEx because this function
- * is a substitute for QueueUserAPCEx if it's not available.
- */
-DWORD
-ptw32_RegisterCancelation (PAPCFUNC unused1, HANDLE threadH, DWORD unused2)
-{
-  CONTEXT context;
-
-  context.ContextFlags = CONTEXT_CONTROL;
-  GetThreadContext (threadH, &context);
-  PTW32_PROGCTR (context) = (DWORD_PTR) ptw32_cancel_self;
-  SetThreadContext (threadH, &context);
-  return 0;
-}
+#include "ptw32pch.h"
 
 int
 pthread_cancel (pthread_t thread)
@@ -137,8 +75,8 @@ pthread_cancel (pthread_t thread)
   if ((self = pthread_self ()).p == NULL)
     {
       return ENOMEM;
-    };
-
+    }
+    
   /*
    * FIXME!!
    *
@@ -149,14 +87,17 @@ pthread_cancel (pthread_t thread)
    * thread is itself.
    *
    * If it may, then we need to ensure that a thread can't
-   * deadlock itself trying to cancel itself asyncronously
+   * deadlock itself trying to cancel itself asynchronously
    * (pthread_cancel is required to be an async-cancel
    * safe function).
    */
   cancel_self = pthread_equal (thread, self);
-
   tp = (ptw32_thread_t *) thread.p;
 
+  // enables full cancel testing in pthread_testcancel, which is normally
+  // disabled because 
+  _InterlockedIncrement( &ptw32_testcancel_enable );
+  
   /*
    * Lock for async-cancel safety.
    */
@@ -178,24 +119,7 @@ pthread_cancel (pthread_t thread)
 	}
       else
 	{
-	  HANDLE threadH = tp->threadH;
-
-	  SuspendThread (threadH);
-
-	  if (WaitForSingleObject (threadH, 0) == WAIT_TIMEOUT)
-	    {
-	      tp->state = PThreadStateCanceling;
-	      tp->cancelState = PTHREAD_CANCEL_DISABLE;
-	      /*
-	       * If alertdrv and QueueUserAPCEx is available then the following
-	       * will result in a call to QueueUserAPCEx with the args given, otherwise
-	       * this will result in a call to ptw32_RegisterCancelation and only
-	       * the threadH arg will be used.
-	       */
-	      ptw32_register_cancelation (ptw32_cancel_callback, threadH, 0);
-	      (void) pthread_mutex_unlock (&tp->cancelLock);
-	      ResumeThread (threadH);
-	    }
+	  ptw32_PrepCancel( tp );
 	}
     }
   else

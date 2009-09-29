@@ -34,9 +34,7 @@
  *      59 Temple Place - Suite 330, Boston, MA 02111-1307, USA
  */
 
-#include "pthread.h"
-#include "implement.h"
-
+#include "ptw32pch.h"
 
 pthread_t
 ptw32_new (void)
@@ -74,8 +72,15 @@ ptw32_new (void)
   tp->detachState = PTHREAD_CREATE_JOINABLE;
   tp->cancelState = PTHREAD_CANCEL_ENABLE;
   tp->cancelType = PTHREAD_CANCEL_DEFERRED;
+  
+  #ifdef PTW32_STATIC_MUTEXS
   tp->cancelLock = PTHREAD_MUTEX_INITIALIZER;
   tp->threadLock = PTHREAD_MUTEX_INITIALIZER;
+  #else
+  pthread_mutex_init (&tp->cancelLock, NULL);
+  pthread_mutex_init (&tp->threadLock, NULL);
+  #endif
+
   tp->cancelEvent = CreateEvent (0, (int) PTW32_TRUE,	/* manualReset  */
 				 (int) PTW32_FALSE,	/* setSignaled  */
 				 NULL);
