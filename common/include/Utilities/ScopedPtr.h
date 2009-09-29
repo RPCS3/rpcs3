@@ -165,7 +165,7 @@ public:
 
     operator unspecified_bool_type() const
     {
-        return ( !IsEmpty() ) ? &pxScopedPtr<T>::get : NULL;
+        return ( !IsEmpty() ) ? &ScopedPtr<T>::get : NULL;
     }
 
     void reset(T * ptr = &DefaultStaticInst)

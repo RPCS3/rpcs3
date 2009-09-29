@@ -105,10 +105,10 @@ typedef s32 sptr;
 //////////////////////////////////////////////////////////////////////////////////////////
 // A rough-and-ready cross platform 128-bit datatype, Non-SSE style.
 //
-// Note: These structs do not provide any additional constructors because C++ can't allow
-// the use of dataypes with constructors in unions (and since unions are ont of the primary
-// uses of these types, that measn we can't have constructors). Embedded functions for
-// performing explicity conversion from 64 and 32 bit values is provided instead.
+// Note: These structs don't provide any additional constructors because C++ doesn't allow
+// the use of datatypes with constructors in unions (and since unions aren't the primary
+// uses of these types, that means we can't have constructors). Embedded functions for
+// performing explicit conversion from 64 and 32 bit values are provided instead.
 //
 #ifdef __cplusplus
 struct u128
