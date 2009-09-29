@@ -193,13 +193,13 @@ public:
 	bool IsFinished() const { return m_idx >= m_memory.GetSizeInBytes(); }
 };
 
-namespace StateRecovery
-{
-	extern bool HasState();
-	extern void Recover();
-	extern void SaveToFile( const wxString& file );
-	extern void SaveToSlot( uint num );
-	extern void MakeFull();
-	extern void Clear();
-}
+extern bool StateCopy_IsValid();
+extern bool StateCopy_HasFullState();
+extern bool StateCopy_HasPartialState();
+
+extern void StateCopy_FreezeToMem();
+extern void StateCopy_ThawFromMem();
+extern void StateCopy_SaveToFile( const wxString& file );
+extern void StateCopy_SaveToSlot( uint num );
+extern void StateCopy_Clear();
 

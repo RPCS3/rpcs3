@@ -62,7 +62,7 @@ const wxImage& LoadImageAny(
 // ------------------------------------------------------------------------
 const wxBitmap& Pcsx2App::GetLogoBitmap()
 {
-	if( m_Bitmap_Logo != NULL )
+	if( m_Bitmap_Logo )
 		return *m_Bitmap_Logo;
 
 	wxFileName mess;
@@ -90,7 +90,7 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 	wxImage img;
 	EmbeddedImage<res_BackgroundLogo> temp;	// because gcc can't allow non-const temporaries.
 	LoadImageAny( img, useTheme, mess, L"BackgroundLogo", temp );
-	m_Bitmap_Logo.reset( new wxBitmap( img ) );
+	m_Bitmap_Logo = new wxBitmap( img );
 
 	return *m_Bitmap_Logo;
 }
@@ -137,10 +137,10 @@ wxImageList& Pcsx2App::GetImgList_Config()
 // ------------------------------------------------------------------------
 wxImageList& Pcsx2App::GetImgList_Toolbars()
 {
-	if( m_ToolbarImages == NULL )
+	if( !m_ToolbarImages )
 	{
 		const int imgSize = g_Conf->Toolbar_ImageSize ? 64 : 32;
-		m_ToolbarImages.reset( new wxImageList( imgSize, imgSize ) );
+		m_ToolbarImages = new wxImageList( imgSize, imgSize );
 		wxFileName mess;
 		bool useTheme = (g_Conf->DeskTheme != L"default");
 

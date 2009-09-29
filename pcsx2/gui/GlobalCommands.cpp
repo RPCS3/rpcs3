@@ -69,31 +69,32 @@ namespace Implementations
 	{
 	}
 
-	void Emu_Suspend()
+	void Sys_Suspend()
 	{
-		AppInvoke( CoreThread, Suspend() );
-		AppInvoke( MainFrame, ApplySettings() );
+		if( HasCoreThread() )
+			GetCoreThread().Suspend();
 	}
 
-	void Emu_Resume()
+	void Sys_Resume()
 	{
-		AppInvoke( CoreThread, Resume() );
-		AppInvoke( MainFrame, ApplySettings() );
+		if( HasCoreThread() )
+			GetCoreThread().Resume();
 	}
 
-	void Emu_TakeSnapshot()
+	void Sys_TakeSnapshot()
 	{
 		GSmakeSnapshot( g_Conf->Folders.Snapshots.ToAscii().data() );
 	}
 
-	void Emu_RenderToggle()
+	void Sys_RenderToggle()
 	{
-		AppInvoke( CoreThread, Suspend() );
+		if( !HasCoreThread() ) return;
+		SysSuspend();
 		renderswitch = !renderswitch;
-		AppInvoke( CoreThread, Resume() );
+		SysResume();
 	}
 
-	void Emu_LoggingToggle()
+	void Sys_LoggingToggle()
 	{
 	#ifdef PCSX2_DEVBUILD
 		// There's likely a better way to implement this, but this seemed useful.
@@ -108,7 +109,7 @@ namespace Implementations
 	#endif
 	}
 
-	void Emu_FreezeGS()
+	void Sys_FreezeGS()
 	{
 		// fixme : fix up gsstate mess and make it mtgs compatible -- air
 #ifdef _STGS_GSSTATE_CODE
@@ -137,7 +138,7 @@ namespace Implementations
 
 	}
 
-	void Emu_RecordingToggle()
+	void Sys_RecordingToggle()
 	{
 		g_Pcsx2Recording ^= 1;
 
@@ -206,37 +207,37 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 		NULL,
 	},
 
-	{	"Emu_Suspend",
-		Implementations::Emu_Suspend,
+	{	"Sys_Suspend",
+		Implementations::Sys_Suspend,
 		NULL,
 		NULL,
 	},
 
-	{	"Emu_TakeSnapshot",
-		Implementations::Emu_TakeSnapshot,
+	{	"Sys_TakeSnapshot",
+		Implementations::Sys_TakeSnapshot,
 		NULL,
 		NULL,
 	},
 
-	{	"Emu_RenderswitchToggle",
-		Implementations::Emu_RenderToggle,
+	{	"Sys_RenderswitchToggle",
+		Implementations::Sys_RenderToggle,
 		NULL,
 		NULL,
 	},
 
-	{	"Emu_LoggingToggle",
-		Implementations::Emu_LoggingToggle,
+	{	"Sys_LoggingToggle",
+		Implementations::Sys_LoggingToggle,
 		NULL,
 		NULL,
 	},
 
-	{	"Emu_FreezeGS",
-		Implementations::Emu_FreezeGS,
+	{	"Sys_FreezeGS",
+		Implementations::Sys_FreezeGS,
 		NULL,
 		NULL,
 	},
-	{	"Emu_RecordingToggle",
-		Implementations::Emu_RecordingToggle,
+	{	"Sys_RecordingToggle",
+		Implementations::Sys_RecordingToggle,
 		NULL,
 		NULL,
 	},
@@ -304,11 +305,11 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 	GlobalAccels.Map( AAC( WXK_TAB ),			"Framelimiter_TurboToggle" );
 	GlobalAccels.Map( AAC( WXK_TAB ).Shift(),	"Framelimiter_MasterToggle" );
 
-	GlobalAccels.Map( AAC( WXK_ESCAPE ),		"Emu_Suspend");
-	GlobalAccels.Map( AAC( WXK_F8 ),			"Emu_TakeSnapshot");
-	GlobalAccels.Map( AAC( WXK_F9 ),			"Emu_RenderswitchToggle");
+	GlobalAccels.Map( AAC( WXK_ESCAPE ),		"Sys_Suspend");
+	GlobalAccels.Map( AAC( WXK_F8 ),			"Sys_TakeSnapshot");
+	GlobalAccels.Map( AAC( WXK_F9 ),			"Sys_RenderswitchToggle");
 
-	GlobalAccels.Map( AAC( WXK_F10 ),			"Emu_LoggingToggle");
-	GlobalAccels.Map( AAC( WXK_F11 ),			"Emu_FreezeGS");
-	GlobalAccels.Map( AAC( WXK_F12 ),			"Emu_RecordingToggle");
+	GlobalAccels.Map( AAC( WXK_F10 ),			"Sys_LoggingToggle");
+	GlobalAccels.Map( AAC( WXK_F11 ),			"Sys_FreezeGS");
+	GlobalAccels.Map( AAC( WXK_F12 ),			"Sys_RecordingToggle");
 }

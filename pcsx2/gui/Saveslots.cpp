@@ -23,16 +23,6 @@
 
 StartupParams g_Startup;
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Save Slot Detection System
-
-bool States_isSlotUsed(int num)
-{
-	if (ElfCRC == 0)
-		return false;
-	else
-		return wxFileExists( SaveStateBase::GetFilename( num ) );
-}
 
 // returns true if the new state was loaded, or false if nothing happened.
 void States_Load( const wxString& file )
@@ -55,7 +45,7 @@ void States_Load( const wxString& file )
 	catch( Exception::BaseException& )
 	{
 		// VM state is probably ruined.  We'll need to recover from the in-memory backup.
-		StateRecovery::Recover();
+		//StateRecovery::Recover();
 	}
 
 	SysExecute();
@@ -64,7 +54,7 @@ void States_Load( const wxString& file )
 // Save state save-to-file (or slot) helpers.
 void States_Save( const wxString& file )
 {
-	if( !EmulationInProgress() )
+	if( !SysHasValidState() )
 	{
 		Msgbox::Alert( _("You need to start emulation first before you can save it's state.") );
 		return;
@@ -73,7 +63,7 @@ void States_Save( const wxString& file )
 	try
 	{
 		Console::Status( wxsFormat( L"Saving savestate to file: %s", file.c_str() ) );
-		StateRecovery::SaveToFile( file );
+		StateCopy_SaveToFile( file );
 		SysStatus( wxsFormat( _("State saved to file: %s"), wxFileName( file ).GetFullName().c_str() ) );
 	}
 	catch( Exception::BaseException& ex )
@@ -102,6 +92,14 @@ void States_Save( const wxString& file )
 
 static int StatesC = 0;
 static const int StateSlotsCount = 10;
+
+bool States_isSlotUsed(int num)
+{
+	if (ElfCRC == 0)
+		return false;
+	else
+		return wxFileExists( SaveStateBase::GetFilename( num ) );
+}
 
 void States_FreezeCurrentSlot()
 {

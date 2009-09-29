@@ -53,7 +53,7 @@ static bool IsMtapPresent( uint port )
 
 static void _ReadMcd(u8 *data, u32 adr, int size)
 {
-	EmuPlugins.McdRead(
+	SysPlugins.McdRead(
 		sio.GetMemcardIndex(), sio.activeMemcardSlot[sio.GetMemcardIndex()],
 		data, adr, size
 	);
@@ -61,7 +61,7 @@ static void _ReadMcd(u8 *data, u32 adr, int size)
 
 static void _SaveMcd(const u8 *data, u32 adr, int size)
 {
-	EmuPlugins.McdSave(
+	SysPlugins.McdSave(
 		sio.GetMemcardIndex(), sio.activeMemcardSlot[sio.GetMemcardIndex()],
 		data, adr, size
 	);
@@ -69,7 +69,7 @@ static void _SaveMcd(const u8 *data, u32 adr, int size)
 
 static void _EraseMCDBlock(u32 adr)
 {
-	EmuPlugins.McdEraseBlock( sio.GetMemcardIndex(), sio.activeMemcardSlot[sio.GetMemcardIndex()], adr );
+	SysPlugins.McdEraseBlock( sio.GetMemcardIndex(), sio.activeMemcardSlot[sio.GetMemcardIndex()], adr );
 }
 
 static u8 sio_xor( const u8 *buf, uint length )
@@ -601,7 +601,7 @@ void InitializeSIO(u8 value)
 			const uint port = sio.GetMemcardIndex();
 			const uint slot = sio.activeMemcardSlot[port];
 
-			if( EmuPlugins.McdIsPresent( port, slot ) )
+			if( SysPlugins.McdIsPresent( port, slot ) )
 			{
 				sio2.packet.recvVal1 = 0x1100;
 				PAD_LOG("START MEMCARD [port:%d, slot:%d] - Present", port, slot );
@@ -665,7 +665,7 @@ void SaveStateBase::sioFreeze()
 		for( int port=0; port<2; ++port )
 		{
 			for( int slot=0; slot<8; ++slot )
-				m_mcdCRCs[port][slot] = EmuPlugins.McdGetCRC( port, slot );
+				m_mcdCRCs[port][slot] = SysPlugins.McdGetCRC( port, slot );
 		}
 	}
 	Freeze( m_mcdCRCs );
@@ -689,7 +689,7 @@ void SaveStateBase::sioFreeze()
 		{
 			for( int slot=0; slot<8; ++slot )
 			{
-				u64 newCRC = EmuPlugins.McdGetCRC( port, slot );
+				u64 newCRC = SysPlugins.McdGetCRC( port, slot );
 				if( newCRC != m_mcdCRCs[port][slot] )
 				{
 					m_mcdCRCs[port][slot] = newCRC;

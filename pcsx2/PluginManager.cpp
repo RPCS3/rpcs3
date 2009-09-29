@@ -28,29 +28,29 @@
 #	include "svnrev.h"
 #endif
 
-EmuPluginBindings EmuPlugins;
+SysPluginBindings SysPlugins;
 
-bool EmuPluginBindings::McdIsPresent( uint port, uint slot )
+bool SysPluginBindings::McdIsPresent( uint port, uint slot )
 {
 	return !!Mcd->McdIsPresent( (PS2E_THISPTR) Mcd, port, slot );
 }
 
-void EmuPluginBindings::McdRead( uint port, uint slot, u8 *dest, u32 adr, int size )
+void SysPluginBindings::McdRead( uint port, uint slot, u8 *dest, u32 adr, int size )
 {
 	Mcd->McdRead( (PS2E_THISPTR) Mcd, port, slot, dest, adr, size );
 }
 
-void EmuPluginBindings::McdSave( uint port, uint slot, const u8 *src, u32 adr, int size )
+void SysPluginBindings::McdSave( uint port, uint slot, const u8 *src, u32 adr, int size )
 {
 	Mcd->McdSave( (PS2E_THISPTR) Mcd, port, slot, src, adr, size );
 }
 
-void EmuPluginBindings::McdEraseBlock( uint port, uint slot, u32 adr )
+void SysPluginBindings::McdEraseBlock( uint port, uint slot, u32 adr )
 {
 	Mcd->McdEraseBlock( (PS2E_THISPTR) Mcd, port, slot, adr );
 }
 
-u64 EmuPluginBindings::McdGetCRC( uint port, uint slot )
+u64 SysPluginBindings::McdGetCRC( uint port, uint slot )
 {
 	return Mcd->McdGetCRC( (PS2E_THISPTR) Mcd, port, slot );
 }
@@ -988,10 +988,10 @@ void PluginManager::Init()
 			throw Exception::PluginInitError( pid );
 	} while( ++pi, pi->shortname != NULL );
 
-	if( EmuPlugins.Mcd == NULL )
+	if( SysPlugins.Mcd == NULL )
 	{
-		EmuPlugins.Mcd = (PS2E_ComponentAPI_Mcd*)m_mcdPlugin->NewComponentInstance( PS2E_TYPE_Mcd );
-		if( EmuPlugins.Mcd == NULL )
+		SysPlugins.Mcd = (PS2E_ComponentAPI_Mcd*)m_mcdPlugin->NewComponentInstance( PS2E_TYPE_Mcd );
+		if( SysPlugins.Mcd == NULL )
 		{
 			// fixme: use plugin's GetLastError (not implemented yet!)
 			throw Exception::PluginInitError( PluginId_Mcd, "Internal Memorycard Plugin failed to initialize." );
@@ -1029,10 +1029,10 @@ void PluginManager::Shutdown()
 
 	// More memorycard hacks!!
 
-	if( (EmuPlugins.Mcd != NULL) && (m_mcdPlugin != NULL) )
+	if( (SysPlugins.Mcd != NULL) && (m_mcdPlugin != NULL) )
 	{
-		m_mcdPlugin->DeleteComponentInstance( (PS2E_THISPTR)EmuPlugins.Mcd );
-		EmuPlugins.Mcd = NULL;
+		m_mcdPlugin->DeleteComponentInstance( (PS2E_THISPTR)SysPlugins.Mcd );
+		SysPlugins.Mcd = NULL;
 	}
 
 	DbgCon::Status( "Plugins shutdown successfully." );

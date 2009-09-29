@@ -47,6 +47,8 @@ extern bool DevAssert( bool condition, const char* msg );
 
 namespace Exception
 {
+	int MakeNewType();
+
 	// --------------------------------------------------------------------------------------
 	//  BaseException
 	// --------------------------------------------------------------------------------------
@@ -87,6 +89,9 @@ namespace Exception
 		// Returns a message suitable for end-user display.
 		// This message is usually meant for display in a user popup or such.
 		virtual wxString FormatDisplayMessage() const { return m_message_user; }
+		
+		virtual void Rethrow() const=0;
+		virtual BaseException* Clone() const=0;
 
 	protected:
 		// Construction using two pre-formatted pre-translated messages
@@ -129,7 +134,9 @@ namespace Exception
 //     it will be optionally translated.
 //
 #define DEFINE_EXCEPTION_COPYTORS( classname ) \
-	virtual ~classname() throw() {}
+	virtual ~classname() throw() {} \
+	virtual void Rethrow() const { throw classname( *this ); } \
+	virtual BaseException* Clone() const { return new classname( *this ); }
 
 #define DEFINE_RUNTIME_EXCEPTION( classname, defmsg ) \
 	DEFINE_EXCEPTION_COPYTORS( classname ) \
@@ -161,7 +168,7 @@ namespace Exception
 		DEFINE_LOGIC_EXCEPTION( LogicError, wxLt("An unhandled logic error has occurred.") )
 	};
 
-	class ObjectIsNull : public RuntimeError
+	class ObjectIsNull : public virtual RuntimeError
 	{
 	public:
 		wxString ObjectName;

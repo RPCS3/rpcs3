@@ -252,40 +252,11 @@ void SysClearExecutionCache()
 	vuMicroCpuReset();
 }
 
-// The calling function should trap and handle exceptions as needed.
-// Exceptions:
-//   Exception::StateLoadError - thrown when a fully recoverable exception ocurred.  The
-//   virtual machine memory state is fully intact.
-//
-//   Any other exception means the Virtual Memory state is indeterminate and probably
-//   invalid.
 void SysLoadState( const wxString& srcfile )
 {
-	SafeArray<u8> buf;
-	gzFile gzfp = gzopen( srcfile.ToUTF8().data(), "rb" );
-	if( gzfp == NULL )
-		throw Exception::BadSavedState( srcfile, "File not found, or permission denied!" );
-
-	int curidx = 0;
-	do
-	{
-		buf.MakeRoomFor( curidx+327680 );
-		gzread( gzfp, buf.GetPtr(curidx), 327680 );
-		curidx += 327680;
-	} while( !gzeof(gzfp) );
-
-	gzclose( gzfp );
-
-	memLoadingState joe( buf );		// this could throw n StateLoadError.
-
-	// we perform a full backup to memory first so that we can restore later if the
-	// load fails.  fixme: should this be made optional?  It could have significant
-	// speed impact on state loads on slower machines with low ram. >_<
-	StateRecovery::MakeFull();
-
-	SysClearExecutionCache();
-	cpuReset();
-	joe.FreezeAll();
+	//SysClearExecutionCache();
+	//cpuReset();
+	//joe.FreezeAll();
 }
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the

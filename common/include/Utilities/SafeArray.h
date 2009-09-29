@@ -33,27 +33,33 @@ extern void pcsx2_aligned_free(void* pmem);
 // pointer to null after deallocation.
 
 #define safe_delete( ptr ) \
-	((void) (delete ptr), ptr = NULL)
+	((void) (delete (ptr)), (ptr) = NULL)
 
 #define safe_delete_array( ptr ) \
-	((void) (delete[] ptr), ptr = NULL)
+	((void) (delete[] (ptr)), (ptr) = NULL)
 
 // fixme: I'm pretty sure modern libc implementations under gcc and msvc check null status
 // inside free(), meaning we shouldn't have to do it ourselves.  But legacy implementations
 // didn't always check, so best to be cautious unless absolutely certain it's being covered on
 // all ported platforms.
 #define safe_free( ptr ) \
-	((void) (( ( ptr != NULL ) && (free( ptr ), !!0) ), ptr = NULL))
+	((void) (( ( (ptr) != NULL ) && (free( ptr ), !!0) ), (ptr) = NULL))
+
+#define safe_fclose( ptr ) \
+	((void) (( ( (ptr) != NULL ) && (fclose( ptr ), !!0) ), (ptr) = NULL))
 
 // Implementation note: all known implementations of _aligned_free check the pointer for
 // NULL status (our implementation under GCC, and microsoft's under MSVC), so no need to
 // do it here.
 #define safe_aligned_free( ptr ) \
-	((void) ( _aligned_free( ptr ), ptr = NULL ))
+	((void) ( _aligned_free( ptr ), (ptr) = NULL ))
 
 #define SafeSysMunmap( ptr, size ) \
-	((void) ( HostSys::Munmap( (uptr)ptr, size ), ptr = NULL ))
+	((void) ( HostSys::Munmap( (uptr)(ptr), size ), (ptr) = NULL ))
 
+// Microsoft Windows only macro, useful for freeing out COM objects:
+#define safe_release( ptr ) \
+	((void) (( ( (ptr) != NULL ) && ((ptr)->Release(), !!0) ), (ptr) = NULL))
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Handy little class for allocating a resizable memory block, complete with

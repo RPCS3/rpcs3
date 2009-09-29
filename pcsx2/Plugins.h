@@ -48,6 +48,7 @@ namespace Exception
 
 	public:
 		DEFINE_EXCEPTION_COPYTORS( PluginError )
+
 		PluginError() {}
 		PluginError( PluginsEnum_t pid, const char* msg="Generic plugin error" )
 		{
@@ -183,13 +184,13 @@ class mtgsThreadObject;
 // make the current PluginManager largely obsolete (with the exception of the general Load/Unload
 // management facilities)
 //
-class EmuPluginBindings
+class SysPluginBindings
 {
 protected:
 	PS2E_ComponentAPI_Mcd* Mcd;
 
 public:
-	EmuPluginBindings() :
+	SysPluginBindings() :
 		Mcd( NULL )
 	{
 
@@ -204,7 +205,7 @@ public:
 	friend class PluginManager;
 };
 
-extern EmuPluginBindings EmuPlugins;
+extern SysPluginBindings SysPlugins;
 
 
 // --------------------------------------------------------------------------------------

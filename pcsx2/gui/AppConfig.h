@@ -178,4 +178,4 @@ extern ConfigOverrides OverrideOptions;
 extern wxFileConfig* OpenFileConfig( const wxString& filename );
 extern void AppConfig_OnChangedSettingsFolder( bool overwrite =  false );
 
-extern wxScopedPtr<AppConfig> g_Conf;
+extern ScopedPtr<AppConfig> g_Conf;

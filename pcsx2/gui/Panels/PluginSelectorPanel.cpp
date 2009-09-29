@@ -364,9 +364,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	wxCommandEvent evt( pxEVT_ShowStatusBar );
 	GetEventHandler()->AddPendingEvent( evt );
 
-	// Use a thread to load plugins.
-	m_EnumeratorThread.reset( NULL );
-	m_EnumeratorThread.reset( new EnumThread( *this ) );
+	m_EnumeratorThread.Delete() = new EnumThread( *this );
 
 	if( DisableThreading )
 		m_EnumeratorThread->DoNextPlugin( 0 );
@@ -376,7 +374,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 
 bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 {
-	m_EnumeratorThread.reset();			// make sure the thread is STOPPED, just in case...
+	m_EnumeratorThread = NULL;			// make sure the thread is STOPPED, just in case...
 
 	bool validated = true;
 
@@ -385,20 +383,20 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 
 	// Impl Note: ScopedPtr used so that resources get cleaned up if an exception
 	// occurs during file enumeration.
-	wxScopedPtr<wxArrayString> pluginlist( new wxArrayString() );
+	ScopedPtr<wxArrayString> pluginlist( new wxArrayString() );
 
-	int pluggers = EnumeratePluginsInFolder( m_ComponentBoxes.GetPluginsPath(), pluginlist.get() );
+	int pluggers = EnumeratePluginsInFolder( m_ComponentBoxes.GetPluginsPath(), pluginlist );
 
 	if( !m_FileList || (*pluginlist != *m_FileList) )
 		validated = false;
 
 	if( pluggers == 0 )
 	{
-		m_FileList.reset();
+		m_FileList = NULL;
 		return validated;
 	}
 
-	m_FileList.swap( pluginlist );
+	m_FileList.SwapPtr( pluginlist );
 
 	m_StatusPanel.SetGaugeLength( pluggers );
 
@@ -428,7 +426,7 @@ void Panels::PluginSelectorPanel::OnShowStatusBar( wxCommandEvent& evt )
 
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 {
-	m_EnumeratorThread.reset();
+	m_EnumeratorThread = NULL;
 
 	// fixme: Default plugins should be picked based on the timestamp of the DLL or something?
 	//  (for now we just force it to selection zero if nothing's selected)

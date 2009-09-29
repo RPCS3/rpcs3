@@ -204,6 +204,7 @@ SysCoreThread::SysCoreThread( PluginManager& plugins ) :
 ,	m_shortSuspend( false )
 ,	m_plugins( plugins )
 {
+	m_name = L"EE Core";
 }
 
 SysCoreThread::~SysCoreThread() throw()
@@ -280,13 +281,13 @@ void SysCoreThread::CpuInitializeMess()
 	cpuReset();
 	SysClearExecutionCache();
 
-	if( StateRecovery::HasState() )
+	if( StateCopy_IsValid() )
 	{
 		// no need to boot bios or detect CDs when loading savestates.
 		// [TODO] : It might be useful to detect game SLUS/CRC and compare it against
 		// the savestate info, and issue a warning to the user since, chances are, they
 		// don't really want to run a game with the wrong ISO loaded into the emu.
-		StateRecovery::Recover();
+		StateCopy_ThawFromMem();
 	}
 	else
 	{
@@ -354,7 +355,6 @@ static void _cet_callback_cleanup( void* handle )
 
 sptr SysCoreThread::ExecuteTask()
 {
-	SetName( "EE Core" );
 	tls_coreThread = this;
 
 	StateCheck();

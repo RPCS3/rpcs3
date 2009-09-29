@@ -43,7 +43,7 @@ class MainEmuFrame : public wxFrame
 // ------------------------------------------------------------------------
 
 protected:
-	wxScopedPtr<wxFileHistory>	m_RecentIsoList;
+	ScopedPtr<wxFileHistory>	m_RecentIsoList;
     wxStatusBar&	m_statusbar;
     wxStaticBitmap	m_background;
 
@@ -74,7 +74,7 @@ public:
 
 	void OnLogBoxHidden();
 
-	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Emu_SuspendResume ); }
+	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Sys_SuspendResume ); }
 	void UpdateIsoSrcFile();
 	void UpdateIsoSrcSelection();
 	void ApplySettings();

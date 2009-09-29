@@ -1939,10 +1939,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\HostGui.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\i18n.cpp"
 				>
 			</File>
@@ -2517,6 +2513,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Resources\EmbeddedImage.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\HostGui.h"
 					>
 				</File>
 				<File

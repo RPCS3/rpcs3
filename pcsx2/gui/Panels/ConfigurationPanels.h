@@ -55,7 +55,7 @@ namespace Exception
 		Panels::BaseApplicableConfigPanel* m_Panel;
 
 	public:
-		virtual ~CannotApplySettings() throw() {}
+		DEFINE_EXCEPTION_COPYTORS( CannotApplySettings )
 
 		explicit CannotApplySettings( Panels::BaseApplicableConfigPanel* thispanel, const char* msg=wxLt("Cannot apply new settings, one of the settings is invalid.") )
 		{
@@ -351,7 +351,7 @@ namespace Panels
 	class BiosSelectorPanel : public BaseSelectorPanel
 	{
 	protected:
-		wxScopedPtr<wxArrayString>	m_BiosList;
+		ScopedPtr<wxArrayString>	m_BiosList;
 		wxListBox&		m_ComboBox;
 		DirPickerPanel&	m_FolderPicker;
 
@@ -454,8 +454,8 @@ namespace Panels
 		ComboBoxPanel&	m_ComponentBoxes;
 		bool			m_Canceled;
 
-		wxScopedPtr<wxArrayString>	m_FileList;	// list of potential plugin files
-		wxScopedPtr<EnumThread>		m_EnumeratorThread;
+		ScopedPtr<wxArrayString>	m_FileList;	// list of potential plugin files
+		ScopedPtr<EnumThread>		m_EnumeratorThread;
 
 	public:
 		virtual ~PluginSelectorPanel();

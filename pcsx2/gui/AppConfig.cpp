@@ -525,7 +525,8 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 		AppLoadSettings();
 
 	AppApplySettings();
-	AppInvoke( MainFrame, ReloadRecentLists() );
+	if( HasMainFrame() )
+		GetMainFrame().ReloadRecentLists();
 
 	g_Conf->Folders.Logs.Mkdir();
 

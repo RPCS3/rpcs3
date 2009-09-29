@@ -72,14 +72,13 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	static const wxString LabelGreets = wxString::FromUTF8(
 		"Contributors"
 		"\n\n"
-		"Hiryu and Sjeep for libcvd (the iso parsing and"
-		"filesystem driver code), nneeve (fpu and vu help)"
+		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu)"
 		"\n\n"
 		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp),"
 		"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
 		"\n\n"
 		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime,"
-		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth"
+		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87"
 	);
 
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );

@@ -19,7 +19,19 @@
 
 using namespace Threading;
 
-class SysSuspendableThread : public PersistentThread
+class ISysThread : public virtual IThread
+{
+public:
+	ISysThread() {}
+	virtual ~ISysThread() throw() {};
+
+	virtual bool IsSuspended() const { return false; }
+	virtual void Suspend( bool isBlocking = true ) { }
+	virtual void Resume() {}
+};
+
+
+class SysSuspendableThread : public PersistentThread, public virtual ISysThread
 {
 	typedef PersistentThread _parent;
 

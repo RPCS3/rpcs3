@@ -17,17 +17,19 @@
 
 #include "Dependencies.h"
 
-// ----------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 // wxBaseTools.h
 //
 // This file is meant to contain utility classes for users of the wxWidgets library.
 // All classes in this file are strictly dependent on wxBase libraries only, meaning
 // you don't need to include or link against wxCore (GUI) to build them.  For tools
 // which require wxCore, see wxGuiTools.h
-// ----------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// wxDoNotLogInThisScope
+
+// --------------------------------------------------------------------------------------
+//  wxDoNotLogInThisScope
+// --------------------------------------------------------------------------------------
 // This class is used to disable wx's sometimes inappropriate amount of forced error logging
 // during specific activities.  For example, when using wxDynamicLibrary to detect the
 // validity of DLLs, wx will log errors for missing symbols. (sigh)
@@ -52,5 +54,37 @@ public:
 	{
 		wxLog::EnableLogging( m_prev );
 	}
+};
+
+// --------------------------------------------------------------------------------------
+//  wxToUTF8  -  shortcut for str.ToUTF8().data()
+// --------------------------------------------------------------------------------------
+class wxToUTF8
+{
+	DeclareNoncopyableObject( wxToUTF8 );
+
+protected:
+	wxCharBuffer m_charbuffer;
+
+public:
+	wxToUTF8( const wxString& str ) : m_charbuffer( str.ToUTF8().data() ) { }
+	virtual ~wxToUTF8() throw() {}
+	
+	operator const char*() { return m_charbuffer.data(); }
+};
+
+// This class provided for completeness sake.  You probably should use ToUTF8 instead.
+class wxToAscii
+{
+	DeclareNoncopyableObject( wxToAscii );
+
+protected:
+	wxCharBuffer m_charbuffer;
+
+public:
+	wxToAscii( const wxString& str ) : m_charbuffer( str.ToAscii().data() ) { }
+	virtual ~wxToAscii() throw() {}
+
+	operator const char*() { return m_charbuffer.data(); }
 };
 

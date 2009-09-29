@@ -153,6 +153,7 @@ public:
 		m_outpipe( outpipe )
 	,	m_color( color )
 	{
+		m_name = (m_color == Color_Red) ? L"Redirect_Stderr" : L"Redirect_Stdout";
 	}
 	
 	virtual ~WinPipeThread() throw()
@@ -166,8 +167,6 @@ protected:
 		try
 		{
 			SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
-			SetName( (m_color == Color_Red) ? "Redirect_Stderr" :" Redirect_Stdout" );
-
 			while( true )
 			{
 				Sleep( 100 );

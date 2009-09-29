@@ -20,6 +20,7 @@
 #include <semaphore.h>
 
 #include "Pcsx2Defs.h"
+#include "ScopedPtr.h"
 
 namespace Exception
 {
@@ -87,6 +88,7 @@ namespace Threading
 
 		void Lock();
 		void Unlock();
+		bool TryLock();
 	};
 
 	// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
@@ -101,55 +103,94 @@ namespace Threading
 	// sleeps the current thread for the given number of milliseconds.
 	extern void Sleep( int ms );
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// PersistentThread - Helper class for the basics of starting/managing persistent threads.
-	//
-	// Use this as a base class for your threaded procedure, and implement the 'int ExecuteTask()'
-	// method.  Use Start() and Cancel() to start and shutdown the thread, and use m_sem_event
-	// internally to post/receive events for the thread (make a public accessor for it in your
-	// derived class if your thread utilizes the post).
-	//
-	// Notes:
-	//  * Constructing threads as static global vars isn't recommended since it can potentially
-	//    confuse w32pthreads, if the static initializers are executed out-of-order (C++ offers
-	//    no dependency options for ensuring correct static var initializations).  Use heap
-	//    allocation to create thread objects instead.
-	//
-	class PersistentThread
+// --------------------------------------------------------------------------------------
+// IThread - Interface for the public access to PersistentThread.
+// --------------------------------------------------------------------------------------
+// Class usage: Can be used for allowing safe nullification of a thread handle.  Rather
+// than being NULL'd, the handle can be mapped to an IThread implementation which acts
+// as a do-nothing placebo or an assertion generator.
+//
+	class IThread
+	{
+		DeclareNoncopyableObject(IThread);
+
+	public:
+		IThread() {}
+		virtual ~IThread() throw() {}
+
+		virtual bool IsSelf() const { return false; }
+		virtual bool IsRunning() { return false; }
+		virtual int  GetReturnCode() const
+		{
+			DevAssert( false, "Cannot obtain a return code from a placebo thread." );
+			return 0;
+		}
+
+		virtual void Start() {}
+		virtual void Cancel( bool isBlocking = true ) {}
+		virtual sptr Block() { return NULL; }
+		virtual bool Detach() { return false; }
+	};
+
+// --------------------------------------------------------------------------------------
+// PersistentThread - Helper class for the basics of starting/managing persistent threads.
+// --------------------------------------------------------------------------------------
+// Use this as a base class for your threaded procedure, and implement the 'int ExecuteTask()'
+// method.  Use Start() and Cancel() to start and shutdown the thread, and use m_sem_event
+// internally to post/receive events for the thread (make a public accessor for it in your
+// derived class if your thread utilizes the post).
+//
+// Notes:
+//  * Constructing threads as static global vars isn't recommended since it can potentially
+//    confuse w32pthreads, if the static initializers are executed out-of-order (C++ offers
+//    no dependency options for ensuring correct static var initializations).  Use heap
+//    allocation to create thread objects instead.
+//
+	class PersistentThread : public virtual IThread
 	{
 		DeclareNoncopyableObject(PersistentThread);
 
 	protected:
 		typedef int (*PlainJoeFP)();
+		
+		wxString	m_name;				// diagnostic name for our thread.
+
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
 		Semaphore	m_sem_finished;		// used for canceling and closing threads in a deadlock-safe manner
+		MutexLock	m_lock_start;		// used to lock the Start() code from starting simutaneous threads accidentally.
 		sptr		m_returncode;		// value returned from the thread on close.
-
+		
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
 		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.
+
+		// exception handle, set non-NULL if the thread terminated with an exception
+		// Use RethrowException() to re-throw the exception using its original exception type.
+		ScopedPtr<Exception::BaseException> m_except;
 		
 	public:
 		virtual ~PersistentThread() throw();
 		PersistentThread();
+		PersistentThread( const char* name );
 
 		virtual void Start();
 		virtual void Cancel( bool isBlocking = true );
-		virtual void Detach();
-
-		// Gets the return code of the thread.
-		// Throws std::logic_error if the thread has not terminated.
-		virtual int GetReturnCode() const;
-
-		virtual bool IsRunning() const;
+		virtual bool Detach();
 		virtual sptr Block();
-		
+
+		virtual int GetReturnCode() const;
+		virtual void RethrowException() const;
+
+		bool IsRunning() const;
 		bool IsSelf() const;
+		wxString GetName() const;
 
 		virtual void DoThreadCleanup();
 
 	protected:
-		void SetName( __unused const char* name );
+		void DoSetThreadName( const wxString& name );
+		void DoSetThreadName( __unused const char* name );
+		void _internal_execute();
 		
 		// Used to dispatch the thread callback function.
 		// (handles some thread cleanup on Win32, and is basically a typecast
@@ -159,7 +200,7 @@ namespace Threading
 		// Implemented by derived class to handle threading actions!
 		virtual sptr ExecuteTask()=0;
 	};
-
+	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// ScopedLock: Helper class for using Mutexes.
 	// Using this class provides an exception-safe (and generally clean) method of locking

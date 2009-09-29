@@ -211,8 +211,8 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_SkipBiosToggle,		Menu_SkipBiosToggle_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
-	ConnectMenu( MenuId_Emu_SuspendResume,	Menu_SuspendResume_Click );
-	ConnectMenu( MenuId_Emu_Reset,			Menu_EmuReset_Click );
+	ConnectMenu( MenuId_Sys_SuspendResume,	Menu_SuspendResume_Click );
+	ConnectMenu( MenuId_Sys_Reset,			Menu_EmuReset_Click );
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
 
@@ -367,23 +367,23 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 		_("Closing PCSX2 may be hazardous to your health"));
 
 	// ------------------------------------------------------------------------
-	m_menuEmu.Append(MenuId_Emu_SuspendResume,		_("Suspend"),
+	m_menuEmu.Append(MenuId_Sys_SuspendResume,		_("Suspend"),
 		_("Stops emulation dead in its tracks") )->Enable( SysHasValidState() );
 
 	m_menuEmu.AppendSeparator();
 
-	//m_menuEmu.Append(MenuId_Emu_Close,		_("Close"),
+	//m_menuEmu.Append(MenuId_Sys_Close,		_("Close"),
 	//	_("Stops emulation and closes the GS window."));
 
-	m_menuEmu.Append(MenuId_Emu_LoadStates,	_("Load state"), &m_LoadStatesSubmenu);
-	m_menuEmu.Append(MenuId_Emu_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
+	m_menuEmu.Append(MenuId_Sys_LoadStates,	_("Load state"), &m_LoadStatesSubmenu);
+	m_menuEmu.Append(MenuId_Sys_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
 
 	m_menuEmu.AppendSeparator();
 	m_menuEmu.Append(MenuId_EnablePatches,	_("Enable Patches"),
 		wxEmptyString, wxITEM_CHECK);
 
 	m_menuEmu.AppendSeparator();
-	m_menuEmu.Append(MenuId_Emu_Reset,		_("Reset"),
+	m_menuEmu.Append(MenuId_Sys_Reset,		_("Reset"),
 		_("Resets emulation state and re-runs current image"));
 
     // ------------------------------------------------------------------------
@@ -470,9 +470,7 @@ void MainEmuFrame::ReloadRecentLists()
 
 	if( m_RecentIsoList )
 		m_RecentIsoList->Save( *cfg );
-	m_RecentIsoList.reset();
-	m_RecentIsoList.reset( new wxFileHistory( g_Conf->RecentFileCount ) );
-	m_RecentIsoList->Load( *cfg );
+	m_RecentIsoList.Reassign( new wxFileHistory(g_Conf->RecentFileCount) )->Load( *cfg );
 	UpdateIsoSrcFile();
 	cfg->Flush();
 }
@@ -484,12 +482,11 @@ void MainEmuFrame::ApplySettings()
 	GetMenuBar()->Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
 	GetMenuBar()->Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );
 
-	GetMenuBar()->Enable( MenuId_Emu_SuspendResume, SysHasValidState() );
+	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, SysHasValidState() );
 
-	bool result = false;
-	AppInvokeBool( CoreThread, IsSuspended(), result );
-	GetMenuBar()->SetLabel( MenuId_Emu_SuspendResume, result ? _("Resume") :_("Suspend") );
-
+	if( HasCoreThread() )
+		GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, GetCoreThread().IsSuspended() ? _("Resume") :_("Suspend") );
+	
 	if( m_RecentIsoList )
 	{
 		if( m_RecentIsoList->GetMaxFiles() != g_Conf->RecentFileCount )

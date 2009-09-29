@@ -93,10 +93,10 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 		}
 	}
 
-	if( EmulationInProgress() )
+	if( SysHasValidState() )
 	{
 		// [TODO] : Add one of 'dems checkboxes that read like "[x] don't show this stupid shit again, kthx."
-		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmEmuReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
+		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmSysReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
 
 		if( !result )
 		{
@@ -190,11 +190,9 @@ void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 {
 	if( !SysHasValidState() ) return;
+	if( !HasCoreThread() ) return;
 
-	bool result = false;
-	AppInvokeBool( CoreThread, IsSuspended(), result );
-
-	if( result )
+	if( GetCoreThread().IsSuspended() )
 		SysResume();
 	else
 		SysSuspend();
@@ -202,15 +200,13 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 {
-	bool wasInProgress = EmulationInProgress();
-	bool wasSuspended;
-
-	AppInvokeBool( CoreThread, IsSuspended(), wasSuspended );
+	if( !SysHasValidState() ) return;
+	bool wasSuspended = HasCoreThread() ? GetCoreThread().IsSuspended() : true;
 
 	SysReset();
 
-	if( !wasInProgress || wasSuspended ) return;
-	SysExecute();
+	if( !wasSuspended )
+		SysExecute();
 }
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)

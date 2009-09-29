@@ -37,12 +37,15 @@ DEFINE_EVENT_TYPE( pxEVT_SemaphorePing );
 DEFINE_EVENT_TYPE( pxEVT_OpenModalDialog );
 DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
 DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
+DEFINE_EVENT_TYPE( pxEVT_AppCoreThread_Terminated );
+DEFINE_EVENT_TYPE( pxEVT_FreezeFinished );
+DEFINE_EVENT_TYPE( pxEVT_ThawFinished );
 
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
 bool					UseDefaultSettingsFolder = true;
 
-wxScopedPtr<AppConfig>	g_Conf;
+ScopedPtr<AppConfig>	g_Conf;
 ConfigOverrides			OverrideOptions;
 
 namespace Exception
@@ -54,7 +57,7 @@ namespace Exception
 	class StartupAborted : public BaseException
 	{
 	public:
-		virtual ~StartupAborted() throw() {}
+		DEFINE_EXCEPTION_COPYTORS( StartupAborted )
 
 		StartupAborted( const wxString& msg_eng=L"Startup initialization was aborted by the user." )
 		{
@@ -64,21 +67,21 @@ namespace Exception
 	};
 }
 
-AppEmuThread::AppEmuThread( PluginManager& plugins ) :
+AppCoreThread::AppCoreThread( PluginManager& plugins ) :
 	SysCoreThread( plugins )
 ,	m_kevt()
 {
 }
 
-AppEmuThread::~AppEmuThread() throw()
+AppCoreThread::~AppCoreThread() throw()
 {
-	AppInvoke( MainFrame, ApplySettings() );
 }
 
-void AppEmuThread::Suspend( bool isBlocking )
+void AppCoreThread::Suspend( bool isBlocking )
 {
 	_parent::Suspend( isBlocking );
-	AppInvoke( MainFrame, ApplySettings() );
+	if( HasMainFrame() )
+		GetMainFrame().ApplySettings();
 
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
 	// plugin is suspended.
@@ -88,7 +91,7 @@ void AppEmuThread::Suspend( bool isBlocking )
 	m_kevt.m_altDown		= false;
 }
 
-void AppEmuThread::OnResumeReady()
+void AppCoreThread::OnResumeReady()
 {
 	if( !DevAssert( wxThread::IsMain(), "SysCoreThread can only be resumed from the main/gui thread." ) ) return;
 
@@ -99,7 +102,19 @@ void AppEmuThread::OnResumeReady()
 	if( GSopen2 != NULL )
 		wxGetApp().OpenGsFrame();
 
-	AppInvoke( MainFrame, ApplySettings() );
+	if( HasMainFrame() )
+		GetMainFrame().ApplySettings();
+}
+
+// Called whenever the thread has terminated, for either regular or irregular reasons.
+// Typically the thread handles all its own errors, so there's no need to have error
+// handling here.  However it's a good idea to update the status of the GUI to reflect
+// the new (lack of) thread status, so this posts a message to the App to do so.
+void AppCoreThread::DoThreadCleanup()
+{
+	wxCommandEvent evt( pxEVT_AppCoreThread_Terminated );
+	wxGetApp().AddPendingEvent( evt );
+	_parent::DoThreadCleanup();
 }
 
 // This is used when the GS plugin is handling its own window.  Messages from the PAD
@@ -111,14 +126,14 @@ static const int pxID_PadHandler_Keydown = 8030;
 	extern int TranslateGDKtoWXK( u32 keysym );
 #endif
 
-void AppEmuThread::StateCheck( bool isCancelable )
+void AppCoreThread::StateCheck( bool isCancelable )
 {
 	_parent::StateCheck( isCancelable );
 
 	const keyEvent* ev = PADkeyEvent();
 	if( ev == NULL || (ev->key == 0) ) return;
 
-	GetPluginManager().KeyEvent( *ev );
+	m_plugins.KeyEvent( *ev );
 	m_kevt.SetEventType( ( ev->evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
 	const bool isDown = (ev->evt == KEYPRESS);
 
@@ -141,8 +156,13 @@ void AppEmuThread::StateCheck( bool isCancelable )
 	wxGetApp().PostPadKey( m_kevt );
 }
 
-void AppEmuThread::ApplySettings( const Pcsx2Config& src )
+// To simplify settings application rules and re-entry conditions, the main App's implementation
+// of ApplySettings requires that the caller manually ensure that the thread has been properly
+// suspended.  If the thread has mot been suspended, this call will fail *silently*.
+void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
+	if( !IsSuspended() ) return;
+
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is
 	// usually the desired behavior) will be ignored.
@@ -153,16 +173,13 @@ void AppEmuThread::ApplySettings( const Pcsx2Config& src )
 	SysCoreThread::ApplySettings( src );
 }
 
-__forceinline bool EmulationInProgress()
-{
-	return wxGetApp().EmuInProgress();
-}
-
+// Returns true if there is a "valid" virtual machine state from the user's perspective.  This
+// means the user has started the emulator and not issued a full reset.
 __forceinline bool SysHasValidState()
 {
-	return wxGetApp().EmuInProgress() || StateRecovery::HasState();
+	bool isRunning = HasCoreThread() ? GetCoreThread().IsRunning() : false;
+	return isRunning || StateCopy_HasFullState();
 }
-
 
 bool HandlePluginError( Exception::PluginError& ex )
 {
@@ -183,7 +200,7 @@ bool HandlePluginError( Exception::PluginError& ex )
 	return result;
 }
 
-sptr AppEmuThread::ExecuteTask()
+sptr AppCoreThread::ExecuteTask()
 {
 	try
 	{
@@ -195,7 +212,7 @@ sptr AppEmuThread::ExecuteTask()
 		m_plugins.Close();
 		if( ex.StreamName == g_Conf->FullpathToBios() )
 		{
-			GetPluginManager().Close();
+			m_plugins.Close();
 			bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
 				_("\n\nPress Ok to go to the BIOS Configuration Panel.") );
 
@@ -270,7 +287,7 @@ void Pcsx2App::ReadUserModeSettings()
 
 	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
 	usermodefile.SetPath( usrlocaldir.ToString() );
-	wxScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
+	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
 
 	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
 
@@ -401,10 +418,10 @@ bool Pcsx2App::OnInit()
     wxInitAllImageHandlers();
 	if( !wxApp::OnInit() ) return false;
 
-	g_Conf.reset( new AppConfig() );
+	g_Conf = new AppConfig();
 
-	m_StdoutRedirHandle.reset( NewPipeRedir(stdout) );
-	m_StderrRedirHandle.reset( NewPipeRedir(stderr) );
+	m_StdoutRedirHandle = NewPipeRedir(stdout);
+	m_StderrRedirHandle = NewPipeRedir(stderr);
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
 #define pxMessageBoxEventThing(func) \
@@ -416,11 +433,14 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
 	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
 	Connect( pxEVT_LoadPluginsComplete,	wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
+	
+	Connect( pxEVT_FreezeFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeFinished ) );
+	Connect( pxEVT_ThawFinished,	wxCommandEventHandler( Pcsx2App::OnThawFinished ) );
 
 	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
 	// User/Admin Mode Dual Setup:
-	//   Pcsx2 now supports two fundamental modes of operation.  The default is Classic mode,
+	//   PCSX2 now supports two fundamental modes of operation.  The default is Classic mode,
 	//   which uses the Current Working Directory (CWD) for all user data files, and requires
 	//   Admin access on Vista (and some Linux as well).  The second mode is the Vista-
 	//   compatible \documents folder usage.  The mode is determined by the presence and
@@ -456,7 +476,7 @@ bool Pcsx2App::OnInit()
 		SysDetect();
 		AppApplySettings();
 
-		m_CoreAllocs.reset( new SysCoreAllocations() );
+		m_CoreAllocs = new SysCoreAllocations();
 
 		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
 		{
@@ -577,6 +597,14 @@ void Pcsx2App::Ping() const
 // ----------------------------------------------------------------------------
 //         Pcsx2App Event Handlers
 // ----------------------------------------------------------------------------
+
+// Invoked by the AppCoreThread when the thread has terminated itself.
+void Pcsx2App::OnCoreThreadTerminated( wxCommandEvent& evt )
+{
+	if( HasMainFrame() )
+		GetMainFrame().ApplySettings();
+	m_CoreThread = NULL;
+}
 
 void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
 {
@@ -709,7 +737,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 // the glorious user, whomever (s)he-it might be.
 bool Pcsx2App::PrepForExit()
 {
-	m_CoreThread.reset();
+	m_CoreThread = NULL;
 	CleanupMess();
 
 	return true;
@@ -750,6 +778,36 @@ Pcsx2App::~Pcsx2App()
 	CleanupMess();
 }
 
+MainEmuFrame& Pcsx2App::GetMainFrame() const
+{
+	wxASSERT( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
+	wxASSERT( m_MainFrame != NULL );
+	return *m_MainFrame;
+}
+
+SysCoreThread& Pcsx2App::GetCoreThread() const
+{
+	wxASSERT( m_CoreThread != NULL );
+	return *m_CoreThread;
+}
+
+
+MainEmuFrame& Pcsx2App::GetMainFrameOrExcept() const
+{
+	if( m_MainFrame == NULL )
+		throw Exception::ObjectIsNull( "main application frame" );
+
+	return *m_MainFrame;
+}
+
+SysCoreThread& Pcsx2App::GetCoreThreadOrExcept() const
+{
+	if( !m_CoreThread )
+		throw Exception::ObjectIsNull( "core emulation thread" );
+
+	return *m_CoreThread;
+}
+
 void AppApplySettings( const AppConfig* oldconf )
 {
 	DevAssert( wxThread::IsMain(), "ApplySettings valid from the GUI thread only." );
@@ -780,9 +838,10 @@ void AppApplySettings( const AppConfig* oldconf )
 		}
 	}
 
-    // Both AppInvokes cause unhandled runtime errors in Linux.
-	AppInvoke( MainFrame, ApplySettings() );
-	AppInvoke( CoreThread, ApplySettings( g_Conf->EmuOptions ) );
+	if( HasMainFrame() )
+		GetMainFrame().ApplySettings();
+	if( HasCoreThread() )
+		GetCoreThread().ApplySettings( g_Conf->EmuOptions );
 }
 
 void AppLoadSettings()
@@ -793,7 +852,8 @@ void AppLoadSettings()
 	IniLoader loader( *conf );
 	g_Conf->LoadSave( loader );
 
-	AppInvoke( MainFrame, LoadRecentIsoList( *conf ) );
+	if( HasMainFrame() )
+		GetMainFrame().LoadRecentIsoList( *conf );
 }
 
 void AppSaveSettings()
@@ -804,7 +864,8 @@ void AppSaveSettings()
 	IniSaver saver( *conf );
 	g_Conf->LoadSave( saver );
 
-	AppInvoke( MainFrame, SaveRecentIsoList( *conf ) );
+	if( HasMainFrame() )
+		GetMainFrame().SaveRecentIsoList( *conf );
 }
 
 // --------------------------------------------------------------------------------------
@@ -815,9 +876,15 @@ void AppSaveSettings()
 // configured CDVD source device.
 void Pcsx2App::SysExecute()
 {
+	if( sys_resume_lock )
+	{
+		Console::WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
+		return;
+	}
+
 	SysReset();
 	LoadPluginsImmediate();
-	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
+	m_CoreThread = new AppCoreThread( *m_CorePlugins );
 	m_CoreThread->Resume();
 }
 
@@ -826,14 +893,34 @@ void Pcsx2App::SysExecute()
 // sources.
 void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
 {
+	if( sys_resume_lock )
+	{
+		Console::WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
+		return;
+	}
+
 	SysReset();
 	LoadPluginsImmediate();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	CDVDsys_ChangeSource( cdvdsrc );
 
-	m_CoreThread.reset( new AppEmuThread( *m_CorePlugins ) );
+	m_CoreThread = new AppCoreThread( *m_CorePlugins );
 	m_CoreThread->Resume();
 }
+
+void Pcsx2App::SysReset()
+{
+	m_CoreThread	= NULL;
+}
+
+// Returns the state of the emulated system (Virtual Machine).  Returns true if the
+// system is active, or is in the process of reporting or handling an error.  Returns
+// false if there is no active system (thread is shutdown or hasn't been started).
+bool Pcsx2App::SysIsActive() const
+{
+	return m_CoreThread && m_CoreThread->IsRunning();
+}
+
 
 void Pcsx2App::OpenGsFrame()
 {
@@ -857,11 +944,13 @@ void Pcsx2App::OnGsFrameClosed()
 
 
 // Writes text to console and updates the window status bar and/or HUD or whateverness.
+// FIXME: This probably isn't thread safe. >_<
 void SysStatus( const wxString& text )
 {
 	// mirror output to the console!
 	Console::Status( text.c_str() );
-	AppInvoke( MainFrame, SetStatusText( text ) );
+	if( HasMainFrame() )
+		GetMainFrame().SetStatusText( text );
 }
 
 // Executes the emulator using a saved/existing virtual machine state and currently
@@ -878,18 +967,48 @@ void SysExecute( CDVD_SourceType cdvdsrc )
 
 void SysResume()
 {
-	AppInvoke( CoreThread, Resume() );
+	if( !HasCoreThread() ) return;
+
+	if( sys_resume_lock )
+	{
+		Console::WriteLn( "SysResume: State is locked, ignoring Resume request!" );
+		return;
+	}
+
+	GetCoreThread().Resume();
 }
 
 void SysSuspend( bool closePlugins )
 {
+	if( !HasCoreThread() ) return;
+
 	if( closePlugins )
-		AppInvoke( CoreThread, Suspend(closePlugins) );
+		GetCoreThread().Suspend();
 	else
-		AppInvoke( CoreThread, ShortSuspend() );
+		GetCoreThread().ShortSuspend();
 }
 
 void SysReset()
 {
 	wxGetApp().SysReset();
+}
+
+bool HasMainFrame()
+{
+	return wxGetApp().HasMainFrame();
+}
+
+bool HasCoreThread()
+{
+	return wxGetApp().HasCoreThread();
+}
+
+MainEmuFrame&	GetMainFrame()
+{
+	return wxGetApp().GetMainFrame();
+}
+
+SysCoreThread&	GetCoreThread()
+{
+	return wxGetApp().GetCoreThread();
 }

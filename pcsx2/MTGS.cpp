@@ -107,6 +107,7 @@ mtgsThreadObject::mtgsThreadObject() :
 ,	m_lock_Stack()
 #endif
 {
+	m_name = L"MTGS";
 }
 
 void mtgsThreadObject::Start()
@@ -139,6 +140,7 @@ void mtgsThreadObject::PollStatus()
 
 mtgsThreadObject::~mtgsThreadObject() throw()
 {
+	_parent::Cancel();
 }
 
 void mtgsThreadObject::OnResumeReady()
@@ -244,8 +246,6 @@ void mtgsThreadObject::OpenPlugin()
 
 sptr mtgsThreadObject::ExecuteTask()
 {
-	SetName( "MTGS" );
-
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;
 #endif

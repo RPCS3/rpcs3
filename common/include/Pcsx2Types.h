@@ -105,23 +105,30 @@ typedef s32 sptr;
 //////////////////////////////////////////////////////////////////////////////////////////
 // A rough-and-ready cross platform 128-bit datatype, Non-SSE style.
 //
+// Note: These structs do not provide any additional constructors because C++ can't allow
+// the use of dataypes with constructors in unions (and since unions are ont of the primary
+// uses of these types, that measn we can't have constructors). Embedded functions for
+// performing explicity conversion from 64 and 32 bit values is provided instead.
+//
 #ifdef __cplusplus
 struct u128
 {
 	u64 lo;
 	u64 hi;
 
-	// Implicit conversion from u64
-	u128( u64 src ) :
-		lo( src )
-	,	hi( 0 ) {}
+	// Explicit conversion from u64
+	static u128 From64( u64 src )
+	{
+		u128 retval = { src, 0 };
+		return retval;
+	}
 
-	// Implicit conversion from u32
-	u128( u32 src ) :
-		lo( src )
-	,	hi( 0 ) {}
-
-	u128() {}
+	// Explicit conversion from u32
+	static u128 From32( u32 src )
+	{
+		u128 retval = { src, 0 };
+		return retval;
+	}
 };
 
 struct s128
@@ -129,17 +136,19 @@ struct s128
 	s64 lo;
 	s64 hi;
 
-	// Implicit conversion from u64
-	s128( s64 src ) :
-		lo( src )
-	,	hi( 0 ) {}
+	// explicit conversion from s64, with sign extension.
+	static s128 From64( s64 src )
+	{
+		s128 retval = { src, (src < 0) ? -1 : 0 };
+		return retval;
+	}
 
-	// Implicit conversion from u32
-	s128( s32 src ) :
-		lo( src )
-	,	hi( 0 ) {}
-
-	s128() {}
+	// explicit conversion from s32, with sign extension.
+	static s128 From64( s32 src )
+	{
+		s128 retval = { src, (src < 0) ? -1 : 0 };
+		return retval;
+	}
 };
 
 #else

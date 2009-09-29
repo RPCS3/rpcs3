@@ -26,6 +26,7 @@ class MainEmuFrame;
 class GSFrame;
 class ConsoleLogFrame;
 class PipeRedirectionBase;
+class AppCoreThread;
 
 #include "Utilities/HashMap.h"
 #include "Utilities/wxGuiTools.h"
@@ -39,6 +40,9 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_OpenModalDialog, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_LoadPluginsComplete, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_AppCoreThread_Terminated, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_FreezeFinished, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_ThawFinished, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // ------------------------------------------------------------------------
@@ -73,11 +77,11 @@ enum MenuIdentifiers
 	MenuId_SkipBiosToggle,		// enables the Bios Skip speedhack
 
 
-	MenuId_Emu_SuspendResume,			// suspends/resumes active emulation, retains plugin states
-	MenuId_Emu_Close,			// Closes the emulator (states are preserved)
-	MenuId_Emu_Reset,			// Issues a complete reset (wipes preserved states)
-	MenuId_Emu_LoadStates,		// Opens load states submenu
-	MenuId_Emu_SaveStates,		// Opens save states submenu
+	MenuId_Sys_SuspendResume,			// suspends/resumes active emulation, retains plugin states
+	MenuId_Sys_Close,			// Closes the emulator (states are preserved)
+	MenuId_Sys_Reset,			// Issues a complete reset (wipes preserved states)
+	MenuId_Sys_LoadStates,		// Opens load states submenu
+	MenuId_Sys_SaveStates,		// Opens save states submenu
 	MenuId_EnablePatches,
 
 	MenuId_State_Load,
@@ -298,15 +302,15 @@ public:
 protected:
 	wxImageList						m_ConfigImages;
 
-	wxScopedPtr<wxImageList>		m_ToolbarImages;
-	wxScopedPtr<wxBitmap>			m_Bitmap_Logo;
-	wxScopedPtr<PipeRedirectionBase>m_StdoutRedirHandle;
-	wxScopedPtr<PipeRedirectionBase>m_StderrRedirHandle;
+	ScopedPtr<wxImageList>			m_ToolbarImages;
+	ScopedPtr<wxBitmap>				m_Bitmap_Logo;
+	ScopedPtr<PipeRedirectionBase>	m_StdoutRedirHandle;
+	ScopedPtr<PipeRedirectionBase>	m_StderrRedirHandle;
 
 public:
-	wxScopedPtr<SysCoreAllocations>	m_CoreAllocs;
-	wxScopedPtr<PluginManager>		m_CorePlugins;
-	wxScopedPtr<SysCoreThread>		m_CoreThread;
+	ScopedPtr<SysCoreAllocations>	m_CoreAllocs;
+	ScopedPtr<PluginManager>		m_CorePlugins;
+	ScopedPtr<SysCoreThread>		m_CoreThread;
 
 protected:
 	// Note: Pointers to frames should not be scoped because wxWidgets handles deletion
@@ -333,16 +337,8 @@ public:
 
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc );
-	void SysReset()
-	{
-		m_CoreThread.reset();
-		m_CorePlugins.reset();
-	}
-
-	bool EmuInProgress() const
-	{
-		return m_CoreThread && m_CoreThread->IsRunning();
-	}
+	void SysReset();
+	bool SysIsActive() const;
 
 	const wxBitmap& GetLogoBitmap();
 	wxImageList& GetImgList_Config();
@@ -350,28 +346,13 @@ public:
 
 	const AppImageIds& GetImgId() const { return m_ImageId; }
 
-	MainEmuFrame& GetMainFrame() const
-	{
-		wxASSERT( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
-		wxASSERT( m_MainFrame != NULL );
-		return *m_MainFrame;
-	}
+	bool HasMainFrame() const { return m_MainFrame != NULL; }
+	bool HasCoreThread() const { return m_CoreThread != NULL; }
 
-	MainEmuFrame& GetMainFrameOrExcept() const
-	{
-		if( m_MainFrame == NULL )
-			throw Exception::ObjectIsNull( "main application frame" );
-
-		return *m_MainFrame;
-	}
-
-	SysCoreThread& GetCoreThreadOrExcept() const
-	{
-		if( !m_CoreThread )
-			throw Exception::ObjectIsNull( "core emulation thread" );
-
-		return *m_CoreThread;
-	}
+	MainEmuFrame&	GetMainFrame() const;
+	SysCoreThread&	GetCoreThread() const;
+	MainEmuFrame&	GetMainFrameOrExcept() const;
+	SysCoreThread&	GetCoreThreadOrExcept() const;
 
 	void OpenGsFrame();
 	void OnGsFrameClosed();
@@ -412,9 +393,14 @@ protected:
 	void OnLoadPluginsComplete( wxCommandEvent& evt );
 	void OnSemaphorePing( wxCommandEvent& evt );
 	void OnOpenModalDialog( wxCommandEvent& evt );
+	void OnCoreThreadTerminated( wxCommandEvent& evt );
+
+	void OnFreezeFinished( wxCommandEvent& evt );
+	void OnThawFinished( wxCommandEvent& evt );
+
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void OnEmuKeyDown( wxKeyEvent& evt );
-
+	
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior
 	// ----------------------------------------------------------------------------
@@ -432,10 +418,10 @@ protected:
 
 
 // --------------------------------------------------------------------------------------
-//  AppEmuThread class
+//  AppCoreThread class
 // --------------------------------------------------------------------------------------
 
-class AppEmuThread : public SysCoreThread
+class AppCoreThread : public SysCoreThread
 {
 	typedef SysCoreThread _parent;
 
@@ -443,15 +429,16 @@ protected:
 	wxKeyEvent		m_kevt;
 
 public:
-	AppEmuThread( PluginManager& plugins );
-	virtual ~AppEmuThread() throw();
+	AppCoreThread( PluginManager& plugins );
+	virtual ~AppCoreThread() throw();
 
 	virtual void Suspend( bool isBlocking=true );
 	virtual void StateCheck( bool isCancelable=true );
 	virtual void ApplySettings( const Pcsx2Config& src );
-	virtual void OnResumeReady();
 
 protected:
+	virtual void OnResumeReady();
+	virtual void DoThreadCleanup();
 	sptr ExecuteTask();
 };
 
@@ -470,6 +457,7 @@ public:
 	bool IsReentrant() const { return Counter > 1; }
 };
 
+extern bool sys_resume_lock;
 
 extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
 extern void LoadPluginsPassive();
@@ -477,12 +465,12 @@ extern void LoadPluginsImmediate();
 extern void UnloadPlugins();
 
 extern bool HandlePluginError( Exception::PluginError& ex );
-extern bool EmulationInProgress();
-extern bool SysHasValidState();
 
 extern void AppLoadSettings();
 extern void AppSaveSettings();
 extern void AppApplySettings( const AppConfig* oldconf=NULL );
+
+extern bool SysHasValidState();
 
 extern void SysStatus( const wxString& text );
 extern void SysSuspend( bool closePlugins = true );
@@ -491,36 +479,8 @@ extern void SysReset();
 extern void SysExecute();
 extern void SysExecute( CDVD_SourceType cdvdsrc );
 
+extern bool HasMainFrame();
+extern bool HasCoreThread();
 
-// --------------------------------------------------------------------------------------
-//  AppInvoke  macro
-// --------------------------------------------------------------------------------------
-// This handy macro provides a safe way to invoke functions on objects that may or may not
-// exist.  If the object is null, the function is not called.  Useful for calling things that
-// are cosmetic optional, such as logging or status bars.
-//
-// Performance Note:  This macro uses exception handling, and should not be used in the
-//   context of tight loops or performant code.
-//
-// Parameters:
-//   obj   - name of the object.  The name must have a matching accessor in Pcsx2App in the
-//           format of GetSomethingOrExcept(), where 'Something' would be the object name.
-//   runme - The function to call, complete with parameters.  Note that parameters that
-//           perform actions (such as creating new objects or something) won't be run unless
-//           the 'obj' itself exists.
-//
-#define AppInvoke( obj, runme ) \
-do { \
-	try { \
-		wxGetApp().Get##obj##OrExcept().runme; \
-	} \
-	catch( Exception::ObjectIsNull& ) { } \
-} while( false )
-
-#define AppInvokeBool( obj, runme, dest ) \
-{ \
-	try { \
-		(dest) = wxGetApp().Get##obj##OrExcept().runme; \
-	} \
-	catch( Exception::ObjectIsNull& ) { } \
-} while( false )
+extern MainEmuFrame&	GetMainFrame();
+extern SysCoreThread&	GetCoreThread();

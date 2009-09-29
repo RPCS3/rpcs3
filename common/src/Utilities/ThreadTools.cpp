@@ -16,6 +16,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Threading.h"
+#include "wxBaseTools.h"
 
 #include <wx/datetime.h>
 #include <wx/thread.h>
@@ -37,11 +38,13 @@ namespace Threading
 	}
 
 	PersistentThread::PersistentThread() :
-		m_thread()
+		m_name( L"PersistentThread" )
+	,	m_thread()
 	,	m_sem_event()
 	,	m_sem_finished()
+	,	m_lock_start( true )	// recursive mutexing!
 	,	m_returncode( 0 )
-	,	m_detached( false )
+	,	m_detached( true )		// start out with m_thread in detached/invalid state
 	,	m_running( false )
 	{
 	}
@@ -53,40 +56,42 @@ namespace Threading
 	// your sister, and then cheating on her with your daughter.
 	PersistentThread::~PersistentThread() throw()
 	{
-		if( !m_running ) return;
-
-		wxASSERT( !IsSelf() );		// not allowed from our own thread.
-
-		if( !_InterlockedExchange( &m_detached, true ) )
+		if( m_running )
 		{
 #if wxUSE_GUI
 			m_sem_finished.WaitGui();
 #else
 			m_sem_finished.Wait();
 #endif
-			m_running = false;
 		}
+
+		Detach();
 	}
 
 	// This function should not be called from the owner thread.
 	void PersistentThread::Start()
 	{
+		ScopedLock startlock( m_lock_start );		// Prevents sudden parallel startup
 		if( m_running ) return;
+
+		Detach();		// clean up previous thread, if one exists.
 		m_sem_finished.Reset();
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 			throw Exception::ThreadCreationError();
 
-		m_running = true;
+		m_detached = false;
 	}
 
+	// Returns: TRUE if the detachment was performed, or FALSE if the thread was
+	// already detached or isn't running at all.
 	// This function should not be called from the owner thread.
-	void PersistentThread::Detach()
+	bool PersistentThread::Detach()
 	{
-		if( !m_running ) return;
-		if( _InterlockedExchange( &m_detached, true ) ) return;
-
 		wxASSERT( !IsSelf() );		// not allowed from our own thread.
+
+		if( _InterlockedExchange( &m_detached, true ) ) return false;
 		pthread_detach( m_thread );
+		return true;
 	}
 
 	// Remarks:
@@ -102,15 +107,15 @@ namespace Threading
 	//
 	void PersistentThread::Cancel( bool isBlocking )
 	{
+		wxASSERT( !IsSelf() );
 	    if( !m_running ) return;
 
-		if( _InterlockedExchange( &m_detached, true ) )
+		if( m_detached )
 		{
 			Console::Notice( "Threading Warning: Attempted to cancel detached thread; Ignoring..." );
 			return;
 		}
 
-		wxASSERT( !IsSelf() );
 		pthread_cancel( m_thread );
 
 		if( isBlocking )
@@ -121,8 +126,6 @@ namespace Threading
 			m_sem_finished.Wait();
 #endif
 		}
-		else
-			pthread_detach( m_thread );
 	}
 
 	// Blocks execution of the calling thread until this thread completes its task.  The
@@ -153,14 +156,10 @@ namespace Threading
 
 	bool PersistentThread::IsRunning() const
 	{
-	    if (!m_running) return false;
-	    
-		if( !!m_detached )
-			return !!m_running;
-		else
-			return ( ESRCH != pthread_kill( m_thread, 0 ) );
+	    return !!m_running;
 	}
 
+	// Gets the return code of the thread.
 	// Exceptions:
 	//   InvalidOperation - thrown if the thread is still running or has never been started.
 	//
@@ -171,13 +170,67 @@ namespace Threading
 
 		return m_returncode;
 	}
+	
+	// Throws an exception if the thread encountered one.  Uses the BaseException's Rethrow() method,
+	// which ensures the exception type remains consistent.  Debuggable stacktraces will be lost, since
+	// the thread will have allowed itself to terminate properly.
+	void PersistentThread::RethrowException() const
+	{
+		if( !m_except ) return;
+		m_except->Rethrow();
+	}
 
 	// invoked when canceling or exiting the thread.
 	void PersistentThread::DoThreadCleanup()
 	{
 		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
-		_InterlockedExchange( &m_running, false );
+		m_running = false;
 		m_sem_finished.Post();
+	}
+
+	wxString PersistentThread::GetName() const
+	{
+		return m_name;
+	}
+
+	void PersistentThread::_internal_execute()
+	{
+		m_running = true;
+		DoSetThreadName( m_name );
+
+		try {
+			m_returncode = ExecuteTask();
+		}
+		catch( std::logic_error& ex )
+		{
+			throw Exception::LogicError( wxsFormat( L"(thread: %s) STL Logic Error: %s\n\t%s",
+				GetName().c_str(), wxString::FromUTF8( ex.what() ) )
+			);
+		}
+		catch( Exception::LogicError& ex )
+		{
+			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName() ) + m_except->DiagMsg();
+			ex.Rethrow();
+		}
+		catch( std::runtime_error& ex )
+		{
+			m_except = new Exception::RuntimeError(
+				// Diagnostic message:
+				wxsFormat( L"(thread: %s) STL Runtime Error: %s\n\t%s",
+					GetName().c_str(), wxString::FromUTF8( ex.what() )
+				),
+				
+				// User Message (not translated, std::exception doesn't have that kind of fancy!
+				wxsFormat( L"A runtime error occurred in %s:\n\n%s (STL)",
+					GetName().c_str(), wxString::FromUTF8( ex.what() )
+				)
+			);
+		}
+		catch( Exception::RuntimeError& ex )
+		{
+			m_except = ex.Clone();
+			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName() ) + m_except->DiagMsg();
+		}
 	}
 
 	void* PersistentThread::_internal_callback( void* itsme )
@@ -186,17 +239,26 @@ namespace Threading
 		PersistentThread& owner = *((PersistentThread*)itsme);
 
 		pthread_cleanup_push( _pt_callback_cleanup, itsme );
-		owner.m_returncode = owner.ExecuteTask();
+		owner._internal_execute();
 		pthread_cleanup_pop( true );
-
 		return (void*)owner.m_returncode;
 	}
+
+	void PersistentThread::DoSetThreadName( const wxString& name )
+	{
+		DoSetThreadName( wxToUTF8(name) );
+	}
 	
-	void PersistentThread::SetName( __unused const char* name )
+	void PersistentThread::DoSetThreadName( __unused const char* name )
 	{
 		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
 
 	#ifdef _WINDOWS_
+	
+		// This code sample was borrowed form some obscure MSDN article.
+		// In a rare bout of sanity, it's an actual Micrsoft-published hack
+		// that actually works!
+	
 		static const int MS_VC_EXCEPTION = 0x406D1388;
 
 		#pragma pack(push,8)
@@ -210,10 +272,10 @@ namespace Threading
 		#pragma pack(pop)
 
 		THREADNAME_INFO info;
-		info.dwType = 0x1000;
-		info.szName = name;
-		info.dwThreadID = GetCurrentThreadId();
-		info.dwFlags = 0;
+		info.dwType		= 0x1000;
+		info.szName		= name;
+		info.dwThreadID	= GetCurrentThreadId();
+		info.dwFlags	= 0;
 
 		__try
 		{
@@ -478,6 +540,11 @@ namespace Threading
 	void MutexLock::Unlock()
 	{
 		pthread_mutex_unlock( &mutex );
+	}
+
+	bool MutexLock::TryLock()
+	{
+		return EBUSY != pthread_mutex_trylock( &mutex );
 	}
 
 // --------------------------------------------------------------------------------------

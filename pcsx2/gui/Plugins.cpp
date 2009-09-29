@@ -63,13 +63,15 @@ protected:
 	int ExecuteTask();
 };
 
-static wxScopedPtr<LoadPluginsTask> _loadTask;
+static ScopedPtr<LoadPluginsTask> _loadTask;
 
 LoadPluginsTask::~LoadPluginsTask() throw()
 {
-	_loadTask.release();
+	if( _loadTask )
+		_loadTask.DetachPtr();		// avoids recursive deletion
+
 	PersistentThread::Cancel();
-	_loadTask.reset();
+	_loadTask = NULL;
 }
 
 int LoadPluginsTask::ExecuteTask()
@@ -111,10 +113,10 @@ int LoadPluginsTask::ExecuteTask()
 
 int EnumeratePluginsInFolder( const wxDirName& searchpath, wxArrayString* dest )
 {
-	wxScopedPtr<wxArrayString> placebo;
+	ScopedPtr<wxArrayString> placebo;
 	wxArrayString* realdest = dest;
 	if( realdest == NULL )
-		placebo.reset( realdest = new wxArrayString() );
+		placebo = realdest = new wxArrayString();		// placebo is our /dev/null -- gets deleted when done
 
 #ifdef __WXMSW__
 	// Windows pretty well has a strict "must end in .dll" rule.
@@ -137,8 +139,8 @@ void Pcsx2App::OnReloadPlugins( wxCommandEvent& evt )
 void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 {
 	// scoped ptr ensures the thread object is cleaned up even on exception:
-	wxScopedPtr<LoadPluginsTask> killTask( (LoadPluginsTask*)evt.GetClientData() );
-	m_CorePlugins.reset( killTask->Result );
+	ScopedPtr<LoadPluginsTask> killTask( (LoadPluginsTask*)evt.GetClientData() );
+	m_CorePlugins = killTask->Result;
 
 	if( !m_CorePlugins )
 	{
@@ -153,8 +155,8 @@ void Pcsx2App::ReloadPlugins()
 {
 	if( _loadTask ) return;
 
-	m_CoreThread.reset();
-	m_CorePlugins.reset();
+	m_CoreThread	= NULL;
+	m_CorePlugins	= NULL;
 
 	wxString passins[PluginId_Count];
 
@@ -166,7 +168,7 @@ void Pcsx2App::ReloadPlugins()
 			passins[pi->id] = g_Conf->FullpathTo( pi->id );
 	} while( ++pi, pi->shortname != NULL );
 
-	_loadTask.reset( new LoadPluginsTask( passins ) );
+	_loadTask.Delete() = new LoadPluginsTask( passins );
 	// ...  and when it finishes it posts up a OnLoadPluginsComplete().  Bye. :)
 }
 
@@ -203,5 +205,5 @@ void LoadPluginsImmediate()
 
 void UnloadPlugins()
 {
-	wxGetApp().m_CorePlugins.reset();
+	wxGetApp().m_CorePlugins = NULL;
 }

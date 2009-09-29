@@ -85,12 +85,12 @@ __forceinline void xWrite64( u64 val )
 	xWrite( val );
 }
 
-const xAddressIndexerBase ptr;
-const xAddressIndexer<u128> ptr128;
-const xAddressIndexer<u64> ptr64;
-const xAddressIndexer<u32> ptr32;
-const xAddressIndexer<u16> ptr16;
-const xAddressIndexer<u8> ptr8;
+const xAddressIndexerBase	ptr;
+const xAddressIndexer<u128>	ptr128;
+const xAddressIndexer<u64>	ptr64;
+const xAddressIndexer<u32>	ptr32;
+const xAddressIndexer<u16>	ptr16;
+const xAddressIndexer<u8>	ptr8;
 
 // ------------------------------------------------------------------------
 
