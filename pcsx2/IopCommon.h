@@ -15,7 +15,7 @@
  
 #pragma once
 
-#define PSXCLK	(36864000ULL)	/* 36.864 Mhz */
+static const s64 PSXCLK = 36864000;	/* 36.864 Mhz */
 
 #include "R3000A.h"
 #include "Common.h"
