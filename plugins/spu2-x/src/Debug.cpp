@@ -15,7 +15,7 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Spu2.h"
+#include "Global.h"
 
 int crazy_debug=0;
 

@@ -15,13 +15,33 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Global.h"
 #include "Dialogs.h"
 
-int SoundtouchCfg::SequenceLenMS = 63;
-int SoundtouchCfg::SeekWindowMS = 16;
-int SoundtouchCfg::OverlapMS = 7;
+#include "SoundTouch/SoundTouch.h"
 
-void SoundtouchCfg::ClampValues()
+static int SequenceLenMS = 63;
+static int SeekWindowMS = 16;
+static int OverlapMS = 7;
+
+// Timestretch Slider Bounds, Min/Max
+static const int SequenceLen_Min = 30;
+static const int SequenceLen_Max = 90;
+
+static const int SeekWindow_Min = 10;
+static const int SeekWindow_Max = 32;
+
+static const int Overlap_Min = 3;
+static const int Overlap_Max = 15;
+
+void SoundtouchCfg::ApplySettings( soundtouch::SoundTouch& sndtouch )
+{
+	sndtouch.setSetting( SETTING_SEQUENCE_MS,	SequenceLenMS );
+	sndtouch.setSetting( SETTING_SEEKWINDOW_MS,	SeekWindowMS );
+	sndtouch.setSetting( SETTING_OVERLAP_MS,	OverlapMS );
+}
+
+static void ClampValues()
 {
 	Clampify( SequenceLenMS, SequenceLen_Min, SequenceLen_Max );
 	Clampify( SeekWindowMS, SeekWindow_Min, SeekWindow_Max );
@@ -101,7 +121,7 @@ void SoundtouchCfg::OpenDialog( HWND hWnd )
 	ret = DialogBox( hInstance, MAKEINTRESOURCE(IDD_CONFIG_SOUNDTOUCH), hWnd, (DLGPROC)DialogProc );
 	if(ret==-1)
 	{
-		MessageBoxEx(GetActiveWindow(),L"Error Opening the Soundtouch advanced dialog.",L"OMG ERROR!",MB_OK,0);
+		MessageBoxEx(GetActiveWindow(), L"Error Opening the Soundtouch advanced dialog.", L"OMG ERROR!", MB_OK, 0);
 		return;
 	}
 	ReadSettings();

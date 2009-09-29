@@ -16,9 +16,8 @@
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
-#include <stdio.h>
-
-#include "Spu2.h"
+#include "Global.h"
+#include "PS2E-spu2.h"
 
 FILE* s2rfile;
 
@@ -115,6 +114,7 @@ void dummy7()
 #define Cread(a,b,c,d) if(fread(a,b,c,d)<b) break;
 
 #ifdef _MSC_VER
+#include "Windows/Dialogs.h"
 EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow)
 {
 	// load file

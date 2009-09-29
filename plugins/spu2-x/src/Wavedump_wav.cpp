@@ -15,11 +15,7 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdexcept>
-#include <new>
-
-#include "Spu2.h"
-
+#include "Global.h"
 #include "SoundTouch/WavFile.h"
 
 static WavOutFile* _new_WavOutFile( const char* destfile )
@@ -52,7 +48,7 @@ namespace WaveDump
 		{
 			for( int srcidx=0; srcidx<CoreSrc_Count; srcidx++ )
 			{
-				SAFE_DELETE_OBJ( m_CoreWav[cidx][srcidx] );
+				safe_delete( m_CoreWav[cidx][srcidx] );
 				
 				sprintf( wavfilename, "logs\\spu2x-Core%d-%s.wav",
 					cidx, m_tbl_CoreOutputTypeNames[ srcidx ] );
@@ -77,7 +73,7 @@ namespace WaveDump
 		{
 			for( int srcidx=0; srcidx<CoreSrc_Count; srcidx++ )
 			{
-				SAFE_DELETE_OBJ( m_CoreWav[cidx][srcidx]  );
+				safe_delete( m_CoreWav[cidx][srcidx]  );
 			}
 		}
 	}
@@ -99,7 +95,7 @@ WavOutFile* m_wavrecord = NULL;
 
 void RecordStart()
 {
-	SAFE_DELETE_OBJ( m_wavrecord );
+	safe_delete( m_wavrecord );
 
 	try
 	{
@@ -114,7 +110,7 @@ void RecordStart()
 
 void RecordStop()
 {
-	SAFE_DELETE_OBJ( m_wavrecord );
+	safe_delete( m_wavrecord );
 }
 
 void RecordWrite( const StereoOut16& sample )

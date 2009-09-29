@@ -15,7 +15,21 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Global.h"
 #include "Dialogs.h"
+
+void SysMessage(const char *fmt, ...)
+{
+	va_list list;
+	char tmp[512];
+	wchar_t wtmp[512];
+
+	va_start(list,fmt);
+	sprintf_s(tmp,fmt,list);
+	va_end(list);
+	swprintf_s(wtmp, L"%S", tmp);
+	MessageBox(0, wtmp, L"SPU2-X System Message", 0);
+}
 
 //////
 

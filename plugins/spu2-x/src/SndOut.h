@@ -1,25 +1,21 @@
-//GiGaHeRz's SPU2 Driver
-//Copyright (c) 2003-2008, David Quintana <gigaherz@gmail.com>
-//
-//This library is free software; you can redistribute it and/or
-//modify it under the terms of the GNU Lesser General Public
-//License as published by the Free Software Foundation; either
-//version 2.1 of the License, or (at your option) any later version.
-//
-//This library is distributed in the hope that it will be useful,
-//but WITHOUT ANY WARRANTY; without even the implied warranty of
-//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-//Lesser General Public License for more details.
-//
-//You should have received a copy of the GNU Lesser General Public
-//License along with this library; if not, write to the Free Software
-//Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-//
-#ifndef SNDOUT_H_INCLUDE
-#define SNDOUT_H_INCLUDE
+/* SPU2-X, A plugin for Emulating the Sound Processing Unit of the Playstation 2
+ * Developed and maintained by the Pcsx2 Development Team.
+ * 
+ * Original portions from SPU2ghz are (c) 2008 by David Quintana [gigaherz]
+ *
+ * SPU2-X is free software: you can redistribute it and/or modify it under the terms
+ * of the GNU Lesser General Public License as published by the Free Software Found-
+ * ation, either version 3 of the License, or (at your option) any later version.
+ *
+ * SPU2-X is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#include "BaseTypes.h"
-#include "Lowpass.h"
+#pragma once
 
 // Number of stereo samples per SndOut block.
 // All drivers must work in units of this size when communicating with
@@ -35,7 +31,7 @@ static const int SndOutVolumeShift = 13;
 // is too problematic. :)
 static const int SampleRate = 48000;
 
-int FindOutputModuleById( const wchar_t* omodid );
+extern int FindOutputModuleById( const wchar_t* omodid );
 
 struct StereoOut16
 {
@@ -231,9 +227,9 @@ struct Stereo51Out16DplII
 			s32 Tfl=(RAccum)*255/(LAccum);
 			s32 Tfr=(LAccum)*255/(RAccum);
 
-			int gMax = max(Tfl,Tfr);
-			Tfl=Tfl*255/gMax;
-			Tfr=Tfr*255/gMax;
+			int gMax = std::max(Tfl,Tfr);
+			Tfl = Tfl*255/gMax;
+			Tfr = Tfr*255/gMax;
 
 			if(Tfl>255) Tfl=255;
 			if(Tfr>255) Tfr=255;
@@ -393,12 +389,6 @@ public:
 	static s32 Test();
 	static void ClearContents();
 
-#ifdef _MSC_VER
-	static void Configure(HWND parent, u32 module );
-#else
-	static void Configure(uptr parent, u32 module );
-#endif
-
 	// Note: When using with 32 bit output buffers, the user of this function is responsible
 	// for shifting the values to where they need to be manually.  The fixed point depth of
 	// the sample output is determined by the SndOutVolumeShift, which is the number of bits
@@ -474,11 +464,7 @@ public:
 	virtual s32  Test() const=0;
 
 	// Gui function: Used to open the configuration box for this driver.
-#ifdef _MSC_VER
-	virtual void Configure(HWND parent)=0;
-#else
 	virtual void Configure(uptr parent)=0;
-#endif
 
 	// Loads settings from the INI file for this driver
 	virtual void ReadSettings()=0;
@@ -503,4 +489,13 @@ extern SndOutModule* XAudio2Out;
 
 extern SndOutModule* mods[];
 
-#endif // SNDOUT_H_INCLUDE
+// =====================================================================================================
+
+extern void RecordStart();
+extern void RecordStop();
+extern void RecordWrite( const StereoOut16& sample );
+
+extern s32  DspLoadLibrary(wchar_t *fileName, int modNum);
+extern void DspCloseLibrary();
+extern int  DspProcess(s16 *buffer, int samples);
+extern void DspUpdate(); // to let the Dsp process window messages

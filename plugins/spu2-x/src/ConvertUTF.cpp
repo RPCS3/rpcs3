@@ -38,12 +38,8 @@
 
 ------------------------------------------------------------------------ */
 
-#include "PS2Etypes.h"
-
-#include <stdexcept>
-#include <string>
+#include "Global.h"
 #include "ConvertUTF.h"
-
 
 using std::string;
 using std::wstring;

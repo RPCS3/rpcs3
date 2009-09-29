@@ -15,11 +15,13 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Global.h"
+
 #define _WIN32_DCOM
-
 #include "Dialogs.h"
-#include <xaudio2.h>
 
+#include <atlbase.h>
+#include <xaudio2.h>
 
 namespace Exception
 {
@@ -181,7 +183,7 @@ private:
 			killMe->FlushSourceBuffers();
 			EnterCriticalSection( &cs );
 			killMe->DestroyVoice();
-			SAFE_DELETE_ARRAY( qbuffer );
+			safe_delete_array( qbuffer );
 			LeaveCriticalSection( &cs );
 			DeleteCriticalSection( &cs );
 		}
@@ -225,7 +227,7 @@ private:
 
 	};
 
-	IXAudio2* pXAudio2;
+	CComPtr<IXAudio2> pXAudio2;
 	IXAudio2MasteringVoice* pMasteringVoice;
 	BaseStreamingVoice* voiceContext;
 
@@ -314,7 +316,7 @@ public:
 		catch( Exception::XAudio2Error& ex )
 		{
 			SysMessage( ex.CMessage() );
-			SAFE_RELEASE( pXAudio2 );
+			pXAudio2.Release();
 			CoUninitialize();
 			return -1;
 		}
@@ -333,7 +335,7 @@ public:
 		// But doing no cleanup at all causes XA2 under XP to crash.  So after much trial
 		// and error we found a happy compromise as follows:
 
-		SAFE_DELETE_OBJ( voiceContext );
+		safe_delete( voiceContext );
 
 		voiceContext = NULL;
 
@@ -342,12 +344,11 @@ public:
 
 		pMasteringVoice = NULL;
 
-		SAFE_RELEASE( pXAudio2 );
-
+		pXAudio2.Release();
 		CoUninitialize();
 	}
 
-	virtual void Configure(HWND parent)
+	virtual void Configure(uptr parent)
 	{
 	}
 

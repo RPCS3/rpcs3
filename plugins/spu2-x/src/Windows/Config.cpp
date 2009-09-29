@@ -15,17 +15,16 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Global.h"
 #include "Dialogs.h"
 
-#ifdef SPU2X_DEVBUILD
+#ifdef PCSX2_DEVBUILD
 static const int LATENCY_MAX = 3000;
 #else
 static const int LATENCY_MAX = 750;
 #endif
 
 static const int LATENCY_MIN = 40;
-
-int AutoDMAPlayRate[2] = {0,0};
 
 // MIXING
 int Interpolation = 1;
@@ -57,9 +56,6 @@ bool StereoExpansionEnabled = false;
 
 void ReadSettings()
 {
-	AutoDMAPlayRate[0] = CfgReadInt(L"MIXING",L"AutoDMA_Play_Rate_0",0);
-	AutoDMAPlayRate[1] = CfgReadInt(L"MIXING",L"AutoDMA_Play_Rate_1",0);
-
 	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
 
 	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
@@ -106,9 +102,6 @@ void ReadSettings()
 void WriteSettings()
 {
 	CfgWriteInt(L"MIXING",L"Interpolation",Interpolation);
-
-	CfgWriteInt(L"MIXING",L"AutoDMA_Play_Rate_0",AutoDMAPlayRate[0]);
-	CfgWriteInt(L"MIXING",L"AutoDMA_Play_Rate_1",AutoDMAPlayRate[1]);
 
 	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
 
@@ -204,9 +197,11 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				break;
 
 				case IDC_OUTCONF:
-					SndBuffer::Configure( hWnd,
-						(int)SendMessage(GetDlgItem(hWnd,IDC_OUTPUT),CB_GETCURSEL,0,0)
-					);
+				{
+					const int module = (int)SendMessage(GetDlgItem(hWnd,IDC_OUTPUT),CB_GETCURSEL,0,0);
+					if( mods[module] == NULL ) break;
+					mods[module]->Configure((uptr)hWnd);
+				}
 				break;
 				
 				case IDC_OPEN_CONFIG_DEBUG:

@@ -103,8 +103,6 @@ public:
 	
 protected:
 	static void ClampValues();
-	//static bool CALLBACK DialogProc(uptr hWnd,u32 uMsg,WPARAM wParam,LPARAM lParam);
-
 };
 
 

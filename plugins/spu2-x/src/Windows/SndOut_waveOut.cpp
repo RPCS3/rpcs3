@@ -15,8 +15,8 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Global.h"
 #include "Dialogs.h"
-#include <windows.h>
 
 
 class WaveOutModule: public SndOutModule
@@ -197,7 +197,7 @@ public:
 		}
 		waveOutClose(hwodevice);
 
-		SAFE_DELETE_ARRAY( qbuffer );
+		safe_delete_array( qbuffer );
 	}
 
 private:
@@ -271,13 +271,13 @@ private:
 	}
 
 public:
-	virtual void Configure(HWND parent)
+	virtual void Configure(uptr parent)
 	{
 		INT_PTR ret;
-		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_WAVEOUT),GetActiveWindow(),(DLGPROC)ConfigProc,1);
+		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_WAVEOUT), (HWND)parent, (DLGPROC)ConfigProc,1);
 		if(ret==-1)
 		{
-			MessageBoxEx(GetActiveWindow(), L"Error Opening the config dialog.", L"OMG ERROR!", MB_OK, 0);
+			MessageBoxEx((HWND)parent, L"Error Opening the config dialog.", L"OMG ERROR!", MB_OK, 0);
 			return;
 		}
 	}

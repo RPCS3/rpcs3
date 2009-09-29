@@ -15,7 +15,7 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Spu2.h"
+#include "Global.h"
 
 
 StereoOut32 StereoOut32::Empty( 0, 0 );
@@ -56,11 +56,7 @@ public:
 	s32  Init()  { return 0; }
 	void Close() { }
 	s32  Test() const { return 0; }
-#ifdef _MSC_VER
-	void Configure(HWND parent)  { }
-#else
 	void Configure(uptr parent)  { }
-#endif
 	bool Is51Out() const { return false; }
 	int GetEmptySampleCount() const { return 0; }
 	
@@ -290,9 +286,9 @@ void SndBuffer::Cleanup()
 {
 	mods[OutputModule]->Close();
 
-	SAFE_DELETE_ARRAY( m_buffer );
-	SAFE_DELETE_ARRAY( sndTempBuffer );
-	SAFE_DELETE_ARRAY( sndTempBuffer16 );
+	safe_delete_array( m_buffer );
+	safe_delete_array( sndTempBuffer );
+	safe_delete_array( sndTempBuffer16 );
 }
 
 int SndBuffer::m_dsp_progress = 0;
@@ -374,16 +370,4 @@ s32 SndBuffer::Test()
 		return -1;
 
 	return mods[OutputModule]->Test();
-}
-
-#ifdef _MSC_VER
-void SndBuffer::Configure(HWND parent, u32 module )
-#else
-void SndBuffer::Configure(uptr parent, u32 module )
-#endif
-{
-	if( mods[module] == NULL )
-		return;
-
-	mods[module]->Configure(parent);
 }

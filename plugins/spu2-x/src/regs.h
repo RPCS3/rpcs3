@@ -147,21 +147,21 @@ Core attributes (SD_C)
 
 *********************************************************************/
 
-#define SPDIF_OUT_OFF        0x0000		//no spdif output
-#define SPDIF_OUT_PCM        0x0020		//encode spdif from spu2 pcm output
-#define SPDIF_OUT_BYPASS     0x0100		//bypass spu2 processing
+#define SPDIF_OUT_OFF				0x0000		// no spdif output
+#define SPDIF_OUT_PCM				0x0020		// encode spdif from spu2 pcm output
+#define SPDIF_OUT_BYPASS			0x0100		// bypass spu2 processing
 
-#define SPDIF_MODE_BYPASS_BITSTREAM 0x0002	//bypass mode for digital bitstream data
-#define SPDIF_MODE_BYPASS_PCM       0x0000	//bypass mode for pcm data (using analog output)
+#define SPDIF_MODE_BYPASS_BITSTREAM	0x0002		// bypass mode for digital bitstream data
+#define SPDIF_MODE_BYPASS_PCM		0x0000		// bypass mode for pcm data (using analog output)
 
-#define SPDIF_MODE_MEDIA_CD  0x0800		//source media is a CD
-#define SPDIF_MODE_MEDIA_DVD 0x0000		//source media is a DVD
+#define SPDIF_MODE_MEDIA_CD			0x0800		// source media is a CD
+#define SPDIF_MODE_MEDIA_DVD		0x0000		// source media is a DVD
 
-#define SPDIF_MEDIA_CDVD     0x0200
-#define SPDIF_MEDIA_400      0x0000
+#define SPDIF_MEDIA_CDVD			0x0200
+#define SPDIF_MEDIA_400				0x0000
 
-#define SPDIF_PROTECT_NORMAL      0x0000	// spdif stream is not protected
-#define SPDIF_PROTECT_PROHIBIT    0x8000	// spdif stream can't be copied
+#define SPDIF_PROTECT_NORMAL		0x0000		// spdif stream is not protected
+#define SPDIF_PROTECT_PROHIBIT		0x8000		// spdif stream can't be copied
 
 /********************************************************************/
 

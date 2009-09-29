@@ -19,10 +19,10 @@
 #ifndef _REGTABLE_H_
 #define _REGTABLE_H_
 
-#define U16P(x)    ( (u16*)&(x) )
+#define U16P(x)		( (u16*)&(x) )
 
 // Returns the hiword of a 32 bit integer.
-#define U16P_HI(x) ( ((u16*)&(x))+1 )
+#define U16P_HI(x)	( ((u16*)&(x))+1 )
 
 // Yay!  Global namespace pollution 101!
 extern const u16 zero;

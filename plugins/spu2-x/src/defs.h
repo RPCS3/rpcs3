@@ -17,12 +17,27 @@
 
 #pragma once
 
+#include "Mixer.h"
+
+// --------------------------------------------------------------------------------------
+//  SPU2 Memory Indexers
+// --------------------------------------------------------------------------------------
+
+#define spu2Rs16(mmem)	(*(s16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))
+#define spu2Ru16(mmem)	(*(u16 *)((s8 *)spu2regs + ((mmem) & 0x1fff)))
+
+extern s16*	__fastcall GetMemPtr(u32 addr);
+extern s16	__fastcall spu2M_Read( u32 addr );
+extern void	__fastcall spu2M_Write( u32 addr, s16 value );
+extern void	__fastcall spu2M_Write( u32 addr, u16 value );
+
+
 struct V_VolumeLR
 {
 	static V_VolumeLR Max;
 
-	s32 Left;
-	s32 Right;
+	s32		Left;
+	s32		Right;
 
 	V_VolumeLR() {}
 	V_VolumeLR( s32 both ) :
@@ -39,10 +54,10 @@ struct V_VolumeSlide
 	// Holds the "original" value of the volume for this voice, prior to slides.
 	// (ie, the volume as written to the register)
 	
-	s16 Reg_VOL;
-	s32 Value;
-	s8 Increment;
-	s8 Mode;
+	s16		Reg_VOL;
+	s32		Value;
+	s8		Increment;
+	s8		Mode;
 	
 public:
 	V_VolumeSlide() {}
@@ -57,7 +72,6 @@ public:
 	void Update();
 	void RegSet( u16 src );		// used to set the volume from a register source (16 bit signed)
 	void DebugDump( FILE* dump, const char* title, const char* nameLR );
-	
 };
 
 struct V_VolumeSlideLR
@@ -304,135 +318,235 @@ struct V_VoiceGates
 	s16 WetR;	// 'AND Gate' for Effect Output for Right Channel
 };
 
-union V_CoreGates
+struct V_CoreGates
 {
-	struct
+	union
 	{
-		u64 lo;
-		u64 hi;
-	} v128;
+		u128 v128;
 
-	struct  
-	{
-		s16 InpL;	// Sound Data Input to Direct Output (Left)
-		s16 InpR;	// Sound Data Input to Direct Output (Right)
-		s16 SndL;	// Voice Data to Direct Output (Left)
-		s16 SndR;	// Voice Data to Direct Output (Right)
-		s16 ExtL;	// External Input to Direct Output (Left)
-		s16 ExtR;	// External Input to Direct Output (Right)
+		struct  
+		{
+			s16 InpL;	// Sound Data Input to Direct Output (Left)
+			s16 InpR;	// Sound Data Input to Direct Output (Right)
+			s16 SndL;	// Voice Data to Direct Output (Left)
+			s16 SndR;	// Voice Data to Direct Output (Right)
+			s16 ExtL;	// External Input to Direct Output (Left)
+			s16 ExtR;	// External Input to Direct Output (Right)
+		};
 	};
+	
+};
+
+struct VoiceMixSet
+{
+	static const VoiceMixSet Empty;
+	StereoOut32 Dry, Wet;
+
+	VoiceMixSet() {}
+	VoiceMixSet( const StereoOut32& dry, const StereoOut32& wet ) :
+		Dry( dry ),
+		Wet( wet )
+	{
+	}
 };
 
 struct V_Core
 {
 	static const uint NumVoices = 24;
 
+	int				Index;			// Core index identifier.
+
 	// Voice Gates -- These are SSE-related values, and must always be
 	// first to ensure 16 byte alignment
 
-	V_VoiceGates VoiceGates[NumVoices];
-	V_CoreGates DryGate;
-	V_CoreGates WetGate;
+	V_VoiceGates	VoiceGates[NumVoices];
+	V_CoreGates		DryGate;
+	V_CoreGates		WetGate;
 
-	V_VolumeSlideLR MasterVol;// Master Volume
-	V_VolumeLR ExtVol;		// Volume for External Data Input
-	V_VolumeLR InpVol;		// Volume for Sound Data Input
-	V_VolumeLR FxVol;		// Volume for Output from Effects 
+	V_VolumeSlideLR	MasterVol;		// Master Volume
+	V_VolumeLR		ExtVol;			// Volume for External Data Input
+	V_VolumeLR		InpVol;			// Volume for Sound Data Input
+	V_VolumeLR		FxVol;			// Volume for Output from Effects 
 
-	V_Voice Voices[NumVoices];
+	V_Voice			Voices[NumVoices];
 	
-// Interrupt Address
-	u32 IRQA;
-// DMA Transfer Start Address
-	u32 TSA;  
-// DMA Transfer Data Address (Internal...)
-	u32 TDA;  
+	u32				IRQA;			// Interrupt Address
+	u32				TSA;			// DMA Transfer Start Address
+	u32				TDA;			// DMA Transfer Data Address (Internal...)
 
-// Interrupt Enable
-	s8 IRQEnable;
-// DMA related?
-	s8 DMABits;
-// Effect Enable
-	s8 FxEnable;
-// Noise Clock
-	s8 NoiseClk;
-// AutoDMA Status
-	u16 AutoDMACtrl;
-// DMA Interrupt Counter
-	s32 DMAICounter;
-// Mute
-	s8 Mute;
-// Input Buffer
-	u32 InputDataLeft;
-	u32 InputPos;
-	u32 InputDataProgress;
-	u8 AdmaInProgress;
+	s8				IRQEnable;		// Interrupt Enable
+	s8				DMABits;		// DMA related?
+	s8				FxEnable;		// Effect Enable
+	s8				NoiseClk;		// Noise Clock
+	u16				AutoDMACtrl;	// AutoDMA Status
+	s32				DMAICounter;	// DMA Interrupt Counter
+	s8				Mute;			// Mute
+	u32				InputDataLeft;	// Input Buffer
+	u32				InputPos;
+	u32				InputDataProgress;
+	u8				AdmaInProgress;
 
-// Reverb
-	V_Reverb Revb;
-	V_ReverbBuffers RevBuffers;		// buffer pointers for reverb, pre-calculated and pre-clipped.
-	u32 EffectsStartA;
-	u32 EffectsEndA;
-	u32 ReverbX;
+	V_Reverb		Revb;			// Reverb Registers
+	V_ReverbBuffers	RevBuffers;		// buffer pointers for reverb, pre-calculated and pre-clipped.
+	u32				EffectsStartA;
+	u32				EffectsEndA;
+	u32				ReverbX;
 	
 	// Current size of the effects buffer.  Pre-caculated when the effects start
 	// or end position registers are written.  CAN BE NEGATIVE OR ZERO, in which
 	// case reverb should be disabled.
-	s32 EffectsBufferSize;
+	s32				EffectsBufferSize;
 	
-// Registers
-	V_CoreRegs Regs;
+	V_CoreRegs		Regs;			// Registers
 
 	// Last samples to pass through the effects processor.
 	// Used because the effects processor works at 24khz and just pulls
 	// from this for the odd Ts.
-	StereoOut32 LastEffect;
+	StereoOut32		LastEffect;
 
-	u8 InitDelay;
+	u8				InitDelay;
+	u8				CoreEnabled;
 
-	u8 CoreEnabled;
+	u8				AttrBit0;
+	u8				AttrBit4;
+	u8				AttrBit5;
 
-	u8 AttrBit0;
-	u8 AttrBit4;
-	u8 AttrBit5;
+	u16*			DMAPtr;
+	u32				MADR;
+	u32				TADR;
 
-	u16*DMAPtr;
-	u32 MADR;
-	u32 TADR;
+	// HACK -- This is a temp buffer which is (or isn't?) used to circumvent some memory
+	// corruption that originates elsewhere in the plugin. >_<  The actual ADMA buffer
+	// is an area mapped to SPU2 main memory.
+	s16				ADMATempBuffer[0x1000];
 
-	s16 ADMATempBuffer[0x1000];
+// ----------------------------------------------------------------------------------
+//  V_Core Methods
+// ----------------------------------------------------------------------------------
 
-	u32 ADMAPV;
-	StereoOut32 ADMAP;
+	V_Core() : Index( -1 ) {}	// uninitialized constructor
+	V_Core( int idx );			// our badass constructor
+	virtual ~V_Core() throw();
 
-	void Reset();
-	void UpdateEffectsBufferSize();
+	void	Reset();
+	void	UpdateEffectsBufferSize();
 
-	V_Core();		// our badass constructor
-	s32 EffectsBufferIndexer( s32 offset ) const;
-	void UpdateFeedbackBuffersA();
-	void UpdateFeedbackBuffersB();
+	s32		EffectsBufferIndexer( s32 offset ) const;
+	void	UpdateFeedbackBuffersA();
+	void	UpdateFeedbackBuffersB();
+
+	void	WriteRegPS1( u32 mem, u16 value );
+	u16		ReadRegPS1( u32 mem );
+	
+// --------------------------------------------------------------------------------------
+//  Mixer Section
+// --------------------------------------------------------------------------------------
+
+	StereoOut32 Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, const StereoOut32& Ext );
+	void		Reverb_AdvanceBuffer();
+	StereoOut32 DoReverb( const StereoOut32& Input );
+	s32			RevbGetIndexer( s32 offset );
+
+	StereoOut32 ReadInput();
+	StereoOut32 ReadInputPV();
+	StereoOut32 ReadInput_HiFi( bool isCDDA );
+	
+// --------------------------------------------------------------------------
+//  DMA Section
+// --------------------------------------------------------------------------
+
+	// Returns the index of the DMA channel (4 for Core 0, or 7 for Core 1)
+	int GetDmaIndex() const
+	{
+		return (Index == 0) ? 4 : 7;
+	}
+
+	// returns either '4' or '7'
+	char GetDmaIndexChar() const
+	{
+		return 0x30 + GetDmaIndex();
+	}
+
+	__forceinline u16 DmaRead()
+	{
+		const u16 ret = (u16)spu2M_Read(TDA);
+		++TDA; TDA &= 0xfffff;
+		return ret;
+	}
+
+	__forceinline void DmaWrite(u16 value)
+	{
+		spu2M_Write( TSA, value );
+		++TSA; TSA &= 0xfffff;
+	}
+
+	void LogAutoDMA( FILE* fp );
+	
+	void DoDMAwrite(u16* pMem, u32 size);
+	void DoDMAread(u16* pMem, u32 size);
+
+	void AutoDMAReadBuffer(int mode);
+	void StartADMAWrite(u16 *pMem, u32 sz);
+	void PlainDMAWrite(u16 *pMem, u32 sz);
 };
 
-extern V_Core Cores[2];
-extern V_SPDIF Spdif;
+extern V_Core	Cores[2];
+extern V_SPDIF	Spdif;
 
 // Output Buffer Writing Position (the same for all data);
-extern s16 OutPos;
+extern s16		OutPos;
 // Input Buffer Reading Position (the same for all data);
-extern s16 InputPos;
+extern s16		InputPos;
 // SPU Mixing Cycles ("Ticks mixed" counter)
-extern u32 Cycles;
+extern u32		Cycles;
 
-#ifdef __LINUX__
+extern short*	spu2regs;
+extern short*	_spu2mem;
+extern int		PlayMode;
 
-#include <sys/types.h>
-#include <sys/timeb.h>
+extern void SetIrqCall();
+extern void StartVoices(int core, u32 value);
+extern void StopVoices(int core, u32 value);
+extern void InitADSR();
+extern void CalculateADSR( V_Voice& vc );
 
-static __forceinline u32 timeGetTime()
+extern void spdif_set51(u32 is_5_1_out);
+extern u32  spdif_init();
+extern void spdif_shutdown();
+extern void spdif_get_samples(s32 *samples); // fills the buffer with [l,r,c,lfe,sl,sr] if using 5.1 output, or [l,r] if using stereo
+extern void UpdateSpdifMode();
+
+namespace Savestate
 {
-	struct timeb t;
-	ftime(&t);
-	return (u32)(t.time*1000+t.millitm);
+	struct DataBlock;
+
+	extern s32 __fastcall FreezeIt( DataBlock& spud );
+	extern s32 __fastcall ThawIt( DataBlock& spud );
+	extern s32 __fastcall SizeIt();
 }
-#endif
+
+// --------------------------------------------------------------------------------------
+//  ADPCM Decoder Cache
+// --------------------------------------------------------------------------------------
+
+// The SPU2 has a dynamic memory range which is used for several internal operations, such as
+// registers, CORE 1/2 mixing, AutoDMAs, and some other fancy stuff.  We exclude this range
+// from the cache here:
+static const s32 SPU2_DYN_MEMLINE = 0x2800;
+
+// 8 short words per encoded PCM block. (as stored in SPU2 ram)
+static const int pcm_WordsPerBlock = 8;
+
+// number of cachable ADPCM blocks (any blocks above the SPU2_DYN_MEMLINE)
+static const int pcm_BlockCount = 0x100000 / pcm_WordsPerBlock;
+
+// 28 samples per decoded PCM block (as stored in our cache)
+static const int pcm_DecodedSamplesPerBlock = 28;
+
+struct PcmCacheEntry
+{
+	bool Validated;
+	s16 Sampledata[pcm_DecodedSamplesPerBlock];
+};
+
+extern PcmCacheEntry* pcm_cache_data;

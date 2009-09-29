@@ -15,7 +15,15 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-#include "../spu2.h"
+
+#include "Global.h"
+
+#	define WINVER 0x0501
+#	define _WIN32_WINNT 0x0501
+
+#include <windows.h>
+#include <mmsystem.h>
+
 
 extern "C" {
 #include "dsp.h"

@@ -15,50 +15,31 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Spu2.h"
+// ======================================================================================
+//  spu2sys.cpp -- Emulation module for the SPU2 'virtual machine'
+// ======================================================================================
+// This module contains (most!) stuff which is directly related to SPU2 emulation.
+// Contents should be cross-platform compatible whenever possible.
+
+
+#include "Global.h"
 #include "RegTable.h"
+#include "dma.h"
 
-#ifdef __LINUX__
-#include "Linux.h"
-#endif
-
-void StartVoices(int core, u32 value);
-void StopVoices(int core, u32 value);
-
-void InitADSR();
-
-#ifdef _MSC_VER
-DWORD CALLBACK TimeThread(PVOID /* unused param */);
-#endif
-
-void (* _irqcallback)();
-void (* dma4callback)();
-void (* dma7callback)();
+#include "PS2E-spu2.h"		// needed until I figure out a nice solution for irqcallback dependencies.
 
 short *spu2regs;
 short *_spu2mem;
 
-u8 callirq;
+V_CoreDebug	DebugCores[2];
+V_Core		Cores[2];
+V_SPDIF		Spdif;
 
-V_CoreDebug DebugCores[2];
-V_Core Cores[2];
-V_SPDIF Spdif;
+s16		OutPos;
+s16		InputPos;
+u32		Cycles;
 
-s16 OutPos;
-s16 InputPos;
-u32 Cycles;
-
-u32* cyclePtr	= NULL;
-u32  lClocks	= 0;
-
-int PlayMode;
-
-#ifdef _MSC_VER
-HINSTANCE hInstance;
-CRITICAL_SECTION threadSync;
-HANDLE hThreadFunc;
-u32	ThreadFuncID;
-#endif
+int		PlayMode;
 
 bool has_to_call_irq=false;
 
@@ -66,33 +47,6 @@ void SetIrqCall()
 {
 	has_to_call_irq=true;
 }
-
-#ifndef __LINUX__
-void SysMessage(const char *fmt, ...)
-{
-	va_list list;
-	char tmp[512];
-	wchar_t wtmp[512];
-
-	va_start(list,fmt);
-	sprintf_s(tmp,fmt,list);
-	va_end(list);
-	swprintf_s(wtmp, L"%S", tmp);
-	MessageBox(0, wtmp, L"SPU2-X System Message", 0);
-}
-#else
-void SysMessage(const char *fmt, ...)
-{
-	va_list list;
-	char tmp[512];
-	wchar_t wtmp[512];
-
-	va_start(list,fmt);
-	sprintf(tmp,fmt,list);
-	va_end(list);
-	printf("%s", tmp);
-}
-#endif
 
 __forceinline s16 * __fastcall GetMemPtr(u32 addr)
 {
@@ -111,9 +65,7 @@ __forceinline s16 __fastcall spu2M_Read( u32 addr )
 
 // writes a signed value to the SPU2 ram
 // Invalidates the ADPCM cache in the process.
-// Optimization note: don't use __forceinline because the footprint of this
-// function is a little too heavy now.  Better to let the compiler decide.
-__inline void __fastcall spu2M_Write( u32 addr, s16 value )
+__forceinline void __fastcall spu2M_Write( u32 addr, s16 value )
 {
 	// Make sure the cache is invalidated:
 	// (note to self : addr address WORDs, not bytes)
@@ -135,50 +87,55 @@ __inline void __fastcall spu2M_Write( u32 addr, u16 value )
 	spu2M_Write( addr, (s16)value );
 }
 
-V_VolumeLR V_VolumeLR::Max( 0x7FFFFFFF );
-V_VolumeSlideLR V_VolumeSlideLR::Max( 0x3FFF, 0x7FFFFFFF );
+V_VolumeLR		V_VolumeLR::Max( 0x7FFFFFFF );
+V_VolumeSlideLR	V_VolumeSlideLR::Max( 0x3FFF, 0x7FFFFFFF );
 
-V_Core::V_Core()
+V_Core::V_Core( int coreidx ) : Index( coreidx )
+	//LogFile_AutoDMA( NULL )
 {
+	/*char fname[128];
+	sprintf( fname, "logs/adma%d.raw", GetDmaIndex() );
+	LogFile_AutoDMA = fopen( fname, "wb" );*/
+}
+
+V_Core::~V_Core() throw()
+{
+	// Can't use this yet because we dumb V_Core into savestates >_<
+	/*if( LogFile_AutoDMA != NULL )
+	{
+		fclose( LogFile_AutoDMA );
+		LogFile_AutoDMA = NULL;
+	}*/
 }
 
 void V_Core::Reset()
 {
 	memset( this, 0, sizeof(V_Core) );
 
-	const int c = (this == Cores) ? 0 : 1;
+	const int c = Index;
 
-	Regs.STATX=0;
-	Regs.ATTR=0;
-	ExtVol = V_VolumeLR::Max;
-	InpVol = V_VolumeLR::Max;
-	FxVol  = V_VolumeLR::Max;
+	Regs.STATX		= 0;
+	Regs.ATTR		= 0;
+	ExtVol			= V_VolumeLR::Max;
+	InpVol			= V_VolumeLR::Max;
+	FxVol			= V_VolumeLR::Max;
 
-	MasterVol = V_VolumeSlideLR::Max;
+	MasterVol		= V_VolumeSlideLR::Max;
 
-	DryGate.ExtL = -1;
-	DryGate.ExtR = -1;
-	WetGate.ExtL = -1;
-	WetGate.ExtR = -1;
-	DryGate.InpL = -1;
-	DryGate.InpR = -1;
-	WetGate.InpR = -1;
-	WetGate.InpL = -1;
-	DryGate.SndL = -1;
-	DryGate.SndR = -1;
-	WetGate.SndL = -1;
-	WetGate.SndR = -1;
+	memset( &DryGate, -1, sizeof(DryGate) );
+	memset( &WetGate, -1, sizeof(WetGate) );
 
-	Regs.MMIX = 0xFFCF;
-	Regs.VMIXL = 0xFFFFFF;
-	Regs.VMIXR = 0xFFFFFF;
-	Regs.VMIXEL = 0xFFFFFF;
-	Regs.VMIXER = 0xFFFFFF;
-	EffectsStartA= 0xEFFF8 + 0x10000*c;
-	EffectsEndA  = 0xEFFFF + 0x10000*c;
-	FxEnable=0;
-	IRQA=0xFFFF0;
-	IRQEnable=1;
+	Regs.MMIX		= 0xFFCF;
+	Regs.VMIXL		= 0xFFFFFF;
+	Regs.VMIXR		= 0xFFFFFF;
+	Regs.VMIXEL		= 0xFFFFFF;
+	Regs.VMIXER		= 0xFFFFFF;
+	EffectsStartA	= 0xEFFF8 + (0x10000*c);
+	EffectsEndA		= 0xEFFFF + (0x10000*c);
+
+	FxEnable		= 0;
+	IRQA			= 0xFFFF0;
+	IRQEnable		= 1;
 
 	for( uint v=0; v<NumVoices; ++v )
 	{
@@ -187,19 +144,20 @@ void V_Core::Reset()
 		VoiceGates[v].WetL = -1;
 		VoiceGates[v].WetR = -1;
 
-		Voices[v].Volume = V_VolumeSlideLR::Max;
+		Voices[v].Volume		= V_VolumeSlideLR::Max;
 
-		Voices[v].ADSR.Value = 0;
-		Voices[v].ADSR.Phase = 0;
-		Voices[v].Pitch = 0x3FFF;
-		Voices[v].NextA = 2800;
-		Voices[v].StartA = 2800;
-		Voices[v].LoopStartA = 2800;
+		Voices[v].ADSR.Value	= 0;
+		Voices[v].ADSR.Phase	= 0;
+		Voices[v].Pitch			= 0x3FFF;
+		Voices[v].NextA			= 2800;
+		Voices[v].StartA		= 2800;
+		Voices[v].LoopStartA	= 2800;
 	}
-	DMAICounter = 0;
-	AdmaInProgress = 0;
 
-	Regs.STATX = 0x80;
+	DMAICounter		= 0;
+	AdmaInProgress	= 0;
+
+	Regs.STATX		= 0x80;
 }
 
 s32 V_Core::EffectsBufferIndexer( s32 offset ) const
@@ -456,7 +414,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 		lClocks+=TickInterval;
 		Cycles++;
 
-		// Note: IPU does not use MMX regs, so no need to save them.
+		// Note: IOP does not use MMX regs, so no need to save them.
 		//SaveMMXRegs();
 		Mix();
 		//RestoreMMXRegs();
@@ -516,11 +474,12 @@ void V_VolumeSlide::RegSet( u16 src )
 	Value = GetVol32( src );
 }
 
-void SPU_ps1_write(u32 mem, u16 value)
+void V_Core::WriteRegPS1( u32 mem, u16 value )
 {
-	bool show=true;
+	jASSUME( Index == 0 );		// Valid on Core 0 only!
 
-	u32 reg = mem&0xffff;
+	bool show	= true;
+	u32 reg		= mem & 0xffff;
 
 	if((reg>=0x1c00)&&(reg<0x1d80))
 	{
@@ -530,42 +489,42 @@ void SPU_ps1_write(u32 mem, u16 value)
 		switch(vval)
 		{
 			case 0: //VOLL (Volume L)
-				Cores[0].Voices[voice].Volume.Left.Mode = 0;
-				Cores[0].Voices[voice].Volume.Left.RegSet( value << 1 );
-				Cores[0].Voices[voice].Volume.Left.Reg_VOL = value;
+				Voices[voice].Volume.Left.Mode = 0;
+				Voices[voice].Volume.Left.RegSet( value << 1 );
+				Voices[voice].Volume.Left.Reg_VOL = value;
 			break;
 
 			case 1: //VOLR (Volume R)
-				Cores[0].Voices[voice].Volume.Right.Mode = 0;
-				Cores[0].Voices[voice].Volume.Right.RegSet( value << 1 );
-				Cores[0].Voices[voice].Volume.Right.Reg_VOL = value;
+				Voices[voice].Volume.Right.Mode = 0;
+				Voices[voice].Volume.Right.RegSet( value << 1 );
+				Voices[voice].Volume.Right.Reg_VOL = value;
 			break;
 
-			case 2:	Cores[0].Voices[voice].Pitch = value; break;
-			case 3:	Cores[0].Voices[voice].StartA = (u32)value<<8; break;
+			case 2:	Voices[voice].Pitch = value; break;
+			case 3:	Voices[voice].StartA = (u32)value<<8; break;
 
 			case 4: // ADSR1 (Envelope)
-				Cores[0].Voices[voice].ADSR.AttackMode = (value & 0x8000)>>15;
-				Cores[0].Voices[voice].ADSR.AttackRate = (value & 0x7F00)>>8;
-				Cores[0].Voices[voice].ADSR.DecayRate = (value & 0xF0)>>4;
-				Cores[0].Voices[voice].ADSR.SustainLevel = (value & 0xF);
-				Cores[0].Voices[voice].ADSR.Reg_ADSR1 = value;
+				Voices[voice].ADSR.AttackMode = (value & 0x8000)>>15;
+				Voices[voice].ADSR.AttackRate = (value & 0x7F00)>>8;
+				Voices[voice].ADSR.DecayRate = (value & 0xF0)>>4;
+				Voices[voice].ADSR.SustainLevel = (value & 0xF);
+				Voices[voice].ADSR.Reg_ADSR1 = value;
 			break;
 
 			case 5: // ADSR2 (Envelope)
-				Cores[0].Voices[voice].ADSR.SustainMode = (value & 0xE000)>>13;
-				Cores[0].Voices[voice].ADSR.SustainRate = (value & 0x1FC0)>>6;
-				Cores[0].Voices[voice].ADSR.ReleaseMode = (value & 0x20)>>5;
-				Cores[0].Voices[voice].ADSR.ReleaseRate = (value & 0x1F);
-				Cores[0].Voices[voice].ADSR.Reg_ADSR2 = value;
+				Voices[voice].ADSR.SustainMode = (value & 0xE000)>>13;
+				Voices[voice].ADSR.SustainRate = (value & 0x1FC0)>>6;
+				Voices[voice].ADSR.ReleaseMode = (value & 0x20)>>5;
+				Voices[voice].ADSR.ReleaseRate = (value & 0x1F);
+				Voices[voice].ADSR.Reg_ADSR2 = value;
 			break;
 
 			case 6:
-				Cores[0].Voices[voice].ADSR.Value = ((s32)value<<16) | value;
+				Voices[voice].ADSR.Value = ((s32)value<<16) | value;
 				ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
 			break;
 
-			case 7:	Cores[0].Voices[voice].LoopStartA = (u32)value <<8;	break;
+			case 7:	Voices[voice].LoopStartA = (u32)value <<8;	break;
 
 			jNO_DEFAULT;
 		}
@@ -574,21 +533,21 @@ void SPU_ps1_write(u32 mem, u16 value)
 	else switch(reg)
 	{
 		case 0x1d80://         Mainvolume left
-			Cores[0].MasterVol.Left.Mode = 0;
-			Cores[0].MasterVol.Left.RegSet( value );
+			MasterVol.Left.Mode = 0;
+			MasterVol.Left.RegSet( value );
 		break;
 
 		case 0x1d82://         Mainvolume right
-			Cores[0].MasterVol.Right.Mode = 0;
-			Cores[0].MasterVol.Right.RegSet( value );
+			MasterVol.Right.Mode = 0;
+			MasterVol.Right.RegSet( value );
 		break;
 
 		case 0x1d84://         Reverberation depth left
-			Cores[0].FxVol.Left = GetVol32( value );
+			FxVol.Left = GetVol32( value );
 		break;
 
 		case 0x1d86://         Reverberation depth right
-			Cores[0].FxVol.Right = GetVol32( value );
+			FxVol.Right = GetVol32( value );
 		break;
 
 		case 0x1d88://         Voice ON  (0-15)
@@ -652,11 +611,11 @@ void SPU_ps1_write(u32 mem, u16 value)
 		break;
 
 		case 0x1da4:
-			Cores[0].IRQA=(u32)value<<8;
+			IRQA = (u32)value<<8;
 		break;
 
 		case 0x1da6:
-			Cores[0].TSA=(u32)value<<8;
+			TSA = (u32)value<<8;
 		break;
 
 		case 0x1daa:
@@ -668,7 +627,7 @@ void SPU_ps1_write(u32 mem, u16 value)
 		break;
 
 		case 0x1da8:// Spu Write to Memory
-			DmaWrite(0,value);
+			DmaWrite(value);
 			show=false;
 		break;
 	}
@@ -678,8 +637,10 @@ void SPU_ps1_write(u32 mem, u16 value)
 	spu2Ru16(mem)=value;
 }
 
-u16 SPU_ps1_read(u32 mem)
+u16 V_Core::ReadRegPS1(u32 mem)
 {
+	jASSUME( Index == 0 );		// Valid on Core 0 only!
+
 	bool show=true;
 	u16 value = spu2Ru16(mem);
 
@@ -693,60 +654,60 @@ u16 SPU_ps1_read(u32 mem)
 		switch(vval)
 		{
 			case 0: //VOLL (Volume L)
-				//value=Cores[0].Voices[voice].VolumeL.Mode;
-				//value=Cores[0].Voices[voice].VolumeL.Value;
-				value = Cores[0].Voices[voice].Volume.Left.Reg_VOL;
+				//value=Voices[voice].VolumeL.Mode;
+				//value=Voices[voice].VolumeL.Value;
+				value = Voices[voice].Volume.Left.Reg_VOL;
 			break;
 
 			case 1: //VOLR (Volume R)
-				//value=Cores[0].Voices[voice].VolumeR.Mode;
-				//value=Cores[0].Voices[voice].VolumeR.Value;
-				value = Cores[0].Voices[voice].Volume.Right.Reg_VOL;
+				//value=Voices[voice].VolumeR.Mode;
+				//value=Voices[voice].VolumeR.Value;
+				value = Voices[voice].Volume.Right.Reg_VOL;
 			break;
 
-			case 2:	value = Cores[0].Voices[voice].Pitch;		break;
-			case 3:	value = Cores[0].Voices[voice].StartA;		break;
-			case 4: value = Cores[0].Voices[voice].ADSR.Reg_ADSR1;	break;
-			case 5: value = Cores[0].Voices[voice].ADSR.Reg_ADSR2;	break;
-			case 6:	value = Cores[0].Voices[voice].ADSR.Value >> 16;	break;
-			case 7:	value = Cores[0].Voices[voice].LoopStartA;	break;
+			case 2:	value = Voices[voice].Pitch;		break;
+			case 3:	value = Voices[voice].StartA;		break;
+			case 4: value = Voices[voice].ADSR.Reg_ADSR1;	break;
+			case 5: value = Voices[voice].ADSR.Reg_ADSR2;	break;
+			case 6:	value = Voices[voice].ADSR.Value >> 16;	break;
+			case 7:	value = Voices[voice].LoopStartA;	break;
 
 			jNO_DEFAULT;
 		}
 	}
 	else switch(reg)
 	{
-		case 0x1d80: value = Cores[0].MasterVol.Left.Value >> 16;  break;
-		case 0x1d82: value = Cores[0].MasterVol.Right.Value >> 16; break;
-		case 0x1d84: value = Cores[0].FxVol.Left >> 16;            break;
-		case 0x1d86: value = Cores[0].FxVol.Right >> 16;           break;
+		case 0x1d80: value = MasterVol.Left.Value >> 16;  break;
+		case 0x1d82: value = MasterVol.Right.Value >> 16; break;
+		case 0x1d84: value = FxVol.Left >> 16;            break;
+		case 0x1d86: value = FxVol.Right >> 16;           break;
 
 		case 0x1d88: value = 0; break;
 		case 0x1d8a: value = 0; break;
 		case 0x1d8c: value = 0; break;
 		case 0x1d8e: value = 0; break;
 
-		case 0x1d90: value = Cores[0].Regs.PMON&0xFFFF;   break;
-		case 0x1d92: value = Cores[0].Regs.PMON>>16;      break;
+		case 0x1d90: value = Regs.PMON&0xFFFF;   break;
+		case 0x1d92: value = Regs.PMON>>16;      break;
 
-		case 0x1d94: value = Cores[0].Regs.NON&0xFFFF;    break;
-		case 0x1d96: value = Cores[0].Regs.NON>>16;       break;
+		case 0x1d94: value = Regs.NON&0xFFFF;    break;
+		case 0x1d96: value = Regs.NON>>16;       break;
 
-		case 0x1d98: value = Cores[0].Regs.VMIXEL&0xFFFF; break;
-		case 0x1d9a: value = Cores[0].Regs.VMIXEL>>16;    break;
-		case 0x1d9c: value = Cores[0].Regs.VMIXL&0xFFFF;  break;
-		case 0x1d9e: value = Cores[0].Regs.VMIXL>>16;     break;
+		case 0x1d98: value = Regs.VMIXEL&0xFFFF; break;
+		case 0x1d9a: value = Regs.VMIXEL>>16;    break;
+		case 0x1d9c: value = Regs.VMIXL&0xFFFF;  break;
+		case 0x1d9e: value = Regs.VMIXL>>16;     break;
 
 		case 0x1da2:
-			if( value != Cores[0].EffectsStartA>>3 )
+			if( value != EffectsStartA>>3 )
 			{
-				value = Cores[0].EffectsStartA>>3;
-				Cores[0].UpdateEffectsBufferSize();
-				Cores[0].ReverbX = 0;
+				value = EffectsStartA>>3;
+				UpdateEffectsBufferSize();
+				ReverbX = 0;
 			}
 		break;
-		case 0x1da4: value = Cores[0].IRQA>>3;            break;
-		case 0x1da6: value = Cores[0].TSA>>3;             break;
+		case 0x1da4: value = IRQA>>3;            break;
+		case 0x1da6: value = TSA>>3;             break;
 
 		case 0x1daa:
 			value = SPU2read(REG_C_ATTR);
@@ -755,7 +716,7 @@ u16 SPU_ps1_read(u32 mem)
 			value = 0; //SPU2read(REG_P_STATX)<<3;
 			break;
 		case 0x1da8:
-			value = DmaRead(0);
+			value = DmaRead();
 			show=false;
 			break;
 	}
@@ -930,6 +891,30 @@ void SPU2_FastWrite( u32 rmem, u16 value )
 		V_Core& thiscore = Cores[core];
 		switch(omem)
 		{
+			case 0x1ac:
+				// ----------------------------------------------------------------------------
+				// 0x1ac / 0x5ac : direct-write to DMA address : special register (undocumented)
+				// ----------------------------------------------------------------------------
+				// On the GS, DMAs are actually pushed through a hardware register.  Chances are the
+				// SPU works the same way, and "technically" *all* DMA data actually passes through
+				// the HW registers at 0x1ac (core0) and 0x5ac (core1).  We handle normal DMAs in
+				// optimized block copy fashion elsewhere, but some games will write this register
+				// directly, so handle those here:
+
+				// Performance Note: If a game uses this extensively, it *will* be slow.  I plan to
+				// fix that using a proper paged LUT someday.
+
+				for( int i=0; i<2; i++ )
+				{
+					if(Cores[i].IRQEnable && (Cores[i].IRQA == Cores[i].TSA))
+					{
+						Spdif.Info = 4 << i;
+						SetIrqCall();
+					}
+				}
+				thiscore.DmaWrite( value );
+			break;
+			
 			case REG_C_ATTR:
 			{
 				int irqe = thiscore.IRQEnable;

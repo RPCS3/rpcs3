@@ -15,7 +15,8 @@
 //License along with this library; if not, write to the Free Software
 //Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
-#include "Spu2.h"
+
+#include "Global.h"
 
 extern "C" {
 #include "liba52/inttypes.h"
@@ -129,12 +130,13 @@ s32 stoi(sample_t n) //input: [-1..1]
 
 void spdif_update()
 {
-	StereoOut32 Data;
+	
 
 	for(int i=0;i<data_rate;i++)
 	{
-		// Right side data should be zero / ignored
-		ReadInput( 0, Data );	// read from core 0
+		// Source is Core 0
+		// .. and Right side data should be zero / ignored
+		StereoOut32 Data( Cores[0].ReadInput() );
 		
 		if(fSpdifDump)
 		{

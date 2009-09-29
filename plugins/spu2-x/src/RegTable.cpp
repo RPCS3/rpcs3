@@ -15,14 +15,13 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-#include "Spu2.h"
+#include "Global.h"
 #include "RegTable.h"
 
 // This var is used to confirm that our lookup table is "correct"
 // If the assertion in DllMain fails, it means the table has too too few entries.
 // (it can't have too many because that would generate a compiler error).
-const u16 zero=0;
+const u16 zero = 0;
 
 #define PCORE(c,p) \
 	U16P(Cores[c].p)

@@ -48,7 +48,7 @@ wchar_t MemDumpFileName[255];
 wchar_t RegDumpFileName[255];
 
 
-#ifdef SPU2X_DEVBUILD
+#ifdef PCSX2_DEVBUILD
 static const int LATENCY_MAX = 3000;
 #else
 static const int LATENCY_MAX = 750;

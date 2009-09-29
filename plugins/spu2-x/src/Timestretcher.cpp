@@ -15,7 +15,7 @@
 * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "Spu2.h"
+#include "Global.h"
 #include "SoundTouch/SoundTouch.h"
 #include "SoundTouch/WavFile.h"
 
@@ -304,9 +304,7 @@ void SndBuffer::soundtouchInit()
 	pSoundTouch->setSetting( SETTING_USE_QUICKSEEK, 0 );
 	pSoundTouch->setSetting( SETTING_USE_AA_FILTER, 0 );
 
-	pSoundTouch->setSetting( SETTING_SEQUENCE_MS, SoundtouchCfg::SequenceLenMS );
-	pSoundTouch->setSetting( SETTING_SEEKWINDOW_MS, SoundtouchCfg::SeekWindowMS );
-	pSoundTouch->setSetting( SETTING_OVERLAP_MS, SoundtouchCfg::OverlapMS );
+	SoundtouchCfg::ApplySettings( *pSoundTouch );
 
 	pSoundTouch->setTempo(1);
 
@@ -340,5 +338,5 @@ void SndBuffer::soundtouchClearContents()
 
 void SndBuffer::soundtouchCleanup()
 {
-	SAFE_DELETE_OBJ( pSoundTouch );
+	safe_delete( pSoundTouch );
 }

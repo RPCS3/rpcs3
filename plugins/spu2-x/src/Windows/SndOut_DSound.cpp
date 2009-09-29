@@ -15,6 +15,8 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "Global.h"
+
 #define _WIN32_DCOM
 #include "Dialogs.h"
 
@@ -103,6 +105,8 @@ private:
 public:
 	s32 Init()
 	{
+		CoInitializeEx( NULL, COINIT_MULTITHREADED );
+
 		//
 		// Initialize DSound
 		//
@@ -180,7 +184,7 @@ public:
 
 			throw std::runtime_error( "DirectSound Error: Buffer could not be created." );
 		}
-		if(	FAILED(buffer_->QueryInterface(IID_IDirectSoundBuffer8,(void**)&buffer)) )
+		if(	FAILED(buffer_->QueryInterface(IID_IDirectSoundBuffer8,(void**)&buffer)) || buffer == NULL )
 			throw std::runtime_error( "DirectSound Error: Interface could not be queried." );
 
 		buffer_->Release();
@@ -242,11 +246,12 @@ public:
 				buffer_events[i] = NULL;
 			}
 
-			SAFE_RELEASE( buffer_notify );
-			SAFE_RELEASE( buffer );
+			safe_release( buffer_notify );
+			safe_release( buffer );
 		}
 
-		SAFE_RELEASE( dsound );
+		safe_release( dsound );
+		CoUninitialize();
 	}
 
 private:
@@ -406,13 +411,13 @@ private:
 	static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCTSTR lpcstrDescription, LPCTSTR lpcstrModule, LPVOID lpContext );
 
 public:
-	virtual void Configure(HWND parent)
+	virtual void Configure(uptr parent)
 	{
 		INT_PTR ret;
-		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_DSOUND),GetActiveWindow(),(DLGPROC)ConfigProc,1);
+		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_DSOUND),(HWND)parent,(DLGPROC)ConfigProc,1);
 		if(ret==-1)
 		{
-			MessageBoxEx(GetActiveWindow(),L"Error Opening the config dialog.",L"OMG ERROR!",MB_OK,0);
+			MessageBoxEx((HWND)parent,L"Error Opening the config dialog.",L"OMG ERROR!",MB_OK,0);
 			return;
 		}
 	}

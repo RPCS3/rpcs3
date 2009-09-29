@@ -17,30 +17,11 @@
 
 #pragma once
 
-#ifndef _DIALOGS_H_
-#define _DIALOGS_H_
-
-#include "../Spu2.h"
-
-#include <commctrl.h>
-#include <initguid.h>
-
-extern HINSTANCE hInstance;
-
-#define SET_CHECK(idc,value) SendMessage(GetDlgItem(hWnd,idc),BM_SETCHECK,((value)==0)?BST_UNCHECKED:BST_CHECKED,0)
-#define HANDLE_CHECK(idc,hvar)	case idc: (hvar) = !(hvar); SendMessage(GetDlgItem(hWnd,idc),BM_SETCHECK,(hvar)?BST_CHECKED:BST_UNCHECKED,0); break
-#define HANDLE_CHECKNB(idc,hvar)case idc: (hvar) = !(hvar); SendMessage(GetDlgItem(hWnd,idc),BM_SETCHECK,(hvar)?BST_CHECKED:BST_UNCHECKED,0)
-#define ENABLE_CONTROL(idc,value) EnableWindow(GetDlgItem(hWnd,idc),value)
-
-#define INIT_SLIDER(idc,minrange,maxrange,tickfreq,pagesize,linesize) \
-			SendMessage(GetDlgItem(hWnd,idc),TBM_SETRANGEMIN,FALSE,minrange); \
-			SendMessage(GetDlgItem(hWnd,idc),TBM_SETRANGEMAX,FALSE,maxrange); \
-			SendMessage(GetDlgItem(hWnd,idc),TBM_SETTICFREQ,tickfreq,0); \
-			SendMessage(GetDlgItem(hWnd,idc),TBM_SETPAGESIZE,0,pagesize); \
-			SendMessage(GetDlgItem(hWnd,idc),TBM_SETLINESIZE,0,linesize)
-
-#define HANDLE_SCROLL_MESSAGE(idc,idcDisplay) \
-	if((HWND)lParam == GetDlgItem(hWnd,idc)) return DoHandleScrollMessage( GetDlgItem(hWnd,idcDisplay), wParam, lParam )
+#ifdef _WIN32
+#	include "WinConfig.h"
+#else
+#	include "LnxConfig.h"
+#endif
 
 namespace DebugConfig
 {
@@ -50,24 +31,32 @@ namespace DebugConfig
 	extern void EnableControls( HWND hWnd );
 }
 
-extern int SendDialogMsg( HWND hwnd, int dlgId, UINT code, WPARAM wParam, LPARAM lParam);
-extern HRESULT GUIDFromString( const char *str, LPGUID guid );
+namespace SoundtouchCfg
+{
+	extern void ReadSettings();
+	extern void WriteSettings();
+	extern void OpenDialog( HWND hWnd );
+	extern BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
+}
 
-extern void AssignSliderValue( HWND idcwnd, HWND hwndDisplay, int value );
-extern void AssignSliderValue( HWND hWnd, int idc, int editbox, int value );
-extern int GetSliderValue( HWND hWnd, int idc );
-extern BOOL DoHandleScrollMessage( HWND hwndDisplay, WPARAM wParam, LPARAM lParam );
+extern int		SendDialogMsg( HWND hwnd, int dlgId, UINT code, WPARAM wParam, LPARAM lParam);
+extern HRESULT	GUIDFromString( const char *str, LPGUID guid );
 
-bool CfgFindName( const TCHAR *Section, const TCHAR* Name);
+extern void		AssignSliderValue( HWND idcwnd, HWND hwndDisplay, int value );
+extern void		AssignSliderValue( HWND hWnd, int idc, int editbox, int value );
+extern int		GetSliderValue( HWND hWnd, int idc );
+extern BOOL		DoHandleScrollMessage( HWND hwndDisplay, WPARAM wParam, LPARAM lParam );
 
-void CfgWriteBool(const TCHAR* Section, const TCHAR* Name, bool Value);
-void CfgWriteInt(const TCHAR* Section, const TCHAR* Name, int Value);
-void CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wstring& Data);
+extern bool		CfgFindName( const TCHAR *Section, const TCHAR* Name);
 
-bool CfgReadBool(const TCHAR *Section,const TCHAR* Name, bool Default);
-void CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring& Data, int DataSize, const TCHAR* Default);
-void CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSize, const TCHAR* Default);
-int CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default);
+extern void		CfgWriteBool(const TCHAR* Section, const TCHAR* Name, bool Value);
+extern void		CfgWriteInt(const TCHAR* Section, const TCHAR* Name, int Value);
+extern void		CfgWriteStr(const TCHAR* Section, const TCHAR* Name, const wstring& Data);
+
+extern bool		CfgReadBool(const TCHAR *Section,const TCHAR* Name, bool Default);
+extern void		CfgReadStr(const TCHAR* Section, const TCHAR* Name, wstring& Data, int DataSize, const TCHAR* Default);
+extern void		CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSize, const TCHAR* Default);
+extern int		CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default);
 
 
 // Items Specific to DirectSound
@@ -83,4 +72,3 @@ struct ds_device_data
 	bool hasGuid;
 };
 
-#endif

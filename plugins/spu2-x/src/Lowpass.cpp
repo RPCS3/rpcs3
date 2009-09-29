@@ -19,35 +19,39 @@
 #include <math.h>
 #include <float.h>
 
-LPF_data::LPF_data( double freq, double srate )
+template< typename FloatType > __forceinline 
+LowPassFilter<FloatType>::LowPassFilter( FloatType freq, FloatType srate )
 {
-	double omega = 2.0 * freq / srate;
-	static const double g = 1.0; 
+	typedef FloatType FT;
+
+	FloatType omega = (FT)2.0 * freq / srate;
+	static const FloatType g = (FT)1.0; 
 
 	// calculating coefficients:
 
-	double k,p,q,a;
-	double a0,a1,a2,a3,a4;
+	FloatType k,p,q,a;
+	FloatType a0,a1,a2,a3,a4;
 
-	k=(4.0*g-3.0)/(g+1.0);
-	p=1.0-0.25*k;p*=p;
+	k = ((FT)4.0*g-(FT)3.0)/(g+(FT)1.0);
+	p = (FT)1.0-(FT)0.25*k;
+	p *= p;
 
 	// LP:
-	a=1.0/(tan(0.5*omega)*(1.0+p));
-	p=1.0+a;
-	q=1.0-a;
+	a = (FT)1.0/(tan((FT)0.5*omega)*((FT)1.0+p));
+	p = (FT)1.0+a;
+	q = (FT)1.0-a;
 	        
-	a0=1.0/(k+p*p*p*p);
-	a1=4.0*(k+p*p*p*q);
-	a2=6.0*(k+p*p*q*q);
-	a3=4.0*(k+p*q*q*q);
-	a4=    (k+q*q*q*q);
-	p=a0*(k+1.0);
-	        
+	a0 = (FT)1.0/(k+p*p*p*p);
+	a1 = (FT)4.0*(k+p*p*p*q);
+	a2 = (FT)6.0*(k+p*p*q*q);
+	a3 = (FT)4.0*(k+p*q*q*q);
+	a4 =     (k+q*q*q*q);
+	p  = a0*(k+(FT)1.0);
+        
 	coef[0] = p;
-	coef[1] = 4.0*p;
-	coef[2] = 6.0*p;
-	coef[3] = 4.0*p;
+	coef[1] = (FT)4.0*p;
+	coef[2] = (FT)6.0*p;
+	coef[3] = (FT)4.0*p;
 	coef[4] = p;
 	coef[5] = -a1*a0;
 	coef[6] = -a2*a0;
@@ -56,13 +60,34 @@ LPF_data::LPF_data( double freq, double srate )
 }
 
 // Processes a single sample into the LPF.
-double LPF_data::sample( double inval )
+template< typename FloatType > __forceinline 
+FloatType LowPassFilter<FloatType>::sample( FloatType inval )
 {
-	const double out = (coef[0]*inval) + d[0];
+	const FloatType out = (coef[0]*inval) + d[0];
 	d[0] = (coef[1]*inval) + (coef[5]*out) + d[1];
 	d[1] = (coef[2]*inval) + (coef[6]*out) + d[2];
 	d[2] = (coef[3]*inval) + (coef[7]*out) + d[3];
 	d[3] = (coef[4]*inval) + (coef[8]*out);	
 
 	return out;
+}
+
+LowPassFilter32::LowPassFilter32( float freq, float srate ) :
+	impl_lpf( freq, srate )
+{
+}
+
+LowPassFilter64::LowPassFilter64( double freq, double srate ) :
+	impl_lpf( freq, srate )
+{
+}
+
+float LowPassFilter32::sample( float inval )
+{
+	return impl_lpf.sample( inval );
+}
+
+double LowPassFilter64::sample( double inval )
+{
+	return impl_lpf.sample( inval );
 }

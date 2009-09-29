@@ -15,7 +15,7 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Spu2.h"
+#include "Global.h"
 
 static const s32 ADSR_MAX_VOL = 0x7fffffff;
 
@@ -34,7 +34,7 @@ void InitADSR()                                    // INIT ADSR
 		else
 			rate <<= shift;
 
-		PsxRates[i] = (int)min( rate, 0x3fffffffLL );
+		PsxRates[i] = (int)std::min( rate, 0x3fffffffLL );
 	}
 }
 

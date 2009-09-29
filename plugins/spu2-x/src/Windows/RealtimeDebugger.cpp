@@ -16,6 +16,7 @@
  */
 
 
+#include "Global.h"
 #include "Dialogs.h"
 #include "../RegTable.h"
 
@@ -59,7 +60,7 @@ static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 	return TRUE;
 }
 
-#ifdef SPU2X_DEVBUILD
+#ifdef PCSX2_DEVBUILD
 
 int FillRectangle(HDC dc, int left, int top, int width, int height)
 {
