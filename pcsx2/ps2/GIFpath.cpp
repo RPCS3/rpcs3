@@ -177,7 +177,14 @@ static void __fastcall RegHandlerLABEL(const u32* data)
 
 static void __fastcall RegHandlerUNMAPPED(const u32* data)
 {
-	Console::Notice( "Unmapped GIFtag Register Index: Ignoring." );
+	const int regidx = ((u8*)data)[8];
+	
+	// Known "unknowns":
+	//   the bios likes to write to 0x7f using an EOP giftag with NLOOP set to 4.
+	//   Not sure what it's trying to accomplish exactly.  Ignoring seems to work fine.
+	
+	if( regidx != 0x7f )
+		Console::Notice( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
 }
 
 #define INSERT_UNMAPPED_4	RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED,
@@ -251,13 +258,16 @@ void SaveStateBase::gifPathFreeze()
 }
 
 
-static __forceinline void gsHandler(const u8* pMem) {
+static __forceinline void gsHandler(const u8* pMem)
+{
 	const int handler = pMem[8];
-	if (handler >= 0x60) {
-		// Question: What happens if an app writes to uncharted register space
-		// on real PS2 hardware (handler 0x63 and higher)?  Probably a silent
-		// ignorance, but not tested so just guessing... --air
-		s_gifPath.Handlers[handler&0x3]((const u32*)pMem);
+	if (handler >= 0x60)
+	{
+		// Question: What happens if an app writes to uncharted register space on real PS2
+		// hardware (handler 0x63 and higher)?  Probably a silent ignorance, but not tested
+		// so just guessing... --air
+
+		s_gifPath.Handlers[handler-0x60]((const u32*)pMem);
 	}
 }
 
