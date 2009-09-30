@@ -18,7 +18,6 @@
 
 #include "Global.h"
 #include "Dialogs.h"
-#include "../RegTable.h"
 
 
 static bool debugDialogOpen=false;

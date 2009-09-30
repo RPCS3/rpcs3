@@ -991,10 +991,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\RegTable.h"
-					>
-				</File>
-				<File
 					RelativePath="..\spu2freeze.cpp"
 					>
 				</File>

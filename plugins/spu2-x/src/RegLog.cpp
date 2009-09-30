@@ -16,7 +16,6 @@
  */
 
 #include "Global.h"
-#include "RegTable.h"
 
 const char *ParamNames[8]={"VOLL","VOLR","PITCH","ADSR1","ADSR2","ENVX","VOLXL","VOLXR"};
 const char *AddressNames[6]={"SSAH","SSAL","LSAH","LSAL","NAXH","NAXL"};
@@ -89,8 +88,8 @@ void SPU2writeLog( const char* action, u32 rmem, u16 value )
 			case SPDIF_OUT:
 				RegLog(2,"SPDIF_OUT",rmem,-1,value);
 				break;
-			case IRQINFO:
-				RegLog(2,"IRQINFO",rmem,-1,value);
+			case SPDIF_IRQINFO:
+				RegLog(2,"SPDIF_IRQINFO",rmem,-1,value);
 				break;
 			case 0x7c4:
 				if(Spdif.Unknown1 != value) ConLog(" * SPU2: SPDIF Unknown Register 1 set to %04x\n",value);

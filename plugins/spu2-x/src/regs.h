@@ -127,10 +127,10 @@
 
 // SPDIF interface
 #define SPDIF_OUT        0x07C0		// SPDIF Out: OFF/'PCM'/Bitstream/Bypass
-#define IRQINFO          0x07C2	
+#define SPDIF_IRQINFO    0x07C2	
 #define SPDIF_MODE       0x07C6			
 #define SPDIF_MEDIA      0x07C8		// SPDIF Media: 'CD'/DVD	
-#define SPDIF_PROTECT		 0x07CC		// SPDIF Copy Protection
+#define SPDIF_PROTECT	 0x07CC		// SPDIF Copy Protection
 
 
 /*********************************************************************
@@ -179,4 +179,17 @@ Core attributes (SD_C)
 #define VOICE_ADDR_SSA		 0x0		// Waveform data starting address
 #define VOICE_ADDR_LSAX      0x4		// Loop point address
 #define VOICE_ADDR_NAX       0x8		// Waveform data that should be read next
+
+
+
+// --------------------------------------------------------------------------------------
+//  SPU2-X Register Table LUT
+// --------------------------------------------------------------------------------------
+
+#define U16P(x)		( (u16*)&(x) )
+
+// Returns the hiword of a 32 bit integer.
+#define U16P_HI(x)	( ((u16*)&(x))+1 )
+
+extern u16* regtable[0x401];
 

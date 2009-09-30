@@ -99,24 +99,35 @@ public:
 	void DebugDump( FILE* dump, const char* title );
 };
 
-
 struct V_ADSR
 {
-	u16 Reg_ADSR1;
-	u16 Reg_ADSR2;
+	union
+	{
+		u32	reg32;
+		
+		struct  
+		{
+			u16 regADSR1;
+			u16 regADSR2;
+		};
+		
+		struct 
+		{
+			u32	SustainLevel:4,
+				DecayRate:4,
+				AttackRate:7,
+				AttackMode:1,	// 0 for linear (+lin), 1 for pseudo exponential (+exp)
 
-	s32 Value;		// Ranges from 0 to 0x7fffffff (signed values are clamped to 0) [Reg_ENVX]
-	u8 Phase;
-	u8 AttackRate;		// Ar
-	u8 AttackMode;		// Am
-	u8 DecayRate;		// Dr
-	u8 SustainLevel;	// Sl
-	u8 SustainRate;		// Sr
-	u8 SustainMode;		// Sm
-	u8 ReleaseRate;		// Rr
-	u8 ReleaseMode;		// Rm
+				ReleaseRate:5,
+				ReleaseMode:1,	// 0 for linear (-lin), 1 for exponential (-exp)
+				SustainRate:7,
+				SustainMode:3;	// 0 = +lin, 1 = -lin, 2 = +exp, 3 = -exp
+		};
+	};
 
-	bool Releasing;		// Ready To Release, triggered by Voice.Stop();
+	s32		Value;		// Ranges from 0 to 0x7fffffff (signed values are clamped to 0) [Reg_ENVX]
+	u8		Phase;		// monitors current phase of ADSR envelope
+	bool	Releasing;	// Ready To Release, triggered by Voice.Stop();
 
 public:
 	bool Calculate();
@@ -133,10 +144,6 @@ struct V_Voice
 	V_ADSR ADSR;
 // Pitch (also Reg_PITCH)
 	s16 Pitch; 
-// Pitch Modulated by previous voice
-	s8 Modulated;
-// Source (Wave/Noise)
-	s8 Noise;
 // Loop Start address (also Reg_LSAH/L)
 	u32 LoopStartA; 
 // Sound Start address (also Reg_SSAH/L)
@@ -147,14 +154,13 @@ struct V_Voice
 	s32 Prev1;
 	s32 Prev2;
 
+	// Pitch Modulated by previous voice
+	bool Modulated;
+	// Source (Wave/Noise)
+	bool Noise;
+
 	s8 LoopMode;
 	s8 LoopFlags;
-
-// [Air] : Replaced loop flags read from the ADPCM header with
-//  a single LoopFlags value (above) -- more cache-friendly.
-	//s8 LoopStart;
-	//s8 Loop;
-	//s8 LoopEnd;
 
 // Sample pointer (19:12 bit fixed point)
 	s32 SP;
@@ -303,8 +309,9 @@ struct V_CoreRegs
 	u32 VMIXR;
 	u32 VMIXEL;
 	u32 VMIXER;
-	u16 MMIX;
 	u32 ENDX;
+
+	u16 MMIX;
 	u16 STATX;
 	u16 ATTR;
 	u16 _1AC;
@@ -374,17 +381,18 @@ struct V_Core
 	u32				TSA;			// DMA Transfer Start Address
 	u32				TDA;			// DMA Transfer Data Address (Internal...)
 
-	s8				IRQEnable;		// Interrupt Enable
+	bool			IRQEnable;		// Interrupt Enable
+	bool			FxEnable;		// Effect Enable
+	bool			Mute;			// Mute
+	bool			AdmaInProgress;
+
 	s8				DMABits;		// DMA related?
-	s8				FxEnable;		// Effect Enable
 	s8				NoiseClk;		// Noise Clock
 	u16				AutoDMACtrl;	// AutoDMA Status
 	s32				DMAICounter;	// DMA Interrupt Counter
-	s8				Mute;			// Mute
 	u32				InputDataLeft;	// Input Buffer
 	u32				InputPos;
 	u32				InputDataProgress;
-	u8				AdmaInProgress;
 
 	V_Reverb		Revb;			// Reverb Registers
 	V_ReverbBuffers	RevBuffers;		// buffer pointers for reverb, pre-calculated and pre-clipped.

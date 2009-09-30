@@ -19,7 +19,6 @@
 #include "PS2E-spu2.h"
 #include "dma.h"
 #include "Dialogs.h"
-#include "RegTable.h"
 
 #ifdef _MSC_VER
 #	include "svnrev.h"
@@ -216,11 +215,7 @@ EXPORT_C_(void) CALLBACK SPU2interruptDMA7()
 
 EXPORT_C_(s32) SPU2init() 
 {
-#define MAKESURE(a,b) \
-	/*fprintf(stderr,"%08p: %08p == %08p\n",&(regtable[a>>1]),regtable[a>>1],U16P(b));*/ \
-	assert(regtable[(a)>>1]==U16P(b))
-
-	MAKESURE(0x800,zero);
+	assert( regtable[0x400] == NULL );
 
 	s32 c=0,v=0;
 	ReadSettings();
@@ -271,6 +266,8 @@ EXPORT_C_(s32) SPU2init()
 
 	memset(spu2regs, 0, 0x010000);
 	memset(_spu2mem, 0, 0x200000);
+	Cores[0].Index = 0;
+	Cores[1].Index = 1;
 	Cores[0].Reset();
 	Cores[1].Reset();
 

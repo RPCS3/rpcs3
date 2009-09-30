@@ -16,12 +16,6 @@
  */
 
 #include "Global.h"
-#include "RegTable.h"
-
-// This var is used to confirm that our lookup table is "correct"
-// If the assertion in DllMain fails, it means the table has too too few entries.
-// (it can't have too many because that would generate a compiler error).
-const u16 zero = 0;
 
 #define PCORE(c,p) \
 	U16P(Cores[c].p)
@@ -33,8 +27,8 @@ const u16 zero = 0;
 	PVCP(c,v,Volume.Left.Reg_VOL), \
 	PVCP(c,v,Volume.Right.Reg_VOL), \
 	PVCP(c,v,Pitch), \
-	PVCP(c,v,ADSR.Reg_ADSR1), \
-	PVCP(c,v,ADSR.Reg_ADSR2), \
+	PVCP(c,v,ADSR.regADSR1), \
+	PVCP(c,v,ADSR.regADSR2), \
 	PVCP(c,v,ADSR.Value)+1, \
 	PVCP(c,v,Volume.Left.Value)+1, \
 	PVCP(c,v,Volume.Right.Value)+1
@@ -54,8 +48,7 @@ const u16 zero = 0;
 	PCORE(c,Revb.n)+1, \
 	PCORE(c,Revb.n)
 
-#pragma pack(1)
-u16* regtable[0x800] =
+u16* regtable[0x401] =
 {
 	// Voice Params: 8 params, 24 voices = 0x180 bytes
 	PVC(0, 0),PVC(0, 1),PVC(0, 2),PVC(0, 3),PVC(0, 4),PVC(0, 5),
@@ -75,22 +68,20 @@ u16* regtable[0x800] =
 	PCORE(0,Regs.VMIXR)+1,
 	PCORE(0,Regs.VMIXER),
 	PCORE(0,Regs.VMIXER)+1,
-	PCORE(0,Regs.MMIX),
 
+	PCORE(0,Regs.MMIX),
 	PCORE(0,Regs.ATTR),
 
 	PCORE(0,IRQA)+1,
 	PCORE(0,IRQA),
 
-	U16P(zero),
-	U16P(zero),
-	U16P(zero),
-	U16P(zero),
+	NULL, NULL,
+	NULL, NULL,
 
 	PCORE(0,TSA)+1,
 	PCORE(0,TSA),
 
-	PRAW(0x1ac), PRAW(0x1ae), 
+	PRAW(REG__1AC), PRAW(REG__1AE), 
 
 	PCORE(0,AutoDMACtrl),
 
@@ -129,7 +120,7 @@ u16* regtable[0x800] =
 	PREVB_REG(0,MIX_DEST_B1),
 
 	PCORE(0,EffectsEndA)+1,
-	U16P(zero),
+	NULL,
 
 	PCORE(0,Regs.ENDX),
 	PCORE(0,Regs.ENDX)+1,
@@ -187,10 +178,8 @@ u16* regtable[0x800] =
 	PCORE(1,IRQA)+1,
 	PCORE(1,IRQA),
 
-	U16P(zero),
-	U16P(zero),
-	U16P(zero),
-	U16P(zero),
+	NULL, NULL,
+	NULL, NULL,
 
 	PCORE(1,TSA)+1,
 	PCORE(1,TSA),
@@ -234,7 +223,7 @@ u16* regtable[0x800] =
 	PREVB_REG(1,MIX_DEST_B1),
 
 	PCORE(1,EffectsEndA)+1,
-	U16P(zero),
+	NULL,
 
 	PCORE(1,Regs.ENDX),
 	PCORE(1,Regs.ENDX)+1,
@@ -308,6 +297,5 @@ u16* regtable[0x800] =
 	PRAW(0x7F0),PRAW(0x7F2),PRAW(0x7F4),PRAW(0x7F6),
 	PRAW(0x7F8),PRAW(0x7FA),PRAW(0x7FC),PRAW(0x7FE),
 
-	U16P(zero)
+	NULL
 };
-#pragma pack()

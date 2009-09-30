@@ -177,8 +177,8 @@ void DoFullDump()
 							 "     - Rm: %x\n"
 							 "     - Phase: %x\n"
 							 "     - Value: %x\n",
-							 Cores[c].Voices[v].ADSR.Reg_ADSR1,
-							 Cores[c].Voices[v].ADSR.Reg_ADSR2,
+							 Cores[c].Voices[v].ADSR.regADSR1,
+							 Cores[c].Voices[v].ADSR.regADSR2,
 							 Cores[c].Voices[v].ADSR.AttackRate,
 							 Cores[c].Voices[v].ADSR.AttackMode,
 							 Cores[c].Voices[v].ADSR.DecayRate,
