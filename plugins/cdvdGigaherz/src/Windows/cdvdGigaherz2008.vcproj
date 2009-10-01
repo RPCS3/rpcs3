@@ -136,6 +136,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				UACExecutionLevel="2"
+				ModuleDefinitionFile=".\plugin.def"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -188,30 +189,12 @@
 				>
 			</File>
 			<File
-				RelativePath="plugin.def"
-				>
-			</File>
-			<File
 				RelativePath="..\ReadThread.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\TocStuff.cpp"
 				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<Filter
 				Name="isofs"

@@ -32,11 +32,11 @@ int cmode;
 ///////////////////////////////////////////////////////////////////////////////
 // Plugin Interface                                                          //
 
-char *LibName       = "Gigaherz's CDVD Plugin ("
+char *LibName       = "Gigaherz's CDVD Plugin "
 #ifdef PCSX2_DEBUG
-	"Debug "
+	" Debug"
 #endif
-	"r"	SFY(SVN_REV)
+	"(r" SFY(SVN_REV)
 #if SVN_MODS
 	"/modded"
 #endif
