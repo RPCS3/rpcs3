@@ -364,7 +364,12 @@
 			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
-		<Unit filename="../gui/Resources/Dualshock.jpg" />
+		<Unit filename="../gui/Resources/Dualshock.h" />
+		<Unit filename="../gui/Resources/Dualshock.jpg">
+			<Option compile="1" />
+			<Option weight="0" />
+			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
+		</Unit>
 		<Unit filename="../gui/Resources/EmbeddedImage.h" />
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
