@@ -7,7 +7,6 @@
 #ifndef _CDVDLIB_H
 #define _CDVDLIB_H
 
-#define __WIN32__
 #define CDVDdefs
 #include <PS2Edefs.h>
 

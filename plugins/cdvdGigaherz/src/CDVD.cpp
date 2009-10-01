@@ -33,7 +33,7 @@ int cmode;
 // Plugin Interface                                                          //
 
 char *LibName       = "Gigaherz's CDVD Plugin ("
-#ifdef _DEBUG
+#ifdef PCSX2_DEBUG
 	"Debug "
 #endif
 	"r"	SFY(SVN_REV)
@@ -157,7 +157,7 @@ s32 CALLBACK CDVDopen(const char* pTitleFilename)
 		return 0;
 	}
 
-	if(source_drive='$')
+	if(source_drive=='$')
 	{
 		printf(" * CDVD: Opening image '%s'...\n",source_file);
 

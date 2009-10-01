@@ -17,8 +17,6 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)\bin\$(PcsxSubsection)"
-			IntermediateDirectory=".\Release"
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Release.vsprops"
 			UseOfMFC="0"
@@ -49,21 +47,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="$(SolutionDir)\common\include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_WINDOWS;_USRDLL;__MSCW32__"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
+				AdditionalIncludeDirectories=""
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile=".\Release/cdvdGigaherz.pch"
-				AssemblerListingLocation=".\Release/"
-				ObjectFile=".\Release/"
-				ProgramDataBaseFileName=".\Release/"
-				BrowseInformation="0"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -71,7 +56,6 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="NDEBUG"
-				Culture="3082"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -79,16 +63,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies=""
-				OutputFile="$(OutDir)\cdvdGigaherz.dll"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
 				ModuleDefinitionFile=".\plugin.def"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
-				RandomizedBaseAddress="0"
-				DataExecutionPrevention="0"
-				ImportLibrary="$(OutDir)\$(TargetName).lib"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -114,8 +89,6 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)\bin\$(PcsxSubsection)"
-			IntermediateDirectory=".\Debug"
 			ConfigurationType="2"
 			InheritedPropertySheets="..\..\..\..\common\vsprops\plugin_svnroot.vsprops;..\..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\..\..\common\vsprops\CodeGen_Debug.vsprops"
 			UseOfMFC="0"
@@ -145,22 +118,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				AdditionalIncludeDirectories="$(SolutionDir)\common\include"
-				PreprocessorDefinitions="_DEBUG;WIN32;_WINDOWS;_USRDLL;__MSCW32__;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
+				AdditionalIncludeDirectories=""
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				PrecompiledHeaderFile=".\Debug/cdvdGigaherz.pch"
-				AssemblerListingLocation=".\Debug/"
-				ObjectFile=".\Debug/"
-				ProgramDataBaseFileName=".\Debug/"
-				BrowseInformation="0"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
-				EnablePREfast="false"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -168,26 +128,14 @@
 			<Tool
 				Name="VCResourceCompilerTool"
 				PreprocessorDefinitions="_DEBUG"
-				Culture="3082"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="odbc32.lib odbccp32.lib shlwapi.lib"
-				OutputFile="$(OutDir)\cdvdGigaherz-dbg.dll"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
+				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				UACExecutionLevel="2"
-				ModuleDefinitionFile=".\plugin.def"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
-				RandomizedBaseAddress="0"
-				DataExecutionPrevention="0"
-				ImportLibrary="$(OutDir)\$(TargetName).lib"
-				TargetMachine="1"
-				Profile="false"
 			/>
 			<Tool
 				Name="VCALinkTool"
