@@ -18,6 +18,7 @@
 		MinimalRebuild="true"
 		RuntimeLibrary="2"
 		BufferSecurityCheck="false"
+		EnableFunctionLevelLinking="false"
 	/>
 	<Tool
 		Name="VCLinkerTool"

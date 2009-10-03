@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="cdvdGigaherz"
 	ProjectGUID="{5CF88D5F-64DD-4EDC-9F1A-436BD502940A}"
 	RootNamespace="cdvdGigaherz"
@@ -119,8 +119,6 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories=""
-				EnableFunctionLevelLinking="true"
-				UsePrecompiledHeader="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -134,7 +132,6 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				UACExecutionLevel="2"
 				ModuleDefinitionFile=".\plugin.def"
 			/>
