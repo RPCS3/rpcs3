@@ -491,7 +491,7 @@ void recEventTest()
 	// dont' remove this check unless doing an official release
 	if( g_globalXMMSaved || g_globalMMXSaved)
 	{
-		DevCon::Error("Pcsx2 Foopah!  Frozen regs have not been restored!!!");
+		DevCon::Error("PCSX2 Foopah!  Frozen regs have not been restored!!!");
 		DevCon::Error("g_globalXMMSaved = %d,g_globalMMXSaved = %d", g_globalXMMSaved, g_globalMMXSaved);
 	}
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);

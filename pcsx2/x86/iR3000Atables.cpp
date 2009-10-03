@@ -22,6 +22,8 @@
 #include "IopMem.h"
 #include "IopDma.h"
 
+using namespace x86Emitter;
+
 extern int g_psxWriteOk;
 extern u32 g_psxMaxRecMem;
 
@@ -1243,11 +1245,23 @@ void rpsxJALR()
 		assert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
 		MOV32RtoM((uptr)&psxRegs.pc, ESI);
 		x86regs[ESI].inuse = 0;
+		#ifdef PCSX2_DEBUG
+		xOR( esi, esi );
+		#endif
+
 	}
 	else {
 		MOV32MtoR(EAX, (uptr)&g_recWriteback);
 		MOV32RtoM((uptr)&psxRegs.pc, EAX);
+		#ifdef PCSX2_DEBUG
+		xOR( eax, eax );
+		#endif
 	}
+	#ifdef PCSX2_DEBUG
+	xForwardJNZ8 skipAssert;
+	xWrite8( 0xcc );
+	skipAssert.SetTarget();
+	#endif
 
 	psxSetBranchReg(0xffffffff);
 }

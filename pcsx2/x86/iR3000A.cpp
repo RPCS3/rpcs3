@@ -681,7 +681,6 @@ static __forceinline s32 recExecuteBlock( s32 eeCycles )
 // Returns the offset to the next instruction after any cleared memory
 static __forceinline u32 psxRecClearMem(u32 pc)
 {
-	BASEBLOCKEX* pexblock;
 	BASEBLOCK* pblock;
 
 	pblock = PSX_GETBLOCK(pc);
@@ -696,8 +695,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 
 	jASSUME(blockidx != -1);
 
-	// Variable assignment in the middle of the while statements condition?
-	while (pexblock = recBlocks[blockidx - 1]) {
+	while (BASEBLOCKEX* pexblock = recBlocks[blockidx - 1]) {
 		if (pexblock->startpc + pexblock->size * 4 <= lowerextent)
 			break;
 
@@ -705,8 +703,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 		blockidx--;
 	}
 
-	// Same here.
-	while (pexblock = recBlocks[blockidx]) {
+	while (BASEBLOCKEX* pexblock = recBlocks[blockidx]) {
 		if (pexblock->startpc >= upperextent)
 			break;
 
@@ -716,7 +713,8 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 	}
 
 #ifdef PCSX2_DEVBUILD
-	for (int i = 0; pexblock = recBlocks[i]; i++)
+	blockidx=0;
+	while(BASEBLOCKEX* pexblock = recBlocks[blockidx++])
 		if (pc >= pexblock->startpc && pc < pexblock->startpc + pexblock->size * 4) {
 			Console::Error("Impossible block clearing failure");
 			jASSUME(0);
@@ -749,11 +747,24 @@ void psxSetBranchReg(u32 reg)
 			assert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
 			MOV32RtoM((uptr)&psxRegs.pc, ESI);
 			x86regs[ESI].inuse = 0;
+			#ifdef PCSX2_DEBUG
+			xOR( esi, esi );
+			#endif
 		}
 		else {
 			MOV32MtoR(EAX, (uptr)&g_recWriteback);
 			MOV32RtoM((uptr)&psxRegs.pc, EAX);
+
+			#ifdef PCSX2_DEBUG
+			xOR( eax, eax );
+			#endif
 		}
+		
+		#ifdef PCSX2_DEBUG
+		xForwardJNZ8 skipAssert;
+		xWrite8( 0xcc );
+		skipAssert.SetTarget();
+		#endif
 	}
 
 	_psxFlushCall(FLUSH_EVERYTHING);
