@@ -128,15 +128,15 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 	if(MsgAutoDMA()) ConLog(" * SPU2: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
 		GetDmaIndexChar(), size<<1, TSA, DMABits, AutoDMACtrl, (~Regs.ATTR)&0x7fff);
 
-	InputDataProgress=0;
+	InputDataProgress = 0;
 	if((AutoDMACtrl&(Index+1))==0)
 	{
-		TSA=0x2000+(Index<<10);
-		DMAICounter=size;
+		TSA = 0x2000 + (Index<<10);
+		DMAICounter = size;
 	}
 	else if(size>=512)
 	{
-		InputDataLeft=size;
+		InputDataLeft = size;
 		if(AdmaInProgress==0)
 		{
 #ifdef PCM24_S1_INTERLEAVE
@@ -149,25 +149,42 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 				AutoDMAReadBuffer(Index,0);
 			}
 #else
-			if(((PlayMode&4)==4)&&(Index==0))
+			if( ((PlayMode&4)==4) && (Index==0) )
 				Cores[0].InputPos=0;
 
 			AutoDMAReadBuffer(0);
 #endif
 
 			if(size==512)
-				DMAICounter=size;
+				DMAICounter = size;
 		}
 
-		AdmaInProgress=1;
+		AdmaInProgress = 1;
 	}
 	else
 	{
-		InputDataLeft=0;
-		DMAICounter=1;
+		InputDataLeft	= 0;
+		DMAICounter		= 1;
 	}
-	TADR=MADR+(size<<1);
+	TADR = MADR + (size<<1);
 }
+
+// HACKFIX: The BIOS breaks if we check the IRQA for both cores when issuing DMA writes.  The
+// breakage is a null psxRegs.pc being loaded form some memory address (haven't traced it deeper
+// yet).  We get around it by only checking the current core's IRQA, instead of doing the
+// *correct* thing and checking both.  This might break some games, but having a working BIOS
+// is more important for now, until a proper fix can be uncovered.
+//
+// This problem might be caused by bad DMA timings in the IOP or a lack of proper IRQ
+// handling by the Effects Processor.  After those are implemented, let's hope it gets
+// magically fixed?
+//
+// Note: This appears to affect DMA Writes only, so DMA Read DMAs are left intact (both core
+// IRQAs are tested).  Very few games use DMA reads tho, so it could just be a case of "works
+// by the grace of not being used."
+//
+#define NO_BIOS_HACKFIX   0			// set to 1 to disable the hackfix
+
 
 void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 {
@@ -227,7 +244,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 	const u32 buff1size = (buff1end-TSA);
 	memcpy( GetMemPtr( TSA ), pMem, buff1size*2 );
-	
+
 	if( buff2end > 0 )
 	{
 		// second branch needs copied:
@@ -239,10 +256,33 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 		//memset( pcm_cache_flags, 0, endpt2 );
 
 		// Emulation Grayarea: Should addresses wrap around to zero, or wrap around to
-		// 0x2800?  Hard to know for usre (almost no games depend on this)
+		// 0x2800?  Hard to know for sure (almost no games depend on this)
 
 		memcpy( GetMemPtr( 0 ), &pMem[buff1size], buff2end*2 );
 		TDA = (buff2end+1) & 0xfffff;
+
+		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+		// Important: Test both core IRQ settings for either DMA!
+		// Note: Because this buffer wraps, we use || instead of &&
+
+#if NO_BIOS_HACKFIX
+		for( int i=0; i<2; i++ )
+		{
+			// Note: (start is inclusive, dest exclusive -- fixes DMC1 FMVs)
+
+			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
+			{
+				Spdif.Info = 4 << i;
+				SetIrqCall();
+			}
+		}
+#else
+		if( IRQEnable && (IRQA >= TSA) || (IRQA < TDA) )
+		{
+			Spdif.Info = 4 << Index;
+			SetIrqCall();
+		}
+#endif
 	}
 	else
 	{
@@ -250,30 +290,28 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 		// Just set the TDA and check for an IRQ...
 		
 		TDA = buff1end;
-	}
 
-	// Flag interrupt?  If IRQA occurs between start and dest, flag it.
-	// Important: Test both core IRQ settings for either DMA!
+		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+		// Important: Test both core IRQ settings for either DMA!
 
-	for( int i=0; i<2; i++ )
-	{
-		// Note: (start is inclusive, dest exclusive -- fixes DMC1 FMVs)
-
-		if( Cores[i].IRQEnable && (Cores[i].IRQA >= Cores[i].TSA) && (Cores[i].IRQA < Cores[i].TDA) )
+#if NO_BIOS_HACKFIX
+		for( int i=0; i<2; i++ )
 		{
-			Spdif.Info = 4 << i;
-			SetIrqCall();
+			// Note: (start is inclusive, dest exclusive -- fixes DMC1 FMVs)
+
+			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
+			{
+				Spdif.Info = 4 << i;
+				SetIrqCall();
+			}
 		}
-	}
-
-	if(IRQEnable)
-	{
-
-		if( ( IRQA >= TSA ) && ( IRQA < TDA ) )
+#else
+		if( IRQEnable && (IRQA >= TSA) && (IRQA < TDA) )
 		{
 			Spdif.Info = 4 << Index;
 			SetIrqCall();
 		}
+#endif
 	}
 
 	TSA			= TDA & 0xFFFF0;
@@ -308,6 +346,19 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 		memcpy( &pMem[buff1size], GetMemPtr( 0 ), buff2end*2 );
 
 		TDA = (buff2end+0x20) & 0xfffff;
+
+		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+		// Important: Test both core IRQ settings for either DMA!
+		// Note: Because this buffer wraps, we use || instead of &&
+
+		for( int i=0; i<2; i++ )
+		{
+			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
+			{
+				Spdif.Info = 4 << i;
+				SetIrqCall();
+			}
+		}
 	}
 	else
 	{
@@ -315,17 +366,17 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 		// Just set the TDA and check for an IRQ...
 
 		TDA = (buff1end + 0x20) & 0xfffff;
-	}
 
-	// Flag interrupt?  If IRQA occurs between start and dest, flag it.
-	// Important: Test both core IRQ settings for either DMA!
+		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+		// Important: Test both core IRQ settings for either DMA!
 
-	for( int i=0; i<2; i++ )
-	{
-		if( Cores[i].IRQEnable && (Cores[i].IRQA >= Cores[i].TSA) && (Cores[i].IRQA < Cores[i].TDA) )
+		for( int i=0; i<2; i++ )
 		{
-			Spdif.Info = 4 << i;
-			SetIrqCall();
+			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
+			{
+				Spdif.Info = 4 << i;
+				SetIrqCall();
+			}
 		}
 	}
 

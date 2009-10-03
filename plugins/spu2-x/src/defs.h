@@ -432,11 +432,12 @@ struct V_Core
 //  V_Core Methods
 // ----------------------------------------------------------------------------------
 
-	V_Core() : Index( -1 ) {}	// uninitialized constructor
+	// uninitialized constructor
+	V_Core() : Index( -1 ), DMAPtr( NULL ) {}
 	V_Core( int idx );			// our badass constructor
 	virtual ~V_Core() throw();
 
-	void	Reset();
+	void	Reset( int index );
 	void	UpdateEffectsBufferSize();
 
 	s32		EffectsBufferIndexer( s32 offset ) const;

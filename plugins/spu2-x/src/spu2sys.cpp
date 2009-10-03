@@ -107,11 +107,11 @@ V_Core::~V_Core() throw()
 	}*/
 }
 
-void V_Core::Reset()
+void V_Core::Reset( int index )
 {
 	memset( this, 0, sizeof(V_Core) );
 
-	const int c = Index;
+	const int c = Index = index;
 
 	Regs.STATX		= 0;
 	Regs.ATTR		= 0;
@@ -276,7 +276,7 @@ u32 TicksThread = 0;
 
 __forceinline void TimeUpdate(u32 cClocks)
 {
-	u32 dClocks = cClocks-lClocks;
+	s32 dClocks = cClocks-lClocks;
 
 	// [Air]: Sanity Check
 	//  If for some reason our clock value seems way off base, just mix
@@ -306,7 +306,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 			Cores[0].InitDelay--;
 			if(Cores[0].InitDelay==0)
 			{
-				Cores[0].Reset();
+				Cores[0].Reset(0);
 			}
 		}
 
@@ -315,7 +315,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 			Cores[1].InitDelay--;
 			if(Cores[1].InitDelay==0)
 			{
-				Cores[1].Reset();
+				Cores[1].Reset(1);
 			}
 		}
 
@@ -824,7 +824,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			
 			for( int i=0; i<2; i++ )
 			{
-				if(Cores[i].IRQEnable && (Cores[i].IRQA == Cores[i].TSA))
+				if(Cores[i].IRQEnable && (Cores[i].IRQA == thiscore.TSA))
 				{
 					Spdif.Info = 4 << i;
 					SetIrqCall();
@@ -851,7 +851,7 @@ static void __fastcall RegWrite_Core( u16 value )
 				}
 				else
 				{
-					thiscore.Reset();
+					thiscore.Reset(thiscore.Index);
 				}
 			}
 

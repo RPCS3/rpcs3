@@ -177,8 +177,6 @@ EXPORT_C_(void) CALLBACK SPU2writeDMA4Mem(u16* pMem, u32 size)	// size now in 16
 
 EXPORT_C_(void) CALLBACK SPU2interruptDMA4()
 {
-	if( cyclePtr != NULL ) TimeUpdate( *cyclePtr );
-
 	FileLog("[%10d] SPU2 interruptDMA4\n",Cycles);
 	Cores[0].Regs.STATX |= 0x80;
 	//Cores[0].Regs.ATTR &= ~0x30;
@@ -206,8 +204,6 @@ EXPORT_C_(void) CALLBACK SPU2writeDMA7Mem(u16* pMem, u32 size)
 
 EXPORT_C_(void) CALLBACK SPU2interruptDMA7()
 {
-	if( cyclePtr != NULL ) TimeUpdate( *cyclePtr );
-
 	FileLog("[%10d] SPU2 interruptDMA7\n",Cycles);
 	Cores[1].Regs.STATX |= 0x80;
 	//Cores[1].Regs.ATTR &= ~0x30;
@@ -266,10 +262,8 @@ EXPORT_C_(s32) SPU2init()
 
 	memset(spu2regs, 0, 0x010000);
 	memset(_spu2mem, 0, 0x200000);
-	Cores[0].Index = 0;
-	Cores[1].Index = 1;
-	Cores[0].Reset();
-	Cores[1].Reset();
+	Cores[0].Reset(0);
+	Cores[1].Reset(1);
 
 	DMALogOpen();
 
