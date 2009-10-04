@@ -89,9 +89,9 @@ namespace Implementations
 	void Sys_RenderToggle()
 	{
 		if( !HasCoreThread() ) return;
-		SysSuspend();
+		sCoreThread.Suspend();
 		renderswitch = !renderswitch;
-		SysResume();
+		sCoreThread.Resume();
 	}
 
 	void Sys_LoggingToggle()
@@ -150,7 +150,7 @@ namespace Implementations
 	{
 #ifdef PCSX2_DEVBUILD
 		iDumpRegisters(cpuRegs.pc, 0);
-		Console::Notice("hardware registers dumped EE:%x, IOP:%x\n", cpuRegs.pc, psxRegs.pc);
+		Console.Notice("hardware registers dumped EE:%x, IOP:%x\n", cpuRegs.pc, psxRegs.pc);
 #endif
 	}
 }
@@ -260,7 +260,7 @@ void AcceleratorDictionary::Map( const KeyAcceleratorCode& acode, const char *se
 
 	if( result != NULL )
 	{
-		Console::Notice( wxsFormat(
+		Console.Notice( wxsFormat(
 			L"Kbd Accelerator '%s' is mapped multiple times.\n"
 			L"\t'Command %s' is being replaced by '%s'",
 			acode.ToString().c_str(), wxString::FromUTF8( result->Id ).c_str(), searchfor )
@@ -271,7 +271,7 @@ void AcceleratorDictionary::Map( const KeyAcceleratorCode& acode, const char *se
 
 	if( result == NULL )
 	{
-		Console::Notice( wxsFormat( L"Kbd Accelerator '%s' is mapped to unknown command '%s'",
+		Console.Notice( wxsFormat( L"Kbd Accelerator '%s' is mapped to unknown command '%s'",
 			acode.ToString().c_str(), wxString::FromUTF8( searchfor ).c_str() )
 		);
 	}

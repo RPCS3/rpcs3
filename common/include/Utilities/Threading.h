@@ -120,25 +120,33 @@ namespace Threading
 
 		virtual bool IsSelf() const { return false; }
 		virtual bool IsRunning() { return false; }
-		virtual int  GetReturnCode() const
-		{
-			DevAssert( false, "Cannot obtain a return code from a placebo thread." );
-			return 0;
-		}
 
 		virtual void Start() {}
 		virtual void Cancel( bool isBlocking = true ) {}
-		virtual sptr Block() { return NULL; }
+		virtual void Block() {}
 		virtual bool Detach() { return false; }
 	};
 
 // --------------------------------------------------------------------------------------
 // PersistentThread - Helper class for the basics of starting/managing persistent threads.
 // --------------------------------------------------------------------------------------
-// Use this as a base class for your threaded procedure, and implement the 'int ExecuteTask()'
-// method.  Use Start() and Cancel() to start and shutdown the thread, and use m_sem_event
-// internally to post/receive events for the thread (make a public accessor for it in your
-// derived class if your thread utilizes the post).
+// This class is meant to be a helper for the typical threading model of "start once and 
+// reuse many times."  This class incorporates a lot of extra overhead in stopping and
+// starting threads, but in turn provides most of the basic thread-safety and event-handling
+// functionality needed for a threaded operation.  In practice this model is usually an
+// ideal one for efficiency since Operating Systems themselves typically subscribe to a
+// design where sleeping, suspending, and resuming threads is very efficient, but starting
+// new threads has quite a bit of overhead.
+//
+// To use this as a base class for your threaded procedure, overload the following virtual
+// methods:
+//  void OnStart();
+//  void ExecuteTask();
+//  void OnThreadCleanup();
+//  
+// Use the public methods Start() and Cancel() to start and shutdown the thread, and use
+// m_sem_event internally to post/receive events for the thread (make a public accessor for
+// it in your derived class if your thread utilizes the post).
 //
 // Notes:
 //  * Constructing threads as static global vars isn't recommended since it can potentially
@@ -159,7 +167,6 @@ namespace Threading
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
 		Semaphore	m_sem_finished;		// used for canceling and closing threads in a deadlock-safe manner
 		MutexLock	m_lock_start;		// used to lock the Start() code from starting simutaneous threads accidentally.
-		sptr		m_returncode;		// value returned from the thread on close.
 		
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
 		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.
@@ -176,18 +183,23 @@ namespace Threading
 		virtual void Start();
 		virtual void Cancel( bool isBlocking = true );
 		virtual bool Detach();
-		virtual sptr Block();
-
-		virtual int GetReturnCode() const;
+		virtual void Block();
 		virtual void RethrowException() const;
 
 		bool IsRunning() const;
 		bool IsSelf() const;
 		wxString GetName() const;
 
-		virtual void DoThreadCleanup();
+		void _ThreadCleanup();
 
 	protected:
+
+		// Extending classes should always implement your own OnStart(), which is called by
+		// Start() once necessary locks have been obtained.  Do not override Start() directly
+		// unless you're really sure that's what you need to do. ;)
+		virtual void OnStart()=0;
+		virtual void OnThreadCleanup()=0;
+
 		void DoSetThreadName( const wxString& name );
 		void DoSetThreadName( __unused const char* name );
 		void _internal_execute();
@@ -198,7 +210,7 @@ namespace Threading
 		static void* _internal_callback( void* func );
 
 		// Implemented by derived class to handle threading actions!
-		virtual sptr ExecuteTask()=0;
+		virtual void ExecuteTask()=0;
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -295,7 +307,7 @@ namespace Threading
 		{
 		}
 
-		sptr Block();
+		void Block();
 		void PostTask();
 		void WaitForResult();
 
@@ -304,7 +316,7 @@ namespace Threading
 		// all your necessary processing work here.
 		virtual void Task()=0;
 
-		sptr ExecuteTask();
+		virtual void ExecuteTask();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////

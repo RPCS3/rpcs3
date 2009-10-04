@@ -11,3 +11,7 @@ folder prefix, these files can be included the same way as other wxWidgets inclu
 
 If/when PCSX2 upgrades to wx2.9/3.0 these files will be removed and the wxWidgets
 distribution files will automatically be used instead.
+
+
+NOTE: Removed wxScopedPtr in favor of our own implementation, which uses a more
+sensible API naming convention and also features better operator assignment.

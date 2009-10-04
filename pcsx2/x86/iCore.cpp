@@ -136,7 +136,7 @@ int  _getFreeXMMreg()
 		_freeXMMreg(tempi);
 		return tempi;
 	}
-	Console::Error("*PCSX2*: XMM Reg Allocation Error in _getFreeXMMreg()!");
+	Console.Error("*PCSX2*: XMM Reg Allocation Error in _getFreeXMMreg()!");
 
 	return -1;
 }

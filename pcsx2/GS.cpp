@@ -79,7 +79,7 @@ void gsSetRegionMode( GS_RegionMode region )
 	if( gsRegionMode == region ) return;
 
 	gsRegionMode = region;
-	Console::WriteLn( "%s Display Mode Initialized.", (( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC") );
+	Console.WriteLn( "%s Display Mode Initialized.", (( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC") );
 	UpdateVSyncRate();
 }
 
@@ -140,7 +140,7 @@ void gsCSRwrite(u32 value)
 	else if( value & 0x100 ) // FLUSH
 	{ 
 		// Our emulated GS has no FIFO, but if it did, it would flush it here...
-		//Console::WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
+		//Console.WriteLn("GS_CSR FLUSH GS fifo: %x (CSRr=%x)", value, GSCSRr);
 	}
 	else
 	{
@@ -363,7 +363,7 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 
 	if( !m_StrictSkipping ) return;
 
-	//Console::WriteLn("LostTime on the EE!");
+	//Console.WriteLn("LostTime on the EE!");
 
 	mtgsThread.SendSimplePacket(
 		GS_RINGTYPE_STARTTIME,
@@ -414,7 +414,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 	{
 		if( !FramesToSkip )
 		{
-			//Console::Status( "- Skipping some VUs!" );
+			//Console.Status( "- Skipping some VUs!" );
 
 			GSsetFrameSkip( 1 );
 			FramesToRender = noSkipFrames;
@@ -482,7 +482,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 
 			if( sSlowDeltaTime > (m_iSlowTicks + ((s64)GetTickFrequency() / 4)) )
 			{
-				//Console::Status( "Frameskip couldn't skip enough -- had to lose some time!" );
+				//Console.Status( "Frameskip couldn't skip enough -- had to lose some time!" );
 				m_iSlowStart = iEnd - m_iSlowTicks;
 			}
 
@@ -492,7 +492,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 			return;
 	}
 
-	//Console::WriteLn( "Consecutive Frames -- Lateness: %d", (int)( sSlowDeltaTime / m_iSlowTicks ) );
+	//Console.WriteLn( "Consecutive Frames -- Lateness: %d", (int)( sSlowDeltaTime / m_iSlowTicks ) );
 
 	// -- Consecutive frames section --
 	// Force-render consecutive frames without skipping.

@@ -17,8 +17,6 @@
 
 #include "Dependencies.h"
 
-extern bool DevAssert( bool condition, const char* msg );
-
 // --------------------------------------------------------------------------------------
 //  DESTRUCTOR_CATCHALL - safe destructor helper
 // --------------------------------------------------------------------------------------
@@ -30,13 +28,13 @@ extern bool DevAssert( bool condition, const char* msg );
 #define __DESTRUCTOR_CATCHALL( funcname ) \
 	catch( Exception::BaseException& ex ) \
 	{ \
-		Console::Error( "Unhandled BaseException in %s (ignored!):", funcname ); \
-		Console::Error( ex.FormatDiagnosticMessage() ); \
+		Console.Error( "Unhandled BaseException in %s (ignored!):", funcname ); \
+		Console.Error( ex.FormatDiagnosticMessage() ); \
 	} \
 	catch( std::exception& ex ) \
 	{ \
-		Console::Error( "Unhandled std::exception in %s (ignored!):", funcname ); \
-		Console::Error( ex.what() ); \
+		Console.Error( "Unhandled std::exception in %s (ignored!):", funcname ); \
+		Console.Error( ex.what() ); \
 	}
 
 #ifdef __GNUC__

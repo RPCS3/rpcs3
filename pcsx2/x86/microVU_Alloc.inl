@@ -30,7 +30,7 @@
 		case 2: regX = gprF2;	break;									\
 		case 3: regX = gprF3;	break;									\
 		default:														\
-			Console::Error("microVU Error: fInst = %d", fInst);	\
+			Console.Error("microVU Error: fInst = %d", fInst);	\
 			regX = gprF0;												\
 			break;														\
 	}																	\

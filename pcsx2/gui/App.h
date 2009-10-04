@@ -35,6 +35,9 @@ class AppCoreThread;
 #include "System.h"
 #include "System/SysThreads.h"
 
+#define AllowFromMainThreadOnly() \
+	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
+
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_OpenModalDialog, -1 )
@@ -44,6 +47,12 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_FreezeFinished, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_ThawFinished, -1 )
 END_DECLARE_EVENT_TYPES()
+
+// This is used when the GS plugin is handling its own window.  Messages from the PAD
+// are piped through to an app-level message handler, which dispatches them through
+// the universal Accelerator table.
+static const int pxID_PadHandler_Keydown = 8030;
+
 
 // ------------------------------------------------------------------------
 // All Menu Options for the Main Window! :D
@@ -338,7 +347,6 @@ public:
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc );
 	void SysReset();
-	bool SysIsActive() const;
 
 	const wxBitmap& GetLogoBitmap();
 	wxImageList& GetImgList_Config();
@@ -346,17 +354,19 @@ public:
 
 	const AppImageIds& GetImgId() const { return m_ImageId; }
 
-	bool HasMainFrame() const { return m_MainFrame != NULL; }
-	bool HasCoreThread() const { return m_CoreThread != NULL; }
-
 	MainEmuFrame&	GetMainFrame() const;
 	SysCoreThread&	GetCoreThread() const;
-	MainEmuFrame&	GetMainFrameOrExcept() const;
-	SysCoreThread&	GetCoreThreadOrExcept() const;
+
+	bool HasMainFrame() const	{ return m_MainFrame != NULL; }
+	bool HasCoreThread() const	{ return m_CoreThread != NULL; }
+
+	MainEmuFrame*	GetMainFramePtr() const		{ return m_MainFrame; }
+	SysCoreThread*	GetCoreThreadPtr() const	{ return m_CoreThread; }
 
 	void OpenGsFrame();
 	void OnGsFrameClosed();
-
+	void OnMainFrameClosed();
+	
 	// --------------------------------------------------------------------------
 	//  Overrides of wxApp virtuals:
 	// --------------------------------------------------------------------------
@@ -375,9 +385,12 @@ public:
 	//   Console / Program Logging Helpers
 	// ----------------------------------------------------------------------------
 	ConsoleLogFrame* GetProgramLog();
-	void CloseProgramLog();
 	void ProgramLog_CountMsg();
 	void ProgramLog_PostEvent( wxEvent& evt );
+	void EnableConsoleLogging() const;
+	void DisableWindowLogging() const;
+	void DisableDiskLogging() const;
+	void OnProgramLogClosed();
 
 protected:
 	void InitDefaultGlobalAccelerators();
@@ -433,29 +446,52 @@ public:
 	virtual ~AppCoreThread() throw();
 
 	virtual void Suspend( bool isBlocking=true );
+	virtual void Resume();
 	virtual void StateCheck( bool isCancelable=true );
 	virtual void ApplySettings( const Pcsx2Config& src );
 
 protected:
 	virtual void OnResumeReady();
-	virtual void DoThreadCleanup();
-	sptr ExecuteTask();
+	virtual void OnThreadCleanup();
+	virtual void ExecuteTask();
 };
 
 DECLARE_APP(Pcsx2App)
 
-class EntryGuard
-{
-public:
-	int& Counter;
-	EntryGuard( int& counter ) : Counter( counter )
-	{ ++Counter; }
+// --------------------------------------------------------------------------------------
+//  s* macros!  ['s' stands for 'shortcut']
+// --------------------------------------------------------------------------------------
+// Use these for "silent fail" invocation of PCSX2 Application-related constructs.  If the
+// construct (albeit wxApp, MainFrame, CoreThread, etc) is null, the requested method will
+// not be invoked, and an optional "else" clause cn be affixed for handling the end case.
+//
+// Usage Examples:
+//   sCoreThread.Suspend();		// Suspends the CoreThread, or does nothing if the CoreThread handle is NULL
+//   sCoreThread.Suspend(); else Console.WriteLn( "Judge Wapner" );	// 'else' clause for handling NULL scenarios.
+//
+// Note!  These macros are not "syntax complete", which means they could generat unexpected
+// syntax errors in some situatins, and more importantly they cannot be used for invoking 
+// functions with return values.
+//
+// Rationale: There are a lot of situations where we want to invoke a void-style method on
+// various volatile object pointers (App, Corethread, MainFrame, etc).  Typically if these
+// objects are NULL the most intuitive response is to simply ignore the call request and
+// continue running silently.  These macros make that possible without any extra boilerplate
+// conditionals or temp variable defines in the code.
+// 
+#define sApp \
+	if( Pcsx2App* __app_ = (Pcsx2App*)wxApp::GetInstance() ) (*__app_)
 
-	virtual ~EntryGuard() throw()
-	{ --Counter; }
+#define sCoreThread \
+	if( SysCoreThread* __thread_ = GetCoreThreadPtr() ) (*__thread_)
 
-	bool IsReentrant() const { return Counter > 1; }
-};
+#define sMainFrame \
+	if( MainEmuFrame* __frame_ = GetMainFramePtr() ) (*__frame_)
+
+
+// --------------------------------------------------------------------------------------
+//  External App-related Globals and Shortcuts
+// --------------------------------------------------------------------------------------
 
 extern bool sys_resume_lock;
 
@@ -473,14 +509,12 @@ extern void AppApplySettings( const AppConfig* oldconf=NULL );
 extern bool SysHasValidState();
 
 extern void SysStatus( const wxString& text );
-extern void SysSuspend( bool closePlugins = true );
-extern void SysResume();
-extern void SysReset();
-extern void SysExecute();
-extern void SysExecute( CDVD_SourceType cdvdsrc );
 
 extern bool HasMainFrame();
 extern bool HasCoreThread();
 
 extern MainEmuFrame&	GetMainFrame();
 extern SysCoreThread&	GetCoreThread();
+
+extern MainEmuFrame*	GetMainFramePtr();
+extern SysCoreThread*	GetCoreThreadPtr();

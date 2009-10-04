@@ -379,7 +379,7 @@ __forceinline void fpuFloat4(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -
 		_freeXMMreg(t1reg);
 	}
 	else {
-		Console::Error("fpuFloat2() allocation error"); 
+		Console.Error("fpuFloat2() allocation error"); 
 		t1reg = (regd == 0) ? 1 : 0; // get a temp reg thats not regd
 		SSE_MOVAPS_XMM_to_M128( (uptr)&FPU_FLOAT_TEMP[0], t1reg ); // backup data in t1reg to a temp address
 		SSE_MOVSS_XMM_to_XMM(t1reg, regd);
@@ -459,9 +459,9 @@ void FPU_ADD_SUB(int regd, int regt, int issub)
 	int temp2 = _allocX86reg(-1, X86TYPE_TEMP, 0, 0); //receives regt
 	int xmmtemp = _allocTempXMMreg(XMMT_FPS, -1); //temporary for anding with regd/regt
  
-	if (tempecx != ECX)	{ Console::Error("FPU: ADD/SUB Allocation Error!"); tempecx = ECX;}
-	if (temp2 == -1)	{ Console::Error("FPU: ADD/SUB Allocation Error!"); temp2 = EAX;}
-	if (xmmtemp == -1)	{ Console::Error("FPU: ADD/SUB Allocation Error!"); xmmtemp = XMM0;}
+	if (tempecx != ECX)	{ Console.Error("FPU: ADD/SUB Allocation Error!"); tempecx = ECX;}
+	if (temp2 == -1)	{ Console.Error("FPU: ADD/SUB Allocation Error!"); temp2 = EAX;}
+	if (xmmtemp == -1)	{ Console.Error("FPU: ADD/SUB Allocation Error!"); xmmtemp = XMM0;}
 
 	SSE2_MOVD_XMM_to_R(tempecx, regd); 
 	SSE2_MOVD_XMM_to_R(temp2, regt);
@@ -646,7 +646,7 @@ static void (*recComOpXMM_to_XMM[] )(x86SSERegType, x86SSERegType) = {
 int recCommutativeOp(int info, int regd, int op) 
 {
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
-    //if (t0reg == -1) {Console::WriteLn("FPU: CommutativeOp Allocation Error!");}
+    //if (t0reg == -1) {Console.WriteLn("FPU: CommutativeOp Allocation Error!");}
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
@@ -685,7 +685,7 @@ int recCommutativeOp(int info, int regd, int op)
 			}
 			break;
 		default:
-			Console::Status("FPU: recCommutativeOp case 4");
+			Console.Status("FPU: recCommutativeOp case 4");
 			SSE_MOVSS_M32_to_XMM(regd, (uptr)&fpuRegs.fpr[_Fs_]);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			if (CHECK_FPU_EXTRA_OVERFLOW || (op >= 2)) { fpuFloat2(regd); fpuFloat2(t0reg); }
@@ -770,7 +770,7 @@ void recC_EQ_xmm(int info)
 	int tempReg;
 	int t0reg;
 
-	//Console::WriteLn("recC_EQ_xmm()");
+	//Console.WriteLn("recC_EQ_xmm()");
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S: 
@@ -801,9 +801,9 @@ void recC_EQ_xmm(int info)
 			SSE_UCOMISS_XMM_to_XMM(EEREC_S, EEREC_T); 
 			break;
 		default: 
-			Console::Status("recC_EQ_xmm: Default");
+			Console.Status("recC_EQ_xmm: Default");
 			tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-			if (tempReg < 0) {Console::Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
+			if (tempReg < 0) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
 			MOV32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Fs_]);
 			CMP32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Ft_]); 
 
@@ -840,7 +840,7 @@ void recC_LE_xmm(int info )
 	int tempReg; //tempX86reg
 	int t0reg; //tempXMMreg
 
-	//Console::WriteLn("recC_LE_xmm()");
+	//Console.WriteLn("recC_LE_xmm()");
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S: 
@@ -881,9 +881,9 @@ void recC_LE_xmm(int info )
 			SSE_UCOMISS_XMM_to_XMM(EEREC_S, EEREC_T); 
 			break;
 		default: // Untested and incorrect, but this case is never reached AFAIK (cottonvibes)
-			Console::Status("recC_LE_xmm: Default");
+			Console.Status("recC_LE_xmm: Default");
 			tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-			if (tempReg < 0) {Console::Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
+			if (tempReg < 0) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
 			MOV32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Fs_]);
 			CMP32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Ft_]); 
 			
@@ -914,7 +914,7 @@ void recC_LT_xmm(int info)
 	int tempReg;
 	int t0reg;
 
-	//Console::WriteLn("recC_LT_xmm()");
+	//Console.WriteLn("recC_LT_xmm()");
 	
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
@@ -957,9 +957,9 @@ void recC_LT_xmm(int info)
 			SSE_UCOMISS_XMM_to_XMM(EEREC_S, EEREC_T); 
 			break;
 		default:
-			Console::Status("recC_LT_xmm: Default");
+			Console.Status("recC_LT_xmm: Default");
 			tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-			if (tempReg < 0) {Console::Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
+			if (tempReg < 0) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
 			MOV32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Fs_]);
 			CMP32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Ft_]); 
 			
@@ -1049,8 +1049,8 @@ void recDIVhelper1(int regd, int regt) // Sets flags
 	u32 *ajmp32, *bjmp32;
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-	//if (t1reg == -1) {Console::Error("FPU: DIV Allocation Error!");}
-	if (tempReg == -1) {Console::Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
+	//if (t1reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
+	if (tempReg == -1) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
 
 	AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
 
@@ -1105,11 +1105,11 @@ void recDIV_S_xmm(int info)
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
-    //if (t0reg == -1) {Console::Error("FPU: DIV Allocation Error!");}
-    //Console::WriteLn("DIV");
+    //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
+    //Console.WriteLn("DIV");
 
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//Console::WriteLn("div to nearest");
+		//Console.WriteLn("div to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -1118,14 +1118,14 @@ void recDIV_S_xmm(int info)
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
-			//Console::WriteLn("FPU: DIV case 1");
+			//Console.WriteLn("FPU: DIV case 1");
 			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recDIVhelper1(EEREC_D, t0reg);
 			else recDIVhelper2(EEREC_D, t0reg);
 			break;
 		case PROCESS_EE_T:
-			//Console::WriteLn("FPU: DIV case 2");
+			//Console.WriteLn("FPU: DIV case 2");
 			if (EEREC_D == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);
@@ -1139,7 +1139,7 @@ void recDIV_S_xmm(int info)
 			}
 			break;
 		case (PROCESS_EE_S|PROCESS_EE_T):
-			//Console::WriteLn("FPU: DIV case 3");
+			//Console.WriteLn("FPU: DIV case 3");
 			if (EEREC_D == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
@@ -1153,7 +1153,7 @@ void recDIV_S_xmm(int info)
 			}
 			break;
 		default:
-			//Console::WriteLn("FPU: DIV case 4");
+			//Console.WriteLn("FPU: DIV case 4");
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recDIVhelper1(EEREC_D, t0reg);
@@ -1591,19 +1591,19 @@ void recSUBhelper(int regd, int regt)
 void recSUBop(int info, int regd)
 {
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
-    //if (t0reg == -1) {Console::Error("FPU: SUB Allocation Error!");}
+    //if (t0reg == -1) {Console.Error("FPU: SUB Allocation Error!");}
 
 	//AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagO|FPUflagU)); // Clear O and U flags
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
-			//Console::WriteLn("FPU: SUB case 1");
+			//Console.WriteLn("FPU: SUB case 1");
 			if (regd != EEREC_S) SSE_MOVSS_XMM_to_XMM(regd, EEREC_S);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			recSUBhelper(regd, t0reg);
 			break;
 		case PROCESS_EE_T:
-			//Console::WriteLn("FPU: SUB case 2");
+			//Console.WriteLn("FPU: SUB case 2");
 			if (regd == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_M32_to_XMM(regd, (uptr)&fpuRegs.fpr[_Fs_]);
@@ -1615,7 +1615,7 @@ void recSUBop(int info, int regd)
 			}
 			break;
 		case (PROCESS_EE_S|PROCESS_EE_T):
-			//Console::WriteLn("FPU: SUB case 3");
+			//Console.WriteLn("FPU: SUB case 3");
 			if (regd == EEREC_T) {
 				SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 				SSE_MOVSS_XMM_to_XMM(regd, EEREC_S);
@@ -1627,7 +1627,7 @@ void recSUBop(int info, int regd)
 			}
 			break;
 		default:
-			Console::Notice("FPU: SUB case 4");
+			Console.Notice("FPU: SUB case 4");
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			SSE_MOVSS_M32_to_XMM(regd, (uptr)&fpuRegs.fpr[_Fs_]);
 			recSUBhelper(regd, t0reg);
@@ -1663,10 +1663,10 @@ void recSQRT_S_xmm(int info)
 	u8* pjmp;
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
-	//Console::WriteLn("FPU: SQRT");
+	//Console.WriteLn("FPU: SQRT");
 	
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//Console::WriteLn("sqrt to nearest");
+		//Console.WriteLn("sqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -1678,7 +1678,7 @@ void recSQRT_S_xmm(int info)
 
 	if (CHECK_FPU_EXTRA_FLAGS) {
 		int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-		if (tempReg == -1) {Console::Error("FPU: SQRT Allocation Error!"); tempReg = EAX;}
+		if (tempReg == -1) {Console.Error("FPU: SQRT Allocation Error!"); tempReg = EAX;}
 
 		AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
 
@@ -1717,8 +1717,8 @@ void recRSQRThelper1(int regd, int t0reg) // Preforms the RSQRT function when re
 	u8 *qjmp1, *qjmp2;
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-	//if (t1reg == -1) {Console::Error("FPU: RSQRT Allocation Error!");}
-	if (tempReg == -1) {Console::Error("FPU: RSQRT Allocation Error!"); tempReg = EAX;}
+	//if (t1reg == -1) {Console.Error("FPU: RSQRT Allocation Error!");}
+	if (tempReg == -1) {Console.Error("FPU: RSQRT Allocation Error!"); tempReg = EAX;}
 
 	AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
 
@@ -1784,33 +1784,33 @@ void recRSQRThelper2(int regd, int t0reg) // Preforms the RSQRT function when re
 void recRSQRT_S_xmm(int info)
 {
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
-	//if (t0reg == -1) {Console::Error("FPU: RSQRT Allocation Error!");}
-	//Console::WriteLn("FPU: RSQRT");
+	//if (t0reg == -1) {Console.Error("FPU: RSQRT Allocation Error!");}
+	//Console.WriteLn("FPU: RSQRT");
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
 		case PROCESS_EE_S:
-			//Console::WriteLn("FPU: RSQRT case 1");
+			//Console.WriteLn("FPU: RSQRT case 1");
 			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);
 			else recRSQRThelper2(EEREC_D, t0reg);
 			break;
 		case PROCESS_EE_T:	
-			//Console::WriteLn("FPU: RSQRT case 2");
+			//Console.WriteLn("FPU: RSQRT case 2");
 			SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);
 			SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);
 			else recRSQRThelper2(EEREC_D, t0reg);
 			break;
 		case (PROCESS_EE_S|PROCESS_EE_T):
-			//Console::WriteLn("FPU: RSQRT case 3");
+			//Console.WriteLn("FPU: RSQRT case 3");
 			SSE_MOVSS_XMM_to_XMM(t0reg, EEREC_T);		
 			SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_S);
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);
 			else recRSQRThelper2(EEREC_D, t0reg);
 			break;
 		default:
-			//Console::WriteLn("FPU: RSQRT case 4");
+			//Console.WriteLn("FPU: RSQRT case 4");
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			SSE_MOVSS_M32_to_XMM(EEREC_D, (uptr)&fpuRegs.fpr[_Fs_]);		
 			if (CHECK_FPU_EXTRA_FLAGS) recRSQRThelper1(EEREC_D, t0reg);

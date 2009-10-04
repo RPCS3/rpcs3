@@ -89,17 +89,17 @@ static __forceinline void CreatePipe( HANDLE& ph_Pipe, HANDLE& ph_File )
 	ph_Pipe = CreateNamedPipe(s_PipeName, PIPE_ACCESS_DUPLEX, 0, 1, 2048, 2048, 0, &k_Secur);
 
 	if (ph_Pipe == INVALID_HANDLE_VALUE)
-		throw Exception::Win32Error( "Error creating Named Pipe." );
+		throw Exception::Win32Error( "CreateNamedPipe failed." );
 
 	ph_File = CreateFile(s_PipeName, GENERIC_READ|GENERIC_WRITE, 0, &k_Secur, OPEN_EXISTING, 0, NULL);
 
 	if (ph_File == INVALID_HANDLE_VALUE)
-		throw Exception::Win32Error( "Error creating Pipe Reader." );
+		throw Exception::Win32Error( "CreateFile to pipe failed." );
 
 	if (!ConnectNamedPipe(ph_Pipe, NULL))
 	{
 		if (GetLastError() != ERROR_PIPE_CONNECTED)
-			throw Exception::Win32Error( "Error connecting Pipe." );
+			throw Exception::Win32Error( "ConnectNamedPipe failed." );
 	}
 
 	SetHandleInformation(ph_Pipe, HANDLE_FLAG_INHERIT, 0);
@@ -108,7 +108,7 @@ static __forceinline void CreatePipe( HANDLE& ph_Pipe, HANDLE& ph_File )
 
 // Reads from the Pipe and appends the read data to ps_Data
 // returns TRUE if something was printed to console, or false if the stdout/err were idle.
-static __forceinline bool ReadPipe(HANDLE h_Pipe, Console::Colors color )
+static __forceinline bool ReadPipe(HANDLE h_Pipe, ConsoleColors color )
 {
 	if( h_Pipe == INVALID_HANDLE_VALUE ) return false;
 
@@ -129,13 +129,13 @@ static __forceinline bool ReadPipe(HANDLE h_Pipe, Console::Colors color )
 		if (!ReadFile(h_Pipe, s8_Buf, sizeof(s8_Buf)-1, &u32_Read, NULL))
 		{
 			if (GetLastError() != ERROR_IO_PENDING)
-				throw Exception::Win32Error( "Error reading Pipe." );
+				throw Exception::Win32Error( "ReadFile from pipe failed." );
 		}
 
 		// ATTENTION: The Console always prints ANSI to the pipe independent if compiled as UNICODE or MBCS!
 		s8_Buf[u32_Read] = 0;
 		OemToCharA(s8_Buf, s8_Buf);			// convert DOS codepage -> ANSI
-		Console::Write( color, s8_Buf );	// convert ANSI -> Unicode if compiled as Unicode
+		Console.Write( color, s8_Buf );	// convert ANSI -> Unicode if compiled as Unicode
 	}
 	while (u32_Read == sizeof(s8_Buf)-1);
 
@@ -144,12 +144,14 @@ static __forceinline bool ReadPipe(HANDLE h_Pipe, Console::Colors color )
 
 class WinPipeThread : public PersistentThread
 {
+	typedef PersistentThread _parent;
+
 protected:
 	const HANDLE& m_outpipe;
-	const Console::Colors m_color;
+	const ConsoleColors m_color;
 
 public:
-	WinPipeThread( const HANDLE& outpipe, Console::Colors color ) :
+	WinPipeThread( const HANDLE& outpipe, ConsoleColors color ) :
 		m_outpipe( outpipe )
 	,	m_color( color )
 	{
@@ -158,11 +160,13 @@ public:
 	
 	virtual ~WinPipeThread() throw()
 	{
-		PersistentThread::Cancel();
+		_parent::Cancel();
 	}
 	
 protected:
-	int ExecuteTask()
+	void OnStart() {}
+
+	void ExecuteTask()
 	{
 		try
 		{
@@ -178,10 +182,11 @@ protected:
 		{
 			// Log error, and fail silently.  It's not really important if the
 			// pipe fails.  PCSX2 will run fine without it in any case.
-			Console::Error( ex.FormatDiagnosticMessage() );
-			return -2;
+			Console.Error( ex.FormatDiagnosticMessage() );
 		}
 	}
+
+	void OnThreadCleanup() { }
 };
 
 class WinPipeRedirection : public PipeRedirectionBase
@@ -212,7 +217,7 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 {
 	try
 	{
-		wxASSERT( stdstream == stderr || stdstream == stdout );
+		pxAssert( (stdstream == stderr) || (stdstream == stdout) );
 		DWORD stdhandle = ( stdstream == stderr ) ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE;
 
 		CreatePipe( m_pipe, m_file );
@@ -221,27 +226,33 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 		// In some cases GetStdHandle can fail, even when the one we just assigned above is valid.
 		HANDLE newhandle = GetStdHandle(stdhandle);
 		if( newhandle == INVALID_HANDLE_VALUE )
-			throw Exception::Win32Error( "PipeRedirection: GetStdHandle failed." );
+			throw Exception::Win32Error( "GetStdHandle failed." );
 
 		if( newhandle == NULL )
-			throw Exception::RuntimeError( "PipeRedirection: GetStdHandle returned NULL." );		// not a Win32error (no error code)
+			throw Exception::RuntimeError( "GetStdHandle returned NULL." );		// not a Win32error (no error code)
 
 		m_crtFile	= _open_osfhandle( (intptr_t)newhandle, _O_TEXT );
 		if( m_crtFile == -1 ) 
-			throw Exception::RuntimeError( "PipeRedirection: _open_osfhandle returned -1." );
+			throw Exception::RuntimeError( "_open_osfhandle returned -1." );
 
 		m_fp		= _fdopen( m_crtFile, "w" );
 		if( m_fp == NULL )
-			throw Exception::RuntimeError( "PipeRedirection: _fdopen returned NULL." );
+			throw Exception::RuntimeError( "_fdopen returned NULL." );
 
 		*stdstream = *m_fp;
 		setvbuf( stdstream, NULL, _IONBF, 0 );
 
 		m_Thread.Start();
 	}
+	catch( Exception::BaseException& ex )
+	{
+		Cleanup();
+		ex.DiagMsg() = (wxString)((stdstream==stdout) ? L"STDOUT" : L"STDERR") + L" Redirection Init failed: " + ex.DiagMsg();
+		throw;
+	}
 	catch( ... )
 	{
-		Cleanup(); throw;
+		throw;
 	}
 }
 
@@ -280,7 +291,7 @@ PipeRedirectionBase* NewPipeRedir( FILE* stdstream )
 	catch( Exception::RuntimeError& ex )
 	{
 		// Entirely non-critical errors.  Log 'em and move along.
-		Console::Error( ex.FormatDiagnosticMessage() );
+		Console.Error( ex.FormatDiagnosticMessage() );
 	}
 	
 	return NULL;

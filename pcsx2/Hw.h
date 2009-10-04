@@ -467,7 +467,7 @@ static __forceinline u8* dmaGetAddr(u32 mem)
 	mem &= ~0xf;
 
 	if( (mem&0xffff0000) == 0x50000000 ) {// reserved scratch pad mem
-		Console::WriteLn("dmaGetAddr: reserved scratch pad mem");
+		Console.WriteLn("dmaGetAddr: reserved scratch pad mem");
 		return NULL;//(u8*)&PS2MEM_SCRATCH[(mem) & 0x3ff0];
 	}
 
@@ -477,7 +477,7 @@ static __forceinline u8* dmaGetAddr(u32 mem)
 	// do manual LUT since IPU/SPR seems to use addrs 0x3000xxxx quite often
 	// linux doesn't suffer from this because it has better vm support
 	if( memLUT[ (p-PS2MEM_BASE)>>12 ].aPFNs == NULL ) {
-		Console::WriteLn("dmaGetAddr: memLUT PFN warning");
+		Console.WriteLn("dmaGetAddr: memLUT PFN warning");
 		return NULL;//p;
 	}
 
@@ -501,7 +501,7 @@ static __forceinline void *dmaGetAddr(u32 addr) {
 
 	ptr = (u8*)vtlb_GetPhyPtr(addr&0x1FFFFFF0);
 	if (ptr == NULL) {
-		Console::Error( "*PCSX2*: DMA error: %8.8x", addr);
+		Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
 		return NULL;
 	}
 	return ptr;

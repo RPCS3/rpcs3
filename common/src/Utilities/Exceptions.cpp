@@ -15,6 +15,8 @@
 
 #include "PrecompiledHeader.h"
 
+#include <wx/app.h>
+
 wxString GetEnglish( const char* msg )
 {
 	return wxString::FromAscii(msg);
@@ -26,11 +28,9 @@ wxString GetTranslation( const char* msg )
 }
 
 // ------------------------------------------------------------------------
-// Force DevAssert to *not* inline for devel/debug builds (allows using breakpoints to trap
-// assertions), and force it to inline for release builds (optimizes it out completely since
-// IsDevBuild is false).  Since Devel builds typically aren't enabled with Global Optimization/
-// LTCG, this currently isn't even necessary.  But might as well, in case we decide at a later
-// date to re-enable LTCG for devel.
+// Force DevAssert to *not* inline for devel builds (allows using breakpoints to trap assertions,
+// and force it to inline for release builds (optimizes it out completely since IsDevBuild is a
+// const false).
 //
 #ifdef PCSX2_DEVBUILD
 #	define DEVASSERT_INLINE __noinline
@@ -38,36 +38,43 @@ wxString GetTranslation( const char* msg )
 #	define DEVASSERT_INLINE __forceinline
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Assertion tool for Devel builds, intended for sanity checking and/or bounds checking
-// variables in areas which are not performance critical.
-//
-// How it works: This function throws an exception of type Exception::AssertionFailure if
-// the assertion conditional is false.  Typically for the end-user, this exception is handled
-// by the general handler, which (should eventually) create some state dumps and other
-// information for troubleshooting purposes.
-//
-// From a debugging environment, you can trap your DevAssert by either breakpointing the
-// exception throw below, or by adding Exception::LogicError to your First-Chance Exception
-// catch list (Visual Studio, under the Debug->Exceptions menu/dialog).  You should have
-// LogicErrors enabled as First-Chance exceptions regardless, so do it now. :)
-//
-// Returns:
-//   TRUE if the assertion succeeded (condition is valid), or FALSE if the assertion
-//   failed.  The true clause is only reachable in release builds, and can be used by code
-//   to provide a "stable" escape clause for unexpected behavior.
-//
-DEVASSERT_INLINE bool DevAssert( bool condition, const char* msg )
+// Using a threadlocal assertion guard.  Separate threads can assert at the same time.
+// That's ok.  What we don't want is the *same* thread recurse-asserting.
+static __threadlocal int s_assert_guard = 0;
+
+DEVASSERT_INLINE void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const wxChar* msg)
 {
-	if( condition ) return true;
+#ifdef PCSX2_DEVBUILD
+	RecursionGuard guard( s_assert_guard );
+	if( guard.IsReentrant() ) return;
+	
+	if( wxTheApp == NULL )
+	{
+		// Note: Format uses MSVC's syntax for output window hotlinking.
+		wxsFormat( L"%s(%d): Assertion failed in %s: %s\n",
+			file, line, fromUTF8(func), msg );
 
-	wxASSERT_MSG_A( false, msg );
-
-	if( IsDevBuild && !IsDebugBuild )
-		throw Exception::LogicError( msg );
-
-	return false;
+		wxLogError( msg );
+	}
+	else
+	{
+	#ifdef __WXDEBUG__
+		wxTheApp->OnAssertFailure( file, line, fromUTF8(func), cond, msg );
+	#elif wxUSE_GUI
+		// FIXME: this should create a popup dialog for devel builds.
+		wxLogError( msg );
+	#else
+		wxLogError( msg );
+	#endif
+	}
+#endif
 }
+
+__forceinline void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const char* msg)
+{
+	pxOnAssert( file, line, func, cond, fromUTF8(msg) );
+}
+
 
 // --------------------------------------------------------------------------------------
 //  Exception Namespace Implementations  (Format message handlers for general exceptions)
@@ -87,7 +94,7 @@ void Exception::BaseException::InitBaseEx( const wxString& msg_eng, const wxStri
 
 #ifdef __LINUX__
     //wxLogError( msg_eng.c_str() );
-    Console::Error( msg_eng );
+    Console.Error( msg_eng );
 #endif
 }
 
@@ -100,7 +107,7 @@ void Exception::BaseException::InitBaseEx( const char* msg_eng )
 
 #ifdef __LINUX__
     //wxLogError( m_message_diag.c_str() );
-    Console::Error( msg_eng );
+    Console.Error( msg_eng );
 #endif
 }
 

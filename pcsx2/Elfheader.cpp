@@ -263,10 +263,10 @@ struct ElfObject
 			secthead = (ELF_SHR*)&data[header.e_shoff];
 
 		if ( ( header.e_shnum > 0 ) && ( header.e_shentsize != sizeof(ELF_SHR) ) )
-			Console::Error( "ElfLoader Warning > Size of section headers is not standard" );
+			Console.Error( "ElfLoader Warning > Size of section headers is not standard" );
 
 		if ( ( header.e_phnum > 0 ) && ( header.e_phentsize != sizeof(ELF_PHR) ) )
-			Console::Error( "ElfLoader Warning > Size of program headers is not standard" );
+			Console.Error( "ElfLoader Warning > Size of program headers is not standard" );
 
 		ELF_LOG( "type:      " );
 		switch( header.e_type )
@@ -388,7 +388,7 @@ struct ElfObject
 							size = proghead[ i ].p_filesz;
 
 						if( proghead[ i ].p_vaddr != proghead[ i ].p_paddr )
-							Console::Notice( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x",
+							Console.Notice( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x",
 								proghead[ i ].p_paddr, proghead[ i ].p_vaddr);
 
 						// used to be paddr
@@ -475,7 +475,7 @@ struct ElfObject
 
 			SymNames = (char*)data.GetPtr( secthead[ i_dt ].sh_offset );
 			eS = (Elf32_Sym*)data.GetPtr( secthead[ i_st ].sh_offset );
-			Console::WriteLn("found %d symbols", secthead[ i_st ].sh_size / sizeof( Elf32_Sym ));
+			Console.WriteLn("found %d symbols", secthead[ i_st ].sh_size / sizeof( Elf32_Sym ));
 
 			for( uint i = 1; i < ( secthead[ i_st ].sh_size / sizeof( Elf32_Sym ) ); i++ ) {
 				if ( ( eS[ i ].st_value != 0 ) && ( ELF32_ST_TYPE( eS[ i ].st_info ) == 2 ) ) {
@@ -491,17 +491,17 @@ void ElfApplyPatches()
 	wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
 
 	// if patches found the following status msg will be overwritten
-	Console::SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
+	Console.SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
 
 	if( !EmuConfig.EnablePatches ) return;
 
 	if(LoadPatch( filename ) != 0)
 	{
-		Console::WriteLn( "XML Loader returned an error. Trying to load a pnach..." );
+		Console.WriteLn( "XML Loader returned an error. Trying to load a pnach..." );
 		inifile_read( filename.ToAscii().data() );
 	}
 	else
-		Console::WriteLn( "XML Loading success. Will not load from pnach..." );
+		Console.WriteLn( "XML Loading success. Will not load from pnach..." );
 
 	applypatch( 0 );
 }
@@ -513,14 +513,14 @@ u32 loadElfCRC( const char* filename )
 
 	IsoFS_init( );
 	
-	Console::Status("loadElfCRC: %s", filename);
+	Console.Status("loadElfCRC: %s", filename);
 	
 	int mylen = strlen( "cdromN:" );
 	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
 
-	DevCon::Status( "loadElfFile: %d bytes", toc.fileSize );
+	DevCon.Status( "loadElfFile: %d bytes", toc.fileSize );
 	u32 crcval = ElfObject( wxString::FromAscii( filename ), toc.fileSize ).GetCRC();
-	Console::Status( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
+	Console.Status( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
 
 	return crcval;
 }
@@ -540,7 +540,7 @@ void loadElfFile(const wxString& filename)
 	if( filename.IsEmpty() ) return;
 	
 	s64 elfsize;
-	Console::Status( wxsFormat( L"loadElfFile: %s", filename.c_str() ) );
+	Console.Status( wxsFormat( L"loadElfFile: %s", filename.c_str() ) );
 
 	const wxCharBuffer buffer( filename.ToAscii() );
 	const char* fnptr = buffer.data();
@@ -548,12 +548,12 @@ void loadElfFile(const wxString& filename)
 	
 	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
-		DevCon::WriteLn("Loading from a file (or non-cd image)");
+		DevCon.WriteLn("Loading from a file (or non-cd image)");
 		elfsize = Path::GetFileSize( filename );
 	}
 	else
 	{
-		DevCon::WriteLn("Loading from a CD rom or CD image");
+		DevCon.WriteLn("Loading from a CD rom or CD image");
 		useCdvdSource = true;
 		TocEntry toc;
 		IsoFS_init( );
@@ -565,7 +565,7 @@ void loadElfFile(const wxString& filename)
 	if( elfsize > 0xfffffff )
 		throw Exception::BadStream( filename, wxLt("Illegal ELF file size, over 2GB!") );
 
-	Console::Status( wxsFormat(L"loadElfFile: %d", wxULongLong(elfsize).GetLo() ) );
+	Console.Status( wxsFormat(L"loadElfFile: %d", wxULongLong(elfsize).GetLo() ) );
 	if( elfsize == 0 )
 		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
 
@@ -597,12 +597,12 @@ void loadElfFile(const wxString& filename)
 		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
 		{
 			strcpy( (char*)PSM( i ), fnptr );
-			DevCon::Status( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr );
+			DevCon.Status( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr );
 		}
 	}
 
 	ElfCRC = elfobj.GetCRC();
-	Console::Status( wxsFormat( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC ) );
+	Console.Status( wxsFormat( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC ) );
 
 	ElfApplyPatches();
 	
@@ -624,7 +624,7 @@ int GetPS2ElfName( wxString& name )
 
 	// check if the file exists
 	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
-		Console::Status("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
+		Console.Status("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
 		return 0;//could not find; not a PS/PS2 cdvd
 	}
 
@@ -638,7 +638,7 @@ int GetPS2ElfName( wxString& name )
 	if (pos==NULL){
 		pos=strstr(buffer, "BOOT");
 		if (pos==NULL) {
-			Console::Error("PCSX2 Boot Error: This is not a Playstation or PS2 game!");
+			Console.Error("PCSX2 Boot Error: This is not a Playstation or PS2 game!");
 			return 0;
 		}
 		return 1;
@@ -664,7 +664,7 @@ int GetPS2ElfName( wxString& name )
 
 	u32 addr;
 
-	Console::WriteLn("Loading System.map...");
+	Console.WriteLn("Loading System.map...");
 	while (!feof(fp)) {
 		fseek(fp, 8, SEEK_CUR);
 		buffer[0] = '0'; buffer[1] = 'x';

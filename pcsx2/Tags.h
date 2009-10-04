@@ -117,7 +117,7 @@ namespace Tag
 	{
 		if (ptag == NULL)  					 // Is ptag empty?
 		{
-			Console::Error("%s BUSERR", s);
+			Console.Error("%s BUSERR", s);
 			UpperTransfer(tag, ptag);
 
 			// Set BEIS (BUSERR) in DMAC_STAT register
@@ -177,21 +177,21 @@ static __forceinline void PrintCHCR(const char*  s, DMACh *tag)
 	u8 num_addr = tag->chcr.ASP;
 	u32 mode = tag->chcr.MOD;
 
-	Console::Write("%s chcr %s mem: ", s, (tag->chcr.DIR) ? "from" : "to");
+	Console.Write("%s chcr %s mem: ", s, (tag->chcr.DIR) ? "from" : "to");
 		
 	if (mode == NORMAL_MODE)
-		Console::Write(" normal mode; ");
+		Console.Write(" normal mode; ");
 	else if (mode == CHAIN_MODE)
-		Console::Write(" chain mode; ");
+		Console.Write(" chain mode; ");
 	else if (mode == INTERLEAVE_MODE)
-		Console::Write(" interleave mode; ");
+		Console.Write(" interleave mode; ");
 	else
-		Console::Write(" ?? mode; ");
+		Console.Write(" ?? mode; ");
 		
-	if (num_addr != 0) Console::Write("ASP = %d;", num_addr);
-	if (tag->chcr.TTE) Console::Write("TTE;");
-	if (tag->chcr.TIE) Console::Write("TIE;");
-	if (tag->chcr.STR) Console::Write(" (DMA started)."); else Console::Write(" (DMA stopped).");
-	Console::WriteLn("");
+	if (num_addr != 0) Console.Write("ASP = %d;", num_addr);
+	if (tag->chcr.TTE) Console.Write("TTE;");
+	if (tag->chcr.TIE) Console.Write("TIE;");
+	if (tag->chcr.STR) Console.Write(" (DMA started)."); else Console.Write(" (DMA stopped).");
+	Console.Newline();
 }
 

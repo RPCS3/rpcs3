@@ -179,7 +179,7 @@ static __releaseinline void __fastcall _vuFMACAdd(VURegs * VU, int reg, int xyzw
 		if (VU->fmac[i].enable == 1) continue;
 		break;
 	}
-	//if (i==8) Console::Error("*PCSX2*: error , out of fmacs %d", VU->cycle);
+	//if (i==8) Console.Error("*PCSX2*: error , out of fmacs %d", VU->cycle);
 	
 
 	VUM_LOG("adding FMAC pipe[%d]; xyzw=%x", i, xyzw);
@@ -2064,10 +2064,10 @@ void _vuXGKICK(VURegs * VU)
 	
 	if((size << 4) > (u32)(0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)))
 	{
-		//DevCon::Notice("addr + Size = 0x%x, transferring %x then doing %x", ((VU->VI[_Is_].US[0]*16) & 0x3fff) + (size << 4), (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4, size - (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff) >> 4));
+		//DevCon.Notice("addr + Size = 0x%x, transferring %x then doing %x", ((VU->VI[_Is_].US[0]*16) & 0x3fff) + (size << 4), (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4, size - (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff) >> 4));
 		memcpy_aligned(pmem, (u8*)VU->Mem+((VU->VI[_Is_].US[0]*16) & 0x3fff), 0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff));
 		size -= (0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff)) >> 4;
-		//DevCon::Notice("Size left %x", size);
+		//DevCon.Notice("Size left %x", size);
 		pmem += 0x4000-((VU->VI[_Is_].US[0]*16) & 0x3fff);
 		memcpy_aligned(pmem, (u8*)VU->Mem, size<<4);
 	}

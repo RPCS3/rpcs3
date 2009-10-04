@@ -18,18 +18,12 @@
 #include "MainFrame.h"
 #include "Plugins.h"
 #include "SaveState.h"
-#include "ConsoleLogger.h"
 
 #include "Dialogs/ModalPopups.h"
 #include "Dialogs/ConfigurationDialog.h"
 #include "Dialogs/LogOptionsDialog.h"
 
-#include "Utilities/ScopedPtr.h"
 #include "Utilities/HashMap.h"
-
-#include <wx/cmdline.h>
-#include <wx/stdpaths.h>
-#include <wx/intl.h>
 
 IMPLEMENT_APP(Pcsx2App)
 
@@ -47,25 +41,6 @@ bool					UseDefaultSettingsFolder = true;
 
 ScopedPtr<AppConfig>	g_Conf;
 ConfigOverrides			OverrideOptions;
-
-namespace Exception
-{
-	// --------------------------------------------------------------------------
-	// Exception used to perform an "errorless" termination of the app during OnInit
-	// procedures.  This happens when a user cancels out of startup prompts/wizards.
-	//
-	class StartupAborted : public BaseException
-	{
-	public:
-		DEFINE_EXCEPTION_COPYTORS( StartupAborted )
-
-		StartupAborted( const wxString& msg_eng=L"Startup initialization was aborted by the user." )
-		{
-			// english messages only for this exception.
-			BaseException::InitBaseEx( msg_eng, msg_eng );
-		}
-	};
-}
 
 AppCoreThread::AppCoreThread( PluginManager& plugins ) :
 	SysCoreThread( plugins )
@@ -91,10 +66,21 @@ void AppCoreThread::Suspend( bool isBlocking )
 	m_kevt.m_altDown		= false;
 }
 
+void AppCoreThread::Resume()
+{
+	// Thread control (suspend / resume) should only be performed from the main/gui thread.
+	if( !AllowFromMainThreadOnly() ) return;
+
+	if( sys_resume_lock )
+	{
+		Console.WriteLn( "SysResume: State is locked, ignoring Resume request!" );
+		return;
+	}
+	_parent::Resume();
+}
+
 void AppCoreThread::OnResumeReady()
 {
-	if( !DevAssert( wxThread::IsMain(), "SysCoreThread can only be resumed from the main/gui thread." ) ) return;
-
 	if( m_shortSuspend ) return;
 
 	ApplySettings( g_Conf->EmuOptions );
@@ -110,17 +96,12 @@ void AppCoreThread::OnResumeReady()
 // Typically the thread handles all its own errors, so there's no need to have error
 // handling here.  However it's a good idea to update the status of the GUI to reflect
 // the new (lack of) thread status, so this posts a message to the App to do so.
-void AppCoreThread::DoThreadCleanup()
+void AppCoreThread::OnThreadCleanup()
 {
 	wxCommandEvent evt( pxEVT_AppCoreThread_Terminated );
 	wxGetApp().AddPendingEvent( evt );
-	_parent::DoThreadCleanup();
+	_parent::OnThreadCleanup();
 }
-
-// This is used when the GS plugin is handling its own window.  Messages from the PAD
-// are piped through to an app-level message handler, which dispatches them through
-// the universal Accelerator table.
-static const int pxID_PadHandler_Keydown = 8030;
 
 #ifdef __WXGTK__
 	extern int TranslateGDKtoWXK( u32 keysym );
@@ -168,17 +149,9 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	// usually the desired behavior) will be ignored.
 
 	static int localc = 0;
-	EntryGuard guard( localc );
+	RecursionGuard guard( localc );
 	if(guard.IsReentrant()) return;
 	SysCoreThread::ApplySettings( src );
-}
-
-// Returns true if there is a "valid" virtual machine state from the user's perspective.  This
-// means the user has started the emulator and not issued a full reset.
-__forceinline bool SysHasValidState()
-{
-	bool isRunning = HasCoreThread() ? GetCoreThread().IsRunning() : false;
-	return isRunning || StateCopy_HasFullState();
 }
 
 bool HandlePluginError( Exception::PluginError& ex )
@@ -200,7 +173,7 @@ bool HandlePluginError( Exception::PluginError& ex )
 	return result;
 }
 
-sptr AppCoreThread::ExecuteTask()
+void AppCoreThread::ExecuteTask()
 {
 	try
 	{
@@ -233,7 +206,7 @@ sptr AppCoreThread::ExecuteTask()
 	catch( Exception::PluginError& ex )
 	{
 		m_plugins.Close();
-		Console::Error( ex.FormatDiagnosticMessage() );
+		Console.Error( ex.FormatDiagnosticMessage() );
 		Msgbox::Alert( ex.FormatDisplayMessage(), _("Plugin Open Error") );
 
 		/*if( HandlePluginError( ex ) )
@@ -251,300 +224,12 @@ sptr AppCoreThread::ExecuteTask()
 		m_plugins.Close();
 		Msgbox::Alert( ex.FormatDisplayMessage() );
 	}
-
-	return 0;
-}
-
-
-void Pcsx2App::OpenWizardConsole()
-{
-	if( !IsDebugBuild ) return;
-	g_Conf->ProgLogBox.Visible = true;
-	m_ProgramLogBox	= new ConsoleLogFrame( NULL, L"PCSX2 Program Log", g_Conf->ProgLogBox );
-}
-
-static bool m_ForceWizard = false;
-
-// User mode settings can't be stored in the CWD for two reasons:
-//   (a) the user may not have permission to do so (most obvious)
-//   (b) it would result in sloppy usermode.ini found all over a hard drive if people runs the
-//       exe from many locations (ugh).
-//
-// So better to use the registry on Win32 and a "default ini location" config file under Linux,
-// and store the usermode settings for the CWD based on the CWD's hash.
-//
-void Pcsx2App::ReadUserModeSettings()
-{
-	wxString cwd( wxGetCwd() );
-	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length() );
-
-	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
-	if( !usrlocaldir.Exists() )
-	{
-		Console::Status( L"Creating UserLocalData folder: " + usrlocaldir.ToString() );
-		usrlocaldir.Mkdir();
-	}
-
-	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
-	usermodefile.SetPath( usrlocaldir.ToString() );
-	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
-
-	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
-
-	if( m_ForceWizard || !conf_usermode->HasGroup( groupname ) )
-	{
-		// first time startup, so give the user the choice of user mode:
-		OpenWizardConsole();
-		FirstTimeWizard wiz( NULL );
-		if( !wiz.RunWizard( wiz.GetUsermodePage() ) )
-			throw Exception::StartupAborted( L"Startup aborted: User canceled FirstTime Wizard." );
-
-		// Save user's new settings
-		IniSaver saver( *conf_usermode );
-		g_Conf->LoadSaveUserMode( saver, groupname );
-		AppConfig_OnChangedSettingsFolder( true );
-		AppSaveSettings();
-	}
-	else
-	{
-		// usermode.ini exists -- assume Documents mode, unless the ini explicitly
-		// specifies otherwise.
-		UseAdminMode = false;
-
-		IniLoader loader( *conf_usermode );
-		g_Conf->LoadSaveUserMode( loader, groupname );
-
-		if( !wxFile::Exists( GetSettingsFilename() ) )
-		{
-			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
-			// (we skip the first page since it's a usermode.ini thing)
-
-			OpenWizardConsole();
-			FirstTimeWizard wiz( NULL );
-			if( !wiz.RunWizard( wiz.GetPostUsermodePage() ) )
-				throw Exception::StartupAborted( L"Startup aborted: User canceled Configuration Wizard." );
-
-			// Save user's new settings
-			IniSaver saver( *conf_usermode );
-			g_Conf->LoadSaveUserMode( saver, groupname );
-			AppConfig_OnChangedSettingsFolder( true );
-			AppSaveSettings();
-		}
-	}
-}
-
-void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
-{
-	parser.SetLogo( (wxString)L" >>  PCSX2  --  A Playstation2 Emulator for the PC  <<\n\n" +
-		_("All options are for the current session only and will not be saved.\n")
-	);
-
-	parser.AddParam( _("IsoFile"), wxCMD_LINE_VAL_STRING, wxCMD_LINE_PARAM_OPTIONAL );
-
-	parser.AddSwitch( L"h",			L"help",	_("displays this list of command line options"), wxCMD_LINE_OPTION_HELP );
-
-	parser.AddSwitch( wxEmptyString,L"nogui",	_("disables display of the gui while running games") );
-	parser.AddSwitch( wxEmptyString,L"skipbios",_("skips standard BIOS splash screens and software checks") );
-	parser.AddOption( wxEmptyString,L"elf",		_("executes an ELF image"), wxCMD_LINE_VAL_STRING );
-	parser.AddSwitch( wxEmptyString,L"nodisc",	_("boots an empty dvd tray; use to enter the PS2 system menu") );
-	parser.AddSwitch( wxEmptyString,L"usecd",	_("boots from the configured CDVD plugin (ignores IsoFile parameter)") );
-
-	parser.AddOption( wxEmptyString,L"cfgpath",	_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
-	parser.AddOption( wxEmptyString,L"cfg",		_("specifies the PCSX2 configuration file to use [not implemented]"), wxCMD_LINE_VAL_STRING );
-
-	parser.AddSwitch( wxEmptyString,L"forcewiz",_("Forces PCSX2 to start the First-time Wizard") );
-
-	const PluginInfo* pi = tbl_PluginInfo; do {
-		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
-			wxsFormat( _("specify the file to use as the %s plugin"), pi->GetShortname().c_str() )
-		);
-	} while( ++pi, pi->shortname != NULL );
-
-	parser.SetSwitchChars( L"-" );
-}
-
-bool Pcsx2App::OnCmdLineError( wxCmdLineParser& parser )
-{
-	wxApp::OnCmdLineError( parser );
-	return false;
-}
-
-bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
-{
-	if( parser.GetParamCount() >= 1 )
-	{
-		// [TODO] : Unnamed parameter is taken as an "autorun" option for a cdvd/iso.
-		parser.GetParam( 0 );
-	}
-
-	// Suppress wxWidgets automatic options parsing since none of them pertain to PCSX2 needs.
-	//wxApp::OnCmdLineParsed( parser );
-
-	//bool yay = parser.Found(L"nogui");
-	m_ForceWizard = parser.Found( L"forcewiz" );
-
-	const PluginInfo* pi = tbl_PluginInfo; do
-	{
-		wxString dest;
-		if( !parser.Found( pi->GetShortname().Lower(), &dest ) ) continue;
-
-		OverrideOptions.Filenames.Plugins[pi->id] = dest;
-
-		if( wxFileExists( dest ) )
-			Console::Notice( pi->GetShortname() + L" override: " + dest );
-		else
-		{
-			bool result = Msgbox::OkCancel(
-				wxsFormat( _("Plugin Override Error!  Specified %s plugin does not exist:\n\n"), pi->GetShortname().c_str() ) +
-				dest +
-				_("Press OK to use the default configured plugin, or Cancel to close."),
-				_("Plugin Override Error - PCSX2"), wxICON_ERROR
-			);
-
-			if( !result ) return false;
-		}
-	} while( ++pi, pi->shortname != NULL );
-
-	parser.Found( L"cfgpath", &OverrideOptions.SettingsFolder );
-
-	return true;
-}
-
-typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
-
-// ------------------------------------------------------------------------
-bool Pcsx2App::OnInit()
-{
-    wxInitAllImageHandlers();
-	if( !wxApp::OnInit() ) return false;
-
-	g_Conf = new AppConfig();
-
-	m_StdoutRedirHandle = NewPipeRedir(stdout);
-	m_StderrRedirHandle = NewPipeRedir(stderr);
-	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
-
-#define pxMessageBoxEventThing(func) \
-	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
-
-	Connect( pxEVT_MSGBOX,			pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-	Connect( pxEVT_CallStackBox,	pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-	Connect( pxEVT_SemaphorePing,	wxCommandEventHandler( Pcsx2App::OnSemaphorePing ) );
-	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
-	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
-	Connect( pxEVT_LoadPluginsComplete,	wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
-	
-	Connect( pxEVT_FreezeFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeFinished ) );
-	Connect( pxEVT_ThawFinished,	wxCommandEventHandler( Pcsx2App::OnThawFinished ) );
-
-	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
-
-	// User/Admin Mode Dual Setup:
-	//   PCSX2 now supports two fundamental modes of operation.  The default is Classic mode,
-	//   which uses the Current Working Directory (CWD) for all user data files, and requires
-	//   Admin access on Vista (and some Linux as well).  The second mode is the Vista-
-	//   compatible \documents folder usage.  The mode is determined by the presence and
-	//   contents of a usermode.ini file in the CWD.  If the ini file is missing, we assume
-	//   the user is setting up a classic install.  If the ini is present, we read the value of
-	//   the UserMode and SettingsPath vars.
-	//
-	//   Conveniently this dual mode setup applies equally well to most modern Linux distros.
-
-	try
-	{
-		InitDefaultGlobalAccelerators();
-
-		delete wxLog::SetActiveTarget( new pxLogConsole() );
-		ReadUserModeSettings();
-
-		AppConfig_OnChangedSettingsFolder();
-
-	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
-
-	    if( m_ProgramLogBox )
-	    {
-			delete m_ProgramLogBox;
-			g_Conf->ProgLogBox.Visible = true;
-		}
-
-		m_ProgramLogBox	= new ConsoleLogFrame( m_MainFrame, L"PCSX2 Program Log", g_Conf->ProgLogBox );
-
-		SetTopWindow( m_MainFrame );	// not really needed...
-		SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
-	    m_MainFrame->Show();
-
-		SysDetect();
-		AppApplySettings();
-
-		m_CoreAllocs = new SysCoreAllocations();
-
-		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
-		{
-			wxString message( _("The following cpu recompilers failed to initialize and will not be available:\n\n") );
-
-			if( !m_CoreAllocs->RecSuccess_EE )
-			{
-				message += L"\t* R5900 (EE)\n";
-				g_Session.ForceDisableEErec = true;
-			}
-
-			if( !m_CoreAllocs->RecSuccess_IOP )
-			{
-				message += L"\t* R3000A (IOP)\n";
-				g_Session.ForceDisableIOPrec = true;
-			}
-
-			if( !m_CoreAllocs->RecSuccess_VU0 )
-			{
-				message += L"\t* VU0\n";
-				g_Session.ForceDisableVU0rec = true;
-			}
-
-			if( !m_CoreAllocs->RecSuccess_VU1 )
-			{
-				message += L"\t* VU1\n";
-				g_Session.ForceDisableVU1rec = true;
-			}
-
-			message += pxE( ".Popup Error:EmuCore:MemoryForRecs",
-				L"These errors are the result of memory allocation failures (see the program log for details). "
-				L"Closing out some memory hogging background tasks may resolve this error.\n\n"
-				L"These recompilers have been disabled and interpreters will be used in their place.  "
-				L"Interpreters can be very slow, so don't get too excited.  Press OK to continue or CANCEL to close PCSX2."
-			);
-
-			if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
-				return false;
-		}
-
-		LoadPluginsPassive();
-	}
-	// ----------------------------------------------------------------------------
-	catch( Exception::StartupAborted& ex )
-	{
-		Console::Notice( ex.FormatDiagnosticMessage() );
-		return false;
-	}
-	// ----------------------------------------------------------------------------
-	// Failures on the core initialization procedure (typically OutOfMemory errors) are bad,
-	// since it means the emulator is completely non-functional.  Let's pop up an error and
-	// exit gracefully-ish.
-	//
-	catch( Exception::RuntimeError& ex )
-	{
-		Console::Error( ex.FormatDiagnosticMessage() );
-		Msgbox::Alert( ex.FormatDisplayMessage() + L"\n\nPress OK to close PCSX2.",
-			_("PCSX2 Critical Error"), wxICON_ERROR );
-		return false;
-	}
-    return true;
 }
 
 // Allows for activating menu actions from anywhere in PCSX2.
 // And it's Thread Safe!
 void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 {
-	wxASSERT( m_MainFrame != NULL );
 	if( m_MainFrame == NULL ) return;
 
 	wxCommandEvent joe( wxEVT_COMMAND_MENU_SELECTED, menu_id );
@@ -570,7 +255,7 @@ void Pcsx2App::PostPadKey( wxKeyEvent& evt )
 
 int Pcsx2App::ThreadedModalDialog( DialogIdentifiers dialogId )
 {
-	wxASSERT( !wxThread::IsMain() );		// don't call me from MainThread!
+	AllowFromMainThreadOnly();
 
 	MsgboxEventResult result;
 	wxCommandEvent joe( pxEVT_OpenModalDialog, dialogId );
@@ -601,6 +286,7 @@ void Pcsx2App::Ping() const
 // Invoked by the AppCoreThread when the thread has terminated itself.
 void Pcsx2App::OnCoreThreadTerminated( wxCommandEvent& evt )
 {
+
 	if( HasMainFrame() )
 		GetMainFrame().ApplySettings();
 	m_CoreThread = NULL;
@@ -621,7 +307,7 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 		case DialogId_CoreSettings:
 		{
 			static int _guard = 0;
-			EntryGuard guard( _guard );
+			RecursionGuard guard( _guard );
 			if( guard.IsReentrant() ) return;
 			evtres.result = ConfigurationDialog().ShowModal();
 		}
@@ -630,7 +316,7 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 		case DialogId_BiosSelector:
 		{
 			static int _guard = 0;
-			EntryGuard guard( _guard );
+			RecursionGuard guard( _guard );
 			if( guard.IsReentrant() ) return;
 			evtres.result = BiosSelectorDialog().ShowModal();
 		}
@@ -639,7 +325,7 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 		case DialogId_LogOptions:
 		{
 			static int _guard = 0;
-			EntryGuard guard( _guard );
+			RecursionGuard guard( _guard );
 			if( guard.IsReentrant() ) return;
 			evtres.result = LogOptionsDialog().ShowModal();
 		}
@@ -648,7 +334,7 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 		case DialogId_About:
 		{
 			static int _guard = 0;
-			EntryGuard guard( _guard );
+			RecursionGuard guard( _guard );
 			if( guard.IsReentrant() ) return;
 			evtres.result = AboutBoxDialog().ShowModal();
 		}
@@ -677,28 +363,10 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 
 	if( cmd != NULL )
 	{
-		DbgCon::WriteLn( "(app) Invoking command: %s", cmd->Id );
+		DbgCon.WriteLn( "(app) Invoking command: %s", cmd->Id );
 		cmd->Invoke();
 	}
 
-}
-
-void Pcsx2App::CleanupMess()
-{
-	if( m_CorePlugins )
-	{
-		m_CorePlugins->Close();
-		m_CorePlugins->Shutdown();
-	}
-
-	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
-	// likely due to some pending message in the queue that references lilypad procs.
-	// We don't need to unload plugins anyway tho -- shutdown is plenty safe enough for
-	// closing out all the windows.  So just leave it be and let the plugins get unloaded
-	// during the wxApp destructor. -- air
-
-	m_ProgramLogBox = NULL;
-	m_MainFrame = NULL;
 }
 
 void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
@@ -710,10 +378,10 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	// ----------------------------------------------------------------------------
 	catch( Exception::PluginError& ex )
 	{
-		Console::Error( ex.FormatDiagnosticMessage() );
+		Console.Error( ex.FormatDiagnosticMessage() );
 		if( !HandlePluginError( ex ) )
 		{
-			Console::Error( L"User-canceled plugin configuration after load failure.  Plugins not loaded!" );
+			Console.Error( L"User-canceled plugin configuration after load failure.  Plugins not loaded!" );
 			Msgbox::Alert( _("Warning!  Plugins have not been loaded.  PCSX2 will be inoperable.") );
 		}
 	}
@@ -723,7 +391,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 		// Runtime errors which have been unhandled should still be safe to recover from,
 		// so lets issue a message to the user and then continue the message pump.
 
-		Console::Error( ex.FormatDiagnosticMessage() );
+		Console.Error( ex.FormatDiagnosticMessage() );
 		Msgbox::Alert( ex.FormatDisplayMessage() );
 	}
 }
@@ -756,61 +424,31 @@ int Pcsx2App::OnExit()
 	return wxApp::OnExit();
 }
 
-Pcsx2App::Pcsx2App()  :
-	m_MainFrame( NULL )
-,	m_gsFrame( NULL )
-,	m_ProgramLogBox( NULL )
-,	m_ConfigImages( 32, 32 )
-,	m_ConfigImagesAreLoaded( false )
-,	m_ToolbarImages( NULL )
-,	m_Bitmap_Logo( NULL )
-{
-	SetAppName( L"pcsx2" );
-	BuildCommandHash();
-}
-
-Pcsx2App::~Pcsx2App()
-{
-	// Typically OnExit cleans everything up before we get here, *unless* we cancel
-	// out of program startup in OnInit (return false) -- then remaining cleanup needs
-	// to happen here in the destructor.
-
-	CleanupMess();
-}
-
+// This method generates debug assertions if the MainFrame handle is NULL (typically
+// indicating that PCSX2 is running in NoGUI mode, or that the main frame has been
+// closed).  In most cases you'll want to use HasMainFrame() to test for thread
+// validity first, or use GetMainFramePtr() and manually check for NULL (choice
+// is a matter of programmer preference).
 MainEmuFrame& Pcsx2App::GetMainFrame() const
 {
-	wxASSERT( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
-	wxASSERT( m_MainFrame != NULL );
+	pxAssert( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
+	pxAssert( m_MainFrame != NULL );
 	return *m_MainFrame;
 }
 
+// This method generates debug assertions if the CoreThread handle is NULL (typically
+// indicating that there is no active emulation session).  In most cases you'll want
+// to use HasCoreThread() to test for thread validity first, or use GetCoreThreadPtr()
+// and manually check for NULL (choice is a matter of programmer preference).
 SysCoreThread& Pcsx2App::GetCoreThread() const
 {
-	wxASSERT( m_CoreThread != NULL );
-	return *m_CoreThread;
-}
-
-
-MainEmuFrame& Pcsx2App::GetMainFrameOrExcept() const
-{
-	if( m_MainFrame == NULL )
-		throw Exception::ObjectIsNull( "main application frame" );
-
-	return *m_MainFrame;
-}
-
-SysCoreThread& Pcsx2App::GetCoreThreadOrExcept() const
-{
-	if( !m_CoreThread )
-		throw Exception::ObjectIsNull( "core emulation thread" );
-
+	pxAssert( m_CoreThread != NULL );
 	return *m_CoreThread;
 }
 
 void AppApplySettings( const AppConfig* oldconf )
 {
-	DevAssert( wxThread::IsMain(), "ApplySettings valid from the GUI thread only." );
+	AllowFromMainThreadOnly();
 
 	// Ensure existence of necessary documents folders.  Plugins and other parts
 	// of PCSX2 rely on them.
@@ -868,60 +506,6 @@ void AppSaveSettings()
 		GetMainFrame().SaveRecentIsoList( *conf );
 }
 
-// --------------------------------------------------------------------------------------
-//  Sys/Core API and Shortcuts (for wxGetApp())
-// --------------------------------------------------------------------------------------
-
-// Executes the emulator using a saved/existing virtual machine state and currently
-// configured CDVD source device.
-void Pcsx2App::SysExecute()
-{
-	if( sys_resume_lock )
-	{
-		Console::WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
-		return;
-	}
-
-	SysReset();
-	LoadPluginsImmediate();
-	m_CoreThread = new AppCoreThread( *m_CorePlugins );
-	m_CoreThread->Resume();
-}
-
-// Executes the specified cdvd source and optional elf file.  This command performs a
-// full closure of any existing VM state and starts a fresh VM with the requested
-// sources.
-void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
-{
-	if( sys_resume_lock )
-	{
-		Console::WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
-		return;
-	}
-
-	SysReset();
-	LoadPluginsImmediate();
-	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
-	CDVDsys_ChangeSource( cdvdsrc );
-
-	m_CoreThread = new AppCoreThread( *m_CorePlugins );
-	m_CoreThread->Resume();
-}
-
-void Pcsx2App::SysReset()
-{
-	m_CoreThread	= NULL;
-}
-
-// Returns the state of the emulated system (Virtual Machine).  Returns true if the
-// system is active, or is in the process of reporting or handling an error.  Returns
-// false if there is no active system (thread is shutdown or hasn't been started).
-bool Pcsx2App::SysIsActive() const
-{
-	return m_CoreThread && m_CoreThread->IsRunning();
-}
-
-
 void Pcsx2App::OpenGsFrame()
 {
 	if( m_gsFrame != NULL ) return;
@@ -942,67 +526,104 @@ void Pcsx2App::OnGsFrameClosed()
 	m_gsFrame = NULL;
 }
 
+void Pcsx2App::OnProgramLogClosed()
+{
+	if( m_ProgramLogBox == NULL ) return;
+	DisableWindowLogging();
+	m_ProgramLogBox = NULL;
+}
+
+void Pcsx2App::OnMainFrameClosed()
+{
+	// Nothing threaded depends on the mainframe (yet) -- it all passes through the main wxApp
+	// message handler.  But that might change in the future.
+	if( m_MainFrame == NULL ) return;
+	m_MainFrame = NULL;
+}
+
+
+
+// --------------------------------------------------------------------------------------
+//  Sys/Core API and Shortcuts (for wxGetApp())
+// --------------------------------------------------------------------------------------
+
+// Executes the emulator using a saved/existing virtual machine state and currently
+// configured CDVD source device.
+void Pcsx2App::SysExecute()
+{
+	if( sys_resume_lock )
+	{
+		Console.WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
+		return;
+	}
+
+	SysReset();
+	LoadPluginsImmediate();
+	m_CoreThread = new AppCoreThread( *m_CorePlugins );
+	m_CoreThread->Resume();
+}
+
+// Executes the specified cdvd source and optional elf file.  This command performs a
+// full closure of any existing VM state and starts a fresh VM with the requested
+// sources.
+void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
+{
+	if( sys_resume_lock )
+	{
+		Console.WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
+		return;
+	}
+
+	SysReset();
+	LoadPluginsImmediate();
+	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
+	CDVDsys_ChangeSource( cdvdsrc );
+
+	m_CoreThread = new AppCoreThread( *m_CorePlugins );
+	m_CoreThread->Resume();
+}
+
+void Pcsx2App::SysReset()
+{
+	m_CoreThread	= NULL;
+}
+
+// Returns true if there is a "valid" virtual machine state from the user's perspective.  This
+// means the user has started the emulator and not issued a full reset.
+// Thread Safety: The state of the system can change in parallel to execution of the
+// main thread.  If you need to perform an extended length activity on the execution
+// state (such as saving it), you *must* suspend the Corethread first!
+__forceinline bool SysHasValidState()
+{
+	bool isRunning = HasCoreThread() ? GetCoreThread().IsRunning() : false;
+	return isRunning || StateCopy_HasFullState();
+}
 
 // Writes text to console and updates the window status bar and/or HUD or whateverness.
 // FIXME: This probably isn't thread safe. >_<
 void SysStatus( const wxString& text )
 {
 	// mirror output to the console!
-	Console::Status( text.c_str() );
+	Console.Status( text.c_str() );
 	if( HasMainFrame() )
 		GetMainFrame().SetStatusText( text );
 }
 
-// Executes the emulator using a saved/existing virtual machine state and currently
-// configured CDVD source device.
-void SysExecute()
-{
-	wxGetApp().SysExecute();
-}
-
-void SysExecute( CDVD_SourceType cdvdsrc )
-{
-	wxGetApp().SysExecute( cdvdsrc );
-}
-
-void SysResume()
-{
-	if( !HasCoreThread() ) return;
-
-	if( sys_resume_lock )
-	{
-		Console::WriteLn( "SysResume: State is locked, ignoring Resume request!" );
-		return;
-	}
-
-	GetCoreThread().Resume();
-}
-
-void SysSuspend( bool closePlugins )
-{
-	if( !HasCoreThread() ) return;
-
-	if( closePlugins )
-		GetCoreThread().Suspend();
-	else
-		GetCoreThread().ShortSuspend();
-}
-
-void SysReset()
-{
-	wxGetApp().SysReset();
-}
-
 bool HasMainFrame()
 {
-	return wxGetApp().HasMainFrame();
+	return wxTheApp && wxGetApp().HasMainFrame();
 }
 
 bool HasCoreThread()
 {
-	return wxGetApp().HasCoreThread();
+	return wxTheApp && wxGetApp().HasCoreThread();
 }
 
+// This method generates debug assertions if either the wxApp or MainFrame handles are
+// NULL (typically indicating that PCSX2 is running in NoGUI mode, or that the main
+// frame has been closed).  In most cases you'll want to use HasMainFrame() to test
+// for gui validity first, or use GetMainFramePtr() and manually check for NULL (choice
+// is a matter of programmer preference).
 MainEmuFrame&	GetMainFrame()
 {
 	return wxGetApp().GetMainFrame();
@@ -1011,4 +632,19 @@ MainEmuFrame&	GetMainFrame()
 SysCoreThread&	GetCoreThread()
 {
 	return wxGetApp().GetCoreThread();
+}
+
+// Returns a pointer to the main frame of the GUI (frame may be hidden from view), or
+// NULL if no main frame exists (NoGUI mode and/or the frame has been destroyed).  If
+// the wxApp is NULL then this will also return NULL.
+MainEmuFrame*	GetMainFramePtr()
+{
+	return wxTheApp ? wxGetApp().GetMainFramePtr() : NULL;
+}
+
+// Returns a pointer to the CoreThread of the GUI (thread may be stopped or suspended),
+// or NULL if no core thread exists, or if the wxApp is also NULL.
+SysCoreThread*	GetCoreThreadPtr()
+{
+	return wxTheApp ? wxGetApp().GetCoreThreadPtr() : NULL;
 }

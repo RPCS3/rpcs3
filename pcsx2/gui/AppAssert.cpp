@@ -105,8 +105,8 @@ void Pcsx2App::OnAssertFailure( const wxChar *file, int line, const wxChar *func
 	wxString trace( L"Call stack:\n" + pxGetStackTrace() );
 
 	wxMessageOutputDebug().Printf( dbgmsg );
-	Console::Error( dbgmsg );
-	Console::WriteLn( trace );
+	Console.Error( dbgmsg );
+	Console.WriteLn( trace );
 
 	int retval = Msgbox::Assertion( dbgmsg, trace );
 	

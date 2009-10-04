@@ -380,7 +380,7 @@ microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 			infoVar = 1;
 		}
 		iPC = bPC;
-		DevCon::Status("microVU%d: Branch VI-Delay (%d) [%04x]", getIndex, i, xPC);
+		DevCon.Status("microVU%d: Branch VI-Delay (%d) [%04x]", getIndex, i, xPC);
 	}
 	else iPC = bPC;
 }
@@ -394,7 +394,7 @@ microVUt(int) mVUbranchCheck(mV) {
 		incPC(2);
 		mVUlow.evilBranch = 1;
 		mVUregs.blockType = 2;
-		DevCon::Status("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU->index, xPC);
+		DevCon.Status("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU->index, xPC);
 		return 1;
 	}
 	incPC(2);
@@ -431,7 +431,7 @@ microVUt(void) mVUanalyzeJump(mV, int Is, int It, bool isJALR) {
 	if (mVUconstReg[Is].isValid && !CHECK_VU_CONSTHACK) {
 		mVUlow.constJump.isValid  = 1;
 		mVUlow.constJump.regValue = mVUconstReg[Is].regValue;
-		//DevCon::Status("microVU%d: Constant JR/JALR Address Optimization", mVU->index);
+		//DevCon.Status("microVU%d: Constant JR/JALR Address Optimization", mVU->index);
 	}
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	if (isJALR) {

@@ -19,138 +19,301 @@
 using namespace Threading;
 using namespace std;
 
-namespace Console
+// Important!  Only Assert and Null console loggers are allowed for initial console targeting.
+// Other log targets rely on the static buffer and a threaded mutex lock, which are only valid
+// after C++ initialization has finished.
+void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp )
 {
-	MutexLock m_writelock;
+	pxAssertDev(
+		(writer.DoWrite != NULL)	&& (writer.DoWriteLn != NULL) &&
+		(writer.Newline != NULL)	&& (writer.SetTitle != NULL) &&
+		(writer.SetColor != NULL)	&& (writer.ClearColor != NULL),
+		"Invalid IConsoleWriter object!  All function pointer interfaces must be implemented."
+	);
+	
+	if( !ConsoleBuffer_Get().IsEmpty() )
+		writer.DoWriteLn( ConsoleBuffer_Get() );
 
-	bool __fastcall Write( Colors color, const wxString& fmt )
-	{
-		SetColor( color );
-		Write( fmt );
-		ClearColor();
+	Console	= writer;
 
-		return false;
-	}
+#ifdef PCSX2_DEVBUILD
+	DevCon	= writer;
+#endif
 
-	bool __fastcall WriteLn( Colors color, const wxString& fmt )
-	{
-		SetColor( color );
-		WriteLn( fmt );
-		ClearColor();
-		return false;
-	}
-
-	// ------------------------------------------------------------------------
-	__forceinline void __fastcall _Write( const char* fmt, va_list args )
-	{
-		std::string m_format_buffer;
-		vssprintf( m_format_buffer, fmt, args );
-		Write( wxString::FromUTF8( m_format_buffer.c_str() ) );
-	}
-
-	__forceinline void __fastcall _WriteLn( const char* fmt, va_list args )
-	{
-		std::string m_format_buffer;
-		vssprintf( m_format_buffer, fmt, args );
-		WriteLn( wxString::FromUTF8( m_format_buffer.c_str() ) );
-	}
-
-	__forceinline void __fastcall _WriteLn( Colors color, const char* fmt, va_list args )
-	{
-		SetColor( color );
-		_WriteLn( fmt, args );
-		ClearColor();
-	}
-
-	// ------------------------------------------------------------------------
-	bool Write( const char* fmt, ... )
-	{
-		va_list args;
-		va_start(args,fmt);
-		_Write( fmt, args );
-		va_end(args);
-
-		return false;
-	}
-
-	bool Write( Colors color, const char* fmt, ... )
-	{
-		va_list args;
-		va_start(args,fmt);
-		SetColor( color );
-		_Write( fmt, args );
-		ClearColor();
-		va_end(args);
-
-		return false;
-	}
-
-	// ------------------------------------------------------------------------
-	bool WriteLn( const char* fmt, ... )
-	{
-		va_list args;
-		va_start(args,fmt);
-		_WriteLn( fmt, args );
-		va_end(args);
-
-		return false;
-	}
-
-	bool WriteLn( Colors color, const char* fmt, ... )
-	{
-		va_list args;
-		va_start(args,fmt);
-		_WriteLn( color, fmt, args );
-		va_end(args);
-		return false;
-	}
-
-	// ------------------------------------------------------------------------
-	bool Error( const char* fmt, ... )
-	{
-		va_list args;
-		va_start(args,fmt);
-		_WriteLn( Color_Red, fmt, args );
-		va_end(args);
-		return false;
-	}
-
-	bool Notice( const char* fmt, ... )
-	{
-		va_list list;
-		va_start(list,fmt);
-		_WriteLn( Color_Yellow, fmt, list );
-		va_end(list);
-		return false;
-	}
-
-	bool Status( const char* fmt, ... )
-	{
-		va_list list;
-		va_start(list,fmt);
-		_WriteLn( Color_Green, fmt, list );
-		va_end(list);
-		return false;
-	}
-
-	// ------------------------------------------------------------------------
-	bool __fastcall Error( const wxString& src )
-	{
-		WriteLn( Color_Red, src );
-		return false;
-	}
-
-	bool __fastcall Notice( const wxString& src )
-	{
-		WriteLn( Color_Yellow, src );
-		return false;
-	}
-
-	bool __fastcall Status( const wxString& src )
-	{
-		WriteLn( Color_Green, src );
-		return false;
-	}
-
+#ifdef PCSX2_DEBUG
+	DbgCon	= writer;
+#endif
 }
 
+// --------------------------------------------------------------------------------------
+//  ConsoleImpl_Null
+// --------------------------------------------------------------------------------------
+
+static void __concall ConsoleNull_SetTitle( const wxString& title ) {}
+static void __concall ConsoleNull_SetColor( ConsoleColors color ) {}
+static void __concall ConsoleNull_ClearColor() {}
+static void __concall ConsoleNull_Newline() {}
+static void __concall ConsoleNull_DoWrite( const wxString& fmt ) {}
+static void __concall ConsoleNull_DoWriteLn( const wxString& fmt ) {}
+
+// --------------------------------------------------------------------------------------
+//  ConsoleImpl_Assert
+// --------------------------------------------------------------------------------------
+
+static void __concall ConsoleAssert_DoWrite( const wxString& fmt )
+{
+	pxFail( L"Console class has not been initialized; Message written:\n\t" + fmt );
+}
+
+static void __concall ConsoleAssert_DoWriteLn( const wxString& fmt )
+{
+	pxFail( L"Console class has not been initialized; Message written:\n\t" + fmt );
+}
+
+// --------------------------------------------------------------------------------------
+//  ConsoleImpl_Buffered Implementations
+// --------------------------------------------------------------------------------------
+
+static wxString	m_buffer;
+
+const wxString& ConsoleBuffer_Get()
+{
+	return m_buffer;
+}
+
+void ConsoleBuffer_Clear()
+{
+	m_buffer.Clear();
+}
+
+void ConsoleBuffer_FlushToFile( FILE *fp )
+{
+	if( fp == NULL || m_buffer.IsEmpty() ) return;
+	px_fputs( fp, toUTF8(m_buffer) );
+	m_buffer.Clear();
+}
+
+static void __concall ConsoleBuffer_DoWrite( const wxString& fmt )
+{
+	m_buffer += fmt;
+}
+
+static void __concall ConsoleBuffer_DoWriteLn( const wxString& fmt )
+{
+	m_buffer += fmt + L"\n";
+}
+
+// --------------------------------------------------------------------------------------
+//  ConsoleImpl_wxLogError Implementations
+// --------------------------------------------------------------------------------------
+
+static void __concall Console_wxLogError_DoWriteLn( const wxString& fmt )
+{
+	if( !m_buffer.IsEmpty() )
+	{
+		wxLogError( m_buffer );
+		m_buffer.Clear();
+	}
+	wxLogError( fmt );
+}
+
+// --------------------------------------------------------------------------------------
+//  IConsole Implementations
+// --------------------------------------------------------------------------------------
+
+// Default write action at startup and shutdown is to use the stdout.
+void IConsole_DoWrite( const wxString& fmt )
+{
+	wxPrintf( fmt );
+}
+
+// Default write action at startup and shutdown is to use the stdout.
+void IConsole_DoWriteLn( const wxString& fmt )
+{
+	wxPrintf( fmt );
+}
+
+// Writes a line of colored text to the console (no newline).
+// The console color is reset to default when the operation is complete.
+void IConsoleWriter::Write( ConsoleColors color, const wxString& fmt ) const
+{
+	SetColor( color );
+	Write( fmt );
+	ClearColor();
+}
+
+// Writes a line of colored text to the console, with automatic newline appendage.
+// The console color is reset to default when the operation is complete.
+void IConsoleWriter::WriteLn( ConsoleColors color, const wxString& fmt ) const
+{
+	SetColor( color );
+	WriteLn( fmt );
+	ClearColor();
+}
+
+void IConsoleWriter::_Write( const char* fmt, va_list args ) const
+{
+	std::string m_format_buffer;
+	vssprintf( m_format_buffer, fmt, args );
+	Write( wxString::FromUTF8( m_format_buffer.c_str() ) );
+}
+
+void IConsoleWriter::_WriteLn( const char* fmt, va_list args ) const
+{
+	std::string m_format_buffer;
+	vssprintf( m_format_buffer, fmt, args );
+	WriteLn( wxString::FromUTF8( m_format_buffer.c_str() ) );
+}
+
+void IConsoleWriter::_WriteLn( ConsoleColors color, const char* fmt, va_list args ) const
+{
+	SetColor( color );
+	_WriteLn( fmt, args );
+	ClearColor();
+}
+
+void IConsoleWriter::Write( const char* fmt, ... ) const
+{
+	va_list args;
+	va_start(args,fmt);
+	_Write( fmt, args );
+	va_end(args);
+}
+
+void IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
+{
+	va_list args;
+	va_start(args,fmt);
+	SetColor( color );
+	_Write( fmt, args );
+	ClearColor();
+	va_end(args);
+}
+
+void IConsoleWriter::WriteLn( const char* fmt, ... ) const
+{
+	va_list args;
+	va_start(args,fmt);
+	_WriteLn( fmt, args );
+	va_end(args);
+}
+
+void IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
+{
+	va_list args;
+	va_start(args,fmt);
+	_WriteLn( color, fmt, args );
+	va_end(args);
+}
+
+void IConsoleWriter::Write( const wxString& src ) const
+{
+	DoWrite( src );
+}
+
+void IConsoleWriter::WriteLn( const wxString& src ) const
+{
+	DoWriteLn( src );
+}
+
+void IConsoleWriter::Error( const char* fmt, ... ) const
+{
+	va_list args;
+	va_start(args,fmt);
+	_WriteLn( Color_Red, fmt, args );
+	va_end(args);
+}
+
+void IConsoleWriter::Notice( const char* fmt, ... ) const
+{
+	va_list list;
+	va_start(list,fmt);
+	_WriteLn( Color_Yellow, fmt, list );
+	va_end(list);
+}
+
+void IConsoleWriter::Status( const char* fmt, ... ) const
+{
+	va_list list;
+	va_start(list,fmt);
+	_WriteLn( Color_Green, fmt, list );
+	va_end(list);
+}
+
+void IConsoleWriter::Error( const wxString& src ) const
+{
+	WriteLn( Color_Red, src );
+}
+
+void IConsoleWriter::Notice( const wxString& src ) const
+{
+	WriteLn( Color_Yellow, src );
+}
+
+void IConsoleWriter::Status( const wxString& src ) const
+{
+	WriteLn( Color_Green, src );
+}
+
+const IConsoleWriter ConsoleWriter_Null =
+{
+	ConsoleNull_DoWrite,
+	ConsoleNull_DoWriteLn,
+
+	ConsoleNull_Newline,
+	
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
+const IConsoleWriter ConsoleWriter_Assert =
+{
+	ConsoleAssert_DoWrite,
+	ConsoleAssert_DoWriteLn,
+
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
+const IConsoleWriter ConsoleWriter_wxError =
+{
+	ConsoleBuffer_DoWrite,			// Writes without newlines go to buffer to avoid error log spam.
+	Console_wxLogError_DoWriteLn,
+
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
+const IConsoleWriter ConsoleWriter_Buffered =
+{
+	ConsoleBuffer_DoWrite,			// Writes without newlines go to buffer to avoid assertion spam.
+	ConsoleBuffer_DoWriteLn,
+
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
+
+// Important!  Only Assert and Null console loggers are allowed for initial console targeting.
+// Other log targets rely on the static buffer and a threaded mutex lock, which are only valid
+// after C++ initialization has finished.
+
+IConsoleWriter	Console	= ConsoleWriter_Assert;
+
+#ifdef PCSX2_DEVBUILD
+	IConsoleWriter	DevConWriter= ConsoleWriter_Assert;
+#endif
+
+#ifdef PCSX2_DEBUG
+	IConsoleWriter	DbgConWriter= ConsoleWriter_Assert;
+#endif

@@ -242,7 +242,7 @@ void recPMFHL()
 			}
 			break;
 		default:
-			Console::Error("PMFHL??  *pcsx2 head esplode!*");
+			Console.Error("PMFHL??  *pcsx2 head esplode!*");
 			assert(0);
 	}
 
@@ -1507,7 +1507,7 @@ void recPEXTUH()
 void recQFSRV()
 {
 	if ( !_Rd_ ) return;
-	//Console::WriteLn("recQFSRV()");
+	//Console.WriteLn("recQFSRV()");
 
 	int info = eeRecompileCodeXMM( XMMINFO_READS | XMMINFO_READT | XMMINFO_WRITED );
 

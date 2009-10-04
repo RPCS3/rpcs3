@@ -162,13 +162,13 @@ void _recvuFDIVflush(VURegs * VU, bool intermediate) {
 
 	if( intermediate ) {
 		if ((vucycle - VU->fdiv.sCycle) > VU->fdiv.Cycle) {
-//			Console::WriteLn("flushing FDIV pipe");
+//			Console.WriteLn("flushing FDIV pipe");
 			VU->fdiv.enable = 0;
 		}
 	}
 	else {
 		if ((vucycle - VU->fdiv.sCycle) >= VU->fdiv.Cycle) {
-//			Console::WriteLn("flushing FDIV pipe");
+//			Console.WriteLn("flushing FDIV pipe");
 			VU->fdiv.enable = 0;
 		}
 	}
@@ -179,13 +179,13 @@ void _recvuEFUflush(VURegs * VU, bool intermediate) {
 
 	if( intermediate ) {
 		if ((vucycle - VU->efu.sCycle) > VU->efu.Cycle) {
-//			Console::WriteLn("flushing FDIV pipe");
+//			Console.WriteLn("flushing FDIV pipe");
 			VU->efu.enable = 0;
 		}
 	}
 	else {
 		if ((vucycle - VU->efu.sCycle) >= VU->efu.Cycle) {
-//			Console::WriteLn("flushing FDIV pipe");
+//			Console.WriteLn("flushing FDIV pipe");
 			VU->efu.enable = 0;
 		}
 	}
@@ -292,7 +292,7 @@ void _recvuFMACAdd(VURegs * VU, int reg, int xyzw) {
 		break;
 	}
 
-	if (i==8) Console::Error("*PCSX2*: error , out of fmacs");
+	if (i==8) Console.Error("*PCSX2*: error , out of fmacs");
 //	VUM_LOG("adding FMAC pipe[%d]; reg %d", i, reg);
 	
 	VU->fmac[i].enable = 1;
@@ -303,14 +303,14 @@ void _recvuFMACAdd(VURegs * VU, int reg, int xyzw) {
 }
 
 void _recvuFDIVAdd(VURegs * VU, int cycles) {
-//	Console::WriteLn("adding FDIV pipe");
+//	Console.WriteLn("adding FDIV pipe");
 	VU->fdiv.enable = 1;
 	VU->fdiv.sCycle = vucycle;
 	VU->fdiv.Cycle  = cycles;
 }
 
 void _recvuEFUAdd(VURegs * VU, int cycles) {
-//	Console::WriteLn("adding EFU pipe");
+//	Console.WriteLn("adding EFU pipe");
 	VU->efu.enable = 1;
 	VU->efu.sCycle = vucycle;
 	VU->efu.Cycle  = cycles;
@@ -325,7 +325,7 @@ void _recvuIALUAdd(VURegs * VU, int reg, int cycles) {
 		break;
 	}
 
-	if (i==8) Console::Error("*PCSX2*: error , out of ialus");
+	if (i==8) Console.Error("*PCSX2*: error , out of ialus");
 	
 	VU->ialu[i].enable = 1;
 	VU->ialu[i].sCycle = vucycle;
@@ -389,7 +389,7 @@ void _recvuFlushFDIV(VURegs * VU) {
 	if (VU->fdiv.enable == 0) return;
 
 	cycle = VU->fdiv.Cycle + 1 - (vucycle - VU->fdiv.sCycle); //VU->fdiv.Cycle contains the latency minus 1 (6 or 12)
-//	Console::WriteLn("waiting FDIV pipe %d", cycle);
+//	Console.WriteLn("waiting FDIV pipe %d", cycle);
 	VU->fdiv.enable = 0;
 	vucycle+= cycle;
 }
@@ -400,7 +400,7 @@ void _recvuFlushEFU(VURegs * VU) {
 	if (VU->efu.enable == 0) return;
 
 	cycle = VU->efu.Cycle - (vucycle - VU->efu.sCycle);
-//	Console::WriteLn("waiting FDIV pipe %d", cycle);
+//	Console.WriteLn("waiting FDIV pipe %d", cycle);
 	VU->efu.enable = 0;
 	vucycle+= cycle;
 }
@@ -1725,9 +1725,9 @@ void testPrintOverflow() {
 	tempRegX[2] &= 0xff800000;
 	tempRegX[3] &= 0xff800000;
 	if ( (tempRegX[0] == 0x7f800000) || (tempRegX[1] == 0x7f800000) || (tempRegX[2] == 0x7f800000) || (tempRegX[3] == 0x7f800000) )
-		Console::Notice( "VU OVERFLOW!: Changing to +Fmax!!!!!!!!!!!!" );
+		Console.Notice( "VU OVERFLOW!: Changing to +Fmax!!!!!!!!!!!!" );
 	if ( (tempRegX[0] == 0xff800000) || (tempRegX[1] == 0xff800000) || (tempRegX[2] == 0xff800000) || (tempRegX[3] == 0xff800000) )
-		Console::Notice( "VU OVERFLOW!: Changing to -Fmax!!!!!!!!!!!!" );
+		Console.Notice( "VU OVERFLOW!: Changing to -Fmax!!!!!!!!!!!!" );
 }
 
 // Outputs to the console when overflow has occured.

@@ -295,11 +295,7 @@ public:
 	void Save( const wxString& dstfile );
 	void Save( const wxOutputStream& deststream );
 
-	bool MultitapEnabled( uint port ) const
-	{
-		wxASSERT( port < 2 );
-		return (port==0) ? MultitapPort0_Enabled : MultitapPort1_Enabled;
-	}
+	bool MultitapEnabled( uint port ) const;
 
 	bool operator ==( const Pcsx2Config& right ) const
 	{

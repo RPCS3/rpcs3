@@ -1112,7 +1112,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	if (size > diff) {
 		// fixme: one of these days the following *16's will get cleaned up when we introduce
 		// a special qwc/simd16 optimized version of memcpy_aligned. :)
-		//DevCon::Status("XGkick Wrap!");
+		//DevCon.Status("XGkick Wrap!");
 		memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), diff*16);
 		size  -= diff;
 		pDest += diff*16;

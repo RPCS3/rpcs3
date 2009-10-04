@@ -48,7 +48,7 @@ void Panels::DirPickerPanel::UpdateCheckStatus( bool someNoteworthyBoolean )
 void Panels::DirPickerPanel::UseDefaultPath_Click( wxCommandEvent &evt )
 {
 	evt.Skip();
-	wxASSERT( m_pickerCtrl != NULL && m_checkCtrl != NULL );
+	pxAssert( (m_pickerCtrl != NULL) && (m_checkCtrl != NULL) );
 	UpdateCheckStatus( m_checkCtrl->IsChecked() );
 }
 

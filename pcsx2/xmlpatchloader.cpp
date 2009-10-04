@@ -73,18 +73,18 @@ int LoadPatch( const wxString& crc )
 	bool loadOkay = doc.LoadFile();
 	if ( !loadOkay )
 	{
-		//Console::Error("XML Patch Loader: Could not load file '%s'. Error='%s'.", pfile, doc.ErrorDesc() );
+		//Console.Error("XML Patch Loader: Could not load file '%s'. Error='%s'.", pfile, doc.ErrorDesc() );
 		return -1;
 	}
 	else
 	{
-		Console::WriteLn("XML Patch Loader: '%s' Found", pfile.c_str() );
+		Console.WriteLn("XML Patch Loader: '%s' Found", pfile.c_str() );
 	}
 
 	TiXmlNode *root = doc.FirstChild("GAME");
 	if(!root)
 	{
-		Console::Error("XML Patch Loader: Root node is not GAME, invalid patch file.");
+		Console.Error("XML Patch Loader: Root node is not GAME, invalid patch file.");
 		return -1;
 	}
 
@@ -92,7 +92,7 @@ int LoadPatch( const wxString& crc )
 
 	const char *title=rootelement->Attribute("title");
 	if(title)
-		Console::WriteLn("XML Patch Loader: Game Title: %s", title);
+		Console.WriteLn("XML Patch Loader: Game Title: %s", title);
 
 	int result=LoadGroup(root,-1);
 	if(result) {
@@ -102,7 +102,7 @@ int LoadPatch( const wxString& crc )
 
 	wxString uTitle( wxString::FromAscii( title ) );
 	if( uTitle.IsEmpty() ) uTitle = L"<No Title>";
-	Console::SetTitle( uTitle );
+	Console.SetTitle( uTitle );
 
 	return 0;
 }
@@ -114,7 +114,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 
 	const char *gtitle=groupelement->Attribute("title");
 	if(gtitle)
-		Console::WriteLn("XML Patch Loader: Group Title: %s", gtitle);
+		Console.WriteLn("XML Patch Loader: Group Title: %s", gtitle);
 
 	const char *enable=groupelement->Attribute("enabled");
 	bool gEnabled=true;
@@ -122,7 +122,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 	{
 		if(strcmp(enable,"false")==0)
 		{
-			Console::WriteLn("XML Patch Loader: Group is disabled.");
+			Console.WriteLn("XML Patch Loader: Group is disabled.");
 			gEnabled=false;
 		}
 	}
@@ -133,7 +133,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 		TiXmlElement *cmelement = comment->ToElement();
 		const char *comment = cmelement->GetText();
 		if(comment)
-			Console::WriteLn("XML Patch Loader: Group Comment:\n%s\n---", comment);
+			Console.WriteLn("XML Patch Loader: Group Comment:\n%s\n---", comment);
 	}
 
 	string t;
@@ -162,7 +162,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
         if( pid != NULL )
 		sscanf(pid, "%x", &g_ZeroGSOptions);
         else
-		Console::WriteLn("zerogs attribute wrong");
+		Console.WriteLn("zerogs attribute wrong");
     }
 
 	TiXmlNode *roundmode=group->FirstChild("ROUNDMODE");
@@ -210,7 +210,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			}
 		}
 		if(( eetype == 0xffff )||( vutype == 0xffff )) {
-			Console::Notice("XML Patch Loader: WARNING: Invalid value in ROUNDMODE.");
+			Console.Notice("XML Patch Loader: WARNING: Invalid value in ROUNDMODE.");
 		}
 		else {
 			SetRoundMode(eetype,vutype);
@@ -223,7 +223,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 		TiXmlElement *celement = cpatch->ToElement();
 		if(!celement)
 		{
-			Console::Error("XML Patch Loader: ERROR: Couldn't convert node to element." );
+			Console.Error("XML Patch Loader: ERROR: Couldn't convert node to element." );
 			return -1;
 		}
 
@@ -237,7 +237,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 		const char *value=celement->Attribute("value");
 
 		if(ptitle) {
-			Console::WriteLn("XML Patch Loader: Patch title: %s", ptitle);
+			Console.WriteLn("XML Patch Loader: Patch title: %s", ptitle);
 		}
 
 		bool penabled=gEnabled;
@@ -245,7 +245,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 		{
 			if(strcmp(penable,"false")==0)
 			{
-				Console::Notice("XML Patch Loader: Patch is disabled.");
+				Console.Notice("XML Patch Loader: Patch is disabled.");
 				penabled=false;
 			}
 		}
@@ -253,15 +253,15 @@ int LoadGroup(TiXmlNode *group,int gParent)
 		if(!applymode) applymode="frame";
 		if(!place) place="EE";
 		if(!address) {
-			Console::Error("XML Patch Loader: ERROR: Patch doesn't contain an address.");
+			Console.Error("XML Patch Loader: ERROR: Patch doesn't contain an address.");
 			return -1;
 		}
 		if(!value) {
-			Console::Error("XML Patch Loader: ERROR: Patch doesn't contain a value.");
+			Console.Error("XML Patch Loader: ERROR: Patch doesn't contain a value.");
 			return -1;
 		}
 		if(!size) {
-			Console::Notice("XML Patch Loader: WARNING: Patch doesn't contain the size. Trying to deduce from the value size.");
+			Console.Notice("XML Patch Loader: WARNING: Patch doesn't contain the size. Trying to deduce from the value size.");
 			switch(strlen(value))
 			{
 				case 8:
@@ -296,7 +296,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			patch[patchnumber].placetopatch=1;
 		} else
 		{
-			Console::Error("XML Patch Loader: ERROR: Invalid applymode attribute.\n");
+			Console.Error("XML Patch Loader: ERROR: Invalid applymode attribute.\n");
 			patchnumber=0;
 			return -1;
 		}
@@ -310,7 +310,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			patch[patchnumber].cpu= CPU_IOP;
 		} else
 		{
-			Console::Error("XML Patch Loader: ERROR: Invalid place attribute.\n");
+			Console.Error("XML Patch Loader: ERROR: Invalid place attribute.\n");
 			patchnumber=0;
 			return -1;
 		}
@@ -332,7 +332,7 @@ int LoadGroup(TiXmlNode *group,int gParent)
 			patch[patchnumber].type = BYTE_T;
 		} else
 		{
-			Console::Error("XML Patch Loader: ERROR: Invalid size attribute.\n");
+			Console.Error("XML Patch Loader: ERROR: Invalid size attribute.\n");
 			patchnumber=0;
 			return -1;
 		}

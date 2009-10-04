@@ -76,7 +76,7 @@ void GSFrame::OnKeyDown( wxKeyEvent& evt )
 	
 	if( cmd != NULL )
 	{
-		DbgCon::WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
+		DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
 		cmd->Invoke();
 	}
 }

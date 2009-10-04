@@ -17,103 +17,99 @@
 
 #include "StringHelpers.h"
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Console Namespace -- For printing messages to the console.
-//
+
+enum ConsoleColors
+{
+	Color_Black = 0,
+	Color_Red,
+	Color_Green,
+	Color_Yellow,
+	Color_Blue,
+	Color_Magenta,
+	Color_Cyan,
+	Color_White
+};
+
+// Use fastcall for the console; should be helpful in most cases
+#define __concall	__fastcall
+
+// ----------------------------------------------------------------------------------------
+//  IConsole -- For printing messages to the console.
+// ----------------------------------------------------------------------------------------
 // SysPrintf is depreciated; We should phase these in over time.
 //
-namespace Console
+struct IConsoleWriter
 {
-	enum Colors
-	{
-		Color_Black = 0,
-		Color_Red,
-		Color_Green,
-		Color_Yellow,
-		Color_Blue,
-		Color_Magenta,
-		Color_Cyan,
-		Color_White
-	};
+	// Write implementation for internal use only.
+	void (__concall *DoWrite)( const wxString& fmt );
 
-	// va_args version of WriteLn, mostly for internal use only.
-	extern void __fastcall _WriteLn( Colors color, const char* fmt, va_list args );
+	// WriteLn implementation for internal use only.
+	void (__concall *DoWriteLn)( const wxString& fmt );
 
-	extern void __fastcall SetTitle( const wxString& title );
+	void (__concall *Newline)();
+
+	void (__concall *SetTitle)( const wxString& title );
 
 	// Changes the active console color.
 	// This color will be unset by calls to colored text methods
 	// such as ErrorMsg and Notice.
-	extern void __fastcall SetColor( Colors color );
+	void (__concall *SetColor)( ConsoleColors color );
 
 	// Restores the console color to default (usually low-intensity white on Win32)
-	extern void ClearColor();
+	void (__concall *ClearColor)();
 
-	// The following Write functions return bool so that we can use macros to exclude
-	// them from different build types.  The return values are always zero.
+	// ----------------------------------------------------------------------------
+	// Public members; call these to print stuff to console!
 
-	// Writes a newline to the console.
-	extern bool Newline();
+	void Write( ConsoleColors color, const char* fmt, ... ) const;
+	void Write( const char* fmt, ... ) const;
+	void Write( ConsoleColors color, const wxString& fmt ) const;
+	void Write( const wxString& fmt ) const;
 
-	// Writes a line of colored text to the console, with automatic newline appendage.
-	// The console color is reset to default when the operation is complete.
-	extern bool WriteLn( Colors color, const char* fmt, ... );
+	void WriteLn( ConsoleColors color, const char* fmt, ... ) const;
+	void WriteLn( const char* fmt, ... ) const;
+	void WriteLn( ConsoleColors color, const wxString& fmt ) const;
+	void WriteLn( const wxString& fmt ) const;
 
-	// Writes a formatted message to the console, with appended newline.
-	extern bool WriteLn( const char* fmt, ... );
+	void Error( const char* fmt, ... ) const;
+	void Notice( const char* fmt, ... ) const;
+	void Status( const char* fmt, ... ) const;
 
-	// Writes a line of colored text to the console (no newline).
-	// The console color is reset to default when the operation is complete.
-	extern bool Write( Colors color, const char* fmt, ... );
+	void Error( const wxString& src ) const;
+	void Notice( const wxString& src ) const;
+	void Status( const wxString& src ) const;
 
-	// Writes a formatted message to the console (no newline)
-	extern bool Write( const char* fmt, ... );
+	// ----------------------------------------------------------------------------
+	//  Private Members; for internal use only.
 
-	// Displays a message in the console with red emphasis.
-	// Newline is automatically appended.
-	extern bool Error( const char* fmt, ... );
+	void _Write( const char* fmt, va_list args ) const;
+	void _WriteLn( const char* fmt, va_list args ) const;
+	void _WriteLn( ConsoleColors color, const char* fmt, va_list args ) const;
+};
 
-	// Displays a message in the console with yellow emphasis.
-	// Newline is automatically appended.
-	extern bool Notice( const char* fmt, ... );
+extern void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp=NULL );
+extern const wxString& ConsoleBuffer_Get();
+extern void ConsoleBuffer_Clear();
+extern void ConsoleBuffer_FlushToFile( FILE *fp );
 
-	// Displays a message in the console with yellow emphasis.
-	// Newline is automatically appended.
-	extern bool Status( const char* fmt, ... );
+extern const IConsoleWriter		ConsoleWriter_Null;
+extern const IConsoleWriter		ConsoleWriter_Assert;
+extern const IConsoleWriter		ConsoleWriter_Buffered;
+extern const IConsoleWriter		ConsoleWriter_wxError;
 
-
-	extern bool __fastcall Write( const wxString& text );
-	extern bool __fastcall Write( Colors color, const wxString& text );
-	extern bool __fastcall WriteLn( const wxString& text );
-	extern bool __fastcall WriteLn( Colors color, const wxString& text );
-
-	extern bool __fastcall Error( const wxString& text );
-	extern bool __fastcall Notice( const wxString& text );
-	extern bool __fastcall Status( const wxString& text );
-}
-
-using Console::Color_Black;
-using Console::Color_Red;
-using Console::Color_Green;
-using Console::Color_Blue;
-using Console::Color_Magenta;
-using Console::Color_Cyan;
-using Console::Color_Yellow;
-using Console::Color_White;
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// DevCon / DbgCon
+extern IConsoleWriter	Console;
 
 #ifdef PCSX2_DEVBUILD
-#	define DevCon Console
-#	define DevMsg MsgBox
+	extern IConsoleWriter	DevConWriter;
+#	define DevCon			DevConWriter
 #else
-#	define DevCon 0&&Console
-#	define DevMsg 
+#	define DevCon			ConsoleWriter_Null
 #endif
 
 #ifdef PCSX2_DEBUG
-#	define DbgCon Console
+	extern IConsoleWriter	DbgConWriter;
+#	define DbgCon			DbgConWriter
 #else
-#	define DbgCon 0&&Console
+#	define DbgCon			ConsoleWriter_Null
 #endif
+

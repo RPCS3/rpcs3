@@ -80,7 +80,7 @@ using namespace std;			// for min / max
 // If we have an infinity value, then Overflow has occured.
 #define checkOverflow(xReg, cFlagsToSet, shouldReturn) {  \
 	if ( ( xReg & ~0x80000000 ) == PosInfinity ) {  \
-		/*Console::Notice( "FPU OVERFLOW!: Changing to +/-Fmax!!!!!!!!!!!!\n" );*/  \
+		/*Console.Notice( "FPU OVERFLOW!: Changing to +/-Fmax!!!!!!!!!!!!\n" );*/  \
 		xReg = ( xReg & 0x80000000 ) | posFmax;  \
 		_ContVal_ |= cFlagsToSet;  \
 		if ( shouldReturn ) { return; }  \
@@ -90,7 +90,7 @@ using namespace std;			// for min / max
 // If we have a denormal value, then Underflow has occured.
 #define checkUnderflow(xReg, cFlagsToSet, shouldReturn) {  \
 	if ( ( ( xReg & 0x7F800000 ) == 0 ) && ( ( xReg & 0x007FFFFF ) != 0 ) ) {  \
-		/*Console::Notice( "FPU UNDERFLOW!: Changing to +/-0!!!!!!!!!!!!\n" );*/  \
+		/*Console.Notice( "FPU UNDERFLOW!: Changing to +/-0!!!!!!!!!!!!\n" );*/  \
 		xReg &= 0x80000000;  \
 		_ContVal_ |= cFlagsToSet;  \
 		if ( shouldReturn ) { return; }  \
@@ -377,14 +377,14 @@ void SUBA_S() {
 void LWC1() {
 	u32 addr;
 	addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s16)(cpuRegs.code & 0xffff);	// force sign extension to 32bit
-	if (addr & 0x00000003) { Console::Error( "FPU (LWC1 Opcode): Invalid Unaligned Memory Address" ); return; }  // Should signal an exception?
+	if (addr & 0x00000003) { Console.Error( "FPU (LWC1 Opcode): Invalid Unaligned Memory Address" ); return; }  // Should signal an exception?
 	fpuRegs.fpr[_Rt_].UL = memRead32(addr);
 }
 
 void SWC1() {
 	u32 addr;
 	addr = cpuRegs.GPR.r[_Rs_].UL[0] + (s16)(cpuRegs.code & 0xffff);	// force sign extension to 32bit
-	if (addr & 0x00000003) { Console::Error( "FPU (SWC1 Opcode): Invalid Unaligned Memory Address" ); return; }  // Should signal an exception?
+	if (addr & 0x00000003) { Console.Error( "FPU (SWC1 Opcode): Invalid Unaligned Memory Address" ); return; }  // Should signal an exception?
 	memWrite32(addr, fpuRegs.fpr[_Rt_].UL);
 }
 

@@ -40,14 +40,14 @@ __forceinline void FreezeMMXRegs(int save)
 {
 	if( !g_EEFreezeRegs ) return;
 
-	//DevCon::Notice("FreezeMMXRegs_(%d); [%d]\n", save, g_globalMMXSaved);
+	//DevCon.Notice("FreezeMMXRegs_(%d); [%d]\n", save, g_globalMMXSaved);
 
 	if( save )
 	{
 		g_globalMMXSaved++;
 		if( g_globalMMXSaved > 1 )
 		{
-			//DevCon::Notice("MMX Already Saved!\n");
+			//DevCon.Notice("MMX Already Saved!\n");
 			return;
 		}
 
@@ -84,7 +84,7 @@ __forceinline void FreezeMMXRegs(int save)
 	else {
 		if( g_globalMMXSaved==0 )
 		{
-			//DevCon::Notice("MMX Not Saved!\n");
+			//DevCon.Notice("MMX Not Saved!\n");
 			return;
 		}
 		g_globalMMXSaved--;
@@ -129,13 +129,13 @@ __forceinline void FreezeXMMRegs(int save)
 {
 	if( !g_EEFreezeRegs ) return;
 
-	//DevCon::Notice("FreezeXMMRegs_(%d); [%d]\n", save, g_globalXMMSaved);
+	//DevCon.Notice("FreezeXMMRegs_(%d); [%d]\n", save, g_globalXMMSaved);
 
 	if( save )
 	{
 		g_globalXMMSaved++;
 		if( g_globalXMMSaved > 1 ){
-			//DevCon::Notice("XMM Already saved\n");
+			//DevCon.Notice("XMM Already saved\n");
 			return;
 		}
 
@@ -173,7 +173,7 @@ __forceinline void FreezeXMMRegs(int save)
 	{
 		if( g_globalXMMSaved==0 )
 		{
-			//DevCon::Notice("XMM Regs not saved!\n");
+			//DevCon.Notice("XMM Regs not saved!\n");
 			return;
 		}
 

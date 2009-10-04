@@ -32,20 +32,20 @@ Panels::StaticApplyState Panels::g_ApplyState;
 //
 void Panels::StaticApplyState::DoCleanup() throw()
 {
-	wxASSERT_MSG( PanelList.size() != 0, L"PanelList list hasn't been cleaned up." );
+	pxAssertMsg( PanelList.size() != 0, L"PanelList list hasn't been cleaned up." );
 	PanelList.clear();
 	ParentBook = NULL;
 }
 
 void Panels::StaticApplyState::StartBook( wxBookCtrlBase* book )
 {
-	DevAssert( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
+	pxAssertDev( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
 	ParentBook = book;
 }
 
 void Panels::StaticApplyState::StartWizard()
 {
-	DevAssert( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
+	pxAssertDev( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
 }
 
 // -----------------------------------------------------------------------
@@ -74,7 +74,7 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 		PanelApplyList_t::iterator yay = PanelList.begin();
 		while( yay != PanelList.end() )
 		{
-			//DbgCon::Status( L"Writing settings for: " + (*yay)->GetLabel() );
+			//DbgCon.Status( L"Writing settings for: " + (*yay)->GetLabel() );
 			if( (pageid < 0) || (*yay)->IsOnPage( pageid ) )
 				(*yay)->Apply();
 			yay++;

@@ -56,7 +56,7 @@ __forceinline void gsInterrupt()
 
 	if (!(gif->chcr.STR))
 	{
-		//Console::WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", gif->chcr._u32, gif->qwc, done);
+		//Console.WriteLn("Eh? why are you still interrupting! chcr %x, qwc %x, done = %x", gif->chcr._u32, gif->qwc, done);
 		return;
 	}
 
@@ -71,7 +71,7 @@ __forceinline void gsInterrupt()
 	{
 		if (!dmacRegs->ctrl.DMAE) 
 		{
-			Console::Notice("gs dma masked, re-scheduling...");
+			Console.Notice("gs dma masked, re-scheduling...");
 			// re-raise the int shortly in the future
 			CPU_INT( 2, 64 );
 			return;
@@ -121,7 +121,7 @@ int  _GIFchain()
 		//must increment madr and clear qwc, else it loops
 		gif->madr += gif->qwc * 16;
 		gif->qwc = 0;
-		Console::Notice( "Hackfix - NULL GIFchain" );
+		Console.Notice( "Hackfix - NULL GIFchain" );
 		return -1;
 	}
 
@@ -180,13 +180,13 @@ void GIFdma()
 
 	if (gifRegs->ctrl.PSE)  // temporarily stop
 	{
-		Console::WriteLn("Gif dma temp paused?");
+		Console.WriteLn("Gif dma temp paused?");
 		return;
 	}
 
 	if ((dmacRegs->ctrl.STD == STD_GIF) && (prevcycles != 0))
 	{
-		Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
+		Console.WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3, gif->madr, psHu32(DMAC_STADR));
 
 		if ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) 
 		{
@@ -242,7 +242,7 @@ void GIFdma()
 		
 		if ((dmacRegs->ctrl.STD == STD_GIF) && (gif->chcr.MOD == NORMAL_MODE))
 		{ 
-			Console::WriteLn("DMA Stall Control on GIF normal");
+			Console.WriteLn("DMA Stall Control on GIF normal");
 		}
 
 		GIFchain();	//Transfers the data set by the switch
@@ -262,7 +262,7 @@ void GIFdma()
 			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) && (id == 4)) 
 			{
 				// stalled
-				Console::WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
+				Console.WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
 				gif->tadr -= 16;
 				hwDmacIrq(DMAC_STALL_SIS);
@@ -314,7 +314,7 @@ void dmaGIF()
 	
 	if (dmacRegs->ctrl.MFD == MFD_GIF)  // GIF MFIFO
 	{
-		//Console::WriteLn("GIF MFIFO");
+		//Console.WriteLn("GIF MFIFO");
 		gifMFIFOInterrupt();
 		return;
 	}	
@@ -434,7 +434,7 @@ void mfifoGIFtransfer(int qwc)
 	{
 		if (gif->tadr == spr0->madr) 
 		{
-			//if( gifqwc > 1 ) DevCon::WriteLn("gif mfifo tadr==madr but qwc = %d", gifqwc);
+			//if( gifqwc > 1 ) DevCon.WriteLn("gif mfifo tadr==madr but qwc = %d", gifqwc);
 			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			gifstate |= GIF_STATE_EMPTY;			
 			return;
@@ -498,7 +498,7 @@ void mfifoGIFtransfer(int qwc)
 	FreezeRegs(1); 
 	if (mfifoGIFchain() == -1) 
 	{
-		Console::WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", gif->qwc, gif->madr, gif->tadr);
+		Console.WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", gif->qwc, gif->madr, gif->tadr);
 		gifstate = GIF_STATE_STALL;
 	}
 	FreezeRegs(0); 
@@ -522,7 +522,7 @@ void gifMFIFOInterrupt()
 
 	if (!(gif->chcr.STR)) 
 	{ 
-		Console::WriteLn("WTF GIFMFIFO");
+		Console.WriteLn("WTF GIFMFIFO");
 		cpuRegs.interrupt &= ~(1 << 11); 
 		return; 
 	}
@@ -538,7 +538,7 @@ void gifMFIFOInterrupt()
 	{
 		if (gifqwc <= 0) 
 		{
-			//Console::WriteLn("Empty");
+			//Console.WriteLn("Empty");
 			gifstate |= GIF_STATE_EMPTY;
 			gifRegs->stat.IMT = 0; // OPH=0 | APATH=0
 			hwDmacIrq(DMAC_MFIFO_EMPTY);
@@ -551,11 +551,11 @@ void gifMFIFOInterrupt()
 #ifdef PCSX2_DEVBUILD
 	if (gifstate == GIF_STATE_READY || gif->qwc > 0) 
 	{
-		Console::Error("gifMFIFO Panic > Shouldn't go here!");
+		Console.Error("gifMFIFO Panic > Shouldn't go here!");
 		return;
 	}
 #endif
-	//if(gifqwc > 0) Console::WriteLn("GIF MFIFO ending with stuff in it %x", gifqwc);
+	//if(gifqwc > 0) Console.WriteLn("GIF MFIFO ending with stuff in it %x", gifqwc);
 	if (!gifmfifoirq) gifqwc = 0;
 
 	gspath3done = false;

@@ -55,8 +55,6 @@ protected:
 
 
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
-
-extern void SysLoadState( const wxString& file );
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
 
 

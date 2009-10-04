@@ -13,7 +13,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#include "../PrecompiledHeader.h"
+#include "PrecompiledHeader.h"
 #include "RedtapeWindows.h"
 #include "x86emitter/tools.h"
 #include "Threading.h"

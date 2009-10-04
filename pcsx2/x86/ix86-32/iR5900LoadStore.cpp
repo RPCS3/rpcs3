@@ -184,7 +184,7 @@ void assertmem()
 {
 	__asm mov s_tempaddr, ecx
 	__asm mov s_bCachingMem, edx
-	Console::Error("%x(%x) not mem write!", s_tempaddr, s_bCachingMem);
+	Console.Error("%x(%x) not mem write!", s_tempaddr, s_bCachingMem);
 	assert(0);
 }
 

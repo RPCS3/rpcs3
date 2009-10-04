@@ -33,7 +33,7 @@ using namespace Threading;
 using namespace std;
 
 #ifdef DEBUG
-#define MTGS_LOG Console::WriteLn
+#define MTGS_LOG Console.WriteLn
 #else
 #define MTGS_LOG 0&&
 #endif
@@ -79,6 +79,8 @@ struct MTGS_BufferedData
 };
 
 PCSX2_ALIGNED( 32, static MTGS_BufferedData RingBuffer );
+extern bool renderswitch;
+static volatile bool gsIsOpened = false;
 
 
 #ifdef RINGBUF_DEBUG_STACK
@@ -112,7 +114,15 @@ mtgsThreadObject::mtgsThreadObject() :
 
 void mtgsThreadObject::Start()
 {
-	m_returncode	= 0;
+	_parent::Start();
+	m_ExecMode = ExecMode_Suspending;
+	SetEvent();
+}
+
+void mtgsThreadObject::OnStart()
+{
+	gsIsOpened		= false;
+
 	m_RingPos		= 0;
 	m_WritePos		= 0;
 
@@ -123,19 +133,12 @@ void mtgsThreadObject::Start()
 	m_packet_size		= 0;
 	m_packet_ringpos	= 0;
 
-	_parent::Start();
-	m_ExecMode = ExecMode_Suspending;
-	SetEvent();
+	_parent::OnStart();
 }
 
 void mtgsThreadObject::PollStatus()
 {
-	if( m_ExecMode == ExecMode_NoThreadYet )
-	{
-		if( m_returncode != 0 )	// means the thread failed to init the GS plugin
-			throw Exception::PluginOpenError( PluginId_GS );
-	}
-
+	RethrowException();
 }
 
 mtgsThreadObject::~mtgsThreadObject() throw()
@@ -172,7 +175,7 @@ void mtgsThreadObject::PostVsyncEnd( bool updategs )
 		if( m_WritePos == volatize( m_RingPos ) )
 		{
 			// MTGS ringbuffer is empty, but we still have queued frames in the counter?  Ouch!
-			Console::Error( "MTGS > Queued framecount mismatch = %d", m_QueuedFrames );
+			Console.Error( "MTGS > Queued framecount mismatch = %d", m_QueuedFrames );
 			m_QueuedFrames = 0;
 			break;
 		}
@@ -182,7 +185,7 @@ void mtgsThreadObject::PostVsyncEnd( bool updategs )
 
 	m_lock_FrameQueueCounter.Lock();
 	m_QueuedFrames++;
-	//Console::Status( " >> Frame Added!" );
+	//Console.Status( " >> Frame Added!" );
 	m_lock_FrameQueueCounter.Unlock();
 
 	SendSimplePacket( GS_RINGTYPE_VSYNC,
@@ -199,13 +202,11 @@ struct PacketTagType
 	u32 data[3];
 };
 
-extern bool renderswitch;
-static volatile long gsIsOpened = 0;
-
 static void _clean_close_gs( void* obj )
 {
-	int result = _InterlockedExchange( &gsIsOpened, 0 );
-	if( result && (g_plugins != NULL) )
+	if( !gsIsOpened ) return;
+	gsIsOpened = false;
+	if( g_plugins != NULL )
 		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
 }
 
@@ -224,33 +225,34 @@ void mtgsThreadObject::OpenPlugin()
 	GSirqCallback( dummyIrqCallback );
 
 	if( renderswitch )
-		Console::WriteLn( "\t\tForced software switch enabled." );
+		Console.WriteLn( "\t\tForced software switch enabled." );
+
+	int result;
 
 	if( GSopen2 != NULL )
-		m_returncode = GSopen2( (void*)&pDsp, 1 | (renderswitch ? 4 : 0) );
+		result = GSopen2( (void*)&pDsp, 1 | (renderswitch ? 4 : 0) );
 	else
-		m_returncode = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+		result = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
 
-	gsIsOpened = 1;
-	m_sem_OpenDone.Post();
-
-	if( m_returncode != 0 )
+	if( result != 0 )
 	{
-		DevCon::WriteLn( "MTGS: GSopen Finished, return code: 0x%x", m_returncode );
-		pthread_exit( (void*)m_returncode );
+		DevCon.WriteLn( "GSopen Failed: return code: 0x%x", result );
+		throw Exception::PluginOpenError( PluginId_GS );
 	}
+
+	gsIsOpened = true;
+	m_sem_OpenDone.Post();
 
 	GSCSRr = 0x551B4000; // 0x55190000
 	GSsetGameCRC( ElfCRC, 0 );
 }
 
-sptr mtgsThreadObject::ExecuteTask()
+void mtgsThreadObject::ExecuteTask()
 {
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;
 #endif
 
-	gsIsOpened = false;
 	pthread_cleanup_push( _clean_close_gs, this );
 	while( true )
 	{
@@ -263,7 +265,7 @@ sptr mtgsThreadObject::ExecuteTask()
 		// ever be modified by this thread.
 		while( m_RingPos != volatize(m_WritePos))
 		{
-			wxASSERT( m_RingPos < RingBufferSize );
+			pxAssert( m_RingPos < RingBufferSize );
 
 			const PacketTagType& tag = (PacketTagType&)RingBuffer[m_RingPos];
 			u32 ringposinc = 1;
@@ -275,9 +277,9 @@ sptr mtgsThreadObject::ExecuteTask()
 			uptr stackpos = ringposStack.back();
 			if( stackpos != m_RingPos )
 			{
-				Console::Error( "MTGS Ringbuffer Critical Failure ---> %x to %x (prevCmd: %x)\n", stackpos, m_RingPos, prevCmd.command );
+				Console.Error( "MTGS Ringbuffer Critical Failure ---> %x to %x (prevCmd: %x)\n", stackpos, m_RingPos, prevCmd.command );
 			}
-			wxASSERT( stackpos == m_RingPos );
+			pxAssert( stackpos == m_RingPos );
 			prevCmd = tag;
 			ringposStack.pop_back();
 			m_lock_Stack.Unlock();
@@ -333,7 +335,7 @@ sptr mtgsThreadObject::ExecuteTask()
 					m_lock_FrameQueueCounter.Lock();
 					AtomicDecrement( m_QueuedFrames );
 					jASSUME( m_QueuedFrames >= 0 );
-					//Console::Status( " << Frame Removed!" );
+					//Console.Status( " << Frame Removed!" );
 					m_lock_FrameQueueCounter.Unlock();
 
 					if( PADupdate != NULL )
@@ -408,8 +410,8 @@ sptr mtgsThreadObject::ExecuteTask()
 				
 #ifdef PCSX2_DEVBUILD
 				default:
-					Console::Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
-					wxASSERT_MSG( false, L"Bad packet encountered in the MTGS Ringbuffer." );
+					Console.Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
+					pxFail( "Bad packet encountered in the MTGS Ringbuffer." );
 					m_RingPos = m_WritePos;
 					continue;
 #else
@@ -419,15 +421,13 @@ sptr mtgsThreadObject::ExecuteTask()
 			}
 
 			uint newringpos = m_RingPos + ringposinc;
-			wxASSERT( newringpos <= RingBufferSize );
+			pxAssert( newringpos <= RingBufferSize );
 			newringpos &= RingBufferMask;
 			AtomicExchange( m_RingPos, newringpos );
 		}
 		m_RingBufferIsBusy = false;
 	}
 	pthread_cleanup_pop( true );
-
-	return 0;
 }
 
 void mtgsThreadObject::OnSuspendInThread()
@@ -445,7 +445,7 @@ void mtgsThreadObject::OnResumeInThread()
 // Used primarily for plugin startup/shutdown.
 void mtgsThreadObject::WaitGS()
 {
-	DevAssert( !IsSelf(), "This method is only allowed from threads *not* named MTGS." );
+	pxAssertDev( !IsSelf(), "This method is only allowed from threads *not* named MTGS." );
 
 	if( IsSuspended() ) return;
 
@@ -465,7 +465,7 @@ void mtgsThreadObject::SetEvent()
 
 void mtgsThreadObject::PrepEventWait()
 {
-	//Console::Notice( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
+	//Console.Notice( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
 	SetEvent();
 	Timeslice();
 }
@@ -531,7 +531,7 @@ void mtgsThreadObject::SendDataPacket()
 		m_CopyDataTally += m_packet_size;
 		if( ( m_CopyDataTally > 0x8000 ) || ( ++m_CopyCommandTally > 16 ) )
 		{
-			//Console::Status( "MTGS Kick! DataSize : 0x%5.8x, CommandTally : %d", m_CopyDataTally, m_CopyCommandTally );
+			//Console.Status( "MTGS Kick! DataSize : 0x%5.8x, CommandTally : %d", m_CopyDataTally, m_CopyCommandTally );
 			SetEvent();
 		}
 	}
@@ -579,7 +579,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	}
 	if (ringtx_s>=128*1024*1024)
 	{
-		Console::Status("GSRingBufCopy:128MB in %d tx -> b/tx: AVG = %.2f , max = %d, min = %d",ringtx_c,ringtx_s/(float)ringtx_c,ringtx_s_max,ringtx_s_min);
+		Console.Status("GSRingBufCopy:128MB in %d tx -> b/tx: AVG = %.2f , max = %d, min = %d",ringtx_c,ringtx_s/(float)ringtx_c,ringtx_s_max,ringtx_s_min);
 		for (int i=0;i<32;i++)
 		{
 			u32 total_bucket=0;
@@ -590,15 +590,15 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 				{
 					total_bucket+=ringtx_inf[i][j];
 					bucket_subitems++;
-					Console::Notice("GSRingBufCopy :tx [%d,%d] algn %d : count= %d [%.2f%%]",1<<i,(1<<(i+1))-16,1<<j,ringtx_inf[i][j],ringtx_inf[i][j]/(float)ringtx_c*100);
+					Console.Notice("GSRingBufCopy :tx [%d,%d] algn %d : count= %d [%.2f%%]",1<<i,(1<<(i+1))-16,1<<j,ringtx_inf[i][j],ringtx_inf[i][j]/(float)ringtx_c*100);
 					ringtx_inf[i][j]=0;
 				}
 			}
 			if (total_bucket)
-				Console::Notice("GSRingBufCopy :tx [%d,%d] total : count= %d [%.2f%%] [%.2f%%]",1<<i,(1<<(i+1))-16,total_bucket,total_bucket/(float)ringtx_c*100,ringtx_inf_s[i]/(float)ringtx_s*100);
+				Console.Notice("GSRingBufCopy :tx [%d,%d] total : count= %d [%.2f%%] [%.2f%%]",1<<i,(1<<(i+1))-16,total_bucket,total_bucket/(float)ringtx_c*100,ringtx_inf_s[i]/(float)ringtx_s*100);
 			ringtx_inf_s[i]=0;
 		}
-		Console::Notice("GSRingBufCopy :tx ulg count =%d [%.2f%%]",ringtx_s_ulg,ringtx_s_ulg/(float)ringtx_s*100);
+		Console.Notice("GSRingBufCopy :tx ulg count =%d [%.2f%%]",ringtx_s_ulg,ringtx_s_ulg/(float)ringtx_s*100);
 		ringtx_s_ulg=0;
 		ringtx_c=0;
 		ringtx_s=0;
@@ -696,7 +696,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
     else	// always true - if( writepos + size == MTGS_RINGBUFFEREND )
 	{
 		// Yay.  Perfect fit.  What are the odds?
-		//Console::WriteLn( "MTGS > Perfect Fit!");
+		//Console.WriteLn( "MTGS > Perfect Fit!");
 
 		PrepEventWait();
 		while( true )

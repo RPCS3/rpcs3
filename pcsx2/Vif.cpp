@@ -582,7 +582,7 @@ void mfifoVIF1transfer(int qwc)
 				int temp = vif1ch->madr;								//Temporarily Store ADDR
 				vif1ch->madr = qwctag(vif1ch->tadr + 16); 					  //Set MADR to QW following the tag
 				vif1ch->tadr = temp;								//Copy temporarily stored ADDR to Tag
-				if ((temp & dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console::WriteLn("Next tag = %x outside ring %x size %x", temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
+				if ((temp & dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("Next tag = %x outside ring %x size %x", temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
 				vif1.done = false;
 				break;
 			}
@@ -660,7 +660,7 @@ void vifMFIFOInterrupt()
 			case 0: //Set up transfer
 				if (vif1ch->tadr == spr0->madr)
 				{
-				//	Console::WriteLn("Empty 1");
+				//	Console.WriteLn("Empty 1");
 					vifqwc = 0;
 					vif1.inprogress |= 0x10;
 					vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
@@ -685,7 +685,7 @@ void vifMFIFOInterrupt()
 	
 	/*if (vifqwc <= 0)
 	{
-		//Console::WriteLn("Empty 2");
+		//Console.WriteLn("Empty 2");
 		//vif1.inprogress |= 0x10;
 		vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 		hwDmacIrq(DMAC_MFIFO_EMPTY);

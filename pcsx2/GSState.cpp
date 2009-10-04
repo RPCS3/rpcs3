@@ -72,8 +72,8 @@ void SaveGSState(const wxString& file)
 {
 	if( g_SaveGSStream ) return;
 
-	Console::WriteLn( "Saving GS State..." );
-	Console::WriteLn( wxsFormat( L"\t%s", file.c_str() ) );
+	Console.WriteLn( "Saving GS State..." );
+	Console.WriteLn( wxsFormat( L"\t%s", file.c_str() ) );
 
 	SafeArray<u8> buf;
 	g_fGSSave = new memSavingState( buf );
@@ -88,7 +88,7 @@ void LoadGSState(const wxString& file)
 {
 	int ret;
 
-	Console::Status( "Loading GS State..." );
+	Console.Status( "Loading GS State..." );
 
 	wxString src( file );
 
@@ -260,7 +260,7 @@ void vSyncDebugStuff( uint frame )
 		if( --g_nLeftGSFrames <= 0 ) {
 			safe_delete( g_fGSSave );
 			g_SaveGSStream = 0;
-			Console::WriteLn("Done saving GS stream");
+			Console.WriteLn("Done saving GS stream");
 		}
 	}
 #endif

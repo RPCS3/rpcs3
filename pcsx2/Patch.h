@@ -28,7 +28,7 @@
 	while ( *param && ( *param != ',' ) ) param++; \
 	if ( *param ) param++; \
 	while ( *param && ( *param == ' ' ) ) param++; \
-	if ( *param == 0 ) { Console::Error( _( "Not enough params for inicommand" ) ); return; }
+	if ( *param == 0 ) { Console.Error( _( "Not enough params for inicommand" ) ); return; }
 	
 //
 // Enums

@@ -283,7 +283,7 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 {
 	--m_DialogIdents[GetId()];
-	wxASSERT( m_DialogIdents[GetId()] >= 0 );
+	pxAssert( m_DialogIdents[GetId()] >= 0 );
 }
 
 // ------------------------------------------------------------------------

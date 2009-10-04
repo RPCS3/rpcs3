@@ -175,7 +175,7 @@ microVUf(int) mVUfindLeastUsedProg() {
 			mVU->prog.prog[i].isOld  = 0;
 			mVU->prog.prog[i].used	 = 1;
 			mVUsortProg(mVU, i);
-			Console::Notice("microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, i+1, mVU->prog.total+1);
+			Console.Notice("microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, i+1, mVU->prog.total+1);
 			return i;
 		}
 	}
@@ -192,7 +192,7 @@ microVUf(int) mVUfindLeastUsedProg() {
 	mVU->prog.prog[pIdx].isOld	= 0;
 	mVU->prog.prog[pIdx].used	= 1;
 	mVUsortProg(mVU, pIdx);
-	Console::Notice("microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, pIdx+1, mVU->prog.total+1);
+	Console.Notice("microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, pIdx+1, mVU->prog.total+1);
 	return pIdx;
 }
 
@@ -208,11 +208,11 @@ microVUt(void) mVUvsyncUpdate(mV) {
 			mVU->prog.total--;
 			if (!mVU->index) mVUclearProg<0>(i);
 			else			 mVUclearProg<1>(i);
-			DevCon::Status("microVU%d: Killing Dead Program [%03d]", mVU->index, i+1);
+			DevCon.Status("microVU%d: Killing Dead Program [%03d]", mVU->index, i+1);
 		}
 		else if (((mVU->prog.curFrame - mVU->prog.prog[i].frame) >= (30  *  1)) && !mVU->prog.prog[i].isOld) {
 			mVU->prog.prog[i].isOld = 1;
-			//DevCon::Status("microVU%d: Aging Old Program [%03d]", mVU->index, i+1);
+			//DevCon.Status("microVU%d: Aging Old Program [%03d]", mVU->index, i+1);
 		}
 	}
 	mVU->prog.curFrame++;
@@ -222,7 +222,7 @@ microVUf(bool) mVUcmpPartial(int progIndex) {
 	microVU* mVU = mVUx;
 	for (int i = 0; i <= mVUprogI.ranges.total; i++) {
 		if ((mVUprogI.ranges.range[i][0] < 0)
-		||  (mVUprogI.ranges.range[i][1] < 0)) { DevCon::Error("microVU%d: Negative Range![%d][%d]", mVU->index, i, mVUprogI.ranges.total); }
+		||  (mVUprogI.ranges.range[i][1] < 0)) { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, i, mVUprogI.ranges.total); }
 		if (memcmp_mmx(cmpOffset(mVUprogI.data), cmpOffset(mVU->regs->Micro), ((mVUprogI.ranges.range[i][1] + 8) - mVUprogI.ranges.range[i][0]))) {
 			return 0;
 		}

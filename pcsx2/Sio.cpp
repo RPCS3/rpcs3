@@ -382,7 +382,7 @@ void SIO_CommandWrite(u8 value,int way) {
 					sio.buf[2]='+';
 					sio.buf[3]=sio.terminator;
 					//if (sio.k != 0 || (sio.sector & 0xf) != 0)
-					//	Console::Notice("saving : odd position for erase.");
+					//	Console.Notice("saving : odd position for erase.");
 
 					_EraseMCDBlock((512+16)*(sio.sector&~0xf));
 

@@ -82,13 +82,13 @@ bool MainEmuFrame::_DoSelectIsoBrowser()
 
 void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 {
-	SysSuspend();
+	sCoreThread.Suspend();
 
 	if( !wxFileExists( g_Conf->CurrentIso ) )
 	{
 		if( !_DoSelectIsoBrowser() )
 		{
-			SysResume();
+			sCoreThread.Resume();
 			return;
 		}
 	}
@@ -100,7 +100,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 		if( !result )
 		{
-			SysResume();
+			sCoreThread.Resume();
 			return;
 		}
 	}
@@ -108,33 +108,33 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
 	AppSaveSettings();
 
-	SysExecute( g_Conf->CdvdSource );
+	sApp.SysExecute( g_Conf->CdvdSource );
 }
 
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
-	SysSuspend();
+	sCoreThread.Suspend();
 	_DoSelectIsoBrowser();
-	SysResume();
+	sCoreThread.Resume();
 }
 
 void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 {
-	SysSuspend();
+	sCoreThread.Suspend();
 
 	if( !_DoSelectIsoBrowser() )
 	{
-		SysResume();
+		sCoreThread.Resume();
 		return;
 	}
 
-	SysExecute( CDVDsrc_Iso );
+	sApp.SysExecute( CDVDsrc_Iso );
 }
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
 {
-	//Console::Status( "%d", event.GetId() - g_RecentIsoList->GetBaseId() );
-	//Console::WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
+	//Console.Status( "%d", event.GetId() - g_RecentIsoList->GetBaseId() );
+	//Console.WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
 }
 
 #include "IniInterface.h"
@@ -174,12 +174,12 @@ void MainEmuFrame::Menu_SaveStates_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_LoadStateOther_Click(wxCommandEvent &event)
 {
-   Console::WriteLn("If this were hooked up, it would load a savestate file.");
+   Console.WriteLn("If this were hooked up, it would load a savestate file.");
 }
 
 void MainEmuFrame::Menu_SaveStateOther_Click(wxCommandEvent &event)
 {
-   Console::WriteLn("If this were hooked up, it would save a savestate file.");
+   Console.WriteLn("If this were hooked up, it would save a savestate file.");
 }
 
 void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
@@ -190,12 +190,13 @@ void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 {
 	if( !SysHasValidState() ) return;
-	if( !HasCoreThread() ) return;
-
-	if( GetCoreThread().IsSuspended() )
-		SysResume();
-	else
-		SysSuspend();
+	if( SysCoreThread* thr = GetCoreThreadPtr() )
+	{
+		if( thr->IsSuspended() )
+			thr->Resume();
+		else
+			thr->Suspend();
+	}
 }
 
 void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
@@ -203,10 +204,10 @@ void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
 	if( !SysHasValidState() ) return;
 	bool wasSuspended = HasCoreThread() ? GetCoreThread().IsSuspended() : true;
 
-	SysReset();
+	sApp.SysReset();
 
 	if( !wasSuspended )
-		SysExecute();
+		sApp.SysExecute();
 }
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)

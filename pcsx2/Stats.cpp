@@ -41,7 +41,7 @@ void statsClose() {
 #else
 	f = fopen(LOGS_DIR "/stats.txt", "w");
 #endif
-	if (!f) { Console::WriteLn("Can't open stats.txt"); return; }
+	if (!f) { Console.WriteLn("Can't open stats.txt"); return; }
 	fprintf(f, "-- PCSX2 v%s statics--\n\n", PCSX2_VERSION);
 	fprintf(f, "Ran for %d seconds\n", t);
 	fprintf(f, "Total VSyncs: %d (%s)\n", stats.vsyncCount, Config.PsxType ? "PAL" : "NTSC");

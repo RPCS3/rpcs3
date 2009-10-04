@@ -98,7 +98,7 @@ bool StreamException_LogFromErrno( const wxString& streamname, const wxChar* act
 	}
 	catch( Exception::Stream& ex )
 	{
-		Console::Notice( wxsFormat( L"%s: %s", action, ex.FormatDiagnosticMessage().c_str() ) );
+		Console.Notice( wxsFormat( L"%s: %s", action, ex.FormatDiagnosticMessage().c_str() ) );
 		return true;
 	}
 	return false;
@@ -113,7 +113,7 @@ bool StreamException_LogLastError( const wxString& streamname, const wxChar* act
 	}
 	catch( Exception::Stream& ex )
 	{
-		Console::Notice( wxsFormat( L"%s: %s", action, ex.FormatDiagnosticMessage().c_str() ) );
+		Console.Notice( wxsFormat( L"%s: %s", action, ex.FormatDiagnosticMessage().c_str() ) );
 		return true;
 	}
 	return false;

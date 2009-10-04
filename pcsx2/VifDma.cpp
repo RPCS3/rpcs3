@@ -308,7 +308,7 @@ static void ProcessMemSkip(int size, unsigned int unpackType, const unsigned int
 			VIFUNPACK_LOG("Processing V4-5 skip, size = %d", size);
 			break;
 		default:
-			Console::WriteLn("Invalid unpack type %x", unpackType);
+			Console.WriteLn("Invalid unpack type %x", unpackType);
 			break;
 	}
 
@@ -389,14 +389,14 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		//This is just to make sure the alignment isnt loopy on a split packet
 		if(vifRegs->offset != ((vif->tag.addr & 0xf) >> 2))
 		{
-			DevCon::Error("Warning: Unpack alignment error");
+			DevCon.Error("Warning: Unpack alignment error");
 		}
 
 		VIFUNPACK_LOG("Aligning packet size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 
 		if (((u32)size / (u32)ft->dsize) < ((u32)ft->qsize - vifRegs->offset))
 		{
-				DevCon::Error("Wasn't enough left size/dsize = %x left to write %x", (size / ft->dsize), (ft->qsize - vifRegs->offset));
+				DevCon.Error("Wasn't enough left size/dsize = %x left to write %x", (size / ft->dsize), (ft->qsize - vifRegs->offset));
 		}
 		unpacksize = min((size / ft->dsize), (ft->qsize - vifRegs->offset));
 
@@ -413,7 +413,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		}
 		else
 		{
-			DevCon::Notice("Offset = %x", vifRegs->offset);
+			DevCon.Notice("Offset = %x", vifRegs->offset);
 			vif->tag.addr += unpacksize * 4;
 			return size>>2;
 		}
@@ -521,7 +521,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 			/* unpack one qword */
 			if(vif->tag.addr + ((size / ft->dsize) * 4)  >= (u32)(VIFdmanum ? 0x4000 : 0x1000))
 			{
-				//DevCon::Notice("Overflow");
+				//DevCon.Notice("Overflow");
 				vif->tag.addr &= (u32)(VIFdmanum ? 0x3fff : 0xfff);
 				dest = (u32*)(VU->Mem + v->addr);
 			}
@@ -607,7 +607,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 	{
 		if (v->addr >= memlimit)
 		{
-			//DevCon::Notice("Overflown at the start");
+			//DevCon.Notice("Overflown at the start");
 			v->addr &= (memlimit - 1);
 			dest = (u32*)(VU->Mem + v->addr);
 		}
@@ -633,7 +633,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			}
 			else
 			{
-				//DevCon::Notice("VIF%x Unpack ending %x > %x", VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
+				//DevCon.Notice("VIF%x Unpack ending %x > %x", VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
 				tempsize = size;
 				size = 0;
 			}
@@ -745,7 +745,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			int incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
 			size = 0;
 			int addrstart = v->addr;
-			if((tempsize >> 2) != vif->tag.size) DevCon::Notice("split when size != tagsize");
+			if((tempsize >> 2) != vif->tag.size) DevCon.Notice("split when size != tagsize");
 
 			VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, vif->tag.addr);
 
@@ -753,7 +753,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			{
 				if(v->addr >= memlimit)
 				{
-					DevCon::Notice("Mem limit ovf");
+					DevCon.Notice("Mem limit ovf");
 					v->addr &= (memlimit - 1);
 					dest = (u32*)(VU->Mem + v->addr);
 				}
@@ -819,9 +819,9 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 
 		if(vifRegs->cycle.cl > 0) // Quicker and avoids zero division :P
 			if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num)
-			DevCon::Notice("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
+			DevCon.Notice("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
 
-		//DevCon::Notice("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType, vif->tag.addr);
+		//DevCon.Notice("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType, vif->tag.addr);
 		while (vifRegs->num > 0)
 		{
 			if (vif->cl == vifRegs->cycle.wl)
@@ -878,7 +878,7 @@ static void vuExecMicro(u32 addr, const u32 VIFdmanum)
 	}
 
 	if (VU->vifRegs->itops > (VIFdmanum ? 0x3ffu : 0xffu))
-		Console::WriteLn("VIF%d ITOP overrun! %x", VIFdmanum, VU->vifRegs->itops);
+		Console.WriteLn("VIF%d ITOP overrun! %x", VIFdmanum, VU->vifRegs->itops);
 
 	VU->vifRegs->itop = VU->vifRegs->itops;
 
@@ -926,7 +926,7 @@ static __forceinline void vif0UNPACK(u32 *data)
 
 	if (vif0Regs->cycle.wl == 0 && vif0Regs->cycle.wl < vif0Regs->cycle.cl)
 	{
-		Console::WriteLn("Vif0 CL %d, WL %d", vif0Regs->cycle.cl, vif0Regs->cycle.wl);
+		Console.WriteLn("Vif0 CL %d, WL %d", vif0Regs->cycle.cl, vif0Regs->cycle.wl);
 		vif0.cmd &= ~0x7f;
 		return;
 	}
@@ -960,7 +960,7 @@ static __forceinline void vif0UNPACK(u32 *data)
 
 static __forceinline void vif0mpgTransfer(u32 addr, u32 *data, int size)
 {
-	/*	Console::WriteLn("vif0mpgTransfer addr=%x; size=%x", addr, size);
+	/*	Console.WriteLn("vif0mpgTransfer addr=%x; size=%x", addr, size);
 		{
 			FILE *f = fopen("vu1.raw", "wb");
 			fwrite(data, 1, size*4, f);
@@ -980,7 +980,7 @@ static __forceinline void vif0mpgTransfer(u32 addr, u32 *data, int size)
 
 static int __fastcall Vif0TransNull(u32 *data)  // Shouldnt go here
 {
-	Console::WriteLn("VIF0 Shouldnt go here CMD = %x", vif0Regs->code);
+	Console.WriteLn("VIF0 Shouldnt go here CMD = %x", vif0Regs->code);
 	vif0.cmd = 0;
 	return 0;
 }
@@ -1065,7 +1065,7 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 {
 	if (vif0.vifpacketsize < vif0.tag.size)
 	{
-		if((vif0.tag.addr + vif0.vifpacketsize) > 0x1000) DevCon::Notice("Vif0 MPG Split Overflow");
+		if((vif0.tag.addr + vif0.vifpacketsize) > 0x1000) DevCon.Notice("Vif0 MPG Split Overflow");
 
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.vifpacketsize);
 		vif0.tag.addr += vif0.vifpacketsize << 2;
@@ -1077,7 +1077,7 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 	{
 		int ret;
 
-		if((vif0.tag.addr + vif0.tag.size) > 0x1000) DevCon::Notice("Vif0 MPG Overflow");
+		if((vif0.tag.addr + vif0.tag.size) > 0x1000) DevCon.Notice("Vif0 MPG Overflow");
 
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.tag.size);
 		ret = vif0.tag.size;
@@ -1222,7 +1222,7 @@ static void Vif0CMDNull()  // invalid opcode
 	// if ME1, then force the vif to interrupt
 	if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 	{
-		Console::WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
+		Console.WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
 		vif0Regs->stat |= VIF0_STAT_ER1;
 		vif0.irq++;
 	}
@@ -1252,7 +1252,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 			continue;
 		}
 
-		if (vif0.tag.size != 0) Console::WriteLn("no vif0 cmd but tag size is left last cmd read %x", vif0Regs->code);
+		if (vif0.tag.size != 0) Console.WriteLn("no vif0 cmd but tag size is left last cmd read %x", vif0Regs->code);
 
 		// if interrupt and new cmd is NOT MARK
 		if (vif0.irq) break;
@@ -1274,7 +1274,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 			{
 				if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 				{
-					Console::WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
+					Console.WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
 					vif0Regs->stat |= VIF0_STAT_ER1;
 					vif0.irq++;
 				}
@@ -1315,7 +1315,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 		vif0.vifstalled = true;
 
 		if (((vif0Regs->code >> 24) & 0x7f) != 0x7)vif0Regs->stat |= VIF0_STAT_VIS;
-		//else Console::WriteLn("VIF0 IRQ on MARK");
+		//else Console.WriteLn("VIF0 IRQ on MARK");
 
 		// spiderman doesn't break on qw boundaries
 		vif0.irqoffset = transferred % 4; // cannot lose the offset
@@ -1326,7 +1326,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 			vif0ch->madr += (transferred << 4);
 			vif0ch->qwc -= transferred;
 		}
-		//else Console::WriteLn("Stall on vif0, FromSPR = %x, Vif0MADR = %x Sif0MADR = %x STADR = %x", psHu32(0x1000d010), vif0ch->madr, psHu32(0x1000c010), psHu32(DMAC_STADR));
+		//else Console.WriteLn("Stall on vif0, FromSPR = %x, Vif0MADR = %x Sif0MADR = %x STADR = %x", psHu32(0x1000d010), vif0ch->madr, psHu32(0x1000c010), psHu32(DMAC_STADR));
 		return -2;
 	}
 
@@ -1440,14 +1440,14 @@ void  vif0Interrupt()
 		}
 	}
 
-	if (!vif0ch->chcr.STR) Console::WriteLn("Vif0 running when CHCR = %x", vif0ch->chcr._u32);
+	if (!vif0ch->chcr.STR) Console.WriteLn("Vif0 running when CHCR = %x", vif0ch->chcr._u32);
 
 	if ((vif0ch->chcr.MOD == CHAIN_MODE) && (!vif0.done) && (!vif0.vifstalled))
 	{
 
 		if (!(dmacRegs->ctrl.DMAE))
 		{
-			Console::WriteLn("vif0 dma masked");
+			Console.WriteLn("vif0 dma masked");
 			return;
 		}
 
@@ -1460,8 +1460,8 @@ void  vif0Interrupt()
 		return;
 	}
 
-	if (vif0ch->qwc > 0) Console::WriteLn("VIF0 Ending with QWC left");
-	if (vif0.cmd != 0) Console::WriteLn("vif0.cmd still set %x", vif0.cmd);
+	if (vif0ch->qwc > 0) Console.WriteLn("VIF0 Ending with QWC left");
+	if (vif0.cmd != 0) Console.WriteLn("vif0.cmd still set %x", vif0.cmd);
 
 	vif0ch->chcr.STR = 0;
 	hwDmacIrq(DMAC_VIF0);
@@ -1519,7 +1519,7 @@ void dmaVIF0()
 	{
 		if (_VIF0chain() == -2)
 		{
-			Console::WriteLn("Stall on normal %x", vif0Regs->stat);
+			Console.WriteLn("Stall on normal %x", vif0Regs->stat);
 			vif0.vifstalled = true;
 			return;
 		}
@@ -1552,7 +1552,7 @@ void vif0Write32(u32 mem, u32 value)
 			if (value & 0x1)
 			{
 				/* Reset VIF */
-				//Console::WriteLn("Vif0 Reset %x", vif0Regs->stat);
+				//Console.WriteLn("Vif0 Reset %x", vif0Regs->stat);
 				memzero(vif0);
 				vif0ch->qwc = 0; //?
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
@@ -1571,7 +1571,7 @@ void vif0Write32(u32 mem, u32 value)
 				vif0Regs->stat |= VIF0_STAT_VFS;
 				vif0Regs->stat &= ~VIF0_STAT_VPS;
 				vif0.vifstalled = true;
-				Console::WriteLn("vif0 force break");
+				Console.WriteLn("vif0 force break");
 			}
 
 			if (value & 0x4)
@@ -1638,7 +1638,7 @@ void vif0Write32(u32 mem, u32 value)
 			break;
 
 		default:
-			Console::WriteLn("Unknown Vif0 write to %x", mem);
+			Console.WriteLn("Unknown Vif0 write to %x", mem);
 			psHu32(mem) = value;
 			break;
 	}
@@ -1695,7 +1695,7 @@ static __forceinline void vif1UNPACK(u32 *data)
 	{
 		if (vif1Regs->cycle.wl < vif1Regs->cycle.cl)
 		{
-			Console::WriteLn("Vif1 CL %d, WL %d", vif1Regs->cycle.cl, vif1Regs->cycle.wl);
+			Console.WriteLn("Vif1 CL %d, WL %d", vif1Regs->cycle.cl, vif1Regs->cycle.wl);
 			vif1.cmd &= ~0x7f;
 			return;
 		}
@@ -1734,7 +1734,7 @@ static __forceinline void vif1UNPACK(u32 *data)
 
 static __forceinline void vif1mpgTransfer(u32 addr, u32 *data, int size)
 {
-	/*	Console::WriteLn("vif1mpgTransfer addr=%x; size=%x", addr, size);
+	/*	Console.WriteLn("vif1mpgTransfer addr=%x; size=%x", addr, size);
 		{
 			FILE *f = fopen("vu1.raw", "wb");
 			fwrite(data, 1, size*4, f);
@@ -1754,7 +1754,7 @@ static __forceinline void vif1mpgTransfer(u32 addr, u32 *data, int size)
 
 static int __fastcall Vif1TransNull(u32 *data)  // Shouldnt go here
 {
-	Console::WriteLn("Shouldnt go here CMD = %x", vif1Regs->code);
+	Console.WriteLn("Shouldnt go here CMD = %x", vif1Regs->code);
 	vif1.cmd = 0;
 	return 0;
 }
@@ -1836,7 +1836,7 @@ static int __fastcall Vif1TransMPG(u32 *data)
 {
 	if (vif1.vifpacketsize < vif1.tag.size)
 	{
-		if((vif1.tag.addr + vif1.vifpacketsize) > 0x4000) DevCon::Notice("Vif1 MPG Split Overflow");
+		if((vif1.tag.addr + vif1.vifpacketsize) > 0x4000) DevCon.Notice("Vif1 MPG Split Overflow");
 		vif1mpgTransfer(vif1.tag.addr, data, vif1.vifpacketsize);
 		vif1.tag.addr += vif1.vifpacketsize << 2;
 		vif1.tag.size -= vif1.vifpacketsize;
@@ -1845,7 +1845,7 @@ static int __fastcall Vif1TransMPG(u32 *data)
 	else
 	{
 		int ret;
-		if((vif1.tag.addr + vif1.tag.size) > 0x4000) DevCon::Notice("Vif1 MPG Overflow");
+		if((vif1.tag.addr + vif1.tag.size) > 0x4000) DevCon.Notice("Vif1 MPG Overflow");
 		vif1mpgTransfer(vif1.tag.addr, data, vif1.tag.size);
 		ret = vif1.tag.size;
 		vif1.tag.size = 0;
@@ -2037,7 +2037,7 @@ u8 schedulepath3msk = 0;
 void Vif1MskPath3()  // MSKPATH3
 {
 	vif1Regs->mskpath3 = schedulepath3msk & 0x1;
-	//Console::WriteLn("VIF MSKPATH3 %x", vif1Regs->mskpath3);
+	//Console.WriteLn("VIF MSKPATH3 %x", vif1Regs->mskpath3);
 
 	if (vif1Regs->mskpath3)
 	{
@@ -2146,7 +2146,7 @@ static void Vif1CMDNull()  // invalid opcode
 
 	if (!(vif1Regs->err.ME1))   //Ignore vifcode and tag mismatch error
 	{
-		Console::WriteLn("UNKNOWN VifCmd: %x\n", vif1.cmd);
+		Console.WriteLn("UNKNOWN VifCmd: %x\n", vif1.cmd);
 		vif1Regs->stat |= VIF1_STAT_ER1;
 		vif1.irq++;
 	}
@@ -2224,7 +2224,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 			continue;
 		}
 
-		if (vif1.tag.size != 0) DevCon::Error("no vif1 cmd but tag size is left last cmd read %x", vif1Regs->code);
+		if (vif1.tag.size != 0) DevCon.Error("no vif1 cmd but tag size is left last cmd read %x", vif1Regs->code);
 
 		if (vif1.irq) break;
 
@@ -2244,7 +2244,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 			{
 				if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 				{
-					Console::WriteLn("UNKNOWN VifCmd: %x", vif1.cmd);
+					Console.WriteLn("UNKNOWN VifCmd: %x", vif1.cmd);
 					vif1Regs->stat |= VIF1_STAT_ER1;
 					vif1.irq++;
 				}
@@ -2297,7 +2297,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		vif1ch->qwc -= transferred;
 
 		if ((vif1ch->qwc == 0) && (vif1.irqoffset == 0)) vif1.inprogress = 0;
-		//Console::WriteLn("Stall on vif1, FromSPR = %x, Vif1MADR = %x Sif0MADR = %x STADR = %x", psHu32(0x1000d010), vif1ch->madr, psHu32(0x1000c010), psHu32(DMAC_STADR));
+		//Console.WriteLn("Stall on vif1, FromSPR = %x, Vif1MADR = %x Sif0MADR = %x STADR = %x", psHu32(0x1000d010), vif1ch->madr, psHu32(0x1000c010), psHu32(DMAC_STADR));
 		return -2;
 	}
 
@@ -2330,7 +2330,7 @@ void vif1TransferFromMemory()
 	// VIF from gsMemory
 	if (pMem == NULL)  						//Is vif0ptag empty?
 	{
-		Console::WriteLn("Vif1 Tag BUSERR");
+		Console.WriteLn("Vif1 Tag BUSERR");
 		dmacRegs->stat.BEIS = 1;      //If yes, set BEIS (BUSERR) in DMAC_STAT register
 		vif1.done = true;
 		vif1Regs->stat &= ~VIF1_STAT_FQC;
@@ -2510,7 +2510,7 @@ __forceinline void vif1Interrupt()
 
 	}
 
-	if (!(vif1ch->chcr.STR)) Console::WriteLn("Vif1 running when CHCR == %x", vif1ch->chcr._u32);
+	if (!(vif1ch->chcr.STR)) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch->chcr._u32);
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
@@ -2546,7 +2546,7 @@ __forceinline void vif1Interrupt()
 
 		if (!(dmacRegs->ctrl.DMAE))
 		{
-			Console::WriteLn("vif1 dma masked");
+			Console.WriteLn("vif1 dma masked");
 			return;
 		}
 
@@ -2562,8 +2562,8 @@ __forceinline void vif1Interrupt()
 		return; //Dont want to end if vif is stalled.
 	}
 #ifdef PCSX2_DEVBUILD
-	if (vif1ch->qwc > 0) Console::WriteLn("VIF1 Ending with %x QWC left");
-	if (vif1.cmd != 0) Console::WriteLn("vif1.cmd still set %x tag size %x", vif1.cmd, vif1.tag.size);
+	if (vif1ch->qwc > 0) Console.WriteLn("VIF1 Ending with %x QWC left");
+	if (vif1.cmd != 0) Console.WriteLn("vif1.cmd still set %x tag size %x", vif1.cmd, vif1.tag.size);
 #endif
 
 	vif1Regs->stat &= ~VIF1_STAT_VPS; //Vif goes idle as the stall happened between commands;
@@ -2590,9 +2590,9 @@ void dmaVIF1()
 
 	if (dmacRegs->ctrl.MFD == MFD_VIF1)   // VIF MFIFO
 	{
-		//Console::WriteLn("VIFMFIFO\n");
+		//Console.WriteLn("VIFMFIFO\n");
 		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
-		if (vif1ch->chcr.MOD == NORMAL_MODE) Console::WriteLn("MFIFO mode is normal (which isn't normal here)! %x", vif1ch->chcr);
+		if (vif1ch->chcr.MOD == NORMAL_MODE) Console.WriteLn("MFIFO mode is normal (which isn't normal here)! %x", vif1ch->chcr);
 		vifMFIFOInterrupt();
 		return;
 	}
@@ -2600,7 +2600,7 @@ void dmaVIF1()
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_VIF1)
 	{
-		//DevCon::WriteLn("VIF Stall Control Source = %x, Drain = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3);
+		//DevCon.WriteLn("VIF Stall Control Source = %x, Drain = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3);
 	}
 #endif
 
@@ -2608,7 +2608,7 @@ void dmaVIF1()
 	{
 
 		if (dmacRegs->ctrl.STD == STD_VIF1)
-			Console::WriteLn("DMA Stall Control on VIF1 normal");
+			Console.WriteLn("DMA Stall Control on VIF1 normal");
 
 		if (vif1ch->chcr.DIR)  // to Memory
 			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
@@ -2675,7 +2675,7 @@ void vif1Write32(u32 mem, u32 value)
 				vif1Regs->stat &= ~VIF1_STAT_VPS;
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 				vif1.vifstalled = true;
-				Console::WriteLn("vif1 force break");
+				Console.WriteLn("vif1 force break");
 			}
 
 			if (value & 0x4)
@@ -2710,7 +2710,7 @@ void vif1Write32(u32 mem, u32 value)
 						// loop necessary for spiderman
 						if ((psHu32(DMAC_CTRL) & 0xC) == 0x8)
 						{
-							//Console::WriteLn("MFIFO Stall");
+							//Console.WriteLn("MFIFO Stall");
 							CPU_INT(10, vif1ch->qwc * BIAS);
 						}
 						else
@@ -2741,7 +2741,7 @@ void vif1Write32(u32 mem, u32 value)
 				// different so can't be stalled
 				if (vif1Regs->stat & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 				{
-					DevCon::WriteLn("changing dir when vif1 fifo stalled");
+					DevCon.WriteLn("changing dir when vif1 fifo stalled");
 				}
 			}
 #endif
@@ -2781,7 +2781,7 @@ void vif1Write32(u32 mem, u32 value)
 			break;
 
 		default:
-			Console::WriteLn("Unknown Vif1 write to %x", mem);
+			Console.WriteLn("Unknown Vif1 write to %x", mem);
 			psHu32(mem) = value;
 			break;
 	}

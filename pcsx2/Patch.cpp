@@ -437,7 +437,7 @@ void applypatch(int place)
 {
 	int i;
 
-	if (place == 0) Console::WriteLn(" patchnumber: %d", patchnumber);
+	if (place == 0) Console.WriteLn(" patchnumber: %d", patchnumber);
 	
 	for ( i = 0; i < patchnumber; i++ ) 
 	{
@@ -447,15 +447,15 @@ void applypatch(int place)
 
 void patchFunc_comment( char * text1, char * text2 )
 {
-	Console::WriteLn( "comment: %s", text2 );
+	Console.WriteLn( "comment: %s", text2 );
 }
 
 
 void patchFunc_gametitle( char * text1, char * text2 )
 {
-	Console::WriteLn( "gametitle: %s", text2 );
+	Console.WriteLn( "gametitle: %s", text2 );
 	strgametitle.FromAscii( text2 );
-	Console::SetTitle( strgametitle );
+	Console.SetTitle( strgametitle );
 }
 
 void patchFunc_patch( char * cmd, char * param )
@@ -466,7 +466,7 @@ void patchFunc_patch( char * cmd, char * param )
 	{
 		// TODO : Use wxLogError for this, once we have full unicode compliance on cmd/params vars.
 		//wxLogError( L"Patch ERROR: Maximum number of patches reached: %s=%s", cmd, param );
-		Console::Error( "Patch ERROR: Maximum number of patches reached: %s=%s", cmd, param );
+		Console.Error( "Patch ERROR: Maximum number of patches reached: %s=%s", cmd, param );
 		return;
 	}
 
@@ -483,7 +483,7 @@ void patchFunc_patch( char * cmd, char * param )
 	patch[ patchnumber ].cpu = (patch_cpu_type)PatchTableExecute( pText, NULL, cpuCore );
 	if ( patch[ patchnumber ].cpu == 0 ) 
 	{
-		Console::Error( "Unrecognized patch '%s'", pText );
+		Console.Error( "Unrecognized patch '%s'", pText );
 		return;
 	}
 
@@ -496,7 +496,7 @@ void patchFunc_patch( char * cmd, char * param )
 	patch[ patchnumber ].type = (patch_data_type)PatchTableExecute( pText, NULL, dataType );
 	if ( patch[ patchnumber ].type == 0 ) 
 	{
-		Console::Error( "Unrecognized patch '%s'", pText );
+		Console.Error( "Unrecognized patch '%s'", pText );
 		return;
 	}
 	
@@ -648,7 +648,7 @@ void inifile_read( const char * name )
 
 	if( !f1 )
 	{
-		Console::WriteLn("No patch found. Resuming execution without a patch (this is NOT an error)." );
+		Console.WriteLn("No patch found. Resuming execution without a patch (this is NOT an error)." );
 		return;
 	}
 
@@ -666,7 +666,7 @@ int AddPatch(int Mode, int Place, int Address, int Size, u64 data)
 
 	if ( patchnumber >= MAX_PATCH )
 	{
-		Console::Error( "Patch ERROR: Maximum number of patches reached.");
+		Console.Error( "Patch ERROR: Maximum number of patches reached.");
 		return -1;
 	}
 
@@ -723,7 +723,7 @@ void patchFunc_roundmode( char * cmd, char * param )
 
 		if( type == 0xffff ) 
 		{
-			Console::WriteLn("bad argument (%s) to round mode! skipping...\n", pText);
+			Console.WriteLn("bad argument (%s) to round mode! skipping...\n", pText);
 			break;
 		}
 

@@ -60,7 +60,9 @@ public:
 	virtual ~LoadPluginsTask() throw();
 
 protected:
-	int ExecuteTask();
+	void OnStart() {}
+	void OnThreadCleanup() {}
+	void ExecuteTask();
 };
 
 static ScopedPtr<LoadPluginsTask> _loadTask;
@@ -74,7 +76,7 @@ LoadPluginsTask::~LoadPluginsTask() throw()
 	_loadTask = NULL;
 }
 
-int LoadPluginsTask::ExecuteTask()
+void LoadPluginsTask::ExecuteTask()
 {
 	wxGetApp().Ping();
 	Sleep(3);
@@ -105,7 +107,6 @@ int LoadPluginsTask::ExecuteTask()
 	// anything else leave unhandled so that the debugger catches it!
 
 	wxGetApp().AddPendingEvent( evt );
-	return 0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -188,13 +189,13 @@ void LoadPluginsPassive()
 // then no action is performed.
 void LoadPluginsImmediate()
 {
-	wxASSERT( wxThread::IsMain() );
+	AllowFromMainThreadOnly();
 	if( g_plugins ) return;
 
 	static int _reentrant = 0;
-	EntryGuard guard( _reentrant );
+	RecursionGuard guard( _reentrant );
 
-	wxASSERT( !guard.IsReentrant() );
+	pxAssertMsg( !guard.IsReentrant(), "Recrsive calls to this function are prohibited." );
 	wxGetApp().ReloadPlugins();
 	while( _loadTask )
 	{

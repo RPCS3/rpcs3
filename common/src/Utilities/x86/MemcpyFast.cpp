@@ -31,7 +31,7 @@
  3dsdk.support@amd.com
 ******************************************************************************/
 
-#include "../PrecompiledHeader.h"
+#include "PrecompiledHeader.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4414)

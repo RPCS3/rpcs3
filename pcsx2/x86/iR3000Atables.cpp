@@ -1788,7 +1788,7 @@ static void rpsxCOP0() { rpsxCP0[_Rs_](); }
 //static void rpsxBASIC() { rpsxCP2BSC[_Rs_](); }
 
 static void rpsxNULL() {
-	Console::WriteLn("psxUNK: %8.8x", psxRegs.code);
+	Console.WriteLn("psxUNK: %8.8x", psxRegs.code);
 }
 
 void (*rpsxBSC[64])() = {

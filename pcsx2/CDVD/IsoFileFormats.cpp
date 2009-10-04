@@ -137,13 +137,13 @@ isoFile *isoOpen(const char *filename)
 	iso->handle = _openfile( iso->filename, O_RDONLY);
 	if (iso->handle == NULL)
 	{
-		Console::Error("error loading %s", iso->filename);
+		Console.Error("error loading %s", iso->filename);
 		return NULL;
 	}
 
 	if (isoDetect(iso) == -1) return NULL;
 
-	Console::WriteLn("detected blocksize = %d", iso->blocksize);
+	Console.WriteLn("detected blocksize = %d", iso->blocksize);
 
 	if ((strlen(iso->filename) > 3) && strncmp(iso->filename + (strlen(iso->filename) - 3), "I00", 3) == 0)
 	{
@@ -181,12 +181,12 @@ isoFile *isoOpen(const char *filename)
 		iso->blocks = (u32)((_tellfile(iso->handle) - iso->offset) / (iso->blocksize));
 	}
 
-	Console::WriteLn("isoOpen: %s ok", iso->filename);
-	Console::WriteLn("offset = %d", iso->offset);
-	Console::WriteLn("blockofs = %d", iso->blockofs);
-	Console::WriteLn("blocksize = %d", iso->blocksize);
-	Console::WriteLn("blocks = %d", iso->blocks);
-	Console::WriteLn("type = %d", iso->type);
+	Console.WriteLn("isoOpen: %s ok", iso->filename);
+	Console.WriteLn("offset = %d", iso->offset);
+	Console.WriteLn("blockofs = %d", iso->blockofs);
+	Console.WriteLn("blocksize = %d", iso->blocksize);
+	Console.WriteLn("blocks = %d", iso->blocks);
+	Console.WriteLn("type = %d", iso->type);
 
 	return iso;
 }
@@ -219,12 +219,12 @@ isoFile *isoCreate(const char *filename, int flags)
 	
 	if (iso->handle == NULL)
 	{
-		Console::Error("Error loading %s", iso->filename);
+		Console.Error("Error loading %s", iso->filename);
 		return NULL;
 	}
 	
-	Console::WriteLn("isoCreate: %s ok", iso->filename);
-	Console::WriteLn("offset = %d", iso->offset);
+	Console.WriteLn("isoCreate: %s ok", iso->filename);
+	Console.WriteLn("offset = %d", iso->offset);
 
 	return iso;
 }
@@ -235,9 +235,9 @@ int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks)
 	iso->blocks = blocks;
 	iso->blockofs = blockofs;
 	
-	Console::WriteLn("blockofs = %d", iso->blockofs);
-	Console::WriteLn("blocksize = %d", iso->blocksize);
-	Console::WriteLn("blocks = %d", iso->blocks);
+	Console.WriteLn("blockofs = %d", iso->blockofs);
+	Console.WriteLn("blocksize = %d", iso->blocksize);
+	Console.WriteLn("blocks = %d", iso->blocks);
 	
 	if (iso->flags & ISOFLAGS_BLOCKDUMP_V2)
 	{
@@ -292,7 +292,7 @@ int _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 	
 	if (ret < iso->blocksize)
 	{
-		Console::Error("read error %d in _isoReadBlock", ret);
+		Console.Error("read error %d in _isoReadBlock", ret);
 		return -1;
 	}
 
@@ -303,7 +303,7 @@ int _isoReadBlockD(isoFile *iso, u8 *dst, int lsn)
 {
 	int ret;
 
-//	Console::WriteLn("_isoReadBlockD %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
+//	Console.WriteLn("_isoReadBlockD %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
 	
 	memset(dst, 0, iso->blockofs);
 	for (int i = 0; i < iso->dtablesize; i++)
@@ -317,7 +317,7 @@ int _isoReadBlockD(isoFile *iso, u8 *dst, int lsn)
 
 		return 0;
 	}
-	Console::WriteLn("Block %d not found in dump", lsn);
+	Console.WriteLn("Block %d not found in dump", lsn);
 
 	return -1;
 }
@@ -339,7 +339,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
 
 	ofs = (u64)(lsn - iso->multih[i].slsn) * iso->blocksize + iso->offset;
 	
-//	Console::WriteLn("_isoReadBlock %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
+//	Console.WriteLn("_isoReadBlock %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
 	
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->multih[i].handle, ofs, SEEK_SET);
@@ -347,7 +347,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
 	
 	if (ret < iso->blocksize)
 	{
-		Console::WriteLn("read error %d in _isoReadBlockM", ret);
+		Console.WriteLn("read error %d in _isoReadBlockM", ret);
 		return -1;
 	}
 
@@ -360,7 +360,7 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 
 	if (lsn > iso->blocks)
 	{
-		Console::WriteLn("isoReadBlock: %d > %d", lsn, iso->blocks);
+		Console.WriteLn("isoReadBlock: %d > %d", lsn, iso->blocks);
 		return -1;
 	}
 	
@@ -401,13 +401,13 @@ int _isoWriteBlockD(isoFile *iso, u8 *src, int lsn)
 {
 	int ret;
 
-//	Console::WriteLn("_isoWriteBlock %d (ofs=%d)", iso->blocksize, ofs);
+//	Console.WriteLn("_isoWriteBlock %d (ofs=%d)", iso->blocksize, ofs);
 	
 	ret = _writefile(iso->handle, &lsn, 4);
 	if (ret < 4) return -1;
 	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
 	
-//	Console::WriteLn("_isoWriteBlock %d", ret);
+//	Console.WriteLn("_isoWriteBlock %d", ret);
 	
 	if (ret < iso->blocksize) return -1;
 

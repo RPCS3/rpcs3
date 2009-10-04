@@ -284,7 +284,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 
 	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE)
 	{
-		Console::Status( "EErec const buffer filled; Resetting..." );
+		Console.Status( "EErec const buffer filled; Resetting..." );
 		throw Exception::ForceDispatcherReg();
 	
 		/*for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
@@ -305,7 +305,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 	imm64[0] = lo;
 	imm64[1] = hi;
 
-	//Console::Notice("Consts allocated: %d of %u", (recConstBufPtr - recConstBuf) / 2, count);
+	//Console.Notice("Consts allocated: %d of %u", (recConstBufPtr - recConstBuf) / 2, count);
 
 	return imm64;
 }
@@ -395,7 +395,7 @@ volatile bool eeRecIsReset = false;
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
-	Console::Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
+	Console.Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
 	eeRecIsReset = true;
 
 	maxrecmem = 0;
@@ -491,8 +491,8 @@ void recEventTest()
 	// dont' remove this check unless doing an official release
 	if( g_globalXMMSaved || g_globalMMXSaved)
 	{
-		DevCon::Error("PCSX2 Foopah!  Frozen regs have not been restored!!!");
-		DevCon::Error("g_globalXMMSaved = %d,g_globalMMXSaved = %d", g_globalXMMSaved, g_globalMMXSaved);
+		DevCon.Error("PCSX2 Foopah!  Frozen regs have not been restored!!!");
+		DevCon.Error("g_globalXMMSaved = %d,g_globalMMXSaved = %d", g_globalXMMSaved, g_globalMMXSaved);
 	}
 	assert( !g_globalXMMSaved && !g_globalMMXSaved);
 #endif
@@ -743,8 +743,8 @@ void recClear(u32 addr, u32 size)
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
 		if (pexblock->startpc >= addr && pexblock->startpc < addr + size * 4
 		 || pexblock->startpc < addr && blockend > addr) {
-			Console::Error( "Impossible block clearing failure" );
-			wxASSERT_MSG( false, L"Impossible block clearing failure" );
+			Console.Error( "Impossible block clearing failure" );
+			pxFail( "Impossible block clearing failure" );
 		}
 	}
 #endif
@@ -893,12 +893,12 @@ void iFlushCall(int flushtype)
 //	int i;
 //	for(i = 0; i < 32; ++i ) {
 //		if( fpuRegs.fpr[i].UL== 0x7f800000 || fpuRegs.fpr[i].UL == 0xffc00000) {
-//			Console::WriteLn("bad fpu: %x %x %x", i, cpuRegs.cycle, g_lastpc);
+//			Console.WriteLn("bad fpu: %x %x %x", i, cpuRegs.cycle, g_lastpc);
 //		}
 //
 //		if( VU0.VF[i].UL[0] == 0xffc00000 || //(VU0.VF[i].UL[1]&0xffc00000) == 0xffc00000 ||
 //			VU0.VF[i].UL[0] == 0x7f800000) {
-//			Console::WriteLn("bad vu0: %x %x %x", i, cpuRegs.cycle, g_lastpc);
+//			Console.WriteLn("bad vu0: %x %x %x", i, cpuRegs.cycle, g_lastpc);
 //		}
 //	}
 //}
@@ -1045,7 +1045,7 @@ static void checkcodefn()
     __asm__("movl %%eax, %[pctemp]" : [pctemp]"=m"(pctemp) );
 #endif
 
-	Console::Error("code changed! %x", pctemp);
+	Console.Error("code changed! %x", pctemp);
 	assert(0);
 }
 
@@ -1115,7 +1115,7 @@ void recompileNextInstruction(int delayslot)
 			case 1:
 				switch(_Rt_) {
 					case 0: case 1: case 2: case 3: case 0x10: case 0x11: case 0x12: case 0x13:
-						Console::Notice("branch %x in delay slot!", cpuRegs.code);
+						Console.Notice("branch %x in delay slot!", cpuRegs.code);
 						_clearNeededX86regs();
 						_clearNeededMMXregs();
 						_clearNeededXMMregs();
@@ -1124,7 +1124,7 @@ void recompileNextInstruction(int delayslot)
 				break;
 
 			case 2: case 3: case 4: case 5: case 6: case 7: case 0x14: case 0x15: case 0x16: case 0x17:
-				Console::Notice("branch %x in delay slot!", cpuRegs.code);
+				Console.Notice("branch %x in delay slot!", cpuRegs.code);
 				_clearNeededX86regs();
 				_clearNeededMMXregs();
 				_clearNeededXMMregs();
@@ -1187,14 +1187,14 @@ static void printfn()
 u32 s_recblocks[] = {0};
 
 void badespfn() {
-	Console::Error("Bad esp!");
+	Console.Error("Bad esp!");
 	assert(0);
 }
 
 // Called when a block under manual protection fails it's pre-execution integrity check.
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	DevCon::WriteLn("dyna_block_discard .. start=0x%08X  size=%d", start, sz*4);
+	DevCon.WriteLn("dyna_block_discard .. start=0x%08X  size=%d", start, sz*4);
 	recClear(start, sz);
 }
 
@@ -1227,7 +1227,7 @@ void recRecompile( const u32 startpc )
 		recResetEE();
 	}
 	if ( (recConstBufPtr - recConstBuf) >= RECCONSTBUF_SIZE - 64 ) {
-		DevCon::WriteLn("EE recompiler stack reset");
+		DevCon.WriteLn("EE recompiler stack reset");
 		recResetEE();
 	}
 
@@ -1291,7 +1291,7 @@ void recRecompile( const u32 startpc )
 				willbranch3 = 1;
 				s_nEndBlock = i;
 
-				//DevCon::Notice( "Pagesplit @ %08X : size=%d insts", startpc, (i-startpc) / 4 );
+				//DevCon.Notice( "Pagesplit @ %08X : size=%d insts", startpc, (i-startpc) / 4 );
 				break;
 			}
 
@@ -1513,12 +1513,12 @@ StartRecomp:
 				xJC( dyna_page_reset );
 
 				// note: clearcnt is measured per-page, not per-block!
-				//DbgCon::WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
+				//DbgCon.WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
 				//	startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, inpage_sz, manual_counter[inpage_ptr >> 12] );
 			}
 			else
 			{
-				DbgCon::Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+				DbgCon.Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
 					startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, pgsz, inpage_sz );
 			}
 

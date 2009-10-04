@@ -151,7 +151,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	u8 used[34];
 	int numused, count;
 
-	Console::WriteLn( "dump1 %x:%x, %x", startpc, psxpc, psxRegs.cycle );
+	Console.WriteLn( "dump1 %x:%x, %x", startpc, psxpc, psxRegs.cycle );
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString filename( Path::Combine( g_Conf->Folders.Logs, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
@@ -559,7 +559,7 @@ void recResetIOP()
 	jASSUME( recMem != NULL );
 	jASSUME( m_recBlockAlloc != NULL );
 
-	DevCon::Status( "iR3000A Resetting recompiler memory and structures" );
+	DevCon.Status( "iR3000A Resetting recompiler memory and structures" );
 
 	memset_8<0xcc,RECMEM_SIZE>( recMem );	// 0xcc is INT3
 	iopClearRecLUT((BASEBLOCK*)m_recBlockAlloc,
@@ -716,7 +716,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 	blockidx=0;
 	while(BASEBLOCKEX* pexblock = recBlocks[blockidx++])
 		if (pc >= pexblock->startpc && pc < pexblock->startpc + pexblock->size * 4) {
-			Console::Error("Impossible block clearing failure");
+			Console.Error("Impossible block clearing failure");
 			jASSUME(0);
 		}
 #endif
@@ -838,7 +838,7 @@ static void checkcodefn()
 #else
     __asm__("movl %%eax, %[pctemp]" : : [pctemp]"m"(pctemp) );
 #endif
-	Console::WriteLn("iop code changed! %x", pctemp);
+	Console.WriteLn("iop code changed! %x", pctemp);
 }
 #endif
 #endif

@@ -166,7 +166,7 @@ s32 FileMemoryCard::Read( uint port, uint slot, u8 *dest, u32 adr, int size )
 	wxFile& mcfp( m_file[port][slot] );
 	if( !mcfp.IsOpened() )
 	{
-		DevCon::Error( "MemoryCard: Ignoring attempted read from disabled card." );
+		DevCon.Error( "MemoryCard: Ignoring attempted read from disabled card." );
 		memset(dest, 0, size);
 		return 1;
 	}
@@ -180,7 +180,7 @@ s32 FileMemoryCard::Save( uint port, uint slot, const u8 *src, u32 adr, int size
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon::Error( "MemoryCard: Ignoring attempted save/write to disabled card." );
+		DevCon.Error( "MemoryCard: Ignoring attempted save/write to disabled card." );
 		return 1;
 	}
 
@@ -191,7 +191,7 @@ s32 FileMemoryCard::Save( uint port, uint slot, const u8 *src, u32 adr, int size
 	for (int i=0; i<size; i++)
 	{
 		if ((m_currentdata[i] & src[i]) != src[i])
-			Console::Notice("MemoryCard: (warning) writing to uncleared data.");
+			Console.Notice("MemoryCard: (warning) writing to uncleared data.");
 		m_currentdata[i] &= src[i];
 	}
 
@@ -205,7 +205,7 @@ s32 FileMemoryCard::EraseBlock( uint port, uint slot, u32 adr )
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon::Error( "MemoryCard: Ignoring erase for disabled card." );
+		DevCon.Error( "MemoryCard: Ignoring erase for disabled card." );
 		return 1;
 	}
 
@@ -310,7 +310,7 @@ static PS2E_THISPTR PS2E_CALLBACK FileMcd_NewComponentInstance( u32 component )
 	}
 	catch( std::bad_alloc& )
 	{
-		Console::Error( "Allocation failed on Component_FileMcd! (out of memory?)" );
+		Console.Error( "Allocation failed on Component_FileMcd! (out of memory?)" );
 	}
 	return NULL;
 }

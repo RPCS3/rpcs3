@@ -30,9 +30,9 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 {
 	const char dmaNum = spuCore ? '7' : '4';
 
-	/*if (chcr & 0x400) DevCon::Status("SPU 2 DMA %c linked list chain mode! chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);
-	if (chcr & 0x40000000) DevCon::Notice("SPU 2 DMA %c Unusual bit set on 'to' direction chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);
-	if ((chcr & 0x1) == 0) DevCon::Status("SPU 2 DMA %c loading from spu2 memory chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);*/
+	/*if (chcr & 0x400) DevCon.Status("SPU 2 DMA %c linked list chain mode! chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);
+	if (chcr & 0x40000000) DevCon.Notice("SPU 2 DMA %c Unusual bit set on 'to' direction chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);
+	if ((chcr & 0x1) == 0) DevCon.Status("SPU 2 DMA %c loading from spu2 memory chcr = %x madr = %x bcr = %x\n", dmaNum, chcr, madr, bcr);*/
 
 	const int size = (bcr >> 16) * (bcr & 0xFFFF);
 
@@ -41,7 +41,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 	if (SPU2async)
 	{
 		SPU2async(psxRegs.cycle - psxCounters[6].sCycleT);
-		//Console::Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
+		//Console.Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
 
 		psxCounters[6].sCycleT = psxRegs.cycle;
 		psxCounters[6].CycleT = size * 3;
@@ -53,7 +53,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 
 		if((g_psxNextBranchCycle - psxNextsCounter) > (u32)psxNextCounter)
 		{
-			//DevCon::Notice("SPU2async Setting new counter branch, old %x new %x ((%x - %x = %x) > %x delta)", g_psxNextBranchCycle, psxNextsCounter + psxNextCounter, g_psxNextBranchCycle, psxNextsCounter, (g_psxNextBranchCycle - psxNextsCounter), psxNextCounter);
+			//DevCon.Notice("SPU2async Setting new counter branch, old %x new %x ((%x - %x = %x) > %x delta)", g_psxNextBranchCycle, psxNextsCounter + psxNextCounter, g_psxNextBranchCycle, psxNextsCounter, (g_psxNextBranchCycle - psxNextsCounter), psxNextCounter);
 			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
 		}
 	}
@@ -72,7 +72,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 			break;
 
 		default:
-			Console::Error("*** DMA %c - SPU unknown *** %x addr = %x size = %x", dmaNum, chcr, madr, bcr);
+			Console.Error("*** DMA %c - SPU unknown *** %x addr = %x size = %x", dmaNum, chcr, madr, bcr);
 			break;
 	}
 }
@@ -277,7 +277,7 @@ s32  spu2DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 	if (SPU2async)
 	{
 		SPU2async(psxRegs.cycle - psxCounters[6].sCycleT);
-		//Console::Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
+		//Console.Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
 
 		psxCounters[6].sCycleT = psxRegs.cycle;
 		psxCounters[6].CycleT = bytes * 3;
@@ -315,7 +315,7 @@ s32  spu2DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 	if (SPU2async)
 	{
 		SPU2async(psxRegs.cycle - psxCounters[6].sCycleT);
-		//Console::Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
+		//Console.Status("cycles sent to SPU2 %x\n", psxRegs.cycle - psxCounters[6].sCycleT);
 
 		psxCounters[6].sCycleT = psxRegs.cycle;
 		psxCounters[6].CycleT = bytes * 3;
@@ -478,7 +478,7 @@ void IopDmaUpdate(u32 elapsed)
 
 s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
-	Console::Error("ERROR: Tried to read using DMA %d (%s). Ignoring.", 0, channel, IopDmaNames[channel]);
+	Console.Error("ERROR: Tried to read using DMA %d (%s). Ignoring.", 0, channel, IopDmaNames[channel]);
 
 	*bytesProcessed = bytesLeft;
 	return 0;
@@ -486,7 +486,7 @@ s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 s32 errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
-	Console::Error("ERROR: Tried to write using DMA %d (%s). Ignoring.", 0, channel, IopDmaNames[channel]);
+	Console.Error("ERROR: Tried to write using DMA %d (%s). Ignoring.", 0, channel, IopDmaNames[channel]);
 
 	*bytesProcessed = bytesLeft;
 	return 0;

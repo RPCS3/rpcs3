@@ -443,7 +443,7 @@ void SuperVUReset(int vuindex)
 
 	if (vuindex < 0)
 	{
-		DbgCon::Status("SuperVU reset > Resetting recompiler memory and structures.");
+		DbgCon.Status("SuperVU reset > Resetting recompiler memory and structures.");
 
 		// Does this cause problems on VU recompiler resets?  It could, if the VU works like
 		// the EE used to, and actually tries to re-enter the recBlock after issuing a clear. (air)
@@ -455,7 +455,7 @@ void SuperVUReset(int vuindex)
 	}
 	else
 	{
-		DbgCon::Status("SuperVU reset [VU%d] > Resetting the recs and junk", vuindex);
+		DbgCon.Status("SuperVU reset [VU%d] > Resetting the recs and junk", vuindex);
 		list<VuFunctionHeader*>::iterator it;
 		if (recVUHeaders[vuindex]) memset(recVUHeaders[vuindex], 0, sizeof(VuFunctionHeader*) * (s_MemSize[vuindex] / 8));
 		if (recVUBlocks[vuindex]) memset(recVUBlocks[vuindex], 0, sizeof(VuBlockHeader) * (s_MemSize[vuindex] / 8));
@@ -496,7 +496,7 @@ void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
 			if (plist->size() > 30)
 			{
 				// list is too big, delete
-				//Console::Notice("Performance warning: deleting cached VU program!");
+				//Console.Notice("Performance warning: deleting cached VU program!");
 				delete plist->front();
 				plist->pop_front();
 			}
@@ -689,7 +689,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 		{
 			char command[255];
 			FILE* fasm = fopen("mydump1", "wb");
-			//Console::WriteLn("writing: %x, %x", (*itblock)->startpc, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode);
+			//Console.WriteLn("writing: %x, %x", (*itblock)->startpc, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode);
 			fwrite((*itblock)->pcode, 1, (uptr)(*itblock)->pendcode - (uptr)(*itblock)->pcode, fasm);
 			fclose(fasm);
 			sprintf(command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 > tempdump");
@@ -836,12 +836,12 @@ static VuFunctionHeader* SuperVURecompileProgram(u32 startpc, int vuindex)
 {
 	assert(vuindex < 2);
 	assert(s_recVUPtr != NULL);
-	//Console::WriteLn("svu%c rec: %x", '0'+vuindex, startpc);
+	//Console.WriteLn("svu%c rec: %x", '0'+vuindex, startpc);
 
 	// if recPtr reached the mem limit reset whole mem
 	if (((uptr)s_recVUPtr - (uptr)s_recVUMem) >= VU_EXESIZE - 0x40000)
 	{
-		//Console::WriteLn("SuperVU reset mem");
+		//Console.WriteLn("SuperVU reset mem");
 		SuperVUReset(0);
 		SuperVUReset(1);
 		SuperVUReset(-1);
@@ -945,7 +945,7 @@ static int _recbranchAddr(u32 vucode)
 	s32 bpc = pc + (_Imm11_ << 3);
 	/*
 		if ( bpc < 0 ) {
-			Console::WriteLn("zerorec branch warning: bpc < 0 ( %x ); Using unsigned imm11", bpc);
+			Console.WriteLn("zerorec branch warning: bpc < 0 ( %x ); Using unsigned imm11", bpc);
 			bpc = pc + (_UImm11_ << 3);
 		}*/
 	bpc &= (s_MemSize[s_vu] - 1);
@@ -1025,13 +1025,13 @@ static VuInstruction* getDelayInst(VuInstruction* pInst)
 			delay++;
 			if (delay == 5) //maximum delay is 4 (length of the pipeline)
 			{
-				DevCon::WriteLn("supervu: cycle branch delay maximum (4) is reached");
+				DevCon.WriteLn("supervu: cycle branch delay maximum (4) is reached");
 				break;
 			}
 		}
 		else break;
 	}
-	if (delay > 1) DevCon::WriteLn("supervu: %d cycle branch delay detected: %x %x", delay - 1, pc, s_pFnHeader->startpc);
+	if (delay > 1) DevCon.WriteLn("supervu: %d cycle branch delay detected: %x %x", delay - 1, pc, s_pFnHeader->startpc);
 	return pDelayInst;
 }
 #endif
@@ -1039,7 +1039,7 @@ static VuInstruction* getDelayInst(VuInstruction* pInst)
 static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const VUPIPELINES& pipes)
 {
 	// check if block already exists
-	//Console::WriteLn("startpc %x", startpc);
+	//Console.WriteLn("startpc %x", startpc);
 	startpc &= (s_vu ? 0x3fff : 0xfff);
 	VuBlockHeader* pbh = &recVUBlocks[s_vu][startpc/8];
 
@@ -1204,7 +1204,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 					if ((ptr[0]&0xc0))
 					{
 						// sometimes full sticky bits are needed (simple series 2000 - oane chapara)
-						//Console::WriteLn("needSticky: %x-%x", s_pFnHeader->startpc, startpc);
+						//Console.WriteLn("needSticky: %x-%x", s_pFnHeader->startpc, startpc);
 						needFullStatusFlag = 2;
 					}
 					break;
@@ -1216,7 +1216,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 
 		if (pc >= s_MemSize[s_vu])
 		{
-			Console::Error("inf vu0 prog %x",  startpc);
+			Console.Error("inf vu0 prog %x",  startpc);
 			break;
 		}
 	}
@@ -1380,7 +1380,7 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 		// sensible soccer overflows on vu0, so increase the limit...
 		if ((s_vu == 1 && i >= 0x799) || (s_vu == 0 && i >= 0x201))
 		{
-			Console::Error("VuRec base block doesn't terminate!");
+			Console.Error("VuRec base block doesn't terminate!");
 			assert(0);
 			break;
 		}
@@ -1577,13 +1577,13 @@ static VuBaseBlock* SuperVUBuildBlocks(VuBaseBlock* parent, u32 startpc, const V
 		switch (vucode >> 25)
 		{
 			case 0x24: // jr
-				Console::Error("svurec bad jr jump!");
+				Console.Error("svurec bad jr jump!");
 				assert(0);
 				break;
 
 			case 0x25: // jalr
 				{
-					Console::Error("svurec bad jalr jump!");
+					Console.Error("svurec bad jalr jump!");
 					assert(0);
 					break;
 				}
@@ -2827,7 +2827,7 @@ void svudispfntemp()
 			{
 				//static int curesp;
 				//__asm mov curesp, esp
-				//Console::WriteLn("tVU: %x %x %x", s_svulast, s_vucount, s_vufnheader);
+				//Console.WriteLn("tVU: %x %x %x", s_svulast, s_vucount, s_vufnheader);
 				if (g_curdebugvu) iDumpVU1Registers();
 				else iDumpVU0Registers();
 				s_vucount++;
@@ -3204,7 +3204,7 @@ void VuBaseBlock::Recompile()
 				break;
 
 			default:
-				DevCon::Error("Bad branch %x\n", branch);
+				DevCon.Error("Bad branch %x\n", branch);
 				assert(0);
 				break;
 		}
@@ -3406,7 +3406,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 			else
 			{
 				s_ClipRead = s_pCurBlock->GetInstIterAtPc(nParentPc)->pClipWrite;
-				if (s_ClipRead == 0) Console::WriteLn("super ClipRead allocation error!");
+				if (s_ClipRead == 0) Console.WriteLn("super ClipRead allocation error!");
 			}
 		}
 
@@ -3477,7 +3477,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 				else
 				{
 					s_StatusRead = s_pCurBlock->GetInstIterAtPc(nParentPc)->pStatusWrite;
-					if (s_StatusRead == 0) Console::WriteLn("super StatusRead allocation error!");
+					if (s_StatusRead == 0) Console.WriteLn("super StatusRead allocation error!");
 //					if( pc >= (u32)s_pCurBlock->endpc-8 ) {
 //						// towards the end, so variable might be leaded to another block (silent hill 4)
 //						uptr tempstatus = (uptr)SuperVUStaticAlloc(4);
@@ -3816,7 +3816,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 #ifdef PCSX2_DEVBUILD
 		if (regs[1].VIread & regs[0].VIwrite & ~((1 << REG_Q) | (1 << REG_P) | (1 << REG_VF0_FLAG) | (1 << REG_ACC_FLAG)))
 		{
-			Console::Notice("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x", regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
+			Console.Notice("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x", regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
 		}
 #endif
 
@@ -3833,7 +3833,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 
 			if (vfwrite[0] == vfwrite[1])
 			{
-				//Console::WriteLn("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle %x", s_pCurBlock->startpc);
+				//Console.WriteLn("*PCSX2*: Warning, VF write to the same reg in both lower/upper cycle %x", s_pCurBlock->startpc);
 			}
 
 			if (vfread0[0] == vfwrite[1] || vfread1[0] == vfwrite[1])
@@ -3911,7 +3911,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 //
 //				CALLFunc((u32)branchfn);
 //				assert( itinst->regs[0].VIwrite & 0xffff );
-//				Console::WriteLn("vi write before branch");
+//				Console.WriteLn("vi write before branch");
 //				for(s_CacheVIReg = 0; s_CacheVIReg < 16; ++s_CacheVIReg) {
 //					if( itinst->regs[0].VIwrite & (1<<s_CacheVIReg) )
 //						break;
@@ -4627,5 +4627,5 @@ void recVULowerOP_T3_11(VURegs* VU, s32 info)
 
 void recVUunknown(VURegs* VU, s32 info)
 {
-	Console::Notice("Unknown SVU micromode opcode called");
+	Console.Notice("Unknown SVU micromode opcode called");
 }

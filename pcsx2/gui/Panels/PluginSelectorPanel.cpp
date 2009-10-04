@@ -108,7 +108,7 @@ public:
 			if ( ((version >> 16)&0xff) == tbl_PluginInfo[pluginTypeIndex].version )
 				return true;
 
-			Console::Notice("%s Plugin %s:  Version %x != %x", info.shortname, m_plugpath.c_str(), 0xff&(version >> 16), info.version);
+			Console.Notice("%s Plugin %s:  Version %x != %x", info.shortname, m_plugpath.c_str(), 0xff&(version >> 16), info.version);
 		}
 		return false;
 	}
@@ -123,7 +123,7 @@ public:
 
 	wxString GetName() const
 	{
-		wxASSERT( m_GetLibName != NULL );
+		pxAssert( m_GetLibName != NULL );
 		return wxString::FromAscii(m_GetLibName());
 	}
 
@@ -315,7 +315,7 @@ void Panels::PluginSelectorPanel::Apply()
 			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
 		}
 
-		wxGetApp().SysReset();
+		sApp.SysReset();
 	}
 
 	if( !wxGetApp().m_CorePlugins )
@@ -345,6 +345,9 @@ void Panels::PluginSelectorPanel::CancelRefresh()
 {
 }
 
+// This method is a callback from the BaseSelectorPanel.  It is called when the page is shown
+// and the page's enumerated selections are valid (meaning we should start our enumeration
+// thread!)
 void Panels::PluginSelectorPanel::DoRefresh()
 {
 	m_ComponentBoxes.Reset();
@@ -374,7 +377,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 
 bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 {
-	m_EnumeratorThread = NULL;			// make sure the thread is STOPPED, just in case...
+	if( m_EnumeratorThread ) return true;		// Cant reset file lists while we're busy enumerating...
 
 	bool validated = true;
 
@@ -451,6 +454,10 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 {
 	if( !m_FileList ) return;
 
+	// The thread can get canceled and replaced with a new thread, which means all
+	// pending messages should be ignored.
+	if( m_EnumeratorThread != (EnumThread*)evt.GetClientData() ) return;
+
 	const size_t evtidx = evt.GetExtraLong();
 
 	if( DisableThreading )
@@ -473,7 +480,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 
 	if( result.TypeMask == 0 )
 	{
-		Console::Error( L"Some kinda plugin failure: " + (*m_FileList)[evtidx] );
+		Console.Error( L"Some kinda plugin failure: " + (*m_FileList)[evtidx] );
 	}
 
 	for( int i=0; i<NumPluginTypes; ++i )
@@ -515,7 +522,7 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 
 void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 {
-	DbgCon::WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
+	DbgCon.WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
 
 	try
 	{
@@ -538,17 +545,18 @@ void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 	}
 	catch( Exception::BadStream& ex )
 	{
-		Console::Status( ex.FormatDiagnosticMessage() );
+		Console.Status( ex.FormatDiagnosticMessage() );
 	}
 
 	wxCommandEvent yay( pxEVT_EnumeratedNext );
+	yay.SetClientData( this );
 	yay.SetExtraLong( curidx );
 	m_master.GetEventHandler()->AddPendingEvent( yay );
 }
 
-sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
+void Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 {
-	DevCon::Status( "Plugin Enumeration Thread started..." );
+	DevCon.Status( "Plugin Enumeration Thread started..." );
 
 	wxGetApp().Ping();		// gives the gui thread some time to refresh
 	Sleep( 3 );
@@ -558,11 +566,12 @@ sptr Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 		DoNextPlugin( curidx );
 		if( (curidx & 3) == 3 ) wxGetApp().Ping();		// gives the gui thread some time to refresh
 		pthread_testcancel();
+		Sleep(150);
 	}
 
 	wxCommandEvent done( pxEVT_EnumerationFinished );
+	done.SetClientData( this );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 
-	DevCon::Status( "Plugin Enumeration Thread complete!" );
-	return 0;
+	DevCon.Status( "Plugin Enumeration Thread complete!" );
 }

@@ -31,6 +31,9 @@ static bool state_buffer_lock = false;
 // form the main thread.
 bool sys_resume_lock = false;
 
+// --------------------------------------------------------------------------------------
+//  StateThread_Freeze
+// --------------------------------------------------------------------------------------
 class StateThread_Freeze : public PersistentThread
 {
 	typedef PersistentThread _parent;
@@ -38,9 +41,9 @@ class StateThread_Freeze : public PersistentThread
 public:
 	StateThread_Freeze( const wxString& file )
 	{
-		m_name = L"SaveState::CopyAndZip";
+		m_name = L"SaveState::Freeze";
 
-		DevAssert( wxThread::IsMain(), "StateThread creation is allowed from the Main thread only." );
+		AllowFromMainThreadOnly();
 		if( state_buffer_lock )
 			throw Exception::RuntimeError( "Cannot save state; a previous save or load action is already in progress." );
 
@@ -49,22 +52,63 @@ public:
 	}
 	
 protected:
-	sptr ExecuteTask()
+	void OnStart() {}
+	void ExecuteTask()
 	{
 		memSavingState( state_buffer ).FreezeAll();
-		return 0;
 	}
 	
-	void DoThreadCleanup()
+	void OnThreadCleanup()
 	{
 		wxCommandEvent evt( pxEVT_FreezeFinished );
 		evt.SetClientData( this );
 		wxGetApp().AddPendingEvent( evt );
 
-		_parent::DoThreadCleanup();
+		_parent::OnThreadCleanup();
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//
+// --------------------------------------------------------------------------------------
+class StateThread_Thaw : public PersistentThread
+{
+	typedef PersistentThread _parent;
+
+public:
+	StateThread_Thaw( const wxString& file )
+	{
+		m_name = L"SaveState::Thaw";
+
+		AllowFromMainThreadOnly();
+		if( state_buffer_lock )
+			throw Exception::RuntimeError( "Cannot sload state; a previous save or load action is already in progress." );
+
+		Start();
+		sys_resume_lock = true;
+	}
+	
+protected:
+	void OnStart() {}
+
+	void ExecuteTask()
+	{
+		memSavingState( state_buffer ).FreezeAll();
+	}
+	
+	void OnThreadCleanup()
+	{
+		wxCommandEvent evt( pxEVT_FreezeFinished );
+		evt.SetClientData( this );
+		wxGetApp().AddPendingEvent( evt );
+
+		_parent::OnThreadCleanup();
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//
+// --------------------------------------------------------------------------------------
 class StateThread_ZipToDisk : public PersistentThread
 {
 	typedef PersistentThread _parent;
@@ -77,7 +121,7 @@ public:
 	{
 		m_name = L"SaveState::ZipToDisk";
 
-		DevAssert( wxThread::IsMain(), "StateThread creation is allowed from the Main thread only." );
+		AllowFromMainThreadOnly();
 		if( state_buffer_lock )
 			throw Exception::RuntimeError( "Cannot save state; a previous save or load action is already in progress." );
 
@@ -101,26 +145,29 @@ public:
 	}
 
 protected:
-	sptr ExecuteTask()
+	void OnStart() {}
+
+	void ExecuteTask()
 	{
 		Sleep( 2 );
 		if( gzwrite( (gzFile)m_gzfp, state_buffer.GetPtr(), state_buffer.GetSizeInBytes() ) < state_buffer.GetSizeInBytes() )
 			throw Exception::BadStream();
-
-		return 0;
 	}
 	
-	void DoThreadCleanup()
+	void OnThreadCleanup()
 	{
 		wxCommandEvent evt( pxEVT_FreezeFinished );
 		evt.SetClientData( this );		// tells message to clean us up.
 		wxGetApp().AddPendingEvent( evt );
 
-		_parent::DoThreadCleanup();
+		_parent::OnThreadCleanup();
 	}
 };
 
 
+// --------------------------------------------------------------------------------------
+//
+// --------------------------------------------------------------------------------------
 class StateThread_UnzipFromDisk : public PersistentThread
 {
 	typedef PersistentThread _parent;
@@ -133,7 +180,7 @@ public:
 	{
 		m_name = L"SaveState::UnzipFromDisk";
 
-		DevAssert( wxThread::IsMain(), "StateThread creation is allowed from the Main thread only." );
+		AllowFromMainThreadOnly();
 		if( state_buffer_lock )
 			throw Exception::RuntimeError( "Cannot save state; a previous save or load action is already in progress." );
 
@@ -157,7 +204,9 @@ public:
 	}
 
 protected:
-	sptr ExecuteTask()
+	void OnStart() {}
+
+	void ExecuteTask()
 	{
 		// fixme: should start initially with the file size, and then grow from there.
 
@@ -171,13 +220,13 @@ protected:
 		} while( !gzeof(m_gzfp) );
 	}
 
-	void DoThreadCleanup()
+	void OnThreadCleanup()
 	{
 		wxCommandEvent evt( pxEVT_ThawFinished );
 		evt.SetClientData( this );		// tells message to clean us up.
 		wxGetApp().AddPendingEvent( evt );
 
-		_parent::DoThreadCleanup();
+		_parent::OnThreadCleanup();
 	}
 };
 
@@ -187,32 +236,51 @@ void Pcsx2App::OnFreezeFinished( wxCommandEvent& evt )
 	state_buffer_lock = false;
 
 	SysClearExecutionCache();
-	SysResume();
+	sCoreThread.Resume();
 	
-	if( PersistentThread* thread = (PersistentThread*)evt.GetClientData() )
-	{
-		delete thread;
-	}
+	delete (PersistentThread*)evt.GetClientData();
 }
 
 void Pcsx2App::OnThawFinished( wxCommandEvent& evt )
 {
+	PersistentThread* thr = (PersistentThread*)evt.GetClientData();
+	if( thr == NULL )
+	{
+		pxAssert( false );
+		return;
+	}
+
+	/*catch( Exception::BadSavedState& ex)
+	{
+		// At this point we can return control back to the user, no questions asked.
+		// StateLoadErrors are only thorwn if the load failed prior to any virtual
+		// machine memory contents being changed.  (usually missing file errors)
+
+		Console.Notice( ex.FormatDiagnosticMessage() );
+		sCoreThread.Resume();
+	}*/
+
 	state_buffer.Dispose();
 	state_buffer_lock = false;
 
 	SysClearExecutionCache();
-	SysResume();
+	sCoreThread.Resume();
 
-	if( PersistentThread* thread = (PersistentThread*)evt.GetClientData() )
-	{
-		delete thread;
-	}
+	delete (PersistentThread*)evt.GetClientData();
 }
 
 void StateCopy_SaveToFile( const wxString& file )
 {
 	if( state_buffer_lock ) return;
-	// [TODO] Implement optional 7zip compression here?
+	new StateThread_ZipToDisk( file );
+}
+
+void StateCopy_LoadFromFile( const wxString& file )
+{
+	if( state_buffer_lock ) return;
+
+	sCoreThread.ShortSuspend();
+	new StateThread_UnzipFromDisk( file );
 }
 
 // Saves recovery state info to the given saveslot, or saves the active emulation state

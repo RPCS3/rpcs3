@@ -308,9 +308,9 @@ void FPU_ADD_SUB(int tempd, int tempt) //tempd and tempt are overwritten, they a
 	int temp2 = _allocX86reg(-1, X86TYPE_TEMP, 0, 0); //receives regt
 	int xmmtemp = _allocTempXMMreg(XMMT_FPS, -1); //temporary for anding with regd/regt
  
-	if (tempecx != ECX)	{ Console::Error("FPU: ADD/SUB Allocation Error!"); tempecx = ECX;}
-	if (temp2 == -1)	{ Console::Error("FPU: ADD/SUB Allocation Error!"); temp2 = EAX;}
-	if (xmmtemp == -1)	{ Console::Error("FPU: ADD/SUB Allocation Error!"); xmmtemp = XMM0;}
+	if (tempecx != ECX)	{ Console.Error("FPU: ADD/SUB Allocation Error!"); tempecx = ECX;}
+	if (temp2 == -1)	{ Console.Error("FPU: ADD/SUB Allocation Error!"); temp2 = EAX;}
+	if (xmmtemp == -1)	{ Console.Error("FPU: ADD/SUB Allocation Error!"); xmmtemp = XMM0;}
  
 	SSE2_MOVD_XMM_to_R(tempecx, tempd); 
 	SSE2_MOVD_XMM_to_R(temp2, tempt);
@@ -554,8 +554,8 @@ void recDIVhelper1(int regd, int regt) // Sets flags
 	u32 *ajmp32, *bjmp32;
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-	if (t1reg == -1) {Console::Error("FPU: DIV Allocation Error!");}
-	if (tempReg == -1) {Console::Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
+	if (t1reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
+	if (tempReg == -1) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
  
 	AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
  
@@ -611,11 +611,11 @@ void recDIV_S_xmm(int info)
 {
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
-    //if (t0reg == -1) {Console::Error("FPU: DIV Allocation Error!");}
-    //Console::WriteLn("DIV");
+    //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
+    //Console.WriteLn("DIV");
  
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//Console::WriteLn("div to nearest");
+		//Console.WriteLn("div to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -872,13 +872,13 @@ void recSQRT_S_xmm(int info)
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-	if (tempReg == -1) {Console::Error("FPU: SQRT Allocation Error!"); tempReg = EAX;}
+	if (tempReg == -1) {Console.Error("FPU: SQRT Allocation Error!"); tempReg = EAX;}
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
-	if (t1reg == -1) {Console::Error("FPU: SQRT Allocation Error!");}
-	//Console::WriteLn("FPU: SQRT");
+	if (t1reg == -1) {Console.Error("FPU: SQRT Allocation Error!");}
+	//Console.WriteLn("FPU: SQRT");
  
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//Console::WriteLn("sqrt to nearest");
+		//Console.WriteLn("sqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
@@ -931,8 +931,8 @@ void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when reg
 	u32 *pjmp32;
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
-	if (t1reg == -1) {Console::Error("FPU: RSQRT Allocation Error!");}
-	if (tempReg == -1) {Console::Error("FPU: RSQRT Allocation Error!"); tempReg = EAX;}
+	if (t1reg == -1) {Console.Error("FPU: RSQRT Allocation Error!");}
+	if (tempReg == -1) {Console.Error("FPU: RSQRT Allocation Error!"); tempReg = EAX;}
  
 	AND32ItoM((uptr)&fpuRegs.fprc[31], ~(FPUflagI|FPUflagD)); // Clear I and D flags
  
@@ -998,7 +998,7 @@ void recRSQRT_S_xmm(int info)
 	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
-		//Console::WriteLn("rsqrt to nearest");
+		//Console.WriteLn("rsqrt to nearest");
 		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change

@@ -156,7 +156,7 @@ void psxSYSCALL() {
 }
 
 void psxRFE() {
-//	Console::WriteLn("RFE\n");
+//	Console.WriteLn("RFE\n");
 	psxRegs.CP0.n.Status = (psxRegs.CP0.n.Status & 0xfffffff0) |
 						  ((psxRegs.CP0.n.Status & 0x3c) >> 2);
 //	Log=0;
@@ -300,7 +300,7 @@ void psxCTC0() { _rFs_ = _u32(_rRt_); }
 * Format:  ?                                             *
 *********************************************************/
 void psxNULL() { 
-Console::Notice("psx: Unimplemented op %x", psxRegs.code);
+Console.Notice("psx: Unimplemented op %x", psxRegs.code);
 }
 
 void psxSPECIAL() {

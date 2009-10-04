@@ -55,36 +55,3 @@ public:
 		wxLog::EnableLogging( m_prev );
 	}
 };
-
-// --------------------------------------------------------------------------------------
-//  wxToUTF8  -  shortcut for str.ToUTF8().data()
-// --------------------------------------------------------------------------------------
-class wxToUTF8
-{
-	DeclareNoncopyableObject( wxToUTF8 );
-
-protected:
-	wxCharBuffer m_charbuffer;
-
-public:
-	wxToUTF8( const wxString& str ) : m_charbuffer( str.ToUTF8().data() ) { }
-	virtual ~wxToUTF8() throw() {}
-	
-	operator const char*() { return m_charbuffer.data(); }
-};
-
-// This class provided for completeness sake.  You probably should use ToUTF8 instead.
-class wxToAscii
-{
-	DeclareNoncopyableObject( wxToAscii );
-
-protected:
-	wxCharBuffer m_charbuffer;
-
-public:
-	wxToAscii( const wxString& str ) : m_charbuffer( str.ToAscii().data() ) { }
-	virtual ~wxToAscii() throw() {}
-
-	operator const char*() { return m_charbuffer.data(); }
-};
-

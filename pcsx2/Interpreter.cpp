@@ -35,7 +35,7 @@ static std::string disOut;
 static void debugI()
 {
 	if( !IsDevBuild ) return;
-	if( cpuRegs.GPR.n.r0.UD[0] || cpuRegs.GPR.n.r0.UD[1] ) Console::Error("R0 is not zero!!!!");
+	if( cpuRegs.GPR.n.r0.UD[0] || cpuRegs.GPR.n.r0.UD[1] ) Console.Error("R0 is not zero!!!!");
 }
 
 //long int runs=0;
@@ -51,7 +51,7 @@ static void execI()
 	//runs++;
 	//if (runs > 1599999999){ //leave some time to startup the testgame
 	//	if (opcode.Name[0] == 'L') { //find all opcodes beginning with "L"
-	//		Console::WriteLn ("Load %s", opcode.Name);
+	//		Console.WriteLn ("Load %s", opcode.Name);
 	//	}
 	//}
 
@@ -97,7 +97,7 @@ static void __fastcall doBranch( u32 target )
 
 void __fastcall intDoBranch(u32 target)
 {
-	//Console::WriteLn("Interpreter Branch ");
+	//Console.WriteLn("Interpreter Branch ");
 	_doBranch_shared( target );
 
 	if( Cpu == &intCpu )

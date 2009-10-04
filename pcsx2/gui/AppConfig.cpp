@@ -532,6 +532,8 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 
 	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );
 
+	wxGetApp().DisableDiskLogging();
+
 	if( emuLog != NULL )
 	{
 		if( emuLogName != newlogname )
@@ -544,6 +546,7 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 	if( emuLog == NULL )
 	{
 		emuLogName = newlogname;
-		emuLog = fopen( emuLogName.ToUTF8().data(), "wb" );
+		emuLog = fopen( toUTF8(emuLogName), "wb" );
 	}
+	wxGetApp().EnableConsoleLogging();
 }

@@ -41,6 +41,8 @@
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="_LIB"
 				ExceptionHandling="2"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="PrecompiledHeader.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -96,6 +98,8 @@
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="_LIB"
 				ExceptionHandling="2"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="PrecompiledHeader.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -151,6 +155,8 @@
 				Name="VCCLCompilerTool"
 				PreprocessorDefinitions="_LIB"
 				ExceptionHandling="2"
+				UsePrecompiledHeader="2"
+				PrecompiledHeaderThrough="PrecompiledHeader.h"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -212,6 +218,34 @@
 			<File
 				RelativePath="..\..\src\Utilities\PathUtils.cpp"
 				>
+			</File>
+			<File
+				RelativePath="..\..\src\Utilities\PrecompiledHeader.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\src\Utilities\StringHelpers.cpp"
@@ -367,6 +401,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath="..\..\include\Utilities\Assertions.h"
+				>
+			</File>
 			<File
 				RelativePath="..\..\include\Utilities\Console.h"
 				>

@@ -45,14 +45,14 @@ s32 CALLBACK ISOopen(const char* pTitle)
 
 	if( (pTitle == NULL) || (pTitle[0] == 0) )
 	{
-		Console::Error( "CDVDiso Error: No filename specified." );
+		Console.Error( "CDVDiso Error: No filename specified." );
 		return -1;
 	}
 
 	iso = isoOpen(pTitle);
 	if (iso == NULL)
 	{
-		Console::Error( "CDVDiso Error: Failed loading  %s", pTitle );
+		Console.Error( "CDVDiso Error: Failed loading  %s", pTitle );
 		return -1;
 	}
 
@@ -128,7 +128,7 @@ static void FindLayer1Start()
 		int off = iso->blockofs;
 		u8 tempbuffer[CD_FRAMESIZE_RAW];
 
-		Console::Status("CDVDiso: searching for layer1...");
+		Console.Status("CDVDiso: searching for layer1...");
 		//tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
 		for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
 		{
@@ -146,12 +146,12 @@ static void FindLayer1Start()
 
 		if(layer1start == 0x200010)
 		{
-			Console::Status("\tCouldn't find second layer on dual layer... ignoring");
+			Console.Status("\tCouldn't find second layer on dual layer... ignoring");
 			layer1start=-2;
 		}
 
 		if(layer1start>=0)
-			Console::Status("\tfound at 0x%8.8x", layer1start);
+			Console.Status("\tfound at 0x%8.8x", layer1start);
 	}
 }
 

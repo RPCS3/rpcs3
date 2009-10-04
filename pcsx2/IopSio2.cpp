@@ -52,7 +52,7 @@ only recv2 & dataout influences padman
 
 
 void sio2Reset() {
-	DevCon::Status( "Sio2 Reset" );
+	DevCon.Status( "Sio2 Reset" );
 	memzero(sio2);
 	sio2.packet.recvVal1 = 0x1D100; // Nothing is connected at start
 }
@@ -155,7 +155,7 @@ void sio2_serialIn(u8 value){
 	sioWrite8(value);
 	
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
-		Console::Notice("*PCSX2*: sendSize >= %d", BUFSIZE);
+		Console.Notice("*PCSX2*: sendSize >= %d", BUFSIZE);
 	} else {
 		sio2.buf[sio2.packet.sendSize] = sioRead8();
 		sio2.packet.sendSize++;
@@ -182,7 +182,7 @@ void sio2_fifoIn(u8 value){
 	SIODMAWrite(value);
 	
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
-		Console::WriteLn("*PCSX2*: sendSize >= %d", BUFSIZE);
+		Console.WriteLn("*PCSX2*: sendSize >= %d", BUFSIZE);
 	} else {
 		sio2.buf[sio2.packet.sendSize] = sioRead8();
 		sio2.packet.sendSize++;
@@ -194,7 +194,7 @@ u8 sio2_fifoOut(){
 		//PAD_LOG("READING %x\n",sio2.buf[sio2.recvIndex]);
 		return sio2.buf[sio2.recvIndex++];
 	} else {
-		Console::Error( "*PCSX2*: buffer overrun" );
+		Console.Error( "*PCSX2*: buffer overrun" );
 	}
 	return 0; // No Data
 }

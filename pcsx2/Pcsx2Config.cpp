@@ -172,6 +172,12 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	ini.Flush();
 }
 
+bool Pcsx2Config::MultitapEnabled( uint port ) const
+{
+	pxAssert( port < 2 );
+	return (port==0) ? MultitapPort0_Enabled : MultitapPort1_Enabled;
+}
+
 void Pcsx2Config::Load( const wxString& srcfile )
 {
 	//m_IsLoaded = true;

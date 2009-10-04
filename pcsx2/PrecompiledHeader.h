@@ -69,10 +69,6 @@ typedef int BOOL;
 #define TRUE  1
 #define FALSE 0
 
-#ifndef wxASSERT_MSG_A
-#	define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii(msg).c_str() );
-#endif
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // Begin Pcsx2 Includes: Add items here that are local to Pcsx2 but stay relatively
 // unchanged for long periods of time, or happen to be used by almost everything, so they
@@ -82,6 +78,8 @@ typedef int BOOL;
 #include "Pcsx2Defs.h"
 #include "i18n.h"
 #include "Config.h"
+
+#include "Utilities/Assertions.h"
 #include "Utilities/wxBaseTools.h"
 #include "Utilities/ScopedPtr.h"
 #include "Utilities/Path.h"

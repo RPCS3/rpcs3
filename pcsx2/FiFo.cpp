@@ -60,7 +60,7 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 	VIF_LOG("ReadFIFO/VIF1, addr=0x%08X", mem);
 
 	if( vif1Regs->stat & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) )
-		DevCon::Notice( "Reading from vif1 fifo when stalled" );
+		DevCon.Notice( "Reading from vif1 fifo when stalled" );
 
 	if (vif1Regs->stat & VIF1_STAT_FDR)
 	{
@@ -79,7 +79,7 @@ void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
 {
 	jASSUME( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
 
-	DevCon::Notice( "ReadFIFO/GIF, addr=0x%x", mem );
+	DevCon.Notice( "ReadFIFO/GIF, addr=0x%x", mem );
 
 	//out[0] = psHu64(mem  );
 	//out[1] = psHu64(mem+8);
@@ -143,9 +143,9 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 	psHu64(0x5008) = value[1];
 
 	if(vif1Regs->stat & VIF1_STAT_FDR)
-		DevCon::Notice("writing to fifo when fdr is set!");
+		DevCon.Notice("writing to fifo when fdr is set!");
 	if( vif1Regs->stat & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
-		DevCon::Notice("writing to vif1 fifo when stalled");
+		DevCon.Notice("writing to vif1 fifo when stalled");
 
 	vif1ch->qwc += 1;
 	int ret = VIF1transfer((u32*)value, 4, 0);
@@ -187,7 +187,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 	if( mem == 0 )
 	{
 		// Should this raise a PS2 exception or just ignore silently?
-		Console::Notice( "WriteFIFO/IPUout (ignored)" );
+		Console.Notice( "WriteFIFO/IPUout (ignored)" );
 	}
 	else
 	{
@@ -197,7 +197,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 		//committing every 16 bytes
 		while( FIFOto_write((u32*)value, 1) == 0 )
 		{
-			Console::WriteLn("IPU sleeping");
+			Console.WriteLn("IPU sleeping");
 			Threading::Timeslice();
 		}
 	}

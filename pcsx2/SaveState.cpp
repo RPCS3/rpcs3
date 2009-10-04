@@ -76,7 +76,8 @@ void SaveStateBase::PrepBlock( int size )
 
 void SaveStateBase::FreezeTag( const char* src )
 {
-	wxASSERT( strlen(src) < (sizeof( m_tagspace )-1) );
+	const int allowedlen = sizeof( m_tagspace )-1;
+	pxAssertDev( strlen(src) < allowedlen, wxsFormat( L"Tag name exceeds the allowed length of %d chars.", allowedlen) );
 
 	memzero( m_tagspace );
 	strcpy( m_tagspace, src );
@@ -84,7 +85,7 @@ void SaveStateBase::FreezeTag( const char* src )
 
 	if( strcmp( m_tagspace, src ) != 0 )
 	{
-		wxASSERT_MSG( false, L"Savestate data corruption detected while reading tag" );
+		pxFail( "Savestate data corruption detected while reading tag" );
 		throw Exception::BadSavedState(
 			// Untranslated diagnostic msg (use default msg for translation)
 			L"Savestate data corruption detected while reading tag: " + wxString::FromAscii(src)
@@ -118,7 +119,7 @@ void SaveStateBase::FreezeBios()
 	{
 		if( memcmp( descin, desccmp, 128 ) != 0 )
 		{
-			Console::Error(
+			Console.Error(
 				"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
 				"\t\tCurrent Version:   %s\n"
 				"\t\tSavestate Version: %s\n",
@@ -240,7 +241,7 @@ bool SaveStateBase::FreezeSection()
 
 			FreezeMainMemory();
 			int realsectsize = m_idx - seekpos;
-			wxASSERT( sectlen == realsectsize );
+			pxAssert( sectlen == realsectsize );
 			m_sectid++;
 		}
 		break;
@@ -311,7 +312,7 @@ bool SaveStateBase::FreezeSection()
 
 		case FreezeId_Unknown:
 		default:
-			wxASSERT( IsSaving() );
+			pxAssert( IsSaving() );
 
 			// Skip unknown sections with a warning log.
 			// Maybe it'll work!  (haha?)
@@ -321,7 +322,7 @@ bool SaveStateBase::FreezeSection()
 			Freeze( size );
 			m_tagspace[sizeof(m_tagspace)-1] = 0;
 
-			Console::Notice(
+			Console.Notice(
 				"Warning: Unknown tag encountered while loading savestate; going to ignore it!\n"
 				"\tTagname: %s, Size: %d", m_tagspace, size
 			);

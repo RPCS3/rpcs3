@@ -296,7 +296,7 @@ __forceinline void SIF1Dma()
 
 					if (sif1dma->chcr.TTE)
 					{
-						Console::WriteLn("SIF1 TTE");
+						Console.WriteLn("SIF1 TTE");
 						SIF1write(ptag + 2, 2);
 					}
 
@@ -338,11 +338,11 @@ __forceinline void SIF1Dma()
 							break;
 
 						default:
-							Console::WriteLn("Bad addr1 source chain");
+							Console.WriteLn("Bad addr1 source chain");
 					}
 					if ((sif1dma->chcr.TIE) && (Tag::IRQ(ptag)))
 					{
-						Console::WriteLn("SIF1 TIE");
+						Console.WriteLn("SIF1 TIE");
 						sif1.end = 1;
 					}
 				}
@@ -495,7 +495,7 @@ __forceinline void dmaSIF2()
 
 	sif2dma->chcr.STR = 0;
 	hwDmacIrq(DMAC_SIF2);
-	Console::WriteLn("*PCSX2*: dmaSIF2");
+	Console.WriteLn("*PCSX2*: dmaSIF2");
 }
 
 

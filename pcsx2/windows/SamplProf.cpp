@@ -231,7 +231,7 @@ int __stdcall ProfilerThread(void* nada)
 				rv += lst[i].ToString(tick_count);
 			}
 
-			Console::WriteLn("+Sampling Profiler Results-\n%s\n+>", rv.ToAscii().data() );
+			Console.WriteLn("+Sampling Profiler Results-\n%s\n+>", rv.ToAscii().data() );
 
 			tick_count=0;
 
@@ -265,7 +265,7 @@ void ProfilerInit()
 	if (ProfRunning)
 		return;
 
-	//Console::Msg( "Profiler Thread Initializing..." );
+	//Console.Msg( "Profiler Thread Initializing..." );
 	ProfRunning=true;
 	DuplicateHandle(GetCurrentProcess(), 
 		GetCurrentThread(), 
@@ -279,12 +279,12 @@ void ProfilerInit()
 
 	hProfThread=CreateThread(0,0,(LPTHREAD_START_ROUTINE)ProfilerThread,0,0,0);
 	SetThreadPriority(hProfThread,THREAD_PRIORITY_HIGHEST);
-	//Console::WriteLn( " Done!" );
+	//Console.WriteLn( " Done!" );
 }
 
 void ProfilerTerm()
 {
-	//Console::Msg( "Profiler Terminating..." );
+	//Console.Msg( "Profiler Terminating..." );
 	if (!ProfRunning)
 		return;
 
@@ -304,7 +304,7 @@ void ProfilerTerm()
 		CloseHandle( hMtgsThread );
 
 	DeleteCriticalSection( &ProfModulesLock );
-	//Console::WriteLn( " Done!" );
+	//Console.WriteLn( " Done!" );
 }
 
 void ProfilerSetEnabled(bool Enabled)

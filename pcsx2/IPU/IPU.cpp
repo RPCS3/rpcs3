@@ -164,24 +164,24 @@ void ipuShutdown()
 
 void ReportIPU()
 {
-	Console::WriteLn("g_nDMATransfer = 0x%x.", g_nDMATransfer._u32);
-	Console::WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", FIreadpos, FIwritepos);
-	Console::WriteLn("fifo_input = 0x%x.", fifo_input);
-	Console::WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", FOreadpos, FOwritepos);
-	Console::WriteLn("fifo_output = 0x%x.", fifo_output);
-	Console::WriteLn("g_BP = 0x%x.", g_BP);
-	Console::WriteLn("niq = 0x%x, iq = 0x%x.", niq, iq);
-	Console::WriteLn("vqclut = 0x%x.", vqclut);
-	Console::WriteLn("s_thresh = 0x%x.", s_thresh);
-	Console::WriteLn("coded_block_pattern = 0x%x.", coded_block_pattern);
-	Console::WriteLn("g_decoder = 0x%x.", g_decoder);
-	Console::WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", mpeg2_scan_norm, mpeg2_scan_alt);
-	Console::WriteLn("g_nCmdPos = 0x%x.", g_nCmdPos);
-	Console::WriteLn("g_nCmdIndex = 0x%x.", g_nCmdIndex);
-	Console::WriteLn("ipuCurCmd = 0x%x.", ipuCurCmd);
-	Console::WriteLn("_readbits = 0x%x.", _readbits);
-	Console::WriteLn("temp will equal 0x%x.", readbits - _readbits);
-	Console::WriteLn("");
+	Console.WriteLn("g_nDMATransfer = 0x%x.", g_nDMATransfer._u32);
+	Console.WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", FIreadpos, FIwritepos);
+	Console.WriteLn("fifo_input = 0x%x.", fifo_input);
+	Console.WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", FOreadpos, FOwritepos);
+	Console.WriteLn("fifo_output = 0x%x.", fifo_output);
+	Console.WriteLn("g_BP = 0x%x.", g_BP);
+	Console.WriteLn("niq = 0x%x, iq = 0x%x.", niq, iq);
+	Console.WriteLn("vqclut = 0x%x.", vqclut);
+	Console.WriteLn("s_thresh = 0x%x.", s_thresh);
+	Console.WriteLn("coded_block_pattern = 0x%x.", coded_block_pattern);
+	Console.WriteLn("g_decoder = 0x%x.", g_decoder);
+	Console.WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", mpeg2_scan_norm, mpeg2_scan_alt);
+	Console.WriteLn("g_nCmdPos = 0x%x.", g_nCmdPos);
+	Console.WriteLn("g_nCmdIndex = 0x%x.", g_nCmdIndex);
+	Console.WriteLn("ipuCurCmd = 0x%x.", ipuCurCmd);
+	Console.WriteLn("_readbits = 0x%x.", _readbits);
+	Console.WriteLn("temp will equal 0x%x.", readbits - _readbits);
+	Console.WriteLn("");
 }
 // fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
 
@@ -284,11 +284,11 @@ __forceinline u64 ipuRead64(u32 mem)
 			break;
 
 		ipucase(IPU_CTRL):
-			DevCon::Notice("reading 64bit IPU ctrl");
+			DevCon.Notice("reading 64bit IPU ctrl");
 			break;
 
 		ipucase(IPU_BP):
-			DevCon::Notice("reading 64bit IPU top");
+			DevCon.Notice("reading 64bit IPU top");
 			break;
 
 		ipucase(IPU_TOP): // IPU_TOP
@@ -346,7 +346,7 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 			ipuRegs->ctrl._u32 = (value & 0x47f30000) | (ipuRegs->ctrl._u32 & 0x8000ffff);
 			if (ipuRegs->ctrl.IDP == 3)
 			{
-				Console::WriteLn("IPU Invalid Intra DC Precision, switching to 9 bits");
+				Console.WriteLn("IPU Invalid Intra DC Precision, switching to 9 bits");
 				ipuRegs->ctrl.IDP = 1;
 			}
 
@@ -665,7 +665,7 @@ static BOOL __fastcall ipuCSC(u32 val)
 
 	if (csc.DTE) IPU_LOG("Dithering enabled.");
 
-	//Console::WriteLn("CSC");
+	//Console.WriteLn("CSC");
 	for (;g_nCmdIndex < (int)csc.MBC; g_nCmdIndex++)
 	{
 
@@ -773,7 +773,7 @@ __forceinline void IPU_INTERRUPT() //dma
 void IPUCMD_WRITE(u32 val)
 {
 	// don't process anything if currently busy
-	if (ipuRegs->ctrl.BUSY) Console::WriteLn("IPU BUSY!"); // wait for thread
+	if (ipuRegs->ctrl.BUSY) Console.WriteLn("IPU BUSY!"); // wait for thread
 
 	ipuRegs->ctrl.ECD = 0;
 	ipuRegs->ctrl.SCD = 0; //clear ECD/SCD
@@ -969,7 +969,7 @@ void IPUWorker()
 			return;
 
 		default:
-			Console::WriteLn("Unknown IPU command: %x", ipuRegs->cmd.CMD);
+			Console.WriteLn("Unknown IPU command: %x", ipuRegs->cmd.CMD);
 			break;
 	}
 
@@ -1284,7 +1284,7 @@ void __fastcall ipu_dither(const macroblock_rgb32* rgb32, macroblock_rgb16 *rgb1
 
 void __fastcall ipu_vq(macroblock_rgb16 *rgb16, u8* indx4)
 {
-	Console::Error("IPU: VQ not implemented");
+	Console.Error("IPU: VQ not implemented");
 }
 
 void __fastcall ipu_copy(const macroblock_8 *mb8, macroblock_16 *mb16)
@@ -1361,7 +1361,7 @@ static __forceinline bool IPU1chain(int &totalqwc)
 
 		if (pMem == NULL)
 		{
-			Console::Error("ipu1dma NULL!");
+			Console.Error("ipu1dma NULL!");
 			return true;
 		}
 
@@ -1430,7 +1430,7 @@ static __forceinline bool ipuDmacSrcChain(DMACh *tag, u32 *ptag)
 			break;
 
 		default:
-			Console::Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
+			Console.Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
 			break;
 	}
 
@@ -1469,7 +1469,7 @@ int IPU1dma()
 		//Check TIE bit of CHCR and IRQ bit of tag
 		if (ipu1dma->chcr.TIE && (g_nDMATransfer.DOTIE1))
 		{
-			Console::WriteLn("IPU1 TIE");
+			Console.WriteLn("IPU1 TIE");
 
 			IPU_INT_TO(totalqwc * BIAS);
 			g_nDMATransfer.TIE1 = 1;
@@ -1517,7 +1517,7 @@ int IPU1dma()
 	// Normal Mode & qwc is finished
 	if ((ipu1dma->chcr.MOD == NORMAL_MODE) && (ipu1dma->qwc == 0))
 	{
-		//Console::WriteLn("ipu1 normal empty qwc?");
+		//Console.WriteLn("ipu1 normal empty qwc?");
 		return totalqwc;
 	}
 
@@ -1553,7 +1553,7 @@ int IPU1dma()
 			//Check TIE bit of CHCR and IRQ bit of tag
 			if (g_nDMATransfer.DOTIE1)
 			{
-				Console::WriteLn("IPU1 TIE");
+				Console.WriteLn("IPU1 TIE");
 
 				if (IPU1chain(totalqwc)) return totalqwc;
 
@@ -1619,7 +1619,7 @@ int FIFOfrom_write(const u32 *value, int size)
 
 	ipuRegs->ctrl.OFC += firsttrans;
 	IPU0dma();
-	//Console::WriteLn("Written %d qwords, %d", firsttrans,ipuRegs->ctrl.OFC);
+	//Console.WriteLn("Written %d qwords, %d", firsttrans,ipuRegs->ctrl.OFC);
 
 	return firsttrans;
 }

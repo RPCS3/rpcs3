@@ -69,7 +69,7 @@ u8 psxHwRead8(u32 add) {
 		case IOP_T5_COUNT:
 		case IOP_T5_MODE:
 		case IOP_T5_TARGET:
-			DevCon::Notice( "IOP Counter Read8 from addr0x%x = 0x%x", add, psxHu8(add) );
+			DevCon.Notice( "IOP Counter Read8 from addr0x%x = 0x%x", add, psxHu8(add) );
 			return psxHu8(add);
 #endif
 
@@ -623,7 +623,7 @@ void psxHwWrite8(u32 add, u8 value) {
 		USBwrite8(add, value); return;
 	}
 	if((add & 0xf) == 0xa)
-		Console::Error("8bit write (possible chcr set) to addr 0x%x = 0x%x", add, value );
+		Console.Error("8bit write (possible chcr set) to addr 0x%x = 0x%x", add, value );
 
 	switch (add) {
 		case 0x1f801040:
@@ -649,7 +649,7 @@ void psxHwWrite8(u32 add, u8 value) {
 		case IOP_T5_COUNT:
 		case IOP_T5_MODE:
 		case IOP_T5_TARGET:
-			DevCon::Notice( "IOP Counter Write8 to addr 0x%x = 0x%x", add, value );
+			DevCon.Notice( "IOP Counter Write8 to addr 0x%x = 0x%x", add, value );
 			psxHu8(add) = value;
 		return;
 
@@ -673,7 +673,7 @@ void psxHwWrite8(u32 add, u8 value) {
 				( value == '\n' && g_pbufi != 0 ) )
 			{
 				g_pbuf[g_pbufi] = 0;
-				DevCon::WriteLn( Color_Cyan, "%s", g_pbuf );
+				DevCon.WriteLn( Color_Cyan, "%s", g_pbuf );
 				g_pbufi = 0;
 			}
 			else if( value != '\n' )
@@ -703,7 +703,7 @@ void psxHwWrite16(u32 add, u16 value) {
 		USBwrite16(add, value); return;
 	}
 
-	if((add & 0xf) == 0x9) DevCon::WriteLn("16bit write (possible chcr set) %x value %x", add, value);
+	if((add & 0xf) == 0x9) DevCon.WriteLn("16bit write (possible chcr set) %x value %x", add, value);
 
 	switch (add) {
 		case 0x1f801040:
@@ -1236,7 +1236,7 @@ void psxHwWrite32(u32 add, u32 value) {
 //------------------------------------------------------------------
 		case 0x1f8014c0:
 			PSXHW_LOG("RTC_HOLDMODE 32bit write %lx", value);
-			Console::Notice("** RTC_HOLDMODE 32bit write %lx", value);
+			Console.Notice("** RTC_HOLDMODE 32bit write %lx", value);
 			break;
 
 		case 0x1f801450:
@@ -1341,10 +1341,10 @@ void psxDmaInterrupt2(int n)
 	if (HW_DMA_ICR2 & (1 << (16 + n)))
 	{
 /*		if (HW_DMA_ICR2 & (1 << (24 + n))) {
-			Console::WriteLn("*PCSX2*: HW_DMA_ICR2 n=%d already set", n);
+			Console.WriteLn("*PCSX2*: HW_DMA_ICR2 n=%d already set", n);
 		}
 		if (psxHu32(0x1070) & 8) {
-			Console::WriteLn("*PCSX2*: psxHu32(0x1070) 8 already set (n=%d)", n);
+			Console.WriteLn("*PCSX2*: psxHu32(0x1070) 8 already set (n=%d)", n);
 		}*/
 		HW_DMA_ICR2|= (1 << (24 + n));
 		psxRegs.CP0.n.Cause |= 1 << (16 + n);

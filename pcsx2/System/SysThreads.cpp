@@ -45,14 +45,14 @@ SysSuspendableThread::~SysSuspendableThread() throw()
 {
 }
 
-void SysSuspendableThread::Start()
+void SysSuspendableThread::OnStart()
 {
-	if( !DevAssert( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
+	if( !pxAssertDev( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
 
 	m_ResumeEvent.Reset();
 	m_SuspendEvent.Reset();
 
-	_parent::Start();
+	_parent::OnStart();
 }
 
 
@@ -79,7 +79,7 @@ void SysSuspendableThread::Suspend( bool isBlocking )
 		if( m_ExecMode == ExecMode_Running )
 			m_ExecMode = ExecMode_Suspending;
 
-		DevAssert( m_ExecMode == ExecMode_Suspending, "ExecMode should be nothing other than Suspended..." );
+		pxAssertDev( m_ExecMode == ExecMode_Suspending, "ExecMode should be nothing other than Suspended..." );
 	}
 	m_sem_event.Post();
 	m_SuspendEvent.WaitGui();
@@ -120,7 +120,7 @@ void SysSuspendableThread::Resume()
 		}
 	}
 
-	DevAssert( m_ExecMode == ExecMode_Suspended,
+	pxAssertDev( m_ExecMode == ExecMode_Suspended,
 		"SysSuspendableThread is not in a suspended/idle state?  wtf!" );
 
 	m_ExecMode = ExecMode_Running;
@@ -136,11 +136,11 @@ void SysSuspendableThread::Resume()
 //    (Called from the context of this thread only)
 // --------------------------------------------------------------------------------------
 
-void SysSuspendableThread::DoThreadCleanup()
+void SysSuspendableThread::OnThreadCleanup()
 {
 	ScopedLock locker( m_lock_ExecMode );
 	m_ExecMode = ExecMode_NoThreadYet;
-	_parent::DoThreadCleanup();
+	_parent::OnThreadCleanup();
 }
 
 void SysSuspendableThread::StateCheck( bool isCancelable )
@@ -162,7 +162,7 @@ void SysSuspendableThread::StateCheck( bool isCancelable )
 		case ExecMode_NoThreadYet:
 			// threads should never have this state set while the thread is in any way
 			// active or alive. (for obvious reasons!!)
-			DevAssert( false, "Invalid execution state detected." );
+			pxFailDev( "Invalid execution state detected." );
 		break;
 	#endif
 
@@ -272,7 +272,7 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 // --------------------------------------------------------------------------------------
 SysCoreThread& SysCoreThread::Get()
 {
-	wxASSERT_MSG( tls_coreThread != NULL, L"This function must be called from the context of a running SysCoreThread." );
+	pxAssertMsg( tls_coreThread != NULL, L"This function must be called from the context of a running SysCoreThread." );
 	return *tls_coreThread;
 }
 
@@ -350,10 +350,10 @@ void SysCoreThread::CpuExecute()
 
 static void _cet_callback_cleanup( void* handle )
 {
-	((SysCoreThread*)handle)->DoThreadCleanup();
+	((SysCoreThread*)handle)->OnThreadCleanup();
 }
 
-sptr SysCoreThread::ExecuteTask()
+void SysCoreThread::ExecuteTask()
 {
 	tls_coreThread = this;
 
@@ -361,8 +361,6 @@ sptr SysCoreThread::ExecuteTask()
 	CpuInitializeMess();
 	StateCheck();
 	CpuExecute();
-
-	return 0;
 }
 
 void SysCoreThread::OnSuspendInThread()
@@ -378,9 +376,9 @@ void SysCoreThread::OnResumeInThread()
 
 
 // Invoked by the pthread_exit or pthread_cancel
-void SysCoreThread::DoThreadCleanup()
+void SysCoreThread::OnThreadCleanup()
 {
 	m_plugins.Shutdown();
-	_parent::DoThreadCleanup();
+	_parent::OnThreadCleanup();
 }
 

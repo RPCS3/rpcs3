@@ -174,7 +174,7 @@ void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const
 
 	if( enumArray[i] == NULL )
 	{
-		Console::Notice( wxsFormat( L"Loadini Warning: Unrecognized value '%s' on key '%s'\n\tUsing the default setting of '%s'.",
+		Console.Notice( wxsFormat( L"Loadini Warning: Unrecognized value '%s' on key '%s'\n\tUsing the default setting of '%s'.",
 			retval.c_str(), var.c_str(), enumArray[defvalue]
 		) );
 		value = defvalue;
@@ -258,7 +258,7 @@ void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const*
 	const int cnt = _calcEnumLength( enumArray );
 	if( value >= cnt )
 	{
-		Console::Notice( wxsFormat(
+		Console.Notice( wxsFormat(
 			L"Settings Warning: An illegal enumerated index was detected when saving '%s'\n"
 			L"\tIllegal Value: %d\n"
 			L"\tUsing Default: %d (%s)\n",
@@ -266,7 +266,7 @@ void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const*
 		);
 
 		// Cause a debug assertion, since this is a fully recoverable error.
-		wxASSERT( value < cnt );
+		pxAssert( value < cnt );
 		
 		value = defvalue;
 	}

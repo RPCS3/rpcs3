@@ -228,17 +228,17 @@ public:
 	PluginManagerBase() {}
 	virtual ~PluginManagerBase() {}
 
-	virtual void Init() { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Init() { pxFail( "Null PluginManager!" ); }
 	virtual void Shutdown() {}
 	virtual void Open() { }
-	virtual void Open( PluginsEnum_t pid ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Open( PluginsEnum_t pid ) { pxFail( "Null PluginManager!" ); }
 	virtual void Close( PluginsEnum_t pid ) {}
 	virtual void Close( bool closegs=true ) {}
 
-	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state ) { wxASSERT_MSG( false, L"Null PluginManager!" ); }
+	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state ) { pxFail( "Null PluginManager!" ); }
 	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 	{
-		wxASSERT_MSG( false, L"Null PluginManager!" );
+		pxFail( "Null PluginManager!" );
 		return false;
 	}
 

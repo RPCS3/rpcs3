@@ -128,6 +128,7 @@ public:
 	virtual ~mtgsThreadObject() throw();
 
 	void Start();
+	void OnStart();
 	void PollStatus();
 
 	// Waits for the GS to empty out the entire ring buffer contents.
@@ -166,7 +167,7 @@ protected:
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();
 	void _FinishSimplePacket( uint future_writepos );
-	sptr ExecuteTask();
+	void ExecuteTask();
 };
 
 PCSX2_ALIGNED16_EXTERN( mtgsThreadObject mtgsThread );

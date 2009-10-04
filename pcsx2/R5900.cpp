@@ -113,12 +113,12 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		errLevel2 = TRUE;
 		checkStatus = (cpuRegs.CP0.n.Status.b.DEV == 0); // for perf/debug exceptions
 		
-		Console::Error("*PCSX2* FIX ME: Level 2 cpuException");
+		Console.Error("*PCSX2* FIX ME: Level 2 cpuException");
 		if ((code & 0x38000) <= 0x8000 ) 
 		{
 			//Reset / NMI
 			cpuRegs.pc = 0xBFC00000;
-			Console::Notice("Reset request");
+			Console.Notice("Reset request");
 			UpdateCP0Status();
 			return;
 		} 
@@ -127,7 +127,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		else if((code & 0x38000) == 0x18000)  
 			offset = 0x100; //Debug
 		else 
-			Console::Error("Unknown Level 2 Exception!! Cause %x", code);
+			Console.Error("Unknown Level 2 Exception!! Cause %x", code);
 	}
 	
 	if (cpuRegs.CP0.n.Status.b.EXL == 0) 
@@ -135,7 +135,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		cpuRegs.CP0.n.Status.b.EXL = 1;
 		if (bd) 
 		{
-			Console::Notice("branch delay!!");
+			Console.Notice("branch delay!!");
 			cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
 			cpuRegs.CP0.n.Cause |= 0x80000000;
 		} 
@@ -148,7 +148,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 	else 
 	{
 		offset = 0x180; //Override the cause		
-		if (errLevel2) Console::Notice("cpuException: Status.EXL = 1 cause %x", code);
+		if (errLevel2) Console.Notice("cpuException: Status.EXL = 1 cause %x", code);
 	}
 	
 	if (checkStatus)
@@ -161,10 +161,10 @@ __releaseinline void cpuException(u32 code, u32 bd)
 
 void cpuTlbMiss(u32 addr, u32 bd, u32 excode) 
 {
-	Console::Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
+	Console.Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
 		cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
 		
-	if (bd) Console::Notice("branch delay!!");
+	if (bd) Console.Notice("branch delay!!");
 
 	assert(0); // temporary
 
@@ -201,7 +201,7 @@ __forceinline void _cpuTestMissingINTC() {
 	if (cpuRegs.CP0.n.Status.val & 0x400 &&
 		psHu32(INTC_STAT) & psHu32(INTC_MASK)) {
 		if ((cpuRegs.interrupt & (1 << 30)) == 0) {
-			Console::Error("*PCSX2*: Error, missing INTC Interrupt");
+			Console.Error("*PCSX2*: Error, missing INTC Interrupt");
 		}
 	}
 }
@@ -211,7 +211,7 @@ __forceinline void _cpuTestMissingDMAC() {
 		(psHu16(0xe012) & psHu16(0xe010) || 
 		 psHu16(0xe010) & 0x8000)) {
 		if ((cpuRegs.interrupt & (1 << 31)) == 0) {
-			Console::Error("*PCSX2*: Error, missing DMAC Interrupt");
+			Console.Error("*PCSX2*: Error, missing DMAC Interrupt");
 		}
 	}
 }
@@ -319,7 +319,7 @@ static __forceinline void _cpuTestTIMR()
 	if ( (cpuRegs.CP0.n.Status.val & 0x8000) &&
 		cpuRegs.CP0.n.Count >= cpuRegs.CP0.n.Compare && cpuRegs.CP0.n.Count < cpuRegs.CP0.n.Compare+1000 )
 	{
-		Console::Status("timr intr: %x, %x", cpuRegs.CP0.n.Count, cpuRegs.CP0.n.Compare);
+		Console.Status("timr intr: %x, %x", cpuRegs.CP0.n.Count, cpuRegs.CP0.n.Compare);
 		cpuException(0x808000, cpuRegs.branch);
 	}
 }
@@ -396,7 +396,7 @@ __forceinline void _cpuBranchTest_Shared()
 	if( iopBranchAction )
 	{
 		//if( EEsCycle < -450 )
-		//	Console::WriteLn( " IOP ahead by: %d cycles", -EEsCycle );
+		//	Console.WriteLn( " IOP ahead by: %d cycles", -EEsCycle );
 
 		// Experimental and Probably Unnecessry Logic -->
 		// Check if the EE already has an exception pending, and if so we shouldn't
@@ -420,7 +420,7 @@ __forceinline void _cpuBranchTest_Shared()
 			int cycleCount = std::min( EEsCycle, (s32)(eeWaitCycles>>4) );
 			int cyclesRun = cycleCount - psxCpu->ExecuteBlock( cycleCount );
 			EEsCycle -= cyclesRun;
-			//Console::Notice( "IOP Exception-Pending Execution -- EEsCycle: %d", EEsCycle );
+			//Console.Notice( "IOP Exception-Pending Execution -- EEsCycle: %d", EEsCycle );
 		}
 		else*/
 		{
@@ -456,7 +456,7 @@ __forceinline void _cpuBranchTest_Shared()
 		// IOP extra timeslices in short order.
 
 		cpuSetNextBranchDelta( 48 );
-		//Console::Notice( "EE ahead of the IOP -- Rapid Branch!  %d", EEsCycle );
+		//Console.Notice( "EE ahead of the IOP -- Rapid Branch!  %d", EEsCycle );
 	}
 
 	// The IOP could be running ahead/behind of us, so adjust the iop's next branch by its
@@ -556,7 +556,7 @@ void cpuExecuteBios()
 	// Set the video mode to user's default request:
 	gsSetRegionMode( (GS_RegionMode)EmuConfig.Video.DefaultRegionMode );
 
-	Console::Status( "Executing Bios Stub..." );
+	Console.Status( "Executing Bios Stub..." );
 
 	PCSX2_MEM_PROTECT_BEGIN();
 	g_ExecBiosHack = true;
@@ -588,7 +588,7 @@ void cpuExecuteBios()
 	// with new faster versions:
 	Cpu->Reset();
 
-	Console::Notice("Execute Bios Stub Complete");
+	Console.Notice("Execute Bios Stub Complete");
 	//GSprintf(5, "PCSX2 " PCSX2_VERSION "\nExecuteBios Complete\n");
 }
 

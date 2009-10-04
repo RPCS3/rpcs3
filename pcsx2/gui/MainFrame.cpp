@@ -140,11 +140,22 @@ void MainEmuFrame::PopulatePadMenu()
 //
 void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 {
-	if( !wxGetApp().PrepForExit() )
-		evt.Veto( evt.CanVeto() );
+	bool isClosing = false;
+
+	if( !evt.CanVeto() )
+	{
+		// Mandatory destruction...
+		isClosing = true;
+	}
+	else
+	{
+		isClosing = wxGetApp().PrepForExit();
+		if( !isClosing ) evt.Veto( true );
+	}
+
+	sApp.OnMainFrameClosed();
 
 	evt.Skip();
-	//Destroy();
 }
 
 void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
@@ -153,7 +164,7 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 	// while the logger spams itself)
 	// ... makes for a good test of the message pump's responsiveness.
 	if( EnableThreadedLoggingTest )
-		Console::Notice( "Threaded Logging Test!  (a window move event)" );
+		Console.Notice( "Threaded Logging Test!  (a window move event)" );
 
 	// evt.GetPosition() returns the client area position, not the window frame position.
 	// So read the window's screen-relative position directly.
@@ -466,7 +477,7 @@ void MainEmuFrame::ReloadRecentLists()
 	// to make a clone copy of this complex object. ;)
 
 	wxConfigBase* cfg = wxConfigBase::Get( false );
-	wxASSERT( cfg != NULL );
+	pxAssert( cfg != NULL );
 
 	if( m_RecentIsoList )
 		m_RecentIsoList->Save( *cfg );

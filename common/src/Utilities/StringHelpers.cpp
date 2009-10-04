@@ -17,6 +17,17 @@
 
 const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
 
+
+__forceinline wxString fromUTF8( const char* src )
+{
+	return wxString::FromUTF8( src );
+}
+
+__forceinline wxString fromAscii( const char* src )
+{
+	return wxString::FromAscii( src );
+}
+
 // Splits a string into parts and adds the parts into the given SafeList.
 // This list is not cleared, so concatenating many splits into a single large list is
 // the 'default' behavior, unless you manually clear the SafeList prior to subsequent calls.
@@ -159,4 +170,50 @@ bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval, const wx
 
 	dest = wxRect( point, size );
 	return true;
+}
+
+// Performs a cross-platform puts operation, which adds CRs to naked LFs on Win32 platforms, 
+// so that Notepad won't throw a fit and Rama can read the logs again! On Unix and Mac platforms,
+// the input string is written unmodified.
+//
+// PCSX2 generally uses Unix-style newlines -- LF (\n) only -- hence there's no need to strip CRs
+// from incoming data.  Mac platforms may need an implementation of their own that converts
+// newlines to CRs...?
+//
+void px_fputs( FILE* fp, const char* src )
+{
+	if( fp == NULL ) return;
+
+#ifdef _WIN32
+	// Windows needs CR's partnered with all newlines, or else notepad.exe can't view
+	// the stupid logfile.  Best way is to write one char at a time.. >_<
+	
+	const char* curchar = src;
+	bool prevcr = false;
+	while( *curchar != 0 )
+	{
+		if( *curchar == '\r' )
+		{
+			prevcr = true;
+		}
+		else
+		{
+			// Only write a CR/LF pair if the current LF is not prefixed nor
+			// post-fixed by a CR.
+			if( *curchar == '\n' && !prevcr && (*(curchar+1) != '\r') )
+				fputs( "\r\n", fp );
+			else
+				fputc( *curchar, fp );
+
+			prevcr = false;
+		}
+		++curchar;
+	}
+
+#else
+	// Linux is happy with plain old LFs.  Not sure about Macs... does OSX still
+	// go by the old school Mac style of using Crs only?
+
+	fputs( src, emuLog );	// fputs does not do automatic newlines, so it's ok!
+#endif
 }

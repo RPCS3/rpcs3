@@ -34,7 +34,7 @@ namespace Threading
 
 	static void _pt_callback_cleanup( void* handle )
 	{
-		((PersistentThread*)handle)->DoThreadCleanup();
+		((PersistentThread*)handle)->_ThreadCleanup();
 	}
 
 	PersistentThread::PersistentThread() :
@@ -43,39 +43,60 @@ namespace Threading
 	,	m_sem_event()
 	,	m_sem_finished()
 	,	m_lock_start( true )	// recursive mutexing!
-	,	m_returncode( 0 )
 	,	m_detached( true )		// start out with m_thread in detached/invalid state
 	,	m_running( false )
 	{
 	}
 
-	// This destructor performs basic "last chance" cleanup, which is a blocking
-	// join against non-detached threads.  Detached threads are unhandled.
-	// Extending classes should always implement their own thread closure process.
-	// This class must not be deleted from its own thread.  That would be like marrying
-	// your sister, and then cheating on her with your daughter.
+	// This destructor performs basic "last chance" cleanup, which is a blocking join
+	// against the thread. Extending classes should almost always implement their own
+	// thread closure process, since any PersistentThread will, by design, not terminate
+	// unless it has been properly canceled.
+	//	
+	// Thread safetly: This class must not be deleted from its own thread.  That would be
+	// like marrying your sister, and then cheating on her with your daughter.
 	PersistentThread::~PersistentThread() throw()
 	{
-		if( m_running )
+		try
 		{
-#if wxUSE_GUI
-			m_sem_finished.WaitGui();
-#else
-			m_sem_finished.Wait();
-#endif
-		}
+			wxString logfix = L"Thread Destructor for " + m_name;
 
-		Detach();
+			if( m_running )
+			{
+				Console.WriteLn( logfix + L": Waiting for running thread to end.");
+	#if wxUSE_GUI
+				m_sem_finished.WaitGui();
+	#else
+				m_sem_finished.Wait();
+	#endif
+				// Need to lock here so that the thread can finish shutting down before
+				// it gets destroyed, otherwise th mutex handle would become invalid.
+				ScopedLock locker( m_lock_start );
+			}
+			else
+				Console.WriteLn( logfix + L": thread not running.");
+			Sleep( 1 );
+			Detach();
+		}
+		DESTRUCTOR_CATCHALL
 	}
 
+	// Main entry point for starting or e-starting a persistent thread.  This function performs necessary
+	// locks and checks for avoiding race conditions, and then calls OnStart() immeediately before
+	// the actual thread creation.  Extending classes should generally not override Start(), and should
+	// instead override DoPrepStart instead.
+	//
 	// This function should not be called from the owner thread.
 	void PersistentThread::Start()
 	{
 		ScopedLock startlock( m_lock_start );		// Prevents sudden parallel startup
 		if( m_running ) return;
 
-		Detach();		// clean up previous thread, if one exists.
+		Detach();		// clean up previous thread handle, if one exists.
 		m_sem_finished.Reset();
+
+		OnStart();
+
 		if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 			throw Exception::ThreadCreationError();
 
@@ -108,11 +129,12 @@ namespace Threading
 	void PersistentThread::Cancel( bool isBlocking )
 	{
 		wxASSERT( !IsSelf() );
-	    if( !m_running ) return;
+
+		if( !m_running ) return;
 
 		if( m_detached )
 		{
-			Console::Notice( "Threading Warning: Attempted to cancel detached thread; Ignoring..." );
+			Console.Notice( "Threading Warning: Attempted to cancel detached thread; Ignoring..." );
 			return;
 		}
 
@@ -136,9 +158,9 @@ namespace Threading
 	// Returns the return code of the thread.
 	// This method is roughly the equivalent of pthread_join().
 	//
-	sptr PersistentThread::Block()
+	void PersistentThread::Block()
 	{
-		DevAssert( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
+		pxAssertDev( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
 
 		if( m_running )
 #if wxUSE_GUI
@@ -146,7 +168,6 @@ namespace Threading
 #else
 			m_sem_finished.Wait();
 #endif
-		return m_returncode;
 	}
 
 	bool PersistentThread::IsSelf() const
@@ -159,18 +180,6 @@ namespace Threading
 	    return !!m_running;
 	}
 
-	// Gets the return code of the thread.
-	// Exceptions:
-	//   InvalidOperation - thrown if the thread is still running or has never been started.
-	//
-	sptr PersistentThread::GetReturnCode() const
-	{
-		if( IsRunning() )
-			throw Exception::InvalidOperation( "Thread.GetReturnCode : thread is still running." );
-
-		return m_returncode;
-	}
-	
 	// Throws an exception if the thread encountered one.  Uses the BaseException's Rethrow() method,
 	// which ensures the exception type remains consistent.  Debuggable stacktraces will be lost, since
 	// the thread will have allowed itself to terminate properly.
@@ -180,10 +189,19 @@ namespace Threading
 		m_except->Rethrow();
 	}
 
-	// invoked when canceling or exiting the thread.
-	void PersistentThread::DoThreadCleanup()
+	// invoked internally when canceling or exiting the thread.  Extending classes should implement
+	// OnThreadCleanup() to extend clenup functionality.
+	void PersistentThread::_ThreadCleanup()
 	{
 		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
+
+		// Typically thread cleanup needs to lock against thread startup, since both
+		// will perform some measure of variable inits or resets, depending on how the
+		// derrived class is implemented.
+		ScopedLock startlock( m_lock_start );
+
+		OnThreadCleanup();
+
 		m_running = false;
 		m_sem_finished.Post();
 	}
@@ -199,7 +217,7 @@ namespace Threading
 		DoSetThreadName( m_name );
 
 		try {
-			m_returncode = ExecuteTask();
+			ExecuteTask();
 		}
 		catch( std::logic_error& ex )
 		{
@@ -233,6 +251,9 @@ namespace Threading
 		}
 	}
 
+	void PersistentThread::OnStart() {}
+	void PersistentThread::OnThreadCleanup() {}
+	
 	void* PersistentThread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
@@ -241,12 +262,12 @@ namespace Threading
 		pthread_cleanup_push( _pt_callback_cleanup, itsme );
 		owner._internal_execute();
 		pthread_cleanup_pop( true );
-		return (void*)owner.m_returncode;
+		return NULL;
 	}
 
 	void PersistentThread::DoSetThreadName( const wxString& name )
 	{
-		DoSetThreadName( wxToUTF8(name) );
+		DoSetThreadName( toUTF8(name) );
 	}
 	
 	void PersistentThread::DoSetThreadName( __unused const char* name )
@@ -292,12 +313,12 @@ namespace Threading
 // --------------------------------------------------------------------------------------
 
 	// Tells the thread to exit and then waits for thread termination.
-	sptr BaseTaskThread::Block()
+	void BaseTaskThread::Block()
 	{
-		if( !IsRunning() ) return m_returncode;
+		if( !IsRunning() ) return;
 		m_Done = true;
 		m_sem_event.Post();
-		return PersistentThread::Block();
+		PersistentThread::Block();
 	}
 
 	// Initiates the new task.  This should be called after your own StartTask has
@@ -326,7 +347,7 @@ namespace Threading
 		m_post_TaskComplete.Reset();
 	}
 
-	sptr BaseTaskThread::ExecuteTask()
+	void BaseTaskThread::ExecuteTask()
 	{
 		while( !m_Done )
 		{
@@ -340,7 +361,7 @@ namespace Threading
 			m_lock_TaskComplete.Unlock();
 		};
 
-		return 0;
+		return;
 	}
 
 // --------------------------------------------------------------------------------------

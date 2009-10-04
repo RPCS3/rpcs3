@@ -42,20 +42,18 @@ SessionOverrideFlags	g_Session = {false};
 // This function should be called once during program execution.
 void SysDetect()
 {
-	using namespace Console;
-
-	Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+	Console.Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
 
-	Notice("Savestate version: %x", g_SaveVersion);
+	Console.Notice("Savestate version: %x", g_SaveVersion);
 
 	cpudetectInit();
 
-	SetColor( Color_Black );
+	Console.SetColor( Color_Black );
 
-	WriteLn( "x86Init:" );
-	WriteLn( wxsFormat(
+	Console.WriteLn( "x86Init:" );
+	Console.WriteLn( wxsFormat(
 		L"\tCPU vendor name  =  %s\n"
 		L"\tFamilyID         =  %x\n"
 		L"\tx86Family        =  %s\n"
@@ -92,11 +90,11 @@ void SysDetect()
 	JoinString( result[0], features[0], L".. " );
 	JoinString( result[1], features[1], L".. " );
 
-	WriteLn( L"Features Detected:\n\t" + result[0] + (result[1].IsEmpty() ? L"" : (L"\n\t" + result[1])) + L"\n" );
+	Console.WriteLn( L"Features Detected:\n\t" + result[0] + (result[1].IsEmpty() ? L"" : (L"\n\t" + result[1])) + L"\n" );
 
 	//if ( x86caps.VendorName[0] == 'A' ) //AMD cpu
 
-	Console::ClearColor();
+	Console.ClearColor();
 }
 
 // returns the translated error message for the Virtual Machine failing to allocate!
@@ -110,7 +108,7 @@ static wxString GetMemoryErrorVM()
 
 SysCoreAllocations::SysCoreAllocations()
 {
-	Console::Status( "Initializing PS2 virtual machine..." );
+	Console.Status( "Initializing PS2 virtual machine..." );
 
 	RecSuccess_EE		= false;
 	RecSuccess_IOP		= false;
@@ -148,7 +146,7 @@ SysCoreAllocations::SysCoreAllocations()
 		);
 	}
 
-	Console::Status( "Allocating memory for recompilers..." );
+	Console.Status( "Allocating memory for recompilers..." );
 
 	try
 	{
@@ -157,7 +155,7 @@ SysCoreAllocations::SysCoreAllocations()
 	}
 	catch( Exception::BaseException& ex )
 	{
-		Console::Error( L"EE Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
+		Console.Error( L"EE Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		recCpu.Shutdown();
 	}
 
@@ -168,7 +166,7 @@ SysCoreAllocations::SysCoreAllocations()
 	}
 	catch( Exception::BaseException& ex )
 	{
-		Console::Error( L"IOP Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
+		Console.Error( L"IOP Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		psxRec.Shutdown();
 	}
 
@@ -181,7 +179,7 @@ SysCoreAllocations::SysCoreAllocations()
 	}
 	catch( Exception::BaseException& ex )
 	{
-		Console::Error( L"VU0 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
+		Console.Error( L"VU0 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		VU0micro::recShutdown();
 	}
 
@@ -192,7 +190,7 @@ SysCoreAllocations::SysCoreAllocations()
 	}
 	catch( Exception::BaseException& ex )
 	{
-		Console::Error( L"VU1 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
+		Console.Error( L"VU1 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		VU1micro::recShutdown();
 	}
 
@@ -252,13 +250,6 @@ void SysClearExecutionCache()
 	vuMicroCpuReset();
 }
 
-void SysLoadState( const wxString& srcfile )
-{
-	//SysClearExecutionCache();
-	//cpuReset();
-	//joe.FreezeAll();
-}
-
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the
 // allocation is below a certain memory address (specified in "bounds" parameter).
 // The allocated block has code execution privileges.
@@ -269,7 +260,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 
 	if( (Mem == NULL) || (bounds != 0 && (((uptr)Mem + size) > bounds)) )
 	{
-		DevCon::Notice( "First try failed allocating %s at address 0x%x", caller, base );
+		DevCon.Notice( "First try failed allocating %s at address 0x%x", caller, base );
 
 		// memory allocation *must* have the top bit clear, so let's try again
 		// with NULL (let the OS pick something for us).
@@ -279,7 +270,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 		Mem = (u8*)HostSys::Mmap( NULL, size );
 		if( bounds != 0 && (((uptr)Mem + size) > bounds) )
 		{
-			DevCon::Error( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", caller, Mem );
+			DevCon.Error( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", caller, Mem );
 			SafeSysMunmap( Mem, size );
 
 			// returns NULL, caller should throw an exception.

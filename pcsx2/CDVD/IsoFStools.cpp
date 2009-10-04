@@ -184,7 +184,7 @@ int IsoFS_getVolumeDescriptor(void)
 	s32 volDescSector;
 	cdVolDesc localVolDesc;
 
-	DbgCon::WriteLn("IsoFS_GetVolumeDescriptor called");
+	DbgCon.WriteLn("IsoFS_GetVolumeDescriptor called");
 
 	for (volDescSector = 16; volDescSector<20; volDescSector++)
 	{
@@ -205,11 +205,11 @@ int IsoFS_getVolumeDescriptor(void)
 	}
 
 	if (CDVolDesc.filesystemType == 1)
-		DbgCon::WriteLn( Color_Green, "CD FileSystem is ISO9660" );
+		DbgCon.WriteLn( Color_Green, "CD FileSystem is ISO9660" );
 	else if (CDVolDesc.filesystemType == 2)
-		DbgCon::WriteLn( Color_Green, "CD FileSystem is Joliet");
+		DbgCon.WriteLn( Color_Green, "CD FileSystem is Joliet");
 	else 
-		DbgCon::Notice("Could not detect CD FileSystem type");
+		DbgCon.Notice("Could not detect CD FileSystem type");
 
 	//	CdStop();
 
@@ -223,7 +223,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 	dirTocEntry* tocEntryPointer;
 	TocEntry localTocEntry;	// used for internal checking only
 
-	DbgCon::WriteLn("IsoFS_findfile(\"%s\") called", fname);
+	DbgCon.WriteLn("IsoFS_findfile(\"%s\") called", fname);
 
 	_splitpath2(fname, pathname, filename);
 
@@ -297,7 +297,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 					current_sector++;
 					if (IsoFS_readSectors(current_sector,1,toc) != TRUE)
 					{
-						Console::Error("Couldn't Read from CD !");
+						Console.Error("Couldn't Read from CD !");
 						return -1;
 					}
 //					CdSync(0x00);
@@ -333,7 +333,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 		// If we havent found the directory name we wanted then fail
 		if (found_dir != TRUE)
 		{
-			Console::Notice( "IsoFS_findfile: could not find dir" );
+			Console.Notice( "IsoFS_findfile: could not find dir" );
 			return -1;
 		}
 
@@ -343,7 +343,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 		// Read the TOC of the found subdirectory
 		if (IsoFS_readSectors(localTocEntry.fileLBA,1,toc) != TRUE)
 		{
-			Console::Error("Couldn't Read from CD !");
+			Console.Error("Couldn't Read from CD !");
 			return -1;
 		}
 //		CdSync(0x00);
@@ -388,7 +388,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 				strcpy(tocEntry->filename, localTocEntry.filename);
 				memcpy(tocEntry->date, localTocEntry.date, 7);
 
-				DbgCon::WriteLn("IsoFS_findfile: found file");
+				DbgCon.WriteLn("IsoFS_findfile: found file");
 
 				return TRUE;
 			}
@@ -403,7 +403,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 			dir_lba++;
 
 			if (IsoFS_readSectors(dir_lba,1,toc) != TRUE){
-				Console::Error("Couldn't Read from CD !");
+				Console.Error("Couldn't Read from CD !");
 				return -1;
 			}
 //			CdSync(0x00);
@@ -412,7 +412,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 		}
 	}
 
-	DbgCon::Notice("IsoFS_findfile: could not find file");
+	DbgCon.Notice("IsoFS_findfile: could not find file");
 
 	return FALSE;
 }

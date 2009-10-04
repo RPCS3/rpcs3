@@ -162,7 +162,7 @@ static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 	vsprintf(msg, fmt, list);
 	va_end(list);
 
-	Console::WriteLn(msg);
+	Console.WriteLn(msg);
 }
 
 // PAD
@@ -662,13 +662,13 @@ static void PS2E_CALLBACK pcsx2_OSD_WriteLn( int icon, const char* msg )
 
 PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
-	Console::Status( "Loading plugins..." );
+	Console.Status( "Loading plugins..." );
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
 		const PluginsEnum_t pid = pi->id;
 
-		Console::WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
+		Console.WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
 
 		if( folders[pid].IsEmpty() )
 			throw Exception::InvalidArgument( "Empty plugin filename." );
@@ -705,7 +705,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
 
-	Console::Status( "Plugins loaded successfully.\n" );
+	Console.Status( "Plugins loaded successfully.\n" );
 
 	// HACK!  Manually bind the Internal MemoryCard plugin for now, until
 	// we get things more completed in the new plugin api.
@@ -887,7 +887,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 {
 	if( m_info[pid].IsOpened ) return;
 
-	Console::WriteLn( "\tOpening %s", tbl_PluginInfo[pid].shortname );
+	Console.WriteLn( "\tOpening %s", tbl_PluginInfo[pid].shortname );
 
 	// Each Open needs to be called explicitly. >_<
 
@@ -911,7 +911,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 
 void PluginManager::Open()
 {
-	Console::Status( "Opening plugins..." );
+	Console.Status( "Opening plugins..." );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		Open( pi->id );
@@ -924,13 +924,13 @@ void PluginManager::Open()
 	if (GSopen2) mtgsThread.WaitForOpen();
 	mtgsThread.PollStatus();
 
-	Console::Status( "Plugins opened successfully." );
+	Console.Status( "Plugins opened successfully." );
 }
 
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
-	Console::Status( "\tClosing %s", tbl_PluginInfo[pid].shortname );
+	Console.Status( "\tClosing %s", tbl_PluginInfo[pid].shortname );
 
 	if( pid == PluginId_GS )
 	{
@@ -948,7 +948,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 
 void PluginManager::Close( bool closegs )
 {
-	DbgCon::Status( "Closing plugins..." );
+	DbgCon.Status( "Closing plugins..." );
 
 	// Close plugins in reverse order of the initialization procedure.
 
@@ -958,7 +958,7 @@ void PluginManager::Close( bool closegs )
 			Close( tbl_PluginInfo[i].id );
 	}
 
-	DbgCon::Status( "Plugins closed successfully." );
+	DbgCon.Status( "Plugins closed successfully." );
 }
 
 // Initializes all plugins.  Plugin initialization should be done once for every new emulation
@@ -979,10 +979,10 @@ void PluginManager::Init()
 		if( m_info[pid].IsInitialized ) continue;
 		if( !printlog )
 		{
-			Console::Status( "Initializing plugins..." );
+			Console.Status( "Initializing plugins..." );
 			printlog = true;
 		}
-		Console::WriteLn( "\tInit %s", tbl_PluginInfo[pid].shortname );
+		Console.WriteLn( "\tInit %s", tbl_PluginInfo[pid].shortname );
 		m_info[pid].IsInitialized = true;
 		if( 0 != m_info[pid].CommonBindings.Init() )
 			throw Exception::PluginInitError( pid );
@@ -999,7 +999,7 @@ void PluginManager::Init()
 	}
 
 	if( printlog )
-		Console::Status( "Plugins initialized successfully.\n" );
+		Console.Status( "Plugins initialized successfully.\n" );
 }
 
 // Shuts down all plugins.  Plugins are closed first, if necessary.
@@ -1013,7 +1013,7 @@ void PluginManager::Shutdown()
 	mtgsThread.Cancel();	// speedier shutdown!
 
 	Close();
-	DbgCon::Status( "Shutting down plugins..." );
+	DbgCon.Status( "Shutting down plugins..." );
 
 	// Shutdown plugins in reverse order (probably doesn't matter...
 	//  ... but what the heck, right?)
@@ -1022,7 +1022,7 @@ void PluginManager::Shutdown()
 	{
 		const PluginsEnum_t pid = tbl_PluginInfo[i].id;
 		if( !m_info[pid].IsInitialized ) continue;
-		DevCon::WriteLn( "\tShutdown %s", tbl_PluginInfo[pid].shortname );
+		DevCon.WriteLn( "\tShutdown %s", tbl_PluginInfo[pid].shortname );
 		m_info[pid].IsInitialized = false;
 		m_info[pid].CommonBindings.Shutdown();
 	}
@@ -1035,7 +1035,7 @@ void PluginManager::Shutdown()
 		SysPlugins.Mcd = NULL;
 	}
 
-	DbgCon::Status( "Plugins shutdown successfully." );
+	DbgCon.Status( "Plugins shutdown successfully." );
 }
 
 // For internal use only, unless you're the MTGS.  Then it's for you too!
@@ -1063,7 +1063,7 @@ bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 //
 void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 {
-	Console::WriteLn( "\t%s %s", state.IsSaving() ? "Saving" : "Loading",
+	Console.WriteLn( "\t%s %s", state.IsSaving() ? "Saving" : "Loading",
 		tbl_PluginInfo[pid].shortname );
 
 	freezeData fP = { 0, NULL };
@@ -1078,7 +1078,7 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 		// no state data to read, but the plugin expects some state data.
 		// Issue a warning to console...
 		if( fP.size != 0 )
-			Console::Notice( "\tWarning: No data for this plugin was found. Plugin status may be unpredictable." );
+			Console.Notice( "\tWarning: No data for this plugin was found. Plugin status may be unpredictable." );
 		return;
 
 		// Note: Size mismatch check could also be done here on loading, but

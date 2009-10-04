@@ -15,6 +15,8 @@
 
 #pragma once
 
+// Dependencies.h : Contains classes required by all Utilities headers.
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // DeclareNoncopyableObject
 // This macro provides an easy and clean method for ensuring objects are not copyable.
@@ -73,17 +75,15 @@ protected:
 //
 #define wxLt(a)		(a)
 
-#ifndef wxASSERT_MSG_A
-#	define wxASSERT_MSG_A( cond, msg ) wxASSERT_MSG( cond, wxString::FromAscii( msg ).c_str() )
-#endif
-
 // must include wx/setup.h first, otherwise we get warnings/errors regarding __LINUX__
 #include <wx/setup.h>
+
+class wxString;
 
 #include "Pcsx2Defs.h"
 
 #include <wx/string.h>
-#include <wx/tokenzr.h>
+//#include <wx/tokenzr.h>
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 #include <wx/intl.h>
 #include <wx/log.h>
@@ -94,3 +94,5 @@ protected:
 #include <cstring>		// string.h under c++
 #include <cstdio>		// stdio.h under c++
 #include <cstdlib>
+
+#include "Utilities/Assertions.h"

@@ -511,10 +511,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\RecoverySystem.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\SamplProf.cpp"
 				>
 			</File>
@@ -1915,6 +1911,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\AppInit.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\AppMain.cpp"
 				>
 			</File>
@@ -1960,6 +1960,10 @@
 			</File>
 			<File
 				RelativePath="..\..\gui\Plugins.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\RecoverySystem.cpp"
 				>
 			</File>
 			<File

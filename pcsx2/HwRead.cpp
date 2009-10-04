@@ -55,7 +55,7 @@ __forceinline mem8_t hwRead8(u32 mem)
 	u8 ret;
 
 	if( mem >= IPU_CMD && mem < D0_CHCR )
-		DevCon::Notice("Unexpected hwRead8 from 0x%x", mem);
+		DevCon.Notice("Unexpected hwRead8 from 0x%x", mem);
 
 	switch (mem)
 	{
@@ -128,7 +128,7 @@ __forceinline mem16_t hwRead16(u32 mem)
 	u16 ret;
 
 	if( mem >= IPU_CMD && mem < D0_CHCR )
-		Console::Notice("Unexpected hwRead16 from 0x%x", mem);
+		Console.Notice("Unexpected hwRead16 from 0x%x", mem);
 
 	switch (mem)
 	{

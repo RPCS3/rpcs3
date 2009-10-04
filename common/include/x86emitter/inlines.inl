@@ -203,7 +203,7 @@ namespace x86Emitter
 				Factor++;
 			else
 			{
-				DevAssert( Index.IsEmpty(), "x86Emitter: Only one scaled index register is allowed in an address modifier." );
+				pxAssertDev( Index.IsEmpty(), "x86Emitter: Only one scaled index register is allowed in an address modifier." );
 				Index = src;
 				Factor = 2;
 			}
@@ -287,7 +287,7 @@ namespace x86Emitter
 // Don't ask. --arcum42
 #if !defined(__LINUX__) || !defined(DEBUG)
 
-				Console::Error( "Emitter Error: Invalid short jump displacement = 0x%x", (int)displacement );
+				Console.Error( "Emitter Error: Invalid short jump displacement = 0x%x", (int)displacement );
 #endif
 			}
 			BasePtr[-1] = (s8)displacement;

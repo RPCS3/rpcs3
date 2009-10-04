@@ -71,7 +71,7 @@ void __Log( const char* fmt, ... )
 #ifdef PCSX2_DEVBUILD
 	if (varLog.LogToConsole)		// log to console enabled?
 	{
-		Console::Write(tmp);
+		Console.Write(tmp);
 
 	} 
 	else if( emuLog != NULL )		// manually write to the logfile.
@@ -111,7 +111,7 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 
 	if (varLog.LogToConsole)		// log to console enabled?
 	{
-		Console::WriteLn(tmp);
+		Console.WriteLn(tmp);
 
 	} else if( emuLog != NULL )		// manually write to the logfile.
 	{

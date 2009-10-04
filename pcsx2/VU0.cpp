@@ -75,7 +75,7 @@ __forceinline void _vu0run(bool breakOnMbit) {
 	do {
 		// knockout kings 2002 loops here with sVU
 		if (breakOnMbit && (VU0.cycle-startcycle > 0x1000)) {
-			Console::Notice("VU0 perma-stall, breaking execution...");
+			Console.Notice("VU0 perma-stall, breaking execution...");
 			break; // mVU will never get here (it handles mBit internally)
 		}
 		CpuVU0.ExecuteBlock();
@@ -159,17 +159,17 @@ void CTC2() {
 		case REG_FBRST:
 			VU0.VI[REG_FBRST].UL = cpuRegs.GPR.r[_Rt_].UL[0] & 0x0C0C;
 			if (cpuRegs.GPR.r[_Rt_].UL[0] & 0x1) { // VU0 Force Break
-				Console::Error("fixme: VU0 Force Break");
+				Console.Error("fixme: VU0 Force Break");
 			}
 			if (cpuRegs.GPR.r[_Rt_].UL[0] & 0x2) { // VU0 Reset
-				//Console::WriteLn("fixme: VU0 Reset");
+				//Console.WriteLn("fixme: VU0 Reset");
 				vu0ResetRegs();
 			}
 			if (cpuRegs.GPR.r[_Rt_].UL[0] & 0x100) { // VU1 Force Break
-				Console::Error("fixme: VU1 Force Break");
+				Console.Error("fixme: VU1 Force Break");
 			}
 			if (cpuRegs.GPR.r[_Rt_].UL[0] & 0x200) { // VU1 Reset
-//				Console::WriteLn("fixme: VU1 Reset");
+//				Console.WriteLn("fixme: VU1 Reset");
 				vu1ResetRegs();
 			}
 			break;
@@ -354,7 +354,7 @@ void vu0Finish()
 		if(VU0.VI[REG_VPU_STAT].UL & 0x1) {
 			VU0.VI[REG_VPU_STAT].UL &= ~1;
 			// this log tends to spam a lot (MGS3)
-			//Console::Notice("vu0Finish > stall aborted by force.");
+			//Console.Notice("vu0Finish > stall aborted by force.");
 		}
 	}
 }

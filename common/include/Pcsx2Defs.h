@@ -59,7 +59,10 @@
 // jASSUME - give hints to the optimizer
 //  This is primarily useful for the default case switch optimizer, which enables VC to
 //  generate more compact switches.
-
+//
+// Note: When using the PCSX2 Utilities library, this is deprecated.  Use pxAssert instead,
+//  which itself optimizes to an __assume() hint in release mode builds.
+//
 #ifndef jASSUME
 #	ifdef NDEBUG
 #		define jBREAKPOINT() ((void) 0)
@@ -224,8 +227,9 @@ This theoretically unoptimizes. Not having much luck so far.
 #	define PCSX2_ALIGNED_EXTERN(alig,x) extern x __attribute((aligned(alig)))
 #	define PCSX2_ALIGNED16_EXTERN(x) extern x __attribute((aligned(16)))
 
-#	define __naked		// GCC lacks the naked specifier
-#	define CALLBACK	// CALLBACK is a win32-specific mess
+#	define __naked			// GCC lacks the naked specifier
+#	define __assume(cond)	// GCC has no equivalent for __assume
+#	define CALLBACK			__stdcall
 
 // Inlining note: GCC needs ((unused)) attributes defined on inlined functions to suppress
 // warnings when a static inlined function isn't used in the scope of a single file (which

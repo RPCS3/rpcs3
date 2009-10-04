@@ -70,7 +70,7 @@ class ConsoleTestThread : public Threading::PersistentThread
 {
 protected:
 	volatile bool m_done;
-	sptr ExecuteTask();
+	void ExecuteTask();
 
 public:
 	ConsoleTestThread() :
@@ -82,6 +82,10 @@ public:
 	{
 		m_done = true;
 	}
+
+	protected:
+		void OnStart() {}
+		void OnThreadCleanup() {}
 };
 
 // --------------------------------------------------------------------------------------
@@ -113,7 +117,7 @@ protected:
 		void SetFont( const wxFont& font );
 		void SetFont( int fontsize );
 
-		const wxTextAttr& operator[]( Console::Colors coloridx ) const
+		const wxTextAttr& operator[]( ConsoleColors coloridx ) const
 		{
 			return m_table[(int)coloridx];
 		}
@@ -123,7 +127,7 @@ protected:
 	ConLogConfig&	m_conf;
 	wxTextCtrl&		m_TextCtrl;
 	ColorArray		m_ColorTable;
-	Console::Colors	m_curcolor;
+	ConsoleColors	m_curcolor;
 	volatile long	m_msgcounter;		// used to track queued messages and throttle load placed on the gui message pump
 
 	Semaphore		m_semaphore;
@@ -137,7 +141,7 @@ public:
 	virtual ~ConsoleLogFrame();
 
 	virtual void Write( const wxString& text );
-	virtual void SetColor( Console::Colors color );
+	virtual void SetColor( ConsoleColors color );
 	virtual void ClearColor();
 	virtual void DockedMove();
 
@@ -145,7 +149,7 @@ public:
 	// (settings change if the user moves the window or changes the font size)
 	const ConLogConfig& GetConfig() const { return m_conf; }
 
-	void Write( Console::Colors color, const wxString& text );
+	void Write( ConsoleColors color, const wxString& text );
 	void Newline();
 	void CountMessage();
 	void DoMessage();

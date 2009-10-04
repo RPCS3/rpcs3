@@ -23,8 +23,6 @@
 #include <wx/file.h>
 #include <wx/textfile.h>
 
-using Console::Colors;
-
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Newline, -1)
@@ -73,12 +71,12 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 
 		case wxLOG_FatalError:
 			// This one is unused by wx, and unused by PCSX2 (we prefer exceptions, thanks).
-			DevAssert( false, "Stop using FatalError and use assertions or exceptions instead." );
+			pxFailDev( "Stop using FatalError and use assertions or exceptions instead." );
 		break;
 
 		case wxLOG_Status:
 			// Also unsed by wx, and unused by PCSX2 also (we prefer direct API calls to our main window!)
-			DevAssert( false, "Stop using wxLogStatus just access the Pcsx2App functions directly instead." );
+			pxFailDev( "Stop using wxLogStatus just access the Pcsx2App functions directly instead." );
 		break;
 
 		case wxLOG_Info:
@@ -86,22 +84,22 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 			// fallthrough!
 
 		case wxLOG_Message:
-			Console::WriteLn( wxString(L"wx > ") + szString );
+			Console.WriteLn( wxString(L"wx > ") + szString );
 		break;
 
 		case wxLOG_Error:
-			Console::Error( wxString(L"wx > ") + szString );
+			Console.Error( wxString(L"wx > ") + szString );
 		break;
 
 		case wxLOG_Warning:
-			Console::Notice( wxString(L"wx > ") + szString );
+			Console.Notice( wxString(L"wx > ") + szString );
 		break;
     }
 }
 
 
 // ----------------------------------------------------------------------------
-sptr ConsoleTestThread::ExecuteTask()
+void ConsoleTestThread::ExecuteTask()
 {
 	static int numtrack = 0;
 
@@ -109,11 +107,10 @@ sptr ConsoleTestThread::ExecuteTask()
 	{
 		// Two lines, both formatted, and varied colors.  This makes for a fairly realistic
 		// worst case scenario (without being entirely unrealistic).
-		Console::WriteLn( wxsFormat( L"This is a threaded logging test. Something bad could happen... %d", ++numtrack ) );
-		Console::Status( wxsFormat( L"Testing high stress loads %s", L"(multi-color)" ) );
+		Console.WriteLn( wxsFormat( L"This is a threaded logging test. Something bad could happen... %d", ++numtrack ) );
+		Console.Status( wxsFormat( L"Testing high stress loads %s", L"(multi-color)" ) );
 		Sleep( 0 );
 	}
-	return 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -212,7 +209,7 @@ void ConsoleLogFrame::ColorArray::SetFont( int fontsize )
 	Create( fontsize );
 }
 
-static const Console::Colors DefaultConsoleColor = Color_White;
+static const ConsoleColors DefaultConsoleColor = Color_White;
 
 enum MenuIDs_t
 {
@@ -297,9 +294,10 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 ConsoleLogFrame::~ConsoleLogFrame()
 {
 	safe_delete( m_threadlogger );
+	wxGetApp().OnProgramLogClosed();
 }
 
-void ConsoleLogFrame::SetColor( Colors color )
+void ConsoleLogFrame::SetColor( ConsoleColors color )
 {
 	if( color != m_curcolor )
 		m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor=color] );
@@ -335,7 +333,7 @@ void ConsoleLogFrame::Write( const wxString& text )
 
 // Implementation note:  Calls SetColor and Write( text ).  Override those virtuals
 // and this one will magically follow suite. :)
-void ConsoleLogFrame::Write( Colors color, const wxString& text )
+void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 {
 	SetColor( color );
 	Write( text );
@@ -383,7 +381,7 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 		wxRect snapzone( topright - wxSize( 8,8 ), wxSize( 16,16 ) );
 
 		m_conf.AutoDock = snapzone.Contains( GetPosition() );
-		//Console::WriteLn( "DockCheck: %d", g_Conf->ConLogBox.AutoDock );
+		//Console.WriteLn( "DockCheck: %d", g_Conf->ConLogBox.AutoDock );
 		if( m_conf.AutoDock )
 		{
 			SetPosition( topright + wxSize( 1,0 ) );
@@ -407,6 +405,7 @@ void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 	else
 	{
 		safe_delete( m_threadlogger );
+		wxGetApp().OnProgramLogClosed();
 		event.Skip();
 	}
 }
@@ -476,12 +475,12 @@ void ConsoleLogFrame::OnFontSize( wxMenuEvent& evt )
 }
 
 // ----------------------------------------------------------------------------
-//  Logging Events (typically recieved from Console class interfaces)
+//  Logging Events (typically received from Console class interfaces)
 // ----------------------------------------------------------------------------
 
 void ConsoleLogFrame::OnWrite( wxCommandEvent& event )
 {
-	Write( (Colors)event.GetExtraLong(), event.GetString() );
+	Write( (ConsoleColors)event.GetExtraLong(), event.GetString() );
 	DoMessage();
 }
 
@@ -532,7 +531,7 @@ void ConsoleLogFrame::CountMessage()
 //
 void ConsoleLogFrame::DoMessage()
 {
-	wxASSERT_MSG( wxThread::IsMain(), L"DoMessage must only be called from the main gui thread!" );
+	AllowFromMainThreadOnly();
 
 	int cur = _InterlockedDecrement( &m_msgcounter );
 
@@ -552,144 +551,188 @@ void ConsoleLogFrame::DoMessage()
 	}
 }
 
+
 ConsoleLogFrame* Pcsx2App::GetProgramLog()
 {
 	return m_ProgramLogBox;
 }
 
-void Pcsx2App::CloseProgramLog()
-{
-	if( m_ProgramLogBox == NULL ) return;
-
-	m_ProgramLogBox->Close();
-
-	// disable future console log messages from being sent to the window.
-	m_ProgramLogBox = NULL;
-}
-
 void Pcsx2App::ProgramLog_CountMsg()
 {
-	if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
+	// New console log object model makes this check obsolete:
+	//if( m_ProgramLogBox == NULL ) return;
 	m_ProgramLogBox->CountMessage();
 }
 
 void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 {
-	if ((wxTheApp == NULL) || ( m_ProgramLogBox == NULL )) return;
+	// New console log object model makes this check obsolete:
+	//if( m_ProgramLogBox == NULL ) return;
 	m_ProgramLogBox->GetEventHandler()->AddPendingEvent( evt );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-namespace Console
+// --------------------------------------------------------------------------------------
+//  ConsoleImpl_ToFile
+// --------------------------------------------------------------------------------------
+static void __concall _immediate_logger( const char* src )
 {
-	// thread-local console color storage.
-	static __threadlocal Colors th_CurrentColor = DefaultConsoleColor;
-
-	static Threading::MutexLock immediate_log_lock;
-
-	// performs immediate thread-safe (mutex locked) logging to disk and to the Linux console.
-	// Many platforms still do not provide thread-safe implementations of fputs or printf, so
-	// they are implemented here using a mutex lock for maximum safety.
-	static void _immediate_logger( const char* src )
-	{
-
-		ScopedLock locker( immediate_log_lock );
-
-		if( emuLog != NULL )
-			fputs( src, emuLog );	// fputs does not do automatic newlines, so it's ok!
-
-		// Linux has a handy dandy universal console...
-		// [TODO] make this a configurable option?  Do we care? :)
 #ifdef __LINUX__
-		// puts does automatic newlines, which we don't want here
-
-		/*if (strchr(src, '\n'))
-		{
-		    fputs( "PCSX2 > ", stdout );
-            fputs( src , stdout);
-		}
-		else
-		{*/
-            fputs( src, stdout );
-		//}
+	fputs( src, stdout );
 #endif
+	px_fputs( emuLog, src );
+}
 
-	}
+static void __concall ConsoleToFile_Newline()
+{
+#ifdef __LINUX__
+	fputc( '\n', stdout );
+	fputc( '\n', emuLog );
+#else
+	fputs( "\r\n", emuLog );
+#endif
+}
 
-	static void _immediate_logger( const wxString& src )
-	{
-		_immediate_logger( src.ToUTF8().data() );
-	}
+static void __concall ConsoleToFile_DoWrite( const wxString& fmt )
+{
+	_immediate_logger( toUTF8(fmt) );
+}
 
-	void __fastcall SetTitle( const wxString& title )
-	{
-		if( wxTheApp == NULL ) return;
+static void __concall ConsoleToFile_DoWriteLn( const wxString& fmt )
+{
+	_immediate_logger( toUTF8(fmt) );
+	ConsoleToFile_Newline();
 
-		wxCommandEvent evt( wxEVT_SetTitleText );
-		evt.SetString( title );
-		wxGetApp().ProgramLog_PostEvent( evt );
-	}
+	if( emuLog != NULL )
+		fflush( emuLog );
+}
 
-	void __fastcall SetColor( Colors color )
-	{
-		th_CurrentColor = color;
-	}
+extern const IConsoleWriter	ConsoleWriter_File;
+const IConsoleWriter	ConsoleWriter_File =
+{
+	ConsoleToFile_DoWrite,
+	ConsoleToFile_DoWriteLn,
+	ConsoleToFile_Newline,
 
-	void ClearColor()
-	{
-		th_CurrentColor = DefaultConsoleColor;
-	}
+	ConsoleWriter_Null.SetTitle,
+	ConsoleWriter_Null.SetColor,
+	ConsoleWriter_Null.ClearColor,
+};
 
-	bool Newline()
-	{
-		_immediate_logger( "\n" );
+// thread-local console color storage.
+static __threadlocal ConsoleColors th_CurrentColor = DefaultConsoleColor;
 
-		if( wxTheApp == NULL ) return false;
+// --------------------------------------------------------------------------------------
+//  ConsoleToWindow Implementations
+// --------------------------------------------------------------------------------------
+static void __concall ConsoleToWindow_SetTitle( const wxString& title )
+{
+	wxCommandEvent evt( wxEVT_SetTitleText );
+	evt.SetString( title );
+	wxGetApp().ProgramLog_PostEvent( evt );
+}
 
-		wxCommandEvent evt( wxEVT_LOG_Newline );
-		wxGetApp().ProgramLog_PostEvent( evt );
-		wxGetApp().ProgramLog_CountMsg();
+static void __concall ConsoleToWindow_SetColor( ConsoleColors color )
+{
+	th_CurrentColor = color;
+}
 
-		return false;
-	}
+static void __concall ConsoleToWindow_ClearColor()
+{
+	th_CurrentColor = DefaultConsoleColor;
+}
 
-	bool __fastcall Write( const wxString& fmt )
-	{
-		_immediate_logger( fmt );
+template< const IConsoleWriter& secondary >
+static void __concall ConsoleToWindow_Newline()
+{
+	secondary.Newline();
 
-		if( wxTheApp == NULL ) return false;
+	wxCommandEvent evt( wxEVT_LOG_Newline );
+	((Pcsx2App&)*wxTheApp).ProgramLog_PostEvent( evt );
+	((Pcsx2App&)*wxTheApp).ProgramLog_CountMsg();
+}
 
-		wxCommandEvent evt( wxEVT_LOG_Write );
-		evt.SetString( fmt );
-		evt.SetExtraLong( th_CurrentColor );
-		wxGetApp().ProgramLog_PostEvent( evt );
-		wxGetApp().ProgramLog_CountMsg();
+template< const IConsoleWriter& secondary >
+static void __concall ConsoleToWindow_DoWrite( const wxString& fmt )
+{
+	secondary.DoWrite( fmt );
 
-		return false;
-	}
+	wxCommandEvent evt( wxEVT_LOG_Write );
+	evt.SetString( fmt );
+	evt.SetExtraLong( th_CurrentColor );
+	((Pcsx2App&)*wxTheApp).ProgramLog_PostEvent( evt );
+	((Pcsx2App&)*wxTheApp).ProgramLog_CountMsg();
+}
 
-	bool __fastcall WriteLn( const wxString& fmt )
-	{
-		const wxString fmtline( fmt + L"\n" );
-		//_immediate_logger( "PCSX2 >  ");
-		_immediate_logger( fmtline );
+template< const IConsoleWriter& secondary >
+static void __concall ConsoleToWindow_DoWriteLn( const wxString& fmt )
+{
+	secondary.DoWriteLn( fmt );
 
-		if( emuLog != NULL )
-			fflush( emuLog );
+	// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
+	// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
 
-		// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
-		// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
+	wxCommandEvent evt( wxEVT_LOG_Write );
+	evt.SetString( fmt + L"\n" );
+	evt.SetExtraLong( th_CurrentColor );
+	((Pcsx2App&)*wxTheApp).ProgramLog_PostEvent( evt );
+	((Pcsx2App&)*wxTheApp).ProgramLog_CountMsg();
+}
 
-		if( wxTheApp == NULL ) return false;
-		wxCommandEvent evt( wxEVT_LOG_Write );
-		evt.SetString( fmtline );
-		evt.SetExtraLong( th_CurrentColor );
-		wxGetApp().ProgramLog_PostEvent( evt );
-		wxGetApp().ProgramLog_CountMsg();
+typedef void __concall DoWriteFn(const wxString&);
 
-		return false;
-	}
+static const IConsoleWriter	ConsoleWriter_Window =
+{
+	ConsoleToWindow_DoWrite<ConsoleWriter_Null>,
+	ConsoleToWindow_DoWriteLn<ConsoleWriter_Null>,
+	ConsoleToWindow_Newline<ConsoleWriter_Null>,
+
+	ConsoleToWindow_SetTitle,
+	ConsoleToWindow_SetColor,
+	ConsoleToWindow_ClearColor,
+};
+
+static const IConsoleWriter	ConsoleWriter_WindowAndFile =
+{
+	ConsoleToWindow_DoWrite<ConsoleWriter_File>,
+	ConsoleToWindow_DoWriteLn<ConsoleWriter_File>,
+	ConsoleToWindow_Newline<ConsoleWriter_File>,
+
+	ConsoleToWindow_SetTitle,
+	ConsoleToWindow_SetColor,
+	ConsoleToWindow_ClearColor,
+};
+
+void Pcsx2App::EnableConsoleLogging() const
+{
+	if( emuLog )
+		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_WindowAndFile : (IConsoleWriter&)ConsoleWriter_File );
+	else
+		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Buffered );
+}
+
+// Used to disable the emuLog disk logger, typically used when disabling or re-initializing the
+// emuLog file handle.  Call SetConsoleLogging to re-enable the disk logger when finished.
+void Pcsx2App::DisableDiskLogging() const
+{
+	Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Buffered );
+
+	// Semi-hack: It's possible, however very unlikely, that a secondary thread could attempt
+	// to write to the logfile just before we disable logging, and would thus have a pending write
+	// operation to emuLog file handle at the same time we're trying to re-initialize it.  The CRT
+	// has some guards of its own, and PCSX2 itself typically suspends the "log happy" threads
+	// when changing settings, so the chance for problems is low.  We minimize it further here
+	// by sleeping off 5ms, which should allow any pending log-to-disk events to finish up.
+	//
+	// (the most ideal solution would be a mutex lock in the Disk logger itself, but for now I
+	//  am going to try and keep the logger lock-free and use this semi-hack instead).
+
+	Threading::Sleep( 5 );
+}
+
+void Pcsx2App::DisableWindowLogging() const
+{
+	Console_SetActiveHandler( (emuLog!=NULL) ? (IConsoleWriter&)ConsoleWriter_File : (IConsoleWriter&)ConsoleWriter_Buffered );
+	Threading::Sleep( 5 );
 }
 
 DEFINE_EVENT_TYPE( pxEVT_MSGBOX );
@@ -875,5 +918,4 @@ namespace Msgbox
 	{
 		CallStack( src.FormatDisplayMessage(), src.FormatDiagnosticMessage(), wxEmptyString, L"PCSX2 Unhandled Exception", wxOK );
 	}
-
 }

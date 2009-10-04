@@ -411,7 +411,9 @@ namespace Panels
 			void DoNextPlugin( int evtidx );
 
 		protected:
-			sptr ExecuteTask();
+			void OnStart() {}
+			void ExecuteTask();
+			void OnThreadCleanup() {}
 		};
 
 		// This panel contains all of the plugin combo boxes.  We stick them

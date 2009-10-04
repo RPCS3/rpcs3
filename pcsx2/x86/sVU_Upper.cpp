@@ -153,7 +153,7 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 		return;
 	}
 
-	//Console::WriteLn ("recUpdateFlags");
+	//Console.WriteLn ("recUpdateFlags");
 
 	macaddr = VU_VI_ADDR(REG_MAC_FLAG, 0);
 	stataddr = VU_VI_ADDR(REG_STATUS_FLAG, 0); // write address
@@ -161,7 +161,7 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 
 	if( stataddr == 0 ) stataddr = prevstataddr;
 	if( macaddr == 0 ) {
-		Console::WriteLn( "VU ALLOCATION WARNING: Using Mac Flag Previous Address!" );
+		Console.WriteLn( "VU ALLOCATION WARNING: Using Mac Flag Previous Address!" );
 		macaddr = VU_VI_ADDR(REG_MAC_FLAG, 2);
 	}
 
@@ -171,7 +171,7 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 	if (reg == EEREC_TEMP) {
 		t1reg = _vuGetTempXMMreg(info);
 		if (t1reg < 0) {
-			//Console::WriteLn( "VU ALLOCATION ERROR: Temp reg can't be allocated!!!!" );
+			//Console.WriteLn( "VU ALLOCATION ERROR: Temp reg can't be allocated!!!!" );
 			t1reg = (reg == 0) ? 1 : 0; // Make t1reg != reg
 			SSE_MOVAPS_XMM_to_M128( (uptr)TEMPXMMData, t1reg ); // Backup data to temp address
 			t1regBoolean = 1;
@@ -609,7 +609,7 @@ void SSE_SUBSS_M32_to_XMM_custom(int info, int regd, int regt) {
 //------------------------------------------------------------------
 void recVUMI_ABS(VURegs *VU, int info) 
 {
-	//Console::WriteLn("recVUMI_ABS()");
+	//Console.WriteLn("recVUMI_ABS()");
 	if ( (_Ft_ == 0) || (_X_Y_Z_W == 0) ) return;
 
 	if ((_X_Y_Z_W == 0x8) || (_X_Y_Z_W == 0xf)) {
@@ -631,7 +631,7 @@ void recVUMI_ABS(VURegs *VU, int info)
 PCSX2_ALIGNED16(float s_two[4]) = {0,0,0,2};
 void recVUMI_ADD(VURegs *VU, int info)
 {
-	//Console::WriteLn("recVUMI_ADD()");
+	//Console.WriteLn("recVUMI_ADD()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate; // Don't do anything and just clear flags
 	if ( !_Fd_ ) info = (info & ~PROCESS_EE_SET_D(0xf)) | PROCESS_EE_SET_D(EEREC_TEMP);
 
@@ -675,7 +675,7 @@ flagUpdate:
 
 void recVUMI_ADD_iq(VURegs *VU, uptr addr, int info)
 {
-	//Console::WriteLn("recVUMI_ADD_iq()");
+	//Console.WriteLn("recVUMI_ADD_iq()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if ( !_Fd_ ) info = (info & ~PROCESS_EE_SET_D(0xf)) | PROCESS_EE_SET_D(EEREC_TEMP);
 	if (CHECK_VU_EXTRA_OVERFLOW) {
@@ -735,7 +735,7 @@ flagUpdate:
 
 void recVUMI_ADD_xyzw(VURegs *VU, int xyzw, int info)
 {
-	//Console::WriteLn("recVUMI_ADD_xyzw()");
+	//Console.WriteLn("recVUMI_ADD_xyzw()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if ( !_Fd_ ) info = (info & ~PROCESS_EE_SET_D(0xf)) | PROCESS_EE_SET_D(EEREC_TEMP);
 	if (CHECK_VU_EXTRA_OVERFLOW) {
@@ -799,7 +799,7 @@ void recVUMI_ADDw(VURegs *VU, int info) { recVUMI_ADD_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_ADDA(VURegs *VU, int info)
 {
-	//Console::WriteLn("recVUMI_ADDA()");
+	//Console.WriteLn("recVUMI_ADDA()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
@@ -834,7 +834,7 @@ flagUpdate:
 
 void recVUMI_ADDA_iq(VURegs *VU, uptr addr, int info)
 {
-	//Console::WriteLn("recVUMI_ADDA_iq()");
+	//Console.WriteLn("recVUMI_ADDA_iq()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		vuFloat3(addr);
@@ -886,7 +886,7 @@ flagUpdate:
 
 void recVUMI_ADDA_xyzw(VURegs *VU, int xyzw, int info)
 {
-	//Console::WriteLn("recVUMI_ADDA_xyzw()");
+	//Console.WriteLn("recVUMI_ADDA_xyzw()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
@@ -944,7 +944,7 @@ void recVUMI_ADDAw(VURegs *VU, int info) { recVUMI_ADDA_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_SUB(VURegs *VU, int info)
 {
-	//Console::WriteLn("recVUMI_SUB()");
+	//Console.WriteLn("recVUMI_SUB()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if ( !_Fd_ ) info = (info & ~PROCESS_EE_SET_D(0xf)) | PROCESS_EE_SET_D(EEREC_TEMP);
 
@@ -1003,7 +1003,7 @@ flagUpdate:
 
 void recVUMI_SUB_iq(VURegs *VU, uptr addr, int info)
 {
-	//Console::WriteLn("recVUMI_SUB_iq()");
+	//Console.WriteLn("recVUMI_SUB_iq()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		vuFloat3(addr);
@@ -1076,7 +1076,7 @@ flagUpdate:
 
 void recVUMI_SUB_xyzw(VURegs *VU, int xyzw, int info)
 {
-	//Console::WriteLn("recVUMI_SUB_xyzw()");
+	//Console.WriteLn("recVUMI_SUB_xyzw()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if ( !_Fd_ ) info = (info & ~PROCESS_EE_SET_D(0xf)) | PROCESS_EE_SET_D(EEREC_TEMP);
 	if (CHECK_VU_EXTRA_OVERFLOW) {
@@ -1154,7 +1154,7 @@ void recVUMI_SUBw(VURegs *VU, int info) { recVUMI_SUB_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_SUBA(VURegs *VU, int info)
 {
-	//Console::WriteLn("recVUMI_SUBA()");
+	//Console.WriteLn("recVUMI_SUBA()");
 	if ( _X_Y_Z_W == 0 ) goto flagUpdate;
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
@@ -1201,7 +1201,7 @@ flagUpdate:
 
 void recVUMI_SUBA_iq(VURegs *VU, uptr addr, int info)
 {
-	//Console::WriteLn ("recVUMI_SUBA_iq");
+	//Console.WriteLn ("recVUMI_SUBA_iq");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		vuFloat3(addr);
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
@@ -1258,7 +1258,7 @@ void recVUMI_SUBA_iq(VURegs *VU, uptr addr, int info)
 
 void recVUMI_SUBA_xyzw(VURegs *VU, int xyzw, int info)
 {
-	//Console::WriteLn ("recVUMI_SUBA_xyzw");
+	//Console.WriteLn ("recVUMI_SUBA_xyzw");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, ( 1 << (3 - xyzw) ) );
@@ -1317,7 +1317,7 @@ void recVUMI_SUBAw(VURegs *VU, int info) { recVUMI_SUBA_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_MUL_toD(VURegs *VU, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MUL_toD");
+	//Console.WriteLn ("recVUMI_MUL_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
@@ -1358,7 +1358,7 @@ void recVUMI_MUL_toD(VURegs *VU, int regd, int info)
 
 void recVUMI_MUL_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MUL_iq_toD");
+	//Console.WriteLn ("recVUMI_MUL_iq_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		vuFloat3(addr);
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
@@ -1414,7 +1414,7 @@ void recVUMI_MUL_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 
 void recVUMI_MUL_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MUL_xyzw_toD");
+	//Console.WriteLn ("recVUMI_MUL_xyzw_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, ( 1 << (3 - xyzw) ) );
 	}
@@ -1482,7 +1482,7 @@ void recVUMI_MUL_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 
 void recVUMI_MUL(VURegs *VU, int info)
 {
-	//Console::WriteLn ("recVUMI_MUL");
+	//Console.WriteLn ("recVUMI_MUL");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MUL_toD(VU, EEREC_D, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -1490,7 +1490,7 @@ void recVUMI_MUL(VURegs *VU, int info)
 
 void recVUMI_MUL_iq(VURegs *VU, int addr, int info)
 {
-	//Console::WriteLn ("recVUMI_MUL_iq");
+	//Console.WriteLn ("recVUMI_MUL_iq");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MUL_iq_toD(VU, addr, EEREC_D, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -1499,7 +1499,7 @@ void recVUMI_MUL_iq(VURegs *VU, int addr, int info)
 
 void recVUMI_MUL_xyzw(VURegs *VU, int xyzw, int info)
 {
-	//Console::WriteLn ("recVUMI_MUL_xyzw");
+	//Console.WriteLn ("recVUMI_MUL_xyzw");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MUL_xyzw_toD(VU, xyzw, EEREC_D, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -1519,21 +1519,21 @@ void recVUMI_MULw(VURegs *VU, int info) { recVUMI_MUL_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_MULA( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MULA");
+	//Console.WriteLn ("recVUMI_MULA");
 	recVUMI_MUL_toD(VU, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MULA_iq(VURegs *VU, int addr, int info)
 {	
-	//Console::WriteLn ("recVUMI_MULA_iq");
+	//Console.WriteLn ("recVUMI_MULA_iq");
 	recVUMI_MUL_iq_toD(VU, addr, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MULA_xyzw(VURegs *VU, int xyzw, int info)
 {
-	//Console::WriteLn ("recVUMI_MULA_xyzw");
+	//Console.WriteLn ("recVUMI_MULA_xyzw");
 	recVUMI_MUL_xyzw_toD(VU, xyzw, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
@@ -1552,7 +1552,7 @@ void recVUMI_MULAw(VURegs *VU, int info) { recVUMI_MULA_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_MADD_toD(VURegs *VU, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MADD_toD");
+	//Console.WriteLn ("recVUMI_MADD_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
@@ -1620,7 +1620,7 @@ void recVUMI_MADD_toD(VURegs *VU, int regd, int info)
 
 void recVUMI_MADD_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MADD_iq_toD");
+	//Console.WriteLn ("recVUMI_MADD_iq_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		vuFloat3(addr);
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
@@ -1718,7 +1718,7 @@ void recVUMI_MADD_iq_toD(VURegs *VU, uptr addr, int regd, int info)
 
 void recVUMI_MADD_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MADD_xyzw_toD");
+	//Console.WriteLn ("recVUMI_MADD_xyzw_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, ( 1 << (3 - xyzw) ) );
 		vuFloat5_useEAX( EEREC_ACC, EEREC_TEMP, _X_Y_Z_W );
@@ -1831,7 +1831,7 @@ void recVUMI_MADD_xyzw_toD(VURegs *VU, int xyzw, int regd, int info)
 
 void recVUMI_MADD(VURegs *VU, int info)
 {
-	//Console::WriteLn ("recVUMI_MADD");
+	//Console.WriteLn ("recVUMI_MADD");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MADD_toD(VU, EEREC_D, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -1839,7 +1839,7 @@ void recVUMI_MADD(VURegs *VU, int info)
 
 void recVUMI_MADD_iq(VURegs *VU, int addr, int info)
 {
-	//Console::WriteLn ("recVUMI_MADD_iq");
+	//Console.WriteLn ("recVUMI_MADD_iq");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MADD_iq_toD(VU, addr, EEREC_D, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -1847,7 +1847,7 @@ void recVUMI_MADD_iq(VURegs *VU, int addr, int info)
 
 void recVUMI_MADD_xyzw(VURegs *VU, int xyzw, int info)
 {
-	//Console::WriteLn ("recVUMI_MADD_xyzw");
+	//Console.WriteLn ("recVUMI_MADD_xyzw");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MADD_xyzw_toD(VU, xyzw, EEREC_D, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -1868,49 +1868,49 @@ void recVUMI_MADDw(VURegs *VU, int info) { recVUMI_MADD_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_MADDA( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MADDA");
+	//Console.WriteLn ("recVUMI_MADDA");
 	recVUMI_MADD_toD(VU, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MADDAi( VURegs *VU , int info)
 {
-	//Console::WriteLn ("recVUMI_MADDAi");
+	//Console.WriteLn ("recVUMI_MADDAi");
 	recVUMI_MADD_iq_toD( VU, VU_VI_ADDR(REG_I, 1), EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MADDAq( VURegs *VU , int info)
 {
-	//Console::WriteLn ("recVUMI_MADDAq ");
+	//Console.WriteLn ("recVUMI_MADDAq ");
 	recVUMI_MADD_iq_toD( VU, VU_REGQ_ADDR, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MADDAx( VURegs *VU , int info)
 {
-	//Console::WriteLn ("recVUMI_MADDAx");
+	//Console.WriteLn ("recVUMI_MADDAx");
 	recVUMI_MADD_xyzw_toD(VU, 0, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MADDAy( VURegs *VU , int info)
 {
-	//Console::WriteLn ("recVUMI_MADDAy");
+	//Console.WriteLn ("recVUMI_MADDAy");
 	recVUMI_MADD_xyzw_toD(VU, 1, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MADDAz( VURegs *VU , int info)
 {
-	//Console::WriteLn ("recVUMI_MADDAz");
+	//Console.WriteLn ("recVUMI_MADDAz");
 	recVUMI_MADD_xyzw_toD(VU, 2, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MADDAw( VURegs *VU , int info)
 {
-	//Console::WriteLn ("recVUMI_MADDAw");
+	//Console.WriteLn ("recVUMI_MADDAw");
 	recVUMI_MADD_xyzw_toD(VU, 3, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
@@ -1922,7 +1922,7 @@ void recVUMI_MADDAw( VURegs *VU , int info)
 //------------------------------------------------------------------
 void recVUMI_MSUB_toD(VURegs *VU, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUB_toD");
+	//Console.WriteLn ("recVUMI_MSUB_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, _X_Y_Z_W );
@@ -1983,7 +1983,7 @@ void recVUMI_MSUB_toD(VURegs *VU, int regd, int info)
 
 void recVUMI_MSUB_temp_toD(VURegs *VU, int regd, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUB_temp_toD");
+	//Console.WriteLn ("recVUMI_MSUB_temp_toD");
 
 	if (_X_Y_Z_W != 0xf) {
 		int t1reg = _vuGetTempXMMreg(info);
@@ -2035,7 +2035,7 @@ void recVUMI_MSUB_temp_toD(VURegs *VU, int regd, int info)
 
 void recVUMI_MSUB_iq_toD(VURegs *VU, int regd, int addr, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUB_iq_toD");
+	//Console.WriteLn ("recVUMI_MSUB_iq_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
 		vuFloat5_useEAX( EEREC_ACC, EEREC_TEMP, _X_Y_Z_W );
@@ -2048,7 +2048,7 @@ void recVUMI_MSUB_iq_toD(VURegs *VU, int regd, int addr, int info)
 
 void recVUMI_MSUB_xyzw_toD(VURegs *VU, int regd, int xyzw, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUB_xyzw_toD");
+	//Console.WriteLn ("recVUMI_MSUB_xyzw_toD");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, _X_Y_Z_W );
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, 1 << (3 - xyzw));
@@ -2060,7 +2060,7 @@ void recVUMI_MSUB_xyzw_toD(VURegs *VU, int regd, int xyzw, int info)
 
 void recVUMI_MSUB(VURegs *VU, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUB");
+	//Console.WriteLn ("recVUMI_MSUB");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MSUB_toD(VU, EEREC_D, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -2068,7 +2068,7 @@ void recVUMI_MSUB(VURegs *VU, int info)
 
 void recVUMI_MSUB_iq(VURegs *VU, int addr, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUB_iq");
+	//Console.WriteLn ("recVUMI_MSUB_iq");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MSUB_iq_toD(VU, EEREC_D, addr, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -2078,7 +2078,7 @@ void recVUMI_MSUBi(VURegs *VU, int info) { recVUMI_MSUB_iq(VU, VU_VI_ADDR(REG_I,
 void recVUMI_MSUBq(VURegs *VU, int info) { recVUMI_MSUB_iq(VU, VU_REGQ_ADDR, info); }
 void recVUMI_MSUBx(VURegs *VU, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUBx");
+	//Console.WriteLn ("recVUMI_MSUBx");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_D, 0, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -2086,7 +2086,7 @@ void recVUMI_MSUBx(VURegs *VU, int info)
 
 void recVUMI_MSUBy(VURegs *VU, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUBy");
+	//Console.WriteLn ("recVUMI_MSUBy");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_D, 1, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -2094,7 +2094,7 @@ void recVUMI_MSUBy(VURegs *VU, int info)
 
 void recVUMI_MSUBz(VURegs *VU, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUBz");
+	//Console.WriteLn ("recVUMI_MSUBz");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_D, 2, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -2102,7 +2102,7 @@ void recVUMI_MSUBz(VURegs *VU, int info)
 
 void recVUMI_MSUBw(VURegs *VU, int info)
 {
-	//Console::WriteLn ("recVUMI_MSUBw");
+	//Console.WriteLn ("recVUMI_MSUBw");
 	if( !_Fd_ ) info |= PROCESS_EE_SET_D(EEREC_TEMP);
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_D, 3, info);
 	recUpdateFlags(VU, EEREC_D, info);
@@ -2115,49 +2115,49 @@ void recVUMI_MSUBw(VURegs *VU, int info)
 //------------------------------------------------------------------
 void recVUMI_MSUBA( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MSUBA");
+	//Console.WriteLn ("recVUMI_MSUBA");
 	recVUMI_MSUB_toD(VU, EEREC_ACC, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MSUBAi( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MSUBAi ");
+	//Console.WriteLn ("recVUMI_MSUBAi ");
 	recVUMI_MSUB_iq_toD( VU, EEREC_ACC, VU_VI_ADDR(REG_I, 1), info );
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MSUBAq( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MSUBAq");
+	//Console.WriteLn ("recVUMI_MSUBAq");
 	recVUMI_MSUB_iq_toD( VU, EEREC_ACC, VU_REGQ_ADDR, info );
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MSUBAx( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MSUBAx");
+	//Console.WriteLn ("recVUMI_MSUBAx");
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_ACC, 0, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MSUBAy( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MSUBAy");
+	//Console.WriteLn ("recVUMI_MSUBAy");
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_ACC, 1, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MSUBAz( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MSUBAz ");
+	//Console.WriteLn ("recVUMI_MSUBAz ");
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_ACC, 2, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
 
 void recVUMI_MSUBAw( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_MSUBAw");
+	//Console.WriteLn ("recVUMI_MSUBAw");
 	recVUMI_MSUB_xyzw_toD(VU, EEREC_ACC, 3, info);
 	recUpdateFlags(VU, EEREC_ACC, info);
 }
@@ -2273,7 +2273,7 @@ void MINMAXlogical(VURegs *VU, int info, int min, int mode, uptr addr = 0, int x
 void recVUMI_MAX(VURegs *VU, int info)
 {	
 	if ( _Fd_ == 0 ) return;
-	//Console::WriteLn ("recVUMI_MAX");
+	//Console.WriteLn ("recVUMI_MAX");
 
 	if (MINMAXFIX)
 		MINMAXlogical(VU, info, 0, 0);
@@ -2311,7 +2311,7 @@ void recVUMI_MAX(VURegs *VU, int info)
 void recVUMI_MAX_iq(VURegs *VU, uptr addr, int info)
 {	
 	if ( _Fd_ == 0 ) return;
-	//Console::WriteLn ("recVUMI_MAX_iq");
+	//Console.WriteLn ("recVUMI_MAX_iq");
 
 	if (MINMAXFIX)
 		MINMAXlogical(VU, info, 0, 1, addr);
@@ -2374,7 +2374,7 @@ void recVUMI_MAX_iq(VURegs *VU, uptr addr, int info)
 void recVUMI_MAX_xyzw(VURegs *VU, int xyzw, int info)
 {	
 	if ( _Fd_ == 0 ) return;
-	//Console::WriteLn ("recVUMI_MAX_xyzw");
+	//Console.WriteLn ("recVUMI_MAX_xyzw");
 
 	if (_Fs_ == 0 && _Ft_ == 0)
 	{
@@ -2458,7 +2458,7 @@ void recVUMI_MAXw(VURegs *VU, int info) { recVUMI_MAX_xyzw(VU, 3, info); }
 void recVUMI_MINI(VURegs *VU, int info)
 {
 	if ( _Fd_ == 0 ) return;
-	//Console::WriteLn ("recVUMI_MINI");
+	//Console.WriteLn ("recVUMI_MINI");
 
 	if (MINMAXFIX)
 		MINMAXlogical(VU, info, 1, 0);
@@ -2502,7 +2502,7 @@ void recVUMI_MINI(VURegs *VU, int info)
 void recVUMI_MINI_iq(VURegs *VU, uptr addr, int info)
 {
 	if ( _Fd_ == 0 ) return;
-	//Console::WriteLn ("recVUMI_MINI_iq");
+	//Console.WriteLn ("recVUMI_MINI_iq");
 
 	if (MINMAXFIX)
 		MINMAXlogical(VU, info, 1, 1, addr);
@@ -2566,7 +2566,7 @@ void recVUMI_MINI_iq(VURegs *VU, uptr addr, int info)
 void recVUMI_MINI_xyzw(VURegs *VU, int xyzw, int info)
 {
 	if ( _Fd_ == 0 ) return;
-	//Console::WriteLn ("recVUMI_MINI_xyzw");
+	//Console.WriteLn ("recVUMI_MINI_xyzw");
 
 	if (_Fs_ == 0 && _Ft_ == 0)
 	{
@@ -2638,7 +2638,7 @@ void recVUMI_MINIw(VURegs *VU, int info) { recVUMI_MINI_xyzw(VU, 3, info); }
 //------------------------------------------------------------------
 void recVUMI_OPMULA( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_OPMULA");
+	//Console.WriteLn ("recVUMI_OPMULA");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, 0xE);
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, 0xE);
@@ -2665,7 +2665,7 @@ void recVUMI_OPMULA( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_OPMSUB( VURegs *VU, int info )
 {
-	//Console::WriteLn ("recVUMI_OPMSUB");
+	//Console.WriteLn ("recVUMI_OPMSUB");
 	if (CHECK_VU_EXTRA_OVERFLOW) {
 		if (_Fs_) vuFloat5_useEAX( EEREC_S, EEREC_TEMP, 0xE);
 		if (_Ft_) vuFloat5_useEAX( EEREC_T, EEREC_TEMP, 0xE);
@@ -2695,7 +2695,7 @@ void recVUMI_OPMSUB( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_NOP( VURegs *VU, int info ) 
 {
-	//Console::WriteLn ("recVUMI_NOP");
+	//Console.WriteLn ("recVUMI_NOP");
 }
 //------------------------------------------------------------------
 
@@ -2707,7 +2707,7 @@ static const PCSX2_ALIGNED16(int rec_const_0x8000000[4]) = { 0x80000000, 0x80000
 
 void recVUMI_FTOI_Saturate(int rec_s, int rec_t, int rec_tmp1, int rec_tmp2)
 {
-	//Console::WriteLn ("recVUMI_FTOI_Saturate");
+	//Console.WriteLn ("recVUMI_FTOI_Saturate");
 	//Duplicate the xor'd sign bit to the whole value
 	//FFFF FFFF for positive,  0 for negative
 	SSE_MOVAPS_XMM_to_XMM(rec_tmp1, rec_s);
@@ -2742,7 +2742,7 @@ void recVUMI_FTOI0(VURegs *VU, int info)
 
 	if ( _Ft_ == 0 ) return; 
 
-	//Console::WriteLn ("recVUMI_FTOI0");
+	//Console.WriteLn ("recVUMI_FTOI0");
 
 	if (_X_Y_Z_W != 0xf) {
 		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
@@ -2843,7 +2843,7 @@ void recVUMI_FTOIX(VURegs *VU, int addr, int info)
 
 	if ( _Ft_ == 0 ) return; 
 
-	//Console::WriteLn ("recVUMI_FTOIX");
+	//Console.WriteLn ("recVUMI_FTOIX");
 	if (_X_Y_Z_W != 0xf) {
 		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 		SSE_MULPS_M128_to_XMM(EEREC_TEMP, addr);
@@ -2953,7 +2953,7 @@ void recVUMI_ITOF0( VURegs *VU, int info )
 {
 	if ( _Ft_ == 0 ) return;
 
-	//Console::WriteLn ("recVUMI_ITOF0");
+	//Console.WriteLn ("recVUMI_ITOF0");
 	if (_X_Y_Z_W != 0xf) {
 		SSE2_CVTDQ2PS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 		vuFloat_useEAX( info, EEREC_TEMP, 15); // Clamp infinities
@@ -2970,7 +2970,7 @@ void recVUMI_ITOFX(VURegs *VU, int addr, int info)
 {
 	if ( _Ft_ == 0 ) return; 
 
-	//Console::WriteLn ("recVUMI_ITOFX");
+	//Console.WriteLn ("recVUMI_ITOFX");
 	if (_X_Y_Z_W != 0xf) {
 		SSE2_CVTDQ2PS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
 		SSE_MULPS_M128_to_XMM(EEREC_TEMP, addr);
@@ -3004,7 +3004,7 @@ void recVUMI_CLIP(VURegs *VU, int info)
 	u32 prevclipaddr = VU_VI_ADDR(REG_CLIP_FLAG, 2);
 
 	if( clipaddr == 0 ) { // battle star has a clip right before fcset
-		Console::WriteLn("skipping vu clip");
+		Console.WriteLn("skipping vu clip");
 		return;
 	}
 
@@ -3021,7 +3021,7 @@ void recVUMI_CLIP(VURegs *VU, int info)
 	x86temp1 = ALLOCTEMPX86(MODE_8BITREG);
 	x86temp2 = ALLOCTEMPX86(MODE_8BITREG);
 
-	//if ( (x86temp1 == 0) || (x86temp2 == 0) ) Console::Error("VU CLIP Allocation Error: EAX being allocated!");
+	//if ( (x86temp1 == 0) || (x86temp2 == 0) ) Console.Error("VU CLIP Allocation Error: EAX being allocated!");
 
 	_freeXMMreg(t1reg); // These should have been freed at allocation in eeVURecompileCode()
 	_freeXMMreg(t2reg); // but if they've been used since then, then free them. (just doing this incase :p (cottonvibes))

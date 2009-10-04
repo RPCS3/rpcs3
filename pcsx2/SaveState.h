@@ -200,6 +200,7 @@ extern bool StateCopy_HasPartialState();
 extern void StateCopy_FreezeToMem();
 extern void StateCopy_ThawFromMem();
 extern void StateCopy_SaveToFile( const wxString& file );
+extern void StateCopy_LoadFromFile( const wxString& file );
 extern void StateCopy_SaveToSlot( uint num );
 extern void StateCopy_Clear();
 

@@ -61,17 +61,16 @@ public:
 	virtual void Resume();
 
 	virtual void StateCheck( bool isCancelable = true );
-	virtual void DoThreadCleanup();
+	virtual void OnThreadCleanup();
 
 	// This function is called by Resume immediately prior to releasing the suspension of
 	// the core emulation thread.  You should overload this rather than Resume(), since
 	// Resume() has a lot of checks and balances to prevent re-entrance and race conditions.
 	virtual void OnResumeReady() {}
-	
+
+	virtual void OnStart();
+
 protected:
-	// Marked as protected because user code should call Resume instead, which performs
-	// a thread-safe check/init/resume procedure.
-	virtual void Start();
 	
 	// Extending classes should implement this, but should not call it.  The parent class
 	// handles invocation by the following guidelines: Called *in thread* from StateCheck()
@@ -107,7 +106,7 @@ public:
 	virtual ~SysCoreThread() throw();
 
 	virtual void ApplySettings( const Pcsx2Config& src );
-	virtual void DoThreadCleanup();
+	virtual void OnThreadCleanup();
 	virtual void ShortSuspend();
 	virtual void OnResumeReady();
 
@@ -118,5 +117,5 @@ protected:
 	virtual void Start();
 	virtual void OnSuspendInThread();
 	virtual void OnResumeInThread();
-	virtual sptr ExecuteTask();
+	virtual void ExecuteTask();
 };

@@ -38,12 +38,12 @@ static void TestClearVUs(u32 madr, u32 size)
 	{
 		if (madr < 0x11004000)
 		{
-			DbgCon::Notice("scratch pad clearing vu0");
+			DbgCon.Notice("scratch pad clearing vu0");
 			CpuVU0.Clear(madr&0xfff, size);
 		}
 		else if (madr >= 0x11008000 && madr < 0x1100c000)
 		{
-			DbgCon::Notice("scratch pad clearing vu1");
+			DbgCon.Notice("scratch pad clearing vu1");
 			CpuVU1.Clear(madr&0x3fff, size);
 		}
 	}
@@ -62,7 +62,7 @@ int  _SPR0chain()
 		case MFD_VIF1:
 		case MFD_GIF:
 			if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) 
-				Console::WriteLn("SPR MFIFO Write outside MFIFO area");
+				Console.WriteLn("SPR MFIFO Write outside MFIFO area");
 			else 
 				mfifotransferred += spr0->qwc;
 			
@@ -101,7 +101,7 @@ void _SPR0interleave()
 	u32 *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;
-	//Console::WriteLn("dmaSPR0 interleave");
+	//Console.WriteLn("dmaSPR0 interleave");
 	SPR_LOG("SPR0 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
 	        spr0->qwc, tqwc, sqwc, spr0->madr, spr0->sadr);
 
@@ -138,7 +138,7 @@ static __forceinline void _dmaSPR0()
 {
 	if (dmacRegs->ctrl.STS == STS_fromSPR)
 	{
-		Console::WriteLn("SPR0 stall %d", dmacRegs->ctrl.STS);
+		Console.WriteLn("SPR0 stall %d", dmacRegs->ctrl.STS);
 	}
 
 	// Transfer Dn_QWC from SPR to Dn_MADR
@@ -176,7 +176,7 @@ static __forceinline void _dmaSPR0()
 
 			if (dmacRegs->ctrl.STS == STS_fromSPR)   // STS == fromSPR
 			{
-				Console::WriteLn("SPR stall control");
+				Console.WriteLn("SPR stall control");
 			}
 
 			switch (id)
@@ -196,7 +196,7 @@ static __forceinline void _dmaSPR0()
 			SPR0chain();
 			if (spr0->chcr.TIE && Tag::IRQ(ptag))  			 //Check TIE bit of CHCR and IRQ bit of tag
 			{
-				//Console::WriteLn("SPR0 TIE");
+				//Console.WriteLn("SPR0 TIE");
 				done = TRUE;
 			}
 				
@@ -231,9 +231,9 @@ void SPRFROMinterrupt()
 		{
 			case MFD_GIF:
 			{
-				if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console::WriteLn("GIF MFIFO Write outside MFIFO area");
+				if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("GIF MFIFO Write outside MFIFO area");
 				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
-				//Console::WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
+				//Console.WriteLn("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
 				mfifoGIFtransfer(mfifotransferred);
 				mfifotransferred = 0;
 				if (gif->chcr.STR) return;
@@ -241,9 +241,9 @@ void SPRFROMinterrupt()
 			}
 			case MFD_VIF1:
 			{
-				if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console::WriteLn("VIF MFIFO Write outside MFIFO area");
+				if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console.WriteLn("VIF MFIFO Write outside MFIFO area");
 				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
-				//Console::WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
+				//Console.WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
 				mfifoVIF1transfer(mfifotransferred);
 				mfifotransferred = 0;
 				if (vif1ch->chcr.STR) return;
@@ -386,7 +386,7 @@ void _dmaSPR1()   // toSPR work function
 			{
 				SPR_LOG("dmaIrq Set");
 
-				//Console::WriteLn("SPR1 TIE");
+				//Console.WriteLn("SPR1 TIE");
 				done = true;
 			}
 			

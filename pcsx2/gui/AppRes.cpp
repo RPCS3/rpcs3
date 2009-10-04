@@ -80,7 +80,7 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 			//wxFileInputStream stream( zipped.ToString() )
 			//wxZipInputStream zstream( stream );
 
-			Console::Error( "Loading themes from zipfile is not supported yet.\nFalling back on default theme." );
+			Console.Error( "Loading themes from zipfile is not supported yet.\nFalling back on default theme." );
 		}
 
 		// Overrides zipfile settings (fix when zipfile support added)

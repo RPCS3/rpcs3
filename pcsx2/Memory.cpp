@@ -95,7 +95,7 @@ u8  *psS = NULL; //0.015 mb, scratch pad
 void MyMemCheck(u32 mem)
 {
     if( mem == 0x1c02f2a0 )
-        Console::WriteLn("yo; (mem == 0x1c02f2a0) in MyMemCheck...");
+        Console.WriteLn("yo; (mem == 0x1c02f2a0) in MyMemCheck...");
 }
 
 /////////////////////////////
@@ -218,7 +218,7 @@ mem8_t __fastcall _ext_memRead8 (u32 mem)
 		case 7: // dev9
 		{
 			mem8_t retval = DEV9read8(mem & ~0xa4000000);
-			Console::WriteLn("DEV9 read8 %8.8lx: %2.2lx", mem & ~0xa4000000, retval);
+			Console.WriteLn("DEV9 read8 %8.8lx: %2.2lx", mem & ~0xa4000000, retval);
 			return retval;
 		}
 	}
@@ -248,7 +248,7 @@ mem16_t __fastcall _ext_memRead16(u32 mem)
 		case 7: // dev9
 		{
 			mem16_t retval = DEV9read16(mem & ~0xa4000000);
-			Console::WriteLn("DEV9 read16 %8.8lx: %4.4lx", mem & ~0xa4000000, retval);
+			Console.WriteLn("DEV9 read16 %8.8lx: %4.4lx", mem & ~0xa4000000, retval);
 			return retval;
 		}
 
@@ -270,7 +270,7 @@ mem32_t __fastcall _ext_memRead32(u32 mem)
 		case 7: // dev9
 		{
 			mem32_t retval = DEV9read32(mem & ~0xa4000000);
-			Console::WriteLn("DEV9 read32 %8.8lx: %8.8lx", mem & ~0xa4000000, retval);
+			Console.WriteLn("DEV9 read32 %8.8lx: %8.8lx", mem & ~0xa4000000, retval);
 			return retval;
 		}
 	}
@@ -322,7 +322,7 @@ void __fastcall _ext_memWrite8 (u32 mem, mem8_t  value)
 			gsWrite8(mem, value); return;
 		case 7: // dev9
 			DEV9write8(mem & ~0xa4000000, value);
-			Console::WriteLn("DEV9 write8 %8.8lx: %2.2lx", mem & ~0xa4000000, value);
+			Console.WriteLn("DEV9 write8 %8.8lx: %2.2lx", mem & ~0xa4000000, value);
 			return;
 	}
 
@@ -345,7 +345,7 @@ void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
 			gsWrite16(mem, value); return;
 		case 7: // dev9
 			DEV9write16(mem & ~0xa4000000, value);
-			Console::WriteLn("DEV9 write16 %8.8lx: %4.4lx", mem & ~0xa4000000, value);
+			Console.WriteLn("DEV9 write16 %8.8lx: %4.4lx", mem & ~0xa4000000, value);
 			return;
 		case 8: // spu2
 			SPU2write(mem, value); return;
@@ -362,7 +362,7 @@ void __fastcall _ext_memWrite32(u32 mem, mem32_t value)
 			gsWrite32(mem, value); return;
 		case 7: // dev9
 			DEV9write32(mem & ~0xa4000000, value);
-			Console::WriteLn("DEV9 write32 %8.8lx: %8.8lx", mem & ~0xa4000000, value);
+			Console.WriteLn("DEV9 write32 %8.8lx: %8.8lx", mem & ~0xa4000000, value);
 			return;
 	}
 	MEM_LOG("Unknown Memory write32  to  address %x with data %8.8x", mem, value);
@@ -546,7 +546,7 @@ void __fastcall vuMicroWrite128(u32 addr,const mem128_t* data)
 
 void memSetPageAddr(u32 vaddr, u32 paddr)
 {
-	//Console::WriteLn("memSetPageAddr: %8.8x -> %8.8x", vaddr, paddr);
+	//Console.WriteLn("memSetPageAddr: %8.8x -> %8.8x", vaddr, paddr);
 
 	vtlb_VMap(vaddr,paddr,0x1000);
 
@@ -554,7 +554,7 @@ void memSetPageAddr(u32 vaddr, u32 paddr)
 
 void memClearPageAddr(u32 vaddr)
 {
-	//Console::WriteLn("memClearPageAddr: %8.8x", vaddr);
+	//Console.WriteLn("memClearPageAddr: %8.8x", vaddr);
 
 	vtlb_VMapUnmap(vaddr,0x1000); // -> whut ?
 
@@ -851,9 +851,9 @@ void mmap_MarkCountedRamPage( u32 paddr )
 		return;		// skip town if we're already protected.
 
 	if( m_PageProtectInfo[rampage].Mode == ProtMode_Manual )
-		DbgCon::WriteLn( "dyna_page_reset @ 0x%05x", paddr>>12 );
+		DbgCon.WriteLn( "dyna_page_reset @ 0x%05x", paddr>>12 );
 	else
-		DbgCon::WriteLn( "Write-protected page @ 0x%05x", paddr>>12 );
+		DbgCon.WriteLn( "Write-protected page @ 0x%05x", paddr>>12 );
 
 	m_PageProtectInfo[rampage].Mode = ProtMode_Write;
 	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadOnly );
@@ -871,7 +871,7 @@ void mmap_ClearCpuBlock( uint offset )
 	jASSUME( m_PageProtectInfo[rampage].Mode != ProtMode_Manual );
 
 	//#ifndef __LINUX__		// this function is called from the signal handler
-	//DbgCon::WriteLn( "Manual page @ 0x%05x", m_PageProtectInfo[rampage].ReverseRamMap>>12 );
+	//DbgCon.WriteLn( "Manual page @ 0x%05x", m_PageProtectInfo[rampage].ReverseRamMap>>12 );
 	//#endif
 
 	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadWrite );
@@ -884,7 +884,7 @@ void mmap_ClearCpuBlock( uint offset )
 // to ensure the EErec is also reset in conjunction with calling this function.
 void mmap_ResetBlockTracking()
 {
-	DevCon::WriteLn( "vtlb/mmap: Block Tracking reset..." );
+	DevCon.WriteLn( "vtlb/mmap: Block Tracking reset..." );
 	memzero( m_PageProtectInfo );
 	HostSys::MemProtect( psM, Ps2MemSize::Base, Protect_ReadWrite );
 }

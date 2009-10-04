@@ -252,7 +252,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 
 // Debug Stuff...
 #ifdef mVUdebug
-#define mVUprint Console::Status
+#define mVUprint Console.Status
 #else
 #define mVUprint 0&&
 #endif
@@ -284,7 +284,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUcacheCheck(ptr, start, limit) {														  \
 	uptr diff = ptr - start;																	  \
 	if (diff >= limit) {																		  \
-		Console::Status("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
+		Console.Status("microVU%d: Program cache limit reached. Size = 0x%x", mVU->index, diff); \
 		mVUreset(mVU);																			  \
 	}																							  \
 }

@@ -7,6 +7,7 @@ using std::string;
 using std::min;
 using std::max;
 
+#include "Assertions.h"
 #include "MemcpyFast.h"
 #include "Console.h"
 #include "Exceptions.h"

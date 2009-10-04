@@ -136,9 +136,9 @@ void Unknown() {
 	CPU_LOG("%8.8lx: Unknown opcode called", cpuRegs.pc);
 }
 
-void MMI_Unknown() { Console::Notice("Unknown MMI opcode called"); }
-void COP0_Unknown() { Console::Notice("Unknown COP0 opcode called"); }
-void COP1_Unknown() { Console::Notice("Unknown FPU/COP1 opcode called"); }
+void MMI_Unknown() { Console.Notice("Unknown MMI opcode called"); }
+void COP0_Unknown() { Console.Notice("Unknown COP0 opcode called"); }
+void COP1_Unknown() { Console.Notice("Unknown FPU/COP1 opcode called"); }
 
 
 
@@ -761,7 +761,7 @@ int __Deci2Call(int call, u32 *addr)
 			else
 			{
 				deci2handler = NULL;
-				DevCon::Notice( "Deci2Call.Open > NULL address ignored." );
+				DevCon.Notice( "Deci2Call.Open > NULL address ignored." );
 			}
 			return 1;
 
@@ -780,7 +780,7 @@ int __Deci2Call(int call, u32 *addr)
 				deci2addr[3], deci2addr[2], deci2addr[1], deci2addr[0]);
 
 //			cpuRegs.pc = deci2handler;
-//			Console::WriteLn("deci2msg: %s",  (char*)PSM(deci2addr[4]+0xc));
+//			Console.WriteLn("deci2msg: %s",  (char*)PSM(deci2addr[4]+0xc));
 			if (deci2addr == NULL) return 1;
 			if (deci2addr[1]>0xc){
 				u8* pdeciaddr = (u8*)dmaGetAddr(deci2addr[4]+0xc);
@@ -790,7 +790,7 @@ int __Deci2Call(int call, u32 *addr)
 					pdeciaddr += (deci2addr[4]+0xc)%16;
 				memcpy(deci2buffer, pdeciaddr, deci2addr[1]-0xc);
 				deci2buffer[deci2addr[1]-0xc>=255?255:deci2addr[1]-0xc]='\0';
-				Console::Write( Color_Cyan, deci2buffer );
+				Console.Write( Color_Cyan, deci2buffer );
 			}
 			deci2addr[3] = 0;
 			return 1;
@@ -809,7 +809,7 @@ int __Deci2Call(int call, u32 *addr)
 
 		case 0x10://kputs
 			if( addr != NULL )
-				Console::Write( Color_Cyan, "%s", PSM(*addr));
+				Console.Write( Color_Cyan, "%s", PSM(*addr));
 			return 1;
 	}
 
@@ -831,7 +831,7 @@ void SYSCALL()
 	if (call == 0x7c)
 	{
 		if(cpuRegs.GPR.n.a0.UL[0] == 0x10)
-			Console::Write( Color_Cyan, (char*)PSM(memRead32(cpuRegs.GPR.n.a1.UL[0])) );
+			Console.Write( Color_Cyan, (char*)PSM(memRead32(cpuRegs.GPR.n.a1.UL[0])) );
 		else
 			__Deci2Call( cpuRegs.GPR.n.a0.UL[0], (u32*)PSM(cpuRegs.GPR.n.a1.UL[0]) );
 	}
