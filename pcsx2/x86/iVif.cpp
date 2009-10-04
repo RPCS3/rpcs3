@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -49,7 +49,9 @@ static PCSX2_ALIGNED16(u32 s_maskarr[16][4]) = {
 
 extern u8 s_maskwrite[256];
 
-extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]) = {0};
+extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]);
+
+u32 s_TempDecompress[4] = {0};
 
 #ifdef __LINUX__
 static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask);
@@ -65,7 +67,7 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 		prev |= s_maskwrite[mask&0xff];
 		hasmask[i] = prev;
 
-		if ((mask&0xff) != (oldmask&0xff)) 
+		if ((mask&0xff) != (oldmask&0xff))
 #ifdef __LINUX__
 		if (mask == 0) // Temporary workaround for a bug causing a segfault.
 			UseOldMaskCode(vif1masks, mask);

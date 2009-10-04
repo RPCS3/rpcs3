@@ -379,8 +379,8 @@ __forceinline void xWrite( T val )
 			return *this;
 		}
 
-		__forceinline inline ModSibBase operator+( const s32 imm ) const { return ModSibBase( *this ).Add( imm ); }
-		__forceinline inline ModSibBase operator-( const s32 imm ) const { return ModSibBase( *this ).Add( -imm ); }
+		__forceinline ModSibBase operator+( const s32 imm ) const { return ModSibBase( *this ).Add( imm ); }
+		__forceinline ModSibBase operator-( const s32 imm ) const { return ModSibBase( *this ).Add( -imm ); }
 
 	protected:
 		void Reduce();
