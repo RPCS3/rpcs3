@@ -132,6 +132,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				UACExecutionLevel="2"
 				ModuleDefinitionFile=".\plugin.def"
 			/>

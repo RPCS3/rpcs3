@@ -136,7 +136,7 @@ void spdif_update()
 	{
 		// Source is Core 0
 		// .. and Right side data should be zero / ignored
-		StereoOut32 Data( Cores[0].ReadInput() );
+		StereoOut32 Data( Cores[0].ReadInput_HiFi() );
 		
 		if(fSpdifDump)
 		{

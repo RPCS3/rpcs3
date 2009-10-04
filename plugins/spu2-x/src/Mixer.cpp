@@ -477,15 +477,6 @@ static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, uint voice
 /////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                     //
 
-__forceinline StereoOut32 V_Core::ReadInputPV()
-{
-	return ApplyVolume( ReadInput(), InpVol );
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                     //
-
 // writes a signed value to the SPU2 ram
 // Performs no cache invalidation -- use only for dynamic memory ranges
 // of the SPU2 (between 0x0000 and SPU2_DYN_MEMLINE)
@@ -658,8 +649,11 @@ __forceinline void Mix()
 	// Note: Playmode 4 is SPDIF, which overrides other inputs.
 	StereoOut32 InputData[2] =
 	{
-		(PlayMode&4) ? StereoOut32::Empty : Cores[0].ReadInputPV(),
-		(PlayMode&8) ? StereoOut32::Empty : Cores[1].ReadInputPV()
+		// SPDIF is on Core 0:
+		(PlayMode&4) ? StereoOut32::Empty : ApplyVolume( Cores[0].ReadInput(), Cores[0].InpVol ),
+		
+		// CDDA is on Core 1:
+		(PlayMode&8) ? StereoOut32::Empty : ApplyVolume( Cores[1].ReadInput(), Cores[1].InpVol )
 	};
 
 	WaveDump::WriteCore( 0, CoreSrc_Input, InputData[0] );
@@ -694,7 +688,7 @@ __forceinline void Mix()
 		// Experimental CDDA support
 		// The CDDA overrides all other mixer output.  It's a direct feed!
 
-		Out = Cores[1].ReadInput();
+		Out = Cores[1].ReadInput_HiFi();
 		//WaveLog::WriteCore( 1, "CDDA-32", OutL, OutR );
 	}
 	else

@@ -457,8 +457,7 @@ struct V_Core
 	s32			RevbGetIndexer( s32 offset );
 
 	StereoOut32 ReadInput();
-	StereoOut32 ReadInputPV();
-	StereoOut32 ReadInput_HiFi( bool isCDDA );
+	StereoOut32 ReadInput_HiFi();
 	
 // --------------------------------------------------------------------------
 //  DMA Section
