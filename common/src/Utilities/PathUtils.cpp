@@ -18,25 +18,13 @@
 
 #include <wx/file.h>
 
-#ifdef __LINUX__
-#ifndef _S_IFDIR
-#define _S_IFDIR S_IFDIR
-#endif
-
-#ifndef _S_IFREG
-#define _S_IFREG S_IFREG
-#endif
-#else
-#include <direct.h>
-#endif
-
 // ---------------------------------------------------------------------------------
 //  wxDirName Implementations
 // ---------------------------------------------------------------------------------
 
 wxFileName wxDirName::Combine( const wxFileName& right ) const
 {
-	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wxDirName concatenation." );
+	pxAssertMsg( IsDir(), L"Warning: Malformed directory name detected during wxDirName concatenation." );
 	if( right.IsAbsolute() )
 		return right;
 
@@ -51,7 +39,7 @@ wxFileName wxDirName::Combine( const wxFileName& right ) const
 
 wxDirName wxDirName::Combine( const wxDirName& right ) const
 {
-	wxASSERT_MSG( IsDir() && right.IsDir(), L"Warning: Malformed directory name detected during wDirName concatenation." );
+	pxAssertMsg( IsDir() && right.IsDir(), L"Warning: Malformed directory name detected during wDirName concatenation." );
 
 	wxDirName result( right );
 	result.Normalize( wxPATH_NORM_ENV_VARS | wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE, GetPath() );
@@ -60,7 +48,7 @@ wxDirName wxDirName::Combine( const wxDirName& right ) const
 
 wxDirName& wxDirName::Normalize( int flags, const wxString& cwd )
 {
-	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
+	pxAssertMsg( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
 	if( !wxFileName::Normalize( flags, cwd ) )
 		throw Exception::RuntimeError( "wxDirName::Normalize operation failed." );
 	return *this;
@@ -68,7 +56,7 @@ wxDirName& wxDirName::Normalize( int flags, const wxString& cwd )
 
 wxDirName& wxDirName::MakeRelativeTo( const wxString& pathBase )
 {
-	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
+	pxAssertMsg( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
 	if( !wxFileName::MakeRelativeTo( pathBase ) )
 		throw Exception::RuntimeError( "wxDirName::MakeRelativeTo operation failed." );
 	return *this;
@@ -76,7 +64,7 @@ wxDirName& wxDirName::MakeRelativeTo( const wxString& pathBase )
 
 wxDirName& wxDirName::MakeAbsolute( const wxString& cwd )
 {
-	wxASSERT_MSG( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
+	pxAssertMsg( IsDir(), L"Warning: Malformed directory name detected during wDirName normalization." );
 	if( !wxFileName::MakeAbsolute( cwd ) )
 		throw Exception::RuntimeError( "wxDirName::MakeAbsolute operation failed." );
 	return *this;

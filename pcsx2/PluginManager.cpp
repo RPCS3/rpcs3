@@ -826,13 +826,6 @@ extern void spu2DMA4Irq();
 extern void spu2DMA7Irq();
 extern void spu2Irq();
 
-static bool OpenPlugin_CDVD()
-{
-	if( CDVDapi_Plugin.open(NULL) ) return false;
-	CDVDapi_Plugin.newDiskCB( cdvdNewDiskCB );
-	return true;
-}
-
 static bool OpenPlugin_GS()
 {
 	mtgsThread.Resume();

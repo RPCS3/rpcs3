@@ -137,7 +137,7 @@ public:
 	MovImplAll() {} // Satisfy GCC's whims.
 };
 
-#define ccSane() jASSUME( ccType >= 0 && ccType <= 0x0f )
+#define ccSane()	pxAssertDev( ccType >= 0 && ccType <= 0x0f, "Invalid comparison type specifier." )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // CMOV !!  [in all of it's disappointing lack-of glory]  .. and ..

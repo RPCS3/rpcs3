@@ -93,51 +93,51 @@ namespace x86Emitter
 	//
 	__forceinline xAddressInfo xAddressReg::operator+( const xAddressReg& right ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, right );
 	}
 
 	__forceinline xAddressInfo xAddressReg::operator+( const xAddressInfo& right ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return right + *this;
 	}
 
 	__forceinline xAddressInfo xAddressReg::operator+( s32 right ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, right );
 	}
 
 	__forceinline xAddressInfo xAddressReg::operator+( const void* right ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, (s32)right );
 	}
 
 	// ------------------------------------------------------------------------
 	__forceinline xAddressInfo xAddressReg::operator-( s32 right ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, -right );
 	}
 
 	__forceinline xAddressInfo xAddressReg::operator-( const void* right ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( *this, -(s32)right );
 	}
 
 	// ------------------------------------------------------------------------
 	__forceinline xAddressInfo xAddressReg::operator*( u32 right ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( Empty, *this, right );
 	}
 
 	__forceinline xAddressInfo xAddressReg::operator<<( u32 shift ) const
 	{
-		jASSUME( Id != -1 );
+		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
 		return xAddressInfo( Empty, *this, 1<<shift );
 	}
 
@@ -213,7 +213,7 @@ namespace x86Emitter
 		else if( Index.IsEmpty() )
 			Index = src;
 		else
-			wxASSERT_MSG( false, L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
+			pxFailDev( L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
 
 		return *this;
 	}
@@ -237,7 +237,7 @@ namespace x86Emitter
 		else if( Index == src.Index )
 			Factor++;
 		else
-			wxASSERT_MSG( false, L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
+			pxFailDev( L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
 
 		return *this;
 	}
@@ -253,8 +253,8 @@ namespace x86Emitter
 			((cctype==Jcc_Unconditional) ? 5 : 6 ))	// j32's are either 5 or 6 bytes
 		)
 	{
-		jASSUME( cctype != Jcc_Unknown );
-		jASSUME( OperandSize == 1 || OperandSize == 4 );
+		pxAssert( cctype != Jcc_Unknown );
+		pxAssert( OperandSize == 1 || OperandSize == 4 );
 		
 		if( OperandSize == 1 )
 			xWrite8( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
@@ -276,14 +276,14 @@ namespace x86Emitter
 	template< typename OperandType >
 	void xForwardJump<OperandType>::SetTarget() const
 	{
-		jASSUME( BasePtr != NULL );
+		pxAssert( BasePtr != NULL );
 
 		sptr displacement = (sptr)xGetPtr() - (sptr)BasePtr;
 		if( OperandSize == 1 )
 		{
 			if( !is_s8( displacement ) )
 			{
-				wxASSERT( false );
+				pxAssert( false );
 // Don't ask. --arcum42
 #if !defined(__LINUX__) || !defined(DEBUG)
 
@@ -304,7 +304,7 @@ namespace x86Emitter
 	//
 	static __forceinline JccComparisonType xInvertCond( JccComparisonType src )
 	{
-		jASSUME( src != Jcc_Unknown );
+		pxAssert( src != Jcc_Unknown );
 		if( Jcc_Unconditional == src ) return Jcc_Unconditional;
 
 		// x86 conditionals are clever!  To invert conditional types, just invert the lower bit:

@@ -107,13 +107,13 @@ public:
 	// Generates a debug assertion if the object is NULL!
     T& operator*() const
     {
-        wxASSERT(m_ptr != NULL);
+        pxAssert(m_ptr != NULL);
         return *m_ptr;
     }
 
     T* operator->() const
     {
-        wxASSERT(m_ptr != NULL);
+        pxAssert(m_ptr != NULL);
         return m_ptr;
     }
 };
@@ -180,27 +180,27 @@ public:
 
     T& operator*() const
     {
-        wxASSERT(m_ptr != NULL);
+        pxAssert(m_ptr != NULL);
         return *m_ptr;
     }
 
     T* operator->() const
     {
-        wxASSERT(m_ptr != NULL);
+        pxAssert(m_ptr != NULL);
         return m_ptr;
     }
 
     T* get() const
     {
-        wxASSERT(m_ptr != NULL);
+        pxAssert(m_ptr != NULL);
         return m_ptr;
     }
 
     void swap(pxObjPtr& other)
     {
 		// Neither pointer in either container should ever be NULL...
-		wxASSERT(m_ptr != NULL);
-		wxASSERT(other.m_ptr != NULL);
+		pxAssert(m_ptr != NULL);
+		pxAssert(other.m_ptr != NULL);
 
         T * const tmp = other.m_ptr;
         other.m_ptr = m_ptr;

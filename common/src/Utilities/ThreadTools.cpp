@@ -108,7 +108,7 @@ namespace Threading
 	// This function should not be called from the owner thread.
 	bool PersistentThread::Detach()
 	{
-		wxASSERT( !IsSelf() );		// not allowed from our own thread.
+		pxAssertMsg( !IsSelf(), "Thread affinity error." );		// not allowed from our own thread.
 
 		if( _InterlockedExchange( &m_detached, true ) ) return false;
 		pthread_detach( m_thread );
@@ -128,7 +128,7 @@ namespace Threading
 	//
 	void PersistentThread::Cancel( bool isBlocking )
 	{
-		wxASSERT( !IsSelf() );
+		pxAssertMsg( !IsSelf(), "Thread affinity error." );
 
 		if( !m_running ) return;
 
@@ -193,7 +193,7 @@ namespace Threading
 	// OnThreadCleanup() to extend clenup functionality.
 	void PersistentThread::_ThreadCleanup()
 	{
-		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
+		pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
 
 		// Typically thread cleanup needs to lock against thread startup, since both
 		// will perform some measure of variable inits or resets, depending on how the
@@ -272,9 +272,11 @@ namespace Threading
 
 	void PersistentThread::DoSetThreadName( __unused const char* name )
 	{
-		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
+		pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
 
-	#ifdef _WINDOWS_
+		// This feature needs Windows headers and MSVC's SEH support:
+
+	#if defined(_WINDOWS_) && defined (_MSC_VER)
 
 		// This code sample was borrowed form some obscure MSDN article.
 		// In a rare bout of sanity, it's an actual Micrsoft-published hack
@@ -325,7 +327,7 @@ namespace Threading
 	// initialized internal variables / preparations for task execution.
 	void BaseTaskThread::PostTask()
 	{
-		wxASSERT( !m_detached );
+		pxAssert( !m_detached );
 
 		ScopedLock locker( m_lock_TaskComplete );
 		m_TaskPending = true;

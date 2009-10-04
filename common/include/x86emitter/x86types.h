@@ -127,7 +127,7 @@ __forceinline void xWrite( T val )
 		int Id;
 
 		xRegisterBase(): Id( -1 ) {}
-		explicit xRegisterBase( int regId ) : Id( regId ) { jASSUME( Id >= -2 && Id < 8 ); }	// allow -2 for user-custom identifiers.
+		explicit xRegisterBase( int regId ) : Id( regId ) { pxAssert( Id >= -2 && Id < 8 ); }	// allow -2 for user-custom identifiers.
 
 		bool IsEmpty() const { return Id < 0; }
 
@@ -644,7 +644,7 @@ __forceinline void xWrite( T val )
 	public:
 		int GetMaxInstructionSize() const
 		{
-			jASSUME( m_cc != Jcc_Unknown );
+			pxAssert( m_cc != Jcc_Unknown );
 			return ( m_cc == Jcc_Unconditional ) ? 5 : 6;
 		}
 
@@ -656,7 +656,7 @@ __forceinline void xWrite( T val )
 		//
 		xSmartJump( JccComparisonType ccType )
 		{
-			jASSUME( ccType != Jcc_Unknown );
+			pxAssert( ccType != Jcc_Unknown );
 			m_baseptr = xGetPtr();
 			m_cc = ccType;
 			xAdvancePtr( GetMaxInstructionSize() );

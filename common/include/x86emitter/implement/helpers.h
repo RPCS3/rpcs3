@@ -150,5 +150,5 @@ void _DoI_helpermess( const xImpl& helpme, const xDirectOrIndirect<T>& to, const
 		// One of the fields needs to be direct, or else we cannot complete the operation.
 		// (intel doesn't support indirects in both fields)
 
-		jASSUME( false );
+		pxFailDev( "Invalid asm instruction: Both operands are indirect memory addresses." );
 }

@@ -112,12 +112,9 @@ __emitinline void Internal::xJccKnownTarget( JccComparisonType comparison, const
 	const int slideVal = slideForward ? ((comparison == Jcc_Unconditional) ? 3 : 4) : 0;
 	displacement8 -= slideVal;
 
-	// if the following assert fails it means we accidentally used slideForard on a backward
-	// jump (which is an invalid operation since there's nothing to slide forward).
 	if( slideForward ) 
 	{
-		// jASSUME has an  else statement in it that would be abiguous without the brackets.
-		jASSUME( displacement8 >= 0 );
+		pxAssertDev( displacement8 >= 0, "Used slideForward on a backward jump; nothing to slide!" );
 	}
 	
 	if( is_s8( displacement8 ) )

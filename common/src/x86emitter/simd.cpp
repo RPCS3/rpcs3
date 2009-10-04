@@ -33,7 +33,7 @@ __emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
 
 	// If the lower byte is not a valid prefix and the upper byte is non-zero it
 	// means we made a mistake!
-	if( !is16BitOpcode ) jASSUME( (opcode >> 8) == 0 );
+	if( !is16BitOpcode ) pxAssert( (opcode >> 8) == 0 );
 
 	if( prefix != 0 )
 	{

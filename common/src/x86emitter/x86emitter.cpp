@@ -272,7 +272,7 @@ namespace Internal
 	//
 	__noinline void EmitSibMagic( uint regfield, const ModSibBase& info )
 	{
-		jASSUME( regfield < 8 );
+		pxAssert( regfield < 8, "Invalid x86 register identifier." );
 
 		int displacement_size = (info.Displacement == 0) ? 0 :
 			( ( info.IsByteSizeDisp() ) ? 1 : 2 );
@@ -497,8 +497,8 @@ void ModSibBase::Reduce()
 		// note: intentionally leave index assigned to esp also (generates correct
 		// encoding later, since ESP cannot be encoded 'alone')
 
-		jASSUME( Scale == 0 );		// esp can't have an index modifier!
-		jASSUME( Base.IsEmpty() );	// base must be empty or else!
+		pxAssert( Scale == 0 );		// esp can't have an index modifier!
+		pxAssert( Base.IsEmpty() );	// base must be empty or else!
 
 		Base = Index;
 		return;
@@ -523,7 +523,7 @@ void ModSibBase::Reduce()
 		case 2: Scale = 1; break;
 
 		case 3:				// becomes [reg*2+reg]
-			jASSUME( Base.IsEmpty() );
+			pxAssertDev( Base.IsEmpty(), "Cannot scale an Index register by 3 when Base is not empty!" );
 			Base = Index;
 			Scale = 1;
 		break;
@@ -531,22 +531,22 @@ void ModSibBase::Reduce()
 		case 4: Scale = 2; break;
 
 		case 5:				// becomes [reg*4+reg]
-			jASSUME( Base.IsEmpty() );
+			pxAssertDev( Base.IsEmpty(), "Cannot scale an Index register by 5 when Base is not empty!" );
 			Base = Index;
 			Scale = 2;
 		break;
 
 		case 6:				// invalid!
-			assert( false );
+			pxFail( "x86 asm cannot scale a register by 6." );
 		break;
 
 		case 7:				// so invalid!
-			assert( false );
+			pxFail( "x86 asm cannot scale a register by 7." );
 		break;
 
 		case 8: Scale = 3; break;
 		case 9:				// becomes [reg*8+reg]
-			jASSUME( Base.IsEmpty() );
+			pxAssertDev( Base.IsEmpty(), "Cannot scale an Index register by 9 when Base is not empty!" );
 			Base = Index;
 			Scale = 3;
 		break;

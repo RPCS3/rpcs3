@@ -32,12 +32,12 @@
 //
 emitterT void ModRM( uint mod, uint reg, uint rm )
 {
-	// Note: Following ASSUMEs are for legacy support only.
+	// Note: Following assertions are for legacy support only.
 	// The new emitter performs these sanity checks during operand construction, so these
 	// assertions can probably be removed once all legacy emitter code has been removed.
-	jASSUME( mod < 4 );
-	jASSUME( reg < 8 );
-	jASSUME( rm < 8 );
+	pxAssert( mod < 4 );
+	pxAssert( reg < 8 );
+	pxAssert( rm < 8 );
 	xWrite8( (mod << 6) | (reg << 3) | rm );
 }
 
@@ -46,9 +46,9 @@ emitterT void SibSB( uint ss, uint index, uint base )
 	// Note: Following ASSUMEs are for legacy support only.
 	// The new emitter performs these sanity checks during operand construction, so these
 	// assertions can probably be removed once all legacy emitter code has been removed.
-	jASSUME( ss < 4 );
-	jASSUME( index < 8 );
-	jASSUME( base < 8 );
+	pxAssert( ss < 4 );
+	pxAssert( index < 8 );
+	pxAssert( base < 8 );
 	xWrite8( (ss << 6) | (index << 3) | base );
 }
 
