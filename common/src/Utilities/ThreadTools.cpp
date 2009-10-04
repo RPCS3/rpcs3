@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 
 #include "PrecompiledHeader.h"
 #include "Threading.h"
@@ -52,7 +52,7 @@ namespace Threading
 	// against the thread. Extending classes should almost always implement their own
 	// thread closure process, since any PersistentThread will, by design, not terminate
 	// unless it has been properly canceled.
-	//	
+	//
 	// Thread safetly: This class must not be deleted from its own thread.  That would be
 	// like marrying your sister, and then cheating on her with your daughter.
 	PersistentThread::~PersistentThread() throw()
@@ -222,12 +222,12 @@ namespace Threading
 		catch( std::logic_error& ex )
 		{
 			throw Exception::LogicError( wxsFormat( L"(thread: %s) STL Logic Error: %s\n\t%s",
-				GetName().c_str(), wxString::FromUTF8( ex.what() ) )
+				GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 			);
 		}
 		catch( Exception::LogicError& ex )
 		{
-			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName() ) + m_except->DiagMsg();
+			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
 			ex.Rethrow();
 		}
 		catch( std::runtime_error& ex )
@@ -235,25 +235,25 @@ namespace Threading
 			m_except = new Exception::RuntimeError(
 				// Diagnostic message:
 				wxsFormat( L"(thread: %s) STL Runtime Error: %s\n\t%s",
-					GetName().c_str(), wxString::FromUTF8( ex.what() )
+					GetName().c_str(), fromUTF8( ex.what() ).c_str()
 				),
-				
+
 				// User Message (not translated, std::exception doesn't have that kind of fancy!
 				wxsFormat( L"A runtime error occurred in %s:\n\n%s (STL)",
-					GetName().c_str(), wxString::FromUTF8( ex.what() )
+					GetName().c_str(), fromUTF8( ex.what() ).c_str()
 				)
 			);
 		}
 		catch( Exception::RuntimeError& ex )
 		{
 			m_except = ex.Clone();
-			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName() ) + m_except->DiagMsg();
+			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
 		}
 	}
 
 	void PersistentThread::OnStart() {}
 	void PersistentThread::OnThreadCleanup() {}
-	
+
 	void* PersistentThread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
@@ -269,17 +269,17 @@ namespace Threading
 	{
 		DoSetThreadName( toUTF8(name) );
 	}
-	
+
 	void PersistentThread::DoSetThreadName( __unused const char* name )
 	{
 		wxASSERT( IsSelf() );	// only allowed from our own thread, thanks.
 
 	#ifdef _WINDOWS_
-	
+
 		// This code sample was borrowed form some obscure MSDN article.
 		// In a rare bout of sanity, it's an actual Micrsoft-published hack
 		// that actually works!
-	
+
 		static const int MS_VC_EXCEPTION = 0x406D1388;
 
 		#pragma pack(push,8)
@@ -332,7 +332,7 @@ namespace Threading
 		m_post_TaskComplete.Reset();
 		m_sem_event.Post();
 	}
-	
+
 	// Blocks current thread execution pending the completion of the parallel task.
 	void BaseTaskThread::WaitForResult()
 	{
@@ -402,7 +402,7 @@ namespace Threading
 // --------------------------------------------------------------------------------------
 //  Semaphore Implementations
 // --------------------------------------------------------------------------------------
-	
+
 	Semaphore::Semaphore()
 	{
 		sem_init( &sema, false, 0 );
@@ -452,7 +452,7 @@ namespace Threading
 		{
 			// In order to avoid deadlock we need to make sure we cut some time
 			// to handle messages.
-			
+
 			do {
 				wxTheApp->Yield();
 			} while( !Wait( ts_msec_250 ) );

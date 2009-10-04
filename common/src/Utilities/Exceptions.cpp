@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -47,12 +47,12 @@ DEVASSERT_INLINE void pxOnAssert( const wxChar* file, int line, const char* func
 #ifdef PCSX2_DEVBUILD
 	RecursionGuard guard( s_assert_guard );
 	if( guard.IsReentrant() ) return;
-	
+
 	if( wxTheApp == NULL )
 	{
 		// Note: Format uses MSVC's syntax for output window hotlinking.
 		wxsFormat( L"%s(%d): Assertion failed in %s: %s\n",
-			file, line, fromUTF8(func), msg );
+			file, line, fromUTF8(func).c_str(), msg );
 
 		wxLogError( msg );
 	}
@@ -179,7 +179,7 @@ wxString Exception::StateCrcMismatch::FormatDisplayMessage() const
 {
 	return wxsFormat(
 		m_message_user + L"\n\n" +
-		wxsFormat( 
+		wxsFormat(
 			L"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n",
 			Crc_Savestate, Crc_Cdvd
 		)

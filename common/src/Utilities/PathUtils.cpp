@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -92,7 +92,7 @@ void wxDirName::Rmdir()
 bool wxDirName::Mkdir()
 {
 	if( Exists() ) return true;
-	
+
 	// Recursively create child directories as needed:
 	wxDirName recurse( *this );
 	recurse.RemoveLastDir();
@@ -173,7 +173,7 @@ wxString Path::GetDirectory( const wxString& src )
 // Example /this/that/something.txt -> dest == "/"
 wxString Path::GetRootDirectory( const wxString& src )
 {
-	int pos = src.find_first_of( wxFileName::GetPathSeparators() );
+	size_t pos = src.find_first_of( wxFileName::GetPathSeparators() );
 	if( pos == wxString::npos )
 		return wxString();
 	else

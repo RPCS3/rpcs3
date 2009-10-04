@@ -269,6 +269,7 @@
 		<Unit filename="../gui/AppAssert.cpp" />
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />
+		<Unit filename="../gui/AppInit.cpp" />
 		<Unit filename="../gui/AppMain.cpp" />
 		<Unit filename="../gui/AppRes.cpp" />
 		<Unit filename="../gui/CheckedStaticBox.cpp" />

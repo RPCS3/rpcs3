@@ -566,7 +566,7 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 		DoNextPlugin( curidx );
 		if( (curidx & 3) == 3 ) wxGetApp().Ping();		// gives the gui thread some time to refresh
 		pthread_testcancel();
-		Sleep(150);
+		//Sleep(150);		// uncomment this to slow down the selector, for debugging threading.
 	}
 
 	wxCommandEvent done( pxEVT_EnumerationFinished );

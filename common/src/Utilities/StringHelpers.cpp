@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "PrecompiledHeader.h"
 
 const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDefaultCoord );
@@ -161,7 +161,7 @@ bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval, const wx
 	dest = defval;
 
 	wxStringTokenizer parts( src, separators );
-	
+
 	wxPoint point;
 	wxSize size;
 
@@ -172,7 +172,7 @@ bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval, const wx
 	return true;
 }
 
-// Performs a cross-platform puts operation, which adds CRs to naked LFs on Win32 platforms, 
+// Performs a cross-platform puts operation, which adds CRs to naked LFs on Win32 platforms,
 // so that Notepad won't throw a fit and Rama can read the logs again! On Unix and Mac platforms,
 // the input string is written unmodified.
 //
@@ -187,7 +187,7 @@ void px_fputs( FILE* fp, const char* src )
 #ifdef _WIN32
 	// Windows needs CR's partnered with all newlines, or else notepad.exe can't view
 	// the stupid logfile.  Best way is to write one char at a time.. >_<
-	
+
 	const char* curchar = src;
 	bool prevcr = false;
 	while( *curchar != 0 )
@@ -214,6 +214,6 @@ void px_fputs( FILE* fp, const char* src )
 	// Linux is happy with plain old LFs.  Not sure about Macs... does OSX still
 	// go by the old school Mac style of using Crs only?
 
-	fputs( src, emuLog );	// fputs does not do automatic newlines, so it's ok!
+	fputs( src, fp );	// fputs does not do automatic newlines, so it's ok!
 #endif
 }
