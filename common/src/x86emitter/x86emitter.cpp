@@ -272,7 +272,7 @@ namespace Internal
 	//
 	__noinline void EmitSibMagic( uint regfield, const ModSibBase& info )
 	{
-		pxAssert( regfield < 8, "Invalid x86 register identifier." );
+		pxAssertDev( regfield < 8, "Invalid x86 register identifier." );
 
 		int displacement_size = (info.Displacement == 0) ? 0 :
 			( ( info.IsByteSizeDisp() ) ? 1 : 2 );
