@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,12 +12,12 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
 
-#define TINY_BLOCK_COPY 64  
-#define IN_CACHE_COPY 2 * 1024 
+
+#define TINY_BLOCK_COPY 64
+#define IN_CACHE_COPY 2 * 1024
 #define UNCACHED_COPY 4 * 1024
-#define BLOCK_PREFETCH_COPY  infinity // no limit for movq/movntq w/block prefetch 
+#define BLOCK_PREFETCH_COPY  infinity // no limit for movq/movntq w/block prefetch
 #define CACHEBLOCK 80
 
 // Fast assembly routines for x86-64
@@ -45,7 +45,7 @@ memcmp_mmx:
 		//call FreezeMMXRegs_
 		//add esp, 4
 
-memcmp_mmx_begin:		
+memcmp_mmx_begin:
 		push esi
 		mov MEMCMP_SRC1, dword ptr [esp+8]
 		mov MEMCMP_SRC2, dword ptr [esp+12]
@@ -114,7 +114,7 @@ memcmp_Cmp8:
 		pand mm0, mm6
 		pand mm0, mm7
 		pmovmskb eax, mm0
-		
+
 		// check if eq
 		cmp eax, 0xff
 		je memcmp_Continue
@@ -214,7 +214,7 @@ memcmp_End:
 		emms
 		pop esi
 		ret
-        
+
 // memxor_mmx
 #define MEMXOR_SRC1 edx
 #define MEMXOR_SRC2 esi
@@ -327,8 +327,8 @@ memxor_End:
 // void __fastcall memcpy_amd_(void *dest, const void *src, size_t n)
 .global memcpy_amd_
 memcpy_amd_:
-	push    edi  
-	push    esi  
+	push    edi
+	push    esi
 
 	mov		edi, ecx		// destination
 	mov		esi, edx		// source
@@ -343,7 +343,7 @@ memcpy_amd_:
 	jbe		$memcpy_do_align //  it appears to be slower
 	cmp		eax, 64*1024
 	jbe		$memcpy_align_done
-	
+
 $memcpy_do_align:
 	mov		eax, 8			// a trick that's faster than rep movsb...
 	sub		eax, edi		// align destination to qword
@@ -501,12 +501,12 @@ $memcpy_last_few:		// dword aligned from before movsd's
 	jz		$memcpy_final	// no more, let's leave
 	rep		movsb		// the last 1, 2, or 3 bytes
 
-$memcpy_final: 
+$memcpy_final:
 	emms				// clean up the MMX state
 	sfence				// flush the write buffer
 	//mov		eax, [dest]	// ret value = destination pointer
 
-	pop    esi  
+	pop    esi
 	pop    edi
 
 	ret 4

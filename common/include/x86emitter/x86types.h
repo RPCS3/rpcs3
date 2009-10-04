@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -50,7 +50,7 @@ template< typename T >
 __forceinline void xWrite( T val )
 {
 	*(T*)x86Ptr = val;
-	x86Ptr += sizeof(T); 
+	x86Ptr += sizeof(T);
 }
 
 
@@ -72,8 +72,8 @@ __forceinline void xWrite( T val )
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 // __emitline - preprocessors definition
-// 
-// This is configured to inline emitter functions appropriately for release builds, and 
+//
+// This is configured to inline emitter functions appropriately for release builds, and
 // disables some of the more aggressive inlines for dev builds (which can be helpful when
 // debugging).  Additionally,  I've set up the inlining to be as practical and intelligent
 // as possible with regard to constant propagation.  Namely this involves forcing inlining
@@ -133,7 +133,7 @@ __forceinline void xWrite( T val )
 
 		// Returns true if the register is a valid accumulator: Eax, Ax, Al.
 		bool IsAccumulator() const { return Id == 0; }
-		
+
 		// returns true if the register is a valid MMX or XMM register.
 		bool IsSIMD() const { return OperandSize == 8 || OperandSize == 16; }
 
@@ -150,7 +150,7 @@ __forceinline void xWrite( T val )
 		xRegister(): xRegisterBase<OperandType>() {}
 		xRegister( const xRegisterBase<OperandType>& src ) : xRegisterBase<OperandType>( src ) {}
 		explicit xRegister( int regId ) : xRegisterBase<OperandType>( regId ) {}
-		
+
 		bool operator==( const xRegister<OperandType>& src ) const	{ return this->Id == src.Id; }
 		bool operator!=( const xRegister<OperandType>& src ) const	{ return this->Id != src.Id; }
 
@@ -173,7 +173,7 @@ __forceinline void xWrite( T val )
 		xRegisterSIMD(): xRegisterBase<OperandType>() {}
 		explicit xRegisterSIMD( const xRegisterBase<OperandType>& src ) : xRegisterBase<OperandType>( src ) {}
 		explicit xRegisterSIMD( int regId ) : xRegisterBase<OperandType>( regId ) {}
-		
+
 		bool operator==( const xRegisterSIMD<OperandType>& src ) const	{ return this->Id == src.Id; }
 		bool operator!=( const xRegisterSIMD<OperandType>& src ) const	{ return this->Id != src.Id; }
 
@@ -212,34 +212,34 @@ __forceinline void xWrite( T val )
 	{
 	public:
 		static const xAddressReg Empty;		// defined as an empty/unused value (-1)
-	
+
 	public:
-		xAddressReg(): xRegister32() {}
-		xAddressReg( const xAddressReg& src ) : xRegister32( src.Id ) {}
-		xAddressReg( const xRegister32& src ) : xRegister32( src ) {}
-		explicit xAddressReg( int regId ) : xRegister32( regId ) {}
+		inline xAddressReg(): xRegister32() {}
+		inline xAddressReg( const xAddressReg& src ) : xRegister32( src.Id ) {}
+		inline xAddressReg( const xRegister32& src ) : xRegister32( src ) {}
+		explicit inline xAddressReg( int regId ) : xRegister32( regId ) {}
 
 		// Returns true if the register is the stack pointer: ESP.
 		bool IsStackPointer() const { return Id == 4; }
 
-		xAddressInfo operator+( const xAddressReg& right ) const;
-		xAddressInfo operator+( const xAddressInfo& right ) const;
-		xAddressInfo operator+( s32 right ) const;
-		xAddressInfo operator+( const void* right ) const;
+		inline xAddressInfo operator+( const xAddressReg& right ) const;
+		inline xAddressInfo operator+( const xAddressInfo& right ) const;
+		inline xAddressInfo operator+( s32 right ) const;
+		inline xAddressInfo operator+( const void* right ) const;
 
-		xAddressInfo operator-( s32 right ) const;
-		xAddressInfo operator-( const void* right ) const;
+		inline xAddressInfo operator-( s32 right ) const;
+		inline xAddressInfo operator-( const void* right ) const;
 
-		xAddressInfo operator*( u32 factor ) const;
-		xAddressInfo operator<<( u32 shift ) const;
-		
-		xAddressReg& operator=( const xRegister32& src )
+		inline xAddressInfo operator*( u32 factor ) const;
+		inline xAddressInfo operator<<( u32 shift ) const;
+
+		inline xAddressReg& operator=( const xRegister32& src )
 		{
 			Id = src.Id;
 			return *this;
 		}
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
 	class xAddressInfo
@@ -266,7 +266,7 @@ __forceinline void xWrite( T val )
 			Displacement( displacement )
 		{
 		}
-		
+
 		__forceinline explicit xAddressInfo( s32 displacement ) :
 			Base(),
 			Index(),
@@ -274,7 +274,7 @@ __forceinline void xWrite( T val )
 			Displacement( displacement )
 		{
 		}
-		
+
 		static xAddressInfo FromIndexReg( const xAddressReg& index, int scale=0, s32 displacement=0 );
 
 	public:
@@ -285,9 +285,9 @@ __forceinline void xWrite( T val )
 			Displacement += imm;
 			return *this;
 		}
-		
-		__forceinline xAddressInfo& Add( const xAddressReg& src );
-		__forceinline xAddressInfo& Add( const xAddressInfo& src );
+
+		inline  xAddressInfo& Add( const xAddressReg& src );
+		inline  xAddressInfo& Add( const xAddressInfo& src );
 
 		__forceinline xAddressInfo operator+( const xAddressReg& right ) const { return xAddressInfo( *this ).Add( right ); }
 		__forceinline xAddressInfo operator+( const xAddressInfo& right ) const { return xAddressInfo( *this ).Add( right ); }
@@ -332,19 +332,19 @@ __forceinline void xWrite( T val )
 	{
 		xRegister<OperandType> m_reg;
 		int m_imm;
-		
+
 	public:
 		xImmReg() :
 			m_reg(), m_imm( 0 ) { }
 
 		xImmReg( int imm, const xRegister<OperandType>& reg=xRegister<OperandType>() ) :
 			m_reg( reg ), m_imm( imm ) { }
-			
+
 		const xRegister<OperandType>& GetReg() const { return m_reg; }
 		const int GetImm() const { return m_imm; }
 		bool IsReg() const { return !m_reg.IsEmpty(); }
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// ModSib - Internal low-level representation of the ModRM/SIB information.
 	//
@@ -366,26 +366,26 @@ __forceinline void xWrite( T val )
 		s32 Displacement;		// offset applied to the Base/Index registers.
 
 	public:
-		explicit ModSibBase( const xAddressInfo& src );
-		explicit ModSibBase( s32 disp );
-		ModSibBase( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 );
-		ModSibBase( const void* target );
-		
-		bool IsByteSizeDisp() const { return is_s8( Displacement ); }
+		explicit inline ModSibBase( const xAddressInfo& src );
+		explicit inline ModSibBase( s32 disp );
+		inline ModSibBase( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 );
+		inline ModSibBase( const void* target );
 
-		__forceinline ModSibBase& Add( s32 imm )
+		inline bool IsByteSizeDisp() const { return is_s8( Displacement ); }
+
+		inline ModSibBase& Add( s32 imm )
 		{
 			Displacement += imm;
 			return *this;
 		}
 
-		__forceinline ModSibBase operator+( const s32 imm ) const { return ModSibBase( *this ).Add( imm ); }
-		__forceinline ModSibBase operator-( const s32 imm ) const { return ModSibBase( *this ).Add( -imm ); }
+		__forceinline inline ModSibBase operator+( const s32 imm ) const { return ModSibBase( *this ).Add( imm ); }
+		__forceinline inline ModSibBase operator-( const s32 imm ) const { return ModSibBase( *this ).Add( -imm ); }
 
 	protected:
 		void Reduce();
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Strictly-typed version of ModSibBase, which is used to apply operand size information
 	// to ImmToMem operations.
@@ -402,7 +402,7 @@ __forceinline void xWrite( T val )
 		__forceinline ModSibStrict( const OperandType* target ) : ModSibBase( target ) {}
 		__forceinline ModSibStrict( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) :
 			ModSibBase( base, index, scale, displacement ) {}
-		
+
 		__forceinline ModSibStrict<OperandType>& Add( s32 imm )
 		{
 			Displacement += imm;
@@ -453,7 +453,7 @@ __forceinline void xWrite( T val )
 		{
 			return ModSibBase( (uptr)src );
 		}
-		
+
 		xAddressIndexerBase() {}			// appease the GCC gods
 	};
 
@@ -489,7 +489,7 @@ __forceinline void xWrite( T val )
 		{
 			return ModSibStrict<OperandType>( (uptr)src );
 		}
-		
+
 		xAddressIndexer() {}  // GCC initialization dummy
 	};
 
@@ -524,7 +524,7 @@ __forceinline void xWrite( T val )
 
 		xDirectOrIndirect( const ModSibStrict<OperandType>& srcmem ) :
 			m_RegDirect(), m_MemIndirect( srcmem ) {}
-		
+
 		const xRegister<OperandType>& GetReg() const { return m_RegDirect; }
 		const ModSibStrict<OperandType>& GetMem() const { return m_MemIndirect; }
 		bool IsDirect() const { return !m_RegDirect.IsEmpty(); }
@@ -532,12 +532,12 @@ __forceinline void xWrite( T val )
 
 		bool operator==( const xDirectOrIndirect<OperandType>& src ) const
 		{
-			return IsDirect() ? 
+			return IsDirect() ?
 				(m_RegDirect == src.m_RegDirect) :
 				(m_MemIndirect == src.m_MemIndirect);
 		}
-		
-		bool operator!=( const xDirectOrIndirect<OperandType>& src ) const 
+
+		bool operator!=( const xDirectOrIndirect<OperandType>& src ) const
 		{
 			return !operator==( src );
 		}
@@ -582,7 +582,7 @@ __forceinline void xWrite( T val )
 		Jcc_LessOrEqual		= 0xe,
 		Jcc_Greater			= 0xf,
 	};
-	
+
 	// Not supported yet:
 	//E3 cb 	JECXZ rel8 	Jump short if ECX register is 0.
 
@@ -607,7 +607,7 @@ __forceinline void xWrite( T val )
 	// This class provides an interface for generating forward-based j8's or j32's "smartly"
 	// as per the measured displacement distance.  If the displacement is a valid s8, then
 	// a j8 is inserted, else a j32.
-	// 
+	//
 	// Note: This class is inherently unsafe, and so it's recommended to use xForwardJump8/32
 	// whenever it is known that the jump destination is (or is not) short.  Only use
 	// xSmartJump in cases where it's unknown what jump encoding will be ideal.
@@ -661,7 +661,7 @@ __forceinline void xWrite( T val )
 			m_cc = ccType;
 			xAdvancePtr( GetMaxInstructionSize() );
 		}
-		
+
 	protected:
 		void SetTarget();
 	};
@@ -683,16 +683,16 @@ __forceinline void xWrite( T val )
 
 		// The jump instruction is emitted at the point of object construction.  The conditional
 		// type must be valid (Jcc_Unknown generates an assertion).
-		xForwardJump( JccComparisonType cctype = Jcc_Unconditional );
-		
+		inline xForwardJump( JccComparisonType cctype = Jcc_Unconditional );
+
 		// Sets the jump target by writing back the current x86Ptr to the jump instruction.
 		// This method can be called multiple times, re-writing the jump instruction's target
 		// in each case. (the the last call is the one that takes effect).
-		void SetTarget() const;
+		inline void SetTarget() const;
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
-	//	
+	//
 	namespace Internal
 	{
 		#include "implement/helpers.h"
