@@ -661,16 +661,16 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			if (VIFdmanum)
 			{
 				__asm__(".intel_syntax noprefix\n"
-				        "movaps xmm6, xmmword ptr [%[g_vifmask.Row1]]\n"
-				        "movaps xmm7, xmmword ptr [%[g_vifmask.Col1]]\n"
-					".att_syntax\n" : : [g_vifmask.Row1]"r"(g_vifmask.Row1), [g_vifmask.Col1]"r"(g_vifmask.Col1));
+				        "movaps xmm6, xmmword ptr [%[Row1]]\n"
+				        "movaps xmm7, xmmword ptr [%[Col1]]\n"
+					".att_syntax\n" : : [Row1]"r"(g_vifmask.Row1), [Col1]"r"(g_vifmask.Col1));
 			}
 			else
 			{
 				__asm__(".intel_syntax noprefix\n"
-				        "movaps xmm6, xmmword ptr [%[g_vifmask.Row0]]\n"
-				        "movaps xmm7, xmmword ptr [%[g_vifmask.Col0]]\n"
-					".att_syntax\n" : : [g_vifmask.Row0]"r"(g_vifmask.Row0),  [g_vifmask.Col0]"r"(g_vifmask.Col0));
+				        "movaps xmm6, xmmword ptr [%[Row0]]\n"
+				        "movaps xmm7, xmmword ptr [%[Col0]]\n"
+					".att_syntax\n" : : [Row0]"r"(g_vifmask.Row0),  [Col0]"r"(g_vifmask.Col0));
 			}
 #endif
 
