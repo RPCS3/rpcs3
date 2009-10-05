@@ -6,7 +6,7 @@
 
 SETLOCAL ENABLEEXTENSIONS
 
-set mydir=%~0\..\
+set mydir=%~dp0
 SubWCRev.exe "%~1" "%mydir%\svnrev_template.h" "%CD%\svnrev.h"
 if %ERRORLEVEL% NEQ 0 (
   echo Automatic revision update unavailable, using generic template instead.
