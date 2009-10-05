@@ -14,10 +14,6 @@
  */
 
 // This is meant to be a collection of generic functions dealing with tags.
-// I kept seeing the same code over and over with different structure names
-// and the same members, and figured it'd be a good spot to use templates...
-
-// Actually, looks like I didn't need templates after all... :)
 
 enum mfd_type
 {

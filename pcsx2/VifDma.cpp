@@ -892,17 +892,17 @@ static void vuExecMicro(u32 addr, const u32 VIFdmanum)
 		VU->vifRegs->top = VU->vifRegs->tops & 0x3ff;
 
 		/* is DBF flag set in VIF_STAT? */
-		if (VU->vifRegs->stat & VIF_STAT_DBF)
+		if (VU->vifRegs->stat.DBF)
 		{
-			/* it is, so set tops with base, and set the stat DBF flag */
+			/* it is, so set tops with base, and clear the stat DBF flag */
 			VU->vifRegs->tops = VU->vifRegs->base;
-			VU->vifRegs->stat &= ~VIF_STAT_DBF;
+			VU->vifRegs->stat.DBF = 0;
 		}
 		else
 		{
-			/* it is not, so set tops with base + ofst,  and clear stat DBF flag */
+			/* it is not, so set tops with base + offset,  and set stat DBF flag */
 			VU->vifRegs->tops = VU->vifRegs->base + VU->vifRegs->ofst;
-			VU->vifRegs->stat |= VIF_STAT_DBF;
+			VU->vifRegs->stat.DBF = 1;
 		}
 	}
 
@@ -1178,7 +1178,7 @@ static void Vif0CMDSTMod()  // STMOD
 static void Vif0CMDMark()  // MARK
 {
 	vif0Regs->mark = (u16)vif0Regs->code;
-	vif0Regs->stat |= VIF0_STAT_MRK;
+	vif0Regs->stat.MRK = 1;
 	vif0.cmd &= ~0x7f;
 }
 
@@ -1227,7 +1227,7 @@ static void Vif0CMDNull()  // invalid opcode
 	if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 	{
 		Console.WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
-		vif0Regs->stat |= VIF0_STAT_ER1;
+		vif0Regs->stat.ER1 = 1;
 		vif0.irq++;
 	}
 	vif0.cmd &= ~0x7f;
@@ -1247,12 +1247,12 @@ int VIF0transfer(u32 *data, int size, int istag)
 	{
 		if (vif0.cmd)
 		{
-			vif0Regs->stat |= VIF0_STAT_VPS_T; //Decompression has started
+			vif0Regs->stat.VPS = VPS_TRANSFERRING; //Decompression has started
 
 			ret = Vif0TransTLB[(vif0.cmd & 0x7f)](data);
 			data += ret;
 			vif0.vifpacketsize -= ret;
-			if (vif0.cmd == 0) vif0Regs->stat &= ~VIF0_STAT_VPS_T; //We are once again waiting for a new vifcode as the command has cleared
+			if (vif0.cmd == 0) vif0Regs->stat.VPS = VPS_IDLE; //We are once again waiting for a new vifcode as the command has cleared
 			continue;
 		}
 
@@ -1264,7 +1264,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 		vif0.cmd = (data[0] >> 24);
 		vif0Regs->code = data[0];
 
-		vif0Regs->stat |= VIF0_STAT_VPS_D; //We need to set these (Onimusha needs it)
+		vif0Regs->stat.VPS |= VPS_DECODING; //We need to set these (Onimusha needs it)
 
 		if ((vif0.cmd & 0x60) == 0x60)
 		{
@@ -1279,7 +1279,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 				if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 				{
 					Console.WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
-					vif0Regs->stat |= VIF0_STAT_ER1;
+					vif0Regs->stat.ER1 = 1;
 					vif0.irq++;
 				}
 				vif0.cmd = 0;
@@ -1318,7 +1318,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 	{
 		vif0.vifstalled = true;
 
-		if (((vif0Regs->code >> 24) & 0x7f) != 0x7)vif0Regs->stat |= VIF0_STAT_VIS;
+		if (((vif0Regs->code >> 24) & 0x7f) != 0x7) vif0Regs->stat.VIS = 1;
 		//else Console.WriteLn("VIF0 IRQ on MARK");
 
 		// spiderman doesn't break on qw boundaries
@@ -1334,8 +1334,8 @@ int VIF0transfer(u32 *data, int size, int istag)
 		return -2;
 	}
 
-	vif0Regs->stat &= ~VIF0_STAT_VPS; //Vif goes idle as the stall happened between commands;
-	if (vif0.cmd) vif0Regs->stat |= VIF0_STAT_VPS_W;  //Otherwise we wait for the data
+	vif0Regs->stat.VPS = 0; //Vif goes idle as the stall happened between commands;
+	if (vif0.cmd) vif0Regs->stat.VPS |= VPS_WAITING;  //Otherwise we wait for the data
 
 	if (!istag)
 	{
@@ -1421,13 +1421,13 @@ void  vif0Interrupt()
 
 	if (vif0.irq && (vif0.tag.size == 0))
 	{
-		vif0Regs->stat |= VIF0_STAT_INT;
+		vif0Regs->stat.INT = 1;
 		hwIntcIrq(VIF0intc);
 		--vif0.irq;
 
-		if (vif0Regs->stat & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
+		if (vif0Regs->stat._u32 & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 		{
-			vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
+			vif0Regs->stat.FQC = 0; // FQC=0
 			vif0ch->chcr.STR = 0;
 			return;
 		}
@@ -1469,7 +1469,7 @@ void  vif0Interrupt()
 
 	vif0ch->chcr.STR = 0;
 	hwDmacIrq(DMAC_VIF0);
-	vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
+	vif0Regs->stat.FQC = 0; // FQC=0
 }
 
 //  Vif1 Data Transfer Table
@@ -1517,13 +1517,14 @@ void dmaVIF0()
 
 	g_vifCycles = 0;
 
-	vif0Regs->stat |= 0x8000000; // FQC=8
+	vif0Regs->stat.FQC = 0x8; // FQC=8
 
 	if (!(vif0ch->chcr.MOD & 0x1) || vif0ch->qwc > 0)   // Normal Mode
 	{
 		if (_VIF0chain() == -2)
 		{
-			Console.WriteLn("Stall on normal %x", vif0Regs->stat);
+			Console.WriteLn("Stall on normal %x", vif0Regs->stat._u32);
+			
 			vif0.vifstalled = true;
 			return;
 		}
@@ -1546,7 +1547,7 @@ void vif0Write32(u32 mem, u32 value)
 			VIF_LOG("VIF0_MARK write32 0x%8.8x", value);
 
 			/* Clear mark flag in VIF0_STAT and set mark with 'value' */
-			vif0Regs->stat &= ~VIF0_STAT_MRK;
+			vif0Regs->stat.MRK = 0;
 			vif0Regs->mark = value;
 			break;
 
@@ -1556,7 +1557,9 @@ void vif0Write32(u32 mem, u32 value)
 			if (value & 0x1)
 			{
 				/* Reset VIF */
-				//Console.WriteLn("Vif0 Reset %x", vif0Regs->stat);
+				
+				//Console.WriteLn("Vif0 Reset %x", vif0Regs->stat._u32);
+				
 				memzero(vif0);
 				vif0ch->qwc = 0; //?
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
@@ -1564,7 +1567,7 @@ void vif0Write32(u32 mem, u32 value)
 				psHu64(VIF0_FIFO + 8) = 0; // VIF0_FIFO + 8
 				vif0.done = true;
 				vif0Regs->err._u32 = 0;
-				vif0Regs->stat &= ~(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
+				vif0Regs->stat._u32 &= ~(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 			}
 
 			if (value & 0x2)
@@ -1572,8 +1575,8 @@ void vif0Write32(u32 mem, u32 value)
 				/* Force Break the VIF */
 				/* I guess we should stop the VIF dma here, but not 100% sure (linuz) */
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
-				vif0Regs->stat |= VIF0_STAT_VFS;
-				vif0Regs->stat &= ~VIF0_STAT_VPS;
+				vif0Regs->stat.VFS = 1;
+				vif0Regs->stat.VPS = 0;
 				vif0.vifstalled = true;
 				Console.WriteLn("vif0 force break");
 			}
@@ -1583,8 +1586,8 @@ void vif0Write32(u32 mem, u32 value)
 				/* Stop VIF */
 				// Not completely sure about this, can't remember what game, used this, but 'draining' the VIF helped it, instead of
 				//  just stoppin the VIF (linuz).
-				vif0Regs->stat |= VIF0_STAT_VSS;
-				vif0Regs->stat &= ~VIF0_STAT_VPS;
+				vif0Regs->stat.VSS = 1;
+				vif0Regs->stat.VPS = 0;
 				vif0.vifstalled = true;
 			}
 
@@ -1593,10 +1596,10 @@ void vif0Write32(u32 mem, u32 value)
 				bool cancel = false;
 
 				/* Cancel stall, first check if there is a stall to cancel, and then clear VIF0_STAT VSS|VFS|VIS|INT|ER0|ER1 bits */
-				if (vif0Regs->stat & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
+				if (vif0Regs->stat._u32 & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 					cancel = true;
 
-				vif0Regs->stat &= ~(VIF0_STAT_VSS | VIF0_STAT_VFS | VIF0_STAT_VIS |
+				vif0Regs->stat._u32 &= ~(VIF0_STAT_VSS | VIF0_STAT_VFS | VIF0_STAT_VIS |
 						    VIF0_STAT_INT | VIF0_STAT_ER0 | VIF0_STAT_ER1);
 				if (cancel)
 				{
@@ -1657,9 +1660,9 @@ void vif0Reset()
 	SetNewMask(g_vif0Masks, g_vif0HasMask3, 0, 0xffffffff);
 	psHu64(VIF0_FIFO) = 0;
 	psHu64(VIF0_FIFO + 8) = 0;
-	vif0Regs->stat &= ~VIF0_STAT_VPS;
+	vif0Regs->stat.VPS = 0;
 	vif0.done = true;
-	vif0Regs->stat &= ~VIF0_STAT_FQC; // FQC=0
+	vif0Regs->stat.FQC = 0; // FQC=0
 }
 
 void SaveStateBase::vif0Freeze()
@@ -1869,7 +1872,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	{
 		if (gif->chcr.STR && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) //PATH3 is in image mode, so wait for end of transfer
 		{
-			vif1Regs->stat |= VIF1_STAT_VGW;
+			vif1Regs->stat.VGW = 1;
 			return 0;
 		}
 	}
@@ -2013,7 +2016,7 @@ static void Vif1CMDSTCycl()  // STCYCL
 static void Vif1CMDOffset()  // OFFSET
 {
 	vif1Regs->ofst  = vif1Regs->code & 0x3ff;
-	vif1Regs->stat &= ~VIF1_STAT_DBF;
+	vif1Regs->stat.DBF = 0;
 	vif1Regs->tops  = vif1Regs->base;
 	vif1.cmd &= ~0x7f;
 }
@@ -2076,7 +2079,7 @@ static void Vif1CMDMskPath3()  // MSKPATH3
 static void Vif1CMDMark()  // MARK
 {
 	vif1Regs->mark = (u16)vif1Regs->code;
-	vif1Regs->stat |= VIF1_STAT_MRK;
+	vif1Regs->stat.MRK = 1;
 	vif1.cmd &= ~0x7f;
 }
 
@@ -2089,7 +2092,7 @@ static void Vif1CMDFlush()  // FLUSH/E/A
 		// Gif is already transferring so wait for it.
 		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr.STR)
 		{
-			vif1Regs->stat |= VIF1_STAT_VGW;
+			vif1Regs->stat.VGW = 1;
 			CPU_INT(2, 4);
 		}
 	}
@@ -2151,7 +2154,7 @@ static void Vif1CMDNull()  // invalid opcode
 	if (!(vif1Regs->err.ME1))   //Ignore vifcode and tag mismatch error
 	{
 		Console.WriteLn("UNKNOWN VifCmd: %x\n", vif1.cmd);
-		vif1Regs->stat |= VIF1_STAT_ER1;
+		vif1Regs->stat.ER1 = 1;
 		vif1.irq++;
 	}
 	vif1.cmd = 0;
@@ -2213,18 +2216,18 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 	while (vif1.vifpacketsize > 0)
 	{
-		if(vif1Regs->stat & VIF1_STAT_VGW) break;
+		if(vif1Regs->stat.VGW) break;
 
 		if (vif1.cmd)
 		{
-			vif1Regs->stat |= VIF1_STAT_VPS_T; //Decompression has started
+			vif1Regs->stat.VPS = VPS_TRANSFERRING; //Decompression has started
 
 			ret = Vif1TransTLB[vif1.cmd](data);
 			data += ret;
 			vif1.vifpacketsize -= ret;
 
 			//We are once again waiting for a new vifcode as the command has cleared
-			if (vif1.cmd == 0) vif1Regs->stat &= ~VIF1_STAT_VPS_T;
+			if (vif1.cmd == 0) vif1Regs->stat.VPS = VPS_IDLE;
 			continue;
 		}
 
@@ -2235,7 +2238,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		vif1.cmd = (data[0] >> 24);
 		vif1Regs->code = data[0];
 
-		vif1Regs->stat |= VIF1_STAT_VPS_D;
+		vif1Regs->stat.VPS |= VPS_DECODING;
 		if ((vif1.cmd & 0x60) == 0x60)
 		{
 			vif1UNPACK(data);
@@ -2249,7 +2252,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 				if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 				{
 					Console.WriteLn("UNKNOWN VifCmd: %x", vif1.cmd);
-					vif1Regs->stat |= VIF1_STAT_ER1;
+					vif1Regs->stat.ER1 = 1;
 					vif1.irq++;
 				}
 				vif1.cmd = 0;
@@ -2276,9 +2279,9 @@ int VIF1transfer(u32 *data, int size, int istag)
 			}
 		}
 
-		if(!vif1.cmd) vif1Regs->stat &= ~VIF1_STAT_VPS_D;
+		if(!vif1.cmd) vif1Regs->stat.VPS = VPS_IDLE;
 
-		if((vif1Regs->stat & VIF1_STAT_VGW) || vif1.vifstalled == true) break;
+		if((vif1Regs->stat.VGW) || vif1.vifstalled == true) break;
 	} // End of Transfer loop
 
 	transferred += size - vif1.vifpacketsize;
@@ -2289,7 +2292,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 	{
 		vif1.vifstalled = true;
 
-		if (((vif1Regs->code >> 24) & 0x7f) != 0x7) vif1Regs->stat |= VIF1_STAT_VIS; // Note: commenting this out fixes WALL-E
+		if (((vif1Regs->code >> 24) & 0x7f) != 0x7) vif1Regs->stat.VIS = 1; // Note: commenting this out fixes WALL-E
 
 		if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1)) vif1.inprogress &= ~0x1;
 
@@ -2305,8 +2308,8 @@ int VIF1transfer(u32 *data, int size, int istag)
 		return -2;
 	}
 
-	vif1Regs->stat &= ~VIF1_STAT_VPS; //Vif goes idle as the stall happened between commands;
-	if (vif1.cmd) vif1Regs->stat |= VIF1_STAT_VPS_W;  //Otherwise we wait for the data
+	vif1Regs->stat.VPS = 0; //Vif goes idle as the stall happened between commands;
+	if (vif1.cmd) vif1Regs->stat.VPS |= VPS_WAITING;  //Otherwise we wait for the data
 
 	if (!istag)
 	{
@@ -2315,7 +2318,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		vif1ch->qwc -= transferred;
 	}
 
-	if(vif1Regs->stat & VIF1_STAT_VGW)
+	if (vif1Regs->stat.VGW)
 	{
 		vif1.vifstalled = true;
 	}
@@ -2337,7 +2340,7 @@ void vif1TransferFromMemory()
 		Console.WriteLn("Vif1 Tag BUSERR");
 		dmacRegs->stat.BEIS = 1;      //If yes, set BEIS (BUSERR) in DMAC_STAT register
 		vif1.done = true;
-		vif1Regs->stat &= ~VIF1_STAT_FQC;
+		vif1Regs->stat.FQC = 0;
 		vif1ch->qwc = 0;
 		CPU_INT(1, 0);
 
@@ -2501,29 +2504,31 @@ __forceinline void vif1Interrupt()
 
 	g_vifCycles = 0;
 
-	if(schedulepath3msk) Vif1MskPath3();
+	if (schedulepath3msk) Vif1MskPath3();
 
-	if((vif1Regs->stat & VIF1_STAT_VGW))
+	if ((vif1Regs->stat.VGW))
 	{
 		if (gif->chcr.STR)
 		{
 			CPU_INT(1, gif->qwc * BIAS);
 			return;
 		}
-		else vif1Regs->stat &= ~VIF1_STAT_VGW;
-
+		else 
+		{
+		    vif1Regs->stat.VGW = 0;
+		}
 	}
 
 	if (!(vif1ch->chcr.STR)) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch->chcr._u32);
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
-		vif1Regs->stat |= VIF1_STAT_INT;
+		vif1Regs->stat.INT = 1;
 		hwIntcIrq(VIF1intc);
 		--vif1.irq;
-		if (vif1Regs->stat & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+		if (vif1Regs->stat._u32 & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
-			vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
+			vif1Regs->stat.FQC = 0; // FQC=0
 
 			// One game doesnt like vif stalling at end, cant remember what. Spiderman isnt keen on it tho
 			vif1ch->chcr.STR = 0;
@@ -2570,7 +2575,7 @@ __forceinline void vif1Interrupt()
 	if (vif1.cmd != 0) Console.WriteLn("vif1.cmd still set %x tag size %x", vif1.cmd, vif1.tag.size);
 #endif
 
-	vif1Regs->stat &= ~VIF1_STAT_VPS; //Vif goes idle as the stall happened between commands;
+	vif1Regs->stat.VPS = 0; //Vif goes idle as the stall happened between commands;
 	vif1ch->chcr.STR = 0;
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF1);
@@ -2579,7 +2584,7 @@ __forceinline void vif1Interrupt()
 	//Games effected by setting, Fatal Frame, KH2, Shox, Crash N Burn, GT3/4 possibly
 	//Im guessing due to the full gs fifo before the reverse? (Refraction)
 	//Note also this is only the condition for reverse fifo mode, normal direction clears it as normal
-	if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat &= ~0x1F000000; // FQC=0
+	if (!vif1Regs->mskpath3 || vif1ch->chcr.DIR) vif1Regs->stat.FQC = 0; // FQC=0
 }
 
 void dmaVIF1()
@@ -2625,9 +2630,9 @@ void dmaVIF1()
 	}
 
 	if (vif1.dmamode != VIF_NORMAL_FROM_MEM_MODE)
-		vif1Regs->stat |= 0x10000000; // FQC=16
+		vif1Regs->stat.FQC = 0x10; // FQC=16
 	else
-		vif1Regs->stat |= min((u16)16, vif1ch->qwc) << 24; // FQC=16
+		vif1Regs->stat._u32 |= min((u16)16, vif1ch->qwc) << 24; // FQC=16
 
 	// Chain Mode
 	vif1.done = false;
@@ -2642,7 +2647,7 @@ void vif1Write32(u32 mem, u32 value)
 			VIF_LOG("VIF1_MARK write32 0x%8.8x", value);
 
 			/* Clear mark flag in VIF1_STAT and set mark with 'value' */
-			vif1Regs->stat &= ~VIF1_STAT_MRK;
+			vif1Regs->stat.MRK = 0;
 			vif1Regs->mark = value;
 			break;
 
@@ -2668,15 +2673,15 @@ void vif1Write32(u32 mem, u32 value)
 
 				vif1Regs->err._u32 = 0;
 				vif1.inprogress = 0;
-				vif1Regs->stat &= ~(VIF1_STAT_FQC | VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
+				vif1Regs->stat._u32 &= ~(VIF1_STAT_FQC | VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
 			}
 
 			if (value & 0x2)
 			{
 				/* Force Break the VIF */
 				/* I guess we should stop the VIF dma here, but not 100% sure (linuz) */
-				vif1Regs->stat |= VIF1_STAT_VFS;
-				vif1Regs->stat &= ~VIF1_STAT_VPS;
+				vif1Regs->stat.VFS = 1;
+				vif1Regs->stat.VPS = 0;
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 				vif1.vifstalled = true;
 				Console.WriteLn("vif1 force break");
@@ -2687,8 +2692,8 @@ void vif1Write32(u32 mem, u32 value)
 				/* Stop VIF */
 				// Not completely sure about this, can't remember what game used this, but 'draining' the VIF helped it, instead of
 				//   just stoppin the VIF (linuz).
-				vif1Regs->stat |= VIF1_STAT_VSS;
-				vif1Regs->stat &= ~VIF1_STAT_VPS;
+				vif1Regs->stat.VSS = 1;
+				vif1Regs->stat.VPS = 0;
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 				vif1.vifstalled = true;
 			}
@@ -2698,12 +2703,12 @@ void vif1Write32(u32 mem, u32 value)
 				bool cancel = false;
 
 				/* Cancel stall, first check if there is a stall to cancel, and then clear VIF1_STAT VSS|VFS|VIS|INT|ER0|ER1 bits */
-				if (vif1Regs->stat & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+				if (vif1Regs->stat._u32 & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 				{
 					cancel = true;
 				}
 
-				vif1Regs->stat &= ~(VIF1_STAT_VSS | VIF1_STAT_VFS | VIF1_STAT_VIS |
+				vif1Regs->stat._u32 &= ~(VIF1_STAT_VSS | VIF1_STAT_VFS | VIF1_STAT_VIS |
 						VIF1_STAT_INT | VIF1_STAT_ER0 | VIF1_STAT_ER1);
 
 				if (cancel)
@@ -2712,16 +2717,21 @@ void vif1Write32(u32 mem, u32 value)
 					{
 						g_vifCycles = 0;
 						// loop necessary for spiderman
-						if ((psHu32(DMAC_CTRL) & 0xC) == 0x8)
+						switch(dmacRegs->ctrl.MFD)
 						{
-							//Console.WriteLn("MFIFO Stall");
-							CPU_INT(10, vif1ch->qwc * BIAS);
+						    case MFD_VIF1:
+                                //Console.WriteLn("MFIFO Stall");
+                                CPU_INT(10, vif1ch->qwc * BIAS);
+                                break;
+                            
+                            case NO_MFD:
+                            case MFD_RESERVED:
+                            case MFD_GIF: // Wonder if this should be with VIF?
+                                // Gets the timing right - Flatout
+                                CPU_INT(1, vif1ch->qwc * BIAS);
+                                break;
 						}
-						else
-						{
-							// Gets the timing right - Flatout
-							CPU_INT(1, vif1ch->qwc * BIAS);
-						}
+						
 						vif1ch->chcr.STR = 1;
 					}
 				}
@@ -2740,27 +2750,27 @@ void vif1Write32(u32 mem, u32 value)
 
 #ifdef PCSX2_DEVBUILD
 			/* Only FDR bit is writable, so mask the rest */
-			if ((vif1Regs->stat & VIF1_STAT_FDR) ^(value & VIF1_STAT_FDR))
+			if ((vif1Regs->stat.FDR) ^(value & VIF1_STAT_FDR))
 			{
 				// different so can't be stalled
-				if (vif1Regs->stat & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+				if (vif1Regs->stat._u32 & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 				{
 					DevCon.WriteLn("changing dir when vif1 fifo stalled");
 				}
 			}
 #endif
 
-			vif1Regs->stat = (vif1Regs->stat & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
-			if (vif1Regs->stat & VIF1_STAT_FDR)
+			vif1Regs->stat._u32 = (vif1Regs->stat._u32 & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
+			if (vif1Regs->stat.FDR)
 			{
-				vif1Regs->stat |= 0x01000000; // FQC=1 - hack but it checks this is true before transfer? (fatal frame)
+				vif1Regs->stat.FQC = 1; // FQC=1 - hack but it checks this is true before transfer? (fatal frame)
 			}
 			else
 			{
 				vif1ch->qwc = 0;
 				vif1.vifstalled = false;
 				vif1.done = true;
-				vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
+				vif1Regs->stat.FQC = 0; // FQC=0
 			}
 			break;
 
@@ -2799,12 +2809,15 @@ void vif1Reset()
 	memzero(vif1);
 	memzero(*vif1Regs);
 	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
+	
 	psHu64(VIF1_FIFO) = 0;
 	psHu64(VIF1_FIFO + 8) = 0;
-	vif1Regs->stat &= ~VIF1_STAT_VPS;
+	
+	vif1Regs->stat.VPS = 0;
+	vif1Regs->stat.FQC = 0; // FQC=0
+	
 	vif1.done = true;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-	vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
 }
 
 void SaveStateBase::vif1Freeze()

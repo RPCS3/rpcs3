@@ -62,7 +62,7 @@ __forceinline void gsInterrupt()
 
 	if ((vif1.cmd & 0x7f) == 0x51)
 	{
-		if (Path3progress != IMAGE_MODE) vif1Regs->stat &= ~VIF1_STAT_VGW;
+		if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = 0;
 	}
 
 	if (Path3progress == STOPPED_MODE) gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
@@ -84,7 +84,7 @@ __forceinline void gsInterrupt()
 	gspath3done = false;
 	gscycles = 0;
 	gif->chcr.STR = 0;
-	vif1Regs->stat &= ~VIF1_STAT_VGW;
+	vif1Regs->stat.VGW = 0;
 	
 	gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); 
 	
@@ -224,9 +224,9 @@ void GIFdma()
 			}
 		} 
 		 
-		if (Path3progress == STOPPED_MODE) /*|| (vif1Regs->stat |= VIF1_STAT_VGW) == 0*/
+		if (Path3progress == STOPPED_MODE) /*|| (vif1Regs->stat._u32 |= VIF1_STAT_VGW) == 0*/
 		{
-			vif1Regs->stat &= ~VIF1_STAT_VGW;
+			vif1Regs->stat.VGW = 0;
 			if (gif->qwc == 0) CPU_INT(2, 16);
 			return;
 		}
@@ -539,9 +539,9 @@ void gifMFIFOInterrupt()
 		if (gifqwc <= 0) 
 		{
 			//Console.WriteLn("Empty");
+			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			gifstate |= GIF_STATE_EMPTY;
 			gifRegs->stat.IMT = 0; // OPH=0 | APATH=0
-			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			return;
 		}
 		mfifoGIFtransfer(0);
@@ -563,7 +563,7 @@ void gifMFIFOInterrupt()
 	
 	gifRegs->stat._u32 &= ~(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
 	
-	vif1Regs->stat &= ~VIF1_STAT_VGW;
+	vif1Regs->stat.VGW = 0;
 	gif->chcr.STR = 0;
 	gifstate = GIF_STATE_READY;
 	hwDmacIrq(DMAC_GIF);

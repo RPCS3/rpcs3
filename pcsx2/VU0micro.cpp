@@ -41,7 +41,7 @@ void vu0ResetRegs()
 {
 	VU0.VI[REG_VPU_STAT].UL &= ~0xff; // stop vu0
 	VU0.VI[REG_FBRST].UL &= ~0xff; // stop vu0
-	vif0Regs->stat &= ~VIF0_STAT_VEW;
+	vif0Regs->stat.VEW = 0;
 }
 
 void VU0MI_XGKICK() {

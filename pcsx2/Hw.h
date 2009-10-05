@@ -85,7 +85,7 @@ struct DMACh {
 };
 
 // HW defines
-enum HWaddress
+enum EERegisterAddresses
 {
 	RCNT0_COUNT		=	0x10000000,
 	RCNT0_MODE		=	0x10000010,
@@ -266,8 +266,12 @@ enum HWaddress
 	MCH_DRD			=	0x1000F440,
 
 	DMAC_ENABLER	=	0x1000F520,
-	DMAC_ENABLEW	=	0x1000F590,
+	DMAC_ENABLEW	=	0x1000F590
+};
 
+
+enum GSRegisterAddresses
+{
 	GS_PMODE		=	0x12000000,
 	GS_SMODE1		=	0x12000010,
 	GS_SMODE2		=	0x12000020,
@@ -289,8 +293,8 @@ enum HWaddress
 	GS_SIGLBLID		=	0x12001080
 };
 
-#define SBFLG_IOPALIVE 0x10000
-#define SBFLG_IOPSYNC 0x40000
+//#define SBFLG_IOPALIVE 0x10000
+//#define SBFLG_IOPSYNC 0x40000
 
 enum INTCIrqs
 {
@@ -335,24 +339,24 @@ enum DMACIrqs
 
 	// We're setting error conditions through hwDmacIrq, so these correspond to the conditions above.
 	DMAC_STALL_SIS		= 13,
-	DMAC_MFIFO_EMPTY		= 14, // Transfer?
+	DMAC_MFIFO_EMPTY	= 14,
 	DMAC_BUS_ERROR	= 15
 };
 
 //DMA interrupts & masks
 enum DMAInter
 {
-	BEISintr = 0x8000,
-	VIF0intr = 0x10001,
-	VIF1intr = 0x20002,
-	GIFintr = 0x40004,
-	IPU0intr = 0x80008,
-	IPU1intr = 0x100010,
-	SIF0intr = 0x200020,
-	SIF1intr  =0x400040,
-	SIF2intr = 0x800080,
-	SPR0intr = 0x1000100,
-	SPR1intr = 0x2000200,
+	BEISintr = 0x00008000,
+	VIF0intr = 0x00010001,
+	VIF1intr = 0x00020002,
+	GIFintr =  0x00040004,
+	IPU0intr = 0x00080008,
+	IPU1intr = 0x00100010,
+	SIF0intr = 0x00200020,
+	SIF1intr  =0x00400040,
+	SIF2intr = 0x00800080,
+	SPR0intr = 0x01000100,
+	SPR1intr = 0x02000200,
 	SISintr  = 0x20002000,
 	MEISintr = 0x40004000
 };
@@ -433,7 +437,6 @@ union tDMAC_STADR {
 
 struct DMACregisters
 {
-	// Note: not yet tested.
 	tDMAC_CTRL	ctrl;
 	u32 padding[3];
 	tDMAC_STAT	stat;
@@ -572,13 +575,6 @@ extern void __fastcall hwWrite64_page_0E( u32 mem, const mem64_t* srcval );
 extern void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval );
 
 extern void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval);
-
-// legacy - used for debugging sometimes
-//extern mem32_t __fastcall hwRead32(u32 mem);
-//extern void __fastcall hwWrite32(u32 mem, u32 value);
-
-//extern void hwWrite64(u32 mem, u64 value);
-//extern void hwWrite128(u32 mem, const u64 *value);
 
 void hwIntcIrq(int n);
 void hwDmacIrq(int n);

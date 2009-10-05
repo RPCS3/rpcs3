@@ -98,7 +98,7 @@ bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
 	ScopedPtr<wxArrayString> bioslist( new wxArrayString() );
 
 	if( m_FolderPicker.GetPath().Exists() )
-		wxDir::GetAllFiles( m_FolderPicker.GetPath().ToString(), bioslist, L"*.bin", wxDIR_FILES );
+		wxDir::GetAllFiles( m_FolderPicker.GetPath().ToString(), bioslist, L"*.*", wxDIR_FILES );
 
 	if( !m_BiosList || (*bioslist != *m_BiosList) )
 		validated = false;

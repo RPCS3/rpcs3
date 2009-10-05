@@ -59,13 +59,13 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 
 	VIF_LOG("ReadFIFO/VIF1, addr=0x%08X", mem);
 
-	if( vif1Regs->stat & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) )
+	if( vif1Regs->stat._u32 & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) )
 		DevCon.Notice( "Reading from vif1 fifo when stalled" );
 
-	if (vif1Regs->stat & VIF1_STAT_FDR)
+	if (vif1Regs->stat.FDR)
 	{
 		if (--psHu32(D1_QWC) == 0)
-			vif1Regs->stat&= ~VIF1_STAT_FQC;
+			vif1Regs->stat.FQC = 0;
 	}
 
 	//out[0] = psHu64(mem  );
@@ -142,9 +142,9 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 	psHu64(0x5000) = value[0];
 	psHu64(0x5008) = value[1];
 
-	if(vif1Regs->stat & VIF1_STAT_FDR)
+	if (vif1Regs->stat.FDR)
 		DevCon.Notice("writing to fifo when fdr is set!");
-	if( vif1Regs->stat & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
+	if ( vif1Regs->stat._u32 & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
 		DevCon.Notice("writing to vif1 fifo when stalled");
 
 	vif1ch->qwc += 1;

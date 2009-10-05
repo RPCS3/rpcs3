@@ -138,7 +138,6 @@ int psxDma7Interrupt()
 
 void psxDma8(u32 madr, u32 bcr, u32 chcr)
 {
-
 	const int size = (bcr >> 16) * (bcr & 0xFFFF) * 8;
 
 	switch (chcr & 0x01000201)
@@ -259,7 +258,6 @@ void iopIntcIrq(uint irqType)
 // Gigaherz's "Improved DMA Handling" Engine WIP...
 //
 
-// fixme: Is this in progress?
 #ifdef ENABLE_NEW_IOPDMA
 
 s32  spu2DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)

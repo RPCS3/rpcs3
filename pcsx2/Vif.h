@@ -73,6 +73,14 @@ enum vif_stat_flags
 	VIF_STAT_ER1		= (1<<13)
 };
 
+enum vif_status
+{
+    VPS_IDLE = 0,
+    VPS_WAITING = 1,
+    VPS_DECODING = 2,
+    VPS_TRANSFERRING = 3 // And decompressing.
+};
+
 //
 // Bitfield Structure
 //
@@ -124,7 +132,7 @@ struct vifCycle {
 };
 
 struct VIFregisters {
-	u32 stat;
+	tVIF_STAT stat;
 	u32 pad0[3];
 	u32 fbrst;
 	u32 pad1[3];

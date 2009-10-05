@@ -30,7 +30,7 @@ VUmicroCpu CpuVU1;		// contains a working copy of the VU1 cpu functions/API
 static void DummyExecuteVU1Block(void)
 {
 	VU0.VI[ REG_VPU_STAT ].UL &= ~0x100;
-	VU1.vifRegs->stat &= ~VIF1_STAT_VEW; // also reset the bit (grandia 3 works)
+	VU1.vifRegs->stat.VEW = 0; // also reset the bit (grandia 3 works)
 }
 
 void vuMicroCpuReset()

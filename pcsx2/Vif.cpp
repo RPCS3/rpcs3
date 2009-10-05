@@ -526,7 +526,7 @@ void mfifoVIF1transfer(int qwc)
 			else
 				CPU_INT(10, vif1ch->qwc * BIAS);
 
-			vif1Regs->stat |= 0x10000000; // FQC=16
+			vif1Regs->stat.FQC = 0x10; // FQC=16
 		}
 		vif1.inprogress &= ~0x10;
 		
@@ -615,7 +615,7 @@ void vifMFIFOInterrupt()
 	
 	if (schedulepath3msk) Vif1MskPath3();
 
-	if ((vif1Regs->stat & VIF1_STAT_VGW))
+	if ((vif1Regs->stat.VGW))
 	{
 		if (gif->chcr.STR)
 		{			
@@ -624,7 +624,7 @@ void vifMFIFOInterrupt()
 		} 
 		else 
 		{
-			vif1Regs->stat &= ~VIF1_STAT_VGW;
+			vif1Regs->stat.VGW = 0;
 		}
 	
 	}
@@ -637,12 +637,12 @@ void vifMFIFOInterrupt()
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
-		vif1Regs->stat |= VIF1_STAT_INT;
+		vif1Regs->stat.INT = 1;
 		hwIntcIrq(INTC_VIF1);
 		--vif1.irq;
-		if (vif1Regs->stat & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+		if (vif1Regs->stat._u32 & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
-			vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
+			vif1Regs->stat.FQC = 0; // FQC=0
 			vif1ch->chcr.STR = 0;
 			return;
 		}
@@ -660,13 +660,13 @@ void vifMFIFOInterrupt()
 				//	Console.WriteLn("Empty 1");
 					vifqwc = 0;
 					vif1.inprogress |= 0x10;
-					vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
+					vif1Regs->stat.FQC = 0; // FQC=0
 					hwDmacIrq(DMAC_MFIFO_EMPTY);
 					return;
 				}
 
 				 mfifoVIF1transfer(0);
-				 if (vif1ch->madr >= dmacRegs->rbor.ADDR && vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
+				 if ((vif1ch->madr >= dmacRegs->rbor.ADDR) && (vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)))
 					CPU_INT(10, 0);
 				else
 					CPU_INT(10, vif1ch->qwc * BIAS);
@@ -684,7 +684,7 @@ void vifMFIFOInterrupt()
 	{
 		//Console.WriteLn("Empty 2");
 		//vif1.inprogress |= 0x10;
-		vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
+		vif1Regs->stat.FQC = 0; // FQC=0
 		hwDmacIrq(DMAC_MFIFO_EMPTY);
 	}*/
 
@@ -694,6 +694,6 @@ void vifMFIFOInterrupt()
 	hwDmacIrq(DMAC_VIF1);
 	VIF_LOG("vif mfifo dma end");
 
-	vif1Regs->stat &= ~VIF1_STAT_FQC; // FQC=0
+	vif1Regs->stat.FQC = 0; // FQC=0
 
 }

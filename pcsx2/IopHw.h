@@ -42,6 +42,7 @@ static const u32
 	HW_SIO_CTRL			= 0x1f80104a,
 	HW_SIO_BAUD			= 0x1f80104e,
 
+    HW_RAM_SIZE         = 0x1f801060,
 	HW_IREG				= 0x1f801070,
 	HW_IMASK			= 0x1f801074,
 	HW_ICTRL			= 0x1f801078,
@@ -74,9 +75,69 @@ static const u32
 	HW_SIO2_RECV1		= 0x1f80826c,
 	HW_SIO2_RECV2		= 0x1f808270,
 	HW_SIO2_RECV3		= 0x1f808274,
+	HW_SIO2_8278        = 0x1F808278, // May as well add defs
+	HW_SIO2_827C        = 0x1F80827C, // for these 2...
 	HW_SIO2_INTR		= 0x1f808280;
 
+enum DMAMadrAddresses
+{
+    HWx_DMA0_MADR  = 0x1f801080,
+    HWx_DMA1_MADR  = 0x1f801090,
+    HWx_DMA2_MADR  = 0x1f8010a0,
+    HWx_DMA3_MADR  = 0x1f8010b0,
+    HWx_DMA4_MADR  = 0x1f8010c0,
+    HWx_DMA5_MADR  = 0x1f8010d0,
+    HWx_DMA6_MADR  = 0x1f8010e0,
+    HWx_DMA7_MADR  = 0x1f801500,
+    HWx_DMA8_MADR  = 0x1f801510,
+    HWx_DMA9_MADR  = 0x1f801520,
+    HWx_DMA10_MADR = 0x1f801530,
+    HWx_DMA11_MADR = 0x1f801540,
+    HWx_DMA12_MADR = 0x1f801550
+};
 
+enum DMABcrAddresses
+{
+    HWx_DMA0_BCR  = 0x1f801084,
+    HWx_DMA1_BCR  = 0x1f801094,
+    HWx_DMA2_BCR  = 0x1f8010a4,
+    HWx_DMA3_BCR  = 0x1f8010b4,
+    HWx_DMA3_BCR_L16  = 0x1f8010b4,
+    HWx_DMA3_BCR_H16  = 0x1f8010b6,
+    HWx_DMA4_BCR  = 0x1f8010c4,
+    HWx_DMA5_BCR  = 0x1f8010d4,
+    HWx_DMA6_BCR  = 0x1f8010e4,
+    HWx_DMA7_BCR  = 0x1f801504,
+    HWx_DMA8_BCR  = 0x1f801514,
+    HWx_DMA9_BCR  = 0x1f801524,
+    HWx_DMA10_BCR = 0x1f801534,
+    HWx_DMA11_BCR = 0x1f801544,
+    HWx_DMA12_BCR = 0x1f801554
+};
+
+enum DMAChcrAddresses
+{
+    HWx_DMA0_CHCR  = 0x1f801088,
+    HWx_DMA1_CHCR  = 0x1f801098,
+    HWx_DMA2_CHCR  = 0x1f8010a8,
+    HWx_DMA3_CHCR  = 0x1f8010b8,
+    HWx_DMA4_CHCR  = 0x1f8010c8,
+    HWx_DMA5_CHCR  = 0x1f8010d8,
+    HWx_DMA6_CHCR  = 0x1f8010e8,
+    HWx_DMA7_CHCR  = 0x1f801508,
+    HWx_DMA8_CHCR  = 0x1f801518,
+    HWx_DMA9_CHCR  = 0x1f801528,
+    HWx_DMA10_CHCR = 0x1f801538,
+    HWx_DMA11_CHCR = 0x1f801548,
+    HWx_DMA12_CHCR = 0x1f801558
+};
+
+enum DMATadrAddresses
+{
+    HWx_DMA2_TADR  = 0x1f8010ac,
+    HWx_DMA4_TADR  = 0x1f8010cc,
+    HWx_DMA9_TADR  = 0x1f80152c
+};
 /* Registers for the IOP Counters */
 enum IOPCountRegs
 {
