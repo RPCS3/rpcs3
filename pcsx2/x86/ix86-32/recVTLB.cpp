@@ -243,7 +243,7 @@ namespace vtlb_private
 // If it were smaller than a page we'd end up allowing execution rights on some
 // other vars additionally (bad!).
 //
-static __aligned(0x1000) u8 m_IndirectDispatchers[0x1000];
+static __pagealigned u8 m_IndirectDispatchers[0x1000];
 
 // ------------------------------------------------------------------------
 // mode        - 0 for read, 1 for write!
