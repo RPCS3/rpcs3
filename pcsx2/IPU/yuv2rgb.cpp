@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -33,7 +33,7 @@ struct SSE2_Tables
 	u8 Y_bias[16];			// offset -48
 	u16 Y_mask[8];			// offset -32
 	u16 round_1bit[8];		// offset -16
-	
+
 	u16 Y_coefficients[8];	// offset 0
 	u16 GCr_coefficients[8];// offset 16
 	u16 GCb_coefficients[8];// offset 32
@@ -55,16 +55,16 @@ enum
 	BCb_COEFF   = 0x40
 };
 
-static volatile const __aligned16 SSE2_Tables sse2_tables = 
+static const __aligned16 SSE2_Tables sse2_tables =
 {
 	{0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000},	// c_bias
 	{16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16},			// y_bias
 	{0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00,0xff00},	// y_mask
-	
+
 	// Specifying round off instead of round down as everywhere else
 	// implies that this is right
 	{1,1,1,1,1,1,1,1},		// round_1bit
-	
+
 	SSE_COEFFICIENTS(0x95),   // 1.1640625 [Y_coefficients]
 	SSE_COEFFICIENTS(-0x68),  // -0.8125 [GCr_coefficients]
 	SSE_COEFFICIENTS(-0x32),  // -0.390625 [GCb_coefficients]
@@ -78,7 +78,7 @@ static __aligned16 u16 yuv2rgb_temp[3][8];
 __releaseinline void yuv2rgb_sse2(void)
 {
 	FreezeXMMRegs(1);
-	
+
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 	__asm {
 		mov eax, 1
@@ -176,7 +176,7 @@ ihatemsvc:
 		movhlps xmm3, xmm0
 		movhlps xmm4, xmm1
 		movhlps xmm5, xmm2
-		punpcklbw xmm0, xmm3 // Red bytes, back in order 
+		punpcklbw xmm0, xmm3 // Red bytes, back in order
 		punpcklbw xmm1, xmm4 // Green ""
 		punpcklbw xmm2, xmm5 // Blue ""
 		movaps xmm3, xmm0
@@ -211,8 +211,10 @@ ihatemsvc:
 		cmp esi, 64
 		jne tworows
 	}
+
 #elif defined(__GNUC__)
-	__asm__(
+
+	__asm__ __volatile__ (
 		".intel_syntax noprefix\n"
 		"mov eax, 1\n"
 		"xor esi, esi\n"
@@ -220,8 +222,8 @@ ihatemsvc:
 
 		// Use ecx and edx as base pointers, to allow for Mod/RM form on memOps.
 		// This saves 2-3 bytes per instruction where these are used. :)
-		"mov ecx, offset %c[yuv2rgb_temp]\n"
-		"mov edx, offset %c[sse2_tables]+64\n"
+		//"mov ecx, offset %c[yuv2rgb_temp]\n"
+		//"mov edx, offset %c[sse2_tables]+64\n"
 
 		".align 16\n"
 "tworows:\n"
@@ -237,29 +239,29 @@ ihatemsvc:
 		// unfortunately I don't think this will matter despite being
 		// technically potentially a little faster, but this is
 		// equivalent to an add or sub
-		"pxor xmm2, xmmword ptr [edx+%c[C_BIAS]]\n" // xmm2 <-- 8 x (Cb - 128) << 8
-		"pxor xmm0, xmmword ptr [edx+%c[C_BIAS]]\n" // xmm0 <-- 8 x (Cr - 128) << 8
+		"pxor xmm2, xmmword ptr [%[sse2_tables]+%c[C_BIAS]]\n" // xmm2 <-- 8 x (Cb - 128) << 8
+		"pxor xmm0, xmmword ptr [%[sse2_tables]+%c[C_BIAS]]\n" // xmm0 <-- 8 x (Cr - 128) << 8
 
 		"movaps xmm1, xmm0\n"
 		"movaps xmm3, xmm2\n"
-		"pmulhw xmm1, xmmword ptr [edx+%c[GCr_COEFF]]\n"
-		"pmulhw xmm3, xmmword ptr [edx+%c[GCb_COEFF]]\n"
-		"pmulhw xmm0, xmmword ptr [edx+%c[RCr_COEFF]]\n"
-		"pmulhw xmm2, xmmword ptr [edx+%c[BCb_COEFF]]\n"
+		"pmulhw xmm1, xmmword ptr [%[sse2_tables]+%c[GCr_COEFF]]\n"
+		"pmulhw xmm3, xmmword ptr [%[sse2_tables]+%c[GCb_COEFF]]\n"
+		"pmulhw xmm0, xmmword ptr [%[sse2_tables]+%c[RCr_COEFF]]\n"
+		"pmulhw xmm2, xmmword ptr [%[sse2_tables]+%c[BCb_COEFF]]\n"
 		"paddsw xmm1, xmm3\n"
 		// store for the next line; looking at the code above
 		// compared to the code below, I have to wonder whether
 		// this was worth the hassle
-		"movaps xmmword ptr [ecx], xmm0\n"
-		"movaps xmmword ptr [ecx+16], xmm1\n"
-		"movaps xmmword ptr [ecx+32], xmm2\n"
+		"movaps xmmword ptr [%[yuv2rgb_temp]], xmm0\n"
+		"movaps xmmword ptr [%[yuv2rgb_temp]+16], xmm1\n"
+		"movaps xmmword ptr [%[yuv2rgb_temp]+32], xmm2\n"
 		"jmp ihategcctoo\n"
 
 		".align 16\n"
 "onerow:\n"
-		"movaps xmm0, xmmword ptr [ecx]\n"
-		"movaps xmm1, xmmword ptr [ecx+16]\n"
-		"movaps xmm2, xmmword ptr [ecx+32]\n"
+		"movaps xmm0, xmmword ptr [%[yuv2rgb_temp]]\n"
+		"movaps xmm1, xmmword ptr [%[yuv2rgb_temp]+16]\n"
+		"movaps xmm2, xmmword ptr [%[yuv2rgb_temp]+32]\n"
 
 "ihategcctoo:\n"
 		"movaps xmm3, xmm0\n"
@@ -267,13 +269,13 @@ ihatemsvc:
 		"movaps xmm5, xmm2\n"
 
 		"movaps xmm6, xmmword ptr [mb8+edi]\n"
-		"psubusb xmm6, xmmword ptr [edx+%c[Y_BIAS]]\n"
+		"psubusb xmm6, xmmword ptr [%[sse2_tables]+%c[Y_BIAS]]\n"
 		"movaps xmm7, xmm6\n"
 		"psllw xmm6, 8\n"                   // xmm6 <- Y << 8 for pixels 0,2,4,6,8,10,12,14
-		"pand xmm7, xmmword ptr [edx+%c[Y_MASK]]\n" // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
+		"pand xmm7, xmmword ptr [%[sse2_tables]+%c[Y_MASK]]\n" // xmm7 <- Y << 8 for pixels 1,3,5,7,9,11,13,15
 
-		"pmulhuw xmm6, xmmword ptr [edx+%c[Y_COEFF]]\n"
-		"pmulhuw xmm7, xmmword ptr [edx+%c[Y_COEFF]]\n"
+		"pmulhuw xmm6, xmmword ptr [%[sse2_tables]+%c[Y_COEFF]]\n"
+		"pmulhuw xmm7, xmmword ptr [%[sse2_tables]+%c[Y_COEFF]]\n"
 
 		"paddsw xmm0, xmm6\n"
 		"paddsw xmm3, xmm7\n"
@@ -283,7 +285,7 @@ ihatemsvc:
 		"paddsw xmm5, xmm7\n"
 
 		// round
-		"movaps xmm6, xmmword ptr [edx+%c[ROUND_1BIT]]\n"
+		"movaps xmm6, xmmword ptr [%[sse2_tables]+%c[ROUND_1BIT]]\n"
 		"paddw xmm0, xmm6\n"
 		"paddw xmm1, xmm6\n"
 		"paddw xmm2, xmm6\n"
@@ -340,14 +342,14 @@ ihatemsvc:
 		"jne tworows\n"
 		".att_syntax\n"
 		:
-		:[C_BIAS]"i"(C_BIAS), [Y_BIAS]"i"(Y_BIAS), [Y_MASK]"i"(Y_MASK), 
-			[ROUND_1BIT]"i"(ROUND_1BIT), [Y_COEFF]"i"(Y_COEFF), [GCr_COEFF]"i"(GCr_COEFF), 
+		:[C_BIAS]"i"(C_BIAS), [Y_BIAS]"i"(Y_BIAS), [Y_MASK]"i"(Y_MASK),
+			[ROUND_1BIT]"i"(ROUND_1BIT), [Y_COEFF]"i"(Y_COEFF), [GCr_COEFF]"i"(GCr_COEFF),
 			[GCb_COEFF]"i"(GCb_COEFF), [RCr_COEFF]"i"(RCr_COEFF), [BCb_COEFF]"i"(BCb_COEFF),
-			[yuv2rgb_temp]"i"(yuv2rgb_temp), [sse2_tables]"i"(&sse2_tables)
-		:
+			[yuv2rgb_temp]"r"(yuv2rgb_temp), [sse2_tables]"r"(&sse2_tables)
+		: "eax", "ebx", "esi", "edi", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
 	);
 #else
-#error Unsupported compiler
+#	error Unsupported compiler
 #endif
 
 	FreezeXMMRegs(0);

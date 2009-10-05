@@ -104,7 +104,7 @@ static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask)
 	u8* p0 = (u8*)&s_maskarr[mask&15][0];
 	u8* p1 = (u8*)&s_maskarr[(mask>>4)&15][0];
 
-	__asm__(".intel_syntax noprefix\n"
+	__asm__ __volatile__(".intel_syntax noprefix\n"
 			"movaps xmm0, [%0]\n"
 			"movaps xmm1, [%1]\n"
 			"movaps xmm2, xmm0\n"
@@ -121,6 +121,6 @@ static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask)
 			"movq [%2+40], xmm3\n"
 			"movhps [%2+48], xmm2\n"
 			"movhps [%2+56], xmm3\n"
-			".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) );
+			".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) : "memory" );
 }
 #endif

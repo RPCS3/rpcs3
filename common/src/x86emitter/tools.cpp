@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -65,7 +65,7 @@ __forceinline void FreezeMMXRegs(int save)
 			emms
 		}
 #else
-        __asm__(
+        __asm__ volatile(
 			".intel_syntax noprefix\n"
 			"movq [%[g_globalMMXData]+0x00], mm0\n"
 			"movq [%[g_globalMMXData]+0x08], mm1\n"
@@ -76,7 +76,7 @@ __forceinline void FreezeMMXRegs(int save)
 			"movq [%[g_globalMMXData]+0x30], mm6\n"
 			"movq [%[g_globalMMXData]+0x38], mm7\n"
 			"emms\n"
-			".att_syntax\n" : : [g_globalMMXData]"r"(g_globalMMXData)
+			".att_syntax\n" : : [g_globalMMXData]"r"(g_globalMMXData) : "memory"
 		);
 #endif
 
@@ -105,7 +105,7 @@ __forceinline void FreezeMMXRegs(int save)
 			emms
 		}
 #else
-        __asm__(
+        __asm__ volatile(
 			".intel_syntax noprefix\n"
 			"movq mm0, [%[g_globalMMXData]+0x00]\n"
 			"movq mm1, [%[g_globalMMXData]+0x08]\n"
@@ -116,7 +116,7 @@ __forceinline void FreezeMMXRegs(int save)
 			"movq mm6, [%[g_globalMMXData]+0x30]\n"
 			"movq mm7, [%[g_globalMMXData]+0x38]\n"
 			"emms\n"
-			".att_syntax\n" : :  [g_globalMMXData]"r"(g_globalMMXData)
+			".att_syntax\n" : :  [g_globalMMXData]"r"(g_globalMMXData) : "memory"
 		);
 #endif
 	}
@@ -154,7 +154,7 @@ __forceinline void FreezeXMMRegs(int save)
         }
 
 #else
-        __asm__(
+        __asm__ volatile(
 			".intel_syntax noprefix\n"
 			"movaps [%[g_globalXMMData]+0x00], xmm0\n"
 			"movaps [%[g_globalXMMData]+0x10], xmm1\n"
@@ -164,7 +164,7 @@ __forceinline void FreezeXMMRegs(int save)
 			"movaps [%[g_globalXMMData]+0x50], xmm5\n"
 			"movaps [%[g_globalXMMData]+0x60], xmm6\n"
 			"movaps [%[g_globalXMMData]+0x70], xmm7\n"
-			".att_syntax\n" : :  [g_globalXMMData]"r"(g_globalXMMData)
+			".att_syntax\n" : : [g_globalXMMData]"r"(g_globalXMMData) : "memory"
 		);
 
 #endif // _MSC_VER
@@ -196,7 +196,7 @@ __forceinline void FreezeXMMRegs(int save)
         }
 
 #else
-        __asm__(
+        __asm__ volatile(
 			".intel_syntax noprefix\n"
 			"movaps xmm0, [%[g_globalXMMData]+0x00]\n"
 			"movaps xmm1, [%[g_globalXMMData]+0x10]\n"
@@ -206,7 +206,7 @@ __forceinline void FreezeXMMRegs(int save)
 			"movaps xmm5, [%[g_globalXMMData]+0x50]\n"
 			"movaps xmm6, [%[g_globalXMMData]+0x60]\n"
 			"movaps xmm7, [%[g_globalXMMData]+0x70]\n"
-			".att_syntax\n" : : [g_globalXMMData]"r"(g_globalXMMData)
+			".att_syntax\n" : : [g_globalXMMData]"r"(g_globalXMMData) : "memory"
 		);
 
 #endif // _MSC_VER

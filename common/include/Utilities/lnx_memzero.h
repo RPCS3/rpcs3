@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -102,7 +102,7 @@ static __forceinline void memset_8( void *dest )
 		return;
 
 		case 3:
-			__asm__ 
+			__asm__ volatile
 			(
 				".intel_syntax noprefix\n"
 				"cld\n"
@@ -112,16 +112,16 @@ static __forceinline void memset_8( void *dest )
 				"stosd\n"
 				"stosd\n"
 				".att_syntax\n"
-				: 
+				:
+				// Input specifiers: D - edi, a -- eax, c ecx
 				: [dest]"D"(dest), [data32]"a"(data32)
-// D - edi, a -- eax, c ecx
-				:  
+				: "memory"
 			);
 		return;
 
 		case 4:
-			__asm__ 
-			(			
+			__asm__ volatile
+			(
 				".intel_syntax noprefix\n"
 				"cld\n"
 //				"mov edi, %[dest]\n"
@@ -131,15 +131,15 @@ static __forceinline void memset_8( void *dest )
 				"stosd\n"
 				"stosd\n"
 				".att_syntax\n"
-				: 
+				:
 				:  [dest]"D"(dest), [data32]"a"(data32)
-				:  
-				
+				:  "memory"
+
 			);
 		return;
 
 		case 5:
-			__asm__
+			__asm__ volatile
 			(
 				".intel_syntax noprefix\n"
 				"cld\n"
@@ -151,15 +151,15 @@ static __forceinline void memset_8( void *dest )
 				"stosd\n"
 				"stosd\n"
 				".att_syntax\n"
-				: 
-				:  [dest]"D"(dest), [data32]"a"(data32)
-				:  
-				
+				:
+				: [dest]"D"(dest), [data32]"a"(data32)
+				: "memory"
+
 			);
 		return;
 
 		default:
-			__asm__
+			__asm__ volatile
 			(
 				".intel_syntax noprefix\n"
 				"cld\n"
@@ -168,9 +168,9 @@ static __forceinline void memset_8( void *dest )
 //				"mov eax, %\[data32]n"
 				"rep stosd\n"
 				".att_syntax\n"
-				: 
+				:
 				: [remdat]"c"(remdat), [dest]"D"(dest), [data32]"a"(data32)
-				:  
+				: "memory"
 			);
 		return;
 	}

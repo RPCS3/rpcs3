@@ -646,6 +646,11 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 			int writemask;
 			u32 oldcycle = -1;
 
+			// yay evil .. let's just set some XMM registers in the middle of C code
+			// and "hope" they get preserved, in spite of the fact that x86-32 ABI specifies
+			// these as "clobberable" registers (so any printf or something could decide to
+			// clobber them, and has every right to... >_<) --air
+
 #ifdef _MSC_VER
 			if (VIFdmanum)
 			{
@@ -658,6 +663,10 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 				__asm movaps XMM_COL, xmmword ptr [g_vifmask.Col0]
 			}
 #else
+			// I'd add volatile to these, but what's the point?  This code already breaks
+			// like 5000 coveted rules of binary interfacing regardless, and is only working by
+			// the miracles and graces of a profound deity (or maybe it doesn't -- linux port
+			// *does* have stability issues, especially in GCC 4.4). --air
 			if (VIFdmanum)
 			{
 				__asm__(".intel_syntax noprefix\n"

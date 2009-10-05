@@ -299,7 +299,7 @@ static s32 __forceinline GetNoiseValues()
 #else
 	__asm__ (
 		".intel_syntax\n"
-		"MOV %%eax,%0\n"
+		"MOV %%eax,%1\n"
 		"ROR %%eax,5\n"
 		"XOR %%eax,0x9a\n"
 		"MOV %%ebx,%%eax\n"
@@ -308,7 +308,7 @@ static s32 __forceinline GetNoiseValues()
 		"XOR %%eax,%%ebx\n"
 		"ROR %%eax,3\n"
 		"MOV %0,%%eax\n"
-		".att_syntax\n" : :"r"(Seed));
+		".att_syntax\n" : "m="(Seed) : "m"(Seed));
 #endif
 	return retval;
 }
@@ -651,7 +651,7 @@ __forceinline void Mix()
 	{
 		// SPDIF is on Core 0:
 		(PlayMode&4) ? StereoOut32::Empty : ApplyVolume( Cores[0].ReadInput(), Cores[0].InpVol ),
-		
+
 		// CDDA is on Core 1:
 		(PlayMode&8) ? StereoOut32::Empty : ApplyVolume( Cores[1].ReadInput(), Cores[1].InpVol )
 	};

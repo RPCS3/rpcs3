@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
@@ -286,7 +286,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 	{
 		Console.Status( "EErec const buffer filled; Resetting..." );
 		throw Exception::ForceDispatcherReg();
-	
+
 		/*for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
 		{
 			if (p[0] == lo && p[1] == hi) {
@@ -601,22 +601,29 @@ static void recExecute()
 
 	#else // _MSC_VER
 
-				__asm__
+				__asm__ __volatile__
 				(
+					// We should be able to rely on GAS syntax (the register clobber list) as a
+					// replacement for manual push/pop of unpreserved registers.
+
+					// EBP note: As I feared, EBP is "required" for C++ excepion handling in Linux, and trying
+					//   to issue a clobber specifier for it causes an error.  We really need to find a way to
+					//   disable EBP regalloc in iCore. --air
+
 					".intel_syntax noprefix\n"
-					"push ebx\n"
-					"push esi\n"
-					"push edi\n"
-					"push ebp\n"
+					//"push ebx\n"
+					//"push esi\n"
+					//"push edi\n"
+					//"push ebp\n"
 
 					"call DispatcherReg\n"
 
-					"pop ebp\n"
-					"pop edi\n"
-					"pop esi\n"
-					"pop ebx\n"
+					//"pop ebp\n"
+					//"pop edi\n"
+					//"pop esi\n"
+					//"pop ebx\n"
 					".att_syntax\n"
-				);
+				: : : "eax", "ebx", "ecx", "edx", "esi", "edi", "memory" );
 	#endif
 			}
 			catch( Exception::ForceDispatcherReg& )
@@ -679,21 +686,11 @@ void recClear(u32 addr, u32 size)
 	BASEBLOCKEX* pexblock;
 	BASEBLOCK* pblock;
 
-	//why the hell?
-#if 1
 	// necessary since recompiler doesn't call femms/emms
-#ifdef __INTEL_COMPILER
-                __asm__("emms");
+#ifdef _MSC_VER
+	 asm emms;
 #else
-        #ifdef _MSC_VER
-                if (x86caps.has3DNOWInstructionExtensions) __asm femms;
-                else __asm emms;
-        #else
-                if( x86caps.has3DNOWInstructionExtensions )__asm__("femms");
-                else
-                        __asm__("emms");
-        #endif
-#endif
+	__asm__ __volatile__("emms");
 #endif
 
 	if ((addr) >= maxrecmem || !(recLUT[(addr) >> 16] + (addr & ~0xFFFFUL)))

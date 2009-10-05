@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -16,7 +16,7 @@
 
 #include "PrecompiledHeader.h"
 
-u32 g_sseMXCSR = DEFAULT_sseMXCSR; 
+u32 g_sseMXCSR = DEFAULT_sseMXCSR;
 u32 g_sseVUMXCSR = DEFAULT_sseVUMXCSR;
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -46,7 +46,7 @@ void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR)
 #ifdef _MSC_VER
 	__asm ldmxcsr g_sseMXCSR; // set the new sse control
 #else
-	__asm__("ldmxcsr %[g_sseMXCSR]" : : [g_sseMXCSR]"m"(g_sseMXCSR) );
+	__asm__ __volatile__("ldmxcsr %[g_sseMXCSR]" : : [g_sseMXCSR]"m"(g_sseMXCSR) );
 #endif
 	//g_sseVUMXCSR = g_sseMXCSR|0x6000;
 }

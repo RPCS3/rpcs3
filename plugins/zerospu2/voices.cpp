@@ -38,10 +38,10 @@ void VOICE_PROCESSED::SetVolume(s32 iProcessRight)
 	if (vol&0x8000) // sweep not working
 	{
 		short sInc=1;							// -> sweep up?
-		
+
 		if (vol&0x2000) sInc=-1;					// -> or down?
 		if (vol&0x1000) vol^=0xffff;				// -> mmm... phase inverted? have to investigate this
-		
+
 		vol=((vol&0x7f)+1)/2;					// -> sweep: 0..127 -> 0..64
 		vol+=vol/(2*sInc);						 // -> HACK: we don't sweep right now, so we just raise/lower the volume by the half!
 		vol*=128;
@@ -64,14 +64,14 @@ void VOICE_PROCESSED::StartSound()
 	ADSRX.lVolume=1; // and init some adsr vars
 	ADSRX.State=0;
 	ADSRX.EnvelopeVol=0;
-							
+
 	if (bReverb && GetCtrl()->reverb)
 	{
 		// setup the reverb effects
 	}
 
 	pCurr=pStart;   // set sample start
-							
+
 	s_1=0;		  // init mixing vars
 	s_2=0;
 	iSBPos=28;
@@ -90,9 +90,9 @@ void VOICE_PROCESSED::VoiceChangeFrequency()
 {
 	iUsedFreq=iActFreq;			   // -> take it and calc steps
 	sinc=(u32)pvoice->pitch<<4;
-	
+
 	if (!sinc) sinc=1;
-	
+
 	// -> freq change in simle imterpolation mode: set flag
 	SB[32]=1;
 }
@@ -116,7 +116,7 @@ void VOICE_PROCESSED::InterpolateUp()
 			else if (id2<(id1<<1))
 				SB[28]=(id1*sinc)/0x10000L;
 			else
-				SB[28]=(id1*sinc)/0x20000L; 
+				SB[28]=(id1*sinc)/0x20000L;
 		}
 		else												// curr delta negative
 		{
@@ -128,7 +128,7 @@ void VOICE_PROCESSED::InterpolateUp()
 			else if (id2>(id1<<1))
 				SB[28]=(id1*sinc)/0x10000L;
 			else
-				SB[28]=(id1*sinc)/0x20000L; 
+				SB[28]=(id1*sinc)/0x20000L;
 		}
 	}
 	else if (SB[32]==2)							   // flag 1: calc step and set flag... and don't change the value in this pass
@@ -181,15 +181,15 @@ void VOICE_PROCESSED::FModChangeFrequency(s32 ns)
 	iFMod[ns]=0;
 }
 
-static void __forceinline GetNoiseValues(s32& VD) 
+static void __forceinline GetNoiseValues(s32& VD)
 {
 	static s32 Seed = 0x41595321;
 
-	if(Seed&0x100) 
+	if(Seed&0x100)
 		VD = (s32)((Seed&0xff)<<8);
-	else if (!(Seed&0xffff)) 
+	else if (!(Seed&0xffff))
 		VD = (s32)0x8000;
-	else 
+	else
 		VD = (s32)0x7fff;
 
 #ifdef _WIN32
@@ -207,7 +207,7 @@ static void __forceinline GetNoiseValues(s32& VD)
 #else
 	__asm__ (
 		".intel_syntax\n"
-		"MOV %%eax,%0\n"
+		"MOV %%eax,%1\n"
 		"ROR %%eax,5\n"
 		"XOR %%eax,0x9a\n"
 		"MOV %%ebx,%%eax\n"
@@ -216,7 +216,7 @@ static void __forceinline GetNoiseValues(s32& VD)
 		"XOR %%eax,%%ebx\n"
 		"ROR %%eax,3\n"
 		"MOV %0,%%eax\n"
-		".att_syntax\n" : :"r"(Seed));
+		".att_syntax\n" : "r="(Seed) :"r"(Seed));
 #endif
 }
 
@@ -239,13 +239,13 @@ int VOICE_PROCESSED::iGetNoiseVal()
 
 	// mmm... depending on the noise freq we allow bigger/smaller changes to the previous val
 	fa=iOldNoise + ((fa - iOldNoise) / ((0x001f - (GetCtrl()->noiseFreq)) + 1));
-	
+
 	clamp16(fa);
 
 	iOldNoise=fa;
 	SB[29] = fa;							   // -> store noise val in "current sample" slot
 	return fa;
-}								 
+}
 
 void VOICE_PROCESSED::StoreInterpolationVal(s32 fa)
 {
@@ -257,10 +257,10 @@ void VOICE_PROCESSED::StoreInterpolationVal(s32 fa)
 			fa=0;					   // muted?
 		else												// else adjust
 		{
-			clamp16(fa);			
+			clamp16(fa);
 		}
 
-		SB[28] = 0;					
+		SB[28] = 0;
 		SB[29] = SB[30];			  // -> helpers for simple linear interpolation: delay real val for two slots, and calc the two deltas, for a 'look at the future behaviour'
 		SB[30] = SB[31];
 		SB[31] = fa;
@@ -271,14 +271,14 @@ void VOICE_PROCESSED::StoreInterpolationVal(s32 fa)
 s32 VOICE_PROCESSED::iGetInterpolationVal()
 {
 	s32 fa;
-	
+
 	if (bFMod==2) return SB[29];
 
 	if (sinc<0x10000L)					   // -> upsampling?
 		InterpolateUp();					 // --> interpolate up
-	else 
+	else
 		InterpolateDown();				   // --> else down
-	
+
 	fa=SB[29];
 	return fa;
 }

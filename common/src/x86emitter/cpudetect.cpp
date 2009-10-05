@@ -1,6 +1,6 @@
 /*  Cpudetection lib
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 
 #include "PrecompiledHeader.h"
 #include "internal.h"
@@ -27,12 +27,9 @@ __aligned16 x86CPU_INFO x86caps;
 static s32 iCpuId( u32 cmd, u32 *regs )
 {
 #ifdef _MSC_VER
-	__asm
-	{
-		xor ecx, ecx;		// ecx should be zero for CPUID(4)
-	}
+	__asm xor ecx, ecx;		// ecx should be zero for CPUID(4)
 #else
-	__asm__ ( "xor %ecx, %ecx" );
+	__asm__ __volatile__ ( "xor %ecx, %ecx" );
 #endif
 
    __cpuid( (int*)regs, cmd );

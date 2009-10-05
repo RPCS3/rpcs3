@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 // recompiler reworked to add dynamic linking Jan06
 // and added reg caching, const propagation, block analysis Jun06
 // zerofrog(@gmail.com)
@@ -657,22 +657,29 @@ static __forceinline s32 recExecuteBlock( s32 eeCycles )
 		pop ebx
 	}
 #else
-	__asm__
+	__asm__ __volatile__
 	(
+		// We should be able to rely on GAS syntax (the register clobber list) as a
+		// replacement for manual push/pop of unpreserved registers.
+		//
+		// EBP note: As I feared, EBP is "required" for C++ excepion handling in Linux, and trying
+		//   to issue a clobber specifier for it causes an error.  We really need to find a way to
+		//   disable EBP regalloc in iCore. --air
+
 		".intel_syntax noprefix\n"
-		"push ebx\n"
-		"push esi\n"
-		"push edi\n"
+		//"push ebx\n"
+		//"push esi\n"
+		//"push edi\n"
 		"push ebp\n"
 
 		"call iopDispatcherReg\n"
 
 		"pop ebp\n"
-		"pop edi\n"
-		"pop esi\n"
-		"pop ebx\n"
+		//"pop edi\n"
+		//"pop esi\n"
+		//"pop ebx\n"
 		".att_syntax\n"
-	);
+	: : : "eax", "ebx", "ecx", "edx", "esi", "edi", "memory" );
 #endif
 
 	return psxBreak + psxCycleEE;
@@ -759,7 +766,7 @@ void psxSetBranchReg(u32 reg)
 			xOR( eax, eax );
 			#endif
 		}
-		
+
 		#ifdef PCSX2_DEBUG
 		xForwardJNZ8 skipAssert;
 		xWrite8( 0xcc );
@@ -836,7 +843,7 @@ static void checkcodefn()
 #ifdef _MSC_VER
 	__asm mov pctemp, eax;
 #else
-    __asm__("movl %%eax, %[pctemp]" : : [pctemp]"m"(pctemp) );
+    __asm__ __volatile__("movl %%eax, %[pctemp]" : [pctemp]"m="(pctemp) );
 #endif
 	Console.WriteLn("iop code changed! %x", pctemp);
 }
