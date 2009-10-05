@@ -287,7 +287,7 @@ mVUop(mVU_ABS) {
 	pass2 {
 		if (!_Ft_) return;
 		int Fs = mVU->regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W, !((_Fs_ == _Ft_) && (_X_Y_Z_W == 0xf)));
-		SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_absclip);
+		SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVUglob.absclip);
 		mVU->regAlloc->clearNeeded(Fs);
 	}
 	pass3 { mVUlog("ABS"); mVUlogFtFs(); }
@@ -334,7 +334,7 @@ mVUop(mVU_OPMSUB) {
 }
 
 // FTOI0/FTIO4/FTIO12/FTIO15 Opcodes
-void mVU_FTOIx(mP, uptr addr, const char* opName) {
+static void mVU_FTOIx(mP, uptr addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 {
 		if (!_Ft_) return;
@@ -346,10 +346,10 @@ void mVU_FTOIx(mP, uptr addr, const char* opName) {
 		SSE_MOVAPS_XMM_to_XMM(t1, Fs);
 		if (addr) { SSE_MULPS_M128_to_XMM(Fs, addr); }
 		SSE2_CVTTPS2DQ_XMM_to_XMM(Fs, Fs);
-		SSE2_PXOR_M128_to_XMM(t1, (uptr)mVU_signbit);
+		SSE2_PXOR_M128_to_XMM(t1, (uptr)mVUglob.signbit);
 		SSE2_PSRAD_I8_to_XMM (t1, 31);
 		SSE_MOVAPS_XMM_to_XMM(t2, Fs);
-		SSE2_PCMPEQD_M128_to_XMM(t2, (uptr)mVU_signbit);
+		SSE2_PCMPEQD_M128_to_XMM(t2, (uptr)mVUglob.signbit);
 		SSE_ANDPS_XMM_to_XMM (t1, t2);
 		SSE2_PADDD_XMM_to_XMM(Fs, t1);
 
@@ -361,7 +361,7 @@ void mVU_FTOIx(mP, uptr addr, const char* opName) {
 }
 
 // ITOF0/ITOF4/ITOF12/ITOF15 Opcodes
-void mVU_ITOFx(mP, uptr addr, const char* opName) {
+static void mVU_ITOFx(mP, uptr addr, const char* opName) {
 	pass1 { mVUanalyzeFMAC2(mVU, _Fs_, _Ft_); }
 	pass2 {
 		if (!_Ft_) return;
@@ -388,9 +388,9 @@ mVUop(mVU_CLIP) {
 		mVUallocCFLAGa(mVU, gprT1, cFLAG.lastWrite);
 		SHL32ItoR(gprT1, 6);
 
-		SSE_ANDPS_M128_to_XMM(Ft, (uptr)mVU_absclip);
+		SSE_ANDPS_M128_to_XMM(Ft, (uptr)mVUglob.absclip);
 		SSE_MOVAPS_XMM_to_XMM(t1, Ft);
-		SSE_ORPS_M128_to_XMM(t1, (uptr)mVU_signbit);
+		SSE_ORPS_M128_to_XMM(t1, (uptr)mVUglob.signbit);
 
 		SSE_CMPNLEPS_XMM_to_XMM(t1, Fs); // -w, -z, -y, -x
 		SSE_CMPLTPS_XMM_to_XMM(Ft, Fs);  // +w, +z, +y, +x
@@ -504,11 +504,11 @@ mVUop(mVU_MINIy)	{ mVU_FMACa(mVU, recPass, 2, 4, 0,	"MINIy");  }
 mVUop(mVU_MINIz)	{ mVU_FMACa(mVU, recPass, 2, 4, 0,	"MINIz");  }
 mVUop(mVU_MINIw)	{ mVU_FMACa(mVU, recPass, 2, 4, 0,	"MINIw");  }
 mVUop(mVU_FTOI0)	{ mVU_FTOIx(mX, (uptr)0,			"FTOI0");  }
-mVUop(mVU_FTOI4)	{ mVU_FTOIx(mX, (uptr)mVU_FTOI_4,	"FTOI4");  }
-mVUop(mVU_FTOI12)	{ mVU_FTOIx(mX, (uptr)mVU_FTOI_12,	"FTOI12"); }
-mVUop(mVU_FTOI15)	{ mVU_FTOIx(mX, (uptr)mVU_FTOI_15,	"FTOI15"); }
+mVUop(mVU_FTOI4)	{ mVU_FTOIx(mX, (uptr)mVUglob.FTOI_4,"FTOI4");  }
+mVUop(mVU_FTOI12)	{ mVU_FTOIx(mX, (uptr)mVUglob.FTOI_12,"FTOI12"); }
+mVUop(mVU_FTOI15)	{ mVU_FTOIx(mX, (uptr)mVUglob.FTOI_15,"FTOI15"); }
 mVUop(mVU_ITOF0)	{ mVU_ITOFx(mX, (uptr)0,			"ITOF0");  }
-mVUop(mVU_ITOF4)	{ mVU_ITOFx(mX, (uptr)mVU_ITOF_4,	"ITOF4");  }
-mVUop(mVU_ITOF12)	{ mVU_ITOFx(mX, (uptr)mVU_ITOF_12,	"ITOF12"); }
-mVUop(mVU_ITOF15)	{ mVU_ITOFx(mX, (uptr)mVU_ITOF_15,	"ITOF15"); }
+mVUop(mVU_ITOF4)	{ mVU_ITOFx(mX, (uptr)mVUglob.ITOF_4,"ITOF4");  }
+mVUop(mVU_ITOF12)	{ mVU_ITOFx(mX, (uptr)mVUglob.ITOF_12,"ITOF12"); }
+mVUop(mVU_ITOF15)	{ mVU_ITOFx(mX, (uptr)mVUglob.ITOF_15,"ITOF15"); }
 mVUop(mVU_NOP)		{ pass3 { mVUlog("NOP"); } }

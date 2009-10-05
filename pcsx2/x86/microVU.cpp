@@ -22,10 +22,39 @@
 // Micro VU - Global Variables
 //------------------------------------------------------------------
 
-PCSX2_ALIGNED16(microVU microVU0);
-PCSX2_ALIGNED16(microVU microVU1);
+__aligned16 microVU microVU0;
+__aligned16 microVU microVU1;
 
-declareAllVariables // Declares All Global Variables :D
+#define __four(val)		{ val, val, val, val }
+
+const __aligned(32) mVU_Globals mVUglob = 
+{
+	// absclip / signbit
+	// minvals / maxlavs
+	__four( 0x7fffffff ), __four( 0x80000000 ),
+	__four( 0xff7fffff ), __four( 0x7f7fffff ),
+
+	__four( 0x3f800000 ),		// ONE!
+	__four( 0x3f490fdb ),		// PI4!
+
+	// T1 T2 T3 T4
+	// T5 T6 T7 T8
+	__four( 0x3f7ffff5 ), __four( 0xbeaaa61c ), __four( 0x3e4c40a6 ), __four( 0xbe0e6c63 ),
+	__four( 0x3dc577df ), __four( 0xbd6501c4 ), __four( 0x3cb31652 ), __four( 0xbb84d7e7 ),
+
+	// S2 S3 S4 S5
+	__four( 0xbe2aaaa4 ), __four( 0x3c08873e ), __four( 0xb94fb21f ), __four( 0x362e9c14 ),
+
+	// E1 E2 E3
+	// E4 E5 E6
+	__four( 0x3e7fffa8 ), __four( 0x3d0007f4 ), __four( 0x3b29d3ff ),
+	__four( 0x3933e553 ), __four( 0x36b63510 ), __four( 0x353961ac ),
+
+	// FTOI_4 / 12 / 15
+	// ITOF_4 / 12 / 15
+	__four( 16.0 ),		__four( 4096.0 ),			__four( 32768.0 ),
+	__four( 0.0625f ),	__four( 0.000244140625 ),	__four( 0.000030517578125 )
+};
 
 //------------------------------------------------------------------
 // Micro VU - Main Functions

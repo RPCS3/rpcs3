@@ -24,12 +24,12 @@ void mVUclamp1(int reg, int regT1, int xyzw, bool bClampE = 0) {
 	if ((!clampE && CHECK_VU_OVERFLOW) || (clampE && bClampE)) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
-				SSE_MINSS_M32_to_XMM(reg, (uptr)mVU_maxvals);
-				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVU_minvals);
+				SSE_MINSS_M32_to_XMM(reg, (uptr)mVUglob.maxvals);
+				SSE_MAXSS_M32_to_XMM(reg, (uptr)mVUglob.minvals);
 				break;
 			default:
-				SSE_MINPS_M128_to_XMM(reg, (uptr)mVU_maxvals);
-				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVU_minvals);
+				SSE_MINPS_M128_to_XMM(reg, (uptr)mVUglob.maxvals);
+				SSE_MAXPS_M128_to_XMM(reg, (uptr)mVUglob.minvals);
 				break;
 		}
 	}
@@ -43,16 +43,16 @@ void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw, bool bClampE = 0) {
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
 				SSE_MOVSS_XMM_to_XMM (regT1, reg);
-				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINSS_M32_to_XMM (reg,   (uptr)mVU_maxvals);
-				SSE_MAXSS_M32_to_XMM (reg,   (uptr)mVU_minvals);
+				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVUglob.signbit);
+				SSE_MINSS_M32_to_XMM (reg,   (uptr)mVUglob.maxvals);
+				SSE_MAXSS_M32_to_XMM (reg,   (uptr)mVUglob.minvals);
 				SSE_ORPS_XMM_to_XMM  (reg, regT1);
 				break;
 			default:
 				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
-				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVU_signbit);
-				SSE_MINPS_M128_to_XMM(reg,   (uptr)mVU_maxvals);
-				SSE_MAXPS_M128_to_XMM(reg,   (uptr)mVU_minvals);
+				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVUglob.signbit);
+				SSE_MINPS_M128_to_XMM(reg,   (uptr)mVUglob.maxvals);
+				SSE_MAXPS_M128_to_XMM(reg,   (uptr)mVUglob.minvals);
 				SSE_ORPS_XMM_to_XMM  (reg, regT1);
 				break;
 		}
@@ -328,8 +328,14 @@ microVUt(void) mVUrestoreRegs(microVU* mVU) {
 // Micro VU - Custom SSE Instructions
 //------------------------------------------------------------------
 
-static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK1[4]) = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
-static const u32 PCSX2_ALIGNED16(MIN_MAX_MASK2[4]) = {0x00000000, 0x40000000, 0x00000000, 0x40000000};
+struct SSEMaskPair { u32 mask1[4], mask2[4]; };
+
+static const __aligned16 SSEMaskPair MIN_MAX = 
+{
+	{0xffffffff, 0x80000000, 0xffffffff, 0x80000000},
+	{0x00000000, 0x40000000, 0x00000000, 0x40000000}
+};
+
 
 // Warning: Modifies t1 and t2
 void MIN_MAX_PS(microVU* mVU, int to, int from, int t1, int t2, bool min) {
@@ -339,21 +345,21 @@ void MIN_MAX_PS(microVU* mVU, int to, int from, int t1, int t2, bool min) {
 
 	// ZW
 	SSE2_PSHUFD_XMM_to_XMM(t1, to, 0xfa);
-	SSE2_PAND_M128_to_XMM (t1, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (t1, (uptr)MIN_MAX_MASK2);
+	SSE2_PAND_M128_to_XMM (t1, (uptr)MIN_MAX.mask1);
+	SSE2_POR_M128_to_XMM  (t1, (uptr)MIN_MAX.mask2);
 	SSE2_PSHUFD_XMM_to_XMM(t2, from, 0xfa);
-	SSE2_PAND_M128_to_XMM (t2, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (t2, (uptr)MIN_MAX_MASK2);
+	SSE2_PAND_M128_to_XMM (t2, (uptr)MIN_MAX.mask1);
+	SSE2_POR_M128_to_XMM  (t2, (uptr)MIN_MAX.mask2);
 	if (min) SSE2_MINPD_XMM_to_XMM(t1, t2);
 	else     SSE2_MAXPD_XMM_to_XMM(t1, t2);
 
 	// XY
 	SSE2_PSHUFD_XMM_to_XMM(t2, from, 0x50);
-	SSE2_PAND_M128_to_XMM (t2, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (t2, (uptr)MIN_MAX_MASK2);
+	SSE2_PAND_M128_to_XMM (t2, (uptr)MIN_MAX.mask1);
+	SSE2_POR_M128_to_XMM  (t2, (uptr)MIN_MAX.mask2);
 	SSE2_PSHUFD_XMM_to_XMM(to, to, 0x50);
-	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX_MASK2);
+	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX.mask1);
+	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX.mask2);
 	if (min) SSE2_MINPD_XMM_to_XMM(to, t2);
 	else     SSE2_MAXPD_XMM_to_XMM(to, t2);
 
@@ -367,8 +373,8 @@ void MIN_MAX_SS(mV, int to, int from, int t1, bool min) {
 	bool t1b = 0;
 	if (t1 < 0) { t1 = mVU->regAlloc->allocReg(); t1b = 1; }
 	SSE_SHUFPS_XMM_to_XMM (to, from, 0);
-	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX_MASK1);
-	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX_MASK2);
+	SSE2_PAND_M128_to_XMM (to, (uptr)MIN_MAX.mask1);
+	SSE2_POR_M128_to_XMM  (to, (uptr)MIN_MAX.mask2);
 	SSE2_PSHUFD_XMM_to_XMM(t1, to, 0xee);
 	if (min) SSE2_MINPD_XMM_to_XMM(to, t1);
 	else	 SSE2_MAXPD_XMM_to_XMM(to, t1);
@@ -509,7 +515,7 @@ void SSE_DIVSS(mV, int to, int from, int t1 = -1, int t2 = -1) {
 // Micro VU - Custom Quick Search
 //------------------------------------------------------------------
 
-PCSX2_ALIGNED(0x1000, static u8 mVUsearchXMM[0x1000]);
+static __pagealigned u8 mVUsearchXMM[0x1000];
 
 // Generates a custom optimized block-search function 
 // Note: Structs must be 16-byte aligned! (GCC doesn't guarantee this)

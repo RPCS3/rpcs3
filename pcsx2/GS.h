@@ -18,7 +18,7 @@
 #include "Common.h"
 #include "System/SysThreads.h"
 
-PCSX2_ALIGNED16( extern u8 g_RealGSMem[Ps2MemSize::GSregs] );
+extern __aligned16 u8 g_RealGSMem[Ps2MemSize::GSregs];
 
 #define PS2MEM_GS		g_RealGSMem
 #define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
@@ -170,7 +170,7 @@ protected:
 	void ExecuteTask();
 };
 
-PCSX2_ALIGNED16_EXTERN( mtgsThreadObject mtgsThread );
+extern __aligned16 mtgsThreadObject mtgsThread;
 
 void mtgsWaitGS();
 
@@ -195,8 +195,8 @@ extern void _gs_ChangeTimings( u32 framerate, u32 iTicks );
 
 
 // used for resetting GIF fifo
-void gsGIFReset();
-void gsCSRwrite(u32 value);
+extern void gsGIFReset();
+extern void gsCSRwrite(u32 value);
 
 extern void gsWrite8(u32 mem, u8 value);
 extern void gsWrite16(u32 mem, u16 value);

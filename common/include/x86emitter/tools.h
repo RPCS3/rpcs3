@@ -93,7 +93,7 @@ struct x86CPU_INFO
 //////////////////////////////////////////////////////////////////////////////////////////
 
 
-PCSX2_ALIGNED16_EXTERN( x86CPU_INFO x86caps );
+extern __aligned16 x86CPU_INFO x86caps;
 
 extern u8 g_globalMMXSaved, g_globalXMMSaved;
 extern bool g_EEFreezeRegs;

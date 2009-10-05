@@ -49,7 +49,7 @@
 
 using namespace R5900;
 
-PCSX2_ALIGNED16(VURegs VU0);
+__aligned16 VURegs VU0;
 
 void COP2_BC2() { Int_COP2BC2PrintTable[_Rt_]();}
 void COP2_SPECIAL() { Int_COP2SPECIAL1PrintTable[_Funct_]();}

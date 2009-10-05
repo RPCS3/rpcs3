@@ -40,7 +40,7 @@
 	TEST32ItoR(gprTemp, 1);									\
 	aJump = JZ8(0);											\
 		MOV32ItoM((uptr)&mVU->divFlag, divI);				\
-		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVU_absclip);	\
+		SSE_ANDPS_M128_to_XMM(xmmReg, (uptr)mVUglob.absclip);	\
 	x86SetJ8(aJump);										\
 }
 
@@ -66,8 +66,8 @@ mVUop(mVU_DIV) {
 			x86SetJ8(bjmp);
 
 			SSE_XORPS_XMM_to_XMM (Fs, Ft);
-			SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_signbit);
-			SSE_ORPS_M128_to_XMM (Fs, (uptr)mVU_maxvals); // If division by zero, then xmmFs = +/- fmax
+			SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVUglob.signbit);
+			SSE_ORPS_M128_to_XMM (Fs, (uptr)mVUglob.maxvals); // If division by zero, then xmmFs = +/- fmax
 
 			djmp = JMP8(0);
 		x86SetJ8(cjmp);
@@ -94,7 +94,7 @@ mVUop(mVU_SQRT) {
 		MOV32ItoM((uptr)&mVU->divFlag, 0); // Clear I/D flags
 		testNeg(Ft, gprT1, ajmp); // Check for negative sqrt
 
-		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(Ft, (uptr)mVU_maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
+		if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(Ft, (uptr)mVUglob.maxvals); // Clamp infinities (only need to do positive clamp since xmmFt is positive)
 		SSE_SQRTSS_XMM_to_XMM(Ft, Ft);
 		writeQreg(Ft, mVUinfo.writeQ);
 
@@ -126,8 +126,8 @@ mVUop(mVU_RSQRT) {
 				MOV32ItoM((uptr)&mVU->divFlag, divD); // Zero divide flag (only when not 0/0)
 			x86SetJ8(cjmp);
 
-			SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVU_signbit);
-			SSE_ORPS_M128_to_XMM (Fs, (uptr)mVU_maxvals); // xmmFs = +/-Max
+			SSE_ANDPS_M128_to_XMM(Fs, (uptr)mVUglob.signbit);
+			SSE_ORPS_M128_to_XMM (Fs, (uptr)mVUglob.maxvals); // xmmFs = +/-Max
 
 			djmp = JMP8(0);
 		x86SetJ8(ajmp);
@@ -159,16 +159,16 @@ mVUop(mVU_RSQRT) {
 // ToDo: Can Be Optimized Further? (takes approximately (~115 cycles + mem access time) on a c2d)
 microVUt(void) mVU_EATAN_(mV, int PQ, int Fs, int t1, int t2) {
 	SSE_MOVSS_XMM_to_XMM (PQ, Fs);
-	SSE_MULSS_M32_to_XMM (PQ, (uptr)mVU_T1);
+	SSE_MULSS_M32_to_XMM (PQ, (uptr)mVUglob.T1);
 	SSE_MOVAPS_XMM_to_XMM(t2, Fs);
-	EATANhelper(mVU_T2);
-	EATANhelper(mVU_T3);
-	EATANhelper(mVU_T4);
-	EATANhelper(mVU_T5);
-	EATANhelper(mVU_T6);
-	EATANhelper(mVU_T7);
-	EATANhelper(mVU_T8);
-	SSE_ADDSS_M32_to_XMM  (PQ, (uptr)mVU_Pi4);
+	EATANhelper(mVUglob.T2);
+	EATANhelper(mVUglob.T3);
+	EATANhelper(mVUglob.T4);
+	EATANhelper(mVUglob.T5);
+	EATANhelper(mVUglob.T6);
+	EATANhelper(mVUglob.T7);
+	EATANhelper(mVUglob.T8);
+	SSE_ADDSS_M32_to_XMM  (PQ, (uptr)mVUglob.Pi4);
 	SSE2_PSHUFD_XMM_to_XMM(PQ, PQ, mVUinfo.writeP ? 0x27 : 0xC6);
 }
 
@@ -180,8 +180,8 @@ mVUop(mVU_EATAN) {
 		int t2 = mVU->regAlloc->allocReg();
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
-		SSE_SUBSS_M32_to_XMM  (Fs,    (uptr)mVU_one);
-		SSE_ADDSS_M32_to_XMM  (xmmPQ, (uptr)mVU_one);
+		SSE_SUBSS_M32_to_XMM  (Fs,    (uptr)mVUglob.one);
+		SSE_ADDSS_M32_to_XMM  (xmmPQ, (uptr)mVUglob.one);
 		SSE_DIVSS (mVU, Fs, xmmPQ);
 		mVU_EATAN_(mVU, xmmPQ, Fs, t1, t2);
 		mVU->regAlloc->clearNeeded(Fs);
@@ -246,22 +246,22 @@ mVUop(mVU_EEXP) {
 		int t2 = mVU->regAlloc->allocReg();
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
-		SSE_MULSS_M32_to_XMM  (xmmPQ, (uptr)mVU_E1);
-		SSE_ADDSS_M32_to_XMM  (xmmPQ, (uptr)mVU_one);
+		SSE_MULSS_M32_to_XMM  (xmmPQ, (uptr)mVUglob.E1);
+		SSE_ADDSS_M32_to_XMM  (xmmPQ, (uptr)mVUglob.one);
 		SSE_MOVAPS_XMM_to_XMM (t1, Fs);
 		SSE_MULSS			  (mVU, t1, Fs);
 		SSE_MOVAPS_XMM_to_XMM (t2, t1);
-		SSE_MULSS_M32_to_XMM  (t1, (uptr)mVU_E2);
+		SSE_MULSS_M32_to_XMM  (t1, (uptr)mVUglob.E2);
 		SSE_ADDSS			  (mVU, xmmPQ, t1);
-		eexpHelper(mVU_E3);
-		eexpHelper(mVU_E4);
-		eexpHelper(mVU_E5);
+		eexpHelper(mVUglob.E3);
+		eexpHelper(mVUglob.E4);
+		eexpHelper(mVUglob.E5);
 		SSE_MULSS			  (mVU, t2, Fs);
-		SSE_MULSS_M32_to_XMM  (t2, (uptr)mVU_E6);
+		SSE_MULSS_M32_to_XMM  (t2, (uptr)mVUglob.E6);
 		SSE_ADDSS			  (mVU, xmmPQ, t2);
 		SSE_MULSS			  (mVU, xmmPQ, xmmPQ);
 		SSE_MULSS			  (mVU, xmmPQ, xmmPQ);
-		SSE_MOVSS_M32_to_XMM  (t2, (uptr)mVU_one);
+		SSE_MOVSS_M32_to_XMM  (t2, (uptr)mVUglob.one);
 		SSE_DIVSS			  (mVU, t2, xmmPQ);
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, t2);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
@@ -307,7 +307,7 @@ mVUop(mVU_ERCPR) {
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
-		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVUglob.one);
 		SSE_DIVSS			  (mVU, Fs, xmmPQ);
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
@@ -323,7 +323,7 @@ mVUop(mVU_ERLENG) {
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		mVU_sumXYZ			  (mVU, xmmPQ, Fs);
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, xmmPQ);
-		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVUglob.one);
 		SSE_DIVSS			  (mVU, Fs, xmmPQ);
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
@@ -338,7 +338,7 @@ mVUop(mVU_ERSADD) {
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		mVU_sumXYZ			  (mVU, xmmPQ, Fs);
-		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVUglob.one);
 		SSE_DIVSS			  (mVU, Fs, xmmPQ);
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
@@ -352,9 +352,9 @@ mVUop(mVU_ERSQRT) {
 	pass2 { 
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE_ANDPS_M128_to_XMM (Fs, (uptr)mVU_absclip);
+		SSE_ANDPS_M128_to_XMM (Fs, (uptr)mVUglob.absclip);
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
-		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVU_one);
+		SSE_MOVSS_M32_to_XMM  (Fs, (uptr)mVUglob.one);
 		SSE_DIVSS			  (mVU, Fs, xmmPQ);
 		SSE_MOVSS_XMM_to_XMM  (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
@@ -395,12 +395,12 @@ mVUop(mVU_ESIN) {
 		SSE_MOVAPS_XMM_to_XMM (t2, Fs);
 		SSE_MULSS			  (mVU, Fs, t1);
 		SSE_MOVAPS_XMM_to_XMM (t1, Fs);
-		SSE_MULSS_M32_to_XMM  (Fs, (uptr)mVU_S2);
+		SSE_MULSS_M32_to_XMM  (Fs, (uptr)mVUglob.S2);
 		SSE_ADDSS			  (mVU, xmmPQ, Fs);
-		esinHelper(mVU_S3);
-		esinHelper(mVU_S4);
+		esinHelper(mVUglob.S3);
+		esinHelper(mVUglob.S4);
 		SSE_MULSS			  (mVU, t2, t1);
-		SSE_MULSS_M32_to_XMM  (t2, (uptr)mVU_S5);
+		SSE_MULSS_M32_to_XMM  (t2, (uptr)mVUglob.S5);
 		SSE_ADDSS			  (mVU, xmmPQ, t2);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);
@@ -415,7 +415,7 @@ mVUop(mVU_ESQRT) {
 	pass2 { 
 		int Fs = mVU->regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		SSE_ANDPS_M128_to_XMM (Fs, (uptr)mVU_absclip);
+		SSE_ANDPS_M128_to_XMM (Fs, (uptr)mVUglob.absclip);
 		SSE_SQRTSS_XMM_to_XMM (xmmPQ, Fs);
 		SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU->regAlloc->clearNeeded(Fs);

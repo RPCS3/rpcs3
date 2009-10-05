@@ -1911,6 +1911,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\AppCoreThread.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\AppInit.cpp"
 				>
 			</File>

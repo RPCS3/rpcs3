@@ -162,21 +162,27 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// PCSX2_ALIGNED16  - helper macros for aligning variables in MSVC and GCC.
+// __aligned / __aligned16 / __pagealigned
 //
 // GCC Warning!  The GCC linker (LD) typically fails to assure alignment of class members.
 // If you want alignment to be assured, the variable must either be a member of a struct
 // or a static global.
+//
+// __pagealigned is equivalent to __aligned(0x1000), and is used to align a dynarec code
+// buffer to a page boundary (allows the use of execution-enabled mprotect).
 //
 // General Performance Warning: Any function that specifies alignment on a local (stack)
 // variable will have to align the stack frame on enter, and restore it on exit (adds
 // overhead).  Furthermore, compilers cannot inline functions that have aligned local
 // vars.  So use local var alignment with much caution.
 //
-// Note: building the 'extern' into PCSX2_ALIGNED16 fixes Visual Assist X's intellisense.
-//
 #ifdef _MSC_VER
 
+#	define __aligned(alig)	__declspec(align(alig))
+#	define __aligned16		__declspec(align(16))
+#	define __pagealigned	__declspec(align(0x1000))
+
+	// Deprecated; use __align instead.
 #	define PCSX2_ALIGNED(alig,x)		__declspec(align(alig)) x
 #	define PCSX2_ALIGNED_EXTERN(alig,x)	extern __declspec(align(alig)) x
 #	define PCSX2_ALIGNED16(x)			__declspec(align(16)) x
@@ -220,8 +226,10 @@ This theoretically unoptimizes. Not having much luck so far.
 
 */
 
-// fixme - is this needed for recent versions of GCC?  Or can we just use the first two macros
-// instead for both definitions (implementations) and declarations (includes)? -- air
+#	define __aligned(alig)	__attribute__((aligned(alig)))
+#	define __aligned16		__attribute__((aligned(16)))
+#	define __pagealigned	__attribute__((aligned(0x1000)))
+	// Deprecated; use __align instead.
 #	define PCSX2_ALIGNED(alig,x) x __attribute((aligned(alig)))
 #	define PCSX2_ALIGNED16(x) x __attribute((aligned(16)))
 #	define PCSX2_ALIGNED_EXTERN(alig,x) extern x __attribute((aligned(alig)))

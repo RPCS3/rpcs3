@@ -22,7 +22,7 @@
 
 using namespace x86Emitter;
 
-PCSX2_ALIGNED16( x86CPU_INFO x86caps );
+__aligned16 x86CPU_INFO x86caps;
 
 static s32 iCpuId( u32 cmd, u32 *regs )
 {

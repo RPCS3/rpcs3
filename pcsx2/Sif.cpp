@@ -232,7 +232,7 @@ __forceinline void SIF0Dma()
 				}
 				else if (sif0.fifoSize >= 4) // Read a tag
 				{
-					static PCSX2_ALIGNED16(u32 tag[4]);
+					static __aligned16 u32 tag[4];
 					SIF0read((u32*)&tag[0], 4); // Tag
 					SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 

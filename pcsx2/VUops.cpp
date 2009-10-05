@@ -45,7 +45,7 @@
 #define _UImm11_	(s32)(VU->code & 0x7ff)
 
 
-static PCSX2_ALIGNED16( VECTOR RDzero );
+static __aligned16 VECTOR RDzero;
 
 static __releaseinline void __fastcall _vuFMACflush(VURegs * VU) {
 	int i;

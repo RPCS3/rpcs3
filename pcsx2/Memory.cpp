@@ -812,7 +812,7 @@ struct vtlb_PageProtectionInfo
 	vtlb_ProtectionMode Mode;
 };
 
-PCSX2_ALIGNED16( static vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::Base >> 12] );
+static __aligned16 vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::Base >> 12];
 
 
 // returns:

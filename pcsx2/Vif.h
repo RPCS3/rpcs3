@@ -188,14 +188,26 @@ extern "C"
 #define vif0Regs ((VIFregisters*)&PS2MEM_HW[0x3800])
 #define vif1Regs ((VIFregisters*)&PS2MEM_HW[0x3c00])
 
-void dmaVIF0();
-void dmaVIF1();
-void mfifoVIF1transfer(int qwc);
-int  VIF0transfer(u32 *data, int size, int istag);
-int  VIF1transfer(u32 *data, int size, int istag);
-void  vifMFIFOInterrupt();
+extern void dmaVIF0();
+extern void dmaVIF1();
+extern void mfifoVIF1transfer(int qwc);
+extern int  VIF0transfer(u32 *data, int size, int istag);
+extern int  VIF1transfer(u32 *data, int size, int istag);
+extern void vifMFIFOInterrupt();
 
-void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask);
+// --------------------------------------------------------------------------------------
+//  VIF SEE-optimized Masking Mess
+// --------------------------------------------------------------------------------------
+
+struct VifMaskTypes
+{
+	u32	Row0[4], Col0[4];
+	u32	Row1[4], Col1[4];
+};
+
+extern __aligned16 VifMaskTypes g_vifmask;
+
+extern void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask);
 
 #define XMM_R0			xmm0
 #define XMM_R1			xmm1

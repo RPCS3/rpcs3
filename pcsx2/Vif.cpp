@@ -29,10 +29,7 @@ u32* vifMaskRegs = NULL;
 vifStruct *vif;
 u16 vifqwc = 0;
 
-PCSX2_ALIGNED16(u32 g_vifRow0[4]);
-PCSX2_ALIGNED16(u32 g_vifCol0[4]);
-PCSX2_ALIGNED16(u32 g_vifRow1[4]);
-PCSX2_ALIGNED16(u32 g_vifCol1[4]);
+__aligned16 VifMaskTypes g_vifmask;
 
 extern int g_vifCycles;
 

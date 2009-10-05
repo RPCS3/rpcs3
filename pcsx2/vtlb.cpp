@@ -47,7 +47,7 @@ using namespace vtlb_private;
 
 namespace vtlb_private
 {
-	PCSX2_ALIGNED( 64, MapData vtlbdata );
+	__aligned(64) MapData vtlbdata;
 }
 
 vtlbHandler vtlbHandlerCount=0;

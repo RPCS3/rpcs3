@@ -511,7 +511,7 @@ void LWR()
 
 // dummy variable used as a destination address for writes to the zero register, so
 // that the zero register always stays zero.
-PCSX2_ALIGNED16( static GPR_reg m_dummy_gpr_zero );
+static __aligned16 GPR_reg m_dummy_gpr_zero;
 
 // Returns the x86 address of the requested GPR, which is safe for writing. (includes
 // special handling for returning a dummy var for GPR0(zero), so that it's value is

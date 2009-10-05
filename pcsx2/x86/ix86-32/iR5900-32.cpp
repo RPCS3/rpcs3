@@ -64,7 +64,7 @@ u32 s_nBlockCycles = 0; // cycles of current block recompiling
 u32 pc;			         // recompiler pc
 int branch;		         // set for branch
 
-PCSX2_ALIGNED16(GPR_reg64 g_cpuConstRegs[32]) = {0};
+__aligned16 GPR_reg64 g_cpuConstRegs[32] = {0};
 u32 g_cpuHasConstReg = 0, g_cpuFlushedConstReg = 0;
 
 ////////////////////////////////////////////////////////////////
@@ -387,8 +387,8 @@ struct ManualPageTracking
 	u8  counter;
 };
 
-PCSX2_ALIGNED16( static u16 manual_page[Ps2MemSize::Base >> 12] );
-PCSX2_ALIGNED16( static u8 manual_counter[Ps2MemSize::Base >> 12] );
+static __aligned16 u16 manual_page[Ps2MemSize::Base >> 12];
+static __aligned16 u8 manual_counter[Ps2MemSize::Base >> 12];
 
 volatile bool eeRecIsReset = false;
 

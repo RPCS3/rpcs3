@@ -191,7 +191,7 @@ static void __fastcall RegHandlerUNMAPPED(const u32* data)
 #define INSERT_UNMAPPED_16	INSERT_UNMAPPED_4 INSERT_UNMAPPED_4 INSERT_UNMAPPED_4 INSERT_UNMAPPED_4
 #define INSERT_UNMAPPED_64	INSERT_UNMAPPED_16 INSERT_UNMAPPED_16 INSERT_UNMAPPED_16 INSERT_UNMAPPED_16
 
-PCSX2_ALIGNED16( static GifPathStruct s_gifPath ) = 
+static __aligned16 GifPathStruct s_gifPath = 
 {
 	RegHandlerSIGNAL, RegHandlerFINISH, RegHandlerLABEL, RegHandlerUNMAPPED,
 	

@@ -62,7 +62,7 @@ static const uint RingBufferSize = 1<<RingBufferSizeFactor;
 // start (the wrapping is what makes it a ringbuffer, yo!)
 static const uint RingBufferMask = RingBufferSize - 1;
 
-PCSX2_ALIGNED16( mtgsThreadObject mtgsThread );
+__aligned16 mtgsThreadObject mtgsThread;
 
 struct MTGS_BufferedData
 {
@@ -78,7 +78,7 @@ struct MTGS_BufferedData
 	}
 };
 
-PCSX2_ALIGNED( 32, static MTGS_BufferedData RingBuffer );
+static __aligned(32) MTGS_BufferedData RingBuffer;
 extern bool renderswitch;
 static volatile bool gsIsOpened = false;
 

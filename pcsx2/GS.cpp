@@ -29,7 +29,7 @@ using namespace R5900;
 
 u32 CSRw;
 
-PCSX2_ALIGNED16( u8 g_RealGSMem[0x2000] );
+__aligned16 u8 g_RealGSMem[0x2000];
 extern int m_nCounters[];
 
 // FrameSkipping Stuff

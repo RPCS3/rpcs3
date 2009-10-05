@@ -500,8 +500,6 @@ extern void LoadPluginsPassive();
 extern void LoadPluginsImmediate();
 extern void UnloadPlugins();
 
-extern bool HandlePluginError( Exception::PluginError& ex );
-
 extern void AppLoadSettings();
 extern void AppSaveSettings();
 extern void AppApplySettings( const AppConfig* oldconf=NULL );

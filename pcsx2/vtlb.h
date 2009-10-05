@@ -87,5 +87,5 @@ namespace vtlb_private
 		void* RWFT[5][2][128];
 	};
 
-	PCSX2_ALIGNED_EXTERN( 64, MapData vtlbdata );
+	extern __aligned(64) MapData vtlbdata;
 }

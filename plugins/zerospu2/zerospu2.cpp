@@ -856,10 +856,10 @@ void ResampleLinear(s16* pStereoSamples, s32 oldsamples, s16* pNewSamples, s32 n
 	}
 }
 
-static PCSX2_ALIGNED16(s16 s_ThreadBuffer[NSSIZE*NSFRAMES*2*5]);
+static __aligned16 s16 s_ThreadBuffer[NSSIZE*NSFRAMES*2*5];
 
 // SoundTouch's INTEGER system is broken these days, so we'll need this to do float conversions...
-static PCSX2_ALIGNED16(float s_floatBuffer[NSSIZE*NSFRAMES*2*5]);
+static __aligned16 float s_floatBuffer[NSSIZE*NSFRAMES*2*5];
 
 // communicates with the audio hardware
 #ifdef _WIN32

@@ -64,7 +64,7 @@ REC_FUNC(SQC2);
 
 #else
 
-PCSX2_ALIGNED16(u64 retValues[2]);
+__aligned16 u64 retValues[2];
 
 void _eeOnLoadWrite(int reg)
 {
@@ -2060,7 +2060,7 @@ void recSQC2( void )
 
 using namespace Interpreter::OpcodeImpl;
 
-PCSX2_ALIGNED16(u32 dummyValue[4]);
+__aligned16 u32 dummyValue[4];
 
 void SetFastMemory(int bSetFast)
 {

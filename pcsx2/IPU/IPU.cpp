@@ -57,8 +57,8 @@ int ipuCurCmd = 0xffffffff;
 
 int FOreadpos = 0, FOwritepos = 0;
 static int FIreadpos = 0, FIwritepos = 0;
-PCSX2_ALIGNED16(u32 fifo_input[32]);
-PCSX2_ALIGNED16(u32 fifo_output[32]);
+__aligned16 u32 fifo_input[32];
+__aligned16 u32 fifo_output[32];
 
 void ReorderBitstream();
 
@@ -81,13 +81,13 @@ char convert_data_buffer[0x1C];
 // Quantization matrix
 static u8 niq[64];			//non-intraquant matrix
 static u8 iq[64];			//intraquant matrix
-u16 vqclut[16];			//clut conversion table
+u16 vqclut[16];				//clut conversion table
 static u8 s_thresh[2];		//thresholds for color conversions
 int coded_block_pattern = 0;
-PCSX2_ALIGNED16(macroblock_8  mb8);
-PCSX2_ALIGNED16(macroblock_16 mb16);
-PCSX2_ALIGNED16(macroblock_rgb32 rgb32);
-PCSX2_ALIGNED16(macroblock_rgb16 rgb16);
+__aligned16 macroblock_8  mb8;
+__aligned16 macroblock_16 mb16;
+__aligned16 macroblock_rgb32 rgb32;
+__aligned16 macroblock_rgb16 rgb16;
 
 u8 indx4[16*16/2];
 bool	mpeg2_inited = FALSE;		//mpeg2_idct_init() must be called only once
@@ -101,7 +101,7 @@ extern "C"
 	extern u8 mpeg2_scan_alt[64];
 }
 
-PCSX2_ALIGNED16(u8 _readbits[80]);	//local buffer (ring buffer)
+__aligned16 u8 _readbits[80];	//local buffer (ring buffer)
 u8* readbits = _readbits; // always can decrement by one 1qw
 
 //#define SATURATE_4BITS(val) ((val)>15 ? 15 : (val))

@@ -70,7 +70,7 @@
 #define _X_Y_Z_W  ((( VU->code >> 21 ) & 0xF ) )
 
 
-static const PCSX2_ALIGNED16(u32 VU_ONE[4]) = {0x3f800000, 0xffffffff, 0xffffffff, 0xffffffff};
+static const __aligned16 u32 VU_ONE[4] = {0x3f800000, 0xffffffff, 0xffffffff, 0xffffffff};
 //------------------------------------------------------------------
 
 
@@ -84,7 +84,6 @@ static const PCSX2_ALIGNED16(u32 VU_ONE[4]) = {0x3f800000, 0xffffffff, 0xfffffff
 //------------------------------------------------------------------
 // DIV*
 //------------------------------------------------------------------
-PCSX2_ALIGNED16(u64 DIV_TEMP_XMM[2]);
 void recVUMI_DIV(VURegs *VU, int info)
 {
 	u8 *pjmp, *pjmp1;
@@ -176,7 +175,7 @@ void recVUMI_SQRT( VURegs *VU, int info )
 //------------------------------------------------------------------
 // RSQRT*
 //------------------------------------------------------------------
-PCSX2_ALIGNED16(u64 RSQRT_TEMP_XMM[2]);
+__aligned16 u64 RSQRT_TEMP_XMM[2];
 void recVUMI_RSQRT(VURegs *VU, int info)
 {
 	u8 *ajmp8, *bjmp8;
@@ -1538,7 +1537,7 @@ void recVUMI_MFP(VURegs *VU, int info)
 //------------------------------------------------------------------
 // WAITP
 //------------------------------------------------------------------
-static PCSX2_ALIGNED16(float s_tempmem[4]);
+static __aligned16 float s_tempmem[4];
 void recVUMI_WAITP(VURegs *VU, int info)
 {
 	//Console.WriteLn("recVUMI_WAITP");

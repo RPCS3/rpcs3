@@ -202,8 +202,8 @@ extern void FIFOfrom_readsingle(void *value);
 
 // The IPU can only do one task at once and never uses other buffers so these
 // should be made available to functions in other modules to save registers.
-PCSX2_ALIGNED16(extern macroblock_rgb32 rgb32);
-PCSX2_ALIGNED16(extern macroblock_8 mb8);
+extern __aligned16 macroblock_rgb32	rgb32;
+extern __aligned16 macroblock_8		mb8;
 
 extern int ipuInit();
 extern void ipuReset();

@@ -19,46 +19,31 @@
 // Global Variables
 //------------------------------------------------------------------
 
-#define declareAllVariables											\
-initVariable( _somePrefix_,	u32,   mVU_absclip,	0x7fffffff );		\
-initVariable( _somePrefix_,	u32,   mVU_signbit,	0x80000000 );		\
-initVariable( _somePrefix_,	u32,   mVU_minvals,	0xff7fffff );		\
-initVariable( _somePrefix_,	u32,   mVU_maxvals,	0x7f7fffff );		\
-initVariable( _somePrefix_, u32,   mVU_one,		0x3f800000 );		\
-initVariable( _somePrefix_, u32,   mVU_T1,		0x3f7ffff5 );		\
-initVariable( _somePrefix_, u32,   mVU_T2,		0xbeaaa61c );		\
-initVariable( _somePrefix_, u32,   mVU_T3,		0x3e4c40a6 );		\
-initVariable( _somePrefix_, u32,   mVU_T4,		0xbe0e6c63 );		\
-initVariable( _somePrefix_, u32,   mVU_T5,		0x3dc577df );		\
-initVariable( _somePrefix_, u32,   mVU_T6,		0xbd6501c4 );		\
-initVariable( _somePrefix_, u32,   mVU_T7,		0x3cb31652 );		\
-initVariable( _somePrefix_, u32,   mVU_T8,		0xbb84d7e7 );		\
-initVariable( _somePrefix_, u32,   mVU_Pi4,		0x3f490fdb );		\
-initVariable( _somePrefix_, u32,   mVU_S2,		0xbe2aaaa4 );		\
-initVariable( _somePrefix_, u32,   mVU_S3,		0x3c08873e );		\
-initVariable( _somePrefix_, u32,   mVU_S4,		0xb94fb21f );		\
-initVariable( _somePrefix_, u32,   mVU_S5,		0x362e9c14 );		\
-initVariable( _somePrefix_, u32,   mVU_E1,		0x3e7fffa8 );		\
-initVariable( _somePrefix_, u32,   mVU_E2,		0x3d0007f4 );		\
-initVariable( _somePrefix_, u32,   mVU_E3,		0x3b29d3ff );		\
-initVariable( _somePrefix_, u32,   mVU_E4,		0x3933e553 );		\
-initVariable( _somePrefix_, u32,   mVU_E5,		0x36b63510 );		\
-initVariable( _somePrefix_,	u32,   mVU_E6,		0x353961ac );		\
-initVariable( _somePrefix_, float, mVU_FTOI_4,	16.0 );				\
-initVariable( _somePrefix_, float, mVU_FTOI_12,	4096.0 );			\
-initVariable( _somePrefix_, float, mVU_FTOI_15,	32768.0 );			\
-initVariable( _somePrefix_, float, mVU_ITOF_4,	0.0625f );			\
-initVariable( _somePrefix_, float, mVU_ITOF_12,	0.000244140625 );	\
-initVariable( _somePrefix_, float, mVU_ITOF_15,	0.000030517578125 );
+struct mVU_Globals
+{
+	u32		absclip[4], signbit[4],
+			minvals[4], maxvals[4];
+	u32		one[4];
+	u32		Pi4[4];
 
-#define _somePrefix_ PCSX2_ALIGNED16_EXTERN
-#define initVariable(aprefix, atype, aname, avalue) aprefix (const atype aname [4]);
-declareAllVariables
-#undef	_somePrefix_
-#undef	initVariable
+	u32		T1[4], T2[4], T3[4], T4[4],
+			T5[4], T6[4], T7[4], T8[4];
 
-#define _somePrefix_ PCSX2_ALIGNED16
-#define initVariable(aprefix, atype, aname, avalue) aprefix (const atype aname [4])	= {avalue, avalue, avalue, avalue};
+	u32		S2[4], S3[4], S4[4], S5[4];
+
+	u32		E1[4], E2[4], E3[4],
+			E4[4], E5[4], E6[4];
+
+	float	FTOI_4[4],
+			FTOI_12[4],
+			FTOI_15[4];
+
+	float	ITOF_4[4],
+			ITOF_12[4],
+			ITOF_15[4];
+};
+
+extern const __aligned(32) mVU_Globals mVUglob;
 
 //------------------------------------------------------------------
 // Helper Macros
@@ -147,7 +132,7 @@ declareAllVariables
 
 // Function/Template Stuff
 #define mVUx (vuIndex ? &microVU1 : &microVU0)
-#define mVUop(opName)	void opName (mP)
+#define mVUop(opName)	static void opName (mP)
 #define microVUr(aType) __recInline aType
 #define microVUt(aType) __forceinline aType
 #define microVUx(aType) template<int vuIndex> aType
@@ -166,8 +151,12 @@ declareAllVariables
 #define opCase4 if (opCase == 4) // Q  Opcodes
 
 // Define mVUquickSearch
+
+// FIXME: I changed the below saerchXMM extern from __aligned16 to __pagealigned.
+// This *probably* fixes the crashing bugs in linux when using the optimized memcmp.
+// Needs testing... --air
 #ifndef __LINUX__
-PCSX2_ALIGNED16_EXTERN( u8 mVUsearchXMM[0x1000] );
+extern __pagealigned u8 mVUsearchXMM[0x1000];
 typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUquickSearch(dest, src, size) ((((mVUCall)((void*)mVUsearchXMM))(dest, src)) == 0xf)
 #define mVUemitSearch() { mVUcustomSearch(); }

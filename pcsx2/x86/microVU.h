@@ -143,9 +143,9 @@ struct microProgManager {
 #define mVUcacheSize ((mMaxProg < 20) ? (_1mb * 10) : (mMaxProg * (_1mb * 0.5))) // 0.5mb per program
 struct microVU {
 
-	PCSX2_ALIGNED16(u32 macFlag[4]);  // 4 instances of mac  flag (used in execution)
-	PCSX2_ALIGNED16(u32 clipFlag[4]); // 4 instances of clip flag (used in execution)
-	PCSX2_ALIGNED16(u32 xmmPQb[4]);   // Backup for xmmPQ
+	__aligned16 u32 macFlag[4];  // 4 instances of mac  flag (used in execution)
+	__aligned16 u32 clipFlag[4]; // 4 instances of clip flag (used in execution)
+	__aligned16 u32 xmmPQb[4];   // Backup for xmmPQ
 
 	u32 index;			// VU Index (VU0 or VU1)
 	u32 vuMemSize;		// VU Main  Memory Size (in bytes)
@@ -175,8 +175,8 @@ struct microVU {
 };
 
 // microVU rec structs
-extern PCSX2_ALIGNED16(microVU microVU0);
-extern PCSX2_ALIGNED16(microVU microVU1);
+extern __aligned16 microVU microVU0;
+extern __aligned16 microVU microVU1;
 
 // Debug Helper
 extern int mVUdebugNow;

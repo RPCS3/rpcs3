@@ -578,7 +578,7 @@ EERECOMPILE_CODEX(eeRecompileCode2, DSRA32);
 * Format:  OP rd, rt, rs                                 *
 *********************************************************/
 
-PCSX2_ALIGNED16(u32 s_sa[4]) = {0x1f, 0, 0x3f, 0};
+__aligned16 u32 s_sa[4] = {0x1f, 0, 0x3f, 0};
 
 int recSetShiftV(int info, int* rsreg, int* rtreg, int* rdreg, int* rstemp, int forcemmx, int shift64)
 {

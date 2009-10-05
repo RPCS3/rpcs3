@@ -962,7 +962,6 @@ void _freeXMMregs()
 	}
 }
 
-PCSX2_ALIGNED16(u32 s_zeros[4]) = {0};
 int _signExtendXMMtoM(u32 to, x86SSERegType from, int candestroy)
 {
 	int t0reg;

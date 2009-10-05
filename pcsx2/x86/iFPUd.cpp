@@ -70,9 +70,6 @@ namespace DOUBLE {
  
 #define FPU_ADD_SUB_HACK 1 // Add/Sub opcodes produce more ps2-like results if set to 1
  
-static u32 PCSX2_ALIGNED16(s_neg[4]) = { 0x80000000, 0xffffffff, 0xffffffff, 0xffffffff };
-static u32 PCSX2_ALIGNED16(s_pos[4]) = { 0x7fffffff, 0xffffffff, 0xffffffff, 0xffffffff };
- 
 #define REC_FPUBRANCH(f) \
 	void f(); \
 	void rec##f() { \
@@ -100,21 +97,46 @@ static u32 PCSX2_ALIGNED16(s_pos[4]) = { 0x7fffffff, 0xffffffff, 0xffffffff, 0xf
 //------------------------------------------------------------------
 // PS2 -> DOUBLE
 //------------------------------------------------------------------
- 
+
 #define SINGLE(sign, exp, mant) (((sign)<<31) | ((exp)<<23) | (mant))
 #define DOUBLE(sign, exp, mant) (((sign ## ULL)<<63) | ((exp ## ULL)<<52) | (mant ## ULL))
- 
-static u32 PCSX2_ALIGNED16(pos_inf[4]) = {SINGLE(0,0xff,0), 0, 0, 0};
-static u32 PCSX2_ALIGNED16(neg_inf[4]) = {SINGLE(1,0xff,0), 0, 0, 0};
-static u32 PCSX2_ALIGNED16(one_exp[4]) = {SINGLE(0,1,0), 0, 0, 0};
-static u64 PCSX2_ALIGNED16(dbl_one_exp[2]) = {DOUBLE(0,1,0), 0};
- 
-static u64 PCSX2_ALIGNED16(dbl_cvt_overflow) = DOUBLE(0,1151,0); //needs special code if above or equal
-static u64 PCSX2_ALIGNED16(dbl_ps2_overflow) = DOUBLE(0,1152,0); //overflow & clamp if above or equal
-static u64 PCSX2_ALIGNED16(dbl_underflow) = DOUBLE(0,897,0); //underflow if below
- 
-static u64 PCSX2_ALIGNED16(dbl_s_pos[2]) = {0x7fffffffffffffffULL, 0}; 
-//static u64 PCSX2_ALIGNED16(dbl_s_neg[2]) = {0x8000000000000000ULL, 0}; 
+
+struct FPUd_Globals
+{
+	u32		neg[4], pos[4];
+
+	u32		pos_inf[4], neg_inf[4],
+			one_exp[4];
+
+	u64		dbl_one_exp[2];
+	
+	u64		dbl_cvt_overflow,	// needs special code if above or equal
+			dbl_ps2_overflow,	// overflow & clamp if above or equal
+			dbl_underflow;		// underflow if below
+			
+	u64		dbl_s_pos[2];
+	//u64		dlb_s_neg[2];
+};
+
+static const __aligned(32) FPUd_Globals s_const = 
+{
+	{ 0x80000000, 0xffffffff, 0xffffffff, 0xffffffff },
+	{ 0x7fffffff, 0xffffffff, 0xffffffff, 0xffffffff },
+
+	{SINGLE(0,0xff,0), 0, 0, 0},
+	{SINGLE(1,0xff,0), 0, 0, 0},
+	{SINGLE(0,1,0), 0, 0, 0},
+
+	{DOUBLE(0,1,0), 0},
+
+	DOUBLE(0,1151,0),
+	DOUBLE(0,1152,0),
+	DOUBLE(0,897,0),
+
+	{0x7fffffffffffffffULL, 0},
+	//{0x8000000000000000ULL, 0},
+};
+
  
 // converts small normal numbers to double equivalent
 // converts large normal numbers (which represent NaN/inf in IEEE) to double equivalent
@@ -122,9 +144,9 @@ static u64 PCSX2_ALIGNED16(dbl_s_pos[2]) = {0x7fffffffffffffffULL, 0};
 //mustn't use EAX/ECX/EDX/x86regs (MUL)
 void ToDouble(int reg)
 {
-	SSE_UCOMISS_M32_to_XMM(reg, (uptr)&pos_inf); //sets ZF if equal or uncomparable
+	SSE_UCOMISS_M32_to_XMM(reg, (uptr)s_const.pos_inf); //sets ZF if equal or incomparable
 	u8 *to_complex = JE8(0); //complex conversion if positive infinity or NaN
-	SSE_UCOMISS_M32_to_XMM(reg, (uptr)&neg_inf); 
+	SSE_UCOMISS_M32_to_XMM(reg, (uptr)s_const.neg_inf); 
 	u8 *to_complex2 = JE8(0); //complex conversion if negative infinity
  
 	SSE2_CVTSS2SD_XMM_to_XMM(reg, reg); //simply convert
@@ -133,9 +155,9 @@ void ToDouble(int reg)
 	x86SetJ8(to_complex);
 	x86SetJ8(to_complex2);
  
-	SSE2_PSUBD_M128_to_XMM(reg, (uptr)&one_exp); //lower exponent
+	SSE2_PSUBD_M128_to_XMM(reg, (uptr)s_const.one_exp); //lower exponent
 	SSE2_CVTSS2SD_XMM_to_XMM(reg, reg); 
-	SSE2_PADDQ_M128_to_XMM(reg, (uptr)&dbl_one_exp); //raise exponent
+	SSE2_PADDQ_M128_to_XMM(reg, (uptr)s_const.dbl_one_exp); //raise exponent
  
 	x86SetJ8(end);
 }
@@ -166,29 +188,29 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc, bool addsub)
 		AND32ItoM((uptr)&fpuRegs.ACCflag, ~1);
 
 	SSE_MOVAPS_XMM_to_XMM(absreg, reg);
-	SSE2_ANDPD_M128_to_XMM(absreg, (uptr)&dbl_s_pos); 
+	SSE2_ANDPD_M128_to_XMM(absreg, (uptr)&s_const.dbl_s_pos); 
  
-	SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&dbl_cvt_overflow);
+	SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&s_const.dbl_cvt_overflow);
 	u8 *to_complex = JAE8(0);
  
-	SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&dbl_underflow);
+	SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&s_const.dbl_underflow);
 	u8 *to_underflow = JB8(0); 
  
 	SSE2_CVTSD2SS_XMM_to_XMM(reg, reg); //simply convert
 	u8 *end = JMP8(0);
  
 	x86SetJ8(to_complex); 
-	SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&dbl_ps2_overflow);
+	SSE2_UCOMISD_M64_to_XMM(absreg, (uptr)&s_const.dbl_ps2_overflow);
 	u8 *to_overflow = JAE8(0);
  
-	SSE2_PSUBQ_M128_to_XMM(reg, (uptr)&dbl_one_exp); //lower exponent
+	SSE2_PSUBQ_M128_to_XMM(reg, (uptr)&s_const.dbl_one_exp); //lower exponent
 	SSE2_CVTSD2SS_XMM_to_XMM(reg, reg); //convert
-	SSE2_PADDD_M128_to_XMM(reg, (uptr)one_exp); //raise exponent
+	SSE2_PADDD_M128_to_XMM(reg, (uptr)s_const.one_exp); //raise exponent
 	u8 *end2 = JMP8(0);
  
 	x86SetJ8(to_overflow); 
 	SSE2_CVTSD2SS_XMM_to_XMM(reg, reg); 
-	SSE_ORPS_M128_to_XMM(reg, (uptr)&s_pos); //clamp
+	SSE_ORPS_M128_to_XMM(reg, (uptr)&s_const.pos); //clamp
 	if (flags && FPU_FLAGS_OVERFLOW)
 		OR32ItoM((uptr)&fpuRegs.fprc[31], (FPUflagO | FPUflagSO));
 	if (flags && FPU_FLAGS_OVERFLOW && acc)
@@ -221,7 +243,7 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc, bool addsub)
 		x86SetJ8(is_zero);
 	}
 	SSE2_CVTSD2SS_XMM_to_XMM(reg, reg);
-	SSE_ANDPS_M128_to_XMM(reg, (uptr)&s_neg); //flush to zero
+	SSE_ANDPS_M128_to_XMM(reg, (uptr)s_const.neg); //flush to zero
  
 	x86SetJ8(end);
 	x86SetJ8(end2);
@@ -247,10 +269,10 @@ void ToPS2FPU(int reg, bool flags, int absreg, bool acc, bool addsub = false)
 void SetMaxValue(int regd)
 {
 	if (FPU_RESULT)
-		SSE_ORPS_M128_to_XMM(regd, (uptr)&s_pos[0]); // set regd to maximum
+		SSE_ORPS_M128_to_XMM(regd, (uptr)&s_const.pos[0]); // set regd to maximum
 	else
 	{
-		SSE_ANDPS_M128_to_XMM(regd, (uptr)&s_neg[0]); // Get the sign bit
+		SSE_ANDPS_M128_to_XMM(regd, (uptr)&s_const.neg[0]); // Get the sign bit
 		SSE_ORPS_M128_to_XMM(regd, (uptr)&g_maxvals[0]); // regd = +/- Maximum  (CLAMP)!
 	}
 }
@@ -285,7 +307,7 @@ void recABS_S_xmm(int info)
  
 	CLEAR_OU_FLAGS;
  
-	SSE_ANDPS_M128_to_XMM(EEREC_D, (uptr)&s_pos[0]);
+	SSE_ANDPS_M128_to_XMM(EEREC_D, (uptr)s_const.pos);
 }
  
 FPURECOMPILE_CONSTCODE(ABS_S, XMMINFO_WRITED|XMMINFO_READS);
@@ -341,7 +363,7 @@ void FPU_ADD_SUB(int tempd, int tempt) //tempd and tempt are overwritten, they a
  
 	x86SetJ8(j8Ptr[0]);
 	//diff = 25 .. 255 , expt < expd
-	SSE_ANDPS_M128_to_XMM(tempt, (uptr)s_neg);
+	SSE_ANDPS_M128_to_XMM(tempt, (uptr)s_const.neg);
 	j8Ptr[5] = JMP8(0);
  
 	x86SetJ8(j8Ptr[1]);
@@ -355,7 +377,7 @@ void FPU_ADD_SUB(int tempd, int tempt) //tempd and tempt are overwritten, they a
  
 	x86SetJ8(j8Ptr[3]);
 	//diff = -255 .. -25, expd < expt
-	SSE_ANDPS_M128_to_XMM(tempd, (uptr)s_neg); 
+	SSE_ANDPS_M128_to_XMM(tempd, (uptr)s_const.neg); 
 	j8Ptr[7] = JMP8(0);
  
 	x86SetJ8(j8Ptr[2]);
@@ -606,10 +628,11 @@ void recDIVhelper2(int regd, int regt) // Doesn't sets flags
  
 	ToPS2FPU(regd, false, regt, false);
 }
- 
+
+static __aligned16 u32 roundmode_temp[4];
+
 void recDIV_S_xmm(int info)
 {
-	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
     //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
     //Console.WriteLn("DIV");
@@ -678,7 +701,7 @@ void recMaddsub(int info, int regd, int op, bool acc)
 
 	x86SetJ8(mulovf);
 	if (op == 1) //sub
-		SSE_XORPS_M128_to_XMM(sreg, (uptr)&s_neg);
+		SSE_XORPS_M128_to_XMM(sreg, (uptr)s_const.neg);
 	SSE_MOVAPS_XMM_to_XMM(treg, sreg);  //fall through below
 
 	x86SetJ8(accovf);
@@ -726,8 +749,11 @@ FPURECOMPILE_CONSTCODE(MADDA_S, XMMINFO_WRITEACC|XMMINFO_READACC|XMMINFO_READS|X
 // MAX / MIN XMM
 //------------------------------------------------------------------
  
-static const u32 PCSX2_ALIGNED16(minmax_mask[4]) = {0xffffffff, 0x80000000, 0, 0};
-static const u32 PCSX2_ALIGNED16(minmax_mask2[4]) = {0, 0x40000000, 0, 0};
+static const __aligned16 u32 minmax_mask[8] =
+{
+	0xffffffff,	0x80000000, 0, 0,
+	0,			0x40000000, 0, 0
+};
 // FPU's MAX/MIN work with all numbers (including "denormals"). Check VU's logical min max for more info.
 void recMINMAX(int info, bool ismin)
 {
@@ -738,10 +764,10 @@ void recMINMAX(int info, bool ismin)
  
 	SSE2_PSHUFD_XMM_to_XMM(sreg, sreg, 0x00);
 	SSE2_PAND_M128_to_XMM(sreg, (uptr)minmax_mask);
-	SSE2_POR_M128_to_XMM(sreg, (uptr)minmax_mask2);
+	SSE2_POR_M128_to_XMM(sreg, (uptr)&minmax_mask[4]);
 	SSE2_PSHUFD_XMM_to_XMM(treg, treg, 0x00);
 	SSE2_PAND_M128_to_XMM(treg, (uptr)minmax_mask);
-	SSE2_POR_M128_to_XMM(treg, (uptr)minmax_mask2);
+	SSE2_POR_M128_to_XMM(treg, (uptr)&minmax_mask[4]);
 	if (ismin)
 		SSE2_MINSD_XMM_to_XMM(sreg, treg);
 	else
@@ -835,7 +861,7 @@ void recNEG_S_xmm(int info) {
  
 	CLEAR_OU_FLAGS;
  
-	SSE_XORPS_M128_to_XMM(EEREC_D, (uptr)&s_neg[0]);
+	SSE_XORPS_M128_to_XMM(EEREC_D, (uptr)&s_const.neg[0]);
 }
  
 FPURECOMPILE_CONSTCODE(NEG_S, XMMINFO_WRITED|XMMINFO_READS);
@@ -869,7 +895,6 @@ FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
 void recSQRT_S_xmm(int info)
 {
 	u8 *pjmp;
-	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	int tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
 	if (tempReg == -1) {Console.Error("FPU: SQRT Allocation Error!"); tempReg = EAX;}
@@ -895,12 +920,12 @@ void recSQRT_S_xmm(int info)
 		AND32ItoR(tempReg, 1);  //Check sign
 		pjmp = JZ8(0); //Skip if none are
 			OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags
-			SSE_ANDPS_M128_to_XMM(EEREC_D, (uptr)&s_pos[0]); // Make EEREC_D Positive
+			SSE_ANDPS_M128_to_XMM(EEREC_D, (uptr)&s_const.pos[0]); // Make EEREC_D Positive
 		x86SetJ8(pjmp);
 	}
 	else 
 	{
-		SSE_ANDPS_M128_to_XMM(EEREC_D, (uptr)&s_pos[0]); // Make EEREC_D Positive
+		SSE_ANDPS_M128_to_XMM(EEREC_D, (uptr)&s_const.pos[0]); // Make EEREC_D Positive
 	}
  
  
@@ -941,7 +966,7 @@ void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when reg
 	AND32ItoR(tempReg, 1);  //Check sign
 	pjmp2 = JZ8(0); //Skip if not set
 		OR32ItoM((uptr)&fpuRegs.fprc[31], FPUflagI|FPUflagSI); // Set I and SI flags
-		SSE_ANDPS_M128_to_XMM(regt, (uptr)&s_pos[0]); // Make regt Positive
+		SSE_ANDPS_M128_to_XMM(regt, (uptr)&s_const.pos[0]); // Make regt Positive
 	x86SetJ8(pjmp2);
  
 	//--- Check for zero ---
@@ -981,7 +1006,7 @@ void recRSQRThelper1(int regd, int regt) // Preforms the RSQRT function when reg
  
 void recRSQRThelper2(int regd, int regt) // Preforms the RSQRT function when regd <- Fs and regt <- Ft (Doesn't set flags)
 {
-	SSE_ANDPS_M128_to_XMM(regt, (uptr)&s_pos[0]); // Make regt Positive
+	SSE_ANDPS_M128_to_XMM(regt, (uptr)&s_const.pos[0]); // Make regt Positive
  
 	ToDouble(regt); ToDouble(regd);
  
@@ -995,7 +1020,6 @@ void recRSQRT_S_xmm(int info)
 {
 	int sreg, treg;
  
-	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
 		//Console.WriteLn("rsqrt to nearest");

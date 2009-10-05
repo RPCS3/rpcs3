@@ -1108,7 +1108,7 @@ void _recMove128MtoRmOffset(u32 offset, u32 from)
 	MOV32RtoRm(ECX, EDX, offset+12);
 }
 
-static PCSX2_ALIGNED16(u32 s_ones[2]) = {0xffffffff, 0xffffffff};
+static const __aligned16 u32 s_ones[2] = {0xffffffff, 0xffffffff};
 
 void LogicalOpRtoR(x86MMXRegType to, x86MMXRegType from, int op)
 {

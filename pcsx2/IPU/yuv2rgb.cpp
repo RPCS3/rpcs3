@@ -55,7 +55,7 @@ enum
 	BCb_COEFF   = 0x40
 };
 
-static volatile PCSX2_ALIGNED16(const SSE2_Tables sse2_tables) = 
+static volatile const __aligned16 SSE2_Tables sse2_tables = 
 {
 	{0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000,0x8000},	// c_bias
 	{16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16},			// y_bias
@@ -72,7 +72,7 @@ static volatile PCSX2_ALIGNED16(const SSE2_Tables sse2_tables) =
 	SSE_COEFFICIENTS(0x102),  // 2.015625 [BCb_coefficients]
 };
 
-static PCSX2_ALIGNED16(u16 yuv2rgb_temp[3][8]);
+static __aligned16 u16 yuv2rgb_temp[3][8];
 
 // This could potentially be improved for SSE4
 __releaseinline void yuv2rgb_sse2(void)

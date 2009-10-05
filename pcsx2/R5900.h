@@ -247,9 +247,9 @@ struct tlbs
 
 #endif
 
-PCSX2_ALIGNED16_EXTERN(cpuRegisters cpuRegs);
-PCSX2_ALIGNED16_EXTERN(fpuRegisters fpuRegs);
-PCSX2_ALIGNED16_EXTERN(tlbs tlb[48]);
+extern __aligned16 cpuRegisters cpuRegs;
+extern __aligned16 fpuRegisters fpuRegs;
+extern __aligned16 tlbs tlb[48];
 
 extern u32 g_nextBranchCycle;
 extern bool eeEventTestIsActive;

@@ -19,8 +19,8 @@
 #include <time.h>
 #include <sys/time.h>
 
-extern "C" PCSX2_ALIGNED16( u8 _xmm_backup[16*2] );
-extern "C" PCSX2_ALIGNED16( u8 _mmx_backup[8*4] );
+extern "C" __aligned16 u8 _xmm_backup[16*2];
+extern "C" __aligned16 u8 _mmx_backup[8*4];
 
 u8 _xmm_backup[16*2];
 u8 _mmx_backup[8*4];

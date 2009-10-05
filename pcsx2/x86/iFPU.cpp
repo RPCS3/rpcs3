@@ -75,8 +75,8 @@ void recRSQRT_S_xmm(int info);
 
 #define FPU_ADD_SUB_HACK 1 // Add/Sub opcodes produce more ps2-like results if set to 1
 
-static u32 PCSX2_ALIGNED16(s_neg[4]) = { 0x80000000, 0xffffffff, 0xffffffff, 0xffffffff };
-static u32 PCSX2_ALIGNED16(s_pos[4]) = { 0x7fffffff, 0xffffffff, 0xffffffff, 0xffffffff };
+static const __aligned16 u32 s_neg[4] = { 0x80000000, 0xffffffff, 0xffffffff, 0xffffffff };
+static const __aligned16 u32 s_pos[4] = { 0x7fffffff, 0xffffffff, 0xffffffff, 0xffffffff };
 
 #define REC_FPUBRANCH(f) \
 	void f(); \
@@ -367,7 +367,7 @@ REC_FPUFUNC(RSQRT_S);
 // Clamp Functions (Converts NaN's and Infinities to Normal Numbers)
 //------------------------------------------------------------------
 
-PCSX2_ALIGNED16(u64 FPU_FLOAT_TEMP[2]);
+static __aligned16 u64 FPU_FLOAT_TEMP[2];
 __forceinline void fpuFloat4(int regd) { // +NaN -> +fMax, -NaN -> -fMax, +Inf -> +fMax, -Inf -> -fMax
 	int t1reg = _allocTempXMMreg(XMMT_FPS, -1);
 	if (t1reg >= 0) {
@@ -1100,9 +1100,10 @@ void recDIVhelper2(int regd, int regt) // Doesn't sets flags
 	ClampValues(regd);
 }
 
+static __aligned16 u32 roundmode_temp[4];
+
 void recDIV_S_xmm(int info)
 {
-	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
     //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
@@ -1661,7 +1662,6 @@ FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
 void recSQRT_S_xmm(int info)
 {
 	u8* pjmp;
-	static u32 PCSX2_ALIGNED16(roundmode_temp[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 	int roundmodeFlag = 0;
 	//Console.WriteLn("FPU: SQRT");
 	

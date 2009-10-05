@@ -37,17 +37,12 @@ extern "C"
 	extern u32* vifRow;
 }
 
-PCSX2_ALIGNED16_EXTERN(u32 g_vifRow0[4]);
-PCSX2_ALIGNED16_EXTERN(u32 g_vifCol0[4]);
-PCSX2_ALIGNED16_EXTERN(u32 g_vifRow1[4]);
-PCSX2_ALIGNED16_EXTERN(u32 g_vifCol1[4]);
-
 extern vifStruct *vif;
 
 vifStruct vif0, vif1;
 
-static PCSX2_ALIGNED16(u32 g_vif1Masks[64]);
-static PCSX2_ALIGNED16(u32 g_vif0Masks[64]);
+static __aligned16 u32 g_vif1Masks[64];
+static __aligned16 u32 g_vif0Masks[64];
 u32 g_vif1HasMask3[4] = {0}, g_vif0HasMask3[4] = {0};
 
 // Generic constants
@@ -59,7 +54,7 @@ static const unsigned int VIF1dmanum = 1;
 int g_vifCycles = 0;
 Path3Modes Path3progress = STOPPED_MODE;
 
-static PCSX2_ALIGNED16( u32 splittransfer[4] );
+static __aligned16 u32 splittransfer[4];
 u32 splitptr = 0;
 
 typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, u32 *data, int size);
@@ -353,7 +348,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		vifRegs = vif0Regs;
 		vifMaskRegs = g_vif0Masks;
 		vif = &vif0;
-		vifRow = g_vifRow0;
+		vifRow = g_vifmask.Row0;
 	}
 	else
 	{
@@ -361,7 +356,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 		vifRegs = vif1Regs;
 		vifMaskRegs = g_vif1Masks;
 		vif = &vif1;
-		vifRow = g_vifRow1;
+		vifRow = g_vifmask.Row1;
 	}
 	assert(v->addr < memsize);
 
@@ -507,7 +502,7 @@ static int VIFalign(u32 *data, vifCode *v, unsigned int size, const unsigned int
 			if(vifRegs->mode == 2)
 			{
 				//Update the reg rows for SSE
-				vifRow = VIFdmanum ? g_vifRow1 : g_vifRow0;
+				vifRow = VIFdmanum ? g_vifmask.Row1 : g_vifmask.Row0;
 				vifRow[0] = vifRegs->r0;
 				vifRow[1] = vifRegs->r1;
 				vifRow[2] = vifRegs->r2;
@@ -568,7 +563,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		vifRegs = vif0Regs;
 		vifMaskRegs = g_vif0Masks;
 		vif = &vif0;
-		vifRow = g_vifRow0;
+		vifRow = g_vifmask.Row0;
 		assert(v->addr < memsize);
 	}
 	else
@@ -578,7 +573,7 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 		vifRegs = vif1Regs;
 		vifMaskRegs = g_vif1Masks;
 		vif = &vif1;
-		vifRow = g_vifRow1;
+		vifRow = g_vifmask.Row1;
 		assert(v->addr < memsize);
 	}
 
@@ -654,28 +649,28 @@ static void VIFunpack(u32 *data, vifCode *v, unsigned int size, const unsigned i
 #ifdef _MSC_VER
 			if (VIFdmanum)
 			{
-				__asm movaps XMM_ROW, xmmword ptr [g_vifRow1]
-				__asm movaps XMM_COL, xmmword ptr [g_vifCol1]
+				__asm movaps XMM_ROW, xmmword ptr [g_vifmask.Row1]
+				__asm movaps XMM_COL, xmmword ptr [g_vifmask.Col1]
 			}
 			else
 			{
-				__asm movaps XMM_ROW, xmmword ptr [g_vifRow0]
-				__asm movaps XMM_COL, xmmword ptr [g_vifCol0]
+				__asm movaps XMM_ROW, xmmword ptr [g_vifmask.Row0]
+				__asm movaps XMM_COL, xmmword ptr [g_vifmask.Col0]
 			}
 #else
 			if (VIFdmanum)
 			{
 				__asm__(".intel_syntax noprefix\n"
-				        "movaps xmm6, xmmword ptr [%[g_vifRow1]]\n"
-				        "movaps xmm7, xmmword ptr [%[g_vifCol1]]\n"
-					".att_syntax\n" : : [g_vifRow1]"r"(g_vifRow1), [g_vifCol1]"r"(g_vifCol1));
+				        "movaps xmm6, xmmword ptr [%[g_vifmask.Row1]]\n"
+				        "movaps xmm7, xmmword ptr [%[g_vifmask.Col1]]\n"
+					".att_syntax\n" : : [g_vifmask.Row1]"r"(g_vifmask.Row1), [g_vifmask.Col1]"r"(g_vifmask.Col1));
 			}
 			else
 			{
 				__asm__(".intel_syntax noprefix\n"
-				        "movaps xmm6, xmmword ptr [%[g_vifRow0]]\n"
-				        "movaps xmm7, xmmword ptr [%[g_vifCol0]]\n"
-					".att_syntax\n" : : [g_vifRow0]"r"(g_vifRow0),  [g_vifCol0]"r"(g_vifCol0));
+				        "movaps xmm6, xmmword ptr [%[g_vifmask.Row0]]\n"
+				        "movaps xmm7, xmmword ptr [%[g_vifmask.Col0]]\n"
+					".att_syntax\n" : : [g_vifmask.Row0]"r"(g_vifmask.Row0),  [g_vifmask.Col0]"r"(g_vifmask.Col0));
 			}
 #endif
 
@@ -1001,7 +996,7 @@ static int __fastcall Vif0TransSTRow(u32 *data)  // STROW
 	int ret;
 
 	u32* pmem = &vif0Regs->r0 + (vif0.tag.addr << 2);
-	u32* pmem2 = g_vifRow0 + vif0.tag.addr;
+	u32* pmem2 = g_vifmask.Row0 + vif0.tag.addr;
 	assert(vif0.tag.addr < 4);
 	ret = min(4 - vif0.tag.addr, vif0.vifpacketsize);
 	assert(ret > 0);
@@ -1035,7 +1030,7 @@ static int __fastcall Vif0TransSTCol(u32 *data)  // STCOL
 	int ret;
 
 	u32* pmem = &vif0Regs->c0 + (vif0.tag.addr << 2);
-	u32* pmem2 = g_vifCol0 + vif0.tag.addr;
+	u32* pmem2 = g_vifmask.Col0 + vif0.tag.addr;
 	ret = min(4 - vif0.tag.addr, vif0.vifpacketsize);
 	switch (ret)
 	{
@@ -1626,7 +1621,7 @@ void vif0Write32(u32 mem, u32 value)
 		case VIF0_R2:
 		case VIF0_R3:
 			assert((mem&0xf) == 0);
-			g_vifRow0[(mem>>4) & 3] = value;
+			g_vifmask.Row0[(mem>>4) & 3] = value;
 			break;
 
 		case VIF0_C0:
@@ -1634,7 +1629,7 @@ void vif0Write32(u32 mem, u32 value)
 		case VIF0_C2:
 		case VIF0_C3:
 			assert((mem&0xf) == 0);
-			g_vifCol0[(mem>>4) & 3] = value;
+			g_vifmask.Col0[(mem>>4) & 3] = value;
 			break;
 
 		default:
@@ -1665,12 +1660,12 @@ void SaveStateBase::vif0Freeze()
 	// Dunno if this one is needed, but whatever, it's small. :)
 	Freeze(g_vifCycles);
 
-	Freeze(vif0);
+	// mask settings for VIF0 and VIF1
+	Freeze(g_vifmask);
 
+	Freeze(vif0);
 	Freeze(g_vif0HasMask3);
 	Freeze(g_vif0Masks);
-	Freeze(g_vifRow0);
-	Freeze(g_vifCol0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1774,7 +1769,7 @@ static int __fastcall Vif1TransSTRow(u32 *data)
 	int ret;
 
 	u32* pmem = &vif1Regs->r0 + (vif1.tag.addr << 2);
-	u32* pmem2 = g_vifRow1 + vif1.tag.addr;
+	u32* pmem2 = g_vifmask.Row1 + vif1.tag.addr;
 	assert(vif1.tag.addr < 4);
 	ret = min(4 - vif1.tag.addr, vif1.vifpacketsize);
 	assert(ret > 0);
@@ -1807,7 +1802,7 @@ static int __fastcall Vif1TransSTCol(u32 *data)
 	int ret;
 
 	u32* pmem = &vif1Regs->c0 + (vif1.tag.addr << 2);
-	u32* pmem2 = g_vifCol1 + vif1.tag.addr;
+	u32* pmem2 = g_vifmask.Col1 + vif1.tag.addr;
 	ret = min(4 - vif1.tag.addr, vif1.vifpacketsize);
 	switch (ret)
 	{
@@ -1855,7 +1850,7 @@ static int __fastcall Vif1TransMPG(u32 *data)
 }
 
 // Dummy GIF-TAG Packet to Guarantee Count = 1
-PCSX2_ALIGNED16_EXTERN(u32 nloop0_packet[4]);
+extern __aligned16 u32 nloop0_packet[4];
 
 static int __fastcall Vif1TransDirectHL(u32 *data)
 {
@@ -2769,7 +2764,7 @@ void vif1Write32(u32 mem, u32 value)
 		case VIF1_R2:
 		case VIF1_R3:
 			assert((mem&0xf) == 0);
-			g_vifRow1[(mem>>4) & 3] = value;
+			g_vifmask.Row1[(mem>>4) & 3] = value;
 			break;
 
 		case VIF1_C0:
@@ -2777,7 +2772,7 @@ void vif1Write32(u32 mem, u32 value)
 		case VIF1_C2:
 		case VIF1_C3:
 			assert((mem&0xf) == 0);
-			g_vifCol1[(mem>>4) & 3] = value;
+			g_vifmask.Col1[(mem>>4) & 3] = value;
 			break;
 
 		default:
@@ -2809,6 +2804,4 @@ void SaveStateBase::vif1Freeze()
 
 	Freeze(g_vif1HasMask3);
 	Freeze(g_vif1Masks);
-	Freeze(g_vifRow1);
-	Freeze(g_vifCol1);
 }

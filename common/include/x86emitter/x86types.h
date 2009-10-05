@@ -408,7 +408,7 @@ __forceinline void xWrite( T val )
 			Displacement += imm;
 			return *this;
 		}
-
+__noinline
 		__forceinline ModSibStrict<OperandType> operator+( const s32 imm ) const { return ModSibStrict<OperandType>( *this ).Add( imm ); }
 		__forceinline ModSibStrict<OperandType> operator-( const s32 imm ) const { return ModSibStrict<OperandType>( *this ).Add( -imm ); }
 

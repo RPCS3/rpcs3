@@ -47,7 +47,7 @@ bool iopBranchAction = false;
 
 bool iopEventTestIsActive = false;
 
-PCSX2_ALIGNED16(psxRegisters psxRegs);
+__aligned16 psxRegisters psxRegs;
 
 void psxReset()
 {

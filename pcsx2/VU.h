@@ -181,7 +181,7 @@ struct _VURegsNum {
 };
 
 extern VURegs* g_pVU1;
-PCSX2_ALIGNED16_EXTERN(VURegs VU0);
+extern __aligned16 VURegs VU0;
 
 #define VU1 (*g_pVU1)
 

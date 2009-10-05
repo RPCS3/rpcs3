@@ -32,8 +32,7 @@
 #include "internal.h"
 
 // defined in tools.cpp
-PCSX2_ALIGNED16_EXTERN( u64 g_globalXMMData[2*iREGCNT_XMM] );
-
+extern __aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
 
 // ------------------------------------------------------------------------
 // Notes on Thread Local Storage:

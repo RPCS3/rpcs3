@@ -88,10 +88,10 @@ extern u32 vudump;
 #include <windows.h>
 #endif
 
-PCSX2_ALIGNED16(u8 backVUregs[sizeof(VURegs)]);
-PCSX2_ALIGNED16(u8 cmpVUregs [sizeof(VURegs)]);
-PCSX2_ALIGNED16(u8 backVUmem [0x4000]);
-PCSX2_ALIGNED16(u8 cmpVUmem  [0x4000]);
+__aligned16 u8 backVUregs[sizeof(VURegs)];
+__aligned16 u8 cmpVUregs [sizeof(VURegs)];
+__aligned16 u8 backVUmem [0x4000];
+__aligned16 u8 cmpVUmem  [0x4000];
 static u32 runCount = 0;
 #define VU3 ((VURegs)*((VURegs*)cmpVUregs))
 #define fABS(aInt)	 (aInt & 0x7fffffff)

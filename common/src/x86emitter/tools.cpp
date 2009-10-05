@@ -23,8 +23,8 @@
 u8 g_globalMMXSaved = 0;
 u8 g_globalXMMSaved = 0;
 
-PCSX2_ALIGNED16( u64 g_globalMMXData[8] );
-PCSX2_ALIGNED16( u64 g_globalXMMData[2*iREGCNT_XMM] );
+__aligned16 u64 g_globalMMXData[8];
+__aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
 
 /////////////////////////////////////////////////////////////////////
 // MMX Register Freezing

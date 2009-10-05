@@ -41,9 +41,9 @@ using namespace R5900;	// for R5900 disasm tools
 s32 EEsCycle;		// used to sync the IOP to the EE
 u32 EEoCycle;
 
-PCSX2_ALIGNED16(cpuRegisters cpuRegs);
-PCSX2_ALIGNED16(fpuRegisters fpuRegs);
-PCSX2_ALIGNED16(tlbs tlb[48]);
+__aligned16 cpuRegisters cpuRegs;
+__aligned16 fpuRegisters fpuRegs;
+__aligned16 tlbs tlb[48];
 R5900cpu *Cpu = NULL;
 
 bool g_ExecBiosHack = false; // set if the BIOS has already been executed

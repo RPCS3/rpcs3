@@ -72,7 +72,7 @@
 //------------------------------------------------------------------
 // Global Variables
 //------------------------------------------------------------------
-static const PCSX2_ALIGNED16(int SSEmovMask[ 16 ][ 4 ]) =
+static const __aligned16 int SSEmovMask[ 16 ][ 4 ] =
 {
 	{ 0x00000000, 0x00000000, 0x00000000, 0x00000000 },
 	{ 0x00000000, 0x00000000, 0x00000000, 0xFFFFFFFF },
@@ -92,7 +92,7 @@ static const PCSX2_ALIGNED16(int SSEmovMask[ 16 ][ 4 ]) =
 	{ 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF }
 };
 
-static const PCSX2_ALIGNED16(u32 const_abs_table[16][4]) = 
+static const __aligned16 u32 const_abs_table[16][4] = 
 {
    { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff }, //0000
    { 0xffffffff, 0xffffffff, 0xffffffff, 0x7fffffff }, //0001
@@ -112,21 +112,21 @@ static const PCSX2_ALIGNED16(u32 const_abs_table[16][4]) =
    { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff }, //1111
 };
 
-static const PCSX2_ALIGNED16(float recMult_float_to_int4[4])	= { 16.0, 16.0, 16.0, 16.0 };
-static const PCSX2_ALIGNED16(float recMult_float_to_int12[4])	= { 4096.0, 4096.0, 4096.0, 4096.0 };
-static const PCSX2_ALIGNED16(float recMult_float_to_int15[4])	= { 32768.0, 32768.0, 32768.0, 32768.0 };
+static const __aligned16 float recMult_float_to_int4[4]		= { 16.0, 16.0, 16.0, 16.0 };
+static const __aligned16 float recMult_float_to_int12[4]	= { 4096.0, 4096.0, 4096.0, 4096.0 };
+static const __aligned16 float recMult_float_to_int15[4]	= { 32768.0, 32768.0, 32768.0, 32768.0 };
 
-static const PCSX2_ALIGNED16(float recMult_int_to_float4[4])	= { 0.0625f, 0.0625f, 0.0625f, 0.0625f };
-static const PCSX2_ALIGNED16(float recMult_int_to_float12[4])	= { 0.000244140625, 0.000244140625, 0.000244140625, 0.000244140625 };
-static const PCSX2_ALIGNED16(float recMult_int_to_float15[4])	= { 0.000030517578125, 0.000030517578125, 0.000030517578125, 0.000030517578125 };
+static const __aligned16 float recMult_int_to_float4[4]		= { 0.0625f, 0.0625f, 0.0625f, 0.0625f };
+static const __aligned16 float recMult_int_to_float12[4]	= { 0.000244140625, 0.000244140625, 0.000244140625, 0.000244140625 };
+static const __aligned16 float recMult_int_to_float15[4]	= { 0.000030517578125, 0.000030517578125, 0.000030517578125, 0.000030517578125 };
 
-static const PCSX2_ALIGNED16(u32 VU_Underflow_Mask1[4])			= {0x7f800000, 0x7f800000, 0x7f800000, 0x7f800000};
-static const PCSX2_ALIGNED16(u32 VU_Underflow_Mask2[4])			= {0x007fffff, 0x007fffff, 0x007fffff, 0x007fffff};
-static const PCSX2_ALIGNED16(u32 VU_Zero_Mask[4])				= {0x00000000, 0x00000000, 0x00000000, 0x00000000};
-static const PCSX2_ALIGNED16(u32 VU_Zero_Helper_Mask[4])		= {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
-static const PCSX2_ALIGNED16(u32 VU_Signed_Zero_Mask[4])		= {0x80000000, 0x80000000, 0x80000000, 0x80000000};
-static const PCSX2_ALIGNED16(u32 VU_Pos_Infinity[4])			= {0x7f800000, 0x7f800000, 0x7f800000, 0x7f800000};
-static const PCSX2_ALIGNED16(u32 VU_Neg_Infinity[4])			= {0xff800000, 0xff800000, 0xff800000, 0xff800000};
+static const __aligned16 u32 VU_Underflow_Mask1[4]			= {0x7f800000, 0x7f800000, 0x7f800000, 0x7f800000};
+static const __aligned16 u32 VU_Underflow_Mask2[4]			= {0x007fffff, 0x007fffff, 0x007fffff, 0x007fffff};
+static const __aligned16 u32 VU_Zero_Mask[4]				= {0x00000000, 0x00000000, 0x00000000, 0x00000000};
+static const __aligned16 u32 VU_Zero_Helper_Mask[4]			= {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff};
+static const __aligned16 u32 VU_Signed_Zero_Mask[4]			= {0x80000000, 0x80000000, 0x80000000, 0x80000000};
+static const __aligned16 u32 VU_Pos_Infinity[4]				= {0x7f800000, 0x7f800000, 0x7f800000, 0x7f800000};
+static const __aligned16 u32 VU_Neg_Infinity[4]				= {0xff800000, 0xff800000, 0xff800000, 0xff800000};
 //------------------------------------------------------------------
 
  
@@ -135,7 +135,7 @@ static const PCSX2_ALIGNED16(u32 VU_Neg_Infinity[4])			= {0xff800000, 0xff800000
 //
 // Note: Computes under/overflow flags if CHECK_VU_EXTRA_FLAGS is 1
 //------------------------------------------------------------------
-PCSX2_ALIGNED16(u64 TEMPXMMData[2]);
+static __aligned16 u64 TEMPXMMData[2];
 void recUpdateFlags(VURegs * VU, int reg, int info)
 {
 	static u8 *pjmp, *pjmp2;
@@ -327,8 +327,8 @@ void recUpdateFlags(VURegs * VU, int reg, int info)
 //
 // Note: See FPU_ADD_SUB() for more info on what this is doing.
 //------------------------------------------------------------------
-static PCSX2_ALIGNED16(u32 VU_addsuband[2][4]);
-static PCSX2_ALIGNED16(u32 VU_addsub_reg[2][4]);
+static __aligned16 u32 VU_addsuband[2][4];
+static __aligned16 u32 VU_addsub_reg[2][4];
 
 static u32 tempECX;
 
@@ -628,7 +628,7 @@ void recVUMI_ABS(VURegs *VU, int info)
 //------------------------------------------------------------------
 // ADD*, ADD_iq*, ADD_xyzw*
 //------------------------------------------------------------------
-PCSX2_ALIGNED16(float s_two[4]) = {0,0,0,2};
+static const __aligned16 float s_two[4] = {0,0,0,2};
 void recVUMI_ADD(VURegs *VU, int info)
 {
 	//Console.WriteLn("recVUMI_ADD()");
@@ -2164,11 +2164,11 @@ void recVUMI_MSUBAw( VURegs *VU, int info )
 //------------------------------------------------------------------
 
 
-static const u32 PCSX2_ALIGNED16(special_mask[4]) = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
-static const u32 PCSX2_ALIGNED16(special_mask2[4]) = {0, 0x40000000, 0, 0x40000000};
+static const __aligned16 u32 special_mask[4] = {0xffffffff, 0x80000000, 0xffffffff, 0x80000000};
+static const __aligned16 u32 special_mask2[4] = {0, 0x40000000, 0, 0x40000000};
 
-u32 PCSX2_ALIGNED16(temp_loc[4]);
-u32 PCSX2_ALIGNED16(temp_loc2[4]);
+__aligned16 u32 temp_loc[4];
+__aligned16 u32 temp_loc2[4];
 
 //MAX/MINI are non-arithmetic operations that implicitly support numbers with the EXP field being 0 ("denormals").
 //
@@ -2703,7 +2703,9 @@ void recVUMI_NOP( VURegs *VU, int info )
 //------------------------------------------------------------------
 // recVUMI_FTOI_Saturate() - Saturates result from FTOI Instructions
 //------------------------------------------------------------------
-static const PCSX2_ALIGNED16(int rec_const_0x8000000[4]) = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+
+// unused, but leaving here for possible reference..
+//static const __aligned16 int rec_const_0x8000000[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
 
 void recVUMI_FTOI_Saturate(int rec_s, int rec_t, int rec_tmp1, int rec_tmp2)
 {
@@ -2734,8 +2736,8 @@ void recVUMI_FTOI_Saturate(int rec_s, int rec_t, int rec_tmp1, int rec_tmp2)
 //------------------------------------------------------------------
 // FTOI 0/4/12/15
 //------------------------------------------------------------------
-static PCSX2_ALIGNED16(float FTIO_Temp1[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
-static PCSX2_ALIGNED16(float FTIO_Temp2[4]) = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
+static __aligned16 float FTIO_Temp1[4] = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
+static __aligned16 float FTIO_Temp2[4] = { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
 void recVUMI_FTOI0(VURegs *VU, int info)
 {	
 	int t1reg, t2reg; // Temp XMM regs

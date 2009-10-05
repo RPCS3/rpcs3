@@ -82,8 +82,8 @@ extern u8 g_globalMMXSaved;
 #endif
 
 
-PCSX2_ALIGNED16( static u8 _xmm_backup[16*2] );
-PCSX2_ALIGNED16( static u8 _mmx_backup[8*4] );
+static __aligned16 u8 _xmm_backup[16*2];
+static __aligned16 u8 _mmx_backup[8*4];
 
 static __declspec(naked) void __fastcall _memcpy_raz_usrc(void *dest, const void *src, size_t bytes)
 {

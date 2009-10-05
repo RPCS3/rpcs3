@@ -28,7 +28,7 @@ extern u32 g_vif1Masks[48], g_vif0Masks[48];
 extern u32 g_vif1HasMask3[4], g_vif0HasMask3[4];
 
 // arranged in writearr, rowarr, colarr, updatearr
-static PCSX2_ALIGNED16(u32 s_maskarr[16][4]) = {
+static const __aligned16 u32 s_maskarr[16][4] = {
 	{0xffffffff, 0x00000000, 0x00000000, 0xffffffff},
 	{0xffff0000, 0x0000ffff, 0x00000000, 0xffffffff},
 	{0xffff0000, 0x00000000, 0x0000ffff, 0xffffffff},
@@ -49,9 +49,10 @@ static PCSX2_ALIGNED16(u32 s_maskarr[16][4]) = {
 
 extern u8 s_maskwrite[256];
 
-extern "C" PCSX2_ALIGNED16(u32 s_TempDecompress[4]);
+// Dear C++: Please don't mangle this name, thanks!
+extern "C" __aligned16 u32 s_TempDecompress[4];
 
-u32 s_TempDecompress[4] = {0};
+__aligned16 u32 s_TempDecompress[4] = {0};
 
 #ifdef __LINUX__
 static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask);

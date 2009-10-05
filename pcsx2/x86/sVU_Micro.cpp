@@ -85,15 +85,17 @@
 //------------------------------------------------------------------
 int vucycle;
 
-PCSX2_ALIGNED16(const float s_fones[8])		= {1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f};
-PCSX2_ALIGNED16(const u32 s_mask[4])		= {0x007fffff, 0x007fffff, 0x007fffff, 0x007fffff};
-PCSX2_ALIGNED16(const u32 s_expmask[4])		= {0x7f800000, 0x7f800000, 0x7f800000, 0x7f800000};
-PCSX2_ALIGNED16(const u32 g_minvals[4])		= {0xff7fffff, 0xff7fffff, 0xff7fffff, 0xff7fffff};
-PCSX2_ALIGNED16(const u32 g_maxvals[4])		= {0x7f7fffff, 0x7f7fffff, 0x7f7fffff, 0x7f7fffff};
-PCSX2_ALIGNED16(const u32 const_clip[8])	= {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff,
-											   0x80000000, 0x80000000, 0x80000000, 0x80000000};
-PCSX2_ALIGNED(64, const u32 g_ones[4])		= {0x00000001, 0x00000001, 0x00000001, 0x00000001};
-PCSX2_ALIGNED16(const u32 g_minvals_XYZW[16][4]) =
+const __aligned16 float s_fones[8]	= {1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f};
+const __aligned16 u32 s_mask[4]		= {0x007fffff, 0x007fffff, 0x007fffff, 0x007fffff};
+const __aligned16 u32 s_expmask[4]	= {0x7f800000, 0x7f800000, 0x7f800000, 0x7f800000};
+const __aligned16 u32 g_minvals[4]	= {0xff7fffff, 0xff7fffff, 0xff7fffff, 0xff7fffff};
+const __aligned16 u32 g_maxvals[4]	= {0x7f7fffff, 0x7f7fffff, 0x7f7fffff, 0x7f7fffff};
+const __aligned16 u32 const_clip[8]	= {0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff,
+									   0x80000000, 0x80000000, 0x80000000, 0x80000000};
+
+const __aligned(64) u32 g_ones[4]	= {0x00000001, 0x00000001, 0x00000001, 0x00000001};
+
+const __aligned16 u32 g_minvals_XYZW[16][4] =
 {
    { 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff }, //0000
    { 0xffffffff, 0xffffffff, 0xffffffff, 0xff7fffff }, //0001
@@ -112,7 +114,7 @@ PCSX2_ALIGNED16(const u32 g_minvals_XYZW[16][4]) =
    { 0xff7fffff, 0xff7fffff, 0xff7fffff, 0xffffffff }, //1110
    { 0xff7fffff, 0xff7fffff, 0xff7fffff, 0xff7fffff }, //1111
 };
-PCSX2_ALIGNED16(const u32 g_maxvals_XYZW[16][4])=
+const __aligned16 u32 g_maxvals_XYZW[16][4] =
 {
    { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff }, //0000
    { 0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7f7fffff }, //0001
@@ -1697,14 +1699,14 @@ void vuFloat3(uptr x86ptr) {
 	}
 }
 
-PCSX2_ALIGNED16(u64 vuFloatData[2]);
-PCSX2_ALIGNED16(u64 vuFloatData2[2]);
+__aligned16 u64 vuFloatData[4];
+
 // Makes NaN == 0, Infinities stay the same; Very Slow - Use only for debugging
 void vuFloatExtra( int regd, int XYZW) {
 	int t1reg = (regd == 0) ? (regd + 1) : (regd - 1);
 	int t2reg = (regd <= 1) ? (regd + 2) : (regd - 2);
-	SSE_MOVAPS_XMM_to_M128( (uptr)vuFloatData, t1reg );
-	SSE_MOVAPS_XMM_to_M128( (uptr)vuFloatData2, t2reg );
+	SSE_MOVAPS_XMM_to_M128( (uptr)&vuFloatData[0], t1reg );
+	SSE_MOVAPS_XMM_to_M128( (uptr)&vuFloatData[2], t2reg );
 
 	SSE_XORPS_XMM_to_XMM(t1reg, t1reg); 
 	SSE_CMPORDPS_XMM_to_XMM(t1reg, regd); 
@@ -1712,11 +1714,11 @@ void vuFloatExtra( int regd, int XYZW) {
 	SSE_ANDPS_XMM_to_XMM(t2reg, t1reg);
 	VU_MERGE_REGS_CUSTOM(regd, t2reg, XYZW);
 	
-	SSE_MOVAPS_M128_to_XMM( t1reg, (uptr)vuFloatData );
-	SSE_MOVAPS_M128_to_XMM( t2reg, (uptr)vuFloatData2 );
+	SSE_MOVAPS_M128_to_XMM( t1reg, (uptr)&vuFloatData[0] );
+	SSE_MOVAPS_M128_to_XMM( t2reg, (uptr)&vuFloatData[2] );
 }
 
-static PCSX2_ALIGNED16(u32 tempRegX[]) = {0x00000000, 0x00000000, 0x00000000, 0x00000000};
+static __aligned16 u32 tempRegX[] = {0x00000000, 0x00000000, 0x00000000, 0x00000000};
 
 // Called by testWhenOverflow() function
 void testPrintOverflow() {

@@ -174,8 +174,6 @@ void recPLZCW()
 	GPR_DEL_CONST(_Rd_);
 }
 
-//static u32 PCSX2_ALIGNED16(s_CmpMasks[]) = { 0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
-
 void recPMFHL()
 {
 	if ( ! _Rd_ ) return;
@@ -1182,8 +1180,6 @@ REC_FUNC_DEL( QFSRV, _Rd_);
 #else
 
 ////////////////////////////////////////////////////
-PCSX2_ALIGNED16(int s_MaskHighBitD[4]) = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
-PCSX2_ALIGNED16(int s_MaskHighBitW[4]) = { 0x80008000, 0x80008000, 0x80008000, 0x80008000 };
 
 void recPABSW() //needs clamping
 {
@@ -2023,7 +2019,6 @@ void recPDIVBW()
 }
 
 ////////////////////////////////////////////////////
-PCSX2_ALIGNED16(int s_mask1[4]) = {~0, 0, ~0, 0};
 
 //upper word of each doubleword in LO and HI is undocumented/undefined
 //contains the upper multiplication result (before the addition with the lower multiplication result)
@@ -2492,7 +2487,7 @@ void recPSRAVW()
 
 
 ////////////////////////////////////////////////////
-PCSX2_ALIGNED16(u32 s_tempPINTEH[4]) = {0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
+static const __aligned16 u32 s_tempPINTEH[4] = {0x0000ffff, 0x0000ffff, 0x0000ffff, 0x0000ffff };
 
 void recPINTEH()
 {

@@ -70,12 +70,12 @@ extern vFloat vFloats1_useEAX[16];
 extern vFloat vFloats2[16];
 extern vFloat vFloats4[16];
 extern vFloat vFloats4_useEAX[16];
-PCSX2_ALIGNED16_EXTERN(const float s_fones[8]);
-PCSX2_ALIGNED16_EXTERN(const u32 s_mask[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 s_expmask[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 g_minvals[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 g_maxvals[4]);
-PCSX2_ALIGNED16_EXTERN(const u32 const_clip[8]);
+extern const __aligned16 float s_fones[8];
+extern const __aligned16 u32 s_mask[4];
+extern const __aligned16 u32 s_expmask[4];
+extern const __aligned16 u32 g_minvals[4];
+extern const __aligned16 u32 g_maxvals[4];
+extern const __aligned16 u32 const_clip[8];
 
 u32 GetVIAddr(VURegs * VU, int reg, int read, int info);
 int _vuGetTempXMMreg(int info);
