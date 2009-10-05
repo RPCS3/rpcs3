@@ -53,6 +53,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 			wxEmptyString
 		},
 		{
+			_("FPU Negative Div Hack - for Gundam games."),
+			wxEmptyString
+		},
+		{
 			_("DMA Execution Hack - for Fatal Frame."),
 			wxEmptyString
 		},

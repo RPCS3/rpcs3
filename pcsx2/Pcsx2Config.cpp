@@ -136,6 +136,7 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( VuClipFlagHack );
 	IniBitBool( FpuCompareHack );
 	IniBitBool( FpuMulHack );
+	IniBitBool( FpuNegDivHack );
 	IniBitBool( DMAExeHack );
 	IniBitBool( XgKickHack );
 	IniBitBool( MpegHack );

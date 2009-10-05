@@ -1111,8 +1111,9 @@ void recDIV_S_xmm(int info)
 
 	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
 		//Console.WriteLn("div to nearest");
-		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
+		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode to nearest
 		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
+		if (CHECK_FPUNEGDIVHACK) roundmode_temp[0] |= 0x2000; // Negative Roundmode
 		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
 		roundmodeFlag = 1;
 	}
