@@ -29,8 +29,8 @@
 
 struct SSE2_Tables
 {
-	u16 C_bias[8];			// offset -64
-	u8 Y_bias[16];			// offset -48
+	u16	C_bias[8];			// offset -64
+	u8	Y_bias[16];			// offset -48
 	u16 Y_mask[8];			// offset -32
 	u16 round_1bit[8];		// offset -16
 
@@ -214,6 +214,10 @@ ihatemsvc:
 
 #elif defined(__GNUC__)
 
+	// offset to the middle of the sse2 table, so that we can use 1-byte address displacement
+	// to access all fields:
+	static const u8* sse2_tableoffset = ((u8*)&sse2_tables) + 64;
+
 	__asm__ __volatile__ (
 		".intel_syntax noprefix\n"
 		"mov eax, 1\n"
@@ -345,7 +349,7 @@ ihatemsvc:
 		:[C_BIAS]"i"(C_BIAS), [Y_BIAS]"i"(Y_BIAS), [Y_MASK]"i"(Y_MASK),
 			[ROUND_1BIT]"i"(ROUND_1BIT), [Y_COEFF]"i"(Y_COEFF), [GCr_COEFF]"i"(GCr_COEFF),
 			[GCb_COEFF]"i"(GCb_COEFF), [RCr_COEFF]"i"(RCr_COEFF), [BCb_COEFF]"i"(BCb_COEFF),
-			[yuv2rgb_temp]"r"(yuv2rgb_temp), [sse2_tables]"r"(&sse2_tables)
+			[yuv2rgb_temp]"r"(yuv2rgb_temp), [sse2_tables]"r"(sse2_tableoffset)
 		: "eax", "ebx", "esi", "edi", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "memory"
 	);
 #else

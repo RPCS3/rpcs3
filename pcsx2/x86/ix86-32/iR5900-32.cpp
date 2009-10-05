@@ -614,11 +614,11 @@ static void recExecute()
 					//"push ebx\n"
 					//"push esi\n"
 					//"push edi\n"
-					//"push ebp\n"
+					"push ebp\n"
 
 					"call DispatcherReg\n"
 
-					//"pop ebp\n"
+					"pop ebp\n"
 					//"pop edi\n"
 					//"pop esi\n"
 					//"pop ebx\n"
@@ -688,7 +688,7 @@ void recClear(u32 addr, u32 size)
 
 	// necessary since recompiler doesn't call femms/emms
 #ifdef _MSC_VER
-	 asm emms;
+	__asm emms;
 #else
 	__asm__ __volatile__("emms");
 #endif
