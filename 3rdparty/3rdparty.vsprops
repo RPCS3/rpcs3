@@ -11,6 +11,7 @@
 		AdditionalIncludeDirectories="&quot;$(ProjectDir)&quot;"
 		PreprocessorDefinitions="__WIN32__;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
 		StructMemberAlignment="5"
+		EnableFunctionLevelLinking="true"
 		RuntimeTypeInfo="false"
 		WarningLevel="3"
 		DebugInformationFormat="3"

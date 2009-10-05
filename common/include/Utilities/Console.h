@@ -34,9 +34,8 @@ enum ConsoleColors
 #define __concall	__fastcall
 
 // ----------------------------------------------------------------------------------------
-//  IConsole -- For printing messages to the console.
+//  IConsoleWriter -- For printing messages to the console.
 // ----------------------------------------------------------------------------------------
-// SysPrintf is depreciated; We should phase these in over time.
 //
 struct IConsoleWriter
 {
@@ -93,6 +92,7 @@ extern void ConsoleBuffer_Clear();
 extern void ConsoleBuffer_FlushToFile( FILE *fp );
 
 extern const IConsoleWriter		ConsoleWriter_Null;
+extern const IConsoleWriter		ConsoleWriter_Stdio;
 extern const IConsoleWriter		ConsoleWriter_Assert;
 extern const IConsoleWriter		ConsoleWriter_Buffered;
 extern const IConsoleWriter		ConsoleWriter_wxError;

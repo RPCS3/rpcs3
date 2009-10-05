@@ -19,9 +19,13 @@
 using namespace Threading;
 using namespace std;
 
-// Important!  Only Assert and Null console loggers are allowed for initial console targeting.
-// Other log targets rely on the static buffer and a threaded mutex lock, which are only valid
-// after C++ initialization has finished.
+// This function re-assigns the console log writer(s) to the specified target.  It makes sure
+// to flush any contents from the buffered console log (which typically accumulates due to
+// log suspension during log file/window re-init operations) into the new log.
+//
+// Important!  Only Assert and Null console loggers are allowed during C++ startup init (when
+// the program or DLL first loads).  Other log targets rely on the static buffer and a
+// threaded mutex lock, which are only valid after C++ initialization has finished.
 void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp )
 {
 	pxAssertDev(
@@ -46,7 +50,7 @@ void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp )
 }
 
 // --------------------------------------------------------------------------------------
-//  ConsoleImpl_Null
+//  ConsoleNull
 // --------------------------------------------------------------------------------------
 
 static void __concall ConsoleNull_SetTitle( const wxString& title ) {}
@@ -56,8 +60,48 @@ static void __concall ConsoleNull_Newline() {}
 static void __concall ConsoleNull_DoWrite( const wxString& fmt ) {}
 static void __concall ConsoleNull_DoWriteLn( const wxString& fmt ) {}
 
+const IConsoleWriter ConsoleWriter_Null =
+{
+	ConsoleNull_DoWrite,
+	ConsoleNull_DoWriteLn,
+
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
 // --------------------------------------------------------------------------------------
-//  ConsoleImpl_Assert
+//  Console_Stdio
+// --------------------------------------------------------------------------------------
+
+// One possible default write action at startup and shutdown is to use the stdout.
+static void __concall ConsoleStdio_DoWrite( const wxString& fmt )
+{
+	wxPrintf( fmt );
+}
+
+// Default write action at startup and shutdown is to use the stdout.
+static void __concall ConsoleStdio_DoWriteLn( const wxString& fmt )
+{
+	wxPrintf( fmt + L"\n" );
+}
+
+const IConsoleWriter ConsoleWriter_Stdio =
+{
+	ConsoleStdio_DoWrite,			// Writes without newlines go to buffer to avoid error log spam.
+	ConsoleStdio_DoWriteLn,
+
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
+// --------------------------------------------------------------------------------------
+//  ConsoleAssert
 // --------------------------------------------------------------------------------------
 
 static void __concall ConsoleAssert_DoWrite( const wxString& fmt )
@@ -70,8 +114,20 @@ static void __concall ConsoleAssert_DoWriteLn( const wxString& fmt )
 	pxFail( L"Console class has not been initialized; Message written:\n\t" + fmt );
 }
 
+const IConsoleWriter ConsoleWriter_Assert =
+{
+	ConsoleAssert_DoWrite,
+	ConsoleAssert_DoWriteLn,
+
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
 // --------------------------------------------------------------------------------------
-//  ConsoleImpl_Buffered Implementations
+//  ConsoleBuffer
 // --------------------------------------------------------------------------------------
 
 static wxString	m_buffer;
@@ -86,6 +142,8 @@ void ConsoleBuffer_Clear()
 	m_buffer.Clear();
 }
 
+// Flushes the contents of the ConsoleBuffer to the specified destination file stream, and
+// clears the buffer contents to 0.
 void ConsoleBuffer_FlushToFile( FILE *fp )
 {
 	if( fp == NULL || m_buffer.IsEmpty() ) return;
@@ -103,8 +161,20 @@ static void __concall ConsoleBuffer_DoWriteLn( const wxString& fmt )
 	m_buffer += fmt + L"\n";
 }
 
+const IConsoleWriter ConsoleWriter_Buffered =
+{
+	ConsoleBuffer_DoWrite,			// Writes without newlines go to buffer to avoid assertion spam.
+	ConsoleBuffer_DoWriteLn,
+
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
 // --------------------------------------------------------------------------------------
-//  ConsoleImpl_wxLogError Implementations
+//  Console_wxLogError
 // --------------------------------------------------------------------------------------
 
 static void __concall Console_wxLogError_DoWriteLn( const wxString& fmt )
@@ -117,21 +187,23 @@ static void __concall Console_wxLogError_DoWriteLn( const wxString& fmt )
 	wxLogError( fmt );
 }
 
-// --------------------------------------------------------------------------------------
-//  IConsole Implementations
-// --------------------------------------------------------------------------------------
-
-// Default write action at startup and shutdown is to use the stdout.
-void IConsole_DoWrite( const wxString& fmt )
+const IConsoleWriter ConsoleWriter_wxError =
 {
-	wxPrintf( fmt );
-}
+	ConsoleBuffer_DoWrite,			// Writes without newlines go to buffer to avoid error log spam.
+	Console_wxLogError_DoWriteLn,
 
-// Default write action at startup and shutdown is to use the stdout.
-void IConsole_DoWriteLn( const wxString& fmt )
-{
-	wxPrintf( fmt );
-}
+	ConsoleNull_Newline,
+
+	ConsoleNull_SetTitle,
+	ConsoleNull_SetColor,
+	ConsoleNull_ClearColor,
+};
+
+// =====================================================================================================
+//  IConsole Interfaces
+// =====================================================================================================
+// (all non-virtual members that do common work and then pass the result through DoWrite
+//  or DoWriteLn)
 
 // Writes a line of colored text to the console (no newline).
 // The console color is reset to default when the operation is complete.
@@ -255,65 +327,31 @@ void IConsoleWriter::Status( const wxString& src ) const
 	WriteLn( Color_Green, src );
 }
 
-const IConsoleWriter ConsoleWriter_Null =
-{
-	ConsoleNull_DoWrite,
-	ConsoleNull_DoWriteLn,
+// --------------------------------------------------------------------------------------
+//  Default Writer for C++ init / startup:
+// --------------------------------------------------------------------------------------
+// In GUI modes under Windows I default to Assert, because windows lacks a qualified universal
+// program console.  In console mode I use Stdio instead, since the program is pretty well
+// promised a valid console in any platform (except maybe Macs, which probably consider consoles
+// a fundamental design flaw or something).
 
-	ConsoleNull_Newline,
-	
-	ConsoleNull_SetTitle,
-	ConsoleNull_SetColor,
-	ConsoleNull_ClearColor,
-};
-
-const IConsoleWriter ConsoleWriter_Assert =
-{
-	ConsoleAssert_DoWrite,
-	ConsoleAssert_DoWriteLn,
-
-	ConsoleNull_Newline,
-
-	ConsoleNull_SetTitle,
-	ConsoleNull_SetColor,
-	ConsoleNull_ClearColor,
-};
-
-const IConsoleWriter ConsoleWriter_wxError =
-{
-	ConsoleBuffer_DoWrite,			// Writes without newlines go to buffer to avoid error log spam.
-	Console_wxLogError_DoWriteLn,
-
-	ConsoleNull_Newline,
-
-	ConsoleNull_SetTitle,
-	ConsoleNull_SetColor,
-	ConsoleNull_ClearColor,
-};
-
-const IConsoleWriter ConsoleWriter_Buffered =
-{
-	ConsoleBuffer_DoWrite,			// Writes without newlines go to buffer to avoid assertion spam.
-	ConsoleBuffer_DoWriteLn,
-
-	ConsoleNull_Newline,
-
-	ConsoleNull_SetTitle,
-	ConsoleNull_SetColor,
-	ConsoleNull_ClearColor,
-};
-
+#if wxUSE_GUI && defined(__WXMSW__)
+#	define _DefaultWriter_	ConsoleWriter_Assert
+#else
+#	define _DefaultWriter_	ConsoleWriter_Stdio
+#endif
 
 // Important!  Only Assert and Null console loggers are allowed for initial console targeting.
 // Other log targets rely on the static buffer and a threaded mutex lock, which are only valid
 // after C++ initialization has finished.
 
-IConsoleWriter	Console	= ConsoleWriter_Assert;
+IConsoleWriter	Console	= _DefaultWriter_;
 
 #ifdef PCSX2_DEVBUILD
-	IConsoleWriter	DevConWriter= ConsoleWriter_Assert;
+	IConsoleWriter	DevConWriter= _DefaultWriter_;
 #endif
 
 #ifdef PCSX2_DEBUG
-	IConsoleWriter	DbgConWriter= ConsoleWriter_Assert;
+	IConsoleWriter	DbgConWriter= _DefaultWriter_;
 #endif
+

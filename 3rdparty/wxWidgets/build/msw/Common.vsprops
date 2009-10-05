@@ -9,6 +9,7 @@
 		Name="VCCLCompilerTool"
 		PreprocessorDefinitions="WIN32;__WXMSW__;_LIB;wxUSE_UNICODE=1"
 		ExceptionHandling="2"
+		EnableFunctionLevelLinking="true"
 		CompileAs="0"
 	/>
 </VisualStudioPropertySheet>

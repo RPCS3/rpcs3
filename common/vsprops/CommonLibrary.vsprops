@@ -11,6 +11,7 @@
 		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include\$(ProjectName)&quot;;&quot;$(SvnRootDir)\common\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\include&quot;;&quot;$(SvnRootDir)\3rdparty&quot;"
 		PreprocessorDefinitions="__WIN32__;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE"
 		StructMemberAlignment="5"
+		EnableFunctionLevelLinking="true"
 		RuntimeTypeInfo="false"
 		WarningLevel="3"
 		DebugInformationFormat="3"
