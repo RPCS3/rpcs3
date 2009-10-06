@@ -2,16 +2,17 @@
 <VisualStudioPropertySheet
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="w32pthreads"
+	Name="wxWidgets_UseGui"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
 		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\w32pthreads\include&quot;"
-		PreprocessorDefinitions="WIN32_PTHREADS;__CLEANUP_SEH"
+		PreprocessorDefinitions="wxUSE_UNICODE=1"
 		ExceptionHandling="2"
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="w32pthreads.v3.lib w32pthreads_lib.lib"
+		AdditionalDependencies="wxAdv28.lib wxBase28.lib wxCore28.lib zlib.lib libjpeg7.lib"
+		AdditionalLibraryDirectories="&quot;$(SvnRootDir)\deps\$(PlatformName)\$(ConfigurationName)&quot;"
 	/>
 </VisualStudioPropertySheet>

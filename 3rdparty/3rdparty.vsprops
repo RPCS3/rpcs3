@@ -3,8 +3,9 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="3rdparty"
-	OutputDirectory="..\..\deps\$(PlatformName)\$(ConfigurationName)"
+	OutputDirectory="$(SvnRootDir)\deps\$(PlatformName)\$(ConfigurationName)"
 	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+	DeleteExtensionsOnClean="*.bsc;*.idb;*.sbr;*.res;*.pch;*.pdb;*.obj;*.ilk;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;$(TargetPath)"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
@@ -19,7 +20,6 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		LinkIncremental="1"
 		GenerateDebugInformation="true"
 		SubSystem="2"
 	/>

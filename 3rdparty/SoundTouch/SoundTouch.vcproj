@@ -5,6 +5,7 @@
 	Name="SoundTouch"
 	ProjectGUID="{E9B51944-7E6D-4BCD-83F2-7BBD5A46182D}"
 	RootNamespace="SoundTouch"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -17,7 +18,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -70,7 +71,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
+			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -124,7 +125,7 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -145,7 +146,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				WarningLevel="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

@@ -3,8 +3,6 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="common"
-	OutputDirectory="$(SolutionDir)\bin\$(PcsxSubsection)"
-	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 	>
 	<Tool
 		Name="VCCLCompilerTool"

@@ -5,6 +5,7 @@
 	Name="glew_static"
 	ProjectGUID="{067D7863-393B-494F-B296-4A8853EB3D1D}"
 	RootNamespace="glew_static"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -17,7 +18,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Debug.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -70,7 +71,7 @@
 		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
+			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Release.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
 			>
@@ -125,7 +126,7 @@
 		<Configuration
 			Name="Devel|Win32"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\DefaultProjectRootDir.vsprops;..\3rdparty.vsprops;..\..\common\vsprops\CodeGen_Devel.vsprops;..\..\common\vsprops\IncrementalLinking.vsprops"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
 			>

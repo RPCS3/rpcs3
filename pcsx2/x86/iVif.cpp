@@ -51,7 +51,6 @@ extern u8 s_maskwrite[256];
 
 // Dear C++: Please don't mangle this name, thanks!
 extern "C" __aligned16 u32 s_TempDecompress[4];
-
 __aligned16 u32 s_TempDecompress[4] = {0};
 
 #ifdef __LINUX__

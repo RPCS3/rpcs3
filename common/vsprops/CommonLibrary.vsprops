@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="CommonLibrary"
-	OutputDirectory="..\..\deps\$(PlatformName)\$(ConfigurationName)"
+	OutputDirectory="$(SvnRootDir)\deps\$(PlatformName)\$(ConfigurationName)"
 	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 	>
 	<Tool
