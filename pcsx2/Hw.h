@@ -388,6 +388,10 @@ union tDMAC_STAT {
 		u32 reserved3 : 1;
 	};
 	u32 _u32;
+	
+	bool test(u32 flags) { return (_u32 & flags); }
+	void set(u32 flags) { _u32 |= flags; }
+	void clear(u32 flags) { _u32 &= ~flags; }
 };
 
 union tDMAC_PCR {

@@ -115,6 +115,10 @@ union tGIF_STAT
 	tGIF_STAT( u32 val ) : _u32( val )
 	{
 	}
+	
+	bool test(u32 flags) { return (_u32 & flags); }
+	void set(u32 flags) { _u32 |= flags; }
+	void clear(u32 flags) { _u32 &= ~flags; }
 };
 
 union tGIF_TAG0

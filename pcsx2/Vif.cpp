@@ -640,7 +640,7 @@ void vifMFIFOInterrupt()
 		vif1Regs->stat.INT = 1;
 		hwIntcIrq(INTC_VIF1);
 		--vif1.irq;
-		if (vif1Regs->stat._u32 & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
 			vif1Regs->stat.FQC = 0; // FQC=0
 			vif1ch->chcr.STR = 0;

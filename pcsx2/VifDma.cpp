@@ -1425,7 +1425,7 @@ void  vif0Interrupt()
 		hwIntcIrq(VIF0intc);
 		--vif0.irq;
 
-		if (vif0Regs->stat._u32 & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
+		if (vif0Regs->stat.test(VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 		{
 			vif0Regs->stat.FQC = 0; // FQC=0
 			vif0ch->chcr.STR = 0;
@@ -1567,7 +1567,7 @@ void vif0Write32(u32 mem, u32 value)
 				psHu64(VIF0_FIFO + 8) = 0; // VIF0_FIFO + 8
 				vif0.done = true;
 				vif0Regs->err._u32 = 0;
-				vif0Regs->stat._u32 &= ~(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
+				vif0Regs->stat.clear(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 			}
 
 			if (value & 0x2)
@@ -1596,10 +1596,10 @@ void vif0Write32(u32 mem, u32 value)
 				bool cancel = false;
 
 				/* Cancel stall, first check if there is a stall to cancel, and then clear VIF0_STAT VSS|VFS|VIS|INT|ER0|ER1 bits */
-				if (vif0Regs->stat._u32 & (VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
+				if (vif0Regs->stat.test(VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 					cancel = true;
 
-				vif0Regs->stat._u32 &= ~(VIF0_STAT_VSS | VIF0_STAT_VFS | VIF0_STAT_VIS |
+				vif0Regs->stat.clear(VIF0_STAT_VSS | VIF0_STAT_VFS | VIF0_STAT_VIS |
 						    VIF0_STAT_INT | VIF0_STAT_ER0 | VIF0_STAT_ER1);
 				if (cancel)
 				{
@@ -1924,7 +1924,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	}
 	else
 	{
-		gifRegs->stat._u32 &= ~(GIF_STAT_APATH2 | GIF_STAT_OPH);
+		gifRegs->stat.clear(GIF_STAT_APATH2 | GIF_STAT_OPH);
 		ret = vif1.tag.size;
 		vif1.tag.size = 0;
 		vif1.cmd = 0;
@@ -2526,7 +2526,7 @@ __forceinline void vif1Interrupt()
 		vif1Regs->stat.INT = 1;
 		hwIntcIrq(VIF1intc);
 		--vif1.irq;
-		if (vif1Regs->stat._u32 & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
 			vif1Regs->stat.FQC = 0; // FQC=0
 
@@ -2632,7 +2632,7 @@ void dmaVIF1()
 	if (vif1.dmamode != VIF_NORMAL_FROM_MEM_MODE)
 		vif1Regs->stat.FQC = 0x10; // FQC=16
 	else
-		vif1Regs->stat._u32 |= min((u16)16, vif1ch->qwc) << 24; // FQC=16
+		vif1Regs->stat.set(min((u16)16, vif1ch->qwc) << 24); // FQC=16
 
 	// Chain Mode
 	vif1.done = false;
@@ -2673,7 +2673,7 @@ void vif1Write32(u32 mem, u32 value)
 
 				vif1Regs->err._u32 = 0;
 				vif1.inprogress = 0;
-				vif1Regs->stat._u32 &= ~(VIF1_STAT_FQC | VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
+				vif1Regs->stat.clear(VIF1_STAT_FQC | VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
 			}
 
 			if (value & 0x2)
@@ -2703,12 +2703,12 @@ void vif1Write32(u32 mem, u32 value)
 				bool cancel = false;
 
 				/* Cancel stall, first check if there is a stall to cancel, and then clear VIF1_STAT VSS|VFS|VIS|INT|ER0|ER1 bits */
-				if (vif1Regs->stat._u32 & (VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+				if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 				{
 					cancel = true;
 				}
 
-				vif1Regs->stat._u32 &= ~(VIF1_STAT_VSS | VIF1_STAT_VFS | VIF1_STAT_VIS |
+				vif1Regs->stat.clear(VIF1_STAT_VSS | VIF1_STAT_VFS | VIF1_STAT_VIS |
 						VIF1_STAT_INT | VIF1_STAT_ER0 | VIF1_STAT_ER1);
 
 				if (cancel)
@@ -2753,14 +2753,14 @@ void vif1Write32(u32 mem, u32 value)
 			if ((vif1Regs->stat.FDR) ^(value & VIF1_STAT_FDR))
 			{
 				// different so can't be stalled
-				if (vif1Regs->stat._u32 & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
+				if (vif1Regs->stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 				{
 					DevCon.WriteLn("changing dir when vif1 fifo stalled");
 				}
 			}
 #endif
 
-			vif1Regs->stat._u32 = (vif1Regs->stat._u32 & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
+			vif1Regs->stat._u32 = (vif1Regs->stat.test(~VIF1_STAT_FDR)) | (value & VIF1_STAT_FDR);
 			if (vif1Regs->stat.FDR)
 			{
 				vif1Regs->stat.FQC = 1; // FQC=1 - hack but it checks this is true before transfer? (fatal frame)

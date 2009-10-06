@@ -46,11 +46,9 @@ void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
 	jASSUME( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
 
 	VIF_LOG("ReadFIFO/VIF0 0x%08X", mem);
-	//out[0] = psHu64(mem  );
-	//out[1] = psHu64(mem+8);
-
-	out[0] = psHu64(0x4000);
-	out[1] = psHu64(0x4008);
+	
+	out[0] = psHu64(VIF0_FIFO);
+	out[1] = psHu64(VIF0_FIFO + 8);
 }
 
 void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
@@ -59,7 +57,7 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 
 	VIF_LOG("ReadFIFO/VIF1, addr=0x%08X", mem);
 
-	if( vif1Regs->stat._u32 & (VIF1_STAT_INT|VIF1_STAT_VSS|VIF1_STAT_VIS|VIF1_STAT_VFS) )
+	if (vif1Regs->stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
 		DevCon.Notice( "Reading from vif1 fifo when stalled" );
 
 	if (vif1Regs->stat.FDR)
@@ -68,11 +66,8 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 			vif1Regs->stat.FQC = 0;
 	}
 
-	//out[0] = psHu64(mem  );
-	//out[1] = psHu64(mem+8);
-
-	out[0] = psHu64(0x5000);
-	out[1] = psHu64(0x5008);
+	out[0] = psHu64(VIF1_FIFO);
+	out[1] = psHu64(VIF1_FIFO + 8);
 }
 
 void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
@@ -81,11 +76,8 @@ void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
 
 	DevCon.Notice( "ReadFIFO/GIF, addr=0x%x", mem );
 
-	//out[0] = psHu64(mem  );
-	//out[1] = psHu64(mem+8);
-
-	out[0] = psHu64(0x6000);
-	out[1] = psHu64(0x6008);
+	out[0] = psHu64(GIF_FIFO);
+	out[1] = psHu64(GIF_FIFO + 8);
 }
 
 void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
@@ -119,11 +111,8 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 
 	VIF_LOG("WriteFIFO/VIF0, addr=0x%08X", mem);
 
-	//psHu64(mem  ) = value[0];
-	//psHu64(mem+8) = value[1];
-
-	psHu64(0x4000) = value[0];
-	psHu64(0x4008) = value[1];
+	psHu64(VIF0_FIFO) = value[0];
+	psHu64(VIF0_FIFO + 8) = value[1];
 
 	vif0ch->qwc += 1;
 	int ret = VIF0transfer((u32*)value, 4, 0);
@@ -136,15 +125,12 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 
 	VIF_LOG("WriteFIFO/VIF1, addr=0x%08X", mem);
 
-	//psHu64(mem  ) = value[0];
-	//psHu64(mem+8) = value[1];
-
-	psHu64(0x5000) = value[0];
-	psHu64(0x5008) = value[1];
+	psHu64(VIF1_FIFO) = value[0];
+	psHu64(VIF1_FIFO + 8) = value[1];
 
 	if (vif1Regs->stat.FDR)
 		DevCon.Notice("writing to fifo when fdr is set!");
-	if ( vif1Regs->stat._u32 & (VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
+	if (vif1Regs->stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
 		DevCon.Notice("writing to vif1 fifo when stalled");
 
 	vif1ch->qwc += 1;
@@ -160,11 +146,8 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 	jASSUME( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
 	GIF_LOG("WriteFIFO/GIF, addr=0x%08X", mem);
 
-	//psHu64(mem  ) = value[0];
-	//psHu64(mem+8) = value[1];
-
-	psHu64(0x6000) = value[0];
-	psHu64(0x6008) = value[1];
+	psHu64(GIF_FIFO) = value[0];
+	psHu64(GIF_FIFO + 8) = value[1];
 
 	FreezeRegs(1);
 	mtgsThread.PrepDataPacket(GIF_PATH_3, nloop0_packet, 1);

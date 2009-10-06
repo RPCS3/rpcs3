@@ -19,6 +19,7 @@
 
 #include "Common.h"
 #include "GS.h"
+#include "Gif.h"
 #include "iR5900.h"
 #include "Counters.h"
 #include "VifDma.h"
@@ -103,16 +104,16 @@ void gsReset()
 
 	GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now
 	GSIMR = 0x7f00;
-	psHu32(GIF_STAT) = 0;
-	psHu32(GIF_CTRL) = 0;
-	psHu32(GIF_MODE) = 0;
+	gifRegs->stat._u32 = 0;
+	gifRegs->ctrl._u32 = 0;
+	gifRegs->mode._u32 = 0;
 }
 
 void gsGIFReset()
 {
-	psHu32(GIF_STAT) = 0;
-	psHu32(GIF_CTRL) = 0;
-	psHu32(GIF_MODE) = 0;
+	gifRegs->stat._u32 = 0;
+	gifRegs->ctrl._u32 = 0;
+	gifRegs->mode._u32 = 0;
 }
 
 void gsCSRwrite(u32 value)
@@ -166,13 +167,13 @@ __forceinline void gsWrite8(u32 mem, u8 value)
 {
 	switch (mem)
 	{
-		case 0x12001000: // GS_CSR
+		case GS_CSR: // GS_CSR
 			gsCSRwrite((CSRw & ~0x000000ff) | value); break;
-		case 0x12001001: // GS_CSR
+		case GS_CSR + 1: // GS_CSR
 			gsCSRwrite((CSRw & ~0x0000ff00) | (value <<  8)); break;
-		case 0x12001002: // GS_CSR
+		case GS_CSR + 2: // GS_CSR
 			gsCSRwrite((CSRw & ~0x00ff0000) | (value << 16)); break;
-		case 0x12001003: // GS_CSR
+		case GS_CSR + 3: // GS_CSR
 			gsCSRwrite((CSRw & ~0xff000000) | (value << 24)); break;
 		default:
 			*PS2GS_BASE(mem) = value;

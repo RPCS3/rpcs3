@@ -103,6 +103,10 @@ union tVIF_STAT {
 		u32 FQC : 5; // Amount of data. Up to 8 qwords on Vif0, 16 on Vif1.
 	};
 	u32 _u32;
+	
+	bool test(u32 flags) { return (_u32 & flags); }
+	void set(u32 flags) { _u32 |= flags; }
+	void clear(u32 flags) { _u32 &= ~flags; }
 };
 
 union tVIF_FBRST {

@@ -350,7 +350,7 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 				ipuRegs->ctrl.IDP = 1;
 			}
 
-			if (ipuRegs->ctrl.RST & 0x1) ipuSoftReset(); // RESET
+			if (ipuRegs->ctrl.RST) ipuSoftReset(); // RESET
 
 			IPU_LOG("Ipu write32: IPU_CTRL=0x%08X", value);
 			break;
@@ -1005,7 +1005,7 @@ u8* prev_readbits()
 {
 	if (readbits < _readbits + 16) return _readbits + 48 - (readbits - _readbits);
 
-	return readbits -16;
+	return readbits - 16;
 }
 
 void ReorderBitstream()
@@ -1467,7 +1467,7 @@ int IPU1dma()
 		if (IPU1chain(totalqwc)) return totalqwc;
 
 		//Check TIE bit of CHCR and IRQ bit of tag
-		if (ipu1dma->chcr.TIE && (g_nDMATransfer.DOTIE1))
+		if (ipu1dma->chcr.TIE && g_nDMATransfer.DOTIE1)
 		{
 			Console.WriteLn("IPU1 TIE");
 

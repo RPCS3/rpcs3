@@ -45,7 +45,7 @@ enum d_ctrl_flags
 	CTRL_RELE = 0x2, // 0/1 - cycle stealing off/on
 	CTRL_MFD = 0xC, // Memory FIFO drain channel (mfd_type)
 	CTRL_STS = 0x30, // Stall Control source channel (sts type)
-	CTRL_STD = 0xC0, // Stall Controll drain channel (std_type)
+	CTRL_STD = 0xC0, // Stall Control drain channel (std_type)
 	CTRL_RCYC = 0x100 // Release cycle (8/16/32/64/128/256)
 	// When cycle stealing is on, the release cycle sets the period to release
 	// the bus to EE.

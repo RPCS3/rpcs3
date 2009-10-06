@@ -50,9 +50,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
 	if ((psHu32(qwcRegister) >> 16) != 0)
 	{
-		DMA_LOG("DMA QWC (%x) upper 16bits set to %x\n", 
-			qwcRegister,
-			psHu32(qwcRegister) >> 16); 
+		DMA_LOG("DMA QWC (%x) upper 16bits set to %x\n", qwcRegister, psHu32(qwcRegister) >> 16); 
 		psHu32(qwcRegister) = 0; 
 	}
 
@@ -114,7 +112,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 		psHu32(qwcRegister) = 0; 
 	}
 
-	/* Keep the old tag if in chain mode and hw doesnt set it*/
+	/* Keep the old tag if in chain mode and hw doesn't set it*/
 	if (((value & 0xc) == 0x4) && ((value & 0xffff0000) == 0))
 		psHu32(mem) = (psHu32(mem) & 0xffff0000) | (u16)value;
 	else /* Else (including Normal mode etc) write whatever the hardware sends*/
@@ -298,8 +296,8 @@ void hwWrite8(u32 mem, u8 value)
 			break;
 
 		case DMAC_ENABLEW + 2:
-			psHu8(0xf592) = value;
-			psHu8(0xf522) = value;
+			psHu8(DMAC_ENABLEW + 2) = value;
+			psHu8(DMAC_ENABLER + 2) = value;
 			break;
 
 		case SBUS_F200: // SIF(?)
@@ -331,7 +329,7 @@ void hwWrite8(u32 mem, u8 value)
 			break;
 		
 		default:
-			assert( (mem&0xff0f) != 0xf200 );
+			assert( (mem & 0xff0f) != 0xf200 );
 
 			switch(mem&~3) {
 				case SIO_ISR:
@@ -613,8 +611,8 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			break;
 			
 		case DMAC_ENABLEW + 2:
-			psHu16(0xf592) = value;
-			psHu16(0xf522) = value;
+			psHu16(DMAC_ENABLEW + 2) = value;
+			psHu16(DMAC_ENABLER + 2) = value;
 			break;
 		
 		case SIO_ISR:
@@ -726,20 +724,21 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 			if (value & 0x1)
 				gsGIFReset();
 			else if ( value & 8 )
-				psHu32(GIF_STAT) |= GIF_STAT_PSE;
+				gifRegs->stat.PSE = 1;
 			else
-				psHu32(GIF_STAT) &= ~GIF_STAT_PSE;
+				gifRegs->stat.PSE = 0; 
 		break;
 
 		case GIF_MODE:
 		{
 			// need to set GIF_MODE (hamster ball)
-			psHu32(GIF_MODE) = value;
+			gifRegs->mode._u32 = value;
 
 			// set/clear bits 0 and 2 as per the GIF_MODE value.
-			const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
+            const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
 			psHu32(GIF_STAT) &= ~bitmask;
 			psHu32(GIF_STAT) |= (u32)value & bitmask;
+
 		}
 		break;
 
@@ -798,14 +797,14 @@ void __fastcall hwWrite32_page_0B( u32 mem, u32 value )
 
 void __fastcall StartQueuedDMA()
 {
-	if(QueuedDMA & 0x1) { QueuedDMA &= ~0x1; dmaVIF0(); }
-	if(QueuedDMA & 0x2) { QueuedDMA &= ~0x2; dmaVIF1(); }
-	if(QueuedDMA & 0x4) { QueuedDMA &= ~0x4; dmaGIF(); }
-	if(QueuedDMA & 0x8) { QueuedDMA &= ~0x8; dmaIPU0(); }
-	if(QueuedDMA & 0x10) { QueuedDMA &= ~0x10; dmaIPU1(); }
-	if(QueuedDMA & 0x20) { QueuedDMA &= ~0x20; dmaSIF0(); }
-	if(QueuedDMA & 0x40) { QueuedDMA &= ~0x40; dmaSIF1(); }
-	if(QueuedDMA & 0x80) { QueuedDMA &= ~0x80; dmaSIF2(); }
+	if(QueuedDMA & 0x001) { QueuedDMA &= ~0x001; dmaVIF0(); }
+	if(QueuedDMA & 0x002) { QueuedDMA &= ~0x002; dmaVIF1(); }
+	if(QueuedDMA & 0x004) { QueuedDMA &= ~0x004; dmaGIF(); }
+	if(QueuedDMA & 0x008) { QueuedDMA &= ~0x008; dmaIPU0(); }
+	if(QueuedDMA & 0x010) { QueuedDMA &= ~0x010; dmaIPU1(); }
+	if(QueuedDMA & 0x020) { QueuedDMA &= ~0x020; dmaSIF0(); }
+	if(QueuedDMA & 0x040) { QueuedDMA &= ~0x040; dmaSIF1(); }
+	if(QueuedDMA & 0x080) { QueuedDMA &= ~0x080; dmaSIF2(); }
 	if(QueuedDMA & 0x100) { QueuedDMA &= ~0x100; dmaSPR0(); }
 	if(QueuedDMA & 0x200) { QueuedDMA &= ~0x200; dmaSPR1(); }
 }
@@ -904,8 +903,8 @@ void __fastcall hwWrite32_page_0F( u32 mem, u32 value )
 
 		case HELPSWITCH(DMAC_ENABLEW):
 			HW_LOG("DMAC_ENABLEW Write 32bit %lx", value);
-			psHu32(0xf590) = value;
-			psHu32(0xf520) = value;
+			psHu32(DMAC_ENABLEW) = value;
+			psHu32(DMAC_ENABLER) = value;
 			break;
 
 		//------------------------------------------------------------------
@@ -1182,8 +1181,8 @@ void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval )
 			break;
 
 		case DMAC_ENABLEW: // DMAC_ENABLEW
-			psHu32(0xf590) = value;
-			psHu32(0xf520) = value;
+			psHu32(DMAC_ENABLEW) = value;
+			psHu32(DMAC_ENABLER) = value;
 		break;
 
 		default:
@@ -1215,8 +1214,8 @@ void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval)
 		break;
 
 		case DMAC_ENABLEW: // DMAC_ENABLEW
-			psHu32(0xf590) = srcval[0];
-			psHu32(0xf520) = srcval[0];
+			psHu32(DMAC_ENABLEW) = srcval[0];
+			psHu32(DMAC_ENABLER) = srcval[0];
 		break;
 
 		case SIO_ISR:
