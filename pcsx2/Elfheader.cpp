@@ -494,15 +494,16 @@ void ElfApplyPatches()
 	Console.SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
 
 	if( !EmuConfig.EnablePatches ) return;
-
-	if(LoadPatch( filename ) != 0)
+    
+	/*if(LoadPatch( filename ) != 0)
 	{
 		Console.WriteLn( "XML Loader returned an error. Trying to load a pnach..." );
 		inifile_read( filename.ToAscii().data() );
 	}
 	else
-		Console.WriteLn( "XML Loading success. Will not load from pnach..." );
+		Console.WriteLn( "XML Loading success. Will not load from pnach..." );*/
 
+    inifile_read( filename.ToAscii().data() );
 	applypatch( 0 );
 }
 

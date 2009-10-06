@@ -240,6 +240,7 @@
 		<Unit filename="../System.h" />
 		<Unit filename="../System/SysThreads.cpp" />
 		<Unit filename="../System/SysThreads.h" />
+		<Unit filename="../Tags.h" />
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />
 		<Unit filename="../Utilities/folderdesc.txt" />
@@ -380,12 +381,6 @@
 		<Unit filename="../ps2/Iop/IopHwRead.cpp" />
 		<Unit filename="../ps2/Iop/IopHwWrite.cpp" />
 		<Unit filename="../ps2/Iop/IopHw_Internal.h" />
-		<Unit filename="../tinyxml/tinystr.cpp" />
-		<Unit filename="../tinyxml/tinystr.h" />
-		<Unit filename="../tinyxml/tinyxml.cpp" />
-		<Unit filename="../tinyxml/tinyxml.h" />
-		<Unit filename="../tinyxml/tinyxmlerror.cpp" />
-		<Unit filename="../tinyxml/tinyxmlparser.cpp" />
 		<Unit filename="../vtlb.cpp" />
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />
@@ -457,7 +452,6 @@
 		<Unit filename="../x86/sVU_Upper.cpp" />
 		<Unit filename="../x86/sVU_zerorec.cpp" />
 		<Unit filename="../x86/sVU_zerorec.h" />
-		<Unit filename="../xmlpatchloader.cpp" />
 		<Extensions>
 			<envvars />
 			<code_completion>
