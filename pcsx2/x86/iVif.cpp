@@ -69,13 +69,17 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 
 		if ((mask&0xff) != (oldmask&0xff))
 #ifdef __LINUX__
-		if (mask == 0) // Temporary workaround for a bug causing a segfault.
+// This seems to now be hitting several games, and not just in that spot,
+// so until we can work out something better, I'm reverting to using the
+// old Linux mask code all the time. --arcum42
+
+		//if (mask == 0) // Temporary workaround for a bug causing a segfault.
 			UseOldMaskCode(vif1masks, mask);
-		else
-#endif
+		//else
+#else
 		{
 			__m128i r0, r1, r2, r3;
-			r0 = _mm_load_si128((__m128i*)&s_maskarr[mask&15][0]);
+			r0 = _mm_load_si128((__m128i*)&s_maskarr[mask&15][0]); // Tends to crash Linux,
 			r2 = _mm_unpackhi_epi16(r0, r0);
 			r0 = _mm_unpacklo_epi16(r0, r0);
 
@@ -93,6 +97,7 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 			_mm_storeh_pi((__m64*)&vif1masks[12], *(__m128*)&r2);
 			_mm_storeh_pi((__m64*)&vif1masks[14], *(__m128*)&r3);
 		}
+#endif
 	}
 	FreezeXMMRegs(0);
 }
