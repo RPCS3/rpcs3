@@ -89,7 +89,12 @@ protected:
 // ----------------------------------------------------------------------------
 
 // we need HINSTANCE declaration to define WinMain()
-#include "wx/msw/wrapwin.h"
+// PCSX2: No we don't.  Having windows includes to all of PCSX2 sucks, and this is precisely
+// what C/C++ "forward" declarations were designed to fix. --air
+//#include "wx/msw/wrapwin.h"
+
+struct HINSTANCE__;
+typedef struct HINSTANCE__* HINSTANCE;
 
 #ifndef SW_SHOWNORMAL
     #define SW_SHOWNORMAL 1

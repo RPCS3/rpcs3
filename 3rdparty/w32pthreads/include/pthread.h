@@ -37,8 +37,8 @@
  * See the README file for an explanation of the pthreads-win32 version
  * numbering scheme and how the DLL is named etc.
  */
-#define PTW32_VERSION 2,8,0,0
-#define PTW32_VERSION_STRING "2, 8, 0, 0\0"
+#define PTW32_VERSION 2,8,0,3
+#define PTW32_VERSION_STRING "2, 8, 0, 3\0"
 
 /* There are three implementations of cancel cleanup.
  * Note that pthread.h is included in both application
@@ -224,7 +224,9 @@ typedef unsigned long DWORD_PTR;
 #include <signal.h>
 #endif /* HAVE_SIGNAL_H */
 
+#ifndef __CLEANUP_C
 #include <setjmp.h>
+#endif
 #include <limits.h>
 
 /*
