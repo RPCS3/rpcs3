@@ -600,30 +600,7 @@ static void recExecute()
 				}
 
 	#else // _MSC_VER
-
-				__asm__ __volatile__
-				(
-					// We should be able to rely on GAS syntax (the register clobber list) as a
-					// replacement for manual push/pop of unpreserved registers.
-
-					// EBP note: As I feared, EBP is "required" for C++ excepion handling in Linux, and trying
-					//   to issue a clobber specifier for it causes an error.  We really need to find a way to
-					//   disable EBP regalloc in iCore. --air
-
-					".intel_syntax noprefix\n"
-					//"push ebx\n"
-					//"push esi\n"
-					//"push edi\n"
-					"push ebp\n"
-
-					"call DispatcherReg\n"
-
-					"pop ebp\n"
-					//"pop edi\n"
-					//"pop esi\n"
-					//"pop ebx\n"
-					".att_syntax\n"
-				: : : "eax", "ebx", "ecx", "edx", "esi", "edi", "memory" );
+				DispatcherReg();
 	#endif
 			}
 			catch( Exception::ForceDispatcherReg& )
