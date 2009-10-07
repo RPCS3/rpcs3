@@ -235,8 +235,8 @@ This theoretically unoptimizes. Not having much luck so far.
 #	define PCSX2_ALIGNED_EXTERN(alig,x) extern x __attribute((aligned(alig)))
 #	define PCSX2_ALIGNED16_EXTERN(x) extern x __attribute((aligned(16)))
 
-#	define __naked			// GCC lacks the naked specifier
-#	define __assume(cond)	// GCC has no equivalent for __assume
+#	define __naked						// GCC lacks the naked specifier
+#	define __assume(cond)	((void)0)	// GCC has no equivalent for __assume
 #	define CALLBACK			__attribute__((stdcall))
 
 // Inlining note: GCC needs ((unused)) attributes defined on inlined functions to suppress

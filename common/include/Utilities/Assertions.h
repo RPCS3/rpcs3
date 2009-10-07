@@ -68,7 +68,7 @@
 #else
 
 	// Release Builds just use __assume as an optimization, and return the conditional
-	// as a result (if .
+	// as a result (which is optimized to nil if unused).
 
 #	define pxAssertMsg(cond, msg)	(__assume(cond), likely(cond))
 #	define pxAssertDev(cond, msg)	(__assume(cond), likely(cond))
@@ -76,8 +76,6 @@
 #	define pxFailDev(msg)			(__assume(false), false)
 
 #endif
-
-__cold
 
 #define pxAssert(cond)				pxAssertMsg(cond, (wxChar*)NULL)
 
