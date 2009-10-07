@@ -447,6 +447,13 @@ namespace Test
 			
 			desiredOutput = "- ~\n-\n  null value: ~\n  ~: null key";
 		}
+		
+		void Unicode(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << "\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2";
+			
+			desiredOutput = "\"$ \\xa2 \\u20ac \\U00024b62\"";
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
@@ -609,6 +616,7 @@ namespace Test
 		RunEmitterTest(&Emitter::SimpleGlobalSettings, "simple global settings", passed, total);
 		RunEmitterTest(&Emitter::ComplexGlobalSettings, "complex global settings", passed, total);
 		RunEmitterTest(&Emitter::Null, "null", passed, total);
+		RunEmitterTest(&Emitter::Unicode, "unicode", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

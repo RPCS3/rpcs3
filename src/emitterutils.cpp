@@ -40,6 +40,99 @@ namespace YAML
 				
 				return true;
 			}
+			
+			unsigned ToUnsigned(char ch) { return static_cast<unsigned int>(static_cast<unsigned char>(ch)); }
+			unsigned AdvanceAndGetNextChar(std::string::const_iterator& it, std::string::const_iterator end) {
+				std::string::const_iterator jt = it;
+				++jt;
+				if(jt == end)
+					return 0;
+				
+				++it;
+				return ToUnsigned(*it);
+			}
+			
+			std::string WriteUnicode(unsigned value) {
+				std::stringstream str;
+				// TODO: for the common escaped characters, give their usual symbol
+				if(value <= 0xFF)
+					str << "\\x" << std::hex << std::setfill('0') << std::setw(2) << value;
+				else if(value <= 0xFFFF)
+					str << "\\u" << std::hex << std::setfill('0') << std::setw(4) << value;
+				else
+					str << "\\U" << std::hex << std::setfill('0') << std::setw(8) << value;
+				return str.str();
+			}
+			
+			std::string WriteSingleByte(unsigned ch) {
+				return WriteUnicode(ch);
+			}
+			
+			std::string WriteTwoBytes(unsigned ch, unsigned ch1) {
+				// Note: if no second byte is provided (signalled by ch1 == 0)
+				//       then we just write the first one as a single byte.
+				//       Should we throw an error instead? Or write something else?
+				// (The same question goes for the other WriteNBytes functions)
+				if(ch1 == 0)
+					return WriteSingleByte(ch);
+				
+				unsigned value = ((ch - 0xC0) << 6) + (ch1 - 0x80);
+				return WriteUnicode(value);
+			}
+			
+			std::string WriteThreeBytes(unsigned ch, unsigned ch1, unsigned ch2) {
+				if(ch1 == 0)
+					return WriteSingleByte(ch);
+				if(ch2 == 0)
+					return WriteSingleByte(ch) + WriteSingleByte(ch1);
+
+				unsigned value = ((ch - 0xE0) << 12) + ((ch1 - 0x80) << 6) + (ch2 - 0x80);
+				return WriteUnicode(value);
+			}
+
+			std::string WriteFourBytes(unsigned ch, unsigned ch1, unsigned ch2, unsigned ch3) {
+				if(ch1 == 0)
+					return WriteSingleByte(ch);
+				if(ch2 == 0)
+					return WriteSingleByte(ch) + WriteSingleByte(ch1);
+				if(ch3 == 0)
+					return WriteSingleByte(ch) + WriteSingleByte(ch1) + WriteSingleByte(ch2);
+				
+				unsigned value = ((ch - 0xF0) << 18) + ((ch1 - 0x80) << 12) + ((ch2 - 0x80) << 6) + (ch3 - 0x80);
+				return WriteUnicode(value);
+			}
+
+			// WriteNonPrintable
+			// . Writes the next UTF-8 code point to the stream
+			std::string::const_iterator WriteNonPrintable(ostream& out, std::string::const_iterator start, std::string::const_iterator end) {
+				std::string::const_iterator it = start;
+				unsigned ch = ToUnsigned(*it);
+				if(ch <= 0xC1) {
+					// this may include invalid first characters (0x80 - 0xBF)
+					// or "overlong" UTF-8 (0xC0 - 0xC1)
+					// We just copy them as bytes
+					// TODO: should we do something else? throw an error?
+					out << WriteSingleByte(ch);
+					return start;
+				} else if(ch <= 0xDF) {
+					unsigned ch1 = AdvanceAndGetNextChar(it, end);
+					out << WriteTwoBytes(ch, ch1);
+					return it;
+				} else if(ch <= 0xEF) {
+					unsigned ch1 = AdvanceAndGetNextChar(it, end);
+					unsigned ch2 = AdvanceAndGetNextChar(it, end);
+					out << WriteThreeBytes(ch, ch1, ch2);
+					return it;
+				} else {
+					unsigned ch1 = AdvanceAndGetNextChar(it, end);
+					unsigned ch2 = AdvanceAndGetNextChar(it, end);
+					unsigned ch3 = AdvanceAndGetNextChar(it, end);
+					out << WriteFourBytes(ch, ch1, ch2, ch3);
+					return it;
+				}
+				
+				return start;
+			}
 		}
 		
 		bool WriteString(ostream& out, const std::string& str, bool inFlow)
@@ -71,8 +164,8 @@ namespace YAML
 		bool WriteDoubleQuotedString(ostream& out, const std::string& str)
 		{
 			out << "\"";
-			for(std::size_t i=0;i<str.size();i++) {
-				char ch = str[i];
+			for(std::string::const_iterator it=str.begin();it!=str.end();++it) {
+				char ch = *it;
 				if(IsPrintable(ch)) {
 					if(ch == '\"')
 						out << "\\\"";
@@ -81,10 +174,7 @@ namespace YAML
 					else
 						out << ch;
 				} else {
-					// TODO: for the common escaped characters, give their usual symbol
-					std::stringstream str;
-					str << "\\x" << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(static_cast<unsigned char>(ch));
-					out << str.str();
+					it = WriteNonPrintable(out, it, str.end());
 				}
 			}
 			out << "\"";
