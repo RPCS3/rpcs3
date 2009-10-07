@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include <list>
 #include <wx/event.h>
 
 template< typename EvtType >
@@ -24,7 +25,7 @@ struct EventListener
 
 	void*		object;
 	FuncType*	OnEvent;
-	
+
 	EventListener( FuncType* fnptr )
 	{
 		object	= NULL;
@@ -36,12 +37,12 @@ struct EventListener
 		object	= objhandle;
 		OnEvent	= fnptr;
 	}
-	
+
 	bool operator ==( const EventListener& right ) const
 	{
 		return (object == right.object) && (OnEvent == right.OnEvent);
 	}
-	
+
 	bool operator !=( const EventListener& right ) const
 	{
 		return this->operator ==(right);
@@ -52,10 +53,10 @@ template< typename EvtType >
 class EventSource
 {
 public:
-	typedef typename EventListener<EvtType>			ListenerType;
+	typedef EventListener< EvtType >				ListenerType;
 	typedef typename std::list< ListenerType >		ListenerList;
-	typedef typename ListenerList::const_iterator	Handle;
-	
+	typedef typename ListenerList::iterator			Handle;
+
 protected:
 	ListenerList m_listeners;
 
@@ -103,9 +104,9 @@ public:
 			}
 			catch( Exception::RuntimeError& ex )
 			{
-				Console::Error( L"Ignoring runtime error thrown from event listener: " + ex.FormatDiagnosticMessage() );
+				Console.Error( L"Ignoring runtime error thrown from event listener: " + ex.FormatDiagnosticMessage() );
 			}
-			catch( BaseException& ex )
+			catch( Exception::BaseException& ex )
 			{
 			}
 		}
@@ -125,10 +126,10 @@ public:
 	typedef typename EventSource<EvtType>::Handle		ConstIterator;
 
 protected:
-	EventSource<EvtType>&	m_source;
-	const ListenerHandle			m_listener;
-	ConstIterator					m_iter;
-	bool							m_attached;
+	EventSource<EvtType>&		m_source;
+	const ListenerHandle		m_listener;
+	ConstIterator				m_iter;
+	bool						m_attached;
 
 public:
 	EventListenerBinding( EventSource<EvtType>& source, const ListenerHandle& listener, bool autoAttach=true ) :
@@ -141,12 +142,12 @@ public:
 		//if( !pxAssertDev( listener.OnEvent != NULL, "NULL listener callback function." ) ) return;
 		if( autoAttach ) Attach();
 	}
-	
+
 	virtual ~EventListenerBinding() throw()
 	{
 		Detach();
 	}
-	
+
 	void Detach()
 	{
 		if( !m_attached ) return;
@@ -182,23 +183,30 @@ void EventSource<EvtType>::Add( const ListenerType& listener )
 	AddFast( listener );
 }
 
+template< typename EvtType >
+class PredicatesAreTheThingsOfNightmares
+{
+	typedef EventListener< EvtType >	ListenerType;
+
+protected:
+	const void* const m_object_match;
+
+public:
+	PredicatesAreTheThingsOfNightmares( const void* objmatch ) : m_object_match( objmatch ) { }
+
+	bool operator()( const ListenerType& src ) const
+	{
+		return src.object == m_object_match;
+	}
+};
+
 // removes all listeners which reference the given object.  Use for assuring object deletion.
 template< typename EvtType >
 void EventSource<EvtType>::RemoveObject( const void* object )
 {
-	class PredicatesAreTheThingsOfNightmares
-	{
-	protected:
-		const void* const m_object_match;
+	// Iso C++ rules regarding temporaries, specifically that non-const temporaries are disallowed,
+	// also removes any actual convenience factor that unary predicates may have actually offered. >_<
 
-	public:
-		PredicatesAreTheThingsOfNightmares( const void* objmatch ) : m_object_match( objmatch ) { }
-
-		bool operator()( const ListenerType& src )
-		{
-			return src.object == m_object_match;
-		}
-	};
-	m_listeners.remove_if( PredicatesAreTheThingsOfNightmares( object ) );
+	m_listeners.remove_if( PredicatesAreTheThingsOfNightmares<EvtType>( object ) );
 }
 

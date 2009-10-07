@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -64,7 +64,7 @@ protected:
 
 // Use this macro/class as a base to seal a class from being derived from.
 // This macro works by providing a unique base class with a protected constructor
-// for every class that derives from it. 
+// for every class that derives from it.
 #define Sealed		private virtual __BaseSealed<__COUNTER__>
 
 
@@ -94,5 +94,6 @@ class wxString;
 #include <cstring>		// string.h under c++
 #include <cstdio>		// stdio.h under c++
 #include <cstdlib>
+#include <list>
 
 #include "Utilities/Assertions.h"
