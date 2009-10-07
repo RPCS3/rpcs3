@@ -41,7 +41,9 @@ protected:
 		ExecMode_NoThreadYet,
 		ExecMode_Running,
 		ExecMode_Suspending,
-		ExecMode_Suspended
+		ExecMode_Suspended,
+		ExecMode_Pausing,
+		ExecMode_Paused,
 	};
 
 	volatile ExecutionMode	m_ExecMode;
@@ -59,6 +61,7 @@ public:
 
 	virtual void Suspend( bool isBlocking = true );
 	virtual void Resume();
+	virtual void Pause();
 
 	virtual void StateCheck( bool isCancelable = true );
 	virtual void OnThreadCleanup();
@@ -78,11 +81,21 @@ protected:
 	// thread, requesting this thread suspend itself temporarily).  After this is called,
 	// the thread enters a waiting state on the m_ResumeEvent semaphore.
 	virtual void OnSuspendInThread()=0;
+	
+	// Extending classes should implement this, but should not call it.  The parent class
+	// handles invocation by the following guidelines: Called *in thread* from StateCheck()
+	// prior to pausing the thread (ie, when Pause() has been called on a separate thread,
+	// requesting this thread pause itself temporarily).  After this is called, the thread
+	// enters a waiting state on the m_ResumeEvent semaphore.
+	virtual void OnPauseInThread()=0;
 
 	// Extending classes should implement this, but should not call it.  The parent class
 	// handles invocation by the following guidelines: Called from StateCheck() after the
 	// thread has been suspended and then subsequently resumed.
-	virtual void OnResumeInThread()=0;
+	// Parameter:
+	//   isSuspended - set to TRUE if the thread is returning from a suspended state, or
+	//     FALSE if it's returning from a paused state.
+	virtual void OnResumeInThread( bool isSuspended )=0;
 };
 
 // --------------------------------------------------------------------------------------
@@ -107,7 +120,6 @@ public:
 
 	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void OnThreadCleanup();
-	virtual void ShortSuspend();
 	virtual void OnResumeReady();
 
 protected:
@@ -116,6 +128,7 @@ protected:
 
 	virtual void Start();
 	virtual void OnSuspendInThread();
-	virtual void OnResumeInThread();
+	virtual void OnPauseInThread() {}
+	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void ExecuteTask();
 };

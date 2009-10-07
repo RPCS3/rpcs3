@@ -99,7 +99,6 @@ mtgsThreadObject::mtgsThreadObject() :
 ,	m_CopyCommandTally( 0 )
 ,	m_CopyDataTally( 0 )
 ,	m_RingBufferIsBusy( false )
-,	m_LoadState( false )
 ,	m_QueuedFrames( 0 )
 ,	m_lock_FrameQueueCounter()
 ,	m_packet_size( 0 )
@@ -127,7 +126,6 @@ void mtgsThreadObject::OnStart()
 	m_WritePos		= 0;
 
 	m_RingBufferIsBusy	= false;
-	m_LoadState			= false;
 
 	m_QueuedFrames		= 0;
 	m_packet_size		= 0;
@@ -435,9 +433,9 @@ void mtgsThreadObject::OnSuspendInThread()
 	_clean_close_gs( NULL );
 }
 
-void mtgsThreadObject::OnResumeInThread()
+void mtgsThreadObject::OnResumeInThread( bool isSuspended )
 {
-	if( !m_LoadState )
+	if( isSuspended )
 		OpenPlugin();
 }
 
@@ -812,7 +810,6 @@ void mtgsThreadObject::Freeze( int mode, MTGS_FreezeData& data )
 	{
 		AtomicExchange( m_RingPos, m_WritePos );
 		SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
-		m_LoadState = true;
 		SetEvent();
 		Resume();
 	}
@@ -820,7 +817,6 @@ void mtgsThreadObject::Freeze( int mode, MTGS_FreezeData& data )
 		SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
 
 	mtgsWaitGS();
-	m_LoadState = false;
 }
 
 // Waits for the GS to empty out the entire ring buffer contents.

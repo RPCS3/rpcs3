@@ -117,10 +117,22 @@ wxString Exception::BaseException::FormatDiagnosticMessage() const
 }
 
 // ------------------------------------------------------------------------
+wxString Exception::CancelEvent::FormatDiagnosticMessage() const
+{
+	// FIXME: This should probably just log a single line from the stacktrace.. ?
+	return L"Action canceled: " + m_message_diag;
+}
+
+wxString Exception::CancelEvent::FormatDisplayMessage() const
+{
+	return L"Action canceled: " + m_message_diag;
+}
+
+// ------------------------------------------------------------------------
 wxString Exception::ObjectIsNull::FormatDiagnosticMessage() const
 {
 	return wxsFormat(
-		L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
+		L"reference to '%s' failed : handle is null.",
 		m_message_diag.c_str()
 	) + m_stacktrace;
 }
@@ -128,7 +140,7 @@ wxString Exception::ObjectIsNull::FormatDiagnosticMessage() const
 wxString Exception::ObjectIsNull::FormatDisplayMessage() const
 {
 	return wxsFormat(
-		L"An attempted reference to the %s has failed; the frame does not exist or it's handle is null.",
+		L"reference to '%s' failed : handle is null.",
 		m_message_diag.c_str()
 	);
 }

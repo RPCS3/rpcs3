@@ -5,7 +5,7 @@
 	Name="PcsxBaseProperties"
 	OutputDirectory="$(SolutionDir)\bin\$(PcsxSubsection)"
 	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
-	DeleteExtensionsOnClean="*.bsc;*.idb;*.sbr;*.res;*.pch;*.pdb;*.obj;*.ilk;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;$(TargetPath)"
+	DeleteExtensionsOnClean="*.bsc;*.idb;*.sbr;*.res;*.pch;*.pdb;*.obj;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;$(TargetPath)"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
@@ -18,6 +18,7 @@
 		WarningLevel="3"
 		DebugInformationFormat="3"
 		CompileAs="0"
+		DisableSpecificWarnings="4063;4100"
 	/>
 	<Tool
 		Name="VCLinkerTool"

@@ -16,6 +16,7 @@
 		WarningLevel="3"
 		DebugInformationFormat="3"
 		CompileAs="0"
+		DisableSpecificWarnings="4063;4100"
 	/>
 	<Tool
 		Name="VCLinkerTool"

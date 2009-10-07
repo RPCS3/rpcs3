@@ -44,7 +44,7 @@ static const int IdealWidth = 500;
 template< typename T >
 void Dialogs::ConfigurationDialog::AddPage( const char* label, int iconid )
 {
-	const wxString labelstr( wxString::FromUTF8( label ) );
+	const wxString labelstr( fromUTF8( label ) );
 	const int curidx = m_labels.Add( labelstr );
 	g_ApplyState.SetCurrentPage( curidx );
 	m_listbook.AddPage( new T( m_listbook, IdealWidth ),	wxGetTranslation( labelstr ),

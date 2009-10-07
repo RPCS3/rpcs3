@@ -45,7 +45,7 @@
 #if defined(PCSX2_DEBUG)
 
 #	define pxAssertMsg(cond, msg)		( (!!(cond)) || \
-		(pxOnAssert(__TFILE__, __LINE__, __WXFUNCTION__, _T(#cond), msg), !!(cond)) )
+		(pxOnAssert(__TFILE__, __LINE__, __WXFUNCTION__, _T(#cond), msg), likely(cond)) )
 
 #	define pxAssertDev(cond,msg)	pxAssertMsg(cond, msg)
 
@@ -57,25 +57,27 @@
 	// Devel builds use __assume for standard assertions and call pxOnAssertDevel
 	// for AssertDev brand assertions (which typically throws a LogicError exception).
 
-#	define pxAssertMsg(cond, msg)	(!!(cond))
+#	define pxAssertMsg(cond, msg)	(__assume(cond), likely(cond))
 
 #	define pxAssertDev(cond, msg)	( (!!(cond)) || \
-		(pxOnAssert(__TFILE__, __LINE__, __WXFUNCTION__, _T(#cond), msg), !!(cond)) )
+		(pxOnAssert(__TFILE__, __LINE__, __WXFUNCTION__, _T(#cond), msg), likely(cond)) )
 
-#	define pxFail(msg)			__assume(false)
+#	define pxFail(msg)			(__assume(false), false)
 #	define pxFailDev(msg	)	pxAssertDev(false, msg)
 
 #else
 
-	// Release Builds just use __assume as an optimization, and always return 'true'
-	// indicating the assertion check succeeded (no actual check is performed).
+	// Release Builds just use __assume as an optimization, and return the conditional
+	// as a result (if .
 
-#	define pxAssertMsg(cond, msg)	(__assume(cond), true)
-#	define pxAssertDev(cond, msg)	(__assume(cond), true)
-#	define pxFail(msg)				(__assume(false), true)
-#	define pxFailDev(msg)			(__assume(false), true)
+#	define pxAssertMsg(cond, msg)	(__assume(cond), likely(cond))
+#	define pxAssertDev(cond, msg)	(__assume(cond), likely(cond))
+#	define pxFail(msg)				(__assume(false), false)
+#	define pxFailDev(msg)			(__assume(false), false)
 
 #endif
+
+__cold
 
 #define pxAssert(cond)				pxAssertMsg(cond, (wxChar*)NULL)
 

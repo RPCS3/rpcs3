@@ -90,7 +90,7 @@ struct LegacyApi_CommonMethod
 	// returns the method name as a wxString, converted from UTF8.
 	wxString GetMethodName( PluginsEnum_t pid ) const
 	{
-		return tbl_PluginInfo[pid].GetShortname() + wxString::FromUTF8( MethodName );
+		return tbl_PluginInfo[pid].GetShortname() + fromUTF8( MethodName );
 	}
 };
 
@@ -107,7 +107,7 @@ struct LegacyApi_ReqMethod
 	// returns the method name as a wxString, converted from UTF8.
 	wxString GetMethodName( ) const
 	{
-		return wxString::FromUTF8( MethodName );
+		return fromUTF8( MethodName );
 	}
 };
 
@@ -118,7 +118,7 @@ struct LegacyApi_OptMethod
 	VoidMethod**	Dest;		// Target function where the binding is saved.
 
 	// returns the method name as a wxString, converted from UTF8.
-	wxString GetMethodName() const { return wxString::FromUTF8( MethodName ); }
+	wxString GetMethodName() const { return fromUTF8( MethodName ); }
 };
 
 

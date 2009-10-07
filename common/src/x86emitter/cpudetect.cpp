@@ -15,10 +15,12 @@
 
 
 #include "PrecompiledHeader.h"
-#include "internal.h"
-#include "tools.h"
 #include "Utilities/RedtapeWindows.h"
 #include "Utilities/Threading.h"
+
+#include "internal.h"
+#include "tools.h"
+
 
 using namespace x86Emitter;
 

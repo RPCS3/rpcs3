@@ -47,7 +47,7 @@ namespace R5900Exception
 
 		void Init( const char*msg )
 		{
-			m_message = wxString::FromUTF8( msg );
+			m_message = fromUTF8( msg );
 			cpuState = cpuRegs;
 		}
 	};

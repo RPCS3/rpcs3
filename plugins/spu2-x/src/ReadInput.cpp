@@ -63,8 +63,6 @@ StereoOut32 V_Core::ReadInput_HiFi()
 		AdmaInProgress = 0;
 		if(InputDataLeft >= 0x200)
 		{
-			u8 k = (InputDataLeft >= InputDataProgress);
-
 #ifdef PCM24_S1_INTERLEAVE
 			AutoDMAReadBuffer(1);
 #else

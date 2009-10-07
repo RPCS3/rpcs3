@@ -15,6 +15,10 @@
 
 #pragma once
 
+#ifdef _MSC_VER
+#	pragma warning(disable:4063)	// case '1' is not a valid value for switch()
+#endif
+
 // These functions are meant for memset operations of constant length only.
 // For dynamic length clears, use the C-compiler provided memset instead.
 

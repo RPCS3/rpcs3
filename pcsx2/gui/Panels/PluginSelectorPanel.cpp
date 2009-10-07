@@ -559,13 +559,13 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
 	DevCon.Status( "Plugin Enumeration Thread started..." );
 
 	wxGetApp().Ping();		// gives the gui thread some time to refresh
-	Sleep( 3 );
+	Yield( 3 );
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
 		DoNextPlugin( curidx );
 		if( (curidx & 3) == 3 ) wxGetApp().Ping();		// gives the gui thread some time to refresh
-		pthread_testcancel();
+		TestCancel();
 		//Sleep(150);		// uncomment this to slow down the selector, for debugging threading.
 	}
 

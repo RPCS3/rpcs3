@@ -220,12 +220,12 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_SemaphorePing,	wxCommandEventHandler( Pcsx2App::OnSemaphorePing ) );
 	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
 	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
+	Connect( pxEVT_SysExecute,		wxCommandEventHandler( Pcsx2App::OnSysExecute ) );
+
 	Connect( pxEVT_LoadPluginsComplete,	wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
 
-	Connect( pxEVT_FreezeFinished,	wxCommandEventHandler( Pcsx2App::OnCoreThreadTerminated ) );
-	
-	Connect( pxEVT_FreezeFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeFinished ) );
-	Connect( pxEVT_ThawFinished,	wxCommandEventHandler( Pcsx2App::OnThawFinished ) );
+	Connect( pxEVT_AppCoreThreadFinished,	wxCommandEventHandler( Pcsx2App::OnCoreThreadTerminated ) );
+	Connect( pxEVT_FreezeThreadFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeThreadFinished ) );
 
 	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
@@ -310,7 +310,7 @@ bool Pcsx2App::OnInit()
 				return false;
 		}
 
-		LoadPluginsPassive();
+		LoadPluginsPassive( NULL );
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::StartupAborted& ex )

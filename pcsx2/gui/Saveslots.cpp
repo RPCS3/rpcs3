@@ -23,59 +23,10 @@
 
 StartupParams g_Startup;
 
-// returns true if the new state was loaded, or false if nothing happened.
-void States_Load( const wxString& file )
-{
-	sCoreThread.ShortSuspend();
-
-	try
-	{
-		StateCopy_LoadFromFile( file );
-		//SysLoadState( file );
-		//SysStatus( wxsFormat( _("Loaded State %s"), wxFileName( file ).GetFullName().c_str() ) );
-	}
-	catch( Exception::BaseException& )
-	{
-		// VM state is probably ruined.  We'll need to recover from the in-memory backup.
-		//StateRecovery::Recover();
-	}
-
-	sApp.SysExecute();
-}
-
 // Save state save-to-file (or slot) helpers.
 void States_Save( const wxString& file )
 {
-	if( !SysHasValidState() )
-	{
-		Msgbox::Alert( _("You need to start emulation first before you can save it's state.") );
-		return;
-	}
-
-	try
-	{
-		Console.Status( wxsFormat( L"Saving savestate to file: %s", file.c_str() ) );
-		StateCopy_SaveToFile( file );
-		SysStatus( wxsFormat( _("State saved to file: %s"), wxFileName( file ).GetFullName().c_str() ) );
-	}
-	catch( Exception::BaseException& ex )
-	{
-		// TODO: Implement a "pause the action and issue a popup" thing here.
-		// *OR* some kind of GS overlay... [for now we use the console]
-
-		// Translation Tip: "Your emulation state has not been saved!"
-
-		/*Msgbox::Alert(
-			wxsFormat( _("Error saving state to file: %s"), file.c_str() ) +
-			L"\n\n" + _("Error details:") + ex.DisplayMessage()
-		);*/
-
-		Console.Error( wxsFormat(
-			L"An error occurred while trying to save to file %s\n", file.c_str() ) +
-			L"Your emulation state has not been saved!\n"
-			L"\nError: " + ex.FormatDiagnosticMessage()
-		);
-	}
+	StateCopy_SaveToFile( file );
 }
 
 // --------------------------------------------------------------------------------------
@@ -95,22 +46,12 @@ bool States_isSlotUsed(int num)
 
 void States_FreezeCurrentSlot()
 {
-	Console.Status( "Saving savestate to slot %d...", StatesC );
-	States_Save( SaveStateBase::GetFilename( StatesC ) );
+	StateCopy_SaveToSlot( StatesC );
 }
 
 void States_DefrostCurrentSlot()
 {
-	wxString file( SaveStateBase::GetFilename( StatesC ) );
-
-	if( !wxFileExists( file ) )
-	{
-		Console.Notice( "Savestate slot %d is empty.", StatesC );
-		return;
-	}
-
-	Console.Status( "Loading savestate from slot %d...", StatesC );
-	States_Load( file );
+	StateCopy_LoadFromSlot( StatesC );
 	//SysStatus( wxsFormat( _("Loaded State (slot %d)"), StatesC ) );
 }
 

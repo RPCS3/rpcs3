@@ -72,7 +72,7 @@ void AppCoreThread::OnResumeReady()
 // the new (lack of) thread status, so this posts a message to the App to do so.
 void AppCoreThread::OnThreadCleanup()
 {
-	wxCommandEvent evt( pxEVT_AppCoreThread_Terminated );
+	wxCommandEvent evt( pxEVT_AppCoreThreadFinished );
 	wxGetApp().AddPendingEvent( evt );
 	_parent::OnThreadCleanup();
 }

@@ -102,7 +102,6 @@ protected:
 	int m_CopyCommandTally;
 	int m_CopyDataTally;
 	volatile bool m_RingBufferIsBusy;
-	volatile bool m_LoadState;
 
 	// Counts the number of vsync frames queued in the MTGS ringbuffer.  This is used to
 	// throttle the number of frames allowed to be rendered ahead of time for games that
@@ -153,7 +152,8 @@ public:
 protected:
 	void OpenPlugin();
 	void OnSuspendInThread();
-	void OnResumeInThread();
+	void OnPauseInThread() {}
+	void OnResumeInThread( bool IsSuspended );
 
 	void OnResumeReady();
 

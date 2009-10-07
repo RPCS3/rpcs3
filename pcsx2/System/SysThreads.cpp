@@ -55,7 +55,6 @@ void SysSuspendableThread::OnStart()
 	_parent::OnStart();
 }
 
-
 // Pauses the emulation state at the next PS2 vsync, and returns control to the calling
 // thread; or does nothing if the core is already suspended.  Calling this thread from the
 // Core thread will result in deadlock.
@@ -65,6 +64,11 @@ void SysSuspendableThread::OnStart()
 //      Defaults to false if parameter is not specified.  Performing non-blocking suspension
 //      is mostly useful for starting certain non-Emu related gui activities (improves gui
 //      responsiveness).
+//
+// Exceptions:
+//   CancelEvent  - thrown if the thread is already in a Paused state.  Because actions that
+//      pause emulation typically rely on plugins remaining loaded/active, Suspension must
+//      cansel itself forcefully or risk crashing whatever other action is in progress.
 //
 void SysSuspendableThread::Suspend( bool isBlocking )
 {
@@ -76,11 +80,34 @@ void SysSuspendableThread::Suspend( bool isBlocking )
 		if( m_ExecMode == ExecMode_Suspended )
 			return;
 
+		if( m_ExecMode == ExecMode_Pausing || m_ExecMode == ExecMode_Paused )
+			throw Exception::CancelEvent( "Another thread is pausing the VM state." );
+
 		if( m_ExecMode == ExecMode_Running )
 			m_ExecMode = ExecMode_Suspending;
 
-		pxAssertDev( m_ExecMode == ExecMode_Suspending, "ExecMode should be nothing other than Suspended..." );
+		pxAssertDev( m_ExecMode == ExecMode_Suspending, "ExecMode should be nothing other than Suspending..." );
 	}
+	m_SuspendEvent.Reset();
+	m_sem_event.Post();
+	if( isBlocking ) m_SuspendEvent.WaitGui();
+}
+
+void SysSuspendableThread::Pause()
+{
+	if( IsSelf() || !IsRunning() ) return;
+
+	{
+		ScopedLock locker( m_lock_ExecMode );
+
+		if( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Paused) ) return;
+
+		if( m_ExecMode == ExecMode_Running )
+			m_ExecMode = ExecMode_Pausing;
+
+		pxAssertDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
+	}
+	m_SuspendEvent.Reset();
 	m_sem_event.Post();
 	m_SuspendEvent.WaitGui();
 }
@@ -111,6 +138,7 @@ void SysSuspendableThread::Resume()
 			// fall through...
 
 			case ExecMode_Suspending:
+			case ExecMode_Pausing:
 				// we need to make sure and wait for the emuThread to enter a fully suspended
 				// state before continuing...
 
@@ -120,8 +148,8 @@ void SysSuspendableThread::Resume()
 		}
 	}
 
-	pxAssertDev( m_ExecMode == ExecMode_Suspended,
-		"SysSuspendableThread is not in a suspended/idle state?  wtf!" );
+	pxAssertDev( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Paused),
+		"SysSuspendableThread is not in a suspended/paused state?  wtf!" );
 
 	m_ExecMode = ExecMode_Running;
 	m_ResumeProtection = true;
@@ -148,7 +176,7 @@ void SysSuspendableThread::StateCheck( bool isCancelable )
 	// Shortcut for the common case, to avoid unnecessary Mutex locks:
 	if( m_ExecMode == ExecMode_Running )
 	{
-		if( isCancelable ) pthread_testcancel();
+		if( isCancelable ) TestCancel();
 		return;
 	}
 
@@ -170,23 +198,41 @@ void SysSuspendableThread::StateCheck( bool isCancelable )
 			// Yup, need this a second time.  Variable state could have changed while we
 			// were trying to acquire the lock above.
 			if( isCancelable )
-				pthread_testcancel();
+				TestCancel();
 		break;
 
+		// -------------------------------------
+		case ExecMode_Pausing:
+		{
+			OnPauseInThread();
+			m_ExecMode = ExecMode_Paused;
+			m_SuspendEvent.Post();
+		}
+		// fallthrough...
+
+		case ExecMode_Paused:
+			m_lock_ExecMode.Unlock();
+			while( m_ExecMode == ExecMode_Paused )
+				m_ResumeEvent.WaitGui();
+
+			OnResumeInThread( false );
+		break;
+
+		// -------------------------------------
 		case ExecMode_Suspending:
 		{
 			OnSuspendInThread();
 			m_ExecMode = ExecMode_Suspended;
 			m_SuspendEvent.Post();
 		} 
-		// fall through...
-
+		// fallthrough...
+		
 		case ExecMode_Suspended:
 			m_lock_ExecMode.Unlock();
 			while( m_ExecMode == ExecMode_Suspended )
 				m_ResumeEvent.WaitGui();
 
-			OnResumeInThread();
+			OnResumeInThread( true );
 		break;
 		
 		jNO_DEFAULT;
@@ -217,16 +263,6 @@ void SysCoreThread::Start()
 	m_plugins.Init();
 	_parent::Start();
 }
-
-// Suspends the system without closing plugins or updating GUI status.
-// Should be used for savestates or other actions which happen very quickly.
-void SysCoreThread::ShortSuspend()
-{
-	m_shortSuspend = true;
-	Suspend();
-	m_shortSuspend = false;
-}
-
 
 // Resumes the core execution state, or does nothing is the core is already running.  If
 // settings were changed, resets will be performed as needed and emulation state resumed from
@@ -348,11 +384,6 @@ void SysCoreThread::CpuExecute()
 	PCSX2_MEM_PROTECT_END();
 }
 
-static void _cet_callback_cleanup( void* handle )
-{
-	((SysCoreThread*)handle)->OnThreadCleanup();
-}
-
 void SysCoreThread::ExecuteTask()
 {
 	tls_coreThread = this;
@@ -369,9 +400,10 @@ void SysCoreThread::OnSuspendInThread()
 		m_plugins.Close();
 }
 
-void SysCoreThread::OnResumeInThread()
+void SysCoreThread::OnResumeInThread( bool isSuspended )
 {
-	m_plugins.Open();
+	if( isSuspended )
+		m_plugins.Open();
 }
 
 

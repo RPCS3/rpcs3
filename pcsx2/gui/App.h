@@ -21,6 +21,8 @@
 #include <wx/docview.h>
 #include <wx/apptrait.h>
 
+#include "Utilities/Listeners.h"
+
 class IniInterface;
 class MainEmuFrame;
 class GSFrame;
@@ -35,6 +37,9 @@ class AppCoreThread;
 #include "System.h"
 #include "System/SysThreads.h"
 
+
+typedef void FnType_OnThreadComplete(const wxCommandEvent& evt);
+
 #define AllowFromMainThreadOnly() \
 	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
 
@@ -42,10 +47,10 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_OpenModalDialog, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_SysExecute, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_LoadPluginsComplete, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_AppCoreThread_Terminated, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_FreezeFinished, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_ThawFinished, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_AppCoreThreadFinished, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_FreezeThreadFinished, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // This is used when the GS plugin is handling its own window.  Messages from the PAD
@@ -335,8 +340,6 @@ public:
 	Pcsx2App();
 	virtual ~Pcsx2App();
 
-	void ReloadPlugins();
-
 	void PostPadKey( wxKeyEvent& evt );
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	int  ThreadedModalDialog( DialogIdentifiers dialogId );
@@ -392,6 +395,18 @@ public:
 	void DisableDiskLogging() const;
 	void OnProgramLogClosed();
 
+	// ----------------------------------------------------------------------------
+	//   Event Sources!
+	// ----------------------------------------------------------------------------
+
+protected:
+	CmdEvt_Source		m_evtsrc_CorePluginStatus;
+	CmdEvt_Source		m_evtsrc_CoreThreadStatus;
+
+public:
+	CmdEvt_Source& Source_CoreThreadStatus()	{ return m_evtsrc_CoreThreadStatus; }
+	CmdEvt_Source& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
+
 protected:
 	void InitDefaultGlobalAccelerators();
 	void BuildCommandHash();
@@ -402,18 +417,18 @@ protected:
 
 	void HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const;
 
+	void OnSysExecute( wxCommandEvent& evt );
 	void OnReloadPlugins( wxCommandEvent& evt );
 	void OnLoadPluginsComplete( wxCommandEvent& evt );
 	void OnSemaphorePing( wxCommandEvent& evt );
 	void OnOpenModalDialog( wxCommandEvent& evt );
 	void OnCoreThreadTerminated( wxCommandEvent& evt );
 
-	void OnFreezeFinished( wxCommandEvent& evt );
-	void OnThawFinished( wxCommandEvent& evt );
+	void OnFreezeThreadFinished( wxCommandEvent& evt );
 
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void OnEmuKeyDown( wxKeyEvent& evt );
-	
+
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior
 	// ----------------------------------------------------------------------------
@@ -496,7 +511,7 @@ DECLARE_APP(Pcsx2App)
 extern bool sys_resume_lock;
 
 extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
-extern void LoadPluginsPassive();
+extern void LoadPluginsPassive( FnType_OnThreadComplete* onComplete );
 extern void LoadPluginsImmediate();
 extern void UnloadPlugins();
 

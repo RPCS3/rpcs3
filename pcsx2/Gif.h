@@ -206,7 +206,7 @@ struct GIFregisters
 	u32 padding[3];
 	tGIF_MODE 	mode;
 	u32 padding1[3];
-	tGIF_STAT		stat;
+	tGIF_STAT	stat;
 	u32 padding2[7];
 	
 	tGIF_TAG0	tag0;
@@ -218,7 +218,7 @@ struct GIFregisters
 	u32			tag3;
 	u32 padding6[3];
 	
-	tGIF_CNT		cnt;
+	tGIF_CNT	cnt;
 	u32 padding7[3];
 	tGIF_P3CNT	p3cnt;
 	u32 padding8[3];

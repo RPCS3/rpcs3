@@ -15,6 +15,10 @@
 
 #pragma once
 
+#ifdef __WXMSW__
+#	include <wx/msw/wrapwin.h>
+#else
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Windows Redtape!  No windows.h should be included without it!
 //
@@ -39,4 +43,5 @@
 #undef min
 #undef max
 
+#endif
 #endif

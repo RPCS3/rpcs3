@@ -30,10 +30,10 @@ IMPLEMENT_APP(Pcsx2App)
 DEFINE_EVENT_TYPE( pxEVT_SemaphorePing );
 DEFINE_EVENT_TYPE( pxEVT_OpenModalDialog );
 DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
+DEFINE_EVENT_TYPE( pxEVT_SysExecute );
 DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
-DEFINE_EVENT_TYPE( pxEVT_AppCoreThread_Terminated );
-DEFINE_EVENT_TYPE( pxEVT_FreezeFinished );
-DEFINE_EVENT_TYPE( pxEVT_ThawFinished );
+DEFINE_EVENT_TYPE( pxEVT_AppCoreThreadFinished );
+DEFINE_EVENT_TYPE( pxEVT_FreezeThreadFinished );
 
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
@@ -211,6 +211,18 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 		(handler->*func)(event);
 	}
 	// ----------------------------------------------------------------------------
+	catch( Exception::CancelEvent& ex )
+	{
+		Console.Notice( ex.FormatDiagnosticMessage() );
+	}
+	// ----------------------------------------------------------------------------
+	catch( Exception::BadSavedState& ex)
+	{
+		// Saved state load failed.
+		Console.Notice( ex.FormatDiagnosticMessage() );
+		sCoreThread.Resume();
+	}
+	// ----------------------------------------------------------------------------
 	catch( Exception::PluginError& ex )
 	{
 		Console.Error( ex.FormatDiagnosticMessage() );
@@ -376,26 +388,34 @@ void Pcsx2App::OnMainFrameClosed()
 	m_MainFrame = NULL;
 }
 
-
-
 // --------------------------------------------------------------------------------------
 //  Sys/Core API and Shortcuts (for wxGetApp())
 // --------------------------------------------------------------------------------------
+
+static int _sysexec_cdvdsrc_type = -1;
+
+static void OnSysExecuteAfterPlugins( const wxCommandEvent& loadevt )
+{
+	if( !wxGetApp().m_CorePlugins ) return;
+
+	wxCommandEvent execevt( pxEVT_SysExecute );
+	execevt.SetInt( _sysexec_cdvdsrc_type );
+	wxGetApp().AddPendingEvent( execevt );
+}
 
 // Executes the emulator using a saved/existing virtual machine state and currently
 // configured CDVD source device.
 void Pcsx2App::SysExecute()
 {
-	if( sys_resume_lock )
+	if( !m_CorePlugins )
 	{
-		Console.WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
+		LoadPluginsPassive( OnSysExecuteAfterPlugins );
 		return;
 	}
 
-	SysReset();
-	LoadPluginsImmediate();
-	m_CoreThread = new AppCoreThread( *m_CorePlugins );
-	m_CoreThread->Resume();
+	wxCommandEvent evt( pxEVT_SysExecute );
+	evt.SetInt( -1 );
+	AddPendingEvent( evt );
 }
 
 // Executes the specified cdvd source and optional elf file.  This command performs a
@@ -403,16 +423,32 @@ void Pcsx2App::SysExecute()
 // sources.
 void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
 {
+	if( !m_CorePlugins )
+	{
+		LoadPluginsPassive( OnSysExecuteAfterPlugins );
+		return;
+	}
+
+	wxCommandEvent evt( pxEVT_SysExecute );
+	evt.SetInt( (int)cdvdsrc );
+	AddPendingEvent( evt );
+}
+
+void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
+{
 	if( sys_resume_lock )
 	{
 		Console.WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
 		return;
 	}
 
-	SysReset();
-	LoadPluginsImmediate();
+	// if something unloaded plugins since this messages was queued then it's best to ignore
+	// it, because apparently too much stuff is going on and the emulation states are wonky.
+	if( !m_CorePlugins ) return;
+
+	if( evt.GetInt() != -1 ) SysReset();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
-	CDVDsys_ChangeSource( cdvdsrc );
+	if( evt.GetInt() != -1 ) CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
 
 	m_CoreThread = new AppCoreThread( *m_CorePlugins );
 	m_CoreThread->Resume();

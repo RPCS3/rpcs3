@@ -17,7 +17,8 @@
 #include "IsoFileTools.h"
 
 #ifdef _WIN32
-#include <windows.h>
+#	include <wx/msw/wrapwin.h>
+
 
 void *_openfile(const char *filename, int flags)
 {

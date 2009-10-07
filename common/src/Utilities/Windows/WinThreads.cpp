@@ -18,7 +18,6 @@
 #include "x86emitter/tools.h"
 #include "Threading.h"
 
-
 #ifdef _WIN32
 #include "implement.h"		// win32 pthreads implementations.
 #endif

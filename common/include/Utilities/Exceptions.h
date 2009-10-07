@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Dependencies.h"
+#include "StringHelpers.h"
 
 // --------------------------------------------------------------------------------------
 //  DESTRUCTOR_CATCHALL - safe destructor helper
@@ -133,7 +134,7 @@ namespace Exception
 //
 #define DEFINE_EXCEPTION_COPYTORS( classname ) \
 	virtual ~classname() throw() {} \
-	virtual void Rethrow() const { throw classname( *this ); } \
+	virtual void Rethrow() const { throw *this; } \
 	virtual BaseException* Clone() const { return new classname( *this ); }
 
 #define DEFINE_RUNTIME_EXCEPTION( classname, defmsg ) \
@@ -149,11 +150,13 @@ namespace Exception
 	explicit classname( const wxString& msg_eng )		{ BaseException::InitBaseEx( msg_eng, wxEmptyString ); }
 
 	// ---------------------------------------------------------------------------------------
-	// Generalized Exceptions: RuntimeError / LogicError / ObjectIsNull
+	//  RuntimeError / LogicError - Generalized Exceptions
 	// ---------------------------------------------------------------------------------------
 
 	class RuntimeError : public virtual BaseException
 	{
+	public:
+		bool	IsSilent;
 	public:
 		DEFINE_RUNTIME_EXCEPTION( RuntimeError, wxLt("An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter.") )
 	};
@@ -166,7 +169,38 @@ namespace Exception
 		DEFINE_LOGIC_EXCEPTION( LogicError, wxLt("An unhandled logic error has occurred.") )
 	};
 
-	class ObjectIsNull : public virtual RuntimeError
+	// --------------------------------------------------------------------------------------
+	//  CancelAppEvent  -  Exception for canceling an event in a non-verbose fashion
+	// --------------------------------------------------------------------------------------
+	// Typically the PCSX2 interface issues popup dialogs for runtime errors.  This exception
+	// instead issues a "silent" cancelation that is handled by the app gracefully (generates
+	// log, and resumes messages queue processing).
+	//
+	// I chose to have this exception derive from RuntimeError, since if one is thrown from outside 
+	// an App message loop we'll still want it to be handled in a reasonably graceful manner.
+	class CancelEvent : public virtual RuntimeError
+	{
+	public:
+		DEFINE_EXCEPTION_COPYTORS( CancelEvent )
+
+		explicit CancelEvent( const char* logmsg )
+		{
+			m_message_diag = fromUTF8( logmsg );
+			// overridden message formatters only use the diagnostic version...
+		}
+		
+		explicit CancelEvent( const wxString& logmsg=L"No reason given." )
+		{
+			m_message_diag = logmsg;
+			// overridden message formatters only use the diagnostic version...
+		}
+		
+		virtual wxString FormatDisplayMessage() const;
+		virtual wxString FormatDiagnosticMessage() const;
+	};
+
+	// --------------------------------------------------------------------------------------
+	class ObjectIsNull : public virtual CancelEvent
 	{
 	public:
 		wxString ObjectName;
@@ -175,17 +209,16 @@ namespace Exception
 
 		explicit ObjectIsNull( const char* objname="unspecified" )
 		{
-			m_message_diag = wxString::FromUTF8( objname );
+			m_message_diag = fromUTF8( objname );
 			// overridden message formatters only use the diagnostic version...
 		}
-		
 
 		virtual wxString FormatDisplayMessage() const;
 		virtual wxString FormatDiagnosticMessage() const;
 	};
 
 	// ---------------------------------------------------------------------------------------
-	// OutOfMemory / InvalidOperation / InvalidArgument / IndexBoundsFault / ParseError
+	//  OutOfMemory / InvalidOperation / InvalidArgument / IndexBoundsFault / ParseError
 	// ---------------------------------------------------------------------------------------
 
 	class OutOfMemory : public virtual RuntimeError
@@ -282,17 +315,17 @@ namespace Exception
 	explicit classname( const char* objname, const char* msg=defmsg ) \
 	{ \
 		BaseException::InitBaseEx( msg ); \
-		StreamName = wxString::FromUTF8( objname ); \
+		StreamName = fromUTF8( objname ); \
 	} \
 	explicit classname( const char* objname, const wxString& msg_eng, const wxString& msg_xlt ) \
 	{ \
 		BaseException::InitBaseEx( msg_eng, msg_xlt ); \
-		StreamName = wxString::FromUTF8( objname ); \
+		StreamName = fromUTF8( objname ); \
 	} \
 	explicit classname( const char* objname, const wxString& msg_eng ) \
 	{ \
 		BaseException::InitBaseEx( msg_eng, msg_eng ); \
-		StreamName = wxString::FromUTF8( objname ); \
+		StreamName = fromUTF8( objname ); \
 	} \
 	explicit classname( const wxString& objname, const wxString& msg_eng ) \
 	{ \

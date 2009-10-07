@@ -430,6 +430,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\Listeners.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\lnx_memzero.h"
 				>
 			</File>

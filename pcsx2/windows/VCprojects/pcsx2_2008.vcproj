@@ -1805,6 +1805,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\common\include\Utilities\Listeners.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\MainFrame.cpp"
 				>
 			</File>

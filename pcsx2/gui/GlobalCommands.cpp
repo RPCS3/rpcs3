@@ -263,7 +263,7 @@ void AcceleratorDictionary::Map( const KeyAcceleratorCode& acode, const char *se
 		Console.Notice( wxsFormat(
 			L"Kbd Accelerator '%s' is mapped multiple times.\n"
 			L"\t'Command %s' is being replaced by '%s'",
-			acode.ToString().c_str(), wxString::FromUTF8( result->Id ).c_str(), searchfor )
+			acode.ToString().c_str(), fromUTF8( result->Id ).c_str(), searchfor )
 		);
 	}
 
@@ -272,7 +272,7 @@ void AcceleratorDictionary::Map( const KeyAcceleratorCode& acode, const char *se
 	if( result == NULL )
 	{
 		Console.Notice( wxsFormat( L"Kbd Accelerator '%s' is mapped to unknown command '%s'",
-			acode.ToString().c_str(), wxString::FromUTF8( searchfor ).c_str() )
+			acode.ToString().c_str(), fromUTF8( searchfor ).c_str() )
 		);
 	}
 	else

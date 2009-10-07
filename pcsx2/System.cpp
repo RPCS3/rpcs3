@@ -139,7 +139,7 @@ SysCoreAllocations::SysCoreAllocations()
 		throw Exception::OutOfMemory(
 			wxsFormat(			// Diagnostic (english)
 				L"std::bad_alloc caught while trying to allocate memory for the PS2 Virtual Machine.\n"
-				L"Error Details: " + wxString::FromUTF8( ex.what() )
+				L"Error Details: " + fromUTF8( ex.what() )
 			),
 
 			GetMemoryErrorVM()	// translated

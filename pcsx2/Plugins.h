@@ -32,9 +32,20 @@ struct PluginInfo
 
 	wxString GetShortname() const
 	{
-		return wxString::FromUTF8( shortname );
+		return fromUTF8( shortname );
 	}
 };
+
+#ifdef _MSC_VER
+
+// Disabling C4673: throwing 'Exception::Blah' the following types will not be considered at the catch site
+//   The warning is bugged, and happens even though we're properly inheriting classes with
+//   'virtual' qualifiers.  But since the warning is potentially useful elsewhere, I disable
+//   it only for the scope of these exceptions.
+
+#	pragma warning(push)
+#	pragma warning(disable:4673)
+#endif
 
 // --------------------------------------------------------------------------------------
 //  Plugin-related Exceptions
@@ -139,8 +150,11 @@ namespace Exception
 		virtual wxString FormatDiagnosticMessage() const;
 		virtual wxString FormatDisplayMessage() const;
 	};
-
 };
+
+#ifdef _MSC_VER
+#	pragma warning(pop)
+#endif
 
 // --------------------------------------------------------------------------------------
 //  LegacyPluginAPI_Common

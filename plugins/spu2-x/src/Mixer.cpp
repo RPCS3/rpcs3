@@ -238,20 +238,6 @@ static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint 
 					g_counter_cache_misses++;
 			}
 
-			s16* sbuffer = cacheLine.Sampledata;
-
-			//if( vc.LoopFlags & XAFLAG_LOOP )
-			//	vc.Prev1 = vc.Prev2 = 0;
-
-			// saturated decoder
-			//XA_decode_block( sbuffer, memptr, vc.Prev1, vc.Prev2 );
-
-			// [Air]: Testing use of a new unsaturated decoder. (benchmark needed)
-			//   Chances are the saturation isn't needed, but for a very few exception games.
-			//   This is definitely faster than the above version, but is it by enough to
-			//   merit possible lower compatibility?  Especially now that games that make
-			//   heavy use of the SPU2 via music or sfx will mostly use the cache anyway.
-
 			XA_decode_block_unsaturated( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
 		}
 

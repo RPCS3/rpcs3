@@ -30,7 +30,6 @@ int mVUdebugNow = 0;
 
 #ifdef DEBUG_COMPARE
 
-#include <windows.h>
 static int runAmount = 0;
 
 void VUtestPause() {
@@ -70,8 +69,9 @@ void VUtestPause() {
 	SysPrintf("VU Mem CRC = 0x%08x\n", j);
 	SysPrintf("EndPC = 0x%04x\n", VU1.VI[REG_TPC].UL);
 
+	// ... wtf?? --air
 	for (int i = 0; i < 10000000; i++) {
-		Sleep(1000);
+		Threading::Sleep(1000);
 	}
 }
 #else
@@ -84,9 +84,6 @@ extern u32 vudump;
 
 #ifdef DEBUG_COMPARE2
 
-#ifndef DEBUG_COMPARE
-#include <windows.h>
-#endif
 
 __aligned16 u8 backVUregs[sizeof(VURegs)];
 __aligned16 u8 cmpVUregs [sizeof(VURegs)];

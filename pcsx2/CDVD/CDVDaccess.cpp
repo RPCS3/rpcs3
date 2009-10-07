@@ -19,7 +19,7 @@
 #define ENABLE_TIMESTAMPS
 
 #ifdef _WIN32
-#include <windows.h>
+#	include <wx/msw/wrapwin.h>
 #endif
 
 #include <ctype.h>

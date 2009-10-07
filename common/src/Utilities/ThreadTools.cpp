@@ -15,16 +15,22 @@
 
 
 #include "PrecompiledHeader.h"
-#include "Threading.h"
-#include "wxBaseTools.h"
 
-#include <wx/datetime.h>
-#include <wx/thread.h>
+#ifdef _WIN32
+#	include <wx/msw/wrapwin.h>	// for thread renaming features
+#endif
 #include <wx/app.h>
 
 #ifdef __LINUX__
 #	include <signal.h>		// for pthread_kill, which is in pthread.h on w32-pthreads
 #endif
+
+#include "Threading.h"
+#include "wxBaseTools.h"
+
+#include <wx/datetime.h>
+#include <wx/thread.h>
+
 
 using namespace Threading;
 
@@ -32,7 +38,7 @@ namespace Threading
 {
 	static const wxTimeSpan ts_msec_250( 0, 0, 0, 250 );
 
-	static void _pt_callback_cleanup( void* handle )
+	void PersistentThread::_pt_callback_cleanup( void* handle )
 	{
 		((PersistentThread*)handle)->_ThreadCleanup();
 	}
@@ -59,11 +65,11 @@ namespace Threading
 	{
 		try
 		{
-			wxString logfix = L"Thread Destructor for " + m_name;
+			Console.WriteLn( L"Thread Log: Executing destructor for " + m_name );
 
 			if( m_running )
 			{
-				Console.WriteLn( logfix + L": Waiting for running thread to end.");
+				Console.WriteLn( L"\tWaiting for running thread to end...");
 	#if wxUSE_GUI
 				m_sem_finished.WaitGui();
 	#else
@@ -73,9 +79,7 @@ namespace Threading
 				// it gets destroyed, otherwise th mutex handle would become invalid.
 				ScopedLock locker( m_lock_start );
 			}
-			else
-				Console.WriteLn( logfix + L": thread not running.");
-			Sleep( 1 );
+			Threading::Sleep( 1 );
 			Detach();
 		}
 		DESTRUCTOR_CATCHALL
@@ -189,47 +193,22 @@ namespace Threading
 		m_except->Rethrow();
 	}
 
-	// invoked internally when canceling or exiting the thread.  Extending classes should implement
-	// OnThreadCleanup() to extend clenup functionality.
-	void PersistentThread::_ThreadCleanup()
+	void PersistentThread::TestCancel()
 	{
-		pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
-
-		// Typically thread cleanup needs to lock against thread startup, since both
-		// will perform some measure of variable inits or resets, depending on how the
-		// derrived class is implemented.
-		ScopedLock startlock( m_lock_start );
-
-		OnThreadCleanup();
-
-		m_running = false;
-		m_sem_finished.Post();
+		pxAssert( IsSelf() );
+		pthread_testcancel();
 	}
 
-	wxString PersistentThread::GetName() const
+	// Executes the virtual member method
+	void PersistentThread::_try_virtual_invoke( void (PersistentThread::*method)() )
 	{
-		return m_name;
-	}
-
-	void PersistentThread::_internal_execute()
-	{
-		m_running = true;
-		DoSetThreadName( m_name );
-
 		try {
-			ExecuteTask();
+			(this->*method)();
 		}
-		catch( std::logic_error& ex )
-		{
-			throw Exception::LogicError( wxsFormat( L"(thread: %s) STL Logic Error: %s\n\t%s",
-				GetName().c_str(), fromUTF8( ex.what() ).c_str() )
-			);
-		}
-		catch( Exception::LogicError& ex )
-		{
-			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
-			ex.Rethrow();
-		}
+
+		// ----------------------------------------------------------------------------
+		// Neat repackaging for STL Runtime errors...
+		//
 		catch( std::runtime_error& ex )
 		{
 			m_except = new Exception::RuntimeError(
@@ -244,16 +223,79 @@ namespace Threading
 				)
 			);
 		}
+
+		// ----------------------------------------------------------------------------
 		catch( Exception::RuntimeError& ex )
 		{
 			m_except = ex.Clone();
 			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
 		}
+
+		// ----------------------------------------------------------------------------
+		// Should we let logic errors propagate, or swallow them and let the thread manager
+		// handle them?  Hmm..
+		/*catch( std::logic_error& ex )
+		{
+			throw Exception::LogicError( wxsFormat( L"(thread: %s) STL Logic Error: %s\n\t%s",
+				GetName().c_str(), fromUTF8( ex.what() ).c_str() )
+			);
+		}
+		catch( Exception::LogicError& ex )
+		{
+			m_except = ex.Clone();
+			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
+		}*/
+
+		// ----------------------------------------------------------------------------
+		// BaseException / std::exception  --  same deal.  Allow propagation or no?
+		//
+		/*catch( std::exception& ex )
+		{
+			throw Exception::BaseException( wxsFormat( L"(thread: %s) STL exception: %s\n\t%s",
+				GetName().c_str(), fromUTF8( ex.what() ).c_str() )
+			);
+		}
+		catch( Exception::BaseException& ex )
+		{
+			m_except = ex.Clone();
+			m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
+		}*/
+	}
+
+	// invoked internally when canceling or exiting the thread.  Extending classes should implement
+	// OnThreadCleanup() to extend cleanup functionality.
+	void PersistentThread::_ThreadCleanup()
+	{
+		pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
+
+		// Typically thread cleanup needs to lock against thread startup, since both
+		// will perform some measure of variable inits or resets, depending on how the
+		// derived class is implemented.
+		ScopedLock startlock( m_lock_start );
+
+		_try_virtual_invoke( &PersistentThread::OnThreadCleanup );
+
+		m_running = false;
+		m_sem_finished.Post();
+	}
+
+	wxString PersistentThread::GetName() const
+	{
+		return m_name;
+	}
+
+	void PersistentThread::_internal_execute()
+	{
+		m_running = true;
+		_DoSetThreadName( m_name );
+		_try_virtual_invoke( &PersistentThread::ExecuteTask );
 	}
 
 	void PersistentThread::OnStart() {}
 	void PersistentThread::OnThreadCleanup() {}
 
+	// passed into pthread_create, and is used to dispatch the thread's object oriented
+	// callback function
 	void* PersistentThread::_internal_callback( void* itsme )
 	{
 		jASSUME( itsme != NULL );
@@ -265,12 +307,12 @@ namespace Threading
 		return NULL;
 	}
 
-	void PersistentThread::DoSetThreadName( const wxString& name )
+	void PersistentThread::_DoSetThreadName( const wxString& name )
 	{
-		DoSetThreadName( toUTF8(name) );
+		_DoSetThreadName( toUTF8(name) );
 	}
 
-	void PersistentThread::DoSetThreadName( __unused const char* name )
+	void PersistentThread::_DoSetThreadName( __unused const char* name )
 	{
 		pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
 

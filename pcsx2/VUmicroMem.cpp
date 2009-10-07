@@ -27,12 +27,6 @@
 VUmicroCpu CpuVU0;		// contains a working copy of the VU0 cpu functions/API
 VUmicroCpu CpuVU1;		// contains a working copy of the VU1 cpu functions/API
 
-static void DummyExecuteVU1Block(void)
-{
-	VU0.VI[ REG_VPU_STAT ].UL &= ~0x100;
-	VU1.vifRegs->stat.VEW = 0; // also reset the bit (grandia 3 works)
-}
-
 void vuMicroCpuReset()
 {
 	CpuVU0 = CHECK_VU0REC ? recVU0 : intVU0;

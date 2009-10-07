@@ -310,7 +310,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	{
 		// Odd versions: beta / development editions, which feature revision number and compile date.
 		wintitle.Printf( _("PCSX2  %d.%d.%d.%d%s (svn)  %s"), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
-			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, wxString::FromUTF8(__DATE__).c_str() );
+			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, fromUTF8(__DATE__).c_str() );
 	}
 	else
 	{

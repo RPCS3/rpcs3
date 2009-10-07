@@ -15,25 +15,14 @@
  
 #pragma once
 
+#include <semaphore.h>
 #include <errno.h> // EBUSY
 #include <pthread.h>
-#include <semaphore.h>
 
 #include "Pcsx2Defs.h"
 #include "ScopedPtr.h"
 
-namespace Exception
-{
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// Thread termination exception, used to quickly terminate threads from anywhere in the
-	// thread's call stack.  This exception is handled by the PCSX2 PersistentThread class.  Threads
-	// not derived from that class will not handle this exception.
-	//
-	class ThreadTermination
-	{
-	};
-}
-
+#undef Yield		// release th burden of windows.h global namespace spam.
 class wxTimeSpan;
 
 namespace Threading
@@ -56,6 +45,38 @@ namespace Threading
 		void Wait();
 	};
 #endif
+
+	// --------------------------------------------------------------------------------------
+	//  NonblockingMutex
+	// --------------------------------------------------------------------------------------
+	// This is a very simple non-blocking mutex, which behaves similarly to pthread_mutex's
+	// trylock(), but without any of the extra overhead needed to set up a structure capable
+	// of blocking waits.  It basically optimizes to a single InterlockedExchange.
+	//
+	// Simple use: if TryLock() returns false, the Bool is already interlocked by another thread.
+	// If TryLock() returns true, you've locked the object and are *responsible* for unlocking
+	// it later.
+	//
+	class NonblockingMutex
+	{
+	protected:
+		volatile long val;
+
+	public:
+		NonblockingMutex() : val( false ) {}
+		virtual ~NonblockingMutex() throw() {};
+
+		bool TryLock() throw()
+		{
+			return !_InterlockedExchange( &val, true );
+		}
+
+		bool IsLocked()
+		{ return !!val; }
+
+		void Release()
+		{ val = false; }
+	};
 
 	struct Semaphore
 	{
@@ -166,7 +187,7 @@ namespace Threading
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
 		Semaphore	m_sem_finished;		// used for canceling and closing threads in a deadlock-safe manner
-		MutexLock	m_lock_start;		// used to lock the Start() code from starting simutaneous threads accidentally.
+		MutexLock	m_lock_start;		// used to lock the Start() code from starting simultaneous threads accidentally.
 		
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
 		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.
@@ -190,27 +211,49 @@ namespace Threading
 		bool IsSelf() const;
 		wxString GetName() const;
 
-		void _ThreadCleanup();
-
 	protected:
-
 		// Extending classes should always implement your own OnStart(), which is called by
 		// Start() once necessary locks have been obtained.  Do not override Start() directly
 		// unless you're really sure that's what you need to do. ;)
 		virtual void OnStart()=0;
 		virtual void OnThreadCleanup()=0;
 
-		void DoSetThreadName( const wxString& name );
-		void DoSetThreadName( __unused const char* name );
-		void _internal_execute();
-		
-		// Used to dispatch the thread callback function.
-		// (handles some thread cleanup on Win32, and is basically a typecast
-		// on linux).
-		static void* _internal_callback( void* func );
-
 		// Implemented by derived class to handle threading actions!
 		virtual void ExecuteTask()=0;
+
+		// Inserts a thread cancellation point.  If the thread has received a cancel request, this
+		// function will throw an SEH exception designed to exit the thread (so make sure to use C++
+		// object encapsulation for anything that could leak resources, to ensure object unwinding
+		// and cleanup, or use the DoThreadCleanup() override to perform resource cleanup).
+		void TestCancel();
+
+		// Yields this thread to other threads and checks for cancellation.  A sleeping thread should
+		// always test for cancellation, however if you really don't want to, you can use Threading::Sleep()
+		// or better yet, disable cancellation of the thread completely with DisableCancellation().
+		//
+		// Parameters:
+		//   ms - 'minimum' yield time in milliseconds (rough -- typically yields are longer by 1-5ms
+		//         depending on operating system/platform).  If ms is 0 or unspecified, then a single
+		//         timeslice is yielded to other contending threads.  If no threads are contending for
+		//         time when ms==0, then no yield is done, but cancellation is still tested.
+		void Yield( int ms = 0 )
+		{
+			pxAssert( IsSelf() );
+			Threading::Sleep( ms );
+			TestCancel();
+		}
+
+		// ----------------------------------------------------------------------------
+		// Section of methods for internal use only.
+
+		void _DoSetThreadName( const wxString& name );
+		void _DoSetThreadName( __unused const char* name );
+		void _internal_execute();
+		void _try_virtual_invoke( void (PersistentThread::*method)() );
+		void _ThreadCleanup();
+
+		static void* _internal_callback( void* func );
+		static void _pt_callback_cleanup( void* handle );
 	};
 	
 	//////////////////////////////////////////////////////////////////////////////////////////

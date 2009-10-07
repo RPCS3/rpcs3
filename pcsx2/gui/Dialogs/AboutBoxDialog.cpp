@@ -51,7 +51,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	m_bitmap_dualshock( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN )
 {
-	static const wxString LabelAuthors = wxString::FromUTF8(
+	static const wxString LabelAuthors = fromUTF8(
 		"Developers"
 		"\n\n"
 		"v0.9.6+: Arcum42, Refraction,"
@@ -69,7 +69,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		"Webmasters: CKemu, Falcon4ever"
 	);
 
-	static const wxString LabelGreets = wxString::FromUTF8(
+	static const wxString LabelGreets = fromUTF8(
 		"Contributors"
 		"\n\n"
 		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu)"

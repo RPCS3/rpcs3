@@ -837,7 +837,7 @@ static void __fastcall RegWrite_Core( u16 value )
 		{
 			bool irqe = thiscore.IRQEnable;
 			int bit0 = thiscore.AttrBit0;
-			int bit4 = thiscore.AttrBit4;
+			//int bit4 = thiscore.AttrBit4;
 
 			if( ((value>>15)&1) && (!thiscore.CoreEnabled) && (thiscore.InitDelay==0) ) // on init/reset
 			{

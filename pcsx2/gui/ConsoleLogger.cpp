@@ -109,7 +109,7 @@ void ConsoleTestThread::ExecuteTask()
 		// worst case scenario (without being entirely unrealistic).
 		Console.WriteLn( wxsFormat( L"This is a threaded logging test. Something bad could happen... %d", ++numtrack ) );
 		Console.Status( wxsFormat( L"Testing high stress loads %s", L"(multi-color)" ) );
-		Sleep( 0 );
+		Yield( 0 );
 	}
 }
 

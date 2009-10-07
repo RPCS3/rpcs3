@@ -191,7 +191,7 @@ typedef struct _PS2E_SessionInfo
 	// Sony's assigned serial number, valid only for CD/CDVD games (ASCII-Z string).
 	//   Ex: SLUS-2932 (if the running app is not a sony-registered game, the serial
 	// will be a zero length string).
-	const char Serial[16];
+	char Serial[16];
 
 } PS2E_SessionInfo;
 

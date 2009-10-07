@@ -227,14 +227,14 @@ void IConsoleWriter::_Write( const char* fmt, va_list args ) const
 {
 	std::string m_format_buffer;
 	vssprintf( m_format_buffer, fmt, args );
-	Write( wxString::FromUTF8( m_format_buffer.c_str() ) );
+	Write( fromUTF8( m_format_buffer.c_str() ) );
 }
 
 void IConsoleWriter::_WriteLn( const char* fmt, va_list args ) const
 {
 	std::string m_format_buffer;
 	vssprintf( m_format_buffer, fmt, args );
-	WriteLn( wxString::FromUTF8( m_format_buffer.c_str() ) );
+	WriteLn( fromUTF8( m_format_buffer.c_str() ) );
 }
 
 void IConsoleWriter::_WriteLn( ConsoleColors color, const char* fmt, va_list args ) const

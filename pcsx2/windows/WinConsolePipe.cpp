@@ -142,6 +142,9 @@ static __forceinline bool ReadPipe(HANDLE h_Pipe, ConsoleColors color )
 	return true;
 }
 
+// --------------------------------------------------------------------------------------
+//  WinPipeThread
+// --------------------------------------------------------------------------------------
 class WinPipeThread : public PersistentThread
 {
 	typedef PersistentThread _parent;
@@ -173,8 +176,7 @@ protected:
 			SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
 			while( true )
 			{
-				Sleep( 100 );
-				pthread_testcancel();
+				Yield( 100 );
 				ReadPipe( m_outpipe, m_color );
 			}
 		}
@@ -189,6 +191,9 @@ protected:
 	void OnThreadCleanup() { }
 };
 
+// --------------------------------------------------------------------------------------
+//  WinPipeRedirection
+// --------------------------------------------------------------------------------------
 class WinPipeRedirection : public PipeRedirectionBase
 {
 	DeclareNoncopyableObject( WinPipeRedirection );
@@ -221,7 +226,8 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 		DWORD stdhandle = ( stdstream == stderr ) ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE;
 
 		CreatePipe( m_pipe, m_file );
-		SetStdHandle( stdhandle, m_file );
+		if( 0 == SetStdHandle( stdhandle, m_file ) )
+			throw Exception::Win32Error( "SetStdHandle failed." );
 
 		// In some cases GetStdHandle can fail, even when the one we just assigned above is valid.
 		HANDLE newhandle = GetStdHandle(stdhandle);
@@ -231,11 +237,11 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 		if( newhandle == NULL )
 			throw Exception::RuntimeError( "GetStdHandle returned NULL." );		// not a Win32error (no error code)
 
-		m_crtFile	= _open_osfhandle( (intptr_t)newhandle, _O_TEXT );
+		m_crtFile = _open_osfhandle( (intptr_t)newhandle, _O_TEXT );
 		if( m_crtFile == -1 ) 
 			throw Exception::RuntimeError( "_open_osfhandle returned -1." );
 
-		m_fp		= _fdopen( m_crtFile, "w" );
+		m_fp = _fdopen( m_crtFile, "w" );
 		if( m_fp == NULL )
 			throw Exception::RuntimeError( "_fdopen returned NULL." );
 
@@ -269,10 +275,22 @@ void WinPipeRedirection::Cleanup() throw()
 	{
 		fclose( m_fp );
 		m_fp = NULL;
+
+		m_crtFile	= -1;						// crtFile is closed implicitly when closing m_fp
+		m_file		= INVALID_HANDLE_VALUE;		// m_file is closed implicitly when closing crtFile
+	}
+	
+	if( m_crtFile != -1 )
+	{
+		_close( m_crtFile );
+		m_crtFile	= -1;		// m_file is closed implicitly when closing crtFile
 	}
 
-	// crtFile is closed implicitly when closing m_fp
-	// m_file is closed implicitly when closing crtFile
+	if( m_file != INVALID_HANDLE_VALUE )
+	{
+		CloseHandle( m_pipe );
+		m_file = INVALID_HANDLE_VALUE;
+	}
 
 	if( m_pipe != INVALID_HANDLE_VALUE )
 	{

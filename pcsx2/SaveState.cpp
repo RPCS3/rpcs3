@@ -136,6 +136,9 @@ static const int MainMemorySizeInBytes =
 
 void SaveStateBase::FreezeMainMemory()
 {
+	if( IsLoading() )
+		PreLoadPrep();
+
 	// First Block - Memory Dumps
 	// ---------------------------
 	FreezeMem(PS2MEM_BASE,		Ps2MemSize::Base);		// 32 MB main memory   
@@ -149,8 +152,8 @@ void SaveStateBase::FreezeMainMemory()
 
 void SaveStateBase::FreezeRegisters()
 {
-	//if( IsLoading() )
-	//	PreLoadPrep();
+	if( IsLoading() )
+		PreLoadPrep();
 
 	// Second Block - Various CPU Registers and States
 	// -----------------------------------------------
