@@ -415,7 +415,7 @@
 		<Unit filename="../x86/iVU0micro.cpp" />
 		<Unit filename="../x86/iVU1micro.cpp" />
 		<Unit filename="../x86/iVif.cpp">
-			<Option compiler="gcc" use="1" buildCommand="gcc $options -S $includes -c $file -o $object" />
+			<Option compiler="gcc" use="0" buildCommand="gcc $options -S $includes -c $file -o $object" />
 		</Unit>
 		<Unit filename="../x86/ir5900tables.cpp" />
 		<Unit filename="../x86/ix86-32/aR5900-32.S" />
