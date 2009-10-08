@@ -679,7 +679,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 	}
 
 	vif1Regs->stat.VPS = 0; //Vif goes idle as the stall happened between commands;
-	if (vif1.cmd) vif1Regs->stat.VPS |= VPS_WAITING;  //Otherwise we wait for the data
+	if (vif1.cmd) vif1Regs->stat.VPS = VPS_WAITING;  //Otherwise we wait for the data
 
 	if (!istag)
 	{
@@ -1127,21 +1127,21 @@ void vif1Write32(u32 mem, u32 value)
 			}
 #endif
 
-			vif1Regs->stat._u32 = (vif1Regs->stat.test(~VIF1_STAT_FDR)) | (value & VIF1_STAT_FDR);
+			vif1Regs->stat._u32 = (vif1Regs->stat._u32 & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
 			if (vif1Regs->stat.FDR)
 			{
-				vif1Regs->stat.FQC = 1; // FQC=1 - hack but it checks this is true before transfer? (fatal frame)
+				vif1Regs->stat.FQC = 1; // Hack but it checks this is true before transfer? (fatal frame)
 			}
 			else
 			{
 				vif1ch->qwc = 0;
 				vif1.vifstalled = false;
 				vif1.done = true;
-				vif1Regs->stat.FQC = 0; // FQC=0
+				vif1Regs->stat.FQC = 0;
 			}
 			break;
 
-		case VIF1_MODE:   // MODE
+		case VIF1_MODE:
 			vif1Regs->mode = value;
 			break;
 
