@@ -378,3 +378,27 @@ Pcsx2App::~Pcsx2App()
 		emuLog = NULL;
 	}
 }
+// ------------------------------------------------------------------------------------------
+//  Using the MSVCRT to track memory leaks:
+// ------------------------------------------------------------------------------------------
+// When exiting PCSX2 normally, the CRT will make a list of all memory that's leaked.  The
+// number inside {} can be pasted into the line below to cause MSVC to breakpoint on that
+// allocation at the time it's made.  And then using a stacktrace you can figure out what
+// leaked! :D
+//
+// Limitations: Unfortunately, wxWidgets gui uses a lot of heap allocations while handling
+// messages, and so any mouse movements will pretty much screw up the leak value.  So to use
+// this feature you need to execute pcsx in no-gui mode, and then not move the mouse or use
+// the keyboard until you get to the leak. >_<
+//
+// (but this tool is still still better than nothing!)
+struct CrtDebugBreak
+{
+	CrtDebugBreak( int spot )
+	{
+		_CrtSetBreakAlloc( spot );
+	}
+};
+
+//CrtDebugBreak breakAt( 157 );
+

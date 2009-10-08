@@ -48,7 +48,7 @@ namespace Threading
 	,	m_thread()
 	,	m_sem_event()
 	,	m_sem_finished()
-	,	m_lock_start( true )	// recursive mutexing!
+	,	m_lock_start()
 	,	m_detached( true )		// start out with m_thread in detached/invalid state
 	,	m_running( false )
 	{
@@ -572,29 +572,32 @@ namespace Threading
 		err = pthread_mutex_init( &mutex, NULL );
 	}
 
-	MutexLock::MutexLock( bool isRecursive )
-	{
-		if( isRecursive )
-		{
-			pthread_mutexattr_t mutexAttribute;
-			int status = pthread_mutexattr_init( &mutexAttribute );
-			if (status != 0) { /* ... */ }
-			status = pthread_mutexattr_settype( &mutexAttribute, PTHREAD_MUTEX_RECURSIVE);
-			if (status != 0) { /* ... */}
-
-			int err = 0;
-			err = pthread_mutex_init( &mutex, &mutexAttribute );
-		}
-		else
-		{
-			int err = 0;
-			err = pthread_mutex_init( &mutex, NULL );
-		}
-	}
-
-	MutexLock::~MutexLock()
+	MutexLock::~MutexLock() throw()
 	{
 		pthread_mutex_destroy( &mutex );
+	}
+
+	static long _attr_refcount = 0;
+	static pthread_mutexattr_t _attr_recursive;
+
+	MutexLockRecursive::MutexLockRecursive() : MutexLock( false )
+	{
+		if( _InterlockedIncrement( &_attr_refcount ) == 1 )
+		{
+			if( 0 != pthread_mutexattr_init( &_attr_recursive ) )
+				throw Exception::OutOfMemory( "Out of memory error initializing the Mutex attributes for recursive mutexing." );
+
+			pthread_mutexattr_settype( &_attr_recursive, PTHREAD_MUTEX_RECURSIVE );
+		}
+
+		int err = 0;
+		err = pthread_mutex_init( &mutex, &_attr_recursive );
+	}
+
+	MutexLockRecursive::~MutexLockRecursive() throw()
+	{
+		if( _InterlockedDecrement( &_attr_refcount ) == 0 )
+			pthread_mutexattr_destroy( &_attr_recursive );
 	}
 
 	void MutexLock::Lock()

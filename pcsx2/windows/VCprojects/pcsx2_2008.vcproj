@@ -817,15 +817,15 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\VifDma.cpp"
-								>
-							</File>
-							<File
 								RelativePath="..\..\Vif0Dma.cpp"
 								>
 							</File>
 							<File
 								RelativePath="..\..\Vif1Dma.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\VifDma.cpp"
 								>
 							</File>
 							<File

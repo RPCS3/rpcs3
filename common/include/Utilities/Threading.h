@@ -99,18 +99,31 @@ namespace Threading
 		int  Count();
 	};
 
-	struct MutexLock
+	class MutexLock
 	{
+	protected:
 		pthread_mutex_t mutex;
 
+	public:
 		MutexLock();
-		MutexLock( bool isRecursive );
-		~MutexLock();
+		virtual ~MutexLock() throw();
 
 		void Lock();
 		void Unlock();
 		bool TryLock();
+	
+	protected:
+		// empty constructor used by MutexLockRecursive
+		MutexLock( bool ) {}
 	};
+
+	class MutexLockRecursive : public MutexLock
+	{
+	public:
+		MutexLockRecursive();
+		virtual ~MutexLockRecursive() throw();
+	};
+
 
 	// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
 	extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
@@ -187,7 +200,7 @@ namespace Threading
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
 		Semaphore	m_sem_finished;		// used for canceling and closing threads in a deadlock-safe manner
-		MutexLock	m_lock_start;		// used to lock the Start() code from starting simultaneous threads accidentally.
+		MutexLockRecursive	m_lock_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
 		
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
 		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.

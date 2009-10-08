@@ -94,7 +94,7 @@ mtgsThreadObject::mtgsThreadObject() :
 ,	m_WritePos( 0 )
 
 ,	m_lock_RingRestart()
-,	m_PacketLocker( true )		// true - makes it a recursive lock
+,	m_PacketLocker()
 
 ,	m_CopyCommandTally( 0 )
 ,	m_CopyDataTally( 0 )

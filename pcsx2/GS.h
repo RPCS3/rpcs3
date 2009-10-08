@@ -95,7 +95,7 @@ protected:
 	MutexLock m_lock_RingRestart;
 
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
-	MutexLock m_PacketLocker;
+	MutexLockRecursive m_PacketLocker;
 
 	// Used to delay the sending of events.  Performance is better if the ringbuffer
 	// has more than one command in it when the thread is kicked.
