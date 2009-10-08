@@ -286,6 +286,8 @@ void SndBuffer::Cleanup()
 {
 	mods[OutputModule]->Close();
 
+	soundtouchCleanup();
+
 	safe_delete_array( m_buffer );
 	safe_delete_array( sndTempBuffer );
 	safe_delete_array( sndTempBuffer16 );
