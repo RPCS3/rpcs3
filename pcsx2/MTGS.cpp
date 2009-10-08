@@ -30,7 +30,6 @@
 //#define PCSX2_GSRING_SAMPLING_STATS
 
 using namespace Threading;
-using namespace std;
 
 #ifdef DEBUG
 #define MTGS_LOG Console.WriteLn

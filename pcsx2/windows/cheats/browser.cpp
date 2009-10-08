@@ -16,10 +16,6 @@
 
 #include "../Win32.h"
 
-#include <vector>
-
-using namespace std;
-
 #include "../cheatscpp.h"
 
 #include "PS2Edefs.h"

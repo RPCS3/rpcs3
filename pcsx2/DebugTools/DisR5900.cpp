@@ -16,8 +16,6 @@
 
 #include "PrecompiledHeader.h"
 
-using namespace std;
-
 #include "Debug.h"
 #include "R5900.h"
 #include "VU.h"

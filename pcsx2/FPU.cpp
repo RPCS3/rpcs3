@@ -20,8 +20,6 @@
 #include "R5900.h"
 #include "R5900OpcodeTables.h"
 
-using namespace std;			// for min / max
-
 // Helper Macros
 //****************************************************************
 

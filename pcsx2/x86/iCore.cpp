@@ -39,9 +39,6 @@ _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 // X86 caching
 _x86regs x86regs[iREGCNT_GPR], s_saveX86regs[iREGCNT_GPR];
 
-#include <vector>
-using namespace std;
-
 // XMM Caching
 #define VU_VFx_ADDR(x)  (uptr)&VU->VF[x].UL[0]
 #define VU_ACCx_ADDR    (uptr)&VU->ACC.UL[0]

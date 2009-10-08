@@ -392,6 +392,8 @@ Pcsx2App::~Pcsx2App()
 // the keyboard until you get to the leak. >_<
 //
 // (but this tool is still still better than nothing!)
+
+#ifdef PCSX2_DEBUG
 struct CrtDebugBreak
 {
 	CrtDebugBreak( int spot )
@@ -404,3 +406,4 @@ struct CrtDebugBreak
 
 //CrtDebugBreak breakAt( 157 );
 
+#endif

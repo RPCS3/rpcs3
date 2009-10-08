@@ -17,7 +17,6 @@
 #include "Threading.h"
 
 using namespace Threading;
-using namespace std;
 
 // This function re-assigns the console log writer(s) to the specified target.  It makes sure
 // to flush any contents from the buffered console log (which typically accumulates due to

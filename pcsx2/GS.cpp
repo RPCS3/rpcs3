@@ -25,7 +25,6 @@
 #include "VifDma.h"
 
 using namespace Threading;
-using namespace std;
 using namespace R5900;
 
 u32 CSRw;

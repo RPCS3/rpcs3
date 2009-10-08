@@ -21,8 +21,6 @@
 #include "Sifcmd.h"
 #include "Tags.h"
 
-using namespace std;
-
 DMACh *sif0ch;
 DMACh *sif1ch;
 DMACh *sif2ch;

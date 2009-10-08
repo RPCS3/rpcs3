@@ -32,8 +32,6 @@
 #	include "svnrev.h"
 #endif
 
-using namespace std;
-
 const Pcsx2Config EmuConfig;
 
 // disable all session overrides by default...

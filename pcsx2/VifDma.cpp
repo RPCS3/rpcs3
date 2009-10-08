@@ -24,8 +24,6 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 
-using namespace std;			// for min / max
-
 // Extern variables
 extern "C"
 {
