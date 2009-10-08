@@ -396,7 +396,9 @@ struct CrtDebugBreak
 {
 	CrtDebugBreak( int spot )
 	{
+#ifndef __LINUX__
 		_CrtSetBreakAlloc( spot );
+#endif
 	}
 };
 
