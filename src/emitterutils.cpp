@@ -5,6 +5,7 @@
 #include "stringsource.h"
 #include <sstream>
 #include <iomanip>
+#include <cassert>
 
 namespace YAML
 {
@@ -41,17 +42,11 @@ namespace YAML
 				return true;
 			}
 			
-			unsigned ToUnsigned(char ch) { return static_cast<unsigned int>(static_cast<unsigned char>(ch)); }
-			unsigned AdvanceAndGetNextChar(std::string::const_iterator& it, std::string::const_iterator end) {
-				std::string::const_iterator jt = it;
-				++jt;
-				if(jt == end)
-					return 0;
-				
-				++it;
-				return ToUnsigned(*it);
-			}
+			typedef unsigned char byte;
+			byte ToByte(char ch) { return static_cast<byte>(ch); }
 			
+			typedef std::string::const_iterator StrIter;
+
 			std::string WriteUnicode(unsigned value) {
 				std::stringstream str;
 				// TODO: for the common escaped characters, give their usual symbol
@@ -64,74 +59,101 @@ namespace YAML
 				return str.str();
 			}
 			
-			std::string WriteSingleByte(unsigned ch) {
-				return WriteUnicode(ch);
+			// GetBytesToRead
+			// . Returns the length of the UTF-8 sequence starting with 'signal'
+			int GetBytesToRead(byte signal) {
+				if(signal <= 0x7F) // ASCII
+					return 1;
+				else if(signal <= 0xBF) // invalid first characters
+					return 0;
+				else if(signal <= 0xDF) // Note: this allows "overlong" UTF8 (0xC0 - 0xC1) to pass unscathed. OK?
+					return 2;
+				else if(signal <= 0xEF)
+					return 3;
+				else
+					return 4;
 			}
 			
-			std::string WriteTwoBytes(unsigned ch, unsigned ch1) {
-				// Note: if no second byte is provided (signalled by ch1 == 0)
-				//       then we just write the first one as a single byte.
-				//       Should we throw an error instead? Or write something else?
-				// (The same question goes for the other WriteNBytes functions)
-				if(ch1 == 0)
-					return WriteSingleByte(ch);
-				
-				unsigned value = ((ch - 0xC0) << 6) + (ch1 - 0x80);
-				return WriteUnicode(value);
+			// ReadBytes
+			// . Reads the next 'bytesToRead', if we can.
+			// . Returns zero if we fail, otherwise fills the byte buffer with
+			//   the data and returns the number of bytes read.
+			int ReadBytes(byte bytes[4], StrIter start, StrIter end, int bytesToRead) {
+				for(int i=0;i<bytesToRead;i++) {
+					if(start == end)
+						return 0;
+					bytes[i] = ToByte(*start);
+					++start;
+				}
+				return bytesToRead;
 			}
 			
-			std::string WriteThreeBytes(unsigned ch, unsigned ch1, unsigned ch2) {
-				if(ch1 == 0)
-					return WriteSingleByte(ch);
-				if(ch2 == 0)
-					return WriteSingleByte(ch) + WriteSingleByte(ch1);
-
-				unsigned value = ((ch - 0xE0) << 12) + ((ch1 - 0x80) << 6) + (ch2 - 0x80);
-				return WriteUnicode(value);
+			// IsValidUTF8
+			// . Assumes bytes[0] is a valid signal byte with the right size passed
+			bool IsValidUTF8(byte bytes[4], int size) {
+				for(int i=1;i<size;i++)
+					if(bytes[i] & 0x80 != 0x80)
+						return false;
+				return true;
+			}
+			
+			byte UTF8SignalPrefix(int size) {
+				switch(size) {
+					case 1: return 0;
+					case 2: return 0xC0;
+					case 3: return 0xE0;
+					case 4: return 0xF0;
+				}
+				assert(false);
+				return 0;
+			}
+			
+			unsigned UTF8ToUnicode(byte bytes[4], int size) {
+				unsigned value = bytes[0] - UTF8SignalPrefix(size);
+				for(int i=1;i<size;i++)
+					value = (value << 6) + (bytes[i] - 0x80);
+				return value;
 			}
 
-			std::string WriteFourBytes(unsigned ch, unsigned ch1, unsigned ch2, unsigned ch3) {
-				if(ch1 == 0)
-					return WriteSingleByte(ch);
-				if(ch2 == 0)
-					return WriteSingleByte(ch) + WriteSingleByte(ch1);
-				if(ch3 == 0)
-					return WriteSingleByte(ch) + WriteSingleByte(ch1) + WriteSingleByte(ch2);
+			// ReadUTF8
+			// . Returns the Unicode code point starting at 'start',
+			//   and sets 'bytesRead' to the length of the UTF-8 Sequence
+			// . If it's invalid UTF8, we set 'bytesRead' to zero.
+			unsigned ReadUTF8(StrIter start, StrIter end, int& bytesRead) {
+				int bytesToRead = GetBytesToRead(ToByte(*start));
+				if(!bytesToRead) {
+					bytesRead = 0;
+					return 0;
+				}
+
+				byte bytes[4];
+				bytesRead = ReadBytes(bytes, start, end, bytesToRead);
+				if(!bytesRead)
+					return 0;
 				
-				unsigned value = ((ch - 0xF0) << 18) + ((ch1 - 0x80) << 12) + ((ch2 - 0x80) << 6) + (ch3 - 0x80);
-				return WriteUnicode(value);
+				if(!IsValidUTF8(bytes, bytesRead)) {
+					bytesRead = 0;
+					return 0;
+				}
+				
+				return UTF8ToUnicode(bytes, bytesRead);
 			}
 
 			// WriteNonPrintable
 			// . Writes the next UTF-8 code point to the stream
-			std::string::const_iterator WriteNonPrintable(ostream& out, std::string::const_iterator start, std::string::const_iterator end) {
-				std::string::const_iterator it = start;
-				unsigned ch = ToUnsigned(*it);
-				if(ch <= 0xC1) {
-					// this may include invalid first characters (0x80 - 0xBF)
-					// or "overlong" UTF-8 (0xC0 - 0xC1)
-					// We just copy them as bytes
-					// TODO: should we do something else? throw an error?
-					out << WriteSingleByte(ch);
-					return start;
-				} else if(ch <= 0xDF) {
-					unsigned ch1 = AdvanceAndGetNextChar(it, end);
-					out << WriteTwoBytes(ch, ch1);
-					return it;
-				} else if(ch <= 0xEF) {
-					unsigned ch1 = AdvanceAndGetNextChar(it, end);
-					unsigned ch2 = AdvanceAndGetNextChar(it, end);
-					out << WriteThreeBytes(ch, ch1, ch2);
-					return it;
-				} else {
-					unsigned ch1 = AdvanceAndGetNextChar(it, end);
-					unsigned ch2 = AdvanceAndGetNextChar(it, end);
-					unsigned ch3 = AdvanceAndGetNextChar(it, end);
-					out << WriteFourBytes(ch, ch1, ch2, ch3);
-					return it;
+			int WriteNonPrintable(ostream& out, StrIter start, StrIter end) {
+				int bytesRead = 0;
+				unsigned value = ReadUTF8(start, end, bytesRead);
+
+				if(bytesRead == 0) {
+					// TODO: is it ok to just write the replacement character here,
+					//       or should we instead write the invalid byte (as \xNN)?
+					out << WriteUnicode(0xFFFD);
+					return 1;
 				}
 				
-				return start;
+				out << WriteUnicode(value);
+				return bytesRead;
 			}
 		}
 		
@@ -164,7 +186,7 @@ namespace YAML
 		bool WriteDoubleQuotedString(ostream& out, const std::string& str)
 		{
 			out << "\"";
-			for(std::string::const_iterator it=str.begin();it!=str.end();++it) {
+			for(StrIter it=str.begin();it!=str.end();++it) {
 				char ch = *it;
 				if(IsPrintable(ch)) {
 					if(ch == '\"')
@@ -174,7 +196,9 @@ namespace YAML
 					else
 						out << ch;
 				} else {
-					it = WriteNonPrintable(out, it, str.end());
+					int bytesRead = WriteNonPrintable(out, it, str.end());
+					if(bytesRead >= 1)
+						it += (bytesRead - 1);
 				}
 			}
 			out << "\"";
