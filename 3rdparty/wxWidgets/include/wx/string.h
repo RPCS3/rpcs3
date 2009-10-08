@@ -174,11 +174,18 @@ inline int Stricmp(const char *psz1, const char *psz2)
 
 #include "wx/beforestd.h"
 #include <string>
+#if wxUSE_PRIVATE_HEAP && defined(__WXMSW__)
+#	include "wx/msw/HeapAllocator.h"
+#endif
 #include "wx/afterstd.h"
 
 #if wxUSE_UNICODE
     #ifdef HAVE_STD_WSTRING
-        typedef std::wstring wxStdString;
+		#if wxUSE_PRIVATE_HEAP && defined(__WXMSW__)
+			typedef std::basic_string< wchar_t, std::char_traits< wchar_t >, wxStringAllocator<wchar_t> > wxStdString;
+		#else
+			//typedef std::wstring wxStdString;
+		#endif
     #else
         typedef std::basic_string<wxChar> wxStdString;
     #endif

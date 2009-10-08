@@ -86,7 +86,7 @@
 // Default is 0
 //
 // Recommended setting: 1 if you are not using a memory debugging tool, else 0
-#define wxUSE_MEMORY_TRACING 1
+#define wxUSE_MEMORY_TRACING 0
 
 // In debug mode, cause new and delete to be redefined globally.
 // If this causes problems (e.g. link errors which is a common problem
@@ -108,6 +108,20 @@
 //
 // Recommended setting: 0
 #define wxUSE_DEBUG_NEW_ALWAYS 0
+
+// [PCSX2 Extension (Win32-specific)]
+// Tells wxWidgets to use private heaps for wxString and wxObject.  This is very
+// useful for two reasons: it tends to be a good speedup, since these objects
+// allocate a lot of small blocks that fragment the global heap, and it also
+// bypasses the CRT, which avoids heap pollution when looking for memory leaks.
+// Typically wxWidgets is leak-free so you only want your own app's blocks in
+// the global CRT heap.
+//
+// Default is 1.
+//
+// Recommended Setting: 1  (wxWidgets developers my find it useful to use 0).
+//
+#define wxUSE_PRIVATE_HEAP 1
 
 // wxHandleFatalExceptions() may be used to catch the program faults at run
 // time and, instead of terminating the program with a usual GPF message box,

@@ -5,6 +5,7 @@
 	Name="wxBase28"
 	ProjectGUID="{48AD7E0A-25B1-4974-A1E3-03F8C438D34F}"
 	RootNamespace="wxBase28"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -574,6 +575,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\msw\HeapAllocator.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\msw\main.cpp"
 				>
 			</File>
@@ -691,6 +696,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\wx\msw\gccpriv.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\wx\msw\HeapAllocator.h"
 				>
 			</File>
 			<File

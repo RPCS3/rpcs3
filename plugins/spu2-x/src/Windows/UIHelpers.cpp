@@ -63,7 +63,7 @@ __forceinline void Verifyc(HRESULT hr, const char* fn)
 
 void AssignSliderValue( HWND idcwnd, HWND hwndDisplay, int value )
 {
-	value = min( max( value, 0 ), 512 );
+	value = std::min( std::max( value, 0 ), 512 );
 	SendMessage(idcwnd,TBM_SETPOS,TRUE,value); 
 
 	wchar_t tbox[32];

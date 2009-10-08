@@ -18,6 +18,8 @@
 #ifndef _SPU2X_GLOBAL_H_
 #define _SPU2X_GLOBAL_H_
 
+#define NOMINMAX
+
 struct StereoOut16;
 struct StereoOut32;
 struct StereoOutFloat;

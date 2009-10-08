@@ -5,6 +5,7 @@
 	Name="wxConfig28"
 	ProjectGUID="{C34487AF-228A-4D11-8E50-27803DF76873}"
 	RootNamespace="wxConfig"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -127,6 +128,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\include\wx\setup.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\wx\msw\setup.h"
 				>
 				<FileConfiguration
@@ -159,10 +164,6 @@
 						Outputs="..\..\lib\vc_lib\msw\wx\setup.h"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\include\wx\setup.h"
-				>
 			</File>
 		</Filter>
 		<Filter

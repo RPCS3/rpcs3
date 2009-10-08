@@ -5,6 +5,7 @@
 	Name="wxCore28"
 	ProjectGUID="{0318BA30-EF48-441A-9E10-DC85EFAE39F0}"
 	RootNamespace="wxCore"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform

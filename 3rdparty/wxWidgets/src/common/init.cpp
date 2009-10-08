@@ -282,12 +282,16 @@ bool wxEntryStart(int& argc, wxChar **argv)
         }
     }
 
+	// PCSX2: Dunno why my operator new overload fails to work on this.  Says it needs
+	// one with four parameters... ?
+	#if !wxUSE_PRIVATE_HEAP || !defined(__WXMSW__)
     if ( !app.get() )
     {
         // either IMPLEMENT_APP() was not used at all or it failed -- in any
         // case we still need something
         app.Set(new wxDummyConsoleApp);
     }
+    #endif
 
 
     // wxApp initialization: this can be customized

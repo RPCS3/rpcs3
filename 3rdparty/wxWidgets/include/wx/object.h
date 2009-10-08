@@ -433,6 +433,40 @@ public:
 
     // Turn on the correct set of new and delete operators
 
+#if wxUSE_PRIVATE_HEAP && defined(__WXMSW__)
+	void* operator new( size_t size, const wxChar * = NULL, int  = 0 )
+	{
+		_allocateHeap_wxObject();
+		return _allocHeap_wxObject( size );
+	}
+
+    void *operator new[] ( size_t size, const wxChar * = NULL, int = 0 )
+	{
+		_allocateHeap_wxObject();
+		return _allocHeap_wxObject( size );
+	}
+
+	void operator delete( void* ptr )
+	{
+		_freeHeap_wxObject( ptr );
+	}
+	
+	void operator delete( void* ptr, const wxChar*, int  )
+	{
+		_freeHeap_wxObject( ptr );
+	}
+
+	void operator delete[]( void* ptr )
+	{
+		_freeHeap_wxObject( ptr );
+	}
+	
+	void operator delete[]( void* ptr, const wxChar*, int  )
+	{
+		_freeHeap_wxObject( ptr );
+	}
+#else
+
 #ifdef _WX_WANT_NEW_SIZET_WXCHAR_INT
     void *operator new ( size_t size, const wxChar *fileName = NULL, int lineNum = 0 );
 #endif
@@ -459,6 +493,7 @@ public:
 
 #ifdef _WX_WANT_ARRAY_DELETE_VOID_WXCHAR_INT
     void operator delete[] (void* buf, const wxChar*, int );
+#endif
 #endif
 
     // ref counted data handling methods
