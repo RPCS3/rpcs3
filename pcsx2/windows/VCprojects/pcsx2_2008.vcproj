@@ -821,7 +821,19 @@
 								>
 							</File>
 							<File
+								RelativePath="..\..\Vif0Dma.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\Vif1Dma.cpp"
+								>
+							</File>
+							<File
 								RelativePath="..\..\VifDma.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\VifDma_internal.h"
 								>
 							</File>
 							<Filter

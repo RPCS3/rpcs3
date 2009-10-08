@@ -41,11 +41,6 @@ enum UnpackOffset
 	OFFSET_W = 3
 };
 
-__forceinline static int _limit(int a, int max)
-{
-	return (a > max) ? max : a;
-}
-
 static __forceinline u32 setVifRowRegs(u32 reg, u32 data)
 {
 	switch (reg)

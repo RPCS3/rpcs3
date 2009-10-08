@@ -90,8 +90,8 @@ void __fastcall UNPACK_V4_5( u32 *dest, u32 *data, int size );
 void vifDmaInit();
 void vif0Init();
 void vif1Init();
-extern void  vif0Interrupt();
-extern void  vif1Interrupt();
+extern void vif0Interrupt();
+extern void vif1Interrupt();
 extern void Vif1MskPath3();
 
 void vif0Write32(u32 mem, u32 value);
@@ -99,5 +99,10 @@ void vif1Write32(u32 mem, u32 value);
 
 void vif0Reset();
 void vif1Reset();
+
+__forceinline static int _limit(int a, int max)
+{
+	return ((a > max) ? max : a);
+}
 
 #endif

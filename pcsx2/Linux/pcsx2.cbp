@@ -258,8 +258,11 @@
 		<Unit filename="../VUops.h" />
 		<Unit filename="../Vif.cpp" />
 		<Unit filename="../Vif.h" />
+		<Unit filename="../Vif0Dma.cpp" />
+		<Unit filename="../Vif1Dma.cpp" />
 		<Unit filename="../VifDma.cpp" />
 		<Unit filename="../VifDma.h" />
+		<Unit filename="../VifDma_internal.h" />
 		<Unit filename="../gui/AdvancedDialog.cpp" />
 		<Unit filename="../gui/AdvancedDialog.h" />
 		<Unit filename="../gui/App.h" />
