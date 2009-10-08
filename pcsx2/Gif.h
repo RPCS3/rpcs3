@@ -90,6 +90,14 @@ union tGIF_MODE
 	}
 };
 
+enum gif_paths
+{
+    GIF_APATH_IDLE = 0,
+    GIF_APATH1,
+    GIF_APATH2,
+    GIF_APATH3
+};
+
 union tGIF_STAT
 {
 	struct
