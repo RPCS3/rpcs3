@@ -16,8 +16,9 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 
-AppCoreThread::AppCoreThread( PluginManager& plugins ) :
-	SysCoreThread( plugins )
+AppCoreThread CoreThread;
+
+AppCoreThread::AppCoreThread() : SysCoreThread()
 ,	m_kevt()
 {
 }
@@ -26,11 +27,13 @@ AppCoreThread::~AppCoreThread() throw()
 {
 }
 
-void AppCoreThread::Suspend( bool isBlocking )
+bool AppCoreThread::Suspend( bool isBlocking )
 {
-	_parent::Suspend( isBlocking );
-	if( HasMainFrame() )
-		GetMainFrame().ApplySettings();
+	bool retval = _parent::Suspend( isBlocking );
+
+	wxCommandEvent evt( pxEVT_CoreThreadStatus );
+	evt.SetInt( CoreStatus_Suspended );
+	wxGetApp().AddPendingEvent( evt );
 
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
 	// plugin is suspended.
@@ -38,6 +41,8 @@ void AppCoreThread::Suspend( bool isBlocking )
 	m_kevt.m_shiftDown		= false;
 	m_kevt.m_controlDown	= false;
 	m_kevt.m_altDown		= false;
+	
+	return retval;
 }
 
 void AppCoreThread::Resume()
@@ -55,26 +60,28 @@ void AppCoreThread::Resume()
 
 void AppCoreThread::OnResumeReady()
 {
-	if( m_shortSuspend ) return;
-
 	ApplySettings( g_Conf->EmuOptions );
 
 	if( GSopen2 != NULL )
 		wxGetApp().OpenGsFrame();
 
-	if( HasMainFrame() )
-		GetMainFrame().ApplySettings();
+	wxCommandEvent evt( pxEVT_CoreThreadStatus );
+	evt.SetInt( CoreStatus_Resumed );
+	wxGetApp().AddPendingEvent( evt );
+
+	_parent::OnResumeReady();
 }
 
 // Called whenever the thread has terminated, for either regular or irregular reasons.
 // Typically the thread handles all its own errors, so there's no need to have error
 // handling here.  However it's a good idea to update the status of the GUI to reflect
 // the new (lack of) thread status, so this posts a message to the App to do so.
-void AppCoreThread::OnThreadCleanup()
+void AppCoreThread::OnCleanupInThread()
 {
-	wxCommandEvent evt( pxEVT_AppCoreThreadFinished );
+	wxCommandEvent evt( pxEVT_CoreThreadStatus );
+	evt.SetInt( CoreStatus_Stopped );
 	wxGetApp().AddPendingEvent( evt );
-	_parent::OnThreadCleanup();
+	_parent::OnCleanupInThread();
 }
 
 #ifdef __WXGTK__
@@ -84,11 +91,12 @@ void AppCoreThread::OnThreadCleanup()
 void AppCoreThread::StateCheck( bool isCancelable )
 {
 	_parent::StateCheck( isCancelable );
+	if( !pxAssert(g_plugins!=NULL) ) return;
 
 	const keyEvent* ev = PADkeyEvent();
 	if( ev == NULL || (ev->key == 0) ) return;
 
-	m_plugins.KeyEvent( *ev );
+	g_plugins->KeyEvent( *ev );
 	m_kevt.SetEventType( ( ev->evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
 	const bool isDown = (ev->evt == KEYPRESS);
 
@@ -116,7 +124,8 @@ void AppCoreThread::StateCheck( bool isCancelable )
 // suspended.  If the thread has mot been suspended, this call will fail *silently*.
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
-	if( !IsSuspended() ) return;
+	if( m_ExecMode != ExecMode_Suspended ) return;
+	if( src == EmuConfig ) return;
 
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is
@@ -128,19 +137,18 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	SysCoreThread::ApplySettings( src );
 }
 
-void AppCoreThread::ExecuteTask()
+void AppCoreThread::ExecuteTaskInThread()
 {
 	try
 	{
-		SysCoreThread::ExecuteTask();
+		SysCoreThread::ExecuteTaskInThread();
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::FileNotFound& ex )
 	{
-		m_plugins.Close();
+		if( g_plugins != NULL ) g_plugins->Close();
 		if( ex.StreamName == g_Conf->FullpathToBios() )
 		{
-			m_plugins.Close();
 			bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
 				_("\n\nPress Ok to go to the BIOS Configuration Panel.") );
 
@@ -160,7 +168,7 @@ void AppCoreThread::ExecuteTask()
 	// ----------------------------------------------------------------------------
 	catch( Exception::PluginError& ex )
 	{
-		m_plugins.Close();
+		if( g_plugins != NULL ) g_plugins->Close();
 		Console.Error( ex.FormatDiagnosticMessage() );
 		Msgbox::Alert( ex.FormatDisplayMessage(), _("Plugin Open Error") );
 
@@ -176,7 +184,7 @@ void AppCoreThread::ExecuteTask()
 	catch( Exception::BaseException& ex )
 	{
 		// Sent the exception back to the main gui thread?
-		m_plugins.Close();
+		if( g_plugins != NULL ) g_plugins->Close();
 		Msgbox::Alert( ex.FormatDisplayMessage() );
 	}
 }

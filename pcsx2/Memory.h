@@ -127,6 +127,7 @@ extern void memSetSupervisorMode();
 extern void memSetUserMode();
 extern void memSetPageAddr(u32 vaddr, u32 paddr);
 extern void memClearPageAddr(u32 vaddr);
+extern void memBindConditionalHandlers();
 
 extern void memMapVUmicro();
 

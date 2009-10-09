@@ -412,8 +412,8 @@ namespace Panels
 
 		protected:
 			void OnStart() {}
-			void ExecuteTask();
-			void OnThreadCleanup() {}
+			void ExecuteTaskInThread();
+			void OnCleanupInThread() {}
 		};
 
 		// This panel contains all of the plugin combo boxes.  We stick them

@@ -128,7 +128,7 @@ FILE *_cdvdOpenNVM()
 		fd = fopen(file.data(), "wb");
 		if (fd == NULL)
 		{
-			Console.Error( "\tMEC File Creation failed!" );
+			Console.Error( "\tNVM File Creation failed!" );
 			throw Exception::CreateStream( file );
 		}
 		for (int i=0; i<1024; i++) fputc(0, fd);

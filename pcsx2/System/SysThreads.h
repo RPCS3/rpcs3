@@ -25,8 +25,8 @@ public:
 	ISysThread() {}
 	virtual ~ISysThread() throw() {};
 
-	virtual bool IsSuspended() const { return false; }
-	virtual void Suspend( bool isBlocking = true ) { }
+	virtual bool Suspend( bool isBlocking = true ) { return false; }
+	virtual bool Pause() { return false; }
 	virtual void Resume() {}
 };
 
@@ -57,14 +57,14 @@ public:
 	explicit SysSuspendableThread();
 	virtual ~SysSuspendableThread() throw();
 
-	bool IsSuspended() const	{ return (m_ExecMode == ExecMode_Suspended); }
+	bool IsExecMode_Running() const { return m_ExecMode == ExecMode_Running; }
 
-	virtual void Suspend( bool isBlocking = true );
+	virtual bool Suspend( bool isBlocking = true );
 	virtual void Resume();
-	virtual void Pause();
-
+	virtual bool Pause();
+	
 	virtual void StateCheck( bool isCancelable = true );
-	virtual void OnThreadCleanup();
+	virtual void OnCleanupInThread();
 
 	// This function is called by Resume immediately prior to releasing the suspension of
 	// the core emulation thread.  You should overload this rather than Resume(), since
@@ -74,7 +74,10 @@ public:
 	virtual void OnStart();
 
 protected:
-	
+
+	// Used internally from Resume(), so let's make it private here.
+	virtual void Start();
+
 	// Extending classes should implement this, but should not call it.  The parent class
 	// handles invocation by the following guidelines: Called *in thread* from StateCheck()
 	// prior to suspending the thread (ie, when Suspend() has been called on a separate
@@ -108,19 +111,24 @@ class SysCoreThread : public SysSuspendableThread
 protected:
 	bool			m_resetRecompilers;
 	bool			m_resetProfilers;
-	bool			m_shortSuspend;
-	PluginManager&	m_plugins;
+	bool			m_resetVirtualMachine;
+	bool			m_hasValidState;
 
 public:
 	static SysCoreThread& Get();
 
 public:
-	explicit SysCoreThread( PluginManager& plugins );
+	explicit SysCoreThread();
 	virtual ~SysCoreThread() throw();
 
 	virtual void ApplySettings( const Pcsx2Config& src );
-	virtual void OnThreadCleanup();
 	virtual void OnResumeReady();
+	virtual void Reset();
+	
+	bool HasValidState()
+	{
+		return m_hasValidState;
+	}
 
 protected:
 	void CpuInitializeMess();
@@ -130,5 +138,6 @@ protected:
 	virtual void OnSuspendInThread();
 	virtual void OnPauseInThread() {}
 	virtual void OnResumeInThread( bool IsSuspended );
-	virtual void ExecuteTask();
+	virtual void OnCleanupInThread();
+	virtual void ExecuteTaskInThread();
 };

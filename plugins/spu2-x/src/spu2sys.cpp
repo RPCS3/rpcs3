@@ -276,17 +276,23 @@ u32 TicksThread = 0;
 
 __forceinline void TimeUpdate(u32 cClocks)
 {
-	s32 dClocks = cClocks-lClocks;
+	u32 dClocks = cClocks - lClocks;
 
-	// [Air]: Sanity Check
-	//  If for some reason our clock value seems way off base, just mix
-	//  out a little bit, skip the rest, and hope the ship "rights" itself later on.
+	// Sanity Checks:
+	//  It's not totally uncommon for the IOP's clock to jump backwards a cycle or two, and in
+	//  such cases we just want to ignore the TimeUpdate call.
+
+	if( dClocks > (u32)-15 ) return;
+	
+	//  But if for some reason our clock value seems way off base (typically due to bad dma
+	//  timings from PCSX2), just mix out a little bit, skip the rest, and hope the ship
+	//  "rights" itself later on.
 
 	if( dClocks > TickInterval*SanityInterval )
 	{
 		ConLog( " * SPU2 > TimeUpdate Sanity Check (Tick Delta: %d) (PS2 Ticks: %d)\n", dClocks/TickInterval, cClocks/TickInterval );
-		dClocks = TickInterval*SanityInterval;
-		lClocks = cClocks-dClocks;
+		dClocks = TickInterval * SanityInterval;
+		lClocks = cClocks - dClocks;
 	}
 
 	//UpdateDebugDialog();
@@ -350,8 +356,8 @@ __forceinline void TimeUpdate(u32 cClocks)
 			}
 		}
 
-		dClocks-=TickInterval;
-		lClocks+=TickInterval;
+		dClocks -= TickInterval;
+		lClocks += TickInterval;
 		Cycles++;
 
 		// Note: IOP does not use MMX regs, so no need to save them.

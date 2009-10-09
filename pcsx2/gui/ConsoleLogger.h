@@ -70,7 +70,7 @@ class ConsoleTestThread : public Threading::PersistentThread
 {
 protected:
 	volatile bool m_done;
-	void ExecuteTask();
+	void ExecuteTaskInThread();
 
 public:
 	ConsoleTestThread() :
@@ -85,7 +85,7 @@ public:
 
 	protected:
 		void OnStart() {}
-		void OnThreadCleanup() {}
+		void OnCleanupInThread() {}
 };
 
 // --------------------------------------------------------------------------------------

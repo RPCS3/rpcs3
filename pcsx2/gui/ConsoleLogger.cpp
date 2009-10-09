@@ -99,7 +99,7 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 
 
 // ----------------------------------------------------------------------------
-void ConsoleTestThread::ExecuteTask()
+void ConsoleTestThread::ExecuteTaskInThread()
 {
 	static int numtrack = 0;
 

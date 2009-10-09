@@ -310,7 +310,7 @@ void Panels::PluginSelectorPanel::Apply()
 
 	if( pi->shortname != NULL )
 	{
-		if( wxGetApp().m_CoreThread )
+		if( CoreThread.IsRunning() )
 		{
 			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
 		}
@@ -554,7 +554,7 @@ void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 	m_master.GetEventHandler()->AddPendingEvent( yay );
 }
 
-void Panels::PluginSelectorPanel::EnumThread::ExecuteTask()
+void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 {
 	DevCon.Status( "Plugin Enumeration Thread started..." );
 

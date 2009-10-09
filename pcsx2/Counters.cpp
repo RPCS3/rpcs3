@@ -442,7 +442,7 @@ __forceinline void rcntUpdate_vSync()
 	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
 		eeRecIsReset = false;
-		mtgsThread.PollStatus();
+		mtgsThread.RethrowException();
 		SysCoreThread::Get().StateCheck();
 		if( eeRecIsReset )
 		{

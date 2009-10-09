@@ -58,8 +58,8 @@ public:
 
 protected:
 	void OnStart() {}
-	void OnThreadCleanup();
-	void ExecuteTask();
+	void OnCleanupInThread();
+	void ExecuteTaskInThread();
 };
 
 LoadPluginsTask::~LoadPluginsTask() throw()
@@ -67,7 +67,7 @@ LoadPluginsTask::~LoadPluginsTask() throw()
 	PersistentThread::Cancel();
 }
 
-void LoadPluginsTask::ExecuteTask()
+void LoadPluginsTask::ExecuteTaskInThread()
 {
 	wxGetApp().Ping();
 	Yield(3);
@@ -78,13 +78,13 @@ void LoadPluginsTask::ExecuteTask()
 	Result = PluginManager_Create( m_folders );
 }
 
-void LoadPluginsTask::OnThreadCleanup()
+void LoadPluginsTask::OnCleanupInThread()
 {
 	wxCommandEvent evt( pxEVT_LoadPluginsComplete );
 	evt.SetClientData( this );
 	wxGetApp().AddPendingEvent( evt );
 
-	_parent::OnThreadCleanup();
+	_parent::OnCleanupInThread();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
@@ -127,7 +127,7 @@ static bool plugin_load_lock = false;
 void Pcsx2App::OnReloadPlugins( wxCommandEvent& evt )
 {
 	if( plugin_load_lock ) return;
-	m_CoreThread	= NULL;
+	CoreThread.Cancel();
 	m_CorePlugins	= NULL;
 
 	wxString passins[PluginId_Count];
@@ -203,7 +203,7 @@ void LoadPluginsImmediate()
 {
 	if( g_plugins != NULL ) return;
 
-	wxGetApp().m_CoreThread = NULL;
+	CoreThread.Cancel();
 
 	wxString passins[PluginId_Count];
 	ConvertPluginFilenames( passins );
@@ -213,6 +213,6 @@ void LoadPluginsImmediate()
 
 void UnloadPlugins()
 {
-	wxGetApp().m_CoreThread = NULL;
+	CoreThread.Cancel();
 	wxGetApp().m_CorePlugins = NULL;
 }

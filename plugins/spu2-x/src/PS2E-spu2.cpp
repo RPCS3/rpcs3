@@ -309,6 +309,8 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	}*/
 
 	IsOpened = true;
+	lClocks  = (cyclePtr!=NULL) ? *cyclePtr : 0;
+
 	try
 	{
 		SndBuffer::Init();

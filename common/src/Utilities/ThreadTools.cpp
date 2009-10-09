@@ -122,7 +122,7 @@ namespace Threading
 	// Remarks:
 	//   Provision of non-blocking Cancel() is probably academic, since destroying a PersistentThread
 	//   object performs a blocking Cancel regardless of if you explicitly do a non-blocking Cancel()
-	//   prior, since the ExecuteTask() method requires a valid object state.  If you really need
+	//   prior, since the ExecuteTaskInThread() method requires a valid object state.  If you really need
 	//   fire-and-forget behavior on threads, use pthreads directly for now.
 	//
 	// This function should not be called from the owner thread.
@@ -263,7 +263,7 @@ namespace Threading
 	}
 
 	// invoked internally when canceling or exiting the thread.  Extending classes should implement
-	// OnThreadCleanup() to extend cleanup functionality.
+	// OnCleanupInThread() to extend cleanup functionality.
 	void PersistentThread::_ThreadCleanup()
 	{
 		pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
@@ -273,7 +273,7 @@ namespace Threading
 		// derived class is implemented.
 		ScopedLock startlock( m_lock_start );
 
-		_try_virtual_invoke( &PersistentThread::OnThreadCleanup );
+		_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
 
 		m_running = false;
 		m_sem_finished.Post();
@@ -288,11 +288,11 @@ namespace Threading
 	{
 		m_running = true;
 		_DoSetThreadName( m_name );
-		_try_virtual_invoke( &PersistentThread::ExecuteTask );
+		_try_virtual_invoke( &PersistentThread::ExecuteTaskInThread );
 	}
 
 	void PersistentThread::OnStart() {}
-	void PersistentThread::OnThreadCleanup() {}
+	void PersistentThread::OnCleanupInThread() {}
 
 	// passed into pthread_create, and is used to dispatch the thread's object oriented
 	// callback function
@@ -391,7 +391,7 @@ namespace Threading
 		m_post_TaskComplete.Reset();
 	}
 
-	void BaseTaskThread::ExecuteTask()
+	void BaseTaskThread::ExecuteTaskInThread()
 	{
 		while( !m_Done )
 		{

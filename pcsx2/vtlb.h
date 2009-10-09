@@ -26,9 +26,18 @@ extern u8* vtlb_malloc( uint size, uint align );
 extern void vtlb_free( void* pmem, uint size );
 
 
-//physical stuff
-vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
-									vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128);
+extern vtlbHandler vtlb_NewHandler();
+
+extern vtlbHandler vtlb_RegisterHandler(
+	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
+	vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128
+);
+
+extern void vtlb_ReassignHandler( vtlbHandler rv, 
+	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
+	vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128
+);
+
 
 extern void vtlb_MapHandler(vtlbHandler handler,u32 start,u32 size);
 extern void vtlb_MapBlock(void* base,u32 start,u32 size,u32 blocksize=0);

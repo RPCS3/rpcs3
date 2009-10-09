@@ -47,22 +47,24 @@ protected:
     wxStatusBar&	m_statusbar;
     wxStaticBitmap	m_background;
 
-	wxMenuBar& m_menubar;
+	wxMenuBar&		m_menubar;
 
-	wxMenu& m_menuBoot;
-	wxMenu& m_menuEmu;
-	wxMenu& m_menuConfig;
-	wxMenu& m_menuMisc;
-	wxMenu& m_menuDebug;
+	wxMenu&			m_menuBoot;
+	wxMenu&			m_menuEmu;
+	wxMenu&			m_menuConfig;
+	wxMenu&			m_menuMisc;
+	wxMenu&			m_menuDebug;
 
-	wxMenu& m_menuVideo;
-	wxMenu& m_menuAudio;
-	wxMenu& m_menuPad;
+	wxMenu&			m_menuVideo;
+	wxMenu&			m_menuAudio;
+	wxMenu&			m_menuPad;
 
-	wxMenu& m_LoadStatesSubmenu;
-	wxMenu& m_SaveStatesSubmenu;
+	wxMenu&			m_LoadStatesSubmenu;
+	wxMenu&			m_SaveStatesSubmenu;
 
-	wxMenuItem& m_MenuItem_Console;
+	wxMenuItem&		m_MenuItem_Console;
+	
+	CmdEvt_ListenerBinding	m_Listener_CoreThreadStatus;
 
 // ------------------------------------------------------------------------
 //     MainEmuFrame Constructors and Member Methods
@@ -107,7 +109,7 @@ protected:
 	void Menu_Exit_Click(wxCommandEvent &event);
 
 	void Menu_SuspendResume_Click(wxCommandEvent &event);
-	void Menu_EmuReset_Click(wxCommandEvent &event);
+	void Menu_SysReset_Click(wxCommandEvent &event);
 
 	void Menu_ConfigPlugin_Click(wxCommandEvent &event);
 

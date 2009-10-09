@@ -58,7 +58,9 @@ R5900Exception::BaseExcept::~BaseExcept() throw (){}
 
 void cpuReset()
 {
-	mtgsWaitGS();		// GS better be done processing before we reset the EE, just in case.
+	if( mtgsThread.IsExecMode_Running() )
+		mtgsWaitGS();		// GS better be done processing before we reset the EE, just in case.
+
 	cpuIsInitialized = true;
 
 	memReset();

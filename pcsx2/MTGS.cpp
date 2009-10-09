@@ -110,13 +110,6 @@ mtgsThreadObject::mtgsThreadObject() :
 	m_name = L"MTGS";
 }
 
-void mtgsThreadObject::Start()
-{
-	_parent::Start();
-	m_ExecMode = ExecMode_Suspending;
-	SetEvent();
-}
-
 void mtgsThreadObject::OnStart()
 {
 	gsIsOpened		= false;
@@ -130,12 +123,10 @@ void mtgsThreadObject::OnStart()
 	m_packet_size		= 0;
 	m_packet_ringpos	= 0;
 
-	_parent::OnStart();
-}
+	m_CopyCommandTally	= 0;
+	m_CopyDataTally		= 0;
 
-void mtgsThreadObject::PollStatus()
-{
-	RethrowException();
+	_parent::OnStart();
 }
 
 mtgsThreadObject::~mtgsThreadObject() throw()
@@ -244,7 +235,7 @@ void mtgsThreadObject::OpenPlugin()
 	GSsetGameCRC( ElfCRC, 0 );
 }
 
-void mtgsThreadObject::ExecuteTask()
+void mtgsThreadObject::ExecuteTaskInThread()
 {
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;
@@ -444,7 +435,7 @@ void mtgsThreadObject::WaitGS()
 {
 	pxAssertDev( !IsSelf(), "This method is only allowed from threads *not* named MTGS." );
 
-	if( IsSuspended() ) return;
+	if( !pxAssertDev( m_ExecMode == ExecMode_Running, "MTGS Warning!  WaitGS issued on a suspended/paused thread." ) ) return;
 
 	// FIXME : Use semaphores instead of spinwaits.
 	SetEvent();

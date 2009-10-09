@@ -309,20 +309,17 @@ void __fastcall vtlbDefaultPhyWrite128(u32 addr,const mem128_t* data) { Console.
 // VTLB Public API -- Init/Term/RegisterHandler stuff
 //
 
-// Registers a handler into the VTLB's internal handler array.  The handler defines specific behavior
+// Assigns or re-assigns the callbacks for a VTLB memory handler.  The handler defines specific behavior
 // for how memory pages bound to the handler are read from / written to.  If any of the handler pointers
 // are NULL, the memory operations will be mapped to the BusError handler (thus generating BusError
 // exceptions if the emulated app attempts to access them).
 //
 // Note: All handlers persist across calls to vtlb_Reset(), but are wiped/invalidated by calls to vtlb_Init()
 //
-// Returns a handle for the newly created handler  See .vtlb_MapHandler for use of the return value.
-vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
-									vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128)
+void vtlb_ReassignHandler( vtlbHandler rv, 
+		 vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
+		 vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128 )
 {
-	//write the code :p
-	vtlbHandler rv=vtlbHandlerCount++;
-	
 	vtlbdata.RWFT[0][0][rv] = (r8!=0) ? (void*)(r8): (void*)vtlbDefaultPhyRead8;
 	vtlbdata.RWFT[1][0][rv] = (r16!=0)  ? (void*)r16: (void*)vtlbDefaultPhyRead16;
 	vtlbdata.RWFT[2][0][rv] = (r32!=0)  ? (void*)r32: (void*)vtlbDefaultPhyRead32;
@@ -340,9 +337,31 @@ vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP
 	vtlbdata.RWFT[2][1][rv] = (void*)((w32!=0)  ? w32:vtlbDefaultPhyWrite32);
 	vtlbdata.RWFT[3][1][rv] = (void*)((w64!=0)  ? w64:vtlbDefaultPhyWrite64);
 	vtlbdata.RWFT[4][1][rv] = (void*)((w128!=0) ? w128:vtlbDefaultPhyWrite128);
+}
 
+vtlbHandler vtlb_NewHandler()
+{
+	pxAssertDev( vtlbHandlerCount < 127, "VTLB allowed handler count exceeded!" );
+	return vtlbHandlerCount++;
+}
+
+// Registers a handler into the VTLB's internal handler array.  The handler defines specific behavior
+// for how memory pages bound to the handler are read from / written to.  If any of the handler pointers
+// are NULL, the memory operations will be mapped to the BusError handler (thus generating BusError
+// exceptions if the emulated app attempts to access them).
+//
+// Note: All handlers persist across calls to vtlb_Reset(), but are wiped/invalidated by calls to vtlb_Init()
+//
+// Returns a handle for the newly created handler  See vtlb_MapHandler for use of the return value.
+//
+vtlbHandler vtlb_RegisterHandler(	vtlbMemR8FP* r8,vtlbMemR16FP* r16,vtlbMemR32FP* r32,vtlbMemR64FP* r64,vtlbMemR128FP* r128,
+									vtlbMemW8FP* w8,vtlbMemW16FP* w16,vtlbMemW32FP* w32,vtlbMemW64FP* w64,vtlbMemW128FP* w128)
+{
+	vtlbHandler rv = vtlb_NewHandler();
+	vtlb_ReassignHandler( rv, r8, r16, r32, r64, r128, w8, w16, w32, w64, w128 );
 	return rv;
 }
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Maps the given hander (created with vtlb_RegisterHandler) to the specified memory region.

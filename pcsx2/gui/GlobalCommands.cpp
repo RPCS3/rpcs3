@@ -71,14 +71,12 @@ namespace Implementations
 
 	void Sys_Suspend()
 	{
-		if( HasCoreThread() )
-			GetCoreThread().Suspend();
+		CoreThread.Suspend();
 	}
 
 	void Sys_Resume()
 	{
-		if( HasCoreThread() )
-			GetCoreThread().Resume();
+		CoreThread.Resume();
 	}
 
 	void Sys_TakeSnapshot()
@@ -88,10 +86,9 @@ namespace Implementations
 
 	void Sys_RenderToggle()
 	{
-		if( !HasCoreThread() ) return;
-		sCoreThread.Suspend();
+		bool resume = CoreThread.Suspend();
 		renderswitch = !renderswitch;
-		sCoreThread.Resume();
+		if( resume ) CoreThread.Resume();
 	}
 
 	void Sys_LoggingToggle()

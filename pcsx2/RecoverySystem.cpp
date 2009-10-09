@@ -20,6 +20,7 @@
 
 #include "zlib/zlib.h"
 
+class _BaseStateThread;
 
 static SafeArray<u8> state_buffer;
 
@@ -32,6 +33,12 @@ static NonblockingMutex state_buffer_lock;
 bool sys_resume_lock = false;
 
 static FnType_OnThreadComplete* Callback_FreezeFinished = NULL;
+
+static void StateThread_OnAppStatus( void* thr, const enum AppStatusEvent& stat )
+{
+	if( (thr == NULL) || (stat != AppStatus_Exiting) ) return;
+	((PersistentThread*)thr)->Cancel();
+}
 
 enum
 {
@@ -46,6 +53,9 @@ class _BaseStateThread : public PersistentThread
 {
 	typedef PersistentThread _parent;
 
+protected:
+	EventListenerBinding<AppStatusEvent> m_bind_OnExit;
+
 public:
 	virtual ~_BaseStateThread() throw()
 	{
@@ -53,7 +63,8 @@ public:
 	}
 
 protected:
-	_BaseStateThread( const char* name, FnType_OnThreadComplete* onFinished )
+	_BaseStateThread( const char* name, FnType_OnThreadComplete* onFinished ) :
+		m_bind_OnExit( wxGetApp().Source_AppStatus(), EventListener<AppStatusEvent>( this, StateThread_OnAppStatus ) )
 	{
 		Callback_FreezeFinished = onFinished;
 		m_name = L"StateThread::" + fromUTF8(name);
@@ -94,18 +105,18 @@ protected:
 	{
 		_parent::OnStart();
 		sys_resume_lock = true;
-		sCoreThread.Pause();
+		CoreThread.Pause();
 	}
 
-	void ExecuteTask()
+	void ExecuteTaskInThread()
 	{
 		memSavingState( state_buffer ).FreezeAll();
 	}
 
-	void OnThreadCleanup()
+	void OnCleanupInThread()
 	{
 		SendFinishEvent( StateThreadAction_Create );
-		_parent::OnThreadCleanup();
+		_parent::OnCleanupInThread();
 	}
 };
 
@@ -131,18 +142,18 @@ protected:
 		}
 
 		sys_resume_lock = true;
-		sCoreThread.Pause();
+		CoreThread.Pause();
 	}
 
-	void ExecuteTask()
+	void ExecuteTaskInThread()
 	{
 		memLoadingState( state_buffer ).FreezeAll();
 	}
 	
-	void OnThreadCleanup()
+	void OnCleanupInThread()
 	{
 		SendFinishEvent( StateThreadAction_Restore );
-		_parent::OnThreadCleanup();
+		_parent::OnCleanupInThread();
 	}
 };
 
@@ -179,17 +190,28 @@ protected:
 			throw Exception::CreateStream( m_filename, "Cannot create savestate file for writing." );
 	}
 
-	void ExecuteTask()
+	void ExecuteTaskInThread()
 	{
-		Yield( 2 );
-		if( gzwrite( (gzFile)m_gzfp, state_buffer.GetPtr(), state_buffer.GetSizeInBytes() ) < state_buffer.GetSizeInBytes() )
-			throw Exception::BadStream();
+		Yield( 3 );
+		//if( gzwrite( m_gzfp, state_buffer.GetPtr(), state_buffer.GetSizeInBytes() ) < state_buffer.GetSizeInBytes() )
+		//	throw Exception::BadStream();
+
+		static const int BlockSize = 0x10000;
+		int curidx = 0;
+		do
+		{
+			int thisBlockSize = std::min( BlockSize, state_buffer.GetSizeInBytes() - curidx );
+			if( gzwrite( m_gzfp, state_buffer.GetPtr(curidx), thisBlockSize ) < thisBlockSize )
+				throw Exception::BadStream( m_filename );
+			curidx += BlockSize;
+			Yield( 1 );
+		} while( curidx < state_buffer.GetSizeInBytes() );
 	}
 	
-	void OnThreadCleanup()
+	void OnCleanupInThread()
 	{
 		SendFinishEvent( StateThreadAction_ZipToDisk );
-		_parent::OnThreadCleanup();
+		_parent::OnCleanupInThread();
 	}
 };
 
@@ -233,7 +255,7 @@ protected:
 			throw Exception::CreateStream( m_filename, "Cannot open savestate file for reading." );
 	}
 
-	void ExecuteTask()
+	void ExecuteTaskInThread()
 	{
 		// fixme: should start initially with the file size, and then grow from there.
 
@@ -250,10 +272,10 @@ protected:
 		m_finished = true;
 	}
 
-	void OnThreadCleanup()
+	void OnCleanupInThread()
 	{
 		SendFinishEvent( StateThreadAction_UnzipFromDisk );
-		_parent::OnThreadCleanup();
+		_parent::OnCleanupInThread();
 	}
 };
 
@@ -288,7 +310,7 @@ void OnFinished_Resume( const wxCommandEvent& evt )
 		SysClearExecutionCache();
 	}
 
-	sCoreThread.Resume();
+	CoreThread.Resume();
 }
 
 static wxString zip_dest_filename;
@@ -304,7 +326,9 @@ void OnFinished_ZipToDisk( const wxCommandEvent& evt )
 	}
 		
 	// Phase 2: Record to disk!!
-	(new StateThread_ZipToDisk( OnFinished_Resume, zip_dest_filename ))->Start();
+	(new StateThread_ZipToDisk( NULL, zip_dest_filename ))->Start();
+	
+	CoreThread.Resume();
 }
 
 void OnFinished_Restore( const wxCommandEvent& evt )
@@ -331,7 +355,7 @@ void StateCopy_SaveToFile( const wxString& file )
 void StateCopy_LoadFromFile( const wxString& file )
 {
 	if( state_buffer_lock.IsLocked() ) return;
-	sCoreThread.Pause();
+	CoreThread.Pause();
 	(new StateThread_UnzipFromDisk( OnFinished_Restore, file ))->Start();
 }
 
@@ -341,6 +365,8 @@ void StateCopy_LoadFromFile( const wxString& file )
 // the one in the memory save. :)
 void StateCopy_SaveToSlot( uint num )
 {
+	if( state_buffer_lock.IsLocked() ) return;
+
 	zip_dest_filename = SaveStateBase::GetFilename( num );
 	(new StateThread_Freeze( OnFinished_ZipToDisk ))->Start();
 	Console.Status( "Saving savestate to slot %d...", num );
@@ -361,7 +387,7 @@ void StateCopy_LoadFromSlot( uint slot )
 	Console.Status( "Loading savestate from slot %d...", slot );
 	Console.Status( wxsFormat(L"\tfilename: %s", file.c_str()) );
 
-	sCoreThread.Pause();
+	CoreThread.Pause();
 	(new StateThread_UnzipFromDisk( OnFinished_Restore, file ))->Start();
 }
 
@@ -392,9 +418,21 @@ void StateCopy_ThawFromMem()
 	new StateThread_Thaw( OnFinished_Restore );
 }
 
+void State_ThawFromMem_Blocking()
+{
+	if( !state_buffer_lock.TryLock() )
+
+	memLoadingState( state_buffer ).FreezeAll();
+	state_buffer_lock.Release();
+}
+
 void StateCopy_Clear()
 {
 	if( state_buffer_lock.IsLocked() ) return;
 	state_buffer.Dispose();
 }
 
+bool StateCopy_IsBusy()
+{
+	return state_buffer_lock.IsLocked();
+}

@@ -114,7 +114,7 @@ vtlbHandler tlb_fallback_8;
 vtlbHandler vu0_micro_mem[2];		// 0 - dynarec, 1 - interpreter
 vtlbHandler vu1_micro_mem[2];		// 0 - dynarec, 1 - interpreter
 
-vtlbHandler hw_by_page[0x10];
+vtlbHandler hw_by_page[0x10] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 vtlbHandler gs_page_0;
 vtlbHandler gs_page_1;
 
@@ -599,6 +599,19 @@ void memShutdown()
 	vtlb_Term();
 }
 
+void memBindConditionalHandlers()
+{
+	if( hw_by_page[0xf] == -1 ) return;
+
+	vtlbMemR32FP* page0F32( EmuConfig.Speedhacks.IntcStat ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
+	vtlbMemR64FP* page0F64( EmuConfig.Speedhacks.IntcStat ? hwRead64_generic_INTC_HACK : hwRead64_generic );
+
+	vtlb_ReassignHandler( hw_by_page[0xf],
+		_ext_memRead8<1>, _ext_memRead16<1>, page0F32, page0F64, hwRead128_generic,
+		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0F, hwWrite64_generic, hwWrite128_generic
+	);
+}
+
 // Resets memory mappings, unmaps TLBs, reloads bios roms, etc.
 void memReset()
 {
@@ -724,13 +737,8 @@ void memReset()
 		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0E, hwWrite64_page_0E, hwWrite128_generic
 	);
 
-	vtlbMemR32FP* page0F32( EmuConfig.Speedhacks.IntcStat ? hwRead32_page_0F_INTC_HACK : hwRead32_page_0F );
-	vtlbMemR64FP* page0F64( EmuConfig.Speedhacks.IntcStat ? hwRead64_generic_INTC_HACK : hwRead64_generic );
-
-	hw_by_page[0xf] = vtlb_RegisterHandler(
-		_ext_memRead8<1>, _ext_memRead16<1>, page0F32, page0F64, hwRead128_generic,
-		_ext_memWrite8<1>, _ext_memWrite16<1>, hwWrite32_page_0F, hwWrite64_generic, hwWrite128_generic
-	);
+	hw_by_page[0xf] = vtlb_NewHandler();
+	memBindConditionalHandlers();
 
 	//////////////////////////////////////////////////////////////////////
 	// GS Optimized Mappings

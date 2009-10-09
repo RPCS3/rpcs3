@@ -915,7 +915,7 @@ void PluginManager::Open()
 	} while( ++pi, pi->shortname != NULL );
 
 	if (GSopen2) mtgsThread.WaitForOpen();
-	mtgsThread.PollStatus();
+	mtgsThread.RethrowException();
 
 	Console.Status( "Plugins opened successfully." );
 }

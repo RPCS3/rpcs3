@@ -359,14 +359,10 @@ memSavingState::memSavingState( SafeArray<u8>& save_to ) :
 // Saving of state data
 void memSavingState::FreezeMem( void* data, int size )
 {
-	const int end = m_idx+size;
-	m_memory.MakeRoomFor( end );
-
-	u8* dest = (u8*)m_memory.GetPtr();
-	const u8* src = (u8*)data;
-
-	for( ; m_idx<end; ++m_idx, ++src )
-		dest[m_idx] = *src;
+	u8* const dest = m_memory.GetPtr(m_idx);
+	m_idx += size;
+	m_memory.MakeRoomFor( m_idx );
+	memcpy_fast( dest, data, size );
 }
 
 memLoadingState::memLoadingState( const SafeArray<u8>& load_from ) : 
@@ -379,10 +375,7 @@ memLoadingState::~memLoadingState() { }
 // Loading of state data 
 void memLoadingState::FreezeMem( void* data, int size )
 {
-	const int end = m_idx+size;
-	const u8* src = (u8*)m_memory.GetPtr();
-	u8* dest = (u8*)data;
-
-	for( ; m_idx<end; ++m_idx, ++dest )
-		*dest = src[m_idx];
+	const u8* const src = m_memory.GetPtr(m_idx);
+	m_idx += size;
+	memcpy_fast( data, src, size );
 }

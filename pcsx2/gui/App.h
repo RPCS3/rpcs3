@@ -49,7 +49,7 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_SysExecute, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_LoadPluginsComplete, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_AppCoreThreadFinished, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_CoreThreadStatus, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_FreezeThreadFinished, -1 )
 END_DECLARE_EVENT_TYPES()
 
@@ -157,6 +157,12 @@ enum DialogIdentifiers
 	DialogId_BiosSelector,
 	DialogId_LogOptions,
 	DialogId_About,
+};
+
+enum AppStatusEvent
+{
+	// Maybe this will be expanded upon later..?
+	AppStatus_Exiting
 };
 
 // --------------------------------------------------------------------------------------
@@ -324,7 +330,6 @@ protected:
 public:
 	ScopedPtr<SysCoreAllocations>	m_CoreAllocs;
 	ScopedPtr<PluginManager>		m_CorePlugins;
-	ScopedPtr<SysCoreThread>		m_CoreThread;
 
 protected:
 	// Note: Pointers to frames should not be scoped because wxWidgets handles deletion
@@ -345,7 +350,7 @@ public:
 	int  ThreadedModalDialog( DialogIdentifiers dialogId );
 	void Ping() const;
 
-	bool PrepForExit();
+	bool PrepForExit( bool canCancel );
 
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc );
@@ -358,13 +363,8 @@ public:
 	const AppImageIds& GetImgId() const { return m_ImageId; }
 
 	MainEmuFrame&	GetMainFrame() const;
-	SysCoreThread&	GetCoreThread() const;
-
+	MainEmuFrame*	GetMainFramePtr() const	{ return m_MainFrame; }
 	bool HasMainFrame() const	{ return m_MainFrame != NULL; }
-	bool HasCoreThread() const	{ return m_CoreThread != NULL; }
-
-	MainEmuFrame*	GetMainFramePtr() const		{ return m_MainFrame; }
-	SysCoreThread*	GetCoreThreadPtr() const	{ return m_CoreThread; }
 
 	void OpenGsFrame();
 	void OnGsFrameClosed();
@@ -402,10 +402,12 @@ public:
 protected:
 	CmdEvt_Source		m_evtsrc_CorePluginStatus;
 	CmdEvt_Source		m_evtsrc_CoreThreadStatus;
+	EventSource<AppStatusEvent>	m_evtsrc_AppStatus;
 
 public:
 	CmdEvt_Source& Source_CoreThreadStatus()	{ return m_evtsrc_CoreThreadStatus; }
 	CmdEvt_Source& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
+	EventSource<AppStatusEvent>& Source_AppStatus()	{ return m_evtsrc_AppStatus; }
 
 protected:
 	void InitDefaultGlobalAccelerators();
@@ -422,7 +424,7 @@ protected:
 	void OnLoadPluginsComplete( wxCommandEvent& evt );
 	void OnSemaphorePing( wxCommandEvent& evt );
 	void OnOpenModalDialog( wxCommandEvent& evt );
-	void OnCoreThreadTerminated( wxCommandEvent& evt );
+	void OnCoreThreadStatus( wxCommandEvent& evt );
 
 	void OnFreezeThreadFinished( wxCommandEvent& evt );
 
@@ -449,6 +451,13 @@ protected:
 //  AppCoreThread class
 // --------------------------------------------------------------------------------------
 
+enum CoreThreadStatus
+{
+	CoreStatus_Resumed,
+	CoreStatus_Suspended,
+	CoreStatus_Stopped,
+};
+
 class AppCoreThread : public SysCoreThread
 {
 	typedef SysCoreThread _parent;
@@ -457,18 +466,18 @@ protected:
 	wxKeyEvent		m_kevt;
 
 public:
-	AppCoreThread( PluginManager& plugins );
+	AppCoreThread();
 	virtual ~AppCoreThread() throw();
 
-	virtual void Suspend( bool isBlocking=true );
+	virtual bool Suspend( bool isBlocking=true );
 	virtual void Resume();
 	virtual void StateCheck( bool isCancelable=true );
 	virtual void ApplySettings( const Pcsx2Config& src );
 
 protected:
 	virtual void OnResumeReady();
-	virtual void OnThreadCleanup();
-	virtual void ExecuteTask();
+	virtual void OnCleanupInThread();
+	virtual void ExecuteTaskInThread();
 };
 
 DECLARE_APP(Pcsx2App)
@@ -481,8 +490,8 @@ DECLARE_APP(Pcsx2App)
 // not be invoked, and an optional "else" clause cn be affixed for handling the end case.
 //
 // Usage Examples:
-//   sCoreThread.Suspend();		// Suspends the CoreThread, or does nothing if the CoreThread handle is NULL
-//   sCoreThread.Suspend(); else Console.WriteLn( "Judge Wapner" );	// 'else' clause for handling NULL scenarios.
+//   sMainFrame.ApplySettings();
+//   sMainFrame.ApplySettings(); else Console.WriteLn( "Judge Wapner" );	// 'else' clause for handling NULL scenarios.
 //
 // Note!  These macros are not "syntax complete", which means they could generat unexpected
 // syntax errors in some situatins, and more importantly they cannot be used for invoking 
@@ -496,9 +505,6 @@ DECLARE_APP(Pcsx2App)
 // 
 #define sApp \
 	if( Pcsx2App* __app_ = (Pcsx2App*)wxApp::GetInstance() ) (*__app_)
-
-#define sCoreThread \
-	if( SysCoreThread* __thread_ = GetCoreThreadPtr() ) (*__thread_)
 
 #define sMainFrame \
 	if( MainEmuFrame* __frame_ = GetMainFramePtr() ) (*__frame_)
@@ -523,11 +529,8 @@ extern bool SysHasValidState();
 
 extern void SysStatus( const wxString& text );
 
-extern bool HasMainFrame();
-extern bool HasCoreThread();
-
+extern bool				HasMainFrame();
 extern MainEmuFrame&	GetMainFrame();
-extern SysCoreThread&	GetCoreThread();
-
 extern MainEmuFrame*	GetMainFramePtr();
-extern SysCoreThread*	GetCoreThreadPtr();
+
+extern AppCoreThread CoreThread;

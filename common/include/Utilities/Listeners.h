@@ -83,20 +83,24 @@ public:
 	virtual inline void Add( const ListenerType& listener );
 	virtual inline void RemoveObject( const void* object );
 
-	Handle Add( void* objhandle, typename ListenerType::FuncType* fnptr )
+	void Add( void* objhandle, typename ListenerType::FuncType* fnptr )
 	{
-		return Add( Handle( objhandle, fnptr ) );
+		Add( ListenerType( objhandle, fnptr ) );
 	}
 
 	void Remove( void* objhandle, typename ListenerType::FuncType* fnptr )
 	{
-		Remove( Handle( objhandle, fnptr ) );
+		Remove( ListenerType( objhandle, fnptr ) );
 	}
 
-	void Dispatch( const wxCommandEvent& evt ) const
+	void Dispatch( const EvtType& evt ) const
 	{
-		Handle iter = m_listeners.begin();
-		while( iter != m_listeners.end() )
+		// Have to make a complete copy of the list, because the event stack can change:
+		
+		ListenerList list( m_listeners );
+		
+		typename ListenerList::const_iterator iter = list.begin();
+		while( iter != list.end() )
 		{
 			try
 			{
@@ -108,7 +112,10 @@ public:
 			}
 			catch( Exception::BaseException& ex )
 			{
+				if( IsDevBuild ) throw;
+				Console.Error( L"Ignoring non-runtime BaseException thrown from event listener: " + ex.FormatDiagnosticMessage() );
 			}
+			++iter;
 		}
 	}
 };

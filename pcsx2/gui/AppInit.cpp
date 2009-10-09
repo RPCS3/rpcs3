@@ -224,7 +224,7 @@ bool Pcsx2App::OnInit()
 
 	Connect( pxEVT_LoadPluginsComplete,	wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
 
-	Connect( pxEVT_AppCoreThreadFinished,	wxCommandEventHandler( Pcsx2App::OnCoreThreadTerminated ) );
+	Connect( pxEVT_CoreThreadStatus,	wxCommandEventHandler( Pcsx2App::OnCoreThreadStatus ) );
 	Connect( pxEVT_FreezeThreadFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeThreadFinished ) );
 
 	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
@@ -335,11 +335,10 @@ bool Pcsx2App::OnInit()
 
 void Pcsx2App::CleanupMess()
 {
+	CoreThread.Cancel();
+
 	if( m_CorePlugins )
-	{
-		m_CorePlugins->Close();
 		m_CorePlugins->Shutdown();
-	}
 
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.

@@ -149,7 +149,7 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 	}
 	else
 	{
-		isClosing = wxGetApp().PrepForExit();
+		isClosing = wxGetApp().PrepForExit( evt.CanVeto() );
 		if( !isClosing ) evt.Veto( true );
 	}
 
@@ -223,7 +223,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
 	ConnectMenu( MenuId_Sys_SuspendResume,	Menu_SuspendResume_Click );
-	ConnectMenu( MenuId_Sys_Reset,			Menu_EmuReset_Click );
+	ConnectMenu( MenuId_Sys_Reset,			Menu_SysReset_Click );
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
 
@@ -260,6 +260,13 @@ void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
 	}
 }
 
+static void OnCoreThreadStatusChanged( void* obj, const wxCommandEvent& evt )
+{
+	if( obj == NULL ) return;
+	MainEmuFrame* mframe = (MainEmuFrame*)obj;
+	mframe->ApplySettings();
+}
+
 // ------------------------------------------------------------------------
 MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
     wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
@@ -286,7 +293,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) ),
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
 
-	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
+	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
+	
+	m_Listener_CoreThreadStatus( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener( this, OnCoreThreadStatusChanged ) )
 {
 	// ------------------------------------------------------------------------
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
@@ -495,8 +504,7 @@ void MainEmuFrame::ApplySettings()
 
 	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, SysHasValidState() );
 
-	if( HasCoreThread() )
-		GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, GetCoreThread().IsSuspended() ? _("Resume") :_("Suspend") );
+	GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, CoreThread.IsExecMode_Running() ? _("Suspend") :_("Resume") );
 	
 	if( m_RecentIsoList )
 	{

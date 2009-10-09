@@ -82,13 +82,13 @@ bool MainEmuFrame::_DoSelectIsoBrowser()
 
 void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 {
-	sCoreThread.Suspend();
+	CoreThread.Suspend();
 
 	if( !wxFileExists( g_Conf->CurrentIso ) )
 	{
 		if( !_DoSelectIsoBrowser() )
 		{
-			sCoreThread.Resume();
+			CoreThread.Resume();
 			return;
 		}
 	}
@@ -100,7 +100,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 		if( !result )
 		{
-			sCoreThread.Resume();
+			CoreThread.Resume();
 			return;
 		}
 	}
@@ -113,18 +113,18 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
-	sCoreThread.Suspend();
+	bool resume = CoreThread.Suspend();
 	_DoSelectIsoBrowser();
-	sCoreThread.Resume();
+	if( resume ) CoreThread.Resume();
 }
 
 void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 {
-	sCoreThread.Suspend();
+	CoreThread.Suspend();
 
 	if( !_DoSelectIsoBrowser() )
 	{
-		sCoreThread.Resume();
+		CoreThread.Resume();
 		return;
 	}
 
@@ -190,23 +190,19 @@ void MainEmuFrame::Menu_Exit_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 {
 	if( !SysHasValidState() ) return;
-	if( SysCoreThread* thr = GetCoreThreadPtr() )
-	{
-		if( thr->IsSuspended() )
-			thr->Resume();
-		else
-			thr->Suspend();
-	}
+
+	if( !CoreThread.Suspend() )
+		CoreThread.Resume();
 }
 
-void MainEmuFrame::Menu_EmuReset_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 {
 	if( !SysHasValidState() ) return;
-	bool wasSuspended = HasCoreThread() ? GetCoreThread().IsSuspended() : true;
+	bool resume = CoreThread.Suspend();
 
 	sApp.SysReset();
 
-	if( !wasSuspended )
+	if( resume )
 		sApp.SysExecute();
 }
 

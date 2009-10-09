@@ -204,4 +204,4 @@ extern void StateCopy_LoadFromFile( const wxString& file );
 extern void StateCopy_SaveToSlot( uint num );
 extern void StateCopy_LoadFromSlot( uint slot );
 extern void StateCopy_Clear();
-
+extern bool StateCopy_IsBusy();

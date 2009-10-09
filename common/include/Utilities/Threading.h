@@ -175,8 +175,8 @@ namespace Threading
 // To use this as a base class for your threaded procedure, overload the following virtual
 // methods:
 //  void OnStart();
-//  void ExecuteTask();
-//  void OnThreadCleanup();
+//  void ExecuteTaskInThread();
+//  void OnCleanupInThread();
 //  
 // Use the public methods Start() and Cancel() to start and shutdown the thread, and use
 // m_sem_event internally to post/receive events for the thread (make a public accessor for
@@ -229,10 +229,10 @@ namespace Threading
 		// Start() once necessary locks have been obtained.  Do not override Start() directly
 		// unless you're really sure that's what you need to do. ;)
 		virtual void OnStart()=0;
-		virtual void OnThreadCleanup()=0;
+		virtual void OnCleanupInThread()=0;
 
 		// Implemented by derived class to handle threading actions!
-		virtual void ExecuteTask()=0;
+		virtual void ExecuteTaskInThread()=0;
 
 		// Inserts a thread cancellation point.  If the thread has received a cancel request, this
 		// function will throw an SEH exception designed to exit the thread (so make sure to use C++
@@ -372,7 +372,7 @@ namespace Threading
 		// all your necessary processing work here.
 		virtual void Task()=0;
 
-		virtual void ExecuteTask();
+		virtual void ExecuteTaskInThread();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////

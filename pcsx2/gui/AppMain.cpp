@@ -32,7 +32,7 @@ DEFINE_EVENT_TYPE( pxEVT_OpenModalDialog );
 DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
 DEFINE_EVENT_TYPE( pxEVT_SysExecute );
 DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
-DEFINE_EVENT_TYPE( pxEVT_AppCoreThreadFinished );
+DEFINE_EVENT_TYPE( pxEVT_CoreThreadStatus );
 DEFINE_EVENT_TYPE( pxEVT_FreezeThreadFinished );
 
 bool					UseAdminMode = false;
@@ -118,13 +118,13 @@ void Pcsx2App::Ping() const
 //         Pcsx2App Event Handlers
 // ----------------------------------------------------------------------------
 
-// Invoked by the AppCoreThread when the thread has terminated itself.
-void Pcsx2App::OnCoreThreadTerminated( wxCommandEvent& evt )
+// Invoked by the AppCoreThread when it's internal status has changed.
+// evt.GetInt() reflects the status at the time the message was sent, which may differ
+// from the actual status.  Typically listeners bound to this will want to use direct
+// polling of the CoreThread rather than the belated status.
+void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 {
-
-	if( HasMainFrame() )
-		GetMainFrame().ApplySettings();
-	m_CoreThread = NULL;
+	m_evtsrc_CoreThreadStatus.Dispatch( evt );
 }
 
 void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
@@ -220,7 +220,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	{
 		// Saved state load failed.
 		Console.Notice( ex.FormatDiagnosticMessage() );
-		sCoreThread.Resume();
+		CoreThread.Resume();
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::PluginError& ex )
@@ -243,6 +243,14 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	}
 }
 
+static void OnStateSaveFinished( void* obj, const wxCommandEvent& evt )
+{
+	if( evt.GetInt() == CoreStatus_Resumed )
+	{
+		wxGetApp().PostMenuAction( MenuId_Exit );
+		wxGetApp().Source_CoreThreadStatus().Remove( NULL, OnStateSaveFinished );
+	}
+}
 
 // Common exit handler which can be called from any event (though really it should
 // be called only from CloseWindow handlers since that's the more appropriate way
@@ -250,17 +258,37 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 //
 // returns true if the app can close, or false if the close event was canceled by
 // the glorious user, whomever (s)he-it might be.
-bool Pcsx2App::PrepForExit()
+bool Pcsx2App::PrepForExit( bool canCancel )
 {
-	m_CoreThread = NULL;
-	CleanupMess();
+	// If a savestate is saving, we should wait until it finishes.  Otherwise the user
+	// might lose data.
+	
+	if( StateCopy_IsBusy() )
+	{
+		Source_CoreThreadStatus().Add( NULL, OnStateSaveFinished );
+		throw Exception::CancelEvent( "Savestate in progress, cannot close program (close event delayed)" );
+	}
 
+	if( canCancel )
+	{
+		bool resume = CoreThread.Suspend();
+		if( /* TODO: Confirm with the user? */ false )
+		{
+			if(resume) CoreThread.Resume();
+			return false;
+		}
+	}
+	else
+	{
+		m_evtsrc_AppStatus.Dispatch( AppStatus_Exiting );
+		CleanupMess();
+	}
 	return true;
 }
 
 int Pcsx2App::OnExit()
 {
-	PrepForExit();
+	CleanupMess();
 
 	if( g_Conf )
 		AppSaveSettings();
@@ -283,16 +311,6 @@ MainEmuFrame& Pcsx2App::GetMainFrame() const
 	return *m_MainFrame;
 }
 
-// This method generates debug assertions if the CoreThread handle is NULL (typically
-// indicating that there is no active emulation session).  In most cases you'll want
-// to use HasCoreThread() to test for thread validity first, or use GetCoreThreadPtr()
-// and manually check for NULL (choice is a matter of programmer preference).
-SysCoreThread& Pcsx2App::GetCoreThread() const
-{
-	pxAssert( m_CoreThread != NULL );
-	return *m_CoreThread;
-}
-
 void AppApplySettings( const AppConfig* oldconf )
 {
 	AllowFromMainThreadOnly();
@@ -305,6 +323,8 @@ void AppApplySettings( const AppConfig* oldconf )
 	g_Conf->Folders.Snapshots.Mkdir();
 
 	g_Conf->EmuOptions.BiosFilename = g_Conf->FullpathToBios();
+
+	bool resume = CoreThread.Suspend();
 
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
@@ -323,10 +343,10 @@ void AppApplySettings( const AppConfig* oldconf )
 		}
 	}
 
-	if( HasMainFrame() )
-		GetMainFrame().ApplySettings();
-	if( HasCoreThread() )
-		GetCoreThread().ApplySettings( g_Conf->EmuOptions );
+	CoreThread.ApplySettings( g_Conf->EmuOptions );
+	
+	if( resume )
+		CoreThread.Resume();
 }
 
 void AppLoadSettings()
@@ -368,8 +388,7 @@ void Pcsx2App::OpenGsFrame()
 
 void Pcsx2App::OnGsFrameClosed()
 {
-	if( m_CoreThread != NULL )
-		m_CoreThread->Suspend();
+	CoreThread.Suspend();
 	m_gsFrame = NULL;
 }
 
@@ -446,17 +465,16 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 	// it, because apparently too much stuff is going on and the emulation states are wonky.
 	if( !m_CorePlugins ) return;
 
-	if( evt.GetInt() != -1 ) SysReset();
+	if( evt.GetInt() != -1 ) SysReset(); else CoreThread.Suspend();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	if( evt.GetInt() != -1 ) CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
 
-	m_CoreThread = new AppCoreThread( *m_CorePlugins );
-	m_CoreThread->Resume();
+	CoreThread.Resume();
 }
 
 void Pcsx2App::SysReset()
 {
-	m_CoreThread	= NULL;
+	CoreThread.Reset();
 }
 
 // Returns true if there is a "valid" virtual machine state from the user's perspective.  This
@@ -466,8 +484,7 @@ void Pcsx2App::SysReset()
 // state (such as saving it), you *must* suspend the Corethread first!
 __forceinline bool SysHasValidState()
 {
-	bool isRunning = HasCoreThread() ? GetCoreThread().IsRunning() : false;
-	return isRunning || StateCopy_HasFullState();
+	return CoreThread.HasValidState() || StateCopy_HasFullState();
 }
 
 // Writes text to console and updates the window status bar and/or HUD or whateverness.
@@ -476,18 +493,12 @@ void SysStatus( const wxString& text )
 {
 	// mirror output to the console!
 	Console.Status( text.c_str() );
-	if( HasMainFrame() )
-		GetMainFrame().SetStatusText( text );
+	sMainFrame.SetStatusText( text );
 }
 
 bool HasMainFrame()
 {
 	return wxTheApp && wxGetApp().HasMainFrame();
-}
-
-bool HasCoreThread()
-{
-	return wxTheApp && wxGetApp().HasCoreThread();
 }
 
 // This method generates debug assertions if either the wxApp or MainFrame handles are
@@ -500,22 +511,10 @@ MainEmuFrame&	GetMainFrame()
 	return wxGetApp().GetMainFrame();
 }
 
-SysCoreThread&	GetCoreThread()
-{
-	return wxGetApp().GetCoreThread();
-}
-
 // Returns a pointer to the main frame of the GUI (frame may be hidden from view), or
 // NULL if no main frame exists (NoGUI mode and/or the frame has been destroyed).  If
 // the wxApp is NULL then this will also return NULL.
 MainEmuFrame*	GetMainFramePtr()
 {
 	return wxTheApp ? wxGetApp().GetMainFramePtr() : NULL;
-}
-
-// Returns a pointer to the CoreThread of the GUI (thread may be stopped or suspended),
-// or NULL if no core thread exists, or if the wxApp is also NULL.
-SysCoreThread*	GetCoreThreadPtr()
-{
-	return wxTheApp ? wxGetApp().GetCoreThreadPtr() : NULL;
 }

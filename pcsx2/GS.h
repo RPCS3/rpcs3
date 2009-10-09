@@ -126,9 +126,7 @@ public:
 	mtgsThreadObject();
 	virtual ~mtgsThreadObject() throw();
 
-	void Start();
 	void OnStart();
-	void PollStatus();
 
 	// Waits for the GS to empty out the entire ring buffer contents.
 	// Used primarily for plugin startup/shutdown.
@@ -167,7 +165,7 @@ protected:
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();
 	void _FinishSimplePacket( uint future_writepos );
-	void ExecuteTask();
+	void ExecuteTaskInThread();
 };
 
 extern __aligned16 mtgsThreadObject mtgsThread;

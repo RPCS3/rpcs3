@@ -169,7 +169,7 @@ public:
 protected:
 	void OnStart() {}
 
-	void ExecuteTask()
+	void ExecuteTaskInThread()
 	{
 		try
 		{
@@ -188,7 +188,7 @@ protected:
 		}
 	}
 
-	void OnThreadCleanup() { }
+	void OnCleanupInThread() { }
 };
 
 // --------------------------------------------------------------------------------------

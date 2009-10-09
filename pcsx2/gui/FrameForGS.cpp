@@ -54,8 +54,7 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title):
 
 GSFrame::~GSFrame() throw()
 {
-	if( HasCoreThread() )
-		GetCoreThread().Suspend();		// Just in case...!
+	CoreThread.Suspend();		// Just in case...!
 }
 
 void GSFrame::OnCloseWindow(wxCloseEvent& evt)
