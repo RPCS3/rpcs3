@@ -16,6 +16,13 @@
 #ifndef __VIFDMA_INTERNAL_H__
 #define __VIFDMA_INTERNAL_H__
 
+enum VifModes
+{
+	VIF_NORMAL_TO_MEM_MODE = 0,
+	VIF_NORMAL_FROM_MEM_MODE = 1,
+	VIF_CHAIN_MODE = 2
+};
+
 // Generic constants
 static const unsigned int VIF0intc = 4;
 static const unsigned int VIF1intc = 5;
@@ -35,11 +42,11 @@ struct VIFUnpackFuncTable
 	// will be decompressed from data for 1 cycle
 };
 
-extern int g_vifCycles;
-extern u8 s_maskwrite[256];
 extern const VIFUnpackFuncTable VIFfuncTable[16];
 extern __aligned16 u32 g_vif0Masks[64], g_vif1Masks[64];
 extern u32 g_vif0HasMask3[4], g_vif1HasMask3[4];
+extern int g_vifCycles;
+extern u8 s_maskwrite[256];
 
 template<const u32 VIFdmanum> void ProcessMemSkip(u32 size, u32 unpackType);
 template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size);

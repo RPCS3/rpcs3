@@ -15,13 +15,6 @@
 #ifndef __VIFDMA_H__
 #define __VIFDMA_H__
 
-enum VifModes
-{
-	VIF_NORMAL_TO_MEM_MODE = 0,
-	VIF_NORMAL_FROM_MEM_MODE = 1,
-	VIF_CHAIN_MODE = 2
-};
-
 struct vifCode {
    u32 addr;
    u32 size;
@@ -87,18 +80,18 @@ void __fastcall UNPACK_V4_8s( u32 *dest, u32 *data, int size );
 
 void __fastcall UNPACK_V4_5( u32 *dest, u32 *data, int size );
 
-void vifDmaInit();
-void vif0Init();
-void vif1Init();
+extern void vifDmaInit();
+
+extern void vif0Init();
 extern void vif0Interrupt();
+extern void vif0Write32(u32 mem, u32 value);
+extern void vif0Reset();
+
 extern void vif1Interrupt();
+extern void vif1Init();
 extern void Vif1MskPath3();
-
-void vif0Write32(u32 mem, u32 value);
-void vif1Write32(u32 mem, u32 value);
-
-void vif0Reset();
-void vif1Reset();
+extern void vif1Write32(u32 mem, u32 value);
+extern void vif1Reset();
 
 __forceinline static int _limit(int a, int max)
 {

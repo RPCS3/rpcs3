@@ -563,9 +563,12 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		}
 		else
 		{
-			tempsize = 0;  //Commenting out this then
-			//tempsize = size; // -\_uncommenting these Two enables non-SSE unpacks
-			//size = 0;		 // -/
+#ifndef NON_SSE_UNPACKS
+			tempsize = 0;
+#else
+			tempsize = size;
+			size = 0;
+#endif
 		}
 
 		if (size >= ft->gsize)

@@ -400,3 +400,5 @@ extern SessionOverrideFlags g_Session;
 #endif
 
 #define EE_CONST_PROP // rec2 - enables constant propagation (faster)
+//#define NON_SSE_UNPACKS  // Turns off SSE Unpacks (slower)
+

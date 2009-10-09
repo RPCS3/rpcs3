@@ -269,7 +269,6 @@ enum EERegisterAddresses
 	DMAC_ENABLEW	=	0x1000F590
 };
 
-
 enum GSRegisterAddresses
 {
 	GS_PMODE		=	0x12000000,
@@ -338,9 +337,9 @@ enum DMACIrqs
 	DMAC_TO_SPR,
 
 	// We're setting error conditions through hwDmacIrq, so these correspond to the conditions above.
-	DMAC_STALL_SIS		= 13,
-	DMAC_MFIFO_EMPTY	= 14,
-	DMAC_BUS_ERROR	= 15
+	DMAC_STALL_SIS		= 13, // SIS
+	DMAC_MFIFO_EMPTY	= 14, // MEIS
+	DMAC_BUS_ERROR	= 15      // BEIS
 };
 
 //DMA interrupts & masks
@@ -457,7 +456,36 @@ struct DMACregisters
 	tDMAC_STADR	stadr;
 };
 
+// Currently guesswork.
+union tINTC_STAT {
+	struct {
+		u32 interrupts : 10;
+	    u32 placeholder : 22;
+	};
+	u32 _u32;
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set(u32 flags) { _u32 |= flags; }
+	void clear(u32 flags) { _u32 &= ~flags; }
+};
+
+union tINTC_MASK {
+	struct {
+	    u32 int_mask : 10;
+	    u32 placeholder:22;
+	};
+	u32 _u32;
+};
+
+struct INTCregisters
+{
+	tINTC_STAT	stat;
+	u32 padding[3];
+	tINTC_MASK	mask;
+};
+    
 #define dmacRegs ((DMACregisters*)(PS2MEM_HW+0xE000))
+#define intcRegs ((INTCregisters*)(PS2MEM_HW+0xF000))
 
 #ifdef PCSX2_VIRTUAL_MEM
 
@@ -522,10 +550,10 @@ static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num)
 	if (ptr == NULL)
 	{
 		// DMA Error
-		psHu32(DMAC_STAT) |= DMAC_STAT_BEIS; /* BUS error */
+		dmacRegs->stat.BEIS = 1; // BUS Error
 
 		// DMA End
-		psHu32(DMAC_STAT) |= 1<<num;
+		dmacRegs->stat.set(1 << num);
 		dma->chcr.STR = 0;
 	}
 
@@ -604,6 +632,7 @@ void hwConstWrite128(u32 mem, int xmmreg);
 extern void  intcInterrupt();
 extern void  dmacInterrupt();
 
-extern int rdram_devices, rdram_sdevid;
+extern const int rdram_devices;
+extern int rdram_sdevid;
 
 #endif /* __HW_H__ */

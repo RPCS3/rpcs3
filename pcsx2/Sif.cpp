@@ -199,10 +199,10 @@ __forceinline void SIF0Dma()
 				//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
 				SIF_LOG("----------- %lX of %lX", readSize << 2, size << 2);
 
-				ptag = _dmaGetAddr(sif0dma, sif0dma->madr, 5);
+				ptag = _dmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
 				if (ptag == NULL) return;
 				
-				//_dmaGetAddr(sif0dma, *ptag, sif0dma->madr, 5);
+				//_dmaGetAddr(sif0dma, *ptag, sif0dma->madr, DMAC_SIF0);
 
 				SIF0read((u32*)ptag, readSize << 2);
 
@@ -283,10 +283,10 @@ __forceinline void SIF1Dma()
 				{
 					// Process DMA tag at sif1dma->tadr
 					done = false;
-					ptag = _dmaGetAddr(sif1dma, sif1dma->tadr, 6);
+					ptag = _dmaGetAddr(sif1dma, sif1dma->tadr, DMAC_SIF1);
 					if (ptag == NULL) return;
 					
-					//_dmaGetAddr(sif1dma, *ptag, sif1dma->tadr, 6);
+					//_dmaGetAddr(sif1dma, *ptag, sif1dma->tadr, DMAC_SIF1);
 					
 					
 					sif1dma->chcr._u32 = (sif1dma->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);     // Copy the tag
@@ -350,10 +350,10 @@ __forceinline void SIF1Dma()
 				int qwTransfer = sif1dma->qwc;
 				u32 *data;
 				
-				data = _dmaGetAddr(sif1dma, sif1dma->madr, 6);
+				data = _dmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
 				if (data == NULL) return;
 				
-				//_dmaGetAddr(sif1dma, *data, sif1dma->madr, 6);
+				//_dmaGetAddr(sif1dma, *data, sif1dma->madr, DMAC_SIF1);
 
 				if (qwTransfer > (FIFO_SIF1_W - sif1.fifoSize) / 4) // Copy part of sif1dma into FIFO
 					qwTransfer = (FIFO_SIF1_W - sif1.fifoSize) / 4;
