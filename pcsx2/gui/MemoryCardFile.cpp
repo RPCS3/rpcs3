@@ -220,11 +220,14 @@ u64 FileMemoryCard::GetCRC( uint port, uint slot )
 
 	if( !Seek( mcfp, 0 ) ) return 0;
 
+	// Process the file in 4k chunks.  Speeds things up significantly.
 	u64 retval = 0;
-	for( uint i=MC2_SIZE/sizeof(u64); i; --i )
+	u64 buffer[0x1000];
+	for( uint i=MC2_SIZE/sizeof(buffer); i; --i )
 	{
-		u64 temp; mcfp.Read( &temp, sizeof(temp) );
-		retval ^= temp;
+		mcfp.Read( &buffer, sizeof(buffer) );
+		for( uint t=0; t<ArraySize(buffer); ++t )
+			retval ^= buffer[t];
 	}
 
 	return retval;

@@ -104,6 +104,7 @@ protected:
 	void OnStart()
 	{
 		_parent::OnStart();
+
 		sys_resume_lock = true;
 		CoreThread.Pause();
 	}
@@ -203,7 +204,7 @@ protected:
 			int thisBlockSize = std::min( BlockSize, state_buffer.GetSizeInBytes() - curidx );
 			if( gzwrite( m_gzfp, state_buffer.GetPtr(curidx), thisBlockSize ) < thisBlockSize )
 				throw Exception::BadStream( m_filename );
-			curidx += BlockSize;
+			curidx += thisBlockSize;
 			Yield( 1 );
 		} while( curidx < state_buffer.GetSizeInBytes() );
 	}
@@ -259,11 +260,13 @@ protected:
 	{
 		// fixme: should start initially with the file size, and then grow from there.
 
-		static const int BlockSize = 327680;
+		static const int BlockSize = 0x100000;
+		state_buffer.MakeRoomFor( 0x800000 );		// start with an 8 meg buffer to avoid frequent reallocation.
+
 		int curidx = 0;
 		do
 		{
-			state_buffer.ExactAlloc( curidx+BlockSize );
+			state_buffer.MakeRoomFor( curidx+BlockSize );
 			gzread( m_gzfp, state_buffer.GetPtr(curidx), BlockSize );
 			curidx += BlockSize;
 			TestCancel();
@@ -313,6 +316,11 @@ void OnFinished_Resume( const wxCommandEvent& evt )
 	CoreThread.Resume();
 }
 
+void OnFinished_Dispose( const wxCommandEvent& evt )
+{
+	state_buffer.Dispose();
+}
+
 static wxString zip_dest_filename;
 
 void OnFinished_ZipToDisk( const wxCommandEvent& evt )
@@ -326,7 +334,7 @@ void OnFinished_ZipToDisk( const wxCommandEvent& evt )
 	}
 		
 	// Phase 2: Record to disk!!
-	(new StateThread_ZipToDisk( NULL, zip_dest_filename ))->Start();
+	(new StateThread_ZipToDisk( OnFinished_Dispose, zip_dest_filename ))->Start();
 	
 	CoreThread.Resume();
 }

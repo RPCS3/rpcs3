@@ -85,7 +85,7 @@ public:
 	// Loads or saves the entire emulation state.
 	// Note: The Cpu state must be reset, and plugins *open*, prior to Defrosting
 	// (loading) a state!
-	void FreezeAll();
+	virtual void FreezeAll();
 
 	// Loads or saves an arbitrary data type.  Usable on atomic types, structs, and arrays.  
 	// For dynamically allocated pointers use FreezeMem instead.
@@ -168,9 +168,11 @@ protected:
 
 class memSavingState : public SaveStateBase
 {
+	typedef SaveStateBase _parent;
+
 protected:
 	static const int ReallocThreshold = 0x200000;	// 256k reallocation block size.
-	static const int MemoryBaseAllocSize = 0x02a00000;  // 42 meg base alloc
+	static const int MemoryBaseAllocSize = 0x02b00000;  // 45 meg base alloc
 
 public:
 	virtual ~memSavingState() { }
@@ -178,6 +180,8 @@ public:
 	
 	// Saving of state data to a memory buffer
 	void FreezeMem( void* data, int size );
+	void FreezeAll();
+
 	bool IsSaving() const { return true; }
 };
 

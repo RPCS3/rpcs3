@@ -151,16 +151,15 @@ public:
 		m_ptr = _virtual_realloc( newsize );
 		if( m_ptr == NULL )
 		{
-
-				throw Exception::OutOfMemory(
-					wxsFormat(	// english (for diagnostic)
-						L"Out-of-memory on SafeArray block re-allocation.\n"
-						L"Old size: %d bytes, New size: %d bytes.",
-						m_size, newsize
-					),
-					// internationalized!
-					wxsFormat( _("Out of memory, trying to allocate %d bytes."), newsize )
-				);
+			throw Exception::OutOfMemory(
+				wxsFormat(	// english (for diagnostic)
+					L"Out-of-memory on SafeArray block re-allocation.\n"
+					L"Old size: %d bytes, New size: %d bytes.",
+					m_size, newsize
+				),
+				// internationalized!
+				wxsFormat( _("Out of memory, trying to allocate %d bytes."), newsize )
+			);
 		}
 		m_size = newsize;
 	}

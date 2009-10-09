@@ -324,6 +324,8 @@ void SndBuffer::soundtouchInit()
 // reset timestretch management vars, and delay updates a bit:
 void SndBuffer::soundtouchClearContents()
 {
+	if( pSoundTouch == NULL ) return;
+
 	pSoundTouch->clear();
 	pSoundTouch->setTempo(1);
 

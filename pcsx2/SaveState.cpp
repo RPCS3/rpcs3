@@ -352,8 +352,6 @@ void SaveStateBase::FreezeAll()
 memSavingState::memSavingState( SafeArray<u8>& save_to ) :
 	SaveStateBase( save_to )
 {
-	save_to.ChunkSize = ReallocThreshold;
-	save_to.MakeRoomFor( MemoryBaseAllocSize );
 }
 
 // Saving of state data
@@ -363,6 +361,15 @@ void memSavingState::FreezeMem( void* data, int size )
 	m_idx += size;
 	m_memory.MakeRoomFor( m_idx );
 	memcpy_fast( dest, data, size );
+}
+
+void memSavingState::FreezeAll()
+{
+	// 90% of all savestates fit in under 45 megs (and require more than 43 megs, so migght as well...)
+	m_memory.ChunkSize = ReallocThreshold;
+	m_memory.MakeRoomFor( MemoryBaseAllocSize );
+
+	_parent::FreezeAll();
 }
 
 memLoadingState::memLoadingState( const SafeArray<u8>& load_from ) : 
