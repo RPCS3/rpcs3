@@ -31,7 +31,7 @@ void _allocateHeap_wxString()
 	if( win32_string_heap == INVALID_HANDLE_VALUE )
 	{
 		//wxASSERT( win32_string_heap_refcount == 0 );
-		win32_string_heap = HeapCreate( HEAP_NO_SERIALIZE, 0x200000, 0 );
+		win32_string_heap = HeapCreate( 0, 0x200000, 0 );
 	}
 }
 
