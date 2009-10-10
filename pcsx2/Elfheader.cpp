@@ -18,6 +18,7 @@
 #include "Common.h"
 #include "CDVD/IsoFSdrv.h"
 #include "DebugTools/Debug.h"
+#include "GS.h"			// for sending game crc to mtgs
 
 using namespace std;
 
@@ -604,8 +605,8 @@ void loadElfFile(const wxString& filename)
 
 	ElfCRC = elfobj.GetCRC();
 	Console.Status( wxsFormat( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC ) );
-
 	ElfApplyPatches();
+	mtgsThread.SendGameCRC( ElfCRC );
 	
 	return;
 }
