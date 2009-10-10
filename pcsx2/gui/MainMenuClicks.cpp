@@ -168,7 +168,7 @@ void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_SaveStates_Click(wxCommandEvent &event)
 {
-	States_SetCurrentSlot( event.GetId() - MenuId_State_Load01 - 1 );
+	States_SetCurrentSlot( event.GetId() - MenuId_State_Save01 - 1 );
 	States_FreezeCurrentSlot();
 }
 
