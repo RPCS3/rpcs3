@@ -218,7 +218,7 @@ __forceinline void SIF0Dma()
 			{
 				// Stop if TIE & the IRQ are set, or at the end. (I'll try to convert this to use the tags code later.)
 				//if (((sif0dma->chcr._u32 & 0x80000080) == 0x80000080) || (sif0.end)) 
-				if ((sif0dma->chcr.TIE & Tag::IRQ(sif0dma->chcr._u32)) || sif0.end)
+				if ((sif0dma->chcr.TIE && Tag::IRQ(sif0dma->chcr._u32)) || sif0.end)
 				{
 					if (sif0.end)
 						SIF_LOG(" EE SIF end"); 
