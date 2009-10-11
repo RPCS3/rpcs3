@@ -635,6 +635,7 @@ void vifMFIFOInterrupt()
 		vif1Regs->stat.INT = 1;
 		hwIntcIrq(INTC_VIF1);
 		--vif1.irq;
+		
 		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
 			vif1Regs->stat.FQC = 0; // FQC=0
@@ -645,12 +646,10 @@ void vifMFIFOInterrupt()
 	
 	if (vif1.done == false || vif1ch->qwc)
 	{
-		
-
 		switch(vif1.inprogress & 1)
 		{
 			case 0: //Set up transfer
-				if (vif1ch->tadr == spr0->madr)
+                if (vif1ch->tadr == spr0->madr)
 				{
 				//	Console.WriteLn("Empty 1");
 					vifqwc = 0;
@@ -660,13 +659,14 @@ void vifMFIFOInterrupt()
 					return;
 				}
 
-				 mfifoVIF1transfer(0);
-				 if ((vif1ch->madr >= dmacRegs->rbor.ADDR) && (vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)))
-					CPU_INT(10, 0);
-				else
+                mfifoVIF1transfer(0);
+                if ((vif1ch->madr >= dmacRegs->rbor.ADDR) && (vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)))
+                    CPU_INT(10, 0);
+                else
 					CPU_INT(10, vif1ch->qwc * BIAS);
 
 				return;
+				
 			case 1: //Transfer data
 				mfifo_VIF1chain();	
 				CPU_INT(10, 0);
@@ -689,6 +689,5 @@ void vifMFIFOInterrupt()
 	hwDmacIrq(DMAC_VIF1);
 	VIF_LOG("vif mfifo dma end");
 
-	vif1Regs->stat.FQC = 0; // FQC=0
-
+	vif1Regs->stat.FQC = 0;
 }

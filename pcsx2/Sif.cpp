@@ -188,7 +188,7 @@ __forceinline void SIF0Dma()
 		if (eesifbusy[0]) // If EE SIF enabled and there's something to transfer
 		{
 			int size = sif0dma->qwc;
-			if (dmacRegs->ctrl.STS == STS_SIF0)   // STS == fromSIF0
+			if (dmacRegs->ctrl.STS == STS_SIF0)
 			{
 				SIF_LOG("SIF0 stall control");
 			}
@@ -217,7 +217,8 @@ __forceinline void SIF0Dma()
 			if (sif0dma->qwc == 0)
 			{
 				// Stop if TIE & the IRQ are set, or at the end. (I'll try to convert this to use the tags code later.)
-				if (((sif0dma->chcr._u32 & 0x80000080) == 0x80000080) || (sif0.end)) 
+				//if (((sif0dma->chcr._u32 & 0x80000080) == 0x80000080) || (sif0.end)) 
+				if ((sif0dma->chcr.TIE & Tag::IRQ(sif0dma->chcr._u32)) || sif0.end)
 				{
 					if (sif0.end)
 						SIF_LOG(" EE SIF end"); 
@@ -242,11 +243,10 @@ __forceinline void SIF0Dma()
 
 					//  (tag[0] >> 28) & 3? Surely this is supposed to be (tag[0] >> 28) & 7? --arcum42
 					if ((dmacRegs->ctrl.STS != NO_STS) && ((tag[0] >> 28) & 3) == 0)
-						psHu32(DMAC_STADR) = sif0dma->madr + (sif0dma->qwc * 16);
+						dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
 					sif0.chain = 1;
 					if (tag[0] & 0x40000000) sif0.end = 1;
 					done = false;
-
 				}
 			}
 		}
@@ -263,7 +263,6 @@ __forceinline void SIF1Dma()
 	{
 		if (eesifbusy[1]) // If EE SIF1 is enabled
 		{
-
 			if (dmacRegs->ctrl.STD == STD_SIF1)
 				SIF_LOG("SIF1 stall control"); // STD == fromSIF1
 
@@ -285,8 +284,6 @@ __forceinline void SIF1Dma()
 					done = false;
 					ptag = _dmaGetAddr(sif1dma, sif1dma->tadr, DMAC_SIF1);
 					if (ptag == NULL) return;
-					
-					//_dmaGetAddr(sif1dma, *ptag, sif1dma->tadr, DMAC_SIF1);
 					
 					
 					sif1dma->chcr._u32 = (sif1dma->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);     // Copy the tag
@@ -352,8 +349,6 @@ __forceinline void SIF1Dma()
 				
 				data = _dmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
 				if (data == NULL) return;
-				
-				//_dmaGetAddr(sif1dma, *data, sif1dma->madr, DMAC_SIF1);
 
 				if (qwTransfer > (FIFO_SIF1_W - sif1.fifoSize) / 4) // Copy part of sif1dma into FIFO
 					qwTransfer = (FIFO_SIF1_W - sif1.fifoSize) / 4;
@@ -451,6 +446,7 @@ __forceinline void dmaSIF0()
 
 	psHu32(SBUS_F240) |= 0x2000;
 	eesifbusy[0] = true;
+	
 	if (iopsifbusy[0])
 	{
 		FreezeXMMRegs(1);
@@ -474,6 +470,7 @@ __forceinline void dmaSIF1()
 
 	psHu32(SBUS_F240) |= 0x4000;
 	eesifbusy[1] = true;
+	
 	if (iopsifbusy[1])
 	{
 		FreezeXMMRegs(1);

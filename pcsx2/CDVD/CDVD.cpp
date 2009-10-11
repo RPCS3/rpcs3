@@ -120,7 +120,7 @@ FILE *_cdvdOpenNVM()
 	nvmfile.SetExt( L"nvm" );
 	const wxCharBuffer file( nvmfile.GetFullPath().ToUTF8() );
 
-	// if file doesnt exist, create empty one
+	// if file doesn't exist, create empty one
 	fd = fopen(file.data(), "r+b");
 	if (fd == NULL)
 	{
@@ -266,13 +266,13 @@ s32 cdvdReadConfig(u8* config)
 	switch (cdvd.COffset)
 	{
 		case 0:
-			return getNvmData(config, (cdvd.CBlockIndex++)*16, 16,  offsetof(NVMLayout, config0));
+			return getNvmData(config, (cdvd.CBlockIndex++)*16, 16, offsetof(NVMLayout, config0));
 			break;
 		case 2:
-			return getNvmData(config, (cdvd.CBlockIndex++)*16, 16,  offsetof(NVMLayout, config2));
+			return getNvmData(config, (cdvd.CBlockIndex++)*16, 16, offsetof(NVMLayout, config2));
 			break;
 		default:
-			return getNvmData(config, (cdvd.CBlockIndex++)*16, 16,  offsetof(NVMLayout, config1));
+			return getNvmData(config, (cdvd.CBlockIndex++)*16, 16, offsetof(NVMLayout, config1));
 	}
 }
 s32 cdvdWriteConfig(const u8* config)
@@ -291,7 +291,7 @@ s32 cdvdWriteConfig(const u8* config)
 	switch (cdvd.COffset)
 	{
 		case 0:
-			return setNvmData(config, (cdvd.CBlockIndex++)*16, 16,offsetof(NVMLayout, config0));
+			return setNvmData(config, (cdvd.CBlockIndex++)*16, 16, offsetof(NVMLayout, config0));
 			break;
 		case 2:
 			return setNvmData(config, (cdvd.CBlockIndex++)*16, 16, offsetof(NVMLayout, config2));
@@ -301,6 +301,16 @@ s32 cdvdWriteConfig(const u8* config)
 	}
 }
 
+void reloadElfInfo(const char* str)
+{
+    // Now's a good time to reload the ELF info...
+	if (ElfCRC == 0)
+	{
+		ElfCRC = loadElfCRC( str );
+		ElfApplyPatches();
+		mtgsThread.SendGameCRC( ElfCRC );
+	}
+}
 
 void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	wxString fname;
@@ -345,40 +355,36 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	key[ 3] = (key_0_3&0xFF000000)>>24;
 	key[ 4] = key_4;
 
-	if(arg2 == 75)
-	{
-		key[14] = key_14;
-		key[15] = 0x05;
-	}
-	else if(arg2 == 3075)
-	{
-		key[15] = 0x01;
-	}
-	else if(arg2 == 4246)
-	{
-		// 0x0001F2F707 = sector 0x0001F2F7  dec 0x07
-		key[ 0] = 0x07;
-		key[ 1] = 0xF7;
-		key[ 2] = 0xF2;
-		key[ 3] = 0x01;
-		key[ 4] = 0x00;
-		key[15] = 0x01;
-	}
-	else
-	{
-		key[15] = 0x01;
-	}
+    switch (arg2)
+    {
+        case 75:
+            key[14] = key_14;
+            key[15] = 0x05;
+            break;
+            
+//      case 3075:
+//          key[15] = 0x01;
+//          break;
+            
+        case 4246:
+            // 0x0001F2F707 = sector 0x0001F2F7  dec 0x07
+            key[ 0] = 0x07;
+            key[ 1] = 0xF7;
+            key[ 2] = 0xF2;
+            key[ 3] = 0x01;
+            key[ 4] = 0x00;
+            key[15] = 0x01;
+            break;
+            
+        default:
+            key[15] = 0x01;
+            break;
+    }
 
 	Console.WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", 
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 
-	// Now's a good time to reload the ELF info...
-	if( IsPs2 && (ElfCRC == 0) )
-	{
-		ElfCRC = loadElfCRC( str );
-		ElfApplyPatches();
-		mtgsThread.SendGameCRC( ElfCRC );
-	}
+    if (IsPs2) reloadElfInfo(str);
 }
 
 s32 cdvdGetToc(void* toc)
@@ -505,13 +511,7 @@ void cdvdDetectDisk()
 	wxString str;
 	bool IsPs2 = (GetPS2ElfName(str) == 2);
 
-	// Now's a good time to reload the ELF info...
-	if( IsPs2 && (ElfCRC == 0) )
-	{
-		ElfCRC = loadElfCRC( str.ToAscii().data() );
-		ElfApplyPatches();
-		mtgsThread.SendGameCRC( ElfCRC );
-	}
+    if (IsPs2) reloadElfInfo(str.ToAscii().data());
 }
 
 void cdvdNewDiskCB()

@@ -123,7 +123,7 @@ struct GifPathStruct
 //   and raise a gsIrq.  If CSR is already *set*, then ignore all subsequent drawing operations
 //   and writes to general purpose registers to the GS. (note: I'm pretty sure this includes
 //   direct GS and GSreg accesses, as well as those coming through the GIFpath -- but that
-//   behavior isn't confirmed yet).  Privlidged writes are still active.
+//   behavior isn't confirmed yet).  Privileged writes are still active.
 //
 //   Ignorance continues until the SIGNAL bit in CSR is manually cleared by the EE.  And here's
 //   the tricky part: the interrupt from the second SIGNAL is still pending, and should be
@@ -222,7 +222,7 @@ __forceinline bool GIFPath::StepReg()
 
 __forceinline u8 GIFPath::GetReg() { return regs[curreg]; }
 
-// unpack the registers - registers are stored as a sequence of 4 bit values in the
+// Unpack the registers - registers are stored as a sequence of 4 bit values in the
 // upper 64 bits of the GIFTAG.  That sucks for us when handling partialized GIF packets
 // coming in from paths 2 and 3, so we unpack them into an 8 bit array here.
 //
@@ -393,7 +393,7 @@ void GIFPath_Reset()
 }
 
 // This is a hackfix tool provided for "canceling" the contents of the GIFpath when
-// invalid GIFdma states are encountered (tpyically needed for PATH3 only).
+// invalid GIFdma states are encountered (typically needed for PATH3 only).
 __forceinline void GIFPath_Clear( GIF_PATH pathidx )
 {
 	memzero(s_gifPath.path[pathidx]);

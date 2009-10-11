@@ -65,7 +65,11 @@ __forceinline void gsInterrupt()
 		if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = 0;
 	}
 
-	if (Path3progress == STOPPED_MODE) gifRegs->stat.clear(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
+	if (Path3progress == STOPPED_MODE) 
+	{
+	    gifRegs->stat.clear(GIF_STAT_APATH3 | GIF_STAT_OPH);
+	}
+	
 	if ((gif->qwc > 0) || (!gspath3done)) 
 	{
 		if (!dmacRegs->ctrl.DMAE) 
@@ -94,8 +98,9 @@ __forceinline void gsInterrupt()
 }
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
-{ 
-	psHu32(GIF_STAT) |= GIF_STAT_APATH3 | GIF_STAT_OPH;         
+{      
+	gifRegs->stat.APATH = GIF_APATH3;
+	gifRegs->stat.OPH = 1;             
 
 	int size   = mtgsThread.PrepDataPacket(GIF_PATH_3, pMem, qwc);
 	u8* pgsmem = mtgsThread.GetDataPacketPtr();
@@ -490,7 +495,7 @@ void mfifoGIFtransfer(int qwc)
 		{
 			SPR_LOG("dmaIrq Set");
 			gifstate = GIF_STATE_DONE;
-			gifmfifoirq = TRUE;
+			gifmfifoirq = true;
 		}
 	 }
 	 
@@ -511,7 +516,12 @@ void mfifoGIFtransfer(int qwc)
 void gifMFIFOInterrupt()
 {
 	mfifocycles = 0;
-	if (Path3progress == STOPPED_MODE) psHu32(GIF_STAT)&= ~(GIF_STAT_APATH3 | GIF_STAT_OPH); // OPH=0 | APATH=0
+	
+	if (Path3progress == STOPPED_MODE)
+	{
+	     gifRegs->stat.APATH = GIF_APATH_IDLE;
+	     gifRegs->stat.OPH = 0;
+	}
 
 	if ((spr0->chcr.STR) && (spr0->qwc == 0))
 	{

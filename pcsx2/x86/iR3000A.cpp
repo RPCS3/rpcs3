@@ -662,7 +662,7 @@ static __forceinline s32 recExecuteBlock( s32 eeCycles )
 		// We should be able to rely on GAS syntax (the register clobber list) as a
 		// replacement for manual push/pop of unpreserved registers.
 		//
-		// EBP note: As I feared, EBP is "required" for C++ excepion handling in Linux, and trying
+		// EBP note: As I feared, EBP is "required" for C++ exception handling in Linux, and trying
 		//   to issue a clobber specifier for it causes an error.  We really need to find a way to
 		//   disable EBP regalloc in iCore. --air
 
