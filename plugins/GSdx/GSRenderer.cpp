@@ -24,9 +24,10 @@
 
 GSRenderer::GSRenderer()
 	: GSState()
+	, m_tex_buff( (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 16) )
+	, m_vt(this)
 	, m_dev(NULL)
 	, m_shader(0)
-	, m_vt(this)
 {
 	m_interlace = theApp.GetConfig("interlace", 0);
 	m_aspectratio = theApp.GetConfig("aspectratio", 1);
@@ -51,6 +52,8 @@ GSRenderer::~GSRenderer()
 	{
 		m_dev->Reset(1, 1, GSDevice::Windowed);
 	}*/
+
+	_aligned_free( m_tex_buff );
 
 	delete m_dev;
 }

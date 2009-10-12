@@ -41,6 +41,10 @@ GSDevice9::GSDevice9()
 GSDevice9::~GSDevice9()
 {
 	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
+	
+	for_each(m_om_bs.begin(), m_om_bs.end(), delete_second());
+	for_each(m_om_dss.begin(), m_om_dss.end(), delete_second());
+	for_each(m_ps_ss.begin(), m_ps_ss.end(), delete_second());
 
 	if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);

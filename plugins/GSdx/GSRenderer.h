@@ -46,6 +46,8 @@ protected:
 	bool m_aa1;
 	bool m_blur;
 
+	uint8* m_tex_buff;
+	
 	virtual GSTexture* GetOutput(int i) = 0;
 
 	GSVertexTrace m_vt;
@@ -86,6 +88,10 @@ public:
 	{
 		return !m_nativeres && m_regs->PMODE.EN != 0; // upscale ratio depends on the display size, with no output it may not be set correctly (ps2 logo to game transition)
 	}
+
+	// TODO : Implement proper locking here *if needed*  (not sure yet if it is) --air
+	uint8* GetTextureBufferLock() { return m_tex_buff; }
+	void ReleaseTextureBufferLock() { }
 };
 
 template<class Vertex> class GSRendererT : public GSRenderer

@@ -188,6 +188,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 {
 	if(!m_merge || !(m_merge->GetSize() == fs))
 	{
+		delete m_merge;
 		m_merge = CreateRenderTarget(fs.x, fs.y, false);
 	}
 

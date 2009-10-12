@@ -93,8 +93,7 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 	if(m_dev->ResizeTexture(&m_texture[i], w, h))
 	{
-		// TODO
-		static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
+		uint8* buff = GetTextureBufferLock();
 		static int pitch = 1024 * 4;
 
 		GSVector4i r(0, 0, w, h);

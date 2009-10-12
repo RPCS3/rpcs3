@@ -910,9 +910,6 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 	GSVector4i tr(0, 0, tw, th);
 
-	// TODO
-	static uint8* buff = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 16);
-	
 	int pitch = max(tw, psm.bs.x) * sizeof(uint32);
 
 	GSLocalMemory& mem = m_renderer->m_mem;
@@ -926,6 +923,8 @@ void GSTextureCache::Source::Flush(uint32 count)
 		pitch >>= 2;
 		rtx = psm.rtxP;
 	}
+
+	uint8* buff = m_renderer->GetTextureBufferLock();
 
 	for(uint32 i = 0; i < count; i++)
 	{
@@ -956,14 +955,14 @@ void GSTextureCache::Source::Flush(uint32 count)
 		}
 	}
 
+	m_renderer->ReleaseTextureBufferLock();
+
 	if(count < m_write.count)
 	{
 		memcpy(m_write.rect[0], &m_write.rect[count], (m_write.count - count) * sizeof(m_write.rect[0]));
 	}
 
 	m_write.count -= count;
-
-	//_aligned_free(buff);
 }
 
 // GSTextureCache::Target

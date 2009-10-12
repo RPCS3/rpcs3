@@ -85,6 +85,8 @@ EXPORT_C_(INT32) GSinit()
 
 #ifdef _WINDOWS
 
+	//_CrtSetBreakAlloc( 1273 );
+
 	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 	if(!GSUtil::CheckDirectX())
