@@ -209,7 +209,11 @@ private:
 			EnterCriticalSection( &cs );
 
 			// All of these checks are necessary because XAudio2 is wonky shizat.
-			if( pSourceVoice == NULL || context == NULL ) return;
+			if( pSourceVoice == NULL || context == NULL )
+			{
+				LeaveCriticalSection( &cs );
+				return;
+			}
 
 			T* qb = (T*)context;
 
