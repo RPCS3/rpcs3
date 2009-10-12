@@ -20,6 +20,8 @@ set(YAML_CPP_VERSION "${YAML_CPP_VERSION_MAJOR}.${YAML_CPP_VERSION_MINOR}.${YAML
 
 enable_testing()
 
+option(YAML_CPP_BUILD_TOOLS "Enables or disables yaml-reader and parse tools" true)
+
 if(WIN32)
   set(_library_dir bin) # .dll are in PATH, like executables
 else(WIN32)
@@ -64,5 +66,7 @@ if(UNIX)
 	install(FILES ${PC_FILE} DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 endif(UNIX)
 
-add_subdirectory (yaml-reader)
-add_subdirectory (util)
+if(YAML_CPP_BUILD_TOOLS)
+	add_subdirectory (yaml-reader)
+	add_subdirectory (util)
+endif(YAML_CPP_BUILD_TOOLS)
