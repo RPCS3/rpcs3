@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -44,64 +44,64 @@ void _initX86regs() {
 u32 _x86GetAddr(int type, int reg)
 {
 	u32 ret = 0;
-	
-	switch(type&~X86TYPE_VU1) 
+
+	switch(type&~X86TYPE_VU1)
 	{
-		case X86TYPE_GPR: 
-			ret = (u32)&cpuRegs.GPR.r[reg]; 
+		case X86TYPE_GPR:
+			ret = (u32)&cpuRegs.GPR.r[reg];
 			break;
-		
-		case X86TYPE_VI: 
+
+		case X86TYPE_VI:
 			if (type & X86TYPE_VU1)
 				ret = (u32)&VU1.VI[reg];
 			else
 				ret = (u32)&VU0.VI[reg];
 			break;
-		
-		case X86TYPE_MEMOFFSET: 
+
+		case X86TYPE_MEMOFFSET:
 			ret = 0;
 			break;
-		
-		case X86TYPE_VIMEMOFFSET: 
+
+		case X86TYPE_VIMEMOFFSET:
 			ret = 0;
 			break;
-		
+
 		case X86TYPE_VUQREAD:
 			if  (type & X86TYPE_VU1)
 				ret = (u32)&VU1.VI[REG_Q];
 			else
 				ret = (u32)&VU0.VI[REG_Q];
 			break;
-		
-		case X86TYPE_VUPREAD: 
+
+		case X86TYPE_VUPREAD:
 			if  (type & X86TYPE_VU1)
 				ret = (u32)&VU1.VI[REG_P];
 			else
 				ret = (u32)&VU0.VI[REG_P];
 			break;
-		
-		case X86TYPE_VUQWRITE: 
+
+		case X86TYPE_VUQWRITE:
 			if  (type & X86TYPE_VU1)
 				ret = (u32)&VU1.q;
 			else
 				ret = (u32)&VU0.q;
 			break;
-		
-		case X86TYPE_VUPWRITE: 
+
+		case X86TYPE_VUPWRITE:
 			if  (type & X86TYPE_VU1)
 				ret = (u32)&VU1.p;
 			else
 				ret = (u32)&VU0.p;
 			break;
-		
-		case X86TYPE_PSX: 
+
+		case X86TYPE_PSX:
 			ret = (u32)&psxRegs.GPR.r[reg];
 			break;
-		
+
 		case X86TYPE_PCWRITEBACK:
 			ret = (u32)&g_recWriteback;
 			break;
-		
+
 		case X86TYPE_VUJUMP:
 			ret = (u32)&g_recWriteback;
 			break;
@@ -121,9 +121,9 @@ int _getFreeX86reg(int mode)
 
 	for (int i=0; i<iREGCNT_GPR; i++) {
 		int reg = (g_x86checknext+i)%iREGCNT_GPR;
-		if( reg == 0 || reg == ESP ) continue;
+		if( reg == 0 || reg == ESP || reg == EBP ) continue;
 		if( reg >= maxreg ) continue;
-		if( (mode&MODE_NOFRAME) && reg==EBP ) continue;
+		//if( (mode&MODE_NOFRAME) && reg==EBP ) continue;
 
 		if (x86regs[reg].inuse == 0) {
 			g_x86checknext = (reg+1)%iREGCNT_GPR;
@@ -132,8 +132,8 @@ int _getFreeX86reg(int mode)
 	}
 
 	for (int i=1; i<maxreg; i++) {
-		if( i == ESP ) continue;
-		if( (mode&MODE_NOFRAME) && i==EBP ) continue;
+		if( i == ESP  || i==EBP ) continue;
+		//if( (mode&MODE_NOFRAME) && i==EBP ) continue;
 
 		if (x86regs[i].needed) continue;
 		if (x86regs[i].type != X86TYPE_TEMP) {
@@ -189,9 +189,9 @@ void _flushConstRegs()
 	for (int i = 1, j = 0; i < 32; j++ && ++i, j %= 2) {
 		if (!GPR_IS_CONST1(i) || g_cpuFlushedConstReg & (1<<i)) continue;
 		if (g_cpuConstRegs[i].SL[j] != 0) continue;
-		
+
 		if (eaxval != 0) XOR32RtoR(EAX, EAX), eaxval = 0;
-		
+
 		MOV32RtoM((uptr)&cpuRegs.GPR.r[i].SL[j], EAX);
 		done[j] |= 1<<i;
 		zero_cnt++;
@@ -202,10 +202,10 @@ void _flushConstRegs()
 	for (int i = 1, j = 0; i < 32; j++ && ++i, j %= 2) {
 		if (!GPR_IS_CONST1(i) || g_cpuFlushedConstReg & (1<<i)) continue;
 		if (g_cpuConstRegs[i].SL[j] != -1) continue;
-		
+
 		if (eaxval > 0) XOR32RtoR(EAX, EAX), eaxval = 0;
 		if (eaxval == 0) NOT32R(EAX), eaxval = -1;
-		
+
 		MOV32RtoM((uptr)&cpuRegs.GPR.r[i].SL[j], EAX);
 		done[j + 2] |= 1<<i;
 		minusone_cnt++;
@@ -225,7 +225,7 @@ void _flushConstRegs()
 					MOV32ItoM((uptr)&cpuRegs.GPR.r[i].UL[0], g_cpuConstRegs[i].UL[0]);
 				if (!(done[1] & (1<<i)))
 					MOV32ItoM((uptr)&cpuRegs.GPR.r[i].UL[1], g_cpuConstRegs[i].UL[1]);
-				
+
 				g_cpuFlushedConstReg |= 1<<i;
 			}
 		if (g_cpuHasConstReg == g_cpuFlushedConstReg) break;
@@ -237,10 +237,10 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 {
 	int i;
 	assert( reg >= 0 && reg < 32 );
-	 
+
 	// don't alloc EAX and ESP,EBP if MODE_NOFRAME
 	int oldmode = mode;
-	int noframe = mode & MODE_NOFRAME;
+	//int noframe = mode & MODE_NOFRAME;
 	int maxreg = (mode & MODE_8BITREG) ? 4 : iREGCNT_GPR;
 	mode &= ~(MODE_NOFRAME|MODE_8BITREG);
 	int readfromreg = -1;
@@ -248,7 +248,7 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 	if ( type != X86TYPE_TEMP ) {
 		if ( maxreg < iREGCNT_GPR ) {
 			// make sure reg isn't in the higher regs
-			
+
 			for(i = maxreg; i < iREGCNT_GPR; ++i) {
 				if (!x86regs[i].inuse || x86regs[i].type != type || x86regs[i].reg != reg) continue;
 
@@ -265,12 +265,12 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 		}
 
 		for (i=1; i<maxreg; i++) {
-			if ( i == ESP ) continue;
+			if ( i == ESP || i == EBP ) continue;
 			if (!x86regs[i].inuse || x86regs[i].type != type || x86regs[i].reg != reg) continue;
 
-			if( (noframe && i == EBP) || (i >= maxreg) ) {
+			if( i >= maxreg ) {
 				if (x86regs[i].mode & MODE_READ) readfromreg = i;
-				
+
 				mode |= x86regs[i].mode&MODE_WRITE;
 				x86regs[i].inuse = 0;
 				break;
@@ -289,10 +289,10 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 			if( type != X86TYPE_TEMP && !(x86regs[i].mode & MODE_READ) && (mode&MODE_READ)) {
 
 				if( type == X86TYPE_GPR ) _flushConstReg(reg);
-				
-				if( X86_ISVI(type) && reg < 16 ) 
+
+				if( X86_ISVI(type) && reg < 16 )
 					MOVZX32M16toR(i, _x86GetAddr(type, reg));
-				else 
+				else
 					MOV32MtoR(i, _x86GetAddr(type, reg));
 
 				x86regs[i].mode |= MODE_READ;
@@ -304,9 +304,9 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 		}
 	}
 
-	if (x86reg == -1) 
+	if (x86reg == -1)
 		x86reg = _getFreeX86reg(oldmode);
-	else 
+	else
 		_freeX86reg(x86reg);
 
 	x86regs[x86reg].type = type;
@@ -316,7 +316,7 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 	x86regs[x86reg].inuse = 1;
 
 	if( mode & MODE_READ ) {
-		if( readfromreg >= 0 ) 
+		if( readfromreg >= 0 )
 			MOV32RtoR(x86reg, readfromreg);
 		else {
 			if( type == X86TYPE_GPR ) {
@@ -328,18 +328,18 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 					_flushConstReg(reg);
 					_deleteMMXreg(MMX_GPR+reg, 1);
 					_deleteGPRtoXMMreg(reg, 1);
-					
+
 					_eeMoveGPRtoR(x86reg, reg);
-					
+
 					_deleteMMXreg(MMX_GPR+reg, 0);
 					_deleteGPRtoXMMreg(reg, 0);
 				}
 			}
 			else {
 				if( X86_ISVI(type) && reg < 16 ) {
-					if( reg == 0 ) 
+					if( reg == 0 )
 						XOR32RtoR(x86reg, x86reg);
-					else 
+					else
 						MOVZX32M16toR(x86reg, _x86GetAddr(type, reg));
 				}
 				else MOV32MtoR(x86reg, _x86GetAddr(type, reg));
@@ -358,9 +358,9 @@ int _checkX86reg(int type, int reg, int mode)
 		if (x86regs[i].inuse && x86regs[i].reg == reg && x86regs[i].type == type) {
 
 			if( !(x86regs[i].mode & MODE_READ) && (mode&MODE_READ) ) {
-				if( X86_ISVI(type) ) 
+				if( X86_ISVI(type) )
 					MOVZX32M16toR(i, _x86GetAddr(type, reg));
-				else 
+				else
 					MOV32MtoR(i, _x86GetAddr(type, reg));
 			}
 
@@ -408,21 +408,21 @@ void _deleteX86reg(int type, int reg, int flush)
 				case 0:
 					_freeX86reg(i);
 					break;
-				
+
 				case 1:
 					if( x86regs[i].mode & MODE_WRITE) {
 
-						if( X86_ISVI(type) && x86regs[i].reg < 16 ) 
+						if( X86_ISVI(type) && x86regs[i].reg < 16 )
 							MOV16RtoM(_x86GetAddr(type, x86regs[i].reg), i);
 						else
 							MOV32RtoM(_x86GetAddr(type, x86regs[i].reg), i);
-						
+
 						// get rid of MODE_WRITE since don't want to flush again
 						x86regs[i].mode &= ~MODE_WRITE;
 						x86regs[i].mode |= MODE_READ;
 					}
 					return;
-					
+
 				case 2:
 					x86regs[i].inuse = 0;
 					break;
@@ -472,7 +472,7 @@ void _initMMXregs()
 __forceinline void* _MMXGetAddr(int reg)
 {
 	assert( reg != MMX_TEMP );
-	
+
 	if( reg == MMX_LO ) return &cpuRegs.LO;
 	if( reg == MMX_HI ) return &cpuRegs.HI;
 	if( reg == MMX_FPUACC ) return &fpuRegs.ACC;
@@ -480,7 +480,7 @@ __forceinline void* _MMXGetAddr(int reg)
 	if( reg >= MMX_GPR && reg < MMX_GPR+32 ) return &cpuRegs.GPR.r[reg&31];
 	if( reg >= MMX_FPU && reg < MMX_FPU+32 ) return &fpuRegs.fpr[reg&31];
 	if( reg >= MMX_COP0 && reg < MMX_COP0+32 ) return &cpuRegs.CP0.r[reg&31];
-	
+
 	assert( 0 );
 	return NULL;
 }
@@ -589,7 +589,7 @@ int _allocMMXreg(int mmxreg, int reg, int mode)
 	}
 
 	if (mmxreg == -1) mmxreg = _getFreeMMXreg();
-	
+
 	mmxregs[mmxreg].inuse = 1;
 	mmxregs[mmxreg].reg = reg;
 	mmxregs[mmxreg].mode = mode&~MODE_READHALF;
@@ -697,7 +697,7 @@ void _deleteMMXreg(int reg, int flush)
 
 		if (mmxregs[i].inuse && mmxregs[i].reg == reg ) {
 
-			switch(flush) { 
+			switch(flush) {
 				case 0: // frees all of the reg
 					_freeMMXreg(i);
 					break;
@@ -769,14 +769,14 @@ void _freeMMXreg(int mmxreg)
 {
 	assert( mmxreg < iREGCNT_MMX );
 	if (!mmxregs[mmxreg].inuse) return;
-	
+
 	if (mmxregs[mmxreg].mode & MODE_WRITE ) {
 		// Not sure if this line is accurate, since if the 32 was 34, it would be MMX_ISGPR.
 		if ( /*mmxregs[mmxreg].reg >= MMX_GPR &&*/ mmxregs[mmxreg].reg < MMX_GPR+32 ) // Checking if a u32 is >=0 is pointless.
 			assert( !(g_cpuHasConstReg & (1<<(mmxregs[mmxreg].reg-MMX_GPR))) );
 
 		assert( mmxregs[mmxreg].reg != MMX_GPR );
-		
+
 		if( MMX_IS32BITS(mmxregs[mmxreg].reg) )
 			MOVDMMXtoM((u32)_MMXGetAddr(mmxregs[mmxreg].reg), mmxreg);
 		else
@@ -854,11 +854,11 @@ void SetFPUstate() {
 	_freeMMXreg(7);
 
 	if (x86FpuState == MMX_STATE) {
-		if (x86caps.has3DNOWInstructionExtensions) 
+		if (x86caps.has3DNOWInstructionExtensions)
 			FEMMS();
 		else
 			EMMS();
-		
+
 		x86FpuState = FPU_STATE;
 	}
 }
@@ -956,13 +956,13 @@ void _signExtendSFtoM(u32 mem)
 int _signExtendMtoMMX(x86MMXRegType to, u32 mem)
 {
 	int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-	
+
 	MOVDMtoMMX(t0reg, mem);
 	MOVQRtoR(to, t0reg);
 	PSRADItoR(t0reg, 31);
 	PUNPCKLDQRtoR(to, t0reg);
 	_freeMMXreg(t0reg);
-	
+
 	return to;
 }
 
@@ -987,7 +987,7 @@ int _signExtendGPRMMXtoMMX(x86MMXRegType to, u32 gprreg, x86MMXRegType from, u32
 	SetMMXstate();
 
 	if( g_pCurInstInfo->regs[gprreg] & EEINST_MMX ) {
-		
+
 		if( EEINST_ISLIVE64(gprfromreg) ) {
 			_freeMMXreg(from);
 		}
@@ -1061,7 +1061,7 @@ int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift)
 int _allocCheckGPRtoMMX(EEINST* pinst, int reg, int mode)
 {
 	if( pinst->regs[reg] & EEINST_MMX ) return _allocMMXreg(-1, MMX_GPR+reg, mode);
-		
+
 	return _checkMMXreg(MMX_GPR+reg, mode);
 }
 
