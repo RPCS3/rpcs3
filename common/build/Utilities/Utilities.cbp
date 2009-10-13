@@ -58,10 +58,6 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-march=athlon" />
-			<Add option="-march=pentium4" />
-			<Add option="-march=i686" />
-			<Add option="-march=i586" />
 			<Add directory="../../include/Utilities" />
 			<Add directory="../../include" />
 			<Add directory="../../../3rdparty" />

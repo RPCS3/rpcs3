@@ -59,8 +59,6 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-march=athlon" />
-			<Add option="-march=pentium3" />
 			<Add option="-Wno-format" />
 			<Add option="-Wno-unused-parameter" />
 			<Add option="-Wno-unused-value" />

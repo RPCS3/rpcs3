@@ -134,9 +134,14 @@ __forceinline void SIF0Dma()
 		{
 			if (sif0.counter == 0) // If there's no more to transfer
 			{
-				// Note.. add normal mode here
-				// The if statement doesn't seem to match the description...
-				if (sif0.sifData.data & 0xC0000000) // If NORMAL mode or end of CHAIN, or interrupt then stop DMA
+				// What this is supposed to do is stop DMA if it is the end of a chain, an interrupt is called, or in normal mode.
+				// It currently doesn't check for normal mode.
+				//
+				// The old code for this was:
+				// if (sif0.sifData.data & 0xC0000000) 
+				// which checks if the tag type is refe or end, or if the irq flag is set.
+				// If the tag is refe or end, sif0.end gets set, so I'm replacing it with something easier to read: --arcum42
+				if (/*(sif0dma->chcr.MOD == NORMAL_MODE) ||*/ sif0.end || Tag::IRQ(sif0.sifData.data))
 				{
 					SIF_LOG(" IOP SIF Stopped");
 
@@ -243,7 +248,9 @@ __forceinline void SIF0Dma()
 
 					//  (tag[0] >> 28) & 3? Surely this is supposed to be (tag[0] >> 28) & 7? --arcum42
 					if ((dmacRegs->ctrl.STS != NO_STS) && ((tag[0] >> 28) & 3) == 0)
+					{
 						dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
+					}
 					sif0.chain = 1;
 					if (tag[0] & 0x40000000) sif0.end = 1;
 					done = false;
@@ -264,7 +271,9 @@ __forceinline void SIF1Dma()
 		if (eesifbusy[1]) // If EE SIF1 is enabled
 		{
 			if (dmacRegs->ctrl.STD == STD_SIF1)
+			{
 				SIF_LOG("SIF1 stall control"); // STD == fromSIF1
+			}
 
 			if (sif1dma->qwc == 0) // If there's no more to transfer
 			{
