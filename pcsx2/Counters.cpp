@@ -336,8 +336,6 @@ static __forceinline void VSyncStart(u32 sCycle)
 
 	if ((CSRw & 0x8)) 
 	{
-		
-		
 		if (!(GSIMR&0x800)) 
 		{
 			gsIrq();
@@ -412,8 +410,6 @@ __forceinline void rcntUpdate_hScanline()
 	else { //HBLANK END / HRENDER Begin
 		if (CSRw & 0x4) 
 		{
-			
-			
 			if (!(GSIMR&0x400)) 
 			{
 				gsIrq();
@@ -448,7 +444,13 @@ __forceinline void rcntUpdate_vSync()
 		{
 			eeRecIsReset = false;
 			cpuSetBranch();
+			
+			// Hack! GCC is unwilling to let us throw exceptions here.
+			// (Ones in Exception::*, anyways.) Work around it by skipping
+			// it.
+#ifdef _MSC_VER
 			throw Exception::ForceDispatcherReg();
+#endif
 		}
 
 		VSyncEnd(vsyncCounter.sCycle);

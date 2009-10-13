@@ -96,7 +96,6 @@
 			<Add option="-fno-dse" />
 			<Add option="-fno-tree-dse" />
 			<Add option="-pipe -msse -msse2" />
-			<Add option="-fvisibility=default" />
 			<Add option="-DWX_PRECOMP" />
 			<Add directory="$(SvnRootDir)/common/include/" />
 			<Add directory="$(SvnRootDir)/3rdparty/" />

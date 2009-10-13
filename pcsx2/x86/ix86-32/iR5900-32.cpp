@@ -562,17 +562,6 @@ static void __naked DispatcherEvent()
 }
 #endif
 
-static void DispatcherRegC()
-{
-#ifdef _MSC_VER
-	__asm jmp DispatcherReg;
-#else
-	__asm__ __volatile__(
-		"jmp DispatcherReg\n"
-	);
-#endif
-}
-
 static void recExecute()
 {
 	// Implementation Notes:
@@ -611,7 +600,7 @@ static void recExecute()
 				}
 
 	#else // _MSC_VER
-				DispatcherRegC();
+				DispatcherReg();
 	#endif
 			}
 			catch( Exception::ForceDispatcherReg& )

@@ -266,7 +266,7 @@ void SysSuspendableThread::StateCheck( bool isCancelable )
 
 // --------------------------------------------------------------------------------------
 //  EECoreThread *External Thread* Implementations
-//    (Called form outside the context of this thread)
+//    (Called from outside the context of this thread)
 // --------------------------------------------------------------------------------------
 
 SysCoreThread::SysCoreThread() :
