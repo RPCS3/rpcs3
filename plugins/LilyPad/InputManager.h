@@ -15,7 +15,9 @@
  * Still more effort than it's worth to port to Linux, however.
  */
 
-// Match DirectInput8 values.
+// Mostly match DirectInput8 values.  Note that these are for physical controls.
+// One physical axis maps to 3 virtual ones, and one physical POV control maps to
+// 4 virtual ones.
 enum ControlType {
 	NO_CONTROL = 0,
 	// Axes are ints.  Relative axes are for mice, mice wheels, etc,
@@ -35,6 +37,9 @@ enum ControlType {
 	// that range is treated as -1 (Though 36000-37000 is treated
 	// like 0 to 1000, just in case).
 	POV = 16,
+
+	// Pressure sensitive buttons.  Only a different type because
+	// they have configurable dead zones, unlike  push or toggle buttons.
 	PRESSURE_BTN = 32,
 };
 

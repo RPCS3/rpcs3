@@ -25,7 +25,7 @@ void WindowsKeyboard::UpdateKey(int vkey, int state) {
 		int newState = state * FULLY_DOWN;
 		if (newState != physicalControlState[vkey]) {
 			// Check for alt-F4 to avoid toggling skip mode incorrectly.
-			if (vkey != VK_F4 || !(physicalControls[VK_MENU].vkey || physicalControls[VK_MENU].vkey || physicalControls[VK_MENU].vkey)) {
+			if (vkey != VK_F4 || !(physicalControlState[VK_MENU] || physicalControlState[VK_RMENU] || physicalControlState[VK_LMENU])) {
 				int event = KEYPRESS;
 				if (!newState) event = KEYRELEASE;
 				QueueKeyEvent(vkey, event);
