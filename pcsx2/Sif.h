@@ -16,6 +16,9 @@
 #ifndef __SIF_H__
 #define __SIF_H__
 
+#define FIFO_SIF0_W 128
+#define FIFO_SIF1_W 128
+
 struct sifData
 {
 	s32 data;
@@ -24,6 +27,31 @@ struct sifData
 	s32 addr;
 };
 
+struct _sif0
+{
+	u32 fifoData[FIFO_SIF0_W];
+	s32 fifoReadPos;
+	s32 fifoWritePos;
+	s32 fifoSize;
+	s32 chain;
+	s32 end;
+	s32 tagMode;
+	s32 counter;
+	struct sifData sifData;
+};
+
+struct _sif1
+{
+	u32 fifoData[FIFO_SIF1_W];
+	s32 fifoReadPos;
+	s32 fifoWritePos;
+	s32 fifoSize;
+	s32 chain;
+	s32 end;
+	s32 tagMode;
+	s32 counter;
+	struct sifData sifData;
+};
 extern DMACh *sif0ch;
 extern DMACh *sif1ch;
 extern DMACh *sif2ch;

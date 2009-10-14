@@ -25,35 +25,6 @@ DMACh *sif0ch;
 DMACh *sif1ch;
 DMACh *sif2ch;
 
-
-#define FIFO_SIF0_W 128
-#define FIFO_SIF1_W 128
-
-struct _sif0
-{
-	u32 fifoData[FIFO_SIF0_W];
-	s32 fifoReadPos;
-	s32 fifoWritePos;
-	s32 fifoSize;
-	s32 chain;
-	s32 end;
-	s32 tagMode;
-	s32 counter;
-	struct sifData sifData;
-};
-
-struct _sif1
-{
-	u32 fifoData[FIFO_SIF1_W];
-	s32 fifoReadPos;
-	s32 fifoWritePos;
-	s32 fifoSize;
-	s32 chain;
-	s32 end;
-	s32 tagMode;
-	s32 counter;
-};
-
 static _sif0 sif0;
 static _sif1 sif1;
 
@@ -123,7 +94,7 @@ static __forceinline void SIF1read(u32 *to, int words)
 __forceinline void SIF0Dma()
 {
 	u32 *ptag;
-	bool done = FALSE;
+	bool done = false;
 	int cycles = 0, psxCycles = 0;
 
 	SIF_LOG("SIF0 DMA start...");
@@ -165,15 +136,18 @@ __forceinline void SIF0Dma()
 
 					SIF0write((u32*)iopPhysMem(HW_DMA9_TADR + 8), 4);
 
-					HW_DMA9_MADR = sif0.sifData.data & 0xFFFFFF;
 					HW_DMA9_TADR += 16; ///HW_DMA9_MADR + 16 + sif0.sifData.words << 2;
+					HW_DMA9_MADR = sif0.sifData.data & 0xFFFFFF;
 					sif0.counter = sif0.sifData.words & 0xFFFFFF;
 
 					SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.sifData.words, sif0.sifData.data);
-					if (sif0.sifData.data & 0x40000000)
+					
+					u32 tagId = Tag::Id(sif0.sifData.data);
+					if ((tagId == TAG_REFE) || (tagId == TAG_END))
 						SIF_LOG("   END");
 					else
 						SIF_LOG("   CNT %08X, %08X", sif0.sifData.data, sif0.sifData.words);
+					
 					done = false;
 				}
 			}
@@ -206,8 +180,6 @@ __forceinline void SIF0Dma()
 
 				ptag = _dmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
 				if (ptag == NULL) return;
-				
-				//_dmaGetAddr(sif0dma, *ptag, sif0dma->madr, DMAC_SIF0);
 
 				SIF0read((u32*)ptag, readSize << 2);
 
@@ -221,8 +193,7 @@ __forceinline void SIF0Dma()
 
 			if (sif0dma->qwc == 0)
 			{
-				// Stop if TIE & the IRQ are set, or at the end. (I'll try to convert this to use the tags code later.)
-				//if (((sif0dma->chcr._u32 & 0x80000080) == 0x80000080) || (sif0.end)) 
+				// Stop if TIE & the IRQ are set, or at the end.
 				if ((sif0dma->chcr.TIE && Tag::IRQ(sif0dma->chcr._u32)) || sif0.end)
 				{
 					if (sif0.end)
@@ -237,22 +208,34 @@ __forceinline void SIF0Dma()
 				else if (sif0.fifoSize >= 4) // Read a tag
 				{
 					static __aligned16 u32 tag[4];
+					
 					SIF0read((u32*)&tag[0], 4); // Tag
 					SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
-					sif0dma->qwc = (u16)tag[0];
+					Tag::UnsafeTransfer(sif0dma,&tag[0]);
 					sif0dma->madr = tag[1];
-					sif0dma->chcr._u32 = (sif0dma->chcr._u32 & 0xffff) | (tag[0] & 0xffff0000);
 
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
 
-					//  (tag[0] >> 28) & 3? Surely this is supposed to be (tag[0] >> 28) & 7? --arcum42
-					if ((dmacRegs->ctrl.STS != NO_STS) && ((tag[0] >> 28) & 3) == 0)
+					switch (Tag::Id(tag[0]))
 					{
-						dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
+						case TAG_REFE:
+                            sif0.end = 1;
+                            if (dmacRegs->ctrl.STS != NO_STS) 
+                                dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
+							break;
+                            
+						case TAG_REFS:
+                            if (dmacRegs->ctrl.STS != NO_STS) 
+                                dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
+							break;
+
+						case TAG_END:
+                            sif0.end = 1;
+							break;
 					}
-					sif0.chain = 1;
-					if (tag[0] & 0x40000000) sif0.end = 1;
+					
+					//sif0.chain = 1;
 					done = false;
 				}
 			}
@@ -284,7 +267,7 @@ __forceinline void SIF1Dma()
 					eesifbusy[1] = false;
 					done = true;
 					CPU_INT(6, cycles*BIAS);
-					sif1.chain = 0;
+					//sif1.chain = 0;
 					sif1.end = 0;
 				}
 				else // Chain mode
@@ -304,7 +287,7 @@ __forceinline void SIF1Dma()
 						SIF1write(ptag + 2, 2);
 					}
 
-					sif1.chain = 1;
+					//sif1.chain = 1;
 
 					switch (Tag::Id(ptag))
 					{
@@ -405,7 +388,7 @@ __forceinline void SIF1Dma()
 				}
 				else if (sif1.fifoSize >= 4) // Read a tag
 				{
-					struct sifData d;
+				    struct sifData d;
 					SIF1read((u32*)&d, 4);
 					SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", d.data & 0xffffff, d.words, (d.data >> 28)&7, (d.data >> 31)&1);
 					HW_DMA10_MADR = d.data & 0xffffff;
