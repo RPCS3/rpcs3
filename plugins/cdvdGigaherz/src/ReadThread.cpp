@@ -8,6 +8,10 @@ s32 prefetch_left=0;
 
 HANDLE hNotify = INVALID_HANDLE_VALUE;
 HANDLE hThread = INVALID_HANDLE_VALUE;
+HANDLE hRequestComplete = INVALID_HANDLE_VALUE;
+
+CRITICAL_SECTION CacheMutex;
+
 DWORD  pidThread= 0;
 
 enum loadStatus
@@ -52,34 +56,41 @@ u32  cdvdSectorHash(int lsn, int mode)
 
 void cdvdCacheUpdate(int lsn, int mode, char* data)
 {
+	EnterCriticalSection( &CacheMutex );
 	u32 entry = cdvdSectorHash(lsn,mode);
 
 	memcpy(Cache[entry].data,data,2352*16);
 	Cache[entry].lsn = lsn;
 	Cache[entry].mode = mode;
+	LeaveCriticalSection( &CacheMutex );
 }
 
 bool cdvdCacheFetch(int lsn, int mode, char* data)
 {
+	EnterCriticalSection( &CacheMutex );
 	u32 entry = cdvdSectorHash(lsn,mode);
 
 	if((Cache[entry].lsn==lsn) &&
 		(Cache[entry].mode==mode))
 	{
 		memcpy(data,Cache[entry].data,2352*16);
+		LeaveCriticalSection( &CacheMutex );
 		return true;
 	}
 
+	LeaveCriticalSection( &CacheMutex );
 	return false;
 }
 
 void cdvdCacheReset()
 {
+	EnterCriticalSection( &CacheMutex );
 	for(int i=0;i<CacheSize;i++)
 	{
 		Cache[i].lsn=-1;
 		Cache[i].mode=-1;
 	}
+	LeaveCriticalSection( &CacheMutex );
 }
 
 void cdvdCallNewDiscCB()
@@ -141,79 +152,86 @@ bool cdvdUpdateDiscStatus()
 DWORD CALLBACK cdvdThread(PVOID param)
 {
 	printf(" * CDVD: IO thread started...\n");
+
 	while(cdvd_is_open)
 	{
 		DWORD f=0;
 
 		if(!src) break;
 
-		if(cdvdUpdateDiscStatus()) continue;
+		if(cdvdUpdateDiscStatus())
+		{
+			// Need to sleep some to avoid an aggressive spin that sucks the cpu dry.
+			Sleep( 10 );
+			continue;
+		}
 
 		if(prefetch_left)
 			WaitForSingleObject(hNotify,1);
 		else
 			WaitForSingleObject(hNotify,250);
 
-		if(cdvd_is_open)
+		// check again to make sure we're not done here...
+		if(!cdvd_is_open) break;
+
+		static SectorInfo info;
+
+		bool handlingRequest = false;
+
+		if(threadRequestPending)
 		{
-			static SectorInfo info;
+			info=threadRequestInfo;
+			handlingRequest = true;
+		}
+		else
+		{
+			info.lsn = prefetch_last_lba;
+			info.mode = prefetch_last_mode;
+		}
 
-			bool handlingRequest = false;
+		if(threadRequestPending || prefetch_left)
+		{
+			s32 ret = -1;
+			s32 tries=5;
 
-			if(threadRequestPending)
+			s32 count = 16;
+
+			s32 left = tracks[0].length-info.lsn;
+
+			if(left<count) count=left;
+
+			do {
+				if(info.mode==CDVD_MODE_2048)
+					ret = src->ReadSectors2048(info.lsn,count,info.data);
+				else
+					ret = src->ReadSectors2352(info.lsn,count,info.data);
+
+				if(ret==0)
+					break;
+
+				tries--;
+
+			} while((ret<0)&&(tries>0));
+
+			cdvdCacheUpdate(info.lsn,info.mode,info.data);
+
+			if(handlingRequest)
 			{
-				info=threadRequestInfo;
-				handlingRequest = true;
+				threadRequestInfo = info;
+
+				handlingRequest = false;
+				threadRequestPending = false;
+				PulseEvent(hRequestComplete);
+
+				prefetch_last_lba=info.lsn;
+				prefetch_last_mode=info.mode;
+
+				prefetch_left = prefetch_max_blocks;
 			}
 			else
 			{
-				info.lsn = prefetch_last_lba;
-				info.mode = prefetch_last_mode;
-			}
-
-			if(threadRequestPending || prefetch_left)
-			{
-				s32 ret = -1;
-				s32 tries=5;
-
-				s32 count = 16;
-
-				s32 left = tracks[0].length-info.lsn;
-
-				if(left<count) count=left;
-
-				do {
-					if(info.mode==CDVD_MODE_2048)
-						ret = src->ReadSectors2048(info.lsn,count,info.data);
-					else
-						ret = src->ReadSectors2352(info.lsn,count,info.data);
-
-					if(ret==0)
-						break;
-
-					tries--;
-
-				} while((ret<0)&&(tries>0));
-
-				cdvdCacheUpdate(info.lsn,info.mode,info.data);
-
-				if(handlingRequest)
-				{
-					threadRequestInfo = info;
-
-					handlingRequest = false;
-					threadRequestPending = false;
-
-					prefetch_last_lba=info.lsn;
-					prefetch_last_mode=info.mode;
-
-					prefetch_left = prefetch_max_blocks;
-				}
-				else
-				{
-					prefetch_last_lba+=16;
-					prefetch_left--;
-				}
+				prefetch_last_lba+=16;
+				prefetch_left--;
 			}
 		}
 	}
@@ -223,9 +241,14 @@ DWORD CALLBACK cdvdThread(PVOID param)
 
 s32 cdvdStartThread()
 {
+	InitializeCriticalSection( &CacheMutex );
 
 	hNotify = CreateEvent(NULL,FALSE,FALSE,NULL);
 	if(hNotify==INVALID_HANDLE_VALUE)
+		return -1;
+
+	hRequestComplete = CreateEvent(NULL,FALSE,FALSE,NULL);
+	if(hRequestComplete==INVALID_HANDLE_VALUE)
 		return -1;
 
 	cdvd_is_open=true;
@@ -251,6 +274,9 @@ void cdvdStopThread()
 	}
 	CloseHandle(hThread);
 	CloseHandle(hNotify);
+	CloseHandle(hRequestComplete);
+	
+	DeleteCriticalSection( &CacheMutex );
 }
 
 s32 cdvdRequestSector(u32 sector, s32 mode)
@@ -269,7 +295,7 @@ s32 cdvdRequestSector(u32 sector, s32 mode)
 	}
 
 	threadRequestPending = true;
-
+	ResetEvent(hRequestComplete);
 	PulseEvent(hNotify);
 
 	return 0;
@@ -284,7 +310,7 @@ s8* cdvdGetSector(s32 sector, s32 mode)
 {
 	while(threadRequestPending)
 	{
-		Sleep(1);
+		WaitForSingleObject( hRequestComplete, 10 );
 	}
 
 	s32 offset;
@@ -317,6 +343,7 @@ s32 cdvdDirectReadSector(s32 first, s32 mode, char *buffer)
 
 	s32 sector = first&(~15); //align to 16-sector block
 
+	EnterCriticalSection( &CacheMutex );
 	if(!cdvdCacheFetch(sector,mode,data))
 	{
 		s32 ret = -1;
@@ -343,6 +370,7 @@ s32 cdvdDirectReadSector(s32 first, s32 mode, char *buffer)
 
 		cdvdCacheUpdate(sector,mode,data);
 	}
+	LeaveCriticalSection( &CacheMutex );
 
 	s32 offset;
 

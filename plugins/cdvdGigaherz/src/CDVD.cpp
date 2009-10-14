@@ -138,7 +138,9 @@ s32 CALLBACK CDVDopen(const char* pTitleFilename)
 
 	if(source_drive=='-')
 	{
-		char temp[3]="A:";
+		// MSDN : Trailing backslash is required to ensure consistent behavior across
+		// various versions of Windows and storage types.
+		char temp[]="A:\\";
 
 		for(char d='A';d<='Z';d++)
 		{
