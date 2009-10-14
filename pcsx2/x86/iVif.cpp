@@ -53,9 +53,9 @@ extern u8 s_maskwrite[256];
 extern "C" __aligned16 u32 s_TempDecompress[4];
 __aligned16 u32 s_TempDecompress[4] = {0};
 
-#ifdef __LINUX__
+/*#ifdef __LINUX__
 static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask);
-#endif
+#endif*/
 
 void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
@@ -68,15 +68,19 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 		hasmask[i] = prev;
 
 		if ((mask&0xff) != (oldmask&0xff))
-#ifdef __LINUX__
+
+//#ifdef __LINUX__
 // This seems to now be hitting several games, and not just in that spot,
 // so until we can work out something better, I'm reverting to using the
 // old Linux mask code all the time. --arcum42
 
+// Note: not neccessary if we set -mpreferred-stack-boundary=2, so it is now 
+// disabled.
+
 		//if (mask == 0) // Temporary workaround for a bug causing a segfault.
-			UseOldMaskCode(vif1masks, mask);
+			//UseOldMaskCode(vif1masks, mask);
 		//else
-#else
+//#else
 		{
 			__m128i r0, r1, r2, r3;
 			r0 = _mm_load_si128((__m128i*)&s_maskarr[mask&15][0]); // Tends to crash Linux,
@@ -97,12 +101,12 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 			_mm_storeh_pi((__m64*)&vif1masks[12], *(__m128*)&r2);
 			_mm_storeh_pi((__m64*)&vif1masks[14], *(__m128*)&r3);
 		}
-#endif
+//#endif
 	}
 	FreezeXMMRegs(0);
 }
 
-#ifdef __LINUX__
+/*#ifdef __LINUX__
 static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask)
 {
 	u8* p0 = (u8*)&s_maskarr[mask&15][0];
@@ -127,4 +131,4 @@ static void __forceinline UseOldMaskCode(u32* &vif1masks, u32 &mask)
 			"movhps [%2+56], xmm3\n"
 			".att_syntax\n" : : "r"(p0), "r"(p1), "r"(vif1masks) : "memory" );
 }
-#endif
+#endif*/
