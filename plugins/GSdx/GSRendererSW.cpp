@@ -113,6 +113,7 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 			s_n++;
 		}
+		ReleaseTextureBufferLock();
 	}
 
 	return m_texture[i];

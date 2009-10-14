@@ -647,6 +647,8 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		switch(TEX0.PSM)
 		{
 		default:
+			// Note: this assertion triggers in Xenosaga2 after the first intro scenes, when
+			// gameplay first begins (in the city).
 			ASSERT(0);
 		case PSM_PSMCT32:
 			src->m_fmt = FMT_32;
