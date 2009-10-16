@@ -99,7 +99,7 @@ Threading::PersistentThread::~PersistentThread() throw()
 		// a safe thing to do since typically threads are acquiring and releasing locks
 		// and semaphores all the time.  And terminating threads isn't really cross-platform
 		// either so let's just not bother.
-		
+
 		// Additionally since this is a destructor most of our derived class info is lost,
 		// so we can't allow for customized deadlock handlers, least not in any useful
 		// context.  So let's just log the condition and move on.
@@ -271,16 +271,18 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 		m_except = ex.Clone();
 		m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
 	}
-
 	// ----------------------------------------------------------------------------
-	// BaseException / std::exception  --  same deal as LogicErrors.
-	//
-	catch( std::exception& ex )
+	// Bleh... don't bother with std::exception.  std::logic_error and runtime_error should catch
+	// anything coming out of the core STL libraries anyway.
+	/*catch( std::exception& ex )
 	{
 		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL exception: %s\n\t%s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
-	}
+	}*/
+	// ----------------------------------------------------------------------------
+	// BaseException --  same deal as LogicErrors.
+	//
 	catch( Exception::BaseException& ex )
 	{
 		m_except = ex.Clone();
@@ -548,7 +550,7 @@ void Threading::Semaphore::Wait()
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
 		WaitRaw();
-	} 
+	}
 	else if( _WaitGui_RecursionGuard() )
 	{
 		if( !WaitRaw(ts_waitgui_deadlock) )	// default is 4 seconds

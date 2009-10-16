@@ -668,7 +668,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	{
 		const PluginsEnum_t pid = pi->id;
 
-		Console.WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8() );
+		Console.WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
 
 		if( folders[pid].IsEmpty() )
 			throw Exception::InvalidArgument( "Empty plugin filename." );
@@ -747,7 +747,7 @@ PluginManager::~PluginManager() throw()
 	}
 	DESTRUCTOR_CATCHALL
 	// All library unloading done automatically.
-	
+
 	if( g_plugins == this )
 		g_plugins = NULL;
 }
@@ -1081,13 +1081,13 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 		// older versions of a different size... or could give different sizes depending
 		// on the status of the plugin when loading, so let's ignore it.
 	}
-	
+
 	fP.size = fsize;
 	if( fP.size == 0 ) return;
 
 	state.PrepBlock( fP.size );
 	fP.data = (s8*)state.GetBlockPtr();
-	
+
 	if( state.IsSaving() )
 	{
 		if( !DoFreeze(pid, FREEZE_SAVE, &fP) )

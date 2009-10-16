@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -29,7 +29,7 @@ protected:
 public:
 	GSFrame(wxWindow* parent, const wxString& title);
 	virtual ~GSFrame() throw();
-	
+
 protected:
 	void InitDefaultAccelerators();
 	void OnCloseWindow( wxCloseEvent& evt );
@@ -63,7 +63,7 @@ protected:
 	wxMenu&			m_SaveStatesSubmenu;
 
 	wxMenuItem&		m_MenuItem_Console;
-	
+
 	CmdEvt_ListenerBinding		m_Listener_CoreThreadStatus;
 	CmdEvt_ListenerBinding		m_Listener_CorePluginStatus;
 	EventListenerBinding<int>	m_Listener_SettingsApplied;
@@ -83,13 +83,13 @@ public:
 	void UpdateIsoSrcFile();
 	void UpdateIsoSrcSelection();
 	void ReloadRecentLists();
-	
+
 protected:
 	static void OnCoreThreadStatusChanged( void* obj, const wxCommandEvent& evt );
 	static void OnCorePluginStatusChanged( void* obj, const wxCommandEvent& evt );
 	static void OnSettingsApplied( void* obj, const int& evt );
-	static void MainEmuFrame::OnSettingsLoadSave( void* obj, const IniInterface& evt );
-	
+	static void OnSettingsLoadSave( void* obj, const IniInterface& evt );
+
 	void LoadSaveRecentIsoList( IniInterface& conf );
 	void ApplySettings();
 	void ApplyCoreStatus();
