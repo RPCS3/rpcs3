@@ -72,32 +72,6 @@ namespace Exception
 
 using namespace Threading;
 
-// Reads from the Pipe and appends the read data to ps_Data
-// returns TRUE if something was printed to console, or false if the stdout/err were idle.
-static __forceinline bool ReadPipe(HANDLE h_Pipe, ConsoleColors color )
-{
-	if( h_Pipe == INVALID_HANDLE_VALUE ) return false;
-
-	char s8_Buf[2049];
-	DWORD u32_Read = 0;
-	do
-	{
-		if (!ReadFile(h_Pipe, s8_Buf, sizeof(s8_Buf)-1, &u32_Read, NULL))
-		{
-			if (GetLastError() != ERROR_IO_PENDING)
-				throw Exception::Win32Error( "ReadFile from pipe failed." );
-		}
-
-		// ATTENTION: The Console always prints ANSI to the pipe independent if compiled as UNICODE or MBCS!
-		s8_Buf[u32_Read] = 0;
-		OemToCharA(s8_Buf, s8_Buf);			// convert DOS codepage -> ANSI
-		Console.Write( color, s8_Buf );	// convert ANSI -> Unicode if compiled as Unicode
-	}
-	while (u32_Read == sizeof(s8_Buf)-1);
-
-	return true;
-}
-
 // --------------------------------------------------------------------------------------
 //  WinPipeThread
 // --------------------------------------------------------------------------------------
@@ -127,13 +101,59 @@ protected:
 
 	void ExecuteTaskInThread()
 	{
+		SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
+		if( m_outpipe == INVALID_HANDLE_VALUE ) return;
+
 		try
 		{
-			SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
+			char s8_Buf[2049];
+			DWORD u32_Read = 0;
+
 			while( true )
 			{
-				Yield( 100 );
-				ReadPipe( m_outpipe, m_color );
+				if( !ReadFile(m_outpipe, s8_Buf, sizeof(s8_Buf)-1, &u32_Read, NULL) )
+				{
+					DWORD result = GetLastError();
+					if( result == ERROR_HANDLE_EOF ) break;
+					if( result == ERROR_IO_PENDING )
+					{
+						Yield( 10 );
+						continue;
+					}
+
+					throw Exception::Win32Error( "ReadFile from pipe failed." );
+				}
+
+				if( u32_Read <= 3 )
+				{
+					// Windows has a habit of sending 1 or 2 characters of every message, and then sending
+					// the rest in a second message.  This is "ok" really, except our Console class is hardly
+					// free of overhead, so it's helpful if we can concatenate the couple of messages together.
+					// But we don't want to break the ability to print progressive status bars, like '....'
+					// so I use a clever Yield/Peek loop combo that keeps reading as long as there's new data
+					// immediately being fed to our pipe. :)  --air
+					
+					DWORD u32_avail = 0;
+
+					do
+					{
+						Yield();
+						if( !PeekNamedPipe(m_outpipe, 0, 0, 0, &u32_avail, 0) )
+							throw Exception::Win32Error( "Error peeking Pipe." );
+
+						if( u32_avail == 0 ) break;
+						
+						DWORD loopread;
+						if( !ReadFile(m_outpipe, &s8_Buf[u32_Read], sizeof(s8_Buf)-u32_Read-1, &loopread, NULL) ) break;
+						u32_Read += loopread;
+
+					} while( u32_Read < sizeof(s8_Buf)-32 );
+				}
+
+				// ATTENTION: The Console always prints ANSI to the pipe independent if compiled as UNICODE or MBCS!
+				s8_Buf[u32_Read] = 0;
+				OemToCharA(s8_Buf, s8_Buf);			// convert DOS codepage -> ANSI
+				Console.Write( m_color, s8_Buf );
 			}
 		}
 		catch( Exception::RuntimeError& ex )
@@ -227,6 +247,14 @@ WinPipeRedirection::~WinPipeRedirection()
 
 void WinPipeRedirection::Cleanup() throw()
 {
+	// Cleanup Order Notes:
+	//  * The redirection thread is most likely blocking on ReadFile(), so we can't Cancel yet, lest we deadlock --
+	//    Closing the writepipe (either directly or through the fp/crt handles) issues an EOF to the thread,
+	//    so it's safe to Cancel afterward.
+	//
+	//  * The seemingly redundant series of checks here are designed to handle cases where the pipe init fails
+	//    mid-init (in which case the writepipe might be allocated while the fp/crtFile are still invalid, etc).
+
 	if( m_fp != NULL )
 	{
 		fclose( m_fp );
@@ -239,7 +267,14 @@ void WinPipeRedirection::Cleanup() throw()
 	if( m_crtFile != -1 )
 	{
 		_close( m_crtFile );
-		m_crtFile	= -1;		// m_file is closed implicitly when closing crtFile
+		m_crtFile	= -1;						// m_file is closed implicitly when closing crtFile
+		m_writepipe = INVALID_HANDLE_VALUE;		// same for the write end of the pipe (I assume)
+	}
+
+	if( m_writepipe != INVALID_HANDLE_VALUE )
+	{
+		CloseHandle( m_writepipe );
+		m_writepipe = INVALID_HANDLE_VALUE;
 	}
 
 	m_Thread.Cancel();
@@ -249,7 +284,6 @@ void WinPipeRedirection::Cleanup() throw()
 		CloseHandle( m_readpipe );
 		m_readpipe = INVALID_HANDLE_VALUE;
 	}
-
 }
 
 // The win32 specific implementation of PipeRedirection.
