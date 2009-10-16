@@ -542,12 +542,16 @@ void RelocateLogfile()
 //
 void AppConfig_OnChangedSettingsFolder( bool overwrite )
 {
-	PathDefs::GetDocuments().Mkdir();
-	PathDefs::GetSettings().Mkdir();
+	if( !UseAdminMode )
+		PathDefs::GetDocuments().Mkdir();
+
+	GetSettingsFolder().Mkdir();
+
+	const wxString iniFilename( GetSettingsFilename() );
 
 	if( overwrite )
 	{
-		if( !wxRemoveFile( GetSettingsFilename() ) )
+		if( wxFileExists( iniFilename ) && !wxRemoveFile( iniFilename ) )
 			throw Exception::AccessDenied( "Failed to overwrite settings; permission to file was denied." );
 	}
 
@@ -556,7 +560,7 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 
 	// Bind into wxConfigBase to allow wx to use our config internally, and delete whatever
 	// comes out (cleans up prev config, if one).
-	delete wxConfigBase::Set( OpenFileConfig( GetSettingsFilename() ) );
+	delete wxConfigBase::Set( OpenFileConfig( iniFilename ) );
 	GetAppConfig()->SetRecordDefaults();
 
 	//wxGetApp().Source_SettingsChanged().Dispatch( SettingsEvt_IniOpening );

@@ -316,6 +316,8 @@ void AppApplySettings( const AppConfig* oldconf, bool saveOnSuccess )
 {
 	AllowFromMainThreadOnly();
 
+	g_Conf->Folders.ApplyDefaults();
+
 	// Ensure existence of necessary documents folders.  Plugins and other parts
 	// of PCSX2 rely on them.
 

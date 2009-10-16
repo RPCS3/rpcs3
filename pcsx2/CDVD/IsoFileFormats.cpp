@@ -428,6 +428,7 @@ void isoClose(isoFile *iso)
 	if (iso->handle) _closefile(iso->handle);
 	if (iso->htable) _closefile(iso->htable);
 	safe_free( iso->buffer );
+	safe_free( iso->dtable );
 	safe_free( iso );
 }
 
