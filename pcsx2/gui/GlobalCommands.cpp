@@ -53,16 +53,20 @@ wxString KeyAcceleratorCode::ToString() const
 		).ToString();
 }
 
-
+int limitOn = false; 
 namespace Implementations
 {
 	void Frameskip_Toggle()
 	{
+		limitOn ^= 1;
+		Console.WriteLn("Framelimit mode changed to %d", limitOn ? 1 : 0);
 		// FIXME : Reimplement framelimiting using new double-switch boolean system
 	}
 
 	void Framelimiter_TurboToggle()
 	{
+		limitOn ^= 1;
+		Console.WriteLn("Framelimit mode changed to %d", limitOn ? 1 : 0);
 	}
 
 	void Framelimiter_MasterToggle()

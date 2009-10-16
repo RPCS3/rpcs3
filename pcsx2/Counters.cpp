@@ -284,10 +284,11 @@ void frameLimitReset()
 // Framelimiter - Measures the delta time between calls and stalls until a
 // certain amount of time passes if such time hasn't passed yet.
 // See the GS FrameSkip function for details on why this is here and not in the GS.
+extern int limitOn; 
 static __forceinline void frameLimit()
 {
 	// 999 means the user would rather just have framelimiting turned off...
-	if( !EmuConfig.Video.EnableFrameLimiting || EmuConfig.Video.FpsLimit >= 999 ) return;
+	if( /*!EmuConfig.Video.EnableFrameLimiting*/ !limitOn || EmuConfig.Video.FpsLimit >= 999 ) return;
 	
 	s64 sDeltaTime;
 	u64 uExpectedEnd;
