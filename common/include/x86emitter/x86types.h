@@ -28,8 +28,6 @@ enum XMMSSEType
 };
 
 extern __threadlocal u8  *x86Ptr;
-extern __threadlocal u8  *j8Ptr[32];		// depreciated item.  use local u8* vars instead.
-extern __threadlocal u32 *j32Ptr[32];		// depreciated item.  use local u32* vars instead.
 
 extern __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM];
 

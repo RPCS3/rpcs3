@@ -43,22 +43,27 @@ extern __aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
 //    generally identical.
 //
 // Performance Considerations:
-//  * GCC's implementation involves an extra dereference from normal storage.
+//  * GCC's implementation involves an extra dereference from normal storage (possibly
+//    applies to x86-32 only -- x86-64 is untested).
 //
 //  * MSVC's implementation involves *two* extra dereferences from normal storage because
 //    it has to look up the TLS heap pointer from the Windows Thread Storage Area.  (in
-//    generated ASM code, this dereference is denoted by access to the fs:[2ch] address).
+//    generated ASM code, this dereference is denoted by access to the fs:[2ch] address),
 //
 //  * However, in either case, the optimizer usually optimizes it to a register so the
-//    extra overhead is minimal over a series of instructions.  (Note!!  the Full Opt-
-//    imization [/Ox] option effectively disables TLS optimizations in MSVC, causing
-//    generally significant code bloat).
+//    extra overhead is minimal over a series of instructions.
+//
+// MSVC Notes:
+//  * Important!! the Full Optimization [/Ox] option effectively disables TLS optimizations
+//    in MSVC 2008 and earlier, causing generally significant code bloat.  Not tested in
+//    VC2010 yet.
+//
+//  * VC2010 generally does a superior job of optimizing TLS across inlined functions and
+//    class methods, compared to predecessors.
 //
 
 
 __threadlocal u8  *x86Ptr;
-__threadlocal u8  *j8Ptr[32];
-__threadlocal u32 *j32Ptr[32];
 
 __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM] = { XMMT_INT };
 

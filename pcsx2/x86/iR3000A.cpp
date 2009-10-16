@@ -616,8 +616,6 @@ static void recShutdown()
 	s_nInstCacheSize = 0;
 }
 
-#pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
-
 u32 g_psxlastpc = 0;
 
 static void iopClearRecLUT(BASEBLOCK* base, int count)
@@ -647,11 +645,9 @@ static __forceinline s32 recExecuteBlock( s32 eeCycles )
 		push ebx
 		push esi
 		push edi
-		push ebp
 
 		call iopDispatcherReg
 
-		pop ebp
 		pop edi
 		pop esi
 		pop ebx
@@ -661,20 +657,14 @@ static __forceinline s32 recExecuteBlock( s32 eeCycles )
 	(
 		// We should be able to rely on GAS syntax (the register clobber list) as a
 		// replacement for manual push/pop of unpreserved registers.
-		//
-		// EBP note: As I feared, EBP is "required" for C++ exception handling in Linux, and trying
-		//   to issue a clobber specifier for it causes an error.  We really need to find a way to
-		//   disable EBP regalloc in iCore. --air
 
 		".intel_syntax noprefix\n"
 		//"push ebx\n"
 		//"push esi\n"
 		//"push edi\n"
-		"push ebp\n"
 
 		"call iopDispatcherReg\n"
 
-		"pop ebp\n"
 		//"pop edi\n"
 		//"pop esi\n"
 		//"pop ebx\n"

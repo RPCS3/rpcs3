@@ -800,12 +800,13 @@ void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 
 			// (this is one of my test cases for the new emitter --air)
 			using namespace x86Emitter;
-			xAddressReg thisreg( x86reg );
+			xAddressInfo indexer( offset );
+			if( x86reg != -1 ) indexer.Add( xAddressReg( x86reg ) );
 
-			if ( _X ) xMOV(ptr32[thisreg+offset],    0x00000000);
-			if ( _Y ) xMOV(ptr32[thisreg+offset+4],  0x00000000);
-			if ( _Z ) xMOV(ptr32[thisreg+offset+8],  0x00000000);
-			if ( _W ) xMOV(ptr32[thisreg+offset+12], 0x3f800000);
+			if ( _X ) xMOV(ptr32[indexer],    0x00000000);
+			if ( _Y ) xMOV(ptr32[indexer+4],  0x00000000);
+			if ( _Z ) xMOV(ptr32[indexer+8],  0x00000000);
+			if ( _W ) xMOV(ptr32[indexer+12], 0x3f800000);
 		}
 		return;
 	}

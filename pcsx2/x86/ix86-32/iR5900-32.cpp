@@ -475,10 +475,6 @@ static void recShutdown( void )
 	s_nInstCacheSize = 0;
 }
 
-#ifdef _MSC_VER
-#pragma warning(disable:4731) // frame pointer register 'ebp' modified by inline assembly code
-#endif
-
 void recStep( void )
 {
 }
@@ -509,7 +505,6 @@ void recEventTest()
 ////////////////////////////////////////////////////
 
 static u32 g_lastpc = 0;
-u32 g_EEDispatchTemp;
 
 #ifdef _MSC_VER
 
@@ -570,30 +565,28 @@ static void recExecute()
 	// invoking DispatcherReg.  These things are code bits which are called infrequently,
 	// such as dyna_block_discard and dyna_page_reset.
 
-	// Optimization note:
-	// Compared pushad against manually pushing the regs one-by-one.
-	// Manually pushing is faster, especially on Core2's and such. :)
-
-	g_EEFreezeRegs = true;
-
 	try
 	{
 		while( true )
 		{
+			// Note: make sure the FreezeRegs boolean is reset to true here, because
+			// it might be set to false, depending on if the rec exits from the context of
+			// an EventTest or not.
+
+			g_EEFreezeRegs = true;
+
 			try
 			{
-	#ifdef _MSC_VER
 
+	#ifdef _MSC_VER
 				__asm
 				{
 					push ebx
 					push esi
 					push edi
-					push ebp
 
 					call DispatcherReg
 
-					pop ebp
 					pop edi
 					pop esi
 					pop ebx
