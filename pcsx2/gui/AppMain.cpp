@@ -76,7 +76,11 @@ void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 
 void Pcsx2App::PostPadKey( wxKeyEvent& evt )
 {
-	if( m_gsFrame == NULL )
+	// HACK: Legacy PAD plugins expect PCSX2 to ignore keyboard messages on the
+	// GS window while the PAD plugin is open, so send messages to the APP handler
+	// only if *either* the GS or PAD plugins are in legacy mode.
+
+	if( m_gsFrame == NULL || (PADopen != NULL) )
 	{
 		evt.SetId( pxID_PadHandler_Keydown );
 		wxGetApp().AddPendingEvent( evt );

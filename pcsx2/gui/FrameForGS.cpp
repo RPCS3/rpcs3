@@ -65,6 +65,12 @@ void GSFrame::OnCloseWindow(wxCloseEvent& evt)
 
 void GSFrame::OnKeyDown( wxKeyEvent& evt )
 {
+	// HACK: Legacy PAD plugins expect PCSX2 to ignore keyboard messages on the GS Window while
+	// the PAD plugin is open, so ignore here (PCSX2 will direct messages routed from PAD directly
+	// to the APP level message handler).
+
+	if( (PADopen != NULL) && CoreThread.IsOpen() ) return;
+
 	const GlobalCommandDescriptor* cmd = NULL;
 	m_Accels.TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
 	if( cmd == NULL )
