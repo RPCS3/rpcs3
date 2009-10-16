@@ -85,8 +85,7 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 
 		// Note: apply first, then save -- in case the apply fails.
 
-		AppApplySettings( &confcopy );
-		if( saveOnSuccess ) AppSaveSettings();
+		AppApplySettings( &confcopy, saveOnSuccess );
 	}
 	catch( Exception::CannotApplySettings& ex )
 	{
@@ -95,10 +94,13 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 		UseDefaultSettingsFolder = oldUseDefSet;
 		*g_Conf = confcopy;
 
-		wxMessageBox( ex.FormatDisplayMessage(), _("Cannot apply settings...") );
+		if( ex.IsVerbose )
+		{
+			wxMessageBox( ex.FormatDisplayMessage(), _("Cannot apply settings...") );
 
-		if( ex.GetPanel() != NULL )
-			ex.GetPanel()->SetFocusToMe();
+			if( ex.GetPanel() != NULL )
+				ex.GetPanel()->SetFocusToMe();
+		}
 
 		retval = false;
 	}
@@ -170,7 +172,7 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int id
 
 	int size = m_langs.size();
 	int cursel = 0;
-	wxString* compiled = new wxString[size];
+	ScopedArray<wxString> compiled( size ); //, L"Compiled Language Names" );
 	wxString configLangName( wxLocale::GetLanguageName( wxLANGUAGE_DEFAULT ) );
 
 	for( int i=0; i<size; ++i )
@@ -181,7 +183,7 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int id
 	}
 
 	m_picker = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		size, compiled, wxCB_READONLY | wxCB_SORT );
+		size, compiled.GetPtr(), wxCB_READONLY | wxCB_SORT );
 	m_picker->SetSelection( cursel );
 
 	wxBoxSizer& s_lang = *new wxBoxSizer( wxHORIZONTAL );

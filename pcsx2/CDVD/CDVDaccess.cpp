@@ -292,15 +292,17 @@ void CDVDsys_ChangeSource( CDVD_SourceType type )
 
 		jNO_DEFAULT;
 	}
-
-	CDVD->newDiskCB( cdvdNewDiskCB );
 }
 
 bool DoCDVDopen()
 {
 	CheckNullCDVD();
 
-	int ret = CDVD->open( m_SourceFilename[m_CurrentSourceType].IsEmpty() ? NULL : m_SourceFilename[m_CurrentSourceType].ToUTF8().data() );
+	// the new disk callback is set on Init also, but just in case the plugin clears it for
+	// some reason on close, we re-send here:
+	CDVD->newDiskCB( cdvdNewDiskCB );
+	
+	int ret = CDVD->open( !m_SourceFilename[m_CurrentSourceType].IsEmpty() ? m_SourceFilename[m_CurrentSourceType].ToUTF8() : (char*)NULL );
 	if( ret == -1 ) return false;
 
 	int cdtype = DoCDVDdetectDiskType();

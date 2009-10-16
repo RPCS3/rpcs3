@@ -89,18 +89,13 @@ void MainEmuFrame::UpdateIsoSrcFile()
 	GetMenuBar()->SetLabel( MenuId_Src_Iso, label );
 }
 
-void MainEmuFrame::LoadRecentIsoList( wxConfigBase& conf )
+void MainEmuFrame::LoadSaveRecentIsoList( IniInterface& conf )
 {
-	if( m_RecentIsoList )
-		m_RecentIsoList->Load( conf );
+	if( conf.IsLoading() )
+		m_RecentIsoList->Load( conf.GetConfig() );
+	else
+		m_RecentIsoList->Save( conf.GetConfig() );
 }
-
-void MainEmuFrame::SaveRecentIsoList( wxConfigBase& conf )
-{
-	if( m_RecentIsoList )
-		m_RecentIsoList->Load( conf );
-}
-
 
 // ------------------------------------------------------------------------
 //     Video / Audio / Pad "Extensible" Menus
@@ -260,11 +255,34 @@ void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
 	}
 }
 
-static void OnCoreThreadStatusChanged( void* obj, const wxCommandEvent& evt )
+void MainEmuFrame::OnCoreThreadStatusChanged( void* obj, const wxCommandEvent& evt )
+{
+	if( obj == NULL ) return;
+	MainEmuFrame* mframe = (MainEmuFrame*)obj;
+	mframe->ApplyCoreStatus();
+}
+
+void MainEmuFrame::OnCorePluginStatusChanged( void* obj, const wxCommandEvent& evt )
+{
+	if( obj == NULL ) return;
+	MainEmuFrame* mframe = (MainEmuFrame*)obj;
+	mframe->ApplyCoreStatus();
+}
+
+void MainEmuFrame::OnSettingsApplied( void* obj, const int& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 	mframe->ApplySettings();
+}
+
+void MainEmuFrame::OnSettingsLoadSave( void* obj, const IniInterface& evt )
+{
+	if( obj == NULL ) return;
+	MainEmuFrame* mframe = (MainEmuFrame*)obj;
+	
+	// FIXME: Evil const cast hack!
+	mframe->LoadSaveRecentIsoList( const_cast<IniInterface&>(evt) );
 }
 
 // ------------------------------------------------------------------------
@@ -295,7 +313,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
 	
-	m_Listener_CoreThreadStatus( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener( this, OnCoreThreadStatusChanged ) )
+	m_Listener_CoreThreadStatus( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener( this, OnCoreThreadStatusChanged ) ),
+	m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), CmdEvt_Listener( this, OnCorePluginStatusChanged ) ),
+	m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) ),
+	m_Listener_SettingsLoadSave( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
 {
 	// ------------------------------------------------------------------------
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
@@ -471,8 +492,8 @@ MainEmuFrame::~MainEmuFrame() throw()
 {
 	try
 	{
-		if( m_RecentIsoList )
-			m_RecentIsoList->Save( *wxConfigBase::Get( false ) );
+		if( m_RecentIsoList && GetAppConfig() )
+			m_RecentIsoList->Save( *GetAppConfig() );
 	}
 	DESTRUCTOR_CATCHALL
 }
@@ -485,7 +506,7 @@ void MainEmuFrame::ReloadRecentLists()
 	// the recent file count has been changed, and it's a helluva lot easier than trying
 	// to make a clone copy of this complex object. ;)
 
-	wxConfigBase* cfg = wxConfigBase::Get( false );
+	wxConfigBase* cfg = GetAppConfig();
 	pxAssert( cfg != NULL );
 
 	if( m_RecentIsoList )
@@ -495,6 +516,14 @@ void MainEmuFrame::ReloadRecentLists()
 	cfg->Flush();
 }
 
+void MainEmuFrame::ApplyCoreStatus()
+{
+	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, SysHasValidState() );
+	GetMenuBar()->Enable( MenuId_Sys_Reset, SysHasValidState() || (g_plugins!=NULL) );
+
+	GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, CoreThread.IsOpen() ? _("Suspend") : _("Resume") );
+}
+
 void MainEmuFrame::ApplySettings()
 {
 	GetMenuBar()->Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
@@ -502,10 +531,6 @@ void MainEmuFrame::ApplySettings()
 	GetMenuBar()->Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
 	GetMenuBar()->Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );
 
-	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, SysHasValidState() );
-
-	GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, CoreThread.IsExecMode_Running() ? _("Suspend") :_("Resume") );
-	
 	if( m_RecentIsoList )
 	{
 		if( m_RecentIsoList->GetMaxFiles() != g_Conf->RecentFileCount )

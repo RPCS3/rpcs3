@@ -25,10 +25,30 @@
 #undef Yield		// release th burden of windows.h global namespace spam.
 class wxTimeSpan;
 
+#define AllowFromMainThreadOnly() \
+	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
+
 namespace Threading
 {
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// Define some useful object handles - wait events, mutexes.
+	// --------------------------------------------------------------------------------------
+	//  Platform Specific External APIs
+	// --------------------------------------------------------------------------------------
+	// The following set of documented functions have Linux/Win32 specific implementations,
+	// which are found in WinThreads.cpp and LnxThreads.cpp
+	
+
+	// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
+	extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
+
+	// Releases a timeslice to other threads.
+	extern void Timeslice();
+
+	// For use in spin/wait loops.
+	extern void SpinWait();
+
+	// sleeps the current thread for the given number of milliseconds.
+	extern void Sleep( int ms );
+
 
 	// pthread Cond is an evil api that is not suited for Pcsx2 needs.
 	// Let's not use it. Use mutexes and semaphores instead to create waits. (Air)
@@ -39,7 +59,7 @@ namespace Threading
 		pthread_mutex_t mutex;
 
 		WaitEvent();
-		~WaitEvent();
+		~WaitEvent() throw();
 
 		void Set();
 		void Wait();
@@ -64,7 +84,7 @@ namespace Threading
 
 	public:
 		NonblockingMutex() : val( false ) {}
-		virtual ~NonblockingMutex() throw() {};
+		virtual ~NonblockingMutex() throw() {}
 
 		bool TryLock() throw()
 		{
@@ -78,25 +98,31 @@ namespace Threading
 		{ val = false; }
 	};
 
-	struct Semaphore
+	class Semaphore
 	{
-		sem_t sema;
+	protected:
+		sem_t m_sema;
 
+	public:
 		Semaphore();
-		~Semaphore();
+		virtual ~Semaphore() throw();
 
 		void Reset();
 		void Post();
 		void Post( int multiple );
 		
-#if wxUSE_GUI
-		void WaitGui();
-		bool WaitGui( const wxTimeSpan& timeout );
-#endif
-		void Wait();
-		bool Wait( const wxTimeSpan& timeout );
+		void WaitRaw();
+		bool WaitRaw( const wxTimeSpan& timeout );
 		void WaitNoCancel();
 		int  Count();
+
+#if wxUSE_GUI
+		void Wait();
+		bool Wait( const wxTimeSpan& timeout );
+
+	protected:
+		bool _WaitGui_RecursionGuard();
+#endif
 	};
 
 	class MutexLock
@@ -123,19 +149,6 @@ namespace Threading
 		MutexLockRecursive();
 		virtual ~MutexLockRecursive() throw();
 	};
-
-
-	// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
-	extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
-
-	// Releases a timeslice to other threads.
-	extern void Timeslice();
-
-	// For use in spin/wait loops.
-	extern void SpinWait();
-
-	// sleeps the current thread for the given number of milliseconds.
-	extern void Sleep( int ms );
 
 // --------------------------------------------------------------------------------------
 // IThread - Interface for the public access to PersistentThread.
@@ -279,8 +292,8 @@ namespace Threading
 		DeclareNoncopyableObject(ScopedLock);
 
 	protected:
-		MutexLock& m_lock;
-		bool m_IsLocked;
+		MutexLock&	m_lock;
+		bool		m_IsLocked;
 
 	public:
 		virtual ~ScopedLock() throw()
@@ -311,6 +324,25 @@ namespace Threading
 			m_lock.Lock();
 			m_IsLocked = true;
 		}
+		
+		bool IsLocked() const { return m_IsLocked; }
+
+	protected:
+		// Special constructor used by ScopedTryLock
+		ScopedLock( MutexLock& locker, bool isTryLock ) :
+			m_lock( locker )
+		,	m_IsLocked( isTryLock ? m_lock.TryLock() : false )
+		{
+		}
+			
+	};
+	
+	class ScopedTryLock : public ScopedLock
+	{
+	public:
+		ScopedTryLock( MutexLock& locker ) : ScopedLock( locker, true ) { }
+		virtual ~ScopedTryLock() throw() {}
+		bool Failed() const { return !m_IsLocked; }
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////

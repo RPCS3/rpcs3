@@ -23,38 +23,6 @@
 
 extern void px_fputs( FILE* fp, const char* src );
 
-// --------------------------------------------------------------------------------------
-//  toUTF8  -  shortcut for str.ToUTF8().data()
-// --------------------------------------------------------------------------------------
-class toUTF8
-{
-	DeclareNoncopyableObject( toUTF8 );
-
-protected:
-	wxCharBuffer m_charbuffer;
-
-public:
-	toUTF8( const wxString& str ) : m_charbuffer( str.ToUTF8().data() ) { }
-	virtual ~toUTF8() throw() {}
-	
-	operator const char*() { return m_charbuffer.data(); }
-};
-
-// This class provided for completeness sake.  You probably should use toUTF8 instead.
-class toAscii
-{
-	DeclareNoncopyableObject( toAscii );
-
-protected:
-	wxCharBuffer m_charbuffer;
-
-public:
-	toAscii( const wxString& str ) : m_charbuffer( str.ToAscii().data() ) { }
-	virtual ~toAscii() throw() {}
-
-	operator const char*() { return m_charbuffer.data(); }
-};
-
 extern wxString fromUTF8( const char* src );
 extern wxString fromAscii( const char* src );
 

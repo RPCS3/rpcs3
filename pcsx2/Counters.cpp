@@ -439,7 +439,7 @@ __forceinline void rcntUpdate_vSync()
 	{
 		eeRecIsReset = false;
 		mtgsThread.RethrowException();
-		SysCoreThread::Get().StateCheck();
+		SysCoreThread::Get().StateCheckInThread();
 		if( eeRecIsReset )
 		{
 			eeRecIsReset = false;

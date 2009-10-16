@@ -22,8 +22,9 @@
 #include <wx/apptrait.h>
 
 #include "Utilities/Listeners.h"
+#include "IniInterface.h"
 
-class IniInterface;
+//class IniInterface;
 class MainEmuFrame;
 class GSFrame;
 class ConsoleLogFrame;
@@ -39,9 +40,6 @@ class AppCoreThread;
 
 
 typedef void FnType_OnThreadComplete(const wxCommandEvent& evt);
-
-#define AllowFromMainThreadOnly() \
-	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
@@ -159,7 +157,7 @@ enum DialogIdentifiers
 	DialogId_About,
 };
 
-enum AppStatusEvent
+enum AppEventType
 {
 	// Maybe this will be expanded upon later..?
 	AppStatus_Exiting
@@ -310,6 +308,23 @@ struct MsgboxEventResult
 };
 
 // --------------------------------------------------------------------------------------
+//  AppIniSaver / AppIniLoader
+// --------------------------------------------------------------------------------------
+class AppIniSaver : public IniSaver
+{
+public:
+	AppIniSaver();
+	virtual ~AppIniSaver() {}
+};
+
+class AppIniLoader : public IniLoader
+{
+public:
+	AppIniLoader();
+	virtual ~AppIniLoader() {}
+};
+
+// --------------------------------------------------------------------------------------
 //  Pcsx2App  -  main wxApp class
 // --------------------------------------------------------------------------------------
 
@@ -390,7 +405,7 @@ public:
 	ConsoleLogFrame* GetProgramLog();
 	void ProgramLog_CountMsg();
 	void ProgramLog_PostEvent( wxEvent& evt );
-	void EnableConsoleLogging() const;
+	void EnableAllLogging() const;
 	void DisableWindowLogging() const;
 	void DisableDiskLogging() const;
 	void OnProgramLogClosed();
@@ -402,12 +417,16 @@ public:
 protected:
 	CmdEvt_Source		m_evtsrc_CorePluginStatus;
 	CmdEvt_Source		m_evtsrc_CoreThreadStatus;
-	EventSource<AppStatusEvent>	m_evtsrc_AppStatus;
+	EventSource<int>	m_evtsrc_SettingsApplied;
+	EventSource<IniInterface>	m_evtsrc_SettingsLoadSave;
+	EventSource<AppEventType>	m_evtsrc_AppStatus;
 
 public:
 	CmdEvt_Source& Source_CoreThreadStatus()	{ return m_evtsrc_CoreThreadStatus; }
 	CmdEvt_Source& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
-	EventSource<AppStatusEvent>& Source_AppStatus()	{ return m_evtsrc_AppStatus; }
+	EventSource<int>& Source_SettingsApplied()	{ return m_evtsrc_SettingsApplied; }
+	EventSource<IniInterface>& Source_SettingsLoadSave()	{ return m_evtsrc_SettingsLoadSave; }
+	EventSource<AppEventType>& Source_AppStatus()	{ return m_evtsrc_AppStatus; }
 
 protected:
 	void InitDefaultGlobalAccelerators();
@@ -453,6 +472,7 @@ protected:
 
 enum CoreThreadStatus
 {
+	CoreStatus_Indeterminate,
 	CoreStatus_Resumed,
 	CoreStatus_Suspended,
 	CoreStatus_Stopped,
@@ -471,11 +491,14 @@ public:
 
 	virtual bool Suspend( bool isBlocking=true );
 	virtual void Resume();
-	virtual void StateCheck( bool isCancelable=true );
+	virtual void StateCheckInThread( bool isCancelable=true );
 	virtual void ApplySettings( const Pcsx2Config& src );
 
 protected:
 	virtual void OnResumeReady();
+
+	virtual void OnResumeInThread( bool IsSuspended );
+	virtual void OnSuspendInThread();
 	virtual void OnCleanupInThread();
 	virtual void ExecuteTaskInThread();
 };
@@ -514,8 +537,6 @@ DECLARE_APP(Pcsx2App)
 //  External App-related Globals and Shortcuts
 // --------------------------------------------------------------------------------------
 
-extern bool sys_resume_lock;
-
 extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
 extern void LoadPluginsPassive( FnType_OnThreadComplete* onComplete );
 extern void LoadPluginsImmediate();
@@ -523,7 +544,7 @@ extern void UnloadPlugins();
 
 extern void AppLoadSettings();
 extern void AppSaveSettings();
-extern void AppApplySettings( const AppConfig* oldconf=NULL );
+extern void AppApplySettings( const AppConfig* oldconf=NULL, bool saveOnSuccess=false );
 
 extern bool SysHasValidState();
 

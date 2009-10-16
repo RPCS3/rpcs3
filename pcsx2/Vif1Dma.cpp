@@ -728,7 +728,7 @@ void vif1TransferFromMemory()
 		{
 			if (size > 1)
 			{
-				mtgsWaitGS();
+				mtgsThread.WaitGS();
 				GSreadFIFO((u64*)&PS2MEM_HW[0x5000]);
 			}
 			pMem[0] = psHu64(VIF1_FIFO);
@@ -738,7 +738,7 @@ void vif1TransferFromMemory()
 	}
 	else
 	{
-		mtgsWaitGS();
+		mtgsThread.WaitGS();
 		GSreadFIFO2(pMem, vif1ch->qwc);
 
 		// set incase read

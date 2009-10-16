@@ -293,9 +293,6 @@ int Pcsx2App::OnExit()
 	if( g_Conf )
 		AppSaveSettings();
 
-	while( wxGetLocale() != NULL )
-		delete wxGetLocale();
-
 	return wxApp::OnExit();
 }
 
@@ -311,7 +308,7 @@ MainEmuFrame& Pcsx2App::GetMainFrame() const
 	return *m_MainFrame;
 }
 
-void AppApplySettings( const AppConfig* oldconf )
+void AppApplySettings( const AppConfig* oldconf, bool saveOnSuccess )
 {
 	AllowFromMainThreadOnly();
 
@@ -323,6 +320,8 @@ void AppApplySettings( const AppConfig* oldconf )
 	g_Conf->Folders.Snapshots.Mkdir();
 
 	g_Conf->EmuOptions.BiosFilename = g_Conf->FullpathToBios();
+
+	RelocateLogfile();
 
 	bool resume = CoreThread.Suspend();
 
@@ -343,34 +342,44 @@ void AppApplySettings( const AppConfig* oldconf )
 		}
 	}
 
+	sApp.Source_SettingsApplied().Dispatch( 0 );
 	CoreThread.ApplySettings( g_Conf->EmuOptions );
 	
 	if( resume )
 		CoreThread.Resume();
+
+	if( saveOnSuccess )
+		AppSaveSettings();
+}
+
+static wxFileConfig _dud_config;
+
+AppIniSaver::AppIniSaver() :
+	IniSaver( (GetAppConfig() != NULL) ? *GetAppConfig() : _dud_config )
+{
+}
+
+AppIniLoader::AppIniLoader() :
+	IniLoader( (GetAppConfig() != NULL) ? *GetAppConfig() : _dud_config )
+{
 }
 
 void AppLoadSettings()
 {
-	wxConfigBase* conf = wxConfigBase::Get( false );
-	if( NULL == conf ) return;
+	if( !AllowFromMainThreadOnly() ) return;
 
-	IniLoader loader( *conf );
+	AppIniLoader loader;
 	g_Conf->LoadSave( loader );
-
-	if( HasMainFrame() )
-		GetMainFrame().LoadRecentIsoList( *conf );
+	wxGetApp().Source_SettingsLoadSave().Dispatch( loader );
 }
 
 void AppSaveSettings()
 {
-	wxConfigBase* conf = wxConfigBase::Get( false );
-	if( NULL == conf ) return;
+	if( !AllowFromMainThreadOnly() ) return;
 
-	IniSaver saver( *conf );
+	AppIniSaver saver;
 	g_Conf->LoadSave( saver );
-
-	if( HasMainFrame() )
-		GetMainFrame().SaveRecentIsoList( *conf );
+	wxGetApp().Source_SettingsLoadSave().Dispatch( saver );
 }
 
 void Pcsx2App::OpenGsFrame()
@@ -413,28 +422,30 @@ void Pcsx2App::OnMainFrameClosed()
 
 static int _sysexec_cdvdsrc_type = -1;
 
-static void OnSysExecuteAfterPlugins( const wxCommandEvent& loadevt )
+static void _sendmsg_SysExecute()
 {
-	if( !wxGetApp().m_CorePlugins ) return;
-
 	wxCommandEvent execevt( pxEVT_SysExecute );
 	execevt.SetInt( _sysexec_cdvdsrc_type );
 	wxGetApp().AddPendingEvent( execevt );
+}
+
+static void OnSysExecuteAfterPlugins( const wxCommandEvent& loadevt )
+{
+	if( (wxTheApp == NULL) || !((Pcsx2App*)wxTheApp)->m_CorePlugins ) return;
+	_sendmsg_SysExecute();
 }
 
 // Executes the emulator using a saved/existing virtual machine state and currently
 // configured CDVD source device.
 void Pcsx2App::SysExecute()
 {
+	_sysexec_cdvdsrc_type = -1;
 	if( !m_CorePlugins )
 	{
 		LoadPluginsPassive( OnSysExecuteAfterPlugins );
 		return;
 	}
-
-	wxCommandEvent evt( pxEVT_SysExecute );
-	evt.SetInt( -1 );
-	AddPendingEvent( evt );
+	_sendmsg_SysExecute();
 }
 
 // Executes the specified cdvd source and optional elf file.  This command performs a
@@ -442,20 +453,18 @@ void Pcsx2App::SysExecute()
 // sources.
 void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
 {
+	_sysexec_cdvdsrc_type = (int)cdvdsrc;
 	if( !m_CorePlugins )
 	{
 		LoadPluginsPassive( OnSysExecuteAfterPlugins );
 		return;
 	}
-
-	wxCommandEvent evt( pxEVT_SysExecute );
-	evt.SetInt( (int)cdvdsrc );
-	AddPendingEvent( evt );
+	_sendmsg_SysExecute();
 }
 
 void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 {
-	if( sys_resume_lock )
+	if( sys_resume_lock > 0 )
 	{
 		Console.WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
 		return;
@@ -465,16 +474,18 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 	// it, because apparently too much stuff is going on and the emulation states are wonky.
 	if( !m_CorePlugins ) return;
 
-	if( evt.GetInt() != -1 ) SysReset(); else CoreThread.Suspend();
+	if( evt.GetInt() != -1 ) CoreThread.Reset(); else CoreThread.Suspend();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	if( evt.GetInt() != -1 ) CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
 
 	CoreThread.Resume();
 }
 
+// Full system reset stops the core thread and unloads all core plugins *completely*.
 void Pcsx2App::SysReset()
 {
 	CoreThread.Reset();
+	m_CorePlugins = NULL;
 }
 
 // Returns true if there is a "valid" virtual machine state from the user's perspective.  This

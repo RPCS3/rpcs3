@@ -31,39 +31,71 @@ public:
 };
 
 
-class SysSuspendableThread : public PersistentThread, public virtual ISysThread
+class SysThreadBase : public PersistentThread, public virtual ISysThread
 {
 	typedef PersistentThread _parent;
 
 protected:
+	// Important: The order of these enumerations matters.  All "not-open" statuses must
+	// be listed before ExecMode_Closed, since there are "optimized" tests that rely on the
+	// assumption that "ExecMode <= ExecMode_Closed" equates to a closed thread status.
 	enum ExecutionMode
 	{
+		// Thread has not been created yet.  Typically this is the same as IsRunning()
+		// returning FALSE.
 		ExecMode_NoThreadYet,
-		ExecMode_Running,
-		ExecMode_Suspending,
-		ExecMode_Suspended,
+		
+		// Close signal has been sent to the thread, but the thread's response is still
+		// pending (thread is busy/running).
+		ExecMode_Closing,
+
+		// Thread is safely paused, with plugins in a "closed" state, and waiting for a
+		// resume/open signal.
+		ExecMode_Closed,
+
+		// Thread is active and running, with pluigns in an "open" state.
+		ExecMode_Opened,
+		
+		// Pause signal has been sent to the thread, but the thread's response is still
+		// pending (thread is busy/running).
 		ExecMode_Pausing,
+		
+		// Thread is safely paused, with plugins in an "open" state, and waiting for a
+		// resume/open signal.
 		ExecMode_Paused,
 	};
 
 	volatile ExecutionMode	m_ExecMode;
-	MutexLock				m_lock_ExecMode;
+	MutexLock				m_ExecModeMutex;
 
 	Semaphore				m_ResumeEvent;
 	Semaphore				m_SuspendEvent;
-	bool					m_ResumeProtection;
-	
-public:
-	explicit SysSuspendableThread();
-	virtual ~SysSuspendableThread() throw();
+	int						m_resume_guard;
 
-	bool IsExecMode_Running() const { return m_ExecMode == ExecMode_Running; }
+public:
+	explicit SysThreadBase();
+	virtual ~SysThreadBase() throw();
+
+	// Thread safety for IsOpen / IsClosed: The execution mode can change at any time on
+	// any thread, so the actual status may have already changed by the time this function
+	// returns its result.  Typically this isn't of major concern.  However if you need
+	// more assured execution mode status, issue a lock against the ExecutionModeMutex()
+	// first.
+	bool IsOpen() const
+	{
+		return m_ExecMode > ExecMode_Closed;
+	}
+	
+	bool IsClosed() const { return !IsOpen(); }
+
+	ExecutionMode GetExecutionMode() const { return m_ExecMode; }
+	MutexLock& ExecutionModeMutex() { return m_ExecModeMutex; }
 
 	virtual bool Suspend( bool isBlocking = true );
 	virtual void Resume();
 	virtual bool Pause();
 	
-	virtual void StateCheck( bool isCancelable = true );
+	virtual void StateCheckInThread( bool isCancelable = true );
 	virtual void OnCleanupInThread();
 
 	// This function is called by Resume immediately prior to releasing the suspension of
@@ -79,21 +111,21 @@ protected:
 	virtual void Start();
 
 	// Extending classes should implement this, but should not call it.  The parent class
-	// handles invocation by the following guidelines: Called *in thread* from StateCheck()
+	// handles invocation by the following guidelines: Called *in thread* from StateCheckInThread()
 	// prior to suspending the thread (ie, when Suspend() has been called on a separate
 	// thread, requesting this thread suspend itself temporarily).  After this is called,
 	// the thread enters a waiting state on the m_ResumeEvent semaphore.
 	virtual void OnSuspendInThread()=0;
 	
 	// Extending classes should implement this, but should not call it.  The parent class
-	// handles invocation by the following guidelines: Called *in thread* from StateCheck()
+	// handles invocation by the following guidelines: Called *in thread* from StateCheckInThread()
 	// prior to pausing the thread (ie, when Pause() has been called on a separate thread,
 	// requesting this thread pause itself temporarily).  After this is called, the thread
 	// enters a waiting state on the m_ResumeEvent semaphore.
 	virtual void OnPauseInThread()=0;
 
 	// Extending classes should implement this, but should not call it.  The parent class
-	// handles invocation by the following guidelines: Called from StateCheck() after the
+	// handles invocation by the following guidelines: Called from StateCheckInThread() after the
 	// thread has been suspended and then subsequently resumed.
 	// Parameter:
 	//   isSuspended - set to TRUE if the thread is returning from a suspended state, or
@@ -104,9 +136,9 @@ protected:
 // --------------------------------------------------------------------------------------
 //  EECoreThread class
 // --------------------------------------------------------------------------------------
-class SysCoreThread : public SysSuspendableThread
+class SysCoreThread : public SysThreadBase
 {
-	typedef SysSuspendableThread _parent;
+	typedef SysThreadBase _parent;
 
 protected:
 	bool			m_resetRecompilers;
@@ -141,3 +173,5 @@ protected:
 	virtual void OnCleanupInThread();
 	virtual void ExecuteTaskInThread();
 };
+
+extern int sys_resume_lock;

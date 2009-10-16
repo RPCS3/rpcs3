@@ -88,7 +88,7 @@ std::list<uint> ringposStack;
 #endif
 
 mtgsThreadObject::mtgsThreadObject() :
-	SysSuspendableThread()
+	SysThreadBase()
 ,	m_RingPos( 0 )
 ,	m_WritePos( 0 )
 
@@ -244,8 +244,8 @@ void mtgsThreadObject::ExecuteTaskInThread()
 	pthread_cleanup_push( _clean_close_gs, this );
 	while( true )
 	{
-		m_sem_event.Wait();		// ... because this does a cancel test itself..
-		StateCheck( false );	// false disables cancel test here!
+		m_sem_event.WaitRaw();		// ... because this does a cancel test itself..
+		StateCheckInThread( false );	// false disables cancel test here!
 
 		m_RingBufferIsBusy = true;
 
@@ -282,7 +282,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 					m_lock_RingRestart.Lock();
 					m_lock_RingRestart.Unlock();
 
-					StateCheck( false );		// disable cancel since the above locks are cancelable already
+					StateCheckInThread( false );		// disable cancel since the above locks are cancelable already
 				continue;
 
 				case GS_RINGTYPE_P1:
@@ -435,7 +435,8 @@ void mtgsThreadObject::WaitGS()
 {
 	pxAssertDev( !IsSelf(), "This method is only allowed from threads *not* named MTGS." );
 
-	if( !pxAssertDev( m_ExecMode == ExecMode_Running, "MTGS Warning!  WaitGS issued on a suspended/paused thread." ) ) return;
+	if( m_ExecMode == ExecMode_NoThreadYet || !IsRunning() ) return;
+	if( !pxAssertDev( IsOpen(), "MTGS Warning!  WaitGS issued on a closed thread." ) ) return;
 
 	// FIXME : Use semaphores instead of spinwaits.
 	SetEvent();
@@ -790,7 +791,7 @@ void mtgsThreadObject::SendGameCRC( u32 crc )
 void mtgsThreadObject::WaitForOpen()
 {
 	if( !gsIsOpened )
-		m_sem_OpenDone.WaitGui();
+		m_sem_OpenDone.Wait();
 	m_sem_OpenDone.Reset();
 }
 
@@ -806,13 +807,5 @@ void mtgsThreadObject::Freeze( int mode, MTGS_FreezeData& data )
 	else
 		SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
 
-	mtgsWaitGS();
-}
-
-// Waits for the GS to empty out the entire ring buffer contents.
-// Used primarily for plugin startup/shutdown.
-void mtgsWaitGS()
-{
 	mtgsThread.WaitGS();
 }
-

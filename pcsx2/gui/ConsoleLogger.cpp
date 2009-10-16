@@ -521,7 +521,7 @@ void ConsoleLogFrame::CountMessage()
 
 			wxCommandEvent evt( wxEVT_SemaphoreWait );
 			GetEventHandler()->AddPendingEvent( evt );
-			m_semaphore.Wait();
+			m_semaphore.WaitRaw();
 		}
 	}
 }
@@ -594,12 +594,12 @@ static void __concall ConsoleToFile_Newline()
 
 static void __concall ConsoleToFile_DoWrite( const wxString& fmt )
 {
-	_immediate_logger( toUTF8(fmt) );
+	_immediate_logger( fmt.ToUTF8() );
 }
 
 static void __concall ConsoleToFile_DoWriteLn( const wxString& fmt )
 {
-	_immediate_logger( toUTF8(fmt) );
+	_immediate_logger( fmt.ToUTF8() );
 	ConsoleToFile_Newline();
 
 	if( emuLog != NULL )
@@ -702,7 +702,7 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 	ConsoleToWindow_ClearColor,
 };
 
-void Pcsx2App::EnableConsoleLogging() const
+void Pcsx2App::EnableAllLogging() const
 {
 	if( emuLog )
 		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_WindowAndFile : (IConsoleWriter&)ConsoleWriter_File );

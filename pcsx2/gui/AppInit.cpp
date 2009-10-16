@@ -118,6 +118,10 @@ void Pcsx2App::ReadUserModeSettings()
 			AppSaveSettings();
 		}
 	}
+	
+	// force a reset here to unload plugins loaded by the wizard.  If we don't do this
+	// the recompilers might fail to allocate the memory they need to function.
+	SysReset();
 }
 
 void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
@@ -203,7 +207,7 @@ typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
 bool Pcsx2App::OnInit()
 {
 	g_Conf = new AppConfig();
-	EnableConsoleLogging();
+	EnableAllLogging();
 
     wxInitAllImageHandlers();
 	if( !wxApp::OnInit() ) return false;
@@ -260,7 +264,7 @@ bool Pcsx2App::OnInit()
 		}
 
 		m_ProgramLogBox	= new ConsoleLogFrame( m_MainFrame, L"PCSX2 Program Log", g_Conf->ProgLogBox );
-		EnableConsoleLogging();
+		EnableAllLogging();
 		
 		SetTopWindow( m_MainFrame );	// not really needed...
 		SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
@@ -316,6 +320,7 @@ bool Pcsx2App::OnInit()
 	catch( Exception::StartupAborted& ex )
 	{
 		Console.Notice( ex.FormatDiagnosticMessage() );
+		CleanupMess();
 		return false;
 	}
 	// ----------------------------------------------------------------------------
@@ -347,6 +352,9 @@ void Pcsx2App::CleanupMess()
 	// during the wxApp destructor. -- air
 	
 	// FIXME: performing a wxYield() here may fix that problem. -- air
+
+	while( wxGetLocale() != NULL )
+		delete wxGetLocale();
 }
 
 Pcsx2App::Pcsx2App()  :
@@ -369,6 +377,9 @@ Pcsx2App::~Pcsx2App()
 	// to happen here in the destructor.
 
 	CleanupMess();
+	
+	delete wxConfigBase::Set( NULL );
+	
 	Console_SetActiveHandler( ConsoleWriter_Null );
 	
 	if( emuLog != NULL )
@@ -377,6 +388,8 @@ Pcsx2App::~Pcsx2App()
 		emuLog = NULL;
 	}
 }
+
+
 // ------------------------------------------------------------------------------------------
 //  Using the MSVCRT to track memory leaks:
 // ------------------------------------------------------------------------------------------
@@ -403,6 +416,6 @@ struct CrtDebugBreak
 	}
 };
 
-//CrtDebugBreak breakAt( 157 );
+//CrtDebugBreak breakAt( 20603 );
 
 #endif

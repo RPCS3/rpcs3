@@ -64,7 +64,10 @@ protected:
 
 	wxMenuItem&		m_MenuItem_Console;
 	
-	CmdEvt_ListenerBinding	m_Listener_CoreThreadStatus;
+	CmdEvt_ListenerBinding		m_Listener_CoreThreadStatus;
+	CmdEvt_ListenerBinding		m_Listener_CorePluginStatus;
+	EventListenerBinding<int>	m_Listener_SettingsApplied;
+	EventListenerBinding<IniInterface>	m_Listener_SettingsLoadSave;
 
 // ------------------------------------------------------------------------
 //     MainEmuFrame Constructors and Member Methods
@@ -79,13 +82,18 @@ public:
 	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Sys_SuspendResume ); }
 	void UpdateIsoSrcFile();
 	void UpdateIsoSrcSelection();
-	void ApplySettings();
 	void ReloadRecentLists();
 	
-	void LoadRecentIsoList( wxConfigBase& conf );
-	void SaveRecentIsoList( wxConfigBase& conf );
-
 protected:
+	static void OnCoreThreadStatusChanged( void* obj, const wxCommandEvent& evt );
+	static void OnCorePluginStatusChanged( void* obj, const wxCommandEvent& evt );
+	static void OnSettingsApplied( void* obj, const int& evt );
+	static void MainEmuFrame::OnSettingsLoadSave( void* obj, const IniInterface& evt );
+	
+	void LoadSaveRecentIsoList( IniInterface& conf );
+	void ApplySettings();
+	void ApplyCoreStatus();
+
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
 	void OnCloseWindow(wxCloseEvent& evt);

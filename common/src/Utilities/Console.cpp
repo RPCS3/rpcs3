@@ -146,7 +146,7 @@ void ConsoleBuffer_Clear()
 void ConsoleBuffer_FlushToFile( FILE *fp )
 {
 	if( fp == NULL || m_buffer.IsEmpty() ) return;
-	px_fputs( fp, toUTF8(m_buffer) );
+	px_fputs( fp, m_buffer.ToUTF8() );
 	m_buffer.Clear();
 }
 

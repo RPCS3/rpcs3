@@ -294,6 +294,12 @@ namespace Exception
 		DEFINE_RUNTIME_EXCEPTION( ThreadCreationError, wxLt("Thread could not be created.") );
 	};
 
+	class ThreadTimedOut : public virtual RuntimeError
+	{
+	public:
+		DEFINE_RUNTIME_EXCEPTION( ThreadTimedOut, "Blocking action timed out due to potential deadlock." );
+	};
+
 	// ---------------------------------------------------------------------------------------
 	// Streaming (file) Exceptions:
 	//   Stream / BadStream / CreateStream / FileNotFound / AccessDenied / EndOfStream

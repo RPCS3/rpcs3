@@ -29,12 +29,12 @@ static NonblockingMutex state_buffer_lock;
 
 // This boolean is to keep the system from resuming emulation until the current state has completely
 // uploaded or downloaded itself.  It is only modified from the main thread, and should only be read
-// form the main thread.
-bool sys_resume_lock = false;
+// from the main thread.
+int sys_resume_lock = 0;
 
 static FnType_OnThreadComplete* Callback_FreezeFinished = NULL;
 
-static void StateThread_OnAppStatus( void* thr, const enum AppStatusEvent& stat )
+static void StateThread_OnAppStatus( void* thr, const enum AppEventType& stat )
 {
 	if( (thr == NULL) || (stat != AppStatus_Exiting) ) return;
 	((PersistentThread*)thr)->Cancel();
@@ -54,7 +54,7 @@ class _BaseStateThread : public PersistentThread
 	typedef PersistentThread _parent;
 
 protected:
-	EventListenerBinding<AppStatusEvent> m_bind_OnExit;
+	EventListenerBinding<AppEventType> m_bind_OnExit;
 
 public:
 	virtual ~_BaseStateThread() throw()
@@ -64,7 +64,7 @@ public:
 
 protected:
 	_BaseStateThread( const char* name, FnType_OnThreadComplete* onFinished ) :
-		m_bind_OnExit( wxGetApp().Source_AppStatus(), EventListener<AppStatusEvent>( this, StateThread_OnAppStatus ) )
+		m_bind_OnExit( wxGetApp().Source_AppStatus(), EventListener<AppEventType>( this, StateThread_OnAppStatus ) )
 	{
 		Callback_FreezeFinished = onFinished;
 		m_name = L"StateThread::" + fromUTF8(name);
@@ -105,7 +105,7 @@ protected:
 	{
 		_parent::OnStart();
 
-		sys_resume_lock = true;
+		++sys_resume_lock;
 		CoreThread.Pause();
 	}
 
@@ -142,7 +142,7 @@ protected:
 			throw Exception::RuntimeError( "ThawState request made, but no valid state exists!" );
 		}
 
-		sys_resume_lock = true;
+		++sys_resume_lock;
 		CoreThread.Pause();
 	}
 
@@ -186,7 +186,7 @@ protected:
 	void OnStart()
 	{
 		_parent::OnStart();
-		m_gzfp = gzopen( toUTF8(m_filename), "wb" );
+		m_gzfp = gzopen( m_filename.ToUTF8(), "wb" );
 		if(	m_gzfp == NULL )
 			throw Exception::CreateStream( m_filename, "Cannot create savestate file for writing." );
 	}
@@ -251,7 +251,7 @@ protected:
 	{
 		_parent::OnStart();
 
-		m_gzfp = gzopen( toUTF8(m_filename), "rb" );
+		m_gzfp = gzopen( m_filename.ToUTF8(), "rb" );
 		if(	m_gzfp == NULL )
 			throw Exception::CreateStream( m_filename, "Cannot open savestate file for reading." );
 	}
@@ -284,7 +284,7 @@ protected:
 
 void Pcsx2App::OnFreezeThreadFinished( wxCommandEvent& evt )
 {
-	// clear the OnFreezeFinsihed to NULL now, in case of error.
+	// clear the OnFreezeFinished to NULL now, in case of error.
 	// (but only actually run it if no errors occur)
 	FnType_OnThreadComplete* fn_tmp = Callback_FreezeFinished;
 	Callback_FreezeFinished = NULL;
@@ -293,7 +293,7 @@ void Pcsx2App::OnFreezeThreadFinished( wxCommandEvent& evt )
 		ScopedPtr<PersistentThread> thr( (PersistentThread*)evt.GetClientData() );
 		if( !pxAssertDev( thr != NULL, "NULL thread handle on freeze finished?" ) ) return;
 		state_buffer_lock.Release();
-		sys_resume_lock = false;
+		--sys_resume_lock;
 		thr->RethrowException();
 	}
 	

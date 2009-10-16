@@ -375,8 +375,7 @@ void AppConfig::LoadSaveMemcards( IniInterface& ini )
 	}
 }
 
-// ------------------------------------------------------------------------
-void AppConfig::LoadSave( IniInterface& ini )
+void AppConfig::LoadSaveRootItems( IniInterface& ini )
 {
 	AppConfig defaults;
 
@@ -388,11 +387,16 @@ void AppConfig::LoadSave( IniInterface& ini )
 	IniEntry( Listbook_ImageSize );
 	IniEntry( Toolbar_ImageSize );
 	IniEntry( Toolbar_ShowLabels );
-	
+
 	IniEntry( CurrentIso );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
+}
 
+// ------------------------------------------------------------------------
+void AppConfig::LoadSave( IniInterface& ini )
+{
+	LoadSaveRootItems( ini );
 	LoadSaveMemcards( ini );
 
 	// Process various sub-components:
@@ -508,6 +512,30 @@ wxFileConfig* OpenFileConfig( const wxString& filename )
 	return new wxFileConfig( wxEmptyString, wxEmptyString, filename, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
 }
 
+void RelocateLogfile()
+{
+	g_Conf->Folders.Logs.Mkdir();
+
+	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );
+
+	if( (emuLog != NULL) && (emuLogName != newlogname) )
+	{
+		Console.Status( "\nRelocating Logfile...\n\tFrom: %s\n\tTo  : %s\n", emuLogName.c_str(), newlogname.c_str() );
+		wxGetApp().DisableDiskLogging();
+
+		fclose( emuLog );
+		emuLog = NULL;
+	}
+
+	if( emuLog == NULL )
+	{
+		emuLogName = newlogname;
+		emuLog = fopen( emuLogName.ToUTF8(), "wb" );
+	}
+
+	wxGetApp().EnableAllLogging();
+}
+
 // Parameters:
 //   overwrite - this option forces the current settings to overwrite any existing settings that might
 //      be saved to the configured ini/settings folder.
@@ -517,35 +545,32 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 	PathDefs::GetDocuments().Mkdir();
 	PathDefs::GetSettings().Mkdir();
 
-	// Allow wx to use our config, and enforces auto-cleanup as well
+	if( overwrite )
+	{
+		if( !wxRemoveFile( GetSettingsFilename() ) )
+			throw Exception::AccessDenied( "Failed to overwrite settings; permission to file was denied." );
+	}
+
+	//if( GetAppConfig() != NULL )
+	//	wxGetApp().Source_SettingsChanged().Dispatch( SettingsEvt_IniClosing );
+
+	// Bind into wxConfigBase to allow wx to use our config internally, and delete whatever
+	// comes out (cleans up prev config, if one).
 	delete wxConfigBase::Set( OpenFileConfig( GetSettingsFilename() ) );
-	wxConfigBase::Get()->SetRecordDefaults();
+	GetAppConfig()->SetRecordDefaults();
+
+	//wxGetApp().Source_SettingsChanged().Dispatch( SettingsEvt_IniOpening );
 
 	if( !overwrite )
 		AppLoadSettings();
 
 	AppApplySettings();
-	sMainFrame.ReloadRecentLists();
+}
 
-	g_Conf->Folders.Logs.Mkdir();
-
-	wxString newlogname( Path::Combine( g_Conf->Folders.Logs.ToString(), L"emuLog.txt" ) );
-
-	wxGetApp().DisableDiskLogging();
-
-	if( emuLog != NULL )
-	{
-		if( emuLogName != newlogname )
-		{
-			fclose( emuLog );
-			emuLog = NULL;
-		}
-	}
-	
-	if( emuLog == NULL )
-	{
-		emuLogName = newlogname;
-		emuLog = fopen( toUTF8(emuLogName), "wb" );
-	}
-	wxGetApp().EnableConsoleLogging();
+// Returns the current application configuration file.  This is preferred over using
+// wxConfigBase::GetAppConfig(), since it defaults to *not* creating a config file
+// automatically (which is typically highly undesired behavior in our system)
+wxConfigBase* GetAppConfig()
+{
+	return wxConfigBase::Get( false );
 }

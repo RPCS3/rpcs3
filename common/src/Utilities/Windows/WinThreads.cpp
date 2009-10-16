@@ -51,11 +51,6 @@ namespace Threading
 		//ptw32_smp_system = ( x86caps.LogicalCores > 1 ) ? TRUE : FALSE;
 	}
 
-	__forceinline void Timeslice()
-	{
-		::Sleep(0);
-	}
-
 	__forceinline void Sleep( int ms )
 	{
 		::Sleep( ms );

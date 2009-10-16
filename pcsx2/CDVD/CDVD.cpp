@@ -81,11 +81,11 @@ FILE *_cdvdOpenMechaVer()
 	const wxCharBuffer file( mecfile.GetFullPath().ToUTF8() );
 
 	// if file doesnt exist, create empty one
-	fd = fopen(file.data(), "r+b");
+	fd = fopen(file, "r+b");
 	if (fd == NULL)
 	{
 		Console.Notice("MEC File Not Found , Creating Blank File");
-		fd = fopen(file.data(), "wb");
+		fd = fopen(file, "wb");
 		if (fd == NULL)
 		{
 			Console.Error( "\tMEC File Creation failed!" );
@@ -121,11 +121,11 @@ FILE *_cdvdOpenNVM()
 	const wxCharBuffer file( nvmfile.GetFullPath().ToUTF8() );
 
 	// if file doesn't exist, create empty one
-	fd = fopen(file.data(), "r+b");
+	fd = fopen(file, "r+b");
 	if (fd == NULL)
 	{
 		Console.Notice("NVM File Not Found , Creating Blank File");
-		fd = fopen(file.data(), "wb");
+		fd = fopen(file, "wb");
 		if (fd == NULL)
 		{
 			Console.Error( "\tNVM File Creation failed!" );
@@ -301,11 +301,15 @@ s32 cdvdWriteConfig(const u8* config)
 	}
 }
 
-void reloadElfInfo(const char* str)
+static MutexLockRecursive Mutex_NewDiskCB;
+
+static void reloadElfInfo(const char* str)
 {
-    // Now's a good time to reload the ELF info...
+	// Now's a good time to reload the ELF info...
 	if (ElfCRC == 0)
 	{
+		ScopedLock locker( Mutex_NewDiskCB );
+
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
 		mtgsThread.SendGameCRC( ElfCRC );
@@ -504,7 +508,7 @@ void SaveStateBase::cdvdFreeze()
 	}
 }
 
-void cdvdDetectDisk()
+static void cdvdDetectDisk()
 {
 	cdvd.Type = DoCDVDdetectDiskType();
 
@@ -516,12 +520,14 @@ void cdvdDetectDisk()
 
 void cdvdNewDiskCB()
 {
+	if( !Mutex_NewDiskCB.TryLock() ) return;
 	DoCDVDresetDiskTypeCache();
 
-	cdvdDetectDisk();
+	try { cdvdDetectDisk(); }
+	catch(...) { Mutex_NewDiskCB.Unlock(); }		// ensure mutex gets unlocked.
 }
 
-void mechaDecryptBytes( u32 madr, int size )
+static void mechaDecryptBytes( u32 madr, int size )
 {
 	int shiftAmount = (cdvd.decSet>>4) & 7;
 	int doXor = (cdvd.decSet) & 1;

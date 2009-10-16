@@ -28,32 +28,32 @@
 static __threadlocal SysCoreThread* tls_coreThread = NULL;
 
 // --------------------------------------------------------------------------------------
-//  SysSuspendableThread *External Thread* Implementations
+//  SysThreadBase *External Thread* Implementations
 //    (Called form outside the context of this thread)
 // --------------------------------------------------------------------------------------
 
-SysSuspendableThread::SysSuspendableThread() :
+SysThreadBase::SysThreadBase() :
 	m_ExecMode( ExecMode_NoThreadYet )
-,	m_lock_ExecMode()
+,	m_ExecModeMutex()
 ,	m_ResumeEvent()
 ,	m_SuspendEvent()
-,	m_ResumeProtection( false )
+,	m_resume_guard( 0 )
 {
 }
 
-SysSuspendableThread::~SysSuspendableThread() throw()
+SysThreadBase::~SysThreadBase() throw()
 {
 }
 
-void SysSuspendableThread::Start()
+void SysThreadBase::Start()
 {
 	_parent::Start();
-	m_ExecMode = ExecMode_Suspending;
+	m_ExecMode = ExecMode_Closing;
 	m_sem_event.Post();
 }
 
 
-void SysSuspendableThread::OnStart()
+void SysThreadBase::OnStart()
 {
 	if( !pxAssertDev( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
 
@@ -63,9 +63,8 @@ void SysSuspendableThread::OnStart()
 	_parent::OnStart();
 }
 
-// Pauses the emulation state at the next PS2 vsync, and returns control to the calling
-// thread; or does nothing if the core is already suspended.  Calling this thread from the
-// Core thread will result in deadlock.
+// Suspends emulation and closes the emulation state (including plugins) at the next PS2 vsync,
+// and returns control to the calling thread; or does nothing if the core is already suspended.
 //
 // Parameters:
 //   isNonblocking - if set to true then the function will not block for emulation suspension.
@@ -78,61 +77,78 @@ void SysSuspendableThread::OnStart()
 //   suspended.
 //
 // Exceptions:
-//   CancelEvent  - thrown if the thread is already in a Paused state.  Because actions that
-//      pause emulation typically rely on plugins remaining loaded/active, Suspension must
-//      cansel itself forcefully or risk crashing whatever other action is in progress.
+//   CancelEvent  - thrown if the thread is already in a Paused or Closing state.  Because
+//      actions that pause emulation typically rely on plugins remaining loaded/active,
+//      Suspension must cansel itself forcefully or risk crashing whatever other action is
+//      in progress.
 //
-bool SysSuspendableThread::Suspend( bool isBlocking )
+bool SysThreadBase::Suspend( bool isBlocking )
 {
 	if( IsSelf() || !IsRunning() ) return false;
+	
+	// shortcut ExecMode check to avoid deadlocking on redundant calls to Suspend issued
+	// from Resume or OnResumeReady code.
+	if( m_ExecMode == ExecMode_Closed ) return false;
 
 	bool retval = false;
 
 	{
-		ScopedLock locker( m_lock_ExecMode );
+		ScopedLock locker( m_ExecModeMutex );
 
-		if( m_ExecMode == ExecMode_Suspended )
-			return false;
+		// Check again -- status could have changed since above.
+		if( m_ExecMode == ExecMode_Closed ) return false;
 
 		if( m_ExecMode == ExecMode_Pausing || m_ExecMode == ExecMode_Paused )
 			throw Exception::CancelEvent( "Another thread is pausing the VM state." );
 
-		if( m_ExecMode == ExecMode_Running )
+		if( m_ExecMode == ExecMode_Opened )
 		{
-			m_ExecMode = ExecMode_Suspending;
+			m_ExecMode = ExecMode_Closing;
 			retval = true;
 		}
 
-		pxAssertDev( m_ExecMode == ExecMode_Suspending, "ExecMode should be nothing other than Suspending..." );
+		pxAssertDev( m_ExecMode == ExecMode_Closing, "ExecMode should be nothing other than Closing..." );
+		m_SuspendEvent.Reset();
+		m_sem_event.Post();
 	}
-	m_SuspendEvent.Reset();
-	m_sem_event.Post();
-	if( isBlocking ) m_SuspendEvent.WaitGui();
+
+	if( isBlocking ) m_SuspendEvent.Wait();
 	return retval;
 }
 
-bool SysSuspendableThread::Pause()
+// Returns:
+//   The previous suspension state; true if the thread was running or false if it was
+//   closed, not running, or paused.
+//
+bool SysThreadBase::Pause()
 {
 	if( IsSelf() || !IsRunning() ) return false;
+
+	// shortcut ExecMode check to avoid deadlocking on redundant calls to Suspend issued
+	// from Resume or OnResumeReady code.
+	if( (m_ExecMode == ExecMode_Closed) || (m_ExecMode == ExecMode_Paused) ) return false;
 
 	bool retval = false;
 
 	{
-		ScopedLock locker( m_lock_ExecMode );
+		ScopedLock locker( m_ExecModeMutex );
 
-		if( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Paused) ) return false;
+		// Check again -- status could have changed since above.
+		if( (m_ExecMode == ExecMode_Closed) || (m_ExecMode == ExecMode_Paused) ) return false;
 
-		if( m_ExecMode == ExecMode_Running )
+		if( m_ExecMode == ExecMode_Opened )
 		{
 			m_ExecMode = ExecMode_Pausing;
 			retval = true;
 		}
 
 		pxAssertDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
+
+		m_SuspendEvent.Reset();
+		m_sem_event.Post();
 	}
-	m_SuspendEvent.Reset();
-	m_sem_event.Post();
-	m_SuspendEvent.WaitGui();
+
+	m_SuspendEvent.Wait();
 
 	return retval;
 }
@@ -140,73 +156,93 @@ bool SysSuspendableThread::Pause()
 // Resumes the core execution state, or does nothing is the core is already running.  If
 // settings were changed, resets will be performed as needed and emulation state resumed from
 // memory savestates.
+// 
+// Note that this is considered a non-blocking action.  Most times the state is safely resumed
+// on return, but in the case of re-entrant or nested message handling the function may return
+// before the thread has resumed.  If you need explicit behavior tied to the completion of the
+// Resume, you'll need to bind callbacks to either OnResumeReady or OnResumeInThread.
 //
 // Exceptions (can occur on first call only):
 //   PluginInitError     - thrown if a plugin fails init (init is performed on the current thread
 //                         on the first time the thread is resumed from it's initial idle state)
 //   ThreadCreationError - Insufficient system resources to create thread.
 //
-void SysSuspendableThread::Resume()
+void SysThreadBase::Resume()
 {
 	if( IsSelf() ) return;
+	if( m_ExecMode == ExecMode_Opened ) return;
+	if( !pxAssert( g_plugins != NULL ) ) return;
+
+	ScopedLock locker( m_ExecModeMutex );
+
+	// Recursion guard is needed because of the non-blocking Wait if the state
+	// is Suspending/Closing.  Processed events could recurse into Resume, and we'll
+	// want to silently ignore them.
 	
+	RecursionGuard guard( m_resume_guard );
+	if( guard.IsReentrant() ) return;
+
+	switch( m_ExecMode )
 	{
-		ScopedLock locker( m_lock_ExecMode );
+		case ExecMode_Opened: return;
 
-		switch( m_ExecMode )
-		{
-			case ExecMode_Running: return;
+		case ExecMode_NoThreadYet:
+			Start();
+			m_ExecMode = ExecMode_Closing;
+		// fall through...
 
-			case ExecMode_NoThreadYet:
-				Start();
-				m_ExecMode = ExecMode_Suspending;
-			// fall through...
+		case ExecMode_Closing:
+		case ExecMode_Pausing:
+			// we need to make sure and wait for the emuThread to enter a fully suspended
+			// state before continuing...
 
-			case ExecMode_Suspending:
-			case ExecMode_Pausing:
-				// we need to make sure and wait for the emuThread to enter a fully suspended
-				// state before continuing...
-
-				locker.Unlock();		// no deadlocks please, thanks. :)
-				m_SuspendEvent.WaitGui();
-			break;
-		}
+			locker.Unlock();		// no deadlocks please, thanks. :)
+			++sys_resume_lock;
+			m_SuspendEvent.Wait();
+			--sys_resume_lock;
+			locker.Lock();
+			
+			// The entire state coming out of a Wait is indeterminate because of user input
+			// and pending messages being handled.  If something doesn't feel right, we should
+			// abort.
+			
+			if( (m_ExecMode != ExecMode_Closed) && (m_ExecMode != ExecMode_Paused) ) return;
+			if( g_plugins == NULL ) return;
+		break;
 	}
 
-	pxAssertDev( (m_ExecMode == ExecMode_Suspended) || (m_ExecMode == ExecMode_Paused),
-		"SysSuspendableThread is not in a suspended/paused state?  wtf!" );
+	pxAssertDev( (m_ExecMode == ExecMode_Closed) || (m_ExecMode == ExecMode_Paused),
+		"SysThreadBase is not in a closed/paused state?  wtf!" );
 
-	m_ResumeProtection = true;
 	OnResumeReady();
-	m_ResumeProtection = false;
-	m_ExecMode = ExecMode_Running;
+	m_ExecMode = ExecMode_Opened;
 	m_ResumeEvent.Post();
 }
 
 
 // --------------------------------------------------------------------------------------
-//  SysSuspendableThread *Worker* Implementations
+//  SysThreadBase *Worker* Implementations
 //    (Called from the context of this thread only)
 // --------------------------------------------------------------------------------------
 
-void SysSuspendableThread::OnCleanupInThread()
+void SysThreadBase::OnCleanupInThread()
 {
-	ScopedLock locker( m_lock_ExecMode );
+	ScopedLock locker( m_ExecModeMutex );
 	m_ExecMode = ExecMode_NoThreadYet;
 	_parent::OnCleanupInThread();
 }
 
-void SysSuspendableThread::StateCheck( bool isCancelable )
+void SysThreadBase::StateCheckInThread( bool isCancelable )
 {
 	// Shortcut for the common case, to avoid unnecessary Mutex locks:
-	if( m_ExecMode == ExecMode_Running )
+	if( m_ExecMode == ExecMode_Opened )
 	{
 		if( isCancelable ) TestCancel();
 		return;
 	}
 
 	// Oh, seems we need a full lock, because something special is happening!
-	ScopedLock locker( m_lock_ExecMode );
+	ScopedLock locker( m_ExecModeMutex );
 
 	switch( m_ExecMode )
 	{
@@ -219,7 +255,7 @@ void SysSuspendableThread::StateCheck( bool isCancelable )
 		break;
 	#endif
 
-		case ExecMode_Running:
+		case ExecMode_Opened:
 			// Yup, need this a second time.  Variable state could have changed while we
 			// were trying to acquire the lock above.
 			if( isCancelable )
@@ -236,26 +272,26 @@ void SysSuspendableThread::StateCheck( bool isCancelable )
 		// fallthrough...
 
 		case ExecMode_Paused:
-			m_lock_ExecMode.Unlock();
+			m_ExecModeMutex.Unlock();
 			while( m_ExecMode == ExecMode_Paused )
-				m_ResumeEvent.WaitGui();
+				m_ResumeEvent.WaitRaw();
 
 			OnResumeInThread( false );
 		break;
 
 		// -------------------------------------
-		case ExecMode_Suspending:
+		case ExecMode_Closing:
 		{
 			OnSuspendInThread();
-			m_ExecMode = ExecMode_Suspended;
+			m_ExecMode = ExecMode_Closed;
 			m_SuspendEvent.Post();
 		} 
 		// fallthrough...
 		
-		case ExecMode_Suspended:
-			m_lock_ExecMode.Unlock();
-			while( m_ExecMode == ExecMode_Suspended )
-				m_ResumeEvent.WaitGui();
+		case ExecMode_Closed:
+			m_ExecModeMutex.Unlock();
+			while( m_ExecMode == ExecMode_Closed )
+				m_ResumeEvent.WaitRaw();
 
 			OnResumeInThread( true );
 		break;
@@ -330,8 +366,7 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	if( src == EmuConfig ) return;
 
-	// Suspend only if ResumeProtection is false:
-	const bool resumeWhenDone = !m_ResumeProtection && Suspend();
+	const bool resumeWhenDone = Suspend();
 
 	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers		= (src.Profiler != EmuConfig.Profiler );
@@ -416,8 +451,8 @@ void SysCoreThread::ExecuteTaskInThread()
 {
 	tls_coreThread = this;
 
-	m_sem_event.Wait();
-	StateCheck();
+	m_sem_event.WaitRaw();
+	StateCheckInThread();
 	CpuExecute();
 }
 

@@ -123,7 +123,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wx", "wx", "{62BF822E-6A12-49A8-BE8C-C55A9BCA24DA}"
 	ProjectSection(SolutionItems) = preProject
 		common\include\wx\folderdesc.txt = common\include\wx\folderdesc.txt
-		common\include\wx\scopedptr.h = common\include\wx\scopedptr.h
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bin2cpp", "tools\bin2cpp\bin2c.vcproj", "{677B7D11-D5E1-40B3-88B1-9A4DF83D2213}"

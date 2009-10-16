@@ -27,18 +27,12 @@ using namespace Dialogs;
 
 void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
-	if( Dialogs::ConfigurationDialog( this ).ShowModal() )
-	{
-		AppSaveSettings();
-	}
+	Dialogs::ConfigurationDialog( this ).ShowModal();
 }
 
 void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
 {
-	if( Dialogs::BiosSelectorDialog( this ).ShowModal() )
-	{
-		AppSaveSettings();
-	}
+	Dialogs::BiosSelectorDialog( this ).ShowModal();
 }
 
 void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
@@ -150,10 +144,11 @@ void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent &event )
 {
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
 
-	wxConfigBase* conf = wxConfigBase::Get( false );
-	if( NULL == conf ) return;
-	IniSaver saver( *conf );
-	g_Conf->EmuOptions.LoadSave( saver );
+	if( wxConfigBase* conf = GetAppConfig() )
+	{
+		IniSaver saver( *conf );
+		g_Conf->EmuOptions.LoadSave( saver );
+	}
 }
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
@@ -191,8 +186,17 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 {
 	if( !SysHasValidState() ) return;
 
-	if( !CoreThread.Suspend() )
-		CoreThread.Resume();
+	// Note: We manually update the menu here, even though it'll be updated again
+	// when the thread "officially" suspends or resumes (via listener callback), because
+	// the callback is tied to the actual thread status
+
+	if( CoreThread.Suspend() )
+		GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, _("Resume") );
+	else
+	{
+		sApp.SysExecute();
+		GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, _("Suspend") );
+	}
 }
 
 void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
@@ -204,6 +208,8 @@ void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 
 	if( resume )
 		sApp.SysExecute();
+
+	GetMenuBar()->Enable( MenuId_Sys_Reset, resume );
 }
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
@@ -229,9 +235,10 @@ void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 	LoadPluginsImmediate();
 	if( g_plugins == NULL ) return;
 
+	bool resume = CoreThread.Suspend();
 	wxWindowDisabler disabler;
-	//ScopedWindowDisable disabler( this );
 	g_plugins->Configure( pid );
+	if( resume ) CoreThread.Resume();
 }
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)

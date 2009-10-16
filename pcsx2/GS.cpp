@@ -527,7 +527,7 @@ void gsDynamicSkipEnable()
 {
 	if( !m_StrictSkipping ) return;
 
-	mtgsWaitGS();
+	mtgsThread.WaitGS();
 	m_iSlowStart = GetCPUTicks();
 	frameLimitReset();
 }

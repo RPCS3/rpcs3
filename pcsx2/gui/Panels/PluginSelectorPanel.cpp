@@ -18,6 +18,7 @@
 #include "Plugins.h"
 #include "Utilities/ScopedPtr.h"
 #include "ConfigurationPanels.h"
+#include "Dialogs/ModalPopups.h"
 
 #include <wx/dynlib.h>
 #include <wx/dir.h>
@@ -276,6 +277,8 @@ void Panels::PluginSelectorPanel::Apply()
 	// user never entered plugins panel?  Skip application since combo boxes are invalid/uninitialized.
 	if( !m_FileList ) return;
 
+	AppConfig curconf( *g_Conf );
+
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
 		int sel = m_ComponentBoxes.Get(i).GetSelection();
@@ -304,7 +307,7 @@ void Panels::PluginSelectorPanel::Apply()
 	// the whole plugin system needs to be re-loaded.
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
-		if( g_Conf->FullpathTo( pi->id ) != g_Conf->FullpathTo( pi->id ) )
+		if( g_Conf->FullpathTo( pi->id ) != curconf.FullpathTo( pi->id ) )
 			break;
 	} while( ++pi, pi->shortname != NULL );
 
@@ -313,6 +316,21 @@ void Panels::PluginSelectorPanel::Apply()
 		if( CoreThread.IsRunning() )
 		{
 			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
+			int result = Dialogs::IssueConfirmation( this, L"PluginSelector:ConfirmShutdown", ConfButtons().OK().Cancel(),
+
+				_("Shutdown PS2 virtual machine?"),
+
+				pxE( ".Popup:PluginSelector:ConfirmShutdown",
+					L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "
+					L"PCSX2 will attempt to save and restore the state, but if the newly selected plugins are "
+					L"incompatible the recovery may fail, and current progress will be lost."
+					L"\n\n"
+					L"Are you sure you want to apply settings now?"
+				)
+			);
+
+			if( result == wxID_CANCEL )
+				throw Exception::CannotApplySettings( this, "Cannot apply settings: canceled by user because plugins changed while the emulation state was active.", false );
 		}
 
 		sApp.SysReset();
@@ -358,12 +376,17 @@ void Panels::PluginSelectorPanel::DoRefresh()
 		return;
 	}
 
-	// Disable all controls until enumeration is complete.
+	// Disable all controls until enumeration is complete
+	m_ComponentBoxes.Hide();
+
+	// (including next button if it's a Wizard)
+	wxWindow* forwardButton = GetGrandParent()->FindWindow( wxID_FORWARD );
+	if( forwardButton != NULL )
+		forwardButton->Disable();
+
 	// Show status bar for plugin enumeration.  Use a pending event so that
 	// the window's size can get initialized properly before trying to custom-
 	// fit the status panel to it.
-
-	m_ComponentBoxes.Hide();
 	wxCommandEvent evt( pxEVT_ShowStatusBar );
 	GetEventHandler()->AddPendingEvent( evt );
 
@@ -415,8 +438,10 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes.Get(pid).GetClientData(sel)] );
 	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
 	{
+		bool resume = CoreThread.Suspend();
 		wxWindowDisabler disabler;
 		configfunc();
+		if( resume ) CoreThread.Resume();
 	}
 }
 
@@ -447,6 +472,10 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 	m_ComponentBoxes.Show();
 	m_StatusPanel.Hide();
 	m_StatusPanel.Reset();
+	
+	wxWindow* forwardButton = GetGrandParent()->FindWindow( wxID_FORWARD );
+	if( forwardButton != NULL )
+		forwardButton->Enable();
 }
 
 

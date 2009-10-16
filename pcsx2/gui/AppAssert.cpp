@@ -96,7 +96,7 @@ void Pcsx2App::OnAssertFailure( const wxChar *file, int line, const wxChar *func
 
 	// make life easier for people using VC++ IDE by using this format, which allows double-click
 	// response times from the Output window...
-	dbgmsg.Printf( L"%s(%d) : assertion failed%s%s: %s", file, line,
+	dbgmsg.Printf( L"%s(%d) : assertion failed%s%s: %s\n", file, line,
 		(func==NULL) ? wxEmptyString : L" in ", 
 		(func==NULL) ? wxEmptyString : func, 
 		message.c_str()

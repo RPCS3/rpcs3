@@ -64,6 +64,60 @@ protected:
 	virtual void OnDoubleClicked( wxCommandEvent& evt );
 };
 
+class ConfButtons
+{
+protected:
+	BITFIELD32()
+		bool
+			m_OK:1,
+			m_Cancel:1,
+			m_Yes:1,
+			m_No:1,
+			m_AllowToAll:1,
+			m_Apply:1,
+			m_Abort:1,
+			m_Retry:1,
+			m_Ignore:1;
+	BITFIELD_END
+
+public:
+	ConfButtons() : bitset( 0 ) { }
+	
+	ConfButtons& OK()		{ m_OK			= true; return *this; }
+	ConfButtons& Cancel()	{ m_Cancel		= true; return *this; }
+	ConfButtons& Apply()	{ m_Apply		= true; return *this; }
+	ConfButtons& Yes()		{ m_Yes			= true; return *this; }
+	ConfButtons& No()		{ m_No			= true; return *this; }
+	ConfButtons& ToAll()	{ m_AllowToAll	= true; return *this; }
+
+	ConfButtons& Abort()	{ m_Abort		= true; return *this; }
+	ConfButtons& Retry()	{ m_Retry		= true; return *this; }
+	ConfButtons& Ignore()	{ m_Ignore		= true; return *this; }
+	
+	bool HasOK() const		{ return m_OK; }
+	bool HasCancel() const	{ return m_Cancel; }
+	bool HasApply() const	{ return m_Apply; }
+	bool HasYes() const		{ return m_Yes; }
+	bool HasNo() const		{ return m_No; }
+	bool AllowsToAll() const{ return m_AllowToAll; }
+
+	bool HasAbort() const	{ return m_Abort; }
+	bool HasRetry() const	{ return m_Retry; }
+	bool HasIgnore() const	{ return m_Ignore; }
+
+	bool Allows( wxWindowID id ) const;
+
+	bool operator ==( const ConfButtons& right ) const
+	{
+		return OpEqu( bitset );
+	}
+
+	bool operator !=( const ConfButtons& right ) const
+	{
+		return !OpEqu( bitset );
+	}
+};
+
 namespace Dialogs
 {
 	class AboutBoxDialog: public wxDialogWithHelpers
@@ -76,6 +130,7 @@ namespace Dialogs
 		//wxStaticBitmap m_bitmap_logo;
 		wxStaticBitmap m_bitmap_dualshock;
 	};
+
 	
 	class PickUserModeDialog : public wxDialogWithHelpers
 	{
@@ -103,5 +158,22 @@ namespace Dialogs
 		void OnOverwrite_Click( wxCommandEvent& evt );
 	};
 
+
+	class ExtensibleConfirmation : public wxDialogWithHelpers
+	{
+	protected:
+		wxBoxSizer&		m_ExtensibleSizer;
+		wxBoxSizer&		m_ButtonSizer;
+	public:
+		ExtensibleConfirmation( wxWindow* parent, const ConfButtons& type, const wxString& title, const wxString& msg );
+		virtual ~ExtensibleConfirmation() throw() {}
+
+		wxBoxSizer& GetExtensibleSizer() const { return m_ExtensibleSizer; }
+
+	protected:
+		void AddActionButton( wxWindowID id );
+	};
+
+	wxWindowID IssueConfirmation( wxWindow* parent, const wxString& disablerKey, const ConfButtons& type, const wxString& title, const wxString& msg );
 }
 

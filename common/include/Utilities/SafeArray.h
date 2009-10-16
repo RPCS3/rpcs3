@@ -308,11 +308,11 @@ public:
 			if( m_ptr == NULL )
 			{
 				throw Exception::OutOfMemory(
-					// English Diagonstic message:
+					// English Diagnostic message:
 					wxsFormat(
 						L"Out-of-memory on SafeList block re-allocation.\n"
-						L"Old size: %d bytes, New size: %d bytes",
-						m_allocsize, newalloc
+						L"Name: %s, Old size: %d bytes, New size: %d bytes",
+						Name, m_allocsize, newalloc
 					),
 					
 					wxsFormat( _("Out of memory, trying to allocate %d bytes."), newalloc )

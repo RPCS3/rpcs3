@@ -111,7 +111,6 @@
 		<Unit filename="../../common/include/Pcsx2Types.h" />
 		<Unit filename="../../common/include/PluginCallbacks.h" />
 		<Unit filename="../../common/include/wx/folderdesc.txt" />
-		<Unit filename="../../common/include/wx/scopedarray.h" />
 		<Unit filename="../CDVD/CDVD.cpp" />
 		<Unit filename="../CDVD/CDVD.h" />
 		<Unit filename="../CDVD/CDVD_internal.h" />
@@ -277,7 +276,8 @@
 		<Unit filename="../gui/Dialogs/AboutBoxDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
-		<Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />
+		<Unit filename="../gui/Dialogs/ConfirmationDialogs.cpp" />
+        <Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />
 		<Unit filename="../gui/Dialogs/ImportSettingsDialog.cpp" />
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.cpp" />
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.h" />

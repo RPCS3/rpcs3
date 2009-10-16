@@ -1,7 +1,5 @@
 #pragma once
 
-#include <wx/scopedarray.h>
-
 // --------------------------------------------------------------------------------------
 //  ScopedPtr
 // --------------------------------------------------------------------------------------
@@ -10,7 +8,7 @@ template< typename T >
 class ScopedPtr
 {
 	DeclareNoncopyableObject(ScopedPtr);
-	
+
 protected:
 	T* m_ptr;
 
@@ -19,7 +17,7 @@ public:
 
     wxEXPLICIT ScopedPtr(T * ptr = NULL) : m_ptr(ptr) { }
 
-    ~ScopedPtr()
+    ~ScopedPtr() throw()
 		{ Delete(); }
 
 	ScopedPtr& Reassign(T * ptr = NULL)
@@ -32,7 +30,7 @@ public:
 		return *this;
 	}
 	
-	ScopedPtr& Delete()
+	ScopedPtr& Delete() throw()
 	{
 		// Thread-safe deletion: Set the pointer to NULL first, and then issue
 		// the deletion.  This allows pending Application messages that might be
@@ -118,6 +116,125 @@ public:
     }
 };
 
+// --------------------------------------------------------------------------------------
+//  ScopedArray  -  same as ScopedPtr but uses delete[], and has operator[]
+// --------------------------------------------------------------------------------------
+
+template< typename T >
+class ScopedArray
+{
+	DeclareNoncopyableObject(ScopedArray);
+
+protected:
+	T*		m_array;
+	uint	m_valid_range;
+public:
+    typedef T element_type;
+
+    wxEXPLICIT ScopedArray(T * ptr = NULL) :
+		m_array(ptr)
+	,	m_valid_range( 0xffffffff )
+    {
+    }
+
+	wxEXPLICIT ScopedArray( int size ) :
+		m_array( pxAssertDev( size >= 0, "Invalid negative size specified." ) ? new T[size] : NULL )
+	,	m_valid_range( (uint)size )
+	{
+	}
+
+	// For breaking the 2gb barrier, lets provision this:
+	wxEXPLICIT ScopedArray( s64 size ) :
+		m_array( pxAssertDev( size >= 0 && (size < UINT_MAX), "Invalid negative size specified to ScopedArray." ) ? new T[size] : NULL )
+	,	m_valid_range( (uint)size )
+	{
+	}
+
+    ~ScopedArray() throw()
+		{ Delete(); }
+
+	ScopedArray& Reassign(T * ptr = NULL)
+	{
+		if( ptr != m_array )
+		{
+			Delete();
+			m_array = ptr;
+		}
+		return *this;
+	}
+	
+	ScopedArray& Delete() throw()
+	{
+		// Thread-safe deletion: Set the pointer to NULL first, and then issue
+		// the deletion.  This allows pending Application messages that might be
+		// dependent on the current object to nullify their actions.
+
+		T* deleteme = m_array;
+		m_array = NULL;
+		delete[] deleteme;
+
+		return *this;
+	}
+
+	// Removes the pointer from scoped management, but does not delete!
+    T *DetachPtr()
+    {
+        T *ptr = m_array;
+        m_array = NULL;
+        return ptr;
+    }
+
+	// Returns the managed pointer.  Can return NULL as a valid result if the ScopedPtr
+	// has no object in management.
+	T* GetPtr() const
+	{
+		return m_array;
+	}
+
+	void SwapPtr(ScopedArray& other)
+	{
+		T * const tmp = other.m_array;
+		other.m_array = m_array;
+		m_array = tmp;
+	}
+	
+	// ----------------------------------------------------------------------------
+	//  ScopedPtr Operators
+	// ----------------------------------------------------------------------------
+	// I've decided to use the ATL's approach to pointer validity tests, opposed to
+	// the wx/boost approach (which uses some bizarre member method pointer crap, and can't
+	// allow the T* implicit casting.
+	
+	bool operator!() const throw()
+	{
+		return m_array == NULL;
+	}
+	
+	// Equality
+	bool operator==(T* pT) const throw()
+	{
+		return m_array == pT;
+	}
+
+	// Inequality
+	bool operator!=(T* pT) const  throw()
+	{
+		return !operator==(pT);
+	}
+
+	// Convenient assignment operator.  ScopedPtr = NULL will issue an automatic deletion
+	// of the managed pointer.
+	ScopedArray& operator=( T* src )
+	{
+		return Reassign( src );
+	}
+
+	T& operator[]( uint idx ) const
+	{
+		pxAssertDev( idx < m_valid_range, "Array index out of bounds on ScopedArray." );
+		return m_array[idx];
+	}
+};
 
 // --------------------------------------------------------------------------------------
 //  pxObjPtr   --  fancified version of wxScopedPtr

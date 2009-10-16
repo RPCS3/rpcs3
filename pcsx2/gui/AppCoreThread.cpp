@@ -31,9 +31,9 @@ bool AppCoreThread::Suspend( bool isBlocking )
 {
 	bool retval = _parent::Suspend( isBlocking );
 
-	wxCommandEvent evt( pxEVT_CoreThreadStatus );
+	/*wxCommandEvent evt( pxEVT_CoreThreadStatus );
 	evt.SetInt( CoreStatus_Suspended );
-	wxGetApp().AddPendingEvent( evt );
+	wxGetApp().AddPendingEvent( evt );*/
 
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
 	// plugin is suspended.
@@ -50,12 +50,24 @@ void AppCoreThread::Resume()
 	// Thread control (suspend / resume) should only be performed from the main/gui thread.
 	if( !AllowFromMainThreadOnly() ) return;
 
-	if( sys_resume_lock )
+	if( sys_resume_lock > 0 )
 	{
 		Console.WriteLn( "SysResume: State is locked, ignoring Resume request!" );
 		return;
 	}
 	_parent::Resume();
+
+	if( m_ExecMode != ExecMode_Opened )
+	{
+		// Resume failed for some reason, so update GUI statuses and post a message to
+		// try again on the resume.
+
+		wxCommandEvent evt( pxEVT_CoreThreadStatus );
+		evt.SetInt( CoreStatus_Suspended );
+		wxGetApp().AddPendingEvent( evt );
+
+		sApp.SysExecute();
+	}
 }
 
 void AppCoreThread::OnResumeReady()
@@ -65,11 +77,25 @@ void AppCoreThread::OnResumeReady()
 	if( GSopen2 != NULL )
 		wxGetApp().OpenGsFrame();
 
+	_parent::OnResumeReady();
+}
+
+void AppCoreThread::OnResumeInThread( bool isSuspended )
+{
+	_parent::OnResumeInThread( isSuspended );
+	
 	wxCommandEvent evt( pxEVT_CoreThreadStatus );
 	evt.SetInt( CoreStatus_Resumed );
 	wxGetApp().AddPendingEvent( evt );
+}
 
-	_parent::OnResumeReady();
+void AppCoreThread::OnSuspendInThread()
+{
+	_parent::OnSuspendInThread();
+
+	wxCommandEvent evt( pxEVT_CoreThreadStatus );
+	evt.SetInt( CoreStatus_Suspended );
+	wxGetApp().AddPendingEvent( evt );
 }
 
 // Called whenever the thread has terminated, for either regular or irregular reasons.
@@ -88,9 +114,9 @@ void AppCoreThread::OnCleanupInThread()
 	extern int TranslateGDKtoWXK( u32 keysym );
 #endif
 
-void AppCoreThread::StateCheck( bool isCancelable )
+void AppCoreThread::StateCheckInThread( bool isCancelable )
 {
-	_parent::StateCheck( isCancelable );
+	_parent::StateCheckInThread( isCancelable );
 	if( !pxAssert(g_plugins!=NULL) ) return;
 
 	const keyEvent* ev = PADkeyEvent();
@@ -124,7 +150,7 @@ void AppCoreThread::StateCheck( bool isCancelable )
 // suspended.  If the thread has mot been suspended, this call will fail *silently*.
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
-	if( m_ExecMode != ExecMode_Suspended ) return;
+	if( m_ExecMode != ExecMode_Closed ) return;
 	if( src == EmuConfig ) return;
 
 	// Re-entry guard protects against cases where code wants to manually set core settings

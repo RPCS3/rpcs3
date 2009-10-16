@@ -82,9 +82,9 @@ struct MTGS_FreezeData
 	s32			retval;		// value returned from the call, valid only after an mtgsWaitGS()
 };
 
-class mtgsThreadObject : public SysSuspendableThread
+class mtgsThreadObject : public SysThreadBase
 {
-	typedef SysSuspendableThread _parent;
+	typedef SysThreadBase _parent;
 
 protected:
 	// note: when g_pGSRingPos == g_pGSWritePos, the fifo is empty
@@ -169,8 +169,6 @@ protected:
 };
 
 extern __aligned16 mtgsThreadObject mtgsThread;
-
-void mtgsWaitGS();
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff

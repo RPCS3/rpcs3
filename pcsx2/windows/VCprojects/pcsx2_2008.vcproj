@@ -1817,10 +1817,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\common\include\Utilities\Listeners.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\MainFrame.cpp"
 				>
 			</File>
@@ -1869,6 +1865,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Dialogs\ConfigurationDialog.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Dialogs\ConfirmationDialogs.cpp"
 					>
 				</File>
 				<File

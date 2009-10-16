@@ -668,7 +668,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	{
 		const PluginsEnum_t pid = pi->id;
 
-		Console.WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
+		Console.WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8() );
 
 		if( folders[pid].IsEmpty() )
 			throw Exception::InvalidArgument( "Empty plugin filename." );
@@ -700,6 +700,8 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		// Bind Optional Functions
 		// (leave pointer null and do not generate error)
 	} while( ++pi, pi->shortname != NULL );
+
+	CDVDapi_Plugin.newDiskCB( cdvdNewDiskCB );
 
 	// Hack for PAD's stupid parameter passed on Init
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
@@ -1003,7 +1005,7 @@ void PluginManager::Init()
 //
 void PluginManager::Shutdown()
 {
-	mtgsThread.Cancel();	// speedier shutdown!
+	mtgsThread.Cancel();	// cancel it for speedier shutdown!
 
 	Close();
 	DbgCon.Status( "Shutting down plugins..." );

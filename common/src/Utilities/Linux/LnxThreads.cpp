@@ -45,11 +45,6 @@ namespace Threading
 		}
 	}
 
-	__forceinline void Timeslice()
-	{
-		usleep(500);
-	}
-
 	__forceinline void Sleep( int ms )
 	{
 		usleep( 1000*ms );
