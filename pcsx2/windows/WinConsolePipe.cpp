@@ -72,38 +72,23 @@ namespace Exception
 
 using namespace Threading;
 
-static __forceinline void CreatePipe( HANDLE& ph_Pipe, HANDLE& ph_File )
+static __forceinline void __CreatePipe( HANDLE& ph_ReadPipe, HANDLE& ph_WritePipe )
 {
-	// Create a threadsafe unique name for the Pipe
-	static int s32_Counter = 0;
-
-	wxString s_PipeName;
-	s_PipeName.Printf( L"\\\\.\\pipe\\pcsxPipe%X_%X_%X_%X",
-					  GetCurrentProcessId(), GetCurrentThreadId(), GetTickCount(), ++s32_Counter);
-
 	SECURITY_ATTRIBUTES k_Secur;
 	k_Secur.nLength              = sizeof(SECURITY_ATTRIBUTES);
 	k_Secur.lpSecurityDescriptor = 0;
 	k_Secur.bInheritHandle       = TRUE;
 
-	ph_Pipe = CreateNamedPipe(s_PipeName, PIPE_ACCESS_DUPLEX, 0, 1, 2048, 2048, 0, &k_Secur);
+	if( 0 == CreatePipe( &ph_ReadPipe, &ph_WritePipe, &k_Secur, 2048 ) )
+		throw Exception::Win32Error( "CreatePipe failed." );
 
-	if (ph_Pipe == INVALID_HANDLE_VALUE)
-		throw Exception::Win32Error( "CreateNamedPipe failed." );
-
-	ph_File = CreateFile(s_PipeName, GENERIC_READ|GENERIC_WRITE, 0, &k_Secur, OPEN_EXISTING, 0, NULL);
-
-	if (ph_File == INVALID_HANDLE_VALUE)
-		throw Exception::Win32Error( "CreateFile to pipe failed." );
-
-	if (!ConnectNamedPipe(ph_Pipe, NULL))
+	if (!ConnectNamedPipe(ph_ReadPipe, NULL))
 	{
 		if (GetLastError() != ERROR_PIPE_CONNECTED)
 			throw Exception::Win32Error( "ConnectNamedPipe failed." );
 	}
 
-	SetHandleInformation(ph_Pipe, HANDLE_FLAG_INHERIT, 0);
-	SetHandleInformation(ph_File, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+	SetHandleInformation(ph_WritePipe, HANDLE_FLAG_INHERIT, 0);
 }
 
 // Reads from the Pipe and appends the read data to ps_Data
@@ -199,8 +184,8 @@ class WinPipeRedirection : public PipeRedirectionBase
 	DeclareNoncopyableObject( WinPipeRedirection );
 
 protected:
-	HANDLE		m_pipe;
-	HANDLE		m_file;
+	HANDLE		m_readpipe;
+	HANDLE		m_writepipe;
 	int			m_crtFile;
 	FILE*		m_fp;
 
@@ -214,19 +199,19 @@ public:
 };
 
 WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
-	m_pipe(INVALID_HANDLE_VALUE)
-,	m_file(INVALID_HANDLE_VALUE)
+	m_readpipe(INVALID_HANDLE_VALUE)
+,	m_writepipe(INVALID_HANDLE_VALUE)
 ,	m_crtFile(-1)
 ,	m_fp(NULL)
-,	m_Thread( m_pipe, (stdstream == stderr) ? Color_Red : Color_Black )
+,	m_Thread( m_readpipe, (stdstream == stderr) ? Color_Red : Color_Black )
 {
 	try
 	{
 		pxAssert( (stdstream == stderr) || (stdstream == stdout) );
 		DWORD stdhandle = ( stdstream == stderr ) ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE;
 
-		CreatePipe( m_pipe, m_file );
-		if( 0 == SetStdHandle( stdhandle, m_file ) )
+		__CreatePipe( m_readpipe, m_writepipe );
+		if( 0 == SetStdHandle( stdhandle, m_writepipe ) )
 			throw Exception::Win32Error( "SetStdHandle failed." );
 
 		// In some cases GetStdHandle can fail, even when the one we just assigned above is valid.
@@ -277,7 +262,6 @@ void WinPipeRedirection::Cleanup() throw()
 		m_fp = NULL;
 
 		m_crtFile	= -1;						// crtFile is closed implicitly when closing m_fp
-		m_file		= INVALID_HANDLE_VALUE;		// m_file is closed implicitly when closing crtFile
 	}
 	
 	if( m_crtFile != -1 )
@@ -286,16 +270,16 @@ void WinPipeRedirection::Cleanup() throw()
 		m_crtFile	= -1;		// m_file is closed implicitly when closing crtFile
 	}
 
-	if( m_file != INVALID_HANDLE_VALUE )
+	if( m_readpipe != INVALID_HANDLE_VALUE )
 	{
-		CloseHandle( m_pipe );
-		m_file = INVALID_HANDLE_VALUE;
+		CloseHandle( m_readpipe );
+		m_readpipe = m_writepipe = INVALID_HANDLE_VALUE;
 	}
 
-	if( m_pipe != INVALID_HANDLE_VALUE )
+	if( m_writepipe != INVALID_HANDLE_VALUE )
 	{
-		CloseHandle( m_pipe );
-		m_pipe = INVALID_HANDLE_VALUE;
+		CloseHandle( m_writepipe );
+		m_readpipe = m_writepipe = INVALID_HANDLE_VALUE;
 	}
 }
 
