@@ -72,40 +72,11 @@ namespace Exception
 
 using namespace Threading;
 
-static __forceinline void __CreatePipe( HANDLE& ph_ReadPipe, HANDLE& ph_WritePipe )
-{
-	SECURITY_ATTRIBUTES k_Secur;
-	k_Secur.nLength              = sizeof(SECURITY_ATTRIBUTES);
-	k_Secur.lpSecurityDescriptor = 0;
-	k_Secur.bInheritHandle       = TRUE;
-
-	if( 0 == CreatePipe( &ph_ReadPipe, &ph_WritePipe, &k_Secur, 2048 ) )
-		throw Exception::Win32Error( "CreatePipe failed." );
-
-	if (!ConnectNamedPipe(ph_ReadPipe, NULL))
-	{
-		if (GetLastError() != ERROR_PIPE_CONNECTED)
-			throw Exception::Win32Error( "ConnectNamedPipe failed." );
-	}
-
-	SetHandleInformation(ph_WritePipe, HANDLE_FLAG_INHERIT, 0);
-}
-
 // Reads from the Pipe and appends the read data to ps_Data
 // returns TRUE if something was printed to console, or false if the stdout/err were idle.
 static __forceinline bool ReadPipe(HANDLE h_Pipe, ConsoleColors color )
 {
 	if( h_Pipe == INVALID_HANDLE_VALUE ) return false;
-
-	// IMPORTANT: Check if there is data that can be read.
-	// The first console output will be lost if ReadFile() is called before data becomes available!
-	// It does not make any sense but the following 5 lines are indispensable!!
-	DWORD u32_Avail = 0;
-	if (!PeekNamedPipe(h_Pipe, 0, 0, 0, &u32_Avail, 0))
-		throw Exception::Win32Error( "Error peeking Pipe." );
-
-	if (!u32_Avail)
-		return false;
 
 	char s8_Buf[2049];
 	DWORD u32_Read = 0;
@@ -210,7 +181,9 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 		pxAssert( (stdstream == stderr) || (stdstream == stdout) );
 		DWORD stdhandle = ( stdstream == stderr ) ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE;
 
-		__CreatePipe( m_readpipe, m_writepipe );
+		if( 0 == CreatePipe( &m_readpipe, &m_writepipe, NULL, 0 ) )
+			throw Exception::Win32Error( "CreatePipe failed." );
+
 		if( 0 == SetStdHandle( stdhandle, m_writepipe ) )
 			throw Exception::Win32Error( "SetStdHandle failed." );
 
@@ -254,14 +227,13 @@ WinPipeRedirection::~WinPipeRedirection()
 
 void WinPipeRedirection::Cleanup() throw()
 {
-	m_Thread.Cancel();
-
 	if( m_fp != NULL )
 	{
 		fclose( m_fp );
 		m_fp = NULL;
 
 		m_crtFile	= -1;						// crtFile is closed implicitly when closing m_fp
+		m_writepipe = INVALID_HANDLE_VALUE;		// same for the write end of the pipe
 	}
 	
 	if( m_crtFile != -1 )
@@ -270,17 +242,14 @@ void WinPipeRedirection::Cleanup() throw()
 		m_crtFile	= -1;		// m_file is closed implicitly when closing crtFile
 	}
 
+	m_Thread.Cancel();
+
 	if( m_readpipe != INVALID_HANDLE_VALUE )
 	{
 		CloseHandle( m_readpipe );
-		m_readpipe = m_writepipe = INVALID_HANDLE_VALUE;
+		m_readpipe = INVALID_HANDLE_VALUE;
 	}
 
-	if( m_writepipe != INVALID_HANDLE_VALUE )
-	{
-		CloseHandle( m_writepipe );
-		m_readpipe = m_writepipe = INVALID_HANDLE_VALUE;
-	}
 }
 
 // The win32 specific implementation of PipeRedirection.
