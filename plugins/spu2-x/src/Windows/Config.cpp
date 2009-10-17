@@ -24,7 +24,7 @@ static const int LATENCY_MAX = 3000;
 static const int LATENCY_MAX = 750;
 #endif
 
-static const int LATENCY_MIN = 40;
+static const int LATENCY_MIN = 50;
 
 // MIXING
 int Interpolation = 1;
@@ -37,7 +37,7 @@ int Interpolation = 1;
 bool EffectsDisabled = false;
 
 // OUTPUT
-int SndOutLatencyMS = 160;
+int SndOutLatencyMS = 150;
 bool timeStretchDisabled = false;
 
 u32 OutputModule = 0;
@@ -62,7 +62,7 @@ void ReadSettings()
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
 
 	StereoExpansionEnabled = CfgReadBool( L"OUTPUT", L"Enable_StereoExpansion", false );
-	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 160);
+	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
 
 	wchar_t omodid[128];
 	CfgReadStr( L"OUTPUT", L"Output_Module", omodid, 127, XAudio2Out->GetIdent() );
@@ -157,7 +157,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			int maxexp = (int)(pow( (double)LATENCY_MAX+2, 1.0/3.0 ) * 128.0);
 			INIT_SLIDER( IDC_LATENCY_SLIDER, minexp, maxexp, 200, 42, 12 );
 
-			SendDialogMsg( hWnd, IDC_LATENCY_SLIDER, TBM_SETPOS, TRUE, (int)((pow( (double)SndOutLatencyMS, 1.0/3.0 ) * 128.0) + 0.5) ); 
+			SendDialogMsg( hWnd, IDC_LATENCY_SLIDER, TBM_SETPOS, TRUE, (int)((pow( (double)SndOutLatencyMS, 1.0/3.0 ) * 128.0) + 1) ); 
 			swprintf_s(temp,L"%d ms (avg)",SndOutLatencyMS);
 			SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 			
