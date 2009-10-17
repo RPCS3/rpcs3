@@ -340,6 +340,10 @@ bool Pcsx2App::OnInit()
 
 void Pcsx2App::CleanupMess()
 {
+	// app is shutting down, so don't let the system resume for anything.  (sometimes there
+	// are pending Resume messages in the queue from previous user actions)
+
+	sys_resume_lock += 10;
 	CoreThread.Cancel();
 
 	if( m_CorePlugins )
@@ -416,6 +420,6 @@ struct CrtDebugBreak
 	}
 };
 
-//CrtDebugBreak breakAt( 20603 );
+//CrtDebugBreak breakAt( 8890 );
 
 #endif

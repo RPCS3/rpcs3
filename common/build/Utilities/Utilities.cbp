@@ -95,8 +95,10 @@
 		<Unit filename="../../src/Utilities/Linux/LnxHostSys.cpp" />
 		<Unit filename="../../src/Utilities/Linux/LnxMisc.cpp" />
 		<Unit filename="../../src/Utilities/Linux/LnxThreads.cpp" />
+		<Unit filename="../../src/Utilities/Mutex.cpp" />
 		<Unit filename="../../src/Utilities/PathUtils.cpp" />
 		<Unit filename="../../src/Utilities/PrecompiledHeader.h" />
+		<Unit filename="../../src/Utilities/Semaphore.cpp" />
 		<Unit filename="../../src/Utilities/StringHelpers.cpp" />
 		<Unit filename="../../src/Utilities/ThreadTools.cpp" />
 		<Unit filename="../../src/Utilities/vssprintf.cpp" />

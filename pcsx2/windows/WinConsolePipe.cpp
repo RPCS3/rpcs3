@@ -154,6 +154,8 @@ protected:
 				s8_Buf[u32_Read] = 0;
 				OemToCharA(s8_Buf, s8_Buf);			// convert DOS codepage -> ANSI
 				Console.Write( m_color, s8_Buf );
+				
+				TestCancel();
 			}
 		}
 		catch( Exception::RuntimeError& ex )
@@ -207,8 +209,15 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 		if( 0 == SetStdHandle( stdhandle, m_writepipe ) )
 			throw Exception::Win32Error( "SetStdHandle failed." );
 
-		// In some cases GetStdHandle can fail, even when the one we just assigned above is valid.
-		// Regardless, it seems to work right so if SetStdHandle was successful, assume it worked.
+		// Note: Don't use GetStdHandle to "confirm" the handle.
+		//
+		// Under Windows7, and possibly Vista, GetStdHandle for STDOUT will return NULL
+		// after it's been assigned a custom write pipe (this differs from XP, which
+		// returns the assigned handle).  Amusingly, the GetStdHandle succeeds for STDERR
+		// and also tends to succeed when the app is run from the MSVC debugger.
+		//
+		// Fortunately, there's no need to use GetStdHandle anyway, so long as SetStdHandle
+		// didn't error.
 
 		m_crtFile = _open_osfhandle( (intptr_t)m_writepipe, _O_TEXT );
 		if( m_crtFile == -1 ) 

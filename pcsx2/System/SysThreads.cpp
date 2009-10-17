@@ -35,9 +35,6 @@ static __threadlocal SysCoreThread* tls_coreThread = NULL;
 SysThreadBase::SysThreadBase() :
 	m_ExecMode( ExecMode_NoThreadYet )
 ,	m_ExecModeMutex()
-,	m_ResumeEvent()
-,	m_SuspendEvent()
-,	m_resume_guard( 0 )
 {
 }
 
@@ -58,7 +55,8 @@ void SysThreadBase::OnStart()
 	if( !pxAssertDev( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
 
 	m_ResumeEvent.Reset();
-	m_SuspendEvent.Reset();
+	//m_SuspendEvent.Reset();
+	FrankenMutex( m_RunningLock );
 
 	_parent::OnStart();
 }
@@ -108,11 +106,10 @@ bool SysThreadBase::Suspend( bool isBlocking )
 		}
 
 		pxAssertDev( m_ExecMode == ExecMode_Closing, "ExecMode should be nothing other than Closing..." );
-		m_SuspendEvent.Reset();
 		m_sem_event.Post();
 	}
 
-	if( isBlocking ) m_SuspendEvent.Wait();
+	if( isBlocking ) m_RunningLock.Wait();
 	return retval;
 }
 
@@ -144,11 +141,10 @@ bool SysThreadBase::Pause()
 
 		pxAssertDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
 
-		m_SuspendEvent.Reset();
 		m_sem_event.Post();
 	}
 
-	m_SuspendEvent.Wait();
+	m_RunningLock.Wait();
 
 	return retval;
 }
@@ -162,7 +158,7 @@ bool SysThreadBase::Pause()
 // before the thread has resumed.  If you need explicit behavior tied to the completion of the
 // Resume, you'll need to bind callbacks to either OnResumeReady or OnResumeInThread.
 //
-// Exceptions (can occur on first call only):
+// Exceptions:
 //   PluginInitError     - thrown if a plugin fails init (init is performed on the current thread
 //                         on the first time the thread is resumed from it's initial idle state)
 //   ThreadCreationError - Insufficient system resources to create thread.
@@ -179,8 +175,8 @@ void SysThreadBase::Resume()
 	// is Suspending/Closing.  Processed events could recurse into Resume, and we'll
 	// want to silently ignore them.
 	
-	RecursionGuard guard( m_resume_guard );
-	if( guard.IsReentrant() ) return;
+	//RecursionGuard guard( m_resume_guard );
+	//if( guard.IsReentrant() ) return;
 
 	switch( m_ExecMode )
 	{
@@ -196,11 +192,9 @@ void SysThreadBase::Resume()
 			// we need to make sure and wait for the emuThread to enter a fully suspended
 			// state before continuing...
 
-			locker.Unlock();		// no deadlocks please, thanks. :)
-			++sys_resume_lock;
-			m_SuspendEvent.Wait();
-			--sys_resume_lock;
-			locker.Lock();
+			//locker.Unlock();		// no deadlocks please, thanks. :)
+			m_RunningLock.Wait();
+			//locker.Lock();
 			
 			// The entire state coming out of a Wait is indeterminate because of user input
 			// and pending messages being handled.  If something doesn't feel right, we should
@@ -227,22 +221,22 @@ void SysThreadBase::Resume()
 
 void SysThreadBase::OnCleanupInThread()
 {
-	ScopedLock locker( m_ExecModeMutex );
 	m_ExecMode = ExecMode_NoThreadYet;
 	_parent::OnCleanupInThread();
+	m_RunningLock.Unlock();
 }
 
 void SysThreadBase::StateCheckInThread( bool isCancelable )
 {
 	// Shortcut for the common case, to avoid unnecessary Mutex locks:
-	if( m_ExecMode == ExecMode_Opened )
+	/*if( m_ExecMode == ExecMode_Opened )
 	{
 		if( isCancelable ) TestCancel();
 		return;
 	}
 
 	// Oh, seems we need a full lock, because something special is happening!
-	ScopedLock locker( m_ExecModeMutex );
+	ScopedLock locker( m_ExecModeMutex );*/
 
 	switch( m_ExecMode )
 	{
@@ -267,15 +261,16 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 		{
 			OnPauseInThread();
 			m_ExecMode = ExecMode_Paused;
-			m_SuspendEvent.Post();
+			m_RunningLock.Unlock();
 		}
 		// fallthrough...
 
 		case ExecMode_Paused:
-			m_ExecModeMutex.Unlock();
+			//locker.Unlock();
 			while( m_ExecMode == ExecMode_Paused )
 				m_ResumeEvent.WaitRaw();
 
+			m_RunningLock.Lock();
 			OnResumeInThread( false );
 		break;
 
@@ -284,15 +279,16 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 		{
 			OnSuspendInThread();
 			m_ExecMode = ExecMode_Closed;
-			m_SuspendEvent.Post();
+			m_RunningLock.Unlock();
 		} 
 		// fallthrough...
 		
 		case ExecMode_Closed:
-			m_ExecModeMutex.Unlock();
+			//locker.Unlock();
 			while( m_ExecMode == ExecMode_Closed )
 				m_ResumeEvent.WaitRaw();
 
+			m_RunningLock.Lock();
 			OnResumeInThread( true );
 		break;
 		
@@ -449,6 +445,7 @@ void SysCoreThread::CpuExecute()
 
 void SysCoreThread::ExecuteTaskInThread()
 {
+	m_RunningLock.Lock();
 	tls_coreThread = this;
 
 	m_sem_event.WaitRaw();
@@ -458,8 +455,8 @@ void SysCoreThread::ExecuteTaskInThread()
 
 void SysCoreThread::OnSuspendInThread()
 {
-	if( g_plugins == NULL ) return;
-	g_plugins->Close();
+	if( g_plugins != NULL )
+		g_plugins->Close();
 }
 
 void SysCoreThread::OnResumeInThread( bool isSuspended )
@@ -475,8 +472,9 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 // Invoked by the pthread_exit or pthread_cancel
 void SysCoreThread::OnCleanupInThread()
 {
-	//if( g_plugins != NULL )
-	//	g_plugins->Shutdown();
+	if( g_plugins != NULL )
+		g_plugins->Close();
+
 	_parent::OnCleanupInThread();
 }
 

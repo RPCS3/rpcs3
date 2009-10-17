@@ -66,11 +66,18 @@ protected:
 	};
 
 	volatile ExecutionMode	m_ExecMode;
-	MutexLock				m_ExecModeMutex;
 
+	// This lock is used to avoid simultaneous requests to Suspend/Resume/Pause from
+	// contending threads.
+	MutexLockRecursive		m_ExecModeMutex;
+
+	// Used to wake up the thread from sleeping when it's in a suspended state.
 	Semaphore				m_ResumeEvent;
-	Semaphore				m_SuspendEvent;
-	int						m_resume_guard;
+	
+	// Locked whenever the thread is not in a suspended state (either closed or paused).
+	// Issue a Wait against this mutex for performing actions that require the thread
+	// to be suspended.
+	MutexLock				m_RunningLock;
 
 public:
 	explicit SysThreadBase();

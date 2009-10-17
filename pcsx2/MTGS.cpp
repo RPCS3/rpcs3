@@ -237,6 +237,9 @@ void mtgsThreadObject::OpenPlugin()
 
 void mtgsThreadObject::ExecuteTaskInThread()
 {
+	// Required by the underlying SysThreadBase class (is unlocked on exit)
+	m_RunningLock.Lock();
+
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;
 #endif
@@ -790,9 +793,10 @@ void mtgsThreadObject::SendGameCRC( u32 crc )
 
 void mtgsThreadObject::WaitForOpen()
 {
-	if( !gsIsOpened )
-		m_sem_OpenDone.Wait();
-	m_sem_OpenDone.Reset();
+	if( gsIsOpened ) return;
+	Resume();
+	m_sem_OpenDone.Wait();
+	mtgsThread.RethrowException();
 }
 
 void mtgsThreadObject::Freeze( int mode, MTGS_FreezeData& data )

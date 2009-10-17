@@ -282,11 +282,10 @@ bool Pcsx2App::PrepForExit( bool canCancel )
 			return false;
 		}
 	}
-	else
-	{
-		m_evtsrc_AppStatus.Dispatch( AppStatus_Exiting );
-		CleanupMess();
-	}
+
+	m_evtsrc_AppStatus.Dispatch( AppStatus_Exiting );
+	CleanupMess();
+
 	return true;
 }
 

@@ -911,13 +911,12 @@ void PluginManager::Open()
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		Open( pi->id );
 		// If GS doesn't support GSopen2, need to wait until call to GSopen
-		// returns to populate pDsp.  If it does, can initialize otherp plugins
+		// returns to populate pDsp.  If it does, can initialize other plugins
 		// at same time as GS, as long as GSopen2 does not subclass its window.
 		if (pi->id == PluginId_GS && !GSopen2) mtgsThread.WaitForOpen();
 	} while( ++pi, pi->shortname != NULL );
 
 	if (GSopen2) mtgsThread.WaitForOpen();
-	mtgsThread.RethrowException();
 
 	Console.Status( "Plugins opened successfully." );
 }

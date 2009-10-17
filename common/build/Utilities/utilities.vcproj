@@ -216,6 +216,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\Mutex.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\PathUtils.cpp"
 				>
 			</File>
@@ -248,7 +252,15 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\Semaphore.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\StringHelpers.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\Utilities\ThreadingInternal.h"
 				>
 			</File>
 			<File

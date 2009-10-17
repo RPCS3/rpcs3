@@ -28,6 +28,33 @@ class wxTimeSpan;
 #define AllowFromMainThreadOnly() \
 	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
 
+namespace Exception
+{
+	class ThreadCreationError : public virtual RuntimeError
+	{
+	public:
+		DEFINE_RUNTIME_EXCEPTION( ThreadCreationError, wxLt("Thread could not be created.") );
+	};
+
+#if wxUSE_GUI
+
+	// --------------------------------------------------------------------------------------
+	//  ThreadTimedOut Exception
+	// --------------------------------------------------------------------------------------
+	// This exception is thrown by Semaphore and Mutex Wait/Lock functions if a blocking wait is
+	// needed due to gui Yield recursion, and the timeout period for deadlocking (usually 3 seconds)
+	// is reached before the lock becomes available. This exception cannot occur in the following
+	// conditions:
+	//  * If the user-specified timeout is less than the deadlock timeout.
+	//  * If the method is run from a thread *other* than the MainGui thread.
+	class ThreadTimedOut : public virtual RuntimeError
+	{
+	public:
+		DEFINE_RUNTIME_EXCEPTION( ThreadTimedOut, "Blocking action timed out due to potential deadlock." );
+	};
+#endif
+}
+
 namespace Threading
 {
 	// --------------------------------------------------------------------------------------
@@ -110,33 +137,40 @@ namespace Threading
 		void Reset();
 		void Post();
 		void Post( int multiple );
-		
+
 		void WaitRaw();
 		bool WaitRaw( const wxTimeSpan& timeout );
 		void WaitNoCancel();
 		int  Count();
 
-#if wxUSE_GUI
 		void Wait();
 		bool Wait( const wxTimeSpan& timeout );
-
-	protected:
-		bool _WaitGui_RecursionGuard();
-#endif
 	};
 
 	class MutexLock
 	{
 	protected:
-		pthread_mutex_t mutex;
+		pthread_mutex_t m_mutex;
 
 	public:
 		MutexLock();
 		virtual ~MutexLock() throw();
+		virtual bool IsRecursive() const { return false; }
+		
+		void Recreate();
+		bool RecreateIfLocked();
+		void Detach();
 
 		void Lock();
-		void Unlock();
+		bool Lock( const wxTimeSpan& timeout );
 		bool TryLock();
+		void Unlock();
+
+		void LockRaw();
+		bool LockRaw( const wxTimeSpan& timeout );
+		
+		void Wait();
+		bool Wait( const wxTimeSpan& timeout );
 	
 	protected:
 		// empty constructor used by MutexLockRecursive
@@ -148,6 +182,7 @@ namespace Threading
 	public:
 		MutexLockRecursive();
 		virtual ~MutexLockRecursive() throw();
+		virtual bool IsRecursive() const { return true; }
 	};
 
 // --------------------------------------------------------------------------------------
@@ -212,7 +247,7 @@ namespace Threading
 
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
-		Semaphore	m_sem_finished;		// used for canceling and closing threads in a deadlock-safe manner
+		MutexLock	m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
 		MutexLockRecursive	m_lock_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
 		
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
@@ -221,7 +256,7 @@ namespace Threading
 		// exception handle, set non-NULL if the thread terminated with an exception
 		// Use RethrowException() to re-throw the exception using its original exception type.
 		ScopedPtr<Exception::BaseException> m_except;
-		
+
 	public:
 		virtual ~PersistentThread() throw();
 		PersistentThread();
@@ -247,10 +282,6 @@ namespace Threading
 		// Implemented by derived class to handle threading actions!
 		virtual void ExecuteTaskInThread()=0;
 
-		// Inserts a thread cancellation point.  If the thread has received a cancel request, this
-		// function will throw an SEH exception designed to exit the thread (so make sure to use C++
-		// object encapsulation for anything that could leak resources, to ensure object unwinding
-		// and cleanup, or use the DoThreadCleanup() override to perform resource cleanup).
 		void TestCancel();
 
 		// Yields this thread to other threads and checks for cancellation.  A sleeping thread should
@@ -268,6 +299,8 @@ namespace Threading
 			Threading::Sleep( ms );
 			TestCancel();
 		}
+
+		void FrankenMutex( MutexLock& mutex );
 
 		// ----------------------------------------------------------------------------
 		// Section of methods for internal use only.

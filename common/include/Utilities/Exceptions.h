@@ -279,25 +279,13 @@ namespace Exception
 
 	// ---------------------------------------------------------------------------------------
 	// Hardware/OS Exceptions:
-	//   HardwareDeficiency / CpuStateShutdown / PluginFailure / ThreadCreationError
+	//   HardwareDeficiency
 	// ---------------------------------------------------------------------------------------
 
 	class HardwareDeficiency : public virtual RuntimeError
 	{
 	public:
 		DEFINE_RUNTIME_EXCEPTION( HardwareDeficiency, wxLt("Your machine's hardware is incapable of running Pcsx2.  Sorry dood.") );
-	};
-
-	class ThreadCreationError : public virtual RuntimeError
-	{
-	public:
-		DEFINE_RUNTIME_EXCEPTION( ThreadCreationError, wxLt("Thread could not be created.") );
-	};
-
-	class ThreadTimedOut : public virtual RuntimeError
-	{
-	public:
-		DEFINE_RUNTIME_EXCEPTION( ThreadTimedOut, "Blocking action timed out due to potential deadlock." );
 	};
 
 	// ---------------------------------------------------------------------------------------

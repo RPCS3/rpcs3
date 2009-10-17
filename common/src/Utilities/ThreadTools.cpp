@@ -19,7 +19,6 @@
 #ifdef _WIN32
 #	include <wx/msw/wrapwin.h>	// for thread renaming features
 #endif
-#include <wx/app.h>
 
 #ifdef __LINUX__
 #	include <signal.h>		// for pthread_kill, which is in pthread.h on w32-pthreads
@@ -27,21 +26,35 @@
 
 #include "Threading.h"
 #include "wxBaseTools.h"
+#include "ThreadingInternal.h"
 
-#include <wx/datetime.h>
-#include <wx/thread.h>
+// 100ms interval for waitgui (issued from blocking semaphore waits on the main thread,
+// to avoid gui deadlock).
+const wxTimeSpan	Threading::def_yieldgui_interval( 0, 0, 0, 100 );
 
-namespace Threading
+// three second interval for deadlock protection on waitgui.
+const wxTimeSpan	Threading::def_deadlock_timeout( 0, 0, 3, 0 );
+
+// (intended for internal use only)
+// Returns true if the Wait is recursive, or false if the Wait is safe and should be
+// handled via normal yielding methods.
+bool Threading::_WaitGui_RecursionGuard( const char* guardname )
 {
-	// 100ms interval for waitgui (issued from blocking semaphore waits on the main thread,
-	// to avoid gui deadlock).
-	static const wxTimeSpan	ts_waitgui_interval( 0, 0, 0, 100 );
+	// In order to avoid deadlock we need to make sure we cut some time to handle messages.
+	// But this can result in recursive yield calls, which would crash the app.  Protect
+	// against them here and, if recursion is detected, perform a standard blocking wait.
+	//   (also, wx ignores message pumping on recursive Yields, so no point in allowing
+	//    more then one recursion)
 
-	// Four second interval for deadlock protection on waitgui.
-	static const wxTimeSpan	ts_waitgui_deadlock( 0, 0, 4, 0 );
+	static int __Guard = 0;
+	RecursionGuard guard( __Guard );
 
-	static long					_attr_refcount = 0;
-	static pthread_mutexattr_t	_attr_recursive;
+	if( guard.Counter >= 2 )
+	{
+		Console.WriteLn( "(Thread Log) Possible yield recursion detected in %s; performing blocking wait.", guardname );
+		return true;
+	}
+	return false;
 }
 
 __forceinline void Threading::Timeslice()
@@ -58,7 +71,7 @@ Threading::PersistentThread::PersistentThread() :
 	m_name( L"PersistentThread" )
 ,	m_thread()
 ,	m_sem_event()
-,	m_sem_finished()
+,	m_lock_InThread()
 ,	m_lock_start()
 ,	m_detached( true )		// start out with m_thread in detached/invalid state
 ,	m_running( false )
@@ -81,14 +94,7 @@ Threading::PersistentThread::~PersistentThread() throw()
 		if( m_running )
 		{
 			DevCon.WriteLn( L"\tWaiting for running thread to end...");
-#if wxUSE_GUI
-			m_sem_finished.Wait();
-#else
-			m_sem_finished.WaitRaw();
-#endif
-			// Need to lock here so that the thread can finish shutting down before
-			// it gets destroyed, otherwise th mutex handle would become invalid.
-			ScopedLock locker( m_lock_start );
+			m_lock_InThread.Wait();
 		}
 		Threading::Sleep( 1 );
 		Detach();
@@ -110,6 +116,19 @@ Threading::PersistentThread::~PersistentThread() throw()
 	DESTRUCTOR_CATCHALL
 }
 
+void Threading::PersistentThread::FrankenMutex( MutexLock& mutex )
+{
+	if( mutex.RecreateIfLocked() )
+	{
+		// Our lock is bupkis, which means  the previous thread probably deadlocked.
+		// Let's create a new mutex lock to replace it.
+
+		Console.Error( wxsFormat(
+			L"(Thread Log) Possible deadlock detected on restarted mutex belonging to '%s'.", m_name.c_str() )
+		);
+	}
+}
+
 // Main entry point for starting or e-starting a persistent thread.  This function performs necessary
 // locks and checks for avoiding race conditions, and then calls OnStart() immeediately before
 // the actual thread creation.  Extending classes should generally not override Start(), and should
@@ -118,11 +137,13 @@ Threading::PersistentThread::~PersistentThread() throw()
 // This function should not be called from the owner thread.
 void Threading::PersistentThread::Start()
 {
-	ScopedLock startlock( m_lock_start );		// Prevents sudden parallel startup
+	// Prevents sudden parallel startup, and or parallel startup + cancel:
+	ScopedLock startlock( m_lock_start );
 	if( m_running ) return;
 
 	Detach();		// clean up previous thread handle, if one exists.
-	m_sem_finished.Reset();
+
+	FrankenMutex( m_lock_InThread );
 
 	OnStart();
 
@@ -159,23 +180,25 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 {
 	pxAssertMsg( !IsSelf(), "Thread affinity error." );
 
-	if( !m_running ) return;
-
-	if( m_detached )
 	{
-		Console.Notice( "(Thread Warning) Ignoring attempted cancelation of detached thread." );
-		return;
-	}
+		// Prevent simultaneous startup and cancel:
+		ScopedLock startlock( m_lock_start );
+		if( !m_running ) return;
 
-	pthread_cancel( m_thread );
+		if( m_detached )
+		{
+			Console.Notice( "(Thread Warning) Ignoring attempted cancellation of detached thread." );
+			return;
+		}
+
+		pthread_cancel( m_thread );
+		
+	}
 
 	if( isBlocking )
 	{
-#if wxUSE_GUI
-		m_sem_finished.Wait();
-#else
-		m_sem_finished.WaitRaw();
-#endif
+		m_lock_InThread.Wait();
+		Detach();
 	}
 }
 
@@ -191,12 +214,7 @@ void Threading::PersistentThread::Block()
 {
 	pxAssertDev( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
 
-	if( m_running )
-#if wxUSE_GUI
-		m_sem_finished.Wait();
-#else
-		m_sem_finished.WaitRaw();
-#endif
+	m_lock_InThread.Wait();
 }
 
 bool Threading::PersistentThread::IsSelf() const
@@ -218,6 +236,10 @@ void Threading::PersistentThread::RethrowException() const
 	m_except->Rethrow();
 }
 
+// Inserts a thread cancellation point.  If the thread has received a cancel request, this
+// function will throw an SEH exception designed to exit the thread (so make sure to use C++
+// object encapsulation for anything that could leak resources, to ensure object unwinding
+// and cleanup, or use the DoThreadCleanup() override to perform resource cleanup).
 void Threading::PersistentThread::TestCancel()
 {
 	pxAssert( IsSelf() );
@@ -297,15 +319,10 @@ void Threading::PersistentThread::_ThreadCleanup()
 {
 	pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
 
-	// Typically thread cleanup needs to lock against thread startup, since both
-	// will perform some measure of variable inits or resets, depending on how the
-	// derived class is implemented.
-	ScopedLock startlock( m_lock_start );
-
 	_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
 
 	m_running = false;
-	m_sem_finished.Post();
+	m_lock_InThread.Unlock();
 }
 
 wxString Threading::PersistentThread::GetName() const
@@ -315,6 +332,7 @@ wxString Threading::PersistentThread::GetName() const
 
 void Threading::PersistentThread::_internal_execute()
 {
+	m_lock_InThread.Lock();
 	m_running = true;
 	_DoSetThreadName( m_name );
 	_try_virtual_invoke( &PersistentThread::ExecuteTaskInThread );
@@ -472,228 +490,6 @@ void Threading::WaitEvent::Wait()
 }
 #endif
 
-// --------------------------------------------------------------------------------------
-//  Semaphore Implementations
-// --------------------------------------------------------------------------------------
-
-Threading::Semaphore::Semaphore()
-{
-	sem_init( &m_sema, false, 0 );
-}
-
-Threading::Semaphore::~Semaphore() throw()
-{
-	sem_destroy( &m_sema );
-}
-
-void Threading::Semaphore::Reset()
-{
-	sem_destroy( &m_sema );
-	sem_init( &m_sema, false, 0 );
-}
-
-void Threading::Semaphore::Post()
-{
-	sem_post( &m_sema );
-}
-
-void Threading::Semaphore::Post( int multiple )
-{
-#if defined(_MSC_VER)
-	sem_post_multiple( &m_sema, multiple );
-#else
-	// Only w32pthreads has the post_multiple, but it's easy enough to fake:
-	while( multiple > 0 )
-	{
-		multiple--;
-		sem_post( &m_sema );
-	}
-#endif
-}
-
-#if wxUSE_GUI
-// (intended for internal use only)
-// Returns true if the Wait is recursive, or false if the Wait is safe and should be
-// handled via normal yielding methods.
-bool Threading::Semaphore::_WaitGui_RecursionGuard()
-{
-	// In order to avoid deadlock we need to make sure we cut some time to handle
-	// messages.  But this can result in recursive yield calls, which would crash
-	// the app.  Protect against them here and, if recursion is detected, perform
-	// a standard blocking wait.
-
-	static int __Guard = 0;
-	RecursionGuard guard( __Guard );
-
-	if( guard.Counter > 4 )
-	{
-		Console.WriteLn( "(Thread Log) Possible yield recursion detected in Semaphore::Wait; performing blocking wait." );
-		//while( wxTheApp->Pending() ) wxTheApp->Dispatch();		// ensures console gets updated.
-		return true;
-	}
-	return false;
-}
-
-// This is a wxApp-safe implementation of Wait, which makes sure and executes the App's
-// pending messages *if* the Wait is performed on the Main/GUI thread.  This ensures that
-// user input continues to be handled and that windoes continue to repaint.  If the Wait is
-// called from another thread, no message pumping is performed.
-//
-// Exceptions:
-//   ThreadTimedOut - thrown if a blocking wait was needed due to recursion and the default
-//      timeout period (usually 4 seconds) was reached, indicating likely deadlock.  If
-//      the method is run from a thread *other* than the MainGui thread, this exception
-//      cannot occur.
-//
-void Threading::Semaphore::Wait()
-{
-	if( !wxThread::IsMain() || (wxTheApp == NULL) )
-	{
-		WaitRaw();
-	}
-	else if( _WaitGui_RecursionGuard() )
-	{
-		if( !WaitRaw(ts_waitgui_deadlock) )	// default is 4 seconds
-			throw Exception::ThreadTimedOut();
-	}
-	else
-	{
-		do {
-			wxTheApp->Yield( true );
-		} while( !WaitRaw( ts_waitgui_interval ) );
-	}
-}
-
-// This is a wxApp-safe implementation of Wait, which makes sure and executes the App's
-// pending messages *if* the Wait is performed on the Main/GUI thread.  This ensures that
-// user input continues to be handled and that windows continue to repaint.  If the Wait is
-// called from another thread, no message pumping is performed.
-//
-// Returns:
-//   false if the wait timed out before the semaphore was signaled, or true if the signal was
-//   reached prior to timeout.
-//
-// Exceptions:
-//   ThreadTimedOut - thrown if a blocking wait was needed due to recursion and the default
-//      timeout period (usually 4 seconds) was reached, indicating likely deadlock.  If the
-//      user-specified timeout is less than four seconds, this exception cannot occur.  If
-//      the method is run from a thread *other* than the MainGui thread, this exception
-//      cannot occur.
-//
-bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
-{
-	if( !wxThread::IsMain() || (wxTheApp == NULL) )
-	{
-		return WaitRaw( timeout );
-	}
-	else if( _WaitGui_RecursionGuard() )
-	{
-		if( timeout > ts_waitgui_deadlock )
-		{
-			if( WaitRaw(ts_waitgui_deadlock) ) return true;
-			throw Exception::ThreadTimedOut();
-		}
-		return WaitRaw( timeout );
-	}
-	else
-	{
-		wxTimeSpan countdown( (timeout) );
-
-		do {
-			wxTheApp->Yield();
-			if( WaitRaw( ts_waitgui_interval ) ) break;
-			countdown -= ts_waitgui_interval;
-		} while( countdown.GetMilliseconds() > 0 );
-
-		return countdown.GetMilliseconds() > 0;
-	}
-}
-#endif
-
-void Threading::Semaphore::WaitRaw()
-{
-	sem_wait( &m_sema );
-}
-
-bool Threading::Semaphore::WaitRaw( const wxTimeSpan& timeout )
-{
-	wxDateTime megafail( wxDateTime::UNow() + timeout );
-	const timespec fail = { megafail.GetTicks(), megafail.GetMillisecond() * 1000000 };
-	return sem_timedwait( &m_sema, &fail ) != -1;
-}
-
-// Performs an uncancellable wait on a semaphore; restoring the thread's previous cancel state
-// after the wait has completed.  Useful for situations where the semaphore itself is stored on
-// the stack and passed to another thread via GUI message or such, avoiding complications where
-// the thread might be canceled and the stack value becomes invalid.
-//
-// Performance note: this function has quite a bit more overhead compared to Semaphore::WaitRaw(), so
-// consider manually specifying the thread as uncancellable and using WaitRaw() instead if you need
-// to do a lot of no-cancel waits in a tight loop worker thread, for example.
-void Threading::Semaphore::WaitNoCancel()
-{
-	int oldstate;
-	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
-	WaitRaw();
-	pthread_setcancelstate( oldstate, NULL );
-}
-
-int Threading::Semaphore::Count()
-{
-	int retval;
-	sem_getvalue( &m_sema, &retval );
-	return retval;
-}
-
-// --------------------------------------------------------------------------------------
-//  MutexLock Implementations
-// --------------------------------------------------------------------------------------
-
-Threading::MutexLock::MutexLock()
-{
-	int err = 0;
-	err = pthread_mutex_init( &mutex, NULL );
-}
-
-Threading::MutexLock::~MutexLock() throw()
-{
-	pthread_mutex_destroy( &mutex );
-}
-
-Threading::MutexLockRecursive::MutexLockRecursive() : MutexLock( false )
-{
-	if( _InterlockedIncrement( &_attr_refcount ) == 1 )
-	{
-		if( 0 != pthread_mutexattr_init( &_attr_recursive ) )
-			throw Exception::OutOfMemory( "Out of memory error initializing the Mutex attributes for recursive mutexing." );
-
-		pthread_mutexattr_settype( &_attr_recursive, PTHREAD_MUTEX_RECURSIVE );
-	}
-
-	int err = 0;
-	err = pthread_mutex_init( &mutex, &_attr_recursive );
-}
-
-Threading::MutexLockRecursive::~MutexLockRecursive() throw()
-{
-	if( _InterlockedDecrement( &_attr_refcount ) == 0 )
-		pthread_mutexattr_destroy( &_attr_recursive );
-}
-
-void Threading::MutexLock::Lock()
-{
-	pthread_mutex_lock( &mutex );
-}
-
-void Threading::MutexLock::Unlock()
-{
-	pthread_mutex_unlock( &mutex );
-}
-
-bool Threading::MutexLock::TryLock()
-{
-	return EBUSY != pthread_mutex_trylock( &mutex );
-}
 
 // --------------------------------------------------------------------------------------
 //  InterlockedExchanges / AtomicExchanges (PCSX2's Helper versions)
