@@ -208,14 +208,9 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 			throw Exception::Win32Error( "SetStdHandle failed." );
 
 		// In some cases GetStdHandle can fail, even when the one we just assigned above is valid.
-		HANDLE newhandle = GetStdHandle(stdhandle);
-		if( newhandle == INVALID_HANDLE_VALUE )
-			throw Exception::Win32Error( "GetStdHandle failed." );
+		// Regardless, it seems to work right so if SetStdHandle was successful, assume it worked.
 
-		if( newhandle == NULL )
-			throw Exception::RuntimeError( "GetStdHandle returned NULL." );		// not a Win32error (no error code)
-
-		m_crtFile = _open_osfhandle( (intptr_t)newhandle, _O_TEXT );
+		m_crtFile = _open_osfhandle( (intptr_t)m_writepipe, _O_TEXT );
 		if( m_crtFile == -1 ) 
 			throw Exception::RuntimeError( "_open_osfhandle returned -1." );
 
