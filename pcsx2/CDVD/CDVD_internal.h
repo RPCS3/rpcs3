@@ -115,7 +115,12 @@ static const uint tbl_ContigiousSeekDelta[3] =
 // concerned with accurate(ish) seek delays and less concerned with actual block read speeds.
 // Translation: it's a minor speedhack :D
 
-static const uint PSX_CD_READSPEED = 153600;   // 1 Byte Time @ x1 (150KB = cd x 1)
+//Fixme ( voodoocycles ):
+//The current CD mode gives a too low transfer rate. HDloader reports 900kb/s, while the theoretical max is 3600kb/s
+//Silent Hill 2 videos starve of data and stall.
+//So let's double that until the cause of the slow data rate is known.
+
+static const uint PSX_CD_READSPEED = 153600 * 2;   // 1 Byte Time @ x1 (150KB = cd x 1)
 static const uint PSX_DVD_READSPEED = 1382400 + 256000; // normal is 1 Byte Time @ x1 (1350KB = dvd x 1).
 
 // Legacy Note: FullSeek timing causes many games to load very slow, but it likely not the real problem.

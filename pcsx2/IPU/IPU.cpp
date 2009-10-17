@@ -1656,6 +1656,7 @@ void FIFOfrom_read(void *value, int size)
 int IPU0dma()
 {
 	int readsize;
+	static int totalsize = 0;
 	void* pMem;
 
 	if ((!(ipu0dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
@@ -1670,6 +1671,7 @@ int IPU0dma()
 	pMem = (u32*)dmaGetAddr(ipu0dma->madr);
 
 	readsize = min(ipu0dma->qwc, (u16)ipuRegs->ctrl.OFC);
+	totalsize+=readsize;
 	FIFOfrom_read(pMem, readsize);
 
 	ipu0dma->madr += readsize << 4;
@@ -1695,7 +1697,12 @@ int IPU0dma()
 					break;
 			}
 		}
-		IPU_INT_FROM(readsize*BIAS);
+		//Fixme ( voodoocycles ):
+		//This was IPU_INT_FROM(readsize*BIAS );
+		//This broke vids in Digital Devil Saga
+		//Note that interrupting based on totalsize is just guessing..
+		IPU_INT_FROM(totalsize*BIAS );
+		totalsize=0;
 	}
 
 	return readsize;

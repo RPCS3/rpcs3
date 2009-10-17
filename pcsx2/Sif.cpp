@@ -382,7 +382,11 @@ __forceinline void SIF1Dma()
 						SIF_LOG(" IOP SIF interrupt");
 					
 					iopsifbusy[1] = false;
-					PSX_INT(IopEvt_SIF1, psxCycles);
+
+					//Fixme ( voodoocycles ):
+					//The *50 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
+
+					PSX_INT(IopEvt_SIF1, psxCycles * 50);
 					sif1.tagMode = 0;
 					done = true;
 				}
