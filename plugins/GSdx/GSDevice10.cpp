@@ -68,7 +68,9 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 	scd.SampleDesc.Quality = 0;
 	scd.Windowed = TRUE;
 
-	uint32 flags = D3D10_CREATE_DEVICE_SINGLETHREADED;
+	//Crashes when 2 threads work on the swapchain, as in pcsx2/wx.
+	//Todo : Figure out a way to have this flag anyway
+	uint32 flags = 0; //D3D10_CREATE_DEVICE_SINGLETHREADED;
 
 #ifdef DEBUG
 	flags |= D3D10_CREATE_DEVICE_DEBUG;
