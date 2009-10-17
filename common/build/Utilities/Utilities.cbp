@@ -58,6 +58,7 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-march=native" />
 			<Add directory="../../include/Utilities" />
 			<Add directory="../../include" />
 			<Add directory="../../../3rdparty" />

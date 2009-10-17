@@ -88,8 +88,6 @@
 			</Environment>
 		</Build>
 		<Compiler>
-			<Add option="-march=pentium4" />
-			<Add option="-march=i486" />
 			<Add option="-Wno-format" />
 			<Add option="-Wno-unused-parameter" />
 			<Add option="-Wno-unused-value" />
@@ -420,7 +418,6 @@
 			<Option compiler="gcc" use="0" buildCommand="gcc $options -S $includes -c $file -o $object" />
 		</Unit>
 		<Unit filename="../x86/ir5900tables.cpp" />
-		<Unit filename="../x86/ix86-32/aR5900-32.S" />
 		<Unit filename="../x86/ix86-32/iCore-32.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900-32.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900Arit.cpp" />

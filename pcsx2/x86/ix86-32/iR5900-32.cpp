@@ -422,11 +422,11 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	//   esp into ebp, and then align esp.  ebp references the original esp base
 	//   for the duration of our function, and is used to restore the original
 	//   esp before returning from the function
-	
+
 	// Optimization: We "allocate" 0x20 bytes of stack ahead of time here.  The first
 	// 16 bytes are used for saving esi, edi, and ebx.  The second 16 bytes are used
 	// for passing parameters to stdcall/cdecl functions.
-	
+
 	xPUSH( ebp );
 	xMOV( ebp, esp );
 	xAND( esp, -0x10 );
@@ -834,10 +834,15 @@ void CheckForBIOSEnd()
 	xMOV( eax, &cpuRegs.pc );
 
 	xCMP( eax, 0x00200008 );
-	xJE( ExitRec );
+	xForwardJE8 CallExitRec;
 
 	xCMP( eax, 0x00100008 );
-	xJE( ExitRec );
+	xForwardJNE8 SkipExitRec;
+
+	CallExitRec.SetTarget();
+	xCALL( ExitRec );
+
+	SkipExitRec.SetTarget();
 }
 
 static int *s_pCode;
@@ -1262,7 +1267,7 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
 	DevCon.WriteLn("dyna_block_discard .. start=0x%08X  size=%d", start, sz*4);
 	recClear(start, sz);
-	
+
 	// Note: this function is accessed via a JMP, and thus the RET here will exit
 	// recompiled code and take us back to recExecute.
 }
