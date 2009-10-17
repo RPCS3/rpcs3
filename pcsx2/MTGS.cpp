@@ -282,8 +282,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 					AtomicExchange(m_RingPos, 0);
 
 					// stall for a bit to let the MainThread have time to update the g_pGSWritePos.
-					m_lock_RingRestart.Lock();
-					m_lock_RingRestart.Unlock();
+					m_lock_RingRestart.Wait();
 
 					StateCheckInThread( false );		// disable cancel since the above locks are cancelable already
 				continue;

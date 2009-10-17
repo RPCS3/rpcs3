@@ -232,10 +232,12 @@ namespace x86Emitter
 		else if( Index.IsEmpty() )
 		{
 			Index = src.Index;
-			Factor = 1;
+			Factor = src.Factor;
 		}
 		else if( Index == src.Index )
-			Factor++;
+		{
+			Factor += src.Factor;
+		}
 		else
 			pxFailDev( L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
 

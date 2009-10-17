@@ -144,6 +144,7 @@ void Threading::PersistentThread::Start()
 	Detach();		// clean up previous thread handle, if one exists.
 
 	FrankenMutex( m_lock_InThread );
+	m_sem_event.Reset();
 
 	OnStart();
 

@@ -55,7 +55,7 @@ void SysThreadBase::OnStart()
 	if( !pxAssertDev( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
 
 	m_ResumeEvent.Reset();
-	//m_SuspendEvent.Reset();
+	FrankenMutex( m_ExecModeMutex );
 	FrankenMutex( m_RunningLock );
 
 	_parent::OnStart();
@@ -228,16 +228,6 @@ void SysThreadBase::OnCleanupInThread()
 
 void SysThreadBase::StateCheckInThread( bool isCancelable )
 {
-	// Shortcut for the common case, to avoid unnecessary Mutex locks:
-	/*if( m_ExecMode == ExecMode_Opened )
-	{
-		if( isCancelable ) TestCancel();
-		return;
-	}
-
-	// Oh, seems we need a full lock, because something special is happening!
-	ScopedLock locker( m_ExecModeMutex );*/
-
 	switch( m_ExecMode )
 	{
 
@@ -266,7 +256,6 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 		// fallthrough...
 
 		case ExecMode_Paused:
-			//locker.Unlock();
 			while( m_ExecMode == ExecMode_Paused )
 				m_ResumeEvent.WaitRaw();
 
@@ -284,7 +273,6 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 		// fallthrough...
 		
 		case ExecMode_Closed:
-			//locker.Unlock();
 			while( m_ExecMode == ExecMode_Closed )
 				m_ResumeEvent.WaitRaw();
 
