@@ -32,13 +32,13 @@ namespace Threading
 
 Threading::MutexLock::MutexLock()
 {
-	int err = pthread_mutex_init( &m_mutex, NULL );
+	pthread_mutex_init( &m_mutex, NULL );
 }
 
 void Threading::MutexLock::Detach()
 {
 	if( EBUSY != pthread_mutex_destroy(&m_mutex) ) return;
-	
+
 	if( IsRecursive() )
 	{
 		// Sanity check: Recursive locks could be held by our own thread, which would

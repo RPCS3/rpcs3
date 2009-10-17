@@ -88,6 +88,8 @@
 			</Environment>
 		</Build>
 		<Compiler>
+			<Add option="-march=pentium4" />
+			<Add option="-march=i486" />
 			<Add option="-Wno-format" />
 			<Add option="-Wno-unused-parameter" />
 			<Add option="-Wno-unused-value" />
@@ -96,7 +98,7 @@
 			<Add option="-fno-dse" />
 			<Add option="-fno-tree-dse" />
 			<Add option="-pipe -msse -msse2" />
-			<Add option="-mpreferred-stack-boundary=2" />
+			<Add option="-march=native" />
 			<Add option="-DWX_PRECOMP" />
 			<Add directory="$(SvnRootDir)/common/include/" />
 			<Add directory="$(SvnRootDir)/3rdparty/" />
@@ -277,7 +279,7 @@
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
 		<Unit filename="../gui/Dialogs/ConfirmationDialogs.cpp" />
-        <Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />
+		<Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />
 		<Unit filename="../gui/Dialogs/ImportSettingsDialog.cpp" />
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.cpp" />
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.h" />
