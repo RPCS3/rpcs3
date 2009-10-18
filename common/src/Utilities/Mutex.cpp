@@ -150,9 +150,8 @@ void Threading::MutexLock::Lock()
 	}
 	else
 	{
-		do {
+		while( !LockRaw(def_yieldgui_interval) )
 			wxTheApp->Yield( true );
-		} while( !LockRaw(def_yieldgui_interval) );
 	}
 #else
 	LockRaw();
@@ -183,8 +182,8 @@ bool Threading::MutexLock::Lock( const wxTimeSpan& timeout )
 		wxTimeSpan countdown( (timeout) );
 
 		do {
-			wxTheApp->Yield(true);
 			if( LockRaw( def_yieldgui_interval ) ) break;
+			wxTheApp->Yield(true);
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
 

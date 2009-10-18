@@ -335,7 +335,7 @@ static DynGenFunc* EnterRecompiledCode	= NULL;
 //      stackframe setup code in this function)
 static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 {
-	pxFailDev( wxsFormat( L"(Stackframe) Sanitycheck Failed on %s\n\tCurrent=%d; Saved=%d",
+	pxFailDev( wxsFormat( L"(Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
 		(espORebp==0) ? L"ESP" : L"EBP", regval, (espORebp==0) ? s_store_esp : s_store_ebp )
 	);
 
@@ -346,14 +346,14 @@ static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 
 static void _DynGen_StackFrameCheck()
 {
-	if( true ) return;
+	if( !IsDevBuild ) return;
 
 	// --------- EBP Here -----------
 
 	xCMP( ebp, &s_store_ebp );
 	xForwardJE8 skipassert_ebp;
 
-	xMOV( ecx, 1 );
+	xMOV( ecx, 1 );					// 1 specifies EBP
 	xMOV( edx, ebp );
 	xCALL( StackFrameCheckFailed );
 	xMOV( ebp, &s_store_ebp );		// half-hearted frame recovery attempt!
@@ -365,7 +365,7 @@ static void _DynGen_StackFrameCheck()
 	xCMP( esp, &s_store_esp );
 	xForwardJE8 skipassert_esp;
 
-	xMOV( ecx, 1 );
+	xXOR( ecx, ecx );				// 0 specifies ESI
 	xMOV( edx, esp );
 	xCALL( StackFrameCheckFailed );
 	xMOV( esp, &s_store_esp );		// half-hearted frame recovery attempt!
@@ -423,21 +423,21 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	//   for the duration of our function, and is used to restore the original
 	//   esp before returning from the function
 
-	// Optimization: We "allocate" 0x20 bytes of stack ahead of time here.  The first
-	// 16 bytes are used for saving esi, edi, and ebx.  The second 16 bytes are used
-	// for passing parameters to stdcall/cdecl functions.
+	// Optimization: We "allocate" 0x10 bytes of stack ahead of time here, which we can
+	// use for supplying parameters to cdecl functions.
 
 	xPUSH( ebp );
+	xPUSH( edi );
+	xPUSH( esi );
+	xPUSH( ebx );
+	
 	xMOV( ebp, esp );
 	xAND( esp, -0x10 );
-	xSUB( esp, 0x20 );
+	xSUB( esp, 0x10 );
 
 	xMOV( &s_store_ebp, ebp );
 	xMOV( &s_store_esp, esp );
-
-	xMOV( ptr[esp+0x18], edi );
-	xMOV( ptr[esp+0x14], esi );
-	xMOV( ptr[esp+0x10], ebx );
+	xSUB( ptr32[&s_store_esp], 4 );		// account for the address pushed when we xCALL
 
 	//xPUSH( edi );
 	//xPUSH( esi );
@@ -453,12 +453,14 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	//xPOP( ebp );
 	//xRET();
 
+	xADD( ptr32[&s_store_esp], 4 );		// account for the address pushed when we xCALL
 	_DynGen_StackFrameCheck();
 
-	xMOV( edi, ptr[esp+0x18] );
-	xMOV( esi, ptr[esp+0x14] );
-	xMOV( ebx, ptr[esp+0x10] );
 	xMOV( esp, ebp );
+	
+	xPOP( ebx );
+	xPOP( esi );
+	xPOP( edi );
 	xPOP( ebp );
 	xRET();
 

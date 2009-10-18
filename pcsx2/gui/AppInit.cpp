@@ -343,12 +343,23 @@ void Pcsx2App::CleanupMess()
 	// app is shutting down, so don't let the system resume for anything.  (sometimes there
 	// are pending Resume messages in the queue from previous user actions)
 
-	sys_resume_lock += 10;
-	CoreThread.Cancel();
+	try
+	{
+		sys_resume_lock += 10;
+		CoreThread.Cancel();
 
-	if( m_CorePlugins )
-		m_CorePlugins->Shutdown();
+		if( m_CorePlugins )
+			m_CorePlugins->Shutdown();
+	}
+	catch( Exception::RuntimeError& ex )
+	{
+		// Handle runtime errors gracefully during shutdown.  Mostly these are things
+		// that we just don't care about by now, and just want to "get 'er done!" so
+		// we can exit the app. ;)
 
+		Console.Error( ex.FormatDiagnosticMessage() );
+	}
+	
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.
 	// We don't need to unload plugins anyway tho -- shutdown is plenty safe enough for

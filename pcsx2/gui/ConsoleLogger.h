@@ -68,6 +68,8 @@ protected:
 
 class ConsoleTestThread : public Threading::PersistentThread
 {
+	typedef PersistentThread _parent;
+
 protected:
 	volatile bool m_done;
 	void ExecuteTaskInThread();
@@ -82,10 +84,6 @@ public:
 	{
 		m_done = true;
 	}
-
-	protected:
-		void OnStart() {}
-		void OnCleanupInThread() {}
 };
 
 // --------------------------------------------------------------------------------------

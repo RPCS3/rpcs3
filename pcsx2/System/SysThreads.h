@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -44,7 +44,7 @@ protected:
 		// Thread has not been created yet.  Typically this is the same as IsRunning()
 		// returning FALSE.
 		ExecMode_NoThreadYet,
-		
+
 		// Close signal has been sent to the thread, but the thread's response is still
 		// pending (thread is busy/running).
 		ExecMode_Closing,
@@ -55,11 +55,11 @@ protected:
 
 		// Thread is active and running, with pluigns in an "open" state.
 		ExecMode_Opened,
-		
+
 		// Pause signal has been sent to the thread, but the thread's response is still
 		// pending (thread is busy/running).
 		ExecMode_Pausing,
-		
+
 		// Thread is safely paused, with plugins in an "open" state, and waiting for a
 		// resume/open signal.
 		ExecMode_Paused,
@@ -73,7 +73,7 @@ protected:
 
 	// Used to wake up the thread from sleeping when it's in a suspended state.
 	Semaphore				m_ResumeEvent;
-	
+
 	// Locked whenever the thread is not in a suspended state (either closed or paused).
 	// Issue a Wait against this mutex for performing actions that require the thread
 	// to be suspended.
@@ -92,7 +92,7 @@ public:
 	{
 		return m_ExecMode > ExecMode_Closed;
 	}
-	
+
 	bool IsClosed() const { return !IsOpen(); }
 
 	ExecutionMode GetExecutionMode() const { return m_ExecMode; }
@@ -101,18 +101,19 @@ public:
 	virtual bool Suspend( bool isBlocking = true );
 	virtual void Resume();
 	virtual bool Pause();
-	
+
 	virtual void StateCheckInThread( bool isCancelable = true );
-	virtual void OnCleanupInThread();
+
+protected:
+	virtual void OnStart();
 
 	// This function is called by Resume immediately prior to releasing the suspension of
 	// the core emulation thread.  You should overload this rather than Resume(), since
 	// Resume() has a lot of checks and balances to prevent re-entrance and race conditions.
 	virtual void OnResumeReady() {}
 
-	virtual void OnStart();
-
-protected:
+	virtual void OnCleanupInThread();
+	virtual void OnStartInThread();
 
 	// Used internally from Resume(), so let's make it private here.
 	virtual void Start();
@@ -123,7 +124,7 @@ protected:
 	// thread, requesting this thread suspend itself temporarily).  After this is called,
 	// the thread enters a waiting state on the m_ResumeEvent semaphore.
 	virtual void OnSuspendInThread()=0;
-	
+
 	// Extending classes should implement this, but should not call it.  The parent class
 	// handles invocation by the following guidelines: Called *in thread* from StateCheckInThread()
 	// prior to pausing the thread (ie, when Pause() has been called on a separate thread,
@@ -163,7 +164,7 @@ public:
 	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void OnResumeReady();
 	virtual void Reset();
-	
+
 	bool HasValidState()
 	{
 		return m_hasValidState;

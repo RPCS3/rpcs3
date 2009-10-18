@@ -268,6 +268,9 @@ namespace Threading
 		virtual void Block();
 		virtual void RethrowException() const;
 
+		void WaitOnSelf( Semaphore& mutex );
+		void WaitOnSelf( MutexLock& mutex );
+
 		bool IsRunning() const;
 		bool IsSelf() const;
 		wxString GetName() const;
@@ -276,10 +279,15 @@ namespace Threading
 		// Extending classes should always implement your own OnStart(), which is called by
 		// Start() once necessary locks have been obtained.  Do not override Start() directly
 		// unless you're really sure that's what you need to do. ;)
-		virtual void OnStart()=0;
-		virtual void OnCleanupInThread()=0;
+		virtual void OnStart();
+		
+		virtual void OnStartInThread();
 
-		// Implemented by derived class to handle threading actions!
+		// This is called when the thread has been canceled or exits normally.  The PersistentThread
+		// automatically binds it to the pthread cleanup routines as soon as the thread starts.
+		virtual void OnCleanupInThread();
+
+		// Implemented by derived class to perform actual threaded task!
 		virtual void ExecuteTaskInThread()=0;
 
 		void TestCancel();
@@ -444,23 +452,23 @@ namespace Threading
 	// Our fundamental interlocking functions.  All other useful interlocks can be derived
 	// from these little beasties!
 
-	extern void AtomicExchange( volatile u32& Target, u32 value );
-	extern void AtomicExchangeAdd( volatile u32& Target, u32 value );
-	extern void AtomicIncrement( volatile u32& Target );
-	extern void AtomicDecrement( volatile u32& Target );
-	extern void AtomicExchange( volatile s32& Target, s32 value );
-	extern void AtomicExchangeAdd( volatile s32& Target, u32 value );
-	extern void AtomicIncrement( volatile s32& Target );
-	extern void AtomicDecrement( volatile s32& Target );
+	extern u32 AtomicExchange( volatile u32& Target, u32 value );
+	extern u32 AtomicExchangeAdd( volatile u32& Target, u32 value );
+	extern u32 AtomicIncrement( volatile u32& Target );
+	extern u32 AtomicDecrement( volatile u32& Target );
+	extern s32 AtomicExchange( volatile s32& Target, s32 value );
+	extern s32 AtomicExchangeAdd( volatile s32& Target, u32 value );
+	extern s32 AtomicIncrement( volatile s32& Target );
+	extern s32 AtomicDecrement( volatile s32& Target );
 
-	extern void _AtomicExchangePointer( const void ** target, const void* value );
-	extern void _AtomicCompareExchangePointer( const void ** target, const void* value, const void* comparand );
+	extern void* _AtomicExchangePointer( void * volatile * const target, void* const value );
+	extern void* _AtomicCompareExchangePointer( void * volatile * const target, void* const value, void* const comparand );
 
 	#define AtomicExchangePointer( target, value ) \
-		_AtomicExchangePointer( (const void**)(&target), (const void*)(value) )
+		_InterlockedExchangePointer( &target, value )
 
 	#define AtomicCompareExchangePointer( target, value, comparand ) \
-		_AtomicCompareExchangePointer( (const void**)(&target), (const void*)(value), (const void*)(comparand) )
+		_InterlockedCompareExchangePointer( &target, value, comparand )
 
 }
 

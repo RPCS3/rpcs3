@@ -74,6 +74,8 @@ protected:
 	{
 		if( !state_buffer_lock.TryLock() )
 			throw Exception::CancelEvent( m_name + L"request ignored: state copy buffer is already locked!" );
+			
+		_parent::OnStart();
 	}
 
 	void SendFinishEvent( int type )
@@ -104,7 +106,6 @@ protected:
 	void OnStart()
 	{
 		_parent::OnStart();
-
 		++sys_resume_lock;
 		CoreThread.Pause();
 	}

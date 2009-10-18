@@ -85,7 +85,7 @@ Exception::BaseException::~BaseException() throw() {}
 void Exception::BaseException::InitBaseEx( const wxString& msg_eng, const wxString& msg_xlt )
 {
 	m_message_diag = msg_eng;
-	m_message_user = msg_xlt;
+	m_message_user = msg_xlt.IsEmpty() ? msg_eng : msg_xlt;
 
 	// Linux/GCC exception handling is still suspect (this is likely to do with GCC more
 	// than linux), and fails to propagate exceptions up the stack from EErec code.  This

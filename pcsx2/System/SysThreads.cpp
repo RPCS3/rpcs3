@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -46,6 +46,25 @@ void SysThreadBase::Start()
 {
 	_parent::Start();
 	m_ExecMode = ExecMode_Closing;
+
+	Sleep( 1 );
+
+	if( !m_ResumeEvent.WaitRaw( wxTimeSpan(0, 0, 1, 500) ) )
+	{
+		RethrowException();
+		if( pxAssertDev( m_ExecMode == ExecMode_Closing, "Unexpected thread status during SysThread startup." ) )
+		{
+			throw Exception::ThreadCreationError( 
+				wxsFormat( L"Timeout occurred while attempting to start the %s thread.", m_name.c_str() ),
+				wxEmptyString
+			);
+		}
+	}
+
+	pxAssertDev( (m_ExecMode == ExecMode_Closing) || (m_ExecMode == ExecMode_Closed),
+		"Unexpected thread status during SysThread startup."
+	);
+
 	m_sem_event.Post();
 }
 
@@ -55,7 +74,7 @@ void SysThreadBase::OnStart()
 	if( !pxAssertDev( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
 
 	m_ResumeEvent.Reset();
-	//m_SuspendEvent.Reset();
+	FrankenMutex( m_ExecModeMutex );
 	FrankenMutex( m_RunningLock );
 
 	_parent::OnStart();
@@ -83,7 +102,7 @@ void SysThreadBase::OnStart()
 bool SysThreadBase::Suspend( bool isBlocking )
 {
 	if( IsSelf() || !IsRunning() ) return false;
-	
+
 	// shortcut ExecMode check to avoid deadlocking on redundant calls to Suspend issued
 	// from Resume or OnResumeReady code.
 	if( m_ExecMode == ExecMode_Closed ) return false;
@@ -152,7 +171,7 @@ bool SysThreadBase::Pause()
 // Resumes the core execution state, or does nothing is the core is already running.  If
 // settings were changed, resets will be performed as needed and emulation state resumed from
 // memory savestates.
-// 
+//
 // Note that this is considered a non-blocking action.  Most times the state is safely resumed
 // on return, but in the case of re-entrant or nested message handling the function may return
 // before the thread has resumed.  If you need explicit behavior tied to the completion of the
@@ -171,20 +190,27 @@ void SysThreadBase::Resume()
 
 	ScopedLock locker( m_ExecModeMutex );
 
-	// Recursion guard is needed because of the non-blocking Wait if the state
-	// is Suspending/Closing.  Processed events could recurse into Resume, and we'll
-	// want to silently ignore them.
-	
-	//RecursionGuard guard( m_resume_guard );
-	//if( guard.IsReentrant() ) return;
+	// Implementation Note:
+	// The entire state coming out of a Wait is indeterminate because of user input
+	// and pending messages being handled.  So after each call we do some seemingly redundant
+	// sanity checks against m_ExecMode/m_Running status, and if something doesn't feel
+	// right, we should abort.
 
 	switch( m_ExecMode )
 	{
 		case ExecMode_Opened: return;
 
 		case ExecMode_NoThreadYet:
+		{
+			static int __Guard = 0;
+			RecursionGuard guard( __Guard );
+			if( guard.IsReentrant() ) return;
+
 			Start();
-			m_ExecMode = ExecMode_Closing;
+			if( !m_running || (m_ExecMode == ExecMode_NoThreadYet) )
+				throw Exception::ThreadCreationError();
+			if( m_ExecMode == ExecMode_Opened ) return;
+		}
 		// fall through...
 
 		case ExecMode_Closing:
@@ -192,14 +218,8 @@ void SysThreadBase::Resume()
 			// we need to make sure and wait for the emuThread to enter a fully suspended
 			// state before continuing...
 
-			//locker.Unlock();		// no deadlocks please, thanks. :)
 			m_RunningLock.Wait();
-			//locker.Lock();
-			
-			// The entire state coming out of a Wait is indeterminate because of user input
-			// and pending messages being handled.  If something doesn't feel right, we should
-			// abort.
-			
+			if( !m_running ) return;
 			if( (m_ExecMode != ExecMode_Closed) && (m_ExecMode != ExecMode_Paused) ) return;
 			if( g_plugins == NULL ) return;
 		break;
@@ -219,6 +239,13 @@ void SysThreadBase::Resume()
 //    (Called from the context of this thread only)
 // --------------------------------------------------------------------------------------
 
+void SysThreadBase::OnStartInThread()
+{
+	m_RunningLock.Lock();
+	_parent::OnStartInThread();
+	m_ResumeEvent.Post();
+}
+
 void SysThreadBase::OnCleanupInThread()
 {
 	m_ExecMode = ExecMode_NoThreadYet;
@@ -228,16 +255,6 @@ void SysThreadBase::OnCleanupInThread()
 
 void SysThreadBase::StateCheckInThread( bool isCancelable )
 {
-	// Shortcut for the common case, to avoid unnecessary Mutex locks:
-	/*if( m_ExecMode == ExecMode_Opened )
-	{
-		if( isCancelable ) TestCancel();
-		return;
-	}
-
-	// Oh, seems we need a full lock, because something special is happening!
-	ScopedLock locker( m_ExecModeMutex );*/
-
 	switch( m_ExecMode )
 	{
 
@@ -266,7 +283,6 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 		// fallthrough...
 
 		case ExecMode_Paused:
-			//locker.Unlock();
 			while( m_ExecMode == ExecMode_Paused )
 				m_ResumeEvent.WaitRaw();
 
@@ -280,18 +296,17 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 			OnSuspendInThread();
 			m_ExecMode = ExecMode_Closed;
 			m_RunningLock.Unlock();
-		} 
+		}
 		// fallthrough...
-		
+
 		case ExecMode_Closed:
-			//locker.Unlock();
 			while( m_ExecMode == ExecMode_Closed )
 				m_ResumeEvent.WaitRaw();
 
 			m_RunningLock.Lock();
 			OnResumeInThread( true );
 		break;
-		
+
 		jNO_DEFAULT;
 	}
 }
@@ -366,7 +381,7 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers		= (src.Profiler != EmuConfig.Profiler );
- 
+
 	const_cast<Pcsx2Config&>(EmuConfig) = src;
 
 	if( resumeWhenDone ) Resume();
@@ -385,7 +400,7 @@ SysCoreThread& SysCoreThread::Get()
 void SysCoreThread::CpuInitializeMess()
 {
 	if( m_hasValidState ) return;
-	
+
 	wxString elf_file;
 	if( EmuConfig.SkipBiosSplash )
 	{
@@ -445,7 +460,6 @@ void SysCoreThread::CpuExecute()
 
 void SysCoreThread::ExecuteTaskInThread()
 {
-	m_RunningLock.Lock();
 	tls_coreThread = this;
 
 	m_sem_event.WaitRaw();

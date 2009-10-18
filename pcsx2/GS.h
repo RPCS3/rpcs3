@@ -108,10 +108,6 @@ protected:
 	// run very fast and have little or no ringbuffer overhead (typically opening menus)
 	volatile s32 m_QueuedFrames;
 
-	// Protection lock for the frame queue counter -- needed because we can't safely
-	// AtomicExchange from two threads.
-	MutexLock m_lock_FrameQueueCounter;
-
 	// These vars maintain instance data for sending Data Packets.
 	// Only one data packet can be constructed and uploaded at a time.
 

@@ -41,9 +41,12 @@ bool AppCoreThread::Suspend( bool isBlocking )
 	m_kevt.m_shiftDown		= false;
 	m_kevt.m_controlDown	= false;
 	m_kevt.m_altDown		= false;
-	
+
 	return retval;
 }
+
+
+static int resume_tries = 0;
 
 void AppCoreThread::Resume()
 {
@@ -55,6 +58,7 @@ void AppCoreThread::Resume()
 		Console.WriteLn( "SysResume: State is locked, ignoring Resume request!" );
 		return;
 	}
+	
 	_parent::Resume();
 
 	if( m_ExecMode != ExecMode_Opened )
@@ -66,8 +70,18 @@ void AppCoreThread::Resume()
 		evt.SetInt( CoreStatus_Suspended );
 		wxGetApp().AddPendingEvent( evt );
 
-		sApp.SysExecute();
+		if( (m_ExecMode != ExecMode_Closing) || (m_ExecMode != ExecMode_Pausing) )
+		{
+			if( ++resume_tries <= 2 )
+			{
+				sApp.SysExecute();
+			}
+			else
+				Console.Status( "SysResume: Multiple resume retries failed.  Giving up..." );
+		}
 	}
+	
+	resume_tries = 0;
 }
 
 void AppCoreThread::OnResumeReady()
@@ -83,7 +97,7 @@ void AppCoreThread::OnResumeReady()
 void AppCoreThread::OnResumeInThread( bool isSuspended )
 {
 	_parent::OnResumeInThread( isSuspended );
-	
+
 	wxCommandEvent evt( pxEVT_CoreThreadStatus );
 	evt.SetInt( CoreStatus_Resumed );
 	wxGetApp().AddPendingEvent( evt );
