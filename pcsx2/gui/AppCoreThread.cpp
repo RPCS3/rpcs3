@@ -41,7 +41,7 @@ bool AppCoreThread::Suspend( bool isBlocking )
 	m_kevt.m_shiftDown		= false;
 	m_kevt.m_controlDown	= false;
 	m_kevt.m_altDown		= false;
-	
+
 	return retval;
 }
 
@@ -66,7 +66,8 @@ void AppCoreThread::Resume()
 		evt.SetInt( CoreStatus_Suspended );
 		wxGetApp().AddPendingEvent( evt );
 
-		sApp.SysExecute();
+		if( (m_ExecMode != ExecMode_Closing) || (m_ExecMode != ExecMode_Pausing) )
+			sApp.SysExecute();
 	}
 }
 
@@ -83,7 +84,7 @@ void AppCoreThread::OnResumeReady()
 void AppCoreThread::OnResumeInThread( bool isSuspended )
 {
 	_parent::OnResumeInThread( isSuspended );
-	
+
 	wxCommandEvent evt( pxEVT_CoreThreadStatus );
 	evt.SetInt( CoreStatus_Resumed );
 	wxGetApp().AddPendingEvent( evt );

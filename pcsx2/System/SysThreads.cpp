@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -47,6 +47,7 @@ void SysThreadBase::Start()
 	_parent::Start();
 	m_ExecMode = ExecMode_Closing;
 	m_sem_event.Post();
+	m_StartupEvent.Wait();
 }
 
 
@@ -55,6 +56,7 @@ void SysThreadBase::OnStart()
 	if( !pxAssertDev( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
 
 	m_ResumeEvent.Reset();
+	m_StartupEvent.Reset();
 	FrankenMutex( m_ExecModeMutex );
 	FrankenMutex( m_RunningLock );
 
@@ -83,7 +85,7 @@ void SysThreadBase::OnStart()
 bool SysThreadBase::Suspend( bool isBlocking )
 {
 	if( IsSelf() || !IsRunning() ) return false;
-	
+
 	// shortcut ExecMode check to avoid deadlocking on redundant calls to Suspend issued
 	// from Resume or OnResumeReady code.
 	if( m_ExecMode == ExecMode_Closed ) return false;
@@ -152,7 +154,7 @@ bool SysThreadBase::Pause()
 // Resumes the core execution state, or does nothing is the core is already running.  If
 // settings were changed, resets will be performed as needed and emulation state resumed from
 // memory savestates.
-// 
+//
 // Note that this is considered a non-blocking action.  Most times the state is safely resumed
 // on return, but in the case of re-entrant or nested message handling the function may return
 // before the thread has resumed.  If you need explicit behavior tied to the completion of the
@@ -171,20 +173,13 @@ void SysThreadBase::Resume()
 
 	ScopedLock locker( m_ExecModeMutex );
 
-	// Recursion guard is needed because of the non-blocking Wait if the state
-	// is Suspending/Closing.  Processed events could recurse into Resume, and we'll
-	// want to silently ignore them.
-	
-	//RecursionGuard guard( m_resume_guard );
-	//if( guard.IsReentrant() ) return;
-
 	switch( m_ExecMode )
 	{
 		case ExecMode_Opened: return;
 
 		case ExecMode_NoThreadYet:
 			Start();
-			m_ExecMode = ExecMode_Closing;
+
 		// fall through...
 
 		case ExecMode_Closing:
@@ -192,14 +187,12 @@ void SysThreadBase::Resume()
 			// we need to make sure and wait for the emuThread to enter a fully suspended
 			// state before continuing...
 
-			//locker.Unlock();		// no deadlocks please, thanks. :)
 			m_RunningLock.Wait();
-			//locker.Lock();
-			
+
 			// The entire state coming out of a Wait is indeterminate because of user input
 			// and pending messages being handled.  If something doesn't feel right, we should
 			// abort.
-			
+
 			if( (m_ExecMode != ExecMode_Closed) && (m_ExecMode != ExecMode_Paused) ) return;
 			if( g_plugins == NULL ) return;
 		break;
@@ -269,9 +262,9 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 			OnSuspendInThread();
 			m_ExecMode = ExecMode_Closed;
 			m_RunningLock.Unlock();
-		} 
+		}
 		// fallthrough...
-		
+
 		case ExecMode_Closed:
 			while( m_ExecMode == ExecMode_Closed )
 				m_ResumeEvent.WaitRaw();
@@ -279,7 +272,7 @@ void SysThreadBase::StateCheckInThread( bool isCancelable )
 			m_RunningLock.Lock();
 			OnResumeInThread( true );
 		break;
-		
+
 		jNO_DEFAULT;
 	}
 }
@@ -354,7 +347,7 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers		= (src.Profiler != EmuConfig.Profiler );
- 
+
 	const_cast<Pcsx2Config&>(EmuConfig) = src;
 
 	if( resumeWhenDone ) Resume();
@@ -373,7 +366,7 @@ SysCoreThread& SysCoreThread::Get()
 void SysCoreThread::CpuInitializeMess()
 {
 	if( m_hasValidState ) return;
-	
+
 	wxString elf_file;
 	if( EmuConfig.SkipBiosSplash )
 	{
@@ -434,7 +427,9 @@ void SysCoreThread::CpuExecute()
 void SysCoreThread::ExecuteTaskInThread()
 {
 	m_RunningLock.Lock();
+
 	tls_coreThread = this;
+	m_StartupEvent.Post();
 
 	m_sem_event.WaitRaw();
 	StateCheckInThread();

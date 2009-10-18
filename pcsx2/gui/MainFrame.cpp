@@ -280,7 +280,7 @@ void MainEmuFrame::OnSettingsLoadSave( void* obj, const IniInterface& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
-	
+
 	// FIXME: Evil const cast hack!
 	mframe->LoadSaveRecentIsoList( const_cast<IniInterface&>(evt) );
 }
@@ -312,7 +312,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
 
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
-	
+
 	m_Listener_CoreThreadStatus( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener( this, OnCoreThreadStatusChanged ) ),
 	m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), CmdEvt_Listener( this, OnCorePluginStatusChanged ) ),
 	m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) ),
@@ -518,6 +518,8 @@ void MainEmuFrame::ReloadRecentLists()
 
 void MainEmuFrame::ApplyCoreStatus()
 {
+	bool valstate = SysHasValidState();
+
 	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, SysHasValidState() );
 	GetMenuBar()->Enable( MenuId_Sys_Reset, SysHasValidState() || (g_plugins!=NULL) );
 

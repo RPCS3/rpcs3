@@ -237,8 +237,8 @@ void mtgsThreadObject::OpenPlugin()
 
 void mtgsThreadObject::ExecuteTaskInThread()
 {
-	// Required by the underlying SysThreadBase class (is unlocked on exit)
 	m_RunningLock.Lock();
+	m_StartupEvent.Post();
 
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;
@@ -247,7 +247,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 	pthread_cleanup_push( _clean_close_gs, this );
 	while( true )
 	{
-		m_sem_event.WaitRaw();		// ... because this does a cancel test itself..
+		m_sem_event.WaitRaw();			// ... because this does a cancel test itself..
 		StateCheckInThread( false );	// false disables cancel test here!
 
 		m_RingBufferIsBusy = true;
@@ -389,7 +389,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 				case GS_RINGTYPE_MODECHANGE:
 					_gs_ChangeTimings( tag.data[0], tag.data[1] );
 				break;
-				
+
 				case GS_RINGTYPE_CRC:
 					GSsetGameCRC( tag.data[0], 0 );
 				break;
@@ -397,7 +397,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 				case GS_RINGTYPE_STARTTIME:
 					m_iSlowStart += tag.data[0];
 				break;
-				
+
 #ifdef PCSX2_DEVBUILD
 				default:
 					Console.Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
