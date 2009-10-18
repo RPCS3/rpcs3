@@ -43,13 +43,11 @@ bool Threading::_WaitGui_RecursionGuard( const char* guardname )
 	// In order to avoid deadlock we need to make sure we cut some time to handle messages.
 	// But this can result in recursive yield calls, which would crash the app.  Protect
 	// against them here and, if recursion is detected, perform a standard blocking wait.
-	//   (also, wx ignores message pumping on recursive Yields, so no point in allowing
-	//    more then one recursion)
 
 	static int __Guard = 0;
 	RecursionGuard guard( __Guard );
 
-	if( guard.Counter >= 2 )
+	if( guard.IsReentrant() )
 	{
 		Console.WriteLn( "(Thread Log) Possible yield recursion detected in %s; performing blocking wait.", guardname );
 		return true;
@@ -130,7 +128,7 @@ void Threading::PersistentThread::FrankenMutex( MutexLock& mutex )
 }
 
 // Main entry point for starting or e-starting a persistent thread.  This function performs necessary
-// locks and checks for avoiding race conditions, and then calls OnStart() immeediately before
+// locks and checks for avoiding race conditions, and then calls OnStart() immediately before
 // the actual thread creation.  Extending classes should generally not override Start(), and should
 // instead override DoPrepStart instead.
 //
@@ -142,10 +140,6 @@ void Threading::PersistentThread::Start()
 	if( m_running ) return;
 
 	Detach();		// clean up previous thread handle, if one exists.
-
-	FrankenMutex( m_lock_InThread );
-	m_sem_event.Reset();
-
 	OnStart();
 
 	if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
@@ -237,6 +231,57 @@ void Threading::PersistentThread::RethrowException() const
 	m_except->Rethrow();
 }
 
+// This helper function is a deadlock-safe method of waiting on a semaphore in a PersistentThread.  If the
+// thread is terminated or canceled by another thread or a nested action prior to the semaphore being
+// posted, this function will detect that and throw a ThreadTimedOut exception.
+//
+// Note: Use of this function only applies to semaphores which are posted by the worker thread.  Calling
+// this function from the context of the thread itself is an error, and a dev assertion will be generated.
+//
+// Exceptions:
+//   ThreadTimedOut
+//
+void Threading::PersistentThread::WaitOnSelf( Semaphore& sem )
+{
+	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the thread (invalid operation!)" ) ) return;
+
+	while( true )
+	{
+		if( sem.Wait( wxTimeSpan(0, 0, 0, 250) ) ) return;
+		if( !m_running )
+		{
+			wxString msg( m_name + L": thread was terminated while another thread was waiting on a semaphore." );
+			throw Exception::ThreadTimedOut( msg, msg );
+		}
+	}
+}
+
+// This helper function is a deadlock-safe method of waiting on a mutex in a PersistentThread.  If the
+// thread is terminated or canceled by another thread or a nested action prior to the mutex being
+// unlocked, this function will detect that and throw a ThreadTimedOut exception.
+//
+// Note: Use of this function only applies to semaphores which are posted by the worker thread.  Calling
+// this function from the context of the thread itself is an error, and a dev assertion will be generated.
+//
+// Exceptions:
+//   ThreadTimedOut
+//
+void Threading::PersistentThread::WaitOnSelf( MutexLock& mutex )
+{
+	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the thread (invalid operation!)" ) ) return;
+
+	while( true )
+	{
+		if( mutex.Wait( wxTimeSpan(0, 0, 0, 250) ) ) return;
+		if( !m_running )
+		{
+			wxString msg( m_name + L": thread was terminated while another thread was waiting on a mutex." );
+			throw Exception::ThreadTimedOut( msg, msg );
+		}
+	}
+}
+
+
 // Inserts a thread cancellation point.  If the thread has received a cancel request, this
 // function will throw an SEH exception designed to exit the thread (so make sure to use C++
 // object encapsulation for anything that could leak resources, to ensure object unwinding
@@ -322,7 +367,6 @@ void Threading::PersistentThread::_ThreadCleanup()
 
 	_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
 
-	m_running = false;
 	m_lock_InThread.Unlock();
 }
 
@@ -331,16 +375,36 @@ wxString Threading::PersistentThread::GetName() const
 	return m_name;
 }
 
+// This override is called by PeristentThread when the thread is first created, prior to
+// calling ExecuteTaskInThread.  This is useful primarily for "base" classes that extend
+// from PersistentThread, giving them the ability to bind startup code to all threads that
+// derive from them.  (the alternative would have been to make ExecuteTaskInThread a
+// private member, and provide a new Task executor by a different name).
+void Threading::PersistentThread::OnStartInThread()
+{
+	m_running = true;
+}
+
 void Threading::PersistentThread::_internal_execute()
 {
 	m_lock_InThread.Lock();
-	m_running = true;
 	_DoSetThreadName( m_name );
+
+	OnStartInThread();
+
 	_try_virtual_invoke( &PersistentThread::ExecuteTaskInThread );
 }
 
-void Threading::PersistentThread::OnStart() {}
-void Threading::PersistentThread::OnCleanupInThread() {}
+void Threading::PersistentThread::OnStart()
+{
+	FrankenMutex( m_lock_InThread );
+	m_sem_event.Reset();
+}
+
+void Threading::PersistentThread::OnCleanupInThread()
+{
+	m_running = false;
+}
 
 // passed into pthread_create, and is used to dispatch the thread's object oriented
 // callback function
@@ -497,52 +561,42 @@ void Threading::WaitEvent::Wait()
 // --------------------------------------------------------------------------------------
 // define some overloads for InterlockedExchanges for commonly used types, like u32 and s32.
 
-__forceinline void Threading::AtomicExchange( volatile u32& Target, u32 value )
+__forceinline u32 Threading::AtomicExchange( volatile u32& Target, u32 value )
 {
-	_InterlockedExchange( (volatile long*)&Target, value );
+	return _InterlockedExchange( (volatile long*)&Target, value );
 }
 
-__forceinline void Threading::AtomicExchangeAdd( volatile u32& Target, u32 value )
+__forceinline u32 Threading::AtomicExchangeAdd( volatile u32& Target, u32 value )
 {
-	_InterlockedExchangeAdd( (volatile long*)&Target, value );
+	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
 }
 
-__forceinline void Threading::AtomicIncrement( volatile u32& Target )
+__forceinline u32 Threading::AtomicIncrement( volatile u32& Target )
 {
-	_InterlockedExchangeAdd( (volatile long*)&Target, 1 );
+	return _InterlockedExchangeAdd( (volatile long*)&Target, 1 );
 }
 
-__forceinline void Threading::AtomicDecrement( volatile u32& Target )
+__forceinline u32 Threading::AtomicDecrement( volatile u32& Target )
 {
-	_InterlockedExchangeAdd( (volatile long*)&Target, -1 );
+	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
 }
 
-__forceinline void Threading::AtomicExchange( volatile s32& Target, s32 value )
+__forceinline s32 Threading::AtomicExchange( volatile s32& Target, s32 value )
 {
-	_InterlockedExchange( (volatile long*)&Target, value );
+	return _InterlockedExchange( (volatile long*)&Target, value );
 }
 
-__forceinline void Threading::AtomicExchangeAdd( volatile s32& Target, u32 value )
+__forceinline s32 Threading::AtomicExchangeAdd( volatile s32& Target, u32 value )
 {
-	_InterlockedExchangeAdd( (volatile long*)&Target, value );
+	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
 }
 
-__forceinline void Threading::AtomicIncrement( volatile s32& Target )
+__forceinline s32 Threading::AtomicIncrement( volatile s32& Target )
 {
-	_InterlockedExchangeAdd( (volatile long*)&Target, 1 );
+	return _InterlockedExchangeAdd( (volatile long*)&Target, 1 );
 }
 
-__forceinline void Threading::AtomicDecrement( volatile s32& Target )
+__forceinline s32 Threading::AtomicDecrement( volatile s32& Target )
 {
-	_InterlockedExchangeAdd( (volatile long*)&Target, -1 );
-}
-
-__forceinline void Threading::_AtomicExchangePointer( const void ** target, const void* value )
-{
-	_InterlockedExchange( (volatile long*)target, (long)value );
-}
-
-__forceinline void Threading::_AtomicCompareExchangePointer( const void ** target, const void* value, const void* comparand )
-{
-	_InterlockedCompareExchange( (volatile long*)target, (long)value, (long)comparand );
+	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
 }

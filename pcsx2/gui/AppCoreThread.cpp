@@ -45,6 +45,9 @@ bool AppCoreThread::Suspend( bool isBlocking )
 	return retval;
 }
 
+
+static int resume_tries = 0;
+
 void AppCoreThread::Resume()
 {
 	// Thread control (suspend / resume) should only be performed from the main/gui thread.
@@ -55,6 +58,7 @@ void AppCoreThread::Resume()
 		Console.WriteLn( "SysResume: State is locked, ignoring Resume request!" );
 		return;
 	}
+	
 	_parent::Resume();
 
 	if( m_ExecMode != ExecMode_Opened )
@@ -67,8 +71,17 @@ void AppCoreThread::Resume()
 		wxGetApp().AddPendingEvent( evt );
 
 		if( (m_ExecMode != ExecMode_Closing) || (m_ExecMode != ExecMode_Pausing) )
-			sApp.SysExecute();
+		{
+			if( ++resume_tries <= 2 )
+			{
+				sApp.SysExecute();
+			}
+			else
+				Console.Status( "SysResume: Multiple resume retries failed.  Giving up..." );
+		}
 	}
+	
+	resume_tries = 0;
 }
 
 void AppCoreThread::OnResumeReady()

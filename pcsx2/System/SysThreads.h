@@ -74,11 +74,6 @@ protected:
 	// Used to wake up the thread from sleeping when it's in a suspended state.
 	Semaphore				m_ResumeEvent;
 
-	// Used to signal the creating thread that the worker has entered the running state.
-	// This is necessary because until the thread has established itself, locking against
-	// m_RunningLock isn't a reliable synchronization tool.
-	Semaphore				m_StartupEvent;
-
 	// Locked whenever the thread is not in a suspended state (either closed or paused).
 	// Issue a Wait against this mutex for performing actions that require the thread
 	// to be suspended.
@@ -108,16 +103,17 @@ public:
 	virtual bool Pause();
 
 	virtual void StateCheckInThread( bool isCancelable = true );
-	virtual void OnCleanupInThread();
+
+protected:
+	virtual void OnStart();
 
 	// This function is called by Resume immediately prior to releasing the suspension of
 	// the core emulation thread.  You should overload this rather than Resume(), since
 	// Resume() has a lot of checks and balances to prevent re-entrance and race conditions.
 	virtual void OnResumeReady() {}
 
-	virtual void OnStart();
-
-protected:
+	virtual void OnCleanupInThread();
+	virtual void OnStartInThread();
 
 	// Used internally from Resume(), so let's make it private here.
 	virtual void Start();

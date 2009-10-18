@@ -46,8 +46,26 @@ void SysThreadBase::Start()
 {
 	_parent::Start();
 	m_ExecMode = ExecMode_Closing;
+
+	Sleep( 1 );
+
+	if( !m_ResumeEvent.WaitRaw( wxTimeSpan(0, 0, 1, 500) ) )
+	{
+		RethrowException();
+		if( pxAssertDev( m_ExecMode == ExecMode_Closing, "Unexpected thread status during SysThread startup." ) )
+		{
+			throw Exception::ThreadCreationError( 
+				wxsFormat( L"Timeout occurred while attempting to start the %s thread.", m_name.c_str() ),
+				wxEmptyString
+			);
+		}
+	}
+
+	pxAssertDev( (m_ExecMode == ExecMode_Closing) || (m_ExecMode == ExecMode_Closed),
+		"Unexpected thread status during SysThread startup."
+	);
+
 	m_sem_event.Post();
-	m_StartupEvent.Wait();
 }
 
 
@@ -56,7 +74,6 @@ void SysThreadBase::OnStart()
 	if( !pxAssertDev( m_ExecMode == ExecMode_NoThreadYet, "SysSustainableThread:Start(): Invalid execution mode" ) ) return;
 
 	m_ResumeEvent.Reset();
-	m_StartupEvent.Reset();
 	FrankenMutex( m_ExecModeMutex );
 	FrankenMutex( m_RunningLock );
 
@@ -173,13 +190,27 @@ void SysThreadBase::Resume()
 
 	ScopedLock locker( m_ExecModeMutex );
 
+	// Implementation Note:
+	// The entire state coming out of a Wait is indeterminate because of user input
+	// and pending messages being handled.  So after each call we do some seemingly redundant
+	// sanity checks against m_ExecMode/m_Running status, and if something doesn't feel
+	// right, we should abort.
+
 	switch( m_ExecMode )
 	{
 		case ExecMode_Opened: return;
 
 		case ExecMode_NoThreadYet:
-			Start();
+		{
+			static int __Guard = 0;
+			RecursionGuard guard( __Guard );
+			if( guard.IsReentrant() ) return;
 
+			Start();
+			if( !m_running || (m_ExecMode == ExecMode_NoThreadYet) )
+				throw Exception::ThreadCreationError();
+			if( m_ExecMode == ExecMode_Opened ) return;
+		}
 		// fall through...
 
 		case ExecMode_Closing:
@@ -188,11 +219,7 @@ void SysThreadBase::Resume()
 			// state before continuing...
 
 			m_RunningLock.Wait();
-
-			// The entire state coming out of a Wait is indeterminate because of user input
-			// and pending messages being handled.  If something doesn't feel right, we should
-			// abort.
-
+			if( !m_running ) return;
 			if( (m_ExecMode != ExecMode_Closed) && (m_ExecMode != ExecMode_Paused) ) return;
 			if( g_plugins == NULL ) return;
 		break;
@@ -211,6 +238,13 @@ void SysThreadBase::Resume()
 //  SysThreadBase *Worker* Implementations
 //    (Called from the context of this thread only)
 // --------------------------------------------------------------------------------------
+
+void SysThreadBase::OnStartInThread()
+{
+	m_RunningLock.Lock();
+	_parent::OnStartInThread();
+	m_ResumeEvent.Post();
+}
 
 void SysThreadBase::OnCleanupInThread()
 {
@@ -426,10 +460,7 @@ void SysCoreThread::CpuExecute()
 
 void SysCoreThread::ExecuteTaskInThread()
 {
-	m_RunningLock.Lock();
-
 	tls_coreThread = this;
-	m_StartupEvent.Post();
 
 	m_sem_event.WaitRaw();
 	StateCheckInThread();

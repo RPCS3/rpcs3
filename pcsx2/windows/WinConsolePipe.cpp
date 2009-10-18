@@ -97,8 +97,6 @@ public:
 	}
 	
 protected:
-	void OnStart() {}
-
 	void ExecuteTaskInThread()
 	{
 		SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
@@ -165,8 +163,6 @@ protected:
 			Console.Error( ex.FormatDiagnosticMessage() );
 		}
 	}
-
-	void OnCleanupInThread() { }
 };
 
 // --------------------------------------------------------------------------------------

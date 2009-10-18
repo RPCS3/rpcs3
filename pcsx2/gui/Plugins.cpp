@@ -57,7 +57,6 @@ public:
 	virtual ~LoadPluginsTask() throw();
 
 protected:
-	void OnStart() {}
 	void OnCleanupInThread();
 	void ExecuteTaskInThread();
 };

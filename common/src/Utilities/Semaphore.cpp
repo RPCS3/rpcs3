@@ -68,7 +68,7 @@ bool Threading::Semaphore::WaitRaw( const wxTimeSpan& timeout )
 {
 	wxDateTime megafail( wxDateTime::UNow() + timeout );
 	const timespec fail = { megafail.GetTicks(), megafail.GetMillisecond() * 1000000 };
-	return sem_timedwait( &m_sema, &fail ) != -1;
+	return sem_timedwait( &m_sema, &fail ) == 0;
 }
 
 
@@ -94,9 +94,8 @@ void Threading::Semaphore::Wait()
 	}
 	else
 	{
-		do {
+		while( !WaitRaw( def_yieldgui_interval ) )
 			wxTheApp->Yield( true );
-		} while( !WaitRaw( def_yieldgui_interval ) );
 	}
 #else
 	WaitRaw();
@@ -136,8 +135,8 @@ bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 		wxTimeSpan countdown( (timeout) );
 
 		do {
-			wxTheApp->Yield(true);
 			if( WaitRaw( def_yieldgui_interval ) ) break;
+			wxTheApp->Yield(true);
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
 
