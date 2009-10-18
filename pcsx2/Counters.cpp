@@ -322,11 +322,22 @@ static __forceinline void frameLimit()
 
 	m_iStart = uExpectedEnd;
 
-	while( sDeltaTime < 0 )
+	// Shortcut for cases where no waiting is needed (they're running slow already,
+	// so don't bog 'em down with extra math...)
+	if( sDeltaTime >= 0 ) return;
+	
+	// If we're way ahead then we can afford to sleep the thread a bit.
+
+	s32 msec = (int)((sDeltaTime*-1000) / (s64)GetTickFrequency());
+	if( msec > 2 ) Threading::Sleep( msec - 2 );
+
+	// 
+	while( true )
 	{
-		Timeslice();
 		iEnd = GetCPUTicks();
 		sDeltaTime = iEnd - uExpectedEnd;
+		if( sDeltaTime >= 0 ) break;
+		Timeslice();
 	}
 }
 
