@@ -690,12 +690,6 @@ bool wxApp::Yield(bool onlyIfNeeded)
     // MT-FIXME
     static bool s_inYield = false;
 
-#if wxUSE_LOG
-    // disable log flushing from here because a call to wxYield() shouldn't
-    // normally result in message boxes popping up &c
-    wxLog::Suspend();
-#endif // wxUSE_LOG
-
     if ( s_inYield )
     {
         if ( !onlyIfNeeded )
@@ -705,6 +699,12 @@ bool wxApp::Yield(bool onlyIfNeeded)
 
         return false;
     }
+
+#if wxUSE_LOG
+	// disable log flushing from here because a call to wxYield() shouldn't
+	// normally result in message boxes popping up &c
+	wxLog::Suspend();
+#endif // wxUSE_LOG
 
     s_inYield = true;
 
