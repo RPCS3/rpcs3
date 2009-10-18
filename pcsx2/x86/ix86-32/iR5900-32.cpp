@@ -328,6 +328,7 @@ static DynGenFunc* DispatcherReg		= NULL;
 static DynGenFunc* JITCompile			= NULL;
 static DynGenFunc* JITCompileInBlock	= NULL;
 static DynGenFunc* EnterRecompiledCode	= NULL;
+static DynGenFunc* ExitRecompiledCode	= NULL;
 
 // parameters:
 //   espORebp - 0 for ESP, or 1 for EBP.
@@ -427,41 +428,45 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	// use for supplying parameters to cdecl functions.
 
 	xPUSH( ebp );
-	xPUSH( edi );
-	xPUSH( esi );
-	xPUSH( ebx );
-	
 	xMOV( ebp, esp );
+
 	xAND( esp, -0x10 );
-	xSUB( esp, 0x10 );
 
-	xMOV( &s_store_ebp, ebp );
+	// First 0x10 is for esi, edi, etc. Second 0x10 is for the return address and ebp.  The
+	// third second 0x10 is for C-style CDECL calls we might make from the recompiler
+	// (parameters for those calls can be stored there!)
+
+	xSUB( esp, 0x30 );
+
+	xMOV( ptr[ebp-12], edi );
+	xMOV( ptr[ebp-8], esi );
+	xMOV( ptr[ebp-4], ebx );
+
+	// Simulate a CALL function by pushing the call address and EBP onto the stack.
+	xMOV( ptr32[esp+0x10+12], 0xffeeff );
+	uptr& imm = *(uptr*)(xGetPtr()-4);
+	xMOV( ptr32[esp+0x10+8], ebp );
+
 	xMOV( &s_store_esp, esp );
-	xSUB( ptr32[&s_store_esp], 4 );		// account for the address pushed when we xCALL
+	xMOV( &s_store_ebp, ebp );
 
-	//xPUSH( edi );
-	//xPUSH( esi );
-	//xPUSH( ebx );
+	xJMP( ptr32[&DispatcherReg] );
+	imm = (uptr)xGetPtr();
+	ExitRecompiledCode = (DynGenFunc*)xGetPtr();
 
-	xCALL( ptr32[&DispatcherReg] );
+	xLEAVE();
+	//xMOV( esp, ebp );
+	//xPOP( ebp );
 
-	//xPOP( ebx );
-	//xPOP( esi );
-	//xPOP( edi );
+	//_DynGen_StackFrameCheck();
+
+	xMOV( edi, ptr[ebp-12] );
+	xMOV( esi, ptr[ebp-8] );
+	xMOV( ebx, ptr[ebp-4] );
 
 	//xMOV( esp, ebp );
 	//xPOP( ebp );
-	//xRET();
-
-	xADD( ptr32[&s_store_esp], 4 );		// account for the address pushed when we xCALL
-	_DynGen_StackFrameCheck();
-
-	xMOV( esp, ebp );
-	
-	xPOP( ebx );
-	xPOP( esi );
-	xPOP( edi );
-	xPOP( ebp );
+	xLEAVE();
 	xRET();
 
 	return (DynGenFunc*)retval;
@@ -808,18 +813,16 @@ void recClear(u32 addr, u32 size)
 
 	upperextent = min(upperextent, ceiling);
 
-#ifdef PCSX2_DEVBUILD
 	for (int i = 0; pexblock = recBlocks[i]; i++) {
 		if (s_pCurBlock == PC_GETBLOCK(pexblock->startpc))
 			continue;
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
 		if (pexblock->startpc >= addr && pexblock->startpc < addr + size * 4
 		 || pexblock->startpc < addr && blockend > addr) {
-			Console.Error( "Impossible block clearing failure" );
-			pxFail( "Impossible block clearing failure" );
+			DevCon.Error( "Impossible block clearing failure" );
+			pxFailDev( "Impossible block clearing failure" );
 		}
 	}
-#endif
 
 	if (upperextent > lowerextent)
 		ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
@@ -1284,6 +1287,8 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 
 	// Note: this function is accessed via a JMP, and thus the RET here will exit
 	// recompiled code and take us back to recExecute.
+
+	__asm__ __volatile__( "leave\n jmp %[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
 }
 
 void recRecompile( const u32 startpc )
