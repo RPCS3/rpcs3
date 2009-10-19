@@ -130,28 +130,31 @@ void memMapVUmicro()
 	vtlb_MapHandler(vu0_micro_mem[CHECK_VU0REC ? 0 : 1],0x11000000,0x00004000);
 	vtlb_MapHandler(vu1_micro_mem[CHECK_VU1REC ? 0 : 1],0x11008000,0x00004000);
 
+	// VU0/VU1 memory
+	// (Like IOP memory, these are generally only used by the EE Bios kernel during
+	//  boot-up.  Applications/games are "supposed" to use the thread-safe VIF
+	//  instead.)
 	vtlb_MapBlock(VU0.Mem,0x11004000,0x00004000,0x1000);
 	vtlb_MapBlock(VU1.Mem,0x1100c000,0x00004000);
 }
 
 void memMapPhy()
 {
-	//Main mem
-	vtlb_MapBlock(psM,0x00000000,Ps2MemSize::Base);//mirrored on first 256 mb ?
+	// Main memory
+	vtlb_MapBlock(psM,	0x00000000,Ps2MemSize::Base);//mirrored on first 256 mb ?
 
-	//Rom
-	vtlb_MapBlock(psR,0x1fc00000,Ps2MemSize::Rom);//Writable ?
-	//Rom 1
-	vtlb_MapBlock(psR1,0x1e000000,Ps2MemSize::Rom1);//Writable ?
-	//Rom 2 ?
-	vtlb_MapBlock(psR2,0x1e400000,Ps2MemSize::Rom2);//Writable ?
-	//EEProm ?
-	vtlb_MapBlock(psER,0x1e040000,Ps2MemSize::ERom);//Writable ?
+	// Various ROMs (all read-only)
+	vtlb_MapBlock(psR,	0x1fc00000,Ps2MemSize::Rom);
+	vtlb_MapBlock(psR1,	0x1e000000,Ps2MemSize::Rom1);
+	vtlb_MapBlock(psR2,	0x1e400000,Ps2MemSize::Rom2);
+	vtlb_MapBlock(psER,	0x1e040000,Ps2MemSize::ERom);
 
-	//IOP mem
+	// IOP memory
+	// (used by the EE Bios Kernel during initial hardware initialization, Apps/Games
+	//  are "supposed" to use the thread-safe SIF instead.)
 	vtlb_MapBlock(psxM,0x1c000000,0x00800000);
 
-	//These fallback to mem* stuff ...
+	// Generic Handlers; These fallback to mem* stuff...
 	vtlb_MapHandler(tlb_fallback_1,0x10000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_7,0x14000000,0x10000);
 	vtlb_MapHandler(tlb_fallback_4,0x18000000,0x10000);
@@ -162,7 +165,8 @@ void memMapPhy()
 	vtlb_MapHandler(tlb_fallback_2,0x1f800000,0x10000);
 	vtlb_MapHandler(tlb_fallback_8,0x1f900000,0x10000);
 
-	// map specific optimized page handlers for HW accesses
+	// Hardware Register Handlers : specialized/optimized per-page handling of HW register accesses
+	// (note that hw_by_page handles are assigned in memReset prior to calling this function)
 	vtlb_MapHandler(hw_by_page[0x0], 0x10000000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x1], 0x10001000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x2], 0x10002000, 0x01000);
@@ -177,6 +181,9 @@ void memMapPhy()
 
 	vtlb_MapHandler(gs_page_0, 0x12000000, 0x01000);
 	vtlb_MapHandler(gs_page_1, 0x12001000, 0x01000);
+
+	// "Secret" IOP HW mappings - Used by EE Bios Kernel during boot and generally
+	// left untouched after that, as per EE/IOP thread safety rules.
 	
 	vtlb_MapHandler(hw_by_page[0x1], 0x1f801000, 0x01000);
 	vtlb_MapHandler(hw_by_page[0x3], 0x1f803000, 0x01000);
