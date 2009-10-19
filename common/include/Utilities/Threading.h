@@ -314,7 +314,7 @@ namespace Threading
 		// Section of methods for internal use only.
 
 		void _DoSetThreadName( const wxString& name );
-		void _DoSetThreadName( __unused const char* name );
+		void _DoSetThreadName( const char* name );
 		void _internal_execute();
 		void _try_virtual_invoke( void (PersistentThread::*method)() );
 		void _ThreadCleanup();

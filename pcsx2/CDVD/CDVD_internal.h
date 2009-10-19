@@ -129,9 +129,9 @@ static const uint PSX_DVD_READSPEED = 1382400 + 256000; // normal is 1 Byte Time
 static const uint Cdvd_FullSeek_Cycles = (PSXCLK*100) / 1000;		// average number of cycles per fullseek (100ms)
 static const uint Cdvd_FastSeek_Cycles = (PSXCLK*30) / 1000;		// average number of cycles per fastseek (37ms)
 
-static const __unused char *mg_zones[8] = {"Japan", "USA", "Europe", "Oceania", "Asia", "Russia", "China", "Mexico"};
+static const char *mg_zones[8] = {"Japan", "USA", "Europe", "Oceania", "Asia", "Russia", "China", "Mexico"};
 
-static const __unused char *nCmdName[0x100]= {
+static const char *nCmdName[0x100]= {
 	"CdSync", 
 	"CdNop", 
 	"CdStandby", 
@@ -168,7 +168,7 @@ enum nCmds
 	N_CD_CHG_SPDL_CTRL = 0x0F, // CdChgSpdlCtrl
 };
 
-static const __unused char *sCmdName[0x100]= {
+static const char *sCmdName[0x100]= {
 	"", "sceCdGetDiscType", "sceCdReadSubQ", "subcommands",//sceCdGetMecaconVersion, read/write console id, read renewal date
 	"", "sceCdTrayState", "sceCdTrayCtrl", "",
 	"sceCdReadClock", "sceCdWriteClock", "sceCdReadNVM", "sceCdWriteNVM",

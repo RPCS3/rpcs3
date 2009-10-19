@@ -189,7 +189,6 @@
 #	define PCSX2_ALIGNED16_EXTERN(x)	extern __declspec(align(16)) x
 
 #	define __naked			__declspec(naked)
-#	define __unused			/*unused*/
 #	define __noinline		__declspec(noinline)
 #	define __threadlocal	__declspec(thread)
 
@@ -244,7 +243,6 @@ This theoretically unoptimizes. Not having much luck so far.
 // happens *by design* like all the friggen time >_<)
 
 #	define __fastcall		__attribute__((fastcall))
-#	define __unused			__attribute__((unused))
 #	define _inline			__inline__ __attribute__((unused))
 #	ifdef NDEBUG
 #		define __forceinline	__attribute__((always_inline,unused))

@@ -39,14 +39,14 @@ template< G2Type InstType >
 class Group2ImplAll
 {
 public:
-	template< typename T > __forceinline void operator()( const xRegister<T>& to,		__unused const xRegisterCL& from ) const
+	template< typename T > __forceinline void operator()( const xRegister<T>& to, const xRegisterCL& from ) const
 	{
 		prefix16<T>();
 		xWrite8( Is8BitOp<T>() ? 0xd2 : 0xd3 );
 		EmitSibMagic( InstType, to );
 	}
 
-	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest,	__unused const xRegisterCL& from ) const
+	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest, const xRegisterCL& from ) const
 	{
 		prefix16<T>();
 		xWrite8( Is8BitOp<T>() ? 0xd2 : 0xd3 );

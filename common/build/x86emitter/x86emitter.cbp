@@ -59,6 +59,7 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="-march=i486" />
 			<Add option="-Wno-format" />
 			<Add option="-Wno-unused-parameter" />
 			<Add option="-Wno-unused-value" />
@@ -67,6 +68,8 @@
 			<Add option="-fno-dse" />
 			<Add option="-fno-tree-dse" />
 			<Add option="-pipe -msse -msse2" />
+			<Add option="-mpreferred-stack-boundary=2" />
+			<Add option="-m32" />
 			<Add directory="../../include/x86emitter" />
 			<Add directory="../../include" />
 		</Compiler>

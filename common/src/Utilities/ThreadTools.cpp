@@ -424,7 +424,7 @@ void Threading::PersistentThread::_DoSetThreadName( const wxString& name )
 	_DoSetThreadName( name.ToUTF8() );
 }
 
-void Threading::PersistentThread::_DoSetThreadName( __unused const char* name )
+void Threading::PersistentThread::_DoSetThreadName( const char* name )
 {
 	pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
 

@@ -32,17 +32,17 @@ class DwordShiftImplAll
 
 public:
 	// ---------- 32 Bit Interface -----------
-	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, __unused const xRegisterCL& clreg ) const	{ xOpWrite0F( 0xa5 | m_shiftop, to, from ); }
-	__forceinline void operator()( void* dest,				const xRegister32& from, __unused const xRegisterCL& clreg ) const	{ xOpWrite0F( 0xa5 | m_shiftop, from, dest ); }
-	__forceinline void operator()( const ModSibBase& dest,	const xRegister32& from, __unused const xRegisterCL& clreg ) const	{ xOpWrite0F( 0xa5 | m_shiftop, from, dest ); }
+	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, const xRegisterCL& clreg ) const	{ xOpWrite0F( 0xa5 | m_shiftop, to, from ); }
+	__forceinline void operator()( void* dest,				const xRegister32& from, const xRegisterCL& clreg ) const	{ xOpWrite0F( 0xa5 | m_shiftop, from, dest ); }
+	__forceinline void operator()( const ModSibBase& dest,	const xRegister32& from, const xRegisterCL& clreg ) const	{ xOpWrite0F( 0xa5 | m_shiftop, from, dest ); }
 	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0xa4 | m_shiftop, to, from ); }
 	__forceinline void operator()( void* dest,				const xRegister32& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0xa4 | m_shiftop, from, dest, shiftcnt ); }
 	__forceinline void operator()( const ModSibBase& dest,	const xRegister32& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0xa4 | m_shiftop, from, dest, shiftcnt ); }
 
 	// ---------- 16 Bit Interface -----------
-	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, __unused const xRegisterCL& clreg ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, to, from ); }
-	__forceinline void operator()( void* dest,				const xRegister16& from, __unused const xRegisterCL& clreg ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, from, dest ); }
-	__forceinline void operator()( const ModSibBase& dest,	const xRegister16& from, __unused const xRegisterCL& clreg ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, from, dest ); }
+	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, const xRegisterCL& clreg ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, to, from ); }
+	__forceinline void operator()( void* dest,				const xRegister16& from, const xRegisterCL& clreg ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, from, dest ); }
+	__forceinline void operator()( const ModSibBase& dest,	const xRegister16& from, const xRegisterCL& clreg ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, from, dest ); }
 	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0x66, 0xa4 | m_shiftop, to, from ); }
 	__forceinline void operator()( void* dest,				const xRegister16& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0x66, 0xa4 | m_shiftop, from, dest, shiftcnt ); }
 	__forceinline void operator()( const ModSibBase& dest,	const xRegister16& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0x66, 0xa4 | m_shiftop, from, dest, shiftcnt ); }
