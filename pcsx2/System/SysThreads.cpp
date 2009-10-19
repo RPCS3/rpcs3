@@ -460,6 +460,8 @@ void SysCoreThread::CpuExecute()
 
 void SysCoreThread::ExecuteTaskInThread()
 {
+	Threading::EnableHiresScheduler();
+
 	tls_coreThread = this;
 
 	m_sem_event.WaitRaw();
@@ -486,6 +488,8 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 // Invoked by the pthread_exit or pthread_cancel
 void SysCoreThread::OnCleanupInThread()
 {
+	Threading::DisableHiresScheduler();
+
 	if( g_plugins != NULL )
 		g_plugins->Close();
 

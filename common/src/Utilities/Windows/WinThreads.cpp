@@ -60,7 +60,23 @@ namespace Threading
 	// improve performance and reduce cpu power consumption.
 	__forceinline void SpinWait()
 	{
-		__asm { pause };
+		__asm pause;
+	}
+	
+	__forceinline void EnableHiresScheduler()
+	{
+		// This improves accuracy of Sleep() by some amount, and only adds a negligable amount of
+		// overhead on modern CPUs.  Typically desktops are already set pretty low, but laptops in
+		// particular may have a scheduler Period of 15 or 20ms to extend battery life.
+		
+		// (note: this same trick is used by most multimedia software and games)
+
+		timeBeginPeriod( 1 );
+	}
+
+	__forceinline void DisableHiresScheduler()
+	{
+		timeEndPeriod( 1 );
 	}
 }
 
