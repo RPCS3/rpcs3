@@ -1970,8 +1970,17 @@ int wxString::PrintfV(const wxChar* pszFormat, va_list argptr)
     }
 
     // we could have overshot
-    Shrink();
+    // PCSX2: And we could have 4gb of ram and not really give a hoot if we overshoot
+    // the length of a temporary string by 0.5kb, which itself will likely be free'd a few
+    // instructions later.  Also, this defeats the purpose of even using the 1kb "overshot"
+    // starting buffer size at the top of the function.  Ideally if you are really concerned
+    // about memory, the 1024 should be a 512, and this should only shrink if the allocated
+    // length of the string is more than 128 bytes past the end of the actual string content.
+    //  -- Jake Stine (air)
 
+	//if( capacity() - 128 >= length() )		// this line added by air, as proposed above.
+    //	Shrink();
+    
     return length();
 }
 
