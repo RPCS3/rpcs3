@@ -8,25 +8,27 @@
 
 namespace YAML
 {
-	Parser::Parser(std::istream& in): m_pScanner(0)
+	Parser::Parser()
+	{
+	}
+	
+	Parser::Parser(std::istream& in)
 	{
 		Load(in);
 	}
 
 	Parser::~Parser()
 	{
-		delete m_pScanner;
 	}
 
 	Parser::operator bool() const
 	{
-		return !m_pScanner->empty();
+		return m_pScanner.get() && !m_pScanner->empty();
 	}
 
 	void Parser::Load(std::istream& in)
 	{
-		delete m_pScanner;
-		m_pScanner = new Scanner(in);
+		m_pScanner.reset(new Scanner(in));
 		m_state.Reset();
 	}
 
@@ -50,7 +52,7 @@ namespace YAML
 			m_pScanner->pop();
 
 		// now parse our root node
-		document.Parse(m_pScanner, m_state);
+		document.Parse(m_pScanner.get(), m_state);
 
 		// and finally eat any doc ends we see
 		while(!m_pScanner->empty() && m_pScanner->peek().type == Token::DOC_END)
