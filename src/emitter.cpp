@@ -37,6 +37,11 @@ namespace YAML
 	}
 
 	// global setters
+	bool Emitter::SetOutputCharset(EMITTER_MANIP value)
+	{
+		return m_pState->SetOutputCharset(value, GLOBAL);
+	}
+
 	bool Emitter::SetStringFormat(EMITTER_MANIP value)
 	{
 		return m_pState->SetStringFormat(value, GLOBAL);
@@ -485,13 +490,14 @@ namespace YAML
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();
 		
+		bool escapeNonAscii = m_pState->GetOutputCharset() == EscapeNonAscii;
 		EMITTER_MANIP strFmt = m_pState->GetStringFormat();
 		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
 		unsigned curIndent = m_pState->GetCurIndent();
 
 		switch(strFmt) {
 			case Auto:
-				Utils::WriteString(m_stream, str, flowType == FT_FLOW);
+				Utils::WriteString(m_stream, str, flowType == FT_FLOW, escapeNonAscii);
 				break;
 			case SingleQuoted:
 				if(!Utils::WriteSingleQuotedString(m_stream, str)) {
@@ -500,11 +506,11 @@ namespace YAML
 				}
 				break;
 			case DoubleQuoted:
-				Utils::WriteDoubleQuotedString(m_stream, str);
+				Utils::WriteDoubleQuotedString(m_stream, str, escapeNonAscii);
 				break;
 			case Literal:
 				if(flowType == FT_FLOW)
-					Utils::WriteString(m_stream, str, flowType == FT_FLOW);
+					Utils::WriteString(m_stream, str, flowType == FT_FLOW, escapeNonAscii);
 				else
 					Utils::WriteLiteralString(m_stream, str, curIndent + m_pState->GetIndent());
 				break;

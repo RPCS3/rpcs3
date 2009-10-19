@@ -11,6 +11,10 @@ namespace YAML
 	enum EMITTER_MANIP {
 		// general manipulators
 		Auto,
+
+		// output character set
+		EmitNonAscii,
+		EscapeNonAscii,
 		
 		// string manipulators
 		// Auto, // duplicate

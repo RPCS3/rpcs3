@@ -9,6 +9,7 @@ namespace YAML
 		m_stateStack.push(ES_WAITING_FOR_DOC);
 		
 		// set default global manipulators
+		m_charset.set(EmitNonAscii);
 		m_strFmt.set(Auto);
 		m_boolFmt.set(TrueFalseBool);
 		m_boolLengthFmt.set(LongBool);
@@ -43,6 +44,7 @@ namespace YAML
 	// . Only the ones that make sense will be accepted
 	void EmitterState::SetLocalValue(EMITTER_MANIP value)
 	{
+		SetOutputCharset(value, LOCAL);
 		SetStringFormat(value, LOCAL);
 		SetBoolFormat(value, LOCAL);
 		SetBoolCaseFormat(value, LOCAL);
@@ -131,6 +133,18 @@ namespace YAML
 	void EmitterState::ClearModifiedSettings()
 	{
 		m_modifiedSettings.clear();
+	}
+
+	bool EmitterState::SetOutputCharset(EMITTER_MANIP value, FMT_SCOPE scope)
+	{
+		switch(value) {
+			case EmitNonAscii:
+			case EscapeNonAscii:
+				_Set(m_charset, value, scope);
+				return true;
+			default:
+				return false;
+		}
 	}
 	
 	bool EmitterState::SetStringFormat(EMITTER_MANIP value, FMT_SCOPE scope)

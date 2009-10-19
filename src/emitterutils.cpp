@@ -5,18 +5,129 @@
 #include "stringsource.h"
 #include <sstream>
 #include <iomanip>
-#include <cassert>
 
 namespace YAML
 {
 	namespace Utils
 	{
 		namespace {
-			bool IsPrintable(char ch) {
-				return (0x20 <= ch && ch <= 0x7E);
+			enum {REPLACEMENT_CHARACTER = 0xFFFD};
+
+			bool IsAnchorChar(int ch) { // test for ns-anchor-char
+				switch (ch) {
+					case ',': case '[': case ']': case '{': case '}': // c-flow-indicator
+					case ' ': case '\t': // s-white
+					case 0xFEFF: // c-byte-order-mark
+					case 0xA: case 0xD: // b-char
+						return false;
+					case 0x85:
+						return true;
+				}
+
+				if (ch < 0x20)
+					return false;
+
+				if (ch < 0x7E)
+					return true;
+
+				if (ch < 0xA0)
+					return false;
+				if (ch >= 0xD800 && ch <= 0xDFFF)
+					return false;
+				if ((ch & 0xFFFE) == 0xFFFE)
+					return false;
+				if ((ch >= 0xFDD0) && (ch <= 0xFDEF))
+					return false;
+				if (ch > 0x10FFFF)
+					return false;
+
+				return true;
 			}
 			
-			bool IsValidPlainScalar(const std::string& str, bool inFlow) {
+			int Utf8BytesIndicated(char ch) {
+				int byteVal = static_cast<unsigned char>(ch);
+				switch (byteVal >> 4) {
+					case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+						return 1;
+					case 12: case 13:
+						return 2;
+					case 14:
+						return 3;
+					case 15:
+						return 4;
+					default:
+					  return -1;
+				}
+			}
+
+			bool IsTrailingByte(char ch) {
+				return (ch & 0xC0) == 0x80;
+			}
+			
+			bool GetNextCodePointAndAdvance(int& codePoint, std::string::const_iterator& first, std::string::const_iterator last) {
+				if (first == last)
+					return false;
+				
+				int nBytes = Utf8BytesIndicated(*first);
+				if (nBytes < 1) {
+					// Bad lead byte
+					++first;
+					codePoint = REPLACEMENT_CHARACTER;
+					return true;
+				}
+				
+				if (nBytes == 1) {
+					codePoint = *first++;
+					return true;
+				}
+				
+				// Gather bits from trailing bytes
+				codePoint = static_cast<unsigned char>(*first) & ~(0xFF << (7 - nBytes));
+				++first;
+				--nBytes;
+				for (; nBytes > 0; ++first, --nBytes) {
+					if ((first == last) || !IsTrailingByte(*first)) {
+						codePoint = REPLACEMENT_CHARACTER;
+						break;
+					}
+					codePoint <<= 6;
+					codePoint |= *first & 0x3F;
+				}
+
+				// Check for illegal code points
+				if (codePoint > 0x10FFFF)
+					codePoint = REPLACEMENT_CHARACTER;
+				else if (codePoint >= 0xD800 && codePoint <= 0xDFFF)
+					codePoint = REPLACEMENT_CHARACTER;
+				else if ((codePoint & 0xFFFE) == 0xFFFE)
+					codePoint = REPLACEMENT_CHARACTER;
+				else if (codePoint >= 0xFDD0 && codePoint <= 0xFDEF)
+					codePoint = REPLACEMENT_CHARACTER;
+				return true;
+			}
+			
+			void WriteCodePoint(ostream& out, int codePoint) {
+				if (codePoint < 0 || codePoint > 0x10FFFF) {
+					codePoint = REPLACEMENT_CHARACTER;
+				}
+				if (codePoint < 0x7F) {
+					out << static_cast<char>(codePoint);
+				} else if (codePoint < 0x7FF) {
+					out << static_cast<char>(0xC0 | (codePoint >> 6))
+					    << static_cast<char>(0x80 | (codePoint & 0x3F));
+				} else if (codePoint < 0xFFFF) {
+					out << static_cast<char>(0xE0 | (codePoint >> 12))
+					    << static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F))
+					    << static_cast<char>(0x80 | (codePoint & 0x3F));
+				} else {
+					out << static_cast<char>(0xF0 | (codePoint >> 18))
+					    << static_cast<char>(0x80 | ((codePoint >> 12) & 0x3F))
+					    << static_cast<char>(0x80 | ((codePoint >> 6) & 0x3F))
+					    << static_cast<char>(0x80 | (codePoint & 0x3F));
+				}
+			}
+			
+			bool IsValidPlainScalar(const std::string& str, bool inFlow, bool allowOnlyAscii) {
 				// first check the start
 				const RegEx& start = (inFlow ? Exp::PlainScalarInFlow : Exp::PlainScalar);
 				if(!start.Matches(str))
@@ -29,177 +140,109 @@ namespace YAML
 				// then check until something is disallowed
 				const RegEx& disallowed = (inFlow ? Exp::EndScalarInFlow : Exp::EndScalar)
 				                          || (Exp::BlankOrBreak + Exp::Comment)
-				                          || (!Exp::Printable)
+				                          || Exp::NotPrintable
+				                          || Exp::Utf8_ByteOrderMark
 				                          || Exp::Break
 				                          || Exp::Tab;
 				StringCharSource buffer(str.c_str(), str.size());
 				while(buffer) {
 					if(disallowed.Matches(buffer))
 						return false;
+					if(allowOnlyAscii && (0x7F < static_cast<unsigned char>(buffer[0]))) 
+						return false;
 					++buffer;
 				}
 				
 				return true;
 			}
-			
-			typedef unsigned char byte;
-			byte ToByte(char ch) { return static_cast<byte>(ch); }
-			
-			typedef std::string::const_iterator StrIter;
 
-			std::string WriteUnicode(unsigned value) {
-				std::stringstream str;
-				// TODO: for the common escaped characters, give their usual symbol
-				if(value <= 0xFF)
-					str << "\\x" << std::hex << std::setfill('0') << std::setw(2) << value;
-				else if(value <= 0xFFFF)
-					str << "\\u" << std::hex << std::setfill('0') << std::setw(4) << value;
-				else
-					str << "\\U" << std::hex << std::setfill('0') << std::setw(8) << value;
-				return str.str();
-			}
-			
-			// GetBytesToRead
-			// . Returns the length of the UTF-8 sequence starting with 'signal'
-			int GetBytesToRead(byte signal) {
-				if(signal <= 0x7F) // ASCII
-					return 1;
-				else if(signal <= 0xBF) // invalid first characters
-					return 0;
-				else if(signal <= 0xDF) // Note: this allows "overlong" UTF8 (0xC0 - 0xC1) to pass unscathed. OK?
-					return 2;
-				else if(signal <= 0xEF)
-					return 3;
-				else
-					return 4;
-			}
-			
-			// ReadBytes
-			// . Reads the next 'bytesToRead', if we can.
-			// . Returns zero if we fail, otherwise fills the byte buffer with
-			//   the data and returns the number of bytes read.
-			int ReadBytes(byte bytes[4], StrIter start, StrIter end, int bytesToRead) {
-				for(int i=0;i<bytesToRead;i++) {
-					if(start == end)
-						return 0;
-					bytes[i] = ToByte(*start);
-					++start;
+			void WriteDoubleQuoteEscapeSequence(ostream& out, int codePoint) {
+				static const char hexDigits[] = "0123456789abcdef";
+
+				char escSeq[] = "\\U00000000";
+				int digits = 8;
+				if (codePoint < 0xFF) {
+					escSeq[1] = 'x';
+					digits = 2;
+				} else if (codePoint < 0xFFFF) {
+					escSeq[1] = 'u';
+					digits = 4;
 				}
-				return bytesToRead;
+
+				// Write digits into the escape sequence
+				int i = 2;
+				for (; digits > 0; --digits, ++i) {
+					escSeq[i] = hexDigits[(codePoint >> (4 * (digits - 1))) & 0xF];
+				}
+
+				escSeq[i] = 0; // terminate with NUL character
+				out << escSeq;
 			}
-			
-			// IsValidUTF8
-			// . Assumes bytes[0] is a valid signal byte with the right size passed
-			bool IsValidUTF8(byte bytes[4], int size) {
-				for(int i=1;i<size;i++)
-					if(bytes[i] & 0x80 != 0x80)
+
+			bool WriteAliasName(ostream& out, const std::string& str) {
+				int codePoint;
+				for(std::string::const_iterator i = str.begin();
+					GetNextCodePointAndAdvance(codePoint, i, str.end());
+					)
+				{
+					if (!IsAnchorChar(codePoint))
 						return false;
+
+					WriteCodePoint(out, codePoint);
+				}
 				return true;
-			}
-			
-			byte UTF8SignalPrefix(int size) {
-				switch(size) {
-					case 1: return 0;
-					case 2: return 0xC0;
-					case 3: return 0xE0;
-					case 4: return 0xF0;
-				}
-				assert(false);
-				return 0;
-			}
-			
-			unsigned UTF8ToUnicode(byte bytes[4], int size) {
-				unsigned value = bytes[0] - UTF8SignalPrefix(size);
-				for(int i=1;i<size;i++)
-					value = (value << 6) + (bytes[i] - 0x80);
-				return value;
-			}
-
-			// ReadUTF8
-			// . Returns the Unicode code point starting at 'start',
-			//   and sets 'bytesRead' to the length of the UTF-8 Sequence
-			// . If it's invalid UTF8, we set 'bytesRead' to zero.
-			unsigned ReadUTF8(StrIter start, StrIter end, int& bytesRead) {
-				int bytesToRead = GetBytesToRead(ToByte(*start));
-				if(!bytesToRead) {
-					bytesRead = 0;
-					return 0;
-				}
-
-				byte bytes[4];
-				bytesRead = ReadBytes(bytes, start, end, bytesToRead);
-				if(!bytesRead)
-					return 0;
-				
-				if(!IsValidUTF8(bytes, bytesRead)) {
-					bytesRead = 0;
-					return 0;
-				}
-				
-				return UTF8ToUnicode(bytes, bytesRead);
-			}
-
-			// WriteNonPrintable
-			// . Writes the next UTF-8 code point to the stream
-			int WriteNonPrintable(ostream& out, StrIter start, StrIter end) {
-				int bytesRead = 0;
-				unsigned value = ReadUTF8(start, end, bytesRead);
-
-				if(bytesRead == 0) {
-					// TODO: is it ok to just write the replacement character here,
-					//       or should we instead write the invalid byte (as \xNN)?
-					out << WriteUnicode(0xFFFD);
-					return 1;
-				}
-				
-				out << WriteUnicode(value);
-				return bytesRead;
 			}
 		}
 		
-		bool WriteString(ostream& out, const std::string& str, bool inFlow)
+		bool WriteString(ostream& out, const std::string& str, bool inFlow, bool escapeNonAscii)
 		{
-			if(IsValidPlainScalar(str, inFlow)) {
+			if(IsValidPlainScalar(str, inFlow, escapeNonAscii)) {
 				out << str;
 				return true;
 			} else
-				return WriteDoubleQuotedString(out, str);
+				return WriteDoubleQuotedString(out, str, escapeNonAscii);
 		}
 		
 		bool WriteSingleQuotedString(ostream& out, const std::string& str)
 		{
 			out << "'";
-			for(std::size_t i=0;i<str.size();i++) {
-				char ch = str[i];
-				if(!IsPrintable(ch))
-					return false;
-				
-				if(ch == '\'')
+			int codePoint;
+			for(std::string::const_iterator i = str.begin();
+				GetNextCodePointAndAdvance(codePoint, i, str.end());
+				) 
+			{
+				if (codePoint == '\n')
+					return false;  // We can't handle a new line and the attendant indentation yet
+
+				if (codePoint == '\'')
 					out << "''";
 				else
-					out << ch;
+					WriteCodePoint(out, codePoint);
 			}
 			out << "'";
 			return true;
 		}
 		
-		bool WriteDoubleQuotedString(ostream& out, const std::string& str)
+		bool WriteDoubleQuotedString(ostream& out, const std::string& str, bool escapeNonAscii)
 		{
 			out << "\"";
-			for(StrIter it=str.begin();it!=str.end();++it) {
-				char ch = *it;
-				if(IsPrintable(ch)) {
-					if(ch == '\"')
-						out << "\\\"";
-					else if(ch == '\\')
-						out << "\\\\";
-					else
-						out << ch;
-				} else {
-					int bytesRead = WriteNonPrintable(out, it, str.end());
-					if(bytesRead >= 1)
-						it += (bytesRead - 1);
-				}
+			int codePoint;
+			for(std::string::const_iterator i = str.begin();
+				GetNextCodePointAndAdvance(codePoint, i, str.end());
+				) 
+			{
+				if (codePoint == '\"')
+					out << "\\\"";
+				else if (codePoint == '\\')
+					out << "\\\\";
+				else if (codePoint < 0x20 || (codePoint >= 0x80 && codePoint <= 0xA0)) // Control characters and non-breaking space
+					WriteDoubleQuoteEscapeSequence(out, codePoint);
+				else if (codePoint == 0xFEFF) // Byte order marks (ZWNS) should be escaped (YAML 1.2, sec. 5.2)	
+					WriteDoubleQuoteEscapeSequence(out, codePoint);
+				else if (escapeNonAscii && codePoint > 0x7E)
+					WriteDoubleQuoteEscapeSequence(out, codePoint);
+				else
+					WriteCodePoint(out, codePoint);
 			}
 			out << "\"";
 			return true;
@@ -209,11 +252,15 @@ namespace YAML
 		{
 			out << "|\n";
 			out << IndentTo(indent);
-			for(std::size_t i=0;i<str.size();i++) {
-				if(str[i] == '\n')
-					out << "\n" << IndentTo(indent);
+			int codePoint;
+			for(std::string::const_iterator i = str.begin();
+				GetNextCodePointAndAdvance(codePoint, i, str.end());
+				)
+			{
+				if (codePoint == '\n')
+				  out << "\n" << IndentTo(indent);
 				else
-					out << str[i];
+				  WriteCodePoint(out, codePoint);
 			}
 			return true;
 		}
@@ -222,11 +269,15 @@ namespace YAML
 		{
 			unsigned curIndent = out.col();
 			out << "#" << Indentation(postCommentIndent);
-			for(std::size_t i=0;i<str.size();i++) {
-				if(str[i] == '\n')
+			int codePoint;
+			for(std::string::const_iterator i = str.begin();
+				GetNextCodePointAndAdvance(codePoint, i, str.end());
+				)
+			{
+				if(codePoint == '\n')
 					out << "\n" << IndentTo(curIndent) << "#" << Indentation(postCommentIndent);
 				else
-					out << str[i];
+					WriteCodePoint(out, codePoint);
 			}
 			return true;
 		}
@@ -234,25 +285,13 @@ namespace YAML
 		bool WriteAlias(ostream& out, const std::string& str)
 		{
 			out << "*";
-			for(std::size_t i=0;i<str.size();i++) {
-				if(!IsPrintable(str[i]) || str[i] == ' ' || str[i] == '\t' || str[i] == '\n' || str[i] == '\r')
-					return false;
-				
-				out << str[i];
-			}
-			return true;
+			return WriteAliasName(out, str);
 		}
 		
 		bool WriteAnchor(ostream& out, const std::string& str)
 		{
 			out << "&";
-			for(std::size_t i=0;i<str.size();i++) {
-				if(!IsPrintable(str[i]) || str[i] == ' ' || str[i] == '\t' || str[i] == '\n' || str[i] == '\r')
-					return false;
-				
-				out << str[i];
-			}
-			return true;
+			return WriteAliasName(out, str);
 		}
 	}
 }

@@ -28,9 +28,9 @@ namespace YAML
 			return value;
 		}
 
-		std::string Str(char ch)
+		std::string Str(unsigned ch)
 		{
-			return std::string("") + ch;
+			return std::string("") + static_cast<char>(ch);
 		}
 
 		// Escape

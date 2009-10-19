@@ -108,6 +108,9 @@ namespace YAML
 		void ClearModifiedSettings();
 
 		// formatters
+		bool SetOutputCharset(EMITTER_MANIP value, FMT_SCOPE scope);
+		EMITTER_MANIP GetOutputCharset() const { return m_charset.get(); }
+
 		bool SetStringFormat(EMITTER_MANIP value, FMT_SCOPE scope);
 		EMITTER_MANIP GetStringFormat() const { return m_strFmt.get(); }
 		
@@ -149,6 +152,7 @@ namespace YAML
 		// other state
 		std::stack <EMITTER_STATE> m_stateStack;
 		
+		Setting <EMITTER_MANIP> m_charset;
 		Setting <EMITTER_MANIP> m_strFmt;
 		Setting <EMITTER_MANIP> m_boolFmt;
 		Setting <EMITTER_MANIP> m_boolLengthFmt;

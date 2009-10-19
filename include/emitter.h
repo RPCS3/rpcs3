@@ -29,6 +29,7 @@ namespace YAML
 		const std::string GetLastError() const;
 		
 		// global setters
+		bool SetOutputCharset(EMITTER_MANIP value);
 		bool SetStringFormat(EMITTER_MANIP value);
 		bool SetBoolFormat(EMITTER_MANIP value);
 		bool SetIntBase(EMITTER_MANIP value);
