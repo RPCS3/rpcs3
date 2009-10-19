@@ -38,7 +38,7 @@
 		Console.Error( ex.what() ); \
 	}
 
-#ifdef __GNUC__
+#ifdef __GNUG__
 #	define DESTRUCTOR_CATCHALL		__DESTRUCTOR_CATCHALL( __PRETTY_FUNCTION__ )
 #else
 #	define DESTRUCTOR_CATCHALL		__DESTRUCTOR_CATCHALL( __FUNCTION__ )
@@ -88,7 +88,7 @@ namespace Exception
 		// Returns a message suitable for end-user display.
 		// This message is usually meant for display in a user popup or such.
 		virtual wxString FormatDisplayMessage() const { return m_message_user; }
-		
+
 		virtual void Rethrow() const=0;
 		virtual BaseException* Clone() const=0;
 
@@ -176,7 +176,7 @@ namespace Exception
 	// instead issues a "silent" cancelation that is handled by the app gracefully (generates
 	// log, and resumes messages queue processing).
 	//
-	// I chose to have this exception derive from RuntimeError, since if one is thrown from outside 
+	// I chose to have this exception derive from RuntimeError, since if one is thrown from outside
 	// an App message loop we'll still want it to be handled in a reasonably graceful manner.
 	class CancelEvent : public virtual RuntimeError
 	{
@@ -188,13 +188,13 @@ namespace Exception
 			m_message_diag = fromUTF8( logmsg );
 			// overridden message formatters only use the diagnostic version...
 		}
-		
+
 		explicit CancelEvent( const wxString& logmsg=L"No reason given." )
 		{
 			m_message_diag = logmsg;
 			// overridden message formatters only use the diagnostic version...
 		}
-		
+
 		virtual wxString FormatDisplayMessage() const;
 		virtual wxString FormatDiagnosticMessage() const;
 	};

@@ -54,7 +54,7 @@ void SysThreadBase::Start()
 		RethrowException();
 		if( pxAssertDev( m_ExecMode == ExecMode_Closing, "Unexpected thread status during SysThread startup." ) )
 		{
-			throw Exception::ThreadCreationError( 
+			throw Exception::ThreadCreationError(
 				wxsFormat( L"Timeout occurred while attempting to start the %s thread.", m_name.c_str() ),
 				wxEmptyString
 			);
@@ -253,6 +253,9 @@ void SysThreadBase::OnCleanupInThread()
 	m_RunningLock.Unlock();
 }
 
+void SysThreadBase::OnSuspendInThread() {}
+void SysThreadBase::OnResumeInThread( bool isSuspended ) {}
+
 void SysThreadBase::StateCheckInThread( bool isCancelable )
 {
 	switch( m_ExecMode )
@@ -327,6 +330,13 @@ SysCoreThread::SysCoreThread() :
 
 SysCoreThread::~SysCoreThread() throw()
 {
+	SysCoreThread::Cancel();
+}
+
+extern bool CoreCancelDamnit;
+void SysCoreThread::Cancel( bool isBlocking )
+{
+	CoreCancelDamnit = true;
 	_parent::Cancel();
 }
 
@@ -334,6 +344,7 @@ void SysCoreThread::Start()
 {
 	if( g_plugins == NULL ) return;
 	g_plugins->Init();
+	CoreCancelDamnit = false;		// belongs in OnStart actually, but I'm tired :P
 	_parent::Start();
 }
 

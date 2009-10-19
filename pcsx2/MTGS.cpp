@@ -79,7 +79,6 @@ struct MTGS_BufferedData
 
 static __aligned(32) MTGS_BufferedData RingBuffer;
 extern bool renderswitch;
-static volatile bool gsIsOpened = false;
 
 
 #ifdef RINGBUF_DEBUG_STACK
@@ -98,6 +97,7 @@ mtgsThreadObject::mtgsThreadObject() :
 ,	m_CopyCommandTally( 0 )
 ,	m_CopyDataTally( 0 )
 ,	m_RingBufferIsBusy( false )
+,	m_PluginOpened( false )
 ,	m_QueuedFrames( 0 )
 ,	m_packet_size( 0 )
 ,	m_packet_ringpos( 0 )
@@ -111,7 +111,7 @@ mtgsThreadObject::mtgsThreadObject() :
 
 void mtgsThreadObject::OnStart()
 {
-	gsIsOpened		= false;
+	m_PluginOpened	= false;
 
 	m_RingPos		= 0;
 	m_WritePos		= 0;
@@ -187,14 +187,6 @@ struct PacketTagType
 	u32 data[3];
 };
 
-static void _clean_close_gs( void* obj )
-{
-	if( !gsIsOpened ) return;
-	gsIsOpened = false;
-	if( g_plugins != NULL )
-		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
-}
-
 static void dummyIrqCallback()
 {
 	// dummy, because MTGS doesn't need this mess!
@@ -203,7 +195,7 @@ static void dummyIrqCallback()
 
 void mtgsThreadObject::OpenPlugin()
 {
-	if( gsIsOpened ) return;
+	if( m_PluginOpened ) return;
 
 	memcpy_aligned( RingBuffer.Regs, PS2MEM_GS, sizeof(PS2MEM_GS) );
 	GSsetBaseMem( RingBuffer.Regs );
@@ -225,7 +217,7 @@ void mtgsThreadObject::OpenPlugin()
 		throw Exception::PluginOpenError( PluginId_GS );
 	}
 
-	gsIsOpened = true;
+	m_PluginOpened = true;
 	m_sem_OpenDone.Post();
 
 	GSCSRr = 0x551B4000; // 0x55190000
@@ -238,7 +230,6 @@ void mtgsThreadObject::ExecuteTaskInThread()
 	PacketTagType prevCmd;
 #endif
 
-	pthread_cleanup_push( _clean_close_gs, this );
 	while( true )
 	{
 		m_sem_event.WaitRaw();			// ... because this does a cancel test itself..
@@ -409,18 +400,34 @@ void mtgsThreadObject::ExecuteTaskInThread()
 		}
 		m_RingBufferIsBusy = false;
 	}
-	pthread_cleanup_pop( true );
+}
+
+void mtgsThreadObject::ClosePlugin()
+{
+	if( !m_PluginOpened ) return;
+	m_PluginOpened = false;
+	if( g_plugins != NULL )
+		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
 }
 
 void mtgsThreadObject::OnSuspendInThread()
 {
-	_clean_close_gs( NULL );
+	ClosePlugin();
+	_parent::OnSuspendInThread();
 }
 
 void mtgsThreadObject::OnResumeInThread( bool isSuspended )
 {
 	if( isSuspended )
 		OpenPlugin();
+
+	_parent::OnResumeInThread( isSuspended );
+}
+
+void mtgsThreadObject::OnCleanupInThread()
+{
+	ClosePlugin();
+	_parent::OnCleanupInThread();
 }
 
 // Waits for the GS to empty out the entire ring buffer contents.
@@ -783,7 +790,7 @@ void mtgsThreadObject::SendGameCRC( u32 crc )
 
 void mtgsThreadObject::WaitForOpen()
 {
-	if( gsIsOpened ) return;
+	if( m_PluginOpened ) return;
 	Resume();
 
 	// Two-phase timeout on MTGS opening, so that possible errors are handled
@@ -798,11 +805,11 @@ void mtgsThreadObject::WaitForOpen()
 		if( !m_sem_OpenDone.Wait( wxTimeSpan(0, 0, 4, 0) ) )
 		{
 			RethrowException();
-			
+
 			// Not opened yet, and no exceptions.  Weird?  You decide!
 			// TODO : implement a user confirmation to cancel the action and exit the
 			//   emulator forcefully, or to continue waiting on the GS.
-			
+
 			throw Exception::PluginOpenError( PluginId_GS, "The MTGS thread has become unresponsive while waiting for the GS plugin to open." );
 		}
 	}

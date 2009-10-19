@@ -313,8 +313,6 @@ u32* recGetImm64(u32 hi, u32 lo)
 //  R5900 Dispatchers
 // =====================================================================================================
 
-extern "C" void recEventTest();
-
 static u32 g_lastpc = 0;
 static u32 s_store_ebp, s_store_esp;
 
@@ -329,6 +327,13 @@ static DynGenFunc* JITCompile			= NULL;
 static DynGenFunc* JITCompileInBlock	= NULL;
 static DynGenFunc* EnterRecompiledCode	= NULL;
 static DynGenFunc* ExitRecompiledCode	= NULL;
+
+static void recEventTest()
+{
+	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+	_cpuBranchTest_Shared();
+	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+}
 
 // parameters:
 //   espORebp - 0 for ESP, or 1 for EBP.
@@ -443,9 +448,10 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	xMOV( ptr[ebp-4], ebx );
 
 	// Simulate a CALL function by pushing the call address and EBP onto the stack.
-	xMOV( ptr32[esp+0x10+12], 0xffeeff );
+	xMOV( ptr32[esp+0x1c], 0xffeeff );
 	uptr& imm = *(uptr*)(xGetPtr()-4);
-	xMOV( ptr32[esp+0x10+8], ebp );
+	xMOV( ptr32[esp+0x18], ebp );
+	xLEA( ebp, ptr32[esp+0x18] );
 
 	xMOV( &s_store_esp, esp );
 	xMOV( &s_store_ebp, ebp );
@@ -668,59 +674,72 @@ void recStep( void )
 {
 }
 
+#ifndef PCSX2_SEH
 
-extern "C" void recEventTest()
+// <---  setjmp/longjmp model  <---
+
+#include "GS.h"
+#include "System/SysThreads.h"
+
+static void StateThreadCheck_LongJmp()
 {
-#ifdef PCSX2_DEVBUILD
-	// dont' remove this check unless doing an official release
-	if( g_globalXMMSaved || g_globalMMXSaved)
-	{
-		DevCon.Error("PCSX2 Foopah!  Frozen regs have not been restored!!!");
-		DevCon.Error("g_globalXMMSaved = %d,g_globalMMXSaved = %d", g_globalXMMSaved, g_globalMMXSaved);
-	}
-	assert( !g_globalXMMSaved && !g_globalMMXSaved);
-#endif
+	setjmp( SetJmp_StateCheck );
 
-	// Perform counters, interrupts, and IOP updates:
-	_cpuBranchTest_Shared();
-
-#ifdef PCSX2_DEVBUILD
-	assert( !g_globalXMMSaved && !g_globalMMXSaved);
-#endif
+	mtgsThread.RethrowException();
+	SysCoreThread::Get().StateCheckInThread();
 }
 
 static void recExecute()
 {
+	StateThreadCheck_LongJmp();
+
+	switch( setjmp( SetJmp_RecExecute ) )
+	{
+		case SetJmp_Exit: break;
+
+		case 0:
+		case SetJmp_Dispatcher:
+
+			// Typically the Dispatcher is invoked from the EventTest code, which clears
+			// the FreezeRegs flag, so always be sure to reset it here:
+			g_EEFreezeRegs = true;
+
+			while( true )
+				EnterRecompiledCode();
+		break;
+	}
+
+	g_EEFreezeRegs = false;
+}
+
+#else
+
+// --->  SEH Model  --->
+
+static void recExecute()
+{
 	// Implementation Notes:
-	// This function enter an endless loop, which is only escapable via C++ exception handling.
-	// The loop is needed because some things in the rec use "ret" as a shortcut to
-	// invoking DispatcherReg.  These things are code bits which are called infrequently,
-	// such as dyna_block_discard and dyna_page_reset.
+	// [TODO] fix this comment to explain various code entry/exit points, when I'm not so tired!
 
 	try
 	{
 		while( true )
 		{
-			// Note: make sure the FreezeRegs boolean is reset to true here, because
-			// it might be set to false, depending on if the rec exits from the context of
-			// an EventTest or not.
-
+			// Typically the Dispatcher is invoked from the EventTest code, which clears
+			// the FreezeRegs flag, so always be sure to reset it here:
 			g_EEFreezeRegs = true;
 
 			try {
 				EnterRecompiledCode();
 			}
-			catch( Exception::ForceDispatcherReg& )
-			{
-			}
+			catch( Exception::ForceDispatcherReg& ) { }
 		}
 	}
-	catch( Exception::ExitRecExecute& )
-	{
-	}
+	catch( Exception::ExitRecExecute& ) { }
 
 	g_EEFreezeRegs = false;
 }
+#endif
 
 ////////////////////////////////////////////////////
 void R5900::Dynarec::OpcodeImpl::recSYSCALL( void )
@@ -828,9 +847,19 @@ void recClear(u32 addr, u32 size)
 		ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
 }
 
+
+#ifdef __GNUG__
+__threadlocal jmp_buf SetJmp_RecExecute;
+__threadlocal jmp_buf SetJmp_StateCheck;
+#endif
+
 static void ExitRec()
 {
+#ifdef __GNUG__
+	longjmp( SetJmp_RecExecute, SetJmp_Exit );
+#else
 	throw Exception::ExitRecExecute();
+#endif
 }
 
 // check for end of bios
@@ -1273,8 +1302,14 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	DevCon.WriteLn("dyna_block_discard .. start=0x%08X  size=%d", start, sz*4);
 	recClear(start, sz);
 
-	// Note: this function is accessed via a JMP, and thus the RET here will exit
-	// recompiled code and take us back to recExecute.
+	// Stack trick: This function was invoked via a direct jmp, so manually pop the
+	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect. 
+
+#ifdef _MSC_VER
+	__asm leave; __asm jmp [ExitRecompiledCode]
+#else
+	__asm__ __volatile__( "leave\n jmp *%[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
+#endif
 }
 
 // called when a block under manual protection has been run enough times to be a
@@ -1285,10 +1320,11 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 	manual_counter[start >> 12]++;
 	mmap_MarkCountedRamPage( start );
 
-	// Note: this function is accessed via a JMP, and thus the RET here will exit
-	// recompiled code and take us back to recExecute.
-
-	__asm__ __volatile__( "leave\n jmp %[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
+#ifdef _MSC_VER
+	__asm leave; __asm jmp [ExitRecompiledCode]
+#else
+	__asm__ __volatile__( "leave\n jmp *%[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
+#endif
 }
 
 void recRecompile( const u32 startpc )

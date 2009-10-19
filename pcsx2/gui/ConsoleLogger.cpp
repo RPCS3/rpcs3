@@ -500,6 +500,8 @@ void ConsoleLogFrame::OnSemaphoreWait( wxCommandEvent& event )
 	m_semaphore.Post();
 }
 
+static const wxTimeSpan high_volume_timeout( 0, 0, 0, 500 );
+
 // ------------------------------------------------------------------------
 // Deadlock protection: High volume logs will over-tax our message pump and cause the
 // GUI to become inaccessible.  The cool solution would be a threaded log window, but wx
@@ -515,13 +517,21 @@ void ConsoleLogFrame::CountMessage()
 	{
 		if( !wxThread::IsMain() )
 		{
-			// Append an event that'll post up our semaphore.  It'll get run "in
-			// order" which means when it posts all queued messages will have been
-			// processed.
+			// Append an event that'll post up our semaphore.  It'll typically get run "in
+			// order" which means when it posts all queued messages will have been processed.
+
+			// GTK+ / Timeout: We need a timeout on our semaphore to avoid deadlocking in GTK+,
+			// because for some reason it can't friggen process messages from a wxYield()
+			// (which is used from mutex and semaphore locks on the main thread to handle
+			//  messages from child threads, like this one!).
+
+			// Leaving it enabled on Windows as well for now since it's probably a "good idea" to avoid
+			// deadlocking in some totally unforseeably random happenstance sircumstance, and I don't
+			// think it'll have an impact on performance. --air
 
 			wxCommandEvent evt( wxEVT_SemaphoreWait );
 			GetEventHandler()->AddPendingEvent( evt );
-			m_semaphore.WaitRaw();
+			m_semaphore.WaitRaw( high_volume_timeout );
 		}
 	}
 }

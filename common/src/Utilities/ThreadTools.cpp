@@ -187,7 +187,7 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 		}
 
 		pthread_cancel( m_thread );
-		
+
 	}
 
 	if( isBlocking )
@@ -214,7 +214,9 @@ void Threading::PersistentThread::Block()
 
 bool Threading::PersistentThread::IsSelf() const
 {
-	return pthread_self() == m_thread;
+	// Detached threads may have their pthread handles recycled as newer threads, causing
+	// false IsSelf reports.
+	return !m_detached && (pthread_self() == m_thread);
 }
 
 bool Threading::PersistentThread::IsRunning() const
