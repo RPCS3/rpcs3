@@ -334,8 +334,7 @@ static __forceinline void frameLimit()
 	// 
 	while( true )
 	{
-		iEnd = GetCPUTicks();
-		sDeltaTime = iEnd - uExpectedEnd;
+		sDeltaTime = GetCPUTicks() - uExpectedEnd;
 		if( sDeltaTime >= 0 ) break;
 		Timeslice();
 	}

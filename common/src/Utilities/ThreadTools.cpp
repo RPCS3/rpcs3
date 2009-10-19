@@ -144,8 +144,6 @@ void Threading::PersistentThread::Start()
 
 	if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 		throw Exception::ThreadCreationError();
-
-	m_detached = false;
 }
 
 // Returns: TRUE if the detachment was performed, or FALSE if the thread was
@@ -382,7 +380,8 @@ wxString Threading::PersistentThread::GetName() const
 // private member, and provide a new Task executor by a different name).
 void Threading::PersistentThread::OnStartInThread()
 {
-	m_running = true;
+	m_running	= true;
+	m_detached	= false;
 }
 
 void Threading::PersistentThread::_internal_execute()
@@ -433,7 +432,7 @@ void Threading::PersistentThread::_DoSetThreadName( const char* name )
 #if defined(_WINDOWS_) && defined (_MSC_VER)
 
 	// This code sample was borrowed form some obscure MSDN article.
-	// In a rare bout of sanity, it's an actual Micrsoft-published hack
+	// In a rare bout of sanity, it's an actual Microsoft-published hack
 	// that actually works!
 
 	static const int MS_VC_EXCEPTION = 0x406D1388;
@@ -441,10 +440,10 @@ void Threading::PersistentThread::_DoSetThreadName( const char* name )
 	#pragma pack(push,8)
 	struct THREADNAME_INFO
 	{
-		DWORD dwType; // Must be 0x1000.
-		LPCSTR szName; // Pointer to name (in user addr space).
-		DWORD dwThreadID; // Thread ID (-1=caller thread).
-		DWORD dwFlags; // Reserved for future use, must be zero.
+		DWORD dwType;		// Must be 0x1000.
+		LPCSTR szName;		// Pointer to name (in user addr space).
+		DWORD dwThreadID;	// Thread ID (-1=caller thread).
+		DWORD dwFlags;		// Reserved for future use, must be zero.
 	};
 	#pragma pack(pop)
 
@@ -454,13 +453,9 @@ void Threading::PersistentThread::_DoSetThreadName( const char* name )
 	info.dwThreadID	= GetCurrentThreadId();
 	info.dwFlags	= 0;
 
-	__try
-	{
+	__try {
 		RaiseException( MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info );
-	}
-	__except(EXCEPTION_EXECUTE_HANDLER)
-	{
-	}
+	} __except(EXCEPTION_EXECUTE_HANDLER) { }
 #endif
 }
 

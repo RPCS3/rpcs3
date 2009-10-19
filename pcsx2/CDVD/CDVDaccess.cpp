@@ -497,7 +497,7 @@ s32 CALLBACK NODISCdummyS32()
 	return 0;
 }
 
-void CALLBACK NODISCnewDiskCB( void (*callback)())
+void CALLBACK NODISCnewDiskCB(void (* /* callback */)())
 {
 }
 
