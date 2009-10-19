@@ -37,6 +37,9 @@ namespace YAML
 	// . Throws a ParserException on error.
 	bool Parser::GetNextDocument(Node& document)
 	{
+		if(!m_pScanner.get())
+			return false;
+		
 		// clear node
 		document.Clear();
 
@@ -130,6 +133,9 @@ namespace YAML
 
 	void Parser::PrintTokens(std::ostream& out)
 	{
+		if(!m_pScanner.get())
+			return;
+		
 		while(1) {
 			if(m_pScanner->empty())
 				break;
