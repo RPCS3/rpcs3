@@ -287,7 +287,7 @@ namespace YAML
 		params.end = (InFlowContext() ? Exp::EndScalarInFlow : Exp::EndScalar) || (Exp::BlankOrBreak + Exp::Comment);
 		params.eatEnd = false;
 		params.indent = (InFlowContext() ? 0 : GetTopIndent() + 1);
-		params.fold = FOLD_BLOCK;
+		params.fold = FOLD_FLOW;
 		params.eatLeadingWhitespace = true;
 		params.trimTrailingSpaces = true;
 		params.chomp = STRIP;
