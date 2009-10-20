@@ -136,11 +136,13 @@ static void recCTC2(s32 info)
 				MOV16ItoM((uptr)&VU0.VI[REG_FBRST].UL,g_cpuConstRegs[_Rt_].UL[0]&0x0c0c);
 				break;
 			case REG_CMSAR1: // REG_CMSAR1
-				iFlushCall(FLUSH_NOCONST);// since CALLFunc
+				iFlushCall(FLUSH_NOCONST);
 				assert( _checkX86reg(X86TYPE_VI, REG_VPU_STAT, 0) < 0 &&
 					    _checkX86reg(X86TYPE_VI, REG_TPC, 0) < 0 );
 				// Execute VU1 Micro SubRoutine
-				_callFunctionArg1((uptr)vu1ExecMicro, MEM_CONSTTAG, g_cpuConstRegs[_Rt_].UL[0]&0xffff);
+				
+				xMOV( ecx, g_cpuConstRegs[_Rt_].UL[0]&0xffff );
+				xCALL( vu1ExecMicro );
 				break;
 			default:
 			{
@@ -191,10 +193,10 @@ static void recCTC2(s32 info)
 				AND32ItoR(EAX,0x0C0C);
 				MOV16RtoM((uptr)&VU0.VI[REG_FBRST].UL,EAX);
 				break;
-			case REG_CMSAR1: // REG_CMSAR1
+			case REG_CMSAR1: // REG_CMSAR1  (Execute VU1micro Subroutine)
 				iFlushCall(FLUSH_NOCONST);
-				_eeMoveGPRtoR(EAX, _Rt_);
-				_callFunctionArg1((uptr)vu1ExecMicro, MEM_X86TAG|EAX, 0);	// Execute VU1 Micro SubRoutine
+				_eeMoveGPRtoR(ECX, _Rt_);
+				xCALL( vu1ExecMicro );
 				break;
 			default:
 			_eeMoveGPRtoM((uptr)&VU0.VI[_Fs_].UL,_Rt_);

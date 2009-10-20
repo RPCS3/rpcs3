@@ -46,7 +46,7 @@ void vu1ResetRegs()
 
 static int count;
 
-void vu1ExecMicro(u32 addr)
+void __fastcall vu1ExecMicro(u32 addr)
 {
 	while(VU0.VI[REG_VPU_STAT].UL & 0x100)
 	{

@@ -371,7 +371,7 @@ static void _DynGen_StackFrameCheck()
 	xCMP( esp, &s_store_esp );
 	xForwardJE8 skipassert_esp;
 
-	xXOR( ecx, ecx );				// 0 specifies ESI
+	xXOR( ecx, ecx );				// 0 specifies ESP
 	xMOV( edx, esp );
 	xCALL( StackFrameCheckFailed );
 	xMOV( esp, &s_store_esp );		// half-hearted frame recovery attempt!
@@ -867,6 +867,12 @@ void CheckForBIOSEnd()
 {
 	xMOV( eax, &cpuRegs.pc );
 
+	/*xCMP( eax, 0x00200008 );
+	xJE(ExitRec);
+
+	xCMP( eax, 0x00100008 );
+	xJE(ExitRec);*/
+
 	xCMP( eax, 0x00200008 );
 	xForwardJE8 CallExitRec;
 
@@ -975,7 +981,10 @@ void LoadBranchState()
 
 void iFlushCall(int flushtype)
 {
-	_freeX86regs();
+	// Free registers that are not saved across function calls (x86-32 ABI):
+	_freeX86reg(EAX);
+	_freeX86reg(ECX);
+	_freeX86reg(EDX);
 
 	if( flushtype & FLUSH_FREE_XMM )
 		_freeXMMregs();
@@ -1076,6 +1085,8 @@ static u32 eeScaleBlockCycles()
 //   setting "branch = 2";
 static void iBranchTest(u32 newpc)
 {
+	_DynGen_StackFrameCheck();
+	
 	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1306,7 +1317,7 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect. 
 
 #ifdef _MSC_VER
-	__asm leave; __asm jmp [ExitRecompiledCode]
+	__asm leave __asm jmp [ExitRecompiledCode]
 #else
 	__asm__ __volatile__( "leave\n jmp *%[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
 #endif
@@ -1321,7 +1332,7 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 	mmap_MarkCountedRamPage( start );
 
 #ifdef _MSC_VER
-	__asm leave; __asm jmp [ExitRecompiledCode]
+	__asm leave __asm jmp [ExitRecompiledCode]
 #else
 	__asm__ __volatile__( "leave\n jmp *%[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
 #endif

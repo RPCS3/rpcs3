@@ -31,11 +31,6 @@ typedef int x86IntRegType;
 #define EBP 5
 #define ESP 4
 
-#define X86ARG1 EAX
-#define X86ARG2 ECX
-#define X86ARG3 EDX
-#define X86ARG4 EBX
-
 #define MM0 0
 #define MM1 1
 #define MM2 2

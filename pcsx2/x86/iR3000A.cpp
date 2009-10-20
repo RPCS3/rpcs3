@@ -350,7 +350,10 @@ void _psxMoveGPRtoRm(x86IntRegType to, int fromgpr)
 
 void _psxFlushCall(int flushtype)
 {
-	_freeX86regs();
+	// x86-32 ABI : These registers are not preserved across calls:
+	_freeX86reg( EAX );
+	_freeX86reg( ECX );
+	_freeX86reg( EDX );
 
 	if( flushtype & FLUSH_CACHED_REGS )
 		_psxFlushConstRegs();
@@ -436,11 +439,6 @@ void psxRecompileCodeConst1(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
 				_psxFlushCall(FLUSH_NODESTROY);
 				CALLFunc((uptr)zeroEx);
 			}
-			// Bios Call: Force the IOP to do a Branch Test ASAP.
-			// Important! This helps prevent game freeze-ups during boot-up and stage loads.
-			// Note: Fixes to cdvd have removed the need for this code.
-			//MOV32MtoR( EAX, (uptr)&psxRegs.cycle );
-			//MOV32RtoM( (uptr)&g_psxNextBranchCycle, EAX );
 		}
         return;
     }
@@ -846,7 +844,9 @@ void rpsxSYSCALL()
 	MOV32ItoM((uptr)&psxRegs.pc, psxpc - 4);
 	_psxFlushCall(FLUSH_NODESTROY);
 
-	_callFunctionArg2((uptr)psxException, MEM_CONSTTAG, MEM_CONSTTAG, 0x20, psxbranch==1);
+	xMOV( ecx, 0x20 );			// exception code
+	xMOV( edx, psxbranch==1 );	// branch delay slot?
+	xCALL( psxException );
 
 	CMP32ItoM((uptr)&psxRegs.pc, psxpc-4);
 	j8Ptr[0] = JE8(0);
@@ -867,7 +867,9 @@ void rpsxBREAK()
 	MOV32ItoM((uptr)&psxRegs.pc, psxpc - 4);
 	_psxFlushCall(FLUSH_NODESTROY);
 
-	_callFunctionArg2((uptr)psxBREAK, MEM_CONSTTAG, MEM_CONSTTAG, 0x24, psxbranch==1);
+	xMOV( ecx, 0x24 );			// exception code
+	xMOV( edx, psxbranch==1 );	// branch delay slot?
+	xCALL( psxException );
 
 	CMP32ItoM((uptr)&psxRegs.pc, psxpc-4);
 	j8Ptr[0] = JE8(0);

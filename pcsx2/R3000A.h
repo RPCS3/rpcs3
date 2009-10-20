@@ -194,11 +194,11 @@ extern R3000Acpu *psxCpu;
 extern R3000Acpu psxInt;
 extern R3000Acpu psxRec;
 
-void psxReset();
-void psxShutdown();
-void psxException(u32 code, u32 step);
+extern void psxReset();
+extern void psxShutdown();
+extern void __fastcall psxException(u32 code, u32 step);
 extern void psxBranchTest();
-void psxMemReset();
+extern void psxMemReset();
 
 // Subsets
 extern void (*psxBSC[64])();

@@ -38,7 +38,7 @@ __releaseinline void UpdateCP0Status() {
 	cpuTestHwInts();
 }
 
-void WriteCP0Status(u32 value) {
+void __fastcall WriteCP0Status(u32 value) {
 	cpuRegs.CP0.n.Status.val = value;
     UpdateCP0Status();
 }
@@ -221,7 +221,7 @@ __forceinline void COP0_UpdatePCCR()
 	//if( cpuRegs.CP0.n.Status.b.ERL || !cpuRegs.PERF.n.pccr.b.CTE ) return;
 
 	// TODO : Implement memory mode checks here (kernel/super/user)
-	// For now we just assume user mode.
+	// For now we just assume kernel mode.
 	
 	if( cpuRegs.PERF.n.pccr.val & 0xf )
 	{

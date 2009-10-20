@@ -43,6 +43,7 @@
 #include "AppConfig.h"
 
 using namespace std;
+using namespace x86Emitter;
 
 // temporary externs
 extern void iDumpVU0Registers();
@@ -2526,8 +2527,8 @@ static void SuperVUAssignRegs()
 int s_writeQ, s_writeP;
 
 // declare the saved registers
-uptr s_vu1esp, s_callstack;//, s_vu1esp
-uptr s_vu1ebp, s_vuebx, s_vuedi, s_vu1esi;
+uptr s_vu1esp, s_callstack;
+uptr s_vuebx, s_vuedi, s_vu1esi;
 
 static int s_recWriteQ, s_recWriteP; // wait times during recompilation
 static int s_needFlush; // first bit - Q, second bit - P, third bit - Q has been written, fourth bit - P has been written
@@ -2576,6 +2577,11 @@ void SuperVUCleanupProgram(u32 startpc, int vuindex)
 // entry point of all vu programs from emulator calls
 __declspec(naked) void SuperVUExecuteProgram(u32 startpc, int vuindex)
 {
+	// Stackframe setup for the recompiler:
+	// We rewind the stack 4 bytes, which places the parameters of this function before
+	// any calls we might make from recompiled code.  The return address for this function
+	// call is subsequently stored in s_callstack.
+
 	__asm
 	{
 		mov eax, dword ptr [esp]
@@ -2585,20 +2591,15 @@ __declspec(naked) void SuperVUExecuteProgram(u32 startpc, int vuindex)
 		call SuperVUGetProgram
 
 		// save cpu state
-		mov s_vu1ebp, ebp
-		mov s_vu1esi, esi // have to save even in Release
-		mov s_vuedi, edi // have to save even in Release
+		//mov s_vu1ebp, ebp
+		mov s_vu1esi, esi
+		mov s_vuedi, edi
 		mov s_vuebx, ebx
-	}
+
 #ifdef PCSX2_DEBUG
-	__asm
-	{
 		mov s_vu1esp, esp
-	}
 #endif
 
-	__asm
-	{
 		//stmxcsr s_ssecsr
 		ldmxcsr g_sseVUMXCSR
 
@@ -2618,7 +2619,7 @@ __declspec(naked) static void SuperVUEndProgram()
 		// restore cpu state
 		ldmxcsr g_sseMXCSR
 
-		mov ebp, s_vu1ebp
+		//mov ebp, s_vu1ebp
 		mov esi, s_vu1esi
 		mov edi, s_vuedi
 		mov ebx, s_vuebx
@@ -3105,6 +3106,8 @@ void VuBaseBlock::Recompile()
 			_x86regs* endx86 = &s_vecRegArray[nEndx86];
 			for (int i = 0; i < iREGCNT_GPR; ++i)
 			{
+				if( i == ESP || i == EBP ) continue;
+
 				if (endx86[i].inuse)
 				{
 
@@ -3652,7 +3655,8 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 		TEST32ItoM((uptr)&VU0.VI[REG_FBRST].UL, s_vu ? 0x400 : 0x004);
 		u8* ptr = JZ8(0);
 		OR32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, s_vu ? 0x200 : 0x002);
-		_callFunctionArg1((uptr)hwIntcIrq, MEM_CONSTTAG, s_vu ? INTC_VU1 : INTC_VU0);
+		xMOV( ecx, s_vu ? INTC_VU1 : INTC_VU0 );
+		xCALL( hwIntcIrq );
 		x86SetJ8(ptr);
 	}
 	if (ptr[1] & 0x08000000)   // T flag
@@ -3660,7 +3664,8 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 		TEST32ItoM((uptr)&VU0.VI[REG_FBRST].UL, s_vu ? 0x800 : 0x008);
 		u8* ptr = JZ8(0);
 		OR32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, s_vu ? 0x400 : 0x004);
-		_callFunctionArg1((uptr)hwIntcIrq, MEM_CONSTTAG, s_vu ? INTC_VU1 : INTC_VU0);
+		xMOV( ecx, s_vu ? INTC_VU1 : INTC_VU0 );
+		xCALL( hwIntcIrq );
 		x86SetJ8(ptr);
 	}
 
@@ -4379,7 +4384,7 @@ void recVUMI_XGKICK(VURegs *VU, int info)
 		recVUMI_XGKICK_(VU);
 	}
 
-	int isreg = _allocX86reg(X86ARG2, X86TYPE_VI | (s_vu ? X86TYPE_VU1 : 0), _Is_, MODE_READ);
+	int isreg = _allocX86reg(ECX, X86TYPE_VI | (s_vu ? X86TYPE_VU1 : 0), _Is_, MODE_READ);
 	_freeX86reg(isreg); // flush
 	x86regs[isreg].inuse = 1;
 	x86regs[isreg].type = X86TYPE_VITEMP;

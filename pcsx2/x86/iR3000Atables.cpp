@@ -594,311 +594,13 @@ void rpsxDIVU_(int info) { rpsxDIVsuper(info, 0); }
 
 PSXRECOMPILE_CONSTCODE3_PENALTY(DIVU, 1, psxInstCycles_Div);
 
-//// LoadStores
-#ifdef PCSX2_VIRTUAL_MEM
-
-// VM load store functions (fastest)
-
-//#define REC_SLOWREAD
-//#define REC_SLOWWRITE
-
-int _psxPrepareReg(int gprreg)
-{
-	return 0;
-}
-
-static u32 s_nAddMemOffset = 0;
-
-static __forceinline void SET_HWLOC_R3000A() { 
-	x86SetJ8(j8Ptr[0]); 
-	SHR32ItoR(ECX, 3); 
-	if( s_nAddMemOffset ) ADD32ItoR(ECX, s_nAddMemOffset); 
-} 
-
-int rpsxSetMemLocation(int regs, int mmreg)
-{
-	s_nAddMemOffset = 0;
-	MOV32MtoR( ECX, (int)&psxRegs.GPR.r[ regs ] );
-
-	if ( _Imm_ != 0 ) ADD32ItoR( ECX, _Imm_ );
-
-	SHL32ItoR(ECX, 3);
-	j8Ptr[0] = JS8(0);
-	SHR32ItoR(ECX, 3);
-	AND32ItoR(ECX, 0x1fffff); // 2Mb
-	return 1;
-}
-
-void recLoad32(u32 bit, u32 sign)
-{
-	int mmreg = -1;
-
-#ifdef REC_SLOWREAD
-	_psxFlushConstReg(_Rs_);
-#else
-	if( PSX_IS_CONST1( _Rs_ ) ) {
-		// do const processing
-		int ineax = 0;
-
-		_psxOnWriteReg(_Rt_);
-		mmreg = EAX;
-
-		switch(bit) {
-			case 8: ineax = psxRecMemConstRead8(mmreg, g_psxConstRegs[_Rs_]+_Imm_, sign); break;
-			case 16:
-				assert( (g_psxConstRegs[_Rs_]+_Imm_) % 2 == 0 );
-				ineax = psxRecMemConstRead16(mmreg, g_psxConstRegs[_Rs_]+_Imm_, sign);
-				break;
-			case 32:
-				assert( (g_psxConstRegs[_Rs_]+_Imm_) % 4 == 0 );
-				ineax = psxRecMemConstRead32(mmreg, g_psxConstRegs[_Rs_]+_Imm_);
-				break;
-		}
-
-		if( _Rt_ ) MOV32RtoM( (int)&psxRegs.GPR.r[ _Rt_ ], EAX );
-	}
-	else
-#endif
-	{
-		int dohw;
-		int mmregs = _psxPrepareReg(_Rs_);
-
-		_psxOnWriteReg(_Rt_);
-		_psxDeleteReg(_Rt_, 0);
-		
-		dohw = rpsxSetMemLocation(_Rs_, mmregs);
-
-		switch(bit) {
-			case 8: 
-				if( sign ) MOVSX32Rm8toROffset(EAX, ECX, PS2MEM_PSX_+s_nAddMemOffset);
-				else MOVZX32Rm8toROffset(EAX, ECX, PS2MEM_PSX_+s_nAddMemOffset);
-				break;
-			case 16:
-				if( sign ) MOVSX32Rm16toROffset(EAX, ECX, PS2MEM_PSX_+s_nAddMemOffset);
-				else MOVZX32Rm16toROffset(EAX, ECX, PS2MEM_PSX_+s_nAddMemOffset);
-				break;
-			case 32:
-				MOV32RmtoROffset(EAX, ECX, PS2MEM_PSX_+s_nAddMemOffset);
-				break;
-		}
-
-		if( dohw ) {
-			j8Ptr[1] = JMP8(0);
-
-			SET_HWLOC_R3000A();
-
-			switch(bit) {
-				case 8:
-					CALLFunc( (int)psxRecMemRead8 );
-					if( sign ) MOVSX32R8toR(EAX, EAX);
-					else MOVZX32R8toR(EAX, EAX);
-					break;
-				case 16:
-					CALLFunc( (int)psxRecMemRead16 );
-					if( sign ) MOVSX32R16toR(EAX, EAX);
-					else MOVZX32R16toR(EAX, EAX);
-					break;
-				case 32:
-					CALLFunc( (int)psxRecMemRead32 );
-					break;
-			}
-			
-			x86SetJ8(j8Ptr[1]);
-		}
-
-		if( _Rt_ )
-			MOV32RtoM( (int)&psxRegs.GPR.r[ _Rt_ ], EAX );
-	}
-}
-
-void rpsxLB() { recLoad32(8, 1); }
-void rpsxLBU() { recLoad32(8, 0); }
-void rpsxLH() { recLoad32(16, 1); }
-void rpsxLHU() { recLoad32(16, 0); }
-void rpsxLW() { recLoad32(32, 0); }
-
-extern void rpsxMemConstClear(u32 mem);
-
-// check if mem is executable, and clear it
-__declspec(naked) void rpsxWriteMemClear()
-{
-	_asm {
-		mov edx, ecx
-		shr edx, 14
-		and dl, 0xfc
-		add edx, psxRecLUT
-		test dword ptr [edx], 0xffffffff
-		jnz Clear32
-		ret
-Clear32:
-		// recLUT[mem>>16] + (mem&0xfffc)
-		mov edx, dword ptr [edx]
-		mov eax, ecx
-		and eax, 0xfffc
-		// edx += 2*eax
-		shl eax, 1
-		add edx, eax
-		cmp dword ptr [edx], 0
-		je ClearRet
-		sub esp, 4
-		mov dword ptr [esp], edx
-		call psxRecClearMem
-		add esp, 4
-ClearRet:
-		ret
-	}
-}
-
-extern u32 s_psxBlockCycles;
-void recStore(int bit)
-{
-#ifdef REC_SLOWWRITE
-	_psxFlushConstReg(_Rs_);
-#else
-	if( PSX_IS_CONST1( _Rs_ ) ) {
-		u8* pjmpok;
-		u32 addr = g_psxConstRegs[_Rs_]+_Imm_;
-		int doclear = 0;
-
-		if( !(addr & 0x10000000) ) {
-			// check g_psxWriteOk
-			CMP32ItoM((uptr)&g_psxWriteOk, 0);
-			pjmpok = JE8(0);
-		}
-
-		switch(bit) {
-			case 8:
-				if( PSX_IS_CONST1(_Rt_) ) doclear = psxRecMemConstWrite8(addr, MEM_PSXCONSTTAG|(_Rt_<<16));
-				else {
-					_psxMoveGPRtoR(EAX, _Rt_);
-					doclear = psxRecMemConstWrite8(addr, EAX);
-				}
-				
-				break;
-
-			case 16:
-				assert( (addr)%2 == 0 );
-				if( PSX_IS_CONST1(_Rt_) ) doclear = psxRecMemConstWrite16(addr, MEM_PSXCONSTTAG|(_Rt_<<16));
-				else {
-					_psxMoveGPRtoR(EAX, _Rt_);
-					doclear = psxRecMemConstWrite16(addr, EAX);
-				}
-
-				break;
-
-			case 32:
-				assert( (addr)%4 == 0 );
-				if( PSX_IS_CONST1(_Rt_) ) doclear = psxRecMemConstWrite32(addr, MEM_PSXCONSTTAG|(_Rt_<<16));
-				else {
-					_psxMoveGPRtoR(EAX, _Rt_);
-					doclear = psxRecMemConstWrite32(addr, EAX);
-				}
-
-				break;
-		}
-
-		if( !(addr & 0x10000000) ) {
-			if( doclear ) rpsxMemConstClear((addr)&~3);
-			x86SetJ8(pjmpok);
-		}
-	}
-	else
-#endif
-	{
-		int dohw;
-		int mmregs = _psxPrepareReg(_Rs_);
-		dohw = rpsxSetMemLocation(_Rs_, mmregs);
-
-		CMP32ItoM((uptr)&g_psxWriteOk, 0);
-		u8* pjmpok = JE8(0);
-
-		if( PSX_IS_CONST1( _Rt_ ) ) {
-			switch(bit) {
-				case 8: MOV8ItoRmOffset(ECX, g_psxConstRegs[_Rt_], PS2MEM_PSX_+s_nAddMemOffset); break;
-				case 16: MOV16ItoRmOffset(ECX, g_psxConstRegs[_Rt_], PS2MEM_PSX_+s_nAddMemOffset); break;
-				case 32: MOV32ItoRmOffset(ECX, g_psxConstRegs[_Rt_], PS2MEM_PSX_+s_nAddMemOffset); break;
-			}
-		}
-		else {
-			switch(bit) {
-				case 8:
-					MOV8MtoR(EAX, (int)&psxRegs.GPR.r[ _Rt_ ]);
-					MOV8RtoRmOffset(ECX, EAX, PS2MEM_PSX_+s_nAddMemOffset);
-					break;
-
-				case 16:
-					MOV16MtoR(EAX, (int)&psxRegs.GPR.r[ _Rt_ ]);
-					MOV16RtoRmOffset(ECX, EAX, PS2MEM_PSX_+s_nAddMemOffset);
-					break;
-
-				case 32:
-					MOV32MtoR(EAX, (int)&psxRegs.GPR.r[ _Rt_ ]);
-					MOV32RtoRmOffset(ECX, EAX, PS2MEM_PSX_+s_nAddMemOffset);
-					break;
-			}
-		}
-
-		if( s_nAddMemOffset ) ADD32ItoR(ECX, s_nAddMemOffset);
-		CMP32MtoR(ECX, (uptr)&g_psxMaxRecMem);
-		
-		j8Ptr[1] = JAE8(0);
-
-		if( bit < 32 ) AND8ItoR(ECX, 0xfc);
-		CALLFunc((u32)rpsxWriteMemClear);
-
-		if( dohw ) {
-			j8Ptr[2] = JMP8(0);
-
-			SET_HWLOC_R3000A();
-
-			if( PSX_IS_CONST1(_Rt_) ) {
-				switch(bit) {
-					case 8: MOV8ItoR(EAX, g_psxConstRegs[_Rt_]); break;
-					case 16: MOV16ItoR(EAX, g_psxConstRegs[_Rt_]); break;
-					case 32: MOV32ItoR(EAX, g_psxConstRegs[_Rt_]); break;
-				}
-			}
-			else {
-				switch(bit) {
-					case 8: MOV8MtoR(EAX, (int)&psxRegs.GPR.r[ _Rt_ ]); break;
-					case 16: MOV16MtoR(EAX, (int)&psxRegs.GPR.r[ _Rt_ ]); break;
-					case 32: MOV32MtoR(EAX, (int)&psxRegs.GPR.r[ _Rt_ ]); break;
-				}
-			}
-
-			if( s_nAddMemOffset != 0 ) ADD32ItoR(ECX, s_nAddMemOffset);
-
-			// some type of hardware write
-			switch(bit) {
-				case 8: CALLFunc( (int)psxRecMemWrite8 ); break;
-				case 16: CALLFunc( (int)psxRecMemWrite16 ); break;
-				case 32: CALLFunc( (int)psxRecMemWrite32 ); break;
-			}
-
-			x86SetJ8(j8Ptr[2]);
-		}
-
-		x86SetJ8(j8Ptr[1]);
-		x86SetJ8(pjmpok);
-	}
-}
-
-void rpsxSB() { recStore(8); }
-void rpsxSH() { recStore(16); }
-void rpsxSW() { recStore(32); }
-
-REC_FUNC(LWL);
-REC_FUNC(LWR);
-REC_FUNC(SWL);
-REC_FUNC(SWR);
-
-#else
-
 // TLB loadstore functions
 REC_FUNC(LWL);
 REC_FUNC(LWR);
 REC_FUNC(SWL);
 REC_FUNC(SWR);
+
+using namespace x86Emitter;
 
 static void rpsxLB()
 {
@@ -906,9 +608,9 @@ static void rpsxLB()
 	_psxOnWriteReg(_Rt_);
 	_psxDeleteReg(_Rt_, 0);
 
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
-    _callFunctionArg1((uptr)iopMemRead8, X86ARG1|MEM_X86TAG, 0);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
+	xCALL( iopMemRead8 );		// returns value in EAX
 	if (_Rt_) {
 		MOVSX32R8toR(EAX, EAX);
 		MOV32RtoM((uptr)&psxRegs.GPR.r[_Rt_], EAX);
@@ -922,9 +624,9 @@ static void rpsxLBU()
 	_psxOnWriteReg(_Rt_);
 	_psxDeleteReg(_Rt_, 0);
 
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
-	_callFunctionArg1((uptr)iopMemRead8, X86ARG1|MEM_X86TAG, 0);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
+	xCALL( iopMemRead8 );		// returns value in EAX
 	if (_Rt_) {
 		MOVZX32R8toR(EAX, EAX);
 		MOV32RtoM((uptr)&psxRegs.GPR.r[_Rt_], EAX);
@@ -938,9 +640,9 @@ static void rpsxLH()
 	_psxOnWriteReg(_Rt_);
 	_psxDeleteReg(_Rt_, 0);
 
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
-	_callFunctionArg1((uptr)iopMemRead16, X86ARG1|MEM_X86TAG, 0);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
+	xCALL( iopMemRead16 );		// returns value in EAX
 	if (_Rt_) {
 		MOVSX32R16toR(EAX, EAX);
 		MOV32RtoM((uptr)&psxRegs.GPR.r[_Rt_], EAX);
@@ -954,9 +656,9 @@ static void rpsxLHU()
 	_psxOnWriteReg(_Rt_);
 	_psxDeleteReg(_Rt_, 0);
 
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
-	_callFunctionArg1((uptr)iopMemRead16, X86ARG1|MEM_X86TAG, 0);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
+	xCALL( iopMemRead16 );		// returns value in EAX
 	if (_Rt_) {
 		MOVZX32R16toR(EAX, EAX);
 		MOV32RtoM((uptr)&psxRegs.GPR.r[_Rt_], EAX);
@@ -971,13 +673,13 @@ static void rpsxLW()
 	_psxDeleteReg(_Rt_, 0);
 
 	_psxFlushCall(FLUSH_EVERYTHING);
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
 
-	TEST32ItoR(X86ARG1, 0x10000000);
+	TEST32ItoR(ECX, 0x10000000);
 	j8Ptr[0] = JZ8(0);
 
-	_callFunctionArg1((uptr)iopMemRead32, X86ARG1|MEM_X86TAG, 0);
+	xCALL( iopMemRead32 );		// returns value in EAX
 	if (_Rt_) {
 		MOV32RtoM((uptr)&psxRegs.GPR.r[_Rt_], EAX);
 	}
@@ -985,11 +687,11 @@ static void rpsxLW()
 	x86SetJ8(j8Ptr[0]);
 
 	// read from psM directly
-	AND32ItoR(X86ARG1, 0x1fffff);
-	ADD32ItoR(X86ARG1, (uptr)psxM);
+	AND32ItoR(ECX, 0x1fffff);
+	ADD32ItoR(ECX, (uptr)psxM);
 
-	MOV32RmtoR( X86ARG1, X86ARG1 );
-	MOV32RtoM( (uptr)&psxRegs.GPR.r[_Rt_], X86ARG1);
+	MOV32RmtoR( ECX, ECX );
+	MOV32RtoM( (uptr)&psxRegs.GPR.r[_Rt_], ECX);
 
 	x86SetJ8(j8Ptr[1]);
 	PSX_DEL_CONST(_Rt_);
@@ -1000,9 +702,10 @@ static void rpsxSB()
 	_psxDeleteReg(_Rs_, 1);
 	_psxDeleteReg(_Rt_, 1);
 
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
-	_callFunctionArg2((uptr)iopMemWrite8, X86ARG1|MEM_X86TAG, MEM_MEMORYTAG, 0, (uptr)&psxRegs.GPR.r[_Rt_]);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
+	xMOV( edx, &psxRegs.GPR.r[_Rt_] );
+	xCALL( iopMemWrite8 );
 }
 
 static void rpsxSH()
@@ -1010,9 +713,10 @@ static void rpsxSH()
 	_psxDeleteReg(_Rs_, 1);
 	_psxDeleteReg(_Rt_, 1);
 
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
-	_callFunctionArg2((uptr)iopMemWrite16, X86ARG1|MEM_X86TAG, MEM_MEMORYTAG, 0, (uptr)&psxRegs.GPR.r[_Rt_]);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
+	xMOV( edx, &psxRegs.GPR.r[_Rt_] );
+	xCALL( iopMemWrite16 );
 }
 
 static void rpsxSW()
@@ -1020,12 +724,11 @@ static void rpsxSW()
 	_psxDeleteReg(_Rs_, 1);
 	_psxDeleteReg(_Rt_, 1);
 
-	MOV32MtoR(X86ARG1, (uptr)&psxRegs.GPR.r[_Rs_]);
-	if (_Imm_) ADD32ItoR(X86ARG1, _Imm_);
-	_callFunctionArg2((uptr)iopMemWrite32, X86ARG1|MEM_X86TAG, MEM_MEMORYTAG, 0, (uptr)&psxRegs.GPR.r[_Rt_]);
+	MOV32MtoR(ECX, (uptr)&psxRegs.GPR.r[_Rs_]);
+	if (_Imm_) ADD32ItoR(ECX, _Imm_);
+	xMOV( edx, &psxRegs.GPR.r[_Rt_] );
+	xCALL( iopMemWrite32 );
 }
-
-#endif // end load store
 
 //// SLL
 void rpsxSLL_const()

@@ -236,7 +236,8 @@ void _flushConstRegs()
 int _allocX86reg(int x86reg, int type, int reg, int mode)
 {
 	int i;
-	assert( reg >= 0 && reg < 32 );
+	pxAssertDev( reg >= 0 && reg < 32, "Register index out of bounds." );
+	pxAssertDev( x86reg != ESP && x86reg != EBP, "Allocation of ESP/EBP is not allowed!" );
 
 	// don't alloc EAX and ESP,EBP if MODE_NOFRAME
 	int oldmode = mode;
@@ -448,14 +449,10 @@ void _freeX86reg(int x86reg)
 	x86regs[x86reg].inuse = 0;
 }
 
-void _freeX86regs() {
-	int i;
-
-	for (i=0; i<iREGCNT_GPR; i++) {
-		if (!x86regs[i].inuse) continue;
-
+void _freeX86regs()
+{
+	for (int i=0; i<iREGCNT_GPR; i++)
 		_freeX86reg(i);
-	}
 }
 
 // MMX Caching
@@ -861,88 +858,6 @@ void SetFPUstate() {
 
 		x86FpuState = FPU_STATE;
 	}
-}
-
-__forceinline void _callPushArg(u32 arg, uptr argmem)
-{
-	if( IS_X86REG(arg) )  {
-		PUSH32R(arg&0xff);
-	}
-	else if( IS_CONSTREG(arg) )  {
-		PUSH32I(argmem);
-	}
-	else if( IS_GPRREG(arg) ) {
-		SUB32ItoR(ESP, 4);
-		_eeMoveGPRtoRm(ESP, arg&0xff);
-	}
-	else if( IS_XMMREG(arg) ) {
-		SUB32ItoR(ESP, 4);
-		SSEX_MOVD_XMM_to_Rm(ESP, arg&0xf);
-	}
-	else if( IS_MMXREG(arg) ) {
-		SUB32ItoR(ESP, 4);
-		MOVD32MMXtoRm(ESP, arg&0xf);
-	}
-	else if( IS_EECONSTREG(arg) ) {
-		PUSH32I(g_cpuConstRegs[(arg>>16)&0x1f].UL[0]);
-	}
-	else if( IS_PSXCONSTREG(arg) ) {
-		PUSH32I(g_psxConstRegs[(arg>>16)&0x1f]);
-	}
-	else if( IS_MEMORYREG(arg) ) {
-	    PUSH32M(argmem);
-	}
-	else {
-		assert( (arg&0xfff0) == 0 );
-		// assume it is a GPR reg
-		PUSH32R(arg&0xf);
-	}
-}
-
-__forceinline void _callFunctionArg1(uptr fn, u32 arg1, uptr arg1mem)
-{
-	_callPushArg(arg1, arg1mem);
-	CALLFunc((uptr)fn);
-	ADD32ItoR(ESP, 4);
-}
-
-__forceinline void _callFunctionArg2(uptr fn, u32 arg1, u32 arg2, uptr arg1mem, uptr arg2mem)
-{
-	_callPushArg(arg2, arg2mem);
-	_callPushArg(arg1, arg1mem);
-	CALLFunc((uptr)fn);
-	ADD32ItoR(ESP, 8);
-}
-
-__forceinline void _callFunctionArg3(uptr fn, u32 arg1, u32 arg2, u32 arg3, uptr arg1mem, uptr arg2mem, uptr arg3mem)
-{
-	_callPushArg(arg3, arg3mem);
-	_callPushArg(arg2, arg2mem);
-	_callPushArg(arg1, arg1mem);
-	CALLFunc((uptr)fn);
-	ADD32ItoR(ESP, 12);
-}
-
-void _recPushReg(int mmreg)
-{
-	if( IS_XMMREG(mmreg) ) {
-		SUB32ItoR(ESP, 4);
-		SSEX_MOVD_XMM_to_Rm(ESP, mmreg&0xf);
-	}
-	else if( IS_MMXREG(mmreg) ) {
-		SUB32ItoR(ESP, 4);
-		MOVD32MMXtoRm(ESP, mmreg&0xf);
-	}
-	else if( IS_EECONSTREG(mmreg) ) {
-		PUSH32I(g_cpuConstRegs[(mmreg>>16)&0x1f].UL[0]);
-	}
-	else if( IS_PSXCONSTREG(mmreg) ) {
-		PUSH32I(g_psxConstRegs[(mmreg>>16)&0x1f]);
-	}
-	else {
-		assert( (mmreg&0xfff0) == 0 );
-		PUSH32R(mmreg);
-    }
 }
 
 void _signExtendSFtoM(u32 mem)
