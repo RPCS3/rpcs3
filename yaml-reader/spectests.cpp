@@ -17,6 +17,12 @@ namespace {
 }
 
 #define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
+#define PARSE(doc, input) \
+	std::stringstream stream(input);\
+	YAML::Parser parser(stream);\
+	YAML::Node doc;\
+	parser.GetNextDocument(doc)
+#define PARSE_NEXT(doc) parser.GetNextDocument(doc)
 
 namespace Test {
 	namespace {
@@ -47,11 +53,8 @@ namespace Test {
 				"- Mark McGwire\n"
 				"- Sammy Sosa\n"
 				"- Ken Griffey";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0] == "Mark McGwire");
 			YAML_ASSERT(doc[1] == "Sammy Sosa");
@@ -65,11 +68,8 @@ namespace Test {
 				"hr:  65    # Home runs\n"
 				"avg: 0.278 # Batting average\n"
 				"rbi: 147   # Runs Batted In";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
 
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["hr"] == "65");
 			YAML_ASSERT(doc["avg"] == "0.278");
@@ -88,11 +88,8 @@ namespace Test {
 				"- New York Mets\n"
 				"- Chicago Cubs\n"
 				"- Atlanta Braves";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["american"].size() == 3);
 			YAML_ASSERT(doc["american"][0] == "Boston Red Sox");
@@ -117,11 +114,8 @@ namespace Test {
 				"  name: Sammy Sosa\n"
 				"  hr:   63\n"
 				"  avg:  0.288";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0].size() == 3);
 			YAML_ASSERT(doc[0]["name"] == "Mark McGwire");
@@ -141,11 +135,8 @@ namespace Test {
 				"- [name        , hr, avg  ]\n"
 				"- [Mark McGwire, 65, 0.278]\n"
 				"- [Sammy Sosa  , 63, 0.288]";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].size() == 3);
 			YAML_ASSERT(doc[0][0] == "name");
@@ -171,11 +162,8 @@ namespace Test {
 				"    hr: 63,\n"
 				"    avg: 0.288\n"
 				"  }";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["Mark McGwire"].size() == 2);
 			YAML_ASSERT(doc["Mark McGwire"]["hr"] == "65");
@@ -200,17 +188,14 @@ namespace Test {
 				"---\n"
 				"- Chicago Cubs\n"
 				"- St Louis Cardinals";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0] == "Mark McGwire");
 			YAML_ASSERT(doc[1] == "Sammy Sosa");
 			YAML_ASSERT(doc[2] == "Ken Griffey");
-			
-			parser.GetNextDocument(doc);
+
+			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0] == "Chicago Cubs");
 			YAML_ASSERT(doc[1] == "St Louis Cardinals");
@@ -231,17 +216,14 @@ namespace Test {
 				"player: Sammy Sosa\n"
 				"action: grand slam\n"
 				"...";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["time"] == "20:03:20");
 			YAML_ASSERT(doc["player"] == "Sammy Sosa");
 			YAML_ASSERT(doc["action"] == "strike (miss)");
-			
-			parser.GetNextDocument(doc);
+
+			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["time"] == "20:03:47");
 			YAML_ASSERT(doc["player"] == "Sammy Sosa");
@@ -261,11 +243,8 @@ namespace Test {
 				"  # 1998 rbi ranking\n"
 				"  - Sammy Sosa\n"
 				"  - Ken Griffey";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["hr"].size() == 2);
 			YAML_ASSERT(doc["hr"][0] == "Mark McGwire");
@@ -288,11 +267,8 @@ namespace Test {
 				"rbi:\n"
 				"  - *SS # Subsequent occurrence\n"
 				"  - Ken Griffey";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["hr"].size() == 2);
 			YAML_ASSERT(doc["hr"][0] == "Mark McGwire");
@@ -331,11 +307,8 @@ namespace Test {
 				"    Atlanta Braves ]\n"
 				": [ 2001-07-02, 2001-08-12,\n"
 				"    2001-08-14 ]";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
 
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago cubs")].size() == 1);
 			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago cubs")][0] == "2001-07-23");
@@ -358,11 +331,8 @@ namespace Test {
 				"  quantity: 4\n"
 				"- item    : Big Shoes\n"
 				"  quantity: 1";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].size() == 2);
 			YAML_ASSERT(doc[0]["item"] == "Super Hoop");
@@ -384,11 +354,8 @@ namespace Test {
 				"--- |\n"
 				"  \\//||\\/||\n"
 				"  // ||  ||__";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc ==
 						"\\//||\\/||\n"
 						"// ||  ||__");
@@ -403,11 +370,8 @@ namespace Test {
 				"  Mark McGwire's\n"
 				"  year was crippled\n"
 				"  by a knee injury.";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc == "Mark McGwire's year was crippled by a knee injury.");
 			return true;
 		}
@@ -424,11 +388,8 @@ namespace Test {
 				"   0.288 Batting Average\n"
 				" \n"
 				" What a year!";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc ==
 						"Sammy Sosa completed another fine season with great stats.\n\n"
 						"  63 Home Runs\n"
@@ -448,11 +409,8 @@ namespace Test {
 				"stats: |\n"
 				"  65 Home Runs\n"
 				"  0.278 Batting Average\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["name"] == "Mark McGwire");
 			YAML_ASSERT(doc["accomplishment"] == "Mark set a major league home run record in 1998.\n");
@@ -471,11 +429,8 @@ namespace Test {
 				"single: '\"Howdy!\" he cried.'\n"
 				"quoted: ' # Not a ''comment''.'\n"
 				"tie-fighter: '|\\-*-/|'";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 6);
 			YAML_ASSERT(doc["unicode"] == "Sosa did fine.\xe2\x98\xba");
 			YAML_ASSERT(doc["control"] == "\b1998\t1999\t2000\n");
@@ -496,11 +451,8 @@ namespace Test {
 				"\n"
 				"quoted: \"So does this\n"
 				"  quoted scalar.\\n\"";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["plain"] == "This unquoted scalar spans many lines.");
 			YAML_ASSERT(doc["quoted"] == "So does this quoted scalar.\n");
@@ -542,11 +494,8 @@ namespace Test {
 				"    Late afternoon is best.\n"
 				"    Backup contact is Nancy\n"
 				"    Billsmer @ 338-4338.";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 8);
 			YAML_ASSERT(doc["invoice"] == 34843);
 			YAML_ASSERT(doc["date"] == "2001-01-23");
@@ -613,23 +562,20 @@ namespace Test {
 				"    line: 58\n"
 				"    code: |-\n"
 				"      foo = bar";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["Time"] == "2001-11-23 15:01:42 -5");
 			YAML_ASSERT(doc["User"] == "ed");
 			YAML_ASSERT(doc["Warning"] == "This is an error message for the log file");
-			
-			parser.GetNextDocument(doc);
+
+			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["Time"] == "2001-11-23 15:02:31 -5");
 			YAML_ASSERT(doc["User"] == "ed");
 			YAML_ASSERT(doc["Warning"] == "A slightly different error message.");
-			
-			parser.GetNextDocument(doc);
+
+			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 4);
 			YAML_ASSERT(doc["Date"] == "2001-11-23 15:03:17 -5");
 			YAML_ASSERT(doc["User"] == "ed");
@@ -659,11 +605,8 @@ namespace Test {
 				"  ? sky\n"
 				"  : blue\n"
 				"  sea : green";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["sequence"].size() == 2);
 			YAML_ASSERT(doc["sequence"][0] == "one");
@@ -680,11 +623,8 @@ namespace Test {
 			std::string input =
 				"sequence: [ one, two, ]\n"
 				"mapping: { sky: blue, sea: green }";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["sequence"].size() == 2);
 			YAML_ASSERT(doc["sequence"][0] == "one");
@@ -703,11 +643,8 @@ namespace Test {
 			std::string input =
 				"anchored: !local &anchor value\n"
 				"alias: *anchor";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["anchored"] == "value"); // TODO: assert tag
 			YAML_ASSERT(doc["alias"] == "value");
@@ -724,11 +661,8 @@ namespace Test {
 				"folded: >\n"
 				"  some\n"
 				"  text\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["literal"] == "some\ntext\n");
 			YAML_ASSERT(doc["folded"] == "some text\n");
@@ -741,11 +675,8 @@ namespace Test {
 			std::string input =
 				"single: 'text'\n"
 				"double: \"text\"";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["single"] == "text");
 			YAML_ASSERT(doc["double"] == "text");
@@ -762,11 +693,8 @@ namespace Test {
 				"|\n"
 				"  Line break (no glyph)\n"
 				"  Line break (glyphed)\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc == "Line break (no glyph)\nLine break (glyphed)\n");
 			return true;
 		}
@@ -781,11 +709,8 @@ namespace Test {
 				"  void main() {\n"
 				"  \tprintf(\"Hello, world!\\n\");\n"
 				"  }";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["quoted"] == "Quoted\t");
 			YAML_ASSERT(doc["block"] ==
@@ -804,11 +729,8 @@ namespace Test {
 				"\\n \\r \\t \\v \\0 \\\n"
 				"\\  \\_ \\N \\L \\P \\\n"
 				"\\x41 \\u0041 \\U00000041\"";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc == "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \xe2\x80\xa8 \xe2\x80\xa9 A A A");
 			return true;
 		}
@@ -850,11 +772,8 @@ namespace Test {
 				"  Also by two,    # are neither\n"
 				"  \tStill by two   # content nor\n"
 				"    ]             # indentation.";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["Not indented"].size() == 2);
 			YAML_ASSERT(doc["Not indented"]["By one space"] == "By four\n  spaces\n");
@@ -873,11 +792,8 @@ namespace Test {
 				": -\tb\n"
 				"  -  -\tc\n"
 				"     - d";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["a"].size() == 2);
 			YAML_ASSERT(doc["a"][0] == "b");
@@ -894,11 +810,8 @@ namespace Test {
 				"- foo:\t bar\n"
 				"- - baz\n"
 				"  -\tbaz";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0].size() == 1);
 			YAML_ASSERT(doc[0]["foo"] == "bar");
@@ -919,11 +832,8 @@ namespace Test {
 				"block: |\n"
 				"  text\n"
 				"   \tlines\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["plain"] == "text lines");
 			YAML_ASSERT(doc["quoted"] == "text lines");
@@ -942,11 +852,8 @@ namespace Test {
 				"Chomping: |\n"
 				"  Clipped empty lines\n"
 				" ";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["Folding"] == "Empty line\nas a line feed");
 			YAML_ASSERT(doc["Chomping"] == "Clipped empty lines\n");
@@ -964,11 +871,8 @@ namespace Test {
 				"\n"
 				"  as\n"
 				"  space";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc == "trimmed\n\n\nas space");
 			return true;
 		}
@@ -983,11 +887,8 @@ namespace Test {
 				"  \t bar\n"
 				"\n"
 				"  baz\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc == "foo \n\n\t bar\n\nbaz\n");
 			return true;
 		}
@@ -1003,11 +904,8 @@ namespace Test {
 				"\n"
 				"  baz\n"
 				"\"";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);			
 			YAML_ASSERT(doc == " foo\nbar\nbaz ");
 			return true;
 		}
@@ -1018,11 +916,8 @@ namespace Test {
 			std::string input =
 				"key:    # Comment\n"
 				"  value";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["key"] == "value");
 			return true;
@@ -1050,11 +945,8 @@ namespace Test {
 				"        # lines\n"
 				"  value\n"
 				"\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["key"] == "value");
 			return true;
@@ -1089,11 +981,8 @@ namespace Test {
 				"     65\n"
 				"  avg: # Average\n"
 				"   0.278";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			StringMap key;
 			key._["first"] = "Sammy";
 			key._["last"] = "Sosa";
@@ -1113,11 +1002,8 @@ namespace Test {
 			std::string input =
 				"First occurrence: &anchor Value\n"
 				"Second occurrence: *anchor";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["First occurrence"] == "Value");
 			YAML_ASSERT(doc["Second occurrence"] == "Value");
@@ -1132,11 +1018,8 @@ namespace Test {
 				"Second occurrence: *anchor\n"
 				"Override anchor: &anchor Bar\n"
 				"Reuse anchor: *anchor";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 4);
 			YAML_ASSERT(doc["First occurrence"] == "Foo");
 			YAML_ASSERT(doc["Second occurrence"] == "Foo");
@@ -1153,11 +1036,8 @@ namespace Test {
 				"  foo : !!str,\n"
 				"  !!str : bar,\n"
 				"}";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["foo"] == ""); // TODO: check tag
 			YAML_ASSERT(doc[""] == "bar");
@@ -1172,11 +1052,8 @@ namespace Test {
 				"  ? foo :,\n"
 				"  : bar,\n"
 				"}\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(IsNull(doc["foo"]));
 			YAML_ASSERT(doc[YAML::Null] == "bar");
@@ -1190,15 +1067,144 @@ namespace Test {
 				"\"implicit block key\" : [\n"
 				"  \"implicit flow key\" : value,\n"
 				" ]";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
-			YAML::Node doc;
-			parser.GetNextDocument(doc);
-			
+
+			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["implicit block key"].size() == 1);
 			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
 			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"] == "value");
+			return true;
+		}
+		
+		// 7.5
+		TEST DoubleQuotedLineBreaks()
+		{
+			std::string input =
+				"\"folded \n"
+				"to a space,\t\n"
+				" \n"
+				"to a line feed, or \t\\\n"
+				" \\ \tnon-content\"";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc == "folded to a space,\nto a line feed, or \t \tnon-content");
+			return true;
+		}
+		
+		// 7.6
+		TEST DoubleQuotedLines()
+		{
+			std::string input =
+				"\" 1st non-empty\n"
+				"\n"
+				" 2nd non-empty \n"
+				"\t3rd non-empty \"";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc == " 1st non-empty\n2nd non-empty 3rd non-empty ");
+			return true;
+		}
+		
+		// 7.7
+		TEST SingleQuotedCharacters()
+		{
+			std::string input = " 'here''s to \"quotes\"'";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc == "here's to \"quotes\"");
+			return true;
+		}
+		
+		// 7.8
+		TEST SingleQuotedImplicitKeys()
+		{
+			std::string input =
+				"'implicit block key' : [\n"
+				"  'implicit flow key' : value,\n"
+				" ]";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["implicit block key"].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"] == "value");
+			return true;
+		}
+		
+		// 7.9
+		TEST SingleQuotedLines()
+		{
+			std::string input =
+				"' 1st non-empty\n"
+				"\n"
+				" 2nd non-empty \n"
+				"\t3rd non-empty '";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc == " 1st non-empty\n2nd non-empty 3rd non-empty ");
+			return true;
+		}
+		
+		// 7.10
+		TEST PlainCharacters()
+		{
+			std::string input =
+				"# Outside flow collection:\n"
+				"- ::vector\n"
+				"- \": - ()\"\n"
+				"- Up, up, and away!\n"
+				"- -123\n"
+				"- http://example.com/foo#bar\n"
+				"# Inside flow collection:\n"
+				"- [ ::vector,\n"
+				"  \": - ()\",\n"
+				"  \"Up, up, and away!\",\n"
+				"  -123,\n"
+				"  http://example.com/foo#bar ]";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 6);
+			YAML_ASSERT(doc[0] == "::vector");
+			YAML_ASSERT(doc[1] == ": - ()");
+			YAML_ASSERT(doc[2] == "Up, up, and away!");
+			YAML_ASSERT(doc[3] == -123);
+			YAML_ASSERT(doc[4] == "http://example.com/foo#bar");
+			YAML_ASSERT(doc[5].size() == 5);
+			YAML_ASSERT(doc[5][0] == "::vector");
+			YAML_ASSERT(doc[5][1] == ": - ()");
+			YAML_ASSERT(doc[5][2] == "Up, up, and away!");
+			YAML_ASSERT(doc[5][3] == -123);
+			YAML_ASSERT(doc[5][4] == "http://example.com/foo#bar");
+			return true;
+		}
+		
+		// 7.11
+		TEST PlainImplicitKeys()
+		{
+			std::string input =
+				"implicit block key : [\n"
+				"  implicit flow key : value,\n"
+				" ]";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["implicit block key"].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"] == "value");
+			return true;
+		}
+		
+		// 7.12
+		TEST PlainLines()
+		{
+			std::string input =
+				"1st non-empty\n"
+				"\n"
+				" 2nd non-empty \n"
+				"\t3rd non-empty";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc == "1st non-empty\n2nd non-empty 3rd non-empty");
 			return true;
 		}
 	}
@@ -1257,6 +1263,14 @@ namespace Test {
 		RunSpecTest(&Spec::EmptyNodes, "7.2", "Empty Nodes", passed, total);
 		RunSpecTest(&Spec::CompletelyEmptyNodes, "7.3", "Completely Empty Nodes", passed, total);
 		RunSpecTest(&Spec::DoubleQuotedImplicitKeys, "7.4", "Double Quoted Implicit Keys", passed, total);
+		RunSpecTest(&Spec::DoubleQuotedLineBreaks, "7.5", "Double Quoted Line Breaks", passed, total);
+		RunSpecTest(&Spec::DoubleQuotedLines, "7.6", "Double Quoted Lines", passed, total);
+		RunSpecTest(&Spec::SingleQuotedCharacters, "7.7", "Single Quoted Characters", passed, total);
+		RunSpecTest(&Spec::SingleQuotedImplicitKeys, "7.8", "Single Quoted Implicit Keys", passed, total);
+		RunSpecTest(&Spec::SingleQuotedLines, "7.9", "Single Quoted Lines", passed, total);
+		RunSpecTest(&Spec::PlainCharacters, "7.10", "Plain Characters", passed, total);
+		RunSpecTest(&Spec::PlainImplicitKeys, "7.11", "Plain Implicit Keys", passed, total);
+		RunSpecTest(&Spec::PlainLines, "7.12", "Plain Lines", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
