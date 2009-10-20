@@ -12,7 +12,7 @@
 :: application debugging (however these files are by no means required by any software).
 
 del /s "%~dp0\*.ncb"
-del /s "%~dp0\*.ilk"
+del /s "%~dp0\bin\*.ilk"
 del /s "%~dp0\*.idb"
 del /s "%~dp0\*.bsc"
 del /s "%~dp0\*.sbr"

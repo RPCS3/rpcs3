@@ -2,7 +2,6 @@
 // zerofrog(@gmail.com)
 .intel_syntax noprefix
         
-.extern svudispfntemp
 .extern s_TotalVUCycles
 .extern s_callstack
 .extern s_vu1esp
@@ -51,23 +50,3 @@ SuperVUEndProgram:
 		call SuperVUCleanupProgram
 		jmp [s_callstack] // so returns correctly
 
-
-.globl svudispfn
-svudispfn:
-        mov [g_curdebugvu], eax
-		mov s_saveecx, ecx
-		mov s_saveedx, edx
-		mov s_saveebx, ebx
-		mov s_saveesi, esi
-		mov s_saveedi, edi
-		mov s_saveebp, ebp
-
-        call svudispfntemp
-        
-        mov ecx, s_saveecx
-		mov edx, s_saveedx
-		mov ebx, s_saveebx
-		mov esi, s_saveesi
-		mov edi, s_saveedi
-		mov ebp, s_saveebp
-        ret

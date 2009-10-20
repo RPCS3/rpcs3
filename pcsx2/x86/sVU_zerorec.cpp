@@ -43,6 +43,7 @@
 #include "AppConfig.h"
 
 using namespace std;
+using namespace x86Emitter;
 
 // temporary externs
 extern void iDumpVU0Registers();
@@ -51,11 +52,16 @@ extern void iDumpVU1Registers();
 // SuperVURec optimization options, uncomment only for debugging purposes
 #define SUPERVU_CACHING			// vu programs are saved and queried via memcompare (should be no reason to disable this)
 #define SUPERVU_WRITEBACKS			// don't flush the writebacks after every block
-#define SUPERVU_X86CACHING			// use x86reg caching (faster) (not really. rather lots slower :p (rama) )
 #define SUPERVU_VIBRANCHDELAY  		 // when integers are modified right before a branch that uses the integer,
 								// the old integer value is used in the branch, fixes kh2
 
 #define SUPERVU_PROPAGATEFLAGS  // the correct behavior of VUs, for some reason superman breaks gfx with it on...
+
+// use x86reg caching (faster) (not really. rather lots slower :p (rama) ) 
+// ... and buggy too since we disabled EBP.  Causes GoW2 to hang.  Let's get rid of it,
+//     sVU is only here to serve as a regression model for Nan/INF behavior anyway. (--air)
+//#define SUPERVU_X86CACHING
+
 
 // registers won't be flushed at block boundaries (faster) (nothing noticable speed-wise, causes SPS in Ratchet and clank (Nneeve) )
 #ifndef PCSX2_DEBUG
@@ -2526,8 +2532,8 @@ static void SuperVUAssignRegs()
 int s_writeQ, s_writeP;
 
 // declare the saved registers
-uptr s_vu1esp, s_callstack;//, s_vu1esp
-uptr s_vu1ebp, s_vuebx, s_vuedi, s_vu1esi;
+uptr s_vu1esp, s_callstack;
+uptr s_vuebx, s_vuedi, s_vu1esi;
 
 static int s_recWriteQ, s_recWriteP; // wait times during recompilation
 static int s_needFlush; // first bit - Q, second bit - P, third bit - Q has been written, fourth bit - P has been written
@@ -2576,6 +2582,11 @@ void SuperVUCleanupProgram(u32 startpc, int vuindex)
 // entry point of all vu programs from emulator calls
 __declspec(naked) void SuperVUExecuteProgram(u32 startpc, int vuindex)
 {
+	// Stackframe setup for the recompiler:
+	// We rewind the stack 4 bytes, which places the parameters of this function before
+	// any calls we might make from recompiled code.  The return address for this function
+	// call is subsequently stored in s_callstack.
+
 	__asm
 	{
 		mov eax, dword ptr [esp]
@@ -2585,20 +2596,15 @@ __declspec(naked) void SuperVUExecuteProgram(u32 startpc, int vuindex)
 		call SuperVUGetProgram
 
 		// save cpu state
-		mov s_vu1ebp, ebp
-		mov s_vu1esi, esi // have to save even in Release
-		mov s_vuedi, edi // have to save even in Release
+		//mov s_vu1ebp, ebp
+		mov s_vu1esi, esi
+		mov s_vuedi, edi
 		mov s_vuebx, ebx
-	}
+
 #ifdef PCSX2_DEBUG
-	__asm
-	{
 		mov s_vu1esp, esp
-	}
 #endif
 
-	__asm
-	{
 		//stmxcsr s_ssecsr
 		ldmxcsr g_sseVUMXCSR
 
@@ -2618,7 +2624,7 @@ __declspec(naked) static void SuperVUEndProgram()
 		// restore cpu state
 		ldmxcsr g_sseMXCSR
 
-		mov ebp, s_vu1ebp
+		//mov ebp, s_vu1ebp
 		mov esi, s_vu1esi
 		mov edi, s_vuedi
 		mov ebx, s_vuebx
@@ -2790,26 +2796,9 @@ u32 g_curdebugvu;
 
 //float vuDouble(u32 f);
 
-#if defined(_MSC_VER)
-__declspec(naked) static void svudispfn()
-{
-	__asm
-	{
-		mov g_curdebugvu, eax
-		mov s_saveecx, ecx
-		mov s_saveedx, edx
-		mov s_saveebx, ebx
-		mov s_saveesi, esi
-		mov s_saveedi, edi
-		mov s_saveebp, ebp
-	}
-#else
-
-void svudispfntemp()
-{
-#endif
-
 #ifdef PCSX2_DEBUG
+static void  __fastcall svudispfn( int g_curdebugvu )
+{
 	static u32 i;
 
 	if (((vudump&8) && g_curdebugvu) || ((vudump&0x80) && !g_curdebugvu))    //&& g_vu1lastrec != g_vu1last ) {
@@ -2836,21 +2825,8 @@ void svudispfntemp()
 
 		g_vu1lastrec = s_svulast;
 	}
-#endif
-
-#if defined(_MSC_VER)
-	__asm
-	{
-	    mov ecx, s_saveecx
-	    mov edx, s_saveedx
-	    mov ebx, s_saveebx
-	    mov esi, s_saveesi
-	    mov edi, s_saveedi
-	    mov ebp, s_saveebp
-	    ret
-	}
-#endif
 }
+#endif
 
 // frees all regs taking into account the livevars
 void SuperVUFreeXMMregs(u32* livevars)
@@ -2945,8 +2921,8 @@ void VuBaseBlock::Recompile()
 
 	if (itparent == parents.end()) MOV32ItoM((uptr)&skipparent, -1);
 
-	MOV32ItoR(EAX, s_vu);
-	CALLFunc((uptr)svudispfn);
+	xMOV( ecx, s_vu );
+	xCALL( svudispfn );
 #endif
 
 	s_pCurBlock = this;
@@ -3105,6 +3081,8 @@ void VuBaseBlock::Recompile()
 			_x86regs* endx86 = &s_vecRegArray[nEndx86];
 			for (int i = 0; i < iREGCNT_GPR; ++i)
 			{
+				if( i == ESP || i == EBP ) continue;
+
 				if (endx86[i].inuse)
 				{
 
