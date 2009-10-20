@@ -32,6 +32,7 @@ protected:
 
 public:
 	GSRendererOGL();
+	virtual ~GSRendererOGL() {}
 
 	bool CreateDevice(GSDevice* dev);
 
