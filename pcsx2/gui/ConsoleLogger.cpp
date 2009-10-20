@@ -27,14 +27,14 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Newline, -1)
 	DECLARE_EVENT_TYPE(wxEVT_SetTitleText, -1)
-	DECLARE_EVENT_TYPE(wxEVT_SemaphoreWait, -1)
+	DECLARE_EVENT_TYPE(wxEVT_FlushQueue, -1)
 END_DECLARE_EVENT_TYPES()
 
 DEFINE_EVENT_TYPE(wxEVT_LOG_Write)
 DEFINE_EVENT_TYPE(wxEVT_LOG_Newline)
 DEFINE_EVENT_TYPE(wxEVT_SetTitleText)
 DEFINE_EVENT_TYPE(wxEVT_DockConsole)
-DEFINE_EVENT_TYPE(wxEVT_SemaphoreWait)
+DEFINE_EVENT_TYPE(wxEVT_FlushQueue)
 
 // C++ requires abstract destructors to exist, even thought hey're abstract.
 PipeRedirectionBase::~PipeRedirectionBase() throw() {}
@@ -226,12 +226,23 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 ,	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
 ,	m_ColorTable( options.FontSize )
-,	m_curcolor( DefaultConsoleColor )
-,	m_msgcounter( 0 )
+
+,	m_pendingFlushes( 0 )
+,	m_WaitingThreadsForFlush( 0 )
+
+,	m_ThawThrottle( 0 )
+,	m_ThawNeeded( false )
+,	m_ThawPending( false )
+
+,	m_QueueColorSection( L"ConsoleLog::QueueColorSection" )
+,	m_QueueBuffer( L"ConsoleLog::QueueBuffer" )
+,	m_CurQueuePos( false )
+
 ,	m_threadlogger( EnableThreadedLoggingTest ? new ConsoleTestThread() : NULL )
 {
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
-
+	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
+	
     // create Log menu (contains most options)
 	wxMenuBar *pMenuBar = new wxMenuBar();
 	wxMenu& menuLog = *new wxMenu();
@@ -263,7 +274,6 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	// status bar for menu prompts
 	CreateStatusBar();
-	ClearColor();
 
 	SetSize( wxRect( options.DisplayPosition, options.DisplaySize ) );
 	Show( options.Visible );
@@ -281,11 +291,10 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( wxEVT_MOVE,			wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler(ConsoleLogFrame::OnResize) );
 
-	Connect( wxEVT_LOG_Write,		wxCommandEventHandler(ConsoleLogFrame::OnWrite) );
-	Connect( wxEVT_LOG_Newline,		wxCommandEventHandler(ConsoleLogFrame::OnNewline) );
 	Connect( wxEVT_SetTitleText,	wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
 	Connect( wxEVT_DockConsole,		wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
-	Connect( wxEVT_SemaphoreWait,	wxCommandEventHandler(ConsoleLogFrame::OnSemaphoreWait) );
+
+	Connect( wxEVT_FlushQueue,		wxCommandEventHandler(ConsoleLogFrame::OnFlushEvent) );
 
 	if( m_threadlogger != NULL )
 		m_threadlogger->Start();
@@ -297,51 +306,74 @@ ConsoleLogFrame::~ConsoleLogFrame()
 	wxGetApp().OnProgramLogClosed();
 }
 
-void ConsoleLogFrame::SetColor( ConsoleColors color )
-{
-	if( color != m_curcolor )
-		m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor=color] );
-}
-
-void ConsoleLogFrame::ClearColor()
-{
-	if( DefaultConsoleColor != m_curcolor )
-		m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor=DefaultConsoleColor] );
-}
-
-void ConsoleLogFrame::Write( const wxString& text )
-{
-	// remove selection (WriteText is in fact ReplaceSelection)
-	// TODO : Optimize this to only replace selection if some selection
-	//   messages have been received since the last write.
-
-#ifdef __WXMSW__
-	wxTextPos nLen = m_TextCtrl.GetLastPosition();
-	m_TextCtrl.SetSelection(nLen, nLen);
-#endif
-
-	m_TextCtrl.AppendText( text );
-
-	// cap at 256k for now...
-	// fixme - 256k runs well on win32 but appears to be very sluggish on linux.  Might
-	// need platform dependent defaults here. - air
-	if( m_TextCtrl.GetLastPosition() > 0x40000 )
-	{
-		m_TextCtrl.Remove( 0, 0x10000 );
-	}
-}
+int m_pendingFlushes = 0;
 
 // Implementation note:  Calls SetColor and Write( text ).  Override those virtuals
 // and this one will magically follow suite. :)
 void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 {
-	SetColor( color );
-	Write( text );
+//#ifdef PCSX2_SEH
+	pthread_testcancel();
+//#endif
+
+	ScopedLock lock( m_QueueLock );
+
+	if( m_QueueColorSection.GetLength() == 0 )
+	{
+		pxAssertMsg( m_CurQueuePos == 0, "Queue's character position didn't get reset in sync with it's ColorSection table." );
+	}
+
+	if( (m_QueueColorSection.GetLength() == 0) || ((color != Color_Current) && (m_QueueColorSection.GetLast().color != color)) )
+	{		
+		++m_CurQueuePos;		// Don't overwrite the NULL;
+		m_QueueColorSection.Add( ColorSection(color, m_CurQueuePos) );
+	}
+
+	int endpos = m_CurQueuePos + text.Length();
+	m_QueueBuffer.MakeRoomFor( endpos + 1 );		// and the null!!
+	memcpy_fast( &m_QueueBuffer[m_CurQueuePos], text.c_str(), sizeof(wxChar) * text.Length() );
+	m_CurQueuePos = endpos;
+	
+	// this NULL may be overwritten if the next message sent doesn't perform a color change.
+	m_QueueBuffer[m_CurQueuePos] = 0;
+	
+	// Idle events don't always pass (wx blocks them when moving windows or using menus, for
+	// example).  So let's hackfix it so that an alternate message is posted if the queue is
+	// "piling up."
+
+	if( m_pendingFlushes == 0 )
+	{
+		wxCommandEvent evt( wxEVT_FlushQueue );
+		evt.SetInt( 0 );
+		GetEventHandler()->AddPendingEvent( evt );
+	}
+
+	++m_pendingFlushes;
+
+	if( m_pendingFlushes > 32 && !wxThread::IsMain() )
+	{
+		++m_WaitingThreadsForFlush;
+		lock.Unlock();
+
+		if( !m_sem_QueueFlushed.WaitRaw( wxTimeSpan( 0,0,0,500 ) ) )
+		{
+			// Necessary since the main thread could grab the lock and process before
+			// the above function actually returns (gotta love threading!)
+			lock.Lock();
+			if( m_WaitingThreadsForFlush != 0 ) --m_WaitingThreadsForFlush;
+		}
+		else
+		{
+			// give gui thread time to repaint and handle other pending messages.
+			// (those are prioritized lower than wxEvents, typically)
+			Sleep(1);
+		}
+	}
 }
 
 void ConsoleLogFrame::Newline()
 {
-	Write( L"\n" );
+	Write( Color_Current, L"\n" );
 }
 
 void ConsoleLogFrame::DoClose()
@@ -364,7 +396,7 @@ void ConsoleLogFrame::DockedMove()
 //    * Logging Events
 // =================================================================================
 
-// Special event recieved from a window we're docked against.
+// Special event received from a window we're docked against.
 void ConsoleLogFrame::OnDockedMove( wxCommandEvent& event )
 {
 	DockedMove();
@@ -466,7 +498,7 @@ void ConsoleLogFrame::OnFontSize( wxMenuEvent& evt )
 
 	m_conf.FontSize = ptsize;
 	m_ColorTable.SetFont( ptsize );
-	m_TextCtrl.SetDefaultStyle( m_ColorTable[m_curcolor] );
+	m_TextCtrl.SetDefaultStyle( m_ColorTable[Color_White] );
 
 	// TODO: Process the attributes of each character and upgrade the font size,
 	// while still retaining color and bold settings...  (might be slow but then
@@ -478,90 +510,111 @@ void ConsoleLogFrame::OnFontSize( wxMenuEvent& evt )
 //  Logging Events (typically received from Console class interfaces)
 // ----------------------------------------------------------------------------
 
-void ConsoleLogFrame::OnWrite( wxCommandEvent& event )
-{
-	Write( (ConsoleColors)event.GetExtraLong(), event.GetString() );
-	DoMessage();
-}
-
-void ConsoleLogFrame::OnNewline( wxCommandEvent& event )
-{
-	Newline();
-	DoMessage();
-}
-
 void ConsoleLogFrame::OnSetTitle( wxCommandEvent& event )
 {
 	SetTitle( event.GetString() );
 }
 
-void ConsoleLogFrame::OnSemaphoreWait( wxCommandEvent& event )
+void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 {
-	m_semaphore.Post();
+	ScopedLock locker( m_QueueLock );
+
+	if( m_CurQueuePos != 0 )
+	{
+		DoFlushQueue();
+
+#ifdef __WXMSW__
+		// This nicely sets the scroll position to the end of our log window, regardless of if
+		// the textctrl has focus or not.  The wxWidgets AppendText() function uses EM_LINESCROLL
+		// instead, which tends to be much faster for high-volume logs, but also ends up refreshing
+		// the console in sloppy fashion for normal logging.
+		
+		// (both are needed, the WM_VSCROLL makes the scrolling smooth, and the EM_LINESCROLL avoids
+		// weird errors when the buffer reaches "max" and starts clearing old history)
+
+		::SendMessage((HWND)m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+		::SendMessage((HWND)m_TextCtrl.GetHWND(), EM_LINESCROLL, 0, m_TextCtrl.GetNumberOfLines());
+#endif
+		//m_TextCtrl.Thaw();
+	}
+
+	// Implementation note: I tried desperately to move this into wxEVT_IDLE, on the theory that
+	// we don't actually want to wake up pending threads until after the GUI's finished all its
+	// paperwork.  But wxEVT_IDLE doesn't work when you click menus or the title bar of a window,
+	// making it pretty well annoyingly useless for just about anything. >_<
+
+	// Workaround: I added a Sleep(1) to the DoWrite method to give the GUI some time to
+	// do its paperwork.
+
+	if( m_WaitingThreadsForFlush > 0 )
+	{
+		do {
+			m_sem_QueueFlushed.Post();
+		} while( --m_WaitingThreadsForFlush > 0 );
+
+		int count = m_sem_QueueFlushed.Count();
+		while( count < 0 ) m_sem_QueueFlushed.Post();
+	}
 }
 
-// ------------------------------------------------------------------------
-// Deadlock protection: High volume logs will over-tax our message pump and cause the
-// GUI to become inaccessible.  The cool solution would be a threaded log window, but wx
-// is entirely un-safe for that kind of threading.  So instead I use a message counter
-// that stalls non-GUI threads when they attempt to over-tax an already burdened log.
-// If too many messages get queued up, non-gui threads are stalled to allow the gui to
-// catch up.
-void ConsoleLogFrame::CountMessage()
+void ConsoleLogFrame::DoFlushQueue()
 {
-	long result = _InterlockedIncrement( &m_msgcounter );
+	int len = m_QueueColorSection.GetLength();
+	pxAssert( len != 0 );
 
-	if( result > 0x20 )		// 0x20 -- arbitrary value that seems to work well (tested on P4 and C2D)
+	// Note, freezing/thawing actually seems to cause more overhead than it solves.
+	// It might be useful if we're posting like dozens of messages, but in our case
+	// we only post 1-4 typically, so better to leave things enabled.
+	//m_TextCtrl.Freeze();
+
+	// Manual InsertionPoint tracking avoids a lot of overhead in SetInsertionPointEnd()
+	wxTextPos insertPoint = m_TextCtrl.GetLastPosition();
+
+	// cap at 256k for now...
+	// fixme - 256k runs well on win32 but appears to be very sluggish on linux (but that could
+	// be a result of my using Xming + CoLinux).  Might need platform dependent defaults here. --air
+	if( (insertPoint + m_CurQueuePos) > 0x40000 )
 	{
-		if( !wxThread::IsMain() )
+		int toKeep = 0x40000 - m_CurQueuePos;
+		if( toKeep <= 10 )
 		{
-			// Append an event that'll post up our semaphore.  It'll get run "in
-			// order" which means when it posts all queued messages will have been
-			// processed.
-
-			wxCommandEvent evt( wxEVT_SemaphoreWait );
-			GetEventHandler()->AddPendingEvent( evt );
-			m_semaphore.WaitRaw();
+			m_TextCtrl.Clear();
+			insertPoint = 0;
+		}
+		else
+		{
+			int toRemove = 0x40000 - toKeep;
+			if( toRemove < 0x10000 ) toRemove = 0x10000;
+			m_TextCtrl.Remove( 0, toRemove );
+			insertPoint -= toRemove;
 		}
 	}
-}
 
-// Thread Safety note: This function expects to be called from the Main GUI thread
-// only.  If called from a thread other than Main, it will generate an assertion failure.
-//
-void ConsoleLogFrame::DoMessage()
-{
-	AllowFromMainThreadOnly();
+	m_TextCtrl.SetInsertionPoint( insertPoint );
 
-	int cur = _InterlockedDecrement( &m_msgcounter );
-
-	// We need to freeze the control if there are more than 2 pending messages,
-	// otherwise the redraw of the console will prevent it from ever being able to
-	// catch up with the rate the queue is being filled, and the whole app could
-	// deadlock. >_<
-
-	if( m_TextCtrl.IsFrozen() )
+	for( int i=0; i<len; ++i )
 	{
-		if( cur < 1 )
-			m_TextCtrl.Thaw();
-	}
-	else if( cur >= 3 )
-	{
-		m_TextCtrl.Freeze();
-	}
-}
+		if( m_QueueColorSection[i].color != Color_Current )
+			m_TextCtrl.SetDefaultStyle( m_ColorTable[m_QueueColorSection[i].color] );
 
+		const wxString passin( &m_QueueBuffer[m_QueueColorSection[i].startpoint] );
+
+		m_TextCtrl.WriteText( passin );
+		insertPoint += passin.Length();
+	}
+
+	m_TextCtrl.SetInsertionPoint( insertPoint );
+
+	m_CurQueuePos = 0;
+	m_QueueColorSection.Clear();
+	m_pendingFlushes = 0;
+
+	//m_TextCtrl.ShowPosition( insertPoint );
+}
 
 ConsoleLogFrame* Pcsx2App::GetProgramLog()
 {
 	return m_ProgramLogBox;
-}
-
-void Pcsx2App::ProgramLog_CountMsg()
-{
-	// New console log object model makes this check obsolete:
-	//if( m_ProgramLogBox == NULL ) return;
-	m_ProgramLogBox->CountMessage();
 }
 
 void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
@@ -645,37 +698,21 @@ template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_Newline()
 {
 	secondary.Newline();
-
-	wxCommandEvent evt( wxEVT_LOG_Newline );
-	((Pcsx2App&)*wxTheApp).ProgramLog_PostEvent( evt );
-	((Pcsx2App&)*wxTheApp).ProgramLog_CountMsg();
+	((Pcsx2App&)*wxTheApp).GetProgramLog()->Newline();
 }
 
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoWrite( const wxString& fmt )
 {
 	secondary.DoWrite( fmt );
-
-	wxCommandEvent evt( wxEVT_LOG_Write );
-	evt.SetString( fmt );
-	evt.SetExtraLong( th_CurrentColor );
-	((Pcsx2App&)*wxTheApp).ProgramLog_PostEvent( evt );
-	((Pcsx2App&)*wxTheApp).ProgramLog_CountMsg();
+	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( th_CurrentColor, fmt );
 }
 
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoWriteLn( const wxString& fmt )
 {
 	secondary.DoWriteLn( fmt );
-
-	// Implementation note: I've duplicated Write+Newline behavior here to avoid polluting
-	// the message pump with lots of erroneous messages (Newlines can be bound into Write message).
-
-	wxCommandEvent evt( wxEVT_LOG_Write );
-	evt.SetString( fmt + L"\n" );
-	evt.SetExtraLong( th_CurrentColor );
-	((Pcsx2App&)*wxTheApp).ProgramLog_PostEvent( evt );
-	((Pcsx2App&)*wxTheApp).ProgramLog_CountMsg();
+	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( th_CurrentColor, fmt + L"\n" );
 }
 
 typedef void __concall DoWriteFn(const wxString&);

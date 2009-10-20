@@ -121,26 +121,74 @@ protected:
 		}
 	};
 
+	class ColorSection
+	{
+	public:
+		ConsoleColors	color;
+		int				startpoint;
+
+		ColorSection() {}
+		ColorSection( ConsoleColors _color, int msgptr ) : color(_color), startpoint(msgptr) { }
+	};
+
 protected:
 	ConLogConfig&	m_conf;
 	wxTextCtrl&		m_TextCtrl;
 	ColorArray		m_ColorTable;
-	ConsoleColors	m_curcolor;
-	volatile long	m_msgcounter;		// used to track queued messages and throttle load placed on the gui message pump
 
-	Semaphore		m_semaphore;
+	// this int throttles freeze/thaw of the display, by cycling from -2 to 4, roughly.
+	// (negative values force thaw, positive values indicate thaw is disabled.  This is
+	//  needed because the wxWidgets Thaw implementation uses a belated paint message,
+	//  and if we Freeze on the very next queued message after thawing, the repaint
+	//  never happens)
+	int				m_ThawThrottle;		
+
+	// If a freeze is executed, this is set true (without this, wx asserts)
+	bool			m_ThawNeeded;
+
+	// Set true when a Thaw message is sent (avoids cluttering the message pump with redundant
+	// requests)
+	bool			m_ThawPending;
+
+	// ----------------------------------------------------------------------------
+	//  Queue State Management Vars
+	// ----------------------------------------------------------------------------
+
+	// This is a counter of the total number of pending flushes across all threads.
+	// If the value exceeds a threshold, threads begin throttling to avoid deadlocking
+	// the GUI.
+	volatile int			m_pendingFlushes;
+
+	// This is a counter of the number of threads waiting for the Queue to flush.
+	volatile int			m_WaitingThreadsForFlush;
+
+	// Used by threads waiting on the queue to flush.
+	Semaphore				m_sem_QueueFlushed;
+
+	// Lock object for accessing or modifying the following three vars:
+	//  m_QueueBuffer, m_QueueColorSelection, m_CurQueuePos
+	MutexLockRecursive		m_QueueLock;
+	
+	// Describes a series of colored text sections in the m_QueueBuffer.
+	SafeList<ColorSection>	m_QueueColorSection;
+
+	// Series of Null-terminated strings, each one has a corresponding entry in
+	// m_QueueColorSelection.
+	SafeArray<wxChar>		m_QueueBuffer;
+
+	// Current write position into the m_QueueBuffer;
+	int						m_CurQueuePos;
 
 	// Threaded log spammer, useful for testing console logging performance.
-	ConsoleTestThread* m_threadlogger;
+	// (alternatively you can enable Disasm logging in any recompiler and achieve
+	// a similar effect)
+	ConsoleTestThread*		m_threadlogger;
 
 public:
 	// ctor & dtor
 	ConsoleLogFrame( MainEmuFrame *pParent, const wxString& szTitle, ConLogConfig& options );
 	virtual ~ConsoleLogFrame();
 
-	virtual void Write( const wxString& text );
-	virtual void SetColor( ConsoleColors color );
-	virtual void ClearColor();
 	virtual void DockedMove();
 
 	// Retrieves the current configuration options settings for this box.
@@ -149,11 +197,8 @@ public:
 
 	void Write( ConsoleColors color, const wxString& text );
 	void Newline();
-	void CountMessage();
-	void DoMessage();
 
 protected:
-
 	// menu callbacks
 	virtual void OnOpen (wxMenuEvent& event);
 	virtual void OnClose(wxMenuEvent& event);
@@ -164,14 +209,14 @@ protected:
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
 
-	void OnWrite( wxCommandEvent& event );
-	void OnNewline( wxCommandEvent& event );
 	void OnSetTitle( wxCommandEvent& event );
 	void OnDockedMove( wxCommandEvent& event );
-	void OnSemaphoreWait( wxCommandEvent& event );
+	void OnIdleEvent( wxIdleEvent& event );
+	void OnFlushEvent( wxCommandEvent& event );
 
 	// common part of OnClose() and OnCloseWindow()
 	virtual void DoClose();
+	void DoFlushQueue();
 
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
