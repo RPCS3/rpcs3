@@ -67,8 +67,8 @@
 			<Add option="-fno-guess-branch-probability" />
 			<Add option="-fno-dse" />
 			<Add option="-fno-tree-dse" />
+			<Add option="-fno-strict-aliasing" />
 			<Add option="-pipe -msse -msse2" />
-			<Add option="-mpreferred-stack-boundary=2" />
 			<Add option="-m32" />
 			<Add directory="../../include/x86emitter" />
 			<Add directory="../../include" />

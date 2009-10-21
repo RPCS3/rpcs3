@@ -44,15 +44,15 @@ void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * )
 	// get bad virtual address
 	uptr offset = (u8*)info->si_addr - psM;
 
-	DevCon.Status( "Protected memory cleanup. Offset 0x%x", offset );
-
 	if (offset>=Ps2MemSize::Base)
 	{
 		// Bad mojo!  Completely invalid address.
 		// Instigate a crash or abort emulation or something.
 		wxTrap();
-		return;
+		if( !IsDebugBuild )
+			raise( SIGKILL );
 	}
 
+	DevCon.Status( "Protected memory cleanup. Offset 0x%x", offset );
 	mmap_ClearCpuBlock( offset & ~m_pagemask );
 }

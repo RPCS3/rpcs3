@@ -684,8 +684,17 @@ static void StateThreadCheck_LongJmp()
 {
 	setjmp( SetJmp_StateCheck );
 
+	int oldstate;
+
+	// Important! Most of the console logging and such has cancel points in it.  This is great
+	// in Windows, where SEH lets us safely kill a thread from anywhere we want.  This is bad
+	// in Linux, which cannot have a C++ exception cross the recompiler.  Hence the changing
+	// of the cancelstate here!
+
+	pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
 	mtgsThread.RethrowException();
 	SysCoreThread::Get().StateCheckInThread();
+	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
 }
 
 static void recExecute()
@@ -847,17 +856,17 @@ void recClear(u32 addr, u32 size)
 }
 
 
-#ifdef __GNUG__
-__threadlocal jmp_buf SetJmp_RecExecute;
-__threadlocal jmp_buf SetJmp_StateCheck;
+#ifndef PCSX2_SEH
+	jmp_buf SetJmp_RecExecute;
+	jmp_buf SetJmp_StateCheck;
 #endif
 
 static void ExitRec()
 {
-#ifdef __GNUG__
-	longjmp( SetJmp_RecExecute, SetJmp_Exit );
-#else
+#ifdef PCSX2_SEH
 	throw Exception::ExitRecExecute();
+#else
+	longjmp( SetJmp_RecExecute, SetJmp_Exit );
 #endif
 }
 
@@ -1085,7 +1094,7 @@ static u32 eeScaleBlockCycles()
 static void iBranchTest(u32 newpc)
 {
 	_DynGen_StackFrameCheck();
-	
+
 	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1313,7 +1322,7 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	recClear(start, sz);
 
 	// Stack trick: This function was invoked via a direct jmp, so manually pop the
-	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect. 
+	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect.
 
 #ifdef _MSC_VER
 	__asm leave __asm jmp [ExitRecompiledCode]

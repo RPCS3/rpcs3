@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -61,8 +61,9 @@ extern void SysClearExecutionCache();	// clears recompiled execution caches!
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 extern void vSyncDebugStuff( uint frame );
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  Memory Protection (Used by VTLB, Recompilers, and Texture caches)
+// --------------------------------------------------------------------------------------
 #ifdef __LINUX__
 
 #	include <signal.h>
@@ -85,6 +86,33 @@ extern void vSyncDebugStuff( uint frame );
 
 #else
 #	error PCSX2 - Unsupported operating system platform.
+#endif
+
+// --------------------------------------------------------------------------------------
+//  PCSX2_SEH - Defines existence of "built in" Structed Exception Handling support.
+// --------------------------------------------------------------------------------------
+// This should be available on Windows, via Microsoft or Intel compilers (I'm pretty sure Intel
+// supports native SEH model).  GNUC in Windows, or any compiler in a non-windows platform, will
+// need to use setjmp/longjmp instead to exit recompiled code.
+//
+#if defined(_WIN32) && !defined(__GNUC__)
+#	define PCSX2_SEH
+#else
+
+#	include <setjmp.h>
+
+	// Platforms without SEH need to use SetJmp / LongJmp to deal with exiting the recompiled
+	// code execution pipelines in an efficient manner, since standard C++ exceptions cannot
+	// unwind across dynamically recompiled code.
+
+	enum
+	{
+		SetJmp_Dispatcher = 1,
+		SetJmp_Exit,
+	};
+
+	extern jmp_buf SetJmp_RecExecute;
+	extern jmp_buf SetJmp_StateCheck;
 #endif
 
 class pxMessageBoxEvent;

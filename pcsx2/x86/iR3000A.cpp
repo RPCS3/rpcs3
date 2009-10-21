@@ -241,13 +241,19 @@ static DynGenFunc* _DynGen_DispatcherReg()
 #endif
 
 // Set to 0 for a speedup in release builds.
+// [doesn't apply to GCC/Mac, which must always align]
 #define PCSX2_IOP_FORCED_ALIGN_STACK		0 //1
+
+
+// For overriding stackframe generation options in Debug builds (possibly useful for troubleshooting)
+// Typically this value should be the same as IsDevBuild.
+static const bool GenerateStackFrame = IsDevBuild;
 
 static DynGenFunc* _DynGen_EnterRecompiledCode()
 {
 	u8* retval = xGetPtr();
 
-	bool allocatedStack = IsDevBuild || PCSX2_IOP_FORCED_ALIGN_STACK;
+	bool allocatedStack = GenerateStackFrame || PCSX2_IOP_FORCED_ALIGN_STACK;
 
 	// Optimization: The IOP never uses stack-based parameter invocation, so we can avoid
 	// allocating any room on the stack for it (which is important since the IOP's entry
@@ -274,7 +280,7 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 		//   this is usually worthless because CALL+PUSH leaves us 8 byte aligned instead (fail).  So
 		//   we have to do the usual set of stackframe alignments and simulated callstack mess
 		//   *regardless*.
-		
+
 		// MSVC/Intel compilers:
 		//   The PCSX2_IOP_FORCED_ALIGN_STACK setting is 0, so we don't care.  Just push regs like
 		//   the good old days!  (stack alignment will be indeterminate)
@@ -284,13 +290,12 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 		xPUSH( ebx );
 
 		allocatedStack = false;
-		CannotUseCallBecauseItWillUnalignTheGodDamnedStack = !!PCSX2_ASSUME_ALIGNED_STACK;
 	}
 
 	uptr* imm = NULL;
 	if( allocatedStack )
 	{
-		if( IsDevBuild )
+		if( GenerateStackFrame )
 		{
 			// Simulate a CALL function by pushing the call address and EBP onto the stack.
 			// This retains proper stacktrace and stack unwinding (handy in devbuilds!)
@@ -301,10 +306,13 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 			// This part simulates the "normal" stackframe prep of "push ebp, mov ebp, esp"
 			xMOV( ptr32[esp+0x08], ebp );
 			xLEA( ebp, ptr32[esp+0x08] );
-
-			xMOV( &s_store_esp, esp );
-			xMOV( &s_store_ebp, ebp );
 		}
+	}
+
+	if( IsDevBuild )
+	{
+		xMOV( &s_store_esp, esp );
+		xMOV( &s_store_ebp, ebp );
 	}
 
 	xJMP( iopDispatcherReg );
@@ -319,7 +327,7 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	if( allocatedStack )
 	{
 		// pop the nested "simulated call" stackframe, if needed:
-		if( IsDevBuild ) xLEAVE();
+		if( GenerateStackFrame ) xLEAVE();
 		xMOV( edi, ptr[ebp-12] );
 		xMOV( esi, ptr[ebp-8] );
 		xMOV( ebx, ptr[ebp-4] );
@@ -859,22 +867,22 @@ static __noinline s32 recExecuteBlock( s32 eeCycles )
 	// Register freezing note:
 	//  The IOP does not use mmx/xmm registers, so we don't modify the status
 	//  of the g_EEFreezeRegs here.
-	
+
 	// [TODO] recExecuteBlock could be replaced by a direct call to the iopEnterRecompiledCode()
 	//   (by assigning its address to the psxRec structure).  But for that to happen, we need
 	//   to move psxBreak/psxCycleEE update code to emitted assembly code. >_<  --air
 
 	// Likely Disasm, as borrowed from MSVC:
-		
+
 // Entry:
-// 	mov         eax,dword ptr [esp+4] 
-// 	mov         dword ptr [psxBreak (0E88DCCh)],0 
-// 	mov         dword ptr [psxCycleEE (832A84h)],eax 
+// 	mov         eax,dword ptr [esp+4]
+// 	mov         dword ptr [psxBreak (0E88DCCh)],0
+// 	mov         dword ptr [psxCycleEE (832A84h)],eax
 
 // Exit:
-// 	mov         ecx,dword ptr [psxBreak (0E88DCCh)] 
-// 	mov         edx,dword ptr [psxCycleEE (832A84h)] 
-// 	lea         eax,[edx+ecx] 
+// 	mov         ecx,dword ptr [psxBreak (0E88DCCh)]
+// 	mov         edx,dword ptr [psxCycleEE (832A84h)]
+// 	lea         eax,[edx+ecx]
 
 	iopEnterRecompiledCode();
 

@@ -42,25 +42,3 @@
 
 extern void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);
 extern u32  g_sseVUMXCSR, g_sseMXCSR;
-
-// SEH - "Built in" Structed Exception Handling support.
-// This should be available on Windows, via Microsoft or Intel compilers (I'm pretty sure Intel
-// supports native SEH model).  GUNC in Windows, or any compiler in a non-windows platform, will
-// ned to use setjmp/longjmp instead to exit recompiled code.
-//
-#if defined(_WIN32) && !defined(__GNUG__)
-#	define PCSX2_SEH
-#endif
-
-#ifndef PCSX2_SEH
-#	include <setjmp.h>
-
-	enum
-	{
-		SetJmp_Dispatcher = 1,
-		SetJmp_Exit,
-	};
-
-	extern __threadlocal jmp_buf SetJmp_RecExecute;
-	extern __threadlocal jmp_buf SetJmp_StateCheck;
-#endif

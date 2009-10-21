@@ -242,7 +242,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 {
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
-	
+
     // create Log menu (contains most options)
 	wxMenuBar *pMenuBar = new wxMenuBar();
 	wxMenu& menuLog = *new wxMenu();
@@ -312,9 +312,7 @@ int m_pendingFlushes = 0;
 // and this one will magically follow suite. :)
 void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 {
-//#ifdef PCSX2_SEH
 	pthread_testcancel();
-//#endif
 
 	ScopedLock lock( m_QueueLock );
 
@@ -324,7 +322,7 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 	}
 
 	if( (m_QueueColorSection.GetLength() == 0) || ((color != Color_Current) && (m_QueueColorSection.GetLast().color != color)) )
-	{		
+	{
 		++m_CurQueuePos;		// Don't overwrite the NULL;
 		m_QueueColorSection.Add( ColorSection(color, m_CurQueuePos) );
 	}
@@ -333,10 +331,10 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 	m_QueueBuffer.MakeRoomFor( endpos + 1 );		// and the null!!
 	memcpy_fast( &m_QueueBuffer[m_CurQueuePos], text.c_str(), sizeof(wxChar) * text.Length() );
 	m_CurQueuePos = endpos;
-	
+
 	// this NULL may be overwritten if the next message sent doesn't perform a color change.
 	m_QueueBuffer[m_CurQueuePos] = 0;
-	
+
 	// Idle events don't always pass (wx blocks them when moving windows or using menus, for
 	// example).  So let's hackfix it so that an alternate message is posted if the queue is
 	// "piling up."
@@ -355,7 +353,7 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 		++m_WaitingThreadsForFlush;
 		lock.Unlock();
 
-		if( !m_sem_QueueFlushed.WaitRaw( wxTimeSpan( 0,0,0,500 ) ) )
+		if( !m_sem_QueueFlushed.Wait( wxTimeSpan( 0,0,0,500 ) ) )
 		{
 			// Necessary since the main thread could grab the lock and process before
 			// the above function actually returns (gotta love threading!)
@@ -528,7 +526,7 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 		// the textctrl has focus or not.  The wxWidgets AppendText() function uses EM_LINESCROLL
 		// instead, which tends to be much faster for high-volume logs, but also ends up refreshing
 		// the console in sloppy fashion for normal logging.
-		
+
 		// (both are needed, the WM_VSCROLL makes the scrolling smooth, and the EM_LINESCROLL avoids
 		// weird errors when the buffer reaches "max" and starts clearing old history)
 
