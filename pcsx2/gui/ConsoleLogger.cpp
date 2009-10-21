@@ -530,8 +530,8 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 		// (both are needed, the WM_VSCROLL makes the scrolling smooth, and the EM_LINESCROLL avoids
 		// weird errors when the buffer reaches "max" and starts clearing old history)
 
+		::SendMessage((HWND)m_TextCtrl.GetHWND(), EM_LINESCROLL, 0, 0xfffffff);
 		::SendMessage((HWND)m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-		::SendMessage((HWND)m_TextCtrl.GetHWND(), EM_LINESCROLL, 0, m_TextCtrl.GetNumberOfLines());
 #endif
 		//m_TextCtrl.Thaw();
 	}
@@ -601,13 +601,13 @@ void ConsoleLogFrame::DoFlushQueue()
 		insertPoint += passin.Length();
 	}
 
-	m_TextCtrl.SetInsertionPoint( insertPoint );
+	// Some reports on Windows7 have corrupted cursor when using insertPoint (or
+	// +1 / -1 ).  This works better for some reason:
+	m_TextCtrl.SetInsertionPointEnd(); //( insertPoint );
 
 	m_CurQueuePos = 0;
 	m_QueueColorSection.Clear();
 	m_pendingFlushes = 0;
-
-	//m_TextCtrl.ShowPosition( insertPoint );
 }
 
 ConsoleLogFrame* Pcsx2App::GetProgramLog()

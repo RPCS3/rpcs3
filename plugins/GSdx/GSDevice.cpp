@@ -232,6 +232,7 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 {
 	if(!m_weavebob || !(m_weavebob->GetSize() == ds))
 	{
+		delete m_weavebob;
 		m_weavebob = CreateRenderTarget(ds.x, ds.y, false);
 	}
 
