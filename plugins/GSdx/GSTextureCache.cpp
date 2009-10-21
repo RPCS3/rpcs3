@@ -172,24 +172,33 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 	if(m_renderer->CanUpscale())
 	{
-		GSVector4i fr = m_renderer->GetFrameRect();
-
-		int ww = (int)(fr.left + dst->m_TEX0.TBW * 64);
-		int hh = (int)(fr.top + m_renderer->GetDisplayRect().height());
-
-		if(hh <= m_renderer->GetDeviceSize().y / 2)
+		int multiplier = m_renderer->accurateScaleMulti();
+		if (multiplier > 1) //it's limited to a maximum of 4 on reading the config
 		{
-			hh *= 2;
+			dst->m_texture->SetScale(GSVector2((float)multiplier, (float)multiplier));
 		}
-
-		if(hh < 512 && m_renderer->m_context->SCISSOR.SCAY1 == 511) // vp2
+		else
 		{
-			hh = 512;
-		}
 
-		if(ww > 0 && hh > 0)
-		{
-			dst->m_texture->SetScale(GSVector2((float)w / ww, (float)h / hh));
+			GSVector4i fr = m_renderer->GetFrameRect();
+
+			int ww = (int)(fr.left + dst->m_TEX0.TBW * 64);
+			int hh = (int)(fr.top + m_renderer->GetDisplayRect().height());
+
+			if(hh <= m_renderer->GetDeviceSize().y / 2)
+			{
+				hh *= 2;
+			}
+
+			if(hh < 512 && m_renderer->m_context->SCISSOR.SCAY1 == 511) // vp2
+			{
+				hh = 512;
+			}
+
+			if(ww > 0 && hh > 0)
+			{
+				dst->m_texture->SetScale(GSVector2((float)w / ww, (float)h / hh));
+			}
 		}
 	}
 

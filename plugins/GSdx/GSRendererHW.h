@@ -32,6 +32,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 {
 	int m_width;
 	int m_height;
+	int m_accurateScaleMulti;
 	int m_skip;
 	bool m_reset;
 
@@ -709,6 +710,7 @@ public:
 		, m_tc(tc)
 		, m_width(1024)
 		, m_height(1024)
+		, m_accurateScaleMulti(1)
 		, m_skip(0)
 		, m_reset(false)
 	{
@@ -716,6 +718,13 @@ public:
 		{
 			m_width = theApp.GetConfig("resx", m_width);
 			m_height = theApp.GetConfig("resy", m_height);
+			m_accurateScaleMulti = theApp.GetConfig("accurateScaleMulti", m_accurateScaleMulti);
+			if (m_accurateScaleMulti > 4) m_accurateScaleMulti = 1; //use the normal upscale math
+			if (m_accurateScaleMulti > 1) 
+			{
+				m_width = 1024 * m_accurateScaleMulti;
+				m_height = 1024 * m_accurateScaleMulti;
+			}
 		}
 	}
 
