@@ -70,7 +70,7 @@ extern void vSyncDebugStuff( uint frame );
 	extern void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
 	extern void __fastcall InstallLinuxExceptionHandler();
 	extern void __fastcall ReleaseLinuxExceptionHandler();
-	static void __unused NTFS_CompressFile( const wxString& file, bool compressStatus=true ) {}
+	static void NTFS_CompressFile( const wxString& file, bool compressStatus=true ) {}
 
 #	define PCSX2_MEM_PROTECT_BEGIN()	InstallLinuxExceptionHandler()
 #	define PCSX2_MEM_PROTECT_END()		ReleaseLinuxExceptionHandler()

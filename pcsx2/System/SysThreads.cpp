@@ -128,7 +128,18 @@ bool SysThreadBase::Suspend( bool isBlocking )
 		m_sem_event.Post();
 	}
 
-	if( isBlocking ) m_RunningLock.Wait();
+	if( isBlocking )
+	{
+		if( !m_RunningLock.Wait( wxTimeSpan( 0,0,3,0 ) ) )
+		{
+			// [TODO] : Implement proper deadlock handler here that lets the user continue
+			// to wait, or issue a cancel to the thread.
+
+			throw Exception::ThreadTimedOut( L"Possible deadlock while suspending the " + m_name,
+				m_name + L" is not responding to suspend requests.  It may be deadlocked or just running *really* slow."
+			);
+		}
+	}
 	return retval;
 }
 
@@ -471,6 +482,8 @@ void SysCoreThread::CpuExecute()
 
 void SysCoreThread::ExecuteTaskInThread()
 {
+	Threading::EnableHiresScheduler();
+
 	tls_coreThread = this;
 
 	m_sem_event.WaitRaw();
@@ -497,6 +510,8 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 // Invoked by the pthread_exit or pthread_cancel
 void SysCoreThread::OnCleanupInThread()
 {
+	Threading::DisableHiresScheduler();
+
 	if( g_plugins != NULL )
 		g_plugins->Close();
 

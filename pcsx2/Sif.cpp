@@ -201,8 +201,8 @@ __forceinline void SIF0Dma()
 					else
 						SIF_LOG(" EE SIF interrupt");
 
-					eesifbusy[0] = false;
 					CPU_INT(5, cycles*BIAS);
+					eesifbusy[0] = false;
 					done = true;
 				}
 				else if (sif0.fifoSize >= 4) // Read a tag
@@ -216,7 +216,7 @@ __forceinline void SIF0Dma()
 					sif0dma->madr = tag[1];
 
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
-
+					
 					switch (Tag::Id(tag[0]))
 					{
 						case TAG_REFE:
@@ -277,9 +277,7 @@ __forceinline void SIF1Dma()
 					ptag = _dmaGetAddr(sif1dma, sif1dma->tadr, DMAC_SIF1);
 					if (ptag == NULL) return;
 					
-					
-					sif1dma->chcr._u32 = (sif1dma->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);     // Copy the tag
-					sif1dma->qwc = (u16)ptag[0];
+					Tag::UnsafeTransfer(sif1dma, ptag);
 
 					if (sif1dma->chcr.TTE)
 					{
@@ -287,6 +285,11 @@ __forceinline void SIF1Dma()
 						SIF1write(ptag + 2, 2);
 					}
 
+					if ((sif1dma->chcr.TIE) && (Tag::IRQ(ptag)))
+					{
+						Console.WriteLn("SIF1 TIE");
+						sif1.end = 1;
+					}
 					//sif1.chain = 1;
 
 					switch (Tag::Id(ptag))
@@ -326,11 +329,6 @@ __forceinline void SIF1Dma()
 
 						default:
 							Console.WriteLn("Bad addr1 source chain");
-					}
-					if ((sif1dma->chcr.TIE) && (Tag::IRQ(ptag)))
-					{
-						Console.WriteLn("SIF1 TIE");
-						sif1.end = 1;
 					}
 				}
 			}

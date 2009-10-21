@@ -30,15 +30,13 @@ using std::min;
 // A three-way toggle used to determine if the GIF is stalling (transferring) or done (finished).
 // Should be a gifstate_t rather then int, but I don't feel like possibly interfering with savestates right now.
 static int gifstate = GIF_STATE_READY;
+static bool gifempty = false;
 
-//static u64 s_gstag = 0; // used for querying the last tag
-
-// This should be a bool. Next time I feel like breaking the save state, it will be. --arcum42
 static bool gspath3done = false;
 
 static u32 gscycles = 0, prevcycles = 0, mfifocycles = 0;
 static u32 gifqwc = 0;
-bool gifmfifoirq = false;
+static bool gifmfifoirq = false;
 
 static __forceinline void clearFIFOstuff(bool full)
 {	
@@ -60,8 +58,9 @@ __forceinline void gsInterrupt()
 		return;
 	}
 
-	if ((vif1.cmd & 0x7f) == 0x51)
+	if ((vif1.cmd & 0x7f) == 0x51) // DIRECTHL
 	{
+	    // Not waiting for the end of the Gif transfer.
 		if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = 0;
 	}
 
@@ -141,7 +140,7 @@ static __forceinline void GIFchain()
 
 static __forceinline bool checkTieBit(u32* &ptag)
 {
-	if (gif->chcr.TIE && (Tag::IRQ(ptag)))  //Check TIE bit of CHCR and IRQ bit of tag
+	if (gif->chcr.TIE && (Tag::IRQ(ptag)))
 	{
 		GIF_LOG("dmaIrq Set");
 		gspath3done = true;
@@ -151,28 +150,30 @@ static __forceinline bool checkTieBit(u32* &ptag)
 	return false;
 }
 
-static __forceinline bool ReadTag(u32* &ptag, u32 &id)
+static __forceinline u32* ReadTag(u32 &id)
 {
-	ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+	u32* ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 	
-	if (!(Tag::Transfer("Gif", gif, ptag))) return false;
+	if (!(Tag::Transfer("Gif", gif, ptag))) return NULL;
+	
 	gif->madr = ptag[1];				    //MADR = ADDR field
 		
-	id = Tag::Id(ptag);		//ID for DmaChain copied from bit 28 of the tag
+	id = Tag::Id(ptag);
 	gscycles += 2; // Add 1 cycles from the QW read for the tag
 			
 	gspath3done = hwDmacSrcChainWithStack(gif, id);
-	return true;
+	return ptag;
 }
 
-static __forceinline void ReadTag2(u32* &ptag)
+static __forceinline u32* ReadTag2()
 {
-	ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+	u32* ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 	
 	Tag::UnsafeTransfer(gif, ptag);
 	gif->madr = ptag[1];
 
 	gspath3done = hwDmacSrcChainWithStack(gif, Tag::Id(ptag));
+	return ptag;
 }
 
 void GIFdma() 
@@ -209,6 +210,7 @@ void GIFdma()
 	//Path2 gets priority in intermittent mode
 	if ((gifRegs->stat.P1Q || (vif1.cmd & 0x7f) == 0x50) && gifRegs->mode.IMT && (Path3progress == IMAGE_MODE)) 
 	{
+	    // We are in image mode doing DIRECTHL, Path 1 is in queue, and in intermittant mode.
 		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", gifRegs->stat.P1Q, (vif1.cmd & 0x7f), gifRegs->mode._u32, Path3progress);
 		CPU_INT(2, 16);
 		return;
@@ -220,7 +222,8 @@ void GIFdma()
 		{
 			if ((gif->chcr.MOD == CHAIN_MODE) && gif->chcr.STR)
 			{
-				if (!ReadTag(ptag, id)) return;
+			    ptag = ReadTag(id);
+				if (ptag == NULL) return;
 				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
 
 				//Check TIE bit of CHCR and IRQ bit of tag
@@ -257,7 +260,8 @@ void GIFdma()
 	
 	if ((gif->chcr.MOD == CHAIN_MODE) && (!gspath3done)) // Chain Mode
 	{
-		if (!ReadTag(ptag, id)) return;
+        ptag = ReadTag(id);
+        if (ptag == NULL) return;
 		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
 
 		if (dmacRegs->ctrl.STD == STD_GIF)
@@ -312,7 +316,7 @@ void dmaGIF()
 	gspath3done = false; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
 
 	gifRegs->stat.P3Q = 1;
-	gifRegs->stat.FQC |= 0x10;// FQC=31, hack ;) ( 31? 16! arcum42) [used to be 0xE00; // OPH=1 | APATH=3]
+	gifRegs->stat.FQC |= 0x10; // hack ;)
 
 	clearFIFOstuff(true);
 	
@@ -325,9 +329,7 @@ void dmaGIF()
 
 	if ((gif->qwc == 0) && (gif->chcr.MOD != NORMAL_MODE))
 	{
-		u32 *ptag;
-		
-		ReadTag2(ptag);
+		u32* ptag = ReadTag2();
 		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, (ptag[0] >> 28), gif->madr);
 
 		checkTieBit(ptag);
@@ -401,10 +403,12 @@ static __forceinline int mfifoGIFchain()
 	} 
 	else 
 	{
-		int mfifoqwc = gif->qwc;
+		int mfifoqwc;
+		
 		u32 *pMem = (u32*)dmaGetAddr(gif->madr);
 		if (pMem == NULL) return -1;
-		mfifoqwc = WRITERING_DMA(pMem, mfifoqwc);
+		
+		mfifoqwc = WRITERING_DMA(pMem, gif->qwc);
 		mfifocycles += (mfifoqwc) * 2; /* guessing */
 	}
 
@@ -420,7 +424,6 @@ void mfifoGIFtransfer(int qwc)
 {
 	u32 *ptag;
 	int id;
-	u32 temp = 0;
 	
 	mfifocycles = 0;
 	gifmfifoirq = false;
@@ -428,8 +431,11 @@ void mfifoGIFtransfer(int qwc)
 	if(qwc > 0 ) 
 	{
 		gifqwc += qwc;
-		if (gifstate != GIF_STATE_EMPTY) return;
+		
+		if (!(gifstate & GIF_STATE_EMPTY)) return;
+		// if (gifempty == false) return;
 		gifstate &= ~GIF_STATE_EMPTY;
+		gifempty = false;
 	}
 	
 	GIF_LOG("mfifoGIFtransfer %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);
@@ -440,13 +446,14 @@ void mfifoGIFtransfer(int qwc)
 		{
 			//if( gifqwc > 1 ) DevCon.WriteLn("gif mfifo tadr==madr but qwc = %d", gifqwc);
 			hwDmacIrq(DMAC_MFIFO_EMPTY);
-			gifstate |= GIF_STATE_EMPTY;			
+			gifstate |= GIF_STATE_EMPTY;
+			gifempty = true;
 			return;
 		}
 		
 		gif->tadr = qwctag(gif->tadr);
+		
 		ptag = (u32*)dmaGetAddr(gif->tadr);
-			
 		Tag::UnsafeTransfer(gif, ptag);
 		
 		gif->madr = ptag[1];
@@ -472,11 +479,13 @@ void mfifoGIFtransfer(int qwc)
 				break;
 
 			case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
-				temp = gif->madr;								//Temporarily Store ADDR
+			{
+				u32 temp = gif->madr;								//Temporarily Store ADDR
 				gif->madr = qwctag(gif->tadr + 16); 					  //Set MADR to QW following the tag
 				gif->tadr = temp;								//Copy temporarily stored ADDR to Tag
 				gifstate = GIF_STATE_READY;
 				break;
+			}
 
 			case TAG_REF: // Ref - Transfer QWC from ADDR field
 			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control) 
@@ -507,7 +516,7 @@ void mfifoGIFtransfer(int qwc)
 	}
 	FreezeRegs(0); 
 		
-	if ((gif->qwc == 0) && (gifstate == GIF_STATE_DONE)) gifstate = GIF_STATE_STALL;
+	if ((gif->qwc == 0) && (gifstate & GIF_STATE_DONE)) gifstate = GIF_STATE_STALL;
 	CPU_INT(11,mfifocycles);
 		
 	SPR_LOG("mfifoGIFtransfer end %x madr %x, tadr %x", gif->chcr._u32, gif->madr, gif->tadr);	
@@ -515,6 +524,7 @@ void mfifoGIFtransfer(int qwc)
 
 void gifMFIFOInterrupt()
 {
+    Console.WriteLn("gifMFIFOInterrupt");
 	mfifocycles = 0;
 	
 	if (Path3progress == STOPPED_MODE)
@@ -543,13 +553,15 @@ void gifMFIFOInterrupt()
 		return;
 	}	
 	
-	if (gifstate != GIF_STATE_STALL) 
+	if (!(gifstate & GIF_STATE_STALL))
 	{
 		if (gifqwc <= 0) 
 		{
 			//Console.WriteLn("Empty");
 			hwDmacIrq(DMAC_MFIFO_EMPTY);
 			gifstate |= GIF_STATE_EMPTY;
+			gifempty = true;
+			
 			gifRegs->stat.IMT = 0;
 			return;
 		}
@@ -558,7 +570,7 @@ void gifMFIFOInterrupt()
 	}
 	
 #ifdef PCSX2_DEVBUILD
-	if (gifstate == GIF_STATE_READY || gif->qwc > 0) 
+	if ((gifstate & GIF_STATE_READY) || (gif->qwc > 0)) 
 	{
 		Console.Error("gifMFIFO Panic > Shouldn't go here!");
 		return;
@@ -587,6 +599,6 @@ void SaveStateBase::gifFreeze()
 	Freeze( gifqwc );
 	Freeze( gspath3done );
 	Freeze( gscycles );
-
+	//Freeze(gifempty);
 	// Note: mfifocycles is not a persistent var, so no need to save it here.
 }

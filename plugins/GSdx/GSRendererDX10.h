@@ -39,6 +39,7 @@ protected:
 
 public:
 	GSRendererDX10();
+	virtual ~GSRendererDX10() {}
 
 	bool CreateDevice(GSDevice* dev);
 

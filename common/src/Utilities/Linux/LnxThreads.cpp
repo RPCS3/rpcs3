@@ -24,38 +24,44 @@
 
 static bool isMultiCore = true;		// assume more than one CPU (safer)
 
-namespace Threading
+// Note: Apparently this solution is Linux/Solaris only.
+// FreeBSD/OsX need something far more complicated (apparently)
+void Threading::CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
 {
-	// Note: Apparently this solution is Linux/Solaris only.
-	// FreeBSD/OsX need something far more complicated (apparently)
-	void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
+	const uint numCPU = sysconf( _SC_NPROCESSORS_ONLN );
+	if( numCPU > 0 )
 	{
-		const uint numCPU = sysconf( _SC_NPROCESSORS_ONLN );
-		if( numCPU > 0 )
-		{
-			isMultiCore = numCPU > 1;
-			x86caps.LogicalCores = numCPU;
-			x86caps.PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-		}
-		else
-		{
-			// Indeterminate?
-			x86caps.LogicalCores = 1;
-			x86caps.PhysicalCores = 1;
-		}
+		isMultiCore = numCPU > 1;
+		x86caps.LogicalCores = numCPU;
+		x86caps.PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
 	}
+	else
+	{
+		// Indeterminate?
+		x86caps.LogicalCores = 1;
+		x86caps.PhysicalCores = 1;
+	}
+}
 
-	__forceinline void Sleep( int ms )
-	{
-		usleep( 1000*ms );
-	}
+__forceinline void Threading::Sleep( int ms )
+{
+	usleep( 1000*ms );
+}
 
-	// For use in spin/wait loops,  Acts as a hint to Intel CPUs and should, in theory
-	// improve performance and reduce cpu power consumption.
-	__forceinline void SpinWait()
-	{
-		// If this doesn't compile you can just comment it out (it only serves as a
-		// performance hint and isn't required).
-		__asm__ ( "pause" );
-	}
+// For use in spin/wait loops,  Acts as a hint to Intel CPUs and should, in theory
+// improve performance and reduce cpu power consumption.
+__forceinline void Threading::SpinWait()
+{
+	// If this doesn't compile you can just comment it out (it only serves as a
+	// performance hint and isn't required).
+	__asm__ ( "pause" );
+}
+
+__forceinline void Threading::EnableHiresScheduler()
+{
+	// Don't know if linux has a customizable scheduler resolution like Windows (doubtful)
+}
+
+__forceinline void Threading::DisableHiresScheduler()
+{
 }

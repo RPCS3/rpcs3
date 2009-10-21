@@ -403,7 +403,6 @@ public:
 	//   Console / Program Logging Helpers
 	// ----------------------------------------------------------------------------
 	ConsoleLogFrame* GetProgramLog();
-	void ProgramLog_CountMsg();
 	void ProgramLog_PostEvent( wxEvent& evt );
 	void EnableAllLogging() const;
 	void DisableWindowLogging() const;

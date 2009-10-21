@@ -46,6 +46,7 @@ protected:
 
 public:
 	GSRendererDX9();
+	virtual ~GSRendererDX9() {}
 
 	bool CreateDevice(GSDevice* dev);
 

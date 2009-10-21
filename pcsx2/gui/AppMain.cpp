@@ -273,15 +273,22 @@ bool Pcsx2App::PrepForExit( bool canCancel )
 		throw Exception::CancelEvent( "Savestate in progress, cannot close program (close event delayed)" );
 	}
 
+	/*
 	if( canCancel )
 	{
+		// TODO: Confirm with the user?
+		// Problem: Suspend is often slow because it needs to wait until the current EE frame
+		// has finished processing (if the GS or logging has incurred severe overhead this makes
+		// closing PCSX2 difficult).  A non-blocking suspend with modal dialog might suffice
+		// however. --air
+		
 		bool resume = CoreThread.Suspend();
-		if( /* TODO: Confirm with the user? */ false )
+		if( false )
 		{
 			if(resume) CoreThread.Resume();
 			return false;
 		}
-	}
+	}*/
 
 	m_evtsrc_AppStatus.Dispatch( AppStatus_Exiting );
 	CleanupMess();

@@ -365,7 +365,7 @@ void memSavingState::FreezeMem( void* data, int size )
 
 void memSavingState::FreezeAll()
 {
-	// 90% of all savestates fit in under 45 megs (and require more than 43 megs, so migght as well...)
+	// 90% of all savestates fit in under 45 megs (and require more than 43 megs, so might as well...)
 	m_memory.ChunkSize = ReallocThreshold;
 	m_memory.MakeRoomFor( MemoryBaseAllocSize );
 

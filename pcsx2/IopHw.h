@@ -134,10 +134,21 @@ enum DMAChcrAddresses
 
 enum DMATadrAddresses
 {
+    HWx_DMA0_TADR  = 0x1f80108c,
+    HWx_DMA1_TADR  = 0x1f80109c,
     HWx_DMA2_TADR  = 0x1f8010ac,
+    HWx_DMA3_TADR  = 0x1f8010bc,
     HWx_DMA4_TADR  = 0x1f8010cc,
-    HWx_DMA9_TADR  = 0x1f80152c
+    HWx_DMA5_TADR  = 0x1f8010dc,
+    HWx_DMA6_TADR  = 0x1f8010ec,
+    HWx_DMA7_TADR  = 0x1f80150c,
+    HWx_DMA8_TADR  = 0x1f80151c,
+    HWx_DMA9_TADR  = 0x1f80152c,
+    HWx_DMA10_TADR = 0x1f80153c,
+    HWx_DMA11_TADR = 0x1f80154c,
+    HWx_DMA12_TADR = 0x1f80155c
 };
+
 /* Registers for the IOP Counters */
 enum IOPCountRegs
 {

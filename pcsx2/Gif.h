@@ -45,9 +45,9 @@ enum gif_stat_flags
 	GIF_STAT_P2Q		= (1<<7),	// PATH2 request Queued
 	GIF_STAT_P1Q		= (1<<8),	// PATH1 request Queued
 	GIF_STAT_OPH		= (1<<9),	// Output Path (Outputting Data)
-	GIF_STAT_APATH1	= (1<<10),	// Data Transfer Path 1 (In progress)
-	GIF_STAT_APATH2	= (2<<10),	// Data Transfer Path 2 (In progress)
-	GIF_STAT_APATH3	= (3<<10),	// Data Transfer Path 3 (In progress) (Mask too)
+	GIF_STAT_APATH1		= (1<<10),	// Data Transfer Path 1 (In progress)
+	GIF_STAT_APATH2		= (2<<10),	// Data Transfer Path 2 (In progress)
+	GIF_STAT_APATH3		= (3<<10),	// Data Transfer Path 3 (In progress) (Mask too)
 	GIF_STAT_DIR		= (1<<12),	// Transfer Direction
 	GIF_STAT_FQC		= (31<<24)	// QWC in GIF-FIFO
 };
@@ -239,10 +239,10 @@ struct GIFregisters
 extern Path3Modes Path3progress;
 
 extern void gsInterrupt();
-int _GIFchain();
-void GIFdma();
-void dmaGIF();
-void mfifoGIFtransfer(int qwc);
-void gifMFIFOInterrupt();
+extern int _GIFchain();
+extern void GIFdma();
+extern void dmaGIF();
+extern void mfifoGIFtransfer(int qwc);
+extern void gifMFIFOInterrupt();
 
 #endif

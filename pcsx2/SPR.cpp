@@ -66,14 +66,14 @@ int  _SPR0chain()
 			else 
 				mfifotransferred += spr0->qwc;
 			
-			hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+			hwMFIFOWrite(spr0->madr, &psSu8(spr0->sadr), spr0->qwc << 4);
 			spr0->madr += spr0->qwc << 4;
 			spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
 			break;
 			
 		case NO_MFD:
 		case MFD_RESERVED:
-			memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+			memcpy_fast((u8*)pMem, &psSu8(spr0->sadr), spr0->qwc << 4);
 			
 			// clear VU mem also!
 			TestClearVUs(spr0->madr, spr0->qwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
@@ -97,7 +97,7 @@ void _SPR0interleave()
 {
 	int qwc = spr0->qwc;
 	int sqwc = dmacRegs->sqwc.SQWC; 
-	int tqwc =  dmacRegs->sqwc.TQWC; 
+	int tqwc = dmacRegs->sqwc.TQWC; 
 	u32 *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;
@@ -115,7 +115,7 @@ void _SPR0interleave()
  		{
 			case MFD_VIF1:
 			case MFD_GIF:
-				hwMFIFOWrite(spr0->madr, (u8*)&PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+				hwMFIFOWrite(spr0->madr, &psSu8(spr0->sadr), spr0->qwc << 4);
 				mfifotransferred += spr0->qwc;
 				break;
 			
@@ -123,7 +123,7 @@ void _SPR0interleave()
 			case MFD_RESERVED:
 				// clear VU mem also!
 				TestClearVUs(spr0->madr, spr0->qwc << 2);
-				memcpy_fast((u8*)pMem, &PS2MEM_SCRATCH[spr0->sadr & 0x3fff], spr0->qwc << 4);
+				memcpy_fast((u8*)pMem, &psSu8(spr0->sadr), spr0->qwc << 4);
 				break;
  		}
 		spr0->sadr += spr0->qwc * 16;
@@ -163,7 +163,7 @@ static __forceinline void _dmaSPR0()
 				return;
 			}
 			// Destination Chain Mode
-			ptag = (u32*) & PS2MEM_SCRATCH[spr0->sadr & 0x3fff];
+			ptag = &psSu32(spr0->sadr);
 			spr0->sadr += 16;
 			
 			Tag::UnsafeTransfer(spr0, ptag);
@@ -186,25 +186,26 @@ static __forceinline void _dmaSPR0()
 					break;
 
 				case TAG_CNT: // CNT - Transfer QWC following the tag.
-					done = FALSE;
+					done = false;
 					break;
 
 				case TAG_END: // End - Transfer QWC following the tag
-					done = TRUE;
+					done = true;
 					break;
 			}
+			
 			SPR0chain();
 			if (spr0->chcr.TIE && Tag::IRQ(ptag))  			 //Check TIE bit of CHCR and IRQ bit of tag
 			{
 				//Console.WriteLn("SPR0 TIE");
-				done = TRUE;
+				done = true;
 			}
 				
 			spr0finished = done;
 			
 			if (!done)
 			{
-				ptag = (u32*) & PS2MEM_SCRATCH[spr0->sadr & 0x3fff];		//Set memory pointer to SADR
+				ptag = &psSu32(spr0->sadr);		//Set memory pointer to SADR
 				CPU_INT(8, ((u16)ptag[0]) / BIAS); // the lower 16bits of the tag / BIAS);
 				return;
 			}
@@ -227,8 +228,18 @@ void SPRFROMinterrupt()
 
 	if(mfifotransferred != 0)
 	{
-		switch (dmacRegs->ctrl.MFD)
+        switch (dmacRegs->ctrl.MFD)
 		{
+			case MFD_VIF1: // Most common case.
+			{
+				if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("VIF MFIFO Write outside MFIFO area");
+				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
+				//Console.WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
+				mfifoVIF1transfer(mfifotransferred);
+				mfifotransferred = 0;
+				if (vif1ch->chcr.STR) return;
+				break;
+			}
 			case MFD_GIF:
 			{
 				if ((spr0->madr & ~dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("GIF MFIFO Write outside MFIFO area");
@@ -237,16 +248,6 @@ void SPRFROMinterrupt()
 				mfifoGIFtransfer(mfifotransferred);
 				mfifotransferred = 0;
 				if (gif->chcr.STR) return;
-				break;
-			}
-			case MFD_VIF1:
-			{
-				if ((spr0->madr & ~psHu32(DMAC_RBSR)) != psHu32(DMAC_RBOR)) Console.WriteLn("VIF MFIFO Write outside MFIFO area");
-				spr0->madr = dmacRegs->rbor.ADDR + (spr0->madr & dmacRegs->rbsr.RMSK);
-				//Console.WriteLn("mfifoVIF1transfer %x madr %x, tadr %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr);
-				mfifoVIF1transfer(mfifotransferred);
-				mfifotransferred = 0;
-				if (vif1ch->chcr.STR) return;
 				break;
 			}
 			default:
@@ -258,7 +259,6 @@ void SPRFROMinterrupt()
 	hwDmacIrq(DMAC_FROM_SPR);
 }
 
-
 void dmaSPR0()   // fromSPR
 {
 	SPR_LOG("dmaSPR0 chcr = %lx, madr = %lx, qwc  = %lx, sadr = %lx",
@@ -267,7 +267,7 @@ void dmaSPR0()   // fromSPR
 	if ((spr0->chcr.MOD == CHAIN_MODE) && spr0->qwc == 0)
 	{
 		u32 *ptag;
-		ptag = (u32*) & PS2MEM_SCRATCH[spr0->sadr & 0x3fff];		//Set memory pointer to SADR
+		ptag = &psSu32(spr0->sadr);		//Set memory pointer to SADR
 		CPU_INT(8, (ptag[0] & 0xffff) / BIAS);
 		return;
 	}
@@ -279,7 +279,7 @@ void dmaSPR0()   // fromSPR
 
 __forceinline static void SPR1transfer(u32 *data, int size)
 {
-	memcpy_fast(&PS2MEM_SCRATCH[spr1->sadr & 0x3fff], (u8*)data, size << 2);
+	memcpy_fast(&psSu8(spr1->sadr), (u8*)data, size << 2);
 
 	spr1->sadr += size << 2;
 }
@@ -305,7 +305,6 @@ __forceinline void SPR1chain()
 	spr1->qwc = 0;
 }
 
-
 void _SPR1interleave()
 {
 	int qwc = spr1->qwc;
@@ -322,7 +321,7 @@ void _SPR1interleave()
 		spr1->qwc = std::min(tqwc, qwc);
 		qwc -= spr1->qwc;
 		pMem = (u32*)dmaGetAddr(spr1->madr);
-		memcpy_fast(&PS2MEM_SCRATCH[spr1->sadr & 0x3fff], (u8*)pMem, spr1->qwc << 4);
+		memcpy_fast(&psSu8(spr1->sadr), (u8*)pMem, spr1->qwc << 4);
 		spr1->sadr += spr1->qwc * 16;
 		spr1->madr += (sqwc + spr1->qwc) * 16; 
 	}
@@ -405,11 +404,10 @@ void _dmaSPR1()   // toSPR work function
 			break;
 		}
 	}
-
 }
+
 void dmaSPR1()   // toSPR
 {
-
 	SPR_LOG("dmaSPR1 chcr = 0x%x, madr = 0x%x, qwc  = 0x%x\n"
 	        "        tadr = 0x%x, sadr = 0x%x",
 	        spr1->chcr._u32, spr1->madr, spr1->qwc,

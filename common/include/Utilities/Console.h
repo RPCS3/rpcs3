@@ -20,6 +20,8 @@
 
 enum ConsoleColors
 {
+	Color_Current = -1,
+
 	Color_Black = 0,
 	Color_Red,
 	Color_Green,
@@ -27,7 +29,7 @@ enum ConsoleColors
 	Color_Blue,
 	Color_Magenta,
 	Color_Cyan,
-	Color_White
+	Color_White,
 };
 
 // Use fastcall for the console; should be helpful in most cases

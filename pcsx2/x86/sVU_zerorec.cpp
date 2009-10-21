@@ -52,11 +52,16 @@ extern void iDumpVU1Registers();
 // SuperVURec optimization options, uncomment only for debugging purposes
 #define SUPERVU_CACHING			// vu programs are saved and queried via memcompare (should be no reason to disable this)
 #define SUPERVU_WRITEBACKS			// don't flush the writebacks after every block
-#define SUPERVU_X86CACHING			// use x86reg caching (faster) (not really. rather lots slower :p (rama) )
 #define SUPERVU_VIBRANCHDELAY  		 // when integers are modified right before a branch that uses the integer,
 								// the old integer value is used in the branch, fixes kh2
 
 #define SUPERVU_PROPAGATEFLAGS  // the correct behavior of VUs, for some reason superman breaks gfx with it on...
+
+// use x86reg caching (faster) (not really. rather lots slower :p (rama) ) 
+// ... and buggy too since we disabled EBP.  Causes GoW2 to hang.  Let's get rid of it,
+//     sVU is only here to serve as a regression model for Nan/INF behavior anyway. (--air)
+//#define SUPERVU_X86CACHING
+
 
 // registers won't be flushed at block boundaries (faster) (nothing noticable speed-wise, causes SPS in Ratchet and clank (Nneeve) )
 #ifndef PCSX2_DEBUG
@@ -2791,26 +2796,9 @@ u32 g_curdebugvu;
 
 //float vuDouble(u32 f);
 
-#if defined(_MSC_VER)
-__declspec(naked) static void svudispfn()
-{
-	__asm
-	{
-		mov g_curdebugvu, eax
-		mov s_saveecx, ecx
-		mov s_saveedx, edx
-		mov s_saveebx, ebx
-		mov s_saveesi, esi
-		mov s_saveedi, edi
-		mov s_saveebp, ebp
-	}
-#else
-
-void svudispfntemp()
-{
-#endif
-
 #ifdef PCSX2_DEBUG
+static void  __fastcall svudispfn( int g_curdebugvu )
+{
 	static u32 i;
 
 	if (((vudump&8) && g_curdebugvu) || ((vudump&0x80) && !g_curdebugvu))    //&& g_vu1lastrec != g_vu1last ) {
@@ -2837,21 +2825,8 @@ void svudispfntemp()
 
 		g_vu1lastrec = s_svulast;
 	}
-#endif
-
-#if defined(_MSC_VER)
-	__asm
-	{
-	    mov ecx, s_saveecx
-	    mov edx, s_saveedx
-	    mov ebx, s_saveebx
-	    mov esi, s_saveesi
-	    mov edi, s_saveedi
-	    mov ebp, s_saveebp
-	    ret
-	}
-#endif
 }
+#endif
 
 // frees all regs taking into account the livevars
 void SuperVUFreeXMMregs(u32* livevars)
@@ -2946,8 +2921,8 @@ void VuBaseBlock::Recompile()
 
 	if (itparent == parents.end()) MOV32ItoM((uptr)&skipparent, -1);
 
-	MOV32ItoR(EAX, s_vu);
-	CALLFunc((uptr)svudispfn);
+	xMOV( ecx, s_vu );
+	xCALL( svudispfn );
 #endif
 
 	s_pCurBlock = this;

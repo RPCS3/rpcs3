@@ -73,6 +73,11 @@ namespace Threading
 	// For use in spin/wait loops.
 	extern void SpinWait();
 
+	// Optional implementation to enable hires thread/process scheduler for the operating system.
+	// Needed by Windows, but might not be relevant to other platforms.
+	extern void EnableHiresScheduler();
+	extern void DisableHiresScheduler();
+
 	// sleeps the current thread for the given number of milliseconds.
 	extern void Sleep( int ms );
 
@@ -314,7 +319,7 @@ namespace Threading
 		// Section of methods for internal use only.
 
 		void _DoSetThreadName( const wxString& name );
-		void _DoSetThreadName( __unused const char* name );
+		void _DoSetThreadName( const char* name );
 		void _internal_execute();
 		void _try_virtual_invoke( void (PersistentThread::*method)() );
 		void _ThreadCleanup();

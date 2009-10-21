@@ -68,9 +68,14 @@ bool GSDevice10::Create(GSWnd* wnd, bool vsync)
 	scd.SampleDesc.Quality = 0;
 	scd.Windowed = TRUE;
 
-	//Crashes when 2 threads work on the swapchain, as in pcsx2/wx.
-	//Todo : Figure out a way to have this flag anyway
-	uint32 flags = 0; //D3D10_CREATE_DEVICE_SINGLETHREADED;
+	// Crashes when 2 threads work on the swapchain, as in pcsx2/wx when it provides us
+	// an external window handle (which could be attached to any thread other than the GS one).
+	// (but if we're managing our own window then it's safe to enable)
+
+	// FIXME : Figure out a way to have this flag anyway, since it's a measurable speedup (may
+	//   not be possible though).
+
+	uint32 flags = m_wnd->IsManaged() ? D3D10_CREATE_DEVICE_SINGLETHREADED : 0;
 
 #ifdef DEBUG
 	flags |= D3D10_CREATE_DEVICE_DEBUG;

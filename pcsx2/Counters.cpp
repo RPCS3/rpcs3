@@ -322,12 +322,21 @@ static __forceinline void frameLimit()
 
 	m_iStart = uExpectedEnd;
 
-	while( sDeltaTime < 0 )
-	{
-		Timeslice();
-		iEnd = GetCPUTicks();
-		sDeltaTime = iEnd - uExpectedEnd;
-	}
+	// Shortcut for cases where no waiting is needed (they're running slow already,
+	// so don't bog 'em down with extra math...)
+	if( sDeltaTime >= 0 ) return;
+	
+	// If we're way ahead then we can afford to sleep the thread a bit.
+	// (note, sleep(1) thru sleep(2) tend to be the least accurate sleeps, and longer
+	// sleeps tend to be pretty reliable, so that's why the convoluted if/else below)
+
+	s32 msec = (int)((sDeltaTime*-1000) / (s64)GetTickFrequency());
+	if( msec > 4 ) Threading::Sleep( msec );
+	else if( msec > 2 ) Threading::Sleep( 1 );
+
+	// Sleep is not picture-perfect accurate, but it's actually not necessary to
+	// maintain a "perfect" lock to uExpectedEnd anyway.  if we're a little ahead
+	// starting this frame, it'll just sleep longer the next to make up for it. :)
 }
 
 static __forceinline void VSyncStart(u32 sCycle)

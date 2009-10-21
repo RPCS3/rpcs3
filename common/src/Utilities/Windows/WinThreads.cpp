@@ -22,45 +22,58 @@
 #include "implement.h"		// win32 pthreads implementations.
 #endif
 
-namespace Threading
+void Threading::CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
 {
-	void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
+	DWORD vProcessCPUs;
+	DWORD vSystemCPUs;
+
+	x86caps.LogicalCores = 1;
+
+	if( !GetProcessAffinityMask (GetCurrentProcess (),
+		&vProcessCPUs, &vSystemCPUs) ) return;
+
+	int CPUs = 0;
+	DWORD bit;
+
+	for (bit = 1; bit != 0; bit <<= 1)
 	{
-		DWORD vProcessCPUs;
-		DWORD vSystemCPUs;
-
-		x86caps.LogicalCores = 1;
-
-		if( !GetProcessAffinityMask (GetCurrentProcess (),
-			&vProcessCPUs, &vSystemCPUs) ) return;
-
-		int CPUs = 0;
-		DWORD bit;
-
-		for (bit = 1; bit != 0; bit <<= 1)
-		{
-			if (vSystemCPUs & bit)
-				CPUs++;
-		}
-
-		x86caps.LogicalCores = CPUs;
-		if( LogicalCoresPerPhysicalCPU > CPUs) // for 1-socket HTT-disabled machines
-			LogicalCoresPerPhysicalCPU = CPUs;
-
-		x86caps.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-		//ptw32_smp_system = ( x86caps.LogicalCores > 1 ) ? TRUE : FALSE;
+		if (vSystemCPUs & bit)
+			CPUs++;
 	}
 
-	__forceinline void Sleep( int ms )
-	{
-		::Sleep( ms );
-	}
+	x86caps.LogicalCores = CPUs;
+	if( LogicalCoresPerPhysicalCPU > CPUs) // for 1-socket HTT-disabled machines
+		LogicalCoresPerPhysicalCPU = CPUs;
 
-	// For use in spin/wait loops,  Acts as a hint to Intel CPUs and should, in theory
-	// improve performance and reduce cpu power consumption.
-	__forceinline void SpinWait()
-	{
-		__asm { pause };
-	}
+	x86caps.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
+	//ptw32_smp_system = ( x86caps.LogicalCores > 1 ) ? TRUE : FALSE;
+}
+
+__forceinline void Threading::Sleep( int ms )
+{
+	::Sleep( ms );
+}
+
+// For use in spin/wait loops,  Acts as a hint to Intel CPUs and should, in theory
+// improve performance and reduce cpu power consumption.
+__forceinline void Threading::SpinWait()
+{
+	__asm pause;
+}
+
+__forceinline void Threading::EnableHiresScheduler()
+{
+	// This improves accuracy of Sleep() by some amount, and only adds a negligable amount of
+	// overhead on modern CPUs.  Typically desktops are already set pretty low, but laptops in
+	// particular may have a scheduler Period of 15 or 20ms to extend battery life.
+	
+	// (note: this same trick is used by most multimedia software and games)
+
+	timeBeginPeriod( 1 );
+}
+
+__forceinline void Threading::DisableHiresScheduler()
+{
+	timeEndPeriod( 1 );
 }
 
