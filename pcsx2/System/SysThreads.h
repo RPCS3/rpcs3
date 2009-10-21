@@ -93,6 +93,12 @@ public:
 		return m_ExecMode > ExecMode_Closed;
 	}
 
+	bool HasPendingStateChangeRequest()
+	{
+		ExecutionMode mode = m_ExecMode;
+		return (mode == ExecMode_Closing) || (mode == ExecMode_Pausing);
+	}
+
 	bool IsClosed() const { return !IsOpen(); }
 
 	ExecutionMode GetExecutionMode() const { return m_ExecMode; }
@@ -164,6 +170,7 @@ public:
 	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void OnResumeReady();
 	virtual void Reset();
+	virtual void Cancel( bool isBlocking=true );
 
 	bool HasValidState()
 	{

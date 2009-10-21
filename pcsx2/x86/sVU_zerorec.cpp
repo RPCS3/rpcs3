@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -57,7 +57,7 @@ extern void iDumpVU1Registers();
 
 #define SUPERVU_PROPAGATEFLAGS  // the correct behavior of VUs, for some reason superman breaks gfx with it on...
 
-// use x86reg caching (faster) (not really. rather lots slower :p (rama) ) 
+// use x86reg caching (faster) (not really. rather lots slower :p (rama) )
 // ... and buggy too since we disabled EBP.  Causes GoW2 to hang.  Let's get rid of it,
 //     sVU is only here to serve as a regression model for Nan/INF behavior anyway. (--air)
 //#define SUPERVU_X86CACHING
@@ -65,7 +65,7 @@ extern void iDumpVU1Registers();
 
 // registers won't be flushed at block boundaries (faster) (nothing noticable speed-wise, causes SPS in Ratchet and clank (Nneeve) )
 #ifndef PCSX2_DEBUG
-//#define SUPERVU_INTERCACHING	
+//#define SUPERVU_INTERCACHING
 #endif
 
 #define SUPERVU_CHECKCONDITION 0 // has to be 0!!
@@ -75,8 +75,8 @@ extern void iDumpVU1Registers();
 #define _Imm11_ 	(s32)( (vucode & 0x400) ? (0xfffffc00 | (vucode & 0x3ff)) : (vucode & 0x3ff) )
 #define _UImm11_	(s32)(vucode & 0x7ff)
 
-#define _Ft_ ((VU->code >> 16) & 0x1F)  // The rt part of the instruction register 
-#define _Fs_ ((VU->code >> 11) & 0x1F)  // The rd part of the instruction register 
+#define _Ft_ ((VU->code >> 16) & 0x1F)  // The rt part of the instruction register
+#define _Fs_ ((VU->code >> 11) & 0x1F)  // The rd part of the instruction register
 #define _Fd_ ((VU->code >>  6) & 0x1F)  // The sa part of the instruction register
 #define _It_ (_Ft_ & 15)
 #define _Is_ (_Fs_ & 15)
@@ -351,7 +351,7 @@ void SuperVUAlloc(int vuindex)
 		// upper 4 bits must be zero!
 		// Changed "first try base" to 0xf1e0000, since 0x0c000000 liked to fail a lot. (cottonvibes)
 		s_recVUMem = SysMmapEx(0xf1e0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
-		
+
 		if (s_recVUMem == NULL)
 		{
 			throw Exception::OutOfMemory(
@@ -382,27 +382,27 @@ void SuperVUAlloc(int vuindex)
 void DestroyCachedHeaders(int vuindex, int j)
 {
 	list<VuFunctionHeader*>::iterator it = s_plistCachedHeaders[vuindex][j].begin();
-				
+
 	while (it != s_plistCachedHeaders[vuindex][j].end())
 	{
 		delete *it;
 		it++;
 	}
-	
-	s_plistCachedHeaders[vuindex][j].clear();			
+
+	s_plistCachedHeaders[vuindex][j].clear();
 }
 
 void DestroyVUHeaders(int vuindex)
 {
 	list<VuFunctionHeader*>::iterator it = s_listVUHeaders[vuindex].begin();
-				
+
 		while (it != s_listVUHeaders[vuindex].end())
 		{
 			delete *it;
 			it++;
 		}
-		
-	s_listVUHeaders[vuindex].clear();			
+
+	s_listVUHeaders[vuindex].clear();
 }
 
 // destroy VU resources
@@ -595,7 +595,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 	{
 		eff.Printf( "block:%c %x-%x; children: ", ((*itblock)->type&BLOCKTYPE_HASEOP) ? '*' : ' ',
 		        (*itblock)->startpc, (*itblock)->endpc - 8);
-		
+
 		for(itchild = (*itblock)->blocks.begin(); itchild != (*itblock)->blocks.end(); itchild++)
 		{
 			eff.Printf("%x ", (*itchild)->startpc);
@@ -643,9 +643,9 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 			eff.Printf( "STR: ");
 			for (i = 0; i < iREGCNT_GPR; ++i)
 			{
-				if (pregs[i].inuse) 
+				if (pregs[i].inuse)
 					eff.Printf( "%.2d ", pregs[i].reg);
-				else 
+				else
 					eff.Printf( "-1 ");
 			}
 			eff.Printf( "\n");
@@ -657,9 +657,9 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 			pregs = &s_vecRegArray[(*itblock)->nEndx86];
 			for (i = 0; i < iREGCNT_GPR; ++i)
 			{
-				if (pregs[i].inuse) 
+				if (pregs[i].inuse)
 					eff.Printf( "%.2d ", pregs[i].reg);
-				else 
+				else
 					eff.Printf( "-1 ");
 			}
 			eff.Printf( "\n");
@@ -687,7 +687,7 @@ void SuperVUDumpBlock(list<VuBaseBlock*>& blocks, int vuindex)
 			}
 		}
 
-// 
+//
 #if 0	// __LINUX__
 
 		// dump the asm
@@ -756,9 +756,9 @@ void* SuperVUGetProgram(u32 startpc, int vuindex)
 			assert(s_TotalVUCycles > 0);
 			if (vuindex)
 				VU1.VI[REG_TPC].UL = startpc;
-			else 
+			else
 				VU0.VI[REG_TPC].UL = startpc;
-			
+
 			return (void*)SuperVUEndProgram;
 		}
 
@@ -2156,16 +2156,16 @@ void VuBaseBlock::AssignVFRegs()
 			itinst->vfread0[i] = itinst->vfread1[i] = itinst->vfwrite[i] = itinst->vfacc[i] = -1;
 			itinst->vfflush[i] = -1;
 
-			if (regs->VFread0) 
+			if (regs->VFread0)
 				itinst->vfread0[i] = _allocVFtoXMMreg(VU, -1, regs->VFread0, 0);
-			else if (regs->VIread & (1 << REG_VF0_FLAG)) 
+			else if (regs->VIread & (1 << REG_VF0_FLAG))
 				itinst->vfread0[i] = _allocVFtoXMMreg(VU, -1, 0, 0);
-			
-			if (regs->VFread1) 
+
+			if (regs->VFread1)
 				itinst->vfread1[i] = _allocVFtoXMMreg(VU, -1, regs->VFread1, 0);
-			else if ((regs->VIread & (1 << REG_VF0_FLAG)) && regs->VFr1xyzw != 0xff) 
+			else if ((regs->VIread & (1 << REG_VF0_FLAG)) && regs->VFr1xyzw != 0xff)
 				itinst->vfread1[i] = _allocVFtoXMMreg(VU, -1, 0, 0);
-			
+
 			if (regs->VIread & (1 << REG_ACC_FLAG)) itinst->vfacc[i] = _allocACCtoXMMreg(VU, -1, 0);
 
 			int reusereg = -1; // 0 - VFwrite, 1 - VFAcc
@@ -2224,15 +2224,15 @@ void VuBaseBlock::AssignVFRegs()
 				{
 
 					if (itnext == insts.end() || (itnext->livevars[1]&regs->VFread0)) _freeXMMreg(itinst->vfread0[i]);
-					
+
 					xmmregs[itinst->vfread0[i]].inuse = 1;
 					xmmregs[itinst->vfread0[i]].reg = reg;
 					xmmregs[itinst->vfread0[i]].type = type;
 					xmmregs[itinst->vfread0[i]].mode = 0;
-					
+
 					if (reusereg)
 						itinst->vfacc[i] = itinst->vfread0[i];
-					else 
+					else
 						itinst->vfwrite[i] = itinst->vfread0[i];
 				}
 				else if (itinst->vfread1[i] >= 0 && lastwrite != itinst->vfread1[i] &&
@@ -2240,21 +2240,21 @@ void VuBaseBlock::AssignVFRegs()
 				{
 
 					if (itnext == insts.end() || (itnext->livevars[1]&regs->VFread1)) _freeXMMreg(itinst->vfread1[i]);
-					
+
 					xmmregs[itinst->vfread1[i]].inuse = 1;
 					xmmregs[itinst->vfread1[i]].reg = reg;
 					xmmregs[itinst->vfread1[i]].type = type;
 					xmmregs[itinst->vfread1[i]].mode = 0;
-					if (reusereg) 
+					if (reusereg)
 						itinst->vfacc[i] = itinst->vfread1[i];
-					else 
+					else
 						itinst->vfwrite[i] = itinst->vfread1[i];
 				}
 				else
 				{
-					if (reusereg) 
+					if (reusereg)
 						itinst->vfacc[i] = _allocACCtoXMMreg(VU, -1, 0);
-					else 
+					else
 						itinst->vfwrite[i] = _allocVFtoXMMreg(VU, -1, regs->VFwrite, 0);
 				}
 			}
@@ -2276,7 +2276,7 @@ void VuBaseBlock::AssignVFRegs()
 			{
 				// CLIP inst, need two extra regs
 				if (free0 < 0) free0 = _allocTempXMMreg(XMMT_FPS, -1);
-				
+
 				free1 = _allocTempXMMreg(XMMT_FPS, -1);
 				free2 = _allocTempXMMreg(XMMT_FPS, -1);
 				_freeXMMreg(free1);
@@ -2361,12 +2361,12 @@ void VuBaseBlock::AssignVIRegs(int parent)
 	if (parents.size() > 0)
 	{
 		u32 usedvars2 = 0xffffffff;
-		
+
 		for(itparent = parents.begin(); itparent != parents.end(); itparent++)
 		{
 			usedvars2 &= (*itparent)->insts.front().usedvars[0];
 		}
-		
+
 		usedvars |= usedvars2;
 	}
 
@@ -2413,7 +2413,7 @@ void VuBaseBlock::AssignVIRegs(int parent)
 
 	s_markov.children.push_back(this);
 	type |= BLOCKTYPE_ANALYZED;
-	
+
 	for(itparent = parents.begin(); itparent != parents.end(); itparent++)
 	{
 		(*itparent)->AssignVIRegs(1);
@@ -2628,17 +2628,11 @@ __declspec(naked) static void SuperVUEndProgram()
 		mov esi, s_vu1esi
 		mov edi, s_vuedi
 		mov ebx, s_vuebx
-	}
 
 #ifdef PCSX2_DEBUG
-	__asm
-	{
 		sub s_vu1esp, esp
-	}
 #endif
 
-	__asm
-	{
 		call SuperVUCleanupProgram
 		jmp s_callstack // so returns correctly
 	}
@@ -2723,9 +2717,9 @@ static void SuperVURecompile()
 	{
 		(*itblock)->type &= ~BLOCKTYPE_ANALYZED;
 	}
-	
+
 	s_listBlocks.front()->Recompile();
-	
+
 	// make sure everything compiled
 	for(itblock = s_listBlocks.begin(); itblock != s_listBlocks.end(); itblock++)
 	{
@@ -2761,7 +2755,7 @@ static void SuperVURecompile()
 					JMP32((uptr)SuperVUEndProgram - ((uptr)x86Ptr + 5));
 				}
 				// only other case is when there are two branches
-				else 
+				else
 				{
 					assert((*itblock)->insts.back().regs[0].pipe == VUPIPE_BRANCH);
 				}
@@ -2776,7 +2770,7 @@ static void SuperVURecompile()
 				(*itblock)->pChildJumps[i] = (u32*)((uptr)(*itblock)->pChildJumps[i] & 0x7fffffff);
 				*(*itblock)->pChildJumps[i] = (uptr)(*itchild)->pcode - ((uptr)(*itblock)->pChildJumps[i] + 4);
 			}
-			else 
+			else
 			{
 				*(*itblock)->pChildJumps[i] = (uptr)(*itchild)->pcode;
 			}
@@ -2860,7 +2854,7 @@ void SuperVUFreeXMMregs(u32* livevars)
 						SSE_MOVHPS_XMM_to_M64(addr, (x86SSERegType)i);
 						SSE_SHUFPS_M128_to_XMM((x86SSERegType)i, addr, 0xc4);
 					}
-					else 
+					else
 					{
 						SSE_MOVHPS_M64_to_XMM((x86SSERegType)i, addr + 8);
 					}
@@ -2907,7 +2901,7 @@ void VuBaseBlock::Recompile()
 	MOV32ItoM((uptr)&s_vufnheader, s_pFnHeader->startpc);
 	MOV32ItoM((uptr)&VU->VI[REG_TPC], startpc);
 	MOV32ItoM((uptr)&s_svulast, startpc);
-	
+
 	list<VuBaseBlock*>::iterator itparent;
 	for (itparent = parents.begin(); itparent != parents.end(); ++itparent)
 	{
@@ -3023,9 +3017,9 @@ void VuBaseBlock::Recompile()
 		_freeX86regs();
 		AND32ItoM((uptr)&VU0.VI[ REG_VPU_STAT ].UL, s_vu ? ~0x100 : ~0x001); // E flag
 		AND32ItoM((uptr)&VU->vifRegs->stat, ~VIF1_STAT_VEW);
-		
+
 		if (!branch) MOV32ItoM((uptr)&VU->VI[REG_TPC], endpc);
-		
+
 		JMP32((uptr)SuperVUEndProgram - ((uptr)x86Ptr + 5));
 	}
 	else
@@ -3111,7 +3105,7 @@ void VuBaseBlock::Recompile()
 							else
 								x86regs[i].inuse = 0;
 						}
-						else 
+						else
 #endif
 						{
 							_freeX86reg(i);
@@ -3427,7 +3421,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 //							else
 //								MOV32MtoR(EAX, (uptr)&VU->VI[REG_STATUS_FLAG]);
 //							s_StatusRead = tempstatus;
-							
+
 							if (s_StatusRead == 0)
 								s_StatusRead = (uptr) & VU->VI[REG_STATUS_FLAG];
 
@@ -3630,7 +3624,8 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 		TEST32ItoM((uptr)&VU0.VI[REG_FBRST].UL, s_vu ? 0x400 : 0x004);
 		u8* ptr = JZ8(0);
 		OR32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, s_vu ? 0x200 : 0x002);
-		_callFunctionArg1((uptr)hwIntcIrq, MEM_CONSTTAG, s_vu ? INTC_VU1 : INTC_VU0);
+		xMOV( ecx, s_vu ? INTC_VU1 : INTC_VU0 );
+		xCALL( hwIntcIrq );
 		x86SetJ8(ptr);
 	}
 	if (ptr[1] & 0x08000000)   // T flag
@@ -3638,7 +3633,8 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 		TEST32ItoM((uptr)&VU0.VI[REG_FBRST].UL, s_vu ? 0x800 : 0x008);
 		u8* ptr = JZ8(0);
 		OR32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, s_vu ? 0x400 : 0x004);
-		_callFunctionArg1((uptr)hwIntcIrq, MEM_CONSTTAG, s_vu ? INTC_VU1 : INTC_VU0);
+		xMOV( ecx, s_vu ? INTC_VU1 : INTC_VU0 );
+		xCALL( hwIntcIrq );
 		x86SetJ8(ptr);
 	}
 
@@ -3785,7 +3781,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 
 			_freeX86reg(x86temp);
 		}
-		
+
 		// waitq
 		if (ptr[0] == 0x800003bf) SuperVUFlush(0, 1);
 		// waitp
@@ -4357,7 +4353,7 @@ void recVUMI_XGKICK(VURegs *VU, int info)
 		recVUMI_XGKICK_(VU);
 	}
 
-	int isreg = _allocX86reg(X86ARG2, X86TYPE_VI | (s_vu ? X86TYPE_VU1 : 0), _Is_, MODE_READ);
+	int isreg = _allocX86reg(ECX, X86TYPE_VI | (s_vu ? X86TYPE_VU1 : 0), _Is_, MODE_READ);
 	_freeX86reg(isreg); // flush
 	x86regs[isreg].inuse = 1;
 	x86regs[isreg].type = X86TYPE_VITEMP;
@@ -4366,12 +4362,12 @@ void recVUMI_XGKICK(VURegs *VU, int info)
 	SHL32ItoR(isreg, 4);
 	AND32ItoR(isreg, 0x3fff);
 	s_XGKICKReg = isreg;
-	
+
 	if (!SUPERVU_XGKICKDELAY || pc == s_pCurBlock->endpc) {
 		recVUMI_XGKICK_(VU);
 	}
 	else {
-		s_ScheduleXGKICK = (CHECK_XGKICKHACK) ? (min((u32)4, (s_pCurBlock->endpc-pc)/8)) : 2; 
+		s_ScheduleXGKICK = (CHECK_XGKICKHACK) ? (min((u32)4, (s_pCurBlock->endpc-pc)/8)) : 2;
 	}
 }
 

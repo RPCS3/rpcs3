@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #pragma once
 
 #include <semaphore.h>
@@ -62,7 +62,7 @@ namespace Threading
 	// --------------------------------------------------------------------------------------
 	// The following set of documented functions have Linux/Win32 specific implementations,
 	// which are found in WinThreads.cpp and LnxThreads.cpp
-	
+
 
 	// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
 	extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
@@ -146,6 +146,7 @@ namespace Threading
 		void WaitRaw();
 		bool WaitRaw( const wxTimeSpan& timeout );
 		void WaitNoCancel();
+		void WaitNoCancel( const wxTimeSpan& timeout );
 		int  Count();
 
 		void Wait();
@@ -161,7 +162,7 @@ namespace Threading
 		MutexLock();
 		virtual ~MutexLock() throw();
 		virtual bool IsRecursive() const { return false; }
-		
+
 		void Recreate();
 		bool RecreateIfLocked();
 		void Detach();
@@ -173,10 +174,10 @@ namespace Threading
 
 		void LockRaw();
 		bool LockRaw( const wxTimeSpan& timeout );
-		
+
 		void Wait();
 		bool Wait( const wxTimeSpan& timeout );
-	
+
 	protected:
 		// empty constructor used by MutexLockRecursive
 		MutexLock( bool ) {}
@@ -217,7 +218,7 @@ namespace Threading
 // --------------------------------------------------------------------------------------
 // PersistentThread - Helper class for the basics of starting/managing persistent threads.
 // --------------------------------------------------------------------------------------
-// This class is meant to be a helper for the typical threading model of "start once and 
+// This class is meant to be a helper for the typical threading model of "start once and
 // reuse many times."  This class incorporates a lot of extra overhead in stopping and
 // starting threads, but in turn provides most of the basic thread-safety and event-handling
 // functionality needed for a threaded operation.  In practice this model is usually an
@@ -230,7 +231,7 @@ namespace Threading
 //  void OnStart();
 //  void ExecuteTaskInThread();
 //  void OnCleanupInThread();
-//  
+//
 // Use the public methods Start() and Cancel() to start and shutdown the thread, and use
 // m_sem_event internally to post/receive events for the thread (make a public accessor for
 // it in your derived class if your thread utilizes the post).
@@ -247,14 +248,14 @@ namespace Threading
 
 	protected:
 		typedef int (*PlainJoeFP)();
-		
+
 		wxString	m_name;				// diagnostic name for our thread.
 
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
 		MutexLock	m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
 		MutexLockRecursive	m_lock_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
-		
+
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
 		volatile long m_running;		// set true by Start(), and set false by Cancel(), Block(), etc.
 
@@ -285,7 +286,7 @@ namespace Threading
 		// Start() once necessary locks have been obtained.  Do not override Start() directly
 		// unless you're really sure that's what you need to do. ;)
 		virtual void OnStart();
-		
+
 		virtual void OnStartInThread();
 
 		// This is called when the thread has been canceled or exits normally.  The PersistentThread
@@ -327,7 +328,7 @@ namespace Threading
 		static void* _internal_callback( void* func );
 		static void _pt_callback_cleanup( void* handle );
 	};
-	
+
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// ScopedLock: Helper class for using Mutexes.
 	// Using this class provides an exception-safe (and generally clean) method of locking
@@ -370,7 +371,7 @@ namespace Threading
 			m_lock.Lock();
 			m_IsLocked = true;
 		}
-		
+
 		bool IsLocked() const { return m_IsLocked; }
 
 	protected:
@@ -380,9 +381,9 @@ namespace Threading
 		,	m_IsLocked( isTryLock ? m_lock.TryLock() : false )
 		{
 		}
-			
+
 	};
-	
+
 	class ScopedTryLock : public ScopedLock
 	{
 	public:

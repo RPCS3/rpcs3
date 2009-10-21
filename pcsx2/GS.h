@@ -102,6 +102,7 @@ protected:
 	int m_CopyCommandTally;
 	int m_CopyDataTally;
 	volatile bool m_RingBufferIsBusy;
+	volatile bool m_PluginOpened;
 
 	// Counts the number of vsync frames queued in the MTGS ringbuffer.  This is used to
 	// throttle the number of frames allowed to be rendered ahead of time for games that
@@ -121,8 +122,6 @@ protected:
 public:
 	mtgsThreadObject();
 	virtual ~mtgsThreadObject() throw();
-
-	void OnStart();
 
 	// Waits for the GS to empty out the entire ring buffer contents.
 	// Used primarily for plugin startup/shutdown.
@@ -145,11 +144,15 @@ public:
 
 protected:
 	void OpenPlugin();
+	void ClosePlugin();
+
+	void OnStart();
+	void OnResumeReady();
+
 	void OnSuspendInThread();
 	void OnPauseInThread() {}
 	void OnResumeInThread( bool IsSuspended );
-
-	void OnResumeReady();
+	void OnCleanupInThread();
 
 	// Saves MMX/XMM REGS, posts an event to the mtgsThread flag and releases a timeslice.
 	// For use in surrounding loops that wait on the mtgs.

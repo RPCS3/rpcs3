@@ -21,7 +21,6 @@ SuperVUExecuteProgram:
         add esp, 4
         mov dword ptr [s_callstack], eax
         call SuperVUGetProgram
-        mov s_vu1ebp, ebp
         mov s_vu1esi, esi
         mov s_vuedi, edi
         mov s_vuebx, ebx
@@ -38,7 +37,6 @@ SuperVUExecuteProgram:
 SuperVUEndProgram:
 	// restore cpu state
 	ldmxcsr g_sseMXCSR
-		mov ebp, s_vu1ebp
 		mov esi, s_vu1esi
 		mov edi, s_vuedi
 		mov ebx, s_vuebx

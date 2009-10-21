@@ -46,19 +46,32 @@ struct BASEBLOCKEX
 
 class BaseBlocks
 {
-private:
+protected:
+	typedef std::multimap<u32, uptr>::iterator linkiter_t;
+
 	// switch to a hash map later?
 	std::multimap<u32, uptr> links;
-	typedef std::multimap<u32, uptr>::iterator linkiter_t;
 	uptr recompiler;
 	std::vector<BASEBLOCKEX> blocks;
 
 public:
+	BaseBlocks() :
+		recompiler( NULL )
+	,	blocks(0)
+	{
+		blocks.reserve(0x4000);
+	}
+
 	BaseBlocks(uptr recompiler_) :
 		recompiler(recompiler_),
 		blocks(0)
 	{
 		blocks.reserve(0x4000);
+	}
+	
+	void SetJITCompile( void (*recompiler_)() )
+	{
+		recompiler = (uptr)recompiler_;
 	}
 
 	BASEBLOCKEX* New(u32 startpc, uptr fnptr);

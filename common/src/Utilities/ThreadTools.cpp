@@ -185,7 +185,7 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 		}
 
 		pthread_cancel( m_thread );
-		
+
 	}
 
 	if( isBlocking )
@@ -212,7 +212,9 @@ void Threading::PersistentThread::Block()
 
 bool Threading::PersistentThread::IsSelf() const
 {
-	return pthread_self() == m_thread;
+	// Detached threads may have their pthread handles recycled as newer threads, causing
+	// false IsSelf reports.
+	return !m_detached && (pthread_self() == m_thread);
 }
 
 bool Threading::PersistentThread::IsRunning() const
@@ -387,9 +389,9 @@ void Threading::PersistentThread::OnStartInThread()
 void Threading::PersistentThread::_internal_execute()
 {
 	m_lock_InThread.Lock();
-	_DoSetThreadName( m_name );
-
 	OnStartInThread();
+
+	_DoSetThreadName( m_name );
 
 	_try_virtual_invoke( &PersistentThread::ExecuteTaskInThread );
 }
@@ -409,7 +411,7 @@ void Threading::PersistentThread::OnCleanupInThread()
 // callback function
 void* Threading::PersistentThread::_internal_callback( void* itsme )
 {
-	jASSUME( itsme != NULL );
+	pxAssert( itsme != NULL );
 	PersistentThread& owner = *((PersistentThread*)itsme);
 
 	pthread_cleanup_push( _pt_callback_cleanup, itsme );

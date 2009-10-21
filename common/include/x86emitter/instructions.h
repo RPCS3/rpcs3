@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -188,6 +188,7 @@ namespace x86Emitter
 	// ----- Miscellaneous Instructions  -----
 	// Various Instructions with no parameter and no special encoding logic.
 
+	extern void xLEAVE();
 	extern void xRET();
 	extern void xCBW();
 	extern void xCWD();
@@ -244,7 +245,7 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 	// Forward Jump Helpers (act as labels!)
-	
+
 #define DEFINE_FORWARD_JUMP( label, cond ) \
 	template< typename OperandType > \
 	class xForward##label : public xForwardJump<OperandType> \
@@ -328,7 +329,7 @@ namespace x86Emitter
 
 	DEFINE_FORWARD_JUMP( JPE,	Jcc_ParityEven );
 	DEFINE_FORWARD_JUMP( JPO,	Jcc_ParityOdd );
-	
+
 	typedef xForwardJPE<s8>		xForwardJPE8;
 	typedef xForwardJPE<s32>	xForwardJPE32;
 	typedef xForwardJPO<s8>		xForwardJPO8;
@@ -362,7 +363,7 @@ namespace x86Emitter
 
 	extern void xMOVQZX( const xRegisterSSE& to, const ModSibBase& src );
 	extern void xMOVQZX( const xRegisterSSE& to, const xRegisterSSE& from );
-	
+
 	extern void xMOVSS( const xRegisterSSE& to, const xRegisterSSE& from );
 	extern void xMOVSS( const ModSibBase& to, const xRegisterSSE& from );
 	extern void xMOVSD( const xRegisterSSE& to, const xRegisterSSE& from );
@@ -421,12 +422,12 @@ namespace x86Emitter
 	extern void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 );
 
 	// ------------------------------------------------------------------------
-	
+
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xdb> xPAND;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xeb> xPOR;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xef> xPXOR;
-	
+
 	extern const Internal::SimdImpl_AndNot			xANDN;
 
 	extern const Internal::SimdImpl_COMI<true>		xCOMI;
@@ -434,7 +435,7 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_rSqrt<0x53>		xRCP;
 	extern const Internal::SimdImpl_rSqrt<0x52>		xRSQRT;
 	extern const Internal::SimdImpl_Sqrt<0x51>		xSQRT;
-	
+
 	extern const Internal::SimdImpl_MinMax<0x5f>	xMAX;
 	extern const Internal::SimdImpl_MinMax<0x5d>	xMIN;
 	extern const Internal::SimdImpl_Shuffle<0xc6>	xSHUF;
@@ -442,7 +443,7 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 
 	extern const Internal::SimdImpl_DestRegSSE<0x66,0x1738> xPTEST;
-	
+
 	extern const Internal::SimdImpl_Compare<SSE2_Equal>			xCMPEQ;
 	extern const Internal::SimdImpl_Compare<SSE2_Less>			xCMPLT;
 	extern const Internal::SimdImpl_Compare<SSE2_LessOrEqual>	xCMPLE;
@@ -484,9 +485,9 @@ namespace x86Emitter
 
 	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x2c,xRegister32, xRegisterSSE,u64>	xCVTTSD2SI;
 	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>	xCVTTSS2SI;
-	
+
 	// ------------------------------------------------------------------------
-	
+
 	extern const Internal::SimdImpl_Shift<0xf0, 6>		xPSLL;
 	extern const Internal::SimdImpl_Shift<0xd0, 2>		xPSRL;
 	extern const Internal::SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
@@ -502,7 +503,7 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_PUnpack				xPUNPCK;
 	extern const Internal::SimdImpl_Unpack				xUNPCK;
 	extern const Internal::SimdImpl_Pack				xPACK;
-	
+
 	extern const Internal::SimdImpl_PAbsolute			xPABS;
 	extern const Internal::SimdImpl_PSign				xPSIGN;
 	extern const Internal::SimdImpl_PInsert				xPINSR;
@@ -513,7 +514,7 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_Blend				xBLEND;
 	extern const Internal::SimdImpl_DotProduct			xDP;
 	extern const Internal::SimdImpl_Round				xROUND;
-	
+
 	extern const Internal::SimdImpl_PMove<true>			xPMOVSX;
 	extern const Internal::SimdImpl_PMove<false>		xPMOVZX;
 

@@ -19,6 +19,8 @@
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
 
+using namespace x86Emitter;
+
 extern void _vu0WaitMicro();
 extern void _vu0FinishMicro();
 
@@ -311,14 +313,12 @@ static void recCTC2() {
 			}
 			else MOV32ItoM((uptr)&microVU0.regs->VI[_Rd_].UL, 0);
 			break;
-		case REG_CMSAR1:
+		case REG_CMSAR1:	// Execute VU1 Micro SubRoutine
 			if (_Rt_) {
-				MOV32MtoR(EAX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
-				PUSH32R(EAX);
+				MOV32MtoR(ECX, (uptr)&cpuRegs.GPR.r[_Rt_].UL[0]);
 			}
-			else PUSH32I(0);
-			CALLFunc((uptr)vu1ExecMicro); // Execute VU1 Micro SubRoutine
-			ADD32ItoR(ESP, 4);
+			else XOR32RtoR(ECX,ECX);
+			xCALL(vu1ExecMicro);
 			break;
 		case REG_FBRST:
 			if (!_Rt_) { 

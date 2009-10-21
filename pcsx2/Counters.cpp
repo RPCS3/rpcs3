@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -45,7 +45,7 @@ SyncCounter hsyncCounter;
 SyncCounter vsyncCounter;
 
 u32 nextsCounter;	// records the cpuRegs.cycle value of the last call to rcntUpdate()
-s32 nextCounter;	// delta from nextsCounter, in cycles, until the next rcntUpdate() 
+s32 nextCounter;	// delta from nextsCounter, in cycles, until the next rcntUpdate()
 
 void rcntReset(int index) {
 	counters[index].count = 0;
@@ -64,7 +64,7 @@ static __forceinline void _rcntSet( int cntidx )
 
 	// Stopped or special hsync gate?
 	if (!counter.mode.IsCounting || (counter.mode.ClockSource == 0x3) ) return;
-	
+
 	// check for special cases where the overflow or target has just passed
 	// (we probably missed it because we're doing/checking other things)
 	if( counter.count > 0x10000 || counter.count > counter.target )
@@ -80,17 +80,17 @@ static __forceinline void _rcntSet( int cntidx )
 
 	c = ((0x10000 - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
 	c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
-	if (c < nextCounter) 
+	if (c < nextCounter)
 	{
 		nextCounter = c;
 		cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
 	}
-	
+
 	// Ignore target diff if target is currently disabled.
-	// (the overflow is all we care about since it goes first, and then the 
+	// (the overflow is all we care about since it goes first, and then the
 	// target will be turned on afterward, and handled in the next event test).
 
-	if( counter.target & EECNT_FUTURE_TARGET ) 
+	if( counter.target & EECNT_FUTURE_TARGET )
 	{
 		return;
 	}
@@ -98,11 +98,11 @@ static __forceinline void _rcntSet( int cntidx )
 	{
 		c = ((counter.target - counter.count) * counter.rate) - (cpuRegs.cycle - counter.sCycleT);
 		c += cpuRegs.cycle - nextsCounter;		// adjust for time passed since last rcntUpdate();
-		if (c < nextCounter) 
+		if (c < nextCounter)
 		{
 			nextCounter = c;
 			cpuSetNextBranch( nextsCounter, nextCounter );	//Need to update on counter resets/target changes
-		}	
+		}
 	}
 }
 
@@ -137,7 +137,7 @@ void rcntInit() {
 
 	hsyncCounter.Mode = MODE_HRENDER;
 	hsyncCounter.sCycle = cpuRegs.cycle;
-	vsyncCounter.Mode = MODE_VRENDER; 
+	vsyncCounter.Mode = MODE_VRENDER;
 	vsyncCounter.sCycle = cpuRegs.cycle;
 
 	UpdateVSyncRate();
@@ -148,7 +148,7 @@ void rcntInit() {
 
 // debug code, used for stats
 int g_nhsyncCounter;
-static uint iFrame = 0;	
+static uint iFrame = 0;
 
 #ifndef _WIN32
 #include <sys/time.h>
@@ -190,11 +190,11 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, u32 framesPerSecond, u32 scans
 	// Important!  The hRender/hBlank timers should be 50/50 for best results.
 	// In theory a 70%/30% ratio would be more correct but in practice it runs
 	// like crap and totally screws audio synchronization and other things.
-	
+
 	u64 Scanline = Frame / scansPerFrame;
 	u64 hBlank = Scanline / 2;
 	u64 hRender = Scanline - hBlank;
-	
+
 	info->Framerate = framesPerSecond;
 	info->Render = (u32)(Render/10000);
 	info->Blank  = (u32)(Blank/10000);
@@ -202,14 +202,14 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, u32 framesPerSecond, u32 scans
 	info->hRender = (u32)(hRender/10000);
 	info->hBlank  = (u32)(hBlank/10000);
 	info->hScanlinesPerFrame = scansPerFrame;
-	
+
 	// Apply rounding:
 	if( ( Render - info->Render ) >= 5000 ) info->Render++;
 	else if( ( Blank - info->Blank ) >= 5000 ) info->Blank++;
 
 	if( ( hRender - info->hRender ) >= 5000 ) info->hRender++;
 	else if( ( hBlank - info->hBlank ) >= 5000 ) info->hBlank++;
-	
+
 	// Calculate accumulative hSync rounding error per half-frame:
 	{
 	u32 hSyncCycles = ((info->hRender + info->hBlank) * scansPerFrame) / 2;
@@ -284,12 +284,12 @@ void frameLimitReset()
 // Framelimiter - Measures the delta time between calls and stalls until a
 // certain amount of time passes if such time hasn't passed yet.
 // See the GS FrameSkip function for details on why this is here and not in the GS.
-extern int limitOn; 
+extern int limitOn;
 static __forceinline void frameLimit()
 {
 	// 999 means the user would rather just have framelimiting turned off...
 	if( /*!EmuConfig.Video.EnableFrameLimiting*/ !limitOn || EmuConfig.Video.FpsLimit >= 999 ) return;
-	
+
 	s64 sDeltaTime;
 	u64 uExpectedEnd;
 	u64 iEnd;
@@ -302,7 +302,7 @@ static __forceinline void frameLimit()
 	// If the framerate drops too low, reset the expected value.  This avoids
 	// excessive amounts of "fast forward" syndrome which would occur if we
 	// tried to catch up too much.
-	
+
 	if( sDeltaTime > m_iTicks*8 )
 	{
 		m_iStart = iEnd - m_iTicks;
@@ -344,9 +344,9 @@ static __forceinline void VSyncStart(u32 sCycle)
 	EECNT_LOG( "/////////  EE COUNTER VSYNC START  \\\\\\\\\\\\\\\\\\\\  (frame: %d)", iFrame );
 	vSyncDebugStuff( iFrame ); // EE Profiling and Debug code
 
-	if ((CSRw & 0x8)) 
+	if ((CSRw & 0x8))
 	{
-		if (!(GSIMR&0x800)) 
+		if (!(GSIMR&0x800))
 		{
 			gsIrq();
 		}
@@ -393,7 +393,7 @@ static __forceinline void VSyncEnd(u32 sCycle)
 	frameLimit(); // limit FPS
 
 	// This doesn't seem to be needed here.  Games only seem to break with regard to the
-	// vsyncstart irq. 
+	// vsyncstart irq.
 	//cpuRegs.eCycle[30] = 2;
 }
 
@@ -411,16 +411,16 @@ __forceinline void rcntUpdate_hScanline()
 	if (hsyncCounter.Mode & MODE_HBLANK) { //HBLANK Start
 		rcntStartGate(false, hsyncCounter.sCycle);
 		psxCheckStartGate16(0);
-		
+
 		// Setup the hRender's start and end cycle information:
 		hsyncCounter.sCycle += vSyncInfo.hBlank;		// start  (absolute cycle value)
 		hsyncCounter.CycleT = vSyncInfo.hRender;		// endpoint (delta from start value)
 		hsyncCounter.Mode = MODE_HRENDER;
 	}
 	else { //HBLANK END / HRENDER Begin
-		if (CSRw & 0x4) 
+		if (CSRw & 0x4)
 		{
-			if (!(GSIMR&0x400)) 
+			if (!(GSIMR&0x400))
 			{
 				gsIrq();
 			}
@@ -440,6 +440,8 @@ __forceinline void rcntUpdate_hScanline()
 	}
 }
 
+bool CoreCancelDamnit = false;
+
 __forceinline void rcntUpdate_vSync()
 {
 	s32 diff = (cpuRegs.cycle - vsyncCounter.sCycle);
@@ -448,17 +450,24 @@ __forceinline void rcntUpdate_vSync()
 	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
 		eeRecIsReset = false;
+
+#ifndef PCSX2_SEH
+		if( CoreCancelDamnit || SysCoreThread::Get().HasPendingStateChangeRequest() )
+		{
+			longjmp( SetJmp_StateCheck, 1 );
+		}
+#else
 		mtgsThread.RethrowException();
 		SysCoreThread::Get().StateCheckInThread();
+#endif
 		if( eeRecIsReset )
 		{
 			eeRecIsReset = false;
 			cpuSetBranch();
-			
-			// Hack! GCC is unwilling to let us throw exceptions here.
-			// (Ones in Exception::*, anyways.) Work around it by skipping
-			// it.
-#ifdef _MSC_VER
+
+#ifndef PCSX2_SEH
+			longjmp( SetJmp_RecExecute, SetJmp_Dispatcher );
+#else
 			throw Exception::ForceDispatcherReg();
 #endif
 		}
@@ -479,7 +488,7 @@ __forceinline void rcntUpdate_vSync()
 
 		// Accumulate hsync rounding errors:
 		hsyncCounter.sCycle += vSyncInfo.hSyncError;
-	
+
 		if (CHECK_MICROVU0) vsyncVUrec(0);
 		if (CHECK_MICROVU1) vsyncVUrec(1);
 
@@ -511,20 +520,20 @@ static __forceinline void _cpuTestTarget( int i )
 			counters[i].count -= counters[i].target; // Reset on target
 		else
 			counters[i].target |= EECNT_FUTURE_TARGET;
-	} 
+	}
 	else counters[i].target |= EECNT_FUTURE_TARGET;
 }
 
 static __forceinline void _cpuTestOverflow( int i )
 {
 	if (counters[i].count <= 0xffff) return;
-	
+
 	if (counters[i].mode.OverflowInterrupt) {
 		EECNT_LOG("EE Counter[%d] OVERFLOW - mode=%x, count=%x", i, counters[i].mode, counters[i].count);
 		counters[i].mode.OverflowReached = 1;
 		hwIntcIrq(counters[i].interrupt);
 	}
-	
+
 	// wrap counter back around zero, and enable the future target:
 	counters[i].count -= 0x10000;
 	counters[i].target &= 0xffff;
@@ -539,14 +548,14 @@ __forceinline void rcntUpdate()
 	rcntUpdate_vSync();
 
 	// Update counters so that we can perform overflow and target tests.
-	
+
 	for (int i=0; i<=3; i++)
-	{	
+	{
 		// We want to count gated counters (except the hblank which exclude below, and are
 		// counted by the hblank timer instead)
 
 		//if ( gates & (1<<i) ) continue;
-		
+
 		if (!counters[i].mode.IsCounting ) continue;
 
 		if(counters[i].mode.ClockSource != 0x3)	// don't count hblank sources
@@ -561,7 +570,7 @@ __forceinline void rcntUpdate()
 			// Check Counter Targets and Overflows:
 			_cpuTestTarget( i );
 			_cpuTestOverflow( i );
-		} 
+		}
 		else counters[i].sCycleT = cpuRegs.cycle;
 	}
 
@@ -619,20 +628,20 @@ __forceinline void rcntStartGate(bool isVblank, u32 sCycle)
 
 		switch (counters[i].mode.GateMode) {
 			case 0x0: //Count When Signal is low (off)
-			
+
 				// Just set the start cycle (sCycleT) -- counting will be done as needed
 				// for events (overflows, targets, mode changes, and the gate off below)
-			
+
 				counters[i].mode.IsCounting = 1;
 				counters[i].sCycleT = sCycle;
 				EECNT_LOG("EE Counter[%d] %s StartGate Type0, count = %x",
 					isVblank ? "vblank" : "hblank", i, counters[i].count );
 				break;
-				
+
 			case 0x2:	// reset and start counting on vsync end
 				// this is the vsync start so do nothing.
 				break;
-				
+
 			case 0x1: //Reset and start counting on Vsync start
 			case 0x3: //Reset and start counting on Vsync start and end
 				counters[i].mode.IsCounting = 1;
@@ -695,7 +704,7 @@ __forceinline void rcntEndGate(bool isVblank , u32 sCycle)
 	// rcntUpdate, since we're being called from there anyway.
 }
 
-__forceinline void rcntWmode(int index, u32 value)  
+__forceinline void rcntWmode(int index, u32 value)
 {
 	if(counters[index].mode.IsCounting) {
 		if(counters[index].mode.ClockSource != 0x3) {
@@ -714,7 +723,7 @@ __forceinline void rcntWmode(int index, u32 value)
 	// Clear OverflowReached and TargetReached flags (0xc00 mask), but *only* if they are set to 1 in the
 	// given value.  (yes, the bits are cleared when written with '1's).
 
-	counters[index].modeval &= ~(value & 0xc00); 
+	counters[index].modeval &= ~(value & 0xc00);
 	counters[index].modeval = (counters[index].modeval & 0xc00) | (value & 0x3ff);
 	EECNT_LOG("EE Counter[%d] writeMode = %x   passed value=%x", index, counters[index].modeval, value );
 
@@ -724,17 +733,17 @@ __forceinline void rcntWmode(int index, u32 value)
 		case 2: counters[index].rate = 512; break;
 		case 3: counters[index].rate = vSyncInfo.hBlank+vSyncInfo.hRender; break;
 	}
-	
+
 	_rcntSetGate( index );
 	_rcntSet( index );
 }
 
-__forceinline void rcntWcount(int index, u32 value) 
+__forceinline void rcntWcount(int index, u32 value)
 {
 	EECNT_LOG("EE Counter[%d] writeCount = %x,   oldcount=%x, target=%x", index, value, counters[index].count, counters[index].target );
 
 	counters[index].count = value & 0xffff;
-	
+
 	// reset the target, and make sure we don't get a premature target.
 	counters[index].target &= 0xffff;
 	if( counters[index].count > counters[index].target )
@@ -749,7 +758,7 @@ __forceinline void rcntWcount(int index, u32 value)
 				counters[index].sCycleT = cpuRegs.cycle - change;
 			}
 		}
-	} 
+	}
 	else counters[index].sCycleT = cpuRegs.cycle;
 
 	_rcntSet( index );
@@ -795,9 +804,9 @@ __forceinline u32 rcntRcount(int index)
 	u32 ret;
 
 	// only count if the counter is turned on (0x80) and is not an hsync gate (!0x03)
-	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3)) 
+	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3))
 		ret = counters[index].count + ((cpuRegs.cycle - counters[index].sCycleT) / counters[index].rate);
-	else 
+	else
 		ret = counters[index].count;
 
 	// Spams the Console.
@@ -807,9 +816,9 @@ __forceinline u32 rcntRcount(int index)
 
 __forceinline u32 rcntCycle(int index)
 {
-	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3)) 
+	if (counters[index].mode.IsCounting && (counters[index].mode.ClockSource != 0x3))
 		return counters[index].count + ((cpuRegs.cycle - counters[index].sCycleT) / counters[index].rate);
-	else 
+	else
 		return counters[index].count;
 }
 

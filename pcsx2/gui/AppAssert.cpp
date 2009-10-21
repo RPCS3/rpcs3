@@ -74,6 +74,10 @@ static __threadlocal bool _reentrant_lock = false;
 // via messages.
 void Pcsx2App::OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg )
 {
+	// Used to allow the user to suppress future assertions during this application's session.
+	static bool disableAsserts = false;
+	if( disableAsserts ) return;
+
 	if( _reentrant_lock )
 	{
 		// Re-entrant assertions are bad mojo -- trap immediately.
@@ -81,9 +85,6 @@ void Pcsx2App::OnAssertFailure( const wxChar *file, int line, const wxChar *func
 	}
 
 	_reentrant_lock = true;
-
-	// Used to allow the user to suppress future assertions during this application's session.
-	static bool disableAsserts = false;
 
 	wxString dbgmsg;
 	dbgmsg.reserve( 2048 );

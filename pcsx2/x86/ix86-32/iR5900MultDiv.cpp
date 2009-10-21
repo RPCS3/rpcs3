@@ -98,7 +98,7 @@ void recWritebackHILO(int info, int writed, int upper)
 				regd = _checkXMMreg(XMMTYPE_GPRREG, _Rd_, MODE_WRITE|MODE_READ);
 				if( regd >= 0 ) {
 					SSE_MOVLPS_M64_to_XMM(regd, loaddr);
-					regd |= 0x8000;
+					regd |= MEM_XMMTAG;
 				}
 			}
 		}

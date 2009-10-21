@@ -75,24 +75,24 @@ static __forceinline u8* iopPhysMem( u32 addr )
 #define psxHu16(mem)	(*(u16*)&psxH[(mem) & 0xffff])
 #define psxHu32(mem)	(*(u32*)&psxH[(mem) & 0xffff])
 
-void psxMemAlloc();
-void psxMemReset();
-void psxMemShutdown();
+extern void psxMemAlloc();
+extern void psxMemReset();
+extern void psxMemShutdown();
 
-u8   iopMemRead8 (u32 mem);
-u16  iopMemRead16(u32 mem);
-u32  iopMemRead32(u32 mem);
-void iopMemWrite8 (u32 mem, u8 value);
-void iopMemWrite16(u32 mem, u16 value);
-void iopMemWrite32(u32 mem, u32 value);
+extern u8   __fastcall iopMemRead8 (u32 mem);
+extern u16  __fastcall iopMemRead16(u32 mem);
+extern u32  __fastcall iopMemRead32(u32 mem);
+extern void __fastcall iopMemWrite8 (u32 mem, u8 value);
+extern void __fastcall iopMemWrite16(u32 mem, u16 value);
+extern void __fastcall iopMemWrite32(u32 mem, u32 value);
 
 // x86reg and mmreg are always x86 regs
-void psxRecMemRead8();
-void psxRecMemRead16();
-void psxRecMemRead32();
-void psxRecMemWrite8();
-void psxRecMemWrite16();
-void psxRecMemWrite32();
+extern void psxRecMemRead8();
+extern void psxRecMemRead16();
+extern void psxRecMemRead32();
+extern void psxRecMemWrite8();
+extern void psxRecMemWrite16();
+extern void psxRecMemWrite32();
 
 namespace IopMemory
 {

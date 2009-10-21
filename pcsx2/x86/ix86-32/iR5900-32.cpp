@@ -79,8 +79,7 @@ static BASEBLOCK *recRAM = NULL;		// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;		// and here
 static BASEBLOCK *recROM1 = NULL;		// also here
 static u32 *recRAMCopy = NULL;
-void JITCompile();
-static BaseBlocks recBlocks((uptr)JITCompile);
+static BaseBlocks recBlocks;
 static u8* recPtr = NULL;
 static u32 *recConstBufPtr = NULL;
 EEINST* s_pInstCache = NULL;
@@ -310,6 +309,200 @@ u32* recGetImm64(u32 hi, u32 lo)
 	return imm64;
 }
 
+// =====================================================================================================
+//  R5900 Dispatchers
+// =====================================================================================================
+
+static void __fastcall recRecompile( const u32 startpc );
+
+static u32 g_lastpc = 0;
+static u32 s_store_ebp, s_store_esp;
+
+// Recompiled code buffer for EE recompiler dispatchers!
+static u8 __pagealigned eeRecDispatchers[0x1000];
+
+typedef void DynGenFunc();
+
+static DynGenFunc* DispatcherEvent		= NULL;
+static DynGenFunc* DispatcherReg		= NULL;
+static DynGenFunc* JITCompile			= NULL;
+static DynGenFunc* JITCompileInBlock	= NULL;
+static DynGenFunc* EnterRecompiledCode	= NULL;
+static DynGenFunc* ExitRecompiledCode	= NULL;
+
+static void recEventTest()
+{
+	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+	_cpuBranchTest_Shared();
+	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+}
+
+// parameters:
+//   espORebp - 0 for ESP, or 1 for EBP.
+//   regval   - current value of the register at the time the fault was detected (predates the
+//      stackframe setup code in this function)
+static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
+{
+	pxFailDev( wxsFormat( L"(R5900 Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
+		(espORebp==0) ? L"ESP" : L"EBP", regval, (espORebp==0) ? s_store_esp : s_store_ebp )
+	);
+
+	// Note: The recompiler will attempt to recover ESP and EBP after returning from this function,
+	// so typically selecting Continue/Ignore/Cancel for this assertion should allow PCSX2 to con-
+	// tinue to run with some degree of stability.
+}
+
+static void _DynGen_StackFrameCheck()
+{
+	if( !IsDevBuild ) return;
+
+	// --------- EBP Here -----------
+
+	xCMP( ebp, &s_store_ebp );
+	xForwardJE8 skipassert_ebp;
+
+	xMOV( ecx, 1 );					// 1 specifies EBP
+	xMOV( edx, ebp );
+	xCALL( StackFrameCheckFailed );
+	xMOV( ebp, &s_store_ebp );		// half-hearted frame recovery attempt!
+
+	skipassert_ebp.SetTarget();
+
+	// --------- ESP There -----------
+
+	xCMP( esp, &s_store_esp );
+	xForwardJE8 skipassert_esp;
+
+	xXOR( ecx, ecx );				// 0 specifies ESP
+	xMOV( edx, esp );
+	xCALL( StackFrameCheckFailed );
+	xMOV( esp, &s_store_esp );		// half-hearted frame recovery attempt!
+
+	skipassert_esp.SetTarget();
+}
+
+// The address for all cleared blocks.  It recompiles the current pc and then
+// dispatches to the recompiled block address.
+static DynGenFunc* _DynGen_JITCompile()
+{
+	pxAssertMsg( DispatcherReg != NULL, "Please compile the DispatcherReg subroutine *before* JITComple.  Thanks." );
+
+	u8* retval = xGetPtr();
+	_DynGen_StackFrameCheck();
+
+	xMOV( ecx, &cpuRegs.pc );
+	xCALL( recRecompile );
+
+	xMOV( eax, &cpuRegs.pc );
+	xMOV( ebx, eax );
+	xSHR( eax, 16 );
+	xMOV( ecx, ptr[recLUT + (eax*4)] );
+	xJMP( ptr32[ecx+ebx] );
+
+	return (DynGenFunc*)retval;
+}
+
+static DynGenFunc* _DynGen_JITCompileInBlock()
+{
+	u8* retval = xGetPtr();
+	xJMP( JITCompile );
+	return (DynGenFunc*)retval;
+}
+
+// called when jumping to variable pc address
+static DynGenFunc* _DynGen_DispatcherReg()
+{
+	u8* retval = xGetPtr();
+	_DynGen_StackFrameCheck();
+
+	xMOV( eax, &cpuRegs.pc );
+	xMOV( ebx, eax );
+	xSHR( eax, 16 );
+	xMOV( ecx, ptr[recLUT + (eax*4)] );
+	xJMP( ptr32[ecx+ebx] );
+
+	return (DynGenFunc*)retval;
+}
+
+static DynGenFunc* _DynGen_EnterRecompiledCode()
+{
+	u8* retval = xGetPtr();
+
+	// "standard" frame pointer setup for aligned stack: Record the original
+	//   esp into ebp, and then align esp.  ebp references the original esp base
+	//   for the duration of our function, and is used to restore the original
+	//   esp before returning from the function
+
+	// Optimization: We "allocate" 0x10 bytes of stack ahead of time here, which we can
+	// use for supplying parameters to cdecl functions.
+
+	xPUSH( ebp );
+	xMOV( ebp, esp );
+	xAND( esp, -0x10 );
+
+	// First 0x10 is for esi, edi, etc. Second 0x10 is for the return address and ebp.  The
+	// third 0x10 is for C-style CDECL calls we might make from the recompiler
+	// (parameters for those calls can be stored there!)
+
+	xSUB( esp, 0x30 );
+
+	xMOV( ptr[ebp-12], edi );
+	xMOV( ptr[ebp-8], esi );
+	xMOV( ptr[ebp-4], ebx );
+
+	// Simulate a CALL function by pushing the call address and EBP onto the stack.
+	xMOV( ptr32[esp+0x1c], 0xffeeff );
+	uptr& imm = *(uptr*)(xGetPtr()-4);
+
+	// This part simulates the "normal" stackframe prep of "push ebp, mov ebp, esp"
+	xMOV( ptr32[esp+0x18], ebp );
+	xLEA( ebp, ptr32[esp+0x18] );
+
+	xMOV( &s_store_esp, esp );
+	xMOV( &s_store_ebp, ebp );
+
+	xJMP( ptr32[&DispatcherReg] );
+	imm = (uptr)xGetPtr();
+	ExitRecompiledCode = (DynGenFunc*)xGetPtr();
+
+	xLEAVE();
+
+	xMOV( edi, ptr[ebp-12] );
+	xMOV( esi, ptr[ebp-8] );
+	xMOV( ebx, ptr[ebp-4] );
+
+	xLEAVE();
+	xRET();
+
+	return (DynGenFunc*)retval;
+}
+
+static void _DynGen_Dispatchers()
+{
+	// In case init gets called multiple times:
+	HostSys::MemProtect( eeRecDispatchers, 0x1000, Protect_ReadWrite, false );
+
+	// clear the buffer to 0xcc (easier debugging).
+	memset_8<0xcc,0x1000>( eeRecDispatchers );
+
+	xSetPtr( eeRecDispatchers );
+
+	// Place the EventTest and DispatcherReg stuff at the top, because they get called the
+	// most and stand to benefit from strong alignment and direct referencing.
+	DispatcherEvent = (DynGenFunc*)xGetPtr();
+	xCALL( recEventTest );
+	DispatcherReg	= _DynGen_DispatcherReg();
+
+	JITCompile			= _DynGen_JITCompile();
+	JITCompileInBlock	= _DynGen_JITCompileInBlock();
+	EnterRecompiledCode	= _DynGen_EnterRecompiledCode();
+
+	HostSys::MemProtect( eeRecDispatchers, 0x1000, Protect_ReadOnly, true );
+
+	recBlocks.SetJITCompile( JITCompile );
+}
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 static const int REC_CACHEMEM = 0x01000000;
@@ -377,6 +570,7 @@ static void recAlloc()
 	// No errors.. Proceed with initialization:
 
 	ProfilerRegisterSource( "EERec", recMem, REC_CACHEMEM+0x1000 );
+	_DynGen_Dispatchers();
 
 	x86FpuState = FPU_STATE;
 }
@@ -479,141 +673,85 @@ void recStep( void )
 {
 }
 
-extern "C"
+#ifndef PCSX2_SEH
+
+// <---  setjmp/longjmp model  <---
+
+#include "GS.h"
+#include "System/SysThreads.h"
+
+static void StateThreadCheck_LongJmp()
 {
-void recEventTest()
-{
-#ifdef PCSX2_DEVBUILD
-	// dont' remove this check unless doing an official release
-	if( g_globalXMMSaved || g_globalMMXSaved)
-	{
-		DevCon.Error("PCSX2 Foopah!  Frozen regs have not been restored!!!");
-		DevCon.Error("g_globalXMMSaved = %d,g_globalMMXSaved = %d", g_globalXMMSaved, g_globalMMXSaved);
-	}
-	assert( !g_globalXMMSaved && !g_globalMMXSaved);
-#endif
+	setjmp( SetJmp_StateCheck );
 
-	// Perform counters, interrupts, and IOP updates:
-	_cpuBranchTest_Shared();
+	int oldstate;
 
-#ifdef PCSX2_DEVBUILD
-	assert( !g_globalXMMSaved && !g_globalMMXSaved);
-#endif
+	// Important! Most of the console logging and such has cancel points in it.  This is great
+	// in Windows, where SEH lets us safely kill a thread from anywhere we want.  This is bad
+	// in Linux, which cannot have a C++ exception cross the recompiler.  Hence the changing
+	// of the cancelstate here!
+
+	pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
+	mtgsThread.RethrowException();
+	SysCoreThread::Get().StateCheckInThread();
+	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
 }
-}
-
-////////////////////////////////////////////////////
-
-static u32 g_lastpc = 0;
-
-#ifdef _MSC_VER
-
-// The address for all cleared blocks.  It recompiles the current pc and then
-// dispatches to the recompiled block address.
-static __naked void JITCompile()
-{
-	__asm {
-		mov esi, dword ptr [cpuRegs.pc]
-		push esi
-		call recRecompile
-		add esp, 4
-		mov ebx, esi
-		shr esi, 16
-		mov ecx, dword ptr [recLUT+esi*4]
-		jmp dword ptr [ecx+ebx]
-	}
-}
-
-static __naked void JITCompileInBlock()
-{
-	__asm {
-		jmp JITCompile
-	}
-}
-
-// called when jumping to variable pc address
-static void __naked DispatcherReg()
-{
-	__asm {
-		mov eax, dword ptr [cpuRegs.pc]
-		mov ebx, eax
-		shr eax, 16
-		mov ecx, dword ptr [recLUT+eax*4]
-		jmp dword ptr [ecx+ebx]
-	}
-}
-
-// [TODO] : Replace these functions with x86Emitter-generated code and we can compound this
-// function and DispatcherReg() into a fast fall-through case (removes the DispatcerReg jump
-// in this function, since execution will just fall right into the DispatcherReg implementation).
-//
-static void __naked DispatcherEvent()
-{
-	__asm
-	{
-		call recEventTest;
-		jmp DispatcherReg;
-	}
-}
-#endif
 
 static void recExecute()
 {
-	// Implementation Notes:
-	// This function enter an endless loop, which is only escapable via C++ exception handling.
-	// The loop is needed because some things in the rec use "ret" as a shortcut to
-	// invoking DispatcherReg.  These things are code bits which are called infrequently,
-	// such as dyna_block_discard and dyna_page_reset.
+	StateThreadCheck_LongJmp();
 
-	try
+	switch( setjmp( SetJmp_RecExecute ) )
 	{
-		while( true )
-		{
-			// Note: make sure the FreezeRegs boolean is reset to true here, because
-			// it might be set to false, depending on if the rec exits from the context of
-			// an EventTest or not.
+		case SetJmp_Exit: break;
 
+		case 0:
+		case SetJmp_Dispatcher:
+
+			// Typically the Dispatcher is invoked from the EventTest code, which clears
+			// the FreezeRegs flag, so always be sure to reset it here:
 			g_EEFreezeRegs = true;
 
-			try
-			{
-
-	#ifdef _MSC_VER
-				__asm
-				{
-					push ebx
-					push esi
-					push edi
-
-					call DispatcherReg
-
-					pop edi
-					pop esi
-					pop ebx
-				}
-
-	#else // _MSC_VER
-				DispatcherReg();
-	#endif
-			}
-			catch( Exception::ForceDispatcherReg& )
-			{
-			}
-		}
-	}
-	catch( Exception::ExitRecExecute& )
-	{
+			while( true )
+				EnterRecompiledCode();
+		break;
 	}
 
 	g_EEFreezeRegs = false;
 }
 
-namespace R5900 {
-namespace Dynarec {
-namespace OpcodeImpl {
+#else
+
+// --->  SEH Model  --->
+
+static void recExecute()
+{
+	// Implementation Notes:
+	// [TODO] fix this comment to explain various code entry/exit points, when I'm not so tired!
+
+	try
+	{
+		while( true )
+		{
+			// Typically the Dispatcher is invoked from the EventTest code, which clears
+			// the FreezeRegs flag, so always be sure to reset it here:
+			g_EEFreezeRegs = true;
+
+			try {
+				EnterRecompiledCode();
+			}
+			catch( Exception::ForceDispatcherReg& ) { }
+		}
+	}
+	catch( Exception::ExitRecExecute& ) { }
+
+	g_EEFreezeRegs = false;
+}
+#endif
 
 ////////////////////////////////////////////////////
-void recSYSCALL( void ) {
+void R5900::Dynarec::OpcodeImpl::recSYSCALL( void )
+{
 	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_NODESTROY);
@@ -622,13 +760,14 @@ void recSYSCALL( void ) {
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
 	ADD32ItoM((uptr)&cpuRegs.cycle, eeScaleBlockCycles());
-	JMP32((uptr)DispatcherReg - ( (uptr)x86Ptr + 5 ));
+	xJMP( DispatcherReg );
 	x86SetJ8(j8Ptr[0]);
 	//branch = 2;
 }
 
 ////////////////////////////////////////////////////
-void recBREAK( void ) {
+void R5900::Dynarec::OpcodeImpl::recBREAK( void )
+{
 	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
@@ -637,12 +776,10 @@ void recBREAK( void ) {
 	CMP32ItoM((uptr)&cpuRegs.pc, pc);
 	j8Ptr[0] = JE8(0);
 	ADD32ItoM((uptr)&cpuRegs.cycle, eeScaleBlockCycles());
-	RET();
+	xJMP( DispatcherEvent );
 	x86SetJ8(j8Ptr[0]);
 	//branch = 2;
 }
-
-} } }		// end namespace R5900::Dynarec::OpcodeImpl
 
 // Clears the recLUT table so that all blocks are mapped to the JIT recompiler by default.
 static __releaseinline void ClearRecLUT(BASEBLOCK* base, int count)
@@ -703,26 +840,34 @@ void recClear(u32 addr, u32 size)
 
 	upperextent = min(upperextent, ceiling);
 
-#ifdef PCSX2_DEVBUILD
 	for (int i = 0; pexblock = recBlocks[i]; i++) {
 		if (s_pCurBlock == PC_GETBLOCK(pexblock->startpc))
 			continue;
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
 		if (pexblock->startpc >= addr && pexblock->startpc < addr + size * 4
 		 || pexblock->startpc < addr && blockend > addr) {
-			Console.Error( "Impossible block clearing failure" );
-			pxFail( "Impossible block clearing failure" );
+			DevCon.Error( "Impossible block clearing failure" );
+			pxFailDev( "Impossible block clearing failure" );
 		}
 	}
-#endif
 
 	if (upperextent > lowerextent)
 		ClearRecLUT(PC_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
 }
 
+
+#ifndef PCSX2_SEH
+	jmp_buf SetJmp_RecExecute;
+	jmp_buf SetJmp_StateCheck;
+#endif
+
 static void ExitRec()
 {
+#ifdef PCSX2_SEH
 	throw Exception::ExitRecExecute();
+#else
+	longjmp( SetJmp_RecExecute, SetJmp_Exit );
+#endif
 }
 
 // check for end of bios
@@ -730,11 +875,22 @@ void CheckForBIOSEnd()
 {
 	xMOV( eax, &cpuRegs.pc );
 
-	xCMP( eax, 0x00200008 );
-	xJE( ExitRec );
+	/*xCMP( eax, 0x00200008 );
+	xJE(ExitRec);
 
 	xCMP( eax, 0x00100008 );
-	xJE( ExitRec );
+	xJE(ExitRec);*/
+
+	xCMP( eax, 0x00200008 );
+	xForwardJE8 CallExitRec;
+
+	xCMP( eax, 0x00100008 );
+	xForwardJNE8 SkipExitRec;
+
+	CallExitRec.SetTarget();
+	xCALL( ExitRec );
+
+	SkipExitRec.SetTarget();
 }
 
 static int *s_pCode;
@@ -833,7 +989,10 @@ void LoadBranchState()
 
 void iFlushCall(int flushtype)
 {
-	_freeX86regs();
+	// Free registers that are not saved across function calls (x86-32 ABI):
+	_freeX86reg(EAX);
+	_freeX86reg(ECX);
+	_freeX86reg(EDX);
 
 	if( flushtype & FLUSH_FREE_XMM )
 		_freeXMMregs();
@@ -934,6 +1093,8 @@ static u32 eeScaleBlockCycles()
 //   setting "branch = 2";
 static void iBranchTest(u32 newpc)
 {
+	_DynGen_StackFrameCheck();
+
 	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1136,8 +1297,9 @@ static void printfn()
 	static int curcount = 0;
 	const int skip = 0;
 
-	assert( !g_globalMMXSaved );
-	assert( !g_globalXMMSaved );
+	pxAssert( !g_globalMMXSaved && !g_globalXMMSaved );
+
+	//pxAssert( cpuRegs.pc != 0x80001300 );
 
     if( (dumplog&2) && g_lastpc != 0x81fc0 ) {//&& lastrec != g_lastpc ) {
 		curcount++;
@@ -1151,18 +1313,22 @@ static void printfn()
 	}
 }
 
-u32 s_recblocks[] = {0};
-
-void badespfn() {
-	Console.Error("Bad esp!");
-	assert(0);
-}
+static u32 s_recblocks[] = {0};
 
 // Called when a block under manual protection fails it's pre-execution integrity check.
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
 	DevCon.WriteLn("dyna_block_discard .. start=0x%08X  size=%d", start, sz*4);
 	recClear(start, sz);
+
+	// Stack trick: This function was invoked via a direct jmp, so manually pop the
+	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect.
+
+#ifdef _MSC_VER
+	__asm leave __asm jmp [ExitRecompiledCode]
+#else
+	__asm__ __volatile__( "leave\n jmp *%[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
+#endif
 }
 
 // called when a block under manual protection has been run enough times to be a
@@ -1172,9 +1338,15 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 	recClear(start & ~0xfffUL, 0x400);
 	manual_counter[start >> 12]++;
 	mmap_MarkCountedRamPage( start );
+
+#ifdef _MSC_VER
+	__asm leave __asm jmp [ExitRecompiledCode]
+#else
+	__asm__ __volatile__( "leave\n jmp *%[exitRec]\n" : : [exitRec] "m" (ExitRecompiledCode) : );
+#endif
 }
 
-void recRecompile( const u32 startpc )
+static void __fastcall recRecompile( const u32 startpc )
 {
 	u32 i = 0;
 	u32 branchTo;

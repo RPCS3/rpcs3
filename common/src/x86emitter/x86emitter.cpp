@@ -729,6 +729,7 @@ __forceinline void xPOPFD()						{ xWrite8( 0x9D ); }
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 
+__forceinline void xLEAVE()	{ xWrite8( 0xC9 ); }
 __forceinline void xRET()	{ xWrite8( 0xC3 ); }
 __forceinline void xCBW()	{ xWrite16( 0x9866 );  }
 __forceinline void xCWD()	{ xWrite8( 0x98 ); }

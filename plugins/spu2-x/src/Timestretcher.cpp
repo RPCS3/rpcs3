@@ -241,7 +241,7 @@ static void CvtPacketToFloat( StereoOut32* srcdest )
 // Parameter note: Size should always be a multiple of 128, thanks!
 static void CvtPacketToInt( StereoOut32* srcdest, uint size )
 {
-	jASSUME( (size & 127) == 0 );
+	//jASSUME( (size & 127) == 0 );
 	
 	const StereoOutFloat* src = (StereoOutFloat*)srcdest;
 	StereoOut32* dest = srcdest;

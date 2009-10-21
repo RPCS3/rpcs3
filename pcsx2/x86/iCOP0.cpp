@@ -28,6 +28,7 @@
 #include "iCOP0.h"
 
 namespace Interp = R5900::Interpreter::OpcodeImpl::COP0;
+using namespace x86Emitter;
 
 namespace R5900 {
 namespace Dynarec {
@@ -163,12 +164,14 @@ void recMFC0( void )
 			break;
 
 			case 1:
-				CALLFunc( (uptr)COP0_UpdatePCCR );
-				MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pcr0);
+				iFlushCall(FLUSH_NODESTROY);
+				xCALL( COP0_UpdatePCCR );
+				xMOV(eax, &cpuRegs.PERF.n.pcr0);
 				break;
 			case 3:
-				CALLFunc( (uptr)COP0_UpdatePCCR );
-				MOV32MtoR(EAX, (uptr)&cpuRegs.PERF.n.pcr1);
+				iFlushCall(FLUSH_NODESTROY);
+				xCALL( COP0_UpdatePCCR );
+				xMOV(eax, &cpuRegs.PERF.n.pcr1);
 			break;
 		}
 		_deleteEEreg(_Rt_, 0);
@@ -240,8 +243,8 @@ void recMTC0()
 		{
 			case 12: 
 				iFlushCall(FLUSH_NODESTROY);
-				//_flushCachedRegs(); //NOTE: necessary?
-				_callFunctionArg1((uptr)WriteCP0Status, MEM_CONSTTAG, g_cpuConstRegs[_Rt_].UL[0]);
+				xMOV( ecx, g_cpuConstRegs[_Rt_].UL[0] );
+				xCALL( WriteCP0Status );
 			break;
 
 			case 9:
@@ -254,9 +257,10 @@ void recMTC0()
 				switch(_Imm_ & 0x3F)
 				{
 					case 0:
-						CALLFunc( (uptr)COP0_UpdatePCCR );
-						MOV32ItoM((uptr)&cpuRegs.PERF.n.pccr, g_cpuConstRegs[_Rt_].UL[0]);
-						CALLFunc( (uptr)COP0_DiagnosticPCCR );
+						iFlushCall(FLUSH_NODESTROY);
+						xCALL( COP0_UpdatePCCR );
+						xMOV( ptr32[&cpuRegs.PERF.n.pccr], g_cpuConstRegs[_Rt_].UL[0] );
+						xCALL( COP0_DiagnosticPCCR );
 					break;
 
 					case 1:
@@ -288,8 +292,8 @@ void recMTC0()
 		{
 			case 12: 
 				iFlushCall(FLUSH_NODESTROY);
-				//_flushCachedRegs(); //NOTE: necessary?
-				_callFunctionArg1((uptr)WriteCP0Status, MEM_GPRTAG|_Rt_, 0);
+				_eeMoveGPRtoR(ECX, _Rt_);
+				xCALL( WriteCP0Status );
 			break;
 
 			case 9:
@@ -302,9 +306,10 @@ void recMTC0()
 				switch(_Imm_ & 0x3F)
 				{
 					case 0:
-						CALLFunc( (uptr)COP0_UpdatePCCR );
+						iFlushCall(FLUSH_NODESTROY);
+						xCALL( COP0_UpdatePCCR );
 						_eeMoveGPRtoM((uptr)&cpuRegs.PERF.n.pccr, _Rt_);
-						CALLFunc( (uptr)COP0_DiagnosticPCCR );
+						xCALL( COP0_DiagnosticPCCR );
 					break;
 
 					case 1:

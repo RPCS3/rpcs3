@@ -96,8 +96,8 @@
 			<Add option="-fno-guess-branch-probability" />
 			<Add option="-fno-dse" />
 			<Add option="-fno-tree-dse" />
+			<Add option="-fno-strict-aliasing" />
 			<Add option="-pipe -msse -msse2" />
-			<Add option="-mpreferred-stack-boundary=2" />
 			<Add option="-m32" />
 			<Add option="-DWX_PRECOMP" />
 			<Add directory="$(SvnRootDir)/common/include/" />
@@ -387,7 +387,6 @@
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />
 		<Unit filename="../x86/BaseblockEx.h" />
-		<Unit filename="../x86/aR3000A.S" />
 		<Unit filename="../x86/aVUzerorec.S" />
 		<Unit filename="../x86/aVif.S" />
 		<Unit filename="../x86/iCOP0.cpp" />
@@ -420,7 +419,6 @@
 			<Option compiler="gcc" use="0" buildCommand="gcc $options -S $includes -c $file -o $object" />
 		</Unit>
 		<Unit filename="../x86/ir5900tables.cpp" />
-		<Unit filename="../x86/ix86-32/aR5900-32.S" />
 		<Unit filename="../x86/ix86-32/iCore-32.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900-32.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900Arit.cpp" />

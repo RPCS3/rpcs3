@@ -187,8 +187,6 @@ u8 _hasFreeXMMreg();
 void _freeXMMregs();
 int _getNumXMMwrite();
 
-// uses MEM_MMXTAG/MEM_XMMTAG to differentiate between the regs
-void _recPushReg(int mmreg);
 void _signExtendSFtoM(u32 mem);
 
 // returns new index of reg, lower 32 bits already in mmx
@@ -196,41 +194,8 @@ void _signExtendSFtoM(u32 mem);
 // a negative shift is for sign extension
 int _signExtendXMMtoM(u32 to, x86SSERegType from, int candestroy); // returns true if reg destroyed
 
-// Defines for passing register info
-
-// only valid during writes. If write128, then upper 64bits are in an mmxreg
-// (mmreg&0xf). Constant is used from gprreg ((mmreg>>16)&0x1f)
-enum memtag
-{
-	MEM_EECONSTTAG = 0x0100, // argument is a GPR and comes from g_cpuConstRegs
-	MEM_PSXCONSTTAG = 0x0200,
-	MEM_MEMORYTAG = 0x0400,
-	MEM_MMXTAG = 0x0800,	// mmreg is mmxreg
-	MEM_XMMTAG = 0x8000,	// mmreg is xmmreg
-	MEM_X86TAG = 0x4000, // ignored most of the time
-	MEM_GPRTAG = 0x2000, // argument is a GPR reg
-	MEM_CONSTTAG = 0x1000 // argument is a const
-};
-
-template<memtag tag> static __forceinline bool IS_REG(s32 reg)
-{
-	return ((reg >= 0) && (reg & tag));
-}
-
-template<memtag tag> static __forceinline bool IS_REG(u32 reg)
-{
-	return !!(reg & tag);
-}
-
-#define IS_EECONSTREG(reg) IS_REG<MEM_EECONSTTAG>(reg)
-#define IS_PSXCONSTREG(reg) IS_REG<MEM_PSXCONSTTAG>(reg)
-#define IS_MMXREG(reg) IS_REG<MEM_MMXTAG>(reg)
-#define IS_XMMREG(reg) IS_REG<MEM_XMMTAG>(reg)
-
-#define IS_X86REG(reg) IS_REG<MEM_X86TAG>(reg)
-#define IS_GPRREG(reg) IS_REG<MEM_GPRTAG>(reg)
-#define IS_CONSTREG(reg) IS_REG<MEM_CONSTTAG>(reg)
-#define IS_MEMORYREG(reg) IS_REG<MEM_MEMORYTAG>(reg)
+static const int MEM_MMXTAG = 0x0800;	// mmreg is mmxreg
+static const int MEM_XMMTAG = 0x8000;	// mmreg is xmmreg
 
 //////////////////////
 // Instruction Info //
@@ -424,12 +389,6 @@ extern u16 x86FpuState;
 
 //////////////////////////////////////////////////////////////////////////
 // Utility Functions -- that should probably be part of the Emitter.
-
-// see MEM_X defines for argX format
-extern void _callPushArg(u32 arg, uptr argmem); /// X86ARG is ignored for 32bit recs
-extern void _callFunctionArg1(uptr fn, u32 arg1, uptr arg1mem);
-extern void _callFunctionArg2(uptr fn, u32 arg1, u32 arg2, uptr arg1mem, uptr arg2mem);
-extern void _callFunctionArg3(uptr fn, u32 arg1, u32 arg2, u32 arg3, uptr arg1mem, uptr arg2mem, uptr arg3mem);
 
 // Moves 128 bits of data using EAX/EDX (used by iCOP2 only currently)
 extern void _recMove128MtoM(u32 to, u32 from);

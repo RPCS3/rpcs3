@@ -50,7 +50,7 @@ void VU0MI_XGKICK() {
 void VU0MI_XTOP() {
 }
 
-void vu0ExecMicro(u32 addr) {
+void __fastcall vu0ExecMicro(u32 addr) {
 	VUM_LOG("vu0ExecMicro %x", addr);
 	
 	if(VU0.VI[REG_VPU_STAT].UL & 0x1) {
