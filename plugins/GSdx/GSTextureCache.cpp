@@ -554,10 +554,10 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			GSVector4 size = GSVector4(dstsize).xyxy();
 			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy();
 
-			int bw = 64;
-			int bh = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
+			int blockWidth  = 64;
+			int blockHeight = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
 
-			GSVector4i br(0, 0, bw, bh);
+			GSVector4i br(0, 0, blockWidth, blockHeight);
 
 			int sw = (int)dst->m_TEX0.TBW << 6;
 
@@ -565,11 +565,11 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			int dh = 1 << TEX0.TH;
 
 			if(sw != 0)
-			for(int dy = 0; dy < dh; dy += bh)
+			for(int dy = 0; dy < dh; dy += blockHeight)
 			{
-				for(int dx = 0; dx < dw; dx += bw)
+				for(int dx = 0; dx < dw; dx += blockWidth)
 				{
-					int o = dy * dw / bh + dx;
+					int o = dy * dw / blockHeight + dx;
 
 					int sx = o % sw;
 					int sy = o / sw;
@@ -663,6 +663,12 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		case PSM_PSMT8H:
 			src->m_fmt = FMT_8H;
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+			break;
+		case PSM_PSMT8: 
+			//Not sure, this wasn't handled at all. 
+			//Xenosaga 2 and 3 use it, Tales of Legendia as well.
+			//It's always used for fog like effects.
+			src->m_fmt = FMT_8;
 			break;
 		case PSM_PSMT4HL:
 			src->m_fmt = FMT_4HL;
