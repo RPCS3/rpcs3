@@ -146,7 +146,7 @@ void recPLZCW()
 			SSE2_PSHUFD_XMM_to_XMM(regs&0xf, regs&0xf, 0x4e);
 		}
 		else if( regs >= 0 && (regs & MEM_MMXTAG) ) {
-			PSHUFWRtoR(regs, regs, 0x4e);
+			PSHUFWRtoR(regs&0xf, regs&0xf, 0x4e);
 			MOVD32MMXtoR(EAX, regs&0xf);
 			PSHUFWRtoR(regs&0xf, regs&0xf, 0x4e);
 			SetMMXstate();
