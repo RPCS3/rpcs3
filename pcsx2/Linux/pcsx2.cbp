@@ -387,7 +387,6 @@
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />
 		<Unit filename="../x86/BaseblockEx.h" />
-		<Unit filename="../x86/aR3000A.S" />
 		<Unit filename="../x86/aVUzerorec.S" />
 		<Unit filename="../x86/aVif.S" />
 		<Unit filename="../x86/iCOP0.cpp" />

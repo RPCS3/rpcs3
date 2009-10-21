@@ -313,7 +313,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 //  R5900 Dispatchers
 // =====================================================================================================
 
-static void recRecompile( const u32 startpc );
+static void __fastcall recRecompile( const u32 startpc );
 
 static u32 g_lastpc = 0;
 static u32 s_store_ebp, s_store_esp;
@@ -343,7 +343,7 @@ static void recEventTest()
 //      stackframe setup code in this function)
 static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 {
-	pxFailDev( wxsFormat( L"(Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
+	pxFailDev( wxsFormat( L"(R5900 Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
 		(espORebp==0) ? L"ESP" : L"EBP", regval, (espORebp==0) ? s_store_esp : s_store_ebp )
 	);
 
@@ -385,16 +385,18 @@ static void _DynGen_StackFrameCheck()
 // dispatches to the recompiled block address.
 static DynGenFunc* _DynGen_JITCompile()
 {
+	pxAssertMsg( DispatcherReg != NULL, "Please compile the DispatcherReg subroutine *before* JITComple.  Thanks." );
+
 	u8* retval = xGetPtr();
 	_DynGen_StackFrameCheck();
 
-	xMOV( esi, &cpuRegs.pc );
-	xPUSH( esi );
+	xMOV( ecx, &cpuRegs.pc );
 	xCALL( recRecompile );
-	xADD( esp, 4 );
-	xMOV( ebx, esi );
-	xSHR( esi, 16 );
-	xMOV( ecx, ptr32[recLUT + (esi*4)] );
+
+	xMOV( eax, &cpuRegs.pc );
+	xMOV( ebx, eax );
+	xSHR( eax, 16 );
+	xMOV( ecx, ptr[recLUT + (eax*4)] );
 	xJMP( ptr32[ecx+ebx] );
 
 	return (DynGenFunc*)retval;
@@ -436,11 +438,10 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 
 	xPUSH( ebp );
 	xMOV( ebp, esp );
-
 	xAND( esp, -0x10 );
 
 	// First 0x10 is for esi, edi, etc. Second 0x10 is for the return address and ebp.  The
-	// third second 0x10 is for C-style CDECL calls we might make from the recompiler
+	// third 0x10 is for C-style CDECL calls we might make from the recompiler
 	// (parameters for those calls can be stored there!)
 
 	xSUB( esp, 0x30 );
@@ -452,6 +453,8 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	// Simulate a CALL function by pushing the call address and EBP onto the stack.
 	xMOV( ptr32[esp+0x1c], 0xffeeff );
 	uptr& imm = *(uptr*)(xGetPtr()-4);
+
+	// This part simulates the "normal" stackframe prep of "push ebp, mov ebp, esp"
 	xMOV( ptr32[esp+0x18], ebp );
 	xLEA( ebp, ptr32[esp+0x18] );
 
@@ -463,17 +466,11 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	ExitRecompiledCode = (DynGenFunc*)xGetPtr();
 
 	xLEAVE();
-	//xMOV( esp, ebp );
-	//xPOP( ebp );
-
-	//_DynGen_StackFrameCheck();
 
 	xMOV( edi, ptr[ebp-12] );
 	xMOV( esi, ptr[ebp-8] );
 	xMOV( ebx, ptr[ebp-4] );
 
-	//xMOV( esp, ebp );
-	//xPOP( ebp );
 	xLEAVE();
 	xRET();
 
@@ -1088,7 +1085,7 @@ static u32 eeScaleBlockCycles()
 static void iBranchTest(u32 newpc)
 {
 	_DynGen_StackFrameCheck();
-
+	
 	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1316,7 +1313,7 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	recClear(start, sz);
 
 	// Stack trick: This function was invoked via a direct jmp, so manually pop the
-	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect.
+	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect. 
 
 #ifdef _MSC_VER
 	__asm leave __asm jmp [ExitRecompiledCode]
@@ -1340,7 +1337,7 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 #endif
 }
 
-static void recRecompile( const u32 startpc )
+static void __fastcall recRecompile( const u32 startpc )
 {
 	u32 i = 0;
 	u32 branchTo;

@@ -23,8 +23,10 @@
 	// bad asm code.  (error is something like "7#*_uber_379s_mangled_$&02_name is already defined!")
 	// Using GCC's always_inline attribute fixes it.  This differs from __forceinline in that it
 	// inlines *even in debug builds* which is (usually) undesirable.
-	//  ... except when it avoidx compiler bugs.
+	//  ... except when it avoids compiler bugs.
 #	define __always_inline_tmpl_fail	__attribute__((always_inline))
+#else
+#	define __always_inline_tmpl_fail
 #endif
 
 // ------------------------------------------------------------------------

@@ -58,52 +58,11 @@ uptr psxhwLUT[0x10000];
 // R3000A statics
 int psxreclog = 0;
 
-#ifdef _MSC_VER
-
-static u32 g_temp;
-
-// The address for all cleared blocks.  It recompiles the current pc and then
-// dispatches to the recompiled block address.
-static __declspec(naked) void iopJITCompile()
-{
-	__asm {
-		mov esi, dword ptr [psxRegs.pc]
-		push esi
-		call iopRecRecompile
-		add esp, 4
-		mov ebx, esi
-		shr esi, 16
-		mov ecx, dword ptr [psxRecLUT+esi*4]
-		jmp dword ptr [ecx+ebx]
-	}
-}
-
-static __declspec(naked) void iopJITCompileInBlock()
-{
-	__asm {
-		jmp iopJITCompile
-	}
-}
-
-// called when jumping to variable psxpc address
-static __declspec(naked) void iopDispatcherReg()
-{
-	__asm {
-		mov eax, dword ptr [psxRegs.pc]
-		mov ebx, eax
-		shr eax, 16
-		mov ecx, dword ptr [psxRecLUT+eax*4]
-		jmp dword ptr [ecx+ebx]
-	}
-}
-#endif // _MSC_VER
-
-
 static u8 *recMem = NULL;	// the recompiled blocks will be here
 static BASEBLOCK *recRAM = NULL;	// and the ptr to the blocks here
 static BASEBLOCK *recROM = NULL;	// and here
 static BASEBLOCK *recROM1 = NULL;	// also here
-static BaseBlocks recBlocks((uptr)iopJITCompile);
+static BaseBlocks recBlocks;
 static u8 *recPtr = NULL;
 u32 psxpc;			// recompiler psxpc
 int psxbranch;		// set for branch
@@ -139,6 +98,269 @@ static u32 psxdump = 0;
 #define PSXREC_CLEARM(mem) \
 	(((mem) < g_psxMaxRecMem && (psxRecLUT[(mem) >> 16] + (mem))) ? \
 		psxRecClearMem(mem) : 4)
+
+// =====================================================================================================
+//  Dynamically Compiled Dispatchers - R3000A style
+// =====================================================================================================
+
+static void __fastcall iopRecRecompile( const u32 startpc );
+
+static u32 s_store_ebp, s_store_esp;
+
+// Recompiled code buffer for EE recompiler dispatchers!
+static u8 __pagealigned iopRecDispatchers[0x1000];
+
+typedef void DynGenFunc();
+
+static DynGenFunc* iopDispatcherEvent		= NULL;
+static DynGenFunc* iopDispatcherReg			= NULL;
+static DynGenFunc* iopJITCompile			= NULL;
+static DynGenFunc* iopJITCompileInBlock		= NULL;
+static DynGenFunc* iopEnterRecompiledCode	= NULL;
+static DynGenFunc* iopExitRecompiledCode	= NULL;
+
+static void recEventTest()
+{
+	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+	_cpuBranchTest_Shared();
+	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+}
+
+// parameters:
+//   espORebp - 0 for ESP, or 1 for EBP.
+//   regval   - current value of the register at the time the fault was detected (predates the
+//      stackframe setup code in this function)
+static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
+{
+	pxFailDev( wxsFormat( L"(R3000A Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
+		(espORebp==0) ? L"ESP" : L"EBP", regval, (espORebp==0) ? s_store_esp : s_store_ebp )
+		);
+
+	// Note: The recompiler will attempt to recover ESP and EBP after returning from this function,
+	// so typically selecting Continue/Ignore/Cancel for this assertion should allow PCSX2 to con-
+	// tinue to run with some degree of stability.
+}
+
+static void _DynGen_StackFrameCheck()
+{
+	if( !IsDevBuild ) return;
+
+	// --------- EBP Here -----------
+
+	xCMP( ebp, &s_store_ebp );
+	xForwardJE8 skipassert_ebp;
+
+	xMOV( ecx, 1 );					// 1 specifies EBP
+	xMOV( edx, ebp );
+	xCALL( StackFrameCheckFailed );
+	xMOV( ebp, &s_store_ebp );		// half-hearted frame recovery attempt!
+
+	skipassert_ebp.SetTarget();
+
+	// --------- ESP There -----------
+
+	xCMP( esp, &s_store_esp );
+	xForwardJE8 skipassert_esp;
+
+	xXOR( ecx, ecx );				// 0 specifies ESP
+	xMOV( edx, esp );
+	xCALL( StackFrameCheckFailed );
+	xMOV( esp, &s_store_esp );		// half-hearted frame recovery attempt!
+
+	skipassert_esp.SetTarget();
+}
+
+// The address for all cleared blocks.  It recompiles the current pc and then
+// dispatches to the recompiled block address.
+static DynGenFunc* _DynGen_JITCompile()
+{
+	pxAssertMsg( iopDispatcherReg != NULL, "Please compile the DispatcherReg subroutine *before* JITComple.  Thanks." );
+
+	u8* retval = xGetPtr();
+	_DynGen_StackFrameCheck();
+
+	xMOV( ecx, &psxRegs.pc );
+	xCALL( iopRecRecompile );
+
+	xMOV( eax, &psxRegs.pc );
+	xMOV( ebx, eax );
+	xSHR( eax, 16 );
+	xMOV( ecx, ptr[psxRecLUT + (eax*4)] );
+	xJMP( ptr32[ecx+ebx] );
+
+	return (DynGenFunc*)retval;
+}
+
+static DynGenFunc* _DynGen_JITCompileInBlock()
+{
+	u8* retval = xGetPtr();
+	xJMP( iopJITCompile );
+	return (DynGenFunc*)retval;
+}
+
+// called when jumping to variable pc address
+static DynGenFunc* _DynGen_DispatcherReg()
+{
+	u8* retval = xGetPtr();
+	_DynGen_StackFrameCheck();
+
+	xMOV( eax, &psxRegs.pc );
+	xMOV( ebx, eax );
+	xSHR( eax, 16 );
+	xMOV( ecx, ptr[psxRecLUT + (eax*4)] );
+	xJMP( ptr32[ecx+ebx] );
+
+	return (DynGenFunc*)retval;
+}
+
+// --------------------------------------------------------------------------------------
+//  EnterRecompiledCode  - dynamic compilation stub!
+// --------------------------------------------------------------------------------------
+
+// In Release Builds this literally generates the following code:
+//   push edi
+//   push esi
+//   push ebx
+//   jmp DispatcherReg
+//   pop ebx
+//   pop esi
+//   pop edi
+//
+// See notes on why this works in both GCC (aligned stack!) and other compilers (not-so-
+// aligned stack!).  In debug/dev builds the code gen is more complicated, as it constructs
+// ebp stackframe mess, which allows for a complete backtrace from debug breakpoints (yay).
+//
+// Also, if you set PCSX2_IOP_FORCED_ALIGN_STACK to 1, the codegen for MSVC becomes slightly
+// more complicated since it has to perform a full stack alignment on entry.
+//
+
+#if defined(__GNUG__) || defined(__DARWIN__)
+#	define PCSX2_ASSUME_ALIGNED_STACK		1
+#else
+#	define PCSX2_ASSUME_ALIGNED_STACK		0
+#endif
+
+// Set to 0 for a speedup in release builds.
+#define PCSX2_IOP_FORCED_ALIGN_STACK		0 //1
+
+static DynGenFunc* _DynGen_EnterRecompiledCode()
+{
+	u8* retval = xGetPtr();
+
+	bool allocatedStack = IsDevBuild || PCSX2_IOP_FORCED_ALIGN_STACK;
+
+	// Optimization: The IOP never uses stack-based parameter invocation, so we can avoid
+	// allocating any room on the stack for it (which is important since the IOP's entry
+	// code gets invoked quite a lot).
+
+	if( allocatedStack )
+	{
+		xPUSH( ebp );
+		xMOV( ebp, esp );
+		xAND( esp, -0x10 );
+
+		xSUB( esp, 0x20 );
+
+		xMOV( ptr[ebp-12], edi );
+		xMOV( ptr[ebp-8], esi );
+		xMOV( ptr[ebp-4], ebx );
+	}
+	else
+	{
+		// GCC Compiler:
+		//   The frame pointer coming in from the EE's event test can be safely assumed to be
+		//   aligned, since GCC always aligns stackframes.  While handy in x86-64, where CALL + PUSH EBP
+		//   results in a neatly realigned stack on entry to every function, unfortunately in x86-32
+		//   this is usually worthless because CALL+PUSH leaves us 8 byte aligned instead (fail).  So
+		//   we have to do the usual set of stackframe alignments and simulated callstack mess
+		//   *regardless*.
+		
+		// MSVC/Intel compilers:
+		//   The PCSX2_IOP_FORCED_ALIGN_STACK setting is 0, so we don't care.  Just push regs like
+		//   the good old days!  (stack alignment will be indeterminate)
+
+		xPUSH( edi );
+		xPUSH( esi );
+		xPUSH( ebx );
+
+		allocatedStack = false;
+		CannotUseCallBecauseItWillUnalignTheGodDamnedStack = !!PCSX2_ASSUME_ALIGNED_STACK;
+	}
+
+	uptr* imm = NULL;
+	if( allocatedStack )
+	{
+		if( IsDevBuild )
+		{
+			// Simulate a CALL function by pushing the call address and EBP onto the stack.
+			// This retains proper stacktrace and stack unwinding (handy in devbuilds!)
+
+			xMOV( ptr32[esp+0x0c], 0xffeeff );
+			imm = (uptr*)(xGetPtr()-4);
+
+			// This part simulates the "normal" stackframe prep of "push ebp, mov ebp, esp"
+			xMOV( ptr32[esp+0x08], ebp );
+			xLEA( ebp, ptr32[esp+0x08] );
+
+			xMOV( &s_store_esp, esp );
+			xMOV( &s_store_ebp, ebp );
+		}
+	}
+
+	xJMP( iopDispatcherReg );
+	if( imm != NULL )
+		*imm = (uptr)xGetPtr();
+
+	// ----------------------
+	// ---->  Cleanup!  ---->
+
+	iopExitRecompiledCode = (DynGenFunc*)xGetPtr();
+
+	if( allocatedStack )
+	{
+		// pop the nested "simulated call" stackframe, if needed:
+		if( IsDevBuild ) xLEAVE();
+		xMOV( edi, ptr[ebp-12] );
+		xMOV( esi, ptr[ebp-8] );
+		xMOV( ebx, ptr[ebp-4] );
+		xLEAVE();
+	}
+	else
+	{
+		xPOP( ebx );
+		xPOP( esi );
+		xPOP( edi );
+	}
+
+	xRET();
+
+	return (DynGenFunc*)retval;
+}
+
+static void _DynGen_Dispatchers()
+{
+	// In case init gets called multiple times:
+	HostSys::MemProtect( iopRecDispatchers, 0x1000, Protect_ReadWrite, false );
+
+	// clear the buffer to 0xcc (easier debugging).
+	memset_8<0xcc,0x1000>( iopRecDispatchers );
+
+	xSetPtr( iopRecDispatchers );
+
+	// Place the EventTest and DispatcherReg stuff at the top, because they get called the
+	// most and stand to benefit from strong alignment and direct referencing.
+	iopDispatcherEvent = (DynGenFunc*)xGetPtr();
+	xCALL( recEventTest );
+	iopDispatcherReg	= _DynGen_DispatcherReg();
+
+	iopJITCompile			= _DynGen_JITCompile();
+	iopJITCompileInBlock	= _DynGen_JITCompileInBlock();
+	iopEnterRecompiledCode	= _DynGen_EnterRecompiledCode();
+
+	HostSys::MemProtect( iopRecDispatchers, 0x1000, Protect_ReadOnly, true );
+
+	recBlocks.SetJITCompile( iopJITCompile );
+}
 
 ////////////////////////////////////////////////////
 using namespace R3000A;
@@ -549,13 +771,14 @@ static void recAlloc()
 		throw Exception::OutOfMemory( "R3000a Init > Failed to allocate memory for pInstCache." );
 
 	ProfilerRegisterSource( "IOPRec", recMem, RECMEM_SIZE );
+	_DynGen_Dispatchers();
 }
 
 void recResetIOP()
 {
 	// calling recResetIOP without first calling recInit is bad mojo.
-	jASSUME( recMem != NULL );
-	jASSUME( m_recBlockAlloc != NULL );
+	pxAssert( recMem != NULL );
+	pxAssert( m_recBlockAlloc != NULL );
 
 	DevCon.Status( "iR3000A Resetting recompiler memory and structures" );
 
@@ -628,7 +851,7 @@ static void recExecute()
 	//for (;;) R3000AExecute();
 }
 
-static __forceinline s32 recExecuteBlock( s32 eeCycles )
+static __noinline s32 recExecuteBlock( s32 eeCycles )
 {
 	psxBreak = 0;
 	psxCycleEE = eeCycles;
@@ -636,39 +859,24 @@ static __forceinline s32 recExecuteBlock( s32 eeCycles )
 	// Register freezing note:
 	//  The IOP does not use mmx/xmm registers, so we don't modify the status
 	//  of the g_EEFreezeRegs here.
+	
+	// [TODO] recExecuteBlock could be replaced by a direct call to the iopEnterRecompiledCode()
+	//   (by assigning its address to the psxRec structure).  But for that to happen, we need
+	//   to move psxBreak/psxCycleEE update code to emitted assembly code. >_<  --air
 
-#ifdef _MSC_VER
-	__asm
-	{
-		push ebx
-		push esi
-		push edi
+	// Likely Disasm, as borrowed from MSVC:
+		
+// Entry:
+// 	mov         eax,dword ptr [esp+4] 
+// 	mov         dword ptr [psxBreak (0E88DCCh)],0 
+// 	mov         dword ptr [psxCycleEE (832A84h)],eax 
 
-		call iopDispatcherReg
+// Exit:
+// 	mov         ecx,dword ptr [psxBreak (0E88DCCh)] 
+// 	mov         edx,dword ptr [psxCycleEE (832A84h)] 
+// 	lea         eax,[edx+ecx] 
 
-		pop edi
-		pop esi
-		pop ebx
-	}
-#else
-	__asm__ __volatile__
-	(
-		// We should be able to rely on GAS syntax (the register clobber list) as a
-		// replacement for manual push/pop of unpreserved registers.
-
-		".intel_syntax noprefix\n"
-		//"push ebx\n"
-		//"push esi\n"
-		//"push edi\n"
-
-		"call iopDispatcherReg\n"
-
-		//"pop edi\n"
-		//"pop esi\n"
-		//"pop ebx\n"
-		".att_syntax\n"
-	: : : "eax", "ebx", "ecx", "edx", "esi", "edi", "memory" );
-#endif
+	iopEnterRecompiledCode();
 
 	return psxBreak + psxCycleEE;
 }
@@ -688,7 +896,7 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 	u32 lowerextent = pc, upperextent = pc + 4;
 	int blockidx = recBlocks.Index(pc);
 
-	jASSUME(blockidx != -1);
+	pxAssert(blockidx != -1);
 
 	while (BASEBLOCKEX* pexblock = recBlocks[blockidx - 1]) {
 		if (pexblock->startpc + pexblock->size * 4 <= lowerextent)
@@ -707,14 +915,14 @@ static __forceinline u32 psxRecClearMem(u32 pc)
 		recBlocks.Remove(blockidx);
 	}
 
-#ifdef PCSX2_DEVBUILD
 	blockidx=0;
 	while(BASEBLOCKEX* pexblock = recBlocks[blockidx++])
+	{
 		if (pc >= pexblock->startpc && pc < pexblock->startpc + pexblock->size * 4) {
-			Console.Error("Impossible block clearing failure");
-			jASSUME(0);
+			DevCon.Error("Impossible block clearing failure");
+			pxFailDev( "Impossible block clearing failure" );
 		}
-#endif
+	}
 
 	iopClearRecLUT(PSX_GETBLOCK(lowerextent), (upperextent - lowerextent) / 4);
 
@@ -797,12 +1005,8 @@ static void iPsxBranchTest(u32 newpc, u32 cpuBranch)
 	MOV32RtoM((uptr)&psxRegs.cycle, ECX); // update cycles
 	MOV32RtoM((uptr)&psxCycleEE, EAX);
 
-	j8Ptr[2] = JG8( 0 );	// jump if psxCycleEE > 0
-
-	RET();		// returns control to the EE
-
-	// Continue onward with branching here:
-	x86SetJ8( j8Ptr[2] );
+	// jump if psxCycleEE <= 0  (iop's timeslice timed out, so time to return control to the EE)
+	xJLE( iopExitRecompiledCode );
 
 	// check if an event is pending
 	SUB32MtoR(ECX, (uptr)&g_psxNextBranchCycle);
@@ -937,7 +1141,7 @@ static void printfn()
 #endif
 }
 
-void iopRecRecompile(u32 startpc)
+static void __fastcall iopRecRecompile( const u32 startpc )
 {
 	u32 i;
 	u32 branchTo;

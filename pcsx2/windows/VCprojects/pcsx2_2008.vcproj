@@ -488,10 +488,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\x86\aR3000A.S"
-					>
-				</File>
-				<File
 					RelativePath="..\..\x86\ix86-32\aR5900-32.S"
 					>
 				</File>
@@ -897,14 +893,6 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\x86\iCore.cpp"
-								>
-							</File>
-							<File
-								RelativePath="..\..\x86\iCore.h"
-								>
-							</File>
-							<File
 								RelativePath="..\..\x86\iFPU.cpp"
 								>
 								<FileConfiguration
@@ -995,10 +983,6 @@
 							<Filter
 								Name="ix86-32"
 								>
-								<File
-									RelativePath="..\..\x86\ix86-32\iCore-32.cpp"
-									>
-								</File>
 								<File
 									RelativePath="..\..\x86\ix86-32\iR5900-32.cpp"
 									>
@@ -1752,6 +1736,22 @@
 					</File>
 					<File
 						RelativePath="..\..\ps2\BiosTools.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="iCore"
+					>
+					<File
+						RelativePath="..\..\x86\ix86-32\iCore-32.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\iCore.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\..\x86\iCore.h"
 						>
 					</File>
 				</Filter>

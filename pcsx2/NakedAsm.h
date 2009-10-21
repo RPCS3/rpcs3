@@ -26,9 +26,6 @@ extern "C"
 	void so_call(coroutine_t coro);
 	void so_resume(void);
 	void so_exit(void);
-
-	// aR3000A.S
-	void iopRecRecompile(u32 startpc);
 }
 
 #ifdef __LINUX__
@@ -38,12 +35,6 @@ extern "C"
 	// aVUzerorec.S
 	void* SuperVUGetProgram(u32 startpc, int vuindex);
 	void SuperVUCleanupProgram(u32 startpc, int vuindex);
-
-	// aR3000A.S
-	void iopJITCompile();
-	void iopJITCompileInBlock();
-	void iopDispatcherReg();
-
 }
 #endif
 
