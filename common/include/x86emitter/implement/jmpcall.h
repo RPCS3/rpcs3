@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -18,6 +18,15 @@
 // Implementations found here: CALL and JMP!  (unconditional only)
 // Note: This header is meant to be included from within the x86Emitter::Internal namespace.
 
+#ifdef __GNUG__
+	// GCC has a bug that causes the templated function handler for Jmp/Call emitters to generate
+	// bad asm code.  (error is something like "7#*_uber_379s_mangled_$&02_name is already defined!")
+	// Using GCC's always_inline attribute fixes it.  This differs from __forceinline in that it
+	// inlines *even in debug builds* which is (usually) undesirable.
+	//  ... except when it avoidx compiler bugs.
+#	define __always_inline_tmpl_fail	__attribute__((always_inline))
+#endif
+
 // ------------------------------------------------------------------------
 template< bool isJmp >
 class xImpl_JmpCall
@@ -30,11 +39,11 @@ public:
 
 	__forceinline void operator()( const xRegister16& absreg ) const	{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, absreg ); }
 	__forceinline void operator()( const ModSibStrict<u16>& src ) const	{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, src ); }
-	
+
 	// Special form for calling functions.  This form automatically resolves the
 	// correct displacement based on the size of the instruction being generated.
-	template< typename T > 
-	__forceinline void operator()( T* func ) const
+	template< typename T > __forceinline __always_inline_tmpl_fail
+	void operator()( T* func ) const
 	{
 		if( isJmp )
 			xJccKnownTarget( Jcc_Unconditional, (void*)(uptr)func, false );	// double cast to/from (uptr) needed to appease GCC
@@ -42,7 +51,7 @@ public:
 		{
 			// calls are relative to the instruction after this one, and length is
 			// always 5 bytes (16 bit calls are bad mojo, so no bother to do special logic).
-			
+
 			sptr dest = (sptr)func - ((sptr)xGetPtr() + 5);
 			xWrite8( 0xe8 );
 			xWrite32( dest );

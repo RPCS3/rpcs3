@@ -27,8 +27,6 @@ extern "C"
 	void so_resume(void);
 	void so_exit(void);
 
-	void recRecompile( u32 startpc );
-
 	// aR3000A.S
 	void iopRecRecompile(u32 startpc);
 }
@@ -40,7 +38,6 @@ extern "C"
 	// aVUzerorec.S
 	void* SuperVUGetProgram(u32 startpc, int vuindex);
 	void SuperVUCleanupProgram(u32 startpc, int vuindex);
-	void svudispfn();
 
 	// aR3000A.S
 	void iopJITCompile();

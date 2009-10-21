@@ -313,6 +313,8 @@ u32* recGetImm64(u32 hi, u32 lo)
 //  R5900 Dispatchers
 // =====================================================================================================
 
+static void recRecompile( const u32 startpc );
+
 static u32 g_lastpc = 0;
 static u32 s_store_ebp, s_store_esp;
 
@@ -1086,7 +1088,7 @@ static u32 eeScaleBlockCycles()
 static void iBranchTest(u32 newpc)
 {
 	_DynGen_StackFrameCheck();
-	
+
 	if( g_ExecBiosHack ) CheckForBIOSEnd();
 
 	// Check the Event scheduler if our "cycle target" has been reached.
@@ -1314,7 +1316,7 @@ void __fastcall dyna_block_discard(u32 start,u32 sz)
 	recClear(start, sz);
 
 	// Stack trick: This function was invoked via a direct jmp, so manually pop the
-	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect. 
+	// EBP/stackframe before issuing a RET, else esp/ebp will be incorrect.
 
 #ifdef _MSC_VER
 	__asm leave __asm jmp [ExitRecompiledCode]
@@ -1338,7 +1340,7 @@ void __fastcall dyna_page_reset(u32 start,u32 sz)
 #endif
 }
 
-void recRecompile( const u32 startpc )
+static void recRecompile( const u32 startpc )
 {
 	u32 i = 0;
 	u32 branchTo;

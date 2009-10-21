@@ -389,9 +389,9 @@ void Threading::PersistentThread::OnStartInThread()
 void Threading::PersistentThread::_internal_execute()
 {
 	m_lock_InThread.Lock();
-	_DoSetThreadName( m_name );
-
 	OnStartInThread();
+
+	_DoSetThreadName( m_name );
 
 	_try_virtual_invoke( &PersistentThread::ExecuteTaskInThread );
 }
@@ -411,7 +411,7 @@ void Threading::PersistentThread::OnCleanupInThread()
 // callback function
 void* Threading::PersistentThread::_internal_callback( void* itsme )
 {
-	jASSUME( itsme != NULL );
+	pxAssert( itsme != NULL );
 	PersistentThread& owner = *((PersistentThread*)itsme);
 
 	pthread_cleanup_push( _pt_callback_cleanup, itsme );
