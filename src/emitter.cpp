@@ -349,12 +349,18 @@ namespace YAML
 		
 		EMITTER_STATE curState = m_pState->GetCurState();
 		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(flowType == FT_BLOCK)
-			assert(curState == ES_DONE_WITH_BLOCK_SEQ_ENTRY);
-		else if(flowType == FT_FLOW) {
-			m_stream << "]";
+		if(flowType == FT_BLOCK) {
+			// Note: block sequences are *not* allowed to be empty, but we convert it
+			//       to a flow sequence if it is
+			assert(curState == ES_DONE_WITH_BLOCK_SEQ_ENTRY || curState == ES_WAITING_FOR_BLOCK_SEQ_ENTRY);
+			if(curState == ES_WAITING_FOR_BLOCK_SEQ_ENTRY) {
+				unsigned curIndent = m_pState->GetCurIndent();
+				m_stream << IndentTo(curIndent) << "[]";
+			}
+		} else if(flowType == FT_FLOW) {
 			// Note: flow sequences are allowed to be empty
 			assert(curState == ES_DONE_WITH_FLOW_SEQ_ENTRY || curState == ES_WAITING_FOR_FLOW_SEQ_ENTRY);
+			m_stream << "]";
 		} else
 			assert(false);
 		
@@ -685,3 +691,4 @@ namespace YAML
 		return *this;
 	}
 }
+
