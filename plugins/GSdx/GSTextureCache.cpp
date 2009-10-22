@@ -554,6 +554,9 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		if(dst->m_TEX0.TBW != TEX0.TBW) // && dst->m_TEX0.PSM == TEX0.PSM
 		{
+			//Better not do the code below, "fixes" like every game that ever gets here..
+			delete src; return NULL;
+
 			// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
 
 			// ASSERT(dst->m_TEX0.TBW > TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
@@ -592,16 +595,15 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 				}
 			}
 		}
-		else if(tw < tp)
-		{
-			// FIXME: timesplitters blurs the render target by blending itself over a couple of times
+		//else if(tw < tp)
+		//{
+		//	// FIXME: timesplitters blurs the render target by blending itself over a couple of times
 
-			if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
-			{
-				return false;
-			}
-		}
-
+		//	if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
+		//	{
+		//		return false;
+		//	}
+		//}
 		// width/height conversion
 
 		GSVector2 scale = dst->m_texture->GetScale();
@@ -678,6 +680,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			//Xenosaga 2 and 3 use it, Tales of Legendia as well.
 			//It's always used for fog like effects.
 			src->m_fmt = FMT_8;
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 			break;
 		case PSM_PSMT4HL:
 			src->m_fmt = FMT_4HL;
