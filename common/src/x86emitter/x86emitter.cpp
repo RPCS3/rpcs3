@@ -32,7 +32,8 @@
 #include "internal.h"
 
 // defined in tools.cpp
-extern __aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
+//extern __aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
+#include "tools.h"
 
 // ------------------------------------------------------------------------
 // Notes on Thread Local Storage:
@@ -753,12 +754,12 @@ __emitinline void xBSWAP( const xRegister32& to )
 
 __emitinline void xStoreReg( const xRegisterSSE& src )
 {
-	xMOVDQA( &g_globalXMMData[src.Id*2], src );
+	xMOVDQA( &XMMRegisters::data[src.Id*2], src );
 }
 
 __emitinline void xRestoreReg( const xRegisterSSE& dest )
 {
-	xMOVDQA( dest, &g_globalXMMData[dest.Id*2] );
+	xMOVDQA( dest, &XMMRegisters::data[dest.Id*2] );
 }
 
 }

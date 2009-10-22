@@ -14,14 +14,11 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "internal.h"
 #include "tools.h"
 
 // To make sure regs don't get changed while in the recompiler,
 // use Freeze/Thaw in MMXRegisters, XMMRegisters, & Registers.
 
-__aligned16 u64 g_globalMMXData[8];
-__aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
 
 /////////////////////////////////////////////////////////////////////
 // MMX Register Freezing
@@ -30,6 +27,7 @@ __aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
 namespace MMXRegisters
 {
     u8 stack_depth = 0;
+    __aligned16 u64 data[8];
     
     __forceinline bool Saved()
     {
@@ -51,7 +49,7 @@ namespace MMXRegisters
             
 #ifdef _MSC_VER
         __asm {
-            mov ecx, offset g_globalMMXData
+            mov ecx, offset data
             movntq mmword ptr [ecx+0], mm0
             movntq mmword ptr [ecx+8], mm1
             movntq mmword ptr [ecx+16], mm2
@@ -65,16 +63,16 @@ namespace MMXRegisters
 #else
         __asm__ volatile(
             ".intel_syntax noprefix\n"
-            "movq [%[g_globalMMXData]+0x00], mm0\n"
-            "movq [%[g_globalMMXData]+0x08], mm1\n"
-            "movq [%[g_globalMMXData]+0x10], mm2\n"
-            "movq [%[g_globalMMXData]+0x18], mm3\n"
-            "movq [%[g_globalMMXData]+0x20], mm4\n"
-            "movq [%[g_globalMMXData]+0x28], mm5\n"
-            "movq [%[g_globalMMXData]+0x30], mm6\n"
-            "movq [%[g_globalMMXData]+0x38], mm7\n"
+            "movq [%[data]+0x00], mm0\n"
+            "movq [%[data]+0x08], mm1\n"
+            "movq [%[data]+0x10], mm2\n"
+            "movq [%[data]+0x18], mm3\n"
+            "movq [%[data]+0x20], mm4\n"
+            "movq [%[data]+0x28], mm5\n"
+            "movq [%[data]+0x30], mm6\n"
+            "movq [%[data]+0x38], mm7\n"
             "emms\n"
-            ".att_syntax\n" : : [g_globalMMXData]"r"(g_globalMMXData) : "memory"
+            ".att_syntax\n" : : [data]"r"(data) : "memory"
         );
 #endif
     }
@@ -96,7 +94,7 @@ namespace MMXRegisters
 		
 #ifdef _MSC_VER
         __asm {
-            mov ecx, offset g_globalMMXData
+            mov ecx, offset data
             movq mm0, mmword ptr [ecx+0]
             movq mm1, mmword ptr [ecx+8]
             movq mm2, mmword ptr [ecx+16]
@@ -110,16 +108,16 @@ namespace MMXRegisters
 #else
         __asm__ volatile(
             ".intel_syntax noprefix\n"
-            "movq mm0, [%[g_globalMMXData]+0x00]\n"
-            "movq mm1, [%[g_globalMMXData]+0x08]\n"
-            "movq mm2, [%[g_globalMMXData]+0x10]\n"
-            "movq mm3, [%[g_globalMMXData]+0x18]\n"
-            "movq mm4, [%[g_globalMMXData]+0x20]\n"
-            "movq mm5, [%[g_globalMMXData]+0x28]\n"
-            "movq mm6, [%[g_globalMMXData]+0x30]\n"
-            "movq mm7, [%[g_globalMMXData]+0x38]\n"
+            "movq mm0, [%[data]+0x00]\n"
+            "movq mm1, [%[data]+0x08]\n"
+            "movq mm2, [%[data]+0x10]\n"
+            "movq mm3, [%[data]+0x18]\n"
+            "movq mm4, [%[data]+0x20]\n"
+            "movq mm5, [%[data]+0x28]\n"
+            "movq mm6, [%[data]+0x30]\n"
+            "movq mm7, [%[data]+0x38]\n"
             "emms\n"
-            ".att_syntax\n" : :  [g_globalMMXData]"r"(g_globalMMXData) : "memory"
+            ".att_syntax\n" : :  [data]"r"(data) : "memory"
         );
 #endif
     }  
@@ -132,6 +130,7 @@ namespace MMXRegisters
 namespace XMMRegisters
 {  
     u8 stack_depth = 0;
+    __aligned16 u64 data[2*iREGCNT_XMM];
     
     __forceinline bool Saved()
     {
@@ -154,7 +153,7 @@ namespace XMMRegisters
 
 #ifdef _MSC_VER
         __asm {
-            mov ecx, offset g_globalXMMData
+            mov ecx, offset data
             movaps xmmword ptr [ecx+0x00], xmm0
             movaps xmmword ptr [ecx+0x10], xmm1
             movaps xmmword ptr [ecx+0x20], xmm2
@@ -167,15 +166,15 @@ namespace XMMRegisters
     #else
         __asm__ volatile(
             ".intel_syntax noprefix\n"
-            "movaps [%[g_globalXMMData]+0x00], xmm0\n"
-            "movaps [%[g_globalXMMData]+0x10], xmm1\n"
-            "movaps [%[g_globalXMMData]+0x20], xmm2\n"
-            "movaps [%[g_globalXMMData]+0x30], xmm3\n"
-            "movaps [%[g_globalXMMData]+0x40], xmm4\n"
-            "movaps [%[g_globalXMMData]+0x50], xmm5\n"
-            "movaps [%[g_globalXMMData]+0x60], xmm6\n"
-            "movaps [%[g_globalXMMData]+0x70], xmm7\n"
-            ".att_syntax\n" : : [g_globalXMMData]"r"(g_globalXMMData) : "memory"
+            "movaps [%[data]+0x00], xmm0\n"
+            "movaps [%[data]+0x10], xmm1\n"
+            "movaps [%[data]+0x20], xmm2\n"
+            "movaps [%[data]+0x30], xmm3\n"
+            "movaps [%[data]+0x40], xmm4\n"
+            "movaps [%[data]+0x50], xmm5\n"
+            "movaps [%[data]+0x60], xmm6\n"
+            "movaps [%[data]+0x70], xmm7\n"
+            ".att_syntax\n" : : [data]"r"(data) : "memory"
         );
 #endif // _MSC_VER
     }  
@@ -199,7 +198,7 @@ namespace XMMRegisters
 #ifdef _MSC_VER
         __asm
         {
-            mov ecx, offset g_globalXMMData
+            mov ecx, offset data
             movaps xmm0, xmmword ptr [ecx+0x00]
             movaps xmm1, xmmword ptr [ecx+0x10]
             movaps xmm2, xmmword ptr [ecx+0x20]
@@ -212,15 +211,15 @@ namespace XMMRegisters
 #else
         __asm__ volatile(
             ".intel_syntax noprefix\n"
-            "movaps xmm0, [%[g_globalXMMData]+0x00]\n"
-            "movaps xmm1, [%[g_globalXMMData]+0x10]\n"
-            "movaps xmm2, [%[g_globalXMMData]+0x20]\n"
-            "movaps xmm3, [%[g_globalXMMData]+0x30]\n"
-            "movaps xmm4, [%[g_globalXMMData]+0x40]\n"
-            "movaps xmm5, [%[g_globalXMMData]+0x50]\n"
-            "movaps xmm6, [%[g_globalXMMData]+0x60]\n"
-            "movaps xmm7, [%[g_globalXMMData]+0x70]\n"
-            ".att_syntax\n" : : [g_globalXMMData]"r"(g_globalXMMData) : "memory"
+            "movaps xmm0, [%[data]+0x00]\n"
+            "movaps xmm1, [%[data]+0x10]\n"
+            "movaps xmm2, [%[data]+0x20]\n"
+            "movaps xmm3, [%[data]+0x30]\n"
+            "movaps xmm4, [%[data]+0x40]\n"
+            "movaps xmm5, [%[data]+0x50]\n"
+            "movaps xmm6, [%[data]+0x60]\n"
+            "movaps xmm7, [%[data]+0x70]\n"
+            ".att_syntax\n" : : [data]"r"(data) : "memory"
         );
 #endif // _MSC_VER
     }
