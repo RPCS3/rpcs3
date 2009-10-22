@@ -30,7 +30,7 @@ namespace YAML
 
 		std::string Str(unsigned ch)
 		{
-			return std::string("") + static_cast<char>(ch);
+			return std::string(1, static_cast<char>(ch));
 		}
 
 		// Escape
