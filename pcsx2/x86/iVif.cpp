@@ -61,7 +61,8 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 {
 	u32 i;
 	u32 prev = 0;
-	FreezeXMMRegs(1);
+	
+	XMMRegisters::Freeze();
 	for(i = 0; i < 4; ++i, mask >>= 8, oldmask >>= 8, vif1masks += 16) {
 
 		prev |= s_maskwrite[mask&0xff];
@@ -103,7 +104,7 @@ void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask)
 		}
 //#endif
 	}
-	FreezeXMMRegs(0);
+    XMMRegisters::Thaw();
 }
 
 /*#ifdef __LINUX__

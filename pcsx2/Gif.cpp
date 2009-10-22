@@ -133,9 +133,9 @@ int  _GIFchain()
 
 static __forceinline void GIFchain() 
 {
-	FreezeRegs(1);  
+	Registers::Freeze();
 	if (gif->qwc) gscycles+= _GIFchain(); /* guessing */
-	FreezeRegs(0); 
+	Registers::Thaw();
 }
 
 static __forceinline bool checkTieBit(u32* &ptag)
@@ -508,13 +508,13 @@ void mfifoGIFtransfer(int qwc)
 		}
 	 }
 	 
-	FreezeRegs(1); 
+	Registers::Freeze();
 	if (mfifoGIFchain() == -1) 
 	{
 		Console.WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", gif->qwc, gif->madr, gif->tadr);
 		gifstate = GIF_STATE_STALL;
 	}
-	FreezeRegs(0); 
+	Registers::Thaw();
 		
 	if ((gif->qwc == 0) && (gifstate & GIF_STATE_DONE)) gifstate = GIF_STATE_STALL;
 	CPU_INT(11,mfifocycles);

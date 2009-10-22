@@ -121,9 +121,9 @@ static DynGenFunc* iopExitRecompiledCode	= NULL;
 
 static void recEventTest()
 {
-	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+    pxAssert(!Registers::Saved());
 	_cpuBranchTest_Shared();
-	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+    pxAssert(!Registers::Saved());
 }
 
 // parameters:

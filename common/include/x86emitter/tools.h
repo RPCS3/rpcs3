@@ -95,11 +95,28 @@ struct x86CPU_INFO
 
 extern __aligned16 x86CPU_INFO x86caps;
 
-extern u8 g_globalMMXSaved, g_globalXMMSaved;
 extern bool g_EEFreezeRegs;
 
-// when using mmx/xmm regs, use; 0 is load
-// freezes no matter the state
-extern void FreezeXMMRegs(int save);
-extern void FreezeMMXRegs(int save);
-extern void FreezeRegs(int save);
+// when using mmx/xmm regs, use these functions.
+
+namespace MMXRegisters
+{
+    void Freeze();
+    void Thaw();
+    bool Saved();
+};
+
+namespace XMMRegisters
+{
+    void Freeze();
+    void Thaw();
+    bool Saved();
+};
+
+namespace Registers
+{
+    void Freeze();
+    void Thaw();
+    bool Saved();
+};
+

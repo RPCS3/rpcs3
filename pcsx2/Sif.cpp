@@ -443,12 +443,12 @@ __forceinline void dmaSIF0()
 	
 	if (iopsifbusy[0])
 	{
-		FreezeXMMRegs(1);
+        XMMRegisters::Freeze();
 		hwIntcIrq(INTC_SBUS);
 		SIF0Dma();
 		psHu32(SBUS_F240) &= ~0x20;
 		psHu32(SBUS_F240) &= ~0x2000;
-		FreezeXMMRegs(0);
+        XMMRegisters::Thaw();
 	}
 }
 
@@ -467,12 +467,12 @@ __forceinline void dmaSIF1()
 	
 	if (iopsifbusy[1])
 	{
-		FreezeXMMRegs(1);
+        XMMRegisters::Freeze();
 		SIF1Dma();
 		psHu32(SBUS_F240) &= ~0x40;
 		psHu32(SBUS_F240) &= ~0x100;
 		psHu32(SBUS_F240) &= ~0x4000;
-		FreezeXMMRegs(0);
+        XMMRegisters::Thaw();
 	}
 
 }

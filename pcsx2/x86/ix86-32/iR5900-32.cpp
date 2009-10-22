@@ -332,9 +332,9 @@ static DynGenFunc* ExitRecompiledCode	= NULL;
 
 static void recEventTest()
 {
-	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+    pxAssert(!Registers::Saved());
 	_cpuBranchTest_Shared();
-	pxAssert( !g_globalXMMSaved && !g_globalMMXSaved );
+    pxAssert(!Registers::Saved());
 }
 
 // parameters:
@@ -1297,7 +1297,7 @@ static void printfn()
 	static int curcount = 0;
 	const int skip = 0;
 
-	pxAssert( !g_globalMMXSaved && !g_globalXMMSaved );
+    pxAssert(!Registers::Saved());
 
 	//pxAssert( cpuRegs.pc != 0x80001300 );
 

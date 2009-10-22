@@ -184,12 +184,12 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 
 	if (eesifbusy[1])
 	{
-		FreezeXMMRegs(1);
+        XMMRegisters::Freeze();
 		SIF1Dma();
 		psHu32(SBUS_F240) &= ~0x40;
 		psHu32(SBUS_F240) &= ~0x100;
 		psHu32(SBUS_F240) &= ~0x4000;
-		FreezeXMMRegs(0);
+        XMMRegisters::Thaw();
 	}
 }
 

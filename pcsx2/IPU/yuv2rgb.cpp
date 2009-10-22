@@ -77,7 +77,7 @@ static __aligned16 u16 yuv2rgb_temp[3][8];
 // This could potentially be improved for SSE4
 __releaseinline void yuv2rgb_sse2(void)
 {
-	FreezeXMMRegs(1);
+    XMMRegisters::Freeze();
 
 #if defined(_MSC_VER) || defined(__INTEL_COMPILER)
 	__asm {
@@ -356,7 +356,7 @@ ihatemsvc:
 #	error Unsupported compiler
 #endif
 
-	FreezeXMMRegs(0);
+    XMMRegisters::Thaw();
 }
 
 void yuv2rgb_init(void)

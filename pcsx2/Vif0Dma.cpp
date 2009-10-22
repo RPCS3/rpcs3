@@ -224,7 +224,7 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 {
 	int ret;
 
-	FreezeXMMRegs(1);
+    XMMRegisters::Freeze();
 	if (vif0.vifpacketsize < vif0.tag.size)
 	{
 		if(vif0Regs->offset != 0 || vif0.cl != 0)
@@ -238,7 +238,7 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 
 			ProcessMemSkip<0>((vif0.vifpacketsize - ret) << 2, (vif0.cmd & 0xf));
 			vif0.tag.size -= (vif0.vifpacketsize - ret);
-			FreezeXMMRegs(0);
+            XMMRegisters::Thaw();
 
 			return vif0.vifpacketsize;
 		}
@@ -271,7 +271,7 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 		vif0.cmd = 0;
 	}
 
-	FreezeXMMRegs(0);
+    XMMRegisters::Thaw();
 	return ret;
 }
 
