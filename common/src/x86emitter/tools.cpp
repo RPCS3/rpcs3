@@ -29,31 +29,21 @@ __aligned16 u64 g_globalXMMData[2*iREGCNT_XMM];
 
 namespace MMXRegisters
 {
-    u8 g_globalMMXSaved = 0;
-    
-    __forceinline u8 Depth()
-    {
-        return g_globalMMXSaved;
-    }
+    u8 stack_depth = 0;
     
     __forceinline bool Saved()
     {
-        return ( Depth() > 0);
-    }
-    
-    __forceinline bool SavedRepeatedly()
-    {
-        return ( Depth() > 1);
+        return ( stack_depth > 0);
     }
     
     __forceinline void Freeze()
     {
         if (!g_EEFreezeRegs) return;
 
-        //DevCon.Notice("FreezeMMXRegs_(%d); [%d]\n", save, g_globalMMXSaved);
-            g_globalMMXSaved++;
+        //DevCon.Notice("MMXRegisters::Freeze: depth[%d]\n", stack_depth);
+        stack_depth++;
 		
-        if (SavedRepeatedly())
+        if (stack_depth > 1)
         {
             //DevCon.Notice("MMX Already Saved!\n");
             return;
@@ -93,14 +83,14 @@ namespace MMXRegisters
     {
         if (!g_EEFreezeRegs) return;
 
-        //DevCon.Notice("FreezeMMXRegs_(%d); [%d]\n", save, g_globalMMXSaved);
+        //DevCon.Notice("MMXRegisters::Thaw: depth[%d]\n", stack_depth);
             
         if (!Saved())
         {
             //DevCon.Notice("MMX Not Saved!\n");
             return;
         }
-        g_globalMMXSaved--;
+        stack_depth--;
 
         if (Saved()) return;
 		
@@ -141,32 +131,22 @@ namespace MMXRegisters
 
 namespace XMMRegisters
 {  
-    u8 g_globalXMMSaved = 0;
-
-    __forceinline u8 Depth()
-    {
-        return g_globalXMMSaved;
-    }
+    u8 stack_depth = 0;
     
     __forceinline bool Saved()
     {
-        return ( Depth() > 0);
-    }
-    
-    __forceinline bool SavedRepeatedly()
-    {
-        return ( Depth() > 1);
+        return ( stack_depth > 0);
     }
     
     __forceinline void Freeze()
     {
         if (!g_EEFreezeRegs) return;
             
-        //DevCon.Notice("FreezeXMMRegs_(%d); [%d]\n", save, g_globalXMMSaved);
+        //DevCon.Notice("XMMRegisters::Freeze: depth[%d]\n", Depth());
             
-        g_globalXMMSaved++;
+        stack_depth++;
         
-        if (SavedRepeatedly())
+        if (stack_depth > 1)
         {
             //DevCon.Notice("XMM Already saved\n");
             return;
@@ -204,16 +184,16 @@ namespace XMMRegisters
     {
         if (!g_EEFreezeRegs) return;
 
-        //DevCon.Notice("FreezeXMMRegs_(%d); [%d]\n", save, g_globalXMMSaved);
+        //DevCon.Notice("XMMRegisters::Thaw: depth[%d]\n", Depth());
             
-       if (!Saved())
+        if (!Saved())
         {
             //DevCon.Notice("XMM Regs not saved!\n");
             return;
         }
 
         // TODO: really need to backup all regs?
-        g_globalXMMSaved--;
+        stack_depth--;
         if (Saved()) return;
 
 #ifdef _MSC_VER
@@ -255,11 +235,6 @@ namespace Registers
     __forceinline bool Saved()
     {
         return (XMMRegisters::Saved() || MMXRegisters::Saved());
-    }
-    
-    __forceinline bool SavedRepeatedly()
-    {
-        return (XMMRegisters::SavedRepeatedly() || MMXRegisters::SavedRepeatedly());
     }
     
     __forceinline void Freeze()
