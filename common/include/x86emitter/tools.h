@@ -101,22 +101,22 @@ extern bool g_EEFreezeRegs;
 
 namespace MMXRegisters
 {
-    void Freeze();
-    void Thaw();
-    bool Saved();
+    extern void Freeze();
+    extern void Thaw();
+    extern bool Saved();
 };
 
 namespace XMMRegisters
 {
-    void Freeze();
-    void Thaw();
-    bool Saved();
+    extern void Freeze();
+    extern void Thaw();
+    extern bool Saved();
 };
 
 namespace Registers
 {
-    void Freeze();
-    void Thaw();
-    bool Saved();
+    extern void Freeze();
+    extern void Thaw();
+    extern bool Saved();
 };
 
