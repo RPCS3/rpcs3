@@ -426,6 +426,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\EventSource.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\Exceptions.h"
 				>
 			</File>
@@ -439,10 +443,6 @@
 			</File>
 			<File
 				RelativePath="..\..\include\intrin_x86.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\include\Utilities\Listeners.h"
 				>
 			</File>
 			<File

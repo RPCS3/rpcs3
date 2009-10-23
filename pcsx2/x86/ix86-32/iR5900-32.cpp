@@ -19,42 +19,23 @@
 #include "Memory.h"
 #include "R5900OpcodeTables.h"
 #include "iR5900.h"
-#include "iR5900AritImm.h"
-#include "iR5900Arit.h"
-#include "iR5900MultDiv.h"
-#include "iR5900Shift.h"
-#include "iR5900Branch.h"
-#include "iR5900Jump.h"
-#include "iR5900LoadStore.h"
-#include "iR5900Move.h"
 
 #include "BaseblockEx.h"
-
-#include "iMMI.h"
-#include "iFPU.h"
-#include "iCOP0.h"
-#include "sVU_Micro.h"
-#include "VU.h"
-#include "VUmicro.h"
-
-#include "sVU_zerorec.h"
 #include "vtlb.h"
-
 #include "SamplProf.h"
-
-#include "NakedAsm.h"
 #include "Dump.h"
+
+#include "SysThreads.h"
+#include "GS.h"
 
 using namespace x86Emitter;
 using namespace R5900;
 
-// used to disable register freezing during cpuBranchTests (registers
-// are safe then since they've been completely flushed)
-bool g_EEFreezeRegs = false;
+#define PC_GETBLOCK(x) PC_GETBLOCK_(x, recLUT)
 
 u32 maxrecmem = 0;
-uptr recLUT[0x10000];
-uptr hwLUT[0x10000];
+static uptr recLUT[0x10000];
+static uptr hwLUT[0x10000];
 
 #define HWADDR(mem) (hwLUT[mem >> 16] + (mem))
 
@@ -584,13 +565,12 @@ struct ManualPageTracking
 static __aligned16 u16 manual_page[Ps2MemSize::Base >> 12];
 static __aligned16 u8 manual_counter[Ps2MemSize::Base >> 12];
 
-volatile bool eeRecIsReset = false;
+static bool eeRecIsReset = false;
 
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
 	Console.Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
-	eeRecIsReset = true;
 
 	maxrecmem = 0;
 
@@ -652,6 +632,7 @@ void recResetEE( void )
 
 	branch = 0;
 	SetCPUState(EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR);
+	eeRecIsReset = true;
 }
 
 static void recShutdown( void )
@@ -673,81 +654,99 @@ void recStep( void )
 {
 }
 
-#ifndef PCSX2_SEH
+static jmp_buf		m_SetJmp_StateCheck;
 
-// <---  setjmp/longjmp model  <---
-
-#include "GS.h"
-#include "System/SysThreads.h"
-
-static void StateThreadCheck_LongJmp()
+static void recCheckExecutionState()
 {
-	setjmp( SetJmp_StateCheck );
-
-	int oldstate;
-
-	// Important! Most of the console logging and such has cancel points in it.  This is great
-	// in Windows, where SEH lets us safely kill a thread from anywhere we want.  This is bad
-	// in Linux, which cannot have a C++ exception cross the recompiler.  Hence the changing
-	// of the cancelstate here!
-
-	pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
-	mtgsThread.RethrowException();
+#if PCSX2_SEH
 	SysCoreThread::Get().StateCheckInThread();
-	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
-}
-
-static void recExecute()
-{
-	StateThreadCheck_LongJmp();
-
-	switch( setjmp( SetJmp_RecExecute ) )
-	{
-		case SetJmp_Exit: break;
-
-		case 0:
-		case SetJmp_Dispatcher:
-
-			// Typically the Dispatcher is invoked from the EventTest code, which clears
-			// the FreezeRegs flag, so always be sure to reset it here:
-			g_EEFreezeRegs = true;
-
-			while( true )
-				EnterRecompiledCode();
-		break;
-	}
-
-	g_EEFreezeRegs = false;
-}
-
+	
+	if( eeRecIsReset )
+		throw Exception::ForceDispatcherReg();
 #else
 
-// --->  SEH Model  --->
+	// Without SEH we'll need to hop to a safehouse point outside the scope of recompiled
+	// code.  C++ exceptions can't cross the mighty chasm in the stackframe that the recompiler
+	// creates.  However, the longjump is slow so we only want to do one when absolutely
+	// necessary:
+
+	pxAssert( !eeRecIsReset );		// should only be changed during suspended thread states
+	if( SysCoreThread::Get().HasPendingStateChangeRequest() )
+	{
+		longjmp( m_SetJmp_StateCheck, SetJmp_Dispatcher );
+	}
+
+#endif
+}
 
 static void recExecute()
 {
 	// Implementation Notes:
 	// [TODO] fix this comment to explain various code entry/exit points, when I'm not so tired!
 
-	try
-	{
+#if PCSX2_SEH
+	try {
 		while( true )
 		{
-			// Typically the Dispatcher is invoked from the EventTest code, which clears
-			// the FreezeRegs flag, so always be sure to reset it here:
+			eeRecIsReset = false;
 			g_EEFreezeRegs = true;
 
 			try {
 				EnterRecompiledCode();
 			}
 			catch( Exception::ForceDispatcherReg& ) { }
+
 		}
 	}
-	catch( Exception::ExitRecExecute& ) { }
+	catch( Exception::ExitRecExecute& ) {}
 
-	g_EEFreezeRegs = false;
-}
+#else
+
+	switch( setjmp( m_SetJmp_StateCheck ) )
+	{
+		case 0:		// first run, fall through to Dispatcher
+		case SetJmp_Dispatcher:
+			while( true )
+			{
+				int oldstate;
+
+				// Important! Most of the console logging and such has cancel points in it.  This is great
+				// in Windows, where SEH lets us safely kill a thread from anywhere we want.  This is bad
+				// in Linux, which cannot have a C++ exception cross the recompiler.  Hence the changing
+				// of the cancelstate here!
+
+				pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
+				SysCoreThread::Get().StateCheckInThread();
+				pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
+
+				eeRecIsReset = false;
+
+				#ifdef _WIN32
+				__try {
+				#endif
+
+					EnterRecompiledCode();
+				
+				#ifdef _WIN32
+				} __finally
+				{
+					// This assertion is designed to help me troubleshoot the setjmp behavior from Win32.
+					// If the recompiler throws an unhandled SEH exception with SEH support disabled (which
+					// is typically a pthread_cancel) then this will fire and let me know.
+					
+					// FIXME: Doesn't work because SEH is remarkably clever and executes the _finally block
+					// even when I use longjmp to restart the loop.  Maybe a workaround exists? :/
+
+					//pxFailDev( "Recompiler threw an SEH exception with SEH disabled; possibly due to pthread_cancel." );
+				}
+				#endif
+			}
+		break;
+
+		case SetJmp_Exit: break;
+	}
 #endif
+}
 
 ////////////////////////////////////////////////////
 void R5900::Dynarec::OpcodeImpl::recSYSCALL( void )
@@ -856,17 +855,12 @@ void recClear(u32 addr, u32 size)
 }
 
 
-#ifndef PCSX2_SEH
-	jmp_buf SetJmp_RecExecute;
-	jmp_buf SetJmp_StateCheck;
-#endif
-
-static void ExitRec()
+static void recExitExecution()
 {
-#ifdef PCSX2_SEH
+#if PCSX2_SEH
 	throw Exception::ExitRecExecute();
 #else
-	longjmp( SetJmp_RecExecute, SetJmp_Exit );
+	longjmp( m_SetJmp_StateCheck, SetJmp_Exit );
 #endif
 }
 
@@ -875,22 +869,29 @@ void CheckForBIOSEnd()
 {
 	xMOV( eax, &cpuRegs.pc );
 
-	/*xCMP( eax, 0x00200008 );
-	xJE(ExitRec);
+	if( IsDevBuild )
+	{
+		// Using CALL retains stacktrace info, useful for debugging.
 
-	xCMP( eax, 0x00100008 );
-	xJE(ExitRec);*/
+		xCMP( eax, 0x00200008 );
+		xForwardJE8 CallExitRec;
 
-	xCMP( eax, 0x00200008 );
-	xForwardJE8 CallExitRec;
+		xCMP( eax, 0x00100008 );
+		xForwardJNE8 SkipExitRec;
 
-	xCMP( eax, 0x00100008 );
-	xForwardJNE8 SkipExitRec;
+		CallExitRec.SetTarget();
+		xCALL( recExitExecution );
 
-	CallExitRec.SetTarget();
-	xCALL( ExitRec );
+		SkipExitRec.SetTarget();
+	}
+	else
+	{
+		xCMP( eax, 0x00200008 );
+		xJE(recExitExecution);
 
-	SkipExitRec.SetTarget();
+		xCMP( eax, 0x00100008 );
+		xJE(recExitExecution);
+	}
 }
 
 static int *s_pCode;
@@ -1765,11 +1766,13 @@ StartRecomp:
 	s_pCurBlockEx = NULL;
 }
 
-R5900cpu recCpu = {
+R5900cpu recCpu =
+{
 	recAlloc,
 	recResetEE,
 	recStep,
 	recExecute,
+	recCheckExecutionState,
 	recClear,
 	recShutdown
 };

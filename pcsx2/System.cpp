@@ -25,8 +25,10 @@
 #include "sVU_zerorec.h"		// for SuperVUReset
 
 #include "R5900Exceptions.h"
-
 #include "CDVD/CDVD.h"
+#include "System/PageFaultSource.h"
+
+SrcType_PageFault Source_PageFault;
 
 #if _MSC_VER
 #	include "svnrev.h"
@@ -106,6 +108,8 @@ static wxString GetMemoryErrorVM()
 
 SysCoreAllocations::SysCoreAllocations()
 {
+	InstallSignalHandler();
+
 	Console.Status( "Initializing PS2 virtual machine..." );
 
 	RecSuccess_EE		= false;

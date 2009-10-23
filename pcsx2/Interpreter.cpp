@@ -19,6 +19,7 @@
 #include "Common.h"
 #include "R5900.h"
 #include "R5900OpcodeTables.h"
+#include "System/SysThreads.h"
 
 #include <float.h>
 
@@ -29,6 +30,8 @@ extern int vu0branch, vu1branch;
 static int branch2 = 0;
 static u32 cpuBlockCycles = 0;		// 3 bit fixed point version of cycle count
 static std::string disOut;
+
+static void intEventTest();
 
 // These macros are used to assemble the repassembler functions
 
@@ -356,24 +359,24 @@ void JALR()
 
 ////////////////////////////////////////////////////////
 
-void intAlloc()
+static void intAlloc()
 {
 	 // fixme : detect cpu for use the optimize asm code
 }
 
-void intReset()
+static void intReset()
 {
 	cpuRegs.branch = 0;
 	branch2 = 0;
 }
 
-void intEventTest()
+static void intEventTest()
 {
 	// Perform counters, ints, and IOP updates:
 	_cpuBranchTest_Shared();
 }
 
-void intExecute()
+static void intExecute()
 {
 	g_EEFreezeRegs = false;
 
@@ -384,6 +387,11 @@ void intExecute()
 	{
 		execI();
 	}
+}
+
+static void intCheckExecutionState()
+{
+	SysCoreThread::Get().StateCheckInThread();
 }
 
 static void intStep()
@@ -404,6 +412,7 @@ R5900cpu intCpu = {
 	intReset,
 	intStep,
 	intExecute,
+	intCheckExecutionState,
 	intClear,
 	intShutdown
 };

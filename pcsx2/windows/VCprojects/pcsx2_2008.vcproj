@@ -381,15 +381,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\System\SysCoreThread.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\System.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\System\SysThreads.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\System\SysThreads.h"
+				RelativePath="..\..\System\SysThreadBase.cpp"
 				>
 			</File>
 			<Filter
@@ -456,6 +456,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\System\PageFaultSource.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\Paths.h"
 					>
 				</File>
@@ -477,6 +481,10 @@
 				</File>
 				<File
 					RelativePath="..\..\System.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\System\SysThreads.h"
 					>
 				</File>
 			</Filter>

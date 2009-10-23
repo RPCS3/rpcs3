@@ -128,9 +128,9 @@ void AppCoreThread::OnCleanupInThread()
 	extern int TranslateGDKtoWXK( u32 keysym );
 #endif
 
-void AppCoreThread::StateCheckInThread( bool isCancelable )
+void AppCoreThread::StateCheckInThread()
 {
-	_parent::StateCheckInThread( isCancelable );
+	_parent::StateCheckInThread();
 	if( !pxAssert(g_plugins!=NULL) ) return;
 
 	const keyEvent* ev = PADkeyEvent();

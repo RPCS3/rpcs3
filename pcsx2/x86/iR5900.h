@@ -22,11 +22,8 @@
 #include "VU.h"
 #include "iCore.h"
 
-#define PC_GETBLOCK(x) PC_GETBLOCK_(x, recLUT)
-
 extern u32 pc;
 extern int branch;
-extern uptr recLUT[];
 
 extern u32 maxrecmem;
 extern u32 pc;			         // recompiler pc (also used by the SuperVU! .. why? (air))

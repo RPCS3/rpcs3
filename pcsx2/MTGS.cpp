@@ -86,6 +86,14 @@ extern bool renderswitch;
 std::list<uint> ringposStack;
 #endif
 
+static __threadlocal mtgsThreadObject* tls_mtgsThread = NULL;
+
+mtgsThreadObject& mtgsThreadObject::Get()
+{
+	pxAssertMsg( tls_mtgsThread != NULL, L"This function must be called from the context of a running mtgsThreadObject." );
+	return *tls_mtgsThread;
+}
+
 mtgsThreadObject::mtgsThreadObject() :
 	SysThreadBase()
 ,	m_RingPos( 0 )
@@ -162,8 +170,8 @@ void mtgsThreadObject::PostVsyncEnd( bool updategs )
 		if( m_WritePos == volatize( m_RingPos ) )
 		{
 			// MTGS ringbuffer is empty, but we still have queued frames in the counter?  Ouch!
-			Console.Error( "MTGS > Queued framecount mismatch = %d", m_QueuedFrames );
-			m_QueuedFrames = 0;
+			int count = AtomicExchange( m_QueuedFrames, 0 );
+			Console.Error( "MTGS > Queued framecount mismatch = %d", count );
 			break;
 		}
 		Threading::Sleep( 2 );		// Sleep off quite a bit of time, since we're obviously *waaay* ahead.
@@ -226,14 +234,20 @@ void mtgsThreadObject::OpenPlugin()
 
 void mtgsThreadObject::ExecuteTaskInThread()
 {
+	tls_mtgsThread = this;
+
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;
 #endif
 
 	while( true )
 	{
-		m_sem_event.WaitRaw();			// ... because this does a cancel test itself..
-		StateCheckInThread( false );	// false disables cancel test here!
+		// Performance note: Both of these perform cancellation tests, but pthread_testcancel
+		// is very optimized (only 1 instruction test in most cases), so no point in trying
+		// to avoid it.
+
+		m_sem_event.WaitRaw();
+		StateCheckInThread();
 
 		m_RingBufferIsBusy = true;
 
@@ -268,8 +282,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 
 					// stall for a bit to let the MainThread have time to update the g_pGSWritePos.
 					m_lock_RingRestart.Wait();
-
-					StateCheckInThread( false );		// disable cancel since the above locks are cancelable already
+					StateCheckInThread();
 				continue;
 
 				case GS_RINGTYPE_P1:
@@ -427,6 +440,7 @@ void mtgsThreadObject::OnResumeInThread( bool isSuspended )
 void mtgsThreadObject::OnCleanupInThread()
 {
 	ClosePlugin();
+	tls_mtgsThread = NULL;
 	_parent::OnCleanupInThread();
 }
 

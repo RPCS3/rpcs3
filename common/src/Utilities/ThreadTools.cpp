@@ -142,6 +142,8 @@ void Threading::PersistentThread::Start()
 	Detach();		// clean up previous thread handle, if one exists.
 	OnStart();
 
+	m_except = NULL;
+
 	if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
 		throw Exception::ThreadCreationError();
 }

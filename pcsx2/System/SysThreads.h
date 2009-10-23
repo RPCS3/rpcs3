@@ -19,6 +19,25 @@
 
 using namespace Threading;
 
+
+#if !PCSX2_SEH
+#	include <setjmp.h>
+
+	// Platforms without SEH need to use SetJmp / LongJmp to deal with exiting the recompiled
+	// code execution pipelines in an efficient manner, since standard C++ exceptions cannot
+	// unwind across dynamically recompiled code.
+
+	enum
+	{
+		SetJmp_Dispatcher = 1,
+		SetJmp_Exit,
+	};
+
+#endif
+
+// --------------------------------------------------------------------------------------
+//  ISysThread
+// --------------------------------------------------------------------------------------
 class ISysThread : public virtual IThread
 {
 public:
@@ -30,6 +49,9 @@ public:
 	virtual void Resume() {}
 };
 
+// --------------------------------------------------------------------------------------
+//  SysThreadBase
+// --------------------------------------------------------------------------------------
 
 class SysThreadBase : public PersistentThread, public virtual ISysThread
 {
@@ -93,7 +115,7 @@ public:
 		return m_ExecMode > ExecMode_Closed;
 	}
 
-	bool HasPendingStateChangeRequest()
+	bool HasPendingStateChangeRequest() const
 	{
 		ExecutionMode mode = m_ExecMode;
 		return (mode == ExecMode_Closing) || (mode == ExecMode_Pausing);
@@ -108,8 +130,6 @@ public:
 	virtual void Resume();
 	virtual bool Pause();
 
-	virtual void StateCheckInThread( bool isCancelable = true );
-
 protected:
 	virtual void OnStart();
 
@@ -118,6 +138,7 @@ protected:
 	// Resume() has a lot of checks and balances to prevent re-entrance and race conditions.
 	virtual void OnResumeReady() {}
 
+	virtual void StateCheckInThread();
 	virtual void OnCleanupInThread();
 	virtual void OnStartInThread();
 
@@ -147,8 +168,10 @@ protected:
 	virtual void OnResumeInThread( bool isSuspended )=0;
 };
 
+
+
 // --------------------------------------------------------------------------------------
-//  EECoreThread class
+//  SysCoreThread class
 // --------------------------------------------------------------------------------------
 class SysCoreThread : public SysThreadBase
 {
@@ -159,6 +182,9 @@ protected:
 	bool			m_resetProfilers;
 	bool			m_resetVirtualMachine;
 	bool			m_hasValidState;
+
+	// Used by SETJMP only, but ifdef'ing it out clutters up the code.
+	bool			m_CoreCancelDamnit;
 
 public:
 	static SysCoreThread& Get();
@@ -177,9 +203,12 @@ public:
 		return m_hasValidState;
 	}
 
+	bool HasPendingStateChangeRequest() const;
+
+	virtual void StateCheckInThread();
+
 protected:
 	void CpuInitializeMess();
-	void CpuExecute();
 
 	virtual void Start();
 	virtual void OnSuspendInThread();
@@ -187,6 +216,8 @@ protected:
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnCleanupInThread();
 	virtual void ExecuteTaskInThread();
+	
+	void _StateCheckThrows();
 };
 
 extern int sys_resume_lock;

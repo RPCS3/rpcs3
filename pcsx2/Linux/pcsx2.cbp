@@ -236,8 +236,10 @@
 		<Unit filename="../StringUtils.h" />
 		<Unit filename="../System.cpp" />
 		<Unit filename="../System.h" />
-		<Unit filename="../System/SysThreads.cpp" />
-		<Unit filename="../System/SysThreads.h" />
+   		<Unit filename="../System/PageFaultSource.h" />
+		<Unit filename="../System/SysCoreThread.cpp" />
+		<Unit filename="../System/SysThreadBase.cpp" />
+   		<Unit filename="../System/SysThreads.h" />
 		<Unit filename="../Tags.h" />
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />

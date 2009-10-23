@@ -123,6 +123,8 @@ public:
 	mtgsThreadObject();
 	virtual ~mtgsThreadObject() throw();
 
+	static mtgsThreadObject& Get();
+
 	// Waits for the GS to empty out the entire ring buffer contents.
 	// Used primarily for plugin startup/shutdown.
 	void WaitGS();

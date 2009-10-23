@@ -48,7 +48,7 @@ BIOS
 #include "VUmicro.h"
 #include "GS.h"
 #include "IPU/IPU.h"
-#include "AppConfig.h"
+#include "System/PageFaultSource.h"
 
 
 #ifdef ENABLECACHE
@@ -574,6 +574,8 @@ void memClearPageAddr(u32 vaddr)
 ///////////////////////////////////////////////////////////////////////////
 // PS2 Memory Init / Reset / Shutdown
 
+static void __fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info );
+
 static const uint m_allMemSize =
 		Ps2MemSize::Rom + Ps2MemSize::Rom1 + Ps2MemSize::Rom2 + Ps2MemSize::ERom +
 		Ps2MemSize::Base + Ps2MemSize::Hardware + Ps2MemSize::Scratch;
@@ -596,10 +598,14 @@ void memAlloc()
 	psER = curpos; curpos += Ps2MemSize::ERom;
 	psH = curpos; curpos += Ps2MemSize::Hardware;
 	psS = curpos; //curpos += Ps2MemSize::Scratch;
+	
+	Source_PageFault.Add( EventListener<PageFaultInfo>((void*)psM, mmap_OnPageFault) );
 }
 
 void memShutdown()
 {
+	Source_PageFault.Remove( EventListener<PageFaultInfo>((void*)psM, mmap_OnPageFault) );
+
 	vtlb_free( m_psAllMem, m_allMemSize );
 	m_psAllMem = NULL;
 	psM = psR = psR1 = psR2 = psER = psS = psH = NULL;
@@ -623,8 +629,7 @@ void memBindConditionalHandlers()
 void memReset()
 {
 	// VTLB Protection Preparations.
-
-	HostSys::MemProtect( m_psAllMem, m_allMemSize, Protect_ReadWrite );
+	//HostSys::MemProtect( m_psAllMem, m_allMemSize, Protect_ReadWrite );
 
 	// Note!!  Ideally the vtlb should only be initialized once, and then subsequent
 	// resets of the system hardware would only clear vtlb mappings, but since the
@@ -874,28 +879,33 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadOnly );
 }
 
-// offset - offset of address relative to psM.  The exception handler for the platform/host
-// OS should ensure that only addresses within psM address space are passed.   Anything else
-// will produce undefined results (ie, crashes).
-void mmap_ClearCpuBlock( uint offset )
+// offset - offset of address relative to psM.
+static __forceinline void mmap_ClearCpuBlock( uint offset )
 {
 	int rampage = offset >> 12;
 
 	// Assertion: This function should never be run on a block that's already under
 	// manual protection.  Indicates a logic error in the recompiler or protection code.
-	jASSUME( m_PageProtectInfo[rampage].Mode != ProtMode_Manual );
-
-	//#ifndef __LINUX__		// this function is called from the signal handler
-	//DbgCon.WriteLn( "Manual page @ 0x%05x", m_PageProtectInfo[rampage].ReverseRamMap>>12 );
-	//#endif
+	pxAssertMsg( m_PageProtectInfo[rampage].Mode != ProtMode_Manual,
+		"Attempted to clear a block that is already under manual protection." );
 
 	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadWrite );
 	m_PageProtectInfo[rampage].Mode = ProtMode_Manual;
 	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
 }
 
+static void __fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info )
+{
+	// get bad virtual address
+	uptr offset = info.addr - (uptr)basemem;
+	if( offset >= Ps2MemSize::Base ) return;
+
+	mmap_ClearCpuBlock( offset );
+	info.handled = true;
+}
+
 // Clears all block tracking statuses, manual protection flags, and write protection.
-// This does not clear any recompiler blocks.  IT is assumed (and necessary) for the caller
+// This does not clear any recompiler blocks.  It is assumed (and necessary) for the caller
 // to ensure the EErec is also reset in conjunction with calling this function.
 void mmap_ResetBlockTracking()
 {

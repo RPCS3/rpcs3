@@ -440,8 +440,6 @@ __forceinline void rcntUpdate_hScanline()
 	}
 }
 
-bool CoreCancelDamnit = false;
-
 __forceinline void rcntUpdate_vSync()
 {
 	s32 diff = (cpuRegs.cycle - vsyncCounter.sCycle);
@@ -449,28 +447,7 @@ __forceinline void rcntUpdate_vSync()
 
 	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
-		eeRecIsReset = false;
-
-#ifndef PCSX2_SEH
-		if( CoreCancelDamnit || SysCoreThread::Get().HasPendingStateChangeRequest() )
-		{
-			longjmp( SetJmp_StateCheck, 1 );
-		}
-#else
-		mtgsThread.RethrowException();
-		SysCoreThread::Get().StateCheckInThread();
-#endif
-		if( eeRecIsReset )
-		{
-			eeRecIsReset = false;
-			cpuSetBranch();
-
-#ifndef PCSX2_SEH
-			longjmp( SetJmp_RecExecute, SetJmp_Dispatcher );
-#else
-			throw Exception::ForceDispatcherReg();
-#endif
-		}
+		Cpu->CheckExecutionState();
 
 		VSyncEnd(vsyncCounter.sCycle);
 

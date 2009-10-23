@@ -84,10 +84,10 @@
 		<Unit filename="../../../3rdparty/google/type_traits.h" />
 		<Unit filename="../../include/Utilities/Console.h" />
 		<Unit filename="../../include/Utilities/Dependencies.h" />
+		<Unit filename="../../include/Utilities/EventSource.h" />
 		<Unit filename="../../include/Utilities/Exceptions.h" />
 		<Unit filename="../../include/Utilities/General.h" />
 		<Unit filename="../../include/Utilities/HashMap.h" />
-		<Unit filename="../../include/Utilities/Listeners.h" />
 		<Unit filename="../../include/Utilities/MemcpyFast.h" />
 		<Unit filename="../../include/Utilities/Path.h" />
 		<Unit filename="../../include/Utilities/RedtapeWindows.h" />

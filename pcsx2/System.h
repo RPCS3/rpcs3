@@ -60,62 +60,35 @@ extern void SysClearExecutionCache();	// clears recompiled execution caches!
 
 extern u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller="Unnamed");
 extern void vSyncDebugStuff( uint frame );
+extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
 
 // --------------------------------------------------------------------------------------
-//  Memory Protection (Used by VTLB, Recompilers, and Texture caches)
-// --------------------------------------------------------------------------------------
-#ifdef __LINUX__
-
-#	include <signal.h>
-
-	extern void SysPageFaultExceptionFilter( int signal, siginfo_t *info, void * );
-	extern void __fastcall InstallLinuxExceptionHandler();
-	extern void __fastcall ReleaseLinuxExceptionHandler();
-	static void NTFS_CompressFile( const wxString& file, bool compressStatus=true ) {}
-
-#	define PCSX2_MEM_PROTECT_BEGIN()	InstallLinuxExceptionHandler()
-#	define PCSX2_MEM_PROTECT_END()		ReleaseLinuxExceptionHandler()
-
-#elif defined( _WIN32 )
-
-	extern int SysPageFaultExceptionFilter(EXCEPTION_POINTERS* eps);
-	extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
-
-#	define PCSX2_MEM_PROTECT_BEGIN()	__try {
-#	define PCSX2_MEM_PROTECT_END()		} __except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}
-
-#else
-#	error PCSX2 - Unsupported operating system platform.
-#endif
-
-// --------------------------------------------------------------------------------------
-//  PCSX2_SEH - Defines existence of "built in" Structed Exception Handling support.
+//  PCSX2_SEH - Defines existence of "built in" Structured Exception Handling support.
 // --------------------------------------------------------------------------------------
 // This should be available on Windows, via Microsoft or Intel compilers (I'm pretty sure Intel
 // supports native SEH model).  GNUC in Windows, or any compiler in a non-windows platform, will
 // need to use setjmp/longjmp instead to exit recompiled code.
 //
-#if defined(_WIN32) && !defined(__GNUC__)
-#	define PCSX2_SEH
-#else
 
-#	include <setjmp.h>
+//#define PCSX2_SEH		0		// use this to force disable SEH on win32, to test setjmp functionality.
 
-	// Platforms without SEH need to use SetJmp / LongJmp to deal with exiting the recompiled
-	// code execution pipelines in an efficient manner, since standard C++ exceptions cannot
-	// unwind across dynamically recompiled code.
-
-	enum
-	{
-		SetJmp_Dispatcher = 1,
-		SetJmp_Exit,
-	};
-
-	extern jmp_buf SetJmp_RecExecute;
-	extern jmp_buf SetJmp_StateCheck;
+#ifndef PCSX2_SEH
+#	if defined(_WIN32) && !defined(__GNUC__)
+#		define PCSX2_SEH	1
+#	else
+#		define PCSX2_SEH	0
+#	endif
 #endif
 
-class pxMessageBoxEvent;
+// special macro which disables inlining on functions that require their own function stackframe.
+// This is due to how Win32 handles structured exception handling.  Linux uses signals instead
+// of SEH, and so these functions can be inlined.
+#ifdef _WIN32
+#	define __unique_stackframe __noinline
+#else
+#	define __unique_stackframe
+#endif
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Different types of message boxes that the emulator can employ from the friendly confines
@@ -123,6 +96,9 @@ class pxMessageBoxEvent;
 // blocking behavior -- they prompt the user for action and only return after the user has
 // responded to the prompt.
 //
+
+class pxMessageBoxEvent;
+
 namespace Msgbox
 {
 	extern void OnEvent( pxMessageBoxEvent& evt );

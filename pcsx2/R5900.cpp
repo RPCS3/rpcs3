@@ -34,6 +34,8 @@
 #include "SPR.h"
 #include "Sif.h"
 
+#include "System/SysThreads.h"
+
 #include "R5900Exceptions.h"
 
 using namespace R5900;	// for R5900 disasm tools
@@ -60,6 +62,8 @@ void cpuReset()
 {
 	if( mtgsThread.IsOpen() )
 		mtgsThread.WaitGS();		// GS better be done processing before we reset the EE, just in case.
+
+	SysClearExecutionCache();
 
 	cpuIsInitialized = true;
 
@@ -560,7 +564,6 @@ void cpuExecuteBios()
 
 	Console.Status( "Executing Bios Stub..." );
 
-	PCSX2_MEM_PROTECT_BEGIN();
 	g_ExecBiosHack = true;
 	while(	cpuRegs.pc != 0x00200008 &&
 			cpuRegs.pc != 0x00100008 )
@@ -568,7 +571,6 @@ void cpuExecuteBios()
 		Cpu->Execute();
 	}
 	g_ExecBiosHack = false;
-	PCSX2_MEM_PROTECT_END();
 
 //    {
 //        FILE* f = fopen("eebios.bin", "wb");

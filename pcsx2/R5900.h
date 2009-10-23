@@ -26,7 +26,6 @@
 
 extern bool g_EEFreezeRegs;
 extern bool g_ExecBiosHack;
-extern volatile bool eeRecIsReset;
 
 namespace Exception
 {
@@ -256,7 +255,6 @@ extern bool eeEventTestIsActive;
 extern u32 s_iLastCOP0Cycle;
 extern u32 s_iLastPERFCycle[2];
 
-void intEventTest();
 void intSetBranch();
 
 // This is a special form of the interpreter's doBranch that is run from various
@@ -272,6 +270,7 @@ struct R5900cpu
 	void (*Reset)();
 	void (*Step)();
 	void (*Execute)();
+	void (*CheckExecutionState)();
 	void (*Clear)(u32 Addr, u32 Size);
 	void (*Shutdown)();		// deallocates memory reserved by Allocate
 };

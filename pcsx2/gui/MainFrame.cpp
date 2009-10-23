@@ -255,34 +255,33 @@ void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
 	}
 }
 
-void MainEmuFrame::OnCoreThreadStatusChanged( void* obj, const wxCommandEvent& evt )
+void __fastcall MainEmuFrame::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 	mframe->ApplyCoreStatus();
 }
 
-void MainEmuFrame::OnCorePluginStatusChanged( void* obj, const wxCommandEvent& evt )
+void __fastcall MainEmuFrame::OnCorePluginStatusChanged( void* obj, wxCommandEvent& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 	mframe->ApplyCoreStatus();
 }
 
-void MainEmuFrame::OnSettingsApplied( void* obj, const int& evt )
+void __fastcall MainEmuFrame::OnSettingsApplied( void* obj, int& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 	mframe->ApplySettings();
 }
 
-void MainEmuFrame::OnSettingsLoadSave( void* obj, const IniInterface& evt )
+void __fastcall MainEmuFrame::OnSettingsLoadSave( void* obj, IniInterface& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 
-	// FIXME: Evil const cast hack!
-	mframe->LoadSaveRecentIsoList( const_cast<IniInterface&>(evt) );
+	mframe->LoadSaveRecentIsoList( evt );
 }
 
 // ------------------------------------------------------------------------

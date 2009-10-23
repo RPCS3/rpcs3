@@ -18,23 +18,23 @@
 #include <winnt.h>
 
 #include "Common.h"
+#include "System/PageFaultSource.h"
 
 int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
-	const _EXCEPTION_RECORD& ExceptionRecord = *eps->ExceptionRecord;
+	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )
+		return EXCEPTION_CONTINUE_SEARCH;
+
+	PageFaultInfo info( (uptr)eps->ExceptionRecord->ExceptionInformation[1] );
+
+	Source_PageFault.DispatchException( info );
+
+	if( info.handled ) return EXCEPTION_CONTINUE_EXECUTION;
 	
-	if (ExceptionRecord.ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
-	{
-		return EXCEPTION_CONTINUE_SEARCH;
-	}
+	return EXCEPTION_CONTINUE_SEARCH;
+}
 
-	// get bad virtual address
-	u32 offset = (u8*)ExceptionRecord.ExceptionInformation[1]-psM;
-
-	if (offset>=Ps2MemSize::Base)
-		return EXCEPTION_CONTINUE_SEARCH;
-
-	mmap_ClearCpuBlock( offset );
-
-	return EXCEPTION_CONTINUE_EXECUTION;
+void InstallSignalHandler()
+{
+	// NOP on Win32 systems -- we use __try{} __except{} instead.
 }

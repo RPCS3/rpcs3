@@ -280,6 +280,7 @@ namespace Threading
 		bool IsRunning() const;
 		bool IsSelf() const;
 		wxString GetName() const;
+		bool HasPendingException() const { return !!m_except; }
 
 	protected:
 		// Extending classes should always implement your own OnStart(), which is called by

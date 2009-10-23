@@ -210,8 +210,7 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 
 void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
 {
-	try
-	{
+	try {
 		(handler->*func)(event);
 	}
 	// ----------------------------------------------------------------------------
@@ -247,7 +246,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	}
 }
 
-static void OnStateSaveFinished( void* obj, const wxCommandEvent& evt )
+static void __fastcall OnStateSaveFinished( void* obj, wxCommandEvent& evt )
 {
 	if( evt.GetInt() == CoreStatus_Resumed )
 	{
@@ -290,7 +289,8 @@ bool Pcsx2App::PrepForExit( bool canCancel )
 		}
 	}*/
 
-	m_evtsrc_AppStatus.Dispatch( AppStatus_Exiting );
+	AppEventType toSend = AppStatus_Exiting;
+	m_evtsrc_AppStatus.Dispatch( toSend );
 	CleanupMess();
 
 	return true;
@@ -354,7 +354,8 @@ void AppApplySettings( const AppConfig* oldconf, bool saveOnSuccess )
 		}
 	}
 
-	sApp.Source_SettingsApplied().Dispatch( 0 );
+	int toSend = 0;
+	sApp.Source_SettingsApplied().Dispatch( toSend );
 	CoreThread.ApplySettings( g_Conf->EmuOptions );
 	
 	if( resume )

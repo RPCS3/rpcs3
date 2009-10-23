@@ -16,12 +16,17 @@
 #pragma once
 
 #include <list>
-#include <wx/event.h>
+
+class wxCommandEvent;
+
+// --------------------------------------------------------------------------------------
+//  EventListener< typename EvtType >
+// --------------------------------------------------------------------------------------
 
 template< typename EvtType >
 struct EventListener
 {
-	typedef void FuncType( void* object, const EvtType& evt );
+	typedef void __fastcall FuncType( void* object, EvtType& evt );
 
 	void*		object;
 	FuncType*	OnEvent;
@@ -49,6 +54,10 @@ struct EventListener
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//  EventSource< template EvtType >
+// --------------------------------------------------------------------------------------
+
 template< typename EvtType >
 class EventSource
 {
@@ -58,23 +67,38 @@ public:
 	typedef typename ListenerList::iterator			Handle;
 
 protected:
+	typedef typename ListenerList::const_iterator	ConstIterator;
+
 	ListenerList m_listeners;
+	
+	// This is a cached copy of the listener list used to handle standard dispatching, which
+	// allows for self-modification of the EventSource's listener list by the listeners.
+	// Translation: The dispatcher uses this copy instead, to avoid iterator invalidation.
+	ListenerList	m_cache_copy;
+	bool			m_cache_valid;
 
 public:
+	EventSource() : m_cache_valid( false )
+	{
+	}
+
 	virtual ~EventSource() throw() {}
 
 	virtual void Remove( const ListenerType& listener )
 	{
+		m_cache_valid = false;
 		m_listeners.remove( listener );
 	}
 
 	virtual void Remove( const Handle& listenerHandle )
 	{
+		m_cache_valid = false;
 		m_listeners.erase( listenerHandle );
 	}
 
 	virtual Handle AddFast( const ListenerType& listener )
 	{
+		m_cache_valid = false;
 		m_listeners.push_front( listener );
 		return m_listeners.begin();
 	}
@@ -93,14 +117,21 @@ public:
 		Remove( ListenerType( objhandle, fnptr ) );
 	}
 
-	void Dispatch( const EvtType& evt ) const
+	void Dispatch( EvtType& evt )
 	{
-		// Have to make a complete copy of the list, because the event stack can change:
-		
-		ListenerList list( m_listeners );
-		
-		typename ListenerList::const_iterator iter = list.begin();
-		while( iter != list.end() )
+		if( !m_cache_valid )
+		{
+			m_cache_copy = m_listeners;
+			m_cache_valid = true;
+		}
+
+		_DispatchRaw( m_cache_copy.begin(), m_cache_copy.end(), evt );
+	}
+
+protected:
+	__forceinline void _DispatchRaw( ConstIterator& iter, const ConstIterator& iend, EvtType& evt )
+	{
+		while( iter != iend )
 		{
 			try
 			{
@@ -118,14 +149,15 @@ public:
 			++iter;
 		}
 	}
+
 };
 
 // --------------------------------------------------------------------------------------
-//  EventListenerBinding
+//  EventListenerBinding< typename EvtType ?
 // --------------------------------------------------------------------------------------
 // Encapsulated event listener binding, provides the "benefits" of object unwinding.
 //
-template< typename EvtType = wxCommandEvent >
+template< typename EvtType >
 class EventListenerBinding
 {
 public:
@@ -211,9 +243,7 @@ public:
 template< typename EvtType >
 void EventSource<EvtType>::RemoveObject( const void* object )
 {
-	// Iso C++ rules regarding temporaries, specifically that non-const temporaries are disallowed,
-	// also removes any actual convenience factor that unary predicates may have actually offered. >_<
-
+	m_cache_valid = false;
 	m_listeners.remove_if( PredicatesAreTheThingsOfNightmares<EvtType>( object ) );
 }
 

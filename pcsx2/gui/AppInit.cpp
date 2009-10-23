@@ -243,9 +243,8 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
 	Connect( pxEVT_SysExecute,		wxCommandEventHandler( Pcsx2App::OnSysExecute ) );
 
-	Connect( pxEVT_LoadPluginsComplete,	wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
-
-	Connect( pxEVT_CoreThreadStatus,	wxCommandEventHandler( Pcsx2App::OnCoreThreadStatus ) );
+	Connect( pxEVT_LoadPluginsComplete,		wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
+	Connect( pxEVT_CoreThreadStatus,		wxCommandEventHandler( Pcsx2App::OnCoreThreadStatus ) );
 	Connect( pxEVT_FreezeThreadFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeThreadFinished ) );
 
 	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );

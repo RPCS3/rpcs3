@@ -21,7 +21,7 @@
 #include <wx/docview.h>
 #include <wx/apptrait.h>
 
-#include "Utilities/Listeners.h"
+#include "Utilities/EventSource.h"
 #include "IniInterface.h"
 
 //class IniInterface;
@@ -490,7 +490,7 @@ public:
 
 	virtual bool Suspend( bool isBlocking=true );
 	virtual void Resume();
-	virtual void StateCheckInThread( bool isCancelable=true );
+	virtual void StateCheckInThread();
 	virtual void ApplySettings( const Pcsx2Config& src );
 
 protected:

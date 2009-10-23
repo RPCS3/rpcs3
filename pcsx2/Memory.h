@@ -134,7 +134,6 @@ extern void memMapVUmicro();
 extern int mmap_GetRamPageInfo( u32 paddr );
 extern void mmap_MarkCountedRamPage( u32 paddr );
 extern void mmap_ResetBlockTracking();
-extern void mmap_ClearCpuBlock( uint offset );
 
 #define memRead8 vtlb_memRead8
 #define memRead16 vtlb_memRead16

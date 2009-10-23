@@ -20,6 +20,10 @@
 // use Freeze/Thaw in MMXRegisters, XMMRegisters, & Registers.
 
 
+// used to disable register freezing during cpuBranchTests (registers
+// are safe then since they've been completely flushed)
+bool g_EEFreezeRegs = false;
+
 /////////////////////////////////////////////////////////////////////
 // MMX Register Freezing
 //
