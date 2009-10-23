@@ -44,6 +44,8 @@
  * SEH or C++ destructor support. 
  */
 
+#ifdef __CLEANUP_C
+
 ptw32_cleanup_t *
 ptw32_pop_cleanup (int execute)
      /*
@@ -144,3 +146,5 @@ ptw32_push_cleanup (ptw32_cleanup_t * cleanup,
   pthread_setspecific (ptw32_cleanupKey, (void *) cleanup);
 
 }				/* ptw32_push_cleanup */
+
+#endif

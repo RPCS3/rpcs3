@@ -970,7 +970,7 @@ extern void PTW32_CDECL pthread_testcancel (void);
 PTW32_DLLPORT int PTW32_CDECL pthread_once (pthread_once_t * once_control,
                           void (*init_routine) (void));
 
-#if PTW32_LEVEL >= PTW32_LEVEL_MAX
+#if PTW32_LEVEL >= PTW32_LEVEL_MAX && defined(__CLEANUP_C)
 PTW32_DLLPORT ptw32_cleanup_t * PTW32_CDECL ptw32_pop_cleanup (int execute);
 
 PTW32_DLLPORT void PTW32_CDECL ptw32_push_cleanup (ptw32_cleanup_t * cleanup,

@@ -35,6 +35,7 @@
  */
 
 #include "ptw32pch.h"
+#include <assert.h>
 
 #ifndef PTW32_STATIC_LIB
 
@@ -81,6 +82,10 @@ DllMain (HINSTANCE hinstDll, DWORD fdwReason, LPVOID lpvReserved)
     case DLL_PROCESS_DETACH:
       (void) pthread_win32_thread_detach_np ();
       result = pthread_win32_process_detach_np ();
+
+	  if( ptw32_testcancel_enable != 0 )
+		assert(0);
+
       break;
     }
 

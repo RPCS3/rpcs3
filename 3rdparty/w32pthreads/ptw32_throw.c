@@ -142,6 +142,7 @@ ptw32_throw (DWORD exception)
 }
 
 
+#ifdef __CLEANUP_C
 void
 ptw32_pop_cleanup_all (int execute)
 {
@@ -149,7 +150,7 @@ ptw32_pop_cleanup_all (int execute)
     {
     }
 }
-
+#endif
 
 DWORD
 ptw32_get_exception_services_code (void)

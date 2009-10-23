@@ -36,6 +36,27 @@
  */
 
 #include "ptw32pch.h"
+#include <assert.h>
+
+// This is a "safe" cleanup handler for the cancel optimization.  It ensures
+// the testcancel_enable flag gets cleared even when threads commit grotesque
+// exceptions.
+
+static void
+_cleanup_testcancel_optimization( void* specific )
+{
+	ptw32_thread_t * sp = (ptw32_thread_t*)specific; //(ptw32_thread_t *)pthread_getspecific (ptw32_selfThreadKey);
+	if( (sp != NULL) &&
+		(sp->cancelType == PTHREAD_CANCEL_DEFERRED) &&
+		(sp->state >= PThreadStateCancelPending)
+		)
+	{
+		assert( ptw32_testcancel_enable > 0 );
+
+		if( ptw32_testcancel_enable > 0 )
+			(void) _InterlockedDecrement( &ptw32_testcancel_enable );
+	}
+}
 
 #ifdef __CLEANUP_SEH
 
@@ -175,7 +196,9 @@ ptw32_threadStart (void *vthreadParms)
     /*
      * Run the caller's routine;
      */
+     pthread_cleanup_push( _cleanup_testcancel_optimization, sp );
     status = sp->exitStatus = (*start) (arg);
+	 pthread_cleanup_pop( 1 );
 
 #ifdef _UWIN
     if (--pthread_count <= 0)
@@ -323,6 +346,8 @@ ptw32_threadStart (void *vthreadParms)
 #endif /* __CLEANUP_CXX */
 #endif /* __CLEANUP_C */
 #endif /* __CLEANUP_SEH */
+
+  //_cleanup_testcancel_optimization();
 
 #if defined(PTW32_STATIC_LIB)
   /*

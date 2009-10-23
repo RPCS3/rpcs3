@@ -90,8 +90,6 @@ pthread_testcancel (void)
       return;
     }
 
-  _InterlockedDecrement( &ptw32_testcancel_enable );
-
   (void) pthread_mutex_lock (&sp->cancelLock);
 
   if (sp->cancelState != PTHREAD_CANCEL_DISABLE)

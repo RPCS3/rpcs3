@@ -94,10 +94,6 @@ pthread_cancel (pthread_t thread)
   cancel_self = pthread_equal (thread, self);
   tp = (ptw32_thread_t *) thread.p;
 
-  // enables full cancel testing in pthread_testcancel, which is normally
-  // disabled because 
-  _InterlockedIncrement( &ptw32_testcancel_enable );
-  
   /*
    * Lock for async-cancel safety.
    */
@@ -127,8 +123,18 @@ pthread_cancel (pthread_t thread)
       /*
        * Set for deferred cancellation.
        */
+
       if (tp->state < PThreadStateCancelPending)
 	{
+		// enables full cancel testing in pthread_testcancel, which is normally disabled because
+		// the full test requires a DLL function invocation and TLS lookup.  This provides an
+		// inlinable first-step shortcut for much speedier testing. :)
+		
+		// Increment is performed here such that a thread that is already canceling won't get
+		// counted multiple times.
+		
+		_InterlockedIncrement( &ptw32_testcancel_enable );
+
 	  tp->state = PThreadStateCancelPending;
 	  if (!SetEvent (tp->cancelEvent))
 	    {
