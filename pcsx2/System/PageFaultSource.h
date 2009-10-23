@@ -27,7 +27,7 @@ struct PageFaultInfo
 {
 	uptr	addr;
 	bool	handled;
-	
+
 	PageFaultInfo( uptr address )
 	{
 		addr = address;
@@ -60,8 +60,8 @@ extern void InstallSignalHandler();
 
 #ifdef __LINUX__
 
-#	define PCSX2_PAGEFAULT_PROTECT()
-#	define PCSX2_PAGEFAULT_EXCEPT()
+#	define PCSX2_PAGEFAULT_PROTECT
+#	define PCSX2_PAGEFAULT_EXCEPT
 
 #elif defined( _WIN32 )
 

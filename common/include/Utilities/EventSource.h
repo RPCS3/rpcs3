@@ -70,7 +70,7 @@ protected:
 	typedef typename ListenerList::const_iterator	ConstIterator;
 
 	ListenerList m_listeners;
-	
+
 	// This is a cached copy of the listener list used to handle standard dispatching, which
 	// allows for self-modification of the EventSource's listener list by the listeners.
 	// Translation: The dispatcher uses this copy instead, to avoid iterator invalidation.
@@ -129,7 +129,7 @@ public:
 	}
 
 protected:
-	__forceinline void _DispatchRaw( ConstIterator& iter, const ConstIterator& iend, EvtType& evt )
+	__forceinline void _DispatchRaw( ConstIterator iter, const ConstIterator& iend, EvtType& evt )
 	{
 		while( iter != iend )
 		{

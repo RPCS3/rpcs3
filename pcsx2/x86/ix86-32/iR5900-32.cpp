@@ -25,7 +25,7 @@
 #include "SamplProf.h"
 #include "Dump.h"
 
-#include "SysThreads.h"
+#include "System/SysThreads.h"
 #include "GS.h"
 
 using namespace x86Emitter;
@@ -40,7 +40,6 @@ static uptr hwLUT[0x10000];
 #define HWADDR(mem) (hwLUT[mem >> 16] + (mem))
 
 u32 s_nBlockCycles = 0; // cycles of current block recompiling
-//u8* dyna_block_discard_recmem=0;
 
 u32 pc;			         // recompiler pc
 int branch;		         // set for branch
@@ -660,7 +659,7 @@ static void recCheckExecutionState()
 {
 #if PCSX2_SEH
 	SysCoreThread::Get().StateCheckInThread();
-	
+
 	if( eeRecIsReset )
 		throw Exception::ForceDispatcherReg();
 #else
@@ -726,14 +725,14 @@ static void recExecute()
 				#endif
 
 					EnterRecompiledCode();
-				
+
 				#ifdef _WIN32
 				} __finally
 				{
 					// This assertion is designed to help me troubleshoot the setjmp behavior from Win32.
 					// If the recompiler throws an unhandled SEH exception with SEH support disabled (which
 					// is typically a pthread_cancel) then this will fire and let me know.
-					
+
 					// FIXME: Doesn't work because SEH is remarkably clever and executes the _finally block
 					// even when I use longjmp to restart the loop.  Maybe a workaround exists? :/
 

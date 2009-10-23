@@ -18,23 +18,24 @@
 #include <sys/mman.h>
 #include <signal.h>
 #include "Common.h"
+#include "System/PageFaultSource.h"
 
 extern void SignalExit(int sig);
 
 static const uptr m_pagemask = getpagesize()-1;
 
 // Linux implementation of SIGSEGV handler.  Bind it using sigaction().
-static void SysPageFaultSignalFilter( int signal, siginfo_t *info, void * )
+static void SysPageFaultSignalFilter( int signal, siginfo_t *siginfo, void * )
 {
 	// Note: Use of most stdio functions isn't safe here.  Avoid console logs,
 	// assertions, file logs, or just about anything else useful.
 
-	PageFaultInfo info( (uptr)info->si_addr & ~m_pagemask );
-	Source_AccessViolation.DispatchException( info );
+	PageFaultInfo pfinfo( (uptr)siginfo->si_addr & ~m_pagemask );
+	Source_PageFault.DispatchException( pfinfo );
 
 	// resumes execution right where we left off (re-executes instruction that
 	// caused the SIGSEGV).
-	if( info.handled ) return;
+	if( pfinfo.handled ) return;
 
 	// Bad mojo!  Completely invalid address.
 	// Instigate a trap if we're in a debugger, and if not then do a SIGKILL.
@@ -53,4 +54,4 @@ void InstallSignalHandler()
 	sigaction(SIGSEGV, &sa, NULL);
 }
 
-void NTFS_CompressFile( const wxString& file, bool compressStatus=true ) {}
+void NTFS_CompressFile( const wxString& file, bool compressStatus ) {}
