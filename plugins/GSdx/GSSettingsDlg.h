@@ -40,4 +40,5 @@ public:
 	static GSSetting g_renderers[];
 	static GSSetting g_interlace[];
 	static GSSetting g_aspectratio[];
+	static GSSetting g_accurateScaleMulti[];
 };

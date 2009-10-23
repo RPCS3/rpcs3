@@ -63,6 +63,14 @@ GSSetting GSSettingsDlg::g_aspectratio[] =
 	{2, "16:9", NULL},
 };
 
+GSSetting GSSettingsDlg::g_accurateScaleMulti[] =
+{
+	{1, "1x (Use D3D internal Res)", NULL},
+	{2, "2x", NULL},
+	{3, "3x", NULL},
+	{4, "4x", NULL},
+};
+
 GSSettingsDlg::GSSettingsDlg()
 	: GSDialog(IDD_CONFIG)
 {
@@ -119,6 +127,7 @@ void GSSettingsDlg::OnInit()
 	ComboBoxInit(IDC_RENDERER, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
 	ComboBoxInit(IDC_INTERLACE, g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
 	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
+	ComboBoxInit(IDC_ACCURATESCALEMULTI, g_accurateScaleMulti, countof(g_accurateScaleMulti), theApp.GetConfig("accurateScaleMulti", 0));
 
 	CheckDlgButton(m_hWnd, IDC_WINDOWED, theApp.GetConfig("windowed", 1));
 	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 2));
@@ -179,7 +188,12 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		{
 			theApp.SetConfig("AspectRatio", (int)data);
 		}
-
+		
+		if(ComboBoxGetSelData(IDC_ACCURATESCALEMULTI, data))
+		{
+			theApp.SetConfig("accurateScaleMulti", (int)data);
+		}
+		
 		theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));
 		theApp.SetConfig("filter", (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER));
 		theApp.SetConfig("paltex", (int)IsDlgButtonChecked(m_hWnd, IDC_PALTEX));
@@ -193,6 +207,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		theApp.SetConfig("resx", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_GETPOS, 0, 0));
 		theApp.SetConfig("resy", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_GETPOS, 0, 0));
 		theApp.SetConfig("swthreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
+
 	}
 
 	return __super::OnCommand(hWnd, id, code);
@@ -222,6 +237,7 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_ACCURATESCALEMULTI), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw && !native);		
 		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);

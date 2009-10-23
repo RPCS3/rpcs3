@@ -565,6 +565,11 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 			GSVector4 size = GSVector4(dstsize).xyxy();
 			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy();
+			
+			if (dst->m_TEX0.TBW < TEX0.TBW) // otherwise scale.x need to be reduced to make the larger texture fit
+			{
+				scale.x *= (dst->m_TEX0.TBW/TEX0.TBW);
+			}
 
 			int blockWidth  = 64;
 			int blockHeight = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;

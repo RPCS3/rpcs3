@@ -276,13 +276,18 @@ GSVector2i GSState::GetDeviceSize(int i)
 	int w = r.width();
 	int h = r.height();
 
-	if(h == 2 * 416 || h == 2 * 448 || h == 2 * 512)
+	/*if(h == 2 * 416 || h == 2 * 448 || h == 2 * 512)
 	{
 		h /= 2;
 	}
 	else
 	{
 		h = (m_regs->SMODE1.CMOD & 1) ? 512 : 448;
+	}*/
+	
+	//Fixme : Just slightly better than the hack above
+	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1){
+		if (!IsEnabled(0) || !IsEnabled(1)){h >>= 1;}
 	}
 
 	return GSVector2i(w, h);
