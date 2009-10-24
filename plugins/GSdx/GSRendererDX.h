@@ -123,6 +123,7 @@ public:
 				}
 				else
 				{
+					//Breath of Fire Dragon Quarter triggers this in battles. Graphics are fine though.
 					ASSERT(0);
 				}
 			}
@@ -144,20 +145,28 @@ public:
 			{
 				if(m_vt.m_max.p.z > 0xffffff)
 				{
-					ASSERT(m_vt.m_min.p.z > 0xffffff);
-
-					vs_sel.bppz = 1;
-					om_dssel.ztst = ZTST_ALWAYS;
+					//ASSERT(m_vt.m_min.p.z > 0xffffff);
+					// Fixme :Following conditional fixes some dialog frame in Wild Arms 3, but may not be what was intended.
+					if (m_vt.m_min.p.z > 0xffffff)
+					{
+						vs_sel.bppz = 1;
+						om_dssel.ztst = ZTST_ALWAYS;
+					}
+					//else printf ("GSdx: Z issue, please report\n");
 				}
 			}
 			else if(context->ZBUF.PSM == PSM_PSMZ16 || context->ZBUF.PSM == PSM_PSMZ16S)
 			{
 				if(m_vt.m_max.p.z > 0xffff)
 				{
-					ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
-
-					vs_sel.bppz = 2;
-					om_dssel.ztst = ZTST_ALWAYS;
+					//ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
+					// Fixme : Same as above, I guess.
+					if (m_vt.m_min.p.z > 0xffff)
+					{	
+						vs_sel.bppz = 2;
+						om_dssel.ztst = ZTST_ALWAYS;
+					}
+					//else printf ("GSdx: Z issue, please report\n");
 				}
 			}
 		}

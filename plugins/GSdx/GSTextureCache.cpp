@@ -600,15 +600,16 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 				}
 			}
 		}
-		//else if(tw < tp)
-		//{
-		//	// FIXME: timesplitters blurs the render target by blending itself over a couple of times
+		else if(tw < tp)
+		{
+			// FIXME: timesplitters blurs the render target by blending itself over a couple of times
 
-		//	if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
-		//	{
-		//		return false;
-		//	}
-		//}
+			if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
+			{
+				delete src;
+				return false;
+			}
+		}
 		// width/height conversion
 
 		GSVector2 scale = dst->m_texture->GetScale();
