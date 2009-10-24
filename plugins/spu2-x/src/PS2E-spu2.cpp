@@ -54,49 +54,53 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 
 static void InitLibraryName()
 {
-	if( !IsDevBuild )
-	{
-		// Public Release!
-		// Output a simplified string that's just our name:
+#ifdef SPU2X_PUBLIC_RELEASE
 
-		strcpy( libraryName, "SPU2-X" );
-	}
-	else
-	{
-		#ifdef SVN_REV_UNKNOWN
+	// Public Release!
+	// Output a simplified string that's just our name:
 
-		// Unknown revision.
-		// Output a name that includes devbuild status but not
-		// subversion revision tags:
+	strcpy( libraryName, "SPU2-X" );
 
-		strcpy( libraryName, "SPU2-X"
-		#ifdef DEBUG_FAST
-			"-Debug"
-		#elif defined( PCSX2_DEBUG )
-			"-Debug/Strict"		// strict debugging is slow!
-		#else
-			"-Dev"
-		#endif
-		);
+#else
+	#ifdef SVN_REV_UNKNOWN
 
-		#else
+	// Unknown revision.
+	// Output a name that includes devbuild status but not
+	// subversion revision tags:
 
-		// Use TortoiseSVN's SubWCRev utility's output
-		// to label the specific revision:
+	strcpy( libraryName, "SPU2-X"
+	#ifdef DEBUG_FAST
+		"-Debug"
+	#elif defined( PCSX2_DEBUG )
+		"-Debug/Strict"		// strict debugging is slow!
+	#elif defined( PCSX2_DEVBUILD )
+		"-Dev"
+	#else
+		""
+	#endif
+	);
 
-		sprintf_s( libraryName, "SPU2-X r%d%s"
-		#ifdef DEBUG_FAST
-			"-Debug"
-		#elif defined( PCSX2_DEBUG )
-			"-Debug/Strict"		// strict debugging is slow!
-		#else
-			"-Dev"
-		#endif
-			,SVN_REV,
-			SVN_MODS ? "m" : ""
-		);
-		#endif
-	}
+	#else
+
+	// Use TortoiseSVN's SubWCRev utility's output
+	// to label the specific revision:
+
+	sprintf_s( libraryName, "SPU2-X r%d%s"
+	#ifdef DEBUG_FAST
+		"-Debug"
+	#elif defined( PCSX2_DEBUG )
+		"-Debug/Strict"		// strict debugging is slow!
+	#elif defined( PCSX2_DEVBUILD )
+		"-Dev"
+	#else
+		""
+	#endif
+		,SVN_REV,
+		SVN_MODS ? "m" : ""
+	);
+	#endif
+#endif
+
 }
 
 EXPORT_C_(u32) PS2EgetLibType() 
