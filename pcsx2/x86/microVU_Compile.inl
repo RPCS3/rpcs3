@@ -333,7 +333,6 @@ microVUt(void) mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
 
 microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
-	using namespace x86Emitter;
 	microFlagCycles mFC;
 	u8*				thisPtr  = x86Ptr;
 	const u32		endCount = (((microRegInfo*)pState)->blockType) ? 1 : (mVU->microMemSize / 8);
@@ -414,7 +413,6 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
  // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
 microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
-	using namespace x86Emitter;
 	if (startPC > mVU->microMemSize-8) { DevCon.Error("microVU%d: invalid startPC [%04x]", mVU->index, startPC); }
 	startPC &= mVU->microMemSize-8;
 	

@@ -19,8 +19,6 @@
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
 
-using namespace x86Emitter;
-
 extern void _vu0WaitMicro();
 extern void _vu0FinishMicro();
 

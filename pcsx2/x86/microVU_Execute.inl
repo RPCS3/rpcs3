@@ -23,18 +23,23 @@
 void mVUdispatcherA(mV) {
 	mVU->startFunct = x86Ptr;
 
-	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
-	if (!isVU1)	{ CALLFunc((uptr)mVUexecuteVU0); }
-	else		{ CALLFunc((uptr)mVUexecuteVU1); }
-
 	// Backup cpu state
-	PUSH32R(EBX);
-	PUSH32R(EBP);
-	PUSH32R(ESI);
-	PUSH32R(EDI);
+	xPUSH(ebp);
+	xPUSH(ebx);
+	xPUSH(esi);
+	xPUSH(edi);
+	
+	// Align the stackframe (GCC only, since GCC assumes stackframe is always aligned)
+	#ifdef __GNUC__
+	xSUB(esp, 12);
+	#endif
+
+	// __fastcall = The caller has already put the needed parameters in ecx/edx:
+	if (!isVU1)	{ xCALL(mVUexecuteVU0); }
+	else		{ xCALL(mVUexecuteVU1); }
 
 	// Load VU's MXCSR state
-	SSE_LDMXCSR((uptr)&g_sseVUMXCSR);
+	xLDMXCSR(&g_sseVUMXCSR);
 
 	// Load Regs
 #ifdef CHECK_MACROVU0
@@ -59,7 +64,7 @@ void mVUdispatcherA(mV) {
 	SSE_SHUFPS_XMM_to_XMM(xmmPQ, xmmT1, 0); // wzyx = PPQQ
 
 	// Jump to Recompiled Code Block
-	JMPR(EAX);
+	xJMP(eax);
 }
 
 // Generates the code to exit from recompiled blocks
@@ -67,19 +72,25 @@ void mVUdispatcherB(mV) {
 	mVU->exitFunct = x86Ptr;
 
 	// Load EE's MXCSR state
-	SSE_LDMXCSR((uptr)&g_sseMXCSR);
+	xLDMXCSR(&g_sseMXCSR);
 	
-	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers; all other arguments are passed right to left.
-	if (!isVU1) { CALLFunc((uptr)mVUcleanUpVU0); }
-	else		{ CALLFunc((uptr)mVUcleanUpVU1); }
+	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers;
+	//              all other arguments are passed right to left.
+	if (!isVU1) { xCALL(mVUcleanUpVU0); }
+	else		{ xCALL(mVUcleanUpVU1); }
+
+	// Unalign the stackframe:
+	#ifdef __GNUC__
+	xADD( esp, 12 );
+	#endif
 
 	// Restore cpu state
-	POP32R(EDI);
-	POP32R(ESI);
-	POP32R(EBP);
-	POP32R(EBX);
+	xPOP(edi);
+	xPOP(esi);
+	xPOP(ebx);
+	xPOP(ebp);
 
-	RET();
+	xRET();
 
 	mVUcacheCheck(x86Ptr, mVU->cache, 0x1000);
 }
@@ -98,7 +109,7 @@ microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 	mVU->cycles		 = cycles;
 	mVU->totalCycles = cycles;
 
-	x86SetPtr(mVU->prog.x86ptr); // Set x86ptr to where last program left off
+	xSetPtr(mVU->prog.x86ptr); // Set x86ptr to where last program left off
 	return mVUblockFetch(mVU, startPC, (uptr)&mVU->prog.lpState);
 }
 

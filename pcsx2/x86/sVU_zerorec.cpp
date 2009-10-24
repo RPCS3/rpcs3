@@ -2550,8 +2550,6 @@ void SuperVUCleanupProgram(u32 startpc, int vuindex)
 	svutime += (u32)(svufinal.QuadPart - svubase.QuadPart);
 #endif
 
-	assert(s_vu1esp == 0);
-
 	VU = vuindex ? &VU1 : &VU0;
 	VU->cycle += s_TotalVUCycles;
 
@@ -2601,9 +2599,8 @@ __declspec(naked) void SuperVUExecuteProgram(u32 startpc, int vuindex)
 		mov s_vuedi, edi
 		mov s_vuebx, ebx
 
-#ifdef PCSX2_DEBUG
 		mov s_vu1esp, esp
-#endif
+		and esp, -16		// align stack for GCC compilance
 
 		//stmxcsr s_ssecsr
 		ldmxcsr g_sseVUMXCSR
@@ -2629,9 +2626,7 @@ __declspec(naked) static void SuperVUEndProgram()
 		mov edi, s_vuedi
 		mov ebx, s_vuebx
 
-#ifdef PCSX2_DEBUG
-		sub s_vu1esp, esp
-#endif
+		mov esp, s_vu1esp	// restore from aligned stack
 
 		call SuperVUCleanupProgram
 		jmp s_callstack // so returns correctly
@@ -4337,11 +4332,11 @@ void recVUMI_XGKICK_(VURegs *VU)
 	_freeXMMregs();
 
 	OR32ItoM((uptr)&psHu32(GIF_STAT), (GIF_STAT_APATH1 | GIF_STAT_OPH)); // Set PATH1 GIF Status Flags
-	PUSH32R(s_XGKICKReg);
-	PUSH32I((uptr)VU->Mem);
 
-	CALLFunc((uptr)VU1XGKICK_MTGSTransfer);
-	ADD32ItoR(ESP, 8);
+	xMOV(edx, xRegister32(s_XGKICKReg));
+	xMOV(ecx, (uptr)VU->Mem);
+	xCALL(VU1XGKICK_MTGSTransfer);
+
 	AND32ItoM((uptr)&psHu32(GIF_STAT), ~(GIF_STAT_APATH1 | GIF_STAT_OPH)); // Clear PATH1 GIF Status Flags
 	s_ScheduleXGKICK = 0;
 }

@@ -16,6 +16,13 @@
 // Micro VU recompiler! - author: cottonvibes(@gmail.com)
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
+#include "VU.h"
+#include "GS.h"
+#include "x86emitter/x86emitter.h"
+
+using namespace x86Emitter;
+
 #include "microVU.h"
 
 //------------------------------------------------------------------

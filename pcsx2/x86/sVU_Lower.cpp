@@ -1969,7 +1969,7 @@ void recVUMI_XTOP( VURegs *VU, int info )
 //------------------------------------------------------------------
 // VU1XGKICK_MTGSTransfer() - Called by ivuZerorec.cpp
 //------------------------------------------------------------------
-void VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
+void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr)
 {
 	u32 size;
     u8* data = ((u8*)pMem + (addr&0x3fff));

@@ -520,7 +520,6 @@ static __pagealigned u8 mVUsearchXMM[0x1000];
 // Generates a custom optimized block-search function 
 // Note: Structs must be 16-byte aligned! (GCC doesn't guarantee this)
 void mVUcustomSearch() {
-	using namespace x86Emitter;
 	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadWrite, false);
 	memset_8<0xcc,0x1000>(mVUsearchXMM);
 	xSetPtr(mVUsearchXMM);

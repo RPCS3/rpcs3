@@ -90,7 +90,6 @@ microVUt(void) mVUsetupBranch(mV, microFlagCycles& mFC) {
 }
 
 void normBranchCompile(microVU* mVU, u32 branchPC) {
-	using namespace x86Emitter;
 	microBlock* pBlock;
 	blockCreate(branchPC/8);
 	pBlock = mVUblocks[branchPC/8]->search((microRegInfo*)&mVUregs);
@@ -99,7 +98,6 @@ void normBranchCompile(microVU* mVU, u32 branchPC) {
 }
 
 void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
-	using namespace x86Emitter;
 	memcpy_fast(&mVUpBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	mVUsetupBranch(mVU, mFC);
 	mVUbackupRegs(mVU);
@@ -126,7 +124,6 @@ void normBranch(mV, microFlagCycles& mFC) {
 }
 
 void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
-	using namespace x86Emitter;
 	mVUsetupBranch(mVU, mFC);
 	xCMP(ptr16[&mVU->branch], 0);
 	incPC(3);
@@ -172,8 +169,6 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 }
 
 void normJump(mV, microFlagCycles& mFC) {
-	using namespace x86Emitter;
-
 	if (mVUlow.constJump.isValid) { // Jump Address is Constant
 		if (mVUup.eBit) { // E-bit Jump
 			iPC = (mVUlow.constJump.regValue*2)&(mVU->progSize-1);

@@ -1128,7 +1128,7 @@ microVUt(void) mVU_XGKICK_DELAY(mV, bool memVI) {
 	mVUbackupRegs(mVU);
 	if (memVI)	MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick);
 	else		mVUallocVIa(mVU, gprT2, _Is_);
-	CALLFunc((uptr)mVU_XGKICK_);
+	xCALL(mVU_XGKICK_);
 	mVUrestoreRegs(mVU);
 }
 
@@ -1159,7 +1159,6 @@ void setBranchA(mP, int x, int _x_) {
 }
 
 void condEvilBranch(mV, int JMPcc) {
-	using namespace x86Emitter;
 	if (mVUlow.badBranch) {
 		xMOV(ptr32[&mVU->branch], eax);
 		xMOV(ptr32[&mVU->badBranch], branchAddrN);
@@ -1202,7 +1201,6 @@ mVUop(mVU_BAL) {
 }
 
 mVUop(mVU_IBEQ) {
-	using namespace x86Emitter;
 	setBranchA(mX, 3, 0);
 	pass1 { mVUanalyzeCondBranch2(mVU, _Is_, _It_); }
 	pass2 {
@@ -1219,7 +1217,6 @@ mVUop(mVU_IBEQ) {
 }
 
 mVUop(mVU_IBGEZ) {
-	using namespace x86Emitter;
 	setBranchA(mX, 4, 0);
 	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
@@ -1232,7 +1229,6 @@ mVUop(mVU_IBGEZ) {
 }
 
 mVUop(mVU_IBGTZ) {
-	using namespace x86Emitter;
 	setBranchA(mX, 5, 0);
 	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
@@ -1245,7 +1241,6 @@ mVUop(mVU_IBGTZ) {
 }
 
 mVUop(mVU_IBLEZ) {
-	using namespace x86Emitter;
 	setBranchA(mX, 6, 0);
 	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {
@@ -1258,7 +1253,6 @@ mVUop(mVU_IBLEZ) {
 }
 
 mVUop(mVU_IBLTZ) {
-	using namespace x86Emitter;
 	setBranchA(mX, 7, 0);
 	pass1 { mVUanalyzeCondBranch1(mVU, _Is_); }
 	pass2 {	
@@ -1271,7 +1265,6 @@ mVUop(mVU_IBLTZ) {
 }
 
 mVUop(mVU_IBNE) {
-	using namespace x86Emitter;
 	setBranchA(mX, 8, 0);
 	pass1 { mVUanalyzeCondBranch2(mVU, _Is_, _It_); }
 	pass2 {

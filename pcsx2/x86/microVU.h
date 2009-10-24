@@ -17,10 +17,6 @@
 //#define mVUdebug		// Prints Extra Info to Console
 //#define mVUlogProg	// Dumps MicroPrograms to \logs\*.html
 
-#include "Common.h"
-#include "VU.h"
-#include "GS.h"
-#include "x86emitter/x86emitter.h"
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
 
