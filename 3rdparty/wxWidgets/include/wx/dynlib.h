@@ -24,7 +24,8 @@
 #endif
 
 #ifdef __WXMSW__
-#include "wx/msw/private.h"
+// PCSX2: Can we PLEASE not include windows.h into everything, just for HINSTANCE? >_< --air
+//#include "wx/msw/private.h"
 #endif
 
 // note that we have our own dlerror() implementation under Darwin
@@ -41,6 +42,7 @@ class WXDLLIMPEXP_FWD_BASE wxDynamicLibraryDetailsCreator;
 // Note: __OS2__/EMX has to be tested first, since we want to use
 // native version, even if configure detected presence of DLOPEN.
 #if defined(__OS2__) || defined(__EMX__) || defined(__WINDOWS__)
+	typedef HINSTANCE           HMODULE;
     typedef HMODULE             wxDllType;
 #elif defined(__DARWIN__)
     // Don't include dlfcn.h on Darwin, we may be using our own replacements.
