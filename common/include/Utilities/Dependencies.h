@@ -47,28 +47,6 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// __BaseSealed
-// Base class used to implement type-safe sealed classes.
-// This class should never be used directly.  Use the Sealed macro instead, which ensures
-// all sealed classes derive from a unique BaseSealed (preventing them from accidentally
-// circumventing sealing by inheriting from multiple sealed classes.
-//
-template < int T >
-class __BaseSealed
-{
-protected:
-	__BaseSealed()
-	{
-	}
-};
-
-// Use this macro/class as a base to seal a class from being derived from.
-// This macro works by providing a unique base class with a protected constructor
-// for every class that derives from it.
-#define Sealed		private virtual __BaseSealed<__COUNTER__>
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
 // macro provided for tagging translation strings, without actually running them through the
 // translator (which the _() does automatically, and sometimes we don't want that).  This is
 // a shorthand replacement for wxTRANSLATE.
@@ -83,7 +61,6 @@ class wxString;
 #include "Pcsx2Defs.h"
 
 #include <wx/string.h>
-//#include <wx/tokenzr.h>
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 #include <wx/intl.h>
 #include <wx/log.h>

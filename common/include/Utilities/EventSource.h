@@ -26,7 +26,7 @@ class wxCommandEvent;
 template< typename EvtType >
 struct EventListener
 {
-	typedef void __fastcall FuncType( void* object, EvtType& evt );
+	typedef void __fastcall FuncType( void* object, typename EvtType& evt );
 
 	void*		object;
 	FuncType*	OnEvent;
