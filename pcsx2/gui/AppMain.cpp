@@ -25,6 +25,10 @@
 
 #include "Utilities/HashMap.h"
 
+#ifdef __WXMSW__
+#	include <wx/msw/wrapwin.h>
+#endif
+
 IMPLEMENT_APP(Pcsx2App)
 
 DEFINE_EVENT_TYPE( pxEVT_SemaphorePing );

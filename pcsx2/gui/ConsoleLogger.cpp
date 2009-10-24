@@ -23,6 +23,10 @@
 #include <wx/file.h>
 #include <wx/textfile.h>
 
+#ifdef __WXMSW__
+#	include <wx/msw/wrapwin.h>		// needed for OutputDebugStirng
+#endif
+
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Newline, -1)

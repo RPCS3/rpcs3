@@ -29,6 +29,10 @@
 
 #include "GS.h"
 
+#ifdef __WXMSW__
+#	include <wx/msw/wrapwin.h>
+#endif
+
 static __threadlocal SysCoreThread* tls_coreThread = NULL;
 
 // --------------------------------------------------------------------------------------

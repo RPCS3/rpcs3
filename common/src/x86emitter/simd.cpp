@@ -90,11 +90,6 @@ const MovhlImplAll<0x12>		xMOVL;
 const MovhlImpl_RtoR<0x16>		xMOVLH;
 const MovhlImpl_RtoR<0x12>		xMOVHL;
 
-const SimdImpl_COMI<true>		xCOMI;
-const SimdImpl_COMI<false>		xUCOMI;
-
-const SimdImpl_MinMax<0x5f>		xMAX;
-const SimdImpl_MinMax<0x5d>		xMIN;
 const SimdImpl_Shuffle<0xc6>	xSHUF;
 
 const SimdImpl_DestRegEither<0x66,0xdb> xPAND;
@@ -109,50 +104,65 @@ const SimdImpl_DestRegEither<0x66,0xef> xPXOR;
 // to the following condition: (xmm2/m128 AND NOT xmm1) == 0;
 const SimdImpl_DestRegSSE<0x66,0x1738>		xPTEST;
 
-const SimdImpl_Compare<SSE2_Equal>			xCMPEQ;
-const SimdImpl_Compare<SSE2_Less>			xCMPLT;
-const SimdImpl_Compare<SSE2_LessOrEqual>	xCMPLE;
-const SimdImpl_Compare<SSE2_Unordered>		xCMPUNORD;
-const SimdImpl_Compare<SSE2_NotEqual>		xCMPNE;
-const SimdImpl_Compare<SSE2_NotLess>		xCMPNLT;
-const SimdImpl_Compare<SSE2_NotLessOrEqual> xCMPNLE;
-const SimdImpl_Compare<SSE2_Ordered>		xCMPORD;
-
 // ------------------------------------------------------------------------
 // SSE Conversion Operations, as looney as they are.
 // 
 // These enforce pointer strictness for Indirect forms, due to the otherwise completely confusing
 // nature of the functions.  (so if a function expects an m32, you must use (u32*) or ptr32[]).
 //
-const SimdImpl_DestRegStrict<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>		xCVTDQ2PD;
-const SimdImpl_DestRegStrict<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTDQ2PS;
 
-const SimdImpl_DestRegStrict<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2DQ;
-const SimdImpl_DestRegStrict<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>		xCVTPD2PI;
-const SimdImpl_DestRegStrict<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>		xCVTPD2PS;
+__forceinline void xCVTDQ2PD( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0xe6 ); }
+__forceinline void xCVTDQ2PD( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0xf3, 0xe6 ); }
+__forceinline void xCVTDQ2PS( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x5b ); }
+__forceinline void xCVTDQ2PS( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x00, 0x5b ); }
 
-const SimdImpl_DestRegStrict<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PD;
-const SimdImpl_DestRegStrict<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>		xCVTPI2PS;
+__forceinline void xCVTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf2, 0xe6 ); }
+__forceinline void xCVTPD2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0xf2, 0xe6 ); }
+__forceinline void xCVTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x2d ); }
+__forceinline void xCVTPD2PI( const xRegisterMMX& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x2d ); }
+__forceinline void xCVTPD2PS( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x5a ); }
+__forceinline void xCVTPD2PS( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x5a ); }
 
-const SimdImpl_DestRegStrict<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTPS2DQ;
-const SimdImpl_DestRegStrict<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTPS2PD;
-const SimdImpl_DestRegStrict<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>		xCVTPS2PI;
+__forceinline void xCVTPI2PD( const xRegisterSSE& to, const xRegisterMMX& from )	{ OpWriteSSE( 0x66, 0x2a ); }
+__forceinline void xCVTPI2PD( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0x66, 0x2a ); }
+__forceinline void xCVTPI2PS( const xRegisterSSE& to, const xRegisterMMX& from )	{ OpWriteSSE( 0x00, 0x2a ); }
+__forceinline void xCVTPI2PS( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x2a ); }
 
-const SimdImpl_DestRegStrict<0xf2,0x2d,xRegister32, xRegisterSSE,u64>		xCVTSD2SI;
-const SimdImpl_DestRegStrict<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>		xCVTSD2SS;
-const SimdImpl_DestRegStrict<0xf2,0x2a,xRegisterMMX,xRegister32, u32>		xCVTSI2SD;
-const SimdImpl_DestRegStrict<0xf3,0x2a,xRegisterSSE,xRegister32, u32>		xCVTSI2SS;
+__forceinline void xCVTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x5b ); }
+__forceinline void xCVTPS2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x5b ); }
+__forceinline void xCVTPS2PD( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x5a ); }
+__forceinline void xCVTPS2PD( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x5a ); }
+__forceinline void xCVTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x2d ); }
+__forceinline void xCVTPS2PI( const xRegisterMMX& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x2d ); }
 
-const SimdImpl_DestRegStrict<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>		xCVTSS2SD;
-const SimdImpl_DestRegStrict<0xf3,0x2d,xRegister32, xRegisterSSE,u32>		xCVTSS2SI;
+__forceinline void xCVTSD2SI( const xRegister32& to, const xRegisterSSE& from )		{ OpWriteSSE( 0xf2, 0x2d ); }
+__forceinline void xCVTSD2SI( const xRegister32& to, const ModSib64& from )			{ OpWriteSSE( 0xf2, 0x2d ); }
+__forceinline void xCVTSD2SS( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf2, 0x5a ); }
+__forceinline void xCVTSD2SS( const xRegisterSSE& to, const ModSib64& from )		{ OpWriteSSE( 0xf2, 0x5a ); }
+__forceinline void xCVTSI2SD( const xRegisterMMX& to, const xRegister32& from )		{ OpWriteSSE( 0xf2, 0x2a ); }
+__forceinline void xCVTSI2SD( const xRegisterMMX& to, const ModSib32& from )		{ OpWriteSSE( 0xf2, 0x2a ); }
+__forceinline void xCVTSI2SS( const xRegisterSSE& to, const xRegister32& from )		{ OpWriteSSE( 0xf3, 0x2a ); }
+__forceinline void xCVTSI2SS( const xRegisterSSE& to, const ModSib32& from )		{ OpWriteSSE( 0xf3, 0x2a ); }
 
-const SimdImpl_DestRegStrict<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>		xCVTTPD2DQ;
-const SimdImpl_DestRegStrict<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>		xCVTTPD2PI;
-const SimdImpl_DestRegStrict<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>		xCVTTPS2DQ;
-const SimdImpl_DestRegStrict<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>		xCVTTPS2PI;
+__forceinline void xCVTSS2SD( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0x5a ); }
+__forceinline void xCVTSS2SD( const xRegisterSSE& to, const ModSib32& from )		{ OpWriteSSE( 0xf3, 0x5a ); }
+__forceinline void xCVTSS2SI( const xRegister32& to, const xRegisterSSE& from )		{ OpWriteSSE( 0xf3, 0x2d ); }
+__forceinline void xCVTSS2SI( const xRegister32& to, const ModSib32& from )			{ OpWriteSSE( 0xf3, 0x2d ); }
 
-const SimdImpl_DestRegStrict<0xf2,0x2c,xRegister32, xRegisterSSE,u64>		xCVTTSD2SI;
-const SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2SI;
+__forceinline void xCVTTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0xe6 ); }
+__forceinline void xCVTTPD2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0xe6 ); }
+__forceinline void xCVTTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x66, 0x2c ); }
+__forceinline void xCVTTPD2PI( const xRegisterMMX& to, const ModSib128& from )		{ OpWriteSSE( 0x66, 0x2c ); }
+__forceinline void xCVTTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0x5b ); }
+__forceinline void xCVTTPS2DQ( const xRegisterSSE& to, const ModSib128& from )		{ OpWriteSSE( 0xf3, 0x5b ); }
+__forceinline void xCVTTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from )	{ OpWriteSSE( 0x00, 0x2c ); }
+__forceinline void xCVTTPS2PI( const xRegisterMMX& to, const ModSib64& from )		{ OpWriteSSE( 0x00, 0x2c ); }
+
+__forceinline void xCVTTSD2SI( const xRegister32& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf2, 0x2c ); }
+__forceinline void xCVTTSD2SI( const xRegister32& to, const ModSib64& from )		{ OpWriteSSE( 0xf2, 0x2c ); }
+__forceinline void xCVTTSS2SI( const xRegister32& to, const xRegisterSSE& from )	{ OpWriteSSE( 0xf3, 0x2c ); }
+__forceinline void xCVTTSS2SI( const xRegister32& to, const ModSib32& from )		{ OpWriteSSE( 0xf3, 0x2c ); }
+
 
 // ------------------------------------------------------------------------
 
@@ -221,7 +231,6 @@ const xImplSimd_Shift xPSLL =
 	{ 0x66, 0xf3, 0x73, 6 },	// Q
 };
 
-
 const xImplSimd_AddSub xPADD =
 {
 	{ 0x66, 0xdc+0x20 },	// B
@@ -247,7 +256,6 @@ const xImplSimd_AddSub xPSUB =
 	{ 0x66, 0xd8 },			// USB
 	{ 0x66, 0xd8+1 },		// USW
 };
-
 
 const xImplSimd_PMul xPMUL =
 {
@@ -326,9 +334,94 @@ const xImplSimd_Round xROUND =
 	{ 0x66,0x0b3a },	// SD
 };
 
-const SimdImpl_PMinMax<0xde,0x3c> xPMAX;
-const SimdImpl_PMinMax<0xda,0x38> xPMIN;
-const SimdImpl_PCompare xPCMP;
+// =====================================================================================================
+//  SIMD Comparison Instructions
+// =====================================================================================================
+
+void xImplSimd_Compare::PS( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::PS( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
+
+void xImplSimd_Compare::PD( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::PD( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
+
+void xImplSimd_Compare::SS( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::SS( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
+
+void xImplSimd_Compare::SD( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::SD( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
+
+const xImplSimd_MinMax xMIN = 
+{
+	{ 0x00, 0x5d },		// PS
+	{ 0x66, 0x5d },		// PD
+	{ 0xf3, 0x5d },		// SS
+	{ 0xf2, 0x5d },		// SD
+};
+
+const xImplSimd_MinMax xMAX = 
+{
+	{ 0x00, 0x5f },		// PS
+	{ 0x66, 0x5f },		// PD
+	{ 0xf3, 0x5f },		// SS
+	{ 0xf2, 0x5f },		// SD
+};
+
+// [TODO] : Merge this into the xCMP class, so that they are notation as: xCMP.EQ
+
+const xImplSimd_Compare xCMPEQ		= { SSE2_Equal };
+const xImplSimd_Compare xCMPLT		= { SSE2_Less };
+const xImplSimd_Compare xCMPLE		= { SSE2_LessOrEqual };
+const xImplSimd_Compare xCMPUNORD	= { SSE2_LessOrEqual };
+const xImplSimd_Compare xCMPNE		= { SSE2_NotEqual };
+const xImplSimd_Compare xCMPNLT		= { SSE2_NotLess };
+const xImplSimd_Compare xCMPNLE		= { SSE2_NotLessOrEqual };
+const xImplSimd_Compare xCMPORD		= { SSE2_Ordered };
+
+const xImplSimd_COMI xCOMI =
+{
+	{ 0x00, 0x2f },		// SS
+	{ 0x66, 0x2f },		// SD
+};
+
+const xImplSimd_COMI xUCOMI =
+{
+	{ 0x00, 0x2e },		// SS
+	{ 0x66, 0x2e },		// SD
+};
+
+const xImplSimd_PCompare xPCMP =
+{
+	{ 0x66, 0x74 },		// EQB
+	{ 0x66, 0x75 },		// EQW
+	{ 0x66, 0x76 },		// EQD
+
+	{ 0x66, 0x64 },		// GTB
+	{ 0x66, 0x65 },		// GTW
+	{ 0x66, 0x66 },		// GTD
+};
+
+const xImplSimd_PMinMax xPMIN = 
+{
+	{ 0x66, 0xda },			// UB
+	{ 0x66, 0xea },			// SW
+	{ 0x66, 0x3838 },		// SB
+	{ 0x66, 0x3938 },		// SD
+
+	{ 0x66, 0x3a38 },		// UW
+	{ 0x66, 0x3b38 },		// UD
+};
+
+const xImplSimd_PMinMax xPMAX = 
+{
+	{ 0x66, 0xde },			// UB
+	{ 0x66, 0xee },			// SW
+	{ 0x66, 0x3c38 },		// SB
+	{ 0x66, 0x3d38 },		// SD
+
+	{ 0x66, 0x3e38 },		// UW
+	{ 0x66, 0x3f38 },		// UD
+};
+
 const SimdImpl_PShuffle xPSHUF;
 const SimdImpl_PUnpack xPUNPCK;
 const SimdImpl_Unpack xUNPCK;

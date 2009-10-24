@@ -65,7 +65,8 @@ extern void InstallSignalHandler();
 
 #elif defined( _WIN32 )
 
-	extern int SysPageFaultExceptionFilter(EXCEPTION_POINTERS* eps);
+	struct _EXCEPTION_POINTERS;
+	extern int SysPageFaultExceptionFilter(struct _EXCEPTION_POINTERS* eps);
 
 #	define PCSX2_PAGEFAULT_PROTECT		__try
 #	define PCSX2_PAGEFAULT_EXCEPT		__except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}

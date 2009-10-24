@@ -333,10 +333,6 @@
 				Name="Implement_Simd"
 				>
 				<File
-					RelativePath="..\..\include\x86emitter\implement\xmm\comparisons.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\include\x86emitter\implement\xmm\moremovs.h"
 					>
 				</File>
@@ -346,6 +342,10 @@
 				</File>
 				<File
 					RelativePath="..\..\include\x86emitter\implement\simd_arithmetic.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\x86emitter\implement\simd_comparisons.h"
 					>
 				</File>
 				<File

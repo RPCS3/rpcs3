@@ -428,59 +428,81 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xeb> xPOR;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xef> xPXOR;
 
-
-	extern const Internal::SimdImpl_COMI<true>		xCOMI;
-	extern const Internal::SimdImpl_COMI<false>		xUCOMI;
-
-	extern const Internal::SimdImpl_MinMax<0x5f>	xMAX;
-	extern const Internal::SimdImpl_MinMax<0x5d>	xMIN;
 	extern const Internal::SimdImpl_Shuffle<0xc6>	xSHUF;
 
 	// ------------------------------------------------------------------------
 
 	extern const Internal::SimdImpl_DestRegSSE<0x66,0x1738> xPTEST;
 
-	extern const Internal::SimdImpl_Compare<SSE2_Equal>			xCMPEQ;
-	extern const Internal::SimdImpl_Compare<SSE2_Less>			xCMPLT;
-	extern const Internal::SimdImpl_Compare<SSE2_LessOrEqual>	xCMPLE;
-	extern const Internal::SimdImpl_Compare<SSE2_Unordered>		xCMPUNORD;
-	extern const Internal::SimdImpl_Compare<SSE2_NotEqual>		xCMPNE;
-	extern const Internal::SimdImpl_Compare<SSE2_NotLess>		xCMPNLT;
-	extern const Internal::SimdImpl_Compare<SSE2_NotLessOrEqual> xCMPNLE;
-	extern const Internal::SimdImpl_Compare<SSE2_Ordered>		xCMPORD;
+	extern const xImplSimd_MinMax		xMIN;
+	extern const xImplSimd_MinMax		xMAX; 
+
+	extern const xImplSimd_Compare		xCMPEQ,	xCMPLT,
+										xCMPLE,	xCMPUNORD,
+										xCMPNE,	xCMPNLT,
+										xCMPNLE,xCMPORD;
+
+	extern const xImplSimd_COMI			xCOMI;
+	extern const xImplSimd_COMI			xUCOMI;
+
+	extern const xImplSimd_PCompare		xPCMP;
+	extern const xImplSimd_PMinMax		xPMIN;
+	extern const xImplSimd_PMinMax		xPMAX;
 
 	// ------------------------------------------------------------------------
-	// OMG Evil.  I went cross-eyed an hour ago doing this.
+	// 
 	//
-	extern const Internal::SimdImpl_DestRegStrict<0xf3,0xe6,xRegisterSSE,xRegisterSSE,u64>	xCVTDQ2PD;
-	extern const Internal::SimdImpl_DestRegStrict<0x00,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTDQ2PS;
+	extern void xCVTDQ2PD( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTDQ2PD( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTDQ2PS( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTDQ2PS( const xRegisterSSE& to, const ModSib128& from );
 
-	extern const Internal::SimdImpl_DestRegStrict<0xf2,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2DQ;
-	extern const Internal::SimdImpl_DestRegStrict<0x66,0x2d,xRegisterMMX,xRegisterSSE,u128>	xCVTPD2PI;
-	extern const Internal::SimdImpl_DestRegStrict<0x66,0x5a,xRegisterSSE,xRegisterSSE,u128>	xCVTPD2PS;
+	extern void xCVTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTPD2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from );
+	extern void xCVTPD2PI( const xRegisterMMX& to, const ModSib128& from );
+	extern void xCVTPD2PS( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTPD2PS( const xRegisterSSE& to, const ModSib128& from );
 
-	extern const Internal::SimdImpl_DestRegStrict<0x66,0x2a,xRegisterSSE,xRegisterMMX,u64>	xCVTPI2PD;
-	extern const Internal::SimdImpl_DestRegStrict<0x00,0x2a,xRegisterSSE,xRegisterMMX,u64>	xCVTPI2PS;
+	extern void xCVTPI2PD( const xRegisterSSE& to, const xRegisterMMX& from );
+	extern void xCVTPI2PD( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTPI2PS( const xRegisterSSE& to, const xRegisterMMX& from );
+	extern void xCVTPI2PS( const xRegisterSSE& to, const ModSib64& from );
 
-	extern const Internal::SimdImpl_DestRegStrict<0x66,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTPS2DQ;
-	extern const Internal::SimdImpl_DestRegStrict<0x00,0x5a,xRegisterSSE,xRegisterSSE,u64>	xCVTPS2PD;
-	extern const Internal::SimdImpl_DestRegStrict<0x00,0x2d,xRegisterMMX,xRegisterSSE,u64>	xCVTPS2PI;
+	extern void xCVTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTPS2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTPS2PD( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTPS2PD( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from );
+	extern void xCVTPS2PI( const xRegisterMMX& to, const ModSib64& from );
 
-	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x2d,xRegister32, xRegisterSSE,u64>	xCVTSD2SI;
-	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x5a,xRegisterSSE,xRegisterSSE,u64>	xCVTSD2SS;
-	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x2a,xRegisterMMX,xRegister32, u32>	xCVTSI2SD;
-	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x2a,xRegisterSSE,xRegister32, u32>	xCVTSI2SS;
+	extern void xCVTSD2SI( const xRegister32& to, const xRegisterSSE& from );
+	extern void xCVTSD2SI( const xRegister32& to, const ModSib64& from );
+	extern void xCVTSD2SS( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTSD2SS( const xRegisterSSE& to, const ModSib64& from );
+	extern void xCVTSI2SD( const xRegisterMMX& to, const xRegister32& from );
+	extern void xCVTSI2SD( const xRegisterMMX& to, const ModSib32& from );
+	extern void xCVTSI2SS( const xRegisterSSE& to, const xRegister32& from );
+	extern void xCVTSI2SS( const xRegisterSSE& to, const ModSib32& from );
 
-	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x5a,xRegisterSSE,xRegisterSSE,u32>	xCVTSS2SD;
-	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x2d,xRegister32, xRegisterSSE,u32>	xCVTSS2SI;
+	extern void xCVTSS2SD( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTSS2SD( const xRegisterSSE& to, const ModSib32& from );
+	extern void xCVTSS2SI( const xRegister32& to, const xRegisterSSE& from );
+	extern void xCVTSS2SI( const xRegister32& to, const ModSib32& from );
 
-	extern const Internal::SimdImpl_DestRegStrict<0x66,0xe6,xRegisterSSE,xRegisterSSE,u128>	xCVTTPD2DQ;
-	extern const Internal::SimdImpl_DestRegStrict<0x66,0x2c,xRegisterMMX,xRegisterSSE,u128>	xCVTTPD2PI;
-	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x5b,xRegisterSSE,xRegisterSSE,u128>	xCVTTPS2DQ;
-	extern const Internal::SimdImpl_DestRegStrict<0x00,0x2c,xRegisterMMX,xRegisterSSE,u64>	xCVTTPS2PI;
+	extern void xCVTTPD2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTTPD2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTTPD2PI( const xRegisterMMX& to, const xRegisterSSE& from );
+	extern void xCVTTPD2PI( const xRegisterMMX& to, const ModSib128& from );
+	extern void xCVTTPS2DQ( const xRegisterSSE& to, const xRegisterSSE& from );
+	extern void xCVTTPS2DQ( const xRegisterSSE& to, const ModSib128& from );
+	extern void xCVTTPS2PI( const xRegisterMMX& to, const xRegisterSSE& from );
+	extern void xCVTTPS2PI( const xRegisterMMX& to, const ModSib64& from );
 
-	extern const Internal::SimdImpl_DestRegStrict<0xf2,0x2c,xRegister32, xRegisterSSE,u64>	xCVTTSD2SI;
-	extern const Internal::SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>	xCVTTSS2SI;
+	extern void xCVTTSD2SI( const xRegister32& to, const xRegisterSSE& from );
+	extern void xCVTTSD2SI( const xRegister32& to, const ModSib64& from );
+	extern void xCVTTSS2SI( const xRegister32& to, const xRegisterSSE& from );
+	extern void xCVTTSS2SI( const xRegister32& to, const ModSib32& from );
 
 	// ------------------------------------------------------------------------
 
@@ -502,11 +524,6 @@ namespace x86Emitter
 	extern const xImplSimd_DotProduct		xDP;
 	extern const xImplSimd_Round			xROUND;
 
-
-	extern const Internal::SimdImpl_PMinMax<0xde,0x3c>	xPMAX;
-	extern const Internal::SimdImpl_PMinMax<0xda,0x38>	xPMIN;
-
-	extern const Internal::SimdImpl_PCompare			xPCMP;
 	extern const Internal::SimdImpl_PShuffle			xPSHUF;
 	extern const Internal::SimdImpl_PUnpack				xPUNPCK;
 	extern const Internal::SimdImpl_Unpack				xUNPCK;

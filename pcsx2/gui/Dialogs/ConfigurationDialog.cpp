@@ -25,7 +25,8 @@
 #include <wx/listctrl.h>
 
 #ifdef __WXMSW__
-#	include <commctrl.h>		// needed for Vista icon spacing fix.
+#	include <wx/msw/wrapwin.h>		// needed for Vista icon spacing fix.
+#	include <commctrl.h>
 #endif
 
 using namespace wxHelpers;
