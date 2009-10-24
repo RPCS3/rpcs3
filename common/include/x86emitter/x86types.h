@@ -694,9 +694,8 @@ __forceinline void xWrite( T val )
 	namespace Internal
 	{
 		#include "implement/helpers.h"
-		#include "implement/xmm/basehelpers.h"
+		#include "implement/simd_templated_helpers.h"
 		#include "implement/xmm/moremovs.h"
-		#include "implement/xmm/arithmetic.h"
 		#include "implement/xmm/comparisons.h"
 		#include "implement/xmm/shufflepack.h"
 		#include "implement/group1.h"
@@ -729,5 +728,8 @@ __forceinline void xWrite( T val )
 		return xAddressInfo( (sptr)addr ).Add( reg );
 	}
 }
+
+#include "implement/simd_helpers.h"
+#include "implement/simd_arithmetic.h"
 
 #include "inlines.inl"

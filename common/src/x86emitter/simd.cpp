@@ -90,12 +90,8 @@ const MovhlImplAll<0x12>		xMOVL;
 const MovhlImpl_RtoR<0x16>		xMOVLH;
 const MovhlImpl_RtoR<0x12>		xMOVHL;
 
-const SimdImpl_AndNot			xANDN;
 const SimdImpl_COMI<true>		xCOMI;
 const SimdImpl_COMI<false>		xUCOMI;
-const SimdImpl_rSqrt<0x53>		xRCP;
-const SimdImpl_rSqrt<0x52>		xRSQRT;
-const SimdImpl_Sqrt<0x51>		xSQRT;
 
 const SimdImpl_MinMax<0x5f>		xMAX;
 const SimdImpl_MinMax<0x5d>		xMIN;
@@ -160,32 +156,186 @@ const SimdImpl_DestRegStrict<0xf3,0x2c,xRegister32, xRegisterSSE,u32>		xCVTTSS2S
 
 // ------------------------------------------------------------------------
 
-const SimdImpl_Shift<0xd0, 2> xPSRL;
-const SimdImpl_Shift<0xf0, 6> xPSLL;
-const SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
+void xImplSimd_DestRegSSE::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const				{ OpWriteSSE( Prefix, Opcode ); }
+void xImplSimd_DestRegSSE::operator()( const xRegisterSSE& to, const ModSibBase& from ) const				{ OpWriteSSE( Prefix, Opcode ); }
 
-const SimdImpl_AddSub<0xdc, 0xd4> xPADD;
-const SimdImpl_AddSub<0xd8, 0xfb> xPSUB;
+void xImplSimd_DestRegImmSSE::operator()( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm ) const	{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
+void xImplSimd_DestRegImmSSE::operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm ) const	{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
+
+void xImplSimd_DestRegImmMMX::operator()( const xRegisterMMX& to, const xRegisterMMX& from, u8 imm ) const	{ xOpWrite0F( Opcode, to, from, imm ); }
+void xImplSimd_DestRegImmMMX::operator()( const xRegisterMMX& to, const ModSibBase& from, u8 imm ) const	{ xOpWrite0F( Opcode, to, from, imm ); }
+
+void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
+void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const ModSibBase& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
+
+void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteMMX( Opcode ); }
+void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteMMX( Opcode ); }
+
+// =====================================================================================================
+//  SIMD Arithmetic Instructions
+// =====================================================================================================
+
+void _SimdShiftHelper::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
+void _SimdShiftHelper::operator()( const xRegisterSSE& to, const ModSibBase& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
+
+void _SimdShiftHelper::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteMMX( Opcode ); }
+void _SimdShiftHelper::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteMMX( Opcode ); }
+
+void _SimdShiftHelper::operator()( const xRegisterSSE& to, u8 imm8 ) const
+{
+	SimdPrefix( 0x66, OpcodeImm );
+	EmitSibMagic( (int)Modcode, to );
+	xWrite8( imm8 );
+}
+
+void _SimdShiftHelper::operator()( const xRegisterMMX& to, u8 imm8 ) const
+{
+	SimdPrefix( 0x00, OpcodeImm );
+	EmitSibMagic( (int)Modcode, to );
+	xWrite8( imm8 );
+}
+
+void xImplSimd_Shift::DQ( const xRegisterSSE& to, u8 imm8 ) const
+{
+	xOpWrite0F( 0x66, 0x73, (int)Q.Modcode+1, to, imm8 );
+}
+
+
+const xImplSimd_ShiftWithoutQ xPSRA =
+{
+	{ 0x66, 0xe1, 0x71, 4 },	// W
+	{ 0x66, 0xe2, 0x72, 4 }		// D
+};
+
+const xImplSimd_Shift xPSRL =
+{
+	{ 0x66, 0xd1, 0x71, 2 },	// W
+	{ 0x66, 0xd2, 0x72, 2 },	// D
+	{ 0x66, 0xd3, 0x73, 2 },	// Q
+};
+
+const xImplSimd_Shift xPSLL =
+{
+	{ 0x66, 0xf1, 0x71, 6 },	// W
+	{ 0x66, 0xf2, 0x72, 6 },	// D
+	{ 0x66, 0xf3, 0x73, 6 },	// Q
+};
+
+
+const xImplSimd_AddSub xPADD =
+{
+	{ 0x66, 0xdc+0x20 },	// B
+	{ 0x66, 0xdc+0x21 },	// W
+	{ 0x66, 0xdc+0x22 },	// D
+	{ 0x66, 0xd4 },			// Q
+
+	{ 0x66, 0xdc+0x10 },	// SB
+	{ 0x66, 0xdc+0x11 },	// SW
+	{ 0x66, 0xdc },			// USB
+	{ 0x66, 0xdc+1 },		// USW
+};
+
+const xImplSimd_AddSub xPSUB =
+{
+	{ 0x66, 0xd8+0x20 },	// B
+	{ 0x66, 0xd8+0x21 },	// W
+	{ 0x66, 0xd8+0x22 },	// D
+	{ 0x66, 0xfb },			// Q
+
+	{ 0x66, 0xd8+0x10 },	// SB
+	{ 0x66, 0xd8+0x11 },	// SW
+	{ 0x66, 0xd8 },			// USB
+	{ 0x66, 0xd8+1 },		// USW
+};
+
+
+const xImplSimd_PMul xPMUL =
+{
+	{ 0x66, 0xd5 },		// LW
+	{ 0x66, 0xe5 },		// HW
+	{ 0x66, 0xe4 },		// HUW
+	{ 0x66, 0xf4 },		// UDQ
+
+	{ 0x66, 0x0b38 },	// HRSW
+	{ 0x66, 0x4038 },	// LD
+	{ 0x66, 0x2838 },	// DQ
+};
+
+const xImplSimd_rSqrt xRSQRT =
+{
+	{ 0x00, 0x52 },		// PS
+	{ 0xf3, 0x52 }		// SS
+};
+
+const xImplSimd_rSqrt xRCP =
+{
+	{ 0x00, 0x53 },		// PS
+	{ 0xf3, 0x53 }		// SS
+};
+
+const xImplSimd_Sqrt xSQRT =
+{
+	{ 0x00, 0x51 },		// PS
+	{ 0xf3, 0x51 },		// SS
+	{ 0xf2, 0x51 }		// SS
+};
+
+const xImplSimd_AndNot xANDN =
+{
+	{ 0x00, 0x55 },		// PS
+	{ 0x66, 0x55 }		// PD
+};
+
+const xImplSimd_PAbsolute xPABS = 
+{
+	{ 0x66, 0x1c38 },	// B
+	{ 0x66, 0x1d38 },	// W
+	{ 0x66, 0x1e38 }	// D
+};
+
+const xImplSimd_PSign xPSIGN =
+{
+	{ 0x66, 0x0838 },	// B
+	{ 0x66, 0x0938 },	// W
+	{ 0x66, 0x0a38 },	// D
+};
+
+const xImplSimd_PMultAdd xPMADD =
+{
+	{ 0x66, 0xf5 },		// WD
+	{ 0x66, 0xf438 },	// UBSW
+};
+
+const xImplSimd_HorizAdd xHADD =
+{
+	{ 0xf2, 0x7c },		// PS
+	{ 0x66, 0x7c },		// PD
+};
+
+const xImplSimd_DotProduct xDP =
+{
+	{ 0x66,0x403a },	// PS
+	{ 0x66,0x413a },	// PD
+};
+
+const xImplSimd_Round xROUND =
+{
+	{ 0x66,0x083a },	// PS
+	{ 0x66,0x093a },	// PD
+	{ 0x66,0x0a3a },	// SS
+	{ 0x66,0x0b3a },	// SD
+};
+
 const SimdImpl_PMinMax<0xde,0x3c> xPMAX;
 const SimdImpl_PMinMax<0xda,0x38> xPMIN;
-
-const SimdImpl_PMul xPMUL;
 const SimdImpl_PCompare xPCMP;
 const SimdImpl_PShuffle xPSHUF;
 const SimdImpl_PUnpack xPUNPCK;
 const SimdImpl_Unpack xUNPCK;
 const SimdImpl_Pack xPACK;
-
-const SimdImpl_PAbsolute xPABS;
-const SimdImpl_PSign xPSIGN;
 const SimdImpl_PInsert xPINSR;
 const SimdImpl_PExtract xPEXTR;
-const SimdImpl_PMultAdd xPMADD;
-const SimdImpl_HorizAdd xHADD;
-
 const SimdImpl_Blend xBLEND;
-const SimdImpl_DotProduct xDP;
-const SimdImpl_Round xROUND;
 
 const SimdImpl_PMove<true> xPMOVSX;
 const SimdImpl_PMove<false> xPMOVZX;

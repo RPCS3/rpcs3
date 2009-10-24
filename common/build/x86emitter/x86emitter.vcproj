@@ -6,6 +6,7 @@
 	ProjectGUID="{A51123F5-9505-4EAE-85E7-D320290A272C}"
 	RootNamespace="x86emitter"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -332,14 +333,6 @@
 				Name="Implement_Simd"
 				>
 				<File
-					RelativePath="..\..\include\x86emitter\implement\xmm\arithmetic.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\include\x86emitter\implement\xmm\basehelpers.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\include\x86emitter\implement\xmm\comparisons.h"
 					>
 				</File>
@@ -349,6 +342,18 @@
 				</File>
 				<File
 					RelativePath="..\..\include\x86emitter\implement\xmm\shufflepack.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\x86emitter\implement\simd_arithmetic.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\x86emitter\implement\simd_helpers.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\x86emitter\implement\simd_templated_helpers.h"
 					>
 				</File>
 			</Filter>

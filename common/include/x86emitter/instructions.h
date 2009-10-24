@@ -428,13 +428,9 @@ namespace x86Emitter
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xeb> xPOR;
 	extern const Internal::SimdImpl_DestRegEither<0x66,0xef> xPXOR;
 
-	extern const Internal::SimdImpl_AndNot			xANDN;
 
 	extern const Internal::SimdImpl_COMI<true>		xCOMI;
 	extern const Internal::SimdImpl_COMI<false>		xUCOMI;
-	extern const Internal::SimdImpl_rSqrt<0x53>		xRCP;
-	extern const Internal::SimdImpl_rSqrt<0x52>		xRSQRT;
-	extern const Internal::SimdImpl_Sqrt<0x51>		xSQRT;
 
 	extern const Internal::SimdImpl_MinMax<0x5f>	xMAX;
 	extern const Internal::SimdImpl_MinMax<0x5d>	xMIN;
@@ -488,32 +484,36 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 
-	extern const Internal::SimdImpl_Shift<0xf0, 6>		xPSLL;
-	extern const Internal::SimdImpl_Shift<0xd0, 2>		xPSRL;
-	extern const Internal::SimdImpl_ShiftWithoutQ<0xe0, 4> xPSRA;
+	extern const xImplSimd_AndNot			xANDN;
+	extern const xImplSimd_rSqrt			xRCP;
+	extern const xImplSimd_rSqrt			xRSQRT;
+	extern const xImplSimd_Sqrt				xSQRT;
 
-	extern const Internal::SimdImpl_AddSub<0xdc, 0xd4>	xPADD;
-	extern const Internal::SimdImpl_AddSub<0xd8, 0xfb>	xPSUB;
+	extern const xImplSimd_Shift			xPSLL;
+	extern const xImplSimd_Shift			xPSRL;
+	extern const xImplSimd_ShiftWithoutQ	xPSRA;
+	extern const xImplSimd_AddSub			xPADD;
+	extern const xImplSimd_AddSub			xPSUB;
+	extern const xImplSimd_PMul				xPMUL;
+	extern const xImplSimd_PAbsolute		xPABS;
+	extern const xImplSimd_PSign			xPSIGN;
+	extern const xImplSimd_PMultAdd			xPMADD;
+	extern const xImplSimd_HorizAdd			xHADD;
+	extern const xImplSimd_DotProduct		xDP;
+	extern const xImplSimd_Round			xROUND;
+
+
 	extern const Internal::SimdImpl_PMinMax<0xde,0x3c>	xPMAX;
 	extern const Internal::SimdImpl_PMinMax<0xda,0x38>	xPMIN;
 
-	extern const Internal::SimdImpl_PMul				xPMUL;
 	extern const Internal::SimdImpl_PCompare			xPCMP;
 	extern const Internal::SimdImpl_PShuffle			xPSHUF;
 	extern const Internal::SimdImpl_PUnpack				xPUNPCK;
 	extern const Internal::SimdImpl_Unpack				xUNPCK;
 	extern const Internal::SimdImpl_Pack				xPACK;
-
-	extern const Internal::SimdImpl_PAbsolute			xPABS;
-	extern const Internal::SimdImpl_PSign				xPSIGN;
 	extern const Internal::SimdImpl_PInsert				xPINSR;
 	extern const Internal::SimdImpl_PExtract			xPEXTR;
-	extern const Internal::SimdImpl_PMultAdd			xPMADD;
-	extern const Internal::SimdImpl_HorizAdd			xHADD;
-
 	extern const Internal::SimdImpl_Blend				xBLEND;
-	extern const Internal::SimdImpl_DotProduct			xDP;
-	extern const Internal::SimdImpl_Round				xROUND;
 
 	extern const Internal::SimdImpl_PMove<true>			xPMOVSX;
 	extern const Internal::SimdImpl_PMove<false>		xPMOVZX;

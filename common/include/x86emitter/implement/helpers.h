@@ -20,8 +20,10 @@
 // that all members contained within are in said namespace.
 // ------------------------------------------------------------------------
 
-
 #pragma once
+
+#define OpWriteSSE( pre, op )		xOpWrite0F( pre, op, to, from )
+#define OpWriteMMX( op )			xOpWrite0F( op, to, from )
 
 extern void SimdPrefix( u8 prefix, u16 opcode );
 extern void EmitSibMagic( uint regfield, const void* address );
