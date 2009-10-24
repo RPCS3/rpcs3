@@ -24,10 +24,10 @@ SuperVUExecuteProgram:
         mov s_vu1esi, esi
         mov s_vuedi, edi
         mov s_vuebx, ebx
-#ifdef PCSX2_DEBUG
+
         mov s_vu1esp, esp
-#endif
-        
+		and esp, -16		// align stack for GCC compilance
+
         ldmxcsr g_sseVUMXCSR
         mov dword ptr s_writeQ, 0xffffffff
         mov dword ptr s_writeP, 0xffffffff
@@ -41,10 +41,8 @@ SuperVUEndProgram:
 		mov edi, s_vuedi
 		mov ebx, s_vuebx
                 
-#ifdef PCSX2_DEBUG
-        sub s_vu1esp, esp
-#endif
-        
+        mov esp, s_vu1esp
+
 		call SuperVUCleanupProgram
 		jmp [s_callstack] // so returns correctly
 
