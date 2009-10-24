@@ -85,10 +85,10 @@ public:
 	void ReloadRecentLists();
 
 protected:
-	static void __fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
-	static void __fastcall OnCorePluginStatusChanged( void* obj, wxCommandEvent& evt );
-	static void __fastcall OnSettingsApplied( void* obj, int& evt );
-	static void __fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
+	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
+	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, wxCommandEvent& evt );
+	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+	static void __evt_fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
 
 	void LoadSaveRecentIsoList( IniInterface& conf );
 	void ApplySettings();

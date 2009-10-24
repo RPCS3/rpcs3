@@ -574,7 +574,7 @@ void memClearPageAddr(u32 vaddr)
 ///////////////////////////////////////////////////////////////////////////
 // PS2 Memory Init / Reset / Shutdown
 
-static void __fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info );
+static void __evt_fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info );
 
 static const uint m_allMemSize =
 		Ps2MemSize::Rom + Ps2MemSize::Rom1 + Ps2MemSize::Rom2 + Ps2MemSize::ERom +
@@ -894,7 +894,7 @@ static __forceinline void mmap_ClearCpuBlock( uint offset )
 	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
 }
 
-static void __fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info )
+static void __evt_fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info )
 {
 	// get bad virtual address
 	uptr offset = info.addr - (uptr)basemem;

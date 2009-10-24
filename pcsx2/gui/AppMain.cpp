@@ -250,7 +250,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	}
 }
 
-static void __fastcall OnStateSaveFinished( void* obj, wxCommandEvent& evt )
+static void __evt_fastcall OnStateSaveFinished( void* obj, wxCommandEvent& evt )
 {
 	if( evt.GetInt() == CoreStatus_Resumed )
 	{

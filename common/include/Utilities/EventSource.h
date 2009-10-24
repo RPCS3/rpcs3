@@ -19,6 +19,15 @@
 
 class wxCommandEvent;
 
+// __evt_fastcall : Work-around for a GCC 4.3 compilation bug.  The templated FuncType
+// throws type mismatches if we have a __fastcall qualifier. >_< --air
+
+#if defined( __GNUC__ ) && (__GNUC__ < 4 ) || ((__GNUC__ == 4) && ( __GNUC_MINOR__ <= 3 ))
+#	define __evt_fastcall
+#else
+#	define __evt_fastcall
+#endif
+
 // --------------------------------------------------------------------------------------
 //  EventListener< typename EvtType >
 // --------------------------------------------------------------------------------------
@@ -26,7 +35,7 @@ class wxCommandEvent;
 template< typename EvtType >
 struct EventListener
 {
-	typedef void __fastcall FuncType( void* object, typename EvtType& evt );
+	typedef void __evt_fastcall FuncType( void* object, EvtType& evt );
 
 	void*		object;
 	FuncType*	OnEvent;

@@ -34,7 +34,7 @@ int sys_resume_lock = 0;
 
 static FnType_OnThreadComplete* Callback_FreezeFinished = NULL;
 
-static void __fastcall StateThread_OnAppStatus( void* thr, AppEventType& stat )
+static void __evt_fastcall StateThread_OnAppStatus( void* thr, AppEventType& stat )
 {
 	if( (thr == NULL) || (stat != AppStatus_Exiting) ) return;
 	((PersistentThread*)thr)->Cancel();

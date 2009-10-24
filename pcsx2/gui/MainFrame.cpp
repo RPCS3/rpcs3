@@ -255,28 +255,28 @@ void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
 	}
 }
 
-void __fastcall MainEmuFrame::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
+void __evt_fastcall MainEmuFrame::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 	mframe->ApplyCoreStatus();
 }
 
-void __fastcall MainEmuFrame::OnCorePluginStatusChanged( void* obj, wxCommandEvent& evt )
+void __evt_fastcall MainEmuFrame::OnCorePluginStatusChanged( void* obj, wxCommandEvent& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 	mframe->ApplyCoreStatus();
 }
 
-void __fastcall MainEmuFrame::OnSettingsApplied( void* obj, int& evt )
+void __evt_fastcall MainEmuFrame::OnSettingsApplied( void* obj, int& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 	mframe->ApplySettings();
 }
 
-void __fastcall MainEmuFrame::OnSettingsLoadSave( void* obj, IniInterface& evt )
+void __evt_fastcall MainEmuFrame::OnSettingsLoadSave( void* obj, IniInterface& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
