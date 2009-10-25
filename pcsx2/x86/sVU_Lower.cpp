@@ -602,7 +602,7 @@ void recVUMI_MR32( VURegs *VU, int info )
 //------------------------------------------------------------------
 void _loadEAX(VURegs *VU, int x86reg, uptr offset, int info)
 {
-    assert( offset < 0x80000000 );
+    pxAssert( offset < 0x80000000 );
 
 	if( x86reg >= 0 ) {
 		switch(_X_Y_Z_W) {
@@ -788,7 +788,7 @@ void recVUMI_LQI(VURegs *VU, int info)
 //------------------------------------------------------------------
 void _saveEAX(VURegs *VU, int x86reg, uptr offset, int info)
 {
-	assert( offset < 0x80000000 );
+	pxAssert( offset < 0x80000000 );
 
 	if ( _Fs_ == 0 ) {
 		if ( _XYZW_SS ) {
@@ -1591,7 +1591,7 @@ void vuSqSumXYZ(int regd, int regs, int regtemp) // regd.x =  x ^ 2 + y ^ 2 + z 
 void recVUMI_ESADD( VURegs *VU, int info)
 {
 	//Console.WriteLn("VU: ESADD");
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	if( EEREC_TEMP == EEREC_D ) { // special code to reset P ( FixMe: don't know if this is still needed! (cottonvibes) )
 		Console.Notice("ESADD: Resetting P reg!!!\n");
 		MOV32ItoM(VU_VI_ADDR(REG_P, 0), 0);
@@ -1610,7 +1610,7 @@ void recVUMI_ESADD( VURegs *VU, int info)
 void recVUMI_ERSADD( VURegs *VU, int info )
 {
 	//Console.WriteLn("VU: ERSADD");
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	vuSqSumXYZ(EEREC_D, EEREC_S, EEREC_TEMP);
 	// don't use RCPSS (very bad precision)
 	SSE_MOVSS_M32_to_XMM(EEREC_TEMP, (uptr)VU_ONE);
@@ -1627,7 +1627,7 @@ void recVUMI_ERSADD( VURegs *VU, int info )
 void recVUMI_ELENG( VURegs *VU, int info )
 {
 	//Console.WriteLn("VU: ELENG");
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	vuSqSumXYZ(EEREC_D, EEREC_S, EEREC_TEMP);
 	if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(EEREC_D, (uptr)g_maxvals); // Only need to do positive clamp since (x ^ 2 + y ^ 2 + z ^ 2) is positive
 	SSE_SQRTSS_XMM_to_XMM(EEREC_D, EEREC_D);
@@ -1642,7 +1642,7 @@ void recVUMI_ELENG( VURegs *VU, int info )
 void recVUMI_ERLENG( VURegs *VU, int info )
 {
 	//Console.WriteLn("VU: ERLENG");
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	vuSqSumXYZ(EEREC_D, EEREC_S, EEREC_TEMP);
 	if (CHECK_VU_OVERFLOW) SSE_MINSS_M32_to_XMM(EEREC_D, (uptr)g_maxvals); // Only need to do positive clamp since (x ^ 2 + y ^ 2 + z ^ 2) is positive
 	SSE_SQRTSS_XMM_to_XMM(EEREC_D, EEREC_D); // regd <- sqrt(x^2 + y^2 + z^2)
@@ -1659,7 +1659,7 @@ void recVUMI_ERLENG( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_EATANxy( VURegs *VU, int info )
 {
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	//Console.WriteLn("recVUMI_EATANxy");
 	if( (xmmregs[EEREC_S].mode & MODE_WRITE) && (xmmregs[EEREC_S].mode&MODE_NOFLUSH) ) {
 		SSE_MOVLPS_XMM_to_M64((uptr)s_tempmem, EEREC_S);
@@ -1687,7 +1687,7 @@ void recVUMI_EATANxy( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_EATANxz( VURegs *VU, int info )
 {
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	//Console.WriteLn("recVUMI_EATANxz");
 	if( (xmmregs[EEREC_S].mode & MODE_WRITE) && (xmmregs[EEREC_S].mode&MODE_NOFLUSH) ) {
 		SSE_MOVLPS_XMM_to_M64((uptr)s_tempmem, EEREC_S);
@@ -1715,7 +1715,7 @@ void recVUMI_EATANxz( VURegs *VU, int info )
 void recVUMI_ESUM( VURegs *VU, int info )
 {
 	//Console.WriteLn("VU: ESUM");
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 
 	if( x86caps.hasStreamingSIMD3Extensions ) {
 		SSE_MOVAPS_XMM_to_XMM(EEREC_TEMP, EEREC_S);
@@ -1742,7 +1742,7 @@ void recVUMI_ESUM( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_ERCPR( VURegs *VU, int info )
 {
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	//Console.WriteLn("VU1: ERCPR");
 
 	// don't use RCPSS (very bad precision)
@@ -1786,7 +1786,7 @@ void recVUMI_ERCPR( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_ESQRT( VURegs *VU, int info )
 {
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 
 	//Console.WriteLn("VU1: ESQRT");
 	_unpackVFSS_xyzw(EEREC_TEMP, EEREC_S, _Fsf_);
@@ -1806,7 +1806,7 @@ void recVUMI_ERSQRT( VURegs *VU, int info )
 {
 	int t1reg = _vuGetTempXMMreg(info);
  
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	//Console.WriteLn("VU1: ERSQRT");
 
 	_unpackVFSS_xyzw(EEREC_TEMP, EEREC_S, _Fsf_);
@@ -1839,7 +1839,7 @@ void recVUMI_ERSQRT( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_ESIN( VURegs *VU, int info )
 {
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 
 	//Console.WriteLn("recVUMI_ESIN");
 	if( (xmmregs[EEREC_S].mode & MODE_WRITE) && (xmmregs[EEREC_S].mode&MODE_NOFLUSH) ) {
@@ -1870,7 +1870,7 @@ void recVUMI_ESIN( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_EATAN( VURegs *VU, int info )
 {
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 
 	//Console.WriteLn("recVUMI_EATAN");
 	if( (xmmregs[EEREC_S].mode & MODE_WRITE) && (xmmregs[EEREC_S].mode&MODE_NOFLUSH) ) {
@@ -1901,7 +1901,7 @@ void recVUMI_EATAN( VURegs *VU, int info )
 //------------------------------------------------------------------
 void recVUMI_EEXP( VURegs *VU, int info )
 {
-	assert( VU == &VU1 );
+	pxAssert( VU == &VU1 );
 	//Console.WriteLn("recVUMI_EEXP");
 	FLDL2E();
 

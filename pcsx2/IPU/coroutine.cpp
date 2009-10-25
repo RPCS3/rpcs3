@@ -64,7 +64,7 @@ coroutine_t so_create(void (*func)(void *), void *data, void *stack, int size)
 void so_delete(coroutine_t coro)
 {
 	coroutine *co = (coroutine *) coro;
-	assert( co != NULL );
+	pxAssert( co != NULL );
 	if (co->alloc) free(co);
 }
 

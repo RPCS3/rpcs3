@@ -172,7 +172,7 @@ void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
 		
 	if (bd) Console.Notice("branch delay!!");
 
-	assert(0); // temporary
+	pxFail( "TLB Miss handler is uninished code." ); // temporary
 
 	cpuRegs.CP0.n.BadVAddr = addr;
 	cpuRegs.CP0.n.Context &= 0xFF80000F;

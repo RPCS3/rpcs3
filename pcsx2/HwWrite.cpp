@@ -329,7 +329,7 @@ void hwWrite8(u32 mem, u8 value)
 			break;
 		
 		default:
-			assert( (mem & 0xff0f) != 0xf200 );
+			pxAssert( (mem & 0xff0f) != 0xf200 );
 
 			switch(mem&~3) {
 				case SIO_ISR:

@@ -63,7 +63,7 @@ void recADD_const()
 
 void recADD_constv(int info, int creg, int vreg)
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		int mmreg = vreg == _Rt_ ? EEREC_T : EEREC_S;
@@ -165,7 +165,7 @@ void recADD_constt(int info)
 // nothing is constant
 void recADD_(int info)
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 	EEINST_SETSIGNEXT(_Rd_);
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
@@ -253,7 +253,7 @@ void recDADD_const( void )
 
 void recDADD_constv(int info, int creg, int vreg)
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		int mmreg = vreg == _Rt_ ? EEREC_T : EEREC_S;
@@ -336,7 +336,7 @@ void recDADD_constt(int info)
 
 void recDADD_(int info)
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 
@@ -402,7 +402,7 @@ void recSUB_const()
 
 void recSUB_consts(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 	EEINST_SETSIGNEXT(_Rt_);
 	EEINST_SETSIGNEXT(_Rd_);
 
@@ -485,7 +485,7 @@ void recSUB_consts(int info)
 
 void recSUB_constt(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rd_);
 
@@ -563,7 +563,7 @@ void recSUB_constt(int info)
 
 void recSUB_(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
 	EEINST_SETSIGNEXT(_Rd_);
@@ -646,7 +646,7 @@ void recDSUB_const()
 
 void recDSUB_consts(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 
@@ -748,7 +748,7 @@ void recDSUB_consts(int info)
 
 void recDSUB_constt(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 
@@ -803,7 +803,7 @@ void recDSUB_constt(int info)
 
 void recDSUB_(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 
@@ -873,7 +873,7 @@ void recAND_const()
 
 void recAND_constv(int info, int creg, int vreg)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		int mmreg = vreg == _Rt_ ? EEREC_T : EEREC_S;
@@ -944,7 +944,7 @@ void recAND_constt(int info)
 
 void recLogicalOp(int info, int op)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		if( EEREC_D == EEREC_S ) LogicalOpRtoR(EEREC_D, EEREC_T, op);
@@ -1034,7 +1034,7 @@ void recOR_const()
 
 void recOR_constv(int info, int creg, int vreg)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		int mmreg = vreg == _Rt_ ? EEREC_T : EEREC_S;
@@ -1112,7 +1112,7 @@ void recXOR_const()
 
 void recXOR_constv(int info, int creg, int vreg)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		int mmreg = vreg == _Rt_ ? EEREC_T : EEREC_S;
@@ -1189,7 +1189,7 @@ void recNOR_const()
 
 void recNOR_constv(int info, int creg, int vreg)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		int mmreg = vreg == _Rt_ ? EEREC_T : EEREC_S;
@@ -1285,7 +1285,7 @@ u32 s_sltone = 1;
 
 void recSLTs_consts(int info, int sign)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 
@@ -1419,7 +1419,7 @@ void recSLTmemconstt(int regd, int regs, u32 mem, int sign)
 
 void recSLTs_constt(int info, int sign)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		if( _Rs_ == _Rt_ ) {
@@ -1528,7 +1528,7 @@ void recSLT_constt(int info)
 void recSLT_(int info)
 {
 	int t0reg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( !(info & PROCESS_EE_MMX) ) {
 		recSLTs_(info, 1);
@@ -1601,7 +1601,7 @@ void recSLTU_(int info)
 {
 	int t1reg;
 
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 	EEINST_SETSIGNEXT(_Rd_);
 
 	if( !(info & PROCESS_EE_MMX) ) {

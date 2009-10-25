@@ -241,7 +241,7 @@ void recPMFHL()
 			break;
 		default:
 			Console.Error("PMFHL??  *pcsx2 head esplode!*");
-			assert(0);
+			pxFail("PMFHL??  *pcsx2 head esplode!*");
 	}
 
 	_clearNeededXMMregs();
@@ -2516,7 +2516,7 @@ void recPINTEH()
 			SSE2_PSHUFHW_XMM_to_XMM(EEREC_D, EEREC_D, 0xa0);
 		}
 		else if( EEREC_D == EEREC_T ) {
-			assert( EEREC_D != EEREC_S );
+			pxAssert( EEREC_D != EEREC_S );
 			t0reg = _allocTempXMMreg(XMMT_INT, -1);
 			SSE2_PSLLD_I8_to_XMM(EEREC_D, 16);
 			SSE2_MOVDQA_XMM_to_XMM(t0reg, EEREC_S);

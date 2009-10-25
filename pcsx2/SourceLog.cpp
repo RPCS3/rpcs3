@@ -61,12 +61,8 @@ void __Log( const char* fmt, ... )
 	int length = vsprintf(tmp, fmt, list);
 	va_end( list );
 
-	assert( length <= 2020 );
-	if( length > 2020 )
-	{
-		Msgbox::Alert( _("Source log buffer overrun") );
-		// fixme: should throw an exception here once we have proper exception handling implemented.
-	}
+	pxAssertDev( length <= 2020, "Source log buffer overrun" );
+	// fixme: should throw an exception here once we have proper exception handling implemented.
 
 #ifdef PCSX2_DEVBUILD
 	if (varLog.LogToConsole)		// log to console enabled?
@@ -92,12 +88,8 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 
 	// concatenate the log message after the prefix:
 	int length = vsprintf(&tmp[prelength], fmt, list);
-	assert( length <= 2020 );
-	if( length > 2020 )
-	{
-		Msgbox::Alert( _("Source log buffer overrun") );
-		// fixme: should throw an exception here once we have proper exception handling implemented.
-	}
+	pxAssertDev( length <= 2020, "Source log buffer overrun" );
+	// fixme: should throw an exception here once we have proper exception handling implemented.
 
 #ifdef PCSX2_DEVBUILD
 #ifdef _WIN32

@@ -945,7 +945,7 @@ void rpsxJALR()
 	psxRecompileNextInstruction(1);
 	
 	if( x86regs[ESI].inuse ) {
-		assert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
+		pxAssert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
 		MOV32RtoM((uptr)&psxRegs.pc, ESI);
 		x86regs[ESI].inuse = 0;
 		#ifdef PCSX2_DEBUG
@@ -1590,7 +1590,7 @@ void rpsxpropBSC(EEINST* prev, EEINST* pinst)
 			break;
 
 		case 16: rpsxpropCP0(prev, pinst); break;
-		case 18: assert(0); break;
+		case 18: pxFailDev( "iop invalid opcode in const propagation" ); break;
 
 		// stores
 		case 40: case 41: case 42: case 43: case 46:

@@ -447,7 +447,7 @@ static __forceinline BOOL ipuIDEC(u32 val)
 	g_decoder.dcr = 1;//resets DC prediction value
 
 	s_routine = so_create(mpeg2sliceIDEC, &s_RoutineDone, s_tempstack, sizeof(s_tempstack));
-	assert(s_routine != NULL);
+	pxAssert(s_routine != NULL);
 	so_call(s_routine);
 	if (s_RoutineDone) s_routine = NULL;
 
@@ -501,7 +501,7 @@ static __forceinline BOOL ipuBDEC(u32 val)
 	memzero(mb16);
 
 	s_routine = so_create(mpeg2_slice, &s_RoutineDone, s_tempstack, sizeof(s_tempstack));
-	assert(s_routine != NULL);
+	pxAssert(s_routine != NULL);
 	so_call(s_routine);
 
 	if (s_RoutineDone) s_routine = NULL;
@@ -872,7 +872,7 @@ void IPUCMD_WRITE(u32 val)
 
 void IPUWorker()
 {
-	assert(ipuRegs->ctrl.BUSY);
+	pxAssert(ipuRegs->ctrl.BUSY);
 
 	switch (ipuCurCmd)
 	{
@@ -1032,7 +1032,7 @@ u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size)
 
 	if (*(int*)pointer >= 128)
 	{
-		assert(g_BP.FP >= 1);
+		pxAssert(g_BP.FP >= 1);
 
 		if (g_BP.FP > 1) inc_readbits();
 
@@ -1312,7 +1312,7 @@ int FIFOto_read(void *value)
 	{
 		// This is the only spot that wants a return value for IPU1dma.
 		if (IPU1dma() == 0) return 0;
-		assert(g_BP.IFC > 0);
+		pxAssert(g_BP.IFC > 0);
 	}
 
 	// transfer 1 qword, split into two transfers
@@ -1450,11 +1450,11 @@ int IPU1dma()
 	bool done = false;
 	int ipu1cycles = 0, totalqwc = 0;
 
-	assert(!ipu1dma->chcr.TTE);
+	pxAssert(!ipu1dma->chcr.TTE);
 
 	if (!(ipu1dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
 
-	assert(g_nDMATransfer.TIE1 == 0);
+	pxAssert(g_nDMATransfer.TIE1 == 0);
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
 	flushGIF();
@@ -1662,12 +1662,12 @@ int IPU0dma()
 	if ((!(ipu0dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
 		return 0;
 
-	assert(!(ipu0dma->chcr.TTE));
+	pxAssert(!(ipu0dma->chcr.TTE));
 
 	IPU_LOG("dmaIPU0 chcr = %lx, madr = %lx, qwc  = %lx",
 	        ipu0dma->chcr._u32, ipu0dma->madr, ipu0dma->qwc);
 
-	assert((ipu0dma->chcr._u32 & 0xC) == 0);
+	pxAssert((ipu0dma->chcr._u32 & 0xC) == 0);
 	pMem = (u32*)dmaGetAddr(ipu0dma->madr);
 
 	readsize = min(ipu0dma->qwc, (u16)ipuRegs->ctrl.OFC);

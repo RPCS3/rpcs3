@@ -113,7 +113,7 @@ void recJALR( void )
 	recompileNextInstruction(1);
 
 	if( x86regs[ESI].inuse ) {
-		assert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
+		pxAssert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
 		MOV32RtoM((int)&cpuRegs.pc, ESI);
 		x86regs[ESI].inuse = 0;
 	}

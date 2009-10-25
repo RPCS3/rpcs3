@@ -955,7 +955,7 @@ void psxSetBranchReg(u32 reg)
 		psxRecompileNextInstruction(1);
 
 		if( x86regs[ESI].inuse ) {
-			assert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
+			pxAssert( x86regs[ESI].type == X86TYPE_PCWRITEBACK );
 			MOV32RtoM((uptr)&psxRegs.pc, ESI);
 			x86regs[ESI].inuse = 0;
 			#ifdef PCSX2_DEBUG
@@ -987,7 +987,7 @@ void psxSetBranchReg(u32 reg)
 void psxSetBranchImm( u32 imm )
 {
 	psxbranch = 1;
-	assert( imm );
+	pxAssert( imm );
 
 	// end the current block
 	MOV32ItoM( (uptr)&psxRegs.pc, imm );
@@ -1161,7 +1161,7 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 		iDumpPsxRegisters(startpc, 0);
 	}
 
-	assert( startpc );
+	pxAssert( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
 	if (((uptr)recPtr - (uptr)recMem) >= (RECMEM_SIZE - 0x10000))
@@ -1173,7 +1173,7 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 
 	s_pCurBlock = PSX_GETBLOCK(startpc);
 
-	assert(s_pCurBlock->GetFnptr() == (uptr)iopJITCompile
+	pxAssert(s_pCurBlock->GetFnptr() == (uptr)iopJITCompile
 		|| s_pCurBlock->GetFnptr() == (uptr)iopJITCompileInBlock);
 
 	s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
@@ -1264,7 +1264,7 @@ StartRecomp:
 			free(s_pInstCache);
 			s_nInstCacheSize = (s_nEndBlock-startpc)/4+10;
 			s_pInstCache = (EEINST*)malloc(sizeof(EEINST)*s_nInstCacheSize);
-			assert( s_pInstCache != NULL );
+			pxAssert( s_pInstCache != NULL );
 		}
 
 		pcur = s_pInstCache + (s_nEndBlock-startpc)/4;
@@ -1300,7 +1300,7 @@ StartRecomp:
 	if( IsDebugBuild && (psxdump & 1) )
 		iIopDumpBlock(startpc, recPtr);
 
-	assert( (psxpc-startpc)>>2 <= 0xffff );
+	pxAssert( (psxpc-startpc)>>2 <= 0xffff );
 	s_pCurBlockEx->size = (psxpc-startpc)>>2;
 
 	for(i = 1; i < (u32)s_pCurBlockEx->size; ++i) {
@@ -1319,7 +1319,7 @@ StartRecomp:
 		JMP32((uptr)iopDispatcherReg - ( (uptr)x86Ptr + 5 ));
 	}
 	else {
-		if( psxbranch ) assert( !willbranch3 );
+		if( psxbranch ) pxAssert( !willbranch3 );
 		else
 		{
 			ADD32ItoM((uptr)&psxRegs.cycle, psxScaleBlockCycles() );
@@ -1327,7 +1327,7 @@ StartRecomp:
 		}
 
 		if (willbranch3 || !psxbranch) {
-			assert( psxpc == s_nEndBlock );
+			pxAssert( psxpc == s_nEndBlock );
 			_psxFlushCall(FLUSH_EVERYTHING);
 			MOV32ItoM((uptr)&psxRegs.pc, psxpc);
 			recBlocks.Link(HWADDR(s_nEndBlock), xJcc32() );
@@ -1335,14 +1335,14 @@ StartRecomp:
 		}
 	}
 
-	assert( x86Ptr < recMem+RECMEM_SIZE );
+	pxAssert( x86Ptr < recMem+RECMEM_SIZE );
 
-	assert(x86Ptr - recPtr < 0x10000);
+	pxAssert(x86Ptr - recPtr < 0x10000);
 	s_pCurBlockEx->x86size = x86Ptr - recPtr;
 
 	recPtr = x86Ptr;
 
-	assert( (g_psxHasConstReg&g_psxFlushedConstReg) == g_psxHasConstReg );
+	pxAssert( (g_psxHasConstReg&g_psxFlushedConstReg) == g_psxHasConstReg );
 
 	s_pCurBlock = NULL;
 	s_pCurBlockEx = NULL;

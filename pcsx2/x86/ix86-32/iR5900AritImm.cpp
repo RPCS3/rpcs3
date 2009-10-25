@@ -55,7 +55,7 @@ void recADDI_const( void )
 
 void recADDI_(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 	EEINST_SETSIGNEXT(_Rt_);
 	EEINST_SETSIGNEXT(_Rs_);
 
@@ -146,7 +146,7 @@ void recDADDI_const( void )
 
 void recDADDI_(int info) 
 {
-	assert( !(info&PROCESS_EE_XMM) );
+	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 

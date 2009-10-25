@@ -317,7 +317,7 @@ void recMULT_const()
 void recMULTUsuper(int info, int upper, int process);
 void recMULTsuper(int info, int upper, int process)
 {
-	assert( !(info&PROCESS_EE_MMX) );
+	pxAssert( !(info&PROCESS_EE_MMX) );
 	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
@@ -429,7 +429,7 @@ void recMULTUsuper(int info, int upper, int process)
 		if( !_Rd_ ) {
 			// need some temp reg
 			int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-			assert( EEREC_D == 0 );
+			pxAssert( EEREC_D == 0 );
 			info |= PROCESS_EE_SET_D(t0reg);
 		}
 

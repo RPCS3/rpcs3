@@ -36,7 +36,7 @@ BASEBLOCKEX* BaseBlocks::New(u32 startpc, uptr fnptr)
 			imin = imid + 1;
 	}
 
-	assert(imin == blocks.size() || blocks[imin].startpc > startpc);
+	pxAssert(imin == blocks.size() || blocks[imin].startpc > startpc);
 	iter = blocks.insert(blocks.begin() + imin, newblock);
 
 	std::pair<linkiter_t, linkiter_t> range = links.equal_range(startpc);

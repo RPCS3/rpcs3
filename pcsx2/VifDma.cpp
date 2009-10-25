@@ -286,7 +286,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 		vif = &vif1;
 		vifRow = g_vifmask.Row1;
 	}
-	assert(v->addr < memsize);
+	pxAssert(v->addr < memsize);
 
 	dest = (u32*)(VU->Mem + v->addr);
 
@@ -493,7 +493,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		vifMaskRegs = g_vif0Masks;
 		vif = &vif0;
 		vifRow = g_vifmask.Row0;
-		assert(v->addr < memsize);
+		pxAssert(v->addr < memsize);
 	}
 	else
 	{
@@ -503,7 +503,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		vifMaskRegs = g_vif1Masks;
 		vif = &vif1;
 		vifRow = g_vifmask.Row1;
-		assert(v->addr < memsize);
+		pxAssert(v->addr < memsize);
 	}
 
 	dest = (u32*)(VU->Mem + v->addr);

@@ -317,7 +317,7 @@ static void _psxCheckEndGate(int i)
 
 void psxCheckStartGate16(int i)
 {
-	assert( i < 3 );
+	pxAssert( i < 3 );
 
 	if(i == 0)	// hSync counting...
 	{
@@ -353,20 +353,20 @@ void psxCheckStartGate16(int i)
 
 void psxCheckEndGate16(int i)
 {
-	assert(i < 3);
+	pxAssert(i < 3);
 	_psxCheckEndGate( i );
 }
 
 static void psxCheckStartGate32(int i)
 {
 	// 32 bit gate is called for gate 3 only.  Ever.
-	assert(i == 3);
+	pxAssert(i == 3);
 	_psxCheckStartGate( i );
 }
 
 static void psxCheckEndGate32(int i)
 {
-	assert(i == 3);
+	pxAssert(i == 3);
 	_psxCheckEndGate( i );
 }
 
@@ -496,7 +496,7 @@ void psxRcntWcount16(int index, u16 value)
 {
 	u32 change;
 
-	assert( index < 3 );
+	pxAssert( index < 3 );
 	PSXCNT_LOG("IOP Counter[%d] writeCount16 = %x", index, value);
 
 	if(psxCounters[index].rate != PSXHBLANK)
@@ -519,7 +519,7 @@ void psxRcntWcount32(int index, u32 value)
 {
 	u32 change;
 
-	assert( index >= 3 && index < 6 );
+	pxAssert( index >= 3 && index < 6 );
 	PSXCNT_LOG("IOP Counter[%d] writeCount32 = %x", index, value);
 	
 	if(psxCounters[index].rate != PSXHBLANK)
@@ -652,7 +652,7 @@ __forceinline void psxRcntWmode32( int index, u32 value )
 //
 void psxRcntWtarget16(int index, u32 value)
 {
-	assert( index < 3 );
+	pxAssert( index < 3 );
 	PSXCNT_LOG("IOP Counter[%d] writeTarget16 = %lx", index, value);
 	psxCounters[index].target = value & 0xffff;
 
@@ -668,7 +668,7 @@ void psxRcntWtarget16(int index, u32 value)
 
 void psxRcntWtarget32(int index, u32 value)
 {
-	assert( index >= 3 && index < 6);
+	pxAssert( index >= 3 && index < 6);
 	PSXCNT_LOG("IOP Counter[%d] writeTarget32 = %lx", index, value);
 
 	psxCounters[index].target = value;
@@ -687,7 +687,7 @@ u16 psxRcntRcount16(int index)
 {
 	u32 retval = (u32)psxCounters[index].count;
 
-	assert( index < 3 );
+	pxAssert( index < 3 );
 
 	PSXCNT_LOG("IOP Counter[%d] readCount16 = %lx", index, (u16)retval );
 
@@ -709,7 +709,7 @@ u32 psxRcntRcount32(int index)
 {
 	u32 retval = (u32)psxCounters[index].count;
 	
-	assert( index >= 3 && index < 6 );
+	pxAssert( index >= 3 && index < 6 );
 
 	PSXCNT_LOG("IOP Counter[%d] readCount32 = %lx", index, retval );
 

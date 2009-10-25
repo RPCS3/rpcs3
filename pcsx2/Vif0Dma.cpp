@@ -130,9 +130,9 @@ static int __fastcall Vif0TransSTRow(u32 *data)  // STROW
 
 	u32* pmem = &vif0Regs->r0 + (vif0.tag.addr << 2);
 	u32* pmem2 = g_vifmask.Row0 + vif0.tag.addr;
-	assert(vif0.tag.addr < 4);
+	pxAssert(vif0.tag.addr < 4);
 	ret = min(4 - vif0.tag.addr, vif0.vifpacketsize);
-	assert(ret > 0);
+	pxAssert(ret > 0);
 	
 	switch (ret)
 	{
@@ -756,7 +756,7 @@ void vif0Write32(u32 mem, u32 value)
 		case VIF0_R1:
 		case VIF0_R2:
 		case VIF0_R3:
-			assert((mem&0xf) == 0);
+			pxAssert((mem&0xf) == 0);
 			g_vifmask.Row0[(mem>>4) & 3] = value;
 			break;
 
@@ -764,7 +764,7 @@ void vif0Write32(u32 mem, u32 value)
 		case VIF0_C1:
 		case VIF0_C2:
 		case VIF0_C3:
-			assert((mem&0xf) == 0);
+			pxAssert((mem&0xf) == 0);
 			g_vifmask.Col0[(mem>>4) & 3] = value;
 			break;
 

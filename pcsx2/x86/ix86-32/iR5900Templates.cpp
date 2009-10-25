@@ -599,7 +599,8 @@ void eeRecompileCode2(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
 // rt op rs 
 void eeRecompileCode3(R5900FNPTR constcode, R5900FNPTR_INFO multicode)
 {
-	assert(0);
+	pxFail( "Unfinished code reached." );
+	
 	// for now, don't support xmm
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
@@ -704,7 +705,8 @@ void eeRecompileCodeConst2(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
 // rd = rt MULT rs  (SPECIAL)
 void eeRecompileCodeConstSPECIAL(R5900FNPTR constcode, R5900FNPTR_INFO multicode, int MULT)
 {
-	assert(0);
+	pxFail( "Unfinished code reached." );
+
 	// for now, don't support xmm
 	if( MULT ) {
 		_deleteGPRtoXMMreg(_Rd_, 0);
@@ -860,7 +862,7 @@ void eeFPURecompileCode(R5900FNPTR_INFO xmmcode, R5900FNPTR fpucode, int xmminfo
 	if( mmregt >= 0 ) info |= PROCESS_EE_SETMODET_XMM(mmregt);
 
 	if( xmminfo & XMMINFO_READD ) {
-		assert( xmminfo & XMMINFO_WRITED );
+		pxAssert( xmminfo & XMMINFO_WRITED );
 		mmregd = _allocFPtoXMMreg(-1, _Fd_, MODE_READ);
 	}
 
@@ -950,15 +952,15 @@ void eeFPURecompileCode(R5900FNPTR_INFO xmmcode, R5900FNPTR fpucode, int xmminfo
 		}
 	}
 
-	assert( mmregs >= 0 || mmregt >= 0 || mmregd >= 0 || mmregacc >= 0 );
+	pxAssert( mmregs >= 0 || mmregt >= 0 || mmregd >= 0 || mmregacc >= 0 );
 
 	if( xmminfo & XMMINFO_WRITED ) {
-		assert( mmregd >= 0 );
+		pxAssert( mmregd >= 0 );
 		info |= PROCESS_EE_SET_D(mmregd);
 	}
 	if( xmminfo & (XMMINFO_WRITEACC|XMMINFO_READACC) ) {
 		if( mmregacc >= 0 ) info |= PROCESS_EE_SET_ACC(mmregacc)|PROCESS_EE_ACC;
-		else assert( !(xmminfo&XMMINFO_WRITEACC));		
+		else pxAssert( !(xmminfo&XMMINFO_WRITEACC));		
 	}
 
 	if( xmminfo & XMMINFO_READS ) {
@@ -970,7 +972,7 @@ void eeFPURecompileCode(R5900FNPTR_INFO xmmcode, R5900FNPTR fpucode, int xmminfo
 		
 	// at least one must be in xmm
 	if( (xmminfo & (XMMINFO_READS|XMMINFO_READT)) == (XMMINFO_READS|XMMINFO_READT) ) {
-		assert( mmregs >= 0 || mmregt >= 0 );
+		pxAssert( mmregs >= 0 || mmregt >= 0 );
 	}
 
 	xmmcode(info);

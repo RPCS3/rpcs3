@@ -96,7 +96,7 @@ void recMFHILO(int hi)
 
 	if( reghi >= 0 ) {
 		if( regd >= 0 ) {
-			assert( regd != reghi );
+			pxAssert( regd != reghi );
 
 			xmmregs[regd].inuse = 0;
 
@@ -191,7 +191,7 @@ void recMTHILO(int hi)
 
 	if( reghi >= 0 ) {
 		if( regs >= 0 ) {
-			assert( reghi != regs );
+			pxAssert( reghi != regs );
 
 			_deleteGPRtoXMMreg(_Rs_, 0);
 			SSE2_PUNPCKHQDQ_XMM_to_XMM(reghi, reghi);

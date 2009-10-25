@@ -116,7 +116,7 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 
 	vif0ch->qwc += 1;
 	int ret = VIF0transfer((u32*)value, 4, 0);
-	assert( ret == 0 ); // vif stall code not implemented
+	pxAssertDev( ret == 0, "vif stall code not implemented" );
 }
 
 void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
@@ -135,7 +135,7 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 
 	vif1ch->qwc += 1;
 	int ret = VIF1transfer((u32*)value, 4, 0);
-	assert( ret == 0 ); // vif stall code not implemented
+	pxAssertDev( ret == 0, "vif stall code not implemented" );
 }
 
 // Dummy GIF-TAG Packet to Guarantee Count = 1

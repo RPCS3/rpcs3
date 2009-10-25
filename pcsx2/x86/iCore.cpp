@@ -65,7 +65,7 @@ __forceinline void* _XMMGetAddr(int type, int reg, VURegs *VU)
 		
 		case XMMTYPE_GPRREG:
 			if( reg < 32 )
-				assert( !(g_cpuHasConstReg & (1<<reg)) || (g_cpuFlushedConstReg & (1<<reg)) );
+				pxAssert( !(g_cpuHasConstReg & (1<<reg)) || (g_cpuFlushedConstReg & (1<<reg)) );
 			return &cpuRegs.GPR.r[reg].UL[0];
 			
 		case XMMTYPE_FPREG:
@@ -342,7 +342,7 @@ int _allocGPRtoXMMreg(int xmmreg, int gprreg, int mode)
 		if (xmmregs[i].type != XMMTYPE_GPRREG) continue;
 		if (xmmregs[i].reg != gprreg) continue;
 
-		assert( _checkMMXreg(MMX_GPR|gprreg, mode) == -1 );
+		pxAssert( _checkMMXreg(MMX_GPR|gprreg, mode) == -1 );
 
 		g_xmmtypes[i] = XMMT_INT;
 
@@ -354,7 +354,7 @@ int _allocGPRtoXMMreg(int xmmreg, int gprreg, int mode)
 			}
 			else 
 			{
-				//assert( !(g_cpuHasConstReg & (1<<gprreg)) || (g_cpuFlushedConstReg & (1<<gprreg)) );
+				//pxAssert( !(g_cpuHasConstReg & (1<<gprreg)) || (g_cpuFlushedConstReg & (1<<gprreg)) );
 				_flushConstReg(gprreg);
 				SSEX_MOVDQA_M128_to_XMM(i, (uptr)&cpuRegs.GPR.r[gprreg].UL[0]);
 			}
@@ -364,7 +364,7 @@ int _allocGPRtoXMMreg(int xmmreg, int gprreg, int mode)
 		if  ((mode & MODE_WRITE) && (gprreg < 32)) 
 		{
 			g_cpuHasConstReg &= ~(1<<gprreg);
-			//assert( !(g_cpuHasConstReg & (1<<gprreg)) );
+			//pxAssert( !(g_cpuHasConstReg & (1<<gprreg)) );
 		}
 
 		xmmregs[i].counter = g_xmmAllocCounter++; // update counter
@@ -377,7 +377,7 @@ int _allocGPRtoXMMreg(int xmmreg, int gprreg, int mode)
 	// fixme - do we really need to execute this both here and in the loop?
 	if ((mode & MODE_WRITE) && gprreg < 32) 
 	{
-		//assert( !(g_cpuHasConstReg & (1<<gprreg)) );
+		//pxAssert( !(g_cpuHasConstReg & (1<<gprreg)) );
 		g_cpuHasConstReg &= ~(1<<gprreg);
 	}
 
@@ -559,7 +559,7 @@ void _clearNeededXMMregs() {
 		}
 
 		if( xmmregs[i].inuse ) {
-			assert( xmmregs[i].type != XMMTYPE_TEMP );
+			pxAssert( xmmregs[i].type != XMMTYPE_TEMP );
 		}
 	}
 }
@@ -582,7 +582,7 @@ void _deleteVFtoXMMreg(int reg, int vu, int flush)
 				case 2:
 					if( xmmregs[i].mode & MODE_WRITE ) 
 					{
-						assert( reg != 0 );
+						pxAssert( reg != 0 );
 
 						if( xmmregs[i].mode & MODE_VUXYZ ) 
 						{
@@ -710,9 +710,9 @@ void _deleteGPRtoXMMreg(int reg, int flush)
 				case 1:
 				case 2:
 					if( xmmregs[i].mode & MODE_WRITE ) {
-						assert( reg != 0 );
+						pxAssert( reg != 0 );
 
-						//assert( g_xmmtypes[i] == XMMT_INT );
+						//pxAssert( g_xmmtypes[i] == XMMT_INT );
 						SSEX_MOVDQA_XMM_to_M128((uptr)&cpuRegs.GPR.r[reg].UL[0], i);
 						
 						// get rid of MODE_WRITE since don't want to flush again
@@ -759,7 +759,7 @@ void _deleteFPtoXMMreg(int reg, int flush)
 
 void _freeXMMreg(int xmmreg) 
 {
-	assert( xmmreg < iREGCNT_XMM );
+	pxAssert( xmmreg < iREGCNT_XMM );
 
 	if (!xmmregs[xmmreg].inuse) return;
 	
@@ -849,8 +849,8 @@ void _freeXMMreg(int xmmreg)
 		break;
 		
 		case XMMTYPE_GPRREG:
-			assert( xmmregs[xmmreg].reg != 0 );
-			//assert( g_xmmtypes[xmmreg] == XMMT_INT );
+			pxAssert( xmmregs[xmmreg].reg != 0 );
+			//pxAssert( g_xmmtypes[xmmreg] == XMMT_INT );
 			SSEX_MOVDQA_XMM_to_M128((uptr)&cpuRegs.GPR.r[xmmregs[xmmreg].reg].UL[0], xmmreg);
 			break;
 	
@@ -938,8 +938,8 @@ void _flushXMMregs()
 	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 
-		assert( xmmregs[i].type != XMMTYPE_TEMP );
-		assert( xmmregs[i].mode & (MODE_READ|MODE_WRITE) );
+		pxAssert( xmmregs[i].type != XMMTYPE_TEMP );
+		pxAssert( xmmregs[i].mode & (MODE_READ|MODE_WRITE) );
 
 		_freeXMMreg(i);
 		xmmregs[i].inuse = 1;
@@ -955,8 +955,8 @@ void _freeXMMregs()
 	for (i=0; i<iREGCNT_XMM; i++) {
 		if (xmmregs[i].inuse == 0) continue;
 
-		assert( xmmregs[i].type != XMMTYPE_TEMP );
-		//assert( xmmregs[i].mode & (MODE_READ|MODE_WRITE) );
+		pxAssert( xmmregs[i].type != XMMTYPE_TEMP );
+		//pxAssert( xmmregs[i].mode & (MODE_READ|MODE_WRITE) );
 
 		_freeXMMreg(i);
 	}
@@ -976,7 +976,7 @@ int _signExtendXMMtoM(u32 to, x86SSERegType from, int candestroy)
 	}
 	else {
 		// can't destroy and type is int
-		assert( g_xmmtypes[from] == XMMT_INT );
+		pxAssert( g_xmmtypes[from] == XMMT_INT );
 
 		
 		if( _hasFreeXMMreg() ) {
@@ -1000,7 +1000,7 @@ int _signExtendXMMtoM(u32 to, x86SSERegType from, int candestroy)
 		return 0;
 	}
 
-	assert(0);
+	pxAssert( false );
 }
 
 int _allocCheckGPRtoXMM(EEINST* pinst, int gprreg, int mode)
@@ -1079,7 +1079,7 @@ void _recFillRegister(EEINST& pinst, int type, int reg, int write)
 				return;
 			}
 		}
-		assert(0);
+		pxAssert( false );
 	}
 	else {
 		for(i = 0; i < ArraySize(pinst.readType); ++i) {
@@ -1089,7 +1089,7 @@ void _recFillRegister(EEINST& pinst, int type, int reg, int write)
 				return;
 			}
 		}
-		assert(0);
+		pxAssert( false );
 	}
 }
 

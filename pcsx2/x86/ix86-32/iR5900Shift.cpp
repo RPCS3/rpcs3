@@ -62,7 +62,7 @@ void recSLL_const()
 void recSLLs_(int info, int sa)
 {
 	int rtreg, rdreg, t0reg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -136,7 +136,7 @@ void recSRL_const()
 void recSRLs_(int info, int sa) 
 {
 	int rtreg, rdreg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -210,7 +210,7 @@ void recSRA_const()
 void recSRAs_(int info, int sa) 
 {
 	int rtreg, rdreg, t0reg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -289,7 +289,7 @@ void recDSLL_const()
 void recDSLLs_(int info, int sa)
 {
 	int rtreg, rdreg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -323,7 +323,7 @@ void recDSRL_const()
 void recDSRLs_(int info, int sa)
 {
 	int rtreg, rdreg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -357,7 +357,7 @@ void recDSRA_const()
 void recDSRAs_(int info, int sa)
 {
 	int rtreg, rdreg, t0reg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -416,7 +416,7 @@ void recDSLL32_const()
 void recDSLL32s_(int info, int sa)
 {
 	int rtreg, rdreg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -460,7 +460,7 @@ void recDSRL32_const()
 void recDSRL32s_(int info, int sa)
 {
 	int rtreg, rdreg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -503,7 +503,7 @@ void recDSRA32_const()
 void recDSRA32s_(int info, int sa)
 {
 	int rtreg, rdreg, t0reg;
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
@@ -582,7 +582,7 @@ __aligned16 u32 s_sa[4] = {0x1f, 0, 0x3f, 0};
 
 int recSetShiftV(int info, int* rsreg, int* rtreg, int* rdreg, int* rstemp, int forcemmx, int shift64)
 {
-	assert( !(info & PROCESS_EE_XMM) );
+	pxAssert( !(info & PROCESS_EE_XMM) );
 
 	if( info & PROCESS_EE_MMX ) {
 		*rtreg = EEREC_T;

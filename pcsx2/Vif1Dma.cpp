@@ -112,7 +112,7 @@ static __forceinline void vif1mpgTransfer(u32 addr, u32 *data, int size)
 			fwrite(data, 1, size*4, f);
 			fclose(f);
 		}*/
-	assert(VU1.Micro > 0);
+	pxAssert(VU1.Micro > 0);
 	if (memcmp(VU1.Micro + addr, data, size << 2))
 	{
 		CpuVU1.Clear(addr, size << 2); // Clear before writing! :/
@@ -148,9 +148,9 @@ static int __fastcall Vif1TransSTRow(u32 *data)  // STROW
 
 	u32* pmem = &vif1Regs->r0 + (vif1.tag.addr << 2);
 	u32* pmem2 = g_vifmask.Row1 + vif1.tag.addr;
-	assert(vif1.tag.addr < 4);
+	pxAssert(vif1.tag.addr < 4);
 	ret = min(4 - vif1.tag.addr, vif1.vifpacketsize);
-	assert(ret > 0);
+	pxAssert(ret > 0);
 	
 	switch (ret)
 	{
@@ -1149,7 +1149,7 @@ void vif1Write32(u32 mem, u32 value)
 		case VIF1_R1:
 		case VIF1_R2:
 		case VIF1_R3:
-			assert((mem&0xf) == 0);
+			pxAssert((mem&0xf) == 0);
 			g_vifmask.Row1[(mem>>4) & 3] = value;
 			break;
 
@@ -1157,7 +1157,7 @@ void vif1Write32(u32 mem, u32 value)
 		case VIF1_C1:
 		case VIF1_C2:
 		case VIF1_C3:
-			assert((mem&0xf) == 0);
+			pxAssert((mem&0xf) == 0);
 			g_vifmask.Col1[(mem>>4) & 3] = value;
 			break;
 

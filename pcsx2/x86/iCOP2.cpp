@@ -137,7 +137,7 @@ static void recCTC2(s32 info)
 				break;
 			case REG_CMSAR1: // REG_CMSAR1
 				iFlushCall(FLUSH_NOCONST);
-				assert( _checkX86reg(X86TYPE_VI, REG_VPU_STAT, 0) < 0 &&
+				pxAssert( _checkX86reg(X86TYPE_VI, REG_VPU_STAT, 0) < 0 &&
 					    _checkX86reg(X86TYPE_VI, REG_TPC, 0) < 0 );
 				// Execute VU1 Micro SubRoutine
 				
@@ -147,7 +147,7 @@ static void recCTC2(s32 info)
 			default:
 			{
 				if( _Fs_ < 16 )
-					assert( (g_cpuConstRegs[_Rt_].UL[0]&0xffff0000)==0);
+					pxAssert( (g_cpuConstRegs[_Rt_].UL[0]&0xffff0000)==0);
 
 				// a lot of games have vu0 spinning on some integer
 				// then they modify the register and expect vu0 to stop spinning within 10 cycles (donald duck)
@@ -174,7 +174,7 @@ static void recCTC2(s32 info)
 				break;
 			case REG_FBRST:
 				iFlushCall(FLUSH_FREE_TEMPX86);
-				assert( _checkX86reg(X86TYPE_VI, REG_FBRST, 0) < 0 );
+				pxAssert( _checkX86reg(X86TYPE_VI, REG_FBRST, 0) < 0 );
 
 				_eeMoveGPRtoR(EAX, _Rt_);
 
@@ -311,7 +311,7 @@ static void recQMTC2(s32 info)
 			}
 			else {
 				if( GPR_IS_CONST1( _Rt_ ) ) {
-					assert( _checkXMMreg(XMMTYPE_GPRREG, _Rt_, MODE_READ) == -1 );
+					pxAssert( _checkXMMreg(XMMTYPE_GPRREG, _Rt_, MODE_READ) == -1 );
 					_flushConstReg(_Rt_);	
 				}
 

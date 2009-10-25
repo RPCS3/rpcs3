@@ -420,9 +420,8 @@ __forceinline void BSCPropagate::rpropREGIMM()
 		case 25: // mtsah
 			rpropSetRead(_Rs_, 0);
 			break;
-		default:
-			assert(0);
-			break;
+
+		jNO_DEFAULT;
 	}
 }
 
@@ -544,12 +543,12 @@ __forceinline void BSCPropagate::rpropCP1()
 			}
 			break;
 		case 20:
-			assert( _Funct_ == 32 ); // CVT.S.W
+			pxAssert( _Funct_ == 32 ); // CVT.S.W
 			rpropSetFPUWrite(_Fd_, EEINST_REALXMM);
 			rpropSetFPURead(_Fs_, EEINST_REALXMM);
 			break;
-		default:
-			assert(0);
+
+		jNO_DEFAULT;
 	}
 }
 

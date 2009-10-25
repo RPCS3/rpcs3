@@ -153,8 +153,8 @@ int _getFreeX86reg(int mode)
 		_freeX86reg(tempi);
 		return tempi;
 	}
-	Console.Error("*PCSX2*: x86 error");
-	assert(0);
+
+	pxFailDev( "x86 register allocation error" );
 
 	return -1;
 }
@@ -434,7 +434,7 @@ void _deleteX86reg(int type, int reg, int flush)
 
 void _freeX86reg(int x86reg)
 {
-	assert( x86reg >= 0 && x86reg < iREGCNT_GPR );
+	pxAssert( x86reg >= 0 && x86reg < iREGCNT_GPR );
 
 	if( x86regs[x86reg].inuse && (x86regs[x86reg].mode&MODE_WRITE) ) {
 		x86regs[x86reg].mode &= ~MODE_WRITE;
@@ -468,7 +468,7 @@ void _initMMXregs()
 
 __forceinline void* _MMXGetAddr(int reg)
 {
-	assert( reg != MMX_TEMP );
+	pxAssert( reg != MMX_TEMP );
 
 	if( reg == MMX_LO ) return &cpuRegs.LO;
 	if( reg == MMX_HI ) return &cpuRegs.HI;
@@ -478,7 +478,7 @@ __forceinline void* _MMXGetAddr(int reg)
 	if( reg >= MMX_FPU && reg < MMX_FPU+32 ) return &fpuRegs.fpr[reg&31];
 	if( reg >= MMX_COP0 && reg < MMX_COP0+32 ) return &cpuRegs.CP0.r[reg&31];
 
-	assert( 0 );
+	pxAssert( false );
 	return NULL;
 }
 
@@ -541,9 +541,8 @@ int  _getFreeMMXreg()
 		_freeMMXreg(tempi);
 		return tempi;
 	}
-	Console.Error("*PCSX2*: mmx error");
-	assert(0);
 
+	pxFailDev( "mmx register allocation error" );
 	return -1;
 }
 
@@ -556,7 +555,7 @@ int _allocMMXreg(int mmxreg, int reg, int mode)
 			if (mmxregs[i].inuse == 0 || mmxregs[i].reg != reg ) continue;
 
 			if( MMX_ISGPR(reg)) {
-				assert( _checkXMMreg(XMMTYPE_GPRREG, reg-MMX_GPR, 0) == -1 );
+				pxAssert( _checkXMMreg(XMMTYPE_GPRREG, reg-MMX_GPR, 0) == -1 );
 			}
 
 			mmxregs[i].needed = 1;
@@ -700,7 +699,7 @@ void _deleteMMXreg(int reg, int flush)
 					break;
 				case 1: // flushes all of the reg
 					if( mmxregs[i].mode & MODE_WRITE) {
-						assert( mmxregs[i].reg != MMX_GPR );
+						pxAssert( mmxregs[i].reg != MMX_GPR );
 
 						if( MMX_IS32BITS(reg) )
 							MOVDMMXtoM((u32)_MMXGetAddr(mmxregs[i].reg), i);
@@ -764,15 +763,15 @@ u8 _hasFreeMMXreg()
 
 void _freeMMXreg(int mmxreg)
 {
-	assert( mmxreg < iREGCNT_MMX );
+	pxAssert( mmxreg < iREGCNT_MMX );
 	if (!mmxregs[mmxreg].inuse) return;
 
 	if (mmxregs[mmxreg].mode & MODE_WRITE ) {
 		// Not sure if this line is accurate, since if the 32 was 34, it would be MMX_ISGPR.
 		if ( /*mmxregs[mmxreg].reg >= MMX_GPR &&*/ mmxregs[mmxreg].reg < MMX_GPR+32 ) // Checking if a u32 is >=0 is pointless.
-			assert( !(g_cpuHasConstReg & (1<<(mmxregs[mmxreg].reg-MMX_GPR))) );
+			pxAssert( !(g_cpuHasConstReg & (1<<(mmxregs[mmxreg].reg-MMX_GPR))) );
 
-		assert( mmxregs[mmxreg].reg != MMX_GPR );
+		pxAssert( mmxregs[mmxreg].reg != MMX_GPR );
 
 		if( MMX_IS32BITS(mmxregs[mmxreg].reg) )
 			MOVDMMXtoM((u32)_MMXGetAddr(mmxregs[mmxreg].reg), mmxreg);
@@ -816,10 +815,10 @@ void _flushMMXregs()
 		if (mmxregs[i].inuse == 0) continue;
 
 		if( mmxregs[i].mode & MODE_WRITE ) {
-			assert( !(g_cpuHasConstReg & (1<<mmxregs[i].reg)) );
-			assert( mmxregs[i].reg != MMX_TEMP );
-			assert( mmxregs[i].mode & MODE_READ );
-			assert( mmxregs[i].reg != MMX_GPR );
+			pxAssert( !(g_cpuHasConstReg & (1<<mmxregs[i].reg)) );
+			pxAssert( mmxregs[i].reg != MMX_TEMP );
+			pxAssert( mmxregs[i].mode & MODE_READ );
+			pxAssert( mmxregs[i].reg != MMX_GPR );
 
 			if( MMX_IS32BITS(mmxregs[i].reg) )
 				MOVDMMXtoM((u32)_MMXGetAddr(mmxregs[i].reg), i);
@@ -839,8 +838,8 @@ void _freeMMXregs()
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse == 0) continue;
 
-		assert( mmxregs[i].reg != MMX_TEMP );
-		assert( mmxregs[i].mode & MODE_READ );
+		pxAssert( mmxregs[i].reg != MMX_TEMP );
+		pxAssert( mmxregs[i].mode & MODE_READ );
 
 		_freeMMXreg(i);
 	}
@@ -883,7 +882,7 @@ int _signExtendMtoMMX(x86MMXRegType to, u32 mem)
 
 int _signExtendGPRMMXtoMMX(x86MMXRegType to, u32 gprreg, x86MMXRegType from, u32 gprfromreg)
 {
-	assert( to >= 0 && from >= 0 );
+	pxAssert( to >= 0 && from >= 0 );
 	if( !EEINST_ISLIVE1(gprreg) ) {
 		EEINST_RESETHASLIVE1(gprreg);
 		if( to != from ) MOVQRtoR(to, from);
@@ -921,12 +920,12 @@ int _signExtendGPRMMXtoMMX(x86MMXRegType to, u32 gprreg, x86MMXRegType from, u32
 		return -1;
 	}
 
-	assert(0);
+	pxAssert( false );
 }
 
 int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift)
 {
-	assert( to >= 0 && shift >= 0 );
+	pxAssert( to >= 0 && shift >= 0 );
 	if( !EEINST_ISLIVE1(gprreg) ) {
 		if( shift > 0 ) PSRADItoR(to, shift);
 		EEINST_RESETHASLIVE1(gprreg);
@@ -970,7 +969,7 @@ int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift)
 		return -1;
 	}
 
-	assert(0);
+	pxAssert( false );
 }
 
 int _allocCheckGPRtoMMX(EEINST* pinst, int reg, int mode)
