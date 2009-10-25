@@ -85,6 +85,7 @@
 		<Unit filename="../../include/Utilities/Console.h" />
 		<Unit filename="../../include/Utilities/Dependencies.h" />
 		<Unit filename="../../include/Utilities/EventSource.h" />
+		<Unit filename="../../include/Utilities/EventSource.inl" />
 		<Unit filename="../../include/Utilities/Exceptions.h" />
 		<Unit filename="../../include/Utilities/General.h" />
 		<Unit filename="../../include/Utilities/HashMap.h" />
@@ -101,6 +102,7 @@
 		<Unit filename="../../include/intrin_x86.h" />
 		<Unit filename="../../src/Utilities/AlignedMalloc.cpp" />
 		<Unit filename="../../src/Utilities/Console.cpp" />
+		<Unit filename="../../src/Utilities/EventSource.cpp" />
 		<Unit filename="../../src/Utilities/Exceptions.cpp" />
 		<Unit filename="../../src/Utilities/HashTools.cpp" />
 		<Unit filename="../../src/Utilities/Linux/LnxHostSys.cpp" />

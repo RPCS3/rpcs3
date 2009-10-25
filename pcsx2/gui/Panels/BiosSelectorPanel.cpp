@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -33,7 +33,7 @@ Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow& parent, int idealWidth )
 	Connect( wxEVT_COMMAND_DIRPICKER_CHANGED,	wxFileDirPickerEventHandler(PluginSelectorPanel::OnFolderChanged), NULL, this );
 }
 
-Panels::BaseSelectorPanel::~BaseSelectorPanel()
+Panels::BaseSelectorPanel::~BaseSelectorPanel() throw()
 {
 }
 
@@ -92,7 +92,7 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth )
 	SetSizer( &sizer );
 }
 
-Panels::BiosSelectorPanel::~BiosSelectorPanel()
+Panels::BiosSelectorPanel::~BiosSelectorPanel() throw ()
 {
 }
 

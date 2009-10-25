@@ -253,7 +253,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 	Connect( ButtonId_Configure, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnConfigure_Clicked ) );
 }
 
-Panels::PluginSelectorPanel::~PluginSelectorPanel()
+Panels::PluginSelectorPanel::~PluginSelectorPanel() throw()
 {
 	CancelRefresh();		// in case the enumeration thread is currently refreshing...
 }
@@ -472,7 +472,7 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 	m_ComponentBoxes.Show();
 	m_StatusPanel.Hide();
 	m_StatusPanel.Reset();
-	
+
 	wxWindow* forwardButton = GetGrandParent()->FindWindow( wxID_FORWARD );
 	if( forwardButton != NULL )
 		forwardButton->Enable();

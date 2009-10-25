@@ -25,7 +25,7 @@ class wxCommandEvent;
 #if defined( __GNUC__ ) && (__GNUC__ < 4 ) || ((__GNUC__ == 4) && ( __GNUC_MINOR__ <= 3 ))
 #	define __evt_fastcall
 #else
-#	define __evt_fastcall _fastcall
+#	define __evt_fastcall __fastcall
 #endif
 
 // --------------------------------------------------------------------------------------
@@ -188,6 +188,5 @@ typedef EventListenerBinding<wxCommandEvent>	CmdEvt_ListenerBinding;
 #define EventSource_ImplementType( tname ) \
 	template void EventSource<tname>::Add(const EventSource<tname>::ListenerType &listener); \
 	template void EventSource<tname>::RemoveObject(const void* object); \
-	template void EventSource<tname>::Add(const EventSource<tname>::ListenerType &listener); \
 	template void EventSource<tname>::Dispatch(tname& evt); \
 	template void EventSource<tname>::_DispatchRaw( EventSource<tname>::ConstIterator iter, const EventSource<tname>::ConstIterator& iend, tname& evt );
