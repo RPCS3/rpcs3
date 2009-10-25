@@ -1,5 +1,5 @@
-file(GLOB yaml-reader_headers *.h)
-file(GLOB yaml-reader_sources *.cpp)
+file(GLOB yaml-reader_headers [a-z]*.h)
+file(GLOB yaml-reader_sources [a-z]*.cpp)
 
 add_executable(yaml-reader
 	${yaml-reader_sources}
