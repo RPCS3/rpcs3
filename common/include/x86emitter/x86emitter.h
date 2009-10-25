@@ -75,10 +75,10 @@
 #	define CallAddress( ptr ) \
 		( (void (*)()) &(ptr)[0] )()
 
-#	define FastCallAddress( ptr, param )
+#	define FastCallAddress( ptr, param ) \
 		( (void (*)( int )) &(ptr)[0] )( param )
 
-#	define FastCallAddress2( ptr, param1, param2 )
+#	define FastCallAddress2( ptr, param1, param2 ) \
 		( (void (*)( int, int )) &(ptr)[0] )( param1, param2 )
 
 #endif

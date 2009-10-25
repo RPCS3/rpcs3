@@ -83,6 +83,7 @@ struct LogSources
 		VU0:1,
 		COP0:1,		// TLB logs, PERF logs, Debug register logs
 		VIF:1,
+		VIFUnpack:1,
 		SPR:1,		// Scratchpad
 		GIF:1,
 		SIF:1,
@@ -98,8 +99,10 @@ struct LogSources
 		IopCnt:1,
 		Memcards:1,
 		Pad:1,
+		CDR:1,
 		CDVD:1,
 		GPU:1,		// PS1's GPU (currently unimplemented)
+		Cache:1,    // Unimplemented.
 		LogToConsole:1;
 };
 
@@ -119,6 +122,7 @@ extern bool SrcLog_ELF( const char* fmt, ... );
 extern bool SrcLog_VU0( const char* fmt, ... );
 
 extern bool SrcLog_VIF( const char* fmt, ... );
+extern bool SrcLog_VIFUNPACK( const char* fmt, ... );
 extern bool SrcLog_SPR( const char* fmt, ... );
 extern bool SrcLog_GIF( const char* fmt, ... );
 extern bool SrcLog_SIF( const char* fmt, ... );
@@ -126,6 +130,7 @@ extern bool SrcLog_IPU( const char* fmt, ... );
 extern bool SrcLog_VUM( const char* fmt, ... );
 extern bool SrcLog_RPC( const char* fmt, ... );
 extern bool SrcLog_EECNT( const char* fmt, ... );
+extern bool SrcLog_ISOFS( const char* fmt, ... );
 
 extern bool SrcLog_PSXCPU( const char* fmt, ... );
 extern bool SrcLog_PSXMEM( const char* fmt, ... );
@@ -139,6 +144,7 @@ extern bool SrcLog_PAD( const char* fmt, ... );
 extern bool SrcLog_CDR( const char* fmt, ... );
 extern bool SrcLog_CDVD( const char* fmt, ... );
 extern bool SrcLog_GPU( const char* fmt, ... );
+extern bool SrcLog_CACHE( const char* fmt, ... );
 
 #define CPU_LOG  (varLog.R5900) && SrcLog_CPU
 #define MEM_LOG  (varLog.Memory) && SrcLog_MEM
@@ -149,6 +155,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define VU0_LOG  (varLog.VU0) && SrcLog_VU0
 #define COP0_LOG (varLog.COP0) && SrcLog_COP0
 #define VIF_LOG  (varLog.VIF) && SrcLog_VIF
+#define VIFUNPACK_LOG  (varLog.VIFUnpack) && SrcLog_VIFUNPACK
 #define SPR_LOG  (varLog.SPR) && SrcLog_SPR
 #define GIF_LOG  (varLog.GIF) && SrcLog_GIF
 #define SIF_LOG  (varLog.SIF) && SrcLog_SIF
@@ -156,7 +163,7 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define VUM_LOG  (varLog.VUMacro) && SrcLog_VUM
 #define RPC_LOG  (varLog.RPC) && SrcLog_RPC
 #define EECNT_LOG (varLog.Counters) && SrcLog_EECNT
-#define ISOFS_LOG  (varLog.IsoFS) && SrcLog_RPC
+#define ISOFS_LOG  (varLog.IsoFS) && SrcLog_ISOFS
 
 #define PSXCPU_LOG  (varLog.R3000A) && SrcLog_PSXCPU
 #define PSXMEM_LOG  (varLog.IopMemory) && SrcLog_PSXMEM
@@ -165,15 +172,13 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define PSXDMA_LOG  (varLog.IopDMA) && SrcLog_PSXDMA
 #define PSXCNT_LOG  (varLog.IopCnt) && SrcLog_PSXCNT
 
-//memcard has the same number as PAD_LOG for now
 #define MEMCARDS_LOG (varLog.Memcards) && SrcLog_MEMCARDS
 #define PAD_LOG  (varLog.Pad) && SrcLog_PAD
-#define CDR_LOG  (varLog.CDVD) && SrcLog_CDR
+#define CDR_LOG  (varLog.CDR) && SrcLog_CDR
 #define GPU_LOG  (varLog.GPU) && SrcLog_GPU
-#define CDVD_LOG  SrcLog_CDVD
+#define CDVD_LOG  (varLog.CDVD) && SrcLog_CDVD
 
-// fixme - currently we don't log cache
-#define CACHE_LOG 0&&
+#define CACHE_LOG  (varLog.Cache) && SrcLog_CACHE
 
 #else // PCSX2_DEVBUILD
 
@@ -213,12 +218,4 @@ extern bool SrcLog_GPU( const char* fmt, ... );
 #define EMU_LOG 0&&
 #define CACHE_LOG 0&&
 #define MEMCARDS_LOG 0&&
-#endif
-
-//#define VIFUNPACKDEBUG //enable unpack debugging output
-
-#ifdef VIFUNPACKDEBUG
-#define VIFUNPACK_LOG VIF_LOG
-#else
-#define VIFUNPACK_LOG 0&&
 #endif

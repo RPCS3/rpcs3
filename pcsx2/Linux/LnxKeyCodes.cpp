@@ -238,6 +238,10 @@ int TranslateGDKtoWXK( u32 keysym )
 
         case GDK_KP_Separator:
             // FIXME: what is this?
+            // 
+            // Some numeric keyboards have a comma on them. I believe this is the symbol
+            // for the comma, to distinguish it from the period on the numeric keypad.
+            // --arcum42
             key_code = WXK_NUMPAD_SEPARATOR;
             break;
 
