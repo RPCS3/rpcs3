@@ -195,6 +195,7 @@ extern bool SrcLog_CACHE( const char* fmt, ... );
 #define VU0_LOG  0&&
 #define COP0_LOG 0&&
 #define VIF_LOG  0&&
+#define VIFUNPACK_LOG  0&&
 #define SPR_LOG  0&&
 #define GIF_LOG  0&&
 #define SIF_LOG  0&&

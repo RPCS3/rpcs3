@@ -25,7 +25,7 @@ class wxCommandEvent;
 #if defined( __GNUC__ ) && (__GNUC__ < 4 ) || ((__GNUC__ == 4) && ( __GNUC_MINOR__ <= 3 ))
 #	define __evt_fastcall
 #else
-#	define __evt_fastcall
+#	define __evt_fastcall _fastcall
 #endif
 
 // --------------------------------------------------------------------------------------
