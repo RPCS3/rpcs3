@@ -14,6 +14,7 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "App.h"
 #include "ConfigurationPanels.h"
 
 #include "Utilities/ScopedPtr.h"
@@ -27,6 +28,7 @@ using namespace wxHelpers;
 // ------------------------------------------------------------------------
 Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
+,	m_ReloadSettingsBinding( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnAppliedSettings ) )
 {
 	Connect( wxEVT_COMMAND_DIRPICKER_CHANGED,	wxFileDirPickerEventHandler(PluginSelectorPanel::OnFolderChanged), NULL, this );
 }
@@ -61,6 +63,11 @@ void Panels::BaseSelectorPanel::OnFolderChanged( wxFileDirPickerEvent& evt )
 	OnShown();
 }
 
+void Panels::BaseSelectorPanel::OnAppliedSettings( void* me, int& )
+{
+	if( me == NULL ) return;
+	((BaseSelectorPanel*)me)->ReloadSettings();
+}
 
 // ----------------------------------------------------------------------------
 Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth ) :

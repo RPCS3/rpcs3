@@ -168,8 +168,6 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 					evt.Veto();
 					return;
 				}
-				m_panel_PluginSel.ReloadSettings();
-				m_panel_BiosSel.ReloadSettings();
 			}
 		}
 	}

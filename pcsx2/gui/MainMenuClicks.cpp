@@ -186,17 +186,16 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 {
 	if( !SysHasValidState() ) return;
 
-	// Note: We manually update the menu here, even though it'll be updated again
-	// when the thread "officially" suspends or resumes (via listener callback), because
-	// the callback is tied to the actual thread status
-
-	if( CoreThread.Suspend() )
-		GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, _("Resume") );
-	else
+	if( !CoreThread.Suspend() )
 	{
 		sApp.SysExecute();
-		GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, _("Suspend") );
 	}
+	
+	// Disable the menu item.  The state of the menu is indeterminate until the core thread
+	// has responded (it updates status after the plugins are loaded and emulation has
+	// engaged successfully).
+
+	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, false );
 }
 
 void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)

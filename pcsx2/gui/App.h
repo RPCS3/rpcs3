@@ -531,6 +531,11 @@ DECLARE_APP(Pcsx2App)
 #define sMainFrame \
 	if( MainEmuFrame* __frame_ = GetMainFramePtr() ) (*__frame_)
 
+// Use this within the scope of a wxWindow (wxDialog or wxFrame).  If the window has a valid menu
+// bar, the command will run, otherwise it will be silently ignored. :)
+#define sMenuBar \
+	if( wxMenuBar* __menubar_ = GetMenuBar() ) (*__menubar_)
+
 
 // --------------------------------------------------------------------------------------
 //  External App-related Globals and Shortcuts

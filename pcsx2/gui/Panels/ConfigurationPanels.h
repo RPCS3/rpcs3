@@ -31,6 +31,7 @@
 #include "wxHelpers.h"
 #include "Utilities/SafeArray.h"
 #include "Utilities/Threading.h"
+#include "Utilities/EventSource.h"
 
 class wxListBox;
 
@@ -336,9 +337,10 @@ namespace Panels
 	class BaseSelectorPanel: public BaseApplicableConfigPanel
 	{
 	protected:
+		EventListenerBinding<int> m_ReloadSettingsBinding;
 
 	public:
-		virtual ~BaseSelectorPanel();
+		virtual ~BaseSelectorPanel() throw();
 		BaseSelectorPanel( wxWindow& parent, int idealWidth );
 
 		virtual bool Show( bool visible=true );
@@ -349,6 +351,9 @@ namespace Panels
 	protected:
 		virtual void DoRefresh()=0;
 		virtual bool ValidateEnumerationStatus()=0;
+		virtual void ReloadSettings()=0;
+
+		static void __evt_fastcall OnAppliedSettings( void* me, int& whatever );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -363,12 +368,13 @@ namespace Panels
 	public:
 		BiosSelectorPanel( wxWindow& parent, int idealWidth );
 		virtual ~BiosSelectorPanel();
-		void ReloadSettings();
 
 	protected:
 		virtual void Apply();
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
+
+		virtual void ReloadSettings();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -468,7 +474,6 @@ namespace Panels
 
 		void CancelRefresh();		// used from destructor, stays non-virtual
 		void Apply();
-		void ReloadSettings();
 
 	protected:
 		void OnConfigure_Clicked( wxCommandEvent& evt );
@@ -476,11 +481,14 @@ namespace Panels
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 
+		virtual void ReloadSettings();
+
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
 
 		int FileCount() const { return m_FileList->Count(); }
 		const wxString& GetFilename( int i ) const { return (*m_FileList)[i]; }
+
 		friend class EnumThread;
 	};
 }

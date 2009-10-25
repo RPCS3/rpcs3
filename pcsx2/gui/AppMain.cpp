@@ -39,6 +39,10 @@ DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
 DEFINE_EVENT_TYPE( pxEVT_CoreThreadStatus );
 DEFINE_EVENT_TYPE( pxEVT_FreezeThreadFinished );
 
+#include "Utilities/EventSource.inl"
+EventSource_ImplementType( IniInterface );
+EventSource_ImplementType( AppEventType );
+
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
 bool					UseDefaultSettingsFolder = true;

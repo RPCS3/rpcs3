@@ -272,7 +272,7 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 	++m_DialogIdents[GetId()];
 
 	if( hasContextHelp )
-		wxHelpProvider::Set( new wxSimpleHelpProvider() );
+		delete wxHelpProvider::Set( new wxSimpleHelpProvider() );
 
 	// Note: currently the Close (X) button doesn't appear to work in dialogs.  Docs indicate
 	// that it should, so I presume the problem is in wxWidgets and that (hopefully!) an updated

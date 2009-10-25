@@ -28,6 +28,9 @@
 #include "CDVD/CDVD.h"
 #include "System/PageFaultSource.h"
 
+#include "Utilities/EventSource.inl"
+EventSource_ImplementType( PageFaultInfo );
+
 SrcType_PageFault Source_PageFault;
 
 #if _MSC_VER

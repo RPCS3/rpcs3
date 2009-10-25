@@ -204,6 +204,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\EventSource.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\Exceptions.cpp"
 				>
 			</File>
@@ -427,6 +431,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\Utilities\EventSource.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\EventSource.inl"
 				>
 			</File>
 			<File

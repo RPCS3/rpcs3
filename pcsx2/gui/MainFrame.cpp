@@ -70,8 +70,7 @@ void MainEmuFrame::UpdateIsoSrcSelection()
 
 		jNO_DEFAULT
 	}
-
-	GetMenuBar()->Check( cdsrc, true );
+	sMenuBar.Check( cdsrc, true );
 	m_statusbar.SetStatusText( CDVD_SourceLabels[g_Conf->CdvdSource], 1 );
 }
 
@@ -86,7 +85,7 @@ void MainEmuFrame::UpdateIsoSrcFile()
 	label.Printf( L"%s -> %s", _("Iso"),
 		exists ? g_Conf->CurrentIso.c_str() : _("Empty")
 	);
-	GetMenuBar()->SetLabel( MenuId_Src_Iso, label );
+	sMenuBar.SetLabel( MenuId_Src_Iso, label );
 }
 
 void MainEmuFrame::LoadSaveRecentIsoList( IniInterface& conf )
@@ -321,13 +320,13 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
 	// can be factored into the window size (which ends up being background+status+menus)
 
-	m_menubar.Append( &m_menuBoot,		_("Boot") );
-	m_menubar.Append( &m_menuEmu,		_("Emulation") );
-	m_menubar.Append( &m_menuConfig,	_("Config") );
-	m_menubar.Append( &m_menuVideo,		_("Video") );
-	m_menubar.Append( &m_menuAudio,		_("Audio") );
-	m_menubar.Append( &m_menuMisc,		_("Misc") );
-	m_menubar.Append( &m_menuDebug,		_("Debug") );
+	m_menubar.Append( &m_menuBoot,		_("&Boot") );
+	m_menubar.Append( &m_menuEmu,		_("&System") );
+	m_menubar.Append( &m_menuConfig,	_("&Config") );
+	m_menubar.Append( &m_menuVideo,		_("&Video") );
+	m_menubar.Append( &m_menuAudio,		_("&Audio") );
+	m_menubar.Append( &m_menuMisc,		_("&Misc") );
+	m_menubar.Append( &m_menuDebug,		_("&Debug") );
 	SetMenuBar( &m_menubar );
 
 	// ------------------------------------------------------------------------
@@ -407,8 +406,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 		_("Closing PCSX2 may be hazardous to your health"));
 
 	// ------------------------------------------------------------------------
-	m_menuEmu.Append(MenuId_Sys_SuspendResume,		_("Suspend"),
-		_("Stops emulation dead in its tracks") )->Enable( SysHasValidState() );
+	m_menuEmu.Append(MenuId_Sys_SuspendResume,		_("Suspend") )->Enable( SysHasValidState() );
 
 	m_menuEmu.AppendSeparator();
 
@@ -428,7 +426,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(MenuId_Config_Settings,	_("General Settings") );
+	m_menuConfig.Append(MenuId_Config_Settings,	_("General &Settings") );
 	m_menuConfig.AppendSeparator();
 
 	m_menuConfig.Append(MenuId_Config_PAD,		_("PAD"),		&m_menuPad );
@@ -517,20 +515,44 @@ void MainEmuFrame::ReloadRecentLists()
 
 void MainEmuFrame::ApplyCoreStatus()
 {
-	bool valstate = SysHasValidState();
+	wxMenuBar& menubar( *GetMenuBar() );
+	if( !pxAssertMsg( &menubar!=NULL, "Mainframe menu bar is NULL!" ) ) return;
 
-	GetMenuBar()->Enable( MenuId_Sys_SuspendResume, SysHasValidState() );
-	GetMenuBar()->Enable( MenuId_Sys_Reset, SysHasValidState() || (g_plugins!=NULL) );
+	wxMenuItem& susres( *menubar.FindItem( MenuId_Sys_SuspendResume ) );
+	if( !pxAssertMsg( &susres!=NULL, "Suspend/Resume Menubar Item is NULL!" ) ) return;
 
-	GetMenuBar()->SetLabel( MenuId_Sys_SuspendResume, CoreThread.IsOpen() ? _("Suspend") : _("Resume") );
+	if( SysHasValidState() )
+	{
+		susres.Enable();
+		if( CoreThread.IsOpen() )
+		{
+			susres.SetHelp( _("Safely pauses emulation and preserves the PS2 state.") );
+			susres.SetText( _("Suspend") );
+		}
+		else
+		{
+			susres.SetHelp( _("Resumes the suspended emulation state.") );
+			susres.SetText( _("Resume") );
+		}
+	}
+	else
+	{
+		susres.Enable( false );
+		susres.SetHelp( _("No emulation state is active; cannot suspend or resume.") );
+	}
+		
+	menubar.Enable( MenuId_Sys_Reset, SysHasValidState() || (g_plugins!=NULL) );
 }
 
 void MainEmuFrame::ApplySettings()
 {
-	GetMenuBar()->Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
+	wxMenuBar& menubar( *GetMenuBar() );
+	if( !pxAssertMsg( &menubar!=NULL, "Mainframe menu bar is NULL!" ) ) return;
 
-	GetMenuBar()->Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
-	GetMenuBar()->Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );
+	menubar.Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
+
+	menubar.Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
+	menubar.Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );
 
 	if( m_RecentIsoList )
 	{
