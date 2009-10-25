@@ -180,10 +180,22 @@ static void __fastcall RegHandlerUNMAPPED(const u32* data)
 	const int regidx = ((u8*)data)[8];
 	
 	// Known "unknowns":
+	//  It's possible that anything above 0x63 should just be silently ignored, but in the
+	//  offhand chance not, I'm documenting known cases of unknown register use here.
+	//
+	//  0x7F -->
 	//   the bios likes to write to 0x7f using an EOP giftag with NLOOP set to 4.
-	//   Not sure what it's trying to accomplish exactly.  Ignoring seems to work fine.
+	//   Not sure what it's trying to accomplish exactly.  Ignoring seems to work fine,
+	//   and is probably the intended behavior (it's likely meant to be a NOP).
+	//
+	//  0xEE -->
+	//   .hack Infection [PAL confirmed, NTSC unknown] uses 0xee when you zoom the camera.
+	//   The use hasn't been researched yet so parameters are unknown.  Everything seems
+	//   to work fine as usual -- The 0xEE address in common programming terms is typically
+	//   left over uninitialized data, and this might be a case of that, which is to be
+	//   silently ignored.
 	
-	if( regidx != 0x7f )
+	if( regidx != 0x7f && regidx != 0xee )
 		Console.Notice( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
 }
 
