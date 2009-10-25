@@ -51,18 +51,16 @@ extern u8 s_maskwrite[256];
 template<const u32 VIFdmanum> void ProcessMemSkip(u32 size, u32 unpackType);
 template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size);
-template <const u32 VIFdmanum> void vuExecMicro(u32 addr);
+template<const u32 VIFdmanum> void vuExecMicro(u32 addr);
 extern __forceinline void vif0FLUSH();
 extern __forceinline void vif1FLUSH();
 
-__forceinline static u32 vif_size(u8 num)
+static __forceinline u32 vif_size(u8 num)
 {
     if (num == 0) 
         return 0x1000;
-    else if (num == 1)
+    else
         return 0x4000;
-    
-    return 0;
 }
 
 #endif

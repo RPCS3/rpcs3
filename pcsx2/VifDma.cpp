@@ -266,9 +266,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
 
-#ifdef PCSX2_DEBUG
 	u32 memsize = vif_size(VIFdmanum);
-#endif
 
 	if (VIFdmanum == 0)
 	{
@@ -286,7 +284,9 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 		vif = &vif1;
 		vifRow = g_vifmask.Row1;
 	}
+#ifdef PCSX2_DEBUG
 	pxAssert(v->addr < memsize);
+#endif
 
 	dest = (u32*)(VU->Mem + v->addr);
 
@@ -300,10 +300,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 	func = vif->usn ? ft->funcU : ft->funcS;
 
 	size <<= 2;
-
-#ifdef PCSX2_DEBUG
 	memsize = size;
-#endif
 
 	if(vifRegs->offset != 0)
 	{
@@ -319,7 +316,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 
 		if (((u32)size / (u32)ft->dsize) < ((u32)ft->qsize - vifRegs->offset))
 		{
-				DevCon.Error("Wasn't enough left size/dsize = %x left to write %x", (size / ft->dsize), (ft->qsize - vifRegs->offset));
+			DevCon.Error("Wasn't enough left size/dsize = %x left to write %x", (size / ft->dsize), (ft->qsize - vifRegs->offset));
 		}
 		unpacksize = min((size / ft->dsize), (ft->qsize - vifRegs->offset));
 
@@ -493,7 +490,9 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		vifMaskRegs = g_vif0Masks;
 		vif = &vif0;
 		vifRow = g_vifmask.Row0;
+#ifdef PCSX2_DEBUG
 		pxAssert(v->addr < memsize);
+#endif
 	}
 	else
 	{
@@ -503,7 +502,9 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		vifMaskRegs = g_vif1Masks;
 		vif = &vif1;
 		vifRow = g_vifmask.Row1;
+#ifdef PCSX2_DEBUG
 		pxAssert(v->addr < memsize);
+#endif
 	}
 
 	dest = (u32*)(VU->Mem + v->addr);
