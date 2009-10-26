@@ -35,7 +35,7 @@
 #define IDC_ASPECTRATIO                 2031
 #define IDC_SWTHREADS                   2032
 #define IDC_SCALE                       2033
-#define IDC_ACCURATESCALEMULTI          2033
+#define IDC_UPSCALE_MULTIPLIER          2033
 #define IDC_BROWSE                      2034
 #define IDC_FILENAME                    2035
 #define IDC_WIDTH                       2036

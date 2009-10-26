@@ -41,7 +41,7 @@ protected:
 	int m_interlace;
 	int m_aspectratio;
 	int m_filter;
-	int m_accurateScaleMulti;
+	int m_upscale_multiplier;
 	bool m_vsync;
 	bool m_nativeres;
 	bool m_aa1;
@@ -89,9 +89,9 @@ public:
 	{
 		return !m_nativeres && m_regs->PMODE.EN != 0; // upscale ratio depends on the display size, with no output it may not be set correctly (ps2 logo to game transition)
 	}
-	virtual int accurateScaleMulti()
+	virtual int upscale_Multiplier()
 	{
-		return m_accurateScaleMulti;
+		return m_upscale_multiplier;
 	}
 
 	// TODO : Implement proper locking here *if needed*  (not sure yet if it is) --air

@@ -2413,7 +2413,7 @@ bool GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
-bool GSState::IsBadFrame(int& skip)
+bool GSState::IsBadFrame(int& skip, int gamefix_skipdraw)
 {
 	GSFrameInfo fi;
 
@@ -2481,7 +2481,9 @@ bool GSState::IsBadFrame(int& skip)
 		{
 			if(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
 			{
-				// skip = 1;
+				if (gamefix_skipdraw > 0) {
+					skip = gamefix_skipdraw;
+				}
 			}
 
 			// depth textures (bully, mgs3s1 intro)

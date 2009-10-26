@@ -172,7 +172,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 	if(m_renderer->CanUpscale())
 	{
-		int multiplier = m_renderer->accurateScaleMulti();
+		int multiplier = m_renderer->upscale_Multiplier();
 		if (multiplier > 1) //it's limited to a maximum of 4 on reading the config
 		{
 			dst->m_texture->SetScale(GSVector2((float)multiplier, (float)multiplier));

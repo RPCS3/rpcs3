@@ -32,7 +32,8 @@ class GSRendererHW : public GSRendererT<Vertex>
 {
 	int m_width;
 	int m_height;
-	int m_accurateScaleMulti;
+	int m_upscale_multiplier;
+	int m_gamefix_skipdraw;
 	int m_skip;
 	bool m_reset;
 
@@ -531,8 +532,8 @@ protected:
 
 	void Draw()
 	{
-		if(IsBadFrame(m_skip)) return;
-
+		if(IsBadFrame(m_skip, m_gamefix_skipdraw)) return;
+	
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
 
@@ -710,22 +711,24 @@ public:
 		, m_tc(tc)
 		, m_width(1024)
 		, m_height(1024)
-		, m_accurateScaleMulti(1)
+		, m_upscale_multiplier(1)
 		, m_skip(0)
 		, m_reset(false)
+		, m_gamefix_skipdraw (0)
 	{
 		if(!m_nativeres)
 		{
 			m_width = theApp.GetConfig("resx", m_width);
 			m_height = theApp.GetConfig("resy", m_height);
-			m_accurateScaleMulti = theApp.GetConfig("accurateScaleMulti", m_accurateScaleMulti);
-			if (m_accurateScaleMulti > 4) m_accurateScaleMulti = 1; //use the normal upscale math
-			if (m_accurateScaleMulti > 1) 
+			m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", m_upscale_multiplier);
+			if (m_upscale_multiplier > 4) m_upscale_multiplier = 1; //use the normal upscale math
+			if (m_upscale_multiplier > 1) 
 			{
-				m_width = 1024 * m_accurateScaleMulti;
-				m_height = 1024 * m_accurateScaleMulti;
+				m_width  = 1024 * m_upscale_multiplier;
+				m_height = 1024 * m_upscale_multiplier;
 			}
 		}
+		m_gamefix_skipdraw = theApp.GetConfig("gamefix_skipdraw", m_gamefix_skipdraw);
 	}
 
 	virtual ~GSRendererHW()

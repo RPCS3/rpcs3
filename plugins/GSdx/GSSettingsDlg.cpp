@@ -63,7 +63,7 @@ GSSetting GSSettingsDlg::g_aspectratio[] =
 	{2, "16:9", NULL},
 };
 
-GSSetting GSSettingsDlg::g_accurateScaleMulti[] =
+GSSetting GSSettingsDlg::g_upscale_multiplier[] =
 {
 	{1, "1x (Use D3D internal Res)", NULL},
 	{2, "2x", NULL},
@@ -127,11 +127,11 @@ void GSSettingsDlg::OnInit()
 	ComboBoxInit(IDC_RENDERER, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
 	ComboBoxInit(IDC_INTERLACE, g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
 	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
-	ComboBoxInit(IDC_ACCURATESCALEMULTI, g_accurateScaleMulti, countof(g_accurateScaleMulti), theApp.GetConfig("accurateScaleMulti", 0));
+	ComboBoxInit(IDC_UPSCALE_MULTIPLIER, g_upscale_multiplier, countof(g_upscale_multiplier), theApp.GetConfig("upscale_multiplier", 1));
 
 	CheckDlgButton(m_hWnd, IDC_WINDOWED, theApp.GetConfig("windowed", 1));
 	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 2));
-	CheckDlgButton(m_hWnd, IDC_PALTEX, theApp.GetConfig("paltex", 1));
+	CheckDlgButton(m_hWnd, IDC_PALTEX, theApp.GetConfig("paltex", 0));
 	CheckDlgButton(m_hWnd, IDC_VSYNC, theApp.GetConfig("vsync", 0));
 	CheckDlgButton(m_hWnd, IDC_LOGZ, theApp.GetConfig("logz", 1));
 	CheckDlgButton(m_hWnd, IDC_FBA, theApp.GetConfig("fba", 1));
@@ -189,9 +189,13 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("AspectRatio", (int)data);
 		}
 		
-		if(ComboBoxGetSelData(IDC_ACCURATESCALEMULTI, data))
+		if(ComboBoxGetSelData(IDC_UPSCALE_MULTIPLIER, data))
 		{
-			theApp.SetConfig("accurateScaleMulti", (int)data);
+			theApp.SetConfig("upscale_multiplier", (int)data);
+		}
+		else
+		{
+			theApp.SetConfig("upscale_multiplier", 1);
 		}
 		
 		theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));
@@ -207,7 +211,8 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		theApp.SetConfig("resx", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_GETPOS, 0, 0));
 		theApp.SetConfig("resy", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_GETPOS, 0, 0));
 		theApp.SetConfig("swthreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
-
+		
+		//theApp.SetConfig("gamefix_skipdraw", 0);
 	}
 
 	return __super::OnCommand(hWnd, id, code);
@@ -237,7 +242,7 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_ACCURATESCALEMULTI), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_UPSCALE_MULTIPLIER), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw && !native);		
 		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);

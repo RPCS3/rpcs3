@@ -35,9 +35,9 @@ GSRenderer::GSRenderer()
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_nativeres = !!theApp.GetConfig("nativeres", 0);
 	
-	m_accurateScaleMulti = theApp.GetConfig("accurateScaleMulti", 1);
-	if(m_nativeres) m_accurateScaleMulti = 1;
-	else if (m_accurateScaleMulti > 4) m_accurateScaleMulti = 1;
+	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
+	if(m_nativeres) m_upscale_multiplier = 1;
+	else if (m_upscale_multiplier > 4) m_upscale_multiplier = 1;
 
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_blur = !!theApp.GetConfig("blur", 0);
