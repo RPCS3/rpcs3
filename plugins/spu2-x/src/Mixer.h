@@ -40,6 +40,21 @@ struct StereoOut32
 
 	StereoOut16 DownSample() const;
 
+	StereoOut32 operator*( const int& factor ) const
+	{
+		return StereoOut32(
+			Left * factor,
+			Right * factor
+		);
+	}
+
+	StereoOut32& operator*=( const int& factor )
+	{
+		Left *= factor;
+		Right *= factor;
+		return *this;
+	}
+	
 	StereoOut32 operator+( const StereoOut32& right ) const
 	{
 		return StereoOut32(

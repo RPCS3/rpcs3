@@ -21,8 +21,8 @@
 // Low pass filters: Change these to 32 for a speedup (benchmarks needed to see if
 // the speed gain is worth the quality drop)
 
-static LowPassFilter64 lowpass_left( 11000, SampleRate );
-static LowPassFilter64 lowpass_right( 11000, SampleRate );
+//static LowPassFilter64 lowpass_left( 11000, SampleRate );
+//static LowPassFilter64 lowpass_right( 11000, SampleRate );
 
 __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 {
@@ -44,14 +44,8 @@ void V_Core::Reverb_AdvanceBuffer()
 {
 	if( (Cycles & 1) && (EffectsBufferSize > 0) )
 	{
-		//ReverbX = RevbGetIndexer( thiscore, 1 );
 		ReverbX += 1;
-
 		if( ReverbX >= (u32)EffectsBufferSize ) ReverbX = 0;
-
-		//ReverbX += 1;
-		//if(ReverbX >= (u32)EffectsBufferSize )
-		//	ReverbX %= (u32)EffectsBufferSize;
 	}
 }
 
@@ -59,38 +53,37 @@ void V_Core::Reverb_AdvanceBuffer()
 
 StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 {
+	static StereoOut32 downbuf[8];
+	static StereoOut32 upbuf[8];
+	static int dbpos=0, ubpos=0;
+
+	static const s32 downcoeffs[8] =
+	{
+		1283,  5344,  10895, 15243,
+		15243, 10895,  5344,  1283
+	};
+
+	downbuf[dbpos] = Input;
+	dbpos = (dbpos+1) & 7;
+
 	// Reverb processing occurs at 24khz, so we skip processing every other sample,
 	// and use the previous calculation for this core instead.
 
-	if( (Cycles&1)==0 )
+	if( (Cycles&1) == 0 )
 	{
-		StereoOut32 retval( LastEffect );
-		
-		// Make sure and pass input through the LPF.  The result can be discarded.
-		// This gives the LPF a better sampling from which to kill offending frequencies.
+		// Important: Factor silence into the upsampler here, otherwise the reverb engine
+		// develops a nasty feedback loop.
 
-		lowpass_left.sample( Input.Left / 32768.0 );
-		lowpass_right.sample( Input.Right / 32768.0 );
-		
-		//LastEffect = Input;
-		return retval;
+		upbuf[ubpos] = StereoOut32::Empty;
+		ubpos = (ubpos+1) & 7;
 	}
-	else  
+	else
 	{
 		if( RevBuffers.NeedsUpdated )
 			UpdateEffectsBufferSize();
 
 		if( EffectsBufferSize <= 0 )
-		{
-			// StartA is past EndA, so effects are disabled.
-			//ConLog( " * SPU2: Effects disabled due to leapfrogged EffectsStart." );
-			
-			// Should we return zero here, or the input sample?
-			// Because reverb gets an *2 mul, returning input seems dangerous, so I opt for silence.
-			
-			//return Input;
 			return StereoOut32::Empty;
-		}
 
 		// Advance the current reverb buffer pointer, and cache the read/write addresses we'll be
 		// needing for this session of reverb.
@@ -131,42 +124,28 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const u32 mix_dest_b1 = RevbGetIndexer( RevBuffers.MIX_DEST_B1 );
 
 		// -----------------------------------------
-		//    End Buffer Pointers, Begin Reverb!
+		//         Begin Reverb Processing !
 		// -----------------------------------------
 
-		//StereoOut32 INPUT_SAMPLE( LastEffect + Input );
+		StereoOut32 INPUT_SAMPLE;
 
-		// Note: LowPass on the input!  Very important.  Some games like DDS get terrible feedback otherwise.
-		// Decisions, Decisions!  Should we mix in the 22khz sample skipped, or not?
-		// First one mixes in the 22hkz sample.  Second one does not.
+		for( int x=0; x<8; ++x )
+		{
+			INPUT_SAMPLE.Left += (downbuf[(dbpos+x)&7].Left * downcoeffs[x]);
+			INPUT_SAMPLE.Right += (downbuf[(dbpos+x)&7].Right * downcoeffs[x]);
+		}
 
-		/*StereoOut32 INPUT_SAMPLE(
-			(s32)(lowpass_left.sample( (Input.Left+LastEffect.Left) / 32768.0 ) * 32768.0),
-			(s32)(lowpass_right.sample( (Input.Right+LastEffect.Right) / 32768.0 ) * 32768.0)
-		);*/
+		INPUT_SAMPLE.Left  >>= 16;
+		INPUT_SAMPLE.Right >>= 16;
 
-		StereoOut32 INPUT_SAMPLE(
-			(s32)(lowpass_left.sample( Input.Left / 32768.0 ) * 32768.0),
-			(s32)(lowpass_right.sample( Input.Right / 32768.0 ) * 32768.0)
-		);
-		
 		const s32 IIR_INPUT_A0 = ((_spu2mem[src_a0] * Revb.IIR_COEF) + (INPUT_SAMPLE.Left * Revb.IN_COEF_L))>>16;
 		const s32 IIR_INPUT_A1 = ((_spu2mem[src_a1] * Revb.IIR_COEF) + (INPUT_SAMPLE.Right * Revb.IN_COEF_R))>>16;
 		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * Revb.IIR_COEF) + (INPUT_SAMPLE.Left * Revb.IN_COEF_L))>>16;
 		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * Revb.IIR_COEF) + (INPUT_SAMPLE.Right * Revb.IN_COEF_R))>>16;
 
-		const s32 IIR_A0 = (IIR_INPUT_A0 * Revb.IIR_ALPHA) + (_spu2mem[dest_a0] * (0x7fff - Revb.IIR_ALPHA));
-		const s32 IIR_A1 = (IIR_INPUT_A1 * Revb.IIR_ALPHA) + (_spu2mem[dest_a1] * (0x7fff - Revb.IIR_ALPHA));
-		const s32 IIR_B0 = (IIR_INPUT_B0 * Revb.IIR_ALPHA) + (_spu2mem[dest_b0] * (0x7fff - Revb.IIR_ALPHA));
-		const s32 IIR_B1 = (IIR_INPUT_B1 * Revb.IIR_ALPHA) + (_spu2mem[dest_b1] * (0x7fff - Revb.IIR_ALPHA));
-		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 >> 16 );
-		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 >> 16 );
-		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 >> 16 );
-		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 >> 16 );
-
 		// Faster single-mul approach to interpolation:
 		// (doesn't work yet -- breaks Digital Devil Saga badly)
-		/*const s32 IIR_A0 = IIR_INPUT_A0 + (((_spu2mem[dest_a0]-IIR_INPUT_A0) * Revb.IIR_ALPHA)>>16);
+		const s32 IIR_A0 = IIR_INPUT_A0 + (((_spu2mem[dest_a0]-IIR_INPUT_A0) * Revb.IIR_ALPHA)>>16);
 		const s32 IIR_A1 = IIR_INPUT_A1 + (((_spu2mem[dest_a1]-IIR_INPUT_A1) * Revb.IIR_ALPHA)>>16);
 		const s32 IIR_B0 = IIR_INPUT_B0 + (((_spu2mem[dest_b0]-IIR_INPUT_B0) * Revb.IIR_ALPHA)>>16);
 		const s32 IIR_B1 = IIR_INPUT_B1 + (((_spu2mem[dest_b1]-IIR_INPUT_B1) * Revb.IIR_ALPHA)>>16);
@@ -174,7 +153,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 );
 		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 );
 		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 );
-		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 );*/
+		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 );
 
 		const s32 ACC0 =
 			((_spu2mem[acc_src_a0] * Revb.ACC_COEF_A)) +
@@ -199,14 +178,21 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		_spu2mem[mix_dest_b0] = clamp_mix( (MulShr32(Revb.FB_ALPHA<<16, ACC0) - fb_xor_a0 - (_spu2mem[fb_src_b0] * Revb.FB_X)) >> 16 );
 		_spu2mem[mix_dest_b1] = clamp_mix( (MulShr32(Revb.FB_ALPHA<<16, ACC1) - fb_xor_a1 - (_spu2mem[fb_src_b1] * Revb.FB_X)) >> 16 );
 
-		LastEffect.Left  = _spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0];
-		LastEffect.Right = _spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1];
-
-		clamp_mix( LastEffect );
-		
-		//LastEffect.Left = (s32)(lowpass_left.sample( LastEffect.Left / 32768.0 ) * 32768.0);
-		//LastEffect.Right = (s32)(lowpass_right.sample( LastEffect.Right / 32768.0 ) * 32768.0);
-
-		return LastEffect;
+		upbuf[ubpos] = clamp_mix( StereoOut32(
+			_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0],	// left
+			_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1]	// right
+		) );
 	} 
+
+	StereoOut32 retval;
+
+	for( int x=0; x<8; ++x )
+	{
+		retval.Left  += (upbuf[(ubpos+x)&7].Left*downcoeffs[x]);
+		retval.Right += (upbuf[(ubpos+x)&7].Right*downcoeffs[x]);
+	}
+	retval.Left  >>= (16-1); /* -1 To adjust for the null padding. */
+	retval.Right >>= (16-1);
+
+	return retval;
 }

@@ -603,16 +603,19 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 
 			WaveDump::WriteCore( Index, CoreSrc_PreReverb, TW );
 
+			// Like all over volumes on SPU2, reverb coefficients and stuff are signed,
+			// range -50% to 50%, thus *2 is typically needed.  The question is: boost the
+			// volume before going into the reverb unit, or after coming out?
+
 			StereoOut32 RV( DoReverb( TW ) );
+			
+			// (to do pre-reverb boost, change TW above to TW*2 and remove the *2 below on RW.
+			//  This should give a sligntly deeper reverb effect, but may cause distortion on
+			//  some games.)
+			
+			// (fixme: this may not be true anymore with the new reverb system, needs testing)
 
-			// Volume boost after effects application.  Boosting volume prior to effects
-			// causes slight overflows in some games, and the volume boost is required.
-			// (like all over volumes on SPU2, reverb coefficients and stuff are signed,
-			// range -50% to 50%, thus *2 is needed)
-
-			RV.Left  *= 2;
-			RV.Right *= 2;
-
+			RV *= 2;
 			WaveDump::WriteCore( Index, CoreSrc_PostReverb, RV );
 
 			// Mix Dry+Wet
