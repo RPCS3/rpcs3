@@ -159,7 +159,7 @@ namespace PathDefs
 	}
 };
 
-const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx ) const
+wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 {
 	switch( folderidx )
 	{
@@ -174,6 +174,11 @@ const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 		jNO_DEFAULT
 	}
 	return Plugins;		// unreachable, but suppresses warnings.
+}
+
+const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx ) const
+{
+	return const_cast<FolderOptions*>( this )->operator[]( folderidx );
 }
 
 const bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
@@ -463,7 +468,9 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniScopedGroup path( ini, L"Folders" );
 
 	if( ini.IsSaving() )
+	{
 		ApplyDefaults();
+	}
 
 	IniBitBool( UseDefaultPlugins );
 	IniBitBool( UseDefaultSettings );
@@ -483,7 +490,15 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniEntry( RunIso );
 
 	if( ini.IsLoading() )
+	{
 		ApplyDefaults();
+
+		if( !UseAdminMode )
+		{
+			for( int i=0; i<FolderId_COUNT; ++i )
+				operator[]( (FoldersEnum_t)i ).Normalize();
+		}
+	}
 }
 
 // ------------------------------------------------------------------------

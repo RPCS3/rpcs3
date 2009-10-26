@@ -200,9 +200,9 @@ void IniSaver::Entry( const wxString& var, wxString& value, const wxString& defv
 
 void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
 {
-	if( value == defvalue )
+	/*if( value == defvalue )
 		m_Config.Write( var, wxString() );
-	else
+	else*/
 		m_Config.Write( var, value.ToString() );
 }
 

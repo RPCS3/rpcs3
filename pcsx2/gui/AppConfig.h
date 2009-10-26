@@ -84,6 +84,7 @@ public:
 		void Set( FoldersEnum_t folderidx, const wxString& src, bool useDefault );
 
 		const wxDirName& operator[]( FoldersEnum_t folderidx ) const;
+		wxDirName& operator[]( FoldersEnum_t folderidx );
 		const bool IsDefault( FoldersEnum_t folderidx ) const;
 	};
 

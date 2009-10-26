@@ -325,10 +325,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 					//Console.Status( " << Frame Removed!" );
 
 					if( PADupdate != NULL )
-					{
 						PADupdate(0);
-						PADupdate(1);
-					}
 				}
 				break;
 

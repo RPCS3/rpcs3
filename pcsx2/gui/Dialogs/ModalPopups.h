@@ -159,6 +159,20 @@ namespace Dialogs
 	};
 
 
+	// --------------------------------------------------------------------------------------
+	//  ExtensibleConfirmation Dialog
+	// --------------------------------------------------------------------------------------
+	// Purpose: This dialog is a simple framework for providing common popups that have three
+	// main sections of content:
+	//
+	//          [Upper Paragraph]
+	//     [Optional Interior Content]
+	//         [OK] [CANCEL] [ETC]
+	//
+	// The Upper Paragraph and buttons are specified in the constructor.  The Interior Content
+	// can be added by fetching the ExtensibleSizer provided by th created dialog.  Add your
+	// content, dance around a bit, call Fit(), and then ShowModal. :)
+
 	class ExtensibleConfirmation : public wxDialogWithHelpers
 	{
 	protected:
