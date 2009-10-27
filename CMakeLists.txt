@@ -67,6 +67,6 @@ if(UNIX)
 endif(UNIX)
 
 if(YAML_CPP_BUILD_TOOLS)
-	add_subdirectory (test)
+	add_subdirectory (yaml-reader)
 	add_subdirectory (util)
 endif(YAML_CPP_BUILD_TOOLS)
