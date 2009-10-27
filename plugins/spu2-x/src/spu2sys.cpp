@@ -1031,30 +1031,7 @@ static void __fastcall RegWrite_Core( u16 value )
 		break;
 
 		case REG_A_EEA:
-		
-			// Experimental Fix!! --> Disable reverb is EEA is set to 0.
-			//
-			// Rationale:
-			//  Digital Devil Saga on the PS2 has no reverb, but it *appears* to have all reverb
-			//  enabled (FX bit, volumes, etc. are all on).  On SPU2-X it's reverb settings inevitably
-			//  result in a nasty feedback loop, even when all other games work fine (the values for
-			//  buffers and coefficients are quite odd and unlike most other games' reverb settings, so
-			//  the feedback isn't surprising).  Theory: DDS is one of very few games that writes a 0 to
-			//  EffectsEndA, and so my guess is that this disables effects processing on this game.
-			//
-			//  Any other value written to the EEA serves as a page selector for the effects buffer, but
-			//  it's possible the SPU2 ignores EEA set to 0 before it even gets to the point of establishing
-			//  whether or not the 0xffff portion is a valid buffer position.
-			//
-		
-			if( value == 0 )
-			{
-				thiscore.EffectsEndA = 0;
-				fprintf( stderr, "* SPU2: EffectsEndA set to 0; disabling reverb effects!\n" );
-			}
-			else
-				thiscore.EffectsEndA = ((u32)value<<16) | 0xFFFF;
-
+			thiscore.EffectsEndA = ((u32)value<<16) | 0xFFFF;
 			thiscore.RevBuffers.NeedsUpdated = true;
 			thiscore.ReverbX = 0;
 		break;
