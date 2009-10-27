@@ -423,6 +423,10 @@ struct V_Core
 	u32				MADR;
 	u32				TADR;
 
+	StereoOut32 downbuf[8];
+	StereoOut32 upbuf[8];
+	int			dbpos, ubpos;
+
 	// HACK -- This is a temp buffer which is (or isn't?) used to circumvent some memory
 	// corruption that originates elsewhere in the plugin. >_<  The actual ADMA buffer
 	// is an area mapped to SPU2 main memory.

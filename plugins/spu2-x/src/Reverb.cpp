@@ -26,7 +26,7 @@
 
 __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 {
-	u32 pos = ReverbX + offset;
+	u32 pos = ReverbX + offset; //*4);
 
 	// Need to use modulus here, because games can and will drop the buffer size
 	// without notice, and it leads to offsets several times past the end of the buffer.
@@ -53,10 +53,6 @@ void V_Core::Reverb_AdvanceBuffer()
 
 StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 {
-	static StereoOut32 downbuf[8];
-	static StereoOut32 upbuf[8];
-	static int dbpos=0, ubpos=0;
-
 	static const s32 downcoeffs[8] =
 	{
 		1283,  5344,  10895, 15243,
@@ -75,7 +71,6 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		// develops a nasty feedback loop.
 
 		upbuf[ubpos] = StereoOut32::Empty;
-		ubpos = (ubpos+1) & 7;
 	}
 	else
 	{
@@ -83,7 +78,10 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 			UpdateEffectsBufferSize();
 
 		if( EffectsBufferSize <= 0 )
+		{
+			ubpos = (ubpos+1) & 7;
 			return StereoOut32::Empty;
+		}
 
 		// Advance the current reverb buffer pointer, and cache the read/write addresses we'll be
 		// needing for this session of reverb.
@@ -98,10 +96,10 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const u32 dest_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 );
 		const u32 dest_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 );
 		
-		const u32 dest2_a0 = RevbGetIndexer( RevBuffers.IIR_DEST_A0 + 1 );
-		const u32 dest2_a1 = RevbGetIndexer( RevBuffers.IIR_DEST_A1 + 1 );
-		const u32 dest2_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 + 1 );
-		const u32 dest2_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 + 1 );
+		const u32 dest2_a0 = RevbGetIndexer( RevBuffers.IIR_DEST_A0 + 4 );
+		const u32 dest2_a1 = RevbGetIndexer( RevBuffers.IIR_DEST_A1 + 4 );
+		const u32 dest2_b0 = RevbGetIndexer( RevBuffers.IIR_DEST_B0 + 4 );
+		const u32 dest2_b1 = RevbGetIndexer( RevBuffers.IIR_DEST_B1 + 4 );
 		
 		const u32 acc_src_a0 = RevbGetIndexer( RevBuffers.ACC_SRC_A0 );
 		const u32 acc_src_b0 = RevbGetIndexer( RevBuffers.ACC_SRC_B0 );
@@ -143,11 +141,19 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * Revb.IIR_COEF) + (INPUT_SAMPLE.Left * Revb.IN_COEF_L))>>16;
 		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * Revb.IIR_COEF) + (INPUT_SAMPLE.Right * Revb.IN_COEF_R))>>16;
 
+		/*const s32 IIR_A0 = (IIR_INPUT_A0 * Revb.IIR_ALPHA) + (_spu2mem[dest_a0] * (0xffff - Revb.IIR_ALPHA));
+		const s32 IIR_A1 = (IIR_INPUT_A1 * Revb.IIR_ALPHA) + (_spu2mem[dest_a1] * (0xffff - Revb.IIR_ALPHA));
+		const s32 IIR_B0 = (IIR_INPUT_B0 * Revb.IIR_ALPHA) + (_spu2mem[dest_b0] * (0xffff - Revb.IIR_ALPHA));
+		const s32 IIR_B1 = (IIR_INPUT_B1 * Revb.IIR_ALPHA) + (_spu2mem[dest_b1] * (0xffff - Revb.IIR_ALPHA));
+		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 >> 16 );
+		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 >> 16 );
+		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 >> 16 );
+		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 >> 16 );*/
+
 		const s32 IIR_A0 = IIR_INPUT_A0 + (((_spu2mem[dest_a0]-IIR_INPUT_A0) * Revb.IIR_ALPHA)>>16);
 		const s32 IIR_A1 = IIR_INPUT_A1 + (((_spu2mem[dest_a1]-IIR_INPUT_A1) * Revb.IIR_ALPHA)>>16);
 		const s32 IIR_B0 = IIR_INPUT_B0 + (((_spu2mem[dest_b0]-IIR_INPUT_B0) * Revb.IIR_ALPHA)>>16);
 		const s32 IIR_B1 = IIR_INPUT_B1 + (((_spu2mem[dest_b1]-IIR_INPUT_B1) * Revb.IIR_ALPHA)>>16);
-
 		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 );
 		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 );
 		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 );
@@ -164,23 +170,31 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 			((_spu2mem[acc_src_a1] * Revb.ACC_COEF_A)) +
 			((_spu2mem[acc_src_b1] * Revb.ACC_COEF_B)) +
 			((_spu2mem[acc_src_c1] * Revb.ACC_COEF_C)) +
-			((_spu2mem[acc_src_d1] * Revb.ACC_COEF_D)))
-		 >> 16;
+			((_spu2mem[acc_src_d1] * Revb.ACC_COEF_D))
+		) >> 16;
 
-		const s32 acc_fb_mix_a = ACC0 + ((_spu2mem[fb_src_a0] - ACC0) * Revb.FB_ALPHA);
-		const s32 acc_fb_mix_b = ACC1 + ((_spu2mem[fb_src_a1] - ACC1) * Revb.FB_ALPHA);
 
 		const s32 FB_A0 = (_spu2mem[fb_src_a0] * Revb.FB_ALPHA) >> 16;
 		const s32 FB_A1 = (_spu2mem[fb_src_a1] * Revb.FB_ALPHA) >> 16;
 
 		_spu2mem[mix_dest_a0] = clamp_mix( ACC0 - FB_A0 );
 		_spu2mem[mix_dest_a1] = clamp_mix( ACC1 - FB_A1 );
-		_spu2mem[mix_dest_b0] = clamp_mix( (acc_fb_mix_a - (_spu2mem[fb_src_b0] * Revb.FB_X)) >> 16 );
-		_spu2mem[mix_dest_b1] = clamp_mix( (acc_fb_mix_b - (_spu2mem[fb_src_b1] * Revb.FB_X)) >> 16 );
 
+		const s32 acc_fb_mix_a = ACC0 + (((_spu2mem[fb_src_a0] - ACC0) * Revb.FB_ALPHA)>>16);
+		const s32 acc_fb_mix_b = ACC1 + (((_spu2mem[fb_src_a1] - ACC1) * Revb.FB_ALPHA)>>16);
+		_spu2mem[mix_dest_b0] = clamp_mix( acc_fb_mix_a - ((_spu2mem[fb_src_b0] * Revb.FB_X) >> 16) );
+		_spu2mem[mix_dest_b1] = clamp_mix( acc_fb_mix_b - ((_spu2mem[fb_src_b1] * Revb.FB_X) >> 16) );
+
+		//const s32 fb_xor_a0 = _spu2mem[fb_src_a0] * ( Revb.FB_ALPHA ^ 0x8000 );
+		//const s32 fb_xor_a1 = _spu2mem[fb_src_a1] * ( Revb.FB_ALPHA ^ 0x8000 );
+		//_spu2mem[mix_dest_b0] = clamp_mix( (MulShr32(Revb.FB_ALPHA<<16, ACC0) - fb_xor_a0 - (_spu2mem[fb_src_b0] * Revb.FB_X)) >> 16 );
+		//_spu2mem[mix_dest_b1] = clamp_mix( (MulShr32(Revb.FB_ALPHA<<16, ACC1) - fb_xor_a1 - (_spu2mem[fb_src_b1] * Revb.FB_X)) >> 16 );
+
+		// Note: According Neill these should be divided by 3, but currently the
+		// output is way too quiet for that to fly.
 		upbuf[ubpos] = clamp_mix( StereoOut32(
-			_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0],	// left
-			_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1]	// right
+			(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]) / 2,	// left
+			(_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1]) / 2		// right
 		) );
 	} 
 
@@ -193,6 +207,8 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 	}
 	retval.Left  >>= (16-1); /* -1 To adjust for the null padding. */
 	retval.Right >>= (16-1);
+
+	ubpos = (ubpos+1) & 7;
 
 	return retval;
 }

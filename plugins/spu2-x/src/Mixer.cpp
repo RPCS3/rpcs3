@@ -583,51 +583,43 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	TD.Left += Ext.Left & DryGate.ExtL;
 	TD.Right += Ext.Right & DryGate.ExtR;
 
-	if( !EffectsDisabled )
+	if( EffectsDisabled ) return TD;
+	
+	// ----------------------------------------------------------------------------
+	//    Reverberation Effects Processing
+	// ----------------------------------------------------------------------------
+	// The FxEnable bit is, like many other things in the SPU2, only a partial systems
+	// toogle.  It disables the *inputs* to the reverb, such that the reverb is fed silence,
+	// but it does not actually disable reverb effects processing.  In practical terms
+	// this means that when a game turns off reverb, an existing reverb effect should trail
+	// off naturally, instead of being chopped off dead silent.
+	
+	Reverb_AdvanceBuffer();
+
+	StereoOut32 TW;
+
+	if( FxEnable )
 	{
-		//Reverb pointer advances regardless of the FxEnable bit...
-		Reverb_AdvanceBuffer();
+		// Mix Input, Voice, and External data:
 
-		if( FxEnable )
-		{
-			// Mix Input, Voice, and External data:
-			StereoOut32 TW(
-				Input.Left & WetGate.InpL,
-				Input.Right & WetGate.InpR
-			);
+		TW.Left = Input.Left & WetGate.InpL;
+		TW.Right = Input.Right & WetGate.InpR;
 
-			TW.Left += Voices.Wet.Left & WetGate.SndL;
-			TW.Right += Voices.Wet.Right & WetGate.SndR;
-			TW.Left += Ext.Left & WetGate.ExtL;
-			TW.Right += Ext.Right & WetGate.ExtR;
-
-			WaveDump::WriteCore( Index, CoreSrc_PreReverb, TW );
-
-			// Like all over volumes on SPU2, reverb coefficients and stuff are signed,
-			// range -50% to 50%, thus *2 is typically needed.  The question is: boost the
-			// volume before going into the reverb unit, or after coming out?
-
-			StereoOut32 RV( DoReverb( TW ) );
-			
-			// (to do pre-reverb boost, change TW above to TW*2 and remove the *2 below on RW.
-			//  This should give a sligntly deeper reverb effect, but may cause distortion on
-			//  some games.)
-			
-			// (fixme: this may not be true anymore with the new reverb system, needs testing)
-
-			RV *= 2;
-			WaveDump::WriteCore( Index, CoreSrc_PostReverb, RV );
-
-			// Mix Dry+Wet
-			return TD + ApplyVolume( RV, FxVol );
-		}
-		else
-		{
-			WaveDump::WriteCore( Index, CoreSrc_PreReverb, 0, 0 );
-			WaveDump::WriteCore( Index, CoreSrc_PostReverb, 0, 0 );
-		}
+		TW.Left += Voices.Wet.Left & WetGate.SndL;
+		TW.Right += Voices.Wet.Right & WetGate.SndR;
+		TW.Left += Ext.Left & WetGate.ExtL;
+		TW.Right += Ext.Right & WetGate.ExtR;
 	}
-	return TD;
+
+	WaveDump::WriteCore( Index, CoreSrc_PreReverb, TW );
+
+	StereoOut32 RV( DoReverb( TW ) );
+
+	WaveDump::WriteCore( Index, CoreSrc_PostReverb, RV );
+
+	// Mix Dry + Wet
+	// (master volume is applied later to the result of both outputs added together).
+	return TD + ApplyVolume( RV, FxVol );
 }
 
 // used to throttle the output rate of cache stat reports
@@ -659,8 +651,7 @@ __forceinline void Mix()
 		Ext = StereoOut32::Empty;
 	else
 	{
-		Ext = ApplyVolume( Ext, Cores[0].MasterVol );
-		clamp_mix( Ext );
+		Ext = clamp_mix( ApplyVolume( Ext, Cores[0].MasterVol ) );
 	}
 
 	// Commit Core 0 output to ram before mixing Core 1:
@@ -690,7 +681,7 @@ __forceinline void Mix()
 		// I suspect this approach (clamping at the higher volume) is more true to the
 		// PS2's real implementation.
 
-		clamp_mix( Out, SndOutVolumeShift );
+		Out = clamp_mix( Out, SndOutVolumeShift );
 	}
 
 	// Update spdif (called each sample)
