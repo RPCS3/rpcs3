@@ -161,18 +161,18 @@ void V_Core::Reset( int index )
 
 s32 V_Core::EffectsBufferIndexer( s32 offset ) const
 {
-	u32 pos = EffectsStartA + (offset*4);
+	u32 pos = EffectsStartA + offset;
 
 	// Need to use modulus here, because games can and will drop the buffer size
 	// without notice, and it leads to offsets several times past the end of the buffer.
 
 	if( pos > EffectsEndA )
 	{
-		pos = EffectsStartA + ((offset*4) % EffectsBufferSize);
+		pos = EffectsStartA + (offset % EffectsBufferSize);
 	}
 	else if( pos < EffectsStartA )
 	{
-		pos = EffectsEndA+1 - ((offset*4) % EffectsBufferSize );
+		pos = EffectsEndA+1 - (offset % EffectsBufferSize );
 	}
 	return pos;
 }
