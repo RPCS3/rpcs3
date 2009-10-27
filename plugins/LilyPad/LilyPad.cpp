@@ -267,6 +267,8 @@ void UpdateEnabledDevices(int updateList = 0) {
 BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 	hInst = hInstance;
 	if (fdwReason == DLL_PROCESS_ATTACH) {
+		InitializeCriticalSection( &updateLock );
+
 		DisableThreadLibraryCalls(hInstance);
 	}
 	else if (fdwReason == DLL_PROCESS_DETACH) {
@@ -275,6 +277,7 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD fdwReason, void* lpvReserved) {
 		PADshutdown();
 		UninitHid();
 		UninitLibUsb();
+		DeleteCriticalSection( &updateLock );
 	}
 	return 1;
 }
@@ -671,8 +674,6 @@ void CALLBACK PADshutdown() {
 		pads[i&1][i>>1].initialized = 0;
 	portInitialized[0] = portInitialized[1] = 0;
 	UnloadConfigs();
-	
-	DeleteCriticalSection( &updateLock );
 }
 
 inline void StopVibrate() {
@@ -756,8 +757,6 @@ s32 CALLBACK PADinit(u32 flags) {
 	ClearKeyQueue();
 	// Just in case, when resuming emulation.
 	ReleaseModifierKeys();
-
-	InitializeCriticalSection( &updateLock );
 
 	DEBUG_TEXT_OUT("LilyPad initialized\n\n");
 	return 0;
