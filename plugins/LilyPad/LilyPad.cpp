@@ -420,24 +420,7 @@ void Update(unsigned int port, unsigned int slot) {
 	unsigned int t = timeGetTime();
 	if (t - LastCheck < 15 || !openCount) return;
 
-	// pcsx2wx only -->
-	// The following codeblock is problematic on many systems.  Every 10-25 seconds LilyPad becomes unresponsive,
-	// or "sticks", for about a second.  I logged the FORCE_UPDATE handler and it seems to be executing
-	// consistently, even during the stuck second, so I'm really not sure why Lilypad gets stuck at all.
-	// I tried and checked just about every other variable here -- forcing all the stateUpdated's to 0,
-	// and setting the above LastCheck threshold to 5ms.  Some things made the behavior worse.  Nothing
-	// made it better. :(
-	//
-	// In addition to removing this block of code, I've installed a mutex lock (critical section) above,
-	// which fixes both this issue and a more serious issue that sometimes caused Lilypad to become
-	// completely unresponsive for extended periods (due to multiple threads reading and writing to
-	// LastCheck at the same time, corrupting its contents).  I'm not sure if this violates some rules
-	// or requirements regarding thread affinity and devices supported by lilypad (all online info
-	// indicates DInput is entirely safe, but I don't know about other device types).
-	//
-	//   --air
-	
-	/*if (windowThreadId != GetCurrentThreadId()) {
+	if (windowThreadId != GetCurrentThreadId()) {
 		if (stateUpdated[0] < 0) {
 			if (!updateQueued) {
 				updateQueued = 1;
@@ -448,9 +431,7 @@ void Update(unsigned int port, unsigned int slot) {
 			stateUpdated[0] --;
 		}
 		return;
-	}*/
-
-	//updateQueued = 0;
+	}
 
 	LastCheck = t;
 
@@ -623,9 +604,11 @@ void Update(unsigned int port, unsigned int slot) {
 	for (i=0; i<8; i++) {
 		pads[i&1][i>>1].sum = s[i&1][i>>1];
 	}
-	
+
 	padReadKeyUpdated[0] = padReadKeyUpdated[1] = padReadKeyUpdated[2] = 1;
-	stateUpdated[0]--;
+
+	if( stateUpdated[0] > 0 )
+		--stateUpdated[0];
 }
 
 void CALLBACK PADupdate(int port) {
