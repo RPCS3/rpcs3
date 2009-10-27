@@ -1,4 +1,3 @@
-#include "crt.h"
 #include "map.h"
 #include "node.h"
 #include "scanner.h"

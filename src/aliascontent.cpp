@@ -1,4 +1,3 @@
-#include "crt.h"
 #include "aliascontent.h"
 
 namespace YAML

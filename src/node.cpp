@@ -1,4 +1,3 @@
-#include "crt.h"
 #include "node.h"
 #include "token.h"
 #include "scanner.h"

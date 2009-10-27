@@ -1,4 +1,3 @@
-#include "crt.h"
 #include "parserstate.h"
 
 namespace YAML

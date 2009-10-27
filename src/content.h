@@ -23,8 +23,8 @@ namespace YAML
 	class Content
 	{
 	public:
-		Content();
-		virtual ~Content();
+		Content() {}
+		virtual ~Content() {}
 		
 		virtual Content *Clone() const = 0;
 

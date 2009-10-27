@@ -1,4 +1,3 @@
-#include "crt.h"
 #include "scalar.h"
 #include "scanner.h"
 #include "token.h"
