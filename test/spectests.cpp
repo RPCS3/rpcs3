@@ -1628,6 +1628,196 @@ namespace Test {
 			YAML_ASSERT(doc == "1st non-empty\n2nd non-empty 3rd non-empty");
 			return true;
 		}
+		
+		// 7.13
+		TEST FlowSequence()
+		{
+			std::string input =
+				"- [ one, two, ]\n"
+				"- [three ,four]";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0][0] == "one");
+			YAML_ASSERT(doc[0][1] == "two");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1][0] == "three");
+			YAML_ASSERT(doc[1][1] == "four");
+			return true;
+		}
+		
+		// 7.14
+		TEST FlowSequenceEntries()
+		{
+			std::string input =
+				"[\n"
+				"\"double\n"
+				" quoted\", 'single\n"
+				"           quoted',\n"
+				"plain\n"
+				" text, [ nested ],\n"
+				"single: pair,\n"
+				"]";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 5);
+			YAML_ASSERT(doc[0] == "double quoted");
+			YAML_ASSERT(doc[1] == "single quoted");
+			YAML_ASSERT(doc[2] == "plain text");
+			YAML_ASSERT(doc[3].size() == 1);
+			YAML_ASSERT(doc[3][0] == "nested");
+			YAML_ASSERT(doc[4].size() == 1);
+			YAML_ASSERT(doc[4]["single"] == "pair");
+			return true;
+		}
+		
+		// 7.15
+		TEST FlowMappings()
+		{
+			std::string input =
+				"- { one : two , three: four , }\n"
+				"- {five: six,seven : eight}";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0]["one"] == "two");
+			YAML_ASSERT(doc[0]["three"] == "four");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1]["five"] == "six");
+			YAML_ASSERT(doc[1]["seven"] == "eight");
+			return true;
+		}
+		
+		// 7.16
+		TEST FlowMappingEntries()
+		{
+			std::string input =
+				"{\n"
+				"? explicit: entry,\n"
+				"implicit: entry,\n"
+				"?\n"
+				"}";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["explicit"] == "entry");
+			YAML_ASSERT(doc["implicit"] == "entry");
+			YAML_ASSERT(IsNull(doc[YAML::Null]));
+			return true;
+		}
+		
+		// 7.17
+		TEST FlowMappingSeparateValues()
+		{
+			std::string input =
+				"{\n"
+				"unquoted : \"separate\",\n"
+				"http://foo.com,\n"
+				"omitted value:,\n"
+				": omitted key,\n"
+				"}";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc["unquoted"] == "separate");
+			YAML_ASSERT(IsNull(doc["http://foo.com"]));
+			YAML_ASSERT(IsNull(doc["omitted value"]));
+			YAML_ASSERT(doc[YAML::Null] == "omitted key");
+			return true;
+		}
+		
+		// 7.18
+		TEST FlowMappingAdjacentValues()
+		{
+			std::string input =
+				"{\n"
+				"\"adjacent\":value,\n"
+				"\"readable\":value,\n"
+				"\"empty\":\n"
+				"}";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["adjacent"] == "value");
+			YAML_ASSERT(doc["readable"] == "value");
+			YAML_ASSERT(IsNull(doc["empty"]));
+			return true;
+		}
+		
+		// 7.19
+		TEST SinglePairFlowMappings()
+		{
+			std::string input =
+				"[\n"
+				"foo: bar\n"
+				"]";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["foo"] == "bar");
+			return true;
+		}
+		
+		// 7.20
+		TEST SinglePairExplicitEntry()
+		{
+			std::string input =
+				"[\n"
+				"? foo\n"
+				" bar : baz\n"
+				"]";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["foo"] == "bar");
+			return true;
+		}
+		
+		// 7.21
+		TEST SinglePairImplicitEntries()
+		{
+			std::string input =
+				"- [ YAML : separate ]\n"
+				"- [ : empty key entry ]\n"
+				"- [ {JSON: like}:adjacent ]";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0][0].size() == 1);
+			YAML_ASSERT(doc[0][0]["YAML"] == "separate");
+			YAML_ASSERT(doc[1].size() == 1);
+			YAML_ASSERT(doc[1][0].size() == 1);
+			YAML_ASSERT(doc[1][0][YAML::Null] == "empty key entry");
+			YAML_ASSERT(doc[2].size() == 1);
+			YAML_ASSERT(doc[2][0].size() == 1);
+			StringMap key;
+			key._["JSON"] = "like";
+			YAML_ASSERT(doc[2][0][key] == "adjacent");
+			return true;
+		}
+		
+		// 7.22
+		TEST InvalidImplicitKeys()
+		{
+			std::string input =
+				"[ foo\n"
+				" bar: invalid,"; // Note: we don't check (on purpose) the >1K chars for an implicit key
+			
+			try {
+				PARSE(doc, input);
+			} catch(const YAML::Exception& e) {
+				if(e.msg == YAML::ErrorMsg::END_OF_SEQ);
+					return true;
+				
+				throw;
+			}
+			return "  no exception thrown";
+		}
 	}
 
 	bool RunSpecTests()
@@ -1712,6 +1902,16 @@ namespace Test {
 		RunSpecTest(&Spec::PlainCharacters, "7.10", "Plain Characters", passed, total);
 		RunSpecTest(&Spec::PlainImplicitKeys, "7.11", "Plain Implicit Keys", passed, total);
 		RunSpecTest(&Spec::PlainLines, "7.12", "Plain Lines", passed, total);
+		RunSpecTest(&Spec::FlowSequence, "7.13", "Flow Sequence", passed, total);
+		RunSpecTest(&Spec::FlowSequenceEntries, "7.14", "Flow Sequence Entries", passed, total);
+		RunSpecTest(&Spec::FlowMappings, "7.15", "Flow Mappings", passed, total);
+		RunSpecTest(&Spec::FlowMappingEntries, "7.16", "Flow Mapping Entries", passed, total);
+		RunSpecTest(&Spec::FlowMappingSeparateValues, "7.17", "Flow Mapping Separate Values", passed, total);
+		RunSpecTest(&Spec::FlowMappingAdjacentValues, "7.18", "Flow Mapping Adjacent Values", passed, total);
+		RunSpecTest(&Spec::SinglePairFlowMappings, "7.19", "Single Pair Flow Mappings", passed, total);
+		RunSpecTest(&Spec::SinglePairExplicitEntry, "7.20", "Single Pair Explicit Entry", passed, total);
+		RunSpecTest(&Spec::SinglePairImplicitEntries, "7.21", "Single Pair Implicit Entries", passed, total);
+		RunSpecTest(&Spec::InvalidImplicitKeys, "7.22", "Invalid Implicit Keys", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
