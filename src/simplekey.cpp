@@ -38,9 +38,6 @@ namespace YAML
 	{
 		if(!m_simpleKeyAllowed)
 			return false;
-		
-		if(InFlowContext() && m_flows.top() != FLOW_MAP)
-			return false;
 
 		return !ExistsActiveSimpleKey();
 	}
@@ -68,10 +65,15 @@ namespace YAML
 		SimpleKey key(INPUT.mark(), GetFlowLevel());
 
 		// first add a map start, if necessary
-		key.pIndent = PushIndentTo(INPUT.column(), IndentMarker::MAP);
-		if(key.pIndent) {
-			key.pIndent->status = IndentMarker::UNKNOWN;
-			key.pMapStart = key.pIndent->pStartToken;
+		if(InBlockContext()) {
+			key.pIndent = PushIndentTo(INPUT.column(), IndentMarker::MAP);
+			if(key.pIndent) {
+				key.pIndent->status = IndentMarker::UNKNOWN;
+				key.pMapStart = key.pIndent->pStartToken;
+				key.pMapStart->status = Token::UNVERIFIED;
+			}
+		} else if(m_flows.top() == FLOW_SEQ) {
+			key.pMapStart = PushToken(Token::FLOW_MAP_COMPACT);
 			key.pMapStart->status = Token::UNVERIFIED;
 		}
 

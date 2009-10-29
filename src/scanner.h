@@ -54,11 +54,13 @@ namespace YAML
 		void ScanToNextToken();
 		void StartStream();
 		void EndStream();
+		Token *PushToken(Token::TYPE type);
 		
 		bool InFlowContext() const { return !m_flows.empty(); }
 		bool InBlockContext() const { return m_flows.empty(); }
 		int GetFlowLevel() const { return m_flows.size(); }
 		
+		Token::TYPE GetStartTokenFor(IndentMarker::INDENT_TYPE type) const;
 		IndentMarker *PushIndentTo(int column, IndentMarker::INDENT_TYPE type);
 		void PopIndentToHere();
 		void PopAllIndents();

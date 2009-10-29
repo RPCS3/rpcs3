@@ -65,6 +65,7 @@ namespace YAML
 		switch(pScanner->peek().type) {
 			case Token::BLOCK_MAP_START: ParseBlock(pScanner, state); break;
 			case Token::FLOW_MAP_START: ParseFlow(pScanner, state); break;
+			case Token::FLOW_MAP_COMPACT: ParseCompact(pScanner, state); break;
 			default: break;
 		}
 	}
@@ -148,6 +149,35 @@ namespace YAML
 		}
 	}
 
+	// ParseCompact
+	// . Single key: value pair in a flow sequence
+	void Map::ParseCompact(Scanner *pScanner, const ParserState& state)
+	{
+		// eat start token
+		pScanner->pop();
+
+		if(pScanner->empty())
+			throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP_FLOW);
+
+		Token& token = pScanner->peek();
+		std::auto_ptr <Node> pKey(new Node), pValue(new Node);
+
+		// grab key (if non-null)
+		if(token.type == Token::KEY) {
+			pScanner->pop();
+			pKey->Parse(pScanner, state);
+		}
+			
+		// now grab value (optional)
+		if(!pScanner->empty() && pScanner->peek().type == Token::VALUE) {
+			pScanner->pop();
+			pValue->Parse(pScanner, state);
+		}
+			
+		// assign the map with the actual pointers
+		m_data[pKey.release()] = pValue.release();
+	}
+	
 	void Map::Write(Emitter& out) const
 	{
 		out << BeginMap;

@@ -253,6 +253,22 @@ namespace YAML
 		m_endedStream = true;
 	}
 
+	Token *Scanner::PushToken(Token::TYPE type)
+	{
+		m_tokens.push(Token(type, INPUT.mark()));
+		return &m_tokens.back();
+	}
+
+	Token::TYPE Scanner::GetStartTokenFor(IndentMarker::INDENT_TYPE type) const
+	{
+		switch(type) {
+			case IndentMarker::SEQ: return Token::BLOCK_SEQ_START;
+			case IndentMarker::MAP: return Token::BLOCK_MAP_START;
+			case IndentMarker::NONE: assert(false); break;
+		}
+		assert(false);
+	}
+
 	// PushIndentTo
 	// . Pushes an indentation onto the stack, and enqueues the
 	//   proper token (sequence start or mapping start).
@@ -274,13 +290,7 @@ namespace YAML
 			return 0;
 
 		// push a start token
-		if(type == IndentMarker::SEQ)
-			m_tokens.push(Token(Token::BLOCK_SEQ_START, INPUT.mark()));
-		else if(type == IndentMarker::MAP)
-			m_tokens.push(Token(Token::BLOCK_MAP_START, INPUT.mark()));
-		else
-			assert(false);
-		indent.pStartToken = &m_tokens.back();
+		indent.pStartToken = PushToken(GetStartTokenFor(type));
 
 		// and then the indent
 		m_indents.push(&indent);

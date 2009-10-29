@@ -103,8 +103,12 @@ namespace YAML
 			throw ParserException(INPUT.mark(), ErrorMsg::FLOW_END);
 
 		// we might have a solo entry in the flow context
-		if(VerifySimpleKey())
-			m_tokens.push(Token(Token::VALUE, INPUT.mark()));
+		if(InFlowContext()) {
+			if(m_flows.top() == FLOW_MAP && VerifySimpleKey())
+				m_tokens.push(Token(Token::VALUE, INPUT.mark()));
+			else if(m_flows.top() == FLOW_SEQ)
+				InvalidateSimpleKey();
+		}
 
 		m_simpleKeyAllowed = false;
 
@@ -125,9 +129,13 @@ namespace YAML
 	// FlowEntry
 	void Scanner::ScanFlowEntry()
 	{
-		 // we might have a solo entry in the flow context
-		if(VerifySimpleKey())
-			m_tokens.push(Token(Token::VALUE, INPUT.mark()));
+		// we might have a solo entry in the flow context
+		if(InFlowContext()) {
+			if(m_flows.top() == FLOW_MAP && VerifySimpleKey())
+				m_tokens.push(Token(Token::VALUE, INPUT.mark()));
+			else if(m_flows.top() == FLOW_SEQ)
+				InvalidateSimpleKey();
+		}
 		
 		m_simpleKeyAllowed = true;
 
