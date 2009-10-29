@@ -57,7 +57,7 @@ void psxMemReset()
 	jASSUME( psxMemWLUT != NULL );
 	jASSUME( m_psxAllMem != NULL );
 
-	DbgCon.Status( "psxMemReset > Resetting core memory!" );
+	DbgCon.WriteLn( "IOP Resetting physical ram..." );
 
 	memzero_ptr<0x2000 * sizeof(uptr) * 2>( psxMemWLUT );	// clears both allocations, RLUT and WLUT
 	memzero_ptr<m_psxMemSize>( m_psxAllMem );

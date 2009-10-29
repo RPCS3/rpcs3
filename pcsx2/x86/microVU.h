@@ -93,7 +93,7 @@ public:
 		if (listI < 7) return;
 		microBlockLink* linkI = &blockList;
 		for (int i = 0; i <= listI; i++) {
-			DevCon.Status("[%04x][Block #%d][q=%02d][p=%02d][xgkick=%d][vi15=%08x][viBackup=%02d][flags=%02x][exactMatch=%x]",
+			DevCon.WriteLn( Color_Green, "[%04x][Block #%d][q=%02d][p=%02d][xgkick=%d][vi15=%08x][viBackup=%02d][flags=%02x][exactMatch=%x]",
 			pc, i, linkI->block->pState.q, linkI->block->pState.p, linkI->block->pState.xgkick, linkI->block->pState.vi15,
 			linkI->block->pState.viBackUp, linkI->block->pState.flags, linkI->block->pState.needExactMatch);
 			linkI = linkI->next;

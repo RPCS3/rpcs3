@@ -73,7 +73,7 @@ __forceinline void gsInterrupt()
 	{
 		if (!dmacRegs->ctrl.DMAE) 
 		{
-			Console.Notice("gs dma masked, re-scheduling...");
+			Console.Warning("gs dma masked, re-scheduling...");
 			// re-raise the int shortly in the future
 			CPU_INT( 2, 64 );
 			return;
@@ -124,7 +124,7 @@ int  _GIFchain()
 		//must increment madr and clear qwc, else it loops
 		gif->madr += gif->qwc * 16;
 		gif->qwc = 0;
-		Console.Notice( "Hackfix - NULL GIFchain" );
+		Console.Warning( "Hackfix - NULL GIFchain" );
 		return -1;
 	}
 

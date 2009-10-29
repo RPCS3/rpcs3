@@ -380,7 +380,7 @@ microVUt(void) analyzeBranchVI(mV, int xReg, bool &infoVar) {
 			infoVar = 1;
 		}
 		iPC = bPC;
-		DevCon.Status("microVU%d: Branch VI-Delay (%d) [%04x]", getIndex, i, xPC);
+		Console.WriteLn( Color_Green, "microVU%d: Branch VI-Delay (%d) [%04x]", getIndex, i, xPC);
 	}
 	else iPC = bPC;
 }
@@ -394,7 +394,7 @@ microVUt(int) mVUbranchCheck(mV) {
 		incPC(2);
 		mVUlow.evilBranch = 1;
 		mVUregs.blockType = 2;
-		DevCon.Status("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU->index, xPC);
+		Console.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU->index, xPC);
 		return 1;
 	}
 	incPC(2);

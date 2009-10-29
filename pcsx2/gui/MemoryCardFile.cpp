@@ -191,7 +191,7 @@ s32 FileMemoryCard::Save( uint port, uint slot, const u8 *src, u32 adr, int size
 	for (int i=0; i<size; i++)
 	{
 		if ((m_currentdata[i] & src[i]) != src[i])
-			Console.Notice("MemoryCard: (warning) writing to uncleared data.");
+			Console.Warning("MemoryCard: (warning) writing to uncleared data.");
 		m_currentdata[i] &= src[i];
 	}
 

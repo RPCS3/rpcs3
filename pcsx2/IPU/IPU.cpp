@@ -282,11 +282,11 @@ __forceinline u64 ipuRead64(u32 mem)
 			break;
 
 		ipucase(IPU_CTRL):
-			DevCon.Notice("reading 64bit IPU ctrl");
+			DevCon.Warning("reading 64bit IPU ctrl");
 			break;
 
 		ipucase(IPU_BP):
-			DevCon.Notice("reading 64bit IPU top");
+			DevCon.Warning("reading 64bit IPU top");
 			break;
 
 		ipucase(IPU_TOP): // IPU_TOP

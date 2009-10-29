@@ -60,7 +60,7 @@ mem32_t __fastcall iopHwRead32_generic( u32 addr )	{ return _generic_read<mem32_
 void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f801xxx:
-	jASSUME( (addr >> 12) == 0x1f801 );
+	pxAssert( (addr >> 12) == 0x1f801 );
 
 	u32 masked_addr = pgmsk( addr );
 
@@ -81,12 +81,12 @@ void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 		default:
 			if( masked_addr >= 0x100 && masked_addr < 0x130 )
 			{
-				DevCon.Notice( "HwWrite8 to Counter16 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DevCon.Warning( "HwWrite8 to Counter16 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				psxHu8( addr ) = val;
 			}
 			else if( masked_addr >= 0x480 && masked_addr < 0x4a0 )
 			{
-				DevCon.Notice( "HwWrite8 to Counter32 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DevCon.Warning( "HwWrite8 to Counter32 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				psxHu8( addr ) = val;
 			}
 			else if( masked_addr >= pgmsk(HW_USB_START) && masked_addr < pgmsk(HW_USB_END) )
@@ -109,7 +109,7 @@ static int g_pbufi;
 void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
-	jASSUME( (addr >> 12) == 0x1f803 );
+	pxAssert( (addr >> 12) == 0x1f803 );
 
 	if( addr == 0x1f80380c )	// STDOUT
 	{
@@ -119,7 +119,7 @@ void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 			( val == '\n' && g_pbufi != 0 ) )
 		{
 			g_pbuf[g_pbufi] = 0;
-			DevCon.WriteLn( Color_Cyan, g_pbuf );
+			Console.WriteLn( ConColor_IOP, g_pbuf );
 			g_pbufi = 0;
 		}
 		else if( val != '\n' )
@@ -135,7 +135,7 @@ void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
-	jASSUME( (addr >> 12) == 0x1f808 );
+	pxAssert( (addr >> 12) == 0x1f808 );
 
 	if( addr == HW_SIO2_DATAIN )	// sio2 serial data feed input
 		sio2_serialIn( val );
@@ -153,10 +153,10 @@ template< typename T >
 static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 {
 	// all addresses are assumed to be prefixed with 0x1f801xxx:
-	jASSUME( (addr >> 12) == 0x1f801 );
+	pxAssert( (addr >> 12) == 0x1f801 );
 
 	// all addresses should be aligned to the data operand size:
-	jASSUME(
+	pxAssert(
 		( sizeof(T) == 2 && (addr & 1) == 0 ) ||
 		( sizeof(T) == 4 && (addr & 3) == 0 )
 	);
@@ -237,7 +237,7 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 			SPU2write( addr, val );
 		else
 		{
-			DevCon.Notice( "HwWrite32 to SPU2? (addr=0x%08X) .. What manner of trickery is this?!", addr );
+			DevCon.Warning( "HwWrite32 to SPU2? (addr=0x%08X) .. What manner of trickery is this?!", addr );
 			//psxHu(addr) = val;
 		}
 	}
@@ -466,7 +466,7 @@ void __fastcall iopHwWrite16_Page1( u32 addr, mem16_t val )
 void __fastcall iopHwWrite16_Page3( u32 addr, mem16_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
-	jASSUME( (addr >> 12) == 0x1f803 );
+	pxAssert( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
 	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, val );
 }
@@ -474,7 +474,7 @@ void __fastcall iopHwWrite16_Page3( u32 addr, mem16_t val )
 void __fastcall iopHwWrite16_Page8( u32 addr, mem16_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
-	jASSUME( (addr >> 12) == 0x1f808 );
+	pxAssert( (addr >> 12) == 0x1f808 );
 	psxHu16(addr) = val;
 	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, val );
 }
@@ -489,7 +489,7 @@ void __fastcall iopHwWrite32_Page1( u32 addr, mem32_t val )
 void __fastcall iopHwWrite32_Page3( u32 addr, mem32_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
-	jASSUME( (addr >> 12) == 0x1f803 );
+	pxAssert( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
 	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem32_t>( addr ), addr, val );
 }
@@ -497,7 +497,7 @@ void __fastcall iopHwWrite32_Page3( u32 addr, mem32_t val )
 void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 {
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
-	jASSUME( (addr >> 12) == 0x1f808 );
+	pxAssert( (addr >> 12) == 0x1f808 );
 
 	u32 masked_addr = addr & 0x0fff;
 

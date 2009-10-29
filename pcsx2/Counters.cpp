@@ -256,7 +256,7 @@ u32 UpdateVSyncRate()
 		{
 			m_iTicks = ticks;
 			gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-			Console.Status( limiterMsg, EmuConfig.Video.FpsLimit, 0 );
+			Console.WriteLn( limiterMsg, EmuConfig.Video.FpsLimit, 0 );
 		}
 	}
 	else
@@ -266,7 +266,7 @@ u32 UpdateVSyncRate()
 		{
 			m_iTicks = ticks;
 			gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-			Console.Status( limiterMsg, vSyncInfo.Framerate/50, (vSyncInfo.Framerate*2)%100 );
+			Console.WriteLn( limiterMsg, vSyncInfo.Framerate/50, (vSyncInfo.Framerate*2)%100 );
 		}
 	}
 

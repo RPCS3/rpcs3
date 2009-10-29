@@ -1727,9 +1727,9 @@ void testPrintOverflow() {
 	tempRegX[2] &= 0xff800000;
 	tempRegX[3] &= 0xff800000;
 	if ( (tempRegX[0] == 0x7f800000) || (tempRegX[1] == 0x7f800000) || (tempRegX[2] == 0x7f800000) || (tempRegX[3] == 0x7f800000) )
-		Console.Notice( "VU OVERFLOW!: Changing to +Fmax!!!!!!!!!!!!" );
+		Console.Warning( "VU OVERFLOW!: Changing to +Fmax!!!!!!!!!!!!" );
 	if ( (tempRegX[0] == 0xff800000) || (tempRegX[1] == 0xff800000) || (tempRegX[2] == 0xff800000) || (tempRegX[3] == 0xff800000) )
-		Console.Notice( "VU OVERFLOW!: Changing to -Fmax!!!!!!!!!!!!" );
+		Console.Warning( "VU OVERFLOW!: Changing to -Fmax!!!!!!!!!!!!" );
 }
 
 // Outputs to the console when overflow has occured.

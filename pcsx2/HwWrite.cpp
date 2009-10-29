@@ -147,7 +147,7 @@ void hwWrite8(u32 mem, u8 value)
 	}
 
 	if( mem >= IPU_CMD && mem < D0_CHCR )
-		DevCon.Notice( "hwWrite8 to 0x%x = 0x%x", mem, value );
+		DevCon.Warning( "hwWrite8 to 0x%x = 0x%x", mem, value );
 
 	switch (mem) {
 		case RCNT0_COUNT: rcntWcount(0, value); break;
@@ -180,7 +180,7 @@ void hwWrite8(u32 mem, u8 value)
 			     ( value == '\n' && sio_count != 0 ))
 			{
 				sio_buffer[sio_count] = 0;
-				Console.WriteLn( Color_Cyan, sio_buffer );
+				Console.WriteLn( ConColor_EE, sio_buffer );
 				sio_count = 0;
 			}
 			else if( value != '\n' )
@@ -197,7 +197,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("VIF0dma EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit VIF0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit VIF0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x1;
 			}
 			DmaExec8(dmaVIF0, mem, value);
@@ -207,7 +207,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("VIF1dma EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit VIF1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit VIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x2;
 			}
 			if(value & 0x1) vif1.done = false;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
@@ -218,7 +218,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("GSdma EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit GIF DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit GIF DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x4;
 			}
 			DmaExec8(dmaGIF, mem, value);
@@ -228,7 +228,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("IPU0dma EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit IPU0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit IPU0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x8;
 			}
 			DmaExec8(dmaIPU0, mem, value);
@@ -238,7 +238,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("IPU1dma EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit IPU1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit IPU1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x10;
 			}
 			DmaExec8(dmaIPU1, mem, value);
@@ -249,7 +249,7 @@ void hwWrite8(u32 mem, u8 value)
 //			if (value == 0) psxSu32(0x30) = 0x40000;
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit SIF0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit SIF0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x20;
 			}
 			DmaExec8(dmaSIF0, mem, value);
@@ -259,7 +259,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("SIF1dma EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit SIF1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit SIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x40;
 			}
 			DmaExec8(dmaSIF1, mem, value);
@@ -269,7 +269,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("SIF2dma EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit SIF2 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit SIF2 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x80;
 			}
 			DmaExec8(dmaSIF2, mem, value);
@@ -279,7 +279,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("fromSPRdma8 EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit SPR0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit SPR0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x100;
 			}
 			DmaExec8(dmaSPR0, mem, value);
@@ -289,7 +289,7 @@ void hwWrite8(u32 mem, u8 value)
 			DMA_LOG("toSPRdma8 EXECUTE, value=0x%x", value);
 			if ((value & 0x1) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("8 bit SPR1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("8 bit SPR1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x200;
 			}
 			DmaExec8(dmaSPR1, mem, value);
@@ -348,7 +348,7 @@ void hwWrite8(u32 mem, u8 value)
 __forceinline void hwWrite16(u32 mem, u16 value)
 {
 	if( mem >= IPU_CMD && mem < D0_CHCR )
-		Console.Notice( "hwWrite16 to %x", mem );
+		Console.Warning( "hwWrite16 to %x", mem );
 
 	switch(mem)
 	{
@@ -374,7 +374,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("VIF0dma %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit VIF0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit VIF0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x1;
 			}
 			DmaExec16(dmaVIF0, mem, value);
@@ -384,7 +384,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("VIF1dma CHCR %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit VIF1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit VIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x2;
 			}
 			if(value & 0x100) vif1.done = false;  //This must be done here! some games (ala Crash of the Titans) pause the dma to start MFIFO
@@ -428,7 +428,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("0x%8.8x hwWrite32: GSdma %lx", cpuRegs.cycle, value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit GIF DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit GIF DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x4;
 			}
 			DmaExec16(dmaGIF, mem, value);
@@ -470,7 +470,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("IPU0dma %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit IPU0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit IPU0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x8;
 			}
 			DmaExec16(dmaIPU0, mem, value);
@@ -502,7 +502,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("IPU1dma %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit IPU1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit IPU1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x10;
 			}
 			DmaExec16(dmaIPU1, mem, value);
@@ -534,7 +534,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 //			if (value == 0) psxSu32(0x30) = 0x40000;
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit SIF0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit SIF0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x20;
 			}
 			DmaExec16(dmaSIF0, mem, value);
@@ -548,7 +548,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("SIF1dma %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit SIF1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit SIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x40;
 			}
 			DmaExec16(dmaSIF1, mem, value);
@@ -580,7 +580,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("SIF2dma %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit SIF2 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit SIF2 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x80;
 			}
 			DmaExec16(dmaSIF2, mem, value);
@@ -594,7 +594,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("fromSPRdma %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit SPR0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit SPR0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x100;
 			}
 			DmaExec16(dmaSPR0, mem, value);
@@ -604,7 +604,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 			DMA_LOG("toSPRdma %lx", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("16 bit SPR1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("16 bit SPR1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x200;
 			}
 			DmaExec16(dmaSPR1, mem, value);
@@ -743,7 +743,7 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 		break;
 
 		case GIF_STAT: // stat is readonly
-			DevCon.Notice("*PCSX2* GIFSTAT write value = 0x%x (readonly, ignored)", value);
+			DevCon.Warning("*PCSX2* GIFSTAT write value = 0x%x (readonly, ignored)", value);
 		break;
 
 		default:
@@ -762,7 +762,7 @@ void __fastcall hwWrite32_page_0B( u32 mem, u32 value )
 			DMA_LOG("IPU0dma EXECUTE, value=0x%x\n", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit IPU0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit IPU0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x8;
 			}
 			DmaExec(dmaIPU0, mem, value);
@@ -779,7 +779,7 @@ void __fastcall hwWrite32_page_0B( u32 mem, u32 value )
 			DMA_LOG("IPU1dma EXECUTE, value=0x%x\n", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit IPU1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit IPU1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x10;
 			}
 			DmaExec(dmaIPU1, mem, value);
@@ -930,7 +930,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 		
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit VIF0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit VIF0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x1;
 			}
 			
@@ -943,7 +943,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 		
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit VIF1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit VIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x2;
 			}
 			
@@ -967,7 +967,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DMA_LOG("GIFdma EXECUTE, value=0x%x", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit GIF DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit GIF DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x4;
 			}
 			DmaExec(dmaGIF, mem, value);
@@ -986,7 +986,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			//if (value == 0) psxSu32(0x30) = 0x40000;
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit SIF0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit SIF0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x20;
 			}
 			DmaExec(dmaSIF0, mem, value);
@@ -996,7 +996,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DMA_LOG("SIF1dma EXECUTE, value=0x%x", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit SIF1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit SIF1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x40;
 			}
 			DmaExec(dmaSIF1, mem, value);
@@ -1011,7 +1011,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DMA_LOG("SIF2dma EXECUTE, value=0x%x", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit SIF2 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit SIF2 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x80;
 			}
 			DmaExec(dmaSIF2, mem, value);
@@ -1021,7 +1021,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DMA_LOG("SPR0dma EXECUTE (fromSPR), value=0x%x", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit SPR0 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit SPR0 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x100;
 			}
 			DmaExec(dmaSPR0, mem, value);
@@ -1031,7 +1031,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			DMA_LOG("SPR1dma EXECUTE (toSPR), value=0x%x", value);
 			if ((value & 0x100) && !dmacRegs->ctrl.DMAE) 
 			{
-				DevCon.Notice("32 bit SPR1 DMA Start while DMAC Disabled\n");
+				DevCon.Warning("32 bit SPR1 DMA Start while DMAC Disabled\n");
 				QueuedDMA |= 0x200;
 			}
 			DmaExec(dmaSPR1, mem, value);
@@ -1081,7 +1081,7 @@ void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
 	switch (mem)
 	{
 		case GIF_CTRL:
-			DevCon.Status("GIF_CTRL write 64", value);
+			DevCon.WriteLn("GIF_CTRL write 64", value);
 			psHu32(mem) = value & 0x8;
 			if(value & 0x1)
 				gsGIFReset();
@@ -1099,7 +1099,7 @@ void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
 			// set/clear bits 0 and 2 as per the GIF_MODE value.
 			const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
 			
-			Console.Status("GIFMODE64 %x", value);
+			Console.WriteLn("GIFMODE64 %x", value);
 
 			psHu64(GIF_MODE) = value;
 			psHu32(GIF_STAT) &= ~bitmask;

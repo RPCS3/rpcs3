@@ -96,7 +96,7 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 		break;
 
 		case wxLOG_Warning:
-			Console.Notice( wxString(L"wx > ") + szString );
+			Console.Warning( wxString(L"wx > ") + szString );
 		break;
     }
 }
@@ -111,8 +111,8 @@ void ConsoleTestThread::ExecuteTaskInThread()
 	{
 		// Two lines, both formatted, and varied colors.  This makes for a fairly realistic
 		// worst case scenario (without being entirely unrealistic).
-		Console.WriteLn( wxsFormat( L"This is a threaded logging test. Something bad could happen... %d", ++numtrack ) );
-		Console.Status( wxsFormat( L"Testing high stress loads %s", L"(multi-color)" ) );
+		Console.WriteLn( L"This is a threaded logging test. Something bad could happen... %d", ++numtrack );
+		Console.Warning( L"Testing high stress loads %s", L"(multi-color)" );
 		Yield( 0 );
 	}
 }
@@ -165,7 +165,7 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 //   (actual font used is the system-selected fixed-width font)
 //
 ConsoleLogFrame::ColorArray::ColorArray( int fontsize ) :
-	m_table( 8 )
+	m_table( ConsoleColors_Count )
 {
 	Create( fontsize );
 }
@@ -177,18 +177,27 @@ ConsoleLogFrame::ColorArray::~ColorArray()
 
 void ConsoleLogFrame::ColorArray::Create( int fontsize )
 {
-	wxFont fixed( fontsize, wxMODERN, wxNORMAL, wxNORMAL );
-	wxFont fixedB( fontsize, wxMODERN, wxNORMAL, wxBOLD );
+	const wxFont fixed( fontsize, wxMODERN, wxNORMAL, wxNORMAL );
+	const wxFont fixedB( fontsize, wxMODERN, wxNORMAL, wxBOLD );
 
 	// Standard R, G, B format:
 	new (&m_table[Color_Black])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Red])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixedB );
+	new (&m_table[Color_Red])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Green])		wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Blue])		wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixed );
-	new (&m_table[Color_Yellow])	wxTextAttr( wxColor( 160, 160,   0 ), wxNullColour, fixedB );
-	new (&m_table[Color_Cyan])		wxTextAttr( wxColor(   0, 140, 140 ), wxNullColour, fixed );
 	new (&m_table[Color_Magenta])	wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixed );
-	new (&m_table[Color_White])		wxTextAttr( wxColor( 128, 128, 128 ), wxNullColour, fixed );
+	new (&m_table[Color_Orange])	wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixed );
+	new (&m_table[Color_Gray])		wxTextAttr( wxColor( 108, 108, 108 ), wxNullColour, fixed );
+
+	new (&m_table[Color_Cyan])		wxTextAttr( wxColor( 128, 180, 180 ), wxNullColour, fixed );
+	new (&m_table[Color_Yellow])	wxTextAttr( wxColor( 180, 180, 128 ), wxNullColour, fixed );
+	new (&m_table[Color_White])		wxTextAttr( wxColor( 160, 160, 160 ), wxNullColour, fixed );
+
+	new (&m_table[Color_StrongBlack])	wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongRed])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongGreen])	wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongBlue])	wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongOrange])	wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixedB );
 }
 
 void ConsoleLogFrame::ColorArray::Cleanup()
@@ -213,7 +222,7 @@ void ConsoleLogFrame::ColorArray::SetFont( int fontsize )
 	Create( fontsize );
 }
 
-static const ConsoleColors DefaultConsoleColor = Color_White;
+static const ConsoleColors DefaultConsoleColor = Color_Black;
 
 enum MenuIDs_t
 {

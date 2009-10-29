@@ -140,8 +140,8 @@ const wxChar* __fastcall pxGetTranslation( const wxChar* message )
 	{
 		if( wxStrlen( message ) > 96 )
 		{
-			Console.Notice( "pxGetTranslation: Long message detected, maybe use pxE() instead?" );
-			Console.Status( wxsFormat( L"\tMessage: %s", message ) );
+			Console.Warning( "pxGetTranslation: Long message detected, maybe use pxE() instead?" );
+			Console.WriteLn( Color_Green, L"\tMessage: %s", message );
 		}
 	}
 	return wxGetTranslation( message );
@@ -152,7 +152,7 @@ bool i18n_SetLanguage( int wxLangId )
 {
 	if( !wxLocale::IsAvailable( wxLangId ) )
 	{
-		Console.Notice( "Invalid Language Identifier (wxID=%d).", wxLangId );
+		Console.Warning( "Invalid Language Identifier (wxID=%d).", wxLangId );
 		return false;
 	}
 
@@ -160,8 +160,8 @@ bool i18n_SetLanguage( int wxLangId )
 
 	if( !locale->IsOk() )
 	{
-		Console.Notice( wxsFormat( L"SetLanguage: '%s' [%s] is not supported by the operating system",
-			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str() )
+		Console.Warning( L"SetLanguage: '%s' [%s] is not supported by the operating system",
+			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
 		);
 
 		safe_delete( locale );
@@ -170,8 +170,8 @@ bool i18n_SetLanguage( int wxLangId )
 
 	if( !IsEnglish(wxLangId) && !locale->AddCatalog( L"pcsx2main" ) )
 	{
-		Console.Notice( wxsFormat( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
-			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str() )
+		Console.Warning( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
+			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
 		);
 		safe_delete( locale );
 		return false;

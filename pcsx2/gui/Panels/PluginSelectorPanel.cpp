@@ -109,7 +109,7 @@ public:
 			if ( ((version >> 16)&0xff) == tbl_PluginInfo[pluginTypeIndex].version )
 				return true;
 
-			Console.Notice("%s Plugin %s:  Version %x != %x", info.shortname, m_plugpath.c_str(), 0xff&(version >> 16), info.version);
+			Console.Warning("%s Plugin %s:  Version %x != %x", info.shortname, m_plugpath.c_str(), 0xff&(version >> 16), info.version);
 		}
 		return false;
 	}
@@ -551,7 +551,7 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 
 void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 {
-	DbgCon.WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
+	DbgCon.WriteLn( L"\tEnumerating Plugin: " + m_master.GetFilename( curidx ) );
 
 	try
 	{
@@ -574,7 +574,7 @@ void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 	}
 	catch( Exception::BadStream& ex )
 	{
-		Console.Status( ex.FormatDiagnosticMessage() );
+		Console.Warning( ex.FormatDiagnosticMessage() );
 	}
 
 	wxCommandEvent yay( pxEVT_EnumeratedNext );
@@ -585,7 +585,7 @@ void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 
 void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 {
-	DevCon.Status( "Plugin Enumeration Thread started..." );
+	DevCon.WriteLn( "Plugin Enumeration Thread started..." );
 
 	wxGetApp().Ping();		// gives the gui thread some time to refresh
 	Yield( 3 );
@@ -602,5 +602,5 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 	done.SetClientData( this );
 	m_master.GetEventHandler()->AddPendingEvent( done );
 
-	DevCon.Status( "Plugin Enumeration Thread complete!" );
+	DevCon.WriteLn( "Plugin Enumeration Thread complete!" );
 }

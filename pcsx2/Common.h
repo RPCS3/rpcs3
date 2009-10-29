@@ -36,9 +36,10 @@
 #include "Elfheader.h"
 #include "Patch.h"
 
+static const ConsoleColors ConColor_IOP = Color_Yellow;
+static const ConsoleColors ConColor_EE = Color_Cyan;
 
 // Some homeless externs.  This is as good a spot as any for now...
-
 
 extern void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);
 extern u32  g_sseVUMXCSR, g_sseMXCSR;

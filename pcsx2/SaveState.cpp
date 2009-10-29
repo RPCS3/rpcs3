@@ -325,7 +325,7 @@ bool SaveStateBase::FreezeSection()
 			Freeze( size );
 			m_tagspace[sizeof(m_tagspace)-1] = 0;
 
-			Console.Notice(
+			Console.Warning(
 				"Warning: Unknown tag encountered while loading savestate; going to ignore it!\n"
 				"\tTagname: %s, Size: %d", m_tagspace, size
 			);

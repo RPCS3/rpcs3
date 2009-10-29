@@ -870,10 +870,10 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	if( m_PageProtectInfo[rampage].Mode == ProtMode_Write )
 		return;		// skip town if we're already protected.
 
-	if( m_PageProtectInfo[rampage].Mode == ProtMode_Manual )
-		DbgCon.WriteLn( "dyna_page_reset @ 0x%05x", paddr>>12 );
-	else
-		DbgCon.WriteLn( "Write-protected page @ 0x%05x", paddr>>12 );
+	DbgCon.WriteLn( Color_Gray, (m_PageProtectInfo[rampage].Mode == ProtMode_Manual) ?
+		"dyna_page_reset @ 0x%05x" : "Write-protected page @ 0x%05x",
+		paddr>>12
+	);
 
 	m_PageProtectInfo[rampage].Mode = ProtMode_Write;
 	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadOnly );

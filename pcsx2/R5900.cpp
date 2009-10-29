@@ -124,7 +124,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		{
 			//Reset / NMI
 			cpuRegs.pc = 0xBFC00000;
-			Console.Notice("Reset request");
+			Console.Warning("Reset request");
 			UpdateCP0Status();
 			return;
 		} 
@@ -141,7 +141,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 		cpuRegs.CP0.n.Status.b.EXL = 1;
 		if (bd) 
 		{
-			Console.Notice("branch delay!!");
+			Console.Warning("branch delay!!");
 			cpuRegs.CP0.n.EPC = cpuRegs.pc - 4;
 			cpuRegs.CP0.n.Cause |= 0x80000000;
 		} 
@@ -154,7 +154,7 @@ __releaseinline void cpuException(u32 code, u32 bd)
 	else 
 	{
 		offset = 0x180; //Override the cause		
-		if (errLevel2) Console.Notice("cpuException: Status.EXL = 1 cause %x", code);
+		if (errLevel2) Console.Warning("cpuException: Status.EXL = 1 cause %x", code);
 	}
 	
 	if (checkStatus)
@@ -170,7 +170,7 @@ void cpuTlbMiss(u32 addr, u32 bd, u32 excode)
 	Console.Error("cpuTlbMiss pc:%x, cycl:%x, addr: %x, status=%x, code=%x",
 		cpuRegs.pc, cpuRegs.cycle, addr, cpuRegs.CP0.n.Status.val, excode);
 		
-	if (bd) Console.Notice("branch delay!!");
+	if (bd) Console.Warning("branch delay!!");
 
 	pxFail( "TLB Miss handler is uninished code." ); // temporary
 
@@ -325,7 +325,7 @@ static __forceinline void _cpuTestTIMR()
 	if ( (cpuRegs.CP0.n.Status.val & 0x8000) &&
 		cpuRegs.CP0.n.Count >= cpuRegs.CP0.n.Compare && cpuRegs.CP0.n.Count < cpuRegs.CP0.n.Compare+1000 )
 	{
-		Console.Status("timr intr: %x, %x", cpuRegs.CP0.n.Count, cpuRegs.CP0.n.Compare);
+		Console.WriteLn( Color_Magenta, "timr intr: %x, %x", cpuRegs.CP0.n.Count, cpuRegs.CP0.n.Compare);
 		cpuException(0x808000, cpuRegs.branch);
 	}
 }
@@ -426,7 +426,7 @@ __forceinline void _cpuBranchTest_Shared()
 			int cycleCount = std::min( EEsCycle, (s32)(eeWaitCycles>>4) );
 			int cyclesRun = cycleCount - psxCpu->ExecuteBlock( cycleCount );
 			EEsCycle -= cyclesRun;
-			//Console.Notice( "IOP Exception-Pending Execution -- EEsCycle: %d", EEsCycle );
+			//Console.Warning( "IOP Exception-Pending Execution -- EEsCycle: %d", EEsCycle );
 		}
 		else*/
 		{
@@ -462,7 +462,7 @@ __forceinline void _cpuBranchTest_Shared()
 		// IOP extra timeslices in short order.
 
 		cpuSetNextBranchDelta( 48 );
-		//Console.Notice( "EE ahead of the IOP -- Rapid Branch!  %d", EEsCycle );
+		//Console.Warning( "EE ahead of the IOP -- Rapid Branch!  %d", EEsCycle );
 	}
 
 	// The IOP could be running ahead/behind of us, so adjust the iop's next branch by its
@@ -562,7 +562,7 @@ void cpuExecuteBios()
 	// Set the video mode to user's default request:
 	gsSetRegionMode( (GS_RegionMode)EmuConfig.Video.DefaultRegionMode );
 
-	Console.Status( "Executing Bios Stub..." );
+	Console.WriteLn( "Executing Bios Stub..." );
 
 	g_ExecBiosHack = true;
 	while(	cpuRegs.pc != 0x00200008 &&
@@ -592,7 +592,7 @@ void cpuExecuteBios()
 	// with new faster versions:
 	Cpu->Reset();
 
-	Console.Notice("Execute Bios Stub Complete");
+	Console.Warning("Execute Bios Stub Complete");
 	//GSprintf(5, "PCSX2 " PCSX2_VERSION "\nExecuteBios Complete\n");
 }
 

@@ -224,13 +224,13 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 	// ----------------------------------------------------------------------------
 	catch( Exception::CancelEvent& ex )
 	{
-		Console.Notice( ex.FormatDiagnosticMessage() );
+		Console.Warning( ex.FormatDiagnosticMessage() );
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::BadSavedState& ex)
 	{
 		// Saved state load failed.
-		Console.Notice( ex.FormatDiagnosticMessage() );
+		Console.Warning( ex.FormatDiagnosticMessage() );
 		CoreThread.Resume();
 	}
 	// ----------------------------------------------------------------------------
@@ -524,7 +524,7 @@ __forceinline bool SysHasValidState()
 void SysStatus( const wxString& text )
 {
 	// mirror output to the console!
-	Console.Status( text.c_str() );
+	Console.WriteLn( text.c_str() );
 	sMainFrame.SetStatusText( text );
 }
 

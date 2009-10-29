@@ -68,7 +68,7 @@ void Pcsx2App::ReadUserModeSettings()
 	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );
 	if( !usrlocaldir.Exists() )
 	{
-		Console.Status( L"Creating UserLocalData folder: " + usrlocaldir.ToString() );
+		Console.WriteLn( L"Creating UserLocalData folder: " + usrlocaldir.ToString() );
 		usrlocaldir.Mkdir();
 	}
 
@@ -199,7 +199,7 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 		OverrideOptions.Filenames.Plugins[pi->id] = dest;
 
 		if( wxFileExists( dest ) )
-			Console.Notice( pi->GetShortname() + L" override: " + dest );
+			Console.Warning( pi->GetShortname() + L" override: " + dest );
 		else
 		{
 			bool result = Msgbox::OkCancel(
@@ -335,7 +335,7 @@ bool Pcsx2App::OnInit()
 	// ----------------------------------------------------------------------------
 	catch( Exception::StartupAborted& ex )
 	{
-		Console.Notice( ex.FormatDiagnosticMessage() );
+		Console.Warning( ex.FormatDiagnosticMessage() );
 		CleanupMess();
 		return false;
 	}

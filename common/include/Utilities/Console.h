@@ -23,13 +23,27 @@ enum ConsoleColors
 	Color_Current = -1,
 
 	Color_Black = 0,
-	Color_Red,
 	Color_Green,
-	Color_Yellow,
+	Color_Red,
 	Color_Blue,
 	Color_Magenta,
-	Color_Cyan,
-	Color_White,
+	Color_Orange,
+	Color_Gray,
+
+	Color_Cyan,			// faint visibility, intended for logging PS2/IOP output
+	Color_Yellow,		// faint visibility, intended for logging PS2/IOP output
+	Color_White,		// faint visibility, intended for logging PS2/IOP output
+
+	// Strong text *may* result in mis-aligned text in the console, depending on the
+	// font and the platform, so use these with caution.
+
+	Color_StrongBlack,
+	Color_StrongRed,	// intended for errors
+	Color_StrongGreen,	// intended for infrequent state information
+	Color_StrongBlue,	// intended for block headings
+	Color_StrongOrange,	// intended for warnings
+	
+	ConsoleColors_Count
 };
 
 // Use fastcall for the console; should be helpful in most cases
@@ -62,30 +76,21 @@ struct IConsoleWriter
 	// ----------------------------------------------------------------------------
 	// Public members; call these to print stuff to console!
 
+
 	void Write( ConsoleColors color, const char* fmt, ... ) const;
-	void Write( const char* fmt, ... ) const;
-	void Write( ConsoleColors color, const wxString& fmt ) const;
-	void Write( const wxString& fmt ) const;
-
 	void WriteLn( ConsoleColors color, const char* fmt, ... ) const;
+	void Write( const char* fmt, ... ) const;
 	void WriteLn( const char* fmt, ... ) const;
-	void WriteLn( ConsoleColors color, const wxString& fmt ) const;
-	void WriteLn( const wxString& fmt ) const;
-
 	void Error( const char* fmt, ... ) const;
-	void Notice( const char* fmt, ... ) const;
-	void Status( const char* fmt, ... ) const;
+	void Warning( const char* fmt, ... ) const;
 
-	void Error( const wxString& src ) const;
-	void Notice( const wxString& src ) const;
-	void Status( const wxString& src ) const;
+	void Write( ConsoleColors color, const wxChar* fmt, ... ) const;
+	void WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const;
+	void Write( const wxChar* fmt, ... ) const;
+	void WriteLn( const wxChar* fmt, ... ) const;
+	void Error( const wxChar* fmt, ... ) const;
+	void Warning( const wxChar* fmt, ... ) const;
 
-	// ----------------------------------------------------------------------------
-	//  Private Members; for internal use only.
-
-	void _Write( const char* fmt, va_list args ) const;
-	void _WriteLn( const char* fmt, va_list args ) const;
-	void _WriteLn( ConsoleColors color, const char* fmt, va_list args ) const;
 };
 
 extern void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp=NULL );

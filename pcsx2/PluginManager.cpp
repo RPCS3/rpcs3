@@ -662,13 +662,13 @@ static void PS2E_CALLBACK pcsx2_OSD_WriteLn( int icon, const char* msg )
 
 PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
-	Console.Status( "Loading plugins..." );
+	Console.WriteLn( Color_StrongBlue, "Loading plugins..." );
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
 		const PluginsEnum_t pid = pi->id;
 
-		Console.WriteLn( "\tBinding %s\t: %s ", tbl_PluginInfo[pid].shortname, folders[pid].ToUTF8().data() );
+		Console.WriteLn( L"\tBinding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), folders[pid].c_str() );
 
 		if( folders[pid].IsEmpty() )
 			throw Exception::InvalidArgument( "Empty plugin filename." );
@@ -707,7 +707,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	PADinit = (_PADinit)m_info[PluginId_PAD].CommonBindings.Init;
 	m_info[PluginId_PAD].CommonBindings.Init = _hack_PADinit;
 
-	Console.Status( "Plugins loaded successfully.\n" );
+	Console.WriteLn( Color_StrongBlue, "Plugins loaded successfully.\n" );
 
 	// HACK!  Manually bind the Internal MemoryCard plugin for now, until
 	// we get things more completed in the new plugin api.
@@ -906,7 +906,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 
 void PluginManager::Open()
 {
-	Console.Status( "Opening plugins..." );
+	Console.WriteLn( Color_StrongBlue, "Opening plugins..." );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		Open( pi->id );
@@ -918,13 +918,13 @@ void PluginManager::Open()
 
 	if (GSopen2) mtgsThread.WaitForOpen();
 
-	Console.Status( "Plugins opened successfully." );
+	Console.WriteLn( Color_StrongBlue, "Plugins opened successfully." );
 }
 
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
-	Console.Status( "\tClosing %s", tbl_PluginInfo[pid].shortname );
+	Console.WriteLn( "\tClosing %s", tbl_PluginInfo[pid].shortname );
 
 	if( pid == PluginId_GS )
 	{
@@ -942,7 +942,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 
 void PluginManager::Close( bool closegs )
 {
-	DbgCon.Status( "Closing plugins..." );
+	DbgCon.WriteLn( Color_StrongBlue, "Closing plugins..." );
 
 	// Close plugins in reverse order of the initialization procedure.
 
@@ -952,7 +952,7 @@ void PluginManager::Close( bool closegs )
 			Close( tbl_PluginInfo[i].id );
 	}
 
-	DbgCon.Status( "Plugins closed successfully." );
+	DbgCon.WriteLn( Color_StrongBlue, "Plugins closed successfully." );
 }
 
 // Initializes all plugins.  Plugin initialization should be done once for every new emulation
@@ -973,7 +973,7 @@ void PluginManager::Init()
 		if( m_info[pid].IsInitialized ) continue;
 		if( !printlog )
 		{
-			Console.Status( "Initializing plugins..." );
+			Console.WriteLn( Color_StrongBlue, "Initializing plugins..." );
 			printlog = true;
 		}
 		Console.WriteLn( "\tInit %s", tbl_PluginInfo[pid].shortname );
@@ -993,7 +993,7 @@ void PluginManager::Init()
 	}
 
 	if( printlog )
-		Console.Status( "Plugins initialized successfully.\n" );
+		Console.WriteLn( Color_StrongBlue, "Plugins initialized successfully.\n" );
 }
 
 // Shuts down all plugins.  Plugins are closed first, if necessary.
@@ -1007,7 +1007,7 @@ void PluginManager::Shutdown()
 	mtgsThread.Cancel();	// cancel it for speedier shutdown!
 
 	Close();
-	DbgCon.Status( "Shutting down plugins..." );
+	DbgCon.WriteLn( Color_StrongGreen, "Shutting down plugins..." );
 
 	// Shutdown plugins in reverse order (probably doesn't matter...
 	//  ... but what the heck, right?)
@@ -1029,7 +1029,7 @@ void PluginManager::Shutdown()
 		SysPlugins.Mcd = NULL;
 	}
 
-	DbgCon.Status( "Plugins shutdown successfully." );
+	DbgCon.WriteLn( Color_StrongGreen, "Plugins shutdown successfully." );
 }
 
 // For internal use only, unless you're the MTGS.  Then it's for you too!
@@ -1072,7 +1072,7 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 		// no state data to read, but the plugin expects some state data.
 		// Issue a warning to console...
 		if( fP.size != 0 )
-			Console.Notice( "\tWarning: No data for this plugin was found. Plugin status may be unpredictable." );
+			Console.Warning( "\tWarning: No data for this plugin was found. Plugin status may be unpredictable." );
 		return;
 
 		// Note: Size mismatch check could also be done here on loading, but

@@ -149,14 +149,14 @@ namespace VU1micro
 			char str2[150];
 			SysPrintf("\n\n");
 			SysPrintf("-----------------------------------------------\n");
-			Console.Notice("Problem Occurred!");
+			Console.Warning("Problem Occurred!");
 			SysPrintf("-----------------------------------------------\n");
 			SysPrintf("runCount = %d\n", runCount);
 			SysPrintf("StartPC [%04x]\n", ((VURegs*)backVUregs)->VI[REG_TPC].UL);
 			SysPrintf("-----------------------------------------------\n\n");
 
 			SysPrintf("-----------------------------------------------\n");
-			Console.Notice("Super VU / Micro VU");
+			Console.Warning("Super VU / Micro VU");
 			SysPrintf("-----------------------------------------------\n");
 
 			for (int i = 0; i < 32; i++) {

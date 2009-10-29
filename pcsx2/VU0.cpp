@@ -75,7 +75,7 @@ __forceinline void _vu0run(bool breakOnMbit) {
 	do {
 		// knockout kings 2002 loops here with sVU
 		if (breakOnMbit && (VU0.cycle-startcycle > 0x1000)) {
-			Console.Notice("VU0 perma-stall, breaking execution...");
+			Console.Warning("VU0 perma-stall, breaking execution...");
 			break; // mVU will never get here (it handles mBit internally)
 		}
 		CpuVU0.ExecuteBlock();
@@ -354,7 +354,7 @@ void vu0Finish()
 		if(VU0.VI[REG_VPU_STAT].UL & 0x1) {
 			VU0.VI[REG_VPU_STAT].UL &= ~1;
 			// this log tends to spam a lot (MGS3)
-			//Console.Notice("vu0Finish > stall aborted by force.");
+			//Console.Warning("vu0Finish > stall aborted by force.");
 		}
 	}
 }

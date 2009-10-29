@@ -45,18 +45,19 @@ SessionOverrideFlags	g_Session = {false};
 // This function should be called once during program execution.
 void SysDetect()
 {
-	Console.Notice("PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+	Console.WriteLn( Color_StrongGreen, "PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
 	);
 
-	Console.Notice("Savestate version: %x", g_SaveVersion);
+	Console.WriteLn( "Savestate version: 0x%x", g_SaveVersion);
+	Console.Newline();
 
 	cpudetectInit();
 
-	Console.SetColor( Color_Black );
+	//Console.SetColor( Color_Gray );
 
-	Console.WriteLn( "x86Init:" );
-	Console.WriteLn( wxsFormat(
+	Console.WriteLn( Color_StrongBlack, "x86-32 Init:" );
+	Console.WriteLn(
 		L"\tCPU vendor name  =  %s\n"
 		L"\tFamilyID         =  %x\n"
 		L"\tx86Family        =  %s\n"
@@ -65,14 +66,14 @@ void SysDetect()
 		L"\tx86PType         =  %s\n"
 		L"\tx86Flags         =  %8.8x %8.8x\n"
 		L"\tx86EFlags        =  %8.8x\n",
-			wxString::FromAscii( x86caps.VendorName ).c_str(), x86caps.StepID,
-			wxString::FromAscii( x86caps.FamilyName ).Trim().Trim(false).c_str(),
+			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
+			fromUTF8( x86caps.FamilyName ).Trim().Trim(false).c_str(),
 			x86caps.Speed / 1000, x86caps.Speed%1000,
 			x86caps.PhysicalCores, x86caps.LogicalCores,
-			wxString::FromAscii( x86caps.TypeName ).c_str(),
+			fromUTF8( x86caps.TypeName ).c_str(),
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
-	) );
+	);
 
 	wxArrayString features[2];	// 2 lines, for readability!
 
@@ -93,11 +94,12 @@ void SysDetect()
 	JoinString( result[0], features[0], L".. " );
 	JoinString( result[1], features[1], L".. " );
 
-	Console.WriteLn( L"Features Detected:\n\t" + result[0] + (result[1].IsEmpty() ? L"" : (L"\n\t" + result[1])) + L"\n" );
+	Console.ClearColor();
+
+	Console.WriteLn( Color_StrongBlack,	L"x86 Features Detected:" );
+	Console.WriteLn( L"\t" + result[0] + (result[1].IsEmpty() ? L"" : (L"\n\t" + result[1])) + L"\n" );
 
 	//if ( x86caps.VendorName[0] == 'A' ) //AMD cpu
-
-	Console.ClearColor();
 }
 
 // returns the translated error message for the Virtual Machine failing to allocate!
@@ -113,7 +115,7 @@ SysCoreAllocations::SysCoreAllocations()
 {
 	InstallSignalHandler();
 
-	Console.Status( "Initializing PS2 virtual machine..." );
+	Console.WriteLn( "Initializing PS2 virtual machine..." );
 
 	RecSuccess_EE		= false;
 	RecSuccess_IOP		= false;
@@ -151,7 +153,7 @@ SysCoreAllocations::SysCoreAllocations()
 		);
 	}
 
-	Console.Status( "Allocating memory for recompilers..." );
+	Console.WriteLn( "Allocating memory for recompilers..." );
 
 	try
 	{
@@ -265,7 +267,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 
 	if( (Mem == NULL) || (bounds != 0 && (((uptr)Mem + size) > bounds)) )
 	{
-		DevCon.Notice( "First try failed allocating %s at address 0x%x", caller, base );
+		DevCon.Warning( "First try failed allocating %s at address 0x%x", caller, base );
 
 		// memory allocation *must* have the top bit clear, so let's try again
 		// with NULL (let the OS pick something for us).
@@ -275,7 +277,7 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 		Mem = (u8*)HostSys::Mmap( NULL, size );
 		if( bounds != 0 && (((uptr)Mem + size) > bounds) )
 		{
-			DevCon.Error( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", caller, Mem );
+			DevCon.Warning( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", caller, Mem );
 			SafeSysMunmap( Mem, size );
 
 			// returns NULL, caller should throw an exception.

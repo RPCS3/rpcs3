@@ -333,7 +333,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 		}
 		else
 		{
-			DevCon.Notice("Offset = %x", vifRegs->offset);
+			DevCon.Warning("Offset = %x", vifRegs->offset);
 			vif->tag.addr += unpacksize * 4;
 			return size>>2;
 		}
@@ -440,7 +440,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 			/* unpack one qword */
 			if(vif->tag.addr + ((size / ft->dsize) * 4)  >= (u32)vif_size(VIFdmanum))
 			{
-				//DevCon.Notice("Overflow");
+				//DevCon.Warning("Overflow");
 				vif->tag.addr &= (u32)(vif_size(VIFdmanum) - 1);
 				dest = (u32*)(VU->Mem + v->addr);
 			}
@@ -532,7 +532,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 	{
 		if (v->addr >= memlimit)
 		{
-			//DevCon.Notice("Overflown at the start");
+			//DevCon.Warning("Overflown at the start");
 			v->addr &= (memlimit - 1);
 			dest = (u32*)(VU->Mem + v->addr);
 		}
@@ -557,7 +557,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			}
 			else
 			{
-				//DevCon.Notice("VIF%x Unpack ending %x > %x", VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
+				//DevCon.Warning("VIF%x Unpack ending %x > %x", VIFdmanum, tempsize, VIFdmanum ? 0x4000 : 0x1000);
 				tempsize = size;
 				size = 0;
 			}
@@ -679,7 +679,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			int incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
 			size = 0;
 			int addrstart = v->addr;
-			if((tempsize >> 2) != vif->tag.size) DevCon.Notice("split when size != tagsize");
+			if((tempsize >> 2) != vif->tag.size) DevCon.Warning("split when size != tagsize");
 
 			VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, vif->tag.addr);
 
@@ -687,7 +687,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			{
 				if(v->addr >= memlimit)
 				{
-					DevCon.Notice("Mem limit overflow");
+					DevCon.Warning("Mem limit overflow");
 					v->addr &= (memlimit - 1);
 					dest = (u32*)(VU->Mem + v->addr);
 				}
@@ -756,9 +756,9 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 
 		if(vifRegs->cycle.cl > 0) // Quicker and avoids zero division :P
 			if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num)
-			DevCon.Notice("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
+			DevCon.Warning("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
 
-		//DevCon.Notice("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType, vif->tag.addr);
+		//DevCon.Warning("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType, vif->tag.addr);
 		while (vifRegs->num > 0)
 		{
 			if (vif->cl == vifRegs->cycle.wl)

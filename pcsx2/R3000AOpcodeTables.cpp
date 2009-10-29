@@ -300,7 +300,7 @@ void psxCTC0() { _rFs_ = _u32(_rRt_); }
 * Format:  ?                                             *
 *********************************************************/
 void psxNULL() { 
-Console.Notice("psx: Unimplemented op %x", psxRegs.code);
+Console.Warning("psx: Unimplemented op %x", psxRegs.code);
 }
 
 void psxSPECIAL() {

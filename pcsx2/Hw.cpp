@@ -75,7 +75,7 @@ __forceinline void intcInterrupt()
 	if ((cpuRegs.CP0.n.Status.val & 0x400) != 0x400) return;
 
 	if ((psHu32(INTC_STAT)) == 0) {
-		DevCon.Notice("*PCSX2*: intcInterrupt already cleared");
+		DevCon.Warning("*PCSX2*: intcInterrupt already cleared");
         return;
 	}
 	if ((psHu32(INTC_STAT) & psHu32(INTC_MASK)) == 0) return;
@@ -197,7 +197,7 @@ bool hwDmacSrcChainWithStack(DMACh *dma, int id) {
                     break;
                     
                 default:
-                    Console.Notice("Call Stack Overflow (report if it fixes/breaks anything)");
+                    Console.Warning("Call Stack Overflow (report if it fixes/breaks anything)");
                     return true;
 			}
 			

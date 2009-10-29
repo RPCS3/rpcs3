@@ -57,7 +57,7 @@ void States_DefrostCurrentSlot()
 
 static void OnSlotChanged()
 {
-	Console.Notice( " > Selected savestate slot %d", StatesC);
+	Console.Warning( " > Selected savestate slot %d", StatesC);
 
 	if( GSchangeSaveState != NULL )
 		GSchangeSaveState(StatesC, SaveStateBase::GetFilename(StatesC).mb_str());

@@ -97,7 +97,7 @@ static void SetSingleAffinity()
 
 	if( s_oldmask == ERROR_INVALID_PARAMETER )
 	{
-		Console.Notice(
+		Console.Warning(
 			"CpuDetect: SetThreadAffinityMask failed...\n"
 			"\tSystem Affinity : 0x%08x"
 			"\tProcess Affinity: 0x%08x"
@@ -353,7 +353,7 @@ void cpudetectInit()
 
 		if( sse3_result != !!x86caps.hasStreamingSIMD3Extensions )
 		{
-			Console.Notice( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
+			Console.Warning( "SSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
 				bool_to_char( !!x86caps.hasStreamingSIMD3Extensions ), bool_to_char( sse3_result ) );
 
 			x86caps.hasStreamingSIMD3Extensions = sse3_result;
@@ -361,7 +361,7 @@ void cpudetectInit()
 
 		if( ssse3_result != !!x86caps.hasSupplementalStreamingSIMD3Extensions )
 		{
-			Console.Notice( "SSSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
+			Console.Warning( "SSSE3 Detection Inconsistency: cpuid=%s, test_result=%s",
 				bool_to_char( !!x86caps.hasSupplementalStreamingSIMD3Extensions ), bool_to_char( ssse3_result ) );
 
 			x86caps.hasSupplementalStreamingSIMD3Extensions = ssse3_result;
@@ -369,7 +369,7 @@ void cpudetectInit()
 
 		if( sse41_result != !!x86caps.hasStreamingSIMD4Extensions )
 		{
-			Console.Notice( "SSE4 Detection Inconsistency: cpuid=%s, test_result=%s",
+			Console.Warning( "SSE4 Detection Inconsistency: cpuid=%s, test_result=%s",
 				bool_to_char( !!x86caps.hasStreamingSIMD4Extensions ), bool_to_char( sse41_result ) );
 
 			x86caps.hasStreamingSIMD4Extensions = sse41_result;
@@ -378,7 +378,7 @@ void cpudetectInit()
 	}
 	else
 	{
-		Console.Notice(
+		Console.Warning(
 			"Notice: Could not allocate memory for SSE3/4 detection.\n"
 			"\tRelying on CPUID results. [this is not an error]"
 		);

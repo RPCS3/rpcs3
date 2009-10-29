@@ -69,7 +69,7 @@ u8 psxHwRead8(u32 add) {
 		case IOP_T5_COUNT:
 		case IOP_T5_MODE:
 		case IOP_T5_TARGET:
-			DevCon.Notice( "IOP Counter Read8 from addr0x%x = 0x%x", add, psxHu8(add) );
+			DevCon.Warning( "IOP Counter Read8 from addr0x%x = 0x%x", add, psxHu8(add) );
 			return psxHu8(add);
 #endif
 
@@ -649,7 +649,7 @@ void psxHwWrite8(u32 add, u8 value) {
 		case IOP_T5_COUNT:
 		case IOP_T5_MODE:
 		case IOP_T5_TARGET:
-			DevCon.Notice( "IOP Counter Write8 to addr 0x%x = 0x%x", add, value );
+			DevCon.Warning( "IOP Counter Write8 to addr 0x%x = 0x%x", add, value );
 			psxHu8(add) = value;
 		return;
 
@@ -673,7 +673,7 @@ void psxHwWrite8(u32 add, u8 value) {
 				( value == '\n' && g_pbufi != 0 ) )
 			{
 				g_pbuf[g_pbufi] = 0;
-				DevCon.WriteLn( Color_Cyan, "%s", g_pbuf );
+				Console.WriteLn( ConColor_IOP, g_pbuf );
 				g_pbufi = 0;
 			}
 			else if( value != '\n' )
@@ -1236,7 +1236,7 @@ void psxHwWrite32(u32 add, u32 value) {
 //------------------------------------------------------------------
 		case 0x1f8014c0:
 			PSXHW_LOG("RTC_HOLDMODE 32bit write %lx", value);
-			Console.Notice("** RTC_HOLDMODE 32bit write %lx", value);
+			Console.Warning("** RTC_HOLDMODE 32bit write %lx", value);
 			break;
 
 		case 0x1f801450:

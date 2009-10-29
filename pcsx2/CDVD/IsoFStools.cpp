@@ -209,7 +209,7 @@ int IsoFS_getVolumeDescriptor(void)
 	else if (CDVolDesc.filesystemType == 2)
 		DbgCon.WriteLn( Color_Green, "CD FileSystem is Joliet");
 	else 
-		DbgCon.Notice("Could not detect CD FileSystem type");
+		DbgCon.Warning("Could not detect CD FileSystem type");
 
 	//	CdStop();
 
@@ -333,7 +333,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 		// If we havent found the directory name we wanted then fail
 		if (found_dir != TRUE)
 		{
-			Console.Notice( "IsoFS_findfile: could not find dir" );
+			Console.Warning( "IsoFS_findfile: could not find dir" );
 			return -1;
 		}
 
@@ -412,7 +412,7 @@ int IsoFS_findFile(const char* fname, TocEntry* tocEntry){
 		}
 	}
 
-	DbgCon.Notice("IsoFS_findfile: could not find file");
+	DbgCon.Warning("IsoFS_findfile: could not find file");
 
 	return FALSE;
 }

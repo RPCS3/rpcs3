@@ -84,7 +84,7 @@ FILE *_cdvdOpenMechaVer()
 	fd = fopen(file, "r+b");
 	if (fd == NULL)
 	{
-		Console.Notice("MEC File Not Found , Creating Blank File");
+		Console.Warning("MEC File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
 		if (fd == NULL)
 		{
@@ -124,7 +124,7 @@ FILE *_cdvdOpenNVM()
 	fd = fopen(file, "r+b");
 	if (fd == NULL)
 	{
-		Console.Notice("NVM File Not Found , Creating Blank File");
+		Console.Warning("NVM File Not Found , Creating Blank File");
 		fd = fopen(file, "wb");
 		if (fd == NULL)
 		{
@@ -328,7 +328,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	const wxCharBuffer crap( fname.ToAscii() );
 	const char* str = crap.data();
 	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
-	DevCon.Notice("exeName = %s", &str[8]);
+	DevCon.Warning("exeName = %s", &str[8]);
 
 	// convert the number characters to a real 32bit number
 	numbers =	((((exeName[5] - '0'))*10000)	+
@@ -1048,14 +1048,14 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			// Seek to sector zero.  The cdvdStartSeek function will simulate
 			// spinup times if needed.
 
-			DevCon.Notice( "CdStandby : %d", rt );
+			DevCon.Warning( "CdStandby : %d", rt );
 			cdvd.Action = cdvdAction_Standby;
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 			CDVD_INT( cdvdStartSeek( 0, MODE_DVDROM ) );
 		break;
 
 		case N_CD_STOP: // CdStop
-			DevCon.Notice( "CdStop : %d", rt );
+			DevCon.Warning( "CdStop : %d", rt );
 			cdvd.Action = cdvdAction_Stop;
 			CDVD_INT( PSXCLK / 6 );		// 166ms delay?
 		break;
@@ -1216,12 +1216,12 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 		break;
 
 		case N_CD_CHG_SPDL_CTRL: // CdChgSpdlCtrl
-			Console.Notice("sceCdChgSpdlCtrl(%d)", cdvd.Param[0]);
+			Console.Warning("sceCdChgSpdlCtrl(%d)", cdvd.Param[0]);
 			cdvdSetIrq();
 		break;
 
 		default:
-			Console.Notice("NCMD Unknown %x", rt);
+			Console.Warning("NCMD Unknown %x", rt);
 			cdvdSetIrq();
 		break;
 	}
@@ -1250,7 +1250,7 @@ static __forceinline void cdvdWrite07(u8 rt)		// BREAK
 	// If we're already in a Ready state or already Breaking, then do nothing:
 	if ((cdvd.Ready != CDVD_NOTREADY) || (cdvd.Action == cdvdAction_Break)) return;
 
-	DbgCon.Notice("*PCSX2*: CDVD BREAK %x", rt);
+	DbgCon.WriteLn("*PCSX2*: CDVD BREAK %x", rt);
 
 	// Aborts any one of several CD commands:
 	// Pause, Seek, Read, Status, Standby, and Stop
@@ -1285,9 +1285,9 @@ static __forceinline void cdvdWrite14(u8 rt) { // PS1 MODE??
 	u32 cycle = psxRegs.cycle;
 
 	if (rt == 0xFE)
-		Console.Notice("*PCSX2*: go PS1 mode DISC SPEED = FAST");
+		Console.Warning("*PCSX2*: go PS1 mode DISC SPEED = FAST");
 	else
-		Console.Notice("*PCSX2*: go PS1 mode DISC SPEED = %dX", rt);
+		Console.Warning("*PCSX2*: go PS1 mode DISC SPEED = %dX", rt);
 
 	psxReset();
 	psxHu32(0x1f801450) = 0x8;
@@ -1934,7 +1934,7 @@ void cdvdWrite(u8 key, u8 rt)
 		case 0x18: cdvdWrite18(rt); break;
 		case 0x3A: cdvdWrite3A(rt); break;
 		default:
-			Console.Notice("IOP Unknown 8bit write to addr 0x1f4020%x = 0x%x", key, rt);
+			Console.Warning("IOP Unknown 8bit write to addr 0x1f4020%x = 0x%x", key, rt);
 			break;
 	}
 }

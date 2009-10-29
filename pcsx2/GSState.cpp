@@ -73,7 +73,7 @@ void SaveGSState(const wxString& file)
 	if( g_SaveGSStream ) return;
 
 	Console.WriteLn( "Saving GS State..." );
-	Console.WriteLn( wxsFormat( L"\t%s", file.c_str() ) );
+	Console.WriteLn( L"\t%s", file.c_str() );
 
 	SafeArray<u8> buf;
 	g_fGSSave = new memSavingState( buf );
@@ -88,7 +88,7 @@ void LoadGSState(const wxString& file)
 {
 	int ret;
 
-	Console.Status( "Loading GS State..." );
+	Console.WriteLn( "Loading GS State..." );
 
 	wxString src( file );
 

@@ -197,7 +197,7 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 {
 	if (vif0.vifpacketsize < vif0.tag.size)
 	{
-		if((vif0.tag.addr + vif0.vifpacketsize) > 0x1000) DevCon.Notice("Vif0 MPG Split Overflow");
+		if((vif0.tag.addr + vif0.vifpacketsize) > 0x1000) DevCon.Warning("Vif0 MPG Split Overflow");
 
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.vifpacketsize);
 		vif0.tag.addr += vif0.vifpacketsize << 2;
@@ -209,7 +209,7 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 	{
 		int ret;
 
-		if((vif0.tag.addr + vif0.tag.size) > 0x1000) DevCon.Notice("Vif0 MPG Overflow");
+		if((vif0.tag.addr + vif0.tag.size) > 0x1000) DevCon.Warning("Vif0 MPG Overflow");
 
 		vif0mpgTransfer(vif0.tag.addr, data, vif0.tag.size);
 		ret = vif0.tag.size;

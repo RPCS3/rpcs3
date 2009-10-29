@@ -77,7 +77,7 @@ void AppCoreThread::Resume()
 				sApp.SysExecute();
 			}
 			else
-				Console.Status( "SysResume: Multiple resume retries failed.  Giving up..." );
+				Console.WriteLn( Color_Orange, "SysResume: Multiple resume retries failed.  Giving up..." );
 		}
 	}
 	

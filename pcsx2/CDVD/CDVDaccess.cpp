@@ -159,15 +159,15 @@ static int FindDiskType(int mType)
 	switch(iCDType)
 	{
 		case CDVD_TYPE_DETCTCD:
-			Console.Status(" * CDVD Disk Open: CD, %d tracks (%d to %d):", tn.etrack-tn.strack+1,tn.strack,tn.etrack);
+			Console.WriteLn(" * CDVD Disk Open: CD, %d tracks (%d to %d):", tn.etrack-tn.strack+1,tn.strack,tn.etrack);
 			break;
 		
 		case CDVD_TYPE_DETCTDVDS:
-			Console.Status(" * CDVD Disk Open: DVD, Single layer or unknown:");
+			Console.WriteLn(" * CDVD Disk Open: DVD, Single layer or unknown:");
 			break;
 		
 		case CDVD_TYPE_DETCTDVDD:
-			Console.Status(" * CDVD Disk Open: DVD, Double layer:");
+			Console.WriteLn(" * CDVD Disk Open: DVD, Double layer:");
 			break;
 	}
 
@@ -188,12 +188,12 @@ static int FindDiskType(int mType)
 		if (td.type == CDVD_AUDIO_TRACK) 
 		{
 			audioTracks++;
-			Console.Status(" * * Track %d: Audio (%d sectors)", i,tlength);
+			Console.WriteLn(" * * Track %d: Audio (%d sectors)", i,tlength);
 		}
 		else 
 		{
 			dataTracks++;
-			Console.Status(" * * Track %d: Data (Mode %d) (%d sectors)", i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
+			Console.WriteLn(" * * Track %d: Data (Mode %d) (%d sectors)", i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
 		}
 	}
 
@@ -406,7 +406,7 @@ s32 DoCDVDreadTrack(u32 lsn, int mode)
 		break;
 	}
 
-	//DevCon.Notice("CDVD readTrack(lsn=%d,mode=%d)",params lsn, lastReadSize);
+	//DevCon.Warning("CDVD readTrack(lsn=%d,mode=%d)",params lsn, lastReadSize);
 	lastLSN = lsn;
 	return CDVD->readTrack(lsn,mode);
 }

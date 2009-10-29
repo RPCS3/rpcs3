@@ -535,7 +535,7 @@ void RelocateLogfile()
 
 	if( (emuLog != NULL) && (emuLogName != newlogname) )
 	{
-		Console.Status( wxsFormat(L"\nRelocating Logfile...\n\tFrom: %s\n\tTo  : %s\n", emuLogName.c_str(), newlogname.c_str()) );
+		Console.WriteLn( L"\nRelocating Logfile...\n\tFrom: %s\n\tTo  : %s\n", emuLogName.c_str(), newlogname.c_str() );
 		wxGetApp().DisableDiskLogging();
 
 		fclose( emuLog );

@@ -196,7 +196,7 @@ static void __fastcall RegHandlerUNMAPPED(const u32* data)
 	//   silently ignored.
 	
 	if( regidx != 0x7f && regidx != 0xee )
-		Console.Notice( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
+		Console.Warning( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
 }
 
 #define INSERT_UNMAPPED_4	RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED,

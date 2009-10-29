@@ -263,7 +263,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 
 	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE)
 	{
-		Console.Status( "EErec const buffer filled; Resetting..." );
+		Console.WriteLn( "EErec const buffer filled; Resetting..." );
 		throw Exception::ForceDispatcherReg();
 
 		/*for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
@@ -284,7 +284,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 	imm64[0] = lo;
 	imm64[1] = hi;
 
-	//Console.Notice("Consts allocated: %d of %u", (recConstBufPtr - recConstBuf) / 2, count);
+	//Console.Warning("Consts allocated: %d of %u", (recConstBufPtr - recConstBuf) / 2, count);
 
 	return imm64;
 }
@@ -569,7 +569,7 @@ static bool eeRecIsReset = false;
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
-	Console.Status( "Issuing EE/iR5900-32 Recompiler Reset [mem/structure cleanup]" );
+	Console.WriteLn( Color_StrongBlack, "Issuing EE/iR5900-32 Recompiler Reset" );
 
 	maxrecmem = 0;
 
@@ -1206,7 +1206,7 @@ void recompileNextInstruction(int delayslot)
 			case 1:
 				switch(_Rt_) {
 					case 0: case 1: case 2: case 3: case 0x10: case 0x11: case 0x12: case 0x13:
-						Console.Notice("branch %x in delay slot!", cpuRegs.code);
+						Console.Warning("branch %x in delay slot!", cpuRegs.code);
 						_clearNeededX86regs();
 						_clearNeededMMXregs();
 						_clearNeededXMMregs();
@@ -1215,7 +1215,7 @@ void recompileNextInstruction(int delayslot)
 				break;
 
 			case 2: case 3: case 4: case 5: case 6: case 7: case 0x14: case 0x15: case 0x16: case 0x17:
-				Console.Notice("branch %x in delay slot!", cpuRegs.code);
+				Console.Warning("branch %x in delay slot!", cpuRegs.code);
 				_clearNeededX86regs();
 				_clearNeededMMXregs();
 				_clearNeededXMMregs();
@@ -1281,7 +1281,7 @@ static u32 s_recblocks[] = {0};
 // Called when a block under manual protection fails it's pre-execution integrity check.
 void __fastcall dyna_block_discard(u32 start,u32 sz)
 {
-	DevCon.WriteLn("dyna_block_discard .. start=0x%08X  size=%d", start, sz*4);
+	DevCon.WriteLn("Discarding Manual Block @ 0x%08X  [size=%d]", start, sz*4);
 	recClear(start, sz);
 
 	// Stack trick: This function was invoked via a direct jmp, so manually pop the
@@ -1393,7 +1393,7 @@ static void __fastcall recRecompile( const u32 startpc )
 				willbranch3 = 1;
 				s_nEndBlock = i;
 
-				//DevCon.Notice( "Pagesplit @ %08X : size=%d insts", startpc, (i-startpc) / 4 );
+				//DevCon.Warning( "Pagesplit @ %08X : size=%d insts", startpc, (i-startpc) / 4 );
 				break;
 			}
 
@@ -1620,7 +1620,7 @@ StartRecomp:
 			}
 			else
 			{
-				DbgCon.Notice( "Uncounted Manual block @ %08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+				DbgCon.WriteLn( "Uncounted Manual block @ 0x%08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
 					startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, pgsz, inpage_sz );
 			}
 

@@ -231,7 +231,7 @@ int __stdcall ProfilerThread(void* nada)
 				rv += lst[i].ToString(tick_count);
 			}
 
-			Console.WriteLn("+Sampling Profiler Results-\n%s\n+>", rv.ToAscii().data() );
+			Console.WriteLn( L"+Sampling Profiler Results-\n%s\n+>", rv.c_str() );
 
 			tick_count=0;
 

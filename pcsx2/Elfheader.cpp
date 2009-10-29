@@ -389,7 +389,7 @@ struct ElfObject
 							size = proghead[ i ].p_filesz;
 
 						if( proghead[ i ].p_vaddr != proghead[ i ].p_paddr )
-							Console.Notice( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x",
+							Console.Warning( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x",
 								proghead[ i ].p_paddr, proghead[ i ].p_vaddr);
 
 						// used to be paddr
@@ -515,14 +515,14 @@ u32 loadElfCRC( const char* filename )
 
 	IsoFS_init( );
 	
-	Console.Status("loadElfCRC: %s", filename);
+	Console.WriteLn("loadElfCRC: %s", filename);
 	
 	int mylen = strlen( "cdromN:" );
 	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
 
-	DevCon.Status( "loadElfFile: %d bytes", toc.fileSize );
+	DevCon.WriteLn( "loadElfFile: %d bytes", toc.fileSize );
 	u32 crcval = ElfObject( wxString::FromAscii( filename ), toc.fileSize ).GetCRC();
-	Console.Status( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
+	Console.WriteLn( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
 
 	return crcval;
 }
@@ -542,7 +542,7 @@ void loadElfFile(const wxString& filename)
 	if( filename.IsEmpty() ) return;
 	
 	s64 elfsize;
-	Console.Status( wxsFormat( L"loadElfFile: %s", filename.c_str() ) );
+	Console.WriteLn( L"loadElfFile: %s", filename.c_str() );
 
 	const wxCharBuffer buffer( filename.ToAscii() );
 	const char* fnptr = buffer.data();
@@ -567,7 +567,7 @@ void loadElfFile(const wxString& filename)
 	if( elfsize > 0xfffffff )
 		throw Exception::BadStream( filename, wxLt("Illegal ELF file size, over 2GB!") );
 
-	Console.Status( wxsFormat(L"loadElfFile: %d", wxULongLong(elfsize).GetLo() ) );
+	Console.WriteLn( L"loadElfFile: %d", wxULongLong(elfsize).GetLo() );
 	if( elfsize == 0 )
 		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
 
@@ -599,12 +599,12 @@ void loadElfFile(const wxString& filename)
 		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
 		{
 			strcpy( (char*)PSM( i ), fnptr );
-			DevCon.Status( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr );
+			DevCon.WriteLn( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr );
 		}
 	}
 
 	ElfCRC = elfobj.GetCRC();
-	Console.Status( wxsFormat( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC ) );
+	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
 	ElfApplyPatches();
 	mtgsThread.SendGameCRC( ElfCRC );
 	
@@ -626,7 +626,7 @@ int GetPS2ElfName( wxString& name )
 
 	// check if the file exists
 	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
-		Console.Status("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
+		Console.Warning("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
 		return 0;//could not find; not a PS/PS2 cdvd
 	}
 

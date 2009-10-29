@@ -466,7 +466,7 @@ void mtgsThreadObject::SetEvent()
 
 void mtgsThreadObject::PrepEventWait()
 {
-	//Console.Notice( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
+	//Console.Warning( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
 	SetEvent();
 	Timeslice();
 }
@@ -591,15 +591,15 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 				{
 					total_bucket+=ringtx_inf[i][j];
 					bucket_subitems++;
-					Console.Notice("GSRingBufCopy :tx [%d,%d] algn %d : count= %d [%.2f%%]",1<<i,(1<<(i+1))-16,1<<j,ringtx_inf[i][j],ringtx_inf[i][j]/(float)ringtx_c*100);
+					Console.Warning("GSRingBufCopy :tx [%d,%d] algn %d : count= %d [%.2f%%]",1<<i,(1<<(i+1))-16,1<<j,ringtx_inf[i][j],ringtx_inf[i][j]/(float)ringtx_c*100);
 					ringtx_inf[i][j]=0;
 				}
 			}
 			if (total_bucket)
-				Console.Notice("GSRingBufCopy :tx [%d,%d] total : count= %d [%.2f%%] [%.2f%%]",1<<i,(1<<(i+1))-16,total_bucket,total_bucket/(float)ringtx_c*100,ringtx_inf_s[i]/(float)ringtx_s*100);
+				Console.Warning("GSRingBufCopy :tx [%d,%d] total : count= %d [%.2f%%] [%.2f%%]",1<<i,(1<<(i+1))-16,total_bucket,total_bucket/(float)ringtx_c*100,ringtx_inf_s[i]/(float)ringtx_s*100);
 			ringtx_inf_s[i]=0;
 		}
-		Console.Notice("GSRingBufCopy :tx ulg count =%d [%.2f%%]",ringtx_s_ulg,ringtx_s_ulg/(float)ringtx_s*100);
+		Console.Warning("GSRingBufCopy :tx ulg count =%d [%.2f%%]",ringtx_s_ulg,ringtx_s_ulg/(float)ringtx_s*100);
 		ringtx_s_ulg=0;
 		ringtx_c=0;
 		ringtx_s=0;

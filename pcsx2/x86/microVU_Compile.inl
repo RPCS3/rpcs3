@@ -65,7 +65,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 			mVUcurProg.ranges.total = 0;
 			mVUrange[0] = 0;
 			mVUrange[1] = mVU->microMemSize - 8;
-			DevCon.Status("microVU%d: Prog Range List Full", mVU->index);
+			DevCon.WriteLn( Color_StrongBlack, "microVU%d: Prog Range List Full", mVU->index);
 		}
 	}
 	else {
@@ -89,7 +89,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 			}
 		}
 		else {
-			DevCon.Status("microVU%d: Prog Range Wrap [%04x] [%d]", mVU->index, mVUrange[0], mVUrange[1]);
+			DevCon.WriteLn("microVU%d: Prog Range Wrap [%04x] [%d]", mVU->index, mVUrange[0], mVUrange[1]);
 			mVUrange[1] = mVU->microMemSize - 8;
 			if (mVUcurProg.ranges.total < mVUcurProg.ranges.max) {
 				mVUcurProg.ranges.total++;
@@ -100,16 +100,16 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 				mVUcurProg.ranges.total = 0;
 				mVUrange[0] = 0;
 				mVUrange[1] = mVU->microMemSize - 8;
-				DevCon.Status("microVU%d: Prog Range List Full", mVU->index);
+				DevCon.WriteLn( Color_StrongBlack, "microVU%d: Prog Range List Full", mVU->index);
 			}
 		}
 	}
 }
 
 microVUt(void) startLoop(mV) {
-	if (curI & _Mbit_)	{ Console.Status("microVU%d: M-bit set!", getIndex); }
-	if (curI & _Dbit_)	{ DevCon.Status ("microVU%d: D-bit set!", getIndex); }
-	if (curI & _Tbit_)	{ DevCon.Status ("microVU%d: T-bit set!", getIndex); }
+	if (curI & _Mbit_)	{ Console.WriteLn(Color_Green, "microVU%d: M-bit set!", getIndex); }
+	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set!", getIndex); }
+	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set!", getIndex); }
 	memset(&mVUinfo,	 0, sizeof(mVUinfo));
 	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));
 }
@@ -121,7 +121,7 @@ microVUt(void) doIbit(mV) {
 		mVU->regAlloc->clearRegVF(33);
 
 		if (CHECK_VU_OVERFLOW && ((curI & 0x7fffffff) >= 0x7f800000)) {
-			Console.Status("microVU%d: Clamping I Reg", mVU->index);
+			Console.WriteLn(Color_Green,"microVU%d: Clamping I Reg", mVU->index);
 			tempI = (0x80000000 & curI) | 0x7f7fffff; // Clamp I Reg
 		}
 		else tempI = curI;
@@ -133,7 +133,7 @@ microVUt(void) doIbit(mV) {
 
 microVUt(void) doSwapOp(mV) { 
 	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
-		DevCon.Status("microVU%d: Backing Up VF Reg [%04x]", getIndex, xPC);
+		DevCon.WriteLn(Color_Green, "microVU%d: Backing Up VF Reg [%04x]", getIndex, xPC);
 		int t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
 		int t2 = mVU->regAlloc->allocReg();
 		SSE_MOVAPS_XMM_to_XMM(t2, t1);
@@ -182,7 +182,7 @@ microVUt(void) eBitWarning(mV) {
 	if (mVUpBlock->pState.blockType == 2) Console.Error("microVU%d Warning: Branch, Branch, Branch! [%04x]", mVU->index, xPC);
 	incPC(2);
 	if (curI & _Ebit_) {
-		DevCon.Status("microVU%d: E-bit in Branch delay slot! [%04x]", mVU->index, xPC);
+		DevCon.Warning("microVU%d: E-bit in Branch delay slot! [%04x]", mVU->index, xPC);
 		mVUregs.blockType = 1;
 	}
 	incPC(-2);

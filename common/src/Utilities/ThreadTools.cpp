@@ -87,11 +87,11 @@ Threading::PersistentThread::~PersistentThread() throw()
 {
 	try
 	{
-		DevCon.WriteLn( L"(Thread Log) Executing destructor for " + m_name );
+		DbgCon.WriteLn( L"(Thread Log) Executing destructor for " + m_name );
 
 		if( m_running )
 		{
-			DevCon.WriteLn( L"\tWaiting for running thread to end...");
+			DevCon.WriteLn( L"(Thread Log) Waiting for running thread to end...");
 			m_lock_InThread.Wait();
 		}
 		Threading::Sleep( 1 );
@@ -108,8 +108,8 @@ Threading::PersistentThread::~PersistentThread() throw()
 		// so we can't allow for customized deadlock handlers, least not in any useful
 		// context.  So let's just log the condition and move on.
 
-		Console.Error( wxsFormat(L"\tThread destructor for '%s' timed out with error:\n\t",
-			m_name.c_str(), ex.FormatDiagnosticMessage().c_str() ) );
+		Console.Error( L"(Thread Log) Thread destructor for '%s' timed out with error:\n\t",
+			m_name.c_str(), ex.FormatDiagnosticMessage().c_str() );
 	}
 	DESTRUCTOR_CATCHALL
 }
@@ -121,8 +121,8 @@ void Threading::PersistentThread::FrankenMutex( MutexLock& mutex )
 		// Our lock is bupkis, which means  the previous thread probably deadlocked.
 		// Let's create a new mutex lock to replace it.
 
-		Console.Error( wxsFormat(
-			L"(Thread Log) Possible deadlock detected on restarted mutex belonging to '%s'.", m_name.c_str() )
+		Console.Error( 
+			L"(Thread Log) Possible deadlock detected on restarted mutex belonging to '%s'.", m_name.c_str()
 		);
 	}
 }
@@ -182,7 +182,7 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 
 		if( m_detached )
 		{
-			Console.Notice( "(Thread Warning) Ignoring attempted cancellation of detached thread." );
+			Console.Warning( "(Thread Warning) Ignoring attempted cancellation of detached thread." );
 			return;
 		}
 

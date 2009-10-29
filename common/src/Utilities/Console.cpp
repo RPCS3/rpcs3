@@ -198,56 +198,144 @@ const IConsoleWriter ConsoleWriter_wxError =
 	ConsoleNull_ClearColor,
 };
 
+// Sanity check: truncate strings if they exceed 512k in length.  Anything like that
+// is either a bug or really horrible code that needs to be stopped before it causes
+// system deadlock.
+static const int MaxFormattedStringLength = 0x80000;
+
+template< typename CharType >
+class FormatBuffer : public MutexLock
+{
+public:
+	bool&				clearbit;
+	SafeArray<CharType>	buffer;
+	
+	FormatBuffer( bool& bit_to_clear_on_destruction ) :
+		clearbit( bit_to_clear_on_destruction )
+	,	buffer( 4096, wxsFormat( L"%s Format Buffer", (sizeof(CharType)==1) ? "Ascii" : "Unicode" ) )
+	{
+	}
+
+	virtual ~FormatBuffer() throw()
+	{
+		clearbit = true;
+		Wait();		// lock the mutex, just in case.
+	}
+	
+};
+
+static bool ascii_buffer_is_deleted = false;
+static bool unicode_buffer_is_deleted = false;
+
+static FormatBuffer<char>	ascii_buffer( ascii_buffer_is_deleted );
+static FormatBuffer<wxChar>	unicode_buffer( unicode_buffer_is_deleted );
+
+static void format_that_ascii_mess( SafeArray<char>& buffer, const char* fmt, va_list argptr )
+{
+	while( true )
+	{
+		int size = buffer.GetLength();
+		int len = vsnprintf(buffer.GetPtr(), size, fmt, argptr);
+
+		// some implementations of vsnprintf() don't NUL terminate
+		// the string if there is not enough space for it so
+		// always do it manually
+		buffer[size-1] = '\0';
+
+		if( size >= MaxFormattedStringLength ) break;
+
+		// vsnprintf() may return either -1 (traditional Unix behavior) or the
+		// total number of characters which would have been written if the
+		// buffer were large enough (newer standards such as Unix98)
+
+		if ( len < 0 )
+			len = size + (size/4);
+
+		if ( len < size ) break;
+		buffer.ExactAlloc( len + 1 );
+	};
+
+	// performing an assertion or log of a truncated string is unsafe, so let's not; even
+	// though it'd be kinda nice if we did.
+}
+
+static void format_that_unicode_mess( SafeArray<wxChar>& buffer, const wxChar* fmt, va_list argptr)
+{
+	while( true )
+	{
+		int size = buffer.GetLength();
+		int len = wxVsnprintf(buffer.GetPtr(), size, fmt, argptr);
+
+		// some implementations of vsnprintf() don't NUL terminate
+		// the string if there is not enough space for it so
+		// always do it manually
+		buffer[size-1] = L'\0';
+
+		if( size >= MaxFormattedStringLength ) break;
+
+		// vsnprintf() may return either -1 (traditional Unix behavior) or the
+		// total number of characters which would have been written if the
+		// buffer were large enough (newer standards such as Unix98)
+
+		if ( len < 0 )
+			len = size + (size/4);
+
+		if ( len < size ) break;
+		buffer.ExactAlloc( len + 1 );
+	};
+
+	// performing an assertion or log of a truncated string is unsafe, so let's not; even
+	// though it'd be kinda nice if we did.
+}
+
+static wxString ascii_format_string(const char* fmt, va_list argptr)
+{
+	if( ascii_buffer_is_deleted )
+	{
+		SafeArray<char>	localbuf( 4096, L"Temporary Ascii Formatting Buffer" );
+		format_that_ascii_mess( localbuf, fmt, argptr );
+		return fromUTF8( localbuf.GetPtr() );
+	}
+	else
+	{
+		ScopedLock locker( ascii_buffer );
+		format_that_ascii_mess( ascii_buffer.buffer, fmt, argptr );
+		return fromUTF8( ascii_buffer.buffer.GetPtr() );
+	}
+}
+
+
+static wxString unicode_format_string(const wxChar* fmt, va_list argptr)
+{
+	if( unicode_buffer_is_deleted )
+	{
+		SafeArray<wxChar> localbuf( 4096, L"Temporary Unicode Formatting Buffer" );
+		format_that_unicode_mess( localbuf, fmt, argptr );
+		return localbuf.GetPtr();
+	}
+	else
+	{
+		ScopedLock locker( unicode_buffer );
+		format_that_unicode_mess( unicode_buffer.buffer, fmt, argptr );
+		return unicode_buffer.buffer.GetPtr();
+	}
+}
+
 // =====================================================================================================
 //  IConsole Interfaces
 // =====================================================================================================
 // (all non-virtual members that do common work and then pass the result through DoWrite
 //  or DoWriteLn)
 
-// Writes a line of colored text to the console (no newline).
-// The console color is reset to default when the operation is complete.
-void IConsoleWriter::Write( ConsoleColors color, const wxString& fmt ) const
-{
-	SetColor( color );
-	Write( fmt );
-	ClearColor();
-}
-
-// Writes a line of colored text to the console, with automatic newline appendage.
-// The console color is reset to default when the operation is complete.
-void IConsoleWriter::WriteLn( ConsoleColors color, const wxString& fmt ) const
-{
-	SetColor( color );
-	WriteLn( fmt );
-	ClearColor();
-}
-
-void IConsoleWriter::_Write( const char* fmt, va_list args ) const
-{
-	std::string m_format_buffer;
-	vssprintf( m_format_buffer, fmt, args );
-	Write( fromUTF8( m_format_buffer.c_str() ) );
-}
-
-void IConsoleWriter::_WriteLn( const char* fmt, va_list args ) const
-{
-	std::string m_format_buffer;
-	vssprintf( m_format_buffer, fmt, args );
-	WriteLn( fromUTF8( m_format_buffer.c_str() ) );
-}
-
-void IConsoleWriter::_WriteLn( ConsoleColors color, const char* fmt, va_list args ) const
-{
-	SetColor( color );
-	_WriteLn( fmt, args );
-	ClearColor();
-}
+// --------------------------------------------------------------------------------------
+//  ASCII/UTF8 (char*)
+// --------------------------------------------------------------------------------------
 
 void IConsoleWriter::Write( const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
-	_Write( fmt, args );
+	DoWrite( ascii_format_string(fmt, args) );
 	va_end(args);
 }
 
@@ -256,7 +344,7 @@ void IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
 	va_list args;
 	va_start(args,fmt);
 	SetColor( color );
-	_Write( fmt, args );
+	DoWrite( ascii_format_string(fmt, args) );
 	ClearColor();
 	va_end(args);
 }
@@ -265,7 +353,7 @@ void IConsoleWriter::WriteLn( const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
-	_WriteLn( fmt, args );
+	DoWriteLn( ascii_format_string(fmt, args) );
 	va_end(args);
 }
 
@@ -273,58 +361,92 @@ void IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
-	_WriteLn( color, fmt, args );
+	SetColor( color );
+	DoWriteLn( ascii_format_string(fmt, args) );
+	ClearColor();
 	va_end(args);
-}
-
-void IConsoleWriter::Write( const wxString& src ) const
-{
-	DoWrite( src );
-}
-
-void IConsoleWriter::WriteLn( const wxString& src ) const
-{
-	DoWriteLn( src );
 }
 
 void IConsoleWriter::Error( const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
-	_WriteLn( Color_Red, fmt, args );
+	SetColor( Color_StrongRed );
+	DoWriteLn( ascii_format_string(fmt, args) );
+	ClearColor();
 	va_end(args);
 }
 
-void IConsoleWriter::Notice( const char* fmt, ... ) const
+void IConsoleWriter::Warning( const char* fmt, ... ) const
 {
-	va_list list;
-	va_start(list,fmt);
-	_WriteLn( Color_Yellow, fmt, list );
-	va_end(list);
+	va_list args;
+	va_start(args,fmt);
+	SetColor( Color_StrongOrange );
+	DoWriteLn( ascii_format_string(fmt, args) );
+	ClearColor();
+	va_end(args);
 }
 
-void IConsoleWriter::Status( const char* fmt, ... ) const
+// --------------------------------------------------------------------------------------
+//  FmtWrite Variants - Unicode/UTF16 style
+// --------------------------------------------------------------------------------------
+
+void IConsoleWriter::Write( const wxChar* fmt, ... ) const
 {
-	va_list list;
-	va_start(list,fmt);
-	_WriteLn( Color_Green, fmt, list );
-	va_end(list);
+	va_list args;
+	va_start(args,fmt);
+	DoWrite( unicode_format_string( fmt, args ) );
+	va_end(args);
 }
 
-void IConsoleWriter::Error( const wxString& src ) const
+void IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
 {
-	WriteLn( Color_Red, src );
+	va_list args;
+	va_start(args,fmt);
+	SetColor( color );
+	DoWrite( unicode_format_string( fmt, args ) );
+	ClearColor();
+	va_end(args);
 }
 
-void IConsoleWriter::Notice( const wxString& src ) const
+void IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 {
-	WriteLn( Color_Yellow, src );
+	va_list args;
+	va_start(args,fmt);
+	DoWriteLn( unicode_format_string( fmt, args ) );
+	va_end(args);
 }
 
-void IConsoleWriter::Status( const wxString& src ) const
+void IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const
 {
-	WriteLn( Color_Green, src );
+	va_list args;
+	va_start(args,fmt);
+	SetColor( color );
+	DoWriteLn( unicode_format_string( fmt, args ) );
+	ClearColor();
+	va_end(args);
 }
+
+void IConsoleWriter::Error( const wxChar* fmt, ... ) const
+{
+	va_list args;
+	va_start(args,fmt);
+	SetColor( Color_StrongRed );
+	DoWriteLn( unicode_format_string( fmt, args ) );
+	ClearColor();
+	va_end(args);
+}
+
+void IConsoleWriter::Warning( const wxChar* fmt, ... ) const
+{
+	va_list args;
+	va_start(args,fmt);
+	SetColor( Color_StrongOrange );
+	DoWriteLn( unicode_format_string( fmt, args ) );
+	ClearColor();
+	va_end(args);
+}
+
 
 // --------------------------------------------------------------------------------------
 //  Default Writer for C++ init / startup:

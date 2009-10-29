@@ -73,13 +73,13 @@ class SafeArray
 public:
 	static const int DefaultChunkSize = 0x1000 * sizeof(T);
 
-public: 
-	const wxChar* Name;		// user-assigned block name
-	int ChunkSize;
+public:
+	wxString	Name;			// user-assigned block name
+	int			ChunkSize;
 
 protected:
-	T* m_ptr;
-	int m_size;	// size of the allocation of memory
+	T*		m_ptr;
+	int		m_size;				// size of the allocation of memory
 
 protected:
 	// Internal constructor for use by derived classes.  This allows a derived class to
@@ -232,13 +232,13 @@ public:
 	static const int DefaultChunkSize = 0x80 * sizeof(T);
 
 public: 
-	const wxChar* Name;		// user-assigned block name
-	int ChunkSize;			// assigned DefaultChunkSize on init, reconfigurable at any time.
+	wxString	Name;			// user-assigned block name
+	int			ChunkSize;		// assigned DefaultChunkSize on init, reconfigurable at any time.
 
 protected:
-	T* m_ptr;
-	int m_allocsize;	// size of the allocation of memory
-	uint m_length;		// length of the array (active items, not buffer allocation)
+	T*		m_ptr;
+	int		m_allocsize;		// size of the allocation of memory
+	uint	m_length;			// length of the array (active items, not buffer allocation)
 
 protected:
 	virtual T* _virtual_realloc( int newsize )
@@ -312,7 +312,7 @@ public:
 					wxsFormat(
 						L"Out-of-memory on SafeList block re-allocation.\n"
 						L"Name: %s, Old size: %d bytes, New size: %d bytes",
-						Name, m_allocsize, newalloc
+						Name.c_str(), m_allocsize, newalloc
 					),
 					
 					wxsFormat( _("Out of memory, trying to allocate %d bytes."), newalloc )

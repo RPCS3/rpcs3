@@ -685,7 +685,7 @@ int recCommutativeOp(int info, int regd, int op)
 			}
 			break;
 		default:
-			Console.Status("FPU: recCommutativeOp case 4");
+			Console.WriteLn(Color_Magenta, "FPU: recCommutativeOp case 4");
 			SSE_MOVSS_M32_to_XMM(regd, (uptr)&fpuRegs.fpr[_Fs_]);
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			if (CHECK_FPU_EXTRA_OVERFLOW || (op >= 2)) { fpuFloat2(regd); fpuFloat2(t0reg); }
@@ -801,7 +801,7 @@ void recC_EQ_xmm(int info)
 			SSE_UCOMISS_XMM_to_XMM(EEREC_S, EEREC_T); 
 			break;
 		default: 
-			Console.Status("recC_EQ_xmm: Default");
+			Console.WriteLn(Color_Magenta, "recC_EQ_xmm: Default");
 			tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
 			if (tempReg < 0) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
 			MOV32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Fs_]);
@@ -881,7 +881,7 @@ void recC_LE_xmm(int info )
 			SSE_UCOMISS_XMM_to_XMM(EEREC_S, EEREC_T); 
 			break;
 		default: // Untested and incorrect, but this case is never reached AFAIK (cottonvibes)
-			Console.Status("recC_LE_xmm: Default");
+			Console.WriteLn(Color_Magenta, "recC_LE_xmm: Default");
 			tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
 			if (tempReg < 0) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
 			MOV32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Fs_]);
@@ -957,7 +957,7 @@ void recC_LT_xmm(int info)
 			SSE_UCOMISS_XMM_to_XMM(EEREC_S, EEREC_T); 
 			break;
 		default:
-			Console.Status("recC_LT_xmm: Default");
+			Console.WriteLn(Color_Magenta, "recC_LT_xmm: Default");
 			tempReg = _allocX86reg(-1, X86TYPE_TEMP, 0, 0);
 			if (tempReg < 0) {Console.Error("FPU: DIV Allocation Error!"); tempReg = EAX;}
 			MOV32MtoR(tempReg, (uptr)&fpuRegs.fpr[_Fs_]);
@@ -1629,7 +1629,7 @@ void recSUBop(int info, int regd)
 			}
 			break;
 		default:
-			Console.Notice("FPU: SUB case 4");
+			Console.Warning("FPU: SUB case 4");
 			SSE_MOVSS_M32_to_XMM(t0reg, (uptr)&fpuRegs.fpr[_Ft_]);
 			SSE_MOVSS_M32_to_XMM(regd, (uptr)&fpuRegs.fpr[_Fs_]);
 			recSUBhelper(regd, t0reg);

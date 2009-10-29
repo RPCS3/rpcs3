@@ -51,10 +51,9 @@ DEVASSERT_INLINE void pxOnAssert( const wxChar* file, int line, const char* func
 	if( wxTheApp == NULL )
 	{
 		// Note: Format uses MSVC's syntax for output window hotlinking.
-		wxsFormat( L"%s(%d): Assertion failed in %s: %s\n",
-			file, line, fromUTF8(func).c_str(), msg );
-
-		wxLogError( msg );
+		wxLogError( wxsFormat( L"%s(%d): Assertion failed in %s: %s\n",
+			file, line, fromUTF8(func).c_str(), msg )
+		);
 	}
 	else
 	{

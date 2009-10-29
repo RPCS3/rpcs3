@@ -207,7 +207,7 @@ void iDumpBlock( int startpc, u8 * ptr )
 	u8 fpuused[33];
 	int numused, fpunumused;
 
-	Console.Status( "dump1 %x:%x, %x", startpc, pc, cpuRegs.cycle );
+	Console.WriteLn( "dump1 %x:%x, %x", startpc, pc, cpuRegs.cycle );
 
 	g_Conf->Folders.Logs.Mkdir();
 	AsciiFile eff(

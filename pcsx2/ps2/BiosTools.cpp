@@ -122,7 +122,7 @@ static void loadBiosRom( const wxChar *ext, u8 *dest, s64 maxSize )
 		Bios1 = Path::ReplaceExtension( Bios, ext );
 		if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 		{
-			Console.Notice( "Load Bios Warning: %s not found (this is not an error!)", wxString(ext).ToAscii().data() );
+			Console.Warning( "Load Bios Warning: %s not found (this is not an error!)", wxString(ext).ToAscii().data() );
 			return;
 		}
 	}
@@ -167,7 +167,7 @@ void LoadBIOS()
 	}
 
 	BiosVersion = GetBiosVersion();
-	Console.Status("Bios Version %d.%d", BiosVersion >> 8, BiosVersion & 0xff);
+	Console.WriteLn("Bios Version %d.%d", BiosVersion >> 8, BiosVersion & 0xff);
 
 	//injectIRX("host.irx");	//not fully tested; still buggy
 

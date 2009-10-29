@@ -43,7 +43,7 @@
 
 void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
 {
-	jASSUME( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
+	pxAssert( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
 
 	VIF_LOG("ReadFIFO/VIF0 0x%08X", mem);
 	
@@ -53,12 +53,12 @@ void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
 
 void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 {
-	jASSUME( (mem >= VIF1_FIFO) && (mem < GIF_FIFO) );
+	pxAssert( (mem >= VIF1_FIFO) && (mem < GIF_FIFO) );
 
 	VIF_LOG("ReadFIFO/VIF1, addr=0x%08X", mem);
 
 	if (vif1Regs->stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
-		DevCon.Notice( "Reading from vif1 fifo when stalled" );
+		DevCon.Warning( "Reading from vif1 fifo when stalled" );
 
 	if (vif1Regs->stat.FDR)
 	{
@@ -72,9 +72,9 @@ void __fastcall ReadFIFO_page_5(u32 mem, u64 *out)
 
 void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
 {
-	jASSUME( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
+	pxAssert( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
 
-	DevCon.Notice( "ReadFIFO/GIF, addr=0x%x", mem );
+	DevCon.Warning( "ReadFIFO/GIF, addr=0x%x", mem );
 
 	out[0] = psHu64(GIF_FIFO);
 	out[1] = psHu64(GIF_FIFO + 8);
@@ -82,7 +82,7 @@ void __fastcall ReadFIFO_page_6(u32 mem, u64 *out)
 
 void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
 {
-	jASSUME( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );
+	pxAssert( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );
 
 	// All addresses in this page map to 0x7000 and 0x7010:
 	mem &= 0x10;
@@ -107,7 +107,7 @@ void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
 
 void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 {
-	jASSUME( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
+	pxAssert( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
 
 	VIF_LOG("WriteFIFO/VIF0, addr=0x%08X", mem);
 
@@ -121,7 +121,7 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 
 void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 {
-	jASSUME( (mem >= VIF1_FIFO) && (mem < GIF_FIFO) );
+	pxAssert( (mem >= VIF1_FIFO) && (mem < GIF_FIFO) );
 
 	VIF_LOG("WriteFIFO/VIF1, addr=0x%08X", mem);
 
@@ -129,9 +129,9 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 	psHu64(VIF1_FIFO + 8) = value[1];
 
 	if (vif1Regs->stat.FDR)
-		DevCon.Notice("writing to fifo when fdr is set!");
+		DevCon.Warning("writing to fifo when fdr is set!");
 	if (vif1Regs->stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
-		DevCon.Notice("writing to vif1 fifo when stalled");
+		DevCon.Warning("writing to vif1 fifo when stalled");
 
 	vif1ch->qwc += 1;
 	int ret = VIF1transfer((u32*)value, 4, 0);
@@ -143,7 +143,7 @@ __aligned16 u32 nloop0_packet[4] = {0x8000, 0, 0, 0};
 
 void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 {
-	jASSUME( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
+	pxAssert( (mem >= GIF_FIFO) && (mem < IPUout_FIFO) );
 	GIF_LOG("WriteFIFO/GIF, addr=0x%08X", mem);
 
 	psHu64(GIF_FIFO) = value[0];
@@ -160,7 +160,7 @@ void __fastcall WriteFIFO_page_6(u32 mem, const mem128_t *value)
 
 void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 {
-	jASSUME( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );
+	pxAssert( (mem >= IPUout_FIFO) && (mem < D0_CHCR) );
 
 	// All addresses in this page map to 0x7000 and 0x7010:
 	mem &= 0x10;
@@ -170,7 +170,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 	if( mem == 0 )
 	{
 		// Should this raise a PS2 exception or just ignore silently?
-		Console.Notice( "WriteFIFO/IPUout (ignored)" );
+		Console.Warning( "WriteFIFO/IPUout (ignored)" );
 	}
 	else
 	{

@@ -788,7 +788,7 @@ void recResetIOP()
 	pxAssert( recMem != NULL );
 	pxAssert( m_recBlockAlloc != NULL );
 
-	DevCon.Status( "iR3000A Resetting recompiler memory and structures" );
+	DevCon.WriteLn( "iR3000A Recompiler reset." );
 
 	memset_8<0xcc,RECMEM_SIZE>( recMem );	// 0xcc is INT3
 	iopClearRecLUT((BASEBLOCK*)m_recBlockAlloc,

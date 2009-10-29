@@ -258,15 +258,15 @@ void zeroEx()
 	}
 
 	if (!strncmp(lib, "loadcore", 8) && code == 6) {
-		DevCon.WriteLn("loadcore RegisterLibraryEntries (%x): %8.8s", psxRegs.pc, iopVirtMemR<char>(psxRegs.GPR.n.a0+12));
+		DevCon.WriteLn( Color_Gray, "loadcore RegisterLibraryEntries (%x): %8.8s", psxRegs.pc, iopVirtMemR<char>(psxRegs.GPR.n.a0+12));
 	}
 
 	if (!strncmp(lib, "intrman", 7) && code == 4) {
-		DevCon.WriteLn("intrman RegisterIntrHandler (%x): intr %s, handler %x", psxRegs.pc, intrname[psxRegs.GPR.n.a0], psxRegs.GPR.n.a2);
+		DevCon.WriteLn( Color_Gray, "intrman RegisterIntrHandler (%x): intr %s, handler %x", psxRegs.pc, intrname[psxRegs.GPR.n.a0], psxRegs.GPR.n.a2);
 	}
 
 	if (!strncmp(lib, "sifcmd", 6) && code == 17) {
-		DevCon.WriteLn("sifcmd sceSifRegisterRpc (%x): rpc_id %x", psxRegs.pc, psxRegs.GPR.n.a1);
+		DevCon.WriteLn( Color_Gray, "sifcmd sceSifRegisterRpc (%x): rpc_id %x", psxRegs.pc, psxRegs.GPR.n.a1);
 	}
 
 	if (!strncmp(lib, "sysclib", 8))

@@ -343,7 +343,7 @@ void SuperVUAlloc(int vuindex)
 {
 	// The old -1 crap has been depreciated on this function.  Please
 	// specify either 0 or 1, thanks.
-	jASSUME(vuindex >= 0);
+	pxAssert(vuindex >= 0);
 
 	// upper 4 bits must be zero!
 	if (s_recVUMem == NULL)
@@ -357,6 +357,8 @@ void SuperVUAlloc(int vuindex)
 			throw Exception::OutOfMemory(
 				// untranslated diagnostic msg, use exception's default for translation
 				wxsFormat( L"SuperVU failed to allocate recompiler memory (addr: 0x%x)", (u32)s_recVUMem ),
+				
+				// Translated message
 				_("An out of memory error occured while attempting to reserve memory for the core recompilers.")
 			);
 		}
@@ -368,7 +370,7 @@ void SuperVUAlloc(int vuindex)
 
 	if (vuindex >= 0)
 	{
-		jASSUME(s_recVUMem != NULL);
+		pxAssert(s_recVUMem != NULL);
 
 		if (recVUHeaders[vuindex] == NULL)
 			recVUHeaders[vuindex] = new VuFunctionHeader* [s_MemSize[vuindex] / 8];
@@ -449,7 +451,7 @@ void SuperVUReset(int vuindex)
 
 	if (vuindex < 0)
 	{
-		DbgCon.Status("SuperVU reset > Resetting recompiler memory and structures.");
+		DbgCon.WriteLn("SuperVU: Resetting recompiler memory and structures.");
 
 		// Does this cause problems on VU recompiler resets?  It could, if the VU works like
 		// the EE used to, and actually tries to re-enter the recBlock after issuing a clear. (air)
@@ -461,7 +463,7 @@ void SuperVUReset(int vuindex)
 	}
 	else
 	{
-		DbgCon.Status("SuperVU reset [VU%d] > Resetting the recs and junk", vuindex);
+		DbgCon.WriteLn("SuperVU [VU%d]: Resetting the recs and junk", vuindex);
 		list<VuFunctionHeader*>::iterator it;
 		if (recVUHeaders[vuindex]) memset(recVUHeaders[vuindex], 0, sizeof(VuFunctionHeader*) * (s_MemSize[vuindex] / 8));
 		if (recVUBlocks[vuindex]) memset(recVUBlocks[vuindex], 0, sizeof(VuBlockHeader) * (s_MemSize[vuindex] / 8));
@@ -502,7 +504,7 @@ void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
 			if (plist->size() > 30)
 			{
 				// list is too big, delete
-				//Console.Notice("Performance warning: deleting cached VU program!");
+				//Console.Warning("Performance warning: deleting cached VU program!");
 				delete plist->front();
 				plist->pop_front();
 			}
@@ -3785,7 +3787,7 @@ void VuInstruction::Recompile(list<VuInstruction>::iterator& itinst, u32 vuxyz)
 #ifdef PCSX2_DEVBUILD
 		if (regs[1].VIread & regs[0].VIwrite & ~((1 << REG_Q) | (1 << REG_P) | (1 << REG_VF0_FLAG) | (1 << REG_ACC_FLAG)))
 		{
-			Console.Notice("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x", regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
+			Console.Warning("*PCSX2*: Warning, VI write to the same reg %x in both lower/upper cycle %x", regs[1].VIread & regs[0].VIwrite, s_pCurBlock->startpc);
 		}
 #endif
 
@@ -4596,5 +4598,5 @@ void recVULowerOP_T3_11(VURegs* VU, s32 info)
 
 void recVUunknown(VURegs* VU, s32 info)
 {
-	Console.Notice("Unknown SVU micromode opcode called");
+	Console.Warning("Unknown SVU micromode opcode called");
 }

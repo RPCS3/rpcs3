@@ -48,12 +48,12 @@ mem8_t __fastcall iopHwRead8_Page1( u32 addr )
 		default:
 			if( masked_addr >= 0x100 && masked_addr < 0x130 )
 			{
-				DevCon.Notice( "HwRead8 from Counter16 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DevCon.Warning( "HwRead8 from Counter16 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				ret = psxHu8( addr );
 			}
 			else if( masked_addr >= 0x480 && masked_addr < 0x4a0 )
 			{
-				DevCon.Notice( "HwRead8 from Counter32 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
+				DevCon.Warning( "HwRead8 from Counter32 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				ret = psxHu8( addr );
 			}
 			else if( (masked_addr >= pgmsk(HW_USB_START)) && (masked_addr < pgmsk(HW_USB_END)) )
@@ -213,7 +213,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 			ret = SPU2read( addr );
 		else
 		{
-			DevCon.Notice( "HwRead32 from SPU2? (addr=0x%08X) .. What manner of trickery is this?!", addr );
+			DevCon.Warning( "HwRead32 from SPU2? (addr=0x%08X) .. What manner of trickery is this?!", addr );
 			ret = psxHu32(addr);
 		}
 	}

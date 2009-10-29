@@ -210,10 +210,10 @@ static __forceinline bool PERF_ShouldCountEvent( uint evt )
 void COP0_DiagnosticPCCR()
 {
 	if( cpuRegs.PERF.n.pccr.b.Event0 >= 7 && cpuRegs.PERF.n.pccr.b.Event0 <= 10 )
-		Console.Notice( "PERF/PCR0 Unsupported Update Event Mode = 0x%x", cpuRegs.PERF.n.pccr.b.Event0 );
+		Console.Warning( "PERF/PCR0 Unsupported Update Event Mode = 0x%x", cpuRegs.PERF.n.pccr.b.Event0 );
 
 	if( cpuRegs.PERF.n.pccr.b.Event1 >= 7 && cpuRegs.PERF.n.pccr.b.Event1 <= 10 )
-		Console.Notice( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", cpuRegs.PERF.n.pccr.b.Event1 );
+		Console.Warning( "PERF/PCR1 Unsupported Update Event Mode = 0x%x", cpuRegs.PERF.n.pccr.b.Event1 );
 }
 extern int branch;
 __forceinline void COP0_UpdatePCCR()

@@ -52,7 +52,7 @@ only recv2 & dataout influences padman
 
 
 void sio2Reset() {
-	DevCon.Status( "Sio2 Reset" );
+	DevCon.WriteLn( "Sio2 Reset" );
 	memzero(sio2);
 	sio2.packet.recvVal1 = 0x1D100; // Nothing is connected at start
 }
@@ -155,7 +155,7 @@ void sio2_serialIn(u8 value){
 	sioWrite8(value);
 	
 	if (sio2.packet.sendSize > BUFSIZE) {//asadr
-		Console.Notice("*PCSX2*: sendSize >= %d", BUFSIZE);
+		Console.Warning("*PCSX2*: sendSize >= %d", BUFSIZE);
 	} else {
 		sio2.buf[sio2.packet.sendSize] = sioRead8();
 		sio2.packet.sendSize++;

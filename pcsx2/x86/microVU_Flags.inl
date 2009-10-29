@@ -50,7 +50,7 @@ microVUt(void) mVUstatusFlagOp(mV) {
 		}
 	}
 	iPC = curPC;
-	DevCon.Status("microVU%d: FSSET Optimization", getIndex);
+	DevCon.WriteLn(Color_Green, "microVU%d: FSSET Optimization", getIndex);
 }
 
 int findFlagInst(int* fFlag, int cycles) {
