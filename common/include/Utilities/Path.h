@@ -13,7 +13,10 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include <wx/filename.h>
+#include "StringHelpers.h"
 
 #define g_MaxPath 255			// 255 is safer with antiquated Win32 ASCII APIs.
 
@@ -29,7 +32,7 @@ public:
 
 	wxDirName() : wxFileName() {}
 	wxDirName( const wxDirName& src ) : wxFileName( src ) { }
-	explicit wxDirName( const char* src ) { Assign( wxString::FromAscii(src) ); }
+	explicit wxDirName( const char* src ) { Assign( fromUTF8(src) ); }
 	explicit wxDirName( const wxString& src ) { Assign( src ); }
 
 	// ------------------------------------------------------------------------
@@ -93,7 +96,7 @@ public:
 
 	wxDirName& operator=(const wxDirName& dirname)	{ Assign( dirname ); return *this; }
 	wxDirName& operator=(const wxString& dirname)	{ Assign( dirname ); return *this; }
-	wxDirName& operator=(const char* dirname)		{ Assign( wxString::FromAscii(dirname) ); return *this; }
+	wxDirName& operator=(const char* dirname)		{ Assign( fromUTF8(dirname) ); return *this; }
 
 	wxFileName operator+( const wxFileName& right ) const	{ return Combine( right ); }
 	wxDirName operator+( const wxDirName& right )  const	{ return Combine( right ); }

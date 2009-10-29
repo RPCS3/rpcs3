@@ -85,7 +85,7 @@ T Parse( const wxString& src, const wxString& separators=L",")
 {
 	T retval;
 	if( !TryParse( retval, src, separators ) )
-		throw Exception::ParseError( "Parse failure on call to " + wxString::FromAscii(__WXFUNCTION__) + ": " + src );
+		throw Exception::ParseError( "Parse failure on call to " + fromUTF8(__WXFUNCTION__) + ": " + src );
 	return retval;
 }
 

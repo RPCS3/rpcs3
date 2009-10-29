@@ -117,7 +117,7 @@ public:
 	bool Test( int pluginTypeIndex ) const
 	{
 		// all test functions use the same parameterless API, so just pick one arbitrarily (I pick PAD!)
-		PluginTestFnptr testfunc = (PluginTestFnptr)m_plugin.GetSymbol( wxString::FromAscii( tbl_PluginInfo[pluginTypeIndex].shortname ) + L"test" );
+		PluginTestFnptr testfunc = (PluginTestFnptr)m_plugin.GetSymbol( fromUTF8( tbl_PluginInfo[pluginTypeIndex].shortname ) + L"test" );
 		if( testfunc == NULL ) return false;
 		return (testfunc() == 0);
 	}
@@ -125,7 +125,7 @@ public:
 	wxString GetName() const
 	{
 		pxAssert( m_GetLibName != NULL );
-		return wxString::FromAscii(m_GetLibName());
+		return fromUTF8(m_GetLibName());
 	}
 
 	void GetVersionString( wxString& dest, int pluginTypeIndex ) const

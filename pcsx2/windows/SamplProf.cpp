@@ -124,7 +124,7 @@ void ProfilerRegisterSource(const char* Name, const void* buff, u32 sz)
 	if( ProfRunning )
 		EnterCriticalSection( &ProfModulesLock );
 
-	wxString strName( wxString::FromAscii(Name) );
+	wxString strName( fromUTF8(Name) );
 	if( !_registeredName( strName ) )
 		ProfModules.push_back( Module( strName, buff, sz ) );
 
@@ -137,7 +137,7 @@ void ProfilerRegisterSource(const char* Name, const void* function)
 	if( ProfRunning )
 		EnterCriticalSection( &ProfModulesLock );
 
-	wxString strName( wxString::FromAscii(Name) );
+	wxString strName( fromUTF8(Name) );
 	if( !_registeredName( strName ) )
 		ProfModules.push_back( Module(strName,function) );
 
@@ -147,7 +147,7 @@ void ProfilerRegisterSource(const char* Name, const void* function)
 
 void ProfilerTerminateSource( const char* Name )
 {
-	wxString strName( wxString::FromAscii(Name) );
+	wxString strName( fromUTF8(Name) );
 	for( vector<Module>::const_iterator
 		iter = ProfModules.begin(),
 		end = ProfModules.end(); iter<end; ++iter )

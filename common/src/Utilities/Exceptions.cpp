@@ -19,12 +19,12 @@
 
 wxString GetEnglish( const char* msg )
 {
-	return wxString::FromAscii(msg);
+	return fromUTF8(msg);
 }
 
 wxString GetTranslation( const char* msg )
 {
-	return wxGetTranslation( wxString::FromAscii(msg).c_str() );
+	return wxGetTranslation( fromUTF8(msg) );
 }
 
 // ------------------------------------------------------------------------

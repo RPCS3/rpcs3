@@ -182,7 +182,7 @@ namespace wxHelpers
 
 	void Launch(const char *filename)
 	{
-		Launch( wxString::FromAscii(filename) );
+		Launch( fromUTF8(filename) );
 	}
 
 	// ------------------------------------------------------------------------
@@ -198,7 +198,7 @@ namespace wxHelpers
 
 	void Explore(const char *path)
 	{
-		Explore( wxString::FromAscii(path) );
+		Explore( fromUTF8(path) );
 	}
 }
 

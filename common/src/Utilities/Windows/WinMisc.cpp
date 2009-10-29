@@ -105,7 +105,7 @@ void Win32::RealVersionInfo::InitVersionString()
     int majorVersion = (DWORD)(LOBYTE(LOWORD(version)));
     int minorVersion = (DWORD)(HIBYTE(LOWORD(version)));
 
-	wxString verName( wxString::FromAscii( GetVersionName( minorVersion, majorVersion ) ) );
+	wxString verName( fromUTF8( GetVersionName( minorVersion, majorVersion ) ) );
 
 	bool IsCompatMode = false;
 

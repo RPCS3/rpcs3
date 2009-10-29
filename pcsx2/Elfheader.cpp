@@ -521,7 +521,7 @@ u32 loadElfCRC( const char* filename )
 	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
 
 	DevCon.WriteLn( "loadElfFile: %d bytes", toc.fileSize );
-	u32 crcval = ElfObject( wxString::FromAscii( filename ), toc.fileSize ).GetCRC();
+	u32 crcval = ElfObject( fromUTF8( filename ), toc.fileSize ).GetCRC();
 	Console.WriteLn( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
 
 	return crcval;
@@ -655,7 +655,7 @@ int GetPS2ElfName( wxString& name )
 	// the filename is everything up to the first CR/LF/tab.. ?
 	// Or up to any whitespace?  (I'm opting for first CRLF/tab, although the old code
 	// apparently stopped on spaces too) --air
-	name = wxStringTokenizer( wxString::FromAscii( pos ) ).GetNextToken();
+	name = wxStringTokenizer( fromUTF8( pos ) ).GetNextToken();
 
 #ifdef PCSX2_DEVBUILD
 	FILE *fp;

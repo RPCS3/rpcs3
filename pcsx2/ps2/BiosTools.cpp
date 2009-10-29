@@ -226,10 +226,10 @@ bool IsBIOS(const wxString& filename, wxString& description)
 				case 'C': zone = "China";	break;
 			}
 
-			const wxString romver( wxString::FromAscii(aROMVER) );
+			const wxString romver( fromUTF8(aROMVER) );
 
 			description.Printf( L"%-7s v%c%c.%c%c(%c%c/%c%c/%c%c%c%c)  %s",
-				wxString::FromAscii(zone).c_str(),
+				fromUTF8(zone).c_str(),
 				romver[0], romver[1],	// ver major
 				romver[2], romver[3],	// ver minor
 				romver[12], romver[13],	// day

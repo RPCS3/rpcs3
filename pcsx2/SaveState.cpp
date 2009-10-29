@@ -88,7 +88,7 @@ void SaveStateBase::FreezeTag( const char* src )
 		pxFail( "Savestate data corruption detected while reading tag" );
 		throw Exception::BadSavedState(
 			// Untranslated diagnostic msg (use default msg for translation)
-			L"Savestate data corruption detected while reading tag: " + wxString::FromAscii(src)
+			L"Savestate data corruption detected while reading tag: " + fromUTF8(src)
 		);
 	}
 }
