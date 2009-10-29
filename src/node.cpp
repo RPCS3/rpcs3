@@ -64,6 +64,13 @@ namespace YAML
 
 		// save location
 		m_mark = pScanner->peek().mark;
+		
+		// special case: a value node by itself must be a map, with no header
+		if(pScanner->peek().type == Token::VALUE) {
+			m_pContent = new Map;
+			m_pContent->Parse(pScanner, state);
+			return;
+		}
 
 		ParseHeader(pScanner, state);
 

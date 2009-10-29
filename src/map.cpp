@@ -66,6 +66,7 @@ namespace YAML
 			case Token::BLOCK_MAP_START: ParseBlock(pScanner, state); break;
 			case Token::FLOW_MAP_START: ParseFlow(pScanner, state); break;
 			case Token::FLOW_MAP_COMPACT: ParseCompact(pScanner, state); break;
+			case Token::VALUE: ParseCompactWithNoKey(pScanner, state); break;
 			default: break;
 		}
 	}
@@ -173,6 +174,20 @@ namespace YAML
 			pScanner->pop();
 			pValue->Parse(pScanner, state);
 		}
+			
+		// assign the map with the actual pointers
+		m_data[pKey.release()] = pValue.release();
+	}
+	
+	// ParseCompactWithNoKey
+	// . Single key: value pair in a flow sequence
+	void Map::ParseCompactWithNoKey(Scanner *pScanner, const ParserState& state)
+	{
+		std::auto_ptr <Node> pKey(new Node), pValue(new Node);
+
+		// grab value
+		pScanner->pop();
+		pValue->Parse(pScanner, state);
 			
 		// assign the map with the actual pointers
 		m_data[pKey.release()] = pValue.release();

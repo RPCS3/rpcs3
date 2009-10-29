@@ -42,6 +42,7 @@ namespace YAML
 		void ParseBlock(Scanner *pScanner, const ParserState& state);
 		void ParseFlow(Scanner *pScanner, const ParserState& state);
 		void ParseCompact(Scanner *pScanner, const ParserState& state);
+		void ParseCompactWithNoKey(Scanner *pScanner, const ParserState& state);
 
 	private:
 		node_map m_data;
