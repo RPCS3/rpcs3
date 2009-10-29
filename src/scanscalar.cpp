@@ -31,6 +31,7 @@ namespace YAML
 			// Phase #1: scan until line ending
 			
 			std::size_t lastNonWhitespaceChar = scalar.size();
+			bool escapedNewline = false;
 			while(!params.end.Matches(INPUT) && !Exp::Break.Matches(INPUT)) {
 				if(!INPUT)
 					break;
@@ -48,10 +49,11 @@ namespace YAML
 
 				// escaped newline? (only if we're escaping on slash)
 				if(params.escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
-					int n = Exp::EscBreak.Match(INPUT);
-					INPUT.eat(n);
+					// eat escape character and get out (but preserve trailing whitespace!)
+					INPUT.get();
 					lastNonWhitespaceChar = scalar.size();
-					continue;
+					escapedNewline = true;
+					break;
 				}
 
 				// escape this?
@@ -149,7 +151,7 @@ namespace YAML
 					case FOLD_FLOW:
 						if(nextEmptyLine)
 							scalar += "\n";
-						else if(!emptyLine && !nextEmptyLine)
+						else if(!emptyLine && !nextEmptyLine && !escapedNewline)
 							scalar += " ";
 						break;
 				}
