@@ -1819,7 +1819,7 @@ namespace Test {
 			try {
 				PARSE(doc, input);
 			} catch(const YAML::Exception& e) {
-				if(e.msg == YAML::ErrorMsg::END_OF_SEQ);
+				if(e.msg == YAML::ErrorMsg::END_OF_SEQ_FLOW)
 					return true;
 				
 				throw;
