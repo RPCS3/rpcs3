@@ -1781,7 +1781,7 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc[0].size() == 1);
-			YAML_ASSERT(doc[0]["foo"] == "bar");
+			YAML_ASSERT(doc[0]["foo bar"] == "baz");
 			return true;
 		}
 		

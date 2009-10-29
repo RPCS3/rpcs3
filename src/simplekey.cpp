@@ -72,9 +72,6 @@ namespace YAML
 				key.pMapStart = key.pIndent->pStartToken;
 				key.pMapStart->status = Token::UNVERIFIED;
 			}
-		} else if(m_flows.top() == FLOW_SEQ) {
-			key.pMapStart = PushToken(Token::FLOW_MAP_COMPACT);
-			key.pMapStart->status = Token::UNVERIFIED;
 		}
 
 		// then add the (now unverified) key

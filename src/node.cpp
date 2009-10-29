@@ -104,7 +104,7 @@ namespace YAML
 				break;
 			case Token::FLOW_MAP_START:
 			case Token::BLOCK_MAP_START:
-			case Token::FLOW_MAP_COMPACT:
+			case Token::KEY:
 				m_pContent = new Map;
 				break;
 			default:
