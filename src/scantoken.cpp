@@ -3,6 +3,8 @@
 #include "exceptions.h"
 #include "exp.h"
 #include "scanscalar.h"
+#include "scantag.h"
+#include "tag.h"
 #include <sstream>
 
 namespace YAML
@@ -24,12 +26,12 @@ namespace YAML
 		m_simpleKeyAllowed = false;
 
 		// store pos and eat indicator
-		Mark mark = INPUT.mark();
+		Token token(Token::DIRECTIVE, INPUT.mark());
 		INPUT.eat(1);
 
 		// read name
 		while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
-			name += INPUT.get();
+			token.value += INPUT.get();
 
 		// read parameters
 		while(1) {
@@ -46,12 +48,9 @@ namespace YAML
 			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
 				param += INPUT.get();
 
-			params.push_back(param);
+			token.params.push_back(param);
 		}
 		
-		Token token(Token::DIRECTIVE, mark);
-		token.value = name;
-		token.params = params;
 		m_tokens.push(token);
 	}
 
@@ -242,37 +241,34 @@ namespace YAML
 	// Tag
 	void Scanner::ScanTag()
 	{
-		std::string handle, suffix;
-
 		// insert a potential simple key
 		InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = false;
 
+		Token token(Token::TAG, INPUT.mark());
+
 		// eat the indicator
-		Mark mark = INPUT.mark();
-		handle += INPUT.get();
+		INPUT.get();
+		
+		if(INPUT && INPUT.peek() == Keys::VerbatimTagStart){
+			std::string tag = ScanVerbatimTag(INPUT);
 
-		// read the handle
-		while(INPUT && INPUT.peek() != Keys::Tag && !Exp::BlankOrBreak.Matches(INPUT))
-			handle += INPUT.get();
-
-		// is there a suffix?
-		if(INPUT.peek() == Keys::Tag) {
-			// eat the indicator
-			handle += INPUT.get();
-
-			// then read it
-			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
-				suffix += INPUT.get();
+			token.value = tag;
+			token.data = Tag::VERBATIM;
 		} else {
-			// this is a bit weird: we keep just the '!' as the handle and move the rest to the suffix
-			suffix = handle.substr(1);
-			handle = "!";
+			bool canBeHandle;
+			token.value = ScanTagHandle(INPUT, canBeHandle);
+			token.data = (token.value.empty() ? Tag::SECONDARY_HANDLE : Tag::PRIMARY_HANDLE);
+			
+			// is there a suffix?
+			if(canBeHandle && INPUT.peek() == Keys::Tag) {
+				// eat the indicator
+				INPUT.get();
+				token.params.push_back(ScanTagSuffix(INPUT));
+				token.data = Tag::NAMED_HANDLE;
+			}
 		}
 
-		Token token(Token::TAG, mark);
-		token.value = handle;
-		token.params.push_back(suffix);
 		m_tokens.push(token);
 	}
 

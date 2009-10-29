@@ -30,6 +30,11 @@ namespace YAML
 			++m_offset;
 			return *this;
 		}
+		
+		StringCharSource& operator += (std::size_t offset) {
+			m_offset += offset;
+			return *this;
+		}
 	private:
 		const char *m_str;
 		std::size_t m_size;

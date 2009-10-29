@@ -52,6 +52,7 @@ namespace YAML
 		Emitter& Write(double d);
 		Emitter& Write(const _Alias& alias);
 		Emitter& Write(const _Anchor& anchor);
+		Emitter& Write(const _Tag& tag);
 		Emitter& Write(const _Comment& comment);
 		Emitter& Write(const _Null& null);
 		

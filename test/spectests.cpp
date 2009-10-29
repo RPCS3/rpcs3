@@ -32,7 +32,7 @@ namespace Test {
 				ret = test();
 			} catch(const YAML::Exception& e) {
 				ret.ok = false;
-				ret.error = "  Exception caught: " + e.msg;
+				ret.error = std::string("  Exception caught: ") + e.what();
 			}
 			
 			if(!ret.ok) {
@@ -459,7 +459,136 @@ namespace Test {
 			return true;
 		}
 		
-		// TODO: 2.19 - 2.26 tags
+		// TODO: 2.19 - 2.22 tags
+		
+		// 2.23
+		TEST VariousExplicitTags()
+		{
+			std::string input =
+				"---\n"
+				"not-date: !!str 2002-04-28\n"
+				"\n"
+				"picture: !!binary |\n"
+				" R0lGODlhDAAMAIQAAP//9/X\n"
+				" 17unp5WZmZgAAAOfn515eXv\n"
+				" Pz7Y6OjuDg4J+fn5OTk6enp\n"
+				" 56enmleECcgggoBADs=\n"
+				"\n"
+				"application specific tag: !something |\n"
+				" The semantics of the tag\n"
+				" above may be different for\n"
+				" different documents.";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["not-date"].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc["not-date"] == "2002-04-28");
+			YAML_ASSERT(doc["picture"].GetTag() == "tag:yaml.org,2002:binary");
+			YAML_ASSERT(doc["picture"] ==
+				"R0lGODlhDAAMAIQAAP//9/X\n"
+				"17unp5WZmZgAAAOfn515eXv\n"
+				"Pz7Y6OjuDg4J+fn5OTk6enp\n"
+				"56enmleECcgggoBADs=\n"
+			);
+			YAML_ASSERT(doc["application specific tag"].GetTag() == "!something");
+			YAML_ASSERT(doc["application specific tag"] ==
+				"The semantics of the tag\n"
+				"above may be different for\n"
+				"different documents."
+			);
+			return true;
+		}
+		
+		// 2.24
+		TEST GlobalTags()
+		{
+			std::string input =
+				"%TAG ! tag:clarkevans.com,2002:\n"
+				"--- !shape\n"
+				"  # Use the ! handle for presenting\n"
+				"  # tag:clarkevans.com,2002:circle\n"
+				"- !circle\n"
+				"  center: &ORIGIN {x: 73, y: 129}\n"
+				"  radius: 7\n"
+				"- !line\n"
+				"  start: *ORIGIN\n"
+				"  finish: { x: 89, y: 102 }\n"
+				"- !label\n"
+				"  start: *ORIGIN\n"
+				"  color: 0xFFEEBB\n"
+				"  text: Pretty vector drawing.";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "tag:clarkevans.com,2002:shape");
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].GetTag() == "tag:clarkevans.com,2002:circle");
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0]["center"].size() == 2);
+			YAML_ASSERT(doc[0]["center"]["x"] == 73);
+			YAML_ASSERT(doc[0]["center"]["y"] == 129);
+			YAML_ASSERT(doc[0]["radius"] == 7);
+			YAML_ASSERT(doc[1].GetTag() == "tag:clarkevans.com,2002:line");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1]["start"].size() == 2);
+			YAML_ASSERT(doc[1]["start"]["x"] == 73);
+			YAML_ASSERT(doc[1]["start"]["y"] == 129);
+			YAML_ASSERT(doc[1]["finish"].size() == 2);
+			YAML_ASSERT(doc[1]["finish"]["x"] == 89);
+			YAML_ASSERT(doc[1]["finish"]["y"] == 102);
+			YAML_ASSERT(doc[2].GetTag() == "tag:clarkevans.com,2002:label");
+			YAML_ASSERT(doc[2].size() == 3);
+			YAML_ASSERT(doc[2]["start"].size() == 2);
+			YAML_ASSERT(doc[2]["start"]["x"] == 73);
+			YAML_ASSERT(doc[2]["start"]["y"] == 129);
+			YAML_ASSERT(doc[2]["color"] == "0xFFEEBB");
+			YAML_ASSERT(doc[2]["text"] == "Pretty vector drawing.");
+			return true;
+		}
+		
+		// 2.25
+		TEST UnorderedSets()
+		{
+			std::string input =
+				"# Sets are represented as a\n"
+				"# Mapping where each key is\n"
+				"# associated with a null value\n"
+				"--- !!set\n"
+				"? Mark McGwire\n"
+				"? Sammy Sosa\n"
+				"? Ken Griffey";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "tag:yaml.org,2002:set");
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(IsNull(doc["Mark McGwire"]));
+			YAML_ASSERT(IsNull(doc["Sammy Sosa"]));
+			YAML_ASSERT(IsNull(doc["Ken Griffey"]));
+			return true;
+		}
+		
+		// 2.26
+		TEST OrderedMappings()
+		{
+			std::string input =
+				"# Ordered maps are represented as\n"
+				"# A sequence of mappings, with\n"
+				"# each mapping having one key\n"
+				"--- !!omap\n"
+				"- Mark McGwire: 65\n"
+				"- Sammy Sosa: 63\n"
+				"- Ken Griffey: 58";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "tag:yaml.org,2002:omap");
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["Mark McGwire"] == 65);
+			YAML_ASSERT(doc[1].size() == 1);
+			YAML_ASSERT(doc[1]["Sammy Sosa"] == 63);
+			YAML_ASSERT(doc[2].size() == 1);
+			YAML_ASSERT(doc[2]["Ken Griffey"] == 58);
+			return true;
+		}
 		
 		// 2.27
 		TEST Invoice()
@@ -496,6 +625,7 @@ namespace Test {
 				"    Billsmer @ 338-4338.";
 
 			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "tag:clarkevans.com,2002:invoice");
 			YAML_ASSERT(doc.size() == 8);
 			YAML_ASSERT(doc["invoice"] == 34843);
 			YAML_ASSERT(doc["date"] == "2001-01-23");
@@ -993,8 +1123,291 @@ namespace Test {
 			return true;
 		}
 		
-		// TODO: 6.13 - 6.17 directives
-		// TODO: 6.18 - 6.28 tags
+		// 6.13
+		TEST ReservedDirectives()
+		{
+			std::string input =
+				"%FOO  bar baz # Should be ignored\n"
+				"               # with a warning.\n"
+				"--- \"foo\"";
+
+			PARSE(doc, input);
+			return true;
+		}
+		
+		// 6.14
+		TEST YAMLDirective()
+		{
+			std::string input =
+				"%YAML 1.3 # Attempt parsing\n"
+				"           # with a warning\n"
+				"---\n"
+				"\"foo\"";
+
+			PARSE(doc, input);
+			return true;
+		}
+		
+		// 6.15
+		TEST InvalidRepeatedYAMLDirective()
+		{
+			std::string input =
+				"%YAML 1.2\n"
+				"%YAML 1.1\n"
+				"foo";
+
+			try {
+				PARSE(doc, input);
+			} catch(const YAML::ParserException& e) {
+				if(e.msg == YAML::ErrorMsg::REPEATED_YAML_DIRECTIVE)
+					return true;
+
+				throw;
+			}
+			
+			return "  No exception was thrown";
+		}
+		
+		// 6.16
+		TEST TagDirective()
+		{
+			std::string input =
+				"%TAG !yaml! tag:yaml.org,2002:\n"
+				"---\n"
+				"!yaml!str \"foo\"";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc == "foo");
+			return true;
+		}
+		
+		// 6.17
+		TEST InvalidRepeatedTagDirective()
+		{
+			std::string input =
+				"%TAG ! !foo\n"
+				"%TAG ! !foo\n"
+				"bar";
+
+			try {
+				PARSE(doc, input);
+			} catch(const YAML::ParserException& e) {
+				if(e.msg == YAML::ErrorMsg::REPEATED_TAG_DIRECTIVE)
+					return true;
+				
+				throw;
+			}
+	
+			return "  No exception was thrown";
+		}
+
+		// 6.18
+		TEST PrimaryTagHandle()
+		{
+			std::string input =
+				"# Private\n"
+				"!foo \"bar\"\n"
+				"...\n"
+				"# Global\n"
+				"%TAG ! tag:example.com,2000:app/\n"
+				"---\n"
+				"!foo \"bar\"";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "!foo");
+			YAML_ASSERT(doc == "bar");
+
+			PARSE_NEXT(doc);
+			YAML_ASSERT(doc.GetTag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc == "bar");
+			return true;
+		}
+		
+		// 6.19
+		TEST SecondaryTagHandle()
+		{
+			std::string input =
+				"%TAG !! tag:example.com,2000:app/\n"
+				"---\n"
+				"!!int 1 - 3 # Interval, not integer";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "tag:example.com,2000:app/int");
+			YAML_ASSERT(doc == "1 - 3");
+			return true;
+		}
+		
+		// 6.20
+		TEST TagHandles()
+		{
+			std::string input =
+				"%TAG !e! tag:example.com,2000:app/\n"
+				"---\n"
+				"!e!foo \"bar\"";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc == "bar");
+			return true;
+		}
+		
+		// 6.21
+		TEST LocalTagPrefix()
+		{
+			std::string input =
+				"%TAG !m! !my-\n"
+				"--- # Bulb here\n"
+				"!m!light fluorescent\n"
+				"...\n"
+				"%TAG !m! !my-\n"
+				"--- # Color here\n"
+				"!m!light green";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.GetTag() == "!my-light");
+			YAML_ASSERT(doc == "fluorescent");
+			
+			PARSE_NEXT(doc);
+			YAML_ASSERT(doc.GetTag() == "!my-light");
+			YAML_ASSERT(doc == "green");
+			return true;
+		}
+		
+		// 6.22
+		TEST GlobalTagPrefix()
+		{
+			std::string input =
+				"%TAG !e! tag:example.com,2000:app/\n"
+				"---\n"
+				"- !e!foo \"bar\"";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[0].GetTag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc[0] == "bar");
+			return true;
+		}
+		
+		// 6.23
+		TEST NodeProperties()
+		{
+			std::string input =
+				"!!str &a1 \"foo\":\n"
+				"  !!str bar\n"
+				"&a2 baz : *a1";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 2);
+			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
+				if(it.first() == "foo") {
+					YAML_ASSERT(it.first().GetTag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.second().GetTag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.second() == "bar");
+				} else if(it.first() == "baz") {
+					YAML_ASSERT(it.second() == "foo");
+				} else
+					return "  unknown key";
+			}
+			
+			return true;
+		}
+		
+		// 6.24
+		TEST VerbatimTags()
+		{
+			std::string input =
+				"!<tag:yaml.org,2002:str> foo :\n"
+				"  !<!bar> baz";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
+				YAML_ASSERT(it.first().GetTag() == "tag:yaml.org,2002:str");
+				YAML_ASSERT(it.first() == "foo");
+				YAML_ASSERT(it.second().GetTag() == "!bar");
+				YAML_ASSERT(it.second() == "baz");
+			}
+			return true;
+		}
+		
+		// 6.25
+		TEST InvalidVerbatimTags()
+		{
+			std::string input =
+				"- !<!> foo\n"
+				"- !<$:?> bar\n";
+
+			PARSE(doc, input);
+			return "  not implemented yet"; // TODO: check tags (but we probably will say these are valid, I think)
+		}
+		
+		// 6.26
+		TEST TagShorthands()
+		{
+			std::string input =
+				"%TAG !e! tag:example.com,2000:app/\n"
+				"---\n"
+				"- !local foo\n"
+				"- !!str bar\n"
+				"- !e!tag%21 baz\n";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].GetTag() == "!local");
+			YAML_ASSERT(doc[0] == "foo");
+			YAML_ASSERT(doc[1].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[1] == "bar");
+			YAML_ASSERT(doc[2].GetTag() == "tag:example.com,2000:app/tag%21");
+			YAML_ASSERT(doc[2] == "baz");
+			return true;
+		}
+		
+		// 6.27
+		TEST InvalidTagShorthands()
+		{
+			std::string input1 =
+				"%TAG !e! tag:example,2000:app/\n"
+				"---\n"
+				"- !e! foo";
+
+			bool threw = false;
+			try {
+				PARSE(doc, input1);
+			} catch(const YAML::ParserException& e) {
+				threw = true;
+				if(e.msg != YAML::ErrorMsg::TAG_WITH_NO_SUFFIX)
+					throw;
+			}
+			
+			if(!threw)
+				return "  No exception was thrown for a tag with no suffix";
+
+			std::string input2 =
+				"%TAG !e! tag:example,2000:app/\n"
+				"---\n"
+				"- !h!bar baz";
+
+			PARSE(doc, input2); // TODO: should we reject this one (since !h! is not declared)?
+			return "  not implemented yet";
+		}
+		
+		// 6.28
+		TEST NonSpecificTags()
+		{
+			std::string input =
+				"# Assuming conventional resolution:\n"
+				"- \"12\"\n"
+				"- 12\n"
+				"- ! 12";
+
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0] == "12"); // TODO: check tags. How?
+			YAML_ASSERT(doc[1] == 12);
+			YAML_ASSERT(doc[2] == "12");
+			return true;
+		}
 
 		// 6.29
 		TEST NodeAnchors()
@@ -1039,8 +1452,16 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["foo"] == ""); // TODO: check tag
-			YAML_ASSERT(doc[""] == "bar");
+			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
+				if(it.first() == "foo") {
+					YAML_ASSERT(it.second().GetTag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.second() == "");
+				} else if(it.first() == "") {
+					YAML_ASSERT(it.first().GetTag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.second() == "bar");
+				} else
+					return "  unexpected key";
+			}
 			return true;
 		}
 		
@@ -1232,6 +1653,10 @@ namespace Test {
 		RunSpecTest(&Spec::QuotedScalars, "2.17", "Quoted scalars", passed, total);
 		RunSpecTest(&Spec::MultiLineFlowScalars, "2.18", "Multi-line flow scalars", passed, total);
 		
+		RunSpecTest(&Spec::VariousExplicitTags, "2.23", "Various Explicit Tags", passed, total);
+		RunSpecTest(&Spec::GlobalTags, "2.24", "Global Tags", passed, total);
+		RunSpecTest(&Spec::UnorderedSets, "2.25", "Unordered Sets", passed, total);
+		RunSpecTest(&Spec::OrderedMappings, "2.26", "Ordered Mappings", passed, total);
 		RunSpecTest(&Spec::Invoice, "2.27", "Invoice", passed, total);
 		RunSpecTest(&Spec::LogFile, "2.28", "Log File", passed, total);
 		
@@ -1255,8 +1680,24 @@ namespace Test {
 		RunSpecTest(&Spec::FlowFolding, "6.8", "Flow Folding", passed, total);
 		RunSpecTest(&Spec::SeparatedComment, "6.9", "Separated Comment", passed, total);
 		RunSpecTest(&Spec::CommentLines, "6.10", "Comment Lines", passed, total);
-		RunSpecTest(&Spec::SeparationSpacesII, "6.11", "Separation Spaces", passed, total);
-		
+		RunSpecTest(&Spec::MultiLineComments, "6.11", "Multi-Line Comments", passed, total);
+		RunSpecTest(&Spec::SeparationSpacesII, "6.12", "Separation Spaces", passed, total);
+		RunSpecTest(&Spec::ReservedDirectives, "6.13", "Reserved Directives", passed, total);
+		RunSpecTest(&Spec::YAMLDirective, "6.14", "YAML Directive", passed, total);
+		RunSpecTest(&Spec::InvalidRepeatedYAMLDirective, "6.15", "Invalid Repeated YAML Directive", passed, total);
+		RunSpecTest(&Spec::TagDirective, "6.16", "Tag Directive", passed, total);
+		RunSpecTest(&Spec::InvalidRepeatedTagDirective, "6.17", "Invalid Repeated Tag Directive", passed, total);
+		RunSpecTest(&Spec::PrimaryTagHandle, "6.18", "Primary Tag Handle", passed, total);
+		RunSpecTest(&Spec::SecondaryTagHandle, "6.19", "SecondaryTagHandle", passed, total);
+		RunSpecTest(&Spec::TagHandles, "6.20", "TagHandles", passed, total);
+		RunSpecTest(&Spec::LocalTagPrefix, "6.21", "LocalTagPrefix", passed, total);
+		RunSpecTest(&Spec::GlobalTagPrefix, "6.22", "GlobalTagPrefix", passed, total);
+		RunSpecTest(&Spec::NodeProperties, "6.23", "NodeProperties", passed, total);
+		RunSpecTest(&Spec::VerbatimTags, "6.24", "Verbatim Tags", passed, total);
+		RunSpecTest(&Spec::InvalidVerbatimTags, "6.25", "Invalid Verbatim Tags", passed, total);
+		RunSpecTest(&Spec::TagShorthands, "6.26", "Tag Shorthands", passed, total);
+		RunSpecTest(&Spec::InvalidTagShorthands, "6.27", "Invalid Tag Shorthands", passed, total);
+		RunSpecTest(&Spec::NonSpecificTags, "6.28", "Non Specific Tags", passed, total);
 		RunSpecTest(&Spec::NodeAnchors, "6.29", "Node Anchors", passed, total);
 		
 		RunSpecTest(&Spec::AliasNodes, "7.1", "Alias Nodes", passed, total);

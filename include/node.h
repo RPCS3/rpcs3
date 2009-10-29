@@ -9,7 +9,6 @@
 #include "iterator.h"
 #include "mark.h"
 #include "noncopyable.h"
-#include "parserstate.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -21,6 +20,7 @@ namespace YAML
 	class Content;
 	class Scanner;
 	class Emitter;
+	class ParserState;
 
 	enum CONTENT_TYPE { CT_NONE, CT_SCALAR, CT_SEQUENCE, CT_MAP };
 
@@ -75,6 +75,9 @@ namespace YAML
 		const Node *Identity() const { return m_pIdentity; }
 		bool IsAlias() const { return m_alias; }
 		bool IsReferenced() const { return m_referenced; }
+		
+		// for tags
+		const std::string GetTag() const { return m_tag; } // TODO: should an aliased node return its alias's tag?
 
 		// emitting
 		friend Emitter& operator << (Emitter& out, const Node& node);

@@ -80,6 +80,16 @@ namespace YAML
 	inline _Anchor Anchor(const std::string content) {
 		return _Anchor(content);
 	}
+	
+	struct _Tag {
+		_Tag(const std::string& content_): content(content_), verbatim(true) {}
+		std::string content;
+		bool verbatim;
+	};
+	
+	inline _Tag VerbatimTag(const std::string& content) {
+		return _Tag(content);
+	}
 
 	struct _Comment {
 		_Comment(const std::string& content_): content(content_) {}

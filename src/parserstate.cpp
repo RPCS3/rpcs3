@@ -2,23 +2,22 @@
 
 namespace YAML
 {
-	void ParserState::Reset()
+	ParserState::ParserState()
 	{
 		// version
+		version.isDefault = true;
 		version.major = 1;
 		version.minor = 2;
-
-		// and tags
-		tags.clear();
-		tags["!"] = "!";
-		tags["!!"] = "tag:yaml.org,2002:";
 	}
 
-	std::string ParserState::TranslateTag(const std::string& handle) const
+	const std::string ParserState::TranslateTagHandle(const std::string& handle) const
 	{
 		std::map <std::string, std::string>::const_iterator it = tags.find(handle);
-		if(it == tags.end())
+		if(it == tags.end()) {
+			if(handle == "!!")
+				return "tag:yaml.org,2002:";
 			return handle;
+		}
 
 		return it->second;
 	}

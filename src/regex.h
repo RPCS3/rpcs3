@@ -37,12 +37,12 @@ namespace YAML
 
 		int Match(const std::string& str) const;
 		int Match(const Stream& in) const;
+		template <typename Source> int Match(const Source& source) const;
 
 	private:
 		RegEx(REGEX_OP op);
 		
 		template <typename Source> bool IsValidSource(const Source& source) const;
-		template <typename Source> int Match(const Source& source) const;
 		template <typename Source> int MatchUnchecked(const Source& source) const;
 
 		template <typename Source> int MatchOpEmpty(const Source& source) const;

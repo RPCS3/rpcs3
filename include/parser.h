@@ -5,7 +5,6 @@
 
 
 #include "node.h"
-#include "parserstate.h"
 #include "noncopyable.h"
 #include <ios>
 #include <string>
@@ -16,6 +15,7 @@
 namespace YAML
 {
 	class Scanner;
+	class ParserState;
 	struct Token;
 
 	class Parser: private noncopyable
@@ -33,13 +33,13 @@ namespace YAML
 
 	private:
 		void ParseDirectives();
-		void HandleDirective(Token *pToken);
-		void HandleYamlDirective(Token *pToken);
-		void HandleTagDirective(Token *pToken);
+		void HandleDirective(const Token& token);
+		void HandleYamlDirective(const Token& token);
+		void HandleTagDirective(const Token& token);
 
 	private:
 		std::auto_ptr<Scanner> m_pScanner;
-		ParserState m_state;
+		std::auto_ptr<ParserState> m_pState;
 	};
 }
 

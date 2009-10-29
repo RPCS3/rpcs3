@@ -3,6 +3,7 @@
 #include "exceptions.h"
 #include "exp.h"
 #include <cassert>
+#include <memory>
 
 namespace YAML
 {
@@ -13,6 +14,9 @@ namespace YAML
 
 	Scanner::~Scanner()
 	{
+		for(unsigned i=0;i<m_indentRefs.size();i++)
+			delete m_indentRefs[i];
+		m_indentRefs.clear();
 	}
 
 	// empty
@@ -228,7 +232,9 @@ namespace YAML
 	{
 		m_startedStream = true;
 		m_simpleKeyAllowed = true;
-		m_indents.push(IndentMarker(-1, IndentMarker::NONE));
+		IndentMarker *pIndent = new IndentMarker(-1, IndentMarker::NONE);
+		m_indentRefs.push_back(pIndent);
+		m_indents.push(pIndent);
 		m_anchors.clear();
 	}
 
@@ -257,8 +263,9 @@ namespace YAML
 		if(InFlowContext())
 			return 0;
 		
-		IndentMarker indent(column, type);
-		const IndentMarker& lastIndent = m_indents.top();
+		std::auto_ptr<IndentMarker> pIndent(new IndentMarker(column, type));
+		IndentMarker& indent = *pIndent;
+		const IndentMarker& lastIndent = *m_indents.top();
 
 		// is this actually an indentation?
 		if(indent.column < lastIndent.column)
@@ -276,13 +283,15 @@ namespace YAML
 		indent.pStartToken = &m_tokens.back();
 
 		// and then the indent
-		m_indents.push(indent);
-		return &m_indents.top();
+		m_indents.push(&indent);
+		m_indentRefs.push_back(pIndent.release());
+		return m_indentRefs.back();
 	}
 
 	// PopIndentToHere
 	// . Pops indentations off the stack until we reach the current indentation level,
 	//   and enqueues the proper token each time.
+	// . Then pops all invalid indentations off.
 	void Scanner::PopIndentToHere()
 	{
 		// are we in flow?
@@ -291,7 +300,7 @@ namespace YAML
 
 		// now pop away
 		while(!m_indents.empty()) {
-			const IndentMarker& indent = m_indents.top();
+			const IndentMarker& indent = *m_indents.top();
 			if(indent.column < INPUT.column())
 				break;
 			if(indent.column == INPUT.column() && !(indent.type == IndentMarker::SEQ && !Exp::BlockEntry.Matches(INPUT)))
@@ -299,6 +308,9 @@ namespace YAML
 				
 			PopIndent();
 		}
+		
+		while(!m_indents.empty() && m_indents.top()->status == IndentMarker::INVALID)
+			PopIndent();
 	}
 	
 	// PopAllIndents
@@ -312,7 +324,7 @@ namespace YAML
 
 		// now pop away
 		while(!m_indents.empty()) {
-			const IndentMarker& indent = m_indents.top();
+			const IndentMarker& indent = *m_indents.top();
 			if(indent.type == IndentMarker::NONE)
 				break;
 			
@@ -324,17 +336,17 @@ namespace YAML
 	// . Pops a single indent, pushing the proper token
 	void Scanner::PopIndent()
 	{
-		IndentMarker indent = m_indents.top();
-		IndentMarker::INDENT_TYPE type = indent.type;
+		const IndentMarker& indent = *m_indents.top();
 		m_indents.pop();
-		if(!indent.isValid) {
+
+		if(indent.status != IndentMarker::VALID) {
 			InvalidateSimpleKey();
 			return;
 		}
 		
-		if(type == IndentMarker::SEQ)
+		if(indent.type == IndentMarker::SEQ)
 			m_tokens.push(Token(Token::BLOCK_SEQ_END, INPUT.mark()));
-		else if(type == IndentMarker::MAP)
+		else if(indent.type == IndentMarker::MAP)
 			m_tokens.push(Token(Token::BLOCK_MAP_END, INPUT.mark()));
 	}
 
@@ -343,7 +355,7 @@ namespace YAML
 	{
 		if(m_indents.empty())
 			return 0;
-		return m_indents.top().column;
+		return m_indents.top()->column;
 	}
 
 	// Save

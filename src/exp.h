@@ -25,6 +25,7 @@ namespace YAML
 		const RegEx Digit = RegEx('0', '9');
 		const RegEx Alpha = RegEx('a', 'z') || RegEx('A', 'Z');
 		const RegEx AlphaNumeric = Alpha || Digit;
+		const RegEx Word = AlphaNumeric || RegEx('-');
 		const RegEx Hex = Digit || RegEx('A', 'F') || RegEx('a', 'f');
 		// Valid Unicode code points that are not part of c-printable (YAML 1.2, sec. 5.1)
 		const RegEx NotPrintable = RegEx(0) || 
@@ -45,6 +46,8 @@ namespace YAML
 		            ValueInFlow = RegEx(':') + (BlankOrBreak || RegEx(",}", REGEX_OR));
 		const RegEx Comment = RegEx('#');
 		const RegEx AnchorEnd = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak;
+		const RegEx URI = Word || RegEx("#;/?:@&=+$,_.!~*'()[]", REGEX_OR) || (RegEx('%') + Hex + Hex);
+		const RegEx Tag = Word || RegEx("#;/?:@&=+$_.~*'", REGEX_OR) || (RegEx('%') + Hex + Hex);
 
 		// Plain scalar rules:
 		// . Cannot start with a blank.
@@ -79,6 +82,8 @@ namespace YAML
 		const char Tag = '!';
 		const char LiteralScalar = '|';
 		const char FoldedScalar = '>';
+		const char VerbatimTagStart = '<';
+		const char VerbatimTagEnd = '>';
 	}
 }
 

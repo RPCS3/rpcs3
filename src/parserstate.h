@@ -10,16 +10,17 @@
 namespace YAML
 {
 	struct Version {
+		bool isDefault;
 		int major, minor;
 	};
-
+	
 	struct ParserState
 	{
+		ParserState();
+		const std::string TranslateTagHandle(const std::string& handle) const;
+	
 		Version version;
 		std::map <std::string, std::string> tags;
-
-		void Reset();
-		std::string TranslateTag(const std::string& handle) const;
 	};
 }
 

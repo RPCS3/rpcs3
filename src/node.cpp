@@ -9,6 +9,7 @@
 #include "aliascontent.h"
 #include "iterpriv.h"
 #include "emitter.h"
+#include "tag.h"
 #include <stdexcept>
 
 namespace YAML
@@ -137,10 +138,8 @@ namespace YAML
 		if(m_tag != "")
 			throw ParserException(token.mark, ErrorMsg::MULTIPLE_TAGS);
 
-		m_tag = state.TranslateTag(token.value);
-
-		for(std::size_t i=0;i<token.params.size();i++)
-			m_tag += token.params[i];
+		Tag tag(token);
+		m_tag = tag.Translate(state);
 		pScanner->pop();
 	}
 	
@@ -241,7 +240,10 @@ namespace YAML
 	bool Node::GetScalar(std::string& s) const
 	{
 		if(!m_pContent) {
-			s = "~";
+			if(m_tag.empty())
+				s = "~";
+			else
+				s = "";
 			return true;
 		}
 		
@@ -258,7 +260,8 @@ namespace YAML
 				out << Anchor(node.m_anchor);
 		}
 
-		// TODO: write tag
+		if(node.m_tag != "")
+			out << VerbatimTag(node.m_tag);
 
 		// write content
 		if(node.m_pContent)

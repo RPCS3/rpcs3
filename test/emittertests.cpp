@@ -9,7 +9,7 @@ namespace Test
 
 		void SimpleScalar(YAML::Emitter& out, std::string& desiredOutput) {
 			out << "Hello, World!";
-			desiredOutput = "Hello, World!";
+			desiredOutput = "--- Hello, World!";
 		}
 		
 		void SimpleSeq(YAML::Emitter& out, std::string& desiredOutput) {
@@ -19,7 +19,7 @@ namespace Test
 			out << "milk";
 			out << YAML::EndSeq;
 
-			desiredOutput = "- eggs\n- bread\n- milk";
+			desiredOutput = "---\n- eggs\n- bread\n- milk";
 		}
 		
 		void SimpleFlowSeq(YAML::Emitter& out, std::string& desiredOutput) {
@@ -30,7 +30,7 @@ namespace Test
 			out << "Moe";
 			out << YAML::EndSeq;
 			
-			desiredOutput = "[Larry, Curly, Moe]";
+			desiredOutput = "--- [Larry, Curly, Moe]";
 		}
 		
 		void EmptyFlowSeq(YAML::Emitter& out, std::string& desiredOutput) {
@@ -38,7 +38,7 @@ namespace Test
 			out << YAML::BeginSeq;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "[]";
+			desiredOutput = "--- []";
 		}
 		
 		void NestedBlockSeq(YAML::Emitter& out, std::string& desiredOutput) {
@@ -47,7 +47,7 @@ namespace Test
 			out << YAML::BeginSeq << "subitem 1" << "subitem 2" << YAML::EndSeq;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- item 1\n-\n  - subitem 1\n  - subitem 2";
+			desiredOutput = "---\n- item 1\n-\n  - subitem 1\n  - subitem 2";
 		}
 		
 		void NestedFlowSeq(YAML::Emitter& out, std::string& desiredOutput) {
@@ -56,7 +56,7 @@ namespace Test
 			out << YAML::Flow << YAML::BeginSeq << "two" << "three" << YAML::EndSeq;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- one\n- [two, three]";
+			desiredOutput = "---\n- one\n- [two, three]";
 		}
 
 		void SimpleMap(YAML::Emitter& out, std::string& desiredOutput) {
@@ -67,7 +67,7 @@ namespace Test
 			out << YAML::Value << "3B";
 			out << YAML::EndMap;
 
-			desiredOutput = "name: Ryan Braun\nposition: 3B";
+			desiredOutput = "---\nname: Ryan Braun\nposition: 3B";
 		}
 		
 		void SimpleFlowMap(YAML::Emitter& out, std::string& desiredOutput) {
@@ -79,7 +79,7 @@ namespace Test
 			out << YAML::Value << "blue";
 			out << YAML::EndMap;
 			
-			desiredOutput = "{shape: square, color: blue}";
+			desiredOutput = "--- {shape: square, color: blue}";
 		}
 		
 		void MapAndList(YAML::Emitter& out, std::string& desiredOutput) {
@@ -90,7 +90,7 @@ namespace Test
 			out << YAML::Value << YAML::BeginSeq << "Sasha" << "Malia" << YAML::EndSeq;
 			out << YAML::EndMap;
 
-			desiredOutput = "name: Barack Obama\nchildren:\n  - Sasha\n  - Malia";
+			desiredOutput = "---\nname: Barack Obama\nchildren:\n  - Sasha\n  - Malia";
 		}
 		
 		void ListAndMap(YAML::Emitter& out, std::string& desiredOutput) {
@@ -103,7 +103,7 @@ namespace Test
 			out << "item 2";
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- item 1\n-\n  pens: 8\n  pencils: 14\n- item 2";
+			desiredOutput = "---\n- item 1\n-\n  pens: 8\n  pencils: 14\n- item 2";
 		}
 
 		void NestedBlockMap(YAML::Emitter& out, std::string& desiredOutput) {
@@ -119,7 +119,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndMap;
 			
-			desiredOutput = "name: Fred\ngrades:\n  algebra: A\n  physics: C+\n  literature: B";
+			desiredOutput = "---\nname: Fred\ngrades:\n  algebra: A\n  physics: C+\n  literature: B";
 		}
 
 		void NestedFlowMap(YAML::Emitter& out, std::string& desiredOutput) {
@@ -136,7 +136,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndMap;
 			
-			desiredOutput = "{name: Fred, grades: {algebra: A, physics: C+, literature: B}}";
+			desiredOutput = "--- {name: Fred, grades: {algebra: A, physics: C+, literature: B}}";
 		}
 		
 		void MapListMix(YAML::Emitter& out, std::string& desiredOutput) {
@@ -149,7 +149,7 @@ namespace Test
 			out << YAML::Key << "invincible" << YAML::Value << YAML::OnOffBool << false;
 			out << YAML::EndMap;
 			
-			desiredOutput = "name: Bob\nposition: [2, 4]\ninvincible: off";
+			desiredOutput = "---\nname: Bob\nposition: [2, 4]\ninvincible: off";
 		}
 
 		void SimpleLongKey(YAML::Emitter& out, std::string& desiredOutput)
@@ -162,7 +162,7 @@ namespace Test
 			out << YAML::Value << 145;
 			out << YAML::EndMap;
 			
-			desiredOutput = "? height\n: 5'9\"\n? weight\n: 145";
+			desiredOutput = "---\n? height\n: 5'9\"\n? weight\n: 145";
 		}
 		
 		void SingleLongKey(YAML::Emitter& out, std::string& desiredOutput)
@@ -176,7 +176,7 @@ namespace Test
 			out << YAML::Value << 145;
 			out << YAML::EndMap;
 			
-			desiredOutput = "age: 24\n? height\n: 5'9\"\nweight: 145";
+			desiredOutput = "---\nage: 24\n? height\n: 5'9\"\nweight: 145";
 		}
 		
 		void ComplexLongKey(YAML::Emitter& out, std::string& desiredOutput)
@@ -189,7 +189,7 @@ namespace Test
 			out << YAML::Value << "demon";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon";
+			desiredOutput = "---\n?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon";
 		}
 
 		void AutoLongKey(YAML::Emitter& out, std::string& desiredOutput)
@@ -203,7 +203,7 @@ namespace Test
 			out << YAML::Value << "angel";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon\nthe origin: angel";
+			desiredOutput = "---\n?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon\nthe origin: angel";
 		}
 		
 		void ScalarFormat(YAML::Emitter& out, std::string& desiredOutput)
@@ -217,7 +217,7 @@ namespace Test
 			out << YAML::Literal << "literal scalar\nthat may span\nmany, many\nlines and have \"whatever\" crazy\tsymbols that we like";
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- simple scalar\n- 'explicit single-quoted scalar'\n- \"explicit double-quoted scalar\"\n- \"auto-detected\\x0adouble-quoted scalar\"\n- a non-\"auto-detected\" double-quoted scalar\n- |\n  literal scalar\n  that may span\n  many, many\n  lines and have \"whatever\" crazy\tsymbols that we like";
+			desiredOutput = "---\n- simple scalar\n- 'explicit single-quoted scalar'\n- \"explicit double-quoted scalar\"\n- \"auto-detected\\x0adouble-quoted scalar\"\n- a non-\"auto-detected\" double-quoted scalar\n- |\n  literal scalar\n  that may span\n  many, many\n  lines and have \"whatever\" crazy\tsymbols that we like";
 		}
 
 		void AutoLongKeyScalar(YAML::Emitter& out, std::string& desiredOutput)
@@ -227,7 +227,7 @@ namespace Test
 			out << YAML::Value << "and its value";
 			out << YAML::EndMap;
 			
-			desiredOutput = "? |\n  multi-line\n  scalar\n: and its value";
+			desiredOutput = "---\n? |\n  multi-line\n  scalar\n: and its value";
 		}
 		
 		void LongKeyFlowMap(YAML::Emitter& out, std::string& desiredOutput)
@@ -240,7 +240,7 @@ namespace Test
 			out << YAML::Value << "and its value";
 			out << YAML::EndMap;
 			
-			desiredOutput = "{simple key: and value, ? long key: and its value}";
+			desiredOutput = "--- {simple key: and value, ? long key: and its value}";
 		}
 
 		void BlockMapAsKey(YAML::Emitter& out, std::string& desiredOutput)
@@ -255,7 +255,7 @@ namespace Test
 			out << "total value";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  key: value\n  next key: next value\n: total value";
+			desiredOutput = "---\n?\n  key: value\n  next key: next value\n: total value";
 		}
 		
 		void AliasAndAnchor(YAML::Emitter& out, std::string& desiredOutput)
@@ -269,7 +269,7 @@ namespace Test
 			out << YAML::Alias("fred");
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- &fred\n  name: Fred\n  age: 42\n- *fred";
+			desiredOutput = "---\n- &fred\n  name: Fred\n  age: 42\n- *fred";
 		}
 
 		void AliasAndAnchorWithNull(YAML::Emitter& out, std::string& desiredOutput)
@@ -279,7 +279,98 @@ namespace Test
 			out << YAML::Alias("fred");
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- &fred ~\n- *fred";
+			desiredOutput = "---\n- &fred ~\n- *fred";
+		}
+		
+		void SimpleVerbatimTag(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::VerbatimTag("!foo") << "bar";
+			
+			desiredOutput = "--- !<!foo> bar";
+		}
+
+		void VerbatimTagInBlockSeq(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << YAML::VerbatimTag("!foo") << "bar";
+			out << "baz";
+			out << YAML::EndSeq;
+			
+			desiredOutput = "---\n- !<!foo> bar\n- baz";
+		}
+
+		void VerbatimTagInFlowSeq(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginSeq;
+			out << YAML::VerbatimTag("!foo") << "bar";
+			out << "baz";
+			out << YAML::EndSeq;
+			
+			desiredOutput = "--- [!<!foo> bar, baz]";
+		}
+
+		void VerbatimTagInFlowSeqWithNull(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginSeq;
+			out << YAML::VerbatimTag("!foo") << YAML::Null;
+			out << "baz";
+			out << YAML::EndSeq;
+			
+			desiredOutput = "--- [!<!foo> ~, baz]";
+		}
+
+		void VerbatimTagInBlockMap(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << YAML::VerbatimTag("!foo") << "bar";
+			out << YAML::Value << YAML::VerbatimTag("!waz") << "baz";
+			out << YAML::EndMap;
+			
+			desiredOutput = "---\n!<!foo> bar: !<!waz> baz";
+		}
+
+		void VerbatimTagInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginMap;
+			out << YAML::Key << YAML::VerbatimTag("!foo") << "bar";
+			out << YAML::Value << "baz";
+			out << YAML::EndMap;
+			
+			desiredOutput = "--- {!<!foo> bar: baz}";
+		}
+
+		void VerbatimTagInFlowMapWithNull(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginMap;
+			out << YAML::Key << YAML::VerbatimTag("!foo") << YAML::Null;
+			out << YAML::Value << "baz";
+			out << YAML::EndMap;
+			
+			desiredOutput = "--- {!<!foo> ~: baz}";
+		}
+		
+		void VerbatimTagWithEmptySeq(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::VerbatimTag("!foo") << YAML::BeginSeq << YAML::EndSeq;
+			
+			desiredOutput = "--- !<!foo>\n[]";
+		}
+
+		void VerbatimTagWithEmptyMap(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::VerbatimTag("!bar") << YAML::BeginMap << YAML::EndMap;
+			
+			desiredOutput = "--- !<!bar>\n{}";
+		}
+
+		void VerbatimTagWithEmptySeqAndMap(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << YAML::VerbatimTag("!foo") << YAML::BeginSeq << YAML::EndSeq;
+			out << YAML::VerbatimTag("!bar") << YAML::BeginMap << YAML::EndMap;
+			out << YAML::EndSeq;
+			
+			desiredOutput = "---\n- !<!foo>\n  []\n- !<!bar>\n  {}";
 		}
 
 		void ComplexDoc(YAML::Emitter& out, std::string& desiredOutput)
@@ -335,7 +426,7 @@ namespace Test
 			out << YAML::Value << YAML::Alias("id001");
 			out << YAML::EndMap;
 			
-			desiredOutput = "receipt: Oz-Ware Purchase Invoice\ndate: 2007-08-06\ncustomer:\n  given: Dorothy\n  family: Gale\nitems:\n  -\n    part_no: A4786\n    descrip: Water Bucket (Filled)\n    price: 1.47\n    quantity: 4\n  -\n    part_no: E1628\n    descrip: High Heeled \"Ruby\" Slippers\n    price: 100.27\n    quantity: 1\nbill-to: &id001\n  street: |\n    123 Tornado Alley\n    Suite 16\n  city: East Westville\n  state: KS\nship-to: *id001";
+			desiredOutput = "---\nreceipt: Oz-Ware Purchase Invoice\ndate: 2007-08-06\ncustomer:\n  given: Dorothy\n  family: Gale\nitems:\n  -\n    part_no: A4786\n    descrip: Water Bucket (Filled)\n    price: 1.47\n    quantity: 4\n  -\n    part_no: E1628\n    descrip: High Heeled \"Ruby\" Slippers\n    price: 100.27\n    quantity: 1\nbill-to: &id001\n  street: |\n    123 Tornado Alley\n    Suite 16\n  city: East Westville\n  state: KS\nship-to: *id001";
 		}
 
 		void STLContainers(YAML::Emitter& out, std::string& desiredOutput)
@@ -355,7 +446,7 @@ namespace Test
 			out << ages;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- [2, 3, 5, 7, 11, 13]\n-\n  Daniel: 26\n  Jesse: 24";
+			desiredOutput = "---\n- [2, 3, 5, 7, 11, 13]\n-\n  Daniel: 26\n  Jesse: 24";
 		}
 
 		void SimpleComment(YAML::Emitter& out, std::string& desiredOutput)
@@ -365,7 +456,7 @@ namespace Test
 			out << YAML::Value << "least squares" << YAML::Comment("should we change this method?");
 			out << YAML::EndMap;
 			
-			desiredOutput = "method: least squares  # should we change this method?";
+			desiredOutput = "---\nmethod: least squares  # should we change this method?";
 		}
 
 		void MultiLineComment(YAML::Emitter& out, std::string& desiredOutput)
@@ -375,7 +466,7 @@ namespace Test
 			out << "item 2";
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- item 1  # really really long\n          # comment that couldn't possibly\n          # fit on one line\n- item 2";
+			desiredOutput = "---\n- item 1  # really really long\n          # comment that couldn't possibly\n          # fit on one line\n- item 2";
 		}
 
 		void ComplexComments(YAML::Emitter& out, std::string& desiredOutput)
@@ -385,7 +476,7 @@ namespace Test
 			out << YAML::Value << "value";
 			out << YAML::EndMap;
 			
-			desiredOutput = "? long key  # long key\n: value";
+			desiredOutput = "---\n? long key  # long key\n: value";
 		}
 
 		void Indentation(YAML::Emitter& out, std::string& desiredOutput)
@@ -398,7 +489,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "-\n    key 1: value 1\n    key 2:\n        - a\n        - b\n        - c";
+			desiredOutput = "---\n-\n    key 1: value 1\n    key 2:\n        - a\n        - b\n        - c";
 		}
 
 		void SimpleGlobalSettings(YAML::Emitter& out, std::string& desiredOutput)
@@ -413,7 +504,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "-\n    ? key 1\n    : value 1\n    ? key 2\n    : [a, b, c]";
+			desiredOutput = "---\n-\n    ? key 1\n    : value 1\n    ? key 2\n    : [a, b, c]";
 		}
 		
 		void ComplexGlobalSettings(YAML::Emitter& out, std::string& desiredOutput)
@@ -432,7 +523,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "-\n  key 1: value 1\n  key 2: [a, b, c]\n-\n  ? [1, 2]\n  :\n    a: b";
+			desiredOutput = "---\n-\n  key 1: value 1\n  key 2: [a, b, c]\n-\n  ? [1, 2]\n  :\n    a: b";
 		}
 
 		void Null(YAML::Emitter& out, std::string& desiredOutput)
@@ -445,26 +536,26 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- ~\n-\n  null value: ~\n  ~: null key";
+			desiredOutput = "---\n- ~\n-\n  null value: ~\n  ~: null key";
 		}
 		
 		void EscapedUnicode(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << YAML::EscapeNonAscii << "\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2";
 			
-			desiredOutput = "\"$ \\xa2 \\u20ac \\U00024b62\"";
+			desiredOutput = "--- \"$ \\xa2 \\u20ac \\U00024b62\"";
 		}
 		
 		void Unicode(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << "\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2";
-			desiredOutput = "\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2";
+			desiredOutput = "--- \x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2";
 		}
 		
 		void DoubleQuotedUnicode(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << YAML::DoubleQuoted << "\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2";
-			desiredOutput = "\"\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2\"";
+			desiredOutput = "--- \"\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2\"";
 		}
 		
 
@@ -620,6 +711,16 @@ namespace Test
 		RunEmitterTest(&Emitter::BlockMapAsKey, "block map as key", passed, total);
 		RunEmitterTest(&Emitter::AliasAndAnchor, "alias and anchor", passed, total);
 		RunEmitterTest(&Emitter::AliasAndAnchorWithNull, "alias and anchor with null", passed, total);
+		RunEmitterTest(&Emitter::SimpleVerbatimTag, "simple verbatim tag", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagInBlockSeq, "verbatim tag in block seq", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagInFlowSeq, "verbatim tag in flow seq", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagInFlowSeqWithNull, "verbatim tag in flow seq with null", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagInBlockMap, "verbatim tag in block map", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagInFlowMap, "verbatim tag in flow map", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagInFlowMapWithNull, "verbatim tag in flow map with null", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagWithEmptySeq, "verbatim tag with empty seq", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagWithEmptyMap, "verbatim tag with empty map", passed, total);
+		RunEmitterTest(&Emitter::VerbatimTagWithEmptySeqAndMap, "verbatim tag with empty seq and map", passed, total);
 		RunEmitterTest(&Emitter::ComplexDoc, "complex doc", passed, total);
 		RunEmitterTest(&Emitter::STLContainers, "STL containers", passed, total);
 		RunEmitterTest(&Emitter::SimpleComment, "simple comment", passed, total);

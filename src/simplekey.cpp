@@ -12,9 +12,11 @@ namespace YAML
 
 	void Scanner::SimpleKey::Validate()
 	{
-		// Note: pIndent will *not* be garbage here; see below
+		// Note: pIndent will *not* be garbage here;
+		//       we "garbage collect" them so we can
+		//       always refer to them
 		if(pIndent)
-			pIndent->isValid = true;
+			pIndent->status = IndentMarker::VALID;
 		if(pMapStart)
 			pMapStart->status = Token::VALID;
 		if(pKey)
@@ -23,8 +25,8 @@ namespace YAML
 
 	void Scanner::SimpleKey::Invalidate()
 	{
-		// Note: pIndent might be a garbage pointer here, but that's ok
-		//       An indent will only be popped if the simple key is invalid
+		if(pIndent)
+			pIndent->status = IndentMarker::INVALID;
 		if(pMapStart)
 			pMapStart->status = Token::INVALID;
 		if(pKey)
@@ -68,7 +70,7 @@ namespace YAML
 		// first add a map start, if necessary
 		key.pIndent = PushIndentTo(INPUT.column(), IndentMarker::MAP);
 		if(key.pIndent) {
-			key.pIndent->isValid = false;
+			key.pIndent->status = IndentMarker::UNKNOWN;
 			key.pMapStart = key.pIndent->pStartToken;
 			key.pMapStart->status = Token::UNVERIFIED;
 		}
@@ -135,3 +137,4 @@ namespace YAML
 			m_simpleKeys.pop();
 	}
 }
+

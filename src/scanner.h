@@ -36,11 +36,12 @@ namespace YAML
 	private:
 		struct IndentMarker {
 			enum INDENT_TYPE { MAP, SEQ, NONE };
-			IndentMarker(int column_, INDENT_TYPE type_): column(column_), type(type_), isValid(true), pStartToken(0) {}
+			enum STATUS { VALID, INVALID, UNKNOWN };
+			IndentMarker(int column_, INDENT_TYPE type_): column(column_), type(type_), status(VALID), pStartToken(0) {}
 		
 			int column;
 			INDENT_TYPE type;
-			bool isValid;
+			STATUS status;
 			Token *pStartToken;
 		};
 		
@@ -118,10 +119,12 @@ namespace YAML
 		bool m_startedStream, m_endedStream;
 		bool m_simpleKeyAllowed;
 		std::stack <SimpleKey> m_simpleKeys;
-		std::stack <IndentMarker> m_indents;
+		std::stack <IndentMarker *> m_indents;
+		std::vector <IndentMarker *> m_indentRefs; // for "garbage collection"
 		std::stack <FLOW_MARKER> m_flows;
 		std::map <std::string, const Node *> m_anchors;
 	};
 }
 
 #endif // SCANNER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+

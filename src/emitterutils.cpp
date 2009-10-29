@@ -293,6 +293,24 @@ namespace YAML
 			out << "&";
 			return WriteAliasName(out, str);
 		}
+
+		bool WriteTag(ostream& out, const std::string& str)
+		{
+			out << "!<";
+			StringCharSource buffer(str.c_str(), str.size());
+			while(buffer) {
+				int n = Exp::URI.Match(buffer);
+				if(n <= 0)
+					return false;
+
+				while(--n >= 0) {
+					out << buffer[0];
+					++buffer;
+				}
+			}
+			out << ">";
+			return true;
+		}
 	}
 }
 

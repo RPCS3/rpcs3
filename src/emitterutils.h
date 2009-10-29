@@ -18,6 +18,7 @@ namespace YAML
 		bool WriteComment(ostream& out, const std::string& str, int postCommentIndent);
 		bool WriteAlias(ostream& out, const std::string& str);
 		bool WriteAnchor(ostream& out, const std::string& str);
+		bool WriteTag(ostream& out, const std::string& str);
 	}
 }
 
