@@ -8,7 +8,7 @@
 namespace YAML
 {
 	Scanner::Scanner(std::istream& in)
-		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false)
+		: INPUT(in), m_startedStream(false), m_endedStream(false), m_simpleKeyAllowed(false), m_canBeJSONFlow(false)
 	{
 	}
 
@@ -142,7 +142,7 @@ namespace YAML
 		if((InBlockContext() ? Exp::Key : Exp::KeyInFlow).Matches(INPUT))
 			return ScanKey();
 
-		if((InBlockContext() ? Exp::Value : Exp::ValueInFlow).Matches(INPUT))
+		if(GetValueRegex().Matches(INPUT))
 			return ScanValue();
 
 		// alias/anchor
@@ -224,6 +224,16 @@ namespace YAML
 			return true;
 
 		return false;
+	}
+
+	// GetValueRegex
+	// . Get the appropriate regex to check if it's a value token
+	const RegEx& Scanner::GetValueRegex() const
+	{
+		if(InBlockContext())
+			return Exp::Value;
+		
+		return m_canBeJSONFlow ? Exp::ValueInJSONFlow : Exp::ValueInFlow;
 	}
 
 	// StartStream
@@ -410,3 +420,4 @@ namespace YAML
 		m_anchors.clear();
 	}
 }
+

@@ -16,6 +16,7 @@
 namespace YAML
 {
 	class Node;
+	class RegEx;
 
 	class Scanner
 	{
@@ -78,6 +79,7 @@ namespace YAML
 		void ThrowParserException(const std::string& msg) const;
 
 		bool IsWhitespaceToBeEaten(char ch);
+		const RegEx& GetValueRegex() const;
 
 		struct SimpleKey {
 			SimpleKey(const Mark& mark_, int flowLevel_);
@@ -120,6 +122,7 @@ namespace YAML
 		// state info
 		bool m_startedStream, m_endedStream;
 		bool m_simpleKeyAllowed;
+		bool m_canBeJSONFlow;
 		std::stack <SimpleKey> m_simpleKeys;
 		std::stack <IndentMarker *> m_indents;
 		std::vector <IndentMarker *> m_indentRefs; // for "garbage collection"

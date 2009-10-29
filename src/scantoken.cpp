@@ -24,6 +24,7 @@ namespace YAML
 		PopAllSimpleKeys();
 
 		m_simpleKeyAllowed = false;
+		m_canBeJSONFlow = false;
 
 		// store pos and eat indicator
 		Token token(Token::DIRECTIVE, INPUT.mark());
@@ -60,6 +61,7 @@ namespace YAML
 		PopAllIndents();
 		PopAllSimpleKeys();
 		m_simpleKeyAllowed = false;
+		m_canBeJSONFlow = false;
 
 		// eat
 		Mark mark = INPUT.mark();
@@ -73,6 +75,7 @@ namespace YAML
 		PopAllIndents();
 		PopAllSimpleKeys();
 		m_simpleKeyAllowed = false;
+		m_canBeJSONFlow = false;
 
 		// eat
 		Mark mark = INPUT.mark();
@@ -86,6 +89,7 @@ namespace YAML
 		// flows can be simple keys
 		InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = true;
+		m_canBeJSONFlow = false;
 
 		// eat
 		Mark mark = INPUT.mark();
@@ -111,6 +115,7 @@ namespace YAML
 		}
 
 		m_simpleKeyAllowed = false;
+		m_canBeJSONFlow = true;
 
 		// eat
 		Mark mark = INPUT.mark();
@@ -138,6 +143,7 @@ namespace YAML
 		}
 		
 		m_simpleKeyAllowed = true;
+		m_canBeJSONFlow = false;
 
 		// eat
 		Mark mark = INPUT.mark();
@@ -158,6 +164,7 @@ namespace YAML
 
 		PushIndentTo(INPUT.column(), IndentMarker::SEQ);
 		m_simpleKeyAllowed = true;
+		m_canBeJSONFlow = false;
 
 		// eat
 		Mark mark = INPUT.mark();
@@ -190,6 +197,7 @@ namespace YAML
 	{
 		// and check that simple key
 		bool isSimpleKey = VerifySimpleKey();
+		m_canBeJSONFlow = false;
 		
 		if(isSimpleKey) {
 			// can't follow a simple key with another simple key (dunno why, though - it seems fine)
@@ -222,6 +230,7 @@ namespace YAML
 		// insert a potential simple key
 		InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = false;
+		m_canBeJSONFlow = false;
 
 		// eat the indicator
 		Mark mark = INPUT.mark();
@@ -252,6 +261,7 @@ namespace YAML
 		// insert a potential simple key
 		InsertPotentialSimpleKey();
 		m_simpleKeyAllowed = false;
+		m_canBeJSONFlow = false;
 
 		Token token(Token::TAG, INPUT.mark());
 
@@ -305,6 +315,7 @@ namespace YAML
 
 		// can have a simple key only if we ended the scalar by starting a new line
 		m_simpleKeyAllowed = params.leadingSpaces;
+		m_canBeJSONFlow = false;
 
 		// finally, check and see if we ended on an illegal character
 		//if(Exp::IllegalCharInScalar.Matches(INPUT))
@@ -347,6 +358,7 @@ namespace YAML
 		// and scan
 		scalar = ScanScalar(INPUT, params);
 		m_simpleKeyAllowed = false;
+		m_canBeJSONFlow = true;
 
 		Token token(Token::SCALAR, mark);
 		token.value = scalar;
@@ -413,6 +425,7 @@ namespace YAML
 
 		// simple keys always ok after block scalars (since we're gonna start a new line anyways)
 		m_simpleKeyAllowed = true;
+		m_canBeJSONFlow = false;
 
 		Token token(Token::SCALAR, mark);
 		token.value = scalar;

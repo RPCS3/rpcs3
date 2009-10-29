@@ -43,7 +43,8 @@ namespace YAML
 		const RegEx Key = RegEx('?'),
 		            KeyInFlow = RegEx('?') + BlankOrBreak;
 		const RegEx Value = RegEx(':') + (BlankOrBreak || RegEx()),
-		            ValueInFlow = RegEx(':') + (BlankOrBreak || RegEx(",}", REGEX_OR));
+		            ValueInFlow = RegEx(':') + (BlankOrBreak || RegEx(",}", REGEX_OR)),
+		            ValueInJSONFlow = RegEx(':');
 		const RegEx Comment = RegEx('#');
 		const RegEx AnchorEnd = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak;
 		const RegEx URI = Word || RegEx("#;/?:@&=+$,_.!~*'()[]", REGEX_OR) || (RegEx('%') + Hex + Hex);
