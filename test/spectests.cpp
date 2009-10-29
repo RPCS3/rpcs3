@@ -459,7 +459,7 @@ namespace Test {
 			return true;
 		}
 		
-		// TODO: 2.19 - 2.22 tags
+		// TODO: 2.19 - 2.22 schema tags
 		
 		// 2.23
 		TEST VariousExplicitTags()
@@ -765,7 +765,16 @@ namespace Test {
 			return true;
 		}
 		
-		// TODO: 5.5 comment only
+		// 5.5
+		TEST CommentIndicator()
+		{
+			std::string input =
+				"# Comment only.";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 0);
+			return true;
+		}
 		
 		// 5.6
 		TEST NodePropertyIndicators()
@@ -1060,10 +1069,9 @@ namespace Test {
 				"  # Comment\n"
 				"   \n"
 				"\n";
-			std::stringstream stream(input);
-			YAML::Parser parser(stream);
 			
-			YAML_ASSERT(!parser);
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 0);
 			return true;
 		}
 		
