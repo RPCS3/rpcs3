@@ -59,7 +59,7 @@ namespace YAML
 		return m_data.size();
 	}
 
-	void Sequence::Parse(Scanner *pScanner, const ParserState& state)
+	void Sequence::Parse(Scanner *pScanner, ParserState& state)
 	{
 		Clear();
 
@@ -71,10 +71,11 @@ namespace YAML
 		}
 	}
 
-	void Sequence::ParseBlock(Scanner *pScanner, const ParserState& state)
+	void Sequence::ParseBlock(Scanner *pScanner, ParserState& state)
 	{
 		// eat start token
 		pScanner->pop();
+		state.PushCollectionType(ParserState::BLOCK_SEQ);
 
 		while(1) {
 			if(pScanner->empty())
@@ -100,12 +101,15 @@ namespace YAML
 			
 			pNode->Parse(pScanner, state);
 		}
+
+		state.PopCollectionType(ParserState::BLOCK_SEQ);
 	}
 
-	void Sequence::ParseFlow(Scanner *pScanner, const ParserState& state)
+	void Sequence::ParseFlow(Scanner *pScanner, ParserState& state)
 	{
 		// eat start token
 		pScanner->pop();
+		state.PushCollectionType(ParserState::FLOW_SEQ);
 
 		while(1) {
 			if(pScanner->empty())
@@ -129,6 +133,8 @@ namespace YAML
 			else if(token.type != Token::FLOW_SEQ_END)
 				throw ParserException(token.mark, ErrorMsg::END_OF_SEQ_FLOW);
 		}
+
+		state.PopCollectionType(ParserState::FLOW_SEQ);
 	}
 
 	void Sequence::Write(Emitter& out) const

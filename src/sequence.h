@@ -26,7 +26,7 @@ namespace YAML
 		virtual Node *GetNode(std::size_t i) const;
 		virtual std::size_t GetSize() const;
 
-		virtual void Parse(Scanner *pScanner, const ParserState& state);
+		virtual void Parse(Scanner *pScanner, ParserState& state);
 		virtual void Write(Emitter& out) const;
 
 		virtual bool IsSequence() const { return true; }
@@ -38,8 +38,8 @@ namespace YAML
 		virtual int Compare(Map *) { return -1; }
 
 	private:
-		void ParseBlock(Scanner *pScanner, const ParserState& state);
-		void ParseFlow(Scanner *pScanner, const ParserState& state);
+		void ParseBlock(Scanner *pScanner, ParserState& state);
+		void ParseFlow(Scanner *pScanner, ParserState& state);
 
 	protected:
 		std::vector <Node *> m_data;

@@ -57,7 +57,7 @@ namespace YAML
 		return m_data.size();
 	}
 
-	void Map::Parse(Scanner *pScanner, const ParserState& state)
+	void Map::Parse(Scanner *pScanner, ParserState& state)
 	{
 		Clear();
 
@@ -71,10 +71,11 @@ namespace YAML
 		}
 	}
 
-	void Map::ParseBlock(Scanner *pScanner, const ParserState& state)
+	void Map::ParseBlock(Scanner *pScanner, ParserState& state)
 	{
 		// eat start token
 		pScanner->pop();
+		state.PushCollectionType(ParserState::BLOCK_MAP);
 
 		while(1) {
 			if(pScanner->empty())
@@ -106,12 +107,15 @@ namespace YAML
 			// assign the map with the actual pointers
 			m_data[pKey.release()] = pValue.release();
 		}
+
+		state.PopCollectionType(ParserState::BLOCK_MAP);
 	}
 
-	void Map::ParseFlow(Scanner *pScanner, const ParserState& state)
+	void Map::ParseFlow(Scanner *pScanner, ParserState& state)
 	{
 		// eat start token
 		pScanner->pop();
+		state.PushCollectionType(ParserState::FLOW_MAP);
 
 		while(1) {
 			if(pScanner->empty())
@@ -148,12 +152,15 @@ namespace YAML
 			// assign the map with the actual pointers
 			m_data[pKey.release()] = pValue.release();
 		}
+
+		state.PopCollectionType(ParserState::FLOW_MAP);
 	}
 
 	// ParseCompact
 	// . Single "key: value" pair in a flow sequence
-	void Map::ParseCompact(Scanner *pScanner, const ParserState& state)
+	void Map::ParseCompact(Scanner *pScanner, ParserState& state)
 	{
+		state.PushCollectionType(ParserState::COMPACT_MAP);
 		std::auto_ptr <Node> pKey(new Node), pValue(new Node);
 
 		// grab key
@@ -168,12 +175,14 @@ namespace YAML
 			
 		// assign the map with the actual pointers
 		m_data[pKey.release()] = pValue.release();
+		state.PopCollectionType(ParserState::COMPACT_MAP);
 	}
 	
 	// ParseCompactWithNoKey
 	// . Single ": value" pair in a flow sequence
-	void Map::ParseCompactWithNoKey(Scanner *pScanner, const ParserState& state)
+	void Map::ParseCompactWithNoKey(Scanner *pScanner, ParserState& state)
 	{
+		state.PushCollectionType(ParserState::COMPACT_MAP);
 		std::auto_ptr <Node> pKey(new Node), pValue(new Node);
 
 		// grab value
@@ -182,6 +191,7 @@ namespace YAML
 			
 		// assign the map with the actual pointers
 		m_data[pKey.release()] = pValue.release();
+		state.PopCollectionType(ParserState::COMPACT_MAP);
 	}
 	
 	void Map::Write(Emitter& out) const

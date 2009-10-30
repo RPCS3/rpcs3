@@ -610,6 +610,28 @@ namespace Test
 			
 			return true;
 		}
+
+		bool BlockKeyWithNullValue()
+		{
+			std::string input =
+				"key:\n"
+				"just a key: value";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			std::string output;
+			
+			parser.GetNextDocument(doc);
+			if(doc.size() != 2)
+				return false;
+			if(!IsNull(doc["key"]))
+			   return false;
+			if(doc["just a key"] != "value")
+				return false;
+			
+			return true;
+		}
 	}
 	
 	namespace {
@@ -869,6 +891,7 @@ namespace Test
 		RunParserTest(&Parser::MultipleDocs, "multiple docs", passed, total);
 		RunParserTest(&Parser::ExplicitEndDoc, "explicit end doc", passed, total);
 		RunParserTest(&Parser::MultipleDocsWithSomeExplicitIndicators, "multiple docs with some explicit indicators", passed, total);
+		RunParserTest(&Parser::BlockKeyWithNullValue, "block key with null value", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);

@@ -27,7 +27,7 @@ namespace YAML
 		virtual bool GetBegin(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
 		virtual bool GetEnd(std::map <Node *, Node *, ltnode>::const_iterator& it) const;
 		virtual std::size_t GetSize() const;
-		virtual void Parse(Scanner *pScanner, const ParserState& state);
+		virtual void Parse(Scanner *pScanner, ParserState& state);
 		virtual void Write(Emitter& out) const;
 
 		virtual bool IsMap() const { return true; }
@@ -39,10 +39,10 @@ namespace YAML
 		virtual int Compare(Map *pMap);
 
 	private:
-		void ParseBlock(Scanner *pScanner, const ParserState& state);
-		void ParseFlow(Scanner *pScanner, const ParserState& state);
-		void ParseCompact(Scanner *pScanner, const ParserState& state);
-		void ParseCompactWithNoKey(Scanner *pScanner, const ParserState& state);
+		void ParseBlock(Scanner *pScanner, ParserState& state);
+		void ParseFlow(Scanner *pScanner, ParserState& state);
+		void ParseCompact(Scanner *pScanner, ParserState& state);
+		void ParseCompactWithNoKey(Scanner *pScanner, ParserState& state);
 
 	private:
 		node_map m_data;

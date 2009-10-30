@@ -15,7 +15,7 @@ namespace YAML
 		
 		virtual Content *Clone() const;
 
-		virtual void Parse(Scanner* pScanner, const ParserState& state);
+		virtual void Parse(Scanner* pScanner, ParserState& state);
 		virtual void Write(Emitter&) const;
 
 		virtual bool GetBegin(std::vector <Node *>::const_iterator&) const;

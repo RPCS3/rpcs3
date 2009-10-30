@@ -24,7 +24,7 @@ namespace YAML
 		return new Scalar(m_data);
 	}
 
-	void Scalar::Parse(Scanner *pScanner, const ParserState& /*state*/)
+	void Scalar::Parse(Scanner *pScanner, ParserState& /*state*/)
 	{
 		Token& token = pScanner->peek();
 		m_data = token.value;

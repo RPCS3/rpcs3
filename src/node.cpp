@@ -54,7 +54,7 @@ namespace YAML
 		return std::auto_ptr<Node> (new Node(m_mark, m_anchor, m_tag, m_pContent));
 	}
 
-	void Node::Parse(Scanner *pScanner, const ParserState& state)
+	void Node::Parse(Scanner *pScanner, ParserState& state)
 	{
 		Clear();
 
@@ -104,13 +104,14 @@ namespace YAML
 				break;
 			case Token::FLOW_MAP_START:
 			case Token::BLOCK_MAP_START:
-			case Token::KEY:
 				m_pContent = new Map;
 				break;
+			case Token::KEY:
+				// compact maps can only go in a flow sequence
+				if(state.GetCurCollectionType() == ParserState::FLOW_SEQ)
+					m_pContent = new Map;
+				break;
 			default:
-//				std::stringstream str;
-//				str << TokenNames[pScanner->peek().type];
-//				throw std::runtime_error(str.str());
 				break;
 		}
 
@@ -125,7 +126,7 @@ namespace YAML
 
 	// ParseHeader
 	// . Grabs any tag, alias, or anchor tokens and deals with them.
-	void Node::ParseHeader(Scanner *pScanner, const ParserState& state)
+	void Node::ParseHeader(Scanner *pScanner, ParserState& state)
 	{
 		while(1) {
 			if(pScanner->empty())
@@ -140,7 +141,7 @@ namespace YAML
 		}
 	}
 
-	void Node::ParseTag(Scanner *pScanner, const ParserState& state)
+	void Node::ParseTag(Scanner *pScanner, ParserState& state)
 	{
 		Token& token = pScanner->peek();
 		if(m_tag != "")
@@ -151,7 +152,7 @@ namespace YAML
 		pScanner->pop();
 	}
 	
-	void Node::ParseAnchor(Scanner *pScanner, const ParserState& /*state*/)
+	void Node::ParseAnchor(Scanner *pScanner, ParserState& /*state*/)
 	{
 		Token& token = pScanner->peek();
 		if(m_anchor != "")
@@ -162,7 +163,7 @@ namespace YAML
 		pScanner->pop();
 	}
 
-	void Node::ParseAlias(Scanner *pScanner, const ParserState& /*state*/)
+	void Node::ParseAlias(Scanner *pScanner, ParserState& /*state*/)
 	{
 		Token& token = pScanner->peek();
 		if(m_anchor != "")

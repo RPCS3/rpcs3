@@ -32,7 +32,7 @@ namespace YAML
 
 		void Clear();
 		std::auto_ptr<Node> Clone() const;
-		void Parse(Scanner *pScanner, const ParserState& state);
+		void Parse(Scanner *pScanner, ParserState& state);
 
 		CONTENT_TYPE GetType() const;
 
@@ -102,10 +102,10 @@ namespace YAML
 		Node(const Mark& mark, const std::string& anchor, const std::string& tag, const Content *pContent);
 
 		// helpers for parsing
-		void ParseHeader(Scanner *pScanner, const ParserState& state);
-		void ParseTag(Scanner *pScanner, const ParserState& state);
-		void ParseAnchor(Scanner *pScanner, const ParserState& state);
-		void ParseAlias(Scanner *pScanner, const ParserState& state);
+		void ParseHeader(Scanner *pScanner, ParserState& state);
+		void ParseTag(Scanner *pScanner, ParserState& state);
+		void ParseAnchor(Scanner *pScanner, ParserState& state);
+		void ParseAlias(Scanner *pScanner, ParserState& state);
 
 	private:
 		Mark m_mark;

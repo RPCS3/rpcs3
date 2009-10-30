@@ -12,7 +12,7 @@ namespace YAML
 		return 0; // TODO: how to clone an alias?
 	}
 
-	void AliasContent::Parse(Scanner * /*pScanner*/, const ParserState& /*state*/)
+	void AliasContent::Parse(Scanner * /*pScanner*/, ParserState& /*state*/)
 	{
 	}
 

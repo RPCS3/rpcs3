@@ -18,7 +18,7 @@ namespace YAML
 
 		virtual Content *Clone() const;
 
-		virtual void Parse(Scanner *pScanner, const ParserState& state);
+		virtual void Parse(Scanner *pScanner, ParserState& state);
 		virtual void Write(Emitter& out) const;
 
 		virtual bool IsScalar() const { return true; }
