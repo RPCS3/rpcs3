@@ -1826,6 +1826,234 @@ namespace Test {
 			}
 			return "  no exception thrown";
 		}
+		
+		// 7.23
+		TEST FlowContent()
+		{
+			std::string input =
+				"- [ a, b ]\n"
+				"- { a: b }\n"
+				"- \"a\"\n"
+				"- 'b'\n"
+				"- c";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 5);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0][0] == "a");
+			YAML_ASSERT(doc[0][1] == "b");
+			YAML_ASSERT(doc[1].size() == 1);
+			YAML_ASSERT(doc[1]["a"] == "b");
+			YAML_ASSERT(doc[2] == "a");
+			YAML_ASSERT(doc[3] == 'b');
+			YAML_ASSERT(doc[4] == "c");
+			return true;
+		}
+		
+		// 7.24
+		TEST FlowNodes()
+		{
+			std::string input =
+				"- !!str \"a\"\n"
+				"- 'b'\n"
+				"- &anchor \"c\"\n"
+				"- *anchor\n"
+				"- !!str";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 5);
+			YAML_ASSERT(doc[0].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[0] == "a");
+			YAML_ASSERT(doc[1] == 'b');
+			YAML_ASSERT(doc[2] == "c");
+			YAML_ASSERT(doc[3] == "c");
+			YAML_ASSERT(doc[4].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[4] == "");
+			return true;
+		}
+		
+		// 8.1
+		TEST BlockScalarHeader()
+		{
+			std::string input =
+				"- | # Empty header\n"
+				" literal\n"
+				"- >1 # Indentation indicator\n"
+				"  folded\n"
+				"- |+ # Chomping indicator\n"
+				" keep\n"
+				"\n"
+				"- >1- # Both indicators\n"
+				"  strip\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc[0] == "literal\n");
+			YAML_ASSERT(doc[1] == " folded\n");
+			YAML_ASSERT(doc[2] == "keep\n\n");
+			YAML_ASSERT(doc[3] == " strip");
+			return true;
+		}
+		
+		// 8.2
+		TEST BlockIndentationHeader()
+		{
+			std::string input =
+				"- |\n"
+				" detected\n"
+				"- >\n"
+				" \n"
+				"  \n"
+				"  # detected\n"
+				"- |1\n"
+				"  explicit\n"
+				"- >\n"
+				" \t\n"
+				" detected\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc[0] == "detected\n");
+			YAML_ASSERT(doc[1] == "\n\n# detected\n");
+			YAML_ASSERT(doc[2] == " explicit\n");
+			YAML_ASSERT(doc[3] == "\t detected\n");
+			return true;
+		}
+		
+		// 8.3
+		TEST InvalidBlockScalarIndentationIndicators()
+		{
+			{
+				std::string input =
+					"- |\n"
+					"  \n"
+					" text";
+			
+				bool threw = false;
+				try {
+					PARSE(doc, input);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented auto-detecting indentation for a literal block scalar";
+			}
+			
+			{
+				std::string input =
+					"- >\n"
+					"  text\n"
+					" text";
+			
+				bool threw = false;
+				try {
+					PARSE(doc, input);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented auto-detecting indentation for a folded block scalar";
+			}
+			
+			{
+				std::string input =
+					"- |2\n"
+					" text";
+			
+				bool threw = false;
+				try {
+					PARSE(doc, input);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented explicit indentation for a literal block scalar";
+			}
+			
+			return true;
+		}
+		
+		// 8.4
+		TEST ChompingFinalLineBreak()
+		{
+			std::string input =
+				"strip: |-\n"
+				"  text\n"
+				"clip: |\n"
+				"  text\n"
+				"keep: |+\n"
+				"  text\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["strip"] == "text");
+			YAML_ASSERT(doc["clip"] == "text\n");
+			YAML_ASSERT(doc["keep"] == "text\n");
+			return true;
+		}
+		
+		// 8.5
+		TEST ChompingTrailingLines()
+		{
+			std::string input =
+				" # Strip\n"
+				"  # Comments:\n"
+				"strip: |-\n"
+				"  # text\n"
+				"  \n"
+				" # Clip\n"
+				"  # comments:\n"
+				"\n"
+				"clip: |\n"
+				"  # text\n"
+				" \n"
+				" # Keep\n"
+				"  # comments:\n"
+				"\n"
+				"keep: |+\n"
+				"  # text\n"
+				"\n"
+				" # Trail\n"
+				"  # Comments\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["strip"] == "# text");
+			YAML_ASSERT(doc["clip"] == "# text\n");
+			YAML_ASSERT(doc["keep"] == "# text\n");
+			return true;
+		}
+		
+		// 8.6
+		TEST EmptyScalarChomping()
+		{
+			std::string input =
+				"strip: >-\n"
+				"\n"
+				"clip: >\n"
+				"\n"
+				"keep: |+\n"
+				"\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["strip"] == "");
+			YAML_ASSERT(doc["clip"] == "");
+			YAML_ASSERT(doc["keep"] == "\n");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -1920,6 +2148,15 @@ namespace Test {
 		RunSpecTest(&Spec::SinglePairExplicitEntry, "7.20", "Single Pair Explicit Entry", passed, total);
 		RunSpecTest(&Spec::SinglePairImplicitEntries, "7.21", "Single Pair Implicit Entries", passed, total);
 		RunSpecTest(&Spec::InvalidImplicitKeys, "7.22", "Invalid Implicit Keys", passed, total);
+		RunSpecTest(&Spec::FlowContent, "7.23", "Flow Content", passed, total);
+		RunSpecTest(&Spec::FlowNodes, "7.24", "FlowNodes", passed, total);
+		
+		RunSpecTest(&Spec::BlockScalarHeader, "8.1", "Block Scalar Header", passed, total);
+		RunSpecTest(&Spec::BlockIndentationHeader, "8.2", "Block Indentation Header", passed, total);
+		RunSpecTest(&Spec::InvalidBlockScalarIndentationIndicators, "8.3", "Invalid Block Scalar Indentation Indicators", passed, total);
+		RunSpecTest(&Spec::ChompingFinalLineBreak, "8.4", "Chomping Final Line Break", passed, total);
+		RunSpecTest(&Spec::ChompingTrailingLines, "8.4", "Chomping Trailing Lines", passed, total);
+		RunSpecTest(&Spec::EmptyScalarChomping, "8.4", "Empty Scalar Chomping", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
