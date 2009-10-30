@@ -1036,7 +1036,7 @@ void PluginManager::Shutdown()
 // Returns false if the plugin returned an error.
 bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 {
-	if( (pid == PluginId_GS) && wxThread::IsMain() )
+	if( (pid == PluginId_GS) && !mtgsThread.IsSelf() )
 	{
 		// GS needs some thread safety love...
 
