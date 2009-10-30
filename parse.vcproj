@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="yaml-reader"
-	ProjectGUID="{E8CC0D8A-D784-4A6B-B78B-ACEA13F9FB0B}"
-	RootNamespace="yamlreader"
+	Name="parse"
+	ProjectGUID="{CD007B57-7812-4930-A5E2-6E5E56338814}"
+	RootNamespace="parse"
 	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
@@ -45,7 +45,7 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
 				WarningLevel="3"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -115,7 +115,7 @@
 				AdditionalIncludeDirectories="include"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				WarningLevel="4"
+				WarningLevel="3"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -168,23 +168,7 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\yaml-reader\emittertests.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\main.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\parsertests.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\spectests.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\tests.cpp"
+				RelativePath=".\util\parse.cpp"
 				>
 			</File>
 		</Filter>
@@ -193,22 +177,12 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
-			<File
-				RelativePath=".\yaml-reader\emittertests.h"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\parsertests.h"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\spectests.h"
-				>
-			</File>
-			<File
-				RelativePath=".\yaml-reader\tests.h"
-				>
-			</File>
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
+			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
+			>
 		</Filter>
 	</Files>
 	<Globals>

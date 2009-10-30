@@ -172,10 +172,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\src\content.cpp"
-					>
-				</File>
-				<File
 					RelativePath=".\src\conversion.cpp"
 					>
 				</File>
@@ -203,6 +199,10 @@
 					RelativePath=".\src\sequence.cpp"
 					>
 				</File>
+				<File
+					RelativePath=".\src\tag.cpp"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="Scanner"
@@ -221,6 +221,10 @@
 				</File>
 				<File
 					RelativePath=".\src\scanscalar.cpp"
+					>
+				</File>
+				<File
+					RelativePath=".\src\scantag.cpp"
 					>
 				</File>
 				<File
@@ -337,6 +341,10 @@
 					RelativePath=".\src\sequence.h"
 					>
 				</File>
+				<File
+					RelativePath=".\src\tag.h"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="Scanner"
@@ -359,6 +367,10 @@
 				</File>
 				<File
 					RelativePath=".\src\scanscalar.h"
+					>
+				</File>
+				<File
+					RelativePath=".\src\scantag.h"
 					>
 				</File>
 				<File
