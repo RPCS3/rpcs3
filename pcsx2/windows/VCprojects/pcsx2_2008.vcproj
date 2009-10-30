@@ -304,6 +304,10 @@
 				RelativePath="..\..\PrecompiledHeader.h"
 				>
 			</File>
+			<File
+				RelativePath="..\..\ShiftJisToUnicode.cpp"
+				>
+			</File>
 			<Filter
 				Name="Utilities"
 				>

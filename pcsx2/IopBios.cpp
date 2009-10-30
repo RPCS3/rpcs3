@@ -175,8 +175,8 @@ void bios_write()  // 0x35/0x03
 	{
 		const char *ptr = Ra1;
 
-		// fixme: This should use %s with a length parameter (but I forget the exact syntax)
-		Console.Write( ConColor_IOP, "%.*s", a2, ptr);
+		//Console.Write( ConColor_IOP, "%.*s", a2, ptr);
+		Console.Write( ConColor_IOP, ShiftJIS_ConvertString(ptr, a2) );
 	}
 	else
 	{
@@ -287,12 +287,13 @@ _start:
 	// Note: Use Read to obtain a write pointer here, since we're just writing back the 
 	// temp buffer we saved earlier.
 	memcpy( (void*)iopVirtMemR<void>(sp), save, 4*4);
-	Console.Write( ConColor_IOP, tmp);
+	Console.Write( ConColor_IOP, ShiftJIS_ConvertString(tmp), 1023 );
 	pc0 = ra;
 }
 
 void bios_putchar ()  // 3d
 {
+	// FIXME?  How would we properly handle Shift-JIS here?  Or is it even needed?
     Console.Write( ConColor_IOP, "%c", a0 );
     pc0 = ra;
 }

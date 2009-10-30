@@ -39,6 +39,10 @@
 static const ConsoleColors ConColor_IOP = Color_Yellow;
 static const ConsoleColors ConColor_EE = Color_Cyan;
 
+extern wxString ShiftJIS_ConvertString( const char* src );
+extern wxString ShiftJIS_ConvertString( const char* src, int maxlen );
+
+
 // Some homeless externs.  This is as good a spot as any for now...
 
 extern void SetCPUState(u32 sseMXCSR, u32 sseVUMXCSR);

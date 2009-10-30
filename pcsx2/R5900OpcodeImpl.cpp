@@ -790,7 +790,7 @@ int __Deci2Call(int call, u32 *addr)
 					pdeciaddr += (deci2addr[4]+0xc)%16;
 				memcpy(deci2buffer, pdeciaddr, deci2addr[1]-0xc);
 				deci2buffer[deci2addr[1]-0xc>=255?255:deci2addr[1]-0xc]='\0';
-				Console.Write( ConColor_EE, deci2buffer );
+				Console.Write( ConColor_EE, ShiftJIS_ConvertString(deci2buffer) );
 			}
 			deci2addr[3] = 0;
 			return 1;
@@ -809,7 +809,7 @@ int __Deci2Call(int call, u32 *addr)
 
 		case 0x10://kputs
 			if( addr != NULL )
-				Console.Write( ConColor_EE, (char*)PSM(*addr) );
+				Console.Write( ConColor_EE, ShiftJIS_ConvertString((char*)PSM(*addr)) );
 			return 1;
 	}
 
@@ -831,7 +831,7 @@ void SYSCALL()
 	if (call == 0x7c)
 	{
 		if(cpuRegs.GPR.n.a0.UL[0] == 0x10)
-			Console.Write( ConColor_EE, (char*)PSM(memRead32(cpuRegs.GPR.n.a1.UL[0])) );
+			Console.Write( ConColor_EE, ShiftJIS_ConvertString((char*)PSM(memRead32(cpuRegs.GPR.n.a1.UL[0]))) );
 		else
 			__Deci2Call( cpuRegs.GPR.n.a0.UL[0], (u32*)PSM(cpuRegs.GPR.n.a1.UL[0]) );
 	}

@@ -180,7 +180,7 @@ void hwWrite8(u32 mem, u8 value)
 			     ( value == '\n' && sio_count != 0 ))
 			{
 				sio_buffer[sio_count] = 0;
-				Console.WriteLn( ConColor_EE, sio_buffer );
+				Console.WriteLn( ConColor_EE, ShiftJIS_ConvertString(sio_buffer) );
 				sio_count = 0;
 			}
 			else if( value != '\n' )
