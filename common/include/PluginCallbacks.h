@@ -151,7 +151,209 @@ enum OSDIconTypes
 	OSD_Icon_ReserveEnd = 0x1000
 };
 
-//-
+enum PS2E_MenuItemStyle
+{
+	MenuType_Normal = 0,
+	MenuType_Checked,
+	MenuType_Radio,
+	MenuType_Separator
+};
+
+typedef void* PS2E_MenuHandle;
+typedef void* PS2E_MenuItemHandle;
+typedef void PS2E_CALLBACK PS2E_OnMenuItemClicked( PS2E_THISPTR* thisptr, void* userptr );
+
+// --------------------------------------------------------------------------------------
+//  PS2E_ConsoleWriterAPI
+// --------------------------------------------------------------------------------------
+// APIs for writing text to the console.  Typically the emulator will write the text to
+// both a console window and to a disk file, however actual implementation is up to the 
+// emulator.  All text must be either 7-bit ASCII or UTF8 encoded.  Other codepages or
+// MBCS encodings will not be displayed properly.
+//
+// Standard streams STDIO and STDERR can be used instead, however there is no guarantee
+// that they will be handled in a convenient fashion.  Different platforms and operating
+// systems have different methods of standard stream pipes, which is why the ConsoleWriter
+// API has been exposed to plugins.
+//
+// Development Notes:
+//   'char' was chosen over 'wchar_t' because 'wchar_t' is a very loosely defined type that
+//   can vary greatly between compilers (it can be as small as 8 bits and as large as a
+//   compiler wants it to be).  Because of this we can't even make assumptions about its
+//   size within the context of a single operating system; so it just won't do.  Just make
+//   sure everything going into the function is UTF8 encoded and all is find.
+//
+typedef struct _PS2E_ConsoleWriterAPI
+{
+	// Writes text to console; no newline is appended.
+	void (PS2E_CALLBACK* Write)( const char* fmt, ... );
+
+	// Appends an automatic newline to the specified formatted output.
+	void (PS2E_CALLBACK* WriteLn)( const char* fmt, ... );
+
+	// This function always appends a newline
+	void (PS2E_CALLBACK* Error)( const char* fmt, ... );
+
+	// This function always appends a newline
+	void (PS2E_CALLBACK* Warning)( const char* fmt, ... );
+
+	void* reserved[4];
+
+} PS2E_ConsoleWriterAPI;
+
+// --------------------------------------------------------------------------------------
+//  PS2E_ConsoleWriterWideAPI
+// --------------------------------------------------------------------------------------
+// This is the wide character version of the ConsoleWriter APi.  Please see the description
+// of PS2E_ConsoleWriterAPI for details.
+//
+// Important Usage Note to Plugin Authors:
+//   Before using the functions in this structure, you *must* confirm that the emulator's
+//   size of wchar_t matches the size provided by your own compiler.  The size of wchar_t
+//   is provided in the PS2E_EmulatorInfo struct.
+//
+typedef struct _PS2E_ConsoleWriterWideAPI
+{
+	// Writes text to console; no newline is appended.
+	void (PS2E_CALLBACK* Write)( const wchar_t* fmt, ... );
+
+	// Appends an automatic newline to the specified formatted output.
+	void (PS2E_CALLBACK* WriteLn)( const wchar_t* fmt, ... );
+
+	// This function always appends a newline
+	void (PS2E_CALLBACK* Error)( const wchar_t* fmt, ... );
+
+	// This function always appends a newline
+	void (PS2E_CALLBACK* Warning)( const wchar_t* fmt, ... );
+
+	void* reserved[4];
+
+} PS2E_ConsoleWriterWideAPI;
+
+
+// --------------------------------------------------------------------------------------
+//  PS2E_Image
+// --------------------------------------------------------------------------------------
+// Simple RGBA image data container, for passing surface textures to the GS plugin, and
+// for receiving snapshots from the GS plugin.
+//
+// fixme - this might be more ideal as BGRA or ABGR format on Windows platforms?
+//
+typedef struct _PS2E_Image
+{
+	u32 width;
+	u32 height;
+	u8* data;		// RGBA data.  top to bottom.
+
+} PS2E_Image;
+
+// --------------------------------------------------------------------------------------
+//  PS2E_MenuItemInfo
+// --------------------------------------------------------------------------------------
+typedef struct _PS2E_MenuItemInfo
+{
+	const char*			LabelText;
+	const char*			HelpText;
+
+	// Optional image displayed with the menu option.  The emulator may not support
+	// this option, or may choose to ignore or resize the image if the size parameters
+	// are outside a valid threshold.  
+	const PS2E_Image*	Image;
+
+	// Specifies the style of the menu, either Normal, Checked, Radio, or Separator.
+	// This option is overridden if the SubMenu field is non-NULL (in such case the
+	// menu assumes submenu mode)
+	PS2E_MenuItemStyle	Style;
+
+	// Specifies the handle of a sub menu to bind to this menu.  If NULL, the menu is
+	// created normally.  If non-NULL, the menu item will use sub-menu mode and will
+	// ignore the Style field.
+	PS2E_MenuHandle*	SubMenu;
+	
+	// When FALSE the menu item will appear grayed out to the user, and unselectable.
+	BOOL				Enabled;
+
+	// Optional user data pointer (or typecast integer value)
+	void*				UserPtr;
+
+	// Callback issued when the menu is clicked/activated.  If NULL, the menu will be
+	// disabled (grayed).
+	PS2E_OnMenuItemClicked* OnClicked;
+
+} PS2E_MenuItemInfo;
+
+// --------------------------------------------------------------------------------------
+//  PS2E_MenuItemAPI
+// --------------------------------------------------------------------------------------
+typedef struct _PS2E_MenuItemAPI
+{
+	// Allocates a new MenuItem and returns it's handle.  The returned item can be added to any
+	// menu.
+	PS2E_MenuItemHandle (PS2E_CALLBACK* MenuItem_Create)( PS2E_THISPTR thisptr );
+
+	// Deletes the menu item and frees allocated resources.  The menu item will be removed from
+	// whatever menu it is attached to.  If the menu item has a SubMenu, the SubMenu is not
+	// deleted.
+	void (PS2E_CALLBACK* MenuItem_Delete)( PS2E_MenuItemHandle mitem );
+
+	// (Re-)Assigns all properties for a menu.  Assignment generally takes effect immediately.
+	void (PS2E_CALLBACK* MenuItem_SetEverything)( PS2E_MenuItemHandle mitem, const PS2E_MenuItemInfo* info );
+
+	// Sets the text label of a menu item.
+	void (PS2E_CALLBACK* MenuItem_SetText)( PS2E_MenuItemHandle mitem, const char* text );
+
+	// Assigns the help text for a menu item.  This text is typically shown in a status
+	// bar at the bottom of the current window.  This value may be ignored if the emu
+	// interface does not have a context for help text.
+	void (PS2E_CALLBACK* MenuItem_SetHelpText)( PS2E_MenuItemHandle mitem, const char* helptxt );
+
+	// Gives the menu item an accompanying image (orientation of the image may depend
+	// on the operating system platform).
+	void (PS2E_CALLBACK* MenuItem_SetImage)( PS2E_MenuItemHandle mitem, const PS2E_Image* image );
+
+	// Gives the menu item an accompanying image (orientation of the image may depend
+	// on the operating system platform).  
+	//
+	// Returns:
+	//   TRUE if the image was loaded successfully, or FALSE if the image was not found,
+	//   could not be opened, or the image data is invalid (not a PNG, or data corrupted).
+	BOOL (PS2E_CALLBACK* MenuItem_SetImagePng_FromFile)( PS2E_MenuItemHandle mitem, const char* filename );
+
+	// Gives the menu item an accompanying image (orientation of the image may depend on
+	// the operating system platform).  Image is loaded from memory using a memory stream
+	// reader.  This method is useful for loading image data embedded into the dll.
+	//
+	// Returns:
+	//   TRUE if the image was loaded successfully, or FALSE if the image data is invalid
+	//   (not a PNG, or data corrupted).
+	BOOL (PS2E_CALLBACK* MenuItem_SetImagePng_FromMemory)( PS2E_MenuItemHandle mitem, const u8* data );
+
+	// Assigns the menu item's style.
+	void (PS2E_CALLBACK* MenuItem_SetStyle)( PS2E_MenuItemHandle mitem, PS2E_MenuItemStyle style );
+
+	// Assigns a pointer value that the plugin can use to attach user-defined data to
+	// specific menu items.  The value can be any integer typecast if you don't actually
+	// eed more than an integer's worth of data.
+	void (PS2E_CALLBACK* MenuItem_SetUserData)( PS2E_MenuItemHandle mitem, void* dataptr );
+
+	// Assigns a submenu to the menu item, causing it to open the sub menu in cascade
+	// fashion.  When a submenu is assigned, the Style attribute of the menu will be
+	// ignored.  Passing NULL into this function will clear the submenu and return the
+	// menu item to whatever it's current Style attribute is set to.
+	void (PS2E_CALLBACK* MenuItem_SetSubMenu)( PS2E_MenuItemHandle mitem, PS2E_MenuHandle* submenu );
+
+	// Assigns the callback function for this menu (important!).  If passed NULL, the menu
+	// item will be automatically disabled (grayed out) by the emulator.
+	void (PS2E_CALLBACK* MenuItem_SetCallback)( PS2E_MenuItemHandle mitem, PS2E_OnMenuItemClicked* onClickedCallback );
+
+	// Assigns the enabled status of a MenuItem.  Use FALSE to gray out the menuitem option.
+	void (PS2E_CALLBACK* MenuItem_Enable)( PS2E_MenuItemHandle mitem, BOOL enable );
+
+	// Returns the current enable status of the specified menu item.
+	BOOL (PS2E_CALLBACK* MenuItem_IsEnabled)( PS2E_MenuItemHandle mitem );
+
+} PS2E_MenuItemAPI;
+
 // --------------------------------------------------------------------------------------
 //  PS2E_VersionInfo
 // --------------------------------------------------------------------------------------
@@ -189,8 +391,10 @@ typedef struct _PS2E_SessionInfo
 	u32  ElfCRC;		// CRC of the ELF header for this app/game
 
 	// Sony's assigned serial number, valid only for CD/CDVD games (ASCII-Z string).
-	//   Ex: SLUS-2932 (if the running app is not a sony-registered game, the serial
-	// will be a zero length string).
+	//   Ex: SLUS-2932
+	//
+	// (if the running app is not a sony-registered game, the serial will be a zero
+	//  length string).
 	char Serial[16];
 
 } PS2E_SessionInfo;
@@ -221,7 +425,7 @@ typedef struct _PS2E_EmulatorInfo
 	const char*	EmuName;
 
 	// Version information.  All fields besides the emulator's name are optional.
-	struct _PS2E_VersionInfo	EmuVersion;
+	PS2E_VersionInfo	EmuVersion;
 
 	// Number of Physical Cores, as detected by the emulator.
 	// This should always match the real # of cores supported by hardware.
@@ -292,12 +496,42 @@ typedef struct _PS2E_EmulatorInfo
 	//
 	void (PS2E_CALLBACK* OSD_WriteLn)( int icon, const char* msg );
 
-	// TODO : Create the ConsoleLogger class.
+	void (PS2E_CALLBACK* AddMenuItem)( const PS2E_MenuItemInfo* item );
+
+	// ----------------------------------------------------------------------------
+	//  Menu / MenuItem Section
+	// ----------------------------------------------------------------------------
+
+	// Allocates a new menu handle and returns it.  The returned menu can have any valid existing
+	// menu items bound to it, and can be assigned as a submenu to any created MenuItem.  The menu
+	// can belong to multiple menu items, however menu items can only belong to a single menu.
+	PS2E_MenuHandle (PS2E_CALLBACK* Menu_Create)( PS2E_THISPTR thisptr );
+
+	// Deletes the specified menu and frees its allocated memory resources.  NULL pointers are
+	// safely ignored.  Any menu itels also attached to this menu will be deleted.  Even if you
+	// do not explicitly delete your plugin's menu resources, the emulator will do automatic
+	// cleanup after the plugin's instance is free'd.
+	void (PS2E_CALLBACK* Menu_Delete)( PS2E_MenuHandle handle );
+
+	// Adds the specified menu item to this menu. Menu items can only belong to one menu at a
+	// time. If you assign an item to a created menu that already belongs to another menu, it
+	// will be removed from the other menu and moved to this one.  To append a menu item to
+	// multiple menus, you will need to create multiple instances of the item.
+	void (PS2E_CALLBACK* Menu_AddItem)( PS2E_MenuHandle menu, PS2E_MenuItemHandle mitem );
+
+	// Interface for creating menu items and modifying their properties.
+	PS2E_MenuItemAPI MenuItem;
+
 	// Provides a set of basic console functions for writing text to the emulator's
 	// console.  Some emulators may not support a console, in which case these functions
 	// will be NOPs.   For plain and simple to-disk logging, plugins should create and use
 	// their own logging facilities.
-	//ConsoleLogger  Console;
+	PS2E_ConsoleWriterAPI Console;
+
+	// Optional wide-version of the Console API.  Use with caution -- wchar_t is platform and
+	// compiler dependent, and so plugin authors should be sure to check the emulator's wchar_t
+	// side before using this interface.  See PS2E_ConsoleWriterWideAPI comments for more info.
+	PS2E_ConsoleWriterWideAPI ConsoleW;
 
 } PS2E_EmulatorInfo;
 
@@ -569,22 +803,6 @@ typedef struct _PS2E_LibraryAPI
 } PS2E_LibraryAPI;
 
 // --------------------------------------------------------------------------------------
-//  PS2E_Image
-// --------------------------------------------------------------------------------------
-// Simple RGBA image data container, for passing surface textures to the GS plugin, and
-// for receiving snapshots from the GS plugin.
-//
-// fixme - this might be more ideal as BGRA or ABGR format on Windows platforms?
-//
-typedef struct _PS2E_Image
-{
-	u32 width;
-	u32 height;
-	u8* data;		// RGBA data.  top to bottom.
-
-} PS2E_Image;
-
-// --------------------------------------------------------------------------------------
 //  PS2E_ComponentAPI_GS
 // --------------------------------------------------------------------------------------
 // Thread Safety:
@@ -745,8 +963,6 @@ typedef struct _PS2E_ComponentAPI_Mcd
 } PS2E_ComponentAPI_Mcd;
 
 
-
-
 // ------------------------------------------------------------------------------------
 //  KeyEvent type enumerations
 // ------------------------------------------------------------------------------------
@@ -769,11 +985,14 @@ enum PS2E_KeyEventTypes
 typedef struct _PS2E_KeyEvent
 {
 	PS2E_KeyEventTypes event;
+
 	// Value of the key being pressed or released
 	uint value;
+
 	// Combination of PS2E_SHIFT, PS2E_CONTROL, and/or PS2E_ALT, indicating which
 	// modifier keys were also down when the key was pressed.
 	uint flags;
+	
 } PS2E_KeyEvent;
 
 
@@ -781,9 +1000,10 @@ typedef struct _PS2E_KeyEvent
 //  PS2E_ComponentAPI_Pad
 // --------------------------------------------------------------------------------------
 // Thread Safety:
-//  * Thread affinity is not guaranteed, except for PadKeyEvent, which is called in the
-//    GUI thread.  Other calls may be made from either the main emu thread or an
-//    IOP child thread (if the emulator uses one).
+//  * Thread affinity is not guaranteed.  Even PadKeyEvent may be called from a thrad not
+//    belonging to the active window (the window where the GA is output).  Other calls may
+//    be made from either the main emu thread or an EE/IOP/GS child thread (if the emulator
+//    uses them).
 //
 typedef struct _PS2E_ComponentAPI_Pad
 {
@@ -791,14 +1011,14 @@ typedef struct _PS2E_ComponentAPI_Pad
 	struct _PS2E_ComponentAPI Base;
 
 	// PadIsPresent
-	// Called by the emulator to detect the availability of a pad.  This function
-	// will be called frequently -- essentially whenever the SIO port for the pad
-	// has its status polled - so its overhead should be minimal when possible.
+	// Called by the emulator to detect the availability of a pad.  This function will
+	// be called frequently -- essentially whenever the SIO port for the pad has its
+	// status polled - so its overhead should be minimal when possible.
 	//
 	// A plugin should behave reasonably when a pad that's not plugged in is polled.
 	//
 	// Returns:
-	//   0 if the card is not available, or 1 if it is available.
+	//   0 if the card/pad is not available, or 1 if it is available.
 	//
 	BOOL (PS2E_CALLBACK* PadIsPresent)( PS2E_THISPTR thisptr, uint port, uint slot );
 
@@ -825,7 +1045,7 @@ typedef struct _PS2E_ComponentAPI_Pad
 	//   PS2E_KeyEvent:  Key being pressed or released.  Should stay valid until next call to
 	//                   PadKeyEvent or plugin is closed with EmuClose.
 	//
-	typedef PS2E_KeyEvent* (CALLBACK* PadKeyEvent)();
+	typedef PS2E_KeyEvent* (CALLBACK* PadGetKeyEvent)();
 
 	void* reserved[8];
 
@@ -887,40 +1107,6 @@ typedef void (PS2E_CALLBACK* _PS2E_GetLastError)( char* const* msg_diag, wchar_t
 //////////////////////////////////////////////////////////////////////////////////////////
 
 #if 0
-// PAD
-typedef s32  (CALLBACK* _PADinit)(char *configpath, u32 flags);
-typedef s32  (CALLBACK* _PADopen)(void *pDisplay);
-typedef void (CALLBACK* _PADclose)();
-typedef void (CALLBACK* _PADshutdown)();
-typedef keyEvent* (CALLBACK* _PADkeyEvent)();
-typedef u8   (CALLBACK* _PADstartPoll)(u8 pad);
-typedef u8   (CALLBACK* _PADpoll)(u8 value);
-typedef u32  (CALLBACK* _PADquery)();
-typedef void (CALLBACK* _PADupdate)(u8 pad);
-
-typedef void (CALLBACK* _PADgsDriverInfo)(GSdriverInfo *info);
-typedef s32  (CALLBACK* _PADfreeze)(u8 mode, freezeData *data);
-typedef void (CALLBACK* _PADconfigure)();
-typedef s32  (CALLBACK* _PADtest)();
-typedef void (CALLBACK* _PADabout)();
-typedef s32  (CALLBACK* _PADsetSlot)(u8 port, u8 slot);
-typedef s32  (CALLBACK* _PADqueryMtap)(u8 port);
-
-// SIO
-typedef s32  (CALLBACK* _SIOinit)(int types, SIOchangeSlotCB f);
-typedef s32  (CALLBACK* _SIOopen)(void *pDisplay);
-typedef void (CALLBACK* _SIOclose)();
-typedef void (CALLBACK* _SIOshutdown)();
-typedef s32   (CALLBACK* _SIOstartPoll)(u8 deviceType, u32 port, u32 slot, u8 *returnValue);
-typedef s32   (CALLBACK* _SIOpoll)(u8 value, u8 *returnValue);
-typedef u32  (CALLBACK* _SIOquery)();
-
-typedef void (CALLBACK* _SIOkeyEvent)(keyEvent* ev);
-typedef s32  (CALLBACK* _SIOfreeze)(u8 mode, freezeData *data);
-typedef void (CALLBACK* _SIOconfigure)();
-typedef s32  (CALLBACK* _SIOtest)();
-typedef void (CALLBACK* _SIOabout)();
-
 // SPU2
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones

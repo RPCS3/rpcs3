@@ -302,7 +302,17 @@ bool DoCDVDopen()
 	// some reason on close, we re-send here:
 	CDVD->newDiskCB( cdvdNewDiskCB );
 	
-	int ret = CDVD->open( !m_SourceFilename[m_CurrentSourceType].IsEmpty() ? m_SourceFilename[m_CurrentSourceType].ToUTF8() : (char*)NULL );
+	// Win32 Fail: the old CDVD api expects MBCS on Win32 platforms, but generating a MBCS
+	// from unicode is problematic since we need to know the codepage of the text being
+	// converted (which isn't really practical knowledge).  A 'best guess' would be the 
+	// default codepage of the user's Windows install, but even that will fail and return
+	// question marks if the filename is another language.
+	// Likely Fix: Force new versions of CDVD plugins to expect UTF8 instead.
+
+	int ret = CDVD->open( !m_SourceFilename[m_CurrentSourceType].IsEmpty() ?
+		m_SourceFilename[m_CurrentSourceType].ToUTF8() : (char*)NULL
+	);
+
 	if( ret == -1 ) return false;
 
 	int cdtype = DoCDVDdetectDiskType();
