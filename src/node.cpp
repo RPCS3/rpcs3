@@ -27,7 +27,7 @@ namespace YAML
 	Node::Node(const Mark& mark, const std::string& anchor, const std::string& tag, const Content *pContent)
 	: m_mark(mark), m_anchor(anchor), m_tag(tag), m_pContent(0), m_alias(false), m_pIdentity(this), m_referenced(false)
 	{
-		if(m_pContent)
+		if(pContent)
 			m_pContent = pContent->Clone();
 	}
 
