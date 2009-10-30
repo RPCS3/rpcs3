@@ -101,15 +101,13 @@ u32 GIFPath::GetReg()
 
 bool GIFPath::StepReg()
 {
-	if ((++curreg & 0xf) == tag.nreg)
-	{
+	if ((++curreg & 0xf) == tag.nreg) {
 		curreg = 0;
-
-		if(--tag.nloop == 0)
-		{
+		if (--tag.nloop == 0) {
 			return false;
 		}
 	}
+	return true;
 }
 
 __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )

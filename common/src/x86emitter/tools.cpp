@@ -42,12 +42,12 @@ namespace MMXRegisters
     {
         if (!g_EEFreezeRegs) return;
 
-        //DevCon.Notice("MMXRegisters::Freeze: depth[%d]\n", stack_depth);
+        //DevCon.Warning("MMXRegisters::Freeze: depth[%d]\n", stack_depth);
         stack_depth++;
 		
         if (stack_depth > 1)
         {
-            //DevCon.Notice("MMX Already Saved!\n");
+            //DevCon.Warning("MMX Already Saved!\n");
             return;
         }
             
@@ -85,11 +85,11 @@ namespace MMXRegisters
     {
         if (!g_EEFreezeRegs) return;
 
-        //DevCon.Notice("MMXRegisters::Thaw: depth[%d]\n", stack_depth);
+        //DevCon.Warning("MMXRegisters::Thaw: depth[%d]\n", stack_depth);
             
         if (!Saved())
         {
-            //DevCon.Notice("MMX Not Saved!\n");
+            //DevCon.Warning("MMX Not Saved!\n");
             return;
         }
         stack_depth--;
@@ -145,13 +145,13 @@ namespace XMMRegisters
     {
         if (!g_EEFreezeRegs) return;
             
-        //DevCon.Notice("XMMRegisters::Freeze: depth[%d]\n", Depth());
+        //DevCon.Warning("XMMRegisters::Freeze: depth[%d]\n", Depth());
             
         stack_depth++;
         
         if (stack_depth > 1)
         {
-            //DevCon.Notice("XMM Already saved\n");
+            //DevCon.Warning("XMM Already saved\n");
             return;
         }
 
@@ -187,11 +187,11 @@ namespace XMMRegisters
     {
         if (!g_EEFreezeRegs) return;
 
-        //DevCon.Notice("XMMRegisters::Thaw: depth[%d]\n", Depth());
+        //DevCon.Warning("XMMRegisters::Thaw: depth[%d]\n", Depth());
             
         if (!Saved())
         {
-            //DevCon.Notice("XMM Regs not saved!\n");
+            //DevCon.Warning("XMM Regs not saved!\n");
             return;
         }
 

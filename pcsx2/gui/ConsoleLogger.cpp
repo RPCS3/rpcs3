@@ -25,6 +25,7 @@
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>		// needed for OutputDebugStirng
+#	include <richedit.h>
 #endif
 
 BEGIN_DECLARE_EVENT_TYPES()
@@ -255,6 +256,13 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 {
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
+
+#ifdef __WXMSW__
+	// This improves Asian text display behavior on Windows.  The IMF_DUALFONT flag helps
+	// the rich edit box reset back to the default font after displaying japanese characters.
+	// Other editing and messages have been disabled since our console is read-only anyway.
+	SendMessage( (HWND)m_TextCtrl.GetHWND(), EM_SETLANGOPTIONS, 0, IMF_AUTOFONT | IMF_DUALFONT );
+#endif
 
     // create Log menu (contains most options)
 	wxMenuBar *pMenuBar = new wxMenuBar();

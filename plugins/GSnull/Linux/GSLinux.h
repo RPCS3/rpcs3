@@ -23,8 +23,6 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
-#include "GS.h"
-
 extern int GSOpenWindow(void *pDsp, char *Title);
 extern void GSCloseWindow();
 extern void GSProcessMessages();

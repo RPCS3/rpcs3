@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="GSnull"
-	ProjectGUID="{3D0EB14D-32F3-4D82-9C6D-B806ADBB859C}"
+	ProjectGUID="{5FCBD521-5A0B-4D97-A823-A97E6BAB9101}"
 	RootNamespace="GSnull"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="131072"
@@ -39,9 +39,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 			/>
 			<Tool
@@ -56,7 +53,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				ModuleDefinitionFile="GS.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -105,10 +101,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="2"
-				OmitFramePointers="true"
-				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 			/>
 			<Tool
@@ -123,7 +115,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				ModuleDefinitionFile="GS.def"
-				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
 			<Tool

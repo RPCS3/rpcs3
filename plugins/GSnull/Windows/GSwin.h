@@ -16,21 +16,13 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#pragma once
+
 #include <windows.h>
 #include <windowsx.h>
-#include "../GS.h"
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif 
-#define GSdefs
-#include "PS2Edefs.h"
-#ifdef __cplusplus
-}
-#endif
+extern int GSOpenWindow(void *pDsp, char *Title);
+extern void GSCloseWindow();
+extern void GSProcessMessages();
+extern void HandleKeyEvent(keyEvent *ev);
 
-int GSOpenWindow(void *pDsp, char *Title);
-void GSCloseWindow();
-void GSProcessMessages();
-void HandleKeyEvent(keyEvent *ev);

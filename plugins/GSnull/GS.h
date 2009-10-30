@@ -19,28 +19,23 @@
 #ifndef __GS_H__
 #define __GS_H__
 
+struct _keyEvent;
+typedef struct _keyEvent keyEvent;
+
 #include <stdio.h>
 
 #ifdef _WIN32
-#include "Windows/GSwin.h"
-#endif
-
-#include "Registers.h"
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif 
-#define GSdefs
-#include "PS2Edefs.h"
-#ifdef __cplusplus
-}
+#	include "Windows/GSwin.h"
 #endif
 
 #ifdef __LINUX__
-#include "Linux/GSLinux.h"
+#	include "Linux/GSLinux.h"
 #endif
 
+#define GSdefs
+#include "PS2Edefs.h"
+
+#include "Registers.h"
 #include "null/GSnull.h"
 
 /*#ifdef _MSC_VER
