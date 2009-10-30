@@ -17,7 +17,6 @@ GSnull v0.1
 * First Release
 * Tested with Pcsx2
 * Based off of FWnull.
-* Currently Linux only. This may change.
  
  Authors:
  -------
