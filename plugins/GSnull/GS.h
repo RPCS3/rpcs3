@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #ifndef __GS_H__
 #define __GS_H__
 
@@ -23,6 +23,7 @@ struct _keyEvent;
 typedef struct _keyEvent keyEvent;
 
 #include <stdio.h>
+#include "Pcsx2Defs.h"
 
 #ifdef _WIN32
 #	include "Windows/GSwin.h"
@@ -52,7 +53,7 @@ typedef struct _keyEvent keyEvent;
 
 #define GS_LOG __Log
 
-typedef struct 
+typedef struct
 {
 	int Log;
 } Config;
