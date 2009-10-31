@@ -1323,7 +1323,9 @@
 #define wxUSE_UXTHEME_AUTO      1
 
 // Set to 1 to use InkEdit control (Tablet PC), if available
-#define wxUSE_INKEDIT  1
+// PCSX2 note: Warning!! Causes crashes on Vista/Win7 if a user has a tablet connected. --air
+//    https://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=435344
+#define wxUSE_INKEDIT  0
 
 // ----------------------------------------------------------------------------
 // Generic versions of native controls
