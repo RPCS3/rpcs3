@@ -25,7 +25,6 @@
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>		// needed for OutputDebugStirng
-#	include <richedit.h>
 #endif
 
 BEGIN_DECLARE_EVENT_TYPES()
@@ -206,14 +205,14 @@ void ConsoleLogFrame::ColorArray::Cleanup()
 	// The contents of m_table were created with placement new, and must be
 	// disposed of manually:
 
-	for( int i=0; i<8; ++i )
+	for( int i=0; i<ConsoleColors_Count; ++i )
 		m_table[i].~wxTextAttr();
 }
 
 // fixme - not implemented yet.
 void ConsoleLogFrame::ColorArray::SetFont( const wxFont& font )
 {
-	//for( int i=0; i<8; ++i )
+	//for( int i=0; i<ConsoleColors_Count; ++i )
 	//	m_table[i].SetFont( font );
 }
 
@@ -257,13 +256,6 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
 
-#ifdef __WXMSW__
-	// This improves Asian text display behavior on Windows.  The IMF_DUALFONT flag helps
-	// the rich edit box reset back to the default font after displaying japanese characters.
-	// Other editing and messages have been disabled since our console is read-only anyway.
-	SendMessage( (HWND)m_TextCtrl.GetHWND(), EM_SETLANGOPTIONS, 0, IMF_AUTOFONT | IMF_DUALFONT );
-#endif
-
     // create Log menu (contains most options)
 	wxMenuBar *pMenuBar = new wxMenuBar();
 	wxMenu& menuLog = *new wxMenu();
@@ -301,12 +293,12 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	// Bind Events:
 
-	Connect( wxID_OPEN,  wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler(ConsoleLogFrame::OnOpen)  );
-	Connect( wxID_CLOSE, wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler(ConsoleLogFrame::OnClose) );
-	Connect( wxID_SAVE,  wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler(ConsoleLogFrame::OnSave)  );
-	Connect( wxID_CLEAR, wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler(ConsoleLogFrame::OnClear) );
+	Connect( wxID_OPEN,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnOpen)  );
+	Connect( wxID_CLOSE, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnClose) );
+	Connect( wxID_SAVE,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnSave)  );
+	Connect( wxID_CLEAR, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnClear) );
 
-	Connect( MenuID_FontSize_Small, MenuID_FontSize_Huge, wxEVT_COMMAND_MENU_SELECTED, wxMenuEventHandler( ConsoleLogFrame::OnFontSize ) );
+	Connect( MenuID_FontSize_Small, MenuID_FontSize_Huge, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( ConsoleLogFrame::OnFontSize ) );
 
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(ConsoleLogFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
@@ -461,17 +453,17 @@ void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 	}
 }
 
-void ConsoleLogFrame::OnOpen(wxMenuEvent& WXUNUSED(event))
+void ConsoleLogFrame::OnOpen(wxCommandEvent& WXUNUSED(event))
 {
 	Show(true);
 }
 
-void ConsoleLogFrame::OnClose( wxMenuEvent& event )
+void ConsoleLogFrame::OnClose( wxCommandEvent& event )
 {
 	DoClose();
 }
 
-void ConsoleLogFrame::OnSave(wxMenuEvent& WXUNUSED(event))
+void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
 {
     wxString filename;
     wxFile file;
@@ -497,12 +489,12 @@ void ConsoleLogFrame::OnSave(wxMenuEvent& WXUNUSED(event))
 	wxLogStatus(this, L"Log saved to the file '%s'.", filename.c_str());
 }
 
-void ConsoleLogFrame::OnClear(wxMenuEvent& WXUNUSED(event))
+void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
 {
     m_TextCtrl.Clear();
 }
 
-void ConsoleLogFrame::OnFontSize( wxMenuEvent& evt )
+void ConsoleLogFrame::OnFontSize( wxCommandEvent& evt )
 {
 	int ptsize = 8;
 	switch( evt.GetId() )

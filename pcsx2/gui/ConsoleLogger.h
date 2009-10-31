@@ -200,12 +200,12 @@ public:
 
 protected:
 	// menu callbacks
-	virtual void OnOpen (wxMenuEvent& event);
-	virtual void OnClose(wxMenuEvent& event);
-	virtual void OnSave (wxMenuEvent& event);
-	virtual void OnClear(wxMenuEvent& event);
+	virtual void OnOpen (wxCommandEvent& event);
+	virtual void OnClose(wxCommandEvent& event);
+	virtual void OnSave (wxCommandEvent& event);
+	virtual void OnClear(wxCommandEvent& event);
 
-	void OnFontSize(wxMenuEvent& event);
+	void OnFontSize(wxCommandEvent& event);
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
 

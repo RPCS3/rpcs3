@@ -76,6 +76,7 @@ public:
 			Logs;
 
 		wxDirName RunIso;		// last used location for Iso loading.
+		wxDirName RunELF;		// last used location for ELF loading.
 
 		FolderOptions();
 		void LoadSave( IniInterface& conf );
@@ -142,6 +143,7 @@ public:
 	bool		CloseGSonEsc;
 
 	wxString		CurrentIso;
+	wxString		CurrentELF;
 	CDVD_SourceType CdvdSource;
 
 	McdOptions				Mcd[2][4];

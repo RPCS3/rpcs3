@@ -186,6 +186,8 @@ protected:
 	// Used by SETJMP only, but ifdef'ing it out clutters up the code.
 	bool			m_CoreCancelDamnit;
 
+	wxString		m_elf_override;
+
 public:
 	static SysCoreThread& Get();
 
@@ -204,8 +206,10 @@ public:
 	}
 
 	bool HasPendingStateChangeRequest() const;
-
 	virtual void StateCheckInThread();
+	
+	virtual const wxString& GetElfOverride() const { return m_elf_override; }
+	virtual void SetElfOverride( const wxString& elf );
 
 protected:
 	void CpuInitializeMess();

@@ -42,6 +42,7 @@ DEFINE_EVENT_TYPE( pxEVT_FreezeThreadFinished );
 #include "Utilities/EventSource.inl"
 EventSource_ImplementType( IniInterface );
 EventSource_ImplementType( AppEventType );
+EventSource_ImplementType( PluginEventType );
 
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
@@ -442,6 +443,7 @@ void Pcsx2App::OnMainFrameClosed()
 // --------------------------------------------------------------------------------------
 
 static int _sysexec_cdvdsrc_type = -1;
+static wxString _sysexec_elf_override;
 
 static void _sendmsg_SysExecute()
 {
@@ -461,6 +463,7 @@ static void OnSysExecuteAfterPlugins( const wxCommandEvent& loadevt )
 void Pcsx2App::SysExecute()
 {
 	_sysexec_cdvdsrc_type = -1;
+	_sysexec_elf_override = CoreThread.GetElfOverride();
 	if( !m_CorePlugins )
 	{
 		LoadPluginsPassive( OnSysExecuteAfterPlugins );
@@ -472,9 +475,11 @@ void Pcsx2App::SysExecute()
 // Executes the specified cdvd source and optional elf file.  This command performs a
 // full closure of any existing VM state and starts a fresh VM with the requested
 // sources.
-void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc )
+void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override )
 {
 	_sysexec_cdvdsrc_type = (int)cdvdsrc;
+	_sysexec_elf_override = elf_override;
+
 	if( !m_CorePlugins )
 	{
 		LoadPluginsPassive( OnSysExecuteAfterPlugins );
@@ -498,7 +503,9 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 	if( evt.GetInt() != -1 ) CoreThread.Reset(); else CoreThread.Suspend();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 	if( evt.GetInt() != -1 ) CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
-
+	
+	if( !CoreThread.HasValidState() )
+		CoreThread.SetElfOverride( _sysexec_elf_override );
 	CoreThread.Resume();
 }
 

@@ -272,7 +272,10 @@ protected:
 	{
 		bool		IsInitialized;
 		bool		IsOpened;
+
 		wxString	Filename;
+		wxString	Name;
+		wxString	Version;
 
 		LegacyPluginAPI_Common	CommonBindings;
 		wxDynamicLibrary		Lib;
@@ -280,7 +283,6 @@ protected:
 		PluginStatus_t() :
 			IsInitialized( false )
 		,	IsOpened( false )
-		,	Filename()
 		,	CommonBindings()
 		,	Lib()
 		{
@@ -295,6 +297,7 @@ public:		// hack until we unsuck plugins...
 	PluginStatus_t			m_info[PluginId_Count];
 
 public:
+	PluginManager( const wxString (&folders)[PluginId_Count] );
 	virtual ~PluginManager() throw();
 
 	void Init();
@@ -310,13 +313,12 @@ public:
 	bool KeyEvent( const keyEvent& evt );
 	void Configure( PluginsEnum_t pid );
 
-	friend PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] );
+	const wxString& GetName( PluginsEnum_t pid ) const { return m_info[pid].Name; }
+	const wxString& GetVersion( PluginsEnum_t pid ) const { return m_info[pid].Version; }
+
 	friend PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] );
 
 protected:
-	// Internal constructor, should be called by Create only.
-	PluginManager( const wxString (&folders)[PluginId_Count] );
-
 	void BindCommon( PluginsEnum_t pid );
 	void BindRequired( PluginsEnum_t pid );
 	void BindOptional( PluginsEnum_t pid );
@@ -327,7 +329,6 @@ protected:
 extern const PluginInfo tbl_PluginInfo[];
 extern PluginManager* g_plugins;
 
-extern PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] );
 extern PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] );
 
 extern PluginManagerBase& GetPluginManager();

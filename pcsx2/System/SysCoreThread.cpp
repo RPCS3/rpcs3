@@ -96,6 +96,16 @@ void SysCoreThread::Reset()
 	m_resetVirtualMachine = true;
 }
 
+// This function *will* reset the emulator in order to allow the specified elf file to
+// take effect.  This is because it really doesn't make sense to change the elf file outside
+// the context of a reset/restart.
+void SysCoreThread::SetElfOverride( const wxString& elf )
+{
+	pxAssertDev( !m_hasValidState, "Thread synchronization error while assigning ELF override." );
+	m_elf_override = elf;
+}
+
+
 // Applies a full suite of new settings, which will automatically facilitate the necessary
 // resets of the core and components (including plugins, if needed).  The scope of resetting
 // is determined by comparing the current settings against the new settings.
@@ -128,6 +138,24 @@ bool SysCoreThread::HasPendingStateChangeRequest() const
 	return m_CoreCancelDamnit || mtgsThread.HasPendingException() || _parent::HasPendingStateChangeRequest();
 }
 
+struct ScopedBool_ClearOnError
+{
+	bool&	m_target;
+	bool	m_success;
+	
+	ScopedBool_ClearOnError( bool& target ) :
+		m_target( target ), m_success( false )
+	{
+		m_target = true;
+	}
+
+	virtual ~ScopedBool_ClearOnError()
+	{
+		m_target = m_success;
+	}
+	
+	void Success() { m_success = true; }
+};
 
 void SysCoreThread::CpuInitializeMess()
 {
@@ -139,8 +167,10 @@ void SysCoreThread::CpuInitializeMess()
 	m_resetRecompilers = false;
 	m_resetProfilers = false;
 
-	wxString elf_file;
-	if( EmuConfig.SkipBiosSplash )
+	ScopedBool_ClearOnError sbcoe( m_hasValidState );
+
+	wxString elf_file( m_elf_override );
+	if( elf_file.IsEmpty() && EmuConfig.SkipBiosSplash )
 	{
 		// Fetch the ELF filename and CD type from the CDVD provider.
 		wxString ename;
@@ -164,19 +194,19 @@ void SysCoreThread::CpuInitializeMess()
 
 	if( !elf_file.IsEmpty() )
 	{
-		// Skip Bios Hack -- Runs the PS2 BIOS stub, and then manually loads the ELF
-		// executable data, and injects the cpuRegs.pc with the address of the
-		// execution start point.
+		// Skip Bios Hack *or* Manual ELF override:
+		//   Runs the PS2 BIOS stub, and then manually loads the ELF executable data, and
+		//   injects the cpuRegs.pc with the address of the execution start point.
 		//
-		// This hack is necessary for non-CD ELF files, and is optional for game CDs
-		// (though not recommended for games because of rare ill side effects).
+		// This hack is necessary for non-CD ELF files, and is optional for game CDs as a
+		// fast bott up option. (though not recommended for games because of rare ill side
+		// effects).
 
-		m_hasValidState = true;
 		cpuExecuteBios();
-		m_hasValidState = false;	// because loadElfFile might error...
 		loadElfFile( elf_file );
 	}
-	m_hasValidState = true;
+	
+	sbcoe.Success();
 }
 
 void SysCoreThread::StateCheckInThread()
@@ -227,6 +257,8 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 // Invoked by the pthread_exit or pthread_cancel.
 void SysCoreThread::OnCleanupInThread()
 {
+	m_hasValidState = false;
+
 	Threading::DisableHiresScheduler();
 
 	if( g_plugins != NULL )

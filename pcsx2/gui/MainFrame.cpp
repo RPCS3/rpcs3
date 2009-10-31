@@ -42,22 +42,6 @@ wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 	return mnuSubstates;
 }
 
-// ------------------------------------------------------------------------
-wxMenu* MainEmuFrame::MakeCdvdMenu()
-{
-	wxMenu* mnuCdvd = new wxMenu();
-	mnuCdvd->Append( MenuId_Src_Iso,		_("Iso"),		wxEmptyString, wxITEM_RADIO );
-	mnuCdvd->Append( MenuId_Src_Plugin,		_("Plugin"),	wxEmptyString, wxITEM_RADIO );
-	mnuCdvd->Append( MenuId_Src_NoDisc,		_("No disc"),	wxEmptyString, wxITEM_RADIO );
-
-	mnuCdvd->AppendSeparator();
-	mnuCdvd->Append( MenuId_IsoBrowse,		_("Iso Browser..."), _("Select the Iso source image.") );
-	mnuCdvd->Append( MenuId_Config_CDVD,	_("Plugin settings..."),
-		_("Opens the CDVD plugin configuration dialog") );
-
-	return mnuCdvd;
-}
-
 void MainEmuFrame::UpdateIsoSrcSelection()
 {
 	MenuIdentifiers cdsrc = MenuId_Src_Iso;
@@ -81,47 +65,8 @@ void MainEmuFrame::UpdateIsoSrcFile()
 	if( !exists )
 		g_Conf->CurrentIso.Clear();
 
-	wxString label;
-	label.Printf( L"%s -> %s", _("Iso"),
-		exists ? g_Conf->CurrentIso.c_str() : _("Empty")
-	);
-	sMenuBar.SetLabel( MenuId_Src_Iso, label );
-}
-
-void MainEmuFrame::LoadSaveRecentIsoList( IniInterface& conf )
-{
-	if( conf.IsLoading() )
-		m_RecentIsoList->Load( conf.GetConfig() );
-	else
-		m_RecentIsoList->Save( conf.GetConfig() );
-}
-
-// ------------------------------------------------------------------------
-//     Video / Audio / Pad "Extensible" Menus
-// ------------------------------------------------------------------------
-
-void MainEmuFrame::PopulateVideoMenu()
-{
-	m_menuVideo.Append( MenuId_Video_Basics,	_("Basic Settings..."),	wxEmptyString, wxITEM_CHECK );
-	m_menuVideo.AppendSeparator();
-
-	// Populate options from the plugin here.
-
-	m_menuVideo.Append( MenuId_Video_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
-}
-
-void MainEmuFrame::PopulateAudioMenu()
-{
-	// Populate options from the plugin here.
-
-	m_menuAudio.Append( MenuId_Audio_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
-}
-
-void MainEmuFrame::PopulatePadMenu()
-{
-	// Populate options from the plugin here.
-
-	m_menuPad.Append( MenuId_Pad_Advanced,	_("Advanced..."),		wxEmptyString, wxITEM_NORMAL );
+	//sMenuBar.SetLabel( MenuId_Src_Iso, wxsFormat( L"%s -> %s", _("Iso"),
+	//	exists ? Path::GetFilename(g_Conf->CurrentIso).c_str() : _("Empty") ) );
 }
 
 // ------------------------------------------------------------------------
@@ -206,9 +151,8 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_ConfigPlugin_Click);
 	ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
 
-	ConnectMenu( MenuId_Video_Advanced,		Menu_ConfigPlugin_Click);
-	ConnectMenu( MenuId_Audio_Advanced,		Menu_ConfigPlugin_Click);
-	ConnectMenu( MenuId_Pad_Advanced,		Menu_ConfigPlugin_Click);
+	for( int i=0; i<PluginId_Count; ++i )
+		ConnectMenu( MenuId_PluginBase_Settings + (i*PluginMenuId_Interval), Menu_ConfigPlugin_Click);
 
 	ConnectMenu( MenuId_Boot_CDVD,			Menu_BootCdvd_Click );
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
@@ -258,20 +202,29 @@ void __evt_fastcall MainEmuFrame::OnCoreThreadStatusChanged( void* obj, wxComman
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
+	if( !pxAssertMsg( mframe->GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
+
 	mframe->ApplyCoreStatus();
 }
 
-void __evt_fastcall MainEmuFrame::OnCorePluginStatusChanged( void* obj, wxCommandEvent& evt )
+void __evt_fastcall MainEmuFrame::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
 {
 	if( obj == NULL ) return;
-	MainEmuFrame* mframe = (MainEmuFrame*)obj;
-	mframe->ApplyCoreStatus();
+	if( (evt != PluginsEvt_Loaded) && (evt != PluginsEvt_Unloaded) ) return;		// everything else we don't care about
+
+	MainEmuFrame& mframe = *(MainEmuFrame*)obj;
+	if( !pxAssertMsg( mframe.GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
+
+	mframe.ApplyCoreStatus();
+	mframe.ApplyPluginStatus();
 }
 
 void __evt_fastcall MainEmuFrame::OnSettingsApplied( void* obj, int& evt )
 {
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
+	if( !pxAssertMsg( mframe->GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
+
 	mframe->ApplySettings();
 }
 
@@ -280,14 +233,21 @@ void __evt_fastcall MainEmuFrame::OnSettingsLoadSave( void* obj, IniInterface& e
 	if( obj == NULL ) return;
 	MainEmuFrame* mframe = (MainEmuFrame*)obj;
 
-	mframe->LoadSaveRecentIsoList( evt );
+}
+
+static int GetPluginMenuId_Settings( PluginsEnum_t pid )
+{
+	return MenuId_PluginBase_Settings + ((int)pid * PluginMenuId_Interval);
+}
+
+static int GetPluginMenuId_Name( PluginsEnum_t pid )
+{
+	return MenuId_PluginBase_Name + ((int)pid * PluginMenuId_Interval);
 }
 
 // ------------------------------------------------------------------------
 MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
     wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
-
-	m_RecentIsoList( new wxFileHistory( g_Conf->RecentFileCount ) ),
 
 	m_statusbar( *CreateStatusBar(2, 0) ),
 	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
@@ -297,34 +257,34 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menubar( *new wxMenuBar() ),
 
 	m_menuBoot	( *new wxMenu() ),
-	m_menuEmu	( *new wxMenu() ),
+	m_menuCDVD	( *new wxMenu() ),
+	m_menuSys	( *new wxMenu() ),
 	m_menuConfig( *new wxMenu() ),
 	m_menuMisc	( *new wxMenu() ),
-
-	m_menuVideo	( *new wxMenu() ),
-	m_menuAudio	( *new wxMenu() ),
-	m_menuPad	( *new wxMenu() ),
 	m_menuDebug	( *new wxMenu() ),
-
+	
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) ),
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
 
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
 
 	m_Listener_CoreThreadStatus( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener( this, OnCoreThreadStatusChanged ) ),
-	m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), CmdEvt_Listener( this, OnCorePluginStatusChanged ) ),
+	m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>( this, OnCorePluginStatusChanged ) ),
 	m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) ),
 	m_Listener_SettingsLoadSave( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
 {
+
+	for( int i=0; i<PluginId_Count; ++i )
+		m_PluginMenuPacks[i].Populate( (PluginsEnum_t)i );
+
 	// ------------------------------------------------------------------------
 	// Initial menubar setup.  This needs to be done first so that the menu bar's visible size
 	// can be factored into the window size (which ends up being background+status+menus)
 
 	m_menubar.Append( &m_menuBoot,		_("&Boot") );
-	m_menubar.Append( &m_menuEmu,		_("&System") );
+	m_menubar.Append( &m_menuCDVD,		_("CD&VD") );
+	m_menubar.Append( &m_menuSys,		_("&System") );
 	m_menubar.Append( &m_menuConfig,	_("&Config") );
-	m_menubar.Append( &m_menuVideo,		_("&Video") );
-	m_menubar.Append( &m_menuAudio,		_("&Audio") );
 	m_menubar.Append( &m_menuMisc,		_("&Misc") );
 	m_menubar.Append( &m_menuDebug,		_("&Debug") );
 	SetMenuBar( &m_menubar );
@@ -393,35 +353,43 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	wxMenu* recentRunMenu = new wxMenu();
 	m_menuBoot.Append(MenuId_Boot_Recent,	_("Run Recent"), recentRunMenu);
 
-	m_RecentIsoList->UseMenu( recentRunMenu );
-	m_RecentIsoList->AddFilesToMenu( recentRunMenu );
-
-	m_menuBoot.AppendSeparator();
-	m_menuBoot.Append(MenuId_Cdvd_Source,	_("Select CDVD source"), MakeCdvdMenu() );
-	m_menuBoot.Append(MenuId_SkipBiosToggle,_("BIOS Skip Hack"),
-		_("Skips PS2 splash screens when booting from Iso or CDVD media"), wxITEM_CHECK );
-
 	m_menuBoot.AppendSeparator();
 	m_menuBoot.Append(MenuId_Exit,			_("Exit"),
 		_("Closing PCSX2 may be hazardous to your health"));
 
 	// ------------------------------------------------------------------------
-	m_menuEmu.Append(MenuId_Sys_SuspendResume,		_("Suspend") )->Enable( SysHasValidState() );
+	wxMenu& isoRecents( wxGetApp().GetRecentIsoMenu() );
 
-	m_menuEmu.AppendSeparator();
+	//m_menuCDVD.AppendSeparator();
+	m_menuCDVD.Append( MenuId_IsoSelector,	_("Iso Selector"), &isoRecents );
+	m_menuCDVD.Append( GetPluginMenuId_Settings(PluginId_CDVD), _("Plugin Menu"), m_PluginMenuPacks[PluginId_CDVD] );
 
-	//m_menuEmu.Append(MenuId_Sys_Close,		_("Close"),
+	m_menuCDVD.AppendSeparator();
+	m_menuCDVD.Append( MenuId_Src_Iso,		_("Iso"),		_("Makes the specified ISO image the CDVD source."), wxITEM_RADIO );
+	m_menuCDVD.Append( MenuId_Src_Plugin,	_("Plugin"),	_("Uses an external plugin as the CDVD source."), wxITEM_RADIO );
+	m_menuCDVD.Append( MenuId_Src_NoDisc,	_("No disc"),	_("Use this to boot into your virtual PS2's BIOS configuration."), wxITEM_RADIO );
+
+	m_menuCDVD.AppendSeparator();
+	m_menuCDVD.Append( MenuId_SkipBiosToggle,_("Enable Skip BIOS Hack"),
+		_("Skips PS2 splash screens when booting from Iso or CDVD media"), wxITEM_CHECK );
+
+	// ------------------------------------------------------------------------
+	m_menuSys.Append(MenuId_Sys_SuspendResume,		_("Suspend") )->Enable( SysHasValidState() );
+
+	m_menuSys.AppendSeparator();
+
+	//m_menuSys.Append(MenuId_Sys_Close,		_("Close"),
 	//	_("Stops emulation and closes the GS window."));
 
-	m_menuEmu.Append(MenuId_Sys_LoadStates,	_("Load state"), &m_LoadStatesSubmenu);
-	m_menuEmu.Append(MenuId_Sys_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
+	m_menuSys.Append(MenuId_Sys_LoadStates,	_("Load state"), &m_LoadStatesSubmenu);
+	m_menuSys.Append(MenuId_Sys_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
 
-	m_menuEmu.AppendSeparator();
-	m_menuEmu.Append(MenuId_EnablePatches,	_("Enable Patches"),
+	m_menuSys.AppendSeparator();
+	m_menuSys.Append(MenuId_EnablePatches,	_("Enable Patches"),
 		wxEmptyString, wxITEM_CHECK);
 
-	m_menuEmu.AppendSeparator();
-	m_menuEmu.Append(MenuId_Sys_Reset,		_("Reset"),
+	m_menuSys.AppendSeparator();
+	m_menuSys.Append(MenuId_Sys_Reset,		_("Reset"),
 		_("Resets emulation state and re-runs current image"));
 
     // ------------------------------------------------------------------------
@@ -429,13 +397,13 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuConfig.Append(MenuId_Config_Settings,	_("General &Settings") );
 	m_menuConfig.AppendSeparator();
 
-	m_menuConfig.Append(MenuId_Config_PAD,		_("PAD"),		&m_menuPad );
 
-	// Query installed "tertiary" plugins for name and menu options.
-	m_menuConfig.Append(MenuId_Config_CDVD,		_("CDVD"),		wxEmptyString);
-	m_menuConfig.Append(MenuId_Config_DEV9,		_("Dev9"),		wxEmptyString);
-	m_menuConfig.Append(MenuId_Config_USB,		_("USB"),		wxEmptyString);
-	m_menuConfig.Append(MenuId_Config_FireWire,	_("Firewire"),	wxEmptyString);
+	m_menuConfig.Append(MenuId_Config_GS,		_("Video (GS)"),		m_PluginMenuPacks[PluginId_GS]);
+	m_menuConfig.Append(MenuId_Config_SPU2,		_("Audio (SPU2)"),		m_PluginMenuPacks[PluginId_SPU2]);
+	m_menuConfig.Append(MenuId_Config_PAD,		_("Controllers (PAD)"),	m_PluginMenuPacks[PluginId_PAD]);
+	m_menuConfig.Append(MenuId_Config_DEV9,		_("Dev9"),				m_PluginMenuPacks[PluginId_DEV9]);
+	m_menuConfig.Append(MenuId_Config_USB,		_("USB"),				m_PluginMenuPacks[PluginId_USB]);
+	m_menuConfig.Append(MenuId_Config_FireWire,	_("Firewire"),			m_PluginMenuPacks[PluginId_FW]);
 
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_Patches,	_("Patches"),	wxEmptyString);
@@ -448,12 +416,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Reset all..."),
 		_("Clears all PCSX2 settings and re-runs the startup wizard."));
-
-	// ------------------------------------------------------------------------
-
-	PopulateVideoMenu();
-	PopulateAudioMenu();
-	PopulatePadMenu();
 
 	// ------------------------------------------------------------------------
 
@@ -487,36 +449,18 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 MainEmuFrame::~MainEmuFrame() throw()
 {
-	try
-	{
-		if( m_RecentIsoList && GetAppConfig() )
-			m_RecentIsoList->Save( *GetAppConfig() );
-	}
-	DESTRUCTOR_CATCHALL
+	m_menuCDVD.Remove( MenuId_IsoSelector );
 }
 
 // This should be called whenever major changes to the ini configs have occurred,
 // or when the recent file count mismatches the max filecount.
 void MainEmuFrame::ReloadRecentLists()
 {
-	// Always perform delete and reload of the Recent Iso List.  This handles cases where
-	// the recent file count has been changed, and it's a helluva lot easier than trying
-	// to make a clone copy of this complex object. ;)
-
-	wxConfigBase* cfg = GetAppConfig();
-	pxAssert( cfg != NULL );
-
-	if( m_RecentIsoList )
-		m_RecentIsoList->Save( *cfg );
-	m_RecentIsoList.Reassign( new wxFileHistory(g_Conf->RecentFileCount) )->Load( *cfg );
-	UpdateIsoSrcFile();
-	cfg->Flush();
 }
 
 void MainEmuFrame::ApplyCoreStatus()
 {
 	wxMenuBar& menubar( *GetMenuBar() );
-	if( !pxAssertMsg( &menubar!=NULL, "Mainframe menu bar is NULL!" ) ) return;
 
 	wxMenuItem& susres( *menubar.FindItem( MenuId_Sys_SuspendResume ) );
 	if( !pxAssertMsg( &susres!=NULL, "Suspend/Resume Menubar Item is NULL!" ) ) return;
@@ -544,19 +488,96 @@ void MainEmuFrame::ApplyCoreStatus()
 	menubar.Enable( MenuId_Sys_Reset, SysHasValidState() || (g_plugins!=NULL) );
 }
 
+void MainEmuFrame::ApplyPluginStatus()
+{
+	wxMenuBar& menubar( *GetMenuBar() );
+
+	if( g_plugins == NULL )
+	{
+		for( int i=0; i<PluginId_Count; ++i )
+			m_PluginMenuPacks[i].OnUnloaded();
+	}
+	else
+	{
+		for( int i=0; i<PluginId_Count; ++i )
+			m_PluginMenuPacks[i].OnLoaded();
+
+		// bleh this makes the menu too cluttered. --air
+		//m_menuCDVD.SetLabel( MenuId_Src_Plugin, wxsFormat( L"%s (%s)", _("Plugin"),
+		//	g_plugins->GetName( PluginId_CDVD ).c_str() ) );
+	}
+
+	// Re-populate plugin menus.
+
+	// Delete any menu options added by plugins (typically a plugin will have already
+	// done its own proper cleanup when the plugin was shutdown or unloaded, but lets
+	// not trust them, shall we?)
+
+}
+
 void MainEmuFrame::ApplySettings()
 {
 	wxMenuBar& menubar( *GetMenuBar() );
-	if( !pxAssertMsg( &menubar!=NULL, "Mainframe menu bar is NULL!" ) ) return;
 
 	menubar.Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
 
 	menubar.Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
 	menubar.Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );
 
-	if( m_RecentIsoList )
+	UpdateIsoSrcFile();
+}
+
+// ------------------------------------------------------------------------
+//   "Extensible" Plugin Menus
+// ------------------------------------------------------------------------
+
+PerPluginMenuInfo::~PerPluginMenuInfo() throw()
+{
+}
+
+void PerPluginMenuInfo::Populate( PluginsEnum_t pid )
+{
+	if( !pxAssert(pid < PluginId_Count) ) return;
+
+	PluginId = pid;
+
+	MyMenu.Append( GetPluginMenuId_Name(PluginId), _("No plugin loaded") )->Enable( false );
+	MyMenu.AppendSeparator();
+
+	if( PluginId == PluginId_GS )
 	{
-		if( m_RecentIsoList->GetMaxFiles() != g_Conf->RecentFileCount )
-			ReloadRecentLists();
+		MyMenu.Append( MenuId_Video_CoreSettings, _("Core Settings..."),
+			_("Modify video emulation settings regulated by the PCSX2 core virtual machine."), wxITEM_CHECK );
+		MyMenu.AppendSeparator();
 	}
+
+	// Populate options from the plugin here.
+
+	MyMenu.Append( GetPluginMenuId_Settings(PluginId), _("Plugin Settings..."),
+		wxsFormat( _("Opens the %s plugin's advanced settings dialog."), tbl_PluginInfo[pid].GetShortname() )
+	);
+}
+
+// deletes menu items belonging to (created by) the plugin.  Leaves menu items created
+// by the PCSX2 core intact.
+void PerPluginMenuInfo::OnUnloaded()
+{
+	MenuItemAddonList& curlist( m_PluginMenuItems );
+	for( uint mx=0; mx<curlist.size(); ++mx )
+		MyMenu.Delete( curlist[mx].Item );
+
+	curlist.clear();
+
+	MyMenu.SetLabel( GetPluginMenuId_Name(PluginId), _("No plugin loaded") );
+	MyMenu.Enable( GetPluginMenuId_Settings(PluginId), false );
+}
+
+void PerPluginMenuInfo::OnLoaded()
+{
+	MenuItemAddonList& curlist( m_PluginMenuItems );
+
+	MyMenu.SetLabel( GetPluginMenuId_Name(PluginId),
+		g_plugins->GetName( PluginId ) + L" " + g_plugins->GetVersion( PluginId )
+	);
+	MyMenu.Enable( GetPluginMenuId_Settings(PluginId), true );
 }

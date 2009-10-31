@@ -31,10 +31,6 @@ bool AppCoreThread::Suspend( bool isBlocking )
 {
 	bool retval = _parent::Suspend( isBlocking );
 
-	/*wxCommandEvent evt( pxEVT_CoreThreadStatus );
-	evt.SetInt( CoreStatus_Suspended );
-	wxGetApp().AddPendingEvent( evt );*/
-
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
 	// plugin is suspended.
 
@@ -52,6 +48,8 @@ void AppCoreThread::Resume()
 {
 	// Thread control (suspend / resume) should only be performed from the main/gui thread.
 	if( !AllowFromMainThreadOnly() ) return;
+	if( m_ExecMode == ExecMode_Opened ) return;
+	if( !pxAssert( g_plugins != NULL ) ) return;
 
 	if( sys_resume_lock > 0 )
 	{

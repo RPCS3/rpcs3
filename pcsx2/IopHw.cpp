@@ -673,7 +673,7 @@ void psxHwWrite8(u32 add, u8 value) {
 				( value == '\n' && g_pbufi != 0 ) )
 			{
 				g_pbuf[g_pbufi] = 0;
-				Console.WriteLn( ConColor_IOP, g_pbuf );
+				Console.WriteLn( ConColor_IOP, "%s", g_pbuf );
 				g_pbufi = 0;
 			}
 			else if( value != '\n' )

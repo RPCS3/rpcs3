@@ -268,8 +268,13 @@ typedef struct _PS2E_MenuItemInfo
 	// Specifies the handle of a sub menu to bind to this menu.  If NULL, the menu is
 	// created normally.  If non-NULL, the menu item will use sub-menu mode and will
 	// ignore the Style field.
-	PS2E_MenuHandle*	SubMenu;
+	PS2E_MenuHandle		SubMenu;
 	
+	// Menu that this item is attached to.  When this struct is passed into AddMenuItem,
+	// the menu item will be automatically appended to the menu specified in this field
+	// if the field is non-NULL (if the field is NULL then no action is taken).
+	PS2E_MenuHandle		OwnerMenu;
+
 	// When FALSE the menu item will appear grayed out to the user, and unselectable.
 	BOOL				Enabled;
 
@@ -340,7 +345,7 @@ typedef struct _PS2E_MenuItemAPI
 	// fashion.  When a submenu is assigned, the Style attribute of the menu will be
 	// ignored.  Passing NULL into this function will clear the submenu and return the
 	// menu item to whatever it's current Style attribute is set to.
-	void (PS2E_CALLBACK* MenuItem_SetSubMenu)( PS2E_MenuItemHandle mitem, PS2E_MenuHandle* submenu );
+	void (PS2E_CALLBACK* MenuItem_SetSubMenu)( PS2E_MenuItemHandle mitem, PS2E_MenuHandle submenu );
 
 	// Assigns the callback function for this menu (important!).  If passed NULL, the menu
 	// item will be automatically disabled (grayed out) by the emulator.
@@ -351,6 +356,8 @@ typedef struct _PS2E_MenuItemAPI
 
 	// Returns the current enable status of the specified menu item.
 	BOOL (PS2E_CALLBACK* MenuItem_IsEnabled)( PS2E_MenuItemHandle mitem );
+
+	void* reserved[4];
 
 } PS2E_MenuItemAPI;
 
@@ -437,6 +444,18 @@ typedef struct _PS2E_EmulatorInfo
 	// resources.
 	int		LogicalCores;
 
+	// Specifies the size of the wchar_t of the emulator, in bytes.  Plugin authors should be
+	// sure to check this against your own sizeof(wchar_t) before using any API that has
+	// a wchar_t parameter (such as the ConsoleWriterWide interface).  wchar_t is a loosely
+	// defined type that can range from 8 bits to 32 bits (realistically, although there is
+	// no actual limit on size), and can vary between compilers for the same platform.
+	int		Sizeof_wchar_t;
+	
+
+	// Reserved area for future expansion of the structure (avoids having to upgrade the
+	// plugin api for amending new extensions).
+	int		reserved1[6];
+
 	// GetInt
 	// Self-explanatory.
 	//
@@ -496,11 +515,11 @@ typedef struct _PS2E_EmulatorInfo
 	//
 	void (PS2E_CALLBACK* OSD_WriteLn)( int icon, const char* msg );
 
-	void (PS2E_CALLBACK* AddMenuItem)( const PS2E_MenuItemInfo* item );
-
 	// ----------------------------------------------------------------------------
 	//  Menu / MenuItem Section
 	// ----------------------------------------------------------------------------
+
+	void (PS2E_CALLBACK* AddMenuItem)( const PS2E_MenuItemInfo* item );
 
 	// Allocates a new menu handle and returns it.  The returned menu can have any valid existing
 	// menu items bound to it, and can be assigned as a submenu to any created MenuItem.  The menu
@@ -508,7 +527,7 @@ typedef struct _PS2E_EmulatorInfo
 	PS2E_MenuHandle (PS2E_CALLBACK* Menu_Create)( PS2E_THISPTR thisptr );
 
 	// Deletes the specified menu and frees its allocated memory resources.  NULL pointers are
-	// safely ignored.  Any menu itels also attached to this menu will be deleted.  Even if you
+	// safely ignored.  Any menu items also attached to this menu will be deleted.  Even if you
 	// do not explicitly delete your plugin's menu resources, the emulator will do automatic
 	// cleanup after the plugin's instance is free'd.
 	void (PS2E_CALLBACK* Menu_Delete)( PS2E_MenuHandle handle );
@@ -532,6 +551,8 @@ typedef struct _PS2E_EmulatorInfo
 	// compiler dependent, and so plugin authors should be sure to check the emulator's wchar_t
 	// side before using this interface.  See PS2E_ConsoleWriterWideAPI comments for more info.
 	PS2E_ConsoleWriterWideAPI ConsoleW;
+
+	void* reserved2[8];
 
 } PS2E_EmulatorInfo;
 
@@ -797,7 +818,7 @@ typedef struct _PS2E_LibraryAPI
 
 	// Reserved area at the end of the structure, for future API expansion.  This area
 	// should always be zeroed out, so that future versions of emulators that may have
-	// defined functions here will recognize the functions as not supported.
+	// defined functions here will recognize the functions as not supported by the plugin.
 	void* reserved[12];
 
 } PS2E_LibraryAPI;

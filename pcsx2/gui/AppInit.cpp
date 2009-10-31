@@ -263,10 +263,11 @@ bool Pcsx2App::OnInit()
 	try
 	{
 		InitDefaultGlobalAccelerators();
-
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
-		ReadUserModeSettings();
 
+		m_RecentIsoList = new RecentIsoList( m_RecentIsoMenu );
+
+		ReadUserModeSettings();
 		AppConfig_OnChangedSettingsFolder();
 
 	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
@@ -396,9 +397,12 @@ Pcsx2App::Pcsx2App()  :
 ,	m_ConfigImagesAreLoaded( false )
 ,	m_ToolbarImages( NULL )
 ,	m_Bitmap_Logo( NULL )
+,	m_RecentIsoMenu( new wxMenu() )
 {
 	SetAppName( L"pcsx2" );
 	BuildCommandHash();
+	
+	m_RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
 }
 
 Pcsx2App::~Pcsx2App()
@@ -434,7 +438,7 @@ Pcsx2App::~Pcsx2App()
 // this feature you need to execute pcsx in no-gui mode, and then not move the mouse or use
 // the keyboard until you get to the leak. >_<
 //
-// (but this tool is still still better than nothing!)
+// (but this tool is still better than nothing!)
 
 #ifdef PCSX2_DEBUG
 struct CrtDebugBreak
@@ -447,6 +451,6 @@ struct CrtDebugBreak
 	}
 };
 
-//CrtDebugBreak breakAt( 7586 );
+//CrtDebugBreak breakAt( 4327 );
 
 #endif

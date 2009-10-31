@@ -308,6 +308,7 @@
 		<Unit filename="../gui/Panels/SpeedhacksPanel.cpp" />
 		<Unit filename="../gui/Panels/VideoPanel.cpp" />
 		<Unit filename="../gui/Plugins.cpp" />
+		<Unit filename="../gui/RecentIsoList.cpp" />
 		<Unit filename="../gui/Resources/AppIcon16.h" />
 		<Unit filename="../gui/Resources/AppIcon16.png">
 			<Option compile="1" />

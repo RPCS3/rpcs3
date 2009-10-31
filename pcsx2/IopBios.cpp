@@ -174,9 +174,7 @@ void bios_write()  // 0x35/0x03
 	if (a0 == 1)  // stdout
 	{
 		const char *ptr = Ra1;
-
-		//Console.Write( ConColor_IOP, "%.*s", a2, ptr);
-		Console.Write( ConColor_IOP, ShiftJIS_ConvertString(ptr, a2) );
+		Console.Write( ConColor_IOP, L"%s", ShiftJIS_ConvertString(ptr, a2).c_str() );
 	}
 	else
 	{
@@ -284,10 +282,13 @@ _start:
 	}
 	*ptmp = 0;
 
-	// Note: Use Read to obtain a write pointer here, since we're just writing back the 
+	// Use Read to obtain a write pointer here, since we're just writing back the 
 	// temp buffer we saved earlier.
 	memcpy( (void*)iopVirtMemR<void>(sp), save, 4*4);
-	Console.Write( ConColor_IOP, ShiftJIS_ConvertString(tmp), 1023 );
+	
+	// Use "%s" even though it seems indirect: this avoids chaos if/when the IOP decides
+	// to feed us strings that contain percentages or other printf formatting control chars.
+	Console.Write( ConColor_IOP, L"%s", ShiftJIS_ConvertString(tmp).c_str(), 1023 );
 	pc0 = ra;
 }
 
@@ -300,7 +301,7 @@ void bios_putchar ()  // 3d
 
 void bios_puts ()  // 3e/3f
 {
-    Console.Write( ConColor_IOP, Ra0 );
+    Console.Write( ConColor_IOP, L"%s", ShiftJIS_ConvertString(Ra0).c_str() );
     pc0 = ra;
 }
 

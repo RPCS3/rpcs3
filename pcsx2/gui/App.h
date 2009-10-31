@@ -18,7 +18,6 @@
 #include <wx/wx.h>
 #include <wx/fileconf.h>
 #include <wx/imaglist.h>
-#include <wx/docview.h>
 #include <wx/apptrait.h>
 
 #include "Utilities/EventSource.h"
@@ -56,6 +55,9 @@ END_DECLARE_EVENT_TYPES()
 // the universal Accelerator table.
 static const int pxID_PadHandler_Keydown = 8030;
 
+// Plugin ID sections are spaced out evenly at intervals to make it easy to use a
+// single for-loop to create them.
+static const int PluginMenuId_Interval = 0x10;
 
 // ------------------------------------------------------------------------
 // All Menu Options for the Main Window! :D
@@ -82,6 +84,7 @@ enum MenuIdentifiers
 	MenuId_Src_Plugin,
 	MenuId_Src_NoDisc,
 	MenuId_Boot_Iso,			// Opens submenu with Iso browser, and recent isos.
+	MenuId_IsoSelector,			// Contains a submenu of selectable "favorite" isos
 	MenuId_IsoBrowse,			// Open dialog, runs selected iso.
 	MenuId_Boot_CDVD,			// opens a submenu filled by CDVD plugin (usually list of drives)
 	MenuId_Boot_ELF,
@@ -122,20 +125,17 @@ enum MenuIdentifiers
 	MenuId_Config_Multitap0Toggle,
 	MenuId_Config_Multitap1Toggle,
 
-	// Video Subsection
-	// Top items are PCSX2-controlled.  GS plugin items are inserted beneath.
-	MenuId_Video_Basics,		// includes frame timings and skippings settings
-	MenuId_Video_Advanced,		// inserted at the bottom of the menu
+	// Plugin Sections
+	// ---------------
+	// Each plugin menu begins with its name, which is a grayed out option that's
+	// intended for display purposes only.  Plugin ID sections are spaced out evenly
+	// at intervals to make it easy to use a single for-loop to create them.
 
-	// Audio subsection
-	// Top items are PCSX2-controlled.  SPU2 plugin items are inserted beneath.
-	// [no items at this time]
-	MenuId_Audio_Advanced,		// inserted at the bottom of the menu
+	MenuId_PluginBase_Name = 0x100,
+	MenuId_PluginBase_Settings = 0x101,
 
-	// Controller subsection
-	// Top items are PCSX2-controlled.  Pad plugin items are inserted beneath.
-	// [no items at this time]
-	MenuId_Pad_Advanced,
+	MenuId_Video_CoreSettings = 0x200,// includes frame timings and skippings settings
+
 
 	// Miscellaneous Menu!  (Misc)
 	MenuId_Website,				// Visit our awesome website!
@@ -162,6 +162,17 @@ enum AppEventType
 	// Maybe this will be expanded upon later..?
 	AppStatus_Exiting
 };
+
+enum PluginEventType
+{
+	PluginsEvt_Loaded,
+	PluginsEvt_Init,
+	PluginsEvt_Open,
+	PluginsEvt_Close,
+	PluginsEvt_Shutdown,
+	PluginsEvt_Unloaded,
+};
+
 
 // --------------------------------------------------------------------------------------
 //  KeyAcceleratorCode
@@ -252,6 +263,54 @@ public:
 
 
 // --------------------------------------------------------------------------------------
+//  RecentIsoList
+// --------------------------------------------------------------------------------------
+class RecentIsoList : public wxEvtHandler
+{
+protected:
+	struct RecentItem
+	{
+		wxString	Filename;
+		wxMenuItem*	ItemPtr;
+		
+		RecentItem() { ItemPtr = NULL; }
+
+		RecentItem( const wxString& src ) :
+			Filename( src )
+		,	ItemPtr( NULL )
+		{
+		}
+	};
+
+	std::vector<RecentItem> m_Items;
+
+	wxMenu*		m_Menu;
+	uint		m_MaxLength;
+	int			m_cursel;
+	
+	wxMenuItem* m_Separator;
+
+	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
+
+public:
+	RecentIsoList( wxMenu* menu );
+	virtual ~RecentIsoList() throw();
+
+	void RemoveAllFromMenu();
+	void Repopulate();
+	void Add( const wxString& src );
+	
+protected:
+	void InsertIntoMenu( int id );
+	void DoSettingsLoadSave( IniInterface& ini );
+	
+	void OnChangedSelection( wxCommandEvent& evt );
+
+	static void __evt_fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
+};
+
+
+// --------------------------------------------------------------------------------------
 //  AppImageIds  - Config and Toolbar Images and Icons
 // --------------------------------------------------------------------------------------
 struct AppImageIds
@@ -265,14 +324,11 @@ struct AppImageIds
 			Video,
 			Cpu;
 
-		ConfigIds() :
-			Paths( -1 )
-		,	Plugins( -1 )
-		,	Speedhacks( -1 )
-		,	Gamefixes( -1 )
-		,	Video( -1 )
-		,	Cpu( -1 )
+		ConfigIds()
 		{
+			Paths		= Plugins	=
+			Speedhacks	= Gamefixes	=
+			Video		= Cpu		= -1;
 		}
 	} Config;
 
@@ -285,13 +341,12 @@ struct AppImageIds
 			PluginAudio,
 			PluginPad;
 
-		ToolbarIds() :
-			Settings( -1 )
-		,	Play( -1 )
-		,	PluginVideo( -1 )
-		,	PluginAudio( -1 )
-		,	PluginPad( -1 )
+		ToolbarIds()
 		{
+			Settings	= Play	=
+			PluginVideo	=
+			PluginAudio	=
+			PluginPad	= -1;
 		}
 	} Toolbars;
 };
@@ -324,12 +379,31 @@ public:
 	virtual ~AppIniLoader() {}
 };
 
-// --------------------------------------------------------------------------------------
+// =====================================================================================================
 //  Pcsx2App  -  main wxApp class
-// --------------------------------------------------------------------------------------
-
+// =====================================================================================================
 class Pcsx2App : public wxApp
 {
+	// ----------------------------------------------------------------------------
+	//   Event Sources!
+	// ----------------------------------------------------------------------------
+	// These need to be at the top of the App class, because a lot of other things depend
+	// on them and they are, themselves, fairly self-contained.
+
+protected:
+	EventSource<PluginEventType>m_evtsrc_CorePluginStatus;
+	CmdEvt_Source				m_evtsrc_CoreThreadStatus;
+	EventSource<int>			m_evtsrc_SettingsApplied;
+	EventSource<IniInterface>	m_evtsrc_SettingsLoadSave;
+	EventSource<AppEventType>	m_evtsrc_AppStatus;
+
+public:
+	CmdEvt_Source& Source_CoreThreadStatus()		{ return m_evtsrc_CoreThreadStatus; }
+	EventSource<int>& Source_SettingsApplied()		{ return m_evtsrc_SettingsApplied; }
+	EventSource<AppEventType>& Source_AppStatus()	{ return m_evtsrc_AppStatus; }
+	EventSource<PluginEventType>& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
+	EventSource<IniInterface>& Source_SettingsLoadSave()	{ return m_evtsrc_SettingsLoadSave; }
+
 public:
 	CommandDictionary				GlobalCommands;
 	AcceleratorDictionary			GlobalAccels;
@@ -341,6 +415,9 @@ protected:
 	ScopedPtr<wxBitmap>				m_Bitmap_Logo;
 	ScopedPtr<PipeRedirectionBase>	m_StdoutRedirHandle;
 	ScopedPtr<PipeRedirectionBase>	m_StderrRedirHandle;
+
+	ScopedPtr<wxMenu>				m_RecentIsoMenu;
+	ScopedPtr<RecentIsoList>		m_RecentIsoList;
 
 public:
 	ScopedPtr<SysCoreAllocations>	m_CoreAllocs;
@@ -368,7 +445,7 @@ public:
 	bool PrepForExit( bool canCancel );
 
 	void SysExecute();
-	void SysExecute( CDVD_SourceType cdvdsrc );
+	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void SysReset();
 
 	const wxBitmap& GetLogoBitmap();
@@ -376,6 +453,8 @@ public:
 	wxImageList& GetImgList_Toolbars();
 
 	const AppImageIds& GetImgId() const { return m_ImageId; }
+	wxMenu& GetRecentIsoMenu() { return *m_RecentIsoMenu; }
+	RecentIsoList& GetRecentIsoList() { return *m_RecentIsoList; }
 
 	MainEmuFrame&	GetMainFrame() const;
 	MainEmuFrame*	GetMainFramePtr() const	{ return m_MainFrame; }
@@ -408,24 +487,6 @@ public:
 	void DisableWindowLogging() const;
 	void DisableDiskLogging() const;
 	void OnProgramLogClosed();
-
-	// ----------------------------------------------------------------------------
-	//   Event Sources!
-	// ----------------------------------------------------------------------------
-
-protected:
-	CmdEvt_Source		m_evtsrc_CorePluginStatus;
-	CmdEvt_Source		m_evtsrc_CoreThreadStatus;
-	EventSource<int>	m_evtsrc_SettingsApplied;
-	EventSource<IniInterface>	m_evtsrc_SettingsLoadSave;
-	EventSource<AppEventType>	m_evtsrc_AppStatus;
-
-public:
-	CmdEvt_Source& Source_CoreThreadStatus()	{ return m_evtsrc_CoreThreadStatus; }
-	CmdEvt_Source& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
-	EventSource<int>& Source_SettingsApplied()	{ return m_evtsrc_SettingsApplied; }
-	EventSource<IniInterface>& Source_SettingsLoadSave()	{ return m_evtsrc_SettingsLoadSave; }
-	EventSource<AppEventType>& Source_AppStatus()	{ return m_evtsrc_AppStatus; }
 
 protected:
 	void InitDefaultGlobalAccelerators();

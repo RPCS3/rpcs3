@@ -188,7 +188,6 @@ void SysThreadBase::Resume()
 {
 	if( IsSelf() ) return;
 	if( m_ExecMode == ExecMode_Opened ) return;
-	if( !pxAssert( g_plugins != NULL ) ) return;
 
 	ScopedLock locker( m_ExecModeMutex );
 

@@ -29,6 +29,54 @@ using namespace Threading;
 
 static FnType_OnThreadComplete* Callback_PluginsLoadComplete = NULL;
 
+class AppPluginManager : public PluginManager
+{
+	typedef PluginManager _parent;
+
+public:
+	AppPluginManager( const wxString (&folders)[PluginId_Count] ) : PluginManager( folders )
+	{
+	}
+
+	virtual ~AppPluginManager() throw()
+	{
+		PluginEventType pevt = PluginsEvt_Unloaded;
+		sApp.Source_CorePluginStatus().Dispatch( pevt );
+	}
+
+	void Init()
+	{
+		_parent::Init();
+
+		PluginEventType pevt = PluginsEvt_Init;
+		sApp.Source_CorePluginStatus().Dispatch( pevt );
+	}
+	
+	void Shutdown()
+	{
+		_parent::Shutdown();
+
+		PluginEventType pevt = PluginsEvt_Shutdown;
+		sApp.Source_CorePluginStatus().Dispatch( pevt );
+	}
+
+	void Close()
+	{
+		_parent::Close();
+		
+		PluginEventType pevt = PluginsEvt_Close;
+		sApp.Source_CorePluginStatus().Dispatch( pevt );
+	}
+	
+	void Open()
+	{
+		_parent::Open();
+
+		PluginEventType pevt = PluginsEvt_Open;
+		sApp.Source_CorePluginStatus().Dispatch( pevt );
+	}
+};
+
 // --------------------------------------------------------------------------------------
 //  LoadPluginsTask
 // --------------------------------------------------------------------------------------
@@ -74,7 +122,7 @@ void LoadPluginsTask::ExecuteTaskInThread()
 	// This is for testing of the error handler... uncomment for fun?
 	//throw Exception::PluginError( PluginId_PAD, "This one is for testing the error handler!" );
 
-	Result = PluginManager_Create( m_folders );
+	Result = new AppPluginManager( m_folders );
 }
 
 void LoadPluginsTask::OnCleanupInThread()
@@ -166,7 +214,9 @@ void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 	
 	if( fn_tmp != NULL ) fn_tmp( evt );
 
-	//m_evtsrc_PluginLoadFinished.Dispatch( evt );
+	PluginEventType pevt = PluginsEvt_Loaded;
+	sApp.Source_CorePluginStatus().Dispatch( pevt );
+	Source_CorePluginStatus().Dispatch( pevt );
 }
 
 // Posts a message to the App to reload plugins.  Plugins are loaded via a background thread
@@ -206,12 +256,12 @@ void LoadPluginsImmediate()
 
 	wxString passins[PluginId_Count];
 	ConvertPluginFilenames( passins );
-	wxGetApp().m_CorePlugins = PluginManager_Create( passins );
+	wxGetApp().m_CorePlugins = new AppPluginManager( passins );
 
 }
 
 void UnloadPlugins()
 {
 	CoreThread.Cancel();
-	wxGetApp().m_CorePlugins = NULL;
+	sApp.m_CorePlugins = NULL;
 }

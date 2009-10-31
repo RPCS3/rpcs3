@@ -690,6 +690,21 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 
 		//m_libs[i].GetSymbol( L"PS2E_InitAPI" );
 
+		// Fetch plugin name and version information
+		
+		_PS2EgetLibName		GetLibName		= (_PS2EgetLibName)m_info[pid].Lib.GetSymbol( L"PS2EgetLibName" );
+		_PS2EgetLibVersion2	GetLibVersion2	= (_PS2EgetLibVersion2)m_info[pid].Lib.GetSymbol( L"PS2EgetLibVersion2" );
+
+		if( GetLibName == NULL || GetLibVersion2 == NULL )
+			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
+				wxsFormat( L"\nMethod binding failure on GetLibName or GetLibVersion2.\n" ),
+				_( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." )
+			);
+
+		m_info[pid].Name = fromUTF8( GetLibName() );
+		int version = GetLibVersion2( tbl_PluginInfo[pid].typemask );
+		m_info[pid].Version.Printf( L"%d.%d.%d", (version>>8)&0xff, version&0xff, (version>>24)&0xff );
+
 		// Bind Required Functions
 		// (generate critical error if binding fails)
 
@@ -720,6 +735,9 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 
 		x86caps.PhysicalCores,
 		x86caps.LogicalCores,
+		sizeof(wchar_t),
+
+		0,0,0,0,0,0,
 
 		pcsx2_GetInt,
 		pcsx2_GetBoolean,
@@ -1116,15 +1134,6 @@ void PluginManager::Configure( PluginsEnum_t pid )
 	m_info[pid].CommonBindings.Configure();
 }
 
-// Creates an instance of a plugin manager, using the specified plugin filenames for sources.
-// Impl Note: Have to use this stupid effing 'friend' declaration because static members of
-// classes can't access their own protected members.  W-T-F?
-//
-PluginManager* PluginManager_Create( const wxString (&folders)[PluginId_Count] )
-{
-	return new PluginManager( folders );
-}
-
 PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
 {
 	wxString passins[PluginId_Count];
@@ -1133,7 +1142,7 @@ PluginManager* PluginManager_Create( const wxChar* (&folders)[PluginId_Count] )
 		passins[pi->id] = folders[pi->id];
 	} while( ++pi, pi->shortname != NULL );
 
-	return PluginManager_Create( passins );
+	return new PluginManager( passins );
 }
 
 static PluginManagerBase s_pluginman_placebo;

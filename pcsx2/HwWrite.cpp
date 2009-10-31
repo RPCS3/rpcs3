@@ -179,8 +179,11 @@ void hwWrite8(u32 mem, u8 value)
 			if (( value == '\r' ) || ( sio_count == 1023 ) ||
 			     ( value == '\n' && sio_count != 0 ))
 			{
+				// Use "%s" below even though it feels indirect -- it's necessary to avoid
+				// errors if/when games use printf formatting control chars.
+
 				sio_buffer[sio_count] = 0;
-				Console.WriteLn( ConColor_EE, ShiftJIS_ConvertString(sio_buffer) );
+				Console.WriteLn( ConColor_EE, L"%s", ShiftJIS_ConvertString(sio_buffer).c_str() );
 				sio_count = 0;
 			}
 			else if( value != '\n' )

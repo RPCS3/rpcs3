@@ -31,8 +31,6 @@ namespace Savestate
 	{
 		memset( pcm_cache_data, 0, pcm_BlockCount * sizeof(PcmCacheEntry) );
 	}
-
-	static s16 old_state_sBuffer[pcm_DecodedSamplesPerBlock] = {0};
 }
 
 struct Savestate::DataBlock

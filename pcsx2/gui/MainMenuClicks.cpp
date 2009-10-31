@@ -65,9 +65,30 @@ bool MainEmuFrame::_DoSelectIsoBrowser()
 	{
 		g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
 		g_Conf->CurrentIso = ctrl.GetPath();
-		AppSaveSettings();
+		sApp.GetRecentIsoList().Add( g_Conf->CurrentIso );
 
+		AppSaveSettings();
 		UpdateIsoSrcFile();
+		return true;
+	}
+
+	return false;
+}
+
+bool MainEmuFrame::_DoSelectELFBrowser()
+{
+	static const wxChar* elfFilterTypes =
+		L"ELF Files (.elf)|*.elf|"
+		L"All Files (*.*)|*.*";
+
+	wxFileDialog ctrl( this, _("Select ELF file..."), g_Conf->Folders.RunELF.ToString(), wxEmptyString,
+		elfFilterTypes, wxFD_OPEN | wxFD_FILE_MUST_EXIST );
+
+	if( ctrl.ShowModal() != wxID_CANCEL )
+	{
+		g_Conf->Folders.RunELF = wxFileName( ctrl.GetPath() ).GetPath();
+		g_Conf->CurrentELF = ctrl.GetPath();
+		AppSaveSettings();
 		return true;
 	}
 
@@ -116,13 +137,12 @@ void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
 {
 	CoreThread.Suspend();
 
-	if( !_DoSelectIsoBrowser() )
+	if( _DoSelectIsoBrowser() )
 	{
-		CoreThread.Resume();
-		return;
+		sApp.SysExecute( CDVDsrc_Iso );
 	}
 
-	sApp.SysExecute( CDVDsrc_Iso );
+	CoreThread.Resume();
 }
 
 void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
@@ -153,6 +173,13 @@ void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent &event )
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 {
+	CoreThread.Suspend();
+	if( _DoSelectELFBrowser() )
+	{
+		sApp.SysExecute( g_Conf->CdvdSource, g_Conf->CurrentELF );
+	}
+
+	CoreThread.Resume();
 }
 
 void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
@@ -206,7 +233,9 @@ void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 	sApp.SysReset();
 
 	if( resume )
+	{
 		sApp.SysExecute();
+	}
 
 	GetMenuBar()->Enable( MenuId_Sys_Reset, resume );
 }
@@ -214,22 +243,10 @@ void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 {
 	typedef void	(CALLBACK* PluginConfigureFnptr)();
-	const int eventId = event.GetId();
-	PluginsEnum_t pid;
-	switch (eventId) {
-		case MenuId_Video_Advanced:
-			pid = PluginId_GS;
-			break;
-		case MenuId_Audio_Advanced:
-			pid = PluginId_SPU2;
-			break;
-		case MenuId_Pad_Advanced:
-			pid = PluginId_PAD;
-			break;
-		default:
-			pid = (PluginsEnum_t)( event.GetId() - MenuId_Config_GS );
-			break;
-	}
+	const int eventId = event.GetId() - MenuId_PluginBase_Settings;
+	
+	PluginsEnum_t pid = (PluginsEnum_t)(eventId / PluginMenuId_Interval);
+	if( !pxAssertDev( (eventId >= 0) || (pid < PluginId_Count), "Invalid plugin identifier passed to ConfigPlugin event handler." ) ) return;
 
 	LoadPluginsImmediate();
 	if( g_plugins == NULL ) return;

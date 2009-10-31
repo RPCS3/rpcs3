@@ -1845,6 +1845,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\RecentIsoList.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\RecoverySystem.cpp"
 				>
 			</File>

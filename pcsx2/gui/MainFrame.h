@@ -36,6 +36,59 @@ protected:
 	void OnKeyDown( wxKeyEvent& evt );
 };
 
+struct PluginMenuAddition
+{
+	wxString			Text;
+	wxString			HelpText;
+	PS2E_MenuItemStyle	Flags;
+
+	wxMenuItem*			Item;
+	int					ItemId;
+
+	// Optional user data pointer (or typecast integer value)
+	void*				UserPtr;
+
+	void (PS2E_CALLBACK *OnClicked)( PS2E_THISPTR* thisptr, void* userptr );
+};
+
+// --------------------------------------------------------------------------------------
+//  PerPluginMenuInfo
+// --------------------------------------------------------------------------------------
+class PerPluginMenuInfo
+{
+protected:
+	typedef std::vector<PluginMenuAddition> MenuItemAddonList;
+
+	// A list of menu items belonging to this plugin's menu.
+	MenuItemAddonList	m_PluginMenuItems;
+
+	// Base index for inserting items, usually points to the position
+	// after the heading entry and separator.
+	int					m_InsertIndexBase;
+
+	// Current index for inserting menu items; increments with each item
+	// added by a plugin.
+	int					m_InsertIndexCur;
+
+public:
+	PluginsEnum_t		PluginId;
+	wxMenu&				MyMenu;
+
+public:
+	PerPluginMenuInfo() : MyMenu( *new wxMenu() )
+	{
+	}
+	
+	virtual ~PerPluginMenuInfo() throw();
+	
+	void Populate( PluginsEnum_t pid );
+	void OnUnloaded();
+	void OnLoaded();
+
+	operator wxMenu*() { return &MyMenu; }
+	operator const wxMenu*() const { return &MyMenu; }
+};
+
 class MainEmuFrame : public wxFrame
 {
 // ------------------------------------------------------------------------
@@ -43,31 +96,29 @@ class MainEmuFrame : public wxFrame
 // ------------------------------------------------------------------------
 
 protected:
-	ScopedPtr<wxFileHistory>	m_RecentIsoList;
     wxStatusBar&	m_statusbar;
     wxStaticBitmap	m_background;
 
 	wxMenuBar&		m_menubar;
 
 	wxMenu&			m_menuBoot;
-	wxMenu&			m_menuEmu;
+	wxMenu&			m_menuCDVD;
+	wxMenu&			m_menuSys;
 	wxMenu&			m_menuConfig;
 	wxMenu&			m_menuMisc;
 	wxMenu&			m_menuDebug;
-
-	wxMenu&			m_menuVideo;
-	wxMenu&			m_menuAudio;
-	wxMenu&			m_menuPad;
 
 	wxMenu&			m_LoadStatesSubmenu;
 	wxMenu&			m_SaveStatesSubmenu;
 
 	wxMenuItem&		m_MenuItem_Console;
+	
+	PerPluginMenuInfo	m_PluginMenuPacks[PluginId_Count];
 
-	CmdEvt_ListenerBinding		m_Listener_CoreThreadStatus;
-	CmdEvt_ListenerBinding		m_Listener_CorePluginStatus;
-	EventListenerBinding<int>	m_Listener_SettingsApplied;
-	EventListenerBinding<IniInterface>	m_Listener_SettingsLoadSave;
+	CmdEvt_ListenerBinding					m_Listener_CoreThreadStatus;
+	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
+	EventListenerBinding<int>				m_Listener_SettingsApplied;
+	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
 
 // ------------------------------------------------------------------------
 //     MainEmuFrame Constructors and Member Methods
@@ -86,13 +137,13 @@ public:
 
 protected:
 	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
-	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, wxCommandEvent& evt );
+	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
 	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
 	static void __evt_fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
 
-	void LoadSaveRecentIsoList( IniInterface& conf );
 	void ApplySettings();
 	void ApplyCoreStatus();
+	void ApplyPluginStatus();
 
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
@@ -131,6 +182,7 @@ protected:
 	void Menu_ShowAboutBox(wxCommandEvent &event);
 
 	bool _DoSelectIsoBrowser();
+	bool _DoSelectELFBrowser();
 
 // ------------------------------------------------------------------------
 //     MainEmuFram Internal API for Populating Main Menu Contents
@@ -139,11 +191,7 @@ protected:
 	wxMenu* MakeStatesSubMenu( int baseid ) const;
 	wxMenu* MakeStatesMenu();
 	wxMenu* MakeLanguagesMenu() const;
-	wxMenu* MakeCdvdMenu();
 
-	void PopulateVideoMenu();
-	void PopulateAudioMenu();
-	void PopulatePadMenu();
 	void ConnectMenus();
 
 	friend class Pcsx2App;

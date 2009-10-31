@@ -323,6 +323,7 @@ AppConfig::AppConfig() :
 ,	CloseGSonEsc( true )
 
 ,	CurrentIso()
+,	CurrentELF()
 ,	CdvdSource( CDVDsrc_Iso )
 
 ,	ProgLogBox()
@@ -394,6 +395,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( Toolbar_ShowLabels );
 
 	IniEntry( CurrentIso );
+	IniEntry( CurrentELF );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
 }
@@ -459,6 +461,7 @@ AppConfig::FolderOptions::FolderOptions() :
 ,	Logs( PathDefs::GetLogs() )
 
 ,	RunIso( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
+,	RunELF( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
 {
 }
 
@@ -488,6 +491,7 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniEntry( Logs );
 
 	IniEntry( RunIso );
+	IniEntry( RunELF );
 
 	if( ini.IsLoading() )
 	{
