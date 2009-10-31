@@ -520,11 +520,11 @@ static void cdvdDetectDisk()
 
 void cdvdNewDiskCB()
 {
-	if( !Mutex_NewDiskCB.TryLock() ) return;
+	if( !Mutex_NewDiskCB.TryAquire() ) return;
 	DoCDVDresetDiskTypeCache();
 
 	try { cdvdDetectDisk(); }
-	catch(...) { Mutex_NewDiskCB.Unlock(); }		// ensure mutex gets unlocked.
+	catch(...) { Mutex_NewDiskCB.Release(); }		// ensure mutex gets unlocked.
 }
 
 static void mechaDecryptBytes( u32 madr, int size )

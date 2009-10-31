@@ -189,6 +189,9 @@ void SysThreadBase::Resume()
 	if( IsSelf() ) return;
 	if( m_ExecMode == ExecMode_Opened ) return;
 
+	ScopedNonblockingLock resprotect( m_ResumeProtection );
+	if( resprotect.Failed() ) return;
+
 	ScopedLock locker( m_ExecModeMutex );
 
 	// Implementation Note:
@@ -203,9 +206,9 @@ void SysThreadBase::Resume()
 
 		case ExecMode_NoThreadYet:
 		{
-			static int __Guard = 0;
+			/*static int __Guard = 0;
 			RecursionGuard guard( __Guard );
-			if( guard.IsReentrant() ) return;
+			if( guard.IsReentrant() ) return;*/
 
 			Start();
 			if( !m_running || (m_ExecMode == ExecMode_NoThreadYet) )
@@ -242,7 +245,7 @@ void SysThreadBase::Resume()
 
 void SysThreadBase::OnStartInThread()
 {
-	m_RunningLock.Lock();
+	m_RunningLock.Aquire();
 	_parent::OnStartInThread();
 	m_ResumeEvent.Post();
 }
@@ -251,7 +254,7 @@ void SysThreadBase::OnCleanupInThread()
 {
 	m_ExecMode = ExecMode_NoThreadYet;
 	_parent::OnCleanupInThread();
-	m_RunningLock.Unlock();
+	m_RunningLock.Release();
 }
 
 void SysThreadBase::OnSuspendInThread() {}
@@ -281,7 +284,7 @@ void SysThreadBase::StateCheckInThread()
 		{
 			OnPauseInThread();
 			m_ExecMode = ExecMode_Paused;
-			m_RunningLock.Unlock();
+			m_RunningLock.Release();
 		}
 		// fallthrough...
 
@@ -289,7 +292,7 @@ void SysThreadBase::StateCheckInThread()
 			while( m_ExecMode == ExecMode_Paused )
 				m_ResumeEvent.WaitRaw();
 
-			m_RunningLock.Lock();
+			m_RunningLock.Aquire();
 			OnResumeInThread( false );
 		break;
 
@@ -298,7 +301,7 @@ void SysThreadBase::StateCheckInThread()
 		{
 			OnSuspendInThread();
 			m_ExecMode = ExecMode_Closed;
-			m_RunningLock.Unlock();
+			m_RunningLock.Release();
 		}
 		// fallthrough...
 
@@ -306,7 +309,7 @@ void SysThreadBase::StateCheckInThread()
 			while( m_ExecMode == ExecMode_Closed )
 				m_ResumeEvent.WaitRaw();
 
-			m_RunningLock.Lock();
+			m_RunningLock.Aquire();
 			OnResumeInThread( true );
 		break;
 

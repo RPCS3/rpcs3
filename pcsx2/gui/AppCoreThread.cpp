@@ -49,6 +49,8 @@ void AppCoreThread::Resume()
 	// Thread control (suspend / resume) should only be performed from the main/gui thread.
 	if( !AllowFromMainThreadOnly() ) return;
 	if( m_ExecMode == ExecMode_Opened ) return;
+	if( m_ResumeProtection.IsLocked() ) return;
+
 	if( !pxAssert( g_plugins != NULL ) ) return;
 
 	if( sys_resume_lock > 0 )

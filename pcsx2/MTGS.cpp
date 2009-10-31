@@ -272,7 +272,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 			pxAssert( stackpos == m_RingPos );
 			prevCmd = tag;
 			ringposStack.pop_back();
-			m_lock_Stack.Unlock();
+			m_lock_Stack.Release();
 #endif
 
 			switch( tag.command )
@@ -536,7 +536,7 @@ void mtgsThreadObject::SendDataPacket()
 			SetEvent();
 		}
 	}
-	//m_PacketLocker.Unlock();
+	//m_PacketLocker.Release();
 }
 
 int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size )
@@ -561,7 +561,7 @@ static u32 ringtx_inf_s[32];
 //  size - size of the packet data, in smd128's
 int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
 {
-	//m_PacketLocker.Lock();
+	//m_PacketLocker.Aquire();
 
 #ifdef PCSX2_GSRING_TX_STATS
 	ringtx_s += size;
@@ -674,10 +674,10 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 			SpinWait();
 		}
 
-		m_lock_RingRestart.Lock();
+		m_lock_RingRestart.Aquire();
 		SendSimplePacket( GS_RINGTYPE_RESTART, 0, 0, 0 );
 		m_WritePos = writepos = 0;
-		m_lock_RingRestart.Unlock();
+		m_lock_RingRestart.Release();
 		SetEvent();
 
 		// stall until the read position is past the end of our incoming block,
@@ -719,7 +719,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 #ifdef RINGBUF_DEBUG_STACK
 	m_lock_Stack.Lock();
 	ringposStack.push_front( writepos );
-	m_lock_Stack.Unlock();
+	m_lock_Stack.Release();
 #endif
 
 	// Command qword: Low word is the command, and the high word is the packet
@@ -738,7 +738,7 @@ __forceinline uint mtgsThreadObject::_PrepForSimplePacket()
 #ifdef RINGBUF_DEBUG_STACK
 	m_lock_Stack.Lock();
 	ringposStack.push_front( m_WritePos );
-	m_lock_Stack.Unlock();
+	m_lock_Stack.Release();
 #endif
 
 	uint future_writepos = m_WritePos+1;

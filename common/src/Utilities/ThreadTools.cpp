@@ -114,7 +114,7 @@ Threading::PersistentThread::~PersistentThread() throw()
 	DESTRUCTOR_CATCHALL
 }
 
-void Threading::PersistentThread::FrankenMutex( MutexLock& mutex )
+void Threading::PersistentThread::FrankenMutex( Mutex& mutex )
 {
 	if( mutex.RecreateIfLocked() )
 	{
@@ -268,7 +268,7 @@ void Threading::PersistentThread::WaitOnSelf( Semaphore& sem )
 // Exceptions:
 //   ThreadTimedOut
 //
-void Threading::PersistentThread::WaitOnSelf( MutexLock& mutex )
+void Threading::PersistentThread::WaitOnSelf( Mutex& mutex )
 {
 	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the thread (invalid operation!)" ) ) return;
 
@@ -369,7 +369,7 @@ void Threading::PersistentThread::_ThreadCleanup()
 
 	_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
 
-	m_lock_InThread.Unlock();
+	m_lock_InThread.Release();
 }
 
 wxString Threading::PersistentThread::GetName() const
@@ -390,7 +390,7 @@ void Threading::PersistentThread::OnStartInThread()
 
 void Threading::PersistentThread::_internal_execute()
 {
-	m_lock_InThread.Lock();
+	m_lock_InThread.Aquire();
 	OnStartInThread();
 
 	_DoSetThreadName( m_name );
@@ -510,10 +510,10 @@ void Threading::BaseTaskThread::ExecuteTaskInThread()
 		m_sem_event.WaitRaw();
 
 		Task();
-		m_lock_TaskComplete.Lock();
+		m_lock_TaskComplete.Aquire();
 		m_TaskPending = false;
 		m_post_TaskComplete.Post();
-		m_lock_TaskComplete.Unlock();
+		m_lock_TaskComplete.Release();
 	};
 
 	return;

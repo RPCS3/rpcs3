@@ -92,7 +92,7 @@ protected:
 	uint m_WritePos;	// cur pos ee thread is writing to
 
 	Semaphore m_sem_OpenDone;
-	MutexLock m_lock_RingRestart;
+	Mutex m_lock_RingRestart;
 
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
 	MutexLockRecursive m_PacketLocker;
@@ -116,7 +116,7 @@ protected:
 	uint m_packet_ringpos;	// index of the data location in the ringbuffer.
 
 #ifdef RINGBUF_DEBUG_STACK
-	Threading::MutexLock m_lock_Stack;
+	Threading::Mutex m_lock_Stack;
 #endif
 
 public:

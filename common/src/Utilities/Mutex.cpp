@@ -27,15 +27,15 @@ namespace Threading
 }
 
 // --------------------------------------------------------------------------------------
-//  MutexLock Implementations
+//  Mutex Implementations
 // --------------------------------------------------------------------------------------
 
-Threading::MutexLock::MutexLock()
+Threading::Mutex::Mutex()
 {
 	pthread_mutex_init( &m_mutex, NULL );
 }
 
-void Threading::MutexLock::Detach()
+void Threading::Mutex::Detach()
 {
 	if( EBUSY != pthread_mutex_destroy(&m_mutex) ) return;
 
@@ -46,7 +46,7 @@ void Threading::MutexLock::Detach()
 		// (note: if the mutex is locked recursively more than twice then this assert won't
 		//  detect it)
 
-		Unlock(); Unlock();		// in case of double recursion.
+		Release(); Release();		// in case of double recursion.
 		int result = pthread_mutex_destroy( &m_mutex );
 		if( pxAssertDev( result != EBUSY, "Detachment of a recursively-locked mutex (self-locked!)." ) ) return;
 	}
@@ -57,14 +57,14 @@ void Threading::MutexLock::Detach()
 		Console.Error( "(Thread Log) Mutex cleanup failed due to possible deadlock.");
 }
 
-Threading::MutexLock::~MutexLock() throw()
+Threading::Mutex::~Mutex() throw()
 {
 	try {
-		MutexLock::Detach();
+		Mutex::Detach();
 	} DESTRUCTOR_CATCHALL;
 }
 
-Threading::MutexLockRecursive::MutexLockRecursive() : MutexLock( false )
+Threading::MutexLockRecursive::MutexLockRecursive() : Mutex( false )
 {
 	if( _InterlockedIncrement( &_attr_refcount ) == 1 )
 	{
@@ -88,7 +88,7 @@ Threading::MutexLockRecursive::~MutexLockRecursive() throw()
 // the application to survive unexpected or inconvenient failures, where a mutex is deadlocked by
 // a rogue thread.  This function allows us to Recreate the mutex and let the deadlocked one ponder
 // the deeper meanings of the universe for eternity.
-void Threading::MutexLock::Recreate()
+void Threading::Mutex::Recreate()
 {
 	Detach();
 	pthread_mutex_init( &m_mutex, NULL );
@@ -97,7 +97,7 @@ void Threading::MutexLock::Recreate()
 // Returns:
 //   true if the mutex had to be recreated due to lock contention, or false if the mutex is safely
 //   unlocked.
-bool Threading::MutexLock::RecreateIfLocked()
+bool Threading::Mutex::RecreateIfLocked()
 {
 	if( !Wait(def_deadlock_timeout) )
 	{
@@ -108,81 +108,85 @@ bool Threading::MutexLock::RecreateIfLocked()
 }
 
 
-void Threading::MutexLock::LockRaw()
+// This is a direct blocking action -- very fast, very efficient, and generally very dangerous
+// if used from the main GUI thread, since it typically results in an unresponsive program.
+// Call this method directly only if you know the code in question will be run from threads
+// other than the main thread.  
+void Threading::Mutex::FullBlockingAquire()
 {
 	pthread_mutex_lock( &m_mutex );
 }
 
-bool Threading::MutexLock::LockRaw( const wxTimeSpan& timeout )
+bool Threading::Mutex::FullBlockingAquire( const wxTimeSpan& timeout )
 {
 	wxDateTime megafail( wxDateTime::UNow() + timeout );
 	const timespec fail = { megafail.GetTicks(), megafail.GetMillisecond() * 1000000 };
 	return pthread_mutex_timedlock( &m_mutex, &fail ) == 0;
 }
 
-void Threading::MutexLock::Unlock()
+void Threading::Mutex::Release()
 {
 	pthread_mutex_unlock( &m_mutex );
 }
 
-bool Threading::MutexLock::TryLock()
+bool Threading::Mutex::TryAquire()
 {
 	return EBUSY != pthread_mutex_trylock( &m_mutex );
 }
 
-// This is a wxApp-safe rendition of LockRaw, which makes sure to execute pending app events
+// This is a wxApp-safe rendition of FullBlockingAquire, which makes sure to execute pending app events
 // and messages *if* the lock is performed from the main GUI thread.
 //
 // Exceptions:
 //   ThreadTimedOut - See description of ThreadTimedOut for details
 //
-void Threading::MutexLock::Lock()
+void Threading::Mutex::Aquire()
 {
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		LockRaw();
+		FullBlockingAquire();
 	}
-	else if( _WaitGui_RecursionGuard( "Mutex::Lock" ) )
+	else if( _WaitGui_RecursionGuard( "Mutex::Aquire" ) )
 	{
-		if( !LockRaw(def_deadlock_timeout) )
+		if( !FullBlockingAquire(def_deadlock_timeout) )
 			throw Exception::ThreadTimedOut();
 	}
 	else
 	{
-		while( !LockRaw(def_yieldgui_interval) )
+		while( !FullBlockingAquire(def_yieldgui_interval) )
 			wxTheApp->Yield( true );
 	}
 #else
-	LockRaw();
+	FullBlockingAquire();
 #endif
 }
 
 // Exceptions:
 //   ThreadTimedOut - See description of ThreadTimedOut for details
 //
-bool Threading::MutexLock::Lock( const wxTimeSpan& timeout )
+bool Threading::Mutex::Aquire( const wxTimeSpan& timeout )
 {
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		return LockRaw(timeout);
+		return FullBlockingAquire(timeout);
 	}
-	else if( _WaitGui_RecursionGuard( "Mutex::Lock(timeout)" ) )
+	else if( _WaitGui_RecursionGuard( "Mutex::Aquire(timeout)" ) )
 	{
 		if( timeout > def_deadlock_timeout )
 		{
-			if( LockRaw(def_deadlock_timeout) ) return true;
+			if( FullBlockingAquire(def_deadlock_timeout) ) return true;
 			throw Exception::ThreadTimedOut();
 		}
-		return LockRaw( timeout );
+		return FullBlockingAquire( timeout );
 	}
 	else
 	{
 		wxTimeSpan countdown( (timeout) );
 
 		do {
-			if( LockRaw( def_yieldgui_interval ) ) break;
+			if( FullBlockingAquire( def_yieldgui_interval ) ) break;
 			wxTheApp->Yield(true);
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
@@ -194,7 +198,7 @@ bool Threading::MutexLock::Lock( const wxTimeSpan& timeout )
 	throw Exception::ThreadTimedOut();
 
 #else
-	return LockRaw();
+	return FullBlockingAquire();
 #endif
 }
 
@@ -203,19 +207,19 @@ bool Threading::MutexLock::Lock( const wxTimeSpan& timeout )
 // specific task, and to block until the task is finished (PersistentThread uses it to
 // determine if the thread is running or completed, for example).
 //
-// Implemented internally as a simple Lock/Unlock pair.
+// Implemented internally as a simple Aquire/Release pair.
 //
 // Exceptions:
 //   ThreadTimedOut - See description of ThreadTimedOut for details
 //
-void Threading::MutexLock::Wait()
+void Threading::Mutex::Wait()
 {
-	Lock();
-	Unlock();
+	Aquire();
+	Release();
 }
 
 // Performs a wait on a locked mutex, or returns instantly if the mutex is unlocked.
-// (Implemented internally as a simple Lock/Unlock pair.)
+// (Implemented internally as a simple Aquire/Release pair.)
 //
 // Returns:
 //   true if the mutex was freed and is in an unlocked state; or false if the wait timed out
@@ -224,11 +228,11 @@ void Threading::MutexLock::Wait()
 // Exceptions:
 //   ThreadTimedOut - See description of ThreadTimedOut for details
 //
-bool Threading::MutexLock::Wait( const wxTimeSpan& timeout )
+bool Threading::Mutex::Wait( const wxTimeSpan& timeout )
 {
-	if( Lock(timeout) )
+	if( Aquire(timeout) )
 	{
-		Unlock();
+		Release();
 		return true;
 	}
 	return false;

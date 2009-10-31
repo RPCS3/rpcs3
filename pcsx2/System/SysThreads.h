@@ -99,7 +99,11 @@ protected:
 	// Locked whenever the thread is not in a suspended state (either closed or paused).
 	// Issue a Wait against this mutex for performing actions that require the thread
 	// to be suspended.
-	MutexLock				m_RunningLock;
+	Mutex					m_RunningLock;
+	
+	// Protects the thread from re-entrant resume requests while dependent resources are
+	// being constructed.
+	NonblockingMutex		m_ResumeProtection;
 
 public:
 	explicit SysThreadBase();
@@ -124,11 +128,14 @@ public:
 	bool IsClosed() const { return !IsOpen(); }
 
 	ExecutionMode GetExecutionMode() const { return m_ExecMode; }
-	MutexLock& ExecutionModeMutex() { return m_ExecModeMutex; }
+	Mutex& ExecutionModeMutex() { return m_ExecModeMutex; }
 
 	virtual bool Suspend( bool isBlocking = true );
 	virtual void Resume();
 	virtual bool Pause();
+	
+	virtual bool AquireResumeLock() { return m_ResumeProtection.TryAquire(); }
+	virtual void ReleaseResumeLock() { m_ResumeProtection.Release(); }
 
 protected:
 	virtual void OnStart();

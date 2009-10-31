@@ -447,6 +447,12 @@ static wxString _sysexec_elf_override;
 
 static void _sendmsg_SysExecute()
 {
+	if( !CoreThread.AquireResumeLock() )
+	{
+		DbgCon.WriteLn( "(SysExecute) another resume lock or message is already pending; no message posted." );
+		return;
+	}
+
 	wxCommandEvent execevt( pxEVT_SysExecute );
 	execevt.SetInt( _sysexec_cdvdsrc_type );
 	wxGetApp().AddPendingEvent( execevt );
@@ -464,6 +470,7 @@ void Pcsx2App::SysExecute()
 {
 	_sysexec_cdvdsrc_type = -1;
 	_sysexec_elf_override = CoreThread.GetElfOverride();
+
 	if( !m_CorePlugins )
 	{
 		LoadPluginsPassive( OnSysExecuteAfterPlugins );
@@ -488,6 +495,9 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override
 	_sendmsg_SysExecute();
 }
 
+// This message performs actual system execution (as dictated by SysExecute variants).
+// It is implemented as a message handler so that it can be triggered in response to
+// the completion of other dependent activites, namely loading plugins.
 void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 {
 	if( sys_resume_lock > 0 )
@@ -502,10 +512,13 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 
 	if( evt.GetInt() != -1 ) CoreThread.Reset(); else CoreThread.Suspend();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
-	if( evt.GetInt() != -1 ) CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
+	if( evt.GetInt() != -1 || (CDVD == NULL) )
+		CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
 	
 	if( !CoreThread.HasValidState() )
 		CoreThread.SetElfOverride( _sysexec_elf_override );
+
+	CoreThread.ReleaseResumeLock();
 	CoreThread.Resume();
 }
 

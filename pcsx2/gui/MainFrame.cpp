@@ -215,7 +215,7 @@ void __evt_fastcall MainEmuFrame::OnCorePluginStatusChanged( void* obj, PluginEv
 	MainEmuFrame& mframe = *(MainEmuFrame*)obj;
 	if( !pxAssertMsg( mframe.GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
 
-	mframe.ApplyCoreStatus();
+	//mframe.ApplyCoreStatus();
 	mframe.ApplyPluginStatus();
 }
 
@@ -349,9 +349,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	m_menuBoot.Append(MenuId_Boot_ELF,		_("Run ELF File..."),
 		_("For running raw binaries"));
-
-	wxMenu* recentRunMenu = new wxMenu();
-	m_menuBoot.Append(MenuId_Boot_Recent,	_("Run Recent"), recentRunMenu);
 
 	m_menuBoot.AppendSeparator();
 	m_menuBoot.Append(MenuId_Exit,			_("Exit"),
@@ -554,7 +551,7 @@ void PerPluginMenuInfo::Populate( PluginsEnum_t pid )
 	// Populate options from the plugin here.
 
 	MyMenu.Append( GetPluginMenuId_Settings(PluginId), _("Plugin Settings..."),
-		wxsFormat( _("Opens the %s plugin's advanced settings dialog."), tbl_PluginInfo[pid].GetShortname() )
+		wxsFormat( _("Opens the %s plugin's advanced settings dialog."), tbl_PluginInfo[pid].GetShortname().c_str() )
 	);
 }
 

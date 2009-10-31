@@ -364,13 +364,13 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 	if( m_pendingFlushes > 32 && !wxThread::IsMain() )
 	{
 		++m_WaitingThreadsForFlush;
-		lock.Unlock();
+		lock.Release();
 
 		if( !m_sem_QueueFlushed.Wait( wxTimeSpan( 0,0,0,500 ) ) )
 		{
 			// Necessary since the main thread could grab the lock and process before
 			// the above function actually returns (gotta love threading!)
-			lock.Lock();
+			lock.Aquire();
 			if( m_WaitingThreadsForFlush != 0 ) --m_WaitingThreadsForFlush;
 		}
 		else

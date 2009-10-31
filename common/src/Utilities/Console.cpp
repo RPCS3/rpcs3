@@ -204,7 +204,7 @@ const IConsoleWriter ConsoleWriter_wxError =
 static const int MaxFormattedStringLength = 0x80000;
 
 template< typename CharType >
-class FormatBuffer : public MutexLock
+class FormatBuffer : public Mutex
 {
 public:
 	bool&				clearbit;

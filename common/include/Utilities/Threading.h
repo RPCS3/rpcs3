@@ -38,15 +38,16 @@ namespace Exception
 
 #if wxUSE_GUI
 
-	// --------------------------------------------------------------------------------------
-	//  ThreadTimedOut Exception
-	// --------------------------------------------------------------------------------------
-	// This exception is thrown by Semaphore and Mutex Wait/Lock functions if a blocking wait is
-	// needed due to gui Yield recursion, and the timeout period for deadlocking (usually 3 seconds)
-	// is reached before the lock becomes available. This exception cannot occur in the following
-	// conditions:
-	//  * If the user-specified timeout is less than the deadlock timeout.
-	//  * If the method is run from a thread *other* than the MainGui thread.
+// --------------------------------------------------------------------------------------
+//  ThreadTimedOut Exception
+// --------------------------------------------------------------------------------------
+// This exception is thrown by Semaphore and Mutex Wait/Aquire functions if a blocking wait is
+// needed due to gui Yield recursion, and the timeout period for deadlocking (usually 3 seconds)
+// is reached before the lock becomes available. This exception cannot occur in the following
+// conditions:
+//  * If the user-specified timeout is less than the deadlock timeout.
+//  * If the method is run from a thread *other* than the MainGui thread.
+//
 	class ThreadTimedOut : public virtual RuntimeError
 	{
 	public:
@@ -57,12 +58,11 @@ namespace Exception
 
 namespace Threading
 {
-	// --------------------------------------------------------------------------------------
-	//  Platform Specific External APIs
-	// --------------------------------------------------------------------------------------
-	// The following set of documented functions have Linux/Win32 specific implementations,
-	// which are found in WinThreads.cpp and LnxThreads.cpp
-
+// --------------------------------------------------------------------------------------
+//  Platform Specific External APIs
+// --------------------------------------------------------------------------------------
+// The following set of documented functions have Linux/Win32 specific implementations,
+// which are found in WinThreads.cpp and LnxThreads.cpp
 
 	// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
 	extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
@@ -81,6 +81,31 @@ namespace Threading
 	// sleeps the current thread for the given number of milliseconds.
 	extern void Sleep( int ms );
 
+// --------------------------------------------------------------------------------------
+//  AtomicExchange / AtomicIncrement
+// --------------------------------------------------------------------------------------
+// Our fundamental interlocking functions.  All other useful interlocks can be derived
+// from these little beasties!  (these are all implemented internally using cross-platform
+// implementations of _InterlockedExchange and such)
+
+	extern u32 AtomicExchange( volatile u32& Target, u32 value );
+	extern u32 AtomicExchangeAdd( volatile u32& Target, u32 value );
+	extern u32 AtomicIncrement( volatile u32& Target );
+	extern u32 AtomicDecrement( volatile u32& Target );
+	extern s32 AtomicExchange( volatile s32& Target, s32 value );
+	extern s32 AtomicExchangeAdd( volatile s32& Target, u32 value );
+	extern s32 AtomicIncrement( volatile s32& Target );
+	extern s32 AtomicDecrement( volatile s32& Target );
+
+	extern void* _AtomicExchangePointer( void * volatile * const target, void* const value );
+	extern void* _AtomicCompareExchangePointer( void * volatile * const target, void* const value, void* const comparand );
+
+#define AtomicExchangePointer( target, value ) \
+	_InterlockedExchangePointer( &target, value )
+
+#define AtomicCompareExchangePointer( target, value, comparand ) \
+	_InterlockedCompareExchangePointer( &target, value, comparand )
+
 
 	// pthread Cond is an evil api that is not suited for Pcsx2 needs.
 	// Let's not use it. Use mutexes and semaphores instead to create waits. (Air)
@@ -98,36 +123,38 @@ namespace Threading
 	};
 #endif
 
-	// --------------------------------------------------------------------------------------
-	//  NonblockingMutex
-	// --------------------------------------------------------------------------------------
-	// This is a very simple non-blocking mutex, which behaves similarly to pthread_mutex's
-	// trylock(), but without any of the extra overhead needed to set up a structure capable
-	// of blocking waits.  It basically optimizes to a single InterlockedExchange.
-	//
-	// Simple use: if TryLock() returns false, the Bool is already interlocked by another thread.
-	// If TryLock() returns true, you've locked the object and are *responsible* for unlocking
-	// it later.
-	//
+// --------------------------------------------------------------------------------------
+//  NonblockingMutex
+// --------------------------------------------------------------------------------------
+// This is a very simple non-blocking mutex, which behaves similarly to pthread_mutex's
+// trylock(), but without any of the extra overhead needed to set up a structure capable
+// of blocking waits.  It basically optimizes to a single InterlockedExchange.
+//
+// Simple use: if TryAquire() returns false, the Bool is already interlocked by another thread.
+// If TryAquire() returns true, you've locked the object and are *responsible* for unlocking
+// it later.
+//
 	class NonblockingMutex
 	{
 	protected:
-		volatile long val;
+		volatile int val;
 
 	public:
 		NonblockingMutex() : val( false ) {}
 		virtual ~NonblockingMutex() throw() {}
 
-		bool TryLock() throw()
+		bool TryAquire() throw()
 		{
-			return !_InterlockedExchange( &val, true );
+			return !AtomicExchange( val, true );
 		}
 
 		bool IsLocked()
 		{ return !!val; }
 
 		void Release()
-		{ val = false; }
+		{
+			AtomicExchange( val, false );
+		}
 	};
 
 	class Semaphore
@@ -153,37 +180,37 @@ namespace Threading
 		bool Wait( const wxTimeSpan& timeout );
 	};
 
-	class MutexLock
+	class Mutex
 	{
 	protected:
 		pthread_mutex_t m_mutex;
 
 	public:
-		MutexLock();
-		virtual ~MutexLock() throw();
+		Mutex();
+		virtual ~Mutex() throw();
 		virtual bool IsRecursive() const { return false; }
 
 		void Recreate();
 		bool RecreateIfLocked();
 		void Detach();
 
-		void Lock();
-		bool Lock( const wxTimeSpan& timeout );
-		bool TryLock();
-		void Unlock();
+		void Aquire();
+		bool Aquire( const wxTimeSpan& timeout );
+		bool TryAquire();
+		void Release();
 
-		void LockRaw();
-		bool LockRaw( const wxTimeSpan& timeout );
+		void FullBlockingAquire();
+		bool FullBlockingAquire( const wxTimeSpan& timeout );
 
 		void Wait();
 		bool Wait( const wxTimeSpan& timeout );
 
 	protected:
 		// empty constructor used by MutexLockRecursive
-		MutexLock( bool ) {}
+		Mutex( bool ) {}
 	};
 
-	class MutexLockRecursive : public MutexLock
+	class MutexLockRecursive : public Mutex
 	{
 	public:
 		MutexLockRecursive();
@@ -253,7 +280,7 @@ namespace Threading
 
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
-		MutexLock	m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
+		Mutex	m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
 		MutexLockRecursive	m_lock_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
 
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
@@ -275,7 +302,7 @@ namespace Threading
 		virtual void RethrowException() const;
 
 		void WaitOnSelf( Semaphore& mutex );
-		void WaitOnSelf( MutexLock& mutex );
+		void WaitOnSelf( Mutex& mutex );
 
 		bool IsRunning() const;
 		bool IsSelf() const;
@@ -315,7 +342,7 @@ namespace Threading
 			TestCancel();
 		}
 
-		void FrankenMutex( MutexLock& mutex );
+		void FrankenMutex( Mutex& mutex );
 
 		// ----------------------------------------------------------------------------
 		// Section of methods for internal use only.
@@ -330,46 +357,48 @@ namespace Threading
 		static void _pt_callback_cleanup( void* handle );
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// ScopedLock: Helper class for using Mutexes.
-	// Using this class provides an exception-safe (and generally clean) method of locking
-	// code inside a function or conditional block.
+	// --------------------------------------------------------------------------------------
+	//  ScopedLock
+	// --------------------------------------------------------------------------------------
+	// Helper class for using Mutexes.  Using this class provides an exception-safe (and
+	// generally clean) method of locking code inside a function or conditional block.  The lock
+	// will be automatically released on any return or exit from the function.
 	//
 	class ScopedLock
 	{
 		DeclareNoncopyableObject(ScopedLock);
 
 	protected:
-		MutexLock&	m_lock;
+		Mutex&	m_lock;
 		bool		m_IsLocked;
 
 	public:
 		virtual ~ScopedLock() throw()
 		{
 			if( m_IsLocked )
-				m_lock.Unlock();
+				m_lock.Release();
 		}
 
-		ScopedLock( MutexLock& locker ) :
+		ScopedLock( Mutex& locker ) :
 			m_lock( locker )
 		,	m_IsLocked( true )
 		{
-			m_lock.Lock();
+			m_lock.Aquire();
 		}
 
 		// Provides manual unlocking of a scoped lock prior to object destruction.
-		void Unlock()
+		void Release()
 		{
 			if( !m_IsLocked ) return;
 			m_IsLocked = false;
-			m_lock.Unlock();
+			m_lock.Release();
 		}
 
 		// provides manual locking of a scoped lock, to re-lock after a manual unlocking.
-		void Lock()
+		void Aquire()
 		{
 			if( m_IsLocked ) return;
-			m_lock.Lock();
+			m_lock.Aquire();
 			m_IsLocked = true;
 		}
 
@@ -377,9 +406,9 @@ namespace Threading
 
 	protected:
 		// Special constructor used by ScopedTryLock
-		ScopedLock( MutexLock& locker, bool isTryLock ) :
+		ScopedLock( Mutex& locker, bool isTryLock ) :
 			m_lock( locker )
-		,	m_IsLocked( isTryLock ? m_lock.TryLock() : false )
+		,	m_IsLocked( isTryLock ? m_lock.TryAquire() : false )
 		{
 		}
 
@@ -388,51 +417,84 @@ namespace Threading
 	class ScopedTryLock : public ScopedLock
 	{
 	public:
-		ScopedTryLock( MutexLock& locker ) : ScopedLock( locker, true ) { }
+		ScopedTryLock( Mutex& locker ) : ScopedLock( locker, true ) { }
 		virtual ~ScopedTryLock() throw() {}
 		bool Failed() const { return !m_IsLocked; }
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// BaseTaskThread - an abstract base class which provides simple parallel execution of
-	// single tasks.
-	//
-	// Implementation:
-	//   To use this class your derived class will need to implement its own Task() function
-	//   and also a "StartTask( parameters )" function which suits the need of your task, along
-	//   with any local variables your task needs to do its job.  You may additionally want to
-	//   implement a "GetResult()" function, which would be a combination of WaitForResult()
-	//   and a return value of the computational result.
-	//
-	// Thread Safety:
-	//   If operating on local variables, you must execute WaitForResult() before leaving the
-	//   variable scope -- or alternatively have your StartTask() implementation make full
-	//   copies of dependent data.  Also, by default PostTask() always assumes the previous
-	//   task has completed.  If your system can post a new task before the previous one has
-	//   completed, then it needs to explicitly call WaitForResult() or provide a mechanism
-	//   to cancel the previous task (which is probably more work than it's worth).
-	//
-	// Performance notes:
-	//  * Remember that thread creation is generally slow, so you should make your object
-	//    instance once early and then feed it tasks repeatedly over the course of program
-	//    execution.
-	//
-	//  * For threading to be a successful speedup, the task being performed should be as lock
-	//    free as possible.  For example using STL containers in parallel usually fails to
-	//    yield any speedup due to the gratuitous amount of locking that the STL performs
-	//    internally.
-	//
-	//  * The best application of tasking threads is to divide a large loop over a linear array
-	//    into smaller sections.  For example, if you have 20,000 items to process, the task
-	//    can be divided into two threads of 10,000 items each.
-	//
+// --------------------------------------------------------------------------------------
+//  ScopedNonblockingLock
+// --------------------------------------------------------------------------------------
+// A ScopedTryLock branded for use with Nonblocking mutexes.  See ScopedTryLock for details.
+//
+	class ScopedNonblockingLock
+	{
+		DeclareNoncopyableObject(ScopedNonblockingLock);
+
+	protected:
+		NonblockingMutex&	m_lock;
+		bool				m_IsLocked;
+
+	public:
+		ScopedNonblockingLock( NonblockingMutex& locker ) :
+			m_lock( locker )
+		,	m_IsLocked( m_lock.TryAquire() )
+		{
+		}
+
+		virtual ~ScopedNonblockingLock() throw()
+		{
+			if( m_IsLocked )
+				m_lock.Release();
+		}
+
+		bool Failed() const { return !m_IsLocked; }
+	};
+
+// --------------------------------------------------------------------------------------
+//  BaseTaskThread 
+// --------------------------------------------------------------------------------------
+// an abstract base class which provides simple parallel execution of single tasks.
+//
+// FIXME: This class is incomplete and untested!  Don't use, unless you want to fix it
+// while you're at it. :D
+//
+// Implementation:
+//   To use this class your derived class will need to implement its own Task() function
+//   and also a "StartTask( parameters )" function which suits the need of your task, along
+//   with any local variables your task needs to do its job.  You may additionally want to
+//   implement a "GetResult()" function, which would be a combination of WaitForResult()
+//   and a return value of the computational result.
+//
+// Thread Safety:
+//   If operating on local variables, you must execute WaitForResult() before leaving the
+//   variable scope -- or alternatively have your StartTask() implementation make full
+//   copies of dependent data.  Also, by default PostTask() always assumes the previous
+//   task has completed.  If your system can post a new task before the previous one has
+//   completed, then it needs to explicitly call WaitForResult() or provide a mechanism
+//   to cancel the previous task (which is probably more work than it's worth).
+//
+// Performance notes:
+//  * Remember that thread creation is generally slow, so you should make your object
+//    instance once early and then feed it tasks repeatedly over the course of program
+//    execution.
+//
+//  * For threading to be a successful speedup, the task being performed should be as lock
+//    free as possible.  For example using STL containers in parallel usually fails to
+//    yield any speedup due to the gratuitous amount of locking that the STL performs
+//    internally.
+//
+//  * The best application of tasking threads is to divide a large loop over a linear array
+//    into smaller sections.  For example, if you have 20,000 items to process, the task
+//    can be divided into two threads of 10,000 items each.
+//
 	class BaseTaskThread : public PersistentThread
 	{
 	protected:
 		volatile bool m_Done;
 		volatile bool m_TaskPending;
 		Semaphore m_post_TaskComplete;
-		MutexLock m_lock_TaskComplete;
+		Mutex m_lock_TaskComplete;
 
 	public:
 		virtual ~BaseTaskThread() throw() {}
@@ -454,28 +516,5 @@ namespace Threading
 
 		virtual void ExecuteTaskInThread();
 	};
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// Our fundamental interlocking functions.  All other useful interlocks can be derived
-	// from these little beasties!
-
-	extern u32 AtomicExchange( volatile u32& Target, u32 value );
-	extern u32 AtomicExchangeAdd( volatile u32& Target, u32 value );
-	extern u32 AtomicIncrement( volatile u32& Target );
-	extern u32 AtomicDecrement( volatile u32& Target );
-	extern s32 AtomicExchange( volatile s32& Target, s32 value );
-	extern s32 AtomicExchangeAdd( volatile s32& Target, u32 value );
-	extern s32 AtomicIncrement( volatile s32& Target );
-	extern s32 AtomicDecrement( volatile s32& Target );
-
-	extern void* _AtomicExchangePointer( void * volatile * const target, void* const value );
-	extern void* _AtomicCompareExchangePointer( void * volatile * const target, void* const value, void* const comparand );
-
-	#define AtomicExchangePointer( target, value ) \
-		_InterlockedExchangePointer( &target, value )
-
-	#define AtomicCompareExchangePointer( target, value, comparand ) \
-		_InterlockedCompareExchangePointer( &target, value, comparand )
-
 }
 
