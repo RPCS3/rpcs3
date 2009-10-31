@@ -535,6 +535,7 @@ enum CoreThreadStatus
 	CoreStatus_Indeterminate,
 	CoreStatus_Resumed,
 	CoreStatus_Suspended,
+	CoreStatus_Reset,
 	CoreStatus_Stopped,
 };
 
@@ -551,6 +552,7 @@ public:
 
 	virtual bool Suspend( bool isBlocking=true );
 	virtual void Resume();
+	virtual void Reset();
 	virtual void StateCheckInThread();
 	virtual void ApplySettings( const Pcsx2Config& src );
 

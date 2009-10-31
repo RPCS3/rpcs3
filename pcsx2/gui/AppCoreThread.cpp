@@ -27,6 +27,15 @@ AppCoreThread::~AppCoreThread() throw()
 {
 }
 
+void AppCoreThread::Reset()
+{
+	_parent::Reset();
+
+	wxCommandEvent evt( pxEVT_CoreThreadStatus );
+	evt.SetInt( CoreStatus_Reset );
+	wxGetApp().AddPendingEvent( evt );
+}
+
 bool AppCoreThread::Suspend( bool isBlocking )
 {
 	bool retval = _parent::Suspend( isBlocking );
@@ -40,7 +49,6 @@ bool AppCoreThread::Suspend( bool isBlocking )
 
 	return retval;
 }
-
 
 static int resume_tries = 0;
 

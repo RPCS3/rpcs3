@@ -578,3 +578,4 @@ void PerPluginMenuInfo::OnLoaded()
 	);
 	MyMenu.Enable( GetPluginMenuId_Settings(PluginId), true );
 }
+

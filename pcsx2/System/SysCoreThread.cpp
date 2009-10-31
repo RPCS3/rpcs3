@@ -94,6 +94,7 @@ void SysCoreThread::Reset()
 {
 	Suspend();
 	m_resetVirtualMachine = true;
+	m_hasValidState = false;
 }
 
 // This function *will* reset the emulator in order to allow the specified elf file to

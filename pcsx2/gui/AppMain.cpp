@@ -512,8 +512,10 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 
 	if( evt.GetInt() != -1 ) CoreThread.Reset(); else CoreThread.Suspend();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
-	if( evt.GetInt() != -1 || (CDVD == NULL) )
+	if( evt.GetInt() != -1 )
 		CDVDsys_ChangeSource( (CDVD_SourceType)evt.GetInt() );
+	else if( CDVD == NULL )
+		CDVDsys_ChangeSource( CDVDsrc_NoDisc );
 	
 	if( !CoreThread.HasValidState() )
 		CoreThread.SetElfOverride( _sysexec_elf_override );
