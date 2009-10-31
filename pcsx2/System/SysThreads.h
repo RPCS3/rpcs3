@@ -134,7 +134,7 @@ public:
 	virtual void Resume();
 	virtual bool Pause();
 	
-	virtual bool AquireResumeLock() { return m_ResumeProtection.TryAquire(); }
+	virtual bool AcquireResumeLock() { return m_ResumeProtection.TryAcquire(); }
 	virtual void ReleaseResumeLock() { m_ResumeProtection.Release(); }
 
 protected:

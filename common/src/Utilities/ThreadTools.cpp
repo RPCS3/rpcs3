@@ -390,7 +390,7 @@ void Threading::PersistentThread::OnStartInThread()
 
 void Threading::PersistentThread::_internal_execute()
 {
-	m_lock_InThread.Aquire();
+	m_lock_InThread.Acquire();
 	OnStartInThread();
 
 	_DoSetThreadName( m_name );
@@ -510,7 +510,7 @@ void Threading::BaseTaskThread::ExecuteTaskInThread()
 		m_sem_event.WaitRaw();
 
 		Task();
-		m_lock_TaskComplete.Aquire();
+		m_lock_TaskComplete.Acquire();
 		m_TaskPending = false;
 		m_post_TaskComplete.Post();
 		m_lock_TaskComplete.Release();

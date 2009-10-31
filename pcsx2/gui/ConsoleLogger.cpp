@@ -370,7 +370,7 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 		{
 			// Necessary since the main thread could grab the lock and process before
 			// the above function actually returns (gotta love threading!)
-			lock.Aquire();
+			lock.Acquire();
 			if( m_WaitingThreadsForFlush != 0 ) --m_WaitingThreadsForFlush;
 		}
 		else

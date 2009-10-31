@@ -520,7 +520,7 @@ static void cdvdDetectDisk()
 
 void cdvdNewDiskCB()
 {
-	if( !Mutex_NewDiskCB.TryAquire() ) return;
+	if( !Mutex_NewDiskCB.TryAcquire() ) return;
 	DoCDVDresetDiskTypeCache();
 
 	try { cdvdDetectDisk(); }

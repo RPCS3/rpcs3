@@ -447,7 +447,7 @@ static wxString _sysexec_elf_override;
 
 static void _sendmsg_SysExecute()
 {
-	if( !CoreThread.AquireResumeLock() )
+	if( !CoreThread.AcquireResumeLock() )
 	{
 		DbgCon.WriteLn( "(SysExecute) another resume lock or message is already pending; no message posted." );
 		return;

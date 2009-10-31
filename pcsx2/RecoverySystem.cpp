@@ -72,7 +72,7 @@ protected:
 
 	void OnStart()
 	{
-		if( !state_buffer_lock.TryAquire() )
+		if( !state_buffer_lock.TryAcquire() )
 			throw Exception::CancelEvent( m_name + L"request ignored: state copy buffer is already locked!" );
 			
 		_parent::OnStart();
@@ -429,7 +429,7 @@ void StateCopy_ThawFromMem()
 
 void State_ThawFromMem_Blocking()
 {
-	if( !state_buffer_lock.TryAquire() )
+	if( !state_buffer_lock.TryAcquire() )
 
 	memLoadingState( state_buffer ).FreezeAll();
 	state_buffer_lock.Release();

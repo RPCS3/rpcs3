@@ -112,12 +112,12 @@ bool Threading::Mutex::RecreateIfLocked()
 // if used from the main GUI thread, since it typically results in an unresponsive program.
 // Call this method directly only if you know the code in question will be run from threads
 // other than the main thread.  
-void Threading::Mutex::FullBlockingAquire()
+void Threading::Mutex::FullBlockingAcquire()
 {
 	pthread_mutex_lock( &m_mutex );
 }
 
-bool Threading::Mutex::FullBlockingAquire( const wxTimeSpan& timeout )
+bool Threading::Mutex::FullBlockingAcquire( const wxTimeSpan& timeout )
 {
 	wxDateTime megafail( wxDateTime::UNow() + timeout );
 	const timespec fail = { megafail.GetTicks(), megafail.GetMillisecond() * 1000000 };
@@ -129,64 +129,64 @@ void Threading::Mutex::Release()
 	pthread_mutex_unlock( &m_mutex );
 }
 
-bool Threading::Mutex::TryAquire()
+bool Threading::Mutex::TryAcquire()
 {
 	return EBUSY != pthread_mutex_trylock( &m_mutex );
 }
 
-// This is a wxApp-safe rendition of FullBlockingAquire, which makes sure to execute pending app events
+// This is a wxApp-safe rendition of FullBlockingAcquire, which makes sure to execute pending app events
 // and messages *if* the lock is performed from the main GUI thread.
 //
 // Exceptions:
 //   ThreadTimedOut - See description of ThreadTimedOut for details
 //
-void Threading::Mutex::Aquire()
+void Threading::Mutex::Acquire()
 {
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		FullBlockingAquire();
+		FullBlockingAcquire();
 	}
-	else if( _WaitGui_RecursionGuard( "Mutex::Aquire" ) )
+	else if( _WaitGui_RecursionGuard( "Mutex::Acquire" ) )
 	{
-		if( !FullBlockingAquire(def_deadlock_timeout) )
+		if( !FullBlockingAcquire(def_deadlock_timeout) )
 			throw Exception::ThreadTimedOut();
 	}
 	else
 	{
-		while( !FullBlockingAquire(def_yieldgui_interval) )
+		while( !FullBlockingAcquire(def_yieldgui_interval) )
 			wxTheApp->Yield( true );
 	}
 #else
-	FullBlockingAquire();
+	FullBlockingAcquire();
 #endif
 }
 
 // Exceptions:
 //   ThreadTimedOut - See description of ThreadTimedOut for details
 //
-bool Threading::Mutex::Aquire( const wxTimeSpan& timeout )
+bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 {
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		return FullBlockingAquire(timeout);
+		return FullBlockingAcquire(timeout);
 	}
-	else if( _WaitGui_RecursionGuard( "Mutex::Aquire(timeout)" ) )
+	else if( _WaitGui_RecursionGuard( "Mutex::Acquire(timeout)" ) )
 	{
 		if( timeout > def_deadlock_timeout )
 		{
-			if( FullBlockingAquire(def_deadlock_timeout) ) return true;
+			if( FullBlockingAcquire(def_deadlock_timeout) ) return true;
 			throw Exception::ThreadTimedOut();
 		}
-		return FullBlockingAquire( timeout );
+		return FullBlockingAcquire( timeout );
 	}
 	else
 	{
 		wxTimeSpan countdown( (timeout) );
 
 		do {
-			if( FullBlockingAquire( def_yieldgui_interval ) ) break;
+			if( FullBlockingAcquire( def_yieldgui_interval ) ) break;
 			wxTheApp->Yield(true);
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
@@ -198,7 +198,7 @@ bool Threading::Mutex::Aquire( const wxTimeSpan& timeout )
 	throw Exception::ThreadTimedOut();
 
 #else
-	return FullBlockingAquire();
+	return FullBlockingAcquire();
 #endif
 }
 
@@ -207,19 +207,19 @@ bool Threading::Mutex::Aquire( const wxTimeSpan& timeout )
 // specific task, and to block until the task is finished (PersistentThread uses it to
 // determine if the thread is running or completed, for example).
 //
-// Implemented internally as a simple Aquire/Release pair.
+// Implemented internally as a simple Acquire/Release pair.
 //
 // Exceptions:
 //   ThreadTimedOut - See description of ThreadTimedOut for details
 //
 void Threading::Mutex::Wait()
 {
-	Aquire();
+	Acquire();
 	Release();
 }
 
 // Performs a wait on a locked mutex, or returns instantly if the mutex is unlocked.
-// (Implemented internally as a simple Aquire/Release pair.)
+// (Implemented internally as a simple Acquire/Release pair.)
 //
 // Returns:
 //   true if the mutex was freed and is in an unlocked state; or false if the wait timed out
@@ -230,7 +230,7 @@ void Threading::Mutex::Wait()
 //
 bool Threading::Mutex::Wait( const wxTimeSpan& timeout )
 {
-	if( Aquire(timeout) )
+	if( Acquire(timeout) )
 	{
 		Release();
 		return true;

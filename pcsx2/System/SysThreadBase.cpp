@@ -245,7 +245,7 @@ void SysThreadBase::Resume()
 
 void SysThreadBase::OnStartInThread()
 {
-	m_RunningLock.Aquire();
+	m_RunningLock.Acquire();
 	_parent::OnStartInThread();
 	m_ResumeEvent.Post();
 }
@@ -292,7 +292,7 @@ void SysThreadBase::StateCheckInThread()
 			while( m_ExecMode == ExecMode_Paused )
 				m_ResumeEvent.WaitRaw();
 
-			m_RunningLock.Aquire();
+			m_RunningLock.Acquire();
 			OnResumeInThread( false );
 		break;
 
@@ -309,7 +309,7 @@ void SysThreadBase::StateCheckInThread()
 			while( m_ExecMode == ExecMode_Closed )
 				m_ResumeEvent.WaitRaw();
 
-			m_RunningLock.Aquire();
+			m_RunningLock.Acquire();
 			OnResumeInThread( true );
 		break;
 

@@ -41,7 +41,7 @@ namespace Exception
 // --------------------------------------------------------------------------------------
 //  ThreadTimedOut Exception
 // --------------------------------------------------------------------------------------
-// This exception is thrown by Semaphore and Mutex Wait/Aquire functions if a blocking wait is
+// This exception is thrown by Semaphore and Mutex Wait/Acquire functions if a blocking wait is
 // needed due to gui Yield recursion, and the timeout period for deadlocking (usually 3 seconds)
 // is reached before the lock becomes available. This exception cannot occur in the following
 // conditions:
@@ -130,8 +130,8 @@ namespace Threading
 // trylock(), but without any of the extra overhead needed to set up a structure capable
 // of blocking waits.  It basically optimizes to a single InterlockedExchange.
 //
-// Simple use: if TryAquire() returns false, the Bool is already interlocked by another thread.
-// If TryAquire() returns true, you've locked the object and are *responsible* for unlocking
+// Simple use: if TryAcquire() returns false, the Bool is already interlocked by another thread.
+// If TryAcquire() returns true, you've locked the object and are *responsible* for unlocking
 // it later.
 //
 	class NonblockingMutex
@@ -143,7 +143,7 @@ namespace Threading
 		NonblockingMutex() : val( false ) {}
 		virtual ~NonblockingMutex() throw() {}
 
-		bool TryAquire() throw()
+		bool TryAcquire() throw()
 		{
 			return !AtomicExchange( val, true );
 		}
@@ -194,13 +194,13 @@ namespace Threading
 		bool RecreateIfLocked();
 		void Detach();
 
-		void Aquire();
-		bool Aquire( const wxTimeSpan& timeout );
-		bool TryAquire();
+		void Acquire();
+		bool Acquire( const wxTimeSpan& timeout );
+		bool TryAcquire();
 		void Release();
 
-		void FullBlockingAquire();
-		bool FullBlockingAquire( const wxTimeSpan& timeout );
+		void FullBlockingAcquire();
+		bool FullBlockingAcquire( const wxTimeSpan& timeout );
 
 		void Wait();
 		bool Wait( const wxTimeSpan& timeout );
@@ -383,7 +383,7 @@ namespace Threading
 			m_lock( locker )
 		,	m_IsLocked( true )
 		{
-			m_lock.Aquire();
+			m_lock.Acquire();
 		}
 
 		// Provides manual unlocking of a scoped lock prior to object destruction.
@@ -395,10 +395,10 @@ namespace Threading
 		}
 
 		// provides manual locking of a scoped lock, to re-lock after a manual unlocking.
-		void Aquire()
+		void Acquire()
 		{
 			if( m_IsLocked ) return;
-			m_lock.Aquire();
+			m_lock.Acquire();
 			m_IsLocked = true;
 		}
 
@@ -408,7 +408,7 @@ namespace Threading
 		// Special constructor used by ScopedTryLock
 		ScopedLock( Mutex& locker, bool isTryLock ) :
 			m_lock( locker )
-		,	m_IsLocked( isTryLock ? m_lock.TryAquire() : false )
+		,	m_IsLocked( isTryLock ? m_lock.TryAcquire() : false )
 		{
 		}
 
@@ -438,7 +438,7 @@ namespace Threading
 	public:
 		ScopedNonblockingLock( NonblockingMutex& locker ) :
 			m_lock( locker )
-		,	m_IsLocked( m_lock.TryAquire() )
+		,	m_IsLocked( m_lock.TryAcquire() )
 		{
 		}
 

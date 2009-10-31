@@ -561,7 +561,7 @@ static u32 ringtx_inf_s[32];
 //  size - size of the packet data, in smd128's
 int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
 {
-	//m_PacketLocker.Aquire();
+	//m_PacketLocker.Acquire();
 
 #ifdef PCSX2_GSRING_TX_STATS
 	ringtx_s += size;
@@ -674,7 +674,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 			SpinWait();
 		}
 
-		m_lock_RingRestart.Aquire();
+		m_lock_RingRestart.Acquire();
 		SendSimplePacket( GS_RINGTYPE_RESTART, 0, 0, 0 );
 		m_WritePos = writepos = 0;
 		m_lock_RingRestart.Release();
