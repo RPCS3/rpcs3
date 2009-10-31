@@ -39,6 +39,7 @@ static GSRenderer* s_gs = NULL;
 static void (*s_irq)() = NULL;
 static uint8* s_basemem = NULL;
 static int s_renderer = -1;
+static bool s_framelimit = true;
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -441,9 +442,12 @@ EXPORT_C GSsetFrameSkip(int frameskip)
 	s_gs->SetFrameSkip(frameskip);
 }
 
+
 EXPORT_C GSsetFrameLimit(int limit)
 {
-	s_gs->SetFrameLimit(limit != 0);
+	s_framelimit = limit != 0;
+	if( s_gs )
+		s_gs->SetFrameLimit(s_framelimit);
 }
 
 #ifdef _WINDOWS

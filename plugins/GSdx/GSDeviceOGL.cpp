@@ -66,9 +66,9 @@ void GSDeviceOGL::OnCgError(CGcontext ctx, CGerror err)
 	printf("%s\n", cgGetLastListing(ctx)); // ?
 }
 
-bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
+bool GSDeviceOGL::Create(GSWnd* wnd)
 {
-	if(!__super::Create(wnd, vsync))
+	if(!__super::Create(wnd))
 	{
 		return false;
 	}
@@ -115,15 +115,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
 		return false;
 	}
 
-	#ifdef _WINDOWS
-
-	if(WGLEW_EXT_swap_control)
-	{
-		wglSwapIntervalEXT(vsync ? 1 : 0);
-	}
-
-	#endif
-
 	const char* vendor = (const char*)glGetString(GL_VENDOR);
 	const char* renderer = (const char*)glGetString(GL_RENDERER);
 	const char* version = (const char*)glGetString(GL_VERSION);
@@ -153,6 +144,20 @@ bool GSDeviceOGL::Create(GSWnd* wnd, bool vsync)
 	Reset(r.width(), r.height());
 
 	return true;
+}
+
+void GSDeviceOGL::SetVsync(bool enable)
+{
+	__super::SetVsync(enable);
+
+#ifdef _WINDOWS
+
+	if(WGLEW_EXT_swap_control)
+	{
+		wglSwapIntervalEXT(m_vsync ? 1 : 0);
+	}
+
+#endif
 }
 
 bool GSDeviceOGL::Reset(int w, int h)
@@ -185,16 +190,16 @@ bool GSDeviceOGL::Reset(int w, int h)
 	return true;
 }
 
-void GSDeviceOGL::Present(const GSVector4i& r, int shader, bool limit)
+void GSDeviceOGL::Present(const GSVector4i& r, int shader)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); CheckError();
 
 	// TODO: m_current => backbuffer
 
-	Flip(limit);
+	Flip();
 }
 
-void GSDeviceOGL::Flip(bool limit)
+void GSDeviceOGL::Flip()
 {
 	#ifdef _WINDOWS
 

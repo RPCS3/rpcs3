@@ -77,12 +77,13 @@ bool GSRenderer::CreateDevice(GSDevice* dev)
 	ASSERT(dev);
 	ASSERT(!m_dev);
 
-	if(!dev->Create(&m_wnd, m_vsync))
+	if(!dev->Create(&m_wnd))
 	{
 		return false;
 	}
 
 	m_dev = dev;
+	m_dev->SetVsync( m_vsync && m_framelimit );
 
 	return true;
 }
@@ -271,6 +272,12 @@ bool GSRenderer::Merge(int field)
 	return true;
 }
 
+void GSRenderer::SetFrameLimit(bool limit)
+{
+	m_framelimit = limit;
+	if( m_dev ) m_dev->SetVsync(m_vsync && m_framelimit);
+}
+
 void GSRenderer::VSync(int field)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
@@ -343,7 +350,7 @@ void GSRenderer::VSync(int field)
 
 	// present
 
-	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader, m_framelimit);
+	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader);
 
 	// snapshot
 

@@ -38,9 +38,9 @@ GSDevice10::~GSDevice10()
 {
 }
 
-bool GSDevice10::Create(GSWnd* wnd, bool vsync)
+bool GSDevice10::Create(GSWnd* wnd)
 {
-	if(!__super::Create(wnd, vsync))
+	if(!__super::Create(wnd))
 	{
 		return false;
 	}
@@ -260,9 +260,9 @@ bool GSDevice10::Reset(int w, int h)
 	return true;
 }
 
-void GSDevice10::Flip(bool limit)
+void GSDevice10::Flip()
 {
-	m_swapchain->Present(m_vsync && limit ? 1 : 0, 0);
+	m_swapchain->Present(m_vsync, 0);
 }
 
 void GSDevice10::DrawPrimitive()

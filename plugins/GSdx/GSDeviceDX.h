@@ -262,9 +262,9 @@ public:
 	GSDeviceDX() {};
 	virtual ~GSDeviceDX() {}
 
-	virtual bool Create(GSWnd* wnd, bool vsync)
+	virtual bool Create(GSWnd* wnd)
 	{
-		return __super::Create( wnd, vsync );
+		return __super::Create( wnd );
 	}
 	
 	virtual bool Reset(int w, int h)
@@ -272,8 +272,8 @@ public:
 		return __super::Reset( w, h );
 	}
 	
-	//virtual void Present(const GSVector4i& r, int shader, bool limit);
-	//virtual void Flip(bool limit) {}
+	//virtual void Present(const GSVector4i& r, int shader);
+	//virtual void Flip() {}
 	
 	virtual void SetupIA(const void* vertices, int count, int prim) = 0;
 	virtual void SetupVS(VSSelector sel, const VSConstantBuffer* cb) = 0;

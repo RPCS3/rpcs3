@@ -109,10 +109,11 @@ public:
 	GSDeviceOGL();
 	virtual ~GSDeviceOGL();
 
-	bool Create(GSWnd* wnd, bool vsync);
+	bool Create(GSWnd* wnd);
 	bool Reset(int w, int h);
-	void Present(const GSVector4i& r, int shader, bool limit);
-	void Flip(bool limit);
+	void Present(const GSVector4i& r, int shader);
+	void Flip();
+	void SetVsync(bool enable);
 
 	void DrawPrimitive();
 

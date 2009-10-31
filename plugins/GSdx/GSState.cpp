@@ -33,7 +33,6 @@ GSState::GSState()
 	, m_vprim(1)
 	, m_version(5)
 	, m_frameskip(0)
-	, m_framelimit(true)
 	, m_vkf(NULL)
 {
 	m_sssize = 0;
@@ -1617,6 +1616,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	if(version > m_version)
 	{
+		fprintf(stderr, "GSdx: Savestate version is incompatible.  Load aborted.\n" );
 		return -1;
 	}
 
@@ -1774,11 +1774,6 @@ void GSState::SetFrameSkip(int skip)
 			m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerPRMODE;
  		}
 	}
-}
-
-void GSState::SetFrameLimit(bool limit)
-{
-	m_framelimit = limit;
 }
 
 // GSTransferBuffer

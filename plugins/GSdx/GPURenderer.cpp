@@ -69,11 +69,12 @@ bool GPURenderer::Create(HWND hWnd)
 
 	m_wnd.Show();
 
-	if(!m_dev->Create(&m_wnd, m_vsync))
+	if(!m_dev->Create(&m_wnd))
 	{
 		return false;
 	}
 
+	m_dev->SetVsync(m_vsync);
 	Reset();
 
 	return true;
@@ -162,7 +163,7 @@ void GPURenderer::VSync()
 	
 	GetClientRect(m_hWnd, r);
 
-	m_dev->Present(r.fit(m_aspectratio), 0, true);
+	m_dev->Present(r.fit(m_aspectratio), 0);
 }
 
 bool GPURenderer::MakeSnapshot(const string& path)

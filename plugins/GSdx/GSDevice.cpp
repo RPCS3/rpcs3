@@ -25,6 +25,7 @@
 
 GSDevice::GSDevice() 
 	: m_wnd(NULL)
+	, m_vsync(false)
 	, m_rbswapped(false)
 	, m_backbuffer(NULL)
 	, m_merge(NULL)
@@ -51,10 +52,9 @@ GSDevice::~GSDevice()
 	delete m_1x1;
 }
 
-bool GSDevice::Create(GSWnd* wnd, bool vsync)
+bool GSDevice::Create(GSWnd* wnd)
 {
 	m_wnd = wnd;
-	m_vsync = vsync;
 
 	return true;
 }
@@ -82,7 +82,7 @@ bool GSDevice::Reset(int w, int h)
 	return m_wnd != NULL;
 }
 
-void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
+void GSDevice::Present(const GSVector4i& r, int shader)
 {
 	GSVector4i cr = m_wnd->GetClientRect();
 
@@ -106,7 +106,7 @@ void GSDevice::Present(const GSVector4i& r, int shader, bool limit)
 		StretchRect(m_current, m_backbuffer, GSVector4(r), s_shader[shader]);
 	}
 
-	Flip(limit);
+	Flip();
 }
 
 GSTexture* GSDevice::Fetch(int type, int w, int h, bool msaa, int format)

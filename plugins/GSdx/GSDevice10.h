@@ -107,10 +107,10 @@ public:
 	GSDevice10();
 	virtual ~GSDevice10();
 
-	bool Create(GSWnd* wnd, bool vsync);
+	bool Create(GSWnd* wnd);
 	bool CreateTextureFX();
 	bool Reset(int w, int h);
-	void Flip(bool limit);
+	void Flip();
 
 	void DrawPrimitive();
 

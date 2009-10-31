@@ -33,9 +33,9 @@ GSDevice7::~GSDevice7()
 {
 }
 
-bool GSDevice7::Create(GSWnd* wnd, bool vsync)
+bool GSDevice7::Create(GSWnd* wnd)
 {
-	if(!__super::Create(wnd, vsync))
+	if(!__super::Create(wnd))
 	{
 		return false;
 	}
@@ -136,7 +136,7 @@ bool GSDevice7::Reset(int w, int h)
 	return true;
 }
 
-void GSDevice7::Present(const GSVector4i& r, int shader, bool limit)
+void GSDevice7::Present(const GSVector4i& r, int shader)
 {
 	HRESULT hr;
 
@@ -177,7 +177,7 @@ void GSDevice7::Present(const GSVector4i& r, int shader, bool limit)
 
 	MapWindowPoints((HWND)m_wnd->GetHandle(), HWND_DESKTOP, (POINT*)&r2, 2);
 	
-	if(m_vsync && limit)
+	if(m_vsync)
 	{
 		hr = m_dd->WaitForVerticalBlank(DDWAITVB_BLOCKBEGIN, NULL);
 	}

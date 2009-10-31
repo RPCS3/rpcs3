@@ -50,9 +50,9 @@ GSDevice9::~GSDevice9()
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 }
 
-bool GSDevice9::Create(GSWnd* wnd, bool vsync)
+bool GSDevice9::Create(GSWnd* wnd)
 {
-	if(!__super::Create(wnd, vsync))
+	if(!__super::Create(wnd))
 	{
 		return false;
 	}
@@ -377,7 +377,7 @@ bool GSDevice9::IsLost(bool update)
 	return m_lost;
 }
 
-void GSDevice9::Flip(bool limit)
+void GSDevice9::Flip()
 {
 	m_dev->EndScene();
 

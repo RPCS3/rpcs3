@@ -80,15 +80,16 @@ public:
 
 	enum {Windowed, Fullscreen, DontCare};
 
-	virtual bool Create(GSWnd* wnd, bool vsync);
+	virtual bool Create(GSWnd* wnd);
 	virtual bool Reset(int w, int h);
 	virtual bool IsLost(bool update = false) {return false;}
-	virtual void Present(const GSVector4i& r, int shader, bool limit);
-	virtual void Flip(bool limit) {}
+	virtual void Present(const GSVector4i& r, int shader);
+	virtual void Flip() {}
 
 	virtual void BeginScene() {}
 	virtual void DrawPrimitive() {};
 	virtual void EndScene();
+	virtual void SetVsync(bool enable) { m_vsync = enable; }
 
 	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}
 	virtual void ClearRenderTarget(GSTexture* t, uint32 c) {}

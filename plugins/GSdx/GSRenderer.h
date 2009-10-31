@@ -46,6 +46,7 @@ protected:
 	bool m_nativeres;
 	bool m_aa1;
 	bool m_blur;
+	bool m_framelimit;
 
 	uint8* m_tex_buff;
 	
@@ -93,6 +94,8 @@ public:
 	{
 		return m_upscale_multiplier;
 	}
+
+	void SetFrameLimit(bool limit);
 
 	// TODO : Implement proper locking here *if needed*  (not sure yet if it is) --air
 	uint8* GetTextureBufferLock() { return m_tex_buff; }
