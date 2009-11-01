@@ -724,7 +724,8 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 	return src;
 }
-			//WIP fog / blur / depth of field handling. 
+
+//			//WIP fog / blur / depth of field handling. 
 //GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
 //{
 //	Source* src = new Source(m_renderer);
@@ -758,16 +759,13 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 //
 //		src->m_target = true;
 //
+//		dst->Update();
+//
 //		if(dst->m_type != RenderTarget) 
 //		{
-//			// TODO
-//
-//			delete src;
-//
-//			return NULL; 
+//			//src->m_target = false;  //no idea what depth stencil needs ><
+//			//printf("type stencil\n");
 //		}
-//
-//		dst->Update();
 //
 //		GSTexture* tmp = NULL;
 //		
@@ -788,8 +786,15 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 //		//Hacked up to figure out how fog / depth / blur effects are done. Works in Xenosaga 3.
 //		if ((tw == 1024 && th == 1024) && dst->m_TEX0.TBW != TEX0.TBW){
 //			
-//			src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
-//			GSVector4 size = GSVector4(dstsize).xyxy() * 2; // * 2 to force the effect overlay into the right position
+//			if(dst->m_type != RenderTarget) 
+//			{
+//				src->m_texture = m_renderer->m_dev->CreateDepthStencil(dstsize.x, dstsize.y, false);
+//			}
+//			else{
+//				src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
+//			}
+//
+//			GSVector4 size  = GSVector4(dstsize).xyxy()*2 ; // * 2 to force the effect overlay into the right position
 //			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy(); //Not needed right now, but good for testing
 //
 //			GSVector4 br (0.0f, 0.0f, 1024.0f, 1024.0f); // entire RT
@@ -797,23 +802,30 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 //			GSVector4 dr =  br * scale;
 //
 //			m_renderer->m_dev->StretchRect(dst->m_texture, sr, src->m_texture, dr);
+//			
 //		}
-//			// pitch conversion //total mess right now, don't touch :p
+//			// pitch conversion
 //		else if(dst->m_TEX0.TBW != TEX0.TBW) // && dst->m_TEX0.PSM == TEX0.PSM 
 //		{
 //			// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
 //
 //			// ASSERT(dst->m_TEX0.TBW > TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
-//
-//			src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
+//				
+//			if(dst->m_type != RenderTarget) 
+//			{
+//				src->m_texture = m_renderer->m_dev->CreateDepthStencil(dstsize.x, dstsize.y, false);
+//			}
+//			else{
+//				src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
+//			}
 //
 //			GSVector4 size = GSVector4(dstsize).xyxy();
 //			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy();
 //			
 //			if (dst->m_TEX0.TBW < TEX0.TBW) // otherwise scale.x need to be reduced to make the larger texture fit
 //			{
-//			//	scale.x = ((float)dst->m_TEX0.TBW / (float)TEX0.TBW) ;
-//			//	printf("scale.x = %f \n", scale.x);
+//				scale.x = ((float)dst->m_TEX0.TBW / (float)TEX0.TBW) ;
+//				//printf("scale.x = %f \n", scale.x);
 //			}
 //
 //			int blockWidth  = 64;
@@ -855,30 +867,34 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 //				return false;
 //			}
 //		}
+//
 //		// width/height conversion
 //
 //		GSVector2 scale = dst->m_texture->GetScale();
 //
 //		GSVector4 dr(0, 0, w, h);
 //
-//		if(w > dstsize.x) 
-//		{
-//			scale.x = (float)dstsize.x / tw;
-//			dr.z = (float)dstsize.x * scale.x / dst->m_texture->GetScale().x;
-//			w = dstsize.x;
-//		}
+//		//if(dst->m_type != RenderTarget) {
+//			if(w > dstsize.x) 
+//			{
+//				scale.x = (float)dstsize.x / tw;
+//				dr.z = (float)dstsize.x * scale.x / dst->m_texture->GetScale().x;
+//				w = dstsize.x;
+//			}
 //		
-//		if(h > dstsize.y) 
-//		{
-//			scale.y = (float)dstsize.y / th;
-//			dr.w = (float)dstsize.y * scale.y / dst->m_texture->GetScale().y;
-//			h = dstsize.y;
-//		}
+//			if(h > dstsize.y) 
+//			{
+//				scale.y = (float)dstsize.y / th;
+//				dr.w = (float)dstsize.y * scale.y / dst->m_texture->GetScale().y;
+//				h = dstsize.y;
+//			}
+//		//}
 //
 //		GSVector4 sr(0, 0, w, h);
-//
 //		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
-//		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
+//		GSTexture* dt;
+//		if(dst->m_type == RenderTarget) dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
+//		else							dt = m_renderer->m_dev->CreateDepthStencil(w, h, false);
 //
 //		if(!src->m_texture)
 //		{
@@ -909,8 +925,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 //		switch(TEX0.PSM)
 //		{
 //		default:
-//			// Note: this assertion triggers in Xenosaga2 after the first intro scenes, when
-//			// gameplay first begins (in the city).
+//			// Unhandled texture format
 //			ASSERT(0);
 //		case PSM_PSMCT32:
 //			src->m_fmt = FMT_32;
@@ -922,14 +937,25 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 //		case PSM_PSMCT16S:
 //			src->m_fmt = FMT_16;
 //			break;
+//		
+//		case PSM_PSMZ32:
+//			src->m_fmt = FMT_32;
+//			break;	
+//		case PSM_PSMZ24:
+//			src->m_fmt = FMT_24;
+//			break;	
+//		case PSM_PSMZ16:
+//			src->m_fmt = FMT_16;
+//			break;
+//		
 //		case PSM_PSMT8H:
 //			src->m_fmt = FMT_8H;
 //			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 //			break;
 //		case PSM_PSMT8: 
-//			//Not sure, this wasn't handled at all. 
-//			//Xenosaga 2 and 3 use it, Tales of Legendia as well.
-//			//It's always used for fog like effects.
+//				//Not sure, this wasn't handled at all. 
+//				//Xenosaga 2 and 3 use it, Tales of Legendia as well.
+//				//It's always used for fog like effects.
 //			src->m_fmt = FMT_8;
 //			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 //			break;
