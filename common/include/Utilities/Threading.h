@@ -170,8 +170,8 @@ namespace Threading
 		void Post();
 		void Post( int multiple );
 
-		void WaitRaw();
-		bool WaitRaw( const wxTimeSpan& timeout );
+		void WaitWithoutYield();
+		bool WaitWithoutYield( const wxTimeSpan& timeout );
 		void WaitNoCancel();
 		void WaitNoCancel( const wxTimeSpan& timeout );
 		int  Count();
@@ -199,8 +199,8 @@ namespace Threading
 		bool TryAcquire();
 		void Release();
 
-		void FullBlockingAcquire();
-		bool FullBlockingAcquire( const wxTimeSpan& timeout );
+		void AcquireWithoutYield();
+		bool AcquireWithoutYield( const wxTimeSpan& timeout );
 
 		void Wait();
 		bool Wait( const wxTimeSpan& timeout );

@@ -138,6 +138,7 @@ void Pcsx2App::Ping() const
 void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 {
 	m_evtsrc_CoreThreadStatus.Dispatch( evt );
+	ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 }
 
 void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
@@ -497,9 +498,11 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override
 
 // This message performs actual system execution (as dictated by SysExecute variants).
 // It is implemented as a message handler so that it can be triggered in response to
-// the completion of other dependent activites, namely loading plugins.
+// the completion of other dependent activities, namely loading plugins.
 void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 {
+	CoreThread.ReleaseResumeLock();
+
 	if( sys_resume_lock > 0 )
 	{
 		Console.WriteLn( "SysExecute: State is locked, ignoring Execute request!" );
@@ -520,7 +523,6 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 	if( !CoreThread.HasValidState() )
 		CoreThread.SetElfOverride( _sysexec_elf_override );
 
-	CoreThread.ReleaseResumeLock();
 	CoreThread.Resume();
 }
 
@@ -528,6 +530,7 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 void Pcsx2App::SysReset()
 {
 	CoreThread.Reset();
+	CoreThread.ReleaseResumeLock();
 	m_CorePlugins = NULL;
 }
 

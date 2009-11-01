@@ -15,7 +15,11 @@
 
 #pragma once
 
+#if wxUSE_GUI
+
 #include "Dependencies.h"
+#include "ScopedPtr.h"
+#include <stack>
 
 // ----------------------------------------------------------------------------
 // wxGuiTools.h
@@ -122,6 +126,53 @@ protected:
     }
 };
 
+// --------------------------------------------------------------------------------------
+//  MoreStockCursors
+// --------------------------------------------------------------------------------------
+// Because (inexplicably) the ArrowWait cursor isn't in wxWidgets stock list.
+//
+class MoreStockCursors
+{
+protected:
+	ScopedPtr<wxCursor>	m_arrowWait;
+
+public:
+	MoreStockCursors() { }
+	virtual ~MoreStockCursors() throw() { }
+	const wxCursor& GetArrowWait();
+};
+
+enum BusyCursorType
+{
+	Cursor_NotBusy,
+	Cursor_KindaBusy,
+	Cursor_ReallyBusy,
+};
+
+extern MoreStockCursors StockCursors;
+
+// --------------------------------------------------------------------------------------
+//  ScopedBusyCursor
+// --------------------------------------------------------------------------------------
+// ... because wxWidgets wxBusyCursor doesn't really do proper nesting (doesn't let me 
+// override a partially-busy cursor with a really busy one)
+
+class ScopedBusyCursor
+{
+protected:
+	static std::stack<BusyCursorType>	m_cursorStack;
+	static BusyCursorType				m_defBusyType;
+
+public:
+	ScopedBusyCursor( BusyCursorType busytype );
+	virtual ~ScopedBusyCursor() throw();
+	
+	static void SetDefault( BusyCursorType busytype );
+	static void SetManualBusyCursor( BusyCursorType busytype );
+};
+
 
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 extern wxRect wxGetDisplayArea();
+
+#endif

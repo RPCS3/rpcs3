@@ -410,8 +410,8 @@ namespace Panels
 			SafeList<EnumeratedPluginInfo> Results;		// array of plugin results.
 
 		protected:
-			PluginSelectorPanel& m_master;
-
+			PluginSelectorPanel&	m_master;
+			ScopedBusyCursor		m_hourglass;
 		public:
 			virtual ~EnumThread() throw()
 			{

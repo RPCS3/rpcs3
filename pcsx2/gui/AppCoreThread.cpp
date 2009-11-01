@@ -29,6 +29,8 @@ AppCoreThread::~AppCoreThread() throw()
 
 void AppCoreThread::Reset()
 {
+	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
+
 	_parent::Reset();
 
 	wxCommandEvent evt( pxEVT_CoreThreadStatus );
@@ -38,6 +40,7 @@ void AppCoreThread::Reset()
 
 bool AppCoreThread::Suspend( bool isBlocking )
 {
+	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
 	bool retval = _parent::Suspend( isBlocking );
 
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
@@ -67,6 +70,7 @@ void AppCoreThread::Resume()
 		return;
 	}
 	
+	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
 	_parent::Resume();
 
 	if( m_ExecMode != ExecMode_Opened )

@@ -40,7 +40,7 @@ void SysThreadBase::Start()
 
 	Sleep( 1 );
 
-	if( !m_ResumeEvent.WaitRaw( wxTimeSpan(0, 0, 1, 500) ) )
+	if( !m_ResumeEvent.WaitWithoutYield( wxTimeSpan(0, 0, 1, 500) ) )
 	{
 		RethrowException();
 		if( pxAssertDev( m_ExecMode == ExecMode_Closing, "Unexpected thread status during SysThread startup." ) )
@@ -103,16 +103,19 @@ bool SysThreadBase::Suspend( bool isBlocking )
 	{
 		ScopedLock locker( m_ExecModeMutex );
 
-		// Check again -- status could have changed since above.
-		if( m_ExecMode == ExecMode_Closed ) return false;
-
-		if( m_ExecMode == ExecMode_Pausing || m_ExecMode == ExecMode_Paused )
-			throw Exception::CancelEvent( "Another thread is pausing the VM state." );
-
-		if( m_ExecMode == ExecMode_Opened )
+		switch( m_ExecMode )
 		{
-			m_ExecMode = ExecMode_Closing;
-			retval = true;
+			// Check again -- status could have changed since above.
+			case ExecMode_Closed: return false;
+
+			case ExecMode_Pausing:
+			case ExecMode_Paused:
+				throw Exception::CancelEvent( "Another thread is pausing the VM state." );
+	
+			case ExecMode_Opened:
+				m_ExecMode = ExecMode_Closing;
+				retval = true;
+			break;
 		}
 
 		pxAssertDev( m_ExecMode == ExecMode_Closing, "ExecMode should be nothing other than Closing..." );
@@ -198,7 +201,7 @@ void SysThreadBase::Resume()
 	// The entire state coming out of a Wait is indeterminate because of user input
 	// and pending messages being handled.  So after each call we do some seemingly redundant
 	// sanity checks against m_ExecMode/m_Running status, and if something doesn't feel
-	// right, we should abort.
+	// right, we should abort; the user may have canceled the action before it even finished.
 
 	switch( m_ExecMode )
 	{
@@ -206,10 +209,6 @@ void SysThreadBase::Resume()
 
 		case ExecMode_NoThreadYet:
 		{
-			/*static int __Guard = 0;
-			RecursionGuard guard( __Guard );
-			if( guard.IsReentrant() ) return;*/
-
 			Start();
 			if( !m_running || (m_ExecMode == ExecMode_NoThreadYet) )
 				throw Exception::ThreadCreationError();
@@ -290,7 +289,7 @@ void SysThreadBase::StateCheckInThread()
 
 		case ExecMode_Paused:
 			while( m_ExecMode == ExecMode_Paused )
-				m_ResumeEvent.WaitRaw();
+				m_ResumeEvent.WaitWithoutYield();
 
 			m_RunningLock.Acquire();
 			OnResumeInThread( false );
@@ -307,7 +306,7 @@ void SysThreadBase::StateCheckInThread()
 
 		case ExecMode_Closed:
 			while( m_ExecMode == ExecMode_Closed )
-				m_ResumeEvent.WaitRaw();
+				m_ResumeEvent.WaitWithoutYield();
 
 			m_RunningLock.Acquire();
 			OnResumeInThread( true );

@@ -545,6 +545,7 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 	PersistentThread()
 ,	Results( master.FileCount(), L"PluginSelectorResults" )
 ,	m_master( master )
+,	m_hourglass( Cursor_KindaBusy )
 {
 	Results.MatchLengthToAllocatedSize();
 }

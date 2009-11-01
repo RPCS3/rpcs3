@@ -18,6 +18,7 @@
 
 #include "Threading.h"
 #include "wxBaseTools.h"
+#include "wxGuiTools.h"
 #include "ThreadingInternal.h"
 
 namespace Threading
@@ -112,12 +113,13 @@ bool Threading::Mutex::RecreateIfLocked()
 // if used from the main GUI thread, since it typically results in an unresponsive program.
 // Call this method directly only if you know the code in question will be run from threads
 // other than the main thread.  
-void Threading::Mutex::FullBlockingAcquire()
+void Threading::Mutex::AcquireWithoutYield()
 {
+	pxAssertMsg( !wxThread::IsMain(), "Unyielding mutex acquire issued from the main/gui thread.  Please use Acquire() instead." );
 	pthread_mutex_lock( &m_mutex );
 }
 
-bool Threading::Mutex::FullBlockingAcquire( const wxTimeSpan& timeout )
+bool Threading::Mutex::AcquireWithoutYield( const wxTimeSpan& timeout )
 {
 	wxDateTime megafail( wxDateTime::UNow() + timeout );
 	const timespec fail = { megafail.GetTicks(), megafail.GetMillisecond() * 1000000 };
@@ -134,7 +136,7 @@ bool Threading::Mutex::TryAcquire()
 	return EBUSY != pthread_mutex_trylock( &m_mutex );
 }
 
-// This is a wxApp-safe rendition of FullBlockingAcquire, which makes sure to execute pending app events
+// This is a wxApp-safe rendition of AcquireWithoutYield, which makes sure to execute pending app events
 // and messages *if* the lock is performed from the main GUI thread.
 //
 // Exceptions:
@@ -145,20 +147,20 @@ void Threading::Mutex::Acquire()
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		FullBlockingAcquire();
+		pthread_mutex_lock( &m_mutex );
 	}
 	else if( _WaitGui_RecursionGuard( "Mutex::Acquire" ) )
 	{
-		if( !FullBlockingAcquire(def_deadlock_timeout) )
+		if( !AcquireWithoutYield(def_deadlock_timeout) )
 			throw Exception::ThreadTimedOut();
 	}
 	else
 	{
-		while( !FullBlockingAcquire(def_yieldgui_interval) )
+		while( !AcquireWithoutYield(def_yieldgui_interval) )
 			wxTheApp->Yield( true );
 	}
 #else
-	FullBlockingAcquire();
+	pthread_mutex_lock( &m_mutex );
 #endif
 }
 
@@ -170,23 +172,26 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		return FullBlockingAcquire(timeout);
+		return AcquireWithoutYield(timeout);
 	}
 	else if( _WaitGui_RecursionGuard( "Mutex::Acquire(timeout)" ) )
 	{
+		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
+
 		if( timeout > def_deadlock_timeout )
 		{
-			if( FullBlockingAcquire(def_deadlock_timeout) ) return true;
+			if( AcquireWithoutYield(def_deadlock_timeout) ) return true;
 			throw Exception::ThreadTimedOut();
 		}
-		return FullBlockingAcquire( timeout );
+		return AcquireWithoutYield( timeout );
 	}
 	else
 	{
+		ScopedBusyCursor hourglass( Cursor_KindaBusy );
 		wxTimeSpan countdown( (timeout) );
 
 		do {
-			if( FullBlockingAcquire( def_yieldgui_interval ) ) break;
+			if( AcquireWithoutYield( def_yieldgui_interval ) ) break;
 			wxTheApp->Yield(true);
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
@@ -198,7 +203,7 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 	throw Exception::ThreadTimedOut();
 
 #else
-	return FullBlockingAcquire();
+	return AcquireWithoutYield();
 #endif
 }
 

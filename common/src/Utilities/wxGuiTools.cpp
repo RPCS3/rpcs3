@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "wxGuiTools.h"
 
+#include <wx/app.h>
 #include <wx/window.h>
 
 // Returns FALSE if the window position is considered invalid, which means that it's title
@@ -39,3 +40,70 @@ wxRect wxGetDisplayArea()
 	return wxRect( wxPoint(), wxGetDisplaySize() );
 }
 
+// --------------------------------------------------------------------------------------
+//  ScopedBusyCursor Implementations
+// --------------------------------------------------------------------------------------
+
+std::stack<BusyCursorType>	ScopedBusyCursor::m_cursorStack;
+BusyCursorType				ScopedBusyCursor::m_defBusyType;
+
+ScopedBusyCursor::ScopedBusyCursor( BusyCursorType busytype )
+{
+	pxAssert( wxTheApp != NULL );
+
+	BusyCursorType curtype = Cursor_NotBusy;
+	if( !m_cursorStack.empty() )
+		curtype = m_cursorStack.top();
+
+	if( curtype < busytype )
+		SetManualBusyCursor( curtype=busytype );
+
+	m_cursorStack.push( curtype );
+}
+
+ScopedBusyCursor::~ScopedBusyCursor() throw()
+{
+	if( !pxAssert( wxTheApp != NULL ) ) return;
+
+	if( !pxAssert( !m_cursorStack.empty() ) )
+	{
+		SetManualBusyCursor( m_defBusyType );
+		return;
+	}
+
+	BusyCursorType curtype = m_cursorStack.top();
+	m_cursorStack.pop();
+
+	if( m_cursorStack.empty() )
+		SetManualBusyCursor( m_defBusyType );
+	else if( m_cursorStack.top() != curtype )
+		SetManualBusyCursor( m_cursorStack.top() );
+}
+
+void ScopedBusyCursor::SetDefault( BusyCursorType busytype )
+{
+	if( busytype == m_defBusyType ) return;
+	m_defBusyType = busytype;
+	
+	if( m_cursorStack.empty() )
+		SetManualBusyCursor( busytype );
+}
+
+void ScopedBusyCursor::SetManualBusyCursor( BusyCursorType busytype )
+{
+	switch( busytype )
+	{
+		case Cursor_NotBusy:	wxSetCursor( wxNullCursor ); break;
+		case Cursor_KindaBusy:	wxSetCursor( StockCursors.GetArrowWait() ); break;
+		case Cursor_ReallyBusy:	wxSetCursor( *wxHOURGLASS_CURSOR ); break;
+	}
+}
+
+const wxCursor& MoreStockCursors::GetArrowWait()
+{
+	if( !m_arrowWait )
+		m_arrowWait = new wxCursor( wxCURSOR_ARROWWAIT );
+	return *m_arrowWait;
+}
+
+MoreStockCursors StockCursors;

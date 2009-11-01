@@ -232,7 +232,7 @@ void SysCoreThread::ExecuteTaskInThread()
 
 	tls_coreThread = this;
 
-	m_sem_event.WaitRaw();
+	m_sem_event.WaitWithoutYield();
 	PCSX2_PAGEFAULT_PROTECT {
 		StateCheckInThread();
 		Cpu->Execute();

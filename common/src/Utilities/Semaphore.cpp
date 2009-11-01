@@ -18,6 +18,7 @@
 
 #include "Threading.h"
 #include "wxBaseTools.h"
+#include "wxGuiTools.h"
 #include "ThreadingInternal.h"
 
 // --------------------------------------------------------------------------------------
@@ -59,12 +60,13 @@ void Threading::Semaphore::Post( int multiple )
 #endif
 }
 
-void Threading::Semaphore::WaitRaw()
+void Threading::Semaphore::WaitWithoutYield()
 {
+	pxAssertMsg( !wxThread::IsMain(), "Unyielding semaphore wait issued from the main/gui thread.  Please use Wait() instead." );
 	sem_wait( &m_sema );
 }
 
-bool Threading::Semaphore::WaitRaw( const wxTimeSpan& timeout )
+bool Threading::Semaphore::WaitWithoutYield( const wxTimeSpan& timeout )
 {
 	wxDateTime megafail( wxDateTime::UNow() + timeout );
 	const timespec fail = { megafail.GetTicks(), megafail.GetMillisecond() * 1000000 };
@@ -85,24 +87,26 @@ void Threading::Semaphore::Wait()
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		WaitRaw();
+		sem_wait( &m_sema );
 	}
 	else if( _WaitGui_RecursionGuard( "Semaphore::Wait" ) )
 	{
-		if( !WaitRaw(def_yieldgui_interval) )	// default is 4 seconds
+		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
+		if( !WaitWithoutYield(def_yieldgui_interval) )	// default is 4 seconds
 			throw Exception::ThreadTimedOut();
 	}
 	else
 	{
-		while( !WaitRaw( def_yieldgui_interval ) )
+		ScopedBusyCursor hourglass( Cursor_KindaBusy );
+		while( !WaitWithoutYield( def_yieldgui_interval ) )
 			wxTheApp->Yield( true );
 	}
 #else
-	WaitRaw();
+	sem_wait( &m_sema );
 #endif
 }
 
-// This is a wxApp-safe implementation of WaitRaw, which makes sure and executes the App's
+// This is a wxApp-safe implementation of WaitWithoutYield, which makes sure and executes the App's
 // pending messages *if* the Wait is performed on the Main/GUI thread.  This ensures that
 // user input continues to be handled and that windows continue to repaint.  If the Wait is
 // called from another thread, no message pumping is performed.
@@ -119,23 +123,25 @@ bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 #if wxUSE_GUI
 	if( !wxThread::IsMain() || (wxTheApp == NULL) )
 	{
-		return WaitRaw( timeout );
+		return WaitWithoutYield( timeout );
 	}
 	else if( _WaitGui_RecursionGuard( "Semaphore::Wait(timeout)" ) )
 	{
+		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
 		if( timeout > def_deadlock_timeout )
 		{
-			if( WaitRaw(def_deadlock_timeout) ) return true;
+			if( WaitWithoutYield(def_deadlock_timeout) ) return true;
 			throw Exception::ThreadTimedOut();
 		}
-		return WaitRaw( timeout );
+		return WaitWithoutYield( timeout );
 	}
 	else
 	{
+		ScopedBusyCursor hourglass( Cursor_KindaBusy );
 		wxTimeSpan countdown( (timeout) );
 
 		do {
-			if( WaitRaw( def_yieldgui_interval ) ) break;
+			if( WaitWithoutYield( def_yieldgui_interval ) ) break;
 			wxTheApp->Yield(true);
 			countdown -= def_yieldgui_interval;
 		} while( countdown.GetMilliseconds() > 0 );
@@ -143,7 +149,7 @@ bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 		return countdown.GetMilliseconds() > 0;
 	}
 #else
-	return WaitRaw( timeout );
+	return WaitWithoutYield( timeout );
 #endif
 }
 
@@ -152,14 +158,14 @@ bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 // the stack and passed to another thread via GUI message or such, avoiding complications where
 // the thread might be canceled and the stack value becomes invalid.
 //
-// Performance note: this function has quite a bit more overhead compared to Semaphore::WaitRaw(), so
-// consider manually specifying the thread as uncancellable and using WaitRaw() instead if you need
+// Performance note: this function has quite a bit more overhead compared to Semaphore::WaitWithoutYield(), so
+// consider manually specifying the thread as uncancellable and using WaitWithoutYield() instead if you need
 // to do a lot of no-cancel waits in a tight loop worker thread, for example.
 void Threading::Semaphore::WaitNoCancel()
 {
 	int oldstate;
 	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
-	WaitRaw();
+	WaitWithoutYield();
 	pthread_setcancelstate( oldstate, NULL );
 }
 
@@ -167,7 +173,7 @@ void Threading::Semaphore::WaitNoCancel( const wxTimeSpan& timeout )
 {
 	int oldstate;
 	pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
-	WaitRaw( timeout );
+	WaitWithoutYield( timeout );
 	pthread_setcancelstate( oldstate, NULL );
 }
 

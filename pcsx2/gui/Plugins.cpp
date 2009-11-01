@@ -93,10 +93,10 @@ public:
 	PluginManager* Result;
 
 protected:
-	wxString m_folders[PluginId_Count];
-
+	wxString			m_folders[PluginId_Count];
+	ScopedBusyCursor	m_hourglass;
 public:
-	LoadPluginsTask( const wxString (&folders)[PluginId_Count] ) : Result( NULL )
+	LoadPluginsTask( const wxString (&folders)[PluginId_Count] ) : Result( NULL ), m_hourglass( Cursor_KindaBusy )
 	{
 		for(int i=0; i<PluginId_Count; ++i )
 			m_folders[i] = folders[i];

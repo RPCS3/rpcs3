@@ -246,7 +246,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 		// is very optimized (only 1 instruction test in most cases), so no point in trying
 		// to avoid it.
 
-		m_sem_event.WaitRaw();
+		m_sem_event.WaitWithoutYield();
 		StateCheckInThread();
 
 		m_RingBufferIsBusy = true;

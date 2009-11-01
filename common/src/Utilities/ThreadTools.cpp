@@ -496,7 +496,7 @@ void Threading::BaseTaskThread::WaitForResult()
 	#ifdef wxUSE_GUI
 		m_post_TaskComplete.Wait();
 	#else
-		m_post_TaskComplete.WaitRaw();
+		m_post_TaskComplete.WaitWithoutYield();
 	#endif
 
 	m_post_TaskComplete.Reset();
@@ -507,7 +507,7 @@ void Threading::BaseTaskThread::ExecuteTaskInThread()
 	while( !m_Done )
 	{
 		// Wait for a job -- or get a pthread_cancel.  I'm easy.
-		m_sem_event.WaitRaw();
+		m_sem_event.WaitWithoutYield();
 
 		Task();
 		m_lock_TaskComplete.Acquire();
