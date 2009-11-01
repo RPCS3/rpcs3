@@ -54,6 +54,29 @@ void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )
 	IniBitBool( RecBlocks_VU1 );
 }
 
+Pcsx2Config::RecompilerOptions::RecompilerOptions() : bitset(0)
+{
+	// All recs are enabled by default.
+
+	EnableEE = true;
+	EnableIOP = true;
+	EnableVU0 = true;
+	EnableVU1 = true;
+
+	UseMicroVU0 = true;
+	UseMicroVU1 = true;
+
+	// vu and fpu clamping default to standard overflow.
+	vuOverflow = true;
+	//vuExtraOverflow = false;
+	//vuSignOverflow = false;
+	//vuUnderflow = false;
+
+	fpuOverflow = true;
+	//fpuExtraOverflow = false;
+	//fpuFullMode = false;
+}
+
 void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 {
 	RecompilerOptions defaults;
@@ -66,24 +89,6 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 
 	IniBitBool( UseMicroVU0 );
 	IniBitBool( UseMicroVU1 );
-}
-
-Pcsx2Config::CpuOptions::CpuOptions() :
-	bitset( 0 )
-,	sseMXCSR( DEFAULT_sseMXCSR )
-,	sseVUMXCSR( DEFAULT_sseVUMXCSR )
-{
-	vuOverflow	= true;
-	fpuOverflow	= true;
-}
-
-void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
-{
-	CpuOptions defaults;
-	IniScopedGroup path( ini, L"CPU" );
-
-	IniEntry( sseMXCSR );
-	IniEntry( sseVUMXCSR );
 
 	IniBitBool( vuOverflow );
 	IniBitBool( vuExtraOverflow );
@@ -93,6 +98,21 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 	IniBitBool( fpuOverflow );
 	IniBitBool( fpuExtraOverflow );
 	IniBitBool( fpuFullMode );
+}
+
+Pcsx2Config::CpuOptions::CpuOptions() :
+	sseMXCSR( DEFAULT_sseMXCSR )
+,	sseVUMXCSR( DEFAULT_sseVUMXCSR )
+{
+}
+
+void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
+{
+	CpuOptions defaults;
+	IniScopedGroup path( ini, L"CPU" );
+
+	IniEntry( sseMXCSR );
+	IniEntry( sseVUMXCSR );
 
 	Recompiler.LoadSave( ini );
 }

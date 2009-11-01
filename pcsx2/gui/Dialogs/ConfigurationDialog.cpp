@@ -63,7 +63,8 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 
 	g_ApplyState.StartBook( &m_listbook );
 
-	AddPage<CpuPanel>			( wxLt("CPU"),			cfgid.Cpu );
+	AddPage<CpuPanelEE>			( wxLt("EE/IOP"),		cfgid.Cpu );
+	AddPage<CpuPanelVU>			( wxLt("VUs"),			cfgid.Cpu );
 	AddPage<VideoPanel>			( wxLt("GS/Video"),		cfgid.Video );
 	AddPage<SpeedHacksPanel>	( wxLt("Speedhacks"),	cfgid.Speedhacks );
 	AddPage<GameFixesPanel>		( wxLt("Game Fixes"),	cfgid.Gamefixes );

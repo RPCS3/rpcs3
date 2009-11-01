@@ -107,10 +107,21 @@ public:
 			bool
 				UseMicroVU0:1,
 				UseMicroVU1:1;
+
+			bool
+				vuOverflow:1,
+				vuExtraOverflow:1,
+				vuSignOverflow:1,
+				vuUnderflow:1;
+
+			bool
+				fpuOverflow:1,
+				fpuExtraOverflow:1,
+				fpuFullMode:1;
 		BITFIELD_END
 
-		// All recs are enabled by default.
-		RecompilerOptions() : bitset( 0xffffffff ) { }
+		RecompilerOptions();
+
 		void LoadSave( IniInterface& conf );
 
 		bool operator ==( const RecompilerOptions& right ) const
@@ -133,27 +144,12 @@ public:
 		u32 sseMXCSR;
 		u32 sseVUMXCSR;
 
-		BITFIELD32()
-			bool
-				vuOverflow:1,
-				vuExtraOverflow:1,
-				vuSignOverflow:1,
-				vuUnderflow:1;
-
-			bool
-				fpuOverflow:1,
-				fpuExtraOverflow:1,
-				fpuFullMode:1;
-		BITFIELD_END
-
 		CpuOptions();
 		void LoadSave( IniInterface& conf );
 
 		bool operator ==( const CpuOptions& right ) const
 		{
-			return
-				OpEqu( sseMXCSR )	&& OpEqu( sseVUMXCSR )	&&
-				OpEqu( bitset )		&& OpEqu( Recompiler );
+			return OpEqu( sseMXCSR ) && OpEqu( sseVUMXCSR ) && OpEqu( Recompiler );
 		}
 
 		bool operator !=( const CpuOptions& right ) const
@@ -361,16 +357,16 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_MPEGHACK			    (EmuConfig.Gamefixes.MpegHack) // Special Fix for Mana Khemia 1; breaks Digital Devil Saga.
 
 //------------ Advanced Options!!! ---------------
-#define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.vuOverflow)
-#define CHECK_VU_EXTRA_OVERFLOW		(EmuConfig.Cpu.vuExtraOverflow) // If enabled, Operands are clamped before being used in the VU recs
-#define CHECK_VU_SIGN_OVERFLOW		(EmuConfig.Cpu.vuSignOverflow)
-#define CHECK_VU_UNDERFLOW			(EmuConfig.Cpu.vuUnderflow)
+#define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.Recompiler.vuOverflow)
+#define CHECK_VU_EXTRA_OVERFLOW		(EmuConfig.Cpu.Recompiler.vuExtraOverflow) // If enabled, Operands are clamped before being used in the VU recs
+#define CHECK_VU_SIGN_OVERFLOW		(EmuConfig.Cpu.Recompiler.vuSignOverflow)
+#define CHECK_VU_UNDERFLOW			(EmuConfig.Cpu.Recompiler.vuUnderflow)
 #define CHECK_VU_EXTRA_FLAGS		0	// Always disabled now // Sets correct flags in the sVU recs
 
-#define CHECK_FPU_OVERFLOW			(EmuConfig.Cpu.fpuOverflow)
-#define CHECK_FPU_EXTRA_OVERFLOW	(EmuConfig.Cpu.fpuExtraOverflow) // If enabled, Operands are checked for infinities before being used in the FPU recs
+#define CHECK_FPU_OVERFLOW			(EmuConfig.Cpu.Recompiler.fpuOverflow)
+#define CHECK_FPU_EXTRA_OVERFLOW	(EmuConfig.Cpu.Recompiler.fpuExtraOverflow) // If enabled, Operands are checked for infinities before being used in the FPU recs
 #define CHECK_FPU_EXTRA_FLAGS		1	// Always enabled now // Sets D/I flags on FPU instructions
-#define CHECK_FPU_FULL				(EmuConfig.Cpu.fpuFullMode)
+#define CHECK_FPU_FULL				(EmuConfig.Cpu.Recompiler.fpuFullMode)
 
 //------------ EE Recompiler defines - Comment to disable a recompiler ---------------
 

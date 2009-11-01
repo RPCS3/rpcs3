@@ -205,21 +205,46 @@ namespace Panels
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
-	class CpuPanel : public BaseApplicableConfigPanel
+	class CpuPanelEE : public BaseApplicableConfigPanel
 	{
 	protected:
 		wxRadioButton* m_Option_RecEE;
 		wxRadioButton* m_Option_RecIOP;
+
+	public:
+		CpuPanelEE( wxWindow& parent, int idealWidth );
+		void Apply();
+	};
+
+	class CpuPanelVU : public BaseApplicableConfigPanel
+	{
+	protected:
 		wxRadioButton* m_Option_mVU0;
 		wxRadioButton* m_Option_mVU1;
-
 		wxRadioButton* m_Option_sVU0;
 		wxRadioButton* m_Option_sVU1;
 
 	public:
-		CpuPanel( wxWindow& parent, int idealWidth );
+		CpuPanelVU( wxWindow& parent, int idealWidth );
 		void Apply();
 	};
+
+	class AdvancedOptionsFPU : public BaseApplicableConfigPanel
+	{
+	public:
+		AdvancedOptionsFPU( wxWindow& parent, int idealWidth );
+		virtual ~AdvancedOptionsFPU() throw() { }
+		void Apply();
+	};
+
+	class AdvancedOptionsVU : public BaseApplicableConfigPanel
+	{
+	public:
+		AdvancedOptionsVU( wxWindow& parent, int idealWidth );
+		virtual ~AdvancedOptionsVU() throw() { }
+		void Apply();
+	};
+
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
