@@ -229,16 +229,48 @@ namespace Panels
 		void Apply();
 	};
 
-	class AdvancedOptionsFPU : public BaseApplicableConfigPanel
+	class BaseAdvancedCpuOptions : public BaseApplicableConfigPanel
 	{
+	protected:
+		wxStaticBoxSizer& s_adv;
+		wxStaticBoxSizer& s_round;
+		wxStaticBoxSizer& s_clamp;
+
+		wxRadioButton*	m_Option_Round[4];
+
+		wxRadioButton*	m_Option_None;
+		wxRadioButton*	m_Option_Normal;
+
+		wxCheckBox*		m_Option_FTZ;
+		wxCheckBox*		m_Option_DAZ;
+
+	public:
+		BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth );
+		virtual ~BaseAdvancedCpuOptions() throw() { }
+
+	protected:
+		void OnRestoreDefaults( wxCommandEvent& evt );
+		void ApplyRoundmode( u32& mxcsr );
+	};
+
+	class AdvancedOptionsFPU : public BaseAdvancedCpuOptions
+	{
+	protected:
+		wxRadioButton* m_Option_ExtraSign;
+		wxRadioButton* m_Option_Full;
+
 	public:
 		AdvancedOptionsFPU( wxWindow& parent, int idealWidth );
 		virtual ~AdvancedOptionsFPU() throw() { }
 		void Apply();
 	};
 
-	class AdvancedOptionsVU : public BaseApplicableConfigPanel
+	class AdvancedOptionsVU : public BaseAdvancedCpuOptions
 	{
+	protected:
+		wxRadioButton*	m_Option_Extra;
+		wxRadioButton*	m_Option_ExtraSign;
+		
 	public:
 		AdvancedOptionsVU( wxWindow& parent, int idealWidth );
 		virtual ~AdvancedOptionsVU() throw() { }

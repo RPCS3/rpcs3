@@ -121,6 +121,7 @@ public:
 		BITFIELD_END
 
 		RecompilerOptions();
+		void ApplySanityCheck();
 
 		void LoadSave( IniInterface& conf );
 

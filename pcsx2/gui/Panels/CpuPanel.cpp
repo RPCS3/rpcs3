@@ -16,41 +16,44 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
+static const u32 MXCSR_DAZ		= 0x0040;		// bit enable for Denormals Are Zero
+static const u32 MXCSR_FTZ		= 0x8000;		// bit enable for Flush to Zero
+
 using namespace wxHelpers;
 
-Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth ) : 
+Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth ) : 
 	BaseApplicableConfigPanel( &parent, idealWidth )
+,	s_adv( *new wxStaticBoxSizer( wxVERTICAL, this ) )
+,	s_round( *new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) )
+,	s_clamp( *new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") ) )
 {
-	wxStaticBoxSizer& s_adv	= *new wxStaticBoxSizer( wxVERTICAL, this, _("EE/FPU Advanced Recompiler Options") );
-	wxStaticBoxSizer& s_round = *new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") );
-	wxStaticBoxSizer& s_clamp = *new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") );
-
 	wxFlexGridSizer& grid = *new wxFlexGridSizer( 4 );
 
 	// Clever proportions selected for a fairly nice spacing, with the third
-	// colum serving as a buffer between static box and a pair of checkboxes.
+	// column serving as a buffer between static box and a pair of checkboxes.
 
 	grid.AddGrowableCol( 0, 8 );
 	grid.AddGrowableCol( 1, 10 );
 	grid.AddGrowableCol( 2, 1 );
 	grid.AddGrowableCol( 3, 7 );
 
-	AddRadioButton( s_round, _("Nearest") );
-	AddRadioButton( s_round, _("Negative") );
-	AddRadioButton( s_round, _("Positive") );
-	AddRadioButton( s_round, _("Chop / Zero") );
+	m_StartNewRadioGroup = true;
+	m_Option_Round[0]	= &AddRadioButton( s_round, _("Nearest") );
+	m_Option_Round[1]	= &AddRadioButton( s_round, _("Negative") );
+	m_Option_Round[2]	= &AddRadioButton( s_round, _("Positive") );
+	m_Option_Round[3]	= &AddRadioButton( s_round, _("Chop / Zero") );
 
 	m_StartNewRadioGroup = true;
-	AddRadioButton( s_clamp, _("None") );
-	AddRadioButton( s_clamp, _("Normal") );
-	AddRadioButton( s_clamp, _("Extra + Preserve Sign") );
-	AddRadioButton( s_clamp, _("Full") );
+	m_Option_None		= &AddRadioButton( s_clamp, _("None") );
+	m_Option_Normal		= &AddRadioButton( s_clamp, _("Normal") );
 
 	wxBoxSizer& s_daz( *new wxBoxSizer( wxVERTICAL ) );
-	s_daz.AddSpacer( 16 );
-	AddCheckBox( s_daz, _("Flush to Zero") );
-	s_daz.AddSpacer( 6 );
-	AddCheckBox( s_daz, _("Denormals are Zero") );
+	s_daz.AddSpacer( 12 );
+	m_Option_FTZ		= &AddCheckBox( s_daz, _("Flush to Zero") );
+	s_daz.AddSpacer( 4 );
+	m_Option_DAZ		= &AddCheckBox( s_daz, _("Denormals are Zero") );
+	s_daz.AddSpacer( 22 );
+	s_daz.Add( new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ), wxSizerFlags().Align( wxALIGN_CENTRE ) );
 
 	grid.Add( &s_round, SizerFlags::SubGroup() );
 	grid.Add( &s_clamp, SizerFlags::SubGroup() );
@@ -58,61 +61,64 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth
 	grid.Add( &s_daz, wxSizerFlags().Expand() );
 
 	s_adv.Add( &grid, SizerFlags::StdExpand() );
-	
+
 	SetSizer( &s_adv );
+
+	Connect( wxID_DEFAULT, wxCommandEventHandler( BaseAdvancedCpuOptions::OnRestoreDefaults ) );
+}
+
+void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent &evt)
+{
+	m_Option_Round[3]->SetValue(true);
+	m_Option_Normal->SetValue(true);
+	
+	m_Option_DAZ->SetValue(true);
+	m_Option_FTZ->SetValue(true);
+}
+
+Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth ) : 
+	BaseAdvancedCpuOptions( parent, idealWidth )
+{
+	s_adv.GetStaticBox()->SetLabel(_("EE/FPU Advanced Recompiler Options"));
+	
+	m_Option_ExtraSign	= &AddRadioButton( s_clamp, _("Extra + Preserve Sign") );
+	m_Option_Full		= &AddRadioButton( s_clamp, _("Full") );
+
+	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
+	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
+
+	m_Option_FTZ->SetValue( !!(cpuOps.sseMXCSR & MXCSR_FTZ) );
+	m_Option_DAZ->SetValue( !!(cpuOps.sseMXCSR & MXCSR_DAZ) );
+
+	m_Option_Round[(cpuOps.sseMXCSR >> 13) & 3]->SetValue( true );
+
+	m_Option_Normal->SetValue( recOps.fpuOverflow );
+	m_Option_ExtraSign->SetValue( recOps.fpuExtraOverflow );
+	m_Option_Full->SetValue( recOps.fpuFullMode );
+	m_Option_None->SetValue( !recOps.fpuOverflow && !recOps.fpuExtraOverflow && !recOps.fpuFullMode );
 }
 
 
 Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth ) : 
-	BaseApplicableConfigPanel( &parent, idealWidth )
+	BaseAdvancedCpuOptions( parent, idealWidth )
 {
-	wxStaticBoxSizer& s_adv	= *new wxStaticBoxSizer( wxVERTICAL, this, _("VU0 / VU1 Advanced Recompiler Options") );
-	wxStaticBoxSizer& s_round = *new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") );
-	wxStaticBoxSizer& s_clamp = *new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") );
+	s_adv.GetStaticBox()->SetLabel(_("VU0 / VU1 Advanced Recompiler Options"));
 
-	wxFlexGridSizer& grid = *new wxFlexGridSizer( 4 );
+	m_Option_Extra		= &AddRadioButton( s_clamp, _("Extra") );
+	m_Option_ExtraSign	= &AddRadioButton( s_clamp, _("Extra + Preserve Sign") );
 
-	// Clever proportions selected for a fairly nice spacing, with the third
-	// colum serving as a buffer between static box and a pair of checkboxes.
+	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
+	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
 
-	grid.AddGrowableCol( 0, 8 );
-	grid.AddGrowableCol( 1, 10 );
-	grid.AddGrowableCol( 2, 1 );
-	grid.AddGrowableCol( 3, 7 );
+	m_Option_FTZ->SetValue( !!(cpuOps.sseVUMXCSR & MXCSR_FTZ) );
+	m_Option_DAZ->SetValue( !!(cpuOps.sseVUMXCSR & MXCSR_DAZ) );
 
-	AddRadioButton( s_round, _("Nearest") );
-	AddRadioButton( s_round, _("Negative") );
-	AddRadioButton( s_round, _("Positive") );
-	AddRadioButton( s_round, _("Chop / Zero") );
-
-	m_StartNewRadioGroup = true;
-	AddRadioButton( s_clamp, _("None") );
-	AddRadioButton( s_clamp, _("Normal") );
-	AddRadioButton( s_clamp, _("Extra") );
-	AddRadioButton( s_clamp, _("Extra + Preserve Sign") );
-
-	wxBoxSizer& s_daz( *new wxBoxSizer( wxVERTICAL ) );
-	s_daz.AddSpacer( 16 );
-	AddCheckBox( s_daz, _("Flush to Zero") );
-	s_daz.AddSpacer( 6 );
-	AddCheckBox( s_daz, _("Denormals are Zero") );
-
-	grid.Add( &s_round, SizerFlags::SubGroup() );
-	grid.Add( &s_clamp, SizerFlags::SubGroup() );
-	grid.Add( new wxBoxSizer( wxVERTICAL ) );		// spacer column!
-	grid.Add( &s_daz, wxSizerFlags().Expand() );
-
-	s_adv.Add( &grid, SizerFlags::StdExpand() );
-
-	SetSizer( &s_adv );
-}
-
-void Panels::AdvancedOptionsFPU::Apply()
-{
-}
-
-void Panels::AdvancedOptionsVU::Apply()
-{
+	m_Option_Round[(cpuOps.sseVUMXCSR >> 13) & 3]->SetValue( true );
+	
+	m_Option_Normal->SetValue( recOps.vuOverflow );
+	m_Option_Extra->SetValue( recOps.vuExtraOverflow );
+	m_Option_ExtraSign->SetValue( recOps.vuSignOverflow );
+	m_Option_None->SetValue( !recOps.vuOverflow && !recOps.vuExtraOverflow && !recOps.vuSignOverflow );
 }
 
 Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth ) :
@@ -215,4 +221,49 @@ void Panels::CpuPanelVU::Apply()
 
 	recOps.UseMicroVU0	= m_Option_mVU0->GetValue();
 	recOps.UseMicroVU1	= m_Option_mVU1->GetValue();
+}
+
+void Panels::BaseAdvancedCpuOptions::ApplyRoundmode( u32& mxcsr )
+{
+	mxcsr = 0;
+
+	for( int i=0; i<4; ++i )
+	{
+		if( m_Option_Round[i]->GetValue() )
+		{
+			mxcsr |= (i << 13);
+			break;
+		}
+	}
+
+	if( m_Option_DAZ->GetValue() ) mxcsr |= MXCSR_DAZ;
+	if( m_Option_FTZ->GetValue() ) mxcsr |= MXCSR_FTZ;
+}
+
+void Panels::AdvancedOptionsFPU::Apply()
+{
+	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
+	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
+	
+	ApplyRoundmode( cpuOps.sseMXCSR );
+	
+	recOps.fpuOverflow		= m_Option_Normal->GetValue();
+	recOps.fpuExtraOverflow	= m_Option_ExtraSign->GetValue();
+	recOps.fpuFullMode		= m_Option_Full->GetValue();
+	
+	recOps.ApplySanityCheck();
+}
+
+void Panels::AdvancedOptionsVU::Apply()
+{
+	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
+	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
+	
+	ApplyRoundmode( cpuOps.sseVUMXCSR );
+
+	recOps.vuOverflow		= m_Option_Normal->GetValue();
+	recOps.vuExtraOverflow	= m_Option_Extra->GetValue();
+	recOps.vuSignOverflow	= m_Option_ExtraSign->GetValue();
+	
+	recOps.ApplySanityCheck();
 }

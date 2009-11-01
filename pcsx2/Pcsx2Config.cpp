@@ -77,6 +77,29 @@ Pcsx2Config::RecompilerOptions::RecompilerOptions() : bitset(0)
 	//fpuFullMode = false;
 }
 
+void Pcsx2Config::RecompilerOptions::ApplySanityCheck()
+{
+	int fpuCount = (int)fpuOverflow + (int)fpuExtraOverflow + (int)fpuFullMode;
+	
+	if( fpuCount > 1 )
+	{
+		// Values are wonky; assume the defaults.
+		fpuOverflow		= RecompilerOptions().fpuOverflow;
+		fpuExtraOverflow= RecompilerOptions().fpuExtraOverflow;
+		fpuFullMode		= RecompilerOptions().fpuFullMode;
+	}
+
+	int vuCount = (int)vuOverflow + (int)vuExtraOverflow + (int)vuSignOverflow;
+
+	if( fpuCount > 1 )
+	{
+		// Values are wonky; assume the defaults.
+		vuOverflow		= RecompilerOptions().vuOverflow;
+		vuExtraOverflow	= RecompilerOptions().vuExtraOverflow;
+		vuSignOverflow	= RecompilerOptions().vuSignOverflow;
+	}
+}
+
 void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 {
 	RecompilerOptions defaults;
