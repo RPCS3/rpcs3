@@ -340,8 +340,8 @@ namespace x86Emitter
 	extern void xEMMS();
 	extern void xSTMXCSR( const ModSib32& dest );
 	extern void xLDMXCSR( const ModSib32& src );
-	extern void xFXSAVE( const ModSib32& dest );
-	extern void xFXRSTOR( const ModSib32& src );
+	extern void xFXSAVE( const ModSibBase& dest );
+	extern void xFXRSTOR( const ModSibBase& src );
 
 	extern void xMOVDZX( const xRegisterSSE& to, const xRegister32& from );
 	extern void xMOVDZX( const xRegisterSSE& to, const ModSibBase& src );

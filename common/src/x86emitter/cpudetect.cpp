@@ -402,20 +402,18 @@ void cpudetectInit()
 	////////////////////////////////////////////////////////////////////////////////////////////
 	// Establish MXCSR Mask...
 	
-	if( x86caps.hasStreamingSIMDExtensions )
+	MXCSR_Mask.bitmask = 0xFFBF;
+	if( x86caps.hasFastStreamingSIMDExtensionsSaveRestore )
 	{
 		xSetPtr( recSSE );
-		xFXSAVE( ptr32[ecx] );
+		xFXSAVE( recSSE + 1024 );	// just save it to an unused portion of recSSE
 		xRET();
 
-		u32 _fxsave[512/4];
-		memzero( _fxsave );
-		((void (__fastcall *)(u32*))&recSSE[0])( _fxsave );
+		CallAddress( recSSE );
 
-		if( _fxsave[28/4] == 0 )
-			MXCSR_Mask.bitmask = 0xFFBF;
-		else
-			MXCSR_Mask.bitmask = _fxsave[28/4];
+		u32 result = ((u32*)&recSSE[1024])[28];
+		if( result != 0 )
+			MXCSR_Mask.bitmask = result;
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////

@@ -515,7 +515,7 @@ __emitinline void xLDMXCSR( const ModSib32& src )
 
 // Save x87 FPU, MMX Technology, and SSE State to buffer
 // Target buffer must be at least 512 bytes in length to hold the result.
-__emitinline void xFXSAVE( const ModSib32& dest )
+__emitinline void xFXSAVE( const ModSibBase& dest )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 0, dest );
@@ -523,7 +523,7 @@ __emitinline void xFXSAVE( const ModSib32& dest )
 
 // Restore x87 FPU, MMX , XMM, and MXCSR State.
 // Source buffer should be 512 bytes in length.
-__emitinline void xFXRSTOR( const ModSib32& src )
+__emitinline void xFXRSTOR( const ModSibBase& src )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 0, src );

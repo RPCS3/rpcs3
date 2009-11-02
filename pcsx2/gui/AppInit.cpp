@@ -50,6 +50,7 @@ void Pcsx2App::OpenWizardConsole()
 	if( !IsDebugBuild ) return;
 	g_Conf->ProgLogBox.Visible = true;
 	m_ProgramLogBox	= new ConsoleLogFrame( NULL, L"PCSX2 Program Log", g_Conf->ProgLogBox );
+	EnableAllLogging();
 }
 
 // User mode settings can't be stored in the CWD for two reasons:
@@ -265,6 +266,8 @@ bool Pcsx2App::OnInit()
 		InitDefaultGlobalAccelerators();
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
 
+		m_RecentIsoMenu = new wxMenu();
+		m_RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
 		m_RecentIsoList = new RecentIsoList( m_RecentIsoMenu );
 
 		ReadUserModeSettings();
@@ -397,12 +400,10 @@ Pcsx2App::Pcsx2App()  :
 ,	m_ConfigImagesAreLoaded( false )
 ,	m_ToolbarImages( NULL )
 ,	m_Bitmap_Logo( NULL )
-,	m_RecentIsoMenu( new wxMenu() )
+,	m_RecentIsoMenu( NULL )
 {
 	SetAppName( L"pcsx2" );
 	BuildCommandHash();
-	
-	m_RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
 }
 
 Pcsx2App::~Pcsx2App()

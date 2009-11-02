@@ -182,7 +182,7 @@ bool IsBIOS(const wxString& filename, wxString& description)
 	romdir rd;
 
 	wxFileName Bios( g_Conf->Folders.Bios + filename );
-	wxFile fp( Bios.GetFullPath().c_str() );
+	wxFile fp( Bios.GetFullPath() );
 
 	if( !fp.IsOpened() ) return FALSE;
 
@@ -210,6 +210,8 @@ bool IsBIOS(const wxString& filename, wxString& description)
 			fp.Seek( fileOffset );
 			if( fp.Read( &aROMVER, 14 ) == 0 ) break;
 			fp.Seek( filepos );	//go back
+			
+			aROMVER[14] = 0;
 
 			const char zonefail[2] = { aROMVER[4], '\0' };	// the default "zone" (unknown code)
 			const char* zone = zonefail;
