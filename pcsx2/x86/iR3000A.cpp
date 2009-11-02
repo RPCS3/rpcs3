@@ -108,7 +108,7 @@ static void __fastcall iopRecRecompile( const u32 startpc );
 static u32 s_store_ebp, s_store_esp;
 
 // Recompiled code buffer for EE recompiler dispatchers!
-static u8 __pagealigned iopRecDispatchers[0x1000];
+static u8 __pagealigned iopRecDispatchers[__pagesize];
 
 typedef void DynGenFunc();
 
@@ -134,7 +134,7 @@ static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 {
 	pxFailDev( wxsFormat( L"(R3000A Recompiler Stackframe) Sanity check failed on %s\n\tCurrent=%d; Saved=%d",
 		(espORebp==0) ? L"ESP" : L"EBP", regval, (espORebp==0) ? s_store_esp : s_store_ebp )
-		);
+	);
 
 	// Note: The recompiler will attempt to recover ESP and EBP after returning from this function,
 	// so typically selecting Continue/Ignore/Cancel for this assertion should allow PCSX2 to con-
@@ -348,10 +348,10 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 static void _DynGen_Dispatchers()
 {
 	// In case init gets called multiple times:
-	HostSys::MemProtect( iopRecDispatchers, 0x1000, Protect_ReadWrite, false );
+	HostSys::MemProtectStatic( iopRecDispatchers, Protect_ReadWrite, false );
 
 	// clear the buffer to 0xcc (easier debugging).
-	memset_8<0xcc,0x1000>( iopRecDispatchers );
+	memset_8<0xcc,__pagesize>( iopRecDispatchers );
 
 	xSetPtr( iopRecDispatchers );
 
@@ -365,7 +365,7 @@ static void _DynGen_Dispatchers()
 	iopJITCompileInBlock	= _DynGen_JITCompileInBlock();
 	iopEnterRecompiledCode	= _DynGen_EnterRecompiledCode();
 
-	HostSys::MemProtect( iopRecDispatchers, 0x1000, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( iopRecDispatchers, Protect_ReadOnly, true );
 
 	recBlocks.SetJITCompile( iopJITCompile );
 }

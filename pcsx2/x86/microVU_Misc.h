@@ -156,7 +156,7 @@ extern const __aligned(32) mVU_Globals mVUglob;
 // This *probably* fixes the crashing bugs in linux when using the optimized memcmp.
 // Needs testing... --air
 #ifndef __LINUX__
-extern __pagealigned u8 mVUsearchXMM[0x1000];
+extern __pagealigned u8 mVUsearchXMM[__pagesize];
 typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUquickSearch(dest, src, size) ((((mVUCall)((void*)mVUsearchXMM))(dest, src)) == 0xf)
 #define mVUemitSearch() { mVUcustomSearch(); }

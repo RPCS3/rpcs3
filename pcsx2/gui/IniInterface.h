@@ -163,3 +163,6 @@ protected:
 #define IniEntry( varname )		ini.Entry( wxT(#varname), varname, defaults.varname )
 #define IniBitfield( varname )	varname = ini.EntryBitfield( wxT(#varname), varname, defaults.varname )
 #define IniBitBool( varname )	varname = ini.EntryBitBool( wxT(#varname), !!varname, defaults.varname )
+
+#define IniBitfieldEx( varname, textname )	varname = ini.EntryBitfield( wxT(textname), varname, defaults.varname )
+#define IniBitBoolEx( varname, textname )	varname = ini.EntryBitBool( wxT(textname), !!varname, defaults.varname )

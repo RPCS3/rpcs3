@@ -876,7 +876,7 @@ void mmap_MarkCountedRamPage( u32 paddr )
 	);
 
 	m_PageProtectInfo[rampage].Mode = ProtMode_Write;
-	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadOnly );
+	HostSys::MemProtect( &psM[rampage<<12], __pagesize, Protect_ReadOnly );
 }
 
 // offset - offset of address relative to psM.
@@ -889,7 +889,7 @@ static __forceinline void mmap_ClearCpuBlock( uint offset )
 	pxAssertMsg( m_PageProtectInfo[rampage].Mode != ProtMode_Manual,
 		"Attempted to clear a block that is already under manual protection." );
 
-	HostSys::MemProtect( &psM[rampage<<12], 1, Protect_ReadWrite );
+	HostSys::MemProtect( &psM[rampage<<12], __pagesize, Protect_ReadWrite );
 	m_PageProtectInfo[rampage].Mode = ProtMode_Manual;
 	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
 }

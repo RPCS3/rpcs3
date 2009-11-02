@@ -243,7 +243,7 @@ namespace vtlb_private
 // If it were smaller than a page we'd end up allowing execution rights on some
 // other vars additionally (bad!).
 //
-static __pagealigned u8 m_IndirectDispatchers[0x1000];
+static __pagealigned u8 m_IndirectDispatchers[__pagesize];
 
 // ------------------------------------------------------------------------
 // mode        - 0 for read, 1 for write!
@@ -286,7 +286,7 @@ static void DynGen_IndirectDispatch( int mode, int bits )
 void vtlb_dynarec_init()
 {
 	// In case init gets called multiple times:
-	HostSys::MemProtect( m_IndirectDispatchers, 0x1000, Protect_ReadWrite, false );
+	HostSys::MemProtectStatic( m_IndirectDispatchers, Protect_ReadWrite, false );
 
 	// clear the buffer to 0xcc (easier debugging).
 	memset_8<0xcc,0x1000>( m_IndirectDispatchers );
@@ -310,7 +310,7 @@ void vtlb_dynarec_init()
 		}
 	}
 
-	HostSys::MemProtect( m_IndirectDispatchers, 0x1000, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( m_IndirectDispatchers, Protect_ReadOnly, true );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

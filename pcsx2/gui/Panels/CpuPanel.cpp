@@ -16,9 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
-static const u32 MXCSR_DAZ		= 0x0040;		// bit enable for Denormals Are Zero
-static const u32 MXCSR_FTZ		= 0x8000;		// bit enable for Flush to Zero
-
 using namespace wxHelpers;
 
 Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth ) : 
@@ -87,10 +84,10 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
 
-	m_Option_FTZ->SetValue( !!(cpuOps.sseMXCSR & MXCSR_FTZ) );
-	m_Option_DAZ->SetValue( !!(cpuOps.sseMXCSR & MXCSR_DAZ) );
+	m_Option_FTZ->SetValue( cpuOps.sseMXCSR.FlushToZero );
+	m_Option_DAZ->SetValue( cpuOps.sseMXCSR.DenormalsAreZero );
 
-	m_Option_Round[(cpuOps.sseMXCSR >> 13) & 3]->SetValue( true );
+	m_Option_Round[cpuOps.sseMXCSR.RoundingControl]->SetValue( true );
 
 	m_Option_Normal->SetValue( recOps.fpuOverflow );
 	m_Option_ExtraSign->SetValue( recOps.fpuExtraOverflow );
@@ -110,10 +107,10 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth )
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
 
-	m_Option_FTZ->SetValue( !!(cpuOps.sseVUMXCSR & MXCSR_FTZ) );
-	m_Option_DAZ->SetValue( !!(cpuOps.sseVUMXCSR & MXCSR_DAZ) );
+	m_Option_FTZ->SetValue( cpuOps.sseVUMXCSR.FlushToZero );
+	m_Option_DAZ->SetValue( cpuOps.sseVUMXCSR.DenormalsAreZero );
 
-	m_Option_Round[(cpuOps.sseVUMXCSR >> 13) & 3]->SetValue( true );
+	m_Option_Round[cpuOps.sseVUMXCSR.RoundingControl]->SetValue( true );
 	
 	m_Option_Normal->SetValue( recOps.vuOverflow );
 	m_Option_Extra->SetValue( recOps.vuExtraOverflow );
@@ -223,21 +220,19 @@ void Panels::CpuPanelVU::Apply()
 	recOps.UseMicroVU1	= m_Option_mVU1->GetValue();
 }
 
-void Panels::BaseAdvancedCpuOptions::ApplyRoundmode( u32& mxcsr )
+void Panels::BaseAdvancedCpuOptions::ApplyRoundmode( SSE_MXCSR& mxcsr )
 {
-	mxcsr = 0;
-
 	for( int i=0; i<4; ++i )
 	{
 		if( m_Option_Round[i]->GetValue() )
 		{
-			mxcsr |= (i << 13);
+			mxcsr.RoundingControl = i;
 			break;
 		}
 	}
 
-	if( m_Option_DAZ->GetValue() ) mxcsr |= MXCSR_DAZ;
-	if( m_Option_FTZ->GetValue() ) mxcsr |= MXCSR_FTZ;
+	mxcsr.DenormalsAreZero	= m_Option_DAZ->GetValue();
+	mxcsr.FlushToZero		= m_Option_FTZ->GetValue();
 }
 
 void Panels::AdvancedOptionsFPU::Apply()
@@ -245,13 +240,14 @@ void Panels::AdvancedOptionsFPU::Apply()
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
 	
+	cpuOps.sseMXCSR = Pcsx2Config::CpuOptions().sseMXCSR;		// set default
 	ApplyRoundmode( cpuOps.sseMXCSR );
 	
-	recOps.fpuOverflow		= m_Option_Normal->GetValue();
 	recOps.fpuExtraOverflow	= m_Option_ExtraSign->GetValue();
+	recOps.fpuOverflow		= m_Option_Normal->GetValue() || recOps.fpuExtraOverflow;
 	recOps.fpuFullMode		= m_Option_Full->GetValue();
 	
-	recOps.ApplySanityCheck();
+	cpuOps.ApplySanityCheck();
 }
 
 void Panels::AdvancedOptionsVU::Apply()
@@ -259,11 +255,12 @@ void Panels::AdvancedOptionsVU::Apply()
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
 	
+	cpuOps.sseVUMXCSR = Pcsx2Config::CpuOptions().sseVUMXCSR;		// set default
 	ApplyRoundmode( cpuOps.sseVUMXCSR );
 
-	recOps.vuOverflow		= m_Option_Normal->GetValue();
-	recOps.vuExtraOverflow	= m_Option_Extra->GetValue();
 	recOps.vuSignOverflow	= m_Option_ExtraSign->GetValue();
+	recOps.vuExtraOverflow	= m_Option_Extra->GetValue() || recOps.vuSignOverflow;
+	recOps.vuOverflow		= m_Option_Normal->GetValue() || recOps.vuExtraOverflow;
 	
-	recOps.ApplySanityCheck();
+	cpuOps.ApplySanityCheck();
 }

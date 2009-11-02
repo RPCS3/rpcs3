@@ -299,7 +299,7 @@ static u32 g_lastpc = 0;
 static u32 s_store_ebp, s_store_esp;
 
 // Recompiled code buffer for EE recompiler dispatchers!
-static u8 __pagealigned eeRecDispatchers[0x1000];
+static u8 __pagealigned eeRecDispatchers[__pagesize];
 
 typedef void DynGenFunc();
 
@@ -460,10 +460,10 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 static void _DynGen_Dispatchers()
 {
 	// In case init gets called multiple times:
-	HostSys::MemProtect( eeRecDispatchers, 0x1000, Protect_ReadWrite, false );
+	HostSys::MemProtectStatic( eeRecDispatchers, Protect_ReadWrite, false );
 
 	// clear the buffer to 0xcc (easier debugging).
-	memset_8<0xcc,0x1000>( eeRecDispatchers );
+	memset_8<0xcc,__pagesize>( eeRecDispatchers );
 
 	xSetPtr( eeRecDispatchers );
 
@@ -477,7 +477,7 @@ static void _DynGen_Dispatchers()
 	JITCompileInBlock	= _DynGen_JITCompileInBlock();
 	EnterRecompiledCode	= _DynGen_EnterRecompiledCode();
 
-	HostSys::MemProtect( eeRecDispatchers, 0x1000, Protect_ReadOnly, true );
+	HostSys::MemProtectStatic( eeRecDispatchers, Protect_ReadOnly, true );
 
 	recBlocks.SetJITCompile( JITCompile );
 }
@@ -630,7 +630,6 @@ void recResetEE( void )
 	x86FpuState = FPU_STATE;
 
 	branch = 0;
-	SetCPUState(EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR);
 	eeRecIsReset = true;
 }
 
@@ -689,6 +688,7 @@ static void recExecute()
 		{
 			eeRecIsReset = false;
 			g_EEFreezeRegs = true;
+			SetCPUState(g_sseMXCSR, g_sseVUMXCSR);
 
 			try {
 				EnterRecompiledCode();
@@ -719,6 +719,7 @@ static void recExecute()
 				pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
 
 				eeRecIsReset = false;
+				SetCPUState(g_sseMXCSR, g_sseVUMXCSR);
 
 				#ifdef _WIN32
 				__try {

@@ -21,7 +21,6 @@
 #include "internal.h"
 #include "tools.h"
 
-
 using namespace x86Emitter;
 
 __aligned16 x86CPU_INFO x86caps;
@@ -73,8 +72,8 @@ static char* bool_to_char( bool testcond )
 #endif
 
 #ifdef _WINDOWS_
-static HANDLE s_threadId = NULL;
-static DWORD s_oldmask = ERROR_INVALID_PARAMETER;
+	static HANDLE s_threadId = NULL;
+	static DWORD s_oldmask = ERROR_INVALID_PARAMETER;
 #endif
 
 static void SetSingleAffinity()
@@ -148,17 +147,10 @@ static s64 CPUSpeedHz( u64 time )
 }
 
 ////////////////////////////////////////////////////
-int arr[] = {
-	0x65746e49, 0x2952286c, 0x726f4320, 0x4d542865,
-	0x51203229,0x20646175,0x20555043,0x20202020 ,
-	0x20202020,0x20402020,0x36362e32,0x7a4847
-};
-
 void cpudetectInit()
 {
    u32 regs[ 4 ];
    u32 cmds;
-   int cputype=0;            // Cpu type
    //AMD 64 STUFF
    u32 x86_64_8BITBRANDID;
    u32 x86_64_12BITBRANDID;
@@ -180,7 +172,9 @@ void cpudetectInit()
    ((u32*)x86caps.VendorName)[ 1 ] = regs[ 3 ];
    ((u32*)x86caps.VendorName)[ 2 ] = regs[ 2 ];
 
-   // Hack - prevents reg[2] & reg[3] from being optimized out of existance!
+   // Hack - prevents reg[2] & reg[3] from being optimized out of existence! (GCC only)
+   // FIXME: We use a better __cpuid now with proper inline asm constraints.  This hack is
+   //   probably obsolete.  Linux devs please re-confirm. --air
    num = sprintf(str, "\tx86Flags  =  %8.8x %8.8x\n", regs[3], regs[2]);
 
    u32 LogicalCoresPerPhysicalCPU = 0;
@@ -200,7 +194,9 @@ void cpudetectInit()
          x86caps.Flags2 =  regs[ 2 ];
       }
    }
-   /* detect multicore for intel cpu */
+
+   // detect multicore for Intel cpu
+
    if ((cmds >= 0x00000004) && !strcmp("GenuineIntel",x86caps.VendorName))
    {
       if ( iCpuId( 0x00000004, regs ) != -1 )
@@ -222,7 +218,9 @@ void cpudetectInit()
 
          }
       }
-      /* detect multicore for amd cpu */
+      
+      // detect multicore for AMD cpu
+      
       if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",x86caps.VendorName))
       {
          if ( iCpuId( 0x80000008, regs ) != -1 )
@@ -250,8 +248,22 @@ void cpudetectInit()
 			strcpy( x86caps.TypeName, "Unknown");
 		break;
 	}
-	if ( x86caps.VendorName[ 0 ] == 'G' ){ cputype=0;}//trick lines but if you know a way better ;p
-	if ( x86caps.VendorName[ 0 ] == 'A' ){ cputype=1;}
+
+	#if 0
+	// vendor identification, currently unneeded.
+	// It's really not recommended that we base much (if anything) on CPU vendor names.
+	// But the code is left in as an ifdef, for possible future reference.
+
+	int cputype=0;            // Cpu type
+	static const char* Vendor_Intel	= "GenuineIntel";
+	static const char* Vendor_AMD	= "AuthenticAMD";
+
+	if( memcmp( x86caps.VendorName, Vendor_Intel, 12 ) == 0 ) { cputype = 0; } else
+	if( memcmp( x86caps.VendorName, Vendor_AMD, 12 ) == 0 ) { cputype = 1; }
+
+	if ( x86caps.VendorName[ 0 ] == 'G' ) { cputype = 0; }
+	if ( x86caps.VendorName[ 0 ] == 'A' ) { cputype = 1; }
+	#endif
 
 	memzero( x86caps.FamilyName );
 	iCpuId( 0x80000002, (u32*)x86caps.FamilyName);
@@ -311,6 +323,9 @@ void cpudetectInit()
 	x86caps.hasStreamingSIMD4Extensions  = ( x86caps.Flags2 >> 19 ) & 1; //sse4.1
 	x86caps.hasStreamingSIMD4Extensions2 = ( x86caps.Flags2 >> 20 ) & 1; //sse4.2
 
+	static __pagealigned u8 recSSE[__pagesize];
+	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
+	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// SIMD Instruction Support Detection
 	//
@@ -325,7 +340,6 @@ void cpudetectInit()
 	// detection relies on the CPUID bits alone.
 
 	#ifdef _MSC_VER
-	u8* recSSE = (u8*)HostSys::Mmap( NULL, 0x1000 );
 	if( recSSE != NULL )
 	{
 		xSetPtr( recSSE );
@@ -384,6 +398,25 @@ void cpudetectInit()
 		);
 	}
 	#endif
+	
+	////////////////////////////////////////////////////////////////////////////////////////////
+	// Establish MXCSR Mask...
+	
+	if( x86caps.hasStreamingSIMDExtensions )
+	{
+		xSetPtr( recSSE );
+		xFXSAVE( ptr32[ecx] );
+		xRET();
+
+		u32 _fxsave[512/4];
+		memzero( _fxsave );
+		((void (__fastcall *)(u32*))&recSSE[0])( _fxsave );
+
+		if( _fxsave[28/4] == 0 )
+			MXCSR_Mask.bitmask = 0xFFBF;
+		else
+			MXCSR_Mask.bitmask = _fxsave[28/4];
+	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	//  Core Counting!

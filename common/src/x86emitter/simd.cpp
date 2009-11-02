@@ -15,6 +15,55 @@
 
 #include "PrecompiledHeader.h"
 #include "internal.h"
+#include "tools.h"
+
+// Mask of valid bit fields for the target CPU.  Typically this is either 0xFFFF (SSE2
+// or better) or 0xFFBF (SSE1 and earlier).  Code can ensure a safe/valid MXCSR by
+// AND'ing this mask against an MXCSR prior to LDMXCSR.
+SSE_MXCSR	MXCSR_Mask;
+
+SSE_RoundMode SSE_MXCSR::GetRoundMode() const
+{
+	return (SSE_RoundMode)RoundingControl;
+}
+
+SSE_MXCSR& SSE_MXCSR::SetRoundMode( SSE_RoundMode mode )
+{
+	pxAssert( (uint)mode < 4 ); 
+	RoundingControl = (u32)mode;
+	return *this;
+}
+
+SSE_MXCSR& SSE_MXCSR::ClearExceptionFlags()
+{
+	bitmask &= ~0x3f;
+	return *this;
+}
+
+SSE_MXCSR& SSE_MXCSR::EnableExceptions()
+{
+	bitmask &= ~(0x3f << 7);
+	return *this;
+}
+
+SSE_MXCSR& SSE_MXCSR::DisableExceptions()
+{
+	bitmask |= 0x3f << 7;
+	return *this;
+}
+
+// Applies the reserve bits mask for the current running cpu, as fetched from the CPU
+// during CPU init/detection.
+SSE_MXCSR& SSE_MXCSR::ApplyReserveMask()
+{
+	bitmask &= MXCSR_Mask.bitmask;
+	return *this;
+}
+
+SSE_MXCSR::operator x86Emitter::ModSib32() const
+{
+	return &bitmask;
+}
 
 namespace x86Emitter {
 
@@ -451,17 +500,33 @@ __forceinline void xFEMMS()	{ xWrite16( 0x0E0F ); }
 
 
 // Store Streaming SIMD Extension Control/Status to Mem32.
-__emitinline void xSTMXCSR( u32* dest )
+__emitinline void xSTMXCSR( const ModSib32& dest )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 3, dest );
 }
 
 // Load Streaming SIMD Extension Control/Status from Mem32.
-__emitinline void xLDMXCSR( const u32* src )
+__emitinline void xLDMXCSR( const ModSib32& src )
 {
 	SimdPrefix( 0, 0xae );
 	EmitSibMagic( 2, src );
+}
+
+// Save x87 FPU, MMX Technology, and SSE State to buffer
+// Target buffer must be at least 512 bytes in length to hold the result.
+__emitinline void xFXSAVE( const ModSib32& dest )
+{
+	SimdPrefix( 0, 0xae );
+	EmitSibMagic( 0, dest );
+}
+
+// Restore x87 FPU, MMX , XMM, and MXCSR State.
+// Source buffer should be 512 bytes in length.
+__emitinline void xFXRSTOR( const ModSib32& src )
+{
+	SimdPrefix( 0, 0xae );
+	EmitSibMagic( 0, src );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

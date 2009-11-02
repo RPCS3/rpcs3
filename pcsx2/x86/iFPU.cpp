@@ -21,6 +21,8 @@
 #include "iR5900.h"
 #include "iFPU.h"
 
+using namespace x86Emitter;
+
 //------------------------------------------------------------------
 namespace R5900 {
 namespace Dynarec {
@@ -1100,7 +1102,7 @@ void recDIVhelper2(int regd, int regt) // Doesn't sets flags
 	ClampValues(regd);
 }
 
-static __aligned16 u32 roundmode_temp[4];
+static __aligned16 SSE_MXCSR roundmode_nearest, roundmode_neg;
 
 void recDIV_S_xmm(int info)
 {
@@ -1109,12 +1111,23 @@ void recDIV_S_xmm(int info)
     //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
     //Console.WriteLn("DIV");
 
-	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
+	if (g_sseMXCSR.GetRoundMode() != SSEround_Nearest)
+	{
+		// Set roundmode to nearest since it isn't already
 		//Console.WriteLn("div to nearest");
-		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode to nearest
-		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
-		if (CHECK_FPUNEGDIVHACK) roundmode_temp[0] |= 0x2000; // Negative Roundmode
-		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
+
+		if( CHECK_FPUNEGDIVHACK )
+		{
+			roundmode_neg = g_sseMXCSR;
+			roundmode_neg.SetRoundMode( SSEround_NegInf );
+			xLDMXCSR( roundmode_neg );
+		}
+		else
+		{
+			roundmode_nearest = g_sseMXCSR;
+			roundmode_nearest.SetRoundMode( SSEround_Nearest );
+			xLDMXCSR( roundmode_nearest );
+		}
 		roundmodeFlag = 1;
 	}
 
@@ -1163,7 +1176,7 @@ void recDIV_S_xmm(int info)
 			break;
 	}
 	if (roundmodeFlag == 1) { // Set roundmode back if it was changed
-		SSE_LDMXCSR ((uptr)&roundmode_temp[1]);
+		xLDMXCSR (g_sseMXCSR);
 	}
 	_freeXMMreg(t0reg);
 }
@@ -1663,15 +1676,17 @@ FPURECOMPILE_CONSTCODE(SUBA_S, XMMINFO_WRITEACC|XMMINFO_READS|XMMINFO_READT);
 void recSQRT_S_xmm(int info)
 {
 	u8* pjmp;
-	int roundmodeFlag = 0;
+	bool roundmodeFlag = false;
 	//Console.WriteLn("FPU: SQRT");
 	
-	if ((g_sseMXCSR & 0x00006000) != 0x00000000) { // Set roundmode to nearest if it isn't already
+	if (g_sseMXCSR.GetRoundMode() != SSEround_Nearest)
+	{
+		// Set roundmode to nearest if it isn't already
 		//Console.WriteLn("sqrt to nearest");
-		roundmode_temp[0] = (g_sseMXCSR & 0xFFFF9FFF); // Set new roundmode
-		roundmode_temp[1] = g_sseMXCSR; // Backup old Roundmode
-		SSE_LDMXCSR ((uptr)&roundmode_temp[0]); // Recompile Roundmode Change
-		roundmodeFlag = 1;
+		roundmode_nearest = g_sseMXCSR;
+		roundmode_nearest.SetRoundMode( SSEround_Nearest );
+		xLDMXCSR (roundmode_nearest);
+		roundmodeFlag = true;
 	}
 
 	if( info & PROCESS_EE_T ) SSE_MOVSS_XMM_to_XMM(EEREC_D, EEREC_T); 
@@ -1699,9 +1714,7 @@ void recSQRT_S_xmm(int info)
 	SSE_SQRTSS_XMM_to_XMM(EEREC_D, EEREC_D);
 	if (CHECK_FPU_EXTRA_OVERFLOW) ClampValues(EEREC_D); // Shouldn't need to clamp again since SQRT of a number will always be smaller than the original number, doing it just incase :/
 	
-	if (roundmodeFlag == 1) { // Set roundmode back if it was changed
-		SSE_LDMXCSR ((uptr)&roundmode_temp[1]);
-	}
+	if (roundmodeFlag) xLDMXCSR (g_sseMXCSR);
 }
 
 FPURECOMPILE_CONSTCODE(SQRT_S, XMMINFO_WRITED|XMMINFO_READT);

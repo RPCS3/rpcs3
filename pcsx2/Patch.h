@@ -107,10 +107,8 @@ extern void SetFastMemory(int); // iR5900LoadStore.c
 
 //extern int g_VUGameFixes;
 extern int g_ZeroGSOptions;
-extern u32 g_sseMXCSR;
-extern u32 g_sseVUMXCSR;
 
-extern void SetRoundMode(u32 ee, u32 vu);
+extern void SetRoundMode(SSE_RoundMode ee, SSE_RoundMode vu);
 extern int LoadPatch(const wxString& patchfile);
 
 #endif /* __PATCH_H__ */

@@ -21,8 +21,9 @@
 extern void cpudetectInit();
 
 // --------------------------------------------------------------------------------------
-struct x86CPU_INFO
+//  x86CPU_INFO
 // --------------------------------------------------------------------------------------
+struct x86CPU_INFO
 {
 	u32 FamilyID;		// Processor Family
 	u32 Model;			// Processor Model
@@ -91,6 +92,75 @@ struct x86CPU_INFO
    u32 hasStreamingSIMD4ExtensionsA:1;
 };
 
+enum SSE_RoundMode
+{
+	SSEround_Nearest = 0,
+	SSEround_NegInf,
+	SSEround_PosInf,
+	SSEround_Chop,
+};
+
+// --------------------------------------------------------------------------------------
+//  SSE_MXCSR  -  Control/Status Register (bitfield)
+// --------------------------------------------------------------------------------------
+// Bits 0-5 are exception flags; used only if SSE exceptions have been enabled.
+//   Bits in this field are "sticky" and, once an exception has occured, must be manually
+//   cleared using LDMXCSR or FXRSTOR.
+//
+// Bits 7-12 are the masks for disabling the exceptions in bits 0-5.  Cleared bits allow
+//   exceptions, set bits mask exceptions from being raised.
+//
+union SSE_MXCSR
+{
+	u32		bitmask;
+	struct 
+	{
+		u32
+			InvalidOpFlag		:1,
+			DenormalFlag		:1,
+			DivideByZeroFlag	:1,
+			OverflowFlag		:1,
+			UnderflowFlag		:1,
+			PrecisionFlag		:1,
+
+			// This bit is supported only on SSE2 or better CPUs.  Setting it to 1 on
+			// SSE1 cpus will result in an invalid instruction exception when executing
+			// LDMXSCR.
+			DenormalsAreZero	:1,
+
+			InvalidOpMask		:1,
+			DenormalMask		:1,
+			DivideByZeroMask	:1,
+			OverflowMask		:1,
+			UnderflowMask		:1,
+			PrecisionMask		:1,
+
+			RoundingControl		:2,
+			FlushToZero			:1;
+	};
+	
+	SSE_RoundMode GetRoundMode() const;
+	SSE_MXCSR& SetRoundMode( SSE_RoundMode mode );
+	SSE_MXCSR& ClearExceptionFlags();
+	SSE_MXCSR& EnableExceptions();
+	SSE_MXCSR& DisableExceptions();
+	
+	SSE_MXCSR& ApplyReserveMask();
+
+	bool operator ==( const SSE_MXCSR& right ) const
+	{
+		return bitmask == right.bitmask;
+	}
+	
+	bool operator !=( const SSE_MXCSR& right ) const
+	{
+		return bitmask != right.bitmask;
+	}
+	
+	operator x86Emitter::ModSib32() const;
+};
+
+extern SSE_MXCSR	MXCSR_Mask;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 

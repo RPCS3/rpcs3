@@ -39,9 +39,16 @@ namespace HostSys
 
 	void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution )
 	{
+		pxAssertDev( ((size & ~__pagesize) == 0), wxsFormat(
+			L"Memory block size must be a multiple of the target platform's page size.\n"
+			L"\tPage Size: 0x%04x (%d), Block Size: 0x%04x (%d)",
+			__pagesize, __pagesize, size, size )
+		);
+
 		int lnxmode = 0;
 
 		// make sure size is aligned to the system page size:
+		// Check is redundant against the assertion above, but might as well...
 		size = (size + m_pagemask) & ~m_pagemask;
 
 		switch( mode )

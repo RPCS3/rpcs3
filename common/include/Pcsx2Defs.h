@@ -176,11 +176,16 @@
 // overhead).  Furthermore, compilers cannot inline functions that have aligned local
 // vars.  So use local var alignment with much caution.
 //
+
+// Defines the memory page size for the target platform at compilation.  All supported platforms
+// (which means Intel only right now) have a 4k granularity.
+#define __pagesize		0x1000
+
 #ifdef _MSC_VER
 
 #	define __aligned(alig)	__declspec(align(alig))
 #	define __aligned16		__declspec(align(16))
-#	define __pagealigned	__declspec(align(0x1000))
+#	define __pagealigned	__declspec(align(__pagesize))
 
 	// Deprecated; use __align instead.
 #	define PCSX2_ALIGNED(alig,x)		__declspec(align(alig)) x
@@ -227,7 +232,7 @@ This theoretically unoptimizes. Not having much luck so far.
 
 #	define __aligned(alig)	__attribute__((aligned(alig)))
 #	define __aligned16		__attribute__((aligned(16)))
-#	define __pagealigned	__attribute__((aligned(0x1000)))
+#	define __pagealigned	__attribute__((aligned(__pagesize)))
 	// Deprecated; use __align instead.
 #	define PCSX2_ALIGNED(alig,x) x __attribute((aligned(alig)))
 #	define PCSX2_ALIGNED16(x) x __attribute((aligned(16)))

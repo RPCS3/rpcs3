@@ -65,6 +65,12 @@ namespace HostSys
 	extern void MemProtect( void* baseaddr, size_t size, PageProtectionMode mode, bool allowExecution=false );
 
 	extern void Munmap( void* base, u32 size );
+	
+	template< uint size >
+	void MemProtectStatic( u8 (&arr)[size], PageProtectionMode mode, bool allowExecution=false )
+	{
+		MemProtect( arr, size, mode, allowExecution );
+	}
 }
 
 

@@ -515,13 +515,13 @@ void SSE_DIVSS(mV, int to, int from, int t1 = -1, int t2 = -1) {
 // Micro VU - Custom Quick Search
 //------------------------------------------------------------------
 
-static __pagealigned u8 mVUsearchXMM[0x1000];
+static __pagealigned u8 mVUsearchXMM[__pagesize];
 
 // Generates a custom optimized block-search function 
 // Note: Structs must be 16-byte aligned! (GCC doesn't guarantee this)
 void mVUcustomSearch() {
-	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadWrite, false);
-	memset_8<0xcc,0x1000>(mVUsearchXMM);
+	HostSys::MemProtectStatic(mVUsearchXMM, Protect_ReadWrite, false);
+	memset_8<0xcc,__pagesize>(mVUsearchXMM);
 	xSetPtr(mVUsearchXMM);
 
 	xMOVAPS  (xmm0, ptr32[ecx]);
@@ -565,5 +565,5 @@ void mVUcustomSearch() {
 
 	exitPoint.SetTarget();
 	xRET();
-	HostSys::MemProtect(mVUsearchXMM, 0x1000, Protect_ReadOnly, true);
+	HostSys::MemProtectStatic(mVUsearchXMM, Protect_ReadOnly, true);
 }

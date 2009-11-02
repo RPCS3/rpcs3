@@ -703,25 +703,24 @@ void patchFunc_roundmode( char * cmd, char * param )
 	int index;
 	char * pText;
 
-	u32 eetype = (EmuConfig.Cpu.sseMXCSR & 0x6000);
-	u32 vutype = (EmuConfig.Cpu.sseVUMXCSR & 0x6000);
+	SSE_RoundMode eetype = EmuConfig.Cpu.sseMXCSR.GetRoundMode();
+	SSE_RoundMode vutype = EmuConfig.Cpu.sseVUMXCSR.GetRoundMode();
 	
 	index = 0;
 	pText = strtok( param, ", " );
 	while(pText != NULL) 
 	{
-		u32 type = 0xffff;
+		SSE_RoundMode type;
 		
 		if( stricmp(pText, "near") == 0 )
-			type = 0x0000;
+			type = SSEround_Nearest;
 		else if( stricmp(pText, "down") == 0 ) 
-			type = 0x2000;
+			type = SSEround_NegInf;
 		else if( stricmp(pText, "up") == 0 ) 
-			type = 0x4000;
+			type = SSEround_PosInf;
 		else if( stricmp(pText, "chop") == 0 ) 
-			type = 0x6000;
-
-		if( type == 0xffff ) 
+			type = SSEround_Chop;
+		else
 		{
 			Console.WriteLn("bad argument (%s) to round mode! skipping...\n", pText);
 			break;
@@ -747,7 +746,10 @@ void patchFunc_zerogs(char* cmd, char* param)
 	 sscanf(param, "%x", &g_ZeroGSOptions);
 }
 
-void SetRoundMode(u32 ee, u32 vu)
+void SetRoundMode(SSE_RoundMode ee, SSE_RoundMode vu)
 {
-	SetCPUState( (EmuConfig.Cpu.sseMXCSR & 0x9fff) | ee, (EmuConfig.Cpu.sseVUMXCSR & 0x9fff) | vu);
+	SSE_MXCSR mxfpu	= EmuConfig.Cpu.sseMXCSR;
+	SSE_MXCSR mxvu	= EmuConfig.Cpu.sseVUMXCSR;
+	
+	SetCPUState( mxfpu.SetRoundMode( ee ), mxvu.SetRoundMode( vu ) );
 }

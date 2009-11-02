@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "x86emitter/tools.h"
+
 class IniInterface;
 
 enum PluginsEnum_t
@@ -142,12 +144,13 @@ public:
 	{
 		RecompilerOptions Recompiler;
 
-		u32 sseMXCSR;
-		u32 sseVUMXCSR;
+		SSE_MXCSR sseMXCSR;
+		SSE_MXCSR sseVUMXCSR;
 
 		CpuOptions();
 		void LoadSave( IniInterface& conf );
-
+		void ApplySanityCheck();
+		
 		bool operator ==( const CpuOptions& right ) const
 		{
 			return OpEqu( sseMXCSR ) && OpEqu( sseVUMXCSR ) && OpEqu( Recompiler );

@@ -79,9 +79,15 @@ Pcsx2Config::RecompilerOptions::RecompilerOptions() : bitset(0)
 
 void Pcsx2Config::RecompilerOptions::ApplySanityCheck()
 {
-	int fpuCount = (int)fpuOverflow + (int)fpuExtraOverflow + (int)fpuFullMode;
-	
-	if( fpuCount > 1 )
+	bool fpuIsRight = true;
+
+	if( fpuExtraOverflow )
+		fpuIsRight = fpuOverflow;
+
+	if( fpuFullMode )
+		fpuIsRight = !fpuOverflow && !fpuExtraOverflow;
+
+	if( !fpuIsRight )
 	{
 		// Values are wonky; assume the defaults.
 		fpuOverflow		= RecompilerOptions().fpuOverflow;
@@ -89,14 +95,18 @@ void Pcsx2Config::RecompilerOptions::ApplySanityCheck()
 		fpuFullMode		= RecompilerOptions().fpuFullMode;
 	}
 
-	int vuCount = (int)vuOverflow + (int)vuExtraOverflow + (int)vuSignOverflow;
+	bool vuIsOk = true;
 
-	if( fpuCount > 1 )
+	if( vuExtraOverflow ) vuIsOk = vuIsOk && vuOverflow;
+	if( vuSignOverflow ) vuIsOk = vuIsOk && vuExtraOverflow;
+
+	if( !vuIsOk )
 	{
 		// Values are wonky; assume the defaults.
 		vuOverflow		= RecompilerOptions().vuOverflow;
 		vuExtraOverflow	= RecompilerOptions().vuExtraOverflow;
 		vuSignOverflow	= RecompilerOptions().vuSignOverflow;
+		vuUnderflow		= RecompilerOptions().vuUnderflow;
 	}
 }
 
@@ -123,10 +133,18 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 	IniBitBool( fpuFullMode );
 }
 
-Pcsx2Config::CpuOptions::CpuOptions() :
-	sseMXCSR( DEFAULT_sseMXCSR )
-,	sseVUMXCSR( DEFAULT_sseVUMXCSR )
+Pcsx2Config::CpuOptions::CpuOptions()
 {
+	sseMXCSR.bitmask	= DEFAULT_sseMXCSR;
+	sseVUMXCSR.bitmask	= DEFAULT_sseVUMXCSR;
+}
+
+void Pcsx2Config::CpuOptions::ApplySanityCheck()
+{
+	sseMXCSR.ClearExceptionFlags().DisableExceptions();
+	sseVUMXCSR.ClearExceptionFlags().DisableExceptions();
+
+	Recompiler.ApplySanityCheck();
 }
 
 void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
@@ -134,8 +152,13 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 	CpuOptions defaults;
 	IniScopedGroup path( ini, L"CPU" );
 
-	IniEntry( sseMXCSR );
-	IniEntry( sseVUMXCSR );
+	IniBitBoolEx( sseMXCSR.DenormalsAreZero,	"FPU.DenormalsAreZero" );
+	IniBitBoolEx( sseMXCSR.FlushToZero,			"FPU.FlushToZero" );
+	IniBitfieldEx( sseMXCSR.RoundingControl,	"FPU.Roundmode" );
+
+	IniBitBoolEx( sseVUMXCSR.DenormalsAreZero,	"VU.DenormalsAreZero" );
+	IniBitBoolEx( sseVUMXCSR.FlushToZero,		"VU.FlushToZero" );
+	IniBitfieldEx( sseVUMXCSR.RoundingControl,	"VU.Roundmode" );
 
 	Recompiler.LoadSave( ini );
 }

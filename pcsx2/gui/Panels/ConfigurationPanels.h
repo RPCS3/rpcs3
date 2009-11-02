@@ -250,7 +250,7 @@ namespace Panels
 
 	protected:
 		void OnRestoreDefaults( wxCommandEvent& evt );
-		void ApplyRoundmode( u32& mxcsr );
+		void ApplyRoundmode( SSE_MXCSR& mxcsr );
 	};
 
 	class AdvancedOptionsFPU : public BaseAdvancedCpuOptions

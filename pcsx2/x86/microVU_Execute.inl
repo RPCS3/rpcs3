@@ -39,7 +39,7 @@ void mVUdispatcherA(mV) {
 	else		{ xCALL(mVUexecuteVU1); }
 
 	// Load VU's MXCSR state
-	xLDMXCSR(&g_sseVUMXCSR);
+	xLDMXCSR(g_sseVUMXCSR);
 
 	// Load Regs
 #ifdef CHECK_MACROVU0
@@ -72,7 +72,7 @@ void mVUdispatcherB(mV) {
 	mVU->exitFunct = x86Ptr;
 
 	// Load EE's MXCSR state
-	xLDMXCSR(&g_sseMXCSR);
+	xLDMXCSR(g_sseMXCSR);
 	
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers;
 	//              all other arguments are passed right to left.
