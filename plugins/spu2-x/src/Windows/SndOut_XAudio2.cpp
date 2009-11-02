@@ -181,8 +181,9 @@ private:
 			IXAudio2SourceVoice* killMe = pSourceVoice;
 			pSourceVoice = NULL;
 			killMe->FlushSourceBuffers();
-			EnterCriticalSection( &cs );
 			killMe->DestroyVoice();
+
+			EnterCriticalSection( &cs );
 			safe_delete_array( qbuffer );
 			LeaveCriticalSection( &cs );
 			DeleteCriticalSection( &cs );
