@@ -217,7 +217,7 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 	{
 		sApp.SysExecute();
 	}
-	
+
 	// Disable the menu item.  The state of the menu is indeterminate until the core thread
 	// has responded (it updates status after the plugins are loaded and emulation has
 	// engaged successfully).
@@ -242,9 +242,8 @@ void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 {
-	typedef void	(CALLBACK* PluginConfigureFnptr)();
 	const int eventId = event.GetId() - MenuId_PluginBase_Settings;
-	
+
 	PluginsEnum_t pid = (PluginsEnum_t)(eventId / PluginMenuId_Interval);
 	if( !pxAssertDev( (eventId >= 0) || (pid < PluginId_Count), "Invalid plugin identifier passed to ConfigPlugin event handler." ) ) return;
 

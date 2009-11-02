@@ -40,7 +40,7 @@ using namespace Panels;
 	static const int s_orient = wxBK_LEFT;
 #endif
 
-static const int IdealWidth = 575;
+static const int IdealWidth = 580;
 
 template< typename T >
 void Dialogs::ConfigurationDialog::AddPage( const char* label, int iconid )

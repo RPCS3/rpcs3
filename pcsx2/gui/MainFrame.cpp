@@ -231,8 +231,9 @@ void __evt_fastcall MainEmuFrame::OnSettingsApplied( void* obj, int& evt )
 void __evt_fastcall MainEmuFrame::OnSettingsLoadSave( void* obj, IniInterface& evt )
 {
 	if( obj == NULL ) return;
-	MainEmuFrame* mframe = (MainEmuFrame*)obj;
+	//MainEmuFrame* mframe = (MainEmuFrame*)obj;
 
+	// nothing to do here right now.
 }
 
 static int GetPluginMenuId_Settings( PluginsEnum_t pid )
@@ -262,7 +263,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuConfig( *new wxMenu() ),
 	m_menuMisc	( *new wxMenu() ),
 	m_menuDebug	( *new wxMenu() ),
-	
+
 	m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) ),
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
 
@@ -481,14 +482,12 @@ void MainEmuFrame::ApplyCoreStatus()
 		susres.Enable( false );
 		susres.SetHelp( _("No emulation state is active; cannot suspend or resume.") );
 	}
-		
+
 	menubar.Enable( MenuId_Sys_Reset, SysHasValidState() || (g_plugins!=NULL) );
 }
 
 void MainEmuFrame::ApplyPluginStatus()
 {
-	wxMenuBar& menubar( *GetMenuBar() );
-
 	if( g_plugins == NULL )
 	{
 		for( int i=0; i<PluginId_Count; ++i )
@@ -503,13 +502,6 @@ void MainEmuFrame::ApplyPluginStatus()
 		//m_menuCDVD.SetLabel( MenuId_Src_Plugin, wxsFormat( L"%s (%s)", _("Plugin"),
 		//	g_plugins->GetName( PluginId_CDVD ).c_str() ) );
 	}
-
-	// Re-populate plugin menus.
-
-	// Delete any menu options added by plugins (typically a plugin will have already
-	// done its own proper cleanup when the plugin was shutdown or unloaded, but lets
-	// not trust them, shall we?)
-
 }
 
 void MainEmuFrame::ApplySettings()
@@ -559,6 +551,10 @@ void PerPluginMenuInfo::Populate( PluginsEnum_t pid )
 // by the PCSX2 core intact.
 void PerPluginMenuInfo::OnUnloaded()
 {
+	// Delete any menu options added by plugins (typically a plugin will have already
+	// done its own proper cleanup when the plugin was shutdown or unloaded, but lets
+	// not trust them, shall we?)
+
 	MenuItemAddonList& curlist( m_PluginMenuItems );
 	for( uint mx=0; mx<curlist.size(); ++mx )
 		MyMenu.Delete( curlist[mx].Item );
@@ -571,8 +567,6 @@ void PerPluginMenuInfo::OnUnloaded()
 
 void PerPluginMenuInfo::OnLoaded()
 {
-	MenuItemAddonList& curlist( m_PluginMenuItems );
-
 	MyMenu.SetLabel( GetPluginMenuId_Name(PluginId),
 		g_plugins->GetName( PluginId ) + L" " + g_plugins->GetVersion( PluginId )
 	);

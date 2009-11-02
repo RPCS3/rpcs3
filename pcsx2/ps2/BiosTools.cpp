@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -49,8 +49,8 @@ Exception::BiosLoadFailed::BiosLoadFailed( const wxString& filename, const wxStr
 	wxString diag( msg_user.IsEmpty() ?
 		L"BIOS has not been configured, or the configuration has been corrupted." : msg_user
 	);
-	wxString user( msg_user.IsEmpty() ? 
-		_("The PS2 BIOS has not been configured, or the configuration has been corrupted.  Please re-configure.") : msg_user
+	wxString user( msg_user.IsEmpty() ?
+		_("The PS2 BIOS has not been configured, or the configuration has been corrupted.  Please re-configure.") : msg_user.c_str()
 	);
 
 	BaseException::InitBaseEx( diag, user );
@@ -216,7 +216,7 @@ bool IsBIOS(const wxString& filename, wxString& description)
 			fp.Seek( fileOffset );
 			if( fp.Read( &aROMVER, 14 ) == 0 ) break;
 			fp.Seek( filepos );	//go back
-			
+
 			aROMVER[14] = 0;
 
 			const char zonefail[2] = { aROMVER[4], '\0' };	// the default "zone" (unknown code)

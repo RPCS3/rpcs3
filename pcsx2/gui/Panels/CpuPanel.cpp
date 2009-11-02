@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -18,7 +18,7 @@
 
 using namespace wxHelpers;
 
-Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth ) : 
+Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
 ,	s_adv( *new wxStaticBoxSizer( wxVERTICAL, this ) )
 ,	s_round( *new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) )
@@ -29,10 +29,10 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int id
 	// Clever proportions selected for a fairly nice spacing, with the third
 	// column serving as a buffer between static box and a pair of checkboxes.
 
-	grid.AddGrowableCol( 0, 8 );
-	grid.AddGrowableCol( 1, 10 );
+	grid.AddGrowableCol( 0, 17 );
+	grid.AddGrowableCol( 1, 22 );
 	grid.AddGrowableCol( 2, 1 );
-	grid.AddGrowableCol( 3, 7 );
+	grid.AddGrowableCol( 3, 19 );
 
 	m_StartNewRadioGroup = true;
 	m_Option_Round[0]	= &AddRadioButton( s_round, _("Nearest") );
@@ -68,16 +68,16 @@ void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent &evt)
 {
 	m_Option_Round[3]->SetValue(true);
 	m_Option_Normal->SetValue(true);
-	
+
 	m_Option_DAZ->SetValue(true);
 	m_Option_FTZ->SetValue(true);
 }
 
-Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth ) : 
+Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth ) :
 	BaseAdvancedCpuOptions( parent, idealWidth )
 {
 	s_adv.GetStaticBox()->SetLabel(_("EE/FPU Advanced Recompiler Options"));
-	
+
 	m_Option_ExtraSign	= &AddRadioButton( s_clamp, _("Extra + Preserve Sign") );
 	m_Option_Full		= &AddRadioButton( s_clamp, _("Full") );
 
@@ -96,7 +96,7 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth
 }
 
 
-Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth ) : 
+Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth ) :
 	BaseAdvancedCpuOptions( parent, idealWidth )
 {
 	s_adv.GetStaticBox()->SetLabel(_("VU0 / VU1 Advanced Recompiler Options"));
@@ -111,7 +111,7 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth )
 	m_Option_DAZ->SetValue( cpuOps.sseVUMXCSR.DenormalsAreZero );
 
 	m_Option_Round[cpuOps.sseVUMXCSR.RoundingControl]->SetValue( true );
-	
+
 	m_Option_Normal->SetValue( recOps.vuOverflow );
 	m_Option_Extra->SetValue( recOps.vuExtraOverflow );
 	m_Option_ExtraSign->SetValue( recOps.vuSignOverflow );
@@ -123,14 +123,14 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth ) :
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 	wxFlexGridSizer& s_recs = *new wxFlexGridSizer( 2 );
-	
+
 	s_recs.AddGrowableCol( 0, 1 );
 	s_recs.AddGrowableCol( 1, 1 );
-	
+
 	// i18n: No point in translating PS2 CPU names :)
 	wxStaticBoxSizer& s_ee  = *new wxStaticBoxSizer( wxVERTICAL, this, L"EmotionEngine" );
 	wxStaticBoxSizer& s_iop = *new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" );
-	
+
 	m_StartNewRadioGroup = true;
 	AddRadioButton( s_ee, _("Interpreter"), wxEmptyString, _("Quite possibly the slowest thing in the universe.") );
 	m_Option_RecEE = &AddRadioButton( s_ee, _("Recompiler [Preferred]") );
@@ -150,7 +150,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth ) :
 
 	// ----------------------------------------------------------------------------
 	// Apply current configuration options...
-	
+
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 
 	m_Option_RecEE->SetValue( recOps.EnableEE );
@@ -239,14 +239,14 @@ void Panels::AdvancedOptionsFPU::Apply()
 {
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
-	
+
 	cpuOps.sseMXCSR = Pcsx2Config::CpuOptions().sseMXCSR;		// set default
 	ApplyRoundmode( cpuOps.sseMXCSR );
-	
+
 	recOps.fpuExtraOverflow	= m_Option_ExtraSign->GetValue();
 	recOps.fpuOverflow		= m_Option_Normal->GetValue() || recOps.fpuExtraOverflow;
 	recOps.fpuFullMode		= m_Option_Full->GetValue();
-	
+
 	cpuOps.ApplySanityCheck();
 }
 
@@ -254,13 +254,13 @@ void Panels::AdvancedOptionsVU::Apply()
 {
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
-	
+
 	cpuOps.sseVUMXCSR = Pcsx2Config::CpuOptions().sseVUMXCSR;		// set default
 	ApplyRoundmode( cpuOps.sseVUMXCSR );
 
 	recOps.vuSignOverflow	= m_Option_ExtraSign->GetValue();
 	recOps.vuExtraOverflow	= m_Option_Extra->GetValue() || recOps.vuSignOverflow;
 	recOps.vuOverflow		= m_Option_Normal->GetValue() || recOps.vuExtraOverflow;
-	
+
 	cpuOps.ApplySanityCheck();
 }

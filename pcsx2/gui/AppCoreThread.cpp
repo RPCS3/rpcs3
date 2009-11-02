@@ -44,6 +44,9 @@ bool AppCoreThread::Suspend( bool isBlocking )
 	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
 	bool retval = _parent::Suspend( isBlocking );
 
+	if( !retval || isBlocking )
+		ScopedBusyCursor::SetDefault( Cursor_NotBusy );
+
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
 	// plugin is suspended.
 
@@ -70,7 +73,7 @@ void AppCoreThread::Resume()
 		Console.WriteLn( "SysResume: State is locked, ignoring Resume request!" );
 		return;
 	}
-	
+
 	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
 	_parent::Resume();
 
@@ -93,7 +96,7 @@ void AppCoreThread::Resume()
 				Console.WriteLn( Color_Orange, "SysResume: Multiple resume retries failed.  Giving up..." );
 		}
 	}
-	
+
 	resume_tries = 0;
 }
 
