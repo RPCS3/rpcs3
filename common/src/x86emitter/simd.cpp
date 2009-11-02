@@ -526,7 +526,7 @@ __emitinline void xFXSAVE( const ModSibBase& dest )
 __emitinline void xFXRSTOR( const ModSibBase& src )
 {
 	SimdPrefix( 0, 0xae );
-	EmitSibMagic( 0, src );
+	EmitSibMagic( 1, src );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////

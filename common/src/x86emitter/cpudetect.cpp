@@ -358,8 +358,6 @@ void cpudetectInit()
 		bool ssse3_result = _test_instruction( funcSSSE3 );
 		bool sse41_result = _test_instruction( funcSSE41 );
 
-		HostSys::Munmap( recSSE, 0x1000 );
-
 		// Test for and log any irregularities here.
 		// We take the instruction test result over cpuid since (in theory) it should be a
 		// more reliable gauge of the cpu's actual ability.  But since a difference in bit
@@ -398,20 +396,23 @@ void cpudetectInit()
 		);
 	}
 	#endif
-	
+
 	////////////////////////////////////////////////////////////////////////////////////////////
 	// Establish MXCSR Mask...
 	
 	MXCSR_Mask.bitmask = 0xFFBF;
 	if( x86caps.hasFastStreamingSIMDExtensionsSaveRestore )
 	{
+		// the fxsave buffer should be 16-byte aligned.  I just save it to an unused portion of
+		// recSSE, since it has plenty of room to spare.
+
 		xSetPtr( recSSE );
-		xFXSAVE( recSSE + 1024 );	// just save it to an unused portion of recSSE
+		xFXSAVE( recSSE + 1024 );
 		xRET();
 
 		CallAddress( recSSE );
 
-		u32 result = ((u32*)&recSSE[1024])[28];
+		u32 result = (u32&)recSSE[1024+28];			// bytes 28->32 are the MXCSR_Mask.
 		if( result != 0 )
 			MXCSR_Mask.bitmask = result;
 	}

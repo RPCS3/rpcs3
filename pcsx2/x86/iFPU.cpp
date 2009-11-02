@@ -1106,7 +1106,7 @@ static __aligned16 SSE_MXCSR roundmode_nearest, roundmode_neg;
 
 void recDIV_S_xmm(int info)
 {
-	int roundmodeFlag = 0;
+	bool roundmodeFlag = false;
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
     //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
     //Console.WriteLn("DIV");
@@ -1128,7 +1128,7 @@ void recDIV_S_xmm(int info)
 			roundmode_nearest.SetRoundMode( SSEround_Nearest );
 			xLDMXCSR( roundmode_nearest );
 		}
-		roundmodeFlag = 1;
+		roundmodeFlag = true;
 	}
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
@@ -1175,9 +1175,7 @@ void recDIV_S_xmm(int info)
 			else recDIVhelper2(EEREC_D, t0reg);
 			break;
 	}
-	if (roundmodeFlag == 1) { // Set roundmode back if it was changed
-		xLDMXCSR (g_sseMXCSR);
-	}
+	if (roundmodeFlag) xLDMXCSR (g_sseMXCSR);
 	_freeXMMreg(t0reg);
 }
 
