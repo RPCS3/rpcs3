@@ -78,7 +78,6 @@ typedef int BOOL;
 #include "zlib/zlib.h"
 #include "Pcsx2Defs.h"
 #include "i18n.h"
-#include "Config.h"
 
 #include "Utilities/Assertions.h"
 #include "Utilities/wxBaseTools.h"
@@ -89,6 +88,8 @@ typedef int BOOL;
 #include "Utilities/MemcpyFast.h"
 #include "Utilities/General.h"
 #include "x86emitter/tools.h"
+
+#include "Config.h"
 
 // Linux isn't set up for svn version numbers yet.
 #ifdef __LINUX__
