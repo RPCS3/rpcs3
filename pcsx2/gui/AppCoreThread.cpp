@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "ps2/BiosTools.h"
 
 AppCoreThread CoreThread;
 
@@ -191,52 +192,18 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
 void AppCoreThread::ExecuteTaskInThread()
 {
-	try
-	{
-		SysCoreThread::ExecuteTaskInThread();
-	}
-	// ----------------------------------------------------------------------------
-	catch( Exception::FileNotFound& ex )
-	{
-		if( g_plugins != NULL ) g_plugins->Close();
-		if( ex.StreamName == g_Conf->FullpathToBios() )
-		{
-			bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
-				_("\n\nPress Ok to go to the BIOS Configuration Panel.") );
+	_parent::ExecuteTaskInThread();
 
-			if( result )
-			{
-				if( wxGetApp().ThreadedModalDialog( DialogId_BiosSelector ) == wxID_CANCEL )
-				{
-					// fixme: handle case where user cancels the settings dialog. (should return FALSE).
-				}
-				else
-				{
-					// fixme: automatically re-try emu startup here...
-				}
-			}
-		}
-	}
 	// ----------------------------------------------------------------------------
-	catch( Exception::PluginError& ex )
+	/*catch( Exception::PluginError& ex )
 	{
 		if( g_plugins != NULL ) g_plugins->Close();
 		Console.Error( ex.FormatDiagnosticMessage() );
 		Msgbox::Alert( ex.FormatDisplayMessage(), _("Plugin Open Error") );
 
-		/*if( HandlePluginError( ex ) )
+		if( HandlePluginError( ex ) )
 		{
 		// fixme: automatically re-try emu startup here...
-		}*/
-	}
-	// ----------------------------------------------------------------------------
-	// [TODO] : Add exception handling here for debuggable PS2 exceptions that allows
-	// invocation of the PCSX2 debugger and such.
-	//
-	catch( Exception::BaseException& ex )
-	{
-		// Sent the exception back to the main gui thread?
-		if( g_plugins != NULL ) g_plugins->Close();
-		Msgbox::Alert( ex.FormatDisplayMessage() );
-	}
+		}
+	}*/
 }

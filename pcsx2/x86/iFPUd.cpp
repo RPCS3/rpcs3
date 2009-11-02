@@ -116,7 +116,9 @@ struct FPUd_Globals
 	u64		dbl_cvt_overflow,	// needs special code if above or equal
 			dbl_ps2_overflow,	// overflow & clamp if above or equal
 			dbl_underflow;		// underflow if below
-			
+
+	u64		padding;
+
 	u64		dbl_s_pos[2];
 	//u64		dlb_s_neg[2];
 };
@@ -132,9 +134,11 @@ static const __aligned(32) FPUd_Globals s_const =
 
 	{DOUBLE(0,1,0), 0},
 
-	DOUBLE(0,1151,0),
-	DOUBLE(0,1152,0),
-	DOUBLE(0,897,0),
+	DOUBLE(0,1151,0),	// cvt_overflow
+	DOUBLE(0,1152,0),	// ps2_overflow
+	DOUBLE(0,897,0),	// underflow
+
+	0,					// Padding!!
 
 	{0x7fffffffffffffffULL, 0},
 	//{0x8000000000000000ULL, 0},

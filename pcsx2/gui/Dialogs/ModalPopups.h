@@ -93,6 +93,8 @@ public:
 	ConfButtons& Abort()	{ m_Abort		= true; return *this; }
 	ConfButtons& Retry()	{ m_Retry		= true; return *this; }
 	ConfButtons& Ignore()	{ m_Ignore		= true; return *this; }
+
+	ConfButtons& OKCancel()	{ m_OK = m_Cancel = true; return *this; }
 	
 	bool HasOK() const		{ return m_OK; }
 	bool HasCancel() const	{ return m_Cancel; }

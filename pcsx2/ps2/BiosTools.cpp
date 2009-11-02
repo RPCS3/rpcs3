@@ -44,16 +44,17 @@ struct romdir
 
 u32 BiosVersion;  //  Used in Memory, Misc, CDVD
 
-// Returns a string message telling the user to consult guides for obtaining a legal BIOS.
-// This message is in a function because it's used as part of several dialogs in PCSX2 (there
-// are multiple variations on the BIOS and BIOS folder checks).
-wxString BIOS_GetMsg_Required()
+Exception::BiosLoadFailed::BiosLoadFailed( const wxString& filename, const wxString& msg_diag, const wxString& msg_user )
 {
-	return pxE( ".Popup:BiosDumpRequired",
-		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain \n"
-		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).\n"
-		L"Please consult the FAQs and Guides for further instructions."
+	wxString diag( msg_user.IsEmpty() ?
+		L"BIOS has not been configured, or the configuration has been corrupted." : msg_user
 	);
+	wxString user( msg_user.IsEmpty() ? 
+		_("The PS2 BIOS has not been configured, or the configuration has been corrupted.  Please re-configure.") : msg_user
+	);
+
+	BaseException::InitBaseEx( diag, user );
+	StreamName = filename;
 }
 
 // Returns the version information of the bios currently loaded into memory.
@@ -146,27 +147,32 @@ static void loadBiosRom( const wxChar *ext, u8 *dest, s64 maxSize )
 void LoadBIOS()
 {
 	pxAssertDev( PS2MEM_ROM != NULL, "PS2 system memory has not been initialized yet." );
-	
+
 	wxString Bios( g_Conf->FullpathToBios() );
+	if( !g_Conf->BaseFilenames.Bios.IsOk() || g_Conf->BaseFilenames.Bios.IsDir() )
+		throw Exception::BiosLoadFailed( Bios );
 
 	s64 filesize = Path::GetFileSize( Bios );
-	if( filesize > 0 )
+	if( filesize <= 0 )
 	{
-		wxFile fp( Bios.c_str() );
-		fp.Read( PS2MEM_ROM, min( (s64)Ps2MemSize::Rom, filesize ) );
-	}
-	else
-	{
-		// Translated: Bios file not found or not specified ... A bios is required for Pcsx2 to run!
-		throw Exception::FileNotFound( Bios,
-			L"Configured Bios file does not exist",
-			
-			_("The configured BIOS file does not exist, or no BIOS has been configured.\n\n") +
-			BIOS_GetMsg_Required()
+		throw Exception::BiosLoadFailed( Bios,
+			L"Configured BIOS file does not exist.",
+			_("The configured BIOS file does not exist.  Please re-configure.")
 		);
 	}
 
+	wxFile fp( Bios );
+	fp.Read( PS2MEM_ROM, min( (s64)Ps2MemSize::Rom, filesize ) );
+
 	BiosVersion = GetBiosVersion();
+	if( BiosVersion == -1 )
+	{
+		throw Exception::BiosLoadFailed( Bios,
+			L"Configured BIOS file is not a valid PS2 BIOS.",
+			_("The configured BIOS file is not a valid PS2 BIOS.  Please re-configure.")
+		);
+	}
+
 	Console.WriteLn("Bios Version %d.%d", BiosVersion >> 8, BiosVersion & 0xff);
 
 	//injectIRX("host.irx");	//not fully tested; still buggy

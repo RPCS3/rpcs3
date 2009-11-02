@@ -16,6 +16,7 @@
 #pragma once
 
 #include "Utilities/Threading.h"
+#include "x86emitter/tools.h"
 
 using namespace Threading;
 
@@ -194,6 +195,8 @@ protected:
 	bool			m_CoreCancelDamnit;
 
 	wxString		m_elf_override;
+	
+	SSE_MXCSR		m_mxcsr_saved;
 
 public:
 	static SysCoreThread& Get();

@@ -15,6 +15,7 @@
 
 
 #include "PrecompiledHeader.h"
+#include <xmmintrin.h>
 
 SSE_MXCSR g_sseMXCSR = { DEFAULT_sseMXCSR };
 SSE_MXCSR g_sseVUMXCSR = { DEFAULT_sseVUMXCSR };
@@ -29,10 +30,6 @@ void SetCPUState(SSE_MXCSR sseMXCSR, SSE_MXCSR sseVUMXCSR)
 	g_sseMXCSR = sseMXCSR.ApplyReserveMask();
 	g_sseVUMXCSR = sseVUMXCSR.ApplyReserveMask();
 
-#ifdef _MSC_VER
-	__asm ldmxcsr g_sseMXCSR; // set the new sse control
-#else
-	__asm__ __volatile__("ldmxcsr %[g_sseMXCSR]" : : [g_sseMXCSR]"m"(g_sseMXCSR) );
-#endif
+	_mm_setcsr( g_sseMXCSR.bitmask );
 }
 

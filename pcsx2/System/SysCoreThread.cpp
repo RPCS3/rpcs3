@@ -21,17 +21,14 @@
 #include "SysThreads.h"
 
 #include "SaveState.h"
-#include "Elfheader.h"
-#include "Plugins.h"
-#include "R5900.h"
-#include "R3000A.h"
 #include "VUmicro.h"
-
 #include "GS.h"
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>
 #endif
+
+#include <xmmintrin.h>
 
 static __threadlocal SysCoreThread* tls_coreThread = NULL;
 
@@ -203,6 +200,7 @@ void SysCoreThread::CpuInitializeMess()
 		// fast bott up option. (though not recommended for games because of rare ill side
 		// effects).
 
+		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
 		cpuExecuteBios();
 		loadElfFile( elf_file );
 	}
@@ -229,12 +227,14 @@ void SysCoreThread::StateCheckInThread()
 void SysCoreThread::ExecuteTaskInThread()
 {
 	Threading::EnableHiresScheduler();
-
 	tls_coreThread = this;
-
 	m_sem_event.WaitWithoutYield();
+	
+	m_mxcsr_saved.bitmask = _mm_getcsr();
+	
 	PCSX2_PAGEFAULT_PROTECT {
 		StateCheckInThread();
+		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
 		Cpu->Execute();
 	} PCSX2_PAGEFAULT_EXCEPT;
 }
@@ -259,6 +259,8 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 void SysCoreThread::OnCleanupInThread()
 {
 	m_hasValidState = false;
+
+	_mm_setcsr( m_mxcsr_saved.bitmask );
 
 	Threading::DisableHiresScheduler();
 

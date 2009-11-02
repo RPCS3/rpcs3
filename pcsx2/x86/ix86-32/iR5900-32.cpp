@@ -688,13 +688,11 @@ static void recExecute()
 		{
 			eeRecIsReset = false;
 			g_EEFreezeRegs = true;
-			SetCPUState(g_sseMXCSR, g_sseVUMXCSR);
 
 			try {
 				EnterRecompiledCode();
 			}
 			catch( Exception::ForceDispatcherReg& ) { }
-
 		}
 	}
 	catch( Exception::ExitRecExecute& ) {}
@@ -719,7 +717,6 @@ static void recExecute()
 				pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
 
 				eeRecIsReset = false;
-				SetCPUState(g_sseMXCSR, g_sseVUMXCSR);
 
 				#ifdef _WIN32
 				__try {

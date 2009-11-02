@@ -18,6 +18,7 @@
 #include "MainFrame.h"
 #include "Plugins.h"
 #include "SaveState.h"
+#include "ps2/BiosTools.h"
 
 #include "Dialogs/ModalPopups.h"
 #include "Dialogs/ConfigurationDialog.h"
@@ -139,6 +140,7 @@ void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 {
 	m_evtsrc_CoreThreadStatus.Dispatch( evt );
 	ScopedBusyCursor::SetDefault( Cursor_NotBusy );
+	CoreThread.RethrowException();
 }
 
 void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
@@ -218,10 +220,42 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 
 }
 
+// Returns a string message telling the user to consult guides for obtaining a legal BIOS.
+// This message is in a function because it's used as part of several dialogs in PCSX2 (there
+// are multiple variations on the BIOS and BIOS folder checks).
+wxString BIOS_GetMsg_Required()
+{
+	return pxE( ".Popup:BiosDumpRequired",
+		L"\n\n"
+		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain \n"
+		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).\n"
+		L"Please consult the FAQs and Guides for further instructions.\n"
+	);
+}
+
+
 void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
 {
 	try {
 		(handler->*func)(event);
+	}
+	// ----------------------------------------------------------------------------
+	catch( Exception::BiosLoadFailed& ex )
+	{
+		bool result = Dialogs::ExtensibleConfirmation( NULL, ConfButtons().OK().Cancel(),
+			L"PS2 BIOS Error",
+			ex.FormatDisplayMessage() + BIOS_GetMsg_Required() + _("\nPress Ok to go to the BIOS Configuration Panel.")
+		).ShowModal() != wxID_CANCEL;
+
+		if( !result )
+			Console.Warning( "User denied option to re-configure BIOS." );
+
+		if( (wxTheApp != NULL) && (Dialogs::BiosSelectorDialog().ShowModal() != wxID_CANCEL) )
+		{
+			sApp.SysExecute();
+		}
+		else
+			Console.Warning( "User canceled BIOS configuration." );
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::CancelEvent& ex )
