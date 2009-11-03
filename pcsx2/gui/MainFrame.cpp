@@ -158,6 +158,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
 	ConnectMenu( MenuId_IsoBrowse,			Menu_IsoBrowse_Click );
 	ConnectMenu( MenuId_SkipBiosToggle,		Menu_SkipBiosToggle_Click );
+	ConnectMenu( MenuId_EnablePatches,      Menu_EnablePatches_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
 	ConnectMenu( MenuId_Sys_SuspendResume,	Menu_SuspendResume_Click );
@@ -509,6 +510,7 @@ void MainEmuFrame::ApplySettings()
 	wxMenuBar& menubar( *GetMenuBar() );
 
 	menubar.Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
+	menubar.Check( MenuId_EnablePatches, g_Conf->EmuOptions.EnablePatches );
 
 	menubar.Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
 	menubar.Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );

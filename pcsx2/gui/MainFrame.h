@@ -78,9 +78,9 @@ public:
 	PerPluginMenuInfo() : MyMenu( *new wxMenu() )
 	{
 	}
-	
+
 	virtual ~PerPluginMenuInfo() throw();
-	
+
 	void Populate( PluginsEnum_t pid );
 	void OnUnloaded();
 	void OnLoaded();
@@ -112,7 +112,7 @@ protected:
 	wxMenu&			m_SaveStatesSubmenu;
 
 	wxMenuItem&		m_MenuItem_Console;
-	
+
 	PerPluginMenuInfo	m_PluginMenuPacks[PluginId_Count];
 
 	CmdEvt_ListenerBinding					m_Listener_CoreThreadStatus;
@@ -157,6 +157,7 @@ protected:
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
 	void Menu_IsoRecent_Click(wxCommandEvent &event);
 	void Menu_SkipBiosToggle_Click(wxCommandEvent &event);
+	void Menu_EnablePatches_Click(wxCommandEvent &event);
 
 	void Menu_BootCdvd_Click(wxCommandEvent &event);
 	void Menu_OpenELF_Click(wxCommandEvent &event);

@@ -325,7 +325,7 @@ static __forceinline void frameLimit()
 	// Shortcut for cases where no waiting is needed (they're running slow already,
 	// so don't bog 'em down with extra math...)
 	if( sDeltaTime >= 0 ) return;
-	
+
 	// If we're way ahead then we can afford to sleep the thread a bit.
 	// (note, sleep(1) thru sleep(2) tend to be the least accurate sleeps, and longer
 	// sleeps tend to be pretty reliable, so that's why the convoluted if/else below)
@@ -357,7 +357,7 @@ static __forceinline void VSyncStart(u32 sCycle)
 	psxVBlankStart();
 
 	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
-	//if (Config.Patch) applypatch(1); // fixme - Apply patches
+	//if (EmuConfig.EnablePatches) applypatch(1); // fixme - Apply patches
 
 	// INTC - VB Blank Start Hack --
 	// Hack fix!  This corrects a freezeup in Granda 2 where it decides to spin

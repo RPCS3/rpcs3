@@ -121,6 +121,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 	}
 
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
+	g_Conf->EmuOptions.EnablePatches = GetMenuBar()->IsChecked( MenuId_EnablePatches );
 	AppSaveSettings();
 
 	sApp.SysExecute( g_Conf->CdvdSource );
@@ -163,6 +164,17 @@ void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent &event )
 void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent &event )
 {
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
+
+	if( wxConfigBase* conf = GetAppConfig() )
+	{
+		IniSaver saver( *conf );
+		g_Conf->EmuOptions.LoadSave( saver );
+	}
+}
+
+void MainEmuFrame::Menu_EnablePatches_Click( wxCommandEvent &event )
+{
+	g_Conf->EmuOptions.EnablePatches = GetMenuBar()->IsChecked( MenuId_EnablePatches );
 
 	if( wxConfigBase* conf = GetAppConfig() )
 	{
