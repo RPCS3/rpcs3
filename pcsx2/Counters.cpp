@@ -357,7 +357,7 @@ static __forceinline void VSyncStart(u32 sCycle)
 	psxVBlankStart();
 
 	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
-	//if (EmuConfig.EnablePatches) applypatch(1); // fixme - Apply patches
+	if (EmuConfig.EnablePatches) applypatch(1); // fixme - Apply patches
 
 	// INTC - VB Blank Start Hack --
 	// Hack fix!  This corrects a freezeup in Granda 2 where it decides to spin
