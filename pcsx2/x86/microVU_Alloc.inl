@@ -76,24 +76,32 @@ microVUt(void) mVUallocSFLAGc(int reg, int regT, int fInstance) {
 
 // Denormalizes Status Flag
 microVUt(void) mVUallocSFLAGd(uptr memAddr, bool setAllflags) {
+
+	// Cannot use EBP (gprF1) here; as this function is used by mVU0 macro and
+	// the EErec needs EBP preserved.
+
 	MOV32MtoR(gprF0, memAddr);
-	MOV32RtoR(gprF1, gprF0);
-	SHR32ItoR(gprF1, 3);
-	AND32ItoR(gprF1, 0x18);
+	MOV32RtoR(gprF3, gprF0);
+	SHR32ItoR(gprF3, 3);
+	AND32ItoR(gprF3, 0x18);
 
 	MOV32RtoR(gprF2, gprF0);
 	SHL32ItoR(gprF2, 11);
 	AND32ItoR(gprF2, 0x1800);
-	OR32RtoR (gprF1, gprF2);
+	OR32RtoR (gprF3, gprF2);
 
 	SHL32ItoR(gprF0, 14);
 	AND32ItoR(gprF0, 0x3cf0000);
-	OR32RtoR (gprF1, gprF0);
+	OR32RtoR (gprF3, gprF0);
 
 	if (setAllflags) {
-		MOV32RtoR(gprF0, gprF1);
-		MOV32RtoR(gprF2, gprF1);
-		MOV32RtoR(gprF3, gprF1);
+
+		// this code should be run in mVU micro mode only, so writing to
+		// EBP (gprF1) is ok (and needed for vuMicro optimizations).
+
+		MOV32RtoR(gprF0, gprF3);
+		MOV32RtoR(gprF1, gprF3);
+		MOV32RtoR(gprF2, gprF3);
 	}
 }
 

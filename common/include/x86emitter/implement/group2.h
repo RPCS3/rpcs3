@@ -41,6 +41,9 @@ class Group2ImplAll
 public:
 	template< typename T > __forceinline void operator()( const xRegister<T>& to,		const xRegisterCL& /* from */ ) const
 	{
+		//if( !Is8BitOp<T>() )
+		//	pxAssert( to != xRegister<T>( ebp.Id ) );
+
 		prefix16<T>();
 		xWrite8( Is8BitOp<T>() ? 0xd2 : 0xd3 );
 		EmitSibMagic( InstType, to );
@@ -75,6 +78,9 @@ public:
 	template< typename T > __forceinline void operator()( const xRegister<T>& to, u8 imm ) const
 	{
 		if( imm == 0 ) return;
+
+		//if( !Is8BitOp<T>() )
+		//	pxAssert( to != xRegister<T>( ebp.Id ) );
 
 		prefix16<T>();
 		if( imm == 1 )

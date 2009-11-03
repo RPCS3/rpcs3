@@ -218,14 +218,18 @@ class MovExtendImplAll
 protected:
 	static const u16 Opcode = 0xb6 | (SignExtend ? 8 : 0 );
 
+	// Macro useful for trapping unwanted use of EBP.
+	//#define EbpAssert() pxAssert( to != ebp )
+	#define EbpAssert()
+
 public:
-	__forceinline void operator()( const xRegister32& to, const xRegister16& from )	const		{ xOpWrite0F( Opcode+1, to, from ); }
-	__noinline void operator()( const xRegister32& to, const ModSibStrict<u16>& sibsrc ) const	{ xOpWrite0F( Opcode+1, to, sibsrc ); }
-	__noinline void operator()( const xRegister32& to, const xDirectOrIndirect16& src ) const	{ _DoI_helpermess( *this, to, src ); }
+	__forceinline void operator()( const xRegister32& to, const xRegister16& from )	const		{ EbpAssert(); xOpWrite0F( Opcode+1, to, from ); }
+	__noinline void operator()( const xRegister32& to, const ModSibStrict<u16>& sibsrc ) const	{ EbpAssert(); xOpWrite0F( Opcode+1, to, sibsrc ); }
+	__noinline void operator()( const xRegister32& to, const xDirectOrIndirect16& src ) const	{ EbpAssert(); _DoI_helpermess( *this, to, src ); }
 	
-	__forceinline void operator()( const xRegister32& to, const xRegister8& from ) const		{ xOpWrite0F( Opcode, to, from ); }
-	__noinline void operator()( const xRegister32& to, const ModSibStrict<u8>& sibsrc ) const	{ xOpWrite0F( Opcode, to, sibsrc ); }
-	__noinline void operator()( const xRegister32& to, const xDirectOrIndirect8& src ) const	{ _DoI_helpermess( *this, to, src ); }
+	__forceinline void operator()( const xRegister32& to, const xRegister8& from ) const		{ EbpAssert(); xOpWrite0F( Opcode, to, from ); }
+	__noinline void operator()( const xRegister32& to, const ModSibStrict<u8>& sibsrc ) const	{ EbpAssert(); xOpWrite0F( Opcode, to, sibsrc ); }
+	__noinline void operator()( const xRegister32& to, const xDirectOrIndirect8& src ) const	{ EbpAssert(); _DoI_helpermess( *this, to, src ); }
 
 	__forceinline void operator()( const xRegister16& to, const xRegister8& from ) const		{ xOpWrite0F( 0x66, Opcode, to, from ); }
 	__noinline void operator()( const xRegister16& to, const ModSibStrict<u8>& sibsrc ) const	{ xOpWrite0F( 0x66, Opcode, to, sibsrc ); }
