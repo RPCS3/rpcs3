@@ -71,7 +71,9 @@ bool tryIsoType(isoFile *iso, u32 size, u32 offset, u32 blockofs)
 	return false;
 }
 
-int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
+// based on florin's CDVDbin detection code :)
+// Returns 0 if the image is valid/known/supported, or -1 if not (iso->type == ISOTYPE_ILLEGAL).
+int isoDetect(isoFile *iso)
 {
 	char buf[32];
 	int len;
@@ -106,11 +108,11 @@ int isoDetect(isoFile *iso)   // based on florin's CDVDbin detection code :)
 		iso->blocks = 16;
 	}
 
-	if (tryIsoType(iso, 2048, 0, 24)) return 0;			// ISO 2048
-	if (tryIsoType(iso, 2336, 0, 16)) return 0;			// RAW 2336
+	if (tryIsoType(iso, 2048, 0, 24)) return 0;				// ISO 2048
+	if (tryIsoType(iso, 2336, 0, 16)) return 0;				// RAW 2336
 	if (tryIsoType(iso, 2352, 0, 0)) return 0; 				// RAW 2352
 	if (tryIsoType(iso, 2448, 0, 0)) return 0; 				// RAWQ 2448
-	if (tryIsoType(iso, 2048, 150 * 2048, 24)) return 0;		// NERO ISO 2048
+	if (tryIsoType(iso, 2048, 150 * 2048, 24)) return 0;	// NERO ISO 2048
 	if (tryIsoType(iso, 2352, 150 * 2048, 0)) return 0;		// NERO RAW 2352
 	if (tryIsoType(iso, 2448, 150 * 2048, 0)) return 0;		// NERO RAWQ 2448
 	if (tryIsoType(iso, 2048, -8, 24)) return 0; 			// ISO 2048
@@ -131,7 +133,7 @@ isoFile *isoOpen(const char *filename)
 	iso = (isoFile*)malloc(sizeof(isoFile));
 	if (iso == NULL) return NULL;
 
-	memset(iso, 0, sizeof(isoFile));
+	memzero( *iso );
 	strcpy(iso->filename, filename);
 
 	iso->handle = _openfile( iso->filename, O_RDONLY);

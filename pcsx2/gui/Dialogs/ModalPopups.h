@@ -21,6 +21,8 @@
 #include <wx/image.h>
 #include <wx/wizard.h>
 
+static const wxWindowID pxID_CUSTOM = wxID_LOWEST - 1;
+
 class FirstTimeWizard : public wxWizard
 {
 protected:
@@ -77,12 +79,15 @@ protected:
 			m_Apply:1,
 			m_Abort:1,
 			m_Retry:1,
-			m_Ignore:1;
+			m_Ignore:1,
+			m_Reset:1;
 	BITFIELD_END
+
+	wxString m_CustomLabel;
 
 public:
 	ConfButtons() : bitset( 0 ) { }
-	
+
 	ConfButtons& OK()		{ m_OK			= true; return *this; }
 	ConfButtons& Cancel()	{ m_Cancel		= true; return *this; }
 	ConfButtons& Apply()	{ m_Apply		= true; return *this; }
@@ -93,9 +98,17 @@ public:
 	ConfButtons& Abort()	{ m_Abort		= true; return *this; }
 	ConfButtons& Retry()	{ m_Retry		= true; return *this; }
 	ConfButtons& Ignore()	{ m_Ignore		= true; return *this; }
+	ConfButtons& Reset()	{ m_Reset		= true; return *this; }
+
+	ConfButtons& Custom( const wxString& label)
+	{
+		m_CustomLabel = label;
+		return *this;
+	}
 
 	ConfButtons& OKCancel()	{ m_OK = m_Cancel = true; return *this; }
-	
+	ConfButtons& YesNo()	{ m_Yes = m_No = true; return *this; }
+		
 	bool HasOK() const		{ return m_OK; }
 	bool HasCancel() const	{ return m_Cancel; }
 	bool HasApply() const	{ return m_Apply; }
@@ -106,6 +119,10 @@ public:
 	bool HasAbort() const	{ return m_Abort; }
 	bool HasRetry() const	{ return m_Retry; }
 	bool HasIgnore() const	{ return m_Ignore; }
+	bool HasReset() const	{ return m_Reset; }
+	
+	bool HasCustom() const	{ return !m_CustomLabel.IsEmpty(); }
+	const wxString& GetCustomLabel() const { return m_CustomLabel; }
 
 	bool Allows( wxWindowID id ) const;
 
@@ -180,14 +197,17 @@ namespace Dialogs
 	protected:
 		wxBoxSizer&		m_ExtensibleSizer;
 		wxBoxSizer&		m_ButtonSizer;
+
 	public:
 		ExtensibleConfirmation( wxWindow* parent, const ConfButtons& type, const wxString& title, const wxString& msg );
 		virtual ~ExtensibleConfirmation() throw() {}
 
-		wxBoxSizer& GetExtensibleSizer() const { return m_ExtensibleSizer; }
+		virtual wxBoxSizer& GetExtensibleSizer() const { return m_ExtensibleSizer; }
 
 	protected:
-		void AddActionButton( wxWindowID id );
+		virtual void AddActionButton( wxWindowID id );
+		virtual void AddCustomButton( wxWindowID id, const wxString& label );
+		virtual void OnActionButtonClicked( wxCommandEvent& evt );
 	};
 
 	wxWindowID IssueConfirmation( wxWindow* parent, const wxString& disablerKey, const ConfButtons& type, const wxString& title, const wxString& msg );

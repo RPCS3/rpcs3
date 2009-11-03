@@ -292,6 +292,8 @@
 		<Unit filename="../gui/GlobalCommands.cpp" />
 		<Unit filename="../gui/IniInterface.cpp" />
 		<Unit filename="../gui/IniInterface.h" />
+		<Unit filename="../gui/IsoDropTarget.cpp" />
+		<Unit filename="../gui/IsoDropTarget.h" />
 		<Unit filename="../gui/MainFrame.cpp" />
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
@@ -309,6 +311,7 @@
 		<Unit filename="../gui/Panels/VideoPanel.cpp" />
 		<Unit filename="../gui/Plugins.cpp" />
 		<Unit filename="../gui/RecentIsoList.cpp" />
+		<Unit filename="../gui/RecentIsoList.h" />
 		<Unit filename="../gui/Resources/AppIcon16.h" />
 		<Unit filename="../gui/Resources/AppIcon16.png">
 			<Option compile="1" />

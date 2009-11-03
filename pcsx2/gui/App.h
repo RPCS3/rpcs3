@@ -23,7 +23,6 @@
 #include "Utilities/EventSource.h"
 #include "IniInterface.h"
 
-//class IniInterface;
 class MainEmuFrame;
 class GSFrame;
 class ConsoleLogFrame;
@@ -34,6 +33,8 @@ class AppCoreThread;
 #include "Utilities/wxGuiTools.h"
 
 #include "AppConfig.h"
+#include "RecentIsoList.h"
+
 #include "System.h"
 #include "System/SysThreads.h"
 
@@ -260,55 +261,6 @@ public:
 	AcceleratorDictionary();
 	void Map( const KeyAcceleratorCode& acode, const char *searchfor );
 };
-
-
-// --------------------------------------------------------------------------------------
-//  RecentIsoList
-// --------------------------------------------------------------------------------------
-class RecentIsoList : public wxEvtHandler
-{
-protected:
-	struct RecentItem
-	{
-		wxString	Filename;
-		wxMenuItem*	ItemPtr;
-		
-		RecentItem() { ItemPtr = NULL; }
-
-		RecentItem( const wxString& src ) :
-			Filename( src )
-		,	ItemPtr( NULL )
-		{
-		}
-	};
-
-	std::vector<RecentItem> m_Items;
-
-	wxMenu*		m_Menu;
-	uint		m_MaxLength;
-	int			m_cursel;
-	
-	wxMenuItem* m_Separator;
-
-	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
-
-public:
-	RecentIsoList( wxMenu* menu );
-	virtual ~RecentIsoList() throw();
-
-	void RemoveAllFromMenu();
-	void Repopulate();
-	void Add( const wxString& src );
-	
-protected:
-	void InsertIntoMenu( int id );
-	void DoSettingsLoadSave( IniInterface& ini );
-	
-	void OnChangedSelection( wxCommandEvent& evt );
-
-	static void __evt_fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
-};
-
 
 // --------------------------------------------------------------------------------------
 //  AppImageIds  - Config and Toolbar Images and Icons
@@ -614,7 +566,7 @@ extern void AppSaveSettings();
 extern void AppApplySettings( const AppConfig* oldconf=NULL, bool saveOnSuccess=false );
 
 extern bool SysHasValidState();
-
+extern void SysUpdateIsoSrcFile( const wxString& newIsoFile );
 extern void SysStatus( const wxString& text );
 
 extern bool				HasMainFrame();
@@ -622,3 +574,4 @@ extern MainEmuFrame&	GetMainFrame();
 extern MainEmuFrame*	GetMainFramePtr();
 
 extern AppCoreThread CoreThread;
+

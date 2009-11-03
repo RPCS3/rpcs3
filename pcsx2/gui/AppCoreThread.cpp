@@ -104,6 +104,14 @@ void AppCoreThread::OnResumeReady()
 {
 	ApplySettings( g_Conf->EmuOptions );
 
+	if( !wxFile::Exists( g_Conf->CurrentIso ) )
+		g_Conf->CurrentIso.Clear();
+
+	sApp.GetRecentIsoList().Add( g_Conf->CurrentIso );
+	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
+
+	AppSaveSettings();
+
 	if( GSopen2 != NULL )
 		wxGetApp().OpenGsFrame();
 

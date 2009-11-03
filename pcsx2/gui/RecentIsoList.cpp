@@ -23,11 +23,12 @@ RecentIsoList::RecentIsoList( wxMenu* menu ) :
 ,	m_Separator( NULL )
 ,	m_Listener_SettingsLoadSave( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
 {
-	m_Menu->Connect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoList::OnChangedSelection) );
+	Connect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoList::OnChangedSelection) );
 }
 
 RecentIsoList::~RecentIsoList() throw()
 {
+	Disconnect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoList::OnChangedSelection) );
 }
 
 void RecentIsoList::OnChangedSelection( wxCommandEvent& evt )
@@ -36,14 +37,20 @@ void RecentIsoList::OnChangedSelection( wxCommandEvent& evt )
 	uint i=0;
 	for( ; i<cnt; ++i )
 	{
-		if( (m_Items[i].ItemPtr == NULL) || (m_Items[i].ItemPtr->GetId() != evt.GetId()) ) continue;
+		if( (m_Items[i].ItemPtr != NULL) && (m_Items[i].ItemPtr->GetId() == evt.GetId()) ) break;
 	}
 	
-	if( i >= m_Items.size() ) return;
+	if( i >= m_Items.size() )
+	{
+		evt.Skip();
+		return;
+	}
 
 	m_cursel = i;
-	g_Conf->CurrentIso = m_Items[i].Filename;
-	sMainFrame.UpdateIsoSrcFile();
+	
+	bool resume = CoreThread.Suspend();
+	SysUpdateIsoSrcFile( m_Items[i].Filename );
+	if( resume ) CoreThread.Resume();
 }
 
 void RecentIsoList::RemoveAllFromMenu()
@@ -53,9 +60,10 @@ void RecentIsoList::RemoveAllFromMenu()
 	int cnt = m_Items.size();
 	for( int i=0; i<cnt; ++i )
 	{
-		if( m_Items[i].ItemPtr == NULL ) continue;
-		m_Menu->Destroy( m_Items[i].ItemPtr );
-		m_Items[i].ItemPtr = NULL;
+		RecentItem& curitem( m_Items[i] );
+		if( curitem.ItemPtr == NULL ) continue;
+		m_Menu->Destroy( curitem.ItemPtr );
+		curitem.ItemPtr = NULL;
 	}
 	
 	if( m_Separator != NULL )

@@ -17,6 +17,9 @@
 #include "MainFrame.h"
 #include "ConsoleLogger.h"
 
+#include "Dialogs/ModalPopups.h"
+#include "IsoDropTarget.h"
+
 #include "Resources/EmbeddedImage.h"
 #include "Resources/AppIcon16.h"
 #include "Resources/AppIcon32.h"
@@ -56,14 +59,6 @@ void MainEmuFrame::UpdateIsoSrcSelection()
 	}
 	sMenuBar.Check( cdsrc, true );
 	m_statusbar.SetStatusText( CDVD_SourceLabels[g_Conf->CdvdSource], 1 );
-}
-
-void MainEmuFrame::UpdateIsoSrcFile()
-{
-	UpdateIsoSrcSelection();
-	const bool exists = wxFile::Exists( g_Conf->CurrentIso );
-	if( !exists )
-		g_Conf->CurrentIso.Clear();
 
 	//sMenuBar.SetLabel( MenuId_Src_Iso, wxsFormat( L"%s -> %s", _("Iso"),
 	//	exists ? Path::GetFilename(g_Conf->CurrentIso).c_str() : _("Empty") ) );
@@ -147,7 +142,6 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
 	ConnectMenu( MenuId_Config_Multitap1Toggle,	Menu_MultitapToggle_Click );
 
-	ConnectMenuRange(wxID_FILE1, 20, Menu_IsoRecent_Click);
 	ConnectMenuRange(MenuId_Config_GS, PluginId_Count, Menu_ConfigPlugin_Click);
 	ConnectMenuRange(MenuId_Src_Iso, 3, Menu_CdvdSource_Click);
 
@@ -443,7 +437,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
 
-	UpdateIsoSrcFile();
+	SetDropTarget( new IsoDropTarget( this ) );
 }
 
 MainEmuFrame::~MainEmuFrame() throw()
@@ -515,7 +509,7 @@ void MainEmuFrame::ApplySettings()
 	menubar.Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
 	menubar.Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );
 
-	UpdateIsoSrcFile();
+	UpdateIsoSrcSelection();
 }
 
 // ------------------------------------------------------------------------

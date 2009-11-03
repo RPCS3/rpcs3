@@ -131,7 +131,6 @@ public:
 	void OnLogBoxHidden();
 
 	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Sys_SuspendResume ); }
-	void UpdateIsoSrcFile();
 	void UpdateIsoSrcSelection();
 	void ReloadRecentLists();
 
@@ -153,9 +152,7 @@ protected:
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);
 	void Menu_SelectBios_Click(wxCommandEvent &event);
 
-	void Menu_RunIso_Click(wxCommandEvent &event);
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
-	void Menu_IsoRecent_Click(wxCommandEvent &event);
 	void Menu_SkipBiosToggle_Click(wxCommandEvent &event);
 	void Menu_EnablePatches_Click(wxCommandEvent &event);
 
@@ -182,7 +179,7 @@ protected:
 	void Menu_ShowConsole(wxCommandEvent &event);
 	void Menu_ShowAboutBox(wxCommandEvent &event);
 
-	bool _DoSelectIsoBrowser();
+	bool _DoSelectIsoBrowser( wxString& dest );
 	bool _DoSelectELFBrowser();
 
 // ------------------------------------------------------------------------

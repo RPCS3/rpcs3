@@ -171,6 +171,12 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 	// dialogs because we offer more button types, and we don't want the MSW default behavior
 	// of right-justified buttons.
 
+	if( type.HasCustom() )
+		AddCustomButton( pxID_CUSTOM, type.GetCustomLabel() );
+	
+	// Order of wxID_RESET and custom button have been picked fairly arbitrarily, since there's
+	// no standard governing those.
+
 	#ifdef __WXGTK__
 	// GTK+ / Linux inverts OK/CANCEL order -- cancel / no first, OK / Yes later. >_<
 	if( type.HasCancel() )
@@ -195,6 +201,9 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 			AddActionButton( wxID_YESTOALL );
 	}
 
+	if( type.HasReset() )
+		AddCustomButton( wxID_RESET, _("Reset") );
+
 	#ifndef __WXGTK__
 	if( type.HasNo() || type.HasCancel() )		// Extra space between Affirm and Cancel Actions
 		m_ButtonSizer.Add(0, 0, 1, wxEXPAND, 0);
@@ -216,8 +225,20 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 	CenterOnScreen();
 }
 
+void Dialogs::ExtensibleConfirmation::OnActionButtonClicked( wxCommandEvent& evt )
+{
+	EndModal( evt.GetId() );
+}
+
+void Dialogs::ExtensibleConfirmation::AddCustomButton( wxWindowID id, const wxString& label )
+{
+	m_ButtonSizer.Add( new wxButton( this, id, label ), SizerFlags::StdButton() )->SetProportion( 6 );
+	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExtensibleConfirmation::OnActionButtonClicked ) );
+}
+
 void Dialogs::ExtensibleConfirmation::AddActionButton( wxWindowID id )
 {
 	m_ButtonSizer.Add( new wxButton( this, id ), SizerFlags::StdButton() )->SetProportion( 6 );
+	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExtensibleConfirmation::OnActionButtonClicked ) );
 }
 

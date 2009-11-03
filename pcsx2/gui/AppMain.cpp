@@ -346,6 +346,11 @@ int Pcsx2App::OnExit()
 
 	if( g_Conf )
 		AppSaveSettings();
+		
+	sMainFrame.PopEventHandler( m_RecentIsoList );
+
+	m_RecentIsoList = NULL;
+	m_RecentIsoMenu = NULL;
 
 	return wxApp::OnExit();
 }
@@ -488,6 +493,8 @@ static void _sendmsg_SysExecute()
 		return;
 	}
 
+	AppSaveSettings();
+
 	wxCommandEvent execevt( pxEVT_SysExecute );
 	execevt.SetInt( _sysexec_cdvdsrc_type );
 	wxGetApp().AddPendingEvent( execevt );
@@ -585,6 +592,13 @@ void SysStatus( const wxString& text )
 	// mirror output to the console!
 	Console.WriteLn( text.c_str() );
 	sMainFrame.SetStatusText( text );
+}
+
+// Applies a new active iso source file
+void SysUpdateIsoSrcFile( const wxString& newIsoFile )
+{
+	g_Conf->CurrentIso = newIsoFile;
+	sMainFrame.UpdateIsoSrcSelection();
 }
 
 bool HasMainFrame()

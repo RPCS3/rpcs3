@@ -274,6 +274,7 @@ bool Pcsx2App::OnInit()
 		AppConfig_OnChangedSettingsFolder();
 
 	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
+		m_MainFrame->PushEventHandler( m_RecentIsoList );
 
 	    if( m_ProgramLogBox )
 	    {

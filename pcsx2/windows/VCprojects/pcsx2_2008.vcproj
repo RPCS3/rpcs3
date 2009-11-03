@@ -1829,6 +1829,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\IsoDropTarget.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\MainFrame.cpp"
 				>
 			</File>
@@ -2418,7 +2422,15 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\IsoDropTarget.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\MainFrame.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\RecentIsoList.h"
 					>
 				</File>
 				<File

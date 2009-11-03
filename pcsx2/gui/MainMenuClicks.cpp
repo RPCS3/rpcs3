@@ -24,6 +24,7 @@
 
 using namespace Dialogs;
 
+extern wxString GetMsg_ConfirmSysReset();
 
 void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
@@ -37,20 +38,26 @@ void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 {
+	CDVD_SourceType newSource = CDVDsrc_NoDisc;
+
 	switch( event.GetId() )
 	{
-		case MenuId_Src_Iso:	g_Conf->CdvdSource = CDVDsrc_Iso;		break;
-		case MenuId_Src_Plugin:	g_Conf->CdvdSource = CDVDsrc_Plugin;	break;
-		case MenuId_Src_NoDisc: g_Conf->CdvdSource = CDVDsrc_NoDisc;	break;
+		case MenuId_Src_Iso:	newSource = CDVDsrc_Iso;	break;
+		case MenuId_Src_Plugin:	newSource = CDVDsrc_Plugin;	break;
+		case MenuId_Src_NoDisc: newSource = CDVDsrc_NoDisc;	break;
 
 		jNO_DEFAULT
 	}
-	UpdateIsoSrcSelection();
-	AppSaveSettings();
+
+	if( g_Conf->CdvdSource == newSource ) return;
+
+	bool resume = CoreThread.Suspend();
+	CDVDsys_ChangeSource( g_Conf->CdvdSource = newSource );
+	if( resume ) CoreThread.Resume();
 }
 
 // Returns FALSE if the user cancelled the action.
-bool MainEmuFrame::_DoSelectIsoBrowser()
+bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 {
 	static const wxChar* isoFilterTypes =
 		L"All Supported (.iso .mdf .nrg .bin .img .dump)|*.iso;*.mdf;*.nrg;*.bin;*.img;*.dump|"
@@ -63,12 +70,9 @@ bool MainEmuFrame::_DoSelectIsoBrowser()
 
 	if( ctrl.ShowModal() != wxID_CANCEL )
 	{
-		g_Conf->Folders.RunIso = wxFileName( ctrl.GetPath() ).GetPath();
-		g_Conf->CurrentIso = ctrl.GetPath();
-		sApp.GetRecentIsoList().Add( g_Conf->CurrentIso );
-
-		AppSaveSettings();
-		UpdateIsoSrcFile();
+		result = ctrl.GetPath();
+		g_Conf->Folders.RunIso = wxFileName( result ).GetPath();
+		//sApp.GetRecentIsoList().Add( result );
 		return true;
 	}
 
@@ -88,7 +92,6 @@ bool MainEmuFrame::_DoSelectELFBrowser()
 	{
 		g_Conf->Folders.RunELF = wxFileName( ctrl.GetPath() ).GetPath();
 		g_Conf->CurrentELF = ctrl.GetPath();
-		AppSaveSettings();
 		return true;
 	}
 
@@ -101,28 +104,28 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 	if( (g_Conf->CdvdSource == CDVDsrc_Iso) && !wxFileExists(g_Conf->CurrentIso) )
 	{
-		if( !_DoSelectIsoBrowser() )
+		wxString result;
+		if( !_DoSelectIsoBrowser( result ) )
 		{
 			CoreThread.Resume();
 			return;
 		}
+
+		SysUpdateIsoSrcFile( result );
 	}
 
 	if( SysHasValidState() )
 	{
-		// [TODO] : Add one of 'dems checkboxes that read like "[x] don't show this stupid shit again, kthx."
-		bool result = Msgbox::OkCancel( pxE( ".Popup:ConfirmSysReset", L"This will reset the emulator and your current emulation session will be lost.  Are you sure?") );
+		bool confirmed = IssueConfirmation( this, L"BootCdvd:ConfirmReset", ConfButtons().Yes().Cancel(),
+			_("Confirm PS2 Reset"), GetMsg_ConfirmSysReset()
+		) != wxID_CANCEL;
 
-		if( !result )
+		if( !confirmed )
 		{
 			CoreThread.Resume();
 			return;
 		}
 	}
-
-	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
-	g_Conf->EmuOptions.EnablePatches = GetMenuBar()->IsChecked( MenuId_EnablePatches );
-	AppSaveSettings();
 
 	sApp.SysExecute( g_Conf->CdvdSource );
 }
@@ -130,26 +133,17 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
 	bool resume = CoreThread.Suspend();
-	_DoSelectIsoBrowser();
-	if( resume ) CoreThread.Resume();
-}
+	wxString result;
 
-void MainEmuFrame::Menu_RunIso_Click( wxCommandEvent &event )
-{
-	CoreThread.Suspend();
-
-	if( _DoSelectIsoBrowser() )
+	if( _DoSelectIsoBrowser( result ) )
 	{
-		sApp.SysExecute( CDVDsrc_Iso );
+		// This command does an on-the-fly change of CD media without automatic reset.
+		// (useful for disc swapping)
+
+		SysUpdateIsoSrcFile( result );
 	}
 
-	CoreThread.Resume();
-}
-
-void MainEmuFrame::Menu_IsoRecent_Click(wxCommandEvent &event)
-{
-	//Console.Status( "%d", event.GetId() - g_RecentIsoList->GetBaseId() );
-	//Console.WriteLn( Color_Magenta, g_RecentIsoList->GetHistoryFile( event.GetId() - g_RecentIsoList->GetBaseId() ) );
+	if( resume ) CoreThread.Resume();
 }
 
 #include "IniInterface.h"
@@ -185,13 +179,13 @@ void MainEmuFrame::Menu_EnablePatches_Click( wxCommandEvent &event )
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
 {
-	CoreThread.Suspend();
+	bool resume = CoreThread.Suspend();
 	if( _DoSelectELFBrowser() )
 	{
 		sApp.SysExecute( g_Conf->CdvdSource, g_Conf->CurrentELF );
 	}
 
-	CoreThread.Resume();
+	if( resume ) CoreThread.Resume();
 }
 
 void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
