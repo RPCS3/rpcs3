@@ -824,8 +824,7 @@ wchar_t ShiftJIS_ConvertChar(const char* input, int& used)
 		}
 
 		used = 2;
-		const uint SecondByte = input[1];
-		return TwoBytes[FirstByte][SecondByte];
+		return TwoBytes[FirstByte][input[1]];
 	}
 }
 

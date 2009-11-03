@@ -105,8 +105,8 @@ void SaveStateBase::FreezeBios()
 	memzero( descin );
 	memzero( desccmp );
 
-	memcpy_fast( descin, descout.ToAscii().data(), descout.Length() );
-	memcpy_fast( desccmp, descout.ToAscii().data(), descout.Length() );
+	memcpy_fast( descin, descout.ToUTF8().data(), descout.Length() );
+	memcpy_fast( desccmp, descout.ToUTF8().data(), descout.Length() );
 
 	// ... and only freeze bios info once per state, since the user msg could
 	// become really annoying on a corrupted state or something.  (have to always
@@ -123,7 +123,7 @@ void SaveStateBase::FreezeBios()
 				"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
 				"\t\tCurrent Version:   %s\n"
 				"\t\tSavestate Version: %s\n",
-				descout.ToAscii().data(), descin
+				descout.ToUTF8().data(), descin
 			);
 		}
 	}

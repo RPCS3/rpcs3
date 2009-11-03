@@ -123,7 +123,7 @@ static void loadBiosRom( const wxChar *ext, u8 *dest, s64 maxSize )
 		Bios1 = Path::ReplaceExtension( Bios, ext );
 		if( (filesize=Path::GetFileSize( Bios1 ) ) <= 0 )
 		{
-			Console.Warning( "Load Bios Warning: %s not found (this is not an error!)", wxString(ext).ToAscii().data() );
+			Console.Warning( L"Load Bios Warning: %s module not found, skipping... (this is not an error)", ext );
 			return;
 		}
 	}

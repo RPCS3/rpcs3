@@ -436,7 +436,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 		AsciiFile f2( L"mydump1", wxFile::write );
 		f2.Write( ptr, (uptr)x86Ptr - (uptr)ptr );
 	}
-	wxCharBuffer buf( filename.ToAscii() );
+	wxCharBuffer buf( filename.ToUTF8() );
 	const char* filenamea = buf.data();
 	sprintf( command, "objdump -D --target=binary --architecture=i386 -M intel mydump1 | cat %s - > tempdump", filenamea );
 	system( command );

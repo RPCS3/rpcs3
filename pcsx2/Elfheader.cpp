@@ -26,7 +26,7 @@ u32 ElfCRC;
 
 struct ELF_HEADER {
 	u8	e_ident[16];	//0x7f,"ELF"  (ELF file identifier)
-	u16	e_type;		 //ELF type: 0=NONE, 1=REL, 2=EXEC, 3=SHARED, 4=CORE
+	u16	e_type;			//ELF type: 0=NONE, 1=REL, 2=EXEC, 3=SHARED, 4=CORE
 	u16	e_machine;      //Processor: 8=MIPS R3000
 	u32	e_version;      //Version: 1=current
 	u32	e_entry;        //Entry point address
@@ -246,7 +246,7 @@ struct ElfObject
 
 	// Destructor!
 	// C++ does all the cleanup automagically for us.
-	~ElfObject() { }
+	virtual ~ElfObject() { }
 
 	ElfObject( const wxString& srcfile, uint hdrsize ) :
 		filename( srcfile )
@@ -321,11 +321,11 @@ struct ElfObject
 	void readFile()
 	{
 		int rsize = 0;
-		const wxCharBuffer work( filename.ToAscii() );
-		if ((strnicmp( work.data(), "cdrom0:", strlen("cdromN:")) == 0) ||
-			(strnicmp( work.data(), "cdrom1:", strlen("cdromN:")) == 0))
+		const wxCharBuffer work( filename.ToUTF8() );
+		if ((strnicmp( work, "cdrom0:", strlen("cdromN:")) == 0) ||
+			(strnicmp( work, "cdrom1:", strlen("cdromN:")) == 0))
 		{
-			int fi = IsoFS_open(work.data() + strlen("cdromN:"), 1);//RDONLY
+			int fi = IsoFS_open(work + strlen("cdromN:"), 1);//RDONLY
 			
 			if (fi < 0) throw Exception::FileNotFound( filename );
 
@@ -499,12 +499,12 @@ void ElfApplyPatches()
 	/*if(LoadPatch( filename ) != 0)
 	{
 		Console.WriteLn( "XML Loader returned an error. Trying to load a pnach..." );
-		inifile_read( filename.ToAscii().data() );
+		inifile_read( filename.ToUTF8() );
 	}
 	else
 		Console.WriteLn( "XML Loading success. Will not load from pnach..." );*/
 
-    inifile_read( filename.ToAscii().data() );
+    inifile_read( filename.ToUTF8() );
 	applypatch( 0 );
 }
 
@@ -542,9 +542,9 @@ void loadElfFile(const wxString& filename)
 	if( filename.IsEmpty() ) return;
 	
 	s64 elfsize;
-	Console.WriteLn( L"loadElfFile: %s", filename.c_str() );
+	Console.WriteLn( L"loadElfFile: " + filename );
 
-	const wxCharBuffer buffer( filename.ToAscii() );
+	const wxCharBuffer buffer( filename.ToUTF8() );
 	const char* fnptr = buffer.data();
 	bool useCdvdSource=false;
 	

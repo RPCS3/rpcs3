@@ -325,7 +325,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 
 	// get main elf name
 	bool IsPs2 = (GetPS2ElfName(fname) == 2);
-	const wxCharBuffer crap( fname.ToAscii() );
+	const wxCharBuffer crap( fname.To8BitData() );
 	const char* str = crap.data();
 	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
 	DevCon.Warning("exeName = %s", &str[8]);
@@ -515,7 +515,7 @@ static void cdvdDetectDisk()
 	wxString str;
 	bool IsPs2 = (GetPS2ElfName(str) == 2);
 
-    if (IsPs2) reloadElfInfo(str.ToAscii().data());
+    if (IsPs2) reloadElfInfo( str.ToUTF8() );
 }
 
 void cdvdNewDiskCB()

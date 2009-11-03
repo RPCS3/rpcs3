@@ -343,7 +343,7 @@ bool DoCDVDopen()
 		cdvdTD td;
 		CDVD->getTD(0, &td);
 
-		blockDumpFile = isoCreate(temp.ToAscii().data(), ISOFLAGS_BLOCKDUMP_V3);
+		blockDumpFile = isoCreate(temp.ToUTF8(), ISOFLAGS_BLOCKDUMP_V3);
 
 		if( blockDumpFile != NULL )
 		{

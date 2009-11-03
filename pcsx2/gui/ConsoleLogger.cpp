@@ -20,7 +20,6 @@
 #include "Utilities/Console.h"
 #include "DebugTools/Debug.h"
 
-#include <wx/file.h>
 #include <wx/textfile.h>
 
 #ifdef __WXMSW__
