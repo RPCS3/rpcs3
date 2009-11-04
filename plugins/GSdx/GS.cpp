@@ -144,31 +144,6 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 	try
 	{
-		GSFreezeData tempsave = { 0, NULL };
-
-		if(s_gs && (s_renderer != renderer))
-		{
-			// This isn't a "normal" suspend resume case -- We need to swap renderers, but
-			// we have to preserve the GSState at the same time, so quick-save it to the
-			// tempsave, and then recover below after the new GSRenderer is in place.
-
-			s_gs->Freeze(&tempsave, true);
-
-			tempsave.data = (uint8*)_aligned_malloc( tempsave.size, 16 );
-
-			if(!tempsave.data)
-			{
-				throw std::bad_alloc("Failed allocating buffer for device-change savestate.");
-			}
-
-			s_gs->Freeze( &tempsave, false );
-
-			delete s_gs;
-
-			s_gs = NULL;
-			s_renderer = -1;
-		}
-
 		switch(renderer)
 		{
 		default: 
@@ -202,12 +177,6 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 			}
 
 			s_renderer = renderer;
-		}
-
-		if(tempsave.data)
-		{
-			s_gs->Defrost(&tempsave);
-			_aligned_free(tempsave.data);
 		}
 	}
 	catch( std::exception& ex )
