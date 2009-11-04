@@ -119,10 +119,10 @@ namespace YAML
 			return ScanDirective();
 
 		// document token
-		if(INPUT.column() == 0 && Exp::DocStart.Matches(INPUT))
+		if(INPUT.column() == 0 && Exp::DocStart().Matches(INPUT))
 			return ScanDocStart();
 
-		if(INPUT.column() == 0 && Exp::DocEnd.Matches(INPUT))
+		if(INPUT.column() == 0 && Exp::DocEnd().Matches(INPUT))
 			return ScanDocEnd();
 
 		// flow start/end/entry
@@ -136,10 +136,10 @@ namespace YAML
 			return ScanFlowEntry();
 
 		// block/map stuff
-		if(Exp::BlockEntry.Matches(INPUT))
+		if(Exp::BlockEntry().Matches(INPUT))
 			return ScanBlockEntry();
 
-		if((InBlockContext() ? Exp::Key : Exp::KeyInFlow).Matches(INPUT))
+		if((InBlockContext() ? Exp::Key() : Exp::KeyInFlow()).Matches(INPUT))
 			return ScanKey();
 
 		if(GetValueRegex().Matches(INPUT))
@@ -161,7 +161,7 @@ namespace YAML
 			return ScanQuotedScalar();
 
 		// plain scalars
-		if((InBlockContext() ? Exp::PlainScalar : Exp::PlainScalarInFlow).Matches(INPUT))
+		if((InBlockContext() ? Exp::PlainScalar() : Exp::PlainScalarInFlow()).Matches(INPUT))
 			return ScanPlainScalar();
 
 		// don't know what it is!
@@ -175,24 +175,24 @@ namespace YAML
 		while(1) {
 			// first eat whitespace
 			while(INPUT && IsWhitespaceToBeEaten(INPUT.peek())) {
-				if(InBlockContext() && Exp::Tab.Matches(INPUT))
+				if(InBlockContext() && Exp::Tab().Matches(INPUT))
 					m_simpleKeyAllowed = false;
 				INPUT.eat(1);
 			}
 
 			// then eat a comment
-			if(Exp::Comment.Matches(INPUT)) {
+			if(Exp::Comment().Matches(INPUT)) {
 				// eat until line break
-				while(INPUT && !Exp::Break.Matches(INPUT))
+				while(INPUT && !Exp::Break().Matches(INPUT))
 					INPUT.eat(1);
 			}
 
 			// if it's NOT a line break, then we're done!
-			if(!Exp::Break.Matches(INPUT))
+			if(!Exp::Break().Matches(INPUT))
 				break;
 
 			// otherwise, let's eat the line break and keep going
-			int n = Exp::Break.Match(INPUT);
+			int n = Exp::Break().Match(INPUT);
 			INPUT.eat(n);
 
 			// oh yeah, and let's get rid of that simple key
@@ -231,9 +231,9 @@ namespace YAML
 	const RegEx& Scanner::GetValueRegex() const
 	{
 		if(InBlockContext())
-			return Exp::Value;
+			return Exp::Value();
 		
-		return m_canBeJSONFlow ? Exp::ValueInJSONFlow : Exp::ValueInFlow;
+		return m_canBeJSONFlow ? Exp::ValueInJSONFlow() : Exp::ValueInFlow();
 	}
 
 	// StartStream
@@ -323,7 +323,7 @@ namespace YAML
 			const IndentMarker& indent = *m_indents.top();
 			if(indent.column < INPUT.column())
 				break;
-			if(indent.column == INPUT.column() && !(indent.type == IndentMarker::SEQ && !Exp::BlockEntry.Matches(INPUT)))
+			if(indent.column == INPUT.column() && !(indent.type == IndentMarker::SEQ && !Exp::BlockEntry().Matches(INPUT)))
 				break;
 				
 			PopIndent();

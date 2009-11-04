@@ -17,54 +17,153 @@ namespace YAML
 	namespace Exp
 	{
 		// misc
-		const RegEx Space = RegEx(' ');
-		const RegEx Tab = RegEx('\t');
-		const RegEx Blank = Space || Tab;
-		const RegEx Break = RegEx('\n') || RegEx("\r\n");
-		const RegEx BlankOrBreak = Blank || Break;
-		const RegEx Digit = RegEx('0', '9');
-		const RegEx Alpha = RegEx('a', 'z') || RegEx('A', 'Z');
-		const RegEx AlphaNumeric = Alpha || Digit;
-		const RegEx Word = AlphaNumeric || RegEx('-');
-		const RegEx Hex = Digit || RegEx('A', 'F') || RegEx('a', 'f');
+		inline const RegEx& Space() {
+			static const RegEx e = RegEx(' ');
+			return e;
+		}
+		inline const RegEx& Tab() {
+			static const RegEx e = RegEx('\t');
+			return e;
+		}
+		inline const RegEx& Blank() {
+			static const RegEx e = Space() || Tab();
+			return e;
+		}
+		inline const RegEx& Break() {
+			static const RegEx e = RegEx('\n') || RegEx("\r\n");
+			return e;
+		}
+		inline const RegEx& BlankOrBreak() {
+			static const RegEx e = Blank() || Break();
+			return e;
+		}
+		inline const RegEx& Digit() {
+			static const RegEx e = RegEx('0', '9');
+			return e;
+		}
+		inline const RegEx& Alpha() {
+			static const RegEx e = RegEx('a', 'z') || RegEx('A', 'Z');
+			return e;
+		}
+		inline const RegEx& AlphaNumeric() {
+			static const RegEx e = Alpha() || Digit();
+			return e;
+		}
+		inline const RegEx& Word() {
+			static const RegEx e = AlphaNumeric() || RegEx('-');
+			return e;
+		}
+		inline const RegEx& Hex() {
+			static const RegEx e = Digit() || RegEx('A', 'F') || RegEx('a', 'f');
+			return e;
+		}
 		// Valid Unicode code points that are not part of c-printable (YAML 1.2, sec. 5.1)
-		const RegEx NotPrintable = RegEx(0) || 
-			RegEx("\x01\x02\x03\x04\x05\x06\x07\x08\x0B\x0C\x7F", REGEX_OR) || 
-			RegEx(0x0E, 0x1F) ||
-			(RegEx('\xC2') + (RegEx('\x80', '\x84') || RegEx('\x86', '\x9F')));
-		const RegEx Utf8_ByteOrderMark = RegEx("\xEF\xBB\xBF");
+		inline const RegEx& NotPrintable() {
+			static const RegEx e = RegEx(0) || 
+				RegEx("\x01\x02\x03\x04\x05\x06\x07\x08\x0B\x0C\x7F", REGEX_OR) || 
+				RegEx(0x0E, 0x1F) ||
+				(RegEx('\xC2') + (RegEx('\x80', '\x84') || RegEx('\x86', '\x9F')));
+			return e;
+		}
+		inline const RegEx& Utf8_ByteOrderMark() {
+			static const RegEx e = RegEx("\xEF\xBB\xBF");
+			return e;
+		}
 
 		// actual tags
 
-		const RegEx DocStart = RegEx("---") + (BlankOrBreak || RegEx());
-		const RegEx DocEnd = RegEx("...") + (BlankOrBreak || RegEx());
-		const RegEx DocIndicator = DocStart || DocEnd;
-		const RegEx BlockEntry = RegEx('-') + (BlankOrBreak || RegEx());
-		const RegEx Key = RegEx('?'),
-		            KeyInFlow = RegEx('?') + BlankOrBreak;
-		const RegEx Value = RegEx(':') + (BlankOrBreak || RegEx()),
-		            ValueInFlow = RegEx(':') + (BlankOrBreak || RegEx(",}", REGEX_OR)),
-		            ValueInJSONFlow = RegEx(':');
-		const RegEx Comment = RegEx('#');
-		const RegEx AnchorEnd = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak;
-		const RegEx URI = Word || RegEx("#;/?:@&=+$,_.!~*'()[]", REGEX_OR) || (RegEx('%') + Hex + Hex);
-		const RegEx Tag = Word || RegEx("#;/?:@&=+$_.~*'", REGEX_OR) || (RegEx('%') + Hex + Hex);
+		inline const RegEx& DocStart() {
+			static const RegEx e = RegEx("---") + (BlankOrBreak() || RegEx());
+			return e;
+		}
+		inline const RegEx& DocEnd() {
+			static const RegEx e = RegEx("...") + (BlankOrBreak() || RegEx());
+			return e;
+		}
+		inline const RegEx& DocIndicator() {
+			static const RegEx e = DocStart || DocEnd;
+			return e;
+		}
+		inline const RegEx& BlockEntry() {
+			static const RegEx e = RegEx('-') + (BlankOrBreak() || RegEx());
+			return e;
+		}
+		inline const RegEx& Key() {
+			static const RegEx e = RegEx('?');
+			return e;
+		}
+		inline const RegEx& KeyInFlow() {
+			static const RegEx e = RegEx('?') + BlankOrBreak();
+			return e;
+		}
+		inline const RegEx& Value() {
+			static const RegEx e = RegEx(':') + (BlankOrBreak() || RegEx());
+			return e;
+		}
+		inline const RegEx& ValueInFlow() {
+			static const RegEx e = RegEx(':') + (BlankOrBreak() || RegEx(",}", REGEX_OR));
+			return e;
+		}
+		inline const RegEx& ValueInJSONFlow() {
+			static const RegEx e = RegEx(':');
+			return e;
+		}
+		inline const RegEx Comment() {
+			static const RegEx e = RegEx('#');
+			return e;
+		}
+		inline const RegEx& AnchorEnd() {
+			static const RegEx e = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak();
+			return e;
+		}
+		inline const RegEx& URI() {
+			static const RegEx e = Word() || RegEx("#;/?:@&=+$,_.!~*'()[]", REGEX_OR) || (RegEx('%') + Hex() + Hex());
+			return e;
+		}
+		inline const RegEx& Tag() {
+			static const RegEx e = Word() || RegEx("#;/?:@&=+$_.~*'", REGEX_OR) || (RegEx('%') + Hex() + Hex());
+			return e;
+		}
 
 		// Plain scalar rules:
 		// . Cannot start with a blank.
 		// . Can never start with any of , [ ] { } # & * ! | > \' \" % @ `
 		// . In the block context - ? : must be not be followed with a space.
 		// . In the flow context ? is illegal and : and - must not be followed with a space.
-		const RegEx PlainScalar = !(BlankOrBreak || RegEx(",[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-?:", REGEX_OR) + Blank)),
-		            PlainScalarInFlow = !(BlankOrBreak || RegEx("?,[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-:", REGEX_OR) + Blank));
-		const RegEx EndScalar = RegEx(':') + (BlankOrBreak || RegEx()),
-		            EndScalarInFlow = (RegEx(':') + (BlankOrBreak || RegEx(",]}", REGEX_OR))) || RegEx(",?[]{}", REGEX_OR);
+		inline const RegEx& PlainScalar() {
+			static const RegEx e = !(BlankOrBreak() || RegEx(",[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-?:", REGEX_OR) + Blank()));
+			return e;
+		}
+		inline const RegEx& PlainScalarInFlow() {
+			static const RegEx e = !(BlankOrBreak() || RegEx("?,[]{}#&*!|>\'\"%@`", REGEX_OR) || (RegEx("-:", REGEX_OR) + Blank()));
+			return e;
+		}
+		inline const RegEx& EndScalar() {
+			static const RegEx e = RegEx(':') + (BlankOrBreak() || RegEx());
+			return e;
+		}
+		inline const RegEx& EndScalarInFlow() {
+			static const RegEx e = (RegEx(':') + (BlankOrBreak() || RegEx(",]}", REGEX_OR))) || RegEx(",?[]{}", REGEX_OR);
+			return e;
+		}
 
-		const RegEx EscSingleQuote = RegEx("\'\'");
-		const RegEx EscBreak = RegEx('\\') + Break;
+		inline const RegEx& EscSingleQuote() {
+			static const RegEx e = RegEx("\'\'");
+			return e;
+		}
+		inline const RegEx& EscBreak() {
+			static const RegEx e = RegEx('\\') + Break();
+			return e;
+		}
 
-		const RegEx ChompIndicator = RegEx("+-", REGEX_OR);
-		const RegEx Chomp = (ChompIndicator + Digit) || (Digit + ChompIndicator) || ChompIndicator || Digit;
+		inline const RegEx& ChompIndicator() {
+			static const RegEx e = RegEx("+-", REGEX_OR);
+			return e;
+		}
+		inline const RegEx& Chomp() {
+			static const RegEx e = (ChompIndicator() + Digit()) || (Digit() + ChompIndicator()) || ChompIndicator() || Digit();
+			return e;
+		}
 
 		// and some functions
 		std::string Escape(Stream& in);

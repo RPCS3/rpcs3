@@ -129,7 +129,7 @@ namespace YAML
 			
 			bool IsValidPlainScalar(const std::string& str, bool inFlow, bool allowOnlyAscii) {
 				// first check the start
-				const RegEx& start = (inFlow ? Exp::PlainScalarInFlow : Exp::PlainScalar);
+				const RegEx& start = (inFlow ? Exp::PlainScalarInFlow() : Exp::PlainScalar());
 				if(!start.Matches(str))
 					return false;
 				
@@ -138,12 +138,12 @@ namespace YAML
 					return false;
 
 				// then check until something is disallowed
-				const RegEx& disallowed = (inFlow ? Exp::EndScalarInFlow : Exp::EndScalar)
-				                          || (Exp::BlankOrBreak + Exp::Comment)
-				                          || Exp::NotPrintable
-				                          || Exp::Utf8_ByteOrderMark
-				                          || Exp::Break
-				                          || Exp::Tab;
+				const RegEx& disallowed = (inFlow ? Exp::EndScalarInFlow() : Exp::EndScalar())
+				                          || (Exp::BlankOrBreak() + Exp::Comment())
+				                          || Exp::NotPrintable()
+				                          || Exp::Utf8_ByteOrderMark()
+				                          || Exp::Break()
+				                          || Exp::Tab();
 				StringCharSource buffer(str.c_str(), str.size());
 				while(buffer) {
 					if(disallowed.Matches(buffer))
@@ -299,7 +299,7 @@ namespace YAML
 			out << "!<";
 			StringCharSource buffer(str.c_str(), str.size());
 			while(buffer) {
-				int n = Exp::URI.Match(buffer);
+				int n = Exp::URI().Match(buffer);
 				if(n <= 0)
 					return false;
 

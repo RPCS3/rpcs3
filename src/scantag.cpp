@@ -19,7 +19,7 @@ namespace YAML
 				return tag;
 			}
 		
-			int n = Exp::URI.Match(INPUT);
+			int n = Exp::URI().Match(INPUT);
 			if(n <= 0)
 				break;
 			
@@ -44,7 +44,7 @@ namespace YAML
 
 			int n = 0;
 			if(canBeHandle) {
-				n = Exp::Word.Match(INPUT);
+				n = Exp::Word().Match(INPUT);
 				if(n <= 0) {
 					canBeHandle = false;
 					firstNonWordChar = INPUT.mark();
@@ -52,7 +52,7 @@ namespace YAML
 			}
 			
 			if(!canBeHandle)
-				n = Exp::Tag.Match(INPUT);
+				n = Exp::Tag().Match(INPUT);
 
 			if(n <= 0)
 				break;
@@ -68,7 +68,7 @@ namespace YAML
 		std::string tag;
 		
 		while(INPUT) {
-			int n = Exp::Tag.Match(INPUT);
+			int n = Exp::Tag().Match(INPUT);
 			if(n <= 0)
 				break;
 			

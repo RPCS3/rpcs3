@@ -31,22 +31,22 @@ namespace YAML
 		INPUT.eat(1);
 
 		// read name
-		while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
+		while(INPUT && !Exp::BlankOrBreak().Matches(INPUT))
 			token.value += INPUT.get();
 
 		// read parameters
 		while(1) {
 			// first get rid of whitespace
-			while(Exp::Blank.Matches(INPUT))
+			while(Exp::Blank().Matches(INPUT))
 				INPUT.eat(1);
 
 			// break on newline or comment
-			if(!INPUT || Exp::Break.Matches(INPUT) || Exp::Comment.Matches(INPUT))
+			if(!INPUT || Exp::Break().Matches(INPUT) || Exp::Comment().Matches(INPUT))
 				break;
 
 			// now read parameter
 			std::string param;
-			while(INPUT && !Exp::BlankOrBreak.Matches(INPUT))
+			while(INPUT && !Exp::BlankOrBreak().Matches(INPUT))
 				param += INPUT.get();
 
 			token.params.push_back(param);
@@ -238,7 +238,7 @@ namespace YAML
 		alias = (indicator == Keys::Alias);
 
 		// now eat the content
-		while(Exp::AlphaNumeric.Matches(INPUT))
+		while(Exp::AlphaNumeric().Matches(INPUT))
 			name += INPUT.get();
 
 		// we need to have read SOMETHING!
@@ -246,7 +246,7 @@ namespace YAML
 			throw ParserException(INPUT.mark(), alias ? ErrorMsg::ALIAS_NOT_FOUND : ErrorMsg::ANCHOR_NOT_FOUND);
 
 		// and needs to end correctly
-		if(INPUT && !Exp::AnchorEnd.Matches(INPUT))
+		if(INPUT && !Exp::AnchorEnd().Matches(INPUT))
 			throw ParserException(INPUT.mark(), alias ? ErrorMsg::CHAR_IN_ALIAS : ErrorMsg::CHAR_IN_ANCHOR);
 
 		// and we're done
@@ -297,7 +297,7 @@ namespace YAML
 
 		// set up the scanning parameters
 		ScanScalarParams params;
-		params.end = (InFlowContext() ? Exp::EndScalarInFlow : Exp::EndScalar) || (Exp::BlankOrBreak + Exp::Comment);
+		params.end = (InFlowContext() ? Exp::EndScalarInFlow() : Exp::EndScalar()) || (Exp::BlankOrBreak() + Exp::Comment());
 		params.eatEnd = false;
 		params.indent = (InFlowContext() ? 0 : GetTopIndent() + 1);
 		params.fold = FOLD_FLOW;
@@ -337,7 +337,7 @@ namespace YAML
 
 		// setup the scanning parameters
 		ScanScalarParams params;
-		params.end = (single ? RegEx(quote) && !Exp::EscSingleQuote : RegEx(quote));
+		params.end = (single ? RegEx(quote) && !Exp::EscSingleQuote() : RegEx(quote));
 		params.eatEnd = true;
 		params.escape = (single ? '\'' : '\\');
 		params.indent = 0;
@@ -384,14 +384,14 @@ namespace YAML
 
 		// eat chomping/indentation indicators
 		params.chomp = CLIP;
-		int n = Exp::Chomp.Match(INPUT);
+		int n = Exp::Chomp().Match(INPUT);
 		for(int i=0;i<n;i++) {
 			char ch = INPUT.get();
 			if(ch == '+')
 				params.chomp = KEEP;
 			else if(ch == '-')
 				params.chomp = STRIP;
-			else if(Exp::Digit.Matches(ch)) {
+			else if(Exp::Digit().Matches(ch)) {
 				if(ch == '0')
 					throw ParserException(INPUT.mark(), ErrorMsg::ZERO_INDENT_IN_BLOCK);
 
@@ -401,16 +401,16 @@ namespace YAML
 		}
 
 		// now eat whitespace
-		while(Exp::Blank.Matches(INPUT))
+		while(Exp::Blank().Matches(INPUT))
 			INPUT.eat(1);
 
 		// and comments to the end of the line
-		if(Exp::Comment.Matches(INPUT))
-			while(INPUT && !Exp::Break.Matches(INPUT))
+		if(Exp::Comment().Matches(INPUT))
+			while(INPUT && !Exp::Break().Matches(INPUT))
 				INPUT.eat(1);
 
 		// if it's not a line break, then we ran into a bad character inline
-		if(INPUT && !Exp::Break.Matches(INPUT))
+		if(INPUT && !Exp::Break().Matches(INPUT))
 			throw ParserException(INPUT.mark(), ErrorMsg::CHAR_IN_BLOCK);
 
 		// set the initial indentation

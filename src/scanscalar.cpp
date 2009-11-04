@@ -32,12 +32,12 @@ namespace YAML
 			
 			std::size_t lastNonWhitespaceChar = scalar.size();
 			bool escapedNewline = false;
-			while(!params.end.Matches(INPUT) && !Exp::Break.Matches(INPUT)) {
+			while(!params.end.Matches(INPUT) && !Exp::Break().Matches(INPUT)) {
 				if(!INPUT)
 					break;
 
 				// document indicator?
-				if(INPUT.column() == 0 && Exp::DocIndicator.Matches(INPUT)) {
+				if(INPUT.column() == 0 && Exp::DocIndicator().Matches(INPUT)) {
 					if(params.onDocIndicator == BREAK)
 						break;
 					else if(params.onDocIndicator == THROW)
@@ -48,7 +48,7 @@ namespace YAML
 				pastOpeningBreak = true;
 
 				// escaped newline? (only if we're escaping on slash)
-				if(params.escape == '\\' && Exp::EscBreak.Matches(INPUT)) {
+				if(params.escape == '\\' && Exp::EscBreak().Matches(INPUT)) {
 					// eat escape character and get out (but preserve trailing whitespace!)
 					INPUT.get();
 					lastNonWhitespaceChar = scalar.size();
@@ -78,7 +78,7 @@ namespace YAML
 			}
 
 			// doc indicator?
-			if(params.onDocIndicator == BREAK && INPUT.column() == 0 && Exp::DocIndicator.Matches(INPUT))
+			if(params.onDocIndicator == BREAK && INPUT.column() == 0 && Exp::DocIndicator().Matches(INPUT))
 				break;
 
 			// are we done via character match?
@@ -95,7 +95,7 @@ namespace YAML
 			
 			// ********************************
 			// Phase #2: eat line ending
-			n = Exp::Break.Match(INPUT);
+			n = Exp::Break().Match(INPUT);
 			INPUT.eat(n);
 
 			// ********************************
@@ -110,7 +110,7 @@ namespace YAML
 				params.indent = std::max(params.indent, INPUT.column());
 
 			// and then the rest of the whitespace
-			while(Exp::Blank.Matches(INPUT)) {
+			while(Exp::Blank().Matches(INPUT)) {
 				// we check for tabs that masquerade as indentation
 				if(INPUT.peek() == '\t'&& INPUT.column() < params.indent && params.onTabInIndentation == THROW)
 					throw ParserException(INPUT.mark(), ErrorMsg::TAB_IN_INDENTATION);
@@ -122,8 +122,8 @@ namespace YAML
 			}
 
 			// was this an empty line?
-			bool nextEmptyLine = Exp::Break.Matches(INPUT);
-			bool nextMoreIndented = Exp::Blank.Matches(INPUT);
+			bool nextEmptyLine = Exp::Break().Matches(INPUT);
+			bool nextMoreIndented = Exp::Blank().Matches(INPUT);
 			if(params.fold == FOLD_BLOCK && foldedNewlineCount == 0 && nextEmptyLine)
 				foldedNewlineStartedMoreIndented = moreIndented;
 
