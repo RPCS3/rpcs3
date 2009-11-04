@@ -76,6 +76,7 @@ public:
 		ValkyrieProfile2,
 		RadiataStories,
 		SMTNocturne,
+		SMTDDS1,
 		RozenMaidenGebetGarden,
 		TitleCount,
 	};

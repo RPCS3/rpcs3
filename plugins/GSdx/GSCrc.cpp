@@ -127,7 +127,8 @@ CRC::Game CRC::m_games[] =
 	{0x2F123FD8, GodOfWar2, RU, 0},
 	{0x2F123FD8, GodOfWar2, US, 0},
 	{0x44A8A22A, GodOfWar2, EU, 0},
-	{0x4340C7C6, GodOfWar2, Unknown, 0},	
+	{0x4340C7C6, GodOfWar2, Unknown, 0},
+	{0xF8CD3DF6, GodOfWar2, Unknown, 0},
 	{0x5D482F18, JackieChanAdv, Unknown, 0},
 	{0xf0a6d880, HarvestMoon, US, 0},
 	{0x75c01a04, NamcoXCapcom, US, 0},
@@ -148,6 +149,8 @@ CRC::Game CRC::m_games[] =
 	{0x04CCB600, ValkyrieProfile2, EU, 0},
 	{0x47B9B2FD, RadiataStories, US, 0},
 	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear}, // saves/reloads z buffer around shadow drawing
+	{0xD7273511, SMTDDS1, US, ZWriteMustNotClear},     // saves/reloads z buffer around shadow drawing
+	{0x1683A6BE, SMTDDS1, EU, ZWriteMustNotClear},     // saves/reloads z buffer around shadow drawing
 	{0x0B8AB37B, RozenMaidenGebetGarden, JP, 0},
 };
 
