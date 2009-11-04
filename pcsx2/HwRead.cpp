@@ -38,13 +38,6 @@ static __forceinline void IntCHackCheck()
 	// on the few times nextBranchCycle can be behind our current cycle.
 	s32 diff = g_nextBranchCycle - cpuRegs.cycle;
 	if( diff > 0 ) cpuRegs.cycle = g_nextBranchCycle;
-
-	// Threshold method, might fix games that have problems with the simple
-	// implementation above (none known that break yet)
-	/*if( ( g_nextBranchCycle - cpuRegs.cycle ) > 500 )
-		cpuRegs.cycle += 498;
-	else
-		cpuRegs.cycle = g_nextBranchCycle - 2;*/
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -54,8 +47,10 @@ __forceinline mem8_t hwRead8(u32 mem)
 {
 	u8 ret;
 
-	if( mem >= IPU_CMD && mem < D0_CHCR )
-		DevCon.Warning("Unexpected hwRead8 from 0x%x", mem);
+	if( mem >= IPU_CMD && mem < D0_CHCR ) return;
+	// TODO re-implement this warning along with a *complete* logging of all hw activity.
+	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
+	//DevCon.Warning("Unexpected hwRead8 from 0x%x", mem);
 
 	switch (mem)
 	{
@@ -127,8 +122,10 @@ __forceinline mem16_t hwRead16(u32 mem)
 {
 	u16 ret;
 
-	if( mem >= IPU_CMD && mem < D0_CHCR )
-		Console.Warning("Unexpected hwRead16 from 0x%x", mem);
+	if( mem >= IPU_CMD && mem < D0_CHCR ) return;
+	// TODO re-implement this warning along with a *complete* logging of all hw activity.
+	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
+	//	Console.Warning("Unexpected hwRead16 from 0x%x", mem);
 
 	switch (mem)
 	{
