@@ -405,14 +405,10 @@ bool StateCopy_IsValid()
 	return !state_buffer.IsDisposed();
 }
 
-bool StateCopy_HasFullState()
+const SafeArray<u8>* StateCopy_GetBuffer()
 {
-	return false;
-}
-
-bool StateCopy_HasPartialState()
-{
-	return false;
+	if( state_buffer_lock.IsLocked() || state_buffer.IsDisposed() ) return NULL;
+	return &state_buffer;
 }
 
 void StateCopy_FreezeToMem()

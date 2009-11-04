@@ -830,15 +830,8 @@ void mtgsThreadObject::WaitForOpen()
 
 void mtgsThreadObject::Freeze( int mode, MTGS_FreezeData& data )
 {
-	if( mode == FREEZE_LOAD )
-	{
-		WaitGS();
-		SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
-		SetEvent();
-		Resume();
-	}
-	else
-		SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
-
-	mtgsThread.WaitGS();
+	SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
+	SetEvent();
+	Resume();
+	WaitGS();
 }

@@ -448,7 +448,8 @@ protected:
 	void CleanupMess();
 	void OpenWizardConsole();
 
-	void HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const;
+	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const;
+	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
 
 	void OnSysExecute( wxCommandEvent& evt );
 	void OnReloadPlugins( wxCommandEvent& evt );

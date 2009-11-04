@@ -234,7 +234,12 @@ wxString BIOS_GetMsg_Required()
 }
 
 
-void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent& event) const
+void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const
+{
+	const_cast<Pcsx2App*>(this)->HandleEvent( handler, func, event );
+}
+
+void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event)
 {
 	try {
 		(handler->*func)(event);
@@ -250,12 +255,35 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 		if( !result )
 			Console.Warning( "User denied option to re-configure BIOS." );
 
-		if( (wxTheApp != NULL) && (Dialogs::BiosSelectorDialog().ShowModal() != wxID_CANCEL) )
+		if( Dialogs::BiosSelectorDialog().ShowModal() != wxID_CANCEL )
 		{
-			sApp.SysExecute();
+			SysExecute();
 		}
 		else
 			Console.Warning( "User canceled BIOS configuration." );
+	}
+	// ----------------------------------------------------------------------------
+	catch( Exception::PluginInitError& ex )
+	{
+		if( m_CorePlugins ) m_CorePlugins->Shutdown();
+
+		Console.Error( ex.FormatDiagnosticMessage() );
+		if( !HandlePluginError( ex ) )
+		{
+			Console.Error( L"User-canceled plugin configuration after plugin initialization failure.  Plugins unloaded." );
+			Msgbox::Alert( _("Warning!  System plugins have not been loaded.  PCSX2 may be inoperable.") );
+		}
+	}
+	catch( Exception::PluginError& ex )
+	{
+		if( m_CorePlugins ) m_CorePlugins->Close();
+
+		Console.Error( ex.FormatDiagnosticMessage() );
+		if( !HandlePluginError( ex ) )
+		{
+			Console.Error( L"User-canceled plugin configuration; Plugins not loaded!" );
+			Msgbox::Alert( _("Warning!  System plugins have not been loaded.  PCSX2 may be inoperable.") );
+		}
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::CancelEvent& ex )
@@ -268,16 +296,6 @@ void Pcsx2App::HandleEvent(wxEvtHandler *handler, wxEventFunction func, wxEvent&
 		// Saved state load failed.
 		Console.Warning( ex.FormatDiagnosticMessage() );
 		CoreThread.Resume();
-	}
-	// ----------------------------------------------------------------------------
-	catch( Exception::PluginError& ex )
-	{
-		Console.Error( ex.FormatDiagnosticMessage() );
-		if( !HandlePluginError( ex ) )
-		{
-			Console.Error( L"User-canceled plugin configuration after load failure.  Plugins not loaded!" );
-			Msgbox::Alert( _("Warning!  Plugins have not been loaded.  PCSX2 will be inoperable.") );
-		}
 	}
 	// ----------------------------------------------------------------------------
 	catch( Exception::RuntimeError& ex )
@@ -347,7 +365,7 @@ int Pcsx2App::OnExit()
 	if( g_Conf )
 		AppSaveSettings();
 		
-	sMainFrame.PopEventHandler( m_RecentIsoList );
+	sMainFrame.RemoveEventHandler( m_RecentIsoList );
 
 	m_RecentIsoList = NULL;
 	m_RecentIsoMenu = NULL;
@@ -582,7 +600,7 @@ void Pcsx2App::SysReset()
 // state (such as saving it), you *must* suspend the Corethread first!
 __forceinline bool SysHasValidState()
 {
-	return CoreThread.HasValidState() || StateCopy_HasFullState();
+	return CoreThread.HasValidState() || StateCopy_IsValid();
 }
 
 // Writes text to console and updates the window status bar and/or HUD or whateverness.

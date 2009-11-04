@@ -218,7 +218,7 @@ namespace Exception
 	};
 
 	// ---------------------------------------------------------------------------------------
-	//  OutOfMemory / InvalidOperation / InvalidArgument / IndexBoundsFault / ParseError
+	//  OutOfMemory / InvalidOperation / InvalidArgument / ParseError
 	// ---------------------------------------------------------------------------------------
 
 	class OutOfMemory : public virtual RuntimeError
@@ -243,32 +243,6 @@ namespace Exception
 	{
 	public:
 		DEFINE_LOGIC_EXCEPTION( InvalidArgument, "Invalid argument passed to a function." )
-	};
-
-	// Keep those array indexers in bounds when using the SafeArray type, or you'll be
-	// seeing these.
-	//
-	class IndexBoundsFault : public virtual LogicError
-	{
-	public:
-		wxString ArrayName;
-		int ArrayLength;
-		int BadIndex;
-
-	public:
-		DEFINE_EXCEPTION_COPYTORS( IndexBoundsFault )
-
-		IndexBoundsFault( const wxString& objname, int index, int arrsize )
-		{
-			BaseException::InitBaseEx( "Index is outside the bounds of an array." );
-
-			ArrayName	= objname;
-			ArrayLength	= arrsize;
-			BadIndex	= index;
-		}
-
-		virtual wxString FormatDiagnosticMessage() const;
-		virtual wxString FormatDisplayMessage() const;
 	};
 
 	class ParseError : public RuntimeError

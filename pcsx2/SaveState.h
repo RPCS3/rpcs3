@@ -34,6 +34,7 @@ extern s32 CALLBACK gsSafeFreeze( int mode, freezeData *data );
 
 enum FreezeSectionId
 {
+	FreezeId_NotSeeking = -2,
 	FreezeId_End,
 
 	// A BIOS tag should always be saved in conjunction with Memory or Registers tags,
@@ -115,7 +116,8 @@ public:
 		m_idx += size;
 	}
 
-	bool FreezeSection();
+	void WritebackSectionLength( int seekpos, int sectlen, const wxChar* sectname );
+	bool FreezeSection( int seek_section = FreezeId_NotSeeking );
 
 	// Freezes an identifier value into the savestate for troubleshooting purposes.
 	// Identifiers can be used to determine where in a savestate that data has become
@@ -193,13 +195,13 @@ public:
 
 	// Loading of state data from a memory buffer...
 	void FreezeMem( void* data, int size );
+	bool SeekToSection( PluginsEnum_t pid );
+	
 	bool IsSaving() const { return false; }
 	bool IsFinished() const { return m_idx >= m_memory.GetSizeInBytes(); }
 };
 
 extern bool StateCopy_IsValid();
-extern bool StateCopy_HasFullState();
-extern bool StateCopy_HasPartialState();
 
 extern void StateCopy_FreezeToMem();
 extern void StateCopy_ThawFromMem();
@@ -209,3 +211,5 @@ extern void StateCopy_SaveToSlot( uint num );
 extern void StateCopy_LoadFromSlot( uint slot );
 extern void StateCopy_Clear();
 extern bool StateCopy_IsBusy();
+
+extern const SafeArray<u8>* StateCopy_GetBuffer();

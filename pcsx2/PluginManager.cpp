@@ -995,9 +995,10 @@ void PluginManager::Init()
 			printlog = true;
 		}
 		Console.WriteLn( "\tInit %s", tbl_PluginInfo[pid].shortname );
-		m_info[pid].IsInitialized = true;
 		if( 0 != m_info[pid].CommonBindings.Init() )
 			throw Exception::PluginInitError( pid );
+
+		m_info[pid].IsInitialized = true;
 	} while( ++pi, pi->shortname != NULL );
 
 	if( SysPlugins.Mcd == NULL )

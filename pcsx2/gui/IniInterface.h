@@ -71,7 +71,7 @@ public:
 	}
 
 protected:
-	virtual void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )=0;
+	virtual void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue )=0;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -118,7 +118,7 @@ public:
 	void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect );
 
 protected:
-	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue );
+	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue );
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -153,7 +153,7 @@ public:
 	void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect );
 
 protected:
-	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue );
+	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue );
 };
 
 // ------------------------------------------------------------------------

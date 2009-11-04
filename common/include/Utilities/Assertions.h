@@ -79,6 +79,17 @@
 
 #define pxAssert(cond)				pxAssertMsg(cond, (wxChar*)NULL)
 
+// Performs an unsigned index bounds check, and generates a debug assertion if the check fails.
+// For stricter checking in Devel builds as well as debug builds (but possibly slower), use
+// IndexBoundsCheckDev.
+
+#define IndexBoundsCheck( objname, idx, sze )		pxAssertMsg( (uint)(idx) < (uint)(sze), \
+	wxsFormat( L"Array index out of bounds accessing object '%s' (index=%d, size=%d)", objname, (idx), (sze) ) )
+
+#define IndexBoundsCheckDev( objname, idx, sze )	pxAssertDev( (uint)(idx) < (uint)(sze), \
+	wxsFormat( L"Array index out of bounds accessing object '%s' (index=%d, size=%d)", objname, (idx), (sze) ) )
+
+
 extern void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const wxChar* msg);
 extern void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const char* msg);
 

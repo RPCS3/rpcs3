@@ -180,12 +180,12 @@ public:
 	}
 
 	// Gets a pointer to the requested allocation index.
-	// DevBuilds : Throws Exception::IndexBoundsFault() if the index is invalid.
+	// DevBuilds : Generates assertion if the index is invalid.
 	T *GetPtr( uint idx=0 ) { return _getPtr( idx ); }
 	const T *GetPtr( uint idx=0 ) const { return _getPtr( idx ); }
 
 	// Gets an element of this memory allocation much as if it were an array.
-	// DevBuilds : Throws Exception::IndexBoundsFault() if the index is invalid.
+	// DevBuilds : Generates assertion if the index is invalid.
 	T& operator[]( int idx ) { return *_getPtr( (uint)idx ); }
 	const T& operator[]( int idx ) const { return *_getPtr( (uint)idx ); }
 
@@ -205,10 +205,7 @@ protected:
 	// the pointer into a local variable and use std (unsafe) C indexes.
 	T* _getPtr( uint i ) const
 	{
-#ifdef PCSX2_DEVBUILD
-		if( IsDevBuild && i >= (uint)m_size )
-			throw Exception::IndexBoundsFault( Name, i, m_size );
-#endif
+		IndexBoundsCheckDev( Name.c_str(), i, m_size );
 		return &m_ptr[i];
 	}
 };
@@ -246,12 +243,6 @@ protected:
 		return (T*)realloc( m_ptr, newsize * sizeof(T) );
 	}
 	
-	void _boundsCheck( uint i ) const 
-	{
-		if( IsDevBuild && i >= (uint)m_length )
-			throw Exception::IndexBoundsFault( Name, i, m_length );
-	}
-
 public:
 	virtual ~SafeList() throw()
 	{
@@ -345,7 +336,7 @@ public:
 	}
 
 	// Gets an element of this memory allocation much as if it were an array.
-	// DevBuilds : Throws Exception::IndexBoundsFault() if the index is invalid.
+	// DevBuilds : Generates assertion if the index is invalid.
 	T& operator[]( int idx )				{ return *_getPtr( (uint)idx ); }
 	const T& operator[]( int idx ) const	{ return *_getPtr( (uint)idx ); }
 
@@ -371,11 +362,12 @@ public:
 	}
 	
 	// Performs a standard array-copy removal of the given item.  All items past the
-	// given item are copied over.  Throws Exception::IndexBoundsFault() if the index
-	// is invalid (devbuilds only)
+	// given item are copied over.
+	// DevBuilds : Generates assertion if the index is invalid.
 	void Remove( int index )
 	{
-		_boundsCheck( index );
+		IndexBoundsCheckDev( Name.c_str(), index, m_length );
+
 		int copylen = m_length - index;
 		if( copylen > 0 )
 			memcpy_fast( &m_ptr[index], &m_ptr[index+1], copylen );
@@ -403,7 +395,7 @@ protected:
 	// the pointer into a local variable and use std (unsafe) C indexes.
 	T* _getPtr( uint i ) const
 	{
-		_boundsCheck( i );
+		IndexBoundsCheckDev( Name.c_str(), i, m_length );
 		return &m_ptr[i];
 	}
 };

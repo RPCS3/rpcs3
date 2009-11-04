@@ -69,7 +69,7 @@ void SaveStateBase::PrepBlock( int size )
 		m_memory.MakeRoomFor( end );
 	else
 	{
-		if( m_memory.GetSizeInBytes() <= end )
+		if( m_memory.GetSizeInBytes() < end )
 			throw Exception::BadSavedState();
 	}
 }
@@ -199,9 +199,33 @@ void SaveStateBase::FreezeRegisters()
 		PostLoadPrep();
 }
 
-bool SaveStateBase::FreezeSection()
+void SaveStateBase::WritebackSectionLength( int seekpos, int sectlen, const wxChar* sectname )
 {
+	int realsectsize = m_idx - seekpos;
+	if( IsSaving() )
+	{
+		// write back the section length...
+		*((u32*)m_memory.GetPtr(seekpos-4)) = realsectsize;
+	}
+	else	// IsLoading!!
+	{
+		if( sectlen != realsectsize )		// if they don't match then we have a problem, jim.
+		{
+			throw Exception::BadSavedState( wxEmptyString,
+				wxsFormat( L"Invalid size encountered on section '%s'.", sectname ),
+				_("The savestate data is invalid or corrupted.")
+			);
+		}
+	}
+}
+
+bool SaveStateBase::FreezeSection( int seek_section )
+{
+	const bool isSeeking = (seek_section != FreezeId_NotSeeking );
+	if( IsSaving() ) pxAssertDev( !isSeeking, "Cannot seek on a saving-mode savestate stream." );
+
 	Freeze( m_sectid );
+	if( seek_section == m_sectid ) return false;
 
 	switch( m_sectid )
 	{
@@ -222,7 +246,10 @@ bool SaveStateBase::FreezeSection()
 				);
 			}
 
-			FreezeBios();
+			if( isSeeking )
+				m_idx += sectlen;
+			else
+				FreezeBios();
 			m_sectid++;
 		}
 		break;
@@ -242,7 +269,11 @@ bool SaveStateBase::FreezeSection()
 				);
 			}
 
-			FreezeMainMemory();
+			if( isSeeking )
+				m_idx += sectlen;
+			else
+				FreezeMainMemory();
+
 			int realsectsize = m_idx - seekpos;
 			pxAssert( sectlen == realsectsize );
 			m_sectid++;
@@ -253,27 +284,12 @@ bool SaveStateBase::FreezeSection()
 		{
 			FreezeTag( "HardwareRegisters" );
 			int seekpos = m_idx+4;
-			int sectsize;
+			int sectlen = 0xdead;	// gets written back over with "real" data in IsSaving() mode
 
-			Freeze( sectsize );
+			Freeze( sectlen );
 			FreezeRegisters();
-			
-			int realsectsize = m_idx - seekpos;
-			if( IsSaving() )
-			{
-				// write back the section length...
-				*((u32*)m_memory.GetPtr(seekpos-4)) = realsectsize;
-			}
-			else	// IsLoading!!
-			{
-				if( sectsize != realsectsize )		// if they don't match then we have a problem, jim.
-				{
-					throw Exception::BadSavedState( wxEmptyString,
-						L"Invalid size encountered on HardwareRegisters section.",
-						_("The savestate data is invalid or corrupted.")
-					);
-				}
-			}
+
+			WritebackSectionLength( seekpos, sectlen, L"HardwareRegisters" );
 			m_sectid++;
 		}
 		break;
@@ -282,31 +298,20 @@ bool SaveStateBase::FreezeSection()
 		{
 			FreezeTag( "Plugin" );
 			int seekpos = m_idx+4;
-			int sectsize;
+			int sectlen = 0xdead;	// gets written back over with "real" data in IsSaving() mode
 
-			Freeze( sectsize );
+			Freeze( sectlen );
 			Freeze( m_pid );
-			g_plugins->Freeze( (PluginsEnum_t)m_pid, *this );
 
-			int realsectsize = m_idx - seekpos;
-			if( IsSaving() )
-			{
-				// write back the section length...
-				*((u32*)m_memory.GetPtr(seekpos-4)) = realsectsize;
-			}
+			if( isSeeking )
+				m_idx += sectlen;
 			else
-			{
-				if( sectsize != realsectsize )		// if they don't match then we have a problem, jim.
-				{
-					throw Exception::BadSavedState( wxEmptyString,
-						L"Invalid size encountered on Plugin section.",
-						_("The savestate data is invalid or corrupted.")
-					);
-				}
-			}
+				g_plugins->Freeze( (PluginsEnum_t)m_pid, *this );
 
+			WritebackSectionLength( seekpos, sectlen, L"HardwareRegisters" );
 
-			// following increments only affect Saving mode, are ignored by Loading mode.
+			// following increments only affect Saving mode, which needs to be sure to save all
+			// plugins (order doesn't matter but sequential is easy enough. (ignored by Loading mode)
 			m_pid++;
 			if( m_pid >= PluginId_Count )
 				m_sectid = FreezeId_End;
@@ -340,8 +345,14 @@ bool SaveStateBase::FreezeSection()
 
 void SaveStateBase::FreezeAll()
 {
-	m_sectid	= (int)FreezeId_End+1;
-	m_pid		= PluginId_GS;
+	if( IsSaving() )
+	{
+		// Loading mode streams will assign these, but saving mode reads them so better
+		// do some setup first.
+
+		m_sectid	= (int)FreezeId_End+1;
+		m_pid		= PluginId_GS;
+	}
 
 	while( FreezeSection() );
 }
@@ -386,3 +397,24 @@ void memLoadingState::FreezeMem( void* data, int size )
 	m_idx += size;
 	memcpy_fast( data, src, size );
 }
+
+bool memLoadingState::SeekToSection( PluginsEnum_t pid )
+{
+	m_idx = 0;		// start from the beginning
+
+	do
+	{
+		while( FreezeSection( FreezeId_Plugin ) );
+		if( m_sectid == FreezeId_End ) return false;
+
+		FreezeTag( "Plugin" );
+		int seekpos = m_idx + 4;
+		int sectlen = 0xdead;
+
+		Freeze( sectlen );
+		Freeze( m_pid );
+
+	} while( m_pid != pid );
+	return true;
+}
+

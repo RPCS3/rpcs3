@@ -156,13 +156,16 @@ void IniLoader::Entry( const wxString& var, wxRect& value, const wxRect& defvalu
 	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
 }
 
-void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
+void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue )
 {
 	// Confirm default value sanity...
 
 	const int cnt = _calcEnumLength( enumArray );
-	if( defvalue >= cnt )
-		throw Exception::IndexBoundsFault( L"IniLoader Enumeration DefaultValue", defvalue, cnt );
+	if( !IndexBoundsCheck( L"IniLoader EnumDefaultValue", defvalue, cnt ) )
+	{
+		Console.Error( "(LoadSettings) Default enumeration index is out of bounds. Truncating." );
+		defvalue = cnt-1;
+	}
 
 	// Sanity confirmed, proceed with craziness!
 
@@ -174,7 +177,7 @@ void IniLoader::_EnumEntry( const wxString& var, int& value, const wxChar* const
 
 	if( enumArray[i] == NULL )
 	{
-		Console.Warning( L"Loadini Warning: Unrecognized value '%s' on key '%s'\n\tUsing the default setting of '%s'.",
+		Console.Warning( L"(LoadSettings) Warning: Unrecognized value '%s' on key '%s'\n\tUsing the default setting of '%s'.",
 			retval.c_str(), var.c_str(), enumArray[defvalue]
 		);
 		value = defvalue;
@@ -253,13 +256,22 @@ void IniSaver::Entry( const wxString& var, wxRect& value, const wxRect& defvalue
 	m_Config.Write( var, ToString( value ) );
 }
 
-void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, const int defvalue )
+void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue )
 {
 	const int cnt = _calcEnumLength( enumArray );
+
+	// Confirm default value sanity...
+
+	if( !IndexBoundsCheck( L"IniSaver EnumDefaultValue", defvalue, cnt ) )
+	{
+		Console.Error( "(SaveSettings) Default enumeration index is out of bounds. Truncating." );
+		defvalue = cnt-1;
+	}
+
 	if( value >= cnt )
 	{
 		Console.Warning( 
-			L"Settings Warning: An illegal enumerated index was detected when saving '%s'\n"
+			L"(SaveSettings) An illegal enumerated index was detected when saving '%s'\n"
 			L"\tIllegal Value: %d\n"
 			L"\tUsing Default: %d (%s)\n",
 			var.c_str(), value, defvalue, enumArray[defvalue]

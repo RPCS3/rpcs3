@@ -197,14 +197,3 @@ wxString Exception::StateCrcMismatch::FormatDisplayMessage() const
 	);
 }
 
-// ------------------------------------------------------------------------
-wxString Exception::IndexBoundsFault::FormatDiagnosticMessage() const
-{
-	return L"Index out of bounds on SafeArray: " + ArrayName +
-		wxsFormat( L"(index=%d, size=%d)", BadIndex, ArrayLength );
-}
-
-wxString Exception::IndexBoundsFault::FormatDisplayMessage() const
-{
-	return m_message_user;
-}
