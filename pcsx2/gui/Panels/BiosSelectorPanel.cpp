@@ -144,6 +144,8 @@ void Panels::BiosSelectorPanel::DoRefresh()
 {
 	if( !m_BiosList ) return;
 
+	m_ComboBox.Clear();
+
 	wxFileName right( g_Conf->FullpathToBios() );
 	right.MakeAbsolute();
 

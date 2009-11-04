@@ -47,10 +47,10 @@ __forceinline mem8_t hwRead8(u32 mem)
 {
 	u8 ret;
 
-	if( mem >= IPU_CMD && mem < D0_CHCR ) return;
 	// TODO re-implement this warning along with a *complete* logging of all hw activity.
 	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
-	//DevCon.Warning("Unexpected hwRead8 from 0x%x", mem);
+	if( mem >= IPU_CMD && mem < D0_CHCR ) return psHu8(mem);
+	//	DevCon.Warning("Unexpected hwRead8 from 0x%x", mem);
 
 	switch (mem)
 	{
@@ -122,9 +122,9 @@ __forceinline mem16_t hwRead16(u32 mem)
 {
 	u16 ret;
 
-	if( mem >= IPU_CMD && mem < D0_CHCR ) return;
 	// TODO re-implement this warning along with a *complete* logging of all hw activity.
 	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
+	if( mem >= IPU_CMD && mem < D0_CHCR ) return psHu8(mem);
 	//	Console.Warning("Unexpected hwRead16 from 0x%x", mem);
 
 	switch (mem)
