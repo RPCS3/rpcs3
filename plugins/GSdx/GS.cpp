@@ -144,6 +144,16 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 	try
 	{
+		if (s_renderer != renderer)
+		{
+			// Emulator has made a render change request, which requires a completely
+			// new s_gs -- if the emu doesn't save/restore the GS state across this
+			// GSopen call then they'll get corrupted graphics, but that's not my problem.
+
+			delete s_gs;
+			s_gs = NULL;
+		}
+
 		switch(renderer)
 		{
 		default: 
