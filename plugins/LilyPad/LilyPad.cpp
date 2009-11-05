@@ -944,6 +944,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 			hWnd = GetParent (hWnd);
 		// Implements most hacks, as well as enabling/disabling mouse
 		// capture when focus changes.
+		updateQueued = 0;
 		if (!EatWndProc(hWnd, HackWndProc, 0)) {
 			openCount = 0;
 			return -1;
@@ -987,6 +988,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 void CALLBACK PADclose() {
 	if (openCount && !--openCount) {
 		DEBUG_TEXT_OUT("LilyPad closed\n\n");
+		updateQueued = 0;
 		ReleaseEatenProc();
 		dm->ReleaseInput();
 		hWnd = 0;
