@@ -368,10 +368,9 @@ memSavingState::memSavingState( SafeArray<u8>& save_to ) :
 // Saving of state data
 void memSavingState::FreezeMem( void* data, int size )
 {
-	u8* const dest = m_memory.GetPtr(m_idx);
+	m_memory.MakeRoomFor( m_idx+size );
+	memcpy_fast( m_memory.GetPtr(m_idx), data, size );
 	m_idx += size;
-	m_memory.MakeRoomFor( m_idx );
-	memcpy_fast( dest, data, size );
 }
 
 void memSavingState::FreezeAll()

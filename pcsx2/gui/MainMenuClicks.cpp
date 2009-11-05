@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "HostGui.h"
 #include "CDVD/CDVD.h"
+#include "GS.h"
 
 #include "MainFrame.h"
 #include "Dialogs/ModalPopups.h"
@@ -72,7 +73,6 @@ bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 	{
 		result = ctrl.GetPath();
 		g_Conf->Folders.RunIso = wxFileName( result ).GetPath();
-		//sApp.GetRecentIsoList().Add( result );
 		return true;
 	}
 
@@ -256,10 +256,9 @@ void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 	LoadPluginsImmediate();
 	if( g_plugins == NULL ) return;
 
-	bool resume = CoreThread.Suspend();
 	wxWindowDisabler disabler;
+	SaveSinglePluginHelper helper( pid );
 	g_plugins->Configure( pid );
-	if( resume ) CoreThread.Resume();
 }
 
 void MainEmuFrame::Menu_Debug_Open_Click(wxCommandEvent &event)

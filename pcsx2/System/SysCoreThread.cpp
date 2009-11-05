@@ -247,11 +247,11 @@ void SysCoreThread::OnSuspendInThread()
 
 void SysCoreThread::OnResumeInThread( bool isSuspended )
 {
-	if( isSuspended && g_plugins != NULL )
-	{
+	if( g_plugins != NULL )
 		g_plugins->Open();
+
+	if( isSuspended )
 		CpuInitializeMess();
-	}
 }
 
 

@@ -29,6 +29,15 @@ using namespace Threading;
 
 static FnType_OnThreadComplete* Callback_PluginsLoadComplete = NULL;
 
+// --------------------------------------------------------------------------------------
+//  AppPluginManager
+// --------------------------------------------------------------------------------------
+// This extension of PluginManager provides event listener sources for plugins -- loading,
+// unloading, open, close, shutdown, etc.
+//
+// FIXME : Should this be made part of the PCSX2 core emulation? (integrated into PluginManager)
+//   I'm undecided on if it makes sense more in that context or in this one (interface).
+//
 class AppPluginManager : public PluginManager
 {
 	typedef PluginManager _parent;
@@ -132,6 +141,47 @@ void LoadPluginsTask::OnCleanupInThread()
 	wxGetApp().AddPendingEvent( evt );
 
 	_parent::OnCleanupInThread();
+}
+
+// --------------------------------------------------------------------------------------
+//  SaveSinglePluginHelper  (Implementations)
+// --------------------------------------------------------------------------------------
+
+SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid ) :
+	m_plugstore( L"PluginConf Savestate" )
+,	m_whereitsat( NULL )
+,	m_resume( false )
+{
+	m_pid			= pid;
+	m_validstate	= SysHasValidState();
+
+	if( !m_validstate ) return;
+	Console.WriteLn( Color_Green, L"Suspending single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+
+	m_resume		= CoreThread.Pause();
+	m_whereitsat	= StateCopy_GetBuffer();
+
+	if( m_whereitsat == NULL )
+	{
+		m_whereitsat = &m_plugstore;
+		memSavingState save( m_plugstore );
+		g_plugins->Freeze( m_pid, save );
+	}
+
+	g_plugins->Close( pid );
+}
+
+SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
+{
+	if( m_validstate )
+	{
+		Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+		memLoadingState load( *m_whereitsat );
+		if( m_plugstore.IsDisposed() ) load.SeekToSection( m_pid );
+		g_plugins->Freeze( m_pid, load );
+	}
+
+	if( m_resume ) CoreThread.Resume();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

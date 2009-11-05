@@ -90,9 +90,10 @@ namespace Implementations
 
 	void Sys_RenderToggle()
 	{
-		bool resume = CoreThread.Suspend();
+		if( g_plugins == NULL ) return;
+
+		SaveSinglePluginHelper helper( PluginId_GS );
 		renderswitch = !renderswitch;
-		if( resume ) CoreThread.Resume();
 	}
 
 	void Sys_LoggingToggle()

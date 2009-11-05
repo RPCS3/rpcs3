@@ -552,12 +552,34 @@ DECLARE_APP(Pcsx2App)
 #define sMenuBar \
 	if( wxMenuBar* __menubar_ = GetMenuBar() ) (*__menubar_)
 
+// --------------------------------------------------------------------------------------
+//  SaveSinglePluginHelper
+// --------------------------------------------------------------------------------------
+// A scoped convenience class for closing a single plugin and saving its state to memory.
+// Emulation is suspended as needed, and is restored when the object leaves scope.  Within
+// the scope of the object, code is free to call plugin re-configurations or even unload
+// a plugin entirely and re-load a different DLL in its place.
+//
+class SaveSinglePluginHelper
+{
+protected:
+	SafeArray<u8>			m_plugstore;
+	const SafeArray<u8>*	m_whereitsat;
+
+	bool					m_resume;
+	bool					m_validstate;
+	PluginsEnum_t			m_pid;
+
+public:
+	SaveSinglePluginHelper( PluginsEnum_t pid );
+	virtual ~SaveSinglePluginHelper() throw();
+};
 
 // --------------------------------------------------------------------------------------
 //  External App-related Globals and Shortcuts
 // --------------------------------------------------------------------------------------
 
-extern int EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
+extern int  EnumeratePluginsInFolder( const wxDirName& searchPath, wxArrayString* dest );
 extern void LoadPluginsPassive( FnType_OnThreadComplete* onComplete );
 extern void LoadPluginsImmediate();
 extern void UnloadPlugins();

@@ -54,13 +54,6 @@ enum patch_data_type {
 //
 typedef void (*PATCHTABLEFUNC)( char * text1, char * text2 );
 
-struct PatchTextTable
-{
-	const char *text;
-	int code;
-	PATCHTABLEFUNC func;
-};
-	
 struct IniPatch
 {
 	int enabled;
@@ -90,9 +83,6 @@ void inifile_trim( char * buffer );
 //
 // Variables
 //
-extern PatchTextTable commands[];
-extern PatchTextTable dataType[];
-extern PatchTextTable cpuCore[];
 extern IniPatch patch[ MAX_PATCH ];
 extern int patchnumber;
 

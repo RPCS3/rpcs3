@@ -35,10 +35,17 @@ int g_ZeroGSOptions=0, patchnumber;
 
 wxString strgametitle;
 
+struct PatchTextTable
+{
+	const char *text;
+	int code;
+	PATCHTABLEFUNC func;
+};
+
 //
 // Variables
 //
-PatchTextTable commands[] =
+static const PatchTextTable commands[] =
 {
 	{ "comment", 1, patchFunc_comment },
 	{ "gametitle", 2, patchFunc_gametitle },
@@ -56,7 +63,7 @@ PatchTextTable commands[] =
 	{ "", 0, NULL }
 };
 
-PatchTextTable dataType[] =
+static const PatchTextTable dataType[] =
 {
 	{ "byte", 1, NULL },
 	{ "short", 2, NULL },
@@ -66,7 +73,7 @@ PatchTextTable dataType[] =
 	{ "", 0, NULL }
 };
 
-PatchTextTable cpuCore[] =
+static const PatchTextTable cpuCore[] =
 {
 	{ "EE", 1, NULL },
 	{ "IOP", 2, NULL },
@@ -77,7 +84,7 @@ PatchTextTable cpuCore[] =
 // Function Implementations
 //
 
-int PatchTableExecute( char * text1, char * text2, PatchTextTable * Table )
+static int PatchTableExecute( char * text1, char * text2, const PatchTextTable * Table )
 {
 	int i = 0;
 
