@@ -331,15 +331,17 @@ static wxString unicode_format_string(const wxChar* fmt, va_list argptr)
 //  ASCII/UTF8 (char*)
 // --------------------------------------------------------------------------------------
 
-void IConsoleWriter::Write( const char* fmt, ... ) const
+bool IConsoleWriter::Write( const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
 	DoWrite( ascii_format_string(fmt, args) );
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
+bool IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -347,17 +349,21 @@ void IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
 	DoWrite( ascii_format_string(fmt, args) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::WriteLn( const char* fmt, ... ) const
+bool IConsoleWriter::WriteLn( const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
 	DoWriteLn( ascii_format_string(fmt, args) );
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
+bool IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -365,9 +371,11 @@ void IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 	DoWriteLn( ascii_format_string(fmt, args) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::Error( const char* fmt, ... ) const
+bool IConsoleWriter::Error( const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -375,9 +383,11 @@ void IConsoleWriter::Error( const char* fmt, ... ) const
 	DoWriteLn( ascii_format_string(fmt, args) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::Warning( const char* fmt, ... ) const
+bool IConsoleWriter::Warning( const char* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -385,21 +395,25 @@ void IConsoleWriter::Warning( const char* fmt, ... ) const
 	DoWriteLn( ascii_format_string(fmt, args) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
 // --------------------------------------------------------------------------------------
 //  FmtWrite Variants - Unicode/UTF16 style
 // --------------------------------------------------------------------------------------
 
-void IConsoleWriter::Write( const wxChar* fmt, ... ) const
+bool IConsoleWriter::Write( const wxChar* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
 	DoWrite( unicode_format_string( fmt, args ) );
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
+bool IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -407,17 +421,21 @@ void IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
 	DoWrite( unicode_format_string( fmt, args ) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
+bool IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
 	DoWriteLn( unicode_format_string( fmt, args ) );
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const
+bool IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -425,9 +443,11 @@ void IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) cons
 	DoWriteLn( unicode_format_string( fmt, args ) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::Error( const wxChar* fmt, ... ) const
+bool IConsoleWriter::Error( const wxChar* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -435,9 +455,11 @@ void IConsoleWriter::Error( const wxChar* fmt, ... ) const
 	DoWriteLn( unicode_format_string( fmt, args ) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
-void IConsoleWriter::Warning( const wxChar* fmt, ... ) const
+bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 {
 	va_list args;
 	va_start(args,fmt);
@@ -445,6 +467,8 @@ void IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 	DoWriteLn( unicode_format_string( fmt, args ) );
 	ClearColor();
 	va_end(args);
+
+	return false;
 }
 
 

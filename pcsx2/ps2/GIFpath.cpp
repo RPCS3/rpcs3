@@ -194,9 +194,13 @@ static void __fastcall RegHandlerUNMAPPED(const u32* data)
 	//   to work fine as usual -- The 0xEE address in common programming terms is typically
 	//   left over uninitialized data, and this might be a case of that, which is to be
 	//   silently ignored.
-	
+	//
+	//  Guitar Hero 3+ : Massive spamming when using superVU (along with several VIF errors)
+	//  Using microVU avoids the GIFtag errors, so probably just one of sVU's hacks conflicting
+	//  with one of VIF's hacks, and causing corrupted packet data.
+
 	if( regidx != 0x7f && regidx != 0xee )
-		Console.Warning( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
+		DbgCon.Warning( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
 }
 
 #define INSERT_UNMAPPED_4	RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED,

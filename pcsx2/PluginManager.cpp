@@ -153,6 +153,7 @@ static void CALLBACK GS_makeSnapshot(const char *path) {}
 static void CALLBACK GS_setGameCRC(u32 crc, int gameopts) {}
 static void CALLBACK GS_irqCallback(void (*callback)()) {}
 static void CALLBACK GS_setFrameSkip(int frameskip) {}
+static void CALLBACK GS_changeSaveState( int, const char* filename ) {}
 static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 {
 	va_list list;
@@ -281,6 +282,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 	{	"GSsetGameCRC",		(vMeth**)&GSsetGameCRC,		(vMeth*)GS_setGameCRC },
 
 	{	"GSsetFrameSkip",	(vMeth**)&GSsetFrameSkip,	(vMeth*)GS_setFrameSkip	},
+	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState,(vMeth*)GS_changeSaveState },
 	{ NULL }
 };
 
@@ -289,7 +291,6 @@ static const LegacyApi_OptMethod s_MethMessOpt_GS[] =
 	{	"GSopen2",			(vMeth**)&GSopen2			},
 	{	"GSreset",			(vMeth**)&GSreset			},
 	{	"GSsetupRecording",	(vMeth**)&GSsetupRecording	},
-	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState	},
 	{	"GSmakeSnapshot2",	(vMeth**)&GSmakeSnapshot2	},
 	{	"GSgifSoftReset",	(vMeth**)&GSgifSoftReset	},
 	{	"GSreadFIFO",		(vMeth**)&GSreadFIFO		},

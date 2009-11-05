@@ -195,8 +195,6 @@ protected:
 	void ExecuteTaskInThread()
 	{
 		Yield( 3 );
-		//if( gzwrite( m_gzfp, state_buffer.GetPtr(), state_buffer.GetSizeInBytes() ) < state_buffer.GetSizeInBytes() )
-		//	throw Exception::BadStream();
 
 		static const int BlockSize = 0x10000;
 		int curidx = 0;

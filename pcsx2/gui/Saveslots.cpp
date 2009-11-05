@@ -46,11 +46,13 @@ bool States_isSlotUsed(int num)
 
 void States_FreezeCurrentSlot()
 {
+	GSchangeSaveState( StatesC, SaveStateBase::GetFilename( StatesC ).ToUTF8() );
 	StateCopy_SaveToSlot( StatesC );
 }
 
 void States_DefrostCurrentSlot()
 {
+	GSchangeSaveState( StatesC, SaveStateBase::GetFilename( StatesC ).ToUTF8() );
 	StateCopy_LoadFromSlot( StatesC );
 	//SysStatus( wxsFormat( _("Loaded State (slot %d)"), StatesC ) );
 }

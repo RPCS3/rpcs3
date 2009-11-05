@@ -75,22 +75,23 @@ struct IConsoleWriter
 
 	// ----------------------------------------------------------------------------
 	// Public members; call these to print stuff to console!
+	//
+	// All functions always return false.  Return value is provided only so that we can easily 
+	// disable logs at compile time using the "0&&action" macro trick.
 
+	bool Write( ConsoleColors color, const char* fmt, ... ) const;
+	bool WriteLn( ConsoleColors color, const char* fmt, ... ) const;
+	bool Write( const char* fmt, ... ) const;
+	bool WriteLn( const char* fmt, ... ) const;
+	bool Error( const char* fmt, ... ) const;
+	bool Warning( const char* fmt, ... ) const;
 
-	void Write( ConsoleColors color, const char* fmt, ... ) const;
-	void WriteLn( ConsoleColors color, const char* fmt, ... ) const;
-	void Write( const char* fmt, ... ) const;
-	void WriteLn( const char* fmt, ... ) const;
-	void Error( const char* fmt, ... ) const;
-	void Warning( const char* fmt, ... ) const;
-
-	void Write( ConsoleColors color, const wxChar* fmt, ... ) const;
-	void WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const;
-	void Write( const wxChar* fmt, ... ) const;
-	void WriteLn( const wxChar* fmt, ... ) const;
-	void Error( const wxChar* fmt, ... ) const;
-	void Warning( const wxChar* fmt, ... ) const;
-
+	bool Write( ConsoleColors color, const wxChar* fmt, ... ) const;
+	bool WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const;
+	bool Write( const wxChar* fmt, ... ) const;
+	bool WriteLn( const wxChar* fmt, ... ) const;
+	bool Error( const wxChar* fmt, ... ) const;
+	bool Warning( const wxChar* fmt, ... ) const;
 };
 
 extern void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp=NULL );
@@ -110,13 +111,13 @@ extern IConsoleWriter	Console;
 	extern IConsoleWriter	DevConWriter;
 #	define DevCon			DevConWriter
 #else
-#	define DevCon			ConsoleWriter_Null
+#	define DevCon			0&&ConsoleWriter_Null
 #endif
 
 #ifdef PCSX2_DEBUG
 	extern IConsoleWriter	DbgConWriter;
 #	define DbgCon			DbgConWriter
 #else
-#	define DbgCon			ConsoleWriter_Null
+#	define DbgCon			0&&ConsoleWriter_Null
 #endif
 
