@@ -106,56 +106,19 @@ __emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
 	}
 }
 
-// [SSE-3]
-const SimdImpl_DestRegSSE<0xf3,0x12> xMOVSLDUP;
-// [SSE-3]
-const SimdImpl_DestRegSSE<0xf3,0x16> xMOVSHDUP;
-
-const SimdImpl_MoveSSE<0x00,true> xMOVAPS;
-
-// Note: All implementations of Unaligned Movs will, when possible, use aligned movs instead.
-// This happens when using Mem,Reg or Reg,Mem forms where the address is simple displacement
-// which can be checked for alignment at runtime.
-const SimdImpl_MoveSSE<0x00,false> xMOVUPS;
-
-#ifdef ALWAYS_USE_MOVAPS
-const SimdImpl_MoveSSE<0,true> xMOVDQA;
-const SimdImpl_MoveSSE<0,true> xMOVAPD;
-
-// Note: All implementations of Unaligned Movs will, when possible, use aligned movs instead.
-// This happens when using Mem,Reg or Reg,Mem forms where the address is simple displacement
-// which can be checked for alignment at runtime.
-const SimdImpl_MoveSSE<0,false> xMOVDQU;
-const SimdImpl_MoveSSE<0,false> xMOVUPD;
-#else
-const SimdImpl_MoveDQ<0x66, 0x6f, 0x7f> xMOVDQA;
-const SimdImpl_MoveDQ<0xf3, 0x6f, 0x7f> xMOVDQU;
-const SimdImpl_MoveSSE<0x66,true> xMOVAPD;
-const SimdImpl_MoveSSE<0x66,false> xMOVUPD;
-#endif
-
-const MovhlImplAll<0x16>		xMOVH;
-const MovhlImplAll<0x12>		xMOVL;
-const MovhlImpl_RtoR<0x16>		xMOVLH;
-const MovhlImpl_RtoR<0x12>		xMOVHL;
-
-const SimdImpl_Shuffle<0xc6>	xSHUF;
-
-const SimdImpl_DestRegEither<0x66,0xdb> xPAND;
-const SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
-const SimdImpl_DestRegEither<0x66,0xeb> xPOR;
-const SimdImpl_DestRegEither<0x66,0xef> xPXOR;
-
-// ------------------------------------------------------------------------
+const xImplSimd_DestRegEither xPAND		= { 0x66,0xdb };
+const xImplSimd_DestRegEither xPANDN	= { 0x66,0xdf };
+const xImplSimd_DestRegEither xPOR		= { 0x66,0xeb };
+const xImplSimd_DestRegEither xPXOR		= { 0x66,0xef };
 
 // [SSE-4.1] Performs a bitwise AND of dest against src, and sets the ZF flag
 // only if all bits in the result are 0.  PTEST also sets the CF flag according
 // to the following condition: (xmm2/m128 AND NOT xmm1) == 0;
-const SimdImpl_DestRegSSE<0x66,0x1738>		xPTEST;
+const xImplSimd_DestRegSSE		xPTEST = { 0x66,0x1738 };
 
-// ------------------------------------------------------------------------
+// =====================================================================================================
 // SSE Conversion Operations, as looney as they are.
-// 
+// =====================================================================================================
 // These enforce pointer strictness for Indirect forms, due to the otherwise completely confusing
 // nature of the functions.  (so if a function expects an m32, you must use (u32*) or ptr32[]).
 //
@@ -227,8 +190,8 @@ void xImplSimd_DestRegImmMMX::operator()( const xRegisterMMX& to, const ModSibBa
 void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
 void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const ModSibBase& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
 
-void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteMMX( Opcode ); }
-void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteMMX( Opcode ); }
+void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
+void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
 
 // =====================================================================================================
 //  SIMD Arithmetic Instructions
@@ -237,8 +200,8 @@ void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const ModSibBa
 void _SimdShiftHelper::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
 void _SimdShiftHelper::operator()( const xRegisterSSE& to, const ModSibBase& from ) const			{ OpWriteSSE( Prefix, Opcode ); }
 
-void _SimdShiftHelper::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteMMX( Opcode ); }
-void _SimdShiftHelper::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteMMX( Opcode ); }
+void _SimdShiftHelper::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
+void _SimdShiftHelper::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
 
 void _SimdShiftHelper::operator()( const xRegisterSSE& to, u8 imm8 ) const
 {
@@ -471,63 +434,230 @@ const xImplSimd_PMinMax xPMAX =
 	{ 0x66, 0x3f38 },		// UD
 };
 
-const SimdImpl_PShuffle xPSHUF;
-const SimdImpl_PUnpack xPUNPCK;
-const SimdImpl_Unpack xUNPCK;
-const SimdImpl_Pack xPACK;
-const SimdImpl_PInsert xPINSR;
-const SimdImpl_PExtract xPEXTR;
-const SimdImpl_Blend xBLEND;
+// =====================================================================================================
+//  SIMD Shuffle/Pack  (Shuffle puck?)
+// =====================================================================================================
 
-const SimdImpl_PMove<true> xPMOVSX;
-const SimdImpl_PMove<false> xPMOVZX;
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-
-// Converts from MMX register mode to FPU register mode.  The cpu enters MMX register mode
-// when ever MMX instructions are run, and if FPU instructions are run without using EMMS,
-// the FPU results will be invalid.
-__forceinline void xEMMS()	{ xWrite16( 0x770F ); }
-
-// [3DNow] Same as EMMS, but an AMD special version which may (or may not) leave MMX regs
-// in an undefined state (which is fine, since presumably you're done using them anyway).
-// This instruction is thus faster than EMMS on K8s, but all newer AMD cpus use the same
-// logic for either EMMS or FEMMS.
-// Conclusion: Obsolete.  Just use EMMS instead.
-__forceinline void xFEMMS()	{ xWrite16( 0x0E0F ); }
-
-
-// Store Streaming SIMD Extension Control/Status to Mem32.
-__emitinline void xSTMXCSR( const ModSib32& dest )
+__forceinline void xImplSimd_Shuffle::_selector_assertion_check( u8 selector ) const
 {
-	SimdPrefix( 0, 0xae );
-	EmitSibMagic( 3, dest );
+	pxAssertMsg( (selector & ~3) == 0,
+		"Invalid immediate operand on SSE Shuffle: Upper 6 bits of the SSE Shuffle-PD Selector are reserved and must be zero."
+	);
 }
 
-// Load Streaming SIMD Extension Control/Status from Mem32.
-__emitinline void xLDMXCSR( const ModSib32& src )
+void xImplSimd_Shuffle::PS( const xRegisterSSE& to, const xRegisterSSE& from, u8 selector ) const
 {
-	SimdPrefix( 0, 0xae );
-	EmitSibMagic( 2, src );
+	xOpWrite0F( 0xc6, to, from, selector );
 }
 
-// Save x87 FPU, MMX Technology, and SSE State to buffer
-// Target buffer must be at least 512 bytes in length to hold the result.
-__emitinline void xFXSAVE( const ModSibBase& dest )
+void xImplSimd_Shuffle::PS( const xRegisterSSE& to, const ModSibBase& from, u8 selector ) const
 {
-	SimdPrefix( 0, 0xae );
-	EmitSibMagic( 0, dest );
+	xOpWrite0F( 0xc6, to, from, selector );
 }
 
-// Restore x87 FPU, MMX , XMM, and MXCSR State.
-// Source buffer should be 512 bytes in length.
-__emitinline void xFXRSTOR( const ModSibBase& src )
+void xImplSimd_Shuffle::PD( const xRegisterSSE& to, const xRegisterSSE& from, u8 selector ) const
 {
-	SimdPrefix( 0, 0xae );
-	EmitSibMagic( 1, src );
+	_selector_assertion_check( selector );
+	xOpWrite0F( 0x66, 0xc6, to, from, selector & 0x3 );
 }
+
+void xImplSimd_Shuffle::PD( const xRegisterSSE& to, const ModSibBase& from, u8 selector ) const
+{
+	_selector_assertion_check( selector );
+	xOpWrite0F( 0x66, 0xc6, to, from, selector & 0x3 );
+}
+
+void xImplSimd_InsertExtractHelper::operator()( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const
+{
+	xOpWrite0F( 0x66, Opcode, to, from, imm8 );
+}
+
+void xImplSimd_InsertExtractHelper::operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const
+{
+	xOpWrite0F( 0x66, Opcode, to, from, imm8 );
+}
+
+void xImplSimd_PInsert::W( const xRegisterSSE& to, const xRegister32& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
+void xImplSimd_PInsert::W( const xRegisterSSE& to, const ModSibBase& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc4, to, from, imm8 ); }
+void xImplSimd_PInsert::W( const xRegisterMMX& to, const xRegister32& from, u8 imm8 ) const		{ xOpWrite0F( 0xc4, to, from, imm8 ); }
+void xImplSimd_PInsert::W( const xRegisterMMX& to, const ModSibBase& from, u8 imm8 ) const		{ xOpWrite0F( 0xc4, to, from, imm8 ); }
+
+void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterSSE& from, u8 imm8 ) const		{ xOpWrite0F( 0x66, 0xc5, to, from, imm8 ); }
+void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterMMX& from, u8 imm8 ) const		{ xOpWrite0F( 0xc5, to, from, imm8 ); }
+void SimdImpl_PExtract::W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const	{ xOpWrite0F( 0x66, 0x153a, from, dest, imm8 ); }
+
+const xImplSimd_Shuffle xSHUF;
+
+const xImplSimd_PShuffle xPSHUF =
+{
+	{ 0x00, 0x70 },		// W
+	{ 0x66, 0x70 },		// D
+	{ 0xf2, 0x70 },		// LW
+	{ 0xf3, 0x70 },		// HW
+	
+	{ 0x66, 0x0038 },	// B
+};
+
+const SimdImpl_PUnpack xPUNPCK =
+{
+	{ 0x66, 0x60 },		// LBW
+	{ 0x66, 0x61 },		// LWD
+	{ 0x66, 0x62 },		// LDQ
+	{ 0x66, 0x6c },		// LQDQ
+
+	{ 0x66, 0x68 },		// HBW
+	{ 0x66, 0x69 },		// HWD
+	{ 0x66, 0x6a },		// HDQ
+	{ 0x66, 0x6d },		// HQDQ
+};
+
+const SimdImpl_Pack xPACK =
+{
+	{ 0x66, 0x63 },		// SSWB
+	{ 0x66, 0x6b },		// SSDW
+	{ 0x66, 0x67 },		// USWB
+	{ 0x66, 0x2b38 },	// USDW
+};
+
+const xImplSimd_Unpack xUNPCK =
+{
+	{ 0x00, 0x15 },		// HPS
+	{ 0x66, 0x15 },		// HPD
+	{ 0x00, 0x14 },		// LPS
+	{ 0x66, 0x14 },		// LPD
+};
+
+const xImplSimd_PInsert xPINSR =
+{
+	{ 0x203a },			// B
+	{ 0x223a },			// D
+};
+
+const SimdImpl_PExtract xPEXTR =
+{
+	{ 0x143a },			// B
+	{ 0x163a },			// D
+};
+
+// =====================================================================================================
+//  SIMD Move And Blend Instructions
+// =====================================================================================================
+
+void xImplSimd_MovHL::PS( const xRegisterSSE& to, const ModSibBase& from ) const			{ xOpWrite0F( Opcode, to, from ); }
+void xImplSimd_MovHL::PS( const ModSibBase& to, const xRegisterSSE& from ) const			{ xOpWrite0F( Opcode+1, from, to ); }
+
+void xImplSimd_MovHL::PD( const xRegisterSSE& to, const ModSibBase& from ) const			{ xOpWrite0F( 0x66, Opcode, to, from ); }
+void xImplSimd_MovHL::PD( const ModSibBase& to, const xRegisterSSE& from ) const			{ xOpWrite0F( 0x66, Opcode+1, from, to ); }
+
+void xImplSimd_MovHL_RtoR::PS( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ xOpWrite0F( Opcode, to, from ); }
+void xImplSimd_MovHL_RtoR::PD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ xOpWrite0F( 0x66, Opcode, to, from ); }
+
+static const u16 MovPS_OpAligned		= 0x28;		// Aligned [aps] form
+static const u16 MovPS_OpUnaligned		= 0x10;		// unaligned [ups] form
+
+void xImplSimd_MoveSSE::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const
+{
+	if( to != from ) xOpWrite0F( Prefix, MovPS_OpAligned, to, from );
+}
+
+void xImplSimd_MoveSSE::operator()( const xRegisterSSE& to, const ModSibBase& from ) const
+{
+	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
+	bool isReallyAligned = isAligned || ( ((from.Displacement & 0x0f) == 0) && from.Index.IsEmpty() && from.Base.IsEmpty() );
+
+	xOpWrite0F( Prefix, isReallyAligned ? MovPS_OpAligned : MovPS_OpUnaligned, to, from );
+}
+
+void xImplSimd_MoveSSE::operator()( const ModSibBase& to, const xRegisterSSE& from ) const
+{
+	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
+	bool isReallyAligned = isAligned || ( (to.Displacement & 0x0f) == 0 && to.Index.IsEmpty() && to.Base.IsEmpty() );
+	xOpWrite0F( Prefix, isReallyAligned ? MovPS_OpAligned+1 : MovPS_OpUnaligned+1, from, to );
+}
+
+static const u8 MovDQ_PrefixAligned		= 0x66;		// Aligned [dqa] form
+static const u8 MovDQ_PrefixUnaligned	= 0xf3;		// unaligned [dqu] form
+
+void xImplSimd_MoveDQ::operator()( const xRegisterSSE& to, const xRegisterSSE& from ) const
+{
+	if( to != from ) xOpWrite0F( MovDQ_PrefixAligned, 0x6f, to, from );
+}
+
+void xImplSimd_MoveDQ::operator()( const xRegisterSSE& to, const ModSibBase& from ) const
+{
+	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
+	bool isReallyAligned = isAligned || ( (from.Displacement & 0x0f) == 0 && from.Index.IsEmpty() && from.Base.IsEmpty() );
+	xOpWrite0F( isReallyAligned ? MovDQ_PrefixAligned : MovDQ_PrefixUnaligned, 0x6f, to, from );
+}
+
+void xImplSimd_MoveDQ::operator()( const ModSibBase& to, const xRegisterSSE& from ) const
+{
+	// ModSib form is aligned if it's displacement-only and the displacement is aligned:
+	bool isReallyAligned = isAligned || ( (to.Displacement & 0x0f) == 0 && to.Index.IsEmpty() && to.Base.IsEmpty() );
+
+	// use opcode 0x7f : alternate ModRM encoding (reverse src/dst)
+	xOpWrite0F( isReallyAligned ? MovDQ_PrefixAligned : MovDQ_PrefixUnaligned, 0x7f, from, to );
+}
+
+void xImplSimd_PMove::BW( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase ); }
+void xImplSimd_PMove::BW( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase ); }
+
+void xImplSimd_PMove::BD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
+void xImplSimd_PMove::BD( const xRegisterSSE& to, const ModSibStrict<u32>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
+
+void xImplSimd_PMove::BQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
+void xImplSimd_PMove::BQ( const xRegisterSSE& to, const ModSibStrict<u16>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
+
+void xImplSimd_PMove::WD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
+void xImplSimd_PMove::WD( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
+
+void xImplSimd_PMove::WQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
+void xImplSimd_PMove::WQ( const xRegisterSSE& to, const ModSibStrict<u32>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
+
+void xImplSimd_PMove::DQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
+void xImplSimd_PMove::DQ( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
+
+
+const xImplSimd_MoveSSE xMOVAPS = { 0x00, true };
+const xImplSimd_MoveSSE xMOVUPS = { 0x00, false };
+
+#ifdef ALWAYS_USE_MOVAPS
+	const xImplSimd_MoveSSE xMOVDQA	= { 0x00, true };
+	const xImplSimd_MoveSSE xMOVAPD	= { 0x00, true };
+
+	const xImplSimd_MoveSSE xMOVDQU	= { 0x00, false };
+	const xImplSimd_MoveSSE xMOVUPD	= { 0x00, false };
+#else
+	const xImplSimd_MoveDQ xMOVDQA	= { 0x66, true };
+	const xImplSimd_MoveSSE xMOVAPD	= { 0x66, true };
+
+	const xImplSimd_MoveDQ xMOVDQU	= { 0xf3, false };
+	const xImplSimd_MoveSSE xMOVUPD	= { 0x66, false };
+#endif
+
+
+const xImplSimd_MovHL xMOVH = { 0x16 };
+const xImplSimd_MovHL xMOVL = { 0x12 };
+
+const xImplSimd_MovHL_RtoR xMOVLH = { 0x16 };
+const xImplSimd_MovHL_RtoR xMOVHL = { 0x12 };
+
+const xImplSimd_Blend xBLEND =
+{
+	{ 0x66, 0x0c3a },		// PS
+	{ 0x66, 0x0d3a },		// PD
+	{ 0x66, 0x1438 },		// VPS
+	{ 0x66, 0x1538 },		// VPD
+};
+
+const xImplSimd_PMove xPMOVSX = { 0x2038 };
+const xImplSimd_PMove xPMOVZX = { 0x3038 };
+
+// [SSE-3]
+const xImplSimd_DestRegSSE xMOVSLDUP = { 0xf3,0x12 };
+
+// [SSE-3]
+const xImplSimd_DestRegSSE xMOVSHDUP = { 0xf3,0x16 };
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // MMX Mov Instructions (MOVD, MOVQ, MOVSS).
@@ -645,9 +775,9 @@ __forceinline void xPALIGNR( const xRegisterSSE& to, const xRegisterSSE& from, u
 __forceinline void xPALIGNR( const xRegisterMMX& to, const xRegisterMMX& from, u8 imm8 )	{ xOpWrite0F( 0x0f3a, to, from, imm8 ); }
 
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// INSERTPS / EXTRACTPS   [SSE4.1 only!]
-//
+// --------------------------------------------------------------------------------------
+//  INSERTPS / EXTRACTPS   [SSE4.1 only!]
+// --------------------------------------------------------------------------------------
 // [TODO] these might be served better as classes, especially if other instructions use
 // the M32,sse,imm form (I forget offhand if any do).
 
@@ -673,5 +803,53 @@ __emitinline void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& fr
 //
 __emitinline void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x173a, to, from, imm8 ); }
 __emitinline void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 ){ xOpWrite0F( 0x66, 0x173a, from, dest, imm8 ); }
+
+
+// =====================================================================================================
+//  Ungrouped Instructions!
+// =====================================================================================================
+
+// Converts from MMX register mode to FPU register mode.  The cpu enters MMX register mode
+// when ever MMX instructions are run, and if FPU instructions are run without using EMMS,
+// the FPU results will be invalid.
+__forceinline void xEMMS()	{ xWrite16( 0x770F ); }
+
+// [3DNow] Same as EMMS, but an AMD special version which may (or may not) leave MMX regs
+// in an undefined state (which is fine, since presumably you're done using them anyway).
+// This instruction is thus faster than EMMS on K8s, but all newer AMD cpus use the same
+// logic for either EMMS or FEMMS.
+// Conclusion: Obsolete.  Just use EMMS instead.
+__forceinline void xFEMMS()	{ xWrite16( 0x0E0F ); }
+
+
+// Store Streaming SIMD Extension Control/Status to Mem32.
+__emitinline void xSTMXCSR( const ModSib32& dest )
+{
+	SimdPrefix( 0, 0xae );
+	EmitSibMagic( 3, dest );
+}
+
+// Load Streaming SIMD Extension Control/Status from Mem32.
+__emitinline void xLDMXCSR( const ModSib32& src )
+{
+	SimdPrefix( 0, 0xae );
+	EmitSibMagic( 2, src );
+}
+
+// Save x87 FPU, MMX Technology, and SSE State to buffer
+// Target buffer must be at least 512 bytes in length to hold the result.
+__emitinline void xFXSAVE( const ModSibBase& dest )
+{
+	SimdPrefix( 0, 0xae );
+	EmitSibMagic( 0, dest );
+}
+
+// Restore x87 FPU, MMX , XMM, and MXCSR State.
+// Source buffer should be 512 bytes in length.
+__emitinline void xFXRSTOR( const ModSibBase& src )
+{
+	SimdPrefix( 0, 0xae );
+	EmitSibMagic( 1, src );
+}
 
 }

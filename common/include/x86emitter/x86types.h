@@ -703,8 +703,6 @@ __forceinline void xWrite( T val )
 	{
 		#include "implement/helpers.h"
 		#include "implement/simd_templated_helpers.h"
-		#include "implement/xmm/moremovs.h"
-		#include "implement/xmm/shufflepack.h"
 		#include "implement/group1.h"
 		#include "implement/group2.h"
 		#include "implement/group3.h"
@@ -737,7 +735,9 @@ __forceinline void xWrite( T val )
 }
 
 #include "implement/simd_helpers.h"
+#include "implement/simd_moremovs.h"
 #include "implement/simd_arithmetic.h"
 #include "implement/simd_comparisons.h"
+#include "implement/simd_shufflepack.h"
 
 #include "inlines.inl"

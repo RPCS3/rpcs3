@@ -393,29 +393,30 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 
-	extern const Internal::SimdImpl_MoveSSE<0x00,true> xMOVAPS;
-	extern const Internal::SimdImpl_MoveSSE<0x00,false> xMOVUPS;
+	extern const xImplSimd_MoveSSE xMOVAPS;
+	extern const xImplSimd_MoveSSE xMOVUPS;
+	extern const xImplSimd_MoveSSE xMOVAPD;
+	extern const xImplSimd_MoveSSE xMOVUPD;
 
 #ifdef ALWAYS_USE_MOVAPS
-	extern const Internal::SimdImpl_MoveSSE<0,true> xMOVDQA;
-	extern const Internal::SimdImpl_MoveSSE<0,false> xMOVDQU;
-	extern const Internal::SimdImpl_MoveSSE<0,true> xMOVAPD;
-	extern const Internal::SimdImpl_MoveSSE<0,false> xMOVUPD;
+	extern const xImplSimd_MoveSSE xMOVDQA;
+	extern const xImplSimd_MoveSSE xMOVDQU;
 #else
-	extern const Internal::SimdImpl_MoveDQ<0x66, 0x6f, 0x7f> xMOVDQA;
-	extern const Internal::SimdImpl_MoveDQ<0xf3, 0x6f, 0x7f> xMOVDQU;
-	extern const Internal::SimdImpl_MoveSSE<0x66,true> xMOVAPD;
-	extern const Internal::SimdImpl_MoveSSE<0x66,false> xMOVUPD;
+	extern const xImplSimd_MoveDQ xMOVDQA;
+	extern const xImplSimd_MoveDQ xMOVDQU;
 #endif
 
-	extern const Internal::MovhlImpl_RtoR<0x16> xMOVLH;
-	extern const Internal::MovhlImpl_RtoR<0x12> xMOVHL;
+	extern const xImplSimd_MovHL xMOVH;
+	extern const xImplSimd_MovHL xMOVL;
+	extern const xImplSimd_MovHL_RtoR xMOVLH;
+	extern const xImplSimd_MovHL_RtoR xMOVHL;
 
-	extern const Internal::MovhlImplAll<0x16> xMOVH;
-	extern const Internal::MovhlImplAll<0x12> xMOVL;
+	extern const xImplSimd_Blend xBLEND;
+	extern const xImplSimd_PMove xPMOVSX;
+	extern const xImplSimd_PMove xPMOVZX;
 
-	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x12> xMOVSLDUP;
-	extern const Internal::SimdImpl_DestRegSSE<0xf3,0x16> xMOVSHDUP;
+	extern const xImplSimd_DestRegSSE xMOVSLDUP;
+	extern const xImplSimd_DestRegSSE xMOVSHDUP;
 
 	extern void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 );
 	extern void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& from, u8 imm8 );
@@ -425,16 +426,16 @@ namespace x86Emitter
 
 	// ------------------------------------------------------------------------
 
-	extern const Internal::SimdImpl_DestRegEither<0x66,0xdb> xPAND;
-	extern const Internal::SimdImpl_DestRegEither<0x66,0xdf> xPANDN;
-	extern const Internal::SimdImpl_DestRegEither<0x66,0xeb> xPOR;
-	extern const Internal::SimdImpl_DestRegEither<0x66,0xef> xPXOR;
+	extern const xImplSimd_DestRegEither xPAND;
+	extern const xImplSimd_DestRegEither xPANDN;
+	extern const xImplSimd_DestRegEither xPOR;
+	extern const xImplSimd_DestRegEither xPXOR;
 
-	extern const Internal::SimdImpl_Shuffle<0xc6>	xSHUF;
+	extern const xImplSimd_Shuffle		xSHUF;
 
 	// ------------------------------------------------------------------------
 
-	extern const Internal::SimdImpl_DestRegSSE<0x66,0x1738> xPTEST;
+	extern const xImplSimd_DestRegSSE	xPTEST;
 
 	extern const xImplSimd_MinMax		xMIN;
 	extern const xImplSimd_MinMax		xMAX; 
@@ -526,16 +527,12 @@ namespace x86Emitter
 	extern const xImplSimd_DotProduct		xDP;
 	extern const xImplSimd_Round			xROUND;
 
-	extern const Internal::SimdImpl_PShuffle			xPSHUF;
-	extern const Internal::SimdImpl_PUnpack				xPUNPCK;
-	extern const Internal::SimdImpl_Unpack				xUNPCK;
-	extern const Internal::SimdImpl_Pack				xPACK;
-	extern const Internal::SimdImpl_PInsert				xPINSR;
-	extern const Internal::SimdImpl_PExtract			xPEXTR;
-	extern const Internal::SimdImpl_Blend				xBLEND;
-
-	extern const Internal::SimdImpl_PMove<true>			xPMOVSX;
-	extern const Internal::SimdImpl_PMove<false>		xPMOVZX;
+	extern const xImplSimd_PShuffle			xPSHUF;
+	extern const SimdImpl_PUnpack			xPUNPCK;
+	extern const xImplSimd_Unpack			xUNPCK;
+	extern const SimdImpl_Pack				xPACK;
+	extern const xImplSimd_PInsert			xPINSR;
+	extern const SimdImpl_PExtract			xPEXTR;
 
 }
 

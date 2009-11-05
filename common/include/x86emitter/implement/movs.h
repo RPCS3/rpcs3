@@ -18,10 +18,11 @@
 // Header: ix86_impl_movs.h -- covers mov, cmov, movsx/movzx, and SETcc (which shares
 // with cmov many similarities).
 
-// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// MOV instruction Implementation
+// --------------------------------------------------------------------------------------
+//  MovImplAll
+// --------------------------------------------------------------------------------------
+// MOV instruction Implementation, plus many SIMD sub-mov variants.
 
 class MovImplAll
 {

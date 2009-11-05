@@ -333,14 +333,6 @@
 				Name="Implement_Simd"
 				>
 				<File
-					RelativePath="..\..\include\x86emitter\implement\xmm\moremovs.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\include\x86emitter\implement\xmm\shufflepack.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\include\x86emitter\implement\simd_arithmetic.h"
 					>
 				</File>
@@ -350,6 +342,14 @@
 				</File>
 				<File
 					RelativePath="..\..\include\x86emitter\implement\simd_helpers.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\x86emitter\implement\simd_moremovs.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\x86emitter\implement\simd_shufflepack.h"
 					>
 				</File>
 				<File
