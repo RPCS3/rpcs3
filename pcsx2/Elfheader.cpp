@@ -21,10 +21,7 @@
 #include "GS.h"			// for sending game crc to mtgs
 
 using namespace std;
-
-// The two functions needed for patches.
-extern void ApplyPatch( int place );
-extern void inifile_read( const char* name );
+extern void InitPatch(wxString crc);
 
 u32 ElfCRC;
 
@@ -500,8 +497,7 @@ void ElfApplyPatches()
 
 	if( !EmuConfig.EnablePatches ) return;
 
-    inifile_read( filename.ToUTF8() );
-	ApplyPatch( 0 );
+    InitPatch(filename);
 }
 
 // Fetches the CRC of the game bound to the CDVD plugin.

@@ -62,7 +62,7 @@ void inifile_command( char* cmd );
 void inifile_trim( char* buffer );
 
 int AddPatch(int Mode, int Place, int Address, int Size, u64 data);
-void ApplyPatch( int place );
+void ApplyPatch( int place = 1);
 void ResetPatch( void );
 
 extern int g_ZeroGSOptions;
