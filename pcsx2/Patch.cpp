@@ -20,6 +20,8 @@
 #include "IopCommon.h"
 #include "Patch.h"
 
+#include <wx/textfile.h>
+
 IniPatch Patch[ MAX_PATCH ];
 
 u32 SkipCount = 0, IterationCount = 0;
@@ -32,62 +34,45 @@ wxString strgametitle;
 
 struct PatchTextTable
 {
-	const char *text;
+	wxString text;
 	int code;
 	PATCHTABLEFUNC func;
 };
 
 static const PatchTextTable commands[] =
 {
-	{ "comment", 1, PatchFunc::comment },
-	{ "gametitle", 2, PatchFunc::gametitle },
-	{ "patch", 3, PatchFunc::patch },
-	{ "fastmemory", 4, NULL }, // enable for faster but bugger mem (mvc2 is faster)
-	{ "roundmode", 5, PatchFunc::roundmode }, // changes rounding mode for floating point
+	{ L"comment", 1, PatchFunc::comment },
+	{ L"gametitle", 2, PatchFunc::gametitle },
+	{ L"patch", 3, PatchFunc::patch },
+	{ L"fastmemory", 4, NULL }, // enable for faster but bugger mem (mvc2 is faster)
+	{ L"roundmode", 5, PatchFunc::roundmode }, // changes rounding mode for floating point
 											// syntax: roundmode=X,Y
 											// possible values for X,Y: NEAR, DOWN, UP, CHOP
 											// X - EE rounding mode (default is NEAR)
 											// Y - VU rounding mode (default is CHOP)
-	{ "zerogs", 6, PatchFunc::zerogs }, // zerogs=hex
-	{ "vunanmode",8, NULL },
-	{ "ffxhack",9, NULL},
-	{ "xkickdelay",10, NULL},
-	{ "", 0, NULL }
+	{ L"zerogs", 6, PatchFunc::zerogs }, // zerogs=hex
+	{ L"vunanmode",8, NULL },
+	{ L"ffxhack",9, NULL},
+	{ L"xkickdelay",10, NULL},
+	{ wxEmptyString, 0, NULL }
 };
 
 static const PatchTextTable dataType[] =
 {
-	{ "byte", 1, NULL },
-	{ "short", 2, NULL },
-	{ "word", 3, NULL },
-	{ "double", 4, NULL },
-	{ "extended", 5, NULL },
-	{ "", 0, NULL }
+	{ L"byte", 1, NULL },
+	{ L"short", 2, NULL },
+	{ L"word", 3, NULL },
+	{ L"double", 4, NULL },
+	{ L"extended", 5, NULL },
+	{ wxEmptyString, 0, NULL }
 };
 
 static const PatchTextTable cpuCore[] =
 {
-	{ "EE", 1, NULL },
-	{ "IOP", 2, NULL },
-	{ "", 0, NULL }
+	{ L"EE", 1, NULL },
+	{ L"IOP", 2, NULL },
+	{ wxEmptyString, 0, NULL }
 };
-
-static int PatchTableExecute( char* text1, char* text2, const PatchTextTable * Table )
-{
-	int i = 0;
-
-	while (Table[i].text[0])
-	{
-		if (!strcmp(Table[i].text, text1))
-		{
-			if (Table[i].func) Table[i].func(text1, text2);
-			break;
-		}
-		i++;
-	}
-
-	return Table[i].code;
-}
 
 void writeCheat()
 {
@@ -382,76 +367,10 @@ void handle_extended_t( IniPatch *p)
 
 // IniFile Functions.
 
-// This routine is for executing the commands of the ini file.
-void inifile_command( char* cmd )
-{
-	int code;
-	char command[ 256 ];
-	char parameter[ 256 ];
-
-	// extract param part (after '=')
-	char* pEqual = strchr( cmd, '=' );
-
-	if ( ! pEqual ) pEqual = cmd+strlen(cmd); // fastmemory doesn't have =
-
-	memzero( command );
-	memzero( parameter );
-
-	strncpy( command, cmd, pEqual - cmd );
-	strncpy( parameter, pEqual + 1, sizeof( parameter ) );
-
-	inifile_trim( command );
-	inifile_trim( parameter );
-
-	code = PatchTableExecute( command, parameter, commands );
-}
-
-#define  USE_CRAZY_BASHIT_INSANE_TRIM
-#ifdef USE_CRAZY_BASHIT_INSANE_TRIM
-
-void inifile_trim( char* buffer )
-{
-	char* pInit = buffer;
-	char* pEnd = NULL;
-
-	while ((*pInit == ' ') || (*pInit == '\t')) //skip space
-	{
-		pInit++;
-	}
-
-	if ((pInit[0] == '/') && (pInit[1] == '/')) //remove comment
-	{
-		buffer[0] = '\0';
-		return;
-	}
-
-	pEnd = pInit + strlen(pInit) - 1;
-	if ( pEnd <= pInit )
-	{
-		buffer[0] = '\0';
-		return;
-	}
-
-	while ((*pEnd == '\r') || (*pEnd == '\n') || (*pEnd == ' ') || (*pEnd == '\t'))
-	{
-		pEnd--;
-	}
-
-	if (pEnd <= pInit)
-	{
-		buffer[0] = '\0';
-		return;
-	}
-
-	memmove( buffer, pInit, pEnd - pInit + 1 );
-	buffer[ pEnd - pInit + 1 ] = '\0';
-}
-
-#else
-
 // New version of trim (untested), which I coded but can't use yet because the
-// rest of Patch needs to be more wxString-involved first.
+// rest of Patch needs to be more wxString-involved first. --Air
 
+// And now it is... --Arcum42
 void inifile_trim( wxString& buffer )
 {
 	buffer.Trim( false );		// trims left side.
@@ -462,7 +381,7 @@ void inifile_trim( wxString& buffer )
 		return;
 	}
 
-	if( buffer.Left( 2 ) == "//" )
+	if( buffer.Left( 2 ) == L"//" )
 	{
 		buffer.Clear();
 		return;
@@ -471,49 +390,87 @@ void inifile_trim( wxString& buffer )
 	buffer.Trim(true);			// trims right side.
 }
 
-#endif
+static int PatchTableExecute( wxString text1, wxString text2, const PatchTextTable * Table )
+{
+	int i = 0;
+
+	while (Table[i].text[0])
+	{
+		if (!text1.Cmp(Table[i].text))
+		{
+			if (Table[i].func) Table[i].func(text1, text2);
+			break;
+		}
+		i++;
+	}
+
+	return Table[i].code;
+}
+
+// This routine is for executing the commands of the ini file.
+void inifile_command( wxString cmd )
+{
+	int code;
+
+	wxString command;
+	wxString parameter;
+
+	// extract param part (after '=')
+    wxString pEqual = cmd.AfterFirst(L'=');
+    if (pEqual.IsEmpty()) pEqual = cmd;
+
+	command = cmd.BeforeFirst(L'=');
+	parameter = pEqual;
+
+	inifile_trim( command );
+	inifile_trim( parameter );
+
+    code = PatchTableExecute( command, parameter, commands );
+}
 
 // This routine recieves a file from inifile_read, trims it,
 // Then sends the command to be parsed.
-void inifile_process( FILE * f1 )
+void inifile_process(wxTextFile &f1 )
 {
-	char buffer[ 1024 ];
-	while( fgets( buffer, sizeof( buffer ), f1 ) )
-	{
-		inifile_trim( buffer );
-		if ( buffer[ 0 ] ) inifile_command( buffer );
-	}
+    Console.WriteLn("inifile_process");
+    for (int i = 0; i < f1.GetLineCount(); i++)
+    {
+        inifile_trim(f1[i]);
+        if (!f1[i].IsEmpty()) inifile_command(f1[i]);
+    }
 }
 
 // This routine creates a pnach filename from the games crc,
-// loads it, and passes it to inisection_process to be parsed.
+// loads it, trims the commands, and sends them to be parsed.
 void inifile_read(wxString name )
 {
-	FILE* f1;
-	wxCharBuffer buffer;
+	wxTextFile f1;
+	wxString buffer;
 
 	patchnumber = 0;
 
-    buffer = Path::Combine(L"patches", name + L".pnach").ToUTF8();
-	f1 = fopen( buffer, "rt" );
+    buffer = Path::Combine(L"patches", name + L".pnach");
 
 #ifndef _WIN32
-	if( !f1 )
+    if (!f1.Open(buffer))
 	{
-        name = name.MakeUpper();
-        buffer = Path::Combine(L"patches", name + L".pnach").ToUTF8();
-        f1 = fopen(buffer, "rt");
+        name.MakeUpper();
+        buffer = Path::Combine(L"patches", name + L".pnach");
 	}
 #endif
 
-	if( !f1 )
+    if (!f1.Open(buffer))
 	{
 		Console.WriteLn("No patch found. Resuming execution without a patch (this is NOT an error)." );
 		return;
 	}
-
+    else
+    {
+        Console.WriteLn("Opened!");
+    }
+	//inifile_process( f1 );
 	inifile_process( f1 );
-	fclose( f1 );
+	f1.Close();
 }
 
 void _ApplyPatch(IniPatch *p)
@@ -610,99 +567,157 @@ int AddPatch(int Mode, int Place, int Address, int Size, u64 data)
 	return patchnumber++;
 }
 
+void PrintPatch(int i)
+{
+	Console.WriteLn("Patch[%d]:", i);
+	if (Patch[i].enabled == 0)
+        Console.WriteLn("Disabled.");
+    else
+        Console.WriteLn("Enabled.");
+
+    Console.WriteLn("PlaceToPatch:%d", Patch[i].placetopatch);
+
+    switch(Patch[i].cpu)
+    {
+        case CPU_EE: Console.WriteLn("Cpu: EE"); break;
+        case CPU_IOP: Console.WriteLn("Cpu: IOP"); break;
+        default: Console.WriteLn("Cpu: None"); break;
+    }
+
+    Console.WriteLn("Address: %X", Patch[i].addr);
+
+    switch (Patch[i].type)
+    {
+        case BYTE_T: Console.WriteLn("Type: Byte"); break;
+        case SHORT_T: Console.WriteLn("Type: Short"); break;
+        case WORD_T: Console.WriteLn("Type: Word"); break;
+        case DOUBLE_T: Console.WriteLn("Type: Double"); break;
+        case EXTENDED_T: Console.WriteLn("Type: Extended"); break;
+        default: Console.WriteLn("Type: None"); break;
+    }
+
+    Console.WriteLn("Data: %I64X", Patch[i].data);
+}
+
+u32 StrToU32(wxString str, int base = 10)
+{
+    long l;
+
+    str.ToLong(&l, base);
+
+    return l;
+}
+
+u64 StrToU64(wxString str, int base = 10)
+{
+    long long l;
+
+    str.ToLongLong(&l, base);
+
+    return l;
+}
+
 // PatchFunc Functions.
 namespace PatchFunc
 {
-    void comment( char* text1, char* text2 )
+    void comment( wxString text1, wxString text2 )
     {
-        Console.WriteLn( "comment: %s", text2 );
+        Console.WriteLn( L"comment: " + text2 );
     }
 
-    void gametitle( char* text1, char* text2 )
+    void gametitle( wxString text1, wxString text2 )
     {
-        Console.WriteLn( "gametitle: %s", text2 );
-        strgametitle.FromAscii( text2 );
+        Console.WriteLn( L"gametitle: " + text2 );
+        strgametitle = text2;
         Console.SetTitle( strgametitle );
     }
 
-    void patch( char* cmd, char* param )
+    void patch( wxString cmd, wxString param )
     {
-        char* pText;
+        DevCon.WriteLn(cmd + L" " + param);
+        wxString pText;
 
         if ( patchnumber >= MAX_PATCH )
         {
             // TODO : Use wxLogError for this, once we have full unicode compliance on cmd/params vars.
             //wxLogError( L"Patch ERROR: Maximum number of patches reached: %s=%s", cmd, param );
-            Console.Error( "Patch ERROR: Maximum number of patches reached: %s=%s", cmd, param );
+            Console.Error( L"Patch ERROR: Maximum number of patches reached: " + cmd +L"=" + param );
             return;
         }
 
+        // I've just sort of hacked this in place for the moment.
+        // Using SafeList is probably better, but I'll leave that to Air...
         //SafeList<wxString> pieces;
-        //SplitString( pieces, param, "," );
+        //SplitString( pieces, param, L"," );
 
-        pText = strtok( param, "," );
-        pText = param;
+        Patch[patchnumber].placetopatch = StrToU32(param.BeforeFirst(L','), 10);
+        param = param.AfterFirst(L',');
+        pText = param.BeforeFirst(L',');
 
-        Patch[ patchnumber ].placetopatch = strtol( pText, (char **)NULL, 0 );
-
-        pText = strtok( NULL, "," );
         inifile_trim( pText );
-        Patch[ patchnumber ].cpu = (patch_cpu_type)PatchTableExecute( pText, NULL, cpuCore );
+        Patch[patchnumber].cpu = (patch_cpu_type)PatchTableExecute( pText, wxEmptyString, cpuCore );
 
-        if ( Patch[ patchnumber ].cpu == 0 )
+        if (Patch[patchnumber].cpu == 0)
         {
-            Console.Error( "Unrecognized patch '%s'", pText );
+            Console.Error( L"Unrecognized patch '" + cmd + L"'" );
             return;
         }
 
-        pText = strtok( NULL, "," );
+        param = param.AfterFirst(L',');
+        pText = param.BeforeFirst(L',');
         inifile_trim( pText );
-        sscanf( pText, "%X", &Patch[ patchnumber ].addr );
+        Patch[patchnumber].addr = StrToU32(pText, 16);
 
-        pText = strtok( NULL, "," );
+        param = param.AfterFirst(L',');
+        pText = param.BeforeFirst(L',');
         inifile_trim( pText );
-        Patch[ patchnumber ].type = (patch_data_type)PatchTableExecute( pText, NULL, dataType );
+        Patch[patchnumber].type = (patch_data_type)PatchTableExecute( pText, wxEmptyString, dataType );
 
-        if ( Patch[ patchnumber ].type == 0 )
+        if ( Patch[patchnumber].type == 0 )
         {
-            Console.Error( "Unrecognized patch '%s'", pText );
+            Console.Error( L"Unrecognized patch '" + cmd + L"'" );
             return;
         }
 
-        pText = strtok( NULL, "," );
+        param = param.AfterFirst(L',');
+        pText = param.BeforeFirst(L',');
         inifile_trim( pText );
-        sscanf( pText, "%I64X", &Patch[ patchnumber ].data );
 
-        Patch[ patchnumber ].enabled = 1;
+        Patch[patchnumber].data = StrToU64(pText, 16);
+        Patch[patchnumber].enabled = 1;
 
+        //PrintPatch(patchnumber);
         patchnumber++;
     }
 
-    void roundmode( char* cmd, char* param )
+    void roundmode( wxString cmd, wxString param )
     {
+        DevCon.WriteLn(cmd + L" " + param);
+
         int index;
-        char* pText;
+        wxString pText;
 
         SSE_RoundMode eetype = EmuConfig.Cpu.sseMXCSR.GetRoundMode();
         SSE_RoundMode vutype = EmuConfig.Cpu.sseVUMXCSR.GetRoundMode();
 
         index = 0;
-        pText = strtok( param, ", " );
-        while(pText != NULL)
+        param.MakeLower();
+        pText = param.BeforeFirst(L',');
+        while(pText != wxEmptyString)
         {
             SSE_RoundMode type;
 
-            if( stricmp(pText, "near") == 0 )
+            if (pText.Contains(L"near"))
                 type = SSEround_Nearest;
-            else if( stricmp(pText, "down") == 0 )
+            else if (pText.Contains(L"down"))
                 type = SSEround_NegInf;
-            else if( stricmp(pText, "up") == 0 )
+            else if (pText.Contains(L"up"))
                 type = SSEround_PosInf;
-            else if( stricmp(pText, "chop") == 0 )
+            else if (pText.Contains(L"chop"))
                 type = SSEround_Chop;
             else
             {
-                Console.WriteLn("bad argument (%s) to round mode! skipping...\n", pText);
+                Console.WriteLn(L"bad argument (" + pText + L") to round mode! skipping...\n");
                 break;
             }
 
@@ -715,15 +730,37 @@ namespace PatchFunc
                 break;
 
             index++;
-            pText = strtok(NULL, ", ");
+            pText = param.AfterFirst(L',');
         }
 
         SetRoundMode(eetype,vutype);
     }
 
-    void zerogs(char* cmd, char* param)
+    void zerogs(wxString cmd, wxString param)
     {
-         sscanf(param, "%x", &g_ZeroGSOptions);
+        DevCon.WriteLn( cmd + L" " + param);
+        g_ZeroGSOptions = StrToU32(param, 16);
+    }
+}
+
+void PrintRoundMode(SSE_RoundMode ee, SSE_RoundMode vu)
+{
+    switch(ee)
+    {
+        case SSEround_Nearest: DevCon.WriteLn("EE: Near"); break;
+        case SSEround_NegInf: DevCon.WriteLn("EE: Down"); break;
+        case SSEround_PosInf: DevCon.WriteLn("EE: Up"); break;
+        case SSEround_Chop: DevCon.WriteLn("EE: Chop"); break;
+        default: DevCon.WriteLn("EE: ?"); break;
+    }
+
+    switch(vu)
+    {
+        case SSEround_Nearest: DevCon.WriteLn("VU: Near"); break;
+        case SSEround_NegInf: DevCon.WriteLn("VU: Down"); break;
+        case SSEround_PosInf: DevCon.WriteLn("VU: Up"); break;
+        case SSEround_Chop: DevCon.WriteLn("VU: Chop"); break;
+        default: DevCon.WriteLn("VU: ?"); break;
     }
 }
 
@@ -732,5 +769,6 @@ void SetRoundMode(SSE_RoundMode ee, SSE_RoundMode vu)
 	SSE_MXCSR mxfpu	= EmuConfig.Cpu.sseMXCSR;
 	SSE_MXCSR mxvu	= EmuConfig.Cpu.sseVUMXCSR;
 
+    //PrintRoundMode(ee,vu);
 	SetCPUState( mxfpu.SetRoundMode( ee ), mxvu.SetRoundMode( vu ) );
 }
