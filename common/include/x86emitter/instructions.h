@@ -431,14 +431,14 @@ namespace x86Emitter
 	extern const xImplSimd_DestRegEither xPOR;
 	extern const xImplSimd_DestRegEither xPXOR;
 
-	extern const xImplSimd_Shuffle		xSHUF;
+	extern /*const*/ xImplSimd_Shuffle		xSHUF;
 
 	// ------------------------------------------------------------------------
 
 	extern const xImplSimd_DestRegSSE	xPTEST;
 
 	extern const xImplSimd_MinMax		xMIN;
-	extern const xImplSimd_MinMax		xMAX; 
+	extern const xImplSimd_MinMax		xMAX;
 
 	extern const xImplSimd_Compare		xCMPEQ,	xCMPLT,
 										xCMPLE,	xCMPUNORD,
@@ -453,7 +453,7 @@ namespace x86Emitter
 	extern const xImplSimd_PMinMax		xPMAX;
 
 	// ------------------------------------------------------------------------
-	// 
+	//
 	//
 	extern void xCVTDQ2PD( const xRegisterSSE& to, const xRegisterSSE& from );
 	extern void xCVTDQ2PD( const xRegisterSSE& to, const ModSib64& from );

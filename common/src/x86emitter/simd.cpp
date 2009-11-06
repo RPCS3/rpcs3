@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -29,7 +29,7 @@ SSE_RoundMode SSE_MXCSR::GetRoundMode() const
 
 SSE_MXCSR& SSE_MXCSR::SetRoundMode( SSE_RoundMode mode )
 {
-	pxAssert( (uint)mode < 4 ); 
+	pxAssert( (uint)mode < 4 );
 	RoundingControl = (u32)mode;
 	return *this;
 }
@@ -306,7 +306,7 @@ const xImplSimd_AndNot xANDN =
 	{ 0x66, 0x55 }		// PD
 };
 
-const xImplSimd_PAbsolute xPABS = 
+const xImplSimd_PAbsolute xPABS =
 {
 	{ 0x66, 0x1c38 },	// B
 	{ 0x66, 0x1d38 },	// W
@@ -362,7 +362,7 @@ void xImplSimd_Compare::SS( const xRegisterSSE& to, const ModSibBase& from ) con
 void xImplSimd_Compare::SD( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
 void xImplSimd_Compare::SD( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
 
-const xImplSimd_MinMax xMIN = 
+const xImplSimd_MinMax xMIN =
 {
 	{ 0x00, 0x5d },		// PS
 	{ 0x66, 0x5d },		// PD
@@ -370,7 +370,7 @@ const xImplSimd_MinMax xMIN =
 	{ 0xf2, 0x5d },		// SD
 };
 
-const xImplSimd_MinMax xMAX = 
+const xImplSimd_MinMax xMAX =
 {
 	{ 0x00, 0x5f },		// PS
 	{ 0x66, 0x5f },		// PD
@@ -412,7 +412,7 @@ const xImplSimd_PCompare xPCMP =
 	{ 0x66, 0x66 },		// GTD
 };
 
-const xImplSimd_PMinMax xPMIN = 
+const xImplSimd_PMinMax xPMIN =
 {
 	{ 0x66, 0xda },			// UB
 	{ 0x66, 0xea },			// SW
@@ -423,7 +423,7 @@ const xImplSimd_PMinMax xPMIN =
 	{ 0x66, 0x3b38 },		// UD
 };
 
-const xImplSimd_PMinMax xPMAX = 
+const xImplSimd_PMinMax xPMAX =
 {
 	{ 0x66, 0xde },			// UB
 	{ 0x66, 0xee },			// SW
@@ -486,7 +486,7 @@ void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterSSE& from, u8 i
 void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterMMX& from, u8 imm8 ) const		{ xOpWrite0F( 0xc5, to, from, imm8 ); }
 void SimdImpl_PExtract::W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const	{ xOpWrite0F( 0x66, 0x153a, from, dest, imm8 ); }
 
-const xImplSimd_Shuffle xSHUF;
+/*const*/ xImplSimd_Shuffle xSHUF;
 
 const xImplSimd_PShuffle xPSHUF =
 {
@@ -494,7 +494,7 @@ const xImplSimd_PShuffle xPSHUF =
 	{ 0x66, 0x70 },		// D
 	{ 0xf2, 0x70 },		// LW
 	{ 0xf3, 0x70 },		// HW
-	
+
 	{ 0x66, 0x0038 },	// B
 };
 
@@ -757,7 +757,7 @@ __forceinline void xMASKMOV( const xRegisterSSE& to, const xRegisterSSE& from )	
 __forceinline void xMASKMOV( const xRegisterMMX& to, const xRegisterMMX& from )		{ xOpWrite0F( 0xf7, to, from ); }
 
 // xPMOVMSKB:
-// Creates a mask made up of the most significant bit of each byte of the source 
+// Creates a mask made up of the most significant bit of each byte of the source
 // operand and stores the result in the low byte or word of the destination operand.
 // Upper bits of the destination are cleared to zero.
 //

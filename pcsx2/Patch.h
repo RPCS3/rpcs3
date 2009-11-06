@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -17,22 +17,7 @@
 
 #include "Pcsx2Defs.h"
 
-//
-// Defines
-//
-#define MAX_PATCH 1024 
-
-#define IFIS(x,str) if(!strnicmp(x,str,sizeof(str)-1))
-
-#define GETNEXT_PARAM() \
-	while ( *param && ( *param != ',' ) ) param++; \
-	if ( *param ) param++; \
-	while ( *param && ( *param == ' ' ) ) param++; \
-	if ( *param == 0 ) { Console.Error( _( "Not enough params for inicommand" ) ); return; }
-	
-//
-// Enums
-//
+#define MAX_PATCH 1024
 
 enum patch_cpu_type {
 	NO_CPU,
@@ -49,9 +34,6 @@ enum patch_data_type {
 	EXTENDED_T
 };
 
-//
-// Typedefs
-//
 typedef void (*PATCHTABLEFUNC)( char * text1, char * text2 );
 
 struct IniPatch
@@ -65,41 +47,27 @@ struct IniPatch
 	u64 data;
 };
 
-//
-// Function prototypes
-//
-void patchFunc_comment( char * text1, char * text2 );
-void patchFunc_gametitle( char * text1, char * text2 );
-void patchFunc_patch( char * text1, char * text2 );
-void patchFunc_fastmemory( char * text1, char * text2 );
-void patchFunc_roundmode( char * text1, char * text2 );
-void patchFunc_zerogs( char * text1, char * text2 );
-void patchFunc_vunanmode( char * text1, char * text2 );
-void patchFunc_ffxhack( char * text1, char * text2 );
-void patchFunc_xkickdelay( char * text1, char * text2 );
 
-void inifile_trim( char * buffer );
+namespace PatchFunc
+{
+    void comment( char* text1, char* text2 );
+    void gametitle( char* text1, char* text2 );
+    void patch( char* text1, char* text2 );
+    void roundmode( char* text1, char* text2 );
+    void zerogs( char* text1, char* text2 );
+}
 
-//
-// Variables
-//
-extern IniPatch patch[ MAX_PATCH ];
-extern int patchnumber;
-
-void applypatch( int place );
-void inifile_read( const char * name );
-void inifile_command( char * cmd );
-void resetpatch( void );
+void inifile_read( const char* name );
+void inifile_command( char* cmd );
+void inifile_trim( char* buffer );
 
 int AddPatch(int Mode, int Place, int Address, int Size, u64 data);
+void ApplyPatch( int place );
+void ResetPatch( void );
 
-extern void SetFastMemory(int); // iR5900LoadStore.c
-
-//extern int g_VUGameFixes;
 extern int g_ZeroGSOptions;
 
-extern void SetRoundMode(SSE_RoundMode ee, SSE_RoundMode vu);
-extern int LoadPatch(const wxString& patchfile);
+void SetRoundMode(SSE_RoundMode ee, SSE_RoundMode vu);
 
 #endif /* __PATCH_H__ */
 

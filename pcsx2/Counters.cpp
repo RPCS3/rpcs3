@@ -31,6 +31,10 @@ using namespace Threading;
 
 extern u8 psxhblankgate;
 
+// The two functions needed for patches.
+extern void ApplyPatch( int place );
+extern void inifile_read( const char* name );
+
 static const uint EECNT_FUTURE_TARGET = 0x10000000;
 
 u64 profile_starttick = 0;
@@ -357,7 +361,7 @@ static __forceinline void VSyncStart(u32 sCycle)
 	psxVBlankStart();
 
 	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
-	if (EmuConfig.EnablePatches) applypatch(1); // fixme - Apply patches
+	if (EmuConfig.EnablePatches) ApplyPatch(1); // fixme - Apply patches
 
 	// INTC - VB Blank Start Hack --
 	// Hack fix!  This corrects a freezeup in Granda 2 where it decides to spin

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -21,6 +21,10 @@
 #include "GS.h"			// for sending game crc to mtgs
 
 using namespace std;
+
+// The two functions needed for patches.
+extern void ApplyPatch( int place );
+extern void inifile_read( const char* name );
 
 u32 ElfCRC;
 
@@ -164,13 +168,13 @@ static uint parseCommandLine( const wxString& filename )
 		args_ptr -= 256;
 
 		args[ 255 ] = 0;
-		
-		// Copy the parameters into the section of memory at args_ptr, 
+
+		// Copy the parameters into the section of memory at args_ptr,
 		// then zero out anything past the end of args till 256 chars is reached.
 		memcpy( &PS2MEM_BASE[ args_ptr ], args, 256 );
 		memset( &PS2MEM_BASE[ args_ptr + strlen( args ) ], 0, 256 - strlen( args ) );
 		args_end = args_ptr + strlen( args );
-		
+
 		// Set p to just the filename, no path.
 #ifdef _WIN32
 		p = strrchr( filename, '\\' );
@@ -183,12 +187,12 @@ static uint parseCommandLine( const wxString& filename )
 		else
 			p = filename;
 
-		
+
 		args_ptr -= strlen( p ) + 1;
 
 		//fill param 0; i.e. name of the program
 		strcpy( (char*)&PS2MEM_BASE[ args_ptr ], p );
-		
+
 		// Start from the end of where we wrote to, not including all the zero'd out area.
 		for ( i = args_end - args_ptr + 1, argc = 0; i > 0; i-- )
 		{
@@ -199,14 +203,14 @@ static uint parseCommandLine( const wxString& filename )
 
 			while (i && !isEmpty(args_ptr + i )) { i--; }
 
-			// Now that we've gone back a word, increase the number of arguments, 
-			// and mark the location of the argument. 
+			// Now that we've gone back a word, increase the number of arguments,
+			// and mark the location of the argument.
 			if (!isEmpty(args_ptr + i )) // i <= 0
 			{
 				// If the spot we are on is not a space or null , use it.
 				argc++;
 				ret = args_ptr - 4 - 4 - argc * 4;
-				
+
 				if (ret < 0 ) return 0;
 				((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i;
 			}
@@ -217,17 +221,17 @@ static uint parseCommandLine( const wxString& filename )
 					// Otherwise, use the next character .
 					argc++;
 					ret = args_ptr - 4 - 4 - argc * 4;
-					
+
 					if (ret < 0 ) return 0;
 					((u32*)PS2MEM_BASE)[ args_ptr / 4 - argc ] = args_ptr + i + 1;
 				}
 			}
 		}
-		
+
 		// Pass the number of arguments, and if we have arguments.
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 1 ] = argc;		      //how many args
 		((u32*)PS2MEM_BASE)[ args_ptr /4 - argc - 2 ] = ( argc > 0);	//have args?	//not used, cannot be filled at all
-		
+
 		return ret;
 	}
 
@@ -326,7 +330,7 @@ struct ElfObject
 			(strnicmp( work, "cdrom1:", strlen("cdromN:")) == 0))
 		{
 			int fi = IsoFS_open(work + strlen("cdromN:"), 1);//RDONLY
-			
+
 			if (fi < 0) throw Exception::FileNotFound( filename );
 
 			IsoFS_lseek( fi, 0, SEEK_SET );
@@ -495,17 +499,9 @@ void ElfApplyPatches()
 	Console.SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
 
 	if( !EmuConfig.EnablePatches ) return;
-    
-	/*if(LoadPatch( filename ) != 0)
-	{
-		Console.WriteLn( "XML Loader returned an error. Trying to load a pnach..." );
-		inifile_read( filename.ToUTF8() );
-	}
-	else
-		Console.WriteLn( "XML Loading success. Will not load from pnach..." );*/
 
     inifile_read( filename.ToUTF8() );
-	applypatch( 0 );
+	ApplyPatch( 0 );
 }
 
 // Fetches the CRC of the game bound to the CDVD plugin.
@@ -514,9 +510,9 @@ u32 loadElfCRC( const char* filename )
 	TocEntry toc;
 
 	IsoFS_init( );
-	
+
 	Console.WriteLn("loadElfCRC: %s", filename);
-	
+
 	int mylen = strlen( "cdromN:" );
 	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
 
@@ -540,14 +536,14 @@ u32 loadElfCRC( const char* filename )
 void loadElfFile(const wxString& filename)
 {
 	if( filename.IsEmpty() ) return;
-	
+
 	s64 elfsize;
 	Console.WriteLn( L"loadElfFile: " + filename );
 
 	const wxCharBuffer buffer( filename.ToUTF8() );
 	const char* fnptr = buffer.data();
 	bool useCdvdSource=false;
-	
+
 	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
 		DevCon.WriteLn("Loading from a file (or non-cd image)");
@@ -607,7 +603,7 @@ void loadElfFile(const wxString& filename)
 	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
 	ElfApplyPatches();
 	mtgsThread.SendGameCRC( ElfCRC );
-	
+
 	return;
 }
 
