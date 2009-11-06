@@ -556,17 +556,13 @@ namespace YAML
 		
 		return Write(std::string(str));
 	}
-	
-	Emitter& Emitter::Write(int i)
+
+	void Emitter::PreWriteIntegralType(std::stringstream& str)
 	{
-		if(!good())
-			return *this;
-		
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();
 		
 		EMITTER_MANIP intFmt = m_pState->GetIntFormat();
-		std::stringstream str;
 		switch(intFmt) {
 			case Dec:
 				str << std::dec;
@@ -574,18 +570,18 @@ namespace YAML
 			case Hex:
 				str << std::hex;
 				break;
-			case Oct:
+				case Oct:
 				str << std::oct;
 				break;
 			default:
 				assert(false);
 		}
-		
-		str << i;
+	}
+	
+	void Emitter::PostWriteIntegralType(const std::stringstream& str)
+	{
 		m_stream << str.str();
-		
 		PostAtomicWrite();
-		return *this;
 	}
 	
 	Emitter& Emitter::Write(bool b)

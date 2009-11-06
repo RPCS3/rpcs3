@@ -46,7 +46,12 @@ namespace YAML
 		// overloads of write
 		Emitter& Write(const std::string& str);
 		Emitter& Write(const char *str);
-		Emitter& Write(int i);
+		Emitter& Write(int value) { return WriteIntegralType(value); }
+		Emitter& Write(unsigned int value) { return WriteIntegralType(value); }
+		Emitter& Write(short value) { return WriteIntegralType(value); }
+		Emitter& Write(unsigned short value) { return WriteIntegralType(value); }
+		Emitter& Write(long value) { return WriteIntegralType(value); }
+		Emitter& Write(unsigned long value) { return WriteIntegralType(value); }
 		Emitter& Write(bool b);
 		Emitter& Write(float f);
 		Emitter& Write(double d);
@@ -56,6 +61,13 @@ namespace YAML
 		Emitter& Write(const _Comment& comment);
 		Emitter& Write(const _Null& null);
 		
+	private:
+		void PreWriteIntegralType(std::stringstream& str);
+		void PostWriteIntegralType(const std::stringstream& str);
+	
+		template <typename T>
+		Emitter& WriteIntegralType(T value);
+
 	private:
 		enum ATOMIC_TYPE { AT_SCALAR, AT_SEQ, AT_BLOCK_SEQ, AT_FLOW_SEQ, AT_MAP, AT_BLOCK_MAP, AT_FLOW_MAP };
 		
@@ -75,6 +87,19 @@ namespace YAML
 		ostream m_stream;
 		std::auto_ptr <EmitterState> m_pState;
 	};
+	
+	template <typename T>
+	inline Emitter& Emitter::WriteIntegralType(T value)
+	{
+		if(!good())
+			return *this;
+		
+		std::stringstream str;
+		PreWriteIntegralType(str);
+		str << value;
+		PostWriteIntegralType(str);
+		return *this;
+	}
 	
 	// overloads of insertion
 	template <typename T>
