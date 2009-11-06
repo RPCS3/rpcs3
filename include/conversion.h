@@ -21,8 +21,8 @@ namespace YAML
 #define YAML_MAKE_STREAM_CONVERT(type) \
 	inline bool Convert(const std::string& input, type& output) { \
 		std::stringstream stream(input); \
-		stream >> output; \
-		return !stream.fail(); \
+		stream.unsetf(std::ios::dec); \
+		return stream >> output; \
 	}
 	
 	YAML_MAKE_STREAM_CONVERT(char)
