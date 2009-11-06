@@ -179,7 +179,7 @@ const char* xRegisterBase::GetName()
 {
 	if( Id == xRegId_Invalid ) return "invalid";
 	if( Id == xRegId_Empty ) return "empty";
-	
+
 	// bad error?  Return a "big" error string.  Might break formatting of register tables
 	// but that's the least of your worries if you see this baby.
 	if( Id >= 8 || Id <= -3 ) return "!Register index out of range!";
@@ -780,13 +780,13 @@ void xImpl_DwordShift::operator()( const ModSibBase& dest, const xRegister16or32
 		xOpWrite0F( (from->GetOperandSize() == 2) ? 0x66 : 0x00, OpcodeBase, from, dest, shiftcnt );
 }
 
-const xImpl_Test		xTEST;
+const xImpl_Test		xTEST	= { };
 
-const xImpl_BitScan		xBSF = { 0xbc };
-const xImpl_BitScan		xBSR = { 0xbd };
+const xImpl_BitScan		xBSF	= { 0xbc };
+const xImpl_BitScan		xBSR	= { 0xbd };
 
-const xImpl_IncDec		xINC = { false };
-const xImpl_IncDec		xDEC = { true };
+const xImpl_IncDec		xINC 	= { false };
+const xImpl_IncDec		xDEC	= { true };
 
 const xImpl_DwordShift	xSHLD	= { 0xa4 };
 const xImpl_DwordShift	xSHRD	= { 0xac };

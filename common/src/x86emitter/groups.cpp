@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -72,7 +72,7 @@ void _g1_EmitOp( G1Type InstType, const xRegisterInt& to, const xRegisterInt& fr
 static void _g1_EmitOp( G1Type InstType, const ModSibBase& sibdest, const xRegisterInt& from )
 {
 	from.prefix16();
-	xWrite8( (from.Is8BitOp() ? 0 : 1) | (InstType<<3) ); 
+	xWrite8( (from.Is8BitOp() ? 0 : 1) | (InstType<<3) );
 	EmitSibMagic( from, sibdest );
 }
 
@@ -223,11 +223,11 @@ template< typename SrcType >
 static void _imul_ImmStyle( const xRegisterInt& param1, const SrcType& param2, int imm )
 {
 	// for iMul OpSize is allowed to be 16 or 32 bit only.
-	const int OpSize = param1.GetOperandSize();
+	const uint OpSize = param1.GetOperandSize();
 
 	pxAssert( OpSize == param2.GetOperandSize() );
 	pxAssert( OpSize > 1 );
-	
+
 	xOpWrite0F( (OpSize == 2) ? 0x66 : 0, is_s8( imm ) ? 0x6b : 0x69, param1, param2 );
 
 	if( is_s8( imm ) )

@@ -84,6 +84,8 @@
 		<Unit filename="../../include/x86emitter/implement/simd_arithmetic.h" />
 		<Unit filename="../../include/x86emitter/implement/simd_comparisons.h" />
 		<Unit filename="../../include/x86emitter/implement/simd_helpers.h" />
+		<Unit filename="../../include/x86emitter/implement/simd_moremovs.h" />
+		<Unit filename="../../include/x86emitter/implement/simd_shufflepack.h" />
 		<Unit filename="../../include/x86emitter/implement/simd_templated_helpers.h" />
 		<Unit filename="../../include/x86emitter/implement/test.h" />
 		<Unit filename="../../include/x86emitter/implement/xchg.h" />
@@ -104,9 +106,11 @@
 		<Unit filename="../../src/x86emitter/PrecompiledHeader.h" />
 		<Unit filename="../../src/x86emitter/cpudetect.cpp" />
 		<Unit filename="../../src/x86emitter/fpu.cpp" />
+		<Unit filename="../../src/x86emitter/groups.cpp" />
 		<Unit filename="../../src/x86emitter/jmp.cpp" />
 		<Unit filename="../../src/x86emitter/legacy.cpp" />
 		<Unit filename="../../src/x86emitter/legacy_sse.cpp" />
+		<Unit filename="../../src/x86emitter/movs.cpp" />
 		<Unit filename="../../src/x86emitter/simd.cpp" />
 		<Unit filename="../../src/x86emitter/tools.cpp" />
 		<Unit filename="../../src/x86emitter/x86emitter.cpp" />
