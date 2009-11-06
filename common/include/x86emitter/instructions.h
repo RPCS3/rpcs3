@@ -14,7 +14,7 @@
  */
 
 /*
- * ix86 definitions v0.9.0
+ * ix86 definitions v0.9.1
  *
  * Original Authors (v0.6.2 and prior):
  *		linuzappz <linuzappz@pcsx.net>
@@ -22,7 +22,7 @@
  *		goldfinger
  *		zerofrog(@gmail.com)
  *
- * Authors of v0.9.0:
+ * Authors of v0.9.1:
  *		Jake.Stine(@gmail.com)
  *		cottonvibes(@gmail.com)
  *		sudonim(1@gmail.com)
@@ -38,16 +38,16 @@ namespace x86Emitter
 	// ------------------------------------------------------------------------
 	// Group 1 Instruction Class
 
-	extern const Internal::xImpl_G1Logic<Internal::G1Type_AND,0x54> xAND;
-	extern const Internal::xImpl_G1Logic<Internal::G1Type_OR,0x56>  xOR;
-	extern const Internal::xImpl_G1Logic<Internal::G1Type_XOR,0x57> xXOR;
+	extern const xImpl_Group1		xADC;
+	extern const xImpl_Group1		xSBB;
 
-	extern const Internal::xImpl_G1Arith<Internal::G1Type_ADD,0x58> xADD;
-	extern const Internal::xImpl_G1Arith<Internal::G1Type_SUB,0x5c> xSUB;
-	extern const Internal::xImpl_G1Compare xCMP;
+	extern const xImpl_G1Logic		xAND;
+	extern const xImpl_G1Logic		xOR;
+	extern const xImpl_G1Logic		xXOR;
 
-	extern const Internal::xImpl_Group1<Internal::G1Type_ADC> xADC;
-	extern const Internal::xImpl_Group1<Internal::G1Type_SBB> xSBB;
+	extern const xImpl_G1Arith		xADD;
+	extern const xImpl_G1Arith		xSUB;
+	extern const xImpl_G1Compare	xCMP;
 
 	// ------------------------------------------------------------------------
 	// Group 2 Instruction Class
@@ -56,102 +56,66 @@ namespace x86Emitter
 	// zero.  This is a safe optimization since any zero-value shift does not affect any
 	// flags.
 
-	extern const Internal::MovImplAll xMOV;
-	extern const Internal::xImpl_Test xTEST;
+	extern const xImpl_Mov			xMOV;
+	extern const xImpl_Test			xTEST;
 
-	extern const Internal::Group2ImplAll<Internal::G2Type_ROL> xROL;
-	extern const Internal::Group2ImplAll<Internal::G2Type_ROR> xROR;
-	extern const Internal::Group2ImplAll<Internal::G2Type_RCL> xRCL;
-	extern const Internal::Group2ImplAll<Internal::G2Type_RCR> xRCR;
-	extern const Internal::Group2ImplAll<Internal::G2Type_SHL> xSHL;
-	extern const Internal::Group2ImplAll<Internal::G2Type_SHR> xSHR;
-	extern const Internal::Group2ImplAll<Internal::G2Type_SAR> xSAR;
+	extern const xImpl_Group2		xROL,	xROR,
+									xRCL,	xRCR,
+									xSHL,	xSHR,
+									xSAR;
 
 	// ------------------------------------------------------------------------
 	// Group 3 Instruction Class
 
-	extern const Internal::xImpl_Group3<Internal::G3Type_NOT> xNOT;
-	extern const Internal::xImpl_Group3<Internal::G3Type_NEG> xNEG;
-	extern const Internal::xImpl_Group3<Internal::G3Type_MUL> xUMUL;
-	extern const Internal::xImpl_Group3<Internal::G3Type_DIV> xUDIV;
-	extern const Internal::xImpl_iDiv xDIV;
-	extern const Internal::xImpl_iMul xMUL;
+	extern const xImpl_Group3		xNOT,	xNEG;
+	extern const xImpl_Group3		xUMUL,	xUDIV;
+	extern const xImpl_iDiv			xDIV;
+	extern const xImpl_iMul			xMUL;
 
-	extern const Internal::xImpl_IncDec<false> xINC;
-	extern const Internal::xImpl_IncDec<true>  xDEC;
+	extern const xImpl_IncDec		xINC,	xDEC;
 
-	extern const Internal::MovExtendImplAll<false> xMOVZX;
-	extern const Internal::MovExtendImplAll<true>  xMOVSX;
+	extern const xImpl_MovExtend	xMOVZX, xMOVSX;
 
-	extern const Internal::DwordShiftImplAll<false> xSHLD;
-	extern const Internal::DwordShiftImplAll<true>  xSHRD;
+	extern const xImpl_DwordShift	xSHLD,	xSHRD;
 
-	extern const Internal::xImpl_Group8<Internal::G8Type_BT> xBT;
-	extern const Internal::xImpl_Group8<Internal::G8Type_BTR> xBTR;
-	extern const Internal::xImpl_Group8<Internal::G8Type_BTS> xBTS;
-	extern const Internal::xImpl_Group8<Internal::G8Type_BTC> xBTC;
+	extern const xImpl_Group8		xBT;
+	extern const xImpl_Group8		xBTR;
+	extern const xImpl_Group8		xBTS;
+	extern const xImpl_Group8		xBTC;
 
-	extern const Internal::xImpl_JmpCall<true> xJMP;
-	extern const Internal::xImpl_JmpCall<false> xCALL;
+	extern const xImpl_BitScan		xBSF,	xBSR;
 
-	extern const Internal::xImpl_BitScan<0xbc> xBSF;
-	extern const Internal::xImpl_BitScan<0xbd> xBSR;
+	extern const xImpl_JmpCall		xJMP,	xCALL;
 
 	// ------------------------------------------------------------------------
-	extern const Internal::CMovImplGeneric xCMOV;
+	extern const xImpl_CMov
+		xCMOVA, xCMOVAE,
+		xCMOVB, xCMOVBE,
+		xCMOVG, xCMOVGE,
+		xCMOVL, xCMOVLE,
 
-	extern const Internal::CMovImplAll<Jcc_Above>			xCMOVA;
-	extern const Internal::CMovImplAll<Jcc_AboveOrEqual>	xCMOVAE;
-	extern const Internal::CMovImplAll<Jcc_Below>			xCMOVB;
-	extern const Internal::CMovImplAll<Jcc_BelowOrEqual>	xCMOVBE;
-
-	extern const Internal::CMovImplAll<Jcc_Greater>			xCMOVG;
-	extern const Internal::CMovImplAll<Jcc_GreaterOrEqual>	xCMOVGE;
-	extern const Internal::CMovImplAll<Jcc_Less>			xCMOVL;
-	extern const Internal::CMovImplAll<Jcc_LessOrEqual>		xCMOVLE;
-
-	extern const Internal::CMovImplAll<Jcc_Zero>			xCMOVZ;
-	extern const Internal::CMovImplAll<Jcc_Equal>			xCMOVE;
-	extern const Internal::CMovImplAll<Jcc_NotZero>			xCMOVNZ;
-	extern const Internal::CMovImplAll<Jcc_NotEqual>		xCMOVNE;
-
-	extern const Internal::CMovImplAll<Jcc_Overflow>		xCMOVO;
-	extern const Internal::CMovImplAll<Jcc_NotOverflow>		xCMOVNO;
-	extern const Internal::CMovImplAll<Jcc_Carry>			xCMOVC;
-	extern const Internal::CMovImplAll<Jcc_NotCarry>		xCMOVNC;
-
-	extern const Internal::CMovImplAll<Jcc_Signed>			xCMOVS;
-	extern const Internal::CMovImplAll<Jcc_Unsigned>		xCMOVNS;
-	extern const Internal::CMovImplAll<Jcc_ParityEven>		xCMOVPE;
-	extern const Internal::CMovImplAll<Jcc_ParityOdd>		xCMOVPO;
+		xCMOVZ, xCMOVE,
+		xCMOVNZ, xCMOVNE,
+		xCMOVO, xCMOVNO,
+		xCMOVC, xCMOVNC,
+		
+		xCMOVS, xCMOVNS,
+		xCMOVPE, xCMOVPO;
 
 	// ------------------------------------------------------------------------
-	extern const Internal::SetImplGeneric xSET;
+	extern const xImpl_Set 
+		xSETA, xSETAE,
+		xSETB, xSETBE,
+		xSETG, xSETGE,
+		xSETL, xSETLE,
 
-	extern const Internal::SetImplAll<Jcc_Above>			xSETA;
-	extern const Internal::SetImplAll<Jcc_AboveOrEqual>		xSETAE;
-	extern const Internal::SetImplAll<Jcc_Below>			xSETB;
-	extern const Internal::SetImplAll<Jcc_BelowOrEqual>		xSETBE;
+		xSETZ, xSETE,
+		xSETNZ, xSETNE,
+		xSETO, xSETNO,
+		xSETC, xSETNC,
 
-	extern const Internal::SetImplAll<Jcc_Greater>			xSETG;
-	extern const Internal::SetImplAll<Jcc_GreaterOrEqual>	xSETGE;
-	extern const Internal::SetImplAll<Jcc_Less>				xSETL;
-	extern const Internal::SetImplAll<Jcc_LessOrEqual>		xSETLE;
-
-	extern const Internal::SetImplAll<Jcc_Zero>				xSETZ;
-	extern const Internal::SetImplAll<Jcc_Equal>			xSETE;
-	extern const Internal::SetImplAll<Jcc_NotZero>			xSETNZ;
-	extern const Internal::SetImplAll<Jcc_NotEqual>			xSETNE;
-
-	extern const Internal::SetImplAll<Jcc_Overflow>			xSETO;
-	extern const Internal::SetImplAll<Jcc_NotOverflow>		xSETNO;
-	extern const Internal::SetImplAll<Jcc_Carry>			xSETC;
-	extern const Internal::SetImplAll<Jcc_NotCarry>			xSETNC;
-
-	extern const Internal::SetImplAll<Jcc_Signed>			xSETS;
-	extern const Internal::SetImplAll<Jcc_Unsigned>			xSETNS;
-	extern const Internal::SetImplAll<Jcc_ParityEven>		xSETPE;
-	extern const Internal::SetImplAll<Jcc_ParityOdd>		xSETPO;
+		xSETS, xSETNS,
+		xSETPE, xSETPO;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Miscellaneous Instructions
@@ -419,10 +383,10 @@ namespace x86Emitter
 	extern const xImplSimd_DestRegSSE xMOVSHDUP;
 
 	extern void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 );
-	extern void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& from, u8 imm8 );
+	extern void xINSERTPS( const xRegisterSSE& to, const ModSib32& from, u8 imm8 );
 
 	extern void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 );
-	extern void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 );
+	extern void xEXTRACTPS( const ModSib32& dest, const xRegisterSSE& from, u8 imm8 );
 
 	// ------------------------------------------------------------------------
 
@@ -431,7 +395,7 @@ namespace x86Emitter
 	extern const xImplSimd_DestRegEither xPOR;
 	extern const xImplSimd_DestRegEither xPXOR;
 
-	extern /*const*/ xImplSimd_Shuffle		xSHUF;
+	extern const xImplSimd_Shuffle		xSHUF;
 
 	// ------------------------------------------------------------------------
 

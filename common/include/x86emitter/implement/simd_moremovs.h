@@ -142,32 +142,32 @@ struct xImplSimd_PMove
 	// [SSE-4.1] Zero/Sign-extend the low byte values in src into word integers
 	// and store them in dest.
 	void BW( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void BW( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const;
+	void BW( const xRegisterSSE& to, const ModSib64& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low byte values in src into dword integers
 	// and store them in dest.
 	void BD( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void BD( const xRegisterSSE& to, const ModSibStrict<u32>& from ) const;
+	void BD( const xRegisterSSE& to, const ModSib32& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low byte values in src into qword integers
 	// and store them in dest.
 	void BQ( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void BQ( const xRegisterSSE& to, const ModSibStrict<u16>& from ) const;
+	void BQ( const xRegisterSSE& to, const ModSib16& from ) const;
 	
 	// [SSE-4.1] Zero/Sign-extend the low word values in src into dword integers
 	// and store them in dest.
 	void WD( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void WD( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const;
+	void WD( const xRegisterSSE& to, const ModSib64& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low word values in src into qword integers
 	// and store them in dest.
 	void WQ( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void WQ( const xRegisterSSE& to, const ModSibStrict<u32>& from ) const;
+	void WQ( const xRegisterSSE& to, const ModSib32& from ) const;
 
 	// [SSE-4.1] Zero/Sign-extend the low dword values in src into qword integers
 	// and store them in dest.
 	void DQ( const xRegisterSSE& to, const xRegisterSSE& from ) const;
-	void DQ( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const;
+	void DQ( const xRegisterSSE& to, const ModSib64& from ) const;
 };
 
 }

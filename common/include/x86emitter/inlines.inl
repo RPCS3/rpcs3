@@ -14,7 +14,7 @@
  */
 
 /*
- * ix86 core v0.9.0
+ * ix86 core v0.9.1
  *
  * Original Authors (v0.6.2 and prior):
  *		linuzappz <linuzappz@pcsx.net>
@@ -22,7 +22,7 @@
  *		goldfinger
  *		zerofrog(@gmail.com)
  *
- * Authors of v0.9.0:
+ * Authors of v0.9.1:
  *		Jake.Stine(@gmail.com)
  *		cottonvibes(@gmail.com)
  *		sudonim(1@gmail.com)
@@ -45,52 +45,10 @@
 
 namespace x86Emitter
 {
-	extern const char *const x86_regnames_gpr8[8];
-	extern const char *const x86_regnames_gpr16[8];
-	extern const char *const x86_regnames_gpr32[8];
+	// --------------------------------------------------------------------------------------
+	//  x86Register Method Implementations (inlined!)
+	// --------------------------------------------------------------------------------------
 
-	extern const char *const x86_regnames_sse[8];
-	extern const char *const x86_regnames_mmx[8];
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// Diagnostic -- returns a string representation of this register.
-	//
-	template< typename T >
-	const char* xGetRegName( const xRegister<T>& src )
-	{
-		if( src.IsEmpty() ) return "empty";
-		
-		switch( sizeof(T) )
-		{
-			case 1: return x86_regnames_gpr8[ src.Id ];
-			case 2: return x86_regnames_gpr16[ src.Id ];
-			case 4: return x86_regnames_gpr32[ src.Id ];
-			
-			jNO_DEFAULT
-		}
-
-		return "oops?";
-	}
-
-	template< typename T >
-	const char* xGetRegName( const xRegisterSIMD<T>& src )
-	{
-		if( src.IsEmpty() ) return "empty";
-		
-		switch( sizeof(T) )
-		{
-			case 8: return x86_regnames_mmx[ src.Id ];
-			case 16: return x86_regnames_sse[ src.Id ];
-			
-			jNO_DEFAULT
-		}
-
-		return "oops?";
-	}
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// x86Register Method Implementations
-	//
 	__forceinline xAddressInfo xAddressReg::operator+( const xAddressReg& right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
@@ -132,184 +90,12 @@ namespace x86Emitter
 	__forceinline xAddressInfo xAddressReg::operator*( u32 right ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
-		return xAddressInfo( Empty, *this, right );
+		return xAddressInfo( xEmptyReg, *this, right );
 	}
 
 	__forceinline xAddressInfo xAddressReg::operator<<( u32 shift ) const
 	{
 		pxAssertMsg( Id != -1, "Uninitialized x86 register." );
-		return xAddressInfo( Empty, *this, 1<<shift );
-	}
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// ModSib Method Implementations
-	//
-
-	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( const xAddressInfo& src ) :
-		Base( src.Base ),
-		Index( src.Index ),
-		Scale( src.Factor ),
-		Displacement( src.Displacement )
-	{
-		Reduce();
-	}
-
-	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( xAddressReg base, xAddressReg index, int scale, s32 displacement ) :
-		Base( base ),
-		Index( index ),
-		Scale( scale ),
-		Displacement( displacement )
-	{
-		Reduce();
-	}
-
-	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( s32 displacement ) :
-		Base(),
-		Index(),
-		Scale(0),
-		Displacement( displacement )
-	{
-		// no reduction necessary :D
-	}
-
-	// ------------------------------------------------------------------------
-	__forceinline ModSibBase::ModSibBase( const void* target ) :
-		Base(),
-		Index(),
-		Scale(0),
-		Displacement( (s32)target )
-	{
-		// no reduction necessary :D
-	}
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// xAddressInfo Method Implementations
-	//
-	__forceinline xAddressInfo& xAddressInfo::Add( const xAddressReg& src )
-	{
-		if( src == Index )
-		{
-			Factor++;
-		}
-		else if( src == Base )
-		{
-			// Compound the existing register reference into the Index/Scale pair.
-			Base = xAddressReg::Empty;
-
-			if( src == Index )
-				Factor++;
-			else
-			{
-				pxAssertDev( Index.IsEmpty(), "x86Emitter: Only one scaled index register is allowed in an address modifier." );
-				Index = src;
-				Factor = 2;
-			}
-		}
-		else if( Base.IsEmpty() )
-			Base = src;
-		else if( Index.IsEmpty() )
-			Index = src;
-		else
-			pxFailDev( L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
-
-		return *this;
-	}
-
-	// ------------------------------------------------------------------------
-	__forceinline xAddressInfo& xAddressInfo::Add( const xAddressInfo& src )
-	{
-		Add( src.Base );
-		Add( src.Displacement );
-
-		// If the factor is 1, we can just treat index like a base register also.
-		if( src.Factor == 1 )
-		{
-			Add( src.Index );
-		}
-		else if( Index.IsEmpty() )
-		{
-			Index = src.Index;
-			Factor = src.Factor;
-		}
-		else if( Index == src.Index )
-		{
-			Factor += src.Factor;
-		}
-		else
-			pxFailDev( L"x86Emitter: address modifiers cannot have more than two index registers." );	// oops, only 2 regs allowed per ModRm!
-
-		return *this;
-	}
-	
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
-	
-	// ------------------------------------------------------------------------
-	template< typename OperandType >
-	xForwardJump<OperandType>::xForwardJump( JccComparisonType cctype ) :
-		BasePtr( (s8*)xGetPtr() +
-			((OperandSize == 1) ? 2 :		// j8's are always 2 bytes.
-			((cctype==Jcc_Unconditional) ? 5 : 6 ))	// j32's are either 5 or 6 bytes
-		)
-	{
-		pxAssert( cctype != Jcc_Unknown );
-		pxAssert( OperandSize == 1 || OperandSize == 4 );
-		
-		if( OperandSize == 1 )
-			xWrite8( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
-		else
-		{
-			if( cctype == Jcc_Unconditional )
-				xWrite8( 0xe9 );
-			else
-			{
-				xWrite8( 0x0f );
-				xWrite8( 0x80 | cctype );
-			}
-		}
-
-		xAdvancePtr( OperandSize );
-	}
-
-	// ------------------------------------------------------------------------
-	template< typename OperandType >
-	void xForwardJump<OperandType>::SetTarget() const
-	{
-		pxAssert( BasePtr != NULL );
-
-		sptr displacement = (sptr)xGetPtr() - (sptr)BasePtr;
-		if( OperandSize == 1 )
-		{
-			if( !is_s8( displacement ) )
-			{
-				pxAssert( false );
-// Don't ask. --arcum42
-#if !defined(__LINUX__) || !defined(DEBUG)
-
-				Console.Error( "Emitter Error: Invalid short jump displacement = 0x%x", (int)displacement );
-#endif
-			}
-			BasePtr[-1] = (s8)displacement;
-		}
-		else
-		{
-			// full displacement, no sanity checks needed :D
-			((s32*)BasePtr)[-1] = displacement;
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	// returns the inverted conditional type for this Jcc condition.  Ie, JNS will become JS.
-	//
-	static __forceinline JccComparisonType xInvertCond( JccComparisonType src )
-	{
-		pxAssert( src != Jcc_Unknown );
-		if( Jcc_Unconditional == src ) return Jcc_Unconditional;
-
-		// x86 conditionals are clever!  To invert conditional types, just invert the lower bit:
-		return (JccComparisonType)((int)src ^ 1);
+		return xAddressInfo( xEmptyReg, *this, 1<<shift );
 	}
 }

@@ -14,7 +14,7 @@
  */
 
 /*
- * ix86 public header v0.9.0
+ * ix86 public header v0.9.1
  *
  * Original Authors (v0.6.2 and prior):
  *		linuzappz <linuzappz@pcsx.net>
@@ -22,7 +22,7 @@
  *		goldfinger
  *		zerofrog(@gmail.com)
  *
- * Authors of v0.9.0:
+ * Authors of v0.9.1:
  *		Jake.Stine(@gmail.com)
  *		cottonvibes(@gmail.com)
  *		sudonim(1@gmail.com)

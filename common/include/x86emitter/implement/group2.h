@@ -15,8 +15,7 @@
 
 #pragma once
 
-// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
-// Instructions implemented in this header are as follows -->>
+namespace x86Emitter {
 
 enum G2Type
 {
@@ -30,73 +29,23 @@ enum G2Type
 	G2Type_SAR
 };
 
-// -------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+//  xImpl_Group2
+// --------------------------------------------------------------------------------------
 // Group 2 (shift) instructions have no Sib/ModRM forms.
 // Optimization Note: For Imm forms, we ignore the instruction if the shift count is zero.
 // This is a safe optimization since any zero-value shift does not affect any flags.
 //
-template< G2Type InstType >
-class Group2ImplAll
+struct xImpl_Group2
 {
-public:
-	template< typename T > __forceinline void operator()( const xRegister<T>& to,		const xRegisterCL& /* from */ ) const
-	{
-		//if( !Is8BitOp<T>() )
-		//	pxAssert( to != xRegister<T>( ebp.Id ) );
+	G2Type InstType;
 
-		prefix16<T>();
-		xWrite8( Is8BitOp<T>() ? 0xd2 : 0xd3 );
-		EmitSibMagic( InstType, to );
-	}
+	void operator()( const xRegisterInt& to, const xRegisterCL& from ) const;
+	void operator()( const ModSib32orLess& to, const xRegisterCL& from ) const;
+	void operator()( const xRegisterInt& to, u8 imm ) const;
+	void operator()( const ModSib32orLess& to, u8 imm ) const;
 
-	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest,	const xRegisterCL& /* from */ ) const
-	{
-		prefix16<T>();
-		xWrite8( Is8BitOp<T>() ? 0xd2 : 0xd3 );
-		EmitSibMagic( InstType, sibdest );
-	}
-
-	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest, u8 imm ) const
-	{
-		if( imm == 0 ) return;
-
-		prefix16<T>();
-		if( imm == 1 )
-		{
-			// special encoding of 1's
-			xWrite8( Is8BitOp<T>() ? 0xd0 : 0xd1 );
-			EmitSibMagic( InstType, sibdest );
-		}
-		else
-		{
-			xWrite8( Is8BitOp<T>() ? 0xc0 : 0xc1 );
-			EmitSibMagic( InstType, sibdest );
-			xWrite8( imm );
-		}
-	}
-	
-	template< typename T > __forceinline void operator()( const xRegister<T>& to, u8 imm ) const
-	{
-		if( imm == 0 ) return;
-
-		//if( !Is8BitOp<T>() )
-		//	pxAssert( to != xRegister<T>( ebp.Id ) );
-
-		prefix16<T>();
-		if( imm == 1 )
-		{
-			// special encoding of 1's
-			xWrite8( Is8BitOp<T>() ? 0xd0 : 0xd1 );
-			EmitSibMagic( InstType, to );
-		}
-		else
-		{
-			xWrite8( Is8BitOp<T>() ? 0xc0 : 0xc1 );
-			EmitSibMagic( InstType, to );
-			xWrite8( imm );
-		}
-	}
-
+#if 0
 	// ------------------------------------------------------------------------
 	template< typename T > __noinline void operator()( const xDirectOrIndirect<T>& to, u8 imm ) const
 	{
@@ -107,7 +56,7 @@ public:
 	{
 		_DoI_helpermess( *this, to, from );
 	}
-
-
-	Group2ImplAll() {}		// I am a class with no members, so I need an explicit constructor!  Sense abounds.
+#endif
 };
+
+} // End namespace x86Emitter

@@ -14,7 +14,7 @@
  */
 
 /*
- * ix86 core v0.9.0
+ * ix86 core v0.9.1
  *
  * Original Authors (v0.6.2 and prior):
  *		linuzappz <linuzappz@pcsx.net>
@@ -22,7 +22,7 @@
  *		goldfinger
  *		zerofrog(@gmail.com)
  *
- * Authors of v0.9.0:
+ * Authors of v0.9.1:
  *		Jake.Stine(@gmail.com)
  *		cottonvibes(@gmail.com)
  *		sudonim(1@gmail.com)
@@ -33,12 +33,15 @@
 
 namespace x86Emitter {
 
-using namespace Internal;
+void xImpl_JmpCall::operator()( const xRegister32& absreg ) const	{ xOpWrite( 0x00, 0xff, isJmp ? 4 : 2, absreg ); }
+void xImpl_JmpCall::operator()( const ModSib32& src ) const			{ xOpWrite( 0x00, 0xff, isJmp ? 4 : 2, src ); }
 
-const xImpl_JmpCall<true> xJMP;
-const xImpl_JmpCall<false> xCALL;
+void xImpl_JmpCall::operator()( const xRegister16& absreg ) const	{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, absreg ); }
+void xImpl_JmpCall::operator()( const ModSib16& src ) const			{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, src ); }
 
-// ------------------------------------------------------------------------
+const xImpl_JmpCall xJMP	= { true };
+const xImpl_JmpCall xCALL	= { false };
+
 void xSmartJump::SetTarget()
 {
 	u8* target = xGetPtr();
@@ -104,7 +107,7 @@ __emitinline s8* xJcc8( JccComparisonType comparison, s8 displacement )
 // slideForward - used internally by xSmartJump to indicate that the jump target is going
 // to slide forward in the event of an 8 bit displacement.
 //
-__emitinline void Internal::xJccKnownTarget( JccComparisonType comparison, const void* target, bool slideForward )
+__emitinline void xJccKnownTarget( JccComparisonType comparison, const void* target, bool slideForward )
 {
 	// Calculate the potential j8 displacement first, assuming an instruction length of 2:
 	sptr displacement8 = (sptr)target - (sptr)(xGetPtr() + 2);
@@ -134,5 +137,56 @@ __emitinline void xJcc( JccComparisonType comparison, const void* target )
 	xJccKnownTarget( comparison, target, false );
 }
 
+xForwardJumpBase::xForwardJumpBase( uint opsize, JccComparisonType cctype )
+{
+	pxAssert( opsize == 1 || opsize == 4 );
+	pxAssertDev( cctype != Jcc_Unknown, "Invalid ForwardJump conditional type." );
+
+	BasePtr = (s8*)xGetPtr() +
+		((opsize == 1) ? 2 :					// j8's are always 2 bytes.
+		((cctype==Jcc_Unconditional) ? 5 : 6 ));	// j32's are either 5 or 6 bytes
+
+	if( opsize == 1 )
+		xWrite8( (cctype == Jcc_Unconditional) ? 0xeb : (0x70 | cctype) );
+	else
+	{
+		if( cctype == Jcc_Unconditional )
+			xWrite8( 0xe9 );
+		else
+		{
+			xWrite8( 0x0f );
+			xWrite8( 0x80 | cctype );
+		}
+	}
+
+	xAdvancePtr( opsize );
 }
 
+void xForwardJumpBase::_setTarget( uint opsize ) const
+{
+	pxAssertDev( BasePtr != NULL, "" );
+
+	sptr displacement = (sptr)xGetPtr() - (sptr)BasePtr;
+	if( opsize == 1 )
+	{
+		pxAssertDev( is_s8( displacement ), "Emitter Error: Invalid short jump displacement." );
+		BasePtr[-1] = (s8)displacement;
+	}
+	else
+	{
+		// full displacement, no sanity checks needed :D
+		((s32*)BasePtr)[-1] = displacement;
+	}
+}
+
+// returns the inverted conditional type for this Jcc condition.  Ie, JNS will become JS.
+__forceinline JccComparisonType xInvertCond( JccComparisonType src )
+{
+	pxAssert( src != Jcc_Unknown );
+	if( Jcc_Unconditional == src ) return Jcc_Unconditional;
+
+	// x86 conditionals are clever!  To invert conditional types, just invert the lower bit:
+	return (JccComparisonType)((int)src ^ 1);
+}
+
+}

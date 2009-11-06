@@ -17,3 +17,52 @@
 
 #include "x86types.h"
 #include "instructions.h"
+
+#define OpWriteSSE( pre, op )		xOpWrite0F( pre, op, to, from )
+
+namespace x86Emitter {
+
+extern void SimdPrefix( u8 prefix, u16 opcode );
+extern void EmitSibMagic( uint regfield, const void* address );
+extern void EmitSibMagic( uint regfield, const ModSibBase& info );
+extern void EmitSibMagic( uint reg1, const xRegisterBase& reg2 );
+extern void EmitSibMagic( const xRegisterBase& reg1, const xRegisterBase& reg2 );
+extern void EmitSibMagic( const xRegisterBase& reg1, const void* src );
+extern void EmitSibMagic( const xRegisterBase& reg1, const ModSibBase& sib );
+
+extern void _xMovRtoR( const xRegisterInt& to, const xRegisterInt& from );
+extern void _g1_EmitOp( G1Type InstType, const xRegisterInt& to, const xRegisterInt& from );
+
+template< typename T1, typename T2 > __emitinline
+void xOpWrite( u8 prefix, u8 opcode, const T1& param1, const T2& param2 )
+{
+	if( prefix != 0 )
+		xWrite16( (opcode<<8) | prefix );
+	else
+		xWrite8( opcode );
+
+	EmitSibMagic( param1, param2 );
+}
+
+template< typename T1, typename T2 > __emitinline
+void xOpWrite0F( u8 prefix, u16 opcode, const T1& param1, const T2& param2 )
+{
+	SimdPrefix( prefix, opcode );
+	EmitSibMagic( param1, param2 );
+}
+
+template< typename T1, typename T2 > __emitinline
+void xOpWrite0F( u8 prefix, u16 opcode, const T1& param1, const T2& param2, u8 imm8 )
+{
+	xOpWrite0F( prefix, opcode, param1, param2 );
+	xWrite8( imm8 );
+}
+
+template< typename T1, typename T2 > __emitinline
+void xOpWrite0F( u16 opcode, const T1& param1, const T2& param2 )			{ xOpWrite0F( 0, opcode, param1, param2 ); }
+
+template< typename T1, typename T2 > __emitinline
+void xOpWrite0F( u16 opcode, const T1& param1, const T2& param2, u8 imm8 )	{ xOpWrite0F( 0, opcode, param1, param2, imm8 ); }
+
+}
+

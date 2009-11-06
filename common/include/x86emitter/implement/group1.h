@@ -15,8 +15,7 @@
 
 #pragma once
 
-// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
-// Instructions implemented in this header are as follows -->>
+namespace x86Emitter {
 
 enum G1Type
 {
@@ -30,84 +29,23 @@ enum G1Type
 	G1Type_CMP
 };
 
-// -------------------------------------------------------------------
-//
-template< G1Type InstType >
-class xImpl_Group1
+// --------------------------------------------------------------------------------------
+//  xImpl_Group1
+// --------------------------------------------------------------------------------------
+struct xImpl_Group1
 {
-public:
-	// ------------------------------------------------------------------------
-	template< typename T > __forceinline void operator()( const xRegister<T>& to, const xRegister<T>& from ) const
-	{
-		prefix16<T>();
-		xWrite8( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) );
-		EmitSibMagic( from, to );
-	}
+	G1Type	InstType;
 
-	// ------------------------------------------------------------------------
-	template< typename T > __noinline void operator()( const ModSibBase& sibdest, const xRegister<T>& from ) const
-	{
-		prefix16<T>();
-		xWrite8( (Is8BitOp<T>() ? 0 : 1) | (InstType<<3) ); 
-		EmitSibMagic( from, sibdest );
-	}
+	void operator()( const xRegister8& to, const xRegister8& from ) const;
+	void operator()( const xRegister16& to, const xRegister16& from ) const;
+	void operator()( const xRegister32& to, const xRegister32& from ) const;
 
-	// ------------------------------------------------------------------------
-	template< typename T > __noinline void operator()( const xRegister<T>& to, const ModSibBase& sibsrc ) const
-	{
-		prefix16<T>();
-		xWrite8( (Is8BitOp<T>() ? 2 : 3) | (InstType<<3) );
-		EmitSibMagic( to, sibsrc );
-	}
+	void operator()( const ModSibBase& to, const xRegisterInt& from ) const;
+	void operator()( const xRegisterInt& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterInt& to, int imm ) const;
+	void operator()( const ModSib32orLess& to, int imm ) const;
 
-	// ------------------------------------------------------------------------
-	// Note on Imm forms : use int as the source operand since it's "reasonably inert" from a compiler
-	// perspective.  (using uint tends to make the compiler try and fail to match signed immediates with
-	// one of the other overloads).
-	
-	template< typename T > __noinline void operator()( const ModSibStrict<T>& sibdest, int imm ) const
-	{
-		if( Is8BitOp<T>() )
-		{
-			xWrite8( 0x80 );
-			EmitSibMagic( InstType, sibdest );
-			xWrite<s8>( imm );
-		}
-		else
-		{		
-			prefix16<T>();
-			xWrite8( is_s8( imm ) ? 0x83 : 0x81 );
-			EmitSibMagic( InstType, sibdest );
-			if( is_s8( imm ) )
-				xWrite<s8>( imm );
-			else
-				xWrite<T>( imm );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	template< typename T > __forceinline void operator()( const xRegister<T>& to, int imm ) const
-	{
-		prefix16<T>();
-		if( !Is8BitOp<T>() && is_s8( imm ) )
-		{
-			xWrite8( 0x83 );
-			EmitSibMagic( InstType, to );
-			xWrite<s8>( imm );
-		}
-		else
-		{
-			if( to.IsAccumulator() )
-				xWrite8( (Is8BitOp<T>() ? 4 : 5) | (InstType<<3) );
-			else
-			{
-				xWrite8( Is8BitOp<T>() ? 0x80 : 0x81 );
-				EmitSibMagic( InstType, to );
-			}
-			xWrite<T>( imm );
-		}
-	}
-	
+#if 0
 	// ------------------------------------------------------------------------
 	template< typename T > __noinline void operator()( const ModSibBase& to, const xImmReg<T>& immOrReg ) const
 	{
@@ -129,68 +67,83 @@ public:
 		_DoI_helpermess( *this, to, from );
 	}
 
-	template< typename T > __noinline void operator()( const xRegister<T>& to, const xDirectOrIndirect<T>& from ) const
+	// FIXME : Make this struct to 8, 16, and 32 bit registers
+	template< typename T > __noinline void operator()( const xRegisterBase& to, const xDirectOrIndirect<T>& from ) const
 	{
 		_DoI_helpermess( *this, xDirectOrIndirect<T>( to ), from );
 	}
 
-	template< typename T > __noinline void operator()( const xDirectOrIndirect<T>& to, const xRegister<T>& from ) const
+	// FIXME : Make this struct to 8, 16, and 32 bit registers
+	template< typename T > __noinline void operator()( const xDirectOrIndirect<T>& to, const xRegisterBase& from ) const
 	{
 		_DoI_helpermess( *this, to, xDirectOrIndirect<T>( from ) );
 	}
-
-	xImpl_Group1() {}		// Why does GCC need these?
+#endif
 };
 
 // ------------------------------------------------------------------------
 // This class combines x86 with SSE/SSE2 logic operations (ADD, OR, and NOT).
 // Note: ANDN [AndNot] is handled below separately.
 //
-template< G1Type InstType, u16 OpcodeSSE >
-class xImpl_G1Logic : public xImpl_Group1<InstType>
+struct xImpl_G1Logic
 {
-public:
-	using xImpl_Group1<InstType>::operator();
+	G1Type	InstType;
 
-	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> PS;		// packed single precision
-	const SimdImpl_DestRegSSE<0x66,OpcodeSSE> PD;		// packed double precision
+	void operator()( const xRegister8& to, const xRegister8& from ) const;
+	void operator()( const xRegister16& to, const xRegister16& from ) const;
+	void operator()( const xRegister32& to, const xRegister32& from ) const;
 
-	xImpl_G1Logic() {}
+	void operator()( const ModSibBase& to, const xRegisterInt& from ) const;
+	void operator()( const xRegisterInt& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterInt& to, int imm ) const;
+
+	void operator()( const ModSib32orLess& to, int imm ) const;
+
+	xImplSimd_DestRegSSE PS;			// packed single precision
+	xImplSimd_DestRegSSE PD;			// packed double precision
 };
 
 // ------------------------------------------------------------------------
 // This class combines x86 with SSE/SSE2 arithmetic operations (ADD/SUB).
 //
-template< G1Type InstType, u16 OpcodeSSE >
-class xImpl_G1Arith : public xImpl_G1Logic<InstType, OpcodeSSE >
+struct xImpl_G1Arith
 {
-public:
-	using xImpl_Group1<InstType>::operator();
+	G1Type	InstType;
 
-	const SimdImpl_DestRegSSE<0xf3,OpcodeSSE> SS;		// scalar single precision
-	const SimdImpl_DestRegSSE<0xf2,OpcodeSSE> SD;		// scalar double precision
+	void operator()( const xRegister8& to, const xRegister8& from ) const;
+	void operator()( const xRegister16& to, const xRegister16& from ) const;
+	void operator()( const xRegister32& to, const xRegister32& from ) const;
 
-	xImpl_G1Arith() {}
+	void operator()( const ModSibBase& to, const xRegisterInt& from ) const;
+	void operator()( const xRegisterInt& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterInt& to, int imm ) const;
+
+	void operator()( const ModSib32orLess& to, int imm ) const;
+
+	xImplSimd_DestRegSSE PS;			// packed single precision
+	xImplSimd_DestRegSSE PD;			// packed double precision
+	xImplSimd_DestRegSSE SS;			// scalar single precision
+	xImplSimd_DestRegSSE SD;			// scalar double precision
 };
 
 // ------------------------------------------------------------------------
-class xImpl_G1Compare : xImpl_Group1< G1Type_CMP >
+struct xImpl_G1Compare
 {
-protected:
-	template< u8 Prefix > struct Woot
-	{
-		__forceinline void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType cmptype ) const{ xOpWrite0F( Prefix, 0xc2, to, from, (u8)cmptype ); }
-		__forceinline void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType cmptype ) const	{ xOpWrite0F( Prefix, 0xc2, to, from, (u8)cmptype ); }
-		Woot() {}
-	};
+	void operator()( const xRegister8& to, const xRegister8& from ) const;
+	void operator()( const xRegister16& to, const xRegister16& from ) const;
+	void operator()( const xRegister32& to, const xRegister32& from ) const;
 
-public:
-	using xImpl_Group1<G1Type_CMP>::operator();
+	void operator()( const ModSibBase& to, const xRegisterInt& from ) const;
+	void operator()( const xRegisterInt& to, const ModSibBase& from ) const;
+	void operator()( const xRegisterInt& to, int imm ) const;
 
-	const Woot<0x00> PS;
-	const Woot<0x66> PD;
-	const Woot<0xf3> SS;
-	const Woot<0xf2> SD;
+	void operator()( const ModSib32orLess& to, int imm ) const;
 
-	xImpl_G1Compare() {} //GCWhat?
+	xImplSimd_DestSSE_CmpImm	PS;
+	xImplSimd_DestSSE_CmpImm	PD;
+	xImplSimd_DestSSE_CmpImm	SS;
+	xImplSimd_DestSSE_CmpImm	SD;
 };
+
+}	// End namespace x86Emitter
+

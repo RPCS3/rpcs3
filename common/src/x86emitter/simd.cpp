@@ -67,8 +67,6 @@ SSE_MXCSR::operator x86Emitter::ModSib32() const
 
 namespace x86Emitter {
 
-using namespace Internal;
-
 // ------------------------------------------------------------------------
 // SimdPrefix - If the lower byte of the opcode is 0x38 or 0x3a, then the opcode is
 // treated as a 16 bit value (in SSE 0x38 and 0x3a denote prefixes for extended SSE3/4
@@ -76,7 +74,7 @@ using namespace Internal;
 // Non-zero upper bytes, when the lower byte is not the 0x38 or 0x3a prefix, will
 // generate an assertion.
 //
-__emitinline void Internal::SimdPrefix( u8 prefix, u16 opcode )
+__emitinline void SimdPrefix( u8 prefix, u16 opcode )
 {
 	const bool is16BitOpcode = ((opcode & 0xff) == 0x38) || ((opcode & 0xff) == 0x3a);
 
@@ -192,6 +190,9 @@ void xImplSimd_DestRegEither::operator()( const xRegisterSSE& to, const ModSibBa
 
 void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const xRegisterMMX& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
 void xImplSimd_DestRegEither::operator()( const xRegisterMMX& to, const ModSibBase& from ) const			{ OpWriteSSE( 0x00, Opcode ); }
+
+void xImplSimd_DestSSE_CmpImm::operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType imm ) const	{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
+void xImplSimd_DestSSE_CmpImm::operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType imm ) const		{ xOpWrite0F( Prefix, Opcode, to, from, imm ); }
 
 // =====================================================================================================
 //  SIMD Arithmetic Instructions
@@ -351,16 +352,16 @@ const xImplSimd_Round xROUND =
 // =====================================================================================================
 
 void xImplSimd_Compare::PS( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::PS( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::PS( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0x00, 0xc2, to, from, (u8)CType ); }
 
 void xImplSimd_Compare::PD( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::PD( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::PD( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0x66, 0xc2, to, from, (u8)CType ); }
 
 void xImplSimd_Compare::SS( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::SS( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::SS( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0xf3, 0xc2, to, from, (u8)CType ); }
 
 void xImplSimd_Compare::SD( const xRegisterSSE& to, const xRegisterSSE& from ) const	{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
-void xImplSimd_Compare::SD( const xRegisterSSE& to, const ModSibBase& from ) const	{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
+void xImplSimd_Compare::SD( const xRegisterSSE& to, const ModSibBase& from ) const		{ xOpWrite0F( 0xf2, 0xc2, to, from, (u8)CType ); }
 
 const xImplSimd_MinMax xMIN =
 {
@@ -486,7 +487,7 @@ void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterSSE& from, u8 i
 void SimdImpl_PExtract::W( const xRegister32& to, const xRegisterMMX& from, u8 imm8 ) const		{ xOpWrite0F( 0xc5, to, from, imm8 ); }
 void SimdImpl_PExtract::W( const ModSibBase& dest, const xRegisterSSE& from, u8 imm8 ) const	{ xOpWrite0F( 0x66, 0x153a, from, dest, imm8 ); }
 
-/*const*/ xImplSimd_Shuffle xSHUF;
+const xImplSimd_Shuffle xSHUF = { };
 
 const xImplSimd_PShuffle xPSHUF =
 {
@@ -600,22 +601,22 @@ void xImplSimd_MoveDQ::operator()( const ModSibBase& to, const xRegisterSSE& fro
 }
 
 void xImplSimd_PMove::BW( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase ); }
-void xImplSimd_PMove::BW( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase ); }
+void xImplSimd_PMove::BW( const xRegisterSSE& to, const ModSib64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase ); }
 
 void xImplSimd_PMove::BD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
-void xImplSimd_PMove::BD( const xRegisterSSE& to, const ModSibStrict<u32>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
+void xImplSimd_PMove::BD( const xRegisterSSE& to, const ModSib32& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x100 ); }
 
 void xImplSimd_PMove::BQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
-void xImplSimd_PMove::BQ( const xRegisterSSE& to, const ModSibStrict<u16>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
+void xImplSimd_PMove::BQ( const xRegisterSSE& to, const ModSib16& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x200 ); }
 
 void xImplSimd_PMove::WD( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
-void xImplSimd_PMove::WD( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
+void xImplSimd_PMove::WD( const xRegisterSSE& to, const ModSib64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x300 ); }
 
 void xImplSimd_PMove::WQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
-void xImplSimd_PMove::WQ( const xRegisterSSE& to, const ModSibStrict<u32>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
+void xImplSimd_PMove::WQ( const xRegisterSSE& to, const ModSib32& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x400 ); }
 
 void xImplSimd_PMove::DQ( const xRegisterSSE& to, const xRegisterSSE& from ) const		{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
-void xImplSimd_PMove::DQ( const xRegisterSSE& to, const ModSibStrict<u64>& from ) const	{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
+void xImplSimd_PMove::DQ( const xRegisterSSE& to, const ModSib64& from ) const			{ OpWriteSSE( 0x66, OpcodeBase+0x500 ); }
 
 
 const xImplSimd_MoveSSE xMOVAPS = { 0x00, true };
@@ -794,15 +795,15 @@ __forceinline void xPALIGNR( const xRegisterMMX& to, const xRegisterMMX& from, u
 //  * ZMASK: Each bit of Imm8[3:0] selects a dword element in dest to  be written
 //    with 0.0 if set to 1.
 //
-__emitinline void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x213a, to, from, imm8 ); }
-__emitinline void xINSERTPS( const xRegisterSSE& to, const ModSibStrict<u32>& from, u8 imm8 )	{ xOpWrite0F( 0x66, 0x213a, to, from, imm8 ); }
+__emitinline void xINSERTPS( const xRegisterSSE& to, const xRegisterSSE& from, u8 imm8 )	{ xOpWrite0F( 0x66, 0x213a, to, from, imm8 ); }
+__emitinline void xINSERTPS( const xRegisterSSE& to, const ModSib32& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x213a, to, from, imm8 ); }
 
 // [SSE-4.1] Extract a single-precision floating-point value from src at an offset
 // determined by imm8[1-0]*32. The extracted single precision floating-point value
 // is stored into the low 32-bits of dest (or at a 32-bit memory pointer).
 //
-__emitinline void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x173a, to, from, imm8 ); }
-__emitinline void xEXTRACTPS( const ModSibStrict<u32>& dest, const xRegisterSSE& from, u8 imm8 ){ xOpWrite0F( 0x66, 0x173a, from, dest, imm8 ); }
+__emitinline void xEXTRACTPS( const xRegister32& to, const xRegisterSSE& from, u8 imm8 )	{ xOpWrite0F( 0x66, 0x173a, to, from, imm8 ); }
+__emitinline void xEXTRACTPS( const ModSib32& dest, const xRegisterSSE& from, u8 imm8 )		{ xOpWrite0F( 0x66, 0x173a, from, dest, imm8 ); }
 
 
 // =====================================================================================================

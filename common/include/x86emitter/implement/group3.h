@@ -15,8 +15,7 @@
 
 #pragma once
 
-// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
-// Instructions implemented in this header are as follows -->>
+namespace x86Emitter {
 
 enum G3Type
 {
@@ -28,84 +27,83 @@ enum G3Type
 	G3Type_iDIV	= 7
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-template< G3Type InstType >
-class xImpl_Group3
+// --------------------------------------------------------------------------------------
+//  xImpl_Group3
+// --------------------------------------------------------------------------------------
+struct xImpl_Group3
 {
-public:
-	// ------------------------------------------------------------------------
-	template< typename T > __emitinline void operator()( const xRegister<T>& from ) const
-	{
-		prefix16<T>();
-		xWrite8(Is8BitOp<T>() ? 0xf6 : 0xf7 );
-		EmitSibMagic( InstType, from );
-	}
+	G3Type	InstType;
 
-	// ------------------------------------------------------------------------
-	template< typename T > __emitinline void operator()( const ModSibStrict<T>& from ) const
-	{
-		prefix16<T>();
-		xWrite8( Is8BitOp<T>() ? 0xf6 : 0xf7 );
-		EmitSibMagic( InstType, from );
-	}
+	void operator()( const xRegisterInt& from ) const;
+	void operator()( const ModSib32orLess& from ) const;
 
-	template< typename T > __emitinline void operator()( const xDirectOrIndirect<T>& from ) const
+#if 0
+	template< typename T >
+	void operator()( const xDirectOrIndirect<T>& from ) const
 	{
 		_DoI_helpermess( *this, from );
 	}
-	xImpl_Group3() {}
+#endif
 };
 
-// ------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
+//  xImpl_MulDivBase
+// --------------------------------------------------------------------------------------
 // This class combines x86 and SSE/SSE2 instructions for iMUL and iDIV.
 //
-template< G3Type InstType, u16 OpcodeSSE >
-class ImplMulDivBase : public xImpl_Group3<InstType>
+struct xImpl_MulDivBase
 {
-public:
-	ImplMulDivBase() {}
-	const SimdImpl_DestRegSSE<0x00,OpcodeSSE> PS;
-	const SimdImpl_DestRegSSE<0x66,OpcodeSSE> PD;
-	const SimdImpl_DestRegSSE<0xf3,OpcodeSSE> SS;
-	const SimdImpl_DestRegSSE<0xf2,OpcodeSSE> SD;
+	G3Type	InstType;
+	u16		OpcodeSSE;
+
+	void operator()( const xRegisterInt& from ) const;
+	void operator()( const ModSib32orLess& from ) const;
+
+	const xImplSimd_DestRegSSE	PS;
+	const xImplSimd_DestRegSSE	PD;
+	const xImplSimd_DestRegSSE	SS;
+	const xImplSimd_DestRegSSE	SD;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// --------------------------------------------------------------------------------------
+//  xImpl_iDiv
+// --------------------------------------------------------------------------------------
+struct xImpl_iDiv
+{
+	void operator()( const xRegisterInt& from ) const;
+	void operator()( const ModSib32orLess& from ) const;
+
+	const xImplSimd_DestRegSSE	PS;
+	const xImplSimd_DestRegSSE	PD;
+	const xImplSimd_DestRegSSE	SS;
+	const xImplSimd_DestRegSSE	SD;
+};
+
+// --------------------------------------------------------------------------------------
+//  xImpl_iMul
+// --------------------------------------------------------------------------------------
 //
-class xImpl_iDiv : public ImplMulDivBase<G3Type_iDIV,0x5e>
+struct xImpl_iMul
 {
-public:
-	using ImplMulDivBase<G3Type_iDIV,0x5e>::operator();
+	void operator()( const xRegisterInt& from ) const;
+	void operator()( const ModSib32orLess& from ) const;
+
+	// The following iMul-specific forms are valid for 16 and 32 bit register operands only!
+
+	void operator()( const xRegister32& to,	const xRegister32& from ) const;
+	void operator()( const xRegister32& to,	const ModSibBase& src ) const;
+	void operator()( const xRegister16& to,	const xRegister16& from ) const;
+	void operator()( const xRegister16& to,	const ModSibBase& src ) const;
+
+	void operator()( const xRegister32& to,	const xRegister32& from, s32 imm ) const;
+	void operator()( const xRegister32& to,	const ModSibBase& from, s32 imm ) const;
+	void operator()( const xRegister16& to,	const xRegister16& from, s16 imm ) const;
+	void operator()( const xRegister16& to,	const ModSibBase& from, s16 imm ) const;
+
+	const xImplSimd_DestRegSSE	PS;
+	const xImplSimd_DestRegSSE	PD;
+	const xImplSimd_DestRegSSE	SS;
+	const xImplSimd_DestRegSSE	SD;
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// 	The following iMul-specific forms are valid for 16 and 32 bit register operands only!
-//
-class xImpl_iMul : public ImplMulDivBase<G3Type_iMUL,0x59>
-{
-	template< typename T1, typename T2, typename ImmType >
-	static __forceinline void ImmStyle( const T1& param1, const T2& param2, ImmType imm8 )
-	{
-		xOpWrite0F( (sizeof(ImmType) == 2) ? 0x66 : 0, is_s8( imm8 ) ? 0x6b : 0x69, param1, param2 );
-		if( is_s8( imm8 ) )
-			xWrite8( (u8)imm8 );
-		else
-			xWrite<ImmType>( imm8 );
-	}
-
-public:
-	using ImplMulDivBase<G3Type_iMUL,0x59>::operator();
-	
-	__forceinline void operator()( const xRegister32& to,	const xRegister32& from ) const			{ xOpWrite0F( 0xaf, to, from ); }
-	__forceinline void operator()( const xRegister32& to,	const ModSibBase& src ) const			{ xOpWrite0F( 0xaf, to, src ); }
-	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, s32 imm ) const{ ImmStyle( to, from, imm ); }
-	__forceinline void operator()( const xRegister32& to,	const ModSibBase& from, s32 imm ) const	{ ImmStyle( to, from, imm ); }
-
-	__forceinline void operator()( const xRegister16& to,	const xRegister16& from ) const			{ xOpWrite0F( 0x66, 0xaf, to, from ); }
-	__forceinline void operator()( const xRegister16& to,	const ModSibBase& src ) const			{ xOpWrite0F( 0x66, 0xaf, to, src ); }
-	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, s16 imm ) const{ ImmStyle( to, from, imm ); }
-	__forceinline void operator()( const xRegister16& to,	const ModSibBase& from, s16 imm ) const	{ ImmStyle( to, from, imm ); }
-
-	xImpl_iMul() {}
-};
+}

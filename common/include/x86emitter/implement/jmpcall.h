@@ -16,7 +16,8 @@
 #pragma once
 
 // Implementations found here: CALL and JMP!  (unconditional only)
-// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
+
+namespace x86Emitter {
 
 #ifdef __GNUG__
 	// GCC has a bug that causes the templated function handler for Jmp/Call emitters to generate
@@ -29,18 +30,18 @@
 #	define __always_inline_tmpl_fail
 #endif
 
+extern void xJccKnownTarget( JccComparisonType comparison, const void* target, bool slideForward );
+
 // ------------------------------------------------------------------------
-template< bool isJmp >
-class xImpl_JmpCall
+struct xImpl_JmpCall
 {
-public:
-	xImpl_JmpCall() {}
+	bool	isJmp;
 
-	__forceinline void operator()( const xRegister32& absreg ) const	{ xOpWrite( 0x00, 0xff, isJmp ? 4 : 2, absreg ); }
-	__forceinline void operator()( const ModSibStrict<u32>& src ) const	{ xOpWrite( 0x00, 0xff, isJmp ? 4 : 2, src ); }
+	void operator()( const xRegister32& absreg ) const;
+	void operator()( const ModSib32& src ) const;
 
-	__forceinline void operator()( const xRegister16& absreg ) const	{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, absreg ); }
-	__forceinline void operator()( const ModSibStrict<u16>& src ) const	{ xOpWrite( 0x66, 0xff, isJmp ? 4 : 2, src ); }
+	void operator()( const xRegister16& absreg ) const;
+	void operator()( const ModSib16& src ) const;
 
 	// Special form for calling functions.  This form automatically resolves the
 	// correct displacement based on the size of the instruction being generated.
@@ -60,4 +61,6 @@ public:
 		}
 	}
 };
+
+}	// End namespace x86Emitter
 

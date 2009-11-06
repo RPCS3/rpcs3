@@ -15,38 +15,30 @@
 
 #pragma once
 
-// Implementations here cover SHLD and SHRD.
-// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
+namespace x86Emitter {
 
-//////////////////////////////////////////////////////////////////////////////////////////
+// Implementations here cover SHLD and SHRD.
+
+// --------------------------------------------------------------------------------------
+//  xImpl_DowrdShift
+// --------------------------------------------------------------------------------------
 // I use explicit method declarations here instead of templates, in order to provide
 // *only* 32 and 16 bit register operand forms (8 bit registers are not valid in SHLD/SHRD).
 //
 // Optimization Note: Imm shifts by 0 are ignore (no code generated).  This is a safe optimization
-// because shifts by 0 do *not* affect flags status.
+// because shifts by 0 do *not* affect flags status (intel docs cited).
 //
-template< bool isShiftRight >
-class DwordShiftImplAll
+struct xImpl_DwordShift
 {
-	static const u8 m_shiftop = isShiftRight ? 0x8 : 0;
+	u16		OpcodeBase;
 
-public:
-	// ---------- 32 Bit Interface -----------
-	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, const xRegisterCL& /* clreg */ ) const	{ xOpWrite0F( 0xa5 | m_shiftop, to, from ); }
-	__forceinline void operator()( void* dest,				const xRegister32& from, const xRegisterCL& /* clreg */ ) const	{ xOpWrite0F( 0xa5 | m_shiftop, from, dest ); }
-	__forceinline void operator()( const ModSibBase& dest,	const xRegister32& from, const xRegisterCL& /* clreg */ ) const	{ xOpWrite0F( 0xa5 | m_shiftop, from, dest ); }
-	__forceinline void operator()( const xRegister32& to,	const xRegister32& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0xa4 | m_shiftop, to, from ); }
-	__forceinline void operator()( void* dest,				const xRegister32& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0xa4 | m_shiftop, from, dest, shiftcnt ); }
-	__forceinline void operator()( const ModSibBase& dest,	const xRegister32& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0xa4 | m_shiftop, from, dest, shiftcnt ); }
+	void operator()( const xRegister32& to,	const xRegister32& from, const xRegisterCL& clreg ) const;
+	void operator()( const xRegister16& to,	const xRegister16& from, const xRegisterCL& clreg ) const;
+	void operator()( const xRegister32& to,	const xRegister32& from, u8 shiftcnt ) const;
+	void operator()( const xRegister16& to,	const xRegister16& from, u8 shiftcnt ) const;
 
-	// ---------- 16 Bit Interface -----------
-	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, const xRegisterCL& /* clreg */ ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, to, from ); }
-	__forceinline void operator()( void* dest,				const xRegister16& from, const xRegisterCL& /* clreg */ ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, from, dest ); }
-	__forceinline void operator()( const ModSibBase& dest,	const xRegister16& from, const xRegisterCL& /* clreg */ ) const	{ xOpWrite0F( 0x66, 0xa5 | m_shiftop, from, dest ); }
-	__forceinline void operator()( const xRegister16& to,	const xRegister16& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0x66, 0xa4 | m_shiftop, to, from ); }
-	__forceinline void operator()( void* dest,				const xRegister16& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0x66, 0xa4 | m_shiftop, from, dest, shiftcnt ); }
-	__forceinline void operator()( const ModSibBase& dest,	const xRegister16& from, u8 shiftcnt ) const						{ if( shiftcnt != 0 ) xOpWrite0F( 0x66, 0xa4 | m_shiftop, from, dest, shiftcnt ); }
-
-	DwordShiftImplAll() {}		// Why does GCC need these?
+	void operator()( const ModSibBase& dest,const xRegister16or32& from, const xRegisterCL& clreg ) const;
+	void operator()( const ModSibBase& dest,const xRegister16or32& from, u8 shiftcnt ) const;
 };
 
+}	// End namespace x86Emitter

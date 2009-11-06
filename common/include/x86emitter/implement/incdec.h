@@ -16,35 +16,19 @@
 #pragma once
 
 // Implementations found here: Increment and Decrement Instructions!
-// Note: This header is meant to be included from within the x86Emitter::Internal namespace.
+// (They're soooo lonely... but I dunno where else to stick this class!)
 
+namespace x86Emitter {
 
-template< bool isDec >
-class xImpl_IncDec
+// --------------------------------------------------------------------------------------
+//  xImpl_IncDec
+// --------------------------------------------------------------------------------------
+struct xImpl_IncDec
 {
-public:
-	template< typename T >
-	__forceinline void operator()( const xRegister<T>& to )	const
-	{
-		if( Is8BitOp<T>() )
-		{
-			xWrite8( 0xfe );
-			EmitSibMagic( isDec ? 1 : 0, to );
-		}
-		else
-		{
-			prefix16<T>();
-			xWrite8( (isDec ? 0x48 : 0x40) | to.Id );
-		}
-	}
+	bool	isDec;
 
-	template< typename T >
-	__forceinline void operator()( const ModSibStrict<T>& sibdest ) const
-	{
-		prefix16<T>();
-		xWrite8( Is8BitOp<T>() ? 0xfe : 0xff );
-		EmitSibMagic( isDec ? 1 : 0, sibdest );
-	}
-
-	xImpl_IncDec() {}		// don't ask.
+	void operator()( const xRegisterInt& to ) const;
+	void operator()( const ModSib32orLess& to ) const;
 };
+
+}	// End namespace x86Emitter

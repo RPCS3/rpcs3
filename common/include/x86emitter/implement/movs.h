@@ -18,92 +18,27 @@
 // Header: ix86_impl_movs.h -- covers mov, cmov, movsx/movzx, and SETcc (which shares
 // with cmov many similarities).
 
+namespace x86Emitter {
 
 // --------------------------------------------------------------------------------------
 //  MovImplAll
 // --------------------------------------------------------------------------------------
 // MOV instruction Implementation, plus many SIMD sub-mov variants.
-
-class MovImplAll
+//
+struct xImpl_Mov
 {
-public:
-	// ------------------------------------------------------------------------
-	template< typename T > __forceinline void operator()( const xRegister<T>& to, const xRegister<T>& from ) const
-	{
-		if( to == from ) return;	// ignore redundant MOVs.
+	xImpl_Mov() {} // Satisfy GCC's whims.
 
-		prefix16<T>();
-		xWrite8( Is8BitOp<T>() ? 0x88 : 0x89 );
-		EmitSibMagic( from, to );
-	}
+	void operator()( const xRegister8& to, const xRegister8& from ) const;
+	void operator()( const xRegister16& to, const xRegister16& from ) const;
+	void operator()( const xRegister32& to, const xRegister32& from ) const;
 
-	// ------------------------------------------------------------------------
-	template< typename T > __noinline void operator()( const ModSibBase& dest, const xRegister<T>& from ) const
-	{
-		prefix16<T>();
+	void operator()( const ModSibBase& dest, const xRegisterInt& from ) const;
+	void operator()( const xRegisterInt& to, const ModSibBase& src ) const;
+	void operator()( const ModSib32orLess& dest, int imm ) const;
+	void operator()( const xRegisterInt& to, int imm, bool preserve_flags=false ) const;
 
-		// mov eax has a special from when writing directly to a DISP32 address
-		// (sans any register index/base registers).
-
-		if( from.IsAccumulator() && dest.Index.IsEmpty() && dest.Base.IsEmpty() )
-		{
-			xWrite8( Is8BitOp<T>() ? 0xa2 : 0xa3 );
-			xWrite32( dest.Displacement );
-		}
-		else
-		{
-			xWrite8( Is8BitOp<T>() ? 0x88 : 0x89 );
-			EmitSibMagic( from.Id, dest );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	template< typename T > __noinline void operator()( const xRegister<T>& to, const ModSibBase& src ) const
-	{
-		prefix16<T>();
-
-		// mov eax has a special from when reading directly from a DISP32 address
-		// (sans any register index/base registers).
-
-		if( to.IsAccumulator() && src.Index.IsEmpty() && src.Base.IsEmpty() )
-		{
-			xWrite8( Is8BitOp<T>() ? 0xa0 : 0xa1 );
-			xWrite32( src.Displacement );
-		}
-		else
-		{
-			xWrite8( Is8BitOp<T>() ? 0x8a : 0x8b );
-			EmitSibMagic( to, src );
-		}
-	}
-
-	// ------------------------------------------------------------------------
-	template< typename T > __noinline void operator()( const ModSibStrict<T>& dest, int imm ) const
-	{
-		prefix16<T>();
-		xWrite8( Is8BitOp<T>() ? 0xc6 : 0xc7 );
-		EmitSibMagic( 0, dest );
-		xWrite<T>( imm );
-	}
-
-	// ------------------------------------------------------------------------
-	// preserve_flags  - set to true to disable optimizations which could alter the state of
-	//   the flags (namely replacing mov reg,0 with xor).
-	template< typename T > __emitinline void operator()( const xRegister<T>& to, int imm, bool preserve_flags=false ) const
-	{
-		if( !preserve_flags && (imm == 0) )
-			xXOR( to, to );
-		else
-		{
-			// Note: MOV does not have (reg16/32,imm8) forms.
-
-			prefix16<T>();
-			xWrite8( (Is8BitOp<T>() ? 0xb0 : 0xb8) | to.Id ); 
-			xWrite<T>( imm );
-		}
-	}
-
-	// ------------------------------------------------------------------------
+#if 0
 	template< typename T > __noinline void operator()( const ModSibBase& to, const xImmReg<T>& immOrReg ) const
 	{
 		_DoI_helpermess( *this, to, immOrReg );
@@ -125,7 +60,7 @@ public:
 		_DoI_helpermess( *this, to, from );
 	}
 
-	template< typename T > __noinline void operator()( const xRegister<T>& to, const xDirectOrIndirect<T>& from ) const
+	/*template< typename T > __noinline void operator()( const xRegister<T>& to, const xDirectOrIndirect<T>& from ) const
 	{
 		_DoI_helpermess( *this, xDirectOrIndirect<T>( to ), from );
 	}
@@ -133,16 +68,15 @@ public:
 	template< typename T > __noinline void operator()( const xDirectOrIndirect<T>& to, const xRegister<T>& from ) const
 	{
 		_DoI_helpermess( *this, to, xDirectOrIndirect<T>( from ) );
-	}
-
-	MovImplAll() {} // Satisfy GCC's whims.
+	}*/
+#endif
 };
 
-#define ccSane()	pxAssertDev( ccType >= 0 && ccType <= 0x0f, "Invalid comparison type specifier." )
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// CMOV !!  [in all of it's disappointing lack-of glory]  .. and ..
-// SETcc!!  [more glory, less lack!]
+// --------------------------------------------------------------------------------------
+//  xImpl_CMov
+// --------------------------------------------------------------------------------------
+// CMOVcc !!  [in all of it's disappointing lack-of glory]  .. and ..
+// SETcc !!  [more glory, less lack!]
 //
 // CMOV Disclaimer: Caution!  This instruction can look exciting and cool, until you
 // realize that it cannot load immediate values into registers. -_-
@@ -150,92 +84,67 @@ public:
 // I use explicit method declarations here instead of templates, in order to provide
 // *only* 32 and 16 bit register operand forms (8 bit registers are not valid in CMOV).
 //
-class CMovImplGeneric
+
+struct xImpl_CMov
 {
-public:
-	__forceinline void operator()( JccComparisonType ccType, const xRegister32& to, const xRegister32& from ) const		{ ccSane(); xOpWrite0F( 0x40 | ccType, to, from ); }
-	__noinline void operator()( JccComparisonType ccType, const xRegister32& to, const ModSibBase& sibsrc ) const		{ ccSane(); xOpWrite0F( 0x40 | ccType, to, sibsrc ); }
-	//__noinline void operator()( JccComparisonType ccType, const xDirectOrIndirect32& to, const xDirectOrIndirect32& from ) const { ccSane(); _DoI_helpermess( *this, to, from ); }	// too.. lazy.. to fix.
+	JccComparisonType	ccType;
 
-	__forceinline void operator()( JccComparisonType ccType, const xRegister16& to, const xRegister16& from ) const		{ ccSane(); xOpWrite0F( 0x66, 0x40 | ccType, to, from ); }
-	__noinline void operator()( JccComparisonType ccType, const xRegister16& to, const ModSibBase& sibsrc ) const	{ ccSane(); xOpWrite0F( 0x66, 0x40 | ccType, to, sibsrc ); }
-	//__noinline void operator()( JccComparisonType ccType, const xDirectOrIndirect16& to, const xDirectOrIndirect16& from ) const { ccSane(); _DoI_helpermess( *this, to, from ); }
+	void operator()( const xRegister32& to, const xRegister32& from ) const;
+	void operator()( const xRegister32& to, const ModSibBase& sibsrc ) const;
 
-	CMovImplGeneric() {}		// don't ask.
+	void operator()( const xRegister16& to, const xRegister16& from ) const;
+	void operator()( const xRegister16& to, const ModSibBase& sibsrc ) const;
+
+	//void operator()( const xDirectOrIndirect32& to, const xDirectOrIndirect32& from );
+	//void operator()( const xDirectOrIndirect16& to, const xDirectOrIndirect16& from ) const;
 };
 
-// ------------------------------------------------------------------------
-template< JccComparisonType ccType >
-class CMovImplAll
+struct xImpl_Set
 {
-	static const u16 Opcode = 0x40 | ccType;
+	JccComparisonType ccType;
 
-public:
-	__forceinline void operator()( const xRegister32& to, const xRegister32& from ) const	{ ccSane(); xOpWrite0F( Opcode, to, from ); }
-	__noinline void operator()( const xRegister32& to, const ModSibBase& sibsrc ) const		{ ccSane(); xOpWrite0F( Opcode, to, sibsrc ); }
-	__noinline void operator()( const xDirectOrIndirect32& to, const xDirectOrIndirect32& from ) const { ccSane(); _DoI_helpermess( *this, to, from ); }
+	void operator()( const xRegister8& to ) const;
+	void operator()( const ModSib8& dest ) const;
 
-	__forceinline void operator()( const xRegister16& to, const xRegister16& from ) const	{ ccSane(); xOpWrite0F( 0x66, Opcode, to, from ); }
-	__noinline void operator()( const xRegister16& to, const ModSibBase& sibsrc ) const		{ ccSane(); xOpWrite0F( 0x66, Opcode, to, sibsrc ); }
-	__noinline void operator()( const xDirectOrIndirect16& to, const xDirectOrIndirect16& from ) const { ccSane(); _DoI_helpermess( *this, to, from ); }
-
-	CMovImplAll() {}		// don't ask.
+	//void operator()( const xDirectOrIndirect8& dest ) const;
 };
 
-// ------------------------------------------------------------------------
-class SetImplGeneric
-{
-	// note: SETcc are 0x90, with 0 in the Reg field of ModRM.
-public:
-	__forceinline void operator()( JccComparisonType ccType, const xRegister8& to ) const		{ ccSane(); xOpWrite0F( 0x90 | ccType, 0, to ); }
-	__noinline void operator()( JccComparisonType ccType, const ModSibStrict<u8>& dest ) const	{ ccSane(); xOpWrite0F( 0x90 | ccType, 0, dest ); }
-
-	SetImplGeneric() {}		// if you do, ask GCC.
-};
-
-// ------------------------------------------------------------------------
-template< JccComparisonType ccType >
-class SetImplAll
-{
-	static const u16 Opcode = 0x90 | ccType;		// SETcc are 0x90 base opcode, with 0 in the Reg field of ModRM.
-
-public:
-	__forceinline void operator()( const xRegister8& to ) const			{ ccSane(); xOpWrite0F( Opcode, 0, to ); }
-	__noinline void operator()( const ModSibStrict<u8>& dest ) const	{ ccSane(); xOpWrite0F( Opcode, 0, dest ); }
-	__noinline void operator()( const xDirectOrIndirect8& dest ) const	{ ccSane(); _DoI_helpermess( *this, dest ); }
-	
-	SetImplAll() {}		// if you do, ask GCC.
-};
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Mov with sign/zero extension implementations (movsx / movzx)
-//
-
-// ------------------------------------------------------------------------
-template< bool SignExtend >
-class MovExtendImplAll
+class xRegister16or32
 {
 protected:
-	static const u16 Opcode = 0xb6 | (SignExtend ? 8 : 0 );
-
-	// Macro useful for trapping unwanted use of EBP.
-	//#define EbpAssert() pxAssert( to != ebp )
-	#define EbpAssert()
+	const xRegisterInt&		m_convtype;
 
 public:
-	__forceinline void operator()( const xRegister32& to, const xRegister16& from )	const		{ EbpAssert(); xOpWrite0F( Opcode+1, to, from ); }
-	__noinline void operator()( const xRegister32& to, const ModSibStrict<u16>& sibsrc ) const	{ EbpAssert(); xOpWrite0F( Opcode+1, to, sibsrc ); }
-	__noinline void operator()( const xRegister32& to, const xDirectOrIndirect16& src ) const	{ EbpAssert(); _DoI_helpermess( *this, to, src ); }
-	
-	__forceinline void operator()( const xRegister32& to, const xRegister8& from ) const		{ EbpAssert(); xOpWrite0F( Opcode, to, from ); }
-	__noinline void operator()( const xRegister32& to, const ModSibStrict<u8>& sibsrc ) const	{ EbpAssert(); xOpWrite0F( Opcode, to, sibsrc ); }
-	__noinline void operator()( const xRegister32& to, const xDirectOrIndirect8& src ) const	{ EbpAssert(); _DoI_helpermess( *this, to, src ); }
+	xRegister16or32( const xRegister32& src ) : m_convtype( src ) {}
+	xRegister16or32( const xRegister16& src ) : m_convtype( src ) {}
 
-	__forceinline void operator()( const xRegister16& to, const xRegister8& from ) const		{ xOpWrite0F( 0x66, Opcode, to, from ); }
-	__noinline void operator()( const xRegister16& to, const ModSibStrict<u8>& sibsrc ) const	{ xOpWrite0F( 0x66, Opcode, to, sibsrc ); }
-	__noinline void operator()( const xRegister16& to, const xDirectOrIndirect8& src ) const	{ _DoI_helpermess( *this, to, src ); }
+	//operator const xRegisterInt&() const { return m_convtype; }
+	operator const xRegisterBase&() const { return m_convtype; }
 
-	MovExtendImplAll() {}		// don't ask.
+	const xRegisterInt* operator->() const
+	{
+		return &m_convtype;
+	}
 };
 
+
+// --------------------------------------------------------------------------------------
+//  xImpl_MovExtend
+// --------------------------------------------------------------------------------------
+// Mov with sign/zero extension implementations (movsx / movzx)
+//
+struct xImpl_MovExtend
+{
+	bool	SignExtend;
+
+	void operator()( const xRegister16or32& to, const xRegister8& from ) const;
+	void operator()( const xRegister16or32& to, const ModSib8& sibsrc ) const;
+	void operator()( const xRegister32& to, const xRegister16& from ) const;
+	void operator()( const xRegister32& to, const ModSib16& sibsrc ) const;
+
+	//void operator()( const xRegister32& to, const xDirectOrIndirect16& src ) const;
+	//void operator()( const xRegister16or32& to, const xDirectOrIndirect8& src ) const;
+	//void operator()( const xRegister16& to, const xDirectOrIndirect8& src ) const;
+};
+
+}	// End namespace x86Emitter

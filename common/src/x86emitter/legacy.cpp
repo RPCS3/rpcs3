@@ -43,7 +43,7 @@ emitterT void ModRM( uint mod, uint reg, uint rm )
 
 emitterT void SibSB( uint ss, uint index, uint base )
 {
-	// Note: Following ASSUMEs are for legacy support only.
+	// Note: Following asserts are for legacy support only.
 	// The new emitter performs these sanity checks during operand construction, so these
 	// assertions can probably be removed once all legacy emitter code has been removed.
 	pxAssert( ss < 4 );
@@ -54,60 +54,64 @@ emitterT void SibSB( uint ss, uint index, uint base )
 
 using namespace x86Emitter;
 
-template< typename ImmType >
-static __forceinline xRegister<ImmType> _reghlp( x86IntRegType src )
+static ModSib32 _mhlp32( x86IntRegType to )
 {
-	return xRegister<ImmType>( src );
+	return ptr32[xAddressReg( to )];
 }
 
-static __forceinline ModSibBase _mrmhlp( x86IntRegType src )
+static ModSib32 _mhlp32( x86IntRegType to1, x86IntRegType to2 )
 {
-	return ptr[_reghlp<u32>(src)];
+	return ptr32[xAddressReg( to1 ) + xAddressReg( to2 )];
 }
 
-template< typename ImmType >
-static __forceinline ModSibStrict<ImmType> _mhlp( x86IntRegType src )
+static ModSib16 _mhlp16( x86IntRegType to )
 {
-	return ModSibStrict<ImmType>( xAddressReg::Empty, xAddressReg(src) );
+	return ptr16[xAddressReg( to )];
 }
 
-template< typename ImmType >
-static __forceinline ModSibStrict<ImmType> _mhlp2( x86IntRegType src1, x86IntRegType src2 )
+static ModSib16 _mhlp16( x86IntRegType to1, x86IntRegType to2 )
 {
-	return ModSibStrict<ImmType>( xAddressReg(src2), xAddressReg(src1) );
+	return ptr16[xAddressReg( to1 ) + xAddressReg( to2 )];
+}
+
+static ModSib8 _mhlp8( x86IntRegType to )
+{
+	return ptr8[xAddressReg( to )];
+}
+
+static ModSib8 _mhlp8( x86IntRegType to1, x86IntRegType to2 )
+{
+	return ptr8[xAddressReg( to1 ) + xAddressReg( to2 )];
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 #define DEFINE_LEGACY_HELPER( cod, bits ) \
-	emitterT void cod##bits##RtoR( x86IntRegType to, x86IntRegType from )	{ x##cod( _reghlp<u##bits>(to), _reghlp<u##bits>(from) ); } \
-	emitterT void cod##bits##ItoR( x86IntRegType to, u##bits imm )			{ x##cod( _reghlp<u##bits>(to), imm ); } \
-	emitterT void cod##bits##MtoR( x86IntRegType to, uptr from )			{ x##cod( _reghlp<u##bits>(to), (void*)from ); } \
-	emitterT void cod##bits##RtoM( uptr to, x86IntRegType from )			{ x##cod( (void*)to, _reghlp<u##bits>(from) ); } \
+	emitterT void cod##bits##RtoR( x86IntRegType to, x86IntRegType from )	{ x##cod( xRegister##bits(to), xRegister##bits(from) ); } \
+	emitterT void cod##bits##ItoR( x86IntRegType to, u##bits imm )			{ x##cod( xRegister##bits(to), imm ); } \
+	emitterT void cod##bits##MtoR( x86IntRegType to, uptr from )			{ x##cod( xRegister##bits(to), (void*)from ); } \
+	emitterT void cod##bits##RtoM( uptr to, x86IntRegType from )			{ x##cod( (void*)to, xRegister##bits(from) ); } \
 	emitterT void cod##bits##ItoM( uptr to, u##bits imm )					{ x##cod( ptr##bits[to], imm ); }  \
-	emitterT void cod##bits##ItoRm( x86IntRegType to, u##bits imm, int offset )	{ x##cod( _mhlp<u##bits>(to) + offset, imm ); } \
-	emitterT void cod##bits##RmtoR( x86IntRegType to, x86IntRegType from, int offset ) { x##cod( _reghlp<u##bits>(to), _mhlp<u##bits>(from) + offset ); } \
-	emitterT void cod##bits##RtoRm( x86IntRegType to, x86IntRegType from, int offset ) { x##cod( _mhlp<u##bits>(to) + offset, _reghlp<u##bits>(from) ); } \
+	emitterT void cod##bits##ItoRm( x86IntRegType to, u##bits imm, int offset )	{ x##cod( _mhlp##bits(to) + offset, imm ); } \
+	emitterT void cod##bits##RmtoR( x86IntRegType to, x86IntRegType from, int offset ) { x##cod( xRegister##bits(to), _mhlp##bits(from) + offset ); } \
+	emitterT void cod##bits##RtoRm( x86IntRegType to, x86IntRegType from, int offset ) { x##cod( _mhlp##bits(to) + offset, xRegister##bits(from) ); } \
 	emitterT void cod##bits##RtoRmS( x86IntRegType to1, x86IntRegType to2, x86IntRegType from, int offset ) \
-	{ x##cod( _mhlp2<u##bits>(to1,to2) + offset, _reghlp<u##bits>(from) ); } \
+	{ x##cod( _mhlp##bits(to1,to2) + offset, xRegister##bits(from) ); } \
 	emitterT void cod##bits##RmStoR( x86IntRegType to, x86IntRegType from1, x86IntRegType from2, int offset ) \
-	{ x##cod( _reghlp<u##bits>(to), _mhlp2<u##bits>(from1,from2) + offset ); }
+	{ x##cod( xRegister##bits(to), _mhlp##bits(from1,from2) + offset ); }
 
 #define DEFINE_LEGACY_SHIFT_HELPER( cod, bits ) \
-	emitterT void cod##bits##CLtoR( x86IntRegType to )						{ x##cod( _reghlp<u##bits>(to), cl ); } \
-	emitterT void cod##bits##ItoR( x86IntRegType to, u8 imm )				{ x##cod( _reghlp<u##bits>(to), imm ); } \
+	emitterT void cod##bits##CLtoR( x86IntRegType to )						{ x##cod( xRegister##bits(to), cl ); } \
+	emitterT void cod##bits##ItoR( x86IntRegType to, u8 imm )				{ x##cod( xRegister##bits(to), imm ); } \
 	emitterT void cod##bits##CLtoM( uptr to )								{ x##cod( ptr##bits[to], cl ); } \
 	emitterT void cod##bits##ItoM( uptr to, u8 imm )						{ x##cod( ptr##bits[to], imm ); }  \
-	emitterT void cod##bits##ItoRm( x86IntRegType to, u8 imm, int offset )	{ x##cod( _mhlp<u##bits>(to) + offset, imm ); } \
-	emitterT void cod##bits##CLtoRm( x86IntRegType to, int offset )			{ x##cod( _mhlp<u##bits>(to) + offset, cl ); }
+	emitterT void cod##bits##ItoRm( x86IntRegType to, u8 imm, int offset )	{ x##cod( _mhlp##bits(to) + offset, imm ); } \
+	emitterT void cod##bits##CLtoRm( x86IntRegType to, int offset )			{ x##cod( _mhlp##bits(to) + offset, cl ); }
 
 #define DEFINE_LEGACY_ONEREG_HELPER( cod, bits ) \
-	emitterT void cod##bits##R( x86IntRegType to )					{ x##cod( _reghlp<u##bits>(to) ); } \
+	emitterT void cod##bits##R( x86IntRegType to )					{ x##cod( xRegister##bits(to) ); } \
 	emitterT void cod##bits##M( uptr to )							{ x##cod( ptr##bits[to] ); } \
-	emitterT void cod##bits##Rm( x86IntRegType to, uptr offset )	{ x##cod( _mhlp<u##bits>(to) + offset ); }
-
-//emitterT void cod##bits##RtoRmS( x86IntRegType to1, x86IntRegType to2, x86IntRegType from, int offset )
-//	{ cod( _mhlp2<u##bits>(to1,to2) + offset, _reghlp<u##bits>(from) ); }
+	emitterT void cod##bits##Rm( x86IntRegType to, uptr offset )	{ x##cod( _mhlp##bits(to) + offset ); }
 
 #define DEFINE_OPCODE_LEGACY( cod ) \
 	DEFINE_LEGACY_HELPER( cod, 32 ) \
@@ -198,7 +202,7 @@ emitterT void MOV8RmSOffsettoR( x86IntRegType to, x86IntRegType from1, s32 from2
 
 emitterT void AND32I8toR( x86IntRegType to, s8 from )
 {
-	xAND( _reghlp<u32>(to), from );
+	xAND( xRegister32(to), from );
 }
 
 emitterT void AND32I8toM( uptr to, s8 from )

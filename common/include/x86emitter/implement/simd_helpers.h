@@ -47,6 +47,15 @@ struct xImplSimd_DestRegImmSSE
 	void operator()( const xRegisterSSE& to, const ModSibBase& from, u8 imm ) const;
 };
 
+struct xImplSimd_DestSSE_CmpImm
+{
+	u8		Prefix;
+	u16		Opcode;
+
+	void operator()( const xRegisterSSE& to, const xRegisterSSE& from, SSE2_ComparisonType imm ) const;
+	void operator()( const xRegisterSSE& to, const ModSibBase& from, SSE2_ComparisonType imm ) const;
+};
+
 struct xImplSimd_DestRegImmMMX
 {
 	u8		Prefix;

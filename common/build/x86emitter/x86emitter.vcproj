@@ -204,6 +204,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\x86emitter\groups.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\x86emitter\jmp.cpp"
 				>
 			</File>
@@ -213,6 +217,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\x86emitter\legacy_sse.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\x86emitter\movs.cpp"
 				>
 			</File>
 			<File
@@ -350,10 +358,6 @@
 				</File>
 				<File
 					RelativePath="..\..\include\x86emitter\implement\simd_shufflepack.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\include\x86emitter\implement\simd_templated_helpers.h"
 					>
 				</File>
 			</Filter>

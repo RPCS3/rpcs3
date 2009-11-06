@@ -13,83 +13,16 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// ------------------------------------------------------------------------
-// helpers.h -- Various universally helpful functions for emitter convenience!
-//
-// Note: Header file should be included from the x86Emitter::Internal namespace, such
-// that all members contained within are in said namespace.
-// ------------------------------------------------------------------------
-
 #pragma once
 
-#define OpWriteSSE( pre, op )		xOpWrite0F( pre, op, to, from )
+namespace x86Emitter {
 
-extern void SimdPrefix( u8 prefix, u16 opcode );
-extern void EmitSibMagic( uint regfield, const void* address );
-extern void EmitSibMagic( uint regfield, const ModSibBase& info );
-extern void xJccKnownTarget( JccComparisonType comparison, const void* target, bool slideForward );
+// helpermess is currently broken >_<
 
-template< typename T > bool Is8BitOp() { return sizeof(T) == 1; }
-template< typename T > void prefix16() { if( sizeof(T) == 2 ) xWrite8( 0x66 ); }
-
-
-// Writes a ModRM byte for "Direct" register access forms, which is used for all
-// instructions taking a form of [reg,reg].
-template< typename T > __emitinline
-void EmitSibMagic( uint reg1, const xRegisterBase<T>& reg2 )
-{
-	xWrite8( (Mod_Direct << 6) | (reg1 << 3) | reg2.Id );
-}
-
-template< typename T1, typename T2 > __emitinline
-void EmitSibMagic( const xRegisterBase<T1> reg1, const xRegisterBase<T2>& reg2 )
-{
-	xWrite8( (Mod_Direct << 6) | (reg1.Id << 3) | reg2.Id );
-}
-
-template< typename T1 > __emitinline
-void EmitSibMagic( const xRegisterBase<T1> reg1, const void* src )			{ EmitSibMagic( reg1.Id, src ); }
-
-template< typename T1 > __emitinline
-void EmitSibMagic( const xRegisterBase<T1> reg1, const ModSibBase& sib )	{ EmitSibMagic( reg1.Id, sib ); }
-
-// ------------------------------------------------------------------------
-template< typename T1, typename T2 > __emitinline
-void xOpWrite( u8 prefix, u8 opcode, const T1& param1, const T2& param2 )
-{
-	if( prefix != 0 )
-		xWrite16( (opcode<<8) | prefix );
-	else
-		xWrite8( opcode );
-
-	EmitSibMagic( param1, param2 );
-}
-
-// ------------------------------------------------------------------------
-template< typename T1, typename T2 > __emitinline
-void xOpWrite0F( u8 prefix, u16 opcode, const T1& param1, const T2& param2 )
-{
-	SimdPrefix( prefix, opcode );
-	EmitSibMagic( param1, param2 );
-}
-
-template< typename T1, typename T2 > __emitinline
-void xOpWrite0F( u8 prefix, u16 opcode, const T1& param1, const T2& param2, u8 imm8 )
-{
-	xOpWrite0F( prefix, opcode, param1, param2 );
-	xWrite8( imm8 );
-}
-
-template< typename T1, typename T2 > __emitinline
-void xOpWrite0F( u16 opcode, const T1& param1, const T2& param2 )			{ xOpWrite0F( 0, opcode, param1, param2 ); }
-
-template< typename T1, typename T2 > __emitinline
-void xOpWrite0F( u16 opcode, const T1& param1, const T2& param2, u8 imm8 )	{ xOpWrite0F( 0, opcode, param1, param2, imm8 ); }
-
-// ------------------------------------------------------------------------
+#if 0
 
 template< typename xImpl, typename T >
-void _DoI_helpermess( const xImpl& helpme, const xDirectOrIndirect<T>& to, const xImmReg<T>& immOrReg )
+void _DoI_helpermess( const xImpl& helpme, const xDirectOrIndirect& to, const xImmReg<T>& immOrReg )
 {
 	if( to.IsDirect() )
 	{
@@ -113,7 +46,7 @@ void _DoI_helpermess( const xImpl& helpme, const ModSibBase& to, const xImmReg<T
 	if( immOrReg.IsReg() )
 		helpme( to, immOrReg.GetReg() );
 	else
-		helpme( ModSibStrict<T>(to), immOrReg.GetImm() );
+		helpme( (ModSibStrict)to, immOrReg.GetImm() );
 }
 
 template< typename xImpl, typename T >
@@ -153,3 +86,6 @@ void _DoI_helpermess( const xImpl& helpme, const xDirectOrIndirect<T>& to, const
 
 		pxFailDev( "Invalid asm instruction: Both operands are indirect memory addresses." );
 }
+#endif
+
+}	// End namespace x86Emitter
