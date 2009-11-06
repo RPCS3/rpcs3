@@ -47,7 +47,6 @@ struct IniPatch
 	u64 data;
 };
 
-
 namespace PatchFunc
 {
     void comment( char* text1, char* text2 );

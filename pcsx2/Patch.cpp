@@ -487,36 +487,22 @@ void inifile_process( FILE * f1 )
 
 // This routine creates a pnach filename from the games crc,
 // loads it, and passes it to inisection_process to be parsed.
-void inifile_read( const char* name )
+void inifile_read(wxString name )
 {
 	FILE* f1;
-	char buffer[ 1024 ];
+	wxCharBuffer buffer;
 
 	patchnumber = 0;
 
-#ifdef _WIN32
-	sprintf( buffer, "patches\\%s.pnach", name );
-#else
-	sprintf( buffer, "patches/%s.pnach", name );
-#endif
-
+    buffer = Path::Combine(L"patches", name + L".pnach").ToUTF8();
 	f1 = fopen( buffer, "rt" );
 
 #ifndef _WIN32
 	if( !f1 )
 	{
-		 // try all upper case because linux is case sensitive
-		 char* pstart = buffer+8;
-		 char* pend = buffer+strlen(buffer);
-		 while(pstart != pend )
-		{
-			// stop at the first . since we only want to update the hex
-			if( *pstart == '.' ) break;
-			*pstart = toupper(*pstart);
-			*pstart++;
-		 }
-
-		 f1 = fopen(buffer, "rt");
+        name = name.MakeUpper();
+        buffer = Path::Combine(L"patches", name + L".pnach").ToUTF8();
+        f1 = fopen(buffer, "rt");
 	}
 #endif
 
@@ -598,7 +584,7 @@ void ApplyPatch(int place)
 
 void InitPatch(wxString crc)
 {
-    inifile_read(crc.ToUTF8());
+    inifile_read(crc);
     Console.WriteLn("patchnumber: %d", patchnumber);
     ApplyPatch(0);
 }
