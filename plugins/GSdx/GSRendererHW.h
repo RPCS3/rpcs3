@@ -466,9 +466,7 @@ protected:
 	{
 		__super::VSync(field);
 
-		// IncAge() gets rid of "old" textures, but it's not really needed.
-		// Doing it causes flickering on many game scene transitions.
-		//m_tc->IncAge();  
+		m_tc->IncAge();  
 
 		m_skip = 0;
 

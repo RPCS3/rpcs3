@@ -451,7 +451,7 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 	// TODO: ds
 */
 }
-//Currently unused
+
 void GSTextureCache::IncAge()
 {
 	int maxage = m_src.m_used ? 3 : 30;
@@ -470,24 +470,25 @@ void GSTextureCache::IncAge()
 
 	m_src.m_used = false;
 
-	maxage = 4; // ffx intro scene changes leave the old image untouched for a couple of frames and only then start using it
+	// Clearing of Rendertargets causes flickering in many scene transitions, so let's not :p
+	//maxage = 4; // ffx intro scene changes leave the old image untouched for a couple of frames and only then start using it
 
-	for(int type = 0; type < 2; type++)
-	{
-		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); )
-		{
-			list<Target*>::iterator j = i++;
+	//for(int type = 0; type < 2; type++)
+	//{
+	//	for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); )
+	//	{
+	//		list<Target*>::iterator j = i++;
 
-			Target* t = *j;
+	//		Target* t = *j;
 
-			if(++t->m_age > maxage)
-			{
-				m_dst[type].erase(j);
+	//		if(++t->m_age > maxage)
+	//		{
+	//			m_dst[type].erase(j);
 
-				delete t;
-			}
-		}
-	}
+	//			delete t;
+	//		}
+	//	}
+	//}
 }
 
 GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
