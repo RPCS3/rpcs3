@@ -802,7 +802,8 @@ static const wchar_t* TwoBytes[256] = {
 };
 
 // requires two bytes on input (second CAN be 0), returns unicode mapping, assigns used bytes (1/2)
-wchar_t ShiftJIS_ConvertChar(const char* input, int& used)
+// This function takes a u8 by design - we do NOT want sign extension of the characters!!
+wchar_t ShiftJIS_ConvertChar(const u8* input, int& used)
 {
 	const uint FirstByte = input[0];
 
@@ -832,13 +833,15 @@ wxString ShiftJIS_ConvertString( const char* src )
 {
 	wxString result;
 
-	// The length of the sresult (in chars) cannot exceed the length of the source.
+	// Implementation Notes:
+	//  * The length of the result (in chars) cannot exceed the length of the source.
+	
 	result.reserve( strlen(src) );
 
 	while( *src != 0 )
 	{
 		int skip;
-		result += ShiftJIS_ConvertChar( src, skip );
+		result += ShiftJIS_ConvertChar( (u8*)src, skip );
 		src += skip;
 	}
 
@@ -849,7 +852,7 @@ wxString ShiftJIS_ConvertString( const char* src, int maxlen )
 {
 	wxString result;
 
-	// The length of the sresult (in chars) cannot exceed the length of the source.
+	// The length of the result (in chars) cannot exceed the length of the source.
 	result.reserve( maxlen );
 
 	const char* endpt = src + maxlen;
@@ -857,7 +860,7 @@ wxString ShiftJIS_ConvertString( const char* src, int maxlen )
 	while( (*src != 0) && (src < endpt) )
 	{
 		int skip;
-		result += ShiftJIS_ConvertChar( src, skip );
+		result += ShiftJIS_ConvertChar( (u8*)src, skip );
 		src += skip;
 	}
 

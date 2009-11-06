@@ -291,8 +291,6 @@ void vtlb_dynarec_init()
 	// clear the buffer to 0xcc (easier debugging).
 	memset_8<0xcc,0x1000>( m_IndirectDispatchers );
 
-	//u8* baseptr = m_IndirectDispatchers;
-
 	for( int mode=0; mode<2; ++mode )
 	{
 		for( int bits=0; bits<5; ++bits )
