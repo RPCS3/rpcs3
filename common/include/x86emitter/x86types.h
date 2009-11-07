@@ -52,7 +52,7 @@ extern const char* xGetRegName( int regid, int operandSize );
 template< typename T >
 static __forceinline bool is_s8( T imm ) { return (s8)imm == (s32)imm; }
 
-template< typename T > __forceinline void xWrite( T val );
+template< typename T > void xWrite( T val );
 
 // --------------------------------------------------------------------------------------
 //  ALWAYS_USE_MOVAPS [define] / AlwaysUseMovaps [const]
@@ -208,8 +208,16 @@ template< typename T > __forceinline void xWrite( T val );
 	public:
 		int Id;
 
-		xRegisterBase(): Id( xRegId_Invalid ) {}
-		explicit xRegisterBase( int regId ) : Id( regId ) { pxAssert( (Id >= xRegId_Empty) && (Id < 8) ); }
+		xRegisterBase()
+		{
+			Id = xRegId_Invalid;
+		}
+
+		explicit xRegisterBase( int regId )
+		{
+			Id = regId;
+			pxAssert( (Id >= xRegId_Empty) && (Id < 8) );
+		}
 
 		bool IsEmpty() const		{ return Id < 0 ; }
 		bool IsInvalid() const		{ return Id == xRegId_Invalid; }
@@ -252,7 +260,6 @@ template< typename T > __forceinline void xWrite( T val );
 
 	public:
 		xRegister8(): _parent() {}
-		//explicit xRegister8( const xRegisterBase& src ) : _parent( src ) {}
 		explicit xRegister8( int regId ) : _parent( regId ) {}
 		
 		virtual uint GetOperandSize() const { return 1; }
@@ -267,7 +274,6 @@ template< typename T > __forceinline void xWrite( T val );
 
 	public:
 		xRegister16(): _parent() {}
-		//explicit xRegister16( const xRegisterBase& src ) : _parent( src ) {}
 		explicit xRegister16( int regId ) : _parent( regId ) {}
 
 		virtual uint GetOperandSize() const { return 2; }
@@ -282,7 +288,6 @@ template< typename T > __forceinline void xWrite( T val );
 
 	public:
 		xRegister32(): _parent() {}
-		//explicit xRegister32( const xRegisterBase& src ) : _parent( src ) {}
 		explicit xRegister32( int regId ) : _parent( regId ) {}
 
 		virtual uint GetOperandSize() const { return 4; }
@@ -303,7 +308,7 @@ template< typename T > __forceinline void xWrite( T val );
 
 	public:
 		xRegisterMMX(): _parent() {}
-		xRegisterMMX( const xRegisterBase& src ) : _parent( src ) {}
+		//xRegisterMMX( const xRegisterBase& src ) : _parent( src ) {}
 		explicit xRegisterMMX( int regId ) : _parent( regId ) {}
 
 		virtual uint GetOperandSize() const { return 8; }
@@ -318,7 +323,7 @@ template< typename T > __forceinline void xWrite( T val );
 
 	public:
 		xRegisterSSE(): _parent() {}
-		xRegisterSSE( const xRegisterBase& src ) : _parent( src ) {}
+		//xRegisterSSE( const xRegisterBase& src ) : _parent( src ) {}
 		explicit xRegisterSSE( int regId ) : _parent( regId ) {}
 
 		virtual uint GetOperandSize() const { return 16; }
@@ -372,11 +377,11 @@ template< typename T > __forceinline void xWrite( T val );
 		}*/
 	};
 
-	class xRegisterEmpty
+	// --------------------------------------------------------------------------------------
+	//  xRegisterEmpty
+	// --------------------------------------------------------------------------------------
+	struct xRegisterEmpty
 	{
-	public:
-		xRegisterEmpty() {}
-
 		operator xRegister8() const
 		{
 			return xRegister8( xRegId_Empty );
@@ -402,6 +407,23 @@ template< typename T > __forceinline void xWrite( T val );
 			return xAddressReg( xRegId_Empty );
 		}
 	};
+
+	class xRegister16or32
+	{
+	protected:
+		const xRegisterInt&		m_convtype;
+
+	public:
+		xRegister16or32( const xRegister32& src ) : m_convtype( src ) {}
+		xRegister16or32( const xRegister16& src ) : m_convtype( src ) {}
+
+		operator const xRegisterBase&() const { return m_convtype; }
+
+		const xRegisterInt* operator->() const
+		{
+			return &m_convtype;
+		}
+	};
 	
 	extern const xRegisterEmpty xEmptyReg;
 
@@ -411,37 +433,39 @@ template< typename T > __forceinline void xWrite( T val );
 	class xAddressInfo
 	{
 	public:
-		xAddressReg Base;		// base register (no scale)
-		xAddressReg Index;		// index reg gets multiplied by the scale
-		int Factor;				// scale applied to the index register, in factor form (not a shift!)
-		s32 Displacement;		// address displacement
+		xAddressReg	Base;			// base register (no scale)
+		xAddressReg	Index;			// index reg gets multiplied by the scale
+		int			Factor;			// scale applied to the index register, in factor form (not a shift!)
+		s32			Displacement;	// address displacement
 
 	public:
-		__forceinline xAddressInfo( const xAddressReg& base, const xAddressReg& index, int factor=1, s32 displacement=0 ) :
-			Base( base ),
-			Index( index ),
-			Factor( factor ),
-			Displacement( displacement )
+		__forceinline xAddressInfo( const xAddressReg& base, const xAddressReg& index, int factor=1, s32 displacement=0 )
 		{
+			Base		= base;
+			Index		= index;
+			Factor		= factor;
+			Displacement= displacement;
+
 			pxAssertMsg( base.Id != xRegId_Invalid, "Uninitialized x86 register." );
 			pxAssertMsg( index.Id != xRegId_Invalid, "Uninitialized x86 register." );
 		}
 
-		__forceinline explicit xAddressInfo( const xAddressReg& index, int displacement=0 ) :
-			Base( xEmptyReg ),
-			Index( index ),
-			Factor(0),
-			Displacement( displacement )
+		__forceinline explicit xAddressInfo( const xAddressReg& index, int displacement=0 )
 		{
+			Base		= xEmptyReg;
+			Index		= index;
+			Factor		= 0;
+			Displacement= displacement;
+
 			pxAssertMsg( index.Id != xRegId_Invalid, "Uninitialized x86 register." );
 		}
 
-		__forceinline explicit xAddressInfo( s32 displacement=0 ) :
-			Base( xEmptyReg ),
-			Index( xEmptyReg ),
-			Factor(0),
-			Displacement( displacement )
+		__forceinline explicit xAddressInfo( s32 displacement=0 )
 		{
+			Base		= xEmptyReg;
+			Index		= xEmptyReg;
+			Factor		= 0;
+			Displacement= displacement;
 		}
 
 		static xAddressInfo FromIndexReg( const xAddressReg& index, int scale=0, s32 displacement=0 );
@@ -501,15 +525,20 @@ template< typename T > __forceinline void xWrite( T val );
 	template< typename xRegType >
 	class xImmReg
 	{
-		xRegType m_reg;
-		int m_imm;
+		xRegType	m_reg;
+		int			m_imm;
 
 	public:
-		xImmReg() :
-			m_reg(), m_imm( 0 ) { }
+		xImmReg() : m_reg()
+		{
+			m_imm = 0;
+		}
 
-		xImmReg( int imm, const xRegType& reg = xEmptyReg ) :
-			m_reg( reg ), m_imm( imm ) { }
+		xImmReg( int imm, const xRegType& reg = xEmptyReg )
+		{
+			m_reg = reg;
+			m_imm = imm;
+		}
 
 		const xRegType& GetReg() const { return m_reg; }
 		const int GetImm() const { return m_imm; }
@@ -537,31 +566,43 @@ template< typename T > __forceinline void xWrite( T val );
 		s32				Displacement;	// offset applied to the Base/Index registers.
 
 	public:
-		explicit ModSibBase( const xAddressInfo& src ) :
-			Base( src.Base ), Index( src.Index ), Scale( src.Factor ),
-			Displacement( src.Displacement )
+		explicit ModSibBase( const xAddressInfo& src )
 		{
+			Base		= src.Base;
+			Index		= src.Index;
+			Scale		= src.Factor;
+			Displacement= src.Displacement;
+
 			Reduce();
 		}
 
-		ModSibBase( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) :
-			Base( base ), Index( index ), Scale( scale ),
-			Displacement( displacement )
+		ModSibBase( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 )
 		{
+			Base		= base;
+			Index		= index;
+			Scale		= scale;
+			Displacement= displacement;
+
 			Reduce();
 		}
 
-		explicit ModSibBase( s32 disp ) :
-			Base(), Index(), Scale(0),
-			Displacement( disp )
+		explicit ModSibBase( s32 disp )
 		{
+			Base		= xEmptyReg;
+			Index		= xEmptyReg;
+			Scale		= 0;
+			Displacement= disp;
+
 			// no reduction necessary :D
 		}
 
-		ModSibBase( const void* target ) :
-			Base(), Index(), Scale(0),
-			Displacement( (s32)target )
+		ModSibBase( const void* target )
 		{
+			Base		= xEmptyReg;
+			Index		= xEmptyReg;
+			Scale		= 0;
+			Displacement= (s32)target;
+
 			// no reduction necessary :D
 		}
 
@@ -589,7 +630,6 @@ template< typename T > __forceinline void xWrite( T val );
 		typedef ModSibBase _parent;
 
 	protected:
-		//explicit ModSib32orLess( const ModSibBase& src ) : _parent( src ) {}
 		explicit ModSib32orLess( const xAddressInfo& src ) : _parent( src ) {}
 		explicit ModSib32orLess( s32 disp ) : _parent( disp ) {}
 		ModSib32orLess( const void* target ) : _parent( target ) {}
@@ -677,8 +717,6 @@ template< typename T > __forceinline void xWrite( T val );
 		{
 			return xModSibType( (uptr)src );
 		}
-
-		xAddressIndexer() {}  // GCC initialization dummy
 	};
 
 	// ptr[] - use this form for instructions which can resolve the address operand size from

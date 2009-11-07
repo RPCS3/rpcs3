@@ -70,7 +70,7 @@ __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM] = { XMMT_INT };
 
 namespace x86Emitter {
 
-template< typename T > __forceinline void xWrite( T val )
+template< typename T > void xWrite( T val )
 {
 	*(T*)x86Ptr = val;
 	x86Ptr += sizeof(T);
@@ -102,16 +102,19 @@ __forceinline void xWrite64( u64 val )
 	xWrite( val );
 }
 
-const xAddressIndexer<ModSibBase>	ptr;
-const xAddressIndexer<ModSib128>	ptr128;
-const xAddressIndexer<ModSib64>		ptr64;
-const xAddressIndexer<ModSib32>		ptr32;
-const xAddressIndexer<ModSib16>		ptr16;
-const xAddressIndexer<ModSib8>		ptr8;
+// Empty initializers are due to frivolously pointless GCC errors (it demands the
+// objects be initialized even though they have no actual variable members).
+
+const xAddressIndexer<ModSibBase>	ptr		= { };
+const xAddressIndexer<ModSib128>	ptr128	= { };
+const xAddressIndexer<ModSib64>		ptr64	= { };
+const xAddressIndexer<ModSib32>		ptr32	= { };
+const xAddressIndexer<ModSib16>		ptr16	= { };
+const xAddressIndexer<ModSib8>		ptr8	= { };
 
 // ------------------------------------------------------------------------
 
-const xRegisterEmpty xEmptyReg;
+const xRegisterEmpty xEmptyReg = { };
 
 const xRegisterSSE
 	xmm0( 0 ), xmm1( 1 ),

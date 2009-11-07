@@ -109,24 +109,6 @@ struct xImpl_Set
 	//void operator()( const xDirectOrIndirect8& dest ) const;
 };
 
-class xRegister16or32
-{
-protected:
-	const xRegisterInt&		m_convtype;
-
-public:
-	xRegister16or32( const xRegister32& src ) : m_convtype( src ) {}
-	xRegister16or32( const xRegister16& src ) : m_convtype( src ) {}
-
-	//operator const xRegisterInt&() const { return m_convtype; }
-	operator const xRegisterBase&() const { return m_convtype; }
-
-	const xRegisterInt* operator->() const
-	{
-		return &m_convtype;
-	}
-};
-
 
 // --------------------------------------------------------------------------------------
 //  xImpl_MovExtend
