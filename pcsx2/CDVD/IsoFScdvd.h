@@ -23,29 +23,25 @@
 
 #include "Common.h"
 
-#if defined(_MSC_VER)
-#pragma pack(1)
+#ifdef _MSC_VER
+#	pragma pack(1)
 #endif
 
 struct TocEntry
 {
-	u32	fileLBA;
-	u32 fileSize;
-	u8	fileProperties;
-	u8	padding1[3];
+	u32		fileLBA;
+	u32		fileSize;
+	u8		fileProperties;
+	u8		padding1[3];
 	char	filename[128+1];
-	u8	date[7];
-#if defined(_MSC_VER)
-};
-#else
-} __attribute__((packed));
+	u8		date[7];
+} __packed;
+
+#ifdef _MSC_VER
+#	pragma pack()
 #endif
 
-#if defined(_MSC_VER)
-#pragma pack()
-#endif
-
-int IsoFS_findFile(const char* fname, struct TocEntry* tocEntry);
-int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf);
+extern int IsoFS_findFile(const char* fname, struct TocEntry* tocEntry);
+extern int IsoFS_readSectors(u32 lsn, u32 sectors, void *buf);
 
 #endif // _ISOFSCDVD_H

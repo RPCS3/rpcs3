@@ -25,12 +25,12 @@ union regInfo {
 	};
 };
 
-#if defined(_MSC_VER)
-#pragma pack(1)
-#pragma warning(disable:4996)
+#ifdef _MSC_VER
+#	pragma pack(1)
+#	pragma warning(disable:4996)		// 'function': was declared deprecated
 #endif
 
-__declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
+__aligned16 struct microRegInfo { // Ordered for Faster Compares
 	u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
 	u8 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u8 q;
@@ -43,21 +43,16 @@ __declspec(align(16)) struct microRegInfo { // Ordered for Faster Compares
 	u8 flags;			// clip x2 :: status x2
 	u8 blockType;		// 0 = Normal; 1,2 = Compile one instruction (E-bit/Branch Ending)
 	u8 padding[5];		// 160 bytes
-#if defined(_MSC_VER)
-};
-#else
-} __attribute__((packed));
-#endif
+} __packed;
 
-__declspec(align(16)) struct microBlock {
+__aligned16 struct microBlock {
 	microRegInfo pState;	// Detailed State of Pipeline
 	microRegInfo pStateEnd; // Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
 	u8* x86ptrStart;		// Start of code
-#if defined(_MSC_VER)
-};
-#pragma pack()
-#else
-} __attribute__((packed));
+} __packed;
+
+#ifdef _MSC_VER
+#	pragma pack()
 #endif
 
 struct microTempRegInfo {

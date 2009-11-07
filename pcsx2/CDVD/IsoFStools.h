@@ -17,19 +17,18 @@
  *  Modified by Florin for PCSX2 emu
  */
 
-#ifndef __ISOFSTOOLS_H__
-#define __ISOFSTOOLS_H__
+#pragma once
 
 #include "IsoFScdvd.h"
 
 int IsoFS_initDirectoryList(char* pathname, char* extensions, unsigned int inc_dirs);
 int IsoFS_getDirectories(TocEntry tocEntry[], int req_entries);
 
-#define CD_SECS              60 /* seconds per minute */
-#define CD_FRAMES            75 /* frames per second */
-#define CD_MSF_OFFSET       150 /* MSF numbering offset of first frame */
+static const int CD_SECS		= 60;	// seconds per minute
+static const int CD_FRAMES		= 75;	// frames per second
+static const int CD_MSF_OFFSET	= 150;	// MSF numbering offset of first frame
 
-#if defined(_MSC_VER)
+#ifdef _MSC_VER
 #	pragma pack(1)
 #endif
 
@@ -44,11 +43,8 @@ struct rootDirTocHeader
 	u8	reserved[6];	//+1A
 	u8	reserved2;		//+20
 	u8	reserved3;		//+21
-#if defined(_MSC_VER)
-};						//+22
-#else
-} __attribute__((packed));
-#endif
+
+} __packed;				//+22
 
 struct asciiDate
 {
@@ -60,11 +56,7 @@ struct asciiDate
 	char	seconds[2];
 	char	hundreths[2];
 	char	terminator[1];
-#if defined(_MSC_VER)
-};
-#else
-} __attribute__((packed));
-#endif
+} __packed;
 
 struct cdVolDesc
 {
@@ -80,6 +72,7 @@ struct cdVolDesc
 	u8		reserved6[32];
 	u32		unknown1;
 	u32		unknown1_bigend;
+
 	u16		volDescSize;									//+80
 	u16		volDescSize_bigend;								//+82
 	u32		unknown3;										//+84
@@ -88,7 +81,9 @@ struct cdVolDesc
 	u32		reserved7;										//+90
 	u32		secDirTableLBA;	// LBA of Secondary Dir Table	//+94
 	u32		reserved8;										//+98
-	struct rootDirTocHeader	rootToc;
+
+	rootDirTocHeader	rootToc;
+
 	s8		volSetName[128];
 	s8		publisherName[128];
 	s8		preparerName[128];
@@ -96,17 +91,15 @@ struct cdVolDesc
 	s8		copyrightFileName[37];
 	s8		abstractFileName[37];
 	s8		bibliographyFileName[37];
-	struct	asciiDate	creationDate;
-	struct	asciiDate	modificationDate;
-	struct	asciiDate	effectiveDate;
-	struct	asciiDate	expirationDate;
+
+	asciiDate	creationDate;
+	asciiDate	modificationDate;
+	asciiDate	effectiveDate;
+	asciiDate	expirationDate;
+
 	u8		reserved10;
 	u8		reserved11[1166];
-#if defined(_MSC_VER)
-};
-#else
-} __attribute__((packed));
-#endif
+} __packed;
 
 struct dirTableEntry
 {
@@ -115,34 +108,30 @@ struct dirTableEntry
 	u32	dirTOCLBA;
 	u16 dirDepth;
 	u8	dirName[32];
-#if defined(_MSC_VER)
-};
-#else
-} __attribute__((packed));
-#endif
+} __packed;
+
+// --------------------------------------------------------------------------------------
+//  dirTocEntry
+// --------------------------------------------------------------------------------------
+// This is the internal Table of Contents, as found on the CD
+// TocEntry structure contains only the important stuff needed for export.
 
 struct dirTocEntry
 {
-	short	length;
-	u32 fileLBA;
-	u32 fileLBA_bigend;
-	u32 fileSize;
-	u32 fileSize_bigend;
-	u8	dateStamp[6];
-	u8	reserved1;
-	u8	fileProperties;
-	u8	reserved2[6];
-	u8	filenameLength;
-	char filename[128];
-#if defined(_MSC_VER)
-};
-#else
-} __attribute__((packed));
-#endif	// This is the internal format on the CD
-// TocEntry structure contains only the important stuff needed for export
+	s16		length;
+	u32		fileLBA;
+	u32		fileLBA_bigend;
+	u32		fileSize;
+	u32		fileSize_bigend;
+	u8		dateStamp[6];
+	u8		reserved1;
+	u8		fileProperties;
+	u8		reserved2[6];
+	u8		filenameLength;
 
-#if defined(_MSC_VER)
-#pragma pack()
+	char	filename[128];
+} __packed;
+
+#ifdef _MSC_VER
+#	pragma pack()
 #endif
-
-#endif//__ISOFSTOOLS_H__

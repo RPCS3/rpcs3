@@ -179,11 +179,45 @@
 
 // Defines the memory page size for the target platform at compilation.  All supported platforms
 // (which means Intel only right now) have a 4k granularity.
-
 #define PCSX2_PAGESIZE		0x1000
 static const int __pagesize	= PCSX2_PAGESIZE;
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// Structure Packing (__packed)
+//
+// Current Method:
+// Use a combination of embedded compiler-specific #pragma mess in conjunction with a
+// __packed macro.  The former appeases the MSVC gods, the latter appeases the GCC gods.
+// The end result looks something like this:
+//
+// #ifdef _MSC_VER
+// #   pragma pack(1)
+// #endif
+//
+// struct SomeKindaFail {
+//     u8   neat;
+//     u32  unaligned32;
+// } __packed;
+//
+// MSVC 2008 and better support __pragma, however there's no way to support that in
+// a way that's backwards compatible to VS 2005, without still including the old-style
+// #pragma mess.  So there's really not much point (yet) in using it.  I've included macros
+// that utilize __pragma (commented out below) which can be deployed at a time when we
+// are ok with the idea of completely breaking backwards compat with VC2005/prior.
+//
+
+// --------------------------------------------------------------------------------------
+//  Microsoft Visual Studio 
+// --------------------------------------------------------------------------------------
 #ifdef _MSC_VER
+
+// Using these breaks compat with VC2005; so we're not using it yet.
+//#	define __pack_begin		__pragma(pack(1))
+//#	define __pack_end		__pragma(pack())
+
+// This is the 2005/earlier compatible packing define, which must be used in conjunction
+// with #ifdef _MSC_VER/#pragma pack() directives (ugly).
+#	define __packed
 
 #	define __aligned(alig)	__declspec(align(alig))
 #	define __aligned16		__declspec(align(16))
@@ -205,32 +239,15 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 #	define likely(x) x
 #	define unlikely(x) x
 
-#	define CALLBACK    __stdcall
+#	define CALLBACK		   __stdcall
 
 #else
 
-// GCC 4.4.0 is a bit nutty, as compilers go. it gets a define to itself.
-#	define GCC_VERSION (__GNUC__ * 10000 \
-                               + __GNUC_MINOR__ * 100 \
-                               + __GNUC_PATCHLEVEL__)
+// --------------------------------------------------------------------------------------
+//  GCC / Intel Compilers Section
+// --------------------------------------------------------------------------------------
 
-/* Test for GCC > 4.4.0; Should be adjusted when new versions come out */
-#	if GCC_VERSION >= 40400
-#		define THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
-#		define __nooptimization __attribute__((optimize("O0")))
-#	endif
-
-/*
-This theoretically unoptimizes. Not having much luck so far.
-#	ifdef THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
-#		pragma GCC optimize ("O0")
-#	endif
-
-#	ifdef THE_UNBEARABLE_LIGHTNESS_OF_BEING_GCC_4_4_0
-#		pragma GCC reset_options
-#	endif
-
-*/
+#	define __packed			__attribute__((packed))
 
 #	define __aligned(alig)	__attribute__((aligned(alig)))
 #	define __aligned16		__attribute__((aligned(16)))

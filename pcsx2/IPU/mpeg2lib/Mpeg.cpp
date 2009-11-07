@@ -1016,13 +1016,10 @@ struct TGA_HEADER
     u8  descriptor;         // image descriptor bits (vh flip bits)
 
     // pixel data follows header
+} __packed;
+
 #if defined(_MSC_VER)
-};
-
-#pragma pack()
-#else
-} __attribute__((packed));
-
+#	pragma pack()
 #endif
 
 void SaveTGA(const char* filename, int width, int height, void* pdata)

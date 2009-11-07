@@ -17,16 +17,14 @@
  *  Modified by Florin for PCSX2 emu
  */
 
-#ifndef __ISOFSDRV_H__
-#define __ISOFSDRV_H__
+#pragma once
 
 #include "IsoFScdvd.h"
 
 /* Filing-system exported functions */
-void IsoFS_init();
-int IsoFS_open(const char *name, int mode);
-int IsoFS_lseek(int fd, int offset, int whence);
-int IsoFS_read( int fd, char * buffer, int size );
-int IsoFS_close( int fd);
+extern void IsoFS_init();
+extern int  IsoFS_open(const char *name, int mode);
+extern int  IsoFS_lseek(int fd, int offset, int whence);
+extern int  IsoFS_read( int fd, char * buffer, int size );
+extern int  IsoFS_close(int fd);
 
-#endif//__ISOFSDRV_H__

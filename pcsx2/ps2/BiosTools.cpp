@@ -26,18 +26,18 @@
 // romdir structure (packing required!)
 //
 #if defined(_MSC_VER)
-#pragma pack(1)
+#	pragma pack(1)
 #endif
+
 struct romdir
 {
 	char fileName[10];
 	u16 extInfoSize;
 	u32 fileSize;
-#if defined(_MSC_VER)
-};
-#pragma pack()				//+22
-#else
-} __attribute__((packed));
+} __packed;			// +22
+
+#ifdef _MSC_VER
+#	pragma pack()
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
