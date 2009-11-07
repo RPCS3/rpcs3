@@ -33,6 +33,13 @@ extern void EmitSibMagic( const xRegisterBase& reg1, const ModSibBase& sib );
 extern void _xMovRtoR( const xRegisterInt& to, const xRegisterInt& from );
 extern void _g1_EmitOp( G1Type InstType, const xRegisterInt& to, const xRegisterInt& from );
 
+template< typename T > inline
+void xWrite( T val )
+{
+	*(T*)x86Ptr = val;
+	x86Ptr += sizeof(T);
+}
+
 template< typename T1, typename T2 > __emitinline
 void xOpWrite( u8 prefix, u8 opcode, const T1& param1, const T2& param2 )
 {

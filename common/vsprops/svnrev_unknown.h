@@ -20,4 +20,5 @@
 // doesn't check for the SVN_REV_UNKNOWN define.
 
 #define SVN_REV 0
-#define SVN_MODS ""
+#define SVN_MODS 0
+

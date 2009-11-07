@@ -70,12 +70,6 @@ __threadlocal XMMSSEType g_xmmtypes[iREGCNT_XMM] = { XMMT_INT };
 
 namespace x86Emitter {
 
-template< typename T > void xWrite( T val )
-{
-	*(T*)x86Ptr = val;
-	x86Ptr += sizeof(T);
-}
-
 template void xWrite<u8>( u8 val );
 template void xWrite<u16>( u16 val );
 template void xWrite<u32>( u32 val );
