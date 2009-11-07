@@ -33,6 +33,8 @@ static isoFile *iso = NULL;
 
 static int psize, cdtype;
 
+static s32 layer1start = -1;
+
 void CALLBACK ISOclose()
 {
 	isoClose(iso);
@@ -68,6 +70,8 @@ s32 CALLBACK ISOopen(const char* pTitle)
 			cdtype = CDVD_TYPE_PS2CD;
 			break;
 	}
+
+	layer1start = -1;
 
 	return 0;
 }
@@ -118,8 +122,6 @@ s32 CALLBACK ISOgetTD(u8 Track, cdvdTD *Buffer)
 	return 0;
 }
 
-static s32 layer1start = -1;
-
 static void FindLayer1Start()
 {
 	if ((layer1start == -1) && iso->blocks >= 2295104)
@@ -130,9 +132,9 @@ static void FindLayer1Start()
 
 		Console.WriteLn("CDVDiso: searching for layer1...");
 		//tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW);
-		for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
+		for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x210010; layer1start += 16)
 		{
-			isoReadBlock(iso, tempbuffer+off, layer1start);
+			isoReadBlock(iso, tempbuffer, layer1start);
 			// CD001
 			if ((tempbuffer[off+1] == 0x43) &&
 				(tempbuffer[off+2] == 0x44) &&

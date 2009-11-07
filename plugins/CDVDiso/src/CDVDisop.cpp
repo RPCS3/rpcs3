@@ -322,7 +322,11 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 				{
 					isoReadBlock(iso, tempbuffer, layer1start);
 					// CD001
-					if (tempbuffer[off+1] == 0x43 && tempbuffer[off+2] == 0x44 && tempbuffer[off+3] == 0x30 && tempbuffer[off+4] == 0x30 && tempbuffer[off+5] == 0x31)
+					if (tempbuffer[off+1] == 0x43 &&
+						tempbuffer[off+2] == 0x44 &&
+						tempbuffer[off+3] == 0x30 &&
+						tempbuffer[off+4] == 0x30 &&
+						tempbuffer[off+5] == 0x31)
 						break;
 				}
 				free(tempbuffer);
