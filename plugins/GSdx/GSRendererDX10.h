@@ -28,14 +28,7 @@
 class GSRendererDX10 : public GSRendererDX<GSVertexHW10>
 {
 protected:
-	struct
-	{
-		CComPtr<ID3D10DepthStencilState> dss;
-		CComPtr<ID3D10BlendState> bs;
-	} m_date;
-
 	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
-	void SetupDATE(GSTexture* rt, GSTexture* ds);
 
 public:
 	GSRendererDX10();

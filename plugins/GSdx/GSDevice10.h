@@ -88,6 +88,14 @@ public: // TODO
 		CComPtr<ID3D10Buffer> cb;
 	} m_interlace;
 
+	struct
+	{
+		CComPtr<ID3D10DepthStencilState> dss;
+		CComPtr<ID3D10BlendState> bs;
+	} m_date;
+
+	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm);
+
 	CComPtr<ID3D10InputLayout> m_il;
 	hash_map<uint32, CComPtr<ID3D10VertexShader> > m_vs;
 	CComPtr<ID3D10Buffer> m_vs_cb;

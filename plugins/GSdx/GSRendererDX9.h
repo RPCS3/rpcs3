@@ -32,16 +32,9 @@ protected:
 	{
 		Direct3DDepthStencilState9 dss;
 		Direct3DBlendState9 bs;
-	} m_date;
-
-	struct
-	{
-		Direct3DDepthStencilState9 dss;
-		Direct3DBlendState9 bs;
 	} m_fba;
 
 	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
-	void SetupDATE(GSTexture* rt, GSTexture* ds);
 	void UpdateFBA(GSTexture* rt);
 
 public:

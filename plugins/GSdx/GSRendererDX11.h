@@ -30,14 +30,6 @@ class GSRendererDX11 : public GSRendererDX<GSVertexHW11>
 protected:
 	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 
-	struct
-	{
-		CComPtr<ID3D11DepthStencilState> dss;
-		CComPtr<ID3D11BlendState> bs;
-	} m_date;
-
-	void SetupDATE(GSTexture* rt, GSTexture* ds);
-
 public:
 	GSRendererDX11();
 	virtual ~GSRendererDX11() {}

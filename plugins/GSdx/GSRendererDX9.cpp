@@ -37,19 +37,6 @@ bool GSRendererDX9::CreateDevice(GSDevice* dev)
 
 	//
 
-	memset(&m_date.dss, 0, sizeof(m_date.dss));
-
-	m_date.dss.StencilEnable = true;
-	m_date.dss.StencilReadMask = 1;
-	m_date.dss.StencilWriteMask = 1;
-	m_date.dss.StencilFunc = D3DCMP_ALWAYS;
-	m_date.dss.StencilPassOp = D3DSTENCILOP_REPLACE;
-	m_date.dss.StencilRef = 1;
-
-	memset(&m_date.bs, 0, sizeof(m_date.bs));
-
-	//
-
 	memset(&m_fba.dss, 0, sizeof(m_fba.dss));
 
 	m_fba.dss.StencilEnable = true;
@@ -208,74 +195,6 @@ void GSRendererDX9::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t
 	(*(GSDevice9*)m_dev)->SetRenderState(D3DRS_SHADEMODE, PRIM->IIP ? D3DSHADE_GOURAUD : D3DSHADE_FLAT); // TODO
 
 	__super::Draw(rt, ds, tex);
-}
-
-void GSRendererDX9::SetupDATE(GSTexture* rt, GSTexture* ds)
-{
-	if(!m_context->TEST.DATE) return; // || (::GetAsyncKeyState(VK_CONTROL) & 0x8000)
-
-	GSDevice9* dev = (GSDevice9*)m_dev;
-
-	const GSVector2i& size = rt->GetSize();
-
-	if(GSTexture* t = dev->CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
-	{
-		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
-
-		dev->BeginScene();
-
-		dev->ClearStencil(ds, 0);
-
-		// om
-
-		dev->OMSetDepthStencilState(&m_date.dss);
-		dev->OMSetBlendState(&m_date.bs, 0);
-		dev->OMSetRenderTargets(t, ds);
-
-		// ia
-
-		GSVector4 s = GSVector4(rt->GetScale().x / size.x, rt->GetScale().y / size.y);
-		GSVector4 o = GSVector4(-1.0f, 1.0f);
-
-		GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
-		GSVector4 dst = src * 2.0f + o.xxxx();
-
-		GSVertexPT1 vertices[] =
-		{
-			{GSVector4(dst.x, -dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
-			{GSVector4(dst.z, -dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
-			{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
-			{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
-		};
-
-		dev->IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
-		dev->IASetInputLayout(dev->m_convert.il);
-		dev->IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
-
-		// vs
-
-		dev->VSSetShader(dev->m_convert.vs, NULL, 0);
-
-		// ps
-
-		GSTexture* rt2 = rt->IsMSAA() ? dev->Resolve(rt) : rt;
-
-		dev->PSSetShaderResources(rt2, NULL);
-		dev->PSSetShader(dev->m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL, 0);
-		dev->PSSetSamplerState(&dev->m_convert.pt);
-
-		//
-
-		dev->DrawPrimitive();
-
-		//
-
-		dev->EndScene();
-
-		dev->Recycle(t);
-
-		if(rt2 != rt) dev->Recycle(rt2);
-	}
 }
 
 void GSRendererDX9::UpdateFBA(GSTexture* rt)

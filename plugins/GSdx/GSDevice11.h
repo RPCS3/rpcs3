@@ -89,6 +89,14 @@ public: // TODO
 		CComPtr<ID3D11Buffer> cb;
 	} m_interlace;
 
+	struct
+	{
+		CComPtr<ID3D11DepthStencilState> dss;
+		CComPtr<ID3D11BlendState> bs;
+	} m_date;
+
+	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm);
+
 	// Shaders...
 
 	CComPtr<ID3D11InputLayout> m_il;

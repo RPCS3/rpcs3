@@ -35,7 +35,6 @@ class GSRendererDX : public GSRendererHW<Vertex>
 protected:
 	int m_topology;
 
-	virtual void SetupDATE(GSTexture* rt, GSTexture* ds) {}
 	virtual void UpdateFBA(GSTexture* rt) {}
 
 public:
@@ -67,11 +66,31 @@ public:
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
 
+		assert(m_dev != NULL);
+
 		GSDeviceDX& dev = (GSDeviceDX&)*m_dev;
 
 		//
+		if(m_context->TEST.DATE)
+		{
+			const GSVector2i& size = rt->GetSize();
 
-		SetupDATE(rt, ds);
+			GSVector4 s = GSVector4(rt->GetScale().x / size.x, rt->GetScale().y / size.y);
+			GSVector4 o = GSVector4(-1.0f, 1.0f);
+
+			GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
+			GSVector4 dst = src * 2.0f + o.xxxx();
+
+			GSVertexPT1 vertices[] =
+			{
+				{GSVector4(dst.x, -dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
+				{GSVector4(dst.z, -dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
+				{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
+				{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
+			};
+
+			dev.SetupDATE(rt, ds, vertices, m_context->TEST.DATM );
+		}
 
 		//
 

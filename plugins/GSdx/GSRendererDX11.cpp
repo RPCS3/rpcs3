@@ -35,35 +35,6 @@ bool GSRendererDX11::CreateDevice(GSDevice* dev)
 	if(!__super::CreateDevice(dev))
 		return false;
 
-	//
-
-	D3D11_DEPTH_STENCIL_DESC dsd;
-
-	memset(&dsd, 0, sizeof(dsd));
-
-	dsd.DepthEnable = false;
-	dsd.StencilEnable = true;
-	dsd.StencilReadMask = 1;
-	dsd.StencilWriteMask = 1;
-	dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-
-	(*(GSDevice11*)m_dev)->CreateDepthStencilState(&dsd, &m_date.dss);
-
-	D3D11_BLEND_DESC bd;
-
-	memset(&bd, 0, sizeof(bd));
-
-	(*(GSDevice11*)m_dev)->CreateBlendState(&bd, &m_date.bs);
-
-	//
-
 	return true;
 }
 
@@ -191,76 +162,4 @@ void GSRendererDX11::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* 
 	}
 
 	__super::Draw(rt, ds, tex);
-}
-
-void GSRendererDX11::SetupDATE(GSTexture* rt, GSTexture* ds)
-{
-	if(!m_context->TEST.DATE) return; // || (::GetAsyncKeyState(VK_CONTROL) & 0x8000)
-
-	GSDevice11* dev = (GSDevice11*)m_dev;
-
-	const GSVector2i& size = rt->GetSize();
-
-	if(GSTexture* t = dev->CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
-	{
-		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
-
-		dev->BeginScene();
-
-		dev->ClearStencil(ds, 0);
-
-		// om
-
-		dev->OMSetDepthStencilState(m_date.dss, 1);
-		dev->OMSetBlendState(m_date.bs, 0);
-		dev->OMSetRenderTargets(t, ds);
-
-		// ia
-
-		GSVector4 s = GSVector4(rt->GetScale().x / size.x, rt->GetScale().y / size.y);
-		GSVector4 o = GSVector4(-1.0f, 1.0f);
-
-		GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
-		GSVector4 dst = src * 2.0f + o.xxxx();
-
-		GSVertexPT1 vertices[] =
-		{
-			{GSVector4(dst.x, -dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
-			{GSVector4(dst.z, -dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
-			{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
-			{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
-		};
-
-		dev->IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
-		dev->IASetInputLayout(dev->m_convert.il);
-		dev->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-		// vs
-
-		dev->VSSetShader(dev->m_convert.vs, NULL);
-
-		// gs
-
-		dev->GSSetShader(NULL);
-
-		// ps
-
-		GSTexture* rt2 = rt->IsMSAA() ? dev->Resolve(rt) : rt;
-
-		dev->PSSetShaderResources(rt2, NULL);
-		dev->PSSetShader(dev->m_convert.ps[m_context->TEST.DATM ? 2 : 3], NULL);
-		dev->PSSetSamplerState(dev->m_convert.pt, NULL);
-
-		// 
-
-		dev->DrawPrimitive();
-
-		//
-
-		dev->EndScene();
-
-		dev->Recycle(t);
-
-		if(rt2 != rt) dev->Recycle(rt2);
-	}
 }

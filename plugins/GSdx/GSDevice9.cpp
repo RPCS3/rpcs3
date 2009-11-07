@@ -221,6 +221,21 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	SetupVS(sel, &cb);
 
+	//
+
+	memset(&m_date.dss, 0, sizeof(m_date.dss));
+
+	m_date.dss.StencilEnable = true;
+	m_date.dss.StencilReadMask = 1;
+	m_date.dss.StencilWriteMask = 1;
+	m_date.dss.StencilFunc = D3DCMP_ALWAYS;
+	m_date.dss.StencilPassOp = D3DSTENCILOP_REPLACE;
+	m_date.dss.StencilRef = 1;
+
+	memset(&m_date.bs, 0, sizeof(m_date.bs));
+
+	//
+
 	return true;
 }
 
@@ -727,6 +742,56 @@ void GSDevice9::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linea
 	cb.hH = (float)s.y / 2;
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], (const float*)&cb, 1, linear);
+}
+
+void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm)
+{
+	const GSVector2i& size = rt->GetSize();
+
+	if(GSTexture* t = CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
+	{
+		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
+
+		BeginScene();
+
+		ClearStencil(ds, 0);
+
+		// om
+
+		OMSetDepthStencilState(&m_date.dss);
+		OMSetBlendState(&m_date.bs, 0);
+		OMSetRenderTargets(t, ds);
+
+		// ia
+
+		IASetVertexBuffer(iaVertices, sizeof(iaVertices[0]), countof(iaVertices));
+		IASetInputLayout(m_convert.il);
+		IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
+
+		// vs
+
+		VSSetShader(m_convert.vs, NULL, 0);
+
+		// ps
+
+		GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
+
+		PSSetShaderResources(rt2, NULL);
+		PSSetShader(m_convert.ps[datm ? 2 : 3], NULL, 0);
+		PSSetSamplerState(&m_convert.pt);
+
+		//
+
+		DrawPrimitive();
+
+		//
+
+		EndScene();
+
+		Recycle(t);
+
+		if(rt2 != rt) Recycle(rt2);
+	}
 }
 
 void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)

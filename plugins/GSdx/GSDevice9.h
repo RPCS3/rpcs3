@@ -124,6 +124,14 @@ public: // TODO
 		CComPtr<IDirect3DPixelShader9> ps[4];
 	} m_interlace;
 
+	struct
+	{
+		Direct3DDepthStencilState9 dss;
+		Direct3DBlendState9 bs;
+	} m_date;
+
+	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm);
+
 	// Shaders...
 
 	CComPtr<IDirect3DVertexDeclaration9> m_il;

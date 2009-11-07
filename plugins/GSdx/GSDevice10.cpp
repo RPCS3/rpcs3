@@ -237,6 +237,33 @@ bool GSDevice10::Create(GSWnd* wnd)
 
 	CreateTextureFX();
 
+	//
+
+	memset(&dsd, 0, sizeof(dsd));
+
+	dsd.DepthEnable = false;
+	dsd.StencilEnable = true;
+	dsd.StencilReadMask = 1;
+	dsd.StencilWriteMask = 1;
+	dsd.FrontFace.StencilFunc = D3D10_COMPARISON_ALWAYS;
+	dsd.FrontFace.StencilPassOp = D3D10_STENCIL_OP_REPLACE;
+	dsd.FrontFace.StencilFailOp = D3D10_STENCIL_OP_KEEP;
+	dsd.FrontFace.StencilDepthFailOp = D3D10_STENCIL_OP_KEEP;
+	dsd.BackFace.StencilFunc = D3D10_COMPARISON_ALWAYS;
+	dsd.BackFace.StencilPassOp = D3D10_STENCIL_OP_REPLACE;
+	dsd.BackFace.StencilFailOp = D3D10_STENCIL_OP_KEEP;
+	dsd.BackFace.StencilDepthFailOp = D3D10_STENCIL_OP_KEEP;
+
+	m_dev->CreateDepthStencilState(&dsd, &m_date.dss);
+
+	D3D10_BLEND_DESC blend;
+
+	memset(&blend, 0, sizeof(blend));
+
+	m_dev->CreateBlendState(&blend, &m_date.bs);
+
+	//
+
 	return true;
 }
 
@@ -536,6 +563,60 @@ void GSDevice10::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool line
 	m_dev->UpdateSubresource(m_interlace.cb, 0, NULL, &cb, 0, 0);
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
+}
+
+void GSDevice10::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm)
+{
+	const GSVector2i& size = rt->GetSize();
+
+	if(GSTexture* t = CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
+	{
+		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
+
+		BeginScene();
+
+		ClearStencil(ds, 0);
+
+		// om
+
+		OMSetDepthStencilState(m_date.dss, 1);
+		OMSetBlendState(m_date.bs, 0);
+		OMSetRenderTargets(t, ds);
+
+		// ia
+
+		IASetVertexBuffer(iaVertices, sizeof(iaVertices[0]), countof(iaVertices));
+		IASetInputLayout(m_convert.il);
+		IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+		// vs
+
+		VSSetShader(m_convert.vs, NULL);
+
+		// gs
+
+		GSSetShader(NULL);
+
+		// ps
+
+		GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
+
+		PSSetShaderResources(rt2, NULL);
+		PSSetShader(m_convert.ps[datm ? 2 : 3], NULL);
+		PSSetSamplerState(m_convert.pt, NULL);
+
+		// 
+
+		DrawPrimitive();
+
+		//
+
+		EndScene();
+
+		Recycle(t);
+
+		if(rt2 != rt) Recycle(rt2);
+	}
 }
 
 void GSDevice10::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
