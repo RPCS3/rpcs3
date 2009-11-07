@@ -16,9 +16,11 @@
 #include "PrecompiledHeader.h"
 
 #include "Common.h"
-#include "CDVD/IsoFSdrv.h"
+//#include "CDVD/IsoFSdrv.h"
 #include "DebugTools/Debug.h"
 #include "GS.h"			// for sending game crc to mtgs
+#include "cdvd/isofs/isofscdvd.h"
+#include "cdvd/isofs/isofs.h"
 
 using namespace std;
 extern void InitPatch(wxString crc);
@@ -326,13 +328,18 @@ struct ElfObject
 		if ((strnicmp( work, "cdrom0:", strlen("cdromN:")) == 0) ||
 			(strnicmp( work, "cdrom1:", strlen("cdromN:")) == 0))
 		{
-			int fi = IsoFS_open(work + strlen("cdromN:"), 1);//RDONLY
+			IsoFSCDVD isofs;
+			IsoDirectory fsroot(&isofs);
 
-			if (fi < 0) throw Exception::FileNotFound( filename );
+			// Will throw exception if the file was not found
+			IsoFile file = fsroot.OpenFile(work + strlen("cdromN:"));
 
-			IsoFS_lseek( fi, 0, SEEK_SET );
-			rsize = IsoFS_read( fi, (char*)data.GetPtr(), data.GetSizeInBytes() );
-			IsoFS_close( fi );
+			int size = file.getLength();
+
+			char buffer[256]; //if the file is longer...it should be shorter :D
+			rsize = file.read((u8*)data.GetPtr(), data.GetSizeInBytes());
+
+			//if (fi < 0) throw Exception::FileNotFound( filename );
 		}
 		else
 		{
@@ -503,18 +510,24 @@ void ElfApplyPatches()
 // Fetches the CRC of the game bound to the CDVD plugin.
 u32 loadElfCRC( const char* filename )
 {
-	TocEntry toc;
-
-	IsoFS_init( );
+	IsoFSCDVD isofs;
+	IsoDirectory fsroot(&isofs);
+	IsoFileDescriptor desc;
+	u32 crcval = 0;
 
 	Console.WriteLn("loadElfCRC: %s", filename);
 
-	int mylen = strlen( "cdromN:" );
-	if ( IsoFS_findFile( filename + mylen, &toc ) == -1 ) return 0;
+	try {
+		int mylen = strlen( "cdromN:" );
+		desc = fsroot.FindFile( filename + mylen );
 
-	DevCon.WriteLn( "loadElfFile: %d bytes", toc.fileSize );
-	u32 crcval = ElfObject( fromUTF8( filename ), toc.fileSize ).GetCRC();
-	Console.WriteLn( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
+		DevCon.WriteLn( "loadElfFile: %d bytes", desc.size );
+		crcval = ElfObject( fromUTF8( filename ), desc.size ).GetCRC();
+		Console.WriteLn( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
+	}
+	catch( ... )
+	{
+	}
 
 	return crcval;
 }
@@ -549,11 +562,23 @@ void loadElfFile(const wxString& filename)
 	{
 		DevCon.WriteLn("Loading from a CD rom or CD image");
 		useCdvdSource = true;
-		TocEntry toc;
-		IsoFS_init( );
-		if ( IsoFS_findFile( fnptr + strlen( "cdromN:" ), &toc ) == -1 )
+
+		IsoFileDescriptor desc;
+		try
+		{
+			IsoFSCDVD isofs;
+			IsoDirectory fsroot(&isofs);
+			u32 crcval = 0;
+
+			Console.WriteLn("loadElfCRC: %s", filename);
+
+			desc = fsroot.FindFile(fnptr + strlen( "cdromN:" ));
+		}
+		catch( ... )
+		{
 			throw Exception::FileNotFound( filename, wxLt("ELF file was not found on the CDVD source media.") );
-		elfsize = toc.fileSize;
+		}
+		elfsize = desc.size;
 	}
 
 	if( elfsize > 0xfffffff )
@@ -612,42 +637,51 @@ int GetPS2ElfName( wxString& name )
 	int f;
 	char buffer[g_MaxPath];//if a file is longer...it should be shorter :D
 	char *pos;
-	TocEntry tocEntry;
 
-	IsoFS_init();
+	try {
+		IsoFSCDVD isofs;
+		IsoDirectory fsroot(&isofs);
 
-	// check if the file exists
-	if (IsoFS_findFile("SYSTEM.CNF;1", &tocEntry) != TRUE){
-		Console.Warning("GetElfName: SYSTEM.CNF not found; invalid cd image or no disc present.");
-		return 0;//could not find; not a PS/PS2 cdvd
-	}
+		try {
+			// Will throw exception if the file was not found
+			IsoFile file = fsroot.OpenFile("SYSTEM.CNF;1");
 
-	f=IsoFS_open("SYSTEM.CNF;1", 1);
-	IsoFS_read(f, buffer, g_MaxPath);
-	IsoFS_close(f);
+			int size = file.getLength();
 
-	buffer[tocEntry.fileSize]='\0';
+			char buffer[256]; //if the file is longer...it should be shorter :D
+			file.read((u8*)buffer,size);
+			buffer[size]='\0';
 
-	pos=strstr(buffer, "BOOT2");
-	if (pos==NULL){
-		pos=strstr(buffer, "BOOT");
-		if (pos==NULL) {
-			Console.Error("PCSX2 Boot Error: This is not a Playstation or PS2 game!");
-			return 0;
+			char* pos = strstr(buffer, "BOOT2");
+			if (pos == NULL)
+			{
+				pos = strstr(buffer, "BOOT");
+				if (pos==NULL) {
+					Console.Error("PCSX2 Boot Error: This is not a Playstation or PS2 game!");
+					return 0;
+				}
+				return 1;
+			}
+
+			pos+=strlen("BOOT2");
+			while (pos && *pos && pos<&buffer[g_MaxPath]
+			&& (*pos<'A' || (*pos>'Z' && *pos<'a') || *pos>'z'))
+				pos++;
+			if (!pos || *pos==0)
+				return 0;
+
+			// the filename is everything up to the first CR/LF/tab.. ?
+			// Or up to any whitespace?  (I'm opting for first CRLF/tab, although the old code
+			// apparently stopped on spaces too) --air
+			name = wxStringTokenizer( fromUTF8( pos ) ).GetNextToken();
 		}
-		return 1;
+		catch( ... )
+		{
+		}
 	}
-	pos+=strlen("BOOT2");
-	while (pos && *pos && pos<&buffer[g_MaxPath]
-		&& (*pos<'A' || (*pos>'Z' && *pos<'a') || *pos>'z'))
-		pos++;
-	if (!pos || *pos==0)
-		return 0;
-
-	// the filename is everything up to the first CR/LF/tab.. ?
-	// Or up to any whitespace?  (I'm opting for first CRLF/tab, although the old code
-	// apparently stopped on spaces too) --air
-	name = wxStringTokenizer( fromUTF8( pos ) ).GetNextToken();
+	catch( ... )
+	{
+	}
 
 #ifdef PCSX2_DEVBUILD
 	FILE *fp;

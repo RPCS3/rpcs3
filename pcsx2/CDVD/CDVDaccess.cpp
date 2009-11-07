@@ -27,9 +27,11 @@
 #include <wx/datetime.h>
 
 #include "IopCommon.h"
-#include "IsoFStools.h"
-#include "IsoFSdrv.h"
 #include "CDVDisoReader.h"
+
+#include "IsoFS/IsoFS.h"
+#include "IsoFS/IsoFSCDVD.h"
+#include <exception>
 
 const wxChar* CDVD_SourceLabels[] =
 {
@@ -69,41 +71,52 @@ static void CheckNullCDVD()
 //
 static int CheckDiskTypeFS(int baseType)
 {
-	int		f;
-	char	buffer[256];//if a file is longer...it should be shorter :D
-	char	*pos;
-	static struct TocEntry tocEntry;
+	try {
+		IsoFSCDVD isofs;
+		IsoDirectory fsroot(&isofs);
+		
+		try {
+			// Will throw exception if the file was not found
+			IsoFile file = fsroot.OpenFile("SYSTEM.CNF;1");
 
-	IsoFS_init();
-	
-	f = IsoFS_open("SYSTEM.CNF;1", 1);
-	
-	// check if the file exists
-	if (f >= 0)
-	{
-		int size = IsoFS_read(f, buffer, 256);
-		IsoFS_close(f);
+			int size = file.getLength();
 
-		buffer[size]='\0';
+			char buffer[256]; //if the file is longer...it should be shorter :D
+			file.read((u8*)buffer,size);
+			buffer[size]='\0';
 
-		pos = strstr(buffer, "BOOT2");
-		if (pos == NULL)
+			char* pos = strstr(buffer, "BOOT2");
+			if (pos == NULL)
+			{
+				pos = strstr(buffer, "BOOT");
+				if (pos == NULL)  return CDVD_TYPE_ILLEGAL;
+				return CDVD_TYPE_PSCD;
+			}
+
+			return (baseType==CDVD_TYPE_DETCTCD) ? CDVD_TYPE_PS2CD : CDVD_TYPE_PS2DVD;
+		}
+		catch( ... )
 		{
-			pos = strstr(buffer, "BOOT");
-			if (pos == NULL)  return CDVD_TYPE_ILLEGAL;
+		}
+
+		try {
+			fsroot.FindFile("PSX.EXE;1");
 			return CDVD_TYPE_PSCD;
 		}
-		return (baseType==CDVD_TYPE_DETCTCD) ? CDVD_TYPE_PS2CD : CDVD_TYPE_PS2DVD;
-	}
+		catch( ... )
+		{
+		}
 
-	if (IsoFS_findFile("PSX.EXE;1", &tocEntry) == TRUE)
-	{
-		return CDVD_TYPE_PSCD;
+		try {
+			fsroot.FindFile("VIDEO_TS/VIDEO_TS.IFO;1");
+			return CDVD_TYPE_DVDV;
+		}
+		catch( ... )
+		{
+		}
 	}
-
-	if (IsoFS_findFile("VIDEO_TS/VIDEO_TS.IFO;1", &tocEntry) == TRUE)
+	catch( ... )
 	{
-		return CDVD_TYPE_DVDV;
 	}
 
 	return CDVD_TYPE_ILLEGAL; // << Only for discs which aren't ps2 at all.
@@ -136,8 +149,9 @@ static int FindDiskType(int mType)
 		{
 			if (DoCDVDreadSector(bleh, 16, CDVD_MODE_2048) == 0)
 			{
-				const cdVolDesc& volDesc = (cdVolDesc&)bleh;
-				if(volDesc.rootToc.tocSize == 2048) 
+				//const cdVolDesc& volDesc = (cdVolDesc&)bleh;
+				//if(volDesc.rootToc.tocSize == 2048) 
+				if(*(u16*)(bleh+166) == 2048)
 					iCDType = CDVD_TYPE_DETCTCD;
 				else
 					iCDType = CDVD_TYPE_DETCTDVDS;

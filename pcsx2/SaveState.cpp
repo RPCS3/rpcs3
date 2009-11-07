@@ -19,7 +19,7 @@
 #include "IopCommon.h"
 #include "SaveState.h"
 
-#include "CDVD/IsoFSdrv.h"
+//#include "CDVD/IsoFSdrv.h"
 #include "ps2/BiosTools.h"
 
 #include "VUmicro.h"

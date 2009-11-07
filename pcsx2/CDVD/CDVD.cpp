@@ -19,7 +19,6 @@
 #include <wx/datetime.h>
 
 #include "IopCommon.h"
-#include "IsoFStools.h"
 #include "CDVD_internal.h"
 #include "CDVDisoReader.h"
 #include "GS.h"			// for gsRegionMode

@@ -96,6 +96,7 @@ s32 CALLBACK ISOreadSubQ(u32 lsn, cdvdSubQ* subq)
 	subq->discM		= itob(min);
 	subq->discS		= itob(sec);
 	subq->discF		= itob(frm);
+
 	return 0;
 }
 

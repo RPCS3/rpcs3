@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="pcsx2"
 	ProjectGUID="{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	RootNamespace="pcsx2"
@@ -413,26 +413,6 @@
 				</File>
 				<File
 					RelativePath="..\..\CDVD\IsoFileFormats.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\IsoFScdvd.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\IsoFSdrv.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\IsoFSdrv.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\IsoFStools.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\..\CDVD\IsoFStools.h"
 					>
 				</File>
 			</Filter>
@@ -1773,6 +1753,42 @@
 				>
 				<File
 					RelativePath="..\WinSysExec.cpp"
+					>
+				</File>
+			</Filter>
+			<Filter
+				Name="IsoFS"
+				>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoFile.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoFile.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoFileDescriptor.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoFS.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoFS.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoFSCDVD.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoFSCDVD.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\IsoFS\SectorSource.h"
 					>
 				</File>
 			</Filter>

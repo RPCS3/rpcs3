@@ -23,7 +23,6 @@
 #include <stdio.h>
 
 #include "IopCommon.h"
-#include "IsoFStools.h"
 #include "IsoFileFormats.h"
 
 #endif

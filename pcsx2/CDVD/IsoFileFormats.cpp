@@ -16,8 +16,8 @@
   
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
-#include "IsoFStools.h"
-#include "IsoFSdrv.h"
+//#include "IsoFStools.h"
+//#include "IsoFSdrv.h"
 #include "IsoFileFormats.h"
 
 #include <stdio.h>
@@ -27,15 +27,15 @@
 int detect(isoFile *iso)
 {
 	u8 buf[2448];
-	cdVolDesc *volDesc;
+	u8* pbuf;
 
 	if (isoReadBlock(iso, buf, 16) == -1) return -1;
 	
-	volDesc = (cdVolDesc *) (( iso->flags & ISOFLAGS_BLOCKDUMP_V3 ) ? buf : (buf + 24));
+	pbuf = (( iso->flags & ISOFLAGS_BLOCKDUMP_V3 ) ? buf : (buf + 24));
 
-	if (strncmp((char*)volDesc->volID, "CD001", 5)) return 0;
+	if (strncmp((char*)(pbuf+1), "CD001", 5)) return 0;
 
-	if (volDesc->rootToc.tocSize == 2048)
+	if (*(u16*)(pbuf+166) == 2048)
 		iso->type = ISOTYPE_CD;
 	else
 		iso->type = ISOTYPE_DVD;
