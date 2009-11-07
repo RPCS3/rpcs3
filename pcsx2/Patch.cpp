@@ -449,28 +449,22 @@ void inifile_read(wxString name )
 
 	patchnumber = 0;
 
-    buffer = Path::Combine(L"patches", name + L".pnach");
+	buffer = Path::Combine(L"patches", name + L".pnach");
 
-#ifndef _WIN32
-    if (!f1.Open(buffer))
+	if(!f1.Open(buffer) && wxFileName::IsCaseSensitive())
 	{
-        name.MakeUpper();
-        buffer = Path::Combine(L"patches", name + L".pnach");
+		name.MakeUpper();
+		f1.Open( Path::Combine(L"patches", name + L".pnach") );
 	}
-#endif
 
-    if (!f1.Open(buffer))
+	if(!f1.IsOpened())
 	{
-		Console.WriteLn("No patch found. Resuming execution without a patch (this is NOT an error)." );
+		Console.WriteLn( Color_Gray, "No patch found. Resuming execution without a patch (this is NOT an error)." );
 		return;
 	}
-    else
-    {
-        Console.WriteLn("Opened!");
-    }
-	//inifile_process( f1 );
+
+	Console.WriteLn( Color_Green, "Patch found!");
 	inifile_process( f1 );
-	f1.Close();
 }
 
 void _ApplyPatch(IniPatch *p)
