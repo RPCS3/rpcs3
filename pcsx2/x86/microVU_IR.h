@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -30,7 +30,7 @@ union regInfo {
 #	pragma warning(disable:4996)		// 'function': was declared deprecated
 #endif
 
-__aligned16 struct microRegInfo { // Ordered for Faster Compares
+struct __aligned16 microRegInfo { // Ordered for Faster Compares
 	u32 vi15;			// Constant Prop Info for vi15 (only valid if sign-bit set)
 	u8 needExactMatch;	// If set, block needs an exact match of pipeline state
 	u8 q;
@@ -45,7 +45,7 @@ __aligned16 struct microRegInfo { // Ordered for Faster Compares
 	u8 padding[5];		// 160 bytes
 } __packed;
 
-__aligned16 struct microBlock {
+struct __aligned16 microBlock {
 	microRegInfo pState;	// Detailed State of Pipeline
 	microRegInfo pStateEnd; // Detailed State of Pipeline at End of Block (needed by JR/JALR opcodes)
 	u8* x86ptrStart;		// Start of code
@@ -151,7 +151,7 @@ struct microIR {
 	microTempRegInfo regsTemp;		// Temp Pipeline info (used so that new pipeline info isn't conflicting between upper and lower instructions in the same cycle)
 	microOp			 info[pSize/2];	// Info for Instructions in current block
 	microConstInfo	 constReg[16];	// Simple Const Propagation Info for VI regs within blocks
-	u8  branch;			
+	u8  branch;
 	u32 cycles;		// Cycles for current block
 	u32 count;		// Number of VU 64bit instructions ran (starts at 0 for each block)
 	u32 curPC;		// Current PC
@@ -203,9 +203,9 @@ private:
 	}
 
 public:
-	microRegAlloc(VURegs* vuRegsPtr) { 
+	microRegAlloc(VURegs* vuRegsPtr) {
 		vuRegs = vuRegsPtr;
-		reset(); 
+		reset();
 	}
 	void reset() {
 		for (int i = 0; i < xmmTotal; i++) {
@@ -264,11 +264,11 @@ public:
 					if (i == reg) continue;
 					if (xmmReg[i].reg == xmmReg[reg].reg) {
 						if (xmmReg[i].xyzw && xmmReg[i].xyzw < 0xf) DevCon.Error("microVU Error: clearNeeded() [%d]", xmmReg[i].reg);
-						if (mergeRegs == 1) { 
+						if (mergeRegs == 1) {
 							mVUmergeRegs(i, reg, xmmReg[reg].xyzw, 1);
 							xmmReg[i].xyzw = 0xf;
 							xmmReg[i].count = counter;
-							mergeRegs = 2; 
+							mergeRegs = 2;
 						}
 						else clearReg(i);
 					}

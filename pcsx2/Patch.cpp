@@ -595,19 +595,15 @@ void PrintPatch(int i)
 
 u32 StrToU32(wxString str, int base = 10)
 {
-    long l;
-
-    str.ToLong(&l, base);
-
+    unsigned long l;
+    str.ToULong(&l, base);
     return l;
 }
 
 u64 StrToU64(wxString str, int base = 10)
 {
-    long long l;
-
-    str.ToLongLong(&l, base);
-
+    unsigned long long l;
+    str.ToULongLong(&l, base);
     return l;
 }
 

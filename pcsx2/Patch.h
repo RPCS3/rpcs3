@@ -34,7 +34,6 @@ enum patch_data_type {
 	EXTENDED_T
 };
 
-//typedef void (*PATCHTABLEFUNC)( char * text1, char * text2 );
 typedef void (*PATCHTABLEFUNC)( wxString text1, wxString text2 );
 
 struct IniPatch
