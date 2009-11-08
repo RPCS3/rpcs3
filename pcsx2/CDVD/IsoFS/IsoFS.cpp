@@ -1,157 +1,143 @@
+
 #include "PrecompiledHeader.h"
-
 #include "IsoFS.h"
-
-#include <vector>
-
-using namespace std;
-
-void Tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ")
-{
-	string::size_type lastPos = str.find_first_not_of(delimiters, 0);
-	string::size_type pos     = str.find_first_of(delimiters, lastPos);
-
-	while (string::npos != pos || string::npos != lastPos)
-	{
-		tokens.push_back(str.substr(lastPos, pos - lastPos));
-		lastPos = str.find_first_not_of(delimiters, pos);
-		pos = str.find_first_of(delimiters, lastPos);
-	}
-}
+#include "IsoFile.h"
 
 //////////////////////////////////////////////////////////////////////////
 // IsoDirectory
 //////////////////////////////////////////////////////////////////////////
 
-IsoDirectory::IsoDirectory(SectorSource* r)
+// Used to load the Root directory from an image
+IsoDirectory::IsoDirectory(SectorSource& r) :
+	internalReader(r)
 {
-	byte sector[2048];
+	u8 sector[2048];
 
-	r->readSector(sector,16);
+	internalReader.readSector(sector,16);
 
 	IsoFileDescriptor rootDirEntry(sector+156,38);
 
-	Init(r, rootDirEntry);
+	Init(rootDirEntry);
 }
 
-IsoDirectory::IsoDirectory(SectorSource* r, IsoFileDescriptor directoryEntry)
+// Used to load a specific directory from a file descriptor
+IsoDirectory::IsoDirectory(SectorSource& r, IsoFileDescriptor directoryEntry) :
+	internalReader(r)
 {
-	Init(r, directoryEntry);
+	Init(directoryEntry);
 }
 
-void IsoDirectory::Init(SectorSource* r, IsoFileDescriptor directoryEntry)
+IsoDirectory::~IsoDirectory() throw()
+{
+}
+
+void IsoDirectory::Init(const IsoFileDescriptor& directoryEntry)
 {
 	// parse directory sector
-	IsoFile dataStream (r, directoryEntry);
-
-	internalReader = r;
+	IsoFile dataStream (internalReader, directoryEntry);
 
 	files.clear();
 
 	int remainingSize = directoryEntry.size;
 
-	byte b[257];
+	u8 b[257];
 
 	while(remainingSize>=4) // hm hack :P
 	{
-		b[0] = dataStream.read<byte>();
+		b[0] = dataStream.read<u8>();
 
 		if(b[0]==0)
 		{
 			break; // or continue?
 		}
 
-		remainingSize-=b[0];
+		remainingSize -= b[0];
 
 		dataStream.read(b+1, b[0]-1);
 
-		IsoFileDescriptor file(b,b[0]);
-		files.push_back(file);
+		files.push_back(IsoFileDescriptor(b, b[0]));
 	}
 
 	b[0] = 0;
 }
 
-IsoFileDescriptor IsoDirectory::GetEntry(int index)
+const IsoFileDescriptor& IsoDirectory::GetEntry(int index) const
 {
 	return files[index];
 }
 
-int IsoDirectory::GetIndexOf(string fileName)
+int IsoDirectory::GetIndexOf(const wxString& fileName) const
 {
 	for(unsigned int i=0;i<files.size();i++)
 	{
-		string file = files[i].name;
-		if(file.compare(fileName)==0)
-		{
-			return i;
-		}
+		if(files[i].name == fileName) return i;
 	}
 
-	throw Exception::FileNotFound( fileName.c_str() );
+	throw Exception::FileNotFound( fileName );
 }
 
-IsoFileDescriptor IsoDirectory::GetEntry(string fileName)
+const IsoFileDescriptor& IsoDirectory::GetEntry(const wxString& fileName) const
 {
 	return GetEntry(GetIndexOf(fileName));
 }
 
-IsoFileDescriptor IsoDirectory::FindFile(string filePath)
+IsoFileDescriptor IsoDirectory::FindFile(const wxString& filePath) const
 {
+	pxAssert( !filePath.IsEmpty() );
+
+	// wxWidgets DOS-style parser should work fine for ISO 9660 path names.  Only practical difference
+	// is case sensitivity, and that won't matter for path splitting.
+	wxFileName parts( filePath, wxPATH_DOS );
 	IsoFileDescriptor info;
-	IsoDirectory dir = *this;
+	const IsoDirectory* dir = this;
+	ScopedPtr<IsoDirectory> deleteme;
 
-	// this was supposed to be a vector<string>, but this damn hotfix kills stl
-	// if you have the Windows SDK 6.1 installed after vs2008 sp1
-	vector<string> path;
+	// walk through path ("." and ".." entries are in the directories themselves, so even if the
+	// path included . and/or .., it still works)
 
-	Tokenize(filePath,path,"\\/");
-
-	// walk through path ("." and ".." entries are in the directories themselves, so even if the path included . and/or .., it should still work)
-	for(int i=0;i<path.size();i++)
+	for(uint i=0; i<parts.GetDirCount(); ++i)
 	{
-		string pathName = path[i];
-		info = dir.GetEntry(pathName);
-		if((info.flags&2)==2) // if it's a directory
-		{
-			dir  = IsoDirectory(internalReader, info);
-		}
+		info = dir->GetEntry(parts.GetDirs()[i]);
+		if(info.IsFile()) throw Exception::FileNotFound( filePath );
+		
+		dir = deleteme = new IsoDirectory(internalReader, info);
 	}
+
+	if( !parts.GetFullName().IsEmpty() )
+		info = dir->GetEntry(parts.GetFullName());
 
 	return info;
 }
 
-IsoFile IsoDirectory::OpenFile(string filePath)
+bool IsoDirectory::IsFile(const wxString& filePath) const
 {
-	IsoFileDescriptor info = FindFile(filePath);
-	if((info.flags&2)==2) // if it's a directory
-	{
-		throw Exception::InvalidArgument("Filename points to a directory.");
-	}
-
-	return IsoFile(internalReader, info);
+	if( filePath.IsEmpty() ) return false;
+	return (FindFile(filePath).flags&2) != 2;
 }
 
-IsoDirectory::~IsoDirectory(void)
+bool IsoDirectory::IsDir(const wxString& filePath) const
 {
+	if( filePath.IsEmpty() ) return false;
+	return (FindFile(filePath).flags&2) == 2;
 }
 
-//////////////////////////////////////////////////////////////////////////
-// IsoFileDescriptor
-//////////////////////////////////////////////////////////////////////////
+u32 IsoDirectory::GetFileSize( const wxString& filePath ) const
+{
+	return FindFile( filePath ).size;
+}
 
 IsoFileDescriptor::IsoFileDescriptor()
 {
 	lba = 0;
 	size = 0;
 	flags = 0;
-	name = "";
 }
 
-IsoFileDescriptor::IsoFileDescriptor(const byte* data, int length)
+IsoFileDescriptor::IsoFileDescriptor(const u8* data, int length)
 {
-	lba = *(const int*)(data+2);
-	size = *(const int*)(data+10);
+	lba		= (u32&)data[2];
+	size	= (u32&)data[10];
+
 	date.year      = data[18] + 1900;
 	date.month     = data[19];
 	date.day       = data[20];
@@ -162,27 +148,35 @@ IsoFileDescriptor::IsoFileDescriptor(const byte* data, int length)
 
 	flags = data[25];
 
-	if((lba<0)||(length<0))
-	{
-		// would be nice to have some exceptio nthis fits in
-		throw Exception::InvalidOperation("WTF?! Size or lba < 0?!");
-	}
+	// This assert probably means a coder error, but let's fall back on a runtime exception
+	// in release builds since, most likely, the error is "recoverable" form a user standpoint.
+	if( !pxAssertDev( (lba>=0) && (length>=0), "Invalid ISO file descriptor data encountered." ) )
+		throw Exception::BadStream();
 
 	int fileNameLength = data[32];
 
-	name.clear();
-
 	if(fileNameLength==1)
 	{
-		char c = *(const char*)(data+33);
+		u8 c = data[33];
 
 		switch(c)
 		{
-		case 0:	name = "."; break;
-		case 1: name = ".."; break;
-		default: name.append(1,c);
+			case 0:	name = L"."; break;
+			case 1: name = L".."; break;
+			default: name = (wxChar)c;
 		}
 	}
-	else if (fileNameLength>0)
-		name.append((const char*)(data+33),fileNameLength);
+	else
+	{
+		// copy string and up-convert from ascii to wxChar
+
+		const u8* fnsrc = data+33;
+		const u8* fnend = fnsrc+fileNameLength;
+
+		while( fnsrc != fnend )
+		{
+			name += (wxChar)*fnsrc;
+			++fnsrc;
+		}
+	}
 }

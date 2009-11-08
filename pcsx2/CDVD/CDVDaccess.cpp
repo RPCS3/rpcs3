@@ -71,53 +71,36 @@ static void CheckNullCDVD()
 //
 static int CheckDiskTypeFS(int baseType)
 {
+	IsoFSCDVD isofs;
+	IsoDirectory rootdir(isofs);
 	try {
-		IsoFSCDVD isofs;
-		IsoDirectory fsroot(&isofs);
-		
-		try {
-			// Will throw exception if the file was not found
-			IsoFile file = fsroot.OpenFile("SYSTEM.CNF;1");
+		IsoFile file( rootdir, L"SYSTEM.CNF;1");
 
-			int size = file.getLength();
+		int size = file.getLength();
 
-			char buffer[256]; //if the file is longer...it should be shorter :D
-			file.read((u8*)buffer,size);
-			buffer[size]='\0';
+		char buffer[256]; //if the file is longer...it should be shorter :D
+		file.read((u8*)buffer,size);
+		buffer[size]='\0';
 
-			char* pos = strstr(buffer, "BOOT2");
-			if (pos == NULL)
-			{
-				pos = strstr(buffer, "BOOT");
-				if (pos == NULL)  return CDVD_TYPE_ILLEGAL;
-				return CDVD_TYPE_PSCD;
-			}
-
-			return (baseType==CDVD_TYPE_DETCTCD) ? CDVD_TYPE_PS2CD : CDVD_TYPE_PS2DVD;
-		}
-		catch( ... )
+		char* pos = strstr(buffer, "BOOT2");
+		if (pos == NULL)
 		{
-		}
-
-		try {
-			fsroot.FindFile("PSX.EXE;1");
+			pos = strstr(buffer, "BOOT");
+			if (pos == NULL)  return CDVD_TYPE_ILLEGAL;
 			return CDVD_TYPE_PSCD;
 		}
-		catch( ... )
-		{
-		}
 
-		try {
-			fsroot.FindFile("VIDEO_TS/VIDEO_TS.IFO;1");
-			return CDVD_TYPE_DVDV;
-		}
-		catch( ... )
-		{
-		}
+		return (baseType==CDVD_TYPE_DETCTCD) ? CDVD_TYPE_PS2CD : CDVD_TYPE_PS2DVD;
 	}
-	catch( ... )
+	catch( Exception::FileNotFound& )
 	{
 	}
+
+	if( rootdir.IsFile(L"PSX.EXE;1") )
+		return CDVD_TYPE_PSCD;
+
+	if( rootdir.IsFile(L"VIDEO_TS/VIDEO_TS.IFO;1") )
+		return CDVD_TYPE_DVDV;
 
 	return CDVD_TYPE_ILLEGAL; // << Only for discs which aren't ps2 at all.
 }

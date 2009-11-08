@@ -1,55 +1,84 @@
 #include "PrecompiledHeader.h"
 
+#include "IsoFS.h"
 #include "IsoFile.h"
 
-using namespace std;
-
-IsoFile::IsoFile(SectorSource* reader, IsoFileDescriptor fileEntry)
-	: fileEntry(fileEntry)
+IsoFile::IsoFile(SectorSource& reader, const wxString& filename)
+	: internalReader(reader)
+	, fileEntry(IsoDirectory(reader).FindFile(filename))
 {
-	internalReader = reader;
-	currentSectorNumber=fileEntry.lba;
-	currentOffset = 0;
-	sectorOffset = 0;
-	maxOffset = fileEntry.size;
-
-	if(maxOffset>0)
-		reader->readSector(currentSector,currentSectorNumber);
+	Init();
 }
 
-void IsoFile::seek(s64 offset)
+IsoFile::IsoFile(const IsoDirectory& dir, const wxString& filename)
+	: internalReader(dir.GetReader())
+	, fileEntry(dir.FindFile(filename))
 {
-	s64 endOffset = offset;
+	Init();
+}
 
-#ifdef __LINUX__
-    if (offset<0) throw "Seek offset out of bounds.";
-#else
-	if(offset<0)
-		throw new exception("Seek offset out of bounds.");
-#endif
+IsoFile::IsoFile(SectorSource& reader, const IsoFileDescriptor& fileEntry)
+	: internalReader(reader)
+	, fileEntry(fileEntry)
+{
+	Init();
+}
+
+void IsoFile::Init()
+{
+	//pxAssertDev( fileEntry.IsFile(), "IsoFile Error: Filename points to a directory." );
+
+	currentSectorNumber	= fileEntry.lba;
+	currentOffset		= 0;
+	sectorOffset		= 0;
+	maxOffset			= std::max<u32>( 0, fileEntry.size );
+
+	if(maxOffset > 0)
+		internalReader.readSector(currentSector, currentSectorNumber);
+}
+
+IsoFile::~IsoFile() throw()
+{
+}
+
+u32 IsoFile::seek(u32 absoffset)
+{
+	u32 endOffset = absoffset;
 
 	int oldSectorNumber = currentSectorNumber;
-	s64 newOffset = endOffset;
+	u32 newOffset = endOffset;
 	int newSectorNumber = fileEntry.lba + (int)(newOffset / sectorLength);
 	if(oldSectorNumber != newSectorNumber)
 	{
-		internalReader->readSector(currentSector, newSectorNumber);
+		internalReader.readSector(currentSector, newSectorNumber);
 	}
 	currentOffset = newOffset;
 	currentSectorNumber = newSectorNumber;
 	sectorOffset = (int)(currentOffset % sectorLength);
+	
+	return currentOffset;
 }
 
-void IsoFile::seek(s64 offset, int ref_position)
+u32 IsoFile::seek(s32 offset, wxSeekMode ref_position)
 {
-	if(ref_position == SEEK_SET)
-		seek(offset);
+	switch( ref_position )
+	{
+		case wxFromStart:
+			pxAssertDev( offset > 0, "Invalid seek position from start." );
+			return seek(offset);
 
-	if(ref_position == SEEK_CUR)
-		seek(currentOffset+offset);
+		case wxFromCurrent:
+			// truncate negative values to zero
+			return seek( std::max<u32>(0, currentOffset+offset) );
 
-	if(ref_position == SEEK_END)
-		seek(fileEntry.size+offset);
+		case wxFromEnd:
+			// truncate negative values to zero
+			return seek( std::max<u32>(0, fileEntry.size+offset) );
+
+		jNO_DEFAULT;
+	}
+	
+	return 0;		// unreachable
 }
 
 void IsoFile::reset()
@@ -57,38 +86,41 @@ void IsoFile::reset()
 	seek(0);
 }
 
-s64 IsoFile::skip(s64 n)
+// Returns the number of bytes actually skipped.
+s32 IsoFile::skip(s32 n)
 {
-	s64 oldOffset = currentOffset;
+	s32 oldOffset = currentOffset;
 
 	if(n<0)
-		return n;
+		return 0;
 
 	seek(currentOffset+n);
 
 	return currentOffset-oldOffset;
 }
 
-s64 IsoFile::getFilePointer()
+u32 IsoFile::getSeekPos() const
 {
 	return currentOffset;
 }
 
-bool IsoFile::eof()
+bool IsoFile::eof() const
 {
 	return (currentOffset == maxOffset);
 }
 
+// loads the current sector index into the CurrentSector buffer.
 void IsoFile::makeDataAvailable()
 {
-	if (sectorOffset >= sectorLength) {
+	if (sectorOffset >= sectorLength)
+	{
 		currentSectorNumber++;
-		internalReader->readSector(currentSector, currentSectorNumber);
+		internalReader.readSector(currentSector, currentSectorNumber);
 		sectorOffset -= sectorLength;
 	}
 }
 
-int IsoFile::read()
+u8 IsoFile::readByte()
 {
 	if(currentOffset >= maxOffset)
 		throw Exception::EndOfStream();
@@ -100,41 +132,39 @@ int IsoFile::read()
 	return currentSector[sectorOffset++];
 }
 
-int IsoFile::internalRead(byte* b, int off, int len)
+// Reads data from a single sector at a time.  Reads cannot cross sector boundaries.
+int IsoFile::internalRead(void* dest, int off, int len)
 {
 	if (len > 0)
 	{
-		if (len > (maxOffset - currentOffset))
+		size_t slen = len;
+		if (slen > (maxOffset - currentOffset))
 		{
-			len = (int) (maxOffset - currentOffset);
+			slen = (int) (maxOffset - currentOffset);
 		}
 
-		memcpy(b + off, currentSector + sectorOffset, len);
+		memcpy_fast((u8*)dest + off, currentSector + sectorOffset, slen);
 
-		sectorOffset += len;
-		currentOffset += len;
+		sectorOffset += slen;
+		currentOffset += slen;
+		return slen;
 	}
-
-	return len;
+	return 0;
 }
 
-int IsoFile::read(byte* b, int len)
+// returns the number of bytes actually read.
+s32 IsoFile::read(void* dest, s32 len)
 {
-	if (b == NULL)
-	{
-		throw Exception::ObjectIsNull("b");
-	}
+	pxAssert( dest != NULL );
+	pxAssert( len >= 0 );		// should we silent-fail on negative length reads?  prolly not...
 
-	if (len < 0)
-	{
-		throw Exception::InvalidOperation("off<0 or len<0.");
-	}
+	if( len <= 0 ) return 0;
 
-	int off=0;
+	int off = 0;
 
 	int totalLength = 0;
 
-	int firstSector = internalRead(b, off, min(len, sectorLength - sectorOffset));
+	int firstSector = internalRead(dest, off, std::min(len, sectorLength - sectorOffset));
 	off += firstSector;
 	len -= firstSector;
 	totalLength += firstSector;
@@ -143,7 +173,7 @@ int IsoFile::read(byte* b, int len)
 	while ((len >= sectorLength) && (currentOffset < maxOffset))
 	{
 		makeDataAvailable();
-		int n = internalRead(b, off, sectorLength);
+		int n = internalRead(dest, off, sectorLength);
 		off += n;
 		len -= n;
 		totalLength += n;
@@ -152,56 +182,39 @@ int IsoFile::read(byte* b, int len)
 	// Read remaining, if any
 	if (len > 0) {
 		makeDataAvailable();
-		int lastSector = internalRead(b, off, len);
+		int lastSector = internalRead(dest, off, len);
 		totalLength += lastSector;
 	}
 
 	return totalLength;
 }
 
-string IsoFile::readLine()
+// Reads data until it reaches a newline character (either \n, \r, or ASCII-Z).  The caller is
+// responsible for handling files with DOS-style newlines (CR/LF pairs), if needed.  The resulting
+// string has no newlines.
+//
+// Read data is unformatted 8 bit / Ascii.  If the source file is known to be UTF8, use the fromUTF8()
+// conversion helper provided by PCSX2 utility classes.
+//
+std::string IsoFile::readLine()
 {
-	string s;
-	char c;
+	std::string s;
+	s.reserve( 512 );
 
-	s.clear();
-	do {
-		if(eof())
+	while( !eof() )
+	{
+		u8 c = read<u8>();
+
+		if((c=='\n') || (c=='\r') || (c==0))
 			break;
 
-		c = read();
-
-		if((c=='\n')||(c=='\r')||(c==0))
-			break;
-
-		s.append(1,c);
-	} while(true);
+		s += c;
+	}
 
 	return s;
 }
 
-wstring IsoFile::readLineW()
-{
-	wstring s;
-	wchar_t c;
-
-	s.clear();
-	do {
-		if(eof())
-			break;
-
-		c = read<wchar_t>();
-
-		if((c==L'\n')||(c==L'\r')||(c==0))
-			break;
-
-		s.append(1,c);
-	} while(true);
-
-	return s;
-}
-
-s64 IsoFile::getLength()
+u32 IsoFile::getLength()
 {
 	return maxOffset;
 }
@@ -209,9 +222,4 @@ s64 IsoFile::getLength()
 const IsoFileDescriptor& IsoFile::getEntry()
 {
 	return fileEntry;
-}
-
-IsoFile::~IsoFile(void)
-{
-
 }
