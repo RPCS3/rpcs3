@@ -19,8 +19,8 @@
 //#include "CDVD/IsoFSdrv.h"
 #include "DebugTools/Debug.h"
 #include "GS.h"			// for sending game crc to mtgs
-#include "cdvd/isofs/isofscdvd.h"
-#include "cdvd/isofs/isofs.h"
+#include "CDVD/IsoFS/IsoFSCDVD.h"
+#include "CDVD/IsoFS/IsoFS.h"
 
 using namespace std;
 extern void InitPatch(wxString crc);
@@ -336,7 +336,6 @@ struct ElfObject
 
 			int size = file.getLength();
 
-			char buffer[256]; //if the file is longer...it should be shorter :D
 			rsize = file.read((u8*)data.GetPtr(), data.GetSizeInBytes());
 
 			//if (fi < 0) throw Exception::FileNotFound( filename );
@@ -568,9 +567,8 @@ void loadElfFile(const wxString& filename)
 		{
 			IsoFSCDVD isofs;
 			IsoDirectory fsroot(&isofs);
-			u32 crcval = 0;
 
-			Console.WriteLn("loadElfCRC: %s", filename);
+			Console.WriteLn(L"loadElfCRC: " + filename);
 
 			desc = fsroot.FindFile(fnptr + strlen( "cdromN:" ));
 		}
@@ -634,9 +632,7 @@ void loadElfFile(const wxString& filename)
 //   2 - PS2 CD
 int GetPS2ElfName( wxString& name )
 {
-	int f;
 	char buffer[g_MaxPath];//if a file is longer...it should be shorter :D
-	char *pos;
 
 	try {
 		IsoFSCDVD isofs;

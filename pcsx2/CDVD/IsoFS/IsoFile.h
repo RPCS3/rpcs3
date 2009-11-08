@@ -11,8 +11,8 @@ public:
 private:
 	IsoFileDescriptor fileEntry;
 
-	__int64 currentOffset;
-	__int64 maxOffset;
+	s64 currentOffset;
+	s64 maxOffset;
 
 	int currentSectorNumber;
 	byte currentSector[sectorLength];
@@ -27,12 +27,12 @@ public:
 
 	IsoFile(SectorSource* reader, IsoFileDescriptor fileEntry);
 
-	void seek(__int64 offset);
-	void seek(__int64 offset, int ref_position);
+	void seek(s64 offset);
+	void seek(s64 offset, int ref_position);
 	void reset();
 
-	__int64 skip(__int64 n);
-	__int64 getFilePointer();
+	s64 skip(s64 n);
+	s64 getFilePointer();
 
 	bool eof();
 	int  read();
@@ -55,9 +55,9 @@ public:
 	std::string readLine();   // Assume null-termination
 	std::wstring readLineW(); // (this one too)
 
-	__int64 getLength();
+	s64 getLength();
 
 	const IsoFileDescriptor& getEntry();
-	
+
 	~IsoFile(void);
 };

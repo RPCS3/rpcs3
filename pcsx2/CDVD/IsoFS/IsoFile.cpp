@@ -17,15 +17,19 @@ IsoFile::IsoFile(SectorSource* reader, IsoFileDescriptor fileEntry)
 		reader->readSector(currentSector,currentSectorNumber);
 }
 
-void IsoFile::seek(__int64 offset)
+void IsoFile::seek(s64 offset)
 {
-	__int64 endOffset = offset;
+	s64 endOffset = offset;
 
+#ifdef __LINUX__
+    if (offset<0) throw "Seek offset out of bounds.";
+#else
 	if(offset<0)
 		throw new exception("Seek offset out of bounds.");
+#endif
 
 	int oldSectorNumber = currentSectorNumber;
-	__int64 newOffset = endOffset;
+	s64 newOffset = endOffset;
 	int newSectorNumber = fileEntry.lba + (int)(newOffset / sectorLength);
 	if(oldSectorNumber != newSectorNumber)
 	{
@@ -36,7 +40,7 @@ void IsoFile::seek(__int64 offset)
 	sectorOffset = (int)(currentOffset % sectorLength);
 }
 
-void IsoFile::seek(__int64 offset, int ref_position)
+void IsoFile::seek(s64 offset, int ref_position)
 {
 	if(ref_position == SEEK_SET)
 		seek(offset);
@@ -53,9 +57,9 @@ void IsoFile::reset()
 	seek(0);
 }
 
-__int64 IsoFile::skip(__int64 n)
+s64 IsoFile::skip(s64 n)
 {
-	__int64 oldOffset = currentOffset;
+	s64 oldOffset = currentOffset;
 
 	if(n<0)
 		return n;
@@ -65,7 +69,7 @@ __int64 IsoFile::skip(__int64 n)
 	return currentOffset-oldOffset;
 }
 
-__int64 IsoFile::getFilePointer()
+s64 IsoFile::getFilePointer()
 {
 	return currentOffset;
 }
@@ -197,7 +201,7 @@ wstring IsoFile::readLineW()
 	return s;
 }
 
-__int64 IsoFile::getLength()
+s64 IsoFile::getLength()
 {
 	return maxOffset;
 }
@@ -207,7 +211,7 @@ const IsoFileDescriptor& IsoFile::getEntry()
 	return fileEntry;
 }
 
-IsoFile::~IsoFile(void) 
+IsoFile::~IsoFile(void)
 {
 
 }
