@@ -26,7 +26,7 @@
 #include "R5900OpcodeTables.h"
 #include "VUmicro.h"
 #include "sVU_Micro.h"
-
+using namespace x86Emitter;
 extern void _vu0WaitMicro();
 
 #ifndef CHECK_MACROVU0

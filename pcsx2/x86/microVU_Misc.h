@@ -19,28 +19,15 @@
 // Global Variables
 //------------------------------------------------------------------
 
-struct mVU_Globals
-{
-	u32		absclip[4], signbit[4],
-			minvals[4], maxvals[4];
+struct mVU_Globals {
+	u32		absclip[4], signbit[4], minvals[4], maxvals[4];
 	u32		one[4];
 	u32		Pi4[4];
-
-	u32		T1[4], T2[4], T3[4], T4[4],
-			T5[4], T6[4], T7[4], T8[4];
-
+	u32		T1[4], T2[4], T3[4], T4[4], T5[4], T6[4], T7[4], T8[4];
 	u32		S2[4], S3[4], S4[4], S5[4];
-
-	u32		E1[4], E2[4], E3[4],
-			E4[4], E5[4], E6[4];
-
-	float	FTOI_4[4],
-			FTOI_12[4],
-			FTOI_15[4];
-
-	float	ITOF_4[4],
-			ITOF_12[4],
-			ITOF_15[4];
+	u32		E1[4], E2[4], E3[4], E4[4], E5[4], E6[4];
+	float	FTOI_4[4], FTOI_12[4], FTOI_15[4];
+	float	ITOF_4[4], ITOF_12[4], ITOF_15[4];
 };
 
 extern const __aligned(32) mVU_Globals mVUglob;
@@ -169,6 +156,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #endif
 
 // Misc Macros...
+#define __four(val)	{ val, val, val, val }
 #define mVUprogI	 mVU->prog.prog[progIndex]
 #define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
 #define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
@@ -241,7 +229,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 
 // Debug Stuff...
 #ifdef mVUdebug
-#define mVUprint Console.Status
+#define mVUprint Console.WriteLn
 #else
 #define mVUprint 0&&
 #endif

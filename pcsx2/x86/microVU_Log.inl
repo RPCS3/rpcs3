@@ -48,7 +48,7 @@ microVUx(void) __mVUdumpProgram(int progIndex) {
 	int bPC		= iPC;
 	mVUbranch	= 0;
 
-	const wxString logname( wxsFormat( L"microVU%d prog - %02d.html", L"logs", vuIndex, progIndex) );
+	const wxString logname( wxsFormat( L"microVU%d prog - %02d.html", vuIndex, progIndex) );
 	mVU->logFile = new AsciiFile( Path::Combine( g_Conf->Folders.Logs, logname), L"w" );
 
 	mVUlog("<html>\n");

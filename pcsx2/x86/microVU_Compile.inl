@@ -288,12 +288,12 @@ microVUt(void) mVUtestCycles(mV) {
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 	if (IsDevBuild || !isVU1) {
 		u32* jmp32 = JG32(0);
-		if (!isVU1) { TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); vu0jmp = JZ32(0); }
+		//if (!isVU1) { TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); vu0jmp = JZ32(0); }
 			MOV32ItoR(gprT2, (uptr)mVU);
 			if (isVU1)  CALLFunc((uptr)mVUwarning1);
 			//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
 			mVUendProgram(mVU, NULL, 0);
-		if (!isVU1) x86SetJ32(vu0jmp);
+		//if (!isVU1) x86SetJ32(vu0jmp);
 		x86SetJ32(jmp32);
 	}
 }
@@ -342,7 +342,6 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	mVUsetupRange(mVU, startPC, 1);	// Setup Program Bounds/Range
 	mVU->regAlloc->reset();			// Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
-	
 	for (int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
 		startLoop(mVU);

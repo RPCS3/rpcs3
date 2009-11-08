@@ -103,7 +103,7 @@ void mVUdispatcherB(mV) {
 microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
-	//mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
+	mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
 	
 	mVUsearchProg<vuIndex>(); // Find and set correct program
 	mVU->cycles		 = cycles;

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="pcsx2"
 	ProjectGUID="{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	RootNamespace="pcsx2"
@@ -661,6 +661,10 @@
 								</File>
 								<File
 									RelativePath="..\..\x86\microVU_Execute.inl"
+									>
+								</File>
+								<File
+									RelativePath="..\..\x86\microVU_Flags.inl"
 									>
 								</File>
 								<File
