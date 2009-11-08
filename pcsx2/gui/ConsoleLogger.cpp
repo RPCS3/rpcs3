@@ -638,18 +638,19 @@ void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 // --------------------------------------------------------------------------------------
 //  ConsoleImpl_ToFile
 // --------------------------------------------------------------------------------------
-static void __concall _immediate_logger( const char* src )
+
+static void __concall _immediate_logger( wxString src )
 {
 #ifdef __LINUX__
-	fputs( src, stdout );
+	ConsoleWriter_Stdio.DoWrite(src);
 #endif
-	px_fputs( emuLog, src );
+	px_fputs( emuLog, src.ToUTF8() );
 }
 
 static void __concall ConsoleToFile_Newline()
 {
 #ifdef __LINUX__
-	fputc( '\n', stdout );
+	ConsoleWriter_Stdio.Newline();
 	fputc( '\n', emuLog );
 #else
 	fputs( "\r\n", emuLog );
@@ -658,28 +659,43 @@ static void __concall ConsoleToFile_Newline()
 
 static void __concall ConsoleToFile_DoWrite( const wxString& fmt )
 {
-	_immediate_logger( fmt.ToUTF8() );
+	_immediate_logger( fmt );
 }
 
 static void __concall ConsoleToFile_DoWriteLn( const wxString& fmt )
 {
-	_immediate_logger( fmt.ToUTF8() );
+	_immediate_logger( fmt );
 	ConsoleToFile_Newline();
 
 	if( emuLog != NULL )
 		fflush( emuLog );
 }
 
+static void __concall ConsoleToFile_SetTitle( const wxString& title )
+{
+    ConsoleWriter_Stdio.SetTitle(title);
+}
+
+static void __concall ConsoleToFile_SetColor( ConsoleColors color )
+{
+    ConsoleWriter_Stdio.SetColor(color);
+}
+
+static void __concall ConsoleToFile_ClearColor()
+{
+    ConsoleWriter_Stdio.ClearColor();
+}
+
 extern const IConsoleWriter	ConsoleWriter_File;
-const IConsoleWriter	ConsoleWriter_File =
+const IConsoleWriter    ConsoleWriter_File =
 {
 	ConsoleToFile_DoWrite,
 	ConsoleToFile_DoWriteLn,
 	ConsoleToFile_Newline,
 
-	ConsoleWriter_Null.SetTitle,
-	ConsoleWriter_Null.SetColor,
-	ConsoleWriter_Null.ClearColor,
+	ConsoleToFile_SetTitle,
+	ConsoleToFile_SetColor,
+	ConsoleToFile_ClearColor,
 };
 
 // thread-local console color storage.
@@ -688,20 +704,26 @@ static __threadlocal ConsoleColors th_CurrentColor = DefaultConsoleColor;
 // --------------------------------------------------------------------------------------
 //  ConsoleToWindow Implementations
 // --------------------------------------------------------------------------------------
+template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_SetTitle( const wxString& title )
 {
+    secondary.SetTitle(title);
 	wxCommandEvent evt( wxEVT_SetTitleText );
 	evt.SetString( title );
 	wxGetApp().ProgramLog_PostEvent( evt );
 }
 
+template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_SetColor( ConsoleColors color )
 {
+    secondary.SetColor(color);
 	th_CurrentColor = color;
 }
 
+template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_ClearColor()
 {
+    secondary.ClearColor();
 	th_CurrentColor = DefaultConsoleColor;
 }
 
@@ -734,9 +756,9 @@ static const IConsoleWriter	ConsoleWriter_Window =
 	ConsoleToWindow_DoWriteLn<ConsoleWriter_Null>,
 	ConsoleToWindow_Newline<ConsoleWriter_Null>,
 
-	ConsoleToWindow_SetTitle,
-	ConsoleToWindow_SetColor,
-	ConsoleToWindow_ClearColor,
+	ConsoleToWindow_SetTitle<ConsoleWriter_Null>,
+	ConsoleToWindow_SetColor<ConsoleWriter_Null>,
+	ConsoleToWindow_ClearColor<ConsoleWriter_Null>,
 };
 
 static const IConsoleWriter	ConsoleWriter_WindowAndFile =
@@ -745,9 +767,9 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 	ConsoleToWindow_DoWriteLn<ConsoleWriter_File>,
 	ConsoleToWindow_Newline<ConsoleWriter_File>,
 
-	ConsoleToWindow_SetTitle,
-	ConsoleToWindow_SetColor,
-	ConsoleToWindow_ClearColor,
+	ConsoleToWindow_SetTitle<ConsoleWriter_File>,
+	ConsoleToWindow_SetColor<ConsoleWriter_File>,
+	ConsoleToWindow_ClearColor<ConsoleWriter_File>,
 };
 
 void Pcsx2App::EnableAllLogging() const
