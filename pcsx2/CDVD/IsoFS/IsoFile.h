@@ -26,7 +26,7 @@ public:
 	virtual ~IsoFile() throw();
 
 	u32 seek(u32 absoffset);
-	u32 seek(s32 offset, wxSeekMode ref_position);
+	u32 seek(s64 offset, wxSeekMode ref_position);
 	void reset();
 
 	s32 skip(s32 n);

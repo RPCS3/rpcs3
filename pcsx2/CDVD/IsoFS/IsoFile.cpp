@@ -59,21 +59,23 @@ u32 IsoFile::seek(u32 absoffset)
 	return currentOffset;
 }
 
-u32 IsoFile::seek(s32 offset, wxSeekMode ref_position)
+// Returns the new offset in the file.  Out-of-bounds seeks are automatically truncated at 0
+// and fileLength.
+u32 IsoFile::seek(s64 offset, wxSeekMode ref_position)
 {
 	switch( ref_position )
 	{
 		case wxFromStart:
-			pxAssertDev( offset > 0, "Invalid seek position from start." );
+			pxAssertDev( offset >= 0 && offset <= (s64)ULONG_MAX, "Invalid seek position from start." );
 			return seek(offset);
 
 		case wxFromCurrent:
-			// truncate negative values to zero
-			return seek( std::max<u32>(0, currentOffset+offset) );
+			// truncate negative values to zero, and positive values to 4gb
+			return seek( std::min( std::max<s64>(0, (s64)currentOffset+offset), (s64)ULONG_MAX ) );
 
 		case wxFromEnd:
-			// truncate negative values to zero
-			return seek( std::max<u32>(0, fileEntry.size+offset) );
+			// truncate negative values to zero, and positive values to 4gb
+			return seek( std::min( std::max<s64>(0, (s64)fileEntry.size+offset), (s64)ULONG_MAX ) );
 
 		jNO_DEFAULT;
 	}
