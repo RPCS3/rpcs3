@@ -419,26 +419,20 @@ s32 cdvdRefreshData()
 	}
 	else
 	{
-		curDiskType = FindDiskType();
+		s32 mt=cdvdGetMediaType();
+
+		if(mt<0)			curDiskType = CDVD_TYPE_DETCTCD;
+		else if(mt == 0)	curDiskType = CDVD_TYPE_DETCTDVDS;
+		else				curDiskType = CDVD_TYPE_DETCTDVDD;
 	}
 	
 	curTrayStatus = CDVD_TRAY_CLOSE;
 
 	switch(curDiskType)
 	{
-		case CDVD_TYPE_ILLEGAL:   diskTypeName="Illegal Disc"; break;
-		case CDVD_TYPE_DVDV:      diskTypeName="DVD-Video"; break;
-		case CDVD_TYPE_CDDA:      diskTypeName="CD-Audio"; break;
-		case CDVD_TYPE_PS2DVD:    diskTypeName="PS2 DVD"; break;
-		case CDVD_TYPE_PS2CDDA:   diskTypeName="PS2 CD+Audio"; break;
-		case CDVD_TYPE_PS2CD:     diskTypeName="PS2 CD"; break;
-		case CDVD_TYPE_PSCDDA:    diskTypeName="PS1 CD+Audio"; break;
-		case CDVD_TYPE_PSCD:      diskTypeName="PS1 CD"; break;
-		case CDVD_TYPE_UNKNOWN:   diskTypeName="Unknown"; break;
-		case CDVD_TYPE_DETCTDVDD: diskTypeName="Detecting (Single-Layer DVD)"; break;
-		case CDVD_TYPE_DETCTDVDS: diskTypeName="Detecting (Double-Layer DVD)"; break;
-		case CDVD_TYPE_DETCTCD:   diskTypeName="Detecting (CD)"; break;
-		case CDVD_TYPE_DETCT:     diskTypeName="Detecting"; break;
+		case CDVD_TYPE_DETCTDVDD: diskTypeName="Single-Layer DVD"; break;
+		case CDVD_TYPE_DETCTDVDS: diskTypeName="Double-Layer DVD"; break;
+		case CDVD_TYPE_DETCTCD:   diskTypeName="CD-ROM"; break;
 		case CDVD_TYPE_NODISC:    diskTypeName="No Disc"; break;
 	}
 

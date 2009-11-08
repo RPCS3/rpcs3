@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="cdvdGigaherz"
 	ProjectGUID="{5CF88D5F-64DD-4EDC-9F1A-436BD502940A}"
 	RootNamespace="cdvdGigaherz"
@@ -171,10 +171,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\CheckDiskType.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\config.cpp"
 				>
 			</File>
@@ -194,18 +190,6 @@
 				RelativePath="..\TocStuff.cpp"
 				>
 			</File>
-			<Filter
-				Name="isofs"
-				>
-				<File
-					RelativePath="..\isofs\CDVDiso.cpp"
-					>
-				</File>
-				<File
-					RelativePath="..\isofs\CDVDisodrv.cpp"
-					>
-				</File>
-			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
