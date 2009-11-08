@@ -282,7 +282,7 @@ void __fastcall mVUprintPC1(u32 PC) { Console.Write("Block PC [%04x] ", PC); }
 void __fastcall mVUprintPC2(u32 PC) { Console.Write("[%04x]\n", PC); }
 
 microVUt(void) mVUtestCycles(mV) {
-	u32* vu0jmp;
+	//u32* vu0jmp;
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
