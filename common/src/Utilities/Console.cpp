@@ -152,7 +152,7 @@ static void __concall ConsoleStdio_SetTitle( const wxString& title )
 static void __concall ConsoleStdio_ClearColor()
 {
 #ifdef __LINUX__
-	wxPrintf(tbl_color_codes[17]);
+	wxPrintf(tbl_color_codes[16]);
 #endif
 }
 
