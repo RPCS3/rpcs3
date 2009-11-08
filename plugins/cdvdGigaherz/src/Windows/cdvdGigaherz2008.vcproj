@@ -175,11 +175,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\FileSrc.cpp"
+				RelativePath=".\IOCtlSrc.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\IOCtlSrc.cpp"
+				RelativePath="..\ReaderModules.cpp"
 				>
 			</File>
 			<File
@@ -190,6 +190,14 @@
 				RelativePath="..\TocStuff.cpp"
 				>
 			</File>
+			<Filter
+				Name="Reader Modules"
+				>
+				<File
+					RelativePath=".\PlainIso.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -200,6 +208,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ReaderModules.h"
+				>
+			</File>
+			<File
 				RelativePath="resource.h"
 				>
 			</File>
@@ -207,22 +219,6 @@
 				RelativePath="..\SectorConverters.h"
 				>
 			</File>
-			<Filter
-				Name="isofs"
-				>
-				<File
-					RelativePath="..\isofs\CDVDiso.h"
-					>
-				</File>
-				<File
-					RelativePath="..\isofs\CDVDisodrv.h"
-					>
-				</File>
-				<File
-					RelativePath="..\isofs\CDVDlib.h"
-					>
-				</File>
-			</Filter>
 			<Filter
 				Name="rosddk"
 				>

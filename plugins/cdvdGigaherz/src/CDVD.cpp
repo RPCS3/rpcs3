@@ -164,7 +164,7 @@ s32 CALLBACK CDVDopen(const char* pTitleFilename)
 		printf(" * CDVD: Opening image '%s'...\n",source_file);
 
 		//open device file
-		src=new FileSrc(source_file);
+		src= TryLoaders(source_file);
 	}
 	else
 	{

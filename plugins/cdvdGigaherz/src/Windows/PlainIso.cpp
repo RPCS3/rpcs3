@@ -10,7 +10,11 @@
 #pragma warning(default:4200)
 #include <stddef.h>
 
+#include "../ReaderModules.h"
 #include "../SectorConverters.h"
+
+#include <string>
+
 template<class T>
 bool ApiErrorCheck(T t,T okValue,bool cmpEq)
 {
@@ -30,7 +34,7 @@ bool ApiErrorCheck(T t,T okValue,bool cmpEq)
 
 #define RETURN(v) {OpenOK=v; return;}
 
-s32 FileSrc::Reopen()
+s32 PlainIso::Reopen()
 {
 	if(fileSource!=INVALID_HANDLE_VALUE)
 	{
@@ -53,7 +57,7 @@ s32 FileSrc::Reopen()
 	return 0;
 }
 
-FileSrc::FileSrc(const char* fileName)
+PlainIso::PlainIso(const char* fileName)
 {
 	fileSource=INVALID_HANDLE_VALUE;
 
@@ -62,7 +66,7 @@ FileSrc::FileSrc(const char* fileName)
 	Reopen();
 }
 
-FileSrc::~FileSrc()
+PlainIso::~PlainIso()
 {
 	if(OpenOK)
 	{
@@ -70,7 +74,7 @@ FileSrc::~FileSrc()
 	}
 }
 
-s32 FileSrc::GetSectorCount()
+s32 PlainIso::GetSectorCount()
 {
 	LARGE_INTEGER li;
 	int plain_sectors = 0;
@@ -88,12 +92,12 @@ s32 FileSrc::GetSectorCount()
 	return -1;
 }
 
-s32 FileSrc::GetLayerBreakAddress()
+s32 PlainIso::GetLayerBreakAddress()
 {
 	return 0;
 }
 
-s32 FileSrc::GetMediaType()
+s32 PlainIso::GetMediaType()
 {
 	if(mediaTypeCached)
 		return mediaType;
@@ -125,7 +129,7 @@ s32 FileSrc::GetMediaType()
 	f = ((l)%75);
 
 
-s32 FileSrc::ReadTOC(char *toc,int msize)
+s32 PlainIso::ReadTOC(char *toc,int msize)
 {
 	DWORD size=0;
 
@@ -162,7 +166,7 @@ s32 FileSrc::ReadTOC(char *toc,int msize)
 	return 0;
 }
 
-s32 FileSrc::ReadSectors2048(u32 sector, u32 count, char *buffer)
+s32 PlainIso::ReadSectors2048(u32 sector, u32 count, char *buffer)
 {
 	DWORD size=0;
 	LARGE_INTEGER Offset;
@@ -192,7 +196,7 @@ s32 FileSrc::ReadSectors2048(u32 sector, u32 count, char *buffer)
 }
 
 
-s32 FileSrc::ReadSectors2352(u32 sector, u32 count, char *buffer)
+s32 PlainIso::ReadSectors2352(u32 sector, u32 count, char *buffer)
 {
 	DWORD size=0;
 	LARGE_INTEGER Offset;
@@ -228,7 +232,7 @@ s32 FileSrc::ReadSectors2352(u32 sector, u32 count, char *buffer)
 	return 0;
 }
 
-s32 FileSrc::DiscChanged()
+s32 PlainIso::DiscChanged()
 {
 	DWORD size=0;
 
@@ -237,7 +241,23 @@ s32 FileSrc::DiscChanged()
 	return 0;
 }
 
-s32 FileSrc::IsOK()
+s32 PlainIso::IsOK()
 {
 	return OpenOK;
+}
+
+Reader* PlainIso::TryLoad(const char* fName)
+{
+	std::string fileName = fName;
+	std::string::size_type pos = fileName.find_last_of('.');
+
+	if(pos == std::string::npos) // no "." found, error.
+		return NULL;
+
+	std::string extension = fileName.substr(pos);
+
+	if(extension.compare(".iso")!=0) // assume valid
+		return NULL;
+
+	return new PlainIso(fName);
 }

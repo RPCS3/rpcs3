@@ -43,7 +43,6 @@ typedef struct _toc_data
 
 extern toc_data cdtoc;
 
-
 class Source //abstract class as base for source modules
 {
 public:
@@ -117,55 +116,9 @@ public:
 	virtual s32 DiscChanged();
 };
 
-class FileSrc: public Source
-{
-private:
-	HANDLE fileSource;
-
-	bool OpenOK;
-
-	s32 sector_count;
-
-	char sectorbuffer[32*2048];
-
-	char fName[256];
-
-	DWORD sessID;
-
-	bool tocCached;
-	char tocCacheData[2048];
-
-	bool mediaTypeCached;
-	int  mediaType;
-
-	bool discSizeCached;
-	s32  discSize;
-
-	bool layerBreakCached;
-	s32  layerBreak;
-
-public:
-	FileSrc(const char* fileName);
-
-	//virtual destructor
-	virtual ~FileSrc();
-
-	//virtual members
-	virtual s32 GetSectorCount();
-	virtual s32 ReadTOC(char *toc,int size);
-	virtual s32 ReadSectors2048(u32 sector, u32 count, char *buffer);
-	virtual s32 ReadSectors2352(u32 sector, u32 count, char *buffer);
-	virtual s32 GetLayerBreakAddress();
-
-	virtual s32 GetMediaType();
-
-	virtual s32 IsOK();
-	virtual s32 Reopen();
-
-	virtual s32 DiscChanged();
-};
-
 extern Source *src;
+
+Source* TryLoaders(const char* fileName);
 
 int FindDiskType();
 
