@@ -34,7 +34,7 @@ enum patch_data_type {
 	EXTENDED_T
 };
 
-typedef void (*PATCHTABLEFUNC)( wxString text1, wxString text2 );
+typedef void PATCHTABLEFUNC( const wxString& text1, const wxString& text2 );
 
 struct IniPatch
 {
@@ -49,15 +49,15 @@ struct IniPatch
 
 namespace PatchFunc
 {
-    void comment( wxString text1, wxString text2 );
-    void gametitle( wxString text1, wxString text2 );
-    void patch( wxString text1, wxString text2 );
-    void roundmode( wxString text1, wxString text2 );
-    void zerogs( wxString text1, wxString text2 );
+	PATCHTABLEFUNC comment;
+    PATCHTABLEFUNC gametitle;
+    PATCHTABLEFUNC patch;
+    PATCHTABLEFUNC roundmode;
+    PATCHTABLEFUNC zerogs;
 }
 
-void inifile_read( wxString name );
-void inifile_command( wxString cmd );
+void inifile_read( const wxString& name );
+void inifile_command( const wxString& cmd );
 void inifile_trim( wxString& buffer );
 
 int AddPatch(int Mode, int Place, int Address, int Size, u64 data);

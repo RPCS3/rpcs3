@@ -46,6 +46,29 @@ extern bool TryParse( wxPoint& dest, const wxString& src, const wxPoint& defval=
 extern bool TryParse( wxSize& dest, const wxString& src, const wxSize& defval=wxDefaultSize, const wxString& separators=L",");
 extern bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval=wxDefaultRect, const wxString& separators=L",");
 
+// --------------------------------------------------------------------------------------
+//  ParsedAssignmentString
+// --------------------------------------------------------------------------------------
+// This class is a simple helper for parsing INI-style assignments, in the typical form of:
+//    variable = value
+//    filename = SomeString.txt
+//    integer  = 15
+//
+// This parser supports both '//' and ';' at the head of a line as indicators of a commented
+// line, and such a line will return empty strings for l- and r-value.
+//
+// No type handling is performed -- the user must manually parse strings into integers, etc.
+// For advanced "fully functional" ini file parsing, consider using wxFileConfig instead.
+//
+struct ParsedAssignmentString
+{
+	wxString	lvalue;
+	wxString	rvalue;
+	bool		IsComment;
+
+	ParsedAssignmentString( const wxString& src );
+};
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Custom internal sprintf functions, which are ASCII only (even in UNICODE builds)

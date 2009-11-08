@@ -1764,6 +1764,10 @@
 				Name="IsoFS"
 				>
 				<File
+					RelativePath="..\..\CDVD\IsoFS\IsoDirectory.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\CDVD\IsoFS\IsoFile.cpp"
 					>
 				</File>

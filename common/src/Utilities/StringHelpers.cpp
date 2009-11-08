@@ -172,6 +172,19 @@ bool TryParse( wxRect& dest, const wxString& src, const wxRect& defval, const wx
 	return true;
 }
 
+ParsedAssignmentString::ParsedAssignmentString( const wxString& src )
+{
+	IsComment = false;
+	if( src.StartsWith( L"//" ) || src.StartsWith( L";" ) )
+	{
+		IsComment = true;
+		return;
+	}
+
+	lvalue = src.BeforeFirst(L'=').Trim(true).Trim(false);
+	rvalue = src.AfterFirst(L'=').Trim(true).Trim(false);
+}
+
 // Performs a cross-platform puts operation, which adds CRs to naked LFs on Win32 platforms,
 // so that Notepad won't throw a fit and Rama can read the logs again! On Unix and Mac platforms,
 // the input string is written unmodified.

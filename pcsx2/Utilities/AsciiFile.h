@@ -39,5 +39,5 @@ public:
 	{
 		Write( fmt, strlen( fmt ) );
 	}
-
 };
+
