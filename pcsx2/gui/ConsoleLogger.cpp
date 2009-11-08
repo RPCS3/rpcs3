@@ -639,7 +639,7 @@ void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 //  ConsoleImpl_ToFile
 // --------------------------------------------------------------------------------------
 
-static void __concall _immediate_logger( wxString src )
+static void __concall _immediate_logger( const wxString& src )
 {
 #ifdef __LINUX__
 	ConsoleWriter_Stdio.DoWrite(src);
@@ -851,8 +851,8 @@ public:
 	,	m_Instdata( *(MsgboxEventResult*)NULL )
 	,	m_Title()
 	,	m_Content()
-	,	m_Flags( 0 )
 	{
+		m_Flags = 0;
 	}
 
 	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, long flags ) :
@@ -860,8 +860,8 @@ public:
 	,	m_Instdata( instdata )
 	,	m_Title( title )
 	,	m_Content( content )
-	,	m_Flags( flags )
 	{
+		m_Flags = flags;
 	}
 
 	pxMessageBoxEvent( const pxMessageBoxEvent& event ) :
@@ -869,8 +869,8 @@ public:
 	,	m_Instdata( event.m_Instdata )
 	,	m_Title( event.m_Title )
 	,	m_Content( event.m_Content )
-	,	m_Flags( event.m_Flags )
 	{
+		m_Flags = event.m_Flags;
 	}
 
 	// Thread Safety: Must be called from the GUI thread ONLY.

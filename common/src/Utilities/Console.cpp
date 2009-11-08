@@ -76,7 +76,7 @@ const IConsoleWriter ConsoleWriter_Null =
 // --------------------------------------------------------------------------------------
 
 #ifdef __LINUX__
-static wxString tbl_color_codes[] =
+static const wxChar* tbl_color_codes[] =
 {
         L"\033[30m"              // black
         ,       L"\033[31m"              // red
