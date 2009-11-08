@@ -19,7 +19,7 @@
 
 #include "ModalPopups.h"
 #include "Panels/ConfigurationPanels.h"
-#include "wx//file.h"
+#include <wx/file.h>
 
 using namespace wxHelpers;
 using namespace Panels;
@@ -35,7 +35,7 @@ static T& MakeWizWidget( int pageid, wxWizardPage& src )
 Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
 	DirPickerPanel( parent, FolderId_Settings, _("Settings"), _("Select a folder for PCSX2 settings") )
 {
-	SetToolTip( pxE( ".Tooltips:Folders:Settings",
+	pxSetToolTip( this, pxE( ".Tooltips:Folders:Settings",
 		L"This is the folder where PCSX2 saves your settings, including settings generated "
 		L"by most plugins (some older plugins may not respect this value)."
 	) );

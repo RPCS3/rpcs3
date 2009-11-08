@@ -351,6 +351,7 @@ namespace Panels
 		wxDirName GetPath() const { return wxDirName( m_pickerCtrl->GetPath() ); }
 
 		DirPickerPanel& SetStaticDesc( const wxString& msg );
+		DirPickerPanel& SetToolTip( const wxString& tip );
 
 	protected:
 		void UseDefaultPath_Click( wxCommandEvent &event );

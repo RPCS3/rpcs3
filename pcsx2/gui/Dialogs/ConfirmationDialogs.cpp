@@ -134,9 +134,9 @@ wxWindowID Dialogs::IssueConfirmation( wxWindow* parent, const wxString& disable
 	confirmDlg.GetExtensibleSizer().Add( &cboxPad, wxSizerFlags().Centre() );
 
 	if( type != ConfButtons().OK() )
-		DisablerCtrl.SetToolTip(_("Disables this popup and whatever response you select here will be automatically used from now on."));
+		pxSetToolTip(&DisablerCtrl, _("Disables this popup and whatever response you select here will be automatically used from now on."));
 	else
-		DisablerCtrl.SetToolTip(_("The popup will not be shown again.  This setting can be undone from the settings panels."));
+		pxSetToolTip(&DisablerCtrl, _("The popup will not be shown again.  This setting can be undone from the settings panels."));
 
 	confirmDlg.Fit();
 

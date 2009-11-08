@@ -128,8 +128,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	m_msg_eecycle->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_eecycle->SetSizeHints( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_eecycle, 4) ) );
 
-	m_slider_eecycle->SetToolTip( tooltip );
-	m_msg_eecycle->SetToolTip( tooltip );
+	pxSetToolTip( m_slider_eecycle, tooltip );
+	pxSetToolTip( m_msg_eecycle, tooltip );
 
 	// ------------------------------------------------------------------------
 	// VU Cycle Stealing Hack Section:
@@ -151,8 +151,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	m_msg_vustealer->SetForegroundColour( wxColour( L"Red" ) );
 	m_msg_vustealer->SetSizeHints( wxSize( wxDefaultCoord, pxGetTextHeight(m_msg_vustealer, 4) ) );
 
-	m_slider_vustealer->SetToolTip( tooltip );
-	m_msg_vustealer->SetToolTip( tooltip );
+	pxSetToolTip( m_slider_vustealer, tooltip );
+	pxSetToolTip( m_msg_vustealer, tooltip );
 
 	// ------------------------------------------------------------------------
 	// microVU Hacks Section:

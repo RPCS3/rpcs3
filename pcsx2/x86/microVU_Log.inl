@@ -15,40 +15,41 @@
  
 #pragma once
 
+#include "Utilities/AsciiFile.h"
+
 // writes text directly to mVU->logFile, no newlines appended.
 microVUx(void) __mVULog(const char* fmt, ...) {
+
 	microVU* mVU = mVUx;
+	if (!mVU->logFile) return;
+
 	char tmp[2024];
 	va_list list;
-
 	va_start(list, fmt);
 
 	// concatenate the log message after the prefix:
 	int length = vsprintf(tmp, fmt, list);
 	va_end(list);
 
-	if (mVU->logFile) {
-		fputs(tmp, mVU->logFile);
-		fflush(mVU->logFile);
-	}
+	mVU->logFile->Write( tmp );
+	mVU->logFile->Flush();
 }
 
 #define commaIf() { if (bitX[6]) { mVUlog(","); bitX[6] = 0; } }
 
+#include "AppConfig.h"
+
 microVUx(void) __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
 	bool bitX[7];
-	char str[30];
 	int	delay = 0;
 	int bBranch = mVUbranch;
 	int bCode	= mVU->code;
 	int bPC		= iPC;
 	mVUbranch	= 0;
 
-	// fixme: This needs recdone using wxFile and wxString
-
-	sprintf(str, "%s\\microVU%d prog - %02d.html", "logs", vuIndex, progIndex);
-	mVU->logFile = fopen(str, "w");
+	const wxString logname( wxsFormat( L"microVU%d prog - %02d.html", L"logs", vuIndex, progIndex) );
+	mVU->logFile = new AsciiFile( Path::Combine( g_Conf->Folders.Logs, logname), L"w" );
 
 	mVUlog("<html>\n");
 	mVUlog("<title>microVU%d MicroProgram Log</title>\n", vuIndex);
@@ -116,7 +117,9 @@ microVUx(void) __mVUdumpProgram(int progIndex) {
 	mVUlog("</font>\n");
 	mVUlog("</body>\n");
 	mVUlog("</html>\n");
-	fclose(mVU->logFile);
+
+	safe_delete( mVU->logFile );
+
 	mVUbranch = bBranch;
 	mVU->code = bCode;
 	iPC		  = bPC;

@@ -92,7 +92,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 	s_box.Add( m_pickerCtrl, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5).Expand() );
 
 	m_checkCtrl = &AddCheckBox( s_lower, _("Use default setting") );
-	m_checkCtrl->SetToolTip( pxE( ".Tooltip:DirPicker:UseDefault",
+	pxSetToolTip( m_checkCtrl, pxE( ".Tooltip:DirPicker:UseDefault",
 		L"When checked this folder will automatically reflect the default associated with PCSX2's current usermode setting. " )
 	);
 
@@ -101,7 +101,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 	// button on the dialogs for now.
 
 	wxButton* b_explore( new wxButton( this, wxID_ANY, _("Open in Explorer") ) );
-	b_explore->SetToolTip( _("Open an explorer window to this folder.") );
+	pxSetToolTip( b_explore, _("Open an explorer window to this folder.") );
 	s_lower.Add( b_explore, SizerFlags::StdButton().Align( wxALIGN_RIGHT ) );
 	Connect( b_explore->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( DirPickerPanel::Explore_Click ) );
 #endif
@@ -122,6 +122,12 @@ Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& m
 {
 	InsertStaticTextAt( this, *GetSizer(), 0, msg );
 	//SetSizer( GetSizer(), false );
+	return *this;
+}
+
+Panels::DirPickerPanel& Panels::DirPickerPanel::SetToolTip( const wxString& tip )
+{
+	pxSetToolTip( this, tip );
 	return *this;
 }
 

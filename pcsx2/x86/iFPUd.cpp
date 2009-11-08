@@ -640,28 +640,35 @@ static __aligned16 SSE_MXCSR roundmode_nearest, roundmode_neg;
 
 void recDIV_S_xmm(int info)
 {
-	int roundmodeFlag = 0;
+	bool roundmodeFlag = false;
     //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
     //Console.WriteLn("DIV");
  
-	if (g_sseMXCSR.GetRoundMode() != SSEround_Nearest)
+	if( CHECK_FPUNEGDIVHACK )
 	{
-		// Set roundmode to nearest since it isn't already
-		//Console.WriteLn("div to nearest");
-
-		if( CHECK_FPUNEGDIVHACK )
+		if (g_sseMXCSR.GetRoundMode() != SSEround_NegInf)
 		{
+			// Set roundmode to nearest since it isn't already
+			//Console.WriteLn("div to negative inf");
+
 			roundmode_neg = g_sseMXCSR;
 			roundmode_neg.SetRoundMode( SSEround_NegInf );
 			xLDMXCSR( roundmode_neg );
+			roundmodeFlag = true;
 		}
-		else
+	}
+	else
+	{
+		if (g_sseMXCSR.GetRoundMode() != SSEround_Nearest)
 		{
+			// Set roundmode to nearest since it isn't already
+			//Console.WriteLn("div to nearest");
+
 			roundmode_nearest = g_sseMXCSR;
 			roundmode_nearest.SetRoundMode( SSEround_Nearest );
 			xLDMXCSR( roundmode_nearest );
+			roundmodeFlag = true;
 		}
-		roundmodeFlag = 1;
 	}
  
 	int sreg, treg;
@@ -675,9 +682,7 @@ void recDIV_S_xmm(int info)
  
 	SSE_MOVSS_XMM_to_XMM(EEREC_D, sreg);
  
-	if (roundmodeFlag == 1) { // Set roundmode back if it was changed
-		xLDMXCSR (g_sseMXCSR);
-	}
+	if (roundmodeFlag) xLDMXCSR (g_sseMXCSR);
 	_freeXMMreg(sreg); _freeXMMreg(treg);
 }
  
@@ -1042,6 +1047,10 @@ void recRSQRT_S_xmm(int info)
 {
 	int sreg, treg;
  
+	// iFPU (regular FPU) doesn't touch roundmode for rSQRT.
+	// Should this do the same?  or is changing the roundmode to nearest the better
+	// behavior for both recs? --air
+
 	bool roundmodeFlag = false;
 	if (g_sseMXCSR.GetRoundMode() != SSEround_Nearest)
 	{

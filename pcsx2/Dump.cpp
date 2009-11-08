@@ -211,8 +211,7 @@ void iDumpBlock( int startpc, u8 * ptr )
 
 	g_Conf->Folders.Logs.Mkdir();
 	AsciiFile eff(
-		Path::Combine( g_Conf->Folders.Logs, wxsFormat(L"R5900dump%.8X.txt", startpc) ),
-		wxFile::write
+		Path::Combine( g_Conf->Folders.Logs, wxsFormat(L"R5900dump%.8X.txt", startpc) ), L"w"
 	);
 
 	if( disR5900GetSym(startpc) != NULL )

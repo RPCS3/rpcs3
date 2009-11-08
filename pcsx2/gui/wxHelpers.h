@@ -93,4 +93,5 @@ protected:
 };
 
 extern bool pxDialogExists( wxWindowID id );
-
+extern void pxSetToolTip( wxWindow* wind, const wxString& src );
+extern void pxSetToolTip( wxWindow& wind, const wxString& src );

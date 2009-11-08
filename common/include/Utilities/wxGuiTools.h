@@ -44,21 +44,21 @@
 class pxTextWrapperBase
 {
 protected:
-	bool m_eol;
-	int m_linecount;
+	bool	m_eol;
+	int		m_linecount;
 
 public:
-	virtual ~pxTextWrapperBase() { }
+	virtual ~pxTextWrapperBase() throw() { }
 
-    pxTextWrapperBase() :
-		m_eol( false )
-	,	m_linecount( 0 )
+    pxTextWrapperBase()
 	{
+		m_eol = false;
+		m_linecount = 0;
 	}
 
     // win is used for getting the font, text is the text to wrap, width is the
     // max line width or -1 to disable wrapping
-    void Wrap( const wxWindow *win, const wxString& text, int widthMax );
+    pxTextWrapperBase& Wrap( const wxWindow& win, const wxString& text, int widthMax );
 
 	int GetLineCount() const
 	{
@@ -72,24 +72,8 @@ protected:
     // called at the start of every new line (except the very first one)
     virtual void OnNewLine() { }
 
-    void DoOutputLine(const wxString& line)
-    {
-        OnOutputLine(line);
-		m_linecount++;
-        m_eol = true;
-    }
-
-    // this function is a destructive inspector: when it returns true it also
-    // resets the flag to false so calling it again wouldn't return true any
-    // more
-    bool IsStartOfNewLine()
-    {
-        if ( !m_eol )
-            return false;
-
-        m_eol = false;
-        return true;
-    }
+    void DoOutputLine(const wxString& line);
+    bool IsStartOfNewLine();
 };
 
 // --------------------------------------------------------------------------------------
@@ -100,30 +84,25 @@ protected:
 //
 class pxTextWrapper : public pxTextWrapperBase
 {
+	typedef pxTextWrapperBase _parent;
+	
 protected:
 	wxString m_text;
 
 public:
-	pxTextWrapper() : pxTextWrapperBase()
-	,	m_text()
-	{
-	}
+	pxTextWrapper() : pxTextWrapperBase() { }
+	virtual ~pxTextWrapper() throw() { }
 
     const wxString& GetResult() const
     {
 		return m_text;
     }
 
-protected:
-    virtual void OnOutputLine(const wxString& line)
-    {
-        m_text += line;
-    }
+	pxTextWrapper& Wrap( const wxWindow& win, const wxString& text, int widthMax );
 
-    virtual void OnNewLine()
-    {
-        m_text += L'\n';
-    }
+protected:
+    virtual void OnOutputLine(const wxString& line);
+    virtual void OnNewLine();
 };
 
 // --------------------------------------------------------------------------------------

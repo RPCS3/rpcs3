@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <wx/file.h>
+#include <wx/ffile.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Helper class for wxFile which provides old-school ASCII interfaces (char* style),
@@ -25,13 +25,13 @@
 // This is an ideal solution on several fronts since it is both faster, and fully func-
 // tional (since the dumps are only ever english/ascii only).
 //
-class AsciiFile : public wxFile
+class AsciiFile : public wxFFile
 {
 public:
-	using wxFile::Write;
+	using wxFFile::Write;
 
-	AsciiFile( const wxString& src, OpenMode mode = read ) :
-		wxFile( src, mode ) {}
+	AsciiFile( const wxString& src, const wxChar* mode ) :
+		wxFFile( src, mode ) {}
 	
 	void Printf( const char* fmt, ... );
 

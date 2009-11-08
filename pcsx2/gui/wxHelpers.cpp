@@ -23,187 +23,181 @@
 #   include <wx/tooltip.h>
 #endif
 
-namespace wxHelpers
+// ------------------------------------------------------------------------
+// FlagsAccessors - Provides read-write copies of standard sizer flags for our interface.
+// These standard definitions provide a consistent and pretty interface for our GUI.
+// Without them things look compacted, misaligned, and yucky!
+//
+// Implementation Note: Accessors are all provisioned as dynamic (realtime) sizer calculations.
+// I've preferred this over cstatic const variables on the premise that spacing logic could
+// in the future become a dynamic value (currently it is affixed to 6 for most items).
+//
+wxSizerFlags wxHelpers::SizerFlags::StdSpace()
 {
-	// ------------------------------------------------------------------------
-	// FlagsAccessors - Provides read-write copies of standard sizer flags for our interface.
-	// These standard definitions provide a consistent and pretty interface for our GUI.
-	// Without them things look compacted, misaligned, and yucky!
-	//
-	// Implementation Note: Accessors are all provisioned as dynamic (realtime) sizer calculations.
-	// I've preferred this over cstatic const variables on the premise that spacing logic could
-	// in the future become a dynamic value (currently it is affixed to 6 for most items).
-	//
-	namespace SizerFlags
-	{
-		wxSizerFlags StdSpace()
-		{
-			return wxSizerFlags().Border( wxALL, 6 );
-		}
+	return wxSizerFlags().Border( wxALL, 6 );
+}
 
-		wxSizerFlags StdCenter()
-		{
-			return wxSizerFlags().Align( wxALIGN_CENTER ).DoubleBorder();
-		}
+wxSizerFlags wxHelpers::SizerFlags::StdCenter()
+{
+	return wxSizerFlags().Align( wxALIGN_CENTER ).DoubleBorder();
+}
 
-		wxSizerFlags StdExpand()
-		{
-			return StdSpace().Expand();
-		}
+wxSizerFlags wxHelpers::SizerFlags::StdExpand()
+{
+	return StdSpace().Expand();
+}
 
-		// A good sizer flags setting for top-level static boxes or top-level picture boxes.
-		// Gives a generous border to the left, right, and bottom.  Top border can be configured
-		// manually by using a spacer.
-		wxSizerFlags TopLevelBox()
-		{
-			return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 6 ).Expand();
-		}
+// A good sizer flags setting for top-level static boxes or top-level picture boxes.
+// Gives a generous border to the left, right, and bottom.  Top border can be configured
+// manually by using a spacer.
+wxSizerFlags wxHelpers::SizerFlags::TopLevelBox()
+{
+	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 6 ).Expand();
+}
 
-		// Flags intended for use on grouped StaticBox controls.  These flags are ideal for
-		// StaticBoxes that are part of sub-panels or children of other static boxes, but may
-		// not be best for parent StaticBoxes on dialogs (left and right borders feel a bit
-		// "tight").
-		wxSizerFlags SubGroup()
-		{
-			// Groups look better with a slightly smaller margin than standard.
-			// (basically this accounts for the group's frame)
-			return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 4 ).Expand();
-		}
+// Flags intended for use on grouped StaticBox controls.  These flags are ideal for
+// StaticBoxes that are part of sub-panels or children of other static boxes, but may
+// not be best for parent StaticBoxes on dialogs (left and right borders feel a bit
+// "tight").
+wxSizerFlags wxHelpers::SizerFlags::SubGroup()
+{
+	// Groups look better with a slightly smaller margin than standard.
+	// (basically this accounts for the group's frame)
+	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 4 ).Expand();
+}
 
-		// This force-aligns the std button sizer to the right, where (at least) us win32 platform
-		// users always expect it to be.  Most likely Mac platforms expect it on the left side
-		// just because it's *not* where win32 sticks it.  Too bad!
-		wxSizerFlags StdButton()
-		{
-			return wxSizerFlags().Align( wxALIGN_RIGHT ).Border();
-		}
+// This force-aligns the std button sizer to the right, where (at least) us win32 platform
+// users always expect it to be.  Most likely Mac platforms expect it on the left side
+// just because it's *not* where win32 sticks it.  Too bad!
+wxSizerFlags wxHelpers::SizerFlags::StdButton()
+{
+	return wxSizerFlags().Align( wxALIGN_RIGHT ).Border();
+}
 
-		wxSizerFlags Checkbox()
-		{
-			return StdExpand();
-		}
-	};
+wxSizerFlags wxHelpers::SizerFlags::Checkbox()
+{
+	return StdExpand();
+}
 
-	// This method is used internally to create multi line checkboxes and radio buttons.
-	void _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxString& subtext, const wxString& tooltip, int wrapLen )
-	{
-		static const int Indentation = 23;
+// This method is used internally to create multi line checkboxes and radio buttons.
+static void _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxString& subtext, const wxString& tooltip, int wrapLen )
+{
+	static const int Indentation = 23;
 
-		if( subtext.IsEmpty() ) return;
+	if( subtext.IsEmpty() ) return;
 
-		wxStaticText* joe = new wxStaticText( parent, wxID_ANY, subtext );
-		if( wrapLen > 0 ) joe->Wrap( wrapLen-Indentation );
-		if( !tooltip.IsEmpty() )
-			joe->SetToolTip( tooltip );
-		sizer.Add( joe, wxSizerFlags().Border( wxLEFT, Indentation ) );
-		sizer.AddSpacer( 9 );
-	}
+	wxStaticText* joe = new wxStaticText( parent, wxID_ANY, subtext );
+	if( wrapLen > 0 ) joe->Wrap( wrapLen-Indentation );
+	if( !tooltip.IsEmpty() )
+		pxSetToolTip( joe, tooltip );
+	sizer.Add( joe, wxSizerFlags().Border( wxLEFT, Indentation ) );
+	sizer.AddSpacer( 9 );
+}
 
 
-	// ------------------------------------------------------------------------
-	// Creates a new checkbox and adds it to the specified sizer/parent combo, with optional tooltip.
-	// Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied
-	// to both the checkbox and it's static subtext (if present).
-	//
-	wxCheckBox& AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip, int wrapLen )
-	{
-		wxCheckBox* retval = new wxCheckBox( parent, wxID_ANY, label );
-		sizer.Add( retval, SizerFlags::Checkbox() );
+// ------------------------------------------------------------------------
+// Creates a new checkbox and adds it to the specified sizer/parent combo, with optional tooltip.
+// Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied
+// to both the checkbox and it's static subtext (if present).
+//
+wxCheckBox& wxHelpers::AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip, int wrapLen )
+{
+	wxCheckBox* retval = new wxCheckBox( parent, wxID_ANY, label );
+	sizer.Add( retval, SizerFlags::Checkbox() );
 
-		if( !tooltip.IsEmpty() )
-			retval->SetToolTip( tooltip );
+	if( !tooltip.IsEmpty() )
+		pxSetToolTip( retval, tooltip );
 
-		_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
+	_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
 
-		return *retval;
-	}
+	return *retval;
+}
 
-	// ------------------------------------------------------------------------
-	// Creates a new Radio button and adds it to the specified sizer/parent combo, with optional tooltip.
-	// Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied
-	// to both the radio button and it's static subtext (if present).
-	//
-	// The first item in a group should pass True for the isFirst parameter.
-	//
-	wxRadioButton& AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip, int wrapLen, bool isFirst )
-	{
-		wxRadioButton* retval = new wxRadioButton( parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, isFirst ? wxRB_GROUP : 0 );
-		sizer.Add( retval, SizerFlags::Checkbox() );
+// ------------------------------------------------------------------------
+// Creates a new Radio button and adds it to the specified sizer/parent combo, with optional tooltip.
+// Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied
+// to both the radio button and it's static subtext (if present).
+//
+// The first item in a group should pass True for the isFirst parameter.
+//
+wxRadioButton& wxHelpers::AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip, int wrapLen, bool isFirst )
+{
+	wxRadioButton* retval = new wxRadioButton( parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, isFirst ? wxRB_GROUP : 0 );
+	sizer.Add( retval, SizerFlags::Checkbox() );
 
-		if( !tooltip.IsEmpty() )
-			retval->SetToolTip( tooltip );
+	if( !tooltip.IsEmpty() )
+		pxSetToolTip( retval, tooltip );
 
-		_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
+	_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
 
-		return *retval;
-	}
+	return *retval;
+}
 
-	// ------------------------------------------------------------------------
-	// Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this
-	// ensures that that auto resizing is disabled, and that the sizer flags match the alignment specified
-	// for the textbox.
-	//
-	// Parameters:
-	//  Size - allows forcing the control to wrap text at a specific pre-defined pixel width;
-	//      or specify zero to let wxWidgets layout the text as it deems appropriate (recommended)
-	//
-	// alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
-	//      or overridden.  [default is left alignment]
-	//
-	wxStaticText& AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags, int size )
-	{
-		// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
-		alignFlags |= wxST_NO_AUTORESIZE;
-        wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
-        if( size > 0 ) temp.Wrap( size );
+// ------------------------------------------------------------------------
+// Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this
+// ensures that that auto resizing is disabled, and that the sizer flags match the alignment specified
+// for the textbox.
+//
+// Parameters:
+//  Size - allows forcing the control to wrap text at a specific pre-defined pixel width;
+//      or specify zero to let wxWidgets layout the text as it deems appropriate (recommended)
+//
+// alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
+//      or overridden.  [default is left alignment]
+//
+wxStaticText& wxHelpers::AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags, int size )
+{
+	// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
+	alignFlags |= wxST_NO_AUTORESIZE;
+    wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
+    if( size > 0 ) temp.Wrap( size );
 
-        sizer.Add( &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
-        return temp;
-    }
+    sizer.Add( &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+    return temp;
+}
 
-	wxStaticText& InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags, int size )
-	{
-		// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
-		alignFlags |= wxST_NO_AUTORESIZE;
-		wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
-		if( size > 0 ) temp.Wrap( size );
+wxStaticText& wxHelpers::InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags, int size )
+{
+	// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
+	alignFlags |= wxST_NO_AUTORESIZE;
+	wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
+	if( size > 0 ) temp.Wrap( size );
 
-		sizer.Insert( position, &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
-		return temp;
-	}
+	sizer.Insert( position, &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+	return temp;
+}
 
-	// ------------------------------------------------------------------------
-	// Launches the specified file according to its mime type
-	//
-	void Launch( const wxString& filename )
-	{
-		wxLaunchDefaultBrowser( filename );
-	}
+// ------------------------------------------------------------------------
+// Launches the specified file according to its mime type
+//
+void wxHelpers::Launch( const wxString& filename )
+{
+	wxLaunchDefaultBrowser( filename );
+}
 
-	void Launch(const char *filename)
-	{
-		Launch( fromUTF8(filename) );
-	}
+void wxHelpers::Launch(const char *filename)
+{
+	Launch( fromUTF8(filename) );
+}
 
-	// ------------------------------------------------------------------------
-	// Launches a file explorer window on the specified path.  If the given path is not
-	// a qualified URI (with a prefix:// ), file:// is automatically prepended.  This
-	// bypasses wxWidgets internal filename checking, which can end up launching things
-	// through browser more often than desired.
-	//
-	void Explore( const wxString& path )
-	{
-		wxLaunchDefaultBrowser( !path.Contains( L"://") ? L"file://" + path : path );
-	}
+// ------------------------------------------------------------------------
+// Launches a file explorer window on the specified path.  If the given path is not
+// a qualified URI (with a prefix:// ), file:// is automatically prepended.  This
+// bypasses wxWidgets internal filename checking, which can end up launching things
+// through browser more often than desired.
+//
+void wxHelpers::Explore( const wxString& path )
+{
+	wxLaunchDefaultBrowser( !path.Contains( L"://") ? L"file://" + path : path );
+}
 
-	void Explore(const char *path)
-	{
-		Explore( fromUTF8(path) );
-	}
+void wxHelpers::Explore(const char *path)
+{
+	Explore( fromUTF8(path) );
 }
 
 // ----------------------------------------------------------------------------
-void pxTextWrapperBase::Wrap( const wxWindow *win, const wxString& text, int widthMax )
+pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString& text, int widthMax )
 {
     const wxChar *lastSpace = NULL;
     wxString line;
@@ -238,7 +232,7 @@ void pxTextWrapperBase::Wrap( const wxWindow *win, const wxString& text, int wid
             if ( widthMax >= 0 && lastSpace )
             {
                 int width;
-                win->GetTextExtent(line, &width, NULL);
+                win.GetTextExtent(line, &width, NULL);
 
                 if ( width > widthMax )
                 {
@@ -254,7 +248,73 @@ void pxTextWrapperBase::Wrap( const wxWindow *win, const wxString& text, int wid
             //else: no wrapping at all or impossible to wrap
         }
     }
+
+    return *this;
 }
+
+void pxTextWrapperBase::DoOutputLine(const wxString& line)
+{
+	OnOutputLine(line);
+	m_linecount++;
+	m_eol = true;
+}
+
+// this function is a destructive inspector: when it returns true it also
+// resets the flag to false so calling it again wouldn't return true any
+// more
+bool pxTextWrapperBase::IsStartOfNewLine()
+{
+	if ( !m_eol )
+		return false;
+
+	m_eol = false;
+	return true;
+}
+
+pxTextWrapper& pxTextWrapper::Wrap( const wxWindow& win, const wxString& text, int widthMax )
+{
+	_parent::Wrap( win, text, widthMax );
+	return *this;
+}
+
+void pxTextWrapper::OnOutputLine(const wxString& line)
+{
+	m_text += line;
+}
+
+void pxTextWrapper::OnNewLine()
+{
+	m_text += L'\n';
+}
+
+// This is the preferred way to assign tooltips to wxWindow-based objects, as it performs the
+// necessary text wrapping on platforms that need it.  On windows tooltips are wrapped at 600
+// pixels, or 66% of the screen width, whichever is smaller.  GTK and MAC perform internal
+// wrapping, so this function does a regular assignment there.
+void pxSetToolTip( wxWindow* wind, const wxString& src )
+{
+	if( !pxAssert( wind != NULL ) ) return;
+
+	// Windows needs manual tooltip word wrapping (sigh).
+	// GTK and Mac are a wee bit more clever (except in GTK tooltips don't show at all
+	// half the time because of some other bug .. sigh)
+#ifdef __WXMSW__
+	int whee = wxGetDisplaySize().GetWidth() * 0.75;
+	wind->SetToolTip( pxTextWrapper().Wrap( *wind, src, std::min( whee, 600 ) ).GetResult() );
+#else
+	wind->SetToolTip( src );
+#endif
+}
+
+void pxSetToolTip( wxWindow& wind, const wxString& src )
+{
+	pxSetToolTip( &wind, src );
+}
+
+
+// =====================================================================================================
+//  wxDialogWithHelpers Class Implementations
+// =====================================================================================================
 
 HashTools::HashMap< wxWindowID, int > m_DialogIdents( 0, wxID_ANY );
 

@@ -385,7 +385,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	g_Conf->Folders.Logs.Mkdir();
 
 	wxString filename( Path::Combine( g_Conf->Folders.Logs, wxsFormat( L"psxdump%.8X.txt", startpc ) ) );
-	AsciiFile f( filename, wxFile::write );
+	AsciiFile f( filename, L"w" );
 
 	/*for ( i = startpc; i < s_nEndBlock; i += 4 ) {
 		f.Printf("%s\n", disR3000Fasm( iopMemRead32( i ), i ) );
@@ -433,7 +433,7 @@ static void iIopDumpBlock( int startpc, u8 * ptr )
 	char command[256];
 	// dump the asm
 	{
-		AsciiFile f2( L"mydump1", wxFile::write );
+		AsciiFile f2( L"mydump1", L"w" );
 		f2.Write( ptr, (uptr)x86Ptr - (uptr)ptr );
 	}
 	wxCharBuffer buf( filename.ToUTF8() );

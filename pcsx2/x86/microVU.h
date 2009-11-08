@@ -17,6 +17,8 @@
 //#define mVUdebug		// Prints Extra Info to Console
 //#define mVUlogProg	// Dumps MicroPrograms to \logs\*.html
 
+class AsciiFile;
+
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
 
@@ -152,7 +154,7 @@ struct microVU {
 	microProgManager prog;		// Micro Program Data
 	microRegAlloc*	 regAlloc;	// Reg Alloc Class
 
-	FILE*	logFile;	 // Log File Pointer
+	AsciiFile* logFile;	 // Log File Pointer
 	VURegs*	regs;		 // VU Regs Struct
 	u8*		cache;		 // Dynarec Cache Start (where we will start writing the recompiled code to)
 	u8*		startFunct;	 // Ptr Function to the Start code for recompiled programs

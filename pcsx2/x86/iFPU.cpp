@@ -1111,24 +1111,31 @@ void recDIV_S_xmm(int info)
     //if (t0reg == -1) {Console.Error("FPU: DIV Allocation Error!");}
     //Console.WriteLn("DIV");
 
-	if (g_sseMXCSR.GetRoundMode() != SSEround_Nearest)
+	if( CHECK_FPUNEGDIVHACK )
 	{
-		// Set roundmode to nearest since it isn't already
-		//Console.WriteLn("div to nearest");
-
-		if( CHECK_FPUNEGDIVHACK )
+		if (g_sseMXCSR.GetRoundMode() != SSEround_NegInf)
 		{
+			// Set roundmode to nearest since it isn't already
+			//Console.WriteLn("div to negative inf");
+
 			roundmode_neg = g_sseMXCSR;
 			roundmode_neg.SetRoundMode( SSEround_NegInf );
 			xLDMXCSR( roundmode_neg );
+			roundmodeFlag = true;
 		}
-		else
+	}
+	else
+	{
+		if (g_sseMXCSR.GetRoundMode() != SSEround_Nearest)
 		{
+			// Set roundmode to nearest since it isn't already
+			//Console.WriteLn("div to nearest");
+			
 			roundmode_nearest = g_sseMXCSR;
 			roundmode_nearest.SetRoundMode( SSEround_Nearest );
 			xLDMXCSR( roundmode_nearest );
+			roundmodeFlag = true;
 		}
-		roundmodeFlag = true;
 	}
 
 	switch(info & (PROCESS_EE_S|PROCESS_EE_T) ) {
@@ -1795,6 +1802,9 @@ void recRSQRThelper2(int regd, int t0reg) // Preforms the RSQRT function when re
 
 void recRSQRT_S_xmm(int info)
 {
+	// iFPUd (Full mode) sets roundmode to nearest for rSQRT.
+	// Should this do the same, or should Full mode leave roundmode alone? --air
+
 	int t0reg = _allocTempXMMreg(XMMT_FPS, -1);
 	//if (t0reg == -1) {Console.Error("FPU: RSQRT Allocation Error!");}
 	//Console.WriteLn("FPU: RSQRT");
