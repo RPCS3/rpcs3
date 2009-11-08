@@ -122,6 +122,7 @@
 		<Unit filename="../CDVD/CDVDisoReader.h" />
 		<Unit filename="../CDVD/CdRom.cpp" />
 		<Unit filename="../CDVD/CdRom.h" />
+		<Unit filename="../CDVD/IsoFS/IsoDirectory.h" />
 		<Unit filename="../CDVD/IsoFS/IsoFS.cpp" />
 		<Unit filename="../CDVD/IsoFS/IsoFS.h" />
 		<Unit filename="../CDVD/IsoFS/IsoFSCDVD.cpp" />
