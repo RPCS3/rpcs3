@@ -15,7 +15,7 @@
  
 #pragma once
 //#define mVUdebug		// Prints Extra Info to Console
-//#define mVUlogProg	// Dumps MicroPrograms to \logs\*.html
+#define mVUlogProg	// Dumps MicroPrograms to \logs\*.html
 
 class AsciiFile;
 
