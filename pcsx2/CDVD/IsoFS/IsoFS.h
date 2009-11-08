@@ -7,5 +7,5 @@ struct ISoFileDescriptor;
 #include "SectorSource.h"
 #include "IsoFileDescriptor.h"
 #include "IsoDirectory.h"
-#include "ISoFile.h"
+#include "IsoFile.h"
 

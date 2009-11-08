@@ -587,8 +587,10 @@ void loadElfFile(const wxString& filename)
 	{
 		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
 		{
+		    char* temp;
 			strcpy( (char*)PSM( i ), fnptr );
-			DevCon.WriteLn( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr );
+			strcpy(temp, fnptr); // Passing wxCharBuffers to WriteLn crashes pcsx2.
+			DevCon.WriteLn( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", temp  );
 		}
 	}
 
