@@ -78,6 +78,8 @@ public:
 	wxPanelWithHelpers( wxWindow* parent, int idealWidth=wxDefaultCoord );
 	wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size=wxDefaultSize );
 
+	//wxRadioButton&	NewSpinCtrl( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
+
 	wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 	wxRadioButton&	AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );

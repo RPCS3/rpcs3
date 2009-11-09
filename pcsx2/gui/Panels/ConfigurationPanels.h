@@ -280,12 +280,40 @@ namespace Panels
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	//
+	class FramelimiterPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		wxCheckBox*		m_check_LimiterDisable;
+		wxSpinCtrl*		m_spin_NominalPct;
+		wxSpinCtrl*		m_spin_SlomoPct;
+		wxSpinCtrl*		m_spin_TurboPct;
+
+		wxTextCtrl*		m_text_BaseNtsc;
+		wxTextCtrl*		m_text_BasePal;
+		
+		wxCheckBox*		m_SkipperEnable;
+		wxCheckBox*		m_TurboSkipEnable;
+		wxSpinCtrl*		m_spin_SkipThreshold;
+		
+		wxSpinCtrl*		m_spin_FramesToSkip;
+		wxSpinCtrl*		m_spin_FramesToDraw;
+
+	public:
+		FramelimiterPanel( wxWindow& parent, int idealWidth );
+		virtual ~FramelimiterPanel() throw() {}
+		void Apply();
+	};
+
 	class VideoPanel : public BaseApplicableConfigPanel
 	{
 	protected:
+		wxCheckBox*		m_check_CloseGS;
+		//wxCheckBox*		m_check_CloseGS;
+		//wxCheckBox*		m_;
 
 	public:
 		VideoPanel( wxWindow& parent, int idealWidth );
+		virtual ~VideoPanel() throw() {}
 		void Apply();
 	};
 

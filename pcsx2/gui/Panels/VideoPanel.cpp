@@ -16,9 +16,125 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
+#include <wx/spinctrl.h>
+
+using namespace wxHelpers;
+
+Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth ) :
+	BaseApplicableConfigPanel( &parent, idealWidth )
+{
+	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+
+	AddStaticText( mainSizer, pxE( ".Framelimiter:Heading",
+		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
+		L"percentages of the default region-based framerate, which can also be configured below."
+	) );
+
+	m_check_LimiterDisable = &AddCheckBox( mainSizer, _("Disable Framelimiting"),
+		_("Useful for running benchmarks. Toggle this option in-game by pressing F4."),
+		pxE( ".Tooltip:Framelimiter:Disable",
+			L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not "
+			L"be available either."
+		)
+	);
+
+	m_spin_NominalPct	= new wxSpinCtrl( this );
+	m_spin_SlomoPct		= new wxSpinCtrl( this );
+	m_spin_TurboPct		= new wxSpinCtrl( this );
+
+	(m_text_BaseNtsc	= new wxTextCtrl( this, wxID_ANY ))->SetWindowStyleFlag( wxTE_RIGHT );
+	(m_text_BasePal		= new wxTextCtrl( this, wxID_ANY ))->SetWindowStyleFlag( wxTE_RIGHT );
+
+	m_spin_NominalPct->SetValue( 100 );
+	m_spin_SlomoPct->SetValue( 50 );
+	m_spin_TurboPct->SetValue( 100 );
+	
+	m_text_BaseNtsc->SetValue( L"59.94" );
+	m_text_BasePal->SetValue( L"50.00" );
+
+	wxFlexGridSizer& s_spins = *new wxFlexGridSizer( 5 );
+
+	//s_spins.AddGrowableCol( 0, 1 );
+	//s_spins.AddGrowableCol( 1, 1 );
+
+	AddStaticText( s_spins, _("Base Framerate Adjust:"), wxALIGN_LEFT );
+	s_spins.AddSpacer( 5 );
+	s_spins.Add( m_spin_NominalPct, wxSizerFlags().Border(wxTOP, 3) );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), SizerFlags::StdSpace() );
+	s_spins.AddSpacer( 5 );
+
+	AddStaticText( s_spins, _("Slow Motion Adjust:"), wxALIGN_LEFT );
+	s_spins.AddSpacer( 5 );
+	s_spins.Add( m_spin_SlomoPct, wxSizerFlags().Border(wxTOP, 3) );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), SizerFlags::StdSpace() );
+	s_spins.AddSpacer( 5 );
+
+	AddStaticText( s_spins, _("Turbo Adjust:"), wxALIGN_LEFT );
+	s_spins.AddSpacer( 5 );
+	s_spins.Add( m_spin_TurboPct, wxSizerFlags().Border(wxTOP, 3) );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), SizerFlags::StdSpace() );
+	s_spins.AddSpacer( 5 );
+
+	s_spins.AddSpacer( 15 );
+	s_spins.AddSpacer( 15 );
+	s_spins.AddSpacer( 15 );
+	s_spins.AddSpacer( 15 );
+	s_spins.AddSpacer( 15 );
+
+	AddStaticText( s_spins, _("NTSC Framerate:"), wxALIGN_LEFT );
+	s_spins.AddSpacer( 5 );
+	s_spins.Add( m_text_BaseNtsc, wxSizerFlags().Border(wxTOP, 3) );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), SizerFlags::StdSpace() );
+	s_spins.AddSpacer( 5 );
+
+	AddStaticText( s_spins, _("PAL Framerate:"), wxALIGN_LEFT );
+	s_spins.AddSpacer( 5 );
+	s_spins.Add( m_text_BasePal, wxSizerFlags().Border(wxTOP, 3) );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), SizerFlags::StdSpace() );
+	s_spins.AddSpacer( 5 );
+
+	mainSizer.Add( &s_spins );
+	
+	SetSizer( &mainSizer );
+
+}
+
+void Panels::FramelimiterPanel::Apply()
+{
+}
+
+
 Panels::VideoPanel::VideoPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
 {
+	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+
+	m_check_CloseGS = &AddCheckBox( mainSizer, _("Hide GS window on Suspend"),
+		wxEmptyString,		// subtext
+		pxE( ".Tooltip:Video:HideGS",
+			L"Completely closes the often large and bulky GS window when pressing "
+			L"ESC or suspending the emulator.  That way it won't get *in* the way!"
+		)
+	);
+
+	/*&AddCheckBox( mainSizer, _(""),
+		wxEmptyString,		// subtext
+		pxE( ".Tooltip:Video:HideGS",
+			L"Completely closes the often large and bulky GS window when pressing "
+			L"ESC or suspending the emulator.  That way it won't get *in* the way!"
+		)
+	);*/
+
+	m_check_CloseGS->SetValue( g_Conf->CloseGSonEsc );
+
+	wxStaticBoxSizer& limitSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Framelimiter") );
+	
+	limitSizer.Add( new FramelimiterPanel( *this, idealWidth - 32 ) );
+
+	mainSizer.Add( &limitSizer );
+
+	SetSizer( &mainSizer );
+	
 	// TODO:
 	// Framelimiting / Frameskipping / Vsync
 	// GS Window Options ( incl. Fullscreen )
