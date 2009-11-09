@@ -361,12 +361,17 @@ bool wxSpinCtrl::Create(wxWindow *parent,
 
     // create the text window
 
+	// PCSX2: Add right-handed alignment to the buddy text control, since any self-
+	// respecting integer deserves to be right-justified.  I'd do this from the user
+	// lib instead of wxWidgets directly, but since the buddy textctrl isn't exposed
+	// as a wxWindow, I can't modify it's flags. >_<  --air
+
     m_hwndBuddy = (WXHWND)::CreateWindowEx
                     (
                      exStyle,                // sunken border
                      _T("EDIT"),             // window class
                      NULL,                   // no window title
-                     msStyle,                // style (will be shown later)
+					 msStyle | ES_RIGHT,     // style (will be shown later) [PCSX2, see above]
                      pos.x, pos.y,           // position
                      0, 0,                   // size (will be set later)
                      GetHwndOf(parent),      // parent
