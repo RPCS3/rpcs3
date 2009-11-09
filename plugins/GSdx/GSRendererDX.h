@@ -164,28 +164,26 @@ public:
 			{
 				if(m_vt.m_max.p.z > 0xffffff)
 				{
-					//ASSERT(m_vt.m_min.p.z > 0xffffff);
+					ASSERT(m_vt.m_min.p.z > 0xffffff);
 					// Fixme :Following conditional fixes some dialog frame in Wild Arms 3, but may not be what was intended.
 					if (m_vt.m_min.p.z > 0xffffff)
 					{
 						vs_sel.bppz = 1;
 						om_dssel.ztst = ZTST_ALWAYS;
 					}
-					//else printf ("GSdx: Z issue, please report\n");
 				}
 			}
 			else if(context->ZBUF.PSM == PSM_PSMZ16 || context->ZBUF.PSM == PSM_PSMZ16S)
 			{
 				if(m_vt.m_max.p.z > 0xffff)
 				{
-					//ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
+					ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
 					// Fixme : Same as above, I guess.
 					if (m_vt.m_min.p.z > 0xffff)
 					{	
 						vs_sel.bppz = 2;
 						om_dssel.ztst = ZTST_ALWAYS;
 					}
-					//else printf ("GSdx: Z issue, please report\n");
 				}
 			}
 		}
@@ -198,10 +196,9 @@ public:
 		float oy = (float)(int)context->XYOFFSET.OFY + m_pixoff_y;
 		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
 		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
-		
-		float adjust_offset = 0.0f;
-		float adjust_size = 0.0f;
 
+		vs_cb.VertexScale  = GSVector4(sx, -sy, 1.0f / UINT_MAX, 0.0f);
+		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
 		// gs
 
 		GSDeviceDX::GSSelector gs_sel;
@@ -247,7 +244,7 @@ public:
 		{
 			ps_sel.atst = ATST_ALWAYS;
 		}
-
+		
 		if(tex)
 		{
 			ps_sel.wms = context->CLAMP.WMS;
@@ -264,23 +261,55 @@ public:
 
 			int tw = (int)(1 << context->TEX0.TW);
 			int th = (int)(1 << context->TEX0.TH);
+			
+			int multiplier = upscale_Multiplier();
 
 			GSVector4 WH(tw, th, w, h);
-						
-			//if      (w >   0 && w < 129) { adjust_size = 0.0001f; adjust_offset = -0.000000f; } //0.07f for ar tonelico but max 0.007f for shadow hearts)
-			//else if (w > 128 && w < 257) { adjust_size = 0.0010f; adjust_offset = -0.000000f; } //0.007f; WA games want stuffx at 0.52
-			//else if (w > 256 && w < 513) { adjust_size = 0.4000f; adjust_offset = -0.000000f; } //offset -0.0005f;
-			//else if (w > 512 && w < 1025){ adjust_size = 0.4000f; adjust_offset = -0.000000f; } //TotA battle blur wants -0.000015f, but that's too much for WA games.
-
-			//adjust_offset = -0.001f; } 	//0.07f for ar tonelico but max 0.007f for shadow hearts)
-			//adjust_offset = 0.0002f; }   	//0.007f;
-			//adjust_offset = -0.0005f; }	//offset -0.0005f;
-			//adjust_offset = -0.000006f; } //TotA battle blur wants -0.000015f, but that's too much for WA games.
+			
+			//Try to avoid small, common glitches with upscaling. This only takes care of slight
+			//variations however. The bigger ones, where upscaling intruduces pixels with no data
+			//cannot be fixed generally here. (Wild Arms games do this with their text.)
+			if ( multiplier == 2 ) {
+				if		(tw < 17)    {}
+				else if	(tw < 33)    {}
+				else if	(tw < 65)    {}
+				else if	(tw < 129)   {}
+				else if	(tw < 257)   {}
+				else if	(tw < 513)   {vs_cb.VertexScale.x *= 1.0f - ((float)1 * -0.00002f); }
+				else if	(tw < 1025)  {}
+				
+				if		(th < 17)    {}
+				else if	(th < 33)    {}
+				else if	(th < 65)    {}
+				else if	(th < 129)   {}
+				else if	(th < 257)   {}
+				else if	(th < 513)   {vs_cb.VertexScale.y *= 1.0f - ((float)1 * -0.00001f); }
+				else if	(th < 1025)  {}
+			}
 
 			if(PRIM->FST)
 			{
-				vs_cb.TextureScale = GSVector4((1.0f / 16)) / (WH.xyxy() + adjust_size);
-
+				vs_cb.TextureScale = GSVector4(1.0f / 16) / WH.xyxy();
+				//Try to avoid small, common glitches with upscaling. This only takes care of slight
+				//variations however. The bigger ones, where upscaling intruduces pixels with no data
+				//cannot be fixed generally here. (Wild Arms games do this with their text.)
+				if ( multiplier == 2 ) {
+					if		(tw < 17)    {}
+					else if	(tw < 33)    {}
+					else if	(tw < 65)    {}
+					else if	(tw < 129)   {vs_cb.TextureScale.x *= 1.0f - ((float)4 * 0.0001f); }
+					else if	(tw < 257)   {vs_cb.TextureScale.x *= 1.0f - ((float)2 * 0.0001f);}
+					else if	(tw < 513)   {vs_cb.TextureScale.x *= 1.0f - ((float)6 * 0.0001f); }
+					else if	(tw < 1025)  {}
+				
+					if		(th < 17)    {}
+					else if	(th < 33)    {vs_cb.TextureScale.y *= 1.0f - ((float)2 * 0.0001f); } //ar tonelico bg
+					else if	(th < 65)    {}
+					else if	(th < 129)   {vs_cb.TextureScale.y *= 1.0f - ((float)2 * 0.0001f); }
+					else if	(th < 257)   {vs_cb.TextureScale.y *= 1.0f - ((float)2 * 0.0001f); }
+					else if	(th < 513)   {vs_cb.TextureScale.y *= 1.0f - ((float)4 * 0.0001f); }
+					else if	(th < 1025)  {}
+				}
 				ps_sel.fst = 1;
 			}
 
@@ -302,9 +331,7 @@ public:
 		{
 			ps_sel.tfx = 4;
 		}
-		
-		vs_cb.VertexScale  = GSVector4(sx, -sy, 1.0f / UINT_MAX, 0.0f);
-		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1 + adjust_offset, -(oy * sy + oy2 + 1 + adjust_offset), 0.0f, -1.0f);
+
 		// rs
 
 		GSVector4i scissor = GSVector4i(GSVector4(rt->GetScale()).xyxy() * context->scissor.in).rintersect(GSVector4i(rt->GetSize()).zwxy());
