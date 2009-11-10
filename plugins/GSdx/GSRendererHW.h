@@ -563,7 +563,7 @@ protected:
 			int testh = GetDisplayRect().height() * multiplier;
 			//on startup testh and testw are 1 for a while (invalid)
 			if ((testh > m_height) && testh != 1) {
-				m_height=testh*multiplier;
+				m_height=testh;
 				//printf("changed height > %d\n", m_height );
 			}
 			else if (testh == 1)return;
