@@ -104,16 +104,8 @@ namespace Implementations
 
 		// FIXME: Some of the trace logs will require recompiler resets to be activated properly.
 		//  But since those haven't been implemented yet, no point in implementing that here either.
-
-		char* message;
 		const_cast<Pcsx2Config&>(EmuConfig).Trace.Enabled = !EmuConfig.Trace.Enabled;
-
-		if (EmuConfig.Trace.Enabled)
-            sprintf(message, "Logging Enabled.");
-        else
-            sprintf(message, "Logging Disabled.");
-
-		GSprintf(10, message);
+		GSprintf(10, const_cast<char*>(EmuConfig.Trace.Enabled ? "Logging Enabled." : "Logging Disabled."));
 	}
 
 	void Sys_FreezeGS()
