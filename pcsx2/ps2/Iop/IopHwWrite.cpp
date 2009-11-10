@@ -30,7 +30,7 @@ template< typename T >
 static __forceinline void _generic_write( u32 addr, T val )
 {
 	int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
-	PSXHW_LOG( "HwWrite%d to %s, addr 0x%08x = 0x%08x\n", bitsize, _log_GetIopHwName<T>(addr), addr, val );
+	IopHwTraceLog<T>( addr, val, "Write" );
 	psxHu(addr) = val;
 }
 
@@ -46,7 +46,7 @@ static __forceinline T _generic_read( u32 addr )
 	int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
 
 	T ret = psxHu(addr);
-	PSXHW_LOG( "HwRead%d from %s, addr 0x%08x = 0x%08x\n", bitsize, _log_GetIopHwName<T>(addr), addr, ret );
+	IopHwTraceLog<T>( addr, ret, "Read" );
 	return ret;
 }
 
@@ -100,7 +100,7 @@ void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 		break;
 	}
 
-	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x\n", _log_GetIopHwName<mem8_t>(addr), addr, val );
+	IopHwTraceLog<mem8_t>( addr, val, "Write" );
 }
 
 static char g_pbuf[1024];
@@ -128,8 +128,8 @@ void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 		}
 	}
 
-	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>(addr), addr, psxHu8(addr) );
 	psxHu8( addr ) = val;
+	IopHwTraceLog<mem8_t>( addr, val, "Write" );
 }
 
 void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
@@ -142,8 +142,7 @@ void __fastcall iopHwWrite8_Page8( u32 addr, mem8_t val )
 	else
 		psxHu8( addr ) = val;
 
-	PSXHW_LOG( "HwWrite8 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>(addr), addr, psxHu8(addr) );
-
+	IopHwTraceLog<mem8_t>( addr, val, "Write" );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -450,9 +449,7 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 		}
 	}
 
-	PSXHW_LOG( "HwWrite%s to %s, addr 0x%08x = 0x%04x",
-		sizeof(T) == 2 ? "16" : "32", _log_GetIopHwName<T>( addr ), addr, val
-	);
+	IopHwTraceLog<T>( addr, val, "Write" );
 }
 
 
@@ -468,7 +465,7 @@ void __fastcall iopHwWrite16_Page3( u32 addr, mem16_t val )
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	pxAssert( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
-	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, val );
+	IopHwTraceLog<mem16_t>( addr, val, "Write" );
 }
 
 void __fastcall iopHwWrite16_Page8( u32 addr, mem16_t val )
@@ -476,7 +473,7 @@ void __fastcall iopHwWrite16_Page8( u32 addr, mem16_t val )
 	// all addresses are assumed to be prefixed with 0x1f808xxx:
 	pxAssert( (addr >> 12) == 0x1f808 );
 	psxHu16(addr) = val;
-	PSXHW_LOG( "HwWrite16 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, val );
+	IopHwTraceLog<mem16_t>( addr, val, "Write" );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -491,7 +488,7 @@ void __fastcall iopHwWrite32_Page3( u32 addr, mem32_t val )
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	pxAssert( (addr >> 12) == 0x1f803 );
 	psxHu16(addr) = val;
-	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem32_t>( addr ), addr, val );
+	IopHwTraceLog<mem32_t>( addr, val, "Write" );
 }
 
 void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
@@ -538,7 +535,7 @@ void __fastcall iopHwWrite32_Page8( u32 addr, mem32_t val )
 	}
 	else psxHu32(addr) = val;
 
-	PSXHW_LOG( "HwWrite32 to %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem32_t>( addr ), addr, val );
+	IopHwTraceLog<mem32_t>( addr, val, "Write" );
 }
 
 }

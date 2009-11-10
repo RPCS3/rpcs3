@@ -242,8 +242,6 @@ mem16_t __fastcall _ext_memRead16(u32 mem)
 	{
 		case 1: // hwm
 			return hwRead16(mem);
-		case 2: // psh
-			return psxHwRead16(mem);
 		case 4: // b80
 			MEM_LOG("b800000 Memory read16 address %x", mem);
 			return 0;
@@ -343,8 +341,6 @@ void __fastcall _ext_memWrite16(u32 mem, mem16_t value)
 		case 1: // hwm
 			hwWrite16(mem, value);
 			return;
-		case 2: // psh
-			psxHwWrite16(mem, value); return;
 		case 5: // ba0
 			MEM_LOG("ba00000 Memory write16 to  address %x with data %x", mem, value);
 			return;

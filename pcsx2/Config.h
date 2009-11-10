@@ -55,6 +55,207 @@ enum PluginsEnum_t
 #define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"
 
 // --------------------------------------------------------------------------------------
+//  TraceFiltersEE
+// --------------------------------------------------------------------------------------
+struct TraceFiltersEE
+{
+	BITFIELD32()
+	bool
+		m_EnableAll		:1,		// Master Enable switch (if false, no logs at all)
+
+		m_Bios			:1,		// SYSCALL, RPCs, etc.
+		m_Memory		:1,		// memory accesses (*all* loads and stores)
+		m_Cache			:1,		// Data Cache (Unimplemented)
+		m_SysCtrl		:1,		// TLB logs, PERF logs, Debug register logs
+
+		m_VIFunpack		:1,
+		m_GIFtag		:1,
+
+		m_EnableDisasm	:1,
+		m_R5900			:1,		// instructions, branches, and exception vectors (includes COP0)
+		m_COP0			:1,		// System Control instructions
+		m_COP1			:1,		// EE FPU instructions
+		m_COP2			:1,		// VU0 macro mode instructions and pipeline states
+		m_VU0micro		:1,
+		m_VU1micro		:1,
+
+		m_EnableHardware:1,
+		m_KnownHw		:1,		// Known and handled HW Registers
+		m_UnknownHw		:1,		// Unknown/Unhandled Hardware Registers
+		m_DMA			:1,		// DMA Log filter, to allow for filtering HW separate of the verbose Known Registers.
+		
+		m_EnableEvents	:1,		// Enables logging of event-driven activity -- counters, DMAs, etc.
+		m_Counters		:1,		// EE's counters!
+		m_VIF			:1,
+		m_GIF			:1,
+		m_IPU			:1,
+		m_SPR			:1;		// Scratchpad Ram DMA
+	BITFIELD_END
+	
+	bool Enabled() const		{ return m_EnableAll; }
+	bool DisasmEnabled() const	{ return m_EnableAll && m_EnableDisasm; }
+	bool HwEnabled() const		{ return m_EnableAll && m_EnableHardware; }
+	bool EventsEnabled() const	{ return m_EnableAll && m_EnableEvents; }
+
+	bool Bios() const			{ return m_EnableAll && m_Bios; }
+	bool Memory() const			{ return m_EnableAll && m_Memory; }
+	bool Cache() const			{ return m_EnableAll && m_Cache; }
+	bool SysCtrl() const		{ return m_EnableAll && m_SysCtrl; }
+
+	bool GIFtag() const			{ return m_EnableAll && m_GIFtag; }
+	bool VIFunpack() const		{ return m_EnableAll && m_VIFunpack; }
+
+	bool Counters() const		{ return EventsEnabled() && m_Counters; }
+	bool VIF() const			{ return EventsEnabled() && m_VIF; }
+	bool GIF() const			{ return EventsEnabled() && m_GIF; }
+	bool IPU() const			{ return EventsEnabled() && m_IPU; }
+	bool SPR() const			{ return EventsEnabled() && m_SPR; }
+
+	bool R5900() const			{ return DisasmEnabled() && m_R5900; }
+	bool COP0() const			{ return DisasmEnabled() && m_COP0; }
+	bool COP1() const			{ return DisasmEnabled() && m_COP1; }
+	bool COP2() const			{ return DisasmEnabled() && m_COP2; }
+	bool VU0micro() const		{ return DisasmEnabled() && m_VU0micro; }
+	bool VU1micro() const		{ return DisasmEnabled() && m_VU1micro; }
+
+	bool KnownHw() const		{ return HwEnabled() && m_KnownHw; }
+	bool UnknownHw() const		{ return HwEnabled() && m_UnknownHw; }
+	bool DMA() const			{ return HwEnabled() && m_DMA; }
+
+	TraceFiltersEE()
+	{
+		bitset = 0;
+	}
+
+	void LoadSave( IniInterface& conf );
+
+	bool operator ==( const TraceFiltersEE& right ) const
+	{
+		return OpEqu( bitset );
+	}
+
+	bool operator !=( const TraceFiltersEE& right ) const
+	{
+		return !this->operator ==( right );
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  TraceFiltersIOP
+// --------------------------------------------------------------------------------------
+struct TraceFiltersIOP
+{
+	BITFIELD32()
+	bool
+		m_EnableAll		:1,		// Master Enable switch (if false, no logs at all)
+		m_Bios			:1,		// SYSCALL, RPCs, etc.
+		m_Memory		:1,		// memory accesses (*all* loads and stores)
+
+		m_EnableDisasm	:1,
+		m_R3000A		:1,		// instructions. branches, and exception vectors
+		m_COP2			:1,		// PS1 Triangle helper (disabled in PS2 mode)
+
+		m_EnableHardware:1,
+		m_KnownHw		:1,		// Known and handled HW Registers
+		m_UnknownHw		:1,		// Unknown/Unhandled Hardware Registers
+		m_DMA			:1,		// DMA Log filter, to allow for filtering HW separate of the verbose Known Registers.
+
+		m_EnableEvents	:1,		// Enables logging of event-driven activity -- counters, DMAs, etc.
+		m_Counters		:1,		// IOP's counters!
+		m_Memcards		:1,
+		m_PAD			:1,
+		m_SPU2			:1,
+		m_USB			:1,
+		m_FW			:1,
+		m_CDVD			:1,		// CDROM or CDVD activity (depends on game media type)
+
+		m_GPU			:1;		// PS1's GPU (currently unimplemented and uncategorized)
+	BITFIELD_END
+
+	bool Enabled() const		{ return m_EnableAll; }
+	bool DisasmEnabled() const	{ return m_EnableAll && m_EnableDisasm; }
+	bool HwEnabled() const		{ return m_EnableAll && m_EnableHardware; }
+	bool EventsEnabled() const	{ return m_EnableAll && m_EnableEvents; }
+
+	bool Bios() const			{ return m_EnableAll && m_Bios; }
+	bool Memory() const			{ return m_EnableAll && m_Memory; }
+
+	bool Counters() const		{ return EventsEnabled() && m_Counters; }
+	bool Memcards() const		{ return EventsEnabled() && m_Memcards; }
+	bool PAD() const			{ return EventsEnabled() && m_PAD; }
+	bool SPU2() const			{ return EventsEnabled() && m_SPU2; }
+	bool USB() const			{ return EventsEnabled() && m_USB; }
+	bool FW() const				{ return EventsEnabled() && m_FW; }
+	bool CDVD() const			{ return EventsEnabled() && m_CDVD; }
+
+	bool R3000A() const			{ return DisasmEnabled() && m_R3000A; }
+	bool COP2() const			{ return DisasmEnabled() && m_COP2; }
+
+	bool KnownHw() const		{ return HwEnabled() && m_KnownHw; }
+	bool UnknownHw() const		{ return HwEnabled() && m_UnknownHw; }
+	bool DMA() const			{ return HwEnabled() && m_DMA; }
+
+	TraceFiltersIOP()
+	{
+		bitset = 0;
+	}
+
+	void LoadSave( IniInterface& conf );
+
+	bool operator ==( const TraceFiltersIOP& right ) const
+	{
+		return OpEqu( bitset );
+	}
+
+	bool operator !=( const TraceFiltersIOP& right ) const
+	{
+		return !this->operator ==( right );
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  TraceLogFilters
+// --------------------------------------------------------------------------------------
+struct TraceLogFilters
+{
+	// Enabled - global toggle for high volume logging.  This is effectively the equivalent to
+	// (EE.Enabled() || IOP.Enabled() || SIF) -- it's cached so that we can use the macros
+	// below to inline the conditional check.  This is desirable because these logs are
+	// *very* high volume, and debug builds get noticably slower if they have to invoke
+	// methods/accessors to test the log enable bits.  Debug builds are slow enough already,
+	// so I prefer this to help keep them usable.
+	bool	Enabled;
+
+	bool	SIF;			// SIF DMA Activity (both EE and IOP sides)
+
+	TraceFiltersEE	EE;
+	TraceFiltersIOP	IOP;
+
+	TraceLogFilters()
+	{
+		Enabled	= false;
+		SIF		= false;
+	}
+
+	void LoadSave( IniInterface& conf );
+	
+	bool operator ==( const TraceLogFilters& right ) const
+	{
+		return OpEqu( Enabled ) && OpEqu( SIF ) && OpEqu( EE ) && OpEqu( IOP );
+	}
+
+	bool operator !=( const TraceLogFilters& right ) const
+	{
+		return !this->operator ==( right );
+	}
+};
+
+struct ConsoleLogFilters
+{
+	bool ELF;
+};
+
+// --------------------------------------------------------------------------------------
 //  Pcsx2Config class
 // --------------------------------------------------------------------------------------
 // This is intended to be a public class library between the core emulator and GUI only.
@@ -67,9 +268,8 @@ enum PluginsEnum_t
 // use the provided functions to lock the emulation into a safe state and then apply
 // chances on the necessary scope (see Core_Pause, Core_ApplySettings, and Core_Resume).
 //
-class Pcsx2Config
+struct Pcsx2Config
 {
-public:
 	struct ProfilerOptions
 	{
 		BITFIELD32()
@@ -208,14 +408,14 @@ public:
 	{
 		BITFIELD32()
 			bool
-				VuAddSubHack:1,		// Fix for Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
-				VuClipFlagHack:1,	// Fix for Persona games, maybe others. It's to do with the VU clip flag (again).
-				FpuCompareHack:1,	// Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
-				FpuMulHack:1,		// Fix for Tales of Destiny hangs.
-				FpuNegDivHack:1,	// Fix for Gundam games messed up camera-view.
-				DMAExeHack:1,       // Fix for Fatal Frame; breaks Gust and Tri-Ace games.
-				XgKickHack:1,		// Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
-                MpegHack:1;         // Fix for Mana Khemia 1, breaks Digital Devil Saga.
+				VuAddSubHack	:1,		// Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
+				VuClipFlagHack	:1,		// Persona games, maybe others. It's to do with the VU clip flag (again).
+				FpuCompareHack	:1,		// Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
+				FpuMulHack		:1,		// Tales of Destiny hangs.
+				FpuNegDivHack	:1,		// Gundam games messed up camera-view.
+				DMAExeHack		:1,		// Fatal Frame; breaks Gust and Tri-Ace games.
+				XgKickHack		:1,		// Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+                MpegHack		:1;		// Mana Khemia 1, breaks Digital Devil Saga.
 		BITFIELD_END
 
 		// all gamefixes are disabled by default.
@@ -238,11 +438,11 @@ public:
 	{
 		BITFIELD32()
 			bool
-				IopCycleRate_X2:1,	// enables the x2 multiplier of the IOP cyclerate
-				IntcStat:1,			// tells Pcsx2 to fast-forward through intc_stat waits.
-				BIFC0:1,			// enables BIFC0 detection and fast-forwarding
-				vuFlagHack:1,		// microVU specific flag hack; Can cause Infinite loops, SPS, etc...
-				vuMinMax:1;			// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
+				IopCycleRate_X2	:1,		// enables the x2 multiplier of the IOP cyclerate
+				IntcStat		:1,		// tells Pcsx2 to fast-forward through intc_stat waits.
+				BIFC0			:1,		// enables BIFC0 detection and fast-forwarding
+				vuFlagHack		:1,		// microVU specific flag hack; Can cause Infinite loops, SPS, etc...
+				vuMinMax		:1;		// microVU specific MinMax hack; Can cause SPS, Black Screens,  etc...
 		BITFIELD_END
 
 		u8	EECycleRate;		// EE cycle rate selector (1.0, 1.5, 2.0)
@@ -261,9 +461,7 @@ public:
 			return !this->operator ==( right );
 		}
 	};
-
-public:
-
+	
 	BITFIELD32()
 		bool
 			CdvdVerboseReads:1,		// enables cdvd read activity verbosely dumped to the console
@@ -285,6 +483,9 @@ public:
 	SpeedhackOptions	Speedhacks;
 	GamefixOptions		Gamefixes;
 	ProfilerOptions		Profiler;
+
+	ConsoleLogFilters	Log;
+	TraceLogFilters		Trace;
 
 	wxFileName			BiosFilename;
 

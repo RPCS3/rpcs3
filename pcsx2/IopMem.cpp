@@ -128,12 +128,6 @@ u8 __fastcall iopMemRead8(u32 mem)
 			case 0x3000: return IopMemory::iopHwRead8_Page3(mem);
 			case 0x8000: return IopMemory::iopHwRead8_Page8(mem);
 
-			// code for regression testing -- selectively enable these to help narrow out
-			// which register became buggy with the new Hw handlers.
-			//case 0x1000: return psxHwRead8(mem);
-			//case 0x3000: return psxHwRead8(mem);
-			//case 0x8000: return psxHwRead8(mem);
-			
 			default:
 				return psxHu8(mem);
 		}
@@ -172,12 +166,6 @@ u16 __fastcall iopMemRead16(u32 mem)
 			case 0x3000: return IopMemory::iopHwRead16_Page3(mem);
 			case 0x8000: return IopMemory::iopHwRead16_Page8(mem);
 
-			// code for regression testing -- selectively enable these to help narrow out
-			// which register became buggy with the new Hw handlers.
-			//case 0x1000: return psxHwRead16(mem);
-			//case 0x3000: return psxHwRead16(mem);
-			//case 0x8000: return psxHwRead16(mem);
-			
 			default:
 				return psxHu16(mem);
 		}
@@ -238,12 +226,6 @@ u32 __fastcall iopMemRead32(u32 mem)
 			case 0x3000: return IopMemory::iopHwRead32_Page3(mem);
 			case 0x8000: return IopMemory::iopHwRead32_Page8(mem);
 
-			// code for regression testing -- selectively enable these to help narrow out
-			// which register became buggy with the new Hw handlers.
-			//case 0x1000: return psxHwRead32(mem);
-			//case 0x3000: return psxHwRead32(mem);
-			//case 0x8000: return psxHwRead32(mem);
-			
 			default:
 				return psxHu32(mem);
 		}
@@ -303,25 +285,10 @@ void __fastcall iopMemWrite8(u32 mem, u8 value)
 	{
 		switch( mem & 0xf000 )
 		{
-			// Regression testing: selectively pass ranges of registers to new or old
-			// handlers.  Helps narrow out which area of registers is erroring out.
-			/*case 0x1000:
-				if( mem >= 0x1f801000 )
-					psxHwWrite8( mem, value );
-				else
-					IopMemory::iopHwWrite8_Page1(mem,value);
-			break;*/
-
 			case 0x1000: IopMemory::iopHwWrite8_Page1(mem,value); break;
 			case 0x3000: IopMemory::iopHwWrite8_Page3(mem,value); break;
 			case 0x8000: IopMemory::iopHwWrite8_Page8(mem,value); break;
 
-			// code for regression testing -- selectively enable these to help narrow out
-			// which register became buggy with the new Hw handlers.
-			//case 0x1000: psxHwWrite8(mem,value); break;
-			//case 0x3000: psxHwWrite8(mem,value); break;
-			//case 0x8000: psxHwWrite8(mem,value); break;
-			
 			default:
 				psxHu8(mem) = value;
 			break;
@@ -365,23 +332,10 @@ void __fastcall iopMemWrite16(u32 mem, u16 value)
 	{
 		switch( mem & 0xf000 )
 		{
-			// Regression testing: selectively pass ranges of registers to new or old
-			// handlers.  Helps narrow out which area of registers is erroring out.
-			/*case 0x1000:
-				if( mem >= 0x1f801000 )
-					psxHwWrite16( mem, value );
-				else
-					IopMemory::iopHwWrite16_Page1(mem,value);
-			break;*/
-
 			case 0x1000: IopMemory::iopHwWrite16_Page1(mem,value); break;
 			case 0x3000: IopMemory::iopHwWrite16_Page3(mem,value); break;
 			case 0x8000: IopMemory::iopHwWrite16_Page8(mem,value); break;
 
-			//case 0x1000: psxHwWrite16(mem,value); break;
-			//case 0x3000: psxHwWrite16(mem,value); break;
-			//case 0x8000: psxHwWrite16(mem,value); break;
-			
 			default:
 				psxHu16(mem) = value;
 			break;
@@ -449,22 +403,9 @@ void __fastcall iopMemWrite32(u32 mem, u32 value)
 	{
 		switch( mem & 0xf000 )
 		{
-			// Regression testing: selectively pass ranges of registers to new or old
-			// handlers.  Helps narrow out which area of registers is erroring out.
-			/*case 0x1000:
-				if( mem >= 0x1f801528 )
-					psxHwWrite32( mem, value );
-				else
-					IopMemory::iopHwWrite32_Page1(mem,value);
-			break;*/
-
 			case 0x1000: IopMemory::iopHwWrite32_Page1(mem,value); break;
 			case 0x3000: IopMemory::iopHwWrite32_Page3(mem,value); break;
 			case 0x8000: IopMemory::iopHwWrite32_Page8(mem,value); break;
-
-			//case 0x1000: psxHwWrite32(mem,value); break;
-			//case 0x3000: psxHwWrite32(mem,value); break;
-			//case 0x8000: psxHwWrite32(mem,value); break;
 			
 			default:
 				psxHu32(mem) = value;

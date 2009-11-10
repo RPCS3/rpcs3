@@ -20,52 +20,16 @@
 #include "wxHelpers.h"
 #include "CheckedStaticBox.h"
 
+#include "Utilities/HashMap.h"
+
+using namespace HashTools;
+
 namespace Dialogs {
 
 class LogOptionsDialog: public wxDialogWithHelpers
 {
 public:
 	LogOptionsDialog( wxWindow* parent=NULL, int id=DialogId_LogOptions );
-
-protected:
-	
-	// ----------------------------------------------------------------------------
-	class iopLogOptionsPanel : public CheckedStaticBox
-	{
-	public:
-		iopLogOptionsPanel( wxWindow* parent );
-		void OnLogChecked(wxCommandEvent &event);
-
-	};
-	
-	// ----------------------------------------------------------------------------
-	class eeLogOptionsPanel : public CheckedStaticBox
-	{
-	public:
-		eeLogOptionsPanel( wxWindow* parent );
-		void OnLogChecked(wxCommandEvent &event);
-
-	protected:
-		class DisasmPanel : public CheckedStaticBox
-		{
-		public:
-			DisasmPanel( wxWindow* parent );
-			void OnLogChecked(wxCommandEvent &event);
-		};
-
-		class HwPanel : public CheckedStaticBox
-		{
-		public:
-			HwPanel( wxWindow* parent );
-			void OnLogChecked(wxCommandEvent &event);
-		};
-	};
-
-
-public:
-	void LogChecked(wxCommandEvent &event);
-	
-protected:
 };
 
-};	// end namespace Dialogs
+}	// end namespace Dialogs

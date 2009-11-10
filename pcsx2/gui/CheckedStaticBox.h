@@ -32,9 +32,6 @@ public:
 	void SetValue( bool val );
 	bool GetValue() const;
 
-	using wxPanelWithHelpers::AddCheckBox;		// allows access to overloaded parent :)
-	wxCheckBox& AddCheckBox( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-
 public:
 	// Event handler for click events for the main checkbox (default behavior: enables/disables all child controls)
 	// This function can be overridden to implement custom handling of check enable/disable behavior.

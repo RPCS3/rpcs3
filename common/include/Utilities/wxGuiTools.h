@@ -150,8 +150,14 @@ public:
 	static void SetManualBusyCursor( BusyCursorType busytype );
 };
 
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 extern wxRect wxGetDisplayArea();
+
+extern wxString pxFormatToolTipText( wxWindow* wind, const wxString& src );
+extern void pxSetToolTip( wxWindow* wind, const wxString& src );
+extern void pxSetToolTip( wxWindow& wind, const wxString& src );
+
 
 #endif

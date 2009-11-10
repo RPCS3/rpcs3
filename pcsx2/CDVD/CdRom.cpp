@@ -121,7 +121,7 @@ static void ReadTrack() {
 	cdr.Prev[1] = itob(cdr.SetSector[1]);
 	cdr.Prev[2] = itob(cdr.SetSector[2]);
 
-	CDR_LOG("KEY *** %x:%x:%x", cdr.Prev[0], cdr.Prev[1], cdr.Prev[2]);
+	CDVD_LOG("KEY *** %x:%x:%x", cdr.Prev[0], cdr.Prev[1], cdr.Prev[2]);
 	cdr.RErr = DoCDVDreadTrack(msf_to_lsn(cdr.SetSector), CDVD_MODE_2340);
 }
 
@@ -475,7 +475,7 @@ void  cdrInterrupt() {
 	if (cdr.Stat != NoIntr && cdr.Reg2 != 0x18)
 		psxHu32(0x1070)|= 0x4;
 
-	CDR_LOG("Cdr Interrupt %x\n", Irq);
+	CDVD_LOG("Cdr Interrupt %x\n", Irq);
 }
 
 void  cdrReadInterrupt() {
@@ -488,7 +488,7 @@ void  cdrReadInterrupt() {
 		return;
 	}
 
-	CDR_LOG("KEY END");
+	CDVD_LOG("KEY END");
 
 	cdr.OCUP = 1;
 	SetResultSize(1);
@@ -507,7 +507,7 @@ void  cdrReadInterrupt() {
 
 	if (cdr.RErr == -1)
 	{
-		CDR_LOG(" err\n");
+		CDVD_LOG(" err\n");
 		memzero(cdr.Transfer);
 		cdr.Stat = DiskError;
 		cdr.Result[0] |= 0x01;
@@ -518,7 +518,7 @@ void  cdrReadInterrupt() {
 
 	cdr.Stat = DataReady;
 
-	CDR_LOG(" %x:%x:%x", cdr.Transfer[0], cdr.Transfer[1], cdr.Transfer[2]);
+	CDVD_LOG(" %x:%x:%x", cdr.Transfer[0], cdr.Transfer[1], cdr.Transfer[2]);
 
 	cdr.SetSector[2]++;
 	
@@ -534,7 +534,7 @@ void  cdrReadInterrupt() {
 	cdr.Readed = 0;
 
 	if ((cdr.Transfer[4+2] & 0x80) && (cdr.Mode & 0x2)) { // EOF
-		CDR_LOG("AutoPausing Read");
+		CDVD_LOG("AutoPausing Read");
 		AddIrqQueue(CdlPause, 0x800);
 	}
 	else {
@@ -572,7 +572,7 @@ u8 cdrRead0(void) {
 	// what means the 0x10 and the 0x08 bits? i only saw it used by the bios
 	cdr.Ctrl|=0x18;
 
-	CDR_LOG("CD0 Read: %x", cdr.Ctrl);
+	CDVD_LOG("CD0 Read: %x", cdr.Ctrl);
 	return psxHu8(0x1800) = cdr.Ctrl;
 }
 
@@ -582,7 +582,7 @@ cdrWrite0:
 */
 
 void cdrWrite0(u8 rt) {
-	CDR_LOG("CD0 write: %x", rt);
+	CDVD_LOG("CD0 write: %x", rt);
 
 	cdr.Ctrl = rt | (cdr.Ctrl & ~0x3);
 
@@ -601,14 +601,14 @@ u8 cdrRead1(void) {
 	else 
 		psxHu8(0x1801) = 0;
 	
-	CDR_LOG("CD1 Read: %x", psxHu8(0x1801));
+	CDVD_LOG("CD1 Read: %x", psxHu8(0x1801));
 	return psxHu8(0x1801);
 }
 
 void cdrWrite1(u8 rt) {
 	int i;
 
-	CDR_LOG("CD1 write: %x (%s)", rt, CmdName[rt]);
+	CDVD_LOG("CD1 write: %x (%s)", rt, CmdName[rt]);
 	cdr.Cmd = rt;
 	cdr.OCUP = 0;
 
@@ -733,7 +733,7 @@ void cdrWrite1(u8 rt) {
 			break;
 
 		case CdlSetmode:
-			CDR_LOG("Setmode %x", cdr.Param[0]);
+			CDVD_LOG("Setmode %x", cdr.Param[0]);
 		
 			cdr.Mode = cdr.Param[0];
 			cdr.Ctrl|= 0x80;
@@ -812,7 +812,7 @@ void cdrWrite1(u8 rt) {
 			break;
 
 		default:
-			CDR_LOG("Unknown Cmd: %x\n", cdr.Cmd);
+			CDVD_LOG("Unknown Cmd: %x\n", cdr.Cmd);
 			return;
     }
 	if (cdr.Stat != NoIntr)
@@ -828,12 +828,12 @@ u8 cdrRead2(void) {
 		ret = *cdr.pTransfer++;
 	}
 
-	CDR_LOG("CD2 Read: %x", ret);
+	CDVD_LOG("CD2 Read: %x", ret);
 	return ret;
 }
 
 void cdrWrite2(u8 rt) {
-	CDR_LOG("CD2 write: %x", rt);
+	CDVD_LOG("CD2 write: %x", rt);
 	
 	if (cdr.Ctrl & 0x1) {
 		switch (rt) {
@@ -866,12 +866,12 @@ u8 cdrRead3(void) {
 			psxHu8(0x1803) = 0xff;
 	} else psxHu8(0x1803) = 0;
 
-	CDR_LOG("CD3 Read: %x", psxHu8(0x1803));
+	CDVD_LOG("CD3 Read: %x", psxHu8(0x1803));
 	return psxHu8(0x1803);
 }
 
 void cdrWrite3(u8 rt) {
-	CDR_LOG("CD3 write: %x", rt);
+	CDVD_LOG("CD3 write: %x", rt);
 	
 	if (rt == 0x07 && cdr.Ctrl & 0x1) {
 		cdr.Stat = 0;
@@ -898,13 +898,13 @@ void cdrWrite3(u8 rt) {
 void psxDma3(u32 madr, u32 bcr, u32 chcr) {
 	u32 cdsize;
 
-	CDR_LOG("*** DMA 3 *** %lx addr = %lx size = %lx", chcr, madr, bcr);
+	CDVD_LOG("*** DMA 3 *** %lx addr = %lx size = %lx", chcr, madr, bcr);
 
 	switch (chcr) {
 		case 0x11000000:
 		case 0x11400100:
 			if (cdr.Readed == 0) {
-				CDR_LOG("*** DMA 3 *** NOT READY");
+				CDVD_LOG("*** DMA 3 *** NOT READY");
 				return;
 			}
 
@@ -919,7 +919,7 @@ void psxDma3(u32 madr, u32 bcr, u32 chcr) {
 			return;
 
 		default:
-			CDR_LOG("Unknown cddma %lx", chcr);
+			CDVD_LOG("Unknown cddma %lx", chcr);
 			break;
 	}
 	HW_DMA3_CHCR &= ~0x01000000;
@@ -933,7 +933,7 @@ s32 cdvdDmaRead(s32 channel, u32* data, u32 wordsLeft, u32* wordsProcessed)
 
 	if (cdr.Readed == 0) 
 	{
-		//CDR_LOG("*** DMA 3 *** NOT READY");
+		//CDVD_LOG("*** DMA 3 *** NOT READY");
 		wordsProcessed = 0;
 		return 10000;
 	}

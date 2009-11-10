@@ -80,11 +80,11 @@ wxSizerFlags wxHelpers::SizerFlags::Checkbox()
 }
 
 // This method is used internally to create multi line checkboxes and radio buttons.
-static void _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxString& subtext, const wxString& tooltip, int wrapLen )
+static wxStaticText* _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxString& subtext, const wxString& tooltip, int wrapLen )
 {
 	static const int Indentation = 23;
 
-	if( subtext.IsEmpty() ) return;
+	if( subtext.IsEmpty() ) return NULL;
 
 	wxStaticText* joe = new wxStaticText( parent, wxID_ANY, subtext );
 	if( wrapLen > 0 ) joe->Wrap( wrapLen-Indentation );
@@ -92,6 +92,8 @@ static void _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxStri
 		pxSetToolTip( joe, tooltip );
 	sizer.Add( joe, wxSizerFlags().Border( wxLEFT, Indentation ) );
 	sizer.AddSpacer( 9 );
+
+	return joe;
 }
 
 
@@ -111,6 +113,27 @@ wxCheckBox& wxHelpers::AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wx
 	_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
 
 	return *retval;
+}
+
+pxCheckBox::pxCheckBox(wxPanelWithHelpers* parent, const wxString& label, const wxString& subtext)
+	: wxPanel( parent )
+{
+	m_checkbox		= new wxCheckBox( this, wxID_ANY, label );
+	m_idealWidth	= parent->GetIdealWidth() - 24;
+
+	wxBoxSizer&	mySizer( *new wxBoxSizer(wxVERTICAL) );
+	mySizer.Add( m_checkbox, wxHelpers::SizerFlags::StdExpand() );
+	m_subtext = _appendStaticSubtext( this, mySizer, subtext, wxEmptyString, m_idealWidth );
+
+	SetSizer( &mySizer );
+}
+
+pxCheckBox& pxCheckBox::SetToolTip( const wxString& tip )
+{
+	const wxString wrapped( pxFormatToolTipText(this, tip) );
+	pxSetToolTip( m_checkbox, wrapped );
+	pxSetToolTip( m_subtext, wrapped );
+	return *this;
 }
 
 // ------------------------------------------------------------------------
@@ -280,17 +303,17 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, int idealWidth ) :
-	wxPanel( parent, wxID_ANY )
-,	m_idealWidth( idealWidth )
-,	m_StartNewRadioGroup( true )
+	wxPanel( parent )
 {
+	m_idealWidth			= idealWidth;
+	m_StartNewRadioGroup	= true;
 }
 
 wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size ) :
 	wxPanel( parent, wxID_ANY, pos, size )
-,	m_idealWidth( wxDefaultCoord )
-,	m_StartNewRadioGroup( true )
 {
+	m_idealWidth			= wxDefaultCoord;
+	m_StartNewRadioGroup	= true;
 }
 
 

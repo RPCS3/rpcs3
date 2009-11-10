@@ -203,25 +203,32 @@ const wxCursor& MoreStockCursors::GetArrowWait()
 MoreStockCursors StockCursors;
 
 // --------------------------------------------------------------------------------------
-//  pxSetToolTip
+//  pxFormatToolTipText / pxSetToolTip
 // --------------------------------------------------------------------------------------
 // This is the preferred way to assign tooltips to wxWindow-based objects, as it performs the
 // necessary text wrapping on platforms that need it.  On windows tooltips are wrapped at 600
 // pixels, or 66% of the screen width, whichever is smaller.  GTK and MAC perform internal
 // wrapping, so this function does a regular assignment there.
-void pxSetToolTip( wxWindow* wind, const wxString& src )
-{
-	if( !pxAssert( wind != NULL ) ) return;
 
+wxString pxFormatToolTipText( wxWindow* wind, const wxString& src )
+{
 	// Windows needs manual tooltip word wrapping (sigh).
 	// GTK and Mac are a wee bit more clever (except in GTK tooltips don't show at all
 	// half the time because of some other bug .. sigh)
+
 #ifdef __WXMSW__
+	if( wind == NULL ) return src;		// Silently ignore nulls
 	int whee = wxGetDisplaySize().GetWidth() * 0.75;
-	wind->SetToolTip( pxTextWrapper().Wrap( *wind, src, std::min( whee, 600 ) ).GetResult() );
+	return pxTextWrapper().Wrap( *wind, src, std::min( whee, 600 ) ).GetResult();
 #else
-	wind->SetToolTip( src );
+	return src;
 #endif
+}
+
+void pxSetToolTip( wxWindow* wind, const wxString& src )
+{
+	if( wind == NULL ) return;		// Silently ignore nulls
+	wind->SetToolTip( pxFormatToolTipText(wind, src) );
 }
 
 void pxSetToolTip( wxWindow& wind, const wxString& src )

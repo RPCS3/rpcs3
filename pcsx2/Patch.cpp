@@ -421,7 +421,7 @@ void inifile_command( const wxString& cmd )
 void inifile_process(wxTextFile &f1 )
 {
     Console.WriteLn("inifile_process");
-    for (int i = 0; i < f1.GetLineCount(); i++)
+    for (uint i = 0; i < f1.GetLineCount(); i++)
     {
         inifile_trim(f1[i]);
         if (!f1[i].IsEmpty()) inifile_command(f1[i]);

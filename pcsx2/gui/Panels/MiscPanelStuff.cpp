@@ -19,7 +19,9 @@
 #include "App.h"
 
 #include "ps2/BiosTools.h"
+
 #include <wx/stdpaths.h>
+#include <wx/bookctrl.h>
 
 using namespace wxHelpers;
 
@@ -123,6 +125,13 @@ bool Panels::StaticApplyState::ApplyAll( bool saveOnSuccess )
 {
 	return ApplyPage( -1, saveOnSuccess );
 }
+
+void Panels::BaseApplicableConfigPanel::SetFocusToMe()
+{
+	if( (m_OwnerBook == NULL) || (m_OwnerPage == wxID_NONE) ) return;
+	m_OwnerBook->SetSelection( m_OwnerPage );
+}
+
 
 // -----------------------------------------------------------------------
 Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int idealWidth, bool isFirstTime ) :

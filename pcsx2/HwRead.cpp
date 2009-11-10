@@ -108,7 +108,7 @@ __forceinline mem8_t hwRead8(u32 mem)
 			}
 
 			ret = psHu8(mem);
-			HW_LOG("Unknown Hardware Read 8 from 0x%x = 0x%x", mem, ret);
+			UnknownHW_LOG("Hardware Read 8 from 0x%x = 0x%x", mem, ret);
 			break;
 	}
 
@@ -168,7 +168,7 @@ __forceinline mem16_t hwRead16(u32 mem)
 				return (u16)ret;
 			}
 			ret = psHu16(mem);
-			HW_LOG("Hardware Read16 at 0x%x, value= 0x%x", ret, mem);
+			UnknownHW_LOG("Hardware Read16 at 0x%x, value= 0x%x", ret, mem);
 			break;
 	}
 	return ret;
@@ -375,13 +375,13 @@ void __fastcall hwRead64_generic_INTC_HACK(u32 mem, mem64_t* result )
 	if (mem == INTC_STAT) IntCHackCheck();
 
 	*result = psHu64(mem);
-	HW_LOG("Unknown Hardware Read 64 at %x",mem);
+	UnknownHW_LOG("Hardware Read 64 at %x",mem);
 }
 
 void __fastcall hwRead64_generic(u32 mem, mem64_t* result )
 {
 	*result = psHu64(mem);
-	HW_LOG("Unknown Hardware Read 64 at %x",mem);
+	UnknownHW_LOG("Hardware Read 64 at %x",mem);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -402,7 +402,7 @@ void __fastcall hwRead128_page_01(u32 mem, mem128_t* result )
 void __fastcall hwRead128_page_02(u32 mem, mem128_t* result )
 {
 	// IPU is currently unhandled in 128 bit mode.
-	HW_LOG("Unknown Hardware Read 128 at %x (IPU)",mem);
+	HW_LOG("Hardware Read 128 at %x (IPU)",mem);
 }
 
 void __fastcall hwRead128_generic(u32 mem, mem128_t* out)
@@ -410,5 +410,5 @@ void __fastcall hwRead128_generic(u32 mem, mem128_t* out)
 	out[0] = psHu64(mem);
 	out[1] = psHu64(mem+8);
 
-	HW_LOG("Unknown Hardware Read 128 at %x",mem);
+	UnknownHW_LOG("Hardware Read 128 at %x",mem);
 }

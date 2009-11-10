@@ -33,7 +33,6 @@ namespace wxHelpers
 	extern void Launch( const wxString& path );
 	extern void Launch( const char *path );
 
-
 	namespace SizerFlags
 	{
 		extern wxSizerFlags StdSpace();
@@ -65,14 +64,15 @@ public:
 protected:
 };
 
+
 // --------------------------------------------------------------------------------------
 //  wxPanelWithHelpers
 // --------------------------------------------------------------------------------------
 class wxPanelWithHelpers : public wxPanel
 {
 protected:
-	const int m_idealWidth;
-	bool m_StartNewRadioGroup;
+	int		m_idealWidth;
+	bool	m_StartNewRadioGroup;
 
 public:
 	wxPanelWithHelpers( wxWindow* parent, int idealWidth=wxDefaultCoord );
@@ -94,6 +94,32 @@ protected:
 	}
 };
 
+// --------------------------------------------------------------------------------------
+//  pxCheckBox
+// --------------------------------------------------------------------------------------
+class pxCheckBox : public wxPanel
+{
+protected:
+	wxCheckBox*		m_checkbox;
+	wxStaticText*	m_subtext;
+	int				m_idealWidth;
+
+public:
+	pxCheckBox( wxPanelWithHelpers* parent, const wxString& label, const wxString& subtext=wxEmptyString );
+	virtual ~pxCheckBox() throw() {}
+
+	bool HasSubText() const { return m_subtext != NULL; }
+	const wxStaticText* GetSubText() const { return m_subtext; }
+
+	pxCheckBox& SetToolTip( const wxString& tip );
+
+	operator wxCheckBox*() { return m_checkbox; }
+	operator const wxCheckBox*() const { return m_checkbox; }
+
+	operator wxCheckBox&() { pxAssert( m_checkbox != NULL ); return *m_checkbox; }
+	operator const wxCheckBox&() const { pxAssert( m_checkbox != NULL ); return *m_checkbox; }
+};
+
+
 extern bool pxDialogExists( wxWindowID id );
-extern void pxSetToolTip( wxWindow* wind, const wxString& src );
-extern void pxSetToolTip( wxWindow& wind, const wxString& src );
+

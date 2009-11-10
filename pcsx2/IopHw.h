@@ -289,16 +289,6 @@ extern void psxSetNextBranchDelta( s32 delta );
 extern int iopTestCycle( u32 startCycle, s32 delta );
 extern void _iopTestInterrupts();
 
-// Depreciated : Use iopHwRead* functions defined in IopMem.h instead.
-u8   psxHwRead8 (u32 add);
-u16  psxHwRead16(u32 add);
-u32  psxHwRead32(u32 add);
-
-// Depreciated : Use iopHwWrite* functions defined in IopMem.h instead.
-void psxHwWrite8 (u32 add, u8  value);
-void psxHwWrite16(u32 add, u16 value);
-void psxHwWrite32(u32 add, u32 value);
-
 extern void psxHwReset();
 extern u8   psxHw4Read8 (u32 add);
 extern void psxHw4Write8(u32 add, u8  value);

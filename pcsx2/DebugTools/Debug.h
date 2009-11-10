@@ -66,50 +66,9 @@ namespace R3000A
 }
 
 #ifdef PCSX2_DEVBUILD
-extern bool enableLogging;
 
-struct LogSources
-{
-	bool
-		R5900:1,	// instructions and exception vectors for the R5900 (EE)
-		R3000A:1,	// instructions and exception vectors for the R3000a (IOP)
-	
-		Memory:1,	// memory accesses (loads and stores)
-		Hardware:1,
-		DMA:1,
-		Bios:1,
-		ELF:1,
-		IsoFS:1,		// Iso Filesystem support
-		VU0:1,
-		COP0:1,		// TLB logs, PERF logs, Debug register logs
-		VIF:1,
-		VIFUnpack:1,
-		SPR:1,		// Scratchpad
-		GIF:1,
-		SIF:1,
-		IPU:1,
-		VUMacro:1,	// VU macro mode logs (pipelines)
-		RPC:1,
-		Counters:1,	// EE's counters!
-
-		IopMemory:1,
-		IopHardware:1,
-		IopBios:1,
-		IopDMA:1,
-		IopCnt:1,
-		Memcards:1,
-		Pad:1,
-		CDR:1,
-		CDVD:1,
-		GPU:1,		// PS1's GPU (currently unimplemented)
-		Cache:1,    // Unimplemented.
-		LogToConsole:1;
-};
-
-extern LogSources varLog;
-
-void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, ...);
-void __Log( const char* fmt, ... );
+extern void SourceLog( u16 protocol, u8 source, u32 cpuPc, u32 cpuCycle, const char *fmt, ...);
+extern void __Log( const char* fmt, ... );
 
 extern bool SrcLog_CPU( const char* fmt, ... );
 extern bool SrcLog_COP0( const char* fmt, ... );
@@ -118,7 +77,6 @@ extern bool SrcLog_MEM( const char* fmt, ... );
 extern bool SrcLog_HW( const char* fmt, ... );
 extern bool SrcLog_DMA( const char* fmt, ... );
 extern bool SrcLog_BIOS( const char* fmt, ... );
-extern bool SrcLog_ELF( const char* fmt, ... );
 extern bool SrcLog_VU0( const char* fmt, ... );
 
 extern bool SrcLog_VIF( const char* fmt, ... );
@@ -146,39 +104,44 @@ extern bool SrcLog_CDVD( const char* fmt, ... );
 extern bool SrcLog_GPU( const char* fmt, ... );
 extern bool SrcLog_CACHE( const char* fmt, ... );
 
-#define CPU_LOG  (varLog.R5900) && SrcLog_CPU
-#define MEM_LOG  (varLog.Memory) && SrcLog_MEM
-#define HW_LOG   (varLog.Hardware) && SrcLog_HW
-#define DMA_LOG  (varLog.DMA) && SrcLog_DMA
-#define BIOS_LOG (varLog.Bios) && SrcLog_BIOS
-#define ELF_LOG  (varLog.ELF) && SrcLog_ELF
-#define VU0_LOG  (varLog.VU0) && SrcLog_VU0
-#define COP0_LOG (varLog.COP0) && SrcLog_COP0
-#define VIF_LOG  (varLog.VIF) && SrcLog_VIF
-#define VIFUNPACK_LOG  (varLog.VIFUnpack) && SrcLog_VIFUNPACK
-#define SPR_LOG  (varLog.SPR) && SrcLog_SPR
-#define GIF_LOG  (varLog.GIF) && SrcLog_GIF
-#define SIF_LOG  (varLog.SIF) && SrcLog_SIF
-#define IPU_LOG  (varLog.IPU) && SrcLog_IPU
-#define VUM_LOG  (varLog.VUMacro) && SrcLog_VUM
-#define RPC_LOG  (varLog.RPC) && SrcLog_RPC
-#define EECNT_LOG (varLog.Counters) && SrcLog_EECNT
-#define ISOFS_LOG  (varLog.IsoFS) && SrcLog_ISOFS
+// Helper macro for cut&paste.  Note that we intentionally use a top-level *inline* bitcheck
+// against Trace.Enabled, to avoid extra overhead in Debug builds when logging is disabled.
+#define macTrace EmuConfig.Trace.Enabled && EmuConfig.Trace
 
-#define PSXCPU_LOG  (varLog.R3000A) && SrcLog_PSXCPU
-#define PSXMEM_LOG  (varLog.IopMemory) && SrcLog_PSXMEM
-#define PSXHW_LOG   (varLog.IopHardware) && SrcLog_PSXHW
-#define PSXBIOS_LOG (varLog.IopBios) && SrcLog_PSXBIOS
-#define PSXDMA_LOG  (varLog.IopDMA) && SrcLog_PSXDMA
-#define PSXCNT_LOG  (varLog.IopCnt) && SrcLog_PSXCNT
+#define CPU_LOG			(macTrace.EE.R5900())		&& SrcLog_CPU
+#define MEM_LOG			(macTrace.EE.Memory())		&& SrcLog_MEM
+#define CACHE_LOG		(macTrace.EE.Cache)			&& SrcLog_CACHE
+#define HW_LOG			(macTrace.EE.KnownHw())		&& SrcLog_HW
+#define UnknownHW_LOG	(macTrace.EE.KnownHw())		&& SrcLog_HW
+#define DMA_LOG			(macTrace.EE.DMA())			&& SrcLog_DMA
 
-#define MEMCARDS_LOG (varLog.Memcards) && SrcLog_MEMCARDS
-#define PAD_LOG  (varLog.Pad) && SrcLog_PAD
-#define CDR_LOG  (varLog.CDR) && SrcLog_CDR
-#define GPU_LOG  (varLog.GPU) && SrcLog_GPU
-#define CDVD_LOG  (varLog.CDVD) && SrcLog_CDVD
+#define BIOS_LOG		(macTrace.EE.Bios())		&& SrcLog_BIOS
+#define VU0_LOG			(macTrace.EE.VU0())			&& SrcLog_VU0
+#define SysCtrl_LOG		(macTrace.EE.SysCtrl())		&& SrcLog_COP0
+#define COP0_LOG		(macTrace.EE.COP0())		&& SrcLog_COP0
+#define VIF_LOG			(macTrace.EE.VIF())			&& SrcLog_VIF
+#define SPR_LOG			(macTrace.EE.SPR())			&& SrcLog_SPR
+#define GIF_LOG			(macTrace.EE.GIF())			&& SrcLog_GIF
+#define SIF_LOG			(macTrace.SIF)				&& SrcLog_SIF
+#define IPU_LOG			(macTrace.EE.IPU())			&& SrcLog_IPU
+#define VUM_LOG			(macTrace.EE.COP2())		&& SrcLog_VUM
 
-#define CACHE_LOG  (varLog.Cache) && SrcLog_CACHE
+#define EECNT_LOG		(macTrace.EE.Counters())	&& SrcLog_EECNT
+#define VIFUNPACK_LOG	(macTrace.EE.VIFunpack())	&& SrcLog_VIFUNPACK
+
+
+#define PSXCPU_LOG		(macTrace.IOP.R3000A())		&& SrcLog_PSXCPU
+#define PSXMEM_LOG		(macTrace.IOP.Memory())		&& SrcLog_PSXMEM
+#define PSXHW_LOG		(macTrace.IOP.KnownHw())	&& SrcLog_PSXHW
+#define PSXUnkHW_LOG	(macTrace.IOP.UnknownHw())	&& SrcLog_PSXHW
+#define PSXBIOS_LOG		(macTrace.IOP.Bios())		&& SrcLog_PSXBIOS
+#define PSXDMA_LOG		(macTrace.IOP.DMA())		&& SrcLog_PSXDMA
+#define PSXCNT_LOG		(macTrace.IOP.Counters())	&& SrcLog_PSXCNT
+
+#define MEMCARDS_LOG	(macTrace.IOP.Memcards())	&& SrcLog_MEMCARDS
+#define PAD_LOG			(macTrace.IOP.PAD())		&& SrcLog_PAD
+#define GPU_LOG			(macTrace.IOP.GPU())		&& SrcLog_GPU
+#define CDVD_LOG		(macTrace.IOP.CDVD())		&& SrcLog_CDVD
 
 #else // PCSX2_DEVBUILD
 
@@ -189,11 +152,10 @@ extern bool SrcLog_CACHE( const char* fmt, ... );
 #define HW_LOG   0&&
 #define DMA_LOG  0&&
 #define BIOS_LOG 0&&
-#define ELF_LOG  0&&
 #define FPU_LOG  0&&
 #define MMI_LOG  0&&
 #define VU0_LOG  0&&
-#define COP0_LOG 0&&
+#define SysCtrl_LOG 0&&
 #define VIF_LOG  0&&
 #define VIFUNPACK_LOG  0&&
 #define SPR_LOG  0&&
@@ -220,3 +182,5 @@ extern bool SrcLog_CACHE( const char* fmt, ... );
 #define CACHE_LOG 0&&
 #define MEMCARDS_LOG 0&&
 #endif
+
+#define ELF_LOG  (EmuConfig.Log.ELF) && DevCon.WriteLn

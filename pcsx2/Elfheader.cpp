@@ -250,14 +250,14 @@ struct ElfObject
 
 	// Destructor!
 	// C++ does all the cleanup automagically for us.
-	virtual ~ElfObject() { }
+	virtual ~ElfObject() throw() { }
 
-	ElfObject( const wxString& srcfile, uint hdrsize ) :
-		filename( srcfile )
-	,	data( hdrsize, L"ELF headers" )
-	,	header( *(ELF_HEADER*)data.GetPtr() )
-	,	proghead( NULL )
-	,	secthead( NULL )
+	ElfObject( const wxString& srcfile, uint hdrsize )
+		: filename( srcfile )
+		, data( hdrsize, L"ELF headers" )
+		, header( *(ELF_HEADER*)data.GetPtr() )
+		, proghead( NULL )
+		, secthead( NULL )
 	{
 		readFile();
 
@@ -268,45 +268,43 @@ struct ElfObject
 			secthead = (ELF_SHR*)&data[header.e_shoff];
 
 		if ( ( header.e_shnum > 0 ) && ( header.e_shentsize != sizeof(ELF_SHR) ) )
-			Console.Error( "ElfLoader Warning > Size of section headers is not standard" );
+			Console.Error( "(ELF) Size of section headers is not standard" );
 
 		if ( ( header.e_phnum > 0 ) && ( header.e_phentsize != sizeof(ELF_PHR) ) )
-			Console.Error( "ElfLoader Warning > Size of program headers is not standard" );
+			Console.Error( "(ELF) Size of program headers is not standard" );
 
-		ELF_LOG( "type:      " );
+		const char* elftype = NULL;
 		switch( header.e_type )
 		{
 			default:
-				ELF_LOG( "unknown %x", header.e_type );
-				break;
+				ELF_LOG( "type:      unknown = %x", header.e_type );
+			break;
 
-			case 0x0:
-				ELF_LOG( "no file type" );
-				break;
-
-			case 0x1:
-				ELF_LOG( "relocatable" );
-				break;
-
-			case 0x2:
-				ELF_LOG( "executable" );
-				break;
+			case 0x0: elftype = "no file type";	break;
+			case 0x1: elftype = "relocatable";	break;
+			case 0x2: elftype = "executable";	break;
 		}
-		ELF_LOG( "\n" );
-		ELF_LOG( "machine:   " );
+		if( elftype != NULL ) ELF_LOG( "type:      %s", elftype );
 
+		const char* machine = NULL;
 		switch ( header.e_machine )
 		{
+			case 1: machine = "AT&T WE 32100";	break;
+			case 2: machine = "SPARC";			break;
+			case 3: machine = "Intel 80386";	break;
+			case 4: machine = "Motorola 68000";	break;
+			case 5: machine = "Motorola 88000";	break;
+			case 7: machine = "Intel 80860";	break;
+			case 8: machine = "mips_rs3000";	break;
+			
 			default:
-				ELF_LOG( "unknown" );
-				break;
-
-			case 0x8:
-				ELF_LOG( "mips_rs3000" );
-				break;
+				ELF_LOG( "machine:  unknown = %x", header.e_machine );
+			break;
 		}
 
-		ELF_LOG("\n");
+		if( machine != NULL )
+			ELF_LOG( "machine:  %s", machine );
+
 		ELF_LOG("version:   %d",header.e_version);
 		ELF_LOG("entry:     %08x",header.e_entry);
 		ELF_LOG("flags:     %08x",header.e_flags);
@@ -407,8 +405,8 @@ struct ElfObject
 			}
 
 			ELF_LOG("\n");
-			ELF_LOG("offset:    %08x",(int)proghead[i].p_offset);
-			ELF_LOG("vaddr:     %08x",(int)proghead[i].p_vaddr);
+			ELF_LOG("offset:    %08x",proghead[i].p_offset);
+			ELF_LOG("vaddr:     %08x",proghead[i].p_vaddr);
 			ELF_LOG("paddr:     %08x",proghead[i].p_paddr);
 			ELF_LOG("file size: %08x",proghead[i].p_filesz);
 			ELF_LOG("mem size:  %08x",proghead[i].p_memsz);
@@ -430,29 +428,31 @@ struct ElfObject
 
 		for( int i = 0 ; i < header.e_shnum ; i++ )
 		{
-			ELF_LOG( "Elf32 Section Header [%x] %s", i, &sections_names[ secthead[ i ].sh_name ] );
+			ELF_LOG( "ELF32 Section Header [%x] %s", i, &sections_names[ secthead[ i ].sh_name ] );
 
 			// used by parseCommandLine
 			//if ( secthead[i].sh_flags & 0x2 )
 			//	args_ptr = min( args_ptr, secthead[ i ].sh_addr & 0x1ffffff );
 
-#ifdef PCSX2_DEVBULD
 			ELF_LOG("\n");
-			ELF_LOG("type:      ");
 
+			const char* sectype = NULL;
 			switch ( secthead[ i ].sh_type )
 			{
-				case 0x0: ELF_LOG("null"); break;
-				case 0x1: ELF_LOG("progbits"); break;
-				case 0x2: ELF_LOG("symtab"); break;
-				case 0x3: ELF_LOG("strtab"); break;
-				case 0x4: ELF_LOG("rela"); break;
-				case 0x8: ELF_LOG("no bits"); break;
-				case 0x9: ELF_LOG("rel"); break;
-				default: ELF_LOG("unknown %08x",secthead[i].sh_type); break;
+				case 0x0: sectype = "null";		break;
+				case 0x1: sectype = "progbits";	break;
+				case 0x2: sectype = "symtab";	break;
+				case 0x3: sectype = "strtab";	break;
+				case 0x4: sectype = "rela";		break;
+				case 0x8: sectype = "no bits";	break;
+				case 0x9: sectype = "rel";		break;
+
+				default:
+					ELF_LOG("type:      unknown %08x",secthead[i].sh_type);
+				break;
 			}
 
-			ELF_LOG("\n");
+			ELF_LOG("type:      %s", sectype);
 			ELF_LOG("flags:     %08x", secthead[i].sh_flags);
 			ELF_LOG("addr:      %08x", secthead[i].sh_addr);
 			ELF_LOG("offset:    %08x", secthead[i].sh_offset);
@@ -468,7 +468,6 @@ struct ElfObject
 				i_st = i;
 				i_dt = secthead[i].sh_link;
 			}
-#endif
 		}
 
 		if( ( i_st >= 0 ) && ( i_dt >= 0 ) )

@@ -64,12 +64,12 @@ mem8_t __fastcall iopHwRead8_Page1( u32 addr )
 			else
 			{
 				ret = psxHu8(addr);
-				PSXHW_LOG( "HwRead8 from Unknown, addr 0x%08x = 0x%02x", addr, ret );
+				PSXUnkHW_LOG( "HwRead8 from Unknown, addr 0x%08x = 0x%02x", addr, ret );
 			}
 		return ret;
 	}
 
-	PSXHW_LOG( "HwRead8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>( addr ), addr, ret );
+	IopHwTraceLog<mem8_t>( addr, ret, "Read" );
 	return ret;
 }
 
@@ -86,7 +86,7 @@ mem8_t __fastcall iopHwRead8_Page3( u32 addr )
 	else
 		ret = psxHu8( addr );
 
-	PSXHW_LOG( "HwRead8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>( addr ), addr, psxHu8(addr) );
+	IopHwTraceLog<mem8_t>( addr, ret, "Read" );
 	return ret;
 }
 
@@ -104,7 +104,7 @@ mem8_t __fastcall iopHwRead8_Page8( u32 addr )
 	else
 		ret = psxHu8( addr );
 
-	PSXHW_LOG( "HwRead8 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem8_t>( addr ), addr, psxHu8(addr) );
+	IopHwTraceLog<mem8_t>( addr, ret, "Read" );
 	return ret;	
 }
 
@@ -308,10 +308,8 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 			break;
 		}
 	}
-	
-	PSXHW_LOG( "HwRead%s from %s, addr 0x%08x = 0x%04x",
-		(sizeof(T) == 2) ? "16" : "32", _log_GetIopHwName<T>( addr ), addr, ret
-	);
+
+	IopHwTraceLog<T>( addr, ret, "Read" );
 	return ret;
 }
 
@@ -334,7 +332,7 @@ mem16_t __fastcall iopHwRead16_Page3( u32 addr )
 	jASSUME( (addr >> 12) == 0x1f803 );
 
 	mem16_t ret = psxHu16(addr);
-	PSXHW_LOG( "HwRead16 from %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, ret );
+	IopHwTraceLog<mem16_t>( addr, ret, "Read" );
 	return ret;
 }
 
@@ -346,7 +344,7 @@ mem16_t __fastcall iopHwRead16_Page8( u32 addr )
 	jASSUME( (addr >> 12) == 0x1f808 );
 
 	mem16_t ret = psxHu16(addr);
-	PSXHW_LOG( "HwRead16 from %s, addr 0x%08x = 0x%04x", _log_GetIopHwName<mem16_t>( addr ), addr, ret );
+	IopHwTraceLog<mem16_t>( addr, ret, "Read" );
 	return ret;
 }
 
@@ -364,7 +362,7 @@ mem32_t __fastcall iopHwRead32_Page3( u32 addr )
 	// all addresses are assumed to be prefixed with 0x1f803xxx:
 	jASSUME( (addr >> 12) == 0x1f803 );
 	const mem32_t ret = psxHu32(addr);
-	PSXHW_LOG( "HwRead32 from %s, addr 0x%08x = 0x%08x", _log_GetIopHwName<mem32_t>( addr ), addr, ret );
+	IopHwTraceLog<mem32_t>( addr, ret, "Read" );
 	return ret;
 }
 
@@ -408,7 +406,7 @@ mem32_t __fastcall iopHwRead32_Page8( u32 addr )
 				// HW_SIO2_FIFO -- A yet unknown: Should this be ignored on 32 bit writes, or handled as a
 				// 4-byte FIFO input?
 				// The old IOP system just ignored it, so that's what we do here.  I've included commented code
-				// for treating it as a 16/32 bit write though [which si what the SIO does, for example).
+				// for treating it as a 16/32 bit write though [which is what the SIO does, for example).
 				mcase(HW_SIO2_FIFO):
 					//ret = sio2_fifoOut();
 					//ret |= sio2_fifoOut() << 8;
@@ -428,7 +426,7 @@ mem32_t __fastcall iopHwRead32_Page8( u32 addr )
 	}
 	else ret = psxHu32(addr);
 
-	PSXHW_LOG( "HwRead32 from %s, addr 0x%08x = 0x%02x", _log_GetIopHwName<mem32_t>( addr ), addr, ret );
+	IopHwTraceLog<mem32_t>( addr, ret, "Read" );
 	return ret;
 }
 

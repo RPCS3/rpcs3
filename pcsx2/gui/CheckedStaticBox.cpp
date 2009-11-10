@@ -30,19 +30,9 @@ CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxS
 
 	SetSizer( &m_MasterSizer );
 
-	Connect( id, wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::MainToggle_Click ) );
+	Connect( ThisToggle.GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::MainToggle_Click ) );
 }
 
-// Adds a checkbox to this group panel's base sizer.
-// This is a helper function which saves some typographic red tape over using manual
-// checkbox creation and sizer appendage.
-wxCheckBox& CheckedStaticBox::AddCheckBox( const wxString& label, const wxString& subtext, const wxString& tooltip )
-{
-	return wxPanelWithHelpers::AddCheckBox( ThisSizer, label, subtext, tooltip );
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-//
 void CheckedStaticBox::MainToggle_Click( wxCommandEvent& evt )
 {
 	SetValue( evt.IsChecked() );

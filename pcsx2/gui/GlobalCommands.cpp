@@ -98,17 +98,15 @@ namespace Implementations
 
 	void Sys_LoggingToggle()
 	{
-	#ifdef PCSX2_DEVBUILD
 		// There's likely a better way to implement this, but this seemed useful.
 		// I might add turning EE, VU0, and VU1 recs on and off by hotkey at some point, too.
 		// --arcum42
-		enableLogging = !enableLogging;
-
-		if (enableLogging)
-			GSprintf(10, "Logging Enabled.");
-		else
-			GSprintf(10,"Logging Disabled.");
-	#endif
+		
+		// FIXME: Some of the trace logs will require recompiler resets to be activated properly.
+		//  But since those haven't been implemented yet, no point in implementing that here either.
+		
+		const_cast<Pcsx2Config&>(EmuConfig).Trace.Enabled = !EmuConfig.Trace.Enabled;
+		GSprintf(10, EmuConfig.Trace.Enabled ? "Logging Enabled." : "Logging Disabled.");
 	}
 
 	void Sys_FreezeGS()

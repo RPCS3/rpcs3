@@ -30,14 +30,15 @@ namespace Internal {
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// Helper for debug logging of IOP Registers.  Takes an input address and retuns a
+// Helper for debug logging of IOP Registers.  Takes an input address and returns a
 // register name.
 //
 // This list is not yet exhaustive.  If you spot something that's missing, feel free to
 // fill it in any time. :)
 //
+
 template< typename T>
-static __forceinline const char* _log_GetIopHwName( u32 addr )
+static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
 {
 	switch( addr )
 	{
@@ -194,7 +195,25 @@ static __forceinline const char* _log_GetIopHwName( u32 addr )
 			else if( addr >= 0x1f808200 && addr < 0x1f808240 ) { return "SIO2 param"; }
 			else if( addr >= 0x1f808240 && addr < 0x1f808260 ) { return "SIO2 send"; }
 
-		return "Unknown";
+		return NULL; //"Unknown";
+	}
+}
+
+template< typename T>
+static __releaseinline void IopHwTraceLog( u32 addr, T val, const char* modestr )
+{
+	if( EmuConfig.Trace.IOP.HwEnabled() )
+	{
+		char temp[] = "Hw%s%d from %s, addr 0x%08x = 0x%0*x";
+
+		// Replace the * above with the operand size (this ensures nicely formatted
+		// zero-fill hex values):
+		temp[(sizeof temp)-3] = '0' + (sizeof(T)*2);
+
+		if( const char* regname = _log_GetIopHwName<T>( addr, val ) )
+			PSXHW_LOG( temp, modestr, (sizeof T) * 8, regname, addr, val );
+		else
+			PSXUnkHW_LOG( temp, modestr, (sizeof T) * 8, "Unknown", addr, val );
 	}
 }
 

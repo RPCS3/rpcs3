@@ -659,7 +659,7 @@ __forceinline void hwWrite16(u32 mem, u16 value)
 
 		default:
 			psHu16(mem) = value;
-			HW_LOG("Unknown Hardware write 16 at %x with value %x",mem,value);
+			UnknownHW_LOG("Unknown Hardware write 16 at %x with value %x",mem,value);
 	}
 }
 
@@ -913,7 +913,7 @@ void __fastcall hwWrite32_page_0F( u32 mem, u32 value )
 		//------------------------------------------------------------------
 		case HELPSWITCH(SIO_ISR):
 		case HELPSWITCH(0x1000f410):
-			HW_LOG("Unknown Hardware write 32 at %x with value %x (%x)", mem, value, cpuRegs.CP0.n.Status.val);
+			UnknownHW_LOG("Unknown Hardware write 32 at %x with value %x (%x)", mem, value, cpuRegs.CP0.n.Status.val);
 			break;
 
 		default:
@@ -1190,7 +1190,7 @@ void __fastcall hwWrite64_generic( u32 mem, const mem64_t* srcval )
 
 		default:
 			psHu64(mem) = value;
-			HW_LOG("Unknown Hardware write 64 at %x with value %x (status=%x)",mem,value, cpuRegs.CP0.n.Status.val);
+			UnknownHW_LOG("Unknown Hardware write 64 at %x with value %x (status=%x)",mem,value, cpuRegs.CP0.n.Status.val);
 		break;
 	}
 }
@@ -1230,7 +1230,7 @@ void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval)
 			psHu64(mem  ) = srcval[0];
 			psHu64(mem+8) = srcval[1];
 
-			HW_LOG("Unknown Hardware write 128 at %x with value %x_%x (status=%x)", mem, srcval[1], srcval[0], cpuRegs.CP0.n.Status.val);
+			UnknownHW_LOG("Unknown Hardware write 128 at %x with value %x_%x (status=%x)", mem, srcval[1], srcval[0], cpuRegs.CP0.n.Status.val);
 		break;
 	}
 }

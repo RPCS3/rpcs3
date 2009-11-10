@@ -303,11 +303,14 @@
 		<Unit filename="../gui/MainMenuClicks.cpp" />
 		<Unit filename="../gui/MemoryCardFile.cpp" />
 		<Unit filename="../gui/Panels/AudioPanel.cpp" />
+		<Unit filename="../gui/Panels/BaseConfigPanel.cpp" />
 		<Unit filename="../gui/Panels/BiosSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/ConfigurationPanels.h" />
 		<Unit filename="../gui/Panels/CpuPanel.cpp" />
 		<Unit filename="../gui/Panels/DirPickerPanel.cpp" />
 		<Unit filename="../gui/Panels/GameFixesPanel.cpp" />
+		<Unit filename="../gui/Panels/LogOptionsPanels.cpp" />
+		<Unit filename="../gui/Panels/LogOptionsPanels.h" />
 		<Unit filename="../gui/Panels/MiscPanelStuff.cpp" />
 		<Unit filename="../gui/Panels/PathsPanel.cpp" />
 		<Unit filename="../gui/Panels/PluginSelectorPanel.cpp" />
