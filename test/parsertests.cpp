@@ -118,7 +118,7 @@ namespace Test
 			inputScalar = "http://example.com/foo#bar";
 			desiredOutput = "http://example.com/foo#bar";
 		}
-
+		
 		bool SimpleSeq()
 		{
 			std::string input =
@@ -620,7 +620,6 @@ namespace Test
 			std::stringstream stream(input);
 			YAML::Parser parser(stream);
 			YAML::Node doc;
-			std::string output;
 			
 			parser.GetNextDocument(doc);
 			if(doc.size() != 2)
@@ -630,6 +629,32 @@ namespace Test
 			if(doc["just a key"] != "value")
 				return false;
 			
+			return true;
+		}
+		
+		bool Bases()
+		{
+			std::string input =
+				"- 15\n"
+				"- 0x10\n"
+				"- 030\n"
+				"- 0xffffffff\n";
+			
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			
+			parser.GetNextDocument(doc);
+			if(doc.size() != 4)
+				return false;
+			if(doc[0] != 15)
+				return false;
+			if(doc[1] != 0x10)
+				return false;
+			if(doc[2] != 030)
+				return false;
+			if(doc[3] != 0xffffffff)
+				return false;
 			return true;
 		}
 	}
@@ -892,6 +917,7 @@ namespace Test
 		RunParserTest(&Parser::ExplicitEndDoc, "explicit end doc", passed, total);
 		RunParserTest(&Parser::MultipleDocsWithSomeExplicitIndicators, "multiple docs with some explicit indicators", passed, total);
 		RunParserTest(&Parser::BlockKeyWithNullValue, "block key with null value", passed, total);
+		RunParserTest(&Parser::Bases, "bases", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);

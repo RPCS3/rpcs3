@@ -10,7 +10,7 @@ if(IPHONE)
 endif(IPHONE)
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  set(CMAKE_CXX_FLAGS "-O2 -Wall -pedantic -Wextra ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra -pedantic -Wno-long-long ${CMAKE_CXX_FLAGS}")
 endif(CMAKE_COMPILER_IS_GNUCC)
 
 set(YAML_CPP_VERSION_MAJOR "0")
