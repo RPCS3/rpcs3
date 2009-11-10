@@ -254,12 +254,12 @@ GSVector4i GSState::GetFrameRect(int i)
 
 	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1) h >>= 1;
 
-	//Breaks Disgaea2 FMV borders, causes blur in dragon quest 8
+	//Breaks Disgaea2 FMV borders
 	r.left = m_regs->DISP[i].DISPFB.DBX;
 	r.top = m_regs->DISP[i].DISPFB.DBY;
 	r.right = r.left + w;
 	r.bottom = r.top + h;
-
+	//printf("%d %d %d %d %d %d\n",w,h,r.left,r.top,r.right,r.bottom);
 	return r;
 }
 
