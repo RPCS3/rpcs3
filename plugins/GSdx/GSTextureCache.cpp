@@ -190,6 +190,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 				hh *= 2;
 			}
 
+			//This vp2 fix doesn't work most of the time 
 			if(hh < 512 && m_renderer->m_context->SCISSOR.SCAY1 == 511) // vp2
 			{
 				hh = 512;
@@ -470,25 +471,28 @@ void GSTextureCache::IncAge()
 
 	m_src.m_used = false;
 
-	// Clearing of Rendertargets causes flickering in many scene transitions, so let's not :p
-	//maxage = 4; // ffx intro scene changes leave the old image untouched for a couple of frames and only then start using it
+	// Clearing of Rendertargets causes flickering in many scene transitions.
+	// Sigh, this seems to be used to invalidate surfaces. So set a huge maxage to avoid flicker,
+	// but still invalidate surfaces. (Disgaea 2 fmv when booting the game through the BIOS)
+	// Original maxage was 4 here, Xenosaga 2 needs at least 240, else it flickers on scene transitions.
+	maxage = 400; // ffx intro scene changes leave the old image untouched for a couple of frames and only then start using it
 
-	//for(int type = 0; type < 2; type++)
-	//{
-	//	for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); )
-	//	{
-	//		list<Target*>::iterator j = i++;
+	for(int type = 0; type < 2; type++)
+	{
+		for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); )
+		{
+			list<Target*>::iterator j = i++;
 
-	//		Target* t = *j;
+			Target* t = *j;
 
-	//		if(++t->m_age > maxage)
-	//		{
-	//			m_dst[type].erase(j);
+			if(++t->m_age > maxage)
+			{
+				m_dst[type].erase(j);
 
-	//			delete t;
-	//		}
-	//	}
-	//}
+				delete t;
+			}
+		}
+	}
 }
 
 //Fixme: Several issues in here. Not handling depth stencil, pitch conversion doesnt work.
