@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -44,7 +44,7 @@ static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
 	{
 		// ------------------------------------------------------------------------
 		// SSBUS -- Two Ess'es?
-	
+
 		case HW_SSBUS_SPD_ADDR:		return "SSBUS spd_addr";
 		case HW_SSBUS_PIO_ADDR:		return "SSBUS pio_addr";
 		case HW_SSBUS_SPD_DELAY:	return "SSBUS spd_delay";
@@ -80,7 +80,7 @@ static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
 		case HW_SIO_MODE: return ( sizeof(T) == 4 ) ? "SIO_MODE+CTRL" : "SIO MODE";
 		case HW_SIO_CTRL: return "SIO CTRL";
 		case HW_SIO_BAUD: return "SIO BAUD";
-		
+
 		case 0x1f8014c0: return "RTC_HOLDMODE";
 		case HW_DEV9_DATA: return "DEV9_R_REV/DATA";
 
@@ -88,7 +88,7 @@ static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
 		// BCR_LABEL -- Selects label for BCR depending on operand size (BCR has hi
 		// and low values of count and size, respectively)
 		#define BCR_LABEL( dma ) (sizeof(T)==4) ? dma" BCR" : dma" BCR_size";
-		
+
 		case 0x1f8010a0: return "DMA2 MADR";
 		case 0x1f8010a4: return BCR_LABEL( "DMA2" );
 		case 0x1f8010a6: return "DMA2 BCR_count";
@@ -132,16 +132,16 @@ static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
 		case 0x1f801570: return "DMA PCR2";
 		case 0x1f801574: return "DMA ICR2";
 		case 0x1f801576: return "DMA ICR2_hi";
-		
+
 		case HW_CDR_DATA0:	return "CDROM DATA0";
 		case HW_CDR_DATA1:	return "CDROM DATA1";
 		case HW_CDR_DATA2:	return "CDROM DATA2";
 		case HW_CDR_DATA3:	return "CDROM DATA3";
-		
+
 		case 0x1f80380c:	return "STDOUT";
 
 		// ------------------------------------------------------------------------
-		
+
 		case HW_SIO2_FIFO:	return "SIO2 FIFO";
 		case HW_SIO2_CTRL:	return "SIO2 CTRL";
 		case HW_SIO2_RECV1:	return "SIO2 RECV1";
@@ -154,7 +154,7 @@ static __releaseinline const char* _log_GetIopHwName( u32 addr, T val )
 		// ------------------------------------------------------------------------
 		// Check for "zoned" registers in the default case.
 		// And if all that fails, return "unknown"! :)
-		
+
 		default:
 			if( addr >= 0x1f801100 && addr < 0x1f801130 )
 			{
@@ -211,9 +211,9 @@ static __releaseinline void IopHwTraceLog( u32 addr, T val, const char* modestr 
 		temp[(sizeof temp)-3] = '0' + (sizeof(T)*2);
 
 		if( const char* regname = _log_GetIopHwName<T>( addr, val ) )
-			PSXHW_LOG( temp, modestr, (sizeof T) * 8, regname, addr, val );
+			PSXHW_LOG( temp, modestr, (sizeof (T)) * 8, regname, addr, val );
 		else
-			PSXUnkHW_LOG( temp, modestr, (sizeof T) * 8, "Unknown", addr, val );
+			PSXUnkHW_LOG( temp, modestr, (sizeof (T)) * 8, "Unknown", addr, val );
 	}
 }
 

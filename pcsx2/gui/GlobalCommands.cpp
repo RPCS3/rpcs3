@@ -53,7 +53,7 @@ wxString KeyAcceleratorCode::ToString() const
 		).ToString();
 }
 
-int limitOn = false; 
+int limitOn = false;
 namespace Implementations
 {
 	void Frameskip_Toggle()
@@ -101,12 +101,19 @@ namespace Implementations
 		// There's likely a better way to implement this, but this seemed useful.
 		// I might add turning EE, VU0, and VU1 recs on and off by hotkey at some point, too.
 		// --arcum42
-		
+
 		// FIXME: Some of the trace logs will require recompiler resets to be activated properly.
 		//  But since those haven't been implemented yet, no point in implementing that here either.
-		
+
+		char* message;
 		const_cast<Pcsx2Config&>(EmuConfig).Trace.Enabled = !EmuConfig.Trace.Enabled;
-		GSprintf(10, EmuConfig.Trace.Enabled ? "Logging Enabled." : "Logging Disabled.");
+
+		if (EmuConfig.Trace.Enabled)
+            sprintf(message, "Logging Enabled.");
+        else
+            sprintf(message, "Logging Disabled.");
+
+		GSprintf(10, message);
 	}
 
 	void Sys_FreezeGS()
