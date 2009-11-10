@@ -105,14 +105,24 @@ void recEI()
 
 void recDI()
 {
-	// No need to branch after disabling interrupts...
+	//// No need to branch after disabling interrupts...
 
-	iFlushCall(0);
+	//iFlushCall(0);
 
-	MOV32MtoR( EAX, (uptr)&cpuRegs.cycle );
-	MOV32RtoM( (uptr)&g_nextBranchCycle, EAX );
+	//MOV32MtoR( EAX, (uptr)&cpuRegs.cycle );
+	//MOV32RtoM( (uptr)&g_nextBranchCycle, EAX );
 
-	CALLFunc( (uptr)Interp::DI );
+	//CALLFunc( (uptr)Interp::DI );
+
+	xMOV(eax, ptr32[&cpuRegs.CP0.n.Status]);
+	xTEST(eax, 0x20006); // EXL | ERL | EDI
+	xForwardJNZ8 iHaveNoIdea;
+	xTEST(eax, 0x18); // KSU
+	xForwardJNZ8 inUserMode;
+	iHaveNoIdea.SetTarget();
+	xAND(eax, ~(u32)0x10000); // EIE
+	xMOV(ptr32[&cpuRegs.CP0.n.Status], eax);
+	inUserMode.SetTarget();
 }
 
 
