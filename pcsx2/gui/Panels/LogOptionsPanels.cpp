@@ -25,11 +25,11 @@ using namespace wxHelpers;
 	(wxCheckBox*) s_##name.Add( new pxCheckBox( name##Panel, wxT(label) ) )->GetWindow()
 
 Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
-	: CheckedStaticBox( parent, wxHORIZONTAL, L"EE Logs" )
+	: CheckedStaticBox( parent, wxVERTICAL, L"EE Logs" )
 {
 	CheckBoxDict& chks( parent->CheckBoxes );
 
-	wxBoxSizer& s_misc = *new wxBoxSizer( wxVERTICAL );
+	wxStaticBoxSizer& s_misc = *new wxStaticBoxSizer( wxVERTICAL, this, L"General" );
 	wxPanelWithHelpers* miscPanel = this;		// helper for our newCheckBox macro.
 
 	chks["EE:Memory"]		= newCheckBox( misc, "Memory" );
@@ -56,45 +56,54 @@ Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 	chks["EE:KnownHw"]		= newCheckBox( hw, "Registers" );
 	chks["EE:UnkownHw"]		= newCheckBox( hw, "Unknown Regs" );
 	chks["EE:DMA"]			= newCheckBox( hw, "DMA" );
-	chks["EE:VIF"]			= newCheckBox( hw, "VIF" );
-	chks["EE:GIF"]			= newCheckBox( hw, "GIF" );
-	chks["EE:SIF"]			= newCheckBox( hw, "SIF" );
-	chks["EE:SPR"]			= newCheckBox( hw, "SPR" );
-	chks["EE:IPU"]			= newCheckBox( hw, "IPU" );
 
 	hwPanel->SetValue( false );
 	// ----------------------------------------------------------------------------
+	CheckedStaticBox* evtPanel = new CheckedStaticBox( this, wxVERTICAL, L"Events" );
+	wxSizer& s_evt( evtPanel->ThisSizer );
 
-	wxBoxSizer& eeStack = *new wxBoxSizer( wxVERTICAL );
-	eeStack.Add( disasmPanel, SizerFlags::StdSpace() );
-	eeStack.Add( &s_misc );
+	chks["EE:Counters"]		= newCheckBox( evt, "Counters" );
+	chks["EE:Memcards"]		= newCheckBox( evt, "Memcards" );
+	chks["EE:VIF"]			= newCheckBox( evt, "VIF" );
+	chks["EE:GIF"]			= newCheckBox( evt, "GIF" );
+	chks["EE:IPU"]			= newCheckBox( evt, "IPU" );
+	chks["EE:SPR"]			= newCheckBox( evt, "SPR" );
 
-	ThisSizer.Add( hwPanel, SizerFlags::StdSpace() );
-	ThisSizer.Add( &eeStack );
+	evtPanel->SetValue( false );
+	// ----------------------------------------------------------------------------
+	wxFlexGridSizer& eeTable( *new wxFlexGridSizer( 2, 5 ) );
+	
+	eeTable.Add( &s_misc, SizerFlags::SubGroup() );
+	eeTable.Add( hwPanel, SizerFlags::SubGroup() );
+	eeTable.Add( evtPanel, SizerFlags::SubGroup() );
+	eeTable.Add( disasmPanel, SizerFlags::SubGroup() );
+
+	ThisSizer.AddSpacer( 4 );
+	ThisSizer.Add( &eeTable );
 
 	SetValue( true );
 }
 
 Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
-	: CheckedStaticBox( parent, wxVERTICAL, L"IOP Logs" )
+	: CheckedStaticBox( parent, wxHORIZONTAL, L"IOP Logs" )
 {
 	CheckBoxDict& chks( parent->CheckBoxes );
 
-	wxBoxSizer& s_misc = *new wxBoxSizer( wxVERTICAL );
+	wxStaticBoxSizer& s_misc = *new wxStaticBoxSizer( wxVERTICAL, this, L"General" );
 	wxPanelWithHelpers* miscPanel = this;		// helper for our newCheckBox macro.
 
 	chks["IOP:Memory"]		= newCheckBox( misc, "Memory" );
 	chks["IOP:Bios"]		= newCheckBox( misc, "Bios" );
+	chks["IOP:GPU"]			= newCheckBox( misc, "GPU (PS1 only)" );
 
 	// ----------------------------------------------------------------------------
 	CheckedStaticBox* disasmPanel = new CheckedStaticBox( this, wxVERTICAL, L"Disasm" );
 	wxSizer& s_disasm( disasmPanel->ThisSizer );
 
-	chks["IOP:Disasm"]		= newCheckBox( disasm, "R3000A" );
+	chks["IOP:R3000A"]		= newCheckBox( disasm, "R3000A" );
 	chks["IOP:COP2"]		= newCheckBox( disasm, "COP2 (Geometry)" );
 
 	disasmPanel->SetValue( false );
-
 	// ----------------------------------------------------------------------------
 	CheckedStaticBox* hwPanel = new CheckedStaticBox( this, wxVERTICAL, L"Hardware" );
 	wxSizer& s_hw( hwPanel->ThisSizer );
@@ -102,19 +111,29 @@ Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
 	chks["IOP:KnownHw"]		= newCheckBox( hw, "Registers" );
 	chks["IOP:UnknownHw"]	= newCheckBox( hw, "UnknownRegs" );
 	chks["IOP:DMA"]			= newCheckBox( hw, "DMA" );
-	chks["IOP:Pad"]			= newCheckBox( hw, "Pad" );
-	chks["IOP:CDVD"]		= newCheckBox( hw, "CDVD" );
-	chks["IOP:GPU"]			= newCheckBox( hw, "GPU (PS1 only)" );
 
 	hwPanel->SetValue( false );
 	// ----------------------------------------------------------------------------
+	CheckedStaticBox* evtPanel = new CheckedStaticBox( this, wxVERTICAL, L"Events" );
+	wxSizer& s_evt( evtPanel->ThisSizer );
 
-	wxBoxSizer& iopStack = *new wxBoxSizer( wxVERTICAL );
-	iopStack.Add( disasmPanel, SizerFlags::StdSpace() );
-	iopStack.Add( &s_misc );
+	chks["IOP:PAD"]			= newCheckBox( evt, "Pad" );
+	chks["IOP:SPU2"]		= newCheckBox( evt, "SPU2" );
+	chks["IOP:CDVD"]		= newCheckBox( evt, "CDVD" );
+	chks["IOP:USB"]			= newCheckBox( evt, "USB" );
+	chks["IOP:FW"]			= newCheckBox( evt, "FW" );
 
-	ThisSizer.Add( hwPanel, SizerFlags::StdSpace() );
-	ThisSizer.Add( &iopStack );
+	// ----------------------------------------------------------------------------
+
+	wxFlexGridSizer& iopTable( *new wxFlexGridSizer( 2, 5 ) );
+
+	iopTable.Add( &s_misc, SizerFlags::SubGroup() );
+	iopTable.Add( hwPanel, SizerFlags::SubGroup() );
+	iopTable.Add( evtPanel, SizerFlags::SubGroup() );
+	iopTable.Add( disasmPanel, SizerFlags::SubGroup() );
+
+	ThisSizer.AddSpacer( 4 );
+	ThisSizer.Add( &iopTable );
 
 	SetValue( true );
 }
@@ -133,16 +152,15 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent, int idealWidth )
 	wxStaticBoxSizer&	s_misc		= *new wxStaticBoxSizer( wxHORIZONTAL, this, L"Misc" );
 	wxPanelWithHelpers* miscPanel = this;		// helper for our newCheckBox macro.
 	
-	CheckBoxes["STDOUT"]	= newCheckBox( misc, "Log to STDOUT" );
 	CheckBoxes["SYMs"]		= newCheckBox( misc, "SYMs Log" );
 
 	//miscSizer.Add( ("ELF") );
 
-	topSizer.Add( &m_eeSection, SizerFlags::StdSpace() ); //.Expand() );
-	topSizer.Add( &m_iopSection, SizerFlags::StdSpace() ); //.Expand() );
+	topSizer.Add( &m_eeSection, SizerFlags::StdSpace() );
+	topSizer.Add( &m_iopSection, SizerFlags::StdSpace() );
 
-	mainsizer.Add( &topSizer ); //, wxSizerFlags().Expand() );		// topsizer has it's own padding.
-	mainsizer.Add( &s_misc, SizerFlags::StdSpace() ); //.Expand() );
+	mainsizer.Add( &topSizer );
+	mainsizer.Add( &s_misc, SizerFlags::StdSpace() );
 
 	SetSizer( &mainsizer );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );

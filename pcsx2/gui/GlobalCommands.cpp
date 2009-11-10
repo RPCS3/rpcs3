@@ -50,7 +50,7 @@ wxString KeyAcceleratorCode::ToString() const
 		(shift ? wxACCEL_CMD : 0) |
 		(alt ? wxACCEL_CMD : 0),
 		keycode
-		).ToString();
+	).ToString();
 }
 
 int limitOn = false;
@@ -149,6 +149,7 @@ namespace Implementations
 	{
 		g_Pcsx2Recording ^= 1;
 
+		mtgsThread.WaitGS();		// make sure GS is in sync with the audio stream when we start.
 		mtgsThread.SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
 		if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);
 	}
