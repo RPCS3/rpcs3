@@ -145,8 +145,6 @@ extern bool SrcLog_CACHE( const char* fmt, ... );
 
 #else // PCSX2_DEVBUILD
 
-#define varLog 0
-
 #define CPU_LOG  0&&
 #define MEM_LOG  0&&
 #define HW_LOG   0&&
@@ -155,7 +153,9 @@ extern bool SrcLog_CACHE( const char* fmt, ... );
 #define FPU_LOG  0&&
 #define MMI_LOG  0&&
 #define VU0_LOG  0&&
+#define COP0_LOG 0&&
 #define SysCtrl_LOG 0&&
+#define UnknownHW_LOG 0&&
 #define VIF_LOG  0&&
 #define VIFUNPACK_LOG  0&&
 #define SPR_LOG  0&&
@@ -168,6 +168,7 @@ extern bool SrcLog_CACHE( const char* fmt, ... );
 #define PSXCPU_LOG  0&&
 #define PSXMEM_LOG  0&&
 #define PSXHW_LOG   0&&
+#define PSXUnkHW_LOG   0&&
 #define PSXBIOS_LOG 0&&
 #define PSXDMA_LOG  0&&
 
