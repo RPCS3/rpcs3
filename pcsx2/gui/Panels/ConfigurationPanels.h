@@ -24,6 +24,7 @@
 #include <wx/image.h>
 #include <wx/statline.h>
 #include <wx/bookctrl.h>
+#include <wx/spinctrl.h>
 
 #include <list>
 
@@ -36,7 +37,7 @@
 class wxListBox;
 
 // Annoyances of C++ forward declarations.  Having to type in this red tape mess
-// is keeping me form eating a good sandwich right now... >_<
+// is keeping me from eating a good sandwich right now... >_<
 namespace Panels
 {
 	class BaseApplicableConfigPanel;
@@ -270,7 +271,7 @@ namespace Panels
 	protected:
 		wxRadioButton*	m_Option_Extra;
 		wxRadioButton*	m_Option_ExtraSign;
-		
+
 	public:
 		AdvancedOptionsVU( wxWindow& parent, int idealWidth );
 		virtual ~AdvancedOptionsVU() throw() { }
@@ -290,11 +291,11 @@ namespace Panels
 
 		wxTextCtrl*		m_text_BaseNtsc;
 		wxTextCtrl*		m_text_BasePal;
-		
+
 		wxCheckBox*		m_SkipperEnable;
 		wxCheckBox*		m_TurboSkipEnable;
 		wxSpinCtrl*		m_spin_SkipThreshold;
-		
+
 		wxSpinCtrl*		m_spin_FramesToSkip;
 		wxSpinCtrl*		m_spin_FramesToDraw;
 
