@@ -281,7 +281,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menubar.Append( &m_menuSys,		_("&System") );
 	m_menubar.Append( &m_menuConfig,	_("&Config") );
 	m_menubar.Append( &m_menuMisc,		_("&Misc") );
+#ifdef PCSX2_DEVBUILD
 	m_menubar.Append( &m_menuDebug,		_("&Debug") );
+#endif
 	SetMenuBar( &m_menubar );
 
 	// ------------------------------------------------------------------------
@@ -377,8 +379,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuSys.Append(MenuId_Sys_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
 
 	m_menuSys.AppendSeparator();
-	m_menuSys.Append(MenuId_EnablePatches,	_("Enable Patches"),
-		wxEmptyString, wxITEM_CHECK);
+	
+	//Todo:
+	//m_menuSys.Append(MenuId_EnablePatches,	_("Enable Patches"),
+	//	wxEmptyString, wxITEM_CHECK);
 
 	m_menuSys.AppendSeparator();
 	m_menuSys.Append(MenuId_Sys_Reset,		_("Reset"),
@@ -412,7 +416,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// ------------------------------------------------------------------------
 
 	m_menuMisc.Append( &m_MenuItem_Console );
-	m_menuMisc.Append(MenuId_Profiler,			_("Show Profiler"),	wxEmptyString, wxITEM_CHECK);
+	//Todo: Though not many people need this one :p
+	//m_menuMisc.Append(MenuId_Profiler,			_("Show Profiler"),	wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	// No dialogs implemented for these yet...
@@ -422,14 +427,16 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// Ref will want this re-added eventually.
 	//m_menuMisc.Append(47, _T("Print CDVD Info..."), wxEmptyString, wxITEM_CHECK);
 
-	m_menuMisc.Append(MenuId_Website,			_("Visit Website..."),
-		_("Opens your web-browser to our favorite website."));
+	//Todo:
+	//There's a great working "open website" in the about panel. Less clutter by just using that.
+	//m_menuMisc.Append(MenuId_Website,			_("Visit Website..."),
+	//	_("Opens your web-browser to our favorite website."));
 	m_menuMisc.Append(MenuId_About,				_("About...") );
-
+#ifdef PCSX2_DEVBUILD
 	m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
 	m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);
 	m_menuDebug.Append(MenuId_Debug_Logging,	_("Logging..."),			wxEmptyString);
-
+#endif
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 
 	ConnectMenus();
