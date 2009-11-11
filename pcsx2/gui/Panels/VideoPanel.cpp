@@ -25,18 +25,20 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth )
 {
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 
+	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
+		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
+	
+	m_check_LimiterDisable->SetToolTip( pxE( ".Tooltip:Framelimiter:Disable",
+		L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not "
+		L"be available either."
+	) );
+
 	AddStaticText( mainSizer, pxE( ".Framelimiter:Heading",
 		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
 		L"percentages of the default region-based framerate, which can also be configured below."
 	) );
 
-	m_check_LimiterDisable = &AddCheckBox( mainSizer, _("Disable Framelimiting"),
-		_("Useful for running benchmarks. Toggle this option in-game by pressing F4."),
-		pxE( ".Tooltip:Framelimiter:Disable",
-			L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not "
-			L"be available either."
-		)
-	);
+	mainSizer.Add( m_check_LimiterDisable );
 
 	m_spin_NominalPct	= new wxSpinCtrl( this );
 	m_spin_SlomoPct		= new wxSpinCtrl( this );
@@ -107,15 +109,12 @@ void Panels::FramelimiterPanel::Apply()
 Panels::VideoPanel::VideoPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
 {
-	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-
-	m_check_CloseGS = &AddCheckBox( mainSizer, _("Hide GS window on Suspend"),
-		wxEmptyString,		// subtext
-		pxE( ".Tooltip:Video:HideGS",
-			L"Completely closes the often large and bulky GS window when pressing "
-			L"ESC or suspending the emulator.  That way it won't get *in* the way!"
-		)
-	);
+	m_check_CloseGS =  new pxCheckBox( this, _("Hide GS window on Suspend") );
+	
+	m_check_CloseGS->SetToolTip( pxE( ".Tooltip:Video:HideGS",
+		L"Completely closes the often large and bulky GS window when pressing "
+		L"ESC or suspending the emulator.  That way it won't get *in* the way!"
+	) );
 
 	/*&AddCheckBox( mainSizer, _(""),
 		wxEmptyString,		// subtext
@@ -127,10 +126,12 @@ Panels::VideoPanel::VideoPanel( wxWindow& parent, int idealWidth ) :
 
 	m_check_CloseGS->SetValue( g_Conf->CloseGSonEsc );
 
+	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 	wxStaticBoxSizer& limitSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Framelimiter") );
 	
 	limitSizer.Add( new FramelimiterPanel( *this, idealWidth - 32 ) );
 
+	mainSizer.Add( m_check_CloseGS );
 	mainSizer.Add( &limitSizer );
 
 	SetSizer( &mainSizer );

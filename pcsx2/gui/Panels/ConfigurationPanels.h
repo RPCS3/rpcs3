@@ -99,8 +99,8 @@ namespace Panels
 		wxRadioButton*	m_Option_None;
 		wxRadioButton*	m_Option_Normal;
 
-		wxCheckBox*		m_Option_FTZ;
-		wxCheckBox*		m_Option_DAZ;
+		pxCheckBox*		m_Option_FTZ;
+		pxCheckBox*		m_Option_DAZ;
 
 	public:
 		BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth );
@@ -141,7 +141,7 @@ namespace Panels
 	class FramelimiterPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		wxCheckBox*		m_check_LimiterDisable;
+		pxCheckBox*		m_check_LimiterDisable;
 		wxSpinCtrl*		m_spin_NominalPct;
 		wxSpinCtrl*		m_spin_SlomoPct;
 		wxSpinCtrl*		m_spin_TurboPct;
@@ -165,7 +165,7 @@ namespace Panels
 	class VideoPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		wxCheckBox*		m_check_CloseGS;
+		pxCheckBox*		m_check_CloseGS;
 		//wxCheckBox*		m_check_CloseGS;
 		//wxCheckBox*		m_;
 
@@ -185,11 +185,11 @@ namespace Panels
 		wxStaticText* m_msg_eecycle;
 		wxStaticText* m_msg_vustealer;
 
-		wxCheckBox* m_check_intc;
-		wxCheckBox* m_check_b1fc0;
-		wxCheckBox* m_check_IOPx2;
-		wxCheckBox* m_check_vuFlagHack;
-		wxCheckBox* m_check_vuMinMax;
+		pxCheckBox* m_check_intc;
+		pxCheckBox* m_check_b1fc0;
+		pxCheckBox* m_check_IOPx2;
+		pxCheckBox* m_check_vuFlagHack;
+		pxCheckBox* m_check_vuMinMax;
 
 	public:
 		SpeedHacksPanel( wxWindow& parent, int idealWidth );
@@ -209,7 +209,7 @@ namespace Panels
 	class GameFixesPanel: public BaseApplicableConfigPanel
 	{
 	protected:
-		wxCheckBox*			m_checkbox[NUM_OF_GAME_FIXES];
+		pxCheckBox*			m_checkbox[NUM_OF_GAME_FIXES];
 
 	public:
 		GameFixesPanel( wxWindow& parent, int idealWidth );
@@ -226,7 +226,7 @@ namespace Panels
 	protected:
 		FoldersEnum_t		m_FolderId;
 		wxDirPickerCtrl*	m_pickerCtrl;
-		wxCheckBox*			m_checkCtrl;
+		pxCheckBox*			m_checkCtrl;
 
 	public:
 		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );

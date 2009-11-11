@@ -335,10 +335,10 @@ wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, co
 //
 // Static subtext, if specified, is displayed below the checkbox and is indented accordingly.
 //
-wxCheckBox& wxPanelWithHelpers::AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
+/*wxCheckBox& wxPanelWithHelpers::AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
 {
 	return wxHelpers::AddCheckBoxTo( this, sizer, label, subtext, tooltip, GetIdealWidth()-8 );
-}
+}*/
 
 // ------------------------------------------------------------------------
 // Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this

@@ -67,6 +67,9 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 ,	m_pickerCtrl( NULL )
 ,	m_checkCtrl( NULL )
 {
+	m_checkCtrl = new pxCheckBox( this, _("Use default setting") );
+
+
 	wxStaticBoxSizer& s_box( *new wxStaticBoxSizer( wxVERTICAL, this, label ) );
 	wxFlexGridSizer& s_lower( *new wxFlexGridSizer( 2, 0, 4 ) );
 
@@ -90,8 +93,8 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 	);
 
 	s_box.Add( m_pickerCtrl, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5).Expand() );
+	s_lower.Add( m_checkCtrl );
 
-	m_checkCtrl = &AddCheckBox( s_lower, _("Use default setting") );
 	pxSetToolTip( m_checkCtrl, pxE( ".Tooltip:DirPicker:UseDefault",
 		L"When checked this folder will automatically reflect the default associated with PCSX2's current usermode setting. " )
 	);

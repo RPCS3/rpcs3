@@ -80,7 +80,7 @@ public:
 
 	//wxRadioButton&	NewSpinCtrl( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 
-	wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
+	//wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 	wxRadioButton&	AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
 	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
 
@@ -114,6 +114,7 @@ public:
 	pxCheckBox& SetToolTip( const wxString& tip );
 	pxCheckBox& SetValue( bool val );
 	bool GetValue() const;
+	bool IsChecked() const { pxAssert( m_checkbox != NULL ); return m_checkbox->IsChecked(); }
 
 	operator wxCheckBox&() { pxAssert( m_checkbox != NULL ); return *m_checkbox; }
 	operator const wxCheckBox&() const { pxAssert( m_checkbox != NULL ); return *m_checkbox; }

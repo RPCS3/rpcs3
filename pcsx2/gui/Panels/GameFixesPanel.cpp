@@ -73,7 +73,8 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
 	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
 	{
-		m_checkbox[i] = &AddCheckBox( groupSizer, check_text[i].label, wxEmptyString, check_text[i].tooltip );
+		groupSizer.Add( m_checkbox[i] = new pxCheckBox( this, check_text[i].label ) );
+		m_checkbox[i]->SetToolTip( check_text[i].tooltip );
 		m_checkbox[i]->SetValue( !!(opts.bitset & (1 << i)) );
 	}
 

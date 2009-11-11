@@ -24,6 +24,10 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int id
 ,	s_round( *new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) )
 ,	s_clamp( *new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") ) )
 {
+
+	m_Option_FTZ		= new pxCheckBox( this, _("Flush to Zero") );
+	m_Option_DAZ		= new pxCheckBox( this, _("Denormals are Zero") );
+
 	wxFlexGridSizer& grid = *new wxFlexGridSizer( 4 );
 
 	// Clever proportions selected for a fairly nice spacing, with the third
@@ -46,9 +50,9 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int id
 
 	wxBoxSizer& s_daz( *new wxBoxSizer( wxVERTICAL ) );
 	s_daz.AddSpacer( 12 );
-	m_Option_FTZ		= &AddCheckBox( s_daz, _("Flush to Zero") );
+	s_daz.Add( m_Option_FTZ );
+	s_daz.Add( m_Option_DAZ );
 	s_daz.AddSpacer( 4 );
-	m_Option_DAZ		= &AddCheckBox( s_daz, _("Denormals are Zero") );
 	s_daz.AddSpacer( 22 );
 	s_daz.Add( new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ), wxSizerFlags().Align( wxALIGN_CENTRE ) );
 
