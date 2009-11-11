@@ -127,8 +127,6 @@ struct TraceFiltersEE
 		bitset = 0;
 	}
 
-	void LoadSave( IniInterface& conf );
-
 	bool operator ==( const TraceFiltersEE& right ) const
 	{
 		return OpEqu( bitset );
@@ -200,8 +198,6 @@ struct TraceFiltersIOP
 		bitset = 0;
 	}
 
-	void LoadSave( IniInterface& conf );
-
 	bool operator ==( const TraceFiltersIOP& right ) const
 	{
 		return OpEqu( bitset );
@@ -237,7 +233,7 @@ struct TraceLogFilters
 		SIF		= false;
 	}
 
-	void LoadSave( IniInterface& conf );
+	void LoadSave( IniInterface& ini );
 	
 	bool operator ==( const TraceLogFilters& right ) const
 	{

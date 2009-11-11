@@ -20,14 +20,40 @@
 #include <wx/statline.h>
 
 using namespace wxHelpers;
+using namespace Panels;
 
 Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent, int id )
 	: wxDialogWithHelpers( parent, id, _("High Volume Logging"), true )
 {
 	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );
 	
-	mainsizer.Add( new Panels::LogOptionsPanel( this, 480 ) );
-	
-	AddOkCancel( mainsizer );
+	mainsizer.Add( new LogOptionsPanel( this, 480 ) );
+
+	AddOkCancel( mainsizer, true );
+	FindWindow( wxID_APPLY )->Disable();
+
 	SetSizerAndFit( &mainsizer, true );
+
+	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogOptionsDialog::OnOk_Click ) );
+	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogOptionsDialog::OnApply_Click ) );
+}
+
+void Dialogs::LogOptionsDialog::OnOk_Click( wxCommandEvent& evt )
+{
+	if( g_ApplyState.ApplyAll( false ) )
+	{
+		FindWindow( wxID_APPLY )->Disable();
+		AppSaveSettings();
+
+		Close();
+		evt.Skip();
+	}
+}
+
+void Dialogs::LogOptionsDialog::OnApply_Click( wxCommandEvent& evt )
+{
+	if( g_ApplyState.ApplyAll( false ) )
+		FindWindow( wxID_APPLY )->Disable();
+
+	AppSaveSettings();
 }

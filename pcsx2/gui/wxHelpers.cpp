@@ -136,6 +136,17 @@ pxCheckBox& pxCheckBox::SetToolTip( const wxString& tip )
 	return *this;
 }
 
+pxCheckBox& pxCheckBox::SetValue( bool val )
+{
+	m_checkbox->SetValue( val );
+	return *this;
+}
+
+bool pxCheckBox::GetValue() const
+{
+	return m_checkbox->GetValue();
+}
+
 // ------------------------------------------------------------------------
 // Creates a new Radio button and adds it to the specified sizer/parent combo, with optional tooltip.
 // Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied

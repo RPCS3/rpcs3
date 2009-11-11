@@ -19,43 +19,100 @@
 #include "BaseConfigPanel.h"
 #include "CheckedStaticBox.h"
 
-#include "Utilities/HashMap.h"
-
 namespace Panels
 {
-	typedef HashTools::Dictionary< wxCheckBox* > CheckBoxDict;
-
 	class LogOptionsPanel;
 
 	class eeLogOptionsPanel : public CheckedStaticBox
 	{
 	public:
+		CheckedStaticBox*	m_disasmPanel;
+		CheckedStaticBox*	m_hwPanel;
+		CheckedStaticBox*	m_evtPanel;
+		
+		pxCheckBox*			m_Memory;
+		pxCheckBox*			m_Bios;
+		pxCheckBox*			m_Cache;
+		pxCheckBox*			m_SysCtrl;
+
+		pxCheckBox*			m_R5900;
+		pxCheckBox*			m_COP0;
+		pxCheckBox*			m_COP1;
+		pxCheckBox*			m_COP2;
+		pxCheckBox*			m_VU0micro;
+		pxCheckBox*			m_VU1micro;
+
+		pxCheckBox*			m_KnownHw;
+		pxCheckBox*			m_UnknownHw;
+		pxCheckBox*			m_DMA;
+
+		pxCheckBox*			m_Counters;
+		pxCheckBox*			m_VIF;
+		pxCheckBox*			m_GIF;
+		pxCheckBox*			m_SPR;
+		pxCheckBox*			m_IPU;
+
+	public:
 		eeLogOptionsPanel( LogOptionsPanel* parent );
 		virtual ~eeLogOptionsPanel() throw() {}
+		
+		void OnSettingsChanged();
+		void Apply();
 	};
 
 
 	class iopLogOptionsPanel : public CheckedStaticBox
 	{
 	public:
+		CheckedStaticBox*	m_disasmPanel;
+		CheckedStaticBox*	m_hwPanel;
+		CheckedStaticBox*	m_evtPanel;
+
+		pxCheckBox*			m_Bios;
+		pxCheckBox*			m_Memory;
+		pxCheckBox*			m_GPU;
+
+		pxCheckBox*			m_R3000A;
+		pxCheckBox*			m_COP2;
+
+		pxCheckBox*			m_KnownHw;
+		pxCheckBox*			m_UnknownHw;
+		pxCheckBox*			m_DMA;
+
+		pxCheckBox*			m_Counters;
+		pxCheckBox*			m_Memcards;
+		pxCheckBox*			m_PAD;
+		pxCheckBox*			m_SPU2;
+		pxCheckBox*			m_USB;
+		pxCheckBox*			m_FW;
+		pxCheckBox*			m_CDVD;
+
+	public:
 		iopLogOptionsPanel( LogOptionsPanel* parent );
 		virtual ~iopLogOptionsPanel() throw() {}
+
+		void OnSettingsChanged();
+		void Apply();
 	};
 
 	class LogOptionsPanel : public BaseApplicableConfigPanel
 	{
-	public:
-		CheckBoxDict		CheckBoxes;
-
 	protected:
 		eeLogOptionsPanel&	m_eeSection;
 		iopLogOptionsPanel&	m_iopSection;
 		bool				m_IsDirty;		// any settings modified since last apply will flag this "true"
 
+		pxCheckBox*			m_masterEnabler;
+		pxCheckBox*			m_SIF;
+		pxCheckBox*			m_VIFunpack;
+		pxCheckBox*			m_GIFtag;
+
 	public:
 		LogOptionsPanel( wxWindow* parent, int idealWidth );
 		virtual ~LogOptionsPanel() throw() {}
 
+		void OnSettingsChanged();
+		void OnUpdateEnableAll();
 		void OnCheckBoxClicked(wxCommandEvent &event);
 		void Apply();
 	};

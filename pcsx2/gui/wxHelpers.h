@@ -112,12 +112,14 @@ public:
 	const wxStaticText* GetSubText() const { return m_subtext; }
 
 	pxCheckBox& SetToolTip( const wxString& tip );
-
-	operator wxCheckBox*() { return m_checkbox; }
-	operator const wxCheckBox*() const { return m_checkbox; }
+	pxCheckBox& SetValue( bool val );
+	bool GetValue() const;
 
 	operator wxCheckBox&() { pxAssert( m_checkbox != NULL ); return *m_checkbox; }
 	operator const wxCheckBox&() const { pxAssert( m_checkbox != NULL ); return *m_checkbox; }
+	
+	wxCheckBox* GetWxPtr() { return m_checkbox; }
+	const wxCheckBox* GetWxPtr() const { return m_checkbox; }
 };
 
 

@@ -20,6 +20,21 @@
 
 #include <wx/fileconf.h>
 
+void TraceLogFilters::LoadSave( IniInterface& ini )
+{
+	TraceLogFilters defaults;
+	IniScopedGroup path( ini, L"TraceLog" );
+
+	IniEntry( Enabled );
+	IniEntry( SIF );
+	
+	// Retaining backwards compat of the trace log enablers isn't really important, and
+	// doing each one by hand would be murder.  So let's cheat and just save it as an int:
+
+	IniEntry( EE.bitset );
+	IniEntry( IOP.bitset );
+}
+
 // all speedhacks are disabled by default
 Pcsx2Config::SpeedhackOptions::SpeedhackOptions() :
 	bitset( 0 )
@@ -235,6 +250,8 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	Video.LoadSave( ini );
 	Gamefixes.LoadSave( ini );
 	Profiler.LoadSave( ini );
+
+	Trace.LoadSave( ini );
 
 	ini.Flush();
 }

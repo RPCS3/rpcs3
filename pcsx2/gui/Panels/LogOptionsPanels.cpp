@@ -17,66 +17,55 @@
 #include "LogOptionsPanels.h"
 
 #include "DebugTools/Debug.h"
+#include <wx/statline.h>
 
 
 using namespace wxHelpers;
 
-#define newCheckBox( name, label ) \
-	(wxCheckBox*) s_##name.Add( new pxCheckBox( name##Panel, wxT(label) ) )->GetWindow()
-
 Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 	: CheckedStaticBox( parent, wxVERTICAL, L"EE Logs" )
 {
-	CheckBoxDict& chks( parent->CheckBoxes );
+	m_disasmPanel	= new CheckedStaticBox( this, wxVERTICAL, L"Disasm" );
+	m_hwPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Hardware" );
+	m_evtPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Events" );
+
+	wxSizer& s_disasm	( m_disasmPanel->ThisSizer );
+	wxSizer& s_hw		( m_hwPanel->ThisSizer );
+	wxSizer& s_evt		( m_evtPanel->ThisSizer );
 
 	wxStaticBoxSizer& s_misc = *new wxStaticBoxSizer( wxVERTICAL, this, L"General" );
-	wxPanelWithHelpers* miscPanel = this;		// helper for our newCheckBox macro.
+	wxPanelWithHelpers* m_miscPanel = this;		// helper for our newCheckBox macro.
 
-	chks["EE:Memory"]		= newCheckBox( misc, "Memory" );
-	chks["EE:Bios"]			= newCheckBox( misc, "Bios" );
-	chks["EE:MMU"]			= newCheckBox( misc, "MMU" );
-
-	// ----------------------------------------------------------------------------
-	CheckedStaticBox* disasmPanel = new CheckedStaticBox( this, wxVERTICAL, L"Disasm" );
-	wxSizer& s_disasm( disasmPanel->ThisSizer );
+	s_misc.Add( m_Bios		= new pxCheckBox( m_miscPanel, L"Bios" ) );
+	s_misc.Add( m_Memory	= new pxCheckBox( m_miscPanel, L"Memory" ) );
+	s_misc.Add( m_Cache		= new pxCheckBox( m_miscPanel, L"Cache" ));
+	s_misc.Add( m_SysCtrl	= new pxCheckBox( m_miscPanel, L"SysCtrl / MMU" ) );
 		
-	chks["EE:R5900"]		= newCheckBox( disasm, "R5900" );
-	chks["EE:COP0"]			= newCheckBox( disasm, "COP0 (MMU/SysCtrl)" );
-	chks["EE:COP1"]			= newCheckBox( disasm, "COP1 (FPU)" );
-	chks["EE:COP2"]			= newCheckBox( disasm, "COP2 (VU0 macro)" );
+	s_disasm.Add( m_R5900		= new pxCheckBox( m_disasmPanel, L"R5900" ));
+	s_disasm.Add( m_COP0		= new pxCheckBox( m_disasmPanel, L"COP0 (MMU/SysCtrl)" ));
+	s_disasm.Add( m_COP1		= new pxCheckBox( m_disasmPanel, L"COP1 (FPU)" ));
+	s_disasm.Add( m_COP2		= new pxCheckBox( m_disasmPanel, L"COP2 (VU0 macro)" ));
+	s_disasm.Add( m_VU0micro	= new pxCheckBox( m_disasmPanel, L"VU0 micro" ));
+	s_disasm.Add( m_VU1micro	= new pxCheckBox( m_disasmPanel, L"VU1 micro" ));
 
-	chks["EE:VU0micro"]		= newCheckBox( disasm, "VU0 micro" );
-	chks["EE:VU1micro"]		= newCheckBox( disasm, "VU1 micro" );
+	s_hw.Add( m_KnownHw		= new pxCheckBox( m_hwPanel, L"Registers" ));
+	s_hw.Add( m_UnknownHw	= new pxCheckBox( m_hwPanel, L"Unknown Regs" ));
+	s_hw.Add( m_DMA			= new pxCheckBox( m_hwPanel, L"DMA" ));
 
-	disasmPanel->SetValue( false );
-	// ----------------------------------------------------------------------------
-	CheckedStaticBox* hwPanel = new CheckedStaticBox( this, wxVERTICAL, L"Hardware" );
-	wxSizer& s_hw( hwPanel->ThisSizer );
+	s_evt.Add( m_Counters	= new pxCheckBox( m_evtPanel, L"Counters" ));
+	s_evt.Add( m_VIF		= new pxCheckBox( m_evtPanel, L"VIF" ));
+	s_evt.Add( m_GIF		= new pxCheckBox( m_evtPanel, L"GIF" ));
+	s_evt.Add( m_IPU		= new pxCheckBox( m_evtPanel, L"IPU" ));
+	s_evt.Add( m_SPR		= new pxCheckBox( m_evtPanel, L"SPR" ));
 
-	chks["EE:KnownHw"]		= newCheckBox( hw, "Registers" );
-	chks["EE:UnkownHw"]		= newCheckBox( hw, "Unknown Regs" );
-	chks["EE:DMA"]			= newCheckBox( hw, "DMA" );
+	m_Cache->SetToolTip(_("(not implemented yet)"));
 
-	hwPanel->SetValue( false );
-	// ----------------------------------------------------------------------------
-	CheckedStaticBox* evtPanel = new CheckedStaticBox( this, wxVERTICAL, L"Events" );
-	wxSizer& s_evt( evtPanel->ThisSizer );
-
-	chks["EE:Counters"]		= newCheckBox( evt, "Counters" );
-	chks["EE:Memcards"]		= newCheckBox( evt, "Memcards" );
-	chks["EE:VIF"]			= newCheckBox( evt, "VIF" );
-	chks["EE:GIF"]			= newCheckBox( evt, "GIF" );
-	chks["EE:IPU"]			= newCheckBox( evt, "IPU" );
-	chks["EE:SPR"]			= newCheckBox( evt, "SPR" );
-
-	evtPanel->SetValue( false );
-	// ----------------------------------------------------------------------------
 	wxFlexGridSizer& eeTable( *new wxFlexGridSizer( 2, 5 ) );
 	
 	eeTable.Add( &s_misc, SizerFlags::SubGroup() );
-	eeTable.Add( hwPanel, SizerFlags::SubGroup() );
-	eeTable.Add( evtPanel, SizerFlags::SubGroup() );
-	eeTable.Add( disasmPanel, SizerFlags::SubGroup() );
+	eeTable.Add( m_hwPanel, SizerFlags::SubGroup() );
+	eeTable.Add( m_evtPanel, SizerFlags::SubGroup() );
+	eeTable.Add( m_disasmPanel, SizerFlags::SubGroup() );
 
 	ThisSizer.AddSpacer( 4 );
 	ThisSizer.Add( &eeTable );
@@ -85,57 +74,113 @@ Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 }
 
 Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
-	: CheckedStaticBox( parent, wxHORIZONTAL, L"IOP Logs" )
+	: CheckedStaticBox( parent, wxVERTICAL, L"IOP Logs" )
 {
-	CheckBoxDict& chks( parent->CheckBoxes );
+	m_disasmPanel	= new CheckedStaticBox( this, wxVERTICAL, L"Disasm" );
+	m_hwPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Hardware" );
+	m_evtPanel		= new CheckedStaticBox( this, wxVERTICAL, L"Events" );
+
+	wxSizer& s_disasm	( m_disasmPanel->ThisSizer );
+	wxSizer& s_hw		( m_hwPanel->ThisSizer );
+	wxSizer& s_evt		( m_evtPanel->ThisSizer );
 
 	wxStaticBoxSizer& s_misc = *new wxStaticBoxSizer( wxVERTICAL, this, L"General" );
-	wxPanelWithHelpers* miscPanel = this;		// helper for our newCheckBox macro.
+	wxPanelWithHelpers* m_miscPanel = this;		// helper for our newCheckBox macro.
 
-	chks["IOP:Memory"]		= newCheckBox( misc, "Memory" );
-	chks["IOP:Bios"]		= newCheckBox( misc, "Bios" );
-	chks["IOP:GPU"]			= newCheckBox( misc, "GPU (PS1 only)" );
+	s_misc.Add( m_Bios		= new pxCheckBox( m_miscPanel, L"Bios" ));
+	s_misc.Add( m_Memory	= new pxCheckBox( m_miscPanel, L"Memory" ));
+	s_misc.Add( m_GPU		= new pxCheckBox( m_miscPanel, L"GPU (PS1 only)", L"(Not implemented yet)" ));
 
-	// ----------------------------------------------------------------------------
-	CheckedStaticBox* disasmPanel = new CheckedStaticBox( this, wxVERTICAL, L"Disasm" );
-	wxSizer& s_disasm( disasmPanel->ThisSizer );
+	s_disasm.Add( m_R3000A	= new pxCheckBox( m_disasmPanel, L"R3000A" ));
+	s_disasm.Add( m_COP2	= new pxCheckBox( m_disasmPanel, L"COP2 (Geometry)" ));
 
-	chks["IOP:R3000A"]		= newCheckBox( disasm, "R3000A" );
-	chks["IOP:COP2"]		= newCheckBox( disasm, "COP2 (Geometry)" );
+	s_hw.Add( m_KnownHw		= new pxCheckBox( m_hwPanel, L"Registers" ));
+	s_hw.Add( m_UnknownHw	= new pxCheckBox( m_hwPanel, L"UnknownRegs" ));
+	s_hw.Add( m_DMA			= new pxCheckBox( m_hwPanel, L"DMA" ));
 
-	disasmPanel->SetValue( false );
-	// ----------------------------------------------------------------------------
-	CheckedStaticBox* hwPanel = new CheckedStaticBox( this, wxVERTICAL, L"Hardware" );
-	wxSizer& s_hw( hwPanel->ThisSizer );
-
-	chks["IOP:KnownHw"]		= newCheckBox( hw, "Registers" );
-	chks["IOP:UnknownHw"]	= newCheckBox( hw, "UnknownRegs" );
-	chks["IOP:DMA"]			= newCheckBox( hw, "DMA" );
-
-	hwPanel->SetValue( false );
-	// ----------------------------------------------------------------------------
-	CheckedStaticBox* evtPanel = new CheckedStaticBox( this, wxVERTICAL, L"Events" );
-	wxSizer& s_evt( evtPanel->ThisSizer );
-
-	chks["IOP:PAD"]			= newCheckBox( evt, "Pad" );
-	chks["IOP:SPU2"]		= newCheckBox( evt, "SPU2" );
-	chks["IOP:CDVD"]		= newCheckBox( evt, "CDVD" );
-	chks["IOP:USB"]			= newCheckBox( evt, "USB" );
-	chks["IOP:FW"]			= newCheckBox( evt, "FW" );
-
-	// ----------------------------------------------------------------------------
+	s_evt.Add( m_Counters	= new pxCheckBox( m_evtPanel, L"Counters" ));
+	s_evt.Add( m_Memcards	= new pxCheckBox( m_evtPanel, L"Memcards" ));
+	s_evt.Add( m_PAD		= new pxCheckBox( m_evtPanel, L"Pad" ));
+	s_evt.Add( m_SPU2		= new pxCheckBox( m_evtPanel, L"SPU2" ));
+	s_evt.Add( m_CDVD		= new pxCheckBox( m_evtPanel, L"CDVD" ));
+	s_evt.Add( m_USB		= new pxCheckBox( m_evtPanel, L"USB" ));
+	s_evt.Add( m_FW			= new pxCheckBox( m_evtPanel, L"FW" ));
 
 	wxFlexGridSizer& iopTable( *new wxFlexGridSizer( 2, 5 ) );
 
 	iopTable.Add( &s_misc, SizerFlags::SubGroup() );
-	iopTable.Add( hwPanel, SizerFlags::SubGroup() );
-	iopTable.Add( evtPanel, SizerFlags::SubGroup() );
-	iopTable.Add( disasmPanel, SizerFlags::SubGroup() );
+	iopTable.Add( m_hwPanel, SizerFlags::SubGroup() );
+	iopTable.Add( m_evtPanel, SizerFlags::SubGroup() );
+	iopTable.Add( m_disasmPanel, SizerFlags::SubGroup() );
 
 	ThisSizer.AddSpacer( 4 );
 	ThisSizer.Add( &iopTable );
 
 	SetValue( true );
+}
+
+#define SetCheckValue( cpu, key ) \
+	if( m_##key != NULL ) m_##key->SetValue( conf.cpu.m_##key );
+
+void Panels::eeLogOptionsPanel::OnSettingsChanged()
+{
+	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
+
+	this->SetValue( conf.EE.m_EnableAll );
+	m_disasmPanel->SetValue( conf.EE.m_EnableDisasm );
+	m_evtPanel->SetValue( conf.EE.m_EnableEvents );
+	m_hwPanel->SetValue( conf.EE.m_EnableHardware );
+
+	SetCheckValue( EE, Memory );
+	SetCheckValue( EE, Bios );
+	SetCheckValue( EE, Cache );
+	SetCheckValue( EE, SysCtrl );
+
+	SetCheckValue( EE, R5900 );
+	SetCheckValue( EE, COP0 );
+	SetCheckValue( EE, COP1 );
+	SetCheckValue( EE, COP2 );
+
+	SetCheckValue(EE, VU0micro);
+	SetCheckValue(EE, VU1micro);
+
+	SetCheckValue(EE, KnownHw);
+	SetCheckValue(EE, UnknownHw);
+	SetCheckValue(EE, DMA);
+
+	SetCheckValue(EE, Counters);
+	SetCheckValue(EE, VIF);
+	SetCheckValue(EE, GIF);
+	SetCheckValue(EE, SPR);
+	SetCheckValue(EE, IPU);
+}
+
+void Panels::iopLogOptionsPanel::OnSettingsChanged()
+{
+	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
+
+	SetValue( conf.IOP.m_EnableAll );
+	m_disasmPanel->SetValue( conf.IOP.m_EnableDisasm );
+	m_evtPanel->SetValue( conf.IOP.m_EnableEvents );
+	m_hwPanel->SetValue( conf.IOP.m_EnableHardware );
+
+	SetCheckValue(IOP, Bios);
+	SetCheckValue(IOP, Memory);
+
+	SetCheckValue(IOP, R3000A);
+	SetCheckValue(IOP, COP2);
+
+	SetCheckValue(IOP, KnownHw);
+	SetCheckValue(IOP, UnknownHw);
+	SetCheckValue(IOP, DMA);
+
+	SetCheckValue(IOP, Counters);
+	SetCheckValue(IOP, Memcards);
+	SetCheckValue(IOP, PAD);
+	SetCheckValue(IOP, SPU2);
+	SetCheckValue(IOP, USB);
+	SetCheckValue(IOP, FW);
+	SetCheckValue(IOP, CDVD);
 }
 
 // --------------------------------------------------------------------------------------
@@ -150,62 +195,147 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent, int idealWidth )
 	wxBoxSizer& topSizer			= *new wxBoxSizer( wxHORIZONTAL );
 
 	wxStaticBoxSizer&	s_misc		= *new wxStaticBoxSizer( wxHORIZONTAL, this, L"Misc" );
-	wxPanelWithHelpers* miscPanel = this;		// helper for our newCheckBox macro.
-	
-	CheckBoxes["SYMs"]		= newCheckBox( misc, "SYMs Log" );
 
-	//miscSizer.Add( ("ELF") );
+	m_masterEnabler = new pxCheckBox( this, _("Enable Trace Logging"),
+		_("Trace logs are all written to emulog.txt.  Warning: Enabling trace logs is typically very slow, and is a leading cause of 'What happened to my FPS?' problems. :)") );
+	m_masterEnabler->SetToolTip( _("On-the-fly hotkey support: Toggle trace logging at any time using F10.") );
+
+	s_misc.Add( m_SIF			= new pxCheckBox( this, L"SIF (EE<->IOP)" ));
+	m_SIF->SetToolTip(_("Enables logging of both SIF DMAs and SIF Register activity.") );
+
+	s_misc.Add( m_VIFunpack		= new pxCheckBox( this, L"VIFunpack" ));
+	m_VIFunpack->SetToolTip(_("Special detailed logs of VIF packed data handling (does not include VIF control, status, or hwRegs)"));
+
+	s_misc.Add( m_GIFtag		= new pxCheckBox( this, L"GIFtag" ));
+	m_GIFtag->SetToolTip(_("(not implemented yet)"));
+
+	//s_head.Add( &s_misc, SizerFlags::SubGroup() );
 
 	topSizer.Add( &m_eeSection, SizerFlags::StdSpace() );
 	topSizer.Add( &m_iopSection, SizerFlags::StdSpace() );
 
+	mainsizer.Add( m_masterEnabler, SizerFlags::StdSpace() );
+	mainsizer.Add( new wxStaticLine( this, wxID_ANY ), SizerFlags::StdExpand().Border(wxLEFT | wxRIGHT, 20) );
+	mainsizer.AddSpacer( 5 );
 	mainsizer.Add( &topSizer );
-	mainsizer.Add( &s_misc, SizerFlags::StdSpace() );
+	mainsizer.Add( &s_misc, SizerFlags::StdSpace().Centre() );
 
 	SetSizer( &mainsizer );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );
+	
+	OnSettingsChanged();
 }
 
+void Panels::LogOptionsPanel::OnSettingsChanged()
+{
+	TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
+
+	m_masterEnabler->SetValue( conf.Enabled );
+	m_SIF->SetValue( conf.SIF );
+
+	SetCheckValue( EE, VIFunpack );
+	SetCheckValue( EE, GIFtag );
+
+	m_eeSection.OnSettingsChanged();	
+	m_iopSection.OnSettingsChanged();
+	
+	OnUpdateEnableAll();
+}
+
+void Panels::LogOptionsPanel::OnUpdateEnableAll()
+{
+	bool enabled( m_masterEnabler->GetValue() );
+
+	m_SIF->Enable( enabled );
+	m_VIFunpack->Enable( enabled );
+	m_GIFtag->Enable( enabled );
+
+	m_eeSection.Enable( enabled );
+	m_iopSection.Enable( enabled );
+}
 
 void Panels::LogOptionsPanel::OnCheckBoxClicked(wxCommandEvent &evt)
 {
 	m_IsDirty = true;
+	if( evt.GetId() == m_masterEnabler->GetWxPtr()->GetId() )
+		OnUpdateEnableAll();
 }
 
 void Panels::LogOptionsPanel::Apply()
 {
-	CheckBoxDict& chks( CheckBoxes );
+	if( !m_IsDirty ) return;
 
-#define SetEE( name ) \
-	g_Conf->EmuOptions.Trace.EE.m_##name	= chks["EE:"#name]->GetValue()
+	g_Conf->EmuOptions.Trace.Enabled	= m_masterEnabler->GetValue();
+	g_Conf->EmuOptions.Trace.SIF		= m_SIF->GetValue();
 
-	SetEE(EnableAll);
-	SetEE(Bios);
-	SetEE(Memory);
-	SetEE(SysCtrl);
-	SetEE(VIFunpack);
-	SetEE(GIFtag);
+	g_Conf->EmuOptions.Trace.EE.m_VIFunpack	= m_VIFunpack->GetValue();
+	g_Conf->EmuOptions.Trace.EE.m_GIFtag	= m_GIFtag->GetValue();
 
-	SetEE(EnableDisasm);
-	SetEE(R5900);
-	SetEE(COP0);
-	SetEE(COP1);
-	SetEE(COP2);
-	SetEE(VU0micro);
-	SetEE(VU1micro);
+	m_eeSection.Apply();
+	m_iopSection.Apply();
+
+	m_IsDirty = false;
+}
+
+#define GetSet( name )		conf.name	= name->GetValue()
+
+void Panels::eeLogOptionsPanel::Apply()
+{
+	TraceFiltersEE& conf( g_Conf->EmuOptions.Trace.EE );
+
+	conf.m_EnableAll		= GetValue();
+	conf.m_EnableDisasm		= m_disasmPanel->GetValue();
+	conf.m_EnableHardware	= m_hwPanel->GetValue();
+	conf.m_EnableEvents		= m_evtPanel->GetValue();
+
+	GetSet(m_Bios);
+	GetSet(m_Memory);
+	GetSet(m_Cache);
+	GetSet(m_SysCtrl);
+
+	GetSet(m_R5900);
+	GetSet(m_COP0);
+	GetSet(m_COP1);
+	GetSet(m_COP2);
+	GetSet(m_VU0micro);
+	GetSet(m_VU1micro);
 	
-	SetEE(EnableHardware);
-	SetEE(KnownHw);
-	SetEE(UnknownHw);
-	SetEE(DMA);
+	GetSet(m_KnownHw);
+	GetSet(m_UnknownHw);
+	GetSet(m_DMA);
 
-	SetEE(EnableEvents);
-	SetEE(Counters);
-	SetEE(VIF);
-	SetEE(GIF);
-	SetEE(SPR);
-	SetEE(IPU);
+	GetSet(m_Counters);
+	GetSet(m_VIF);
+	GetSet(m_GIF);
+	GetSet(m_SPR);
+	GetSet(m_IPU);
+}
 	
-	// TODO -- IOP Section!
+void Panels::iopLogOptionsPanel::Apply()
+{
+	TraceFiltersIOP& conf( g_Conf->EmuOptions.Trace.IOP );
+
+	conf.m_EnableAll		= GetValue();
+	conf.m_EnableDisasm		= m_disasmPanel->GetValue();
+	conf.m_EnableHardware	= m_hwPanel->GetValue();
+	conf.m_EnableEvents		= m_evtPanel->GetValue();
+
+	GetSet(m_Bios);
+	GetSet(m_Memory);
+
+	GetSet(m_R3000A);
+	GetSet(m_COP2);
+
+	GetSet(m_KnownHw);
+	GetSet(m_UnknownHw);
+	GetSet(m_DMA);
+
+	GetSet(m_Counters);
+	GetSet(m_Memcards);
+	GetSet(m_PAD);
+	GetSet(m_SPU2);
+	GetSet(m_USB);
+	GetSet(m_FW);
+	GetSet(m_CDVD);
 }
 

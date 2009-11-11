@@ -30,6 +30,10 @@ class LogOptionsDialog: public wxDialogWithHelpers
 {
 public:
 	LogOptionsDialog( wxWindow* parent=NULL, int id=DialogId_LogOptions );
+	
+protected:
+	void OnOk_Click( wxCommandEvent& evt );
+	void OnApply_Click( wxCommandEvent& evt );
 };
 
 }	// end namespace Dialogs
