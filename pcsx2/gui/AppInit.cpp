@@ -294,6 +294,11 @@ bool Pcsx2App::OnInit()
 		SysDetect();
 		AppApplySettings();
 
+#ifdef __WIN32__
+		extern void SetupDwmStuff(WXHWND hMainWindow);
+		SetupDwmStuff(m_MainFrame->GetHWND());
+#endif
+
 		m_CoreAllocs = new SysCoreAllocations();
 
 		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )

@@ -269,7 +269,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) ),
 	m_Listener_SettingsLoadSave( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
 {
-
 	for( int i=0; i<PluginId_Count; ++i )
 		m_PluginMenuPacks[i].Populate( (PluginsEnum_t)i );
 
