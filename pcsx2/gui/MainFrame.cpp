@@ -380,9 +380,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 
 	m_menuSys.AppendSeparator();
 	
-	//Todo:
-	//m_menuSys.Append(MenuId_EnablePatches,	_("Enable Patches"),
-	//	wxEmptyString, wxITEM_CHECK);
+	m_menuSys.Append(MenuId_EnablePatches,	_("Enable Patches"),
+		wxEmptyString, wxITEM_CHECK);
 
 	m_menuSys.AppendSeparator();
 	m_menuSys.Append(MenuId_Sys_Reset,		_("Reset"),
