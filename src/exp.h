@@ -81,7 +81,7 @@ namespace YAML
 			return e;
 		}
 		inline const RegEx& DocIndicator() {
-			static const RegEx e = DocStart || DocEnd;
+			static const RegEx e = DocStart() || DocEnd();
 			return e;
 		}
 		inline const RegEx& BlockEntry() {
