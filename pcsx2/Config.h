@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -29,7 +29,7 @@ enum PluginsEnum_t
 	PluginId_FW,
 	PluginId_DEV9,
 	PluginId_Count,
-	
+
 	// Memorycard plugin support is preliminary, and is only hacked/hardcoded in at this
 	// time.  So it's placed afer PluginId_Count so that it doesn't show up in the conf
 	// screens or other plugin tables.
@@ -83,7 +83,7 @@ struct TraceFiltersEE
 		m_KnownHw		:1,		// Known and handled HW Registers
 		m_UnknownHw		:1,		// Unknown/Unhandled Hardware Registers
 		m_DMA			:1,		// DMA Log filter, to allow for filtering HW separate of the verbose Known Registers.
-		
+
 		m_EnableEvents	:1,		// Enables logging of event-driven activity -- counters, DMAs, etc.
 		m_Counters		:1,		// EE's counters!
 		m_VIF			:1,
@@ -91,7 +91,7 @@ struct TraceFiltersEE
 		m_IPU			:1,
 		m_SPR			:1;		// Scratchpad Ram DMA
 	BITFIELD_END
-	
+
 	bool Enabled() const		{ return m_EnableAll; }
 	bool DisasmEnabled() const	{ return m_EnableAll && m_EnableDisasm; }
 	bool HwEnabled() const		{ return m_EnableAll && m_EnableHardware; }
@@ -234,7 +234,7 @@ struct TraceLogFilters
 	}
 
 	void LoadSave( IniInterface& ini );
-	
+
 	bool operator ==( const TraceLogFilters& right ) const
 	{
 		return OpEqu( Enabled ) && OpEqu( SIF ) && OpEqu( EE ) && OpEqu( IOP );
@@ -346,7 +346,7 @@ struct Pcsx2Config
 		CpuOptions();
 		void LoadSave( IniInterface& conf );
 		void ApplySanityCheck();
-		
+
 		bool operator ==( const CpuOptions& right ) const
 		{
 			return OpEqu( sseMXCSR ) && OpEqu( sseVUMXCSR ) && OpEqu( Recompiler );
@@ -377,7 +377,7 @@ struct Pcsx2Config
 
 		VideoOptions();
 		void LoadSave( IniInterface& conf );
-		
+
 		bool operator ==( const VideoOptions& right ) const
 		{
 			return
@@ -457,7 +457,7 @@ struct Pcsx2Config
 			return !this->operator ==( right );
 		}
 	};
-	
+
 	BITFIELD32()
 		bool
 			CdvdVerboseReads:1,		// enables cdvd read activity verbosely dumped to the console
@@ -471,7 +471,9 @@ struct Pcsx2Config
 			McdEnableEjection:1,
 
 			MultitapPort0_Enabled:1,
-			MultitapPort1_Enabled:1;
+			MultitapPort1_Enabled:1,
+
+			ConsoleToStdio:1;
 	BITFIELD_END
 
 	CpuOptions			Cpu;

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -53,7 +53,7 @@ wxString SaveStateBase::GetFilename( int slot )
 }
 
 SaveStateBase::SaveStateBase( SafeArray<u8>& memblock ) :
-	m_memory( memblock )	
+	m_memory( memblock )
 ,	m_version( g_SaveVersion )
 ,	m_idx( 0 )
 ,	m_sectid( FreezeId_Unknown )
@@ -98,7 +98,7 @@ void SaveStateBase::FreezeBios()
 	// Check the BIOS, and issue a warning if the bios for this state
 	// doesn't match the bios currently being used (chances are it'll still
 	// work fine, but some games are very picky).
-	
+
 	char descin[128], desccmp[128];
 	wxString descout;
 	IsBIOS( g_Conf->FullpathToBios(), descout );
@@ -130,7 +130,7 @@ void SaveStateBase::FreezeBios()
 	m_DidBios = true;
 }
 
-static const int MainMemorySizeInBytes = 
+static const int MainMemorySizeInBytes =
 	Ps2MemSize::Base + Ps2MemSize::Scratch + Ps2MemSize::Hardware +
 	Ps2MemSize::IopRam + Ps2MemSize::IopHardware + 0x0100;
 
@@ -141,13 +141,13 @@ void SaveStateBase::FreezeMainMemory()
 
 	// First Block - Memory Dumps
 	// ---------------------------
-	FreezeMem(PS2MEM_BASE,		Ps2MemSize::Base);		// 32 MB main memory   
-	FreezeMem(PS2MEM_SCRATCH,	Ps2MemSize::Scratch);	// scratch pad 
+	FreezeMem(PS2MEM_BASE,		Ps2MemSize::Base);		// 32 MB main memory
+	FreezeMem(PS2MEM_SCRATCH,	Ps2MemSize::Scratch);	// scratch pad
 	FreezeMem(PS2MEM_HW,		Ps2MemSize::Hardware);	// hardware memory
 
 	FreezeMem(psxM, Ps2MemSize::IopRam);		// 2 MB main memory
 	FreezeMem(psxH, Ps2MemSize::IopHardware);	// hardware memory
-	FreezeMem(psxS, 0x000100);					// iop's sif memory	
+	FreezeMem(psxS, 0x000100);					// iop's sif memory
 }
 
 void SaveStateBase::FreezeRegisters()
@@ -279,7 +279,7 @@ bool SaveStateBase::FreezeSection( int seek_section )
 			m_sectid++;
 		}
 		break;
-		
+
 		case FreezeId_Registers:
 		{
 			FreezeTag( "HardwareRegisters" );
@@ -293,7 +293,7 @@ bool SaveStateBase::FreezeSection( int seek_section )
 			m_sectid++;
 		}
 		break;
-		
+
 		case FreezeId_Plugin:
 		{
 			FreezeTag( "Plugin" );
@@ -382,14 +382,14 @@ void memSavingState::FreezeAll()
 	_parent::FreezeAll();
 }
 
-memLoadingState::memLoadingState( const SafeArray<u8>& load_from ) : 
+memLoadingState::memLoadingState( const SafeArray<u8>& load_from ) :
 	SaveStateBase( const_cast<SafeArray<u8>&>(load_from) )
 {
 }
 
 memLoadingState::~memLoadingState() { }
 
-// Loading of state data 
+// Loading of state data
 void memLoadingState::FreezeMem( void* data, int size )
 {
 	const u8* const src = m_memory.GetPtr(m_idx);
@@ -407,7 +407,6 @@ bool memLoadingState::SeekToSection( PluginsEnum_t pid )
 		if( m_sectid == FreezeId_End ) return false;
 
 		FreezeTag( "Plugin" );
-		int seekpos = m_idx + 4;
 		int sectlen = 0xdead;
 
 		Freeze( sectlen );

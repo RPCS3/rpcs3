@@ -71,7 +71,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		{
 			confirmed = Dialogs::IssueConfirmation( m_WindowBound, L"DragDrop:BootELF", ConfButtons().Reset().Cancel(),
 				_("Confirm PS2 Reset"),
-				_("You have dropped the following ELF binary into PCSX2:\n\n") + 
+				_("You have dropped the following ELF binary into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" + GetMsg_ConfirmSysReset()
 			) != wxID_CANCEL;
 		}
@@ -89,7 +89,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	// ---------------
 	//    ISO CHECK
 	// ---------------
-	
+
 	// FIXME : The whole IsoFileFormats api (meaning isoOpen / isoDetect / etc) needs to be
 	//   converted to C++ and wxInputStream .  Until then this is a nasty little exception unsafe
 	//   hack ;)
@@ -105,19 +105,18 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	{
 		Console.WriteLn( L"(Drag&Drop) Found valid ISO file type!" );
 
-		bool confirmed = true;
 		wxWindowID result = wxID_RESET;
 
 		if( SysHasValidState() )
 		{
 			result = Dialogs::IssueConfirmation( m_WindowBound, L"DragDrop:BootIso", ConfButtons().Reset().Cancel().Custom(_("Swap Disc")),
 				_("Confirm PS2 Reset"),
-				_("You have dropped the following ISO image into PCSX2:\n\n") + 
+				_("You have dropped the following ISO image into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" +
 				_("Do you want to swap discs or boot the new image (via system reset)?")
 			);
 		}
-		
+
 		if( result != wxID_CANCEL )
 		{
 			SysUpdateIsoSrcFile( filenames[0] );

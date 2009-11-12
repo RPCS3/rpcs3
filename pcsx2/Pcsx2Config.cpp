@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -27,7 +27,7 @@ void TraceLogFilters::LoadSave( IniInterface& ini )
 
 	IniEntry( Enabled );
 	IniEntry( SIF );
-	
+
 	// Retaining backwards compat of the trace log enablers isn't really important, and
 	// doing each one by hand would be murder.  So let's cheat and just save it as an int:
 
@@ -236,7 +236,8 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( CdvdVerboseReads );
 	IniBitBool( CdvdDumpBlocks );
 	IniBitBool( EnablePatches );
-	
+	IniBitBool( ConsoleToStdio );
+
 	IniBitBool( SkipBiosSplash );
 
 	IniBitBool( McdEnableEjection );

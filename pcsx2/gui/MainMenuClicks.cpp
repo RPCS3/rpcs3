@@ -23,9 +23,20 @@
 #include "Dialogs/ConfigurationDialog.h"
 #include "Dialogs/LogOptionsDialog.h"
 
+#include "IniInterface.h"
+
 using namespace Dialogs;
 
 extern wxString GetMsg_ConfirmSysReset();
+
+void MainEmuFrame::SaveEmuOptions()
+{
+    if (wxConfigBase* conf = GetAppConfig())
+	{
+		IniSaver saver(*conf);
+		g_Conf->EmuOptions.LoadSave(saver);
+	}
+}
 
 void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
@@ -146,8 +157,6 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 	if( resume ) CoreThread.Resume();
 }
 
-#include "IniInterface.h"
-
 void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent &event )
 {
 	g_Conf->EmuOptions.MultitapPort0_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap0Toggle );
@@ -158,23 +167,13 @@ void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent &event )
 void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent &event )
 {
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
-
-	if( wxConfigBase* conf = GetAppConfig() )
-	{
-		IniSaver saver( *conf );
-		g_Conf->EmuOptions.LoadSave( saver );
-	}
+	SaveEmuOptions();
 }
 
 void MainEmuFrame::Menu_EnablePatches_Click( wxCommandEvent &event )
 {
 	g_Conf->EmuOptions.EnablePatches = GetMenuBar()->IsChecked( MenuId_EnablePatches );
-
-	if( wxConfigBase* conf = GetAppConfig() )
-	{
-		IniSaver saver( *conf );
-		g_Conf->EmuOptions.LoadSave( saver );
-	}
+    SaveEmuOptions();
 }
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
@@ -281,6 +280,18 @@ void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 	g_Conf->ProgLogBox.Visible = event.IsChecked();
 	wxCommandEvent evt( wxEVT_COMMAND_MENU_SELECTED, g_Conf->ProgLogBox.Visible ? wxID_OPEN : wxID_CLOSE );
 	wxGetApp().ProgramLog_PostEvent( evt );
+}
+
+void MainEmuFrame::Menu_ShowConsole_Stdio(wxCommandEvent &event)
+{
+	g_Conf->EmuOptions.ConsoleToStdio = GetMenuBar()->IsChecked( MenuId_Console_Stdio );
+	SaveEmuOptions();
+}
+
+void MainEmuFrame::Menu_PrintCDVD_Info(wxCommandEvent &event)
+{
+	g_Conf->EmuOptions.CdvdVerboseReads = GetMenuBar()->IsChecked( MenuId_CDVD_Info );
+	SaveEmuOptions();
 }
 
 void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)

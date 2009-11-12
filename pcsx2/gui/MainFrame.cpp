@@ -171,6 +171,8 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Debug_Logging,		Menu_Debug_Logging_Click );
 
 	ConnectMenu( MenuId_Console,			Menu_ShowConsole );
+	ConnectMenu( MenuId_Console_Stdio,			Menu_ShowConsole_Stdio );
+	ConnectMenu( MenuId_CDVD_Info,			Menu_PrintCDVD_Info );
 
 	ConnectMenu( MenuId_About,				Menu_ShowAboutBox );
 }
@@ -263,6 +265,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
 
 	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
+	m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, L"Console to Stdio", wxEmptyString, wxITEM_CHECK ) ),
 
 	m_Listener_CoreThreadStatus( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener( this, OnCoreThreadStatusChanged ) ),
 	m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>( this, OnCorePluginStatusChanged ) ),
@@ -379,7 +382,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	m_menuSys.Append(MenuId_Sys_SaveStates,	_("Save state"), &m_SaveStatesSubmenu);
 
 	m_menuSys.AppendSeparator();
-	
+
 	m_menuSys.Append(MenuId_EnablePatches,	_("Enable Patches"),
 		wxEmptyString, wxITEM_CHECK);
 
@@ -415,16 +418,19 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// ------------------------------------------------------------------------
 
 	m_menuMisc.Append( &m_MenuItem_Console );
+#ifdef __LINUX__
+	m_menuMisc.Append( &m_MenuItem_Console_Stdio );
+#endif
 	//Todo: Though not many people need this one :p
 	//m_menuMisc.Append(MenuId_Profiler,			_("Show Profiler"),	wxEmptyString, wxITEM_CHECK);
-	m_menuMisc.AppendSeparator();
+	//m_menuMisc.AppendSeparator();
 
 	// No dialogs implemented for these yet...
 	//m_menuMisc.Append(41, "Patch Browser...", wxEmptyString, wxITEM_NORMAL);
 	//m_menuMisc.Append(42, "Patch Finder...", wxEmptyString, wxITEM_NORMAL);
 
-	// Ref will want this re-added eventually.
-	//m_menuMisc.Append(47, _T("Print CDVD Info..."), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.Append(MenuId_CDVD_Info, _T("Print CDVD Info"), wxEmptyString, wxITEM_CHECK);
+	m_menuMisc.AppendSeparator();
 
 	//Todo:
 	//There's a great working "open website" in the about panel. Less clutter by just using that.
@@ -510,6 +516,10 @@ void MainEmuFrame::ApplySettings()
 
 	menubar.Check( MenuId_SkipBiosToggle, g_Conf->EmuOptions.SkipBiosSplash );
 	menubar.Check( MenuId_EnablePatches, g_Conf->EmuOptions.EnablePatches );
+	menubar.Check( MenuId_CDVD_Info, g_Conf->EmuOptions.CdvdVerboseReads );
+#ifdef __LINUX__
+	menubar.Check( MenuId_Console_Stdio, g_Conf->EmuOptions.ConsoleToStdio );
+#endif
 
 	menubar.Check( MenuId_Config_Multitap0Toggle, g_Conf->EmuOptions.MultitapPort0_Enabled );
 	menubar.Check( MenuId_Config_Multitap1Toggle, g_Conf->EmuOptions.MultitapPort1_Enabled );

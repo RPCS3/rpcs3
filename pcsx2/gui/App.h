@@ -142,6 +142,8 @@ enum MenuIdentifiers
 	MenuId_Website,				// Visit our awesome website!
 	MenuId_Profiler,			// Enable profiler
 	MenuId_Console,				// Enable console
+	MenuId_Console_Stdio,		// Enable Stdio
+	MenuId_CDVD_Info,
 
 	// Debug Subsection
 	MenuId_Debug_Open,			// opens the debugger window / starts a debug session
@@ -415,7 +417,7 @@ public:
 	void OpenGsFrame();
 	void OnGsFrameClosed();
 	void OnMainFrameClosed();
-	
+
 	// --------------------------------------------------------------------------
 	//  Overrides of wxApp virtuals:
 	// --------------------------------------------------------------------------
@@ -525,14 +527,14 @@ DECLARE_APP(Pcsx2App)
 // --------------------------------------------------------------------------------------
 // Use these for "silent fail" invocation of PCSX2 Application-related constructs.  If the
 // construct (albeit wxApp, MainFrame, CoreThread, etc) is null, the requested method will
-// not be invoked, and an optional "else" clause cn be affixed for handling the end case.
+// not be invoked, and an optional "else" clause can be affixed for handling the end case.
 //
 // Usage Examples:
 //   sMainFrame.ApplySettings();
 //   sMainFrame.ApplySettings(); else Console.WriteLn( "Judge Wapner" );	// 'else' clause for handling NULL scenarios.
 //
-// Note!  These macros are not "syntax complete", which means they could generat unexpected
-// syntax errors in some situatins, and more importantly they cannot be used for invoking 
+// Note!  These macros are not "syntax complete", which means they could generate unexpected
+// syntax errors in some situations, and more importantly, they cannot be used for invoking
 // functions with return values.
 //
 // Rationale: There are a lot of situations where we want to invoke a void-style method on
@@ -540,7 +542,7 @@ DECLARE_APP(Pcsx2App)
 // objects are NULL the most intuitive response is to simply ignore the call request and
 // continue running silently.  These macros make that possible without any extra boilerplate
 // conditionals or temp variable defines in the code.
-// 
+//
 #define sApp \
 	if( Pcsx2App* __app_ = (Pcsx2App*)wxApp::GetInstance() ) (*__app_)
 
@@ -558,7 +560,7 @@ DECLARE_APP(Pcsx2App)
 // A scoped convenience class for closing a single plugin and saving its state to memory.
 // Emulation is suspended as needed, and is restored when the object leaves scope.  Within
 // the scope of the object, code is free to call plugin re-configurations or even unload
-// a plugin entirely and re-load a different DLL in its place.
+// a plugin entirely and re-load a different plugin in its place.
 //
 class SaveSinglePluginHelper
 {

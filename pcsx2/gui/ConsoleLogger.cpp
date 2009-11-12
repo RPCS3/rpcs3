@@ -639,18 +639,13 @@ void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 //  ConsoleImpl_ToFile
 // --------------------------------------------------------------------------------------
 
-static void __concall _immediate_logger( const wxString& src )
-{
-#ifdef __LINUX__
-	ConsoleWriter_Stdio.DoWrite(src);
-#endif
-	px_fputs( emuLog, src.ToUTF8() );
-}
-
 static void __concall ConsoleToFile_Newline()
 {
 #ifdef __LINUX__
-	ConsoleWriter_Stdio.Newline();
+	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdio.Newline();
+#endif
+
+#ifdef __LINUX__
 	fputc( '\n', emuLog );
 #else
 	fputs( "\r\n", emuLog );
@@ -659,16 +654,19 @@ static void __concall ConsoleToFile_Newline()
 
 static void __concall ConsoleToFile_DoWrite( const wxString& fmt )
 {
-	_immediate_logger( fmt );
+#ifdef __LINUX__
+	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdio.DoWrite(fmt);
+#endif
+
+	px_fputs( emuLog, fmt.ToUTF8() );
 }
 
 static void __concall ConsoleToFile_DoWriteLn( const wxString& fmt )
 {
-	_immediate_logger( fmt );
+	ConsoleToFile_DoWrite( fmt );
 	ConsoleToFile_Newline();
 
-	if( emuLog != NULL )
-		fflush( emuLog );
+	if (emuLog != NULL) fflush( emuLog );
 }
 
 static void __concall ConsoleToFile_SetTitle( const wxString& title )

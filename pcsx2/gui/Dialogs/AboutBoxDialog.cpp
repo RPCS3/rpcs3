@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -54,16 +54,16 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	static const wxString LabelAuthors = fromUTF8(
 		"Developers"
 		"\n\n"
-		"v0.9.6+: Arcum42, Refraction,"
-		"drk||raziel, cottonvibes, gigaherz,"
+		"v0.9.6+: Arcum42, Refraction, "
+		"drk||raziel, cottonvibes, gigaherz, "
 		"rama, Jake.Stine, saqib, Tmkk, pseudonym"
 		"\n\n"
-		"Previous versions: Alexey silinov, Aumatt,"
-		"Florin, goldfinger, Linuzappz, loser,"
+		"Previous versions: Alexey silinov, Aumatt, "
+		"Florin, goldfinger, Linuzappz, loser, "
 		"Nachbrenner, shadow, Zerofrog"
 		"\n\n"
-		"Betatesting: Bositman, ChaosCode,"
-		"CKemu, crushtest, GeneralPlot,"
+		"Betatesting: Bositman, ChaosCode, "
+		"CKemu, crushtest, GeneralPlot, "
 		"Krakatos, Parotaku, Rudy_X"
 		"\n\n"
 		"Webmasters: CKemu, Falcon4ever"
@@ -74,10 +74,10 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		"\n\n"
 		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu)"
 		"\n\n"
-		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp),"
+		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp), "
 		"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
 		"\n\n"
-		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime,"
+		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime, "
 		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87"
 	);
 
@@ -124,6 +124,6 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 
 	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), SizerFlags::StdCenter() );
 	SetSizerAndFit( &mainSizer );
-	
+
 	CenterOnScreen();
 }

@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -29,7 +29,7 @@ using namespace Internal;
 template< typename T >
 static __forceinline void _generic_write( u32 addr, T val )
 {
-	int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
+	//int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
 	IopHwTraceLog<T>( addr, val, "Write" );
 	psxHu(addr) = val;
 }
@@ -43,7 +43,7 @@ void __fastcall iopHwWrite32_generic( u32 addr, mem32_t val )	{ _generic_write<m
 template< typename T >
 static __forceinline T _generic_read( u32 addr )
 {
-	int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
+	//int bitsize = (sizeof(T) == 1) ? 8 : ( (sizeof(T) == 2) ? 16 : 32 );
 
 	T ret = psxHu(addr);
 	IopHwTraceLog<T>( addr, ret, "Read" );

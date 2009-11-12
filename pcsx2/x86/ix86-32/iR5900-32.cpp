@@ -1315,9 +1315,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	u32 usecop2;
 
 #ifdef PCSX2_DEBUG
-    //dumplog |= 4;
-    if( dumplog & 4 )
-		iDumpRegisters(startpc, 0);
+    if (dumplog & 4) iDumpRegisters(startpc, 0);
 #endif
 
 	pxAssert( startpc );
@@ -1540,14 +1538,15 @@ StartRecomp:
 
 #ifdef PCSX2_DEBUG
 	// dump code
-	for(i = 0; i < ArraySize(s_recblocks); ++i) {
-		if( startpc == s_recblocks[i] ) {
+	for(i = 0; i < ArraySize(s_recblocks); ++i)
+	{
+		if (startpc == s_recblocks[i])
+		{
 			iDumpBlock(startpc, recPtr);
 		}
 	}
 
-	if( (dumplog & 1) ) //|| usecop2 )
-		iDumpBlock(startpc, recPtr);
+	if (dumplog & 1) iDumpBlock(startpc, recPtr);
 #endif
 
 	u32 sz = (s_nEndBlock-startpc) >> 2;
@@ -1618,7 +1617,7 @@ StartRecomp:
 			}
 			else
 			{
-				DbgCon.WriteLn( "Uncounted Manual block @ 0x%08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+				DbgCon.WriteLn( Color_Gray, "Uncounted Manual block @ 0x%08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
 					startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, pgsz, inpage_sz );
 			}
 

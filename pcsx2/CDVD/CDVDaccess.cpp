@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -56,7 +56,7 @@ int lastReadSize;
 int lastLSN;		// needed for block dumping
 
 // Records last read block length for block dumping
-static int plsn = 0;
+//static int plsn = 0;
 static isoFile *blockDumpFile = NULL;
 
 // Assertion check for CDVD != NULL (in devel and debug builds), because its handier than
@@ -133,7 +133,7 @@ static int FindDiskType(int mType)
 			if (DoCDVDreadSector(bleh, 16, CDVD_MODE_2048) == 0)
 			{
 				//const cdVolDesc& volDesc = (cdVolDesc&)bleh;
-				//if(volDesc.rootToc.tocSize == 2048) 
+				//if(volDesc.rootToc.tocSize == 2048)
 				if(*(u16*)(bleh+166) == 2048)
 					iCDType = CDVD_TYPE_DETCTCD;
 				else
@@ -158,11 +158,11 @@ static int FindDiskType(int mType)
 		case CDVD_TYPE_DETCTCD:
 			Console.WriteLn(" * CDVD Disk Open: CD, %d tracks (%d to %d):", tn.etrack-tn.strack+1,tn.strack,tn.etrack);
 			break;
-		
+
 		case CDVD_TYPE_DETCTDVDS:
 			Console.WriteLn(" * CDVD Disk Open: DVD, Single layer or unknown:");
 			break;
-		
+
 		case CDVD_TYPE_DETCTDVDD:
 			Console.WriteLn(" * CDVD Disk Open: DVD, Double layer:");
 			break;
@@ -172,7 +172,7 @@ static int FindDiskType(int mType)
 	for(int i = tn.strack; i <= tn.etrack; i++)
 	{
 		cdvdTD td,td2;
-		
+
 		CDVD->getTD(i,&td);
 
 		if (tn.etrack > i)
@@ -182,12 +182,12 @@ static int FindDiskType(int mType)
 
 		int tlength = td2.lsn - td.lsn;
 
-		if (td.type == CDVD_AUDIO_TRACK) 
+		if (td.type == CDVD_AUDIO_TRACK)
 		{
 			audioTracks++;
 			Console.WriteLn(" * * Track %d: Audio (%d sectors)", i,tlength);
 		}
-		else 
+		else
 		{
 			dataTracks++;
 			Console.WriteLn(" * * Track %d: Data (Mode %d) (%d sectors)", i,((td.type==CDVD_MODE1_TRACK)?1:2),tlength);
@@ -241,18 +241,18 @@ static void DetectDiskType()
 		case CDVD_TYPE_PS2CDDA:
 			mType = CDVD_TYPE_DETCTCD;
 			break;
-		
+
 		case CDVD_TYPE_DVDV:
 		case CDVD_TYPE_PS2DVD:
 			mType = CDVD_TYPE_DETCTDVDS;
 			break;
-		
+
 		case CDVD_TYPE_DETCTDVDS:
 		case CDVD_TYPE_DETCTDVDD:
 		case CDVD_TYPE_DETCTCD:
 			mType = baseMediaType;
 			break;
-		
+
 		case CDVD_TYPE_NODISC:
 			diskTypeCached = CDVD_TYPE_NODISC;
 			return;
@@ -278,7 +278,7 @@ void CDVDsys_ChangeSource( CDVD_SourceType type )
 		case CDVDsrc_Iso:
 			CDVD = &CDVDapi_Iso;
 		break;
-		
+
 		case CDVDsrc_NoDisc:
 			CDVD = &CDVDapi_NoDisc;
 		break;
@@ -298,10 +298,10 @@ bool DoCDVDopen()
 	// the new disk callback is set on Init also, but just in case the plugin clears it for
 	// some reason on close, we re-send here:
 	CDVD->newDiskCB( cdvdNewDiskCB );
-	
+
 	// Win32 Fail: the old CDVD api expects MBCS on Win32 platforms, but generating a MBCS
 	// from unicode is problematic since we need to know the codepage of the text being
-	// converted (which isn't really practical knowledge).  A 'best guess' would be the 
+	// converted (which isn't really practical knowledge).  A 'best guess' would be the
 	// default codepage of the user's Windows install, but even that will fail and return
 	// question marks if the filename is another language.
 	// Likely Fix: Force new versions of CDVD plugins to expect UTF8 instead.

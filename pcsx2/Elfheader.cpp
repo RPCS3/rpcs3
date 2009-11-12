@@ -296,7 +296,7 @@ struct ElfObject
 			case 5: machine = "Motorola 88000";	break;
 			case 7: machine = "Intel 80860";	break;
 			case 8: machine = "mips_rs3000";	break;
-			
+
 			default:
 				ELF_LOG( "machine:  unknown = %x", header.e_machine );
 			break;
@@ -505,7 +505,6 @@ u32 loadElfCRC( const char* filename )
 {
 	u32 crcval = 0;
 	Console.WriteLn("loadElfCRC: %s", filename);
-	int mylen = strlen( "cdromN:" );
 
 	IsoFSCDVD isofs;
 	const int filesize = IsoDirectory(isofs).GetFileSize( fromUTF8(filename) );
