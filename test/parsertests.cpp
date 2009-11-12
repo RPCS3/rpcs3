@@ -657,6 +657,38 @@ namespace Test
 				return false;
 			return true;
 		}
+		
+		bool KeyNotFound()
+		{
+			std::string input = "key: value";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			try {
+				doc["bad key"];
+			} catch(const YAML::Exception& e) {
+				if(e.msg != YAML::ErrorMsg::KEY_NOT_FOUND + ": bad key")
+					throw;
+			}
+
+			try {
+				doc[5];
+			} catch(const YAML::Exception& e) {
+				if(e.msg != YAML::ErrorMsg::KEY_NOT_FOUND + ": 5")
+					throw;
+			}
+
+			try {
+				doc[2.5];
+			} catch(const YAML::Exception& e) {
+				if(e.msg != YAML::ErrorMsg::KEY_NOT_FOUND + ": 2.5")
+					throw;
+			}
+
+			return true;
+		}
 	}
 	
 	namespace {
@@ -674,7 +706,7 @@ namespace Test
 				doc >> output;
 			} catch(const YAML::Exception& e) {
 				ok = false;
-				error = e.msg;
+				error = e.what();
 			}
 			if(ok && output == desiredOutput) {
 				passed++;
@@ -918,6 +950,7 @@ namespace Test
 		RunParserTest(&Parser::MultipleDocsWithSomeExplicitIndicators, "multiple docs with some explicit indicators", passed, total);
 		RunParserTest(&Parser::BlockKeyWithNullValue, "block key with null value", passed, total);
 		RunParserTest(&Parser::Bases, "bases", passed, total);
+		RunParserTest(&Parser::KeyNotFound, "key not found", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);
