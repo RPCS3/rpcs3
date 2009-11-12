@@ -117,10 +117,10 @@ void ConsoleTestThread::ExecuteTaskInThread()
 }
 
 // ----------------------------------------------------------------------------
-// pass an uninitialized file object, the function will ask the user for the
-// filename and try to open it, returns true on success (file was opened),
+// Pass an uninitialized file object. The function will ask the user for the
+// filename and try to open it. It returns true on success (file was opened),
 // false if file couldn't be opened/created and -1 if the file selection
-// dialog was canceled
+// dialog was canceled.
 //
 static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 {
@@ -180,6 +180,7 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 	const wxFont fixedB( fontsize, wxMODERN, wxNORMAL, wxBOLD );
 
 	// Standard R, G, B format:
+	new (&m_table[Color_Default])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Black])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Red])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Green])		wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixed );
@@ -196,7 +197,13 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 	new (&m_table[Color_StrongRed])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixedB );
 	new (&m_table[Color_StrongGreen])	wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixedB );
 	new (&m_table[Color_StrongBlue])	wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongMagenta])	wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixedB );
 	new (&m_table[Color_StrongOrange])	wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixedB );
+    new (&m_table[Color_StrongGray])	wxTextAttr( wxColor( 108, 108, 108 ), wxNullColour, fixedB );
+
+	new (&m_table[Color_StrongCyan])	wxTextAttr( wxColor( 128, 180, 180 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongYellow])	wxTextAttr( wxColor( 180, 180, 128 ), wxNullColour, fixedB );
+	new (&m_table[Color_StrongWhite])	wxTextAttr( wxColor( 160, 160, 160 ), wxNullColour, fixedB );
 }
 
 void ConsoleLogFrame::ColorArray::Cleanup()

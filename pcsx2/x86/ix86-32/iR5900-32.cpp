@@ -1559,20 +1559,24 @@ StartRecomp:
 	//const u32 pgsz = std::min(0x1000 - inpage_offs, inpage_sz);
 	const u32 pgsz = inpage_sz;
 
-	if(PageType!=-1)
-	{
-		if (PageType==0) {
+    switch (PageType)
+    {
+        case -1:
+            break;
+
+        case 0:
 			mmap_MarkCountedRamPage( inpage_ptr );
 			manual_page[inpage_ptr >> 12] = 0;
-		}
-		else
-		{
+			break;
+
+        default:
 			xMOV( ecx, inpage_ptr );
 			xMOV( edx, pgsz / 4 );
 			//xMOV( eax, startpc );		// uncomment this to access startpc (as eax) in dyna_block_discard
 
 			u32 lpc = inpage_ptr;
 			u32 stg = pgsz;
+
 			while(stg>0)
 			{
 				xCMP( ptr32[PSM(lpc)], *(u32*)PSM(lpc) );
@@ -1590,21 +1594,21 @@ StartRecomp:
 
 			// (ideally, perhaps, manual_counter should be reset to 0 every few minutes?)
 
-			if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3) {
-
+			if (startpc != 0x81fc0 && manual_counter[inpage_ptr >> 12] <= 3)
+			{
 				// Counted blocks add a weighted (by block size) value into manual_page each time they're
 				// run.  If the block gets run a lot, it resets and re-protects itself in the hope
 				// that whatever forced it to be manually-checked before was a 1-time deal.
 
 				// Counted blocks have a secondary threshold check in manual_counter, which forces a block
-				// to 'uncounted' mode if it's recompiled several time.  This protects against excessive
+				// to 'uncounted' mode if it's recompiled several times.  This protects against excessive
 				// recompilation of blocks that reside on the same codepage as data.
 
 				// fixme? Currently this algo is kinda dumb and results in the forced recompilation of a
 				// lot of blocks before it decides to mark a 'busy' page as uncounted.  There might be
 				// be a more clever approach that could streamline this process, by doing a first-pass
 				// test using the vtlb memory protection (without recompilation!) to reprotect a counted
-				// block.  But unless a new also is relatively simple in implementation, it's probably
+				// block.  But unless a new algo is relatively simple in implementation, it's probably
 				// not worth the effort (tests show that we have lots of recompiler memory to spare, and
 				// that the current amount of recompilation is fairly cheap).
 
@@ -1612,16 +1616,15 @@ StartRecomp:
 				xJC( dyna_page_reset );
 
 				// note: clearcnt is measured per-page, not per-block!
-				//DbgCon.WriteLn( "Manual block @ %08X : size=%3d  page/offs=%05X/%03X  inpgsz=%d  clearcnt=%d",
+				//DbgCon.WriteLn( "Manual block @ %08X : size =%3d  page/offs = %05X/%03X  inpgsz = %d  clearcnt = %d",
 				//	startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, inpage_sz, manual_counter[inpage_ptr >> 12] );
 			}
 			else
 			{
-				DbgCon.WriteLn( Color_Gray, "Uncounted Manual block @ 0x%08X : size=%3d page/offs=%05X/%03X  inpgsz=%d",
+				DbgCon.WriteLn( Color_Gray, "Uncounted Manual block @ 0x%08X : size =%3d page/offs = %05X/%03X  inpgsz = %d",
 					startpc, sz, inpage_ptr>>12, inpage_ptr&0xfff, pgsz, inpage_sz );
 			}
-
-		}
+            break;
 	}
 
 	// Finally: Generate x86 recompiled code!
@@ -1631,8 +1634,7 @@ StartRecomp:
 	}
 
 #ifdef PCSX2_DEBUG
-	if( (dumplog & 1) )
-		iDumpBlock(startpc, recPtr);
+	if (dumplog & 1) iDumpBlock(startpc, recPtr);
 #endif
 
 	pxAssert( (pc-startpc)>>2 <= 0xffff );

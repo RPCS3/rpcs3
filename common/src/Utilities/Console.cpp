@@ -76,26 +76,45 @@ const IConsoleWriter ConsoleWriter_Null =
 // --------------------------------------------------------------------------------------
 
 #ifdef __LINUX__
-static const wxChar* tbl_color_codes[] =
+static __forceinline const wxChar* GetLinuxConsoleColor(ConsoleColors color)
 {
-        L"\033[30m"              // black
-        ,       L"\033[31m"              // red
-        ,       L"\033[32m"              // green
-        ,       L"\033[33m"              // yellow
-        ,       L"\033[34m"              // blue
-        ,       L"\033[35m"              // magenta
-        ,       L"\033[36m"              // cyan
-        ,       L"\033[37m"              // white!
-        ,       L"\033[30m\033[1m"       // strong black
-        ,       L"\033[31m\033[1m"       // strong red
-        ,       L"\033[32m\033[1m"       // strong green
-        ,       L"\033[33m\033[1m"       // strong yellow
-        ,       L"\033[34m\033[1m"       // strong blue
-        ,       L"\033[35m\033[1m"       // strong magenta
-        ,       L"\033[36m\033[1m"       // strong cyan
-        ,       L"\033[37m\033[1m"       // strong white!
-        ,       L"\033[0m"               // Back to default.
-};
+    switch(color)
+    {
+        case Color_Black: return L"\033[30m";
+        case Color_StrongBlack: return L"\033[30m\033[1m";
+
+        case Color_Red: return L"\033[31m";
+        case Color_StrongRed: return L"\033[31m\033[1m";
+
+        case Color_Green: return L"\033[32m";
+        case Color_StrongGreen: return L"\033[32m\033[1m";
+
+        case Color_Yellow: return L"\033[33m";
+        case Color_StrongYellow: return L"\033[33m\033[1m";
+
+        case Color_Blue: return L"\033[34m";
+        case Color_StrongBlue: return L"\033[34m\033[1m";
+
+        // No orange, so use magenta.
+        case Color_Orange:
+        case Color_Magenta: return L"\033[35m";
+        case Color_StrongOrange:
+        case Color_StrongMagenta: return L"\033[35m\033[1m";
+
+        case Color_Cyan: return L"\033[36m";
+        case Color_StrongCyan: return L"\033[36m\033[1m";
+
+        // Use 'white' instead of grey.
+        case Color_Gray:
+        case Color_White: return L"\033[37m";
+        case Color_StrongGray:
+        case Color_StrongWhite: return L"\033[37m\033[1m";
+
+        // On some other value being passed, clear any formatting.
+        case Color_Default:
+        default: return L"\033[0m";
+    }
+}
 #endif
 
 // One possible default write action at startup and shutdown is to use the stdout.
@@ -115,44 +134,25 @@ static void __concall ConsoleStdio_Newline()
 	wxPrintf( L"\n" );
 }
 
-static void __concall ConsoleStdio_SetColor( ConsoleColors color )
+static void __concall ConsoleStdio_ClearColor()
 {
 #ifdef __LINUX__
-    wxPrintf(tbl_color_codes[16]);
-    switch (color)
-    {
-        case Color_Black: wxPrintf(tbl_color_codes[0]); break;
-        case Color_Green: wxPrintf(tbl_color_codes[2]); break;
-        case Color_Red: wxPrintf(tbl_color_codes[1]); break;
-        case Color_Blue: wxPrintf(tbl_color_codes[4]); break;
-        case Color_Magenta: wxPrintf(tbl_color_codes[5]); break;
-        case Color_Orange: wxPrintf(tbl_color_codes[5]); break; // No orange, so use magenta.
-        case Color_Gray: wxPrintf(tbl_color_codes[7]); break; // Use white instead of grey.
-        case Color_Cyan: wxPrintf(tbl_color_codes[6]); break;
-        case Color_Yellow: wxPrintf(tbl_color_codes[3]); break;
-        case Color_White: wxPrintf(tbl_color_codes[7]); break;
-        case Color_StrongBlack: wxPrintf(tbl_color_codes[8]); break;
-        case Color_StrongRed: wxPrintf(tbl_color_codes[9]); break;
-        case Color_StrongGreen: wxPrintf(tbl_color_codes[10]); break;
-        case Color_StrongBlue: wxPrintf(tbl_color_codes[12]); break;
-        case Color_StrongOrange: wxPrintf(tbl_color_codes[13]); break; // strong magenta.
-        default: wxPrintf(tbl_color_codes[16]); break;
-    }
+	wxPrintf(L"\033[0m");
 #endif
 }
 
+static void __concall ConsoleStdio_SetColor( ConsoleColors color )
+{
+#ifdef __LINUX__
+    ConsoleStdio_ClearColor();
+    wxPrintf(GetLinuxConsoleColor(color));
+#endif
+}
 
 static void __concall ConsoleStdio_SetTitle( const wxString& title )
 {
 #ifdef __LINUX__
 	wxPrintf(L"\033]0;" + title + L"\007");
-#endif
-}
-
-static void __concall ConsoleStdio_ClearColor()
-{
-#ifdef __LINUX__
-	wxPrintf(tbl_color_codes[16]);
 #endif
 }
 

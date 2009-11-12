@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -36,13 +36,20 @@ enum ConsoleColors
 
 	// Strong text *may* result in mis-aligned text in the console, depending on the
 	// font and the platform, so use these with caution.
-
 	Color_StrongBlack,
 	Color_StrongRed,	// intended for errors
 	Color_StrongGreen,	// intended for infrequent state information
 	Color_StrongBlue,	// intended for block headings
+	Color_StrongMagenta,
 	Color_StrongOrange,	// intended for warnings
-	
+	Color_StrongGray,
+
+	Color_StrongCyan,
+	Color_StrongYellow,
+	Color_StrongWhite,
+
+    Color_Default,
+
 	ConsoleColors_Count
 };
 
@@ -76,7 +83,7 @@ struct IConsoleWriter
 	// ----------------------------------------------------------------------------
 	// Public members; call these to print stuff to console!
 	//
-	// All functions always return false.  Return value is provided only so that we can easily 
+	// All functions always return false.  Return value is provided only so that we can easily
 	// disable logs at compile time using the "0&&action" macro trick.
 
 	bool Write( ConsoleColors color, const char* fmt, ... ) const;
