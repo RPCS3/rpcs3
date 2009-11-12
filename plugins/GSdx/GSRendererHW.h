@@ -495,27 +495,6 @@ protected:
 		TEX0.PSM = DISPFB.PSM;
 
 		// TRACE(_T("[%d] GetOutput %d %05x (%d)\n"), (int)m_perfmon.GetFrame(), i, (int)TEX0.TBP0, (int)TEX0.PSM);
-		
-		//This routine ups m_width and m_height globally, should games have a bigger native res than the startup values
-		//(currently 640*512, because of some unknown yet problem with smaller sizes)
-		int multiplier = upscale_Multiplier();
-		if (multiplier > 1)
-		{
-			int testh = GetDisplayRect().height() * multiplier;
-			//on startup testh and testw are 1 for a while (invalid)
-			if ((testh > m_height) && testh != 1) {
-				m_height=testh;
-				//printf("changed height > %d\n", m_height );
-			}
-			else if (testh == 1)return NULL;
-		
-			int testw = GetDisplayRect().width() * multiplier;
-			if ((testw  > m_width) && testw != 1 ) {
-				m_width=testw;
-				//printf("changed width > %d\n", m_width );
-			}
-			else if (testw == 1)return NULL;
-		}
 
 		GSTexture* t = NULL;
 
@@ -554,27 +533,6 @@ protected:
 	void Draw()
 	{
 		if(IsBadFrame(m_skip, m_gamefix_skipdraw)) return;
-		
-		//This routine ups m_width and m_height globally, should games have a bigger native res than the startup values
-		//(currently 640*512, because of some unknown yet problem with smaller sizes)
-		int multiplier = upscale_Multiplier();
-		if (multiplier > 1)
-		{
-			int testh = GetDisplayRect().height() * multiplier;
-			//on startup testh and testw are 1 for a while (invalid)
-			if ((testh > m_height) && testh != 1) {
-				m_height=testh;
-				//printf("changed height > %d\n", m_height );
-			}
-			else if (testh == 1)return;
-		
-			int testw = GetDisplayRect().width() * multiplier;
-			if ((testw  > m_width) && testw != 1 ) {
-				m_width=testw;
-				//printf("changed width > %d\n", m_width );
-			}
-			else if (testw == 1)return;
-		}
 		
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
