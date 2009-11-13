@@ -220,7 +220,6 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( FpuNegDivHack );
 	IniBitBool( DMAExeHack );
 	IniBitBool( XgKickHack );
-	IniBitBool( MpegHack );
 }
 
 Pcsx2Config::Pcsx2Config() :

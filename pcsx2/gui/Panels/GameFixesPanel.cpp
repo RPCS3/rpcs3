@@ -63,10 +63,6 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 		{
 			_("VU XGkick Hack - for Erementar Gerad."),
 			wxEmptyString
-		},
-		{
-			_("MPEG Hack - for Mana Khemia 1."),
-			wxEmptyString
 		}
 	};
 

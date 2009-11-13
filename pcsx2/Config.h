@@ -410,8 +410,7 @@ struct Pcsx2Config
 				FpuMulHack		:1,		// Tales of Destiny hangs.
 				FpuNegDivHack	:1,		// Gundam games messed up camera-view.
 				DMAExeHack		:1,		// Fatal Frame; breaks Gust and Tri-Ace games.
-				XgKickHack		:1,		// Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
-                MpegHack		:1;		// Mana Khemia 1, breaks Digital Devil Saga.
+				XgKickHack		:1;		// Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
 		BITFIELD_END
 
 		// all gamefixes are disabled by default.
@@ -548,7 +547,7 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_VU1REC				(!g_Session.ForceDisableVU1rec && EmuConfig.Cpu.Recompiler.EnableVU1)
 
 //------------ SPECIAL GAME FIXES!!! ---------------
-#define NUM_OF_GAME_FIXES 8
+#define NUM_OF_GAME_FIXES 7
 
 #define CHECK_VUADDSUBHACK			(EmuConfig.Gamefixes.VuAddSubHack) // Special Fix for Tri-ace games, they use an encryption algorithm that requires VU addi opcode to be bit-accurate.
 #define CHECK_FPUCOMPAREHACK		(EmuConfig.Gamefixes.FpuCompareHack) // Special Fix for Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
@@ -557,7 +556,6 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_FPUNEGDIVHACK			(EmuConfig.Gamefixes.FpuNegDivHack) // Special Fix for Gundam games messed up camera-view.
 #define CHECK_DMAEXECHACK			(EmuConfig.Gamefixes.DMAExeHack)  // Special Fix for Fatal Frame; breaks Gust and Tri-Ace games.
 #define CHECK_XGKICKHACK			(EmuConfig.Gamefixes.XgKickHack) // Special Fix for Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics.
-#define CHECK_MPEGHACK			    (EmuConfig.Gamefixes.MpegHack) // Special Fix for Mana Khemia 1; breaks Digital Devil Saga.
 
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.Recompiler.vuOverflow)

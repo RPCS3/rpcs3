@@ -1260,8 +1260,9 @@ void mpeg2sliceIDEC(void* pdone)
 
 						default:	/* end of slice/frame, or error? */
 						{
-							if ((!resumed) && (CHECK_MPEGHACK)) so_resume();
-
+#ifdef MPEGHACK
+							if (!resumed) so_resume();
+#endif
 							finishmpeg2sliceIDEC(decoder);
 
 							*(int*)pdone = 1;
@@ -1288,7 +1289,9 @@ void mpeg2sliceIDEC(void* pdone)
 		}
 	}
 
-	if ((!resumed) && (CHECK_MPEGHACK)) so_resume();
+#ifdef MPEGHACK
+	if (!resumed) so_resume();
+#endif
 
 	finishmpeg2sliceIDEC(decoder);
 
