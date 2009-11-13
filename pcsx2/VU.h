@@ -78,7 +78,7 @@ struct REG_VI {
 					// VU0 mem, with only lower 16 bits valid, and the upper 112bits are hardwired to 0 (cottonvibes)
 };
 
-#define VUFLAG_BREAKONMFLAG		0x00000001
+//#define VUFLAG_BREAKONMFLAG		0x00000001
 #define VUFLAG_MFLAGSET			0x00000002
 
 struct fdivPipe {
@@ -163,9 +163,6 @@ enum VUPipeState
     VUPIPE_BRANCH,
     VUPIPE_XGKICK
 };
-
-#define VUREG_READ		0x1
-#define VUREG_WRITE		0x2
 
 struct _VURegsNum {
 	u8 pipe; // if 0xff, COP2

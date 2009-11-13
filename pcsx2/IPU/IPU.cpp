@@ -66,7 +66,6 @@ static coroutine_t s_routine; // used for executing BDEC/IDEC
 static int s_RoutineDone = 0;
 static u32 s_tempstack[0x4000]; // 64k
 
-void IPUCMD_WRITE(u32 val);
 void IPUWorker();
 int IPU0dma();
 int IPU1dma();
@@ -82,13 +81,13 @@ static u8 iq[64];			//intraquant matrix
 u16 vqclut[16];				//clut conversion table
 static u8 s_thresh[2];		//thresholds for color conversions
 int coded_block_pattern = 0;
-__aligned16 macroblock_8  mb8;
+__aligned16 macroblock_8 mb8;
 __aligned16 macroblock_16 mb16;
 __aligned16 macroblock_rgb32 rgb32;
 __aligned16 macroblock_rgb16 rgb16;
 
 u8 indx4[16*16/2];
-bool	mpeg2_inited = FALSE;		//mpeg2_idct_init() must be called only once
+bool mpeg2_inited = false;		//mpeg2_idct_init() must be called only once
 u8 PCT[] = {'r', 'I', 'P', 'B', 'D', '-', '-', '-'};
 decoder_t g_decoder;						//static, only to place it in bss
 decoder_t tempdec;
@@ -101,8 +100,6 @@ extern "C"
 
 __aligned16 u8 _readbits[80];	//local buffer (ring buffer)
 u8* readbits = _readbits; // always can decrement by one 1qw
-
-//#define SATURATE_4BITS(val) ((val)>15 ? 15 : (val))
 
 __forceinline void IPUProcessInterrupt()
 {
@@ -134,7 +131,7 @@ __forceinline void mpeg2_init()
 		memzero(mb16.Y);
 		memzero(mb16.Cb);
 		memzero(mb16.Cr);
-		mpeg2_inited = TRUE;
+		mpeg2_inited = true;
 	}
 }
 

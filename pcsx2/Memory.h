@@ -123,7 +123,7 @@ extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
 extern void memShutdown();
 extern void memSetKernelMode();
-extern void memSetSupervisorMode();
+//extern void memSetSupervisorMode();
 extern void memSetUserMode();
 extern void memSetPageAddr(u32 vaddr, u32 paddr);
 extern void memClearPageAddr(u32 vaddr);

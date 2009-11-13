@@ -68,7 +68,7 @@ __forceinline void GSVSYNC(void) {
 }
 #endif
 
-void SaveGSState(const wxString& file)
+/*void SaveGSState(const wxString& file)
 {
 	if( g_SaveGSStream ) return;
 
@@ -92,8 +92,8 @@ void LoadGSState(const wxString& file)
 
 	wxString src( file );
 
-	/*if( !wxFileName::FileExists( src ) )
-		src = Path::Combine( g_Conf->Folders.Savestates, src );*/
+	//if( !wxFileName::FileExists( src ) )
+	//	src = Path::Combine( g_Conf->Folders.Savestates, src );
 		
 	if( !wxFileName::FileExists( src ) )
 		return;
@@ -189,7 +189,7 @@ void RunGSState( memLoadingState& f )
 		if( it == packets.end() )
 			it = packets.begin();
 	}
-}
+}*/
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////

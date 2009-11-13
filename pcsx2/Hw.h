@@ -292,9 +292,6 @@ enum GSRegisterAddresses
 	GS_SIGLBLID		=	0x12001080
 };
 
-//#define SBFLG_IOPALIVE 0x10000
-//#define SBFLG_IOPSYNC 0x40000
-
 enum INTCIrqs
 {
 	INTC_GS = 0,
@@ -560,9 +557,7 @@ static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num)
 	return ptr;
 }
 
-void hwInit();
 void hwReset();
-void hwShutdown();
 
 // hw read functions
 extern mem8_t   hwRead8 (u32 mem);
@@ -611,23 +606,10 @@ extern void __fastcall hwWrite128_generic(u32 mem, const mem128_t *srcval);
 void hwIntcIrq(int n);
 void hwDmacIrq(int n);
 
-//bool hwMFIFORead(u32 addr, u8 *data, u32 size);
-bool  hwMFIFOWrite(u32 addr, u8 *data, u32 size);
+bool hwMFIFOWrite(u32 addr, u8 *data, u32 size);
 
-bool  hwDmacSrcChainWithStack(DMACh *dma, int id);
-bool  hwDmacSrcChain(DMACh *dma, int id);
-
-int hwConstRead8 (u32 x86reg, u32 mem, u32 sign);
-int hwConstRead16(u32 x86reg, u32 mem, u32 sign);
-int hwConstRead32(u32 x86reg, u32 mem);
-void hwConstRead64(u32 mem, int mmreg);
-void hwConstRead128(u32 mem, int xmmreg);
-
-void hwConstWrite8 (u32 mem, int mmreg);
-void hwConstWrite16(u32 mem, int mmreg);
-void hwConstWrite32(u32 mem, int mmreg);
-void hwConstWrite64(u32 mem, int mmreg);
-void hwConstWrite128(u32 mem, int xmmreg);
+bool hwDmacSrcChainWithStack(DMACh *dma, int id);
+bool hwDmacSrcChain(DMACh *dma, int id);
 
 extern void  intcInterrupt();
 extern void  dmacInterrupt();

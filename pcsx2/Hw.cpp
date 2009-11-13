@@ -49,10 +49,10 @@ void hwInit()
 	ipuInit();
 }
 
-void hwShutdown() 
+/*void hwShutdown() 
 {
 	ipuShutdown();
-}
+}*/
 
 void hwReset()
 {

@@ -212,22 +212,6 @@ extern u16  gsRead16(u32 mem);
 extern u32  gsRead32(u32 mem);
 extern u64  gsRead64(u32 mem);
 
-
-//extern void gsWrite64(u32 mem, u64 value);
-
-
-void gsConstWrite8(u32 mem, int mmreg);
-void gsConstWrite16(u32 mem, int mmreg);
-void gsConstWrite32(u32 mem, int mmreg);
-void gsConstWrite64(u32 mem, int mmreg);
-void gsConstWrite128(u32 mem, int mmreg);
-
-int gsConstRead8(u32 x86reg, u32 mem, u32 sign);
-int gsConstRead16(u32 x86reg, u32 mem, u32 sign);
-int gsConstRead32(u32 x86reg, u32 mem);
-void gsConstRead64(u32 mem, int mmreg);
-void gsConstRead128(u32 mem, int xmmreg);
-
 void gsIrq();
 
 extern u32 CSRw;
@@ -248,8 +232,4 @@ extern int g_SaveGSStream;
 extern int g_nLeftGSFrames;
 
 #endif
-
-extern void SaveGSState(const wxString& file);
-extern void LoadGSState(const wxString& file);
-extern void RunGSState( memLoadingState& f );
 
