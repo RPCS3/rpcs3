@@ -85,9 +85,9 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth )
 
 	wxBoxSizer& sizer( *new wxBoxSizer( wxVERTICAL ) );
 	AddStaticText( sizer, _("Select a BIOS rom:"), wxALIGN_LEFT );
-	sizer.Add( &m_ComboBox, SizerFlags::StdExpand() );
+	sizer.Add( &m_ComboBox, pxSizerFlags::StdExpand() );
 	sizer.AddSpacer( 6 );
-	sizer.Add( &m_FolderPicker, SizerFlags::StdExpand() );
+	sizer.Add( &m_FolderPicker, pxSizerFlags::StdExpand() );
 
 	SetSizer( &sizer );
 }

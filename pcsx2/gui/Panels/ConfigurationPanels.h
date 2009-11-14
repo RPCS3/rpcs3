@@ -28,6 +28,7 @@
 #include "BaseConfigPanel.h"
 
 #include "Utilities/Threading.h"
+#include "Utilities/pxRadioPanel.h"
 
 namespace Panels
 {
@@ -36,8 +37,7 @@ namespace Panels
 	class UsermodeSelectionPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		wxRadioButton* m_radio_user;
-		wxRadioButton* m_radio_cwd;
+		pxRadioPanel*	m_radio_UserMode;
 
 	public:
 		virtual ~UsermodeSelectionPanel() { }
@@ -66,8 +66,8 @@ namespace Panels
 	class CpuPanelEE : public BaseApplicableConfigPanel
 	{
 	protected:
-		wxRadioButton* m_Option_RecEE;
-		wxRadioButton* m_Option_RecIOP;
+		pxRadioPanel*	m_panel_RecEE;
+		pxRadioPanel*	m_panel_RecIOP;
 
 	public:
 		CpuPanelEE( wxWindow& parent, int idealWidth );
@@ -77,10 +77,8 @@ namespace Panels
 	class CpuPanelVU : public BaseApplicableConfigPanel
 	{
 	protected:
-		wxRadioButton* m_Option_mVU0;
-		wxRadioButton* m_Option_mVU1;
-		wxRadioButton* m_Option_sVU0;
-		wxRadioButton* m_Option_sVU1;
+		pxRadioPanel*	m_panel_VU0;
+		pxRadioPanel*	m_panel_VU1;
 
 	public:
 		CpuPanelVU( wxWindow& parent, int idealWidth );
@@ -91,13 +89,11 @@ namespace Panels
 	{
 	protected:
 		wxStaticBoxSizer& s_adv;
-		wxStaticBoxSizer& s_round;
-		wxStaticBoxSizer& s_clamp;
+		//wxStaticBoxSizer& s_round;
+		//wxStaticBoxSizer& s_clamp;
 
-		wxRadioButton*	m_Option_Round[4];
-
-		wxRadioButton*	m_Option_None;
-		wxRadioButton*	m_Option_Normal;
+		pxRadioPanel*	m_RoundModePanel;
+		pxRadioPanel*	m_ClampModePanel;
 
 		pxCheckBox*		m_Option_FTZ;
 		pxCheckBox*		m_Option_DAZ;
@@ -113,10 +109,6 @@ namespace Panels
 
 	class AdvancedOptionsFPU : public BaseAdvancedCpuOptions
 	{
-	protected:
-		wxRadioButton* m_Option_ExtraSign;
-		wxRadioButton* m_Option_Full;
-
 	public:
 		AdvancedOptionsFPU( wxWindow& parent, int idealWidth );
 		virtual ~AdvancedOptionsFPU() throw() { }
@@ -125,10 +117,6 @@ namespace Panels
 
 	class AdvancedOptionsVU : public BaseAdvancedCpuOptions
 	{
-	protected:
-		wxRadioButton*	m_Option_Extra;
-		wxRadioButton*	m_Option_ExtraSign;
-
 	public:
 		AdvancedOptionsVU( wxWindow& parent, int idealWidth );
 		virtual ~AdvancedOptionsVU() throw() { }

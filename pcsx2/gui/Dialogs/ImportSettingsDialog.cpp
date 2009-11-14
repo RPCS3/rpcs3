@@ -39,14 +39,14 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent ) :
 	wxButton* b_import	= new wxButton( this, wxID_ANY, _("Import") );
 	wxButton* b_over	= new wxButton( this, wxID_ANY, _("Overwrite") );
 
-	s_buttons.Add( b_import,SizerFlags::StdButton() );
+	s_buttons.Add( b_import,pxSizerFlags::StdButton() );
 	s_buttons.AddSpacer( 16 );
-	s_buttons.Add( b_over,	SizerFlags::StdButton() );
+	s_buttons.Add( b_over,	pxSizerFlags::StdButton() );
 	s_buttons.AddSpacer( 16 );
-	s_buttons.Add( new wxButton( this, wxID_CANCEL ), SizerFlags::StdButton() );
+	s_buttons.Add( new wxButton( this, wxID_CANCEL ), pxSizerFlags::StdButton() );
 
 	sizer.AddSpacer( 12 );
-	sizer.Add( &s_buttons, SizerFlags::StdCenter() );
+	sizer.Add( &s_buttons, pxSizerFlags::StdCenter() );
 	SetSizerAndFit( &sizer );
 
 	Connect( b_import->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ImportSettingsDialog::OnImport_Click) );

@@ -256,6 +256,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\pxRadioPanel.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\Semaphore.cpp"
 				>
 			</File>
@@ -467,6 +471,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\Utilities\PrecompiledHeader.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\pxRadioPanel.h"
 				>
 			</File>
 			<File

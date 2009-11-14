@@ -32,7 +32,7 @@ Panels::DirPickerPanel& Panels::BasePathsPanel::AddDirPicker( wxBoxSizer& sizer,
 	FoldersEnum_t folderid, const wxString& label, const wxString& popupLabel )
 {
 	DirPickerPanel* dpan = new DirPickerPanel( this, folderid, label, popupLabel );
-	sizer.Add( dpan, SizerFlags::SubGroup() );
+	sizer.Add( dpan, pxSizerFlags::SubGroup() );
 	return *dpan;
 }
 

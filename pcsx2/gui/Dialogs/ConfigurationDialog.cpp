@@ -153,7 +153,7 @@ Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent, int id ) :
 
 	Panels::BaseSelectorPanel* selpan = new Panels::BiosSelectorPanel( *this, 500 );
 
-	bleh.Add( selpan, SizerFlags::StdExpand() );
+	bleh.Add( selpan, pxSizerFlags::StdExpand() );
 	AddOkCancel( bleh, false );
 
 	SetSizerAndFit( &bleh );

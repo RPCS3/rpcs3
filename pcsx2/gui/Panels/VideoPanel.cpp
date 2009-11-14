@@ -18,7 +18,7 @@
 
 #include <wx/spinctrl.h>
 
-using namespace wxHelpers;
+using namespace pxSizerFlags;
 
 Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth ) :
 	BaseApplicableConfigPanel( &parent, idealWidth )
@@ -62,19 +62,19 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth )
 	AddStaticText( s_spins, _("Base Framerate Adjust:"), wxALIGN_LEFT );
 	s_spins.AddSpacer( 5 );
 	s_spins.Add( m_spin_NominalPct, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), SizerFlags::StdSpace() );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), StdSpace() );
 	s_spins.AddSpacer( 5 );
 
 	AddStaticText( s_spins, _("Slow Motion Adjust:"), wxALIGN_LEFT );
 	s_spins.AddSpacer( 5 );
 	s_spins.Add( m_spin_SlomoPct, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), SizerFlags::StdSpace() );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), StdSpace() );
 	s_spins.AddSpacer( 5 );
 
 	AddStaticText( s_spins, _("Turbo Adjust:"), wxALIGN_LEFT );
 	s_spins.AddSpacer( 5 );
 	s_spins.Add( m_spin_TurboPct, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), SizerFlags::StdSpace() );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), StdSpace() );
 	s_spins.AddSpacer( 5 );
 
 	s_spins.AddSpacer( 15 );
@@ -86,13 +86,13 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth )
 	AddStaticText( s_spins, _("NTSC Framerate:"), wxALIGN_LEFT );
 	s_spins.AddSpacer( 5 );
 	s_spins.Add( m_text_BaseNtsc, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), SizerFlags::StdSpace() );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), StdSpace() );
 	s_spins.AddSpacer( 5 );
 
 	AddStaticText( s_spins, _("PAL Framerate:"), wxALIGN_LEFT );
 	s_spins.AddSpacer( 5 );
 	s_spins.Add( m_text_BasePal, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), SizerFlags::StdSpace() );
+	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), StdSpace() );
 	s_spins.AddSpacer( 5 );
 
 	mainSizer.Add( &s_spins );

@@ -41,6 +41,64 @@ wxRect wxGetDisplayArea()
 }
 
 // --------------------------------------------------------------------------------------
+//  pxSizerFlags
+// --------------------------------------------------------------------------------------
+// FlagsAccessors - Provides read-write copies of standard sizer flags for our interface.
+// These standard definitions provide a consistent and pretty interface for our GUI.
+// Without them things look compacted, misaligned, and yucky!
+//
+// Implementation Note: Accessors are all provisioned as dynamic (realtime) sizer calculations.
+// I've preferred this over cstatic const variables on the premise that spacing logic could
+// in the future become a dynamic value (currently it is affixed to 6 for most items).
+//
+wxSizerFlags pxSizerFlags::StdSpace()
+{
+	return wxSizerFlags().Border( wxALL, 6 );
+}
+
+wxSizerFlags pxSizerFlags::StdCenter()
+{
+	return wxSizerFlags().Align( wxALIGN_CENTER ).DoubleBorder();
+}
+
+wxSizerFlags pxSizerFlags::StdExpand()
+{
+	return StdSpace().Expand();
+}
+
+// A good sizer flags setting for top-level static boxes or top-level picture boxes.
+// Gives a generous border to the left, right, and bottom.  Top border can be configured
+// manually by using a spacer.
+wxSizerFlags pxSizerFlags::TopLevelBox()
+{
+	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 6 ).Expand();
+}
+
+// Flags intended for use on grouped StaticBox controls.  These flags are ideal for
+// StaticBoxes that are part of sub-panels or children of other static boxes, but may
+// not be best for parent StaticBoxes on dialogs (left and right borders feel a bit
+// "tight").
+wxSizerFlags pxSizerFlags::SubGroup()
+{
+	// Groups look better with a slightly smaller margin than standard.
+	// (basically this accounts for the group's frame)
+	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 4 ).Expand();
+}
+
+// This force-aligns the std button sizer to the right, where (at least) us win32 platform
+// users always expect it to be.  Most likely Mac platforms expect it on the left side
+// just because it's *not* where win32 sticks it.  Too bad!
+wxSizerFlags pxSizerFlags::StdButton()
+{
+	return wxSizerFlags().Align( wxALIGN_RIGHT ).Border();
+}
+
+wxSizerFlags pxSizerFlags::Checkbox()
+{
+	return StdExpand();
+}
+
+// --------------------------------------------------------------------------------------
 //  pxTextWrapper / pxTextWrapperBase Implementations
 // --------------------------------------------------------------------------------------
 

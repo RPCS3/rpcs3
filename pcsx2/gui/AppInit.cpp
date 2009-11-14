@@ -93,7 +93,7 @@ void Pcsx2App::ReadUserModeSettings()
 			L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER, 600
 		);
 		
-		s_main.Add( new wxButton( &preAlpha, wxID_OK ), wxHelpers::SizerFlags::StdCenter() );
+		s_main.Add( new wxButton( &preAlpha, wxID_OK ), pxSizerFlags::StdCenter() );
 		preAlpha.SetSizerAndFit( &s_main );
 		preAlpha.CentreOnScreen();
 		preAlpha.ShowModal();

@@ -54,21 +54,20 @@ void Panels::DirPickerPanel::UseDefaultPath_Click( wxCommandEvent &evt )
 
 void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 {
-	wxHelpers::Explore( m_pickerCtrl->GetPath() );
+	pxExplore( m_pickerCtrl->GetPath() );
 }
 
 // ------------------------------------------------------------------------
 // If initPath is NULL, then it's assumed the default folder is to be used, which is
 // obtained from invoking the specified getDefault() function.
 //
-Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel ) :
-	BaseApplicableConfigPanel( parent, wxDefaultCoord )
-,	m_FolderId( folderid )
-,	m_pickerCtrl( NULL )
-,	m_checkCtrl( NULL )
+Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel )
+	: BaseApplicableConfigPanel( parent, wxDefaultCoord )
+	, m_FolderId( folderid )
+	, m_pickerCtrl( NULL )
+	, m_checkCtrl( NULL )
 {
 	m_checkCtrl = new pxCheckBox( this, _("Use default setting") );
-
 
 	wxStaticBoxSizer& s_box( *new wxStaticBoxSizer( wxVERTICAL, this, label ) );
 	wxFlexGridSizer& s_lower( *new wxFlexGridSizer( 2, 0, 4 ) );
@@ -105,7 +104,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 
 	wxButton* b_explore( new wxButton( this, wxID_ANY, _("Open in Explorer") ) );
 	pxSetToolTip( b_explore, _("Open an explorer window to this folder.") );
-	s_lower.Add( b_explore, SizerFlags::StdButton().Align( wxALIGN_RIGHT ) );
+	s_lower.Add( b_explore, pxSizerFlags::StdButton().Align( wxALIGN_RIGHT ) );
 	Connect( b_explore->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( DirPickerPanel::Explore_Click ) );
 #endif
 

@@ -100,18 +100,18 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	label_auth->Wrap( 340 );
 	label_greets->Wrap( 200 );
 
-	aboutUs.Add( label_auth, SizerFlags::StdExpand() );
-	contribs.Add( label_greets, SizerFlags::StdExpand() );
+	aboutUs.Add( label_auth, pxSizerFlags::StdExpand() );
+	contribs.Add( label_greets, pxSizerFlags::StdExpand() );
 
 	AuthLogoSizer.Add( &aboutUs );
 	AuthLogoSizer.AddSpacer( 7 );
 	AuthLogoSizer.Add( &contribs );
 
 	ContribSizer.AddStretchSpacer( 1 );
-	ContribSizer.Add( &m_bitmap_dualshock, SizerFlags::StdSpace() );
+	ContribSizer.Add( &m_bitmap_dualshock, pxSizerFlags::StdSpace() );
 	ContribSizer.AddStretchSpacer( 1 );
 
-	mainSizer.Add( &AuthLogoSizer, SizerFlags::StdSpace() );
+	mainSizer.Add( &AuthLogoSizer, pxSizerFlags::StdSpace() );
 
 	mainSizer.Add( new wxHyperlinkCtrl(
 		this, wxID_ANY, L"Pcsx2 Official Website and Forums" , L"http://www.pcsx2.net" ),
@@ -120,9 +120,9 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		this, wxID_ANY, L"Pcsx2 Official Svn Repository at Googlecode" , L"http://code.google.com/p/pcsx2" ),
 		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
 
-	mainSizer.Add( &ContribSizer, SizerFlags::StdExpand() );
+	mainSizer.Add( &ContribSizer, pxSizerFlags::StdExpand() );
 
-	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), SizerFlags::StdCenter() );
+	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), pxSizerFlags::StdCenter() );
 	SetSizerAndFit( &mainSizer );
 
 	CenterOnScreen();

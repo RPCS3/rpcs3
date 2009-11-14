@@ -91,6 +91,7 @@
 		<Unit filename="../../include/Utilities/HashMap.h" />
 		<Unit filename="../../include/Utilities/MemcpyFast.h" />
 		<Unit filename="../../include/Utilities/Path.h" />
+		<Unit filename="../../include/Utilities/pxRadioPanel.h" />
 		<Unit filename="../../include/Utilities/RedtapeWindows.h" />
 		<Unit filename="../../include/Utilities/SafeArray.h" />
 		<Unit filename="../../include/Utilities/ScopedPtr.h" />
@@ -110,6 +111,7 @@
 		<Unit filename="../../src/Utilities/Linux/LnxThreads.cpp" />
 		<Unit filename="../../src/Utilities/Mutex.cpp" />
 		<Unit filename="../../src/Utilities/PathUtils.cpp" />
+		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/PrecompiledHeader.h" />
 		<Unit filename="../../src/Utilities/Semaphore.cpp" />
 		<Unit filename="../../src/Utilities/StringHelpers.cpp" />

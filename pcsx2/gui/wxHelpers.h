@@ -22,81 +22,19 @@
 
 namespace wxHelpers
 {
-	extern wxCheckBox&		AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord );
-	extern wxRadioButton&	AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord, bool isFirst = false );
+	//extern wxRadioButton&	AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord, bool isFirst = false );
 	extern wxStaticText&	AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int wrapLen=wxDefaultCoord );
 	extern wxStaticText&	InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags=wxALIGN_CENTRE, int wrapLen=wxDefaultCoord );
-
-	extern void Explore( const wxString& path );
-	extern void Explore( const char *path );
-
-	extern void Launch( const wxString& path );
-	extern void Launch( const char *path );
-
-	namespace SizerFlags
-	{
-		extern wxSizerFlags StdSpace();
-		extern wxSizerFlags StdCenter();
-		extern wxSizerFlags StdExpand();
-		extern wxSizerFlags TopLevelBox();
-		extern wxSizerFlags SubGroup();
-		extern wxSizerFlags StdButton();
-		extern wxSizerFlags Checkbox();
-	};
 }
-
-// --------------------------------------------------------------------------------------
-//  wxDialogWithHelpers
-// --------------------------------------------------------------------------------------
-class wxDialogWithHelpers : public wxDialog
-{
-protected:
-	bool m_hasContextHelp;
-
-public:
-	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
-	virtual ~wxDialogWithHelpers() throw();
-
-	wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
-    void AddOkCancel( wxSizer& sizer, bool hasApply=false );
-
-protected:
-};
-
-
-// --------------------------------------------------------------------------------------
-//  wxPanelWithHelpers
-// --------------------------------------------------------------------------------------
-class wxPanelWithHelpers : public wxPanel
-{
-protected:
-	int		m_idealWidth;
-	bool	m_StartNewRadioGroup;
-
-public:
-	wxPanelWithHelpers( wxWindow* parent, int idealWidth=wxDefaultCoord );
-	wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size=wxDefaultSize );
-
-	//wxRadioButton&	NewSpinCtrl( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-
-	//wxCheckBox&		AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-	wxRadioButton&	AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
-
-	int GetIdealWidth() const { return m_idealWidth; }
-	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
-
-protected:	
-	void StartRadioGroup()
-	{
-		m_StartNewRadioGroup = true;
-	}
-};
 
 // --------------------------------------------------------------------------------------
 //  pxCheckBox
 // --------------------------------------------------------------------------------------
+// The checkbox panel created uses the default spacer setting for adding checkboxes (see
+// SizerFlags).  The SetToolTip API provided by this function applies the tooltip to both
+// both the checkbox and it's static subtext (if present), and performs word wrapping on
+// platforms that need it (eg mswindows).
+//
 class pxCheckBox : public wxPanel
 {
 protected:
@@ -106,6 +44,7 @@ protected:
 
 public:
 	pxCheckBox( wxPanelWithHelpers* parent, const wxString& label, const wxString& subtext=wxEmptyString );
+	pxCheckBox( wxDialogWithHelpers* parent, const wxString& label, const wxString& subtext=wxEmptyString );
 	virtual ~pxCheckBox() throw() {}
 
 	bool HasSubText() const { return m_subtext != NULL; }
@@ -121,8 +60,12 @@ public:
 	
 	wxCheckBox* GetWxPtr() { return m_checkbox; }
 	const wxCheckBox* GetWxPtr() const { return m_checkbox; }
+	
+	wxWindowID GetId() const { pxAssert( m_checkbox != NULL ); return m_checkbox->GetId(); }
+	
+protected:
+	void Init( const wxString& label, const wxString& subtext );
 };
-
 
 extern bool pxDialogExists( wxWindowID id );
 

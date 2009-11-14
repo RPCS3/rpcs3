@@ -134,10 +134,8 @@ void Panels::BaseApplicableConfigPanel::SetFocusToMe()
 
 
 // -----------------------------------------------------------------------
-Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int idealWidth, bool isFirstTime ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
-,	m_radio_user( NULL )
-,	m_radio_cwd( NULL )
+Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int idealWidth, bool isFirstTime )
+	: BaseApplicableConfigPanel( &parent, idealWidth )
 {
 	const wxString usermodeExplained( pxE( ".Panels:Usermode:Explained",
 		L"Please select your preferred default location for PCSX2 user-level documents below "
@@ -151,32 +149,42 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int id
 		L"This option only affects Standard Paths which are set to use the installation default value."
 	) );
 
-	wxStaticBoxSizer& s_boxer = *new wxStaticBoxSizer( wxVERTICAL, this, _( "Usermode Selection" ) );
-	AddStaticText( s_boxer, isFirstTime ? usermodeExplained : usermodeWarning );
+	const RadioPanelItem UsermodeOptions[] = 
+	{
+		RadioPanelItem(
+			_("Current working folder (intended for developer use only)"),
+			_("Location: ") + wxGetCwd(),
+			_("This setting requires administration privileges from your operating system.")
+		),
+		
+		RadioPanelItem(
+			_("User Documents (recommended)"),
+			_("Location: ") + wxStandardPaths::Get().GetDocumentsDir()
+		),
+	};
+	
+	wxStaticBoxSizer* s_boxer = new wxStaticBoxSizer( wxVERTICAL, this, _( "Usermode Selection" ) );
+	m_radio_UserMode = new pxRadioPanel( this, UsermodeOptions );
+	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
+	m_radio_UserMode->Realize();
 
-	m_radio_user	= &AddRadioButton( s_boxer, _("User Documents (recommended)"),   _("Location: ") + wxStandardPaths::Get().GetDocumentsDir() );
-	s_boxer.AddSpacer( 4 );
-	m_radio_cwd		= &AddRadioButton( s_boxer, _("Current working folder (intended for developer use only)"), _("Location: ") + wxGetCwd(),
-		_("This setting requires administration privileges from your operating system.") );
-
-	s_boxer.AddSpacer( 4 );
-	SetSizer( &s_boxer );
+	AddStaticText( *s_boxer, isFirstTime ? usermodeExplained : usermodeWarning );
+	s_boxer->Add( m_radio_UserMode, pxSizerFlags::StdExpand() );
+	s_boxer->AddSpacer( 4 );
+	SetSizer( s_boxer );
 }
 
 void Panels::UsermodeSelectionPanel::Apply()
 {
-	if( !m_radio_cwd->GetValue() && !m_radio_user->GetValue() )
-		throw Exception::CannotApplySettings( this, wxLt( "You must select one of the available user modes before proceeding." ) );
-
-	UseAdminMode = m_radio_cwd->GetValue();
+	UseAdminMode = (m_radio_UserMode->GetSelection() == 0);
 }
 
 // -----------------------------------------------------------------------
-Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
-,	m_langs()
-,	m_picker( NULL )
+Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int idealWidth )
+	: BaseApplicableConfigPanel( &parent, idealWidth )
+	, m_langs()
 {
+	m_picker = NULL;
 	i18n_EnumeratePackages( m_langs );
 
 	int size = m_langs.size();
@@ -198,7 +206,7 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int id
 	wxBoxSizer& s_lang = *new wxBoxSizer( wxHORIZONTAL );
 	AddStaticText( s_lang, _("Select a language: "), wxALIGN_CENTRE_VERTICAL );
 	s_lang.AddSpacer( 5 );
-	s_lang.Add( m_picker, SizerFlags::StdSpace() );
+	s_lang.Add( m_picker, pxSizerFlags::StdSpace() );
 
 	SetSizer( &s_lang );
 }

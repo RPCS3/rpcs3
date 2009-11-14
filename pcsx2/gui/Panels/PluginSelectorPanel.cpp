@@ -152,7 +152,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent ) :
 
 	AddStaticText( s_main, _( "Enumerating available plugins..." ) );
 	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
-	s_main.Add( &m_label, SizerFlags::StdExpand() );
+	s_main.Add( &m_label, pxSizerFlags::StdExpand() );
 
 	// The status bar only looks right if I use SetSizerAndFit() here.
 	SetSizerAndFit( &s_main );
@@ -210,7 +210,7 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 
 	s_main.Add( &s_plugin, wxSizerFlags().Expand() );
 	s_main.AddSpacer( 6 );
-	s_main.Add( &m_FolderPicker, SizerFlags::StdExpand() );
+	s_main.Add( &m_FolderPicker, pxSizerFlags::StdExpand() );
 
 	SetSizer( &s_main );
 }
@@ -235,7 +235,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWid
 	// center of the dialog after it's been fitted to the contents.
 
 	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
-	s_main.Add( &m_ComponentBoxes, SizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
+	s_main.Add( &m_ComponentBoxes, pxSizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
 	m_StatusPanel.Hide();
 	m_ComponentBoxes.Hide();

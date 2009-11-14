@@ -64,11 +64,11 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 	wxBoxSizer& usermodeSizer( *new wxBoxSizer( wxVERTICAL ) );
 	AddStaticTextTo( this, usermodeSizer, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
 
-	usermodeSizer.Add( &m_panel_LangSel, SizerFlags::StdCenter() );
+	usermodeSizer.Add( &m_panel_LangSel, pxSizerFlags::StdCenter() );
 	usermodeSizer.Add( &m_panel_UserSel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
 
 	usermodeSizer.AddSpacer( 6 );
-	usermodeSizer.Add( &m_dirpick_settings, SizerFlags::SubGroup() );
+	usermodeSizer.Add( &m_dirpick_settings, pxSizerFlags::SubGroup() );
 	SetSizer( &usermodeSizer );
 
 	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(FirstTimeWizard::UsermodePage::OnUsermodeChanged) );
@@ -93,12 +93,12 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent ) :
 {
 	// Page 2 - Plugins Panel
 	wxBoxSizer& pluginSizer( *new wxBoxSizer( wxVERTICAL ) );
-	pluginSizer.Add( &m_panel_PluginSel, SizerFlags::StdExpand() );
+	pluginSizer.Add( &m_panel_PluginSel, pxSizerFlags::StdExpand() );
 	m_page_plugins.SetSizer( &pluginSizer );
 
 	// Page 3 - Bios Panel
 	wxBoxSizer& biosSizer( *new wxBoxSizer( wxVERTICAL ) );
-	biosSizer.Add( &m_panel_BiosSel, SizerFlags::StdExpand() );
+	biosSizer.Add( &m_panel_BiosSel, pxSizerFlags::StdExpand() );
 	m_page_bios.SetSizer( &biosSizer );
 
 	// Assign page indexes as client data

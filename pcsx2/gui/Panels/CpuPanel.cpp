@@ -16,17 +16,36 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
-using namespace wxHelpers;
+using namespace pxSizerFlags;
 
-Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
-,	s_adv( *new wxStaticBoxSizer( wxVERTICAL, this ) )
-,	s_round( *new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) )
-,	s_clamp( *new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") ) )
+Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth )
+	: BaseApplicableConfigPanel( &parent, idealWidth )
+	, s_adv( *new wxStaticBoxSizer( wxVERTICAL, this ) )
 {
+	wxStaticBoxSizer*	s_round( new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) );
+	wxStaticBoxSizer*	s_clamp( new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") ) );
 
 	m_Option_FTZ		= new pxCheckBox( this, _("Flush to Zero") );
 	m_Option_DAZ		= new pxCheckBox( this, _("Denormals are Zero") );
+
+	const RadioPanelItem RoundModeChoices[] = 
+	{
+		RadioPanelItem(_("Nearest")),
+		RadioPanelItem(_("Negative")),
+		RadioPanelItem(_("Positive")),
+		RadioPanelItem(_("Chop / Zero"))
+	};
+	
+	const RadioPanelItem ClampModeChoices[] = 
+	{
+		RadioPanelItem(_("None")),
+		RadioPanelItem(_("Normal")),	
+	};
+
+	m_RoundModePanel = new pxRadioPanel( this, RoundModeChoices );
+	m_ClampModePanel = new pxRadioPanel( this, ClampModeChoices );
+
+	// ====== The Fitting And Sizing Area  ======
 
 	wxFlexGridSizer& grid = *new wxFlexGridSizer( 4 );
 
@@ -38,16 +57,6 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int id
 	grid.AddGrowableCol( 2, 1 );
 	grid.AddGrowableCol( 3, 19 );
 
-	m_StartNewRadioGroup = true;
-	m_Option_Round[0]	= &AddRadioButton( s_round, _("Nearest") );
-	m_Option_Round[1]	= &AddRadioButton( s_round, _("Negative") );
-	m_Option_Round[2]	= &AddRadioButton( s_round, _("Positive") );
-	m_Option_Round[3]	= &AddRadioButton( s_round, _("Chop / Zero") );
-
-	m_StartNewRadioGroup = true;
-	m_Option_None		= &AddRadioButton( s_clamp, _("None") );
-	m_Option_Normal		= &AddRadioButton( s_clamp, _("Normal") );
-
 	wxBoxSizer& s_daz( *new wxBoxSizer( wxVERTICAL ) );
 	s_daz.AddSpacer( 12 );
 	s_daz.Add( m_Option_FTZ );
@@ -56,12 +65,15 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int id
 	s_daz.AddSpacer( 22 );
 	s_daz.Add( new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ), wxSizerFlags().Align( wxALIGN_CENTRE ) );
 
-	grid.Add( &s_round, SizerFlags::SubGroup() );
-	grid.Add( &s_clamp, SizerFlags::SubGroup() );
+	s_round->Add( m_RoundModePanel, StdExpand() );
+	s_clamp->Add( m_ClampModePanel, StdExpand() );
+
+	grid.Add( s_round, SubGroup() );
+	grid.Add( s_clamp, SubGroup() );
 	grid.Add( new wxBoxSizer( wxVERTICAL ) );		// spacer column!
 	grid.Add( &s_daz, wxSizerFlags().Expand() );
 
-	s_adv.Add( &grid, SizerFlags::StdExpand() );
+	s_adv.Add( &grid, StdExpand() );
 
 	SetSizer( &s_adv );
 
@@ -70,20 +82,25 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int id
 
 void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent &evt)
 {
-	m_Option_Round[3]->SetValue(true);
-	m_Option_Normal->SetValue(true);
+	m_RoundModePanel->SetSelection( 3 );
+	m_ClampModePanel->SetSelection( 0 );
 
 	m_Option_DAZ->SetValue(true);
 	m_Option_FTZ->SetValue(true);
 }
 
-Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth ) :
-	BaseAdvancedCpuOptions( parent, idealWidth )
+Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth )
+	: BaseAdvancedCpuOptions( parent, idealWidth )
 {
 	s_adv.GetStaticBox()->SetLabel(_("EE/FPU Advanced Recompiler Options"));
 
-	m_Option_ExtraSign	= &AddRadioButton( s_clamp, _("Extra + Preserve Sign") );
-	m_Option_Full		= &AddRadioButton( s_clamp, _("Full") );
+	m_ClampModePanel->Append( _("Extra + Preserve Sign") );
+	m_ClampModePanel->Append( _("Full") );
+
+	m_RoundModePanel->Realize();
+	m_ClampModePanel->Realize();
+
+	// ====== Assign Configured Values ======
 
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
@@ -91,22 +108,27 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth
 	m_Option_FTZ->SetValue( cpuOps.sseMXCSR.FlushToZero );
 	m_Option_DAZ->SetValue( cpuOps.sseMXCSR.DenormalsAreZero );
 
-	m_Option_Round[cpuOps.sseMXCSR.RoundingControl]->SetValue( true );
+	m_RoundModePanel->SetSelection( cpuOps.sseMXCSR.RoundingControl );
 
-	m_Option_Normal->SetValue( recOps.fpuOverflow );
-	m_Option_ExtraSign->SetValue( recOps.fpuExtraOverflow );
-	m_Option_Full->SetValue( recOps.fpuFullMode );
-	m_Option_None->SetValue( !recOps.fpuOverflow && !recOps.fpuExtraOverflow && !recOps.fpuFullMode );
+	if( recOps.fpuFullMode )			m_ClampModePanel->SetSelection( 3 );
+	else if( recOps.fpuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
+	else if( recOps.fpuOverflow )		m_ClampModePanel->SetSelection( 1 );
+	else								m_ClampModePanel->SetSelection( 0 );
 }
 
 
-Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth ) :
-	BaseAdvancedCpuOptions( parent, idealWidth )
+Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth )
+	: BaseAdvancedCpuOptions( parent, idealWidth )
 {
 	s_adv.GetStaticBox()->SetLabel(_("VU0 / VU1 Advanced Recompiler Options"));
 
-	m_Option_Extra		= &AddRadioButton( s_clamp, _("Extra") );
-	m_Option_ExtraSign	= &AddRadioButton( s_clamp, _("Extra + Preserve Sign") );
+	m_ClampModePanel->Append( _("Extra") );
+	m_ClampModePanel->Append( _("Extra + Preserve Sign") );
+
+	m_RoundModePanel->Realize();
+	m_ClampModePanel->Realize();
+
+	// ====== Assign Configured Values ======
 
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
@@ -114,55 +136,76 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth )
 	m_Option_FTZ->SetValue( cpuOps.sseVUMXCSR.FlushToZero );
 	m_Option_DAZ->SetValue( cpuOps.sseVUMXCSR.DenormalsAreZero );
 
-	m_Option_Round[cpuOps.sseVUMXCSR.RoundingControl]->SetValue( true );
+	m_RoundModePanel->SetSelection( cpuOps.sseVUMXCSR.RoundingControl );
 
-	m_Option_Normal->SetValue( recOps.vuOverflow );
-	m_Option_Extra->SetValue( recOps.vuExtraOverflow );
-	m_Option_ExtraSign->SetValue( recOps.vuSignOverflow );
-	m_Option_None->SetValue( !recOps.vuOverflow && !recOps.vuExtraOverflow && !recOps.vuSignOverflow );
+	if( recOps.vuSignOverflow )			m_ClampModePanel->SetSelection( 3 );
+	else if( recOps.vuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
+	else if( recOps.vuOverflow )		m_ClampModePanel->SetSelection( 1 );
+	else								m_ClampModePanel->SetSelection( 0 );
 }
 
-Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth )
+	: BaseApplicableConfigPanel( &parent, idealWidth )
 {
-	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
-	wxFlexGridSizer& s_recs = *new wxFlexGridSizer( 2 );
+	// i18n: No point in translating PS2 CPU names :)
+	wxStaticBoxSizer* s_ee  = new wxStaticBoxSizer( wxVERTICAL, this, L"EmotionEngine" );
+	wxStaticBoxSizer* s_iop = new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" );
+
+	const RadioPanelItem tbl_CpuTypes_EE[] =
+	{
+		RadioPanelItem(_("Interpreter"))
+		.SetToolTip(_("Quite possibly the slowest thing in the universe.")),
+			
+		RadioPanelItem(_("Recompiler [Default]"))
+		.SetToolTip(_("Performs just-in-time binary translation of 64-bit MIPS-IV machine code to x86."))
+	};
+	
+	const RadioPanelItem tbl_CpuTypes_IOP[] =
+	{
+		RadioPanelItem(_("Interpreter"))
+		.SetToolTip(_("Pretty slow; provided for diagnostic purposes only.")),
+
+		RadioPanelItem(_("Recompiler [Default]"))
+		.SetToolTip(_("Performs just-in-time binary translation of 32-bit MIPS-I machine code to x86."))
+	};
+
+	
+	m_panel_RecEE	= new pxRadioPanel( this, tbl_CpuTypes_EE );
+	m_panel_RecIOP	= new pxRadioPanel( this, tbl_CpuTypes_IOP );
+
+	m_panel_RecEE->Realize();
+	m_panel_RecIOP->Realize();
+
+	// ====== Begin Sizer Layout ======
+
+	wxBoxSizer&			s_main = *new wxBoxSizer( wxVERTICAL );
+	wxFlexGridSizer&	s_recs = *new wxFlexGridSizer( 2 );
 
 	s_recs.AddGrowableCol( 0, 1 );
 	s_recs.AddGrowableCol( 1, 1 );
 
-	// i18n: No point in translating PS2 CPU names :)
-	wxStaticBoxSizer& s_ee  = *new wxStaticBoxSizer( wxVERTICAL, this, L"EmotionEngine" );
-	wxStaticBoxSizer& s_iop = *new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" );
+	s_ee->Add( m_panel_RecEE, StdExpand() );
+	s_iop->Add( m_panel_RecIOP, StdExpand() );
 
-	m_StartNewRadioGroup = true;
-	AddRadioButton( s_ee, _("Interpreter"), wxEmptyString, _("Quite possibly the slowest thing in the universe.") );
-	m_Option_RecEE = &AddRadioButton( s_ee, _("Recompiler [Preferred]") );
+	s_recs.Add( s_ee, SubGroup() );
+	s_recs.Add( s_iop, SubGroup() );
 
-	m_StartNewRadioGroup = true;
-	AddRadioButton( s_iop, _("Interpreter") );
-	m_Option_RecIOP = &AddRadioButton( s_iop, _("Recompiler [Preferred]") );
-
-	s_recs.Add( &s_ee, SizerFlags::SubGroup() );
-	s_recs.Add( &s_iop, SizerFlags::SubGroup() );
-
-	s_main.Add( &s_recs, SizerFlags::StdExpand() );
+	s_main.Add( &s_recs, StdExpand() );
 	s_main.Add( new wxStaticLine( this ), wxSizerFlags().Border(wxALL, 24).Expand() );
-	s_main.Add( new AdvancedOptionsFPU( *this, idealWidth ), SizerFlags::StdExpand() );
+	s_main.Add( new AdvancedOptionsFPU( *this, idealWidth ), StdExpand() );
 
 	SetSizer( &s_main );
 
-	// ----------------------------------------------------------------------------
-	// Apply current configuration options...
+	// ====== Apply Current Configuration ======
 
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 
-	m_Option_RecEE->SetValue( recOps.EnableEE );
-	m_Option_RecIOP->SetValue( recOps.EnableIOP );
+	m_panel_RecEE->SetSelection( (int)recOps.EnableEE );
+	m_panel_RecIOP->SetSelection( (int)recOps.EnableIOP );
 }
 
-Panels::CpuPanelVU::CpuPanelVU( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::CpuPanelVU::CpuPanelVU( wxWindow& parent, int idealWidth )
+	: BaseApplicableConfigPanel( &parent, idealWidth )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 	wxFlexGridSizer& s_recs = *new wxFlexGridSizer( 2 );
@@ -170,71 +213,75 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow& parent, int idealWidth ) :
 	s_recs.AddGrowableCol( 0, 1 );
 	s_recs.AddGrowableCol( 1, 1 );
 
-	wxStaticBoxSizer& s_vu0 = *new wxStaticBoxSizer( wxVERTICAL, this, L"VU0" );
-	wxStaticBoxSizer& s_vu1 = *new wxStaticBoxSizer( wxVERTICAL, this, L"VU1" );
+	wxStaticBoxSizer* s_vu0 = new wxStaticBoxSizer( wxVERTICAL, this, L"VU0" );
+	wxStaticBoxSizer* s_vu1 = new wxStaticBoxSizer( wxVERTICAL, this, L"VU1" );
 
-	m_StartNewRadioGroup = true;
-	AddRadioButton( s_vu0, _("Interpreter"), wxEmptyString, _("Vector Unit Interpreter. Slow and not very compatible. Only use for testing.") ).SetValue( true );
-	m_Option_mVU0 = &AddRadioButton( s_vu0, _("microVU Recompiler [Preferred]"), wxEmptyString, _("New Vector Unit recompiler.") );
-	m_Option_sVU0 = &AddRadioButton( s_vu0, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
+	const RadioPanelItem tbl_CpuTypes_VU[] =
+	{
+		RadioPanelItem(_("Interpreter"))
+		.SetToolTip(_("Vector Unit Interpreter. Slow and not very compatible. Only use for diagnostics.")),
 
-	m_StartNewRadioGroup = true;
-	AddRadioButton( s_vu1, _("Interpreter"), wxEmptyString, _("Vector Unit Interpreter. Slow and not very compatible. Only use for testing.") ).SetValue( true );
-	m_Option_mVU1 = &AddRadioButton( s_vu1, _("microVU Recompiler [Preferred]"), wxEmptyString, _("New Vector Unit recompiler.") );
-	m_Option_sVU1 = &AddRadioButton( s_vu1, _("superVU Recompiler [legacy]"), wxEmptyString, _("Useful for diagnosing possible bugs in the new mVU recompiler.") );
+		RadioPanelItem(_("microVU Recompiler [Default]"))
+		.SetToolTip(_("New Vector Unit recompiler with much improved compatibility. Recommended.")),
+		
+		RadioPanelItem(_("superVU Recompiler [legacy]"))
+		.SetToolTip(_("Useful for diagnosing bugs or clamping issues in the new mVU recompiler."))
+	};
 
-	s_recs.Add( &s_vu0, SizerFlags::SubGroup() );
-	s_recs.Add( &s_vu1, SizerFlags::SubGroup() );
+	m_panel_VU0 = new pxRadioPanel( this, tbl_CpuTypes_VU );
+	m_panel_VU1 = new pxRadioPanel( this, tbl_CpuTypes_VU );
 
-	s_main.Add( &s_recs, SizerFlags::StdExpand() );
+	m_panel_VU0->Realize();
+	m_panel_VU1->Realize();
+
+	// ====== Begin Sizer Layout ======
+
+	s_vu0->Add( m_panel_VU0, StdExpand() );
+	s_vu1->Add( m_panel_VU1, StdExpand() );
+
+	s_recs.Add( s_vu0, SubGroup() );
+	s_recs.Add( s_vu1, SubGroup() );
+
+	s_main.Add( &s_recs, StdExpand() );
 	s_main.Add( new wxStaticLine( this ), wxSizerFlags().Border(wxALL, 24).Expand() );
-	s_main.Add( new AdvancedOptionsVU( *this, idealWidth ), SizerFlags::StdExpand() );
+	s_main.Add( new AdvancedOptionsVU( *this, idealWidth ), StdExpand() );
 
 	SetSizer( &s_main );
 
-	// ----------------------------------------------------------------------------
-	// Apply current configuration options...
+	// ====== Apply Current Configuration ======
 
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 	if( recOps.UseMicroVU0 )
-		m_Option_mVU0->SetValue( recOps.EnableVU0 );
+		m_panel_VU0->SetSelection( recOps.EnableVU0 ? 1 : 0 );
 	else
-		m_Option_sVU0->SetValue( recOps.EnableVU0 );
+		m_panel_VU0->SetSelection( recOps.EnableVU0 ? 2 : 0 );
 
 	if( recOps.UseMicroVU1 )
-		m_Option_mVU1->SetValue( recOps.EnableVU1 );
+		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 1 : 0 );
 	else
-		m_Option_sVU1->SetValue( recOps.EnableVU1 );
+		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 2 : 0 );
 }
 
 void Panels::CpuPanelEE::Apply()
 {
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
-	recOps.EnableEE		= m_Option_RecEE->GetValue();
-	recOps.EnableIOP	= m_Option_RecIOP->GetValue();
+	recOps.EnableEE		= !!m_panel_RecEE->GetSelection();
+	recOps.EnableIOP	= !!m_panel_RecIOP->GetSelection();
 }
 
 void Panels::CpuPanelVU::Apply()
 {
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
-	recOps.EnableVU0	= m_Option_mVU0->GetValue() || m_Option_sVU0->GetValue();
-	recOps.EnableVU1	= m_Option_mVU1->GetValue() || m_Option_sVU1->GetValue();
+	recOps.EnableVU0	= m_panel_VU0->GetSelection() > 0;
+	recOps.EnableVU1	= m_panel_VU1->GetSelection() > 0;
 
-	recOps.UseMicroVU0	= m_Option_mVU0->GetValue();
-	recOps.UseMicroVU1	= m_Option_mVU1->GetValue();
+	recOps.UseMicroVU0	= m_panel_VU0->GetSelection() == 1;
+	recOps.UseMicroVU1	= m_panel_VU1->GetSelection() == 1;
 }
 
 void Panels::BaseAdvancedCpuOptions::ApplyRoundmode( SSE_MXCSR& mxcsr )
 {
-	for( int i=0; i<4; ++i )
-	{
-		if( m_Option_Round[i]->GetValue() )
-		{
-			mxcsr.RoundingControl = i;
-			break;
-		}
-	}
-
+	mxcsr.RoundingControl	= m_RoundModePanel->GetSelection();
 	mxcsr.DenormalsAreZero	= m_Option_DAZ->GetValue();
 	mxcsr.FlushToZero		= m_Option_FTZ->GetValue();
 }
@@ -247,9 +294,11 @@ void Panels::AdvancedOptionsFPU::Apply()
 	cpuOps.sseMXCSR = Pcsx2Config::CpuOptions().sseMXCSR;		// set default
 	ApplyRoundmode( cpuOps.sseMXCSR );
 
-	recOps.fpuExtraOverflow	= m_Option_ExtraSign->GetValue();
-	recOps.fpuOverflow		= m_Option_Normal->GetValue() || recOps.fpuExtraOverflow;
-	recOps.fpuFullMode		= m_Option_Full->GetValue();
+	const int clampSel		= m_ClampModePanel->GetSelection();
+
+	recOps.fpuOverflow		= clampSel >= 1;
+	recOps.fpuExtraOverflow	= clampSel >= 2;
+	recOps.fpuFullMode		= clampSel >= 3;
 
 	cpuOps.ApplySanityCheck();
 }
@@ -262,9 +311,11 @@ void Panels::AdvancedOptionsVU::Apply()
 	cpuOps.sseVUMXCSR = Pcsx2Config::CpuOptions().sseVUMXCSR;		// set default
 	ApplyRoundmode( cpuOps.sseVUMXCSR );
 
-	recOps.vuSignOverflow	= m_Option_ExtraSign->GetValue();
-	recOps.vuExtraOverflow	= m_Option_Extra->GetValue() || recOps.vuSignOverflow;
-	recOps.vuOverflow		= m_Option_Normal->GetValue() || recOps.vuExtraOverflow;
+	const int clampSel		= m_ClampModePanel->GetSelection();
+
+	recOps.vuOverflow		= clampSel >= 1;
+	recOps.vuExtraOverflow	= clampSel >= 2;
+	recOps.vuSignOverflow	= clampSel >= 3;
 
 	cpuOps.ApplySanityCheck();
 }

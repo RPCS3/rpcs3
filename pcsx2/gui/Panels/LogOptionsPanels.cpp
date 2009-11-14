@@ -20,7 +20,7 @@
 #include <wx/statline.h>
 
 
-using namespace wxHelpers;
+using namespace pxSizerFlags;
 
 Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 	: CheckedStaticBox( parent, wxVERTICAL, L"EE Logs" )
@@ -62,10 +62,10 @@ Panels::eeLogOptionsPanel::eeLogOptionsPanel( LogOptionsPanel* parent )
 
 	wxFlexGridSizer& eeTable( *new wxFlexGridSizer( 2, 5 ) );
 	
-	eeTable.Add( &s_misc, SizerFlags::SubGroup() );
-	eeTable.Add( m_hwPanel, SizerFlags::SubGroup() );
-	eeTable.Add( m_evtPanel, SizerFlags::SubGroup() );
-	eeTable.Add( m_disasmPanel, SizerFlags::SubGroup() );
+	eeTable.Add( &s_misc, SubGroup() );
+	eeTable.Add( m_hwPanel, SubGroup() );
+	eeTable.Add( m_evtPanel, SubGroup() );
+	eeTable.Add( m_disasmPanel, SubGroup() );
 
 	ThisSizer.AddSpacer( 4 );
 	ThisSizer.Add( &eeTable );
@@ -108,10 +108,10 @@ Panels::iopLogOptionsPanel::iopLogOptionsPanel( LogOptionsPanel* parent )
 
 	wxFlexGridSizer& iopTable( *new wxFlexGridSizer( 2, 5 ) );
 
-	iopTable.Add( &s_misc, SizerFlags::SubGroup() );
-	iopTable.Add( m_hwPanel, SizerFlags::SubGroup() );
-	iopTable.Add( m_evtPanel, SizerFlags::SubGroup() );
-	iopTable.Add( m_disasmPanel, SizerFlags::SubGroup() );
+	iopTable.Add( &s_misc, SubGroup() );
+	iopTable.Add( m_hwPanel, SubGroup() );
+	iopTable.Add( m_evtPanel, SubGroup() );
+	iopTable.Add( m_disasmPanel, SubGroup() );
 
 	ThisSizer.AddSpacer( 4 );
 	ThisSizer.Add( &iopTable );
@@ -211,14 +211,14 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent, int idealWidth )
 
 	//s_head.Add( &s_misc, SizerFlags::SubGroup() );
 
-	topSizer.Add( &m_eeSection, SizerFlags::StdSpace() );
-	topSizer.Add( &m_iopSection, SizerFlags::StdSpace() );
+	topSizer.Add( &m_eeSection, StdSpace() );
+	topSizer.Add( &m_iopSection, StdSpace() );
 
-	mainsizer.Add( m_masterEnabler, SizerFlags::StdSpace() );
-	mainsizer.Add( new wxStaticLine( this, wxID_ANY ), SizerFlags::StdExpand().Border(wxLEFT | wxRIGHT, 20) );
+	mainsizer.Add( m_masterEnabler, StdSpace() );
+	mainsizer.Add( new wxStaticLine( this, wxID_ANY ), StdExpand().Border(wxLEFT | wxRIGHT, 20) );
 	mainsizer.AddSpacer( 5 );
 	mainsizer.Add( &topSizer );
-	mainsizer.Add( &s_misc, SizerFlags::StdSpace().Centre() );
+	mainsizer.Add( &s_misc, StdSpace().Centre() );
 
 	SetSizer( &mainsizer );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );

@@ -21,6 +21,8 @@
 #include "ScopedPtr.h"
 #include <stack>
 
+#include <wx/wx.h>
+
 // ----------------------------------------------------------------------------
 // wxGuiTools.h
 //
@@ -29,6 +31,69 @@
 // you will have to use wxCore header files and link against wxCore (GUI) to build
 // them.  For tools which require only wxBase, see wxBaseTools.h
 // ----------------------------------------------------------------------------
+
+namespace pxSizerFlags
+{
+	extern wxSizerFlags StdSpace();
+	extern wxSizerFlags StdCenter();
+	extern wxSizerFlags StdExpand();
+	extern wxSizerFlags TopLevelBox();
+	extern wxSizerFlags SubGroup();
+	extern wxSizerFlags StdButton();
+	extern wxSizerFlags Checkbox();
+};
+
+// --------------------------------------------------------------------------------------
+//  wxDialogWithHelpers
+// --------------------------------------------------------------------------------------
+class wxDialogWithHelpers : public wxDialog
+{
+protected:
+	bool	m_hasContextHelp;
+	int		m_idealWidth;
+
+public:
+	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
+	virtual ~wxDialogWithHelpers() throw();
+
+	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
+    void AddOkCancel( wxSizer& sizer, bool hasApply=false );
+
+	wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
+	int GetIdealWidth() const { return m_idealWidth; }
+	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
+
+protected:
+
+};
+
+// --------------------------------------------------------------------------------------
+//  wxPanelWithHelpers
+// --------------------------------------------------------------------------------------
+class wxPanelWithHelpers : public wxPanel
+{
+protected:
+	int		m_idealWidth;
+	bool	m_StartNewRadioGroup;
+
+public:
+	wxPanelWithHelpers( wxWindow* parent, int idealWidth=wxDefaultCoord );
+	wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size=wxDefaultSize );
+
+	//wxRadioButton&	NewSpinCtrl( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
+
+	//wxRadioButton&	AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
+	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
+
+	wxPanelWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
+	int GetIdealWidth() const { return m_idealWidth; }
+	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
+
+	void StartRadioGroup() { m_StartNewRadioGroup = true; }
+	
+protected:
+};
+
 
 // --------------------------------------------------------------------------------------
 //  pxTextWrapperBase

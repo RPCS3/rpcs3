@@ -30,7 +30,7 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
 
 	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
 
-	s_main.Add( m_panel_langsel, SizerFlags::StdCenter() );
+	s_main.Add( m_panel_langsel, pxSizerFlags::StdCenter() );
 	s_main.Add( m_panel_usersel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
 
 	AddOkCancel( s_main );

@@ -26,6 +26,11 @@
 // which require wxCore, see wxGuiTools.h
 // --------------------------------------------------------------------------------------
 
+extern void pxExplore( const wxString& path );
+extern void pxExplore( const char *path );
+
+extern void pxLaunch( const wxString& path );
+extern void pxLaunch( const char *path );
 
 // --------------------------------------------------------------------------------------
 //  wxDoNotLogInThisScope

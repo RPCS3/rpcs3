@@ -23,61 +23,6 @@
 #   include <wx/tooltip.h>
 #endif
 
-// ------------------------------------------------------------------------
-// FlagsAccessors - Provides read-write copies of standard sizer flags for our interface.
-// These standard definitions provide a consistent and pretty interface for our GUI.
-// Without them things look compacted, misaligned, and yucky!
-//
-// Implementation Note: Accessors are all provisioned as dynamic (realtime) sizer calculations.
-// I've preferred this over cstatic const variables on the premise that spacing logic could
-// in the future become a dynamic value (currently it is affixed to 6 for most items).
-//
-wxSizerFlags wxHelpers::SizerFlags::StdSpace()
-{
-	return wxSizerFlags().Border( wxALL, 6 );
-}
-
-wxSizerFlags wxHelpers::SizerFlags::StdCenter()
-{
-	return wxSizerFlags().Align( wxALIGN_CENTER ).DoubleBorder();
-}
-
-wxSizerFlags wxHelpers::SizerFlags::StdExpand()
-{
-	return StdSpace().Expand();
-}
-
-// A good sizer flags setting for top-level static boxes or top-level picture boxes.
-// Gives a generous border to the left, right, and bottom.  Top border can be configured
-// manually by using a spacer.
-wxSizerFlags wxHelpers::SizerFlags::TopLevelBox()
-{
-	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 6 ).Expand();
-}
-
-// Flags intended for use on grouped StaticBox controls.  These flags are ideal for
-// StaticBoxes that are part of sub-panels or children of other static boxes, but may
-// not be best for parent StaticBoxes on dialogs (left and right borders feel a bit
-// "tight").
-wxSizerFlags wxHelpers::SizerFlags::SubGroup()
-{
-	// Groups look better with a slightly smaller margin than standard.
-	// (basically this accounts for the group's frame)
-	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 4 ).Expand();
-}
-
-// This force-aligns the std button sizer to the right, where (at least) us win32 platform
-// users always expect it to be.  Most likely Mac platforms expect it on the left side
-// just because it's *not* where win32 sticks it.  Too bad!
-wxSizerFlags wxHelpers::SizerFlags::StdButton()
-{
-	return wxSizerFlags().Align( wxALIGN_RIGHT ).Border();
-}
-
-wxSizerFlags wxHelpers::SizerFlags::Checkbox()
-{
-	return StdExpand();
-}
 
 // This method is used internally to create multi line checkboxes and radio buttons.
 static wxStaticText* _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxString& subtext, const wxString& tooltip, int wrapLen )
@@ -96,38 +41,33 @@ static wxStaticText* _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, con
 	return joe;
 }
 
-
-// ------------------------------------------------------------------------
-// Creates a new checkbox and adds it to the specified sizer/parent combo, with optional tooltip.
-// Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied
-// to both the checkbox and it's static subtext (if present).
-//
-wxCheckBox& wxHelpers::AddCheckBoxTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip, int wrapLen )
-{
-	wxCheckBox* retval = new wxCheckBox( parent, wxID_ANY, label );
-	sizer.Add( retval, SizerFlags::Checkbox() );
-
-	if( !tooltip.IsEmpty() )
-		pxSetToolTip( retval, tooltip );
-
-	_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
-
-	return *retval;
-}
-
 pxCheckBox::pxCheckBox(wxPanelWithHelpers* parent, const wxString& label, const wxString& subtext)
 	: wxPanel( parent )
 {
-	m_checkbox		= new wxCheckBox( this, wxID_ANY, label );
 	m_idealWidth	= parent->GetIdealWidth() - 24;
+	Init( label, subtext );
+}
+
+pxCheckBox::pxCheckBox(wxDialogWithHelpers* parent, const wxString& label, const wxString& subtext)
+	: wxPanel( parent )
+{
+	m_idealWidth	= parent->GetIdealWidth() - 24;
+	Init( label, subtext );
+}
+
+void pxCheckBox::Init(const wxString& label, const wxString& subtext)
+{
+	m_checkbox		= new wxCheckBox( this, wxID_ANY, label );
 
 	wxBoxSizer&	mySizer( *new wxBoxSizer(wxVERTICAL) );
-	mySizer.Add( m_checkbox, wxHelpers::SizerFlags::StdExpand() );
+	mySizer.Add( m_checkbox, pxSizerFlags::StdExpand() );
 	m_subtext = _appendStaticSubtext( this, mySizer, subtext, wxEmptyString, m_idealWidth );
 
 	SetSizer( &mySizer );
 }
 
+// applies the tooltip to both both the checkbox and it's static subtext (if present), and
+// performs word wrapping on platforms that need it (eg mswindows).
 pxCheckBox& pxCheckBox::SetToolTip( const wxString& tip )
 {
 	const wxString wrapped( pxFormatToolTipText(this, tip) );
@@ -145,26 +85,6 @@ pxCheckBox& pxCheckBox::SetValue( bool val )
 bool pxCheckBox::GetValue() const
 {
 	return m_checkbox->GetValue();
-}
-
-// ------------------------------------------------------------------------
-// Creates a new Radio button and adds it to the specified sizer/parent combo, with optional tooltip.
-// Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied
-// to both the radio button and it's static subtext (if present).
-//
-// The first item in a group should pass True for the isFirst parameter.
-//
-wxRadioButton& wxHelpers::AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip, int wrapLen, bool isFirst )
-{
-	wxRadioButton* retval = new wxRadioButton( parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, isFirst ? wxRB_GROUP : 0 );
-	sizer.Add( retval, SizerFlags::Checkbox() );
-
-	if( !tooltip.IsEmpty() )
-		pxSetToolTip( retval, tooltip );
-
-	_appendStaticSubtext( parent, sizer, subtext, tooltip, wrapLen );
-
-	return *retval;
 }
 
 // ------------------------------------------------------------------------
@@ -186,7 +106,7 @@ wxStaticText& wxHelpers::AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const
     wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
     if( size > 0 ) temp.Wrap( size );
 
-    sizer.Add( &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+    sizer.Add( &temp, pxSizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
     return temp;
 }
 
@@ -197,37 +117,8 @@ wxStaticText& wxHelpers::InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, in
 	wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
 	if( size > 0 ) temp.Wrap( size );
 
-	sizer.Insert( position, &temp, SizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+	sizer.Insert( position, &temp, pxSizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
 	return temp;
-}
-
-// ------------------------------------------------------------------------
-// Launches the specified file according to its mime type
-//
-void wxHelpers::Launch( const wxString& filename )
-{
-	wxLaunchDefaultBrowser( filename );
-}
-
-void wxHelpers::Launch(const char *filename)
-{
-	Launch( fromUTF8(filename) );
-}
-
-// ------------------------------------------------------------------------
-// Launches a file explorer window on the specified path.  If the given path is not
-// a qualified URI (with a prefix:// ), file:// is automatically prepended.  This
-// bypasses wxWidgets internal filename checking, which can end up launching things
-// through browser more often than desired.
-//
-void wxHelpers::Explore( const wxString& path )
-{
-	wxLaunchDefaultBrowser( !path.Contains( L"://") ? L"file://" + path : path );
-}
-
-void wxHelpers::Explore(const char *path)
-{
-	Explore( fromUTF8(path) );
 }
 
 // =====================================================================================================
@@ -243,13 +134,15 @@ bool pxDialogExists( wxWindowID id )
 	return (dest > 0);
 }
 
-wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size ) :
-	wxDialog( parent, id, title, pos, size , wxDEFAULT_DIALOG_STYLE), //, (wxCAPTION | wxMAXIMIZE | wxCLOSE_BOX | wxRESIZE_BORDER) ),	// flags for resizable dialogs, currently unused.
-	m_hasContextHelp( hasContextHelp )
+wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size )
+	: wxDialog( parent, id, title, pos, size , wxDEFAULT_DIALOG_STYLE) //, (wxCAPTION | wxMAXIMIZE | wxCLOSE_BOX | wxRESIZE_BORDER) ),	// flags for resizable dialogs, currently unused.
 {
 	++m_DialogIdents[GetId()];
 
-	if( hasContextHelp )
+	m_idealWidth = wxDefaultCoord;
+
+	m_hasContextHelp = hasContextHelp;
+	if( m_hasContextHelp )
 		delete wxHelpProvider::Set( new wxSimpleHelpProvider() );
 
 	// Note: currently the Close (X) button doesn't appear to work in dialogs.  Docs indicate
@@ -262,16 +155,6 @@ wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 {
 	--m_DialogIdents[GetId()];
 	pxAssert( m_DialogIdents[GetId()] >= 0 );
-}
-
-// ------------------------------------------------------------------------
-// Creates a new checkbox and adds it to the specified sizer/parent combo, with optional tooltip.
-// Uses the default spacer setting for adding checkboxes, and the tooltip (if specified) is applied
-// to both the checkbox and it's static subtext (if present).
-//
-wxCheckBox& wxDialogWithHelpers::AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
-{
-	return wxHelpers::AddCheckBoxTo( this, sizer, label, subtext, tooltip);
 }
 
 wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int size, int alignFlags )
@@ -292,7 +175,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 		// create a sizer to hold the help and ok/cancel buttons, for platforms
 		// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
 		buttonSizer = new wxBoxSizer( wxHORIZONTAL );
-		buttonSizer->Add( new wxContextHelpButton(this), wxHelpers::SizerFlags::StdButton().Align( wxALIGN_LEFT ) );
+		buttonSizer->Add( new wxContextHelpButton(this), wxHelpers::pxSizerFlags::StdButton().Align( wxALIGN_LEFT ) );
 		sizer.Add( buttonSizer, wxSizerFlags().Center() );
 #endif
 	}
@@ -308,7 +191,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 	}
 
 	s_buttons.Realize();
-	buttonSizer->Add( &s_buttons, wxHelpers::SizerFlags::StdButton() );
+	buttonSizer->Add( &s_buttons, pxSizerFlags::StdButton() );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -326,19 +209,6 @@ wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, co
 	m_idealWidth			= wxDefaultCoord;
 	m_StartNewRadioGroup	= true;
 }
-
-
-// ------------------------------------------------------------------------
-// Creates a new checkbox and adds it to the specified sizer, with optional tooltip.  Uses the default
-// spacer setting for adding checkboxes, and the tooltip (if specified) is applied to both the checkbox
-// and it's static subtext (if present).
-//
-// Static subtext, if specified, is displayed below the checkbox and is indented accordingly.
-//
-/*wxCheckBox& wxPanelWithHelpers::AddCheckBox( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
-{
-	return wxHelpers::AddCheckBoxTo( this, sizer, label, subtext, tooltip, GetIdealWidth()-8 );
-}*/
 
 // ------------------------------------------------------------------------
 // Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this
@@ -365,9 +235,9 @@ wxStaticText& wxPanelWithHelpers::AddStaticText(wxSizer& sizer, const wxString& 
 // Static subtext, if specified, is displayed below the checkbox and is indented accordingly.
 // The first item in a group should pass True for the isFirst parameter.
 //
-wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
+/*wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
 {
 	wxRadioButton& result = wxHelpers::AddRadioButtonTo( this, sizer, label, subtext, tooltip, GetIdealWidth()-8, m_StartNewRadioGroup );
 	m_StartNewRadioGroup = false;
 	return result;
-}
+}*/

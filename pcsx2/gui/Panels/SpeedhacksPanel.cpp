@@ -223,12 +223,12 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow& parent, int idealWidth ) :
 	miscSizer.Add( m_check_b1fc0 );
 	miscSizer.Add( m_check_IOPx2 );
 
-	cycleHacksSizer.Add( &cyclerateSizer, SizerFlags::TopLevelBox() );
-	cycleHacksSizer.Add( &stealerSizer, SizerFlags::TopLevelBox() );
+	cycleHacksSizer.Add( &cyclerateSizer, pxSizerFlags::TopLevelBox() );
+	cycleHacksSizer.Add( &stealerSizer, pxSizerFlags::TopLevelBox() );
 
 	mainSizer.Add( &cycleHacksSizer, wxSizerFlags().Expand() );
-	mainSizer.Add( &microVUSizer, SizerFlags::TopLevelBox() );
-	mainSizer.Add( &miscSizer, SizerFlags::TopLevelBox() );
+	mainSizer.Add( &microVUSizer, pxSizerFlags::TopLevelBox() );
+	mainSizer.Add( &miscSizer, pxSizerFlags::TopLevelBox() );
 	SetSizer( &mainSizer );
 
 	// There has to be a cleaner way to do this...

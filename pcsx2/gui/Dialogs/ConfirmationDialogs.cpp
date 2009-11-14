@@ -126,12 +126,8 @@ wxWindowID Dialogs::IssueConfirmation( wxWindow* parent, const wxString& disable
 	// Add an option that allows the user to disable this popup from showing again.
 	// (and if the config hasn't been initialized yet, then assume the dialog as non-disablable)
 
-	wxBoxSizer& cboxPad = *new wxBoxSizer( wxHORIZONTAL );
-	wxCheckBox&	DisablerCtrl(
-		AddCheckBoxTo( &confirmDlg, cboxPad, _("Do not show this dialog again."))
-	);
-
-	confirmDlg.GetExtensibleSizer().Add( &cboxPad, wxSizerFlags().Centre() );
+	pxCheckBox&	DisablerCtrl( *new pxCheckBox(&confirmDlg, _("Do not show this dialog again.")) );
+	confirmDlg.GetExtensibleSizer().Add( &DisablerCtrl, wxSizerFlags().Centre() );
 
 	if( type != ConfButtons().OK() )
 		pxSetToolTip(&DisablerCtrl, _("Disables this popup and whatever response you select here will be automatically used from now on."));
@@ -162,7 +158,7 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 	// Add the message padded some (StdCenter gives us a 5 pt padding).  Helps emphasize it a bit.
 	wxBoxSizer& msgPadSizer( *new wxBoxSizer(wxVERTICAL) );
 	AddStaticText( msgPadSizer, msg, wxALIGN_CENTRE, 444 );
-	mainsizer.Add( &msgPadSizer, SizerFlags::StdCenter() );
+	mainsizer.Add( &msgPadSizer, pxSizerFlags::StdCenter() );
 
 	mainsizer.Add( &m_ExtensibleSizer, wxSizerFlags().Centre() );
 
@@ -219,7 +215,7 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 		AddActionButton( wxID_CANCEL );
 	#endif
 	
-	mainsizer.Add( &m_ButtonSizer, SizerFlags::StdCenter() );
+	mainsizer.Add( &m_ButtonSizer, pxSizerFlags::StdCenter() );
 
 	SetSizerAndFit( &mainsizer, true );
 	CenterOnScreen();
@@ -232,13 +228,13 @@ void Dialogs::ExtensibleConfirmation::OnActionButtonClicked( wxCommandEvent& evt
 
 void Dialogs::ExtensibleConfirmation::AddCustomButton( wxWindowID id, const wxString& label )
 {
-	m_ButtonSizer.Add( new wxButton( this, id, label ), SizerFlags::StdButton() )->SetProportion( 6 );
+	m_ButtonSizer.Add( new wxButton( this, id, label ), pxSizerFlags::StdButton() )->SetProportion( 6 );
 	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExtensibleConfirmation::OnActionButtonClicked ) );
 }
 
 void Dialogs::ExtensibleConfirmation::AddActionButton( wxWindowID id )
 {
-	m_ButtonSizer.Add( new wxButton( this, id ), SizerFlags::StdButton() )->SetProportion( 6 );
+	m_ButtonSizer.Add( new wxButton( this, id ), pxSizerFlags::StdButton() )->SetProportion( 6 );
 	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExtensibleConfirmation::OnActionButtonClicked ) );
 }
 
