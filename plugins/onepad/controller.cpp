@@ -24,7 +24,7 @@
 
 HatPins hat_position = {false, false, false, false};
 
-__forceinline int set_key(int pad, int index, int value)
+__forceinline void set_key(int pad, int index, int value)
 {
 	conf.keys[pad][index] = value;
 }

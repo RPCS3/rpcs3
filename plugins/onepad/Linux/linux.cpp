@@ -63,7 +63,7 @@ void _PADclose()
 int _GetJoystickIdFromPAD(int pad)
 {
 	// select the right joystick id
-	int joyid = -1;
+	u32 joyid = -1;
 	
 	for (int p = 0; p < MAX_SUB_KEYS; p++)
 	{

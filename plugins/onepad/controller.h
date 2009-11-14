@@ -44,7 +44,7 @@ enum KeyType
 	PAD_NULL = -1
 };
 
-extern int set_key(int pad, int index, int value);
+extern void set_key(int pad, int index, int value);
 extern int get_key(int pad, int index);
 
 extern KeyType type_of_key(int pad, int index);

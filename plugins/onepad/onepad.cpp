@@ -364,7 +364,7 @@ EXPORT_C_(u8) PADstartPoll(int pad)
 
 u8  _PADpoll(u8 value)
 {
-	u8 button_check = 0, button_check2 = 0;
+	u8 button_check = 0;
 	const int avg_pressure = (pressure * 255) / 100;
 
 	if (curByte == 0)
@@ -402,7 +402,7 @@ u8  _PADpoll(u8 value)
 				else 
 					cmdLen = 4;
 			
-				button_check2 = stdpar[curPad][2] >> 4;
+				button_check = stdpar[curPad][2] >> 4;
 				switch (stdpar[curPad][3])
 				{
 					case 0xBF: // X
@@ -448,7 +448,7 @@ u8  _PADpoll(u8 value)
 						stdpar[curPad][19] = 0x00; // Not pressed
 						break;
 				}
-				switch (button_check2)
+				switch (button_check)
 				{
 					case 0xE: // UP
 						stdpar[curPad][10] = avg_pressure;

@@ -175,7 +175,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 		// create a sizer to hold the help and ok/cancel buttons, for platforms
 		// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
 		buttonSizer = new wxBoxSizer( wxHORIZONTAL );
-		buttonSizer->Add( new wxContextHelpButton(this), wxHelpers::pxSizerFlags::StdButton().Align( wxALIGN_LEFT ) );
+		buttonSizer->Add( new wxContextHelpButton(this), pxSizerFlags::StdButton().Align( wxALIGN_LEFT ) );
 		sizer.Add( buttonSizer, wxSizerFlags().Center() );
 #endif
 	}

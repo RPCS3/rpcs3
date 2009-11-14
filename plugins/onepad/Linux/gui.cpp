@@ -106,9 +106,6 @@ void create_a_column(GtkWidget *view, const char *name, int num, bool visible)
 
 void create_columns(GtkWidget *view)
 {
-	GtkCellRenderer     *renderer;
-	GtkTreeViewColumn   *col;  
-	
 	if (!has_columns)
 	{
 		create_a_column(view, "Pad #", COL_PAD, true);

@@ -18,6 +18,7 @@
 #include <wx/wx.h>
 #include "SafeArray.h"
 #include "wxGuiTools.h"
+#include <vector>
 
 // --------------------------------------------------------------------------------------
 //  RadioPanelItem
@@ -174,5 +175,5 @@ public:
 	
 protected:
 	void Init( const RadioPanelItem* srcArray=NULL, int arrsize=0 );
-	void pxRadioPanel::_setToolTipImmediate( int idx, const wxString &tip );
+	void _setToolTipImmediate( int idx, const wxString &tip );
 };
