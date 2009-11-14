@@ -16,13 +16,11 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
-#include "System.h"
+#include "GS.h"
+#include "Elfheader.h"
 #include "PageFaultSource.h"
 #include "SysThreads.h"
 
-#include "SaveState.h"
-#include "VUmicro.h"
-#include "GS.h"
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>

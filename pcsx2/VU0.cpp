@@ -23,14 +23,11 @@
 */
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <cmath>
 
-#include "Common.h"
-#include "DebugTools/Debug.h"
-#include "R5900.h"
 #include "R5900OpcodeTables.h"
-#include "VUops.h"
 #include "VUmicro.h"
 
 #define _Ft_ _Rt_
@@ -44,8 +41,6 @@
 
 #define _Fsf_ ((cpuRegs.code >> 21) & 0x03)
 #define _Ftf_ ((cpuRegs.code >> 23) & 0x03)
-
-#include "VUflags.h"
 
 using namespace R5900;
 

@@ -18,15 +18,11 @@
 // of the VU0 micro.
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <cmath>
 
-#include "Common.h"
-#include "VU.h"
-#include "VUops.h"
 #include "VUmicro.h"
-#include "sVU_Micro.h"
-#include "sVU_zerorec.h"
 
 VURegs* g_pVU1;
 

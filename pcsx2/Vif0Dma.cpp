@@ -13,13 +13,15 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "PrecompiledHeader.h"
 
+#include "PrecompiledHeader.h"
 #include "Common.h"
+#include "Tags.h"
+
 #include "VifDma.h"
 #include "VifDma_internal.h"
+
 #include "VUmicro.h"
-#include "Tags.h"
 
 __aligned16 u32 g_vif0Masks[64];
 u32 g_vif0HasMask3[4] = {0};
@@ -29,6 +31,7 @@ extern void (*Vif0CMDTLB[75])();
 
 vifStruct vif0;
 u32 *vif0ptag;
+
 __forceinline void vif0FLUSH()
 {
 	int _cycles = VU0.cycle;

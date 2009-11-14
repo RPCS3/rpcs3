@@ -15,9 +15,9 @@
 
 
 #include "PrecompiledHeader.h"
+#include "IopCommon.h"
 
 #include <ctype.h>
-#include "IopCommon.h"
 
 namespace R3000A {
 

@@ -14,16 +14,19 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "IopCommon.h"
+#include "AppConfig.h"
 
 #include <ctype.h>
 #include <wx/datetime.h>
 
-#include "IopCommon.h"
+#include "CDVD.h"
 #include "CDVD_internal.h"
 #include "CDVDisoReader.h"
+
 #include "GS.h"			// for gsRegionMode
+#include "Elfheader.h"
 #include "ps2/BiosTools.h"
-#include "AppConfig.h"
 
 static cdvdStruct cdvd;
 

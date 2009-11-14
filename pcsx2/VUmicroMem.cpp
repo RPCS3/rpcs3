@@ -15,11 +15,9 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-#include "R5900.h"
-#include "VUmicro.h"
-#include "sVU_zerorec.h"
+
+#include "sVU_zerorec.h"  // SuperVUReset
 
 // The following CpuVU objects are value types instead of handles or pointers because they are
 // modified on the fly to implement VU1 Skip.

@@ -13,15 +13,16 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 #include "PrecompiledHeader.h"
+#include "Common.h"
+#include "Tags.h"
+
 #include <cmath>
 #include <assert.h>
 
-#include "Common.h"
-#include "VUmicro.h"
 #include "Vif.h"
 #include "VifDma.h"
-#include "Tags.h"
 
 VIFregisters *vifRegs;
 u32* vifRow = NULL;

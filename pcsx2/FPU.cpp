@@ -14,11 +14,9 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <cmath>
-#include "Common.h"
-#include "R5900.h"
-#include "R5900OpcodeTables.h"
 
 // Helper Macros
 //****************************************************************

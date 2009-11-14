@@ -14,21 +14,14 @@
  */
 
 #include "PrecompiledHeader.h"
-
+#include "Common.h"
 #include "HostGui.h"
 
-#include "Common.h"
-#include "VUmicro.h"
-#include "iR5900.h"
-#include "R3000A.h"
-#include "IopMem.h"
-#include "sVU_zerorec.h"		// for SuperVUReset
+#include "sVU_zerorec.h"		// for SuperVUDestroy
 
-#include "R5900Exceptions.h"
-#include "CDVD/CDVD.h"
 #include "System/PageFaultSource.h"
-
 #include "Utilities/EventSource.inl"
+
 EventSource_ImplementType( PageFaultInfo );
 
 SrcType_PageFault Source_PageFault;

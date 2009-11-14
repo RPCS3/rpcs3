@@ -15,13 +15,13 @@
 
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <time.h>
 #include <cmath>
-#include "Common.h"
-#include "Counters.h"
 
 #include "R3000A.h"
+#include "Counters.h"
 #include "IopCounters.h"
 
 #include "GS.h"

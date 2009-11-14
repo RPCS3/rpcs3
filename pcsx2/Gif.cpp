@@ -14,16 +14,14 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-#include "VU.h"
+#include "Tags.h"
+
 #include "GS.h"
 #include "Gif.h"
 #include "VifDma.h"
 
 #include "iR5900.h"
-#include "Counters.h"
-#include "Tags.h"
 
 using std::min;
 

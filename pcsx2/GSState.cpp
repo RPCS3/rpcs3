@@ -15,8 +15,9 @@
 
 #include "PrecompiledHeader.h"
 
-#include "GS.h"
 #include <list>
+
+#include "GS.h"
 
 #ifdef PCSX2_DEVBUILD
 

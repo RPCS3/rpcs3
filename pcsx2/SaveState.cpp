@@ -15,22 +15,15 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "IopCommon.h"
 #include "SaveState.h"
 
-//#include "CDVD/IsoFSdrv.h"
 #include "ps2/BiosTools.h"
-
-#include "VUmicro.h"
-#include "VU.h"
-#include "iCore.h"
-#include "sVU_zerorec.h"
-
-#include "GS.h"
 #include "COP0.h"
 #include "Cache.h"
 #include "AppConfig.h"
+
+#include "Elfheader.h"
 
 using namespace R5900;
 

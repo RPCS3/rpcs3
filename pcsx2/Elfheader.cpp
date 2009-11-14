@@ -14,10 +14,8 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-//#include "CDVD/IsoFSdrv.h"
-#include "DebugTools/Debug.h"
+
 #include "GS.h"			// for sending game crc to mtgs
 
 #include "CDVD/IsoFS/IsoFSCDVD.h"

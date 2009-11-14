@@ -16,6 +16,8 @@
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
 
+#include "Sif.h"
+
 using namespace R3000A;
 
 // Dma0/1   in Mdec.c

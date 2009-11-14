@@ -15,28 +15,17 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-#include "Counters.h"
 
-#include "Memory.h"
-#include "Hw.h"
-#include "DebugTools/Debug.h"
+#include "R5900.h"
 #include "R3000A.h"
 #include "VUmicro.h"
 #include "COP0.h"
 
-#include "GS.h"
-#include "Gif.h"
-#include "IPU/IPU.h"
-#include "Vif.h"
-#include "VifDma.h"
-#include "SPR.h"
-#include "Sif.h"
-
 #include "System/SysThreads.h"
-
 #include "R5900Exceptions.h"
+
+#include "Hardware.h"
 
 using namespace R5900;	// for R5900 disasm tools
 
@@ -95,9 +84,10 @@ void cpuReset()
 
 __releaseinline void cpuException(u32 code, u32 bd)
 {
-	cpuRegs.branch = 0;		// Tells the interpreter that an exception occurred during a branch.
 	bool errLevel2, checkStatus;
 	u32 offset;
+	
+    cpuRegs.branch = 0;		// Tells the interpreter that an exception occurred during a branch.
 	cpuRegs.CP0.n.Cause = code & 0xffff;
 
 	if(cpuRegs.CP0.n.Status.b.ERL == 0)

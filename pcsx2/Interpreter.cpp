@@ -15,9 +15,8 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-#include "R5900.h"
+
 #include "R5900OpcodeTables.h"
 #include "System/SysThreads.h"
 

@@ -19,9 +19,9 @@
 // The EventText function will pick it up.
 
 #include "PrecompiledHeader.h"
+#include "IopCommon.h"
 
 #include <math.h>
-#include "IopCommon.h"
 
 /* Config.PsxType == 1: PAL:
 	 VBlank interlaced		50.00 Hz

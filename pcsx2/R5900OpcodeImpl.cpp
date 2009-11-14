@@ -15,13 +15,14 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
+
+#include <float.h>
+
 #include "R5900.h"
 #include "R5900OpcodeTables.h"
 #include "R5900Exceptions.h"
 
-#include <float.h>
 
 static __forceinline s64 _add64_Overflow( s64 x, s64 y )
 {

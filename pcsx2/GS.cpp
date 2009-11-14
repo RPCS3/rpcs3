@@ -14,15 +14,13 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <list>
 
-#include "Common.h"
 #include "GS.h"
 #include "Gif.h"
-#include "iR5900.h"
 #include "Counters.h"
-#include "VifDma.h"
 
 using namespace Threading;
 using namespace R5900;

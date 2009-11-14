@@ -15,6 +15,7 @@
 
 
 #include "PrecompiledHeader.h"
+#include "IopCommon.h"
 
 #define ENABLE_TIMESTAMPS
 
@@ -25,13 +26,11 @@
 #include <ctype.h>
 #include <time.h>
 #include <wx/datetime.h>
-
-#include "IopCommon.h"
-#include "CDVDisoReader.h"
+#include <exception>
 
 #include "IsoFS/IsoFS.h"
 #include "IsoFS/IsoFSCDVD.h"
-#include <exception>
+#include "CDVDisoReader.h"
 
 const wxChar* CDVD_SourceLabels[] =
 {

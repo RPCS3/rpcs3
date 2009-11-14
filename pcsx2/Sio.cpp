@@ -14,8 +14,9 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "IopCommon.h"
+
+#include "Sio.h"
 #include "sio_internal.h"
 
 _sio sio;

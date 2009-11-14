@@ -18,8 +18,10 @@
 #define _PC_	// disables MIPS opcode macros.
 
 #include "IopCommon.h"
-#include "Sifcmd.h"
 #include "Tags.h"
+
+#include "Sif.h"
+#include "Sifcmd.h"
 
 DMACh *sif0ch;
 DMACh *sif1ch;

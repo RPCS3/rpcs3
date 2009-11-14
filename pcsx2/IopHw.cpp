@@ -15,9 +15,10 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "IopCommon.h"
+
 #include "iR5900.h"
+#include "Sio.h"
 
 // NOTE: Any modifications to read/write fns should also go into their const counterparts
 // found in iPsxHw.cpp.

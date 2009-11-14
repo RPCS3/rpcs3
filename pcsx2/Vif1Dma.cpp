@@ -13,15 +13,17 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "PrecompiledHeader.h"
 
+#include "PrecompiledHeader.h"
 #include "Common.h"
-#include "GS.h"
-#include "Gif.h"
+#include "Tags.h"
+
 #include "VifDma.h"
 #include "VifDma_internal.h"
+
+#include "GS.h"
+#include "Gif.h"
 #include "VUmicro.h"
-#include "Tags.h"
 
 __aligned16 u32 g_vif1Masks[64];
 u32 g_vif1HasMask3[4] = {0};

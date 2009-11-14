@@ -15,16 +15,14 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "GS.h"
-
-#include "VU.h"
-#include "iR5900.h"
-#include "VifDma.h"
-
-#include "SamplProf.h"
 
 #include <list>
 #include <wx/datetime.h>
+
+#include "GS.h"
+#include "Elfheader.h"
+#include "SamplProf.h"
+
 
 // Uncomment this to enable profiling of the GS RingBufferCopy function.
 //#define PCSX2_GSRING_SAMPLING_STATS

@@ -17,23 +17,17 @@
 
 #include "Pcsx2Defs.h"
 
-#define BIAS 2   // Bus is half of the actual ps2 speed
-//#define PS2CLK   36864000	/* 294.912 mhz */
-//#define PSXCLK	 9216000	/* 36.864 Mhz */
-//#define PSXCLK	186864000	/* 36.864 Mhz */
-#define PS2CLK 294912000 //hz	/* 294.912 mhz */
-
 #include "System.h"
-
-#include "Plugins.h"
-#include "SaveState.h"
-
-#include "DebugTools/Debug.h"
 #include "Memory.h"
 #include "Hw.h"
-
 #include "R5900.h"
-#include "Elfheader.h"
+
+#include "SaveState.h"
+#include "DebugTools/Debug.h"
+
+static const u32 BIAS = 2;   // Bus is half of the actual ps2 speed
+static const u32 PS2CLK = 294912000; //hz	/* 294.912 mhz */
+//#define PS2CLK   36864000	/* 294.912 mhz */
 
 static const ConsoleColors ConColor_IOP = Color_Yellow;
 static const ConsoleColors ConColor_EE = Color_Cyan;

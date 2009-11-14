@@ -19,18 +19,11 @@
 
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <cmath>
 
-#include "Common.h"
-#include "DebugTools/Debug.h"
-#include "R5900.h"
-#include "iR5900.h"
 #include "VUmicro.h"
-#include "VUflags.h"
-#include "VUops.h"
-
-#include "sVU_zerorec.h"
 
 using namespace R5900;
 

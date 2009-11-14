@@ -35,21 +35,17 @@ BIOS
 */
 
 #include "PrecompiledHeader.h"
+#include "IopCommon.h"
 
 #pragma warning(disable:4799) // No EMMS at end of function
 
 #include <vector>
 #include <wx/file.h>
 
-#include "IopCommon.h"
-#include "iR5900.h"
-#include "ps2/BiosTools.h"
-
 #include "VUmicro.h"
 #include "GS.h"
-#include "IPU/IPU.h"
 #include "System/PageFaultSource.h"
-
+#include "ps2/BiosTools.h"
 
 #ifdef ENABLECACHE
 #include "Cache.h"

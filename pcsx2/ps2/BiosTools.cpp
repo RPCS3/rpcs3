@@ -14,11 +14,12 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "AppConfig.h"
 #include "Common.h"
 #include "BiosTools.h"
 
 #include "wx/file.h"
+
+#include "AppConfig.h"
 
 #define DIRENTRY_SIZE 16
 

@@ -15,8 +15,10 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "IopCommon.h"
+
+#include "CdRom.h"
+#include "CDVD.h"
 
 //THIS ALL IS FOR THE CDROM REGISTERS HANDLING
 

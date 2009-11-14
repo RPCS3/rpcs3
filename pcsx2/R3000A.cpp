@@ -15,9 +15,10 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "IopCommon.h"
-#include "R5900.h"
+
+#include "Sio.h"
+#include "Sif.h"
 
 using namespace R3000A;
 

@@ -17,6 +17,9 @@
 #include "PrecompiledHeader.h"
 #include "IopHw_Internal.h"
 
+#include "Sio.h"
+#include "CDVD/CdRom.h"
+
 namespace IopMemory
 {
 using namespace Internal;

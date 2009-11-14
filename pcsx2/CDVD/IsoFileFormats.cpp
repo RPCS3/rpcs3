@@ -16,13 +16,12 @@
   
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
-//#include "IsoFStools.h"
-//#include "IsoFSdrv.h"
-#include "IsoFileFormats.h"
 
 #include <stdio.h>
 #include <fcntl.h>
 #include <errno.h>
+
+#include "IsoFileFormats.h"
 
 int detect(isoFile *iso)
 {

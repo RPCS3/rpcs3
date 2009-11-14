@@ -565,6 +565,10 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\Hardware.h"
+							>
+						</File>
+						<File
 							RelativePath="..\..\HwRead.cpp"
 							>
 						</File>

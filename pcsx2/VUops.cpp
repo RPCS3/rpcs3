@@ -14,12 +14,10 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <cmath>
 
-#include "Common.h"
-#include "VUmicro.h"
-#include "VUflags.h"
 #include "VUops.h"
 #include "GS.h"
 

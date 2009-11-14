@@ -15,20 +15,9 @@
 
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-#include "iR5900.h"
-#include "VUmicro.h"
-#include "IopMem.h"
 
-// The full suite of hardware APIs:
-#include "IPU/IPU.h"
-#include "GS.h"
-#include "Counters.h"
-#include "Vif.h"
-#include "VifDma.h"
-#include "SPR.h"
-#include "Sif.h"
+#include "Hardware.h"
 
 using namespace R5900;
 

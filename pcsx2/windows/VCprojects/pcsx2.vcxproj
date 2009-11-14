@@ -598,6 +598,7 @@
     <ClInclude Include="..\..\HashMap.h" />
     <ClInclude Include="..\..\HostGui.h" />
     <ClInclude Include="..\..\Hw.h" />
+    <ClInclude Include="..\..\Hardware.h" />
     <ClInclude Include="..\..\IopBios.h" />
     <ClInclude Include="..\..\IopBios2.h" />
     <ClInclude Include="..\..\IopCommon.h" />

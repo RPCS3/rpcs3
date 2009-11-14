@@ -14,15 +14,16 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Utilities/ScopedPtr.h"
+#include "IopCommon.h"
 
 #include <wx/dir.h>
 #include <wx/file.h>
 
-#include "IopCommon.h"
 #include "GS.h"
 #include "HostGui.h"
 #include "CDVD/CDVDisoReader.h"
+
+#include "Utilities/ScopedPtr.h"
 
 #if _MSC_VER
 #	include "svnrev.h"

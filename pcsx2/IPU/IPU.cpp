@@ -14,14 +14,12 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
+#include "Tags.h"
 
 #include "IPU.h"
 #include "yuv2rgb.h"
-
 #include "Vif.h"
-#include "Tags.h"
 
 // Zero cycle IRQ schedules aren't really good, but the IPU uses them.
 // Better to throw the IRQ inline:

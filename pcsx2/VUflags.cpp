@@ -14,12 +14,13 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "Common.h"
 
 #include <cmath>
 #include <float.h>
 
-#include "Common.h"
 #include "VUmicro.h"
+
 /*****************************************/
 /*          NEW FLAGS                    */ //By asadr. Thnkx F|RES :p
 /*****************************************/

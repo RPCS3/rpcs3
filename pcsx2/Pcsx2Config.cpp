@@ -14,11 +14,12 @@
  */
 
 #include "PrecompiledHeader.h"
+
+#include <wx/fileconf.h>
+
 #include "IniInterface.h"
 #include "Config.h"
 #include "GS.h"
-
-#include <wx/fileconf.h>
 
 void TraceLogFilters::LoadSave( IniInterface& ini )
 {

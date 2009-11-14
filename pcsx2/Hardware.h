@@ -12,23 +12,14 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-#pragma once
 
-#include "R3000A.h"
-#include "Common.h"
-
-#include "CDVD/CDVD.h"
-#include "CDVD/CdRom.h"
-
-#include "IopDma.h"
-#include "IopMem.h"
-#include "IopHw.h"
-#include "IopBios.h"
-#include "IopCounters.h"
-#include "IopSio2.h"
-
-static const s64 PSXCLK = 36864000;	/* 36.864 Mhz */
-//#define PSXCLK	 9216000	/* 36.864 Mhz */
-//#define PSXCLK	186864000	/* 36.864 Mhz */
-
+// The full suite of hardware APIs:
+#include "Counters.h"
+#include "GS.h"
+#include "Hw.h"
+#include "IPU/IPU.h"
+#include "SPR.h"
+#include "Gif.h"
+#include "Sif.h"
+#include "Vif.h"
+#include "VifDma.h"

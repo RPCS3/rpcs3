@@ -14,12 +14,12 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
+#include "Tags.h"
+
 #include "VifDma.h"
 #include "VifDma_internal.h"
 #include "VUmicro.h"
-#include "Tags.h"
 
 #include <xmmintrin.h>
 #include <emmintrin.h>

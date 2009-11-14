@@ -15,10 +15,10 @@
 
 #include "PrecompiledHeader.h"
 
+#include "zlib/zlib.h"
+
 #include "App.h"
 #include "HostGui.h"
-
-#include "zlib/zlib.h"
 
 class _BaseStateThread;
 

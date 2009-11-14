@@ -14,12 +14,11 @@
  */
 
 #include "PrecompiledHeader.h"
-
 #include "Common.h"
-#include "SPR.h"
-#include "iR5900.h"
-#include "VUmicro.h"
 #include "Tags.h"
+
+#include "SPR.h"
+#include "VUmicro.h"
 
 extern void mfifoGIFtransfer(int);
 
