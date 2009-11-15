@@ -667,7 +667,7 @@ namespace PatchFunc
 		catch( wxString& exmsg )
 		{
 			Console.Error( L"(Patch) Error Parsing: %s=%s", cmd.c_str(), param.c_str() );
-			Console.Error( L"\t" + exmsg );
+			Console.Indent().Error( exmsg );
 		}
     }
 

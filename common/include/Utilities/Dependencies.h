@@ -53,17 +53,12 @@
 //
 #define wxLt(a)		(a)
 
-// must include wx/setup.h first, otherwise we get warnings/errors regarding __LINUX__
-#include <wx/setup.h>
-
-class wxString;
-
-#include "Pcsx2Defs.h"
-
 #include <wx/string.h>
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 #include <wx/intl.h>
 #include <wx/log.h>
+
+#include "Pcsx2Defs.h"
 
 #include <stdexcept>
 #include <algorithm>
@@ -71,6 +66,7 @@ class wxString;
 #include <cstring>		// string.h under c++
 #include <cstdio>		// stdio.h under c++
 #include <cstdlib>
+#include <vector>
 #include <list>
 
 #include "Utilities/Assertions.h"

@@ -182,7 +182,7 @@ protected:
 	// Threaded log spammer, useful for testing console logging performance.
 	// (alternatively you can enable Disasm logging in any recompiler and achieve
 	// a similar effect)
-	ConsoleTestThread*		m_threadlogger;
+	ScopedPtr<ConsoleTestThread>	m_threadlogger;
 
 public:
 	// ctor & dtor

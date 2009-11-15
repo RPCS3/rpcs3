@@ -90,7 +90,7 @@ FILE *_cdvdOpenMechaVer()
 		fd = fopen(file, "wb");
 		if (fd == NULL)
 		{
-			Console.Error( "\tMEC File Creation failed!" );
+			Console.Error( "MEC File Creation failed!" );
 			throw Exception::CreateStream( file );
 			//Msgbox::Alert( "_cdvdOpenMechaVer: Error creating %s", file);
 			//exit(1);
@@ -130,7 +130,7 @@ FILE *_cdvdOpenNVM()
 		fd = fopen(file, "wb");
 		if (fd == NULL)
 		{
-			Console.Error( "\tNVM File Creation failed!" );
+			Console.Error( "NVM File Creation failed!" );
 			throw Exception::CreateStream( file );
 		}
 		for (int i=0; i<1024; i++) fputc(0, fd);

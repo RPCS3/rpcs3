@@ -1,16 +1,16 @@
+
+// Can't use #pragma once in the precompiled header, as it won't work correctly with GCC PCH.
+
 #ifndef EMITTER_PRECOMPILED_HEADER
 #define EMITTER_PRECOMPILED_HEADER
-
-// must include wx/setup.h first, otherwise we get warnings/errors regarding __LINUX__
-#include <wx/setup.h>
-
-#include "Pcsx2Defs.h"
 
 #include <wx/string.h>
 #include <wx/tokenzr.h>
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 #include <wx/intl.h>
 #include <wx/log.h>
+
+#include "Pcsx2Defs.h"
 
 #include <stdexcept>
 #include <algorithm>

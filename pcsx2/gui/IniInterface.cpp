@@ -270,11 +270,11 @@ void IniSaver::_EnumEntry( const wxString& var, int& value, const wxChar* const*
 
 	if( value >= cnt )
 	{
-		Console.Warning( 
-			L"(SaveSettings) An illegal enumerated index was detected when saving '%s'\n"
-			L"\tIllegal Value: %d\n"
-			L"\tUsing Default: %d (%s)\n",
-			var.c_str(), value, defvalue, enumArray[defvalue]
+		Console.Warning(  L"(SaveSettings) An illegal enumerated index was detected when saving '%s'", var.c_str() );
+		Console.Indent().Warning( 
+			L"Illegal Value: %d\n"
+			L"Using Default: %d (%s)\n",
+			value, defvalue, enumArray[defvalue]
 		);
 
 		// Cause a debug assertion, since this is a fully recoverable error.

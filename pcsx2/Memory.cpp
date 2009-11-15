@@ -39,7 +39,6 @@ BIOS
 
 #pragma warning(disable:4799) // No EMMS at end of function
 
-#include <vector>
 #include <wx/file.h>
 
 #include "VUmicro.h"

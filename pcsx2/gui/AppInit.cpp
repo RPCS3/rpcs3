@@ -452,7 +452,7 @@ struct CrtDebugBreak
 {
 	CrtDebugBreak( int spot )
 	{
-#ifndef __LINUX__
+#ifdef __WXMSW__
 		_CrtSetBreakAlloc( spot );
 #endif
 	}

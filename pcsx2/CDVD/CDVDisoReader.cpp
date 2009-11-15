@@ -150,12 +150,12 @@ static void FindLayer1Start()
 
 		if(layer1start == 0x200010)
 		{
-			Console.WriteLn("\tCouldn't find second layer on dual layer... ignoring");
+			Console.Warning("CDVDiso: Couldn't find second layer... ignoring");
 			layer1start=-2;
 		}
 
 		if(layer1start>=0)
-			Console.WriteLn("\tfound at 0x%8.8x", layer1start);
+			Console.WriteLn("CDVDiso: second layer found at 0x%8.8x", layer1start);
 	}
 }
 

@@ -47,21 +47,20 @@ void SysDetect()
 
 	cpudetectInit();
 
-	//Console.SetColor( Color_Gray );
-
 	Console.WriteLn( Color_StrongBlack, "x86-32 Init:" );
-	Console.WriteLn(
-		L"\tCPU vendor name  =  %s\n"
-		L"\tFamilyID         =  %x\n"
-		L"\tx86Family        =  %s\n"
-		L"\tCPU speed        =  %d.%03d ghz\n"
-		L"\tCores            =  %d physical [%d logical]\n"
-		L"\tx86PType         =  %s\n"
-		L"\tx86Flags         =  %8.8x %8.8x\n"
-		L"\tx86EFlags        =  %8.8x\n",
+	
+	Console.Indent().WriteLn(
+		L"CPU vendor name  =  %s\n"
+		L"FamilyID         =  %x\n"
+		L"x86Family        =  %s\n"
+		L"CPU speed        =  %d.%03d ghz\n"
+		L"Cores            =  %d physical [%d logical]\n"
+		L"x86PType         =  %s\n"
+		L"x86Flags         =  %8.8x %8.8x\n"
+		L"x86EFlags        =  %8.8x\n",
 			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
 			fromUTF8( x86caps.FamilyName ).Trim().Trim(false).c_str(),
-			x86caps.Speed / 1000, x86caps.Speed%1000,
+			x86caps.Speed / 1000, x86caps.Speed % 1000,
 			x86caps.PhysicalCores, x86caps.LogicalCores,
 			fromUTF8( x86caps.TypeName ).c_str(),
 			x86caps.Flags, x86caps.Flags2,
@@ -87,12 +86,10 @@ void SysDetect()
 	JoinString( result[0], features[0], L".. " );
 	JoinString( result[1], features[1], L".. " );
 
-	Console.ClearColor();
-
 	Console.WriteLn( Color_StrongBlack,	L"x86 Features Detected:" );
-	Console.WriteLn( L"\t" + result[0] + (result[1].IsEmpty() ? L"" : (L"\n\t" + result[1])) + L"\n" );
+	Console.Indent().WriteLn( result[0] + (result[1].IsEmpty() ? L"" : (L"\n" + result[1])) + L"\n" );
 
-	//if ( x86caps.VendorName[0] == 'A' ) //AMD cpu
+	Console.Newline();
 }
 
 // returns the translated error message for the Virtual Machine failing to allocate!

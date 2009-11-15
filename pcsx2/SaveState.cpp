@@ -112,10 +112,11 @@ void SaveStateBase::FreezeBios()
 	{
 		if( memcmp( descin, desccmp, 128 ) != 0 )
 		{
-			Console.Error(
-				"\n\tWarning: BIOS Version Mismatch, savestate may be unstable!\n"
-				"\t\tCurrent Version:   %s\n"
-				"\t\tSavestate Version: %s\n",
+			Console.Newline();
+			Console.Indent(1).Error( "Warning: BIOS Version Mismatch, savestate may be unstable!" );
+			Console.Indent(2).Error(
+				"Current Version:   %s\n"
+				"Savestate Version: %s\n",
 				descout.ToUTF8().data(), descin
 			);
 		}

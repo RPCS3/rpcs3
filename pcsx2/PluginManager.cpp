@@ -668,9 +668,10 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
+		ConsoleIndentScope indent;
 		const PluginsEnum_t pid = pi->id;
 
-		Console.WriteLn( L"\tBinding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), folders[pid].c_str() );
+		Console.WriteLn( L"Binding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), folders[pid].c_str() );
 
 		if( folders[pid].IsEmpty() )
 			throw Exception::InvalidArgument( "Empty plugin filename." );
@@ -902,7 +903,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 {
 	if( m_info[pid].IsOpened ) return;
 
-	Console.WriteLn( "\tOpening %s", tbl_PluginInfo[pid].shortname );
+	Console.Indent().WriteLn( "Opening %s", tbl_PluginInfo[pid].shortname );
 
 	// Each Open needs to be called explicitly. >_<
 
@@ -944,7 +945,7 @@ void PluginManager::Open()
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
-	Console.WriteLn( "\tClosing %s", tbl_PluginInfo[pid].shortname );
+	Console.Indent().WriteLn( "Closing %s", tbl_PluginInfo[pid].shortname );
 
 	if( pid == PluginId_GS )
 	{
@@ -996,7 +997,7 @@ void PluginManager::Init()
 			Console.WriteLn( Color_StrongBlue, "Initializing plugins..." );
 			printlog = true;
 		}
-		Console.WriteLn( "\tInit %s", tbl_PluginInfo[pid].shortname );
+		Console.Indent().WriteLn( "Init %s", tbl_PluginInfo[pid].shortname );
 		if( 0 != m_info[pid].CommonBindings.Init() )
 			throw Exception::PluginInitError( pid );
 
@@ -1037,7 +1038,7 @@ void PluginManager::Shutdown()
 	{
 		const PluginsEnum_t pid = tbl_PluginInfo[i].id;
 		if( !m_info[pid].IsInitialized ) continue;
-		DevCon.WriteLn( "\tShutdown %s", tbl_PluginInfo[pid].shortname );
+		DevCon.Indent().WriteLn( "Shutdown %s", tbl_PluginInfo[pid].shortname );
 		m_info[pid].IsInitialized = false;
 		m_info[pid].CommonBindings.Shutdown();
 	}
@@ -1078,7 +1079,7 @@ bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 //
 void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 {
-	Console.WriteLn( "\t%s %s", state.IsSaving() ? "Saving" : "Loading",
+	Console.Indent().WriteLn( "%s %s", state.IsSaving() ? "Saving" : "Loading",
 		tbl_PluginInfo[pid].shortname );
 
 	freezeData fP = { 0, NULL };
@@ -1093,7 +1094,7 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 		// no state data to read, but the plugin expects some state data.
 		// Issue a warning to console...
 		if( fP.size != 0 )
-			Console.Warning( "\tWarning: No data for this plugin was found. Plugin status may be unpredictable." );
+			Console.Indent().Warning( "Warning: No data for this plugin was found. Plugin status may be unpredictable." );
 		return;
 
 		// Note: Size mismatch check could also be done here on loading, but

@@ -377,7 +377,7 @@ void StateCopy_SaveToSlot( uint num )
 	zip_dest_filename = SaveStateBase::GetFilename( num );
 	(new StateThread_Freeze( OnFinished_ZipToDisk ))->Start();
 	Console.WriteLn( Color_StrongGreen, "Saving savestate to slot %d...", num );
-	Console.WriteLn( Color_StrongGreen, L"\tfilename: %s", zip_dest_filename.c_str() );
+	Console.Indent().WriteLn( Color_StrongGreen, L"filename: %s", zip_dest_filename.c_str() );
 }
 
 void StateCopy_LoadFromSlot( uint slot )
@@ -392,7 +392,7 @@ void StateCopy_LoadFromSlot( uint slot )
 	}
 
 	Console.WriteLn( Color_StrongGreen, "Loading savestate from slot %d...", slot );
-	Console.WriteLn( Color_StrongGreen, L"\tfilename: %s", file.c_str() );
+	Console.Indent().WriteLn( Color_StrongGreen, L"filename: %s", file.c_str() );
 
 	CoreThread.Pause();
 	(new StateThread_UnzipFromDisk( OnFinished_Restore, file ))->Start();

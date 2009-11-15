@@ -18,7 +18,6 @@
 #include "PrecompiledHeader.h"
 
 #include <float.h>
-#include <vector>
 #include <list>
 #include <map>
 

@@ -79,13 +79,13 @@ class pxRadioPanel : public wxPanelWithHelpers
 protected:
 	typedef std::vector<RadioPanelItem>		ButtonArray;
 	typedef SafeArray<RadioPanelObjects>	ButtonObjArray;
-	
+
 	ButtonArray		m_buttonStrings;
 	ButtonObjArray	m_objects;
 	
 	bool			m_IsRealized;
 	int				m_idealWidth;
-	
+
 	wxSize			m_padding;
 	int				m_Indentation;
 

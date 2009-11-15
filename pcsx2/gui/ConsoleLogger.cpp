@@ -181,17 +181,17 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 
 	// Standard R, G, B format:
 	new (&m_table[Color_Default])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Black])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Red])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Green])		wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Blue])		wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixed );
-	new (&m_table[Color_Magenta])	wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixed );
-	new (&m_table[Color_Orange])	wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixed );
-	new (&m_table[Color_Gray])		wxTextAttr( wxColor( 108, 108, 108 ), wxNullColour, fixed );
+	new (&m_table[Color_Black])			wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
+	new (&m_table[Color_Red])			wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixed );
+	new (&m_table[Color_Green])			wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixed );
+	new (&m_table[Color_Blue])			wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixed );
+	new (&m_table[Color_Magenta]	)	wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixed );
+	new (&m_table[Color_Orange])		wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixed );
+	new (&m_table[Color_Gray])			wxTextAttr( wxColor( 108, 108, 108 ), wxNullColour, fixed );
 
-	new (&m_table[Color_Cyan])		wxTextAttr( wxColor( 128, 180, 180 ), wxNullColour, fixed );
-	new (&m_table[Color_Yellow])	wxTextAttr( wxColor( 180, 180, 128 ), wxNullColour, fixed );
-	new (&m_table[Color_White])		wxTextAttr( wxColor( 160, 160, 160 ), wxNullColour, fixed );
+	new (&m_table[Color_Cyan])			wxTextAttr( wxColor( 128, 180, 180 ), wxNullColour, fixed );
+	new (&m_table[Color_Yellow])		wxTextAttr( wxColor( 180, 180, 128 ), wxNullColour, fixed );
+	new (&m_table[Color_White])			wxTextAttr( wxColor( 160, 160, 160 ), wxNullColour, fixed );
 
 	new (&m_table[Color_StrongBlack])	wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixedB );
 	new (&m_table[Color_StrongRed])		wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixedB );
@@ -227,8 +227,6 @@ void ConsoleLogFrame::ColorArray::SetFont( int fontsize )
 	Cleanup();
 	Create( fontsize );
 }
-
-static const ConsoleColors DefaultConsoleColor = Color_Black;
 
 enum MenuIDs_t
 {
@@ -321,7 +319,6 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 ConsoleLogFrame::~ConsoleLogFrame()
 {
-	safe_delete( m_threadlogger );
 	wxGetApp().OnProgramLogClosed();
 }
 
@@ -454,7 +451,7 @@ void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 		DoClose();
 	else
 	{
-		safe_delete( m_threadlogger );
+		m_threadlogger = NULL;
 		wxGetApp().OnProgramLogClosed();
 		event.Skip();
 	}
@@ -681,14 +678,9 @@ static void __concall ConsoleToFile_SetTitle( const wxString& title )
     ConsoleWriter_Stdio.SetTitle(title);
 }
 
-static void __concall ConsoleToFile_SetColor( ConsoleColors color )
+static void __concall ConsoleToFile_DoSetColor( ConsoleColors color )
 {
     ConsoleWriter_Stdio.SetColor(color);
-}
-
-static void __concall ConsoleToFile_ClearColor()
-{
-    ConsoleWriter_Stdio.ClearColor();
 }
 
 extern const IConsoleWriter	ConsoleWriter_File;
@@ -696,15 +688,11 @@ const IConsoleWriter    ConsoleWriter_File =
 {
 	ConsoleToFile_DoWrite,
 	ConsoleToFile_DoWriteLn,
+	ConsoleToFile_DoSetColor,
+
 	ConsoleToFile_Newline,
-
 	ConsoleToFile_SetTitle,
-	ConsoleToFile_SetColor,
-	ConsoleToFile_ClearColor,
 };
-
-// thread-local console color storage.
-static __threadlocal ConsoleColors th_CurrentColor = DefaultConsoleColor;
 
 // --------------------------------------------------------------------------------------
 //  ConsoleToWindow Implementations
@@ -719,17 +707,9 @@ static void __concall ConsoleToWindow_SetTitle( const wxString& title )
 }
 
 template< const IConsoleWriter& secondary >
-static void __concall ConsoleToWindow_SetColor( ConsoleColors color )
+static void __concall ConsoleToWindow_DoSetColor( ConsoleColors color )
 {
     secondary.SetColor(color);
-	th_CurrentColor = color;
-}
-
-template< const IConsoleWriter& secondary >
-static void __concall ConsoleToWindow_ClearColor()
-{
-    secondary.ClearColor();
-	th_CurrentColor = DefaultConsoleColor;
 }
 
 template< const IConsoleWriter& secondary >
@@ -743,14 +723,14 @@ template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoWrite( const wxString& fmt )
 {
 	secondary.DoWrite( fmt );
-	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( th_CurrentColor, fmt );
+	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( Console.GetColor(), fmt );
 }
 
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoWriteLn( const wxString& fmt )
 {
 	secondary.DoWriteLn( fmt );
-	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( th_CurrentColor, fmt + L"\n" );
+	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( Console.GetColor(), fmt + L"\n" );
 }
 
 typedef void __concall DoWriteFn(const wxString&);
@@ -759,22 +739,20 @@ static const IConsoleWriter	ConsoleWriter_Window =
 {
 	ConsoleToWindow_DoWrite<ConsoleWriter_Null>,
 	ConsoleToWindow_DoWriteLn<ConsoleWriter_Null>,
-	ConsoleToWindow_Newline<ConsoleWriter_Null>,
+	ConsoleToWindow_DoSetColor<ConsoleWriter_Null>,
 
+	ConsoleToWindow_Newline<ConsoleWriter_Null>,
 	ConsoleToWindow_SetTitle<ConsoleWriter_Null>,
-	ConsoleToWindow_SetColor<ConsoleWriter_Null>,
-	ConsoleToWindow_ClearColor<ConsoleWriter_Null>,
-};
+};	
 
 static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 {
 	ConsoleToWindow_DoWrite<ConsoleWriter_File>,
 	ConsoleToWindow_DoWriteLn<ConsoleWriter_File>,
-	ConsoleToWindow_Newline<ConsoleWriter_File>,
+	ConsoleToWindow_DoSetColor<ConsoleWriter_File>,
 
+	ConsoleToWindow_Newline<ConsoleWriter_File>,
 	ConsoleToWindow_SetTitle<ConsoleWriter_File>,
-	ConsoleToWindow_SetColor<ConsoleWriter_File>,
-	ConsoleToWindow_ClearColor<ConsoleWriter_File>,
 };
 
 void Pcsx2App::EnableAllLogging() const
@@ -851,29 +829,29 @@ protected:
 	long				m_Flags;
 
 public:
-	pxMessageBoxEvent() :
-		wxEvent( 0, pxEVT_MSGBOX )
-	,	m_Instdata( *(MsgboxEventResult*)NULL )
-	,	m_Title()
-	,	m_Content()
+	pxMessageBoxEvent()
+		: wxEvent( 0, pxEVT_MSGBOX )
+		, m_Instdata( *(MsgboxEventResult*)NULL )
+		, m_Title()
+		, m_Content()
 	{
 		m_Flags = 0;
 	}
 
-	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, long flags ) :
-		wxEvent( 0, pxEVT_MSGBOX )
-	,	m_Instdata( instdata )
-	,	m_Title( title )
-	,	m_Content( content )
+	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, long flags )
+		: wxEvent( 0, pxEVT_MSGBOX )
+		, m_Instdata( instdata )
+		, m_Title( title )
+		, m_Content( content )
 	{
 		m_Flags = flags;
 	}
 
-	pxMessageBoxEvent( const pxMessageBoxEvent& event ) :
-		wxEvent( event )
-	,	m_Instdata( event.m_Instdata )
-	,	m_Title( event.m_Title )
-	,	m_Content( event.m_Content )
+	pxMessageBoxEvent( const pxMessageBoxEvent& event )
+		: wxEvent( event )
+		, m_Instdata( event.m_Instdata )
+		, m_Title( event.m_Title )
+		, m_Content( event.m_Content )
 	{
 		m_Flags = event.m_Flags;
 	}

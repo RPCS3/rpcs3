@@ -141,7 +141,7 @@ const wxChar* __fastcall pxGetTranslation( const wxChar* message )
 		if( wxStrlen( message ) > 96 )
 		{
 			Console.Warning( "pxGetTranslation: Long message detected, maybe use pxE() instead?" );
-			Console.WriteLn( Color_Green, L"\tMessage: %s", message );
+			Console.Indent().WriteLn( Color_Green, L"Message: %s", message );
 		}
 	}
 	return wxGetTranslation( message );
@@ -156,15 +156,13 @@ bool i18n_SetLanguage( int wxLangId )
 		return false;
 	}
 
-	wxLocale* locale = new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING );
+	ScopedPtr<wxLocale> locale( new wxLocale( wxLangId, wxLOCALE_CONV_ENCODING ) );
 
 	if( !locale->IsOk() )
 	{
 		Console.Warning( L"SetLanguage: '%s' [%s] is not supported by the operating system",
 			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
 		);
-
-		safe_delete( locale );
 		return false;
 	}
 
@@ -173,8 +171,9 @@ bool i18n_SetLanguage( int wxLangId )
 		Console.Warning( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
 			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
 		);
-		safe_delete( locale );
 		return false;
 	}
+
+	locale.DetachPtr();
 	return true;
 }
