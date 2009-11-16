@@ -73,6 +73,7 @@ static __forceinline T GetClamped( T src, T min, T max )
 }
 
 extern void SysMessage(const char *fmt, ...);
+extern void SysMessage(const wchar_t *fmt, ...);
 
 //////////////////////////////////////////////////////////////
 // Dev / Debug conditionals --

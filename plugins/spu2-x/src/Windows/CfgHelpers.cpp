@@ -28,7 +28,18 @@ void SysMessage(const char *fmt, ...)
 	sprintf_s(tmp,fmt,list);
 	va_end(list);
 	swprintf_s(wtmp, L"%S", tmp);
-	MessageBox(0, wtmp, L"SPU2-X System Message", 0);
+	MessageBox( GetActiveWindow(), wtmp, L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
+}
+
+void SysMessage(const wchar_t *fmt, ...)
+{
+	va_list list;
+	wchar_t wtmp[512];
+
+	va_start(list,fmt);
+	swprintf_s(wtmp,fmt,list);
+	va_end(list);
+	MessageBox( GetActiveWindow(), wtmp, L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
 }
 
 //////

@@ -126,14 +126,28 @@ EXPORT_C_(void) SPU2configure()
 
 EXPORT_C_(void) SPU2about()
 {
-	//InitLibraryName();
-	//SysMessage( libraryName );
 	AboutBox();
 }
 
+#include "x86emitter/tools.h"
+
 EXPORT_C_(s32) SPU2test()
 {
-	return SndBuffer::Test();
+	cpudetectInit();
+	if( !x86caps.hasStreamingSIMDExtensions || !x86caps.hasStreamingSIMD2Extensions )
+	{
+		SysMessage( "Your CPU does not support SSE2 instructions.\nThe SPU2-X plugin requires SSE2 to run." );
+		return -1;
+	}
+
+	if( !SndBuffer::Test() )
+	{
+		// TODO : Implement a proper dialog that allows the user to test different audio out drivers.
+		SysMessage( L"The '%s' driver test failed.  Please configure\ndifferent SoundOut module and try again.", mods[OutputModule]->GetIdent() );
+		return -1;
+	}
+
+	return 0;
 }
 
 // --------------------------------------------------------------------------------------
