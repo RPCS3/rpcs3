@@ -266,15 +266,13 @@ bool Pcsx2App::OnInit()
 		InitDefaultGlobalAccelerators();
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
 
-		m_RecentIsoMenu = new wxMenu();
-		m_RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
-		m_RecentIsoList = new RecentIsoList( m_RecentIsoMenu );
+		m_Resources = new pxAppResources();
 
 		ReadUserModeSettings();
 		AppConfig_OnChangedSettingsFolder();
 
-	    m_MainFrame		= new MainEmuFrame( NULL, L"PCSX2" );
-		m_MainFrame->PushEventHandler( m_RecentIsoList );
+	    m_MainFrame = new MainEmuFrame( NULL, L"PCSX2" );
+		m_MainFrame->PushEventHandler( &GetRecentIsoList() );
 
 	    if( m_ProgramLogBox )
 	    {
@@ -294,7 +292,7 @@ bool Pcsx2App::OnInit()
 		SysDetect();
 		AppApplySettings();
 
-#ifdef __WIN32__
+#ifdef __WXMSW__
 		extern void SetupDwmStuff(WXHWND hMainWindow);
 		SetupDwmStuff(m_MainFrame->GetHWND());
 #endif
@@ -398,16 +396,12 @@ void Pcsx2App::CleanupMess()
 		delete wxGetLocale();
 }
 
-Pcsx2App::Pcsx2App()  :
-	m_MainFrame( NULL )
-,	m_gsFrame( NULL )
-,	m_ProgramLogBox( NULL )
-,	m_ConfigImages( 32, 32 )
-,	m_ConfigImagesAreLoaded( false )
-,	m_ToolbarImages( NULL )
-,	m_Bitmap_Logo( NULL )
-,	m_RecentIsoMenu( NULL )
+Pcsx2App::Pcsx2App() 
 {
+	m_MainFrame		= NULL;
+	m_gsFrame		= NULL;
+	m_ProgramLogBox	= NULL;
+
 	SetAppName( L"pcsx2" );
 	BuildCommandHash();
 }

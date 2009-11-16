@@ -16,22 +16,22 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 
-RecentIsoList::RecentIsoList( wxMenu* menu ) :
+RecentIsoManager::RecentIsoManager( wxMenu* menu ) :
 	m_Menu( menu )
 ,	m_MaxLength( g_Conf->RecentFileCount )
 ,	m_cursel( 0 )
 ,	m_Separator( NULL )
 ,	m_Listener_SettingsLoadSave( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
 {
-	Connect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoList::OnChangedSelection) );
+	Connect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoManager::OnChangedSelection) );
 }
 
-RecentIsoList::~RecentIsoList() throw()
+RecentIsoManager::~RecentIsoManager() throw()
 {
-	Disconnect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoList::OnChangedSelection) );
+	Disconnect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoManager::OnChangedSelection) );
 }
 
-void RecentIsoList::OnChangedSelection( wxCommandEvent& evt )
+void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 {
 	uint cnt = m_Items.size();
 	uint i=0;
@@ -53,7 +53,7 @@ void RecentIsoList::OnChangedSelection( wxCommandEvent& evt )
 	if( resume ) CoreThread.Resume();
 }
 
-void RecentIsoList::RemoveAllFromMenu()
+void RecentIsoManager::RemoveAllFromMenu()
 {
 	if( m_Menu == NULL ) return;
 
@@ -73,7 +73,7 @@ void RecentIsoList::RemoveAllFromMenu()
 	}
 }
 
-void RecentIsoList::Repopulate()
+void RecentIsoManager::Repopulate()
 {
 	int cnt = m_Items.size();
 	if( cnt <= 0 ) return;
@@ -84,7 +84,7 @@ void RecentIsoList::Repopulate()
 		InsertIntoMenu( i );
 }
 
-void RecentIsoList::Add( const wxString& src )
+void RecentIsoManager::Add( const wxString& src )
 {
 	if( src.IsEmpty() ) return;
 
@@ -122,7 +122,7 @@ void RecentIsoList::Add( const wxString& src )
 	}
 }
 
-void RecentIsoList::InsertIntoMenu( int id )
+void RecentIsoManager::InsertIntoMenu( int id )
 {
 	if( m_Menu == NULL ) return;
 	RecentItem& curitem( m_Items[id] );
@@ -132,7 +132,7 @@ void RecentIsoList::InsertIntoMenu( int id )
 		curitem.ItemPtr->Check();
 }
 
-void RecentIsoList::DoSettingsLoadSave( IniInterface& ini )
+void RecentIsoManager::DoSettingsLoadSave( IniInterface& ini )
 {
 	ini.GetConfig().SetRecordDefaults( false );
 
@@ -168,8 +168,8 @@ void RecentIsoList::DoSettingsLoadSave( IniInterface& ini )
 	ini.GetConfig().SetRecordDefaults( true );
 }
 
-void __evt_fastcall RecentIsoList::OnSettingsLoadSave( void* obj, IniInterface& ini )
+void __evt_fastcall RecentIsoManager::OnSettingsLoadSave( void* obj, IniInterface& ini )
 {
 	if( obj == NULL ) return;
-	((RecentIsoList*)obj)->DoSettingsLoadSave( ini );
+	((RecentIsoManager*)obj)->DoSettingsLoadSave( ini );
 }

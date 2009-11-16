@@ -77,13 +77,13 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int id
 
 	SetSizer( &s_adv );
 
-	Connect( wxID_DEFAULT, wxCommandEventHandler( BaseAdvancedCpuOptions::OnRestoreDefaults ) );
+	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BaseAdvancedCpuOptions::OnRestoreDefaults ) );
 }
 
 void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent &evt)
 {
-	m_RoundModePanel->SetSelection( 3 );
-	m_ClampModePanel->SetSelection( 0 );
+	m_RoundModePanel->SetSelection( 3 );		// Roundmode chop
+	m_ClampModePanel->SetSelection( 1 );		// clamp mode normal
 
 	m_Option_DAZ->SetValue(true);
 	m_Option_FTZ->SetValue(true);

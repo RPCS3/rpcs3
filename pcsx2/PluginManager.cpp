@@ -695,12 +695,12 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 
 		// Fetch plugin name and version information
 		
-		_PS2EgetLibName		GetLibName		= (_PS2EgetLibName)m_info[pid].Lib.GetSymbol( L"PS2EgetLibName" );
-		_PS2EgetLibVersion2	GetLibVersion2	= (_PS2EgetLibVersion2)m_info[pid].Lib.GetSymbol( L"PS2EgetLibVersion2" );
+		_PS2EgetLibName		GetLibName		= (_PS2EgetLibName)		m_info[pid].Lib.GetSymbol( L"PS2EgetLibName" );
+		_PS2EgetLibVersion2	GetLibVersion2	= (_PS2EgetLibVersion2)	m_info[pid].Lib.GetSymbol( L"PS2EgetLibVersion2" );
 
 		if( GetLibName == NULL || GetLibVersion2 == NULL )
 			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
-				wxsFormat( L"\nMethod binding failure on GetLibName or GetLibVersion2.\n" ),
+				L"\nMethod binding failure on GetLibName or GetLibVersion2.\n",
 				_( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." )
 			);
 
@@ -715,8 +715,16 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		BindRequired( pid );
 		BindOptional( pid );
 
-		// Bind Optional Functions
-		// (leave pointer null and do not generate error)
+		// Run Plugin's Functionality Test.
+		// A lot of plugins don't bother to implement this function and return 0 (success)
+		// regardless, but some do so let's go ahead and check it. I mean, we're supposed to. :)
+
+		int testres = m_info[pi->id].CommonBindings.Test();
+		if( testres != 0 )
+			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
+				wxsFormat( L"Plugin Test failure, return code: %d", testres ),
+				_( "The plugin reports that your hardware or software/drivers are not supported." )
+			);
 	} while( ++pi, pi->shortname != NULL );
 
 	CDVDapi_Plugin.newDiskCB( cdvdNewDiskCB );

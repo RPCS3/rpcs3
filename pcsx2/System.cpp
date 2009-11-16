@@ -57,7 +57,7 @@ void SysDetect()
 		L"Cores            =  %d physical [%d logical]\n"
 		L"x86PType         =  %s\n"
 		L"x86Flags         =  %8.8x %8.8x\n"
-		L"x86EFlags        =  %8.8x\n",
+		L"x86EFlags        =  %8.8x",
 			fromUTF8( x86caps.VendorName ).c_str(), x86caps.StepID,
 			fromUTF8( x86caps.FamilyName ).Trim().Trim(false).c_str(),
 			x86caps.Speed / 1000, x86caps.Speed % 1000,
@@ -66,6 +66,8 @@ void SysDetect()
 			x86caps.Flags, x86caps.Flags2,
 			x86caps.EFlags
 	);
+	
+	Console.Newline();
 
 	wxArrayString features[2];	// 2 lines, for readability!
 
@@ -87,8 +89,7 @@ void SysDetect()
 	JoinString( result[1], features[1], L".. " );
 
 	Console.WriteLn( Color_StrongBlack,	L"x86 Features Detected:" );
-	Console.Indent().WriteLn( result[0] + (result[1].IsEmpty() ? L"" : (L"\n" + result[1])) + L"\n" );
-
+	Console.Indent().WriteLn( result[0] + (result[1].IsEmpty() ? L"" : (L"\n" + result[1])) );
 	Console.Newline();
 }
 

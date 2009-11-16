@@ -378,6 +378,32 @@ EXPORT_C GSconfigure()
 
 EXPORT_C_(INT32) GStest()
 {
+	if(!GSUtil::CheckSSE())
+	{
+		return -1;
+	}
+
+#ifdef _WINDOWS
+
+	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+	if(!GSUtil::CheckDirectX())
+	{
+		if(SUCCEEDED(s_hr))
+			::CoUninitialize();
+
+		s_hr = E_FAIL;
+
+		return -1;
+	}
+
+	if(SUCCEEDED(s_hr))
+		::CoUninitialize();
+
+	s_hr = E_FAIL;
+
+#endif
+
 	return 0;
 }
 

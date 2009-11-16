@@ -45,6 +45,8 @@ void GSFrame::InitDefaultAccelerators()
 GSFrame::GSFrame(wxWindow* parent, const wxString& title):
 	wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxSize( 640, 480 ), wxDEFAULT_FRAME_STYLE )
 {
+	SetIcons( wxGetApp().GetIconBundle() );
+
 	InitDefaultAccelerators();
 	//new wxStaticText( "" );
 

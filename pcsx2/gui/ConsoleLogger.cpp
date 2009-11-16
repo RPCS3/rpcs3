@@ -237,26 +237,28 @@ enum MenuIDs_t
 };
 
 // ------------------------------------------------------------------------
-ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, AppConfig::ConsoleLogOptions& options ) :
-	wxFrame(parent, wxID_ANY, title)
-,	m_conf( options )
-,	m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, AppConfig::ConsoleLogOptions& options )
+	: wxFrame(parent, wxID_ANY, title)
+	, m_conf( options )
+	, m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
-,	m_ColorTable( options.FontSize )
+	, m_ColorTable( options.FontSize )
 
-,	m_pendingFlushes( 0 )
-,	m_WaitingThreadsForFlush( 0 )
+	, m_QueueColorSection( L"ConsoleLog::QueueColorSection" )
+	, m_QueueBuffer( L"ConsoleLog::QueueBuffer" )
+	, m_CurQueuePos( false )
 
-,	m_ThawThrottle( 0 )
-,	m_ThawNeeded( false )
-,	m_ThawPending( false )
-
-,	m_QueueColorSection( L"ConsoleLog::QueueColorSection" )
-,	m_QueueBuffer( L"ConsoleLog::QueueBuffer" )
-,	m_CurQueuePos( false )
-
-,	m_threadlogger( EnableThreadedLoggingTest ? new ConsoleTestThread() : NULL )
+	, m_threadlogger( EnableThreadedLoggingTest ? new ConsoleTestThread() : NULL )
 {
+	m_pendingFlushes			= 0;
+	m_WaitingThreadsForFlush	= 0;
+
+	m_ThawThrottle				= 0;
+	m_ThawNeeded				= false;
+	m_ThawPending				= false;
+
+	SetIcons( wxGetApp().GetIconBundle() );
+		
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
 
@@ -722,14 +724,16 @@ static void __concall ConsoleToWindow_Newline()
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoWrite( const wxString& fmt )
 {
-	secondary.DoWrite( fmt );
+	if( secondary.DoWrite != NULL )
+		secondary.DoWrite( fmt );
 	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( Console.GetColor(), fmt );
 }
 
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoWriteLn( const wxString& fmt )
 {
-	secondary.DoWriteLn( fmt );
+	if( secondary.DoWriteLn != NULL )
+		secondary.DoWriteLn( fmt );
 	((Pcsx2App&)*wxTheApp).GetProgramLog()->Write( Console.GetColor(), fmt + L"\n" );
 }
 

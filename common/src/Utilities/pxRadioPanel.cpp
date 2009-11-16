@@ -59,6 +59,8 @@ void pxRadioPanel::Reset()
 
 void pxRadioPanel::Realize()
 {
+	//if(  )
+
 	const int numbuttons = m_buttonStrings.size();
 	if( numbuttons == 0 ) return;
 	if( m_IsRealized ) return;
@@ -82,7 +84,7 @@ void pxRadioPanel::Realize()
 		m_objects[i].SubTextObj = NULL;
 		if( m_buttonStrings[i].SubText.IsEmpty() ) continue;
 		m_objects[i].SubTextObj = new wxStaticText( this, wxID_ANY, m_buttonStrings[i].SubText );
-		if( (m_idealWidth > 0) && pxAssertMsg( m_idealWidth < 40, "Unusably short text wrapping specified!" ) )
+		if( (m_idealWidth > 0) && pxAssertMsg( m_idealWidth > 40, "Unusably short text wrapping specified!" ) )
 			m_objects[i].SubTextObj->Wrap( m_idealWidth - m_Indentation );
 	}
 

@@ -364,11 +364,10 @@ int Pcsx2App::OnExit()
 
 	if( g_Conf )
 		AppSaveSettings();
-		
-	sMainFrame.RemoveEventHandler( m_RecentIsoList );
 
-	m_RecentIsoList = NULL;
-	m_RecentIsoMenu = NULL;
+	sMainFrame.RemoveEventHandler( &GetRecentIsoList() );
+
+	m_Resources = NULL;
 
 	return wxApp::OnExit();
 }

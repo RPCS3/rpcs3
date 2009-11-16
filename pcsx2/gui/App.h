@@ -305,6 +305,28 @@ struct AppImageIds
 	} Toolbars;
 };
 
+// -------------------------------------------------------------------------------------------
+//  pxAppResources
+// -------------------------------------------------------------------------------------------
+// Container class for resources that should (or must) be unloaded prior to the ~wxApp() destructor.
+// (typically this object is deleted at OnExit() or just prior to OnExit()).
+//
+struct pxAppResources
+{
+	AppImageIds					ImageId;
+
+	ScopedPtr<wxImageList>		ConfigImages;
+	ScopedPtr<wxImageList>		ToolbarImages;
+	ScopedPtr<wxIconBundle>		IconBundle;
+	ScopedPtr<wxBitmap>			Bitmap_Logo;
+
+	ScopedPtr<wxMenu>			RecentIsoMenu;
+	ScopedPtr<RecentIsoManager>	RecentIsoList;
+
+	pxAppResources();
+	~pxAppResources() throw() { }
+};
+
 struct MsgboxEventResult
 {
 	Semaphore	WaitForMe;
@@ -363,15 +385,10 @@ public:
 	AcceleratorDictionary			GlobalAccels;
 
 protected:
-	wxImageList						m_ConfigImages;
-
-	ScopedPtr<wxImageList>			m_ToolbarImages;
-	ScopedPtr<wxBitmap>				m_Bitmap_Logo;
 	ScopedPtr<PipeRedirectionBase>	m_StdoutRedirHandle;
 	ScopedPtr<PipeRedirectionBase>	m_StderrRedirHandle;
 
-	ScopedPtr<wxMenu>				m_RecentIsoMenu;
-	ScopedPtr<RecentIsoList>		m_RecentIsoList;
+	ScopedPtr<pxAppResources>		m_Resources;
 
 public:
 	ScopedPtr<SysCoreAllocations>	m_CoreAllocs;
@@ -383,9 +400,6 @@ protected:
 	MainEmuFrame*		m_MainFrame;
 	GSFrame*			m_gsFrame;
 	ConsoleLogFrame*	m_ProgramLogBox;
-
-	bool				m_ConfigImagesAreLoaded;
-	AppImageIds			m_ImageId;
 
 public:
 	Pcsx2App();
@@ -402,14 +416,6 @@ public:
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void SysReset();
 
-	const wxBitmap& GetLogoBitmap();
-	wxImageList& GetImgList_Config();
-	wxImageList& GetImgList_Toolbars();
-
-	const AppImageIds& GetImgId() const { return m_ImageId; }
-	wxMenu& GetRecentIsoMenu() { return *m_RecentIsoMenu; }
-	RecentIsoList& GetRecentIsoList() { return *m_RecentIsoList; }
-
 	MainEmuFrame&	GetMainFrame() const;
 	MainEmuFrame*	GetMainFramePtr() const	{ return m_MainFrame; }
 	bool HasMainFrame() const	{ return m_MainFrame != NULL; }
@@ -417,6 +423,24 @@ public:
 	void OpenGsFrame();
 	void OnGsFrameClosed();
 	void OnMainFrameClosed();
+
+	// --------------------------------------------------------------------------
+	//  App-wide Resources
+	// --------------------------------------------------------------------------
+	// All of these accessors cache the resources on first use and retain them in
+	// memory until the program exits.
+
+	wxMenu&				GetRecentIsoMenu();
+	RecentIsoManager&	GetRecentIsoList();
+	const wxIconBundle&	GetIconBundle();
+	const wxBitmap&		GetLogoBitmap();
+	wxImageList&		GetImgList_Config();
+	wxImageList&		GetImgList_Toolbars();
+
+	const AppImageIds& GetImgId() const
+	{
+		return m_Resources->ImageId;
+	}
 
 	// --------------------------------------------------------------------------
 	//  Overrides of wxApp virtuals:

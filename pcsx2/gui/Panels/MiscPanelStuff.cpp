@@ -152,14 +152,14 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int id
 	const RadioPanelItem UsermodeOptions[] = 
 	{
 		RadioPanelItem(
+			_("User Documents (recommended)"),
+			_("Location: ") + wxStandardPaths::Get().GetDocumentsDir()
+		),
+
+		RadioPanelItem(
 			_("Current working folder (intended for developer use only)"),
 			_("Location: ") + wxGetCwd(),
 			_("This setting requires administration privileges from your operating system.")
-		),
-		
-		RadioPanelItem(
-			_("User Documents (recommended)"),
-			_("Location: ") + wxStandardPaths::Get().GetDocumentsDir()
 		),
 	};
 	
@@ -176,7 +176,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int id
 
 void Panels::UsermodeSelectionPanel::Apply()
 {
-	UseAdminMode = (m_radio_UserMode->GetSelection() == 0);
+	UseAdminMode = (m_radio_UserMode->GetSelection() == 1);
 }
 
 // -----------------------------------------------------------------------

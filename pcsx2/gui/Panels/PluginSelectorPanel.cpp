@@ -349,11 +349,13 @@ void Panels::PluginSelectorPanel::Apply()
 			wxString plugname( tbl_PluginInfo[ex.PluginId].GetShortname() );
 
 			throw Exception::CannotApplySettings( this,
-				// English Log
+				// Diagnostic
 				ex.FormatDiagnosticMessage(),
 
 				// Translated
-				wxsFormat( L"The selected %s plugin failed to load.", plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg()
+				wxsFormat( _("The selected %s plugin failed to load.\n\nReason: %s\n\n"),
+					plugname.c_str(), ex.FormatDisplayMessage().c_str()
+				) + GetApplyFailedMsg()
 			);
 		}
 	}

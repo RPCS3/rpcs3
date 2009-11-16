@@ -41,9 +41,9 @@ void SplitString( SafeList<wxString>& dest, const wxString& src, const wxString&
 		dest.Add( parts.GetNextToken() );
 }
 
-void SplitString( wxArrayString& dest, const wxString& src, const wxString& delims )
+void SplitString( wxArrayString& dest, const wxString& src, const wxString& delims, wxStringTokenizerMode mode )
 {
-	wxStringTokenizer parts( src, delims );
+	wxStringTokenizer parts( src, delims, mode );
 	while( parts.HasMoreTokens() )
 		dest.Add( parts.GetNextToken() );
 }

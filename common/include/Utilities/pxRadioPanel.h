@@ -84,7 +84,6 @@ protected:
 	ButtonObjArray	m_objects;
 	
 	bool			m_IsRealized;
-	int				m_idealWidth;
 
 	wxSize			m_padding;
 	int				m_Indentation;
@@ -92,14 +91,14 @@ protected:
 public:
 	template< int size >
 	pxRadioPanel( wxPanelWithHelpers* parent, const RadioPanelItem (&src)[size] )
-		: wxPanelWithHelpers( parent, parent->GetIdealWidth() )
+		: wxPanelWithHelpers( parent, parent->GetIdealWidth()-24 )
 	{
 		Init( src, size );
 	}
 
 	template< int size >
 	pxRadioPanel( wxDialogWithHelpers* parent, const RadioPanelItem (&src)[size] )
-		: wxDialogWithHelpers( parent, parent->GetIdealWidth() )
+		: wxDialogWithHelpers( parent, parent->GetIdealWidth()-24 )
 	{
 		Init( src, size );
 	}
@@ -112,13 +111,13 @@ public:
 	}
 
 	pxRadioPanel( wxPanelWithHelpers* parent )
-		: wxPanelWithHelpers( parent, parent->GetIdealWidth() )
+		: wxPanelWithHelpers( parent, parent->GetIdealWidth()-24 )
 	{
 		Init();
 	}
 
 	pxRadioPanel( wxDialogWithHelpers* parent )
-		: wxPanelWithHelpers( parent, parent->GetIdealWidth() )
+		: wxPanelWithHelpers( parent, parent->GetIdealWidth()-24 )
 	{
 		Init();
 	}

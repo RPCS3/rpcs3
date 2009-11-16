@@ -20,11 +20,6 @@
 #include "Dialogs/ModalPopups.h"
 #include "IsoDropTarget.h"
 
-#include "Resources/EmbeddedImage.h"
-#include "Resources/AppIcon16.h"
-#include "Resources/AppIcon32.h"
-#include "Resources/AppIcon64.h"
-
 #include <wx/iconbndl.h>
 
 #if _MSC_VER
@@ -314,11 +309,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// loses the transparency information when loading bitmaps into icons.  But for some reason
 	// I cannot get it to work despite following various examples to the letter.
 
-	wxIconBundle bundle;
-	bundle.AddIcon( EmbeddedImage<res_AppIcon32>().GetIcon() );
-	bundle.AddIcon( EmbeddedImage<res_AppIcon64>().GetIcon() );
-	bundle.AddIcon( EmbeddedImage<res_AppIcon16>().GetIcon() );
-	SetIcons( bundle );
+
+	SetIcons( wxGetApp().GetIconBundle() );
 
 	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
 	m_statusbar.SetStatusWidths(2, m_statusbar_widths);

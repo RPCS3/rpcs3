@@ -126,7 +126,8 @@ void Panels::eeLogOptionsPanel::OnSettingsChanged()
 {
 	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
 
-	this->SetValue( conf.EE.m_EnableAll );
+	SetValue( conf.EE.m_EnableAll );
+
 	m_disasmPanel->SetValue( conf.EE.m_EnableDisasm );
 	m_evtPanel->SetValue( conf.EE.m_EnableEvents );
 	m_hwPanel->SetValue( conf.EE.m_EnableHardware );
@@ -160,6 +161,7 @@ void Panels::iopLogOptionsPanel::OnSettingsChanged()
 	const TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
 
 	SetValue( conf.IOP.m_EnableAll );
+
 	m_disasmPanel->SetValue( conf.IOP.m_EnableDisasm );
 	m_evtPanel->SetValue( conf.IOP.m_EnableEvents );
 	m_hwPanel->SetValue( conf.IOP.m_EnableHardware );
@@ -201,12 +203,11 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent, int idealWidth )
 	m_masterEnabler->SetToolTip( _("On-the-fly hotkey support: Toggle trace logging at any time using F10.") );
 
 	s_misc.Add( m_SIF			= new pxCheckBox( this, L"SIF (EE<->IOP)" ));
-	m_SIF->SetToolTip(_("Enables logging of both SIF DMAs and SIF Register activity.") );
-
 	s_misc.Add( m_VIFunpack		= new pxCheckBox( this, L"VIFunpack" ));
-	m_VIFunpack->SetToolTip(_("Special detailed logs of VIF packed data handling (does not include VIF control, status, or hwRegs)"));
-
 	s_misc.Add( m_GIFtag		= new pxCheckBox( this, L"GIFtag" ));
+
+	m_SIF->SetToolTip(_("Enables logging of both SIF DMAs and SIF Register activity.") );
+	m_VIFunpack->SetToolTip(_("Special detailed logs of VIF packed data handling (does not include VIF control, status, or hwRegs)"));
 	m_GIFtag->SetToolTip(_("(not implemented yet)"));
 
 	//s_head.Add( &s_misc, SizerFlags::SubGroup() );
@@ -232,7 +233,7 @@ void Panels::LogOptionsPanel::OnSettingsChanged()
 
 	m_masterEnabler->SetValue( conf.Enabled );
 	m_SIF->SetValue( conf.SIF );
-
+	
 	SetCheckValue( EE, VIFunpack );
 	SetCheckValue( EE, GIFtag );
 

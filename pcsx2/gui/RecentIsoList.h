@@ -16,9 +16,9 @@
 #pragma once
 
 // --------------------------------------------------------------------------------------
-//  RecentIsoList
+//  RecentIsoManager
 // --------------------------------------------------------------------------------------
-class RecentIsoList : public wxEvtHandler
+class RecentIsoManager : public wxEvtHandler
 {
 protected:
 	struct RecentItem
@@ -28,10 +28,10 @@ protected:
 		
 		RecentItem() { ItemPtr = NULL; }
 
-		RecentItem( const wxString& src ) :
-			Filename( src )
-		,	ItemPtr( NULL )
+		RecentItem( const wxString& src )
+			: Filename( src )
 		{
+			ItemPtr = NULL;
 		}
 	};
 
@@ -46,8 +46,8 @@ protected:
 	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
 
 public:
-	RecentIsoList( wxMenu* menu );
-	virtual ~RecentIsoList() throw();
+	RecentIsoManager( wxMenu* menu );
+	virtual ~RecentIsoManager() throw();
 
 	void RemoveAllFromMenu();
 	void Repopulate();

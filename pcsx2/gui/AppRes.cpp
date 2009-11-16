@@ -29,6 +29,10 @@
 #include "Resources/ConfigIcon_Paths.h"
 #include "Resources/ConfigIcon_Plugins.h"
 
+#include "Resources/AppIcon16.h"
+#include "Resources/AppIcon32.h"
+#include "Resources/AppIcon64.h"
+
 // ------------------------------------------------------------------------
 const wxImage& LoadImageAny(
 	wxImage& dest, bool useTheme, wxFileName& base, const wxChar* filename, IEmbeddedImage& onFail )
@@ -59,11 +63,48 @@ const wxImage& LoadImageAny(
 	return dest = onFail.Get();
 }
 
+pxAppResources::pxAppResources()
+{
+}
+
+wxMenu& Pcsx2App::GetRecentIsoMenu()
+{
+	if( !m_Resources->RecentIsoMenu )
+	{
+		m_Resources->RecentIsoMenu = new wxMenu();
+		m_Resources->RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
+	}
+
+	return *m_Resources->RecentIsoMenu;
+}
+
+RecentIsoManager& Pcsx2App::GetRecentIsoList()
+{
+	if( !m_Resources->RecentIsoList )
+		m_Resources->RecentIsoList = new RecentIsoManager( &GetRecentIsoMenu() );
+
+	return *m_Resources->RecentIsoList;
+}
+
+const wxIconBundle& Pcsx2App::GetIconBundle()
+{
+	ScopedPtr<wxIconBundle>& bundle( m_Resources->IconBundle );
+	if( !bundle )
+	{
+		bundle = new wxIconBundle();
+		bundle->AddIcon( EmbeddedImage<res_AppIcon32>().GetIcon() );
+		bundle->AddIcon( EmbeddedImage<res_AppIcon64>().GetIcon() );
+		bundle->AddIcon( EmbeddedImage<res_AppIcon16>().GetIcon() );
+	}
+
+	return *bundle;
+}
+
 // ------------------------------------------------------------------------
 const wxBitmap& Pcsx2App::GetLogoBitmap()
 {
-	if( m_Bitmap_Logo )
-		return *m_Bitmap_Logo;
+	ScopedPtr<wxBitmap>& logo( m_Resources->Bitmap_Logo );
+	if( logo ) return *logo;
 
 	wxFileName mess;
 	bool useTheme = (g_Conf->DeskTheme != L"default");
@@ -90,16 +131,18 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 	wxImage img;
 	EmbeddedImage<res_BackgroundLogo> temp;	// because gcc can't allow non-const temporaries.
 	LoadImageAny( img, useTheme, mess, L"BackgroundLogo", temp );
-	m_Bitmap_Logo = new wxBitmap( img );
+	logo = new wxBitmap( img );
 
-	return *m_Bitmap_Logo;
+	return *logo;
 }
 
 // ------------------------------------------------------------------------
 wxImageList& Pcsx2App::GetImgList_Config()
 {
-	if( !m_ConfigImagesAreLoaded )
+	ScopedPtr<wxImageList>& images( m_Resources->ConfigImages );
+	if( !images )
 	{
+		images = new wxImageList(32, 32);
 		wxFileName mess;
 		bool useTheme = (g_Conf->DeskTheme != L"default");
 
@@ -111,14 +154,14 @@ wxImageList& Pcsx2App::GetImgList_Config()
 
 		wxImage img;
 
-		// GCC Specific: wxT() macro is required when using string token pasting.  For some reason L
-		// generates syntax errors. >_<
+		// GCC Specific: wxT() macro is required when using string token pasting.  For some
+		// reason L generates syntax errors. >_<
 
 		#undef  FancyLoadMacro
 		#define FancyLoadMacro( name ) \
 		{ \
 			EmbeddedImage<res_ConfigIcon_##name> temp( g_Conf->Listbook_ImageSize, g_Conf->Listbook_ImageSize ); \
-			m_ImageId.Config.name = m_ConfigImages.Add( LoadImageAny( \
+			m_Resources->ImageId.Config.name = images->Add( LoadImageAny( \
 				img, useTheme, mess, L"ConfigIcon_" wxT(#name), temp ) \
 			); \
 		}
@@ -130,17 +173,18 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		FancyLoadMacro( Video );
 		FancyLoadMacro( Cpu );
 	}
-	m_ConfigImagesAreLoaded = true;
-	return m_ConfigImages;
+	return *images;
 }
 
 // ------------------------------------------------------------------------
 wxImageList& Pcsx2App::GetImgList_Toolbars()
 {
-	if( !m_ToolbarImages )
+	ScopedPtr<wxImageList>& images( m_Resources->ToolbarImages );
+
+	if( !images )
 	{
 		const int imgSize = g_Conf->Toolbar_ImageSize ? 64 : 32;
-		m_ToolbarImages = new wxImageList( imgSize, imgSize );
+		images = new wxImageList( imgSize, imgSize );
 		wxFileName mess;
 		bool useTheme = (g_Conf->DeskTheme != L"default");
 
@@ -155,10 +199,10 @@ wxImageList& Pcsx2App::GetImgList_Toolbars()
 		#define FancyLoadMacro( name ) \
 		{ \
 			EmbeddedImage<res_ToolbarIcon_##name> temp( imgSize, imgSize ); \
-			m_ImageId.Toolbars.name = m_ConfigImages.Add( LoadImageAny( img, useTheme, mess, L"ToolbarIcon" wxT(#name), temp ) ); \
+			m_Resources.ImageId.Toolbars.name = images->Add( LoadImageAny( img, useTheme, mess, L"ToolbarIcon" wxT(#name), temp ) ); \
 		}
 
 	}
-	return *m_ToolbarImages;
+	return *images;
 }
 
