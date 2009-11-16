@@ -1325,9 +1325,14 @@ PTW32_DLLPORT DWORD PTW32_CDECL ptw32_get_exception_services_code(void);
  * Redefine the SEH __except keyword to ensure that applications
  * propagate our internal exceptions up to the library's internal handlers.
  */
-#define __except( E ) \
-        __except( ( GetExceptionCode() == ptw32_get_exception_services_code() ) \
-                 ? EXCEPTION_CONTINUE_SEARCH : ( E ) )
+ 
+// PCSX2: Holy crap, what?!  No.  Let's not force code conformity on stupid coders.  If they can't write
+// a proper exception handler that does EXCEPTION_CONTINUE_SEARCH on unhandled exceptions, they deserve
+// whatever bad karma befalls them.  --air
+
+//#define __except( E ) \
+//        __except( ( GetExceptionCode() == ptw32_get_exception_services_code() ) \
+//                 ? EXCEPTION_CONTINUE_SEARCH : ( E ) )
 
 #endif /* __CLEANUP_SEH */
 
