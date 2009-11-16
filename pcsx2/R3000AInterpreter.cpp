@@ -230,18 +230,6 @@ void zeroEx()
 		psxRegs.GPR.n.a0, psxRegs.GPR.n.a1, psxRegs.GPR.n.a2, psxRegs.GPR.n.a3);
 	}
 
-//	Log=0;
-//	if (!strcmp(lib, "intrman") && code == 0x11) Log=1;
-//	if (!strcmp(lib, "sifman") && code == 0x5) Log=1;
-//	if (!strcmp(lib, "sifcmd") && code == 0x4) Log=1;
-//	if (!strcmp(lib, "thbase") && code == 0x6) Log=1;
-/*
-	if (!strcmp(lib, "sifcmd") && code == 0xe) {
-		branchPC = psxRegs.GPR.n.ra;
-		psxRegs.GPR.n.v0 = 0;
-		return;
-	}
-*/
 	if (!strncmp(lib, "ioman", 5) && code == 7) {
 		if (psxRegs.GPR.n.a0 == 1) {
 			pc = psxRegs.pc;
@@ -281,54 +269,10 @@ void zeroEx()
 		}
 	}
 
-/*	psxRegs.pc = branchPC;
-	pc = psxRegs.GPR.n.ra;
-	while (psxRegs.pc != pc) psxCpu->ExecuteBlock();
-
-	PSXBIOS_LOG("%s: %s (%x) END", lib, fname == NULL ? "unknown" : fname, code);*/
 #endif
 
 }
-/*/==========================================CALL LOG
-char* getName(char *file, u32 addr){
-	FILE *f; u32 a;
-	static char name[100];
 
-	f=fopen(file, "r");
-	if (!f)
-		name[0]=0;
-	else{
-		while (!feof(f)){
-			fscanf(f, "%08X %s", &a, name);
-			if (a==addr)break;
-		}
-		fclose(f);
-	}
-	return name;
-}
-
-void spyFunctions(){
-	register irxImageInfo *iii;
-	if (psxRegs.pc >= 0x200000)	return;
-	for (iii=(irxImageInfo*)PSXM(0x800); iii && iii->text_size;
-		iii=iii->next ? (irxImageInfo*)PSXM(iii->next) : NULL)
-			if (iii->vaddr<=psxRegs.pc && psxRegs.pc<iii->vaddr+iii->text_size+iii->data_size+iii->bss_size){
-				if (strcmp("secrman_for_cex", PSXM(iii->name))==0){
-					char *name=getName("secrman.fun", psxRegs.pc-iii->vaddr);
-					if (strncmp("__push_params", name, 13)==0){
-						PAD_LOG(PSXM(psxRegs.GPR.n.a0), psxRegs.GPR.n.a1, psxRegs.GPR.n.a2, psxRegs.GPR.n.a3);
-					}else{
-						PAD_LOG("secrman: %s (ra=%06X cycle=%d)", name, psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}}else
-				if (strcmp("mcman", PSXM(iii->name))==0){
-					PAD_LOG("mcman: %s (ra=%06X cycle=%d)",  getName("mcman.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}else
-				if (strcmp("padman", PSXM(iii->name))==0){
-					PAD_LOG("padman: %s (ra=%06X cycle=%d)",  getName("padman.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}else
-				if (strcmp("sio2man", PSXM(iii->name))==0){
-					PAD_LOG("sio2man: %s (ra=%06X cycle=%d)", getName("sio2man.fun", psxRegs.pc-iii->vaddr), psxRegs.GPR.n.ra-iii->vaddr, psxRegs.cycle);}
-				break;
-			}
-}
-*/
 /*********************************************************
 * Register branch logic                                  *
 * Format:  OP rs, offset                                 *
@@ -399,7 +343,6 @@ void psxJAL()
 {	
 	_SetLink(31);
 	doBranch(_JumpTarget_); 
-	/*spyFunctions();*/ 
 }
 
 /*********************************************************
@@ -427,7 +370,6 @@ static __forceinline void execI()
 {
 	psxRegs.code = iopMemRead32(psxRegs.pc);
 	
-	//if( (psxRegs.pc >= 0x1200 && psxRegs.pc <= 0x1400) || (psxRegs.pc >= 0x0b40 && psxRegs.pc <= 0x1000))
 		PSXCPU_LOG("%s", disR3000AF(psxRegs.code, psxRegs.pc));
 
 	psxRegs.pc+= 4;

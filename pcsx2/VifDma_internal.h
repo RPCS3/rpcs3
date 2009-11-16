@@ -57,10 +57,7 @@ extern __forceinline void vif1FLUSH();
 
 static __forceinline u32 vif_size(u8 num)
 {
-    if (num == 0) 
-        return 0x1000;
-    else
-        return 0x4000;
+    return (num == 0) ? 0x1000 : 0x4000;
 }
 
 #endif

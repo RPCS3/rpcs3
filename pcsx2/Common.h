@@ -20,6 +20,7 @@
 #include "System.h"
 #include "Memory.h"
 #include "Hw.h"
+#include "Dmac.h"
 #include "R5900.h"
 
 #include "SaveState.h"

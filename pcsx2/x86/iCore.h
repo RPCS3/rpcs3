@@ -126,10 +126,7 @@ int _checkX86reg(int type, int reg, int mode);
 void _addNeededX86reg(int type, int reg);
 void _clearNeededX86regs();
 void _freeX86reg(int x86reg);
-void _flushX86regs();
 void _freeX86regs();
-void _freeX86tempregs();
-u8 _hasFreeX86reg();
 void _flushCachedRegs();
 void _flushConstRegs();
 void _flushConstReg(int reg);
@@ -177,11 +174,11 @@ void _addNeededFPACCtoXMMreg();
 void _addNeededGPRtoXMMreg(int gprreg);
 void _clearNeededXMMregs();
 void _deleteVFtoXMMreg(int reg, int vu, int flush);
-void _deleteACCtoXMMreg(int vu, int flush);
+//void _deleteACCtoXMMreg(int vu, int flush);
 void _deleteGPRtoXMMreg(int reg, int flush);
 void _deleteFPtoXMMreg(int reg, int flush);
 void _freeXMMreg(int xmmreg);
-void _moveXMMreg(int xmmreg); // instead of freeing, moves it to a diff location
+//void _moveXMMreg(int xmmreg); // instead of freeing, moves it to a diff location
 void _flushXMMregs();
 u8 _hasFreeXMMreg();
 void _freeXMMregs();

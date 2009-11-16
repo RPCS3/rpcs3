@@ -13,14 +13,13 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
 #ifndef __SPR_H__
 #define __SPR_H__
 
-#include "Common.h"
-
-void sprInit();
-void dmaSPR0();
-void dmaSPR1();
-void SPRFROMinterrupt();
-void SPRTOinterrupt();
+extern void sprInit();
+extern void dmaSPR0();
+extern void dmaSPR1();
+extern void SPRFROMinterrupt();
+extern void SPRTOinterrupt();
 #endif /* __SPR_H__ */

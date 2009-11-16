@@ -18,6 +18,7 @@
 #include "App.h"
 
 #include "ModalPopups.h"
+#include "Utilities/StringHelpers.h"
 
 using namespace wxHelpers;
 

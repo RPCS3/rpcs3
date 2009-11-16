@@ -86,14 +86,6 @@ extern void __fastcall iopMemWrite8 (u32 mem, u8 value);
 extern void __fastcall iopMemWrite16(u32 mem, u16 value);
 extern void __fastcall iopMemWrite32(u32 mem, u32 value);
 
-// x86reg and mmreg are always x86 regs
-extern void psxRecMemRead8();
-extern void psxRecMemRead16();
-extern void psxRecMemRead32();
-extern void psxRecMemWrite8();
-extern void psxRecMemWrite16();
-extern void psxRecMemWrite32();
-
 namespace IopMemory
 {
 	// Sif functions not made yet (will for future Iop improvements):

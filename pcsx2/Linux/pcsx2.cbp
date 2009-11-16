@@ -152,6 +152,7 @@
 		<Unit filename="../DebugTools/DisVU1Micro.cpp" />
 		<Unit filename="../DebugTools/DisVUmicro.h" />
 		<Unit filename="../DebugTools/DisVUops.h" />
+		<Unit filename="../Dmac.h" />
 		<Unit filename="../Docs/ChangeLog.txt" />
 		<Unit filename="../Docs/License.txt" />
 		<Unit filename="../Docs/devblog.txt" />
@@ -186,7 +187,6 @@
 		<Unit filename="../Interpreter.cpp" />
 		<Unit filename="../IopBios.cpp" />
 		<Unit filename="../IopBios.h" />
-		<Unit filename="../IopBios2.h" />
 		<Unit filename="../IopCommon.h" />
 		<Unit filename="../IopCounters.cpp" />
 		<Unit filename="../IopCounters.h" />

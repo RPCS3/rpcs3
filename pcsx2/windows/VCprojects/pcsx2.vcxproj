@@ -590,6 +590,7 @@
     <ClInclude Include="..\..\DebugTools\DisASM.h" />
     <ClInclude Include="..\..\DebugTools\DisVUmicro.h" />
     <ClInclude Include="..\..\DebugTools\DisVUops.h" />
+    <ClInclude Include="..\..\Dmac.h" />
     <ClInclude Include="..\..\Dump.h" />
     <ClInclude Include="..\..\Elfheader.h" />
     <ClInclude Include="..\..\Exceptions.h" />
@@ -600,7 +601,6 @@
     <ClInclude Include="..\..\Hw.h" />
     <ClInclude Include="..\..\Hardware.h" />
     <ClInclude Include="..\..\IopBios.h" />
-    <ClInclude Include="..\..\IopBios2.h" />
     <ClInclude Include="..\..\IopCommon.h" />
     <ClInclude Include="..\..\IopCounters.h" />
     <ClInclude Include="..\..\IopDma.h" />

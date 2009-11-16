@@ -13,6 +13,9 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef __HARDWARE_H__
+#define __HARDWARE_H__
+
 // The full suite of hardware APIs:
 #include "Counters.h"
 #include "GS.h"
@@ -23,3 +26,5 @@
 #include "Sif.h"
 #include "Vif.h"
 #include "VifDma.h"
+
+#endif

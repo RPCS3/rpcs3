@@ -550,6 +550,10 @@
 						Name="Hardware"
 						>
 						<File
+							RelativePath="..\..\Dmac.h"
+							>
+						</File>
+						<File
 							RelativePath="..\..\FiFo.cpp"
 							>
 						</File>
@@ -1072,10 +1076,6 @@
 					</File>
 					<File
 						RelativePath="..\..\IopBios.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\IopBios2.h"
 						>
 					</File>
 					<File

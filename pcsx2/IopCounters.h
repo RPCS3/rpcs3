@@ -34,7 +34,6 @@ extern psxCounter psxCounters[NUM_COUNTERS];
 
 extern void psxRcntInit();
 extern void psxRcntUpdate();
-extern void cntspu2async();
 extern void psxRcntWcount16(int index, u16 value);
 extern void psxRcntWcount32(int index, u32 value);
 extern void psxRcntWmode16(int index, u32 value);
@@ -49,7 +48,5 @@ extern void psxVBlankStart();
 extern void psxVBlankEnd();
 extern void psxCheckStartGate16(int i);
 extern void psxCheckEndGate16(int i);
-//static void psxCheckStartGate32(int i);
-//static void psxCheckEndGate32(int i);
 
 #endif /* __PSXCOUNTERS_H__ */
