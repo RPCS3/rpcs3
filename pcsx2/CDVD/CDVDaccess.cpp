@@ -268,6 +268,11 @@ void CDVDsys_SetFile( CDVD_SourceType srctype, const wxString& newfile )
 	m_SourceFilename[srctype] = newfile;
 }
 
+CDVD_SourceType CDVDsys_GetSourceType()
+{
+	return m_CurrentSourceType;
+}
+
 void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
 	GetPluginManager().Close( PluginId_CDVD );

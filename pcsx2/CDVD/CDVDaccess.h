@@ -69,6 +69,7 @@ extern const wxChar* CDVD_SourceLabels[];
 
 extern void CDVDsys_ChangeSource( CDVD_SourceType type );
 extern void CDVDsys_SetFile( CDVD_SourceType srctype, const wxString& newfile );
+extern CDVD_SourceType CDVDsys_GetSourceType();
 
 extern bool DoCDVDopen();
 extern void DoCDVDclose();

@@ -61,12 +61,7 @@ void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 
 		jNO_DEFAULT
 	}
-
-	if( g_Conf->CdvdSource == newSource ) return;
-
-	bool resume = CoreThread.Suspend();
-	CDVDsys_ChangeSource( g_Conf->CdvdSource = newSource );
-	if( resume ) CoreThread.Resume();
+	CoreThread.ChangeCdvdSource( newSource );
 }
 
 // Returns FALSE if the user cancelled the action.

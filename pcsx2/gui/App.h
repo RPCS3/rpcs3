@@ -534,6 +534,7 @@ public:
 	virtual void Reset();
 	virtual void StateCheckInThread();
 	virtual void ApplySettings( const Pcsx2Config& src );
+	virtual void ChangeCdvdSource( CDVD_SourceType type );
 
 protected:
 	virtual void OnResumeReady();

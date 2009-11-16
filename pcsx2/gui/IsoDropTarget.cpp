@@ -121,7 +121,9 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		{
 			SysUpdateIsoSrcFile( filenames[0] );
 			if( result != wxID_RESET )
-				CDVDsys_ChangeSource( CDVDsrc_Iso );
+			{
+				CoreThread.ChangeCdvdSource( CDVDsrc_Iso );
+			}
 			else
 			{
 				sApp.SysExecute( CDVDsrc_Iso );

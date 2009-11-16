@@ -100,6 +100,15 @@ void AppCoreThread::Resume()
 	resume_tries = 0;
 }
 
+void AppCoreThread::ChangeCdvdSource( CDVD_SourceType type )
+{
+	g_Conf->CdvdSource = type;
+	_parent::ChangeCdvdSource( type );
+	sMainFrame.UpdateIsoSrcSelection();
+
+	// TODO: Add a listener for CDVDsource changes?  Or should we bother?
+}
+
 void AppCoreThread::OnResumeReady()
 {
 	ApplySettings( g_Conf->EmuOptions );

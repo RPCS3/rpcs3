@@ -220,6 +220,7 @@ public:
 	
 	virtual const wxString& GetElfOverride() const { return m_elf_override; }
 	virtual void SetElfOverride( const wxString& elf );
+	virtual void ChangeCdvdSource( CDVD_SourceType type );
 
 protected:
 	void CpuInitializeMess();

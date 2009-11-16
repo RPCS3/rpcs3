@@ -140,7 +140,8 @@ EXPORT_C_(s32) SPU2test()
 		return -1;
 	}
 
-	if( !SndBuffer::Test() )
+	ReadSettings();
+	if( SndBuffer::Test() == 0 )
 	{
 		// TODO : Implement a proper dialog that allows the user to test different audio out drivers.
 		SysMessage( L"The '%s' driver test failed.  Please configure\ndifferent SoundOut module and try again.", mods[OutputModule]->GetIdent() );

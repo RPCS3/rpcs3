@@ -35,13 +35,13 @@ static __threadlocal SysCoreThread* tls_coreThread = NULL;
 //    (Called from outside the context of this thread)
 // --------------------------------------------------------------------------------------
 
-SysCoreThread::SysCoreThread() :
-	m_resetRecompilers( true )
-,	m_resetProfilers( true )
-,	m_resetVirtualMachine( true )
-,	m_hasValidState( false )
+SysCoreThread::SysCoreThread()
 {
-	m_name = L"EE Core";
+	m_name					= L"EE Core";
+	m_resetRecompilers		= true;
+	m_resetProfilers		= true;
+	m_resetVirtualMachine	= true;
+	m_hasValidState			= false;
 }
 
 SysCoreThread::~SysCoreThread() throw()
@@ -119,8 +119,20 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 	if( resumeWhenDone ) Resume();
 }
 
+void SysCoreThread::ChangeCdvdSource( CDVD_SourceType type )
+{
+	if( type == CDVDsys_GetSourceType() ) return;
+
+	// Fast change of the CDVD source only -- a Pause will suffice.
+
+	bool resumeWhenDone = Pause();
+	GetPluginManager().Close( PluginId_CDVD );
+	CDVDsys_ChangeSource( type );
+	if( resumeWhenDone ) Resume();
+}
+
 // --------------------------------------------------------------------------------------
-//  EECoreThread *Worker* Implementations
+//  SysCoreThread *Worker* Implementations
 //    (Called from the context of this thread only)
 // --------------------------------------------------------------------------------------
 SysCoreThread& SysCoreThread::Get()

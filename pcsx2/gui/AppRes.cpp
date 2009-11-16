@@ -74,13 +74,13 @@ pxAppResources::pxAppResources()
 
 wxMenu& Pcsx2App::GetRecentIsoMenu()
 {
-	pxAssert( m_Resources->RecentIsoMenu );
+	pxAssert( !!m_Resources->RecentIsoMenu );
 	return *m_Resources->RecentIsoMenu;
 }
 
 RecentIsoManager& Pcsx2App::GetRecentIsoList()
 {
-	pxAssert( m_Resources->RecentIsoList );
+	pxAssert( !!m_Resources->RecentIsoList );
 	return *m_Resources->RecentIsoList;
 }
 

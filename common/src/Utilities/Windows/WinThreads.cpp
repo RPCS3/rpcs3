@@ -32,7 +32,7 @@ __forceinline void Threading::SpinWait()
 
 __forceinline void Threading::EnableHiresScheduler()
 {
-	// This improves accuracy of Sleep() by some amount, and only adds a negligable amount of
+	// This improves accuracy of Sleep() by some amount, and only adds a negligible amount of
 	// overhead on modern CPUs.  Typically desktops are already set pretty low, but laptops in
 	// particular may have a scheduler Period of 15 or 20ms to extend battery life.
 	
