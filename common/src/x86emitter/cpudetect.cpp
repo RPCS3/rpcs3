@@ -13,98 +13,22 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "PrecompiledHeader.h"
-#include "Utilities/RedtapeWindows.h"
-#include "Utilities/Threading.h"
-
+#include "cpudetect_internal.h"
 #include "internal.h"
-#include "tools.h"
 
 using namespace x86Emitter;
 
 __aligned16 x86CPU_INFO x86caps;
-
-static s32 iCpuId( u32 cmd, u32 *regs )
-{
-#ifdef _MSC_VER
-	__asm xor ecx, ecx;		// ecx should be zero for CPUID(4)
-#else
-	__asm__ __volatile__ ( "xor %ecx, %ecx" );
-#endif
-
-   __cpuid( (int*)regs, cmd );
-   return 0;
-}
-
-static u64 GetRdtsc( void )
-{
-   return __rdtsc();
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// Note: This function doesn't support GCC/Linux.  Looking online it seems the only
-// way to simulate the Microsoft SEH model is to use unix signals, and the 'sigaction'
-// function specifically.  Maybe a project for a linux developer at a later date. :)
-//
-#ifdef _MSC_VER
-static bool _test_instruction( void* pfnCall )
-{
-	__try {
-        ((void (*)())pfnCall)();
-	}
-	__except(EXCEPTION_EXECUTE_HANDLER) {
-		return false;
-	}
-	return true;
-}
-
-static char* bool_to_char( bool testcond )
-{
-	return testcond ? "true" : "false";
-}
-
-#endif
 
 #ifdef __LINUX__
 #	include <sys/time.h>
 #	include <errno.h>
 #endif
 
-#ifdef _WINDOWS_
-	static HANDLE s_threadId = NULL;
-	static DWORD s_oldmask = ERROR_INVALID_PARAMETER;
-#endif
-
-static void SetSingleAffinity()
+static char* bool_to_char( bool testcond )
 {
-#ifdef _WINDOWS_
-	// Assign a single CPU thread affinity to ensure rdtsc() accuracy.
-	// (rdtsc for each CPU/core can differ, causing skewed results)
-
-	DWORD_PTR availProcCpus, availSysCpus;
-	if( !GetProcessAffinityMask( GetCurrentProcess(), &availProcCpus, &availSysCpus ) ) return;
-
-	int i;
-	for( i=0; i<32; ++i )
-	{
-		if( availProcCpus & (1<<i) ) break;
-	}
-
-	s_threadId = GetCurrentThread();
-	s_oldmask = SetThreadAffinityMask( s_threadId, (1UL<<i) );
-
-	if( s_oldmask == ERROR_INVALID_PARAMETER )
-	{
-		Console.Warning(
-			"CpuDetect: SetThreadAffinityMask failed...\n"
-			"\tSystem Affinity : 0x%08x"
-			"\tProcess Affinity: 0x%08x"
-			"\tAttempted Thread Affinity CPU: i",
-			availProcCpus, availSysCpus, i
-		);
-	}
-#endif
+	return testcond ? "true" : "false";
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -115,9 +39,9 @@ static s64 CPUSpeedHz( u64 time )
 	s64 startTick, endTick;
 
 	if( ! x86caps.hasTimeStampCounter )
-		return 0; //check if function is supported
+		return 0;
 
-	SetSingleAffinity();
+	SingleCoreAffinity affinity_lock;
 
 	// Align the cpu execution to a cpuTick boundary.
 
@@ -126,22 +50,17 @@ static s64 CPUSpeedHz( u64 time )
 
 	do
 	{
-		timeStop = GetCPUTicks( );
-		startTick = GetRdtsc( );
+		timeStop = GetCPUTicks();
+		startTick = __rdtsc();
 	} while( ( timeStop - timeStart ) == 0 );
 
 	timeStart = timeStop;
 	do
 	{
 		timeStop = GetCPUTicks();
-		endTick = GetRdtsc();
+		endTick = __rdtsc();
 	}
 	while( ( timeStop - timeStart ) < time );
-
-#ifdef _WINDOWS_
-	if( s_oldmask != ERROR_INVALID_PARAMETER )
-		SetThreadAffinityMask( s_threadId, s_oldmask );
-#endif
 
 	return (s64)( endTick - startTick );
 }
@@ -327,20 +246,10 @@ void cpudetectInit()
 	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
-	// SIMD Instruction Support Detection
+	// SIMD Instruction Support Detection (Second Pass)
 	//
-	// Can the SSE3 / SSE4.1 bits be trusted?  Using an instruction test is a very "complete"
-	// approach to ensuring the instruction set is supported, and at least one reported case
-	// of a Q9550 not having it's SSE 4.1 bit set but still supporting it properly is fixed
-	// by this --air
-	//  (note: the user who reported the case later fixed the problem by doing a CMOS reset)
-	//
-	// Linux support note: Linux/GCC doesn't have SEH-style exceptions which allow handling of
-	// CPU-level exceptions (__try/__except in msvc) so this code is disabled on GCC, and
-	// detection relies on the CPUID bits alone.
 
-	#ifdef _MSC_VER
-	if( recSSE != NULL )
+	if( CanTestInstructionSets() )
 	{
 		xSetPtr( recSSE );
 		xMOVSLDUP( xmm1, xmm0 );
@@ -395,7 +304,6 @@ void cpudetectInit()
 			"\tRelying on CPUID results. [this is not an error]"
 		);
 	}
-	#endif
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	// Establish MXCSR Mask...
@@ -424,6 +332,6 @@ void cpudetectInit()
 		LogicalCoresPerPhysicalCPU = 1;
 
 	// This will assign values into x86caps.LogicalCores and PhysicalCores
-	Threading::CountLogicalCores( LogicalCoresPerPhysicalCPU, PhysicalCoresPerPhysicalCPU );
+	CountLogicalCores( LogicalCoresPerPhysicalCPU, PhysicalCoresPerPhysicalCPU );
 }
 

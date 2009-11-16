@@ -104,7 +104,9 @@
 		<Unit filename="../../include/x86emitter/x86types.h" />
 		<Unit filename="../../src/x86emitter/3dnow.cpp" />
 		<Unit filename="../../src/x86emitter/PrecompiledHeader.h" />
+		<Unit filename="../../src/x86emitter/LnxCpuDetect.cpp" />
 		<Unit filename="../../src/x86emitter/cpudetect.cpp" />
+		<Unit filename="../../src/x86emitter/cpudetect_internal.cpp" />
 		<Unit filename="../../src/x86emitter/fpu.cpp" />
 		<Unit filename="../../src/x86emitter/groups.cpp" />
 		<Unit filename="../../src/x86emitter/jmp.cpp" />

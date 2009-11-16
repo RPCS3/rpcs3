@@ -24,25 +24,6 @@
 
 static bool isMultiCore = true;		// assume more than one CPU (safer)
 
-// Note: Apparently this solution is Linux/Solaris only.
-// FreeBSD/OsX need something far more complicated (apparently)
-void Threading::CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
-{
-	const uint numCPU = sysconf( _SC_NPROCESSORS_ONLN );
-	if( numCPU > 0 )
-	{
-		isMultiCore = numCPU > 1;
-		x86caps.LogicalCores = numCPU;
-		x86caps.PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-	}
-	else
-	{
-		// Indeterminate?
-		x86caps.LogicalCores = 1;
-		x86caps.PhysicalCores = 1;
-	}
-}
-
 __forceinline void Threading::Sleep( int ms )
 {
 	usleep( 1000*ms );

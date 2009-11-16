@@ -65,24 +65,22 @@ const wxImage& LoadImageAny(
 
 pxAppResources::pxAppResources()
 {
+	// RecentIsoList and Menu must be created immediately, since they depend on listening for App configuration
+	// events that can be thrown very early ni program execution.
+	RecentIsoMenu = new wxMenu();
+	RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
+	RecentIsoList = new RecentIsoManager( RecentIsoMenu );
 }
 
 wxMenu& Pcsx2App::GetRecentIsoMenu()
 {
-	if( !m_Resources->RecentIsoMenu )
-	{
-		m_Resources->RecentIsoMenu = new wxMenu();
-		m_Resources->RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
-	}
-
+	pxAssert( m_Resources->RecentIsoMenu );
 	return *m_Resources->RecentIsoMenu;
 }
 
 RecentIsoManager& Pcsx2App::GetRecentIsoList()
 {
-	if( !m_Resources->RecentIsoList )
-		m_Resources->RecentIsoList = new RecentIsoManager( &GetRecentIsoMenu() );
-
+	pxAssert( m_Resources->RecentIsoList );
 	return *m_Resources->RecentIsoList;
 }
 

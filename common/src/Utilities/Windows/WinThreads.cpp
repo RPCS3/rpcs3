@@ -18,37 +18,6 @@
 #include "x86emitter/tools.h"
 #include "Threading.h"
 
-#ifdef _WIN32
-#include "implement.h"		// win32 pthreads implementations.
-#endif
-
-void Threading::CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
-{
-	DWORD vProcessCPUs;
-	DWORD vSystemCPUs;
-
-	x86caps.LogicalCores = 1;
-
-	if( !GetProcessAffinityMask (GetCurrentProcess (),
-		&vProcessCPUs, &vSystemCPUs) ) return;
-
-	int CPUs = 0;
-	DWORD bit;
-
-	for (bit = 1; bit != 0; bit <<= 1)
-	{
-		if (vSystemCPUs & bit)
-			CPUs++;
-	}
-
-	x86caps.LogicalCores = CPUs;
-	if( LogicalCoresPerPhysicalCPU > CPUs) // for 1-socket HTT-disabled machines
-		LogicalCoresPerPhysicalCPU = CPUs;
-
-	x86caps.PhysicalCores = ( CPUs / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
-	//ptw32_smp_system = ( x86caps.LogicalCores > 1 ) ? TRUE : FALSE;
-}
-
 __forceinline void Threading::Sleep( int ms )
 {
 	::Sleep( ms );

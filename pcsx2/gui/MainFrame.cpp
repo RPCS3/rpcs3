@@ -337,10 +337,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
 	// ------------------------------------------------------------------------
 
 	m_menuBoot.Append(MenuId_Boot_CDVD,		_("Run CDVD"),
-		_("Use this to access the PS2 system configuration menu"));
+		_("For booting DVD discs or Isos, depending on the configured CDVD source."));
 
 	m_menuBoot.Append(MenuId_Boot_ELF,		_("Run ELF File..."),
-		_("For running raw binaries"));
+		_("For running raw binaries directly"));
 
 	m_menuBoot.AppendSeparator();
 	m_menuBoot.Append(MenuId_Exit,			_("Exit"),

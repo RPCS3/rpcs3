@@ -154,7 +154,7 @@ EXPORT_C_(s32) DEV9test()
 #ifdef _WIN32
 EXPORT_C_(void) DEV9configure()
 {
-	SysMessage("Nothing to Configure");
+	SysMessage("Nothing to Configure?!");
 }
 
 EXPORT_C_(void) DEV9about()
@@ -170,7 +170,7 @@ void SysMessage(const char *fmt, ...)
 	va_start(list,fmt);
 	vsprintf(tmp,fmt,list);
 	va_end(list);
-	MessageBox(0, tmp, "DEV9null Msg", 0);
+	MessageBox( GetActiveWindow(), tmp, "DEV9null Msg", MB_SETFOREGROUND | MB_OK );
 }
 
 BOOL APIENTRY DllMain(HANDLE hModule,                  // DLL INIT

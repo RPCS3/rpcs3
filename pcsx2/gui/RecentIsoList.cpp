@@ -16,13 +16,14 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 
-RecentIsoManager::RecentIsoManager( wxMenu* menu ) :
-	m_Menu( menu )
-,	m_MaxLength( g_Conf->RecentFileCount )
-,	m_cursel( 0 )
-,	m_Separator( NULL )
-,	m_Listener_SettingsLoadSave( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
+RecentIsoManager::RecentIsoManager( wxMenu* menu )
+	: m_Menu( menu )
+	, m_MaxLength( g_Conf->RecentFileCount )
+	, m_Listener_SettingsLoadSave	( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
+	, m_Listener_SettingsApplied	( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
 {
+	m_cursel	= 0;
+	m_Separator	= NULL;
 	Connect( wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(RecentIsoManager::OnChangedSelection) );
 }
 
@@ -132,6 +133,11 @@ void RecentIsoManager::InsertIntoMenu( int id )
 		curitem.ItemPtr->Check();
 }
 
+void RecentIsoManager::DoSettingsApplied( int& ini )
+{
+	// TODO : Implement application of Recent Iso List "maximum" history option
+}
+
 void RecentIsoManager::DoSettingsLoadSave( IniInterface& ini )
 {
 	ini.GetConfig().SetRecordDefaults( false );
@@ -172,4 +178,10 @@ void __evt_fastcall RecentIsoManager::OnSettingsLoadSave( void* obj, IniInterfac
 {
 	if( obj == NULL ) return;
 	((RecentIsoManager*)obj)->DoSettingsLoadSave( ini );
+}
+
+void __evt_fastcall RecentIsoManager::OnSettingsApplied( void* obj, int& ini )
+{
+	if( obj == NULL ) return;
+	((RecentIsoManager*)obj)->DoSettingsApplied( ini );
 }

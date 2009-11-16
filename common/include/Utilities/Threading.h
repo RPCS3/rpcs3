@@ -64,9 +64,6 @@ namespace Threading
 // The following set of documented functions have Linux/Win32 specific implementations,
 // which are found in WinThreads.cpp and LnxThreads.cpp
 
-	// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
-	extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
-
 	// Releases a timeslice to other threads.
 	extern void Timeslice();
 

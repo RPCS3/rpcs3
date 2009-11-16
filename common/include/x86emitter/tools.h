@@ -20,6 +20,9 @@
 // this is all that needs to be called and will fill up the below structs
 extern void cpudetectInit();
 
+// Returns the number of available logical CPUs (cores plus hyperthreaded cpus)
+extern void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU );
+
 // --------------------------------------------------------------------------------------
 //  x86CPU_INFO
 // --------------------------------------------------------------------------------------

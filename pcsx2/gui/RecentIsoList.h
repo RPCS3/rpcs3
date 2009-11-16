@@ -44,6 +44,7 @@ protected:
 	wxMenuItem* m_Separator;
 
 	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
+	EventListenerBinding<int>				m_Listener_SettingsApplied;
 
 public:
 	RecentIsoManager( wxMenu* menu );
@@ -56,8 +57,10 @@ public:
 protected:
 	void InsertIntoMenu( int id );
 	void DoSettingsLoadSave( IniInterface& ini );
+	void DoSettingsApplied( int& val );
 	void OnChangedSelection( wxCommandEvent& evt );
 
 	static void __evt_fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
+	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
 };
 

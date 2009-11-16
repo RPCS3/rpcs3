@@ -206,6 +206,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\x86emitter\cpudetect_internal.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\x86emitter\fpu.cpp"
 				>
 			</File>
@@ -269,6 +273,46 @@
 				RelativePath="..\..\src\x86emitter\x86emitter.cpp"
 				>
 			</File>
+			<Filter
+				Name="Linux"
+				>
+				<File
+					RelativePath="..\..\src\x86emitter\LnxCpuDetect.cpp"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Devel|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+				</File>
+			</Filter>
+			<Filter
+				Name="Windows"
+				>
+				<File
+					RelativePath="..\..\src\x86emitter\WinCpuDetect.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
