@@ -33,7 +33,7 @@ void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhys
 	const uint numCPU = sysconf( _SC_NPROCESSORS_ONLN );
 	if( numCPU > 0 )
 	{
-		isMultiCore = numCPU > 1;
+		//isMultiCore = numCPU > 1;
 		x86caps.LogicalCores = numCPU;
 		x86caps.PhysicalCores = ( numCPU / LogicalCoresPerPhysicalCPU ) * PhysicalCoresPerPhysicalCPU;
 	}

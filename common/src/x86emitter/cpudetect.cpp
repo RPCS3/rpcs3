@@ -26,7 +26,7 @@ __aligned16 x86CPU_INFO x86caps;
 #	include <errno.h>
 #endif
 
-static char* bool_to_char( bool testcond )
+static const char* bool_to_char( bool testcond )
 {
 	return testcond ? "true" : "false";
 }
