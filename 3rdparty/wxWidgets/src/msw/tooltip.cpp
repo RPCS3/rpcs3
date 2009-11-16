@@ -241,6 +241,12 @@ WXHWND wxToolTip::GetToolTipCtrl()
            // subclass the newly created control
            gs_wndprocToolTip = wxSetWindowProc(hwnd, wxToolTipWndProc);
 #endif // wxUSE_TTM_WINDOWFROMPOINT
+
+		   // PCSX2: Default tooltip length is way too short for people with sane doubleclick rates.
+		   // Let's override it with something usable, like 8 seconds. :) --air
+		   if( wxApp::GetComCtl32Version() >= 470 )
+		       SendMessage((HWND)ms_hwndTT, TTM_SETDELAYTIME, TTDT_AUTOPOP, 8000);
+		   
        }
     }
 
