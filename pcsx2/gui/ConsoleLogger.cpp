@@ -682,7 +682,7 @@ static void __concall ConsoleToFile_SetTitle( const wxString& title )
 
 static void __concall ConsoleToFile_DoSetColor( ConsoleColors color )
 {
-    ConsoleWriter_Stdio.SetColor(color);
+    ConsoleWriter_Stdio.DoSetColor(color);
 }
 
 extern const IConsoleWriter	ConsoleWriter_File;
@@ -711,7 +711,7 @@ static void __concall ConsoleToWindow_SetTitle( const wxString& title )
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoSetColor( ConsoleColors color )
 {
-    secondary.SetColor(color);
+    secondary.DoSetColor(color);
 }
 
 template< const IConsoleWriter& secondary >
