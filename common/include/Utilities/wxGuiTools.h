@@ -64,7 +64,7 @@ public:
 	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
 
 protected:
-
+	void OnActivate(wxActivateEvent& evt);
 };
 
 // --------------------------------------------------------------------------------------

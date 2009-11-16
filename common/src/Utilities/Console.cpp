@@ -60,8 +60,8 @@ static void __concall ConsoleNull_DoWriteLn( const wxString& fmt ) {}
 
 const IConsoleWriter ConsoleWriter_Null =
 {
-	NULL, //ConsoleNull_DoWrite,
-	NULL, //ConsoleNull_DoWriteLn,
+	ConsoleNull_DoWrite,
+	ConsoleNull_DoWriteLn,
 	ConsoleNull_DoSetColor,
 
 	ConsoleNull_Newline,
@@ -458,7 +458,7 @@ const IConsoleWriter& IConsoleWriter::ClearColor() const
 
 bool IConsoleWriter::Write( const char* fmt, ... ) const
 {
-	if( DoWrite == NULL ) return false;
+	if( DoWrite == ConsoleNull_DoWrite ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -470,7 +470,7 @@ bool IConsoleWriter::Write( const char* fmt, ... ) const
 
 bool IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
 {
-	if( DoWrite == NULL ) return false;
+	if( DoWrite == ConsoleNull_DoWrite ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -483,7 +483,7 @@ bool IConsoleWriter::Write( ConsoleColors color, const char* fmt, ... ) const
 
 bool IConsoleWriter::WriteLn( const char* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -495,7 +495,7 @@ bool IConsoleWriter::WriteLn( const char* fmt, ... ) const
 
 bool IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 	va_list args;
 	va_start(args,fmt);
 	ConsoleColorScope cs( color );
@@ -507,7 +507,7 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const char* fmt, ... ) const
 
 bool IConsoleWriter::Error( const char* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -520,7 +520,7 @@ bool IConsoleWriter::Error( const char* fmt, ... ) const
 
 bool IConsoleWriter::Warning( const char* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -537,7 +537,7 @@ bool IConsoleWriter::Warning( const char* fmt, ... ) const
 
 bool IConsoleWriter::Write( const wxChar* fmt, ... ) const
 {
-	if( DoWrite == NULL ) return false;
+	if( DoWrite == ConsoleNull_DoWrite ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -549,7 +549,7 @@ bool IConsoleWriter::Write( const wxChar* fmt, ... ) const
 
 bool IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
 {
-	if( DoWrite == NULL ) return false;
+	if( DoWrite == ConsoleNull_DoWrite ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -562,7 +562,7 @@ bool IConsoleWriter::Write( ConsoleColors color, const wxChar* fmt, ... ) const
 
 bool IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -574,7 +574,7 @@ bool IConsoleWriter::WriteLn( const wxChar* fmt, ... ) const
 
 bool IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -587,7 +587,7 @@ bool IConsoleWriter::WriteLn( ConsoleColors color, const wxChar* fmt, ... ) cons
 
 bool IConsoleWriter::Error( const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 
 	va_list args;
 	va_start(args,fmt);
@@ -600,7 +600,7 @@ bool IConsoleWriter::Error( const wxChar* fmt, ... ) const
 
 bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 {
-	if( DoWriteLn == NULL ) return false;
+	if( DoWriteLn == ConsoleNull_DoWriteLn ) return false;
 
 	va_list args;
 	va_start(args,fmt);

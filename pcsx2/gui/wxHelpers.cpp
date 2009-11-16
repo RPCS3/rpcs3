@@ -145,16 +145,23 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 	if( m_hasContextHelp )
 		delete wxHelpProvider::Set( new wxSimpleHelpProvider() );
 
-	// Note: currently the Close (X) button doesn't appear to work in dialogs.  Docs indicate
-	// that it should, so I presume the problem is in wxWidgets and that (hopefully!) an updated
-	// version will fix it later.  I tried to fix it using a manual Connect but it didn't do
-	// any good.
+	// GTK/Linux Note: currently the Close (X) button doesn't appear to work in dialogs.  Docs
+	// indicate that it should, so I presume the problem is in wxWidgets and that (hopefully!)
+	// an updated version will fix it later.  I tried to fix it using a manual Connect but it
+	// didn't do any good.  (problem could also be my Co-Linux / x-window manager)
+	
+	//Connect( wxEVT_ACTIVATE, wxActivateEventHandler(wxDialogWithHelpers::OnActivate) );
 }
 
 wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 {
 	--m_DialogIdents[GetId()];
 	pxAssert( m_DialogIdents[GetId()] >= 0 );
+}
+
+void wxDialogWithHelpers::OnActivate(wxActivateEvent& evt)
+{
+	//evt.Skip();
 }
 
 wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int size, int alignFlags )

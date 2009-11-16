@@ -72,10 +72,10 @@ static const ConsoleColors DefaultConsoleColor = Color_Default;
 //
 struct IConsoleWriter
 {
-	// Write implementation for internal use only. (can be NULL)
+	// Write implementation for internal use only.
 	void (__concall *DoWrite)( const wxString& fmt );
 
-	// WriteLn implementation for internal use only.  (can be NULL)
+	// WriteLn implementation for internal use only.
 	void (__concall *DoWriteLn)( const wxString& fmt );
 
 	// SetColor implementation for internal use only.
