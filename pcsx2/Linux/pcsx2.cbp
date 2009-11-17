@@ -16,9 +16,9 @@
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-march=i486" />
+					<Add option="-W" />
 					<Add option="-g" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
 					<Add option="-DPCSX2_DEVBUILD" />
 					<Add option="-DPCSX2_DEBUG" />
 				</Compiler>
@@ -26,7 +26,7 @@
 					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --libs`" />
 					<Add library="$(SvnRootDir)/deps/debug/zlib.a" />
 					<Add library="$(SvnRootDir)/deps/debug/libx86emitter.a" />
 					<Add library="$(SvnRootDir)/deps/debug/libUtilities.a" />
@@ -41,10 +41,40 @@
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-O2" />
-					<Add option="-W" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
-					<Add option="-DNDEBUG" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
+					<Add option="-fdefer-pop" />
+					<Add option="-fcprop-registers" />
+					<Add option="-fif-conversion" />
+					<Add option="-fif-conversion2" />
+					<Add option="-ftree-ccp" />
+					<Add option="-ftree-dce" />
+					<Add option="-ftree-dominator-opts" />
+					<Add option="-ftree-ter" />
+					<Add option="-ftree-lrs" />
+					<Add option="-ftree-sra" />
+					<Add option="-ftree-copyrename" />
+					<Add option="-ftree-fre" />
+					<Add option="-ftree-ch" />
+					<Add option="-funit-at-a-time" />
+					<Add option="-fmerge-constants" />
+					<Add option="-fthread-jumps" />
+					<Add option="-fcrossjumping" />
+					<Add option="-foptimize-sibling-calls" />
+					<Add option="-fcse-follow-jumps" />
+					<Add option="-fcse-skip-blocks" />
+					<Add option="-fgcse  -fgcse-lm" />
+					<Add option="-frerun-cse-after-loop" />
+					<Add option="-fcaller-saves" />
+					<Add option="-fpeephole2" />
+					<Add option="-fsched-interblock  -fsched-spec" />
+					<Add option="-fregmove" />
+					<Add option="-fstrict-overflow" />
+					<Add option="-fdelete-null-pointer-checks" />
+					<Add option="-freorder-blocks  -freorder-functions" />
+					<Add option="-falign-functions  -falign-jumps" />
+					<Add option="-falign-loops  -falign-labels" />
+					<Add option="-ftree-vrp" />
+					<Add option="-ftree-pre" />
 					<Add option="-DPCSX2_DEVBUILD" />
 					<Add option="-DPCSX2_DEVEL" />
 				</Compiler>
@@ -52,7 +82,7 @@
 					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --libs`" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --libs`" />
 					<Add library="$(SvnRootDir)/deps/devel/zlib.a" />
 					<Add library="$(SvnRootDir)/deps/devel/libx86emitter.a" />
 					<Add library="$(SvnRootDir)/deps/devel/libUtilities.a" />
@@ -67,16 +97,47 @@
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-O2" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
-					<Add option="-DNDEBUG" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
+					<Add option="-fdefer-pop" />
+					<Add option="-fcprop-registers" />
+					<Add option="-fif-conversion" />
+					<Add option="-fif-conversion2" />
+					<Add option="-ftree-ccp" />
+					<Add option="-ftree-dce" />
+					<Add option="-ftree-dominator-opts" />
+					<Add option="-ftree-ter" />
+					<Add option="-ftree-lrs" />
+					<Add option="-ftree-sra" />
+					<Add option="-ftree-copyrename" />
+					<Add option="-ftree-fre" />
+					<Add option="-ftree-ch" />
+					<Add option="-funit-at-a-time" />
+					<Add option="-fmerge-constants" />
+					<Add option="-fthread-jumps" />
+					<Add option="-fcrossjumping" />
+					<Add option="-foptimize-sibling-calls" />
+					<Add option="-fcse-follow-jumps" />
+					<Add option="-fcse-skip-blocks" />
+					<Add option="-fgcse  -fgcse-lm" />
+					<Add option="-frerun-cse-after-loop" />
+					<Add option="-fcaller-saves" />
+					<Add option="-fpeephole2" />
+					<Add option="-fsched-interblock  -fsched-spec" />
+					<Add option="-fregmove" />
+					<Add option="-fstrict-overflow" />
+					<Add option="-fdelete-null-pointer-checks" />
+					<Add option="-freorder-blocks  -freorder-functions" />
+					<Add option="-falign-functions  -falign-jumps" />
+					<Add option="-falign-loops  -falign-labels" />
+					<Add option="-ftree-vrp" />
+					<Add option="-ftree-pre" />
 				</Compiler>
 				<ResourceCompiler>
 					<Add directory="$(ProjectRootDir)/gui" />
 				</ResourceCompiler>
 				<Linker>
 					<Add option="-s" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --libs`" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --libs`" />
 					<Add library="$(SvnRootDir)/deps/release/zlib.a" />
 					<Add library="$(SvnRootDir)/deps/release/libx86emitter.a" />
 					<Add library="$(SvnRootDir)/deps/release/libUtilities.a" />
@@ -89,6 +150,7 @@
 			</Environment>
 		</Build>
 		<Compiler>
+			<Add option="-march=i486" />
 			<Add option="-Wno-format" />
 			<Add option="-Wno-unused-parameter" />
 			<Add option="-Wno-unused-value" />

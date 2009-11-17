@@ -14,11 +14,59 @@
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
 				<Compiler>
-					<Add option="-Wall" />
+					<Add option="-W" />
 					<Add option="-g" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
 					<Add option="-DPCSX2_DEBUG" />
 					<Add option="-DPCSX2_DEVBUILD" />
+				</Compiler>
+			</Target>
+			<Target title="Devel">
+				<Option output="../../../deps/devel/libUtilities" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="./.objs/devel/" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Compiler>
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
+					<Add option="-fdefer-pop" />
+					<Add option="-fcprop-registers" />
+					<Add option="-fif-conversion" />
+					<Add option="-fif-conversion2" />
+					<Add option="-ftree-ccp" />
+					<Add option="-ftree-dce" />
+					<Add option="-ftree-dominator-opts" />
+					<Add option="-ftree-ter" />
+					<Add option="-ftree-lrs" />
+					<Add option="-ftree-sra" />
+					<Add option="-ftree-copyrename" />
+					<Add option="-ftree-fre" />
+					<Add option="-ftree-ch" />
+					<Add option="-funit-at-a-time" />
+					<Add option="-fmerge-constants" />
+					<Add option="-fthread-jumps" />
+					<Add option="-fcrossjumping" />
+					<Add option="-foptimize-sibling-calls" />
+					<Add option="-fcse-follow-jumps" />
+					<Add option="-fcse-skip-blocks" />
+					<Add option="-fgcse  -fgcse-lm" />
+					<Add option="-frerun-cse-after-loop" />
+					<Add option="-fcaller-saves" />
+					<Add option="-fpeephole2" />
+					<Add option="-fsched-interblock  -fsched-spec" />
+					<Add option="-fregmove" />
+					<Add option="-fstrict-overflow" />
+					<Add option="-fdelete-null-pointer-checks" />
+					<Add option="-freorder-blocks  -freorder-functions" />
+					<Add option="-falign-functions  -falign-jumps" />
+					<Add option="-falign-loops  -falign-labels" />
+					<Add option="-ftree-vrp" />
+					<Add option="-ftree-pre" />
+					<Add option="-DPCSX2_DEVBUILD" />
+					<Add option="-DPCSX2_DEVEL" />
+					<Add directory="../../include" />
+					<Add directory="../../include/Utilities" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -29,32 +77,46 @@
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
 				<Compiler>
-					<Add option="-O2" />
-					<Add option="-Wall" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
-					<Add option="-DNDEBUG" />
+					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
+					<Add option="-fdefer-pop" />
+					<Add option="-fcprop-registers" />
+					<Add option="-fif-conversion" />
+					<Add option="-fif-conversion2" />
+					<Add option="-ftree-ccp" />
+					<Add option="-ftree-dce" />
+					<Add option="-ftree-dominator-opts" />
+					<Add option="-ftree-ter" />
+					<Add option="-ftree-lrs" />
+					<Add option="-ftree-sra" />
+					<Add option="-ftree-copyrename" />
+					<Add option="-ftree-fre" />
+					<Add option="-ftree-ch" />
+					<Add option="-funit-at-a-time" />
+					<Add option="-fmerge-constants" />
+					<Add option="-fthread-jumps" />
+					<Add option="-fcrossjumping" />
+					<Add option="-foptimize-sibling-calls" />
+					<Add option="-fcse-follow-jumps" />
+					<Add option="-fcse-skip-blocks" />
+					<Add option="-fgcse  -fgcse-lm" />
+					<Add option="-frerun-cse-after-loop" />
+					<Add option="-fcaller-saves" />
+					<Add option="-fpeephole2" />
+					<Add option="-fsched-interblock  -fsched-spec" />
+					<Add option="-fregmove" />
+					<Add option="-fstrict-overflow" />
+					<Add option="-fdelete-null-pointer-checks" />
+					<Add option="-freorder-blocks  -freorder-functions" />
+					<Add option="-falign-functions  -falign-jumps" />
+					<Add option="-falign-loops  -falign-labels" />
+					<Add option="-ftree-vrp" />
+					<Add option="-ftree-pre" />
 					<Add directory="../../include" />
 					<Add directory="../../include/Utilities" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
 				</Linker>
-			</Target>
-			<Target title="Devel">
-				<Option output="../../../deps/devel/libUtilities" prefix_auto="1" extension_auto="1" />
-				<Option working_dir="" />
-				<Option object_output="./.objs/devel/" />
-				<Option type="2" />
-				<Option compiler="gcc" />
-				<Option createDefFile="1" />
-				<Compiler>
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
-					<Add option="-DPCSX2_DEVBUILD" />
-					<Add option="-DPCSX2_DEVEL" />
-					<Add option="-DNDEBUG" />
-					<Add directory="../../include" />
-					<Add directory="../../include/Utilities" />
-				</Compiler>
 			</Target>
 		</Build>
 		<Compiler>
@@ -91,13 +153,13 @@
 		<Unit filename="../../include/Utilities/HashMap.h" />
 		<Unit filename="../../include/Utilities/MemcpyFast.h" />
 		<Unit filename="../../include/Utilities/Path.h" />
-		<Unit filename="../../include/Utilities/pxRadioPanel.h" />
 		<Unit filename="../../include/Utilities/RedtapeWindows.h" />
 		<Unit filename="../../include/Utilities/SafeArray.h" />
 		<Unit filename="../../include/Utilities/ScopedPtr.h" />
 		<Unit filename="../../include/Utilities/StringHelpers.h" />
 		<Unit filename="../../include/Utilities/Threading.h" />
 		<Unit filename="../../include/Utilities/lnx_memzero.h" />
+		<Unit filename="../../include/Utilities/pxRadioPanel.h" />
 		<Unit filename="../../include/Utilities/wxBaseTools.h" />
 		<Unit filename="../../include/Utilities/wxGuiTools.h" />
 		<Unit filename="../../include/intrin_x86.h" />
@@ -111,12 +173,12 @@
 		<Unit filename="../../src/Utilities/Linux/LnxThreads.cpp" />
 		<Unit filename="../../src/Utilities/Mutex.cpp" />
 		<Unit filename="../../src/Utilities/PathUtils.cpp" />
-		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/PrecompiledHeader.h" />
 		<Unit filename="../../src/Utilities/Semaphore.cpp" />
 		<Unit filename="../../src/Utilities/StringHelpers.cpp" />
 		<Unit filename="../../src/Utilities/ThreadTools.cpp" />
 		<Unit filename="../../src/Utilities/ThreadingInternal.h" />
+		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/vssprintf.cpp" />
 		<Unit filename="../../src/Utilities/wxGuiTools.cpp" />
 		<Unit filename="../../src/Utilities/x86/MemcpyFast.S" />
