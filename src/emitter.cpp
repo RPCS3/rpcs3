@@ -549,14 +549,6 @@ namespace YAML
 		return *this;
 	}
 	
-	Emitter& Emitter::Write(const char *str)
-	{
-		if(!good())
-			return *this;
-		
-		return Write(std::string(str));
-	}
-
 	void Emitter::PreWriteIntegralType(std::stringstream& str)
 	{
 		PreAtomicWrite();
@@ -621,38 +613,6 @@ namespace YAML
 		
 		PostAtomicWrite();
 		return *this;
-	}
-
-	Emitter& Emitter::Write(float f)
-	{
-		if(!good())
-			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		
-		std::stringstream str;
-		str << f;
-		m_stream << str.str();
-		
-		PostAtomicWrite();
-		return *this;		
-	}
-	
-	Emitter& Emitter::Write(double d)
-	{
-		if(!good())
-			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		
-		std::stringstream str;
-		str << d;
-		m_stream << str.str();
-		
-		PostAtomicWrite();
-		return *this;		
 	}
 
 	Emitter& Emitter::Write(const _Alias& alias)

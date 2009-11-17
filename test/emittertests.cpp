@@ -558,6 +558,74 @@ namespace Test
 			desiredOutput = "--- \"\x24 \xC2\xA2 \xE2\x82\xAC \xF0\xA4\xAD\xA2\"";
 		}
 		
+		struct Foo {
+			Foo(): x(0) {}
+			Foo(int x_, const std::string& bar_): x(x_), bar(bar_) {}
+			
+			int x;
+			std::string bar;
+		};
+		
+		YAML::Emitter& operator << (YAML::Emitter& out, const Foo& foo) {
+			out << YAML::BeginMap;
+			out << YAML::Key << "x" << YAML::Value << foo.x;
+			out << YAML::Key << "bar" << YAML::Value << foo.bar;
+			out << YAML::EndMap;
+			return out;
+		}
+		
+		void UserType(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << Foo(5, "hello");
+			out << Foo(3, "goodbye");
+			out << YAML::EndSeq;
+			
+			desiredOutput = "---\n-\n  x: 5\n  bar: hello\n-\n  x: 3\n  bar: goodbye";
+		}
+		
+		void UserTypeInContainer(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			std::vector<Foo> fv;
+			fv.push_back(Foo(5, "hello"));
+			fv.push_back(Foo(3, "goodbye"));
+			out << fv;
+			
+			desiredOutput = "---\n-\n  x: 5\n  bar: hello\n-\n  x: 3\n  bar: goodbye";
+		}
+		
+		template <typename T>
+		YAML::Emitter& operator << (YAML::Emitter& out, const T *v) {
+			if(v)
+				out << *v;
+			else
+				out << YAML::Null;
+			return out;
+		}
+		
+		void PointerToInt(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			int foo = 5;
+			int *bar = &foo;
+			int *baz = 0;
+			out << YAML::BeginSeq;
+			out << bar << baz;
+			out << YAML::EndSeq;
+			
+			desiredOutput = "---\n- 5\n- ~";
+		}
+
+		void PointerToUserType(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			Foo foo(5, "hello");
+			Foo *bar = &foo;
+			Foo *baz = 0;
+			out << YAML::BeginSeq;
+			out << bar << baz;
+			out << YAML::EndSeq;
+			
+			desiredOutput = "---\n-\n  x: 5\n  bar: hello\n- ~";
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
@@ -733,6 +801,10 @@ namespace Test
 		RunEmitterTest(&Emitter::EscapedUnicode, "escaped unicode", passed, total);
 		RunEmitterTest(&Emitter::Unicode, "unicode", passed, total);
 		RunEmitterTest(&Emitter::DoubleQuotedUnicode, "double quoted unicode", passed, total);
+		RunEmitterTest(&Emitter::UserType, "user type", passed, total);
+		RunEmitterTest(&Emitter::UserTypeInContainer, "user type in container", passed, total);
+		RunEmitterTest(&Emitter::PointerToInt, "pointer to int", passed, total);
+		RunEmitterTest(&Emitter::PointerToUserType, "pointer to user type", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
