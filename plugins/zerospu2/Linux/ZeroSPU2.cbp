@@ -42,7 +42,6 @@
 			<Add option="-fPIC" />
 			<Add option="-m32" />
 			<Add option="-msse2" />
-			<Add option="-DVERSION=1" />
 			<Add directory="../Linux" />
 			<Add directory="../../zerospu2" />
 			<Add directory="../../../common/include" />

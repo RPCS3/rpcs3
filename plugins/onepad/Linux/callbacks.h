@@ -1,5 +1,6 @@
 #include <gtk/gtk.h>
 
+#define VERSION "0.1"
 
 void
 OnAbout_Ok                             (GtkDialog       *dialog,
@@ -51,11 +52,11 @@ on_checkbutton_reversely_toggled       (GtkToggleButton *togglebutton,
                                         gpointer         user_data);
 
 void
-on_Remove                              (GtkButton       *button,
+on_Clear                               (GtkButton       *button,
                                         gpointer         user_data);
 
 void
-on_Clear                               (GtkButton       *button,
+on_Remove                              (GtkButton       *button,
                                         gpointer         user_data);
 
 void

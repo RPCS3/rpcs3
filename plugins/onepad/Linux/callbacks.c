@@ -107,7 +107,7 @@ on_checkbutton_reversely_toggled       (GtkToggleButton *togglebutton,
 
 
 void
-on_Remove                              (GtkButton       *button,
+on_Clear                               (GtkButton       *button,
                                         gpointer         user_data)
 {
 
@@ -115,7 +115,7 @@ on_Remove                              (GtkButton       *button,
 
 
 void
-on_Clear                               (GtkButton       *button,
+on_Remove                              (GtkButton       *button,
                                         gpointer         user_data)
 {
 
