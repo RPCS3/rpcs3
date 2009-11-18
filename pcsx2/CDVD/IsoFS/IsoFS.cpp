@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,8 +12,8 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
- 
+
+
 #include "PrecompiledHeader.h"
 
 #include "IsoFS.h"
@@ -115,7 +115,7 @@ IsoFileDescriptor IsoDirectory::FindFile(const wxString& filePath) const
 	{
 		info = dir->GetEntry(parts.GetDirs()[i]);
 		if(info.IsFile()) throw Exception::FileNotFound( filePath );
-		
+
 		dir = deleteme = new IsoDirectory(internalReader, info);
 	}
 
@@ -163,11 +163,6 @@ IsoFileDescriptor::IsoFileDescriptor(const u8* data, int length)
 	date.gmtOffset = data[24];
 
 	flags = data[25];
-
-	// This assert probably means a coder error, but let's fall back on a runtime exception
-	// in release builds since, most likely, the error is "recoverable" form a user standpoint.
-	if( !pxAssertDev( (lba>=0) && (length>=0), "Invalid ISO file descriptor data encountered." ) )
-		throw Exception::BadStream();
 
 	int fileNameLength = data[32];
 

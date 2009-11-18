@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -45,7 +45,7 @@ public:
 		// Display position used if AutoDock is false (ignored otherwise)
 		wxPoint		DisplayPosition;
 		wxSize		DisplaySize;
-		
+
 		// Size of the font in points.
 		int			FontSize;
 
@@ -86,7 +86,7 @@ public:
 
 		const wxDirName& operator[]( FoldersEnum_t folderidx ) const;
 		wxDirName& operator[]( FoldersEnum_t folderidx );
-		const bool IsDefault( FoldersEnum_t folderidx ) const;
+		bool IsDefault( FoldersEnum_t folderidx ) const;
 	};
 
 	// ------------------------------------------------------------------------
@@ -118,9 +118,9 @@ public:
 
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
 	wxLanguage	LanguageId;
-	
+
 	int			RecentFileCount;		// number of files displayed in the Recent Isos list.
-	
+
 	// String value describing the desktop theme to use for pcsk2 (icons and background images)
 	// The theme name is used to look up files in the themes folder (relative to the executable).
 	wxString	DeskTheme;
@@ -138,10 +138,10 @@ public:
 
 	// enables automatic ntfs compression of memory cards (Win32 only)
 	bool		McdEnableNTFS;
-	
+
 	// Closes the GS/Video port on escape (good for fullscreen activity)
 	bool		CloseGSonEsc;
-	
+
 	// Master toggle for enabling or disabling all speedhacks in one fail-free swoop.
 	// (the toggle is applied when a new EmuConfig is sent through AppCoreThread::ApplySettings)
 	bool		EnableSpeedHacks;

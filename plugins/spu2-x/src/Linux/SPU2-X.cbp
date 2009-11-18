@@ -81,14 +81,12 @@
 		<Unit filename="../3rdparty/liba52/tables.h" />
 		<Unit filename="../3rdparty/liba52/tendra.h" />
 		<Unit filename="../ADSR.cpp" />
-		<Unit filename="../BaseTypes.h" />
 		<Unit filename="../ConvertUTF.cpp" />
 		<Unit filename="../ConvertUTF.h" />
 		<Unit filename="../DPLII.h" />
 		<Unit filename="../Debug.cpp" />
 		<Unit filename="../Debug.h" />
 		<Unit filename="../Decoder.cpp" />
-		<Unit filename="../DllInterface.cpp" />
 		<Unit filename="../Dma.cpp" />
 		<Unit filename="../Dma.h" />
 		<Unit filename="Alsa.cpp" />
@@ -105,13 +103,9 @@
 		<Unit filename="../ReadInput.cpp" />
 		<Unit filename="../RegLog.cpp" />
 		<Unit filename="../RegTable.cpp" />
-		<Unit filename="../RegTable.h" />
 		<Unit filename="../Reverb.cpp" />
-		<Unit filename="../SaveStateSPU.cpp" />
 		<Unit filename="../SndOut.cpp" />
 		<Unit filename="../SndOut.h" />
-		<Unit filename="../Spu2.cpp" />
-		<Unit filename="../Spu2.h" />
 		<Unit filename="../Spu2replay.cpp" />
 		<Unit filename="../Spu2replay.h" />
 		<Unit filename="../Timestretcher.cpp" />
@@ -125,6 +119,7 @@
 		<Extensions>
 			<code_completion />
 			<debugger />
+			<envvars />
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

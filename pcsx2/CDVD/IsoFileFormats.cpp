@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -13,7 +13,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-  
+
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
 
@@ -23,13 +23,13 @@
 
 #include "IsoFileFormats.h"
 
-int detect(isoFile *iso)
+static int detect(isoFile *iso)
 {
 	u8 buf[2448];
 	u8* pbuf;
 
 	if (isoReadBlock(iso, buf, 16) == -1) return -1;
-	
+
 	pbuf = (( iso->flags & ISOFLAGS_BLOCKDUMP_V3 ) ? buf : (buf + 24));
 
 	if (strncmp((char*)(pbuf+1), "CD001", 5)) return 0;
@@ -42,9 +42,9 @@ int detect(isoFile *iso)
 	return 1;
 }
 
-int _isoReadDtable(isoFile *iso)
+static int _isoReadDtable(isoFile *iso)
 {
-	int ret;
+	uint ret;
 
 	_seekfile(iso->handle, 0, SEEK_END);
 	iso->dtablesize = (_tellfile(iso->handle) - 16) / (iso->blocksize + 4);
@@ -60,13 +60,13 @@ int _isoReadDtable(isoFile *iso)
 	return 0;
 }
 
-bool tryIsoType(isoFile *iso, u32 size, u32 offset, u32 blockofs)
+static bool tryIsoType(isoFile *iso, u32 size, u32 offset, u32 blockofs)
 {
 	iso->blocksize = size;
 	iso->offset = offset;
 	iso->blockofs = blockofs;
 	if (detect(iso) == 1) return true;
-	
+
 	return false;
 }
 
@@ -83,7 +83,7 @@ int isoDetect(isoFile *iso)
 
 	_seekfile(iso->handle, 0, SEEK_SET);
 	_readfile(iso->handle, buf, 4);
-	
+
 	if (strncmp(buf, "BDV2", 4) == 0)
 	{
 		iso->flags = ISOFLAGS_BLOCKDUMP_V2;
@@ -144,26 +144,26 @@ isoFile *isoOpen(const char *filename)
 
 	if (isoDetect(iso) == -1) return NULL;
 
-	Console.WriteLn("detected blocksize = %d", iso->blocksize);
+	Console.WriteLn("detected blocksize = %u", iso->blocksize);
 
 	if ((strlen(iso->filename) > 3) && strncmp(iso->filename + (strlen(iso->filename) - 3), "I00", 3) == 0)
 	{
 		int i;
-		
+
 		_closefile(iso->handle);
 		iso->flags |= ISOFLAGS_MULTI;
 		iso->blocks = 0;
-		
+
 		for (i = 0; i < 8; i++)
 		{
 			iso->filename[strlen(iso->filename) - 1] = '0' + i;
 			iso->multih[i].handle = _openfile(iso->filename, O_RDONLY);
-			
+
 			if (iso->multih[i].handle == NULL)
 			{
 				break;
 			}
-			
+
 			iso->multih[i].slsn = iso->blocks;
 			_seekfile(iso->multih[i].handle, 0, SEEK_END);
 			iso->blocks += (u32)((_tellfile(iso->multih[i].handle) - iso->offset) / (iso->blocksize));
@@ -183,11 +183,11 @@ isoFile *isoOpen(const char *filename)
 	}
 
 	Console.WriteLn("isoOpen: %s ok", iso->filename);
-	Console.WriteLn("offset = %d", iso->offset);
-	Console.WriteLn("blockofs = %d", iso->blockofs);
-	Console.WriteLn("blocksize = %d", iso->blocksize);
-	Console.WriteLn("blocks = %d", iso->blocks);
-	Console.WriteLn("type = %d", iso->type);
+	Console.WriteLn("offset = %u", iso->offset);
+	Console.WriteLn("blockofs = %u", iso->blockofs);
+	Console.WriteLn("blocksize = %u", iso->blocksize);
+	Console.WriteLn("blocks = %u", iso->blocks);
+	Console.WriteLn("type = %u", iso->type);
 
 	return iso;
 }
@@ -202,7 +202,7 @@ isoFile *isoCreate(const char *filename, int flags)
 
 	memset(iso, 0, sizeof(isoFile));
 	strcpy(iso->filename, filename);
-	
+
 	iso->flags = flags;
 	iso->offset = 0;
 	iso->blockofs = 24;
@@ -212,34 +212,34 @@ isoFile *isoCreate(const char *filename, int flags)
 	{
 		sprintf(Zfile, "%s.table", iso->filename);
 		iso->htable = _openfile(Zfile, O_WRONLY);
-		
+
 		if (iso->htable == NULL) return NULL;
 	}
 
 	iso->handle = _openfile(iso->filename, O_WRONLY | O_CREAT);
-	
+
 	if (iso->handle == NULL)
 	{
 		Console.Error("Error loading %s", iso->filename);
 		return NULL;
 	}
-	
+
 	Console.WriteLn("isoCreate: %s ok", iso->filename);
-	Console.WriteLn("offset = %d", iso->offset);
+	Console.WriteLn("offset = %u", iso->offset);
 
 	return iso;
 }
 
-int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks)
+int  isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks)
 {
 	iso->blocksize = blocksize;
 	iso->blocks = blocks;
 	iso->blockofs = blockofs;
-	
-	Console.WriteLn("blockofs = %d", iso->blockofs);
-	Console.WriteLn("blocksize = %d", iso->blocksize);
-	Console.WriteLn("blocks = %d", iso->blocks);
-	
+
+	Console.WriteLn("blockofs = %u", iso->blockofs);
+	Console.WriteLn("blocksize = %u", iso->blocksize);
+	Console.WriteLn("blocks = %u", iso->blocks);
+
 	if (iso->flags & ISOFLAGS_BLOCKDUMP_V2)
 	{
 		if (_writefile(iso->handle, "BDV2", 4) < 4) return -1;
@@ -284,28 +284,27 @@ void LSNtoMSF(u8 *Time, s32 lsn)
 int _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 {
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
-	int ret;
 
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->handle, ofs, SEEK_SET);
-	
-	ret = _readfile(iso->handle, dst + iso->blockofs, iso->blocksize);
-	
+
+	uint ret = _readfile(iso->handle, dst + iso->blockofs, iso->blocksize);
+
 	if (ret < iso->blocksize)
 	{
-		Console.Error("read error %d in _isoReadBlock", ret);
+		Console.Error("read error in _isoReadBlock." );
 		return -1;
 	}
 
 	return 0;
 }
 
-int _isoReadBlockD(isoFile *iso, u8 *dst, int lsn)
+int _isoReadBlockD(isoFile *iso, u8 *dst, uint lsn)
 {
-	int ret;
+	uint ret;
 
-//	Console.WriteLn("_isoReadBlockD %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
-	
+//	Console.WriteLn("_isoReadBlockD %u, blocksize=%u, blockofs=%u\n", lsn, iso->blocksize, iso->blockofs);
+
 	memset(dst, 0, iso->blockofs);
 	for (int i = 0; i < iso->dtablesize; i++)
 	{
@@ -318,15 +317,15 @@ int _isoReadBlockD(isoFile *iso, u8 *dst, int lsn)
 
 		return 0;
 	}
-	Console.WriteLn("Block %d not found in dump", lsn);
+	Console.WriteLn("Block %u not found in dump", lsn);
 
 	return -1;
 }
 
-int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
+int _isoReadBlockM(isoFile *iso, u8 *dst, uint lsn)
 {
 	u64 ofs;
-	int ret, i;
+	uint ret, i;
 
 	for (i = 0; i < 8; i++)
 	{
@@ -335,36 +334,36 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, int lsn)
 			break;
 		}
 	}
-	
+
 	if (i == 8) return -1;
 
 	ofs = (u64)(lsn - iso->multih[i].slsn) * iso->blocksize + iso->offset;
-	
-//	Console.WriteLn("_isoReadBlock %d, blocksize=%d, blockofs=%d\n", lsn, iso->blocksize, iso->blockofs);
-	
+
+//	Console.WriteLn("_isoReadBlock %u, blocksize=%u, blockofs=%u\n", lsn, iso->blocksize, iso->blockofs);
+
 	memset(dst, 0, iso->blockofs);
 	_seekfile(iso->multih[i].handle, ofs, SEEK_SET);
 	ret = _readfile(iso->multih[i].handle, dst + iso->blockofs, iso->blocksize);
-	
+
 	if (ret < iso->blocksize)
 	{
-		Console.WriteLn("read error %d in _isoReadBlockM", ret);
+		Console.Error("read error in _isoReadBlockM");
 		return -1;
 	}
 
 	return 0;
 }
 
-int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
+int isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
 {
-	int ret;
+	uint ret;
 
 	if (lsn > iso->blocks)
 	{
-		Console.WriteLn("isoReadBlock: %d > %d", lsn, iso->blocks);
+		Console.WriteLn("isoReadBlock: %u > %u", lsn, iso->blocks);
 		return -1;
 	}
-	
+
 	if (iso->flags & ISOFLAGS_BLOCKDUMP_V2)
 		ret = _isoReadBlockD(iso, dst, lsn);
 	else if( iso->flags & ISOFLAGS_BLOCKDUMP_V3 )
@@ -373,8 +372,8 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 		ret = _isoReadBlockM(iso, dst, lsn);
 	else
 		ret = _isoReadBlock(iso, dst, lsn);
-	
-	if (ret == -1) return -1;
+
+	if (ret < lsn) return -1;
 
 	if (iso->type == ISOTYPE_CD)
 	{
@@ -386,9 +385,9 @@ int isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 }
 
 
-int _isoWriteBlock(isoFile *iso, u8 *src, int lsn)
+int _isoWriteBlock(isoFile *iso, u8 *src, uint lsn)
 {
-	int ret;
+	uint ret;
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
 
 	_seekfile(iso->handle, ofs, SEEK_SET);
@@ -398,24 +397,20 @@ int _isoWriteBlock(isoFile *iso, u8 *src, int lsn)
 	return 0;
 }
 
-int _isoWriteBlockD(isoFile *iso, u8 *src, int lsn)
+int _isoWriteBlockD(isoFile *iso, u8 *src, uint lsn)
 {
-	int ret;
+	uint ret;
 
-//	Console.WriteLn("_isoWriteBlock %d (ofs=%d)", iso->blocksize, ofs);
-	
 	ret = _writefile(iso->handle, &lsn, 4);
 	if (ret < 4) return -1;
 	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
-	
-//	Console.WriteLn("_isoWriteBlock %d", ret);
-	
+
 	if (ret < iso->blocksize) return -1;
 
 	return 0;
 }
 
-int isoWriteBlock(isoFile *iso, u8 *src, int lsn)
+int isoWriteBlock(isoFile *iso, u8 *src, uint lsn)
 {
 	if (iso->flags & ISOFLAGS_BLOCKDUMP_V3)
 		return _isoWriteBlockD(iso, src, lsn);

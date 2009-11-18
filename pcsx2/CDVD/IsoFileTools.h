@@ -42,7 +42,7 @@
 extern void *_openfile(const char *filename, int flags);
 extern u64  _tellfile(void *handle);
 extern int  _seekfile(void *handle, u64 offset, int whence);
-extern int  _readfile(void *handle, void *dst, int size);
-extern int  _writefile(void *handle, const void *src, int size);
+extern u32  _readfile(void *handle, void *dst, int size);
+extern u32  _writefile(void *handle, const void *src, int size);
 extern void _closefile(void *handle);
 

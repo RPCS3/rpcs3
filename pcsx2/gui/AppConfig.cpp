@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -181,7 +181,7 @@ const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 	return const_cast<FolderOptions*>( this )->operator[]( folderidx );
 }
 
-const bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
+bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
 {
 	switch( folderidx )
 	{
@@ -387,7 +387,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 
 	IniEntry( CurrentIso );
 	IniEntry( CurrentELF );
-	
+
 	IniEntry( CloseGSonEsc );
 	IniEntry( EnableSpeedHacks );
 

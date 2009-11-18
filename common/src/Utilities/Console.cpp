@@ -65,8 +65,9 @@ const IConsoleWriter ConsoleWriter_Null =
 	ConsoleNull_DoSetColor,
 
 	ConsoleNull_Newline,
-
 	ConsoleNull_SetTitle,
+
+	0,		// instance-level indentation (should always be 0)
 };
 
 // --------------------------------------------------------------------------------------
@@ -154,8 +155,9 @@ const IConsoleWriter ConsoleWriter_Stdio =
 	ConsoleStdio_DoSetColor,
 
 	ConsoleStdio_Newline,
-
 	ConsoleStdio_SetTitle,
+
+	0,		// instance-level indentation (should always be 0)
 };
 
 // --------------------------------------------------------------------------------------
@@ -179,8 +181,9 @@ const IConsoleWriter ConsoleWriter_Assert =
 	ConsoleNull_DoSetColor,
 
 	ConsoleNull_Newline,
-
 	ConsoleNull_SetTitle,
+
+	0,		// instance-level indentation (should always be 0)
 };
 
 // --------------------------------------------------------------------------------------
@@ -225,8 +228,9 @@ const IConsoleWriter ConsoleWriter_Buffered =
 	ConsoleNull_DoSetColor,
 
 	ConsoleNull_Newline,
-
 	ConsoleNull_SetTitle,
+
+	0,		// instance-level indentation (should always be 0)
 };
 
 // --------------------------------------------------------------------------------------
@@ -250,8 +254,9 @@ const IConsoleWriter ConsoleWriter_wxError =
 	ConsoleNull_DoSetColor,
 
 	ConsoleNull_Newline,
-
 	ConsoleNull_SetTitle,
+
+	0,		// instance-level indentation (should always be 0)
 };
 
 // Sanity check: truncate strings if they exceed 512k in length.  Anything like that
@@ -288,7 +293,7 @@ static FormatBuffer<wxChar>	unicode_buffer( unicode_buffer_is_deleted );
 
 static void format_that_ascii_mess( SafeArray<char>& buffer, const char* fmt, va_list argptr )
 {
-	
+
 	while( true )
 	{
 		int size = buffer.GetLength();
@@ -431,10 +436,10 @@ IConsoleWriter IConsoleWriter::Indent( int tabcount ) const
 const IConsoleWriter& IConsoleWriter::SetColor( ConsoleColors color ) const
 {
 	pxAssertMsg( color >= Color_Current && color < ConsoleColors_Count, "Invalid ConsoleColor specified." );
-	
+
 	if( conlog_Color != color )
 		DoSetColor( conlog_Color = color );
-		
+
 	return *this;
 }
 

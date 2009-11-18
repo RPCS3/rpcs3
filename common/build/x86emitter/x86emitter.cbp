@@ -149,8 +149,6 @@
 		<Unit filename="../../include/x86emitter/implement/simd_templated_helpers.h" />
 		<Unit filename="../../include/x86emitter/implement/test.h" />
 		<Unit filename="../../include/x86emitter/implement/xchg.h" />
-		<Unit filename="../../include/x86emitter/implement/xmm/moremovs.h" />
-		<Unit filename="../../include/x86emitter/implement/xmm/shufflepack.h" />
 		<Unit filename="../../include/x86emitter/inlines.inl" />
 		<Unit filename="../../include/x86emitter/instructions.h" />
 		<Unit filename="../../include/x86emitter/internal.h" />

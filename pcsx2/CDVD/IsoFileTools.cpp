@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #include "PrecompiledHeader.h"
 #include "IsoFileTools.h"
 
@@ -60,7 +60,7 @@ int _seekfile(void *handle, u64 offset, int whence)
 	return 0;
 }
 
-int _readfile(void *handle, void *dst, int size)
+u32 _readfile(void *handle, void *dst, int size)
 {
 	DWORD ret;
 
@@ -69,7 +69,7 @@ int _readfile(void *handle, void *dst, int size)
 	return ret;
 }
 
-int _writefile(void *handle, const void *src, int size)
+u32 _writefile(void *handle, const void *src, int size)
 {
 	DWORD ret;
 
@@ -123,12 +123,12 @@ int _seekfile(void *handle, u64 offset, int whence)
 	return seekerr;
 }
 
-int _readfile(void *handle, void *dst, int size)
+u32 _readfile(void *handle, void *dst, int size)
 {
 	return fread(dst, 1, size, (FILE*)handle);
 }
 
-int _writefile(void *handle, const void *src, int size)
+u32 _writefile(void *handle, const void *src, int size)
 {
 	return fwrite(src, 1, size, (FILE*)handle);
 }

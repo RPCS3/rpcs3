@@ -22,8 +22,6 @@
 // the LOCK prefix.  The prefix works on single core CPUs fine (but is slow), but not
 // having the LOCK prefix is very bad indeed.
 
-static bool isMultiCore = true;		// assume more than one CPU (safer)
-
 __forceinline void Threading::Sleep( int ms )
 {
 	usleep( 1000*ms );

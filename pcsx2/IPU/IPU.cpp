@@ -222,7 +222,7 @@ void SaveStateBase::ipuFreeze()
 
 bool ipuCanFreeze()
 {
-	return (ipuCurCmd == 0xffffffff);
+	return (ipuCurCmd == -1);
 }
 
 __forceinline u32 ipuRead32(u32 mem)

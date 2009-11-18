@@ -69,7 +69,7 @@ void SaveStateBase::PrepBlock( int size )
 
 void SaveStateBase::FreezeTag( const char* src )
 {
-	const int allowedlen = sizeof( m_tagspace )-1;
+	const uint allowedlen = sizeof( m_tagspace )-1;
 	pxAssertDev( strlen(src) < allowedlen, wxsFormat( L"Tag name exceeds the allowed length of %d chars.", allowedlen) );
 
 	memzero( m_tagspace );

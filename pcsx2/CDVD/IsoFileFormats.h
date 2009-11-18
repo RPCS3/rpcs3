@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #ifndef __LIBISO_H__
 #define __LIBISO_H__
 
@@ -73,10 +73,10 @@ struct isoFile
 
 extern isoFile *isoOpen(const char *filename);
 extern isoFile *isoCreate(const char *filename, int mode);
-extern int  isoSetFormat(isoFile *iso, int blockofs, int blocksize, int blocks);
+extern int  isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks);
 extern int  isoDetect(isoFile *iso);
-extern int  isoReadBlock(isoFile *iso, u8 *dst, int lsn);
-extern int  isoWriteBlock(isoFile *iso, u8 *src, int lsn);
+extern int  isoReadBlock(isoFile *iso, u8 *dst, uint lsn);
+extern int  isoWriteBlock(isoFile *iso, u8 *src, uint lsn);
 extern void isoClose(isoFile *iso);
 
 #endif /* __LIBISO_H__ */

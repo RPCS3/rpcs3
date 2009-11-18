@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -107,7 +107,7 @@ namespace OpcodeImpl {
 		if (_Rd_) cpuRegs.GPR.r[_Rd_].UD[0] = cpuRegs.LO.UD[1];
 	}
 
-	void DIV1() {	
+	void DIV1() {
 		if (cpuRegs.GPR.r[_Rs_].UL[0] == 0x80000000 && cpuRegs.GPR.r[_Rt_].UL[0] == 0xffffffff)
 		{
 				cpuRegs.LO.SD[1] = (s32)0x80000000;
@@ -145,8 +145,8 @@ namespace MMI {
 
 //*****************MMI OPCODES*********************************
 
-__forceinline void _PLZCW(int n) 
-{ 
+__forceinline void _PLZCW(int n)
+{
 	// This function counts the number of "like" bits in the source register, starting
 	// with the MSB and working its way down, and returns the result MINUS ONE.
 	// So 0xff00 would return 7, not 8.
@@ -161,7 +161,7 @@ __forceinline void _PLZCW(int n)
 	// shift first, compare, then increment.  This excludes the sign bit from our final count.
 	while( i <<= 1, i < 0 ) c++;
 
-	cpuRegs.GPR.r[_Rd_].UL[n] = c; 
+	cpuRegs.GPR.r[_Rd_].UL[n] = c;
 }
 
 void PLZCW() {
@@ -171,13 +171,13 @@ void PLZCW() {
 	_PLZCW (1);
 }
 
-__forceinline void PMFHL_CLAMP(u16 dst, u16 src) 
+__forceinline void PMFHL_CLAMP(u16 dst, u16 src)
 {
     if ((int)src > (int)0x00007fff)
-	    dst = 0x7fff; 
+	    dst = 0x7fff;
     else if ((int)src < (int)0xffff8000)  // Ints only go up to 0x7FFFFFFF. Something's not right here. --arcum42
-	    dst = 0x8000; 
-    else 
+	    dst = 0x8000;
+    else
 	    dst = (u16)src;
 }
 
@@ -254,7 +254,7 @@ void PMTHL() {
 	cpuRegs.HI.UL[2] = cpuRegs.GPR.r[_Rs_].UL[3];
 }
 
-__forceinline void _PSLLH(int n) 
+__forceinline void _PSLLH(int n)
 {
 	cpuRegs.GPR.r[_Rd_].US[n] = cpuRegs.GPR.r[_Rt_].US[n] << ( _Sa_ & 0xf );
 }
@@ -266,7 +266,7 @@ void PSLLH() {
 	_PSLLH(4); _PSLLH(5); _PSLLH(6); _PSLLH(7);
 }
 
-__forceinline void _PSRLH(int n) 
+__forceinline void _PSRLH(int n)
 {
 	cpuRegs.GPR.r[_Rd_].US[n] = cpuRegs.GPR.r[_Rt_].US[n] >> ( _Sa_ & 0xf );
 }
@@ -278,7 +278,7 @@ void PSRLH () {
 	_PSRLH(4); _PSRLH(5); _PSRLH(6); _PSRLH(7);
 }
 
-__forceinline void _PSRAH(int n) 
+__forceinline void _PSRAH(int n)
 {
 	cpuRegs.GPR.r[_Rd_].US[n] = cpuRegs.GPR.r[_Rt_].SS[n] >> ( _Sa_ & 0xf );
 }
@@ -290,7 +290,7 @@ void PSRAH() {
 	_PSRAH(4); _PSRAH(5); _PSRAH(6); _PSRAH(7);
 }
 
-__forceinline void _PSLLW(int n) 
+__forceinline void _PSLLW(int n)
 {
 	cpuRegs.GPR.r[_Rd_].UL[n] = cpuRegs.GPR.r[_Rt_].UL[n] << _Sa_;
 }
@@ -301,7 +301,7 @@ void PSLLW() {
 	_PSLLW(0); _PSLLW(1); _PSLLW(2); _PSLLW(3);
 }
 
-__forceinline void _PSRLW(int n) 
+__forceinline void _PSRLW(int n)
 {
 	cpuRegs.GPR.r[_Rd_].UL[n] = cpuRegs.GPR.r[_Rt_].UL[n] >> _Sa_;
 }
@@ -312,7 +312,7 @@ void PSRLW() {
 	_PSRLW(0); _PSRLW(1); _PSRLW(2); _PSRLW(3);
 }
 
-__forceinline void _PSRAW(int n) 
+__forceinline void _PSRAW(int n)
 {
 	cpuRegs.GPR.r[_Rd_].UL[n] = cpuRegs.GPR.r[_Rt_].SL[n] >> _Sa_;
 }
@@ -326,7 +326,7 @@ void PSRAW() {
 //*****************END OF MMI OPCODES**************************
 //*************************MMI0 OPCODES************************
 
-__forceinline void _PADDW(int n) 
+__forceinline void _PADDW(int n)
 {
 	cpuRegs.GPR.r[_Rd_].UL[n] = cpuRegs.GPR.r[_Rs_].UL[n] + cpuRegs.GPR.r[_Rt_].UL[n];
 }
@@ -337,7 +337,7 @@ void PADDW() {
 	_PADDW(0); _PADDW(1); _PADDW(2); _PADDW(3);
 }
 
-__forceinline void _PSUBW(int n) 
+__forceinline void _PSUBW(int n)
 {
 	cpuRegs.GPR.r[_Rd_].UL[n] = cpuRegs.GPR.r[_Rs_].UL[n] - cpuRegs.GPR.r[_Rt_].UL[n];
 }
@@ -348,7 +348,7 @@ void PSUBW() {
 	_PSUBW(0); _PSUBW(1); _PSUBW(2); _PSUBW(3);
 }
 
-__forceinline void _PCGTW(int n) 
+__forceinline void _PCGTW(int n)
 {
 	if (cpuRegs.GPR.r[_Rs_].SL[n] > cpuRegs.GPR.r[_Rt_].SL[n])
 		cpuRegs.GPR.r[_Rd_].UL[n] = 0xFFFFFFFF;
@@ -362,7 +362,7 @@ void PCGTW() {
 	_PCGTW(0);  _PCGTW(1);  _PCGTW(2);  _PCGTW(3);
 }
 
-__forceinline void _PMAXW(int n) 
+__forceinline void _PMAXW(int n)
 {
 	if (cpuRegs.GPR.r[_Rs_].SL[n] > cpuRegs.GPR.r[_Rt_].SL[n])
 		cpuRegs.GPR.r[_Rd_].UL[n] = cpuRegs.GPR.r[_Rs_].UL[n];
@@ -376,7 +376,7 @@ void PMAXW() {
 	_PMAXW(0);  _PMAXW(1);  _PMAXW(2);  _PMAXW(3);
 }
 
-__forceinline void _PADDH(int n) 
+__forceinline void _PADDH(int n)
 {
 	cpuRegs.GPR.r[_Rd_].US[n] = cpuRegs.GPR.r[_Rs_].US[n] + cpuRegs.GPR.r[_Rt_].US[n];
 }
@@ -388,7 +388,7 @@ void PADDH() {
 	_PADDH(4);  _PADDH(5);  _PADDH(6);  _PADDH(7);
 }
 
-__forceinline void _PSUBH(int n) 
+__forceinline void _PSUBH(int n)
 {
 	cpuRegs.GPR.r[_Rd_].US[n] = cpuRegs.GPR.r[_Rs_].US[n] - cpuRegs.GPR.r[_Rt_].US[n];
 }
@@ -400,7 +400,7 @@ void PSUBH() {
 	_PSUBH(4);  _PSUBH(5);  _PSUBH(6);  _PSUBH(7);
 }
 
-__forceinline void _PCGTH(int n) 
+__forceinline void _PCGTH(int n)
 {
 	if (cpuRegs.GPR.r[_Rs_].SS[n] > cpuRegs.GPR.r[_Rt_].SS[n])
 		cpuRegs.GPR.r[_Rd_].US[n] = 0xFFFF;
@@ -415,9 +415,9 @@ void PCGTH() {
 	_PCGTH(4);  _PCGTH(5);  _PCGTH(6);  _PCGTH(7);
 }
 
-__forceinline void _PMAXH(int n) 
+__forceinline void _PMAXH(int n)
 {
-	if (cpuRegs.GPR.r[_Rs_].SS[n] > cpuRegs.GPR.r[_Rt_].SS[n]) 
+	if (cpuRegs.GPR.r[_Rs_].SS[n] > cpuRegs.GPR.r[_Rt_].SS[n])
 		cpuRegs.GPR.r[_Rd_].US[n] =  cpuRegs.GPR.r[_Rs_].US[n];
 	else
 		cpuRegs.GPR.r[_Rd_].US[n] = cpuRegs.GPR.r[_Rt_].US[n];
@@ -430,7 +430,7 @@ void PMAXH() {
 	_PMAXH(4);  _PMAXH(5);  _PMAXH(6);  _PMAXH(7);
 }
 
-__forceinline void _PADDB(int n) 
+__forceinline void _PADDB(int n)
 {
 	cpuRegs.GPR.r[_Rd_].SC[n] = cpuRegs.GPR.r[_Rs_].SC[n] + cpuRegs.GPR.r[_Rt_].SC[n];
 }
@@ -456,7 +456,7 @@ void PSUBB() {
 		_PSUBB( i );
 }
 
-__forceinline void _PCGTB(int n) 
+__forceinline void _PCGTB(int n)
 {
 	if (cpuRegs.GPR.r[_Rs_].SC[n] > cpuRegs.GPR.r[_Rt_].SC[n])
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0xFF;
@@ -472,17 +472,17 @@ void PCGTB() {
 		_PCGTB( i );
 }
 
-__forceinline void _PADDSW(int n) 
+__forceinline void _PADDSW(int n)
 {
 	s64 sTemp64;
-	
-	sTemp64 = (s64)cpuRegs.GPR.r[_Rs_].SL[n] + (s64)cpuRegs.GPR.r[_Rt_].SL[n]; 
+
+	sTemp64 = (s64)cpuRegs.GPR.r[_Rs_].SL[n] + (s64)cpuRegs.GPR.r[_Rt_].SL[n];
 	if (sTemp64 > 0x7FFFFFFF)
-		cpuRegs.GPR.r[_Rd_].UL[n] = 0x7FFFFFFF; 
+		cpuRegs.GPR.r[_Rd_].UL[n] = 0x7FFFFFFF;
 	else if ((sTemp64 < (s32)0x80000000) )
-		cpuRegs.GPR.r[_Rd_].UL[n] = 0x80000000LL; 
-	else 
-		cpuRegs.GPR.r[_Rd_].UL[n] = (s32)sTemp64; 
+		cpuRegs.GPR.r[_Rd_].UL[n] = 0x80000000LL;
+	else
+		cpuRegs.GPR.r[_Rd_].UL[n] = (s32)sTemp64;
 }
 
 void PADDSW() {
@@ -491,14 +491,14 @@ void PADDSW() {
 	_PADDSW(0); _PADDSW(1); _PADDSW(2); _PADDSW(3);
 }
 
-__forceinline void _PSUBSW(int n) 
+__forceinline void _PSUBSW(int n)
 {
 	s64 sTemp64;
-	
-	sTemp64 = (s64)cpuRegs.GPR.r[_Rs_].SL[n] - (s64)cpuRegs.GPR.r[_Rt_].SL[n]; 
-	
+
+	sTemp64 = (s64)cpuRegs.GPR.r[_Rs_].SL[n] - (s64)cpuRegs.GPR.r[_Rt_].SL[n];
+
 	if (sTemp64 >= 0x7FFFFFFF)
-		cpuRegs.GPR.r[_Rd_].UL[n] = 0x7FFFFFFF; 
+		cpuRegs.GPR.r[_Rd_].UL[n] = 0x7FFFFFFF;
 	else if ((sTemp64 < (s32)0x80000000))
 		cpuRegs.GPR.r[_Rd_].UL[n] = 0x80000000;
 	else
@@ -538,17 +538,17 @@ void PPACW() {
 	cpuRegs.GPR.r[_Rd_].UL[3] = Rs.UL[2];
 }
 
-__forceinline void  _PADDSH(int n) 
+__forceinline void  _PADDSH(int n)
 {
 	s32 sTemp32;
-	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].SS[n] + (s32)cpuRegs.GPR.r[_Rt_].SS[n]; 
-	
+	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].SS[n] + (s32)cpuRegs.GPR.r[_Rt_].SS[n];
+
 	if (sTemp32 > 0x7FFF)
-		cpuRegs.GPR.r[_Rd_].US[n] = 0x7FFF; 
-	else if ((sTemp32 < (s32)0xffff8000) ) 
-		cpuRegs.GPR.r[_Rd_].US[n] = 0x8000; 
-	else 
-		cpuRegs.GPR.r[_Rd_].US[n] = (s16)sTemp32; 
+		cpuRegs.GPR.r[_Rd_].US[n] = 0x7FFF;
+	else if ((sTemp32 < (s32)0xffff8000) )
+		cpuRegs.GPR.r[_Rd_].US[n] = 0x8000;
+	else
+		cpuRegs.GPR.r[_Rd_].US[n] = (s16)sTemp32;
 }
 
 void PADDSH() {
@@ -558,16 +558,16 @@ void PADDSH() {
 	_PADDSH(4); _PADDSH(5); _PADDSH(6); _PADDSH(7);
 }
 
-__forceinline void  _PSUBSH(int n) 
+__forceinline void  _PSUBSH(int n)
 {
 	s32 sTemp32;
-	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].SS[n] - (s32)cpuRegs.GPR.r[_Rt_].SS[n]; 
-	
+	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].SS[n] - (s32)cpuRegs.GPR.r[_Rt_].SS[n];
+
 	if (sTemp32 >= 0x7FFF)
 		cpuRegs.GPR.r[_Rd_].US[n] = 0x7FFF;
-	else if ((sTemp32 < (s32)0xffff8000) ) 
-		cpuRegs.GPR.r[_Rd_].US[n] = 0x8000; 
-	else 
+	else if ((sTemp32 < (s32)0xffff8000) )
+		cpuRegs.GPR.r[_Rd_].US[n] = 0x8000;
+	else
 		cpuRegs.GPR.r[_Rd_].US[n] = (s16)sTemp32;
 }
 
@@ -610,17 +610,17 @@ void PPACH() {
 	cpuRegs.GPR.r[_Rd_].US[7] = Rs.US[6];
 }
 
-__forceinline void  _PADDSB(int n) 
+__forceinline void  _PADDSB(int n)
 {
 	s16 sTemp16;
-	sTemp16 = (s16)cpuRegs.GPR.r[_Rs_].SC[n] + (s16)cpuRegs.GPR.r[_Rt_].SC[n]; 
-	
-	if (sTemp16 > 0x7F) 
-		cpuRegs.GPR.r[_Rd_].UC[n] = 0x7F; 
-	else if (sTemp16 < (s16)0xff80) 
-		cpuRegs.GPR.r[_Rd_].UC[n] = 0x80; 
-	else 
-		cpuRegs.GPR.r[_Rd_].UC[n] = (s8)sTemp16; 
+	sTemp16 = (s16)cpuRegs.GPR.r[_Rs_].SC[n] + (s16)cpuRegs.GPR.r[_Rt_].SC[n];
+
+	if (sTemp16 > 0x7F)
+		cpuRegs.GPR.r[_Rd_].UC[n] = 0x7F;
+	else if (sTemp16 < (s16)0xff80)
+		cpuRegs.GPR.r[_Rd_].UC[n] = 0x80;
+	else
+		cpuRegs.GPR.r[_Rd_].UC[n] = (s8)sTemp16;
 }
 
 void PADDSB() {
@@ -628,19 +628,19 @@ void PADDSB() {
 	if (!_Rd_) return;
 
 	for( i=0; i<16; i++ )
-		_PADDSB(i); 
+		_PADDSB(i);
 }
 
 static __forceinline void _PSUBSB( u8 n )
 {
 	s16 sTemp16;
-	sTemp16 = (s16)cpuRegs.GPR.r[_Rs_].SC[n] - (s16)cpuRegs.GPR.r[_Rt_].SC[n]; 
-	
-	if (sTemp16 >= 0x7F) 
+	sTemp16 = (s16)cpuRegs.GPR.r[_Rs_].SC[n] - (s16)cpuRegs.GPR.r[_Rt_].SC[n];
+
+	if (sTemp16 >= 0x7F)
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0x7F;
 	else if (sTemp16 <= (s16)0xff80)
-		cpuRegs.GPR.r[_Rd_].UC[n] = 0x80; 
-	else 
+		cpuRegs.GPR.r[_Rd_].UC[n] = 0x80;
+	else
 		cpuRegs.GPR.r[_Rd_].UC[n] = (s8)sTemp16;
 }
 
@@ -649,7 +649,7 @@ void PSUBSB() {
 	if (!_Rd_) return;
 
 	for( i=0; i<16; i++ )
-		_PSUBSB(i);  
+		_PSUBSB(i);
 }
 
 void PEXTLB() {
@@ -706,7 +706,7 @@ void PPACB() {
 	cpuRegs.GPR.r[_Rd_].UC[15] = Rs.UC[14];
 }
 
-__forceinline void  _PEXT5(int n) 
+__forceinline void  _PEXT5(int n)
 {
 	cpuRegs.GPR.r[_Rd_].UL[n] =
 		((cpuRegs.GPR.r[_Rt_].UL[n] & 0x0000001F) <<  3) |
@@ -721,7 +721,7 @@ void PEXT5() {
 	_PEXT5(0); _PEXT5(1); _PEXT5(2); _PEXT5(3);
 }
 
-__forceinline void  _PPAC5(int n) 
+__forceinline void  _PPAC5(int n)
 {
 	cpuRegs.GPR.r[_Rd_].UL[n] =
 		((cpuRegs.GPR.r[_Rt_].UL[n] >>  3) & 0x0000001F) |
@@ -739,7 +739,7 @@ void PPAC5() {
 //***END OF MMI0 OPCODES******************************************
 //**********MMI1 OPCODES**************************************
 
-__forceinline void _PABSW(int n) 
+__forceinline void _PABSW(int n)
 {
 	if (cpuRegs.GPR.r[_Rt_].UL[n] == 0x80000000)
 		cpuRegs.GPR.r[_Rd_].UL[n] = 0x7fffffff; //clamp
@@ -755,7 +755,7 @@ void PABSW() {
 	_PABSW(0);  _PABSW(1);  _PABSW(2);  _PABSW(3);
 }
 
-__forceinline void _PCEQW(int n) 
+__forceinline void _PCEQW(int n)
 {
 	if (cpuRegs.GPR.r[_Rs_].UL[n] == cpuRegs.GPR.r[_Rt_].UL[n])
 		cpuRegs.GPR.r[_Rd_].UL[n] = 0xFFFFFFFF;
@@ -809,7 +809,7 @@ void PABSH() {
 
 static __forceinline void  _PCEQH( u8 n )
 {
-	if (cpuRegs.GPR.r[_Rs_].US[n] == cpuRegs.GPR.r[_Rt_].US[n]) 
+	if (cpuRegs.GPR.r[_Rs_].US[n] == cpuRegs.GPR.r[_Rt_].US[n])
 		cpuRegs.GPR.r[_Rd_].US[n] = 0xFFFF;
 	else
 		cpuRegs.GPR.r[_Rd_].US[n] = 0x0000;
@@ -837,12 +837,12 @@ void PMINH() {
 	_PMINH(4); _PMINH(5); _PMINH(6); _PMINH(7);
 }
 
-__forceinline void  _PCEQB(int n) 
+__forceinline void  _PCEQB(int n)
 {
 	if (cpuRegs.GPR.r[_Rs_].UC[n] == cpuRegs.GPR.r[_Rt_].UC[n])
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0xFF;
 	else
-		cpuRegs.GPR.r[_Rd_].UC[n] = 0x00;	
+		cpuRegs.GPR.r[_Rd_].UC[n] = 0x00;
 }
 
 void PCEQB() {
@@ -850,17 +850,17 @@ void PCEQB() {
 	if (!_Rd_) return;
 
 	for( i=0; i<16; i++ )
-		_PCEQB(i); 
+		_PCEQB(i);
 }
 
-__forceinline void  _PADDUW(int n) 
+__forceinline void  _PADDUW(int n)
 {
 	s64 tmp;
-	tmp = (s64)cpuRegs.GPR.r[_Rs_].UL[n] + (s64)cpuRegs.GPR.r[_Rt_].UL[n]; 
-	
-	if (tmp > 0xffffffff) 
-		 cpuRegs.GPR.r[_Rd_].UL[n] = 0xffffffff; 
-	else 
+	tmp = (s64)cpuRegs.GPR.r[_Rs_].UL[n] + (s64)cpuRegs.GPR.r[_Rt_].UL[n];
+
+	if (tmp > 0xffffffff)
+		 cpuRegs.GPR.r[_Rd_].UL[n] = 0xffffffff;
+	else
 		cpuRegs.GPR.r[_Rd_].UL[n] = (u32)tmp;
 }
 
@@ -870,14 +870,14 @@ void PADDUW () {
 	_PADDUW(0); _PADDUW(1); _PADDUW(2); _PADDUW(3);
 }
 
-__forceinline void  _PSUBUW(int n) 
+__forceinline void  _PSUBUW(int n)
 {
 	s64 sTemp64;
-	sTemp64 = (s64)cpuRegs.GPR.r[_Rs_].UL[n] - (s64)cpuRegs.GPR.r[_Rt_].UL[n]; 
-	
-	if (sTemp64 <= 0x0) 
-		cpuRegs.GPR.r[_Rd_].UL[n] = 0x0; 
-	else 
+	sTemp64 = (s64)cpuRegs.GPR.r[_Rs_].UL[n] - (s64)cpuRegs.GPR.r[_Rt_].UL[n];
+
+	if (sTemp64 <= 0x0)
+		cpuRegs.GPR.r[_Rd_].UL[n] = 0x0;
+	else
 		cpuRegs.GPR.r[_Rd_].UL[n] = (u32)sTemp64;
 }
 
@@ -899,13 +899,13 @@ void PEXTUW() {
 	cpuRegs.GPR.r[_Rd_].UL[3] = Rs.UL[3];
 }
 
-__forceinline void  _PADDUH(int n) 
+__forceinline void  _PADDUH(int n)
 {
 	s32 sTemp32;
-	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].US[n] + (s32)cpuRegs.GPR.r[_Rt_].US[n]; 
-	
+	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].US[n] + (s32)cpuRegs.GPR.r[_Rt_].US[n];
+
 	if (sTemp32 > 0xFFFF)
-		cpuRegs.GPR.r[_Rd_].US[n] = 0xFFFF; 
+		cpuRegs.GPR.r[_Rd_].US[n] = 0xFFFF;
 	else
 		cpuRegs.GPR.r[_Rd_].US[n] = (u16)sTemp32;
 }
@@ -917,15 +917,15 @@ void PADDUH() {
 	_PADDUH(4); _PADDUH(5); _PADDUH(6); _PADDUH(7);
 }
 
-__forceinline void  _PSUBUH(int n) 
+__forceinline void  _PSUBUH(int n)
 {
 	s32 sTemp32;
-	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].US[n] - (s32)cpuRegs.GPR.r[_Rt_].US[n]; 
-	
+	sTemp32 = (s32)cpuRegs.GPR.r[_Rs_].US[n] - (s32)cpuRegs.GPR.r[_Rt_].US[n];
+
 	if (sTemp32 <= 0x0)
-		cpuRegs.GPR.r[_Rd_].US[n] = 0x0; 
+		cpuRegs.GPR.r[_Rd_].US[n] = 0x0;
 	else
-		cpuRegs.GPR.r[_Rd_].US[n] = (u16)sTemp32; 
+		cpuRegs.GPR.r[_Rd_].US[n] = (u16)sTemp32;
 }
 
 void PSUBUH() {
@@ -952,15 +952,15 @@ void PEXTUH() {
 	cpuRegs.GPR.r[_Rd_].US[7] = Rs.US[7];
 }
 
-__forceinline void  _PADDUB(int n) 
+__forceinline void  _PADDUB(int n)
 {
 	u16 Temp16;
-	Temp16 = (u16)cpuRegs.GPR.r[_Rs_].UC[n] + (u16)cpuRegs.GPR.r[_Rt_].UC[n]; 
-	
+	Temp16 = (u16)cpuRegs.GPR.r[_Rs_].UC[n] + (u16)cpuRegs.GPR.r[_Rt_].UC[n];
+
 	if (Temp16 > 0xFF)
-		cpuRegs.GPR.r[_Rd_].UC[n] = 0xFF; 
+		cpuRegs.GPR.r[_Rd_].UC[n] = 0xFF;
 	else
-		cpuRegs.GPR.r[_Rd_].UC[n] = (u8)Temp16; 
+		cpuRegs.GPR.r[_Rd_].UC[n] = (u8)Temp16;
 }
 
 void PADDUB() {
@@ -968,14 +968,14 @@ void PADDUB() {
 	if (!_Rd_) return;
 
 	for( i=0; i<16; i++ )
-		 _PADDUB(i); 
+		 _PADDUB(i);
 }
 
 __forceinline void  _PSUBUB(int n) {
 	s16 sTemp16;
-	sTemp16 = (s16)cpuRegs.GPR.r[_Rs_].UC[n] - (s16)cpuRegs.GPR.r[_Rt_].UC[n]; 
-	
-	if (sTemp16 <= 0x0) 
+	sTemp16 = (s16)cpuRegs.GPR.r[_Rs_].UC[n] - (s16)cpuRegs.GPR.r[_Rt_].UC[n];
+
+	if (sTemp16 <= 0x0)
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0x0;
 	else
 		cpuRegs.GPR.r[_Rd_].UC[n] = (u8)sTemp16;
@@ -1060,15 +1060,15 @@ void QFSRV() {				// JayteeMaster: changed a bit to avoid screw up
 
 //*********MMI2 OPCODES***************************************
 
-__forceinline void _PMADDW(int dd, int ss) 
-{ 
-	s64 temp = (s64)((s64)cpuRegs.LO.SL[ss] | ((s64)cpuRegs.HI.SL[ss] << 32)) + 
-			   ((s64)cpuRegs.GPR.r[_Rs_].SL[ss] * (s64)cpuRegs.GPR.r[_Rt_].SL[ss]); 
+__forceinline void _PMADDW(int dd, int ss)
+{
+	s64 temp = (s64)((s64)cpuRegs.LO.SL[ss] | ((s64)cpuRegs.HI.SL[ss] << 32)) +
+			   ((s64)cpuRegs.GPR.r[_Rs_].SL[ss] * (s64)cpuRegs.GPR.r[_Rt_].SL[ss]);
 
-	cpuRegs.LO.SD[dd] = (s32)(temp & 0xffffffff); 
-	cpuRegs.HI.SD[dd] = (s32)(temp >> 32); 
+	cpuRegs.LO.SD[dd] = (s32)(temp & 0xffffffff);
+	cpuRegs.HI.SD[dd] = (s32)(temp >> 32);
 
-	if (_Rd_) cpuRegs.GPR.r[_Rd_].SD[dd] = temp; 
+	if (_Rd_) cpuRegs.GPR.r[_Rd_].SD[dd] = temp;
 }
 
 void PMADDW() {
@@ -1094,15 +1094,15 @@ void PSRLVW() {
 										  (cpuRegs.GPR.r[_Rs_].UL[2] & 0x1F));
 }
 
-__forceinline void  _PMSUBW(int dd, int ss) 
-{ 
-	s64 temp = (s64)((s64)cpuRegs.LO.SL[ss] | ((s64)cpuRegs.HI.SL[ss] << 32)) - 
-			   ((s64)cpuRegs.GPR.r[_Rs_].SL[ss] * (s64)cpuRegs.GPR.r[_Rt_].SL[ss]); 
+__forceinline void  _PMSUBW(int dd, int ss)
+{
+	s64 temp = (s64)((s64)cpuRegs.LO.SL[ss] | ((s64)cpuRegs.HI.SL[ss] << 32)) -
+			   ((s64)cpuRegs.GPR.r[_Rs_].SL[ss] * (s64)cpuRegs.GPR.r[_Rt_].SL[ss]);
 
-	cpuRegs.LO.SD[dd] = (s32)(temp & 0xffffffff); 
-	cpuRegs.HI.SD[dd] = (s32)(temp >> 32); 
+	cpuRegs.LO.SD[dd] = (s32)(temp & 0xffffffff);
+	cpuRegs.HI.SD[dd] = (s32)(temp >> 32);
 
-	if (_Rd_) cpuRegs.GPR.r[_Rd_].SD[dd] = temp; 
+	if (_Rd_) cpuRegs.GPR.r[_Rd_].SD[dd] = temp;
 }
 
 void PMSUBW() {
@@ -1140,14 +1140,14 @@ void PINTH() {
 	cpuRegs.GPR.r[_Rd_].US[7] = Rs.US[7];
 }
 
-__forceinline void  _PMULTW(int dd, int ss) 
-{ 
-	s64 temp = (s64)cpuRegs.GPR.r[_Rs_].SL[ss] * (s64)cpuRegs.GPR.r[_Rt_].SL[ss]; 
+__forceinline void  _PMULTW(int dd, int ss)
+{
+	s64 temp = (s64)cpuRegs.GPR.r[_Rs_].SL[ss] * (s64)cpuRegs.GPR.r[_Rt_].SL[ss];
 
-	cpuRegs.LO.UD[dd] = (s32)(temp & 0xffffffff); 
-	cpuRegs.HI.UD[dd] = (s32)(temp >> 32); 
+	cpuRegs.LO.UD[dd] = (s32)(temp & 0xffffffff);
+	cpuRegs.HI.UD[dd] = (s32)(temp >> 32);
 
-	if (_Rd_) cpuRegs.GPR.r[_Rd_].SD[dd] = temp; 
+	if (_Rd_) cpuRegs.GPR.r[_Rd_].SD[dd] = temp;
 }
 
 void PMULTW() {
@@ -1163,9 +1163,9 @@ __forceinline void  _PDIVW(int dd, int ss)
 		cpuRegs.HI.SD[dd] = (s32)0;
 	}
 	else if (cpuRegs.GPR.r[_Rt_].SL[ss] != 0)
-	{ 
-		cpuRegs.LO.SD[dd] = cpuRegs.GPR.r[_Rs_].SL[ss] / cpuRegs.GPR.r[_Rt_].SL[ss]; 
-		cpuRegs.HI.SD[dd] = cpuRegs.GPR.r[_Rs_].SL[ss] % cpuRegs.GPR.r[_Rt_].SL[ss]; 
+	{
+		cpuRegs.LO.SD[dd] = cpuRegs.GPR.r[_Rs_].SL[ss] / cpuRegs.GPR.r[_Rt_].SL[ss];
+		cpuRegs.HI.SD[dd] = cpuRegs.GPR.r[_Rs_].SL[ss] % cpuRegs.GPR.r[_Rt_].SL[ss];
 	}
 	else
 	{
@@ -1229,21 +1229,21 @@ void PMADDH() {			// JayteeMaster: changed a bit to avoid screw up
 }
 
 // JayteeMaster: changed a bit to avoid screw up
-__forceinline void  _PHMADH_LO(int dd, int n) 
-{ 
+__forceinline void  _PHMADH_LO(int dd, int n)
+{
 	s32 firsttemp =		   (s32)cpuRegs.GPR.r[_Rs_].SS[n+1] * (s32)cpuRegs.GPR.r[_Rt_].SS[n+1];
-	s32 temp = firsttemp + (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n]; 
+	s32 temp = firsttemp + (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n];
 
-	cpuRegs.LO.UL[dd] = temp; 
-	cpuRegs.LO.UL[dd+1] = firsttemp; 
+	cpuRegs.LO.UL[dd] = temp;
+	cpuRegs.LO.UL[dd+1] = firsttemp;
 }
 
-__forceinline void  _PHMADH_HI(int dd, int n) 
-{ 
+__forceinline void  _PHMADH_HI(int dd, int n)
+{
 	s32 firsttemp =		   (s32)cpuRegs.GPR.r[_Rs_].SS[n+1] * (s32)cpuRegs.GPR.r[_Rt_].SS[n+1];
-	s32 temp = firsttemp + (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n]; 
+	s32 temp = firsttemp + (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n];
 
-	cpuRegs.HI.UL[dd] = temp; 
+	cpuRegs.HI.UL[dd] = temp;
 	cpuRegs.HI.UL[dd+1] = firsttemp;
 }
 
@@ -1314,21 +1314,21 @@ void PMSUBH() {			// JayteeMaster: changed a bit to avoid screw up
 }
 
 // JayteeMaster: changed a bit to avoid screw up
-__forceinline void _PHMSBH_LO(int dd, int n, int rdd) 
-{ 
+__forceinline void _PHMSBH_LO(int dd, int n, int rdd)
+{
 	s32 firsttemp =        (s32)cpuRegs.GPR.r[_Rs_].SS[n+1] * (s32)cpuRegs.GPR.r[_Rt_].SS[n+1];
-	s32 temp = firsttemp - (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n]; 
+	s32 temp = firsttemp - (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n];
 
-	cpuRegs.LO.UL[dd] = temp; 
-	cpuRegs.LO.UL[dd+1] = ~firsttemp; 
+	cpuRegs.LO.UL[dd] = temp;
+	cpuRegs.LO.UL[dd+1] = ~firsttemp;
 }
-__forceinline void _PHMSBH_HI(int dd, int n, int rdd) 
-{ 
+__forceinline void _PHMSBH_HI(int dd, int n, int rdd)
+{
 	s32 firsttemp =        (s32)cpuRegs.GPR.r[_Rs_].SS[n+1] * (s32)cpuRegs.GPR.r[_Rt_].SS[n+1];
-	s32 temp = firsttemp - (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n]; 
+	s32 temp = firsttemp - (s32)cpuRegs.GPR.r[_Rs_].SS[n]   * (s32)cpuRegs.GPR.r[_Rt_].SS[n];
 
-	cpuRegs.HI.UL[dd] = temp; 
-	cpuRegs.HI.UL[dd+1] = ~firsttemp; 
+	cpuRegs.HI.UL[dd] = temp;
+	cpuRegs.HI.UL[dd+1] = ~firsttemp;
 }
 
 void PHMSBH() {		// JayteeMaster: changed a bit to avoid screw up
@@ -1415,7 +1415,7 @@ void PMULTH() {			// JayteeMaster: changed a bit to avoid screw up
 	}
 }
 
-__forceinline void  _PDIVBW(int n) 
+__forceinline void  _PDIVBW(int n)
 {
 	if (cpuRegs.GPR.r[_Rs_].UL[n] == 0x80000000 && cpuRegs.GPR.r[_Rt_].US[0] == 0xffff)
 	{
@@ -1466,15 +1466,15 @@ void PROT3W() {
 
 //*************************MMI3 OPCODES************************
 
-__forceinline void _PMADDUW(int dd, int ss) 
-{ 
+__forceinline void _PMADDUW(int dd, int ss)
+{
 	u64 tempu =	(u64)((u64)cpuRegs.LO.UL[ss] | ((u64)cpuRegs.HI.UL[ss] << 32)) + \
-			   ((u64)cpuRegs.GPR.r[_Rs_].UL[ss] * (u64)cpuRegs.GPR.r[_Rt_].UL[ss]); 
+			   ((u64)cpuRegs.GPR.r[_Rs_].UL[ss] * (u64)cpuRegs.GPR.r[_Rt_].UL[ss]);
 
-	cpuRegs.LO.SD[dd] = (s32)(tempu & 0xffffffff); 
-	cpuRegs.HI.SD[dd] = (s32)(tempu >> 32); 
+	cpuRegs.LO.SD[dd] = (s32)(tempu & 0xffffffff);
+	cpuRegs.HI.SD[dd] = (s32)(tempu >> 32);
 
-	if (_Rd_) cpuRegs.GPR.r[_Rd_].UD[dd] = tempu; 
+	if (_Rd_) cpuRegs.GPR.r[_Rd_].UD[dd] = tempu;
 }
 
 void PMADDUW() {
@@ -1517,14 +1517,14 @@ void PINTEH() {
 	cpuRegs.GPR.r[_Rd_].US[7] = Rs.US[6];
 }
 
-__forceinline void  _PMULTUW(int dd, int ss) 
-{ 
-   u64 tempu = (u64)cpuRegs.GPR.r[_Rs_].UL[ss] * (u64)cpuRegs.GPR.r[_Rt_].UL[ss]; 
+__forceinline void  _PMULTUW(int dd, int ss)
+{
+   u64 tempu = (u64)cpuRegs.GPR.r[_Rs_].UL[ss] * (u64)cpuRegs.GPR.r[_Rt_].UL[ss];
 
-   cpuRegs.LO.UD[dd] = (s32)(tempu & 0xffffffff); 
-   cpuRegs.HI.UD[dd] = (s32)(tempu >> 32); 
+   cpuRegs.LO.UD[dd] = (s32)(tempu & 0xffffffff);
+   cpuRegs.HI.UD[dd] = (s32)(tempu >> 32);
 
-   if (_Rd_) cpuRegs.GPR.r[_Rd_].UD[dd] = tempu; 
+   if (_Rd_) cpuRegs.GPR.r[_Rd_].UD[dd] = tempu;
 }
 
 
@@ -1533,11 +1533,11 @@ void PMULTUW() {
 	_PMULTUW(1, 2);
 }
 
-__forceinline void  _PDIVUW(int dd, int ss) 
+__forceinline void  _PDIVUW(int dd, int ss)
 {
-	if (cpuRegs.GPR.r[_Rt_].UL[ss] != 0) { 
-		cpuRegs.LO.SD[dd] = (s32)(cpuRegs.GPR.r[_Rs_].UL[ss] / cpuRegs.GPR.r[_Rt_].UL[ss]); 
-		cpuRegs.HI.SD[dd] = (s32)(cpuRegs.GPR.r[_Rs_].UL[ss] % cpuRegs.GPR.r[_Rt_].UL[ss]); 
+	if (cpuRegs.GPR.r[_Rt_].UL[ss] != 0) {
+		cpuRegs.LO.SD[dd] = (s32)(cpuRegs.GPR.r[_Rs_].UL[ss] / cpuRegs.GPR.r[_Rt_].UL[ss]);
+		cpuRegs.HI.SD[dd] = (s32)(cpuRegs.GPR.r[_Rs_].UL[ss] % cpuRegs.GPR.r[_Rt_].UL[ss]);
 	}
 	else
 	{
@@ -1618,7 +1618,7 @@ void PEXCW() {
 	cpuRegs.GPR.r[_Rd_].UL[3] = Rt.UL[3];
 }
 
-//**********************END OF MMI3 OPCODES******************** 
+//**********************END OF MMI3 OPCODES********************
 
 // obs:
 // QFSRV not verified

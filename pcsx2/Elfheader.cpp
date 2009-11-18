@@ -584,7 +584,7 @@ void loadElfFile(const wxString& filename)
 		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
 		{
 			strcpy( (char*)PSM( i ), fnptr );
-			DevCon.WriteLn( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr.data()  );
+			DevCon.WriteLn( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr.data() );
 		}
 	}
 	ElfCRC = elfobj.GetCRC();

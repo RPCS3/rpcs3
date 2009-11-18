@@ -16,9 +16,9 @@
 #pragma once
 
 // Register counts for x86/32 mode:
-static const uint iREGCNT_XMM = 8;
-static const uint iREGCNT_GPR = 8;
-static const uint iREGCNT_MMX = 8;
+static const int iREGCNT_XMM = 8;
+static const int iREGCNT_GPR = 8;
+static const int iREGCNT_MMX = 8;
 
 enum XMMSSEType
 {
@@ -72,7 +72,7 @@ template< typename T > void xWrite( T val );
 #endif
 
 // --------------------------------------------------------------------------------------
-//  __emitline - preprocessors definition 
+//  __emitline - preprocessors definition
 // --------------------------------------------------------------------------------------
 // This is configured to inline emitter functions appropriately for release builds, and
 // disables some of the more aggressive inlines for dev builds (which can be helpful when
@@ -168,12 +168,12 @@ template< typename T > void xWrite( T val );
 	// --------------------------------------------------------------------------------------
 	class OperandSizedObject
 	{
-	public:	
+	public:
 		virtual uint GetOperandSize() const=0;
 
 		bool Is8BitOp() const		{ return GetOperandSize() == 1; }
 		void prefix16() const		{ if( GetOperandSize() == 2 ) xWrite8( 0x66 ); }
-		
+
 		void xWriteImm( int imm ) const
 		{
 			switch( GetOperandSize() )
@@ -195,7 +195,7 @@ template< typename T > void xWrite( T val );
 	// Represents an invalid or uninitialized register.  If this is encountered by the emitter it
 	// will generate an assertion.
 	static const int xRegId_Invalid	= -2;
-	
+
 	// --------------------------------------------------------------------------------------
 	//  xRegisterBase  -  type-unsafe x86 register representation.
 	// --------------------------------------------------------------------------------------
@@ -235,7 +235,7 @@ template< typename T > void xWrite( T val );
 		// is a valid non-null string for any Id, valid or invalid.  No assertions are generated.
 		const char* GetName();
 	};
-	
+
 	class xRegisterInt : public xRegisterBase
 	{
 		typedef xRegisterBase _parent;
@@ -261,7 +261,7 @@ template< typename T > void xWrite( T val );
 	public:
 		xRegister8(): _parent() {}
 		explicit xRegister8( int regId ) : _parent( regId ) {}
-		
+
 		virtual uint GetOperandSize() const { return 1; }
 
 		bool operator==( const xRegister8& src ) const	{ return Id == src.Id; }
@@ -281,7 +281,7 @@ template< typename T > void xWrite( T val );
 		bool operator==( const xRegister16& src ) const	{ return this->Id == src.Id; }
 		bool operator!=( const xRegister16& src ) const	{ return this->Id != src.Id; }
 	};
-	
+
 	class xRegister32 : public xRegisterInt
 	{
 		typedef xRegisterInt _parent;
@@ -295,7 +295,7 @@ template< typename T > void xWrite( T val );
 		bool operator==( const xRegister32& src ) const	{ return this->Id == src.Id; }
 		bool operator!=( const xRegister32& src ) const	{ return this->Id != src.Id; }
 	};
-	
+
 	// --------------------------------------------------------------------------------------
 	//  xRegisterMMX/SSE  -  Represents either a 64 bit or 128 bit SIMD register
 	// --------------------------------------------------------------------------------------
@@ -424,7 +424,7 @@ template< typename T > void xWrite( T val );
 			return &m_convtype;
 		}
 	};
-	
+
 	extern const xRegisterEmpty xEmptyReg;
 
 	// --------------------------------------------------------------------------------------
@@ -512,7 +512,7 @@ template< typename T > void xWrite( T val );
 	extern const xRegisterCL cl;		// I'm special!
 
 	// --------------------------------------------------------------------------------------
-	//  xImmReg< typename xRegType > 
+	//  xImmReg< typename xRegType >
 	// --------------------------------------------------------------------------------------
 	// Used to represent an immediate value which can also be optimized to a register. Note
 	// that the immediate value represented by this structure is *always* legal.  The register
@@ -541,12 +541,12 @@ template< typename T > void xWrite( T val );
 		}
 
 		const xRegType& GetReg() const { return m_reg; }
-		const int GetImm() const { return m_imm; }
+		int GetImm() const { return m_imm; }
 		bool IsReg() const { return !m_reg.IsEmpty(); }
 	};
 
 	// --------------------------------------------------------------------------------------
-	//  ModSib - Internal low-level representation of the ModRM/SIB information. 
+	//  ModSib - Internal low-level representation of the ModRM/SIB information.
 	// --------------------------------------------------------------------------------------
 	// This class serves two purposes:  It houses 'reduced' ModRM/SIB info only, which means
 	// that the Base, Index, Scale, and Displacement values are all in the correct arrange-
@@ -636,7 +636,7 @@ template< typename T > void xWrite( T val );
 		ModSib32orLess( xAddressReg base, xAddressReg index, int scale=0, s32 displacement=0 ) :
 			_parent( base, index, scale, displacement ) {}
 	};
-	
+
 	// --------------------------------------------------------------------------------------
 	//  ModSib8/16/32/64/128
 	// --------------------------------------------------------------------------------------
@@ -678,7 +678,7 @@ template< typename T > void xWrite( T val );
 			return !operator==( src ); \
 		} \
 	}
-	
+
 	DECLARE_CLASS_ModSibBits( 8, ModSib32orLess );
 	DECLARE_CLASS_ModSibBits( 16, ModSib32orLess );
 	DECLARE_CLASS_ModSibBits( 32, ModSib32orLess );
