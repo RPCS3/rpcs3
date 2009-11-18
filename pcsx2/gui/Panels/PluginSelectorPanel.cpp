@@ -212,8 +212,6 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 	s_main.Add( &s_plugin, wxSizerFlags().Expand() );
 	s_main.AddSpacer( 6 );
 	s_main.Add( &m_FolderPicker, pxSizerFlags::StdExpand() );
-
-	SetSizer( &s_main );
 }
 
 void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
@@ -440,6 +438,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	int sel = m_ComponentBoxes->Get(pid).GetSelection();
 	if( sel == wxNOT_FOUND ) return;
 	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes->Get(pid).GetClientData(sel)] );
+
 	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
 	{
 		bool resume = CoreThread.Suspend();
@@ -545,11 +544,11 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 //  EnumThread   method implementations
 // --------------------------------------------------------------------------------------
 
-Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master ) :
-	PersistentThread()
-,	Results( master.FileCount(), L"PluginSelectorResults" )
-,	m_master( master )
-,	m_hourglass( Cursor_KindaBusy )
+Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master )
+	: PersistentThread()
+	, Results( master.FileCount(), L"PluginSelectorResults" )
+	, m_master( master )
+	, m_hourglass( Cursor_KindaBusy )
 {
 	Results.MatchLengthToAllocatedSize();
 }

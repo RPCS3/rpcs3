@@ -78,6 +78,5 @@ Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent ) :
 		) );
 
 	s_main.AddSpacer( 5 );
-	SetSizer( &s_main );
 }
 

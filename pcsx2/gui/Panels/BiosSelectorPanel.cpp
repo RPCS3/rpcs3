@@ -91,8 +91,6 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
 	sizer.Add( &m_ComboBox, pxSizerFlags::StdExpand() );
 	sizer.AddSpacer( 6 );
 	sizer.Add( &m_FolderPicker, pxSizerFlags::StdExpand() );
-
-	SetSizer( &sizer );
 }
 
 Panels::BiosSelectorPanel::~BiosSelectorPanel() throw ()

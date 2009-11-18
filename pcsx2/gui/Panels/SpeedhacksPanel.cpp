@@ -252,7 +252,6 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent ) :
 	heading->AddTo( mainSizer );
 	mainSizer.Add( s_table, wxSizerFlags().Expand() );
 	mainSizer.Add( &DefEnableSizer, wxSizerFlags().Expand() );
-	SetSizer( &mainSizer );
 
 	// ------------------------------------------------------------------------
 

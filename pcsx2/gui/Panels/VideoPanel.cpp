@@ -190,8 +190,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	s_winsize.Add( &s_customsize, StdSpace().Border( wxLEFT | wxRIGHT | wxBOTTOM) );
 
 
-	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
-	SetSizer( &s_main );
+	wxSizer& s_main( *GetSizer() );
 
 	s_main.Add( &s_winsize, StdSpace() );
 	

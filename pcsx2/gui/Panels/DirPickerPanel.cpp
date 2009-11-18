@@ -122,7 +122,6 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& msg )
 {
 	InsertStaticTextAt( this, *GetSizer(), 0, msg );
-	//SetSizer( GetSizer(), false );
 	return *this;
 }
 
