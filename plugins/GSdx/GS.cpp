@@ -366,6 +366,8 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
+	if( !GSUtil::CheckSSE() ) return;
+
 	if( GSSettingsDlg().DoModal() == IDOK )
 	{
 		if( s_gs != NULL && s_gs->m_wnd.IsManaged() )

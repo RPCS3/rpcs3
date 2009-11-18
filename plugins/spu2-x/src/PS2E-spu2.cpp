@@ -103,6 +103,19 @@ static void InitLibraryName()
 
 }
 
+#include "x86emitter/tools.h"
+
+static bool CheckSSE()
+{
+	cpudetectInit();
+	if( !x86caps.hasStreamingSIMDExtensions || !x86caps.hasStreamingSIMD2Extensions )
+	{
+		SysMessage( "Your CPU does not support SSE2 instructions.\nThe SPU2-X plugin requires SSE2 to run." );
+		return false;
+	}
+	return true;
+}
+
 EXPORT_C_(u32) PS2EgetLibType() 
 {
 	return PS2E_LT_SPU2;
@@ -121,6 +134,7 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 
 EXPORT_C_(void) SPU2configure()
 {
+	if( !CheckSSE() ) return;
 	configure();
 }
 
@@ -129,16 +143,9 @@ EXPORT_C_(void) SPU2about()
 	AboutBox();
 }
 
-#include "x86emitter/tools.h"
-
 EXPORT_C_(s32) SPU2test()
 {
-	cpudetectInit();
-	if( !x86caps.hasStreamingSIMDExtensions || !x86caps.hasStreamingSIMD2Extensions )
-	{
-		SysMessage( "Your CPU does not support SSE2 instructions.\nThe SPU2-X plugin requires SSE2 to run." );
-		return -1;
-	}
+	if( !CheckSSE() ) return -1;
 
 	ReadSettings();
 	if( SndBuffer::Test() != 0 )
