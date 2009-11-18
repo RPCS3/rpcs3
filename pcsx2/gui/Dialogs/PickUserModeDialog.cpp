@@ -21,11 +21,12 @@
 using namespace wxHelpers;
 using namespace Panels;
 
-Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id ) :
-	wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
-,	m_panel_usersel( new UsermodeSelectionPanel( *this, 620, false ) )
-,	m_panel_langsel( new LanguageSelectionPanel( *this, 620 ) )
+Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id )
+	: wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
 {
+	m_panel_usersel = new UsermodeSelectionPanel( this, false );
+	m_panel_langsel = new LanguageSelectionPanel( this );
+
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 
 	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );

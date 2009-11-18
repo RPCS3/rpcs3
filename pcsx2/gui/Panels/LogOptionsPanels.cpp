@@ -188,12 +188,13 @@ void Panels::iopLogOptionsPanel::OnSettingsChanged()
 // --------------------------------------------------------------------------------------
 //  LogOptionsPanel Implementations
 // --------------------------------------------------------------------------------------
-Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent, int idealWidth )
-	: BaseApplicableConfigPanel( parent, idealWidth )
+Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 	, m_eeSection	( *new eeLogOptionsPanel( this ) )
 	, m_iopSection	( *new iopLogOptionsPanel( this ) )
 {
-	wxBoxSizer& mainsizer			= *new wxBoxSizer( wxVERTICAL );
+	wxSizer& s_main( *GetSizer() );
+
 	wxBoxSizer& topSizer			= *new wxBoxSizer( wxHORIZONTAL );
 
 	wxStaticBoxSizer&	s_misc		= *new wxStaticBoxSizer( wxHORIZONTAL, this, L"Misc" );
@@ -215,13 +216,12 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent, int idealWidth )
 	topSizer.Add( &m_eeSection, StdSpace() );
 	topSizer.Add( &m_iopSection, StdSpace() );
 
-	mainsizer.Add( m_masterEnabler, StdSpace() );
-	mainsizer.Add( new wxStaticLine( this, wxID_ANY ), StdExpand().Border(wxLEFT | wxRIGHT, 20) );
-	mainsizer.AddSpacer( 5 );
-	mainsizer.Add( &topSizer );
-	mainsizer.Add( &s_misc, StdSpace().Centre() );
+	s_main.Add( m_masterEnabler, StdSpace() );
+	s_main.Add( new wxStaticLine( this, wxID_ANY ), StdExpand().Border(wxLEFT | wxRIGHT, 20) );
+	s_main.AddSpacer( 5 );
+	s_main.Add( &topSizer );
+	s_main.Add( &s_misc, StdSpace().Centre() );
 
-	SetSizer( &mainsizer );
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );
 	
 	OnSettingsChanged();

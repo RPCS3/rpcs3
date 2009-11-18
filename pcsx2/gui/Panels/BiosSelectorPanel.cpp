@@ -21,14 +21,15 @@
 #include "ps2/BiosTools.h"
 
 #include <wx/dir.h>
+#include <wx/filepicker.h>
 #include <wx/listbox.h>
 
 using namespace wxHelpers;
 
 // ------------------------------------------------------------------------
-Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
-,	m_ReloadSettingsBinding( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnAppliedSettings ) )
+Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent, wxVERTICAL )
+	, m_ReloadSettingsBinding( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnAppliedSettings ) )
 {
 	Connect( wxEVT_COMMAND_DIRPICKER_CHANGED,	wxFileDirPickerEventHandler(PluginSelectorPanel::OnFolderChanged), NULL, this );
 }
@@ -70,20 +71,22 @@ void Panels::BaseSelectorPanel::OnAppliedSettings( void* me, int& )
 }
 
 // ----------------------------------------------------------------------------
-Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow& parent, int idealWidth ) :
-	BaseSelectorPanel( parent, idealWidth-12 )
-,	m_ComboBox( *new wxListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_SORT | wxLB_NEEDED_SB ) )
-,	m_FolderPicker( *new DirPickerPanel( this, FolderId_Bios,
+Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
+	: BaseSelectorPanel( parent )
+	, m_ComboBox( *new wxListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_SORT | wxLB_NEEDED_SB ) )
+	, m_FolderPicker( *new DirPickerPanel( this, FolderId_Bios,
 		_("BIOS Search Path:"),						// static box label
 		_("Select folder with PS2 BIOS roms")		// dir picker popup label
 	) )
 {
+	if( idealWidth != wxDefaultCoord ) m_idealWidth = idealWidth;
+
 	m_ComboBox.SetFont( wxFont( m_ComboBox.GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
 	m_ComboBox.SetMinSize( wxSize( wxDefaultCoord, std::max( m_ComboBox.GetMinSize().GetHeight(), 96 ) ) );
 
 	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms.") );
 
-	wxBoxSizer& sizer( *new wxBoxSizer( wxVERTICAL ) );
+	wxSizer& sizer( *GetSizer() );
 	AddStaticText( sizer, _("Select a BIOS rom:"), wxALIGN_LEFT );
 	sizer.Add( &m_ComboBox, pxSizerFlags::StdExpand() );
 	sizer.AddSpacer( 6 );

@@ -18,10 +18,10 @@
 
 using namespace wxHelpers;
 
-Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth)
+Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
+	BaseApplicableConfigPanel( parent )
 {
-	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+	wxSizer& mainSizer( *GetSizer() );
 	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here.") );
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
@@ -80,8 +80,6 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow& parent, int idealWidth ) :
 		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
 		L"will need to turn off fixes manually when changing games."
 	));
-
-	SetSizer( &mainSizer );
 
 }
 

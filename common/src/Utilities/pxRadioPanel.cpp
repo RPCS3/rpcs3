@@ -31,8 +31,6 @@ void pxRadioPanel::Init( const RadioPanelItem* srcArray, int arrsize )
 	// FIXME: This probably needs to be platform-dependent, and/or based on font size.
 	m_Indentation	= 23;
 
-	SetSizer( new wxBoxSizer(wxVERTICAL) );
-
 	for( int i=0; i<arrsize; ++i )
 		Append( srcArray[i] );
 }

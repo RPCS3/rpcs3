@@ -16,18 +16,9 @@
 #pragma once
 
 #include <wx/wx.h>
-#include <wx/filepicker.h>
+#include "wxGuiTools.h"
 
-#include "Utilities/wxGuiTools.h"
-
-namespace wxHelpers
-{
-	//extern wxRadioButton&	AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord, bool isFirst = false );
-	extern wxStaticText&	AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int wrapLen=wxDefaultCoord );
-	extern wxStaticText&	InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags=wxALIGN_CENTRE, int wrapLen=wxDefaultCoord );
-}
-
-// --------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------
 //  pxCheckBox
 // --------------------------------------------------------------------------------------
 // The checkbox panel created uses the default spacer setting for adding checkboxes (see
@@ -35,20 +26,18 @@ namespace wxHelpers
 // both the checkbox and it's static subtext (if present), and performs word wrapping on
 // platforms that need it (eg mswindows).
 //
-class pxCheckBox : public wxPanel
+class pxCheckBox : public wxPanelWithHelpers
 {
 protected:
 	wxCheckBox*		m_checkbox;
-	wxStaticText*	m_subtext;
-	int				m_idealWidth;
+	pxStaticText*	m_subtext;
 
 public:
-	pxCheckBox( wxPanelWithHelpers* parent, const wxString& label, const wxString& subtext=wxEmptyString );
-	pxCheckBox( wxDialogWithHelpers* parent, const wxString& label, const wxString& subtext=wxEmptyString );
+	pxCheckBox( wxWindow* parent, const wxString& label, const wxString& subtext=wxEmptyString );
 	virtual ~pxCheckBox() throw() {}
 
 	bool HasSubText() const { return m_subtext != NULL; }
-	const wxStaticText* GetSubText() const { return m_subtext; }
+	const pxStaticText* GetSubText() const { return m_subtext; }
 
 	pxCheckBox& SetToolTip( const wxString& tip );
 	pxCheckBox& SetValue( bool val );
@@ -66,6 +55,3 @@ public:
 protected:
 	void Init( const wxString& label, const wxString& subtext );
 };
-
-extern bool pxDialogExists( wxWindowID id );
-

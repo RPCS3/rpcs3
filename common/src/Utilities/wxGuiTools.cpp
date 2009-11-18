@@ -53,7 +53,7 @@ wxRect wxGetDisplayArea()
 //
 wxSizerFlags pxSizerFlags::StdSpace()
 {
-	return wxSizerFlags().Border( wxALL, 6 );
+	return wxSizerFlags().Border( wxALL, StdPadding );
 }
 
 wxSizerFlags pxSizerFlags::StdCenter()
@@ -71,7 +71,7 @@ wxSizerFlags pxSizerFlags::StdExpand()
 // manually by using a spacer.
 wxSizerFlags pxSizerFlags::TopLevelBox()
 {
-	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 6 ).Expand();
+	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, StdPadding ).Expand();
 }
 
 // Flags intended for use on grouped StaticBox controls.  These flags are ideal for
@@ -82,7 +82,7 @@ wxSizerFlags pxSizerFlags::SubGroup()
 {
 	// Groups look better with a slightly smaller margin than standard.
 	// (basically this accounts for the group's frame)
-	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, 4 ).Expand();
+	return wxSizerFlags().Border( wxLEFT | wxBOTTOM | wxRIGHT, StdPadding-2 ).Expand();
 }
 
 // This force-aligns the std button sizer to the right, where (at least) us win32 platform
@@ -104,9 +104,11 @@ wxSizerFlags pxSizerFlags::Checkbox()
 
 pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString& text, int widthMax )
 {
+	if( text.IsEmpty() ) return *this;
+
     const wxChar *lastSpace = NULL;
     wxString line;
-    line.Alloc( widthMax+12 );
+    line.Alloc( text.Length()+12 );
 
     const wxChar *lineStart = text.c_str();
     for ( const wxChar *p = lineStart; ; p++ )

@@ -558,15 +558,15 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\Hardware.h"
+							>
+						</File>
+						<File
 							RelativePath="..\..\Hw.cpp"
 							>
 						</File>
 						<File
 							RelativePath="..\..\Hw.h"
-							>
-						</File>
-						<File
-							RelativePath="..\..\Hardware.h"
 							>
 						</File>
 						<File
@@ -1829,10 +1829,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\gui\CheckedStaticBox.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\gui\ConsoleLogger.cpp"
 				>
 			</File>
@@ -1882,10 +1878,6 @@
 			</File>
 			<File
 				RelativePath="..\..\gui\Saveslots.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\gui\wxHelpers.cpp"
 				>
 			</File>
 			<Filter
@@ -2434,11 +2426,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\AppConfig.h"
+					RelativePath="..\..\gui\AppCommon.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\CheckedStaticBox.h"
+					RelativePath="..\..\gui\AppConfig.h"
 					>
 				</File>
 				<File
@@ -2467,10 +2459,6 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\RecentIsoList.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\wxHelpers.h"
 					>
 				</File>
 			</Filter>

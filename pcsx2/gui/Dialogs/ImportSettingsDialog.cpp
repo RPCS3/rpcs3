@@ -21,23 +21,26 @@
 using namespace wxHelpers;
 
 
-Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent ) :
-	wxDialogWithHelpers( parent, wxID_ANY, L"Import Existing Settings?", false )
+Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
+	: wxDialogWithHelpers( parent, wxID_ANY, _("Import Existing Settings?"), false )
 {
-	wxBoxSizer& sizer( *new wxBoxSizer( wxVERTICAL ) );
+	m_idealWidth = 440;
 
-	AddStaticText( sizer,
-		pxE( ".Popup:ImportExistingSettings",
-			L"Existing PCSX2 settings have been found in the configured settings folder.  "
-			L"Would you like to import these settings or overwrite them with PCSX2 default values?"
-			L"\n\n(or press Cancel to select a different settings folder)"
-		),
-		wxALIGN_CENTRE, 400
+	pxStaticText* heading = new pxStaticHeading( this, pxE( ".Popup:ImportExistingSettings",
+		L"Existing PCSX2 settings have been found in the configured settings folder.  "
+		L"Would you like to import these settings or overwrite them with PCSX2 default values?"
+		L"\n\n(or press Cancel to select a different settings folder)" )
 	);
-	
+	heading->SetMinSize( wxSize( m_idealWidth-8, wxDefaultCoord ) );
+
 	wxBoxSizer& s_buttons = *new wxBoxSizer( wxHORIZONTAL );
 	wxButton* b_import	= new wxButton( this, wxID_ANY, _("Import") );
 	wxButton* b_over	= new wxButton( this, wxID_ANY, _("Overwrite") );
+
+	// --------------------------------------------------------------------
+	// Layout Some Shizat...
+
+	wxBoxSizer& sizer( *new wxBoxSizer( wxVERTICAL ) );
 
 	s_buttons.Add( b_import,pxSizerFlags::StdButton() );
 	s_buttons.AddSpacer( 16 );
@@ -45,6 +48,8 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent ) :
 	s_buttons.AddSpacer( 16 );
 	s_buttons.Add( new wxButton( this, wxID_CANCEL ), pxSizerFlags::StdButton() );
 
+	sizer.AddSpacer( 4 );
+	heading->AddTo( sizer );
 	sizer.AddSpacer( 12 );
 	sizer.Add( &s_buttons, pxSizerFlags::StdCenter() );
 	SetSizerAndFit( &sizer );

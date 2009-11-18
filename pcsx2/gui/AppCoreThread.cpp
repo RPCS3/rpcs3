@@ -198,7 +198,12 @@ void AppCoreThread::StateCheckInThread()
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	if( m_ExecMode != ExecMode_Closed ) return;
-	if( src == EmuConfig ) return;
+	
+	Pcsx2Config fixup( src );
+	if( !g_Conf->EnableSpeedHacks )
+		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
+	
+	if( fixup == EmuConfig ) return;
 
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is
@@ -207,7 +212,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	static int localc = 0;
 	RecursionGuard guard( localc );
 	if(guard.IsReentrant()) return;
-	SysCoreThread::ApplySettings( src );
+	_parent::ApplySettings( fixup );
 }
 
 void AppCoreThread::ExecuteTaskInThread()

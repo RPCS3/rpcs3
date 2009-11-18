@@ -149,16 +149,19 @@ wxWindowID Dialogs::IssueConfirmation( wxWindow* parent, const wxString& disable
 	return modalResult;
 }
 
-Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const ConfButtons& type, const wxString& title, const wxString& msg ) :
-	wxDialogWithHelpers( parent, wxID_ANY, title, false )
-,	m_ExtensibleSizer( *new wxBoxSizer( wxVERTICAL ) )
-,	m_ButtonSizer( *new wxBoxSizer( wxHORIZONTAL ) )
+Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const ConfButtons& type, const wxString& title, const wxString& msg )
+	: wxDialogWithHelpers( parent, wxID_ANY, title, false )
+	, m_ExtensibleSizer( *new wxBoxSizer( wxVERTICAL ) )
+	, m_ButtonSizer( *new wxBoxSizer( wxHORIZONTAL ) )
 {
+	m_idealWidth = 500;
+
 	wxBoxSizer& mainsizer( *new wxBoxSizer(wxVERTICAL) );
 
 	// Add the message padded some (StdCenter gives us a 5 pt padding).  Helps emphasize it a bit.
 	wxBoxSizer& msgPadSizer( *new wxBoxSizer(wxVERTICAL) );
-	AddStaticText( msgPadSizer, msg, wxALIGN_CENTRE, 444 );
+	
+	msgPadSizer.Add( new pxStaticHeading( this, msg ) );
 	mainsizer.Add( &msgPadSizer, pxSizerFlags::StdCenter() );
 
 	mainsizer.Add( &m_ExtensibleSizer, wxSizerFlags().Centre() );

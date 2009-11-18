@@ -15,8 +15,9 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "AppCommon.h"
+
 #include "Dialogs/ModalPopups.h"
-#include "wxHelpers.h"
 
 #include "Resources/EmbeddedImage.h"
 #include "Resources/Dualshock.h"

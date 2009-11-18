@@ -306,29 +306,23 @@ wxString AppConfig::FullpathToMcd( uint port, uint slot ) const
 	return Path::Combine( Folders.MemoryCards, Mcd[port][slot].Filename );
 }
 
-AppConfig::AppConfig() :
-	MainGuiPosition( wxDefaultPosition )
-,	SettingsTabName( L"Cpu" )
-,	LanguageId( wxLANGUAGE_DEFAULT )
-,	RecentFileCount( 6 )
-,	DeskTheme( L"default" )
-,	Listbook_ImageSize( 32 )
-,	Toolbar_ImageSize( 24 )
-,	Toolbar_ShowLabels( true )
-
-,	McdEnableNTFS( true )
-,	CloseGSonEsc( true )
-
-,	CurrentIso()
-,	CurrentELF()
-,	CdvdSource( CDVDsrc_Iso )
-
-,	ProgLogBox()
-,	Ps2ConBox()
-,	Folders()
-,	BaseFilenames()
-,	EmuOptions()
+AppConfig::AppConfig()
+	: MainGuiPosition( wxDefaultPosition )
+	, SettingsTabName( L"Cpu" )
+	, DeskTheme( L"default" )
 {
+	LanguageId			= wxLANGUAGE_DEFAULT;
+	RecentFileCount		= 6;
+	Listbook_ImageSize	= 32;
+	Toolbar_ImageSize	= 24;
+	Toolbar_ShowLabels	= true;
+
+	McdEnableNTFS		= true;
+	CloseGSonEsc		= true;
+	EnableSpeedHacks	= false;
+
+	CdvdSource			= CDVDsrc_Iso;
+
 	for( uint port=0; port<2; ++port )
 	{
 		for( uint slot=0; slot<4; ++slot )
@@ -393,6 +387,9 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 
 	IniEntry( CurrentIso );
 	IniEntry( CurrentELF );
+	
+	IniEntry( CloseGSonEsc );
+	IniEntry( EnableSpeedHacks );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
 }

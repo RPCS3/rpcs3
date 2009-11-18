@@ -15,9 +15,7 @@
 
 #pragma once
 
-
-#include "BaseConfigPanel.h"
-#include "CheckedStaticBox.h"
+#include "AppCommon.h"
 
 namespace Panels
 {
@@ -108,7 +106,7 @@ namespace Panels
 		pxCheckBox*			m_GIFtag;
 
 	public:
-		LogOptionsPanel( wxWindow* parent, int idealWidth );
+		LogOptionsPanel( wxWindow* parent );
 		virtual ~LogOptionsPanel() throw() {}
 
 		void OnSettingsChanged();

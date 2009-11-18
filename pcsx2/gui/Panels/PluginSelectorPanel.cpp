@@ -142,20 +142,21 @@ static const wxString failed_separator( L"--------   Unsupported Plugins  ------
 //  PluginSelectorPanel  implementations
 // --------------------------------------------------------------------------------------
 
-Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent ) :
-	wxPanelWithHelpers( parent )
-,	m_gauge( *new wxGauge( this, wxID_ANY, 10 ) )
-,	m_label( *new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE | wxST_NO_AUTORESIZE ) )
-,	m_progress( 0 )
+Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent )
+	: wxPanelWithHelpers( parent, wxVERTICAL )
+	, m_gauge( *new wxGauge( this, wxID_ANY, 10 ) )
+	, m_label( *new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE | wxST_NO_AUTORESIZE ) )
 {
-	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
+	m_progress = 0;
+
+	wxSizer& s_main( *GetSizer() );
 
 	AddStaticText( s_main, _( "Enumerating available plugins..." ) );
 	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
 	s_main.Add( &m_label, pxSizerFlags::StdExpand() );
 
 	// The status bar only looks right if I use SetSizerAndFit() here.
-	SetSizerAndFit( &s_main );
+	Fit(); // &s_main );
 }
 
 void Panels::PluginSelectorPanel::StatusPanel::SetGaugeLength( int len )
@@ -179,14 +180,14 @@ void Panels::PluginSelectorPanel::StatusPanel::Reset()
 static const int ButtonId_Configure = 51;
 
 // ------------------------------------------------------------------------
-Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent ) :
-	wxPanelWithHelpers( parent )
-,	m_FolderPicker(	*new DirPickerPanel( this, FolderId_Plugins,
+Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent )
+	: wxPanelWithHelpers( parent, wxVERTICAL )
+	, m_FolderPicker(	*new DirPickerPanel( this, FolderId_Plugins,
 		_("Plugins Search Path:"),
 		_("Select a folder with PCSX2 plugins") )
 	)
 {
-	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
+	wxSizer& s_main( *GetSizer() );
 	wxFlexGridSizer& s_plugin( *new wxFlexGridSizer( NumPluginTypes, 3, 16, 10 ) );
 	s_plugin.SetFlexibleDirection( wxHORIZONTAL );
 	s_plugin.AddGrowableCol( 1 );		// expands combo boxes to full width.
@@ -226,26 +227,27 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 }
 
 // ------------------------------------------------------------------------
-Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow& parent, int idealWidth ) :
-	BaseSelectorPanel( parent, idealWidth )
-,	m_StatusPanel( *new StatusPanel( this ) )
-,	m_ComponentBoxes( *new ComboBoxPanel( this ) )
+Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWidth )
+	: BaseSelectorPanel( parent )
 {
+	if( idealWidth != wxDefaultCoord ) m_idealWidth = idealWidth;
+
+	m_StatusPanel		= new StatusPanel( this );
+	m_ComponentBoxes	= new ComboBoxPanel( this );
+
 	// note: the status panel is a floating window, so that it can be positioned in the
 	// center of the dialog after it's been fitted to the contents.
 
-	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
-	s_main.Add( &m_ComponentBoxes, pxSizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
+	wxSizer& s_main( *GetSizer() );
+	s_main.Add( m_ComponentBoxes, pxSizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
 
-	m_StatusPanel.Hide();
-	m_ComponentBoxes.Hide();
+	m_StatusPanel->Hide();
+	m_ComponentBoxes->Hide();
 
 	// refresh button used for diagnostics... (don't think there's a point to having one otherwise) --air
 	//wxButton* refresh = new wxButton( this, wxID_ANY, L"Refresh" );
 	//s_main.Add( refresh );
 	//Connect( refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnRefresh ) );
-
-	SetSizer( &s_main );
 
 	Connect( pxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
 	Connect( pxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
@@ -260,7 +262,7 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel() throw()
 
 void Panels::PluginSelectorPanel::ReloadSettings()
 {
-	m_ComponentBoxes.GetDirPicker().Reset();
+	m_ComponentBoxes->GetDirPicker().Reset();
 }
 
 static wxString GetApplyFailedMsg()
@@ -281,7 +283,7 @@ void Panels::PluginSelectorPanel::Apply()
 
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
-		int sel = m_ComponentBoxes.Get(i).GetSelection();
+		int sel = m_ComponentBoxes->Get(i).GetSelection();
 		if( sel == wxNOT_FOUND )
 		{
 			wxString plugname( tbl_PluginInfo[i].GetShortname() );
@@ -295,7 +297,7 @@ void Panels::PluginSelectorPanel::Apply()
 			);
 		}
 
-		g_Conf->BaseFilenames.Plugins[tbl_PluginInfo[i].id] = GetFilename((int)m_ComponentBoxes.Get(i).GetClientData(sel));
+		g_Conf->BaseFilenames.Plugins[tbl_PluginInfo[i].id] = GetFilename((int)m_ComponentBoxes->Get(i).GetClientData(sel));
 	}
 
 	// ----------------------------------------------------------------------------
@@ -370,7 +372,7 @@ void Panels::PluginSelectorPanel::CancelRefresh()
 // thread!)
 void Panels::PluginSelectorPanel::DoRefresh()
 {
-	m_ComponentBoxes.Reset();
+	m_ComponentBoxes->Reset();
 	if( !m_FileList )
 	{
 		wxCommandEvent evt;
@@ -379,7 +381,7 @@ void Panels::PluginSelectorPanel::DoRefresh()
 	}
 
 	// Disable all controls until enumeration is complete
-	m_ComponentBoxes.Hide();
+	m_ComponentBoxes->Hide();
 
 	// (including next button if it's a Wizard)
 	wxWindow* forwardButton = GetGrandParent()->FindWindow( wxID_FORWARD );
@@ -413,7 +415,7 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 	// occurs during file enumeration.
 	ScopedPtr<wxArrayString> pluginlist( new wxArrayString() );
 
-	int pluggers = EnumeratePluginsInFolder( m_ComponentBoxes.GetPluginsPath(), pluginlist );
+	int pluggers = EnumeratePluginsInFolder( m_ComponentBoxes->GetPluginsPath(), pluginlist );
 
 	if( !m_FileList || (*pluginlist != *m_FileList) )
 		validated = false;
@@ -426,7 +428,7 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 
 	m_FileList.SwapPtr( pluginlist );
 
-	m_StatusPanel.SetGaugeLength( pluggers );
+	m_StatusPanel->SetGaugeLength( pluggers );
 
 	return validated;
 }
@@ -435,9 +437,9 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 {
 	PluginsEnum_t pid = (PluginsEnum_t)(int)((wxEvtHandler*)evt.GetEventObject())->GetClientData();
 
-	int sel = m_ComponentBoxes.Get(pid).GetSelection();
+	int sel = m_ComponentBoxes->Get(pid).GetSelection();
 	if( sel == wxNOT_FOUND ) return;
-	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes.Get(pid).GetClientData(sel)] );
+	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes->Get(pid).GetClientData(sel)] );
 	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
 	{
 		bool resume = CoreThread.Suspend();
@@ -449,9 +451,9 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 
 void Panels::PluginSelectorPanel::OnShowStatusBar( wxCommandEvent& evt )
 {
-	m_StatusPanel.SetSize( m_ComponentBoxes.GetSize().GetWidth() - 8, wxDefaultCoord );
-	m_StatusPanel.CentreOnParent();
-	m_StatusPanel.Show();
+	m_StatusPanel->SetSize( m_ComponentBoxes->GetSize().GetWidth() - 8, wxDefaultCoord );
+	m_StatusPanel->CentreOnParent();
+	m_StatusPanel->Show();
 }
 
 void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
@@ -464,16 +466,16 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 	int emptyBoxes = 0;
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
-		if( m_ComponentBoxes.Get(i).GetCount() <= 0 )
+		if( m_ComponentBoxes->Get(i).GetCount() <= 0 )
 			emptyBoxes++;
 
-		else if( m_ComponentBoxes.Get(i).GetSelection() == wxNOT_FOUND )
-			m_ComponentBoxes.Get(i).SetSelection( 0 );
+		else if( m_ComponentBoxes->Get(i).GetSelection() == wxNOT_FOUND )
+			m_ComponentBoxes->Get(i).SetSelection( 0 );
 	}
 
-	m_ComponentBoxes.Show();
-	m_StatusPanel.Hide();
-	m_StatusPanel.Reset();
+	m_ComponentBoxes->Show();
+	m_StatusPanel->Hide();
+	m_StatusPanel->Reset();
 
 	wxWindow* forwardButton = GetGrandParent()->FindWindow( wxID_FORWARD );
 	if( forwardButton != NULL )
@@ -503,7 +505,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 			m_EnumeratorThread->DoNextPlugin( nextidx );
 	}
 
-	m_StatusPanel.AdvanceProgress( (evtidx < m_FileList->Count()-1) ?
+	m_StatusPanel->AdvanceProgress( (evtidx < m_FileList->Count()-1) ?
 		(*m_FileList)[evtidx + 1] : wxString(_("Completing tasks..."))
 	);
 
@@ -520,7 +522,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 		{
 			if( result.PassedTest & tbl_PluginInfo[i].typemask )
 			{
-				int sel = m_ComponentBoxes.Get(i).Append( wxsFormat( L"%s %s [%s]",
+				int sel = m_ComponentBoxes->Get(i).Append( wxsFormat( L"%s %s [%s]",
 					result.Name.c_str(), result.Version[i].c_str(), Path::GetFilenameWithoutExt( (*m_FileList)[evtidx] ).c_str() ),
 					(void*)evtidx
 				);
@@ -532,7 +534,7 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 				right.MakeAbsolute();
 
 				if( left == right )
-					m_ComponentBoxes.Get(i).SetSelection( sel );
+					m_ComponentBoxes->Get(i).SetSelection( sel );
 			}
 		}
 	}

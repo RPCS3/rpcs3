@@ -25,11 +25,42 @@
 #include <wx/statline.h>
 #include <wx/spinctrl.h>
 
-#include "BaseConfigPanel.h"
+#include "AppCommon.h"
 
-#include "Utilities/Threading.h"
-#include "Utilities/pxRadioPanel.h"
+class wxDirPickerCtrl;
+class wxFileDirPickerEvent;
 
+// --------------------------------------------------------------------------------------
+//  pxUniformTable
+// --------------------------------------------------------------------------------------
+// TODO : Move this class to the common Utilities lib, if it proves useful. :)
+/*
+class pxUniformTable : public wxFlexGridSizer
+{
+protected:	
+	int								m_curcell;
+	SafeArray<wxPanelWithHelpers*>	m_panels;
+
+public:
+	pxUniformTable( wxWindow* parent, int numcols, int numrows, const wxString* staticBoxLabels=NULL );
+	virtual ~pxUniformTable() throw() {}
+
+	int GetCellCount() const
+	{
+		return m_panels.GetLength();
+	}
+
+	wxPanelWithHelpers* operator()( int col, int row )
+	{
+		return m_panels[(col*GetCols()) + row];
+	}
+
+	wxPanelWithHelpers* operator[]( int cellidx )
+	{
+		return m_panels[cellidx];
+	}
+};
+*/
 namespace Panels
 {
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -41,7 +72,7 @@ namespace Panels
 
 	public:
 		virtual ~UsermodeSelectionPanel() { }
-		UsermodeSelectionPanel( wxWindow& parent, int idealWidth=wxDefaultCoord, bool isFirstTime = true );
+		UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime = true );
 
 		void Apply();
 	};
@@ -56,7 +87,7 @@ namespace Panels
 
 	public:
 		virtual ~LanguageSelectionPanel() { }
-		LanguageSelectionPanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
+		LanguageSelectionPanel( wxWindow* parent );
 
 		void Apply();
 	};
@@ -70,7 +101,7 @@ namespace Panels
 		pxRadioPanel*	m_panel_RecIOP;
 
 	public:
-		CpuPanelEE( wxWindow& parent, int idealWidth );
+		CpuPanelEE( wxWindow* parent );
 		void Apply();
 	};
 
@@ -81,7 +112,7 @@ namespace Panels
 		pxRadioPanel*	m_panel_VU1;
 
 	public:
-		CpuPanelVU( wxWindow& parent, int idealWidth );
+		CpuPanelVU( wxWindow* parent );
 		void Apply();
 	};
 
@@ -99,7 +130,7 @@ namespace Panels
 		pxCheckBox*		m_Option_DAZ;
 
 	public:
-		BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth );
+		BaseAdvancedCpuOptions( wxWindow* parent );
 		virtual ~BaseAdvancedCpuOptions() throw() { }
 
 	protected:
@@ -110,7 +141,7 @@ namespace Panels
 	class AdvancedOptionsFPU : public BaseAdvancedCpuOptions
 	{
 	public:
-		AdvancedOptionsFPU( wxWindow& parent, int idealWidth );
+		AdvancedOptionsFPU( wxWindow* parent );
 		virtual ~AdvancedOptionsFPU() throw() { }
 		void Apply();
 	};
@@ -118,7 +149,7 @@ namespace Panels
 	class AdvancedOptionsVU : public BaseAdvancedCpuOptions
 	{
 	public:
-		AdvancedOptionsVU( wxWindow& parent, int idealWidth );
+		AdvancedOptionsVU( wxWindow* parent );
 		virtual ~AdvancedOptionsVU() throw() { }
 		void Apply();
 	};
@@ -145,20 +176,36 @@ namespace Panels
 		wxSpinCtrl*		m_spin_FramesToDraw;
 
 	public:
-		FramelimiterPanel( wxWindow& parent, int idealWidth );
+		FramelimiterPanel( wxWindow* parent );
 		virtual ~FramelimiterPanel() throw() {}
 		void Apply();
+		void OnSettingsChanged();
+	};
+	
+	class GSWindowSettingsPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		pxCheckBox*		m_check_CloseGS;
+		pxCheckBox*		m_check_SizeLock;
+		pxCheckBox*		m_check_AspectLock;
+		pxCheckBox*		m_check_VsyncEnable;
+		pxCheckBox*		m_check_Fullscreen;
+		
+		wxTextCtrl*		m_text_WindowWidth;
+		wxTextCtrl*		m_text_WindowHeight;
+		
+	public:
+		GSWindowSettingsPanel( wxWindow* parent );
+		virtual ~GSWindowSettingsPanel() throw() {}
+		void Apply();
+		void OnSettingsChanged();
 	};
 
 	class VideoPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		pxCheckBox*		m_check_CloseGS;
-		//wxCheckBox*		m_check_CloseGS;
-		//wxCheckBox*		m_;
-
 	public:
-		VideoPanel( wxWindow& parent, int idealWidth );
+		VideoPanel( wxWindow* parent );
 		virtual ~VideoPanel() throw() {}
 		void Apply();
 	};
@@ -168,25 +215,37 @@ namespace Panels
 	class SpeedHacksPanel : public BaseApplicableConfigPanel
 	{
 	protected:
-		wxSlider* m_slider_eecycle;
-		wxSlider* m_slider_vustealer;
-		wxStaticText* m_msg_eecycle;
-		wxStaticText* m_msg_vustealer;
+		wxFlexGridSizer* s_table;
 
-		pxCheckBox* m_check_intc;
-		pxCheckBox* m_check_b1fc0;
-		pxCheckBox* m_check_IOPx2;
-		pxCheckBox* m_check_vuFlagHack;
-		pxCheckBox* m_check_vuMinMax;
+		pxCheckBox*		m_check_Enable;
+		wxButton*		m_button_Defaults;
+
+		wxSlider*		m_slider_eecycle;
+		wxSlider*		m_slider_vustealer;
+		pxStaticText*	m_msg_eecycle;
+		pxStaticText*	m_msg_vustealer;
+
+		pxCheckBox*		m_check_intc;
+		pxCheckBox*		m_check_b1fc0;
+		pxCheckBox*		m_check_IOPx2;
+		pxCheckBox*		m_check_vuFlagHack;
+		pxCheckBox*		m_check_vuMinMax;
 
 	public:
-		SpeedHacksPanel( wxWindow& parent, int idealWidth );
+		SpeedHacksPanel( wxWindow* parent );
 		void Apply();
+		void EnableStuff();
+		void OnSettingsChanged();
+		void OnSettingsChanged( const Pcsx2Config::SpeedhackOptions& opt );
 
 	protected:
 		const wxChar* GetEEcycleSliderMsg( int val );
 		const wxChar* GetVUcycleSliderMsg( int val );
+		void SetEEcycleSliderMsg();
+		void SetVUcycleSliderMsg();
 
+		void OnEnable_Toggled( wxCommandEvent& evt );
+		void Defaults_Click( wxCommandEvent& evt );
 		void Slider_Click(wxScrollEvent &event);
 		void EECycleRate_Scroll(wxScrollEvent &event);
 		void VUCycleRate_Scroll(wxScrollEvent &event);
@@ -200,7 +259,7 @@ namespace Panels
 		pxCheckBox*			m_checkbox[NUM_OF_GAME_FIXES];
 
 	public:
-		GameFixesPanel( wxWindow& parent, int idealWidth );
+		GameFixesPanel( wxWindow* parent );
 		void Apply();
 	};
 
@@ -222,7 +281,7 @@ namespace Panels
 
 		void Apply();
 		void Reset();
-		wxDirName GetPath() const { return wxDirName( m_pickerCtrl->GetPath() ); }
+		wxDirName GetPath() const;
 
 		DirPickerPanel& SetStaticDesc( const wxString& msg );
 		DirPickerPanel& SetToolTip( const wxString& tip );
@@ -245,14 +304,11 @@ namespace Panels
 	//
 	class BasePathsPanel : public wxPanelWithHelpers
 	{
-	protected:
-		wxBoxSizer& s_main;
-
 	public:
-		BasePathsPanel( wxWindow& parent, int idealWidth=wxDefaultCoord );
+		BasePathsPanel( wxWindow* parent );
 
 	protected:
-		DirPickerPanel& AddDirPicker( wxBoxSizer& sizer, FoldersEnum_t folderid,
+		DirPickerPanel& AddDirPicker( wxSizer& sizer, FoldersEnum_t folderid,
 			const wxString& label, const wxString& popupLabel );
 	};
 
@@ -261,7 +317,7 @@ namespace Panels
 	class StandardPathsPanel : public BasePathsPanel
 	{
 	public:
-		StandardPathsPanel( wxWindow& parent, int idealWidth );
+		StandardPathsPanel( wxWindow* parent );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -273,7 +329,7 @@ namespace Panels
 
 	public:
 		virtual ~BaseSelectorPanel() throw();
-		BaseSelectorPanel( wxWindow& parent, int idealWidth );
+		BaseSelectorPanel( wxWindow* parent );
 
 		virtual bool Show( bool visible=true );
 		virtual void OnRefresh( wxCommandEvent& evt );
@@ -294,11 +350,11 @@ namespace Panels
 	{
 	protected:
 		ScopedPtr<wxArrayString>	m_BiosList;
-		wxListBox&		m_ComboBox;
-		DirPickerPanel&	m_FolderPicker;
+		wxListBox&					m_ComboBox;
+		DirPickerPanel&				m_FolderPicker;
 
 	public:
-		BiosSelectorPanel( wxWindow& parent, int idealWidth );
+		BiosSelectorPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
 		virtual ~BiosSelectorPanel() throw();
 
 	protected:
@@ -393,8 +449,8 @@ namespace Panels
 	// ------------------------------------------------------------------------
 
 	protected:
-		StatusPanel&	m_StatusPanel;
-		ComboBoxPanel&	m_ComponentBoxes;
+		StatusPanel*	m_StatusPanel;
+		ComboBoxPanel*	m_ComponentBoxes;
 		bool			m_Canceled;
 
 		ScopedPtr<wxArrayString>	m_FileList;	// list of potential plugin files
@@ -402,7 +458,7 @@ namespace Panels
 
 	public:
 		virtual ~PluginSelectorPanel() throw();
-		PluginSelectorPanel( wxWindow& parent, int idealWidth );
+		PluginSelectorPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
 
 		void CancelRefresh();		// used from destructor, stays non-virtual
 		void Apply();

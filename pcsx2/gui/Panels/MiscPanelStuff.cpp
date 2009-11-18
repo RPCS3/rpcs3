@@ -134,8 +134,8 @@ void Panels::BaseApplicableConfigPanel::SetFocusToMe()
 
 
 // -----------------------------------------------------------------------
-Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int idealWidth, bool isFirstTime )
-	: BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime )
+	: BaseApplicableConfigPanel( parent, wxVERTICAL, _("Usermode Selection") )
 {
 	const wxString usermodeExplained( pxE( ".Panels:Usermode:Explained",
 		L"Please select your preferred default location for PCSX2 user-level documents below "
@@ -163,15 +163,14 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow& parent, int id
 		),
 	};
 	
-	wxStaticBoxSizer* s_boxer = new wxStaticBoxSizer( wxVERTICAL, this, _( "Usermode Selection" ) );
 	m_radio_UserMode = new pxRadioPanel( this, UsermodeOptions );
 	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
 	m_radio_UserMode->Realize();
 
-	AddStaticText( *s_boxer, isFirstTime ? usermodeExplained : usermodeWarning );
-	s_boxer->Add( m_radio_UserMode, pxSizerFlags::StdExpand() );
-	s_boxer->AddSpacer( 4 );
-	SetSizer( s_boxer );
+	wxSizer& s_main( *GetSizer() );
+	AddStaticText( s_main, isFirstTime ? usermodeExplained : usermodeWarning );
+	s_main.Add( m_radio_UserMode, pxSizerFlags::StdExpand() );
+	s_main.AddSpacer( 4 );
 }
 
 void Panels::UsermodeSelectionPanel::Apply()
@@ -180,8 +179,8 @@ void Panels::UsermodeSelectionPanel::Apply()
 }
 
 // -----------------------------------------------------------------------
-Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow& parent, int idealWidth )
-	: BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 	, m_langs()
 {
 	m_picker = NULL;

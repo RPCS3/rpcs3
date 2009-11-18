@@ -18,7 +18,6 @@
 #include <wx/wx.h>
 #include "SafeArray.h"
 #include "wxGuiTools.h"
-#include <vector>
 
 // --------------------------------------------------------------------------------------
 //  RadioPanelItem
@@ -90,40 +89,14 @@ protected:
 
 public:
 	template< int size >
-	pxRadioPanel( wxPanelWithHelpers* parent, const RadioPanelItem (&src)[size] )
-		: wxPanelWithHelpers( parent, parent->GetIdealWidth()-24 )
+	pxRadioPanel( wxWindow* parent, const RadioPanelItem (&src)[size] )
+		: wxPanelWithHelpers( parent, wxVERTICAL )
 	{
 		Init( src, size );
 	}
 
-	template< int size >
-	pxRadioPanel( wxDialogWithHelpers* parent, const RadioPanelItem (&src)[size] )
-		: wxDialogWithHelpers( parent, parent->GetIdealWidth()-24 )
-	{
-		Init( src, size );
-	}
-
-	template< int size >
-	pxRadioPanel( int idealWidth, wxWindow* parent, const RadioPanelItem (&src)[size] )
-		: wxPanelWithHelpers( parent, idealWidth )
-	{
-		Init( src, size );
-	}
-
-	pxRadioPanel( wxPanelWithHelpers* parent )
-		: wxPanelWithHelpers( parent, parent->GetIdealWidth()-24 )
-	{
-		Init();
-	}
-
-	pxRadioPanel( wxDialogWithHelpers* parent )
-		: wxPanelWithHelpers( parent, parent->GetIdealWidth()-24 )
-	{
-		Init();
-	}
-
-	pxRadioPanel( int idealWidth, wxPanelWithHelpers* parent )
-		: wxPanelWithHelpers( parent, idealWidth )
+	pxRadioPanel( wxWindow* parent )
+		: wxPanelWithHelpers( parent, wxVERTICAL )
 	{
 		Init();
 	}

@@ -19,6 +19,7 @@
 #include <wx/stdpaths.h>
 #include <wx/file.h>
 #include <wx/dir.h>
+#include <wx/filepicker.h>
 
 using namespace wxHelpers;
 
@@ -62,14 +63,14 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 // obtained from invoking the specified getDefault() function.
 //
 Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel )
-	: BaseApplicableConfigPanel( parent, wxDefaultCoord )
-	, m_FolderId( folderid )
-	, m_pickerCtrl( NULL )
-	, m_checkCtrl( NULL )
+	: BaseApplicableConfigPanel( parent, wxVERTICAL, label )
 {
+	m_FolderId		= folderid;
+	m_pickerCtrl	= NULL;
+	m_checkCtrl		= NULL;
+
 	m_checkCtrl = new pxCheckBox( this, _("Use default setting") );
 
-	wxStaticBoxSizer& s_box( *new wxStaticBoxSizer( wxVERTICAL, this, label ) );
 	wxFlexGridSizer& s_lower( *new wxFlexGridSizer( 2, 0, 4 ) );
 
 	s_lower.AddGrowableCol( 1 );
@@ -91,7 +92,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 		wxDefaultPosition, wxDefaultSize, wxDIRP_USE_TEXTCTRL | wxDIRP_DIR_MUST_EXIST
 	);
 
-	s_box.Add( m_pickerCtrl, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5).Expand() );
+	GetSizer()->Add( m_pickerCtrl, wxSizerFlags().Border(wxLEFT | wxRIGHT | wxTOP, 5).Expand() );
 	s_lower.Add( m_checkCtrl );
 
 	pxSetToolTip( m_checkCtrl, pxE( ".Tooltip:DirPicker:UseDefault",
@@ -108,9 +109,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 	Connect( b_explore->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( DirPickerPanel::Explore_Click ) );
 #endif
 
-	s_box.Add( &s_lower, wxSizerFlags().Expand() );
-
-	SetSizer( &s_box );
+	GetSizer()->Add( &s_lower, wxSizerFlags().Expand() );
 
 	Connect( m_checkCtrl->GetId(),	wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( DirPickerPanel::UseDefaultPath_Click ) );
 
@@ -144,4 +143,9 @@ void Panels::DirPickerPanel::Reset()
 void Panels::DirPickerPanel::Apply()
 {
 	g_Conf->Folders.Set( m_FolderId, m_pickerCtrl->GetPath(), m_checkCtrl->GetValue() );
+}
+
+wxDirName Panels::DirPickerPanel::GetPath() const
+{
+	return wxDirName( m_pickerCtrl->GetPath() );
 }

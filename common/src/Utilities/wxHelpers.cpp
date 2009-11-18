@@ -14,78 +14,13 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "Utilities/HashMap.h"
+#include "HashMap.h"
 #include "wxHelpers.h"
+#include "pxStaticText.h"
 
 #include <wx/cshelp.h>
+#include <wx/tooltip.h>
 
-#if wxUSE_TOOLTIPS
-#   include <wx/tooltip.h>
-#endif
-
-
-// This method is used internally to create multi line checkboxes and radio buttons.
-static wxStaticText* _appendStaticSubtext( wxWindow* parent, wxSizer& sizer, const wxString& subtext, const wxString& tooltip, int wrapLen )
-{
-	static const int Indentation = 23;
-
-	if( subtext.IsEmpty() ) return NULL;
-
-	wxStaticText* joe = new wxStaticText( parent, wxID_ANY, subtext );
-	if( wrapLen > 0 ) joe->Wrap( wrapLen-Indentation );
-	if( !tooltip.IsEmpty() )
-		pxSetToolTip( joe, tooltip );
-	sizer.Add( joe, wxSizerFlags().Border( wxLEFT, Indentation ) );
-	sizer.AddSpacer( 9 );
-
-	return joe;
-}
-
-pxCheckBox::pxCheckBox(wxPanelWithHelpers* parent, const wxString& label, const wxString& subtext)
-	: wxPanel( parent )
-{
-	m_idealWidth	= parent->GetIdealWidth() - 24;
-	Init( label, subtext );
-}
-
-pxCheckBox::pxCheckBox(wxDialogWithHelpers* parent, const wxString& label, const wxString& subtext)
-	: wxPanel( parent )
-{
-	m_idealWidth	= parent->GetIdealWidth() - 24;
-	Init( label, subtext );
-}
-
-void pxCheckBox::Init(const wxString& label, const wxString& subtext)
-{
-	m_checkbox		= new wxCheckBox( this, wxID_ANY, label );
-
-	wxBoxSizer&	mySizer( *new wxBoxSizer(wxVERTICAL) );
-	mySizer.Add( m_checkbox, pxSizerFlags::StdExpand() );
-	m_subtext = _appendStaticSubtext( this, mySizer, subtext, wxEmptyString, m_idealWidth );
-
-	SetSizer( &mySizer );
-}
-
-// applies the tooltip to both both the checkbox and it's static subtext (if present), and
-// performs word wrapping on platforms that need it (eg mswindows).
-pxCheckBox& pxCheckBox::SetToolTip( const wxString& tip )
-{
-	const wxString wrapped( pxFormatToolTipText(this, tip) );
-	pxSetToolTip( m_checkbox, wrapped );
-	pxSetToolTip( m_subtext, wrapped );
-	return *this;
-}
-
-pxCheckBox& pxCheckBox::SetValue( bool val )
-{
-	m_checkbox->SetValue( val );
-	return *this;
-}
-
-bool pxCheckBox::GetValue() const
-{
-	return m_checkbox->GetValue();
-}
 
 // ------------------------------------------------------------------------
 // Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this
@@ -99,25 +34,17 @@ bool pxCheckBox::GetValue() const
 // alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
 //      or overridden.  [default is left alignment]
 //
-wxStaticText& wxHelpers::AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags, int size )
+pxStaticText& wxHelpers::AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags )
 {
-	// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
-	alignFlags |= wxST_NO_AUTORESIZE;
-    wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
-    if( size > 0 ) temp.Wrap( size );
-
-    sizer.Add( &temp, pxSizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+    pxStaticText& temp( *new pxStaticText( parent, label, alignFlags ) );
+    temp.AddTo( sizer );
     return temp;
 }
 
-wxStaticText& wxHelpers::InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags, int size )
+pxStaticText& wxHelpers::InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags )
 {
-	// No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
-	alignFlags |= wxST_NO_AUTORESIZE;
-	wxStaticText& temp( *new wxStaticText(parent, wxID_ANY, label, wxDefaultPosition, wxDefaultSize, alignFlags ) );
-	if( size > 0 ) temp.Wrap( size );
-
-	sizer.Insert( position, &temp, pxSizerFlags::StdSpace().Align( alignFlags & wxALIGN_MASK ) );
+	pxStaticText& temp( *new pxStaticText(parent, label, alignFlags ) );
+	temp.InsertAt( sizer, position );
 	return temp;
 }
 
@@ -132,6 +59,17 @@ bool pxDialogExists( wxWindowID id )
 	int dest = 0;
 	m_DialogIdents.TryGetValue( id, dest );
 	return (dest > 0);
+}
+
+// --------------------------------------------------------------------------------------
+//  wxDialogWithHelpers Implementation
+// --------------------------------------------------------------------------------------
+IMPLEMENT_DYNAMIC_CLASS(wxDialogWithHelpers, wxDialog)
+
+wxDialogWithHelpers::wxDialogWithHelpers()
+{
+	m_idealWidth		= wxDefaultCoord;
+	m_hasContextHelp	= false;
 }
 
 wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size )
@@ -164,9 +102,9 @@ void wxDialogWithHelpers::OnActivate(wxActivateEvent& evt)
 	//evt.Skip();
 }
 
-wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int size, int alignFlags )
+wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags )
 {
-	return wxHelpers::AddStaticTextTo( this, sizer, label, size, alignFlags );
+	return wxHelpers::AddStaticTextTo( this, sizer, label, alignFlags );
 }
 
 void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
@@ -201,20 +139,87 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 	buttonSizer->Add( &s_buttons, pxSizerFlags::StdButton() );
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
-wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, int idealWidth ) :
-	wxPanel( parent )
+// --------------------------------------------------------------------------------------
+//  wxPanelWithHelpers Implementations
+// --------------------------------------------------------------------------------------
+
+IMPLEMENT_DYNAMIC_CLASS(wxPanelWithHelpers, wxPanel)
+
+void wxPanelWithHelpers::Init()
 {
-	m_idealWidth			= idealWidth;
-	m_StartNewRadioGroup	= true;
+	m_idealWidth = wxDefaultCoord;
+
+	// Find the first parent with a fixed width:
+	wxWindow* millrun = this->GetParent();
+	while( (m_idealWidth == wxDefaultCoord) && millrun != NULL )
+	{
+		if( wxIsKindOf( millrun, wxPanelWithHelpers ) )
+			m_idealWidth = ((wxPanelWithHelpers*)millrun)->GetIdealWidth();
+
+		else if( wxIsKindOf( millrun, wxDialogWithHelpers ) )
+			m_idealWidth = ((wxDialogWithHelpers*)millrun)->GetIdealWidth();
+
+		millrun = millrun->GetParent();
+	}
+
+	if( m_idealWidth == wxDefaultCoord || GetParent() == NULL )
+		return;
+
+	// Check for a StaticBox -- if we belong to one then we'll want to "downgrade" the
+	// inherited textbox width automatically.
+
+	wxSizer* guess = GetSizer();
+	if( guess == NULL ) guess = GetParent()->GetSizer();
+	if( guess == NULL ) guess = GetParent()->GetContainingSizer();
+	
+	if( guess != NULL )
+	{
+		int top=0, others=0;
+		if( wxIsKindOf( guess, wxStaticBoxSizer ) )
+			((wxStaticBoxSizer*)guess)->GetStaticBox()->GetBordersForSizer( &top, &others );
+
+		m_idealWidth -= (others*2);
+		m_idealWidth -= 2;				// generic padding compensation (no exact sciences to be found here)
+	}
 }
 
-wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size ) :
-	wxPanel( parent, wxID_ANY, pos, size )
+wxPanelWithHelpers* wxPanelWithHelpers::AddStaticBox( const wxString& label, wxOrientation orient )
 {
-	m_idealWidth			= wxDefaultCoord;
-	m_StartNewRadioGroup	= true;
+	wxSizer* oldSizer = GetSizer();
+
+	SetSizer( new wxStaticBoxSizer( orient, this, label ), false );
+	Init();
+
+	if( oldSizer )
+		GetSizer()->Add( oldSizer );
+	
+	return this;
+}
+
+wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, wxOrientation orient, const wxString& staticBoxLabel )
+	: wxPanel( parent )
+{
+	SetSizer( new wxStaticBoxSizer( orient, this, staticBoxLabel ) );
+	Init();
+}
+
+wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, wxOrientation orient )
+	: wxPanel( parent )
+{
+	SetSizer( new wxBoxSizer( orient ) );
+	Init();
+}
+
+wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent )
+	: wxPanel( parent )
+{
+	Init();
+}
+
+wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size )
+	: wxPanel( parent, wxID_ANY, pos, size )
+{
+	Init();
 }
 
 // ------------------------------------------------------------------------
@@ -229,22 +234,7 @@ wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, co
 // alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
 //      or overridden.  [default is left alignment]
 //
-wxStaticText& wxPanelWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags, int size )
+pxStaticText& wxPanelWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags )
 {
-	return wxHelpers::AddStaticTextTo( this, sizer, label, alignFlags, (size > 0) ? size : GetIdealWidth()-24 );
+	return wxHelpers::AddStaticTextTo( this, sizer, label, alignFlags );
 }
-
-// ------------------------------------------------------------------------
-// Creates a new Radio button and adds it to the specified sizer, with optional tooltip.  Uses the
-// default spacer setting for adding checkboxes, and the tooltip (if specified) is applied to both
-// the radio button and it's static subtext (if present).
-//
-// Static subtext, if specified, is displayed below the checkbox and is indented accordingly.
-// The first item in a group should pass True for the isFirst parameter.
-//
-/*wxRadioButton& wxPanelWithHelpers::AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext, const wxString& tooltip )
-{
-	wxRadioButton& result = wxHelpers::AddRadioButtonTo( this, sizer, label, subtext, tooltip, GetIdealWidth()-8, m_StartNewRadioGroup );
-	m_StartNewRadioGroup = false;
-	return result;
-}*/

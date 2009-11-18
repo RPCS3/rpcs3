@@ -15,24 +15,14 @@
 
 #pragma once
 
-#include "App.h"
+#include <wx/wx.h>
+#include "wxGuiTools.h"
 
-#include "Utilities/wxHelpers.h"
-#include "Utilities/CheckedStaticBox.h"
-#include "Utilities/HashMap.h"
-
-using namespace HashTools;
-
-namespace Dialogs {
-
-class LogOptionsDialog: public wxDialogWithHelpers
+namespace wxHelpers
 {
-public:
-	LogOptionsDialog( wxWindow* parent=NULL, int id=DialogId_LogOptions );
-	
-protected:
-	void OnOk_Click( wxCommandEvent& evt );
-	void OnApply_Click( wxCommandEvent& evt );
-};
+	//extern wxRadioButton&	AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord, bool isFirst = false );
+	extern pxStaticText&	AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE );
+	extern pxStaticText&	InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags=wxALIGN_CENTRE );
+}
 
-}	// end namespace Dialogs
+

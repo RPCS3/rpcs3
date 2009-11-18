@@ -22,13 +22,12 @@ using namespace wxHelpers;
 static const int BetweenFolderSpace = 5;
 
 // ------------------------------------------------------------------------
-Panels::BasePathsPanel::BasePathsPanel( wxWindow& parent, int idealWidth ) :
-	wxPanelWithHelpers( &parent, idealWidth-12 )
-,	s_main( *new wxBoxSizer( wxVERTICAL ) )
+Panels::BasePathsPanel::BasePathsPanel( wxWindow* parent )
+	: wxPanelWithHelpers( parent, wxVERTICAL )
 {
 }
 
-Panels::DirPickerPanel& Panels::BasePathsPanel::AddDirPicker( wxBoxSizer& sizer,
+Panels::DirPickerPanel& Panels::BasePathsPanel::AddDirPicker( wxSizer& sizer,
 	FoldersEnum_t folderid, const wxString& label, const wxString& popupLabel )
 {
 	DirPickerPanel* dpan = new DirPickerPanel( this, folderid, label, popupLabel );
@@ -37,9 +36,11 @@ Panels::DirPickerPanel& Panels::BasePathsPanel::AddDirPicker( wxBoxSizer& sizer,
 }
 
 // ------------------------------------------------------------------------
-Panels::StandardPathsPanel::StandardPathsPanel( wxWindow& parent, int /* idealWidth */ ) :
+Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent ) :
 	BasePathsPanel( parent )
 {
+	wxSizer& s_main( *GetSizer() );
+
 	s_main.AddSpacer( BetweenFolderSpace );
 	AddDirPicker( s_main, FolderId_Savestates,
 		_("Savestates:"),

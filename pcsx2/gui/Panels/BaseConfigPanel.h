@@ -17,13 +17,6 @@
 
 #include <list>
 
-#include "AppConfig.h"
-#include "wxHelpers.h"
-
-#include "Utilities/SafeArray.h"
-#include "Utilities/EventSource.h"
-#include "Utilities/wxGuiTools.h"
-
 class wxListBox;
 class wxBookCtrlBase;
 
@@ -138,13 +131,16 @@ namespace Panels
 			g_ApplyState.PanelList.remove( this );
 		}
 
-		BaseApplicableConfigPanel( wxWindow* parent, int idealWidth )
-			: wxPanelWithHelpers( parent, idealWidth )
+		BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient=wxVERTICAL )
+			: wxPanelWithHelpers( parent, orient )
 		{
-			m_OwnerPage = g_ApplyState.CurOwnerPage;
-			m_OwnerBook = g_ApplyState.ParentBook;
+			Init();
+		}
 
-			g_ApplyState.PanelList.push_back( this );
+		BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
+			: wxPanelWithHelpers( parent, orient, staticLabel )
+		{
+			Init();
 		}
 
 		int GetOwnerPage() const { return m_OwnerPage; }
@@ -161,5 +157,13 @@ namespace Panels
 		// of form contents fails, the function should throw Exception::CannotApplySettings.
 		// If no exceptions are thrown, then the operation is assumed a success. :)
 		virtual void Apply()=0;
+		
+	protected:
+		void Init()
+		{
+			m_OwnerPage = g_ApplyState.CurOwnerPage;
+			m_OwnerBook = g_ApplyState.ParentBook;
+			g_ApplyState.PanelList.push_back( this );
+		}
 	};
 }

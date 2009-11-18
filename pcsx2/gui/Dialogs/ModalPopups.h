@@ -29,9 +29,9 @@ protected:
 	class UsermodePage : public wxWizardPageSimple
 	{
 	protected:
-		Panels::DirPickerPanel& m_dirpick_settings;
-		Panels::LanguageSelectionPanel& m_panel_LangSel;
-		Panels::UsermodeSelectionPanel& m_panel_UserSel;
+		Panels::DirPickerPanel*			m_dirpick_settings;
+		Panels::LanguageSelectionPanel*	m_panel_LangSel;
+		Panels::UsermodeSelectionPanel*	m_panel_UserSel;
 
 	public:
 		UsermodePage( wxWizard* parent );

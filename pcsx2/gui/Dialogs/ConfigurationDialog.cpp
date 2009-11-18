@@ -23,6 +23,7 @@
 #include <wx/artprov.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
+#include <wx/filepicker.h>
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>		// needed for Vista icon spacing fix.
@@ -40,15 +41,13 @@ using namespace Panels;
 	static const int s_orient = wxBK_LEFT;
 #endif
 
-static const int IdealWidth = 580;
-
 template< typename T >
 void Dialogs::ConfigurationDialog::AddPage( const char* label, int iconid )
 {
 	const wxString labelstr( fromUTF8( label ) );
 	const int curidx = m_labels.Add( labelstr );
 	g_ApplyState.SetCurrentPage( curidx );
-	m_listbook.AddPage( new T( m_listbook, IdealWidth ),	wxGetTranslation( labelstr ),
+	m_listbook.AddPage( new T( &m_listbook ), wxGetTranslation( labelstr ),
 		( labelstr == g_Conf->SettingsTabName ), iconid );
 }
 
@@ -56,6 +55,8 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("PCSX2 Configuration"), true )
 ,	m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
 {
+	m_idealWidth = 600;
+
 	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
 
 	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
@@ -85,7 +86,7 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	// to the size of the frame's ideal width.
 
 	ListView_SetIconSpacing( (HWND)m_listbook.GetListView()->GetHWND(),
-		(IdealWidth-6) / m_listbook.GetPageCount(), g_Conf->Listbook_ImageSize+32		// y component appears to be ignored
+		(m_idealWidth-6) / m_listbook.GetPageCount(), g_Conf->Listbook_ImageSize+32		// y component appears to be ignored
 	);
 #endif
 
@@ -149,9 +150,10 @@ void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent, int id ) :
 	wxDialogWithHelpers( parent, id, _("BIOS Selector"), false )
 {
-	wxBoxSizer& bleh( *new wxBoxSizer( wxVERTICAL ) );
+	m_idealWidth = 500;
 
-	Panels::BaseSelectorPanel* selpan = new Panels::BiosSelectorPanel( *this, 500 );
+	wxBoxSizer& bleh( *new wxBoxSizer( wxVERTICAL ) );
+	Panels::BaseSelectorPanel* selpan = new Panels::BiosSelectorPanel( this );
 
 	bleh.Add( selpan, pxSizerFlags::StdExpand() );
 	AddOkCancel( bleh, false );

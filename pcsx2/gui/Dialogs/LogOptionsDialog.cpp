@@ -25,9 +25,10 @@ using namespace Panels;
 Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent, int id )
 	: wxDialogWithHelpers( parent, id, _("High Volume Logging"), true )
 {
+	m_idealWidth = 480;
+
 	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );
-	
-	mainsizer.Add( new LogOptionsPanel( this, 480 ) );
+	mainsizer.Add( new LogOptionsPanel( this ) );
 
 	AddOkCancel( mainsizer, true );
 	FindWindow( wxID_APPLY )->Disable();

@@ -19,7 +19,7 @@
 #include <wx/image.h>
 #include <wx/propdlg.h>
 
-#include "wxHelpers.h"
+#include "AppCommon.h"
 
 class wxListbook;
 

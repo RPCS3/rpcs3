@@ -18,8 +18,8 @@
 
 using namespace pxSizerFlags;
 
-Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow& parent, int idealWidth )
-	: BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 	, s_adv( *new wxStaticBoxSizer( wxVERTICAL, this ) )
 {
 	wxStaticBoxSizer*	s_round( new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) );
@@ -89,8 +89,8 @@ void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent &evt)
 	m_Option_FTZ->SetValue(true);
 }
 
-Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth )
-	: BaseAdvancedCpuOptions( parent, idealWidth )
+Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
+	: BaseAdvancedCpuOptions( parent )
 {
 	s_adv.GetStaticBox()->SetLabel(_("EE/FPU Advanced Recompiler Options"));
 
@@ -117,8 +117,8 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow& parent, int idealWidth
 }
 
 
-Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth )
-	: BaseAdvancedCpuOptions( parent, idealWidth )
+Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
+	: BaseAdvancedCpuOptions( parent )
 {
 	s_adv.GetStaticBox()->SetLabel(_("VU0 / VU1 Advanced Recompiler Options"));
 
@@ -144,8 +144,8 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow& parent, int idealWidth )
 	else								m_ClampModePanel->SetSelection( 0 );
 }
 
-Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth )
-	: BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 {
 	// i18n: No point in translating PS2 CPU names :)
 	wxStaticBoxSizer* s_ee  = new wxStaticBoxSizer( wxVERTICAL, this, L"EmotionEngine" );
@@ -192,7 +192,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth )
 
 	s_main.Add( &s_recs, StdExpand() );
 	s_main.Add( new wxStaticLine( this ), wxSizerFlags().Border(wxALL, 24).Expand() );
-	s_main.Add( new AdvancedOptionsFPU( *this, idealWidth ), StdExpand() );
+	s_main.Add( new AdvancedOptionsFPU( this ), StdExpand() );
 
 	SetSizer( &s_main );
 
@@ -204,8 +204,8 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow& parent, int idealWidth )
 	m_panel_RecIOP->SetSelection( (int)recOps.EnableIOP );
 }
 
-Panels::CpuPanelVU::CpuPanelVU( wxWindow& parent, int idealWidth )
-	: BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 {
 	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 	wxFlexGridSizer& s_recs = *new wxFlexGridSizer( 2 );
@@ -244,7 +244,7 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow& parent, int idealWidth )
 
 	s_main.Add( &s_recs, StdExpand() );
 	s_main.Add( new wxStaticLine( this ), wxSizerFlags().Border(wxALL, 24).Expand() );
-	s_main.Add( new AdvancedOptionsVU( *this, idealWidth ), StdExpand() );
+	s_main.Add( new AdvancedOptionsVU( this ), StdExpand() );
 
 	SetSizer( &s_main );
 

@@ -84,13 +84,14 @@ void Pcsx2App::ReadUserModeSettings()
 		// Pre-Alpha Warning!  Why didn't I think to add this sooner?!
 		
 		wxDialogWithHelpers preAlpha( NULL, wxID_ANY, _("It might devour your kittens! - PCSX2 0.9.7 Pre-Alpha"), false );
-		
+		preAlpha.SetIdealWidth( 575 );
+
 		wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
 		preAlpha.AddStaticText( s_main,
 			L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
 			L"user interface, and many parts of the program have *NOT* been implemented yet.  Options will be missing.  "
 			L"Some things may crash or hang without warning.  Other things will seem plainly stupid and the product of incompetent "
-			L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER, 600
+			L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER
 		);
 		
 		s_main.Add( new wxButton( &preAlpha, wxID_OK ), pxSizerFlags::StdCenter() );

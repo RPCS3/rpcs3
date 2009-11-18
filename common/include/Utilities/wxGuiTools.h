@@ -23,6 +23,9 @@
 
 #include <wx/wx.h>
 
+class pxStaticText;
+class pxCheckBox;
+
 // ----------------------------------------------------------------------------
 // wxGuiTools.h
 //
@@ -34,6 +37,8 @@
 
 namespace pxSizerFlags
 {
+	static const int StdPadding = 6;
+	
 	extern wxSizerFlags StdSpace();
 	extern wxSizerFlags StdCenter();
 	extern wxSizerFlags StdExpand();
@@ -48,15 +53,18 @@ namespace pxSizerFlags
 // --------------------------------------------------------------------------------------
 class wxDialogWithHelpers : public wxDialog
 {
+	DECLARE_DYNAMIC_CLASS_NO_COPY(wxDialogWithHelpers)
+
 protected:
 	bool	m_hasContextHelp;
 	int		m_idealWidth;
 
 public:
+	wxDialogWithHelpers();
 	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
 	virtual ~wxDialogWithHelpers() throw();
 
-	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
+	wxStaticText& AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE );
     void AddOkCancel( wxSizer& sizer, bool hasApply=false );
 
 	wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
@@ -72,26 +80,27 @@ protected:
 // --------------------------------------------------------------------------------------
 class wxPanelWithHelpers : public wxPanel
 {
+	DECLARE_DYNAMIC_CLASS_NO_COPY(wxPanelWithHelpers)
+
 protected:
 	int		m_idealWidth;
-	bool	m_StartNewRadioGroup;
 
 public:
-	wxPanelWithHelpers( wxWindow* parent, int idealWidth=wxDefaultCoord );
+	wxPanelWithHelpers( wxWindow* parent, wxOrientation orient, const wxString& staticBoxLabel );
+	wxPanelWithHelpers( wxWindow* parent, wxOrientation orient );
 	wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size=wxDefaultSize );
+	explicit wxPanelWithHelpers( wxWindow* parent=NULL );
+	
+	wxPanelWithHelpers* AddStaticBox( const wxString& label, wxOrientation orient=wxVERTICAL );
+	pxStaticText& AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE );
 
-	//wxRadioButton&	NewSpinCtrl( const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-
-	//wxRadioButton&	AddRadioButton( wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString );
-	wxStaticText&	AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE, int size=wxDefaultCoord );
-
-	wxPanelWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
+	// TODO : Propagate to children?
+	wxPanelWithHelpers& SetIdealWidth( int width ) { m_idealWidth = width;  return *this; }
 	int GetIdealWidth() const { return m_idealWidth; }
 	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
-
-	void StartRadioGroup() { m_StartNewRadioGroup = true; }
 	
 protected:
+	void Init();
 };
 
 
@@ -217,6 +226,7 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+extern bool pxDialogExists( wxWindowID id );
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 extern wxRect wxGetDisplayArea();
 

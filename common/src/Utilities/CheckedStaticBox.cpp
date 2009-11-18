@@ -16,19 +16,16 @@
 #include "PrecompiledHeader.h"
 #include "CheckedStaticBox.h"
 
-CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title, int id ) :
-	wxPanelWithHelpers( parent, wxDefaultCoord )
-,	m_MasterSizer( *new wxBoxSizer( wxVERTICAL ) )
-,	ThisToggle( *new wxCheckBox( this, id, title, wxPoint( 8, 0 ) ) )
-,	ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
+CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title, int id )
+	: wxPanelWithHelpers( parent, wxVERTICAL )
+	, ThisToggle( *new wxCheckBox( this, id, title, wxPoint( 8, 0 ) ) )
+	, ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
 {
-	m_MasterSizer.Add( &ThisToggle );
-	m_MasterSizer.Add( &ThisSizer, wxSizerFlags().Expand() );
+	GetSizer()->Add( &ThisToggle );
+	GetSizer()->Add( &ThisSizer, wxSizerFlags().Expand() );
 
 	// Ensure that the right-side of the static group box isn't too cozy:
-	m_MasterSizer.SetMinSize( ThisToggle.GetSize() + wxSize( 32, 0 ) );
-
-	SetSizer( &m_MasterSizer );
+	GetSizer()->SetMinSize( ThisToggle.GetSize() + wxSize( 32, 0 ) );
 
 	Connect( ThisToggle.GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( CheckedStaticBox::MainToggle_Click ) );
 }

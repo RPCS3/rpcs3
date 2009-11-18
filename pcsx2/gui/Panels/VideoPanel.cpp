@@ -20,10 +20,44 @@
 
 using namespace pxSizerFlags;
 
-Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
+template< typename WinType >
+WinType* FitToDigits( WinType* win, int digits )
 {
-	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+	int ex;
+	win->GetTextExtent( wxString( L'0', digits+1 ), &ex, NULL );
+	win->SetMinSize( wxSize( ex+10, wxDefaultCoord ) );		// +10 for text control borders/insets and junk.
+	return win;
+}
+
+template<>
+wxSpinCtrl* FitToDigits<wxSpinCtrl>( wxSpinCtrl* win, int digits )
+{
+	// HACK!!  The better way would be to create a pxSpinCtrl class that extends wxSpinCtrl and thus
+	// have access to wxSpinButton::DoGetBestSize().  But since I don't want to do that, we'll just
+	// make/fake it with a value it's pretty common to Win32/GTK/Mac:
+
+	static const int MagicSpinnerSize = 18;
+
+	int ex;
+	win->GetTextExtent( wxString( L'0', digits+1 ), &ex, NULL );
+	win->SetMinSize( wxSize( ex+10+MagicSpinnerSize, wxDefaultCoord ) );		// +10 for text control borders/insets and junk.
+	return win;
+}
+
+// Creates a text control which is right-justified and has it's minimum width configured to suit the
+// number of digits requested.
+wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits )
+{
+	wxTextCtrl* ctrl = new wxTextCtrl( parent, wxID_ANY );
+	ctrl->SetWindowStyleFlag( wxTE_RIGHT );
+	FitToDigits( ctrl, digits );
+	return ctrl;
+}
+
+Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
+{
+	wxSizer& s_main( *GetSizer() );
 
 	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
 		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
@@ -33,26 +67,19 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth )
 		L"be available either."
 	) );
 
-	AddStaticText( mainSizer, pxE( ".Framelimiter:Heading",
+	AddStaticText( s_main, pxE( ".Framelimiter:Heading",
 		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
 		L"percentages of the default region-based framerate, which can also be configured below."
 	) );
 
-	mainSizer.Add( m_check_LimiterDisable );
+	s_main.Add( m_check_LimiterDisable );
 
-	m_spin_NominalPct	= new wxSpinCtrl( this );
-	m_spin_SlomoPct		= new wxSpinCtrl( this );
-	m_spin_TurboPct		= new wxSpinCtrl( this );
+	m_spin_NominalPct	= FitToDigits( new wxSpinCtrl( this ), 6 );
+	m_spin_SlomoPct		= FitToDigits( new wxSpinCtrl( this ), 6 );
+	m_spin_TurboPct		= FitToDigits( new wxSpinCtrl( this ), 6 );
 
-	(m_text_BaseNtsc	= new wxTextCtrl( this, wxID_ANY ))->SetWindowStyleFlag( wxTE_RIGHT );
-	(m_text_BasePal		= new wxTextCtrl( this, wxID_ANY ))->SetWindowStyleFlag( wxTE_RIGHT );
-
-	m_spin_NominalPct->SetValue( 100 );
-	m_spin_SlomoPct->SetValue( 50 );
-	m_spin_TurboPct->SetValue( 100 );
-	
-	m_text_BaseNtsc->SetValue( L"59.94" );
-	m_text_BasePal->SetValue( L"50.00" );
+	m_text_BaseNtsc		= CreateNumericalTextCtrl( this, 7 );
+	m_text_BasePal		= CreateNumericalTextCtrl( this, 7 );
 
 	wxFlexGridSizer& s_spins = *new wxFlexGridSizer( 5 );
 
@@ -85,19 +112,25 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow& parent, int idealWidth )
 
 	AddStaticText( s_spins, _("NTSC Framerate:"), wxALIGN_LEFT );
 	s_spins.AddSpacer( 5 );
-	s_spins.Add( m_text_BaseNtsc, wxSizerFlags().Border(wxTOP, 3) );
+	s_spins.Add( m_text_BaseNtsc, wxSizerFlags().Align(wxALIGN_RIGHT).Border(wxTOP, 3) );
 	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), StdSpace() );
 	s_spins.AddSpacer( 5 );
 
 	AddStaticText( s_spins, _("PAL Framerate:"), wxALIGN_LEFT );
 	s_spins.AddSpacer( 5 );
-	s_spins.Add( m_text_BasePal, wxSizerFlags().Border(wxTOP, 3) );
+	s_spins.Add( m_text_BasePal, wxSizerFlags().Align(wxALIGN_RIGHT).Border(wxTOP, 3) );
 	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), StdSpace() );
 	s_spins.AddSpacer( 5 );
 
-	mainSizer.Add( &s_spins );
+	s_main.Add( &s_spins );
 	
-	SetSizer( &mainSizer );
+
+	m_spin_NominalPct->SetValue( 100 );
+	m_spin_SlomoPct->SetValue( 50 );
+	m_spin_TurboPct->SetValue( 100 );
+
+	m_text_BaseNtsc->SetValue( L"59.94" );
+	m_text_BasePal->SetValue( L"50.00" );
 
 }
 
@@ -106,35 +139,103 @@ void Panels::FramelimiterPanel::Apply()
 }
 
 
-Panels::VideoPanel::VideoPanel( wxWindow& parent, int idealWidth ) :
-	BaseApplicableConfigPanel( &parent, idealWidth )
+Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 {
-	m_check_CloseGS =  new pxCheckBox( this, _("Hide GS window on Suspend") );
-	
-	m_check_CloseGS->SetToolTip( pxE( ".Tooltip:Video:HideGS",
-		L"Completely closes the often large and bulky GS window when pressing "
-		L"ESC or suspending the emulator.  That way it won't get *in* the way!"
-	) );
+	m_text_WindowWidth	= CreateNumericalTextCtrl( this, 5 );
+	m_text_WindowHeight	= CreateNumericalTextCtrl( this, 5 );
 
-	/*&AddCheckBox( mainSizer, _(""),
-		wxEmptyString,		// subtext
-		pxE( ".Tooltip:Video:HideGS",
-			L"Completely closes the often large and bulky GS window when pressing "
-			L"ESC or suspending the emulator.  That way it won't get *in* the way!"
+	m_check_CloseGS		= new pxCheckBox( this, _("Hide GS window") );
+
+	m_check_AspectLock	= new pxCheckBox( this, _("Lock Aspect Ratio") );
+
+	m_check_SizeLock	= new pxCheckBox( this, _("Lock Size"),
+		pxE( ".Tooltips:Video:LockSize",
+			L"Disables the resize border for the GS window."
 		)
-	);*/
+	);
 
+	m_check_VsyncEnable	= new pxCheckBox( this, _("Wait for Vsync"),
+		pxE( ".Tooltips:Video:Vsync",
+			L"This reduces screen/refresh tearing but typically has a big performance hit.  "
+			L"It may not work in windowed modes, and may not be supported by all GS plugins."
+		)
+	);
+
+	m_check_Fullscreen	= new pxCheckBox( this, _("Force Fullscreen at Startup"),
+		pxE( ".Panels:Video:Fullscreen",
+			L"Enables automatic modeswitch to fullscreen when starting or resuming emulation."
+		)
+	);
+
+	m_check_CloseGS->SetToolTip( pxE( ".Tooltips:Video:HideGS",
+		L"Completely closes the often large and bulky GS window when pressing "
+		L"ESC or suspending the emulator.  Might prevent memory leaks too, if you use DX10."
+	) );
+	
+	// ----------------------------------------------------------------------------
+	//  Layout and Positioning
+
+	wxBoxSizer& s_customsize( *new wxBoxSizer( wxHORIZONTAL ) );
+	s_customsize.Add( m_text_WindowWidth );
+	AddStaticText( s_customsize, _("x") );
+	s_customsize.Add( m_text_WindowHeight );
+
+	//wxFlexGridSizer& s_winsize( *new wxFlexGridSizer( 2 ) );
+	//s_winsize.AddGrowableCol( 0 );
+
+	wxStaticBoxSizer& s_winsize( *new wxStaticBoxSizer( wxVERTICAL, this, _("Window Size:") ) );
+	//AddStaticText( s_winsize, _("Window Size:") );
+	AddStaticText( s_winsize, _("Custom Window Size: "), wxALIGN_LEFT );
+	s_winsize.Add( &s_customsize, StdSpace().Border( wxLEFT | wxRIGHT | wxBOTTOM) );
+
+
+	wxBoxSizer& s_main( *new wxBoxSizer( wxVERTICAL ) );
+	SetSizer( &s_main );
+
+	s_main.Add( &s_winsize, StdSpace() );
+	
+	s_main.Add( m_check_SizeLock );
+	s_main.Add( m_check_AspectLock );
+	s_main.Add( m_check_Fullscreen );
+	s_main.Add( m_check_CloseGS );
+	s_main.Add( m_check_VsyncEnable );
+	
+	
+	m_text_WindowWidth->SetValue( L"640" );
+	m_text_WindowHeight->SetValue( L"480" );
 	m_check_CloseGS->SetValue( g_Conf->CloseGSonEsc );
 
-	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
-	wxStaticBoxSizer& limitSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Framelimiter") );
+}
+
+void Panels::GSWindowSettingsPanel::Apply()
+{
+}
+
+Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
+	BaseApplicableConfigPanel( parent )
+{
+	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
+	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
+	left->SetIdealWidth( (left->GetIdealWidth()-16) / 2 );
+	right->SetIdealWidth( (right->GetIdealWidth()-16) / 2 );
+
+	GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
+	winpan->AddStaticBox(_("Display/Window"));
+
+	FramelimiterPanel* fpan = new FramelimiterPanel( right );
+	fpan->AddStaticBox(_("Framelimiter"));
+		
+	wxSizer& s_main( *GetSizer() );
+	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
+
+	left->GetSizer()->Add( winpan, wxSizerFlags().Expand() );
+	right->GetSizer()->Add( fpan, wxSizerFlags().Expand() );
 	
-	limitSizer.Add( new FramelimiterPanel( *this, idealWidth - 32 ) );
+	s_table->Add( left, StdExpand() );
+	s_table->Add( right, StdExpand() );
 
-	mainSizer.Add( m_check_CloseGS );
-	mainSizer.Add( &limitSizer );
-
-	SetSizer( &mainSizer );
+	s_main.Add( s_table );
 	
 	// TODO:
 	// Framelimiting / Frameskipping / Vsync

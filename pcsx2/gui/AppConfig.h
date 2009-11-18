@@ -141,6 +141,10 @@ public:
 	
 	// Closes the GS/Video port on escape (good for fullscreen activity)
 	bool		CloseGSonEsc;
+	
+	// Master toggle for enabling or disabling all speedhacks in one fail-free swoop.
+	// (the toggle is applied when a new EmuConfig is sent through AppCoreThread::ApplySettings)
+	bool		EnableSpeedHacks;
 
 	wxString		CurrentIso;
 	wxString		CurrentELF;

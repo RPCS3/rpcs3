@@ -15,24 +15,22 @@
 
 #pragma once
 
-#include "App.h"
+#include "wxHelpers.h"
 
-#include "Utilities/wxHelpers.h"
-#include "Utilities/CheckedStaticBox.h"
-#include "Utilities/HashMap.h"
-
-using namespace HashTools;
-
-namespace Dialogs {
-
-class LogOptionsDialog: public wxDialogWithHelpers
+class CheckedStaticBox : public wxPanelWithHelpers
 {
 public:
-	LogOptionsDialog( wxWindow* parent=NULL, int id=DialogId_LogOptions );
-	
-protected:
-	void OnOk_Click( wxCommandEvent& evt );
-	void OnApply_Click( wxCommandEvent& evt );
-};
+	wxBoxSizer& ThisSizer;		// Boxsizer which holds all child items.
+	wxCheckBox& ThisToggle;		// toggle which can enable/disable all child controls
 
-}	// end namespace Dialogs
+public:
+	CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title=wxEmptyString, int id=wxID_ANY );
+
+	void SetValue( bool val );
+	bool GetValue() const;
+
+public:
+	// Event handler for click events for the main checkbox (default behavior: enables/disables all child controls)
+	// This function can be overridden to implement custom handling of check enable/disable behavior.
+	virtual void MainToggle_Click( wxCommandEvent& evt );
+};

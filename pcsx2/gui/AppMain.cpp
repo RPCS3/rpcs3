@@ -422,7 +422,6 @@ void AppApplySettings( const AppConfig* oldconf, bool saveOnSuccess )
 
 	int toSend = 0;
 	sApp.Source_SettingsApplied().Dispatch( toSend );
-	CoreThread.ApplySettings( g_Conf->EmuOptions );
 	
 	if( resume )
 		CoreThread.Resume();

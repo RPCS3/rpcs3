@@ -200,6 +200,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\CheckedStaticBox.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\Console.cpp"
 				>
 			</File>
@@ -256,7 +260,15 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\pxCheckBox.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\pxRadioPanel.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\Utilities\pxStaticText.cpp"
 				>
 			</File>
 			<File
@@ -281,6 +293,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\Utilities\wxGuiTools.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\Utilities\wxHelpers.cpp"
 				>
 			</File>
 			<Filter
@@ -426,6 +442,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\CheckedStaticBox.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\Console.h"
 				>
 			</File>
@@ -474,7 +494,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\pxCheckBox.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\pxRadioPanel.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\pxStaticText.h"
 				>
 			</File>
 			<File
@@ -511,6 +539,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\Utilities\wxGuiTools.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\wxHelpers.h"
 				>
 			</File>
 		</Filter>
