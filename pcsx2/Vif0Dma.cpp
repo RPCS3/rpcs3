@@ -86,7 +86,7 @@ static __forceinline void vif0UNPACK(u32 *data)
 	}
 
 	vif0.cl = 0;
-	vif0.tag.cmd  = vif0.cmd;
+	vif0.tag.cmd = vif0.cmd;
 	vif0Regs->offset = 0;
 }
 

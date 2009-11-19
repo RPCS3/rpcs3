@@ -635,14 +635,14 @@ int GetPS2ElfName( wxString& name )
 
 		if( parts.lvalue == L"BOOT2" )
 		{
-			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PS2 Disc = " + name );
 			name = parts.rvalue;
+			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PS2 Disc = " + name );
 			retype = 2;
 		}
 		else if( parts.lvalue == L"BOOT" )
 		{
-			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PSX/PSone Disc = " + name );
 			name = parts.rvalue;
+			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PSX/PSone Disc = " + name );
 			retype = 1;
 		}
 		else if( parts.lvalue == L"VMODE" )

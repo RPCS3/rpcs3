@@ -549,8 +549,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		if (tempsize > memlimit)
 		{
 			if (((vifRegs->cycle.cl != vifRegs->cycle.wl) &&
-			       ((memlimit + (vifRegs->cycle.cl - vifRegs->cycle.wl) * 16) == tempsize) ||
-			       (tempsize == memlimit)))
+			       ((memlimit + (vifRegs->cycle.cl - vifRegs->cycle.wl) * 16) == tempsize)))
 			{
 				//It's a red herring, so ignore it! SSE unpacks will be much quicker.
 				tempsize = 0;

@@ -59,7 +59,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 			g_psxNextBranchCycle = psxNextsCounter + psxNextCounter;
 		}
 	}
-
+    
 	switch (chcr)
 	{
 		case 0x01000201: //cpu to spu2 transfer

@@ -63,7 +63,7 @@ static void operator+=( wxSizer& target, pxCheckBox* src )
 }
 
 template<>
-static void operator+=( wxSizer& target, const pxWindowAndFlags<pxCheckBox>& src )
+void operator+=( wxSizer& target, const pxWindowAndFlags<pxCheckBox>& src )
 {
 	target.Add( src.window, src.flags );
 }

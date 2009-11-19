@@ -48,7 +48,7 @@
 // Note that if another control in the window has extends that blow the window size larger
 // than the "ideal" width, then the pxStaticText will remain consistent in it's size.  It
 // will not attempt to grow to fit the expanded area.  That might be fixable behavior, but
-// it was hard enough for m to get this much working. ;)
+// it was hard enough for me to get this much working. ;)
 //
 class pxStaticText : public wxStaticText
 {
@@ -91,7 +91,7 @@ static void operator+=( wxSizer& target, pxStaticText* src )
 }
 
 template<>
-static void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
+void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
 {
 	target.Add( src.window, src.flags );
 }

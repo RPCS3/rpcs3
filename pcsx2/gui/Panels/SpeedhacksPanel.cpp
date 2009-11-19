@@ -44,7 +44,7 @@ const wxChar* Panels::SpeedHacksPanel::GetEEcycleSliderMsg( int val )
 
 		case 3:
 			return pxE( ".Panels:Speedhacks:EECycleX3",
-				L"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* cause studdering "
+				L"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* cause stuttering "
 				L"audio on many FMVs."
 			);
 
@@ -201,7 +201,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent ) :
 
 	m_check_intc->SetToolTip( pxE( ".Tooltips:Speedhacks:INTC",
 		L"This hack works best for games that use the INTC Status register to wait for vsyncs, which includes primarily non-3D "
-		L"RPG titles. Games that do not use this method of vsync will see little or no speeup from this hack."
+		L"RPG titles. Games that do not use this method of vsync will see little or no speedup from this hack."
 	) );
 
 	m_check_b1fc0->SetToolTip( pxE( ".Tooltips:Speedhacks:BIFC0",
