@@ -62,13 +62,14 @@ u32 IsoFile::seek(u32 absoffset)
 	u32 endOffset = absoffset;
 
 	int oldSectorNumber = currentSectorNumber;
-	u32 newOffset = endOffset;
-	int newSectorNumber = fileEntry.lba + (int)(newOffset / sectorLength);
+	int newSectorNumber = fileEntry.lba + (int)(endOffset / sectorLength);
+	
 	if(oldSectorNumber != newSectorNumber)
 	{
 		internalReader.readSector(currentSector, newSectorNumber);
 	}
-	currentOffset = newOffset;
+	
+	currentOffset = endOffset;
 	currentSectorNumber = newSectorNumber;
 	sectorOffset = (int)(currentOffset % sectorLength);
 	
@@ -109,12 +110,11 @@ s32 IsoFile::skip(s32 n)
 {
 	s32 oldOffset = currentOffset;
 
-	if(n<0)
-		return 0;
+	if (n<0) return 0;
 
 	seek(currentOffset+n);
 
-	return currentOffset-oldOffset;
+	return currentOffset - oldOffset;
 }
 
 u32 IsoFile::getSeekPos() const

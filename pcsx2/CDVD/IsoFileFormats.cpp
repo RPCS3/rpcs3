@@ -23,7 +23,7 @@
 
 #include "IsoFileFormats.h"
 
-static bool detect(isoFile *iso)
+static int detect(isoFile *iso)
 {
 	u8 buf[2448];
 	u8* pbuf;

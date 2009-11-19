@@ -22,42 +22,45 @@
 
 //THIS ALL IS FOR THE CDROM REGISTERS HANDLING
 
-#define CdlSync         0
-#define CdlNop	        1
-#define CdlSetloc		2
-#define CdlPlay	        3
-#define CdlForward		4
-#define CdlBackward		5
-#define CdlReadN		6
-#define CdlStandby		7
-#define CdlStop	        8
-#define CdlPause        9
-#define CdlInit 		10
-#define CdlMute	        11
-#define CdlDemute		12
-#define CdlSetfilter	13
-#define CdlSetmode		14
-#define CdlGetmode      15
-#define CdlGetlocL		16
-#define CdlGetlocP		17
-#define Cdl18     		18
-#define CdlGetTN		19
-#define CdlGetTD		20
-#define CdlSeekL		21
-#define CdlSeekP		22
-#define CdlTest 		25
-#define CdlID   		26
-#define CdlReadS		27
-#define CdlReset		28
-#define CdlReadToc      30
+enum cdrom_registers
+{
+    CdlSync         = 0,
+    CdlNop	        = 1,
+    CdlSetloc		= 2,
+    CdlPlay	        = 3,
+    CdlForward		= 4,
+    CdlBackward		= 5,
+    CdlReadN		= 6,
+    CdlStandby		= 7,
+    CdlStop	        = 8,
+    CdlPause        = 9,
+    CdlInit 		= 10,
+    CdlMute	        = 11,
+    CdlDemute		= 12,
+    CdlSetfilter	= 13,
+    CdlSetmode		= 14,
+    CdlGetmode      = 15,
+    CdlGetlocL		= 16,
+    CdlGetlocP		= 17,
+    Cdl18     		= 18,
+    CdlGetTN		= 19,
+    CdlGetTD		= 20,
+    CdlSeekL		= 21,
+    CdlSeekP		= 22,
+    CdlTest 		= 25,
+    CdlID   		= 26,
+    CdlReadS		= 27,
+    CdlReset		= 28,
+    CdlReadToc      = 30,
 
-#define AUTOPAUSE		249
-#define READ_ACK		250
-#define READ			251
-#define REPPLAY_ACK		252
-#define REPPLAY			253
-#define ASYNC			254
+    AUTOPAUSE		= 249,
+    READ_ACK		= 250,
+    READ			= 251,
+    REPPLAY_ACK		= 252,
+    REPPLAY			= 253,
+    ASYNC			= 254
 /* don't set 255, it's reserved */
+};
 
 const char *CmdName[0x100]= {
 	"CdlSync",    "CdlNop",       "CdlSetloc",  "CdlPlay",
@@ -128,12 +131,15 @@ static void ReadTrack() {
 }
 
 // cdr.Stat:
-#define NoIntr		0
-#define DataReady	1
-#define Complete	2
-#define Acknowledge	3
-#define DataEnd		4
-#define DiskError	5
+enum cdr_stat_values
+{
+    NoIntr = 0,
+    DataReady,
+    Complete,
+    Acknowledge,
+    DataEnd,
+    DiskError
+};
 
 static void AddIrqQueue(u8 irq, u32 ecycle) {
 	cdr.Irq = irq;
