@@ -23,12 +23,12 @@
 
 #include "IsoFileFormats.h"
 
-static int detect(isoFile *iso)
+static bool detect(isoFile *iso)
 {
 	u8 buf[2448];
 	u8* pbuf;
 
-	if (isoReadBlock(iso, buf, 16) == -1) return -1;
+	if (!isoReadBlock(iso, buf, 16)) return -1;
 
 	pbuf = (( iso->flags & ISOFLAGS_BLOCKDUMP_V3 ) ? buf : (buf + 24));
 
@@ -71,8 +71,8 @@ static bool tryIsoType(isoFile *iso, u32 size, u32 offset, u32 blockofs)
 }
 
 // based on florin's CDVDbin detection code :)
-// Returns 0 if the image is valid/known/supported, or -1 if not (iso->type == ISOTYPE_ILLEGAL).
-int isoDetect(isoFile *iso)
+// Returns true if the image is valid/known/supported, or false if not (iso->type == ISOTYPE_ILLEGAL).
+bool isoDetect(isoFile *iso)
 {
 	char buf[32];
 	int len;
@@ -91,7 +91,7 @@ int isoDetect(isoFile *iso)
 		_readfile(iso->handle, &iso->blocks, 4);
 		_readfile(iso->handle, &iso->blockofs, 4);
 		_isoReadDtable(iso);
-		return (detect(iso) == 1) ? 0 : -1;
+		return (detect(iso) == 1);
 	}
 	else if (strncmp(buf, "BDV3", 4) == 0)
 	{
@@ -100,29 +100,29 @@ int isoDetect(isoFile *iso)
 		_readfile(iso->handle, &iso->blocks, 4);
 		_readfile(iso->handle, &iso->blockofs, 4);
 		_isoReadDtable(iso);
-		return (detect(iso) == 1) ? 0 : -1;
+		return (detect(iso) == 1);
 	}
 	else
 	{
 		iso->blocks = 16;
 	}
 
-	if (tryIsoType(iso, 2048, 0, 24)) return 0;				// ISO 2048
-	if (tryIsoType(iso, 2336, 0, 16)) return 0;				// RAW 2336
-	if (tryIsoType(iso, 2352, 0, 0)) return 0; 				// RAW 2352
-	if (tryIsoType(iso, 2448, 0, 0)) return 0; 				// RAWQ 2448
-	if (tryIsoType(iso, 2048, 150 * 2048, 24)) return 0;	// NERO ISO 2048
-	if (tryIsoType(iso, 2352, 150 * 2048, 0)) return 0;		// NERO RAW 2352
-	if (tryIsoType(iso, 2448, 150 * 2048, 0)) return 0;		// NERO RAWQ 2448
-	if (tryIsoType(iso, 2048, -8, 24)) return 0; 			// ISO 2048
-	if (tryIsoType(iso, 2352, -8, 0)) return 0;				// RAW 2352
-	if (tryIsoType(iso, 2448, -8, 0)) return 0;				// RAWQ 2448
+	if (tryIsoType(iso, 2048, 0, 24)) return true;				// ISO 2048
+	if (tryIsoType(iso, 2336, 0, 16)) return true;				// RAW 2336
+	if (tryIsoType(iso, 2352, 0, 0)) return true; 				// RAW 2352
+	if (tryIsoType(iso, 2448, 0, 0)) return true; 				// RAWQ 2448
+	if (tryIsoType(iso, 2048, 150 * 2048, 24)) return true;	// NERO ISO 2048
+	if (tryIsoType(iso, 2352, 150 * 2048, 0)) return true;		// NERO RAW 2352
+	if (tryIsoType(iso, 2448, 150 * 2048, 0)) return true;		// NERO RAWQ 2448
+	if (tryIsoType(iso, 2048, -8, 24)) return true; 			// ISO 2048
+	if (tryIsoType(iso, 2352, -8, 0)) return true;				// RAW 2352
+	if (tryIsoType(iso, 2448, -8, 0)) return true;				// RAWQ 2448
 
 	iso->offset = 0;
 	iso->blocksize = CD_FRAMESIZE_RAW;
 	iso->blockofs = 0;
 	iso->type = ISOTYPE_AUDIO;
-	return 0;
+	return true;
 }
 
 isoFile *isoOpen(const char *filename)
@@ -142,7 +142,7 @@ isoFile *isoOpen(const char *filename)
 		return NULL;
 	}
 
-	if (isoDetect(iso) == -1) return NULL;
+	if (!isoDetect(iso)) return NULL;
 
 	Console.WriteLn("detected blocksize = %u", iso->blocksize);
 
@@ -230,7 +230,7 @@ isoFile *isoCreate(const char *filename, int flags)
 	return iso;
 }
 
-int  isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks)
+bool isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks)
 {
 	iso->blocksize = blocksize;
 	iso->blocks = blocks;
@@ -242,19 +242,19 @@ int  isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks)
 
 	if (iso->flags & ISOFLAGS_BLOCKDUMP_V2)
 	{
-		if (_writefile(iso->handle, "BDV2", 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
-		if (_writefile(iso->handle, &blockofs, 4) < 4) return -1;
+		if (_writefile(iso->handle, "BDV2", 4) < 4) return false;
+		if (_writefile(iso->handle, &blocksize, 4) < 4) return false;
+		if (_writefile(iso->handle, &blocks, 4) < 4) return false;
+		if (_writefile(iso->handle, &blockofs, 4) < 4) return false;
 	}
 	else if (iso->flags & ISOFLAGS_BLOCKDUMP_V3)
 	{
-		if (_writefile(iso->handle, "BDV3", 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocksize, 4) < 4) return -1;
-		if (_writefile(iso->handle, &blocks, 4) < 4) return -1;
+		if (_writefile(iso->handle, "BDV3", 4) < 4) return false;
+		if (_writefile(iso->handle, &blocksize, 4) < 4) return false;
+		if (_writefile(iso->handle, &blocks, 4) < 4) return false;
 	}
 
-	return 0;
+	return true;
 }
 
 s32 MSFtoLSN(u8 *Time)
@@ -281,7 +281,7 @@ void LSNtoMSF(u8 *Time, s32 lsn)
 	Time[2] = itob(f);
 }
 
-int _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
+bool _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 {
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
 
@@ -293,13 +293,13 @@ int _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 	if (ret < iso->blocksize)
 	{
 		Console.Error("read error in _isoReadBlock." );
-		return -1;
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
-int _isoReadBlockD(isoFile *iso, u8 *dst, uint lsn)
+bool _isoReadBlockD(isoFile *iso, u8 *dst, uint lsn)
 {
 	uint ret;
 
@@ -313,16 +313,16 @@ int _isoReadBlockD(isoFile *iso, u8 *dst, uint lsn)
 		_seekfile(iso->handle, 16 + i * (iso->blocksize + 4) + 4, SEEK_SET);
 		ret = _readfile(iso->handle, dst + iso->blockofs, iso->blocksize);
 
-		if (ret < iso->blocksize) return -1;
+		if (ret < iso->blocksize) return false;
 
-		return 0;
+		return true;
 	}
 	Console.WriteLn("Block %u not found in dump", lsn);
 
-	return -1;
+	return false;
 }
 
-int _isoReadBlockM(isoFile *iso, u8 *dst, uint lsn)
+bool _isoReadBlockM(isoFile *iso, u8 *dst, uint lsn)
 {
 	u64 ofs;
 	uint ret, i;
@@ -335,7 +335,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, uint lsn)
 		}
 	}
 
-	if (i == 8) return -1;
+	if (i == 8) return false;
 
 	ofs = (u64)(lsn - iso->multih[i].slsn) * iso->blocksize + iso->offset;
 
@@ -348,20 +348,20 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, uint lsn)
 	if (ret < iso->blocksize)
 	{
 		Console.Error("read error in _isoReadBlockM");
-		return -1;
+		return false;
 	}
 
-	return 0;
+	return true;
 }
 
-int isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
+bool isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
 {
-	int ret;
+	bool ret;
 
 	if (lsn > iso->blocks)
 	{
 		Console.WriteLn("isoReadBlock: %u > %u", lsn, iso->blocks);
-		return -1;
+		return false;
 	}
 
 	if (iso->flags & ISOFLAGS_BLOCKDUMP_V2)
@@ -373,7 +373,7 @@ int isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
 	else
 		ret = _isoReadBlock(iso, dst, lsn);
 
-    if (ret < 0) return -1;
+    if (!ret) return false;
 
 	if (iso->type == ISOTYPE_CD)
 	{
@@ -381,36 +381,36 @@ int isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
 		dst[15] = 2;
 	}
 
-	return 0;
+	return true;
 }
 
 
-int _isoWriteBlock(isoFile *iso, u8 *src, uint lsn)
+bool _isoWriteBlock(isoFile *iso, u8 *src, uint lsn)
 {
 	uint ret;
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
 
 	_seekfile(iso->handle, ofs, SEEK_SET);
 	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
-	if (ret < iso->blocksize) return -1;
+	if (ret < iso->blocksize) return false;
 
-	return 0;
+	return true;
 }
 
-int _isoWriteBlockD(isoFile *iso, u8 *src, uint lsn)
+bool _isoWriteBlockD(isoFile *iso, u8 *src, uint lsn)
 {
 	uint ret;
 
 	ret = _writefile(iso->handle, &lsn, 4);
-	if (ret < 4) return -1;
+	if (ret < 4) return false;
 	ret = _writefile(iso->handle, src + iso->blockofs, iso->blocksize);
 
-	if (ret < iso->blocksize) return -1;
+	if (ret < iso->blocksize) return false;
 
-	return 0;
+	return true;
 }
 
-int isoWriteBlock(isoFile *iso, u8 *src, uint lsn)
+bool isoWriteBlock(isoFile *iso, u8 *src, uint lsn)
 {
 	if (iso->flags & ISOFLAGS_BLOCKDUMP_V3)
 		return _isoWriteBlockD(iso, src, lsn);

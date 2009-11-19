@@ -101,7 +101,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	if( iso.handle == NULL )
 		throw Exception::CreateStream( filenames[0] );
 
-	if( isoDetect( &iso ) == 0 )
+	if (isoDetect(&iso))
 	{
 		Console.WriteLn( L"(Drag&Drop) Found valid ISO file type!" );
 

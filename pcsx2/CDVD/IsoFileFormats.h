@@ -73,10 +73,10 @@ struct isoFile
 
 extern isoFile *isoOpen(const char *filename);
 extern isoFile *isoCreate(const char *filename, int mode);
-extern int  isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks);
-extern int  isoDetect(isoFile *iso);
-extern int  isoReadBlock(isoFile *iso, u8 *dst, uint lsn);
-extern int  isoWriteBlock(isoFile *iso, u8 *src, uint lsn);
+extern bool isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks);
+extern bool isoDetect(isoFile *iso);
+extern bool isoReadBlock(isoFile *iso, u8 *dst, uint lsn);
+extern bool isoWriteBlock(isoFile *iso, u8 *src, uint lsn);
 extern void isoClose(isoFile *iso);
 
 #endif /* __LIBISO_H__ */
