@@ -19,8 +19,6 @@
 // --------------------------------------------------------------------------------------
 //  pxStaticText Implementations
 // --------------------------------------------------------------------------------------
-// Implementation Notes:
-//  * No reason to ever have AutoResize enabled, quite frankly.  It just causes layout and centering problems.
 
 pxStaticText::pxStaticText( wxWindow* parent, const wxString& label, int style )
 	: wxStaticText( parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, style )
@@ -63,15 +61,15 @@ pxStaticText& pxStaticText::SetToolTip( const wxString& tip )
 	return *this;
 }
 
-void pxStaticText::AddTo( wxSizer& sizer )
+void pxStaticText::AddTo( wxSizer& sizer, wxSizerFlags flags )
 {
-	sizer.Add( this, pxSizerFlags::StdSpace().Align( m_alignflags ) );
+	sizer.Add( this, flags.Align( m_alignflags ) );
 	_setLabel();
 }
 
-void pxStaticText::InsertAt( wxSizer& sizer, int position )
+void pxStaticText::InsertAt( wxSizer& sizer, int position, wxSizerFlags flags )
 {
-	sizer.Insert( position, this, pxSizerFlags::StdSpace().Align( m_alignflags ) );
+	sizer.Insert( position, this, flags.Align( m_alignflags ) );
 	_setLabel();
 }
 
@@ -114,15 +112,9 @@ wxSize pxStaticText::GetMinSize() const
 	return wxSize( std::min( ideal, minSize.x ), minSize.y );
 }
 
-/*pxStaticText::operator wxSizerFlags() const
-{
-	return pxSizerFlags::StdSpace().Align( m_alignflags );
-}*/
-
 // --------------------------------------------------------------------------------------
 //  pxStaticHeading Implementations
 // --------------------------------------------------------------------------------------
-
 pxStaticHeading::pxStaticHeading( wxWindow* parent, const wxString& label, int style )
 	: pxStaticText( parent, label, style )
 {

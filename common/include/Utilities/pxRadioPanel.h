@@ -61,17 +61,15 @@ struct RadioPanelObjects
 // --------------------------------------------------------------------------------------
 //  pxRadioPanel
 // --------------------------------------------------------------------------------------
+// 
+// Rationale:
 // Radio buttons work best when they are created consecutively, and then their subtext
 // created in a second sweep (this keeps the radio buttons together in the parent window's
 // child list, and avoids potentially unwanted behavior with radio buttons failing to
 // group expectedly).  Because of this, our radio button helper is shaped as a panel of
-// a group of radio butons only, instead of bothering with the lower level per-button
+// a group of radio buttons only, instead of bothering with the lower level per-button
 // design.  This makes a few other things nicer as well, such as binding a single message
 // handler to all radio buttons in the panel.
-//
-// The SetToolTip API provided by this function applies the tooltip to both both the radio
-// button and it's static subtext (if present), and performs word wrapping on platforms
-// that need it (eg mswindows).
 //
 class pxRadioPanel : public wxPanelWithHelpers
 {

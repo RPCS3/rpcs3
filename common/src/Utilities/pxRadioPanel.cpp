@@ -113,6 +113,9 @@ void pxRadioPanel::_setToolTipImmediate( int idx, const wxString &tip )
 		woot->SetToolTip( wrapped );
 }
 
+// The SetToolTip API provided by this function applies the tooltip to both the radio
+// button and it's static subtext (if present), and performs word wrapping on platforms
+// that need it (eg mswindows).
 pxRadioPanel& pxRadioPanel::SetToolTip(int idx, const wxString &tip)
 {
 	m_buttonStrings[idx].SetToolTip( tip );

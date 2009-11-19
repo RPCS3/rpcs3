@@ -27,15 +27,14 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id )
 	m_panel_usersel = new UsermodeSelectionPanel( this, false );
 	m_panel_langsel = new LanguageSelectionPanel( this );
 
-	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
+	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
-	AddStaticText( s_main, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
+	*this	+= new pxStaticHeading( this, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
+	*this	+= m_panel_langsel	| pxSizerFlags::StdCenter();
+	*this	+= m_panel_usersel	| wxSizerFlags().Expand().Border( wxALL, 8 );
 
-	s_main.Add( m_panel_langsel, pxSizerFlags::StdCenter() );
-	s_main.Add( m_panel_usersel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
-
-	AddOkCancel( s_main );
-	SetSizerAndFit( &s_main );
+	AddOkCancel( *GetSizer() );
+	Fit();
 	CenterOnScreen();
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickUserModeDialog::OnOk_Click ) );

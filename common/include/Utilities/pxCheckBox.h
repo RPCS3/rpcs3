@@ -55,3 +55,15 @@ public:
 protected:
 	void Init( const wxString& label, const wxString& subtext );
 };
+
+static void operator+=( wxSizer& target, pxCheckBox* src )
+{
+	if( !pxAssert( src != NULL ) ) return;
+	target.Add( src, wxSF.Expand() );
+}
+
+template<>
+static void operator+=( wxSizer& target, const pxWindowAndFlags<pxCheckBox>& src )
+{
+	target.Add( src.window, src.flags );
+}

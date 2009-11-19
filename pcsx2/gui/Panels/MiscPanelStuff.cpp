@@ -167,10 +167,9 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
 	m_radio_UserMode->Realize();
 
-	wxSizer& s_main( *GetSizer() );
-	AddStaticText( s_main, isFirstTime ? usermodeExplained : usermodeWarning );
-	s_main.Add( m_radio_UserMode, pxSizerFlags::StdExpand() );
-	s_main.AddSpacer( 4 );
+	*this	+= new pxStaticText( this, isFirstTime ? usermodeExplained : usermodeWarning );
+	*this	+= m_radio_UserMode | pxSizerFlags::StdExpand();
+	*this	+= 4;
 }
 
 void Panels::UsermodeSelectionPanel::Apply()
@@ -180,7 +179,7 @@ void Panels::UsermodeSelectionPanel::Apply()
 
 // -----------------------------------------------------------------------
 Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
+	: BaseApplicableConfigPanel( parent, wxHORIZONTAL )
 	, m_langs()
 {
 	m_picker = NULL;
@@ -202,12 +201,9 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 		size, compiled.GetPtr(), wxCB_READONLY | wxCB_SORT );
 	m_picker->SetSelection( cursel );
 
-	wxBoxSizer& s_lang = *new wxBoxSizer( wxHORIZONTAL );
-	AddStaticText( s_lang, _("Select a language: "), wxALIGN_CENTRE_VERTICAL );
-	s_lang.AddSpacer( 5 );
-	s_lang.Add( m_picker, pxSizerFlags::StdSpace() );
-
-	SetSizer( &s_lang );
+	*this	+= new pxStaticText( this, _("Select a language: "), wxALIGN_CENTRE_VERTICAL );
+	*this	+= 5;
+	*this	+= m_picker | pxSizerFlags::StdSpace();
 }
 
 void Panels::LanguageSelectionPanel::Apply()

@@ -218,41 +218,39 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent ) :
 	// ------------------------------------------------------------------------
 	//  Layout and Size ---> (!!)
 
-	eeSliderPanel->GetSizer()->Add( m_slider_eecycle, sliderFlags );
-	m_msg_eecycle->AddTo( *eeSliderPanel->GetSizer() );
+	wxFlexGridSizer& DefEnableSizer( *new wxFlexGridSizer( 2, 0, 12 ) );
+	DefEnableSizer.AddGrowableCol( 1, 1 );
+	DefEnableSizer	+= m_button_Defaults	| StdSpace().Align( wxALIGN_LEFT );
+	DefEnableSizer	+= m_check_Enable		| StdSpace().Align( wxALIGN_RIGHT );
 
-	vuSliderPanel->GetSizer()->Add( m_slider_vustealer, sliderFlags );
-	m_msg_vustealer->AddTo( *vuSliderPanel->GetSizer() );
+	*eeSliderPanel	+= m_slider_eecycle		| sliderFlags;
+	*eeSliderPanel	+= m_msg_eecycle;
 
-	vuHacksPanel->GetSizer()->Add( m_check_vuFlagHack, StdExpand() );
-	vuHacksPanel->GetSizer()->Add( m_check_vuMinMax, StdExpand() );
+	*vuSliderPanel	+= m_slider_vustealer	| sliderFlags;
+	*vuSliderPanel	+= m_msg_vustealer;
 
-	miscHacksPanel->GetSizer()->Add( m_check_intc );
-	miscHacksPanel->GetSizer()->Add( m_check_b1fc0 );
-	miscHacksPanel->GetSizer()->Add( m_check_IOPx2 );
+	*vuHacksPanel	+= m_check_vuFlagHack;
+	*vuHacksPanel	+= m_check_vuMinMax;
 
-	left->GetSizer()->Add( eeSliderPanel, StdExpand() );
-	left->GetSizer()->Add( miscHacksPanel, StdExpand() );
+	*miscHacksPanel	+= m_check_intc;
+	*miscHacksPanel	+= m_check_b1fc0;
+	*miscHacksPanel	+= m_check_IOPx2;
 
-	right->GetSizer()->Add( vuSliderPanel, StdExpand() );
-	right->GetSizer()->Add( vuHacksPanel, StdExpand() );
+	*left	+= eeSliderPanel	| StdExpand();
+	*left	+= miscHacksPanel	| StdExpand();
+
+	*right	+= vuSliderPanel	| StdExpand();
+	*right	+= vuHacksPanel		| StdExpand();
 
 	s_table = new wxFlexGridSizer( 2 );
 	s_table->AddGrowableCol( 0 );
 	s_table->AddGrowableCol( 1 );
-	s_table->Add( left, wxSizerFlags().Expand() );
-	s_table->Add( right, wxSizerFlags().Expand() );
+	*s_table+= left				| wxSF.Expand();
+	*s_table+= right			| wxSF.Expand();
 
-	wxFlexGridSizer& DefEnableSizer( *new wxFlexGridSizer( 2, 0, 12 ) );
-	DefEnableSizer.AddGrowableCol( 1, 1 );
-	DefEnableSizer.Add( m_button_Defaults, StdSpace().Align( wxALIGN_LEFT ) );
-	DefEnableSizer.Add( m_check_Enable, StdSpace().Align( wxALIGN_RIGHT ) );
-
-	wxBoxSizer&	mainSizer	= *new wxBoxSizer( wxVERTICAL );
-	heading->AddTo( mainSizer );
-	mainSizer.Add( s_table, wxSizerFlags().Expand() );
-	mainSizer.Add( &DefEnableSizer, wxSizerFlags().Expand() );
-	SetSizer( &mainSizer );
+	*this	+= heading;
+	*this	+= s_table			| wxSF.Expand();
+	*this	+= DefEnableSizer	| wxSF.Expand();
 
 	// ------------------------------------------------------------------------
 
@@ -294,19 +292,19 @@ void Panels::SpeedHacksPanel::OnSettingsChanged( const Pcsx2Config::SpeedhackOpt
 {
 	const bool enabled = g_Conf->EnableSpeedHacks;
 	
-	m_check_Enable->SetValue( !!enabled );
+	m_check_Enable		->SetValue( !!enabled );
 
-	m_slider_eecycle->SetValue( opts.EECycleRate + 1 );
-	m_slider_vustealer->SetValue( opts.VUCycleSteal );
+	m_slider_eecycle	->SetValue( opts.EECycleRate + 1 );
+	m_slider_vustealer	->SetValue( opts.VUCycleSteal );
 
 	SetEEcycleSliderMsg();
 	SetVUcycleSliderMsg();
 
-	m_check_vuFlagHack->SetValue(opts.vuFlagHack);
-	m_check_vuMinMax->SetValue(opts.vuMinMax);
-	m_check_intc->SetValue(opts.IntcStat);
-	m_check_b1fc0->SetValue(opts.BIFC0);
-	m_check_IOPx2->SetValue(opts.IopCycleRate_X2);
+	m_check_vuFlagHack	->SetValue(opts.vuFlagHack);
+	m_check_vuMinMax	->SetValue(opts.vuMinMax);
+	m_check_intc		->SetValue(opts.IntcStat);
+	m_check_b1fc0		->SetValue(opts.BIFC0);
+	m_check_IOPx2		->SetValue(opts.IopCycleRate_X2);
 	
 	EnableStuff();
 
@@ -316,7 +314,10 @@ void Panels::SpeedHacksPanel::OnSettingsChanged( const Pcsx2Config::SpeedhackOpt
 
 void Panels::SpeedHacksPanel::Apply()
 {
+	g_Conf->EnableSpeedHacks = m_check_Enable->GetValue();
+
 	Pcsx2Config::SpeedhackOptions& opts( g_Conf->EmuOptions.Speedhacks );
+	
 	opts.EECycleRate		= m_slider_eecycle->GetValue()-1;
 	opts.VUCycleSteal		= m_slider_vustealer->GetValue();
 

@@ -32,6 +32,7 @@ static const bool DisableThreading =
 #endif
 
 using namespace wxHelpers;
+using namespace pxSizerFlags;
 using namespace Threading;
 
 BEGIN_DECLARE_EVENT_TYPES()
@@ -149,14 +150,13 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent )
 {
 	m_progress = 0;
 
-	wxSizer& s_main( *GetSizer() );
+	m_gauge.SetToolTip( _("I'm givin' her all she's got, Captain!") );
 
-	AddStaticText( s_main, _( "Enumerating available plugins..." ) );
-	s_main.Add( &m_gauge, wxSizerFlags().Expand().Border( wxLEFT | wxRIGHT, 32 ) );
-	s_main.Add( &m_label, pxSizerFlags::StdExpand() );
+	*this	+= new pxStaticHeading( this, _( "Enumerating available plugins..." ) );
+	*this	+= m_gauge	| wxSF.Expand().Border( wxLEFT | wxRIGHT, 32 );
+	*this	+= m_label	| StdExpand();
 
-	// The status bar only looks right if I use SetSizerAndFit() here.
-	Fit(); // &s_main );
+	Fit();
 }
 
 void Panels::PluginSelectorPanel::StatusPanel::SetGaugeLength( int len )
@@ -187,31 +187,29 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 		_("Select a folder with PCSX2 plugins") )
 	)
 {
-	wxSizer& s_main( *GetSizer() );
 	wxFlexGridSizer& s_plugin( *new wxFlexGridSizer( NumPluginTypes, 3, 16, 10 ) );
 	s_plugin.SetFlexibleDirection( wxHORIZONTAL );
 	s_plugin.AddGrowableCol( 1 );		// expands combo boxes to full width.
 
 	for( int i=0; i<NumPluginTypes; ++i )
 	{
-		s_plugin.Add(
-			new wxStaticText( this, wxID_ANY, tbl_PluginInfo[i].GetShortname() ),
-			wxSizerFlags().Border( wxTOP | wxLEFT, 2 )
-		);
-		s_plugin.Add(
-			m_combobox[i] = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY ),
-			wxSizerFlags().Expand()
-		);
-		wxButton* bleh = new wxButton( this, ButtonId_Configure, L"Configure..." );
-		bleh->SetClientData( (void*)(int)tbl_PluginInfo[i].id );
-		s_plugin.Add( bleh );
+		wxStaticText* text = new wxStaticText( this, wxID_ANY, tbl_PluginInfo[i].GetShortname() );
+
+		m_combobox[i] = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+
+		wxButton* confButton = new wxButton( this, ButtonId_Configure, L"Configure..." );
+		confButton->SetClientData( (void*)(int)tbl_PluginInfo[i].id );
+
+		s_plugin	+= text				| wxSF.Border( wxTOP | wxLEFT, 2 );
+		s_plugin	+= m_combobox[i]	| wxSF.Expand();
+		s_plugin	+= confButton;
 	}
 
 	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder for PCSX2 plugins.") );
 
-	s_main.Add( &s_plugin, wxSizerFlags().Expand() );
-	s_main.AddSpacer( 6 );
-	s_main.Add( &m_FolderPicker, pxSizerFlags::StdExpand() );
+	*this	+= s_plugin			| wxSF.Expand();
+	*this	+= 6;
+	*this	+= m_FolderPicker	| StdExpand();
 }
 
 void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
@@ -236,8 +234,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWid
 	// note: the status panel is a floating window, so that it can be positioned in the
 	// center of the dialog after it's been fitted to the contents.
 
-	wxSizer& s_main( *GetSizer() );
-	s_main.Add( m_ComponentBoxes, pxSizerFlags::StdExpand().ReserveSpaceEvenIfHidden() );
+	*this	+= m_ComponentBoxes | StdExpand().ReserveSpaceEvenIfHidden();
 
 	m_StatusPanel->Hide();
 	m_ComponentBoxes->Hide();

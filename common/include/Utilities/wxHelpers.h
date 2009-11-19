@@ -20,8 +20,6 @@
 
 namespace wxHelpers
 {
-	//extern wxRadioButton&	AddRadioButtonTo( wxWindow* parent, wxSizer& sizer, const wxString& label, const wxString& subtext=wxEmptyString, const wxString& tooltip=wxEmptyString, int wrapLen=wxDefaultCoord, bool isFirst = false );
-	extern pxStaticText&	AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE );
 	extern pxStaticText&	InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags=wxALIGN_CENTRE );
 }
 

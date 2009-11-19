@@ -22,25 +22,6 @@
 #include <wx/tooltip.h>
 
 
-// ------------------------------------------------------------------------
-// Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this
-// ensures that that auto resizing is disabled, and that the sizer flags match the alignment specified
-// for the textbox.
-//
-// Parameters:
-//  Size - allows forcing the control to wrap text at a specific pre-defined pixel width;
-//      or specify zero to let wxWidgets layout the text as it deems appropriate (recommended)
-//
-// alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
-//      or overridden.  [default is left alignment]
-//
-pxStaticText& wxHelpers::AddStaticTextTo(wxWindow* parent, wxSizer& sizer, const wxString& label, int alignFlags )
-{
-    pxStaticText& temp( *new pxStaticText( parent, label, alignFlags ) );
-    temp.AddTo( sizer );
-    return temp;
-}
-
 pxStaticText& wxHelpers::InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags )
 {
 	pxStaticText& temp( *new pxStaticText(parent, label, alignFlags ) );
@@ -100,11 +81,6 @@ wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 void wxDialogWithHelpers::OnActivate(wxActivateEvent& evt)
 {
 	//evt.Skip();
-}
-
-wxStaticText& wxDialogWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags )
-{
-	return wxHelpers::AddStaticTextTo( this, sizer, label, alignFlags );
 }
 
 void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
@@ -220,21 +196,4 @@ wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, co
 	: wxPanel( parent, wxID_ANY, pos, size )
 {
 	Init();
-}
-
-// ------------------------------------------------------------------------
-// Creates a static text box that generally "makes sense" in a free-flowing layout.  Specifically, this
-// ensures that that auto resizing is disabled, and that the sizer flags match the alignment specified
-// for the textbox.
-//
-// Parameters:
-//  Size - allows forcing the control to wrap text at a specific pre-defined pixel width;
-//      or specify zero to let wxWidgets layout the text as it deems appropriate (recommended)
-//
-// alignFlags - Either wxALIGN_LEFT, RIGHT, or CENTRE.  All other wxStaticText flags are ignored
-//      or overridden.  [default is left alignment]
-//
-pxStaticText& wxPanelWithHelpers::AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags )
-{
-	return wxHelpers::AddStaticTextTo( this, sizer, label, alignFlags );
 }

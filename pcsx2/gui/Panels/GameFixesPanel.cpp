@@ -21,19 +21,18 @@ using namespace wxHelpers;
 Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	BaseApplicableConfigPanel( parent )
 {
-	wxSizer& mainSizer( *GetSizer() );
-	AddStaticText( mainSizer, _("Some games need special settings.\nEnable them here.") );
+	*this	+= new pxStaticHeading( this, _("Some games need special settings.\nEnable them here."));
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
 	
 	// NOTE: Order of checkboxes must match the order of the bits in the GamefixOptions structure!
 	// NOTE2: Don't make this static, because translations can change at run-time :)
 
-
 	struct CheckTextMess
 	{
 		wxString label, tooltip;
 	};
+
 	const CheckTextMess check_text[NUM_OF_GAME_FIXES] = 
 	{
 		{
@@ -69,14 +68,14 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
 	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
 	{
-		groupSizer.Add( m_checkbox[i] = new pxCheckBox( this, check_text[i].label ) );
+		groupSizer += (m_checkbox[i] = new pxCheckBox( this, check_text[i].label ));
 		m_checkbox[i]->SetToolTip( check_text[i].tooltip );
 		m_checkbox[i]->SetValue( !!(opts.bitset & (1 << i)) );
 	}
 
-	mainSizer.Add( &groupSizer, wxSizerFlags().Centre() );
+	*this	+= groupSizer	| wxSF.Centre();
 
-	AddStaticText( mainSizer, pxE( ".Panels:Gamefixes:Compat Warning",
+	*this	+= new pxStaticHeading( this, pxE( ".Panels:Gamefixes:Compat Warning",
 		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
 		L"will need to turn off fixes manually when changing games."
 	));

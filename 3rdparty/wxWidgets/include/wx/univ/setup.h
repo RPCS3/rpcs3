@@ -438,7 +438,7 @@
 
 // experimental, don't use for now
 #if defined(__WIN32__)
-    #define wxUSE_DYNAMIC_LOADER 1
+    #define wxUSE_DYNAMIC_LOADER 0
 #else
     #define wxUSE_DYNAMIC_LOADER 0
 #endif
@@ -532,7 +532,7 @@
 #define wxUSE_SYSTEM_OPTIONS 1
 
 // wxSound class
-#define wxUSE_SOUND 1
+#define wxUSE_SOUND 0
 
 // Use wxMediaCtrl
 //
@@ -560,7 +560,7 @@
 // Default is 1
 //
 // Recommended setting: 1 (requires wxUSE_XML)
-#define wxUSE_XRC       1
+#define wxUSE_XRC       0
 
 // XML parsing classes. Note that their API will change in the future, so
 // using wxXmlDocument and wxXmlNode in your app is not recommended.
@@ -1134,7 +1134,7 @@
 #define wxUSE_RESOURCES 0
 
 // Window layout constraint system
-#define wxUSE_CONSTRAINTS 1
+#define wxUSE_CONSTRAINTS 0
 
 // Splines
 #define wxUSE_SPLINES 1

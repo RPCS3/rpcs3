@@ -57,8 +57,6 @@ wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits )
 Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	wxSizer& s_main( *GetSizer() );
-
 	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
 		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
 	
@@ -67,13 +65,6 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 		L"be available either."
 	) );
 
-	AddStaticText( s_main, pxE( ".Framelimiter:Heading",
-		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
-		L"percentages of the default region-based framerate, which can also be configured below."
-	) );
-
-	s_main.Add( m_check_LimiterDisable );
-
 	m_spin_NominalPct	= FitToDigits( new wxSpinCtrl( this ), 6 );
 	m_spin_SlomoPct		= FitToDigits( new wxSpinCtrl( this ), 6 );
 	m_spin_TurboPct		= FitToDigits( new wxSpinCtrl( this ), 6 );
@@ -81,57 +72,71 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	m_text_BaseNtsc		= CreateNumericalTextCtrl( this, 7 );
 	m_text_BasePal		= CreateNumericalTextCtrl( this, 7 );
 
-	wxFlexGridSizer& s_spins = *new wxFlexGridSizer( 5 );
+	m_spin_NominalPct	->SetRange( 10,  1000 );
+	m_spin_SlomoPct		->SetRange(  1,  1000 );
+	m_spin_TurboPct		->SetRange( 10,  1000 );
 
-	//s_spins.AddGrowableCol( 0, 1 );
-	//s_spins.AddGrowableCol( 1, 1 );
+	// ------------------------------------------------------------
+	// Sizers and Layouts
 
-	AddStaticText( s_spins, _("Base Framerate Adjust:"), wxALIGN_LEFT );
-	s_spins.AddSpacer( 5 );
-	s_spins.Add( m_spin_NominalPct, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), StdSpace() );
-	s_spins.AddSpacer( 5 );
+	*this += new pxStaticHeading( this, pxE( ".Framelimiter:Heading",
+		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
+		L"percentages of the default region-based framerate, which can also be configured below." )
+	);
 
-	AddStaticText( s_spins, _("Slow Motion Adjust:"), wxALIGN_LEFT );
-	s_spins.AddSpacer( 5 );
-	s_spins.Add( m_spin_SlomoPct, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), StdSpace() );
-	s_spins.AddSpacer( 5 );
+	*this += m_check_LimiterDisable;
 
-	AddStaticText( s_spins, _("Turbo Adjust:"), wxALIGN_LEFT );
-	s_spins.AddSpacer( 5 );
-	s_spins.Add( m_spin_TurboPct, wxSizerFlags().Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, L"%" ), StdSpace() );
-	s_spins.AddSpacer( 5 );
+	wxFlexGridSizer& s_spins( *new wxFlexGridSizer( 5 ) );
+	s_spins.AddGrowableCol( 0 );
 
-	s_spins.AddSpacer( 15 );
-	s_spins.AddSpacer( 15 );
-	s_spins.AddSpacer( 15 );
-	s_spins.AddSpacer( 15 );
-	s_spins.AddSpacer( 15 );
+	s_spins += new pxStaticText( this, _("Base Framerate Adjust:") );
+	s_spins += 5;
+	s_spins += m_spin_NominalPct	| wxSF.Border(wxTOP, 3);
+	s_spins += new pxStaticText( this, L"%" );
+	s_spins += 5;
 
-	AddStaticText( s_spins, _("NTSC Framerate:"), wxALIGN_LEFT );
-	s_spins.AddSpacer( 5 );
-	s_spins.Add( m_text_BaseNtsc, wxSizerFlags().Align(wxALIGN_RIGHT).Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), StdSpace() );
-	s_spins.AddSpacer( 5 );
+	s_spins += new pxStaticText( this, _("Slow Motion Adjust:") );
+	s_spins += 5;
+	s_spins += m_spin_SlomoPct		| wxSF.Border(wxTOP, 3);
+	s_spins += new pxStaticText( this, L"%" );
+	s_spins += 5;
 
-	AddStaticText( s_spins, _("PAL Framerate:"), wxALIGN_LEFT );
-	s_spins.AddSpacer( 5 );
-	s_spins.Add( m_text_BasePal, wxSizerFlags().Align(wxALIGN_RIGHT).Border(wxTOP, 3) );
-	s_spins.Add( new wxStaticText( this, wxID_ANY, _("FPS") ), StdSpace() );
-	s_spins.AddSpacer( 5 );
+	s_spins	+= new pxStaticText( this, _("Turbo Adjust:") );
+	s_spins	+= 5;
+	s_spins	+= m_spin_TurboPct		| wxSF.Border(wxTOP, 3);
+	s_spins	+= new pxStaticText( this, L"%" );
+	s_spins	+= 5;
 
-	s_main.Add( &s_spins );
+	s_spins	+= 15;
+	s_spins	+= 15;
+	s_spins	+= 15;
+	s_spins	+= 15;
+	s_spins	+= 15;
+
+	wxFlexGridSizer& s_fps( *new wxFlexGridSizer( 5 ) );
+	s_fps.AddGrowableCol( 0 );
+
+	s_fps	+= new pxStaticText( this, _("NTSC Framerate:") );
+	s_fps	+= 5;
+	s_fps	+= m_text_BaseNtsc	| wxSF.Align(wxALIGN_RIGHT).Border(wxTOP, 3);
+	s_fps	+= new pxStaticText( this, _("FPS") );
+	s_fps	+= 5;
+
+	s_fps	+= new pxStaticText( this, _("PAL Framerate:") );
+	s_fps	+= 5;
+	s_fps	+= m_text_BasePal	| wxSF.Align(wxALIGN_RIGHT).Border(wxTOP, 3);
+	s_fps	+= new pxStaticText( this, _("FPS") );
+	s_fps	+= 5;
+
+	*this	+= s_spins	| wxSizerFlags().Expand();
+	*this	+= s_fps	| wxSizerFlags().Expand();
 	
+	m_spin_NominalPct	->SetValue( 100 );
+	m_spin_SlomoPct		->SetValue( 50 );
+	m_spin_TurboPct		->SetValue( 100 );
 
-	m_spin_NominalPct->SetValue( 100 );
-	m_spin_SlomoPct->SetValue( 50 );
-	m_spin_TurboPct->SetValue( 100 );
-
-	m_text_BaseNtsc->SetValue( L"59.94" );
-	m_text_BasePal->SetValue( L"50.00" );
-
+	m_text_BaseNtsc		->SetValue( L"59.94" );
+	m_text_BasePal		->SetValue( L"50.00" );
 }
 
 void Panels::FramelimiterPanel::Apply()
@@ -177,33 +182,27 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	//  Layout and Positioning
 
 	wxBoxSizer& s_customsize( *new wxBoxSizer( wxHORIZONTAL ) );
-	s_customsize.Add( m_text_WindowWidth );
-	AddStaticText( s_customsize, _("x") );
-	s_customsize.Add( m_text_WindowHeight );
+	s_customsize	+= m_text_WindowWidth;
+	s_customsize	+= new pxStaticText( this, L"x" );
+	s_customsize	+= m_text_WindowHeight;
 
 	//wxFlexGridSizer& s_winsize( *new wxFlexGridSizer( 2 ) );
 	//s_winsize.AddGrowableCol( 0 );
 
-	wxStaticBoxSizer& s_winsize( *new wxStaticBoxSizer( wxVERTICAL, this, _("Window Size:") ) );
-	//AddStaticText( s_winsize, _("Window Size:") );
-	AddStaticText( s_winsize, _("Custom Window Size: "), wxALIGN_LEFT );
-	s_winsize.Add( &s_customsize, StdSpace().Border( wxLEFT | wxRIGHT | wxBOTTOM) );
+	wxStaticBoxSizer& s_winsize( *new wxStaticBoxSizer( wxVERTICAL, this, _("Custom Window Size:") ) );
+	s_winsize		+= s_customsize		| StdSpace().Border( wxLEFT | wxRIGHT | wxBOTTOM);
 
+	*this += s_winsize | StdSpace();
+	
+	*this += m_check_SizeLock;
+	*this += m_check_AspectLock;
+	*this += m_check_Fullscreen;
+	*this += m_check_CloseGS;
+	*this += m_check_VsyncEnable;
 
-	wxSizer& s_main( *GetSizer() );
-
-	s_main.Add( &s_winsize, StdSpace() );
-	
-	s_main.Add( m_check_SizeLock );
-	s_main.Add( m_check_AspectLock );
-	s_main.Add( m_check_Fullscreen );
-	s_main.Add( m_check_CloseGS );
-	s_main.Add( m_check_VsyncEnable );
-	
-	
-	m_text_WindowWidth->SetValue( L"640" );
-	m_text_WindowHeight->SetValue( L"480" );
-	m_check_CloseGS->SetValue( g_Conf->CloseGSonEsc );
+	m_text_WindowWidth	->SetValue( L"640" );
+	m_text_WindowHeight	->SetValue( L"480" );
+	m_check_CloseGS		->SetValue( g_Conf->CloseGSonEsc );
 
 }
 
@@ -225,16 +224,15 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	FramelimiterPanel* fpan = new FramelimiterPanel( right );
 	fpan->AddStaticBox(_("Framelimiter"));
 		
-	wxSizer& s_main( *GetSizer() );
 	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
 
-	left->GetSizer()->Add( winpan, wxSizerFlags().Expand() );
-	right->GetSizer()->Add( fpan, wxSizerFlags().Expand() );
+	*left		+= winpan		| wxSizerFlags().Expand();
+	*right		+= fpan			| wxSizerFlags().Expand();
 	
-	s_table->Add( left, StdExpand() );
-	s_table->Add( right, StdExpand() );
+	*s_table	+= left		| StdExpand();
+	*s_table	+= right	| StdExpand();
 
-	s_main.Add( s_table );
+	*this += s_table;
 	
 	// TODO:
 	// Framelimiting / Frameskipping / Vsync

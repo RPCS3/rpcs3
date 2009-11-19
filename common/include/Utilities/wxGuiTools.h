@@ -26,6 +26,130 @@
 class pxStaticText;
 class pxCheckBox;
 
+#define wxSF		wxSizerFlags()
+
+// --------------------------------------------------------------------------------------
+//  pxWindowAndFlags
+// --------------------------------------------------------------------------------------
+// This struct is a go-between for combining windows and sizer flags in "neat" fashion.
+// To create the struct, use the | operator, like so:
+//
+//   myPanel | wxSizerFlags().Expand()
+//
+// Implementation Note:  This struct is a template as it allows us to use a special
+// version of the += operator that retains the type information of the window, in case
+// the window implements its own += overloads (one example is pxStaticText).  Without the
+// template, the type of the window would only be known as "wxWindow" when it's added to the
+// sizer, and would thus fail to invoke the correct operator overload.
+//
+template< typename WinType >
+struct pxWindowAndFlags
+{
+	WinType*		window;
+	wxSizerFlags	flags;
+};
+
+template< typename WinType >
+static pxWindowAndFlags<WinType> operator | ( WinType* _win, const wxSizerFlags& _flgs )
+{
+	pxWindowAndFlags<WinType> result = { _win, _flgs };
+	return result;
+}
+
+template< typename WinType >
+static pxWindowAndFlags<WinType> operator | ( WinType& _win, const wxSizerFlags& _flgs )
+{
+	pxWindowAndFlags<WinType> result = { &_win, _flgs };
+	return result;
+}
+
+template< typename WinType >
+static pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType* _win )
+{
+	pxWindowAndFlags<WinType> result = { _win, _flgs };
+	return result;
+}
+
+template< typename WinType >
+static pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType& _win )
+{
+	pxWindowAndFlags<WinType> result = { &_win, _flgs };
+	return result;
+}
+
+// --------------------------------------------------------------------------------------
+//  wxSizer Operator +=  .. a wxSizer.Add() Substitute
+// --------------------------------------------------------------------------------------
+// This set of operators is the *recommended* method for adding windows to sizers, not just
+// because it's a lot prettier but also because it allows controls like pxStaticText to over-
+// ride default sizerflags behavior.
+//
+// += operator works on either sizers, wxDialogs or wxPanels.  In the latter case, the window
+// is added to the dialog/panel's toplevel sizer (wxPanel.GetSizer() is used).  If the panel
+// has no sizer set via SetSizer(), an assertion is generated.
+//
+template< typename WinType >
+static void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )
+{
+	target.Add( src.window, src.flags );
+}
+
+static void operator+=( wxSizer& target, wxWindow* src )
+{
+	target.Add( src );
+}
+
+static void operator+=( wxSizer& target, wxSizer* src )
+{
+	target.Add( src );
+}
+
+static void operator+=( wxSizer& target, int spacer )
+{
+	target.AddSpacer( spacer );
+}
+
+template< typename WinType >
+static void operator+=( wxPanel& target, const pxWindowAndFlags<WinType>& src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+template< typename WinType >
+static void operator+=( wxPanel& target, WinType* src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+static void operator+=( wxPanel& target, int spacer )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	target.GetSizer()->AddSpacer( spacer );
+}
+
+template< typename WinType >
+static void operator+=( wxDialog& target, const pxWindowAndFlags<WinType>& src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+template< typename WinType >
+static void operator+=( wxDialog& target, WinType* src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+static void operator+=( wxDialog& target, int spacer )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	target.GetSizer()->AddSpacer( spacer );
+}
+
+
 // ----------------------------------------------------------------------------
 // wxGuiTools.h
 //
@@ -64,7 +188,6 @@ public:
 	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
 	virtual ~wxDialogWithHelpers() throw();
 
-	wxStaticText& AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE );
     void AddOkCancel( wxSizer& sizer, bool hasApply=false );
 
 	wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
@@ -78,6 +201,20 @@ protected:
 // --------------------------------------------------------------------------------------
 //  wxPanelWithHelpers
 // --------------------------------------------------------------------------------------
+// Overview of Helpers provided by this class:
+//  * Simpler constructors that have wxID, position, and size parameters removed (We never
+//    use them in pcsx2)
+//
+//  * Automatic 'primary box sizer' creation, assigned via SetSizer() -- use GetSizer()
+//    to retrieve it, or use the "*this += window;" syntax to add windows directly to it.
+//
+//  * Built-in support for StaticBoxes (aka groupboxes).  Create one at construction with
+//    a wxString label, or add one "after the fact" using AddStaticBox.
+//
+//  * Propagates IdealWidth settings from parenting wxPanelWithHelpers classes, and auto-
+//    matically adjusts the width based on the sizer type (groupsizers get truncated to
+//    account for borders).
+//
 class wxPanelWithHelpers : public wxPanel
 {
 	DECLARE_DYNAMIC_CLASS_NO_COPY(wxPanelWithHelpers)
@@ -92,7 +229,6 @@ public:
 	explicit wxPanelWithHelpers( wxWindow* parent=NULL );
 	
 	wxPanelWithHelpers* AddStaticBox( const wxString& label, wxOrientation orient=wxVERTICAL );
-	pxStaticText& AddStaticText(wxSizer& sizer, const wxString& label, int alignFlags=wxALIGN_CENTRE );
 
 	// TODO : Propagate to children?
 	wxPanelWithHelpers& SetIdealWidth( int width ) { m_idealWidth = width;  return *this; }

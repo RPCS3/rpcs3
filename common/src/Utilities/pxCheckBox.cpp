@@ -31,7 +31,8 @@ void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 {
 	m_subtext	= NULL;
 	m_checkbox	= new wxCheckBox( this, wxID_ANY, label );
-	GetSizer()->Add( m_checkbox, pxSizerFlags::StdExpand() );
+	
+	*this += m_checkbox | pxSizerFlags::StdExpand();
 
 	static const int Indentation = 23;
 	if( !subtext.IsEmpty() )
@@ -40,11 +41,12 @@ void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 		if( HasIdealWidth() )
 			m_subtext->SetWrapWidth( m_idealWidth - Indentation );
 
-		wxBoxSizer& spaced = *new wxBoxSizer( wxHORIZONTAL );
-		spaced.AddSpacer( Indentation );
-		spaced.Add( m_subtext, wxSizerFlags().Border( wxBOTTOM, 9 ) );
-		spaced.AddSpacer( pxSizerFlags::StdPadding );
-		GetSizer()->Add( &spaced );
+		wxBoxSizer& spaced( *new wxBoxSizer( wxHORIZONTAL ) );
+		spaced += Indentation;
+		spaced += m_subtext | wxSF.Border( wxBOTTOM, 9 );
+		spaced += pxSizerFlags::StdPadding;
+
+		*this += &spaced;
 	}
 }
 

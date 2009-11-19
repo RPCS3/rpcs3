@@ -82,9 +82,9 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87"
 	);
 
-	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
-	AddStaticText( mainSizer, _("PCSX2  -  Playstation 2 Emulator") );
+	*this += new pxStaticText( this, _("PCSX2  -  Playstation 2 Emulator") );
 
 	// This sizer holds text of the authors and a logo!
 	wxBoxSizer& AuthLogoSizer = *new wxBoxSizer( wxHORIZONTAL );
@@ -112,19 +112,20 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	ContribSizer.Add( &m_bitmap_dualshock, pxSizerFlags::StdSpace() );
 	ContribSizer.AddStretchSpacer( 1 );
 
-	mainSizer.Add( &AuthLogoSizer, pxSizerFlags::StdSpace() );
+	*this	+= AuthLogoSizer	| pxSizerFlags::StdSpace();
 
-	mainSizer.Add( new wxHyperlinkCtrl(
-		this, wxID_ANY, L"Pcsx2 Official Website and Forums" , L"http://www.pcsx2.net" ),
-		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
-	mainSizer.Add( new wxHyperlinkCtrl(
-		this, wxID_ANY, L"Pcsx2 Official Svn Repository at Googlecode" , L"http://code.google.com/p/pcsx2" ),
-		wxSizerFlags(1).Center().Border( wxALL, 3 ) );
+	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
+		_("Pcsx2 Official Website and Forums"), L"http://www.pcsx2.net"
+	) | wxSizerFlags(1).Center().Border( wxALL, 3 );
 
-	mainSizer.Add( &ContribSizer, pxSizerFlags::StdExpand() );
+	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
+		_("Pcsx2 Official Svn Repository at Googlecode"), L"http://code.google.com/p/pcsx2"
+	) | wxSizerFlags(1).Center().Border( wxALL, 3 );
 
-	mainSizer.Add( new wxButton( this, wxID_OK, L"I've seen enough"), pxSizerFlags::StdCenter() );
-	SetSizerAndFit( &mainSizer );
+	*this	+= ContribSizer		| pxSizerFlags::StdExpand();
 
+	*this	+= new wxButton( this, wxID_OK, L"I've seen enough") | pxSizerFlags::StdCenter();
+
+	Fit();
 	CenterOnScreen();
 }

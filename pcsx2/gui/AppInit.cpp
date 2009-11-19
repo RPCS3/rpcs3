@@ -86,16 +86,16 @@ void Pcsx2App::ReadUserModeSettings()
 		wxDialogWithHelpers preAlpha( NULL, wxID_ANY, _("It might devour your kittens! - PCSX2 0.9.7 Pre-Alpha"), false );
 		preAlpha.SetIdealWidth( 575 );
 
-		wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
-		preAlpha.AddStaticText( s_main,
+		preAlpha.SetSizer( new wxBoxSizer( wxVERTICAL ) );
+		preAlpha += new pxStaticText( &preAlpha,
 			L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
 			L"user interface, and many parts of the program have *NOT* been implemented yet.  Options will be missing.  "
 			L"Some things may crash or hang without warning.  Other things will seem plainly stupid and the product of incompetent "
 			L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER
 		);
 		
-		s_main.Add( new wxButton( &preAlpha, wxID_OK ), pxSizerFlags::StdCenter() );
-		preAlpha.SetSizerAndFit( &s_main );
+		preAlpha += new wxButton( &preAlpha, wxID_OK ) | pxSizerFlags::StdCenter();
+		preAlpha.Fit();
 		preAlpha.CentreOnScreen();
 		preAlpha.ShowModal();
 	
