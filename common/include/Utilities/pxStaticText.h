@@ -84,25 +84,14 @@ protected:
 	void _setLabel();
 };
 
-static void operator+=( wxSizer& target, pxStaticText* src )
-{
-	if( !pxAssert( src != NULL ) ) return;
-	src->AddTo( target );
-}
+extern void operator+=( wxSizer& target, pxStaticText* src );
 
-#ifdef __LINUX__
 template<>
 void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
 {
 	target.Add( src.window, src.flags );
 }
-#else
-template<>
-static void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
-{
-	target.Add( src.window, src.flags );
-}
-#endif
+
 // --------------------------------------------------------------------------------------
 //  pxStaticHeading
 // --------------------------------------------------------------------------------------

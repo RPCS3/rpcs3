@@ -98,6 +98,33 @@ wxSizerFlags pxSizerFlags::Checkbox()
 	return StdExpand();
 }
 
+void operator+=( wxSizer& target, wxWindow* src )
+{
+	target.Add( src );
+}
+
+void operator+=( wxSizer& target, wxSizer* src )
+{
+	target.Add( src );
+}
+
+void operator+=( wxSizer& target, int spacer )
+{
+	target.AddSpacer( spacer );
+}
+
+void operator+=( wxPanel& target, int spacer )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	target.GetSizer()->AddSpacer( spacer );
+}
+
+void operator+=( wxDialog& target, int spacer )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	target.GetSizer()->AddSpacer( spacer );
+}
+
 // --------------------------------------------------------------------------------------
 //  pxTextWrapper / pxTextWrapperBase Implementations
 // --------------------------------------------------------------------------------------

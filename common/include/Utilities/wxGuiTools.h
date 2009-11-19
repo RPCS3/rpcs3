@@ -88,65 +88,46 @@ static pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType
 // is added to the dialog/panel's toplevel sizer (wxPanel.GetSizer() is used).  If the panel
 // has no sizer set via SetSizer(), an assertion is generated.
 //
+
+extern void operator+=( wxSizer& target, wxWindow* src );
+extern void operator+=( wxSizer& target, wxSizer* src );
+
+extern void operator+=( wxSizer& target, int spacer );
+extern void operator+=( wxPanel& target, int spacer );
+extern void operator+=( wxDialog& target, int spacer );
+
 template< typename WinType >
-static void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )
+void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )
 {
 	target.Add( src.window, src.flags );
 }
 
-static void operator+=( wxSizer& target, wxWindow* src )
-{
-	target.Add( src );
-}
-
-static void operator+=( wxSizer& target, wxSizer* src )
-{
-	target.Add( src );
-}
-
-static void operator+=( wxSizer& target, int spacer )
-{
-	target.AddSpacer( spacer );
-}
-
 template< typename WinType >
-static void operator+=( wxPanel& target, const pxWindowAndFlags<WinType>& src )
+void operator+=( wxPanel& target, const pxWindowAndFlags<WinType>& src )
 {
 	if( !pxAssert( target.GetSizer() != NULL ) ) return;
 	*target.GetSizer() += src;
 }
 
 template< typename WinType >
-static void operator+=( wxPanel& target, WinType* src )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	*target.GetSizer() += src;
-}
-
-static void operator+=( wxPanel& target, int spacer )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	target.GetSizer()->AddSpacer( spacer );
-}
-
-template< typename WinType >
-static void operator+=( wxDialog& target, const pxWindowAndFlags<WinType>& src )
+void operator+=( wxPanel& target, WinType* src )
 {
 	if( !pxAssert( target.GetSizer() != NULL ) ) return;
 	*target.GetSizer() += src;
 }
 
 template< typename WinType >
-static void operator+=( wxDialog& target, WinType* src )
+void operator+=( wxDialog& target, const pxWindowAndFlags<WinType>& src )
 {
 	if( !pxAssert( target.GetSizer() != NULL ) ) return;
 	*target.GetSizer() += src;
 }
 
-static void operator+=( wxDialog& target, int spacer )
+template< typename WinType >
+void operator+=( wxDialog& target, WinType* src )
 {
 	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	target.GetSizer()->AddSpacer( spacer );
+	*target.GetSizer() += src;
 }
 
 

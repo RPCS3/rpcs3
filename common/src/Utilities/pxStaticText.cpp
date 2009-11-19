@@ -120,3 +120,9 @@ pxStaticHeading::pxStaticHeading( wxWindow* parent, const wxString& label, int s
 {
 	m_centerPadding = 0.18;
 }
+
+void operator+=( wxSizer& target, pxStaticText* src )
+{
+	if( !pxAssert( src != NULL ) ) return;
+	src->AddTo( target );
+}

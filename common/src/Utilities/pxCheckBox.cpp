@@ -70,3 +70,9 @@ bool pxCheckBox::GetValue() const
 {
 	return m_checkbox->GetValue();
 }
+
+void operator+=( wxSizer& target, pxCheckBox* src )
+{
+	if( !pxAssert( src != NULL ) ) return;
+	target.Add( src, wxSF.Expand() );
+}
