@@ -53,7 +53,8 @@ void __fastcall vu0ExecMicro(u32 addr) {
 	VU0.VI[REG_VPU_STAT].UL|= 0x1;
 	VU0.VI[REG_VPU_STAT].UL&= ~0xAE;
 
-	if (addr != -1) VU0.VI[REG_TPC].UL = addr;
+	// If an unsigned variable isn't -1? --arcum42
+	/*if (addr != -1) */VU0.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU0);
 	CpuVU0.ExecuteBlock();
 

@@ -341,7 +341,6 @@
 		<Unit filename="../gui/AppInit.cpp" />
 		<Unit filename="../gui/AppMain.cpp" />
 		<Unit filename="../gui/AppRes.cpp" />
-		<Unit filename="../gui/CheckedStaticBox.cpp" />
 		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/ConsoleLogger.h" />
@@ -452,7 +451,6 @@
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
-		<Unit filename="../gui/wxHelpers.cpp" />
 		<Unit filename="../gui/wxHelpers.h" />
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
