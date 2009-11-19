@@ -87,7 +87,7 @@ protected:
 extern void operator+=( wxSizer& target, pxStaticText* src );
 
 template<>
-void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
+inline void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
 {
 	target.Add( src.window, src.flags );
 }
