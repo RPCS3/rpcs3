@@ -356,7 +356,7 @@ int _isoReadBlockM(isoFile *iso, u8 *dst, uint lsn)
 
 int isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
 {
-	uint ret;
+	int ret;
 
 	if (lsn > iso->blocks)
 	{
@@ -373,7 +373,7 @@ int isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
 	else
 		ret = _isoReadBlock(iso, dst, lsn);
 
-	if (ret < lsn) return -1;
+    if (ret < 0) return -1;
 
 	if (iso->type == ISOTYPE_CD)
 	{
