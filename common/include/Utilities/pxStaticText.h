@@ -90,12 +90,19 @@ static void operator+=( wxSizer& target, pxStaticText* src )
 	src->AddTo( target );
 }
 
+#ifdef __LINUX__
 template<>
 void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
 {
 	target.Add( src.window, src.flags );
 }
-
+#else
+template<>
+static void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
+{
+	target.Add( src.window, src.flags );
+}
+#endif
 // --------------------------------------------------------------------------------------
 //  pxStaticHeading
 // --------------------------------------------------------------------------------------

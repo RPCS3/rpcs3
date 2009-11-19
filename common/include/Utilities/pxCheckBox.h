@@ -62,8 +62,16 @@ static void operator+=( wxSizer& target, pxCheckBox* src )
 	target.Add( src, wxSF.Expand() );
 }
 
+#ifdef __LINUX__
 template<>
 void operator+=( wxSizer& target, const pxWindowAndFlags<pxCheckBox>& src )
 {
 	target.Add( src.window, src.flags );
 }
+#else
+template<>
+static void operator+=( wxSizer& target, const pxWindowAndFlags<pxCheckBox>& src )
+{
+	target.Add( src.window, src.flags );
+}
+#endif
