@@ -126,3 +126,4 @@ void operator+=( wxSizer& target, pxStaticText* src )
 	if( !pxAssert( src != NULL ) ) return;
 	src->AddTo( target );
 }
+

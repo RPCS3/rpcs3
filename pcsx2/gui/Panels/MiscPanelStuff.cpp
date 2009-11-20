@@ -167,7 +167,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
 	m_radio_UserMode->Realize();
 
-	*this	+= new pxStaticText( this, isFirstTime ? usermodeExplained : usermodeWarning );
+	*this	+= StaticText( (isFirstTime ? usermodeExplained : usermodeWarning) );
 	*this	+= m_radio_UserMode | pxSizerFlags::StdExpand();
 	*this	+= 4;
 }
@@ -201,7 +201,7 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 		size, compiled.GetPtr(), wxCB_READONLY | wxCB_SORT );
 	m_picker->SetSelection( cursel );
 
-	*this	+= new pxStaticText( this, _("Select a language: "), wxALIGN_CENTRE_VERTICAL );
+	*this	+= StaticText(_("Select a language: ")) | pxMiddle;
 	*this	+= 5;
 	*this	+= m_picker | pxSizerFlags::StdSpace();
 }

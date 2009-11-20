@@ -24,9 +24,87 @@
 #include <wx/wx.h>
 
 class pxStaticText;
+class pxStaticHeading;
 class pxCheckBox;
 
 #define wxSF		wxSizerFlags()
+
+// --------------------------------------------------------------------------------------
+//  pxAlignment / pxStretchType
+// --------------------------------------------------------------------------------------
+// These are full blown class types instead of enumerations because wxSizerFlags has an
+// implicit conversion from integer (silly design flaw creating more work for me!)
+//
+struct pxAlignmentType
+{
+	enum
+	{
+		Centre,
+		Center = Centre,
+		Middle,
+		Left,
+		Right,
+		Top,
+		Bottom
+	};
+
+	int intval;
+
+	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
+	
+	operator wxSizerFlags() const
+	{
+		return Apply();
+	}
+
+	wxSizerFlags operator | ( const wxSizerFlags& _flgs )
+	{
+		return Apply( _flgs );
+	}
+};
+
+struct pxStretchType
+{
+	enum
+	{
+		Shrink,
+		Expand,
+		Shaped,
+		ReserveHidden,
+		FixedMinimum
+	};
+	
+	int intval;
+
+	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
+
+	operator wxSizerFlags() const
+	{
+		return Apply();
+	}
+
+	wxSizerFlags operator | ( const wxSizerFlags& _flgs )
+	{
+		return Apply( _flgs );
+	}
+};
+
+extern const pxAlignmentType
+	pxCentre,	// Horizontal centered alignment
+	pxCenter,
+	pxMiddle,	// vertical centered alignment
+
+	pxAlignLeft,
+	pxAlignRight,
+	pxAlignTop,
+	pxAlignBottom;
+
+extern const pxStretchType
+	pxShrink,
+	pxExpand,
+	pxShaped,
+	pxReserveHidden,
+	pxFixedMinimum;
 
 // --------------------------------------------------------------------------------------
 //  pxWindowAndFlags
@@ -49,29 +127,40 @@ struct pxWindowAndFlags
 	wxSizerFlags	flags;
 };
 
+
+__forceinline wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxAlignmentType align )
+{
+	return align.Apply( _flgs );
+}
+
+__forceinline wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch )
+{
+	return stretch.Apply( _flgs );
+}
+
 template< typename WinType >
-static pxWindowAndFlags<WinType> operator | ( WinType* _win, const wxSizerFlags& _flgs )
+pxWindowAndFlags<WinType> operator | ( WinType* _win, const wxSizerFlags& _flgs )
 {
 	pxWindowAndFlags<WinType> result = { _win, _flgs };
 	return result;
 }
 
 template< typename WinType >
-static pxWindowAndFlags<WinType> operator | ( WinType& _win, const wxSizerFlags& _flgs )
+pxWindowAndFlags<WinType> operator | ( WinType& _win, const wxSizerFlags& _flgs )
 {
 	pxWindowAndFlags<WinType> result = { &_win, _flgs };
 	return result;
 }
 
 template< typename WinType >
-static pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType* _win )
+pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType* _win )
 {
 	pxWindowAndFlags<WinType> result = { _win, _flgs };
 	return result;
 }
 
 template< typename WinType >
-static pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType& _win )
+pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType& _win )
 {
 	pxWindowAndFlags<WinType> result = { &_win, _flgs };
 	return result;
@@ -91,10 +180,11 @@ static pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType
 
 extern void operator+=( wxSizer& target, wxWindow* src );
 extern void operator+=( wxSizer& target, wxSizer* src );
-
 extern void operator+=( wxSizer& target, int spacer );
-extern void operator+=( wxPanel& target, int spacer );
-extern void operator+=( wxDialog& target, int spacer );
+
+extern void operator+=( wxWindow& target, wxWindow* src );
+extern void operator+=( wxWindow& target, wxSizer* src );
+extern void operator+=( wxWindow& target, int spacer );
 
 template< typename WinType >
 void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )
@@ -103,33 +193,11 @@ void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )
 }
 
 template< typename WinType >
-void operator+=( wxPanel& target, const pxWindowAndFlags<WinType>& src )
+void operator+=( wxWindow& target, const pxWindowAndFlags<WinType>& src )
 {
 	if( !pxAssert( target.GetSizer() != NULL ) ) return;
 	*target.GetSizer() += src;
 }
-
-template< typename WinType >
-void operator+=( wxPanel& target, WinType* src )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	*target.GetSizer() += src;
-}
-
-template< typename WinType >
-void operator+=( wxDialog& target, const pxWindowAndFlags<WinType>& src )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	*target.GetSizer() += src;
-}
-
-template< typename WinType >
-void operator+=( wxDialog& target, WinType* src )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	*target.GetSizer() += src;
-}
-
 
 // ----------------------------------------------------------------------------
 // wxGuiTools.h
@@ -170,6 +238,8 @@ public:
 	virtual ~wxDialogWithHelpers() throw();
 
     void AddOkCancel( wxSizer& sizer, bool hasApply=false );
+	pxStaticText*		StaticText( const wxString& label );
+	pxStaticHeading*	StaticHeading( const wxString& label );
 
 	wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
 	int GetIdealWidth() const { return m_idealWidth; }
@@ -210,6 +280,9 @@ public:
 	explicit wxPanelWithHelpers( wxWindow* parent=NULL );
 	
 	wxPanelWithHelpers* AddStaticBox( const wxString& label, wxOrientation orient=wxVERTICAL );
+
+	pxStaticText*		StaticText( const wxString& label );
+	pxStaticHeading*	StaticHeading( const wxString& label );
 
 	// TODO : Propagate to children?
 	wxPanelWithHelpers& SetIdealWidth( int width ) { m_idealWidth = width;  return *this; }

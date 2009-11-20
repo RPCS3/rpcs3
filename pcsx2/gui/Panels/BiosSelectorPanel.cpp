@@ -86,7 +86,7 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
 
 	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms.") );
 
-	*this	+= new pxStaticText( this, _("Select a BIOS rom:") );
+	*this	+= StaticText(_("Select a BIOS rom:"));
 	*this	+= m_ComboBox		| pxSizerFlags::StdExpand();
 	*this	+= 6;
 	*this	+= m_FolderPicker	| pxSizerFlags::StdExpand();

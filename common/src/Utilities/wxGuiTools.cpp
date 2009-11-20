@@ -15,9 +15,123 @@
 
 #include "PrecompiledHeader.h"
 #include "wxGuiTools.h"
+#include "pxStaticText.h"
 
 #include <wx/app.h>
 #include <wx/window.h>
+
+const pxAlignmentType
+	pxCentre		= { pxAlignmentType::Center },	// Horizontal centered alignment
+	pxCenter		= pxCentre,
+	pxMiddle		= { pxAlignmentType::Middle },	// vertical centered alignment
+
+	pxAlignLeft		= { pxAlignmentType::Left },
+	pxAlignRight	= { pxAlignmentType::Right },
+	pxAlignTop		= { pxAlignmentType::Top },
+	pxAlignBottom	= { pxAlignmentType::Bottom };
+
+const pxStretchType
+	pxShrink		= { pxStretchType::Shrink },
+	pxExpand		= { pxStretchType::Expand },
+	pxShaped		= { pxStretchType::Shaped },
+	pxReserveHidden	= { pxStretchType::ReserveHidden },
+	pxFixedMinimum	= { pxStretchType::FixedMinimum };
+
+wxSizerFlags pxAlignmentType::Apply( wxSizerFlags flags ) const
+{
+	switch( intval )
+	{
+		case Centre:
+			flags.Align( flags.GetFlags() | wxALIGN_CENTRE_HORIZONTAL );
+		break;
+
+		case Middle:
+			flags.Align( flags.GetFlags() | wxALIGN_CENTRE_VERTICAL );
+		break;
+
+		case Left:
+			flags.Left();
+		break;
+
+		case Right:
+			flags.Right();
+		break;
+
+		case Top:
+			flags.Top();
+		break;
+
+		case Bottom:
+			flags.Bottom();
+		break;
+	}
+	return flags;
+}
+
+wxSizerFlags pxStretchType::Apply( wxSizerFlags flags ) const
+{
+	switch( intval )
+	{
+		case Shrink:
+			//pxFail( "wxSHRINK is an ignored stretch flag." );
+		break;
+
+		case Expand:
+			flags.Expand();
+		break;
+
+		case Shaped:
+			flags.Shaped();
+		break;
+
+		case ReserveHidden:
+			flags.ReserveSpaceEvenIfHidden();
+		break;
+
+		case FixedMinimum:
+			flags.FixedMinSize();
+			break;
+		
+		//case Tile:
+		//	pxAssert( "pxTile is an unsupported stretch tag (ignored)." );
+		//break;
+	}
+	return flags;
+}
+
+
+void operator+=( wxSizer& target, wxWindow* src )
+{
+	target.Add( src );
+}
+
+void operator+=( wxSizer& target, wxSizer* src )
+{
+	target.Add( src );
+}
+
+void operator+=( wxSizer& target, int spacer )
+{
+	target.AddSpacer( spacer );
+}
+
+void operator+=( wxWindow& target, wxWindow* src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+void operator+=( wxWindow& target, wxSizer* src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+void operator+=( wxWindow& target, int spacer )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	target.GetSizer()->AddSpacer( spacer );
+}
 
 // Returns FALSE if the window position is considered invalid, which means that it's title
 // bar is most likely not easily grabble.  Such a window should be moved to a valid or
@@ -96,33 +210,6 @@ wxSizerFlags pxSizerFlags::StdButton()
 wxSizerFlags pxSizerFlags::Checkbox()
 {
 	return StdExpand();
-}
-
-void operator+=( wxSizer& target, wxWindow* src )
-{
-	target.Add( src );
-}
-
-void operator+=( wxSizer& target, wxSizer* src )
-{
-	target.Add( src );
-}
-
-void operator+=( wxSizer& target, int spacer )
-{
-	target.AddSpacer( spacer );
-}
-
-void operator+=( wxPanel& target, int spacer )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	target.GetSizer()->AddSpacer( spacer );
-}
-
-void operator+=( wxDialog& target, int spacer )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	target.GetSizer()->AddSpacer( spacer );
 }
 
 // --------------------------------------------------------------------------------------

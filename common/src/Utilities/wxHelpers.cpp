@@ -78,6 +78,16 @@ wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 	pxAssert( m_DialogIdents[GetId()] >= 0 );
 }
 
+pxStaticText* wxDialogWithHelpers::StaticText( const wxString& label )
+{
+	return new pxStaticText( this, label );
+}
+
+pxStaticHeading* wxDialogWithHelpers::StaticHeading( const wxString& label )
+{
+	return new pxStaticHeading( this, label );
+}
+
 void wxDialogWithHelpers::OnActivate(wxActivateEvent& evt)
 {
 	//evt.Skip();
@@ -171,6 +181,17 @@ wxPanelWithHelpers* wxPanelWithHelpers::AddStaticBox( const wxString& label, wxO
 	
 	return this;
 }
+
+pxStaticText* wxPanelWithHelpers::StaticText( const wxString& label )
+{
+	return new pxStaticText( this, label );
+}
+
+pxStaticHeading* wxPanelWithHelpers::StaticHeading( const wxString& label )
+{
+	return new pxStaticHeading( this, label );
+}
+
 
 wxPanelWithHelpers::wxPanelWithHelpers( wxWindow* parent, wxOrientation orient, const wxString& staticBoxLabel )
 	: wxPanel( parent )
