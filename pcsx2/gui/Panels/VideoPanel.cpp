@@ -54,6 +54,10 @@ wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits )
 	return ctrl;
 }
 
+// --------------------------------------------------------------------------------------
+//  FramelimiterPanel Implementations
+// --------------------------------------------------------------------------------------
+
 Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
@@ -137,12 +141,27 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 	m_text_BaseNtsc		->SetValue( L"59.94" );
 	m_text_BasePal		->SetValue( L"50.00" );
+	
+	OnSettingsChanged();
+}
+
+void Panels::FramelimiterPanel::OnSettingsChanged()
+{
+	const Pcsx2Config::VideoOptions& conf( g_Conf->EmuOptions.Video );
+
+	// TODO : Apply options from config *to* checkboxes (once video config struct is implemented)
 }
 
 void Panels::FramelimiterPanel::Apply()
 {
+	Pcsx2Config::VideoOptions& conf( g_Conf->EmuOptions.Video );
+
+	// TODO : Apply options from checkboxes (once video config struct is is implemented)
 }
 
+// --------------------------------------------------------------------------------------
+//  GSWindowSetting Implementation
+// --------------------------------------------------------------------------------------
 
 Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
@@ -210,6 +229,10 @@ void Panels::GSWindowSettingsPanel::Apply()
 {
 }
 
+// --------------------------------------------------------------------------------------
+//  VideoPanel Implementation
+// --------------------------------------------------------------------------------------
+
 Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	BaseApplicableConfigPanel( parent )
 {
@@ -232,6 +255,7 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	*s_table	+= left		| StdExpand();
 	*s_table	+= right	| StdExpand();
 
+	*this += StaticHeading(L"This panel is not implemented yet.\nIT DOES NOT WORK.  AT ALL.");
 	*this += s_table;
 	
 	// TODO:

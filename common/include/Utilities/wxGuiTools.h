@@ -181,10 +181,17 @@ pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType& _win 
 extern void operator+=( wxSizer& target, wxWindow* src );
 extern void operator+=( wxSizer& target, wxSizer* src );
 extern void operator+=( wxSizer& target, int spacer );
-
-extern void operator+=( wxWindow& target, wxWindow* src );
-extern void operator+=( wxWindow& target, wxSizer* src );
 extern void operator+=( wxWindow& target, int spacer );
+
+// Important: This template is needed in order to retain window type information and
+// invoke the proper overloaded version of += (which is used by pxStaticText and other
+// classes to perform special actions when added to sizers).
+template< typename WinType >
+void operator+=( wxWindow& target, WinType* src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
 
 template< typename WinType >
 void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )

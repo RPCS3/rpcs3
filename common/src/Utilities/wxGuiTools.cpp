@@ -115,18 +115,6 @@ void operator+=( wxSizer& target, int spacer )
 	target.AddSpacer( spacer );
 }
 
-void operator+=( wxWindow& target, wxWindow* src )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	*target.GetSizer() += src;
-}
-
-void operator+=( wxWindow& target, wxSizer* src )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	*target.GetSizer() += src;
-}
-
 void operator+=( wxWindow& target, int spacer )
 {
 	if( !pxAssert( target.GetSizer() != NULL ) ) return;
