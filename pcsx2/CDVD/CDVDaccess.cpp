@@ -31,6 +31,7 @@
 #include "IsoFS/IsoFS.h"
 #include "IsoFS/IsoFSCDVD.h"
 #include "CDVDisoReader.h"
+#include "Utilities/ScopedPtr.h"
 
 const wxChar* CDVD_SourceLabels[] =
 {
@@ -77,14 +78,14 @@ static int CheckDiskTypeFS(int baseType)
 
 		int size = file.getLength();
 
-		char buffer[256]; //if the file is longer...it should be shorter :D
-		file.read((u8*)buffer,size);
+		ScopedArray<char> buffer((int)file.getLength()+1);
+		file.read((u8*)(buffer.GetPtr()),size);
 		buffer[size]='\0';
 
-		char* pos = strstr(buffer, "BOOT2");
+		char* pos = strstr(buffer.GetPtr(), "BOOT2");
 		if (pos == NULL)
 		{
-			pos = strstr(buffer, "BOOT");
+			pos = strstr(buffer.GetPtr(), "BOOT");
 			if (pos == NULL)  return CDVD_TYPE_ILLEGAL;
 			return CDVD_TYPE_PSCD;
 		}
