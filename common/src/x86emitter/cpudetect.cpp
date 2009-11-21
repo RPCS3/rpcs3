@@ -73,8 +73,6 @@ void cpudetectInit()
    //AMD 64 STUFF
    u32 x86_64_8BITBRANDID;
    u32 x86_64_12BITBRANDID;
-   int num;
-   char str[50];
 
    memzero( x86caps.VendorName );
    x86caps.FamilyID = 0;
@@ -90,11 +88,6 @@ void cpudetectInit()
    ((u32*)x86caps.VendorName)[ 0 ] = regs[ 1 ];
    ((u32*)x86caps.VendorName)[ 1 ] = regs[ 3 ];
    ((u32*)x86caps.VendorName)[ 2 ] = regs[ 2 ];
-
-   // Hack - prevents reg[2] & reg[3] from being optimized out of existence! (GCC only)
-   // FIXME: We use a better __cpuid now with proper inline asm constraints.  This hack is
-   //   probably obsolete.  Linux devs please re-confirm. --air
-   num = sprintf(str, "\tx86Flags  =  %8.8x %8.8x\n", regs[3], regs[2]);
 
    u32 LogicalCoresPerPhysicalCPU = 0;
    u32 PhysicalCoresPerPhysicalCPU = 1;

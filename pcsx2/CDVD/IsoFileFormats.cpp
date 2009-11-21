@@ -23,26 +23,26 @@
 
 #include "IsoFileFormats.h"
 
-static int detect(isoFile *iso)
+static bool detect(isoFile *iso)
 {
 	u8 buf[2448];
 	u8* pbuf;
 
-	if (!isoReadBlock(iso, buf, 16)) return -1;
+	if (!isoReadBlock(iso, buf, 16)) return false; // Not readable
 
 	pbuf = (( iso->flags & ISOFLAGS_BLOCKDUMP_V3 ) ? buf : (buf + 24));
 
-	if (strncmp((char*)(pbuf+1), "CD001", 5)) return 0;
+	if (strncmp((char*)(pbuf+1), "CD001", 5)) return false; // Not ISO 9660 compliant
 
 	if (*(u16*)(pbuf+166) == 2048)
 		iso->type = ISOTYPE_CD;
 	else
 		iso->type = ISOTYPE_DVD;
 
-	return 1;
+	return true; // We can deal with this.
 }
 
-static int _isoReadDtable(isoFile *iso)
+static bool _isoReadDtable(isoFile *iso)
 {
 	uint ret;
 
@@ -54,10 +54,10 @@ static int _isoReadDtable(isoFile *iso)
 	{
 		_seekfile(iso->handle, 16 + (iso->blocksize + 4) * i, SEEK_SET);
 		ret = _readfile(iso->handle, &iso->dtable[i], 4);
-		if (ret < 4) return -1;
+		if (ret < 4) return false;
 	}
 
-	return 0;
+	return true;
 }
 
 static bool tryIsoType(isoFile *iso, u32 size, u32 offset, u32 blockofs)
@@ -65,9 +65,8 @@ static bool tryIsoType(isoFile *iso, u32 size, u32 offset, u32 blockofs)
 	iso->blocksize = size;
 	iso->offset = offset;
 	iso->blockofs = blockofs;
-	if (detect(iso) == 1) return true;
-
-	return false;
+	
+	return detect(iso);
 }
 
 // based on florin's CDVDbin detection code :)
@@ -91,7 +90,7 @@ bool isoDetect(isoFile *iso)
 		_readfile(iso->handle, &iso->blocks, 4);
 		_readfile(iso->handle, &iso->blockofs, 4);
 		_isoReadDtable(iso);
-		return (detect(iso) == 1);
+		return (detect(iso));
 	}
 	else if (strncmp(buf, "BDV3", 4) == 0)
 	{
@@ -100,7 +99,7 @@ bool isoDetect(isoFile *iso)
 		_readfile(iso->handle, &iso->blocks, 4);
 		_readfile(iso->handle, &iso->blockofs, 4);
 		_isoReadDtable(iso);
-		return (detect(iso) == 1);
+		return (detect(iso));
 	}
 	else
 	{
@@ -257,7 +256,7 @@ bool isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks)
 	return true;
 }
 
-s32 MSFtoLSN(u8 *Time)
+static s32 MSFtoLSN(u8 *Time)
 {
 	u32 lsn;
 
@@ -267,7 +266,7 @@ s32 MSFtoLSN(u8 *Time)
 	return lsn;
 }
 
-void LSNtoMSF(u8 *Time, s32 lsn)
+static void LSNtoMSF(u8 *Time, s32 lsn)
 {
 	u8 m, s, f;
 
