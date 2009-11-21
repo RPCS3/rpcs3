@@ -297,25 +297,28 @@ struct Pcsx2Config
 	{
 		BITFIELD32()
 			bool
-				EnableEE:1,
-				EnableIOP:1,
-				EnableVU0:1,
-				EnableVU1:1;
+				EnableEE		:1,
+				EnableIOP		:1,
+				EnableVU0		:1,
+				EnableVU1		:1;
 
 			bool
-				UseMicroVU0:1,
-				UseMicroVU1:1;
+				UseMicroVU0		:1,
+				UseMicroVU1		:1;
 
 			bool
-				vuOverflow:1,
-				vuExtraOverflow:1,
-				vuSignOverflow:1,
-				vuUnderflow:1;
+				vuOverflow		:1,
+				vuExtraOverflow	:1,
+				vuSignOverflow	:1,
+				vuUnderflow		:1;
 
 			bool
-				fpuOverflow:1,
+				fpuOverflow		:1,
 				fpuExtraOverflow:1,
-				fpuFullMode:1;
+				fpuFullMode		:1;
+				
+			bool
+				StackFrameChecks:1;
 		BITFIELD_END
 
 		RecompilerOptions();
@@ -361,6 +364,10 @@ struct Pcsx2Config
 	// ------------------------------------------------------------------------
 	struct VideoOptions
 	{
+		// forces the MTGS to execute tags/tasks in fully blocking/synchronous
+		// style.  Useful for debugging potential bugs in the MTGS pipeline.
+		bool SynchronousMTGS;
+		
 		bool EnableFrameLimiting;
 		bool EnableFrameSkipping;
 

@@ -84,7 +84,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 
 	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
-	*this += StaticText(_("PCSX2  -  Playstation 2 Emulator"));
+	*this += Text(_("PCSX2  -  Playstation 2 Emulator"));
 
 	// This sizer holds text of the authors and a logo!
 	wxBoxSizer& AuthLogoSizer = *new wxBoxSizer( wxHORIZONTAL );

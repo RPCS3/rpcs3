@@ -610,55 +610,52 @@ int GetPS2ElfName( wxString& name )
 		int size = file.getLength();
 		if( size == 0 ) return 0;
 
-		file.read( buffer, size );
-		buffer[size] = '\0';
+		int retype = 0;
+
+		while( !file.eof() )
+		{
+			wxString original( fromUTF8(file.readLine().c_str()) );
+			ParsedAssignmentString parts( original );
+
+			if( parts.lvalue.IsEmpty() && parts.rvalue.IsEmpty() ) continue;
+			if( parts.rvalue.IsEmpty() )
+			{
+				Console.Error( "(GetElfName) Unusual or malformed entry in SYSTEM.CNF ignored:" );
+				Console.Indent().WriteLn( original );
+				continue;
+			}
+
+			if( parts.lvalue == L"BOOT2" )
+			{
+				name = parts.rvalue;
+				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PS2 Disc = " + name );
+				retype = 2;
+			}
+			else if( parts.lvalue == L"BOOT" )
+			{
+				name = parts.rvalue;
+				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PSX/PSone Disc = " + name );
+				retype = 1;
+			}
+			else if( parts.lvalue == L"VMODE" )
+			{
+				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Disc region type = " + parts.rvalue );
+			}
+			else if( parts.lvalue == L"VER" )
+			{
+				Console.WriteLn( Color_StrongBlue, L"(GetElfName) Software version = " + parts.rvalue );
+			}
+		}
+
+		if( retype == 0 )
+		{
+			Console.Error("(GetElfName) Disc image is *not* a Playstation or PS2 game!");
+			return 0;
+		}
 	}
 	catch( Exception::FileNotFound& )
 	{
 		return 0;		// no SYSTEM.CNF, not a PS1/PS2 disc.
-	}
-
-	int retype = 0;
-	wxArrayString lines;
-	SplitString( lines, fromUTF8((char*)buffer), L"\n" );
-
-	for( uint i=0; i<lines.GetCount(); ++i )
-	{
-		ParsedAssignmentString parts( lines[i] );
-
-		if( parts.rvalue.IsEmpty() )
-		{
-			Console.Error( "(GetElfName) Unusual or malformed entry in SYSTEM.CNF ignored:" );
-			Console.WriteLn( L"\t" + lines[i] );
-			continue;
-		}
-
-		if( parts.lvalue == L"BOOT2" )
-		{
-			name = parts.rvalue;
-			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PS2 Disc = " + name );
-			retype = 2;
-		}
-		else if( parts.lvalue == L"BOOT" )
-		{
-			name = parts.rvalue;
-			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Detected PSX/PSone Disc = " + name );
-			retype = 1;
-		}
-		else if( parts.lvalue == L"VMODE" )
-		{
-			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Disc region type = " + parts.rvalue );
-		}
-		else if( parts.lvalue == L"VER" )
-		{
-			Console.WriteLn( Color_StrongBlue, L"(GetElfName) Software version = " + parts.rvalue );
-		}
-	}
-
-	if( retype == 0 )
-	{
-		Console.Error("(GetElfName) Disc image is *not* a Playstation or PS2 game!");
-		return 0;
 	}
 
 #ifdef PCSX2_DEVBUILD

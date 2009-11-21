@@ -70,25 +70,29 @@ void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )
 	IniBitBool( RecBlocks_VU1 );
 }
 
-Pcsx2Config::RecompilerOptions::RecompilerOptions() : bitset(0)
+Pcsx2Config::RecompilerOptions::RecompilerOptions()
 {
+	bitset		= 0;
+
+	StackFrameChecks = false;
+
 	// All recs are enabled by default.
 
-	EnableEE = true;
-	EnableIOP = true;
-	EnableVU0 = true;
-	EnableVU1 = true;
+	EnableEE	= true;
+	EnableIOP	= true;
+	EnableVU0	= true;
+	EnableVU1	= true;
 
-	UseMicroVU0 = true;
-	UseMicroVU1 = true;
+	UseMicroVU0	= true;
+	UseMicroVU1	= true;
 
 	// vu and fpu clamping default to standard overflow.
-	vuOverflow = true;
+	vuOverflow	= true;
 	//vuExtraOverflow = false;
 	//vuSignOverflow = false;
 	//vuUnderflow = false;
 
-	fpuOverflow = true;
+	fpuOverflow	= true;
 	//fpuExtraOverflow = false;
 	//fpuFullMode = false;
 }
@@ -147,6 +151,8 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 	IniBitBool( fpuOverflow );
 	IniBitBool( fpuExtraOverflow );
 	IniBitBool( fpuFullMode );
+	
+	IniBitBool( StackFrameChecks );
 }
 
 Pcsx2Config::CpuOptions::CpuOptions()
@@ -179,16 +185,19 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 	Recompiler.LoadSave( ini );
 }
 
-Pcsx2Config::VideoOptions::VideoOptions() :
-	EnableFrameLimiting( false )
-,	EnableFrameSkipping( false )
-,	DefaultRegionMode( Region_NTSC )
-,	FpsTurbo( 60*4 )
-,	FpsLimit( 60 )
-,	FpsSkip( 55 )
-,	ConsecutiveFrames( 2 )
-,	ConsecutiveSkip( 1 )
+Pcsx2Config::VideoOptions::VideoOptions()
 {
+	EnableFrameLimiting		= false;
+	EnableFrameSkipping		= false;
+	
+	SynchronousMTGS			= false;
+	
+	DefaultRegionMode		= Region_NTSC;
+	FpsTurbo				= 60*4;
+	FpsLimit				= 60;
+	FpsSkip					= 55;
+	ConsecutiveFrames		= 2;
+	ConsecutiveSkip			= 1;
 }
 
 void Pcsx2Config::VideoOptions::LoadSave( IniInterface& ini )

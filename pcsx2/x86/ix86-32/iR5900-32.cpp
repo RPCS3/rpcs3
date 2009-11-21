@@ -334,7 +334,7 @@ static void __fastcall StackFrameCheckFailed( int espORebp, int regval )
 
 static void _DynGen_StackFrameCheck()
 {
-	if( !IsDevBuild ) return;
+	if( !EmuConfig.Recompiler.StackFrameChecks ) return;
 
 	// --------- EBP Here -----------
 

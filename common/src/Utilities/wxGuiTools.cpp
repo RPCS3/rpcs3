@@ -99,6 +99,16 @@ wxSizerFlags pxStretchType::Apply( wxSizerFlags flags ) const
 	return flags;
 }
 
+wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxAlignmentType align )
+{
+	return align.Apply( _flgs );
+}
+
+wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch )
+{
+	return stretch.Apply( _flgs );
+}
+
 
 void operator+=( wxSizer& target, wxWindow* src )
 {

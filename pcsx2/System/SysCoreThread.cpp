@@ -178,7 +178,7 @@ void SysCoreThread::CpuInitializeMess()
 	ScopedBool_ClearOnError sbcoe( m_hasValidState );
 
 	wxString elf_file( m_elf_override );
-	if( elf_file.IsEmpty() && EmuConfig.SkipBiosSplash )
+	if( elf_file.IsEmpty() && EmuConfig.SkipBiosSplash && (CDVDsys_GetSourceType() != CDVDsrc_NoDisc))
 	{
 		// Fetch the ELF filename and CD type from the CDVD provider.
 		wxString ename;

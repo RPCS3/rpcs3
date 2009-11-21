@@ -128,15 +128,8 @@ struct pxWindowAndFlags
 };
 
 
-__forceinline wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxAlignmentType align )
-{
-	return align.Apply( _flgs );
-}
-
-__forceinline wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch )
-{
-	return stretch.Apply( _flgs );
-}
+extern wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxAlignmentType align );
+extern wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch );
 
 template< typename WinType >
 pxWindowAndFlags<WinType> operator | ( WinType* _win, const wxSizerFlags& _flgs )
@@ -245,8 +238,8 @@ public:
 	virtual ~wxDialogWithHelpers() throw();
 
     void AddOkCancel( wxSizer& sizer, bool hasApply=false );
-	pxStaticText*		StaticText( const wxString& label );
-	pxStaticHeading*	StaticHeading( const wxString& label );
+	pxStaticText*		Text( const wxString& label );
+	pxStaticHeading*	Heading( const wxString& label );
 
 	wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
 	int GetIdealWidth() const { return m_idealWidth; }
@@ -267,7 +260,7 @@ protected:
 //    to retrieve it, or use the "*this += window;" syntax to add windows directly to it.
 //
 //  * Built-in support for StaticBoxes (aka groupboxes).  Create one at construction with
-//    a wxString label, or add one "after the fact" using AddStaticBox.
+//    a wxString label, or add one "after the fact" using AddFrame.
 //
 //  * Propagates IdealWidth settings from parenting wxPanelWithHelpers classes, and auto-
 //    matically adjusts the width based on the sizer type (groupsizers get truncated to
@@ -286,10 +279,10 @@ public:
 	wxPanelWithHelpers( wxWindow* parent, const wxPoint& pos, const wxSize& size=wxDefaultSize );
 	explicit wxPanelWithHelpers( wxWindow* parent=NULL );
 	
-	wxPanelWithHelpers* AddStaticBox( const wxString& label, wxOrientation orient=wxVERTICAL );
+	wxPanelWithHelpers* AddFrame( const wxString& label, wxOrientation orient=wxVERTICAL );
 
-	pxStaticText*		StaticText( const wxString& label );
-	pxStaticHeading*	StaticHeading( const wxString& label );
+	pxStaticText*		Text( const wxString& label );
+	pxStaticHeading*	Heading( const wxString& label );
 
 	// TODO : Propagate to children?
 	wxPanelWithHelpers& SetIdealWidth( int width ) { m_idealWidth = width;  return *this; }

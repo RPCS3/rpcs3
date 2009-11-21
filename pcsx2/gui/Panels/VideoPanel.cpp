@@ -93,22 +93,22 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	wxFlexGridSizer& s_spins( *new wxFlexGridSizer( 5 ) );
 	s_spins.AddGrowableCol( 0 );
 
-	s_spins += StaticText(_("Base Framerate Adjust:"));
+	s_spins += Text(_("Base Framerate Adjust:"));
 	s_spins += 5;
 	s_spins += m_spin_NominalPct	| wxSF.Border(wxTOP, 3);
-	s_spins += StaticText(L"%" );
+	s_spins += Text(L"%" );
 	s_spins += 5;
 
-	s_spins += StaticText(_("Slow Motion Adjust:"));
+	s_spins += Text(_("Slow Motion Adjust:"));
 	s_spins += 5;
 	s_spins += m_spin_SlomoPct		| wxSF.Border(wxTOP, 3);
-	s_spins += StaticText(L"%" );
+	s_spins += Text(L"%" );
 	s_spins += 5;
 
-	s_spins	+= StaticText(_("Turbo Adjust:"));
+	s_spins	+= Text(_("Turbo Adjust:"));
 	s_spins	+= 5;
 	s_spins	+= m_spin_TurboPct		| wxSF.Border(wxTOP, 3);
-	s_spins	+= StaticText(L"%" );
+	s_spins	+= Text(L"%" );
 	s_spins	+= 5;
 
 	s_spins	+= 15;
@@ -120,16 +120,16 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	wxFlexGridSizer& s_fps( *new wxFlexGridSizer( 5 ) );
 	s_fps.AddGrowableCol( 0 );
 
-	s_fps	+= StaticText(_("NTSC Framerate:"));
+	s_fps	+= Text(_("NTSC Framerate:"));
 	s_fps	+= 5;
 	s_fps	+= m_text_BaseNtsc	| wxSF.Right().Border(wxTOP, 3);
-	s_fps	+= StaticText(_("FPS"));
+	s_fps	+= Text(_("FPS"));
 	s_fps	+= 5;
 
-	s_fps	+= StaticText(_("PAL Framerate:"));
+	s_fps	+= Text(_("PAL Framerate:"));
 	s_fps	+= 5;
 	s_fps	+= m_text_BasePal	| wxSF.Right().Border(wxTOP, 3);
-	s_fps	+= StaticText(_("FPS"));
+	s_fps	+= Text(_("FPS"));
 	s_fps	+= 5;
 
 	*this	+= s_spins	| pxExpand;
@@ -202,7 +202,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 
 	wxBoxSizer& s_customsize( *new wxBoxSizer( wxHORIZONTAL ) );
 	s_customsize	+= m_text_WindowWidth;
-	s_customsize	+= StaticText(L"x" );
+	s_customsize	+= Text(L"x" );
 	s_customsize	+= m_text_WindowHeight;
 
 	//wxFlexGridSizer& s_winsize( *new wxFlexGridSizer( 2 ) );
@@ -242,10 +242,10 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	right->SetIdealWidth( (right->GetIdealWidth()-16) / 2 );
 
 	GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
-	winpan->AddStaticBox(_("Display/Window"));
+	winpan->AddFrame(_("Display/Window"));
 
 	FramelimiterPanel* fpan = new FramelimiterPanel( right );
-	fpan->AddStaticBox(_("Framelimiter"));
+	fpan->AddFrame(_("Framelimiter"));
 		
 	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
 
@@ -255,7 +255,7 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	*s_table	+= left		| StdExpand();
 	*s_table	+= right	| StdExpand();
 
-	*this += StaticHeading(L"This panel is not implemented yet.\nIT DOES NOT WORK.  AT ALL.");
+	*this += Heading(L"This panel is not implemented yet.\nIT DOES NOT WORK.  AT ALL.");
 	*this += s_table;
 	
 	// TODO:

@@ -78,12 +78,12 @@ wxDialogWithHelpers::~wxDialogWithHelpers() throw()
 	pxAssert( m_DialogIdents[GetId()] >= 0 );
 }
 
-pxStaticText* wxDialogWithHelpers::StaticText( const wxString& label )
+pxStaticText* wxDialogWithHelpers::Text( const wxString& label )
 {
 	return new pxStaticText( this, label );
 }
 
-pxStaticHeading* wxDialogWithHelpers::StaticHeading( const wxString& label )
+pxStaticHeading* wxDialogWithHelpers::Heading( const wxString& label )
 {
 	return new pxStaticHeading( this, label );
 }
@@ -169,7 +169,11 @@ void wxPanelWithHelpers::Init()
 	}
 }
 
-wxPanelWithHelpers* wxPanelWithHelpers::AddStaticBox( const wxString& label, wxOrientation orient )
+// Creates a Static Box container for this panel.  the static box sizer becomes the default
+// sizer for this panel.  If the panel already has a sizer set, then that sizer will be
+// transfered to the new StaticBoxSizer (and will be the first item in it's list, retaining
+// consistent and expected layout)
+wxPanelWithHelpers* wxPanelWithHelpers::AddFrame( const wxString& label, wxOrientation orient )
 {
 	wxSizer* oldSizer = GetSizer();
 
@@ -182,12 +186,12 @@ wxPanelWithHelpers* wxPanelWithHelpers::AddStaticBox( const wxString& label, wxO
 	return this;
 }
 
-pxStaticText* wxPanelWithHelpers::StaticText( const wxString& label )
+pxStaticText* wxPanelWithHelpers::Text( const wxString& label )
 {
 	return new pxStaticText( this, label );
 }
 
-pxStaticHeading* wxPanelWithHelpers::StaticHeading( const wxString& label )
+pxStaticHeading* wxPanelWithHelpers::Heading( const wxString& label )
 {
 	return new pxStaticHeading( this, label );
 }
