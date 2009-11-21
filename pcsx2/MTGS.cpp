@@ -29,10 +29,10 @@
 
 using namespace Threading;
 
-#ifdef DEBUG
-#define MTGS_LOG Console.WriteLn
+#if 0 // PCSX2_DEBUG
+#	define MTGS_LOG Console.WriteLn
 #else
-#define MTGS_LOG 0&&
+#	define MTGS_LOG 0&&
 #endif
 
 // forces the compiler to treat a non-volatile value as volatile.
@@ -94,25 +94,13 @@ mtgsThreadObject& mtgsThreadObject::Get()
 
 mtgsThreadObject::mtgsThreadObject() :
 	SysThreadBase()
-,	m_RingPos( 0 )
-,	m_WritePos( 0 )
-
-,	m_lock_RingRestart()
-,	m_PacketLocker()
-
-,	m_CopyCommandTally( 0 )
-,	m_CopyDataTally( 0 )
-,	m_RingBufferIsBusy( false )
-,	m_PluginOpened( false )
-,	m_QueuedFrames( 0 )
-,	m_packet_size( 0 )
-,	m_packet_ringpos( 0 )
-
 #ifdef RINGBUF_DEBUG_STACK
 ,	m_lock_Stack()
 #endif
 {
 	m_name = L"MTGS";
+
+	// All other state vars are initialized by OnStart().
 }
 
 void mtgsThreadObject::OnStart()
@@ -122,9 +110,9 @@ void mtgsThreadObject::OnStart()
 	m_RingPos		= 0;
 	m_WritePos		= 0;
 
-	m_RingBufferIsBusy	= false;
+	//m_RingBufferIsBusy	= false;
 
-	m_QueuedFrames		= 0;
+	//m_QueuedFrames		= 0;
 	m_packet_size		= 0;
 	m_packet_ringpos	= 0;
 
@@ -161,30 +149,14 @@ void mtgsThreadObject::ResetGS()
 	GIFPath_Reset();
 }
 
+static int alterFrameFlush = 0;
+
 void mtgsThreadObject::PostVsyncEnd( bool updategs )
 {
-	while( m_QueuedFrames > 8 )
-	{
-		if( m_WritePos == volatize( m_RingPos ) )
-		{
-			// MTGS ringbuffer is empty, but we still have queued frames in the counter?  Ouch!
-			int count = AtomicExchange( m_QueuedFrames, 0 );
-			Console.Error( "MTGS > Queued framecount mismatch = %d", count );
-			break;
-		}
-		Threading::Sleep( 2 );		// Sleep off quite a bit of time, since we're obviously *waaay* ahead.
-		SpinWait();
-	}
-
-	AtomicIncrement( m_QueuedFrames );
-	//Console.Status( " >> Frame Added!" );
-
-	SendSimplePacket( GS_RINGTYPE_VSYNC,
-		(*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0);
-
-	// No need to freeze MMX/XMM registers here since this
-	// code is always called from the context of a BranchTest.
-	SetEvent();
+	SendSimplePacket( GS_RINGTYPE_VSYNC, (*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0 );
+	if( alterFrameFlush )
+		RestartRingbuffer();
+	alterFrameFlush ^= 2;
 }
 
 struct PacketTagType
@@ -247,7 +219,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 		m_sem_event.WaitWithoutYield();
 		StateCheckInThread();
 
-		m_RingBufferIsBusy = true;
+		ScopedLock busy( m_lock_RingBufferBusy );
 
 		// note: m_RingPos is intentionally not volatile, because it should only
 		// ever be modified by this thread.
@@ -275,18 +247,12 @@ void mtgsThreadObject::ExecuteTaskInThread()
 
 			switch( tag.command )
 			{
-				case GS_RINGTYPE_RESTART:
-					m_RingPos = 0;
-
-					// stall for a bit to let the MainThread have time to update the g_pGSWritePos.
-					m_lock_RingRestart.Wait();
-					StateCheckInThread();
-				continue;
-
 				case GS_RINGTYPE_P1:
 				{
 					const int qsize = tag.data[0];
 					const u128* data = &RingBuffer[m_RingPos+1];
+
+					MTGS_LOG( "(MTGS Packet Read) ringtype=P1, qwc=%u", qsize );
 
 					// make sure that tag>>16 is the MAX size readable
 					GSgifTransfer1((u32*)(data - 0x400 + qsize), 0x4000-qsize*16);
@@ -299,6 +265,9 @@ void mtgsThreadObject::ExecuteTaskInThread()
 				{
 					const int qsize = tag.data[0];
 					const u128* data = &RingBuffer[m_RingPos+1];
+
+					MTGS_LOG( "(MTGS Packet Read) ringtype=P2, qwc=%u", qsize );
+
 					GSgifTransfer2((u32*)data, qsize);
 					ringposinc += qsize;
 				}
@@ -308,97 +277,120 @@ void mtgsThreadObject::ExecuteTaskInThread()
 				{
 					const int qsize = tag.data[0];
 					const u128* data = &RingBuffer[m_RingPos+1];
+
+					MTGS_LOG( "(MTGS Packet Read) ringtype=P3, qwc=%u", qsize );
+
 					GSgifTransfer3((u32*)data, qsize);
 					ringposinc += qsize;
 				}
 				break;
 
-				case GS_RINGTYPE_VSYNC:
-				{
-					GSvsync(tag.data[0]);
-					gsFrameSkip( !tag.data[1] );
-
-					int framecnt = AtomicDecrement( m_QueuedFrames );
-					pxAssertDev( framecnt >= 0, "Frame queue sync count failure." );
-					//Console.Status( " << Frame Removed!" );
-
-					if( PADupdate != NULL )
-						PADupdate(0);
-				}
-				break;
-
-				case GS_RINGTYPE_FRAMESKIP:
-					_gs_ResetFrameskip();
-				break;
-
-				case GS_RINGTYPE_MEMWRITE8:
-					RingBuffer.Regs[tag.data[0]] = (u8)tag.data[1];
-				break;
-				case GS_RINGTYPE_MEMWRITE16:
-					*(u16*)(RingBuffer.Regs+tag.data[0]) = (u16)tag.data[1];
-				break;
-				case GS_RINGTYPE_MEMWRITE32:
-					*(u32*)(RingBuffer.Regs+tag.data[0]) = tag.data[1];
-				break;
 				case GS_RINGTYPE_MEMWRITE64:
+					MTGS_LOG( "(MTGS Packet Read) ringtype=Write64, data=%lu", *(u64*)&tag.data[1] );
 					*(u64*)(RingBuffer.Regs+tag.data[0]) = *(u64*)&tag.data[1];
 				break;
 
-				case GS_RINGTYPE_FREEZE:
+				default:
 				{
-					MTGS_FreezeData* data = (MTGS_FreezeData*)(*(uptr*)&tag.data[1]);
-					int mode = tag.data[0];
-					data->retval = GetPluginManager().DoFreeze( PluginId_GS, mode, data->fdata );
-					break;
-				}
+					switch( tag.command )
+					{
+						case GS_RINGTYPE_RESTART:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Restart" );
+							m_RingPos = 0;
+						continue;
 
-				case GS_RINGTYPE_RECORD:
-				{
-					int record = tag.data[0];
-					if( GSsetupRecording != NULL ) GSsetupRecording(record, NULL);
-					if( SPU2setupRecording != NULL ) SPU2setupRecording(record, NULL);
-					break;
-				}
 
-				case GS_RINGTYPE_RESET:
-					MTGS_LOG( "MTGS: Receiving Reset..." );
-					if( GSreset != NULL ) GSreset();
-					break;
+						case GS_RINGTYPE_VSYNC:
+						{
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Vsync, field=%u, skip=%s", tag.data[0], tag.data[1] ? "true" : "false" );
+							GSvsync(tag.data[0]);
+							gsFrameSkip( !tag.data[1] );
 
-				case GS_RINGTYPE_SOFTRESET:
-				{
-					int mask = tag.data[0];
-					MTGS_LOG( "MTGS: Receiving GIF Soft Reset (mask: %d)", mask );
-					GSgifSoftReset( mask );
-					break;
-				}
+							if( PADupdate != NULL )
+								PADupdate(0);
 
-				case GS_RINGTYPE_WRITECSR:
-					GSwriteCSR( tag.data[0] );
-				break;
+							StateCheckInThread();
+						}
+						break;
 
-				case GS_RINGTYPE_MODECHANGE:
-					_gs_ChangeTimings( tag.data[0], tag.data[1] );
-				break;
+						case GS_RINGTYPE_FRAMESKIP:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Frameskip" );
+							_gs_ResetFrameskip();
+						break;
 
-				case GS_RINGTYPE_CRC:
-					GSsetGameCRC( tag.data[0], 0 );
-				break;
+						case GS_RINGTYPE_MEMWRITE8:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Write8, addr=0x%08x, data=0x%02x", tag.data[0], (u8)tag.data[1] );
+							RingBuffer.Regs[tag.data[0]] = (u8)tag.data[1];
+						break;
+						
+						case GS_RINGTYPE_MEMWRITE16:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Write8, addr=0x%08x, data=0x%04x", tag.data[0], (u16)tag.data[1] );
+							*(u16*)(RingBuffer.Regs+tag.data[0]) = (u16)tag.data[1];
+						break;
 
-				case GS_RINGTYPE_STARTTIME:
-					m_iSlowStart += tag.data[0];
-				break;
+						case GS_RINGTYPE_MEMWRITE32:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Write8, addr=0x%08x, data=0x%08x", tag.data[0], (u32)tag.data[1] );
+							*(u32*)(RingBuffer.Regs+tag.data[0]) = tag.data[1];
+						break;
+
+						case GS_RINGTYPE_FREEZE:
+						{
+							MTGS_FreezeData* data = (MTGS_FreezeData*)(*(uptr*)&tag.data[1]);
+							int mode = tag.data[0];
+							data->retval = GetPluginManager().DoFreeze( PluginId_GS, mode, data->fdata );
+							break;
+						}
+
+						case GS_RINGTYPE_RECORD:
+						{
+							int record = tag.data[0];
+							if( GSsetupRecording != NULL ) GSsetupRecording(record, NULL);
+							if( SPU2setupRecording != NULL ) SPU2setupRecording(record, NULL);
+						}
+						break;
+
+						case GS_RINGTYPE_RESET:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=Reset" );
+							if( GSreset != NULL ) GSreset();
+						break;
+
+						case GS_RINGTYPE_SOFTRESET:
+						{
+							int mask = tag.data[0];
+							MTGS_LOG( "(MTGS Packet Read) ringtype=SoftReset" );
+							GSgifSoftReset( mask );
+						}
+						break;
+
+						case GS_RINGTYPE_WRITECSR:
+							MTGS_LOG( "(MTGS Packet Read) ringtype=WriteCSR, value=%08x", tag.data[0] );
+							GSwriteCSR( tag.data[0] );
+						break;
+
+						case GS_RINGTYPE_MODECHANGE:
+							_gs_ChangeTimings( tag.data[0], tag.data[1] );
+						break;
+
+						case GS_RINGTYPE_CRC:
+							GSsetGameCRC( tag.data[0], 0 );
+						break;
+
+						case GS_RINGTYPE_STARTTIME:
+							m_iSlowStart += tag.data[0];
+						break;
 
 #ifdef PCSX2_DEVBUILD
-				default:
-					Console.Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
-					pxFail( "Bad packet encountered in the MTGS Ringbuffer." );
-					m_RingPos = m_WritePos;
-					continue;
+						default:
+							Console.Error("GSThreadProc, bad packet (%x) at m_RingPos: %x, m_WritePos: %x", tag.command, m_RingPos, m_WritePos);
+							pxFail( "Bad packet encountered in the MTGS Ringbuffer." );
+							m_RingPos = m_WritePos;
+						continue;
 #else
-				// Optimized performance in non-Dev builds.
-				jNO_DEFAULT;
+						// Optimized performance in non-Dev builds.
+						jNO_DEFAULT;
 #endif
+					}
+				}
 			}
 
 			uint newringpos = m_RingPos + ringposinc;
@@ -406,7 +398,6 @@ void mtgsThreadObject::ExecuteTaskInThread()
 			newringpos &= RingBufferMask;
 			m_RingPos = newringpos;
 		}
-		m_RingBufferIsBusy = false;
 	}
 }
 
@@ -448,9 +439,9 @@ void mtgsThreadObject::WaitGS()
 	if( m_ExecMode == ExecMode_NoThreadYet || !IsRunning() ) return;
 	if( !pxAssertDev( IsOpen(), "MTGS Warning!  WaitGS issued on a closed thread." ) ) return;
 
-	// FIXME : Use semaphores instead of spinwaits.
 	SetEvent();
-	while( volatize(m_RingPos) != volatize(m_WritePos) ) Timeslice();
+	m_lock_RingBufferBusy.Wait();
+	//while( volatize(m_RingPos) != volatize(m_WritePos) ) Timeslice();
 }
 
 // Sets the gsEvent flag and releases a timeslice.
@@ -512,8 +503,15 @@ void mtgsThreadObject::SendDataPacket()
 
 	m_packet_size = 0;
 
-	if( !m_RingBufferIsBusy )
+	if( EmuConfig.Video.SynchronousMTGS )
 	{
+		WaitGS();
+	}
+	/*
+	else if( m_lock_RingBufferBusy.TryAcquire() )
+	{
+		m_lock_RingBufferBusy.Release();
+
 		// The ringbuffer is current in a resting state, so if enough copies have
 		// queued up then go ahead and initiate the GS thread..
 
@@ -533,7 +531,8 @@ void mtgsThreadObject::SendDataPacket()
 			//Console.Status( "MTGS Kick! DataSize : 0x%5.8x, CommandTally : %d", m_CopyDataTally, m_CopyCommandTally );
 			SetEvent();
 		}
-	}
+	}*/
+
 	//m_PacketLocker.Release();
 }
 
@@ -648,6 +647,8 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	}
 	else if( writepos + size > RingBufferSize )
 	{
+		pxAssert( writepos != 0 );
+	
 		// If the incoming packet doesn't fit, then start over from
 		// the start of the ring buffer (it's a lot easier than trying
 		// to wrap the packet around the end of the buffer).
@@ -672,11 +673,8 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 			SpinWait();
 		}
 
-		m_lock_RingRestart.Acquire();
-		SendSimplePacket( GS_RINGTYPE_RESTART, 0, 0, 0 );
-		m_WritePos = writepos = 0;
-		m_lock_RingRestart.Release();
-		SetEvent();
+		RestartRingbuffer();
+		writepos = m_WritePos;
 
 		// stall until the read position is past the end of our incoming block,
 		// or until it reaches the current write position (signals an empty buffer).
@@ -724,7 +722,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	// length in SIMDs (128 bits).
 
 	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];
-	tag.command = pathidx+1;
+	tag.command = pathidx;
 	tag.data[0] = m_packet_size;
 	m_packet_ringpos = m_WritePos + 1;
 
@@ -744,6 +742,8 @@ __forceinline uint mtgsThreadObject::_PrepForSimplePacket()
 
     future_writepos &= RingBufferMask;
 
+	// The ringbuffer read pos is blocking the future write position, so stall out
+	// until the read position has moved.
 	if( future_writepos == volatize(m_RingPos) )
 	{
 		PrepEventWait();
@@ -761,9 +761,45 @@ __forceinline void mtgsThreadObject::_FinishSimplePacket( uint future_writepos )
 {
 	pxAssert( future_writepos != volatize(m_RingPos) );
 	m_WritePos = future_writepos;
+	
+	if( EmuConfig.Video.SynchronousMTGS )
+		WaitGS();
 }
 
-void mtgsThreadObject::SendSimplePacket( GS_RINGTYPE type, int data0, int data1, int data2 )
+void mtgsThreadObject::RestartRingbuffer()
+{
+	if( m_WritePos == 0 ) return;
+
+	const uint thefuture = 0;
+
+	// The ringbuffer read pos is blocking the future write position, so stall out
+	// until the read position has moved.
+	if( thefuture == volatize(m_RingPos) )
+	{
+		PrepEventWait();
+		do
+		{
+			SpinWait();
+		} while( thefuture == volatize(m_RingPos) );
+		PostEventWait();
+	}
+
+	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];
+
+	tag.command = GS_RINGTYPE_RESTART;
+	//tag.data[0] = data0;
+	//tag.data[1] = data1;
+	//tag.data[2] = data2;
+
+	SetEvent();
+
+	m_WritePos = 0;
+
+	if( EmuConfig.Video.SynchronousMTGS )
+		WaitGS();
+}
+
+void mtgsThreadObject::SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 )
 {
 	//ScopedLock locker( m_PacketLocker );
 
@@ -778,7 +814,7 @@ void mtgsThreadObject::SendSimplePacket( GS_RINGTYPE type, int data0, int data1,
 	_FinishSimplePacket( thefuture );
 }
 
-void mtgsThreadObject::SendPointerPacket( GS_RINGTYPE type, u32 data0, void* data1 )
+void mtgsThreadObject::SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 )
 {
 	//ScopedLock locker( m_PacketLocker );
 
@@ -829,7 +865,6 @@ void mtgsThreadObject::WaitForOpen()
 void mtgsThreadObject::Freeze( int mode, MTGS_FreezeData& data )
 {
 	SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
-	SetEvent();
 	Resume();
 	WaitGS();
 }

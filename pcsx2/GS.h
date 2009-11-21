@@ -53,26 +53,28 @@ extern GS_RegionMode gsRegionMode;
 // and writes stay synchronized.  Warning: the debug stack is VERY slow.
 //#define RINGBUF_DEBUG_STACK
 
-enum GS_RINGTYPE
+enum MTGS_RingCommand
 {
-	GS_RINGTYPE_RESTART = 0
-,	GS_RINGTYPE_P1
+	GS_RINGTYPE_P1
 ,	GS_RINGTYPE_P2
 ,	GS_RINGTYPE_P3
-,	GS_RINGTYPE_VSYNC
-,	GS_RINGTYPE_FRAMESKIP
+,	GS_RINGTYPE_MEMWRITE64
+
 ,	GS_RINGTYPE_MEMWRITE8
 ,	GS_RINGTYPE_MEMWRITE16
 ,	GS_RINGTYPE_MEMWRITE32
-,	GS_RINGTYPE_MEMWRITE64
+
+,	GS_RINGTYPE_RESTART
+,	GS_RINGTYPE_VSYNC
+,	GS_RINGTYPE_FRAMESKIP
 ,	GS_RINGTYPE_FREEZE
 ,	GS_RINGTYPE_RECORD
-,	GS_RINGTYPE_RESET		// issues a GSreset() command.
-,	GS_RINGTYPE_SOFTRESET	// issues a soft reset for the GIF
+,	GS_RINGTYPE_RESET			// issues a GSreset() command.
+,	GS_RINGTYPE_SOFTRESET		// issues a soft reset for the GIF
 ,	GS_RINGTYPE_WRITECSR
-,	GS_RINGTYPE_MODECHANGE	// for issued mode changes.
+,	GS_RINGTYPE_MODECHANGE		// for issued mode changes.
 ,	GS_RINGTYPE_CRC
-,	GS_RINGTYPE_STARTTIME	// special case for min==max fps frameskip settings
+,	GS_RINGTYPE_STARTTIME		// special case for min==max fps frameskip settings
 };
 
 
@@ -92,6 +94,7 @@ protected:
 	uint m_WritePos;	// cur pos ee thread is writing to
 
 	Semaphore m_sem_OpenDone;
+	Mutex m_lock_RingBufferBusy;
 	Mutex m_lock_RingRestart;
 
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
@@ -101,13 +104,13 @@ protected:
 	// has more than one command in it when the thread is kicked.
 	int m_CopyCommandTally;
 	int m_CopyDataTally;
-	volatile bool m_RingBufferIsBusy;
+	//volatile bool m_RingBufferIsBusy;
 	volatile bool m_PluginOpened;
 
 	// Counts the number of vsync frames queued in the MTGS ringbuffer.  This is used to
 	// throttle the number of frames allowed to be rendered ahead of time for games that
 	// run very fast and have little or no ringbuffer overhead (typically opening menus)
-	volatile s32 m_QueuedFrames;
+	//volatile s32 m_QueuedFrames;
 
 	// These vars maintain instance data for sending Data Packets.
 	// Only one data packet can be constructed and uploaded at a time.
@@ -137,8 +140,9 @@ public:
 	void WaitForOpen();
 	void Freeze( int mode, MTGS_FreezeData& data );
 
-	void SendSimplePacket( GS_RINGTYPE type, int data0, int data1, int data2 );
-	void SendPointerPacket( GS_RINGTYPE type, u32 data0, void* data1 );
+	void RestartRingbuffer();
+	void SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 );
+	void SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 );
 
 	u8* GetDataPacketPtr() const;
 	void SetEvent();
