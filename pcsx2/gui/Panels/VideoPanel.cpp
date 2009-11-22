@@ -236,6 +236,10 @@ void Panels::GSWindowSettingsPanel::Apply()
 Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	BaseApplicableConfigPanel( parent )
 {
+	m_check_SynchronousGS = new pxCheckBox( this, _("Force Synchronized MTGS"),
+		_("For troubleshooting possible bugs in the MTGS.  Enabling this option will be a big slowdown.")
+	);
+
 	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
 	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
 	left->SetIdealWidth( (left->GetIdealWidth()-16) / 2 );
@@ -256,14 +260,18 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	*s_table	+= right	| StdExpand();
 
 	*this += Heading(L"This panel is not implemented yet.\nIT DOES NOT WORK.  AT ALL.");
+	*this += m_check_SynchronousGS;
 	*this += s_table;
 	
 	// TODO:
 	// Framelimiting / Frameskipping / Vsync
 	// GS Window Options ( incl. Fullscreen )
 	// MTGS Forced Synchronization
+	
+	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.Video.SynchronousMTGS );
 }
 
 void Panels::VideoPanel::Apply()
 {
+	g_Conf->EmuOptions.Video.SynchronousMTGS = m_check_SynchronousGS->GetValue();
 }

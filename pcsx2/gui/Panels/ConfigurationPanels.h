@@ -204,6 +204,8 @@ namespace Panels
 	class VideoPanel : public BaseApplicableConfigPanel
 	{
 	protected:
+		pxCheckBox*		m_check_SynchronousGS;
+
 	public:
 		VideoPanel( wxWindow* parent );
 		virtual ~VideoPanel() throw() {}
