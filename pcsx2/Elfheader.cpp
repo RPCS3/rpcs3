@@ -534,6 +534,9 @@ void loadElfFile(const wxString& filename)
 	const wxCharBuffer fnptr( filename.ToUTF8() );
 	bool useCdvdSource = false;
 
+	if( filename.StartsWith( L"cdrom:" ) )
+		throw Exception::RuntimeError( wxLt("This is not a Ps2 disc. (And we don't currently emulate PS1 games)") );
+	
 	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
 		DevCon.WriteLn("Loading from a file (or non-cd image)");
@@ -551,10 +554,14 @@ void loadElfFile(const wxString& filename)
 
 	if( elfsize > 0xfffffff )
 		throw Exception::BadStream( filename, wxLt("Illegal ELF file size, over 2GB!") );
+	
+	if( elfsize == -1 )
+		throw Exception::BadStream( filename, wxLt("Elf file does not exist! ") );
 
-	Console.WriteLn( L"loadElfFile: %d", wxULongLong(elfsize).GetLo() );
 	if( elfsize == 0 )
 		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
+
+	Console.WriteLn( L"loadElfFile: %d bytes", wxULongLong(elfsize).GetLo() );
 
 	ElfObject elfobj( filename, wxULongLong(elfsize).GetLo() );
 
