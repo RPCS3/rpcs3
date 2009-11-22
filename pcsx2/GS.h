@@ -160,12 +160,10 @@ protected:
 	void OnResumeInThread( bool IsSuspended );
 	void OnCleanupInThread();
 
-	// Saves MMX/XMM REGS, posts an event to the mtgsThread flag and releases a timeslice.
-	// For use in surrounding loops that wait on the mtgs.
+	// Sets the Event flag and issues a timeslice on the EEcore thread (ie, an efficient
+	// method of kicking the MTGS thread into action once there's a sizable chunk of work
+	// accumulated).
 	void PrepEventWait();
-
-	// Restores MMX/XMM REGS.  For use in surrounding loops that wait on the mtgs.
-	void PostEventWait() const;
 
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();
