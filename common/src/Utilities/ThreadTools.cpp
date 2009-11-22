@@ -28,6 +28,8 @@
 #include "wxBaseTools.h"
 #include "ThreadingInternal.h"
 
+using namespace Threading;
+
 // 100ms interval for waitgui (issued from blocking semaphore waits on the main thread,
 // to avoid gui deadlock).
 const wxTimeSpan	Threading::def_yieldgui_interval( 0, 0, 0, 100 );
@@ -71,9 +73,9 @@ Threading::PersistentThread::PersistentThread() :
 ,	m_sem_event()
 ,	m_lock_InThread()
 ,	m_lock_start()
-,	m_detached( true )		// start out with m_thread in detached/invalid state
-,	m_running( false )
 {
+	m_detached	= true;		// start out with m_thread in detached/invalid state
+	m_running	= false;
 }
 
 // This destructor performs basic "last chance" cleanup, which is a blocking join
@@ -233,56 +235,104 @@ void Threading::PersistentThread::RethrowException() const
 	m_except->Rethrow();
 }
 
+void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
+{
+	if( HasPendingException() )
+	{
+		Console.Error( L"(Thread Error) An exception was thrown from blocking thread '%s' while waiting on a %s.",
+			GetName().c_str(), name
+		);
+		RethrowException();
+	}
+
+	if( !m_running )
+	{
+		throw Exception::CancelEvent( wxsFormat(
+			L"Blocking thread %s was terminated while another thread was waiting on a %s.",
+			GetName().c_str(), name )
+		);
+	}
+}
+
 // This helper function is a deadlock-safe method of waiting on a semaphore in a PersistentThread.  If the
 // thread is terminated or canceled by another thread or a nested action prior to the semaphore being
-// posted, this function will detect that and throw a ThreadTimedOut exception.
+// posted, this function will detect that and throw a CancelEvent exception is thrown.
 //
 // Note: Use of this function only applies to semaphores which are posted by the worker thread.  Calling
 // this function from the context of the thread itself is an error, and a dev assertion will be generated.
 //
 // Exceptions:
-//   ThreadTimedOut
+//   This function will rethrow exceptions raised by the persistent thread, if it throws an error
+//   while the calling thread is blocking (which also means the persistent thread has terminated).
 //
-void Threading::PersistentThread::WaitOnSelf( Semaphore& sem )
+void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 {
-	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the thread (invalid operation!)" ) ) return;
+	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return;
 
 	while( true )
 	{
-		if( sem.Wait( wxTimeSpan(0, 0, 0, 250) ) ) return;
-		if( !m_running )
-		{
-			wxString msg( m_name + L": thread was terminated while another thread was waiting on a semaphore." );
-			throw Exception::ThreadTimedOut( msg, msg );
-		}
+		if( sem.Wait( wxTimeSpan(0, 0, 0, 333) ) ) return;
+		_selfRunningTest( L"semaphore" );
 	}
 }
 
-// This helper function is a deadlock-safe method of waiting on a mutex in a PersistentThread.  If the
-// thread is terminated or canceled by another thread or a nested action prior to the mutex being
-// unlocked, this function will detect that and throw a ThreadTimedOut exception.
+// This helper function is a deadlock-safe method of waiting on a mutex in a PersistentThread.
+// If the thread is terminated or canceled by another thread or a nested action prior to the
+// mutex being unlocked, this function will detect that and a CancelEvent exception is thrown.
 //
-// Note: Use of this function only applies to semaphores which are posted by the worker thread.  Calling
-// this function from the context of the thread itself is an error, and a dev assertion will be generated.
+// Note: Use of this function only applies to mutexes which are acquired by a worker thread.
+// Calling this function from the context of the thread itself is an error, and a dev assertion
+// will be generated.
 //
 // Exceptions:
-//   ThreadTimedOut
+//   This function will rethrow exceptions raised by the persistent thread, if it throws an
+//   error while the calling thread is blocking (which also means the persistent thread has
+//   terminated).
 //
-void Threading::PersistentThread::WaitOnSelf( Mutex& mutex )
+void Threading::PersistentThread::WaitOnSelf( Mutex& mutex ) const
 {
-	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the thread (invalid operation!)" ) ) return;
+	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return;
 
 	while( true )
 	{
-		if( mutex.Wait( wxTimeSpan(0, 0, 0, 250) ) ) return;
-		if( !m_running )
-		{
-			wxString msg( m_name + L": thread was terminated while another thread was waiting on a mutex." );
-			throw Exception::ThreadTimedOut( msg, msg );
-		}
+		if( mutex.Wait( wxTimeSpan(0, 0, 0, 333) ) ) return;
+		_selfRunningTest( L"mutex" );
 	}
 }
 
+static const wxTimeSpan SelfWaitInterval( 0,0,0,333 );
+
+bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& timeout ) const
+{
+	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return true;
+
+	wxTimeSpan runningout( timeout );
+
+	while( runningout.GetMilliseconds() > 0 )
+	{
+		const wxTimeSpan interval( (SelfWaitInterval < runningout) ? SelfWaitInterval : runningout );
+		if( sem.Wait( interval ) ) return true;
+		_selfRunningTest( L"semaphore" );
+		runningout -= interval;
+	}
+	return false;
+}
+
+bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& timeout ) const
+{
+	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return true;
+
+	wxTimeSpan runningout( timeout );
+
+	while( runningout.GetMilliseconds() > 0 )
+	{
+		const wxTimeSpan interval( (SelfWaitInterval < runningout) ? SelfWaitInterval : runningout );
+		if( mutex.Wait( interval ) ) return true;
+		_selfRunningTest( L"mutex" );
+		runningout -= interval;
+	}
+	return false;
+}
 
 // Inserts a thread cancellation point.  If the thread has received a cancel request, this
 // function will throw an SEH exception designed to exit the thread (so make sure to use C++
@@ -554,7 +604,6 @@ void Threading::WaitEvent::Wait()
 }
 #endif
 
-
 // --------------------------------------------------------------------------------------
 //  InterlockedExchanges / AtomicExchanges (PCSX2's Helper versions)
 // --------------------------------------------------------------------------------------
@@ -598,4 +647,29 @@ __forceinline s32 Threading::AtomicIncrement( volatile s32& Target )
 __forceinline s32 Threading::AtomicDecrement( volatile s32& Target )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
+}
+
+// --------------------------------------------------------------------------------------
+//  BaseThreadError
+// --------------------------------------------------------------------------------------
+
+wxString Exception::BaseThreadError::FormatDiagnosticMessage() const
+{
+	return wxsFormat( m_message_diag, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName() );
+}
+
+wxString Exception::BaseThreadError::FormatDisplayMessage() const
+{
+	return wxsFormat( m_message_user, (m_thread==NULL) ? _("Null Thread Object") : m_thread->GetName() );
+}
+
+PersistentThread& Exception::BaseThreadError::Thread()
+{
+	pxAssertDev( m_thread != NULL, "NULL thread object on ThreadError exception." );
+	return *m_thread;
+}
+const PersistentThread& Exception::BaseThreadError::Thread() const
+{
+	pxAssertDev( m_thread != NULL, "NULL thread object on ThreadError exception." );
+	return *m_thread;
 }

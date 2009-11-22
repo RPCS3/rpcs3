@@ -45,8 +45,8 @@ void SysThreadBase::Start()
 		RethrowException();
 		if( pxAssertDev( m_ExecMode == ExecMode_Closing, "Unexpected thread status during SysThread startup." ) )
 		{
-			throw Exception::ThreadCreationError(
-				wxsFormat( L"Timeout occurred while attempting to start the %s thread.", m_name.c_str() ),
+			throw Exception::ThreadCreationError( *this,
+				L"Timeout occurred while attempting to start the '%s' thread.",
 				wxEmptyString
 			);
 		}
@@ -129,8 +129,9 @@ bool SysThreadBase::Suspend( bool isBlocking )
 			// [TODO] : Implement proper deadlock handler here that lets the user continue
 			// to wait, or issue a cancel to the thread.
 
-			throw Exception::ThreadTimedOut( L"Possible deadlock while suspending the " + m_name,
-				m_name + L" is not responding to suspend requests.  It may be deadlocked or just running *really* slow."
+			throw Exception::ThreadTimedOut( *this,
+				L"Possible deadlock while suspending thread '%s'",
+				L"'%s' thread is not responding to suspend requests.  It may be deadlocked or just running *really* slow."
 			);
 		}
 	}

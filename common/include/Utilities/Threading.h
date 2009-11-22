@@ -23,17 +23,67 @@
 #include "ScopedPtr.h"
 
 #undef Yield		// release th burden of windows.h global namespace spam.
-class wxTimeSpan;
 
 #define AllowFromMainThreadOnly() \
 	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
 
+class wxTimeSpan;
+
+namespace Threading
+{
+	class PersistentThread;
+}
+
 namespace Exception
 {
-	class ThreadCreationError : public virtual RuntimeError
+	class BaseThreadError : public virtual RuntimeError
 	{
 	public:
-		DEFINE_RUNTIME_EXCEPTION( ThreadCreationError, wxLt("Thread could not be created.") );
+		Threading::PersistentThread*	m_thread;
+
+		DEFINE_EXCEPTION_COPYTORS( BaseThreadError )
+
+		explicit BaseThreadError( Threading::PersistentThread* _thread=NULL )
+		{
+			m_thread = _thread;
+			BaseException::InitBaseEx( "Unspecified thread error" );
+		}
+
+		BaseThreadError( Threading::PersistentThread& _thread )
+		{
+			m_thread = &_thread;
+			BaseException::InitBaseEx( "Unspecified thread error" );
+		}
+		
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
+
+		Threading::PersistentThread& Thread();
+		const Threading::PersistentThread& Thread() const;
+	};
+
+	class ThreadCreationError : public virtual BaseThreadError
+	{
+	public:
+		DEFINE_EXCEPTION_COPYTORS( ThreadCreationError )
+
+		explicit ThreadCreationError( Threading::PersistentThread* _thread=NULL, const char* msg="Creation of thread '%s' failed." )
+		{
+			m_thread = _thread;
+			BaseException::InitBaseEx( msg );
+		}
+
+		ThreadCreationError( Threading::PersistentThread& _thread, const char* msg="Creation of thread '%s' failed." )
+		{
+			m_thread = &_thread;
+			BaseException::InitBaseEx( msg );
+		}
+
+		ThreadCreationError( Threading::PersistentThread& _thread, const wxString& msg_diag, const wxString& msg_user )
+		{
+			m_thread = &_thread;
+			BaseException::InitBaseEx( msg_diag, msg_user );
+		}
 	};
 
 #if wxUSE_GUI
@@ -48,10 +98,28 @@ namespace Exception
 //  * If the user-specified timeout is less than the deadlock timeout.
 //  * If the method is run from a thread *other* than the MainGui thread.
 //
-	class ThreadTimedOut : public virtual RuntimeError
+	class ThreadTimedOut : public virtual BaseThreadError
 	{
 	public:
-		DEFINE_RUNTIME_EXCEPTION( ThreadTimedOut, "Blocking action timed out due to potential deadlock." );
+		DEFINE_EXCEPTION_COPYTORS( ThreadTimedOut )
+
+		explicit ThreadTimedOut( Threading::PersistentThread* _thread=NULL, const char* msg="Blocking action timed out waiting for '%s' (potential thread deadlock)." )
+		{
+			m_thread = _thread;
+			BaseException::InitBaseEx( msg );
+		}
+
+		ThreadTimedOut( Threading::PersistentThread& _thread, const char* msg="Blocking action timed out waiting for '%s' (potential thread deadlock)." )
+		{
+			m_thread = &_thread;
+			BaseException::InitBaseEx( msg );
+		}
+
+		ThreadTimedOut( Threading::PersistentThread& _thread, const wxString& msg_diag, const wxString& msg_user )
+		{
+			m_thread = &_thread;
+			BaseException::InitBaseEx( msg_diag, msg_user );
+		}
 	};
 #endif
 }
@@ -298,8 +366,10 @@ namespace Threading
 		virtual void Block();
 		virtual void RethrowException() const;
 
-		void WaitOnSelf( Semaphore& mutex );
-		void WaitOnSelf( Mutex& mutex );
+		void WaitOnSelf( Semaphore& mutex ) const;
+		void WaitOnSelf( Mutex& mutex ) const;
+		bool WaitOnSelf( Semaphore& mutex, const wxTimeSpan& timeout ) const;
+		bool WaitOnSelf( Mutex& mutex, const wxTimeSpan& timeout ) const;
 
 		bool IsRunning() const;
 		bool IsSelf() const;
@@ -344,6 +414,7 @@ namespace Threading
 		// ----------------------------------------------------------------------------
 		// Section of methods for internal use only.
 
+		void _selfRunningTest( const wxChar* name ) const;
 		void _DoSetThreadName( const wxString& name );
 		void _DoSetThreadName( const char* name );
 		void _internal_execute();

@@ -286,6 +286,31 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		}
 	}
 	// ----------------------------------------------------------------------------
+	catch( Exception::ThreadTimedOut& ex )
+	{
+		Console.Warning( ex.FormatDiagnosticMessage() );
+		int result = Dialogs::ExtensibleConfirmation( NULL, ConfButtons().Ignore().Cancel().Custom( _("Terminate") ),
+			_("PCSX2 Unresponsive Thread"), ex.FormatDisplayMessage() + L"\n\n" +
+			pxE( ".Popup Error:Thread Deadlock Actions",
+				L"'Ignore' to continue waiting for the thread to respond.\n"
+				L"'Cancel' to attempt to cancel the thread.\n"
+				L"'Terminate' to quit PCSX2 immediately.\n"
+			)
+		).ShowModal();
+		
+		if( result == pxID_CUSTOM )
+		{
+			exit(-5);		// fastest way to kill the process?
+		}
+		else if( result == wxID_CANCEL )
+		{
+			// Attempt to cancel the thread:
+			ex.Thread().Cancel();
+		}
+
+		// Ignore does nothing...
+	}
+	// ----------------------------------------------------------------------------
 	catch( Exception::CancelEvent& ex )
 	{
 		Console.Warning( ex.FormatDiagnosticMessage() );

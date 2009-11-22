@@ -332,7 +332,8 @@ bool SaveStateBase::FreezeSection( int seek_section )
 		break;
 	}
 
-	wxSafeYield( NULL );
+	if( wxThread::IsMain() )
+		wxSafeYield( NULL, true );
 
 	return true;
 }
