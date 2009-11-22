@@ -654,13 +654,13 @@ __forceinline s32 Threading::AtomicDecrement( volatile s32& Target )
 // --------------------------------------------------------------------------------------
 
 wxString Exception::BaseThreadError::FormatDiagnosticMessage() const
-{
-	return wxsFormat( m_message_diag, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName() );
+{	
+    return wxsFormat( m_message_diag, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
 }
 
 wxString Exception::BaseThreadError::FormatDisplayMessage() const
-{
-	return wxsFormat( m_message_user, (m_thread==NULL) ? _("Null Thread Object") : m_thread->GetName() );
+{	
+    return wxsFormat( m_message_user, (m_thread==NULL) ? L"Null Thread Object" : m_thread->GetName().c_str());
 }
 
 PersistentThread& Exception::BaseThreadError::Thread()
