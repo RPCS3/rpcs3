@@ -322,7 +322,8 @@ struct ElfObject
 	{
 		int rsize = 0;
 		const wxCharBuffer work( filename.ToUTF8() );
-		if ((strnicmp( work, "cdrom0:", strlen("cdromN:")) == 0) ||
+		if ((strnicmp( work, "cdrom:",  strlen("cdrom:" )) == 0) ||
+			(strnicmp( work, "cdrom0:", strlen("cdromN:")) == 0) ||
 			(strnicmp( work, "cdrom1:", strlen("cdromN:")) == 0))
 		{
 			IsoFSCDVD isofs;
@@ -519,8 +520,10 @@ u32 loadElfCRC( const char* filename )
 // of "cdrom0:" or "cdrom1:" then the CDVD is used as the source; otherwise the ELF is loaded
 // from the host filesystem.
 //
+// If it starts with "cdrom:", an exception is thrown, unless PS1 emulation is being attempted.
+//
 // If the specified filename is empty then no action is taken (PS2 will continue booting
-// normally as if it has no CD
+// normally as if it has no CD.
 //
 // Throws exception on error:
 //
@@ -534,10 +537,12 @@ void loadElfFile(const wxString& filename)
 	const wxCharBuffer fnptr( filename.ToUTF8() );
 	bool useCdvdSource = false;
 
+#ifndef ENABLE_LOADING_PS1_GAMES
 	if( filename.StartsWith( L"cdrom:" ) )
 		throw Exception::RuntimeError( wxLt("This is not a Ps2 disc. (And we don't currently emulate PS1 games)") );
+#endif
 	
-	if( !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
+	if( !filename.StartsWith( L"cdrom:" ) && !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
 	{
 		DevCon.WriteLn("Loading from a file (or non-cd image)");
 		elfsize = Path::GetFileSize( filename );

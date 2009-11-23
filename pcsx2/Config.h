@@ -615,3 +615,8 @@ extern SessionOverrideFlags g_Session;
 #define EE_CONST_PROP // rec2 - enables constant propagation (faster)
 //#define NON_SSE_UNPACKS  // Turns off SSE Unpacks (slower)
 
+// Uncomment this if working on getting PS1 emulation working.
+// This disables the exception normally caused by trying to load PS1
+// games. Note: currently PS1 games will error out even without this
+// commented, so this is for development purposes only.
+//#define ENABLE_LOADING_PS1_GAMES
