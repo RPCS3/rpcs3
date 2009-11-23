@@ -1106,8 +1106,8 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	addr &= 0x3ff;
 	u8* data  = microVU1.regs->Mem + (addr*16);
 	u32 diff  = 0x400 - addr;
-	u32 size  = mtgsThread.PrepDataPacket(GIF_PATH_1, data, diff);
-	u8* pDest = mtgsThread.GetDataPacketPtr();
+	u32 size  = GetMTGS().PrepDataPacket(GIF_PATH_1, data, diff);
+	u8* pDest = GetMTGS().GetDataPacketPtr();
 	
 	if (size > diff) {
 		// fixme: one of these days the following *16's will get cleaned up when we introduce
@@ -1121,7 +1121,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	else {
 		memcpy_aligned(pDest, microVU1.regs->Mem + (addr*16), size*16);
 	}
-	mtgsThread.SendDataPacket();
+	GetMTGS().SendDataPacket();
 }
 
 microVUt(void) mVU_XGKICK_DELAY(mV, bool memVI) {

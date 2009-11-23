@@ -25,8 +25,6 @@
 #include <wx/mstream.h>
 #include <wx/hyperlink.h>
 
-using namespace wxHelpers;
-
 namespace Dialogs
 {
 	// Helper class for creating wxStaticText labels which are aligned to center.

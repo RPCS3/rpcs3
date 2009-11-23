@@ -21,7 +21,6 @@
 #include "Panels/ConfigurationPanels.h"
 #include <wx/file.h>
 
-using namespace wxHelpers;
 using namespace Panels;
 
 template< typename T >
@@ -156,7 +155,7 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 
 		if( page >= 0 )
 		{
-			if( !g_ApplyState.ApplyPage( page, false ) )
+			if( !g_ApplyState.ApplyPage( page ) )
 			{
 				evt.Veto();
 				return;

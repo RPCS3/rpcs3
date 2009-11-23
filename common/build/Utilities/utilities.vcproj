@@ -541,10 +541,6 @@
 				RelativePath="..\..\include\Utilities\wxGuiTools.h"
 				>
 			</File>
-			<File
-				RelativePath="..\..\include\Utilities\wxHelpers.h"
-				>
-			</File>
 		</Filter>
 	</Files>
 	<Globals>

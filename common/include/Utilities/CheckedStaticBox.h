@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "wxHelpers.h"
+#include "wxGuiTools.h"
 
 class CheckedStaticBox : public wxPanelWithHelpers
 {

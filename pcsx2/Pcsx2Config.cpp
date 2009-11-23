@@ -37,11 +37,30 @@ void TraceLogFilters::LoadSave( IniInterface& ini )
 }
 
 // all speedhacks are disabled by default
-Pcsx2Config::SpeedhackOptions::SpeedhackOptions() :
-	bitset( 0 )
-,	EECycleRate( 0 )
-,	VUCycleSteal( 0 )
+Pcsx2Config::SpeedhackOptions::SpeedhackOptions()
 {
+	bitset			= 0;
+	EECycleRate		= 0;
+	VUCycleSteal	= 0;
+}
+
+ConsoleLogFilters::ConsoleLogFilters()
+{
+	ELF			= false;
+	StdoutEE	= true;
+	StdoutIOP	= true;
+	Deci2		= true;
+}
+
+void ConsoleLogFilters::LoadSave( IniInterface& ini )
+{
+	ConsoleLogFilters defaults;
+	IniScopedGroup path( ini, L"ConsoleLog" );
+
+	IniBitBool( ELF );
+	IniBitBool( StdoutEE );
+	IniBitBool( StdoutIOP );
+	IniBitBool( Deci2 );
 }
 
 void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )

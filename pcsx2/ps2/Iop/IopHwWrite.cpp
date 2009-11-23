@@ -122,7 +122,7 @@ void __fastcall iopHwWrite8_Page3( u32 addr, mem8_t val )
 			( val == '\n' && g_pbufi != 0 ) )
 		{
 			g_pbuf[g_pbufi] = 0;
-			Console.WriteLn( ConColor_IOP, "%s", g_pbuf );
+			Console.WriteLn( ConColor_IOP, L"%s", L"%s", ShiftJIS_ConvertString(g_pbuf).c_str() );
 			g_pbufi = 0;
 		}
 		else if( val != '\n' )

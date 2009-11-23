@@ -24,7 +24,6 @@
 #include <wx/filepicker.h>
 #include <wx/listbox.h>
 
-using namespace wxHelpers;
 
 // ------------------------------------------------------------------------
 Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow* parent )

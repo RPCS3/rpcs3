@@ -101,22 +101,42 @@ void SysCoreThread::SetElfOverride( const wxString& elf )
 	m_elf_override = elf;
 }
 
+ScopedCoreThreadSuspend::ScopedCoreThreadSuspend()
+{
+	m_ResumeWhenDone = GetCoreThread().Suspend();
+}
+
+// Resumes CoreThread execution, but *only* if it was in a running state when this object
+// was instanized.  Subsequent calls to Resume() will be ignored.
+void ScopedCoreThreadSuspend::Resume()
+{
+	if( m_ResumeWhenDone )
+		GetCoreThread().Resume();
+	m_ResumeWhenDone = false;
+}
+
+ScopedCoreThreadSuspend::~ScopedCoreThreadSuspend() throw()
+{
+	if( m_ResumeWhenDone )
+	{
+		Console.WriteLn( Color_Gray, "Scoped CoreThread suspend was not allowed to resume." );
+	}
+}
 
 // Applies a full suite of new settings, which will automatically facilitate the necessary
 // resets of the core and components (including plugins, if needed).  The scope of resetting
-// is determined by comparing the current settings against the new settings.
+// is determined by comparing the current settings against the new settings, so that only
+// real differences are applied.
 void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	if( src == EmuConfig ) return;
 
-	const bool resumeWhenDone = Suspend();
+	ScopedCoreThreadSuspend suspend_core;
 
 	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers		= (src.Profiler != EmuConfig.Profiler );
 
 	const_cast<Pcsx2Config&>(EmuConfig) = src;
-
-	if( resumeWhenDone ) Resume();
 }
 
 void SysCoreThread::ChangeCdvdSource( CDVD_SourceType type )
@@ -143,7 +163,7 @@ SysCoreThread& SysCoreThread::Get()
 
 bool SysCoreThread::HasPendingStateChangeRequest() const
 {
-	return m_CoreCancelDamnit || mtgsThread.HasPendingException() || _parent::HasPendingStateChangeRequest();
+	return m_CoreCancelDamnit || GetMTGS().HasPendingException() || _parent::HasPendingStateChangeRequest();
 }
 
 struct ScopedBool_ClearOnError
@@ -220,7 +240,7 @@ void SysCoreThread::CpuInitializeMess()
 
 void SysCoreThread::StateCheckInThread()
 {
-	mtgsThread.RethrowException();
+	GetMTGS().RethrowException();
 	_parent::StateCheckInThread();
 	if( !m_hasValidState )
 		throw Exception::RuntimeError( "Invalid emulation state detected; Virtual machine threads have been cancelled." );

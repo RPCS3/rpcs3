@@ -18,7 +18,6 @@
 
 #include "System.h"
 
-using namespace wxHelpers;
 using namespace pxSizerFlags;
 
 static int pxGetTextHeight( const wxWindow* wind, int rows )

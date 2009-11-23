@@ -43,7 +43,7 @@ class ISysThread : public virtual IThread
 {
 public:
 	ISysThread() {}
-	virtual ~ISysThread() throw() {};
+	virtual ~ISysThread() throw() {}
 
 	virtual bool Suspend( bool isBlocking = true ) { return false; }
 	virtual bool Pause() { return false; }
@@ -58,7 +58,7 @@ class SysThreadBase : public PersistentThread, public virtual ISysThread
 {
 	typedef PersistentThread _parent;
 
-protected:
+public:
 	// Important: The order of these enumerations matters.  All "not-open" statuses must
 	// be listed before ExecMode_Closed, since there are "optimized" tests that rely on the
 	// assumption that "ExecMode <= ExecMode_Closed" equates to a closed thread status.
@@ -88,6 +88,7 @@ protected:
 		ExecMode_Paused,
 	};
 
+protected:
 	volatile ExecutionMode	m_ExecMode;
 
 	// This lock is used to avoid simultaneous requests to Suspend/Resume/Pause from
@@ -176,8 +177,6 @@ protected:
 	virtual void OnResumeInThread( bool isSuspended )=0;
 };
 
-
-
 // --------------------------------------------------------------------------------------
 //  SysCoreThread class
 // --------------------------------------------------------------------------------------
@@ -234,5 +233,34 @@ protected:
 	
 	void _StateCheckThrows();
 };
+
+// --------------------------------------------------------------------------------------
+//  ScopedCoreThreadSuspend
+// --------------------------------------------------------------------------------------
+// This class behaves a bit differently from other scoped classes due to the "standard"
+// assumption that we actually do *not* want to resume CoreThread operations when an
+// exception occurs.  Because of this, the destructor of this class does *not* unroll the
+// suspend operation.  Instead you must manually instruct the class to resume using a call
+// to the provisioned Resume() method.
+//
+// If the class leaves scope without having been resumed, a log is written to the console.
+// This can be useful for troubleshooting, and also allows the log a second line of info
+// indicating the status of CoreThread execution at the time of the exception.
+//
+struct ScopedCoreThreadSuspend
+{
+	bool m_ResumeWhenDone;
+
+	ScopedCoreThreadSuspend();
+	void Resume();
+	virtual ~ScopedCoreThreadSuspend() throw();
+};
+
+// GetCoreThread() is a required external implementation. This function is *NOT*
+// provided by the PCSX2 core library.  It provides an interface for the linking User
+// Interface apps or DLLs to reference their own instance of SysCoreThread (also allowing
+// them to extend the class and override virtual methods).
+//
+extern SysCoreThread& GetCoreThread();
 
 extern int sys_resume_lock;

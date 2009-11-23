@@ -21,8 +21,6 @@
 #include <wx/dir.h>
 #include <wx/filepicker.h>
 
-using namespace wxHelpers;
-
 static wxString GetNormalizedConfigFolder( FoldersEnum_t folderId )
 {
 	const bool isDefault = g_Conf->Folders.IsDefault( folderId );
@@ -121,7 +119,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 
 Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& msg )
 {
-	InsertStaticTextAt( this, *GetSizer(), 0, msg );
+	(new pxStaticText( this, msg ))->InsertAt( *GetSizer(), 0 );
 	return *this;
 }
 

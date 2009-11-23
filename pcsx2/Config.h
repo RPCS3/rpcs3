@@ -248,7 +248,16 @@ struct TraceLogFilters
 
 struct ConsoleLogFilters
 {
-	bool ELF;
+	BITFIELD32()
+		bool
+			ELF			:1,
+			Deci2		:1,
+			StdoutEE	:1,
+			StdoutIOP	:1;
+	BITFIELD_END;
+
+	ConsoleLogFilters();
+	void LoadSave( IniInterface& ini );
 };
 
 // --------------------------------------------------------------------------------------

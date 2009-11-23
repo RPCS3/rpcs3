@@ -84,7 +84,10 @@ struct MTGS_FreezeData
 	s32			retval;		// value returned from the call, valid only after an mtgsWaitGS()
 };
 
-class mtgsThreadObject : public SysThreadBase
+// --------------------------------------------------------------------------------------
+//  SysMtgsThread
+// --------------------------------------------------------------------------------------
+class SysMtgsThread : public SysThreadBase
 {
 	typedef SysThreadBase _parent;
 
@@ -123,10 +126,10 @@ protected:
 #endif
 
 public:
-	mtgsThreadObject();
-	virtual ~mtgsThreadObject() throw();
+	SysMtgsThread();
+	virtual ~SysMtgsThread() throw();
 
-	static mtgsThreadObject& Get();
+	static SysMtgsThread& Get();
 
 	// Waits for the GS to empty out the entire ring buffer contents.
 	// Used primarily for plugin startup/shutdown.
@@ -171,7 +174,12 @@ protected:
 	void ExecuteTaskInThread();
 };
 
-extern __aligned16 mtgsThreadObject mtgsThread;
+// GetMtgsThread() is a required external implementation. This function is *NOT*
+// provided by the PCSX2 core library.  It provides an interface for the linking User
+// Interface apps or DLLs to reference their own instance of SysMtgsThread (also allowing
+// them to extend the class and override virtual methods).
+//
+SysMtgsThread& GetMTGS();
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff

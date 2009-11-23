@@ -185,7 +185,7 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 	new (&m_table[Color_Red])			wxTextAttr( wxColor( 128,   0,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Green])			wxTextAttr( wxColor(   0, 128,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Blue])			wxTextAttr( wxColor(   0,   0, 128 ), wxNullColour, fixed );
-	new (&m_table[Color_Magenta]	)	wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixed );
+	new (&m_table[Color_Magenta])		wxTextAttr( wxColor( 160,   0, 160 ), wxNullColour, fixed );
 	new (&m_table[Color_Orange])		wxTextAttr( wxColor( 160, 120,   0 ), wxNullColour, fixed );
 	new (&m_table[Color_Gray])			wxTextAttr( wxColor( 108, 108, 108 ), wxNullColour, fixed );
 
@@ -262,17 +262,17 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
 
+	wxMenu& menuLog		(*new wxMenu());
+	wxMenu& menuAppear	(*new wxMenu());
+	wxMenu& menuSources	(*new wxMenu());
+	wxMenu& menuFontSizes( menuAppear );
+
     // create Log menu (contains most options)
 	wxMenuBar *pMenuBar = new wxMenuBar();
-	wxMenu& menuLog = *new wxMenu();
-	menuLog.Append(wxID_SAVE,  _("&Save..."),	_("Save log contents to file"));
-	menuLog.Append(wxID_CLEAR, _("C&lear"),		_("Clear the log window contents"));
-	menuLog.AppendSeparator();
-	menuLog.Append(wxID_CLOSE, _("&Close"),		_("Close this log window; contents are preserved"));
+	SetMenuBar( pMenuBar );
 
 	// create Appearance menu and submenus
 
-	wxMenu& menuFontSizes = *new wxMenu();
 	menuFontSizes.Append( MenuID_FontSize_Small,	_("Small"),	_("Fits a lot of log in a microcosmically small area."),
 		wxITEM_RADIO )->Check( options.FontSize == 7 );
 	menuFontSizes.Append( MenuID_FontSize_Normal,	_("Normal"),_("It's what I use (the programmer guy)."),
@@ -282,14 +282,27 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	menuFontSizes.Append( MenuID_FontSize_Huge,		_("Huge"),	_("In case you have a really high res display."),
 		wxITEM_RADIO )->Check( options.FontSize == 12 );
 
-	wxMenu& menuAppear = *new wxMenu();
+	menuAppear.AppendSeparator();
 	menuAppear.Append( wxID_ANY, _("Always on Top"),
 		_("When checked the log window will be visible over other foreground windows."), wxITEM_CHECK );
-	menuAppear.Append( wxID_ANY, _("Font Size"), &menuFontSizes );
+	//menuAppear.Append( wxID_ANY, _("Font Size"), &menuFontSizes );
 
+	menuLog.Append(wxID_SAVE,  _("&Save..."),		_("Save log contents to file"));
+	menuLog.Append(wxID_CLEAR, _("C&lear"),			_("Clear the log window contents"));
+	menuLog.AppendSeparator();
+	menuLog.AppendSubMenu( &menuAppear, _("Appearance") );
+	menuLog.Append(wxID_ANY,	_("Show Legend"),	_("Displays the console color legend.") );
+	menuLog.AppendSeparator();
+	menuLog.Append(wxID_CLOSE, _("&Close"),			_("Close this log window; contents are preserved"));
+	
+	// Source Selection/Toggle menu
+	
+	m_item_Deci2	= menuSources.AppendCheckItem( wxID_ANY, _("EE Deci2"),		_("Enables debug output from the EEcore.") );
+	m_item_StdoutEE	= menuSources.AppendCheckItem( wxID_ANY, _("EE StdOut"),	_("Enables STDOUT from the EEcore.") );
+	m_item_StdoutIOP= menuSources.AppendCheckItem( wxID_ANY, _("IOP StdOut"),	_("Enables STDOUT from the IOP.") );
+	
 	pMenuBar->Append(&menuLog,		_("&Log"));
-	pMenuBar->Append(&menuAppear,	_("&Appearance"));
-	SetMenuBar(pMenuBar);
+	pMenuBar->Append(&menuSources,	_("&Sources"));
 
 	// status bar for menu prompts
 	CreateStatusBar();
@@ -304,7 +317,11 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( wxID_SAVE,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnSave)  );
 	Connect( wxID_CLEAR, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(ConsoleLogFrame::OnClear) );
 
-	Connect( MenuID_FontSize_Small, MenuID_FontSize_Huge, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( ConsoleLogFrame::OnFontSize ) );
+	Connect( MenuID_FontSize_Small, MenuID_FontSize_Huge, wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnFontSize ) );
+
+	Connect( m_item_Deci2->GetId(),		wxEVT_COMMAND_MENU_SELECTED,						wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
+	Connect( m_item_StdoutEE->GetId(),	wxEVT_COMMAND_MENU_SELECTED,						wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
+	Connect( m_item_StdoutIOP->GetId(),	wxEVT_COMMAND_MENU_SELECTED,						wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
 
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(ConsoleLogFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
@@ -312,8 +329,11 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	Connect( wxEVT_SetTitleText,	wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
 	Connect( wxEVT_DockConsole,		wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
-
 	Connect( wxEVT_FlushQueue,		wxCommandEventHandler(ConsoleLogFrame::OnFlushEvent) );
+	
+	m_item_Deci2		->Check( g_Conf->EmuOptions.Log.Deci2 );
+	m_item_StdoutEE		->Check( g_Conf->EmuOptions.Log.StdoutEE );
+	m_item_StdoutIOP	->Check( g_Conf->EmuOptions.Log.StdoutIOP );
 
 	if( m_threadlogger != NULL )
 		m_threadlogger->Start();
@@ -498,6 +518,15 @@ void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
 void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
 {
     m_TextCtrl.Clear();
+}
+
+void ConsoleLogFrame::OnLogSourceChanged( wxCommandEvent& evt )
+{
+	g_Conf->EmuOptions.Log.Deci2	= m_item_Deci2		->IsChecked();
+	g_Conf->EmuOptions.Log.StdoutEE	= m_item_StdoutEE	->IsChecked();
+	g_Conf->EmuOptions.Log.StdoutIOP= m_item_StdoutIOP	->IsChecked();
+	
+	CoreThread.ApplySettings( g_Conf->EmuOptions );
 }
 
 void ConsoleLogFrame::OnFontSize( wxCommandEvent& evt )

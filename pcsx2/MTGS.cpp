@@ -59,8 +59,6 @@ static const uint RingBufferSize = 1<<RingBufferSizeFactor;
 // start (the wrapping is what makes it a ringbuffer, yo!)
 static const uint RingBufferMask = RingBufferSize - 1;
 
-__aligned16 mtgsThreadObject mtgsThread;
-
 struct MTGS_BufferedData
 {
 	u128		m_Ring[RingBufferSize];
@@ -84,15 +82,15 @@ extern bool renderswitch;
 std::list<uint> ringposStack;
 #endif
 
-static __threadlocal mtgsThreadObject* tls_mtgsThread = NULL;
+static __threadlocal SysMtgsThread* tls_mtgsThread = NULL;
 
-mtgsThreadObject& mtgsThreadObject::Get()
+SysMtgsThread& SysMtgsThread::Get()
 {
-	pxAssertMsg( tls_mtgsThread != NULL, L"This function must be called from the context of a running mtgsThreadObject." );
+	pxAssertMsg( tls_mtgsThread != NULL, L"This function must be called from the context of a running SysMtgsThread." );
 	return *tls_mtgsThread;
 }
 
-mtgsThreadObject::mtgsThreadObject() :
+SysMtgsThread::SysMtgsThread() :
 	SysThreadBase()
 #ifdef RINGBUF_DEBUG_STACK
 ,	m_lock_Stack()
@@ -103,7 +101,7 @@ mtgsThreadObject::mtgsThreadObject() :
 	// All other state vars are initialized by OnStart().
 }
 
-void mtgsThreadObject::OnStart()
+void SysMtgsThread::OnStart()
 {
 	m_PluginOpened	= false;
 
@@ -122,17 +120,17 @@ void mtgsThreadObject::OnStart()
 	_parent::OnStart();
 }
 
-mtgsThreadObject::~mtgsThreadObject() throw()
+SysMtgsThread::~SysMtgsThread() throw()
 {
 	_parent::Cancel();
 }
 
-void mtgsThreadObject::OnResumeReady()
+void SysMtgsThread::OnResumeReady()
 {
 	m_sem_OpenDone.Reset();
 }
 
-void mtgsThreadObject::ResetGS()
+void SysMtgsThread::ResetGS()
 {
 	// MTGS Reset process:
 	//  * clear the ringbuffer.
@@ -151,7 +149,7 @@ void mtgsThreadObject::ResetGS()
 
 static int alterFrameFlush = 0;
 
-void mtgsThreadObject::PostVsyncEnd( bool updategs )
+void SysMtgsThread::PostVsyncEnd( bool updategs )
 {
 	SendSimplePacket( GS_RINGTYPE_VSYNC, (*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0 );
 	if( alterFrameFlush || (m_WritePos > (RingBufferSize/3)) )
@@ -174,7 +172,7 @@ static void dummyIrqCallback()
 	// (and zerogs does >_<)
 }
 
-void mtgsThreadObject::OpenPlugin()
+void SysMtgsThread::OpenPlugin()
 {
 	if( m_PluginOpened ) return;
 
@@ -205,7 +203,7 @@ void mtgsThreadObject::OpenPlugin()
 	GSsetGameCRC( ElfCRC, 0 );
 }
 
-void mtgsThreadObject::ExecuteTaskInThread()
+void SysMtgsThread::ExecuteTaskInThread()
 {
 	tls_mtgsThread = this;
 
@@ -404,7 +402,7 @@ void mtgsThreadObject::ExecuteTaskInThread()
 	}
 }
 
-void mtgsThreadObject::ClosePlugin()
+void SysMtgsThread::ClosePlugin()
 {
 	if( !m_PluginOpened ) return;
 	m_PluginOpened = false;
@@ -412,13 +410,13 @@ void mtgsThreadObject::ClosePlugin()
 		g_plugins->m_info[PluginId_GS].CommonBindings.Close();
 }
 
-void mtgsThreadObject::OnSuspendInThread()
+void SysMtgsThread::OnSuspendInThread()
 {
 	ClosePlugin();
 	_parent::OnSuspendInThread();
 }
 
-void mtgsThreadObject::OnResumeInThread( bool isSuspended )
+void SysMtgsThread::OnResumeInThread( bool isSuspended )
 {
 	if( isSuspended )
 		OpenPlugin();
@@ -426,7 +424,7 @@ void mtgsThreadObject::OnResumeInThread( bool isSuspended )
 	_parent::OnResumeInThread( isSuspended );
 }
 
-void mtgsThreadObject::OnCleanupInThread()
+void SysMtgsThread::OnCleanupInThread()
 {
 	ClosePlugin();
 	tls_mtgsThread = NULL;
@@ -435,7 +433,7 @@ void mtgsThreadObject::OnCleanupInThread()
 
 // Waits for the GS to empty out the entire ring buffer contents.
 // Used primarily for plugin startup/shutdown.
-void mtgsThreadObject::WaitGS()
+void SysMtgsThread::WaitGS()
 {
 	pxAssertDev( !IsSelf(), "This method is only allowed from threads *not* named MTGS." );
 
@@ -453,27 +451,27 @@ void mtgsThreadObject::WaitGS()
 
 // Sets the gsEvent flag and releases a timeslice.
 // For use in loops that wait on the GS thread to do certain things.
-void mtgsThreadObject::SetEvent()
+void SysMtgsThread::SetEvent()
 {
 	m_sem_event.Post();
 	m_CopyCommandTally = 0;
 	m_CopyDataTally = 0;
 }
 
-void mtgsThreadObject::PrepEventWait()
+void SysMtgsThread::PrepEventWait()
 {
 	//Console.Warning( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
 	SetEvent();
 	Timeslice();
 }
 
-u8* mtgsThreadObject::GetDataPacketPtr() const
+u8* SysMtgsThread::GetDataPacketPtr() const
 {
 	return (u8*)&RingBuffer[m_packet_ringpos];
 }
 
 // Closes the data packet send command, and initiates the gs thread (if needed).
-void mtgsThreadObject::SendDataPacket()
+void SysMtgsThread::SendDataPacket()
 {
 	// make sure a previous copy block has been started somewhere.
 	pxAssert( m_packet_size != 0 );
@@ -514,7 +512,7 @@ void mtgsThreadObject::SendDataPacket()
 	//m_PacketLocker.Release();
 }
 
-int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size )
+int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u32* srcdata, u32 size )
 {
 	return PrepDataPacket( pathidx, (u8*)srcdata, size );
 }
@@ -534,7 +532,7 @@ static u32 ringtx_inf_s[32];
 // large for VU1 memory.
 // Parameters:
 //  size - size of the packet data, in smd128's
-int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
+int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
 {
 	//m_PacketLocker.Acquire();
 
@@ -684,7 +682,7 @@ int mtgsThreadObject::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 s
 	return m_packet_size;
 }
 
-__forceinline uint mtgsThreadObject::_PrepForSimplePacket()
+__forceinline uint SysMtgsThread::_PrepForSimplePacket()
 {
 #ifdef RINGBUF_DEBUG_STACK
 	m_lock_Stack.Lock();
@@ -710,7 +708,7 @@ __forceinline uint mtgsThreadObject::_PrepForSimplePacket()
 	return future_writepos;
 }
 
-__forceinline void mtgsThreadObject::_FinishSimplePacket( uint future_writepos )
+__forceinline void SysMtgsThread::_FinishSimplePacket( uint future_writepos )
 {
 	pxAssert( future_writepos != volatize(m_RingPos) );
 	m_WritePos = future_writepos;
@@ -723,7 +721,7 @@ __forceinline void mtgsThreadObject::_FinishSimplePacket( uint future_writepos )
 Semaphore	m_sem_OnRingReset;
 u32			m_SignalRingReset;
 
-void mtgsThreadObject::RestartRingbuffer()
+void SysMtgsThread::RestartRingbuffer()
 {
 	if( m_WritePos == 0 ) return;
 	const uint thefuture = 0;
@@ -777,7 +775,7 @@ void mtgsThreadObject::RestartRingbuffer()
 		WaitGS();
 }
 
-void mtgsThreadObject::SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 )
+void SysMtgsThread::SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 )
 {
 	//ScopedLock locker( m_PacketLocker );
 
@@ -792,7 +790,7 @@ void mtgsThreadObject::SendSimplePacket( MTGS_RingCommand type, int data0, int d
 	_FinishSimplePacket( thefuture );
 }
 
-void mtgsThreadObject::SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 )
+void SysMtgsThread::SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 )
 {
 	//ScopedLock locker( m_PacketLocker );
 
@@ -806,12 +804,12 @@ void mtgsThreadObject::SendPointerPacket( MTGS_RingCommand type, u32 data0, void
 	_FinishSimplePacket( thefuture );
 }
 
-void mtgsThreadObject::SendGameCRC( u32 crc )
+void SysMtgsThread::SendGameCRC( u32 crc )
 {
 	SendSimplePacket( GS_RINGTYPE_CRC, crc, 0, 0 );
 }
 
-void mtgsThreadObject::WaitForOpen()
+void SysMtgsThread::WaitForOpen()
 {
 	if( m_PluginOpened ) return;
 	Resume();
@@ -837,10 +835,10 @@ void mtgsThreadObject::WaitForOpen()
 		}
 	}
 
-	mtgsThread.RethrowException();
+	RethrowException();
 }
 
-void mtgsThreadObject::Freeze( int mode, MTGS_FreezeData& data )
+void SysMtgsThread::Freeze( int mode, MTGS_FreezeData& data )
 {
 	SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
 	Resume();

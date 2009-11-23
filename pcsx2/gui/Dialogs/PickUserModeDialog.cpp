@@ -18,7 +18,6 @@
 
 #include <wx/stdpaths.h>
 
-using namespace wxHelpers;
 using namespace Panels;
 
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id )

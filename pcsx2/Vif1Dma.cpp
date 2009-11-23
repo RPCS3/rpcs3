@@ -266,12 +266,12 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
         Registers::Freeze();
 		// copy 16 bytes the fast way:
 		const u64* src = (u64*)splittransfer[0];
-		mtgsThread.PrepDataPacket(GIF_PATH_2, nloop0_packet, 1);
-		u64* dst = (u64*)mtgsThread.GetDataPacketPtr();
+		GetMTGS().PrepDataPacket(GIF_PATH_2, nloop0_packet, 1);
+		u64* dst = (u64*)GetMTGS().GetDataPacketPtr();
 		dst[0] = src[0];
 		dst[1] = src[1];
 
-		mtgsThread.SendDataPacket();
+		GetMTGS().SendDataPacket();
         Registers::Thaw();
 
 		if (vif1.tag.size == 0) vif1.cmd = 0;
@@ -308,9 +308,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	Registers::Freeze();
 
 	// Round ret up, just in case it's not 128bit aligned.
-	const uint count = mtgsThread.PrepDataPacket(GIF_PATH_2, data, (ret + 3) >> 2);
-	memcpy_fast(mtgsThread.GetDataPacketPtr(), data, count << 4);
-	mtgsThread.SendDataPacket();
+	const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, data, (ret + 3) >> 2);
+	memcpy_fast(GetMTGS().GetDataPacketPtr(), data, count << 4);
+	GetMTGS().SendDataPacket();
 
 	Registers::Thaw();
 
@@ -730,7 +730,7 @@ void vif1TransferFromMemory()
 		{
 			if (size > 1)
 			{
-				mtgsThread.WaitGS();
+				GetMTGS().WaitGS();
 				GSreadFIFO((u64*)&PS2MEM_HW[0x5000]);
 			}
 			pMem[0] = psHu64(VIF1_FIFO);
@@ -740,7 +740,7 @@ void vif1TransferFromMemory()
 	}
 	else
 	{
-		mtgsThread.WaitGS();
+		GetMTGS().WaitGS();
 		GSreadFIFO2(pMem, vif1ch->qwc);
 
 		// set incase read

@@ -189,7 +189,7 @@ struct LegacyPluginAPI_Common
 };
 
 class SaveStateBase;
-class mtgsThreadObject;
+class SysMtgsThread;
 
 // --------------------------------------------------------------------------------------
 //  PluginBindings
@@ -323,7 +323,7 @@ protected:
 	void BindRequired( PluginsEnum_t pid );
 	void BindOptional( PluginsEnum_t pid );
 
-	friend class mtgsThreadObject;
+	friend class SysMtgsThread;
 };
 
 extern const PluginInfo tbl_PluginInfo[];

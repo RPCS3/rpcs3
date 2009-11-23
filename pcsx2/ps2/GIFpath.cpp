@@ -414,5 +414,5 @@ __forceinline void GIFPath_Clear( GIF_PATH pathidx )
 {
 	memzero(s_gifPath.path[pathidx]);
 	if( GSgifSoftReset == NULL ) return;
-	mtgsThread.SendSimplePacket( GS_RINGTYPE_SOFTRESET, (1<<pathidx), 0, 0 );
+	GetMTGS().SendSimplePacket( GS_RINGTYPE_SOFTRESET, (1<<pathidx), 0, 0 );
 }

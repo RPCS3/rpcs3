@@ -30,7 +30,6 @@
 #	include <commctrl.h>
 #endif
 
-using namespace wxHelpers;
 using namespace Panels;
 
 // configure the orientation of the listbox based on the platform
@@ -119,7 +118,7 @@ Dialogs::ConfigurationDialog::~ConfigurationDialog() throw()
 
 void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll( false ) )
+	if( g_ApplyState.ApplyAll() )
 	{
 		FindWindow( wxID_APPLY )->Disable();
 		g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];
@@ -138,7 +137,7 @@ void Dialogs::ConfigurationDialog::OnCancel_Click( wxCommandEvent& evt )
 
 void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll( false ) )
+	if( g_ApplyState.ApplyAll() )
 		FindWindow( wxID_APPLY )->Disable();
 
 	g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];

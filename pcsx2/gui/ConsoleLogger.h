@@ -183,6 +183,14 @@ protected:
 	// (alternatively you can enable Disasm logging in any recompiler and achieve
 	// a similar effect)
 	ScopedPtr<ConsoleTestThread>	m_threadlogger;
+	
+	// ----------------------------------------------------------------------------
+	//  Window and Menu Object Handles
+	// ----------------------------------------------------------------------------
+
+	wxMenuItem*		m_item_Deci2;
+	wxMenuItem*		m_item_StdoutEE;
+	wxMenuItem*		m_item_StdoutIOP;
 
 public:
 	// ctor & dtor
@@ -206,6 +214,7 @@ protected:
 	virtual void OnClear(wxCommandEvent& event);
 
 	void OnFontSize(wxCommandEvent& event);
+	void OnLogSourceChanged(wxCommandEvent& event);
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
 

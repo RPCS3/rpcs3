@@ -742,6 +742,8 @@ char deci2buffer[256];
 
 /*
  *	int Deci2Call(int, u_int *);
+ *
+ *  HLE implementation of the Deci2 interface.
  */
 
 int __Deci2Call(int call, u32 *addr)
@@ -788,10 +790,12 @@ int __Deci2Call(int call, u32 *addr)
 				if( pdeciaddr == NULL )
 					pdeciaddr = (u8*)PSM(deci2addr[4]+0xc);
 				else
-					pdeciaddr += (deci2addr[4]+0xc)%16;
+					pdeciaddr += (deci2addr[4]+0xc) % 16;
 				memcpy(deci2buffer, pdeciaddr, deci2addr[1]-0xc);
-				deci2buffer[deci2addr[1]-0xc>=255?255:deci2addr[1]-0xc]='\0';
-				Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString(deci2buffer).c_str() );
+				deci2buffer[(deci2addr[1]-0xc>=255) ? 255 : (deci2addr[1]-0xc)] = '\0';
+
+				if( EmuConfig.Log.Deci2 )
+					Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString(deci2buffer).c_str() );
 			}
 			deci2addr[3] = 0;
 			return 1;
@@ -809,7 +813,7 @@ int __Deci2Call(int call, u32 *addr)
 			return 1;
 
 		case 0x10://kputs
-			if( addr != NULL )
+			if( addr != NULL && EmuConfig.Log.Deci2 )
 				Console.Write( ConColor_EE, L"%s", ShiftJIS_ConvertString((char*)PSM(*addr)).c_str() );
 			return 1;
 	}
@@ -823,7 +827,7 @@ void SYSCALL()
 	u8 call;
 
 	if (cpuRegs.GPR.n.v1.SL[0] < 0)
-		 call = (u8)(-cpuRegs.GPR.n.v1.SL[0]);
+		call = (u8)(-cpuRegs.GPR.n.v1.SL[0]);
 	else
 		call = cpuRegs.GPR.n.v1.UC[0];
 

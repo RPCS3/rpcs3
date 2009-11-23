@@ -19,7 +19,6 @@
 
 #include <wx/statline.h>
 
-using namespace wxHelpers;
 using namespace Panels;
 
 Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent, int id )
@@ -41,7 +40,7 @@ Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent, int id )
 
 void Dialogs::LogOptionsDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll( false ) )
+	if( g_ApplyState.ApplyAll() )
 	{
 		FindWindow( wxID_APPLY )->Disable();
 		AppSaveSettings();
@@ -53,7 +52,7 @@ void Dialogs::LogOptionsDialog::OnOk_Click( wxCommandEvent& evt )
 
 void Dialogs::LogOptionsDialog::OnApply_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll( false ) )
+	if( g_ApplyState.ApplyAll() )
 		FindWindow( wxID_APPLY )->Disable();
 
 	AppSaveSettings();

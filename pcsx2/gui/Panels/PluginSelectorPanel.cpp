@@ -31,7 +31,6 @@ static const bool DisableThreading =
 	false;
 #endif
 
-using namespace wxHelpers;
 using namespace pxSizerFlags;
 using namespace Threading;
 

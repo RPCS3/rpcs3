@@ -20,7 +20,6 @@
 #include "Utilities/Threading.h"
 
 #include "Utilities/wxGuiTools.h"
-#include "Utilities/wxHelpers.h"
 #include "Utilities/pxRadioPanel.h"
 #include "Utilities/pxCheckBox.h"
 #include "Utilities/pxStaticText.h"

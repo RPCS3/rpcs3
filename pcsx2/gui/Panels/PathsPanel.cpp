@@ -18,7 +18,6 @@
 
 #include <wx/stdpaths.h>
 
-using namespace wxHelpers;
 static const int BetweenFolderSpace = 5;
 
 // ------------------------------------------------------------------------

@@ -99,12 +99,12 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 	gifRegs->stat.APATH = GIF_APATH3;
 	gifRegs->stat.OPH = 1;
 
-	int size   = mtgsThread.PrepDataPacket(GIF_PATH_3, pMem, qwc);
-	u8* pgsmem = mtgsThread.GetDataPacketPtr();
+	int size   = GetMTGS().PrepDataPacket(GIF_PATH_3, pMem, qwc);
+	u8* pgsmem = GetMTGS().GetDataPacketPtr();
 
 	memcpy_aligned(pgsmem, pMem, size<<4);
 
-	mtgsThread.SendDataPacket();
+	GetMTGS().SendDataPacket();
 	return size;
 }
 

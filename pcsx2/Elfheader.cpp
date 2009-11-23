@@ -597,7 +597,7 @@ void loadElfFile(const wxString& filename)
 	ElfCRC = elfobj.GetCRC();
 	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
 	ElfApplyPatches();
-	mtgsThread.SendGameCRC( ElfCRC );
+	GetMTGS().SendGameCRC( ElfCRC );
 
 	return;
 }

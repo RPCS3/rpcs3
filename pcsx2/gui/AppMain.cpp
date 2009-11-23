@@ -409,7 +409,7 @@ MainEmuFrame& Pcsx2App::GetMainFrame() const
 	return *m_MainFrame;
 }
 
-void AppApplySettings( const AppConfig* oldconf, bool saveOnSuccess )
+void AppApplySettings( const AppConfig* oldconf )
 {
 	AllowFromMainThreadOnly();
 
@@ -426,7 +426,7 @@ void AppApplySettings( const AppConfig* oldconf, bool saveOnSuccess )
 
 	RelocateLogfile();
 
-	bool resume = CoreThread.Suspend();
+	ScopedCoreThreadSuspend suspend_core;
 
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.
@@ -447,12 +447,6 @@ void AppApplySettings( const AppConfig* oldconf, bool saveOnSuccess )
 
 	int toSend = 0;
 	sApp.Source_SettingsApplied().Dispatch( toSend );
-	
-	if( resume )
-		CoreThread.Resume();
-
-	if( saveOnSuccess )
-		AppSaveSettings();
 }
 
 static wxFileConfig _dud_config;
@@ -663,4 +657,14 @@ MainEmuFrame&	GetMainFrame()
 MainEmuFrame*	GetMainFramePtr()
 {
 	return wxTheApp ? wxGetApp().GetMainFramePtr() : NULL;
+}
+
+SysCoreThread& GetCoreThread()
+{
+	return CoreThread;
+}
+
+SysMtgsThread& GetMTGS()
+{
+	return mtgsThread;
 }

@@ -49,8 +49,8 @@ R5900Exception::BaseExcept::~BaseExcept() throw (){}
 
 void cpuReset()
 {
-	if( mtgsThread.IsOpen() )
-		mtgsThread.WaitGS();		// GS better be done processing before we reset the EE, just in case.
+	if( GetMTGS().IsOpen() )
+		GetMTGS().WaitGS();		// GS better be done processing before we reset the EE, just in case.
 
 	SysClearExecutionCache();
 

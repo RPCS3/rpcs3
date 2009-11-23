@@ -17,7 +17,7 @@
 
 #include "App.h"
 
-#include "Utilities/wxHelpers.h"
+#include "Utilities/wxGuiTools.h"
 #include "Utilities/CheckedStaticBox.h"
 #include "Utilities/HashMap.h"
 

@@ -141,8 +141,8 @@ namespace Implementations
 	{
 		g_Pcsx2Recording ^= 1;
 
-		mtgsThread.WaitGS();		// make sure GS is in sync with the audio stream when we start.
-		mtgsThread.SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
+		GetMTGS().WaitGS();		// make sure GS is in sync with the audio stream when we start.
+		GetMTGS().SendSimplePacket(GS_RINGTYPE_RECORD, g_Pcsx2Recording, 0, 0);
 		if( SPU2setupRecording != NULL ) SPU2setupRecording(g_Pcsx2Recording, NULL);
 	}
 

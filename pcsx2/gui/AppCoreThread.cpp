@@ -17,10 +17,12 @@
 #include "MainFrame.h"
 #include "ps2/BiosTools.h"
 
-AppCoreThread CoreThread;
+#include "GS.h"
+
+__aligned16 SysMtgsThread mtgsThread;
+__aligned16 AppCoreThread CoreThread;
 
 AppCoreThread::AppCoreThread() : SysCoreThread()
-,	m_kevt()
 {
 }
 
@@ -197,21 +199,20 @@ void AppCoreThread::StateCheckInThread()
 // suspended.  If the thread has mot been suspended, this call will fail *silently*.
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
-	if( m_ExecMode != ExecMode_Closed ) return;
+	//if( m_ExecMode != ExecMode_Closed ) return;
 	
 	Pcsx2Config fixup( src );
 	if( !g_Conf->EnableSpeedHacks )
 		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
 	
-	if( fixup == EmuConfig ) return;
-
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is
 	// usually the desired behavior) will be ignored.
 
 	static int localc = 0;
 	RecursionGuard guard( localc );
-	if(guard.IsReentrant()) return;
+	if( guard.IsReentrant() ) return;
+	if( fixup == EmuConfig ) return;
 	_parent::ApplySettings( fixup );
 }
 

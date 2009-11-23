@@ -102,8 +102,8 @@ namespace Panels
 
 		void StartBook( wxBookCtrlBase* book );
 		void StartWizard();
-		bool ApplyAll( bool saveOnSuccess=true );
-		bool ApplyPage( int pageid, bool saveOnSuccess=true );
+		bool ApplyAll();
+		bool ApplyPage( int pageid );
 		void DoCleanup() throw();
 	};
 

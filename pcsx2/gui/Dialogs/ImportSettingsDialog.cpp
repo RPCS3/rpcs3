@@ -18,9 +18,6 @@
 
 #include "ModalPopups.h"
 
-using namespace wxHelpers;
-
-
 Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 	: wxDialogWithHelpers( parent, wxID_ANY, _("Import Existing Settings?"), false )
 {

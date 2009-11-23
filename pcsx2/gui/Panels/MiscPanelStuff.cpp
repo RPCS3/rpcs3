@@ -23,7 +23,6 @@
 #include <wx/stdpaths.h>
 #include <wx/bookctrl.h>
 
-using namespace wxHelpers;
 
 Panels::StaticApplyState Panels::g_ApplyState;
 
@@ -59,7 +58,7 @@ void Panels::StaticApplyState::StartWizard()
 // Returns false if one of the panels fails input validation (in which case dialogs
 // should not be closed, etc).
 //
-bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
+bool Panels::StaticApplyState::ApplyPage( int pageid )
 {
 	bool retval = true;
 
@@ -87,7 +86,7 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 
 		// Note: apply first, then save -- in case the apply fails.
 
-		AppApplySettings( &confcopy, saveOnSuccess );
+		AppApplySettings( &confcopy );
 	}
 	catch( Exception::CannotApplySettings& ex )
 	{
@@ -121,9 +120,9 @@ bool Panels::StaticApplyState::ApplyPage( int pageid, bool saveOnSuccess )
 
 // Returns false if one of the panels fails input validation (in which case dialogs
 // should not be closed, etc).
-bool Panels::StaticApplyState::ApplyAll( bool saveOnSuccess )
+bool Panels::StaticApplyState::ApplyAll()
 {
-	return ApplyPage( -1, saveOnSuccess );
+	return ApplyPage( -1 );
 }
 
 void Panels::BaseApplicableConfigPanel::SetFocusToMe()

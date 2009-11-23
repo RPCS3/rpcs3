@@ -34,7 +34,7 @@ wxString GetMsg_ConfirmSysReset()
 
 bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames)
 {
-	bool resume = CoreThread.Suspend();
+	ScopedCoreThreadSuspend stopped_core;
 
 	if( filenames.GetCount() > 1 )
 	{
@@ -81,7 +81,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 			sApp.SysExecute( g_Conf->CdvdSource, g_Conf->CurrentELF );
 		}
 
-		if( resume ) CoreThread.Resume();
+		stopped_core.Resume();
 		return true;
 	}
 	}
@@ -132,6 +132,6 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 	}
 
 	_closefile( iso.handle );
-	if( resume ) CoreThread.Resume();
+	stopped_core.Resume();
 	return true;
 }

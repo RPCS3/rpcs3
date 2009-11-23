@@ -105,6 +105,8 @@ void __fastcall psxException(u32 code, u32 bd)
 
 	if (!CHECK_IOPREC)
 	{
+		// HLE Bios Handlers, enabled for interpreters only.
+
 		u32 call = psxRegs.GPR.n.t1 & 0xff;
 		switch (psxRegs.pc & 0x1fffff) {
 			case 0xa0:

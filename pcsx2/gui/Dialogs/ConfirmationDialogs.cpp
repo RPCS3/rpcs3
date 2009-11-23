@@ -20,8 +20,6 @@
 #include "ModalPopups.h"
 #include "Utilities/StringHelpers.h"
 
-using namespace wxHelpers;
-
 bool ConfButtons::Allows( wxWindowID id ) const
 {
 	switch( id )

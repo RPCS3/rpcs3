@@ -314,7 +314,7 @@ static void reloadElfInfo(const char* str)
 
 		ElfCRC = loadElfCRC( str );
 		ElfApplyPatches();
-		mtgsThread.SendGameCRC( ElfCRC );
+		GetMTGS().SendGameCRC( ElfCRC );
 	}
 }
 

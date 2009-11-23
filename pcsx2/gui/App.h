@@ -613,7 +613,7 @@ extern void UnloadPlugins();
 
 extern void AppLoadSettings();
 extern void AppSaveSettings();
-extern void AppApplySettings( const AppConfig* oldconf=NULL, bool saveOnSuccess=false );
+extern void AppApplySettings( const AppConfig* oldconf=NULL );
 
 extern bool SysHasValidState();
 extern void SysUpdateIsoSrcFile( const wxString& newIsoFile );
@@ -623,5 +623,7 @@ extern bool				HasMainFrame();
 extern MainEmuFrame&	GetMainFrame();
 extern MainEmuFrame*	GetMainFramePtr();
 
-extern AppCoreThread CoreThread;
+extern __aligned16 AppCoreThread CoreThread;
+extern __aligned16 SysMtgsThread mtgsThread;
+
 

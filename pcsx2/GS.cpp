@@ -65,7 +65,7 @@ void _gs_ChangeTimings( u32 framerate, u32 iTicks )
 
 void gsOnModeChanged( u32 framerate, u32 newTickrate )
 {
-	mtgsThread.SendSimplePacket( GS_RINGTYPE_MODECHANGE, framerate, newTickrate, 0 );
+	GetMTGS().SendSimplePacket( GS_RINGTYPE_MODECHANGE, framerate, newTickrate, 0 );
 }
 
 static bool		gsIsInterlaced	= false;
@@ -90,7 +90,7 @@ void gsInit()
 
 void gsReset()
 {
-	mtgsThread.ResetGS();
+	GetMTGS().ResetGS();
 
 	gsOnModeChanged(
 		(gsRegionMode == Region_NTSC) ? FRAMERATE_NTSC : FRAMERATE_PAL,
@@ -128,7 +128,7 @@ void gsCSRwrite(u32 value)
 		}
 		else
 		{
-			mtgsThread.SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
+			GetMTGS().SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 		}
 	
 		CSRw |= 0x1f;
@@ -143,7 +143,7 @@ void gsCSRwrite(u32 value)
 	else
 	{
 		CSRw |= value & 0x1f;
-		mtgsThread.SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
+		GetMTGS().SendSimplePacket( GS_RINGTYPE_WRITECSR, CSRw, 0, 0 );
 		GSCSRr = ((GSCSRr&~value)&0x1f)|(GSCSRr&~0x1f);
 	}
 
@@ -174,7 +174,7 @@ __forceinline void gsWrite8(u32 mem, u8 value)
 			gsCSRwrite((CSRw & ~0xff000000) | (value << 24)); break;
 		default:
 			*PS2GS_BASE(mem) = value;
-			mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE8, mem&0x13ff, value, 0);
+			GetMTGS().SendSimplePacket(GS_RINGTYPE_MEMWRITE8, mem&0x13ff, value, 0);
 	}
 	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx", mem, value);
 }
@@ -218,7 +218,7 @@ __forceinline void gsWrite16(u32 mem, u16 value)
 	}
 
 	*(u16*)PS2GS_BASE(mem) = value;
-	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE16, mem&0x13ff, value, 0);
+	GetMTGS().SendSimplePacket(GS_RINGTYPE_MEMWRITE16, mem&0x13ff, value, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -243,7 +243,7 @@ __forceinline void gsWrite32(u32 mem, u32 value)
 	}
 
 	*(u32*)PS2GS_BASE(mem) = value;
-	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE32, mem&0x13ff, value, 0);
+	GetMTGS().SendSimplePacket(GS_RINGTYPE_MEMWRITE32, mem&0x13ff, value, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -279,7 +279,7 @@ void __fastcall gsWrite64_generic( u32 mem, const mem64_t* value )
 	GIF_LOG("GS Write64 at %8.8lx with data %8.8x_%8.8x", mem, srcval32[1], srcval32[0]);
 
 	*(u64*)PS2GS_BASE(mem) = *value;
-	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, srcval32[0], srcval32[1]);
+	GetMTGS().SendSimplePacket(GS_RINGTYPE_MEMWRITE64, mem&0x13ff, srcval32[0], srcval32[1]);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -320,8 +320,8 @@ void __fastcall gsWrite128_generic( u32 mem, const mem128_t* value )
 	writeTo[0] = value[0];
 	writeTo[1] = value[1];
 
-	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem, srcval32[0], srcval32[1]);
-	mtgsThread.SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem+8, srcval32[2], srcval32[3]);
+	GetMTGS().SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem, srcval32[0], srcval32[1]);
+	GetMTGS().SendSimplePacket(GS_RINGTYPE_MEMWRITE64, masked_mem+8, srcval32[2], srcval32[3]);
 }
 
 __forceinline u8 gsRead8(u32 mem)
@@ -363,7 +363,7 @@ void gsSyncLimiterLostTime( s32 deltaTime )
 
 	//Console.WriteLn("LostTime on the EE!");
 
-	mtgsThread.SendSimplePacket(
+	GetMTGS().SendSimplePacket(
 		GS_RINGTYPE_STARTTIME,
 		deltaTime,
 		0,
@@ -507,7 +507,7 @@ __forceinline void gsFrameSkip( bool forceskip )
 void gsPostVsyncEnd( bool updategs )
 {
 	*(u32*)(PS2MEM_GS+0x1000) ^= 0x2000; // swap the vsync field
-	mtgsThread.PostVsyncEnd( updategs );
+	GetMTGS().PostVsyncEnd( updategs );
 }
 
 void _gs_ResetFrameskip()
@@ -518,14 +518,14 @@ void _gs_ResetFrameskip()
 // Disables the GS Frameskip at runtime without any racy mess...
 void gsResetFrameSkip()
 {
-	mtgsThread.SendSimplePacket(GS_RINGTYPE_FRAMESKIP, 0, 0, 0);
+	GetMTGS().SendSimplePacket(GS_RINGTYPE_FRAMESKIP, 0, 0, 0);
 }
 
 void gsDynamicSkipEnable()
 {
 	if( !m_StrictSkipping ) return;
 
-	mtgsThread.WaitGS();
+	GetMTGS().WaitGS();
 	m_iSlowStart = GetCPUTicks();
 	frameLimitReset();
 }

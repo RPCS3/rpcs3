@@ -16,8 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
-using namespace wxHelpers;
-
 Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	BaseApplicableConfigPanel( parent )
 {

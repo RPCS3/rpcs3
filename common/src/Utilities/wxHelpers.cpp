@@ -15,19 +15,12 @@
 
 #include "PrecompiledHeader.h"
 #include "HashMap.h"
-#include "wxHelpers.h"
+#include "wxGuiTools.h"
 #include "pxStaticText.h"
 
 #include <wx/cshelp.h>
 #include <wx/tooltip.h>
 
-
-pxStaticText& wxHelpers::InsertStaticTextAt(wxWindow* parent, wxSizer& sizer, int position, const wxString& label, int alignFlags )
-{
-	pxStaticText& temp( *new pxStaticText(parent, label, alignFlags ) );
-	temp.InsertAt( sizer, position );
-	return temp;
-}
 
 // =====================================================================================================
 //  wxDialogWithHelpers Class Implementations

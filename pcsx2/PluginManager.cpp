@@ -859,7 +859,7 @@ extern void spu2Irq();
 
 static bool OpenPlugin_GS()
 {
-	mtgsThread.Resume();
+	GetMTGS().Resume();
 	return true;
 }
 
@@ -942,10 +942,10 @@ void PluginManager::Open()
 		// If GS doesn't support GSopen2, need to wait until call to GSopen
 		// returns to populate pDsp.  If it does, can initialize other plugins
 		// at same time as GS, as long as GSopen2 does not subclass its window.
-		if (pi->id == PluginId_GS && !GSopen2) mtgsThread.WaitForOpen();
+		if (pi->id == PluginId_GS && !GSopen2) GetMTGS().WaitForOpen();
 	} while( ++pi, pi->shortname != NULL );
 
-	if (GSopen2) mtgsThread.WaitForOpen();
+	if (GSopen2) GetMTGS().WaitForOpen();
 
 	Console.WriteLn( Color_StrongBlue, "Plugins opened successfully." );
 }
@@ -959,7 +959,7 @@ void PluginManager::Close( PluginsEnum_t pid )
 	{
 		// force-close PAD before GS, because the PAD depends on the GS window.
 		Close( PluginId_PAD );
-		mtgsThread.Suspend();
+		GetMTGS().Suspend();
 	}
 	else if( pid == PluginId_CDVD )
 		DoCDVDclose();
@@ -1034,7 +1034,7 @@ void PluginManager::Init()
 //
 void PluginManager::Shutdown()
 {
-	mtgsThread.Cancel();	// cancel it for speedier shutdown!
+	GetMTGS().Cancel();	// cancel it for speedier shutdown!
 
 	Close();
 	DbgCon.WriteLn( Color_StrongGreen, "Shutting down plugins..." );
@@ -1066,12 +1066,12 @@ void PluginManager::Shutdown()
 // Returns false if the plugin returned an error.
 bool PluginManager::DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
 {
-	if( (pid == PluginId_GS) && !mtgsThread.IsSelf() )
+	if( (pid == PluginId_GS) && !GetMTGS().IsSelf() )
 	{
 		// GS needs some thread safety love...
 
 		MTGS_FreezeData woot = { data, 0 };
-		mtgsThread.Freeze( mode, woot );
+		GetMTGS().Freeze( mode, woot );
 		return woot.retval != -1;
 	}
 	else
