@@ -226,6 +226,7 @@ bool GSRenderer::Merge(int field)
 		GSVector4 scale = GSVector4(tex[i]->GetScale()).xyxy();
 
 		src[i] = GSVector4(r) * scale / GSVector4(tex[i]->GetSize()).xyxy();
+		src[i] += GSVector4(0.001f,0.001f,-0.001f,-0.001f); // crop a few of the outermost pixels, which are often buggy
 
 		GSVector2 o(0, 0);
 		
@@ -738,8 +739,9 @@ bool GSRenderer::IsLinear()
 	{
 		return mmag;
 	}
-
-	if(!TEX1.LCM && !PRIM->FST) // if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
+	// if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
+	// Fixme : Why should Q be bogus?
+	if(!TEX1.LCM /*&& !PRIM->FST*/) 
 	{
 		float K = (float)TEX1.K / 16;
 		float f = (float)(1 << TEX1.L) / log(2.0f);

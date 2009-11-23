@@ -261,55 +261,14 @@ public:
 
 			int tw = (int)(1 << context->TEX0.TW);
 			int th = (int)(1 << context->TEX0.TH);
-			
-			int multiplier = upscale_Multiplier();
 
 			GSVector4 WH(tw, th, w, h);
-			
-			//Try to avoid small, common glitches with upscaling. This only takes care of slight
-			//variations however. The bigger ones, where upscaling intruduces pixels with no data
-			//cannot be fixed generally here. (Wild Arms games do this with their text.)
-			if ( multiplier == 2 ) {
-				if		(tw < 17)    {}
-				else if	(tw < 33)    {}
-				else if	(tw < 65)    {}
-				else if	(tw < 129)   {}
-				else if	(tw < 257)   {}
-				else if	(tw < 513)   {vs_cb.VertexScale.x *= 1.0f - ((float)1 * -0.00002f); }
-				else if	(tw < 1025)  {}
-				
-				if		(th < 17)    {}
-				else if	(th < 33)    {}
-				else if	(th < 65)    {}
-				else if	(th < 129)   {}
-				else if	(th < 257)   {}
-				else if	(th < 513)   {vs_cb.VertexScale.y *= 1.0f - ((float)1 * -0.00001f); }
-				else if	(th < 1025)  {}
-			}
 
 			if(PRIM->FST)
 			{
 				vs_cb.TextureScale = GSVector4(1.0f / 16) / WH.xyxy();
-				//Try to avoid small, common glitches with upscaling. This only takes care of slight
-				//variations however. The bigger ones, where upscaling intruduces pixels with no data
-				//cannot be fixed generally here. (Wild Arms games do this with their text.)
-				if ( multiplier == 2 ) {
-					if		(tw < 17)    {}
-					else if	(tw < 33)    {}
-					else if	(tw < 65)    {}
-					else if	(tw < 129)   {vs_cb.TextureScale.x *= 1.0f - ((float)4 * 0.0001f); }
-					else if	(tw < 257)   {vs_cb.TextureScale.x *= 1.0f - ((float)2 * 0.0001f);}
-					else if	(tw < 513)   {vs_cb.TextureScale.x *= 1.0f - ((float)6 * 0.0001f); }
-					else if	(tw < 1025)  {}
-				
-					if		(th < 17)    {}
-					else if	(th < 33)    {vs_cb.TextureScale.y *= 1.0f - ((float)2 * 0.0001f); } //ar tonelico bg
-					else if	(th < 65)    {}
-					else if	(th < 129)   {vs_cb.TextureScale.y *= 1.0f - ((float)2 * 0.0001f); }
-					else if	(th < 257)   {vs_cb.TextureScale.y *= 1.0f - ((float)2 * 0.0001f); }
-					else if	(th < 513)   {vs_cb.TextureScale.y *= 1.0f - ((float)4 * 0.0001f); }
-					else if	(th < 1025)  {}
-				}
+				//Maybe better?
+				//vs_cb.TextureScale = GSVector4(1.0f / 16) * GSVector4(tex->m_texture->GetScale()).xyxy() / WH.zwzw();
 				ps_sel.fst = 1;
 			}
 
