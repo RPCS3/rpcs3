@@ -108,6 +108,20 @@ s64 Path::GetFileSize( const wxString& path )
 	return (s64)wxFileName::GetSize( path ).GetValue();
 }
 
+
+wxString Path::Normalize( const wxString& src )
+{
+	wxFileName normalize( src );
+	normalize.Normalize();
+	return normalize.GetFullPath();
+}
+
+wxString Path::Normalize( wxDirName src )
+{
+	src.Normalize();
+	return src.ToString();
+}
+
 // Concatenates two pathnames together, inserting delimiters (backslash on win32)
 // as needed! Assumes the 'dest' is allocated to at least g_MaxPath length.
 //

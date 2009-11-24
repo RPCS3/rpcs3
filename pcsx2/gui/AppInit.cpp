@@ -63,7 +63,7 @@ void Pcsx2App::OpenWizardConsole()
 //
 void Pcsx2App::ReadUserModeSettings()
 {
-	wxString cwd( wxGetCwd() );
+	wxString cwd( Path::Normalize( wxGetCwd() ) );
 	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length() );
 
 	wxDirName usrlocaldir( wxStandardPaths::Get().GetUserLocalDataDir() );

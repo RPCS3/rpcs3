@@ -609,6 +609,11 @@ void Threading::WaitEvent::Wait()
 // --------------------------------------------------------------------------------------
 // define some overloads for InterlockedExchanges for commonly used types, like u32 and s32.
 
+__forceinline bool Threading::AtomicBitTestAndReset( volatile u32& bitset, u8 bit )
+{
+	return _interlockedbittestandreset( (volatile long*)& bitset, bit ) != 0;
+}
+
 __forceinline u32 Threading::AtomicExchange( volatile u32& Target, u32 value )
 {
 	return _InterlockedExchange( (volatile long*)&Target, value );

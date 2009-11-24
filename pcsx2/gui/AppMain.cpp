@@ -300,7 +300,9 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		
 		if( result == pxID_CUSTOM )
 		{
-			exit(-5);		// fastest way to kill the process?
+			// fastest way to kill the process!
+			// (note: SIGTERM is a "handled" kill that performs shutdown stuff, which typically juse crashes anyway)
+			wxKill( wxGetProcessId(), wxSIGKILL );
 		}
 		else if( result == wxID_CANCEL )
 		{

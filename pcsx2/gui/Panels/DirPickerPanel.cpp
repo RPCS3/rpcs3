@@ -23,10 +23,7 @@
 
 static wxString GetNormalizedConfigFolder( FoldersEnum_t folderId )
 {
-	const bool isDefault = g_Conf->Folders.IsDefault( folderId );
-	wxDirName normalized( isDefault ? PathDefs::Get(folderId) : g_Conf->Folders[folderId] );
-	normalized.Normalize( wxPATH_NORM_ALL );
-	return normalized.ToString();
+	return Path::Normalize( g_Conf->Folders.IsDefault( folderId ) ? PathDefs::Get(folderId) : g_Conf->Folders[folderId] );
 }
 
 // Pass me TRUE if the default path is to be used, and the DirPickerCtrl disabled from use.
@@ -35,11 +32,10 @@ void Panels::DirPickerPanel::UpdateCheckStatus( bool someNoteworthyBoolean )
 	m_pickerCtrl->Enable( !someNoteworthyBoolean );
 	if( someNoteworthyBoolean )
 	{
-		wxDirName normalized( PathDefs::Get( m_FolderId ) );
-		normalized.Normalize( wxPATH_NORM_ALL );
-		m_pickerCtrl->SetPath( normalized.ToString() );
+		wxString normalized( Path::Normalize( PathDefs::Get( m_FolderId ) ) );
+		m_pickerCtrl->SetPath( normalized );
 
-		wxFileDirPickerEvent event( m_pickerCtrl->GetEventType(), m_pickerCtrl, m_pickerCtrl->GetId(), normalized.ToString() );
+		wxFileDirPickerEvent event( m_pickerCtrl->GetEventType(), m_pickerCtrl, m_pickerCtrl->GetId(), normalized );
 		m_pickerCtrl->GetEventHandler()->ProcessEvent(event);
 	}
 }

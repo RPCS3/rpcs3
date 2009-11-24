@@ -89,9 +89,7 @@ void RecentIsoManager::Add( const wxString& src )
 {
 	if( src.IsEmpty() ) return;
 
-	wxFileName temp( src );
-	temp.Normalize();
-	wxString normalized( temp.GetFullPath() );
+	wxString normalized( Path::Normalize( src ) );
 
 	int cnt = m_Items.size();
 

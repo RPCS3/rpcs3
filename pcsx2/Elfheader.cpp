@@ -613,8 +613,6 @@ void loadElfFile(const wxString& filename)
 //   2 - PS2 CD
 int GetPS2ElfName( wxString& name )
 {
-	char buffer[512];
-
 	try {
 		IsoFSCDVD isofs;
 		IsoFile file( isofs, L"SYSTEM.CNF;1");
@@ -673,6 +671,7 @@ int GetPS2ElfName( wxString& name )
 #ifdef PCSX2_DEVBUILD
 	FILE *fp;
 	int i;
+	char buffer[512];
 
 	fp = fopen("System.map", "r");
 	if( fp == NULL ) return 2;
@@ -686,7 +685,7 @@ int GetPS2ElfName( wxString& name )
 		for (i=2; i<10; i++) buffer[i] = fgetc(fp); buffer[i] = 0;
 		addr = strtoul(buffer, (char**)NULL, 0);
 		fseek(fp, 3, SEEK_CUR);
-		for (i=0; i<g_MaxPath; i++) {
+		for (i=0; i<512; i++) {
 			buffer[i] = fgetc(fp);
 			if (buffer[i] == '\n' || buffer[i] == 0) break;
 		}

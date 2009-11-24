@@ -162,6 +162,8 @@ namespace Threading
 	extern s32 AtomicIncrement( volatile s32& Target );
 	extern s32 AtomicDecrement( volatile s32& Target );
 
+	extern bool AtomicBitTestAndReset( volatile u32& bitset, u8 bit );
+
 	extern void* _AtomicExchangePointer( void * volatile * const target, void* const value );
 	extern void* _AtomicCompareExchangePointer( void * volatile * const target, void* const value, void* const comparand );
 
