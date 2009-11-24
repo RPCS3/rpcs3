@@ -575,7 +575,8 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 			if(vr.w > uv.w + 1) vr.w = uv.w + 1;
 			break;
 		case CLAMP_REGION_REPEAT: // TODO
-				printf("gsdx: CLAMP_REGION_REPEAT not implemented, please report\n");
+			//Xenosaga 2 and 3 use it	
+			//printf("gsdx: CLAMP_REGION_REPEAT not implemented, please report\n");
 			break;
 		default:
 			__assume(0);
