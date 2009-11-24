@@ -173,7 +173,7 @@ static int nSyms = 0;
 
 void disR5900AddSym(u32 addr, const char *name) {
 
-	assert( strlen(name) < 32 );
+    pxAssertDev(strlen(name) < 32, wxsFormat(L"Char length of symbol is more then 31 chars.", strlen(name)));
 
 	if( nSyms+1 >= nSymAlloc )
 	{

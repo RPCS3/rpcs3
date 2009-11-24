@@ -325,7 +325,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 							// readpos has moved past.  Otherwise the ringbuffer execution will stop on
 							// the readpos==writepos condition. >_<
 
-							pxAssertDev( m_RingPos != m_WritePos, "MTGS Synchronization Error -- Premature stoppage detected on ringbutter restart." );
+							pxAssertDev( m_RingPos != m_WritePos, "MTGS Synchronization Error -- Premature stoppage detected on ringbuffer restart." );
 						continue;
 
 						case GS_RINGTYPE_VSYNC:
