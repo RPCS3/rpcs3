@@ -100,7 +100,7 @@ public:
 	volatile u32	m_SignalRingEnable;
 	volatile s32	m_SignalRingPosition;
 
-	int				m_alterFrameFlush;
+	int				m_QueuedFrameCount;
 	u32				m_RingWrapSpot;
 
 	Mutex			m_lock_RingBufferBusy;

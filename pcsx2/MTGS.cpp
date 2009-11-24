@@ -111,7 +111,7 @@ void SysMtgsThread::OnStart()
 	m_packet_size		= 0;
 	m_packet_ringpos	= 0;
 
-	m_alterFrameFlush	= 0;
+	m_QueuedFrameCount	= 0;
 	m_SignalRingEnable	= 0;
 	m_SignalRingPosition= 0;
 	m_RingWrapSpot		= 0;
@@ -152,15 +152,20 @@ void SysMtgsThread::PostVsyncEnd( bool updategs )
 {
 	SendSimplePacket( GS_RINGTYPE_VSYNC, (*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0 );
 	
-	// Alter-frame flush!  Restarts the ringbuffer (wraps) on every other frame.  This is a
+	// Alter-frame flushing!  Restarts the ringbuffer (wraps) on every other frame.  This is a
 	// mandatory feature that prevents the MTGS from queuing more than 2 frames at any time.
-	// (queued frames cause input lag and desynced audio -- bad!).
+	// (queued frames cause input lag and desynced audio -- bad!).  Ring restarts work for this
+	// because they act as sync points where the EE must stall to wait for the GS to catch-up,
+	// and they also allow us to reuse the front of the ringbuffer more often, which should improve
+	// L2 cache performance.
 
-	m_alterFrameFlush ^= 1;
-	if( !m_alterFrameFlush )
+	if( m_QueuedFrameCount > 0 )
 		RestartRingbuffer();
 	else
+	{
+		m_QueuedFrameCount++;
 		SetEvent();
+	}
 }
 
 struct PacketTagType
@@ -445,7 +450,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 			m_sem_OnRingReset.Post();
 		}
 
-		//Console.Warning( "(MTGS Thread) Nothing to do!!" );
+		//Console.Warning( "(MTGS Thread) Nothing to do!  ringpos=0x%06x", m_RingPos );
 	}
 }
 
@@ -547,7 +552,7 @@ void SysMtgsThread::SendDataPacket()
 	{
 		WaitGS();
 	}
-	else if( m_RingBufferIsBusy )
+	else if( !m_RingBufferIsBusy )
 	{
 		m_CopyDataTally += m_packet_size;
 		if( m_CopyDataTally > 0x2000 ) SetEvent();
@@ -672,14 +677,14 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 				pxAssertDev( m_SignalRingEnable == 0, "MTGS Thread Synchronization Error" );
 				m_SignalRingPosition = somedone;
 
-				//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Sleep!\twrapspot=0x%06x, ringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", m_RingWrapSpot, readpos, writepos, m_SignalRingPosition );
+				//Console.WriteLn( Color_Blue, "(EEcore Sleep) GenStall \tringpos=0x%06x, writepos=0x%06x, wrapspot=0x%06x, signalpos=0x%06x", readpos, writepos, m_RingWrapSpot, m_SignalRingPosition );
 
 				do {
 					AtomicExchange( m_SignalRingEnable, 1 );
 					SetEvent();
 					m_sem_OnRingReset.WaitWithoutYield();
 					readpos = volatize(m_RingPos);
-					//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Post-sleep Report!\tringpos=0x%06x", readpos );
+					//Console.WriteLn( Color_Blue, "(EEcore Awake) Report!\tringpos=0x%06x", readpos );
 				} while( (writepos < readpos) && (writepos+size >= readpos) );
 
 				pxAssertDev( m_SignalRingPosition <= 0, "MTGS Thread Synchronization Error" );
@@ -705,7 +710,6 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		//Console.WriteLn( "MTGS > Ringbuffer Got Filled!");
 		RestartRingbuffer( size );
 		writepos = m_WritePos;
-		m_alterFrameFlush = 0;
 	}
     else	// always true - if( writepos + size == MTGS_RINGBUFFEREND )
 	{
@@ -718,7 +722,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		//Console.WriteLn( "MTGS > Perfect Fit!\tringpos=0x%06x, writepos=0x%06x", readpos, writepos );
 		if( readpos > writepos || readpos == 0 )
 		{
-			uint totalAccum	= (RingBufferSize - readpos) + writepos;
+			uint totalAccum	= (readpos == 0) ? RingBufferSize : ((m_RingWrapSpot - readpos) + writepos);
 			uint somedone	= totalAccum / 4;
 			if( somedone < size+1 ) somedone = size + 1;
 
@@ -752,7 +756,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 			}
 		}
 		
-		m_alterFrameFlush = 0;
+		m_QueuedFrameCount = 0;
 		m_RingWrapSpot = RingBufferSize;
     }
 
@@ -791,19 +795,25 @@ void SysMtgsThread::RestartRingbuffer( uint packsize )
 		// be the act of skipping PAST readpos).  Stall until it loops around to the
 		// beginning of the buffer, and past the size of our packet allocation.
 
-		uint somedone = (m_RingWrapSpot - readpos) + packsize + 1;
+		uint somedone;
+		
+		if( readpos > m_WritePos )
+			somedone = (m_RingWrapSpot - readpos) + packsize + 1;
+		else
+			somedone = (packsize + 1) - readpos;
 
 		if( somedone > 0x80 )
 		{
 			m_SignalRingPosition = somedone;
-			//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Restart Sleep!\t\twrapspot=0x%06x, ringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", m_RingWrapSpot, readpos, m_WritePos, m_SignalRingPosition );
+			//Console.WriteLn( Color_Blue, "(EEcore Sleep) Restart!\tringpos=0x%06x, writepos=0x%06x, wrapspot=0x%06x, signalpos=0x%06x",
+			//	readpos, m_WritePos, m_RingWrapSpot, m_SignalRingPosition );
 
 			do {
 				AtomicExchange( m_SignalRingEnable, 1 );
 				SetEvent();
 				m_sem_OnRingReset.WaitWithoutYield();
 				readpos = volatize(m_RingPos);
-				//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Restart Post-sleep Report!\tringpos=0x%06x", readpos );
+				//Console.WriteLn( Color_Blue, "(EEcore Awake) Report!\tringpos=0x%06x", readpos );
 			} while( (readpos > m_WritePos) || (readpos <= thefuture) );
 		}
 		else
@@ -822,6 +832,7 @@ void SysMtgsThread::RestartRingbuffer( uint packsize )
 
 	m_RingWrapSpot = m_WritePos;
 	m_WritePos = 0;
+	m_QueuedFrameCount = 0;
 
 	if( EmuConfig.Video.SynchronousMTGS )
 		WaitGS();
@@ -841,7 +852,7 @@ __forceinline uint SysMtgsThread::_PrepForSimplePacket()
     future_writepos &= RingBufferMask;
     if( future_writepos == 0 )
     {
-		m_alterFrameFlush = 0;
+		m_QueuedFrameCount = 0;
 		m_RingWrapSpot = RingBufferSize;
 	}
 
