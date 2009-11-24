@@ -426,7 +426,6 @@ void SysMtgsThread::ExecuteTaskInThread()
 				if( m_SignalRingPosition <= 0 )
 				{
 					// Make sure to post the signal after the m_RingPos has been updated...
-					m_RingPos = newringpos;
 					AtomicExchange( m_SignalRingEnable, 0 );
 					m_sem_OnRingReset.Post();
 					continue;
@@ -515,6 +514,8 @@ void SysMtgsThread::SendDataPacket()
 	uint temp = m_packet_ringpos + m_packet_size;
 	pxAssert( temp <= RingBufferSize );
 	temp &= RingBufferMask;
+	if( temp == 0 )
+		m_RingWrapSpot = m_WritePos;
 
 	if( IsDebugBuild )
 	{
@@ -698,7 +699,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		// buffer (it's a lot easier than trying to wrap the packet around the end of the
 		// buffer).
 
-		Console.WriteLn( "MTGS > Ringbuffer Got Filled!");
+		//Console.WriteLn( "MTGS > Ringbuffer Got Filled!");
 		RestartRingbuffer( size );
 		writepos = m_WritePos;
 	}
@@ -709,12 +710,11 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		// base of the ringbuffer (otherwise the buffer will stop when the writepos is
 		// wrapped around to zero later-on in SendDataPacket).
 
-		Console.WriteLn( "MTGS > Perfect Fit!");
-
 		uint readpos = volatize(m_RingPos);
-		if( readpos > writepos )
+		//Console.WriteLn( "MTGS > Perfect Fit!\tringpos=0x%06x, writepos=0x%06x", readpos, writepos );
+		if( readpos > writepos || readpos == 0 )
 		{
-			uint totalAccum	= (m_RingWrapSpot - readpos) + writepos;
+			uint totalAccum	= (RingBufferSize - readpos) + writepos;
 			uint somedone	= totalAccum / 4;
 			if( somedone < size+1 ) somedone = size + 1;
 
@@ -732,13 +732,14 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 					SetEvent();
 					m_sem_OnRingReset.WaitWithoutYield();
 					readpos = volatize(m_RingPos);
-					//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Perfect Post-sleep Report!\tringpos=0x%06x", readpos );
+					Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Perfect Post-sleep Report!\tringpos=0x%06x", readpos );
 				} while( (writepos < readpos) || (readpos==0) );
 
 				pxAssertDev( m_SignalRingPosition <= 0, "MTGS Thread Synchronization Error" );
 			}
 			else
 			{
+				//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Perfect Spin!" );
 				SetEvent();
 				do {
 					SpinWait();
@@ -768,7 +769,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 void SysMtgsThread::RestartRingbuffer( uint packsize )
 {
 	if( m_WritePos == 0 ) return;
-	const uint thefuture = 0;
+	const uint thefuture = packsize;
 
 	//Console.WriteLn( Color_Magenta, "**** Ringbuffer Restart!!" );
 	// Always kick the MTGS into action for a ringbuffer restart.
@@ -776,12 +777,12 @@ void SysMtgsThread::RestartRingbuffer( uint packsize )
 
 	uint readpos = volatize(m_RingPos);
 
-	if( (readpos > m_WritePos) || (readpos == thefuture) )
+	if( (readpos > m_WritePos) || (readpos <= thefuture) )
 	{
 		// We have to be careful not to leapfrog our read-position, which would happen if
 		// it's greater than the current write position (since wrapping writepos to 0 would
 		// be the act of skipping PAST readpos).  Stall until it loops around to the
-		// beginning of the buffer.
+		// beginning of the buffer, and past the size of our packet allocation.
 
 		m_SignalRingPosition = (readpos - m_WritePos) + packsize + 1;
 
@@ -790,7 +791,7 @@ void SysMtgsThread::RestartRingbuffer( uint packsize )
 			AtomicExchange( m_SignalRingEnable, 1 );
 			m_sem_OnRingReset.WaitWithoutYield();
 			readpos = volatize(m_RingPos);
-		} while( (readpos > m_WritePos) || (readpos == thefuture) );
+		} while( (readpos > m_WritePos) || (readpos <= thefuture) );
 	}
 
 	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];

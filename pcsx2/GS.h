@@ -145,7 +145,7 @@ public:
 	void WaitForOpen();
 	void Freeze( int mode, MTGS_FreezeData& data );
 
-	void RestartRingbuffer( uint packsize=1 );
+	void RestartRingbuffer( uint packsize=0 );
 	void SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 );
 	void SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 );
 
