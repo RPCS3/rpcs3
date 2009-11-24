@@ -226,7 +226,7 @@ bool GSRenderer::Merge(int field)
 		GSVector4 scale = GSVector4(tex[i]->GetScale()).xyxy();
 
 		src[i] = GSVector4(r) * scale / GSVector4(tex[i]->GetSize()).xyxy();
-		src[i] += GSVector4(0.001f,0.001f,-0.001f,-0.001f); // crop a few of the outermost pixels, which are often buggy
+		//src[i] += GSVector4(0.001f,0.001f,-0.001f,-0.001f); // crop a few of the outermost pixels, which are often buggy. Note: causes blur
 
 		GSVector2 o(0, 0);
 		
@@ -575,6 +575,7 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 			if(vr.w > uv.w + 1) vr.w = uv.w + 1;
 			break;
 		case CLAMP_REGION_REPEAT: // TODO
+				printf("gsdx: CLAMP_REGION_REPEAT not implemented, please report\n");
 			break;
 		default:
 			__assume(0);
