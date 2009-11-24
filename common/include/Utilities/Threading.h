@@ -158,7 +158,8 @@ namespace Threading
 	extern u32 AtomicIncrement( volatile u32& Target );
 	extern u32 AtomicDecrement( volatile u32& Target );
 	extern s32 AtomicExchange( volatile s32& Target, s32 value );
-	extern s32 AtomicExchangeAdd( volatile s32& Target, u32 value );
+	extern s32 AtomicExchangeAdd( volatile s32& Target, s32 value );
+	extern s32 AtomicExchangeSub( volatile s32& Target, s32 value );
 	extern s32 AtomicIncrement( volatile s32& Target );
 	extern s32 AtomicDecrement( volatile s32& Target );
 

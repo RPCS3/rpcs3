@@ -639,9 +639,14 @@ __forceinline s32 Threading::AtomicExchange( volatile s32& Target, s32 value )
 	return _InterlockedExchange( (volatile long*)&Target, value );
 }
 
-__forceinline s32 Threading::AtomicExchangeAdd( volatile s32& Target, u32 value )
+__forceinline s32 Threading::AtomicExchangeAdd( volatile s32& Target, s32 value )
 {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
+}
+
+__forceinline s32 Threading::AtomicExchangeSub( volatile s32& Target, s32 value )
+{
+	return _InterlockedExchangeAdd( (volatile long*)&Target, -value );
 }
 
 __forceinline s32 Threading::AtomicIncrement( volatile s32& Target )
