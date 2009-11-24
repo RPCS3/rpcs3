@@ -320,12 +320,6 @@ void SysMtgsThread::ExecuteTaskInThread()
 						case GS_RINGTYPE_RESTART:
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Restart" );
 							m_RingPos = 0;
-
-							// It's the EEcore's job to make sure the writepos is set to 0 only AFTER the
-							// readpos has moved past.  Otherwise the ringbuffer execution will stop on
-							// the readpos==writepos condition. >_<
-
-							pxAssertDev( m_RingPos != m_WritePos, "MTGS Synchronization Error -- Premature stoppage detected on ringbuffer restart." );
 						continue;
 
 						case GS_RINGTYPE_VSYNC:
@@ -704,6 +698,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		// buffer (it's a lot easier than trying to wrap the packet around the end of the
 		// buffer).
 
+		Console.WriteLn( "MTGS > Ringbuffer Got Filled!");
 		RestartRingbuffer( size );
 		writepos = m_WritePos;
 	}
@@ -714,7 +709,7 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		// base of the ringbuffer (otherwise the buffer will stop when the writepos is
 		// wrapped around to zero later-on in SendDataPacket).
 
-		//Console.WriteLn( "MTGS > Perfect Fit!");
+		Console.WriteLn( "MTGS > Perfect Fit!");
 
 		uint readpos = volatize(m_RingPos);
 		if( readpos > writepos )
@@ -775,25 +770,27 @@ void SysMtgsThread::RestartRingbuffer( uint packsize )
 	if( m_WritePos == 0 ) return;
 	const uint thefuture = 0;
 
+	//Console.WriteLn( Color_Magenta, "**** Ringbuffer Restart!!" );
 	// Always kick the MTGS into action for a ringbuffer restart.
 	SetEvent();
 
 	uint readpos = volatize(m_RingPos);
-	
-	if( readpos > m_WritePos )
+
+	if( (readpos > m_WritePos) || (readpos == thefuture) )
 	{
 		// We have to be careful not to leapfrog our read-position, which would happen if
 		// it's greater than the current write position (since wrapping writepos to 0 would
 		// be the act of skipping PAST readpos).  Stall until it loops around to the
 		// beginning of the buffer.
 
-		m_SignalRingPosition = (readpos - m_WritePos) + packsize;
+		m_SignalRingPosition = (readpos - m_WritePos) + packsize + 1;
 
 		do {
 			SetEvent();
 			AtomicExchange( m_SignalRingEnable, 1 );
 			m_sem_OnRingReset.WaitWithoutYield();
-		} while( volatize(m_RingPos) > m_WritePos );
+			readpos = volatize(m_RingPos);
+		} while( (readpos > m_WritePos) || (readpos == thefuture) );
 	}
 
 	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];
