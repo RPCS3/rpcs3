@@ -91,35 +91,37 @@ class SysMtgsThread : public SysThreadBase
 {
 	typedef SysThreadBase _parent;
 
-protected:
-	// note: when g_pGSRingPos == g_pGSWritePos, the fifo is empty
-	uint m_RingPos;		// cur pos gs is reading from
-	uint m_WritePos;	// cur pos ee thread is writing to
+public:
+	// note: when m_RingPos == m_WritePos, the fifo is empty
+	uint			m_RingPos;			// cur pos gs is reading from
+	uint			m_WritePos;			// cur pos ee thread is writing to
 
-	Semaphore m_sem_OpenDone;
-	Mutex m_lock_RingBufferBusy;
-	Mutex m_lock_RingRestart;
+	volatile bool	m_RingBufferIsBusy;
+	volatile u32	m_SignalRingEnable;
+	volatile s32	m_SignalRingPosition;
+
+	int				m_alterFrameFlush;
+	u32				m_RingWrapSpot;
+
+	Mutex			m_lock_RingBufferBusy;
+	Semaphore		m_sem_OnRingReset;
 
 	// used to keep multiple threads from sending packets to the ringbuffer concurrently.
-	MutexLockRecursive m_PacketLocker;
+	// (currently not used or implemented -- is a planned feature for a future threaded VU1)
+	//MutexLockRecursive m_PacketLocker;
 
 	// Used to delay the sending of events.  Performance is better if the ringbuffer
 	// has more than one command in it when the thread is kicked.
-	int m_CopyCommandTally;
-	int m_CopyDataTally;
-	//volatile bool m_RingBufferIsBusy;
-	volatile bool m_PluginOpened;
+	int				m_CopyDataTally;
 
-	// Counts the number of vsync frames queued in the MTGS ringbuffer.  This is used to
-	// throttle the number of frames allowed to be rendered ahead of time for games that
-	// run very fast and have little or no ringbuffer overhead (typically opening menus)
-	//volatile s32 m_QueuedFrames;
+	Semaphore		m_sem_OpenDone;
+	volatile bool	m_PluginOpened;
 
 	// These vars maintain instance data for sending Data Packets.
 	// Only one data packet can be constructed and uploaded at a time.
 
-	uint m_packet_size;		// size of the packet (data only, ie. not including the 16 byte command!)
-	uint m_packet_ringpos;	// index of the data location in the ringbuffer.
+	uint			m_packet_size;		// size of the packet (data only, ie. not including the 16 byte command!)
+	uint			m_packet_ringpos;	// index of the data location in the ringbuffer.
 
 #ifdef RINGBUF_DEBUG_STACK
 	Threading::Mutex m_lock_Stack;
@@ -143,7 +145,7 @@ public:
 	void WaitForOpen();
 	void Freeze( int mode, MTGS_FreezeData& data );
 
-	void RestartRingbuffer();
+	void RestartRingbuffer( uint packsize=1 );
 	void SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 );
 	void SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 );
 
@@ -162,11 +164,6 @@ protected:
 	void OnPauseInThread() {}
 	void OnResumeInThread( bool IsSuspended );
 	void OnCleanupInThread();
-
-	// Sets the Event flag and issues a timeslice on the EEcore thread (ie, an efficient
-	// method of kicking the MTGS thread into action once there's a sizable chunk of work
-	// accumulated).
-	void PrepEventWait();
 
 	// Used internally by SendSimplePacket type functions
 	uint _PrepForSimplePacket();

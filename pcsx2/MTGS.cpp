@@ -103,18 +103,19 @@ SysMtgsThread::SysMtgsThread() :
 
 void SysMtgsThread::OnStart()
 {
-	m_PluginOpened	= false;
+	m_PluginOpened		= false;
 
-	m_RingPos		= 0;
-	m_WritePos		= 0;
-
-	//m_RingBufferIsBusy	= false;
-
-	//m_QueuedFrames		= 0;
+	m_RingPos			= 0;
+	m_WritePos			= 0;
+	m_RingBufferIsBusy	= false;
 	m_packet_size		= 0;
 	m_packet_ringpos	= 0;
 
-	m_CopyCommandTally	= 0;
+	m_alterFrameFlush	= 0;
+	m_SignalRingEnable	= 0;
+	m_SignalRingPosition= 0;
+	m_RingWrapSpot		= 0;
+
 	m_CopyDataTally		= 0;
 
 	_parent::OnStart();
@@ -147,17 +148,19 @@ void SysMtgsThread::ResetGS()
 	GIFPath_Reset();
 }
 
-static int alterFrameFlush = 0;
-
 void SysMtgsThread::PostVsyncEnd( bool updategs )
 {
 	SendSimplePacket( GS_RINGTYPE_VSYNC, (*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0 );
-	if( alterFrameFlush || (m_WritePos > (RingBufferSize/3)) )
+	
+	// Alter-frame flush!  Restarts the ringbuffer (wraps) on every other frame.  This is a
+	// mandatory feature that prevents the MTGS from queuing more than 2 frames at any time.
+	// (queued frames cause input lag and desynced audio -- bad!).
+
+	m_alterFrameFlush ^= 1;
+	if( m_alterFrameFlush )
 		RestartRingbuffer();
 	else
 		SetEvent();
-
-	alterFrameFlush ^= 1;
 }
 
 struct PacketTagType
@@ -203,6 +206,25 @@ void SysMtgsThread::OpenPlugin()
 	GSsetGameCRC( ElfCRC, 0 );
 }
 
+class RingBufferLock : public ScopedLock
+{
+protected:
+	SysMtgsThread&		m_mtgs;
+
+public:
+	RingBufferLock( SysMtgsThread& mtgs )
+		: ScopedLock( mtgs.m_lock_RingBufferBusy )
+		, m_mtgs( mtgs )
+	{
+		m_mtgs.m_RingBufferIsBusy = true;
+	}
+	
+	virtual ~RingBufferLock() throw()
+	{
+		m_mtgs.m_RingBufferIsBusy = false;
+	}
+};
+
 void SysMtgsThread::ExecuteTaskInThread()
 {
 	tls_mtgsThread = this;
@@ -220,7 +242,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 		m_sem_event.WaitWithoutYield();
 		StateCheckInThread();
 
-		ScopedLock busy( m_lock_RingBufferBusy );
+		RingBufferLock busy( *this );
 
 		// note: m_RingPos is intentionally not volatile, because it should only
 		// ever be modified by this thread.
@@ -298,8 +320,13 @@ void SysMtgsThread::ExecuteTaskInThread()
 						case GS_RINGTYPE_RESTART:
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Restart" );
 							m_RingPos = 0;
-						continue;
 
+							// It's the EEcore's job to make sure the writepos is set to 0 only AFTER the
+							// readpos has moved past.  Otherwise the ringbuffer execution will stop on
+							// the readpos==writepos condition. >_<
+
+							pxAssertDev( m_RingPos != m_WritePos, "MTGS Synchronization Error -- Premature stoppage detected on ringbutter restart." );
+						continue;
 
 						case GS_RINGTYPE_VSYNC:
 						{
@@ -396,8 +423,29 @@ void SysMtgsThread::ExecuteTaskInThread()
 
 			uint newringpos = m_RingPos + ringposinc;
 			pxAssert( newringpos <= RingBufferSize );
-			newringpos &= RingBufferMask;
-			m_RingPos = newringpos;
+			m_RingPos = newringpos & RingBufferMask;
+
+			if( m_SignalRingEnable != 0 )
+			{
+				// The EEcore has requested a signal after some amount of processed data.
+				m_SignalRingPosition -= ringposinc;
+				if( m_SignalRingPosition <= 0 )
+				{
+					// Make sure to post the signal after the m_RingPos has been updated...
+					m_RingPos = newringpos;
+					AtomicExchange( m_SignalRingEnable, 0 );
+					m_sem_OnRingReset.Post();
+					continue;
+				}
+			}
+		}
+
+		// Safety valve in case standard signals fail for some reason -- this ensures the EEcore
+		// won't sleep the eternity, even if SignalRingPosition didn't reach 0 for some reason.
+		if( AtomicExchange( m_SignalRingEnable, 0 ) != 0 )
+		{
+			AtomicExchange( m_SignalRingPosition, 0 );
+			m_sem_OnRingReset.Post();
 		}
 	}
 }
@@ -442,7 +490,7 @@ void SysMtgsThread::WaitGS()
 
 	if( volatize(m_RingPos) != m_WritePos )
 	{
-		PrepEventWait();
+		SetEvent();
 		do {
 			m_lock_RingBufferBusy.Wait();
 		} while( volatize(m_RingPos) != m_WritePos );
@@ -453,16 +501,10 @@ void SysMtgsThread::WaitGS()
 // For use in loops that wait on the GS thread to do certain things.
 void SysMtgsThread::SetEvent()
 {
-	m_sem_event.Post();
-	m_CopyCommandTally = 0;
-	m_CopyDataTally = 0;
-}
+	if( !m_RingBufferIsBusy )
+		m_sem_event.Post();
 
-void SysMtgsThread::PrepEventWait()
-{
-	//Console.Warning( "MTGS Stall!  EE waits for nothing! ... except your GPU sometimes." );
-	SetEvent();
-	Timeslice();
+	m_CopyDataTally = 0;
 }
 
 u8* SysMtgsThread::GetDataPacketPtr() const
@@ -502,12 +544,17 @@ void SysMtgsThread::SendDataPacket()
 
 	m_WritePos = temp;
 
-	m_packet_size = 0;
-
 	if( EmuConfig.Video.SynchronousMTGS )
 	{
 		WaitGS();
 	}
+	else if( m_RingBufferIsBusy )
+	{
+		m_CopyDataTally += m_packet_size;
+		if( m_CopyDataTally > 0x2000 ) SetEvent();
+	}
+
+	m_packet_size = 0;
 
 	//m_PacketLocker.Release();
 }
@@ -580,11 +627,9 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		ringtx_s_max=0;
 	}
 #endif
-	// Note on volatiles: g_pGSWritePos is not modified by the GS thread,
-	// so there's no need to use volatile reads here.  We still have to use
-	// interlocked exchanges when we modify it, however, since the GS thread
-	// is reading it.
-
+	// Note on volatiles: m_WritePos is not modified by the GS thread, so there's no need
+	// to use volatile reads here.  We do cache it though, since we know it never changes,
+	// except for calls to RingbufferRestert() -- handled below.
 	uint writepos = m_WritePos;
 
 	// Checks if a previous copy was started without an accompanying call to GSRINGBUF_DONECOPY
@@ -604,19 +649,50 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 		// But if not then we need to make sure the readpos is outside the scope of
 		// the block about to be written (writepos + size)
 
-		if( writepos < volatize(m_RingPos) )
+		uint readpos = volatize(m_RingPos);
+		if( (writepos < readpos) && (writepos+size >= readpos) )
 		{
-			// writepos is behind the readpos, so we need to wait until
-			// readpos is out past the end of the future write pos, or until it wraps
-			// around (in which case writepos will be >= readpos)
+			pxAssertDev( m_SignalRingEnable == 0, "MTGS Thread Synchronization Error" );
 
-			PrepEventWait();
-			while( true )
+			// writepos is behind the readpos and will overlap it if we commit the data,
+			// so we need to wait until readpos is out past the end of the future write pos,
+			// or until it wraps around (in which case writepos will be >= readpos).
+
+			// Ideally though we want to wait longer, because if we just toss in this packet
+			// the next packet will likely stall up too.  So lets set a condition for the MTGS
+			// thread to wake up the EE once there's a sizable chunk of the ringbuffer emptied.
+
+			uint totalAccum	= (m_RingWrapSpot - readpos) + writepos;
+			uint somedone	= (totalAccum / 4);
+			if( somedone < size+1 ) somedone = size + 1;
+
+			// FMV Optimization: FMVs typically send *very* little data to the GS, in some cases
+			// every other frame is nothing more than a page swap.  Sleeping the EEcore is a
+			// waste of time, and we get better results using a spinwait.
+
+			if( somedone > 0x80 )
 			{
-				uint readpos = volatize(m_RingPos);
-				if( writepos >= readpos ) break;
-				if( writepos+size < readpos ) break;
-				SpinWait();
+				m_SignalRingPosition = somedone;
+
+				//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Sleep!\twrapspot=0x%06x, ringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", m_RingWrapSpot, readpos, writepos, m_SignalRingPosition );
+
+				do {
+					AtomicExchange( m_SignalRingEnable, 1 );
+					SetEvent();
+					m_sem_OnRingReset.WaitWithoutYield();
+					readpos = volatize(m_RingPos);
+					//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Post-sleep Report!\tringpos=0x%06x", readpos );
+				} while( (writepos < readpos) && (writepos+size >= readpos) );
+
+				pxAssertDev( m_SignalRingPosition <= 0, "MTGS Thread Synchronization Error" );
+			}
+			else
+			{
+				SetEvent();
+				do {
+					SpinWait();
+					readpos = volatize(m_RingPos);
+				} while( (writepos < readpos) && (writepos+size >= readpos) );
 			}
 		}
 	}
@@ -624,44 +700,56 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 	{
 		pxAssert( writepos != 0 );
 	
-		// If the incoming packet doesn't fit, then start over from
-		// the start of the ring buffer (it's a lot easier than trying
-		// to wrap the packet around the end of the buffer).
+		// If the incoming packet doesn't fit, then start over from the start of the ring
+		// buffer (it's a lot easier than trying to wrap the packet around the end of the
+		// buffer).
 
-		RestartRingbuffer();
+		RestartRingbuffer( size );
 		writepos = m_WritePos;
-
-		// stall until the read position is past the end of our incoming block,
-		// or until it reaches the current write position (signals an empty buffer).
-		while( true )
-		{
-			uint readpos = volatize(m_RingPos);
-
-			if( readpos == m_WritePos ) break;
-			if( m_WritePos+size < readpos ) break;
-
-			SpinWait();
-		}
 	}
     else	// always true - if( writepos + size == MTGS_RINGBUFFEREND )
 	{
 		// Yay.  Perfect fit.  What are the odds?
+		// Copy is ready so long as readpos is less than writepos and *not* equal to the
+		// base of the ringbuffer (otherwise the buffer will stop when the writepos is
+		// wrapped around to zero later-on in SendDataPacket).
+
 		//Console.WriteLn( "MTGS > Perfect Fit!");
 
-		PrepEventWait();
-		while( true )
+		uint readpos = volatize(m_RingPos);
+		if( readpos > writepos )
 		{
-			uint readpos = volatize(m_RingPos);
+			uint totalAccum	= (m_RingWrapSpot - readpos) + writepos;
+			uint somedone	= totalAccum / 4;
+			if( somedone < size+1 ) somedone = size + 1;
 
-			// stop waiting if the buffer is empty!
-			if( writepos == readpos ) break;
+			// FMV Optimization: (see above) This condition of a perfect fit is so rare that optimizing
+			// for it is pointless -- but it was also mindlessly simple copy-paste.  So there. :p
 
-			// Copy is ready so long as readpos is less than writepos and *not*
-			// equal to the base of the ringbuffer (otherwise the buffer will stop
-			// when the writepos is wrapped around to zero later-on in SendDataPacket)
-			if( readpos < writepos && readpos != 0 ) break;
+			if( somedone > 0x80 )
+			{
+				m_SignalRingPosition = somedone;
 
-			SpinWait();
+				//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Perfect Sleep!\twrapspot=0x%06x, ringpos=0x%06x, writepos=0x%06x, signalpos=0x%06x", m_RingWrapSpot, readpos, writepos, m_SignalRingPosition );
+
+				do {
+					AtomicExchange( m_SignalRingEnable, 1 );
+					SetEvent();
+					m_sem_OnRingReset.WaitWithoutYield();
+					readpos = volatize(m_RingPos);
+					//Console.WriteLn( Color_Blue, "(MTGS Sync) EEcore Perfect Post-sleep Report!\tringpos=0x%06x", readpos );
+				} while( (writepos < readpos) || (readpos==0) );
+
+				pxAssertDev( m_SignalRingPosition <= 0, "MTGS Thread Synchronization Error" );
+			}
+			else
+			{
+				SetEvent();
+				do {
+					SpinWait();
+					readpos = volatize(m_RingPos);
+				} while( (writepos < readpos) || (readpos==0) );
+			}
 		}
     }
 
@@ -682,6 +770,43 @@ int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size
 	return m_packet_size;
 }
 
+void SysMtgsThread::RestartRingbuffer( uint packsize )
+{
+	if( m_WritePos == 0 ) return;
+	const uint thefuture = 0;
+
+	// Always kick the MTGS into action for a ringbuffer restart.
+	SetEvent();
+
+	uint readpos = volatize(m_RingPos);
+	
+	if( readpos > m_WritePos )
+	{
+		// We have to be careful not to leapfrog our read-position, which would happen if
+		// it's greater than the current write position (since wrapping writepos to 0 would
+		// be the act of skipping PAST readpos).  Stall until it loops around to the
+		// beginning of the buffer.
+
+		m_SignalRingPosition = (readpos - m_WritePos) + packsize;
+
+		do {
+			SetEvent();
+			AtomicExchange( m_SignalRingEnable, 1 );
+			m_sem_OnRingReset.WaitWithoutYield();
+		} while( volatize(m_RingPos) > m_WritePos );
+	}
+
+	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];
+
+	tag.command = GS_RINGTYPE_RESTART;
+
+	m_RingWrapSpot = m_WritePos;
+	m_WritePos = 0;
+
+	if( EmuConfig.Video.SynchronousMTGS )
+		WaitGS();
+}
+
 __forceinline uint SysMtgsThread::_PrepForSimplePacket()
 {
 #ifdef RINGBUF_DEBUG_STACK
@@ -694,12 +819,15 @@ __forceinline uint SysMtgsThread::_PrepForSimplePacket()
 	pxAssert( future_writepos <= RingBufferSize );
 
     future_writepos &= RingBufferMask;
+    if( future_writepos == 0 )
+		m_RingWrapSpot = m_WritePos;
 
+	// FIXME: Optimize this using m_SignalRingEnable and friends!
 	// The ringbuffer read pos is blocking the future write position, so stall out
 	// until the read position has moved.
 	if( future_writepos == volatize(m_RingPos) )
 	{
-		PrepEventWait();
+		SetEvent();
 		do {
 			SpinWait();
 		} while( future_writepos == volatize(m_RingPos) );
@@ -712,67 +840,11 @@ __forceinline void SysMtgsThread::_FinishSimplePacket( uint future_writepos )
 {
 	pxAssert( future_writepos != volatize(m_RingPos) );
 	m_WritePos = future_writepos;
-	
-	if( EmuConfig.Video.SynchronousMTGS )
-		WaitGS();
-}
-
-// TODO : These will be moved to the mtgs class once I solidify the new synch method.
-Semaphore	m_sem_OnRingReset;
-u32			m_SignalRingReset;
-
-void SysMtgsThread::RestartRingbuffer()
-{
-	if( m_WritePos == 0 ) return;
-	const uint thefuture = 0;
-
-	// We have to be careful not to leapfrog our read-position, which would happen if
-	// it's greater than the current write position (since wrapping writepos to 0 would
-	// be the act of skipping PAST readpos).  Stall until it loops around to the
-	// beginning of the buffer
-
-	// TODO : Implement this using a mutex/semaphore signal for when the ring buffer has
-	// wrapped around from 0. ...which should end up looking something like this:
-
-	// note: the boolean for signalling ring resets is to prevent both frivilous posting
-	// to the semapore in the MTGS thread, and to avoid having accumulations of large 
-	// numbers of signals in the semaphore that would have to be unwound here.
-	
-	/*AtomicExchange( m_SignalRingReset, true );
-	uint readpos = volatize(m_RingPos);
-	while( readpos >= m_WritePos || readpos == thefuture )
-		m_sem_OnRingReset().Wait();
-	AtomicExchange( m_SignalRingReset, false );*/
-
-	PrepEventWait();
-	while( true )
-	{
-		uint readpos = volatize(m_RingPos);
-
-		// is the buffer empty?
-		if( readpos == m_WritePos ) break;
-
-		// Also: Wait for the readpos to go past the start of the buffer (which is our
-		// 'future' write position), otherwise it'll stop dead in its tracks when we set
-		// the new write position below.  (readpos == writepos is a "stop" condition).
-		if( (readpos < m_WritePos) && (readpos != thefuture) ) break;
-
-		SpinWait();
-	}
-
-	PacketTagType& tag = (PacketTagType&)RingBuffer[m_WritePos];
-
-	tag.command = GS_RINGTYPE_RESTART;
-	//tag.data[0] = data0;
-	//tag.data[1] = data1;
-	//tag.data[2] = data2;
-
-	SetEvent();
-
-	m_WritePos = 0;
 
 	if( EmuConfig.Video.SynchronousMTGS )
 		WaitGS();
+	else
+		++m_CopyDataTally;
 }
 
 void SysMtgsThread::SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 )
