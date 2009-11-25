@@ -123,9 +123,11 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 	if( SysHasValidState() )
 	{
-		bool confirmed = IssueConfirmation( this, L"BootCdvd:ConfirmReset", ConfButtons().Yes().Cancel(),
+		ExtensibleConfirmation dialog( this, ConfButtons().Yes().Cancel(),
 			_("Confirm PS2 Reset"), GetMsg_ConfirmSysReset()
-		) != wxID_CANCEL;
+		);
+		
+		bool confirmed = (IssueConfirmation( dialog, L"BootCdvd:ConfirmReset" ) != wxID_CANCEL);
 
 		if( !confirmed )
 		{

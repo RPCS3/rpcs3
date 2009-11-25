@@ -99,15 +99,29 @@ wxSizerFlags pxStretchType::Apply( wxSizerFlags flags ) const
 	return flags;
 }
 
-wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxAlignmentType align )
+wxSizerFlags operator , ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
 {
-	return align.Apply( _flgs );
+	//return align.Apply( _flgs );
+	wxSizerFlags retval;
+	
+	uint allflags = (_flgs.GetFlags() | _flgs2.GetFlags());
+
+	retval.Align( allflags & wxALIGN_MASK );
+	if( allflags & wxEXPAND ) retval.Expand();
+	if( allflags & wxSHAPED ) retval.Shaped();
+	if( allflags & wxFIXED_MINSIZE ) retval.FixedMinSize();
+	if( allflags & wxRESERVE_SPACE_EVEN_IF_HIDDEN ) retval.ReserveSpaceEvenIfHidden();
+	
+	// Compounding borders is probably a fair approach:
+	retval.Border( allflags & wxALL, _flgs.GetBorderInPixels() + _flgs2.GetBorderInPixels() );
+
+	return retval;
 }
 
-wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch )
+/*wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch )
 {
 	return stretch.Apply( _flgs );
-}
+}*/
 
 
 void operator+=( wxSizer& target, wxWindow* src )

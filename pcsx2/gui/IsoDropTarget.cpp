@@ -69,11 +69,13 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		bool confirmed = true;
 		if( SysHasValidState() )
 		{
-			confirmed = Dialogs::IssueConfirmation( m_WindowBound, L"DragDrop:BootELF", ConfButtons().Reset().Cancel(),
+			Dialogs::ExtensibleConfirmation dialog( m_WindowBound, ConfButtons().Reset().Cancel(),
 				_("Confirm PS2 Reset"),
 				_("You have dropped the following ELF binary into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" + GetMsg_ConfirmSysReset()
-			) != wxID_CANCEL;
+			);
+
+			confirmed = (Dialogs::IssueConfirmation( dialog, L"DragDrop:BootELF" ) != wxID_CANCEL);
 		}
 
 		if( confirmed )
@@ -109,12 +111,14 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 
 		if( SysHasValidState() )
 		{
-			result = Dialogs::IssueConfirmation( m_WindowBound, L"DragDrop:BootIso", ConfButtons().Reset().Cancel().Custom(_("Swap Disc")),
+			Dialogs::ExtensibleConfirmation dialog( m_WindowBound, ConfButtons().Reset().Cancel().Custom(_("Swap Disc")),
 				_("Confirm PS2 Reset"),
 				_("You have dropped the following ISO image into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" +
 				_("Do you want to swap discs or boot the new image (via system reset)?")
 			);
+
+			result = Dialogs::IssueConfirmation( dialog, L"DragDrop:BootIso" );
 		}
 
 		if( result != wxID_CANCEL )

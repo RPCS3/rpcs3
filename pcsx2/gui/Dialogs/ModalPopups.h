@@ -71,16 +71,17 @@ class ConfButtons
 protected:
 	BITFIELD32()
 		bool
-			m_OK:1,
-			m_Cancel:1,
-			m_Yes:1,
-			m_No:1,
+			m_OK		:1,
+			m_Cancel	:1,
+			m_Yes		:1,
+			m_No		:1,
 			m_AllowToAll:1,
-			m_Apply:1,
-			m_Abort:1,
-			m_Retry:1,
-			m_Ignore:1,
-			m_Reset:1;
+			m_Apply		:1,
+			m_Abort		:1,
+			m_Retry		:1,
+			m_Ignore	:1,
+			m_Reset		:1,
+			m_Close		:1;
 	BITFIELD_END
 
 	wxString m_CustomLabel;
@@ -99,6 +100,7 @@ public:
 	ConfButtons& Retry()	{ m_Retry		= true; return *this; }
 	ConfButtons& Ignore()	{ m_Ignore		= true; return *this; }
 	ConfButtons& Reset()	{ m_Reset		= true; return *this; }
+	ConfButtons& Close()	{ m_Close		= true; return *this; }
 
 	ConfButtons& Custom( const wxString& label)
 	{
@@ -120,6 +122,7 @@ public:
 	bool HasRetry() const	{ return m_Retry; }
 	bool HasIgnore() const	{ return m_Ignore; }
 	bool HasReset() const	{ return m_Reset; }
+	bool HasClose() const	{ return m_Close; }
 	
 	bool HasCustom() const	{ return !m_CustomLabel.IsEmpty(); }
 	const wxString& GetCustomLabel() const { return m_CustomLabel; }
@@ -198,10 +201,13 @@ namespace Dialogs
 		wxBoxSizer&		m_ExtensibleSizer;
 		wxBoxSizer&		m_ButtonSizer;
 
+		ConfButtons		m_Buttons;
+
 	public:
 		ExtensibleConfirmation( wxWindow* parent, const ConfButtons& type, const wxString& title, const wxString& msg );
 		virtual ~ExtensibleConfirmation() throw() {}
 
+		const ConfButtons& GetButtons() const { return m_Buttons; }
 		virtual wxBoxSizer& GetExtensibleSizer() const { return m_ExtensibleSizer; }
 
 	protected:
@@ -210,6 +216,6 @@ namespace Dialogs
 		virtual void OnActionButtonClicked( wxCommandEvent& evt );
 	};
 
-	wxWindowID IssueConfirmation( wxWindow* parent, const wxString& disablerKey, const ConfButtons& type, const wxString& title, const wxString& msg );
+	wxWindowID IssueConfirmation( ExtensibleConfirmation& confirmDlg, const wxString& disablerKey );
 }
 

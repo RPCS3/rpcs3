@@ -85,7 +85,7 @@ static wxWindowID ParseThatResult( const wxString& src, const ConfButtons& valid
 	return wxID_ANY;
 }
 
-wxWindowID Dialogs::IssueConfirmation( wxWindow* parent, const wxString& disablerKey, const ConfButtons& type, const wxString& title, const wxString& msg )
+wxWindowID Dialogs::IssueConfirmation( ExtensibleConfirmation& confirmDlg, const wxString& disablerKey )
 {
 	wxConfigBase* cfg = GetAppConfig();
 
@@ -112,13 +112,11 @@ wxWindowID Dialogs::IssueConfirmation( wxWindow* parent, const wxString& disable
 			result = split[0];
 			if( result == L"disabled" || result == L"off" || result == L"no" )
 			{
-				int result = ParseThatResult( split[1], type );
+				int result = ParseThatResult( split[1], confirmDlg.GetButtons() );
 				if( result != wxID_ANY ) return result;
 			}
 		}
 	}
-
-	Dialogs::ExtensibleConfirmation confirmDlg( parent, type, title, msg );
 
 	if( cfg == NULL ) return confirmDlg.ShowModal();
 
@@ -128,7 +126,7 @@ wxWindowID Dialogs::IssueConfirmation( wxWindow* parent, const wxString& disable
 	pxCheckBox&	DisablerCtrl( *new pxCheckBox(&confirmDlg, _("Do not show this dialog again.")) );
 	confirmDlg.GetExtensibleSizer().Add( &DisablerCtrl, wxSizerFlags().Centre() );
 
-	if( type != ConfButtons().OK() )
+	if( confirmDlg.GetButtons() != ConfButtons().OK() )
 		pxSetToolTip(&DisablerCtrl, _("Disables this popup and whatever response you select here will be automatically used from now on."));
 	else
 		pxSetToolTip(&DisablerCtrl, _("The popup will not be shown again.  This setting can be undone from the settings panels."));
@@ -152,7 +150,8 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 	, m_ExtensibleSizer( *new wxBoxSizer( wxVERTICAL ) )
 	, m_ButtonSizer( *new wxBoxSizer( wxHORIZONTAL ) )
 {
-	m_idealWidth = 500;
+	m_Buttons		= type;
+	m_idealWidth	= 500;
 
 	SetSizer( new wxBoxSizer(wxVERTICAL) );
 
@@ -193,6 +192,9 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 
 	if( type.HasReset() )
 		AddCustomButton( wxID_RESET, _("Reset") );
+
+	if( type.HasClose() )
+		AddActionButton( wxID_CLOSE );
 
 	#ifndef __WXGTK__
 	if( type.HasNo() || type.HasCancel() )		// Extra space between Affirm and Cancel Actions

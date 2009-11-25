@@ -312,7 +312,7 @@ void Panels::PluginSelectorPanel::Apply()
 		if( CoreThread.IsRunning() )
 		{
 			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
-			int result = Dialogs::IssueConfirmation( this, L"PluginSelector:ConfirmShutdown", ConfButtons().OK().Cancel(),
+			Dialogs::ExtensibleConfirmation dialog( this, ConfButtons().OK().Cancel(),
 
 				_("Shutdown PS2 virtual machine?"),
 
@@ -324,6 +324,8 @@ void Panels::PluginSelectorPanel::Apply()
 					L"Are you sure you want to apply settings now?"
 				)
 			);
+			
+			int result = Dialogs::IssueConfirmation( dialog, L"PluginSelector:ConfirmShutdown" );
 
 			if( result == wxID_CANCEL )
 				throw Exception::CannotApplySettings( this, "Cannot apply settings: canceled by user because plugins changed while the emulation state was active.", false );

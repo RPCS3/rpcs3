@@ -42,6 +42,7 @@ namespace Dialogs
 		void OnOk_Click( wxCommandEvent& evt );
 		void OnCancel_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
+		void OnScreenshot_Click( wxCommandEvent& evt );
 
 		virtual void OnSomethingChanged( wxCommandEvent& evt )
 		{

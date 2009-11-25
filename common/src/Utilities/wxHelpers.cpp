@@ -21,6 +21,8 @@
 #include <wx/cshelp.h>
 #include <wx/tooltip.h>
 
+using namespace pxSizerFlags;
+
 
 // =====================================================================================================
 //  wxDialogWithHelpers Class Implementations
@@ -44,6 +46,7 @@ wxDialogWithHelpers::wxDialogWithHelpers()
 {
 	m_idealWidth		= wxDefaultCoord;
 	m_hasContextHelp	= false;
+	m_extraButtonSizer	= NULL;
 }
 
 wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size )
@@ -51,7 +54,8 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 {
 	++m_DialogIdents[GetId()];
 
-	m_idealWidth = wxDefaultCoord;
+	m_idealWidth		= wxDefaultCoord;
+	m_extraButtonSizer	= NULL;
 
 	m_hasContextHelp = hasContextHelp;
 	if( m_hasContextHelp )
@@ -88,34 +92,38 @@ void wxDialogWithHelpers::OnActivate(wxActivateEvent& evt)
 
 void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 {
-	wxSizer* buttonSizer = &sizer;
-	if( m_hasContextHelp )
-	{
-		// Add the context-sensitive help button on the caption for the platforms
-		// which support it (currently MSW only)
-		SetExtraStyle( wxDIALOG_EX_CONTEXTHELP );
-
-#ifndef __WXMSW__
-		// create a sizer to hold the help and ok/cancel buttons, for platforms
-		// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
-		buttonSizer = new wxBoxSizer( wxHORIZONTAL );
-		buttonSizer->Add( new wxContextHelpButton(this), pxSizerFlags::StdButton().Align( wxALIGN_LEFT ) );
-		sizer.Add( buttonSizer, wxSizerFlags().Center() );
-#endif
-	}
-
-	wxStdDialogButtonSizer& s_buttons = *new wxStdDialogButtonSizer();
+	wxStdDialogButtonSizer& s_buttons( *new wxStdDialogButtonSizer() );
 
 	s_buttons.AddButton( new wxButton( this, wxID_OK ) );
 	s_buttons.AddButton( new wxButton( this, wxID_CANCEL ) );
 
 	if( hasApply )
-	{
 		s_buttons.AddButton( new wxButton( this, wxID_APPLY ) );
+
+	m_extraButtonSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	// Add the context-sensitive help button on the caption for the platforms
+	// which support it (currently MSW only)
+	if( m_hasContextHelp )
+	{
+		SetExtraStyle( wxDIALOG_EX_CONTEXTHELP );
+#ifndef __WXMSW__
+		s_littles += new wxContextHelpButton(this)	| StdButton();
+#endif
 	}
+	
+	// create a sizer to hold the help and ok/cancel buttons, for platforms
+	// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
+	wxFlexGridSizer& flex( *new wxFlexGridSizer( 2 ) );
+	flex.AddGrowableCol( 0, 1 );
+	flex.AddGrowableCol( 1, 15 );
+
+	flex	+= m_extraButtonSizer				| pxAlignLeft;
+	flex	+= s_buttons						| pxExpand, pxCenter;
+
+	sizer	+= flex		| StdExpand();
 
 	s_buttons.Realize();
-	buttonSizer->Add( &s_buttons, pxSizerFlags::StdButton() );
 }
 
 // --------------------------------------------------------------------------------------

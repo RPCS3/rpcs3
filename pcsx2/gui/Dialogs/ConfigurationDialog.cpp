@@ -18,12 +18,14 @@
 #include "App.h"
 
 #include "ConfigurationDialog.h"
+#include "ModalPopups.h"
 #include "Panels/ConfigurationPanels.h"
 
 #include <wx/artprov.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
 #include <wx/filepicker.h>
+//#include "wx/clipbrd.h"
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>		// needed for Vista icon spacing fix.
@@ -56,7 +58,7 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 {
 	m_idealWidth = 600;
 
-	wxBoxSizer& mainSizer = *new wxBoxSizer( wxVERTICAL );
+	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
 	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
@@ -71,12 +73,13 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	AddPage<PluginSelectorPanel>( wxLt("Plugins"),		cfgid.Plugins );
 	AddPage<StandardPathsPanel>	( wxLt("Folders"),		cfgid.Paths );
 
-	mainSizer.Add( &m_listbook );
-	AddOkCancel( mainSizer, true );
-
+	*this += m_listbook;
+	AddOkCancel( *GetSizer(), true );
+	*m_extraButtonSizer += new wxButton( this, wxID_SAVE, _("Screenshot!") );
+	
 	FindWindow( wxID_APPLY )->Disable();
 
-	SetSizerAndFit( &mainSizer );
+	Fit();
 	CenterOnScreen();
 
 #ifdef __WXMSW__
@@ -92,6 +95,7 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnCancel_Click ) );
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnApply_Click ) );
+	Connect( wxID_SAVE,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnScreenshot_Click ) );
 
 	// ----------------------------------------------------------------------------
 	// Bind a variety of standard "something probably changed" events.  If the user invokes
@@ -145,9 +149,31 @@ void Dialogs::ConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 }
 
 
+void Dialogs::ConfigurationDialog::OnScreenshot_Click( wxCommandEvent& evt )
+{
+	wxBitmap memBmp;
+
+	{
+	wxWindowDC dc( this );
+	wxSize dcsize( dc.GetSize() );
+	wxMemoryDC memDC( memBmp = wxBitmap( dcsize.x, dcsize.y ) );
+	memDC.Blit( wxPoint(), dcsize, &dc, wxPoint() );
+	}
+
+	wxString filenameDefault;
+	filenameDefault.Printf( L"pcsx2_settings_%s.png", m_listbook.GetPageText( m_listbook.GetSelection() ).c_str() );
+	filenameDefault.Replace( L"/", L"-" );
+
+	wxString filename( wxFileSelector( _("Save dialog screenshots to..."), g_Conf->Folders.Snapshots.ToString(),
+		filenameDefault, L"png", NULL, wxFD_SAVE | wxFD_OVERWRITE_PROMPT, this ) );
+
+	if( !filename.IsEmpty() )
+		memBmp.SaveFile( filename, wxBITMAP_TYPE_PNG );
+}
+
 // ----------------------------------------------------------------------------
-Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent, int id ) :
-	wxDialogWithHelpers( parent, id, _("BIOS Selector"), false )
+Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent, int id )
+	: wxDialogWithHelpers( parent, id, _("BIOS Selector"), false )
 {
 	m_idealWidth = 500;
 

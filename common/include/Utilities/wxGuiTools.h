@@ -128,8 +128,8 @@ struct pxWindowAndFlags
 };
 
 
-extern wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxAlignmentType align );
-extern wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch );
+extern wxSizerFlags operator , ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 ); //pxAlignmentType align );
+//extern wxSizerFlags operator , ( const wxSizerFlags& _flgs, pxStretchType stretch );
 
 template< typename WinType >
 pxWindowAndFlags<WinType> operator | ( WinType* _win, const wxSizerFlags& _flgs )
@@ -140,20 +140,6 @@ pxWindowAndFlags<WinType> operator | ( WinType* _win, const wxSizerFlags& _flgs 
 
 template< typename WinType >
 pxWindowAndFlags<WinType> operator | ( WinType& _win, const wxSizerFlags& _flgs )
-{
-	pxWindowAndFlags<WinType> result = { &_win, _flgs };
-	return result;
-}
-
-template< typename WinType >
-pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType* _win )
-{
-	pxWindowAndFlags<WinType> result = { _win, _flgs };
-	return result;
-}
-
-template< typename WinType >
-pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType& _win )
 {
 	pxWindowAndFlags<WinType> result = { &_win, _flgs };
 	return result;
@@ -238,8 +224,9 @@ class wxDialogWithHelpers : public wxDialog
 	DECLARE_DYNAMIC_CLASS_NO_COPY(wxDialogWithHelpers)
 
 protected:
-	bool	m_hasContextHelp;
-	int		m_idealWidth;
+	bool		m_hasContextHelp;
+	int			m_idealWidth;
+	wxBoxSizer*	m_extraButtonSizer;
 
 public:
 	wxDialogWithHelpers();
