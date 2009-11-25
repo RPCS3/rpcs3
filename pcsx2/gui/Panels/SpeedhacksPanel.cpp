@@ -96,8 +96,8 @@ void Panels::SpeedHacksPanel::SetVUcycleSliderMsg()
 	m_msg_vustealer->SetLabel( GetVUcycleSliderMsg(m_slider_vustealer->GetValue()) );
 }
 
-Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent ) :
-	BaseApplicableConfigPanel( parent )
+Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
 {
 	const wxSizerFlags sliderFlags( wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
 
@@ -244,12 +244,12 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent ) :
 	s_table = new wxFlexGridSizer( 2 );
 	s_table->AddGrowableCol( 0 );
 	s_table->AddGrowableCol( 1 );
-	*s_table+= left				| wxSF.Expand();
-	*s_table+= right			| wxSF.Expand();
+	*s_table+= left				| pxExpand;
+	*s_table+= right			| pxExpand;
 
 	*this	+= heading;
-	*this	+= s_table			| wxSF.Expand();
-	*this	+= DefEnableSizer	| wxSF.Expand();
+	*this	+= s_table			| pxExpand;
+	*this	+= DefEnableSizer	| pxExpand;
 
 	// ------------------------------------------------------------------------
 

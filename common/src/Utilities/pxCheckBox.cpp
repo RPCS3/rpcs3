@@ -76,3 +76,8 @@ void operator+=( wxSizer& target, pxCheckBox* src )
 	if( !pxAssert( src != NULL ) ) return;
 	target.Add( src, wxSF.Expand() );
 }
+
+void operator+=( wxSizer& target, pxCheckBox& src )
+{
+	target.Add( &src, wxSF.Expand() );
+}

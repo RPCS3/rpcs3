@@ -120,6 +120,16 @@ void operator+=( wxSizer& target, wxSizer* src )
 	target.Add( src );
 }
 
+void operator+=( wxSizer& target, wxWindow& src )
+{
+	target.Add( &src );
+}
+
+void operator+=( wxSizer& target, wxSizer& src )
+{
+	target.Add( &src );
+}
+
 void operator+=( wxSizer& target, int spacer )
 {
 	target.AddSpacer( spacer );

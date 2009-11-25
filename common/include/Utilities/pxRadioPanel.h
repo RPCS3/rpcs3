@@ -84,6 +84,7 @@ protected:
 
 	wxSize			m_padding;
 	int				m_Indentation;
+	int				m_DefaultIdx;		// index of the default option (gets specific color/font treatment)
 
 public:
 	template< int size >
@@ -110,6 +111,7 @@ public:
 
 	pxRadioPanel& SetToolTip( int idx, const wxString& tip );
 	pxRadioPanel& SetSelection( int idx );
+	pxRadioPanel& SetDefault( int idx );
 
 	int GetSelection() const;
 	wxWindowID GetSelectionId() const;
@@ -146,4 +148,5 @@ public:
 protected:
 	void Init( const RadioPanelItem* srcArray=NULL, int arrsize=0 );
 	void _setToolTipImmediate( int idx, const wxString &tip );
+	void _RealizeDefaultOption();
 };

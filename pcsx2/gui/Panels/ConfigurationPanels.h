@@ -119,7 +119,6 @@ namespace Panels
 	class BaseAdvancedCpuOptions : public BaseApplicableConfigPanel
 	{
 	protected:
-		wxStaticBoxSizer& s_adv;
 		//wxStaticBoxSizer& s_round;
 		//wxStaticBoxSizer& s_clamp;
 

@@ -26,6 +26,7 @@
 
 void pxRadioPanel::Init( const RadioPanelItem* srcArray, int arrsize )
 {
+	m_DefaultIdx	= -1;
 	m_IsRealized	= false;
 
 	// FIXME: This probably needs to be platform-dependent, and/or based on font size.
@@ -100,7 +101,8 @@ void pxRadioPanel::Realize()
 		if( !m_buttonStrings[i].ToolTip.IsEmpty() )
 			_setToolTipImmediate( i, m_buttonStrings[i].ToolTip );
 	}
-	
+
+	_RealizeDefaultOption();
 }
 
 void pxRadioPanel::_setToolTipImmediate( int idx, const wxString &tip )
@@ -132,6 +134,35 @@ pxRadioPanel& pxRadioPanel::SetSelection( int idx )
 
 	pxAssert( m_objects[idx].LabelObj != NULL );
 	m_objects[idx].LabelObj->SetValue( true );
+	return *this;
+}
+
+void pxRadioPanel::_RealizeDefaultOption()
+{
+	if( m_IsRealized && m_DefaultIdx != -1 )
+	{
+		wxFont def( GetFont() );
+		def.SetWeight( wxBOLD );
+		//def.SetStyle( wxITALIC );
+		m_objects[m_DefaultIdx].LabelObj->SetFont( def );
+		m_objects[m_DefaultIdx].LabelObj->SetForegroundColour( wxColour( 20, 128, 40 ) );
+	}
+}
+
+pxRadioPanel& pxRadioPanel::SetDefault( int idx )
+{
+	if( idx == m_DefaultIdx ) return *this;
+
+	if( m_IsRealized && m_DefaultIdx != -1 )
+	{
+		wxFont def( GetFont() );
+		m_objects[m_DefaultIdx].LabelObj->SetFont( def );
+		m_objects[m_DefaultIdx].LabelObj->SetForegroundColour( GetForegroundColour() );
+	}
+
+	m_DefaultIdx = idx;
+	_RealizeDefaultOption();
+
 	return *this;
 }
 

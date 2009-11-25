@@ -173,6 +173,9 @@ pxWindowAndFlags<WinType> operator | ( const wxSizerFlags& _flgs, WinType& _win 
 
 extern void operator+=( wxSizer& target, wxWindow* src );
 extern void operator+=( wxSizer& target, wxSizer* src );
+extern void operator+=( wxSizer& target, wxWindow& src );
+extern void operator+=( wxSizer& target, wxSizer& src );
+
 extern void operator+=( wxSizer& target, int spacer );
 extern void operator+=( wxWindow& target, int spacer );
 
@@ -183,6 +186,12 @@ template< typename WinType >
 void operator+=( wxWindow& target, WinType* src )
 {
 	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+template< typename WinType >
+void operator+=( wxWindow& target, WinType& src )
+{
 	*target.GetSizer() += src;
 }
 

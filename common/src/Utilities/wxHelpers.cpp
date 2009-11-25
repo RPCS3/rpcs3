@@ -174,7 +174,7 @@ wxPanelWithHelpers* wxPanelWithHelpers::AddFrame( const wxString& label, wxOrien
 	Init();
 
 	if( oldSizer )
-		GetSizer()->Add( oldSizer );
+		*this += oldSizer | pxExpand;
 	
 	return this;
 }

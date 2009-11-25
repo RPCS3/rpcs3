@@ -193,34 +193,34 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	, m_eeSection	( *new eeLogOptionsPanel( this ) )
 	, m_iopSection	( *new iopLogOptionsPanel( this ) )
 {
-	wxSizer& s_main( *GetSizer() );
-
-	wxBoxSizer& topSizer			= *new wxBoxSizer( wxHORIZONTAL );
-
-	wxStaticBoxSizer&	s_misc		= *new wxStaticBoxSizer( wxHORIZONTAL, this, L"Misc" );
-
 	m_masterEnabler = new pxCheckBox( this, _("Enable Trace Logging"),
 		_("Trace logs are all written to emulog.txt.  Warning: Enabling trace logs is typically very slow, and is a leading cause of 'What happened to my FPS?' problems. :)") );
 	m_masterEnabler->SetToolTip( _("On-the-fly hotkey support: Toggle trace logging at any time using F10.") );
 
-	s_misc.Add( m_SIF			= new pxCheckBox( this, L"SIF (EE<->IOP)" ));
-	s_misc.Add( m_VIFunpack		= new pxCheckBox( this, L"VIFunpack" ));
-	s_misc.Add( m_GIFtag		= new pxCheckBox( this, L"GIFtag" ));
+	m_SIF		= new pxCheckBox( this, L"SIF (EE<->IOP)" );
+	m_VIFunpack	= new pxCheckBox( this, L"VIFunpack" );
+	m_GIFtag	= new pxCheckBox( this, L"GIFtag" );
 
-	m_SIF->SetToolTip(_("Enables logging of both SIF DMAs and SIF Register activity.") );
-	m_VIFunpack->SetToolTip(_("Special detailed logs of VIF packed data handling (does not include VIF control, status, or hwRegs)"));
-	m_GIFtag->SetToolTip(_("(not implemented yet)"));
+	m_SIF		->SetToolTip(_("Enables logging of both SIF DMAs and SIF Register activity.") );
+	m_VIFunpack	->SetToolTip(_("Special detailed logs of VIF packed data handling (does not include VIF control, status, or hwRegs)"));
+	m_GIFtag	->SetToolTip(_("(not implemented yet)"));
 
-	//s_head.Add( &s_misc, SizerFlags::SubGroup() );
 
-	topSizer.Add( &m_eeSection, StdSpace() );
-	topSizer.Add( &m_iopSection, StdSpace() );
+	wxBoxSizer& topSizer			= *new wxBoxSizer( wxHORIZONTAL );
+	wxStaticBoxSizer&	s_misc		= *new wxStaticBoxSizer( wxHORIZONTAL, this, L"Misc" );
 
-	s_main.Add( m_masterEnabler, StdSpace() );
-	s_main.Add( new wxStaticLine( this, wxID_ANY ), StdExpand().Border(wxLEFT | wxRIGHT, 20) );
-	s_main.AddSpacer( 5 );
-	s_main.Add( &topSizer );
-	s_main.Add( &s_misc, StdSpace().Centre() );
+	topSizer	+= m_eeSection		| StdSpace();
+	topSizer	+= m_iopSection		| StdSpace();
+
+	s_misc		+= m_SIF;
+	s_misc		+= m_VIFunpack;
+	s_misc		+= m_GIFtag;
+
+	*this		+= m_masterEnabler						| StdSpace();
+	*this		+= new wxStaticLine( this, wxID_ANY )	| StdExpand().Border(wxLEFT | wxRIGHT, 20);
+	*this		+= 5;
+	*this		+= topSizer;
+	*this		+= s_misc								| StdSpace().Centre();
 
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );
 	

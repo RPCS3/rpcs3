@@ -154,15 +154,7 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 {
 	m_idealWidth = 500;
 
-	wxBoxSizer& mainsizer( *new wxBoxSizer(wxVERTICAL) );
-
-	// Add the message padded some (StdCenter gives us a 5 pt padding).  Helps emphasize it a bit.
-	wxBoxSizer& msgPadSizer( *new wxBoxSizer(wxVERTICAL) );
-	
-	msgPadSizer.Add( new pxStaticHeading( this, msg ) );
-	mainsizer.Add( &msgPadSizer, pxSizerFlags::StdCenter() );
-
-	mainsizer.Add( &m_ExtensibleSizer, wxSizerFlags().Centre() );
+	SetSizer( new wxBoxSizer(wxVERTICAL) );
 
 	// Populate the Button Sizer.
 	// We prefer this over the built-in wxWidgets ButtonSizer stuff used for other types of
@@ -216,10 +208,20 @@ Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const
 	if( type.HasCancel() )
 		AddActionButton( wxID_CANCEL );
 	#endif
-	
-	mainsizer.Add( &m_ButtonSizer, pxSizerFlags::StdCenter() );
 
-	SetSizerAndFit( &mainsizer, true );
+	// --------------------------------
+	//    Finalize Sizers and Layout
+	// --------------------------------
+
+	// Add the message padded some (StdCenter gives us a 5 pt padding).  Helps emphasize it a bit.
+	wxBoxSizer& msgPadSizer( *new wxBoxSizer(wxVERTICAL) );
+	msgPadSizer += Heading( msg );
+
+	*this	+= msgPadSizer			| pxSizerFlags::StdCenter();
+	*this	+= m_ExtensibleSizer	| pxCentre;
+	*this	+= m_ButtonSizer		| pxSizerFlags::StdCenter();
+
+	Fit();
 	CenterOnScreen();
 }
 

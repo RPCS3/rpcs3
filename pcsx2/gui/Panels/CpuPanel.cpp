@@ -20,7 +20,6 @@ using namespace pxSizerFlags;
 
 Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
-	, s_adv( *new wxStaticBoxSizer( wxVERTICAL, this ) )
 {
 	wxStaticBoxSizer*	s_round( new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) );
 	wxStaticBoxSizer*	s_clamp( new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") ) );
@@ -45,7 +44,14 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 	m_RoundModePanel = new pxRadioPanel( this, RoundModeChoices );
 	m_ClampModePanel = new pxRadioPanel( this, ClampModeChoices );
 
-	// ====== The Fitting And Sizing Area  ======
+	// Highlight Default Options:
+	
+	m_RoundModePanel->SetDefault( 3 );
+	m_ClampModePanel->SetDefault( 1 );
+
+	// ---------------------------------
+	//    The Fitting And Sizing Area
+	// ---------------------------------
 
 	wxFlexGridSizer& grid = *new wxFlexGridSizer( 4 );
 
@@ -58,24 +64,22 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 	grid.AddGrowableCol( 3, 19 );
 
 	wxBoxSizer& s_daz( *new wxBoxSizer( wxVERTICAL ) );
-	s_daz.AddSpacer( 12 );
-	s_daz.Add( m_Option_FTZ );
-	s_daz.Add( m_Option_DAZ );
-	s_daz.AddSpacer( 4 );
-	s_daz.AddSpacer( 22 );
-	s_daz.Add( new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ), wxSizerFlags().Align( wxALIGN_CENTRE ) );
+	s_daz	+= 12;
+	s_daz	+= m_Option_FTZ;
+	s_daz	+= m_Option_DAZ;
+	s_daz	+= 4;
+	s_daz	+= 22;
+	s_daz	+= new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ) | pxCenter;
 
-	s_round->Add( m_RoundModePanel, StdExpand() );
-	s_clamp->Add( m_ClampModePanel, StdExpand() );
+	*s_round+= m_RoundModePanel		| StdExpand();
+	*s_clamp+= m_ClampModePanel		| StdExpand();
 
-	grid.Add( s_round, SubGroup() );
-	grid.Add( s_clamp, SubGroup() );
-	grid.Add( new wxBoxSizer( wxVERTICAL ) );		// spacer column!
-	grid.Add( &s_daz, wxSizerFlags().Expand() );
+	grid	+= s_round				| SubGroup();
+	grid	+= s_clamp				| SubGroup();
+	grid	+= new wxBoxSizer( wxVERTICAL );		// spacer column!
+	grid	+= &s_daz				| pxExpand;
 
-	s_adv.Add( &grid, StdExpand() );
-
-	SetSizer( &s_adv );
+	*this	+= grid					| StdExpand();
 
 	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BaseAdvancedCpuOptions::OnRestoreDefaults ) );
 }
@@ -87,15 +91,17 @@ void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent &evt)
 
 	m_Option_DAZ->SetValue(true);
 	m_Option_FTZ->SetValue(true);
+	
+	evt.Skip();
 }
 
 Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
 	: BaseAdvancedCpuOptions( parent )
 {
-	s_adv.GetStaticBox()->SetLabel(_("EE/FPU Advanced Recompiler Options"));
+	AddFrame(_("EE/FPU Advanced Recompiler Options"));
 
-	m_ClampModePanel->Append( _("Extra + Preserve Sign") );
-	m_ClampModePanel->Append( _("Full") );
+	m_ClampModePanel->Append(_("Extra + Preserve Sign"));
+	m_ClampModePanel->Append(_("Full"));
 
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
@@ -120,10 +126,10 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
 Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 	: BaseAdvancedCpuOptions( parent )
 {
-	s_adv.GetStaticBox()->SetLabel(_("VU0 / VU1 Advanced Recompiler Options"));
+	AddFrame(_("VU0 / VU1 Advanced Recompiler Options"));
 
-	m_ClampModePanel->Append( _("Extra") );
-	m_ClampModePanel->Append( _("Extra + Preserve Sign") );
+	m_ClampModePanel->Append(_("Extra"));
+	m_ClampModePanel->Append(_("Extra + Preserve Sign"));
 
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
@@ -147,16 +153,12 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	// i18n: No point in translating PS2 CPU names :)
-	wxStaticBoxSizer* s_ee  = new wxStaticBoxSizer( wxVERTICAL, this, L"EmotionEngine" );
-	wxStaticBoxSizer* s_iop = new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" );
-
 	const RadioPanelItem tbl_CpuTypes_EE[] =
 	{
 		RadioPanelItem(_("Interpreter"))
 		.SetToolTip(_("Quite possibly the slowest thing in the universe.")),
 			
-		RadioPanelItem(_("Recompiler [Default]"))
+		RadioPanelItem(_("Recompiler"))
 		.SetToolTip(_("Performs just-in-time binary translation of 64-bit MIPS-IV machine code to x86."))
 	};
 	
@@ -165,36 +167,39 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 		RadioPanelItem(_("Interpreter"))
 		.SetToolTip(_("Pretty slow; provided for diagnostic purposes only.")),
 
-		RadioPanelItem(_("Recompiler [Default]"))
+		RadioPanelItem(_("Recompiler"))
 		.SetToolTip(_("Performs just-in-time binary translation of 32-bit MIPS-I machine code to x86."))
 	};
 
 	
-	m_panel_RecEE	= new pxRadioPanel( this, tbl_CpuTypes_EE );
-	m_panel_RecIOP	= new pxRadioPanel( this, tbl_CpuTypes_IOP );
+	m_panel_RecEE	= &(new pxRadioPanel( this, tbl_CpuTypes_EE ))->SetDefault( 1 );
+	m_panel_RecIOP	= &(new pxRadioPanel( this, tbl_CpuTypes_IOP ))->SetDefault( 1 );
 
 	m_panel_RecEE->Realize();
 	m_panel_RecIOP->Realize();
 
-	// ====== Begin Sizer Layout ======
+	// ---------------------------------
+	//    The Fitting And Sizing Area
+	// ---------------------------------
 
-	wxBoxSizer&			s_main = *new wxBoxSizer( wxVERTICAL );
-	wxFlexGridSizer&	s_recs = *new wxFlexGridSizer( 2 );
+	wxFlexGridSizer&	s_recs( *new wxFlexGridSizer( 2 ) );
 
 	s_recs.AddGrowableCol( 0, 1 );
 	s_recs.AddGrowableCol( 1, 1 );
 
-	s_ee->Add( m_panel_RecEE, StdExpand() );
-	s_iop->Add( m_panel_RecIOP, StdExpand() );
+	// i18n: No point in translating PS2 CPU names :)
+	wxStaticBoxSizer& s_ee	( *new wxStaticBoxSizer( wxVERTICAL, this, L"EmotionEngine" ) );
+	wxStaticBoxSizer& s_iop	( *new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" ) );
 
-	s_recs.Add( s_ee, SubGroup() );
-	s_recs.Add( s_iop, SubGroup() );
+	s_ee	+= m_panel_RecEE	| StdExpand();
+	s_iop	+= m_panel_RecIOP	| StdExpand();
 
-	s_main.Add( &s_recs, StdExpand() );
-	s_main.Add( new wxStaticLine( this ), wxSizerFlags().Border(wxALL, 24).Expand() );
-	s_main.Add( new AdvancedOptionsFPU( this ), StdExpand() );
+	s_recs	+= s_ee				| SubGroup();
+	s_recs	+= s_iop			| SubGroup();
 
-	SetSizer( &s_main );
+	*this	+= &s_recs							| StdExpand();
+	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
+	*this	+= new AdvancedOptionsFPU( this )	| StdExpand();
 
 	// ====== Apply Current Configuration ======
 
@@ -207,46 +212,45 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	wxBoxSizer& s_main = *new wxBoxSizer( wxVERTICAL );
-	wxFlexGridSizer& s_recs = *new wxFlexGridSizer( 2 );
-
-	s_recs.AddGrowableCol( 0, 1 );
-	s_recs.AddGrowableCol( 1, 1 );
-
-	wxStaticBoxSizer* s_vu0 = new wxStaticBoxSizer( wxVERTICAL, this, L"VU0" );
-	wxStaticBoxSizer* s_vu1 = new wxStaticBoxSizer( wxVERTICAL, this, L"VU1" );
-
 	const RadioPanelItem tbl_CpuTypes_VU[] =
 	{
 		RadioPanelItem(_("Interpreter"))
 		.SetToolTip(_("Vector Unit Interpreter. Slow and not very compatible. Only use for diagnostics.")),
 
-		RadioPanelItem(_("microVU Recompiler [Default]"))
+		RadioPanelItem(_("microVU Recompiler"))
 		.SetToolTip(_("New Vector Unit recompiler with much improved compatibility. Recommended.")),
 		
 		RadioPanelItem(_("superVU Recompiler [legacy]"))
 		.SetToolTip(_("Useful for diagnosing bugs or clamping issues in the new mVU recompiler."))
 	};
 
-	m_panel_VU0 = new pxRadioPanel( this, tbl_CpuTypes_VU );
-	m_panel_VU1 = new pxRadioPanel( this, tbl_CpuTypes_VU );
+	m_panel_VU0 = &(new pxRadioPanel( this, tbl_CpuTypes_VU ))	->SetDefault( 1 );
+	m_panel_VU1 = &(new pxRadioPanel( this, tbl_CpuTypes_VU ))	->SetDefault( 1 );
 
 	m_panel_VU0->Realize();
 	m_panel_VU1->Realize();
 
-	// ====== Begin Sizer Layout ======
+	// ---------------------------------
+	//    The Fitting And Sizing Area
+	// ---------------------------------
 
-	s_vu0->Add( m_panel_VU0, StdExpand() );
-	s_vu1->Add( m_panel_VU1, StdExpand() );
+	wxFlexGridSizer&	s_recs( *new wxFlexGridSizer( 2 ) );
 
-	s_recs.Add( s_vu0, SubGroup() );
-	s_recs.Add( s_vu1, SubGroup() );
+	s_recs.AddGrowableCol( 0, 1 );
+	s_recs.AddGrowableCol( 1, 1 );
 
-	s_main.Add( &s_recs, StdExpand() );
-	s_main.Add( new wxStaticLine( this ), wxSizerFlags().Border(wxALL, 24).Expand() );
-	s_main.Add( new AdvancedOptionsVU( this ), StdExpand() );
+	wxStaticBoxSizer& s_vu0( *new wxStaticBoxSizer( wxVERTICAL, this, L"VU0" ) );
+	wxStaticBoxSizer& s_vu1( *new wxStaticBoxSizer( wxVERTICAL, this, L"VU1" ) );
 
-	SetSizer( &s_main );
+	s_vu0	+= m_panel_VU0	| StdExpand();
+	s_vu1	+= m_panel_VU1	| StdExpand();
+
+	s_recs	+= s_vu0		| SubGroup();
+	s_recs	+= s_vu1		| SubGroup();
+
+	*this	+= &s_recs							| StdExpand();
+	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
+	*this	+= new AdvancedOptionsVU( this )	| StdExpand();
 
 	// ====== Apply Current Configuration ======
 

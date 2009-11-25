@@ -127,3 +127,7 @@ void operator+=( wxSizer& target, pxStaticText* src )
 	src->AddTo( target );
 }
 
+void operator+=( wxSizer& target, pxStaticText& src )
+{
+	src.AddTo( target );
+}
