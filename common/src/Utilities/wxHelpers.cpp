@@ -108,7 +108,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 	{
 		SetExtraStyle( wxDIALOG_EX_CONTEXTHELP );
 #ifndef __WXMSW__
-		m_extraButtonSizer += new wxContextHelpButton(this);
+		s_buttons += new wxContextHelpButton(this);
 #endif
 	}
 

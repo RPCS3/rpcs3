@@ -18,7 +18,7 @@
 #include "Threading.h"
 #include "x86emitter/tools.h"
 
-#if !defined(__LINUX__) || !defined(__WXMAC__)
+#if !defined(__LINUX__) && !defined(__WXMAC__)
 
 #	pragma message( "LnxThreads.cpp should only be compiled by projects or makefiles targeted at Linux/Mac distros.")
 
@@ -61,7 +61,7 @@ void pxYieldToMain()
 
 	// (FIXME : Find a more correct implementation for this?)
 	
-	Sleep( 2 );
+	Threading::Sleep( 2 );
 }
 
 #endif
