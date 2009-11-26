@@ -108,20 +108,20 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 	{
 		SetExtraStyle( wxDIALOG_EX_CONTEXTHELP );
 #ifndef __WXMSW__
-		s_littles += new wxContextHelpButton(this)	| StdButton();
+		m_extraButtonSizer += new wxContextHelpButton(this)	| StdButton();
 #endif
 	}
-	
+
 	// create a sizer to hold the help and ok/cancel buttons, for platforms
 	// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
 	wxFlexGridSizer& flex( *new wxFlexGridSizer( 2 ) );
 	flex.AddGrowableCol( 0, 1 );
 	flex.AddGrowableCol( 1, 15 );
 
-	flex	+= m_extraButtonSizer				| pxAlignLeft;
-	flex	+= s_buttons						| pxExpand, pxCenter;
+	flex	+= m_extraButtonSizer	| pxAlignLeft;
+	flex	+= s_buttons			| pxExpand, pxCenter;
 
-	sizer	+= flex		| StdExpand();
+	sizer	+= flex	| StdExpand();
 
 	s_buttons.Realize();
 }

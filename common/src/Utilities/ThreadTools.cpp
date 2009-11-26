@@ -338,10 +338,16 @@ bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& ti
 // function will throw an SEH exception designed to exit the thread (so make sure to use C++
 // object encapsulation for anything that could leak resources, to ensure object unwinding
 // and cleanup, or use the DoThreadCleanup() override to perform resource cleanup).
-void Threading::PersistentThread::TestCancel()
+void Threading::PersistentThread::TestCancel() const
 {
 	pxAssert( IsSelf() );
 	pthread_testcancel();
+}
+
+void Threading::PersistentThread::YieldToMain() const
+{
+	pxYieldToMain();
+	TestCancel();
 }
 
 // Executes the virtual member method

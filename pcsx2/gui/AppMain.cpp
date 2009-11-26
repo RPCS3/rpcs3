@@ -32,7 +32,6 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
-DEFINE_EVENT_TYPE( pxEVT_SemaphorePing );
 DEFINE_EVENT_TYPE( pxEVT_OpenModalDialog );
 DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
 DEFINE_EVENT_TYPE( pxEVT_SysExecute );
@@ -114,20 +113,6 @@ int Pcsx2App::ThreadedModalDialog( DialogIdentifiers dialogId )
 	return result.result;
 }
 
-// Waits for the main GUI thread to respond.  If run from the main GUI thread, returns
-// immediately without error.  Use this on non-GUI threads to have them sleep until
-// the GUI has processed all its pending messages.
-void Pcsx2App::Ping() const
-{
-	if( wxThread::IsMain() ) return;
-
-	Semaphore sema;
-	wxCommandEvent bean( pxEVT_SemaphorePing );
-	bean.SetClientData( &sema );
-	wxGetApp().AddPendingEvent( bean );
-	sema.WaitNoCancel();
-}
-
 // ----------------------------------------------------------------------------
 //         Pcsx2App Event Handlers
 // ----------------------------------------------------------------------------
@@ -141,11 +126,6 @@ void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 	m_evtsrc_CoreThreadStatus.Dispatch( evt );
 	ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 	CoreThread.RethrowException();
-}
-
-void Pcsx2App::OnSemaphorePing( wxCommandEvent& evt )
-{
-	((Semaphore*)evt.GetClientData())->Post();
 }
 
 void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )

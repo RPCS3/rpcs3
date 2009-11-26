@@ -12,14 +12,13 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
+#pragma comment(lib, "User32.lib")
+
 #include "PrecompiledHeader.h"
 #include "RedtapeWindows.h"
-#include "WinVersion.h"
 
 #include <ShTypes.h>
-#include <shlwapi.h>		// for IsOS()
-
 
 static LARGE_INTEGER lfreq;
 
@@ -40,147 +39,160 @@ u64 GetCPUTicks()
 	return count.QuadPart;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-static const char* GetVersionName( DWORD minorVersion, DWORD majorVersion )
+typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
+typedef BOOL (WINAPI *PGPI)(DWORD, DWORD, DWORD, DWORD, PDWORD);
+
+// Calculates the Windows OS Version and install information, and returns it as a
+// human-readable string. :)
+// (Handy function borrowed from Microsoft's MSDN Online, and reformatted to use wxString.)
+wxString GetOSVersionString()
 {
-	switch( majorVersion )
-	{
-		case 6:
-			return "Vista";
-		break;
+	wxString retval;
 
-		case 5:
-			switch( minorVersion )
-			{
-				case 0:
-					return "2000";
-				break;
-				
-				case 1:
-					return "XP";
-				break;
-				
-				case 2:
-					return "Server 2003";
-				break;
+	OSVERSIONINFOEX	osvi;
+	SYSTEM_INFO		si;
+	PGNSI			pGNSI;
+	PGPI			pGPI;
+	BOOL			bOsVersionInfoEx;
+	DWORD			dwType;
 
-				default:
-					return "2000/XP";
-			}
-		break;
-		
-		case 4:
-			switch( minorVersion )
-			{
-				case 0:
-					return "95";
-				break;
-				
-				case 10:
-					return "98";
-				break;
-				
-				case 90:
-					return "ME";
-				break;
-				
-				default:
-					return "95/98/ME";
-			}
-		break;
-		
-		case 3:
-			return "32S";
-		break;
-		
-		default:
-			return "Unknown";
-	}
-}
+	memzero( si );
+	memzero( osvi );
 
-void Win32::RealVersionInfo::InitVersionString()
-{
-	DWORD version = GetVersion();
+	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 
-    int majorVersion = (DWORD)(LOBYTE(LOWORD(version)));
-    int minorVersion = (DWORD)(HIBYTE(LOWORD(version)));
+	if( !(bOsVersionInfoEx = GetVersionEx ((OSVERSIONINFO *) &osvi)) )
+		return L"GetVersionEx Error!";
 
-	wxString verName( fromUTF8( GetVersionName( minorVersion, majorVersion ) ) );
+	// Call GetNativeSystemInfo if supported or GetSystemInfo otherwise.
 
-	bool IsCompatMode = false;
-
-	if( IsVista() )
-	{
-		m_VersionString = L"Windows Vista";
-
-		if( verName != L"Vista" )
-		{
-			if( verName == L"Unknown" )
-				m_VersionString += L" or Newer";
-			else
-				IsCompatMode = true;
-		}
-
-		m_VersionString += wxsFormat( L" v%d.%d", majorVersion, minorVersion );
-
-		if( IsOS( OS_WOW6432 ) )
-			m_VersionString += L" (64-bit)";
-		else
-			m_VersionString += L" (32-bit)";
-	}
-	else if( IsXP() )
-	{
-		m_VersionString = wxsFormat( L"Windows XP v%d.%d", majorVersion, minorVersion );
-				
-		if( IsOS( OS_WOW6432 ) )
-			m_VersionString += L" (64-bit)";
-		else
-			m_VersionString += L" (32-bit)";
-
-		if( verName != L"XP" )
-			IsCompatMode = true;
-	}
+	pGNSI = (PGNSI) GetProcAddress( GetModuleHandle(L"kernel32.dll"), "GetNativeSystemInfo" );
+	if(NULL != pGNSI)
+		pGNSI( &si );
 	else
+		GetSystemInfo( &si );
+
+	if ( VER_PLATFORM_WIN32_NT!=osvi.dwPlatformId || osvi.dwMajorVersion <= 4 )
+		return L"Unsupported Operating System!";
+
+	retval += L"Microsoft ";
+
+	// Test for the specific product.
+
+	if ( osvi.dwMajorVersion == 6 )
 	{
-		m_VersionString = L"Windows " + verName;
+		if( osvi.dwMinorVersion == 0 )
+			retval += ( osvi.wProductType == VER_NT_WORKSTATION ) ? L"Windows Vista " : L"Windows Server 2008 ";
+
+		if ( osvi.dwMinorVersion == 1 )
+			retval += ( osvi.wProductType == VER_NT_WORKSTATION ) ? L"Windows 7 " : L"Windows Server 2008 R2 ";
+
+		pGPI = (PGPI) GetProcAddress( GetModuleHandle(TEXT("kernel32.dll")), "GetProductInfo");
+
+		pGPI( osvi.dwMajorVersion, osvi.dwMinorVersion, 0, 0, &dwType);
+
+		switch( dwType )
+		{
+			case PRODUCT_ULTIMATE:						retval += L"Ultimate Edition";							break;
+			case PRODUCT_HOME_PREMIUM:					retval += L"Home Premium Edition";						break;
+			case PRODUCT_HOME_BASIC:					retval += L"Home Basic Edition";						break;
+			case PRODUCT_ENTERPRISE:					retval += L"Enterprise Edition";						break;
+			case PRODUCT_BUSINESS:						retval += L"Business Edition";							break;
+			case PRODUCT_STARTER:						retval += L"Starter Edition";							break;
+			case PRODUCT_CLUSTER_SERVER:				retval += L"Cluster Server Edition";					break;
+			case PRODUCT_DATACENTER_SERVER:				retval += L"Datacenter Edition";						break;
+			case PRODUCT_DATACENTER_SERVER_CORE:		retval += L"Datacenter Edition (core installation)";	break;
+			case PRODUCT_ENTERPRISE_SERVER:				retval += L"Enterprise Edition";						break;
+			case PRODUCT_ENTERPRISE_SERVER_CORE:		retval += L"Enterprise Edition (core installation)";	break;
+			case PRODUCT_SMALLBUSINESS_SERVER:			retval += L"Small Business Server";						break;
+			case PRODUCT_SMALLBUSINESS_SERVER_PREMIUM:	retval += L"Small Business Server Premium Edition";		break;
+			case PRODUCT_STANDARD_SERVER:				retval += L"Standard Edition";							break;
+			case PRODUCT_STANDARD_SERVER_CORE:			retval += L"Standard Edition (core installation)";		break;
+			case PRODUCT_WEB_SERVER:					retval += L"Web Server Edition";						break;
+		}
 	}
 
-	if( IsCompatMode )
-		m_VersionString += wxsFormat( L" [compatibility mode, running as Windows %s]", verName );
+	if ( osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 2 )
+	{
+		if( GetSystemMetrics(SM_SERVERR2) )
+			retval += L"Windows Server 2003 R2, ";
+		else if ( osvi.wSuiteMask==VER_SUITE_STORAGE_SERVER )
+			retval += L"Windows Storage Server 2003";
+		else if ( osvi.wSuiteMask==VER_SUITE_WH_SERVER )
+			retval += L"Windows Home Server";
+		else if( osvi.wProductType == VER_NT_WORKSTATION && si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_AMD64)
+			retval += L"Windows XP Professional x64 Edition";
+		else
+			retval += L"Windows Server 2003, ";
+
+		// Test for the server type.
+		if ( osvi.wProductType != VER_NT_WORKSTATION )
+		{
+			if ( si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_AMD64 )
+			{
+				if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
+					retval += L"Datacenter x64 Edition";
+				else if( osvi.wSuiteMask & VER_SUITE_ENTERPRISE )
+					retval += L"Enterprise x64 Edition";
+				else
+					retval += L"Standard x64 Edition";
+			}
+
+			else
+			{
+				if ( osvi.wSuiteMask & VER_SUITE_COMPUTE_SERVER )
+					retval += L"Compute Cluster Edition";
+				else if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
+					retval += L"Datacenter Edition";
+				else if( osvi.wSuiteMask & VER_SUITE_ENTERPRISE )
+					retval += L"Enterprise Edition";
+				else if ( osvi.wSuiteMask & VER_SUITE_BLADE )
+					retval += L"Web Edition";
+				else
+					retval += L"Standard Edition";
+			}
+		}
+	}
+
+	if ( osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1 )
+	{
+		retval += L"Windows XP ";
+		retval += ( osvi.wSuiteMask & VER_SUITE_PERSONAL ) ? L"Professional" : L"Home Edition";
+	}
+
+	if ( osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 0 )
+	{
+		retval += L"Windows 2000 ";
+
+		if ( osvi.wProductType == VER_NT_WORKSTATION )
+		{
+			retval += L"Professional";
+		}
+		else 
+		{
+			if( osvi.wSuiteMask & VER_SUITE_DATACENTER )
+				retval += L"Datacenter Server";
+			else if( osvi.wSuiteMask & VER_SUITE_ENTERPRISE )
+				retval += L"Advanced Server";
+			else
+				retval += L"Server";
+		}
+	}
+
+	// Include service pack (if any) and build number.
+
+	if( _tcslen(osvi.szCSDVersion) > 0 )
+		retval += (wxString)L" " + osvi.szCSDVersion;
+
+	retval += wxsFormat( L" (build %d)", osvi.dwBuildNumber );
+
+	if ( osvi.dwMajorVersion >= 6 )
+	{
+		if ( si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_AMD64 )
+			retval += L", 64-bit";
+		else if (si.wProcessorArchitecture==PROCESSOR_ARCHITECTURE_INTEL )
+			retval += L", 32-bit";
+	}
+
+	return retval;
 }
-
-Win32::RealVersionInfo::~RealVersionInfo()
-{
-	if( m_kernel32 != NULL )
-		FreeLibrary( m_kernel32 );
-}
-
-Win32::RealVersionInfo::RealVersionInfo() :
-	m_kernel32( LoadLibrary( L"kernel32" ) )
-{
-	InitVersionString();
-}
-
-bool Win32::RealVersionInfo::IsVista() const
-{
-	if( m_kernel32 == NULL ) return false;
-
-	// CreateThreadpoolWait is a good pick -- it's not likely to exist on older OS's
-	// GetLocaleInfoEx is also good -- two picks are better than one, just in case
-	//   one of the APIs becomes available in a future XP service pack.
-    
-	return
-		( GetProcAddress( m_kernel32, "CreateThreadpoolWait" ) != NULL ) &&
-		( GetProcAddress( m_kernel32, "GetLocaleInfoEx" ) != NULL );
-}
-
-bool Win32::RealVersionInfo::IsXP() const
-{
-	return ( GetProcAddress( m_kernel32, "GetNativeSystemInfo" ) != NULL );
-}
-
-const wxString& Win32::RealVersionInfo::GetVersionString() const
-{
-	return m_VersionString;
-}
-

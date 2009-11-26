@@ -18,6 +18,12 @@
 #include "Threading.h"
 #include "x86emitter/tools.h"
 
+#if !defined(__LINUX__) || !defined(__WXMAC__)
+
+#	pragma message( "LnxThreads.cpp should only be compiled by projects or makefiles targeted at Linux/Mac distros.")
+
+#else
+
 // Note: assuming multicore is safer because it forces the interlocked routines to use
 // the LOCK prefix.  The prefix works on single core CPUs fine (but is slow), but not
 // having the LOCK prefix is very bad indeed.
@@ -44,3 +50,18 @@ __forceinline void Threading::EnableHiresScheduler()
 __forceinline void Threading::DisableHiresScheduler()
 {
 }
+
+void pxYieldToMain()
+{
+	// Linux/GTK+ Implementation Notes:
+	//  I have no idea if wxEventLoop::Pending() is thread safe or not, nor do I have
+	//  any idea how to properly obtain the message queue status of GTK+.  So let's
+	//  just play dumb (and slow) and sleep for a couple milliseconds regardless, until
+	// a better fix is found. --air
+
+	// (FIXME : Find a more correct implementation for this?)
+	
+	Sleep( 2 );
+}
+
+#endif

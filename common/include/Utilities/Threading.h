@@ -124,6 +124,10 @@ namespace Exception
 #endif
 }
 
+// Yields this thread against the main thread *if* the main thread's message pump has pending
+// messages.  If the main thread is idle then no yield is performed.
+extern void pxYieldToMain();
+
 namespace Threading
 {
 // --------------------------------------------------------------------------------------
@@ -348,7 +352,7 @@ namespace Threading
 
 		pthread_t	m_thread;
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
-		Mutex	m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
+		Mutex		m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
 		MutexLockRecursive	m_lock_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
 
 		volatile long m_detached;		// a boolean value which indicates if the m_thread handle is valid
@@ -394,7 +398,8 @@ namespace Threading
 		// Implemented by derived class to perform actual threaded task!
 		virtual void ExecuteTaskInThread()=0;
 
-		void TestCancel();
+		void TestCancel() const;
+		void YieldToMain() const;
 
 		// Yields this thread to other threads and checks for cancellation.  A sleeping thread should
 		// always test for cancellation, however if you really don't want to, you can use Threading::Sleep()
@@ -411,7 +416,7 @@ namespace Threading
 			Threading::Sleep( ms );
 			TestCancel();
 		}
-
+		
 		void FrankenMutex( Mutex& mutex );
 
 		// ----------------------------------------------------------------------------

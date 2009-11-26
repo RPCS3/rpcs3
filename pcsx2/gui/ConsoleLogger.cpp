@@ -246,12 +246,15 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	, m_QueueColorSection( L"ConsoleLog::QueueColorSection" )
 	, m_QueueBuffer( L"ConsoleLog::QueueBuffer" )
-	, m_CurQueuePos( false )
-
 	, m_threadlogger( EnableThreadedLoggingTest ? new ConsoleTestThread() : NULL )
+
+	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )
+	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 {
+	m_CurQueuePos				= 0;
 	m_pendingFlushes			= 0;
 	m_WaitingThreadsForFlush	= 0;
+	m_ThreadedLogInQueue		= false;
 
 	m_ThawThrottle				= 0;
 	m_ThawNeeded				= false;
@@ -330,6 +333,8 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( wxEVT_SetTitleText,	wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
 	Connect( wxEVT_DockConsole,		wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
 	Connect( wxEVT_FlushQueue,		wxCommandEventHandler(ConsoleLogFrame::OnFlushEvent) );
+
+	//Connect( wxEVT_IDLE,			wxIdleEventHandler(ConsoleLogFrame::OnIdleEvent) );
 	
 	m_item_Deci2		->Check( g_Conf->EmuOptions.Log.Deci2 );
 	m_item_StdoutEE		->Check( g_Conf->EmuOptions.Log.StdoutEE );
@@ -385,25 +390,30 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 	}
 
 	++m_pendingFlushes;
-
-	if( m_pendingFlushes > 24 && !wxThread::IsMain() )
+	
+	if( !wxThread::IsMain() )
 	{
-		++m_WaitingThreadsForFlush;
-		lock.Release();
+		m_ThreadedLogInQueue = true;
 
-		if( !m_sem_QueueFlushed.Wait( wxTimeSpan( 0,0,0,500 ) ) )
+		if( m_pendingFlushes > 48 )
 		{
-			// Necessary since the main thread could grab the lock and process before
-			// the above function actually returns (gotta love threading!)
-			lock.Acquire();
-			if( m_WaitingThreadsForFlush != 0 ) --m_WaitingThreadsForFlush;
-		}
-		else
-		{
-			// give gui thread time to repaint and handle other pending messages.
-			// (those are prioritized lower than wxEvents, typically, which means we
-			// can't post a ping event since it'll still just starve out paint msgs.)
-			Sleep(1);
+			++m_WaitingThreadsForFlush;
+			lock.Release();
+
+			if( !m_sem_QueueFlushed.Wait( wxTimeSpan( 0,0,0,500 ) ) )
+			{
+				// Necessary since the main thread could grab the lock and process before
+				// the above function actually returns (gotta love threading!)
+				lock.Acquire();
+				if( m_WaitingThreadsForFlush != 0 ) --m_WaitingThreadsForFlush;
+			}
+			else
+			{
+				// give gui thread time to repaint and handle other pending messages.
+				// (those are prioritized lower than wxEvents, typically, which means we
+				// can't post a ping event since it'll still just starve out paint msgs.)
+				pxYieldToMain();
+			}
 		}
 	}
 }
@@ -561,25 +571,68 @@ void ConsoleLogFrame::OnSetTitle( wxCommandEvent& event )
 	SetTitle( event.GetString() );
 }
 
+void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& evt )
+{
+	// bah, wx's Idle Events are the most worthless crap.
+	//::SendMessage((HWND)m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+}
+
+void __evt_fastcall ConsoleLogFrame::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
+{
+#ifdef __WXMSW__
+	if( obj == NULL ) return;
+	ConsoleLogFrame* mframe = (ConsoleLogFrame*)obj;
+
+	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
+	// are always displayed as the last line of the log window).  Unfortunately this also
+	// makes logging very slow, so we only send the message for status changes, so that the
+	// log aligns itself nicely when we pause emulation or when errors occur.
+
+	::SendMessage((HWND)mframe->m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+#endif
+}
+
+void __evt_fastcall ConsoleLogFrame::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
+{
+#ifdef __WXMSW__
+	if( obj == NULL ) return;
+	ConsoleLogFrame* mframe = (ConsoleLogFrame*)obj;
+
+	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
+	// are always displayed as the last line of the log window).  Unfortunately this also
+	// makes logging very slow, so we only send the message for status changes, so that the
+	// log aligns itself nicely when we pause emulation or when errors occur.
+
+	::SendMessage((HWND)mframe->m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+#endif
+}
+
 void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 {
 	ScopedLock locker( m_QueueLock );
 
 	if( m_CurQueuePos != 0 )
 	{
+		if( m_ThreadedLogInQueue && (m_pendingFlushes < 20) )
+		{
+			// Hacky Speedup -->
+			// Occasionally the EEcore thread can send ups some serious amounts of spam, and
+			// if we don't sleep the main thread some, the stupid text control refresh will
+			// drive framerates toward zero as it tries to refresh for every single log.
+			// This hack checks if a thread has been posting logs and, if so, we "rest" the
+			// main thread so that other threads can accumulate a more sizable log chunk.
+
+			locker.Release();
+			Sleep( 2 );
+			locker.Acquire();
+		}
+
 		DoFlushQueue();
 
 #ifdef __WXMSW__
-		// This nicely sets the scroll position to the end of our log window, regardless of if
-		// the textctrl has focus or not.  The wxWidgets AppendText() function uses EM_LINESCROLL
-		// instead, which tends to be much faster for high-volume logs, but also ends up refreshing
-		// the console in sloppy fashion for normal logging.
-
-		// (both are needed, the WM_VSCROLL makes the scrolling smooth, and the EM_LINESCROLL avoids
-		// weird errors when the buffer reaches "max" and starts clearing old history)
-
+		// EM_LINESCROLL avoids weird errors when the buffer reaches "max" and starts
+		// clearing old history:
 		::SendMessage((HWND)m_TextCtrl.GetHWND(), EM_LINESCROLL, 0, 0xfffffff);
-		::SendMessage((HWND)m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
 #endif
 		//m_TextCtrl.Thaw();
 	}
@@ -653,9 +706,10 @@ void ConsoleLogFrame::DoFlushQueue()
 	// +1 / -1 ).  This works better for some reason:
 	m_TextCtrl.SetInsertionPointEnd(); //( insertPoint );
 
-	m_CurQueuePos = 0;
 	m_QueueColorSection.Clear();
-	m_pendingFlushes = 0;
+	m_CurQueuePos		= 0;
+	m_pendingFlushes	= 0;
+	m_ThreadedLogInQueue= false;
 }
 
 ConsoleLogFrame* Pcsx2App::GetProgramLog()

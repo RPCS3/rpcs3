@@ -239,33 +239,33 @@ static int GetPluginMenuId_Name( PluginsEnum_t pid )
 }
 
 // ------------------------------------------------------------------------
-MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title):
-    wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) ),
+MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
+    : wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) )
 
-	m_statusbar( *CreateStatusBar(2, 0) ),
-	m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() ),
+	, m_statusbar( *CreateStatusBar(2, 0) )
+	, m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() )
 
 	// All menu components must be created on the heap!
 
-	m_menubar( *new wxMenuBar() ),
+	, m_menubar( *new wxMenuBar() )
 
-	m_menuBoot	( *new wxMenu() ),
-	m_menuCDVD	( *new wxMenu() ),
-	m_menuSys	( *new wxMenu() ),
-	m_menuConfig( *new wxMenu() ),
-	m_menuMisc	( *new wxMenu() ),
-	m_menuDebug	( *new wxMenu() ),
+	, m_menuBoot	( *new wxMenu() )
+	, m_menuCDVD	( *new wxMenu() )
+	, m_menuSys	( *new wxMenu() )
+	, m_menuConfig( *new wxMenu() )
+	, m_menuMisc	( *new wxMenu() )
+	, m_menuDebug	( *new wxMenu() )
 
-	m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) ),
-	m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) ),
+	, m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) )
+	, m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) )
 
-	m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) ),
-	m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, L"Console to Stdio", wxEmptyString, wxITEM_CHECK ) ),
+	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
+	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, L"Console to Stdio", wxEmptyString, wxITEM_CHECK ) )
 
-	m_Listener_CoreThreadStatus( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener( this, OnCoreThreadStatusChanged ) ),
-	m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>( this, OnCorePluginStatusChanged ) ),
-	m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) ),
-	m_Listener_SettingsLoadSave( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
+	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )
+	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
+	, m_Listener_SettingsApplied	( wxGetApp().Source_SettingsApplied(), EventListener<int>				( this, OnSettingsApplied ) )
+	, m_Listener_SettingsLoadSave	( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>		( this, OnSettingsLoadSave ) )
 {
 	for( int i=0; i<PluginId_Count; ++i )
 		m_PluginMenuPacks[i].Populate( (PluginsEnum_t)i );

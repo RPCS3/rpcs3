@@ -553,7 +553,7 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 
 void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 {
-	DbgCon.WriteLn( L"\tEnumerating Plugin: " + m_master.GetFilename( curidx ) );
+	DbgCon.Indent().WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
 
 	try
 	{
@@ -589,14 +589,17 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 {
 	DevCon.WriteLn( "Plugin Enumeration Thread started..." );
 
-	wxGetApp().Ping();		// gives the gui thread some time to refresh
-	Yield( 3 );
+	YieldToMain();
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
 		DoNextPlugin( curidx );
-		if( (curidx & 3) == 3 ) wxGetApp().Ping();		// gives the gui thread some time to refresh
-		TestCancel();
+
+		// speed isn't critical here, but the pretty status bar sure is.
+		// second try yield should give the status bars UI a "good" chance to refresh before we advance. :)
+
+		YieldToMain();
+		YieldToMain();
 		//Sleep(150);		// uncomment this to slow down the selector, for debugging threading.
 	}
 

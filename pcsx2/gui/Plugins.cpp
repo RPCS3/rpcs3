@@ -125,8 +125,7 @@ LoadPluginsTask::~LoadPluginsTask() throw()
 
 void LoadPluginsTask::ExecuteTaskInThread()
 {
-	wxGetApp().Ping();
-	Yield(3);
+	pxYieldToMain();
 
 	// This is for testing of the error handler... uncomment for fun?
 	//throw Exception::PluginError( PluginId_PAD, "This one is for testing the error handler!" );
@@ -147,11 +146,11 @@ void LoadPluginsTask::OnCleanupInThread()
 //  SaveSinglePluginHelper  (Implementations)
 // --------------------------------------------------------------------------------------
 
-SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid ) :
-	m_plugstore( L"PluginConf Savestate" )
-,	m_whereitsat( NULL )
-,	m_resume( false )
+SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid )
+	: m_plugstore( L"PluginConf Savestate" )
 {
+	m_whereitsat	= NULL;
+	m_resume		= false;
 	m_pid			= pid;
 	m_validstate	= SysHasValidState();
 

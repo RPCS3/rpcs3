@@ -162,6 +162,8 @@ protected:
 	// This is a counter of the number of threads waiting for the Queue to flush.
 	volatile int			m_WaitingThreadsForFlush;
 
+	volatile bool			m_ThreadedLogInQueue;
+
 	// Used by threads waiting on the queue to flush.
 	Semaphore				m_sem_QueueFlushed;
 
@@ -178,6 +180,9 @@ protected:
 
 	// Current write position into the m_QueueBuffer;
 	int						m_CurQueuePos;
+
+	CmdEvt_ListenerBinding					m_Listener_CoreThreadStatus;
+	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
 
 	// Threaded log spammer, useful for testing console logging performance.
 	// (alternatively you can enable Disasm logging in any recompiler and achieve
@@ -229,5 +234,8 @@ protected:
 
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
+
+	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
+	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
 };
 

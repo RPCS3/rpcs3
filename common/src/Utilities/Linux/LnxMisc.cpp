@@ -40,3 +40,14 @@ u64 GetCPUTicks()
 	gettimeofday(&t, NULL);
 	return ((u64)t.tv_sec*GetTickFrequency())+t.tv_usec;
 }
+
+wxString GetOSVersionString()
+{
+	// TODO : Implement me!!
+	
+	// This shoul return a single comprehensive string description for the linux operating system:
+	// Kernel version, distribution, etc.
+
+	return L"Linux Maybe?";
+}
+

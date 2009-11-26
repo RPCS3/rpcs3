@@ -42,7 +42,6 @@ class AppCoreThread;
 typedef void FnType_OnThreadComplete(const wxCommandEvent& evt);
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE( pxEVT_SemaphorePing, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_OpenModalDialog, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_SysExecute, -1 )
@@ -408,7 +407,6 @@ public:
 	void PostPadKey( wxKeyEvent& evt );
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	int  ThreadedModalDialog( DialogIdentifiers dialogId );
-	void Ping() const;
 
 	bool PrepForExit( bool canCancel );
 
@@ -480,7 +478,6 @@ protected:
 	void OnSysExecute( wxCommandEvent& evt );
 	void OnReloadPlugins( wxCommandEvent& evt );
 	void OnLoadPluginsComplete( wxCommandEvent& evt );
-	void OnSemaphorePing( wxCommandEvent& evt );
 	void OnOpenModalDialog( wxCommandEvent& evt );
 	void OnCoreThreadStatus( wxCommandEvent& evt );
 

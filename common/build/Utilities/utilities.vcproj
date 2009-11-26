@@ -530,10 +530,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\Utilities\WinVersion.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\include\Utilities\wxBaseTools.h"
 				>
 			</File>
