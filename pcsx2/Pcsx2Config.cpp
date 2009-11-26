@@ -124,7 +124,7 @@ void Pcsx2Config::RecompilerOptions::ApplySanityCheck()
 		fpuIsRight = fpuOverflow;
 
 	if( fpuFullMode )
-		fpuIsRight = !fpuOverflow && !fpuExtraOverflow;
+		fpuIsRight = fpuOverflow && fpuExtraOverflow;
 
 	if( !fpuIsRight )
 	{
