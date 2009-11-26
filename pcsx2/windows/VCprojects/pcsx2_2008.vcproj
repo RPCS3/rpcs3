@@ -533,14 +533,6 @@
 					<File
 						RelativePath="..\..\Counters.cpp"
 						>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								AssemblerOutput="4"
-							/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath="..\..\Counters.h"
@@ -895,30 +887,6 @@
 							<File
 								RelativePath="..\..\x86\iFPU.cpp"
 								>
-								<FileConfiguration
-									Name="Debug|Win32"
-									>
-									<Tool
-										Name="VCCLCompilerTool"
-										AssemblerOutput="0"
-									/>
-								</FileConfiguration>
-								<FileConfiguration
-									Name="Devel|Win32"
-									>
-									<Tool
-										Name="VCCLCompilerTool"
-										AssemblerOutput="0"
-									/>
-								</FileConfiguration>
-								<FileConfiguration
-									Name="Release|Win32"
-									>
-									<Tool
-										Name="VCCLCompilerTool"
-										AssemblerOutput="0"
-									/>
-								</FileConfiguration>
 							</File>
 							<File
 								RelativePath="..\..\x86\iFPU.h"
@@ -986,14 +954,6 @@
 								<File
 									RelativePath="..\..\x86\ix86-32\iR5900-32.cpp"
 									>
-									<FileConfiguration
-										Name="Devel|Win32"
-										>
-										<Tool
-											Name="VCCLCompilerTool"
-											AssemblerOutput="4"
-										/>
-									</FileConfiguration>
 								</File>
 								<File
 									RelativePath="..\..\x86\ix86-32\iR5900Arit.cpp"
@@ -1241,22 +1201,6 @@
 					<File
 						RelativePath="..\..\Ipu\IPU.cpp"
 						>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								UsePrecompiledHeader="0"
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Devel|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								UsePrecompiledHeader="0"
-							/>
-						</FileConfiguration>
 					</File>
 					<File
 						RelativePath="..\..\Ipu\IPU.h"
@@ -1935,7 +1879,41 @@
 			<Filter
 				Name="Resources"
 				>
-				<File
+        <File
+					RelativePath="..\..\gui\Resources\ButtonIcon_Camera.png"
+					>
+          <FileConfiguration
+						Name="Debug|Win32"
+						>
+            <Tool
+							Name="VCCustomBuildTool"
+							Description=""
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+          </FileConfiguration>
+          <FileConfiguration
+						Name="Devel|Win32"
+						>
+            <Tool
+							Name="VCCustomBuildTool"
+							Description=""
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+          </FileConfiguration>
+          <FileConfiguration
+						Name="Release|Win32"
+						>
+            <Tool
+							Name="VCCustomBuildTool"
+							Description=""
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+          </FileConfiguration>
+        </File>
+        <File
 					RelativePath="..\..\gui\Resources\AppIcon16.png"
 					>
 					<FileConfiguration

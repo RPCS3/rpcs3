@@ -21,6 +21,9 @@
 #include "ModalPopups.h"
 #include "Panels/ConfigurationPanels.h"
 
+#include "Resources/EmbeddedImage.h"
+#include "Resources/ButtonIcon_Camera.h"
+
 #include <wx/artprov.h>
 #include <wx/listbook.h>
 #include <wx/listctrl.h>
@@ -52,13 +55,11 @@ void Dialogs::ConfigurationDialog::AddPage( const char* label, int iconid )
 		( labelstr == g_Conf->SettingsTabName ), iconid );
 }
 
-Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
-	wxDialogWithHelpers( parent, id, _("PCSX2 Configuration"), true )
-,	m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
+Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id )
+	: wxDialogWithHelpers( parent, id, _("PCSX2 Configuration"), true )
+	, m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
 {
 	m_idealWidth = 600;
-
-	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
 	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
@@ -73,10 +74,15 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id ) :
 	AddPage<PluginSelectorPanel>( wxLt("Plugins"),		cfgid.Plugins );
 	AddPage<StandardPathsPanel>	( wxLt("Folders"),		cfgid.Paths );
 
+	wxBitmapButton& screenshotButton( *new wxBitmapButton( this, wxID_SAVE, EmbeddedImage<res_ButtonIcon_Camera>().Get() ) );
+	screenshotButton.SetToolTip( _("Saves a snapshot of this settings panel to a PNG file.") );
+
+	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 	*this += m_listbook;
 	AddOkCancel( *GetSizer(), true );
-	*m_extraButtonSizer += new wxButton( this, wxID_SAVE, _("Screenshot!") );
-	
+
+	*m_extraButtonSizer += screenshotButton;
+
 	FindWindow( wxID_APPLY )->Disable();
 
 	Fit();
@@ -168,7 +174,10 @@ void Dialogs::ConfigurationDialog::OnScreenshot_Click( wxCommandEvent& evt )
 		filenameDefault, L"png", NULL, wxFD_SAVE | wxFD_OVERWRITE_PROMPT, this ) );
 
 	if( !filename.IsEmpty() )
+	{
+		ScopedBusyCursor busy( Cursor_ReallyBusy );
 		memBmp.SaveFile( filename, wxBITMAP_TYPE_PNG );
+	}
 }
 
 // ----------------------------------------------------------------------------
