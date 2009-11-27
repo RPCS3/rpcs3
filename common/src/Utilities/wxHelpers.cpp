@@ -107,9 +107,9 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 	if( m_hasContextHelp )
 	{
 		SetExtraStyle( wxDIALOG_EX_CONTEXTHELP );
-//#ifndef __WXMSW__
+#ifndef __WXMSW__
 		*m_extraButtonSizer += new wxContextHelpButton(this) | StdButton();
-//#endif
+#endif
 	}
 
 	// create a sizer to hold the help and ok/cancel buttons, for platforms

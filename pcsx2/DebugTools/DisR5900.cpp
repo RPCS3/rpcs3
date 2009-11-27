@@ -164,7 +164,7 @@ typedef void (*TdisR5900F)DisFInterface;
 
 struct sSymbol {
 	u32 addr;
-	char name[32];
+	char name[64];
 };
 
 static sSymbol *dSyms = NULL;
@@ -173,7 +173,9 @@ static int nSyms = 0;
 
 void disR5900AddSym(u32 addr, const char *name) {
 
-    pxAssertDev(strlen(name) < 32, wxsFormat(L"Char length of symbol is more then 31 chars.", strlen(name)));
+    if( !pxAssertDev(strlen(name) < sizeof(dSyms->name),
+		wxsFormat(L"String length out of bounds on debug symbol. Allowed=%d, Symbol=%d", sizeof(dSyms->name)-1, strlen(name)))
+	) return;
 
 	if( nSyms+1 >= nSymAlloc )
 	{
@@ -184,7 +186,7 @@ void disR5900AddSym(u32 addr, const char *name) {
 
 	if (dSyms == NULL) return;
 	dSyms[nSyms].addr = addr;
-	strncpy(dSyms[nSyms].name, name, 32);
+	strncpy(dSyms[nSyms].name, name, 64);
 	nSyms++;
 }
 

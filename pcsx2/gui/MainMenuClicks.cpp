@@ -107,18 +107,36 @@ bool MainEmuFrame::_DoSelectELFBrowser()
 
 void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 {
-	CoreThread.Suspend();
+	ScopedCoreThreadSuspend core;
 
-	if( (g_Conf->CdvdSource == CDVDsrc_Iso) && !wxFileExists(g_Conf->CurrentIso) )
+	if( g_Conf->CdvdSource == CDVDsrc_Iso )
 	{
-		wxString result;
-		if( !_DoSelectIsoBrowser( result ) )
-		{
-			CoreThread.Resume();
-			return;
-		}
+		bool selector = g_Conf->CurrentIso.IsEmpty();
 
-		SysUpdateIsoSrcFile( result );
+		if( !selector && !wxFileExists(g_Conf->CurrentIso) )
+		{
+			// User has an iso selected from a previous run, but it doesn't exist anymore.
+			// Issue a courtesy popup and then an Iso Selector to choose a new one.
+			
+			Dialogs::ExtensibleConfirmation( this, ConfButtons().OK(), _("ISO file not found!"),
+				_("An error occurred while trying to open the file:\n\n") + g_Conf->CurrentIso + L"\n\n" + 
+				_("Error: The configured ISO file does not exist.  Click OK to select a new ISO source for CDVD.")
+			).ShowModal();
+			
+			selector = true;
+		}
+		
+		if( selector )
+		{
+			wxString result;
+			if( !_DoSelectIsoBrowser( result ) )
+			{
+				core.Resume();
+				return;
+			}
+
+			SysUpdateIsoSrcFile( result );
+		}
 	}
 
 	if( SysHasValidState() )
@@ -131,7 +149,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 		if( !confirmed )
 		{
-			CoreThread.Resume();
+			core.Resume();
 			return;
 		}
 	}
@@ -141,7 +159,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 {
-	bool resume = CoreThread.Suspend();
+	ScopedCoreThreadSuspend core;
 	wxString result;
 
 	if( _DoSelectIsoBrowser( result ) )
@@ -152,7 +170,7 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 		SysUpdateIsoSrcFile( result );
 	}
 
-	if( resume ) CoreThread.Resume();
+	core.Resume();
 }
 
 void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent &event )

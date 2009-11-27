@@ -16,6 +16,14 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 
+
+// FIXME : This needs to handle removed/missing ISOs somehow, although I'm not sure the
+// best approach.  I think I'd prefer for missing entries to only be removed when they
+// are selected.  This also means we'll need to add some sort of "no current selection"
+// menu option that's defaulted to when a selection is deemed missing (since just randomly
+// selecting another iso would be undesirable).
+
+
 RecentIsoManager::RecentIsoManager( wxMenu* menu )
 	: m_Menu( menu )
 	, m_MaxLength( g_Conf->RecentFileCount )

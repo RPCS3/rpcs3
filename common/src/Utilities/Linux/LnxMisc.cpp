@@ -44,11 +44,6 @@ u64 GetCPUTicks()
 
 wxString GetOSVersionString()
 {
-	// TODO : Implement me!!
-	
-	// This shoul return a single comprehensive string description for the linux operating system:
-	// Kernel version, distribution, etc.
-
 	return wxGetOsDescription();
 }
 
