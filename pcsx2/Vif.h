@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -103,7 +103,7 @@ union tVIF_STAT {
 		u32 FQC : 5; // Amount of data. Up to 8 qwords on Vif0, 16 on Vif1.
 	};
 	u32 _u32;
-	
+
 	tVIF_STAT(u32 val) { _u32 = val; }
 	
 	bool test(u32 flags) { return !!(_u32 & flags); }
@@ -221,8 +221,8 @@ extern "C"
 extern void dmaVIF0();
 extern void dmaVIF1();
 extern void mfifoVIF1transfer(int qwc);
-extern int  VIF0transfer(u32 *data, int size, int istag);
-extern int  VIF1transfer(u32 *data, int size, int istag);
+extern bool VIF0transfer(u32 *data, int size, bool istag);
+extern bool VIF1transfer(u32 *data, int size, bool istag);
 extern void vifMFIFOInterrupt();
 
 // --------------------------------------------------------------------------------------

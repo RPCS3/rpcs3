@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2009  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -131,7 +131,7 @@ static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data)
 {
 	int n;
 	u32 vifRowReg = getVifRowRegs(offnum);
-	
+
 	if (vifRegs->code & 0x10000000)
 	{
 		switch (vif->cl)
@@ -139,7 +139,7 @@ static __releaseinline void writeXYZW(u32 offnum, u32 &dest, u32 data)
 			case 0:
 				if (offnum == OFFSET_X)
 					n = (vifRegs->mask) & 0x3;
-				else 
+				else
 					n = (vifRegs->mask >> (offnum * 2)) & 0x3;
 				break;
 			case 1:
@@ -210,8 +210,8 @@ void __fastcall UNPACK_V2(u32 *dest, T *data, int size)
 			size--;
 		}
 	}
-	
-	if (vifRegs->offset == OFFSET_Y) 
+
+	if (vifRegs->offset == OFFSET_Y)
 	{
 		if (size > 0)
 		{
@@ -220,13 +220,13 @@ void __fastcall UNPACK_V2(u32 *dest, T *data, int size)
 			size--;
 		}
 	}
-	
+
 	if (vifRegs->offset == OFFSET_Z)
 	{
 		writeXYZW(vifRegs->offset, *dest++, *dest-2);
 		vifRegs->offset = OFFSET_W;
 	}
-	
+
 	if (vifRegs->offset == OFFSET_W)
 	{
 		writeXYZW(vifRegs->offset, *dest, *data);
@@ -246,8 +246,8 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 			size--;
 		}
 	}
-	
-	if(vifRegs->offset == OFFSET_Y) 
+
+	if(vifRegs->offset == OFFSET_Y)
 	{
 		if (size > 0)
 		{
@@ -256,7 +256,7 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 			size--;
 		}
 	}
-	
+
 	if(vifRegs->offset == OFFSET_Z)
 	{
 		if (size > 0)
@@ -266,7 +266,7 @@ void __fastcall UNPACK_V3(u32 *dest, T *data, int size)
 			size--;
 		}
 	}
-	
+
 	if(vifRegs->offset == OFFSET_W)
 	{
 		//V3-# does some bizzare thing with alignment, every 6qw of data the W becomes 0 (strange console!)
@@ -281,7 +281,7 @@ void __fastcall UNPACK_V4(u32 *dest, T *data , int size)
 {
 	while (size > 0)
 	{
-		writeXYZW(vifRegs->offset, *dest++, *data++); 
+		writeXYZW(vifRegs->offset, *dest++, *data++);
 		vifRegs->offset++;
 		size--;
 	}
@@ -298,20 +298,20 @@ void __fastcall UNPACK_V4_5(u32 *dest, u32 *data, int size)
 	writeXYZW(OFFSET_W, *dest, ((*data & 0x8000) >> 8));
 }
 
-void __fastcall UNPACK_S_32(u32 *dest, u32 *data, int size) 
+void __fastcall UNPACK_S_32(u32 *dest, u32 *data, int size)
 {
-	UNPACK_S(dest, data, size); 
+	UNPACK_S(dest, data, size);
 }
 
-void __fastcall UNPACK_S_16s(u32 *dest, u32 *data, int size) 
-{ 
-	s16 *sdata = (s16*)data;  
-	UNPACK_S(dest, sdata, size); 
+void __fastcall UNPACK_S_16s(u32 *dest, u32 *data, int size)
+{
+	s16 *sdata = (s16*)data;
+	UNPACK_S(dest, sdata, size);
 }
 
-void __fastcall UNPACK_S_16u(u32 *dest, u32 *data, int size) 
+void __fastcall UNPACK_S_16u(u32 *dest, u32 *data, int size)
 {
-	u16 *sdata = (u16*)data; 
+	u16 *sdata = (u16*)data;
 	UNPACK_S(dest, sdata, size);
 }
 
@@ -414,12 +414,13 @@ void __fastcall UNPACK_V4_8u(u32 *dest, u32 *data, int size)
 	UNPACK_V4(dest, cdata, size);
 }
 
-static __forceinline int mfifoVIF1rbTransfer()
+static __forceinline bool mfifoVIF1rbTransfer()
 {
 	u32 maddr = dmacRegs->rbor.ADDR;
-	u32 ret, msize = dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16;
+	u32 msize = dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16;
 	u16 mfifoqwc = std::min(vif1ch->qwc, vifqwc);
 	u32 *src;
+	bool ret;
 
 	/* Check if the transfer should wrap around the ring buffer */
 	if ((vif1ch->madr + (mfifoqwc << 4)) > (msize))
@@ -430,21 +431,22 @@ static __forceinline int mfifoVIF1rbTransfer()
 
 		/* it does, so first copy 's1' bytes from 'addr' to 'data' */
 		src = (u32*)PSM(vif1ch->madr);
-		if (src == NULL) return -1;
-		
+		if (src == NULL) return false;
+
 		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset, 0);
+			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset, false);
 		else
-			ret = VIF1transfer(src, s1, 0);
-		
-		if (ret == -2) return ret;
+			ret = VIF1transfer(src, s1, false);
 
-		/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
-		vif1ch->madr = maddr;
+		if (ret)
+		{
+            /* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
+            vif1ch->madr = maddr;
 
-		src = (u32*)PSM(maddr);
-		if (src == NULL) return -1;
-		ret = VIF1transfer(src, ((mfifoqwc << 2) - s1), 0);
+            src = (u32*)PSM(maddr);
+            if (src == NULL) return false;
+            VIF1transfer(src, ((mfifoqwc << 2) - s1), false);
+		}
 	}
 	else
 	{
@@ -452,28 +454,25 @@ static __forceinline int mfifoVIF1rbTransfer()
 
 		/* it doesn't, so just transfer 'qwc*4' words */
 		src = (u32*)PSM(vif1ch->madr);
-		if (src == NULL) return -1;
-		
-		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset, 0);
-		else
-			ret = VIF1transfer(src, mfifoqwc << 2, 0);
-		
-		if (ret == -2) return ret;
-	}
+		if (src == NULL) return false;
 
+		if (vif1.vifstalled)
+			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset, false);
+		else
+			ret = VIF1transfer(src, mfifoqwc << 2, false);
+	}
 	return ret;
 }
 
-static __forceinline int mfifo_VIF1chain()
+static __forceinline bool mfifo_VIF1chain()
 {
-	int ret;
-
+    bool ret;
+    
 	/* Is QWC = 0? if so there is nothing to transfer */
 	if ((vif1ch->qwc == 0) && (!vif1.vifstalled))
 	{
 		vif1.inprogress &= ~1;
-		return 0;
+		return true;
 	}
 
 	if (vif1ch->madr >= dmacRegs->rbor.ADDR &&
@@ -488,13 +487,13 @@ static __forceinline int mfifo_VIF1chain()
 		u32 *pMem = (u32*)dmaGetAddr(vif1ch->madr);
 		SPR_LOG("Non-MFIFO Location");
 
-		if (pMem == NULL) return -1;
-		if (vif1.vifstalled)
-			ret = VIF1transfer(pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, 0);
-		else
-			ret = VIF1transfer(pMem, vif1ch->qwc << 2, 0);
-	}
+		if (pMem == NULL) return false;
 
+		if (vif1.vifstalled)
+			ret = VIF1transfer(pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, false);
+		else
+			ret = VIF1transfer(pMem, vif1ch->qwc << 2, false);
+	}
 	return ret;
 }
 
@@ -507,7 +506,6 @@ void mfifoVIF1transfer(int qwc)
 {
 	u32 *ptag;
 	int id;
-	int ret;
 
 	g_vifCycles = 0;
 
@@ -525,7 +523,7 @@ void mfifoVIF1transfer(int qwc)
 			vif1Regs->stat.FQC = 0x10; // FQC=16
 		}
 		vif1.inprogress &= ~0x10;
-		
+
 		return;
 	}
 
@@ -535,21 +533,23 @@ void mfifoVIF1transfer(int qwc)
 
 		if (vif1ch->chcr.TTE)
 		{
+            bool ret;
+
 			if (vif1.stallontag)
-				ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on Stall
-			else 
-				ret = VIF1transfer(ptag + 2, 2, 1);  //Transfer Tag
-			
-			if (ret == -2)
+				ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on Stall
+			else
+				ret = VIF1transfer(ptag + 2, 2, true);  //Transfer Tag
+
+			if (!(ret))
 			{
-				VIF_LOG("MFIFO Stallon tag");
+				VIF_LOG("MFIFO Stall on tag");
 				vif1.stallontag	= true;
 				return;        //IRQ set by VIFTransfer
 			}
 		}
-		
+
 		Tag::UnsafeTransfer(vif1ch, ptag);
-		
+
 		vif1ch->madr = ptag[1];
 		id =Tag::Id(ptag);
 		vifqwc--;
@@ -599,30 +599,30 @@ void mfifoVIF1transfer(int qwc)
 			vif1.done = true;
 		}
 	}
-	
+
 	vif1.inprogress |= 1;
-	
+
 	SPR_LOG("mfifoVIF1transfer end %x madr %x, tadr %x vifqwc %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr, vifqwc);
 }
 
 void vifMFIFOInterrupt()
 {
 	g_vifCycles = 0;
-	
+
 	if (schedulepath3msk) Vif1MskPath3();
 
 	if ((vif1Regs->stat.VGW))
 	{
 		if (gif->chcr.STR)
-		{			
+		{
 			CPU_INT(10, 16);
 			return;
-		} 
-		else 
+		}
+		else
 		{
 			vif1Regs->stat.VGW = false;
 		}
-	
+
 	}
 
 	if ((spr0->chcr.STR) && (spr0->qwc == 0))
@@ -636,7 +636,7 @@ void vifMFIFOInterrupt()
 		vif1Regs->stat.INT = true;
 		hwIntcIrq(INTC_VIF1);
 		--vif1.irq;
-		
+
 		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
 			vif1Regs->stat.FQC = 0; // FQC=0
@@ -644,7 +644,7 @@ void vifMFIFOInterrupt()
 			return;
 		}
 	}
-	
+
 	if (vif1.done == false || vif1ch->qwc)
 	{
 		switch(vif1.inprogress & 1)
@@ -667,15 +667,15 @@ void vifMFIFOInterrupt()
 					CPU_INT(10, vif1ch->qwc * BIAS);
 
 				return;
-				
+
 			case 1: //Transfer data
-				mfifo_VIF1chain();	
+				mfifo_VIF1chain();
 				CPU_INT(10, 0);
 				return;
 		}
 		return;
-	} 
-	
+	}
+
 	/*if (vifqwc <= 0)
 	{
 		//Console.WriteLn("Empty 2");

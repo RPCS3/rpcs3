@@ -45,7 +45,7 @@ void __fastcall ReadFIFO_page_4(u32 mem, u64 *out)
 	pxAssert( (mem >= VIF0_FIFO) && (mem < VIF1_FIFO) );
 
 	VIF_LOG("ReadFIFO/VIF0 0x%08X", mem);
-	
+
 	out[0] = psHu64(VIF0_FIFO);
 	out[1] = psHu64(VIF0_FIFO + 8);
 }
@@ -114,8 +114,8 @@ void __fastcall WriteFIFO_page_4(u32 mem, const mem128_t *value)
 	psHu64(VIF0_FIFO + 8) = value[1];
 
 	vif0ch->qwc += 1;
-	int ret = VIF0transfer((u32*)value, 4, 0);
-	pxAssertDev( ret == 0, "vif stall code not implemented" );
+	bool ret = VIF0transfer((u32*)value, 4, true);
+	pxAssertDev( ret, "vif stall code not implemented" );
 }
 
 void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
@@ -133,8 +133,8 @@ void __fastcall WriteFIFO_page_5(u32 mem, const mem128_t *value)
 		DevCon.Warning("writing to vif1 fifo when stalled");
 
 	vif1ch->qwc += 1;
-	int ret = VIF1transfer((u32*)value, 4, 0);
-	pxAssertDev( ret == 0, "vif stall code not implemented" );
+	bool ret = VIF1transfer((u32*)value, 4, false);
+	pxAssertDev( ret, "vif stall code not implemented" );
 }
 
 // Dummy GIF-TAG Packet to Guarantee Count = 1

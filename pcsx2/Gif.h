@@ -126,7 +126,7 @@ union tGIF_STAT
 		u32 reserved3 : 3;
 	};
 	u32 _u32;
-	
+
 	tGIF_STAT(u32 val) { _u32 = val; }
 	
 	bool test(u32 flags) { return !!(_u32 & flags); }
@@ -182,7 +182,7 @@ union tGIF_CNT
 		u32 REGCNT : 4;
 		u32 VUADDR : 2;
 		u32 reserved2 : 10;
-		
+
 	};
 	u32 _u32;
 	
@@ -234,7 +234,7 @@ struct GIFregisters
 	u32 padding1[3];
 	tGIF_STAT	stat;
 	u32 padding2[7];
-	
+
 	tGIF_TAG0	tag0;
 	u32 padding3[3];
 	tGIF_TAG1	tag1;
@@ -243,7 +243,7 @@ struct GIFregisters
 	u32 padding5[3];
 	u32			tag3;
 	u32 padding6[3];
-	
+
 	tGIF_CNT	cnt;
 	u32 padding7[3];
 	tGIF_P3CNT	p3cnt;

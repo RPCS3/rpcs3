@@ -73,7 +73,7 @@ static __forceinline void vif1UNPACK(u32 *data)
 		vif1.cmd &= ~0x7f;
         return;
 	}
-	
+
 	//vif1FLUSH();
 
 	vif1.usn = (vif1Regs->code >> 14) & 0x1;
@@ -153,7 +153,7 @@ static int __fastcall Vif1TransSTRow(u32 *data)  // STROW
 	pxAssert(vif1.tag.addr < 4);
 	ret = min(4 - vif1.tag.addr, vif1.vifpacketsize);
 	pxAssert(ret > 0);
-	
+
 	switch (ret)
 	{
 		case 4:
@@ -171,7 +171,7 @@ static int __fastcall Vif1TransSTRow(u32 *data)  // STROW
 			break;
 		jNO_DEFAULT;
 	}
-	
+
 	vif1.tag.addr += ret;
 	vif1.tag.size -= ret;
 	if (vif1.tag.size == 0) vif1.cmd = 0;
@@ -250,7 +250,6 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 	gifRegs->stat.APATH |= GIF_APATH2;
 	gifRegs->stat.OPH = true;
 	
-
 	if (splitptr > 0)  //Leftover data from the last packet, filling the rest and sending to the GS
 	{
 		if ((splitptr < 4) && (vif1.vifpacketsize >= (4 - splitptr)))
@@ -278,7 +277,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 		splitptr = 0;
 		return ret;
 	}
-	
+
 	if (vif1.vifpacketsize < vif1.tag.size)
 	{
 		if (vif1.vifpacketsize < 4 && splitptr != 4)   //Not a full QW left in the buffer, saving left over data
@@ -341,7 +340,7 @@ static int  __fastcall Vif1TransUnpack(u32 *data)
             ProcessMemSkip<1>(vif1.vifpacketsize << 2, (vif1.cmd & 0xf));
             vif1.tag.size -= vif1.vifpacketsize;
 		}
-		
+
         XMMRegisters::Thaw();
 		return vif1.vifpacketsize;
 	}
@@ -360,7 +359,7 @@ static int  __fastcall Vif1TransUnpack(u32 *data)
 			/* we got all the data, transfer it fully */
 			VIFunpack<1>(data, &vif1.tag, vif1.tag.size);
 		}
-		
+
         vif1.tag.size = 0;
         vif1.cmd = 0;
         XMMRegisters::Thaw();
@@ -574,7 +573,7 @@ void (*Vif1CMDTLB[82])() =
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int VIF1transfer(u32 *data, int size, int istag)
+bool VIF1transfer(u32 *data, int size, bool istag)
 {
 	int ret;
 	int transferred = vif1.vifstalled ? vif1.irqoffset : 0; // irqoffset necessary to add up the right qws, or else will spin (spiderman)
@@ -610,7 +609,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		vif1.cmd = (data[0] >> 24);
 		vif1Regs->code = data[0];
 		vif1Regs->stat.VPS |= VPS_DECODING;
-		
+
 		if ((vif1.cmd & 0x60) == 0x60)
 		{
 			vif1UNPACK(data);
@@ -669,7 +668,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 		if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1)) vif1.inprogress &= ~0x1;
 
 		// spiderman doesn't break on qw boundaries
-		if (istag) return -2;
+		if (istag) return false;
 
 		transferred = transferred >> 2;
 		vif1ch->madr += (transferred << 4);
@@ -677,7 +676,7 @@ int VIF1transfer(u32 *data, int size, int istag)
 
 		if ((vif1ch->qwc == 0) && (vif1.irqoffset == 0)) vif1.inprogress = 0;
 		//Console.WriteLn("Stall on vif1, FromSPR = %x, Vif1MADR = %x Sif0MADR = %x STADR = %x", psHu32(0x1000d010), vif1ch->madr, psHu32(0x1000c010), psHu32(DMAC_STADR));
-		return -2;
+		return false;
 	}
 
 	vif1Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
@@ -690,14 +689,11 @@ int VIF1transfer(u32 *data, int size, int istag)
 		vif1ch->qwc -= transferred;
 	}
 
-	if (vif1Regs->stat.VGW)
-	{
-		vif1.vifstalled = true;
-	}
+	if (vif1Regs->stat.VGW) vif1.vifstalled = true;
 
 	if (vif1ch->qwc == 0 && (vif1.irqoffset == 0 || istag == 1)) vif1.inprogress &= ~0x1;
 
-	return vif1.vifstalled ? -2 : 0;
+	return (!(vif1.vifstalled));
 }
 
 void vif1TransferFromMemory()
@@ -711,7 +707,7 @@ void vif1TransferFromMemory()
 		Console.WriteLn("Vif1 Tag BUSERR");
 		dmacRegs->stat.BEIS = true;      //Bus Error
 		vif1Regs->stat.FQC = 0;
-		
+
 		vif1ch->qwc = 0;
 		vif1.done = true;
 		CPU_INT(1, 0);
@@ -731,7 +727,7 @@ void vif1TransferFromMemory()
 			if (size > 1)
 			{
 				GetMTGS().WaitGS();
-				GSreadFIFO((u64*)&PS2MEM_HW[0x5000]);
+				GSreadFIFO(&psHu64(VIF1_FIFO));
 			}
 			pMem[0] = psHu64(VIF1_FIFO);
 			pMem[1] = psHu64(VIF1_FIFO + 8);
@@ -755,22 +751,21 @@ void vif1TransferFromMemory()
 	vif1ch->qwc = 0;
 }
 
-int  _VIF1chain()
+bool _VIF1chain()
 {
 	u32 *pMem;
-	u32 ret;
 
 	if (vif1ch->qwc == 0)
 	{
 		vif1.inprogress = 0;
-		return 0;
+		return true;
 	}
 
 	if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE)
 	{
 		vif1TransferFromMemory();
 		vif1.inprogress = 0;
-		return 0;
+		return true;
 	}
 
 	pMem = (u32*)dmaGetAddr(vif1ch->madr);
@@ -779,18 +774,16 @@ int  _VIF1chain()
 		vif1.cmd = 0;
 		vif1.tag.size = 0;
 		vif1ch->qwc = 0;
-		return 0;
+		return true;
 	}
 
 	VIF_LOG("VIF1chain size=%d, madr=%lx, tadr=%lx",
 	        vif1ch->qwc, vif1ch->madr, vif1ch->tadr);
 
 	if (vif1.vifstalled)
-		ret = VIF1transfer(pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, 0);
+		return VIF1transfer(pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, false);
 	else
-		ret = VIF1transfer(pMem, vif1ch->qwc * 4, 0);
-
-	return ret;
+		return VIF1transfer(pMem, vif1ch->qwc * 4, false);
 }
 
 bool _chainVIF1()
@@ -811,7 +804,6 @@ __forceinline void vif1SetupTransfer()
 
 		case VIF_CHAIN_MODE:
 			int id;
-			int ret;
 
 			vif1ptag = (u32*)dmaGetAddr(vif1ch->tadr); //Set memory pointer to TADR
 
@@ -841,13 +833,14 @@ __forceinline void vif1SetupTransfer()
 
 			if (vif1ch->chcr.TTE)
 			{
+			    bool ret;
 
 				if (vif1.vifstalled)
-					ret = VIF1transfer(vif1ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, 1);  //Transfer Tag on stall
+					ret = VIF1transfer(vif1ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on stall
 				else
-					ret = VIF1transfer(vif1ptag + 2, 2, 1);  //Transfer Tag
+					ret = VIF1transfer(vif1ptag + 2, 2, true);  //Transfer Tag
 
-				if (ret < 0 && vif1.irqoffset < 2)
+				if ((ret == false) && vif1.irqoffset < 2)
 				{
 					vif1.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
 					return;       //There has been an error or an interrupt
@@ -885,7 +878,7 @@ __forceinline void vif1Interrupt()
 			CPU_INT(1, gif->qwc * BIAS);
 			return;
 		}
-		else 
+		else
 		{
 		    vif1Regs->stat.VGW = false;
 		}
@@ -1092,7 +1085,7 @@ void vif1Write32(u32 mem, u32 value)
                                 //Console.WriteLn("MFIFO Stall");
                                 CPU_INT(10, vif1ch->qwc * BIAS);
                                 break;
-                            
+
                             case NO_MFD:
                             case MFD_RESERVED:
                             case MFD_GIF: // Wonder if this should be with VIF?
@@ -1133,7 +1126,8 @@ void vif1Write32(u32 mem, u32 value)
 			//vif1Regs->stat._u32 = (vif1Regs->stat._u32 & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
 			if (vif1Regs->stat.FDR)
 			{
-				vif1Regs->stat.FQC = 1; // Hack but it checks this is true before transfer? (fatal frame)
+			    // Hack but it checks this is true before transfer? (fatal frame)
+				vif1Regs->stat.FQC = 0x1;
 			}
 			else
 			{
@@ -1179,13 +1173,13 @@ void vif1Reset()
 	memzero(vif1);
 	memzero(*vif1Regs);
 	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
-	
+
 	psHu64(VIF1_FIFO) = 0;
 	psHu64(VIF1_FIFO + 8) = 0;
-	
+
 	vif1Regs->stat.VPS = VPS_IDLE;
 	vif1Regs->stat.FQC = 0; // FQC=0
-	
+
 	vif1.done = true;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 }
