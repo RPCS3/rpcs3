@@ -655,7 +655,7 @@ void vifMFIFOInterrupt()
 				//	Console.WriteLn("Empty 1");
 					vifqwc = 0;
 					vif1.inprogress |= 0x10;
-					vif1Regs->stat.FQC = 0; // FQC=0
+					vif1Regs->stat.FQC = 0;
 					hwDmacIrq(DMAC_MFIFO_EMPTY);
 					return;
 				}

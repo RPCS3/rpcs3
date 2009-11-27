@@ -648,9 +648,9 @@ void dmaVIF0()
 
 	if (!(vif0ch->chcr.MOD & 0x1) || vif0ch->qwc > 0)   // Normal Mode
 	{
-		if (_VIF0chain() == -2)
+		if (!_VIF0chain())
 		{
-			Console.WriteLn("Stall on normal %x", vif0Regs->stat._u32);
+			Console.WriteLn(L"Stall on normal vif0 " + vif0Regs->stat.desc());
 
 			vif0.vifstalled = true;
 			return;

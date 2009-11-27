@@ -110,6 +110,7 @@ union tVIF_STAT {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Stat: 0x%x", _u32); }
 };
 
 union tVIF_FBRST {
@@ -128,6 +129,7 @@ union tVIF_FBRST {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Fbrst: 0x%x", _u32); }
 };
 
 union tVIF_ERR {
@@ -146,9 +148,11 @@ union tVIF_ERR {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Err: 0x%x", _u32); }
 };
 
-struct vifCycle {
+struct vifCycle 
+{
 	u8 cl, wl;
 	u8 pad[2];
 };

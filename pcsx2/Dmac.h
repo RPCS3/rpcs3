@@ -43,6 +43,7 @@ union tDMA_CHCR {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Chcr: 0x%x", _u32); }
 };
 
 union tDMA_SADR {
@@ -55,6 +56,7 @@ union tDMA_SADR {
 	tDMA_SADR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Sadr: 0x%x", _u32); }
 };
 
 
@@ -158,6 +160,7 @@ union tDMAC_CTRL {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Ctrl: 0x%x", _u32); }
 };
 
 union tDMAC_STAT {
@@ -181,6 +184,7 @@ union tDMAC_STAT {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Stat: 0x%x", _u32); }
 };
 
 union tDMAC_PCR {
@@ -199,6 +203,7 @@ union tDMAC_PCR {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Pcr: 0x%x", _u32); }
 };
 
 union tDMAC_SQWC {
@@ -216,6 +221,7 @@ union tDMAC_SQWC {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Sqwc: 0x%x", _u32); }
 };
 
 union tDMAC_RBSR {
@@ -228,6 +234,7 @@ union tDMAC_RBSR {
 	tDMAC_RBSR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Rbsr: 0x%x", _u32); }
 };
 
 union tDMAC_RBOR {
@@ -240,6 +247,7 @@ union tDMAC_RBOR {
 	tDMAC_RBOR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Rbor: 0x%x", _u32); }
 };
 
 union tDMAC_STADR {
@@ -252,6 +260,7 @@ union tDMAC_STADR {
 	tDMAC_STADR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Stadr: 0x%x", _u32); }
 };
 
 struct DMACregisters
@@ -286,6 +295,7 @@ union tINTC_STAT {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Stat: 0x%x", _u32); }
 };
 
 union tINTC_MASK {
@@ -301,6 +311,7 @@ union tINTC_MASK {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Mask: 0x%x", _u32); }
 };
 
 struct INTCregisters
