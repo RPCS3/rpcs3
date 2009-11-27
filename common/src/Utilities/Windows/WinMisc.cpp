@@ -39,6 +39,11 @@ u64 GetCPUTicks()
 	return count.QuadPart;
 }
 
+// Windows SDK 7 provides this but previous ones do not, so roll our own in those cases:
+#ifndef VER_SUITE_WH_SERVER
+#	define VER_SUITE_WH_SERVER                 0x00008000
+#endif
+
 typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
 typedef BOOL (WINAPI *PGPI)(DWORD, DWORD, DWORD, DWORD, PDWORD);
 

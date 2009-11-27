@@ -48,6 +48,6 @@ wxString GetOSVersionString()
 	// This shoul return a single comprehensive string description for the linux operating system:
 	// Kernel version, distribution, etc.
 
-	return L"Linux Maybe?";
+	return wxGetOsDescription();
 }
 
