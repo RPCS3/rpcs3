@@ -62,9 +62,9 @@ union tGIF_CTRL
 {
 	struct
 	{
-		bool RST : 1;
+		u32 RST : 1;
 		u32 reserved1 : 2;
-		bool PSE : 1;
+		u32 PSE : 1;
 		u32 reserved2 : 28;
 	};
 	u32 _u32;
@@ -81,9 +81,9 @@ union tGIF_MODE
 {
 	struct
 	{
-		bool M3R : 1;
+		u32 M3R : 1;
 		u32 reserved1 : 1;
-		bool IMT : 1;
+		u32 IMT : 1;
 		u32 reserved2 : 29;
 	};
 	u32 _u32;
@@ -109,18 +109,18 @@ union tGIF_STAT
 {
 	struct
 	{
-		bool M3R : 1;
-		bool M3P : 1;
-		bool IMT : 1;
-		bool PSE : 1;
+		u32 M3R : 1;
+		u32 M3P : 1;
+		u32 IMT : 1;
+		u32 PSE : 1;
 		u32 reserved1 : 1;
-		bool IP3 : 1;
-		bool P3Q : 1;
-		bool P2Q : 1;
-		bool P1Q : 1;
-		bool OPH : 1;
+		u32 IP3 : 1;
+		u32 P3Q : 1;
+		u32 P2Q : 1;
+		u32 P1Q : 1;
+		u32 OPH : 1;
 		u32 APATH : 2;
-		bool DIR : 1;
+		u32 DIR : 1;
 		u32 reserved2 : 11;
 		u32 FQC : 5;
 		u32 reserved3 : 3;

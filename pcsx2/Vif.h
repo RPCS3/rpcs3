@@ -87,19 +87,19 @@ enum vif_status
 union tVIF_STAT {
 	struct {
 		u32 VPS : 2; // Vif(0/1) status; 00 - idle, 01 - waiting for data following vifcode, 10 - decoding vifcode, 11 - decompressing/trasferring data follwing vifcode.
-		bool VEW : 1; // E-bit wait (1 - wait, 0 - don't wait)
-		bool VGW : 1; // Status waiting for the end of gif transfer (Vif1 only)
+		u32 VEW : 1; // E-bit wait (1 - wait, 0 - don't wait)
+		u32 VGW : 1; // Status waiting for the end of gif transfer (Vif1 only)
 		u32 reserved : 2;
-		bool MRK : 1; // Mark Detect
-		bool DBF : 1; // Double Buffer Flag
-		bool VSS : 1; // Stopped by STOP
-		bool VFS : 1; // Stopped by ForceBreak
-		bool VIS : 1; // Vif Interrupt Stall
-		bool INT : 1; // Intereupt by the i bit.
-		bool ER0 : 1;  // DmaTag Mismatch error.
-		bool ER1 : 1; // VifCode error
+		u32 MRK : 1; // Mark Detect
+		u32 DBF : 1; // Double Buffer Flag
+		u32 VSS : 1; // Stopped by STOP
+		u32 VFS : 1; // Stopped by ForceBreak
+		u32 VIS : 1; // Vif Interrupt Stall
+		u32 INT : 1; // Intereupt by the i bit.
+		u32 ER0 : 1;  // DmaTag Mismatch error.
+		u32 ER1 : 1; // VifCode error
 		u32 reserved2 : 9;
-		bool FDR : 1; // VIF/FIFO transfer direction. (false - memory -> Vif, true - Vif -> memory)
+		u32 FDR : 1; // VIF/FIFO transfer direction. (false - memory -> Vif, true - Vif -> memory)
 		u32 FQC : 5; // Amount of data. Up to 8 qwords on Vif0, 16 on Vif1.
 	};
 	u32 _u32;
@@ -114,10 +114,10 @@ union tVIF_STAT {
 
 union tVIF_FBRST {
 	struct {
-		bool RST : 1; // Resets Vif(0/1) when written.
-		bool FBK : 1; // Causes a Forcebreak to Vif((0/1) when true. (Stall)
-		bool STP : 1; // Stops after the end of the Vifcode in progress when true. (Stall)
-		bool STC : 1; // Cancels the Vif(0/1) stall and clears Vif Stats VSS, VFS, VIS, INT, ER0 & ER1.
+		u32 RST : 1; // Resets Vif(0/1) when written.
+		u32 FBK : 1; // Causes a Forcebreak to Vif((0/1) when true. (Stall)
+		u32 STP : 1; // Stops after the end of the Vifcode in progress when true. (Stall)
+		u32 STC : 1; // Cancels the Vif(0/1) stall and clears Vif Stats VSS, VFS, VIS, INT, ER0 & ER1.
 		u32 reserved : 28;
 	};
 	u32 _u32;
@@ -132,9 +132,9 @@ union tVIF_FBRST {
 
 union tVIF_ERR {
 	struct {
-		bool MII : 1; // Masks Stat INT.
-		bool ME0 : 1; // Masks Stat Err0.
-		bool ME1 : 1; // Masks Stat Err1.
+		u32 MII : 1; // Masks Stat INT.
+		u32 ME0 : 1; // Masks Stat Err0.
+		u32 ME1 : 1; // Masks Stat Err1.
 		u32 reserved : 29;
 	};
 	u32 _u32;
@@ -156,7 +156,7 @@ struct vifCycle {
 struct VIFregisters {
 	tVIF_STAT stat;
 	u32 pad0[3];
-	tVIF_FBRST fbrst;
+	u32 fbrst;
 	u32 pad1[3];
 	tVIF_ERR err;
 	u32 pad2[3];

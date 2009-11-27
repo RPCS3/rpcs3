@@ -1129,7 +1129,7 @@ void vif1Write32(u32 mem, u32 value)
 			}
 #endif
 
-            vif1Regs->stat.FDR = (value & VIF1_STAT_FDR);
+			vif1Regs->stat.FDR = !!(value & VIF1_STAT_FDR);
 			//vif1Regs->stat._u32 = (vif1Regs->stat._u32 & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
 			if (vif1Regs->stat.FDR)
 			{
