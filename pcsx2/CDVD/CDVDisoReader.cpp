@@ -125,22 +125,28 @@ s32 CALLBACK ISOgetTD(u8 Track, cdvdTD *Buffer)
 }
 
 #include "gui/App.h"
+#include "Utilities/HashMap.h"
 
-static void FindLayer1Start()
+static bool FindLayer1Start()
 {
-	if( (layer1start != -1) || (iso->blocks < 0x230540) ) return;
+	if( (layer1start != -1) || (iso->blocks < 0x230540) ) return true;
 
 	Console.WriteLn("CDVDiso: searching for layer1...");
 
 	const int off	= iso->blockofs;
 	int blockresult = -1;
 	
-	wxString layerCacheFile( Path::Combine(GetSettingsFolder().ToString(), L"LayerBreakCache.ini") );
-	
-	wxFileConfig layerCacheIni( wxEmptyString, wxEmptyString, layerCacheFile, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
-	
 	// Check the ini file cache first:
-	blockresult = layerCacheIni.Read( fromUTF8(iso->filename), -1 );
+	// Cache is stored in LayerBreakCache.ini, and is associated by hex-encoded hash key of the
+	// complete filename/path of the iso file. :)
+
+	wxString layerCacheFile( Path::Combine(GetSettingsFolder().ToString(), L"LayerBreakCache.ini") );
+	wxFileConfig layerCacheIni( wxEmptyString, wxEmptyString, layerCacheFile, wxEmptyString, wxCONFIG_USE_RELATIVE_PATH );
+
+	wxString cacheKey;
+	cacheKey.Printf( L"%X", HashTools::Hash( iso->filename, strlen( iso->filename ) ) );
+	
+	blockresult = layerCacheIni.Read( cacheKey, -1 );
 	if( blockresult != -1 )
 	{
 		u8 tempbuffer[CD_FRAMESIZE_RAW];
@@ -167,16 +173,17 @@ static void FindLayer1Start()
 
 	if( layer1start == -1 )
 	{
-		// Manual search required.  Implementation uses a two-pass search algo.  The first pass
-		// looks on 16-sector boundaries of a limited range around the center of the image, and
-		// if that fails a second search of all blocks is performed.  Layer sizes are arbitrary,
+		// Manual search required.  Implementation (should) uses a two-pass search algo.  The first
+		// pass looks on 16-sector boundaries of a limited range around the center of the image, and
+		// if that fails a second search of all aligned blocks is performed.  Layer sizes are arbitrary,
 		// and either layer could be the smaller (GoW and Rogue Galaxy both have Layer1 larger
 		// than Layer0 for example), so we have to brute-force the search from some arbitrary
 		// start position  (I choose 25%)!
+		//
+		// [TODO] Currently only the first pass is performed.
 
-		// [TODO]
-		// Layer searching can be slow, especially for compressed disc images, so it would be
-		// quite courteous to pop up a status dialog bar that lets the user know that it's
+		// [TODO] Layer searching can be slow, especially for compressed disc images, so it would
+		// be quite courteous to pop up a status dialog bar that lets the user know that it's
 		// thinking.  Since we're not on the GUI thread, we'll need to establish some messages
 		// to create the window and pass progress increments back to it.
 		
@@ -205,21 +212,26 @@ static void FindLayer1Start()
 		}
 
 		if( layer1start == -1 )
+		{
 			Console.Warning("CDVDiso: Couldn't find second layer... ignoring");
+			return false;
+		}
 		else
 		{
 			Console.WriteLn("CDVDiso: second layer found at sector 0x%8.8x", layer1start);
 	
 			// Save layer information to configuration:
 
-			layerCacheIni.Write( fromUTF8(iso->filename), layer1start );
+			layerCacheIni.Write( cacheKey, layer1start );
 		}
 	}
+	return true;
 }
 
+// Should return 0 if no error occurred, or -1 if layer detection FAILED.
 s32 CALLBACK ISOgetDualInfo(s32* dualType, u32* _layer1start)
 {
-	FindLayer1Start();
+	if( !FindLayer1Start() ) return -1;
 
 	if(layer1start<0)
 	{
@@ -231,7 +243,7 @@ s32 CALLBACK ISOgetDualInfo(s32* dualType, u32* _layer1start)
 		*dualType = 1;
 		*_layer1start = layer1start;
 	}
-	return 1;
+	return 0;
 }
 
 s32 CALLBACK ISOgetDiskType()
