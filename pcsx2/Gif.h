@@ -62,32 +62,39 @@ union tGIF_CTRL
 {
 	struct
 	{
-		u32 RST : 1;
+		bool RST : 1;
 		u32 reserved1 : 2;
-		u32 PSE : 1;
+		bool PSE : 1;
 		u32 reserved2 : 28;
 	};
 	u32 _u32;
-
-	tGIF_CTRL( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_CTRL(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tGIF_MODE
 {
 	struct
 	{
-		u32 M3R : 1;
+		bool M3R : 1;
 		u32 reserved1 : 1;
-		u32 IMT : 1;
+		bool IMT : 1;
 		u32 reserved2 : 29;
 	};
 	u32 _u32;
-
-	tGIF_MODE( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_MODE(u32 val) { _u32 = val; }
+	
+	void write(u32 val) { _u32 = val; }
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 enum gif_paths
@@ -102,31 +109,30 @@ union tGIF_STAT
 {
 	struct
 	{
-		u32 M3R : 1;
-		u32 M3P : 1;
-		u32 IMT : 1;
-		u32 PSE : 1;
+		bool M3R : 1;
+		bool M3P : 1;
+		bool IMT : 1;
+		bool PSE : 1;
 		u32 reserved1 : 1;
-		u32 IP3 : 1;
-		u32 P3Q : 1;
-		u32 P2Q : 1;
-		u32 P1Q : 1;
-		u32 OPH : 1;
+		bool IP3 : 1;
+		bool P3Q : 1;
+		bool P2Q : 1;
+		bool P1Q : 1;
+		bool OPH : 1;
 		u32 APATH : 2;
-		u32 DIR : 1;
+		bool DIR : 1;
 		u32 reserved2 : 11;
 		u32 FQC : 5;
 		u32 reserved3 : 3;
 	};
 	u32 _u32;
-
-	tGIF_STAT( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_STAT(u32 val) { _u32 = val; }
 	
 	bool test(u32 flags) { return !!(_u32 & flags); }
-	void set(u32 flags) { _u32 |= flags; }
-	void clear(u32 flags) { _u32 &= ~flags; }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tGIF_TAG0
@@ -138,10 +144,13 @@ union tGIF_TAG0
 		u32 TAG : 16;
 	};
 	u32 _u32;
-
-	tGIF_TAG0( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_TAG0(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tGIF_TAG1
@@ -155,10 +164,13 @@ union tGIF_TAG1
 		u32 NREG : 4;
 	};
 	u32 _u32;
-
-	tGIF_TAG1( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_TAG1(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tGIF_CNT
@@ -173,10 +185,13 @@ union tGIF_CNT
 		
 	};
 	u32 _u32;
-
-	tGIF_CNT( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_CNT(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tGIF_P3CNT
@@ -187,10 +202,10 @@ union tGIF_P3CNT
 		u32 reserved1 : 17;
 	};
 	u32 _u32;
-
-	tGIF_P3CNT( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_P3CNT(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
 };
 
 union tGIF_P3TAG
@@ -202,10 +217,13 @@ union tGIF_P3TAG
 		u32 reserved1 : 16;
 	};
 	u32 _u32;
-
-	tGIF_P3TAG( u32 val ) : _u32( val )
-	{
-	}
+	
+	tGIF_P3TAG(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 struct GIFregisters

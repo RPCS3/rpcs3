@@ -59,12 +59,12 @@ __forceinline void gsInterrupt()
 	if ((vif1.cmd & 0x7f) == 0x51) // DIRECTHL
 	{
 	    // Not waiting for the end of the Gif transfer.
-		if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = 0;
+		if (Path3progress != IMAGE_MODE) vif1Regs->stat.VGW = false;
 	}
 
 	if (Path3progress == STOPPED_MODE)
 	{
-	    gifRegs->stat.clear(GIF_STAT_APATH3 | GIF_STAT_OPH);
+	    gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH);
 	}
 
 	if ((gif->qwc > 0) || (!gspath3done))
@@ -83,10 +83,10 @@ __forceinline void gsInterrupt()
 
 	gspath3done = false;
 	gscycles = 0;
-	gif->chcr.STR = 0;
-	vif1Regs->stat.VGW = 0;
+	gif->chcr.STR = false;
+	vif1Regs->stat.VGW = false;
 
-	gifRegs->stat.clear(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC);
+	gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC);
 
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
@@ -97,7 +97,7 @@ __forceinline void gsInterrupt()
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 {
 	gifRegs->stat.APATH = GIF_APATH3;
-	gifRegs->stat.OPH = 1;
+	gifRegs->stat.OPH = true;
 
 	int size   = GetMTGS().PrepDataPacket(GIF_PATH_3, pMem, qwc);
 	u8* pgsmem = GetMTGS().GetDataPacketPtr();
@@ -231,7 +231,7 @@ void GIFdma()
 
 		if (Path3progress == STOPPED_MODE) /*|| (vif1Regs->stat._u32 |= VIF1_STAT_VGW) == 0*/
 		{
-			vif1Regs->stat.VGW = 0;
+			vif1Regs->stat.VGW = false;
 			if (gif->qwc == 0) CPU_INT(2, 16);
 			return;
 		}
@@ -313,7 +313,7 @@ void dmaGIF()
 	Path3progress = STOPPED_MODE;
 	gspath3done = false; // For some reason this doesn't clear? So when the system starts the thread, we will clear it :)
 
-	gifRegs->stat.P3Q = 1;
+	gifRegs->stat.P3Q = true;
 	gifRegs->stat.FQC |= 0x10; // hack ;)
 
 	clearFIFOstuff(true);
@@ -528,12 +528,12 @@ void gifMFIFOInterrupt()
 	if (Path3progress == STOPPED_MODE)
 	{
 	     gifRegs->stat.APATH = GIF_APATH_IDLE;
-	     gifRegs->stat.OPH = 0;
+	     gifRegs->stat.OPH = false;
 	}
 
 	if ((spr0->chcr.STR) && (spr0->qwc == 0))
 	{
-		spr0->chcr.STR = 0;
+		spr0->chcr.STR = false;
 		hwDmacIrq(DMAC_FROM_SPR);
 	}
 
@@ -560,7 +560,7 @@ void gifMFIFOInterrupt()
 			gifstate |= GIF_STATE_EMPTY;
 			gifempty = true;
 
-			gifRegs->stat.IMT = 0;
+			gifRegs->stat.IMT = false;
 			return;
 		}
 		mfifoGIFtransfer(0);
@@ -580,10 +580,10 @@ void gifMFIFOInterrupt()
 	gspath3done = false;
 	gscycles = 0;
 
-	gifRegs->stat.clear(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
+	gifRegs->stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_OPH | GIF_STAT_P3Q | GIF_STAT_FQC); // OPH, APATH, P3Q,  FQC = 0
 
-	vif1Regs->stat.VGW = 0;
-	gif->chcr.STR = 0;
+	vif1Regs->stat.VGW = false;
+	gif->chcr.STR = false;
 	gifstate = GIF_STATE_READY;
 	hwDmacIrq(DMAC_GIF);
 	clearFIFOstuff(false);

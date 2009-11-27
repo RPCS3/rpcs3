@@ -101,16 +101,16 @@ void gsReset()
 
 	GSCSRr = 0x551B4000;   // Set the FINISH bit to 1 for now
 	GSIMR = 0x7f00;
-	gifRegs->stat._u32 = 0;
-	gifRegs->ctrl._u32 = 0;
-	gifRegs->mode._u32 = 0;
+	gifRegs->stat.reset();
+	gifRegs->ctrl.reset();
+	gifRegs->mode.reset();
 }
 
 void gsGIFReset()
 {
-	gifRegs->stat._u32 = 0;
-	gifRegs->ctrl._u32 = 0;
-	gifRegs->mode._u32 = 0;
+	gifRegs->stat.reset();
+	gifRegs->ctrl.reset();
+	gifRegs->mode.reset();
 }
 
 void gsCSRwrite(u32 value)

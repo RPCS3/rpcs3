@@ -254,7 +254,7 @@ void SPRFROMinterrupt()
 		}
 	}
 	if (!spr0finished) return;
-	spr0->chcr.STR = 0;
+	spr0->chcr.STR = false;
 	hwDmacIrq(DMAC_FROM_SPR);
 }
 
@@ -429,7 +429,7 @@ void SPRTOinterrupt()
 {
 	_dmaSPR1();
 	if (!spr1finished) return;
-	spr1->chcr.STR = 0;
+	spr1->chcr.STR = false;
 	hwDmacIrq(DMAC_TO_SPR);
 }
 

@@ -422,13 +422,13 @@ __forceinline void  sif1Interrupt()
 __forceinline void  EEsif0Interrupt()
 {
 	hwDmacIrq(DMAC_SIF0);
-	sif0dma->chcr.STR = 0;
+	sif0dma->chcr.STR = false;
 }
 
 __forceinline void  EEsif1Interrupt()
 {
 	hwDmacIrq(DMAC_SIF1);
-	sif1dma->chcr.STR = 0;
+	sif1dma->chcr.STR = false;
 }
 
 __forceinline void dmaSIF0()
@@ -485,7 +485,7 @@ __forceinline void dmaSIF2()
 	SIF_LOG("dmaSIF2 chcr = %lx, madr = %lx, qwc  = %lx",
 	        sif2dma->chcr._u32, sif2dma->madr, sif2dma->qwc);
 
-	sif2dma->chcr.STR = 0;
+	sif2dma->chcr.STR = false;
 	hwDmacIrq(DMAC_SIF2);
 	Console.WriteLn("*PCSX2*: dmaSIF2");
 }

@@ -309,7 +309,7 @@ static void Vif0CMDSTMod()  // STMOD
 static void Vif0CMDMark()  // MARK
 {
 	vif0Regs->mark = (u16)vif0Regs->code;
-	vif0Regs->stat.MRK = 1;
+	vif0Regs->stat.MRK = true;
 	vif0.cmd &= ~0x7f;
 }
 
@@ -358,7 +358,7 @@ static void Vif0CMDNull()  // invalid opcode
 	if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 	{
 		Console.WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
-		vif0Regs->stat.ER1 = 1;
+		vif0Regs->stat.ER1 = true;
 		vif0.irq++;
 	}
 	vif0.cmd &= ~0x7f;
@@ -410,7 +410,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 				if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
 				{
 					Console.WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
-					vif0Regs->stat.ER1 = 1;
+					vif0Regs->stat.ER1 = true;
 					vif0.irq++;
 				}
 				vif0.cmd = 0;
@@ -449,7 +449,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 	{
 		vif0.vifstalled = true;
 
-		if (((vif0Regs->code >> 24) & 0x7f) != 0x7) vif0Regs->stat.VIS = 1;
+		if (((vif0Regs->code >> 24) & 0x7f) != 0x7) vif0Regs->stat.VIS = true;
 		//else Console.WriteLn("VIF0 IRQ on MARK");
 
 		// spiderman doesn't break on qw boundaries
@@ -465,7 +465,7 @@ int VIF0transfer(u32 *data, int size, int istag)
 		return -2;
 	}
 
-	vif0Regs->stat.VPS = 0; //Vif goes idle as the stall happened between commands;
+	vif0Regs->stat.VPS = VPS_IDLE; //Vif goes idle as the stall happened between commands;
 	if (vif0.cmd) vif0Regs->stat.VPS |= VPS_WAITING;  //Otherwise we wait for the data
 
 	if (!istag)
@@ -552,14 +552,14 @@ void vif0Interrupt()
 
 	if (vif0.irq && (vif0.tag.size == 0))
 	{
-		vif0Regs->stat.INT = 1;
+		vif0Regs->stat.INT = true;
 		hwIntcIrq(VIF0intc);
 		--vif0.irq;
 
 		if (vif0Regs->stat.test(VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 		{
-			vif0Regs->stat.FQC = 0; // FQC=0
-			vif0ch->chcr.STR = 0;
+			vif0Regs->stat.FQC = 0;
+			vif0ch->chcr.STR = false;
 			return;
 		}
 
@@ -598,9 +598,9 @@ void vif0Interrupt()
 	if (vif0ch->qwc > 0) Console.WriteLn("VIF0 Ending with QWC left");
 	if (vif0.cmd != 0) Console.WriteLn("vif0.cmd still set %x", vif0.cmd);
 
-	vif0ch->chcr.STR = 0;
+	vif0ch->chcr.STR = false;
 	hwDmacIrq(DMAC_VIF0);
-	vif0Regs->stat.FQC = 0; // FQC=0
+	vif0Regs->stat.FQC = 0;
 }
 
 //  Vif0 Data Transfer Table
@@ -678,7 +678,7 @@ void vif0Write32(u32 mem, u32 value)
 			VIF_LOG("VIF0_MARK write32 0x%8.8x", value);
 
 			/* Clear mark flag in VIF0_STAT and set mark with 'value' */
-			vif0Regs->stat.MRK = 0;
+			vif0Regs->stat.MRK = false;
 			vif0Regs->mark = value;
 			break;
 
@@ -695,16 +695,16 @@ void vif0Write32(u32 mem, u32 value)
 				psHu64(VIF0_FIFO) = 0;
 				psHu64(VIF0_FIFO + 8) = 0;
 				vif0.done = true;
-				vif0Regs->err._u32 = 0;
-				vif0Regs->stat.clear(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
+				vif0Regs->err.reset();
+				vif0Regs->stat.clear_flags(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 			}
 
 			if (value & 0x2) // Forcebreak Vif,
 			{
 				/* I guess we should stop the VIF dma here, but not 100% sure (linuz) */
 				cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
-				vif0Regs->stat.VFS = 1;
-				vif0Regs->stat.VPS = 0;
+				vif0Regs->stat.VFS = true;
+				vif0Regs->stat.VPS = VPS_IDLE;
 				vif0.vifstalled = true;
 				Console.WriteLn("vif0 force break");
 			}
@@ -713,8 +713,8 @@ void vif0Write32(u32 mem, u32 value)
 			{
 				// Not completely sure about this, can't remember what game, used this, but 'draining' the VIF helped it, instead of
 				//  just stoppin the VIF (linuz).
-				vif0Regs->stat.VSS = 1;
-				vif0Regs->stat.VPS = 0;
+				vif0Regs->stat.VSS = true;
+				vif0Regs->stat.VPS = VPS_IDLE;
 				vif0.vifstalled = true;
 			}
 
@@ -726,7 +726,7 @@ void vif0Write32(u32 mem, u32 value)
 				if (vif0Regs->stat.test(VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
 					cancel = true;
 
-				vif0Regs->stat.clear(VIF0_STAT_VSS | VIF0_STAT_VFS | VIF0_STAT_VIS |
+				vif0Regs->stat.clear_flags(VIF0_STAT_VSS | VIF0_STAT_VFS | VIF0_STAT_VIS |
 						    VIF0_STAT_INT | VIF0_STAT_ER0 | VIF0_STAT_ER1);
 				if (cancel)
 				{
@@ -740,7 +740,7 @@ void vif0Write32(u32 mem, u32 value)
 						else
 							_VIF0chain();
 
-						vif0ch->chcr.STR = 1;
+						vif0ch->chcr.STR = true;
 						CPU_INT(0, g_vifCycles); // Gets the timing right - Flatout
 					}
 				}
@@ -752,7 +752,7 @@ void vif0Write32(u32 mem, u32 value)
 			VIF_LOG("VIF0_ERR write32 0x%8.8x", value);
 
 			/* Set VIF0_ERR with 'value' */
-			vif0Regs->err._u32 = value;
+			vif0Regs->err.write(value);
 			break;
 
 		case VIF0_R0:
@@ -789,7 +789,7 @@ void vif0Reset()
 	psHu64(VIF0_FIFO) = 0;
 	psHu64(VIF0_FIFO + 8) = 0;
 	
-	vif0Regs->stat.VPS = 0;
+	vif0Regs->stat.VPS = VPS_IDLE;
 	vif0Regs->stat.FQC = 0;
 	
 	vif0.done = true;

@@ -76,6 +76,17 @@ union tIPU_CTRL {
 		u32 BUSY : 1;	// Busy
 	};
 	u32 _u32;
+
+	tIPU_CTRL( u32 val ) { _u32 = val; }
+	
+    // CTRL = the first 16 bits of ctrl [0x8000ffff], + value for the next 16 bits,
+    // minus the reserved bits. (18-19; 27-29) [0x47f30000]
+	void write(u32 value) { _u32 = (value & 0x47f30000) | (_u32 & 0x8000ffff); }
+
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 struct tIPU_BP {
@@ -104,11 +115,14 @@ union tIPU_CMD_IDEC
 		u32 cmd : 4;
 	};
 
-	u32 value;
+	u32 _u32;
 
-	tIPU_CMD_IDEC( u32 val ) : value( val )
-	{
-	}
+	tIPU_CMD_IDEC( u32 val ) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tIPU_CMD_BDEC
@@ -124,11 +138,14 @@ union tIPU_CMD_BDEC
 		u32 MBI : 1;
 		u32 cmd : 4;
 	};
-	u32 value;
+	u32 _u32;
 
-	tIPU_CMD_BDEC( u32 val ) : value( val )
-	{
-	}
+	tIPU_CMD_BDEC( u32 val ) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tIPU_CMD_CSC
@@ -141,28 +158,38 @@ union tIPU_CMD_CSC
 		u32 OFM : 1;
 		u32 cmd : 4;
 	};
-	u32 value;
+	u32 _u32;
 
-	tIPU_CMD_CSC( u32 val ) : value( val )
-	{
-	}
+	tIPU_CMD_CSC( u32 val ){ _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tIPU_DMA
 {
 	struct
 	{
-		u32 GIFSTALL  : 1;
-		u32 TIE0 :1;
-		u32 TIE1 : 1;
-		u32 ACTV1 : 1;
-		u32 DOTIE1  : 1;
-		u32 FIREINT0 : 1;
-		u32 FIREINT1 : 1;
-		u32 VIFSTALL : 1;
-		u32 SIFSTALL : 1;
+		bool GIFSTALL  : 1;
+		bool TIE0 :1;
+		bool TIE1 : 1;
+		bool ACTV1 : 1;
+		bool DOTIE1  : 1;
+		bool FIREINT0 : 1;
+		bool FIREINT1 : 1;
+		bool VIFSTALL : 1;
+		bool SIFSTALL : 1;
 	};
 	u32 _u32;
+	
+	tIPU_DMA( u32 val ){ _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 enum SCE_IPU

@@ -37,7 +37,7 @@ void vu1ResetRegs()
 {
 	VU0.VI[REG_VPU_STAT].UL &= ~0xff00; // stop vu1
 	VU0.VI[REG_FBRST].UL &= ~0xff00; // stop vu1
-	vif1Regs->stat.VEW = 0;
+	vif1Regs->stat.VEW = false;
 }
 
 static int count;
@@ -55,7 +55,7 @@ void __fastcall vu1ExecMicro(u32 addr)
 
 	VU0.VI[REG_VPU_STAT].UL|= 0x100;
 	VU0.VI[REG_VPU_STAT].UL&= ~0x7E000;
-	vif1Regs->stat.VEW = 1;
+	vif1Regs->stat.VEW = true;
 	if (addr != -1) VU1.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU1);
 

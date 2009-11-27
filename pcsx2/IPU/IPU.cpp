@@ -40,7 +40,7 @@
 #	define IPU_FORCEINLINE __forceinline
 #endif
 
-static tIPU_DMA g_nDMATransfer;
+static tIPU_DMA g_nDMATransfer(0);
 
 // FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
 // FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
@@ -140,7 +140,7 @@ int ipuInit()
 	memzero(*ipuRegs);
 	memzero(g_BP);
 	init_g_decoder();
-	g_nDMATransfer._u32 = 0;
+	g_nDMATransfer.reset();
 
 	return 0;
 }
@@ -148,7 +148,7 @@ int ipuInit()
 void ipuReset()
 {
 	memzero(*ipuRegs);
-	g_nDMATransfer._u32 = 0;
+	g_nDMATransfer.reset();
 }
 
 void ipuShutdown()
@@ -247,7 +247,6 @@ __forceinline u32 ipuRead32(u32 mem)
 			return ipuRegs->ctrl._u32;
 
 		ipucase(IPU_BP): // IPU_BP
-
 			ipuRegs->ipubp = g_BP.BP & 0x7f;
 			ipuRegs->ipubp |= g_BP.IFC << 8;
 			ipuRegs->ipubp |= (g_BP.FP + g_BP.bufferhasnew) << 16;
@@ -303,7 +302,7 @@ void ipuSoftReset()
 
 	coded_block_pattern = 0;
 
-	ipuRegs->ctrl._u32 = 0;
+	ipuRegs->ctrl.reset();
 	ipuRegs->top = 0;
 	ipuCurCmd = 0xffffffff;
 
@@ -336,7 +335,7 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 		ipucase(IPU_CTRL): // IPU_CTRL
             // CTRL = the first 16 bits of ctrl [0x8000ffff], + value for the next 16 bits,
             // minus the reserved bits. (18-19; 27-29) [0x47f30000]
-			ipuRegs->ctrl._u32 = (value & 0x47f30000) | (ipuRegs->ctrl._u32 & 0x8000ffff);
+			ipuRegs->ctrl.write(value);
 			if (ipuRegs->ctrl.IDP == 3)
 			{
 				Console.WriteLn("IPU Invalid Intra DC Precision, switching to 9 bits");
@@ -432,14 +431,16 @@ static __forceinline BOOL ipuIDEC(u32 val)
 	g_decoder.intra_vlc_format = ipuRegs->ctrl.IVF;
 	g_decoder.scan = ipuRegs->ctrl.AS ? mpeg2_scan_alt : mpeg2_scan_norm;
 	g_decoder.intra_dc_precision = ipuRegs->ctrl.IDP;
+	
 	//from IDEC value
 	g_decoder.quantizer_scale = idec.QSC;
 	g_decoder.frame_pred_frame_dct = !idec.DTD;
 	g_decoder.sgn = idec.SGN;
 	g_decoder.dte = idec.DTE;
 	g_decoder.ofm = idec.OFM;
+	
 	//other stuff
-	g_decoder.dcr = 1;//resets DC prediction value
+	g_decoder.dcr = 1; // resets DC prediction value
 
 	s_routine = so_create(mpeg2sliceIDEC, &s_RoutineDone, s_tempstack, sizeof(s_tempstack));
 	pxAssert(s_routine != NULL);
@@ -485,6 +486,7 @@ static __forceinline BOOL ipuBDEC(u32 val)
 	g_decoder.intra_vlc_format = ipuRegs->ctrl.IVF;
 	g_decoder.scan = ipuRegs->ctrl.AS ? mpeg2_scan_alt : mpeg2_scan_norm;
 	g_decoder.intra_dc_precision = ipuRegs->ctrl.IDP;
+	
 	//from BDEC value
 	/* JayteeMaster: the quantizer (linear/non linear) depends on the q_scale_type */
 	g_decoder.quantizer_scale = g_decoder.q_scale_type ? non_linear_quantizer_scale [bdec.QSC] : bdec.QSC << 1;
@@ -537,6 +539,7 @@ static BOOL __fastcall ipuVDEC(u32 val)
 			}
 
 			g_BP.BP += (g_decoder.bitstream_bits + 16);
+			
 			if ((int)g_BP.BP < 0)
 			{
 				g_BP.BP += 128;
@@ -1365,7 +1368,7 @@ static __forceinline bool IPU1chain(int &totalqwc)
 
 		if (ipu1dma->qwc > 0)
 		{
-			g_nDMATransfer.ACTV1 = 1;
+			g_nDMATransfer.ACTV1 = true;
 			return true;
 		}
 	}
@@ -1449,7 +1452,7 @@ int IPU1dma()
 
 	if (!(ipu1dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
 
-	pxAssert(g_nDMATransfer.TIE1 == 0);
+	pxAssert(g_nDMATransfer.TIE1 == false);
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
 	flushGIF();
@@ -1465,9 +1468,9 @@ int IPU1dma()
 			Console.WriteLn("IPU1 TIE");
 
 			IPU_INT_TO(totalqwc * BIAS);
-			g_nDMATransfer.TIE1 = 1;
-			g_nDMATransfer.DOTIE1 = 0;
-			g_nDMATransfer.ACTV1 = 0;
+			g_nDMATransfer.TIE1 = true;
+			g_nDMATransfer.DOTIE1 = false;
+			g_nDMATransfer.ACTV1 = false;
 
 			return totalqwc;
 		}
@@ -1492,7 +1495,7 @@ int IPU1dma()
 
 				IPU_LOG("IPU dmaIrq Set");
 				IPU_INT_TO(totalqwc * BIAS);
-				g_nDMATransfer.TIE1 = 1;
+				g_nDMATransfer.TIE1 = true;
 				return totalqwc;
 			}
 
@@ -1503,8 +1506,8 @@ int IPU1dma()
 			}
 		}
 
-		g_nDMATransfer.DOTIE1 = 0;
-		g_nDMATransfer.ACTV1 = 0;
+		g_nDMATransfer.DOTIE1 = false;
+		g_nDMATransfer.ACTV1 = false;
 	}
 
 	// Normal Mode & qwc is finished
@@ -1561,7 +1564,7 @@ int IPU1dma()
 				}
 
 				IPU_INT_TO(ipu1cycles + totalqwc * BIAS);  // Should it be (ipu1cycles + totalqwc) * BIAS?
-				g_nDMATransfer.TIE1 = 1;
+				g_nDMATransfer.TIE1 = true;
 				return totalqwc;
 			}
 			else
@@ -1682,13 +1685,13 @@ int IPU0dma()
 				case NO_STD:
 					break;
 				case STD_GIF: // GIF
-					g_nDMATransfer.GIFSTALL = 1;
+					g_nDMATransfer.GIFSTALL = true;
 					break;
 				case STD_VIF1: // VIF
-					g_nDMATransfer.VIFSTALL = 1;
+					g_nDMATransfer.VIFSTALL = true;
 					break;
 				case STD_SIF1:
-					g_nDMATransfer.SIFSTALL = 1;
+					g_nDMATransfer.SIFSTALL = true;
 					break;
 			}
 		}
@@ -1722,28 +1725,28 @@ void ipu0Interrupt()
 
 	if (g_nDMATransfer.FIREINT0)
 	{
-		g_nDMATransfer.FIREINT0 = 0;
+		g_nDMATransfer.FIREINT0 = false;
 		hwIntcIrq(INTC_IPU);
 	}
 
 	if (g_nDMATransfer.GIFSTALL)
 	{
 		// gif
-		g_nDMATransfer.GIFSTALL = 0;
+		g_nDMATransfer.GIFSTALL = false;
 		if (gif->chcr.STR) GIFdma();
 	}
 
 	if (g_nDMATransfer.VIFSTALL)
 	{
 		// vif
-		g_nDMATransfer.VIFSTALL = 0;
+		g_nDMATransfer.VIFSTALL = false;
 		if (vif1ch->chcr.STR) dmaVIF1();
 	}
 
 	if (g_nDMATransfer.SIFSTALL)
 	{
 		// sif
-		g_nDMATransfer.SIFSTALL = 0;
+		g_nDMATransfer.SIFSTALL = false;
 
 		// Not totally sure whether this needs to be done or not, so I'm
 		// leaving it commented out for the moment.
@@ -1752,10 +1755,10 @@ void ipu0Interrupt()
 
 	if (g_nDMATransfer.TIE0)
 	{
-		g_nDMATransfer.TIE0 = 0;
+		g_nDMATransfer.TIE0 = false;
 	}
 
-	ipu0dma->chcr.STR = 0;
+	ipu0dma->chcr.STR = false;
 	hwDmacIrq(DMAC_FROM_IPU);
 }
 
@@ -1766,13 +1769,13 @@ IPU_FORCEINLINE void ipu1Interrupt()
 	if (g_nDMATransfer.FIREINT1)
 	{
 		hwIntcIrq(INTC_IPU);
-		g_nDMATransfer.FIREINT1 = 0;
+		g_nDMATransfer.FIREINT1 = false;
 	}
 
 	if (g_nDMATransfer.TIE1)
-		g_nDMATransfer.TIE1 = 0;
+		g_nDMATransfer.TIE1 = false;
 	else
-		ipu1dma->chcr.STR = 0;
+		ipu1dma->chcr.STR = false;
 
 	hwDmacIrq(DMAC_TO_IPU);
 }

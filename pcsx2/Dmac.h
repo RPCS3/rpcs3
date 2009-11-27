@@ -25,17 +25,24 @@ extern u8  *psH; // hw mem
 
 union tDMA_CHCR {
 	struct {
-		u32 DIR : 1;
+		bool DIR : 1;
 		u32 reserved1 : 1;
 		u32 MOD : 2;
 		u32 ASP : 2;
-		u32 TTE : 1;
-		u32 TIE : 1;
-		u32 STR : 1;
+		bool TTE : 1;
+		bool TIE : 1;
+		bool STR : 1;
 		u32 reserved2 : 7;
 		u32 TAG : 16;
 	};
 	u32 _u32;
+	
+	tDMA_CHCR( u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tDMA_SADR {
@@ -44,6 +51,10 @@ union tDMA_SADR {
 		u32 reserved2 : 18;
 	};
 	u32 _u32;
+	
+	tDMA_SADR(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
 };
 
 
@@ -121,7 +132,7 @@ enum DMAInter
 	IPU0intr = 0x00080008,
 	IPU1intr = 0x00100010,
 	SIF0intr = 0x00200020,
-	SIF1intr  =0x00400040,
+	SIF1intr = 0x00400040,
 	SIF2intr = 0x00800080,
 	SPR0intr = 0x01000100,
 	SPR1intr = 0x02000200,
@@ -131,8 +142,8 @@ enum DMAInter
 
 union tDMAC_CTRL {
 	struct {
-		u32 DMAE : 1;
-		u32 RELE : 1;
+		bool DMAE : 1;
+		bool RELE : 1;
 		u32 MFD : 2;
 		u32 STS : 2;
 		u32 STD : 2;
@@ -140,26 +151,36 @@ union tDMAC_CTRL {
 		u32 reserved1 : 21;
 	};
 	u32 _u32;
+	
+	tDMAC_CTRL(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tDMAC_STAT {
 	struct {
 		u32 CIS : 10;
 		u32 reserved1 : 3;
-		u32 SIS : 1;
-		u32 MEIS : 1;
-		u32 BEIS : 1;
+		bool SIS : 1;
+		bool MEIS : 1;
+		bool BEIS : 1;
 		u32 CIM : 10;
 		u32 reserved2 : 3;
-		u32 SIM : 1;
-		u32 MEIM : 1;
+		bool SIM : 1;
+		bool MEIM : 1;
 		u32 reserved3 : 1;
 	};
 	u32 _u32;
 	
+	tDMAC_STAT(u32 val) { _u32 = val; }
+	
 	bool test(u32 flags) { return !!(_u32 & flags); }
-	void set(u32 flags) { _u32 |= flags; }
-	void clear(u32 flags) { _u32 &= ~flags; }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tDMAC_PCR {
@@ -171,6 +192,13 @@ union tDMAC_PCR {
 		u32 PCE : 1;
 	};
 	u32 _u32;
+	
+	tDMAC_PCR(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tDMAC_SQWC {
@@ -181,6 +209,13 @@ union tDMAC_SQWC {
 		u32 reserved2 : 8;
 	};
 	u32 _u32;
+	
+	tDMAC_SQWC(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tDMAC_RBSR {
@@ -189,6 +224,10 @@ union tDMAC_RBSR {
 		u32 reserved1 : 1;
 	};
 	u32 _u32;
+	
+	tDMAC_RBSR(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
 };
 
 union tDMAC_RBOR {
@@ -197,6 +236,10 @@ union tDMAC_RBOR {
 		u32 reserved1 : 1;
 	};
 	u32 _u32;
+	
+	tDMAC_RBOR(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
 };
 
 union tDMAC_STADR {
@@ -205,6 +248,10 @@ union tDMAC_STADR {
 		u32 reserved1 : 1;
 	};
 	u32 _u32;
+	
+	tDMAC_STADR(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
 };
 
 struct DMACregisters
@@ -233,9 +280,12 @@ union tINTC_STAT {
 	};
 	u32 _u32;
 	
+	tINTC_STAT(u32 val) { _u32 = val; }
+	
 	bool test(u32 flags) { return !!(_u32 & flags); }
-	void set(u32 flags) { _u32 |= flags; }
-	void clear(u32 flags) { _u32 &= ~flags; }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 union tINTC_MASK {
@@ -244,6 +294,13 @@ union tINTC_MASK {
 	    u32 placeholder:22;
 	};
 	u32 _u32;
+	
+	tINTC_MASK(u32 val) { _u32 = val; }
+	
+	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set_flags(u32 flags) { _u32 |= flags; }
+	void clear_flags(u32 flags) { _u32 &= ~flags; }
+	void reset() { _u32 = 0; }
 };
 
 struct INTCregisters
@@ -279,11 +336,11 @@ static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num)
 	if (ptr == NULL)
 	{
 		// DMA Error
-		dmacRegs->stat.BEIS = 1; // BUS Error
+		dmacRegs->stat.BEIS = true; // BUS Error
 
 		// DMA End
-		dmacRegs->stat.set(1 << num);
-		dma->chcr.STR = 0;
+		dmacRegs->stat.set_flags(1 << num);
+		dma->chcr.STR = false;
 	}
 
 	return ptr;

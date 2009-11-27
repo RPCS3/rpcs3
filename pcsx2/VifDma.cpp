@@ -830,13 +830,13 @@ template<const u32 VIFdmanum> void vuExecMicro(u32 addr)
 		{
 			/* it is, so set tops with base, and clear the stat DBF flag */
 			VU->vifRegs->tops = VU->vifRegs->base;
-			VU->vifRegs->stat.DBF = 0;
+			VU->vifRegs->stat.DBF = false;
 		}
 		else
 		{
 			/* it is not, so set tops with base + offset,  and set stat DBF flag */
 			VU->vifRegs->tops = VU->vifRegs->base + VU->vifRegs->ofst;
-			VU->vifRegs->stat.DBF = 1;
+			VU->vifRegs->stat.DBF = true;
 		}
 	}
 

@@ -715,15 +715,15 @@ void __fastcall hwWrite32_page_03( u32 mem, u32 value )
 			if (value & 0x1)
 				gsGIFReset();
 			else if ( value & 8 )
-				gifRegs->stat.PSE = 1;
+				gifRegs->stat.PSE = true;
 			else
-				gifRegs->stat.PSE = 0;
+				gifRegs->stat.PSE = false;
 		break;
 
 		case GIF_MODE:
 		{
 			// need to set GIF_MODE (hamster ball)
-			gifRegs->mode._u32 = value;
+			gifRegs->mode.write(value);
 
 			// set/clear bits 0 and 2 as per the GIF_MODE value.
             const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
@@ -1079,9 +1079,9 @@ void __fastcall hwWrite64_page_03( u32 mem, const mem64_t* srcval )
 			else
 			{
 				if( value & 8 )
-					gifRegs->stat.PSE = 1;
+					gifRegs->stat.PSE = true;
 				else
-					gifRegs->stat.PSE = 0;
+					gifRegs->stat.PSE = false;
 			}
 			break;
 

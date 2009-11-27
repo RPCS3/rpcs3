@@ -117,7 +117,7 @@ namespace Tag
 			UpperTransfer(tag, ptag);
 
 			// Set BEIS (BUSERR) in DMAC_STAT register
-			dmacRegs->stat.BEIS = 1;
+			dmacRegs->stat.BEIS = true;
 			return false;
 		}
 		else

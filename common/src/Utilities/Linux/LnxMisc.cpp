@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
+#include <wx/utils.h> 
 
 extern "C" __aligned16 u8 _xmm_backup[16*2];
 extern "C" __aligned16 u8 _mmx_backup[8*4];

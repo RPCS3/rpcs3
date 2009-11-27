@@ -582,7 +582,7 @@ void mfifoVIF1transfer(int qwc)
 
 			case TAG_REF: // Ref - Transfer QWC from ADDR field
 			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
-				vif1ch->tadr =qwctag(vif1ch->tadr + 16);							//Set TADR to next tag
+				vif1ch->tadr = qwctag(vif1ch->tadr + 16);							//Set TADR to next tag
 				vif1.done = false;
 				break;
 
@@ -620,27 +620,27 @@ void vifMFIFOInterrupt()
 		} 
 		else 
 		{
-			vif1Regs->stat.VGW = 0;
+			vif1Regs->stat.VGW = false;
 		}
 	
 	}
 
 	if ((spr0->chcr.STR) && (spr0->qwc == 0))
 	{
-		spr0->chcr.STR = 0;
+		spr0->chcr.STR = false;
 		hwDmacIrq(DMAC_FROM_SPR);
 	}
 
 	if (vif1.irq && vif1.tag.size == 0)
 	{
-		vif1Regs->stat.INT = 1;
+		vif1Regs->stat.INT = true;
 		hwIntcIrq(INTC_VIF1);
 		--vif1.irq;
 		
 		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
 		{
 			vif1Regs->stat.FQC = 0; // FQC=0
-			vif1ch->chcr.STR = 0;
+			vif1ch->chcr.STR = false;
 			return;
 		}
 	}
@@ -686,7 +686,7 @@ void vifMFIFOInterrupt()
 
 	vif1.done = 1;
 	g_vifCycles = 0;
-	vif1ch->chcr.STR = 0;
+	vif1ch->chcr.STR = false;
 	hwDmacIrq(DMAC_VIF1);
 	VIF_LOG("vif mfifo dma end");
 
