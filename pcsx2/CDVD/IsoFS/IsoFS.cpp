@@ -23,22 +23,81 @@
 // IsoDirectory
 //////////////////////////////////////////////////////////////////////////
 
-// Used to load the Root directory from an image
-IsoDirectory::IsoDirectory(SectorSource& r) :
-	internalReader(r)
+//u8		filesystemType;	// 0x01 = ISO9660, 0x02 = Joliet, 0xFF = NULL
+//u8		volID[5];		// "CD001"
+
+
+wxString IsoDirectory::FStype_ToString() const
 {
-	u8 sector[2048];
+	switch( m_fstype )
+	{
+		case FStype_ISO9660:	L"ISO9660";		break;
+		case FStype_Joliet:		L"Joliet";		break;
+	}
 
-	internalReader.readSector(sector,16);
+	return wxsFormat( L"Unrecognized Code (0x%x)", m_fstype );
+}
 
-	IsoFileDescriptor rootDirEntry(sector+156,38);
+// Used to load the Root directory from an image
+IsoDirectory::IsoDirectory(SectorSource& r)
+	: internalReader(r)
+{
+	m_fstype = FStype_ISO9660;
 
-	Init(rootDirEntry);
+	IsoFileDescriptor rootDirEntry;
+	bool isValid = false;
+	uint i = 16;
+	while( true )
+	{
+		u8 sector[2048];
+		internalReader.readSector(sector,i);
+		if( memcmp( &sector[1], "CD001", 5 ) == 0 )
+		{
+			if( sector[0] == 0 )
+			{
+				Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Boot partition info.", i );
+			}
+			
+			else if( sector[0] == 1 )
+			{
+				Console.WriteLn( "(IsoFS) Block 0x%x: Primary partition info.", i );
+				rootDirEntry.Load( sector+156, 38 );
+				isValid = true;
+			}
+
+			else if( sector[0] == 2 )
+			{
+				// Probably means Joliet (long filenames support), which PCSX2 doesn't care about.
+				Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Extended partition info.", i );
+				m_fstype = FStype_Joliet;
+			}
+			
+			else if( sector[0] == 0xff )
+			{
+				// Null terminator.  End of partition information.
+				break;
+			}
+		}
+		else
+		{
+			sector[9] = 0;
+			Console.Error( "(IsoFS) Invalid partition descriptor encountered at block 0x%x: '%s'", i, &sector[1] );
+			break;		// if no valid root partition was found, an exception will be thrown below.
+		}
+
+		++i;
+	}
+
+	if( !isValid )
+		throw Exception::BadStream( "IsoFS", "Root directory not found on ISO image." );
+
+	DevCon.WriteLn( "(IsoFS) Filesystem is %s", FStype_ToString() );
+	Init( rootDirEntry );
 }
 
 // Used to load a specific directory from a file descriptor
-IsoDirectory::IsoDirectory(SectorSource& r, IsoFileDescriptor directoryEntry) :
-	internalReader(r)
+IsoDirectory::IsoDirectory(SectorSource& r, IsoFileDescriptor directoryEntry)
+	: internalReader(r)
 {
 	Init(directoryEntry);
 }
@@ -54,7 +113,7 @@ void IsoDirectory::Init(const IsoFileDescriptor& directoryEntry)
 
 	files.clear();
 
-	int remainingSize = directoryEntry.size;
+	uint remainingSize = directoryEntry.size;
 
 	u8 b[257];
 
@@ -150,6 +209,11 @@ IsoFileDescriptor::IsoFileDescriptor()
 }
 
 IsoFileDescriptor::IsoFileDescriptor(const u8* data, int length)
+{
+	Load( data, length );
+}
+
+void IsoFileDescriptor::Load( const u8* data, int length )
 {
 	lba		= (u32&)data[2];
 	size	= (u32&)data[10];

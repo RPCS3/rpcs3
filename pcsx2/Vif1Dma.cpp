@@ -1112,7 +1112,7 @@ void vif1Write32(u32 mem, u32 value)
 
 #ifdef PCSX2_DEVBUILD
 			/* Only FDR bit is writable, so mask the rest */
-			if ((vif1Regs->stat.FDR) ^(value & VIF1_STAT_FDR))
+			if ((vif1Regs->stat.FDR) ^ ((tVIF_STAT&)value).FDR)
 			{
 				// different so can't be stalled
 				if (vif1Regs->stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))

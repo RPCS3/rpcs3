@@ -1,16 +1,24 @@
 #pragma once
 
+enum IsoFS_Type
+{
+	FStype_ISO9660	= 1,
+	FStype_Joliet	= 2,
+};
+
 class IsoDirectory 
 {
 public:
-	SectorSource& internalReader;
-	std::vector<IsoFileDescriptor> files;
+	SectorSource&					internalReader;
+	std::vector<IsoFileDescriptor>	files;
+	IsoFS_Type						m_fstype;
 
 public:
 	IsoDirectory(SectorSource& r);
 	IsoDirectory(SectorSource& r, IsoFileDescriptor directoryEntry);
-	~IsoDirectory() throw();
+	virtual ~IsoDirectory() throw();
 
+	wxString FStype_ToString() const;
 	SectorSource& GetReader() const { return internalReader; }
 
 	bool Exists(const wxString& filePath) const;

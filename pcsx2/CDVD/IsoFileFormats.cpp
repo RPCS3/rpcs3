@@ -25,7 +25,7 @@
 
 static bool detect(isoFile *iso)
 {
-	u8 buf[2448];
+	u8 buf[2456];
 	u8* pbuf;
 
 	if (!isoReadBlock(iso, buf, 16)) return false; // Not readable
@@ -60,7 +60,7 @@ static bool _isoReadDtable(isoFile *iso)
 	return true;
 }
 
-static bool tryIsoType(isoFile *iso, u32 size, u32 offset, u32 blockofs)
+static bool tryIsoType(isoFile *iso, u32 size, s32 offset, s32 blockofs)
 {
 	iso->blocksize = size;
 	iso->offset = offset;
@@ -182,8 +182,8 @@ isoFile *isoOpen(const char *filename)
 	}
 
 	Console.WriteLn("isoOpen: %s ok", iso->filename);
-	Console.WriteLn("offset = %u", iso->offset);
-	Console.WriteLn("blockofs = %u", iso->blockofs);
+	Console.WriteLn("offset = %d", iso->offset);
+	Console.WriteLn("blockofs = %d", iso->blockofs);
 	Console.WriteLn("blocksize = %u", iso->blocksize);
 	Console.WriteLn("blocks = %u", iso->blocks);
 	Console.WriteLn("type = %u", iso->type);
@@ -224,18 +224,18 @@ isoFile *isoCreate(const char *filename, int flags)
 	}
 
 	Console.WriteLn("isoCreate: %s ok", iso->filename);
-	Console.WriteLn("offset = %u", iso->offset);
+	Console.WriteLn("offset = %d", iso->offset);
 
 	return iso;
 }
 
-bool isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks)
+bool isoSetFormat(isoFile *iso, int blockofs, uint blocksize, uint blocks)
 {
 	iso->blocksize = blocksize;
 	iso->blocks = blocks;
 	iso->blockofs = blockofs;
 
-	Console.WriteLn("blockofs = %u", iso->blockofs);
+	Console.WriteLn("blockofs = %d", iso->blockofs);
 	Console.WriteLn("blocksize = %u", iso->blocksize);
 	Console.WriteLn("blocks = %u", iso->blocks);
 

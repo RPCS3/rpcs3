@@ -56,8 +56,8 @@ struct isoFile
 	char filename[256];
 	isoType type;
 	u32  flags;
-	u32  offset;
-	u32  blockofs;
+	s32  offset;
+	s32  blockofs;
 	u32  blocksize;
 	u32  blocks;
 	void *handle;
@@ -73,7 +73,7 @@ struct isoFile
 
 extern isoFile *isoOpen(const char *filename);
 extern isoFile *isoCreate(const char *filename, int mode);
-extern bool isoSetFormat(isoFile *iso, uint blockofs, uint blocksize, uint blocks);
+extern bool isoSetFormat(isoFile *iso, int blockofs, uint blocksize, uint blocks);
 extern bool isoDetect(isoFile *iso);
 extern bool isoReadBlock(isoFile *iso, u8 *dst, uint lsn);
 extern bool isoWriteBlock(isoFile *iso, u8 *src, uint lsn);
