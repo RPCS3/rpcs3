@@ -38,8 +38,7 @@ enum isoFlags
 	ISOFLAGS_BLOCKDUMP_V3 =	0x0020
 };
 
-static const int CD_FRAMESIZE_RAW	= 2352;
-static const int CD_DATA_SIZE		= CD_FRAMESIZE_RAW - 12;
+static const int CD_FRAMESIZE_RAW	= 2448;
 
 //#define itob(i)		((i)/10*16 + (i)%10)	/* u_char to BCD */
 //#define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */

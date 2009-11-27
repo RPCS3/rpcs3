@@ -413,12 +413,12 @@ void AppConfig::LoadSave( IniInterface& ini )
 }
 
 // ------------------------------------------------------------------------
-AppConfig::ConsoleLogOptions::ConsoleLogOptions() :
-	Visible( false )
-,	AutoDock( true )
-,	DisplayPosition( wxDefaultPosition )
-,	DisplaySize( wxSize( 680, 560 ) )
-,	FontSize( 8 )
+AppConfig::ConsoleLogOptions::ConsoleLogOptions()
+	: Visible( false )
+	, AutoDock( true )
+	, DisplayPosition( wxDefaultPosition )
+	, DisplaySize( wxSize( 680, 560 ) )
+	, FontSize( 8 )
 {
 }
 
