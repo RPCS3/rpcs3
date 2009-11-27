@@ -91,7 +91,7 @@ IsoDirectory::IsoDirectory(SectorSource& r)
 	if( !isValid )
 		throw Exception::BadStream( "IsoFS", "Root directory not found on ISO image." );
 
-	DevCon.WriteLn( "(IsoFS) Filesystem is %s", FStype_ToString() );
+	DevCon.WriteLn( "(IsoFS) Filesystem is %s", FStype_ToString().c_str() );
 	Init( rootDirEntry );
 }
 
