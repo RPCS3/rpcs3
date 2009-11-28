@@ -343,9 +343,9 @@ void  cdrInterrupt() {
 				lsn_to_msf(cdr.ResultTD, trackInfo.lsn);
 				cdr.Stat = Acknowledge;
 				cdr.Result[0] = cdr.StatP;
-				cdr.Result[1] = cdr.ResultTD[0]; //itob(cdr.ResultTD[0]);
-				cdr.Result[2] = cdr.ResultTD[1]; //itob(cdr.ResultTD[1]);
-				cdr.Result[3] = cdr.ResultTD[2]; //itob(cdr.ResultTD[2]);
+				cdr.Result[1] = cdr.ResultTD[2];
+				cdr.Result[2] = cdr.ResultTD[1];
+				cdr.Result[3] = cdr.ResultTD[0];
 			}
 			break;
 
