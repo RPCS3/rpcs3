@@ -222,12 +222,13 @@ bool GSRenderer::Merge(int field)
 		{
 			r += GSVector4i(0, 1).xyxy();
 		}
+		
+		r += GSVector4i(1, 1, -1, -1); //crop a few of the outermost pixels, which are often buggy.
 
 		GSVector4 scale = GSVector4(tex[i]->GetScale()).xyxy();
 
 		src[i] = GSVector4(r) * scale / GSVector4(tex[i]->GetSize()).xyxy();
-		//src[i] += GSVector4(0.001f,0.001f,-0.001f,-0.001f); // crop a few of the outermost pixels, which are often buggy. Note: causes blur
-
+		
 		GSVector2 o(0, 0);
 		
 		if(dr[i].top - baseline >= 4) // 2?
