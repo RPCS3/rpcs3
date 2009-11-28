@@ -73,11 +73,14 @@ IsoDirectory::IsoDirectory(SectorSource& r)
                     m_fstype = FStype_Joliet;
                     break;
 			
-                case 0xff:
-                default:
-                    // Null terminator.  End of partition information.
-                    done = true;
-                    break;
+				case 0xff:
+					// Null terminator.  End of partition information.
+					done = true;
+				break;
+
+				default:
+					Console.Error( "(IsoFS) Unknown partition type ID=%d, encountered at block 0x%x", sector[0], i );
+				break;
 			}
 		}
 		else

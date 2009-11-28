@@ -236,25 +236,117 @@ enum MenuIDs_t
 	MenuID_FontSize_Huge,
 };
 
+void __evt_fastcall pxLogTextCtrl::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
+{
+#ifdef __WXMSW__
+	if( obj == NULL ) return;
+	pxLogTextCtrl* mframe = (pxLogTextCtrl*)obj;
+
+	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
+	// are always displayed as the last line of the log window).  Unfortunately this also
+	// makes logging very slow, so we only send the message for status changes, so that the
+	// log aligns itself nicely when we pause emulation or when errors occur.
+
+	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+	mframe->m_win32_StupidRefreshTricks = 0;
+#endif
+}
+
+void __evt_fastcall pxLogTextCtrl::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
+{
+#ifdef __WXMSW__
+	if( obj == NULL ) return;
+	pxLogTextCtrl* mframe = (pxLogTextCtrl*)obj;
+
+	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
+	// are always displayed as the last line of the log window).  Unfortunately this also
+	// makes logging very slow, so we only send the message for status changes, so that the
+	// log aligns itself nicely when we pause emulation or when errors occur.
+
+	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+	mframe->m_win32_StupidRefreshTricks = 0;
+#endif
+}
+
+pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
+	: wxTextCtrl( parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2
+	)
+
+	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )
+	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
+{
+#ifdef __WXMSW__
+	m_win32_StupidRefreshTricks	= 0;
+	m_win32_LinesPerScroll		= 10;
+#endif
+	m_FreezeWrites				= false;
+
+	Connect( wxEVT_SCROLLWIN_THUMBTRACK,	wxScrollWinEventHandler(pxLogTextCtrl::OnThumbTrack) );
+	Connect( wxEVT_SCROLLWIN_THUMBRELEASE,	wxScrollWinEventHandler(pxLogTextCtrl::OnThumbRelease) );
+
+	Connect( wxEVT_SIZE,					wxSizeEventHandler(pxLogTextCtrl::OnResize) );
+}
+
+
+void pxLogTextCtrl::OnResize( wxSizeEvent& evt )
+{
+#ifdef __WXMSW__
+	// Windows has retarded console window update patterns.  This helps smarten them up.
+	int ctrly = GetSize().y;
+	int fonty;
+	GetTextExtent( L"blaH yeah", NULL, &fonty );
+	m_win32_LinesPerScroll = (int)((ctrly * 0.72) / fonty);
+#endif
+
+	evt.Skip();
+}
+
+void pxLogTextCtrl::OnThumbTrack(wxScrollWinEvent& evt)
+{
+	//Console.Warning( "Thumb Tracking!!!" );
+	m_FreezeWrites = true;
+	evt.Skip();
+}
+
+void pxLogTextCtrl::OnThumbRelease(wxScrollWinEvent& evt)
+{
+	//Console.Warning( "Thumb Releasing!!!" );
+	m_FreezeWrites = false;
+	evt.Skip();
+}
+
+void pxLogTextCtrl::DoFlushUpdate()
+{
+#ifdef __WXMSW__
+	// EM_LINESCROLL avoids weird errors when the buffer reaches "max" and starts
+	// clearing old history:
+	::SendMessage((HWND)GetHWND(), EM_LINESCROLL, 0, 0xfffffff);
+
+	if( ++m_win32_StupidRefreshTricks > m_win32_LinesPerScroll )
+	{
+		m_win32_StupidRefreshTricks = 0;
+		::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+	}
+#endif
+}
+
 // ------------------------------------------------------------------------
 ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, AppConfig::ConsoleLogOptions& options )
 	: wxFrame(parent, wxID_ANY, title)
 	, m_conf( options )
-	, m_TextCtrl( *new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2 ) )
+	, m_TextCtrl( *new pxLogTextCtrl(this) )
 	, m_ColorTable( options.FontSize )
 
 	, m_QueueColorSection( L"ConsoleLog::QueueColorSection" )
 	, m_QueueBuffer( L"ConsoleLog::QueueBuffer" )
 	, m_threadlogger( EnableThreadedLoggingTest ? new ConsoleTestThread() : NULL )
-
-	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )
-	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 {
 	m_CurQueuePos				= 0;
 	m_pendingFlushes			= 0;
 	m_WaitingThreadsForFlush	= 0;
 	m_ThreadedLogInQueue		= false;
+	m_pendingFlushMsg			= false;
 
 	m_ThawThrottle				= 0;
 	m_ThawNeeded				= false;
@@ -322,9 +414,9 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 	Connect( MenuID_FontSize_Small, MenuID_FontSize_Huge, wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnFontSize ) );
 
-	Connect( m_item_Deci2->GetId(),		wxEVT_COMMAND_MENU_SELECTED,						wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
-	Connect( m_item_StdoutEE->GetId(),	wxEVT_COMMAND_MENU_SELECTED,						wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
-	Connect( m_item_StdoutIOP->GetId(),	wxEVT_COMMAND_MENU_SELECTED,						wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
+	Connect( m_item_Deci2->GetId(),		wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
+	Connect( m_item_StdoutEE->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
+	Connect( m_item_StdoutIOP->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
 
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(ConsoleLogFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
@@ -348,8 +440,6 @@ ConsoleLogFrame::~ConsoleLogFrame()
 {
 	wxGetApp().OnProgramLogClosed();
 }
-
-int m_pendingFlushes = 0;
 
 // Implementation note:  Calls SetColor and Write( text ).  Override those virtuals
 // and this one will magically follow suite. :)
@@ -382,11 +472,12 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 	// example).  So let's hackfix it so that an alternate message is posted if the queue is
 	// "piling up."
 
-	if( m_pendingFlushes == 0 )
+	if( !m_pendingFlushMsg )
 	{
 		wxCommandEvent evt( wxEVT_FlushQueue );
 		evt.SetInt( 0 );
 		GetEventHandler()->AddPendingEvent( evt );
+		m_pendingFlushMsg = true;
 	}
 
 	++m_pendingFlushes;
@@ -559,7 +650,6 @@ void ConsoleLogFrame::OnFontSize( wxCommandEvent& evt )
 	// TODO: Process the attributes of each character and upgrade the font size,
 	// while still retaining color and bold settings...  (might be slow but then
 	// it hardly matters being a once-in-a-bluemoon action).
-
 }
 
 // ----------------------------------------------------------------------------
@@ -577,39 +667,12 @@ void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& evt )
 	//::SendMessage((HWND)m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
 }
 
-void __evt_fastcall ConsoleLogFrame::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
-{
-#ifdef __WXMSW__
-	if( obj == NULL ) return;
-	ConsoleLogFrame* mframe = (ConsoleLogFrame*)obj;
-
-	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
-	// are always displayed as the last line of the log window).  Unfortunately this also
-	// makes logging very slow, so we only send the message for status changes, so that the
-	// log aligns itself nicely when we pause emulation or when errors occur.
-
-	::SendMessage((HWND)mframe->m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-#endif
-}
-
-void __evt_fastcall ConsoleLogFrame::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
-{
-#ifdef __WXMSW__
-	if( obj == NULL ) return;
-	ConsoleLogFrame* mframe = (ConsoleLogFrame*)obj;
-
-	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
-	// are always displayed as the last line of the log window).  Unfortunately this also
-	// makes logging very slow, so we only send the message for status changes, so that the
-	// log aligns itself nicely when we pause emulation or when errors occur.
-
-	::SendMessage((HWND)mframe->m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-#endif
-}
-
 void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 {
 	ScopedLock locker( m_QueueLock );
+
+	m_pendingFlushMsg = false;
+	if( m_TextCtrl.HasWriteLock() ) return;
 
 	if( m_CurQueuePos != 0 )
 	{
@@ -628,12 +691,8 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 		}
 
 		DoFlushQueue();
+		m_TextCtrl.DoFlushUpdate();
 
-#ifdef __WXMSW__
-		// EM_LINESCROLL avoids weird errors when the buffer reaches "max" and starts
-		// clearing old history:
-		::SendMessage((HWND)m_TextCtrl.GetHWND(), EM_LINESCROLL, 0, 0xfffffff);
-#endif
 		//m_TextCtrl.Thaw();
 	}
 
@@ -696,10 +755,7 @@ void ConsoleLogFrame::DoFlushQueue()
 		if( m_QueueColorSection[i].color != Color_Current )
 			m_TextCtrl.SetDefaultStyle( m_ColorTable[m_QueueColorSection[i].color] );
 
-		const wxString passin( &m_QueueBuffer[m_QueueColorSection[i].startpoint] );
-
-		m_TextCtrl.WriteText( passin );
-		insertPoint += passin.Length();
+		m_TextCtrl.WriteText( &m_QueueBuffer[m_QueueColorSection[i].startpoint] );
 	}
 
 	// Some reports on Windows7 have corrupted cursor when using insertPoint (or

@@ -87,6 +87,37 @@ public:
 };
 
 // --------------------------------------------------------------------------------------
+//  pxLogTextCtrl
+// --------------------------------------------------------------------------------------
+class pxLogTextCtrl : public wxTextCtrl
+{
+protected:
+	CmdEvt_ListenerBinding					m_Listener_CoreThreadStatus;
+	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
+
+#ifdef __WXMSW__
+	int		m_win32_StupidRefreshTricks;
+	int		m_win32_LinesPerScroll;
+#endif
+	bool	m_FreezeWrites;
+
+public:
+	pxLogTextCtrl(wxWindow* parent);
+
+	bool HasWriteLock() const { return m_FreezeWrites; }
+	void DoFlushUpdate();
+
+protected:
+	virtual void OnThumbTrack(wxScrollWinEvent& event);
+	virtual void OnThumbRelease(wxScrollWinEvent& event);
+	virtual void OnResize( wxSizeEvent& evt );
+
+	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
+	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
+
+};
+
+// --------------------------------------------------------------------------------------
 //  ConsoleLogFrame  --  Because the one built in wx is poop.
 // --------------------------------------------------------------------------------------
 class ConsoleLogFrame : public wxFrame
@@ -133,7 +164,7 @@ protected:
 
 protected:
 	ConLogConfig&	m_conf;
-	wxTextCtrl&		m_TextCtrl;
+	pxLogTextCtrl&	m_TextCtrl;
 	ColorArray		m_ColorTable;
 
 	// this int throttles freeze/thaw of the display, by cycling from -2 to 4, roughly.
@@ -159,9 +190,16 @@ protected:
 	// the GUI.
 	volatile int			m_pendingFlushes;
 
+	// Boolean indicating if a flush message is already in the Main message queue.  Used
+	// to prevent spamming the main thread with redundant messages.
+	volatile bool			m_pendingFlushMsg;
+
 	// This is a counter of the number of threads waiting for the Queue to flush.
 	volatile int			m_WaitingThreadsForFlush;
 
+	// Indicates to the main thread if a child thread is actively writing to the log.  If
+	// true the main thread will sleep briefly to allow the child a chance to accumulate
+	// more messages (helps avoid rapid successive flushes on high volume logging).
 	volatile bool			m_ThreadedLogInQueue;
 
 	// Used by threads waiting on the queue to flush.
@@ -180,9 +218,6 @@ protected:
 
 	// Current write position into the m_QueueBuffer;
 	int						m_CurQueuePos;
-
-	CmdEvt_ListenerBinding					m_Listener_CoreThreadStatus;
-	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
 
 	// Threaded log spammer, useful for testing console logging performance.
 	// (alternatively you can enable Disasm logging in any recompiler and achieve
@@ -234,8 +269,5 @@ protected:
 
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
-
-	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
-	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
 };
 
