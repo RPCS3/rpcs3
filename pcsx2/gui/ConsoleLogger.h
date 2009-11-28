@@ -97,6 +97,7 @@ protected:
 
 #ifdef __WXMSW__
 	int		m_win32_StupidRefreshTricks;
+	int		m_win32_LinesPerPage;
 	int		m_win32_LinesPerScroll;
 #endif
 	bool	m_FreezeWrites;
@@ -105,7 +106,9 @@ public:
 	pxLogTextCtrl(wxWindow* parent);
 
 	bool HasWriteLock() const { return m_FreezeWrites; }
-	void DoFlushUpdate();
+	void ConcludeIssue( int lines );
+
+	virtual void WriteText(const wxString& text);
 
 protected:
 	virtual void OnThumbTrack(wxScrollWinEvent& event);
@@ -114,7 +117,6 @@ protected:
 
 	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
 	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
-
 };
 
 // --------------------------------------------------------------------------------------

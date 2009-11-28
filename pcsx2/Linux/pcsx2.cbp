@@ -364,7 +364,8 @@
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
 		<Unit filename="../gui/MemoryCardFile.cpp" />
-		<Unit filename="../gui/Panels/AudioPanel.cpp" />
+    <Unit filename="../gui/MessageBoxes.cpp" />
+    <Unit filename="../gui/Panels/AudioPanel.cpp" />
 		<Unit filename="../gui/Panels/BaseConfigPanel.h" />
 		<Unit filename="../gui/Panels/BiosSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/ConfigurationPanels.h" />
@@ -456,8 +457,10 @@
 		<Unit filename="../gui/Resources/EmbeddedImage.h" />
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
+		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
-		<Unit filename="../ps2/BiosTools.cpp" />
+    <Unit filename="../gui/pxLogTextCtrl.cpp" />
+    <Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
 		<Unit filename="../ps2/GIFpath.cpp" />
 		<Unit filename="../ps2/Iop/IopHwRead.cpp" />

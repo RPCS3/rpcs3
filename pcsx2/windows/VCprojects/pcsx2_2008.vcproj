@@ -1809,7 +1809,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\MessageBoxes.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\Plugins.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\gui\pxLogTextCtrl.cpp"
 				>
 			</File>
 			<File
@@ -1879,41 +1887,7 @@
 			<Filter
 				Name="Resources"
 				>
-        <File
-					RelativePath="..\..\gui\Resources\ButtonIcon_Camera.png"
-					>
-          <FileConfiguration
-						Name="Debug|Win32"
-						>
-            <Tool
-							Name="VCCustomBuildTool"
-							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
-							Outputs="&quot;$(InputDir)\$(InputName).h"
-						/>
-          </FileConfiguration>
-          <FileConfiguration
-						Name="Devel|Win32"
-						>
-            <Tool
-							Name="VCCustomBuildTool"
-							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
-							Outputs="&quot;$(InputDir)\$(InputName).h"
-						/>
-          </FileConfiguration>
-          <FileConfiguration
-						Name="Release|Win32"
-						>
-            <Tool
-							Name="VCCustomBuildTool"
-							Description=""
-							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
-							Outputs="&quot;$(InputDir)\$(InputName).h"
-						/>
-          </FileConfiguration>
-        </File>
-        <File
+				<File
 					RelativePath="..\..\gui\Resources\AppIcon16.png"
 					>
 					<FileConfiguration
@@ -2044,6 +2018,40 @@
 						<Tool
 							Name="VCCustomBuildTool"
 							Description="Compiling Bitmap Resource..."
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\gui\Resources\ButtonIcon_Camera.png"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description=""
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Devel|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description=""
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description=""
 							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
 							Outputs="&quot;$(InputDir)\$(InputName).h"
 						/>

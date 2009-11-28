@@ -23,7 +23,7 @@
 #include <wx/textfile.h>
 
 #ifdef __WXMSW__
-#	include <wx/msw/wrapwin.h>		// needed for OutputDebugStirng
+#	include <wx/msw/wrapwin.h>		// needed for OutputDebugString
 #endif
 
 BEGIN_DECLARE_EVENT_TYPES()
@@ -39,7 +39,7 @@ DEFINE_EVENT_TYPE(wxEVT_SetTitleText)
 DEFINE_EVENT_TYPE(wxEVT_DockConsole)
 DEFINE_EVENT_TYPE(wxEVT_FlushQueue)
 
-// C++ requires abstract destructors to exist, even thought hey're abstract.
+// C++ requires abstract destructors to exist, even though they're abstract.
 PipeRedirectionBase::~PipeRedirectionBase() throw() {}
 
 // ----------------------------------------------------------------------------
@@ -235,101 +235,6 @@ enum MenuIDs_t
 	MenuID_FontSize_Large,
 	MenuID_FontSize_Huge,
 };
-
-void __evt_fastcall pxLogTextCtrl::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
-{
-#ifdef __WXMSW__
-	if( obj == NULL ) return;
-	pxLogTextCtrl* mframe = (pxLogTextCtrl*)obj;
-
-	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
-	// are always displayed as the last line of the log window).  Unfortunately this also
-	// makes logging very slow, so we only send the message for status changes, so that the
-	// log aligns itself nicely when we pause emulation or when errors occur.
-
-	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-	mframe->m_win32_StupidRefreshTricks = 0;
-#endif
-}
-
-void __evt_fastcall pxLogTextCtrl::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
-{
-#ifdef __WXMSW__
-	if( obj == NULL ) return;
-	pxLogTextCtrl* mframe = (pxLogTextCtrl*)obj;
-
-	// WM_VSCROLL makes the scrolling 'smooth' (such that the last line of the log contents
-	// are always displayed as the last line of the log window).  Unfortunately this also
-	// makes logging very slow, so we only send the message for status changes, so that the
-	// log aligns itself nicely when we pause emulation or when errors occur.
-
-	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-	mframe->m_win32_StupidRefreshTricks = 0;
-#endif
-}
-
-pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
-	: wxTextCtrl( parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2
-	)
-
-	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )
-	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
-{
-#ifdef __WXMSW__
-	m_win32_StupidRefreshTricks	= 0;
-	m_win32_LinesPerScroll		= 10;
-#endif
-	m_FreezeWrites				= false;
-
-	Connect( wxEVT_SCROLLWIN_THUMBTRACK,	wxScrollWinEventHandler(pxLogTextCtrl::OnThumbTrack) );
-	Connect( wxEVT_SCROLLWIN_THUMBRELEASE,	wxScrollWinEventHandler(pxLogTextCtrl::OnThumbRelease) );
-
-	Connect( wxEVT_SIZE,					wxSizeEventHandler(pxLogTextCtrl::OnResize) );
-}
-
-
-void pxLogTextCtrl::OnResize( wxSizeEvent& evt )
-{
-#ifdef __WXMSW__
-	// Windows has retarded console window update patterns.  This helps smarten them up.
-	int ctrly = GetSize().y;
-	int fonty;
-	GetTextExtent( L"blaH yeah", NULL, &fonty );
-	m_win32_LinesPerScroll = (int)((ctrly * 0.72) / fonty);
-#endif
-
-	evt.Skip();
-}
-
-void pxLogTextCtrl::OnThumbTrack(wxScrollWinEvent& evt)
-{
-	//Console.Warning( "Thumb Tracking!!!" );
-	m_FreezeWrites = true;
-	evt.Skip();
-}
-
-void pxLogTextCtrl::OnThumbRelease(wxScrollWinEvent& evt)
-{
-	//Console.Warning( "Thumb Releasing!!!" );
-	m_FreezeWrites = false;
-	evt.Skip();
-}
-
-void pxLogTextCtrl::DoFlushUpdate()
-{
-#ifdef __WXMSW__
-	// EM_LINESCROLL avoids weird errors when the buffer reaches "max" and starts
-	// clearing old history:
-	::SendMessage((HWND)GetHWND(), EM_LINESCROLL, 0, 0xfffffff);
-
-	if( ++m_win32_StupidRefreshTricks > m_win32_LinesPerScroll )
-	{
-		m_win32_StupidRefreshTricks = 0;
-		::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-	}
-#endif
-}
 
 // ------------------------------------------------------------------------
 ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, AppConfig::ConsoleLogOptions& options )
@@ -672,7 +577,7 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 	ScopedLock locker( m_QueueLock );
 
 	m_pendingFlushMsg = false;
-	if( m_TextCtrl.HasWriteLock() ) return;
+	//if( m_TextCtrl.HasWriteLock() ) return;
 
 	if( m_CurQueuePos != 0 )
 	{
@@ -691,8 +596,6 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 		}
 
 		DoFlushQueue();
-		m_TextCtrl.DoFlushUpdate();
-
 		//m_TextCtrl.Thaw();
 	}
 
@@ -758,9 +661,7 @@ void ConsoleLogFrame::DoFlushQueue()
 		m_TextCtrl.WriteText( &m_QueueBuffer[m_QueueColorSection[i].startpoint] );
 	}
 
-	// Some reports on Windows7 have corrupted cursor when using insertPoint (or
-	// +1 / -1 ).  This works better for some reason:
-	m_TextCtrl.SetInsertionPointEnd(); //( insertPoint );
+	m_TextCtrl.ConcludeIssue( m_pendingFlushes );
 
 	m_QueueColorSection.Clear();
 	m_CurQueuePos		= 0;
@@ -929,189 +830,4 @@ void Pcsx2App::DisableWindowLogging() const
 {
 	Console_SetActiveHandler( (emuLog!=NULL) ? (IConsoleWriter&)ConsoleWriter_File : (IConsoleWriter&)ConsoleWriter_Buffered );
 	Threading::Sleep( 5 );
-}
-
-DEFINE_EVENT_TYPE( pxEVT_MSGBOX );
-DEFINE_EVENT_TYPE( pxEVT_CallStackBox );
-
-using namespace Threading;
-
-// Thread Safety: Must be called from the GUI thread ONLY.
-static int pxMessageDialog( const wxString& content, const wxString& caption, long flags )
-{
-	if( IsDevBuild && !wxThread::IsMain() )
-		throw Exception::InvalidOperation( "Function must be called by the main GUI thread only." );
-
-	// fixme: If the emulator is currently active and is running in fullscreen mode, then we
-	// need to either:
-	//  1) Exit fullscreen mode before issuing the popup.
-	//  2) Issue the popup with wxSTAY_ON_TOP specified so that the user will see it.
-	//
-	// And in either case the emulation should be paused/suspended for the user.
-
-	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
-}
-
-// Thread Safety: Must be called from the GUI thread ONLY.
-// fixme: this function should use a custom dialog box that has a wxTextCtrl for the callstack, and
-// uses fixed-width (modern) fonts.
-static int pxCallstackDialog( const wxString& content, const wxString& caption, long flags )
-{
-	if( IsDevBuild && !wxThread::IsMain() )
-		throw Exception::InvalidOperation( "Function must be called by the main GUI thread only." );
-
-	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
-}
-
-class pxMessageBoxEvent : public wxEvent
-{
-protected:
-	MsgboxEventResult&	m_Instdata;
-	wxString			m_Title;
-	wxString			m_Content;
-	long				m_Flags;
-
-public:
-	pxMessageBoxEvent()
-		: wxEvent( 0, pxEVT_MSGBOX )
-		, m_Instdata( *(MsgboxEventResult*)NULL )
-		, m_Title()
-		, m_Content()
-	{
-		m_Flags = 0;
-	}
-
-	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, long flags )
-		: wxEvent( 0, pxEVT_MSGBOX )
-		, m_Instdata( instdata )
-		, m_Title( title )
-		, m_Content( content )
-	{
-		m_Flags = flags;
-	}
-
-	pxMessageBoxEvent( const pxMessageBoxEvent& event )
-		: wxEvent( event )
-		, m_Instdata( event.m_Instdata )
-		, m_Title( event.m_Title )
-		, m_Content( event.m_Content )
-	{
-		m_Flags = event.m_Flags;
-	}
-
-	// Thread Safety: Must be called from the GUI thread ONLY.
-	void DoTheDialog()
-	{
-		int result;
-
-		if( m_id == pxEVT_MSGBOX )
-			result = pxMessageDialog( m_Content, m_Title, m_Flags );
-		else
-			result = pxCallstackDialog( m_Content, m_Title, m_Flags );
-		m_Instdata.result = result;
-		m_Instdata.WaitForMe.Post();
-	}
-
-	virtual wxEvent *Clone() const { return new pxMessageBoxEvent(*this); }
-
-private:
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxMessageBoxEvent)
-};
-
-IMPLEMENT_DYNAMIC_CLASS( pxMessageBoxEvent, wxEvent )
-
-namespace Msgbox
-{
-	// parameters:
-	//   flags - messagebox type flags, such as wxOK, wxCANCEL, etc.
-	//
-	static int ThreadedMessageBox( const wxString& content, const wxString& title, long flags, int boxType=pxEVT_MSGBOX )
-	{
-		// must pass the message to the main gui thread, and then stall this thread, to avoid
-		// threaded chaos where our thread keeps running while the popup is awaiting input.
-
-		MsgboxEventResult instdat;
-		pxMessageBoxEvent tevt( instdat, title, content, flags );
-		wxGetApp().AddPendingEvent( tevt );
-		instdat.WaitForMe.WaitNoCancel();		// Important! disable cancellation since we're using local stack vars.
-		return instdat.result;
-	}
-
-	void OnEvent( pxMessageBoxEvent& evt )
-	{
-		evt.DoTheDialog();
-	}
-
-	// Pops up an alert Dialog Box with a singular "OK" button.
-	// Always returns false.
-	bool Alert( const wxString& text, const wxString& caption, int icon )
-	{
-		icon |= wxOK;
-		if( wxThread::IsMain() )
-			pxMessageDialog( text, caption, icon );
-		else
-			ThreadedMessageBox( text, caption, icon );
-		return false;
-	}
-
-	// Pops up a dialog box with Ok/Cancel buttons.  Returns the result of the inquiry,
-	// true if OK, false if cancel.
-	bool OkCancel( const wxString& text, const wxString& caption, int icon )
-	{
-		icon |= wxOK | wxCANCEL;
-		if( wxThread::IsMain() )
-		{
-			return wxID_OK == pxMessageDialog( text, caption, icon );
-		}
-		else
-		{
-			return wxID_OK == ThreadedMessageBox( text, caption, icon );
-		}
-	}
-
-	bool YesNo( const wxString& text, const wxString& caption, int icon )
-	{
-		icon |= wxYES_NO;
-		if( wxThread::IsMain() )
-		{
-			return wxID_YES == pxMessageDialog( text, caption, icon );
-		}
-		else
-		{
-			return wxID_YES == ThreadedMessageBox( text, caption, icon );
-		}
-	}
-
-	// [TODO] : This should probably be a fancier looking dialog box with the stacktrace
-	// displayed inside a wxTextCtrl.
-	static int CallStack( const wxString& errormsg, const wxString& stacktrace, const wxString& prompt, const wxString& caption, int buttons )
-	{
-		buttons |= wxICON_STOP;
-
-		wxString text( errormsg + L"\n\n" + stacktrace + L"\n" + prompt );
-
-		if( wxThread::IsMain() )
-		{
-			return pxCallstackDialog( text, caption, buttons );
-		}
-		else
-		{
-			return ThreadedMessageBox( text, caption, buttons, pxEVT_CallStackBox );
-		}
-	}
-
-	int Assertion( const wxString& text, const wxString& stacktrace )
-	{
-		return CallStack( text, stacktrace,
-			L"\nDo you want to stop the program?"
-			L"\nOr press [Cancel] to suppress further assertions.",
-			L"PCSX2 Assertion Failure",
-			wxYES_NO | wxCANCEL
-		);
-	}
-
-	void Except( const Exception::BaseException& src )
-	{
-		CallStack( src.FormatDisplayMessage(), src.FormatDiagnosticMessage(), wxEmptyString, L"PCSX2 Unhandled Exception", wxOK );
-	}
 }
