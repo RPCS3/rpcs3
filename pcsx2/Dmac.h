@@ -59,6 +59,57 @@ union tDMA_SADR {
 	wxString desc() { return wxsFormat(L"Sadr: 0x%x", _u32); }
 };
 
+union tDMA_MADR {
+	struct {
+		u32 ADDR : 31; // Transfer memory address
+		u32 SPR : 1; // Memory/SPR Address
+	};
+	u32 _u32;
+	
+	tDMA_MADR(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Madr: 0x%x", _u32); }
+};
+
+union tDMA_TADR {
+	struct {
+		u32 ADDR : 31; // Next Tag address
+		u32 SPR : 1; // Memory/SPR Address
+	};
+	u32 _u32;
+	
+	tDMA_TADR(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Tadr: 0x%x", _u32); }
+};
+
+union tDMA_ASR { // The Address Stack Register
+	struct {
+		u32 ADDR : 31; // Tag memory address
+		u32 SPR : 1; // Memory/SPR Address
+	};
+	u32 _u32;
+	
+	tDMA_ASR(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"Asr: 0x%x", _u32); }
+};
+
+union tDMA_QWC {
+	struct {
+		u32 QWC : 16;
+		u32 reserved2 : 16;
+	};
+	u32 _u32;
+	
+	tDMA_QWC(u32 val) { _u32 = val; }
+	
+	void reset() { _u32 = 0; }
+	wxString desc() { return wxsFormat(L"QWC: 0x%x", _u32); }
+};
 
 struct DMACh {
 	tDMA_CHCR chcr;

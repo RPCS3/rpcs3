@@ -31,8 +31,8 @@ wxString IsoDirectory::FStype_ToString() const
 {
 	switch( m_fstype )
 	{
-		case FStype_ISO9660:	L"ISO9660";		break;
-		case FStype_Joliet:		L"Joliet";		break;
+		case FStype_ISO9660:	return L"ISO9660";		break;
+		case FStype_Joliet:		return L"Joliet";		break;
 	}
 
 	return wxsFormat( L"Unrecognized Code (0x%x)", m_fstype );
@@ -42,40 +42,42 @@ wxString IsoDirectory::FStype_ToString() const
 IsoDirectory::IsoDirectory(SectorSource& r)
 	: internalReader(r)
 {
-	m_fstype = FStype_ISO9660;
-
 	IsoFileDescriptor rootDirEntry;
 	bool isValid = false;
+	bool done = false;
 	uint i = 16;
-	while( true )
+	
+	m_fstype = FStype_ISO9660;
+	
+	while( !done )
 	{
 		u8 sector[2048];
 		internalReader.readSector(sector,i);
 		if( memcmp( &sector[1], "CD001", 5 ) == 0 )
 		{
-			if( sector[0] == 0 )
-			{
-				Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Boot partition info.", i );
-			}
-			
-			else if( sector[0] == 1 )
-			{
-				Console.WriteLn( "(IsoFS) Block 0x%x: Primary partition info.", i );
-				rootDirEntry.Load( sector+156, 38 );
-				isValid = true;
-			}
+		    switch (sector[0])
+		    {
+		        case 0:
+                    Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Boot partition info.", i );
+                    break;
+                    
+                case 1:
+                    Console.WriteLn( "(IsoFS) Block 0x%x: Primary partition info.", i );
+                    rootDirEntry.Load( sector+156, 38 );
+                    isValid = true;
+                    break;
 
-			else if( sector[0] == 2 )
-			{
-				// Probably means Joliet (long filenames support), which PCSX2 doesn't care about.
-				Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Extended partition info.", i );
-				m_fstype = FStype_Joliet;
-			}
+                case 2:
+                    // Probably means Joliet (long filenames support), which PCSX2 doesn't care about.
+                    Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Extended partition info.", i );
+                    m_fstype = FStype_Joliet;
+                    break;
 			
-			else if( sector[0] == 0xff )
-			{
-				// Null terminator.  End of partition information.
-				break;
+                case 0xff:
+                default:
+                    // Null terminator.  End of partition information.
+                    done = true;
+                    break;
 			}
 		}
 		else
@@ -91,7 +93,7 @@ IsoDirectory::IsoDirectory(SectorSource& r)
 	if( !isValid )
 		throw Exception::BadStream( "IsoFS", "Root directory not found on ISO image." );
 
-	DevCon.WriteLn( "(IsoFS) Filesystem is %s", FStype_ToString().c_str() );
+	DevCon.WriteLn( L"(IsoFS) Filesystem is " + FStype_ToString() );
 	Init( rootDirEntry );
 }
 

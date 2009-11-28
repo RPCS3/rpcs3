@@ -133,9 +133,9 @@ void iDumpRegisters(u32 startpc, u32 temp)
 		DMACh* p = (DMACh*)(PS2MEM_HW+dmacs[i]);
 		__Log("dma%d c%x m%x q%x t%x s%x", i, p->chcr._u32, p->madr, p->qwc, p->tadr, p->sadr);
 	}
-	__Log("dmac %x %x %x %x", psHu32(DMAC_CTRL), psHu32(DMAC_STAT), psHu32(DMAC_RBSR), psHu32(DMAC_RBOR));
-	__Log("intc %x %x", psHu32(INTC_STAT), psHu32(INTC_MASK));
-	__Log("sif: %x %x %x %x %x", psHu32(0xf200), psHu32(0xf220), psHu32(0xf230), psHu32(0xf240), psHu32(0xf260));
+	__Log(L"dmac " + dmacRegs->ctrl.desc() + L" " + dmacRegs->stat.desc() + L" " + dmacRegs->rbsr.desc() + L" " + dmacRegs->rbor.desc());
+	__Log(L"intc " + intcRegs->stat.desc() + L" " +  intcRegs->mask.desc());
+	__Log("sif: %x %x %x %x %x", psHu32(SBUS_F200), psHu32(SBUS_F220), psHu32(SBUS_F230), psHu32(SBUS_F240), psHu32(SBUS_F260));
 #endif
 }
 
@@ -152,19 +152,19 @@ void iDumpVU0Registers()
         {
             case REG_Q:
             case REG_P:
-                __Log("%f\n", VU0.VI[i].F);
+                __Log("%f", VU0.VI[i].F);
                 break;
             case REG_MAC_FLAG:
-                __Log("%x\n", 0);//VU0.VI[i].UL&0xff);
+                __Log("%x", 0);//VU0.VI[i].UL&0xff);
                 break;
             case REG_STATUS_FLAG:
-                __Log("%x\n", 0);//VU0.VI[i].UL&0x03);
+                __Log("%x", 0);//VU0.VI[i].UL&0x03);
                 break;
             case REG_CLIP_FLAG:
-                __Log("0\n");
+                __Log("0");
                 break;
             default:
-                __Log("%x\n", VU0.VI[i].UL);
+                __Log("%x", VU0.VI[i].UL);
                 break;
         }
 	}
@@ -261,7 +261,7 @@ void iDumpBlock( int startpc, u8 * ptr )
 	eff.Printf( "\n" );
 	eff.Printf( "       " );
 
-	// TODO : Finish converting this over to wxWidgers wxFile stuff...
+	// TODO : Finish converting this over to wxWidgets wxFile stuff...
 	/*
 	int count;
 	EEINST* pcur;

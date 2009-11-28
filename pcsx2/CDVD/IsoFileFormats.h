@@ -40,9 +40,6 @@ enum isoFlags
 
 static const int CD_FRAMESIZE_RAW	= 2448;
 
-//#define itob(i)		((i)/10*16 + (i)%10)	/* u_char to BCD */
-//#define btoi(b)		((b)/16*10 + (b)%16)	/* BCD to u_char */
-
 struct _multih
 {
 	u32 slsn;

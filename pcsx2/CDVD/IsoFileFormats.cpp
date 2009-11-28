@@ -256,30 +256,6 @@ bool isoSetFormat(isoFile *iso, int blockofs, uint blocksize, uint blocks)
 	return true;
 }
 
-static s32 MSFtoLSN(u8 *Time)
-{
-	u32 lsn;
-
-	lsn = Time[2];
-	lsn += (Time[1] - 2) * 75;
-	lsn += Time[0] * 75 * 60;
-	return lsn;
-}
-
-static void LSNtoMSF(u8 *Time, s32 lsn)
-{
-	u8 m, s, f;
-
-	lsn += 150;
-	m = lsn / 4500; 		// minuten
-	lsn = lsn - m * 4500;	// minuten rest
-	s = lsn / 75;			// sekunden
-	f = lsn - (s * 75);		// sekunden rest
-	Time[0] = itob(m);
-	Time[1] = itob(s);
-	Time[2] = itob(f);
-}
-
 bool _isoReadBlock(isoFile *iso, u8 *dst, int lsn)
 {
 	u64 ofs = (u64)lsn * iso->blocksize + iso->offset;
@@ -376,7 +352,7 @@ bool isoReadBlock(isoFile *iso, u8 *dst, uint lsn)
 
 	if (iso->type == ISOTYPE_CD)
 	{
-		LSNtoMSF(dst + 12, lsn);
+		lsn_to_msf(dst + 12, lsn);
 		dst[15] = 2;
 	}
 
