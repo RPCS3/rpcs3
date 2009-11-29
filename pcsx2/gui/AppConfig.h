@@ -29,10 +29,18 @@ extern bool			UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings
 wxDirName GetSettingsFolder();
 wxString  GetSettingsFilename();
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// Pcsx2 Application Configuration.
-//
-//
+enum AspectRatioType
+{
+	AspectRatio_Stretch,
+	AspectRatio_4_3,
+	AspectRatio_16_9,
+	AspectRatio_MaxCount
+};
+
+// =====================================================================================================
+//  Pcsx2 Application Configuration. 
+// =====================================================================================================
+
 class AppConfig
 {
 public:
@@ -109,6 +117,29 @@ public:
 		bool		Enabled;	// memory card enabled (if false, memcard will not show up in-game)
 	};
 
+	// ------------------------------------------------------------------------
+	// The GS window receives much love from the land of Options and Settings.
+	//
+	struct GSOptions
+	{
+		// Closes the GS/Video port on escape (good for fullscreen activity)
+		bool		CloseOnEsc;
+		bool		DefaultToFullscreen;
+		bool		AlwaysHideMouse;
+		bool		DisableResizeBorders;
+
+		AspectRatioType AspectRatio;
+		
+		wxSize		WindowSize;
+		wxPoint		WindowPos;
+		bool		IsMaximized;
+
+		GSOptions();
+
+		void LoadSave( IniInterface& conf );
+		void SanityCheck();
+	};
+
 public:
 	wxPoint		MainGuiPosition;
 
@@ -139,9 +170,6 @@ public:
 	// enables automatic ntfs compression of memory cards (Win32 only)
 	bool		McdEnableNTFS;
 
-	// Closes the GS/Video port on escape (good for fullscreen activity)
-	bool		CloseGSonEsc;
-
 	// Master toggle for enabling or disabling all speedhacks in one fail-free swoop.
 	// (the toggle is applied when a new EmuConfig is sent through AppCoreThread::ApplySettings)
 	bool		EnableSpeedHacks;
@@ -155,7 +183,8 @@ public:
 	ConsoleLogOptions		Ps2ConBox;
 	FolderOptions			Folders;
 	FilenameOptions			BaseFilenames;
-
+	GSOptions				GSWindow;
+	
 	// PCSX2-core emulation options, which are passed to the emu core prior to initiating
 	// an emulation session.  Note these are the options saved into the GUI ini file and
 	// which are shown as options in the gui preferences, but *not* necessarily the options

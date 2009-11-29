@@ -184,11 +184,13 @@ namespace Panels
 	class GSWindowSettingsPanel : public BaseApplicableConfigPanel
 	{
 	protected:
+		wxComboBox*		m_combo_AspectRatio;
+
 		pxCheckBox*		m_check_CloseGS;
 		pxCheckBox*		m_check_SizeLock;
-		pxCheckBox*		m_check_AspectLock;
 		pxCheckBox*		m_check_VsyncEnable;
 		pxCheckBox*		m_check_Fullscreen;
+		pxCheckBox*		m_check_HideMouse;
 		
 		wxTextCtrl*		m_text_WindowWidth;
 		wxTextCtrl*		m_text_WindowHeight;

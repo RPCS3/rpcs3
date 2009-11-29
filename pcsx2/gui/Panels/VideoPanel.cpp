@@ -145,6 +145,169 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	OnSettingsChanged();
 }
 
+// --------------------------------------------------------------------------------------
+//  GSWindowSetting Implementation
+// --------------------------------------------------------------------------------------
+
+Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
+{
+	const wxString aspect_ratio_labels[] =
+	{
+		_("Fit to Window/Screen"),
+		_("Standard (4:3)"),
+		_("Widescreen (16:9)")
+	};
+
+	m_combo_AspectRatio	= new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		ArraySize(aspect_ratio_labels), aspect_ratio_labels, wxCB_READONLY );
+
+	m_text_WindowWidth	= CreateNumericalTextCtrl( this, 5 );
+	m_text_WindowHeight	= CreateNumericalTextCtrl( this, 5 );
+
+	m_check_SizeLock	= new pxCheckBox( this, _("Disable window resize border") );
+	m_check_HideMouse	= new pxCheckBox( this, _("Always hide mouse cursor") );
+	m_check_CloseGS		= new pxCheckBox( this, _("Hide window on suspend") );
+	m_check_Fullscreen	= new pxCheckBox( this, _("Default to Fullscreen") );
+	m_check_VsyncEnable	= new pxCheckBox( this, _("Vsync Enable") );
+	
+	m_check_VsyncEnable->SetToolTip( pxE( ".Tooltips:Video:Vsync",
+		L"Vsync eliminates screen tearing but typically has a big performance hit. "
+		L"It usually only applies to fullscreen mode, and may not work with all GS plugins."
+	) );
+	
+	m_check_HideMouse->SetToolTip( pxE( ".Tooltips:Video:HideMouse",
+		L"Check this to force the mouse cursor invisible inside the GS window; useful if using "
+		L"the mouse as a primary control device for gaming.  By default the mouse auto-hides after "
+		L"3 seconds of inactivity."
+	) );
+
+	m_check_Fullscreen->SetToolTip( pxE( ".Tooltips:Video:Fullscreen",
+		L"Enables automatic mode switch to fullscreen when starting or resuming emulation. "
+		L"You can still toggle fullscreen display at any time using alt-enter."
+	) );
+
+	m_check_CloseGS->SetToolTip( pxE( ".Tooltips:Video:HideGS",
+		L"Completely closes the often large and bulky GS window when pressing "
+		L"ESC or suspending the emulator."
+	) );
+	
+	// ----------------------------------------------------------------------------
+	//  Layout and Positioning
+
+	wxBoxSizer& s_customsize( *new wxBoxSizer( wxHORIZONTAL ) );
+	s_customsize	+= m_text_WindowWidth;
+	s_customsize	+= Text( L"x" );
+	s_customsize	+= m_text_WindowHeight;
+
+	wxFlexGridSizer& s_AspectRatio( *new wxFlexGridSizer( 2, StdPadding, StdPadding ) );
+	//s_AspectRatio.AddGrowableCol( 0 );
+	s_AspectRatio.AddGrowableCol( 1 );
+
+	s_AspectRatio += Text(_("Aspect Ratio:"))		| pxMiddle;
+	s_AspectRatio += m_combo_AspectRatio			| pxExpand;
+	s_AspectRatio += Text(_("Custom Window Size:"))	| pxMiddle;
+	s_AspectRatio += s_customsize					| pxAlignRight;
+
+	*this += s_AspectRatio | StdExpand();
+	*this += m_check_SizeLock;
+	*this += new wxStaticLine( this ) | StdExpand();
+
+	*this += m_check_Fullscreen;
+	*this += m_check_VsyncEnable;
+	*this += m_check_HideMouse;
+	*this += m_check_CloseGS;
+
+	OnSettingsChanged();
+}
+
+// --------------------------------------------------------------------------------------
+//  VideoPanel Implementation
+// --------------------------------------------------------------------------------------
+
+Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
+	BaseApplicableConfigPanel( parent )
+{
+	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
+	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
+	left->SetIdealWidth( (left->GetIdealWidth()-12) / 2 );
+	right->SetIdealWidth( (right->GetIdealWidth()-12) / 2 );
+
+	m_check_SynchronousGS = new pxCheckBox( left, _("Synchronized MTGS"),
+		_("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
+	);
+	
+	m_check_SynchronousGS->SetToolTip(_("Enable this if you think the MTGS is causing crashes or graphical errors."));
+
+	GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
+	winpan->AddFrame(_("Display/Window"));
+
+	FramelimiterPanel* fpan = new FramelimiterPanel( right );
+	fpan->AddFrame(_("Framelimiter"));
+		
+	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
+	s_table->AddGrowableCol( 0 );
+	s_table->AddGrowableCol( 1 );
+
+	*left		+= winpan	| pxExpand;
+	*right		+= fpan		| pxExpand;
+
+	*left		+= 5;
+	*left		+= m_check_SynchronousGS;
+	
+	*s_table	+= left		| StdExpand();
+	*s_table	+= right	| StdExpand();
+
+	*this		+= s_table	| pxExpand;
+
+	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.Video.SynchronousMTGS );
+}
+
+void Panels::VideoPanel::Apply()
+{
+	g_Conf->EmuOptions.Video.SynchronousMTGS = m_check_SynchronousGS->GetValue();
+}
+
+void Panels::GSWindowSettingsPanel::OnSettingsChanged()
+{
+	const AppConfig::GSOptions& conf( g_Conf->GSWindow );
+
+	m_check_CloseGS		->SetValue( conf.CloseOnEsc );
+	m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
+	m_check_HideMouse	->SetValue( conf.AlwaysHideMouse );
+	m_check_SizeLock	->SetValue( conf.DisableResizeBorders );
+
+	m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
+
+	m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
+	m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
+
+}
+
+void Panels::GSWindowSettingsPanel::Apply()
+{
+	AppConfig::GSOptions& gsopt( g_Conf->GSWindow );
+	
+	gsopt.CloseOnEsc			= m_check_CloseGS	->GetValue();
+	gsopt.DefaultToFullscreen	= m_check_Fullscreen->GetValue();
+	gsopt.AlwaysHideMouse		= m_check_HideMouse	->GetValue();
+	gsopt.DisableResizeBorders	= m_check_SizeLock	->GetValue();
+
+	gsopt.AspectRatio			= (AspectRatioType)m_combo_AspectRatio->GetSelection();
+
+	long xr, yr;
+
+	if( !m_text_WindowWidth->GetValue().ToLong( &xr ) || !m_text_WindowHeight->GetValue().ToLong( &yr ) )
+		throw Exception::CannotApplySettings( this,
+			L"User submitted non-numeric window size parameters!",
+			_("Invalid window dimensions specified: Size cannot contain non-numeric digits! >_<")
+		);
+
+	gsopt.WindowSize.x	= xr;
+	gsopt.WindowSize.y	= yr;
+}
+
+
 void Panels::FramelimiterPanel::OnSettingsChanged()
 {
 	const Pcsx2Config::VideoOptions& conf( g_Conf->EmuOptions.Video );
@@ -157,121 +320,4 @@ void Panels::FramelimiterPanel::Apply()
 	Pcsx2Config::VideoOptions& conf( g_Conf->EmuOptions.Video );
 
 	// TODO : Apply options from checkboxes (once video config struct is is implemented)
-}
-
-// --------------------------------------------------------------------------------------
-//  GSWindowSetting Implementation
-// --------------------------------------------------------------------------------------
-
-Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
-{
-	m_text_WindowWidth	= CreateNumericalTextCtrl( this, 5 );
-	m_text_WindowHeight	= CreateNumericalTextCtrl( this, 5 );
-
-	m_check_CloseGS		= new pxCheckBox( this, _("Hide GS window") );
-
-	m_check_AspectLock	= new pxCheckBox( this, _("Lock Aspect Ratio") );
-
-	m_check_SizeLock	= new pxCheckBox( this, _("Lock Size"),
-		pxE( ".Tooltips:Video:LockSize",
-			L"Disables the resize border for the GS window."
-		)
-	);
-
-	m_check_VsyncEnable	= new pxCheckBox( this, _("Wait for Vsync"),
-		pxE( ".Tooltips:Video:Vsync",
-			L"This reduces screen/refresh tearing but typically has a big performance hit.  "
-			L"It may not work in windowed modes, and may not be supported by all GS plugins."
-		)
-	);
-
-	m_check_Fullscreen	= new pxCheckBox( this, _("Force Fullscreen at Startup"),
-		pxE( ".Panels:Video:Fullscreen",
-			L"Enables automatic modeswitch to fullscreen when starting or resuming emulation."
-		)
-	);
-
-	m_check_CloseGS->SetToolTip( pxE( ".Tooltips:Video:HideGS",
-		L"Completely closes the often large and bulky GS window when pressing "
-		L"ESC or suspending the emulator.  Might prevent memory leaks too, if you use DX10."
-	) );
-	
-	// ----------------------------------------------------------------------------
-	//  Layout and Positioning
-
-	wxBoxSizer& s_customsize( *new wxBoxSizer( wxHORIZONTAL ) );
-	s_customsize	+= m_text_WindowWidth;
-	s_customsize	+= Text(L"x" );
-	s_customsize	+= m_text_WindowHeight;
-
-	//wxFlexGridSizer& s_winsize( *new wxFlexGridSizer( 2 ) );
-	//s_winsize.AddGrowableCol( 0 );
-
-	wxStaticBoxSizer& s_winsize( *new wxStaticBoxSizer( wxVERTICAL, this, _("Custom Window Size:") ) );
-	s_winsize		+= s_customsize		| StdSpace().Border( wxLEFT | wxRIGHT | wxBOTTOM);
-
-	*this += s_winsize | StdSpace();
-	
-	*this += m_check_SizeLock;
-	*this += m_check_AspectLock;
-	*this += m_check_Fullscreen;
-	*this += m_check_CloseGS;
-	*this += m_check_VsyncEnable;
-
-	m_text_WindowWidth	->SetValue( L"640" );
-	m_text_WindowHeight	->SetValue( L"480" );
-	m_check_CloseGS		->SetValue( g_Conf->CloseGSonEsc );
-
-}
-
-void Panels::GSWindowSettingsPanel::Apply()
-{
-}
-
-// --------------------------------------------------------------------------------------
-//  VideoPanel Implementation
-// --------------------------------------------------------------------------------------
-
-Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
-	BaseApplicableConfigPanel( parent )
-{
-	m_check_SynchronousGS = new pxCheckBox( this, _("Force Synchronized MTGS"),
-		_("For troubleshooting possible bugs in the MTGS.  Enabling this option will be a big slowdown.")
-	);
-
-	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
-	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
-	left->SetIdealWidth( (left->GetIdealWidth()-16) / 2 );
-	right->SetIdealWidth( (right->GetIdealWidth()-16) / 2 );
-
-	GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
-	winpan->AddFrame(_("Display/Window"));
-
-	FramelimiterPanel* fpan = new FramelimiterPanel( right );
-	fpan->AddFrame(_("Framelimiter"));
-		
-	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
-
-	*left		+= winpan	| pxExpand;
-	*right		+= fpan		| pxExpand;
-	
-	*s_table	+= left		| StdExpand();
-	*s_table	+= right	| StdExpand();
-
-	*this += Heading(L"This panel is not implemented yet.\nIT DOES NOT WORK.  AT ALL.");
-	*this += m_check_SynchronousGS;
-	*this += s_table;
-	
-	// TODO:
-	// Framelimiting / Frameskipping / Vsync
-	// GS Window Options ( incl. Fullscreen )
-	// MTGS Forced Synchronization
-	
-	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.Video.SynchronousMTGS );
-}
-
-void Panels::VideoPanel::Apply()
-{
-	g_Conf->EmuOptions.Video.SynchronousMTGS = m_check_SynchronousGS->GetValue();
 }

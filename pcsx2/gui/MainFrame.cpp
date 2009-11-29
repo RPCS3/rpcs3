@@ -22,6 +22,10 @@
 
 #include <wx/iconbndl.h>
 
+#ifdef __WXMSW__
+#	include <wx/msw/wrapwin.h>		// needed for SetWindowPos (OnActivate)
+#endif
+
 #if _MSC_VER
 #	include "svnrev.h"
 #endif
@@ -439,6 +443,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	ConnectMenus();
 	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
+	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler(MainEmuFrame::OnActivate) );
 
 	SetDropTarget( new IsoDropTarget( this ) );
 }
@@ -448,10 +453,17 @@ MainEmuFrame::~MainEmuFrame() throw()
 	m_menuCDVD.Remove( MenuId_IsoSelector );
 }
 
-// This should be called whenever major changes to the ini configs have occurred,
-// or when the recent file count mismatches the max filecount.
-void MainEmuFrame::ReloadRecentLists()
+void MainEmuFrame::OnActivate( wxActivateEvent& evt )
 {
+	// Special implementation to "connect" the console log window with the main frame
+	// window.  When one is clicked, the other is assured to be brought to the foreground
+	// with it.  (wxWidgets appears to have no equivalent to this)
+#ifdef __WXMSW__
+	if( ConsoleLogFrame* logframe = wxGetApp().GetProgramLog() )
+		SetWindowPos( (HWND)logframe->GetHWND(), (HWND)GetHWND(), 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOMOVE );
+#endif
+	
+	evt.Skip();
 }
 
 void MainEmuFrame::ApplyCoreStatus()

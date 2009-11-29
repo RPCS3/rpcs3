@@ -2300,6 +2300,18 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\..\3rdparty\wxWidgets\include\wx\msw\wx.rc"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCResourceCompilerTool"
+							AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\lib\vc_lib\mswd&quot;"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
 					RelativePath=".\..\wxResources.rc"
 					>
 				</File>

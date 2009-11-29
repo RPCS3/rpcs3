@@ -326,6 +326,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(ConsoleLogFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler(ConsoleLogFrame::OnResize) );
+	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler(ConsoleLogFrame::OnActivate) );
 
 	Connect( wxEVT_SetTitleText,	wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
 	Connect( wxEVT_DockConsole,		wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
@@ -470,6 +471,19 @@ void ConsoleLogFrame::OnMoveAround( wxMoveEvent& evt )
 void ConsoleLogFrame::OnResize( wxSizeEvent& evt )
 {
 	m_conf.DisplaySize = GetSize();
+	evt.Skip();
+}
+
+void ConsoleLogFrame::OnActivate( wxActivateEvent& evt )
+{
+	// Special implementation to "connect" the console log window with the main frame
+	// window.  When one is clicked, the other is assured to be brought to the foreground
+	// with it.  (wxWidgets appears to have no equivalent to this)
+#ifdef __WXMSW__
+	if( MainEmuFrame* mainframe = GetMainFramePtr() )
+		SetWindowPos( (HWND)mainframe->GetHWND(), (HWND)GetHWND(), 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOMOVE );
+#endif
+
 	evt.Skip();
 }
 

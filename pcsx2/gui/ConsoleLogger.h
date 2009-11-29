@@ -273,5 +273,6 @@ protected:
 
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
+	void OnActivate( wxActivateEvent& evt );
 };
 

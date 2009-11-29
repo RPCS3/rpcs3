@@ -22,20 +22,51 @@
 #include "App.h"
 
 // --------------------------------------------------------------------------------------
+//  GSPanel
+// --------------------------------------------------------------------------------------
+class GSPanel : public wxWindow
+{
+protected:
+	EventListenerBinding<int>	m_Listener_SettingsApplied;
+	wxTimer						m_HideMouseTimer;
+	bool						m_CursorShown;
+
+public:
+	GSPanel( wxWindow* parent );
+	virtual ~GSPanel() throw() { }
+
+	void DoResize();
+	void DoShowMouse();
+
+protected:
+	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+
+	void OnCloseWindow( wxCloseEvent& evt );
+	void OnResize(wxSizeEvent& event);
+	void OnShowMouse( wxMouseEvent& evt );
+	void OnHideMouseTimeout( wxTimerEvent& evt );
+};
+
+// --------------------------------------------------------------------------------------
 //  GSFrame
 // --------------------------------------------------------------------------------------
 class GSFrame : public wxFrame
 {
 protected:
-	AcceleratorDictionary m_Accels;
+	AcceleratorDictionary		m_Accels;
+
+	GSPanel*					m_gspanel;
 
 public:
 	GSFrame(wxWindow* parent, const wxString& title);
 	virtual ~GSFrame() throw();
 
+	wxWindow* GetWindow();
+
 protected:
 	void InitDefaultAccelerators();
-	void OnCloseWindow( wxCloseEvent& evt );
+	void OnMove( wxMoveEvent& evt );
+	void OnResize( wxSizeEvent& evt );
 	void OnKeyDown( wxKeyEvent& evt );
 };
 
@@ -136,7 +167,6 @@ public:
 
 	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Sys_SuspendResume ); }
 	void UpdateIsoSrcSelection();
-	void ReloadRecentLists();
 
 protected:
 	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
@@ -152,8 +182,9 @@ protected:
 
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
-	void OnCloseWindow(wxCloseEvent& evt);
+	void OnCloseWindow( wxCloseEvent& evt );
 	void OnMoveAround( wxMoveEvent& evt );
+	void OnActivate( wxActivateEvent& evt );
 
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);
 	void Menu_SelectBios_Click(wxCommandEvent &event);

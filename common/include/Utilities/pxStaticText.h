@@ -90,7 +90,8 @@ extern void operator+=( wxSizer& target, pxStaticText& src );
 template<>
 inline void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
 {
-	target.Add( src.window, src.flags );
+	src.window->AddTo( target, src.flags );
+	//target.Add( src.window, src.flags );
 }
 
 // --------------------------------------------------------------------------------------

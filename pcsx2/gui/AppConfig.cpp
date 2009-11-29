@@ -318,7 +318,6 @@ AppConfig::AppConfig()
 	Toolbar_ShowLabels	= true;
 
 	McdEnableNTFS		= true;
-	CloseGSonEsc		= true;
 	EnableSpeedHacks	= false;
 
 	CdvdSource			= CDVDsrc_Iso;
@@ -388,7 +387,6 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( CurrentIso );
 	IniEntry( CurrentELF );
 
-	IniEntry( CloseGSonEsc );
 	IniEntry( EnableSpeedHacks );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
@@ -408,6 +406,7 @@ void AppConfig::LoadSave( IniInterface& ini )
 	BaseFilenames.LoadSave( ini );
 
 	EmuOptions.LoadSave( ini );
+	GSWindow.LoadSave( ini );
 
 	ini.Flush();
 }
@@ -447,12 +446,12 @@ void AppConfig::FolderOptions::ApplyDefaults()
 // ------------------------------------------------------------------------
 AppConfig::FolderOptions::FolderOptions() :
 	bitset( 0xffffffff )
-,	Plugins( PathDefs::GetPlugins() )
-,	Bios( PathDefs::GetBios() )
-,	Snapshots( PathDefs::GetSnapshots() )
-,	Savestates( PathDefs::GetSavestates() )
-,	MemoryCards( PathDefs::GetMemoryCards() )
-,	Logs( PathDefs::GetLogs() )
+,	Plugins		( PathDefs::GetPlugins() )
+,	Bios		( PathDefs::GetBios() )
+,	Snapshots	( PathDefs::GetSnapshots() )
+,	Savestates	( PathDefs::GetSavestates() )
+,	MemoryCards	( PathDefs::GetMemoryCards() )
+,	Logs		( PathDefs::GetLogs() )
 
 ,	RunIso( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
 ,	RunELF( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
@@ -516,6 +515,65 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 		ini.Entry( tbl_PluginInfo[i].GetShortname(), Plugins[i], pc );
 
 	ini.Entry( L"BIOS", Bios, pc );
+}
+
+// ------------------------------------------------------------------------
+AppConfig::GSOptions::GSOptions()
+{
+	CloseOnEsc				= true;
+	DefaultToFullscreen		= false;
+	AlwaysHideMouse			= false;
+	DisableResizeBorders	= false;
+
+	AspectRatio				= AspectRatio_4_3;
+	
+	WindowSize				= wxSize( 640, 480 );
+	WindowPos				= wxDefaultPosition;
+	IsMaximized				= false;
+}
+
+void AppConfig::GSOptions::SanityCheck()
+{
+	// Ensure Conformation of various options...
+
+	WindowSize.x = std::max( WindowSize.x, 8 );
+	WindowSize.x = std::min( WindowSize.x, wxGetDisplayArea().GetWidth()-16 );
+
+	WindowSize.y = std::max( WindowSize.y, 8 );
+	WindowSize.y = std::min( WindowSize.y, wxGetDisplayArea().GetHeight()-48 );
+
+	if( !wxGetDisplayArea().Contains( wxRect( WindowPos, WindowSize ) ) )
+		WindowPos = wxDefaultPosition;
+
+
+	if( (uint)AspectRatio >= (uint)AspectRatio_MaxCount )
+		AspectRatio = AspectRatio_4_3;
+}
+
+void AppConfig::GSOptions::LoadSave( IniInterface& ini )
+{
+	IniScopedGroup path( ini, L"GSWindow" );
+	
+	GSOptions defaults;
+	
+	IniEntry( CloseOnEsc );
+	IniEntry( DefaultToFullscreen );
+	IniEntry( AlwaysHideMouse );
+	IniEntry( DisableResizeBorders );
+	
+	IniEntry( WindowSize );
+	IniEntry( WindowPos );
+	
+	static const wxChar* AspectRatioNames[] =
+	{
+		L"Stretch",
+		L"4:3",
+		L"16:9",
+	};
+		
+	ini.EnumEntry( L"AspectRatio", AspectRatio, AspectRatioNames, defaults.AspectRatio );
+
+	DisableResizeBorders	= false;
 }
 
 wxFileConfig* OpenFileConfig( const wxString& filename )

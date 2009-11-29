@@ -63,13 +63,13 @@ pxStaticText& pxStaticText::SetToolTip( const wxString& tip )
 
 void pxStaticText::AddTo( wxSizer& sizer, wxSizerFlags flags )
 {
-	sizer.Add( this, flags.Align( m_alignflags ) );
+	sizer.Add( this, flags.Align( m_alignflags | (flags.GetFlags() & wxALIGN_MASK) ) );
 	_setLabel();
 }
 
 void pxStaticText::InsertAt( wxSizer& sizer, int position, wxSizerFlags flags )
 {
-	sizer.Insert( position, this, flags.Align( m_alignflags ) );
+	sizer.Insert( position, this, flags.Align( m_alignflags | (flags.GetFlags() & wxALIGN_MASK) ) );
 	_setLabel();
 }
 

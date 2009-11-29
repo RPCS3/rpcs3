@@ -467,7 +467,7 @@ void Pcsx2App::OpenGsFrame()
 
 	m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
 	m_gsFrame->SetFocus();
-	pDsp = (uptr)m_gsFrame->GetHandle();
+	pDsp = (uptr)m_gsFrame->GetWindow()->GetHandle();
 	m_gsFrame->Show();
 
 	// The "in the main window" quickie hack...

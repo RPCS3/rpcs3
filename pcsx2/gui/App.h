@@ -568,6 +568,9 @@ DECLARE_APP(Pcsx2App)
 #define sApp \
 	if( Pcsx2App* __app_ = (Pcsx2App*)wxApp::GetInstance() ) (*__app_)
 
+#define sLogFrame \
+	if( ConsoleLogFrame* __conframe_ = wxGetApp().GetProgramLog() ) (*__conframe_)
+
 #define sMainFrame \
 	if( MainEmuFrame* __frame_ = GetMainFramePtr() ) (*__frame_)
 

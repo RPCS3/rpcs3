@@ -42,16 +42,136 @@ void GSFrame::InitDefaultAccelerators()
 	m_Accels.Map( AAC( WXK_F12 ),				"Sys_RecordingToggle" );
 }
 
-GSFrame::GSFrame(wxWindow* parent, const wxString& title):
-	wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxSize( 640, 480 ), wxDEFAULT_FRAME_STYLE )
+GSPanel::GSPanel( wxWindow* parent )
+	: wxWindow()
+	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>	( this, OnSettingsApplied ) )
+	, m_HideMouseTimer( this )
+
+{
+	m_CursorShown = true;
+
+	if ( !wxWindow::Create(parent, wxID_ANY) )
+		throw Exception::RuntimeError( "GSPanel constructor esplode!!" );
+
+	if( g_Conf->GSWindow.AlwaysHideMouse )
+	{
+		SetCursor( wxCursor(wxCURSOR_BLANK) );
+		m_CursorShown = false;
+	}
+
+	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler	(GSPanel::OnCloseWindow) );
+	Connect( wxEVT_SIZE,			wxSizeEventHandler	(GSPanel::OnResize) );
+
+	Connect(wxEVT_MIDDLE_DOWN,		wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_MIDDLE_UP,		wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_RIGHT_DOWN,		wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_RIGHT_UP,			wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_MOTION,			wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_LEFT_DCLICK,		wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_MIDDLE_DCLICK,	wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_RIGHT_DCLICK,		wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_MOUSEWHEEL,		wxMouseEventHandler(GSPanel::OnShowMouse) );
+
+	Connect(m_HideMouseTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(GSPanel::OnHideMouseTimeout) );
+}
+
+void GSPanel::DoShowMouse()
+{
+	if( g_Conf->GSWindow.AlwaysHideMouse ) return;
+
+	if( !m_CursorShown )
+	{
+		SetCursor( wxCursor( wxCURSOR_DEFAULT ) );
+		m_CursorShown = true;
+	}
+	m_HideMouseTimer.Start( 1750, true );
+}
+
+void GSPanel::DoResize()
+{
+	if( GetParent() == NULL ) return;
+	wxSize client = GetParent()->GetClientSize();
+	wxSize viewport = client;
+
+	switch( g_Conf->GSWindow.AspectRatio )
+	{
+		case AspectRatio_Stretch:
+			// just default to matching client size.
+		break;
+
+		case AspectRatio_4_3:
+			if( client.x/4 <= client.y/3 )
+				viewport.y = (int)(client.x * (3.0/4.0));
+			else
+				viewport.x = (int)(client.y * (4.0/3.0));
+		break;
+
+		case AspectRatio_16_9:
+			if( client.x/16 <= client.y/9 )
+				viewport.y = (int)(client.x * (9.0/16.0));
+			else
+				viewport.x = (int)(client.y * (9.0/16.0));
+		break;
+	}
+
+	SetSize( viewport );
+	CenterOnParent();
+}
+
+void GSPanel::OnResize(wxSizeEvent& event)
+{
+	DoResize();
+	//Console.Error( "Size? %d x %d", GetSize().x, GetSize().y );
+	//event.
+}
+
+void GSPanel::OnCloseWindow(wxCloseEvent& evt)
+{
+	wxGetApp().OnGsFrameClosed();
+	evt.Skip();		// and close it.
+}
+
+void GSPanel::OnShowMouse( wxMouseEvent& evt )
+{
+	evt.Skip();
+	DoShowMouse();
+}
+
+void GSPanel::OnHideMouseTimeout( wxTimerEvent& evt )
+{
+	SetCursor( wxCursor( wxCURSOR_BLANK ) );
+	m_CursorShown = false;
+}
+
+
+void __evt_fastcall GSPanel::OnSettingsApplied( void* obj, int& evt )
+{
+	if( obj == NULL ) return;
+	GSPanel* panel = (GSPanel*)obj;
+
+	panel->DoResize();
+	panel->DoShowMouse();
+}
+
+GSFrame::GSFrame(wxWindow* parent, const wxString& title)
+	: wxFrame(parent, wxID_ANY, title,
+		g_Conf->GSWindow.WindowPos, wxSize( 640, 480 ), 
+		(g_Conf->GSWindow.DisableResizeBorders ? 0 : wxRESIZE_BORDER) | wxCAPTION | wxCLIP_CHILDREN |
+			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX
+	)
 {
 	SetIcons( wxGetApp().GetIconBundle() );
 
 	InitDefaultAccelerators();
-	//new wxStaticText( "" );
 
-	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(GSFrame::OnCloseWindow) );
-	Connect( wxEVT_KEY_DOWN,		wxKeyEventHandler(GSFrame::OnKeyDown) );
+	SetClientSize( g_Conf->GSWindow.WindowSize );
+
+	m_gspanel = new GSPanel( this );
+
+	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler	(GSFrame::OnCloseWindow) );
+	Connect( wxEVT_MOVE,			wxMoveEventHandler	(GSFrame::OnMove) );
+	Connect( wxEVT_SIZE,			wxSizeEventHandler	(GSFrame::OnResize) );
+	Connect( wxEVT_KEY_DOWN,		wxKeyEventHandler	(GSFrame::OnKeyDown) );
 }
 
 GSFrame::~GSFrame() throw()
@@ -59,10 +179,32 @@ GSFrame::~GSFrame() throw()
 	CoreThread.Suspend();		// Just in case...!
 }
 
-void GSFrame::OnCloseWindow(wxCloseEvent& evt)
+wxWindow* GSFrame::GetWindow()
 {
-	wxGetApp().OnGsFrameClosed();
-	evt.Skip();		// and close it.
+	return m_gspanel;
+}
+
+void GSFrame::OnMove( wxMoveEvent& evt )
+{
+	// evt.GetPosition() returns the client area position, not the window frame position.
+	g_Conf->GSWindow.WindowPos	= GetScreenPosition();
+
+	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
+	// like selecting or deselecting a window, which muck up docking logic.  We filter them
+	// out using 'lastpos' here. :)
+
+	static wxPoint lastpos( wxDefaultCoord, wxDefaultCoord );
+	if( lastpos == evt.GetPosition() ) return;
+	lastpos = evt.GetPosition();
+}
+
+void GSFrame::OnResize( wxSizeEvent& evt )
+{
+	g_Conf->GSWindow.WindowSize	= GetClientSize();
+	m_gspanel->DoResize();
+
+	// if we skip, the panel is auto-sized to fit our window anyway, which we do not want!
+	//evt.Skip();
 }
 
 void GSFrame::OnKeyDown( wxKeyEvent& evt )
