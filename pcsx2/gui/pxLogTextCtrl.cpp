@@ -69,11 +69,13 @@ pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
 	Connect( wxEVT_SIZE,					wxSizeEventHandler(pxLogTextCtrl::OnResize) );
 }
 
+#ifdef __WXMSW__
 void pxLogTextCtrl::WriteText(const wxString& text)
 {
 	// Don't need the update message -- saves some overhead.
 	DoWriteText( text, SetValue_SelectionOnly );
 }
+#endif
 
 void pxLogTextCtrl::OnResize( wxSizeEvent& evt )
 {

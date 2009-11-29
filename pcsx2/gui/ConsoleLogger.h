@@ -108,7 +108,9 @@ public:
 	bool HasWriteLock() const { return m_FreezeWrites; }
 	void ConcludeIssue( int lines );
 
+#ifdef __WXMSW__
 	virtual void WriteText(const wxString& text);
+#endif
 
 protected:
 	virtual void OnThumbTrack(wxScrollWinEvent& event);
