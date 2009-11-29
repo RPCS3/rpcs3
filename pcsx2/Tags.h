@@ -14,42 +14,7 @@
  */
 
 // This is meant to be a collection of generic functions dealing with tags.
-
-enum mfd_type
-{
-	NO_MFD,
-	MFD_RESERVED,
-	MFD_VIF1,
-	MFD_GIF
-};
-
-enum sts_type
-{
-	NO_STS,
-	STS_SIF0,
-	STS_fromSPR,
-	STS_fromIPU
-};
-
-enum std_type
-{
-	NO_STD,
-	STD_VIF1,
-	STD_GIF,
-	STD_SIF1
-};
-
-enum d_ctrl_flags
-{
-	CTRL_DMAE = 0x1, // 0/1 - disables/enables all DMAs
-	CTRL_RELE = 0x2, // 0/1 - cycle stealing off/on
-	CTRL_MFD = 0xC, // Memory FIFO drain channel (mfd_type)
-	CTRL_STS = 0x30, // Stall Control source channel (sts type)
-	CTRL_STD = 0xC0, // Stall Control drain channel (std_type)
-	CTRL_RCYC = 0x100 // Release cycle (8/16/32/64/128/256)
-	// When cycle stealing is on, the release cycle sets the period to release
-	// the bus to EE.
-};
+#include "Dmac.h"
 
 enum pce_values
 {
@@ -58,6 +23,7 @@ enum pce_values
 	PCE_DISABLED,
 	PCE_ENABLED
 };
+
 
 enum tag_id
 {
@@ -70,6 +36,18 @@ enum tag_id
 	TAG_CALL,		// Transfer QWC following the tag, save succeeding tag
 	TAG_RET,			// Transfer QWC following the tag, load next tag
 	TAG_END			// Transfer QWC following the tag
+};
+
+enum d_ctrl_flags
+{
+	CTRL_DMAE = 0x1, // 0/1 - disables/enables all DMAs
+	CTRL_RELE = 0x2, // 0/1 - cycle stealing off/on
+	CTRL_MFD = 0xC, // Memory FIFO drain channel (mfd_type)
+	CTRL_STS = 0x30, // Stall Control source channel (sts type)
+	CTRL_STD = 0xC0, // Stall Control drain channel (std_type)
+	CTRL_RCYC = 0x100 // Release cycle (8/16/32/64/128/256)
+	// When cycle stealing is on, the release cycle sets the period to release
+	// the bus to EE.
 };
 
 enum chcr_flags
@@ -86,21 +64,14 @@ enum chcr_flags
 	CHCR_STR = 0x100 	// Start. 0 while stopping DMA, 1 while it's running.
 };
 
-enum TransferMode
-{
-	NORMAL_MODE = 0,
-	CHAIN_MODE,
-	INTERLEAVE_MODE,
-	UNDEFINED_MODE
-};
-
 namespace Tag
 {
 	// Transfer functions,
 	static __forceinline void UpperTransfer(DMACh *tag, u32* ptag)
 	{
 		// Transfer upper part of tag to CHCR bits 31-15
-		tag->chcr._u32 = (tag->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+		//tag->chcr._u32 = (tag->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);
+		tag->chcr.TAG = ((*ptag) >> 16);
 	}
 
 	static __forceinline void LowerTransfer(DMACh *tag, u32* ptag)
@@ -135,12 +106,6 @@ namespace Tag
 	}
 
 	// Untested
-	static __forceinline u16 QWC(u32 *tag)
-	{
-		return (tag[0] & 0xffff);
-	}
-
-	// Untested
 	static __forceinline pce_values PCE(u32 *tag)
 	{
 		return (pce_values)((tag[0] >> 22) & 0x3);
@@ -166,28 +131,3 @@ namespace Tag
 		return !!(tag >> 31);
 	}
 }
-
-// Print information about a chcr tag.
-static __forceinline void PrintCHCR(const char*  s, DMACh *tag)
-{
-	u8 num_addr = tag->chcr.ASP;
-	u32 mode = tag->chcr.MOD;
-
-	Console.Write("%s chcr %s mem: ", s, (tag->chcr.DIR) ? "from" : "to");
-		
-	if (mode == NORMAL_MODE)
-		Console.Write(" normal mode; ");
-	else if (mode == CHAIN_MODE)
-		Console.Write(" chain mode; ");
-	else if (mode == INTERLEAVE_MODE)
-		Console.Write(" interleave mode; ");
-	else
-		Console.Write(" ?? mode; ");
-		
-	if (num_addr != 0) Console.Write("ASP = %d;", num_addr);
-	if (tag->chcr.TTE) Console.Write("TTE;");
-	if (tag->chcr.TIE) Console.Write("TIE;");
-	if (tag->chcr.STR) Console.Write(" (DMA started)."); else Console.Write(" (DMA stopped).");
-	Console.Newline();
-}
-

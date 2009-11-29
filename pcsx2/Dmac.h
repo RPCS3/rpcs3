@@ -19,6 +19,38 @@
 
 extern u8  *psH; // hw mem
 
+enum mfd_type
+{
+	NO_MFD = 0,
+	MFD_RESERVED,
+	MFD_VIF1,
+	MFD_GIF
+};
+
+enum sts_type
+{
+	NO_STS = 0,
+	STS_SIF0,
+	STS_fromSPR,
+	STS_fromIPU
+};
+
+enum std_type
+{
+	NO_STD = 0,
+	STD_VIF1,
+	STD_GIF,
+	STD_SIF1
+};
+
+enum TransferMode
+{
+	NORMAL_MODE = 0,
+	CHAIN_MODE,
+	INTERLEAVE_MODE,
+	UNDEFINED_MODE
+};
+
 //
 // --- DMA ---
 //
