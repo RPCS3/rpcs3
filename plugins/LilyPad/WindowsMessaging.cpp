@@ -25,14 +25,11 @@ public:
 		// Redundant.  Should match the next line.
 		// Deactivate();
 		if (wmk) wmk->Deactivate();
-		HWND hWnd = initInfo->hWnd;
-		if (initInfo->hWndButton) {
-			hWnd = initInfo->hWndButton;
-		}
-		if (!wmm && !EatWndProc(hWnd, WindowsMessagingWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
-			Deactivate();
-			return 0;
-		}
+
+		hWndProc = initInfo->hWndProc;
+
+		if (!wmm)
+			hWndProc->Eat(WindowsMessagingWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
 
 		wmk = this;
 		InitState();
@@ -44,7 +41,7 @@ public:
 	void Deactivate() {
 		if (active) {
 			if (!wmm)
-				ReleaseExtraProc(WindowsMessagingWndProc);
+				hWndProc->ReleaseExtraProc(WindowsMessagingWndProc);
 			wmk = 0;
 			active = 0;
 			FreeState();
@@ -67,16 +64,12 @@ public:
 		// Redundant.  Should match the next line.
 		// Deactivate();
 		if (wmm) wmm->Deactivate();
-		HWND hWnd = initInfo->hWnd;
-		if (initInfo->hWndButton) {
-			hWnd = initInfo->hWndButton;
-		}
+		hWndProc = initInfo->hWndProc;
 
-		if (!wmk && !EatWndProc(hWnd, WindowsMessagingWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
-			Deactivate();
-			return 0;
-		}
-		GetMouseCapture(hWnd);
+		if (!wmk)
+			hWndProc->Eat(WindowsMessagingWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
+
+		GetMouseCapture(hWndProc->hWndEaten);
 
 		active = 1;
 
@@ -89,7 +82,7 @@ public:
 	void Deactivate() {
 		if (active) {
 			if (!wmk)
-				ReleaseExtraProc(WindowsMessagingWndProc);
+				hWndProc->ReleaseExtraProc(WindowsMessagingWndProc);
 			ReleaseMouseCapture();
 			wmm = 0;
 			active = 0;

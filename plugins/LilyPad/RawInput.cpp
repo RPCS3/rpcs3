@@ -69,24 +69,22 @@ static int rawMouseActivatedCount = 0;
 class RawInputKeyboard : public WindowsKeyboard {
 public:
 	HANDLE hDevice;
-
+	
 	RawInputKeyboard(HANDLE hDevice, wchar_t *name, wchar_t *instanceID=0) : WindowsKeyboard(RAW, name, instanceID) {
 		this->hDevice = hDevice;
 	}
 
 	int Activate(InitInfo *initInfo) {
 		Deactivate();
-		HWND hWnd = initInfo->hWnd;
-		if (initInfo->hWndButton) {
-			hWnd = initInfo->hWndButton;
-		}
+
+		hWndProc = initInfo->hWndProc;
+
 		active = 1;
 		if (!rawKeyboardActivatedCount++) {
-			if (!rawMouseActivatedCount && !EatWndProc(hWnd, RawInputWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
-				Deactivate();
-				return 0;
-			}
-			if (!GetRawKeyboards(hWnd)) {
+			if (!rawMouseActivatedCount)
+				hWndProc->Eat(RawInputWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
+
+			if (!GetRawKeyboards(hWndProc->hWndEaten)) {
 				Deactivate();
 				return 0;
 			}
@@ -104,7 +102,7 @@ public:
 			if (!rawKeyboardActivatedCount) {
 				ReleaseRawKeyboards();
 				if (!rawMouseActivatedCount)
-					ReleaseExtraProc(RawInputWndProc);
+					hWndProc->ReleaseExtraProc(RawInputWndProc);
 			}
 		}
 	}
@@ -120,10 +118,8 @@ public:
 
 	int Activate(InitInfo *initInfo) {
 		Deactivate();
-		HWND hWnd = initInfo->hWnd;
-		if (initInfo->hWndButton) {
-			hWnd = initInfo->hWndButton;
-		}
+
+		hWndProc = initInfo->hWndProc;
 
 		active = 1;
 
@@ -131,12 +127,11 @@ public:
 		// EatWndProc fail.  In all other cases, no unmatched initialization/cleanup
 		// lines.
 		if (!rawMouseActivatedCount++) {
-			GetMouseCapture(hWnd);
-			if (!rawKeyboardActivatedCount && !EatWndProc(hWnd, RawInputWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES)) {
-				Deactivate();
-				return 0;
-			}
-			if (!GetRawMice(hWnd)) {
+			GetMouseCapture(hWndProc->hWndEaten);
+			if (!rawKeyboardActivatedCount)
+				hWndProc->Eat(RawInputWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
+			
+			if (!GetRawMice(hWndProc->hWndEaten)) {
 				Deactivate();
 				return 0;
 			}
@@ -155,7 +150,7 @@ public:
 				ReleaseRawMice();
 				ReleaseMouseCapture();
 				if (!rawKeyboardActivatedCount) {
-					ReleaseExtraProc(RawInputWndProc);
+					hWndProc->ReleaseExtraProc(RawInputWndProc);
 				}
 			}
 		}

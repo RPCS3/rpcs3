@@ -40,10 +40,12 @@ public:
 	int Activate(InitInfo *initInfo) {
 		if (ikhd) ikhd->Deactivate();
 		binding = initInfo->bindingIgnore;
-		if (initInfo->hWndButton)
-			EatWndProc(initInfo->hWndButton, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
-		else
-			EatWndProc(initInfo->hWnd, StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
+		hWndProc = initInfo->hWndProc;
+
+		return 0;
+		printf( "(Lilypad) StartHook\n" );
+		hWndProc->Eat(StartHooksWndProc, EATPROC_NO_UPDATE_WHILE_UPDATING_DEVICES);
+
 		InitState();
 		ikhd = this;
 		active = 1;
@@ -51,6 +53,8 @@ public:
 	}
 
 	void Deactivate() {
+		printf( "(Lilypad) KillHook\n" );
+
 		FreeState();
 		if (active) {
 			if (hHook) {
@@ -74,9 +78,11 @@ ExtraWndProcResult StartHooksWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 	static int counter = 0;
 	if (ikhd && !ikhd->hHook && ikhd->active) {
 		counter = 0;
-		ikhd->hHook = SetWindowsHookEx(WH_KEYBOARD_LL, IgnoreKeyboardHook, hInst, 0);
+		printf( "(Lilypad) SetHook\n" );
+		ikhd->hHook = SetWindowsHookEx(WH_KEYBOARD_LL, IgnoreKeyboardHook, hInst, 0);//GetCurrentThreadId());
 		if (ikhd->hHook == 0) ikhd->Deactivate();
 	}
+	printf( "(Lilypad) HookThinking!\n" );
 	counter ++;
 	if (counter % 1000 == 0)
 		return CONTINUE_BLISSFULLY_AND_RELEASE_PROC;
@@ -87,6 +93,7 @@ ExtraWndProcResult StartHooksWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM
 LRESULT CALLBACK IgnoreKeyboardHook(int code, WPARAM wParam, LPARAM lParam) {
 	HHOOK hHook = 0;
 	if (ikhd) {
+		printf( "(Lilypad) Hooked!!\n" );
 		hHook = ikhd->hHook;
 		if (hHook) {
 			if (code == HC_ACTION) {

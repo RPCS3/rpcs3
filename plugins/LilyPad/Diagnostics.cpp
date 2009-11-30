@@ -4,6 +4,7 @@
 
 #include "resource.h"
 #include "InputManager.h"
+#include "WndProcEater.h"
 
 Device *dev;
 
@@ -39,7 +40,8 @@ INT_PTR CALLBACK DiagDialog(HWND hWnd, unsigned int uMsg, WPARAM wParam, LPARAM 
 			//break;
 		case WM_TIMER:
 			{
-				InitInfo info = {0, 1, hWnd, hWnd, hWndList};
+				hWndButtonProc.SetWndHandle(hWndList);
+				InitInfo info = {0, 1, hWnd, &hWndButtonProc};
 				dm->Update(&info);
 				LVITEMW item;
 				item.mask = LVIF_TEXT;

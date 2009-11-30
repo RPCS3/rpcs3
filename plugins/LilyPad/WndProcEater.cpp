@@ -1,23 +1,30 @@
 #include "Global.h"
 #include "WndProcEater.h"
 
-static HWND hWndEaten = 0;
-static WNDPROC eatenWndProc = 0;
+WndProcEater::WndProcEater()
+{
+	hWndEaten = 0;
+	eatenWndProc = 0;
 
-struct ExtraWndProcInfo {
-	ExtraWndProc proc;
-	DWORD flags;
-};
+	extraProcs = 0;
+	numExtraProcs = 0;
 
-static ExtraWndProcInfo* extraProcs = 0;
-static int numExtraProcs = 0;
+	hMutex = CreateMutex(0, 0, L"LilyPad");
+}
 
-void ReleaseExtraProc(ExtraWndProc proc) {
+WndProcEater::~WndProcEater() throw()
+{
+	if (hMutex) {
+		ReleaseMutex(hMutex);
+		CloseHandle(hMutex);
+	}
+}
+
+void WndProcEater::ReleaseExtraProc(ExtraWndProc proc) {
 	// Probably isn't needed, but just in case...
-	// Creating and destroying the mutex adds some inefficiency,
-	// but this function is only called on emulation start and on focus/unfocus.
-	HANDLE hMutex = CreateMutexA(0, 0, "LilyPad");
 	if (hMutex) WaitForSingleObject(hMutex, 100);
+
+	//printf( "(Lilypad) Regurgitating! -> 0x%x\n", proc );
 
 	for (int i=0; i<numExtraProcs; i++) {
 		if (extraProcs[i].proc == proc) {
@@ -34,18 +41,18 @@ void ReleaseExtraProc(ExtraWndProc proc) {
 		hWndEaten = 0;
 		eatenWndProc = 0;
 	}
-
-	if (hMutex) {
-		ReleaseMutex(hMutex);
-		CloseHandle(hMutex);
-	}
 }
 
-void ReleaseEatenProc() {
+void WndProcEater::Release() {
 	while (numExtraProcs) ReleaseExtraProc(extraProcs[0].proc);
+	RemoveProp( hWndEaten, L"LilyHaxxor" );
 }
 
-LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT WndProcEater::_OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	if( hWnd != hWndEaten )
+		fprintf( stderr, "Totally mismatched window handles on OverrideWndProc!\n" );
+
 	ExtraWndProcResult res = CONTINUE_BLISSFULLY;
 	LRESULT out = 0;
 	// Here because want it for binding, even when no keyboard mode is selected.
@@ -71,7 +78,7 @@ LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 
 	if (res != NO_WND_PROC) {
 		if (out == WM_DESTROY) {
-			ReleaseEatenProc();
+			Release();
 		}
 		if (res == CONTINUE_BLISSFULLY)
 			out = CallWindowProc(eatenWndProc, hWnd, uMsg, wParam, lParam);
@@ -81,32 +88,41 @@ LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	return out;
 }
 
+static LRESULT CALLBACK OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	WndProcEater* obj = (WndProcEater*)GetProp(hWnd, L"LilyHaxxor");
+	return (obj == NULL) ?
+		DefWindowProc(hWnd, uMsg, wParam, lParam) :
+		obj->_OverrideWndProc( hWnd, uMsg, wParam, lParam );
+}
 
-int EatWndProc(HWND hWnd, ExtraWndProc proc, DWORD flags) {
+bool WndProcEater::SetWndHandle(HWND hWnd)
+{
+	if(hWnd == hWndEaten) return true;
+
+	//printf( "(Lilypad) (Re)-Setting window handle! -> this=0x%08x, hWnd=0x%08x\n", this, hWnd );
+	
+	Release();
+	SetProp(hWnd, L"LilyHaxxor", (HANDLE)this);
+
+	eatenWndProc = (WNDPROC) SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)OverrideWndProc);
+	hWndEaten = (eatenWndProc) ? hWnd : 0;
+
+	return !!hWndEaten;
+}
+
+void WndProcEater::Eat(ExtraWndProc proc, DWORD flags) {
+
+	// check if Subclassing failed to init during SetWndHandle
+	if (!hWndEaten) return;
+
 	// Probably isn't needed, but just in case...
-	// Creating and destroying the mutex adds some inefficiency,
-	// but this function is only called on emulation start and on focus/unfocus.
-	HANDLE hMutex = CreateMutexA(0, 0, "LilyPad");
 	if (hMutex) WaitForSingleObject(hMutex, 100);
 
-	if (hWnd != hWndEaten) {
-		ReleaseEatenProc();
-		eatenWndProc = (WNDPROC) SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)OverrideWndProc);
-		// ???
-		if (eatenWndProc)
-			hWndEaten = hWnd;
-	}
-	if (hWndEaten == hWnd) {
-		extraProcs = (ExtraWndProcInfo*) realloc(extraProcs, sizeof(ExtraWndProcInfo)*(numExtraProcs+1));
-		extraProcs[numExtraProcs].proc = proc;
-		extraProcs[numExtraProcs].flags = flags;
-		numExtraProcs++;
-	}
+	//printf( "(Lilypad) EatingWndProc! -> 0x%x\n", proc );
 
-	if (hMutex) {
-		ReleaseMutex(hMutex);
-		CloseHandle(hMutex);
-	}
-
-	return hWndEaten == hWnd;
+	extraProcs = (ExtraWndProcInfo*) realloc(extraProcs, sizeof(ExtraWndProcInfo)*(numExtraProcs+1));
+	extraProcs[numExtraProcs].proc = proc;
+	extraProcs[numExtraProcs].flags = flags;
+	numExtraProcs++;
 }

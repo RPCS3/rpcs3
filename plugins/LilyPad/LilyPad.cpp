@@ -24,6 +24,14 @@
 
 HINSTANCE hInst;
 HWND hWnd;
+HWND hWndTop;
+
+WndProcEater hWndGSProc;
+WndProcEater hWndTopProc;
+
+// ButtonProc is used mostly by the Config panel for eating the procedures of the
+// button with keyboard focus.
+WndProcEater hWndButtonProc;
 
 // Keeps the various sources for Update polling (PADpoll, PADupdate, etc) from wreaking
 // havoc on each other...
@@ -447,7 +455,7 @@ void Update(unsigned int port, unsigned int slot) {
 		s[i&1][i>>1] = pads[i&1][i>>1].lockedSum;
 	}
 	InitInfo info = {
-		0, 0, hWnd, hWnd, 0
+		0, 0, hWndTop, &hWndGSProc
 	};
 
 	dm->Update(&info);
@@ -801,9 +809,40 @@ static const u8 queryMode[7] =		{0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 static const u8 setNativeMode[7] =  {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A};
 
-// Implements a couple of the hacks, also responsible for monitoring device addition/removal and focus
-// changes.
-ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
+// Implements a couple of the hacks that affect whatever top-level window
+// the GS viewport belongs to (title, screensaver)
+ExtraWndProcResult TitleHackWndProc(HWND hWndTop, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
+	switch (uMsg) {
+		case WM_SETTEXT:
+			if (config.saveStateTitle) {
+				wchar_t text[200];
+				int len;
+				if (IsWindowUnicode(hWndTop)) {
+					len = wcslen((wchar_t*) lParam);
+					if (len < sizeof(text)/sizeof(wchar_t)) wcscpy(text, (wchar_t*) lParam);
+				}
+				else {
+					len = MultiByteToWideChar(CP_ACP, 0, (char*) lParam, -1, text, sizeof(text)/sizeof(wchar_t));
+				}
+				if (len > 0 && len < 150 && !wcsstr(text, L" | State ")) {
+					wsprintfW(text+len, L" | State %i", saveStateIndex);
+					SetWindowText(hWndTop, text);
+					return NO_WND_PROC;
+				}
+			}
+			break;
+		case WM_SYSCOMMAND:
+			if ((wParam == SC_SCREENSAVE || wParam == SC_MONITORPOWER) && config.disableScreenSaver)
+				return NO_WND_PROC;
+			break;
+		default:
+			break;
+	}
+	return CONTINUE_BLISSFULLY;
+}
+
+// responsible for monitoring device addition/removal, focus changes, and viewport closures.
+ExtraWndProcResult StatusWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *output) {
 	switch (uMsg) {
 		case WMA_FORCE_UPDATE:
 			if (wParam == FORCE_UPDATE_WPARAM && lParam == FORCE_UPDATE_LPARAM) {
@@ -813,24 +852,6 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				}
 				return NO_WND_PROC;
 			}
-		case WM_SETTEXT:
-			if (config.saveStateTitle) {
-				wchar_t text[200];
-				int len;
-				if (IsWindowUnicode(hWnd)) {
-					len = wcslen((wchar_t*) lParam);
-					if (len < sizeof(text)/sizeof(wchar_t)) wcscpy(text, (wchar_t*) lParam);
-				}
-				else {
-					len = MultiByteToWideChar(CP_ACP, 0, (char*) lParam, -1, text, sizeof(text)/sizeof(wchar_t));
-				}
-				if (len > 0 && len < 150 && !wcsstr(text, L" | State ")) {
-					wsprintfW(text+len, L" | State %i", saveStateIndex);
-					SetWindowText(hWnd, text);
-					return NO_WND_PROC;
-				}
-			}
-			break;
 		case WM_DEVICECHANGE:
 			if (wParam == DBT_DEVNODES_CHANGED) {
 				UpdateEnabledDevices(1);
@@ -854,10 +875,6 @@ ExtraWndProcResult HackWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				ExitProcess(0);
 				return NO_WND_PROC;
 			}
-			break;
-		case WM_SYSCOMMAND:
-			if ((wParam == SC_SCREENSAVE || wParam == SC_MONITORPOWER) && config.disableScreenSaver)
-				return NO_WND_PROC;
 			break;
 		case WM_DESTROY:
 			QueueKeyEvent(VK_ESCAPE, KEYPRESS);
@@ -897,12 +914,12 @@ void CALLBACK PADconfigure() {
 
 DWORD WINAPI RenameWindowThreadProc(void *lpParameter) {
 	wchar_t newTitle[200];
-	if (hWnd) {
-		int len = GetWindowTextW(hWnd, newTitle, 200);
+	if (hWndTop) {
+		int len = GetWindowTextW(hWndTop, newTitle, 200);
 		if (len > 0 && len < 199) {
 			wchar_t *end;
 			if (end = wcsstr(newTitle, L" | State ")) *end = 0;
-			SetWindowTextW(hWnd, newTitle);
+			SetWindowTextW(hWndTop, newTitle);
 		}
 	}
 	return 0;
@@ -940,26 +957,33 @@ s32 CALLBACK PADopen(void *pDsp) {
 				"Non-LilyPad Error", MB_OK | MB_ICONERROR);
 			return -1;
 		}
-		while (GetWindowLong (hWnd, GWL_STYLE) & WS_CHILD)
-			hWnd = GetParent (hWnd);
-		// Implements most hacks, as well as enabling/disabling mouse
-		// capture when focus changes.
-		updateQueued = 0;
-		if (!EatWndProc(hWnd, HackWndProc, 0)) {
+		hWndTop = hWnd;
+		while (GetWindowLong (hWndTop, GWL_STYLE) & WS_CHILD)
+			hWndTop = GetParent (hWndTop);
+
+		if (!hWndGSProc.SetWndHandle(hWnd) || !hWndTopProc.SetWndHandle(hWndTop)) {
 			openCount = 0;
 			return -1;
 		}
+
+		// Implements most hacks, as well as enabling/disabling mouse
+		// capture when focus changes.
+		updateQueued = 0;
+		hWndGSProc.Eat(StatusWndProc, 0);
+
+		hWndTopProc.Eat(TitleHackWndProc, 0);
+
 		if (config.forceHide) {
-			EatWndProc(hWnd, HideCursorProc, 0);
+			hWndGSProc.Eat(HideCursorProc, 0);
 		}
 		SaveStateChanged();
 		
-		windowThreadId = GetWindowThreadProcessId(hWnd, 0);
+		windowThreadId = GetWindowThreadProcessId(hWndTop, 0);
 	}
 
 	if (restoreFullScreen) {
-		if (!IsWindowMaximized(hWnd)) {
-			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, hWnd, 0, 0);
+		if (!IsWindowMaximized(hWndTop)) {
+			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, hWndTop, 0, 0);
 			if (hThread) CloseHandle(hThread);
 		}
 		restoreFullScreen = 0;
@@ -989,9 +1013,11 @@ void CALLBACK PADclose() {
 	if (openCount && !--openCount) {
 		DEBUG_TEXT_OUT("LilyPad closed\n\n");
 		updateQueued = 0;
-		ReleaseEatenProc();
+		hWndGSProc.Release();
+		hWndTopProc.Release();
 		dm->ReleaseInput();
 		hWnd = 0;
+		hWndTop = 0;
 		ClearKeyQueue();
 	}
 }
@@ -1327,7 +1353,7 @@ keyEvent* CALLBACK PADkeyEvent() {
 	if (!GetQueuedKeyEvent(&ev)) return 0;
 	if ((ev.key == VK_ESCAPE || (int)ev.key == -2) && ev.evt == KEYPRESS && config.escapeFullscreenHack) {
 		static int t;
-		if ((int)ev.key != -2 && IsWindowMaximized(hWnd)) {
+		if ((int)ev.key != -2 && IsWindowMaximized(hWndTop)) {
 			t = timeGetTime();
 			QueueKeyEvent(-2, KEYPRESS);
 			HANDLE hThread = CreateThread(0, 0, MaximizeWindowThreadProc, 0, 0, 0);

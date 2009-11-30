@@ -1250,7 +1250,7 @@ void EndBinding(HWND hWnd) {
 
 		dm->ReleaseInput();
 		ClearKeyQueue();
-		ReleaseEatenProc();
+		hWndButtonProc.Release();
 
 		// Safest to do this last.
 		if (needRefreshDevices) {
@@ -1300,6 +1300,9 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 		}
 		break;
 	case WM_TIMER:
+		// ignore generic timer callback and handle the hwnd-specific one which comes later
+		if(hWnd == 0) return 0;
+
 		if (!selected || selected == 0xFF) {
 			// !selected is mostly for device added/removed when binding.
 			selected = 0xFF;
@@ -1308,7 +1311,15 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 		else {
 			unsigned int uid;
 			int value;
-			InitInfo info = {selected==0x7F, 1, hWndProp, hWnd, GetDlgItem(hWnd, selected)};
+
+			// The old code re-bound our button hWndProcEater to GetDlgItem(hWnd, selected).  But at best hWnd
+			// was null (WM_TIMER is passed twice, once with a null parameter, and a second time that is hWnd
+			// specific), and at worst 'selected' is a post-processed code "based" on cmd, so GetDlgItem
+			// *always* returned NULL anyway.  This resulted in hWndButton being null, which meant Device code
+			// used hWnd instead.  This may have caused odd behavior since the callbacks were still all eaten
+			// by the initial GetDlgItem(hWnd, cmd) selection made when the timer was initialized.
+			
+			InitInfo info = {selected==0x7F, 1, hWndProp, &hWndButtonProc};
 			Device *dev = dm->GetActiveDevice(&info, &uid, &index, &value);
 			if (dev) {
 				int command = selected;
@@ -1517,8 +1528,8 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				if (selIndex >= 0) {
 					if (GetBinding(port, slot, selIndex, dev, b, ffb)) {
 						selected = 0xFF;
-						InitInfo info = {0, 1, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
-						EatWndProc(info.hWndButton, DoNothingWndProc, 0);
+						hWndButtonProc.SetWndHandle(GetDlgItem(hWnd, cmd));
+						InitInfo info = {0, 1, hWndProp, &hWndButtonProc};
 						for (int i=0; i<dm->numDevices; i++) {
 							if (dm->devices[i] != dev) {
 								dm->DisableDevice(i);
@@ -1554,8 +1565,9 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 					}
 				}
 
-				InitInfo info = {selected==0x7F, 1, hWndProp, hWnd, GetDlgItem(hWnd, cmd)};
-				EatWndProc(info.hWndButton, DoNothingWndProc, 0);
+				hWndButtonProc.SetWndHandle(GetDlgItem(hWnd, cmd));
+				hWndButtonProc.Eat(DoNothingWndProc, 0);
+				InitInfo info = {selected==0x7F, 1, hWndProp, &hWndButtonProc};
 				int w = timeGetTime();
 				dm->Update(&info);
 				dm->PostRead();

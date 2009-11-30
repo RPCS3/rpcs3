@@ -11,8 +11,34 @@ enum ExtraWndProcResult {
 };
 
 typedef ExtraWndProcResult (*ExtraWndProc)(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *out);
-int EatWndProc(HWND hWnd, ExtraWndProc proc, DWORD flags);
 
-void ReleaseExtraProc(ExtraWndProc proc);
-void ReleaseEatenProc();
+struct ExtraWndProcInfo {
+	ExtraWndProc proc;
+	DWORD flags;
+};
 
+class WndProcEater
+{
+public:
+	HWND hWndEaten;
+	WNDPROC eatenWndProc;
+	ExtraWndProcInfo* extraProcs;
+	int numExtraProcs;
+
+	HANDLE hMutex;
+
+public:
+	WndProcEater();
+	virtual ~WndProcEater() throw();
+
+	bool SetWndHandle(HWND hWnd);
+	void Eat(ExtraWndProc proc, DWORD flags);
+	void ReleaseExtraProc(ExtraWndProc proc);
+	void Release();
+	
+	LRESULT _OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+};
+
+extern WndProcEater hWndGSProc;
+extern WndProcEater hWndTopProc;
+extern WndProcEater hWndButtonProc;

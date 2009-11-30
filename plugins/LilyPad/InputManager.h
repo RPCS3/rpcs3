@@ -171,6 +171,8 @@ struct PadBindings {
 	int numFFBindings;
 };
 
+class WndProcEater;
+
 struct InitInfo {
 	// 1 when binding key to ignore.
 	int bindingIgnore;
@@ -178,9 +180,11 @@ struct InitInfo {
 	int binding;
 
 	HWND hWndTop;
-	HWND hWnd;
+
 	// For config screen, need to eat button's message handling.
-	HWND hWndButton;
+	//HWND hWndButton;
+	
+	WndProcEater* hWndProc;
 };
 
 
@@ -194,6 +198,11 @@ public:
 	char attached;
 	// Based on input modes.
 	char enabled;
+
+	// Not all devices need to subclass the windproc, but most do so might as well
+	// put it here... --air
+	WndProcEater* hWndProc;
+
 	union {
 		// Allows for one loop to compare all 3 in order.
 		wchar_t *IDs[3];

@@ -37,6 +37,8 @@ Device::Device(DeviceAPI api, DeviceType d, const wchar_t *displayName, const wc
 	attached = 1;
 	enabled = 0;
 
+	hWndProc = 0;
+
 	virtualControls = 0;
 	numVirtualControls = 0;
 	virtualControlState = 0;
