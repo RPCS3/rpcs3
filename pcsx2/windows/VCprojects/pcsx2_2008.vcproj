@@ -2310,6 +2310,22 @@
 							AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\lib\vc_lib\mswd&quot;"
 						/>
 					</FileConfiguration>
+					<FileConfiguration
+						Name="Devel|Win32"
+						>
+						<Tool
+							Name="VCResourceCompilerTool"
+							AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\lib\vc_lib\mswd&quot;"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCResourceCompilerTool"
+							AdditionalIncludeDirectories="&quot;$(SvnRootDir)\common\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\include&quot;;&quot;$(SvnRootDir)\3rdparty\wxWidgets\lib\vc_lib\mswd&quot;"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath=".\..\wxResources.rc"
