@@ -281,6 +281,13 @@ void GSRenderer::SetFrameLimit(bool limit)
 	if( m_dev ) m_dev->SetVsync(m_vsync && m_framelimit);
 }
 
+void GSRenderer::SetVsync(bool enabled)
+{
+	m_vsync = enabled;
+	if( m_dev ) m_dev->SetVsync(m_vsync && m_framelimit);
+}
+
+
 void GSRenderer::VSync(int field)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon);
@@ -341,6 +348,7 @@ void GSRenderer::VSync(int field)
 
 		if( !m_wnd.SetWindowText(s.c_str()) )
 		{
+			// [TODO]
 			// We don't have window title rights, or the window has no title,
 			// so let's use actual OSD!
 		}

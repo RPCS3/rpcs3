@@ -56,6 +56,16 @@ bool GSDevice10::Create(GSWnd* wnd)
 
 	memset(&scd, 0, sizeof(scd));
 
+	// FIXME : Someone with a brain for DX10 and COM figure out how to make this IDXGIFactory
+	// call mess work.  I fail at this stuff.  Thanks!  --air
+
+	// Also... should this be GS plugin territory, or should we incorporate it into PCSX2?
+	// (I'm thinking a dynamic loading of the DXGI dll, and general invocation that way).
+
+	//CComPtr<IDXGIFactory> pFactory;
+	//hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)(&pFactory) );
+	//pFactory->MakeWindowAssociation( (HWND)m_wnd->GetHandle(), DXGI_MWA_NO_WINDOW_CHANGES );
+	
 	scd.BufferCount = 2;
 	scd.BufferDesc.Width = 1;
 	scd.BufferDesc.Height = 1;
@@ -66,7 +76,7 @@ bool GSDevice10::Create(GSWnd* wnd)
 	scd.OutputWindow = (HWND)m_wnd->GetHandle();
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
-	scd.Windowed = TRUE;
+	scd.Windowed = !!theApp.GetConfig("windowed", 1);
 
 	// Crashes when 2 threads work on the swapchain, as in pcsx2/wx when it provides us
 	// an external window handle (which could be attached to any thread other than the GS one).

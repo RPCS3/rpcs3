@@ -159,8 +159,8 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 		default: 
 		case 0: case 1: case 2: dev = new GSDevice9(); break;
 		case 3: case 4: case 5: dev = new GSDevice10(); break;
-		case 6: case 7: case 8: dev = new GSDevice11(); break;
 	#if 0
+		case 6: case 7: case 8: dev = new GSDevice11(); break;
 		case 9: case 10: case 11: dev = new GSDeviceOGL(); break;
 	#endif
 		case 12: case 13: new GSDeviceNull(); break;
@@ -175,8 +175,8 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 			default: 
 			case 0: s_gs = new GSRendererDX9(); break;
 			case 3: s_gs = new GSRendererDX10(); break;
-			case 6: s_gs = new GSRendererDX11(); break;
 	#if 0
+			case 6: s_gs = new GSRendererDX11(); break;
 			case 9: s_gs = new GSRendererOGL(); break;
 	#endif
 			case 2: case 5: case 8: case 11: case 13:
@@ -238,7 +238,8 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 {
 	theApp.SetConfig("windowed", flags & 1);
-	theApp.SetConfig("vsync", flags & 2);
+	//theApp.SetConfig("vsync", flags & 2);
+	//theApp.SetConfig("aspectratio", 0);		
 
 	int renderer = theApp.GetConfig("renderer", 0);
 	if( flags & 4 )
@@ -246,7 +247,11 @@ EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 		renderer = 1;
 	}
 
-	return _GSopen( dsp, NULL, renderer );
+	INT32 retval = _GSopen( dsp, NULL, renderer );
+	s_gs->SetAspectRatio(0);		// PCSX2 manages the aspect ratios
+	s_gs->SetVsync(flags & 2);
+	
+	return retval;
 }
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
@@ -321,16 +326,18 @@ EXPORT_C GSvsync(int field)
 {
 #ifdef _WINDOWS
 
-	MSG msg;
-
-	memset(&msg, 0, sizeof(msg));
-
-	while(msg.message != WM_QUIT && PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+	if( s_gs->m_wnd.IsManaged() )
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
+		MSG msg;
 
+		memset(&msg, 0, sizeof(msg));
+
+		while(msg.message != WM_QUIT && PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+	}
 #endif
 
 	s_gs->VSync(field);

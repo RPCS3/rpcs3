@@ -95,6 +95,8 @@ public:
 		return m_upscale_multiplier;
 	}
 
+	void SetAspectRatio(int aspect)  { m_aspectratio = aspect; }
+	void SetVsync(bool enabled);
 	void SetFrameLimit(bool limit);
 
 	// TODO : Implement proper locking here *if needed*  (not sure yet if it is) --air
