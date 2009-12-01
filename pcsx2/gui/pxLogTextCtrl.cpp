@@ -131,12 +131,16 @@ void pxLogTextCtrl::ConcludeIssue( int lines )
 	// makes logging very slow, so we only send the message for status changes, so that the
 	// log aligns itself nicely when we pause emulation or when errors occur.
 
-	m_win32_StupidRefreshTricks += lines;
-	m_win32_StupidRefreshTricks %= m_win32_LinesPerPage;
-	if( m_win32_StupidRefreshTricks > m_win32_LinesPerScroll )
+	//m_win32_StupidRefreshTricks += lines;
+	//if( m_win32_StupidRefreshTricks > m_win32_LinesPerScroll )
 	{
+		wxTextPos showpos = XYToPosition( 1, GetNumberOfLines()-m_win32_LinesPerScroll );
+		if( showpos > 0 )
+			ShowPosition( showpos );
+
 		m_win32_StupidRefreshTricks = 0;
-		::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+		//::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
 	}
 #endif
+
 }

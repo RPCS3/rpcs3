@@ -204,6 +204,26 @@ void SysMtgsThread::OpenPlugin()
 		throw Exception::PluginOpenError( PluginId_GS );
 	}
 
+// This is the preferred place to implement DXGI fullscreen overrides, using LoadLibrary.
+// But I hate COM, I don't know to make this work, and I don't have DX10, so I give up
+// and enjoy my working DX9 alt-enter instead. Someone else can fix this mess. --air
+
+// Also: Prolly needs some DX10 header includes?  Which ones?  Too many, I gave up.
+
+#if 0    // defined(__WXMSW__) && defined(_MSC_VER)
+	wxDynamicLibrary dynlib( L"dxgi.dll" );
+	SomeFuncTypeIDunno isThisEvenTheRightFunctionNameIDunno = dynlib.GetSymbol("CreateDXGIFactory");
+	if( isThisEvenTheRightFunctionNameIDunno )
+	{
+		// Is this how LoadLibrary for COM works?  I dunno.  I dont care.
+
+		IDXGIFactory* pFactory;
+		hr = isThisEvenTheRightFunctionNameIDunno(__uuidof(IDXGIFactory), (void**)(&pFactory) );
+		pFactory->MakeWindowAssociation((HWND)&pDsp, DXGI_MWA_NO_WINDOW_CHANGES);
+		pFactory->Release();
+	}
+#endif
+
 	m_PluginOpened = true;
 	m_sem_OpenDone.Post();
 

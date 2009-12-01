@@ -27,6 +27,7 @@
 class GSPanel : public wxWindow
 {
 protected:
+	AcceleratorDictionary		m_Accels;
 	EventListenerBinding<int>	m_Listener_SettingsApplied;
 	wxTimer						m_HideMouseTimer;
 	bool						m_CursorShown;
@@ -41,10 +42,13 @@ public:
 protected:
 	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
 
+	void InitDefaultAccelerators();
+
 	void OnCloseWindow( wxCloseEvent& evt );
 	void OnResize(wxSizeEvent& event);
 	void OnShowMouse( wxMouseEvent& evt );
 	void OnHideMouseTimeout( wxTimerEvent& evt );
+	void OnKeyDown( wxKeyEvent& evt );
 };
 
 // --------------------------------------------------------------------------------------
@@ -53,21 +57,17 @@ protected:
 class GSFrame : public wxFrame
 {
 protected:
-	AcceleratorDictionary		m_Accels;
-
 	GSPanel*					m_gspanel;
 
 public:
 	GSFrame(wxWindow* parent, const wxString& title);
 	virtual ~GSFrame() throw();
 
-	wxWindow* GetWindow();
+	wxWindow* GetViewport();
 
 protected:
-	void InitDefaultAccelerators();
 	void OnMove( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
-	void OnKeyDown( wxKeyEvent& evt );
 };
 
 struct PluginMenuAddition

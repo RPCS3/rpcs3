@@ -153,6 +153,14 @@ namespace Implementations
 		Console.Warning("hardware registers dumped EE:%x, IOP:%x\n", cpuRegs.pc, psxRegs.pc);
 #endif
 	}
+	
+	static bool isFullscreen = false;
+	
+	void FullscreenToggle()
+	{
+		isFullscreen = !isFullscreen;
+		sGSFrame.ShowFullScreen( isFullscreen );
+	}
 }
 
 // --------------------------------------------------------------------------------------
@@ -242,6 +250,11 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 		NULL,
 	},
 
+	{	"FullscreenToggle",
+		Implementations::FullscreenToggle,
+		NULL,
+		NULL,
+	},
 
 	// Command Declarations terminator:
 	// (must always be last in list!!)
@@ -305,6 +318,10 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 	GlobalAccels.Map( AAC( WXK_TAB ),			"Framelimiter_TurboToggle" );
 	GlobalAccels.Map( AAC( WXK_TAB ).Shift(),	"Framelimiter_MasterToggle" );
 
+	// Hack! The following bindings are temporary hacks which are needed because of issues
+	// with PAD plugin interfacing (the local window-based accelerators in GSPanel are
+	// currently ignored).
+	
 	GlobalAccels.Map( AAC( WXK_ESCAPE ),		"Sys_Suspend");
 	GlobalAccels.Map( AAC( WXK_F8 ),			"Sys_TakeSnapshot");
 	GlobalAccels.Map( AAC( WXK_F9 ),			"Sys_RenderswitchToggle");
@@ -312,4 +329,6 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 	GlobalAccels.Map( AAC( WXK_F10 ),			"Sys_LoggingToggle");
 	GlobalAccels.Map( AAC( WXK_F11 ),			"Sys_FreezeGS");
 	GlobalAccels.Map( AAC( WXK_F12 ),			"Sys_RecordingToggle");
+
+	GlobalAccels.Map( AAC( WXK_RETURN ).Alt(),	"FullscreenToggle" );
 }

@@ -187,8 +187,13 @@ void AppCoreThread::StateCheckInThread()
 	{
 		case WXK_SHIFT:		m_kevt.m_shiftDown		= isDown; return;
 		case WXK_CONTROL:	m_kevt.m_controlDown	= isDown; return;
+
+		case WXK_ALT:		// ALT/MENU are usually the same key?  I'm confused.
 		case WXK_MENU:		m_kevt.m_altDown		= isDown; return;
 	}
+	
+	if( vkey != WXK_ALT )
+		Console.Warning( "It's not Alt!" );
 
 	m_kevt.m_keyCode = vkey;
 	wxGetApp().PostPadKey( m_kevt );

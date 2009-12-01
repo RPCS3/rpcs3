@@ -414,6 +414,9 @@ public:
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void SysReset();
 
+	GSFrame&		GetGSFrame() const;
+	GSFrame*		GetGSFramePtr() const	{ return m_gsFrame; }
+
 	MainEmuFrame&	GetMainFrame() const;
 	MainEmuFrame*	GetMainFramePtr() const	{ return m_MainFrame; }
 	bool HasMainFrame() const	{ return m_MainFrame != NULL; }
@@ -573,6 +576,9 @@ DECLARE_APP(Pcsx2App)
 
 #define sMainFrame \
 	if( MainEmuFrame* __frame_ = GetMainFramePtr() ) (*__frame_)
+
+#define sGSFrame \
+	if( GSFrame* __gsframe_ = wxGetApp().GetGSFramePtr() ) (*__gsframe_)
 
 // Use this within the scope of a wxWindow (wxDialog or wxFrame).  If the window has a valid menu
 // bar, the command will run, otherwise it will be silently ignored. :)

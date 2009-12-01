@@ -96,7 +96,7 @@ void Pcsx2App::PostPadKey( wxKeyEvent& evt )
 	}
 	else
 	{
-		evt.SetId( m_gsFrame->GetId() );
+		evt.SetId( m_gsFrame->GetViewport()->GetId() );
 		m_gsFrame->AddPendingEvent( evt );
 	}
 }
@@ -391,6 +391,12 @@ MainEmuFrame& Pcsx2App::GetMainFrame() const
 	return *m_MainFrame;
 }
 
+GSFrame& Pcsx2App::GetGSFrame() const
+{
+	pxAssert( m_gsFrame != NULL );
+	return *m_gsFrame;
+}
+
 void AppApplySettings( const AppConfig* oldconf )
 {
 	AllowFromMainThreadOnly();
@@ -467,7 +473,7 @@ void Pcsx2App::OpenGsFrame()
 
 	m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
 	m_gsFrame->SetFocus();
-	pDsp = (uptr)m_gsFrame->GetWindow()->GetHandle();
+	pDsp = (uptr)m_gsFrame->GetViewport()->GetHandle();
 	m_gsFrame->Show();
 
 	// The "in the main window" quickie hack...

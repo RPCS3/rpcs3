@@ -20,7 +20,7 @@
 #include "wx/utils.h"
 
 
-void GSFrame::InitDefaultAccelerators()
+void GSPanel::InitDefaultAccelerators()
 {
 	typedef KeyAcceleratorCode AAC;
 
@@ -37,9 +37,11 @@ void GSFrame::InitDefaultAccelerators()
 	m_Accels.Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
 	m_Accels.Map( AAC( WXK_F9 ),				"Sys_RenderswitchToggle" );
 	
-	m_Accels.Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
+	//m_Accels.Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
 	m_Accels.Map( AAC( WXK_F11 ),				"Sys_FreezeGS" );
 	m_Accels.Map( AAC( WXK_F12 ),				"Sys_RecordingToggle" );
+
+	m_Accels.Map( AAC( WXK_RETURN ).Alt(),		"FullscreenToggle" );
 }
 
 GSPanel::GSPanel( wxWindow* parent )
@@ -53,6 +55,8 @@ GSPanel::GSPanel( wxWindow* parent )
 	if ( !wxWindow::Create(parent, wxID_ANY) )
 		throw Exception::RuntimeError( "GSPanel constructor esplode!!" );
 
+	InitDefaultAccelerators();
+
 	if( g_Conf->GSWindow.AlwaysHideMouse )
 	{
 		SetCursor( wxCursor(wxCURSOR_BLANK) );
@@ -61,6 +65,7 @@ GSPanel::GSPanel( wxWindow* parent )
 
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler	(GSPanel::OnCloseWindow) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler	(GSPanel::OnResize) );
+	Connect( wxEVT_KEY_DOWN,		wxKeyEventHandler	(GSPanel::OnKeyDown) );
 
 	Connect(wxEVT_MIDDLE_DOWN,		wxMouseEventHandler(GSPanel::OnShowMouse) );
 	Connect(wxEVT_MIDDLE_UP,		wxMouseEventHandler(GSPanel::OnShowMouse) );
@@ -143,6 +148,30 @@ void GSPanel::OnHideMouseTimeout( wxTimerEvent& evt )
 	m_CursorShown = false;
 }
 
+void GSPanel::OnKeyDown( wxKeyEvent& evt )
+{
+	// HACK: Legacy PAD plugins expect PCSX2 to ignore keyboard messages on the GS Window while
+	// the PAD plugin is open, so ignore here (PCSX2 will direct messages routed from PAD directly
+	// to the APP level message handler, which in turn routes them right back here -- yes it's
+	// silly, but oh well).
+
+	if( (PADopen != NULL) && CoreThread.IsOpen() ) return;
+
+	const GlobalCommandDescriptor* cmd = NULL;
+	m_Accels.TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
+	if( cmd == NULL )
+	{
+		evt.Skip();		// Let the global APP handle it if it wants
+		return;
+	}
+	
+	if( cmd != NULL )
+	{
+		DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
+		cmd->Invoke();
+	}
+}
+
 
 void __evt_fastcall GSPanel::OnSettingsApplied( void* obj, int& evt )
 {
@@ -162,8 +191,6 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 {
 	SetIcons( wxGetApp().GetIconBundle() );
 
-	InitDefaultAccelerators();
-
 	SetClientSize( g_Conf->GSWindow.WindowSize );
 
 	m_gspanel = new GSPanel( this );
@@ -171,7 +198,6 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler	(GSFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler	(GSFrame::OnMove) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler	(GSFrame::OnResize) );
-	Connect( wxEVT_KEY_DOWN,		wxKeyEventHandler	(GSFrame::OnKeyDown) );
 }
 
 GSFrame::~GSFrame() throw()
@@ -179,7 +205,7 @@ GSFrame::~GSFrame() throw()
 	CoreThread.Suspend();		// Just in case...!
 }
 
-wxWindow* GSFrame::GetWindow()
+wxWindow* GSFrame::GetViewport()
 {
 	return m_gspanel;
 }
@@ -205,28 +231,4 @@ void GSFrame::OnResize( wxSizeEvent& evt )
 
 	// if we skip, the panel is auto-sized to fit our window anyway, which we do not want!
 	//evt.Skip();
-}
-
-void GSFrame::OnKeyDown( wxKeyEvent& evt )
-{
-	// HACK: Legacy PAD plugins expect PCSX2 to ignore keyboard messages on the GS Window while
-	// the PAD plugin is open, so ignore here (PCSX2 will direct messages routed from PAD directly
-	// to the APP level message handler, which in turn routes them right back here -- yes it's
-	// silly, but oh well).
-
-	if( (PADopen != NULL) && CoreThread.IsOpen() ) return;
-
-	const GlobalCommandDescriptor* cmd = NULL;
-	m_Accels.TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
-	if( cmd == NULL )
-	{
-		evt.Skip();		// Let the global APP handle it if it wants
-		return;
-	}
-	
-	if( cmd != NULL )
-	{
-		DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
-		cmd->Invoke();
-	}
 }
