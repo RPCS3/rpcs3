@@ -266,6 +266,10 @@ void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)
 	const int eventId = event.GetId() - MenuId_PluginBase_Settings;
 
 	PluginsEnum_t pid = (PluginsEnum_t)(eventId / PluginMenuId_Interval);
+	
+	// Don't try to call the Patches config dialog until we write one.
+	if (event.GetId() == MenuId_Config_Patches) return;
+	
 	if( !pxAssertDev( (eventId >= 0) || (pid < PluginId_Count), "Invalid plugin identifier passed to ConfigPlugin event handler." ) ) return;
 
 	LoadPluginsImmediate();
