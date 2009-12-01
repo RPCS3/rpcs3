@@ -75,9 +75,9 @@ bool GSDevice10::Create(GSWnd* wnd)
 	// NOTE : This flag can be enabled for both managed and unmanaged windows, as soon as
 	// PCSX2-side properly implements DXGIFactory mess to disable the internal alt-enter crap
 	// that DirectX10 forces upon us (and thus causes threading issues because the window
-	// message pump isn't on the sae thread as the MTGS).
+	// message pump isn't on the same thread as the MTGS).
 
-	uint32 flags = m_wnd->IsManaged() ? D3D10_CREATE_DEVICE_SINGLETHREADED : 0;
+	uint32 flags = /*m_wnd->IsManaged() ?*/ D3D10_CREATE_DEVICE_SINGLETHREADED /*: 0*/;
 
 #ifdef DEBUG
 	flags |= D3D10_CREATE_DEVICE_DEBUG;
