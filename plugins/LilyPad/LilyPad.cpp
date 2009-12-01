@@ -961,7 +961,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 		while (GetWindowLong (hWndTop, GWL_STYLE) & WS_CHILD)
 			hWndTop = GetParent (hWndTop);
 
-		if (!hWndGSProc.SetWndHandle(hWnd) || !hWndTopProc.SetWndHandle(hWndTop)) {
+		if (!hWndGSProc.SetWndHandle(hWnd)) {
 			openCount = 0;
 			return -1;
 		}
@@ -971,7 +971,15 @@ s32 CALLBACK PADopen(void *pDsp) {
 		updateQueued = 0;
 		hWndGSProc.Eat(StatusWndProc, 0);
 
-		hWndTopProc.Eat(TitleHackWndProc, 0);
+		if(hWnd != hWndTop) {
+			if (!hWndTopProc.SetWndHandle(hWndTop)) {
+				openCount = 0;
+				return -1;
+			}
+			hWndTopProc.Eat(TitleHackWndProc, 0);
+		}
+		else
+			hWndGSProc.Eat(TitleHackWndProc, 0);
 
 		if (config.forceHide) {
 			hWndGSProc.Eat(HideCursorProc, 0);
