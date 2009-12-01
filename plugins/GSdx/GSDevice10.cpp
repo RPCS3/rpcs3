@@ -56,16 +56,6 @@ bool GSDevice10::Create(GSWnd* wnd)
 
 	memset(&scd, 0, sizeof(scd));
 
-	// FIXME : Someone with a brain for DX10 and COM figure out how to make this IDXGIFactory
-	// call mess work.  I fail at this stuff.  Thanks!  --air
-
-	// Also... should this be GS plugin territory, or should we incorporate it into PCSX2?
-	// (I'm thinking a dynamic loading of the DXGI dll, and general invocation that way).
-
-	//CComPtr<IDXGIFactory> pFactory;
-	//hr = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)(&pFactory) );
-	//pFactory->MakeWindowAssociation( (HWND)m_wnd->GetHandle(), DXGI_MWA_NO_WINDOW_CHANGES );
-	
 	scd.BufferCount = 2;
 	scd.BufferDesc.Width = 1;
 	scd.BufferDesc.Height = 1;
@@ -82,8 +72,10 @@ bool GSDevice10::Create(GSWnd* wnd)
 	// an external window handle (which could be attached to any thread other than the GS one).
 	// (but if we're managing our own window then it's safe to enable)
 
-	// FIXME : Figure out a way to have this flag anyway, since it's a measurable speedup (may
-	//   not be possible though).
+	// NOTE : This flag can be enabled for both managed and unmanaged windows, as soon as
+	// PCSX2-side properly implements DXGIFactory mess to disable the internal alt-enter crap
+	// that DirectX10 forces upon us (and thus causes threading issues because the window
+	// message pump isn't on the sae thread as the MTGS).
 
 	uint32 flags = m_wnd->IsManaged() ? D3D10_CREATE_DEVICE_SINGLETHREADED : 0;
 
