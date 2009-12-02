@@ -209,7 +209,11 @@ static __forceinline void sifHackInterrupt()
 {
 	// No reason -- just that sometimes the SIF fell asleep, and this wakes it up.
 
-	hwIntcIrq(INTC_SBUS);
+	iopIntcIrq( 3 );		// IOP DMAC int
+	//hwIntcIrq(INTC_SBUS);	// EE's SIF BUS notifier... maybe or maybe not needed?
+
+	// hack is rescheduled as needed by the event handler (depending on if it's actively
+	// signalling an interrupt or not).. better there than here.
 	//PSX_INT( IopEvt_SIFhack, 128 );
 }
 
@@ -262,30 +266,32 @@ __releaseinline void psxBranchTest()
 		iopEventTestIsActive = false;
 	}
 
-	if( psxHu32(0x1078) == 0 ) return;
-	if( (psxHu32(0x1070) & psxHu32(0x1074)) == 0 ) return;
-
-	if ((psxRegs.CP0.n.Status & 0xFE01) >= 0x401)
+	if( (psxHu32(0x1078) != 0) && ((psxHu32(0x1070) & psxHu32(0x1074)) != 0) )
 	{
-		PSXCPU_LOG("Interrupt: %x  %x", psxHu32(0x1070), psxHu32(0x1074));
-		psxException(0, 0);
-		iopBranchAction = true;
+		if( (psxRegs.CP0.n.Status & 0xFE01) >= 0x401 )
+		{
+			PSXCPU_LOG("Interrupt: %x  %x", psxHu32(0x1070), psxHu32(0x1074));
+			psxException(0, 0);
+			iopBranchAction = true;
 
-		// No need to execute the SIFhack after cpuExceptions, since these by nature break SIF's
-		// thread sleep hangs and allow the IOP to "come back to life."
-		psxRegs.interrupt &= ~IopEvt_SIFhack;
+			// No need to execute the SIFhack after cpuExceptions, since these by nature break SIF's
+			// thread sleep hangs and allow the IOP to "come back to life."
+			psxRegs.interrupt &= ~IopEvt_SIFhack;
+		}
 	}
-	else if( IOP_ENABLE_SIF_HACK && (psxRegs.interrupt & IopEvt_SIFhack) )
+
+	if( IOP_ENABLE_SIF_HACK && !iopBranchAction && !(psxRegs.interrupt & IopEvt_SIFhack) )
 	{
 		// Safeguard: since we're not executing an exception vector, we should schedule a SIF wakeup
-		// just in case.
+		// just in case.  (and don't reschedule it if it's already scheduled, since that would just
+		// delay the previously scheduled one, and we don't want that)
 
 		// (TODO: The endless loop in question is a branch instruction that branches to itself endlessly,
 		//  waiting for SIF to wake it up via any cpuException.  We could check for that instruction
 		//  location and only schedule a SIF fix when it's detected...  But for now this is easy and gives
 		//  us good control over testing parameters...)
 
-		PSX_INT( IopEvt_SIFhack, 64 );
+		PSX_INT( IopEvt_SIFhack, 96 );
 	}
 }
 
