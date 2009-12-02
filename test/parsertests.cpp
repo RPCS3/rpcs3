@@ -689,6 +689,23 @@ namespace Test
 
 			return true;
 		}
+		
+		bool DuplicateKey()
+		{
+			std::string input = "{a: 1, b: 2, c: 3, a: 4}";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			if(doc["a"] != 1)
+				return false;
+			if(doc["b"] != 2)
+				return false;
+			if(doc["c"] != 3)
+				return false;
+			return true;
+		}
 	}
 	
 	namespace {
@@ -951,6 +968,7 @@ namespace Test
 		RunParserTest(&Parser::BlockKeyWithNullValue, "block key with null value", passed, total);
 		RunParserTest(&Parser::Bases, "bases", passed, total);
 		RunParserTest(&Parser::KeyNotFound, "key not found", passed, total);
+		RunParserTest(&Parser::DuplicateKey, "duplicate key", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);
