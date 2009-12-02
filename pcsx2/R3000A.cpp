@@ -202,12 +202,27 @@ static __forceinline void IopTestEvent( IopEventId n, void (*callback)() )
 		psxSetNextBranch( psxRegs.sCycle[n], psxRegs.eCycle[n] );
 }
 
+// Change to 1 to enable SIF wakeup hack:
+#define IOP_ENABLE_SIF_HACK 0
+
+static __forceinline void sifHackInterrupt()
+{
+	// No reason -- just that sometimes the SIF fell asleep, and this wakes it up.
+
+	hwIntcIrq(INTC_SBUS);
+	//PSX_INT( IopEvt_SIFhack, 128 );
+}
+
 static __forceinline void _psxTestInterrupts()
 {
 	IopTestEvent(IopEvt_SIF0,		sif0Interrupt);	// SIF0
 	IopTestEvent(IopEvt_SIF1,		sif1Interrupt);	// SIF1
 	IopTestEvent(IopEvt_SIO,		sioInterrupt);
 	IopTestEvent(IopEvt_CdvdRead,	cdvdReadInterrupt);
+
+#if IOP_ENABLE_SIF_HACK
+	IopTestEvent(IopEvt_SIFhack,	sifHackInterrupt);
+#endif
 
 	// Profile-guided Optimization (sorta)
 	// The following ints are rarely called.  Encasing them in a conditional
@@ -255,6 +270,22 @@ __releaseinline void psxBranchTest()
 		PSXCPU_LOG("Interrupt: %x  %x", psxHu32(0x1070), psxHu32(0x1074));
 		psxException(0, 0);
 		iopBranchAction = true;
+
+		// No need to execute the SIFhack after cpuExceptions, since these by nature break SIF's
+		// thread sleep hangs and allow the IOP to "come back to life."
+		psxRegs.interrupt &= ~IopEvt_SIFhack
+	}
+	else if( IopEvt_SIFhack && (psxRegs.interrupt & IopEvt_SIFhack) )
+	{
+		// Safeguard: since we're not executing an exception vector, we should schedule a SIF wakeup
+		// just in case.
+
+		// (TODO: The endless loop in question is a branch instruction that branches to itself endlessly,
+		//  waiting for SIF to wake it up via any cpuException.  We could check for that instruction
+		//  location and only schedule a SIF fix when it's detected...  But for now this is easy and gives
+		//  us good control over testing parameters...)
+
+		PSX_INT( IopEvt_SIFhack, 128 );
 	}
 }
 
