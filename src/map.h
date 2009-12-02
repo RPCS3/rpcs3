@@ -43,6 +43,8 @@ namespace YAML
 		void ParseFlow(Scanner *pScanner, ParserState& state);
 		void ParseCompact(Scanner *pScanner, ParserState& state);
 		void ParseCompactWithNoKey(Scanner *pScanner, ParserState& state);
+		
+		void AddEntry(std::auto_ptr<Node> pKey, std::auto_ptr<Node> pValue);
 
 	private:
 		node_map m_data;
