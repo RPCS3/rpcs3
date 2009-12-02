@@ -273,7 +273,7 @@ __releaseinline void psxBranchTest()
 
 		// No need to execute the SIFhack after cpuExceptions, since these by nature break SIF's
 		// thread sleep hangs and allow the IOP to "come back to life."
-		psxRegs.interrupt &= ~IopEvt_SIFhack
+		psxRegs.interrupt &= ~IopEvt_SIFhack;
 	}
 	else if( IopEvt_SIFhack && (psxRegs.interrupt & IopEvt_SIFhack) )
 	{

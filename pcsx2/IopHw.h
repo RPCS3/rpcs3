@@ -269,8 +269,7 @@ enum IOPCountRegs
 
 enum IopEventId
 {
-	IopEvt_SIFhack = 1,	// The SIF likes to fall asleep and never wake up.  This sends intermittent SBUS flags to rewake it.
-
+	IopEvt_SIFhack = 1	// The SIF likes to fall asleep and never wake up.  This sends intermittent SBUS flags to rewake it.
 ,	IopEvt_Cdvd = 5		// General Cdvd commands (Seek, Standby, Break, etc)
 ,	IopEvt_SIF0 = 9
 ,	IopEvt_SIF1 = 10
