@@ -4,7 +4,6 @@
 #include "token.h"
 #include "exceptions.h"
 #include "emitter.h"
-#include <memory>
 
 namespace YAML
 {

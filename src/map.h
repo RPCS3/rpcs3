@@ -6,6 +6,7 @@
 
 #include "content.h"
 #include <map>
+#include <memory>
 
 namespace YAML
 {
