@@ -275,7 +275,8 @@ __releaseinline void psxBranchTest()
 		// thread sleep hangs and allow the IOP to "come back to life."
 		psxRegs.interrupt &= ~IopEvt_SIFhack;
 	}
-	else if( IopEvt_SIFhack && (psxRegs.interrupt & IopEvt_SIFhack) )
+#ifdef IOP_ENABLE_SIF_HACK
+	else if( !(psxRegs.interrupt & IopEvt_SIFhack) )
 	{
 		// Safeguard: since we're not executing an exception vector, we should schedule a SIF wakeup
 		// just in case.
@@ -287,6 +288,7 @@ __releaseinline void psxBranchTest()
 
 		PSX_INT( IopEvt_SIFhack, 128 );
 	}
+#endif 
 }
 
 void iopTestIntc()
