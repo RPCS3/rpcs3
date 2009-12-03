@@ -33,9 +33,10 @@
 
 // Set this to 1 to remove a lot of non-const div/modulus ops from the rasterization process.
 // Might likely be a measurable speedup but limits threading to 1, 2, 4, and 8 threads.
+// note by rama: Speedup is around 5% on average.
 #define UseConstThreadCount		0
 
-#if !UseConstThreadCount
+#if UseConstThreadCount
 	// ThreadsConst - const number of threads.  User-configured threads (in GSdx panel) must match
 	// this value if UseConstThreadCount is enabled. [yeah, it's hacky for now]
 	static const int ThreadsConst = 2;
