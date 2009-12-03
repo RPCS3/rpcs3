@@ -32,7 +32,7 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if ((value & 0x1) && ((psHu8(mem) & 0x1) == 0x1) && dmacRegs->ctrl.DMAE)
 	{
-		DMA_LOG( "DMAExec8 Attempt to run DMA while one is already active mem = %x", mem );
+		DevCon.Warning( "DMAExec8 Attempt to run DMA while one is already active mem = %x", mem );
 	}
 
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
@@ -57,7 +57,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if ((value & 0x100) && ((psHu32(mem) & 0x100) == 0x100) && dmacRegs->ctrl.DMAE)
 	{
-		DMA_LOG( "DMAExec16 Attempt to run DMA while one is already active mem = %x", mem);
+		DevCon.Warning( "DMAExec16 Attempt to run DMA while one is already active mem = %x", mem);
 	}
 
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
@@ -84,7 +84,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if ((value & 0x100) && ((psHu32(mem) & 0x100) == 0x100) && dmacRegs->ctrl.DMAE)
 	{
-		DMA_LOG( "DMAExec32 Attempt to run DMA while one is already active mem = %x", mem );
+		DevCon.Warning( "DMAExec32 Attempt to run DMA while one is already active mem = %x", mem );
 
 		// Returning here breaks every single Gust game written. :(
 		// Not returning here breaks Fatal Frame. Gamefix time.
@@ -94,7 +94,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 	// Upper 16bits of QWC should not be written since QWC is 16bits in size.
 	if ((psHu32(qwcRegister) >> 16) != 0)
 	{
-		DMA_LOG("DMA QWC (%x) upper 16bits set to %x\n",
+		DevCon.Warning("DMA QWC (%x) upper 16bits set to %x\n",
 			qwcRegister,
 			psHu32(qwcRegister) >> 16);
 		psHu32(qwcRegister) = 0;

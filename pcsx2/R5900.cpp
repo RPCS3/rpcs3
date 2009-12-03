@@ -588,6 +588,10 @@ void cpuExecuteBios()
 
 __forceinline void CPU_INT( u32 n, s32 ecycle)
 {
+	if( n != 2 && cpuRegs.interrupt & (1<<n) ){ //2 is Gif, and every path 3 masking game triggers this :/
+		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );
+	}
+
 	cpuRegs.interrupt|= 1 << n;
 	cpuRegs.sCycle[n] = cpuRegs.cycle;
 	cpuRegs.eCycle[n] = ecycle;

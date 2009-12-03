@@ -192,8 +192,8 @@ void AppCoreThread::StateCheckInThread()
 		case WXK_MENU:		m_kevt.m_altDown		= isDown; return;
 	}
 	
-	if( vkey != WXK_ALT )
-		Console.Warning( "It's not Alt!" );
+	/*if( vkey != WXK_ALT )
+		Console.Warning( "It's not Alt!" );*/
 
 	m_kevt.m_keyCode = vkey;
 	wxGetApp().PostPadKey( m_kevt );
