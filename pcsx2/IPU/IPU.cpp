@@ -1351,9 +1351,9 @@ static __forceinline bool IPU1chain(int &totalqwc)
 	if (ipu1dma->qwc > 0)
 	{
 		int qwc = ipu1dma->qwc;
-		u32 *pMem;
+		tDMA_TAG *pMem;
 
-		pMem = (u32*)dmaGetAddr(ipu1dma->madr);
+		pMem = (tDMA_TAG*)dmaGetAddr(ipu1dma->madr);
 
 		if (pMem == NULL)
 		{
@@ -1361,7 +1361,7 @@ static __forceinline bool IPU1chain(int &totalqwc)
 			return true;
 		}
 
-		qwc = FIFOto_write(pMem, qwc);
+		qwc = FIFOto_write((u32*)pMem, qwc);
 		ipu1dma->madr += qwc<< 4;
 		ipu1dma->qwc -= qwc;
 		totalqwc += qwc;
@@ -1375,10 +1375,9 @@ static __forceinline bool IPU1chain(int &totalqwc)
 	return false;
 }
 
-// Remind me to give this a better name. --arcum42
-static __forceinline bool IncreaseTadr(u32 tag)
+static __forceinline bool ipuDmacPartialChain(tDMA_TAG tag)
 {
-	switch (Tag::Id(tag))
+	switch (tag.ID)
 	{
 		case TAG_REFE:  // refe
 			ipu1dma->tadr += 16;
@@ -1393,13 +1392,13 @@ static __forceinline bool IncreaseTadr(u32 tag)
 
 extern void gsInterrupt();
 
-static __forceinline bool ipuDmacSrcChain(DMACh *tag, u32 *ptag)
+static __forceinline bool ipuDmacSrcChain(DMACh *tag, tDMA_TAG *ptag)
 {
-	switch (Tag::Id(ptag))
+	switch (ptag->ID)
 	{
 		case TAG_REFE: // refe
 			// do not change tadr
-			tag->madr = ptag[1];
+			tag->madr = ptag[1].ADDR;
 			return true;
 			break;
 
@@ -1411,11 +1410,11 @@ static __forceinline bool ipuDmacSrcChain(DMACh *tag, u32 *ptag)
 
 		case TAG_NEXT: // next
 			tag->madr = tag->tadr + 16;
-			tag->tadr = ptag[1];
+			tag->tadr = ptag[1].ADDR;
 			break;
 
 		case TAG_REF: // ref
-			tag->madr = ptag[1];
+			tag->madr = ptag[1].ADDR;
 			tag->tadr += 16;
 			break;
 
@@ -1444,7 +1443,7 @@ static __forceinline void flushGIF()
 
 int IPU1dma()
 {
-	u32 *ptag;
+	tDMA_TAG *ptag;
 	bool done = false;
 	int ipu1cycles = 0, totalqwc = 0;
 
@@ -1483,15 +1482,15 @@ int IPU1dma()
 		else
 		{
 			// Chain mode.
-			u32 tag = ipu1dma->chcr._u32; // upper bits describe current tag
+			tDMA_TAG tag = ipu1dma->chcr._u32; // upper bits describe current tag
 
-			if (ipu1dma->chcr.TIE && Tag::IRQ(tag))
+			if (ipu1dma->chcr.TIE && tag.IRQ)
 			{
-				ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
+				ptag = (tDMA_TAG*)dmaGetAddr(ipu1dma->tadr);
 
-				IncreaseTadr(tag);
+				ipuDmacPartialChain(tag);
 
-				Tag::UpperTransfer(ipu1dma, ptag);
+                ipu1dma->chcrTransfer(ptag);
 
 				IPU_LOG("IPU dmaIrq Set");
 				IPU_INT_TO(totalqwc * BIAS);
@@ -1499,7 +1498,7 @@ int IPU1dma()
 				return totalqwc;
 			}
 
-			if (IncreaseTadr(tag))
+			if (ipuDmacPartialChain(tag))
 			{
 				IPU_INT_TO((1 + totalqwc)*BIAS);
 				return totalqwc;
@@ -1530,19 +1529,19 @@ int IPU1dma()
 	else
 	{
 		// Chain Mode & ipu1dma->qwc is 0
-		ptag = (u32*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
+		ptag = (tDMA_TAG*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
 
 		// Transfer the tag.
-		if (!(Tag::Transfer("IPU1", ipu1dma, ptag))) return totalqwc;
+		if (!ipu1dma->transfer("IPU1", ptag)) return totalqwc;
 
 		ipu1cycles += 1; // Add 1 cycles from the QW read for the tag
 
 		done = ipuDmacSrcChain(ipu1dma, ptag);
 
 		IPU_LOG("dmaIPU1 dmaChain %8.8x_%8.8x size=%d, addr=%lx, fifosize=%x",
-		        ptag[1], ptag[0], ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
+		        ptag[1]._u32, ptag[0]._u32, ipu1dma->qwc, ipu1dma->madr, 8 - g_BP.IFC);
 
-		g_nDMATransfer.DOTIE1 = (ipu1dma->chcr.TIE && Tag::IRQ(ptag));
+		g_nDMATransfer.DOTIE1 = (ipu1dma->chcr.TIE && ptag->IRQ);
 
 		if (ipu1dma->qwc == 0)
 		{
@@ -1555,12 +1554,12 @@ int IPU1dma()
 
 				if (done)
 				{
-					ptag = (u32*)dmaGetAddr(ipu1dma->tadr);
+					ptag = (tDMA_TAG*)dmaGetAddr(ipu1dma->tadr);
 
-					IncreaseTadr(ptag[0]);
+					ipuDmacPartialChain(ptag[0]);
 
 					// Transfer the last of ptag into chcr.
-					Tag::UpperTransfer(ipu1dma, ptag);
+					ipu1dma->chcrTransfer(ptag);
 				}
 
 				IPU_INT_TO(ipu1cycles + totalqwc * BIAS);  // Should it be (ipu1cycles + totalqwc) * BIAS?
@@ -1574,7 +1573,7 @@ int IPU1dma()
 				if (IPU1chain(totalqwc)) return totalqwc;
 			}
 
-			IncreaseTadr(ptag[0]);
+			ipuDmacPartialChain(ptag[0]);
 		}
 		else
 		{
@@ -1655,7 +1654,7 @@ int IPU0dma()
 {
 	int readsize;
 	static int totalsize = 0;
-	void* pMem;
+	tDMA_TAG* pMem;
 
 	if ((!(ipu0dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
 		return 0;
@@ -1665,8 +1664,9 @@ int IPU0dma()
 	IPU_LOG("dmaIPU0 chcr = %lx, madr = %lx, qwc  = %lx",
 	        ipu0dma->chcr._u32, ipu0dma->madr, ipu0dma->qwc);
 
-	pxAssert((ipu0dma->chcr._u32 & 0xC) == 0);
-	pMem = (u32*)dmaGetAddr(ipu0dma->madr);
+	pxAssert(ipu0dma->chcr.MOD == NORMAL_MODE);
+	
+	pMem = (tDMA_TAG*)dmaGetAddr(ipu0dma->madr);
 
 	readsize = min(ipu0dma->qwc, (u16)ipuRegs->ctrl.OFC);
 	totalsize+=readsize;
@@ -1700,7 +1700,7 @@ int IPU0dma()
 		//This broke vids in Digital Devil Saga
 		//Note that interrupting based on totalsize is just guessing..
 		IPU_INT_FROM(totalsize*BIAS );
-		totalsize=0;
+		totalsize = 0;
 	}
 
 	return readsize;

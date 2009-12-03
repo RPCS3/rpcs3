@@ -19,6 +19,29 @@
 
 extern u8  *psH; // hw mem
 
+// Useful enums for some of the fields.
+enum pce_values
+{
+	PCE_NOTHING = 0,
+	PCE_RESERVED,
+	PCE_DISABLED,
+	PCE_ENABLED
+};
+
+
+enum tag_id
+{
+	TAG_CNTS = 0,
+	TAG_REFE = 0, 	// Transfer Packet According to ADDR field, clear STR, and end
+	TAG_CNT, 		// Transfer QWC following the tag.
+	TAG_NEXT,		// Transfer QWC following tag. TADR = ADDR
+	TAG_REF,			// Transfer QWC from ADDR field
+	TAG_REFS,		// Transfer QWC from ADDR field (Stall Control)
+	TAG_CALL,		// Transfer QWC following the tag, save succeeding tag
+	TAG_RET,			// Transfer QWC following the tag, load next tag
+	TAG_END			// Transfer QWC following the tag
+};
+
 enum mfd_type
 {
 	NO_MFD = 0,
@@ -55,15 +78,38 @@ enum TransferMode
 // --- DMA ---
 //
 
+// Doing double duty as both the top 32 bits *and* the lower 32 bits of a chain tag.
+// Theoretically should probably both be in a u64 together, but with the way the 
+// code is layed out, this is easier for the moment.
+
+union tDMA_TAG {
+	struct {
+		u32 QWC : 16;
+		u32 reserved2 : 10;
+		u32 PCE : 2;
+		u32 ID : 3;
+		u32 IRQ : 1;
+	};
+	struct {
+		u32 ADDR : 31;
+		u32 SPR : 1;
+	};
+	u32 _u32;
+	
+	tDMA_TAG(u32 val) { _u32 = val; }
+	u16 upper() { return (_u32 >> 16); }
+	u16 lower() { return (u16)_u32; }
+};
+
 union tDMA_CHCR {
 	struct {
-		u32 DIR : 1;
+		u32 DIR : 1;        // Direction: 0 - to memory, 1 - from memory. VIF1 & SIF2 only.
 		u32 reserved1 : 1;
 		u32 MOD : 2;
-		u32 ASP : 2;
-		u32 TTE : 1;
-		u32 TIE : 1;
-		u32 STR : 1;
+		u32 ASP : 2;        // ASP1 & ASP2; Address stack pointer. 0, 1, or 2 addresses.
+		u32 TTE : 1;        // Tag Transfer Enable. 0 - Disable / 1 - Enable.
+		u32 TIE : 1;        // Tag Interrupt Enable. 0 - Disable / 1 - Enable.
+		u32 STR : 1;        // Start. 0 while stopping DMA, 1 while it's running.
 		u32 reserved2 : 7;
 		u32 TAG : 16;
 	};
@@ -143,6 +189,8 @@ union tDMA_QWC {
 	wxString desc() { return wxsFormat(L"QWC: 0x%x", _u32); }
 };
 
+static __forceinline void throwBusError(const char *s);
+
 struct DMACh {
 	tDMA_CHCR chcr;
 	u32 null0[3];
@@ -157,8 +205,38 @@ struct DMACh {
 	u32 asr1;
 	u32 null5[11];
 	u32 sadr;
+	
+	void chcrTransfer(tDMA_TAG* ptag)
+	{
+	    chcr.TAG = ptag[0].upper();
+	}
+	
+	void qwcTransfer(tDMA_TAG* ptag)
+	{
+	    qwc = ptag[0].QWC;
+	} 
+	
+	bool transfer(const char *s, tDMA_TAG* ptag)
+	{
+	    //chcrTransfer(ptag);
+	    
+		if (ptag == NULL)  					 // Is ptag empty?
+		{
+			throwBusError(s);
+			return false;
+		}
+	    chcrTransfer(ptag);
+		
+        qwcTransfer(ptag);
+        return true;
+	}
+	
+	void unsafeTransfer(tDMA_TAG* ptag)
+	{
+        chcrTransfer(ptag);
+        qwcTransfer(ptag);
+	}
 };
-
 
 enum INTCIrqs
 {
@@ -227,12 +305,12 @@ enum DMAInter
 
 union tDMAC_CTRL {
 	struct {
-		u32 DMAE : 1;
-		u32 RELE : 1;
-		u32 MFD : 2;
-		u32 STS : 2;
-		u32 STD : 2;
-		u32 RCYC : 3;
+		u32 DMAE : 1;       // 0/1 - disables/enables all DMAs
+		u32 RELE : 1;       // 0/1 - cycle stealing off/on
+		u32 MFD : 2;        // Memory FIFO drain channel (mfd_type)
+		u32 STS : 2;        // Stall Control source channel (sts type)
+		u32 STD : 2;        // Stall Control drain channel (std_type)
+		u32 RCYC : 3;       // Release cycle (8/16/32/64/128/256)
 		u32 reserved1 : 21;
 	};
 	u32 _u32;
@@ -346,6 +424,7 @@ union tDMAC_STADR {
 	wxString desc() { return wxsFormat(L"Stadr: 0x%x", _u32); }
 };
 
+
 struct DMACregisters
 {
 	tDMAC_CTRL	ctrl;
@@ -406,6 +485,12 @@ struct INTCregisters
     
 #define dmacRegs ((DMACregisters*)(PS2MEM_HW+0xE000))
 #define intcRegs ((INTCregisters*)(PS2MEM_HW+0xF000))
+
+static __forceinline void throwBusError(const char *s)
+{
+    Console.Error("%s BUSERR", s);
+    dmacRegs->stat.BEIS = true;
+}
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
 static __forceinline void *dmaGetAddr(u32 addr) {
