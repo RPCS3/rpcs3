@@ -957,7 +957,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_join (pthread_t thread,
 
 PTW32_DLLPORT pthread_t PTW32_CDECL pthread_self (void);
 
-extern int PTW32_CDECL pthread_cancel (pthread_t thread);
+extern int pthread_cancel (pthread_t thread);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_setcancelstate (int state,
                                     int *oldstate);
@@ -965,7 +965,7 @@ PTW32_DLLPORT int PTW32_CDECL pthread_setcancelstate (int state,
 PTW32_DLLPORT int PTW32_CDECL pthread_setcanceltype (int type,
                                    int *oldtype);
 
-extern void PTW32_CDECL pthread_testcancel (void);
+extern void pthread_testcancel (void);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_once (pthread_once_t * once_control,
                           void (*init_routine) (void));
@@ -1031,14 +1031,14 @@ PTW32_DLLPORT int PTW32_CDECL pthread_mutex_init (pthread_mutex_t * mutex,
 
 PTW32_DLLPORT int PTW32_CDECL pthread_mutex_destroy (pthread_mutex_t * mutex);
 
-extern int PTW32_CDECL pthread_mutex_lock (pthread_mutex_t * mutex);
+extern int pthread_mutex_lock (pthread_mutex_t * mutex);
 
 PTW32_DLLPORT int PTW32_CDECL pthread_mutex_timedlock(pthread_mutex_t *mutex,
                                     const struct timespec *abstime);
 
-extern int PTW32_CDECL pthread_mutex_trylock (pthread_mutex_t * mutex);
+extern int pthread_mutex_trylock (pthread_mutex_t * mutex);
 
-extern int PTW32_CDECL pthread_mutex_unlock (pthread_mutex_t * mutex);
+extern int pthread_mutex_unlock (pthread_mutex_t * mutex);
 
 #ifdef PTW32_ALLOW_SPIN
 /*

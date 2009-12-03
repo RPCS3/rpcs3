@@ -138,17 +138,11 @@ sem_wait (sem_t * sem)
 
 	  if (v < 0)
 	    {
-#ifdef _MSC_VER
-#pragma inline_depth(0)
-#endif
 	      /* Must wait */
 	      pthread_cleanup_push(ptw32_sem_wait_cleanup, (void *) s);
 	      result = pthreadCancelableWait (s->sem);
 	      /* Cleanup if we're canceled or on any other error */
 	      pthread_cleanup_pop(result);
-#ifdef _MSC_VER
-#pragma inline_depth()
-#endif
 	    }
 #ifdef NEED_SEM
 

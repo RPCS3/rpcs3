@@ -132,9 +132,9 @@ PTW32_DLLPORT int __cdecl sem_init (sem_t * sem,
 
 PTW32_DLLPORT int __cdecl sem_destroy (sem_t * sem);
 
-extern int __cdecl sem_trywait (sem_t * sem);
+extern int sem_trywait (sem_t * sem);
 
-extern int __cdecl sem_wait (sem_t * sem);
+extern int sem_wait (sem_t * sem);
 
 PTW32_DLLPORT int __cdecl sem_timedwait (sem_t * sem,
 				 const struct timespec * abstime);
