@@ -68,6 +68,7 @@ public:
 protected:
 	void OnMove( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
+	void OnActivate( wxActivateEvent& evt );
 };
 
 struct PluginMenuAddition

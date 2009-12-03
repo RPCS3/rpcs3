@@ -32,8 +32,29 @@ SrcType_PageFault Source_PageFault;
 
 const Pcsx2Config EmuConfig;
 
-// disable all session overrides by default...
-SessionOverrideFlags	g_Session = {false};
+// Provides an accessor for quick modification of GS options.  All GS options are allowed to be
+// changed "on the fly" by the *main/gui thread only*.
+Pcsx2Config::GSOptions& SetGSConfig()
+{
+	//DbgCon.WriteLn( "Direct modification of EmuConfig.GS detected" );
+	AllowFromMainThreadOnly();
+	return const_cast<Pcsx2Config::GSOptions&>(EmuConfig.GS);
+}
+
+ConsoleLogFilters& SetConsoleConfig()
+{
+	//DbgCon.WriteLn( "Direct modification of EmuConfig.Log detected" );
+	AllowFromMainThreadOnly();
+	return const_cast<ConsoleLogFilters&>(EmuConfig.Log);
+}
+
+TraceLogFilters& SetTraceConfig()
+{
+	//DbgCon.WriteLn( "Direct modification of EmuConfig.TraceLog detected" );
+	AllowFromMainThreadOnly();
+	return const_cast<TraceLogFilters&>(EmuConfig.Trace);
+}
+
 
 // This function should be called once during program execution.
 void SysDetect()
@@ -146,23 +167,21 @@ SysCoreAllocations::SysCoreAllocations()
 
 	Console.WriteLn( "Allocating memory for recompilers..." );
 
-	try
-	{
+	try {
 		recCpu.Allocate();
 		RecSuccess_EE = true;
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::RuntimeError& ex )
 	{
 		Console.Error( L"EE Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		recCpu.Shutdown();
 	}
 
-	try
-	{
+	try {
 		psxRec.Allocate();
 		RecSuccess_IOP = true;
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::RuntimeError& ex )
 	{
 		Console.Error( L"IOP Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		psxRec.Shutdown();
@@ -170,23 +189,21 @@ SysCoreAllocations::SysCoreAllocations()
 
 	// hmm! : VU0 and VU1 pre-allocations should do sVU and mVU separately?  Sounds complicated. :(
 
-	try
-	{
+	try {
 		VU0micro::recAlloc();
 		RecSuccess_VU0 = true;
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::RuntimeError& ex )
 	{
 		Console.Error( L"VU0 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		VU0micro::recShutdown();
 	}
 
-	try
-	{
+	try {
 		VU1micro::recAlloc();
 		RecSuccess_VU1 = true;
 	}
-	catch( Exception::BaseException& ex )
+	catch( Exception::RuntimeError& ex )
 	{
 		Console.Error( L"VU1 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
 		VU1micro::recShutdown();
@@ -239,8 +256,8 @@ bool SysCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& 
 // Use this method to reset the recs when important global pointers like the MTGS are re-assigned.
 void SysClearExecutionCache()
 {
-	Cpu		= CHECK_EEREC ? &recCpu : &intCpu;
-	psxCpu	= CHECK_IOPREC ? &psxRec : &psxInt;
+	Cpu		= CHECK_EEREC	? &recCpu : &intCpu;
+	psxCpu	= CHECK_IOPREC	? &psxRec : &psxInt;
 
 	Cpu->Reset();
 	psxCpu->Reset();

@@ -80,6 +80,7 @@ typedef int BOOL;
 #include "i18n.h"
 
 #include "Utilities/Assertions.h"
+#include "Utilities/FixedPointTypes.h"
 #include "Utilities/wxBaseTools.h"
 #include "Utilities/ScopedPtr.h"
 #include "Utilities/Path.h"

@@ -306,25 +306,21 @@ bool Pcsx2App::OnInit()
 			if( !m_CoreAllocs->RecSuccess_EE )
 			{
 				message += L"\t* R5900 (EE)\n";
-				g_Session.ForceDisableEErec = true;
 			}
 
 			if( !m_CoreAllocs->RecSuccess_IOP )
 			{
 				message += L"\t* R3000A (IOP)\n";
-				g_Session.ForceDisableIOPrec = true;
 			}
 
 			if( !m_CoreAllocs->RecSuccess_VU0 )
 			{
 				message += L"\t* VU0\n";
-				g_Session.ForceDisableVU0rec = true;
 			}
 
 			if( !m_CoreAllocs->RecSuccess_VU1 )
 			{
 				message += L"\t* VU1\n";
-				g_Session.ForceDisableVU1rec = true;
 			}
 
 			message += pxE( ".Popup Error:EmuCore:MemoryForRecs",

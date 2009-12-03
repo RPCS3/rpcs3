@@ -53,24 +53,87 @@ wxString KeyAcceleratorCode::ToString() const
 	).ToString();
 }
 
-int limitOn = false;
+enum LimiterModeType
+{
+	Limit_Nominal,
+	Limit_Turbo,
+	Limit_Slomo,
+};
+
+static LimiterModeType g_LimiterMode = Limit_Nominal;
+
 namespace Implementations
 {
 	void Frameskip_Toggle()
 	{
-		limitOn ^= 1;
-		Console.WriteLn("Framelimit mode changed to %d", limitOn ? 1 : 0);
-		// FIXME : Reimplement framelimiting using new double-switch boolean system
+		g_Conf->EmuOptions.GS.FrameSkipEnable = !g_Conf->EmuOptions.GS.FrameSkipEnable;
+		SetGSConfig().FrameSkipEnable = g_Conf->EmuOptions.GS.FrameSkipEnable;
+		
+		if( EmuConfig.GS.FrameSkipEnable )
+			Console.WriteLn( "(FrameSkipping) Enabled : FrameDraws=%d, FrameSkips=%d", g_Conf->EmuOptions.GS.ConsecutiveFrames, g_Conf->EmuOptions.GS.ConsecutiveSkip );
+		else
+			Console.WriteLn( "(FrameSkipping) Disabled." );
 	}
 
 	void Framelimiter_TurboToggle()
 	{
-		limitOn ^= 1;
-		Console.WriteLn("Framelimit mode changed to %d", limitOn ? 1 : 0);
+		if( !g_Conf->EmuOptions.GS.FrameLimitEnable )
+		{
+			Console.WriteLn( "(FrameLimiter) Turbo toggle ignored; framelimiter is currently disabled." );
+			return;
+		}
+
+		ScopedCoreThreadPause pauser;
+		if( g_LimiterMode == Limit_Turbo )
+		{
+			GSsetVsync( g_Conf->EmuOptions.GS.VsyncEnable );
+			g_LimiterMode = Limit_Nominal;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.NominalScalar;
+			Console.WriteLn("(FrameLimiter) Turbo DISABLED." );
+		}
+		else
+		{
+			GSsetVsync( false );
+			g_LimiterMode = Limit_Turbo;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.TurboScalar;
+			Console.WriteLn("(FrameLimiter) Turbo ENABLED." );
+		}
+		pauser.Resume();
+	}
+
+	void Framelimiter_SlomoToggle()
+	{
+		// Slow motion auto-enables the framelimiter even if it's disabled.
+		// This seems like desirable and expected behavior.
+		
+		// FIXME: Inconsistent use of g_Conf->EmuOptions vs. EmuConfig.  Should figure
+		// out a better consistency approach... -air
+	
+		ScopedCoreThreadPause pauser;
+		GSsetVsync( g_Conf->EmuOptions.GS.VsyncEnable );
+		if( g_LimiterMode == Limit_Slomo )
+		{
+			g_LimiterMode = Limit_Nominal;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.NominalScalar;
+			Console.WriteLn("(FrameLimiter) SlowMotion DISABLED." );
+		}
+		else
+		{
+			g_LimiterMode = Limit_Slomo;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.SlomoScalar;
+			Console.WriteLn("(FrameLimiter) SlowMotion ENABLED." );
+			g_Conf->EmuOptions.GS.FrameLimitEnable = true;
+		}
+		pauser.Resume();
 	}
 
 	void Framelimiter_MasterToggle()
 	{
+		ScopedCoreThreadPause pauser;
+		g_Conf->EmuOptions.GS.FrameLimitEnable = !g_Conf->EmuOptions.GS.FrameLimitEnable;
+		GSsetVsync( g_Conf->EmuOptions.GS.FrameLimitEnable && g_Conf->EmuOptions.GS.VsyncEnable );
+		Console.WriteLn("(FrameLimiter) %s.", g_Conf->EmuOptions.GS.FrameLimitEnable ? "ENABLED" : "DISABLED" );
+		pauser.Resume();
 	}
 
 	void Sys_Suspend()
@@ -104,7 +167,7 @@ namespace Implementations
 
 		// FIXME: Some of the trace logs will require recompiler resets to be activated properly.
 		//  But since those haven't been implemented yet, no point in implementing that here either.
-		const_cast<Pcsx2Config&>(EmuConfig).Trace.Enabled = !EmuConfig.Trace.Enabled;
+		SetTraceConfig().Enabled = !EmuConfig.Trace.Enabled;
 		GSprintf(10, const_cast<char*>(EmuConfig.Trace.Enabled ? "Logging Enabled." : "Logging Disabled."));
 	}
 
@@ -204,6 +267,12 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 	},
 
 	{	"Framelimiter_TurboToggle",
+		Implementations::Framelimiter_TurboToggle,
+		NULL,
+		NULL,
+	},
+
+	{	"Framelimiter_SlomoToggle",
 		Implementations::Framelimiter_TurboToggle,
 		NULL,
 		NULL,
@@ -314,9 +383,10 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 	GlobalAccels.Map( AAC( WXK_F2 ),			"States_CycleSlotForward" );
 	GlobalAccels.Map( AAC( WXK_F2 ).Shift(),	"States_CycleSlotBackward" );
 
-	GlobalAccels.Map( AAC( WXK_F4 ),			"Frameskip_Toggle");
+	GlobalAccels.Map( AAC( WXK_F4 ),			"Framelimiter_MasterToggle");
+	GlobalAccels.Map( AAC( WXK_F4 ).Shift(),	"Frameskip_Toggle");
 	GlobalAccels.Map( AAC( WXK_TAB ),			"Framelimiter_TurboToggle" );
-	GlobalAccels.Map( AAC( WXK_TAB ).Shift(),	"Framelimiter_MasterToggle" );
+	GlobalAccels.Map( AAC( WXK_TAB ).Shift(),	"Framelimiter_SlomoToggle" );
 
 	// Hack! The following bindings are temporary hacks which are needed because of issues
 	// with PAD plugin interfacing (the local window-based accelerators in GSPanel are

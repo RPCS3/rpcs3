@@ -120,7 +120,7 @@ public:
 	// ------------------------------------------------------------------------
 	// The GS window receives much love from the land of Options and Settings.
 	//
-	struct GSOptions
+	struct GSWindowOptions
 	{
 		// Closes the GS/Video port on escape (good for fullscreen activity)
 		bool		CloseOnEsc;
@@ -129,12 +129,16 @@ public:
 		bool		DisableResizeBorders;
 
 		AspectRatioType AspectRatio;
-		
+
 		wxSize		WindowSize;
 		wxPoint		WindowPos;
 		bool		IsMaximized;
 
-		GSOptions();
+		Fixed100	NominalScalar;
+		Fixed100	TurboScalar;
+		Fixed100	SlomoScalar;
+
+		GSWindowOptions();
 
 		void LoadSave( IniInterface& conf );
 		void SanityCheck();
@@ -183,7 +187,7 @@ public:
 	ConsoleLogOptions		Ps2ConBox;
 	FolderOptions			Folders;
 	FilenameOptions			BaseFilenames;
-	GSOptions				GSWindow;
+	GSWindowOptions				GSWindow;
 	
 	// PCSX2-core emulation options, which are passed to the emu core prior to initiating
 	// an emulation session.  Note these are the options saved into the GUI ini file and

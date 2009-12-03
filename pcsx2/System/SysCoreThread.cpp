@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
+#include "Counters.h"
 #include "GS.h"
 #include "Elfheader.h"
 #include "PageFaultSource.h"
@@ -40,6 +41,7 @@ SysCoreThread::SysCoreThread()
 	m_name					= L"EE Core";
 	m_resetRecompilers		= true;
 	m_resetProfilers		= true;
+	m_resetVsyncTimers		= true;
 	m_resetVirtualMachine	= true;
 	m_hasValidState			= false;
 }
@@ -106,6 +108,14 @@ ScopedCoreThreadSuspend::ScopedCoreThreadSuspend()
 	m_ResumeWhenDone = GetCoreThread().Suspend();
 }
 
+ScopedCoreThreadSuspend::~ScopedCoreThreadSuspend() throw()
+{
+	if( m_ResumeWhenDone )
+	{
+		Console.WriteLn( Color_Gray, "Scoped CoreThread suspend was not allowed to resume." );
+	}
+}
+
 // Resumes CoreThread execution, but *only* if it was in a running state when this object
 // was instanized.  Subsequent calls to Resume() will be ignored.
 void ScopedCoreThreadSuspend::Resume()
@@ -115,13 +125,28 @@ void ScopedCoreThreadSuspend::Resume()
 	m_ResumeWhenDone = false;
 }
 
-ScopedCoreThreadSuspend::~ScopedCoreThreadSuspend() throw()
+ScopedCoreThreadPause::ScopedCoreThreadPause()
+{
+	m_ResumeWhenDone = GetCoreThread().Pause();
+}
+
+ScopedCoreThreadPause::~ScopedCoreThreadPause() throw()
 {
 	if( m_ResumeWhenDone )
 	{
-		Console.WriteLn( Color_Gray, "Scoped CoreThread suspend was not allowed to resume." );
+		Console.WriteLn( Color_Gray, "Scoped CoreThread pause was not allowed to resume." );
 	}
 }
+
+// Resumes CoreThread execution, but *only* if it was in a running state when this object
+// was instanized.  Subsequent calls to Resume() will be ignored.
+void ScopedCoreThreadPause::Resume()
+{
+	if( m_ResumeWhenDone )
+		GetCoreThread().Resume();
+	m_ResumeWhenDone = false;
+}
+
 
 // Applies a full suite of new settings, which will automatically facilitate the necessary
 // resets of the core and components (including plugins, if needed).  The scope of resetting
@@ -131,12 +156,14 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	if( src == EmuConfig ) return;
 
-	ScopedCoreThreadSuspend suspend_core;
+	ScopedCoreThreadPause sys_paused;
 
 	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
-	m_resetProfilers		= (src.Profiler != EmuConfig.Profiler );
-
+	m_resetProfilers		= ( src.Profiler != EmuConfig.Profiler );
+	m_resetVsyncTimers		= ( src.GS != EmuConfig.GS );
+	
 	const_cast<Pcsx2Config&>(EmuConfig) = src;
+	sys_paused.Resume();
 }
 
 void SysCoreThread::ChangeCdvdSource( CDVD_SourceType type )
@@ -189,11 +216,7 @@ void SysCoreThread::CpuInitializeMess()
 {
 	if( m_hasValidState ) return;
 
-	// Some recompiler mess might be left over -- nuke it here:
-	SysClearExecutionCache();
-	memBindConditionalHandlers();
-	m_resetRecompilers = false;
-	m_resetProfilers = false;
+	_reset_stuff_as_needed();
 
 	ScopedBool_ClearOnError sbcoe( m_hasValidState );
 
@@ -238,13 +261,8 @@ void SysCoreThread::CpuInitializeMess()
 	sbcoe.Success();
 }
 
-void SysCoreThread::StateCheckInThread()
+void SysCoreThread::_reset_stuff_as_needed()
 {
-	GetMTGS().RethrowException();
-	_parent::StateCheckInThread();
-	if( !m_hasValidState )
-		throw Exception::RuntimeError( "Invalid emulation state detected; Virtual machine threads have been cancelled." );
-
 	if( m_resetRecompilers || m_resetProfilers )
 	{
 		SysClearExecutionCache();
@@ -252,6 +270,23 @@ void SysCoreThread::StateCheckInThread()
 		m_resetRecompilers = false;
 		m_resetProfilers = false;
 	}
+
+	if( m_resetVsyncTimers )
+	{
+		UpdateVSyncRate();
+		frameLimitReset();
+		m_resetVsyncTimers = false;
+	}
+}
+
+void SysCoreThread::StateCheckInThread()
+{
+	GetMTGS().RethrowException();
+	_parent::StateCheckInThread();
+	if( !m_hasValidState )
+		throw Exception::RuntimeError( "Invalid emulation state detected; Virtual machine threads have been cancelled." );
+
+	_reset_stuff_as_needed();
 }
 
 void SysCoreThread::ExecuteTaskInThread()

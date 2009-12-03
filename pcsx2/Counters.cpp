@@ -160,7 +160,7 @@ static u64 m_iStart=0;
 
 struct vSyncTimingInfo
 {
-	u32 Framerate;			// frames per second * 100 (so 2500 for PAL and 2997 for NTSC)
+	Fixed100 Framerate;		// frames per second (8 bit fixed)
 	u32 Render;				// time from vblank end to vblank start (cycles)
 	u32 Blank;				// time from vblank start to vblank end (cycles)
 
@@ -174,34 +174,31 @@ struct vSyncTimingInfo
 static vSyncTimingInfo vSyncInfo;
 
 
-static void vSyncInfoCalc( vSyncTimingInfo* info, u32 framesPerSecond, u32 scansPerFrame )
+static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 scansPerFrame )
 {
-	// Important: Cannot use floats or doubles here.  The emulator changes rounding modes
-	// depending on user-set speedhack options, and it can break float/double code
-	// (as in returning infinities and junk)
+	// I use fixed point math here to have strict control over rounding errors. --air
 
 	// NOTE: mgs3 likes a /4 vsync, but many games prefer /2.  This seems to indicate a
 	// problem in the counters vsync gates somewhere.
 
-	u64 Frame = ((u64)PS2CLK * 1000000ULL) / framesPerSecond;
-	u64 HalfFrame = Frame / 2;
-	u64 Blank = HalfFrame / 2;		// two blanks and renders per frame
-	u64 Render = HalfFrame - Blank;	// so use the half-frame value for these...
+	u64 Frame		= ((u64)PS2CLK * 1000000ULL) / (framesPerSecond*100).ToIntRounded();
+	u64 HalfFrame	= Frame / 2;
+	u64 Blank		= HalfFrame / 2;		// two blanks and renders per frame
+	u64 Render		= HalfFrame - Blank;	// so use the half-frame value for these...
 
 	// Important!  The hRender/hBlank timers should be 50/50 for best results.
-	// In theory a 70%/30% ratio would be more correct but in practice it runs
-	// like crap and totally screws audio synchronization and other things.
+	//  (this appears to be what the real EE's timing crystal does anyway)
 
-	u64 Scanline = Frame / scansPerFrame;
-	u64 hBlank = Scanline / 2;
-	u64 hRender = Scanline - hBlank;
+	u64 Scanline	= Frame / scansPerFrame;
+	u64 hBlank		= Scanline / 2;
+	u64 hRender		= Scanline - hBlank;
 
-	info->Framerate = framesPerSecond;
-	info->Render = (u32)(Render/10000);
-	info->Blank  = (u32)(Blank/10000);
+	info->Framerate	= framesPerSecond;
+	info->Render	= (u32)(Render/10000);
+	info->Blank		= (u32)(Blank/10000);
 
-	info->hRender = (u32)(hRender/10000);
-	info->hBlank  = (u32)(hBlank/10000);
+	info->hRender	= (u32)(hRender/10000);
+	info->hBlank	= (u32)(hBlank/10000);
 	info->hScanlinesPerFrame = scansPerFrame;
 
 	// Apply rounding:
@@ -226,53 +223,64 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, u32 framesPerSecond, u32 scans
 
 u32 UpdateVSyncRate()
 {
-	static const char *limiterMsg = "Framelimiter rate updated (UpdateVSyncRate): %d.%d fps";
+	XMMRegisters::Freeze();
+	MMXRegisters::Freeze();
 
-	// fixme - According to some docs, progressive-scan modes actually refresh slower than
-	// interlaced modes.  But I can't fathom how, since the refresh rate is a function of
-	// the television and all the docs I found on TVs made no indication that they ever
-	// run anything except their native refresh rate.
-
-	//#define VBLANK_NTSC			((Config.PsxType & 2) ? 59.94 : 59.82) //59.94 is more precise
-	//#define VBLANK_PAL			((Config.PsxType & 2) ? 50.00 : 49.76)
+	// Notice:  (and I probably repeat this elsewhere, but it's worth repeating)
+	//  The PS2's vsync timer is an *independent* crystal that is fixed to either 59.94 (NTSC)
+	//  or 50.0 (PAL) Hz.  It has *nothing* to do with real TV timings or the real vsync of
+	//  the GS's output circuit.  It is the same regardless if the GS is outputting interlace
+	//  or progressive scan content.  Indications are that it is also a simple 50/50 timer and
+	//  that it does not actually measure Vblank/Vdraw zones accurately (which would be like
+	//  1/5 and 4/5 ratios).
+	
+	Fixed100	framerate;
+	u32		scanlines;
+	bool	isCustom;
 
 	if( gsRegionMode == Region_PAL )
 	{
-		if( vSyncInfo.Framerate != FRAMERATE_PAL )
-			vSyncInfoCalc( &vSyncInfo, FRAMERATE_PAL, SCANLINES_TOTAL_PAL );
+		isCustom = (EmuConfig.GS.FrameratePAL != 50.0);
+		framerate = EmuConfig.GS.FrameratePAL / 2;
+		scanlines = SCANLINES_TOTAL_PAL;
 	}
 	else
 	{
-		if( vSyncInfo.Framerate != FRAMERATE_NTSC )
-			vSyncInfoCalc( &vSyncInfo, FRAMERATE_NTSC, SCANLINES_TOTAL_NTSC );
+		isCustom = (EmuConfig.GS.FramerateNTSC != 59.94);
+		framerate = EmuConfig.GS.FramerateNTSC / 2;
+		scanlines = SCANLINES_TOTAL_NTSC;
+	}
+	
+	if( vSyncInfo.Framerate != framerate )
+	{
+		vSyncInfoCalc( &vSyncInfo, framerate, scanlines );
+		Console.WriteLn( Color_Blue, "(UpdateVSyncRate) Mode Changed to %s.", ( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC" );
+		if( isCustom )
+			Console.Indent().WriteLn( Color_StrongBlue, "... with user configured refresh rate: %.02f Hz", framerate.ToFloat() );
+
+		hsyncCounter.CycleT = vSyncInfo.hRender;	// Amount of cycles before the counter will be updated
+		vsyncCounter.CycleT = vSyncInfo.Render;		// Amount of cycles before the counter will be updated
+
+		cpuRcntSet();
 	}
 
-	hsyncCounter.CycleT = vSyncInfo.hRender; // Amount of cycles before the counter will be updated
-	vsyncCounter.CycleT = vSyncInfo.Render; // Amount of cycles before the counter will be updated
+	Fixed100 fpslimit = framerate *
+		( pxAssert( EmuConfig.GS.LimitScalar > 0 ) ? EmuConfig.GS.LimitScalar : 1.0 );
 
-	if( EmuConfig.Video.EnableFrameLimiting && (EmuConfig.Video.FpsLimit > 0) )
+	//s64 debugme = GetTickFrequency() / 3000;
+	s64	ticks = (GetTickFrequency()*500) / (fpslimit * 1000).ToIntRounded();
+
+	if( m_iTicks != ticks )
 	{
-		s64 ticks = GetTickFrequency() / EmuConfig.Video.FpsLimit;
-		if( m_iTicks != ticks )
-		{
-			m_iTicks = ticks;
-			gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-			Console.WriteLn( limiterMsg, EmuConfig.Video.FpsLimit, 0 );
-		}
-	}
-	else
-	{
-		s64 ticks = (GetTickFrequency() * 50) / vSyncInfo.Framerate;
-		if( m_iTicks != ticks )
-		{
-			m_iTicks = ticks;
-			gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-			Console.WriteLn( limiterMsg, vSyncInfo.Framerate/50, (vSyncInfo.Framerate*2)%100 );
-		}
+		m_iTicks = ticks;
+		gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
+		Console.WriteLn( "(UpdateVSyncRate) FPS Limit Changed : %.02f fps", fpslimit.ToFloat()*2 );
 	}
 
 	m_iStart = GetCPUTicks();
-	cpuRcntSet();
+
+	XMMRegisters::Thaw();
+	MMXRegisters::Thaw();
 
 	return (u32)m_iTicks;
 }
@@ -289,16 +297,11 @@ extern int limitOn;
 static __forceinline void frameLimit()
 {
 	// 999 means the user would rather just have framelimiting turned off...
-	if( /*!EmuConfig.Video.EnableFrameLimiting*/ !limitOn || EmuConfig.Video.FpsLimit >= 999 ) return;
+	if( !EmuConfig.GS.FrameLimitEnable ) return;
 
-	s64 sDeltaTime;
-	u64 uExpectedEnd;
-	u64 iEnd;
-
-	uExpectedEnd = m_iStart + m_iTicks;
-	iEnd = GetCPUTicks();
-
-	sDeltaTime = iEnd - uExpectedEnd;
+	u64 uExpectedEnd	= m_iStart + m_iTicks;
+	u64 iEnd			= GetCPUTicks();
+	s64 sDeltaTime		= iEnd - uExpectedEnd;
 
 	// If the framerate drops too low, reset the expected value.  This avoids
 	// excessive amounts of "fast forward" syndrome which would occur if we
@@ -307,12 +310,6 @@ static __forceinline void frameLimit()
 	if( sDeltaTime > m_iTicks*8 )
 	{
 		m_iStart = iEnd - m_iTicks;
-
-		// Let the GS Skipper know we lost time.
-		// Keeps the GS skipper from trying to catch up to a framerate
-		// that the limiter already gave up on.
-
-		gsSyncLimiterLostTime( (s32)(m_iStart - uExpectedEnd) );
 		return;
 	}
 
@@ -386,7 +383,7 @@ static __forceinline void VSyncEnd(u32 sCycle)
 
 	iFrame++;
 
-	gsPostVsyncEnd( true );
+	gsPostVsyncEnd();
 
 	hwIntcIrq(INTC_VBLANK_E);  // HW Irq
 	psxVBlankEnd(); // psxCounters vBlank End

@@ -85,7 +85,7 @@ void pxLogTextCtrl::OnResize( wxSizeEvent& evt )
 	int fonty;
 	GetTextExtent( L"blaH yeah", NULL, &fonty );
 	m_win32_LinesPerPage	= (ctrly / fonty) + 1;
-	m_win32_LinesPerScroll	= m_win32_LinesPerPage * 0.72;
+	m_win32_LinesPerScroll	= m_win32_LinesPerPage * 0.25;
 #endif
 
 	evt.Skip();

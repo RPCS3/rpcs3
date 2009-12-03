@@ -42,15 +42,7 @@ static const uint m_vuMemSize =
 	0x1000 +					// VU0micro memory
 	0x4000+0x800 +				// VU0 memory and VU1 registers
 	0x4000 +					// VU1 memory
-	0x4000;/* +					// VU1micro memory
-	0x4000;		*/				// HACKFIX (see below)
-
-// HACKFIX!  (air)
-// The VIFdma1 has a nasty habit of transferring data into the 4k page of memory above
-// the VU1. (oops!!)  This happens to be recLUT most of the time, which causes rapid death
-// of our emulator.  So we allocate some extra space here to keep VIF1 a little happier.
-
-// fixme - When the VIF is fixed, remove the third +0x4000 above. :)
+	0x4000;
 
 void vuMicroMemAlloc()
 {

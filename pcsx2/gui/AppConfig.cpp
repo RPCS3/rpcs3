@@ -399,14 +399,19 @@ void AppConfig::LoadSave( IniInterface& ini )
 	LoadSaveMemcards( ini );
 
 	// Process various sub-components:
-	ProgLogBox.LoadSave( ini, L"ProgramLog" );
-	Ps2ConBox.LoadSave( ini, L"Ps2Console" );
+	ProgLogBox		.LoadSave( ini, L"ProgramLog" );
+	Ps2ConBox		.LoadSave( ini, L"Ps2Console" );
 
-	Folders.LoadSave( ini );
-	BaseFilenames.LoadSave( ini );
+	Folders			.LoadSave( ini );
+	BaseFilenames	.LoadSave( ini );
+	GSWindow		.LoadSave( ini );
+
+	// Load Emulation options and apply some defaults overtop saved items, which are regulated
+	// by the PCSX2 UI.
 
 	EmuOptions.LoadSave( ini );
-	GSWindow.LoadSave( ini );
+	if( ini.IsLoading() )
+		EmuOptions.GS.LimitScalar = GSWindow.NominalScalar;
 
 	ini.Flush();
 }
@@ -444,18 +449,18 @@ void AppConfig::FolderOptions::ApplyDefaults()
 }
 
 // ------------------------------------------------------------------------
-AppConfig::FolderOptions::FolderOptions() :
-	bitset( 0xffffffff )
-,	Plugins		( PathDefs::GetPlugins() )
-,	Bios		( PathDefs::GetBios() )
-,	Snapshots	( PathDefs::GetSnapshots() )
-,	Savestates	( PathDefs::GetSavestates() )
-,	MemoryCards	( PathDefs::GetMemoryCards() )
-,	Logs		( PathDefs::GetLogs() )
+AppConfig::FolderOptions::FolderOptions()
+	: Plugins		( PathDefs::GetPlugins() )
+	, Bios			( PathDefs::GetBios() )
+	, Snapshots		( PathDefs::GetSnapshots() )
+	, Savestates	( PathDefs::GetSavestates() )
+	, MemoryCards	( PathDefs::GetMemoryCards() )
+	, Logs			( PathDefs::GetLogs() )
 
-,	RunIso( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
-,	RunELF( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
+	, RunIso( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
+	, RunELF( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
 {
+	bitset = 0xffffffff;
 }
 
 void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
@@ -518,8 +523,12 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 }
 
 // ------------------------------------------------------------------------
-AppConfig::GSOptions::GSOptions()
+AppConfig::GSWindowOptions::GSWindowOptions()
 {
+	NominalScalar			= 1.0;
+	TurboScalar				= 3.0;
+	SlomoScalar				= 0.33;
+
 	CloseOnEsc				= true;
 	DefaultToFullscreen		= false;
 	AlwaysHideMouse			= false;
@@ -532,9 +541,13 @@ AppConfig::GSOptions::GSOptions()
 	IsMaximized				= false;
 }
 
-void AppConfig::GSOptions::SanityCheck()
+void AppConfig::GSWindowOptions::SanityCheck()
 {
 	// Ensure Conformation of various options...
+
+	NominalScalar	.ConfineTo( 0.05, 10.0 );
+	TurboScalar		.ConfineTo( 0.05, 10.0 );
+	SlomoScalar		.ConfineTo( 0.05, 10.0 );
 
 	WindowSize.x = std::max( WindowSize.x, 8 );
 	WindowSize.x = std::min( WindowSize.x, wxGetDisplayArea().GetWidth()-16 );
@@ -550,12 +563,15 @@ void AppConfig::GSOptions::SanityCheck()
 		AspectRatio = AspectRatio_4_3;
 }
 
-void AppConfig::GSOptions::LoadSave( IniInterface& ini )
+void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 {
 	IniScopedGroup path( ini, L"GSWindow" );
-	
-	GSOptions defaults;
-	
+	GSWindowOptions defaults;
+
+	IniEntry( NominalScalar );
+	IniEntry( TurboScalar );
+	IniEntry( SlomoScalar );
+
 	IniEntry( CloseOnEsc );
 	IniEntry( DefaultToFullscreen );
 	IniEntry( AlwaysHideMouse );
@@ -573,7 +589,7 @@ void AppConfig::GSOptions::LoadSave( IniInterface& ini )
 		
 	ini.EnumEntry( L"AspectRatio", AspectRatio, AspectRatioNames, defaults.AspectRatio );
 
-	DisableResizeBorders	= false;
+	if( ini.IsLoading() ) SanityCheck();
 }
 
 wxFileConfig* OpenFileConfig( const wxString& filename )

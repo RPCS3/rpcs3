@@ -48,12 +48,13 @@ GSPanel::GSPanel( wxWindow* parent )
 	: wxWindow()
 	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>	( this, OnSettingsApplied ) )
 	, m_HideMouseTimer( this )
-
 {
 	m_CursorShown = true;
 
 	if ( !wxWindow::Create(parent, wxID_ANY) )
 		throw Exception::RuntimeError( "GSPanel constructor esplode!!" );
+
+	SetName( L"GSPanel" );
 
 	InitDefaultAccelerators();
 
@@ -115,7 +116,7 @@ void GSPanel::DoResize()
 			if( client.x/16 <= client.y/9 )
 				viewport.y = (int)(client.x * (9.0/16.0));
 			else
-				viewport.x = (int)(client.y * (9.0/16.0));
+				viewport.x = (int)(client.y * (16.0/9.0));
 		break;
 	}
 
@@ -182,6 +183,10 @@ void __evt_fastcall GSPanel::OnSettingsApplied( void* obj, int& evt )
 	panel->DoShowMouse();
 }
 
+// --------------------------------------------------------------------------------------
+//  GSFrame
+// --------------------------------------------------------------------------------------
+
 GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	: wxFrame(parent, wxID_ANY, title,
 		g_Conf->GSWindow.WindowPos, wxSize( 640, 480 ), 
@@ -193,11 +198,12 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 
 	SetClientSize( g_Conf->GSWindow.WindowSize );
 
-	m_gspanel = new GSPanel( this );
+	m_gspanel	= new GSPanel( this );
 
-	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler	(GSFrame::OnCloseWindow) );
-	Connect( wxEVT_MOVE,			wxMoveEventHandler	(GSFrame::OnMove) );
-	Connect( wxEVT_SIZE,			wxSizeEventHandler	(GSFrame::OnResize) );
+	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(GSFrame::OnCloseWindow) );
+	Connect( wxEVT_MOVE,			wxMoveEventHandler		(GSFrame::OnMove) );
+	Connect( wxEVT_SIZE,			wxSizeEventHandler		(GSFrame::OnResize) );
+	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler	(GSFrame::OnActivate) );
 }
 
 GSFrame::~GSFrame() throw()
@@ -208,6 +214,12 @@ GSFrame::~GSFrame() throw()
 wxWindow* GSFrame::GetViewport()
 {
 	return m_gspanel;
+}
+
+void GSFrame::OnActivate( wxActivateEvent& evt )
+{
+	evt.Skip();
+	if( wxWindow* gsPanel = FindWindowByName(L"GSPanel") ) gsPanel->SetFocus();
 }
 
 void GSFrame::OnMove( wxMoveEvent& evt )
@@ -227,7 +239,15 @@ void GSFrame::OnMove( wxMoveEvent& evt )
 void GSFrame::OnResize( wxSizeEvent& evt )
 {
 	g_Conf->GSWindow.WindowSize	= GetClientSize();
-	m_gspanel->DoResize();
+
+	if( GSPanel* gsPanel = (GSPanel*)FindWindowByName(L"GSPanel") )
+	{
+		gsPanel->DoResize();
+		gsPanel->SetFocus();
+	}
+
+	//wxPoint hudpos = wxPoint(-10,-10) + (GetClientSize() - m_hud->GetSize());
+	//m_hud->SetPosition( hudpos ); //+ GetScreenPosition() + GetClientAreaOrigin() );
 
 	// if we skip, the panel is auto-sized to fit our window anyway, which we do not want!
 	//evt.Skip();

@@ -527,6 +527,7 @@ typedef void (CALLBACK* _GSsetBaseMem)(void*);
 typedef void (CALLBACK* _GSsetGameCRC)(int, int);
 typedef void (CALLBACK* _GSsetFrameSkip)(int frameskip);
 typedef void (CALLBACK* _GSsetFrameLimit)(int limit);
+typedef void (CALLBACK* _GSsetVsync)(int enabled);
 typedef int (CALLBACK* _GSsetupRecording)(int, void*);
 typedef void (CALLBACK* _GSreset)();
 typedef void (CALLBACK* _GSwriteCSR)(u32 value);
@@ -534,8 +535,8 @@ typedef void (CALLBACK* _GSmakeSnapshot)(const char *path);
 typedef void (CALLBACK* _GSmakeSnapshot2)(const char *path, int*, int);
 
 // Worthless crap function that returns GS plugin specific data via some
-// undocumented void* to a struct.   If ant pad plugin actually relies on
-// this info, it deserves to fail new nwer pcsx2s.  -- air
+// undocumented void* to a struct.   If any pad plugin actually relies on
+// this info, it deserves to fail new newer pcsx2s.  -- air
 //typedef void (CALLBACK* _GSgetDriverInfo)(GSdriverInfo *info);
 
 // PAD
@@ -673,17 +674,18 @@ extern _GSreadFIFO        GSreadFIFO;
 extern _GSreadFIFO2       GSreadFIFO2;
 
 extern _GSchangeSaveState GSchangeSaveState;
-extern _GSmakeSnapshot	   GSmakeSnapshot;
+extern _GSmakeSnapshot	  GSmakeSnapshot;
 extern _GSmakeSnapshot2   GSmakeSnapshot2;
-extern _GSirqCallback 	   GSirqCallback;
-extern _GSprintf      	   GSprintf;
-extern _GSsetBaseMem 	   GSsetBaseMem;
-extern _GSsetGameCRC		GSsetGameCRC;
-extern _GSsetFrameSkip	   GSsetFrameSkip;
-extern _GSsetFrameLimit	   GSsetFrameLimit;
-extern _GSsetupRecording GSsetupRecording;
-extern _GSreset		   GSreset;
-extern _GSwriteCSR		   GSwriteCSR;
+extern _GSirqCallback 	  GSirqCallback;
+extern _GSprintf      	  GSprintf;
+extern _GSsetBaseMem 	  GSsetBaseMem;
+extern _GSsetGameCRC	  GSsetGameCRC;
+extern _GSsetFrameSkip	  GSsetFrameSkip;
+extern _GSsetFrameLimit	  GSsetFrameLimit;
+extern _GSsetVsync	      GSsetVsync;
+extern _GSsetupRecording  GSsetupRecording;
+extern _GSreset			  GSreset;
+extern _GSwriteCSR		  GSwriteCSR;
 
 // PAD
 extern _PADopen           PADopen;

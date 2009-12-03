@@ -17,8 +17,12 @@
 
 // Dependencies.h : Contains classes required by all Utilities headers.
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// DeclareNoncopyableObject
+// This should prove useful....
+#define wxsFormat wxString::Format
+
+// --------------------------------------------------------------------------------------
+//  DeclareNoncopyableObject
+// --------------------------------------------------------------------------------------
 // This macro provides an easy and clean method for ensuring objects are not copyable.
 // Simply add the macro to the head or tail of your class declaration, and attempts to
 // copy the class will give you a moderately obtuse compiler error that will have you

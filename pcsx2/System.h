@@ -53,6 +53,9 @@ protected:
 	void CleanupMess() throw();
 };
 
+// GetSysCoreAlloc - this function is not implemented by PCSX2 core -- it must be
+// implemented by the provisioning interface.
+extern SysCoreAllocations& GetSysCoreAlloc();
 
 extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!

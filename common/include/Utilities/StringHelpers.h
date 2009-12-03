@@ -17,7 +17,6 @@
 
 #include "Dependencies.h"
 
-#include <wx/string.h>
 #include <wx/tokenzr.h>
 #include <wx/gdicmn.h>		// for wxPoint/wxRect stuff
 
@@ -28,9 +27,6 @@ extern wxString fromAscii( const char* src );
 
 // wxWidgets lacks one of its own...
 extern const wxRect wxDefaultRect;
-
-// This should prove useful....
-#define wxsFormat wxString::Format
 
 extern void SplitString( wxArrayString& dest, const wxString& src, const wxString& delims, wxStringTokenizerMode mode = wxTOKEN_RET_EMPTY_ALL );
 extern void JoinString( wxString& dest, const wxArrayString& src, const wxString& separator );

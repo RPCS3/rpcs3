@@ -23,6 +23,10 @@ struct VUmicroCpu
 	void (*Step)();
 	void (*ExecuteBlock)();	// VUs should support block-level execution only.
 	void (__fastcall *Clear)(u32 Addr, u32 Size);
+
+	// this boolean indicates to some generic logging facilities if the VU's registers
+	// are valid for logging or not. (see DisVU1Micro.cpp, etc)
+	bool IsInterpreter;
 };
 
 extern VUmicroCpu CpuVU0;

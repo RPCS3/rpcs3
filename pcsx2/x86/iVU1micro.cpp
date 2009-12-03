@@ -297,4 +297,6 @@ const VUmicroCpu recVU1 =
 ,	recStep
 ,	recExecuteBlock
 ,	recClear
+
+,	false
 };

@@ -435,17 +435,18 @@ void AppApplySettings( const AppConfig* oldconf )
 
 	int toSend = 0;
 	sApp.Source_SettingsApplied().Dispatch( toSend );
+	suspend_core.Resume();
 }
 
 static wxFileConfig _dud_config;
 
-AppIniSaver::AppIniSaver() :
-	IniSaver( (GetAppConfig() != NULL) ? *GetAppConfig() : _dud_config )
+AppIniSaver::AppIniSaver()
+	: IniSaver( (GetAppConfig() != NULL) ? *GetAppConfig() : _dud_config )
 {
 }
 
-AppIniLoader::AppIniLoader() :
-	IniLoader( (GetAppConfig() != NULL) ? *GetAppConfig() : _dud_config )
+AppIniLoader::AppIniLoader()
+	: IniLoader( (GetAppConfig() != NULL) ? *GetAppConfig() : _dud_config )
 {
 }
 
@@ -655,4 +656,9 @@ SysCoreThread& GetCoreThread()
 SysMtgsThread& GetMTGS()
 {
 	return mtgsThread;
+}
+
+SysCoreAllocations& GetSysCoreAlloc()
+{
+	return *wxGetApp().m_CoreAllocs;
 }

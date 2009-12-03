@@ -74,7 +74,6 @@ enum MTGS_RingCommand
 ,	GS_RINGTYPE_WRITECSR
 ,	GS_RINGTYPE_MODECHANGE		// for issued mode changes.
 ,	GS_RINGTYPE_CRC
-,	GS_RINGTYPE_STARTTIME		// special case for min==max fps frameskip settings
 };
 
 
@@ -151,7 +150,7 @@ public:
 
 	u8* GetDataPacketPtr() const;
 	void SetEvent();
-	void PostVsyncEnd( bool updategs );
+	void PostVsyncEnd();
 
 protected:
 	void OpenPlugin();
@@ -171,10 +170,10 @@ protected:
 	void ExecuteTaskInThread();
 };
 
-// GetMtgsThread() is a required external implementation. This function is *NOT*
-// provided by the PCSX2 core library.  It provides an interface for the linking User
-// Interface apps or DLLs to reference their own instance of SysMtgsThread (also allowing
-// them to extend the class and override virtual methods).
+// GetMTGS() is a required external implementation. This function is *NOT* provided
+// by the PCSX2 core library.  It provides an interface for the linking User Interface 
+// apps or DLLs to reference their own instance of SysMtgsThread (also allowing them 
+// to extend the class and override virtual methods).
 //
 SysMtgsThread& GetMTGS();
 
@@ -185,17 +184,14 @@ extern void gsInit();
 extern s32 gsOpen();
 extern void gsClose();
 extern void gsReset();
-extern void gsOnModeChanged( u32 framerate, u32 newTickrate );
+extern void gsOnModeChanged( Fixed100 framerate, u32 newTickrate );
 extern void gsSetRegionMode( GS_RegionMode isPal );
 extern void gsResetFrameSkip();
-extern void gsSyncLimiterLostTime( s32 deltaTime );
-extern void gsDynamicSkipEnable();
-extern void gsPostVsyncEnd( bool updategs );
-extern void gsFrameSkip( bool forceskip );
+extern void gsPostVsyncEnd();
+extern void gsFrameSkip();
 
 // Some functions shared by both the GS and MTGS
 extern void _gs_ResetFrameskip();
-extern void _gs_ChangeTimings( u32 framerate, u32 iTicks );
 
 
 // used for resetting GIF fifo
@@ -222,7 +218,6 @@ extern u64  gsRead64(u32 mem);
 void gsIrq();
 
 extern u32 CSRw;
-extern u64 m_iSlowStart;
 
 // GS Playback
 enum gsrun

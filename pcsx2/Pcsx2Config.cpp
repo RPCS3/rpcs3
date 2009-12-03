@@ -204,35 +204,38 @@ void Pcsx2Config::CpuOptions::LoadSave( IniInterface& ini )
 	Recompiler.LoadSave( ini );
 }
 
-Pcsx2Config::VideoOptions::VideoOptions()
+Pcsx2Config::GSOptions::GSOptions()
 {
-	EnableFrameLimiting		= false;
-	EnableFrameSkipping		= false;
+	FrameLimitEnable		= true;
+	FrameSkipEnable			= false;
 	
 	SynchronousMTGS			= false;
 	
 	DefaultRegionMode		= Region_NTSC;
-	FpsTurbo				= 60*4;
-	FpsLimit				= 60;
-	FpsSkip					= 55;
 	ConsecutiveFrames		= 2;
-	ConsecutiveSkip			= 1;
+	ConsecutiveSkip			= 2;
+
+	LimitScalar				= 1.0;
+	FramerateNTSC			= 59.94;
+	FrameratePAL			= 50.0;
 }
 
-void Pcsx2Config::VideoOptions::LoadSave( IniInterface& ini )
+void Pcsx2Config::GSOptions::LoadSave( IniInterface& ini )
 {
-	VideoOptions defaults;
-	IniScopedGroup path( ini, L"Video" );
+	GSOptions defaults;
+	IniScopedGroup path( ini, L"GS" );
 
-	IniEntry( EnableFrameLimiting );
-	IniEntry( EnableFrameSkipping );
+	IniEntry( FrameLimitEnable );
+	IniEntry( FrameSkipEnable );
+	IniEntry( VsyncEnable );
+
+	IniEntry( LimitScalar );
+	IniEntry( FramerateNTSC );
+	IniEntry( FrameratePAL );
 
 	static const wxChar * const ntsc_pal_str[2] =  { L"ntsc", L"pal" };
 	ini.EnumEntry( L"DefaultRegionMode", DefaultRegionMode, ntsc_pal_str, defaults.DefaultRegionMode );
 
-	IniEntry( FpsTurbo );
-	IniEntry( FpsLimit );
-	IniEntry( FpsSkip );
 	IniEntry( ConsecutiveFrames );
 	IniEntry( ConsecutiveSkip );
 }
@@ -251,9 +254,9 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( XgKickHack );
 }
 
-Pcsx2Config::Pcsx2Config() :
-	bitset( 0 )
+Pcsx2Config::Pcsx2Config()
 {
+	bitset = 0;
 }
 
 void Pcsx2Config::LoadSave( IniInterface& ini )
@@ -274,13 +277,14 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 
 	// Process various sub-components:
 
-	Speedhacks.LoadSave( ini );
-	Cpu.LoadSave( ini );
-	Video.LoadSave( ini );
-	Gamefixes.LoadSave( ini );
-	Profiler.LoadSave( ini );
+	Speedhacks		.LoadSave( ini );
+	Cpu				.LoadSave( ini );
+	GS				.LoadSave( ini );
+	Gamefixes		.LoadSave( ini );
+	Profiler		.LoadSave( ini );
 
-	Trace.LoadSave( ini );
+	Trace			.LoadSave( ini );
+	Log				.LoadSave( ini );
 
 	ini.Flush();
 }

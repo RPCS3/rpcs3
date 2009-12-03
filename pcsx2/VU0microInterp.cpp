@@ -240,4 +240,6 @@ const VUmicroCpu intVU0 =
 ,	intStep
 ,	intExecuteBlock
 ,	intClear
+
+,	true
 };

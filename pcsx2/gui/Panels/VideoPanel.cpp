@@ -260,17 +260,17 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 
 	*this		+= s_table	| pxExpand;
 
-	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.Video.SynchronousMTGS );
+	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
 }
 
 void Panels::VideoPanel::Apply()
 {
-	g_Conf->EmuOptions.Video.SynchronousMTGS = m_check_SynchronousGS->GetValue();
+	g_Conf->EmuOptions.GS.SynchronousMTGS = m_check_SynchronousGS->GetValue();
 }
 
 void Panels::GSWindowSettingsPanel::OnSettingsChanged()
 {
-	const AppConfig::GSOptions& conf( g_Conf->GSWindow );
+	const AppConfig::GSWindowOptions& conf( g_Conf->GSWindow );
 
 	m_check_CloseGS		->SetValue( conf.CloseOnEsc );
 	m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
@@ -279,6 +279,8 @@ void Panels::GSWindowSettingsPanel::OnSettingsChanged()
 
 	m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
 
+	m_check_VsyncEnable	->SetValue( g_Conf->EmuOptions.GS.VsyncEnable );
+
 	m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
 	m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
 
@@ -286,14 +288,17 @@ void Panels::GSWindowSettingsPanel::OnSettingsChanged()
 
 void Panels::GSWindowSettingsPanel::Apply()
 {
-	AppConfig::GSOptions& gsopt( g_Conf->GSWindow );
-	
-	gsopt.CloseOnEsc			= m_check_CloseGS	->GetValue();
-	gsopt.DefaultToFullscreen	= m_check_Fullscreen->GetValue();
-	gsopt.AlwaysHideMouse		= m_check_HideMouse	->GetValue();
-	gsopt.DisableResizeBorders	= m_check_SizeLock	->GetValue();
+	AppConfig::GSWindowOptions& appconf( g_Conf->GSWindow );
+	Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
 
-	gsopt.AspectRatio			= (AspectRatioType)m_combo_AspectRatio->GetSelection();
+	appconf.CloseOnEsc				= m_check_CloseGS	->GetValue();
+	appconf.DefaultToFullscreen		= m_check_Fullscreen->GetValue();
+	appconf.AlwaysHideMouse			= m_check_HideMouse	->GetValue();
+	appconf.DisableResizeBorders	= m_check_SizeLock	->GetValue();
+
+	appconf.AspectRatio		= (AspectRatioType)m_combo_AspectRatio->GetSelection();
+
+	gsconf.VsyncEnable		= m_check_VsyncEnable->GetValue();
 
 	long xr, yr;
 
@@ -303,21 +308,43 @@ void Panels::GSWindowSettingsPanel::Apply()
 			_("Invalid window dimensions specified: Size cannot contain non-numeric digits! >_<")
 		);
 
-	gsopt.WindowSize.x	= xr;
-	gsopt.WindowSize.y	= yr;
+	appconf.WindowSize.x	= xr;
+	appconf.WindowSize.y	= yr;
 }
 
 
 void Panels::FramelimiterPanel::OnSettingsChanged()
 {
-	const Pcsx2Config::VideoOptions& conf( g_Conf->EmuOptions.Video );
+	const AppConfig::GSWindowOptions& appconf( g_Conf->GSWindow );
+	const Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
 
-	// TODO : Apply options from config *to* checkboxes (once video config struct is implemented)
+	m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
+
+	m_spin_NominalPct	->SetValue( (appconf.NominalScalar * 100).ToIntRounded() );
+	m_spin_TurboPct		->SetValue( (appconf.TurboScalar * 100).ToIntRounded() );
+	m_spin_TurboPct		->SetValue( (appconf.SlomoScalar * 100).ToIntRounded() );
+	
+	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
+	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
 }
 
 void Panels::FramelimiterPanel::Apply()
 {
-	Pcsx2Config::VideoOptions& conf( g_Conf->EmuOptions.Video );
+	AppConfig::GSWindowOptions& appconf( g_Conf->GSWindow );
+	Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
 
-	// TODO : Apply options from checkboxes (once video config struct is is implemented)
+	gsconf.FrameLimitEnable	= !m_check_LimiterDisable->GetValue();
+
+	appconf.NominalScalar	= m_spin_NominalPct	->GetValue();
+	appconf.TurboScalar		= m_spin_TurboPct	->GetValue();
+	appconf.SlomoScalar		= m_spin_SlomoPct	->GetValue();
+
+	double ntsc, pal;
+	if( !m_text_BaseNtsc->GetValue().ToDouble( &ntsc ) || 
+		!m_text_BasePal	->GetValue().ToDouble( &pal )
+	)
+		throw Exception::CannotApplySettings( this, wxLt("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics.") );
+
+	gsconf.FramerateNTSC	= ntsc;
+	gsconf.FrameratePAL	= pal;
 }

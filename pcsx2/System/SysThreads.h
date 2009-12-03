@@ -187,6 +187,7 @@ class SysCoreThread : public SysThreadBase
 protected:
 	bool			m_resetRecompilers;
 	bool			m_resetProfilers;
+	bool			m_resetVsyncTimers;
 	bool			m_resetVirtualMachine;
 	bool			m_hasValidState;
 
@@ -223,6 +224,7 @@ public:
 
 protected:
 	void CpuInitializeMess();
+	void _reset_stuff_as_needed();
 
 	virtual void Start();
 	virtual void OnSuspendInThread();
@@ -252,8 +254,17 @@ struct ScopedCoreThreadSuspend
 	bool m_ResumeWhenDone;
 
 	ScopedCoreThreadSuspend();
-	void Resume();
 	virtual ~ScopedCoreThreadSuspend() throw();
+	virtual void Resume();
+};
+
+struct ScopedCoreThreadPause
+{
+	bool m_ResumeWhenDone;
+
+	ScopedCoreThreadPause();
+	virtual ~ScopedCoreThreadPause() throw();
+	virtual void Resume();
 };
 
 // GetCoreThread() is a required external implementation. This function is *NOT*

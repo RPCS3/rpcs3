@@ -55,8 +55,10 @@ using namespace VU0micro;
 
 const VUmicroCpu recVU0 = 
 {
-		recReset
-	,	recStep
-	,	recExecuteBlock
-	,	recClear
+	recReset
+,	recStep
+,	recExecuteBlock
+,	recClear
+
+,	false
 };

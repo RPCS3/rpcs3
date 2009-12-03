@@ -258,6 +258,16 @@ struct ConsoleLogFilters
 
 	ConsoleLogFilters();
 	void LoadSave( IniInterface& ini );
+
+	bool operator ==( const ConsoleLogFilters& right ) const
+	{
+		return OpEqu( bitset );
+	}
+
+	bool operator !=( const ConsoleLogFilters& right ) const
+	{
+		return !this->operator ==( right );
+	}
 };
 
 // --------------------------------------------------------------------------------------
@@ -371,43 +381,49 @@ struct Pcsx2Config
 	};
 
 	// ------------------------------------------------------------------------
-	struct VideoOptions
+	struct GSOptions
 	{
 		// forces the MTGS to execute tags/tasks in fully blocking/synchronous
 		// style.  Useful for debugging potential bugs in the MTGS pipeline.
-		bool SynchronousMTGS;
-		
-		bool EnableFrameLimiting;
-		bool EnableFrameSkipping;
+		bool	SynchronousMTGS;
 
+		bool	FrameLimitEnable;
+		bool	FrameSkipEnable;
+		bool	VsyncEnable;
+		
 		// The region mode controls the default Maximum/Minimum FPS settings and also
 		// regulates the vsync rates (which in turn control the IOP's SPU2 tick sync and ensure
 		// proper audio playback speed).
-		int DefaultRegionMode;	// 0=NTSC and 1=PAL
+		int		DefaultRegionMode;	// 0=NTSC and 1=PAL
 
-		int FpsTurbo;			// Limiting kicks in if fps goes beyond this (turbo enabled)
-		int FpsLimit;			// Limiting kicks in if fps goes beyond this line
-		int FpsSkip;			// Skipping kicks in if fps drops below this line
-		int ConsecutiveFrames;	// number of consecutive frames (fields) to render
-		int ConsecutiveSkip;	// number of consecutive frames (fields) to skip
+		int		ConsecutiveFrames;	// number of consecutive frames (fields) to render
+		int		ConsecutiveSkip;	// number of consecutive frames (fields) to skip
 
-		VideoOptions();
+		Fixed100	LimitScalar;
+		Fixed100	FramerateNTSC;
+		Fixed100	FrameratePAL;
+
+		GSOptions();
 		void LoadSave( IniInterface& conf );
 
-		bool operator ==( const VideoOptions& right ) const
+		bool operator ==( const GSOptions& right ) const
 		{
 			return
-				OpEqu( EnableFrameSkipping )	&&
-				OpEqu( EnableFrameLimiting )	&&
+				OpEqu( SynchronousMTGS )		&&
+				OpEqu( FrameSkipEnable )		&&
+				OpEqu( FrameLimitEnable )		&&
+				OpEqu( VsyncEnable )			&&
+
+				OpEqu( LimitScalar )			&&
+				OpEqu( FramerateNTSC )			&&
+				OpEqu( FrameratePAL )			&&
+
 				OpEqu( DefaultRegionMode )		&&
-				OpEqu( FpsTurbo )				&&
-				OpEqu( FpsLimit )				&&
-				OpEqu( FpsSkip )				&&
 				OpEqu( ConsecutiveFrames )		&&
 				OpEqu( ConsecutiveSkip );
 		}
 
-		bool operator !=( const VideoOptions& right ) const
+		bool operator !=( const GSOptions& right ) const
 		{
 			return !this->operator ==( right );
 		}
@@ -475,15 +491,15 @@ struct Pcsx2Config
 
 	BITFIELD32()
 		bool
-			CdvdVerboseReads:1,		// enables cdvd read activity verbosely dumped to the console
-			CdvdDumpBlocks:1,		// enables cdvd block dumping
-			EnablePatches:1,		// enables patch detection and application
+			CdvdVerboseReads	:1,		// enables cdvd read activity verbosely dumped to the console
+			CdvdDumpBlocks		:1,		// enables cdvd block dumping
+			EnablePatches		:1,		// enables patch detection and application
 
 		// when enabled performs bios stub execution, skipping full sony bios + splash screens
-			SkipBiosSplash:1,
+			SkipBiosSplash		:1,
 
 		// enables simulated ejection of memory cards when loading savestates
-			McdEnableEjection:1,
+			McdEnableEjection	:1,
 
 			MultitapPort0_Enabled:1,
 			MultitapPort1_Enabled:1,
@@ -492,7 +508,7 @@ struct Pcsx2Config
 	BITFIELD_END
 
 	CpuOptions			Cpu;
-	VideoOptions		Video;
+	GSOptions			GS;
 	SpeedhackOptions	Speedhacks;
 	GamefixOptions		Gamefixes;
 	ProfilerOptions		Profiler;
@@ -517,10 +533,12 @@ struct Pcsx2Config
 		return
 			OpEqu( bitset )		&&
 			OpEqu( Cpu )		&&
-			OpEqu( Video )		&&
+			OpEqu( GS )		&&
 			OpEqu( Speedhacks )	&&
 			OpEqu( Gamefixes )	&&
 			OpEqu( Profiler )	&&
+			OpEqu( Log )		&&
+			OpEqu( Trace )		&&
 			OpEqu( BiosFilename );
 	}
 
@@ -530,23 +548,12 @@ struct Pcsx2Config
 	}
 };
 
-//////////////////////////////////////////////////////////////////////////
-// Session Configuration Override Flags
-//
-// a handful of flags that can override user configurations for the current application session
-// only.  This allows us to do things like force-disable recompilers if the memory allocations
-// for them fail.
-struct SessionOverrideFlags
-{
-	bool
-		ForceDisableEErec:1,
-		ForceDisableIOPrec:1,
-		ForceDisableVU0rec:1,
-		ForceDisableVU1rec:1;
-};
-
 extern const Pcsx2Config EmuConfig;
-extern SessionOverrideFlags g_Session;
+
+Pcsx2Config::GSOptions&	SetGSConfig();
+ConsoleLogFilters&			SetConsoleConfig();
+TraceLogFilters&			SetTraceConfig();
+
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Helper Macros for Reading Emu Configurations.
@@ -557,10 +564,10 @@ extern SessionOverrideFlags g_Session;
 #define CHECK_MACROVU0				// If defined uses mVU for VU Macro (COP2), else uses sVU
 #define CHECK_MICROVU0				(EmuConfig.Cpu.Recompiler.UseMicroVU0)
 #define CHECK_MICROVU1				(EmuConfig.Cpu.Recompiler.UseMicroVU1)
-#define CHECK_EEREC					(!g_Session.ForceDisableEErec && EmuConfig.Cpu.Recompiler.EnableEE)
-#define CHECK_IOPREC				(!g_Session.ForceDisableIOPrec && EmuConfig.Cpu.Recompiler.EnableIOP)
-#define CHECK_VU0REC				(!g_Session.ForceDisableVU0rec && EmuConfig.Cpu.Recompiler.EnableVU0)
-#define CHECK_VU1REC				(!g_Session.ForceDisableVU1rec && EmuConfig.Cpu.Recompiler.EnableVU1)
+#define CHECK_EEREC					(EmuConfig.Cpu.Recompiler.EnableEE && GetSysCoreAlloc().RecSuccess_EE)
+#define CHECK_IOPREC				(EmuConfig.Cpu.Recompiler.EnableIOP && GetSysCoreAlloc().RecSuccess_IOP)
+#define CHECK_VU0REC				(EmuConfig.Cpu.Recompiler.EnableVU0 && GetSysCoreAlloc().RecSuccess_VU0)
+#define CHECK_VU1REC				(EmuConfig.Cpu.Recompiler.EnableVU1 && GetSysCoreAlloc().RecSuccess_VU1)
 
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define NUM_OF_GAME_FIXES 7

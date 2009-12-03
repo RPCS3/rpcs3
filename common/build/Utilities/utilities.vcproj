@@ -466,6 +466,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\FixedPointTypes.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\Utilities\General.h"
 				>
 			</File>

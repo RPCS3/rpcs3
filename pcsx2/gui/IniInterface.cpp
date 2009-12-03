@@ -141,6 +141,16 @@ int IniLoader::EntryBitfield( const wxString& var, int value, const int defvalue
 	return result;
 }
 
+void IniLoader::Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue )
+{
+	// Note: the "easy" way would be to convert to double and load/save that, but floating point
+	// has way too much rounding error so we really need to do things out manually.. >_<
+
+	wxString readval( value.ToString() );
+	m_Config.Read( var, &readval );
+	value = Fixed100::FromString( readval, value );
+}
+
 void IniLoader::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
 {
 	TryParse( value, m_Config.Read( var, ToString( defvalue ) ), defvalue );
@@ -239,6 +249,14 @@ int IniSaver::EntryBitfield( const wxString& var, int value, const int defvalue 
 {
 	m_Config.Write( var, value );
 	return value;
+}
+
+void IniSaver::Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue )
+{
+	// Note: the "easy" way would be to convert to double and load/save that, but floating point
+	// has way too much rounding error so we really need to do things out manually, using strings.
+
+	m_Config.Write( var, value.ToString() );
 }
 
 void IniSaver::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )

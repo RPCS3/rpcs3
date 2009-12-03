@@ -92,7 +92,7 @@ struct SyncCounter
 //------------------------------------------------------------------
 // NTSC Timing Information!!! (some scanline info is guessed)
 //------------------------------------------------------------------
-#define FRAMERATE_NTSC			2997// frames per second * 100 (29.97)
+#define FRAMERATE_NTSC			29.97 // frames per second
 
 #define SCANLINES_TOTAL_NTSC	525 // total number of scanlines
 #define SCANLINES_VSYNC_NTSC	3   // scanlines that are used for syncing every half-frame
@@ -103,7 +103,7 @@ struct SyncCounter
 //------------------------------------------------------------------
 // PAL Timing Information!!! (some scanline info is guessed)
 //------------------------------------------------------------------
-#define FRAMERATE_PAL			2500// frames per second * 100 (25)
+#define FRAMERATE_PAL			25.0// frames per second * 100 (25)
 
 #define SCANLINES_TOTAL_PAL		625 // total number of scanlines per frame
 #define SCANLINES_VSYNC_PAL		5   // scanlines that are used for syncing every half-frame
@@ -145,7 +145,7 @@ extern void rcntWhold(int index, u32 value);
 extern u32	rcntRcount(int index);
 extern u32	rcntCycle(int index);
 
-u32 UpdateVSyncRate();
-void frameLimitReset();
+extern u32 UpdateVSyncRate();
+extern void frameLimitReset();
 
 #endif /* __COUNTERS_H__ */

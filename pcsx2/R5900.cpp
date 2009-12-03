@@ -550,7 +550,7 @@ __forceinline void cpuTestHwInts() {
 void cpuExecuteBios()
 {
 	// Set the video mode to user's default request:
-	gsSetRegionMode( (GS_RegionMode)EmuConfig.Video.DefaultRegionMode );
+	gsSetRegionMode( (GS_RegionMode)EmuConfig.GS.DefaultRegionMode );
 
 	Console.WriteLn( "Executing Bios Stub..." );
 

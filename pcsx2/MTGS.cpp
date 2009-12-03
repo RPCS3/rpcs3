@@ -148,9 +148,9 @@ void SysMtgsThread::ResetGS()
 	GIFPath_Reset();
 }
 
-void SysMtgsThread::PostVsyncEnd( bool updategs )
+void SysMtgsThread::PostVsyncEnd()
 {
-	SendSimplePacket( GS_RINGTYPE_VSYNC, (*(u32*)(PS2MEM_GS+0x1000)&0x2000), updategs, 0 );
+	SendSimplePacket( GS_RINGTYPE_VSYNC, (*(u32*)(PS2MEM_GS+0x1000)&0x2000), 0, 0 );
 	
 	// Alter-frame flushing!  Restarts the ringbuffer (wraps) on every other frame.  This is a
 	// mandatory feature that prevents the MTGS from queuing more than 2 frames at any time.
@@ -197,6 +197,8 @@ void SysMtgsThread::OpenPlugin()
 		result = GSopen2( (void*)&pDsp, 1 | (renderswitch ? 4 : 0) );
 	else
 		result = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
+
+	GSsetVsync( EmuConfig.GS.FrameLimitEnable && EmuConfig.GS.VsyncEnable );
 
 	if( result != 0 )
 	{
@@ -352,7 +354,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 						{
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Vsync, field=%u, skip=%s", tag.data[0], tag.data[1] ? "true" : "false" );
 							GSvsync(tag.data[0]);
-							gsFrameSkip( !tag.data[1] );
+							gsFrameSkip();
 
 							if( PADupdate != NULL )
 								PADupdate(0);
@@ -416,15 +418,11 @@ void SysMtgsThread::ExecuteTaskInThread()
 						break;
 
 						case GS_RINGTYPE_MODECHANGE:
-							_gs_ChangeTimings( tag.data[0], tag.data[1] );
+							// [TODO] some frameskip sync logic might be needed here!
 						break;
 
 						case GS_RINGTYPE_CRC:
 							GSsetGameCRC( tag.data[0], 0 );
-						break;
-
-						case GS_RINGTYPE_STARTTIME:
-							m_iSlowStart += tag.data[0];
 						break;
 
 #ifdef PCSX2_DEVBUILD
@@ -568,7 +566,7 @@ void SysMtgsThread::SendDataPacket()
 
 	m_WritePos = temp;
 
-	if( EmuConfig.Video.SynchronousMTGS )
+	if( EmuConfig.GS.SynchronousMTGS )
 	{
 		WaitGS();
 	}
@@ -854,7 +852,7 @@ void SysMtgsThread::RestartRingbuffer( uint packsize )
 	m_WritePos = 0;
 	m_QueuedFrameCount = 0;
 
-	if( EmuConfig.Video.SynchronousMTGS )
+	if( EmuConfig.GS.SynchronousMTGS )
 		WaitGS();
 }
 
@@ -918,7 +916,7 @@ __forceinline void SysMtgsThread::_FinishSimplePacket( uint future_writepos )
 	pxAssert( future_writepos != volatize(m_RingPos) );
 	m_WritePos = future_writepos;
 
-	if( EmuConfig.Video.SynchronousMTGS )
+	if( EmuConfig.GS.SynchronousMTGS )
 		WaitGS();
 	else
 		++m_CopyDataTally;
