@@ -33,7 +33,7 @@ namespace Tag
 
 	static __forceinline bool Transfer(const char *s, DMACh *tag, u32* ptag)
 	{
-	    tag->transfer(s, (tDMA_TAG*)ptag);
+	    return tag->transfer(s, (tDMA_TAG*)ptag);
 	}
 
 	static __forceinline void UnsafeTransfer(DMACh *tag, u32* ptag)
