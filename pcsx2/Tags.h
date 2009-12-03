@@ -64,13 +64,32 @@ enum chcr_flags
 	CHCR_STR = 0x100 	// Start. 0 while stopping DMA, 1 while it's running.
 };
 
+// Doing double duty as both the top 32 bits *and* the lower 32 bits of a chain tag.
+// Theoretically should probably both be in a u64 together, but with the way the 
+// code is layed out, this is easier for the moment.
+union tDMA_TAG {
+	struct {
+		u32 QWC : 16;
+		u32 reserved2 : 10;
+		u32 PCE : 2;
+		u32 ID : 3;
+		u32 IRQ : 1;
+	};
+	struct {
+		u32 ADDR : 31;
+		u32 SPR : 1;
+	};
+	u32 _u32;
+	
+	tDMA_TAG(u32 val) { _u32 = val; }
+};
+
 namespace Tag
 {
 	// Transfer functions,
 	static __forceinline void UpperTransfer(DMACh *tag, u32* ptag)
 	{
 		// Transfer upper part of tag to CHCR bits 31-15
-		//tag->chcr._u32 = (tag->chcr._u32 & 0xFFFF) | ((*ptag) & 0xFFFF0000);
 		tag->chcr.TAG = ((*ptag) >> 16);
 	}
 
