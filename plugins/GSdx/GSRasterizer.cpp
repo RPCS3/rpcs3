@@ -24,6 +24,24 @@
 #include "StdAfx.h"
 #include "GSRasterizer.h"
 
+#include "pthread.h"
+
+// Using a spinning finish on the main (MTGS) thread is apparently a big win still, over trying
+// to wait out all the pending m_finished semaphores.  It leaves one spinwait in the rasterizer,
+// but that's still worlds better than 2-6 spinning threads like before.
+#define UseSpinningFinish		1
+
+// Set this to 1 to remove a lot of non-const div/modulus ops from the rasterization process.
+// Might likely be a measurable speedup but limits threading to 1, 2, 4, and 8 threads.
+#define UseConstThreadCount		0
+
+#if !UseConstThreadCount
+	// ThreadsConst - const number of threads.  User-configured threads (in GSdx panel) must match
+	// this value if UseConstThreadCount is enabled. [yeah, it's hacky for now]
+	static const int ThreadsConst = 2;
+	static const int ThreadMaskConst = ThreadsConst-1;
+#endif
+
 GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads)
 	: m_ds(ds)
 	, m_id(id)
@@ -34,6 +52,15 @@ GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads)
 GSRasterizer::~GSRasterizer()
 {
 	delete m_ds;
+}
+
+__forceinline bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
+{
+#if UseConstThreadCount
+	return (ThreadMaskConst==0) || ((scanline & ThreadMaskConst) == m_id);
+#else
+	return (scanline % m_threads) == m_id;
+#endif
 }
 
 void GSRasterizer::Draw(const GSRasterizerData* data)
@@ -96,7 +123,7 @@ void GSRasterizer::DrawPoint(const GSVertexSW* v, const GSVector4i& scissor)
 
 	if(scissor.left <= p.x && p.x < scissor.right && scissor.top <= p.y && p.y < scissor.bottom)
 	{
-		if((p.y % m_threads) == m_id) 
+		if(IsOneOfMyScanlines(p.y))
 		{
 			m_dsf.ssp(v, *v);
 
@@ -458,7 +485,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 	{
 		do
 		{
-			if((top % m_threads) == m_id) 
+			if(IsOneOfMyScanlines(top)) 
 			{
 				GSVector4 lr = l.p.xyxy(r).ceil();
 
@@ -499,7 +526,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 	{
 		do
 		{
-			if((top % m_threads) == m_id) 
+			if(IsOneOfMyScanlines(top))
 			{
 				GSVector4 lr = l.p.ceil();
 
@@ -586,7 +613,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices, const GSVector4i& scis
 
 	for(; r.top < r.bottom; r.top++, scan.t += dedge.t)
 	{
-		if((r.top % m_threads) == m_id) 
+		if(IsOneOfMyScanlines(r.top)) 
 		{
 			m_dsf.ssl(r.right, r.left, r.top, scan);
 
@@ -661,7 +688,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 					int xi = x >> 16;
 					int xf = x & 0xffff;
 
-					if(scissor.left <= xi && xi < scissor.right && (xi % m_threads) == m_id)
+					if(scissor.left <= xi && xi < scissor.right && IsOneOfMyScanlines(xi))
 					{
 						m_stats.pixels++;
 
@@ -689,7 +716,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 					int xi = (x >> 16) + 1;
 					int xf = x & 0xffff;
 
-					if(scissor.left <= xi && xi < scissor.right && (xi % m_threads) == m_id)
+					if(scissor.left <= xi && xi < scissor.right && IsOneOfMyScanlines(xi))
 					{
 						m_stats.pixels++;
 
@@ -759,7 +786,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 					int yi = y >> 16;
 					int yf = y & 0xffff;
 
-					if(scissor.top <= yi && yi < scissor.bottom && (yi % m_threads) == m_id)
+					if(scissor.top <= yi && yi < scissor.bottom && IsOneOfMyScanlines(yi))
 					{
 						m_stats.pixels++;
 
@@ -787,7 +814,7 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 					int yi = (y >> 16) + 1;
 					int yf = y & 0xffff;
 
-					if(scissor.top <= yi && yi < scissor.bottom && (yi % m_threads) == m_id)
+					if(scissor.top <= yi && yi < scissor.bottom && IsOneOfMyScanlines(yi))
 					{
 						m_stats.pixels++;
 
@@ -811,108 +838,108 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 //
 
-GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, long* sync)
+GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, sem_t& finished, volatile long& sync)
 	: GSRasterizer(ds, id, threads)
+	, m_finished(finished)
 	, m_sync(sync)
 	, m_exit(false)
 	, m_data(NULL)
 {
-	if(id > 0)
-	{
-		CreateThread();
-	}
+	sem_init(&m_semaphore, false, 0);
+	sem_init(&m_stopped, false, 0);
+	CreateThread();
 }
 
 GSRasterizerMT::~GSRasterizerMT()
 {
 	m_exit = true;
+	sem_post(&m_semaphore);
+	sem_wait(&m_stopped);
+	
+	sem_destroy(&m_semaphore);
+	sem_destroy(&m_stopped);
 }
 
 void GSRasterizerMT::Draw(const GSRasterizerData* data)
 {
-	if(m_id == 0)
-	{
-		__super::Draw(data);
-	}
-	else
-	{
-		m_data = data;
-
-		_interlockedbittestandset(m_sync, m_id);
-	}
+	m_data = data;
+	sem_post(&m_semaphore);
 }
 
 void GSRasterizerMT::ThreadProc()
 {
 	// _mm_setcsr(MXCSR);
 
-	while(!m_exit)
+	while( true )
 	{
-		if(*m_sync & (1 << m_id))
-		{
-			__super::Draw(m_data);
+		sem_wait(&m_semaphore);
 
-			_interlockedbittestandreset(m_sync, m_id);
-		}
+		if(m_exit) break;
+
+		__super::Draw(m_data);
+
+		if( UseSpinningFinish )
+			_interlockedbittestandreset( &m_sync, m_id );
 		else
-		{
-			_mm_pause();
-		}
+			sem_post(&m_finished);
 	}
+	
+	sem_post(&m_stopped);
 }
 
 //
 
 GSRasterizerList::GSRasterizerList()
 {
-	// User/Source Coding Rule 24. (M impact, ML generality) Place each 
-	// synchronization variable alone, separated by 128 bytes or in a separate cache
-	// line.
-
-	m_sync = (long*)_aligned_malloc(128, 64);
-
-	*m_sync = 0;
+	m_threadcount = 0;
+	sem_init(&m_finished, false, 0);
 }
 
 GSRasterizerList::~GSRasterizerList()
 {
 	FreeRasterizers();
-
-	_aligned_free(m_sync);
+	sem_destroy(&m_finished);
 }
 
 void GSRasterizerList::FreeRasterizers()
 {
-	for_each(begin(), end(), delete_object());
+	for(unsigned i=0; i<size(); ++i) delete (*this)[i];
 
 	clear();
 }
 
 void GSRasterizerList::Draw(const GSRasterizerData* data)
 {
-	*m_sync = 0;
-
 	m_stats.Reset();
 
 	int64 start = __rdtsc();
 
-	for(list<IRasterizer*>::reverse_iterator i = rbegin(); i != rend(); i++)
+	m_sync = m_syncstart;
+
+	for(unsigned i=1; i<size(); ++i)
 	{
-		(*i)->Draw(data);
+		(*this)[i]->Draw(data);
 	}
 
-	while(*m_sync)
+	(*this)[0]->Draw(data);
+
+	if( UseSpinningFinish )
 	{
-		_mm_pause();
+		while(m_sync) _mm_pause();
+	}
+	else
+	{
+		for(unsigned i=1; i<size(); ++i )
+			sem_wait(&m_finished);
 	}
 
 	m_stats.ticks = __rdtsc() - start;
 
-	for(list<IRasterizer*>::iterator i = begin(); i != end(); i++)
+	for(unsigned i=0; i<size(); ++i)
 	{
 		GSRasterizerStats s;
 
-		(*i)->GetStats(s);
+		(*this)[i]->GetStats(s);
 
 		m_stats.pixels += s.pixels;
 		m_stats.prims = max(m_stats.prims, s.prims);

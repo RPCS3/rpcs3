@@ -27,6 +27,9 @@
 #include "GSThread.h"
 #include "GSAlignedClass.h"
 
+#include "pthread.h"
+#include "semaphore.h"
+
 __declspec(align(16)) class GSRasterizerData
 {
 public:
@@ -93,6 +96,8 @@ protected:
 
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, const GSVector4i& scissor, int orientation, int side);
 
+	inline bool IsOneOfMyScanlines(int scanline) const;
+
 public:
 	GSRasterizer(IDrawScanline* ds, int id = 0, int threads = 0);
 	virtual ~GSRasterizer();
@@ -106,14 +111,18 @@ public:
 
 class GSRasterizerMT : public GSRasterizer, private GSThread
 {
-	long* m_sync;
+protected:
+	sem_t& m_finished;
+	volatile long& m_sync;
+	sem_t m_semaphore;
+	sem_t m_stopped;
 	bool m_exit;
 	const GSRasterizerData* m_data;
 
 	void ThreadProc();
 
 public:
-	GSRasterizerMT(IDrawScanline* ds, int id, int threads, long* sync);
+	GSRasterizerMT(IDrawScanline* ds, int id, int threads, sem_t& finished, volatile long& sync);
 	virtual ~GSRasterizerMT();
 
 	// IRasterizer
@@ -121,11 +130,14 @@ public:
 	void Draw(const GSRasterizerData* data);
 };
 
-class GSRasterizerList : protected list<IRasterizer*>, public IRasterizer
+class GSRasterizerList : protected vector<IRasterizer*>, public IRasterizer
 {
-	long* m_sync;
+protected:
+	int m_threadcount;
+	sem_t m_finished;
+	volatile long m_sync;
+	long m_syncstart;
 	GSRasterizerStats m_stats;
-
 	void FreeRasterizers();
 
 public:
@@ -138,9 +150,13 @@ public:
 
 		threads = max(threads, 1); // TODO: min(threads, number of cpu cores)
 
-		for(int i = 0; i < threads; i++) 
+		push_back(new GSRasterizer(new DS(parent, 0), 0, threads));
+
+		m_syncstart = 0;
+		for(int i = 1; i < threads; i++) 
 		{
-			push_back(new GSRasterizerMT(new DS(parent, i), i, threads, m_sync));
+			push_back(new GSRasterizerMT(new DS(parent, i), i, threads, m_finished, m_sync));
+			_interlockedbittestandset(&m_syncstart, i);
 		}
 	}
 
