@@ -40,6 +40,7 @@ static void (*s_irq)() = NULL;
 static uint8* s_basemem = NULL;
 static int s_renderer = -1;
 static bool s_framelimit = true;
+static bool s_vsync = false;
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -201,6 +202,8 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 	s_gs->SetRegsMem(s_basemem);
 	s_gs->SetIrqCallback(s_irq);
+	s_gs->SetVsync(s_vsync);
+	s_gs->SetFrameLimit(s_framelimit);
 
 	if( *(HWND*)dsp == NULL )
 	{
@@ -238,8 +241,6 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 {
 	theApp.SetConfig("windowed", flags & 1);
-	//theApp.SetConfig("vsync", flags & 2);
-	//theApp.SetConfig("aspectratio", 0);		
 
 	int renderer = theApp.GetConfig("renderer", 0);
 	if( flags & 4 )
@@ -249,7 +250,6 @@ EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 
 	INT32 retval = _GSopen( dsp, NULL, renderer );
 	s_gs->SetAspectRatio(0);		// PCSX2 manages the aspect ratios
-	s_gs->SetVsync(flags & 2);
 	
 	return retval;
 }
@@ -456,10 +456,16 @@ EXPORT_C GSsetFrameSkip(int frameskip)
 	s_gs->SetFrameSkip(frameskip);
 }
 
+EXPORT_C GSsetVsync(int enabled)
+{
+	s_vsync = !!enabled;
+	if( s_gs )
+		s_gs->SetVsync(s_vsync);
+}
 
 EXPORT_C GSsetFrameLimit(int limit)
 {
-	s_framelimit = limit != 0;
+	s_framelimit = !!limit;
 	if( s_gs )
 		s_gs->SetFrameLimit(s_framelimit);
 }
