@@ -320,9 +320,9 @@ void Panels::FramelimiterPanel::OnSettingsChanged()
 
 	m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
 
-	m_spin_NominalPct	->SetValue( (appconf.NominalScalar * 100).ToIntRounded() );
-	m_spin_TurboPct		->SetValue( (appconf.TurboScalar * 100).ToIntRounded() );
-	m_spin_TurboPct		->SetValue( (appconf.SlomoScalar * 100).ToIntRounded() );
+	m_spin_NominalPct	->SetValue( appconf.NominalScalar.Raw );
+	m_spin_TurboPct		->SetValue( appconf.TurboScalar.Raw );
+	m_spin_SlomoPct		->SetValue( appconf.SlomoScalar.Raw );
 	
 	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
 	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
@@ -335,16 +335,20 @@ void Panels::FramelimiterPanel::Apply()
 
 	gsconf.FrameLimitEnable	= !m_check_LimiterDisable->GetValue();
 
-	appconf.NominalScalar	= m_spin_NominalPct	->GetValue();
-	appconf.TurboScalar		= m_spin_TurboPct	->GetValue();
-	appconf.SlomoScalar		= m_spin_SlomoPct	->GetValue();
-
-	double ntsc, pal;
-	if( !m_text_BaseNtsc->GetValue().ToDouble( &ntsc ) || 
-		!m_text_BasePal	->GetValue().ToDouble( &pal )
-	)
-		throw Exception::CannotApplySettings( this, wxLt("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics.") );
-
-	gsconf.FramerateNTSC	= ntsc;
-	gsconf.FrameratePAL	= pal;
+	appconf.NominalScalar.Raw	= m_spin_NominalPct	->GetValue();
+	appconf.TurboScalar.Raw		= m_spin_TurboPct	->GetValue();
+	appconf.SlomoScalar.Raw		= m_spin_SlomoPct	->GetValue();
+	
+	try {
+		gsconf.FramerateNTSC	= Fixed100::FromString( m_text_BaseNtsc->GetValue() );
+		gsconf.FrameratePAL		= Fixed100::FromString( m_text_BasePal->GetValue() );
+	}
+	catch( Exception::ParseError& )
+	{
+		throw Exception::CannotApplySettings( this,
+			wxLt("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics.")
+		);
+	}
+	
+	appconf.SanityCheck();
 }

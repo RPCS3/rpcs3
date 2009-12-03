@@ -188,21 +188,38 @@ struct FixedInt
 		return (Raw + (Precision/2)) / Precision;
 	}
 	
-	static FixedInt<Precision> FromString( const wxString parseFrom, const FixedInt<Precision>& defval )
+	static bool TryFromString( FixedInt<Precision>& dest, const wxString& parseFrom )
 	{
 		long whole, frac;
 		wxString afterFirst( parseFrom.AfterFirst( L'.' ).Mid(0, 5) );
 		if( !parseFrom.BeforeFirst( L'.' ).ToLong( &whole ) || !afterFirst.ToLong( &frac ) )
-			return defval;
+			return false;
 
-		FixedInt<Precision> retval( whole );
+		dest.SetWhole( whole );
 
 		if( afterFirst.Length() != 0 && frac != 0 )
 		{
 			int fracPower = (int)pow( 10.0, (int)afterFirst.Length() );
-			retval.SetFraction( (frac * Precision) / fracPower );
+			dest.SetFraction( (frac * Precision) / fracPower );
 		}
-		return retval;
+		return true;
+	}
+
+	static FixedInt<Precision> FromString( const wxString& parseFrom, const FixedInt<Precision>& defval )
+	{
+		FixedInt<Precision> dest;
+		if( !TryFromString( dest, parseFrom ) ) return defval;
+		return dest;
+	}
+
+	// This version of FromString throws a ParseError exception if the conversion fails.
+	static FixedInt<Precision> FromString( const wxString parseFrom )
+	{
+		FixedInt<Precision> dest;
+		if( !TryFromString( dest, parseFrom ) ) throw Exception::ParseError(
+			wxsFormat(L"Parse error on FixedInt<%d>::FromString", Precision), wxEmptyString
+		);
+		return dest;
 	}
 };
 

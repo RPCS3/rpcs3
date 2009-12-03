@@ -154,8 +154,9 @@ namespace Panels
 	};
 
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
+	// --------------------------------------------------------------------------------------
+	//  FramelimiterPanel
+	// --------------------------------------------------------------------------------------
 	class FramelimiterPanel : public BaseApplicableConfigPanel
 	{
 	protected:
@@ -181,6 +182,9 @@ namespace Panels
 		void OnSettingsChanged();
 	};
 	
+	// --------------------------------------------------------------------------------------
+	//  GSWindowSettingsPanel
+	// --------------------------------------------------------------------------------------
 	class GSWindowSettingsPanel : public BaseApplicableConfigPanel
 	{
 	protected:
