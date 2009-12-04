@@ -257,6 +257,7 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 {
 	int renderer;
 
+	// Legacy GUI expects to acquire vsync from the configuration files.
 	s_vsync = !!theApp.GetConfig("vsync", 0);
 
 	if(mt == 2)
@@ -572,6 +573,8 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 		uint8 regs[0x2000];
 		GSsetBaseMem(regs);
+
+		s_vsync = !!theApp.GetConfig("vsync", 0);
 
 		HWND hWnd = NULL;
 		_GSopen(&hWnd, "", renderer);

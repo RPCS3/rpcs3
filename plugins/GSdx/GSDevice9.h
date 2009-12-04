@@ -153,6 +153,8 @@ public:
 	bool Reset(int w, int h);
 	bool IsLost(bool update);
 	void Flip();
+	
+	void SetVsync(bool enable);
 
 	void BeginScene();
 	void DrawPrimitive();

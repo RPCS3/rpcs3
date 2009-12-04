@@ -239,6 +239,19 @@ bool GSDevice9::Create(GSWnd* wnd)
 	return true;
 }
 
+void GSDevice9::SetVsync(bool enable)
+{
+	if( m_vsync == enable ) return;
+	__super::SetVsync(enable);
+
+	// Clever trick:  Delete the backbuffer, so that the next Present will fail and
+	// cause a DXDevice9::Reset call, which re-creates the backbuffer with current
+	// vsync settings. :)
+
+	delete m_backbuffer;
+	m_backbuffer = NULL;
+}
+
 bool GSDevice9::Reset(int w, int h)
 {
 	if(!__super::Reset(w, h))
@@ -260,6 +273,7 @@ bool GSDevice9::Reset(int w, int h)
 
 			m_pp.BackBufferWidth = w;
 			m_pp.BackBufferHeight = h;
+			m_pp.PresentationInterval = m_vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
 
 			hr = m_dev->CreateAdditionalSwapChain(&m_pp, &m_swapchain);
 
@@ -296,12 +310,7 @@ bool GSDevice9::Reset(int w, int h)
 	m_pp.BackBufferFormat = D3DFMT_X8R8G8B8;
 	m_pp.BackBufferWidth = 1;
 	m_pp.BackBufferHeight = 1;
-	m_pp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-
-	if(m_vsync)
-	{
-		m_pp.PresentationInterval = D3DPRESENT_INTERVAL_ONE;	// was D3DPRESENT_INTERVAL_DEFAULT, but ONE is like more "forceful"!
-	}
+	m_pp.PresentationInterval = m_vsync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
 
 	// m_pp.Flags |= D3DPRESENTFLAG_VIDEO; // enables tv-out (but I don't think anyone would still use a regular tv...)
 
@@ -309,7 +318,7 @@ bool GSDevice9::Reset(int w, int h)
 	int mh = theApp.GetConfig("ModeHeight", 0);
 	int mrr = theApp.GetConfig("ModeRefreshRate", 0);
 
-	if(!m_wnd->IsManaged() && mode == Fullscreen && mw > 0 && mh > 0 && mrr >= 0)
+	if(m_wnd->IsManaged() && mode == Fullscreen && mw > 0 && mh > 0 && mrr >= 0)
 	{
 		m_pp.Windowed = FALSE;
 		m_pp.BackBufferWidth = mw;

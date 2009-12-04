@@ -284,7 +284,7 @@ void GSRenderer::SetFrameLimit(bool limit)
 void GSRenderer::SetVsync(bool enabled)
 {
 	m_vsync = enabled;
-	if( m_dev ) m_dev->SetVsync(m_vsync && m_framelimit);
+	if( m_dev ) m_dev->SetVsync(m_vsync);
 }
 
 
