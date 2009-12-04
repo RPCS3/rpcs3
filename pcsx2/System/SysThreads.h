@@ -217,6 +217,7 @@ public:
 
 	bool HasPendingStateChangeRequest() const;
 	virtual void StateCheckInThread();
+	virtual void OnVsyncInThread();
 	
 	virtual const wxString& GetElfOverride() const { return m_elf_override; }
 	virtual void SetElfOverride( const wxString& elf );

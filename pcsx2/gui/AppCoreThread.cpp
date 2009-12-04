@@ -163,9 +163,10 @@ void AppCoreThread::OnCleanupInThread()
 	extern int TranslateGDKtoWXK( u32 keysym );
 #endif
 
-void AppCoreThread::StateCheckInThread()
+void AppCoreThread::OnVsyncInThread()
 {
-	_parent::StateCheckInThread();
+	_parent::OnVsyncInThread();
+
 	if( !pxAssert(g_plugins!=NULL) ) return;
 
 	const keyEvent* ev = PADkeyEvent();
@@ -194,6 +195,11 @@ void AppCoreThread::StateCheckInThread()
 	
 	m_kevt.m_keyCode = vkey;
 	wxGetApp().PostPadKey( m_kevt );
+}
+
+void AppCoreThread::StateCheckInThread()
+{
+	_parent::StateCheckInThread();
 }
 
 // To simplify settings application rules and re-entry conditions, the main App's implementation

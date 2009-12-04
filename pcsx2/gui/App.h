@@ -542,6 +542,7 @@ protected:
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnSuspendInThread();
 	virtual void OnCleanupInThread();
+	virtual void OnVsyncInThread();
 	virtual void ExecuteTaskInThread();
 };
 

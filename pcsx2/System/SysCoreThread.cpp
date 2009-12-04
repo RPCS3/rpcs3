@@ -279,12 +279,18 @@ void SysCoreThread::_reset_stuff_as_needed()
 	}
 }
 
+void SysCoreThread::OnVsyncInThread()
+{
+}
+
 void SysCoreThread::StateCheckInThread()
 {
 	GetMTGS().RethrowException();
 	_parent::StateCheckInThread();
 	if( !m_hasValidState )
 		throw Exception::RuntimeError( "Invalid emulation state detected; Virtual machine threads have been cancelled." );
+
+	//OnVsyncInThread();
 
 	_reset_stuff_as_needed();
 }

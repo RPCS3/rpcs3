@@ -390,6 +390,7 @@ static void intExecute()
 
 static void intCheckExecutionState()
 {
+	SysCoreThread::Get().OnVsyncInThread();
 	SysCoreThread::Get().StateCheckInThread();
 }
 

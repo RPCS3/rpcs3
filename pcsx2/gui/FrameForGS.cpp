@@ -150,6 +150,8 @@ void GSPanel::OnShowMouse( wxMouseEvent& evt )
 
 void GSPanel::OnHideMouseTimeout( wxTimerEvent& evt )
 {
+	if( CoreThread.GetExecutionMode() != SysThreadBase::ExecMode_Opened ) return;
+
 	SetCursor( wxCursor( wxCURSOR_BLANK ) );
 	m_CursorShown = false;
 }

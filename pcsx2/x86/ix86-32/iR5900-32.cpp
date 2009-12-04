@@ -656,6 +656,8 @@ static jmp_buf		m_SetJmp_StateCheck;
 
 static void recCheckExecutionState()
 {
+	SysCoreThread::Get().OnVsyncInThread();
+
 #if PCSX2_SEH
 	SysCoreThread::Get().StateCheckInThread();
 
@@ -669,6 +671,7 @@ static void recCheckExecutionState()
 	// necessary:
 
 	pxAssert( !eeRecIsReset );		// should only be changed during suspended thread states
+
 	if( SysCoreThread::Get().HasPendingStateChangeRequest() )
 	{
 		longjmp( m_SetJmp_StateCheck, SetJmp_Dispatcher );
