@@ -244,7 +244,9 @@ EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 	int renderer = theApp.GetConfig("renderer", 0);
 	if( flags & 4 )
 	{
-		renderer = 1;
+		static bool isdx10avail = GSUtil::IsDirect3D10Available();
+		if (isdx10avail)	renderer = 4; //dx10 sw
+		else				renderer = 1; //dx9 sw
 	}
 
 	INT32 retval = _GSopen( dsp, NULL, renderer );
@@ -263,7 +265,9 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 	if(mt == 2)
 	{
 		// pcsx2 sent a switch renderer request
-		renderer = 1; //DX9 sw
+		static bool isdx10avail = GSUtil::IsDirect3D10Available();
+		if (isdx10avail)	renderer = 4; //dx10 sw
+		else				renderer = 1; //dx9 sw
 		mt = 1;	
 	}
 	else 
