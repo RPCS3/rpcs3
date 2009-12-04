@@ -188,9 +188,6 @@ void SysMtgsThread::OpenPlugin()
 	GSsetBaseMem( RingBuffer.Regs );
 	GSirqCallback( dummyIrqCallback );
 
-	if( renderswitch )
-		Console.Indent(2).WriteLn( "Forced software switch enabled." );
-
 	int result;
 
 	if( GSopen2 != NULL )
@@ -198,7 +195,24 @@ void SysMtgsThread::OpenPlugin()
 	else
 		result = GSopen( (void*)&pDsp, "PCSX2", renderswitch ? 2 : 1 );
 
-	GSsetVsync( EmuConfig.GS.FrameLimitEnable && EmuConfig.GS.VsyncEnable );
+	// Vsync on / off ?
+	if( renderswitch )
+	{
+		Console.Indent(2).WriteLn( "Forced software switch enabled." );
+		if (EmuConfig.GS.VsyncEnable) 
+		{
+			// Better turn Vsync off now, as in most cases sw rendering is not fast enough to support a steady 60fps.
+			// Having Vsync still enabled then means a big cut in speed and sloppy rendering.
+			// It's possible though that some users have very fast machines, and rather kept Vsync enabled, 
+			// but let's assume this is the minority. At least for now ;)
+			GSsetVsync( false );
+			Console.Indent(2).WriteLn( "Vsync temporarily disabled" );
+		}
+	}
+	else 
+	{
+		GSsetVsync( EmuConfig.GS.FrameLimitEnable && EmuConfig.GS.VsyncEnable );
+	}
 
 	if( result != 0 )
 	{
