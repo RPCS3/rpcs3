@@ -71,7 +71,7 @@ namespace Panels
 		pxRadioPanel*	m_radio_UserMode;
 
 	public:
-		virtual ~UsermodeSelectionPanel() { }
+		virtual ~UsermodeSelectionPanel() throw() { }
 		UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime = true );
 
 		void Apply();
@@ -87,7 +87,7 @@ namespace Panels
 		wxComboBox*		m_picker;
 
 	public:
-		virtual ~LanguageSelectionPanel() { }
+		virtual ~LanguageSelectionPanel() throw() { }
 		LanguageSelectionPanel( wxWindow* parent );
 
 		void Apply();
@@ -292,7 +292,7 @@ namespace Panels
 
 	public:
 		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
-		virtual ~DirPickerPanel() { }
+		virtual ~DirPickerPanel() throw() { }
 
 		void Apply();
 		void OnSettingsChanged();
