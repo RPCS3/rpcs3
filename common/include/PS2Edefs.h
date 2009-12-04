@@ -528,6 +528,7 @@ typedef void (CALLBACK* _GSsetGameCRC)(int, int);
 typedef void (CALLBACK* _GSsetFrameSkip)(int frameskip);
 typedef void (CALLBACK* _GSsetFrameLimit)(int limit);
 typedef void (CALLBACK* _GSsetVsync)(int enabled);
+typedef void (CALLBACK* _GSsetExclusive)(int isExclusive);
 typedef int (CALLBACK* _GSsetupRecording)(int, void*);
 typedef void (CALLBACK* _GSreset)();
 typedef void (CALLBACK* _GSwriteCSR)(u32 value);

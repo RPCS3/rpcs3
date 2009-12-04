@@ -75,6 +75,7 @@ namespace Panels
 		UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime = true );
 
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -90,6 +91,7 @@ namespace Panels
 		LanguageSelectionPanel( wxWindow* parent );
 
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -103,6 +105,7 @@ namespace Panels
 	public:
 		CpuPanelEE( wxWindow* parent );
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 	class CpuPanelVU : public BaseApplicableConfigPanel
@@ -114,6 +117,7 @@ namespace Panels
 	public:
 		CpuPanelVU( wxWindow* parent );
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 	class BaseAdvancedCpuOptions : public BaseApplicableConfigPanel
@@ -143,6 +147,7 @@ namespace Panels
 		AdvancedOptionsFPU( wxWindow* parent );
 		virtual ~AdvancedOptionsFPU() throw() { }
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 	class AdvancedOptionsVU : public BaseAdvancedCpuOptions
@@ -151,6 +156,7 @@ namespace Panels
 		AdvancedOptionsVU( wxWindow* parent );
 		virtual ~AdvancedOptionsVU() throw() { }
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 
@@ -215,6 +221,7 @@ namespace Panels
 		VideoPanel( wxWindow* parent );
 		virtual ~VideoPanel() throw() {}
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -268,6 +275,7 @@ namespace Panels
 	public:
 		GameFixesPanel( wxWindow* parent );
 		void Apply();
+		void OnSettingsChanged();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -287,6 +295,8 @@ namespace Panels
 		virtual ~DirPickerPanel() { }
 
 		void Apply();
+		void OnSettingsChanged();
+
 		void Reset();
 		wxDirName GetPath() const;
 
@@ -331,9 +341,6 @@ namespace Panels
 	//
 	class BaseSelectorPanel: public BaseApplicableConfigPanel
 	{
-	protected:
-		EventListenerBinding<int> m_ReloadSettingsBinding;
-
 	public:
 		virtual ~BaseSelectorPanel() throw();
 		BaseSelectorPanel( wxWindow* parent );
@@ -346,9 +353,6 @@ namespace Panels
 	protected:
 		virtual void DoRefresh()=0;
 		virtual bool ValidateEnumerationStatus()=0;
-		virtual void ReloadSettings()=0;
-
-		static void __evt_fastcall OnAppliedSettings( void* me, int& whatever );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -366,10 +370,9 @@ namespace Panels
 
 	protected:
 		virtual void Apply();
+		virtual void OnSettingsChanged();
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
-
-		virtual void ReloadSettings();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -391,11 +394,10 @@ namespace Panels
 			wxString Name;			// string to be pasted into the combo box
 			wxString Version[NumPluginTypes];
 
-			EnumeratedPluginInfo() :
-				PassedTest( 0 )
-			,	TypeMask( 0 )
-			,	Name()
+			EnumeratedPluginInfo()
 			{
+				PassedTest	= 0;
+				TypeMask	= 0;
 			}
 		};
 
@@ -476,7 +478,7 @@ namespace Panels
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 
-		virtual void ReloadSettings();
+		virtual void OnSettingsChanged();
 
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();

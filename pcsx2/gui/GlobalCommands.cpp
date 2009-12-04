@@ -217,12 +217,10 @@ namespace Implementations
 #endif
 	}
 	
-	static bool isFullscreen = false;
-	
 	void FullscreenToggle()
 	{
-		isFullscreen = !isFullscreen;
-		sGSFrame.ShowFullScreen( isFullscreen );
+		g_Conf->GSWindow.DefaultToFullscreen = !g_Conf->GSWindow.DefaultToFullscreen;
+		sGSFrame.ShowFullScreen( g_Conf->GSWindow.DefaultToFullscreen );
 	}
 }
 

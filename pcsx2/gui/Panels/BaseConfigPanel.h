@@ -124,24 +124,13 @@ namespace Panels
 	protected:
 		int				m_OwnerPage;
 		wxBookCtrlBase*	m_OwnerBook;
+		EventListenerBinding<int>	m_Listener_SettingsApplied;
 
 	public:
-		virtual ~BaseApplicableConfigPanel()
-		{
-			g_ApplyState.PanelList.remove( this );
-		}
+		virtual ~BaseApplicableConfigPanel() throw();
 
-		BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient=wxVERTICAL )
-			: wxPanelWithHelpers( parent, orient )
-		{
-			Init();
-		}
-
-		BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
-			: wxPanelWithHelpers( parent, orient, staticLabel )
-		{
-			Init();
-		}
+		BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient=wxVERTICAL );
+		BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel );
 
 		int GetOwnerPage() const { return m_OwnerPage; }
 		wxBookCtrlBase* GetOwnerBook() { return m_OwnerBook; }
@@ -157,13 +146,15 @@ namespace Panels
 		// of form contents fails, the function should throw Exception::CannotApplySettings.
 		// If no exceptions are thrown, then the operation is assumed a success. :)
 		virtual void Apply()=0;
-		
+
+		// This method is bound to the ApplySettings event from the PCSX2 app manager.
+		// Note: This method *will* be called automatically after a successful Apply, but will not
+		// be called after a failed Apply (canceled due to error).
+		virtual void OnSettingsChanged()=0;
+
 	protected:
-		void Init()
-		{
-			m_OwnerPage = g_ApplyState.CurOwnerPage;
-			m_OwnerBook = g_ApplyState.ParentBook;
-			g_ApplyState.PanelList.push_back( this );
-		}
+		static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+
+		void Init();
 	};
 }

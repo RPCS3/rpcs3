@@ -81,6 +81,11 @@ GSPanel::GSPanel( wxWindow* parent )
 	Connect(m_HideMouseTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(GSPanel::OnHideMouseTimeout) );
 }
 
+GSPanel::~GSPanel() throw()
+{
+	CoreThread.Suspend();		// Just in case...!
+}
+
 void GSPanel::DoShowMouse()
 {
 	if( g_Conf->GSWindow.AlwaysHideMouse ) return;
@@ -178,7 +183,8 @@ void __evt_fastcall GSPanel::OnSettingsApplied( void* obj, int& evt )
 {
 	if( obj == NULL ) return;
 	GSPanel* panel = (GSPanel*)obj;
-
+	
+	if( panel->IsBeingDeleted() ) return;
 	panel->DoResize();
 	panel->DoShowMouse();
 }
@@ -208,7 +214,15 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 
 GSFrame::~GSFrame() throw()
 {
-	CoreThread.Suspend();		// Just in case...!
+}
+
+void __evt_fastcall GSFrame::OnSettingsApplied( void* obj, int& evt )
+{
+	if( obj == NULL ) return;
+	GSFrame* frame = (GSFrame*)obj;
+
+	if( frame->IsBeingDeleted() ) return;
+	ShowFullScreen( g_Conf->GSWindow.DefaultToFullscreen );
 }
 
 wxWindow* GSFrame::GetViewport()
@@ -225,20 +239,22 @@ void GSFrame::OnActivate( wxActivateEvent& evt )
 void GSFrame::OnMove( wxMoveEvent& evt )
 {
 	// evt.GetPosition() returns the client area position, not the window frame position.
-	g_Conf->GSWindow.WindowPos	= GetScreenPosition();
+	if( !IsMaximized() && IsVisible() )
+		g_Conf->GSWindow.WindowPos	= GetScreenPosition();
 
 	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
 	// like selecting or deselecting a window, which muck up docking logic.  We filter them
 	// out using 'lastpos' here. :)
 
-	static wxPoint lastpos( wxDefaultCoord, wxDefaultCoord );
-	if( lastpos == evt.GetPosition() ) return;
-	lastpos = evt.GetPosition();
+	//static wxPoint lastpos( wxDefaultCoord, wxDefaultCoord );
+	//if( lastpos == evt.GetPosition() ) return;
+	//lastpos = evt.GetPosition();
 }
 
 void GSFrame::OnResize( wxSizeEvent& evt )
 {
-	g_Conf->GSWindow.WindowSize	= GetClientSize();
+	if( !IsMaximized() && IsVisible() )
+		g_Conf->GSWindow.WindowSize	= GetClientSize();
 
 	if( GSPanel* gsPanel = (GSPanel*)FindWindowByName(L"GSPanel") )
 	{

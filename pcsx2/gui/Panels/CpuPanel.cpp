@@ -106,20 +106,7 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
 
-	// ====== Assign Configured Values ======
-
-	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
-	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
-
-	m_Option_FTZ->SetValue( cpuOps.sseMXCSR.FlushToZero );
-	m_Option_DAZ->SetValue( cpuOps.sseMXCSR.DenormalsAreZero );
-
-	m_RoundModePanel->SetSelection( cpuOps.sseMXCSR.RoundingControl );
-
-	if( recOps.fpuFullMode )			m_ClampModePanel->SetSelection( 3 );
-	else if( recOps.fpuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
-	else if( recOps.fpuOverflow )		m_ClampModePanel->SetSelection( 1 );
-	else								m_ClampModePanel->SetSelection( 0 );
+	OnSettingsChanged();
 }
 
 
@@ -134,20 +121,7 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
 
-	// ====== Assign Configured Values ======
-
-	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
-	Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
-
-	m_Option_FTZ->SetValue( cpuOps.sseVUMXCSR.FlushToZero );
-	m_Option_DAZ->SetValue( cpuOps.sseVUMXCSR.DenormalsAreZero );
-
-	m_RoundModePanel->SetSelection( cpuOps.sseVUMXCSR.RoundingControl );
-
-	if( recOps.vuSignOverflow )			m_ClampModePanel->SetSelection( 3 );
-	else if( recOps.vuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
-	else if( recOps.vuOverflow )		m_ClampModePanel->SetSelection( 1 );
-	else								m_ClampModePanel->SetSelection( 0 );
+	OnSettingsChanged();
 }
 
 Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
@@ -201,12 +175,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
 	*this	+= new AdvancedOptionsFPU( this )	| StdExpand();
 
-	// ====== Apply Current Configuration ======
-
-	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
-
-	m_panel_RecEE->SetSelection( (int)recOps.EnableEE );
-	m_panel_RecIOP->SetSelection( (int)recOps.EnableIOP );
+	OnSettingsChanged();
 }
 
 Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
@@ -252,18 +221,7 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
 	*this	+= new AdvancedOptionsVU( this )	| StdExpand();
 
-	// ====== Apply Current Configuration ======
-
-	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
-	if( recOps.UseMicroVU0 )
-		m_panel_VU0->SetSelection( recOps.EnableVU0 ? 1 : 0 );
-	else
-		m_panel_VU0->SetSelection( recOps.EnableVU0 ? 2 : 0 );
-
-	if( recOps.UseMicroVU1 )
-		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 1 : 0 );
-	else
-		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 2 : 0 );
+	OnSettingsChanged();
 }
 
 void Panels::CpuPanelEE::Apply()
@@ -271,6 +229,13 @@ void Panels::CpuPanelEE::Apply()
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 	recOps.EnableEE		= !!m_panel_RecEE->GetSelection();
 	recOps.EnableIOP	= !!m_panel_RecIOP->GetSelection();
+}
+
+void Panels::CpuPanelEE::OnSettingsChanged()
+{
+	const Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
+	m_panel_RecEE->SetSelection( (int)recOps.EnableEE );
+	m_panel_RecIOP->SetSelection( (int)recOps.EnableIOP );
 }
 
 void Panels::CpuPanelVU::Apply()
@@ -281,6 +246,20 @@ void Panels::CpuPanelVU::Apply()
 
 	recOps.UseMicroVU0	= m_panel_VU0->GetSelection() == 1;
 	recOps.UseMicroVU1	= m_panel_VU1->GetSelection() == 1;
+}
+
+void Panels::CpuPanelVU::OnSettingsChanged()
+{
+	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
+	if( recOps.UseMicroVU0 )
+		m_panel_VU0->SetSelection( recOps.EnableVU0 ? 1 : 0 );
+	else
+		m_panel_VU0->SetSelection( recOps.EnableVU0 ? 2 : 0 );
+
+	if( recOps.UseMicroVU1 )
+		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 1 : 0 );
+	else
+		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 2 : 0 );
 }
 
 void Panels::BaseAdvancedCpuOptions::ApplyRoundmode( SSE_MXCSR& mxcsr )
@@ -307,6 +286,22 @@ void Panels::AdvancedOptionsFPU::Apply()
 	cpuOps.ApplySanityCheck();
 }
 
+void Panels::AdvancedOptionsFPU::OnSettingsChanged()
+{
+	const Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
+	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
+
+	m_Option_FTZ->SetValue( cpuOps.sseMXCSR.FlushToZero );
+	m_Option_DAZ->SetValue( cpuOps.sseMXCSR.DenormalsAreZero );
+
+	m_RoundModePanel->SetSelection( cpuOps.sseMXCSR.RoundingControl );
+
+	if( recOps.fpuFullMode )			m_ClampModePanel->SetSelection( 3 );
+	else if( recOps.fpuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
+	else if( recOps.fpuOverflow )		m_ClampModePanel->SetSelection( 1 );
+	else								m_ClampModePanel->SetSelection( 0 );
+}
+
 void Panels::AdvancedOptionsVU::Apply()
 {
 	Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
@@ -323,3 +318,20 @@ void Panels::AdvancedOptionsVU::Apply()
 
 	cpuOps.ApplySanityCheck();
 }
+
+void Panels::AdvancedOptionsVU::OnSettingsChanged()
+{
+	const Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
+	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
+
+	m_Option_FTZ->SetValue( cpuOps.sseVUMXCSR.FlushToZero );
+	m_Option_DAZ->SetValue( cpuOps.sseVUMXCSR.DenormalsAreZero );
+
+	m_RoundModePanel->SetSelection( cpuOps.sseVUMXCSR.RoundingControl );
+
+	if( recOps.vuSignOverflow )			m_ClampModePanel->SetSelection( 3 );
+	else if( recOps.vuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
+	else if( recOps.vuOverflow )		m_ClampModePanel->SetSelection( 1 );
+	else								m_ClampModePanel->SetSelection( 0 );
+}
+

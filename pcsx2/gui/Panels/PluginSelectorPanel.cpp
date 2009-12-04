@@ -247,6 +247,8 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWid
 	Connect( pxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
 	Connect( pxEVT_ShowStatusBar,		wxCommandEventHandler( PluginSelectorPanel::OnShowStatusBar ) );
 	Connect( ButtonId_Configure, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnConfigure_Clicked ) );
+
+	OnSettingsChanged();
 }
 
 Panels::PluginSelectorPanel::~PluginSelectorPanel() throw()
@@ -254,7 +256,7 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel() throw()
 	CancelRefresh();		// in case the enumeration thread is currently refreshing...
 }
 
-void Panels::PluginSelectorPanel::ReloadSettings()
+void Panels::PluginSelectorPanel::OnSettingsChanged()
 {
 	m_ComponentBoxes->GetDirPicker().Reset();
 }

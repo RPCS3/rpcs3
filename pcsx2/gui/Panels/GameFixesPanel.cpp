@@ -63,12 +63,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		}
 	};
 
-	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
 	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
 	{
 		groupSizer += (m_checkbox[i] = new pxCheckBox( this, check_text[i].label ));
 		m_checkbox[i]->SetToolTip( check_text[i].tooltip );
-		m_checkbox[i]->SetValue( !!(opts.bitset & (1 << i)) );
 	}
 
 	*this	+= groupSizer	| wxSF.Centre();
@@ -78,6 +76,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		L"will need to turn off fixes manually when changing games."
 	));
 
+	OnSettingsChanged();
 }
 
 // I could still probably get rid of the for loop, but I think this is clearer.
@@ -91,4 +90,11 @@ void Panels::GameFixesPanel::Apply()
         else
             opts.bitset &= ~(1 << i);
     }
+}
+
+void Panels::GameFixesPanel::OnSettingsChanged()
+{
+	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
+	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
+		m_checkbox[i]->SetValue( !!(opts.bitset & (1 << i)) );
 }

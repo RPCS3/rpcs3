@@ -135,13 +135,6 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	*this	+= s_spins	| pxExpand;
 	*this	+= s_fps	| pxExpand;
 	
-	m_spin_NominalPct	->SetValue( 100 );
-	m_spin_SlomoPct		->SetValue( 50 );
-	m_spin_TurboPct		->SetValue( 100 );
-
-	m_text_BaseNtsc		->SetValue( L"59.94" );
-	m_text_BasePal		->SetValue( L"50.00" );
-	
 	OnSettingsChanged();
 }
 
@@ -260,12 +253,17 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 
 	*this		+= s_table	| pxExpand;
 
-	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
+	OnSettingsChanged();
 }
 
 void Panels::VideoPanel::Apply()
 {
 	g_Conf->EmuOptions.GS.SynchronousMTGS = m_check_SynchronousGS->GetValue();
+}
+
+void Panels::VideoPanel::OnSettingsChanged()
+{
+	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
 }
 
 void Panels::GSWindowSettingsPanel::OnSettingsChanged()

@@ -28,7 +28,6 @@
 // ------------------------------------------------------------------------
 Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL )
-	, m_ReloadSettingsBinding( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnAppliedSettings ) )
 {
 	Connect( wxEVT_COMMAND_DIRPICKER_CHANGED,	wxFileDirPickerEventHandler(PluginSelectorPanel::OnFolderChanged), NULL, this );
 }
@@ -61,12 +60,6 @@ void Panels::BaseSelectorPanel::OnFolderChanged( wxFileDirPickerEvent& evt )
 {
 	evt.Skip();
 	OnShown();
-}
-
-void Panels::BaseSelectorPanel::OnAppliedSettings( void* me, int& )
-{
-	if( me == NULL ) return;
-	((BaseSelectorPanel*)me)->ReloadSettings();
 }
 
 // ----------------------------------------------------------------------------
@@ -114,11 +107,6 @@ bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
 	return validated;
 }
 
-void Panels::BiosSelectorPanel::ReloadSettings()
-{
-	m_FolderPicker.Reset();
-}
-
 void Panels::BiosSelectorPanel::Apply()
 {
 	int sel = m_ComboBox.GetSelection();
@@ -137,6 +125,10 @@ void Panels::BiosSelectorPanel::Apply()
 	}
 
 	g_Conf->BaseFilenames.Bios = (*m_BiosList)[(int)m_ComboBox.GetClientData(sel)];
+}
+
+void Panels::BiosSelectorPanel::OnSettingsChanged()
+{
 }
 
 void Panels::BiosSelectorPanel::DoRefresh()

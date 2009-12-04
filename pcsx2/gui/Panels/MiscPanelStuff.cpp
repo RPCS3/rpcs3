@@ -125,10 +125,45 @@ bool Panels::StaticApplyState::ApplyAll()
 	return ApplyPage( -1 );
 }
 
+// --------------------------------------------------------------------------------------
+//  BaseApplicableConfigPanel Implementations
+// --------------------------------------------------------------------------------------
+Panels::BaseApplicableConfigPanel::~BaseApplicableConfigPanel() throw()
+{
+	g_ApplyState.PanelList.remove( this );
+}
+
+Panels::BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient )
+	: wxPanelWithHelpers( parent, orient )
+	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
+{
+	Init();
+}
+
+Panels::BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
+	: wxPanelWithHelpers( parent, orient, staticLabel )
+	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
+{
+	Init();
+}
+
 void Panels::BaseApplicableConfigPanel::SetFocusToMe()
 {
 	if( (m_OwnerBook == NULL) || (m_OwnerPage == wxID_NONE) ) return;
 	m_OwnerBook->SetSelection( m_OwnerPage );
+}
+
+void Panels::BaseApplicableConfigPanel::Init()
+{
+	m_OwnerPage = g_ApplyState.CurOwnerPage;
+	m_OwnerBook = g_ApplyState.ParentBook;
+	g_ApplyState.PanelList.push_back( this );
+}
+
+void __evt_fastcall Panels::BaseApplicableConfigPanel::OnSettingsApplied( void* obj, int& ini )
+{
+	if( obj == NULL ) return;
+	((BaseApplicableConfigPanel*)obj)->OnSettingsChanged();
 }
 
 
@@ -169,11 +204,18 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 	*this	+= Text( (isFirstTime ? usermodeExplained : usermodeWarning) );
 	*this	+= m_radio_UserMode | pxSizerFlags::StdExpand();
 	*this	+= 4;
+
+	OnSettingsChanged();
 }
 
 void Panels::UsermodeSelectionPanel::Apply()
 {
 	UseAdminMode = (m_radio_UserMode->GetSelection() == 1);
+}
+
+void Panels::UsermodeSelectionPanel::OnSettingsChanged()
+{
+	m_radio_UserMode->SetSelection( (int)UseAdminMode );
 }
 
 // -----------------------------------------------------------------------
@@ -198,11 +240,13 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 
 	m_picker = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		size, compiled.GetPtr(), wxCB_READONLY | wxCB_SORT );
-	m_picker->SetSelection( cursel );
 
 	*this	+= Text(_("Select a language: ")) | pxMiddle;
 	*this	+= 5;
 	*this	+= m_picker | pxSizerFlags::StdSpace();
+
+	m_picker->SetSelection( cursel );
+	//OnSettingsChanged();
 }
 
 void Panels::LanguageSelectionPanel::Apply()
@@ -222,4 +266,9 @@ void Panels::LanguageSelectionPanel::Apply()
 			break;
 		}
 	}
+}
+
+void Panels::LanguageSelectionPanel::OnSettingsChanged()
+{
+	m_picker->SetSelection( g_Conf->LanguageId );
 }

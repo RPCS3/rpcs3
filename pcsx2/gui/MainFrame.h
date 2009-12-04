@@ -34,7 +34,7 @@ protected:
 
 public:
 	GSPanel( wxWindow* parent );
-	virtual ~GSPanel() throw() { }
+	virtual ~GSPanel() throw();
 
 	void DoResize();
 	void DoShowMouse();
@@ -69,6 +69,8 @@ protected:
 	void OnMove( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
 	void OnActivate( wxActivateEvent& evt );
+
+	void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
 };
 
 struct PluginMenuAddition

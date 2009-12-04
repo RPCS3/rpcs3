@@ -143,20 +143,21 @@ _GSmakeSnapshot	   GSmakeSnapshot;
 _GSmakeSnapshot2   GSmakeSnapshot2;
 _GSirqCallback 	   GSirqCallback;
 _GSprintf      	   GSprintf;
-_GSsetBaseMem 	   GSsetBaseMem;
+_GSsetBaseMem		GSsetBaseMem;
 _GSsetGameCRC		GSsetGameCRC;
-_GSsetFrameSkip	   GSsetFrameSkip;
+_GSsetFrameSkip		GSsetFrameSkip;
 _GSsetVsync			GSsetVsync;
+_GSsetExclusive		GSsetExclusive;
 _GSsetupRecording	GSsetupRecording;
-_GSreset		   GSreset;
-_GSwriteCSR		   GSwriteCSR;
+_GSreset			GSreset;
+_GSwriteCSR			GSwriteCSR;
 
 static void CALLBACK GS_makeSnapshot(const char *path) {}
 static void CALLBACK GS_setGameCRC(u32 crc, int gameopts) {}
 static void CALLBACK GS_irqCallback(void (*callback)()) {}
 static void CALLBACK GS_setFrameSkip(int frameskip) {}
 static void CALLBACK GS_setVsync(int enabled) {}
-static void CALLBACK GS_setFullscreen(int enabled) {}
+static void CALLBACK GS_setExclusive(int isExcl) {}
 static void CALLBACK GS_changeSaveState( int, const char* filename ) {}
 static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 {
@@ -287,6 +288,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 
 	{	"GSsetFrameSkip",	(vMeth**)&GSsetFrameSkip,	(vMeth*)GS_setFrameSkip	},
 	{	"GSsetVsync",		(vMeth**)&GSsetVsync,		(vMeth*)GS_setVsync	},
+	{	"GSsetExclusive",	(vMeth**)&GSsetExclusive,	(vMeth*)GS_setExclusive	},
 	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState,(vMeth*)GS_changeSaveState },
 	{ NULL }
 };

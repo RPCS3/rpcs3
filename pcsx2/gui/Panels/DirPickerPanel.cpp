@@ -110,7 +110,7 @@ Panels::DirPickerPanel::DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid
 	// wx warns when paths don't exist, but this is typically normal when the wizard 
 	// creates its child controls.  So let's ignore them.
 	wxDoNotLogInThisScope please;
-	Reset();	// forces default settings based on g_Conf
+	OnSettingsChanged();	// forces default settings based on g_Conf
 }
 
 Panels::DirPickerPanel& Panels::DirPickerPanel::SetStaticDesc( const wxString& msg )
@@ -131,6 +131,11 @@ void Panels::DirPickerPanel::Reset()
 	m_checkCtrl->SetValue( isDefault );
 	m_pickerCtrl->Enable( !isDefault );
 	m_pickerCtrl->SetPath( GetNormalizedConfigFolder( m_FolderId ) );
+}
+
+void Panels::DirPickerPanel::OnSettingsChanged()
+{
+	Reset();
 }
 
 void Panels::DirPickerPanel::Apply()
