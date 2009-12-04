@@ -122,6 +122,8 @@ public:
 	bool Reset(int w, int h);
 	void Flip();
 
+	void SetExclusive(bool isExcl);
+
 	void DrawPrimitive();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);

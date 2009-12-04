@@ -41,6 +41,7 @@ static uint8* s_basemem = NULL;
 static int s_renderer = -1;
 static bool s_framelimit = true;
 static bool s_vsync = false;
+static bool s_exclusive = true;
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -240,8 +241,6 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 
 EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 {
-	theApp.SetConfig("windowed", flags & 1);
-
 	int renderer = theApp.GetConfig("renderer", 0);
 	if( flags & 4 )
 	{
@@ -250,14 +249,16 @@ EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
 
 	INT32 retval = _GSopen( dsp, NULL, renderer );
 	s_gs->SetAspectRatio(0);		// PCSX2 manages the aspect ratios
-	
+
 	return retval;
 }
 
 EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 {
 	int renderer;
-	
+
+	s_vsync = !!theApp.GetConfig("vsync", 0);
+
 	if(mt == 2)
 	{
 		// pcsx2 sent a switch renderer request
@@ -459,6 +460,13 @@ EXPORT_C GSsetFrameSkip(int frameskip)
 EXPORT_C GSsetVsync(int enabled)
 {
 	s_vsync = !!enabled;
+	if( s_gs )
+		s_gs->SetVsync(s_vsync);
+}
+
+EXPORT_C GSsetExclusive(int enabled)
+{
+	s_exclusive = !!enabled;
 	if( s_gs )
 		s_gs->SetVsync(s_vsync);
 }

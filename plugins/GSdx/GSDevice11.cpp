@@ -66,6 +66,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	scd.OutputWindow = (HWND)m_wnd->GetHandle();
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
+
 	scd.Windowed = TRUE;
 
 	uint32 flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
@@ -256,6 +257,11 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	//
 
+	if(m_wnd->IsManaged())
+	{
+		SetExclusive( !theApp.GetConfig("windowed", 1) );
+	}
+
 	return true;
 }
 
@@ -278,6 +284,25 @@ bool GSDevice11::Reset(int w, int h)
 
 	return true;
 }
+
+void GSDevice11::SetExclusive(bool isExcl)
+{
+	if(!m_swapchain) return;
+	
+	// TODO : Support for alternative display modes, by finishing this code below:
+	//  Video mode info should be pulled form config/ini.
+
+	/*DXGI_MODE_DESC desc;
+	memset(&desc, 0, sizeof(desc));
+	desc.RefreshRate = 0;		// must be zero for best results.
+
+	m_swapchain->ResizeTarget(&desc);
+	*/
+	
+	HRESULT hr = m_swapchain->SetFullscreenState( isExcl, NULL );
+	if(hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+		fprintf(stderr, "(GSdx10) SetExclusive(%s) failed; request unavailable.", isExcl ? "true" : "false");
+} 
 
 void GSDevice11::Flip()
 {

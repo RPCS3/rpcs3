@@ -115,6 +115,8 @@ public:
 	GSDevice10();
 	virtual ~GSDevice10();
 
+	void SetExclusive(bool isExcl);
+
 	bool Create(GSWnd* wnd);
 	bool CreateTextureFX();
 	bool Reset(int w, int h);

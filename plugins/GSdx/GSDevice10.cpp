@@ -66,18 +66,19 @@ bool GSDevice10::Create(GSWnd* wnd)
 	scd.OutputWindow = (HWND)m_wnd->GetHandle();
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
-	scd.Windowed = !!theApp.GetConfig("windowed", 1);
 
-	// Crashes when 2 threads work on the swapchain, as in pcsx2/wx when it provides us
-	// an external window handle (which could be attached to any thread other than the GS one).
-	// (but if we're managing our own window then it's safe to enable)
+	// Always start in Windowed mode.  According to MS, DXGI just "prefers" this, and it's more or less
+	// required if we want to add support for dual displays later on.  The fullscreen/exclusive flip
+	// will be issued after all other initializations are complete.
 
-	// NOTE : This flag can be enabled for both managed and unmanaged windows, as soon as
-	// PCSX2-side properly implements DXGIFactory mess to disable the internal alt-enter crap
-	// that DirectX10 forces upon us (and thus causes threading issues because the window
-	// message pump isn't on the same thread as the MTGS).
+	scd.Windowed = TRUE;
 
-	uint32 flags = /*m_wnd->IsManaged() ?*/ D3D10_CREATE_DEVICE_SINGLETHREADED /*: 0*/;
+	// NOTE : D3D10_CREATE_DEVICE_SINGLETHREADED
+	//   This flag is safe as long as the DXGI's internal message pump is disabled or is on the
+	//   same thread as the GS window (which the emulator makes sure of, if it utilizes a
+	//   multithreaded GS).  Setting the flag is a nice and easy 5% speedup on GS-intensive scenes.
+	
+	uint32 flags = D3D10_CREATE_DEVICE_SINGLETHREADED;
 
 #ifdef DEBUG
 	flags |= D3D10_CREATE_DEVICE_DEBUG;
@@ -264,7 +265,13 @@ bool GSDevice10::Create(GSWnd* wnd)
 
 	m_dev->CreateBlendState(&blend, &m_date.bs);
 
-	//
+	// Exclusive/Fullscreen flip, issued for legacy (managed) windows only.  GSopen2 style
+	// emulators will issue the flip themselves later on.
+
+	if(m_wnd->IsManaged())
+	{
+		SetExclusive( !theApp.GetConfig("windowed", 1) );
+	}
 
 	return true;
 }
@@ -288,6 +295,25 @@ bool GSDevice10::Reset(int w, int h)
 
 	return true;
 }
+
+void GSDevice10::SetExclusive(bool isExcl)
+{
+	if(!m_swapchain) return;
+	
+	// TODO : Support for alternative display modes, by finishing this code below:
+	//  Video mode info should be pulled form config/ini.
+
+	/*DXGI_MODE_DESC desc;
+	memset(&desc, 0, sizeof(desc));
+	desc.RefreshRate = 0;		// must be zero for best results.
+
+	m_swapchain->ResizeTarget(&desc);
+	*/
+	
+	HRESULT hr = m_swapchain->SetFullscreenState( isExcl, NULL );
+	if(hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+		fprintf(stderr, "(GSdx10) SetExclusive(%s) failed; request unavailable.", isExcl ? "true" : "false");
+} 
 
 void GSDevice10::Flip()
 {

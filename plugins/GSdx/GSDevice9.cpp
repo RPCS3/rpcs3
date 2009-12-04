@@ -246,7 +246,7 @@ bool GSDevice9::Reset(int w, int h)
 
 	HRESULT hr;
 
-	int mode = theApp.GetConfig("windowed", 1) ? Windowed : Fullscreen;
+	int mode = (!m_wnd->IsManaged() || theApp.GetConfig("windowed", 1)) ? Windowed : Fullscreen;
 	if(mode == DontCare)
 	{
 		mode = m_pp.Windowed ? Windowed : Fullscreen;
@@ -300,7 +300,7 @@ bool GSDevice9::Reset(int w, int h)
 
 	if(m_vsync)
 	{
-		m_pp.PresentationInterval = D3DPRESENT_INTERVAL_DEFAULT;
+		m_pp.PresentationInterval = D3DPRESENT_INTERVAL_ONE;	// was D3DPRESENT_INTERVAL_DEFAULT, but ONE is like more "forceful"!
 	}
 
 	// m_pp.Flags |= D3DPRESENTFLAG_VIDEO; // enables tv-out (but I don't think anyone would still use a regular tv...)
@@ -309,7 +309,7 @@ bool GSDevice9::Reset(int w, int h)
 	int mh = theApp.GetConfig("ModeHeight", 0);
 	int mrr = theApp.GetConfig("ModeRefreshRate", 0);
 
-	if(mode == Fullscreen && mw > 0 && mh > 0 && mrr >= 0)
+	if(!m_wnd->IsManaged() && mode == Fullscreen && mw > 0 && mh > 0 && mrr >= 0)
 	{
 		m_pp.Windowed = FALSE;
 		m_pp.BackBufferWidth = mw;

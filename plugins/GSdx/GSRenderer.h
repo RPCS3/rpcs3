@@ -98,6 +98,7 @@ public:
 	void SetAspectRatio(int aspect)  { m_aspectratio = aspect; }
 	void SetVsync(bool enabled);
 	void SetFrameLimit(bool limit);
+	virtual void SetExclusive(bool isExcl) {}
 
 	// TODO : Implement proper locking here *if needed*  (not sure yet if it is) --air
 	uint8* GetTextureBufferLock() { return m_tex_buff; }
