@@ -151,6 +151,7 @@
 		<Unit filename="../../include/Utilities/EventSource.h" />
 		<Unit filename="../../include/Utilities/EventSource.inl" />
 		<Unit filename="../../include/Utilities/Exceptions.h" />
+		<Unit filename="../../include/Utilities/FixedPointTypes.h" />
 		<Unit filename="../../include/Utilities/General.h" />
 		<Unit filename="../../include/Utilities/HashMap.h" />
 		<Unit filename="../../include/Utilities/MemcpyFast.h" />
