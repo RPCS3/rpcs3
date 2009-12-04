@@ -91,7 +91,6 @@ __forceinline void gsInterrupt()
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
 	GIF_LOG("GIF DMA end");
-
 }
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
@@ -108,12 +107,17 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 	return size;
 }
 
+static u32 WRITERING_DMA(tDMA_TAG *pMem, u32 qwc)
+{
+    return WRITERING_DMA((u32*)pMem, qwc);
+}
+
 int  _GIFchain()
 {
 	u32 qwc = min( gifsplit, (int)gif->qwc );
-	u32 *pMem;
+	tDMA_TAG *pMem;
 
-	pMem = (u32*)dmaGetAddr(gif->madr);
+	pMem = (tDMA_TAG*)dmaGetAddr(gif->madr);
 	if (pMem == NULL)
 	{
 		// reset path3, fixes dark cloud 2
@@ -136,9 +140,9 @@ static __forceinline void GIFchain()
 	Registers::Thaw();
 }
 
-static __forceinline bool checkTieBit(u32* &ptag)
+static __forceinline bool checkTieBit(tDMA_TAG* &ptag)
 {
-	if (gif->chcr.TIE && (Tag::IRQ(ptag)))
+	if (gif->chcr.TIE && ptag->IRQ)
 	{
 		GIF_LOG("dmaIrq Set");
 		gspath3done = true;
@@ -148,36 +152,33 @@ static __forceinline bool checkTieBit(u32* &ptag)
 	return false;
 }
 
-static __forceinline u32* ReadTag(u32 &id)
+static __forceinline tDMA_TAG* ReadTag()
 {
-	u32* ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+	tDMA_TAG* ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 
-	if (!(Tag::Transfer("Gif", gif, ptag))) return NULL;
+	if (!(gif->transfer("Gif", ptag))) return NULL;
 
-	gif->madr = ptag[1];				    //MADR = ADDR field
-
-	id = Tag::Id(ptag);
+	gif->madr = ptag[1].ADDR;				    //MADR = ADDR field
 	gscycles += 2; // Add 1 cycles from the QW read for the tag
 
-	gspath3done = hwDmacSrcChainWithStack(gif, id);
+	gspath3done = hwDmacSrcChainWithStack(gif, ptag->ID);
 	return ptag;
 }
 
-static __forceinline u32* ReadTag2()
+static __forceinline tDMA_TAG* ReadTag2()
 {
-	u32* ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+	tDMA_TAG* ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 
-	Tag::UnsafeTransfer(gif, ptag);
-	gif->madr = ptag[1];
+    gif->unsafeTransfer(ptag);
+	gif->madr = ptag[1].ADDR;
 
-	gspath3done = hwDmacSrcChainWithStack(gif, Tag::Id(ptag));
+	gspath3done = hwDmacSrcChainWithStack(gif, ptag->ID);
 	return ptag;
 }
 
 void GIFdma()
 {
-	u32 *ptag;
-	u32 id;
+	tDMA_TAG *ptag;
 
 	gscycles = prevcycles;
 
@@ -220,9 +221,9 @@ void GIFdma()
 		{
 			if ((gif->chcr.MOD == CHAIN_MODE) && gif->chcr.STR)
 			{
-			    ptag = ReadTag(id);
+			    ptag = ReadTag();
 				if (ptag == NULL) return;
-				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
+				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr);
 
 				//Check TIE bit of CHCR and IRQ bit of tag
 				if (checkTieBit(ptag))  GIF_LOG("PATH3 MSK dmaIrq Set");
@@ -258,14 +259,14 @@ void GIFdma()
 
 	if ((gif->chcr.MOD == CHAIN_MODE) && (!gspath3done)) // Chain Mode
 	{
-        ptag = ReadTag(id);
+        ptag = ReadTag();
         if (ptag == NULL) return;
-		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, id, gif->madr);
+		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr);
 
 		if (dmacRegs->ctrl.STD == STD_GIF)
 		{
 			// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
-			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) && (id == 4))
+			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) && (ptag->ID == TAG_REFS))
 			{
 				// stalled
 				Console.WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
@@ -285,16 +286,15 @@ void GIFdma()
 
 	if ((!gspath3done) && (gif->qwc == 0))
 	{
-		ptag = (u32*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+		ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+        gif->unsafeTransfer(ptag);
+		gif->madr = ptag[1].ADDR;
 
-		Tag::UnsafeTransfer(gif, ptag);
-		gif->madr = ptag[1];
-
-		gspath3done = hwDmacSrcChainWithStack(gif, Tag::Id(ptag));
+		gspath3done = hwDmacSrcChainWithStack(gif, ptag->ID);
 
 		checkTieBit(ptag);
 
-		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, (ptag[0] >> 28) & 0x7, gif->madr);
+		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr);
 		CPU_INT(2, gscycles * BIAS);
 	}
 	else
@@ -327,8 +327,8 @@ void dmaGIF()
 
 	if ((gif->qwc == 0) && (gif->chcr.MOD != NORMAL_MODE))
 	{
-		u32* ptag = ReadTag2();
-		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1], ptag[0], gif->qwc, (ptag[0] >> 28), gif->madr);
+		tDMA_TAG* ptag = ReadTag2();
+		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr);
 
 		checkTieBit(ptag);
 		GIFdma();
@@ -342,7 +342,7 @@ void dmaGIF()
 }
 
 // called from only one location, so forceinline it:
-static __forceinline int mfifoGIFrbTransfer()
+static __forceinline bool mfifoGIFrbTransfer()
 {
 	u32 mfifoqwc = min(gifqwc, (u32)gif->qwc);
 	u32 *src;
@@ -357,14 +357,14 @@ static __forceinline int mfifoGIFrbTransfer()
 
 		/* it does (wrap around), so first copy 's1' bytes from 'addr' to 'data' */
 		src = (u32*)PSM(gif->madr);
-		if (src == NULL) return -1;
+		if (src == NULL) return false;
 		s1 = WRITERING_DMA(src, s1);
 
 		if (s1 == (mfifoqwc - s2))
 		{
 			/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
 			src = (u32*)PSM(dmacRegs->rbor.ADDR);
-			if (src == NULL) return -1;
+			if (src == NULL) return false;
 			s2 = WRITERING_DMA(src, s2);
 		}
 		else
@@ -378,39 +378,39 @@ static __forceinline int mfifoGIFrbTransfer()
 	{
 		/* it doesn't, so just transfer 'qwc*16' words from 'gif->madr' to GS */
 		src = (u32*)PSM(gif->madr);
-		if (src == NULL) return -1;
+		if (src == NULL) return false;
 		mfifoqwc = WRITERING_DMA(src, mfifoqwc);
 		gif->madr = dmacRegs->rbor.ADDR + (gif->madr & dmacRegs->rbsr.RMSK);
 	}
 
 	gifqwc -= mfifoqwc;
 
-	return 0;
+	return true;
 }
 
 // called from only one location, so forceinline it:
-static __forceinline int mfifoGIFchain()
+static __forceinline bool mfifoGIFchain()
 {
 	/* Is QWC = 0? if so there is nothing to transfer */
-	if (gif->qwc == 0) return 0;
+	if (gif->qwc == 0) return true;
 
 	if (gif->madr >= dmacRegs->rbor.ADDR &&
 		gif->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
 	{
-		if (mfifoGIFrbTransfer() == -1) return -1;
+		if (!mfifoGIFrbTransfer()) return false;
 	}
 	else
 	{
 		int mfifoqwc;
 
-		u32 *pMem = (u32*)dmaGetAddr(gif->madr);
-		if (pMem == NULL) return -1;
+		tDMA_TAG *pMem = (tDMA_TAG*)dmaGetAddr(gif->madr);
+		if (pMem == NULL) return false;
 
 		mfifoqwc = WRITERING_DMA(pMem, gif->qwc);
 		mfifocycles += (mfifoqwc) * 2; /* guessing */
 	}
 
-	return 0;
+	return true;
 }
 
 static u32 qwctag(u32 mask)
@@ -420,8 +420,7 @@ static u32 qwctag(u32 mask)
 
 void mfifoGIFtransfer(int qwc)
 {
-	u32 *ptag;
-	int id;
+	tDMA_TAG *ptag;
 
 	mfifocycles = 0;
 	gifmfifoirq = false;
@@ -451,19 +450,18 @@ void mfifoGIFtransfer(int qwc)
 
 		gif->tadr = qwctag(gif->tadr);
 
-		ptag = (u32*)dmaGetAddr(gif->tadr);
-		Tag::UnsafeTransfer(gif, ptag);
-
-		gif->madr = ptag[1];
-		id =Tag::Id(ptag);
+		ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);
+		gif->unsafeTransfer(ptag);
+		gif->madr = ptag[1].ADDR;
+		
 		mfifocycles += 2;
 
 		GIF_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
-				ptag[1], ptag[0], gif->qwc, id, gif->madr, gif->tadr, gifqwc, spr0->madr);
+				ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr, gif->tadr, gifqwc, spr0->madr);
 
 		gifqwc--;
 
-		switch (id)
+		switch (ptag->ID)
 		{
 			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
 				gif->tadr = qwctag(gif->tadr + 16);
@@ -498,7 +496,7 @@ void mfifoGIFtransfer(int qwc)
 				break;
 			}
 
-		if ((gif->chcr.TIE) && (Tag::IRQ(ptag)))
+		if ((gif->chcr.TIE) && (ptag->IRQ))
 		{
 			SPR_LOG("dmaIrq Set");
 			gifstate = GIF_STATE_DONE;
@@ -507,7 +505,7 @@ void mfifoGIFtransfer(int qwc)
 	 }
 
 	Registers::Freeze();
-	if (mfifoGIFchain() == -1)
+	if (!mfifoGIFchain())
 	{
 		Console.WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", gif->qwc, gif->madr, gif->tadr);
 		gifstate = GIF_STATE_STALL;

@@ -119,6 +119,7 @@ extern u8  *psS; //0.015 mb, scratch pad
 #define psSu32(mem)	(*(u32*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 #define psSu64(mem)	(*(u64*)&PS2MEM_SCRATCH[(mem) & 0x3fff])
 
+#define psH_Chcr(mem)	(*(tDMA_CHCR*)&PS2MEM_HW[(mem) & 0xffff])
 extern void memAlloc();
 extern void memReset();		// clears PS2 ram and loads the bios.  Throws Exception::FileNotFound on error.
 extern void memShutdown();

@@ -121,8 +121,12 @@ union tDMA_CHCR {
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	u16 upper() { return (_u32 >> 16); }
+	u16 lower() { return (u16)_u32; }
 	wxString desc() { return wxsFormat(L"Chcr: 0x%x", _u32); }
 };
+
+#define CHCR(value) ((tDMA_CHCR)(value))
 
 union tDMA_SADR {
 	struct {
@@ -301,6 +305,31 @@ enum DMAInter
 	SPR1intr = 0x02000200,
 	SISintr  = 0x20002000,
 	MEISintr = 0x40004000
+};
+
+union tDMAC_QUEUE
+{
+	struct 
+	{
+	    u16 VIF0 : 1;
+	    u16 VIF1 : 1;
+	    u16 GIF  : 1;
+	    u16 IPU0 : 1;
+	    u16 IPU1 : 1;
+	    u16 SIF0 : 1;
+	    u16 SIF1 : 1;
+	    u16 SIF2 : 1;
+	    u16 SPR0 : 1;
+        u16 SPR1 : 1;
+	    u16 SIS  : 1;
+	    u16 MEIS : 1;
+	    u16 BEIS : 1;
+	};
+	u16 _u16;
+	
+	tDMAC_QUEUE(u16 val) { _u16 = val; }
+	void reset() { _u16 = 0; }
+	bool empty() { return (_u16 == 0); }
 };
 
 union tDMAC_CTRL {
