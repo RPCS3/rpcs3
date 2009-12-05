@@ -627,3 +627,7 @@ TraceLogFilters&			SetTraceConfig();
 // games. Note: currently PS1 games will error out even without this
 // commented, so this is for development purposes only.
 //#define ENABLE_LOADING_PS1_GAMES
+
+// Change to 1 to enable SIF wakeup hack:
+#define IOP_ENABLE_SIF_HACK 0
+

@@ -79,6 +79,24 @@ void Pcsx2App::ReadUserModeSettings()
 
 	wxString groupname( wxsFormat( L"CWD.%08x", hashres ) );
 
+	if (IOP_ENABLE_SIF_HACK == 1)
+	{
+		wxDialogWithHelpers hackedVersion( NULL, wxID_ANY, _("It will devour your young! - PCSX2 Shub-Niggurath edition"), false );
+		hackedVersion.SetIdealWidth( 575 );
+
+		hackedVersion.SetSizer( new wxBoxSizer( wxVERTICAL ) );
+		hackedVersion += new pxStaticText( &hackedVersion,
+			L"NOTICE!! This is a version of Pcsx2 with hacks enabled meant for developers only. "
+			L"It will likely crash on all games, devour your young, and make you an object of shame and disgrace among your family and friends. "
+			L"Do not report any bugs with this version if you received this popup. \n\nYou have been warned. ", wxALIGN_CENTER
+		);
+		
+		hackedVersion += new wxButton( &hackedVersion, wxID_OK ) | pxSizerFlags::StdCenter();
+		hackedVersion.Fit();
+		hackedVersion.CentreOnScreen();
+		hackedVersion.ShowModal();
+	}
+
 	if( m_ForceWizard || !conf_usermode->HasGroup( groupname ) )
 	{
 		// Pre-Alpha Warning!  Why didn't I think to add this sooner?!

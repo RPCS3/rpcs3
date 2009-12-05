@@ -202,9 +202,6 @@ static __forceinline void IopTestEvent( IopEventId n, void (*callback)() )
 		psxSetNextBranch( psxRegs.sCycle[n], psxRegs.eCycle[n] );
 }
 
-// Change to 1 to enable SIF wakeup hack:
-#define IOP_ENABLE_SIF_HACK 0
-
 static __forceinline void sifHackInterrupt()
 {
 	// No reason -- just that sometimes the SIF fell asleep, and this wakes it up.
