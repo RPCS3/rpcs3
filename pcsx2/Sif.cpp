@@ -18,7 +18,6 @@
 #define _PC_	// disables MIPS opcode macros.
 
 #include "IopCommon.h"
-#include "Tags.h"
 
 #include "Sif.h"
 #include "Sifcmd.h"
@@ -196,7 +195,8 @@ __forceinline void SIF0Dma()
 			if (sif0dma->qwc == 0)
 			{
 				// Stop if TIE & the IRQ are set, or at the end.
-				if ((sif0dma->chcr.TIE && Tag::IRQ(sif0dma->chcr._u32)) || sif0.end)
+				// Remind me to look closer at this. (the IRQ tag of a chcr?)
+				if ((sif0dma->chcr.TIE && DMA_TAG(sif0dma->chcr._u32).IRQ) || sif0.end)
 				{
 					if (sif0.end)
 						SIF_LOG(" EE SIF end"); 

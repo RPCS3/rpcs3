@@ -15,7 +15,6 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "Tags.h"
 
 #include "GS.h"
 #include "Gif.h"

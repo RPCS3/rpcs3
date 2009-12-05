@@ -308,7 +308,6 @@
 		<Unit filename="../System/SysCoreThread.cpp" />
 		<Unit filename="../System/SysThreadBase.cpp" />
 		<Unit filename="../System/SysThreads.h" />
-		<Unit filename="../Tags.h" />
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />
 		<Unit filename="../Utilities/folderdesc.txt" />
@@ -364,8 +363,8 @@
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
 		<Unit filename="../gui/MemoryCardFile.cpp" />
-    <Unit filename="../gui/MessageBoxes.cpp" />
-    <Unit filename="../gui/Panels/AudioPanel.cpp" />
+		<Unit filename="../gui/MessageBoxes.cpp" />
+		<Unit filename="../gui/Panels/AudioPanel.cpp" />
 		<Unit filename="../gui/Panels/BaseConfigPanel.h" />
 		<Unit filename="../gui/Panels/BiosSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/ConfigurationPanels.h" />
@@ -406,13 +405,13 @@
 			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
 		</Unit>
-    <Unit filename="../gui/Resources/ButtonIcon_Camera.h" />
-    <Unit filename="../gui/Resources/ButtonIcon_Camera.png">
-      <Option compile="1" />
-      <Option weight="0" />
-      <Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
-    </Unit>
-    <Unit filename="../gui/Resources/ConfigIcon_Cpu.h" />
+		<Unit filename="../gui/Resources/ButtonIcon_Camera.h" />
+		<Unit filename="../gui/Resources/ButtonIcon_Camera.png">
+			<Option compile="1" />
+			<Option weight="0" />
+			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
+		</Unit>
+		<Unit filename="../gui/Resources/ConfigIcon_Cpu.h" />
 		<Unit filename="../gui/Resources/ConfigIcon_Cpu.png">
 			<Option compile="1" />
 			<Option weight="0" />
@@ -457,10 +456,9 @@
 		<Unit filename="../gui/Resources/EmbeddedImage.h" />
 		<Unit filename="../gui/Saveslots.cpp" />
 		<Unit filename="../gui/i18n.cpp" />
-		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
-    <Unit filename="../gui/pxLogTextCtrl.cpp" />
-    <Unit filename="../ps2/BiosTools.cpp" />
+		<Unit filename="../gui/pxLogTextCtrl.cpp" />
+		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
 		<Unit filename="../ps2/GIFpath.cpp" />
 		<Unit filename="../ps2/Iop/IopHwRead.cpp" />
