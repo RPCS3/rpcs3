@@ -481,7 +481,7 @@ mVUop(mVU_MADDq)	{ mVU_FMACc(mVU, recPass, 4,			"MADDq",  0);  }
 mVUop(mVU_MADDx)	{ mVU_FMACc(mVU, recPass, 2,			"MADDx",  cFs);} // Clamp (TOTA, DoM, ...)
 mVUop(mVU_MADDy)	{ mVU_FMACc(mVU, recPass, 2,			"MADDy",  cFs);} // Clamp (TOTA, DoM, ...)
 mVUop(mVU_MADDz)	{ mVU_FMACc(mVU, recPass, 2,			"MADDz",  cFs);} // Clamp (TOTA, DoM, ...)
-mVUop(mVU_MADDw)	{ mVU_FMACc(mVU, recPass, 2,			"MADDw",  cFs);} // Clamp (TOTA, DoM, ...)
+mVUop(mVU_MADDw)	{ mVU_FMACc(mVU, recPass, 2,			"MADDw", (isCOP2)?(cACC|cFt|cFs):cFs);} // Clamp (ICO (COP2), TOTA, DoM)
 mVUop(mVU_MADDA)	{ mVU_FMACb(mVU, recPass, 1, 0,			"MADDA",  0);  }
 mVUop(mVU_MADDAi)	{ mVU_FMACb(mVU, recPass, 3, 0,			"MADDAi", 0);  }
 mVUop(mVU_MADDAq)	{ mVU_FMACb(mVU, recPass, 4, 0,			"MADDAq", 0);  }

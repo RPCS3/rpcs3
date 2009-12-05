@@ -33,6 +33,7 @@ using namespace R5900::Dynarec;
 
 void setupMacroOp(int mode, const char* opName) {
 	printCOP2(opName);
+	microVU0.cop2 = 1;
 	microVU0.prog.IRinfo.curPC = 0;
 	microVU0.code = cpuRegs.code;
 	memset(&microVU0.prog.IRinfo.info[0], 0, sizeof(microVU0.prog.IRinfo.info[0]));
@@ -64,6 +65,7 @@ void endMacroOp(int mode) {
 		MOV32RtoM((uptr)&microVU0.regs->VI[REG_STATUS_FLAG].UL, gprF0);
 	}
 	microVU0.regAlloc->flushAll();
+	microVU0.cop2 = 0;
 }
 
 #define REC_COP2_mVU0(f, opName, mode)						\

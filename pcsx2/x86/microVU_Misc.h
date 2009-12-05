@@ -80,6 +80,7 @@ extern const __aligned(32) mVU_Globals mVUglob;
 #define divI 0x1040000
 #define divD 0x2080000
 
+#define isCOP2		(mVU->cop2  != 0)
 #define isVU1		(mVU->index != 0)
 #define getIndex	(isVU1 ? 1 : 0)
 #define getVUmem(x)	(((isVU1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)

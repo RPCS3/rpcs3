@@ -146,6 +146,7 @@ struct microVU {
 	__aligned16 u32 xmmPQb[4];   // Backup for xmmPQ
 
 	u32 index;			// VU Index (VU0 or VU1)
+	u32 cop2;			// VU is in COP2 mode?  (No/Yes)
 	u32 vuMemSize;		// VU Main  Memory Size (in bytes)
 	u32 microMemSize;	// VU Micro Memory Size (in bytes)
 	u32 progSize;		// VU Micro Memory Size (in u32's)
