@@ -455,11 +455,11 @@ void ADD_SS(microVU* mVU, int to, int from, int t1, int t2) {
 	if (t2b) mVU->regAlloc->clearNeeded(t2);
 }
 
-#define clampOp(opX) {					\
-	/*mVUclamp3(mVU, to,   t1, 0xf);*/	\
-	/*mVUclamp3(mVU, from, t1, 0xf);*/	\
-	opX(to, from);						\
-	/*mVUclamp4(to, t1, 0xf);*/			\
+#define clampOp(opX) {				\
+	mVUclamp3(mVU, to,   t1, 0xf);	\
+	mVUclamp3(mVU, from, t1, 0xf);	\
+	opX(to, from);					\
+	mVUclamp4(to, t1, 0xf);			\
 }
 
 void SSE_MAXPS(mV, int to, int from, int t1 = -1, int t2 = -1) {
