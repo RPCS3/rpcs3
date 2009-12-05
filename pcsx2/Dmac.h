@@ -99,7 +99,10 @@ union tDMA_TAG {
 	tDMA_TAG(u32 val) { _u32 = val; }
 	u16 upper() { return (_u32 >> 16); }
 	u16 lower() { return (u16)_u32; }
+	void reset() { _u32 = 0; }
 };
+
+#define DMA_TAG(value) ((tDMA_TAG)(value))
 
 union tDMA_CHCR {
 	struct {

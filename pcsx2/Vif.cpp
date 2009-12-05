@@ -484,15 +484,15 @@ static __forceinline bool mfifo_VIF1chain()
 	}
 	else
 	{
-		u32 *pMem = (u32*)dmaGetAddr(vif1ch->madr);
+		tDMA_TAG *pMem = (tDMA_TAG*)dmaGetAddr(vif1ch->madr);
 		SPR_LOG("Non-MFIFO Location");
 
 		if (pMem == NULL) return false;
 
 		if (vif1.vifstalled)
-			ret = VIF1transfer(pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, false);
+			ret = VIF1transfer((u32*)pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, false);
 		else
-			ret = VIF1transfer(pMem, vif1ch->qwc << 2, false);
+			ret = VIF1transfer((u32*)pMem, vif1ch->qwc << 2, false);
 	}
 	return ret;
 }
@@ -504,8 +504,7 @@ static u32 qwctag(u32 mask)
 
 void mfifoVIF1transfer(int qwc)
 {
-	u32 *ptag;
-	int id;
+	tDMA_TAG *ptag;
 
 	g_vifCycles = 0;
 
@@ -529,16 +528,16 @@ void mfifoVIF1transfer(int qwc)
 
 	if (vif1ch->qwc == 0 && vifqwc > 0)
 	{
-		ptag = (u32*)dmaGetAddr(vif1ch->tadr);
+		ptag = (tDMA_TAG*)dmaGetAddr(vif1ch->tadr);
 
 		if (vif1ch->chcr.TTE)
 		{
             bool ret;
 
 			if (vif1.stallontag)
-				ret = VIF1transfer(ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on Stall
+				ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on Stall
 			else
-				ret = VIF1transfer(ptag + 2, 2, true);  //Transfer Tag
+				ret = VIF1transfer((u32*)ptag + 2, 2, true);  //Transfer Tag
 
 			if (!(ret))
 			{
@@ -548,16 +547,15 @@ void mfifoVIF1transfer(int qwc)
 			}
 		}
 
-		Tag::UnsafeTransfer(vif1ch, ptag);
+        vif1ch->unsafeTransfer(ptag);
 
-		vif1ch->madr = ptag[1];
-		id =Tag::Id(ptag);
+		vif1ch->madr = ptag[1].ADDR;
 		vifqwc--;
 
 		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
-        ptag[1], ptag[0], vif1ch->qwc, id, vif1ch->madr, vif1ch->tadr, vifqwc, spr0->madr);
+        ptag[1]._u32, ptag[0]._u32, vif1ch->qwc, ptag->ID, vif1ch->madr, vif1ch->tadr, vifqwc, spr0->madr);
 
-		switch (id)
+		switch (ptag->ID)
 		{
 			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
 				vif1ch->tadr = qwctag(vif1ch->tadr + 16);
@@ -593,7 +591,7 @@ void mfifoVIF1transfer(int qwc)
 				break;
 		}
 
-		if ((vif1ch->chcr.TIE) && (Tag::IRQ(ptag)))
+		if (vif1ch->chcr.TIE && ptag->IRQ)
 		{
 			VIF_LOG("dmaIrq Set");
 			vif1.done = true;

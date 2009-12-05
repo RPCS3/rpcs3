@@ -95,7 +95,7 @@ static __forceinline void SIF1read(u32 *to, int words)
 
 __forceinline void SIF0Dma()
 {
-	u32 *ptag;
+	tDMA_TAG *ptag;
 	bool done = false;
 	int cycles = 0, psxCycles = 0;
 
@@ -114,7 +114,7 @@ __forceinline void SIF0Dma()
 				// if (sif0.sifData.data & 0xC0000000) 
 				// which checks if the tag type is refe or end, or if the irq flag is set.
 				// If the tag is refe or end, sif0.end gets set, so I'm replacing it with something easier to read: --arcum42
-				if (/*(sif0dma->chcr.MOD == NORMAL_MODE) ||*/ sif0.end || Tag::IRQ(sif0.sifData.data))
+				if (/*(sif0dma->chcr.MOD == NORMAL_MODE) ||*/ sif0.end || DMA_TAG(sif0.sifData.data).IRQ)
 				{
 					SIF_LOG(" IOP SIF Stopped");
 
@@ -144,7 +144,7 @@ __forceinline void SIF0Dma()
 
 					SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.sifData.words, sif0.sifData.data);
 					
-					u32 tagId = Tag::Id(sif0.sifData.data);
+					u32 tagId = DMA_TAG(sif0.sifData.data).ID;
 					if ((tagId == TAG_REFE) || (tagId == TAG_END))
 						SIF_LOG("   END");
 					else
@@ -180,7 +180,7 @@ __forceinline void SIF0Dma()
 				//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
 				SIF_LOG("----------- %lX of %lX", readSize << 2, size << 2);
 
-				ptag = _dmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
+				ptag = (tDMA_TAG*)_dmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
 				if (ptag == NULL) return;
 
 				SIF0read((u32*)ptag, readSize << 2);
@@ -214,12 +214,12 @@ __forceinline void SIF0Dma()
 					SIF0read((u32*)&tag[0], 4); // Tag
 					SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
-					Tag::UnsafeTransfer(sif0dma,&tag[0]);
-					sif0dma->madr = tag[1];
+                    sif0dma->unsafeTransfer(((tDMA_TAG*)(tag)));
+					sif0dma->madr = DMA_TAG(tag[1]).ADDR;
 
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
 					
-					switch (Tag::Id(tag[0]))
+					switch (DMA_TAG(tag[0]).ID)
 					{
 						case TAG_REFE:
                             sif0.end = 1;
@@ -248,7 +248,7 @@ __forceinline void SIF0Dma()
 
 __forceinline void SIF1Dma()
 {
-	u32 *ptag;
+	tDMA_TAG *ptag;
 	bool done = FALSE;
 	int cycles = 0, psxCycles = 0;
 	do
@@ -276,30 +276,30 @@ __forceinline void SIF1Dma()
 				{
 					// Process DMA tag at sif1dma->tadr
 					done = false;
-					ptag = _dmaGetAddr(sif1dma, sif1dma->tadr, DMAC_SIF1);
+					ptag = (tDMA_TAG*)_dmaGetAddr(sif1dma, sif1dma->tadr, DMAC_SIF1);
 					if (ptag == NULL) return;
 					
-					Tag::UnsafeTransfer(sif1dma, ptag);
+					sif1dma->unsafeTransfer(ptag);
 
 					if (sif1dma->chcr.TTE)
 					{
 						Console.WriteLn("SIF1 TTE");
-						SIF1write(ptag + 2, 2);
+						SIF1write((u32*)ptag + 2, 2);
 					}
 
-					if ((sif1dma->chcr.TIE) && (Tag::IRQ(ptag)))
+					if (sif1dma->chcr.TIE && ptag->IRQ)
 					{
 						Console.WriteLn("SIF1 TIE");
 						sif1.end = 1;
 					}
 					//sif1.chain = 1;
 
-					switch (Tag::Id(ptag))
+					switch (ptag->ID)
 					{
 						case TAG_REFE: // refe
-							SIF_LOG("   REFE %08X", ptag[1]);
+							SIF_LOG("   REFE %08X", ptag[1]._u32);
 							sif1.end = 1;
-							sif1dma->madr = ptag[1];
+							sif1dma->madr = ptag[1].ADDR;
 							sif1dma->tadr += 16;
 							break;
 
@@ -310,15 +310,15 @@ __forceinline void SIF1Dma()
 							break;
 
 						case TAG_NEXT: // next
-							SIF_LOG("   NEXT %08X", ptag[1]);
+							SIF_LOG("   NEXT %08X", ptag[1]._u32);
 							sif1dma->madr = sif1dma->tadr + 16;
-							sif1dma->tadr = ptag[1];
+							sif1dma->tadr = ptag[1].ADDR;
 							break;
 
 						case TAG_REF: // ref
 						case TAG_REFS: // refs
-							SIF_LOG("   REF %08X", ptag[1]);
-							sif1dma->madr = ptag[1];
+							SIF_LOG("   REF %08X", ptag[1]._u32);
+							sif1dma->madr = ptag[1].ADDR;
 							sif1dma->tadr += 16;
 							break;
 
@@ -337,15 +337,15 @@ __forceinline void SIF1Dma()
 			else // There's some data ready to transfer into the fifo..
 			{
 				int qwTransfer = sif1dma->qwc;
-				u32 *data;
+				tDMA_TAG *data;
 				
-				data = _dmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
+				data = (tDMA_TAG*)_dmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
 				if (data == NULL) return;
 
 				if (qwTransfer > (FIFO_SIF1_W - sif1.fifoSize) / 4) // Copy part of sif1dma into FIFO
 					qwTransfer = (FIFO_SIF1_W - sif1.fifoSize) / 4;
 
-				SIF1write(data, qwTransfer << 2);
+				SIF1write((u32*)data, qwTransfer << 2);
 
 				sif1dma->madr += qwTransfer << 4;
 				cycles += qwTransfer;		// fixme : BIAS is factored in above
@@ -395,7 +395,7 @@ __forceinline void SIF1Dma()
 				{
 				    struct sifData d;
 					SIF1read((u32*)&d, 4);
-					SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", d.data & 0xffffff, d.words, (d.data >> 28)&7, (d.data >> 31)&1);
+					SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", d.data & 0xffffff, d.words, DMA_TAG(d.data).ID, DMA_TAG(d.data).IRQ);
 					HW_DMA10_MADR = d.data & 0xffffff;
 					sif1.counter = d.words;
 					sif1.tagMode = (d.data >> 24) & 0xFF;

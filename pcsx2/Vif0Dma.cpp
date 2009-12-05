@@ -30,7 +30,6 @@ extern int (__fastcall *Vif0TransTLB[128])(u32 *data);
 extern void (*Vif0CMDTLB[75])();
 
 vifStruct vif0;
-u32 *vif0ptag;
 
 __forceinline void vif0FLUSH()
 {
@@ -499,18 +498,17 @@ bool  _VIF0chain()
 
 bool _chainVIF0()
 {
-	int id;
+    tDMA_TAG *ptag;
+    
+	ptag = (tDMA_TAG*)dmaGetAddr(vif0ch->tadr); //Set memory pointer to TADR
 
-	vif0ptag = (u32*)dmaGetAddr(vif0ch->tadr); //Set memory pointer to TADR
+	if (!(vif0ch->transfer("Vif0 Tag", ptag))) return false;
 
-	if (!(Tag::Transfer("Vif0 Tag", vif0ch, vif0ptag))) return false;
-
-	vif0ch->madr = vif0ptag[1];		// MADR = ADDR field
-	id = Tag::Id(vif0ptag); 	// ID for DmaChain copied from bit 28 of the tag
-	g_vifCycles += 1; 				// Increase the QW read for the tag
+	vif0ch->madr = ptag[1].ADDR;		// MADR = ADDR field
+    g_vifCycles += 1; 				// Increase the QW read for the tag
 
 	VIF_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
-	        vif0ptag[1], vif0ptag[0], vif0ch->qwc, id, vif0ch->madr, vif0ch->tadr);
+	        ptag[1]._u32, ptag[0]._u32, vif0ch->qwc, ptag->ID, vif0ch->madr, vif0ch->tadr);
 
 	// Transfer dma tag if tte is set
 	if (vif0ch->chcr.TTE)
@@ -518,21 +516,21 @@ bool _chainVIF0()
 	    bool ret;
 
 		if (vif0.vifstalled)
-			ret = VIF0transfer(vif0ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset, true);  //Transfer Tag on stall
+			ret = VIF0transfer((u32*)ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset, true);  //Transfer Tag on stall
 		else
-			ret = VIF0transfer(vif0ptag + 2, 2, true);  //Transfer Tag
+			ret = VIF0transfer((u32*)ptag + 2, 2, true);  //Transfer Tag
 
 		if (!(ret)) return false;        //IRQ set by VIFTransfer
 	}
 
-	vif0.done |= hwDmacSrcChainWithStack(vif0ch, id);
+	vif0.done |= hwDmacSrcChainWithStack(vif0ch, ptag->ID);
 
 	VIF_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",
-	        vif0ptag[1], vif0ptag[0], vif0ch->qwc, id, vif0ch->madr, vif0ch->tadr);
+	        ptag[1]._u32, ptag[0]._u32, vif0ch->qwc, ptag->ID, vif0ch->madr, vif0ch->tadr);
 
 	_VIF0chain();											   //Transfers the data set by the switch
 
-	if (vif0ch->chcr.TIE && Tag::IRQ(vif0ptag))  //Check TIE bit of CHCR and IRQ bit of tag
+	if (vif0ch->chcr.TIE && ptag->IRQ)  //Check TIE bit of CHCR and IRQ bit of tag
 	{
 		VIF_LOG("dmaIrq Set\n");
 		vif0.done = true; //End Transfer

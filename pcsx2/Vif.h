@@ -113,6 +113,8 @@ union tVIF_STAT {
 	wxString desc() { return wxsFormat(L"Stat: 0x%x", _u32); }
 };
 
+#define VIF_STAT(value) ((tVIF_STAT)(value))
+
 union tVIF_FBRST {
 	struct {
 		u32 RST : 1; // Resets Vif(0/1) when written.
@@ -131,6 +133,8 @@ union tVIF_FBRST {
 	void reset() { _u32 = 0; }
 	wxString desc() { return wxsFormat(L"Fbrst: 0x%x", _u32); }
 };
+
+#define FBRST(value) ((tVIF_FBRST)(value))
 
 union tVIF_ERR {
 	struct {

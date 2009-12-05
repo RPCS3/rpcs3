@@ -50,10 +50,10 @@ static void TestClearVUs(u32 madr, u32 size)
 
 int  _SPR0chain()
 {
-	u32 *pMem;
+	tDMA_TAG *pMem;
 
 	if (spr0->qwc == 0) return 0;
-	pMem = (u32*)dmaGetAddr(spr0->madr);
+	pMem = (tDMA_TAG*)dmaGetAddr(spr0->madr);
 	if (pMem == NULL) return -1;
 
 	switch (dmacRegs->ctrl.MFD)
@@ -97,7 +97,7 @@ void _SPR0interleave()
 	int qwc = spr0->qwc;
 	int sqwc = dmacRegs->sqwc.SQWC; 
 	int tqwc = dmacRegs->sqwc.TQWC; 
-	u32 *pMem;
+	tDMA_TAG *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;
 	//Console.WriteLn("dmaSPR0 interleave");
@@ -108,7 +108,7 @@ void _SPR0interleave()
 	{
 		spr0->qwc = std::min(tqwc, qwc);
 		qwc -= spr0->qwc;
-		pMem = (u32*)dmaGetAddr(spr0->madr);
+		pMem = (tDMA_TAG*)dmaGetAddr(spr0->madr);
 		
 		switch (dmacRegs->ctrl.MFD)
  		{
@@ -151,8 +151,7 @@ static __forceinline void _dmaSPR0()
 		}
 		case CHAIN_MODE:
 		{
-			u32 *ptag;
-			int id;
+			tDMA_TAG *ptag;
 			bool done = FALSE;
 
 			if (spr0->qwc > 0)
@@ -162,23 +161,22 @@ static __forceinline void _dmaSPR0()
 				return;
 			}
 			// Destination Chain Mode
-			ptag = &psSu32(spr0->sadr);
+			ptag = (tDMA_TAG*)&psSu32(spr0->sadr);
 			spr0->sadr += 16;
 			
-			Tag::UnsafeTransfer(spr0, ptag);
-			id = Tag::Id(ptag);
+			spr0->unsafeTransfer(ptag);
 			
-			spr0->madr = ptag[1];					//MADR = ADDR field
+			spr0->madr = ptag[1].ADDR;					//MADR = ADDR field
 
 			SPR_LOG("spr0 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
-				ptag[1], ptag[0], spr0->qwc, id, spr0->madr, spr0->sadr);
+				ptag[1]._u32, ptag[0]._u32, spr0->qwc, ptag->ID, spr0->madr, spr0->sadr);
 
 			if (dmacRegs->ctrl.STS == STS_fromSPR)   // STS == fromSPR
 			{
 				Console.WriteLn("SPR stall control");
 			}
 
-			switch (id)
+			switch (ptag->ID)
 			{
 				case TAG_CNTS: // CNTS - Transfer QWC following the tag (Stall Control)
 					if (dmacRegs->ctrl.STS == STS_fromSPR) dmacRegs->stadr.ADDR = spr0->madr + (spr0->qwc * 16);					//Copy MADR to DMAC_STADR stall addr register
@@ -194,7 +192,8 @@ static __forceinline void _dmaSPR0()
 			}
 			
 			SPR0chain();
-			if (spr0->chcr.TIE && Tag::IRQ(ptag))  			 //Check TIE bit of CHCR and IRQ bit of tag
+			
+			if (spr0->chcr.TIE && ptag->IRQ)  			 //Check TIE bit of CHCR and IRQ bit of tag
 			{
 				//Console.WriteLn("SPR0 TIE");
 				done = true;
@@ -204,12 +203,12 @@ static __forceinline void _dmaSPR0()
 			
 			if (!done)
 			{
-				ptag = &psSu32(spr0->sadr);		//Set memory pointer to SADR
-				CPU_INT(8, ((u16)ptag[0]) / BIAS); // the lower 16bits of the tag / BIAS);
+				ptag = (tDMA_TAG*)&psSu32(spr0->sadr);		//Set memory pointer to SADR
+				CPU_INT(8, ptag[0].QWC / BIAS); // the lower 16bits of the tag / BIAS);
 				return;
 			}
 			SPR_LOG("spr0 dmaChain complete %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
-				ptag[1], ptag[0], spr0->qwc, id, spr0->madr);
+				ptag[1]._u32, ptag[0]._u32, spr0->qwc, ptag->ID, spr0->madr);
 			break;
 		}
 		//case INTERLEAVE_MODE:
@@ -265,9 +264,9 @@ void dmaSPR0()   // fromSPR
 
 	if ((spr0->chcr.MOD == CHAIN_MODE) && spr0->qwc == 0)
 	{
-		u32 *ptag;
-		ptag = &psSu32(spr0->sadr);		//Set memory pointer to SADR
-		CPU_INT(8, (ptag[0] & 0xffff) / BIAS);
+		tDMA_TAG *ptag;
+		ptag = (tDMA_TAG*)&psSu32(spr0->sadr);		//Set memory pointer to SADR
+		CPU_INT(8, ptag[0].QWC / BIAS);
 		return;
 	}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
@@ -285,14 +284,14 @@ __forceinline static void SPR1transfer(u32 *data, int size)
 
 int  _SPR1chain()
 {
-	u32 *pMem;
+	tDMA_TAG *pMem;
 
 	if (spr1->qwc == 0) return 0;
 
-	pMem = (u32*)dmaGetAddr(spr1->madr);
+	pMem = (tDMA_TAG*)dmaGetAddr(spr1->madr);
 	if (pMem == NULL) return -1;
 
-	SPR1transfer(pMem, spr1->qwc << 2);
+	SPR1transfer((u32*)pMem, spr1->qwc << 2);
 	spr1->madr += spr1->qwc << 4;
 
 	return (spr1->qwc) * BIAS;
@@ -309,7 +308,7 @@ void _SPR1interleave()
 	int qwc = spr1->qwc;
 	int sqwc = dmacRegs->sqwc.SQWC; 
 	int tqwc =  dmacRegs->sqwc.TQWC; 
-	u32 *pMem;
+	tDMA_TAG *pMem;
 	
 	if (tqwc == 0) tqwc = qwc;
 	SPR_LOG("SPR1 interleave size=%d, tqwc=%d, sqwc=%d, addr=%lx sadr=%lx",
@@ -319,7 +318,7 @@ void _SPR1interleave()
 	{
 		spr1->qwc = std::min(tqwc, qwc);
 		qwc -= spr1->qwc;
-		pMem = (u32*)dmaGetAddr(spr1->madr);
+		pMem = (tDMA_TAG*)dmaGetAddr(spr1->madr);
 		memcpy_fast(&psSu8(spr1->sadr), (u8*)pMem, spr1->qwc << 4);
 		spr1->sadr += spr1->qwc * 16;
 		spr1->madr += (sqwc + spr1->qwc) * 16; 
@@ -343,8 +342,7 @@ void _dmaSPR1()   // toSPR work function
 		}
 		case CHAIN_MODE:
 		{
-			u32 *ptag;
-			int id;
+			tDMA_TAG *ptag;
 			bool done = false;
 
 			if (spr1->qwc > 0)
@@ -356,31 +354,30 @@ void _dmaSPR1()   // toSPR work function
 			}
 			// Chain Mode
 
-			ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+			ptag = (tDMA_TAG*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
 			
-			if (!(Tag::Transfer("SPR1 Tag", spr1, ptag)))
+			if (!spr1->transfer("SPR1 Tag", ptag))
 			{
 				done = true;
 				spr1finished = done;
 			}
 
-			id = Tag::Id(ptag);
-			spr1->madr = ptag[1];						//MADR = ADDR field
+			spr1->madr = ptag[1].ADDR;						//MADR = ADDR field
 
 			// Transfer dma tag if tte is set
 			if (spr1->chcr.TTE)
 			{
-				SPR_LOG("SPR TTE: %x_%x\n", ptag[3], ptag[2]);
-				SPR1transfer(ptag, 4);				//Transfer Tag
+				SPR_LOG("SPR TTE: %x_%x\n", ptag[3]._u32, ptag[2]._u32);
+				SPR1transfer((u32*)ptag, 4);				//Transfer Tag
 			}
 
 			SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx",
-				ptag[1], ptag[0], spr1->qwc, id, spr1->madr);
+				ptag[1]._u32, ptag[0]._u32, spr1->qwc, ptag->ID, spr1->madr);
 
-			done = (hwDmacSrcChain(spr1, id) == 1);
+			done = (hwDmacSrcChain(spr1, ptag->ID) == 1);
 			SPR1chain();										//Transfers the data set by the switch
 
-			if (spr1->chcr.TIE && Tag::IRQ(ptag))  			//Check TIE bit of CHCR and IRQ bit of tag
+			if (spr1->chcr.TIE && ptag->IRQ)  			//Check TIE bit of CHCR and IRQ bit of tag
 			{
 				SPR_LOG("dmaIrq Set");
 
@@ -391,8 +388,8 @@ void _dmaSPR1()   // toSPR work function
 			spr1finished = done;
 			if (!done)
 			{
-				ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
-				CPU_INT(9, (((u16)ptag[0]) / BIAS));// the lower 16 bits of the tag / BIAS);
+				ptag = (tDMA_TAG*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+				CPU_INT(9, (ptag[0].QWC / BIAS));// the lower 16 bits of the tag / BIAS);
 			}
 			break;
 		}
@@ -414,9 +411,9 @@ void dmaSPR1()   // toSPR
 
 	if ((spr1->chcr.MOD == CHAIN_MODE) && (spr1->qwc == 0))
 	{
-		u32 *ptag;
-		ptag = (u32*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
-		CPU_INT(9, (ptag[0] & 0xffff) / BIAS);
+		tDMA_TAG *ptag;
+		ptag = (tDMA_TAG*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+		CPU_INT(9, ptag[0].QWC / BIAS);
 		return;
 	}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values

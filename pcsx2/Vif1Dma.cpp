@@ -33,7 +33,6 @@ extern int (__fastcall *Vif1TransTLB[128])(u32 *data);
 
 Path3Modes Path3progress = STOPPED_MODE;
 vifStruct vif1;
-static u32 *vif1ptag;
 
 static __aligned16 u32 splittransfer[4];
 static u32 splitptr = 0;
@@ -365,7 +364,6 @@ static int  __fastcall Vif1TransUnpack(u32 *data)
         XMMRegisters::Thaw();
         return ret;
 	}
-
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -793,6 +791,8 @@ bool _chainVIF1()
 
 __forceinline void vif1SetupTransfer()
 {
+    tDMA_TAG *ptag;
+    
 	switch (vif1.dmamode)
 	{
 		case VIF_NORMAL_TO_MEM_MODE:
@@ -803,22 +803,19 @@ __forceinline void vif1SetupTransfer()
 			break;
 
 		case VIF_CHAIN_MODE:
-			int id;
+			ptag = (tDMA_TAG*)dmaGetAddr(vif1ch->tadr); //Set memory pointer to TADR
 
-			vif1ptag = (u32*)dmaGetAddr(vif1ch->tadr); //Set memory pointer to TADR
+			if (!(vif1ch->transfer("Vif1 Tag", ptag))) return;
 
-			if (!(Tag::Transfer("Vif1 Tag", vif1ch, vif1ptag))) return;
-
-			vif1ch->madr = vif1ptag[1];            //MADR = ADDR field
+			vif1ch->madr = ptag[1].ADDR;            //MADR = ADDR field
 			g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
-			id = Tag::Id(vif1ptag); //ID for DmaChain copied from bit 28 of the tag
 
 			// Transfer dma tag if tte is set
 
 			VIF_LOG("VIF1 Tag %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx\n",
-			        vif1ptag[1], vif1ptag[0], vif1ch->qwc, id, vif1ch->madr, vif1ch->tadr);
+			        ptag[1]._u32, ptag[0]._u32, vif1ch->qwc, ptag->ID, vif1ch->madr, vif1ch->tadr);
 
-			if (!vif1.done && ((dmacRegs->ctrl.STD == STD_VIF1) && (id == 4)))   // STD == VIF1
+			if (!vif1.done && ((dmacRegs->ctrl.STD == STD_VIF1) && (ptag->ID == TAG_REFS)))   // STD == VIF1
 			{
 				// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
 				if ((vif1ch->madr + vif1ch->qwc * 16) >= dmacRegs->stadr.ADDR)
@@ -836,9 +833,9 @@ __forceinline void vif1SetupTransfer()
 			    bool ret;
 
 				if (vif1.vifstalled)
-					ret = VIF1transfer(vif1ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on stall
+					ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on stall
 				else
-					ret = VIF1transfer(vif1ptag + 2, 2, true);  //Transfer Tag
+					ret = VIF1transfer((u32*)ptag + 2, 2, true);  //Transfer Tag
 
 				if ((ret == false) && vif1.irqoffset < 2)
 				{
@@ -848,10 +845,10 @@ __forceinline void vif1SetupTransfer()
 			}
 
 			vif1.irqoffset = 0;
-			vif1.done |= hwDmacSrcChainWithStack(vif1ch, id);
+			vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
 
 			//Check TIE bit of CHCR and IRQ bit of tag
-			if (vif1ch->chcr.TIE && (Tag::IRQ(vif1ptag)))
+			if (vif1ch->chcr.TIE && ptag->IRQ)
 			{
 				VIF_LOG("dmaIrq Set");
 
@@ -997,7 +994,7 @@ void dmaVIF1()
 	if (vif1.dmamode != VIF_NORMAL_FROM_MEM_MODE)
 		vif1Regs->stat.FQC = 0x10;
 	else
-		vif1Regs->stat.set_flags(min((u16)16, vif1ch->qwc) << 24);
+		vif1Regs->stat.FQC = min((u16)0x10, vif1ch->qwc);
 
 	// Chain Mode
 	vif1.done = false;
@@ -1019,7 +1016,7 @@ void vif1Write32(u32 mem, u32 value)
 		case VIF1_FBRST:   // FBRST
 			VIF_LOG("VIF1_FBRST write32 0x%8.8x", value);
 
-			if (value & 0x1) // Reset Vif.
+			if (FBRST(value).RST) // Reset Vif.
 			{
 				memzero(vif1);
 				cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
@@ -1037,10 +1034,11 @@ void vif1Write32(u32 mem, u32 value)
 
 				vif1Regs->err.reset();
 				vif1.inprogress = 0;
-				vif1Regs->stat.clear_flags(VIF1_STAT_FQC | VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS); // FQC=0
+				vif1Regs->stat.FQC = 0;
+				vif1Regs->stat.clear_flags(VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS);
 			}
 
-			if (value & 0x2) // Forcebreak Vif.
+			if (FBRST(value).FBK) // Forcebreak Vif.
 			{
 				/* I guess we should stop the VIF dma here, but not 100% sure (linuz) */
 				vif1Regs->stat.VFS = true;
@@ -1050,7 +1048,7 @@ void vif1Write32(u32 mem, u32 value)
 				Console.WriteLn("vif1 force break");
 			}
 
-			if (value & 0x4) // Stop Vif.
+			if (FBRST(value).STP) // Stop Vif.
 			{
 				// Not completely sure about this, can't remember what game used this, but 'draining' the VIF helped it, instead of
 				//   just stoppin the VIF (linuz).
@@ -1060,7 +1058,7 @@ void vif1Write32(u32 mem, u32 value)
 				vif1.vifstalled = true;
 			}
 
-			if (value & 0x8) // Cancel Vif Stall.
+			if (FBRST(value).STC) // Cancel Vif Stall.
 			{
 				bool cancel = false;
 
@@ -1122,14 +1120,14 @@ void vif1Write32(u32 mem, u32 value)
 			}
 #endif
 
-			vif1Regs->stat.FDR = !!(value & VIF1_STAT_FDR);
-			//vif1Regs->stat._u32 = (vif1Regs->stat._u32 & ~VIF1_STAT_FDR) | (value & VIF1_STAT_FDR);
-			if (vif1Regs->stat.FDR)
+			vif1Regs->stat.FDR = VIF_STAT(value).FDR;
+			
+			if (vif1Regs->stat.FDR) // Vif transferring to memory.
 			{
 			    // Hack but it checks this is true before transfer? (fatal frame)
 				vif1Regs->stat.FQC = 0x1;
 			}
-			else
+			else // Memory transferring to Vif.
 			{
 				vif1ch->qwc = 0;
 				vif1.vifstalled = false;
