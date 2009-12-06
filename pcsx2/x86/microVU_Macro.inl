@@ -333,8 +333,11 @@ static void recCTC2() {
 			AND32ItoR(EAX, 0x0C0C);
 			MOV32RtoM((uptr)&microVU0.regs->VI[REG_FBRST].UL, EAX);
 			break;
-		default: 
-			_eeMoveGPRtoM((uptr)&microVU0.regs->VI[_Rd_].UL, _Rt_); 
+		default:
+			// Executing vu0 block here fixes the intro of Rachet and Clank
+			// sVU's COP2 has a comment that "Donald Duck" needs this too...
+			if (_Rd_) _eeMoveGPRtoM((uptr)&microVU0.regs->VI[_Rd_].UL, _Rt_);
+			CALLFunc((uptr)CpuVU0.ExecuteBlock);
 			break;
 	}
 }
