@@ -542,7 +542,8 @@ protected:
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnSuspendInThread();
 	virtual void OnCleanupInThread();
-	virtual void OnVsyncInThread();
+	//virtual void VsyncInThread();
+	virtual void DispatchKeyEventToUI( const keyEvent& ev );
 	virtual void ExecuteTaskInThread();
 };
 

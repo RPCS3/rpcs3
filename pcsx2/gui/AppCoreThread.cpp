@@ -163,23 +163,15 @@ void AppCoreThread::OnCleanupInThread()
 	extern int TranslateGDKtoWXK( u32 keysym );
 #endif
 
-void AppCoreThread::OnVsyncInThread()
+void AppCoreThread::DispatchKeyEventToUI( const keyEvent& ev )
 {
-	_parent::OnVsyncInThread();
-
-	if( !pxAssert(g_plugins!=NULL) ) return;
-
-	const keyEvent* ev = PADkeyEvent();
-	if( ev == NULL || (ev->key == 0) ) return;
-
-	g_plugins->KeyEvent( *ev );
-	m_kevt.SetEventType( ( ev->evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
-	const bool isDown = (ev->evt == KEYPRESS);
+	m_kevt.SetEventType( ( ev.evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
+	const bool isDown = (ev.evt == KEYPRESS);
 
 	#ifdef __WXMSW__
-		const int vkey = wxCharCodeMSWToWX( ev->key );
+		const int vkey = wxCharCodeMSWToWX( ev.key );
 	#elif defined( __WXGTK__ )
-		const int vkey = TranslateGDKtoWXK( ev->key );
+		const int vkey = TranslateGDKtoWXK( ev.key );
 	#else
 	#	error Unsupported Target Platform.
 	#endif

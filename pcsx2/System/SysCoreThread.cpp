@@ -19,6 +19,7 @@
 #include "Counters.h"
 #include "GS.h"
 #include "Elfheader.h"
+#include "Patch.h"
 #include "PageFaultSource.h"
 #include "SysThreads.h"
 
@@ -279,8 +280,35 @@ void SysCoreThread::_reset_stuff_as_needed()
 	}
 }
 
-void SysCoreThread::OnVsyncInThread()
+// Called by the VsyncInThread() if a valid keyEvent is pending and is unhandled by other
+// PS2 core plugins.
+void SysCoreThread::DispatchKeyEventToUI( const keyEvent& evt )
 {
+}
+
+// This is called from the PS2 VM at the start of every vsync (either 59.94 or 50 hz by PS2
+// clock scale, which does not correlate to the actual host machine vsync).
+//
+// Default tasks: Updates PADs and applies vsync patches.  Derived classes can override this
+// to change either PAD and/or Patching behaviors.
+//
+// [TODO]: Should probably also handle profiling and debugging updates, once those are
+// re-implemented.
+//
+void SysCoreThread::VsyncInThread()
+{
+	if( !pxAssert(g_plugins!=NULL) ) return;
+	const keyEvent* ev = PADkeyEvent();
+	if( ev != NULL && (ev->key != 0) )
+	{
+		// Give plugins first try to handle keys.  If none of them handles the key, it will
+		// be passed to the main user interface.
+
+		if( !g_plugins->KeyEvent( *ev ) )
+			DispatchKeyEventToUI( *ev );
+	}
+
+	if (EmuConfig.EnablePatches) ApplyPatch();
 }
 
 void SysCoreThread::StateCheckInThread()
@@ -289,8 +317,6 @@ void SysCoreThread::StateCheckInThread()
 	_parent::StateCheckInThread();
 	if( !m_hasValidState )
 		throw Exception::RuntimeError( "Invalid emulation state detected; Virtual machine threads have been cancelled." );
-
-	//OnVsyncInThread();
 
 	_reset_stuff_as_needed();
 }

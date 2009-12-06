@@ -217,7 +217,8 @@ public:
 
 	bool HasPendingStateChangeRequest() const;
 	virtual void StateCheckInThread();
-	virtual void OnVsyncInThread();
+	virtual void VsyncInThread();
+	virtual void DispatchKeyEventToUI( const keyEvent& evt );
 	
 	virtual const wxString& GetElfOverride() const { return m_elf_override; }
 	virtual void SetElfOverride( const wxString& elf );

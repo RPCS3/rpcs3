@@ -390,7 +390,6 @@ static void intExecute()
 
 static void intCheckExecutionState()
 {
-	SysCoreThread::Get().OnVsyncInThread();
 	SysCoreThread::Get().StateCheckInThread();
 }
 
@@ -407,12 +406,15 @@ static void intClear(u32 Addr, u32 Size)
 static void intShutdown() {
 }
 
-R5900cpu intCpu = {
+R5900cpu intCpu =
+{
 	intAlloc,
+	intShutdown,
+
 	intReset,
 	intStep,
 	intExecute,
+
 	intCheckExecutionState,
 	intClear,
-	intShutdown
 };

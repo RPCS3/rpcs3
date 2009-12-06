@@ -656,8 +656,6 @@ static jmp_buf		m_SetJmp_StateCheck;
 
 static void recCheckExecutionState()
 {
-	SysCoreThread::Get().OnVsyncInThread();
-
 #if PCSX2_SEH
 	SysCoreThread::Get().StateCheckInThread();
 
@@ -1733,10 +1731,12 @@ StartRecomp:
 R5900cpu recCpu =
 {
 	recAlloc,
+	recShutdown,
+
 	recResetEE,
 	recStep,
 	recExecute,
+
 	recCheckExecutionState,
 	recClear,
-	recShutdown
 };

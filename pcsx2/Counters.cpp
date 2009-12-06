@@ -30,7 +30,6 @@
 using namespace Threading;
 
 extern u8 psxhblankgate;
-extern void ApplyPatch( int place = 1);
 
 static const uint EECNT_FUTURE_TARGET = 0x10000000;
 
@@ -293,7 +292,6 @@ void frameLimitReset()
 // Framelimiter - Measures the delta time between calls and stalls until a
 // certain amount of time passes if such time hasn't passed yet.
 // See the GS FrameSkip function for details on why this is here and not in the GS.
-extern int limitOn;
 static __forceinline void frameLimit()
 {
 	// 999 means the user would rather just have framelimiting turned off...
@@ -325,8 +323,10 @@ static __forceinline void frameLimit()
 	if( sDeltaTime >= 0 ) return;
 
 	// If we're way ahead then we can afford to sleep the thread a bit.
-	// (note, sleep(1) thru sleep(2) tend to be the least accurate sleeps, and longer
-	// sleeps tend to be pretty reliable, so that's why the convoluted if/else below)
+	// (note, on Windows sleep(1) thru sleep(2) tend to be the least accurate sleeps,
+	// and longer sleeps tend to be pretty reliable, so that's why the convoluted if/
+	// else below.  The same generally isn't true for Linux, but no harm either way
+	// really.)
 
 	s32 msec = (int)((sDeltaTime*-1000) / (s64)GetTickFrequency());
 	if( msec > 4 ) Threading::Sleep( msec );
@@ -339,8 +339,18 @@ static __forceinline void frameLimit()
 
 static __forceinline void VSyncStart(u32 sCycle)
 {
-	EECNT_LOG( "/////////  EE COUNTER VSYNC START  \\\\\\\\\\\\\\\\\\\\  (frame: %d)", iFrame );
-	vSyncDebugStuff( iFrame ); // EE Profiling and Debug code
+	Cpu->CheckExecutionState();
+	SysCoreThread::Get().VsyncInThread();
+
+	EECNT_LOG( "/////////  EE COUNTER VSYNC START (frame: %6d) \\\\\\\\\\\\\\\\\\\\ ", iFrame );
+
+	// EE Profiling and Debug code.
+	// FIXME: should probably be moved to VsyncInThread, and handled
+	// by UI implementations.  (ie, AppCoreThread in PCSX2-wx interface).
+	vSyncDebugStuff( iFrame );
+
+	if (CHECK_MICROVU0) vsyncVUrec(0);
+	if (CHECK_MICROVU1) vsyncVUrec(1);
 
 	if ((CSRw & 0x8))
 	{
@@ -355,7 +365,6 @@ static __forceinline void VSyncStart(u32 sCycle)
 	psxVBlankStart();
 
 	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
-	if (EmuConfig.EnablePatches) ApplyPatch(); // fixme - Apply patches
 
 	// INTC - VB Blank Start Hack --
 	// Hack fix!  This corrects a freezeup in Granda 2 where it decides to spin
@@ -445,8 +454,6 @@ __forceinline void rcntUpdate_vSync()
 
 	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
-		Cpu->CheckExecutionState();
-
 		VSyncEnd(vsyncCounter.sCycle);
 
 		vsyncCounter.sCycle += vSyncInfo.Blank;
@@ -463,9 +470,6 @@ __forceinline void rcntUpdate_vSync()
 
 		// Accumulate hsync rounding errors:
 		hsyncCounter.sCycle += vSyncInfo.hSyncError;
-
-		if (CHECK_MICROVU0) vsyncVUrec(0);
-		if (CHECK_MICROVU1) vsyncVUrec(1);
 
 #		ifdef VSYNC_DEBUG
 		vblankinc++;

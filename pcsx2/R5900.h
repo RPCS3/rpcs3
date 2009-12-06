@@ -263,16 +263,102 @@ void __fastcall intDoBranch(u32 target);
 
 ////////////////////////////////////////////////////////////////////
 // R5900 Public Interface / API
-
+//
+// [TODO] : This is on the list to get converted to a proper C++ class.  I'm putting it
+// off until I get my new IOPint and IOPrec re-merged. --air
+//
 struct R5900cpu
 {
-	void (*Allocate)();		// throws exceptions on failure.
+	// Memory allocation function, for allocating virtual memory spaces needed by
+	// the emulator.  (ints/recs are free to allocate additional memory while running
+	// code, however any virtual mapped memory should always be allocated as soon
+	// as possible, to claim the memory before some plugin does..)
+	//
+	// Thread Affinity:
+	//   Can be called from any thread.  Execute status must be suspended or stopped
+	//   to prevent multi-thread race conditions.
+	//
+	// Notable Exception Throws:
+	//   OutOfMemory - Not enough memory, or the memory areas required were already
+	//                 reserved.
+	//
+	void (*Allocate)();
+	
+	// Deallocates ram allocated by Allocate and/or by runtime code execution.
+	// 
+	// Thread Affinity:
+	//   Can be called from any thread.  Execute status must be suspended or stopped
+	//   to prevent multi-thread race conditions.
+	//
+	// Exception Throws:  None.  This function is a destructor, and should not throw.
+	//
+	void (*Shutdown)();
+
+	// Initializes / Resets code execution states. Typically implementation is only
+	// needed for recompilers, as interpreters have no internal execution states and
+	// rely on the CPU/VM states almost entirely.
+	//
+	// Thread Affinity:
+	//   Can be called from any thread.  Execute status must be suspended or stopped
+	//   to prevent multi-thread race conditions.
+	//
+	// Exception Throws:  Emulator-defined.  Common exception types to look for:
+	//   OutOfMemory, Stream Exceptions
+	//
 	void (*Reset)();
+
+	// Steps a single instruction.  Meant to be used by debuggers.  Is currently unused
+	// and unimplemented.  Future note: recompiler "step" should *always* fall back
+	// on interpreters.
+	//
+	// Exception Throws:  [TODO] (possible execution-related throws to be added)
+	//
 	void (*Step)();
+
+	// Executes code until a break is signaled.  Execution can be paused or suspended
+	// via thread-style signals that are handled by CheckExecutionState callbacks.
+	// Execution Breakages are handled the same way, where-by a signal causes the Execute
+	// call to return at the nearest state check (typically handled internally using
+	// either C++ exceptions or setjmp/longjmp).
+	//
+	// Exception Throws:  [TODO]  (possible execution-related throws to be added)
+	//
 	void (*Execute)();
+
+	// Checks for execution suspension or cancellation.  In pthreads terms this provides 
+	// a "cancellation point."  Execution state checks are typically performed at Vsyncs
+	// by the generic VM event handlers in R5900.cpp/Counters.cpp (applies to both recs
+	// and ints).
+	//
+	// Implementation note: Because of the nuances of recompiled code execution, setjmp
+	// may be used in place of thread cancellation or C++ exceptions (non-SEH exceptions 
+	// cannot unwind through the recompiled code stackframes).
+	//
+	// Thread Affinity:
+	//   Must be called on the same thread as Execute only.
+	//
+	// Exception Throws:
+	//   May throw threading/Pthreads cancellations if the compiler supports SEH.
+	//   ThreadTimedOut - For canceling VM execution in response to MTGS deadlock. (if the
+	//     core emulator does not support multithreaded GS then this will not be a throw
+	//     exception).
+	//
 	void (*CheckExecutionState)();
+
+	// Manual recompiled code cache clear; typically useful to recompilers only.  Size is
+	// in MIPS words (32 bits).  Dev note: this callback is nearly obsolete, and might be
+	// better off replaced with some generic API callbacks from VTLB block protection.
+	// Also: the calls from COP0's TLB remap code should be replaced with full recompiler
+	// resets, since TLB remaps affect more than just the code they contain (code that
+	// may reference the remaped blocks via memory loads/stores, for example).
+	//
+	// Thread Affinity Rule: 
+	//   Can be called from any thread (namely for being called from debugging threads)
+	//
+	// Exception Throws: [TODO] Emulator defined?  (probably shouldn't throw, probably
+	//   doesn't matter if we're stripping it out soon. ;)
+	//
 	void (*Clear)(u32 Addr, u32 Size);
-	void (*Shutdown)();		// deallocates memory reserved by Allocate
 };
 
 extern R5900cpu *Cpu;

@@ -1147,6 +1147,11 @@ void PluginManager::Freeze( PluginsEnum_t pid, SaveStateBase& state )
 
 bool PluginManager::KeyEvent( const keyEvent& evt )
 {
+	// [TODO] : The plan here is to give plugins "first chance" handling of keys.
+	// Handling order will be fixed (GS, SPU2, PAD, etc), and the first plugin to
+	// pick up the key and return "true" (for handled) will cause the loop to break.
+	// The current version of PS2E doesn't support it yet, though.
+
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( pi->id != PluginId_PAD )
 			m_info[pi->id].CommonBindings.KeyEvent( const_cast<keyEvent*>(&evt) );
