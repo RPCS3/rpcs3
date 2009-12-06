@@ -57,7 +57,7 @@ void mVUclamp1(int reg, int regT1, int xyzw, bool bClampE = 0) {
 void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw, bool bClampE = 0) {
 	if ((!clampE && CHECK_VU_SIGN_OVERFLOW) || (clampE && bClampE && CHECK_VU_SIGN_OVERFLOW)) {
 		if (x86caps.hasStreamingSIMD4Extensions) {
-			int i = (xyzw==1||xyzw==2||xyzw==4||xyzw==8) ? 0: 0xf;
+			int i = (xyzw==1||xyzw==2||xyzw==4||xyzw==8) ? 0: 1;
 			SSE4_PMINSD_M128_to_XMM(reg, (uptr)&sse4_maxvals[i][0]);
 			SSE4_PMINUD_M128_to_XMM(reg, (uptr)&sse4_minvals[i][0]);
 			return;
@@ -70,7 +70,7 @@ void mVUclamp2(microVU* mVU, int reg, int regT1, int xyzw, bool bClampE = 0) {
 		}
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
-				SSE_MOVSS_XMM_to_XMM (regT1, reg);
+				SSE_MOVAPS_XMM_to_XMM(regT1, reg);
 				SSE_ANDPS_M128_to_XMM(regT1, (uptr)mVUglob.signbit);
 				SSE_MINSS_M32_to_XMM (reg,   (uptr)mVUglob.maxvals);
 				SSE_MAXSS_M32_to_XMM (reg,   (uptr)mVUglob.minvals);
