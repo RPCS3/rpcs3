@@ -652,6 +652,10 @@
 									>
 								</File>
 								<File
+									RelativePath="..\..\x86\microVU_Clamp.inl"
+									>
+								</File>
+								<File
 									RelativePath="..\..\x86\microVU_Compile.inl"
 									>
 								</File>

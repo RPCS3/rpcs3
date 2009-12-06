@@ -144,6 +144,7 @@ struct microVU {
 	__aligned16 u32 macFlag[4];  // 4 instances of mac  flag (used in execution)
 	__aligned16 u32 clipFlag[4]; // 4 instances of clip flag (used in execution)
 	__aligned16 u32 xmmPQb[4];   // Backup for xmmPQ
+	__aligned16 u32 xmmCTemp[4]; // Backup used in mVUclamp2()
 
 	u32 index;			// VU Index (VU0 or VU1)
 	u32 cop2;			// VU is in COP2 mode?  (No/Yes)
@@ -208,6 +209,7 @@ typedef void (__fastcall *mVUrecCall)(u32, u32);
 
 
 // Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
+#include "microVU_Clamp.inl"
 #include "microVU_Misc.inl"
 #include "microVU_Log.inl"
 #include "microVU_Analyze.inl"
