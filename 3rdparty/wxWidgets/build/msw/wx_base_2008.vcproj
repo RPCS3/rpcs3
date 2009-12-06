@@ -660,14 +660,6 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="Setup Headers"
-			>
-			<File
-				RelativePath="..\..\include\wx\univ\setup.h"
-				>
-			</File>
-		</Filter>
-		<Filter
 			Name="MSW Headers"
 			>
 			<File

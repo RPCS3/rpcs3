@@ -22,7 +22,7 @@
 		<Configuration
 			Name="Debug SSE2|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads-debug.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -86,7 +86,7 @@
 		<Configuration
 			Name="Debug SSE2|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;..\..\common\vsprops\pthreads-debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
@@ -404,7 +404,7 @@
 		<Configuration
 			Name="Debug SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads-debug.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -468,7 +468,7 @@
 		<Configuration
 			Name="Debug SSSE3|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\pthreads-debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -530,7 +530,7 @@
 		<Configuration
 			Name="Debug SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads-debug.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -594,7 +594,7 @@
 		<Configuration
 			Name="Debug SSE4|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\pthreads-debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -787,7 +787,6 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\common\vsprops\pthreads.vsprops"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -845,7 +844,7 @@
 		<Configuration
 			Name="Debug|x64"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>

@@ -59,6 +59,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2_32.lib"
+				OutputFile="$(SolutionDir)\bin\$(ProjectName).debug.dll"
+				ImportLibrary="$(OutDir)\$(ProjectName).debug.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="w32pthreads-debug"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\w32pthreads\include&quot;"
+		PreprocessorDefinitions="WIN32_PTHREADS;__CLEANUP_SEH"
+		ExceptionHandling="2"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		AdditionalDependencies="w32pthreads.v3.debug.lib w32pthreads_lib.lib"
+	/>
+</VisualStudioPropertySheet>
