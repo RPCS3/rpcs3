@@ -516,6 +516,7 @@
 		<Unit filename="../x86/microVU_Alloc.inl" />
 		<Unit filename="../x86/microVU_Analyze.inl" />
 		<Unit filename="../x86/microVU_Branch.inl" />
+		<Unit filename="../x86/microVU_Clamp.inl" />
 		<Unit filename="../x86/microVU_Compile.inl" />
 		<Unit filename="../x86/microVU_Execute.inl" />
 		<Unit filename="../x86/microVU_Flags.inl" />

@@ -360,7 +360,7 @@ void recMicroVU0::Clear(u32 addr, u32 size) {
 	mVUclear(&microVU0, addr, size); 
 }
 
-void recMicroVU0::Vsync() {
+void recMicroVU0::Vsync() throw() {
 	mVUvsyncUpdate(&microVU0);
 }
 
@@ -408,6 +408,6 @@ void recMicroVU1::Clear(u32 addr, u32 size)
 	mVUclear(&microVU1, addr, size); 
 }
 
-void recMicroVU1::Vsync() {
+void recMicroVU1::Vsync() throw() {
 	mVUvsyncUpdate(&microVU1);
 }

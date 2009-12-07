@@ -162,7 +162,7 @@ public:
 	void Reset();
 	void ExecuteBlock();
 	void Clear(u32 addr, u32 size);
-	void Vsync();
+	void Vsync() throw();
 };
 
 class recMicroVU1 : public BaseVUmicroCPU
@@ -178,7 +178,7 @@ public:
 	void Reset();
 	void ExecuteBlock();
 	void Clear(u32 addr, u32 size);
-	void Vsync();
+	void Vsync() throw();
 };
 
 extern BaseVUmicroCPU* CpuVU0;
