@@ -157,7 +157,7 @@ static void recCTC2(s32 info)
 
 				MOV32ItoM((uptr)&VU0.VI[_Fs_].UL,g_cpuConstRegs[_Rt_].UL[0]);
 				iFlushCall(FLUSH_NOCONST);
-				xMOV(ecx, (uptr)&CpuVU0 );
+				xMOV(ecx, (uptr)CpuVU0 );
 				xCALL(BaseCpuProvider::ExecuteBlockFromRecs);
 				break;
 			}
