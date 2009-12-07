@@ -81,6 +81,10 @@ struct IConsoleWriter
 	// SetColor implementation for internal use only.
 	void (__concall *DoSetColor)( ConsoleColors color );
 
+	// Special implementation of DoWrite that's pretty much for MSVC use only.
+	// All implementations should map to DoWrite, except Stdio which should map to Null.
+	void (__concall *DoWriteFromStdout)( const wxString& fmt );
+
 	void (__concall *Newline)();
 	void (__concall *SetTitle)( const wxString& title );
 
@@ -110,6 +114,9 @@ struct IConsoleWriter
 	bool WriteLn( const wxChar* fmt, ... ) const;
 	bool Error( const wxChar* fmt, ... ) const;
 	bool Warning( const wxChar* fmt, ... ) const;
+
+	bool WriteFromStdout( const char* fmt, ... ) const;
+	bool WriteFromStdout( ConsoleColors color, const char* fmt, ... ) const;
 
 	// internal value for indentation of individual lines.  Use the Indent() member to invoke.
 	int _imm_indentation;
@@ -209,7 +216,7 @@ extern void ConsoleBuffer_Clear();
 extern void ConsoleBuffer_FlushToFile( FILE *fp );
 
 extern const IConsoleWriter		ConsoleWriter_Null;
-extern const IConsoleWriter		ConsoleWriter_Stdio;
+extern const IConsoleWriter		ConsoleWriter_Stdout;
 extern const IConsoleWriter		ConsoleWriter_Assert;
 extern const IConsoleWriter		ConsoleWriter_Buffered;
 extern const IConsoleWriter		ConsoleWriter_wxError;

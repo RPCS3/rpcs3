@@ -37,21 +37,21 @@ const Pcsx2Config EmuConfig;
 Pcsx2Config::GSOptions& SetGSConfig()
 {
 	//DbgCon.WriteLn( "Direct modification of EmuConfig.GS detected" );
-	AllowFromMainThreadOnly();
+	AffinityAssert_AllowFromMain();
 	return const_cast<Pcsx2Config::GSOptions&>(EmuConfig.GS);
 }
 
 ConsoleLogFilters& SetConsoleConfig()
 {
 	//DbgCon.WriteLn( "Direct modification of EmuConfig.Log detected" );
-	AllowFromMainThreadOnly();
+	AffinityAssert_AllowFromMain();
 	return const_cast<ConsoleLogFilters&>(EmuConfig.Log);
 }
 
 TraceLogFilters& SetTraceConfig()
 {
 	//DbgCon.WriteLn( "Direct modification of EmuConfig.TraceLog detected" );
-	AllowFromMainThreadOnly();
+	AffinityAssert_AllowFromMain();
 	return const_cast<TraceLogFilters&>(EmuConfig.Trace);
 }
 

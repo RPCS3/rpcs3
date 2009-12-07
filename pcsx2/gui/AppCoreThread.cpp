@@ -64,7 +64,7 @@ static int resume_tries = 0;
 void AppCoreThread::Resume()
 {
 	// Thread control (suspend / resume) should only be performed from the main/gui thread.
-	if( !AllowFromMainThreadOnly() ) return;
+	if( !AffinityAssert_AllowFromMain() ) return;
 	if( m_ExecMode == ExecMode_Opened ) return;
 	if( m_ResumeProtection.IsLocked() ) return;
 

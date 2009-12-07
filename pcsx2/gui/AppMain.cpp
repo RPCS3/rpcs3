@@ -103,7 +103,7 @@ void Pcsx2App::PostPadKey( wxKeyEvent& evt )
 
 int Pcsx2App::ThreadedModalDialog( DialogIdentifiers dialogId )
 {
-	AllowFromMainThreadOnly();
+	AffinityAssert_AllowFromMain();
 
 	MsgboxEventResult result;
 	wxCommandEvent joe( pxEVT_OpenModalDialog, dialogId );
@@ -399,7 +399,7 @@ GSFrame& Pcsx2App::GetGSFrame() const
 
 void AppApplySettings( const AppConfig* oldconf )
 {
-	AllowFromMainThreadOnly();
+	AffinityAssert_AllowFromMain();
 
 	g_Conf->Folders.ApplyDefaults();
 
@@ -452,7 +452,7 @@ AppIniLoader::AppIniLoader()
 
 void AppLoadSettings()
 {
-	if( !AllowFromMainThreadOnly() ) return;
+	if( !AffinityAssert_AllowFromMain() ) return;
 
 	AppIniLoader loader;
 	g_Conf->LoadSave( loader );
@@ -461,7 +461,7 @@ void AppLoadSettings()
 
 void AppSaveSettings()
 {
-	if( !AllowFromMainThreadOnly() ) return;
+	if( !AffinityAssert_AllowFromMain() ) return;
 
 	AppIniSaver saver;
 	g_Conf->LoadSave( saver );

@@ -68,79 +68,72 @@ static s64 CPUSpeedHz( u64 time )
 ////////////////////////////////////////////////////
 void cpudetectInit()
 {
-   u32 regs[ 4 ];
-   u32 cmds;
-   //AMD 64 STUFF
-   u32 x86_64_8BITBRANDID;
-   u32 x86_64_12BITBRANDID;
+	u32 regs[ 4 ];
+	u32 cmds;
+	//AMD 64 STUFF
+	u32 x86_64_8BITBRANDID;
+	u32 x86_64_12BITBRANDID;
 
-   memzero( x86caps.VendorName );
-   x86caps.FamilyID = 0;
-   x86caps.Model  = 0;
-   x86caps.TypeID  = 0;
-   x86caps.StepID = 0;
-   x86caps.Flags  = 0;
-   x86caps.EFlags = 0;
+	memzero( x86caps.VendorName );
+	x86caps.FamilyID	= 0;
+	x86caps.Model	= 0;
+	x86caps.TypeID	= 0;
+	x86caps.StepID	= 0;
+	x86caps.Flags	= 0;
+	x86caps.EFlags	= 0;
 
-   if ( iCpuId( 0, regs ) == -1 ) return;
+	//memzero( regs );
+	iCpuId( 0, regs );
 
-   cmds = regs[ 0 ];
-   ((u32*)x86caps.VendorName)[ 0 ] = regs[ 1 ];
-   ((u32*)x86caps.VendorName)[ 1 ] = regs[ 3 ];
-   ((u32*)x86caps.VendorName)[ 2 ] = regs[ 2 ];
+	cmds = regs[ 0 ];
+	((u32*)x86caps.VendorName)[ 0 ] = regs[ 1 ];
+	((u32*)x86caps.VendorName)[ 1 ] = regs[ 3 ];
+	((u32*)x86caps.VendorName)[ 2 ] = regs[ 2 ];
 
-   u32 LogicalCoresPerPhysicalCPU = 0;
-   u32 PhysicalCoresPerPhysicalCPU = 1;
+	u32 LogicalCoresPerPhysicalCPU = 0;
+	u32 PhysicalCoresPerPhysicalCPU = 1;
 
-   if ( cmds >= 0x00000001 )
-   {
-      if ( iCpuId( 0x00000001, regs ) != -1 )
-      {
-         x86caps.StepID =  regs[ 0 ]        & 0xf;
-         x86caps.Model  = (regs[ 0 ] >>  4) & 0xf;
-         x86caps.FamilyID = (regs[ 0 ] >>  8) & 0xf;
-         x86caps.TypeID  = (regs[ 0 ] >> 12) & 0x3;
-		 LogicalCoresPerPhysicalCPU = ( regs[1] >> 16 ) & 0xff;
-         x86_64_8BITBRANDID = regs[ 1 ] & 0xff;
-         x86caps.Flags  =  regs[ 3 ];
-         x86caps.Flags2 =  regs[ 2 ];
-      }
-   }
+	if ( cmds >= 0x00000001 )
+	{
+		iCpuId( 0x00000001, regs );
 
-   // detect multicore for Intel cpu
+		x86caps.StepID		=  regs[ 0 ]        & 0xf;
+		x86caps.Model		= (regs[ 0 ] >>  4) & 0xf;
+		x86caps.FamilyID	= (regs[ 0 ] >>  8) & 0xf;
+		x86caps.TypeID		= (regs[ 0 ] >> 12) & 0x3;
+		x86_64_8BITBRANDID	=  regs[ 1 ] & 0xff;
+		x86caps.Flags		=  regs[ 3 ];
+		x86caps.Flags2		=  regs[ 2 ];
 
-   if ((cmds >= 0x00000004) && !strcmp("GenuineIntel",x86caps.VendorName))
-   {
-      if ( iCpuId( 0x00000004, regs ) != -1 )
-      {
-         PhysicalCoresPerPhysicalCPU += ( regs[0] >> 26) & 0x3f;
-      }
-   }
+		LogicalCoresPerPhysicalCPU = ( regs[1] >> 16 ) & 0xff;
+	}
 
-   if ( iCpuId( 0x80000000, regs ) != -1 )
-   {
-      cmds = regs[ 0 ];
-      if ( cmds >= 0x80000001 )
-      {
-		 if ( iCpuId( 0x80000001, regs ) != -1 )
-         {
-			x86_64_12BITBRANDID = regs[1] & 0xfff;
-			x86caps.EFlags2 = regs[ 2 ];
-            x86caps.EFlags = regs[ 3 ];
+	// detect multicore for Intel cpu
 
-         }
-      }
-      
-      // detect multicore for AMD cpu
-      
-      if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",x86caps.VendorName))
-      {
-         if ( iCpuId( 0x80000008, regs ) != -1 )
-         {
-            PhysicalCoresPerPhysicalCPU += ( regs[2] ) & 0xff;
-         }
-      }
-   }
+	if ((cmds >= 0x00000004) && !strcmp("GenuineIntel",x86caps.VendorName))
+	{
+		iCpuId( 0x00000004, regs );
+		PhysicalCoresPerPhysicalCPU += ( regs[0] >> 26) & 0x3f;
+	}
+
+	iCpuId( 0x80000000, regs );
+	cmds = regs[ 0 ];
+	if ( cmds >= 0x80000001 )
+	{
+		iCpuId( 0x80000001, regs );
+
+		x86_64_12BITBRANDID = regs[1] & 0xfff;
+		x86caps.EFlags2 = regs[ 2 ];
+		x86caps.EFlags = regs[ 3 ];
+	}
+	  
+	// detect multicore for AMD cpu
+
+	if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",x86caps.VendorName))
+	{
+		iCpuId( 0x80000008, regs );
+		PhysicalCoresPerPhysicalCPU += ( regs[2] ) & 0xff;
+	}
 
 	switch(x86caps.TypeID)
 	{
@@ -245,15 +238,21 @@ void cpudetectInit()
 	if( CanTestInstructionSets() )
 	{
 		xSetPtr( recSSE );
+		xMOVDQU( ptr[ecx], xmm1 );
 		xMOVSLDUP( xmm1, xmm0 );
+		xMOVDQU( xmm1, ptr[ecx] );
 		xRET();
 
 		u8* funcSSSE3 = xGetPtr();
-		xPABS.W( xmm0, xmm1 );
+		xMOVDQU( ptr[ecx], xmm1 );
+		xPABS.W( xmm1, xmm0 );
+		xMOVDQU( xmm1, ptr[ecx] );
 		xRET();
 
 		u8* funcSSE41 = xGetPtr();
+		xMOVDQU( ptr[ecx], xmm1 );
 		xBLEND.VPD( xmm1, xmm0 );
+		xMOVDQU( xmm1, ptr[ecx] );
 		xRET();
 
 		bool sse3_result = _test_instruction( recSSE );  // sse3

@@ -589,9 +589,12 @@ void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& evt )
 void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 {
 	ScopedLock locker( m_QueueLock );
-
 	m_pendingFlushMsg = false;
-	//if( m_TextCtrl.HasWriteLock() ) return;
+
+	// recursion guard needed due to Mutex lock/acquire code below.
+	static int recursion_counter = 0;
+	RecursionGuard recguard( recursion_counter );
+	if( recguard.IsReentrant() ) return;
 
 	if( m_CurQueuePos != 0 )
 	{
@@ -609,7 +612,9 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 			locker.Acquire();
 		}
 
-		DoFlushQueue();
+		if( m_CurQueuePos != 0 )
+			DoFlushQueue();
+
 		//m_TextCtrl.Thaw();
 	}
 
@@ -617,9 +622,6 @@ void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
 	// we don't actually want to wake up pending threads until after the GUI's finished all its
 	// paperwork.  But wxEVT_IDLE doesn't work when you click menus or the title bar of a window,
 	// making it pretty well annoyingly useless for just about anything. >_<
-
-	// Workaround: I added a Sleep(1) to the DoWrite method to give the GUI some time to
-	// do its paperwork.
 
 	if( m_WaitingThreadsForFlush > 0 )
 	{
@@ -702,7 +704,7 @@ void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 static void __concall ConsoleToFile_Newline()
 {
 #ifdef __LINUX__
-	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdio.Newline();
+	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdout.Newline();
 #endif
 
 #ifdef __LINUX__
@@ -715,7 +717,7 @@ static void __concall ConsoleToFile_Newline()
 static void __concall ConsoleToFile_DoWrite( const wxString& fmt )
 {
 #ifdef __LINUX__
-	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdio.DoWrite(fmt);
+	if (g_Conf->EmuOptions.ConsoleToStdio) ConsoleWriter_Stdout.DoWrite(fmt);
 #endif
 
 	px_fputs( emuLog, fmt.ToUTF8() );
@@ -731,12 +733,12 @@ static void __concall ConsoleToFile_DoWriteLn( const wxString& fmt )
 
 static void __concall ConsoleToFile_SetTitle( const wxString& title )
 {
-    ConsoleWriter_Stdio.SetTitle(title);
+    ConsoleWriter_Stdout.SetTitle(title);
 }
 
 static void __concall ConsoleToFile_DoSetColor( ConsoleColors color )
 {
-    ConsoleWriter_Stdio.DoSetColor(color);
+    ConsoleWriter_Stdout.DoSetColor(color);
 }
 
 extern const IConsoleWriter	ConsoleWriter_File;
@@ -746,6 +748,7 @@ const IConsoleWriter    ConsoleWriter_File =
 	ConsoleToFile_DoWriteLn,
 	ConsoleToFile_DoSetColor,
 
+	ConsoleToFile_DoWrite,
 	ConsoleToFile_Newline,
 	ConsoleToFile_SetTitle,
 };
@@ -799,6 +802,7 @@ static const IConsoleWriter	ConsoleWriter_Window =
 	ConsoleToWindow_DoWriteLn<ConsoleWriter_Null>,
 	ConsoleToWindow_DoSetColor<ConsoleWriter_Null>,
 
+	ConsoleToWindow_DoWrite<ConsoleWriter_Null>,
 	ConsoleToWindow_Newline<ConsoleWriter_Null>,
 	ConsoleToWindow_SetTitle<ConsoleWriter_Null>,
 };	
@@ -809,6 +813,7 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 	ConsoleToWindow_DoWriteLn<ConsoleWriter_File>,
 	ConsoleToWindow_DoSetColor<ConsoleWriter_File>,
 
+	ConsoleToWindow_DoWrite<ConsoleWriter_File>,
 	ConsoleToWindow_Newline<ConsoleWriter_File>,
 	ConsoleToWindow_SetTitle<ConsoleWriter_File>,
 };
@@ -818,14 +823,14 @@ void Pcsx2App::EnableAllLogging() const
 	if( emuLog )
 		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_WindowAndFile : (IConsoleWriter&)ConsoleWriter_File );
 	else
-		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Buffered );
+		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
 }
 
 // Used to disable the emuLog disk logger, typically used when disabling or re-initializing the
 // emuLog file handle.  Call SetConsoleLogging to re-enable the disk logger when finished.
 void Pcsx2App::DisableDiskLogging() const
 {
-	Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Buffered );
+	Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
 
 	// Semi-hack: It's possible, however very unlikely, that a secondary thread could attempt
 	// to write to the logfile just before we disable logging, and would thus have a pending write
@@ -834,7 +839,7 @@ void Pcsx2App::DisableDiskLogging() const
 	// when changing settings, so the chance for problems is low.  We minimize it further here
 	// by sleeping off 5ms, which should allow any pending log-to-disk events to finish up.
 	//
-	// (the most ideal solution would be a mutex lock in the Disk logger itself, but for now I
+	// (the most correct solution would be a mutex lock in the Disk logger itself, but for now I
 	//  am going to try and keep the logger lock-free and use this semi-hack instead).
 
 	Threading::Sleep( 5 );
@@ -842,6 +847,6 @@ void Pcsx2App::DisableDiskLogging() const
 
 void Pcsx2App::DisableWindowLogging() const
 {
-	Console_SetActiveHandler( (emuLog!=NULL) ? (IConsoleWriter&)ConsoleWriter_File : (IConsoleWriter&)ConsoleWriter_Buffered );
+	Console_SetActiveHandler( (emuLog!=NULL) ? (IConsoleWriter&)ConsoleWriter_File : (IConsoleWriter&)ConsoleWriter_Stdout );
 	Threading::Sleep( 5 );
 }

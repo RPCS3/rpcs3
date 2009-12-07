@@ -24,7 +24,7 @@
 
 #undef Yield		// release th burden of windows.h global namespace spam.
 
-#define AllowFromMainThreadOnly() \
+#define AffinityAssert_AllowFromMain() \
 	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
 
 class wxTimeSpan;
@@ -418,6 +418,9 @@ namespace Threading
 		}
 		
 		void FrankenMutex( Mutex& mutex );
+
+		bool AffinityAssert_AllowFromSelf() const;
+		bool AffinityAssert_DisallowFromSelf() const;
 
 		// ----------------------------------------------------------------------------
 		// Section of methods for internal use only.

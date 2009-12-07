@@ -84,9 +84,9 @@ protected:
 	const ConsoleColors m_color;
 
 public:
-	WinPipeThread( const HANDLE& outpipe, ConsoleColors color ) :
-		m_outpipe( outpipe )
-	,	m_color( color )
+	WinPipeThread( const HANDLE& outpipe, ConsoleColors color )
+		: m_outpipe( outpipe )
+		, m_color( color )
 	{
 		m_name = (m_color == Color_Red) ? L"Redirect_Stderr" : L"Redirect_Stdout";
 	}
@@ -150,8 +150,7 @@ protected:
 
 				// ATTENTION: The Console always prints ANSI to the pipe independent if compiled as UNICODE or MBCS!
 				s8_Buf[u32_Read] = 0;
-				OemToCharA(s8_Buf, s8_Buf);			// convert DOS codepage -> ANSI
-				Console.Write( m_color, s8_Buf );
+				Console.WriteFromStdout( m_color, s8_Buf );
 				
 				TestCancel();
 			}
@@ -187,12 +186,12 @@ public:
 	void Cleanup() throw();
 };
 
-WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
-	m_readpipe(INVALID_HANDLE_VALUE)
-,	m_writepipe(INVALID_HANDLE_VALUE)
-,	m_crtFile(-1)
-,	m_fp(NULL)
-,	m_Thread( m_readpipe, (stdstream == stderr) ? Color_Red : Color_Black )
+WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
+	: m_readpipe(INVALID_HANDLE_VALUE)
+	, m_writepipe(INVALID_HANDLE_VALUE)
+	, m_crtFile(-1)
+	, m_fp(NULL)
+	, m_Thread( m_readpipe, (stdstream == stderr) ? Color_Red : Color_Black )
 {
 	try
 	{
@@ -236,6 +235,7 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream ) :
 	}
 	catch( ... )
 	{
+		Cleanup();
 		throw;
 	}
 }

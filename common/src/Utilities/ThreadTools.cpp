@@ -67,12 +67,12 @@ void Threading::PersistentThread::_pt_callback_cleanup( void* handle )
 	((PersistentThread*)handle)->_ThreadCleanup();
 }
 
-Threading::PersistentThread::PersistentThread() :
-	m_name( L"PersistentThread" )
-,	m_thread()
-,	m_sem_event()
-,	m_lock_InThread()
-,	m_lock_start()
+Threading::PersistentThread::PersistentThread()
+	: m_name( L"PersistentThread" )
+	, m_thread()
+	, m_sem_event()
+	, m_lock_InThread()
+	, m_lock_start()
 {
 	m_detached	= true;		// start out with m_thread in detached/invalid state
 	m_running	= false;
@@ -116,6 +116,16 @@ Threading::PersistentThread::~PersistentThread() throw()
 	DESTRUCTOR_CATCHALL
 }
 
+bool Threading::PersistentThread::AffinityAssert_AllowFromSelf() const
+{
+	return pxAssertMsg( IsSelf(), wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", m_name ) );
+}
+
+bool Threading::PersistentThread::AffinityAssert_DisallowFromSelf() const
+{
+	return pxAssertMsg( !IsSelf(), wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", m_name ) );
+}
+
 void Threading::PersistentThread::FrankenMutex( Mutex& mutex )
 {
 	if( mutex.RecreateIfLocked() )
@@ -155,7 +165,7 @@ void Threading::PersistentThread::Start()
 // This function should not be called from the owner thread.
 bool Threading::PersistentThread::Detach()
 {
-	pxAssertMsg( !IsSelf(), "Thread affinity error." );		// not allowed from our own thread.
+	AffinityAssert_DisallowFromSelf();
 
 	if( _InterlockedExchange( &m_detached, true ) ) return false;
 	pthread_detach( m_thread );
@@ -175,7 +185,7 @@ bool Threading::PersistentThread::Detach()
 //
 void Threading::PersistentThread::Cancel( bool isBlocking )
 {
-	pxAssertMsg( !IsSelf(), "Thread affinity error." );
+	AffinityAssert_DisallowFromSelf();
 
 	{
 		// Prevent simultaneous startup and cancel:
@@ -210,8 +220,7 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 //
 void Threading::PersistentThread::Block()
 {
-	pxAssertDev( !IsSelf(), "Thread deadlock detected; Block() should never be called by the owner thread." );
-
+	AffinityAssert_DisallowFromSelf();
 	m_lock_InThread.Wait();
 }
 
@@ -268,7 +277,7 @@ void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
 //
 void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 {
-	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return;
+	if( !AffinityAssert_DisallowFromSelf() ) return;
 
 	while( true )
 	{
@@ -292,7 +301,7 @@ void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 //
 void Threading::PersistentThread::WaitOnSelf( Mutex& mutex ) const
 {
-	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return;
+	if( !AffinityAssert_DisallowFromSelf() ) return;
 
 	while( true )
 	{
@@ -305,7 +314,7 @@ static const wxTimeSpan SelfWaitInterval( 0,0,0,333 );
 
 bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& timeout ) const
 {
-	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return true;
+	if( !AffinityAssert_DisallowFromSelf() ) return true;
 
 	wxTimeSpan runningout( timeout );
 
@@ -321,7 +330,7 @@ bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& 
 
 bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& timeout ) const
 {
-	if( !pxAssertDev( !IsSelf(), "WaitOnSelf called from inside the blocking thread (invalid operation!)" ) ) return true;
+	if( !AffinityAssert_DisallowFromSelf() ) return true;
 
 	wxTimeSpan runningout( timeout );
 
@@ -341,7 +350,7 @@ bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& ti
 // and cleanup, or use the DoThreadCleanup() override to perform resource cleanup).
 void Threading::PersistentThread::TestCancel() const
 {
-	pxAssert( IsSelf() );
+	AffinityAssert_AllowFromSelf();
 	pthread_testcancel();
 }
 
@@ -422,10 +431,8 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 // OnCleanupInThread() to extend cleanup functionality.
 void Threading::PersistentThread::_ThreadCleanup()
 {
-	pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
-
+	AffinityAssert_AllowFromSelf();
 	_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
-
 	m_lock_InThread.Release();
 }
 
@@ -486,7 +493,7 @@ void Threading::PersistentThread::_DoSetThreadName( const wxString& name )
 
 void Threading::PersistentThread::_DoSetThreadName( const char* name )
 {
-	pxAssertMsg( IsSelf(), "Thread affinity error." );	// only allowed from our own thread, thanks.
+	if( !AffinityAssert_AllowFromSelf() ) return;
 
 	// This feature needs Windows headers and MSVC's SEH support:
 

@@ -17,13 +17,9 @@
 #include "PrecompiledHeader.h"
 #include "cpudetect_internal.h"
 
-s32 iCpuId( u32 cmd, u32 *regs )
+void iCpuId( u32 cmd, u32 *regs )
 {
-	// ecx should be zero for CPUID(4)
-	__asm__ __volatile__ ( "xor %ecx, %ecx" );
-
 	__cpuid( (int*)regs, cmd );
-	return 0;
 }
 
 // Note: Apparently this solution is Linux/Solaris only.

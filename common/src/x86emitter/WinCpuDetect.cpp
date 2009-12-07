@@ -17,12 +17,10 @@
 #include "PrecompiledHeader.h"
 #include "cpudetect_internal.h"
 
-s32 iCpuId( u32 cmd, u32 *regs )
+void iCpuId( u32 cmd, u32 *regs )
 {
 	// ecx should be zero for CPUID(4)
-	__asm xor ecx, ecx;
 	__cpuid( (int*)regs, cmd );
-	return 0;
 }
 
 void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
@@ -54,7 +52,8 @@ void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhys
 bool _test_instruction( void* pfnCall )
 {
 	__try {
-		((void (*)())pfnCall)();
+		u128 regsave;
+		((void (__fastcall *)(void*))pfnCall)( &regsave );
 	}
 	__except(EXCEPTION_EXECUTE_HANDLER) {
 		return false;

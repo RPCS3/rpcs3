@@ -18,6 +18,9 @@
 
 using namespace Threading;
 
+static wxString	m_buffer;		// used by ConsoleBuffer
+static Mutex	m_bufferlock;	// used by ConsoleBuffer
+
 // This function re-assigns the console log writer(s) to the specified target.  It makes sure
 // to flush any contents from the buffered console log (which typically accumulates due to
 // log suspension during log file/window re-init operations) into the new log.
@@ -34,8 +37,12 @@ void Console_SetActiveHandler( const IConsoleWriter& writer, FILE* flushfp )
 		"Invalid IConsoleWriter object!  All function pointer interfaces must be implemented."
 	);
 
-	if( !ConsoleBuffer_Get().IsEmpty() )
-		writer.DoWriteLn( ConsoleBuffer_Get() );
+	if( &writer != &ConsoleWriter_Buffered )
+	{
+		ScopedLock lock( m_bufferlock );
+		if( !ConsoleBuffer_Get().IsEmpty() )
+			writer.DoWriteLn( ConsoleBuffer_Get() );
+	}
 
 	Console	= writer;
 
@@ -64,6 +71,7 @@ const IConsoleWriter ConsoleWriter_Null =
 	ConsoleNull_DoWriteLn,
 	ConsoleNull_DoSetColor,
 
+	ConsoleNull_DoWrite,
 	ConsoleNull_Newline,
 	ConsoleNull_SetTitle,
 
@@ -71,7 +79,7 @@ const IConsoleWriter ConsoleWriter_Null =
 };
 
 // --------------------------------------------------------------------------------------
-//  Console_Stdio
+//  Console_Stdout
 // --------------------------------------------------------------------------------------
 
 #ifdef __LINUX__
@@ -117,23 +125,23 @@ static __forceinline const wxChar* GetLinuxConsoleColor(ConsoleColors color)
 #endif
 
 // One possible default write action at startup and shutdown is to use the stdout.
-static void __concall ConsoleStdio_DoWrite( const wxString& fmt )
+static void __concall ConsoleStdout_DoWrite( const wxString& fmt )
 {
 	wxPrintf( fmt );
 }
 
 // Default write action at startup and shutdown is to use the stdout.
-static void __concall ConsoleStdio_DoWriteLn( const wxString& fmt )
+static void __concall ConsoleStdout_DoWriteLn( const wxString& fmt )
 {
 	wxPrintf( fmt + L"\n" );
 }
 
-static void __concall ConsoleStdio_Newline()
+static void __concall ConsoleStdout_Newline()
 {
 	wxPrintf( L"\n" );
 }
 
-static void __concall ConsoleStdio_DoSetColor( ConsoleColors color )
+static void __concall ConsoleStdout_DoSetColor( ConsoleColors color )
 {
 #ifdef __LINUX__
 	wxPrintf(L"\033[0m");
@@ -141,21 +149,22 @@ static void __concall ConsoleStdio_DoSetColor( ConsoleColors color )
 #endif
 }
 
-static void __concall ConsoleStdio_SetTitle( const wxString& title )
+static void __concall ConsoleStdout_SetTitle( const wxString& title )
 {
 #ifdef __LINUX__
 	wxPrintf(L"\033]0;" + title + L"\007");
 #endif
 }
 
-const IConsoleWriter ConsoleWriter_Stdio =
+const IConsoleWriter ConsoleWriter_Stdout =
 {
-	ConsoleStdio_DoWrite,			// Writes without newlines go to buffer to avoid error log spam.
-	ConsoleStdio_DoWriteLn,
-	ConsoleStdio_DoSetColor,
+	ConsoleStdout_DoWrite,			// Writes without newlines go to buffer to avoid error log spam.
+	ConsoleStdout_DoWriteLn,
+	ConsoleStdout_DoSetColor,
 
-	ConsoleStdio_Newline,
-	ConsoleStdio_SetTitle,
+	ConsoleNull_DoWrite,			// writes from stdout are ignored here, lest we create infinite loop hell >_<
+	ConsoleStdout_Newline,
+	ConsoleStdout_SetTitle,
 
 	0,		// instance-level indentation (should always be 0)
 };
@@ -180,6 +189,7 @@ const IConsoleWriter ConsoleWriter_Assert =
 	ConsoleAssert_DoWriteLn,
 	ConsoleNull_DoSetColor,
 
+	ConsoleNull_DoWrite,
 	ConsoleNull_Newline,
 	ConsoleNull_SetTitle,
 
@@ -190,8 +200,6 @@ const IConsoleWriter ConsoleWriter_Assert =
 //  ConsoleBuffer
 // --------------------------------------------------------------------------------------
 
-static wxString	m_buffer;
-
 const wxString& ConsoleBuffer_Get()
 {
 	return m_buffer;
@@ -199,6 +207,7 @@ const wxString& ConsoleBuffer_Get()
 
 void ConsoleBuffer_Clear()
 {
+	ScopedLock lock( m_bufferlock );
 	m_buffer.Clear();
 }
 
@@ -206,6 +215,7 @@ void ConsoleBuffer_Clear()
 // clears the buffer contents to 0.
 void ConsoleBuffer_FlushToFile( FILE *fp )
 {
+	ScopedLock lock( m_bufferlock );
 	if( fp == NULL || m_buffer.IsEmpty() ) return;
 	px_fputs( fp, m_buffer.ToUTF8() );
 	m_buffer.Clear();
@@ -213,11 +223,13 @@ void ConsoleBuffer_FlushToFile( FILE *fp )
 
 static void __concall ConsoleBuffer_DoWrite( const wxString& fmt )
 {
+	ScopedLock lock( m_bufferlock );
 	m_buffer += fmt;
 }
 
 static void __concall ConsoleBuffer_DoWriteLn( const wxString& fmt )
 {
+	ScopedLock lock( m_bufferlock );
 	m_buffer += fmt + L"\n";
 }
 
@@ -227,6 +239,7 @@ const IConsoleWriter ConsoleWriter_Buffered =
 	ConsoleBuffer_DoWriteLn,
 	ConsoleNull_DoSetColor,
 
+	ConsoleBuffer_DoWrite,
 	ConsoleNull_Newline,
 	ConsoleNull_SetTitle,
 
@@ -253,6 +266,7 @@ const IConsoleWriter ConsoleWriter_wxError =
 	Console_wxLogError_DoWriteLn,
 	ConsoleNull_DoSetColor,
 
+	ConsoleBuffer_DoWrite,
 	ConsoleNull_Newline,
 	ConsoleNull_SetTitle,
 
@@ -617,6 +631,36 @@ bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 }
 
 // --------------------------------------------------------------------------------------
+//  
+// --------------------------------------------------------------------------------------
+
+bool IConsoleWriter::WriteFromStdout( const char* fmt, ... ) const
+{
+	if( DoWriteFromStdout == ConsoleNull_DoWrite ) return false;
+
+	va_list args;
+	va_start(args,fmt);
+	DoWrite( ascii_format_string(fmt, args) );
+	va_end(args);
+
+	return false;
+}
+
+bool IConsoleWriter::WriteFromStdout( ConsoleColors color, const char* fmt, ... ) const
+{
+	if( DoWriteFromStdout == ConsoleNull_DoWrite ) return false;
+
+	va_list args;
+	va_start(args,fmt);
+	ConsoleColorScope cs( color );
+	DoWrite( ascii_format_string(fmt, args) );
+	va_end(args);
+
+	return false;
+}
+
+
+// --------------------------------------------------------------------------------------
 //  Default Writer for C++ init / startup:
 // --------------------------------------------------------------------------------------
 // In GUI modes under Windows I default to Assert, because windows lacks a qualified universal
@@ -627,7 +671,7 @@ bool IConsoleWriter::Warning( const wxChar* fmt, ... ) const
 #if wxUSE_GUI && defined(__WXMSW__)
 #	define _DefaultWriter_	ConsoleWriter_Assert
 #else
-#	define _DefaultWriter_	ConsoleWriter_Stdio
+#	define _DefaultWriter_	ConsoleWriter_Stdout
 #endif
 
 // Important!  Only Assert and Null console loggers are allowed for initial console targeting.
