@@ -494,7 +494,6 @@
 		<Unit filename="../x86/iR5900Move.h" />
 		<Unit filename="../x86/iR5900MultDiv.h" />
 		<Unit filename="../x86/iR5900Shift.h" />
-		<Unit filename="../x86/iVU0micro.cpp" />
 		<Unit filename="../x86/iVU1micro.cpp" />
 		<Unit filename="../x86/iVif.cpp">
 			<Option compiler="gcc" use="0" buildCommand="gcc $options -S $includes -c $file -o $object" />

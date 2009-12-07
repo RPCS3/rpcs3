@@ -63,6 +63,14 @@ public:
 	virtual void Step()=0;
 	virtual void ExecuteBlock()=0;
 	virtual void Clear(u32 Addr, u32 Size)=0;
+	
+	// C++ Calling Conventions are unstable, and some compilers don't even allow us to take the
+	// address of C++ methods.  We need to use a wrapper function to invoke the ExecuteBlock from
+	// recompiled code.
+	static void ExecuteBlockFromRecs( BaseCpuProvider* cpu )
+	{
+		cpu->ExecuteBlock();
+	}
 };
 
 // --------------------------------------------------------------------------------------
@@ -76,7 +84,7 @@ class BaseVUmicroCPU : public BaseCpuProvider
 public:
 
 	// Called by the PS2 VM's event manager for every internal vertical sync (occurs at either
-	// 50hx (pal) or 59.94hx (NTSC).
+	// 50hz (pal) or 59.94hz (NTSC).
 	//
 	// Exceptions:
 	//   This method is not allowed to throw exceptions, since exceptions may not propagate

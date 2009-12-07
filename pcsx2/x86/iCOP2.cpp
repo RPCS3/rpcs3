@@ -156,11 +156,9 @@ static void recCTC2(s32 info)
 				// instructions, and also sets the nextBranchCycle as needed. (air)
 
 				MOV32ItoM((uptr)&VU0.VI[_Fs_].UL,g_cpuConstRegs[_Rt_].UL[0]);
-				//PUSH32I( -1 );
 				iFlushCall(FLUSH_NOCONST);
-				CALLFunc((uptr)CpuVU0.ExecuteBlock);
-				//CALLFunc((uptr)vu0ExecMicro);
-				//ADD32ItoR( ESP, 4 );
+				xMOV(ecx, (uptr)&CpuVU0 );
+				xCALL(BaseCpuProvider::ExecuteBlockFromRecs);
 				break;
 			}
 		}
