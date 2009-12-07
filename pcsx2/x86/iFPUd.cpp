@@ -22,24 +22,38 @@
 #include "iR5900.h"
 #include "iFPU.h"
 
-/* Version of the FPU that emulates an exponent of 0xff and overflow/underflow flags */
+/* This is a version of the FPU that emulates an exponent of 0xff and overflow/underflow flags */
 
 /* Can be made faster by not converting stuff back and forth between instructions. */
- 
+
+
+//----------------------------------------------------------------
+// FPU emulation status:
+// ADD, SUB (incl. accumulation stage of MADD/MSUB) - no known problems.
+// Mul (incl. multiplication stage of MADD/MSUB) - incorrect. PS2's result mantissa is sometimes 
+//													smaller by 0x1 than IEEE's result (with round to zero).
+// DIV, SQRT, RSQRT - incorrect. PS2's result varies between IEEE's result with round to zero
+//													and IEEE's result with round to +/-infinity.
+// other stuff - no known problems.
+//----------------------------------------------------------------
+
 
 using namespace x86Emitter;
  
-//set overflow flag (set only if FPU_RESULT is 1)
+// Set overflow flag (define only if FPU_RESULT is 1)
 #define FPU_FLAGS_OVERFLOW 1 
-//set underflow flag (set only if FPU_RESULT is 1)
+// Set underflow flag (define only if FPU_RESULT is 1)
 #define FPU_FLAGS_UNDERFLOW 1 
  
-//if 1, result is not clamped (Gives correct results as in PS2,	
-//but can cause problems due to insufficient clamping levels in the VUs)
+// If 1, result is not clamped (Gives correct results as in PS2,	
+// but can cause problems due to insufficient clamping levels in the VUs)
 #define FPU_RESULT 1 
  
-//set I&D flags. also impacts other aspects of DIV/R/SQRT correctness
+// Set I&D flags. also impacts other aspects of DIV/R/SQRT correctness
 #define FPU_FLAGS_ID 1 
+ 
+// Add/Sub opcodes produce the same results as the ps2
+#define FPU_CORRECT_ADD_SUB 1 
 
 #ifdef FPU_RECOMPILE 
 
@@ -48,8 +62,8 @@ namespace R5900 {
 namespace Dynarec {
 namespace OpcodeImpl {
 namespace COP1 {
-	
-u32 __fastcall FPU_MUL_MANTISSA(u32 s, u32 t);
+
+u32 __fastcall FPU_MUL_HACK(u32 s, u32 t);
 
 namespace DOUBLE {
  
@@ -70,8 +84,6 @@ namespace DOUBLE {
 #define FPUflagSD	0X00000020
 #define FPUflagSO	0X00000010
 #define FPUflagSU	0X00000008
- 
-#define FPU_ADD_SUB_HACK 1 // Add/Sub opcodes produce more ps2-like results if set to 1
  
 #define REC_FPUBRANCH(f) \
 	void f(); \
@@ -145,26 +157,25 @@ static const __aligned(32) FPUd_Globals s_const =
 };
 
  
-// converts small normal numbers to double equivalent
-// converts large normal numbers (which represent NaN/inf in IEEE) to double equivalent
+// ToDouble : converts single-precision PS2 float to double-precision IEEE float
 
-//mustn't use EAX/ECX/EDX/x86regs (MUL)
 void ToDouble(int reg)
 {
-	SSE_UCOMISS_M32_to_XMM(reg, (uptr)s_const.pos_inf); //sets ZF if equal or incomparable
-	u8 *to_complex = JE8(0); //complex conversion if positive infinity or NaN
+	SSE_UCOMISS_M32_to_XMM(reg, (uptr)s_const.pos_inf); // Sets ZF if reg is equal or incomparable to pos_inf
+	u8 *to_complex = JE8(0); // Complex conversion if positive infinity or NaN
 	SSE_UCOMISS_M32_to_XMM(reg, (uptr)s_const.neg_inf); 
-	u8 *to_complex2 = JE8(0); //complex conversion if negative infinity
+	u8 *to_complex2 = JE8(0); // Complex conversion if negative infinity
  
-	SSE2_CVTSS2SD_XMM_to_XMM(reg, reg); //simply convert
+	SSE2_CVTSS2SD_XMM_to_XMM(reg, reg); // Simply convert
 	u8 *end = JMP8(0);
  
 	x86SetJ8(to_complex);
 	x86SetJ8(to_complex2);
  
-	SSE2_PSUBD_M128_to_XMM(reg, (uptr)s_const.one_exp); //lower exponent
+	// Special conversion for when IEEE sees the value in reg as an INF/NaN
+	SSE2_PSUBD_M128_to_XMM(reg, (uptr)s_const.one_exp); // Lower exponent by one
 	SSE2_CVTSS2SD_XMM_to_XMM(reg, reg); 
-	SSE2_PADDQ_M128_to_XMM(reg, (uptr)s_const.dbl_one_exp); //raise exponent
+	SSE2_PADDQ_M128_to_XMM(reg, (uptr)s_const.dbl_one_exp); // Raise exponent by one
  
 	x86SetJ8(end);
 }
@@ -174,19 +185,20 @@ void ToDouble(int reg)
 //------------------------------------------------------------------
  
 /* 
-	if FPU_RESULT, results are more like the real PS2's FPU. But if the VU doesn't clamp all operands,
-		new issues may happen if a game transfers the FPU results into the VU and continues operations there.
-		ar tonelico 1 does this with the result from DIV/RSQRT (when a division by zero occurs)
+	if FPU_RESULT is defined, results are more like the real PS2's FPU. But new issues may happen if 
+		the VU isn't clamping all operands since games may transfer FPU results into the VU.
+		Ar tonelico 1 does this with the result from DIV/RSQRT (when a division by zero occurs)
 	otherwise, results are still usually better than iFPU.cpp.
 */
  
-//mustn't use EAX/ECX/EDX/x86regs (MUL)
- 
+// ToPS2FPU_Full - converts double-precision IEEE float to single-precision PS2 float
+
 // converts small normal numbers to PS2 equivalent
 // converts large normal numbers to PS2 equivalent (which represent NaN/inf in IEEE)
 // converts really large normal numbers to PS2 signed max
 // converts really small normal numbers to zero (flush)
 // doesn't handle inf/nan/denormal
+
 void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc, bool addsub)
 {
 	if (flags)
@@ -259,7 +271,6 @@ void ToPS2FPU_Full(int reg, bool flags, int absreg, bool acc, bool addsub)
 		x86SetJ8(end4);
 }
  
-//mustn't use EAX/ECX/EDX/x86regs (MUL)
 void ToPS2FPU(int reg, bool flags, int absreg, bool acc, bool addsub = false)
 {
 	if (FPU_RESULT)
@@ -399,31 +410,31 @@ void FPU_ADD_SUB(int tempd, int tempt) //tempd and tempt are overwritten, they a
 	_freeX86reg(temp2);
 	_freeX86reg(tempecx);
 }
- 
- 
+
 void FPU_MUL(int info, int regd, int sreg, int treg, bool acc)
 {
+	u8 *noHack;
+	u32 *endMul;
+
 	if (CHECK_FPUMULHACK)
 	{
 		SSE2_MOVD_XMM_to_R(ECX, sreg);
 		SSE2_MOVD_XMM_to_R(EDX, treg);
-		CALLFunc( (uptr)&FPU_MUL_MANTISSA );
-		ToDouble(sreg); ToDouble(treg); 
-		SSE2_MULSD_XMM_to_XMM(sreg, treg);
-		ToPS2FPU(sreg, true, treg, acc);
-		SSE_MOVSS_XMM_to_XMM(regd, sreg);
-		SSE2_MOVD_XMM_to_R(ECX, regd);
-		AND32ItoR(ECX, 0xff800000);
-		OR32RtoR(EAX, ECX);
-		SSE2_MOVD_R_to_XMM(regd, EAX);
+		CALLFunc( (uptr)&FPU_MUL_HACK ); //returns the hacked result or 0
+		TEST32RtoR(EAX, EAX);
+		noHack = JZ8(0);
+			SSE2_MOVD_R_to_XMM(regd, EAX);
+			endMul = JMP32(0);
+		x86SetJ8(noHack);
 	}
-	else
-	{
-		ToDouble(sreg); ToDouble(treg); 
-		SSE2_MULSD_XMM_to_XMM(sreg, treg);
-		ToPS2FPU(sreg, true, treg, acc);
-		SSE_MOVSS_XMM_to_XMM(regd, sreg);
-	}
+
+	ToDouble(sreg); ToDouble(treg); 
+	SSE2_MULSD_XMM_to_XMM(sreg, treg);
+	ToPS2FPU(sreg, true, treg, acc);
+	SSE_MOVSS_XMM_to_XMM(regd, sreg);
+
+	if (CHECK_FPUMULHACK) 
+		x86SetJ32(endMul);
 }
 
 //------------------------------------------------------------------
@@ -437,7 +448,7 @@ void recFPUOp(int info, int regd, int op, bool acc)
 	int sreg, treg;
 	ALLOC_S(sreg); ALLOC_T(treg);
  
-	if (FPU_ADD_SUB_HACK) //ADD or SUB
+	if (FPU_CORRECT_ADD_SUB)
 		FPU_ADD_SUB(sreg, treg);
  
 	ToDouble(sreg); ToDouble(treg);
@@ -709,7 +720,7 @@ void recMaddsub(int info, int regd, int op, bool acc)
 
 	GET_ACC(treg); 
 
-	if (FPU_ADD_SUB_HACK) //ADD or SUB
+	if (FPU_CORRECT_ADD_SUB) 
 		FPU_ADD_SUB(treg, sreg); //might be problematic for something!!!!
 
 	//          TEST FOR ACC/MUL OVERFLOWS, PROPOGATE THEM IF THEY OCCUR
