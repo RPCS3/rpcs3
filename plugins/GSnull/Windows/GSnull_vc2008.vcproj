@@ -19,7 +19,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\common\vsprops\CodeGen_Debug.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -52,6 +52,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile="GS.def"
 				TargetMachine="1"
 			/>

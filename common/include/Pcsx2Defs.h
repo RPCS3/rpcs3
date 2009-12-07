@@ -82,41 +82,6 @@
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
-// jNO_DEFAULT -- disables the default case in a switch, which improves switch optimization
-// under MSVC.
-//
-// How it Works: jASSUME turns into an __assume(0) under msvc compilers, which when specified
-// in the 'default:' case of a switch tells the compiler that the case is unreachable, so
-// that it will not generate any code, LUTs, or conditionals to handle it.
-//
-// * In debug builds the default case will cause an assertion.
-// * In devel builds the default case will cause a LogicError exception (C++ only)
-// (either meaning the jNO_DEFAULT has been used incorrectly, and that the default case is in
-//  fact used and needs to be handled).
-//
-// MSVC Note: To stacktrace LogicError exceptions, add Exception::LogicError to the C++ First-
-// Chance Exception list (under Debug->Exceptions menu).
-//
-#ifndef jNO_DEFAULT
-#if defined(__cplusplus) && defined(PCSX2_DEVBUILD)
-#	define jNO_DEFAULT \
-	{ \
-	default: \
-		assert(0); \
-		if( !IsDebugBuild ) throw Exception::LogicError( "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
-		break; \
-	}
-#else
-#	define jNO_DEFAULT \
-	default: \
-	{ \
-		jASSUME(0); \
-		break; \
-	}
-#endif
-#endif
-
-//////////////////////////////////////////////////////////////////////////////////////////
 // compile-time assertion; usable at static variable define level.
 // (typically used to confirm the correct sizeof() for struct types where size
 //  restaints must be enforced).

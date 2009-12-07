@@ -18,26 +18,17 @@
 // ----------------------------------------------------------------------------------------
 //  pxAssert / pxAssertDev / pxFail / pxFailDev
 // ----------------------------------------------------------------------------------------
-// Standard debug-ony "nothrow" (pxAssert) and devel-style "throw" (pxAssertDev) style
-// assertions.  All assertions act as valid conditional statements that return the result
-// of the specified conditional; useful for handling failed assertions in a "graceful" fashion
-// when utilizing the "ignore" feature of assertion debugging.  (Release builds *always* return
-// true for assertion success, but no actual assertion check is performed).
+// Standard "nothrow" assertions.  All assertions act as valid conditional statements that
+// return the result of the specified conditional; useful for handling failed assertions in
+// a "graceful" fashion when utilizing the "ignore" feature of assertion debugging.
 //
-// Performance: All assertion types optimize into __assume() directives in Release builds.
+// Performance: All assertion types optimize into __assume()/likely() directives in Release
+// builds.  If using assertions as part of a conditional, the conditional code *will* not
+// be optimized out, so use conditionals with caution.
 //
 // pxAssertDev is an assertion tool for Devel builds, intended for sanity checking and/or
-// bounds checking variables in areas which are not performance critical.
-//
-// How it works: pxAssertDev throws an exception of type Exception::LogicError if the assertion
-// conditional is false.  Typically for the end-user, this exception is handled by the general
-// exception handler defined by the application, which (should eventually) create some state
-// dumps and other information for troubleshooting purposes.
-//
-// From a debugging environment, you can trap your pxAssertDev by either breakpointing the
-// exception throw code in pxOnAssert, or by adding Exception::LogicError to your First-Chance
-// Exception catch list (Visual Studio, under the Debug->Exceptions menu/dialog).  You should
-// have LogicErrors enabled as First-Chance exceptions regardless, so do it now. :)
+// bounds checking variables in areas which are not performance critical.  Another common
+// use is for checking thread affinity on utility functions.
 //
 // Credits Notes: These macros are based on a combination of wxASSERT, MSVCRT's assert
 // and the ATL's Assertion/Assumption macros.  the best of all worlds!
@@ -93,3 +84,37 @@
 extern void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const wxChar* msg);
 extern void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const char* msg);
 
+//////////////////////////////////////////////////////////////////////////////////////////
+// jNO_DEFAULT -- disables the default case in a switch, which improves switch optimization
+// under MSVC.
+//
+// How it Works: jASSUME turns into an __assume(0) under msvc compilers, which when specified
+// in the 'default:' case of a switch tells the compiler that the case is unreachable, so
+// that it will not generate any code, LUTs, or conditionals to handle it.
+//
+// * In debug builds the default case will cause an assertion.
+// * In devel builds the default case will cause a LogicError exception (C++ only)
+// (either meaning the jNO_DEFAULT has been used incorrectly, and that the default case is in
+//  fact used and needs to be handled).
+//
+// MSVC Note: To stacktrace LogicError exceptions, add Exception::LogicError to the C++ First-
+// Chance Exception list (under Debug->Exceptions menu).
+//
+#ifndef jNO_DEFAULT
+
+#if defined(__cplusplus) && defined(PCSX2_DEVBUILD)
+#	define jNO_DEFAULT \
+	default: \
+	{ \
+		pxFailDev( "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
+		break; \
+	}
+#else
+#	define jNO_DEFAULT \
+	default: \
+	{ \
+		jASSUME(0); \
+		break; \
+	}
+#endif
+#endif

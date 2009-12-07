@@ -6,6 +6,7 @@
 	ProjectGUID="{BF7B81A5-E348-4F7C-A69F-F74C8EEEAD70}"
 	RootNamespace="USBnull"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -18,7 +19,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops"
+			InheritedPropertySheets="..\..\..\common\vsprops\plugin_svnroot.vsprops;.\ProjectRootDir.vsprops;..\..\..\common\vsprops\BaseProperties.vsprops;..\..\..\common\vsprops\IncrementalLinking.vsprops;..\..\..\common\vsprops\CodeGen_Debug.vsprops"
 			CharacterSet="2"
 			>
 			<Tool
@@ -51,6 +52,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile="USBnull.def"
 				RandomizedBaseAddress="1"
 				TargetMachine="1"

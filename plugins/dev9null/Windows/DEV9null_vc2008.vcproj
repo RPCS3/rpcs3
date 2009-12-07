@@ -6,6 +6,7 @@
 	ProjectGUID="{04439C5F-05FB-4A9C-AAD1-5388C25377DB}"
 	RootNamespace="DEV9null"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="0"
 	>
 	<Platforms>
 		<Platform
@@ -54,7 +55,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				LinkIncremental="2"
+				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				ModuleDefinitionFile="DEV9null.def"
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="0"

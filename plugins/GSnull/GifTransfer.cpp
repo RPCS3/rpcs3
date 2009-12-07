@@ -200,7 +200,7 @@ __forceinline u32 _gifTransfer( GIF_PATH pathidx, const u8* pMem, u32 size )
 			}
 			break;
 
-			jNO_DEFAULT;
+			default: __assume(false);
 
 			}
 		}
