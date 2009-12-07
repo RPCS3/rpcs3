@@ -563,7 +563,9 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		if(dst->m_TEX0.TBW != TEX0.TBW) // && dst->m_TEX0.PSM == TEX0.PSM
 		{
 			//Better not do the code below, "fixes" like every game that ever gets here..
-			delete src; return NULL;
+			//Edit: Ratchet and Clank needs this to show most of it's graphics at all.
+			//Someone else fix this please, I can't :p
+			//delete src; return NULL;
 
 			// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
 

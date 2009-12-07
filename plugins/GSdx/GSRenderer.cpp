@@ -752,7 +752,7 @@ bool GSRenderer::IsLinear()
 	}
 	// if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
 	// Fixme : Why should Q be bogus?
-	if(!TEX1.LCM /*&& !PRIM->FST*/) 
+	if(!TEX1.LCM && !PRIM->FST) 
 	{
 		float K = (float)TEX1.K / 16;
 		float f = (float)(1 << TEX1.L) / log(2.0f);
