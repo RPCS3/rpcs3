@@ -349,8 +349,8 @@ static __forceinline void VSyncStart(u32 sCycle)
 	// by UI implementations.  (ie, AppCoreThread in PCSX2-wx interface).
 	vSyncDebugStuff( iFrame );
 
-	if (CHECK_MICROVU0) vsyncVUrec(0);
-	if (CHECK_MICROVU1) vsyncVUrec(1);
+	CpuVU0->Vsync();
+	CpuVU1->Vsync();
 
 	if ((CSRw & 0x8))
 	{

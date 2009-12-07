@@ -190,56 +190,39 @@ void vu0Exec(VURegs* VU)
 	if (VU->VF[0].f.w != 1.0f) DbgCon.Error("VF[0].w != 1.0!!!!\n");
 }
 
-namespace VU0micro
+// --------------------------------------------------------------------------------------
+//  VU0microInterpreter
+// --------------------------------------------------------------------------------------
+InterpVU0::InterpVU0()
 {
-	void intAlloc()
-	{
-	}
-
-	void intShutdown()
-	{
-	}
-
-	void __fastcall intClear(u32 Addr, u32 Size)
-	{
-	}
-
-	static void intReset()
-	{
-	}
-
-	static void intStep()
-	{
-		vu0Exec( &VU0 );
-	}
-
-	static void intExecuteBlock()
-	{
-		int i;
-
-		for (i = 128; i--;) {
-			
-			if ((VU0.VI[REG_VPU_STAT].UL & 0x1) == 0)
-				break;
-
-			vu0Exec(&VU0);
-		}
-
-		if( i < 0 && (VU0.branch || VU0.ebit) ) {
-			// execute one more
-			vu0Exec(&VU0);
-		}
-	}
+	IsInterpreter = true;
 }
 
-using namespace VU0micro;
-
-const VUmicroCpu intVU0 = 
+void InterpVU0::Step()
 {
-	intReset
-,	intStep
-,	intExecuteBlock
-,	intClear
+	vu0Exec( &VU0 );
+}
 
-,	true
-};
+void InterpVU0::ExecuteBlock()
+{
+	for (int i = 128; i--;)
+	{
+		if ((VU0.VI[REG_VPU_STAT].UL & 0x1) == 0)
+		{
+			// Okey.... It apparenly runs an extra instruction on branches or ebits, but
+			// *only* if the microprogram is longer than 128 instructions. This has got
+			// to be some kind of random gamefix hack. --air
+		
+			if( (i < 0) && (VU0.branch || VU0.ebit) )
+			{
+				// execute one more
+				vu0Exec(&VU0);
+			}
+			break;
+		}
+
+		vu0Exec(&VU0);
+	}
+
+}
+

@@ -338,7 +338,7 @@ static u32* SuperVUStaticAlloc(u32 size);
 static void SuperVURecompile();
 
 // allocate VU resources
-void SuperVUAlloc(int vuindex)
+static void SuperVUAlloc(int vuindex)
 {
 	// The old -1 crap has been depreciated on this function.  Please
 	// specify either 0 or 1, thanks.
@@ -350,15 +350,19 @@ void SuperVUAlloc(int vuindex)
 		// upper 4 bits must be zero!
 		// Changed "first try base" to 0xf1e0000, since 0x0c000000 liked to fail a lot. (cottonvibes)
 		s_recVUMem = SysMmapEx(0xf1e0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
+		
+		// Try again at some other random memory location... whatever. >_<
+		if( s_recVUMem == NULL )
+			s_recVUMem = SysMmapEx(0xc2b0000, VU_EXESIZE, 0x10000000, "SuperVUAlloc");
 
 		if (s_recVUMem == NULL)
 		{
-			throw Exception::OutOfMemory(
+			throw Exception::VirtualMemoryMapConflict(
 				// untranslated diagnostic msg, use exception's default for translation
-				wxsFormat( L"SuperVU failed to allocate recompiler memory (addr: 0x%x)", (u32)s_recVUMem ),
+				wxsFormat( L"SuperVU failed to allocate virtual memory below 256MB." ),
 				
 				// Translated message
-				_("An out of memory error occured while attempting to reserve memory for the core recompilers.")
+				_("Out of Memory (sorta): The SuperVU recompiler was unable to reserve the specific memory ranges required.")
 			);
 		}
 
@@ -479,7 +483,7 @@ void SuperVUReset(int vuindex)
 }
 
 // clear the block and any joining blocks
-void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
+static void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
 {
 	vector<VuFunctionHeader::RANGE>::iterator itrange;
 	list<VuFunctionHeader*>::iterator it = s_listVUHeaders[vuindex].begin();
@@ -4597,4 +4601,90 @@ void recVULowerOP_T3_11(VURegs* VU, s32 info)
 void recVUunknown(VURegs* VU, s32 info)
 {
 	Console.Warning("Unknown SVU micromode opcode called");
+}
+
+// --------------------------------------------------------------------------------------
+//  recSuperVU0 Interface
+// --------------------------------------------------------------------------------------
+recSuperVU0::recSuperVU0()
+{
+	IsInterpreter = false;
+}
+	
+void recSuperVU0::Allocate()
+{
+	SuperVUAlloc( 0 );
+}
+
+void recSuperVU0::Shutdown() throw()
+{
+	SuperVUDestroy( 0 );
+}
+
+void recSuperVU0::Reset()
+{
+	SuperVUReset( 0 );
+}
+
+void recSuperVU0::ExecuteBlock()
+{
+	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
+
+	XMMRegisters::Freeze();
+	SuperVUExecuteProgram(VU0.VI[REG_TPC].UL & 0xfff, 0);
+	XMMRegisters::Thaw();
+}
+
+void recSuperVU0::Clear(u32 Addr, u32 Size)
+{
+	SuperVUClear(Addr, Size, 0);
+}
+
+
+// --------------------------------------------------------------------------------------
+//  recSuperVU1 Interface
+// --------------------------------------------------------------------------------------
+recSuperVU1::recSuperVU1()
+{
+	IsInterpreter = false;
+}
+
+void recSuperVU1::Allocate()
+{
+	SuperVUAlloc( 1 );
+}
+
+void recSuperVU1::Shutdown() throw()
+{
+	SuperVUDestroy( 1 );
+}
+
+void recSuperVU1::Reset()
+{
+	SuperVUReset( 1 );
+}
+
+void recSuperVU1::ExecuteBlock()
+{
+	if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
+	pxAssert( (VU1.VI[REG_TPC].UL&7) == 0 );
+
+	// [TODO] Debugging pre- and post- hooks?
+
+	XMMRegisters::Freeze();
+
+	if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) {
+		Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL); 
+	}
+	
+	do { // while loop needed since not always will return finished
+		SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);
+	} while( VU0.VI[REG_VPU_STAT].UL&0x100 );
+
+	XMMRegisters::Thaw();
+}
+
+void recSuperVU1::Clear(u32 Addr, u32 Size)
+{
+	SuperVUClear(Addr, Size, 1);
 }

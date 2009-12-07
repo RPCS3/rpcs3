@@ -194,6 +194,7 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 
 	if( isBlocking )
 	{
+		// FIXME: Add deadlock detection and handling here... ?
 		m_lock_InThread.Wait();
 		Detach();
 	}

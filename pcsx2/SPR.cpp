@@ -37,12 +37,12 @@ static void TestClearVUs(u32 madr, u32 size)
 		if (madr < 0x11004000)
 		{
 			DbgCon.Warning("scratch pad clearing vu0");
-			CpuVU0.Clear(madr&0xfff, size);
+			CpuVU0->Clear(madr&0xfff, size);
 		}
 		else if (madr >= 0x11008000 && madr < 0x1100c000)
 		{
 			DbgCon.Warning("scratch pad clearing vu1");
-			CpuVU1.Clear(madr&0x3fff, size);
+			CpuVU1->Clear(madr&0x3fff, size);
 		}
 	}
 }

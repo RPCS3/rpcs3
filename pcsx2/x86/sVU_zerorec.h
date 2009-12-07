@@ -19,10 +19,6 @@
 
 #include "sVU_Micro.h"
 
-extern void SuperVUAlloc(int vuindex);   // global VU resources are automatically allocated if necessary.
-extern void SuperVUDestroy(int vuindex); // if vuindex is -1, destroys everything
-extern void SuperVUReset(int vuindex);   // if vuindex is -1, resets everything
-
 //Using assembly code from an external file.
 #ifdef __LINUX__
 extern "C" {
@@ -33,7 +29,9 @@ extern void svudispfntemp();
 #ifdef __LINUX__
 }
 #endif
-extern void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex);
+
+extern void SuperVUDestroy(int vuindex);
+extern void SuperVUReset(int vuindex);
 
 // read = 0, will write to reg
 // read = 1, will read from reg
@@ -42,3 +40,34 @@ extern u32 SuperVUGetVIAddr(int reg, int read);
 
 // if p == 0, flush q else flush p; if wait is != 0, waits for p/q
 extern void SuperVUFlush(int p, int wait);
+
+
+class recSuperVU0 : public BaseVUmicroCPU 
+{
+public:
+	recSuperVU0();
+
+	const char* GetShortName() const	{ return "sVU0"; }
+	wxString GetLongName() const		{ return L"SuperVU0 Recompiler"; }
+
+	void Allocate();
+	void Shutdown() throw();
+	void Reset();
+	void ExecuteBlock();
+	void Clear(u32 Addr, u32 Size);
+};
+
+class recSuperVU1 : public BaseVUmicroCPU 
+{
+public:
+	recSuperVU1();
+
+	const char* GetShortName() const	{ return "sVU1"; }
+	wxString GetLongName() const		{ return L"SuperVU1 Recompiler"; }
+
+	void Allocate();
+	void Shutdown() throw();
+	void Reset();
+	void ExecuteBlock();
+	void Clear(u32 Addr, u32 Size);
+};

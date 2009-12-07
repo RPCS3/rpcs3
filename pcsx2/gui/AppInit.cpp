@@ -319,34 +319,53 @@ bool Pcsx2App::OnInit()
 
 		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
 		{
+			// HadSomeFailures only returns 'true' if an *enabled* cpu type fails to init.  If
+			// the user already has all interps configured, for example, then no point in
+			// popping up this dialog.
+
+			// TODO : This should be redone using the ExtensibleConfirmation, and a sub-window
+			// (static text or something with a vertical scrollbar).
+
 			wxString message( _("The following cpu recompilers failed to initialize and will not be available:\n\n") );
 
-			if( !m_CoreAllocs->RecSuccess_EE )
+			if( !m_CoreAllocs->IsRecAvailable_EE() )
 			{
 				message += L"\t* R5900 (EE)\n";
 			}
 
-			if( !m_CoreAllocs->RecSuccess_IOP )
+			if( !m_CoreAllocs->IsRecAvailable_IOP() )
 			{
 				message += L"\t* R3000A (IOP)\n";
 			}
 
-			if( !m_CoreAllocs->RecSuccess_VU0 )
+			if( !m_CoreAllocs->IsRecAvailable_MicroVU0() )
 			{
-				message += L"\t* VU0\n";
+				message += L"\t* microVU0\n";
 			}
 
-			if( !m_CoreAllocs->RecSuccess_VU1 )
+			if( !m_CoreAllocs->IsRecAvailable_MicroVU1() )
 			{
-				message += L"\t* VU1\n";
+				message += L"\t* microVU1\n";
 			}
 
-			message += pxE( ".Popup Error:EmuCore:MemoryForRecs",
+			if( !m_CoreAllocs->IsRecAvailable_SuperVU0() )
+			{
+				message += L"\t* SuperVU0\n";
+			}
+
+			if( !m_CoreAllocs->IsRecAvailable_SuperVU1() )
+			{
+				message += L"\t* SuperVU1\n";
+			}
+
+			// Failures can be SSE-related OR memory related.  Should do per-cpu error reports instead...
+
+			/*message += pxE( ".Popup Error:EmuCore:MemoryForRecs",
 				L"These errors are the result of memory allocation failures (see the program log for details). "
 				L"Closing out some memory hogging background tasks may resolve this error.\n\n"
 				L"These recompilers have been disabled and interpreters will be used in their place.  "
 				L"Interpreters can be very slow, so don't get too excited.  Press OK to continue or CANCEL to close PCSX2."
-			);
+			);*/
 
 			if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
 				return false;

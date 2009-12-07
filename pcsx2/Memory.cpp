@@ -122,8 +122,8 @@ vtlbHandler iopHw_by_page_08;
 // (the VU memory operations are different for recs vs. interpreters)
 void memMapVUmicro()
 {
-	vtlb_MapHandler(vu0_micro_mem[CHECK_VU0REC ? 0 : 1],0x11000000,0x00004000);
-	vtlb_MapHandler(vu1_micro_mem[CHECK_VU1REC ? 0 : 1],0x11008000,0x00004000);
+	vtlb_MapHandler(vu0_micro_mem[CpuVU0->IsInterpreter],0x11000000,0x00004000);
+	vtlb_MapHandler(vu1_micro_mem[CpuVU1->IsInterpreter],0x11008000,0x00004000);
 
 	// VU0/VU1 memory
 	// (Like IOP memory, these are generally only used by the EE Bios kernel during
@@ -414,16 +414,16 @@ static __forceinline void ClearVuFunc( u32 addr, u32 size )
 	if( dynarec )
 	{
 		if( vunum==0 )
-			VU0micro::recClear(addr,size);
+			CpuVU0->Clear(addr,size);
 		else
-			VU1micro::recClear(addr,size);
+			CpuVU1->Clear(addr,size);
 	}
 	else
 	{
 		if( vunum==0 )
-			VU0micro::intClear(addr,size);
+			CpuVU0->Clear(addr,size);
 		else
-			VU1micro::intClear(addr,size);
+			CpuVU1->Clear(addr,size);
 	}
 }
 

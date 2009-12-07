@@ -24,30 +24,35 @@ static const int PCSX2_VersionMid	= 9;
 static const int PCSX2_VersionLo	= 7;
 
 class SysCoreThread;
+class CpuInitializerSet;
 
 // --------------------------------------------------------------------------------------
 //  SysCoreAllocations class
 // --------------------------------------------------------------------------------------
 class SysCoreAllocations
 {
-public:
-	// This set of booleans defaults to false and are only set TRUE if the corresponding
-	// recompilers succeeded to initialize/allocate.  The host application should honor
-	// these booleans when selecting between recompiler or interpreter, since recompilers
-	// will fail to operate if these are "false."
-
-	bool	RecSuccess_EE:1,
-			RecSuccess_IOP:1,
-			RecSuccess_VU0:1,
-			RecSuccess_VU1:1;
-
 protected:
+	ScopedPtr<CpuInitializerSet> CpuProviders;
+
+	bool m_RecSuccessEE:1;
+	bool m_RecSuccessIOP:1;
 
 public:
 	SysCoreAllocations();
 	virtual ~SysCoreAllocations() throw();
 
+	void SelectCpuProviders() const;
+
 	bool HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const;
+
+	bool IsRecAvailable_EE() const		{ return m_RecSuccessEE; }
+	bool IsRecAvailable_IOP() const		{ return m_RecSuccessIOP; }
+	
+	bool IsRecAvailable_MicroVU0() const;
+	bool IsRecAvailable_MicroVU1() const;
+
+	bool IsRecAvailable_SuperVU0() const;
+	bool IsRecAvailable_SuperVU1() const;
 
 protected:
 	void CleanupMess() throw();

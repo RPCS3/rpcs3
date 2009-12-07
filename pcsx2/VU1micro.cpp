@@ -47,7 +47,7 @@ void __fastcall vu1ExecMicro(u32 addr)
 	while(VU0.VI[REG_VPU_STAT].UL & 0x100)
 	{
 		VUM_LOG("vu1ExecMicro > Stalling until current microprogram finishes");
-		CpuVU1.ExecuteBlock();
+		CpuVU1->ExecuteBlock();
 	}
 
 	VUM_LOG("vu1ExecMicro %x", addr);
@@ -59,7 +59,7 @@ void __fastcall vu1ExecMicro(u32 addr)
 	if (addr != -1) VU1.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU1);
 
-	CpuVU1.ExecuteBlock();
+	CpuVU1->ExecuteBlock();
 }
 
 _vuRegsTables(VU1, VU1regs);

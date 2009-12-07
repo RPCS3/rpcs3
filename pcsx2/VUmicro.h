@@ -17,49 +17,165 @@
 #include "VU.h"
 #include "VUops.h"
 
-struct VUmicroCpu
+// --------------------------------------------------------------------------------------
+//  BaseCpuProvider
+// --------------------------------------------------------------------------------------
+//
+// Design Note: This class is only partial C++ style.  It still relies on Alloc and Shutdown
+// calls for memory and resource management.  This is because the underlying implementations
+// of our CPU emulators don't have properly encapsulated objects yet -- if we allocate ram
+// in a constructor, it won't get free'd if an exception occurs during object construction.
+// Once we've resolved all the 'dangling pointers' and stuff in the recompilers, Alloc
+// and Shutdown can be removed in favor of constructor/destructor syntax.
+//
+class BaseCpuProvider
 {
-	void (*Reset)();
-	void (*Step)();
-	void (*ExecuteBlock)();	// VUs should support block-level execution only.
-	void (__fastcall *Clear)(u32 Addr, u32 Size);
+protected:
+	// allocation counter for multiple init/shutdown calls
+	// (most or all implementations will need this!)
+	int		m_AllocCount;
 
+public:
 	// this boolean indicates to some generic logging facilities if the VU's registers
-	// are valid for logging or not. (see DisVU1Micro.cpp, etc)
+	// are valid for logging or not. (see DisVU1Micro.cpp, etc)  [kinda hacky, might
+	// be removed in the future]
 	bool IsInterpreter;
+
+public:
+	BaseCpuProvider()
+	{
+		m_AllocCount = 0;
+	}
+
+	virtual ~BaseCpuProvider() throw()
+	{
+		if( m_AllocCount != 0 )
+			Console.Warning( "Cleanup miscount detected on CPU provider.  Count=%d", m_AllocCount );
+	}
+
+	virtual const char* GetShortName() const=0;
+	virtual wxString GetLongName() const=0;
+
+	virtual void Allocate()=0;
+	virtual void Shutdown()=0;
+	virtual void Reset()=0;
+
+	virtual void Step()=0;
+	virtual void ExecuteBlock()=0;
+	virtual void Clear(u32 Addr, u32 Size)=0;
 };
 
-extern VUmicroCpu CpuVU0;
-extern const VUmicroCpu intVU0;
-extern const VUmicroCpu recVU0;
-
-extern VUmicroCpu CpuVU1;
-extern const VUmicroCpu intVU1;
-extern const VUmicroCpu recVU1;
-
-namespace VU0micro
+// --------------------------------------------------------------------------------------
+//  BaseVUmicroCPU
+// --------------------------------------------------------------------------------------
+// Layer class for possible future implementation (currently is nothing more than a type-safe
+// type define).
+//
+class BaseVUmicroCPU : public BaseCpuProvider
 {
-	extern void recAlloc();
-	extern void recShutdown();
-	extern void __fastcall recClear(u32 Addr, u32 Size);
+public:
 
-	// Note: Interpreter functions are dummies -- they don't actually do anything.
-	extern void intAlloc();
-	extern void intShutdown();
-	extern void __fastcall intClear(u32 Addr, u32 Size);
-}
+	// Called by the PS2 VM's event manager for every internal vertical sync (occurs at either
+	// 50hx (pal) or 59.94hx (NTSC).
+	//
+	// Exceptions:
+	//   This method is not allowed to throw exceptions, since exceptions may not propagate
+	//   safely from the context of recompiled code stackframes.
+	//
+	// Thread Affinity:
+	//   Called from the EEcore thread.  No locking is performed, so any necessary locks must
+	//   be implemented by the CPU provider manually.
+	//
+	virtual void Vsync() throw() { }
 
-namespace VU1micro
+	virtual void Step()
+	{
+		// Ideally this would fall back on interpretation for executing single instructions
+		// for all CPU types, but due to VU complexities and large discrepancies between
+		// clamping in recs and ints, it's not really worth bothering with yet.
+	}
+
+protected:
+	BaseVUmicroCPU() {}
+};
+
+
+// --------------------------------------------------------------------------------------
+//  InterpVU0 / InterpVU1
+// --------------------------------------------------------------------------------------
+class InterpVU0 : public BaseVUmicroCPU
 {
-	extern void recAlloc();
-	extern void recShutdown();
-	extern void __fastcall recClear(u32 Addr, u32 Size);
+public:
+	InterpVU0();
 
-	// Note: Interpreter functions are dummies -- they don't actually do anything.
-	extern void intAlloc();
-	extern void intShutdown();
-	extern void __fastcall intClear(u32 Addr, u32 Size);
-}
+	const char* GetShortName() const	{ return "intVU0"; }
+	wxString GetLongName() const		{ return L"VU0 Interpreter"; }
+
+	void Allocate() { }
+	void Shutdown() throw() { }
+	void Reset() { }
+
+	void Step();
+	void ExecuteBlock();
+	void Clear(u32 addr, u32 size) {}
+};
+
+class InterpVU1 : public BaseVUmicroCPU
+{
+public:
+	InterpVU1();
+
+	const char* GetShortName() const	{ return "intVU1"; }
+	wxString GetLongName() const		{ return L"VU1 Interpreter"; }
+
+	void Allocate() { }
+	void Shutdown() throw() { }
+	void Reset() { }
+
+	void Step();
+	void ExecuteBlock();
+	void Clear(u32 addr, u32 size) {}
+};
+
+// --------------------------------------------------------------------------------------
+//  recMicroVU0 / recMicroVU1
+// --------------------------------------------------------------------------------------
+class recMicroVU0 : public BaseVUmicroCPU
+{
+public:
+	recMicroVU0();
+
+	const char* GetShortName() const	{ return "mVU0"; }
+	wxString GetLongName() const		{ return L"microVU0 Recompiler"; }
+
+	void Allocate();
+	void Shutdown() throw();
+
+	void Reset();
+	void ExecuteBlock();
+	void Clear(u32 addr, u32 size);
+	void Vsync();
+};
+
+class recMicroVU1 : public BaseVUmicroCPU
+{
+public:
+	recMicroVU1();
+
+	const char* GetShortName() const	{ return "mVU1"; }
+	wxString GetLongName() const		{ return L"microVU1 Recompiler"; }
+
+	void Allocate();
+	void Shutdown() throw();
+	void Reset();
+	void ExecuteBlock();
+	void Clear(u32 addr, u32 size);
+	void Vsync();
+};
+
+extern BaseVUmicroCPU* CpuVU0;
+extern BaseVUmicroCPU* CpuVU1;
+
 
 /////////////////////////////////////////////////////////////////
 // These functions initialize memory for both VUs.
@@ -67,20 +183,6 @@ namespace VU1micro
 void vuMicroMemAlloc();
 void vuMicroMemShutdown();
 void vuMicroMemReset();
-
-// Resets VUs and assigns the cpuVU0 / cpuVU1 pointers as according to 
-// the CHECK_VU0REC / CHECK_VU1REC config options.
-void vuMicroCpuReset();
-
-/////////////////////////////////////////////////////////////////
-// microVU Rec Stuff
-//
-extern void initVUrec(VURegs* vuRegs, const int vuIndex);
-extern void closeVUrec(const int vuIndex);
-extern void resetVUrec(const int vuIndex);
-extern void vsyncVUrec(const int vuIndex);
-extern void __fastcall clearVUrec(u32 addr, u32 size, const int vuIndex);
-extern void __fastcall runVUrec(u32 startPC, u32 cycles, const int vuIndex);
 
 /////////////////////////////////////////////////////////////////
 // Everything else does stuff on a per-VU basis.

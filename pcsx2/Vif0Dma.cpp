@@ -97,7 +97,7 @@ static __forceinline void vif0mpgTransfer(u32 addr, u32 *data, int size)
 		}*/
 	if (memcmp(VU0.Micro + addr, data, size << 2))
 	{
-		CpuVU0.Clear(addr, size << 2); // Clear before writing! :/ (cottonvibes)
+		CpuVU0->Clear(addr, size << 2); // Clear before writing! :/ (cottonvibes)
 		memcpy_fast(VU0.Micro + addr, data, size << 2);
 	}
 }

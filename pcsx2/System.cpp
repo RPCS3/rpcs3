@@ -114,6 +114,79 @@ void SysDetect()
 	Console.Newline();
 }
 
+template< typename CpuType >
+class CpuInitializer
+{
+public:
+	ScopedPtr<CpuType>	MyCpu;
+
+	CpuInitializer();
+	virtual ~CpuInitializer() throw();
+
+	bool IsAvailable() const
+	{
+		return !!MyCpu;
+	}
+
+	CpuType* GetPtr() { return MyCpu.GetPtr(); }
+	const CpuType* GetPtr() const { return MyCpu.GetPtr(); }
+
+	operator CpuType*() { return GetPtr(); }
+	operator const CpuType*() const { return GetPtr(); }
+};
+
+// --------------------------------------------------------------------------------------
+//  CpuInitializer Template
+// --------------------------------------------------------------------------------------
+// Helper for initializing various PCSX2 CPU providers, and handing errors and cleanup.
+//
+template< typename CpuType >
+CpuInitializer< CpuType >::CpuInitializer()
+{
+	try {
+		MyCpu = new CpuType();
+		MyCpu->Allocate();
+	}
+	catch( Exception::RuntimeError& ex )
+	{
+		Console.Error( L"MicroVU0 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
+		MyCpu->Shutdown();
+	}
+	catch( std::runtime_error& ex )
+	{
+		Console.Error( L"MicroVU0 Recompiler Allocation Failed (STL Exception)\n\tDetails:" + fromUTF8( ex.what() ) );
+		MyCpu->Shutdown();
+	}
+}
+
+template< typename CpuType >
+CpuInitializer< CpuType >::~CpuInitializer() throw()
+{
+	if( MyCpu )
+		MyCpu->Shutdown();
+}
+
+class CpuInitializerSet
+{
+public:
+	// Note: Allocate sVU first -- it's the most picky.
+
+	CpuInitializer<recSuperVU0>		superVU0;
+	CpuInitializer<recSuperVU1>		superVU1;
+
+	CpuInitializer<recMicroVU0>		microVU0;
+	CpuInitializer<recMicroVU1>		microVU1;
+
+	CpuInitializer<InterpVU0>		interpVU0;
+	CpuInitializer<InterpVU1>		interpVU1;
+	
+public:
+	CpuInitializerSet() {}
+	virtual ~CpuInitializerSet() throw() {}
+};
+
+
+
 // returns the translated error message for the Virtual Machine failing to allocate!
 static wxString GetMemoryErrorVM()
 {
@@ -129,10 +202,8 @@ SysCoreAllocations::SysCoreAllocations()
 
 	Console.WriteLn( "Initializing PS2 virtual machine..." );
 
-	RecSuccess_EE		= false;
-	RecSuccess_IOP		= false;
-	RecSuccess_VU0		= false;
-	RecSuccess_VU1		= false;
+	m_RecSuccessEE		= false;
+	m_RecSuccessIOP		= false;
 
 	try
 	{
@@ -153,13 +224,12 @@ SysCoreAllocations::SysCoreAllocations()
 	{
 		CleanupMess();
 
-		// re-throw std::bad_alloc as something more friendly.
+		// re-throw std::bad_alloc as something more friendly.  This is needed since
+		// much of the code uses new/delete internally, which throw std::bad_alloc on fail.
 
 		throw Exception::OutOfMemory(
-			wxsFormat(			// Diagnostic (english)
-				L"std::bad_alloc caught while trying to allocate memory for the PS2 Virtual Machine.\n"
-				L"Error Details: " + fromUTF8( ex.what() )
-			),
+			L"std::bad_alloc caught while trying to allocate memory for the PS2 Virtual Machine.\n"
+			L"Error Details: " + fromUTF8( ex.what() ),
 
 			GetMemoryErrorVM()	// translated
 		);
@@ -167,9 +237,11 @@ SysCoreAllocations::SysCoreAllocations()
 
 	Console.WriteLn( "Allocating memory for recompilers..." );
 
+	CpuProviders = new CpuInitializerSet();
+
 	try {
 		recCpu.Allocate();
-		RecSuccess_EE = true;
+		m_RecSuccessEE = true;
 	}
 	catch( Exception::RuntimeError& ex )
 	{
@@ -179,7 +251,7 @@ SysCoreAllocations::SysCoreAllocations()
 
 	try {
 		psxRec.Allocate();
-		RecSuccess_IOP = true;
+		m_RecSuccessIOP = true;
 	}
 	catch( Exception::RuntimeError& ex )
 	{
@@ -189,41 +261,25 @@ SysCoreAllocations::SysCoreAllocations()
 
 	// hmm! : VU0 and VU1 pre-allocations should do sVU and mVU separately?  Sounds complicated. :(
 
-	try {
-		VU0micro::recAlloc();
-		RecSuccess_VU0 = true;
-	}
-	catch( Exception::RuntimeError& ex )
-	{
-		Console.Error( L"VU0 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
-		VU0micro::recShutdown();
-	}
-
-	try {
-		VU1micro::recAlloc();
-		RecSuccess_VU1 = true;
-	}
-	catch( Exception::RuntimeError& ex )
-	{
-		Console.Error( L"VU1 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
-		VU1micro::recShutdown();
-	}
-
 	// If both VUrecs failed, then make sure the SuperVU is totally closed out, because it
 	// actually initializes everything once and then shares it between both VU recs.
-	if( !RecSuccess_VU0 && !RecSuccess_VU1 )
+	if( !IsRecAvailable_SuperVU0() && !IsRecAvailable_SuperVU1() )
 		SuperVUDestroy( -1 );
 }
+
+bool SysCoreAllocations::IsRecAvailable_MicroVU0() const { return CpuProviders->microVU0.IsAvailable(); }
+bool SysCoreAllocations::IsRecAvailable_MicroVU1() const { return CpuProviders->microVU1.IsAvailable(); }
+
+bool SysCoreAllocations::IsRecAvailable_SuperVU0() const { return CpuProviders->superVU0.IsAvailable(); }
+bool SysCoreAllocations::IsRecAvailable_SuperVU1() const { return CpuProviders->superVU1.IsAvailable(); }
+
 
 void SysCoreAllocations::CleanupMess() throw()
 {
 	try
 	{
-		// Special SuperVU "complete" terminator.
+		// Special SuperVU "complete" terminator (stupid hacky recompiler)
 		SuperVUDestroy( -1 );
-
-		VU1micro::recShutdown();
-		VU0micro::recShutdown();
 
 		psxRec.Shutdown();
 		recCpu.Shutdown();
@@ -243,11 +299,33 @@ SysCoreAllocations::~SysCoreAllocations() throw()
 
 bool SysCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& recOpts ) const
 {
-	return	(recOpts.EnableEE && !RecSuccess_EE) ||
-			(recOpts.EnableIOP && !RecSuccess_IOP) ||
-			(recOpts.EnableVU0 && !RecSuccess_VU0) ||
-			(recOpts.EnableVU1 && !RecSuccess_VU1);
+	return	(recOpts.EnableEE && !IsRecAvailable_EE()) ||
+			(recOpts.EnableIOP && !IsRecAvailable_IOP()) ||
+			(recOpts.EnableVU0 && recOpts.UseMicroVU0 && !IsRecAvailable_MicroVU0()) ||
+			(recOpts.EnableVU1 && recOpts.UseMicroVU0 && !IsRecAvailable_MicroVU1()) ||
+			(recOpts.EnableVU0 && !recOpts.UseMicroVU0 && !IsRecAvailable_SuperVU0()) ||
+			(recOpts.EnableVU1 && !recOpts.UseMicroVU1 && !IsRecAvailable_SuperVU1());
+
 }
+
+BaseVUmicroCPU* CpuVU0 = NULL;
+BaseVUmicroCPU* CpuVU1 = NULL;
+
+void SysCoreAllocations::SelectCpuProviders() const
+{
+	Cpu		= CHECK_EEREC	? &recCpu : &intCpu;
+	psxCpu	= CHECK_IOPREC	? &psxRec : &psxInt;
+
+	CpuVU0 = CpuProviders->interpVU0;
+	CpuVU1 = CpuProviders->interpVU1;
+
+	if( EmuConfig.Cpu.Recompiler.EnableVU0 )
+		CpuVU0 = EmuConfig.Cpu.Recompiler.UseMicroVU0 ? (BaseVUmicroCPU*)CpuProviders->microVU0 : (BaseVUmicroCPU*)CpuProviders->superVU0;
+
+	if( EmuConfig.Cpu.Recompiler.EnableVU1 )
+		CpuVU1 = EmuConfig.Cpu.Recompiler.UseMicroVU1 ? (BaseVUmicroCPU*)CpuProviders->microVU1 : (BaseVUmicroCPU*)CpuProviders->superVU1;
+}
+
 
 // Resets all PS2 cpu execution caches, which does not affect that actual PS2 state/condition.
 // This can be called at any time outside the context of a Cpu->Execute() block without
@@ -256,13 +334,17 @@ bool SysCoreAllocations::HadSomeFailures( const Pcsx2Config::RecompilerOptions& 
 // Use this method to reset the recs when important global pointers like the MTGS are re-assigned.
 void SysClearExecutionCache()
 {
-	Cpu		= CHECK_EEREC	? &recCpu : &intCpu;
-	psxCpu	= CHECK_IOPREC	? &psxRec : &psxInt;
+	GetSysCoreAlloc().SelectCpuProviders();
+
+	// SuperVUreset will do nothing is none of the recs are initialized.
+	// But it's needed if one or the other is initialized.
+	SuperVUReset(-1);
 
 	Cpu->Reset();
 	psxCpu->Reset();
 
-	vuMicroCpuReset();
+	CpuVU0->Reset();
+	CpuVU1->Reset();
 }
 
 // Maps a block of memory for use as a recompiled code buffer, and ensures that the
@@ -275,17 +357,21 @@ u8 *SysMmapEx(uptr base, u32 size, uptr bounds, const char *caller)
 
 	if( (Mem == NULL) || (bounds != 0 && (((uptr)Mem + size) > bounds)) )
 	{
-		DevCon.Warning( "First try failed allocating %s at address 0x%x", caller, base );
+		if( base != NULL )
+		{
+			DbgCon.Warning( "First try failed allocating %s at address 0x%x", caller, base );
 
-		// memory allocation *must* have the top bit clear, so let's try again
-		// with NULL (let the OS pick something for us).
+			// memory allocation *must* have the top bit clear, so let's try again
+			// with NULL (let the OS pick something for us).
 
-		SafeSysMunmap( Mem, size );
+			SafeSysMunmap( Mem, size );
 
-		Mem = (u8*)HostSys::Mmap( NULL, size );
+			Mem = (u8*)HostSys::Mmap( NULL, size );
+		}
+
 		if( bounds != 0 && (((uptr)Mem + size) > bounds) )
 		{
-			DevCon.Warning( "Fatal Error:\n\tSecond try failed allocating %s, block ptr 0x%x does not meet required criteria.", caller, Mem );
+			DevCon.Warning( "Second try failed allocating %s, block ptr 0x%x does not meet required criteria.", caller, Mem );
 			SafeSysMunmap( Mem, size );
 
 			// returns NULL, caller should throw an exception.

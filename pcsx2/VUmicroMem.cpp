@@ -16,26 +16,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-
-#include "sVU_zerorec.h"  // SuperVUReset
-
-// The following CpuVU objects are value types instead of handles or pointers because they are
-// modified on the fly to implement VU1 Skip.
-
-VUmicroCpu CpuVU0;		// contains a working copy of the VU0 cpu functions/API
-VUmicroCpu CpuVU1;		// contains a working copy of the VU1 cpu functions/API
-
-void vuMicroCpuReset()
-{
-	CpuVU0 = CHECK_VU0REC ? recVU0 : intVU0;
-	CpuVU1 = CHECK_VU1REC ? recVU1 : intVU1;
-	CpuVU0.Reset();
-	CpuVU1.Reset();
-
-	// SuperVUreset will do nothing is none of the recs are initialized.
-	// But it's needed if one or the other is initialized.
-	SuperVUReset(-1);
-}
+#include "VUmicro.h"
 
 static u8* m_vuAllMem = NULL;
 static const uint m_vuMemSize = 

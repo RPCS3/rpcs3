@@ -253,8 +253,17 @@ namespace Exception
 
 	// ---------------------------------------------------------------------------------------
 	// Hardware/OS Exceptions:
-	//   HardwareDeficiency
+	//   HardwareDeficiency / VirtualMemoryMapConflict
 	// ---------------------------------------------------------------------------------------
+
+	// This exception is a specific type of OutOfMemory error that isn't "really" an out of
+	// memory error.  More likely it's caused by a plugin or driver reserving a range of memory
+	// we'd really like to have access to.
+	class VirtualMemoryMapConflict : public virtual OutOfMemory
+	{
+	public:
+		DEFINE_RUNTIME_EXCEPTION( VirtualMemoryMapConflict, wxLt("Virtual memory map confict: Unable to claim specific required memory regions.") )
+	};
 
 	class HardwareDeficiency : public virtual RuntimeError
 	{

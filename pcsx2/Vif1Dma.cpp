@@ -47,7 +47,7 @@ __forceinline void vif1FLUSH()
 	{
 		do
 		{
-			CpuVU1.ExecuteBlock();
+			CpuVU1->ExecuteBlock();
 		}
 		while (VU0.VI[REG_VPU_STAT].UL & 0x100);
 
@@ -115,7 +115,7 @@ static __forceinline void vif1mpgTransfer(u32 addr, u32 *data, int size)
 	pxAssert(VU1.Micro > 0);
 	if (memcmp(VU1.Micro + addr, data, size << 2))
 	{
-		CpuVU1.Clear(addr, size << 2); // Clear before writing! :/
+		CpuVU1->Clear(addr, size << 2); // Clear before writing! :/
 		memcpy_fast(VU1.Micro + addr, data, size << 2);
 	}
 }

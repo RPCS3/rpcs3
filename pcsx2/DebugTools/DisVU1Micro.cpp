@@ -31,7 +31,7 @@ typedef char* (*TdisR5900F)DisFInterface;
 // These macros are used to assemble the disassembler functions
 #define MakeDisF(fn, b) \
 	char* fn DisFInterface { \
-		if( !!CpuVU1.IsInterpreter ) sprintf (ostr, "%8.8x %8.8x:", pc, code); \
+		if( !!CpuVU1->IsInterpreter ) sprintf (ostr, "%8.8x %8.8x:", pc, code); \
 		else ostr[0] = 0; \
 		b; /*ostr[(strlen(ostr) - 1)] = 0;*/ return ostr; \
 	}
@@ -52,47 +52,47 @@ typedef char* (*TdisR5900F)DisFInterface;
 }
 
 #define dCP2128f(i) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
 	else sprintf(ostr, "%s w=%f (%8.8x) z=%f (%8.8x) y=%f (%8.8xl) x=%f (%8.8x) (%s),", ostr, VU1.VF[i].f.w, VU1.VF[i].UL[3], VU1.VF[i].f.z, VU1.VF[i].UL[2], VU1.VF[i].f.y, VU1.VF[i].UL[1], VU1.VF[i].f.x, VU1.VF[i].UL[0], disRNameCP2f[i]); \
 } \
 
 #define dCP232x(i) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
 	else sprintf(ostr, "%s x=%f (%s),", ostr, VU1.VF[i].f.x, disRNameCP2f[i]); \
 } \
 
 #define dCP232y(i) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
 	else sprintf(ostr, "%s y=%f (%s),", ostr, VU1.VF[i].f.y, disRNameCP2f[i]); \
 } \
 
 #define dCP232z(i) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
 	else sprintf(ostr, "%s z=%f (%s),", ostr, VU1.VF[i].f.z, disRNameCP2f[i]); \
 } 
 
 #define dCP232w(i) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2f[i]); \
 	else sprintf(ostr, "%s w=%f (%s),", ostr, VU1.VF[i].f.w, disRNameCP2f[i]); \
 }
 
 #define dCP2ACCf() { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s ACC,", ostr); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s ACC,", ostr); \
 	else sprintf(ostr, "%s w=%f z=%f y=%f x=%f (ACC),", ostr, VU1.ACC.f.w, VU1.ACC.f.z, VU1.ACC.f.y, VU1.ACC.f.x); \
 } \
 
 #define dCP232i(i) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2i[i]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2i[i]); \
 	else sprintf(ostr, "%s %8.8x (%s),", ostr, VU1.VI[i].UL, disRNameCP2i[i]); \
 }
 
 #define dCP232iF(i) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2i[i]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s,", ostr, disRNameCP2i[i]); \
 	else sprintf(ostr, "%s %f (%s),", ostr, VU1.VI[i].F, disRNameCP2i[i]); \
 }
 
 #define dCP232f(i, j) { \
-	if( !CpuVU1.IsInterpreter ) sprintf(ostr, "%s %s%s,", ostr, disRNameCP2f[i], CP2VFnames[j]); \
+	if( !CpuVU1->IsInterpreter ) sprintf(ostr, "%s %s%s,", ostr, disRNameCP2f[i], CP2VFnames[j]); \
 	else sprintf(ostr, "%s %s=%f (%s),", ostr, CP2VFnames[j], VU1.VF[i].F[j], disRNameCP2f[i]); \
 }
 

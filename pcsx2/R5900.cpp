@@ -432,7 +432,7 @@ __forceinline void _cpuBranchTest_Shared()
 	{
 		// We're in a BranchTest.  All dynarec registers are flushed
 		// so there is no need to freeze registers here.
-		CpuVU0.ExecuteBlock();
+		CpuVU0->ExecuteBlock();
 
 		// This might be needed to keep the EE and VU0 in sync.
 		// A better fix will require hefty changes to the VU recs. -_-

@@ -21,6 +21,7 @@
 #include "VUmicro.h"
 #include "sVU_zerorec.h"
 
+
 #define useMVU1 CHECK_MICROVU1
 
 int mVUdebugNow = 0;
@@ -247,6 +248,7 @@ namespace VU1micro
 }
 #else 
 
+/*
 namespace VU1micro
 {
 	void recAlloc()		{ SuperVUAlloc(1);   initVUrec(&VU1, 1); }
@@ -267,7 +269,7 @@ namespace VU1micro
 	static void recExecuteBlock() {
 
 		if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
-		assert( (VU1.VI[REG_TPC].UL&7) == 0 );
+		pxAssert( (VU1.VI[REG_TPC].UL&7) == 0 );
 
 #ifdef DEBUG_COMPARE
 		SysPrintf("(%08d) StartPC = 0x%04x\n", runAmount, VU1.VI[REG_TPC].UL);
@@ -281,22 +283,10 @@ namespace VU1micro
 			}
 			do { // while loop needed since not always will return finished
 				SuperVUExecuteProgram(VU1.VI[REG_TPC].UL & 0x3fff, 1);
-			} while( VU0.VI[REG_VPU_STAT].UL&0x100 );
+			} while( VU0.VI[REG_VPU_STAT].UL & 0x100 );
 		}
         XMMRegisters::Thaw();
 		VUtestPause();
 	}
-}
+}*/
 #endif
-
-using namespace VU1micro;
-
-const VUmicroCpu recVU1 = 
-{
-	recReset
-,	recStep
-,	recExecuteBlock
-,	recClear
-
-,	false
-};

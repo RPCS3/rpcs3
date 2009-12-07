@@ -564,10 +564,8 @@ TraceLogFilters&			SetTraceConfig();
 #define CHECK_MACROVU0				// If defined uses mVU for VU Macro (COP2), else uses sVU
 #define CHECK_MICROVU0				(EmuConfig.Cpu.Recompiler.UseMicroVU0)
 #define CHECK_MICROVU1				(EmuConfig.Cpu.Recompiler.UseMicroVU1)
-#define CHECK_EEREC					(EmuConfig.Cpu.Recompiler.EnableEE && GetSysCoreAlloc().RecSuccess_EE)
-#define CHECK_IOPREC				(EmuConfig.Cpu.Recompiler.EnableIOP && GetSysCoreAlloc().RecSuccess_IOP)
-#define CHECK_VU0REC				(EmuConfig.Cpu.Recompiler.EnableVU0 && GetSysCoreAlloc().RecSuccess_VU0)
-#define CHECK_VU1REC				(EmuConfig.Cpu.Recompiler.EnableVU1 && GetSysCoreAlloc().RecSuccess_VU1)
+#define CHECK_EEREC					(EmuConfig.Cpu.Recompiler.EnableEE && GetSysCoreAlloc().IsRecAvailable_EE())
+#define CHECK_IOPREC				(EmuConfig.Cpu.Recompiler.EnableIOP && GetSysCoreAlloc().IsRecAvailable_IOP())
 
 //------------ SPECIAL GAME FIXES!!! ---------------
 #define NUM_OF_GAME_FIXES 7

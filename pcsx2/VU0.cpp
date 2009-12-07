@@ -73,7 +73,7 @@ __forceinline void _vu0run(bool breakOnMbit) {
 			Console.Warning("VU0 perma-stall, breaking execution...");
 			break; // mVU will never get here (it handles mBit internally)
 		}
-		CpuVU0.ExecuteBlock();
+		CpuVU0->ExecuteBlock();
 	} while ((VU0.VI[REG_VPU_STAT].UL & 1)						// E-bit Termination
 	  &&	(!breakOnMbit || !(VU0.flags & VUFLAG_MFLAGSET)));	// M-bit Break
 
@@ -342,7 +342,7 @@ void vu0Finish()
 		int i = 0;
 
 		while(i++ < 32) {
-			CpuVU0.ExecuteBlock();
+			CpuVU0->ExecuteBlock();
 			if(!(VU0.VI[REG_VPU_STAT].UL & 0x1))
 				break;
 		}
