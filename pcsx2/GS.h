@@ -20,8 +20,116 @@
 
 extern __aligned16 u8 g_RealGSMem[Ps2MemSize::GSregs];
 
+enum CSRfifoState
+{
+    CSR_FIFO_NORMAL = 0, // Neither empty or almost full.
+    CSR_FIFO_EMPTY, // Empty
+    CSR_FIFO_FULL, // Almost Full
+    CSR_FIFO_RESERVED
+};
+
+// I'm initializing this as 64 bit because GSCSRr is 64 bit. There only appeared to be 32 bits worth of fields, 
+// and CSRw is 32 bit, though, so I'm not sure if that's correct.
+union tGS_CSR
+{
+    struct 
+    {
+        // Start Interrupts.
+        // If writing, 1 clears the old event, and enables a new one. 0 does nothing.
+        // If reading, 1 means a signal has been generated.
+        u64 SIGNAL : 1; // SIGNAL event
+        u64 FINISH : 1; // FINISH event
+        u64 HSINT : 1; // HSYNC Interrupt
+        u64 VSINT : 1; // VSYNC Interrupt
+        u64 EDWINT : 1; // Rect Area Write Termination Interrupt
+        // End of Interrupts. Those 5 fields together are 0x1f.
+        
+        u64 undefined : 2; // Should both be 0.
+        u64 reserved1 : 1;
+        u64 FLUSH : 1; // Drawing Suspend And FIFO Clear
+        u64 RESET : 1; // GS System Reset
+        u64 reserved2 : 2;
+        u64 NFIELD : 1; 
+        u64 FIELD : 1; // If the field currently displayed in Interlace mode is even or odd
+        u64 FIFO : 2;
+        u64 REV : 8; // The GS's Revision number
+        u64 ID : 8; // The GS's Id.
+        u64 reserved3 : 32;
+    };
+    u64 _u64;
+    
+    void reset() 
+    {
+        _u64 = 0;
+        FIFO = CSR_FIFO_EMPTY;
+        REV = 0x1D; // GS Revision
+        ID = 0x55; // GS ID
+    }
+    
+    void set(u64 value)
+    {
+        _u64 = value;
+    }
+    
+    // This only sets the interrupts.
+    void setIntBits(const u64 value)
+    {
+        _u64 = (_u64 & ~0x1f) | (value & 0x1f);
+    }
+    
+    // This inverts value, ands it with the current bits, and then sends the result to 
+    // setIntBits to be set as the current interrupts. Which appears to be what gsCSRwrite does.
+    void flipIntBits(tGS_CSR value)
+    {
+        setIntBits(_u64 & ~value._u64);
+    }
+    
+    bool interrupts() { return (SIGNAL | FINISH | HSINT | VSINT | EDWINT); }
+    
+    void setAllInterrupts(bool value)
+    {
+        SIGNAL = FINISH = HSINT = VSINT = EDWINT = value;
+    }
+    
+	tGS_CSR(u64 val) { _u64 = val; }
+	tGS_CSR(u32 val) { _u64 = (u64)val; }
+	tGS_CSR() { reset(); }
+};
+
+union tGS_IMR
+{
+    struct 
+    {
+        u32 reserved1 : 8;
+        u32 SIGMSK : 1;
+        u32 FINISHMSK : 1;
+        u32 HSMSK : 1;
+        u32 VSMSK : 1;
+        u32 EDWMSK : 1;
+        u32 undefined : 2; // Should both be set to 1.
+        u32 reserved2 : 17;
+    };
+    u32 _u32;
+    void reset() 
+    {
+        _u32 = 0;
+        SIGMSK = FINISHMSK = HSMSK = VSMSK = EDWMSK = true;
+        undefined = 0x3;
+    }
+    void set(u32 value)
+    {
+        _u32 = (value & 0x1f00); // Set only the interrupt mask fields.
+        undefined = 0x3; // These should always be set.
+    }
+    
+    bool masked() { return (SIGMSK | FINISHMSK | HSMSK | VSMSK | EDWMSK); }
+};
+
 #define PS2MEM_GS		g_RealGSMem
 #define PS2GS_BASE(mem) (g_RealGSMem+(mem&0x13ff))
+
+#define GSCSRregs      ((tGS_CSR&)*(g_RealGSMem+0x1000))
+#define GSIMRregs      ((tGS_IMR&)*(g_RealGSMem+0x1010))
 
 #define GSCSRr		((u64&)*(g_RealGSMem+0x1000))
 #define GSIMR		((u32&)*(g_RealGSMem+0x1010))
