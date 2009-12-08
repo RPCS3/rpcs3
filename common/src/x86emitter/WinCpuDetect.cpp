@@ -17,12 +17,6 @@
 #include "PrecompiledHeader.h"
 #include "cpudetect_internal.h"
 
-void iCpuId( u32 cmd, u32 *regs )
-{
-	// ecx should be zero for CPUID(4)
-	__cpuid( (int*)regs, cmd );
-}
-
 void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
 {
 	DWORD vProcessCPUs;

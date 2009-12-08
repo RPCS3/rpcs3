@@ -53,4 +53,3 @@ public:
 
 extern bool CanTestInstructionSets();
 extern bool _test_instruction( void* pfnCall );
-extern void iCpuId( u32 cmd, u32 *regs );

@@ -31,8 +31,6 @@ static const char* bool_to_char( bool testcond )
 	return testcond ? "true" : "false";
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
 static s64 CPUSpeedHz( u64 time )
 {
 	u64 timeStart, timeStop;
@@ -65,10 +63,46 @@ static s64 CPUSpeedHz( u64 time )
 	return (s64)( endTick - startTick );
 }
 
-////////////////////////////////////////////////////
+// Recompiled code buffer for SSE and MXCSR feature testing.
+static __pagealigned u8 recSSE[__pagesize];
+
+// Warning!  We've had problems with the MXCSR detection code causing stack corruption in
+// MSVC PGO builds.  The problem was fixed when I moved the MXCSR code to this function, and
+// moved the recSSE[] array to a global static (it was local to cpudetectInit).  Commented
+// here in case the nutty crash ever re-surfaces. >_<
+
+void EstablishMXCSRmask()
+{
+	if( !x86caps.hasStreamingSIMDExtensions ) return;
+
+	MXCSR_Mask.bitmask = 0xFFBF;		// MMX/SSE default
+
+	if( x86caps.hasStreamingSIMD2Extensions )
+	{
+		// This is generally safe assumption, but FXSAVE is the "correct" way to
+		// detect MXCSR masking features of the cpu, so we use it's result below
+		// and override this.
+
+		MXCSR_Mask.bitmask = 0xFFFF;	// SSE2 features added
+	}
+
+	// the fxsave buffer must be 16-byte aligned to avoid GPF.  I just save it to an
+	// unused portion of recSSE, since it has plenty of room to spare.
+
+	xSetPtr( recSSE );
+	xFXSAVE( recSSE + 1024 );
+	xRET();
+
+	CallAddress( recSSE );
+
+	u32 result = (u32&)recSSE[1024+28];			// bytes 28->32 are the MXCSR_Mask.
+	if( result != 0 )
+		MXCSR_Mask.bitmask = result;
+}
+
 void cpudetectInit()
 {
-	u32 regs[ 4 ];
+	s32 regs[ 4 ];
 	u32 cmds;
 	//AMD 64 STUFF
 	u32 x86_64_8BITBRANDID;
@@ -82,8 +116,7 @@ void cpudetectInit()
 	x86caps.Flags	= 0;
 	x86caps.EFlags	= 0;
 
-	//memzero( regs );
-	iCpuId( 0, regs );
+	__cpuid( regs, 0 );
 
 	cmds = regs[ 0 ];
 	((u32*)x86caps.VendorName)[ 0 ] = regs[ 1 ];
@@ -95,7 +128,7 @@ void cpudetectInit()
 
 	if ( cmds >= 0x00000001 )
 	{
-		iCpuId( 0x00000001, regs );
+		__cpuid( regs, 0x00000001 );
 
 		x86caps.StepID		=  regs[ 0 ]        & 0xf;
 		x86caps.Model		= (regs[ 0 ] >>  4) & 0xf;
@@ -112,15 +145,15 @@ void cpudetectInit()
 
 	if ((cmds >= 0x00000004) && !strcmp("GenuineIntel",x86caps.VendorName))
 	{
-		iCpuId( 0x00000004, regs );
+		__cpuid( regs, 0x00000004 );
 		PhysicalCoresPerPhysicalCPU += ( regs[0] >> 26) & 0x3f;
 	}
 
-	iCpuId( 0x80000000, regs );
+	__cpuid( regs, 0x80000000 );
 	cmds = regs[ 0 ];
 	if ( cmds >= 0x80000001 )
 	{
-		iCpuId( 0x80000001, regs );
+		__cpuid( regs, 0x80000001 );
 
 		x86_64_12BITBRANDID = regs[1] & 0xfff;
 		x86caps.EFlags2 = regs[ 2 ];
@@ -131,7 +164,7 @@ void cpudetectInit()
 
 	if ((cmds >= 0x80000008) && !strcmp("AuthenticAMD",x86caps.VendorName))
 	{
-		iCpuId( 0x80000008, regs );
+		__cpuid( regs, 0x80000008 );
 		PhysicalCoresPerPhysicalCPU += ( regs[2] ) & 0xff;
 	}
 
@@ -171,9 +204,9 @@ void cpudetectInit()
 	#endif
 
 	memzero( x86caps.FamilyName );
-	iCpuId( 0x80000002, (u32*)x86caps.FamilyName);
-	iCpuId( 0x80000003, (u32*)(x86caps.FamilyName+16));
-	iCpuId( 0x80000004, (u32*)(x86caps.FamilyName+32));
+	__cpuid( (int*)x86caps.FamilyName,		0x80000002);
+	__cpuid( (int*)(x86caps.FamilyName+16),	0x80000003);
+	__cpuid( (int*)(x86caps.FamilyName+32),	0x80000004);
 
 	//capabilities
 	x86caps.hasFloatingPointUnit                         = ( x86caps.Flags >>  0 ) & 1;
@@ -228,7 +261,6 @@ void cpudetectInit()
 	x86caps.hasStreamingSIMD4Extensions  = ( x86caps.Flags2 >> 19 ) & 1; //sse4.1
 	x86caps.hasStreamingSIMD4Extensions2 = ( x86caps.Flags2 >> 20 ) & 1; //sse4.2
 
-	static __pagealigned u8 recSSE[__pagesize];
 	HostSys::MemProtectStatic( recSSE, Protect_ReadWrite, true );
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -300,22 +332,15 @@ void cpudetectInit()
 	////////////////////////////////////////////////////////////////////////////////////////////
 	// Establish MXCSR Mask...
 	
-	MXCSR_Mask.bitmask = 0xFFBF;
-	if( x86caps.hasFastStreamingSIMDExtensionsSaveRestore )
-	{
-		// the fxsave buffer should be 16-byte aligned.  I just save it to an unused portion of
-		// recSSE, since it has plenty of room to spare.
-
-		xSetPtr( recSSE );
-		xFXSAVE( recSSE + 1024 );
-		xRET();
-
-		CallAddress( recSSE );
-
-		u32 result = (u32&)recSSE[1024+28];			// bytes 28->32 are the MXCSR_Mask.
-		if( result != 0 )
-			MXCSR_Mask.bitmask = result;
-	}
+	// HACK!  For some reason the "proper" fxsave code below causes some kind of stackframe
+	// corruption in MSVC PGO builds.  The culprit appears to be execution of FXSAVE itself,
+	// since only by not executing FXSAVE is the crash avoided. (note: crash happens later
+	// in SysDetect).  Using a #pragma optimize("",off) also fixes it.
+	//
+	// Workaround: We assume the MXCSR mask from the settings of the CPU.  SSE2 CPUs have
+	// a full mask available.  SSE and earlier CPUs have a few bits reserved (must be zero).
+	
+	EstablishMXCSRmask();
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	//  Core Counting!

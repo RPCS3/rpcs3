@@ -17,11 +17,6 @@
 #include "PrecompiledHeader.h"
 #include "cpudetect_internal.h"
 
-void iCpuId( u32 cmd, u32 *regs )
-{
-	__cpuid( (int*)regs, cmd );
-}
-
 // Note: Apparently this solution is Linux/Solaris only.
 // FreeBSD/OsX need something far more complicated (apparently)
 void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhysicalCPU )
