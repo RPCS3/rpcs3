@@ -259,6 +259,9 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect, bool target)
 {
+	// Fixme. Crashes Dual Hearts, maybe others as well. Was fine before r1549.
+	if (!o) return; 
+	
 	uint32 bp = o->bp;
 	uint32 bw = o->bw;
 	uint32 psm = o->psm;
