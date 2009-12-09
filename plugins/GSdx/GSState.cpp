@@ -1089,6 +1089,66 @@ void GSState::Read(uint8* mem, int len)
 	m_mem.ReadImageX(m_tr.x, m_tr.y, mem, len, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
 }
 
+// Use version 1 of the optimized local > local transfer, as per revision 887. 
+// Later (more optimized?) versions cause a crash in Dark Cloud 2.
+#if 1
+void GSState::Move()
+{
+        // ffxii uses this to move the top/bottom of the scrolling menus offscreen and then blends them back over the text to create a shading effect
+        // guitar hero copies the far end of the board to do a similar blend too
+		
+        int sx = m_env.TRXPOS.SSAX;
+        int dx = m_env.TRXPOS.DSAX;
+        int sy = m_env.TRXPOS.SSAY;
+        int dy = m_env.TRXPOS.DSAY;
+        int w = m_env.TRXREG.RRW;
+        int h = m_env.TRXREG.RRH;
+        int xinc = 1;
+        int yinc = 1;
+
+       	InvalidateLocalMem(m_env.BITBLTBUF, GSVector4i(sx, sy, sx + w, sy + h));
+		InvalidateVideoMem(m_env.BITBLTBUF, GSVector4i(dx, dy, dx + w, dy + h));
+
+        if(sx < dx) sx += w-1, dx += w-1, xinc = -1;
+        if(sy < dy) sy += h-1, dy += h-1, yinc = -1;
+
+        const GSLocalMemory::psm_t& spsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.SPSM];
+        const GSLocalMemory::psm_t& dpsm = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM];
+
+        if(m_env.BITBLTBUF.SPSM == PSM_PSMCT32 && m_env.BITBLTBUF.DPSM == PSM_PSMCT32)
+        {
+                for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc*w, dx -= xinc*w)
+                {
+                        DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+                        int* soffset = spsm.rowOffset[sy & 7];
+
+                        DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+                        int* doffset = dpsm.rowOffset[dy & 7];
+                        
+                        for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+                        {
+                                m_mem.WritePixel32(dbase + doffset[dx], m_mem.ReadPixel32(sbase + soffset[sx]));
+                        }
+                }
+        }
+        else
+        {
+                for(int y = 0; y < h; y++, sy += yinc, dy += yinc, sx -= xinc*w, dx -= xinc*w)
+                {
+                        DWORD sbase = spsm.pa(0, sy, m_env.BITBLTBUF.SBP, m_env.BITBLTBUF.SBW);
+                        int* soffset = spsm.rowOffset[sy & 7];
+
+                        DWORD dbase = dpsm.pa(0, dy, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW);
+                        int* doffset = dpsm.rowOffset[dy & 7];
+                        
+                        for(int x = 0; x < w; x++, sx += xinc, dx += xinc)
+                        {
+                                (m_mem.*dpsm.wpa)(dbase + doffset[dx], (m_mem.*spsm.rpa)(sbase + soffset[sx]));
+                        }
+                }
+        }
+}
+#else
 void GSState::Move()
 {
 	// ffxii uses this to move the top/bottom of the scrolling menus offscreen and then blends them back over the text to create a shading effect
@@ -1233,7 +1293,10 @@ void GSState::Move()
 				int* RESTRICT scol = &spo->pixel.col[sy & 7][sx];
 				int* RESTRICT dcol = &dpo->pixel.col[dy & 7][dx];
 
-				for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
+				for(int x = 0; x > -w; x--) {
+					printf("%d",x); //Dark Cloud 2 crashes at x = -63
+					d[dcol[x]] = s[scol[x]];
+				}
 			}
 		}
 	}
@@ -1296,7 +1359,7 @@ void GSState::Move()
 		}
 	}
 }
-
+#endif
 void GSState::SoftReset(uint32 mask)
 {
 	if(mask & 1) memset(&m_path[0], 0, sizeof(GIFPath));
