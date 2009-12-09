@@ -135,7 +135,8 @@ int  _GIFchain()
 static __forceinline void GIFchain()
 {
 	Registers::Freeze();
-	if (gif->qwc) gscycles+= _GIFchain(); /* guessing */
+	// qwc check now done outside this function
+	/*if (gif->qwc)*/ gscycles+= _GIFchain(); /* guessing */
 	Registers::Thaw();
 }
 
@@ -235,10 +236,14 @@ void GIFdma()
 			if (gif->qwc == 0) CPU_INT(2, 16);
 			return;
 		}
-
-		GIFchain();
-		CPU_INT(2, gscycles * BIAS);
-		return;
+		
+		//Check with Path3 masking games
+		if (gif->qwc > 0) {
+			GIFchain();
+			CPU_INT(2, gscycles * BIAS);
+			return;
+		}
+		else DevCon.WriteLn("GIFdma() case 1, but qwc = 0!"); //Don't do 0 GIFchain and then return
 	}
 
 	// Transfer Dn_QWC from Dn_MADR to GIF
@@ -249,11 +254,14 @@ void GIFdma()
 		{
 			Console.WriteLn("DMA Stall Control on GIF normal");
 		}
-
-		GIFchain();	//Transfers the data set by the switch
-
-		CPU_INT(2, gscycles * BIAS);
-		return;
+		
+		//Check with Path3 masking games
+		if (gif->qwc > 0) {
+			GIFchain();	//Transfers the data set by the switch
+			CPU_INT(2, gscycles * BIAS);
+			return;
+		}
+		else DevCon.WriteLn("GIFdma() case 2, but qwc = 0!"); //Don't do 0 GIFchain and then return, fixes Dual Hearts
 	}
 
 	if ((gif->chcr.MOD == CHAIN_MODE) && (!gspath3done)) // Chain Mode
@@ -267,7 +275,8 @@ void GIFdma()
 			// there are still bugs, need to also check if gif->madr +16*qwc >= stadr, if not, stall
 			if (!gspath3done && ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR) && (ptag->ID == TAG_REFS))
 			{
-				// stalled
+				// stalled. 
+				// We really need to test this. Pay attention to prevcycles, as it used to trigger GIFchains in the code above. (rama)
 				Console.WriteLn("GS Stall Control Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gif->madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
 				gif->tadr -= 16;
