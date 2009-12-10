@@ -84,7 +84,7 @@ union tGS_CSR
         setIntBits(_u64 & ~value._u64);
     }
     
-    bool interrupts() { return (SIGNAL | FINISH | HSINT | VSINT | EDWINT); }
+    bool interrupts() { return (SIGNAL || FINISH || HSINT || VSINT || EDWINT); }
     
     void setAllInterrupts(bool value)
     {
@@ -122,7 +122,7 @@ union tGS_IMR
         undefined = 0x3; // These should always be set.
     }
     
-    bool masked() { return (SIGMSK | FINISHMSK | HSMSK | VSMSK | EDWMSK); }
+    bool masked() { return (SIGMSK || FINISHMSK || HSMSK || VSMSK || EDWMSK); }
 };
 
 #define PS2MEM_GS		g_RealGSMem
