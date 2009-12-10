@@ -563,7 +563,7 @@ void vif0Interrupt()
 			else
 				_VIF0chain();
 
-			CPU_INT(0, g_vifCycles);
+			CPU_INT(0, /*g_vifCycles*/ VifCycleVoodoo);
 			return;
 		}
 	}
@@ -584,7 +584,7 @@ void vif0Interrupt()
 		else
 			_chainVIF0();
 
-		CPU_INT(0, g_vifCycles);
+		CPU_INT(0, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
@@ -654,7 +654,7 @@ void dmaVIF0()
 		}
 
 		vif0.done = true;
-		CPU_INT(0, g_vifCycles);
+		CPU_INT(0, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 

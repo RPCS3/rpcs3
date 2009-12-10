@@ -268,7 +268,9 @@ __forceinline void SIF1Dma()
 					SIF_LOG("EE SIF1 End %x", sif1.end);
 					eesifbusy[1] = false;
 					done = true;
-					CPU_INT(6, cycles*BIAS);
+					// Voodoocycles : 4 cycles always, stops games from throwing double interrupts.
+					CPU_INT(6, 4);
+					//CPU_INT(6, cycles*BIAS);
 					//sif1.chain = 0;
 					sif1.end = 0;
 				}

@@ -907,7 +907,7 @@ __forceinline void vif1Interrupt()
 	if (vif1.inprogress & 0x1)
 	{
 		_VIF1chain();
-		CPU_INT(1, g_vifCycles);
+		CPU_INT(1, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
@@ -922,7 +922,7 @@ __forceinline void vif1Interrupt()
 
 		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
 
-		CPU_INT(1, g_vifCycles);
+		CPU_INT(1, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 

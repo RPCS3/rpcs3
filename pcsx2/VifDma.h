@@ -45,6 +45,7 @@ struct vifStruct {
 
 extern vifStruct vif0, vif1;
 extern u8 schedulepath3msk;
+static const int VifCycleVoodoo = 4;
 
 void __fastcall UNPACK_S_32( u32 *dest, u32 *data, int size );
 
