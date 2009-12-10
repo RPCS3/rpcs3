@@ -118,12 +118,12 @@ Threading::PersistentThread::~PersistentThread() throw()
 
 bool Threading::PersistentThread::AffinityAssert_AllowFromSelf() const
 {
-	return pxAssertMsg( IsSelf(), wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", m_name ) );
+	return pxAssertMsg( IsSelf(), wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", m_name.c_str() ) );
 }
 
 bool Threading::PersistentThread::AffinityAssert_DisallowFromSelf() const
 {
-	return pxAssertMsg( !IsSelf(), wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", m_name ) );
+	return pxAssertMsg( !IsSelf(), wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", m_name.c_str() ) );
 }
 
 void Threading::PersistentThread::FrankenMutex( Mutex& mutex )

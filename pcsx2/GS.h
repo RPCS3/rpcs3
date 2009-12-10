@@ -28,6 +28,29 @@ enum CSRfifoState
     CSR_FIFO_RESERVED
 };
 
+union tGS_CSRw
+{
+    struct
+    {
+        u32 SIGNAL : 1; // SIGNAL event
+        u32 FINISH : 1; // FINISH event
+        u32 HSINT : 1; // HSYNC Interrupt
+        u32 VSINT : 1; // VSYNC Interrupt
+        u32 EDWINT : 1; // Rect Area Write Termination Interrupt
+    };
+    u32 _u32;
+    
+    void reset() { _u32 = 0; }
+    void fill()
+    {
+		SIGNAL = true;
+		FINISH = true;
+		HSINT = true;
+		VSINT = true;
+		EDWINT = true;
+    }
+};
+    
 // I'm initializing this as 64 bit because GSCSRr is 64 bit. There only appeared to be 32 bits worth of fields, 
 // and CSRw is 32 bit, though, so I'm not sure if that's correct.
 union tGS_CSR
@@ -35,7 +58,6 @@ union tGS_CSR
     struct 
     {
         // Start Interrupts.
-        // If writing, 1 clears the old event, and enables a new one. 0 does nothing.
         // If reading, 1 means a signal has been generated.
         u64 SIGNAL : 1; // SIGNAL event
         u64 FINISH : 1; // FINISH event
@@ -69,19 +91,6 @@ union tGS_CSR
     void set(u64 value)
     {
         _u64 = value;
-    }
-    
-    // This only sets the interrupts.
-    void setIntBits(const u64 value)
-    {
-        _u64 = (_u64 & ~0x1f) | (value & 0x1f);
-    }
-    
-    // This inverts value, ands it with the current bits, and then sends the result to 
-    // setIntBits to be set as the current interrupts. Which appears to be what gsCSRwrite does.
-    void flipIntBits(tGS_CSR value)
-    {
-        setIntBits(_u64 & ~value._u64);
     }
     
     bool interrupts() { return (SIGNAL || FINISH || HSINT || VSINT || EDWINT); }

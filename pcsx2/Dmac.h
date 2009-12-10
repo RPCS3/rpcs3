@@ -121,6 +121,7 @@ union tDMA_CHCR {
 	tDMA_CHCR( u32 val) { _u32 = val; }
 	
 	bool test(u32 flags) { return !!(_u32 & flags); }
+	void set(u32 value) { _u32 = value; }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
@@ -334,6 +335,24 @@ union tDMAC_QUEUE
 	void reset() { _u16 = 0; }
 	bool empty() { return (_u16 == 0); }
 };
+
+static __forceinline const wxChar* ChcrName(u32 addr)
+{
+    switch (addr)
+    {
+        case D0_CHCR: return L"Vif 0";
+        case D1_CHCR: return L"Vif 1";
+        case D2_CHCR: return L"GS";
+        case D3_CHCR: return L"Ipu 0";
+        case D4_CHCR: return L"Ipu 1";
+        case D5_CHCR: return L"Sif 0";
+        case D6_CHCR: return L"Sif 1";
+        case D7_CHCR: return L"Sif 2";
+        case D8_CHCR: return L"SPR 0";
+        case SPR1_CHCR: return L"SPR 1";
+        default: return L"???";
+    }
+}
 
 union tDMAC_CTRL {
 	struct {
