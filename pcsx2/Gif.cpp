@@ -158,7 +158,7 @@ static __forceinline tDMA_TAG* ReadTag()
 
 	if (!(gif->transfer("Gif", ptag))) return NULL;
 
-	gif->madr = ptag[1].ADDR;				    //MADR = ADDR field
+	gif->madr = ptag[1]._u32;				    //MADR = ADDR field + SPR
 	gscycles += 2; // Add 1 cycles from the QW read for the tag
 
 	gspath3done = hwDmacSrcChainWithStack(gif, ptag->ID);
@@ -170,7 +170,7 @@ static __forceinline tDMA_TAG* ReadTag2()
 	tDMA_TAG* ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 
     gif->unsafeTransfer(ptag);
-	gif->madr = ptag[1].ADDR;
+	gif->madr = ptag[1]._u32;
 
 	gspath3done = hwDmacSrcChainWithStack(gif, ptag->ID);
 	return ptag;
@@ -296,7 +296,7 @@ void GIFdma()
 	{
 		ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
         gif->unsafeTransfer(ptag);
-		gif->madr = ptag[1].ADDR;
+		gif->madr = ptag[1]._u32;
 
 		gspath3done = hwDmacSrcChainWithStack(gif, ptag->ID);
 
@@ -460,7 +460,7 @@ void mfifoGIFtransfer(int qwc)
 
 		ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);
 		gif->unsafeTransfer(ptag);
-		gif->madr = ptag[1].ADDR;
+		gif->madr = ptag[1]._u32;
 		
 		mfifocycles += 2;
 

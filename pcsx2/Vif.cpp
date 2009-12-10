@@ -548,7 +548,7 @@ void mfifoVIF1transfer(int qwc)
 
         vif1ch->unsafeTransfer(ptag);
 
-		vif1ch->madr = ptag[1].ADDR;
+		vif1ch->madr = ptag[1]._u32;
 		vifqwc--;
 
 		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",

@@ -806,7 +806,7 @@ __forceinline void vif1SetupTransfer()
 
 			if (!(vif1ch->transfer("Vif1 Tag", ptag))) return;
 
-			vif1ch->madr = ptag[1].ADDR;            //MADR = ADDR field
+			vif1ch->madr = ptag[1]._u32;            //MADR = ADDR field + SPR
 			g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
 
 			// Transfer dma tag if tte is set

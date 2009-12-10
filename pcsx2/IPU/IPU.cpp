@@ -1397,7 +1397,7 @@ static __forceinline bool ipuDmacSrcChain(DMACh *tag, tDMA_TAG *ptag)
 	{
 		case TAG_REFE: // refe
 			// do not change tadr
-			tag->madr = ptag[1].ADDR;
+			tag->madr = ptag[1]._u32;
 			return true;
 			break;
 
@@ -1409,11 +1409,11 @@ static __forceinline bool ipuDmacSrcChain(DMACh *tag, tDMA_TAG *ptag)
 
 		case TAG_NEXT: // next
 			tag->madr = tag->tadr + 16;
-			tag->tadr = ptag[1].ADDR;
+			tag->tadr = ptag[1]._u32;
 			break;
 
 		case TAG_REF: // ref
-			tag->madr = ptag[1].ADDR;
+			tag->madr = ptag[1]._u32;
 			tag->tadr += 16;
 			break;
 

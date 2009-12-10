@@ -215,7 +215,7 @@ __forceinline void SIF0Dma()
 					SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
                     sif0dma->unsafeTransfer(((tDMA_TAG*)(tag)));
-					sif0dma->madr = DMA_TAG(tag[1]).ADDR;
+					sif0dma->madr = tag[1];
 
 					SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
 					
@@ -301,7 +301,7 @@ __forceinline void SIF1Dma()
 						case TAG_REFE: // refe
 							SIF_LOG("   REFE %08X", ptag[1]._u32);
 							sif1.end = 1;
-							sif1dma->madr = ptag[1].ADDR;
+							sif1dma->madr = ptag[1]._u32;
 							sif1dma->tadr += 16;
 							break;
 
@@ -314,13 +314,13 @@ __forceinline void SIF1Dma()
 						case TAG_NEXT: // next
 							SIF_LOG("   NEXT %08X", ptag[1]._u32);
 							sif1dma->madr = sif1dma->tadr + 16;
-							sif1dma->tadr = ptag[1].ADDR;
+							sif1dma->tadr = ptag[1]._u32;
 							break;
 
 						case TAG_REF: // ref
 						case TAG_REFS: // refs
 							SIF_LOG("   REF %08X", ptag[1]._u32);
-							sif1dma->madr = ptag[1].ADDR;
+							sif1dma->madr = ptag[1]._u32;
 							sif1dma->tadr += 16;
 							break;
 

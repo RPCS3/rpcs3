@@ -503,7 +503,7 @@ bool _chainVIF0()
 
 	if (!(vif0ch->transfer("Vif0 Tag", ptag))) return false;
 
-	vif0ch->madr = ptag[1].ADDR;		// MADR = ADDR field
+	vif0ch->madr = ptag[1]._u32;		// MADR = ADDR field + SPR
     g_vifCycles += 1; 				// Increase the QW read for the tag
 
 	VIF_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx",

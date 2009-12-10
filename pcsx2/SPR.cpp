@@ -165,7 +165,7 @@ static __forceinline void _dmaSPR0()
 			
 			spr0->unsafeTransfer(ptag);
 			
-			spr0->madr = ptag[1].ADDR;					//MADR = ADDR field
+			spr0->madr = ptag[1]._u32;					//MADR = ADDR field + SPR
 
 			SPR_LOG("spr0 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
 				ptag[1]._u32, ptag[0]._u32, spr0->qwc, ptag->ID, spr0->madr, spr0->sadr);
@@ -361,7 +361,7 @@ void _dmaSPR1()   // toSPR work function
 				spr1finished = done;
 			}
 
-			spr1->madr = ptag[1].ADDR;						//MADR = ADDR field
+			spr1->madr = ptag[1]._u32;						//MADR = ADDR field + SPR
 
 			// Transfer dma tag if tte is set
 			if (spr1->chcr.TTE)
