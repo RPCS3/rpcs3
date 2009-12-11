@@ -543,26 +543,39 @@ static __forceinline void throwBusError(const char *s)
     dmacRegs->stat.BEIS = true;
 }
 
-// Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
-static __forceinline void *dmaGetAddr(u32 addr) {
-	u8 *ptr;
-
-//	if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
-
-	//  Need to check the physical address as well as just the "SPR" flag, as VTLB doesnt seem to handle it
-	if ((addr & 0x80000000) || (addr & 0x70000000) == 0x70000000) return (void*)&psS[addr & 0x3ff0];
-
-	ptr = (u8*)vtlb_GetPhyPtr(addr&0x1FFFFFF0);
-	if (ptr == NULL) {
-		Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
-		return NULL;
-	}
-	return ptr;
+static __forceinline bool inScratchpad(u32 addr) 
+{
+    return ((addr >=0x70000000) && (addr <= 0x70003fff));
 }
 
-static __forceinline u32 *_dmaGetAddr(DMACh *dma, u32 addr, u32 num)
+// Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
+static __forceinline tDMA_TAG *dmaGetAddr(u32 addr) 
 {
-	u32 *ptr = (u32*)dmaGetAddr(addr);
+    tDMA_TAG *ptr;
+
+    // if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
+
+    if (DMA_TAG(addr).SPR) return (tDMA_TAG*)&psS[addr & 0x3ff0];
+    
+    // Need to check the physical address as well as just the "SPR" flag, as VTLB doesn't seem to handle it.--refraction
+    if (inScratchpad(addr)) 
+    {
+        //Console.Warning("Writing to the scratchpad without the SPR flag set!");
+        return (tDMA_TAG*)&psS[addr & 0x3ff0];
+    }
+
+    ptr = (tDMA_TAG*)vtlb_GetPhyPtr(addr & 0x1FFFFFF0);
+    if (ptr == NULL) 
+    {
+        Console.Error( "*PCSX2*: DMA error: %8.8x", addr);
+        return NULL;
+    }
+    return ptr;
+} 
+
+static __forceinline tDMA_TAG *safeDmaGetAddr(DMACh *dma, u32 addr, u32 num)
+{
+	tDMA_TAG *ptr = dmaGetAddr(addr);
 	if (ptr == NULL)
 	{
 		// DMA Error

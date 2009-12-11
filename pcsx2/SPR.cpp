@@ -52,7 +52,7 @@ int  _SPR0chain()
 	tDMA_TAG *pMem;
 
 	if (spr0->qwc == 0) return 0;
-	pMem = (tDMA_TAG*)dmaGetAddr(spr0->madr);
+	pMem = dmaGetAddr(spr0->madr);
 	if (pMem == NULL) return -1;
 
 	switch (dmacRegs->ctrl.MFD)
@@ -107,7 +107,7 @@ void _SPR0interleave()
 	{
 		spr0->qwc = std::min(tqwc, qwc);
 		qwc -= spr0->qwc;
-		pMem = (tDMA_TAG*)dmaGetAddr(spr0->madr);
+		pMem = dmaGetAddr(spr0->madr);
 		
 		switch (dmacRegs->ctrl.MFD)
  		{
@@ -287,7 +287,7 @@ int  _SPR1chain()
 
 	if (spr1->qwc == 0) return 0;
 
-	pMem = (tDMA_TAG*)dmaGetAddr(spr1->madr);
+	pMem = dmaGetAddr(spr1->madr);
 	if (pMem == NULL) return -1;
 
 	SPR1transfer((u32*)pMem, spr1->qwc << 2);
@@ -317,7 +317,7 @@ void _SPR1interleave()
 	{
 		spr1->qwc = std::min(tqwc, qwc);
 		qwc -= spr1->qwc;
-		pMem = (tDMA_TAG*)dmaGetAddr(spr1->madr);
+		pMem = dmaGetAddr(spr1->madr);
 		memcpy_fast(&psSu8(spr1->sadr), (u8*)pMem, spr1->qwc << 4);
 		spr1->sadr += spr1->qwc * 16;
 		spr1->madr += (sqwc + spr1->qwc) * 16; 
@@ -353,7 +353,7 @@ void _dmaSPR1()   // toSPR work function
 			}
 			// Chain Mode
 
-			ptag = (tDMA_TAG*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+			ptag = dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
 			
 			if (!spr1->transfer("SPR1 Tag", ptag))
 			{
@@ -387,7 +387,7 @@ void _dmaSPR1()   // toSPR work function
 			spr1finished = done;
 			if (!done)
 			{
-				ptag = (tDMA_TAG*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+				ptag = dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
 				CPU_INT(9, (ptag[0].QWC / BIAS));// the lower 16 bits of the tag / BIAS);
 			}
 			break;
@@ -411,7 +411,7 @@ void dmaSPR1()   // toSPR
 	if ((spr1->chcr.MOD == CHAIN_MODE) && (spr1->qwc == 0))
 	{
 		tDMA_TAG *ptag;
-		ptag = (tDMA_TAG*)dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
+		ptag = dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
 		CPU_INT(9, ptag[0].QWC / BIAS);
 		return;
 	}

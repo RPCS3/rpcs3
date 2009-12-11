@@ -499,7 +499,7 @@ bool _chainVIF0()
 {
     tDMA_TAG *ptag;
     
-	ptag = (tDMA_TAG*)dmaGetAddr(vif0ch->tadr); //Set memory pointer to TADR
+	ptag = dmaGetAddr(vif0ch->tadr); //Set memory pointer to TADR
 
 	if (!(vif0ch->transfer("Vif0 Tag", ptag))) return false;
 

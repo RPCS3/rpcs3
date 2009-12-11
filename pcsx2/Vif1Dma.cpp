@@ -802,7 +802,7 @@ __forceinline void vif1SetupTransfer()
 			break;
 
 		case VIF_CHAIN_MODE:
-			ptag = (tDMA_TAG*)dmaGetAddr(vif1ch->tadr); //Set memory pointer to TADR
+			ptag = dmaGetAddr(vif1ch->tadr); //Set memory pointer to TADR
 
 			if (!(vif1ch->transfer("Vif1 Tag", ptag))) return;
 

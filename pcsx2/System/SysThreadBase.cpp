@@ -130,8 +130,8 @@ bool SysThreadBase::Suspend( bool isBlocking )
 			// to wait, or issue a cancel to the thread.
 
 			throw Exception::ThreadTimedOut( *this,
-				L"Possible deadlock while suspending thread '%s'",
-				L"'%s' thread is not responding to suspend requests.  It may be deadlocked or just running *really* slow."
+				wxsFormat(L"Possible deadlock while suspending thread '%s'", m_name.c_str()),
+				wxsFormat(L"'%s' thread is not responding to suspend requests.  It may be deadlocked or just running *really* slow.", m_name.c_str())
 			);
 		}
 	}

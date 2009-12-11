@@ -116,7 +116,7 @@ int  _GIFchain()
 	u32 qwc = min( gifsplit, (int)gif->qwc );
 	tDMA_TAG *pMem;
 
-	pMem = (tDMA_TAG*)dmaGetAddr(gif->madr);
+	pMem = dmaGetAddr(gif->madr);
 	if (pMem == NULL)
 	{
 		// reset path3, fixes dark cloud 2
@@ -154,7 +154,7 @@ static __forceinline bool checkTieBit(tDMA_TAG* &ptag)
 
 static __forceinline tDMA_TAG* ReadTag()
 {
-	tDMA_TAG* ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+	tDMA_TAG* ptag = dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 
 	if (!(gif->transfer("Gif", ptag))) return NULL;
 
@@ -167,7 +167,7 @@ static __forceinline tDMA_TAG* ReadTag()
 
 static __forceinline tDMA_TAG* ReadTag2()
 {
-	tDMA_TAG* ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+	tDMA_TAG* ptag = dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
 
     gif->unsafeTransfer(ptag);
 	gif->madr = ptag[1]._u32;
@@ -294,7 +294,7 @@ void GIFdma()
 
 	if ((!gspath3done) && (gif->qwc == 0))
 	{
-		ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
+		ptag = dmaGetAddr(gif->tadr);  //Set memory pointer to TADR
         gif->unsafeTransfer(ptag);
 		gif->madr = ptag[1]._u32;
 
@@ -411,7 +411,7 @@ static __forceinline bool mfifoGIFchain()
 	{
 		int mfifoqwc;
 
-		tDMA_TAG *pMem = (tDMA_TAG*)dmaGetAddr(gif->madr);
+		tDMA_TAG *pMem = dmaGetAddr(gif->madr);
 		if (pMem == NULL) return false;
 
 		mfifoqwc = WRITERING_DMA(pMem, gif->qwc);
@@ -458,7 +458,7 @@ void mfifoGIFtransfer(int qwc)
 
 		gif->tadr = qwctag(gif->tadr);
 
-		ptag = (tDMA_TAG*)dmaGetAddr(gif->tadr);
+		ptag = dmaGetAddr(gif->tadr);
 		gif->unsafeTransfer(ptag);
 		gif->madr = ptag[1]._u32;
 		

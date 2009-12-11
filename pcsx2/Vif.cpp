@@ -483,7 +483,7 @@ static __forceinline bool mfifo_VIF1chain()
 	}
 	else
 	{
-		tDMA_TAG *pMem = (tDMA_TAG*)dmaGetAddr(vif1ch->madr);
+		tDMA_TAG *pMem = dmaGetAddr(vif1ch->madr);
 		SPR_LOG("Non-MFIFO Location");
 
 		if (pMem == NULL) return false;
@@ -527,7 +527,7 @@ void mfifoVIF1transfer(int qwc)
 
 	if (vif1ch->qwc == 0 && vifqwc > 0)
 	{
-		ptag = (tDMA_TAG*)dmaGetAddr(vif1ch->tadr);
+		ptag = dmaGetAddr(vif1ch->tadr);
 
 		if (vif1ch->chcr.TTE)
 		{

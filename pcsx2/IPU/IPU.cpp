@@ -1352,7 +1352,7 @@ static __forceinline bool IPU1chain(int &totalqwc)
 		int qwc = ipu1dma->qwc;
 		tDMA_TAG *pMem;
 
-		pMem = (tDMA_TAG*)dmaGetAddr(ipu1dma->madr);
+		pMem = dmaGetAddr(ipu1dma->madr);
 
 		if (pMem == NULL)
 		{
@@ -1485,7 +1485,7 @@ int IPU1dma()
 
 			if (ipu1dma->chcr.TIE && tag.IRQ)
 			{
-				ptag = (tDMA_TAG*)dmaGetAddr(ipu1dma->tadr);
+				ptag = dmaGetAddr(ipu1dma->tadr);
 
 				ipuDmacPartialChain(tag);
 
@@ -1528,7 +1528,7 @@ int IPU1dma()
 	else
 	{
 		// Chain Mode & ipu1dma->qwc is 0
-		ptag = (tDMA_TAG*)dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
+		ptag = dmaGetAddr(ipu1dma->tadr);  //Set memory pointer to TADR
 
 		// Transfer the tag.
 		if (!ipu1dma->transfer("IPU1", ptag)) return totalqwc;
@@ -1553,7 +1553,7 @@ int IPU1dma()
 
 				if (done)
 				{
-					ptag = (tDMA_TAG*)dmaGetAddr(ipu1dma->tadr);
+					ptag = dmaGetAddr(ipu1dma->tadr);
 
 					ipuDmacPartialChain(ptag[0]);
 
@@ -1665,7 +1665,7 @@ int IPU0dma()
 
 	pxAssert(ipu0dma->chcr.MOD == NORMAL_MODE);
 	
-	pMem = (tDMA_TAG*)dmaGetAddr(ipu0dma->madr);
+	pMem = dmaGetAddr(ipu0dma->madr);
 
 	readsize = min(ipu0dma->qwc, (u16)ipuRegs->ctrl.OFC);
 	totalsize+=readsize;
