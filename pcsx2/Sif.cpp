@@ -269,8 +269,9 @@ __forceinline void SIF1Dma()
 					eesifbusy[1] = false;
 					done = true;
 					// Voodoocycles : 4 cycles always, stops games from throwing double interrupts.
-					CPU_INT(6, 4);
-					//CPU_INT(6, cycles*BIAS);
+					// Edit: Ok, one game (Okami) wants bad timing aparently, so revert this until I know which values it likes.
+					//CPU_INT(6, 4);
+					CPU_INT(6, cycles*BIAS);
 					//sif1.chain = 0;
 					sif1.end = 0;
 				}
