@@ -28,13 +28,9 @@ using namespace pxSizerFlags;
 //  wxDialogWithHelpers Class Implementations
 // =====================================================================================================
 
-HashTools::HashMap< wxWindowID, int > m_DialogIdents( 0, wxID_ANY );
-
-bool pxDialogExists( wxWindowID id )
+bool pxDialogExists( const wxString& name )
 {
-	int dest = 0;
-	m_DialogIdents.TryGetValue( id, dest );
-	return (dest > 0);
+	return wxFindWindowByName( name ) != NULL;
 }
 
 // --------------------------------------------------------------------------------------
@@ -44,20 +40,41 @@ IMPLEMENT_DYNAMIC_CLASS(wxDialogWithHelpers, wxDialog)
 
 wxDialogWithHelpers::wxDialogWithHelpers()
 {
-	m_idealWidth		= wxDefaultCoord;
 	m_hasContextHelp	= false;
 	m_extraButtonSizer	= NULL;
+	
+	Init();
 }
 
-wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxString& title, bool hasContextHelp, const wxPoint& pos, const wxSize& size )
-	: wxDialog( parent, id, title, pos, size , wxDEFAULT_DIALOG_STYLE) //, (wxCAPTION | wxMAXIMIZE | wxCLOSE_BOX | wxRESIZE_BORDER) ),	// flags for resizable dialogs, currently unused.
+wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, const wxString& title, bool hasContextHelp, bool resizable )
+	: wxDialog( parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize,
+		wxDEFAULT_DIALOG_STYLE | (resizable ? wxRESIZE_BORDER : 0)
+	)
 {
-	++m_DialogIdents[GetId()];
+	m_hasContextHelp	= hasContextHelp;
+	Init();
+}
 
+wxDialogWithHelpers::wxDialogWithHelpers(wxWindow* parent, const wxString& title, wxOrientation orient)
+	: wxDialog( parent, wxID_ANY, title )
+{
+	m_hasContextHelp	= false;
+	SetSizer( new wxBoxSizer( orient ) );
+	Init();
+
+	m_idealWidth = 500;
+	*this += StdPadding;
+}
+
+wxDialogWithHelpers::~wxDialogWithHelpers() throw()
+{
+}
+
+void wxDialogWithHelpers::Init()
+{
 	m_idealWidth		= wxDefaultCoord;
 	m_extraButtonSizer	= NULL;
 
-	m_hasContextHelp = hasContextHelp;
 	if( m_hasContextHelp )
 		delete wxHelpProvider::Set( new wxSimpleHelpProvider() );
 
@@ -65,14 +82,54 @@ wxDialogWithHelpers::wxDialogWithHelpers( wxWindow* parent, int id,  const wxStr
 	// indicate that it should, so I presume the problem is in wxWidgets and that (hopefully!)
 	// an updated version will fix it later.  I tried to fix it using a manual Connect but it
 	// didn't do any good.  (problem could also be my Co-Linux / x-window manager)
-	
+
 	//Connect( wxEVT_ACTIVATE, wxActivateEventHandler(wxDialogWithHelpers::OnActivate) );
+
+	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler	(wxDialogWithHelpers::OnOkCancel) );
+	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler	(wxDialogWithHelpers::OnOkCancel) );
+	Connect(				wxEVT_CLOSE_WINDOW,				wxCloseEventHandler		(wxDialogWithHelpers::OnCloseWindow) );
 }
 
-wxDialogWithHelpers::~wxDialogWithHelpers() throw()
+void wxDialogWithHelpers::SmartCenterFit()
 {
-	--m_DialogIdents[GetId()];
-	pxAssert( m_DialogIdents[GetId()] >= 0 );
+	Fit();
+
+	// Smart positioning logic!  If our parent window is larger than our window by some
+	// good amount, then we center on that.  If not, center relative to the screen.  This
+	// avoids the popup automatically eclipsing the parent window (which happens in PCSX2
+	// a lot since the main window is small).
+
+	bool centerfail = true;
+	if( wxWindow* parent = GetParent() )
+	{
+		const wxSize parentSize( parent->GetSize() );
+
+		if( (parentSize.x > ((int)GetSize().x * 1.75)) && (parentSize.y > ((int)GetSize().y * 1.75)) )
+		{
+			CenterOnParent();
+			centerfail = false;
+		}
+	}
+
+	if( centerfail ) CenterOnScreen();
+}
+
+// Overrides wxDialog behavior to include automatic Fit() and CenterOnParent/Screen.  The centering
+// is based on a heuristic the centers against the parent window if the parent window is at least
+// 75% larger than the fitted dialog.
+int wxDialogWithHelpers::ShowModal()
+{
+	SmartCenterFit();
+	return wxDialog::ShowModal();
+}
+
+// Overrides wxDialog behavior to include automatic Fit() and CenterOnParent/Screen.  The centering
+// is based on a heuristic the centers against the parent window if the parent window is at least
+// 75% larger than the fitted dialog.
+bool wxDialogWithHelpers::Show( bool show )
+{
+	if( show ) SmartCenterFit();
+	return wxDialog::Show( show );
 }
 
 pxStaticText* wxDialogWithHelpers::Text( const wxString& label )
@@ -84,6 +141,19 @@ pxStaticHeading* wxDialogWithHelpers::Heading( const wxString& label )
 {
 	return new pxStaticHeading( this, label );
 }
+
+void wxDialogWithHelpers::OnCloseWindow( wxCloseEvent& evt )
+{
+	if( !IsModal() ) Destroy();
+	evt.Skip();
+}
+
+void wxDialogWithHelpers::OnOkCancel( wxCommandEvent& evt )
+{
+	Close();
+	evt.Skip();
+}
+
 
 void wxDialogWithHelpers::OnActivate(wxActivateEvent& evt)
 {
@@ -119,7 +189,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 	flex.AddGrowableCol( 1, 15 );
 
 	flex	+= m_extraButtonSizer	| pxAlignLeft;
-	flex	+= s_buttons			| pxExpand, pxCenter;
+	flex	+= s_buttons			| (pxExpand & pxCenter);
 
 	sizer	+= flex	| StdExpand();
 

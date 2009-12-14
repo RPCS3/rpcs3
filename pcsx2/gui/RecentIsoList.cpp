@@ -26,7 +26,7 @@
 
 RecentIsoManager::RecentIsoManager( wxMenu* menu )
 	: m_Menu( menu )
-	, m_MaxLength( g_Conf->RecentFileCount )
+	, m_MaxLength( g_Conf->RecentIsoCount )
 	, m_Listener_SettingsLoadSave	( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
 	, m_Listener_SettingsApplied	( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
 {
@@ -166,7 +166,7 @@ void RecentIsoManager::DoSettingsLoadSave( IniInterface& ini )
 	{
 		RemoveAllFromMenu();
 		
-		m_MaxLength = g_Conf->RecentFileCount;
+		m_MaxLength = g_Conf->RecentIsoCount;
 		IniScopedGroup groupie( ini, L"RecentIso" );
 		for( uint i=0; i<m_MaxLength; ++i )
 		{

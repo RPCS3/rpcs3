@@ -56,6 +56,18 @@ void SysCoreThread::Cancel( bool isBlocking )
 {
 	m_CoreCancelDamnit = true;
 	_parent::Cancel();
+	ReleaseResumeLock();
+}
+
+bool SysCoreThread::Cancel( const wxTimeSpan& span )
+{
+	m_CoreCancelDamnit = true;
+	if( _parent::Cancel( span ) )
+	{
+		ReleaseResumeLock();
+		return true;
+	}
+	return false;
 }
 
 void SysCoreThread::Start()
@@ -78,21 +90,26 @@ void SysCoreThread::Start()
 void SysCoreThread::OnResumeReady()
 {
 	if( m_resetVirtualMachine )
-	{
-		cpuReset();
-		m_resetVirtualMachine	= false;
-		m_hasValidState			= false;
-	}
+		m_hasValidState = false;
 	
 	if( !m_hasValidState )
 		m_resetRecompilers = true;
 }
 
+// Tells the thread to recover from the in-memory state copy when it resumes.  (thread must be
+// resumed manually).
+void SysCoreThread::RecoverState()
+{
+	Pause();
+	m_resetVirtualMachine	= true;
+	m_hasValidState			= false;
+}
+
 void SysCoreThread::Reset()
 {
 	Suspend();
-	m_resetVirtualMachine = true;
-	m_hasValidState = false;
+	m_resetVirtualMachine	= true;
+	m_hasValidState			= false;
 }
 
 // This function *will* reset the emulator in order to allow the specified elf file to
@@ -159,7 +176,8 @@ void SysCoreThread::ApplySettings( const Pcsx2Config& src )
 
 	ScopedCoreThreadPause sys_paused;
 
-	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
+	m_resetRecompilers		= ( src.Cpu != EmuConfig.Cpu ) || ( src.Recompiler != EmuConfig.Recompiler ) ||
+							  ( src.Gamefixes != EmuConfig.Gamefixes ) || ( src.Speedhacks != EmuConfig.Speedhacks );
 	m_resetProfilers		= ( src.Profiler != EmuConfig.Profiler );
 	m_resetVsyncTimers		= ( src.GS != EmuConfig.GS );
 	
@@ -213,9 +231,49 @@ struct ScopedBool_ClearOnError
 	void Success() { m_success = true; }
 };
 
+void SysCoreThread::_reset_stuff_as_needed()
+{
+	if( m_resetVirtualMachine || m_resetRecompilers || m_resetProfilers )
+	{
+		SysClearExecutionCache();
+		memBindConditionalHandlers();
+		m_resetRecompilers		= false;
+		m_resetProfilers		= false;
+	}
+
+	if( m_resetVirtualMachine )
+	{
+		cpuReset();
+		m_resetVirtualMachine	= false;
+		m_resetRecompilers		= true;
+	}
+
+	if( m_resetVsyncTimers )
+	{
+		UpdateVSyncRate();
+		frameLimitReset();
+		m_resetVsyncTimers = false;
+	}
+	
+	SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
+}
+
 void SysCoreThread::CpuInitializeMess()
 {
 	if( m_hasValidState ) return;
+
+	if( StateCopy_IsValid() )
+	{
+		// Automatic recovery system if a state exists in memory.  This is executed here
+		// in order to ensure the plugins are in the proper (loaded/opened) state.
+
+		SysClearExecutionCache();
+		StateCopy_ThawFromMem_Blocking();
+
+		m_hasValidState			= true;
+		m_resetVirtualMachine	= false;
+		return;
+	}
 
 	_reset_stuff_as_needed();
 
@@ -262,24 +320,6 @@ void SysCoreThread::CpuInitializeMess()
 	sbcoe.Success();
 }
 
-void SysCoreThread::_reset_stuff_as_needed()
-{
-	if( m_resetRecompilers || m_resetProfilers )
-	{
-		SysClearExecutionCache();
-		memBindConditionalHandlers();
-		m_resetRecompilers = false;
-		m_resetProfilers = false;
-	}
-
-	if( m_resetVsyncTimers )
-	{
-		UpdateVSyncRate();
-		frameLimitReset();
-		m_resetVsyncTimers = false;
-	}
-}
-
 // Called by the VsyncInThread() if a valid keyEvent is pending and is unhandled by other
 // PS2 core plugins.
 void SysCoreThread::DispatchKeyEventToUI( const keyEvent& evt )
@@ -315,10 +355,11 @@ void SysCoreThread::StateCheckInThread()
 {
 	GetMTGS().RethrowException();
 	_parent::StateCheckInThread();
+
 	if( !m_hasValidState )
 		throw Exception::RuntimeError( "Invalid emulation state detected; Virtual machine threads have been cancelled." );
 
-	_reset_stuff_as_needed();
+	_reset_stuff_as_needed();		// kinda redundant but could catch unexpected threaded state changes...
 }
 
 void SysCoreThread::ExecuteTaskInThread()
@@ -330,9 +371,10 @@ void SysCoreThread::ExecuteTaskInThread()
 	m_mxcsr_saved.bitmask = _mm_getcsr();
 	
 	PCSX2_PAGEFAULT_PROTECT {
-		StateCheckInThread();
-		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
-		Cpu->Execute();
+		do {
+			StateCheckInThread();
+			Cpu->Execute();
+		} while( true );
 	} PCSX2_PAGEFAULT_EXCEPT;
 }
 
@@ -347,8 +389,7 @@ void SysCoreThread::OnResumeInThread( bool isSuspended )
 	if( g_plugins != NULL )
 		g_plugins->Open();
 
-	if( isSuspended )
-		CpuInitializeMess();
+	CpuInitializeMess();
 }
 
 

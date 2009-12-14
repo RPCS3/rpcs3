@@ -25,7 +25,8 @@ void StreamException_ThrowFromErrno( const wxString& streamname, errno_t errcode
 	switch( errcode )
 	{
 		case EINVAL:
-			throw Exception::InvalidArgument( "Invalid argument" );
+			pxFailDev( L"Invalid argument" );
+			throw Exception::Stream( streamname, "Invalid argument" );
 
 		case EACCES:	// Access denied!
 			throw Exception::AccessDenied( streamname );
@@ -75,7 +76,7 @@ void StreamException_ThrowLastError( const wxString& streamname, HANDLE result )
 			throw Exception::AccessDenied( streamname );
 
 		case ERROR_INVALID_HANDLE:
-			throw Exception::InvalidOperation( "Stream object or handle is invalid" );
+			throw Exception::BadStream( streamname, "Stream object or handle is invalid" );
 
 		case ERROR_SHARING_VIOLATION:
 			throw Exception::AccessDenied( streamname, "Sharing violation" );

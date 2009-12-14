@@ -495,31 +495,44 @@ static const uint m_recBlockAllocSize =
 	(((Ps2MemSize::Base + Ps2MemSize::Rom + Ps2MemSize::Rom1) / 4) * sizeof(BASEBLOCK))
 +	RECCONSTBUF_SIZE * sizeof(u32) + Ps2MemSize::Base;
 
+static void recThrowHardwareDeficiency( const wxChar* extFail )
+{
+	throw Exception::HardwareDeficiency(
+		wxsFormat( L"R5900-32 recompiler init failed: %s is not available.", extFail),
+		wxsFormat(_("%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail )
+	);
+}
+
 static void recAlloc()
 {
 	// Hardware Requirements Check...
 
-	if ( !( x86caps.hasMultimediaExtensions  ) )
-		throw Exception::HardwareDeficiency( "Processor doesn't support MMX" );
+	if ( !x86caps.hasMultimediaExtensions )
+		recThrowHardwareDeficiency( L"MMX" );
 
-	if ( !( x86caps.hasStreamingSIMDExtensions ) )
-		throw Exception::HardwareDeficiency( "Processor doesn't support SSE" );
+	if ( !x86caps.hasStreamingSIMDExtensions )
+		recThrowHardwareDeficiency( L"SSE" );
 
-	if ( !( x86caps.hasStreamingSIMD2Extensions ) )
-		throw Exception::HardwareDeficiency( "Processor doesn't support SSE2" );
+	if ( !x86caps.hasStreamingSIMD2Extensions )
+		recThrowHardwareDeficiency( L"SSE2" );
 
 	if( recMem == NULL )
 	{
-		// Note: the VUrec depends on being able to grab an allocation below the 0x10000000 line,
-		// so we give the EErec an address above that to try first as it's basemem address, hence
-		// the 0x20000000 pick.
+		// It's handy to have a constant base address for the EE recompiler buffer, since it
+		// allows me to key in the address directly in the debugger, and also recognize EE
+		// recompiled code from user-provisioned stack traces.  But besides those, the recompiler
+		// has no actual restrictions on where it's compiled code buffer is located.
+
+		// Note: the SuperVU recompiler depends on being able to grab an allocation below the
+		// 0x10000000 line, so we give the EErec an address above that to try first as it's
+		// basemem address, hence the 0x20000000 pick.
 
 		const uint cachememsize = REC_CACHEMEM+0x1000;
 		recMem = (u8*)SysMmapEx( 0x20000000, cachememsize, 0, "recAlloc(R5900)" );
 	}
 
 	if( recMem == NULL )
-		throw Exception::OutOfMemory( "R5900-32 > failed to allocate recompiler memory." );
+		throw Exception::OutOfMemory( "R5900-32: Out of memory allocating recompiled code buffer." );
 
 	// Goal: Allocate BASEBLOCKs for every possible branch target in PS2 memory.
 	// Any 4-byte aligned address makes a valid branch target as per MIPS design (all instructions are
@@ -529,14 +542,14 @@ static void recAlloc()
 		m_recBlockAlloc = (u8*) _aligned_malloc( m_recBlockAllocSize, 4096 );
 
 	if( m_recBlockAlloc == NULL )
-		throw Exception::OutOfMemory( "R5900-32 Init > Failed to allocate memory for BASEBLOCK tables." );
+		throw Exception::OutOfMemory( "R5900-32: Out of memory allocating BASEBLOCK tables." );
 
 	u8* curpos = m_recBlockAlloc;
-	recRAM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Base / 4) * sizeof(BASEBLOCK);
-	recROM = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom / 4) * sizeof(BASEBLOCK);
-	recROM1 = (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom1 / 4) * sizeof(BASEBLOCK);
-	recConstBuf = (u32*)curpos; curpos += RECCONSTBUF_SIZE * sizeof(u32);
-	recRAMCopy = (u32*)curpos;
+	recRAM		= (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Base / 4) * sizeof(BASEBLOCK);
+	recROM		= (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom / 4) * sizeof(BASEBLOCK);
+	recROM1		= (BASEBLOCK*)curpos; curpos += (Ps2MemSize::Rom1 / 4) * sizeof(BASEBLOCK);
+	recConstBuf	= (u32*)curpos; curpos += RECCONSTBUF_SIZE * sizeof(u32);
+	recRAMCopy	= (u32*)curpos;
 
 	if( s_pInstCache == NULL )
 	{
@@ -545,7 +558,7 @@ static void recAlloc()
 	}
 
 	if( s_pInstCache == NULL )
-		throw Exception::OutOfMemory( "R5900-32 Init > failed to allocate memory for pInstCache." );
+		throw Exception::OutOfMemory( "R5900-32: Out of memory allocating InstCache." );
 
 	// No errors.. Proceed with initialization:
 
@@ -564,11 +577,13 @@ struct ManualPageTracking
 static __aligned16 u16 manual_page[Ps2MemSize::Base >> 12];
 static __aligned16 u8 manual_counter[Ps2MemSize::Base >> 12];
 
-static bool eeRecIsReset = false;
+static u32 eeRecIsReset = 0;
 
 ////////////////////////////////////////////////////
 void recResetEE( void )
 {
+	if( AtomicExchange( eeRecIsReset, true ) ) return;
+
 	Console.WriteLn( Color_StrongBlack, "Issuing EE/iR5900-32 Recompiler Reset" );
 
 	maxrecmem = 0;
@@ -630,7 +645,6 @@ void recResetEE( void )
 	x86FpuState = FPU_STATE;
 
 	branch = 0;
-	eeRecIsReset = true;
 }
 
 static void recShutdown( void )
@@ -656,26 +670,21 @@ static jmp_buf		m_SetJmp_StateCheck;
 
 static void recCheckExecutionState()
 {
-#if PCSX2_SEH
-	SysCoreThread::Get().StateCheckInThread();
-
-	if( eeRecIsReset )
-		throw Exception::ForceDispatcherReg();
-#else
-
-	// Without SEH we'll need to hop to a safehouse point outside the scope of recompiled
-	// code.  C++ exceptions can't cross the mighty chasm in the stackframe that the recompiler
-	// creates.  However, the longjump is slow so we only want to do one when absolutely
-	// necessary:
-
 	pxAssert( !eeRecIsReset );		// should only be changed during suspended thread states
 
-	if( SysCoreThread::Get().HasPendingStateChangeRequest() )
+	if( GetCoreThread().HasPendingStateChangeRequest() )
 	{
-		longjmp( m_SetJmp_StateCheck, SetJmp_Dispatcher );
-	}
+#if PCSX2_SEH
+		throw Exception::ForceDispatcherReg();
+#else
+		// Without SEH we'll need to hop to a safehouse point outside the scope of recompiled
+		// code.  C++ exceptions can't cross the mighty chasm in the stackframe that the recompiler
+		// creates.  However, the longjump is slow so we only want to do one when absolutely
+		// necessary:
 
+		longjmp( m_SetJmp_StateCheck, 1 );
 #endif
+	}
 }
 
 static void recExecute()
@@ -684,64 +693,36 @@ static void recExecute()
 	// [TODO] fix this comment to explain various code entry/exit points, when I'm not so tired!
 
 #if PCSX2_SEH
-	try {
-		while( true )
-		{
-			eeRecIsReset = false;
-			g_EEFreezeRegs = true;
+	eeRecIsReset = false;
+	g_EEFreezeRegs = true;
 
-			try {
-				EnterRecompiledCode();
-			}
-			catch( Exception::ForceDispatcherReg& ) { }
-		}
+	try {
+		EnterRecompiledCode();
 	}
-	catch( Exception::ExitRecExecute& ) {}
+	catch( Exception::ForceDispatcherReg& ) { }
 
 #else
 
-	switch( setjmp( m_SetJmp_StateCheck ) )
+	int oldstate;
+
+	if( !setjmp( m_SetJmp_StateCheck ) )
 	{
-		case 0:		// first run, fall through to Dispatcher
-		case SetJmp_Dispatcher:
-			while( true )
-			{
-				int oldstate;
+		eeRecIsReset = false;
+		g_EEFreezeRegs = true;
 
-				// Important! Most of the console logging and such has cancel points in it.  This is great
-				// in Windows, where SEH lets us safely kill a thread from anywhere we want.  This is bad
-				// in Linux, which cannot have a C++ exception cross the recompiler.  Hence the changing
-				// of the cancelstate here!
+		// Important! Most of the console logging and such has cancel points in it.  This is great
+		// in Windows, where SEH lets us safely kill a thread from anywhere we want.  This is bad
+		// in Linux, which cannot have a C++ exception cross the recompiler.  Hence the changing
+		// of the cancelstate here!
 
-				pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
-				SysCoreThread::Get().StateCheckInThread();
-				pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
-
-				eeRecIsReset = false;
-
-				#ifdef _WIN32
-				__try {
-				#endif
-
-					EnterRecompiledCode();
-
-				#ifdef _WIN32
-				} __finally
-				{
-					// This assertion is designed to help me troubleshoot the setjmp behavior from Win32.
-					// If the recompiler throws an unhandled SEH exception with SEH support disabled (which
-					// is typically a pthread_cancel) then this will fire and let me know.
-
-					// FIXME: Doesn't work because SEH is remarkably clever and executes the _finally block
-					// even when I use longjmp to restart the loop.  Maybe a workaround exists? :/
-
-					//pxFailDev( "Recompiler threw an SEH exception with SEH disabled; possibly due to pthread_cancel." );
-				}
-				#endif
-			}
-		break;
-
-		case SetJmp_Exit: break;
+		pthread_setcancelstate( PTHREAD_CANCEL_DISABLE, &oldstate );
+		EnterRecompiledCode();
+		
+		// Generally unreachable code here ...
+	}
+	else
+	{
+		pthread_setcancelstate( PTHREAD_CANCEL_ENABLE, &oldstate );
 	}
 #endif
 }
@@ -858,7 +839,7 @@ static void recExitExecution()
 #if PCSX2_SEH
 	throw Exception::ExitRecExecute();
 #else
-	longjmp( m_SetJmp_StateCheck, SetJmp_Exit );
+	longjmp( m_SetJmp_StateCheck, 1 );
 #endif
 }
 
@@ -1319,7 +1300,7 @@ static void __fastcall recRecompile( const u32 startpc )
     if (dumplog & 4) iDumpRegisters(startpc, 0);
 #endif
 
-	pxAssert( startpc );
+	pxAssume( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
 	if ( ( (uptr)recPtr - (uptr)recMem ) >= REC_CACHEMEM-0x40000 || dumplog == 0xffffffff) {
@@ -1348,7 +1329,7 @@ static void __fastcall recRecompile( const u32 startpc )
 
 	s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 
-	pxAssert(s_pCurBlockEx);
+	pxAssume(s_pCurBlockEx);
 
 	branch = 0;
 
@@ -1359,7 +1340,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	g_cpuHasConstReg = g_cpuFlushedConstReg = 1;
 	g_cpuPrevRegHasLive1 = g_cpuRegHasLive1 = 0xffffffff;
 	g_cpuPrevRegHasSignExt = g_cpuRegHasSignExt = 0;
-	pxAssert( g_cpuConstRegs[0].UD[0] == 0 );
+	pxAssume( g_cpuConstRegs[0].UD[0] == 0 );
 
 	_initX86regs();
 	_initXMMregs();

@@ -52,14 +52,24 @@ struct pxAlignmentType
 
 	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
 	
+	wxSizerFlags operator& ( const wxSizerFlags& _flgs ) const
+	{
+		return Apply( _flgs );
+	}
+
+	wxSizerFlags Border( int dir, int padding ) const
+	{
+		return Apply().Border( dir, padding );
+	}
+
+	wxSizerFlags Proportion( int prop ) const
+	{
+		return Apply().Proportion( intval );
+	}
+
 	operator wxSizerFlags() const
 	{
 		return Apply();
-	}
-
-	wxSizerFlags operator | ( const wxSizerFlags& _flgs )
-	{
-		return Apply( _flgs );
 	}
 };
 
@@ -78,14 +88,46 @@ struct pxStretchType
 
 	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
 
+	wxSizerFlags operator& ( const wxSizerFlags& _flgs ) const
+	{
+		return Apply( _flgs );
+	}
+
+	wxSizerFlags Border( int dir, int padding ) const
+	{
+		return Apply().Border( dir, padding );
+	}
+
+	wxSizerFlags Proportion( int prop ) const
+	{
+		return Apply().Proportion( intval );
+	}
+
 	operator wxSizerFlags() const
 	{
 		return Apply();
 	}
+};
 
-	wxSizerFlags operator | ( const wxSizerFlags& _flgs )
+class pxProportion
+{
+	int intval;
+
+	pxProportion( int prop )
+	{
+		intval = prop;
+	}
+
+	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
+
+	wxSizerFlags operator& ( const wxSizerFlags& _flgs ) const
 	{
 		return Apply( _flgs );
+	}
+
+	operator wxSizerFlags() const
+	{
+		return Apply();
 	}
 };
 
@@ -128,8 +170,7 @@ struct pxWindowAndFlags
 };
 
 
-extern wxSizerFlags operator , ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 ); //pxAlignmentType align );
-//extern wxSizerFlags operator , ( const wxSizerFlags& _flgs, pxStretchType stretch );
+extern wxSizerFlags operator& ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 );
 
 template< typename WinType >
 pxWindowAndFlags<WinType> operator | ( WinType* _win, const wxSizerFlags& _flgs )
@@ -162,9 +203,13 @@ extern void operator+=( wxSizer& target, wxSizer* src );
 extern void operator+=( wxSizer& target, wxWindow& src );
 extern void operator+=( wxSizer& target, wxSizer& src );
 
+extern void operator+=( wxSizer* target, wxWindow& src );
+extern void operator+=( wxSizer* target, wxSizer& src );
+
 extern void operator+=( wxSizer& target, int spacer );
 extern void operator+=( wxWindow& target, int spacer );
 
+// ----------------------------------------------------------------------------
 // Important: This template is needed in order to retain window type information and
 // invoke the proper overloaded version of += (which is used by pxStaticText and other
 // classes to perform special actions when added to sizers).
@@ -178,6 +223,14 @@ void operator+=( wxWindow& target, WinType* src )
 template< typename WinType >
 void operator+=( wxWindow& target, WinType& src )
 {
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	*target.GetSizer() += src;
+}
+
+template< typename WinType >
+void operator+=( wxWindow& target, const pxWindowAndFlags<WinType>& src )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
 	*target.GetSizer() += src;
 }
 
@@ -187,11 +240,31 @@ void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )
 	target.Add( src.window, src.flags );
 }
 
+// ----------------------------------------------------------------------------
+// Pointer Versions!  (note that C++ requires one of the two operator params be a
+// "poper" object type (non-pointer), so that's why some of these are missing.
+
 template< typename WinType >
-void operator+=( wxWindow& target, const pxWindowAndFlags<WinType>& src )
+void operator+=( wxWindow* target, WinType& src )
 {
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	*target.GetSizer() += src;
+	if( !pxAssert( target != NULL ) ) return;
+	if( !pxAssert( target->GetSizer() != NULL ) ) return;
+	*target->GetSizer() += src;
+}
+
+template< typename WinType >
+void operator+=( wxWindow* target, const pxWindowAndFlags<WinType>& src )
+{
+	if( !pxAssert( target != NULL ) ) return;
+	if( !pxAssert( target->GetSizer() != NULL ) ) return;
+	*target->GetSizer() += src;
+}
+
+template< typename WinType >
+void operator+=( wxSizer* target, const pxWindowAndFlags<WinType>& src )
+{
+	if( !pxAssert( target != NULL ) ) return;
+	target.Add( src.window, src.flags );
 }
 
 // ----------------------------------------------------------------------------
@@ -230,19 +303,29 @@ protected:
 
 public:
 	wxDialogWithHelpers();
-	wxDialogWithHelpers(wxWindow* parent, int id, const wxString& title, bool hasContextHelp, const wxPoint& pos=wxDefaultPosition, const wxSize& size=wxDefaultSize );
+	wxDialogWithHelpers(wxWindow* parent, const wxString& title, bool hasContextHelp=false, bool resizable=false );
+	wxDialogWithHelpers(wxWindow* parent, const wxString& title, wxOrientation orient);
 	virtual ~wxDialogWithHelpers() throw();
 
-    void AddOkCancel( wxSizer& sizer, bool hasApply=false );
-	pxStaticText*		Text( const wxString& label );
-	pxStaticHeading*	Heading( const wxString& label );
+    void Init();
+	void AddOkCancel( wxSizer& sizer, bool hasApply=false );
 
-	wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
+	virtual void SmartCenterFit();
+	virtual int ShowModal();
+	virtual bool Show( bool show=true );
+
+	virtual pxStaticText*		Text( const wxString& label );
+	virtual pxStaticHeading*	Heading( const wxString& label );
+
+	virtual wxDialogWithHelpers& SetIdealWidth( int newWidth ) { m_idealWidth = newWidth; return *this; }
+
 	int GetIdealWidth() const { return m_idealWidth; }
 	bool HasIdealWidth() const { return m_idealWidth != wxDefaultCoord; }
 
 protected:
 	void OnActivate(wxActivateEvent& evt);
+	void OnOkCancel(wxCommandEvent& evt);
+	void OnCloseWindow(wxCloseEvent& event);
 };
 
 // --------------------------------------------------------------------------------------
@@ -412,13 +495,15 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-extern bool pxDialogExists( wxWindowID id );
+extern bool pxDialogExists( const wxString& name );
 extern bool pxIsValidWindowPosition( const wxWindow& window, const wxPoint& windowPos );
 extern wxRect wxGetDisplayArea();
 
 extern wxString pxFormatToolTipText( wxWindow* wind, const wxString& src );
 extern void pxSetToolTip( wxWindow* wind, const wxString& src );
 extern void pxSetToolTip( wxWindow& wind, const wxString& src );
+
+extern wxFont pxGetFixedFont( int ptsize=8, int weight=wxNORMAL );
 
 
 #endif

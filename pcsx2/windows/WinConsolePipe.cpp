@@ -99,7 +99,7 @@ public:
 protected:
 	void ExecuteTaskInThread()
 	{
-		SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
+		::SetThreadPriority( ::GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL );
 		if( m_outpipe == INVALID_HANDLE_VALUE ) return;
 
 		try
@@ -112,7 +112,7 @@ protected:
 				if( !ReadFile(m_outpipe, s8_Buf, sizeof(s8_Buf)-1, &u32_Read, NULL) )
 				{
 					DWORD result = GetLastError();
-					if( result == ERROR_HANDLE_EOF ) break;
+					if( result == ERROR_HANDLE_EOF || result == ERROR_BROKEN_PIPE ) break;
 					if( result == ERROR_IO_PENDING )
 					{
 						Yield( 10 );
@@ -172,6 +172,10 @@ class WinPipeRedirection : public PipeRedirectionBase
 	DeclareNoncopyableObject( WinPipeRedirection );
 
 protected:
+	DWORD		m_stdhandle;
+	FILE*		m_stdfp;
+	FILE		m_stdfp_copy;
+
 	HANDLE		m_readpipe;
 	HANDLE		m_writepipe;
 	int			m_crtFile;
@@ -187,21 +191,25 @@ public:
 };
 
 WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
-	: m_readpipe(INVALID_HANDLE_VALUE)
-	, m_writepipe(INVALID_HANDLE_VALUE)
-	, m_crtFile(-1)
-	, m_fp(NULL)
-	, m_Thread( m_readpipe, (stdstream == stderr) ? Color_Red : Color_Black )
+	: m_Thread( m_readpipe, (stdstream == stderr) ? Color_Red : Color_Black )
 {
+	m_stdhandle		= ( stdstream == stderr ) ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE;
+	m_stdfp			= stdstream;
+	m_stdfp_copy	= *stdstream;
+
+	m_readpipe		= INVALID_HANDLE_VALUE;
+	m_writepipe		= INVALID_HANDLE_VALUE;
+	m_crtFile		= -1;
+	m_fp			= NULL;
+
+	pxAssume( (stdstream == stderr) || (stdstream == stdout) );
+
 	try
 	{
-		pxAssert( (stdstream == stderr) || (stdstream == stdout) );
-		DWORD stdhandle = ( stdstream == stderr ) ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE;
-
 		if( 0 == CreatePipe( &m_readpipe, &m_writepipe, NULL, 0 ) )
 			throw Exception::Win32Error( "CreatePipe failed." );
 
-		if( 0 == SetStdHandle( stdhandle, m_writepipe ) )
+		if( 0 == SetStdHandle( m_stdhandle, m_writepipe ) )
 			throw Exception::Win32Error( "SetStdHandle failed." );
 
 		// Note: Don't use GetStdHandle to "confirm" the handle.
@@ -222,10 +230,18 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 		if( m_fp == NULL )
 			throw Exception::RuntimeError( "_fdopen returned NULL." );
 
-		*stdstream = *m_fp;
+		*m_stdfp = *m_fp;		// omg hack.  but it works >_<
 		setvbuf( stdstream, NULL, _IONBF, 0 );
 
 		m_Thread.Start();
+	}
+	catch( Exception::BaseThreadError& ex )
+	{
+		// thread object will become invalid because of scoping after we leave
+		// the constructor, so re-pack a new exception:
+		
+		Cleanup();
+		throw Exception::RuntimeError( ex.FormatDiagnosticMessage(), ex.FormatDisplayMessage() );
 	}
 	catch( Exception::BaseException& ex )
 	{
@@ -235,6 +251,9 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 	}
 	catch( ... )
 	{
+		// C++ doesn't execute the object destructor automatically, because it's fail++
+		// (and I'm *not* encapsulating each handle into its own object >_<)
+
 		Cleanup();
 		throw;
 	}
@@ -247,6 +266,12 @@ WinPipeRedirection::~WinPipeRedirection()
 
 void WinPipeRedirection::Cleanup() throw()
 {
+	// restore the old handle we so graciously hacked earlier ;)
+	//  (or don't and suffer CRT crashes!  ahaha!)
+
+	if( m_stdfp != NULL )
+		*m_stdfp = m_stdfp_copy;
+	
 	// Cleanup Order Notes:
 	//  * The redirection thread is most likely blocking on ReadFile(), so we can't Cancel yet, lest we deadlock --
 	//    Closing the writepipe (either directly or through the fp/crt handles) issues an EOF to the thread,

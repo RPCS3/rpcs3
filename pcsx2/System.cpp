@@ -57,7 +57,7 @@ TraceLogFilters& SetTraceConfig()
 
 
 // This function should be called once during program execution.
-void SysDetect()
+void SysLogMachineCaps()
 {
 	Console.WriteLn( Color_StrongGreen, "PCSX2 %d.%d.%d.r%d %s - compiled on " __DATE__, PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 		SVN_REV, SVN_MODS ? "(modded)" : ""
@@ -65,8 +65,6 @@ void SysDetect()
 
 	Console.WriteLn( "Savestate version: 0x%x", g_SaveVersion);
 	Console.Newline();
-
-	cpudetectInit();
 
 	Console.WriteLn( Color_StrongBlack, "x86-32 Init:" );
 	
@@ -149,13 +147,15 @@ CpuInitializer< CpuType >::CpuInitializer()
 	}
 	catch( Exception::RuntimeError& ex )
 	{
-		Console.Error( L"MicroVU0 Recompiler Allocation Failed:\n" + ex.FormatDiagnosticMessage() );
-		MyCpu->Shutdown();
+		Console.Error( L"CPU provider error:\n\t" + ex.FormatDiagnosticMessage() );
+		if( MyCpu )
+			MyCpu = NULL;
 	}
 	catch( std::runtime_error& ex )
 	{
-		Console.Error( L"MicroVU0 Recompiler Allocation Failed (STL Exception)\n\tDetails:" + fromUTF8( ex.what() ) );
-		MyCpu->Shutdown();
+		Console.Error( L"CPU provider error (STL Exception)\n\tDetails:" + fromUTF8( ex.what() ) );
+		if( MyCpu )
+			MyCpu = NULL;
 	}
 }
 

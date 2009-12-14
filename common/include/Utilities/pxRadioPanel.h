@@ -111,7 +111,8 @@ public:
 
 	pxRadioPanel& SetToolTip( int idx, const wxString& tip );
 	pxRadioPanel& SetSelection( int idx );
-	pxRadioPanel& SetDefault( int idx );
+	pxRadioPanel& SetDefaultItem( int idx );
+	pxRadioPanel& EnableItem( int idx, bool enable=true );
 
 	int GetSelection() const;
 	wxWindowID GetSelectionId() const;

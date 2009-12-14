@@ -53,7 +53,7 @@ ConfigOverrides			OverrideOptions;
 
 static bool HandlePluginError( Exception::PluginError& ex )
 {
-	if( pxDialogExists( DialogId_CoreSettings ) ) return true;
+	if( pxDialogExists( L"CoreSettings" ) ) return true;
 
 	bool result = Msgbox::OkCancel( ex.FormatDisplayMessage() +
 		_("\n\nPress Ok to go to the Plugin Configuration Panel.")
@@ -64,7 +64,7 @@ static bool HandlePluginError( Exception::PluginError& ex )
 		g_Conf->SettingsTabName = L"Plugins";
 
 		// fixme: Send a message to the panel to select the failed plugin.
-		if( Dialogs::ConfigurationDialog().ShowModal() == wxID_CANCEL )
+		if( wxGetApp().IssueModalDialog( Dialogs::ConfigurationDialog::GetNameStatic() ) == wxID_CANCEL )
 			return false;
 	}
 	return result;
@@ -101,18 +101,6 @@ void Pcsx2App::PostPadKey( wxKeyEvent& evt )
 	}
 }
 
-int Pcsx2App::ThreadedModalDialog( DialogIdentifiers dialogId )
-{
-	AffinityAssert_AllowFromMain();
-
-	MsgboxEventResult result;
-	wxCommandEvent joe( pxEVT_OpenModalDialog, dialogId );
-	joe.SetClientData( &result );
-	AddPendingEvent( joe );
-	result.WaitForMe.WaitNoCancel();
-	return result.result;
-}
-
 // ----------------------------------------------------------------------------
 //         Pcsx2App Event Handlers
 // ----------------------------------------------------------------------------
@@ -130,54 +118,69 @@ void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 
 void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 {
-	using namespace Dialogs;
+	pxAssertDev( !evt.GetString().IsEmpty(), wxNullChar );
 
-	MsgboxEventResult& evtres( *((MsgboxEventResult*)evt.GetClientData()) );
-	switch( evt.GetId() )
+	MsgboxEventResult* evtres = (MsgboxEventResult*)evt.GetClientData();
+
+	wxWindowID result = IssueModalDialog( evt.GetString() );
+
+	if( evtres != NULL )
 	{
-		case DialogId_CoreSettings:
-		{
-			static int _guard = 0;
-			RecursionGuard guard( _guard );
-			if( guard.IsReentrant() ) return;
-			evtres.result = ConfigurationDialog().ShowModal();
-		}
-		break;
-
-		case DialogId_BiosSelector:
-		{
-			static int _guard = 0;
-			RecursionGuard guard( _guard );
-			if( guard.IsReentrant() ) return;
-			evtres.result = BiosSelectorDialog().ShowModal();
-		}
-		break;
-
-		case DialogId_LogOptions:
-		{
-			static int _guard = 0;
-			RecursionGuard guard( _guard );
-			if( guard.IsReentrant() ) return;
-			evtres.result = LogOptionsDialog().ShowModal();
-		}
-		break;
-
-		case DialogId_About:
-		{
-			static int _guard = 0;
-			RecursionGuard guard( _guard );
-			if( guard.IsReentrant() ) return;
-			evtres.result = AboutBoxDialog().ShowModal();
-		}
-		break;
+		evtres->result = result;
+		evtres->WaitForMe.Post();
 	}
-
-	evtres.WaitForMe.Post();
 }
 
-void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
+int Pcsx2App::IssueModalDialog( const wxString& dlgName )
 {
-	Msgbox::OnEvent( evt );
+	if( dlgName.IsEmpty() ) return wxID_CANCEL;
+	
+	if( !wxThread::IsMain() )
+	{
+		MsgboxEventResult result;
+		wxCommandEvent joe( pxEVT_OpenModalDialog );
+		joe.SetString( dlgName );
+		joe.SetClientData( &result );
+		AddPendingEvent( joe );
+		result.WaitForMe.WaitNoCancel();
+		return result.result;
+	}
+	
+	if( wxWindow* window = wxFindWindowByName( dlgName ) )
+	{
+		if( wxIsKindOf( window, wxDialog ) )
+		{
+			wxDialog* dialog = (wxDialog*)window;
+
+			window->SetFocus();
+			
+			// It's legal to call ShowModal on a non-modal dialog, therefore making
+			// it modal in nature for the needs of whatever other thread of action wants
+			// to block against it:
+
+			if( !dialog->IsModal() )
+			{
+				int result = dialog->ShowModal();
+				dialog->Destroy();
+				return result;
+			}
+		}
+	}
+	else
+	{
+		using namespace Dialogs;
+
+		if( dlgName == ConfigurationDialog::GetNameStatic() )
+			return ConfigurationDialog().ShowModal();
+		if( dlgName == BiosSelectorDialog::GetNameStatic() )
+			return BiosSelectorDialog().ShowModal();
+		if( dlgName == LogOptionsDialog::GetNameStatic() )
+			return LogOptionsDialog().ShowModal();
+		if( dlgName == AboutBoxDialog::GetNameStatic() )
+			return AboutBoxDialog().ShowModal();
+	}
+	
+	return wxID_CANCEL;
 }
 
 HashTools::HashMap<int, const GlobalCommandDescriptor*> GlobalAccels( 0, 0xffffffff );
@@ -227,15 +230,14 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	// ----------------------------------------------------------------------------
 	catch( Exception::BiosLoadFailed& ex )
 	{
-		bool result = Dialogs::ExtensibleConfirmation( NULL, ConfButtons().OK().Cancel(),
-			L"PS2 BIOS Error",
-			ex.FormatDisplayMessage() + BIOS_GetMsg_Required() + _("\nPress Ok to go to the BIOS Configuration Panel.")
-		).ShowModal() != wxID_CANCEL;
-
-		if( !result )
+		wxDialogWithHelpers dialog( NULL, _("PS2 BIOS Error"), wxVERTICAL );
+		dialog += dialog.Heading( ex.FormatDisplayMessage() + BIOS_GetMsg_Required() + _("\nPress Ok to go to the BIOS Configuration Panel.") );
+		dialog += new ModalButtonPanel( &dialog, MsgButtons().OKCancel() );
+		
+		if( dialog.ShowModal() == wxID_CANCEL )
 			Console.Warning( "User denied option to re-configure BIOS." );
 
-		if( Dialogs::BiosSelectorDialog().ShowModal() != wxID_CANCEL )
+		if( IssueModalDialog( Dialogs::BiosSelectorDialog::GetNameStatic() ) != wxID_CANCEL )
 		{
 			SysExecute();
 		}
@@ -268,15 +270,22 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	// ----------------------------------------------------------------------------
 	catch( Exception::ThreadTimedOut& ex )
 	{
+		// [TODO]  Bind a listener to the CoreThread status, and automatically close the dialog
+		// if the thread starts responding while we're waiting (not hard in fact, but I'm getting
+		// a little tired, so maybe later!)  --air
+	
 		Console.Warning( ex.FormatDiagnosticMessage() );
-		int result = Dialogs::ExtensibleConfirmation( NULL, ConfButtons().Ignore().Cancel().Custom( _("Terminate") ),
-			_("PCSX2 Unresponsive Thread"), ex.FormatDisplayMessage() + L"\n\n" +
+		wxDialogWithHelpers dialog( NULL, _("PCSX2 Unresponsive Thread"), wxVERTICAL );
+		
+		dialog += dialog.Heading( ex.FormatDisplayMessage() + L"\n\n" +
 			pxE( ".Popup Error:Thread Deadlock Actions",
 				L"'Ignore' to continue waiting for the thread to respond.\n"
 				L"'Cancel' to attempt to cancel the thread.\n"
 				L"'Terminate' to quit PCSX2 immediately.\n"
 			)
-		).ShowModal();
+		);
+
+		int result = pxIssueConfirmation( dialog, MsgButtons().Ignore().Cancel().Custom( _("Terminate") ) );
 		
 		if( result == pxID_CUSTOM )
 		{
@@ -386,14 +395,14 @@ int Pcsx2App::OnExit()
 // is a matter of programmer preference).
 MainEmuFrame& Pcsx2App::GetMainFrame() const
 {
-	pxAssert( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
-	pxAssert( m_MainFrame != NULL );
+	pxAssume( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
+	pxAssume( m_MainFrame != NULL );
 	return *m_MainFrame;
 }
 
 GSFrame& Pcsx2App::GetGSFrame() const
 {
-	pxAssert( m_gsFrame != NULL );
+	pxAssume( m_gsFrame != NULL );
 	return *m_gsFrame;
 }
 
@@ -594,6 +603,8 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 // Full system reset stops the core thread and unloads all core plugins *completely*.
 void Pcsx2App::SysReset()
 {
+	StateCopy_Clear();
+
 	CoreThread.Reset();
 	CoreThread.ReleaseResumeLock();
 	m_CorePlugins = NULL;

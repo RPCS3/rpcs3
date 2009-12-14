@@ -45,6 +45,32 @@ namespace Exception
 	};
 }
 
+static void CpuCheckSSE2()
+{
+	if( x86caps.hasStreamingSIMD2Extensions ) return;
+
+	// Only check once per process session:
+	static bool checked = false;
+	if( checked ) return;
+	checked = true;
+
+	wxDialogWithHelpers exconf( NULL, _("PCSX2 - SSE2 Recommended"), wxVERTICAL );
+
+	exconf += exconf.Heading( pxE( ".Error:Startup:NoSSE2",
+		L"Warning: Your computer does not support SSE2, which is required by many PCSX2 recompilers and plugins. "
+		L"Your options will be limited and emulation will be *very* slow." )
+	);
+
+	pxIssueConfirmation( exconf, MsgButtons().OK(), L"Error:Startup:NoSSE2" );
+
+	// Auto-disable anything that needs SSE2:
+
+	g_Conf->EmuOptions.Cpu.Recompiler.EnableEE	= false;
+	g_Conf->EmuOptions.Cpu.Recompiler.EnableVU0	= false;
+	g_Conf->EmuOptions.Cpu.Recompiler.EnableVU1	= false;
+}
+
+
 void Pcsx2App::OpenWizardConsole()
 {
 	if( !IsDebugBuild ) return;
@@ -81,8 +107,7 @@ void Pcsx2App::ReadUserModeSettings()
 
 	if (IOP_ENABLE_SIF_HACK == 1)
 	{
-		wxDialogWithHelpers hackedVersion( NULL, wxID_ANY, _("It will devour your young! - PCSX2 Shub-Niggurath edition"), false );
-		hackedVersion.SetIdealWidth( 575 );
+		wxDialogWithHelpers hackedVersion( NULL, _("It will devour your young! - PCSX2 Shub-Niggurath edition"), wxVERTICAL );
 
 		hackedVersion.SetSizer( new wxBoxSizer( wxVERTICAL ) );
 		hackedVersion += new pxStaticText( &hackedVersion,
@@ -92,8 +117,6 @@ void Pcsx2App::ReadUserModeSettings()
 		);
 		
 		hackedVersion += new wxButton( &hackedVersion, wxID_OK ) | pxSizerFlags::StdCenter();
-		hackedVersion.Fit();
-		hackedVersion.CentreOnScreen();
 		hackedVersion.ShowModal();
 	}
 
@@ -101,8 +124,7 @@ void Pcsx2App::ReadUserModeSettings()
 	{
 		// Pre-Alpha Warning!  Why didn't I think to add this sooner?!
 		
-		wxDialogWithHelpers preAlpha( NULL, wxID_ANY, _("It might devour your kittens! - PCSX2 0.9.7 Pre-Alpha"), false );
-		preAlpha.SetIdealWidth( 575 );
+		wxDialogWithHelpers preAlpha( NULL, _("It might devour your kittens! - PCSX2 0.9.7 Pre-Alpha"), wxVERTICAL );
 
 		preAlpha.SetSizer( new wxBoxSizer( wxVERTICAL ) );
 		preAlpha += new pxStaticText( &preAlpha,
@@ -113,8 +135,6 @@ void Pcsx2App::ReadUserModeSettings()
 		);
 		
 		preAlpha += new wxButton( &preAlpha, wxID_OK ) | pxSizerFlags::StdCenter();
-		preAlpha.Fit();
-		preAlpha.CentreOnScreen();
 		preAlpha.ShowModal();
 	
 		// first time startup, so give the user the choice of user mode:
@@ -243,6 +263,15 @@ typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
 // ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
 {
+#define pxMessageBoxEventThing(func) \
+	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
+
+	Connect( pxEVT_MSGBOX,			pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
+	Connect( pxEVT_ASSERTION,		pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
+	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
+
+	pxDoAssert = AppDoAssert;
+
 	g_Conf = new AppConfig();
 	EnableAllLogging();
 
@@ -253,12 +282,6 @@ bool Pcsx2App::OnInit()
 	m_StderrRedirHandle = NewPipeRedir(stderr);
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
-#define pxMessageBoxEventThing(func) \
-	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
-
-	Connect( pxEVT_MSGBOX,			pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-	Connect( pxEVT_CallStackBox,	pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
 	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
 	Connect( pxEVT_SysExecute,		wxCommandEventHandler( Pcsx2App::OnSysExecute ) );
 
@@ -286,8 +309,20 @@ bool Pcsx2App::OnInit()
 
 		m_Resources = new pxAppResources();
 
+		cpudetectInit();
+
+		if( !x86caps.hasMultimediaExtensions )
+		{
+			// Note: due to memcpy_fast, we need minimum MMX even for interpreters.  This will
+			// hopefully change later once we have a dynamically recompiled memcpy.
+			Msgbox::Alert( _("PCSX2 requires cpu with MMX instruction to run.  Press OK to close."), _("PCSX2 - MMX Required") );
+			return false;
+		}
+
 		ReadUserModeSettings();
 		AppConfig_OnChangedSettingsFolder();
+
+		CpuCheckSSE2();
 
 	    m_MainFrame = new MainEmuFrame( NULL, L"PCSX2" );
 		m_MainFrame->PushEventHandler( &GetRecentIsoList() );
@@ -307,7 +342,8 @@ bool Pcsx2App::OnInit()
 		SetExitOnFrameDelete( true );	// but being explicit doesn't hurt...
 	    m_MainFrame->Show();
 
-		SysDetect();
+		SysLogMachineCaps();
+
 		AppApplySettings();
 
 #ifdef __WXMSW__
@@ -317,46 +353,71 @@ bool Pcsx2App::OnInit()
 
 		m_CoreAllocs = new SysCoreAllocations();
 
+
 		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
 		{
 			// HadSomeFailures only returns 'true' if an *enabled* cpu type fails to init.  If
 			// the user already has all interps configured, for example, then no point in
 			// popping up this dialog.
+			
+			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)"), wxVERTICAL );
 
-			// TODO : This should be redone using the ExtensibleConfirmation, and a sub-window
-			// (static text or something with a vertical scrollbar).
+			exconf += 12;
+			exconf += exconf.Heading( pxE( ".Error:RecompilerInit",
+				L"Warning: Some of the configured PS2 recompilers failed to initialize and will not be available for this session:\n" )
+			);
 
-			wxString message( _("The following cpu recompilers failed to initialize and will not be available:\n\n") );
+			wxTextCtrl* scrollableTextArea = new wxTextCtrl(
+				&exconf, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+				wxTE_READONLY | wxTE_MULTILINE | wxTE_WORDWRAP
+			);
 
+			exconf += scrollableTextArea	| pxSizerFlags::StdExpand();
+			
 			if( !m_CoreAllocs->IsRecAvailable_EE() )
 			{
-				message += L"\t* R5900 (EE)\n";
+				scrollableTextArea->AppendText( L"* R5900 (EE)\n\n" );
+
+				g_Conf->EmuOptions.Recompiler.EnableEE = false;
 			}
 
 			if( !m_CoreAllocs->IsRecAvailable_IOP() )
 			{
-				message += L"\t* R3000A (IOP)\n";
+				scrollableTextArea->AppendText( L"* R3000A (IOP)\n\n" );
+				g_Conf->EmuOptions.Recompiler.EnableIOP = false;
 			}
 
 			if( !m_CoreAllocs->IsRecAvailable_MicroVU0() )
 			{
-				message += L"\t* microVU0\n";
+				scrollableTextArea->AppendText( L"* microVU0\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= false;
+				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && m_CoreAllocs->IsRecAvailable_SuperVU0();
 			}
 
 			if( !m_CoreAllocs->IsRecAvailable_MicroVU1() )
 			{
-				message += L"\t* microVU1\n";
+				scrollableTextArea->AppendText( L"* microVU1\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= false;
+				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && m_CoreAllocs->IsRecAvailable_SuperVU1();
 			}
 
 			if( !m_CoreAllocs->IsRecAvailable_SuperVU0() )
 			{
-				message += L"\t* SuperVU0\n";
+				scrollableTextArea->AppendText( L"* SuperVU0\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= m_CoreAllocs->IsRecAvailable_MicroVU0();
+				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && g_Conf->EmuOptions.Recompiler.UseMicroVU0;
 			}
 
 			if( !m_CoreAllocs->IsRecAvailable_SuperVU1() )
 			{
-				message += L"\t* SuperVU1\n";
+				scrollableTextArea->AppendText( L"* SuperVU1\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= m_CoreAllocs->IsRecAvailable_MicroVU1();
+				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && g_Conf->EmuOptions.Recompiler.UseMicroVU1;
 			}
+
+			exconf += new ModalButtonPanel( &exconf, MsgButtons().OK() ) | pxSizerFlags::StdCenter();
+
+			exconf.ShowModal();
 
 			// Failures can be SSE-related OR memory related.  Should do per-cpu error reports instead...
 
@@ -367,8 +428,8 @@ bool Pcsx2App::OnInit()
 				L"Interpreters can be very slow, so don't get too excited.  Press OK to continue or CANCEL to close PCSX2."
 			);*/
 
-			if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
-				return false;
+			//if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
+			//	return false;
 		}
 
 		LoadPluginsPassive( NULL );
@@ -408,13 +469,16 @@ void Pcsx2App::CleanupMess()
 		if( m_CorePlugins )
 			m_CorePlugins->Shutdown();
 	}
+	catch( Exception::ThreadTimedOut& )		{ throw; }
+	catch( Exception::CancelEvent& )		{ throw; }
 	catch( Exception::RuntimeError& ex )
 	{
 		// Handle runtime errors gracefully during shutdown.  Mostly these are things
 		// that we just don't care about by now, and just want to "get 'er done!" so
 		// we can exit the app. ;)
 
-		Console.Error( ex.FormatDiagnosticMessage() );
+		Console.Error( L"Runtime exception handled during CleanupMess:\n" );
+		Console.Indent().Error( ex.FormatDiagnosticMessage() );
 	}
 	
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
@@ -427,6 +491,8 @@ void Pcsx2App::CleanupMess()
 
 	while( wxGetLocale() != NULL )
 		delete wxGetLocale();
+
+	pxDoAssert = pxAssertImpl_LogIt;
 }
 
 Pcsx2App::Pcsx2App() 
@@ -441,6 +507,8 @@ Pcsx2App::Pcsx2App()
 
 Pcsx2App::~Pcsx2App()
 {
+	pxDoAssert = pxAssertImpl_LogIt;
+
 	// Typically OnExit cleans everything up before we get here, *unless* we cancel
 	// out of program startup in OnInit (return false) -- then remaining cleanup needs
 	// to happen here in the destructor.
@@ -485,6 +553,6 @@ struct CrtDebugBreak
 	}
 };
 
-//CrtDebugBreak breakAt( 4327 );
+//CrtDebugBreak breakAt( 1175 );
 
 #endif

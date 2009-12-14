@@ -62,7 +62,7 @@ protected:
 // implemented by the provisioning interface.
 extern SysCoreAllocations& GetSysCoreAlloc();
 
-extern void SysDetect();				// Detects cpu type and fills cpuInfo structs.
+extern void SysLogMachineCaps();				// Detects cpu type and fills cpuInfo structs.
 extern void SysClearExecutionCache();	// clears recompiled execution caches!
 
 
@@ -106,6 +106,7 @@ extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
 //
 
 class pxMessageBoxEvent;
+class pxAssertionEvent;
 
 namespace Msgbox
 {
@@ -116,10 +117,9 @@ namespace Msgbox
 	extern bool YesNo( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_QUESTION );
 
 	extern int  Assertion( const wxString& text, const wxString& stacktrace );
-	extern void Except( const Exception::BaseException& src );
 }
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_MSGBOX, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_CallStackBox, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_ASSERTION, -1 )
 END_DECLARE_EVENT_TYPES()

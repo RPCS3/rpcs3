@@ -154,7 +154,7 @@ public:
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
 	wxLanguage	LanguageId;
 
-	int			RecentFileCount;		// number of files displayed in the Recent Isos list.
+	int			RecentIsoCount;		// number of files displayed in the Recent Isos list.
 
 	// String value describing the desktop theme to use for pcsk2 (icons and background images)
 	// The theme name is used to look up files in the themes folder (relative to the executable).

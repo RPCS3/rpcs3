@@ -31,6 +31,7 @@ protected:
 	EventListenerBinding<int>	m_Listener_SettingsApplied;
 	wxTimer						m_HideMouseTimer;
 	bool						m_CursorShown;
+	bool						m_HasFocus;
 
 public:
 	GSPanel( wxWindow* parent );
@@ -49,6 +50,8 @@ protected:
 	void OnShowMouse( wxMouseEvent& evt );
 	void OnHideMouseTimeout( wxTimerEvent& evt );
 	void OnKeyDown( wxKeyEvent& evt );
+	void OnFocus( wxFocusEvent& evt );
+	void OnFocusLost( wxFocusEvent& evt );
 };
 
 // --------------------------------------------------------------------------------------

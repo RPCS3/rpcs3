@@ -21,9 +21,11 @@
 
 using namespace Panels;
 
-Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent, int id )
-	: wxDialogWithHelpers( parent, id, _("High Volume Logging"), true )
+Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent )
+	: wxDialogWithHelpers( parent, _("Trace Logging"), true )
 {
+	SetName( GetNameStatic() );
+
 	m_idealWidth = 480;
 
 	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );

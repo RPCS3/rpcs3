@@ -20,22 +20,6 @@
 
 using namespace Threading;
 
-
-#if !PCSX2_SEH
-#	include <setjmp.h>
-
-	// Platforms without SEH need to use SetJmp / LongJmp to deal with exiting the recompiled
-	// code execution pipelines in an efficient manner, since standard C++ exceptions cannot
-	// unwind across dynamically recompiled code.
-
-	enum
-	{
-		SetJmp_Dispatcher = 1,
-		SetJmp_Exit,
-	};
-
-#endif
-
 // --------------------------------------------------------------------------------------
 //  ISysThread
 // --------------------------------------------------------------------------------------
@@ -208,8 +192,10 @@ public:
 	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void OnResumeReady();
 	virtual void Reset();
+	virtual void RecoverState();
 	virtual void Cancel( bool isBlocking=true );
-
+	virtual bool Cancel( const wxTimeSpan& timeout );
+	
 	bool HasValidState()
 	{
 		return m_hasValidState;

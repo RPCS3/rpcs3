@@ -312,7 +312,7 @@ AppConfig::AppConfig()
 	, DeskTheme( L"default" )
 {
 	LanguageId			= wxLANGUAGE_DEFAULT;
-	RecentFileCount		= 6;
+	RecentIsoCount		= 12;
 	Listbook_ImageSize	= 32;
 	Toolbar_ImageSize	= 24;
 	Toolbar_ShowLabels	= true;
@@ -378,7 +378,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( MainGuiPosition );
 	IniEntry( SettingsTabName );
 	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
-	IniEntry( RecentFileCount );
+	IniEntry( RecentIsoCount );
 	IniEntry( DeskTheme );
 	IniEntry( Listbook_ImageSize );
 	IniEntry( Toolbar_ImageSize );

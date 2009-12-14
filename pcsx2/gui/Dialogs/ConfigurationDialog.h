@@ -33,7 +33,9 @@ namespace Dialogs
 
 	public:
 		virtual ~ConfigurationDialog() throw();
-		ConfigurationDialog(wxWindow* parent=NULL, int id=DialogId_CoreSettings);
+		ConfigurationDialog(wxWindow* parent=NULL);
+
+		static const wxChar* GetNameStatic() { return L"Dialog:CoreSettings"; }
 
 	protected:
 		template< typename T >
@@ -43,6 +45,8 @@ namespace Dialogs
 		void OnCancel_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
 		void OnScreenshot_Click( wxCommandEvent& evt );
+		
+		void OnCloseWindow( wxCloseEvent& evt );
 
 		virtual void OnSomethingChanged( wxCommandEvent& evt )
 		{
@@ -54,14 +58,15 @@ namespace Dialogs
 		}
 	};
 
-
 	class BiosSelectorDialog : public wxDialogWithHelpers
 	{
 	protected:
 
 	public:
 		virtual ~BiosSelectorDialog()  throw() {}
-		BiosSelectorDialog( wxWindow* parent=NULL, int id=DialogId_BiosSelector );
+		BiosSelectorDialog( wxWindow* parent=NULL );
+
+		static const wxChar* GetNameStatic() { return L"Dialog:BiosSelector"; }
 
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );

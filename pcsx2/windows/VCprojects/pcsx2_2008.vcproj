@@ -1848,6 +1848,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Dialogs\AssertionDialog.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Dialogs\ConfigurationDialog.cpp"
 					>
 				</File>

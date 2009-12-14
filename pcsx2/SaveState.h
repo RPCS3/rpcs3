@@ -204,7 +204,9 @@ public:
 extern bool StateCopy_IsValid();
 
 extern void StateCopy_FreezeToMem();
-extern void StateCopy_ThawFromMem();
+extern void StateCopy_FreezeToMem_Blocking();
+extern void StateCopy_ThawFromMem_Blocking();
+
 extern void StateCopy_SaveToFile( const wxString& file );
 extern void StateCopy_LoadFromFile( const wxString& file );
 extern void StateCopy_SaveToSlot( uint num );

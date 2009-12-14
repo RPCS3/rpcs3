@@ -3,7 +3,7 @@
  *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
- *  ation, either version 3 of the License, or (at your option) any later version.
+ *  ation, either version 3 of te License, or (at your option) any later version.
  *
  *  PCSX2 is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
@@ -22,7 +22,10 @@
 
 class _BaseStateThread;
 
+// Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
 static SafeArray<u8> state_buffer;
+
+_BaseStateThread* current_state_thread = NULL;
 
 // Simple lock boolean for the state buffer being in use by a thread.
 static NonblockingMutex state_buffer_lock;
@@ -56,9 +59,22 @@ class _BaseStateThread : public PersistentThread
 protected:
 	EventListenerBinding<AppEventType> m_bind_OnExit;
 
+	bool	m_isStarted;
+
+	// Holds the pause/suspend state of the emulator when the state load/stave chain of action is started,
+	// so that the proper state can be restoed automatically on completion.
+	bool	m_resume_when_done;
+
 public:
 	virtual ~_BaseStateThread() throw()
 	{
+		if( !m_isStarted ) return;
+
+		// Assertion fails because C++ changes the 'this' pointer to the base class since
+		// derived classes have been deallocated at this point the destructor!
+
+		//pxAssumeDev( current_state_thread == this, wxCharNull );
+		current_state_thread = NULL;
 		state_buffer_lock.Release();		// just in case;
 	}
 
@@ -67,14 +83,18 @@ protected:
 		m_bind_OnExit( wxGetApp().Source_AppStatus(), EventListener<AppEventType>( this, StateThread_OnAppStatus ) )
 	{
 		Callback_FreezeFinished = onFinished;
-		m_name = L"StateThread::" + fromUTF8(name);
+		m_name					= L"StateThread::" + fromUTF8(name);
+		m_isStarted				= false;
+		m_resume_when_done		= false;
 	}
 
 	void OnStart()
 	{
 		if( !state_buffer_lock.TryAcquire() )
 			throw Exception::CancelEvent( m_name + L"request ignored: state copy buffer is already locked!" );
-			
+
+		current_state_thread = this;
+		m_isStarted = true;
 		_parent::OnStart();
 	}
 
@@ -83,6 +103,7 @@ protected:
 		wxCommandEvent evt( pxEVT_FreezeThreadFinished );
 		evt.SetClientData( this );
 		evt.SetInt( type );
+		evt.SetExtraLong( m_resume_when_done );
 		wxGetApp().AddPendingEvent( evt );
 	}
 
@@ -107,7 +128,7 @@ protected:
 	{
 		_parent::OnStart();
 		++sys_resume_lock;
-		CoreThread.Pause();
+		m_resume_when_done = CoreThread.Pause();
 	}
 
 	void ExecuteTaskInThread()
@@ -118,43 +139,6 @@ protected:
 	void OnCleanupInThread()
 	{
 		SendFinishEvent( StateThreadAction_Create );
-		_parent::OnCleanupInThread();
-	}
-};
-
-// --------------------------------------------------------------------------------------
-//   StateThread_Thaw
-// --------------------------------------------------------------------------------------
-class StateThread_Thaw : public _BaseStateThread
-{
-	typedef _BaseStateThread _parent;
-
-public:
-	StateThread_Thaw( FnType_OnThreadComplete* onFinished ) : _BaseStateThread( "Thaw", onFinished ) { }
-	
-protected:
-	void OnStart()
-	{
-		_parent::OnStart();
-
-		if( state_buffer.IsDisposed() )
-		{
-			state_buffer_lock.Release();
-			throw Exception::RuntimeError( "ThawState request made, but no valid state exists!" );
-		}
-
-		++sys_resume_lock;
-		CoreThread.Pause();
-	}
-
-	void ExecuteTaskInThread()
-	{
-		memLoadingState( state_buffer ).FreezeAll();
-	}
-	
-	void OnCleanupInThread()
-	{
-		SendFinishEvent( StateThreadAction_Restore );
 		_parent::OnCleanupInThread();
 	}
 };
@@ -171,14 +155,15 @@ protected:
 	gzFile			m_gzfp;
 
 public:
-	StateThread_ZipToDisk( FnType_OnThreadComplete* onFinished, const wxString& file ) :
-		_BaseStateThread( "ZipToDisk", onFinished )
-	,	m_filename( file )
-	,	m_gzfp( NULL )
+	StateThread_ZipToDisk( FnType_OnThreadComplete* onFinished, bool resume_done, const wxString& file )
+		: _BaseStateThread( "ZipToDisk", onFinished )
+		, m_filename( file )
 	{
+		m_gzfp				= NULL;
+		m_resume_when_done	= resume_done;
 	}
 
-	~StateThread_ZipToDisk() throw()
+	virtual ~StateThread_ZipToDisk() throw()
 	{
 		if( m_gzfp != NULL ) gzclose( m_gzfp );
 	}
@@ -232,15 +217,16 @@ protected:
 	bool			m_finished;
 	
 public:
-	StateThread_UnzipFromDisk( FnType_OnThreadComplete* onFinished, const wxString& file ) :
-		_BaseStateThread( "UnzipFromDisk", onFinished )
-	,	m_filename( file )
-	,	m_gzfp( NULL )
-	,	m_finished( false )
+	StateThread_UnzipFromDisk( FnType_OnThreadComplete* onFinished, bool resume_done, const wxString& file )
+		: _BaseStateThread( "UnzipFromDisk", onFinished )
+		, m_filename( file )
 	{
+		m_gzfp				= NULL;
+		m_finished			= false;
+		m_resume_when_done	= resume_done;
 	}
 
-	~StateThread_UnzipFromDisk() throw()
+	virtual ~StateThread_UnzipFromDisk() throw()
 	{
 		if( m_gzfp != NULL ) gzclose( m_gzfp );
 	}
@@ -297,32 +283,17 @@ void Pcsx2App::OnFreezeThreadFinished( wxCommandEvent& evt )
 	}
 	
 	if( fn_tmp != NULL ) fn_tmp( evt );
-
-	//m_evtsrc_FreezeThreadFinished.Dispatch( evt );
 }
 
-void OnFinished_Resume( const wxCommandEvent& evt )
+static void OnFinished_Resume( const wxCommandEvent& evt )
 {
-	if( evt.GetInt() == StateThreadAction_Restore )
-	{
-		// Successfully restored state, so remove the copy.  Don't remove it sooner
-		// because the thread may have failed with some exception/error.
-
-		state_buffer.Dispose();
-		SysClearExecutionCache();
-	}
-
-	CoreThread.Resume();
-}
-
-void OnFinished_Dispose( const wxCommandEvent& evt )
-{
-	state_buffer.Dispose();
+	CoreThread.RecoverState();
+	if( evt.GetExtraLong() ) CoreThread.Resume();
 }
 
 static wxString zip_dest_filename;
 
-void OnFinished_ZipToDisk( const wxCommandEvent& evt )
+static void OnFinished_ZipToDisk( const wxCommandEvent& evt )
 {
 	if( !pxAssertDev( evt.GetInt() == StateThreadAction_Create, "Unexpected StateThreadAction value, aborting save." ) ) return;
 
@@ -331,19 +302,11 @@ void OnFinished_ZipToDisk( const wxCommandEvent& evt )
 		Console.Warning( "Cannot save state to disk: empty filename specified." );
 		return;
 	}
-		
+
 	// Phase 2: Record to disk!!
-	(new StateThread_ZipToDisk( OnFinished_Dispose, zip_dest_filename ))->Start();
+	(new StateThread_ZipToDisk( NULL, !!evt.GetExtraLong(), zip_dest_filename ))->Start();
 	
 	CoreThread.Resume();
-}
-
-void OnFinished_Restore( const wxCommandEvent& evt )
-{
-	if( !pxAssertDev( evt.GetInt() == StateThreadAction_UnzipFromDisk, "Unexpected StateThreadAction value, aborting restore." ) ) return;
-
-	// Phase 2: Restore over existing VM state!!
-	(new StateThread_Thaw( OnFinished_Resume ))->Start();
 }
 
 
@@ -362,8 +325,8 @@ void StateCopy_SaveToFile( const wxString& file )
 void StateCopy_LoadFromFile( const wxString& file )
 {
 	if( state_buffer_lock.IsLocked() ) return;
-	CoreThread.Pause();
-	(new StateThread_UnzipFromDisk( OnFinished_Restore, file ))->Start();
+	bool resume_when_done = CoreThread.Pause();
+	(new StateThread_UnzipFromDisk( OnFinished_Resume, resume_when_done, file ))->Start();
 }
 
 // Saves recovery state info to the given saveslot, or saves the active emulation state
@@ -394,13 +357,13 @@ void StateCopy_LoadFromSlot( uint slot )
 	Console.WriteLn( Color_StrongGreen, "Loading savestate from slot %d...", slot );
 	Console.Indent().WriteLn( Color_StrongGreen, L"filename: %s", file.c_str() );
 
-	CoreThread.Pause();
-	(new StateThread_UnzipFromDisk( OnFinished_Restore, file ))->Start();
+	bool resume_when_done = CoreThread.Pause();
+	(new StateThread_UnzipFromDisk( OnFinished_Resume, resume_when_done, file ))->Start();
 }
 
 bool StateCopy_IsValid()
 {
-	return !state_buffer.IsDisposed();
+return !state_buffer.IsDisposed();
 }
 
 const SafeArray<u8>* StateCopy_GetBuffer()
@@ -412,20 +375,45 @@ const SafeArray<u8>* StateCopy_GetBuffer()
 void StateCopy_FreezeToMem()
 {
 	if( state_buffer_lock.IsLocked() ) return;
-	(new StateThread_Freeze( OnFinished_Restore ))->Start();
+	(new StateThread_Freeze( OnFinished_Resume ))->Start();
 }
 
-void StateCopy_ThawFromMem()
+static void _acquire_and_block()
 {
-	if( state_buffer_lock.IsLocked() ) return;
-	new StateThread_Thaw( OnFinished_Restore );
+	if( state_buffer_lock.TryAcquire() ) return;
+
+	/*
+	// If the state buffer is locked and we're being called from the main thread then we need
+	// to cancel the current action.  This is needed because state_buffer_lock is only updated
+	// from events handled on the main thread.
+
+	if( wxThread::IsMain() )
+		throw Exception::CancelEvent( "Blocking ThawFromMem canceled due to existing state buffer lock." );
+	else*/
+	{
+		pxAssume( current_state_thread != NULL );
+		do  {
+			current_state_thread->Block();
+			wxGetApp().ProcessPendingEvents();		// Trying this for now, may or may not work due to recursive pitfalls (see above)
+		} while ( !state_buffer_lock.TryAcquire() );
+	}
 }
 
-void State_ThawFromMem_Blocking()
+void StateCopy_FreezeToMem_Blocking()
 {
-	if( !state_buffer_lock.TryAcquire() )
+	_acquire_and_block();
+
+	memSavingState( state_buffer ).FreezeAll();
+	state_buffer_lock.Release();
+}
+
+// Copies the saved state into the active VM, and automatically free's the saved state data.
+void StateCopy_ThawFromMem_Blocking()
+{
+	_acquire_and_block();
 
 	memLoadingState( state_buffer ).FreezeAll();
+	state_buffer.Dispose();
 	state_buffer_lock.Release();
 }
 
@@ -439,3 +427,4 @@ bool StateCopy_IsBusy()
 {
 	return state_buffer_lock.IsLocked();
 }
+   

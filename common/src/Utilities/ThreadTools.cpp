@@ -37,6 +37,61 @@ const wxTimeSpan	Threading::def_yieldgui_interval( 0, 0, 0, 100 );
 // three second interval for deadlock protection on waitgui.
 const wxTimeSpan	Threading::def_deadlock_timeout( 0, 0, 3, 0 );
 
+//static __threadlocal PersistentThread* tls_current_thread = NULL;
+
+static pthread_key_t	curthread_key = NULL;
+static s32				total_key_count = 0;
+static Mutex			total_key_lock;
+
+static void make_curthread_key()
+{
+	ScopedLock lock( total_key_lock );
+	if( total_key_count++ != 0 ) return;
+
+	if( 0 != pthread_key_create(&curthread_key, NULL) )
+	{
+		Console.Error( "Thread key creation failed (probably out of memory >_<)" );
+		curthread_key = NULL;
+	}
+}
+
+static void unmake_curthread_key()
+{
+	ScopedLock lock( total_key_lock );
+	if( --total_key_count > 0 ) return;
+
+	if( curthread_key != NULL )
+		pthread_key_delete( curthread_key );
+
+	curthread_key = NULL;
+}
+
+
+// Returns a handle to the current persistent thread.  If the current thread does not belong
+// to the PersistentThread table, NULL is returned.  Since the main/ui thread is not created
+// through PersistentThread it will also return NULL.  Callers can use wxThread::IsMain() to
+// test if the NULL thread is the main thread.
+PersistentThread* Threading::pxGetCurrentThread()
+{
+	return (curthread_key==NULL) ? NULL : (PersistentThread*)pthread_getspecific( curthread_key );
+}
+
+// returns the name of the current thread, or "Unknown" if the thread is neither a PersistentThread
+// nor the Main/UI thread.
+wxString Threading::pxGetCurrentThreadName()
+{
+	if( PersistentThread* thr = pxGetCurrentThread() )
+	{
+		return thr->GetName();
+	}
+	else if( wxThread::IsMain() )
+	{
+		return L"Main/UI";
+	}
+
+	return L"Unknown";
+}
+
 // (intended for internal use only)
 // Returns true if the Wait is recursive, or false if the Wait is safe and should be
 // handled via normal yielding methods.
@@ -81,7 +136,7 @@ Threading::PersistentThread::PersistentThread()
 // This destructor performs basic "last chance" cleanup, which is a blocking join
 // against the thread. Extending classes should almost always implement their own
 // thread closure process, since any PersistentThread will, by design, not terminate
-// unless it has been properly canceled.
+// unless it has been properly canceled (resulting in deadlock).
 //
 // Thread safety: This class must not be deleted from its own thread.  That would be
 // like marrying your sister, and then cheating on her with your daughter.
@@ -116,14 +171,24 @@ Threading::PersistentThread::~PersistentThread() throw()
 	DESTRUCTOR_CATCHALL
 }
 
-bool Threading::PersistentThread::AffinityAssert_AllowFromSelf() const
+bool Threading::PersistentThread::AffinityAssert_AllowFromSelf( const DiagnosticOrigin& origin ) const
 {
-	return pxAssertMsg( IsSelf(), wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", m_name.c_str() ) );
+	if( IsSelf() ) return true;
+
+	if( IsDevBuild )
+		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call allowed from '%s' thread only.", m_name.c_str() ) );
+
+	return false;
 }
 
-bool Threading::PersistentThread::AffinityAssert_DisallowFromSelf() const
+bool Threading::PersistentThread::AffinityAssert_DisallowFromSelf( const DiagnosticOrigin& origin ) const
 {
-	return pxAssertMsg( !IsSelf(), wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", m_name.c_str() ) );
+	if( !IsSelf() ) return true;
+
+	if( IsDevBuild )
+		pxOnAssert( origin, wxsFormat( L"Thread affinity violation: Call is *not* allowed from '%s' thread.", m_name.c_str() ) );
+
+	return false;
 }
 
 void Threading::PersistentThread::FrankenMutex( Mutex& mutex )
@@ -157,7 +222,29 @@ void Threading::PersistentThread::Start()
 	m_except = NULL;
 
 	if( pthread_create( &m_thread, NULL, _internal_callback, this ) != 0 )
-		throw Exception::ThreadCreationError();
+		throw Exception::ThreadCreationError( this );
+
+	if( !m_sem_startup.WaitWithoutYield( wxTimeSpan( 0, 0, 3, 0 ) ) )
+	{
+		RethrowException();
+
+		// And if the thread threw nothing of its own:
+		throw Exception::ThreadCreationError( this, "(%s thread) Start error: created thread never posted startup semaphore." );
+	}
+
+	// Event Rationale (above): Performing this semaphore wait on the created thread is "slow" in the
+	// sense that it stalls the calling thread completely until the new thread is created
+	// (which may not always be desirable).  But too bad.  In order to safely use 'running' locks
+	// and detachment management, this *has* to be done.  By rule, starting new threads shouldn't
+	// be done very often anyway, hence the concept of Threadpooling for rapidly rotating tasks.
+	// (and indeed, this semaphore wait might, in fact, be very swift compared to other kernel
+	// overhead in starting threads).
+	
+	// (this could also be done using operating system specific calls, since any threaded OS has
+	// functions that allow us to see if a thread is running or not, and to block against it even if
+	// it's been detached -- removing the need for m_lock_InThread and the semaphore wait above.  But
+	// pthreads kinda lacks that stuff, since pthread_join() has no timeout option making it im-
+	// possible to safely block against a running thread)
 }
 
 // Returns: TRUE if the detachment was performed, or FALSE if the thread was
@@ -165,10 +252,25 @@ void Threading::PersistentThread::Start()
 // This function should not be called from the owner thread.
 bool Threading::PersistentThread::Detach()
 {
-	AffinityAssert_DisallowFromSelf();
+	AffinityAssert_DisallowFromSelf(pxDiagSpot);
 
 	if( _InterlockedExchange( &m_detached, true ) ) return false;
 	pthread_detach( m_thread );
+	return true;
+}
+
+bool Threading::PersistentThread::_basecancel()
+{
+	// Prevent simultaneous startup and cancel:
+	if( !m_running ) return false;
+
+	if( m_detached )
+	{
+		Console.Warning( "(Thread Warning) Ignoring attempted cancellation of detached thread." );
+		return false;
+	}
+
+	pthread_cancel( m_thread );
 	return true;
 }
 
@@ -183,32 +285,39 @@ bool Threading::PersistentThread::Detach()
 // Parameters:
 //   isBlocking - indicates if the Cancel action should block for thread completion or not.
 //
+// Exceptions raised by the blocking thread will be re-thrown into the main thread.  If isBlocking
+// is false then no exceptions will occur.
+//
 void Threading::PersistentThread::Cancel( bool isBlocking )
 {
-	AffinityAssert_DisallowFromSelf();
+	AffinityAssert_DisallowFromSelf( pxDiagSpot );
 
-	{
-		// Prevent simultaneous startup and cancel:
-		ScopedLock startlock( m_lock_start );
-		if( !m_running ) return;
+	// Prevent simultaneous startup and cancel, necessary to avoid 
+	ScopedLock startlock( m_lock_start );
 
-		if( m_detached )
-		{
-			Console.Warning( "(Thread Warning) Ignoring attempted cancellation of detached thread." );
-			return;
-		}
-
-		pthread_cancel( m_thread );
-
-	}
+	if( !_basecancel() ) return;
 
 	if( isBlocking )
 	{
-		// FIXME: Add deadlock detection and handling here... ?
-		m_lock_InThread.Wait();
+		WaitOnSelf( m_lock_InThread );
 		Detach();
 	}
 }
+
+bool Threading::PersistentThread::Cancel( const wxTimeSpan& timespan )
+{
+	AffinityAssert_DisallowFromSelf( pxDiagSpot );
+
+	// Prevent simultaneous startup and cancel:
+	ScopedLock startlock( m_lock_start );
+
+	if( !_basecancel() ) return true;
+
+	if( !WaitOnSelf( m_lock_InThread, timespan ) ) return false;
+	Detach();
+	return true;
+}
+
 
 // Blocks execution of the calling thread until this thread completes its task.  The
 // caller should make sure to signal the thread to exit, or else blocking may deadlock the
@@ -218,10 +327,12 @@ void Threading::PersistentThread::Cancel( bool isBlocking )
 // Returns the return code of the thread.
 // This method is roughly the equivalent of pthread_join().
 //
+// Exceptions raised by the blocking thread will be re-thrown into the main thread.
+//
 void Threading::PersistentThread::Block()
 {
-	AffinityAssert_DisallowFromSelf();
-	m_lock_InThread.Wait();
+	AffinityAssert_DisallowFromSelf(pxDiagSpot);
+	WaitOnSelf( m_lock_InThread );
 }
 
 bool Threading::PersistentThread::IsSelf() const
@@ -277,7 +388,7 @@ void Threading::PersistentThread::_selfRunningTest( const wxChar* name ) const
 //
 void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 {
-	if( !AffinityAssert_DisallowFromSelf() ) return;
+	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return;
 
 	while( true )
 	{
@@ -301,7 +412,7 @@ void Threading::PersistentThread::WaitOnSelf( Semaphore& sem ) const
 //
 void Threading::PersistentThread::WaitOnSelf( Mutex& mutex ) const
 {
-	if( !AffinityAssert_DisallowFromSelf() ) return;
+	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return;
 
 	while( true )
 	{
@@ -314,7 +425,7 @@ static const wxTimeSpan SelfWaitInterval( 0,0,0,333 );
 
 bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& timeout ) const
 {
-	if( !AffinityAssert_DisallowFromSelf() ) return true;
+	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return true;
 
 	wxTimeSpan runningout( timeout );
 
@@ -330,7 +441,7 @@ bool Threading::PersistentThread::WaitOnSelf( Semaphore& sem, const wxTimeSpan& 
 
 bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& timeout ) const
 {
-	if( !AffinityAssert_DisallowFromSelf() ) return true;
+	if( !AffinityAssert_DisallowFromSelf(pxDiagSpot) ) return true;
 
 	wxTimeSpan runningout( timeout );
 
@@ -350,7 +461,7 @@ bool Threading::PersistentThread::WaitOnSelf( Mutex& mutex, const wxTimeSpan& ti
 // and cleanup, or use the DoThreadCleanup() override to perform resource cleanup).
 void Threading::PersistentThread::TestCancel() const
 {
-	AffinityAssert_AllowFromSelf();
+	AffinityAssert_AllowFromSelf(pxDiagSpot);
 	pthread_testcancel();
 }
 
@@ -393,24 +504,16 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	}
 #ifndef PCSX2_DEVBUILD
 	// ----------------------------------------------------------------------------
-	// Allow logic errors to propagate out of the thread in release builds, so that they might be
-	// handled in non-fatal ways.  On Devbuilds let them loose, so that they produce debug stack
-	// traces and such.
-	catch( std::logic_error& ex )
+	// Bleh... don't bother with std::exception.  runtime_error should catch anything
+	// useful coming out of the core STL libraries anyway, and these are best handled by
+	// the MSVC debugger (or by silent random annoying fail on debug-less linux).
+	/*catch( std::logic_error& ex )
 	{
-		throw Exception::LogicError( wxsFormat( L"(thread: %s) STL Logic Error: %s\n\t%s",
+		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL Logic Error: %s\n\t%s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}
-	catch( Exception::LogicError& ex )
-	{
-		m_except = ex.Clone();
-		m_except->DiagMsg() = wxsFormat( L"(thread:%s) ", GetName().c_str() ) + m_except->DiagMsg();
-	}
-	// ----------------------------------------------------------------------------
-	// Bleh... don't bother with std::exception.  std::logic_error and runtime_error should catch
-	// anything coming out of the core STL libraries anyway.
-	/*catch( std::exception& ex )
+	catch( std::exception& ex )
 	{
 		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL exception: %s\n\t%s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
@@ -431,7 +534,7 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 // OnCleanupInThread() to extend cleanup functionality.
 void Threading::PersistentThread::_ThreadCleanup()
 {
-	AffinityAssert_AllowFromSelf();
+	AffinityAssert_AllowFromSelf(pxDiagSpot);
 	_try_virtual_invoke( &PersistentThread::OnCleanupInThread );
 	m_lock_InThread.Release();
 }
@@ -442,42 +545,59 @@ wxString Threading::PersistentThread::GetName() const
 }
 
 // This override is called by PeristentThread when the thread is first created, prior to
-// calling ExecuteTaskInThread.  This is useful primarily for "base" classes that extend
-// from PersistentThread, giving them the ability to bind startup code to all threads that
-// derive from them.  (the alternative would have been to make ExecuteTaskInThread a
-// private member, and provide a new Task executor by a different name).
+// calling ExecuteTaskInThread, and after the initial InThread lock has been claimed.
+// This code is also executed within a "safe" environment, where the creating thread is
+// blocked against m_sem_event.  Make sure to do any necessary variable setup here, without
+// worry that the calling thread might attempt to test the status of those variables
+// before initialization has completed.
+//
 void Threading::PersistentThread::OnStartInThread()
 {
-	m_running	= true;
 	m_detached	= false;
+	m_running	= true;
 }
 
 void Threading::PersistentThread::_internal_execute()
 {
 	m_lock_InThread.Acquire();
-	OnStartInThread();
 
 	_DoSetThreadName( m_name );
+	make_curthread_key();
+	if( curthread_key != NULL )
+		pthread_setspecific( curthread_key, this );
+
+	OnStartInThread();
+	m_sem_startup.Post();
 
 	_try_virtual_invoke( &PersistentThread::ExecuteTaskInThread );
 }
 
+// Called by Start, prior to actual starting of the thread, and after any previous
+// running thread has been canceled or detached.
 void Threading::PersistentThread::OnStart()
 {
 	FrankenMutex( m_lock_InThread );
 	m_sem_event.Reset();
+	m_sem_startup.Reset();
 }
 
+// Extending classes that override this method shoul always call it last from their
+// personal implementations.
 void Threading::PersistentThread::OnCleanupInThread()
 {
 	m_running = false;
+
+	if( curthread_key != NULL )
+		pthread_setspecific( curthread_key, NULL );
+
+	unmake_curthread_key();
 }
 
 // passed into pthread_create, and is used to dispatch the thread's object oriented
 // callback function
 void* Threading::PersistentThread::_internal_callback( void* itsme )
 {
-	pxAssert( itsme != NULL );
+	if( !pxAssertDev( itsme != NULL, wxNullChar ) ) return NULL;
 	PersistentThread& owner = *((PersistentThread*)itsme);
 
 	pthread_cleanup_push( _pt_callback_cleanup, itsme );
@@ -493,8 +613,6 @@ void Threading::PersistentThread::_DoSetThreadName( const wxString& name )
 
 void Threading::PersistentThread::_DoSetThreadName( const char* name )
 {
-	if( !AffinityAssert_AllowFromSelf() ) return;
-
 	// This feature needs Windows headers and MSVC's SEH support:
 
 #if defined(_WINDOWS_) && defined (_MSC_VER)

@@ -96,10 +96,10 @@ protected:
 	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
 
 #ifdef __WXMSW__
-	int		m_win32_StupidRefreshTricks;
 	int		m_win32_LinesPerPage;
 	int		m_win32_LinesPerScroll;
 #endif
+	bool	m_IsPaused;
 	bool	m_FreezeWrites;
 
 public:

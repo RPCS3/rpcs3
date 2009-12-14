@@ -49,8 +49,9 @@ GSPanel::GSPanel( wxWindow* parent )
 	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>	( this, OnSettingsApplied ) )
 	, m_HideMouseTimer( this )
 {
-	m_CursorShown = true;
-
+	m_CursorShown	= true;
+	m_HasFocus		= false;
+	
 	if ( !wxWindow::Create(parent, wxID_ANY) )
 		throw Exception::RuntimeError( "GSPanel constructor esplode!!" );
 
@@ -67,6 +68,9 @@ GSPanel::GSPanel( wxWindow* parent )
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler	(GSPanel::OnCloseWindow) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler	(GSPanel::OnResize) );
 	Connect( wxEVT_KEY_DOWN,		wxKeyEventHandler	(GSPanel::OnKeyDown) );
+
+	Connect( wxEVT_SET_FOCUS,		wxFocusEventHandler(GSPanel::OnFocus) );
+	Connect( wxEVT_KILL_FOCUS,		wxFocusEventHandler(GSPanel::OnFocusLost) );
 
 	Connect(wxEVT_MIDDLE_DOWN,		wxMouseEventHandler(GSPanel::OnShowMouse) );
 	Connect(wxEVT_MIDDLE_UP,		wxMouseEventHandler(GSPanel::OnShowMouse) );
@@ -131,6 +135,7 @@ void GSPanel::DoResize()
 
 void GSPanel::OnResize(wxSizeEvent& event)
 {
+	if( IsBeingDeleted() ) return;
 	DoResize();
 	//Console.Error( "Size? %d x %d", GetSize().x, GetSize().y );
 	//event.
@@ -144,12 +149,14 @@ void GSPanel::OnCloseWindow(wxCloseEvent& evt)
 
 void GSPanel::OnShowMouse( wxMouseEvent& evt )
 {
+	if( IsBeingDeleted() ) return;
 	evt.Skip();
 	DoShowMouse();
 }
 
 void GSPanel::OnHideMouseTimeout( wxTimerEvent& evt )
 {
+	if( IsBeingDeleted() || !m_HasFocus ) return;
 	if( CoreThread.GetExecutionMode() != SysThreadBase::ExecMode_Opened ) return;
 
 	SetCursor( wxCursor( wxCURSOR_BLANK ) );
@@ -180,6 +187,26 @@ void GSPanel::OnKeyDown( wxKeyEvent& evt )
 	}
 }
 
+void GSPanel::OnFocus( wxFocusEvent& evt )
+{
+	evt.Skip();
+	m_HasFocus = true;
+	
+	if( g_Conf->GSWindow.AlwaysHideMouse )
+	{
+		SetCursor( wxCursor(wxCURSOR_BLANK) );
+		m_CursorShown = false;
+	}
+	else
+		DoShowMouse();
+}
+
+void GSPanel::OnFocusLost( wxFocusEvent& evt )
+{
+	evt.Skip();
+	m_HasFocus = false;
+	DoShowMouse();
+}
 
 void __evt_fastcall GSPanel::OnSettingsApplied( void* obj, int& evt )
 {
@@ -234,12 +261,18 @@ wxWindow* GSFrame::GetViewport()
 
 void GSFrame::OnActivate( wxActivateEvent& evt )
 {
+	if( IsBeingDeleted() ) return;
+
 	evt.Skip();
 	if( wxWindow* gsPanel = FindWindowByName(L"GSPanel") ) gsPanel->SetFocus();
 }
 
 void GSFrame::OnMove( wxMoveEvent& evt )
 {
+	if( IsBeingDeleted() ) return;
+
+	evt.Skip();
+
 	// evt.GetPosition() returns the client area position, not the window frame position.
 	if( !IsMaximized() && IsVisible() )
 		g_Conf->GSWindow.WindowPos	= GetScreenPosition();

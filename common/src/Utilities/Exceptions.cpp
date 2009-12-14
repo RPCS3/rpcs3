@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 
 #include <wx/app.h>
+#include "Threading.h"
 
 wxString GetEnglish( const char* msg )
 {
@@ -42,36 +43,66 @@ wxString GetTranslation( const char* msg )
 // That's ok.  What we don't want is the *same* thread recurse-asserting.
 static __threadlocal int s_assert_guard = 0;
 
-DEVASSERT_INLINE void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const wxChar* msg)
-{
-#ifdef PCSX2_DEVBUILD
-	RecursionGuard guard( s_assert_guard );
-	if( guard.IsReentrant() ) return;
+pxDoAssertFnType* pxDoAssert = pxAssertImpl_LogIt;
 
-	if( wxTheApp == NULL )
+// make life easier for people using VC++ IDE by using this format, which allows double-click
+// response times from the Output window...
+wxString DiagnosticOrigin::ToString( const wxChar* msg ) const
+{
+	wxString message;
+	message.reserve( 2048 );
+
+	message.Printf( L"%s(%d) : assertion failed:\n", srcfile, line );
+
+	if( function != NULL )
+		message	+= L"    Function:  " + fromUTF8(function) + L"\n";
+
+	message		+= L"    Thread:    " + Threading::pxGetCurrentThreadName() + L"\n";
+
+	if( condition != NULL )
+		message	+= L"    Condition: " + wxString(condition) + L"\n";
+
+	if( msg != NULL )
+		message += L"    Message:   " + wxString(msg) + L"\n";
+
+	return message;
+}
+
+
+bool pxAssertImpl_LogIt( const DiagnosticOrigin& origin, const wxChar *msg )
+{
+	wxLogError( origin.ToString( msg ) );
+	return false;
+}
+
+DEVASSERT_INLINE void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* msg )
+{
+	RecursionGuard guard( s_assert_guard );
+	if( guard.IsReentrant() ) { return wxTrap(); }
+
+	// wxWidgets doesn't come with debug builds on some Linux distros, and other distros make
+	// it difficult to use the debug build (compilation failures).  To handle these I've had to
+	// bypass the internal wxWidgets assertion handler entirely, since it may not exist even if
+	// PCSX2 itself is compiled in debug mode (assertions enabled).
+
+	bool trapit;
+
+	if( pxDoAssert == NULL )
 	{
 		// Note: Format uses MSVC's syntax for output window hotlinking.
-		wxLogError( wxsFormat( L"%s(%d): Assertion failed in %s: %s\n",
-			file, line, fromUTF8(func).c_str(), msg )
-		);
+		trapit = pxAssertImpl_LogIt( origin, msg );
 	}
 	else
 	{
-	#ifdef __WXDEBUG__
-		wxTheApp->OnAssertFailure( file, line, fromUTF8(func), cond, msg );
-	#elif wxUSE_GUI
-		// FIXME: this should create a popup dialog for devel builds.
-		wxLogError( msg );
-	#else
-		wxLogError( msg );
-	#endif
+		trapit = pxDoAssert( origin, msg );
 	}
-#endif
+
+	if( trapit ) { wxTrap(); }
 }
 
-__forceinline void pxOnAssert( const wxChar* file, int line, const char* func, const wxChar* cond, const char* msg)
+__forceinline void pxOnAssert( const DiagnosticOrigin& origin, const char* msg)
 {
-	pxOnAssert( file, line, func, cond, fromUTF8(msg) );
+	pxOnAssert( origin, fromUTF8(msg) );
 }
 
 

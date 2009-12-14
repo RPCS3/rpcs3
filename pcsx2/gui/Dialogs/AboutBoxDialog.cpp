@@ -25,6 +25,8 @@
 #include <wx/mstream.h>
 #include <wx/hyperlink.h>
 
+using namespace pxSizerFlags;
+
 namespace Dialogs
 {
 	// Helper class for creating wxStaticText labels which are aligned to center.
@@ -45,11 +47,14 @@ namespace Dialogs
 //  AboutBoxDialog  Implementation
 // --------------------------------------------------------------------------------------
 
-Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
-	wxDialogWithHelpers( parent, id, _("About PCSX2"), false ),
-	m_bitmap_dualshock( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
-		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN )
+Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
+	: wxDialogWithHelpers( parent, _("About PCSX2"), wxVERTICAL )
+	, m_bitmap_dualshock( this, wxID_ANY, wxBitmap( EmbeddedImage<res_Dualshock>().Get() ),
+		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN
+	)
 {
+	SetName( GetNameStatic() );
+
 	static const wxString LabelAuthors = fromUTF8(
 		"Developers"
 		"\n\n"
@@ -80,10 +85,6 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87"
 	);
 
-	SetSizer( new wxBoxSizer( wxVERTICAL ) );
-
-	*this += Text(_("PCSX2  -  Playstation 2 Emulator"));
-
 	// This sizer holds text of the authors and a logo!
 	wxBoxSizer& AuthLogoSizer = *new wxBoxSizer( wxHORIZONTAL );
 
@@ -99,18 +100,21 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 	label_auth->Wrap( 340 );
 	label_greets->Wrap( 200 );
 
-	aboutUs.Add( label_auth, pxSizerFlags::StdExpand() );
-	contribs.Add( label_greets, pxSizerFlags::StdExpand() );
+	aboutUs		+= label_auth		| StdExpand();
+	contribs	+= label_greets		| StdExpand();
 
-	AuthLogoSizer.Add( &aboutUs );
-	AuthLogoSizer.AddSpacer( 7 );
-	AuthLogoSizer.Add( &contribs );
+	AuthLogoSizer	+= aboutUs;
+	AuthLogoSizer	+= 7;
+	AuthLogoSizer	+= contribs;
 
 	ContribSizer.AddStretchSpacer( 1 );
-	ContribSizer.Add( &m_bitmap_dualshock, pxSizerFlags::StdSpace() );
+	ContribSizer	+= m_bitmap_dualshock	| StdSpace();
 	ContribSizer.AddStretchSpacer( 1 );
 
-	*this	+= AuthLogoSizer	| pxSizerFlags::StdSpace();
+	// Main (top-level) layout 
+
+	*this	+= Text(_("PCSX2  -  Playstation 2 Emulator"));
+	*this	+= AuthLogoSizer										| StdSpace();
 
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
 		_("Pcsx2 Official Website and Forums"), L"http://www.pcsx2.net"
@@ -120,10 +124,6 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent, int id ):
 		_("Pcsx2 Official Svn Repository at Googlecode"), L"http://code.google.com/p/pcsx2"
 	) | wxSizerFlags(1).Center().Border( wxALL, 3 );
 
-	*this	+= ContribSizer		| pxSizerFlags::StdExpand();
-
-	*this	+= new wxButton( this, wxID_OK, L"I've seen enough") | pxSizerFlags::StdCenter();
-
-	Fit();
-	CenterOnScreen();
+	*this	+= ContribSizer											| StdExpand();
+	*this	+= new wxButton( this, wxID_OK, L"I've seen enough")	| StdCenter();
 }

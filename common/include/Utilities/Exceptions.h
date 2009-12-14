@@ -38,11 +38,7 @@
 		Console.Error( ex.what() ); \
 	}
 
-#ifdef __GNUG__
-#	define DESTRUCTOR_CATCHALL		__DESTRUCTOR_CATCHALL( __PRETTY_FUNCTION__ )
-#else
-#	define DESTRUCTOR_CATCHALL		__DESTRUCTOR_CATCHALL( __FUNCTION__ )
-#endif
+#define DESTRUCTOR_CATCHALL		__DESTRUCTOR_CATCHALL( __pxFUNCTION__ )
 
 namespace Exception
 {
@@ -56,7 +52,7 @@ namespace Exception
 	// catch clause can optionally modify them and then re-throw to a top-level handler.
 	//
 	// Note, this class is "abstract" which means you shouldn't use it directly like, ever.
-	// Use Exception::RuntimeError or Exception::LogicError instead for generic exceptions.
+	// Use Exception::RuntimeError instead for generic exceptions.
 	//
 	// Because exceptions are the (only!) really useful example of multiple inheritance,
 	// this class has only a trivial constructor, and must be manually initialized using
@@ -150,7 +146,7 @@ namespace Exception
 	explicit classname( const wxString& msg_eng )		{ BaseException::InitBaseEx( msg_eng, wxEmptyString ); }
 
 	// ---------------------------------------------------------------------------------------
-	//  RuntimeError / LogicError - Generalized Exceptions
+	//  RuntimeError - Generalized Exceptions with Recoverable Traits!
 	// ---------------------------------------------------------------------------------------
 
 	class RuntimeError : public virtual BaseException
@@ -159,14 +155,6 @@ namespace Exception
 		bool	IsSilent;
 	public:
 		DEFINE_RUNTIME_EXCEPTION( RuntimeError, wxLt("An unhandled runtime error has occurred, somewhere in the depths of Pcsx2's cluttered brain-matter.") )
-	};
-
-	// LogicErrors do not need translated versions, since they are typically obscure, and the
-	// user wouldn't benefit from being able to understand them anyway. :)
-	class LogicError : public virtual BaseException
-	{
-	public:
-		DEFINE_LOGIC_EXCEPTION( LogicError, wxLt("An unhandled logic error has occurred.") )
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -225,24 +213,6 @@ namespace Exception
 	{
 	public:
 		DEFINE_RUNTIME_EXCEPTION( OutOfMemory, wxLt("Out of Memory") )
-	};
-
-	// This exception thrown any time an operation is attempted when an object
-	// is in an uninitialized state.
-	//
-	class InvalidOperation : public virtual LogicError
-	{
-	public:
-		DEFINE_LOGIC_EXCEPTION( InvalidOperation, "Attempted method call is invalid for the current object or program state." )
-	};
-
-	// This exception thrown any time an operation is attempted when an object
-	// is in an uninitialized state.
-	//
-	class InvalidArgument : public virtual LogicError
-	{
-	public:
-		DEFINE_LOGIC_EXCEPTION( InvalidArgument, "Invalid argument passed to a function." )
 	};
 
 	class ParseError : public RuntimeError

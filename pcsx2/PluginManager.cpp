@@ -680,7 +680,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		Console.WriteLn( L"Binding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), folders[pid].c_str() );
 
 		if( folders[pid].IsEmpty() )
-			throw Exception::InvalidArgument( "Empty plugin filename." );
+			throw Exception::PluginInitError( pi->id, "Empty plugin filename." );
 
 		m_info[pid].Filename = folders[pid];
 
@@ -985,6 +985,14 @@ void PluginManager::Close( PluginsEnum_t pid )
 
 void PluginManager::Close( bool closegs )
 {
+	// Spam stopper:  If all plugins are already closed, then return before writing any logs. >_<
+
+	const PluginInfo* pi = tbl_PluginInfo; do {
+		if( m_info[pi->id].IsOpened && (closegs || (pi->id != PluginId_GS)) ) break;
+	} while( ++pi, pi->shortname != NULL );
+
+	if( pi->shortname == NULL ) return;
+
 	DbgCon.WriteLn( Color_StrongBlue, "Closing plugins..." );
 
 	// Close plugins in reverse order of the initialization procedure.

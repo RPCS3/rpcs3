@@ -55,10 +55,12 @@ void Dialogs::ConfigurationDialog::AddPage( const char* label, int iconid )
 		( labelstr == g_Conf->SettingsTabName ), iconid );
 }
 
-Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id )
-	: wxDialogWithHelpers( parent, id, _("PCSX2 Configuration"), true )
+Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent )
+	: wxDialogWithHelpers( parent, _("PCSX2 Configuration"), true )
 	, m_listbook( *new wxListbook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, s_orient ) )
 {
+	SetName( GetNameStatic() );
+
 	m_idealWidth = 600;
 
 	m_listbook.SetImageList( &wxGetApp().GetImgList_Config() );
@@ -85,9 +87,6 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id )
 
 	FindWindow( wxID_APPLY )->Disable();
 
-	Fit();
-	CenterOnScreen();
-
 #ifdef __WXMSW__
 	// Depending on Windows version and user appearance settings, the default icon spacing can be
 	// way over generous.  This little bit of Win32-specific code ensures proper icon spacing, scaled
@@ -103,6 +102,8 @@ Dialogs::ConfigurationDialog::ConfigurationDialog( wxWindow* parent, int id )
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnApply_Click ) );
 	Connect( wxID_SAVE,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ConfigurationDialog::OnScreenshot_Click ) );
 
+	Connect( wxEVT_CLOSE_WINDOW, wxCloseEventHandler(ConfigurationDialog::OnCloseWindow) );
+	
 	// ----------------------------------------------------------------------------
 	// Bind a variety of standard "something probably changed" events.  If the user invokes
 	// any of these, we'll automatically de-gray the Apply button for this dialog box. :)
@@ -126,6 +127,12 @@ Dialogs::ConfigurationDialog::~ConfigurationDialog() throw()
 	g_ApplyState.DoCleanup();
 }
 
+void Dialogs::ConfigurationDialog::OnCloseWindow( wxCloseEvent& evt )
+{
+	if( !IsModal() ) Destroy();
+	evt.Skip();
+}
+
 void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
 	if( g_ApplyState.ApplyAll() )
@@ -133,8 +140,6 @@ void Dialogs::ConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 		FindWindow( wxID_APPLY )->Disable();
 		g_Conf->SettingsTabName = m_labels[m_listbook.GetSelection()];
 		AppSaveSettings();
-
-		Close();
 		evt.Skip();
 	}
 }
@@ -181,9 +186,11 @@ void Dialogs::ConfigurationDialog::OnScreenshot_Click( wxCommandEvent& evt )
 }
 
 // ----------------------------------------------------------------------------
-Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent, int id )
-	: wxDialogWithHelpers( parent, id, _("BIOS Selector"), false )
+Dialogs::BiosSelectorDialog::BiosSelectorDialog( wxWindow* parent )
+	: wxDialogWithHelpers( parent, _("BIOS Selector"), false )
 {
+	SetName( GetNameStatic() );
+
 	m_idealWidth = 500;
 
 	wxBoxSizer& bleh( *new wxBoxSizer( wxVERTICAL ) );

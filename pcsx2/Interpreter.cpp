@@ -382,15 +382,16 @@ static void intExecute()
 	// Mem protection should be handled by the caller here so that it can be
 	// done in a more optimized fashion.
 
-	while( true )
-	{
-		execI();
-	}
+	try {
+		while( true )
+			execI();
+	} catch( Exception::ForceDispatcherReg& ) { }
 }
 
 static void intCheckExecutionState()
 {
-	SysCoreThread::Get().StateCheckInThread();
+	if( GetCoreThread().HasPendingStateChangeRequest() )
+		throw Exception::ForceDispatcherReg();
 }
 
 static void intStep()

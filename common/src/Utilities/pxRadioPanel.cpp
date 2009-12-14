@@ -149,13 +149,13 @@ void pxRadioPanel::_RealizeDefaultOption()
 	}
 }
 
-pxRadioPanel& pxRadioPanel::SetDefault( int idx )
+pxRadioPanel& pxRadioPanel::SetDefaultItem( int idx )
 {
 	if( idx == m_DefaultIdx ) return *this;
 
 	if( m_IsRealized && m_DefaultIdx != -1 )
 	{
-		wxFont def( GetFont() );
+		wxFont def(GetFont());
 		m_objects[m_DefaultIdx].LabelObj->SetFont( def );
 		m_objects[m_DefaultIdx].LabelObj->SetForegroundColour( GetForegroundColour() );
 	}
@@ -165,6 +165,20 @@ pxRadioPanel& pxRadioPanel::SetDefault( int idx )
 
 	return *this;
 }
+
+pxRadioPanel& pxRadioPanel::EnableItem( int idx, bool enable )
+{
+	pxAssertDev( m_IsRealized, "RadioPanel must be realized first, prior to enabling or disabling individual items." );
+	
+	if( m_objects[idx].LabelObj )
+		m_objects[idx].LabelObj->Enable( enable );
+
+	if( m_objects[idx].SubTextObj )
+		m_objects[idx].SubTextObj->Enable( enable );
+
+	return *this;
+}
+
 
 int pxRadioPanel::GetSelection() const
 {

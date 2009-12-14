@@ -40,7 +40,7 @@ struct x86CPU_INFO
 	u32 PhysicalCores;
 	u32 LogicalCores;
 
-	char VendorName[16];	   // Vendor/Creator ID
+	char VendorName[16];	// Vendor/Creator ID
 	char TypeName[20];      // cpu type
 	char FamilyName[50];    // the original cpu name
 

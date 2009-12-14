@@ -18,18 +18,27 @@
 
 #include <wx/stackwalk.h>
 
-
-static wxString pxGetStackTrace()
+static wxString pxGetStackTrace( const FnChar_t* calledFrom )
 {
     wxString stackTrace;
 
     class StackDump : public wxStackWalker
     {
 	protected:
-		wxString m_stackTrace;
+		wxString		m_stackTrace;
+		wxString		m_srcFuncName;
+		bool			m_ignoreDone;
+		int				m_skipped;
 
     public:
-        StackDump() { }
+        StackDump( const FnChar_t* src_function_name )
+        {
+			if( src_function_name != NULL )
+				m_srcFuncName = fromUTF8(src_function_name);
+
+			m_ignoreDone	= false;
+			m_skipped		= 0;
+        }
 
         const wxString& GetStackTrace() const { return m_stackTrace; }
 
@@ -38,92 +47,108 @@ static wxString pxGetStackTrace()
         {
 			wxString name( frame.GetName() );
 			if( name.IsEmpty() )
+			{
 				name = wxsFormat( L"%p ", frame.GetAddress() );
+			}
+			/*else if( m_srcFuncName.IsEmpty() || m_srcFuncName == name )
+			{
+				// FIXME: This logic isn't reliable yet.
+				// It's possible for our debug information to not match the function names returned by
+				// __pxFUNCTION__ (might happen in linux a lot, and could happen in win32 due to
+				// inlining on Dev aserts).  The better approach is a system the queues up all the
+				// stacktrace info in individual wxStrings, and does a two-pass check -- first pass
+				// for the function name and, if not found, a second pass that just skips the first
+				// few stack entries.
+				
+				// It's important we only walk the stack once because Linux (argh, always linux!) has
+				// a really god aweful slow stack walker.
+				
+				// I'm not doing it right now because I've worked on this mess enough for one week. --air
 
-            m_stackTrace += wxString::Format( L"[%02d] %-46s ",
-				wx_truncate_cast(int, frame.GetLevel()), name.c_str()
+				m_ignoreDone = true;
+			}
+
+			if( !m_ignoreDone )
+			{
+				m_skipped++;
+				return;
+			}*/
+
+			//wxString briefName;
+			wxString essenName;
+			
+			if( frame.HasSourceLocation() )
+			{
+				wxFileName wxfn(frame.GetFileName());
+				//briefName.Printf( L"(%s:%d)", wxfn.GetFullName().c_str(), frame.GetLine() );
+
+				wxfn.SetVolume( wxEmptyString );
+				int count = wxfn.GetDirCount();
+				for( int i=0; i<2; ++i )
+					wxfn.RemoveDir(0);
+
+				essenName.Printf( L"%s:%d", wxfn.GetFullPath().c_str(), frame.GetLine() );
+			}
+
+            m_stackTrace += wxString::Format( L"[%02d] %-44s %s\n",
+				frame.GetLevel()-m_skipped,
+				name.c_str(),
+				essenName.c_str()
 			);
-
-            if ( frame.HasSourceLocation() )
-                m_stackTrace += wxsFormat( L"%s:%d", frame.GetFileName().c_str(), frame.GetLine() );
-
-            m_stackTrace += L'\n';
         }
     };
 
-	// [TODO] : Replace this with a textbox dialog setup.
-    static const int maxLines = 20;
-
-    StackDump dump;
-    dump.Walk(2, maxLines); // don't show OnAssert() call itself
-    stackTrace = dump.GetStackTrace();
-
-    const int count = stackTrace.Freq( L'\n' );
-    for ( int i = 0; i < count - maxLines; i++ )
-        stackTrace = stackTrace.BeforeLast( L'\n' );
-
-    return stackTrace;
+    StackDump dump( calledFrom );
+    dump.Walk( 3 );
+    return dump.GetStackTrace();
 }
 
-static __threadlocal bool _reentrant_lock = false;
-
 #ifdef __WXDEBUG__
+
+static __threadlocal int _reentrant_lock = 0;
 
 // This override of wx's implementation provides thread safe assertion message reporting.  If we aren't
 // on the main gui thread then the assertion message box needs to be passed off to the main gui thread
 // via messages.
 void Pcsx2App::OnAssertFailure( const wxChar *file, int line, const wxChar *func, const wxChar *cond, const wxChar *msg )
 {
-	// Used to allow the user to suppress future assertions during this application's session.
-	static bool disableAsserts = false;
-	if( disableAsserts ) return;
+	// Re-entrant assertions are bad mojo -- trap immediately.
+	RecursionGuard guard( _reentrant_lock );
+	if( guard.IsReentrant() ) wxTrap();
 
-	if( _reentrant_lock )
+	wxCharBuffer bleh( wxString(func).ToUTF8() );
+	if( AppDoAssert( DiagnosticOrigin( file, line, bleh, cond ), msg ) )
 	{
-		// Re-entrant assertions are bad mojo -- trap immediately.
 		wxTrap();
 	}
+}
 
-	_reentrant_lock = true;
+#endif
 
-	wxString dbgmsg;
-	dbgmsg.reserve( 2048 );
+bool AppDoAssert( const DiagnosticOrigin& origin, const wxChar *msg )
+{
+	// Used to allow the user to suppress future assertions during this application's session.
+	static bool disableAsserts = false;
+	if( disableAsserts ) return false;
 
-	wxString message;
-	if( msg == NULL )
-		message = cond;
-	else
-		message.Printf( L"%s (%s)", msg, cond );
-
-	// make life easier for people using VC++ IDE by using this format, which allows double-click
-	// response times from the Output window...
-	dbgmsg.Printf( L"%s(%d) : assertion failed%s%s: %s\n", file, line,
-		(func==NULL) ? wxEmptyString : L" in ", 
-		(func==NULL) ? wxEmptyString : func, 
-		message.c_str()
-	);
-
-	wxString trace( L"Call stack:\n" + pxGetStackTrace() );
+	wxString trace( pxGetStackTrace(origin.function) );
+	wxString dbgmsg( origin.ToString( msg ) );
 
 	wxMessageOutputDebug().Printf( dbgmsg );
+
 	Console.Error( dbgmsg );
 	Console.WriteLn( trace );
 
-	int retval = Msgbox::Assertion( dbgmsg, trace );
-	
-	switch( retval )
-	{
-		case wxID_YES:
-			wxTrap();
-		break;
-		
-		case wxID_NO: break;
-		
-		case wxID_CANCEL:		// ignores future assertions.
-			disableAsserts = true;
-		break;
-	}
+	wxString windowmsg( L"Assertion failed: " );
+	if( msg != NULL )
+		windowmsg += msg;
+	else if( origin.condition != NULL )
+		windowmsg += origin.condition;
 
-	_reentrant_lock = false;
+	int retval = Msgbox::Assertion( windowmsg, dbgmsg + L"\nStacktrace:\n" + trace );
+	
+	if( retval == wxID_YES ) return true;
+	if( retval == wxID_IGNORE ) disableAsserts = true;
+	
+	return false;
 }
-#endif

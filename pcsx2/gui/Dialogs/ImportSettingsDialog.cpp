@@ -18,8 +18,10 @@
 
 #include "ModalPopups.h"
 
+using namespace pxSizerFlags;
+
 Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
-	: wxDialogWithHelpers( parent, wxID_ANY, _("Import Existing Settings?"), false )
+	: wxDialogWithHelpers( parent, _("Import Existing Settings?"), wxVERTICAL )
 {
 	m_idealWidth = 440;
 
@@ -28,7 +30,6 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 		L"Would you like to import these settings or overwrite them with PCSX2 default values?"
 		L"\n\n(or press Cancel to select a different settings folder)" )
 	);
-	heading->SetMinSize( wxSize( m_idealWidth-8, wxDefaultCoord ) );
 
 	wxBoxSizer& s_buttons = *new wxBoxSizer( wxHORIZONTAL );
 	wxButton* b_import	= new wxButton( this, wxID_ANY, _("Import") );
@@ -37,19 +38,16 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 	// --------------------------------------------------------------------
 	// Layout Some Shizat...
 
-	wxBoxSizer& sizer( *new wxBoxSizer( wxVERTICAL ) );
+	s_buttons += b_import	| StdButton();
+	s_buttons += 16;
+	s_buttons += b_over		| StdButton();
+	s_buttons += 16;
+	s_buttons += new wxButton( this, wxID_CANCEL ) | StdButton();
 
-	s_buttons.Add( b_import,pxSizerFlags::StdButton() );
-	s_buttons.AddSpacer( 16 );
-	s_buttons.Add( b_over,	pxSizerFlags::StdButton() );
-	s_buttons.AddSpacer( 16 );
-	s_buttons.Add( new wxButton( this, wxID_CANCEL ), pxSizerFlags::StdButton() );
-
-	sizer.AddSpacer( 4 );
-	heading->AddTo( sizer );
-	sizer.AddSpacer( 12 );
-	sizer.Add( &s_buttons, pxSizerFlags::StdCenter() );
-	SetSizerAndFit( &sizer );
+	*this += 4;
+	*this += heading;
+	*this += 12;
+	*this += &s_buttons		| StdCenter();
 
 	Connect( b_import->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ImportSettingsDialog::OnImport_Click) );
 	Connect( b_over->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(ImportSettingsDialog::OnOverwrite_Click) );

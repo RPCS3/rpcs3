@@ -65,14 +65,12 @@ void __fastcall vu0ExecMicro(u32 addr) {
 }
 
 void VU0unknown() {
-	assert(0);
-	
+	pxFailDev("Unknown VU micromode opcode called");
 	CPU_LOG("Unknown VU micromode opcode called"); 
 }  
 
 void VU0regsunknown(_VURegsNum *VUregsn) {
-	assert(0);
-	
+	pxFailDev("Unknown VU micromode opcode called");
 	CPU_LOG("Unknown VU micromode opcode called"); 
 }  
  

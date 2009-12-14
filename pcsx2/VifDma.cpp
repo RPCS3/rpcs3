@@ -283,9 +283,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 		vif = &vif1;
 		vifRow = g_vifmask.Row1;
 	}
-#ifdef PCSX2_DEBUG
-	pxAssert(v->addr < memsize);
-#endif
+	pxAssume(v->addr < memsize);
 
 	dest = (u32*)(VU->Mem + v->addr);
 
@@ -476,9 +474,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 	u32 tempsize = 0;
 	const u32 memlimit = vif_size(VIFdmanum);
 
-#ifdef PCSX2_DEBUG
-	u32 memsize = memlimit;
-#endif
+	pxDebugCode( u32 memsize = memlimit );
 
 	_mm_prefetch((char*)data, _MM_HINT_NTA);
 
@@ -489,9 +485,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		vifMaskRegs = g_vif0Masks;
 		vif = &vif0;
 		vifRow = g_vifmask.Row0;
-#ifdef PCSX2_DEBUG
-		pxAssert(v->addr < memsize);
-#endif
+		pxDebugCode( pxAssume(v->addr < memsize) );
 	}
 	else
 	{
@@ -501,9 +495,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		vifMaskRegs = g_vif1Masks;
 		vif = &vif1;
 		vifRow = g_vifmask.Row1;
-#ifdef PCSX2_DEBUG
-		pxAssert(v->addr < memsize);
-#endif
+		pxDebugCode( pxAssume(v->addr < memsize) );
 	}
 
 	dest = (u32*)(VU->Mem + v->addr);
@@ -523,9 +515,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 
 	size <<= 2;
 
-#ifdef PCSX2_DEBUG
-	memsize = size;
-#endif
+	pxDebugCode( memsize = size );
 
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl)   // skipping write
 	{

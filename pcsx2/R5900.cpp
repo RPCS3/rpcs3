@@ -39,7 +39,6 @@ R5900cpu *Cpu = NULL;
 
 bool g_ExecBiosHack = false; // set if the BIOS has already been executed
 
-static bool cpuIsInitialized = false;
 static const uint eeWaitCycles = 3072;
 
 bool eeEventTestIsActive = false;
@@ -51,10 +50,6 @@ void cpuReset()
 {
 	if( GetMTGS().IsOpen() )
 		GetMTGS().WaitGS();		// GS better be done processing before we reset the EE, just in case.
-
-	SysClearExecutionCache();
-
-	cpuIsInitialized = true;
 
 	memReset();
 	psxMemReset();

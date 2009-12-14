@@ -38,10 +38,9 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 
 	if( filenames.GetCount() > 1 )
 	{
-		Dialogs::ExtensibleConfirmation( m_WindowBound, ConfButtons().Cancel(),
-			_("Drag and Drop Error"),
-			_("It is an error to drop multiple files onto a PCSX2 window.  One at a time please, thank you.")
-		);
+		wxDialogWithHelpers dialog( m_WindowBound, _("Drag and Drop Error"), wxVERTICAL );
+		dialog += dialog.Heading( _("It is an error to drop multiple files onto a PCSX2 window.  One at a time please, thank you.") );
+		pxIssueConfirmation( dialog, MsgButtons().Cancel() );
 		return false;
 	}
 
@@ -69,13 +68,14 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		bool confirmed = true;
 		if( SysHasValidState() )
 		{
-			Dialogs::ExtensibleConfirmation dialog( m_WindowBound, ConfButtons().Reset().Cancel(),
-				_("Confirm PS2 Reset"),
+			wxDialogWithHelpers dialog( m_WindowBound, _("Confirm PS2 Reset"), wxVERTICAL );
+			
+			dialog += dialog.Heading(
 				_("You have dropped the following ELF binary into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" + GetMsg_ConfirmSysReset()
 			);
 
-			confirmed = (Dialogs::IssueConfirmation( dialog, L"DragDrop:BootELF" ) != wxID_CANCEL);
+			confirmed = (pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel(), L"DragDrop:BootELF" ) != wxID_CANCEL);
 		}
 
 		if( confirmed )
@@ -111,14 +111,14 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 
 		if( SysHasValidState() )
 		{
-			Dialogs::ExtensibleConfirmation dialog( m_WindowBound, ConfButtons().Reset().Cancel().Custom(_("Swap Disc")),
-				_("Confirm PS2 Reset"),
-				_("You have dropped the following ISO image into PCSX2:\n\n") +
+			wxDialogWithHelpers dialog( m_WindowBound, _("Confirm PS2 Reset"), wxVERTICAL );
+						
+			dialog += dialog.Heading(_("You have dropped the following ISO image into PCSX2:\n\n") +
 				filenames[0] + L"\n\n" +
 				_("Do you want to swap discs or boot the new image (via system reset)?")
 			);
 
-			result = Dialogs::IssueConfirmation( dialog, L"DragDrop:BootIso" );
+			result = pxIssueConfirmation( dialog, MsgButtons().Reset().Cancel().Custom(_("Swap Disc")), L"DragDrop:BootIso" );
 		}
 
 		if( result != wxID_CANCEL )

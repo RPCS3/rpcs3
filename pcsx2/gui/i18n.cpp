@@ -141,7 +141,7 @@ const wxChar* __fastcall pxGetTranslation( const wxChar* message )
 		if( wxStrlen( message ) > 96 )
 		{
 			Console.Warning( "pxGetTranslation: Long message detected, maybe use pxE() instead?" );
-			Console.Indent().WriteLn( Color_Green, L"Message: %s", message );
+			Console.WriteLn( Color_Green, L"Message: %s", message );
 		}
 	}
 	return wxGetTranslation( message );

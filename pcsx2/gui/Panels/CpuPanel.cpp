@@ -46,8 +46,8 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 
 	// Highlight Default Options:
 	
-	m_RoundModePanel->SetDefault( 3 );
-	m_ClampModePanel->SetDefault( 1 );
+	m_RoundModePanel->SetDefaultItem( 3 );
+	m_ClampModePanel->SetDefaultItem( 1 );
 
 	// ---------------------------------
 	//    The Fitting And Sizing Area
@@ -146,8 +146,8 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	};
 
 	
-	m_panel_RecEE	= &(new pxRadioPanel( this, tbl_CpuTypes_EE ))->SetDefault( 1 );
-	m_panel_RecIOP	= &(new pxRadioPanel( this, tbl_CpuTypes_IOP ))->SetDefault( 1 );
+	m_panel_RecEE	= &(new pxRadioPanel( this, tbl_CpuTypes_EE ))->SetDefaultItem( 1 );
+	m_panel_RecIOP	= &(new pxRadioPanel( this, tbl_CpuTypes_IOP ))->SetDefaultItem( 1 );
 
 	m_panel_RecEE->Realize();
 	m_panel_RecIOP->Realize();
@@ -193,8 +193,8 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 		.SetToolTip(_("Useful for diagnosing bugs or clamping issues in the new mVU recompiler."))
 	};
 
-	m_panel_VU0 = &(new pxRadioPanel( this, tbl_CpuTypes_VU ))	->SetDefault( 1 );
-	m_panel_VU1 = &(new pxRadioPanel( this, tbl_CpuTypes_VU ))	->SetDefault( 1 );
+	m_panel_VU0 = &(new pxRadioPanel( this, tbl_CpuTypes_VU ))	->SetDefaultItem( 1 );
+	m_panel_VU1 = &(new pxRadioPanel( this, tbl_CpuTypes_VU ))	->SetDefaultItem( 1 );
 
 	m_panel_VU0->Realize();
 	m_panel_VU1->Realize();
@@ -233,6 +233,9 @@ void Panels::CpuPanelEE::Apply()
 
 void Panels::CpuPanelEE::OnSettingsChanged()
 {
+	m_panel_RecEE->Enable( x86caps.hasStreamingSIMD2Extensions );
+	m_panel_RecIOP->Enable( x86caps.hasStreamingSIMD2Extensions );
+
 	const Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 	m_panel_RecEE->SetSelection( (int)recOps.EnableEE );
 	m_panel_RecIOP->SetSelection( (int)recOps.EnableIOP );
@@ -250,6 +253,12 @@ void Panels::CpuPanelVU::Apply()
 
 void Panels::CpuPanelVU::OnSettingsChanged()
 {
+	m_panel_VU0->EnableItem( 1, x86caps.hasStreamingSIMD2Extensions );
+	m_panel_VU0->EnableItem( 2, x86caps.hasStreamingSIMD2Extensions );
+
+	m_panel_VU1->EnableItem( 1, x86caps.hasStreamingSIMD2Extensions );
+	m_panel_VU1->EnableItem( 2, x86caps.hasStreamingSIMD2Extensions );
+
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 	if( recOps.UseMicroVU0 )
 		m_panel_VU0->SetSelection( recOps.EnableVU0 ? 1 : 0 );

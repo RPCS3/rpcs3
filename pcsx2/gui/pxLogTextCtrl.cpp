@@ -31,7 +31,6 @@ void __evt_fastcall pxLogTextCtrl::OnCoreThreadStatusChanged( void* obj, wxComma
 
 	if( mframe->HasWriteLock() ) return;
 	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-	mframe->m_win32_StupidRefreshTricks = 0;
 #endif
 }
 
@@ -45,7 +44,6 @@ void __evt_fastcall pxLogTextCtrl::OnCorePluginStatusChanged( void* obj, PluginE
 
 	if( mframe->HasWriteLock() ) return;
 	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-	mframe->m_win32_StupidRefreshTricks = 0;
 #endif
 }
 
@@ -58,10 +56,11 @@ pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
 	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 {
 #ifdef __WXMSW__
-	m_win32_StupidRefreshTricks	= 0;
-	m_win32_LinesPerScroll		= 10;
+	m_win32_LinesPerScroll	= 10;
+	m_win32_LinesPerPage	= 0;
 #endif
-	m_FreezeWrites				= false;
+	m_IsPaused				= false;
+	m_FreezeWrites			= false;
 
 	Connect( wxEVT_SCROLLWIN_THUMBTRACK,	wxScrollWinEventHandler(pxLogTextCtrl::OnThumbTrack) );
 	Connect( wxEVT_SCROLLWIN_THUMBRELEASE,	wxScrollWinEventHandler(pxLogTextCtrl::OnThumbRelease) );
@@ -85,13 +84,11 @@ void pxLogTextCtrl::OnResize( wxSizeEvent& evt )
 	int fonty;
 	GetTextExtent( L"blaH yeah", NULL, &fonty );
 	m_win32_LinesPerPage	= (ctrly / fonty) + 1;
-	m_win32_LinesPerScroll	= m_win32_LinesPerPage * 0.25;
+	m_win32_LinesPerScroll	= m_win32_LinesPerPage * 0.40;
 #endif
 
 	evt.Skip();
 }
-
-bool m_IsPaused = false;
 
 void pxLogTextCtrl::OnThumbTrack(wxScrollWinEvent& evt)
 {
@@ -131,16 +128,12 @@ void pxLogTextCtrl::ConcludeIssue( int lines )
 	// makes logging very slow, so we only send the message for status changes, so that the
 	// log aligns itself nicely when we pause emulation or when errors occur.
 
-	//m_win32_StupidRefreshTricks += lines;
-	//if( m_win32_StupidRefreshTricks > m_win32_LinesPerScroll )
-	{
-		wxTextPos showpos = XYToPosition( 1, GetNumberOfLines()-m_win32_LinesPerScroll );
-		if( showpos > 0 )
-			ShowPosition( showpos );
+	wxTextPos showpos = XYToPosition( 1, GetNumberOfLines()-m_win32_LinesPerScroll );
+	if( showpos > 0 )
+		ShowPosition( showpos );
 
-		m_win32_StupidRefreshTricks = 0;
-		//::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
-	}
+	//::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
 #endif
 
 }
+

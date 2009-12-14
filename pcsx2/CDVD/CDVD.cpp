@@ -745,7 +745,7 @@ __forceinline void cdvdReadInterrupt()
 		// An arbitrary delay of some number of cycles probably makes more sense here,
 		// but for now it's based on the cdvd.ReadTime value. -- air
 
-		assert((int)cdvd.ReadTime > 0 );
+		pxAssume((int)cdvd.ReadTime > 0 );
 		CDVDREAD_INT(cdvd.ReadTime/4);
 		return;
 	}

@@ -99,7 +99,12 @@ wxSizerFlags pxStretchType::Apply( wxSizerFlags flags ) const
 	return flags;
 }
 
-wxSizerFlags operator , ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
+wxSizerFlags pxProportion::Apply( wxSizerFlags flags ) const
+{
+	return flags.Proportion( intval );
+}
+
+wxSizerFlags operator& ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
 {
 	//return align.Apply( _flgs );
 	wxSizerFlags retval;
@@ -118,11 +123,8 @@ wxSizerFlags operator , ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 
 	return retval;
 }
 
-/*wxSizerFlags operator | ( const wxSizerFlags& _flgs, pxStretchType stretch )
-{
-	return stretch.Apply( _flgs );
-}*/
-
+// ----------------------------------------------------------------------------
+// Reference/Handle versions!
 
 void operator+=( wxSizer& target, wxWindow* src )
 {
@@ -148,6 +150,23 @@ void operator+=( wxSizer& target, int spacer )
 {
 	target.AddSpacer( spacer );
 }
+// ----------------------------------------------------------------------------
+// Pointer versions!  (note that C++ requires one of the two operator params be a
+// "poper" object type (non-pointer), so that's why there's only a couple of these.
+
+void operator+=( wxSizer* target, wxWindow& src )
+{
+	if( !pxAssert( target != NULL ) ) return;
+	target->Add( &src );
+}
+
+void operator+=( wxSizer* target, wxSizer& src )
+{
+	if( !pxAssert( target != NULL ) ) return;
+	target->Add( &src );
+}
+
+// ----------------------------------------------------------------------------
 
 void operator+=( wxWindow& target, int spacer )
 {
@@ -430,4 +449,15 @@ void pxSetToolTip( wxWindow* wind, const wxString& src )
 void pxSetToolTip( wxWindow& wind, const wxString& src )
 {
 	pxSetToolTip( &wind, src );
+}
+
+
+wxFont pxGetFixedFont( int ptsize, int weight )
+{
+	return wxFont(
+		ptsize, wxMODERN, wxNORMAL, weight, false, 
+#ifdef __WXMSW__
+		L"Lucida Console"		// better than courier new (win32 only)
+#endif
+	);
 }

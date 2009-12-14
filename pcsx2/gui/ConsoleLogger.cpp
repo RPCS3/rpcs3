@@ -176,8 +176,15 @@ ConsoleLogFrame::ColorArray::~ColorArray()
 
 void ConsoleLogFrame::ColorArray::Create( int fontsize )
 {
-	const wxFont fixed( fontsize, wxMODERN, wxNORMAL, wxNORMAL );
-	const wxFont fixedB( fontsize, wxMODERN, wxNORMAL, wxBOLD );
+	// pxGetFixedFont selects Andale Mono on Win32, which is nice visually but
+	// unfortunately has inconsistently spaced bold versions, so it's not good
+	// for our console.
+
+	const wxFont fixed( pxGetFixedFont( fontsize ) );
+	const wxFont fixedB( pxGetFixedFont( fontsize+1, wxBOLD ) );
+	
+	//const wxFont fixed( fontsize, wxMODERN, wxNORMAL, wxNORMAL );
+	//const wxFont fixedB( fontsize, wxMODERN, wxNORMAL, wxBOLD );
 
 	// Standard R, G, B format:
 	new (&m_table[Color_Default])		wxTextAttr( wxColor(   0,   0,   0 ), wxNullColour, fixed );
@@ -261,6 +268,10 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 		
 	m_TextCtrl.SetBackgroundColour( wxColor( 230, 235, 242 ) );
 	m_TextCtrl.SetDefaultStyle( m_ColorTable[DefaultConsoleColor] );
+
+	// SetDefaultStyle only sets the style of text in the control.  We need to
+	// also set the font of the control, so that sizing logic knows what font we use:
+	m_TextCtrl.SetFont( m_ColorTable[DefaultConsoleColor].GetFont() );
 
 	wxMenu& menuLog		(*new wxMenu());
 	wxMenu& menuAppear	(*new wxMenu());

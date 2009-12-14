@@ -86,9 +86,17 @@ protected:
 
 extern void operator+=( wxSizer& target, pxStaticText* src );
 extern void operator+=( wxSizer& target, pxStaticText& src );
+extern void operator+=( wxSizer* target, pxStaticText& src );
 
 template<>
 inline void operator+=( wxSizer& target, const pxWindowAndFlags<pxStaticText>& src )
+{
+	src.window->AddTo( target, src.flags );
+	//target.Add( src.window, src.flags );
+}
+
+template<>
+inline void operator+=( wxSizer* target, const pxWindowAndFlags<pxStaticText>& src )
 {
 	src.window->AddTo( target, src.flags );
 	//target.Add( src.window, src.flags );

@@ -28,8 +28,11 @@ namespace Dialogs {
 class LogOptionsDialog: public wxDialogWithHelpers
 {
 public:
-	LogOptionsDialog( wxWindow* parent=NULL, int id=DialogId_LogOptions );
+	LogOptionsDialog( wxWindow* parent=NULL );
+	virtual ~LogOptionsDialog() throw() { }
 	
+	static const wxChar* GetNameStatic() { return L"Dialog:TraceLogSettings"; }
+
 protected:
 	void OnOk_Click( wxCommandEvent& evt );
 	void OnApply_Click( wxCommandEvent& evt );

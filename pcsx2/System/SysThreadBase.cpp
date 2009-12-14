@@ -36,21 +36,8 @@ SysThreadBase::~SysThreadBase() throw()
 void SysThreadBase::Start()
 {
 	_parent::Start();
-	m_ExecMode = ExecMode_Closing;
 
 	Sleep( 1 );
-
-	if( !m_ResumeEvent.WaitWithoutYield( wxTimeSpan(0, 0, 1, 500) ) )
-	{
-		RethrowException();
-		if( pxAssertDev( m_ExecMode == ExecMode_Closing, "Unexpected thread status during SysThread startup." ) )
-		{
-			throw Exception::ThreadCreationError( *this,
-				L"Timeout occurred while attempting to start the '%s' thread.",
-				wxEmptyString
-			);
-		}
-	}
 
 	pxAssertDev( (m_ExecMode == ExecMode_Closing) || (m_ExecMode == ExecMode_Closed),
 		"Unexpected thread status during SysThread startup."
@@ -118,7 +105,7 @@ bool SysThreadBase::Suspend( bool isBlocking )
 			break;
 		}
 
-		pxAssertDev( m_ExecMode == ExecMode_Closing, "ExecMode should be nothing other than Closing..." );
+		pxAssumeDev( m_ExecMode == ExecMode_Closing, "ExecMode should be nothing other than Closing..." );
 		m_sem_event.Post();
 	}
 
@@ -164,7 +151,7 @@ bool SysThreadBase::Pause()
 			retval = true;
 		}
 
-		pxAssertDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
+		pxAssumeDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
 
 		m_sem_event.Post();
 	}
@@ -247,7 +234,7 @@ void SysThreadBase::OnStartInThread()
 {
 	m_RunningLock.Acquire();
 	_parent::OnStartInThread();
-	m_ResumeEvent.Post();
+	m_ExecMode = ExecMode_Closing;
 }
 
 void SysThreadBase::OnCleanupInThread()

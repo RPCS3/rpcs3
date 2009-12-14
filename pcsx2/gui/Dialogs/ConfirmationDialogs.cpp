@@ -20,7 +20,9 @@
 #include "ModalPopups.h"
 #include "Utilities/StringHelpers.h"
 
-bool ConfButtons::Allows( wxWindowID id ) const
+using namespace pxSizerFlags;
+
+bool MsgButtons::Allows( wxWindowID id ) const
 {
 	switch( id )
 	{
@@ -63,7 +65,7 @@ static wxString ResultToString( int result )
 	return wxEmptyString;
 }
 
-static wxWindowID ParseThatResult( const wxString& src, const ConfButtons& validTypes )
+static wxWindowID ParseThatResult( const wxString& src, const MsgButtons& validTypes )
 {
 	if( !pxAssert( !src.IsEmpty() ) ) return wxID_ANY;
 
@@ -85,7 +87,53 @@ static wxWindowID ParseThatResult( const wxString& src, const ConfButtons& valid
 	return wxID_ANY;
 }
 
-wxWindowID Dialogs::IssueConfirmation( ExtensibleConfirmation& confirmDlg, const wxString& disablerKey )
+static bool pxTrySetFocus( wxWindow& parent, wxWindowID id )
+{
+	if( wxWindow* found = parent.FindWindowById( id ) )
+	{
+		found->SetFocus();
+		return true;
+	}
+
+	return false;
+}
+
+static bool pxTrySetFocus( wxWindow* parent, wxWindowID id )
+{
+	if( parent == NULL ) return false;
+	pxTrySetFocus( *parent, id );
+}
+
+void MsgButtons::SetBestFocus( wxWindow& dialog ) const
+{
+	if( HasOK()			&& pxTrySetFocus( dialog, wxID_OK ) ) return;
+	if( HasNo()			&& pxTrySetFocus( dialog, wxID_NO ) ) return;
+	if( HasClose()		&& pxTrySetFocus( dialog, wxID_CLOSE ) ) return;
+	if( HasRetry()		&& pxTrySetFocus( dialog, wxID_RETRY ) ) return;
+	
+	// Other confirmational types of buttons must be explicitly focused by the user or
+	// by an implementing dialog.  We won't do it here implicitly because accidental
+	// "on focus" typed keys could invoke really unwanted actions.
+	
+	// (typically close/ok/retry/etc. aren't so bad that accidental clicking does terrible things)
+}
+
+void MsgButtons::SetBestFocus( wxWindow* dialog ) const
+{
+	if( dialog == NULL ) return;
+	SetBestFocus( *dialog );
+}
+
+
+wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButtons& buttons )
+{
+	confirmDlg += new ModalButtonPanel( &confirmDlg, buttons ) | pxCenter.Border( wxTOP, 8 );
+	buttons.SetBestFocus( confirmDlg );
+	return confirmDlg.ShowModal();
+}
+
+
+wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButtons& buttons, const wxString& disablerKey )
 {
 	wxConfigBase* cfg = GetAppConfig();
 
@@ -112,135 +160,143 @@ wxWindowID Dialogs::IssueConfirmation( ExtensibleConfirmation& confirmDlg, const
 			result = split[0];
 			if( result == L"disabled" || result == L"off" || result == L"no" )
 			{
-				int result = ParseThatResult( split[1], confirmDlg.GetButtons() );
+				int result = ParseThatResult( split[1], buttons );
 				if( result != wxID_ANY ) return result;
 			}
 		}
 	}
 
-	if( cfg == NULL ) return confirmDlg.ShowModal();
-
-	// Add an option that allows the user to disable this popup from showing again.
-	// (and if the config hasn't been initialized yet, then assume the dialog as non-disablable)
-
-	pxCheckBox&	DisablerCtrl( *new pxCheckBox(&confirmDlg, _("Do not show this dialog again.")) );
-	confirmDlg.GetExtensibleSizer().Add( &DisablerCtrl, wxSizerFlags().Centre() );
-
-	if( confirmDlg.GetButtons() != ConfButtons().OK() )
-		pxSetToolTip(&DisablerCtrl, _("Disables this popup and whatever response you select here will be automatically used from now on."));
-	else
-		pxSetToolTip(&DisablerCtrl, _("The popup will not be shown again.  This setting can be undone from the settings panels."));
-
-	confirmDlg.Fit();
-
-	int modalResult = confirmDlg.ShowModal();
-
-	wxString cfgResult = ResultToString( modalResult );
-	if( DisablerCtrl.IsChecked() && !cfgResult.IsEmpty() )
+	pxCheckBox*	DisablerCtrl = NULL;
+	if( cfg != NULL )
 	{
-		cfg->SetPath( L"/PopupDisablers" );
-		cfg->Write( disablerKey, L"disabled," + cfgResult );
-		cfg->SetPath( L"/" );
+		// Add an option that allows the user to disable this popup from showing again.
+		// (and if the config hasn't been initialized yet, then assume the dialog as non-disablable)
+
+		DisablerCtrl = new pxCheckBox(&confirmDlg, _("Do not show this dialog again."));
+
+		confirmDlg += 8;
+		confirmDlg += DisablerCtrl | wxSF.Centre();
+
+		if( buttons != MsgButtons().OK() )
+			pxSetToolTip(DisablerCtrl, _("Disables this popup and whatever response you select here will be automatically used from now on."));
+		else
+			pxSetToolTip(DisablerCtrl, _("The popup will not be shown again.  This setting can be undone from the settings panels."));
+
+	}
+
+	int modalResult = pxIssueConfirmation( confirmDlg, buttons );
+
+	if( cfg != NULL )
+	{
+		wxString cfgResult = ResultToString( modalResult );
+		if( DisablerCtrl->IsChecked() && !cfgResult.IsEmpty() )
+		{
+			cfg->SetPath( L"/PopupDisablers" );
+			cfg->Write( disablerKey, L"disabled," + cfgResult );
+			cfg->SetPath( L"/" );
+			cfg->Flush();
+		}
 	}
 	return modalResult;
 }
 
-Dialogs::ExtensibleConfirmation::ExtensibleConfirmation( wxWindow* parent, const ConfButtons& type, const wxString& title, const wxString& msg )
-	: wxDialogWithHelpers( parent, wxID_ANY, title, false )
-	, m_ExtensibleSizer( *new wxBoxSizer( wxVERTICAL ) )
-	, m_ButtonSizer( *new wxBoxSizer( wxHORIZONTAL ) )
+ModalButtonPanel::ModalButtonPanel( wxWindow* parent, const MsgButtons& buttons )
+	: wxPanelWithHelpers( parent, wxHORIZONTAL )
 {
-	m_Buttons		= type;
-	m_idealWidth	= 500;
-
-	SetSizer( new wxBoxSizer(wxVERTICAL) );
-
 	// Populate the Button Sizer.
 	// We prefer this over the built-in wxWidgets ButtonSizer stuff used for other types of
 	// dialogs because we offer more button types, and we don't want the MSW default behavior
 	// of right-justified buttons.
 
-	if( type.HasCustom() )
-		AddCustomButton( pxID_CUSTOM, type.GetCustomLabel() );
-	
+	if( buttons.HasCustom() )
+		AddCustomButton( pxID_CUSTOM, buttons.GetCustomLabel() );
+
 	// Order of wxID_RESET and custom button have been picked fairly arbitrarily, since there's
 	// no standard governing those.
 
-	#ifdef __WXGTK__
+#ifdef __WXGTK__
 	// GTK+ / Linux inverts OK/CANCEL order -- cancel / no first, OK / Yes later. >_<
-	if( type.HasCancel() )
+	if( buttons.HasCancel() )
 		AddActionButton( wxID_CANCEL );
 
-	if( type.HasNo() )
+	if( buttons.HasNo() )
 	{
 		AddActionButton( wxID_NO );
-		if( type.AllowsToAll() ) AddActionButton( wxID_NOTOALL );
+		if( buttons.AllowsToAll() ) AddActionButton( wxID_NOTOALL );
 	}
-	if( type.HasOK() || type.HasYes() )			// Extra space between Affirm and Cancel Actions
-		m_ButtonSizer.Add(0, 0, 1, wxEXPAND, 0);
-	#endif
 
-	if( type.HasOK() )
+	if( buttons.HasIgnore() )
+		AddCustomButton( wxID_IGNORE, _("Ignore") );
+
+	if( buttons.HasOK() || buttons.HasYes() )			// Extra space between Affirm and Cancel Actions
+		GetSizer()->Add(0, 0, 1, wxEXPAND, 0);
+#endif
+
+	if( buttons.HasOK() )
 		AddActionButton( wxID_OK );
 
-	if( type.HasYes() )
+	if( buttons.HasYes() )
 	{
 		AddActionButton( wxID_YES );
-		if( type.AllowsToAll() )
+		if( buttons.AllowsToAll() )
 			AddActionButton( wxID_YESTOALL );
 	}
 
-	if( type.HasReset() )
+#ifdef __WXGTK__
+	if( buttons.HasRetry() )
+		AddActionButton( wxID_RETRY );
+
+	if( buttons.HasAbort() )
+		AddActionButton( wxID_ABORT );
+#else
+	if( buttons.HasAbort() )
+		AddActionButton( wxID_ABORT );
+
+	if( buttons.HasRetry() )
+		AddActionButton( wxID_RETRY );
+#endif
+
+	if( buttons.HasReset() )
 		AddCustomButton( wxID_RESET, _("Reset") );
 
-	if( type.HasClose() )
+	if( buttons.HasClose() )
 		AddActionButton( wxID_CLOSE );
 
-	#ifndef __WXGTK__
-	if( type.HasNo() || type.HasCancel() )		// Extra space between Affirm and Cancel Actions
-		m_ButtonSizer.Add(0, 0, 1, wxEXPAND, 0);
-
-	if( type.HasNo() )
+#ifndef __WXGTK__
+	if( buttons.HasNo() )
 	{
 		AddActionButton( wxID_NO );
-		if( type.AllowsToAll() )
+		if( buttons.AllowsToAll() )
 			AddActionButton( wxID_NOTOALL );
 	}
 
-	if( type.HasCancel() )
+	if( buttons.HasIgnore() )
+		AddCustomButton( wxID_IGNORE, _("Ignore") );
+
+	if( buttons.HasCancel() )
 		AddActionButton( wxID_CANCEL );
-	#endif
-
-	// --------------------------------
-	//    Finalize Sizers and Layout
-	// --------------------------------
-
-	// Add the message padded some (StdCenter gives us a 5 pt padding).  Helps emphasize it a bit.
-	wxBoxSizer& msgPadSizer( *new wxBoxSizer(wxVERTICAL) );
-	msgPadSizer += Heading( msg );
-
-	*this	+= msgPadSizer			| pxSizerFlags::StdCenter();
-	*this	+= m_ExtensibleSizer	| pxCentre;
-	*this	+= m_ButtonSizer		| pxSizerFlags::StdCenter();
-
-	Fit();
-	CenterOnScreen();
+#endif
 }
 
-void Dialogs::ExtensibleConfirmation::OnActionButtonClicked( wxCommandEvent& evt )
+void ModalButtonPanel::OnActionButtonClicked( wxCommandEvent& evt )
 {
-	EndModal( evt.GetId() );
+	evt.Skip();
+	wxWindow* toplevel = wxGetTopLevelParent( this );
+	if( toplevel != NULL && wxIsKindOf(toplevel, wxDialog) )
+		((wxDialog*)toplevel)->EndModal( evt.GetId() );
 }
 
-void Dialogs::ExtensibleConfirmation::AddCustomButton( wxWindowID id, const wxString& label )
+void ModalButtonPanel::AddCustomButton( wxWindowID id, const wxString& label )
 {
-	m_ButtonSizer.Add( new wxButton( this, id, label ), pxSizerFlags::StdButton() )->SetProportion( 6 );
-	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExtensibleConfirmation::OnActionButtonClicked ) );
+	*this += new wxButton( this, id, label ) | StdButton().Proportion(6);
+	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ModalButtonPanel::OnActionButtonClicked ) );
 }
 
-void Dialogs::ExtensibleConfirmation::AddActionButton( wxWindowID id )
+// This is for buttons that are defined internally by wxWidgets, such as wxID_CANCEL, wxID_ABORT, etc.
+// wxWidgets will assign the labels and stuff for us. :D
+void ModalButtonPanel::AddActionButton( wxWindowID id )
 {
-	m_ButtonSizer.Add( new wxButton( this, id ), pxSizerFlags::StdButton() )->SetProportion( 6 );
-	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ExtensibleConfirmation::OnActionButtonClicked ) );
+	*this += new wxButton( this, id ) | StdButton().Proportion(6);
+	Connect( id, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ModalButtonPanel::OnActionButtonClicked ) );
 }
 

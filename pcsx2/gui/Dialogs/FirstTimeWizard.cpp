@@ -22,6 +22,7 @@
 #include <wx/file.h>
 
 using namespace Panels;
+using namespace pxSizerFlags;
 
 template< typename T >
 static T& MakeWizWidget( int pageid, wxWizardPage* src )
@@ -48,8 +49,6 @@ Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
 			), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE
 		), wxSizerFlags().Expand().Border( wxBOTTOM, 6 )
 	);
-
-	//SetSizerAndFit( GetSizer(), false );
 }
 
 // ----------------------------------------------------------------------------
@@ -58,24 +57,22 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 {
 	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
-	wxPanelWithHelpers* panel = new wxPanelWithHelpers( this, wxVERTICAL );
-	panel->SetIdealWidth( 640 );
-	wxSizer& s_panel( *panel->GetSizer() );
+	wxPanelWithHelpers& panel( *new wxPanelWithHelpers( this, wxVERTICAL ) );
+	panel.SetIdealWidth( 640 );
 
-	m_dirpick_settings	= new SettingsDirPickerPanel( panel );
-	m_panel_LangSel		= new LanguageSelectionPanel( panel );
-	m_panel_UserSel		= new UsermodeSelectionPanel( panel );
+	m_dirpick_settings	= new SettingsDirPickerPanel( &panel );
+	m_panel_LangSel		= new LanguageSelectionPanel( &panel );
+	m_panel_UserSel		= new UsermodeSelectionPanel( &panel );
 
-	(new pxStaticHeading( panel, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") ))
-		->AddTo( s_panel );
+	panel += panel.Heading(_("PCSX2 is starting from a new or unknown folder and needs to be configured."));
 
-	s_panel.Add( m_panel_LangSel, pxSizerFlags::StdCenter() );
-	s_panel.Add( m_panel_UserSel, wxSizerFlags().Expand().Border( wxALL, 8 ) );
+	panel += m_panel_LangSel		| StdCenter();
+	panel += m_panel_UserSel		| pxExpand.Border( wxALL, 8 );
 
-	s_panel.AddSpacer( 6 );
-	s_panel.Add( m_dirpick_settings, pxSizerFlags::SubGroup() );
+	panel += 6;
+	panel += m_dirpick_settings		| SubGroup();
 
-	GetSizer()->Add( panel, wxSizerFlags().Expand() );
+	panel += panel					| pxExpand;
 
 	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(FirstTimeWizard::UsermodePage::OnUsermodeChanged) );
 }
@@ -98,14 +95,13 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	, m_panel_BiosSel	( MakeWizWidget<BiosSelectorPanel>( 2, &m_page_bios ) )
 {
 	// Page 2 - Plugins Panel
-	wxBoxSizer& pluginSizer( *new wxBoxSizer( wxVERTICAL ) );
-	pluginSizer.Add( &m_panel_PluginSel, pxSizerFlags::StdExpand() );
-	m_page_plugins.SetSizer( &pluginSizer );
-
 	// Page 3 - Bios Panel
-	wxBoxSizer& biosSizer( *new wxBoxSizer( wxVERTICAL ) );
-	biosSizer.Add( &m_panel_BiosSel, pxSizerFlags::StdExpand() );
-	m_page_bios.SetSizer( &biosSizer );
+
+	m_page_plugins.	SetSizer( new wxBoxSizer( wxVERTICAL ) );
+	m_page_bios.	SetSizer( new wxBoxSizer( wxVERTICAL ) );
+
+	m_page_plugins	+= m_panel_PluginSel		| StdExpand();
+	m_page_bios		+= m_panel_BiosSel			| StdExpand();
 
 	// Assign page indexes as client data
 	m_page_usermode.SetClientData	( (void*)0 );
@@ -117,8 +113,13 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	m_page_usermode.SetNext	( &m_page_plugins );
 	m_page_plugins.SetNext	( &m_page_bios );
 
-	GetPageAreaSizer()->Add( &m_page_usermode );
-	GetPageAreaSizer()->Add( &m_page_plugins );
+	GetPageAreaSizer() += m_page_usermode;
+	GetPageAreaSizer() += m_page_plugins;
+
+	// this doesn't descent from wxDialogWithHelpers, so we need to explicitly
+	// fit and center it. :(
+
+	Fit();
 	CenterOnScreen();
 
 	Connect( wxEVT_WIZARD_PAGE_CHANGED,		wxWizardEventHandler( FirstTimeWizard::OnPageChanged ) );

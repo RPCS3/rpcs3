@@ -38,7 +38,6 @@ class AppCoreThread;
 #include "System.h"
 #include "System/SysThreads.h"
 
-
 typedef void FnType_OnThreadComplete(const wxCommandEvent& evt);
 
 BEGIN_DECLARE_EVENT_TYPES()
@@ -149,14 +148,6 @@ enum MenuIdentifiers
 	MenuId_Debug_MemoryDump,
 	MenuId_Debug_Logging,		// dialog for selection additional log options
 	MenuId_Config_ResetAll,
-};
-
-enum DialogIdentifiers
-{
-	DialogId_CoreSettings = 0x800,
-	DialogId_BiosSelector,
-	DialogId_LogOptions,
-	DialogId_About,
 };
 
 enum AppEventType
@@ -331,9 +322,9 @@ struct MsgboxEventResult
 	Semaphore	WaitForMe;
 	int			result;
 
-	MsgboxEventResult() :
-		WaitForMe(), result( 0 )
+	MsgboxEventResult()
 	{
+		result = 0;
 	}
 };
 
@@ -406,7 +397,7 @@ public:
 
 	void PostPadKey( wxKeyEvent& evt );
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
-	int  ThreadedModalDialog( DialogIdentifiers dialogId );
+	int  IssueModalDialog( const wxString& dlgName );
 
 	bool PrepForExit( bool canCancel );
 
@@ -532,6 +523,7 @@ public:
 	virtual bool Suspend( bool isBlocking=true );
 	virtual void Resume();
 	virtual void Reset();
+	virtual void Cancel( bool isBlocking=true );
 	virtual void StateCheckInThread();
 	virtual void ApplySettings( const Pcsx2Config& src );
 	virtual void ChangeCdvdSource( CDVD_SourceType type );
@@ -609,6 +601,9 @@ public:
 	SaveSinglePluginHelper( PluginsEnum_t pid );
 	virtual ~SaveSinglePluginHelper() throw();
 };
+
+
+extern pxDoAssertFnType AppDoAssert;
 
 // --------------------------------------------------------------------------------------
 //  External App-related Globals and Shortcuts

@@ -28,6 +28,16 @@ AppCoreThread::AppCoreThread() : SysCoreThread()
 
 AppCoreThread::~AppCoreThread() throw()
 {
+	AppCoreThread::Cancel();
+}
+
+void AppCoreThread::Cancel( bool isBlocking )
+{
+	if( !_parent::Cancel( wxTimeSpan( 0,0,1,0 ) ) )
+	{
+		// Possible deadlock!
+		throw Exception::ThreadTimedOut( this );
+	}
 }
 
 void AppCoreThread::Reset()

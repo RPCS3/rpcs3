@@ -15,130 +15,277 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "Dialogs/ModalPopups.h"
 
 DEFINE_EVENT_TYPE( pxEVT_MSGBOX );
-DEFINE_EVENT_TYPE( pxEVT_CallStackBox );
+DEFINE_EVENT_TYPE( pxEVT_ASSERTION );
 
 using namespace Threading;
+using namespace pxSizerFlags;
 
-// Thread Safety: Must be called from the GUI thread ONLY.
-static int pxMessageDialog( const wxString& content, const wxString& caption, long flags )
+// Thread Safety: Must be called from the GUI thread ONLY.  Will assert otherwise.
+//
+// [TODO] Add support for icons?
+//
+static int pxMessageDialog( const wxString& caption, const wxString& content, const MsgButtons& buttons )
 {
-	if( IsDevBuild && !wxThread::IsMain() )
-		throw Exception::InvalidOperation( "Function must be called by the main GUI thread only." );
+	if( !AffinityAssert_AllowFromMain() ) return wxID_CANCEL;
 
-	// fixme: If the emulator is currently active and is running in fullscreen mode, then we
-	// need to either:
+	// fixme: If the emulator is currently active and is running in exclusive mode (forced
+	// fullscreen), then we need to either:
 	//  1) Exit fullscreen mode before issuing the popup.
 	//  2) Issue the popup with wxSTAY_ON_TOP specified so that the user will see it.
 	//
 	// And in either case the emulation should be paused/suspended for the user.
 
-	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
+	wxDialogWithHelpers dialog( NULL, caption, wxVERTICAL );
+	dialog += dialog.Heading( content );
+	return pxIssueConfirmation( dialog, buttons );
 }
 
-// Thread Safety: Must be called from the GUI thread ONLY.
-// fixme: this function should use a custom dialog box that has a wxTextCtrl for the callstack, and
-// uses fixed-width (modern) fonts.
-static int pxCallstackDialog( const wxString& content, const wxString& caption, long flags )
+class BaseMessageBoxEvent : public wxEvent
 {
-	if( IsDevBuild && !wxThread::IsMain() )
-		throw Exception::InvalidOperation( "Function must be called by the main GUI thread only." );
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(BaseMessageBoxEvent)
 
-	return wxMessageDialog( NULL, content, caption, flags ).ShowModal();
-}
+protected:
+	MsgboxEventResult*	m_Instdata;
+	wxString			m_Content;
+
+public:
+	explicit BaseMessageBoxEvent( int msgtype=pxEVT_MSGBOX, const wxString& content=wxEmptyString )
+		: wxEvent( 0, msgtype )
+		, m_Content( content )
+	{
+		m_Instdata = NULL;
+	}
+
+	virtual ~BaseMessageBoxEvent() throw() { }
+	virtual BaseMessageBoxEvent *Clone() const { return new BaseMessageBoxEvent(*this); }
+
+	BaseMessageBoxEvent( MsgboxEventResult& instdata, const wxString& content )
+		: wxEvent( 0, pxEVT_MSGBOX )
+		, m_Instdata( &instdata )
+		, m_Content( content )
+	{
+	}
+
+	BaseMessageBoxEvent( const wxString& content )
+		: wxEvent( 0, pxEVT_MSGBOX )
+		, m_Instdata( NULL )
+		, m_Content( content )
+	{
+	}
+
+	BaseMessageBoxEvent( const BaseMessageBoxEvent& event )
+		: wxEvent( event )
+		, m_Instdata( event.m_Instdata )
+		, m_Content( event.m_Content )
+	{
+	}
+
+	BaseMessageBoxEvent& SetInstData( MsgboxEventResult& instdata )
+	{
+		m_Instdata = &instdata;
+		return *this;
+	}
+
+	// Thread Safety: Must be called from the GUI thread ONLY.
+	virtual void IssueDialog()
+	{
+		AffinityAssert_AllowFromMain();
+
+		int result = _DoDialog();
+
+		if( m_Instdata != NULL )
+		{
+			m_Instdata->result = result;
+			m_Instdata->WaitForMe.Post();
+		}
+	}
+
+protected:
+	virtual int _DoDialog() const
+	{
+		pxFailDev( "Abstract Base MessageBox Event." );
+		return wxID_CANCEL;
+	}
+};
 
 // --------------------------------------------------------------------------------------
 //  pxMessageBoxEvent
 // --------------------------------------------------------------------------------------
-class pxMessageBoxEvent : public wxEvent
+// This event type is used to transfer message boxes to the main UI thread, and return the
+// result of the box.  It's the only way a message box can be issued from non-main threads
+// with complete safety in wx2.8.
+//
+// For simplicity sake this message box only supports two basic designs.  The main design
+// is a generic message box with confirmation buttons of your choosing.  Additionally you
+// can specify a "scrollableContent" text string, which is added into a read-only richtext
+// control similar to the console logs and such.
+//
+// Future consideration: If wxWidgets 3.0 has improved thread safety, then it should probably
+// be reasonable for it to work with a more flexable model where the dialog can be created
+// on a child thread, passed to the main thread, where ShowModal() is run (keeping the nested
+// message pumps on the main thread where they belong).  But so far this is not possible,
+// because of various subtle issues in wx2.8 design.
+//
+class pxMessageBoxEvent : public BaseMessageBoxEvent
 {
-protected:
-	MsgboxEventResult&	m_Instdata;
-	wxString			m_Title;
-	wxString			m_Content;
-	long				m_Flags;
+	typedef BaseMessageBoxEvent _parent;
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxMessageBoxEvent)
 
+protected:
+	wxString			m_Title;
+	MsgButtons			m_Buttons;
+	
 public:
-	pxMessageBoxEvent()
-		: wxEvent( 0, pxEVT_MSGBOX )
-		, m_Instdata( *(MsgboxEventResult*)NULL )
-		, m_Title()
-		, m_Content()
+	pxMessageBoxEvent( int msgtype=pxEVT_MSGBOX )
+		: BaseMessageBoxEvent( msgtype )
 	{
-		m_Flags = 0;
 	}
 
-	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, long flags )
-		: wxEvent( 0, pxEVT_MSGBOX )
-		, m_Instdata( instdata )
+	virtual ~pxMessageBoxEvent() throw() { }
+	virtual pxMessageBoxEvent *Clone() const { return new pxMessageBoxEvent(*this); }
+
+	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, const MsgButtons& buttons )
+		: BaseMessageBoxEvent( instdata, content )
 		, m_Title( title )
-		, m_Content( content )
+		, m_Buttons( buttons )
 	{
-		m_Flags = flags;
+	}
+
+	pxMessageBoxEvent( const wxString& title, const wxString& content, const MsgButtons& buttons )
+		: BaseMessageBoxEvent( content )
+		, m_Title( title )
+		, m_Buttons( buttons )
+	{
 	}
 
 	pxMessageBoxEvent( const pxMessageBoxEvent& event )
-		: wxEvent( event )
-		, m_Instdata( event.m_Instdata )
+		: BaseMessageBoxEvent( event )
 		, m_Title( event.m_Title )
-		, m_Content( event.m_Content )
+		, m_Buttons( event.m_Buttons )
 	{
-		m_Flags = event.m_Flags;
 	}
 
-	// Thread Safety: Must be called from the GUI thread ONLY.
-	void DoTheDialog()
+	pxMessageBoxEvent& SetInstData( MsgboxEventResult& instdata )
 	{
-		int result;
-
-		if( m_id == pxEVT_MSGBOX )
-			result = pxMessageDialog( m_Content, m_Title, m_Flags );
-		else
-			result = pxCallstackDialog( m_Content, m_Title, m_Flags );
-		m_Instdata.result = result;
-		m_Instdata.WaitForMe.Post();
+		_parent::SetInstData( instdata );
+		return *this;
 	}
 
-	virtual wxEvent *Clone() const { return new pxMessageBoxEvent(*this); }
-
-private:
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxMessageBoxEvent)
+protected:
+	virtual int _DoDialog() const
+	{
+		return pxMessageDialog( m_Content, m_Title, m_Buttons );
+	}
 };
 
-IMPLEMENT_DYNAMIC_CLASS( pxMessageBoxEvent, wxEvent )
+// --------------------------------------------------------------------------------------
+//  pxAssertionEvent
+// --------------------------------------------------------------------------------------
+class pxAssertionEvent : public BaseMessageBoxEvent
+{
+	typedef BaseMessageBoxEvent _parent;
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN( pxAssertionEvent )
+
+protected:
+	wxString	m_Stacktrace;
+
+public:
+	pxAssertionEvent()
+		: BaseMessageBoxEvent( pxEVT_ASSERTION )
+	{
+	}
+	
+	virtual ~pxAssertionEvent() throw() { }
+
+	virtual pxAssertionEvent *Clone() const { return new pxAssertionEvent(*this); }
+
+	pxAssertionEvent( MsgboxEventResult& instdata, const wxString& content, const wxString& trace )
+		: BaseMessageBoxEvent( pxEVT_ASSERTION )
+		, m_Stacktrace( trace )
+	{
+	}
+
+	pxAssertionEvent( const wxString& content, const wxString& trace )
+		: BaseMessageBoxEvent( pxEVT_ASSERTION, content )
+		, m_Stacktrace( trace )
+	{
+	}
+
+	pxAssertionEvent( const pxAssertionEvent& event )
+		: BaseMessageBoxEvent( event )
+		, m_Stacktrace( event.m_Stacktrace )
+	{
+	}
+
+	pxAssertionEvent& SetInstData( MsgboxEventResult& instdata )
+	{
+		_parent::SetInstData( instdata );
+		return *this;
+	}
+
+	pxAssertionEvent& SetStacktrace( const wxString& trace )
+	{
+		m_Stacktrace = trace;
+		return *this;
+	}
+
+protected:
+	virtual int _DoDialog() const
+	{
+		return Dialogs::AssertionDialog( m_Content, m_Stacktrace ).ShowModal();
+	}
+};
+
+IMPLEMENT_DYNAMIC_CLASS( BaseMessageBoxEvent, wxEvent )
+IMPLEMENT_DYNAMIC_CLASS( pxMessageBoxEvent, BaseMessageBoxEvent )
+IMPLEMENT_DYNAMIC_CLASS( pxAssertionEvent, BaseMessageBoxEvent )
 
 namespace Msgbox
 {
-	// parameters:
-	//   flags - messagebox type flags, such as wxOK, wxCANCEL, etc.
-	//
-	static int ThreadedMessageBox( const wxString& content, const wxString& title, long flags, int boxType=pxEVT_MSGBOX )
+	static int ThreadedMessageBox( BaseMessageBoxEvent& evt )
+	{
+		MsgboxEventResult instdat;
+		evt.SetInstData( instdat );
+
+		if( wxThread::IsMain() )
+		{
+			// main thread can handle the message immediately.
+			wxGetApp().ProcessEvent( evt );
+		}
+		else
+		{
+			// Not on main thread, must post the message there for handling instead:
+			wxGetApp().AddPendingEvent( evt );
+			instdat.WaitForMe.WaitNoCancel();		// Important! disable cancellation since we're using local stack vars.
+		}
+		return instdat.result;
+	}
+
+	static int ThreadedMessageBox( const wxString& title, const wxString& content, const MsgButtons& buttons )
 	{
 		// must pass the message to the main gui thread, and then stall this thread, to avoid
 		// threaded chaos where our thread keeps running while the popup is awaiting input.
 
 		MsgboxEventResult instdat;
-		pxMessageBoxEvent tevt( instdat, title, content, flags );
+		pxMessageBoxEvent tevt( instdat, title, content, buttons );
 		wxGetApp().AddPendingEvent( tevt );
 		instdat.WaitForMe.WaitNoCancel();		// Important! disable cancellation since we're using local stack vars.
 		return instdat.result;
-	}
-
-	void OnEvent( pxMessageBoxEvent& evt )
-	{
-		evt.DoTheDialog();
 	}
 
 	// Pops up an alert Dialog Box with a singular "OK" button.
 	// Always returns false.
 	bool Alert( const wxString& text, const wxString& caption, int icon )
 	{
-		icon |= wxOK;
+		MsgButtons buttons( MsgButtons().OK() );
+
 		if( wxThread::IsMain() )
-			pxMessageDialog( text, caption, icon );
+			pxMessageDialog( caption, text, buttons );
 		else
-			ThreadedMessageBox( text, caption, icon );
+			ThreadedMessageBox( caption, text, buttons );
 		return false;
 	}
 
@@ -146,60 +293,40 @@ namespace Msgbox
 	// true if OK, false if cancel.
 	bool OkCancel( const wxString& text, const wxString& caption, int icon )
 	{
-		icon |= wxOK | wxCANCEL;
+		MsgButtons buttons( MsgButtons().OKCancel() );
+
 		if( wxThread::IsMain() )
 		{
-			return wxID_OK == pxMessageDialog( text, caption, icon );
+			return wxID_OK == pxMessageDialog( caption, text, buttons );
 		}
 		else
 		{
-			return wxID_OK == ThreadedMessageBox( text, caption, icon );
+			return wxID_OK == ThreadedMessageBox( caption, text, buttons );
 		}
 	}
 
 	bool YesNo( const wxString& text, const wxString& caption, int icon )
 	{
-		icon |= wxYES_NO;
-		if( wxThread::IsMain() )
-		{
-			return wxID_YES == pxMessageDialog( text, caption, icon );
-		}
-		else
-		{
-			return wxID_YES == ThreadedMessageBox( text, caption, icon );
-		}
-	}
-
-	// [TODO] : This should probably be a fancier looking dialog box with the stacktrace
-	// displayed inside a wxTextCtrl.
-	static int CallStack( const wxString& errormsg, const wxString& stacktrace, const wxString& prompt, const wxString& caption, int buttons )
-	{
-		buttons |= wxICON_STOP;
-
-		wxString text( errormsg + L"\n\n" + stacktrace + L"\n" + prompt );
+		MsgButtons buttons( MsgButtons().YesNo() );
 
 		if( wxThread::IsMain() )
 		{
-			return pxCallstackDialog( text, caption, buttons );
+			return wxID_YES == pxMessageDialog( caption, text, buttons );
 		}
 		else
 		{
-			return ThreadedMessageBox( text, caption, buttons, pxEVT_CallStackBox );
+			return wxID_YES == ThreadedMessageBox( caption, text, buttons );
 		}
 	}
 
 	int Assertion( const wxString& text, const wxString& stacktrace )
 	{
-		return CallStack( text, stacktrace,
-			L"\nDo you want to stop the program?"
-			L"\nOr press [Cancel] to suppress further assertions.",
-			L"PCSX2 Assertion Failure",
-			wxYES_NO | wxCANCEL
-		);
+		pxAssertionEvent tevt( text, stacktrace );
+		return ThreadedMessageBox( tevt );
 	}
+}
 
-	void Except( const Exception::BaseException& src )
-	{
-		CallStack( src.FormatDisplayMessage(), src.FormatDiagnosticMessage(), wxEmptyString, L"PCSX2 Unhandled Exception", wxOK );
-	}
+void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
+{
+	evt.IssueDialog();
 }

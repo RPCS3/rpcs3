@@ -126,6 +126,13 @@
 #	endif
 #endif
 
+#ifdef PCSX2_DEBUG
+#	define pxDebugCode(code)		code
+#else
+#	define pxDebugCode(code)
+#endif
+
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // __aligned / __aligned16 / __pagealigned
 //
@@ -201,8 +208,8 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 // Don't know if there are Visual C++ equivalents of these.
 #	define __hot
 #	define __cold
-#	define likely(x) x
-#	define unlikely(x) x
+#	define likely(x)		(!!(x))
+#	define unlikely(x)		(!!(x))
 
 #	define CALLBACK		   __stdcall
 

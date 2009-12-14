@@ -340,7 +340,7 @@ static __forceinline void frameLimit()
 static __forceinline void VSyncStart(u32 sCycle)
 {
 	Cpu->CheckExecutionState();
-	SysCoreThread::Get().VsyncInThread();
+	GetCoreThread().VsyncInThread();
 
 	EECNT_LOG( "/////////  EE COUNTER VSYNC START (frame: %6d) \\\\\\\\\\\\\\\\\\\\ ", iFrame );
 

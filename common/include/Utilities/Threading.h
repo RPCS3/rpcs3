@@ -32,6 +32,9 @@ class wxTimeSpan;
 namespace Threading
 {
 	class PersistentThread;
+
+	PersistentThread* pxGetCurrentThread();
+	wxString pxGetCurrentThreadName();
 }
 
 namespace Exception
@@ -346,12 +349,11 @@ namespace Threading
 		DeclareNoncopyableObject(PersistentThread);
 
 	protected:
-		typedef int (*PlainJoeFP)();
-
 		wxString	m_name;				// diagnostic name for our thread.
 
 		pthread_t	m_thread;
-		Semaphore	m_sem_event;		// general wait event that's needed by most threads.
+		Semaphore	m_sem_event;		// general wait event that's needed by most threads
+		Semaphore	m_sem_startup;		// startup sync tool
 		Mutex		m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
 		MutexLockRecursive	m_lock_start;	// used to lock the Start() code from starting simultaneous threads accidentally.
 
@@ -369,6 +371,7 @@ namespace Threading
 
 		virtual void Start();
 		virtual void Cancel( bool isBlocking = true );
+		virtual bool Cancel( const wxTimeSpan& timeout );
 		virtual bool Detach();
 		virtual void Block();
 		virtual void RethrowException() const;
@@ -419,12 +422,13 @@ namespace Threading
 		
 		void FrankenMutex( Mutex& mutex );
 
-		bool AffinityAssert_AllowFromSelf() const;
-		bool AffinityAssert_DisallowFromSelf() const;
+		bool AffinityAssert_AllowFromSelf( const DiagnosticOrigin& origin ) const;
+		bool AffinityAssert_DisallowFromSelf( const DiagnosticOrigin& origin ) const;
 
 		// ----------------------------------------------------------------------------
 		// Section of methods for internal use only.
 
+		bool _basecancel();
 		void _selfRunningTest( const wxChar* name ) const;
 		void _DoSetThreadName( const wxString& name );
 		void _DoSetThreadName( const char* name );

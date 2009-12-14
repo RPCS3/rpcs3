@@ -66,7 +66,7 @@ protected:
 	virtual void OnDoubleClicked( wxCommandEvent& evt );
 };
 
-class ConfButtons
+class MsgButtons
 {
 protected:
 	BITFIELD32()
@@ -87,29 +87,29 @@ protected:
 	wxString m_CustomLabel;
 
 public:
-	ConfButtons() : bitset( 0 ) { }
+	MsgButtons() : bitset( 0 ) { }
 
-	ConfButtons& OK()		{ m_OK			= true; return *this; }
-	ConfButtons& Cancel()	{ m_Cancel		= true; return *this; }
-	ConfButtons& Apply()	{ m_Apply		= true; return *this; }
-	ConfButtons& Yes()		{ m_Yes			= true; return *this; }
-	ConfButtons& No()		{ m_No			= true; return *this; }
-	ConfButtons& ToAll()	{ m_AllowToAll	= true; return *this; }
+	MsgButtons& OK()		{ m_OK			= true; return *this; }
+	MsgButtons& Cancel()	{ m_Cancel		= true; return *this; }
+	MsgButtons& Apply()		{ m_Apply		= true; return *this; }
+	MsgButtons& Yes()		{ m_Yes			= true; return *this; }
+	MsgButtons& No()		{ m_No			= true; return *this; }
+	MsgButtons& ToAll()		{ m_AllowToAll	= true; return *this; }
 
-	ConfButtons& Abort()	{ m_Abort		= true; return *this; }
-	ConfButtons& Retry()	{ m_Retry		= true; return *this; }
-	ConfButtons& Ignore()	{ m_Ignore		= true; return *this; }
-	ConfButtons& Reset()	{ m_Reset		= true; return *this; }
-	ConfButtons& Close()	{ m_Close		= true; return *this; }
+	MsgButtons& Abort()		{ m_Abort		= true; return *this; }
+	MsgButtons& Retry()		{ m_Retry		= true; return *this; }
+	MsgButtons& Ignore()	{ m_Ignore		= true; return *this; }
+	MsgButtons& Reset()		{ m_Reset		= true; return *this; }
+	MsgButtons& Close()		{ m_Close		= true; return *this; }
 
-	ConfButtons& Custom( const wxString& label)
+	MsgButtons& Custom( const wxString& label)
 	{
 		m_CustomLabel = label;
 		return *this;
 	}
 
-	ConfButtons& OKCancel()	{ m_OK = m_Cancel = true; return *this; }
-	ConfButtons& YesNo()	{ m_Yes = m_No = true; return *this; }
+	MsgButtons& OKCancel()	{ m_OK = m_Cancel = true; return *this; }
+	MsgButtons& YesNo()		{ m_Yes = m_No = true; return *this; }
 		
 	bool HasOK() const		{ return m_OK; }
 	bool HasCancel() const	{ return m_Cancel; }
@@ -128,29 +128,45 @@ public:
 	const wxString& GetCustomLabel() const { return m_CustomLabel; }
 
 	bool Allows( wxWindowID id ) const;
+	void SetBestFocus( wxWindow* dialog ) const;
+	void SetBestFocus( wxWindow& dialog ) const;
 
-	bool operator ==( const ConfButtons& right ) const
+	bool operator ==( const MsgButtons& right ) const
 	{
 		return OpEqu( bitset );
 	}
 
-	bool operator !=( const ConfButtons& right ) const
+	bool operator !=( const MsgButtons& right ) const
 	{
 		return !OpEqu( bitset );
 	}
+};
+
+class ModalButtonPanel : public wxPanelWithHelpers
+{
+public:
+	ModalButtonPanel( wxWindow* window, const MsgButtons& buttons );
+	virtual ~ModalButtonPanel() throw() { }
+
+	virtual void AddActionButton( wxWindowID id );
+	virtual void AddCustomButton( wxWindowID id, const wxString& label );
+
+	virtual void OnActionButtonClicked( wxCommandEvent& evt );
 };
 
 namespace Dialogs
 {
 	class AboutBoxDialog: public wxDialogWithHelpers
 	{
-	public:
-		AboutBoxDialog( wxWindow* parent=NULL, int id=DialogId_About );
-		virtual ~AboutBoxDialog() throw() {}
-
 	protected:
 		//wxStaticBitmap m_bitmap_logo;
 		wxStaticBitmap m_bitmap_dualshock;
+
+	public:
+		AboutBoxDialog( wxWindow* parent=NULL );
+		virtual ~AboutBoxDialog() throw() {}
+
+		static const wxChar* GetNameStatic() { return L"Dialog:AboutBox"; }
 	};
 
 	
@@ -161,7 +177,7 @@ namespace Dialogs
 		Panels::LanguageSelectionPanel* m_panel_langsel;
 
 	public:
-		PickUserModeDialog( wxWindow* parent, int id=wxID_ANY );
+		PickUserModeDialog( wxWindow* parent );
 		virtual ~PickUserModeDialog() throw() {}
 
 	protected:
@@ -180,42 +196,15 @@ namespace Dialogs
 		void OnOverwrite_Click( wxCommandEvent& evt );
 	};
 
-
-	// --------------------------------------------------------------------------------------
-	//  ExtensibleConfirmation Dialog
-	// --------------------------------------------------------------------------------------
-	// Purpose: This dialog is a simple framework for providing common popups that have three
-	// main sections of content:
-	//
-	//          [Upper Paragraph]
-	//     [Optional Interior Content]
-	//         [OK] [CANCEL] [ETC]
-	//
-	// The Upper Paragraph and buttons are specified in the constructor.  The Interior Content
-	// can be added by fetching the ExtensibleSizer provided by th created dialog.  Add your
-	// content, dance around a bit, call Fit(), and then ShowModal. :)
-
-	class ExtensibleConfirmation : public wxDialogWithHelpers
+	class AssertionDialog : public wxDialogWithHelpers
 	{
-	protected:
-		wxBoxSizer&		m_ExtensibleSizer;
-		wxBoxSizer&		m_ButtonSizer;
-
-		ConfButtons		m_Buttons;
-
 	public:
-		ExtensibleConfirmation( wxWindow* parent, const ConfButtons& type, const wxString& title, const wxString& msg );
-		virtual ~ExtensibleConfirmation() throw() {}
-
-		const ConfButtons& GetButtons() const { return m_Buttons; }
-		virtual wxBoxSizer& GetExtensibleSizer() const { return m_ExtensibleSizer; }
-
-	protected:
-		virtual void AddActionButton( wxWindowID id );
-		virtual void AddCustomButton( wxWindowID id, const wxString& label );
-		virtual void OnActionButtonClicked( wxCommandEvent& evt );
+		AssertionDialog( const wxString& text, const wxString& stacktrace );
+		virtual ~AssertionDialog() throw() {}
+		
+		
 	};
-
-	wxWindowID IssueConfirmation( ExtensibleConfirmation& confirmDlg, const wxString& disablerKey );
 }
 
+wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButtons& buttons );
+wxWindowID pxIssueConfirmation( wxDialogWithHelpers& confirmDlg, const MsgButtons& buttons, const wxString& disablerKey );

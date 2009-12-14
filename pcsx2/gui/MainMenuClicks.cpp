@@ -28,6 +28,15 @@
 
 using namespace Dialogs;
 
+template<typename DialogType>
+void AppOpenDialog( wxWindow* parent )
+{
+	if( wxWindow* window = wxFindWindowByName( DialogType::GetNameStatic() ) )
+		window->SetFocus();
+	else
+		(new DialogType( parent ))->Show();
+}
+
 extern wxString GetMsg_ConfirmSysReset();
 
 void MainEmuFrame::SaveEmuOptions()
@@ -41,12 +50,12 @@ void MainEmuFrame::SaveEmuOptions()
 
 void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
-	Dialogs::ConfigurationDialog( this ).ShowModal();
+	AppOpenDialog<ConfigurationDialog>( this );
 }
 
 void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
 {
-	Dialogs::BiosSelectorDialog( this ).ShowModal();
+	AppOpenDialog<BiosSelectorDialog>( this );
 }
 
 void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
@@ -118,11 +127,14 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 			// User has an iso selected from a previous run, but it doesn't exist anymore.
 			// Issue a courtesy popup and then an Iso Selector to choose a new one.
 			
-			Dialogs::ExtensibleConfirmation( this, ConfButtons().OK(), _("ISO file not found!"),
+			wxDialogWithHelpers dialog( this, _("ISO file not found!"), wxVERTICAL );
+			dialog += dialog.Heading(
 				_("An error occurred while trying to open the file:\n\n") + g_Conf->CurrentIso + L"\n\n" + 
 				_("Error: The configured ISO file does not exist.  Click OK to select a new ISO source for CDVD.")
-			).ShowModal();
-			
+			);
+
+			pxIssueConfirmation( dialog, MsgButtons().OK() );
+
 			selector = true;
 		}
 		
@@ -141,11 +153,9 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 
 	if( SysHasValidState() )
 	{
-		ExtensibleConfirmation dialog( this, ConfButtons().Yes().Cancel(),
-			_("Confirm PS2 Reset"), GetMsg_ConfirmSysReset()
-		);
-		
-		bool confirmed = (IssueConfirmation( dialog, L"BootCdvd:ConfirmReset" ) != wxID_CANCEL);
+		wxDialogWithHelpers dialog( this, _("Confirm PS2 Reset"), wxVERTICAL );
+		dialog += dialog.Heading( GetMsg_ConfirmSysReset() );
+		bool confirmed = (pxIssueConfirmation( dialog, MsgButtons().Yes().Cancel(), L"BootCdvd:ConfirmReset" ) != wxID_CANCEL);
 
 		if( !confirmed )
 		{
@@ -290,7 +300,7 @@ void MainEmuFrame::Menu_Debug_MemoryDump_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_Debug_Logging_Click(wxCommandEvent &event)
 {
-	LogOptionsDialog( this, wxID_ANY ).ShowModal();
+	AppOpenDialog<LogOptionsDialog>( this );
 }
 
 void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
@@ -316,5 +326,5 @@ void MainEmuFrame::Menu_PrintCDVD_Info(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)
 {
-	AboutBoxDialog( this, wxID_ANY ).ShowModal();
+	AppOpenDialog<AboutBoxDialog>( this );
 }

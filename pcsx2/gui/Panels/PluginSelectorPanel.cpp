@@ -16,6 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "App.h"
 #include "Plugins.h"
+#include "SaveState.h"
 #include "Utilities/ScopedPtr.h"
 #include "ConfigurationPanels.h"
 #include "Dialogs/ModalPopups.h"
@@ -309,37 +310,43 @@ void Panels::PluginSelectorPanel::Apply()
 			break;
 	} while( ++pi, pi->shortname != NULL );
 
+	bool isSuspended = false;
+
 	if( pi->shortname != NULL )
 	{
 		if( CoreThread.IsRunning() )
 		{
 			// [TODO] : Post notice that this shuts down existing emulation, and may not safely recover.
-			Dialogs::ExtensibleConfirmation dialog( this, ConfButtons().OK().Cancel(),
-
-				_("Shutdown PS2 virtual machine?"),
-
-				pxE( ".Popup:PluginSelector:ConfirmShutdown",
-					L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "
-					L"PCSX2 will attempt to save and restore the state, but if the newly selected plugins are "
-					L"incompatible the recovery may fail, and current progress will be lost."
-					L"\n\n"
-					L"Are you sure you want to apply settings now?"
-				)
-			);
+			wxDialogWithHelpers dialog( this, _("Shutdown PS2 virtual machine?"), wxVERTICAL );
 			
-			int result = Dialogs::IssueConfirmation( dialog, L"PluginSelector:ConfirmShutdown" );
+			dialog += dialog.Heading( pxE( ".Popup:PluginSelector:ConfirmShutdown",
+				L"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 virtual machine. "
+				L"PCSX2 will attempt to save and restore the state, but if the newly selected plugins are "
+				L"incompatible the recovery may fail, and current progress will be lost."
+				L"\n\n"
+				L"Are you sure you want to apply settings now?"
+			) );
+
+			int result = pxIssueConfirmation( dialog, MsgButtons().OK().Cancel(), L"PluginSelector:ConfirmShutdown" );
 
 			if( result == wxID_CANCEL )
 				throw Exception::CannotApplySettings( this, "Cannot apply settings: canceled by user because plugins changed while the emulation state was active.", false );
+
+			// FIXME : We only actually have to save plugins here, except the recovery code
+			// in SysCoreThread isn't quite set up yet to handle that (I think...) --air
+
+			isSuspended = CoreThread.Suspend();
+			StateCopy_FreezeToMem_Blocking();
 		}
 
-		sApp.SysReset();
+		// Don't use SysShutdown, it clears the StateCopy.
+		CoreThread.Cancel();
+		wxGetApp().m_CorePlugins = NULL;
 	}
 
 	if( !wxGetApp().m_CorePlugins )
 	{
-		try
-		{
+		try {
 			LoadPluginsImmediate();
 		}
 		catch( Exception::PluginError& ex )
@@ -359,6 +366,8 @@ void Panels::PluginSelectorPanel::Apply()
 			);
 		}
 	}
+
+	if( isSuspended ) CoreThread.Resume();
 }
 
 void Panels::PluginSelectorPanel::CancelRefresh()
@@ -591,6 +600,7 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 {
 	DevCon.WriteLn( "Plugin Enumeration Thread started..." );
 
+	Sleep( 15 );		// give the window some time to paint.
 	YieldToMain();
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )

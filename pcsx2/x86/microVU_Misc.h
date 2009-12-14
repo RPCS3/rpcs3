@@ -121,8 +121,8 @@ extern const __aligned(32) mVU_Globals mVUglob;
 // Function/Template Stuff
 #define mVUx (vuIndex ? &microVU1 : &microVU0)
 #define mVUop(opName)	static void opName (mP)
-#define microVUr(aType) __recInline aType
-#define microVUt(aType) __forceinline aType
+#define microVUr(aType) static __recInline aType
+#define microVUt(aType) static __forceinline aType
 #define microVUx(aType) template<int vuIndex> aType
 #define microVUf(aType) template<int vuIndex> __forceinline aType
 

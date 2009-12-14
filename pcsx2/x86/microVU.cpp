@@ -67,20 +67,20 @@ const __aligned(32) mVU_Globals mVUglob = {
 // Micro VU - Main Functions
 //------------------------------------------------------------------
 
-microVUt(void) mVUthrowHardwareDeficiency( const wxChar* extFail )
+microVUt(void) mVUthrowHardwareDeficiency( const wxChar* extFail, int vuIndex )
 {
 	throw Exception::HardwareDeficiency(
-		L"microVU init error: SSE1 is not available!",
-		wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), L"SSE" )
+		wxsFormat( L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail),
+		wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail )
 	);
 }
 
 // Only run this once per VU! ;)
 microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 
-	if(!x86caps.hasMultimediaExtensions)		mVUthrowHardwareDeficiency( L"MMX" );
-	if(!x86caps.hasStreamingSIMDExtensions)		mVUthrowHardwareDeficiency( L"SSE" );
-	if(!x86caps.hasStreamingSIMD2Extensions)	mVUthrowHardwareDeficiency( L"SSE2" );
+	if(!x86caps.hasMultimediaExtensions)		mVUthrowHardwareDeficiency( L"MMX", vuIndex );
+	if(!x86caps.hasStreamingSIMDExtensions)		mVUthrowHardwareDeficiency( L"SSE", vuIndex );
+	if(!x86caps.hasStreamingSIMD2Extensions)	mVUthrowHardwareDeficiency( L"SSE2", vuIndex );
 
 	microVU* mVU = mVUx;
 	memset(&mVU->prog, 0, sizeof(mVU->prog));
@@ -182,17 +182,19 @@ microVUt(void) mVUclear(mV, u32 addr, u32 size) {
 // Clears program data
 microVUf(void) mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
-	mVUprogI.used	   = 0;
-	mVUprogI.isDead    = 1;
-	mVUprogI.isOld	   = 1;
-	mVUprogI.frame	   = mVU->prog.curFrame;
-	for (int j = 0; j <= mVUprogI.ranges.max; j++) {
-		mVUprogI.ranges.range[j][0]	= -1; // Set range to 
-		mVUprogI.ranges.range[j][1]	= -1; // indeterminable status
-		mVUprogI.ranges.total		= -1;
+	microProgram& program = mVU->prog.prog[progIndex];
+
+	program.used		= 0;
+	program.isDead		= 1;
+	program.isOld		= 1;
+	program.frame		= mVU->prog.curFrame;
+	for (int j = 0; j <= program.ranges.max; j++) {
+		program.ranges.range[j][0]	= -1; // Set range to 
+		program.ranges.range[j][1]	= -1; // indeterminable status
+		program.ranges.total		= -1;
 	}
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		safe_delete(mVUprogI.block[i]);
+		safe_delete(program.block[i]);
 	}
 }
 
@@ -322,6 +324,9 @@ microVUf(int) mVUsearchProg() {
 	return 1; // If !cleared, then we're still on the same program as last-time ;)
 }
 
+static u32 mvu0_allocated = 0;
+static u32 mvu1_allocated = 0;
+
 // --------------------------------------------------------------------------------------
 //  recMicroVU0
 // --------------------------------------------------------------------------------------
@@ -331,13 +336,21 @@ recMicroVU0::recMicroVU0() {
 }
 
 void recMicroVU0::Allocate() {
-	if( AtomicIncrement( m_AllocCount ) == 0 )
-		mVUinit( &VU0, 0 );
+	if( m_AllocCount == 0 )
+	{
+		++m_AllocCount;
+		if( AtomicExchange( mvu0_allocated, 1 ) == 0 )
+			mVUinit( &VU0, 0 );
+	}
 }
 
 void recMicroVU0::Shutdown() throw() {
-	if( AtomicDecrement( m_AllocCount ) == 0 )
-		mVUclose(&microVU0);
+	if( m_AllocCount > 0 )
+	{
+		--m_AllocCount;
+		if( AtomicExchange( mvu0_allocated, 0 ) == 1 )
+			mVUclose(&microVU0);
+	}
 }
 
 void recMicroVU0::Reset() {
@@ -356,7 +369,7 @@ void recMicroVU0::ExecuteBlock() {
 }
 
 void recMicroVU0::Clear(u32 addr, u32 size) {
-	pxAssert( m_AllocCount );		// please allocate me first! :|
+	pxAssert( mvu0_allocated );		// please allocate me first! :|
 	mVUclear(&microVU0, addr, size); 
 }
 
@@ -367,32 +380,35 @@ void recMicroVU0::Vsync() throw() {
 // --------------------------------------------------------------------------------------
 //  recMicroVU1
 // --------------------------------------------------------------------------------------
-recMicroVU1::recMicroVU1()
-{
+recMicroVU1::recMicroVU1() {
 	IsInterpreter = false;
 }
 
-void recMicroVU1::Allocate()
-{
-	if( AtomicIncrement( m_AllocCount ) == 0 )
-		mVUinit( &VU1, 1 );
+void recMicroVU1::Allocate() {
+	if( m_AllocCount == 0 )
+	{
+		++m_AllocCount;
+		if( AtomicExchange( mvu1_allocated, 1 ) == 0 )
+			mVUinit( &VU1, 1 );
+	}
 }
 
-void recMicroVU1::Shutdown() throw()
-{
-	if( AtomicDecrement( m_AllocCount ) == 0 )
-		mVUclose(&microVU1);
+void recMicroVU1::Shutdown() throw() {
+	if( m_AllocCount > 0 )
+	{
+		--m_AllocCount;
+		if( AtomicExchange( mvu1_allocated, 0 ) == 1 )
+			mVUclose(&microVU1);
+	}
 }
 
-void recMicroVU1::Reset()
-{
+void recMicroVU1::Reset() {
 	if( !pxAssertDev( m_AllocCount, "MicroVU1 CPU Provider has not been allocated prior to reset!" ) ) return;
 	mVUreset(&microVU1);
 }
 
-void recMicroVU1::ExecuteBlock()
-{
-	pxAssert( m_AllocCount );		// please allocate me first! :|
+void recMicroVU1::ExecuteBlock() {
+	pxAssert( mvu1_allocated );		// please allocate me first! :|
 
 	if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
 	pxAssert( (VU1.VI[REG_TPC].UL&7) == 0 );
@@ -402,8 +418,7 @@ void recMicroVU1::ExecuteBlock()
 	XMMRegisters::Thaw();
 }
 
-void recMicroVU1::Clear(u32 addr, u32 size)
-{
+void recMicroVU1::Clear(u32 addr, u32 size) {
 	pxAssert( m_AllocCount );		// please allocate me first! :|
 	mVUclear(&microVU1, addr, size); 
 }

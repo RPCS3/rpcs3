@@ -592,7 +592,7 @@ $memcpy_final:
 // (zerofrog)
 u8 memcmp_mmx(const void* src1, const void* src2, int cmpsize)
 {
-	assert( (cmpsize&7) == 0 );
+	pxAssert( (cmpsize&7) == 0 );
 
 	__asm {
 		push esi
@@ -766,7 +766,7 @@ End:
 // returns the xor of all elements, cmpsize has to be mult of 8
 void memxor_mmx(void* dst, const void* src1, int cmpsize)
 {
-	assert( (cmpsize&7) == 0 );
+	pxAssert( (cmpsize&7) == 0 );
 
 	__asm {
 		mov ecx, cmpsize

@@ -20,21 +20,17 @@
 
 using namespace Panels;
 
-Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent, int id )
-	: wxDialogWithHelpers( parent, id, _("PCSX2 First Time configuration"), false )
+Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent )
+	: wxDialogWithHelpers( parent, _("PCSX2 First Time configuration"), wxVERTICAL )
 {
 	m_panel_usersel = new UsermodeSelectionPanel( this, false );
 	m_panel_langsel = new LanguageSelectionPanel( this );
-
-	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
 	*this	+= new pxStaticHeading( this, _("PCSX2 is starting from a new or unknown folder and needs to be configured.") );
 	*this	+= m_panel_langsel	| pxSizerFlags::StdCenter();
 	*this	+= m_panel_usersel	| wxSizerFlags().Expand().Border( wxALL, 8 );
 
 	AddOkCancel( *GetSizer() );
-	Fit();
-	CenterOnScreen();
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickUserModeDialog::OnOk_Click ) );
 	// TODO : Add a command event handler for language changes, that dynamically re-update contents of this window.
