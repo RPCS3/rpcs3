@@ -28,6 +28,10 @@
 #include "System/SysThreads.h"
 #include "GS.h"
 
+#ifdef __LINUX__
+#include <csetjmp>
+#endif
+
 using namespace x86Emitter;
 using namespace R5900;
 

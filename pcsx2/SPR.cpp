@@ -90,7 +90,6 @@ __forceinline void SPR0chain()
 	spr0->qwc = 0;
 }
 
-
 void _SPR0interleave()
 {
 	int qwc = spr0->qwc;
@@ -373,7 +372,7 @@ void _dmaSPR1()   // toSPR work function
 			SPR_LOG("spr1 dmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx",
 				ptag[1]._u32, ptag[0]._u32, spr1->qwc, ptag->ID, spr1->madr);
 
-			done = (hwDmacSrcChain(spr1, ptag->ID) == 1);
+			done = (hwDmacSrcChain(spr1, ptag->ID));
 			SPR1chain();										//Transfers the data set by the switch
 
 			if (spr1->chcr.TIE && ptag->IRQ)  			//Check TIE bit of CHCR and IRQ bit of tag

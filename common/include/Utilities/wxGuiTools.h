@@ -264,7 +264,7 @@ template< typename WinType >
 void operator+=( wxSizer* target, const pxWindowAndFlags<WinType>& src )
 {
 	if( !pxAssert( target != NULL ) ) return;
-	target.Add( src.window, src.flags );
+	target->Add( src.window, src.flags );
 }
 
 // ----------------------------------------------------------------------------
