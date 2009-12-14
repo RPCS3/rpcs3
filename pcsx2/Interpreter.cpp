@@ -390,6 +390,7 @@ static void intExecute()
 
 static void intExecuteBiosStub()
 {
+	g_EEFreezeRegs = false;
 	Console.WriteLn( Color_StrongGreen, "(R5900-Interp) Executing Bios Stub..." );
 	while( (cpuRegs.pc != 0x00200008) && (cpuRegs.pc != 0x00100008) ) {
 		execI();
