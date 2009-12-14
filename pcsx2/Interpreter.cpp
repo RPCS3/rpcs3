@@ -388,6 +388,30 @@ static void intExecute()
 	} catch( Exception::ExitCpuExecute& ) { }
 }
 
+static void intExecuteBiosStub()
+{
+	Console.WriteLn( Color_StrongGreen, "(R5900-Interp) Executing Bios Stub..." );
+	while( (cpuRegs.pc != 0x00200008) && (cpuRegs.pc != 0x00100008) ) {
+		execI();
+	}
+
+	// ... some maual bios injection hack from a century ago, me thinks.  Leaving the
+	// code intact for posterity. --air
+
+	//    {
+	//        FILE* f = fopen("eebios.bin", "wb");
+	//        fwrite(PSM(0x80000000), 0x100000, 1, f);
+	//        fclose(f);
+	//        exit(0);
+
+	//        f = fopen("iopbios.bin", "wb");
+	//        fwrite(PS2MEM_PSX, 0x80000, 1, f);
+	//        fclose(f);
+	//    }
+
+	Console.WriteLn( Color_StrongGreen, "(R5900-Interp) Execute Bios Stub Complete");
+}
+
 static void intCheckExecutionState()
 {
 	if( GetCoreThread().HasPendingStateChangeRequest() )
@@ -415,6 +439,7 @@ R5900cpu intCpu =
 	intReset,
 	intStep,
 	intExecute,
+	intExecuteBiosStub,
 
 	intCheckExecutionState,
 	intClear,

@@ -121,7 +121,8 @@ static __forceinline void cpuRcntSet()
 	if( nextCounter < 0 ) nextCounter = 0;
 }
 
-void rcntInit() {
+void rcntInit()
+{
 	int i;
 
 	memzero(counters);
@@ -140,7 +141,8 @@ void rcntInit() {
 	vsyncCounter.Mode = MODE_VRENDER;
 	vsyncCounter.sCycle = cpuRegs.cycle;
 
-	UpdateVSyncRate();
+	// Set the video mode to user's default request:
+	gsSetRegionMode( (GS_RegionMode)EmuConfig.GS.DefaultRegionMode );
 
 	for (i=0; i<4; i++) rcntReset(i);
 	cpuRcntSet();

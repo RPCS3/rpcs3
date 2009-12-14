@@ -28,8 +28,8 @@
 #include "System/SysThreads.h"
 #include "GS.h"
 
-#ifdef __LINUX__
-#include <csetjmp>
+#if !PCSX2_SEH
+#	include <csetjmp>
 #endif
 
 using namespace x86Emitter;
@@ -38,8 +38,8 @@ using namespace R5900;
 #define PC_GETBLOCK(x) PC_GETBLOCK_(x, recLUT)
 
 u32 maxrecmem = 0;
-static uptr recLUT[0x10000];
-static uptr hwLUT[0x10000];
+static __aligned16 uptr recLUT[0x10000];
+static __aligned16 uptr hwLUT[0x10000];
 
 #define HWADDR(mem) (hwLUT[mem >> 16] + (mem))
 
@@ -730,6 +730,26 @@ static void recExecute()
 	}
 #endif
 }
+
+static void recExecuteBiosStub()
+{
+	Console.WriteLn( Color_StrongGreen, "(R5900-32) Executing Bios Stub..." );
+	g_ExecBiosHack = true;
+
+	recExecute();
+	pxAssertDev( cpuRegs.pc == 0x00200008 || cpuRegs.pc == 0x00100008,
+		"Bios stub execution terminated on an abnormal address."
+	);
+
+	g_ExecBiosHack = false;
+	Console.WriteLn( Color_StrongGreen, "(R5900-32) Execute Bios Stub Complete");
+
+	// Reset the EErecs here, because the bios generates "slow" blocks that have
+	// g_ExecBiosHack checks in them.  This deletes them so that the recs replace them
+	// with new faster versions:
+	recResetEE();
+}
+
 
 ////////////////////////////////////////////////////
 void R5900::Dynarec::OpcodeImpl::recSYSCALL( void )
@@ -1721,7 +1741,8 @@ R5900cpu recCpu =
 	recResetEE,
 	recStep,
 	recExecute,
-
+	recExecuteBiosStub,
+	
 	recCheckExecutionState,
 	recClear,
 };

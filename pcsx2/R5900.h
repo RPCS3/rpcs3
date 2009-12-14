@@ -319,6 +319,20 @@ struct R5900cpu
 	//
 	void (*Execute)();
 
+	// This function performs a "hackish" execution of the BIOS stub, which initializes
+	// EE memory and hardware.  It forcefully breaks execution when the stub is finished,
+	// prior to the PS2 logos being displayed.  This allows us to "shortcut" right into
+	// a game without having to wait through the logos or endure game/bios localization
+	// checks.
+	//
+	// Use of this function must be followed by the proper injection of the elf header's
+	// code execution entry point into cpuRegs.pc.  Failure to modify cpuRegs.pc will
+	// result in the bios continuing its normal unimpeded splash screen execution.
+	//
+	// Exception Throws:  [TODO]  (possible execution-related throws to be added)
+	//
+	void (*ExecuteBiosStub)();
+
 	// Checks for execution suspension or cancellation.  In pthreads terms this provides 
 	// a "cancellation point."  Execution state checks are typically performed at Vsyncs
 	// by the generic VM event handlers in R5900.cpp/Counters.cpp (applies to both recs
@@ -361,7 +375,6 @@ extern R5900cpu recCpu;
 
 extern void cpuInit();
 extern void cpuReset();		// can throw Exception::FileNotFound.
-extern void cpuExecuteBios();
 extern void cpuException(u32 code, u32 bd);
 extern void cpuTlbMissR(u32 addr, u32 bd);
 extern void cpuTlbMissW(u32 addr, u32 bd);

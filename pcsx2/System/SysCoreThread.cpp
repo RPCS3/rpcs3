@@ -313,7 +313,7 @@ void SysCoreThread::CpuInitializeMess()
 		// effects).
 
 		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
-		cpuExecuteBios();
+		Cpu->ExecuteBiosStub();
 		loadElfFile( elf_file );
 	}
 	

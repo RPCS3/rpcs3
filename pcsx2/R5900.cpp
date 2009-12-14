@@ -59,12 +59,12 @@ void cpuReset()
 	memzero(fpuRegs);
 	memzero(tlb);
 
-	cpuRegs.pc = 0xbfc00000; ///set pc reg to stack 
-	cpuRegs.CP0.n.Config = 0x440;
-	cpuRegs.CP0.n.Status.val = 0x70400004; //0x10900000 <-- wrong; // COP0 enabled | BEV = 1 | TS = 1
-	cpuRegs.CP0.n.PRid   = 0x00002e20; // PRevID = Revision ID, same as R5900
-	fpuRegs.fprc[0]   = 0x00002e00; // fpu Revision..
-	fpuRegs.fprc[31]  = 0x01000001; // fpu Status/Control
+	cpuRegs.pc				= 0xbfc00000; //set pc reg to stack 
+	cpuRegs.CP0.n.Config	= 0x440;
+	cpuRegs.CP0.n.Status.val= 0x70400004; //0x10900000 <-- wrong; // COP0 enabled | BEV = 1 | TS = 1
+	cpuRegs.CP0.n.PRid		= 0x00002e20; // PRevID = Revision ID, same as R5900
+	fpuRegs.fprc[0]			= 0x00002e00; // fpu Revision..
+	fpuRegs.fprc[31]		= 0x01000001; // fpu Status/Control
 
 	g_nextBranchCycle = cpuRegs.cycle + 4;
 	EEsCycle = 0;
@@ -531,54 +531,6 @@ __forceinline void cpuTestHwInts() {
 	cpuTestINTCInts();
 	cpuTestDMACInts();
 	cpuTestTIMRInts();
-}
-
-// This function performs a "hackish" execution of the BIOS stub, which initializes EE
-// memory and hardware.  It forcefully breaks execution when the stub is finished, prior
-// to the PS2 logos being displayed.  This allows us to "shortcut" right into a game
-// without having to wait through the logos or endure game/bios localization checks.
-//
-// Use of this function must be followed by the proper injection of the elf header's code
-// execution entry point into cpuRegs.pc.  Failure to modify cpuRegs.pc will result in the
-// bios continuing its normal unimpeeded splashscreen execution.
-//
-void cpuExecuteBios()
-{
-	// Set the video mode to user's default request:
-	gsSetRegionMode( (GS_RegionMode)EmuConfig.GS.DefaultRegionMode );
-
-	Console.WriteLn( "Executing Bios Stub..." );
-
-	g_ExecBiosHack = true;
-	while(	cpuRegs.pc != 0x00200008 &&
-			cpuRegs.pc != 0x00100008 )
-	{
-		Cpu->Execute();
-	}
-	g_ExecBiosHack = false;
-
-//    {
-//        FILE* f = fopen("eebios.bin", "wb");
-//        fwrite(PSM(0x80000000), 0x100000, 1, f);
-//        fclose(f);
-//        exit(0);
-
-//        f = fopen("iopbios.bin", "wb");
-//        fwrite(PS2MEM_PSX, 0x80000, 1, f);
-//        fclose(f);
-//    }
-
-//	REC_CLEARM(0x00200008);
-//	REC_CLEARM(0x00100008);
-//	REC_CLEARM(cpuRegs.pc);
-
-	// Reset the EErecs here, because the bios generates "slow" blocks that have
-	// g_ExecBiosHack checks in them.  This deletes them so that the recs replace them
-	// with new faster versions:
-	Cpu->Reset();
-
-	Console.Warning("Execute Bios Stub Complete");
-	//GSprintf(5, "PCSX2 " PCSX2_VERSION "\nExecuteBios Complete\n");
 }
 
 __forceinline void CPU_INT( u32 n, s32 ecycle)
