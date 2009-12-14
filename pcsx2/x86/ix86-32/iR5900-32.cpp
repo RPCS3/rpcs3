@@ -264,7 +264,7 @@ u32* recGetImm64(u32 hi, u32 lo)
 	if (recConstBufPtr >= recConstBuf + RECCONSTBUF_SIZE)
 	{
 		Console.WriteLn( "EErec const buffer filled; Resetting..." );
-		throw Exception::ForceDispatcherReg();
+		throw Exception::ExitCpuExecute();
 
 		/*for (u32 *p = recConstBuf; p < recConstBuf + RECCONSTBUF_SIZE; p += 2)
 		{
@@ -675,7 +675,7 @@ static void recCheckExecutionState()
 	if( GetCoreThread().HasPendingStateChangeRequest() )
 	{
 #if PCSX2_SEH
-		throw Exception::ForceDispatcherReg();
+		throw Exception::ExitCpuExecute();
 #else
 		// Without SEH we'll need to hop to a safehouse point outside the scope of recompiled
 		// code.  C++ exceptions can't cross the mighty chasm in the stackframe that the recompiler
@@ -699,7 +699,7 @@ static void recExecute()
 	try {
 		EnterRecompiledCode();
 	}
-	catch( Exception::ForceDispatcherReg& ) { }
+	catch( Exception::ExitCpuExecute& ) { }
 
 #else
 
@@ -837,7 +837,7 @@ void recClear(u32 addr, u32 size)
 static void recExitExecution()
 {
 #if PCSX2_SEH
-	throw Exception::ExitRecExecute();
+	throw Exception::ExitCpuExecute();
 #else
 	longjmp( m_SetJmp_StateCheck, 1 );
 #endif

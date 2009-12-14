@@ -32,16 +32,10 @@ namespace Exception
 	// Implementation Note: this exception has no meaningful type information and we don't
 	// care to have it be caught by any BaseException handlers lying about, so let's not
 	// derive from BaseException :D
-	class ForceDispatcherReg
+	class ExitCpuExecute
 	{
 	public:
-		explicit ForceDispatcherReg() { }
-	};
-
-	class ExitRecExecute
-	{
-	public:
-		explicit ExitRecExecute() { }
+		explicit ExitCpuExecute() { }
 	};
 }
 #ifndef __LINUX__

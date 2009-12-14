@@ -344,7 +344,8 @@
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/ConsoleLogger.h" />
 		<Unit filename="../gui/Dialogs/AboutBoxDialog.cpp" />
-		<Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
+    <Unit filename="../gui/Dialogs/AssertionDialog.cpp" />
+    <Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
 		<Unit filename="../gui/Dialogs/ConfirmationDialogs.cpp" />
 		<Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />

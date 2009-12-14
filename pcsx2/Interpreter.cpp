@@ -385,13 +385,13 @@ static void intExecute()
 	try {
 		while( true )
 			execI();
-	} catch( Exception::ForceDispatcherReg& ) { }
+	} catch( Exception::ExitCpuExecute& ) { }
 }
 
 static void intCheckExecutionState()
 {
 	if( GetCoreThread().HasPendingStateChangeRequest() )
-		throw Exception::ForceDispatcherReg();
+		throw Exception::ExitCpuExecute();
 }
 
 static void intStep()
