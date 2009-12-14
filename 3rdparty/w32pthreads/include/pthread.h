@@ -224,7 +224,7 @@ typedef unsigned long DWORD_PTR;
 #include <signal.h>
 #endif /* HAVE_SIGNAL_H */
 
-#ifndef __CLEANUP_C
+#ifdef __CLEANUP_C
 #include <setjmp.h>
 #endif
 #include <limits.h>
