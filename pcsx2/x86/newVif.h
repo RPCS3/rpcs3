@@ -21,20 +21,18 @@ using namespace x86Emitter;
 extern void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0);
 extern void _nVifUnpack(int idx, u8 *data, u32 size);
 
-struct instBlock { u8 data[16*64]; };
-static __pagealigned instBlock nVifUpk[2][2][4][3][16]; // [USN][Masking][curCycle][CyclesToWrite-1][Unpack Type]
-static __aligned16 u32 nVifMask[3][4][4] = {0};			// [MaskNumber][CycleNumber][Vector]
 typedef u32 (__fastcall *nVifCall)(void*, void*);
-#define nVifUnpackF(dest, src,   usn, doMask, curCycle, cycles, unpackType) {				\
-	(((nVifCall)((void*)&nVifUpk[usn][doMask][curCycle][cycles][unpackType]))(dest, src));	\
-}
+
+static __pagealigned u8 nVifUpkExec[__pagesize*16];
+static __aligned16 nVifCall nVifUpk[(2*2*16)*4*4];		// ([USN][Masking][Unpack Type]) [curCycle][CyclesToWrite-1]
+static __aligned16 u32 nVifMask[3][4][4] = {0};			// [MaskNumber][CycleNumber][Vector]
 
 #define	_v0 0
 #define	_v1 0x55
 #define	_v2 0xaa
 #define	_v3 0xff
-#define aMax(x, y) (((x) > (y) ? (x) : (y)))
-#define aMin(x, y) (((x) < (y) ? (x) : (y)))
+#define aMax(x, y) std::max(x,y)
+#define aMin(x, y) std::min(x,y)
 #define _f __forceinline
 
 #define xShiftR(regX, n) {			\
@@ -42,7 +40,7 @@ typedef u32 (__fastcall *nVifCall)(void*, void*);
 	else	 { xPSRA.D(regX, n); }	\
 }
 
-u32 nVifT[16] = { 
+static const u32 nVifT[16] = { 
 	4, // S-32
 	2, // S-16
 	1, // S-8

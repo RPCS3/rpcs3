@@ -66,11 +66,40 @@ void convertRGB() {
 	xPSRL.D	 (xmm2, 24); // single AND...
 }
 
+struct VifUnpackIndexer
+{
+	int	usn, mask;
+	int	curCycle, cyclesToWrite;
+	
+	nVifCall& GetCall( int packType ) const
+	{
+		int usnpart		= usn*2*16;
+		int maskpart	= mask*16;
+		int packpart	= packType;
+
+		int curpart		= curCycle*4;
+		int cycpespart	= cyclesToWrite;
+
+		return nVifUpk[((usnpart+maskpart+packpart)*(4*4)) + (curpart+cycpespart)];
+	}
+	
+	void xSetCall( int packType ) const
+	{
+		xAlignPtr(16);
+		GetCall( packType ) = (nVifCall)xGetPtr();
+	}
+
+	void xSetNullCall( int packType ) const
+	{
+		GetCall( packType ) = NULL;
+	}
+};
+
 // ecx = dest, edx = src
 void nVifGen(int usn, int mask, int curCycle, int cycles) {
-	HostSys::MemProtect(nVifUpk, sizeof(nVifUpk), Protect_ReadWrite, false);
+	const VifUnpackIndexer indexer = { usn, mask, curCycle, cycles };
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x0]); // S-32
+	indexer.xSetCall(0x0); // S-32
 		if (cycles>=0) xMOVUPS  (xmm0, ptr32[edx]);
 		if (cycles>=0) xPSHUF.D (xmm1, xmm0, _v0);
 		if (cycles>=1) xPSHUF.D (xmm2, xmm0, _v1);
@@ -78,7 +107,7 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest (xmm1, xmm2, xmm3);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x1]); // S-16
+	indexer.xSetCall(0x1); // S-16
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=0) xPUNPCK.LWD(xmm0, xmm0);
 		if (cycles>=0) xShiftR    (xmm0, 16);
@@ -88,7 +117,7 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest   (xmm1, xmm2, xmm3);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x2]); // S-8
+	indexer.xSetCall(0x2); // S-8
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=0) xPUNPCK.LBW(xmm0, xmm0);
 		if (cycles>=0) xPUNPCK.LWD(xmm0, xmm0);
@@ -99,15 +128,16 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest   (xmm1, xmm2, xmm3);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x3]); // ----
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x4]); // V2-32
+	indexer.xSetNullCall(0x3); // ----
+
+	indexer.xSetCall(0x4); // V2-32
 		if (cycles>=0) xMOVUPS  (xmm0, ptr32[edx]);
 		if (cycles>=2) xMOVUPS  (xmm2, ptr32[edx+0x10]);
 		if (cycles>=1) xPSHUF.D (xmm1, xmm0, 0xe);
 		if (cycles>=0) xMovDest (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x5]); // V2-16
+	indexer.xSetCall(0x5); // V2-16
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=2) xPSHUF.D   (xmm2, xmm0, _v2);
 		if (cycles>=0) xPUNPCK.LWD(xmm0, xmm0);
@@ -118,7 +148,7 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest   (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x6]); // V2-8
+	indexer.xSetCall(0x6); // V2-8
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=0) xPUNPCK.LBW(xmm0, xmm0);
 		if (cycles>=2) xPSHUF.D   (xmm2, xmm0, _v2);
@@ -130,15 +160,16 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest   (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x7]); // ----
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x8]); // V3-32
+	indexer.xSetNullCall(0x7); // ----
+
+	indexer.xSetCall(0x8); // V3-32
 		if (cycles>=0) xMOVUPS  (xmm0, ptr32[edx]);
 		if (cycles>=1) xMOVUPS  (xmm1, ptr32[edx+12]);
 		if (cycles>=2) xMOVUPS  (xmm2, ptr32[edx+24]);
 		if (cycles>=0) xMovDest (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0x9]); // V3-16
+	indexer.xSetCall(0x9); // V3-16
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=1) xMOVUPS    (xmm1, ptr32[edx+6]);
 		if (cycles>=2) xMOVUPS    (xmm2, ptr32[edx+12]);
@@ -151,7 +182,7 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest   (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0xa]); // V3-8
+	indexer.xSetCall(0xa); // V3-8
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=1) xMOVUPS    (xmm1, ptr32[edx+3]);
 		if (cycles>=2) xMOVUPS    (xmm2, ptr32[edx+6]);
@@ -167,15 +198,16 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest   (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0xb]); // ----
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0xc]); // V4-32
+	indexer.xSetNullCall(0xb); // ----
+
+	indexer.xSetCall(0xc); // V4-32
 		if (cycles>=0) xMOVUPS  (xmm0, ptr32[edx]);
 		if (cycles>=1) xMOVUPS  (xmm1, ptr32[edx+0x10]);
 		if (cycles>=2) xMOVUPS  (xmm2, ptr32[edx+0x20]);
 		if (cycles>=0) xMovDest (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0xd]); // V4-16
+	indexer.xSetCall(0xd); // V4-16
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=1) xMOVUPS    (xmm1, ptr32[edx+0x10]);
 		if (cycles>=2) xMOVUPS    (xmm2, ptr32[edx+0x20]);
@@ -188,7 +220,7 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=0) xMovDest   (xmm0, xmm1, xmm2);
 	xRET();
 
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0xe]); // V4-8
+	indexer.xSetCall(0xe); // V4-8
 		if (cycles>=0) xMOVUPS    (xmm0, ptr32[edx]);
 		if (cycles>=1) xMOVUPS    (xmm1, ptr32[edx+4]);
 		if (cycles>=2) xMOVUPS    (xmm2, ptr32[edx+8]);
@@ -206,7 +238,7 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 
 	// A | B5 | G5 | R5
 	// ..0.. A 0000000 | ..0.. B 000 | ..0.. G 000 | ..0.. R 000
-	xSetPtr(&nVifUpk[usn][mask][curCycle][cycles][0xf]); // V4-5
+	indexer.xSetCall(0xf); // V4-5
 		if (cycles>=0) xMOVUPS   (xmm0, ptr32[edx]);
 		if (cycles>=0) xMOVAPS   (xmm1, xmm0);
 		if (cycles>=0) convertRGB();
@@ -219,5 +251,6 @@ void nVifGen(int usn, int mask, int curCycle, int cycles) {
 		if (cycles>=2) convertRGB();
 		if (cycles>=2) xMOVAPS   (ptr32[ecx+0x20], xmm2);
 	xRET();
-	HostSys::MemProtect(nVifUpk, sizeof(nVifUpk), Protect_ReadOnly, true);
+
+	pxAssert( ((uptr)xGetPtr() - (uptr)nVifUpkExec) < sizeof(nVifUpkExec) );
 }

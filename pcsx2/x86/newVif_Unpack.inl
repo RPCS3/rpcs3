@@ -36,18 +36,25 @@ void initNewVif(int idx) {
 	nVif[idx].vifBlock	= new BlockBuffer(0x2000); // 8kb Block Buffer
 	nVif[idx].vuMemEnd  = idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
 	nVif[idx].vuMemLimit= idx ? 0x3ff0 : 0xff0;
-	memset_8<0xcc,sizeof(nVifUpk)>(nVifUpk);
+
+	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
+	memset8<0xcc>( nVifUpkExec );
+
+	xSetPtr( nVifUpkExec );
+
 	for (int a = 0; a < 2; a++) {
 	for (int b = 0; b < 2; b++) {
 	for (int c = 0; c < 4; c++) {
 	for (int d = 0; d < 3; d++) {
-		nVifGen(a, b, c, d); //nVifUpk[2][2][4][3][16];
+		nVifGen(a, b, c, d);
 	}}}}
+
+	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
 }
 
 int nVifUnpack(int idx, u32 *data) {
 	XMMRegisters::Freeze();
-	BlockBuffer* vB = nVif[idx].vifBlock;
+	//BlockBuffer* vB = nVif[idx].vifBlock;
 	int			ret = aMin(vif1.vifpacketsize, vif1.tag.size);
 	vif1.tag.size -= ret;
 	_nVifUnpack(idx, (u8*)data, ret<<2);
@@ -70,9 +77,9 @@ _f void incVUptr(int idx, u8* &ptr, int amount) {
 	if ((uptr)ptr & 0xf) DevCon.WriteLn("unaligned wtf :(");
 }
 
-_f void setMasks(VIFregisters* v) {
+static void setMasks(const VIFregisters& v) {
 	for (int i = 0; i < 16; i++) {
-		int m = (v->mask >> (i*2)) & 3;
+		int m = (v.mask >> (i*2)) & 3;
 		switch (m) {
 			case 0: // Data
 				nVifMask[0][i/4][i%4] = 0xffffffff;
@@ -82,12 +89,12 @@ _f void setMasks(VIFregisters* v) {
 			case 1: // Row
 				nVifMask[0][i/4][i%4] = 0;
 				nVifMask[1][i/4][i%4] = 0;
-				nVifMask[2][i/4][i%4] = ((u32*)&v->r0)[(i%4)*4];
+				nVifMask[2][i/4][i%4] = ((u32*)&v.r0)[(i%4)*4];
 				break;
 			case 2: // Col
 				nVifMask[0][i/4][i%4] = 0;
 				nVifMask[1][i/4][i%4] = 0;
-				nVifMask[2][i/4][i%4] = ((u32*)&v->c0)[(i/4)*4];
+				nVifMask[2][i/4][i%4] = ((u32*)&v.c0)[(i/4)*4];
 				break;
 			case 3: // Write Protect
 				nVifMask[0][i/4][i%4] = 0;
@@ -98,7 +105,97 @@ _f void setMasks(VIFregisters* v) {
 	}
 }
 
-_f void _nVifUnpack(int idx, u8 *data, u32 size) {
+// ----------------------------------------------------------------------------
+//  Unpacking Optimization notes:
+// ----------------------------------------------------------------------------
+//  Some games send a LOT of small packets.  This is a problem because the new VIF unpacker
+//  has a lot of setup code to establish which unpack function to call.  The best way to
+//  optimize this is to cache the unpack function's base (see fnbase below) and update it
+//  when the variables it depends on are modified: writes to vif->tag.cmd and vif->usn.
+//
+//  A secondary optimization would be adding special handlers for packets where vifRegs->num==1.
+//  (which would remove the loop, simplify the incVUptr code, etc).  But checking for it has
+//  to be simple enough that it doesn't offset the benefits (which I'm not sure is possible).
+//   -- air
+
+
+template< int idx, bool doMode, bool isFill >
+__releaseinline void __fastcall _nVifUnpackLoop( u8 *data, u32 size )
+{
+	// Eh... template attempt, tho not sure it helped much.  There's too much setup code (see
+	// optimization note above) -- air
+
+	const int	usn		= !!(vif->usn);
+	const int	doMask	= !!(vif->tag.cmd & 0x10);
+	const int	upkNum	= vif->tag.cmd & 0xf;
+	const u32&	vift	= nVifT[upkNum];
+
+	u8* dest					 = setVUptr(idx, vif->tag.addr);
+	const VIFUnpackFuncTable& ft = VIFfuncTable[vif->tag.cmd & 0xf];
+	UNPACKFUNCTYPE func			 = vif->usn ? ft.funcU : ft.funcS;
+
+	const nVifCall*	fnbase = &nVifUpk[
+		((usn*2*16) + (doMask*16) + (upkNum)) * (4*4)
+	];
+
+	const int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
+	const int blockSize = isFill ? vifRegs->cycle.wl : vifRegs->cycle.cl;
+
+	if (doMask)
+		setMasks(*vifRegs);
+
+	if (vif->cl >= blockSize) {
+		vif->cl  = 0;
+	}
+
+	while (vifRegs->num > 0) {
+		if (vif->cl  < cycleSize) { 
+			//if (size <= 0) { DbgCon.WriteLn("_nVifUnpack: Out of Data!"); break; }
+			if (doMode /*|| doMask*/) {
+				//if (doMask)
+				//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);
+				func((u32*)dest, (u32*)data, ft.qsize);
+				data += ft.gsize;
+				size -= ft.gsize;
+				vifRegs->num--;
+			}
+			else if (1) {
+				//DevCon.WriteLn("SSE Unpack!");
+				fnbase[aMin(vif->cl, 4) * 4](dest, data);
+				data += vift;
+				size -= vift;
+				vifRegs->num--;
+			}
+			else {
+			
+				//DevCon.WriteLn("SSE Unpack!");
+				int c = aMin((cycleSize - vif->cl), 3);
+				size -= vift * c;
+				//if (c>1)	  { DevCon.WriteLn("C > 1!"); }
+				if (c<0||c>3) { DbgCon.WriteLn("C wtf!"); }
+				if (size < 0) { DbgCon.WriteLn("Size Shit"); size+=vift*c;c=1;size-=vift*c;}
+				fnbase[(aMin(vif->cl, 4) * 4) + c-1](dest, data);
+				data += vift * c;
+				vifRegs->num -= c;
+			}
+		}
+		else if (isFill) {
+			func((u32*)dest, (u32*)data, ft.qsize);
+			vifRegs->num--;
+		}
+		incVUptr(idx, dest, 16);
+		
+		// Removing this modulo was a huge speedup for God of War. (62->73 fps)
+		// (GoW uses a lot of blockSize==1 packets, resulting in tons of loops -- so the biggest
+		//  factor in performance ends up being the top-level conditionals of the loop, and
+		//  also the loop prep code.) --air
+
+		//vif->cl = (vif->cl+1) % blockSize;
+		if( ++vif->cl == blockSize ) vif->cl = 0;
+	}
+}
+
+void _nVifUnpack(int idx, u8 *data, u32 size) {
 	/*if (nVif[idx].vifRegs->cycle.cl >= nVif[idx].vifRegs->cycle.wl) { // skipping write
 		if (!idx) VIFunpack<0>((u32*)data, &vif0.tag, size>>2);
 		else	  VIFunpack<1>((u32*)data, &vif1.tag, size>>2);
@@ -107,64 +204,38 @@ _f void _nVifUnpack(int idx, u8 *data, u32 size) {
 	else*/ { // filling write
 		vif        = nVif[idx].vif;
 		vifRegs    = nVif[idx].vifRegs;
-		int isFill = !!(vifRegs->cycle.cl < vifRegs->cycle.wl);
-		int usn    = !!(vif->usn);
-		int doMask = !!(vif->tag.cmd & 0x10);
-		int upkNum = vif->tag.cmd & 0xf;
-		int doMode = !!(vifRegs->mode);
-		if (doMask) setMasks(vifRegs);
+
+		const bool	doMode	= !!vifRegs->mode;
+		const bool	isFill	= (vifRegs->cycle.cl < vifRegs->cycle.wl);
+
+		//UnpackLoopTable[idx][doMode][isFill]( data, size );
+
+		if( idx )
+		{
+			if( doMode )
+			{
+				if( isFill )
+					_nVifUnpackLoop<1,true,true>( data, size );
+				else
+					_nVifUnpackLoop<1,true,false>( data, size );
+			}
+			else
+			{
+				if( isFill )
+					_nVifUnpackLoop<1,false,true>( data, size );
+				else
+					_nVifUnpackLoop<1,false,false>( data, size );
+			}
+		}
+		else
+		{
+			pxFailDev( "No VIF0 support yet, sorry!" );
+		}
 		
 		//if (isFill)
 		//DevCon.WriteLn("%s Write! [num = %d][%s]", (isFill?"Filling":"Skipping"), vifRegs->num, (vifRegs->num%3 ? "bad!" : "ok"));
 		//DevCon.WriteLn("%s Write! [mask = %08x][type = %02d][num = %d]", (isFill?"Filling":"Skipping"), vifRegs->mask, upkNum, vifRegs->num);
 		
-		u8* dest					 = setVUptr(idx, vif->tag.addr);
-		const VIFUnpackFuncTable* ft = &VIFfuncTable[vif->tag.cmd & 0xf];
-		UNPACKFUNCTYPE func			 = vif->usn ? ft->funcU : ft->funcS;
-		int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
-		int blockSize = isFill ? vifRegs->cycle.wl : vifRegs->cycle.cl;
-		//vif->cl = 0;
-		while (vifRegs->num > 0) {
-			if (vif->cl >= blockSize) {
-				vif->cl  = 0;
-			}
-			if (vif->cl  < cycleSize) { 
-				if (size <= 0) { DevCon.WriteLn("_nVifUnpack: Out of Data!"); break; }
-				if (doMode /*|| doMask*/) {
-					//if (doMask)
-					//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);
-					func((u32*)dest, (u32*)data, ft->qsize);
-					data += ft->gsize;
-					size -= ft->gsize;
-					vifRegs->num--;
-				}
-				else if (1) {
-					//DevCon.WriteLn("SSE Unpack!");
-					nVifUnpackF(dest, data, usn, doMask, aMin(vif->cl, 4), 0, upkNum); 
-					data += nVifT[upkNum];
-					size -= nVifT[upkNum];
-					vifRegs->num--;
-				}
-				else {
-					//DevCon.WriteLn("SSE Unpack!");
-					int c = aMin((cycleSize - vif->cl), 3);
-					int t = nVifT[upkNum];
-					size -= t * c;
-					//if (c>1)	  { DevCon.WriteLn("C > 1!"); }
-					if (c<0||c>3) { DevCon.WriteLn("C wtf!"); }
-					if (size < 0) { DevCon.WriteLn("Size Shit"); size+=t*c;c=1;size-=t*c;}
-					nVifUnpackF(dest, data, usn, doMask, aMin(vif->cl, 4), c-1, upkNum); 
-					data += t * c;
-					vifRegs->num -= c;
-				}
-			}
-			else if (isFill) {
-				func((u32*)dest, (u32*)data, ft->qsize);
-				vifRegs->num--;
-			}
-			incVUptr(idx, dest, 16);
-			vif->cl = (vif->cl+1) % blockSize;
-		}
 	}
 }
 
