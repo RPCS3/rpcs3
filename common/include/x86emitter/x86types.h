@@ -157,9 +157,12 @@ template< typename T > void xWrite( T val );
 	class ModSibBase;
 
 	extern void xSetPtr( void* ptr );
-	extern u8* xGetPtr();
 	extern void xAlignPtr( uint bytes );
 	extern void xAdvancePtr( uint bytes );
+	extern void xAlignCallTarget();
+
+	extern u8* xGetPtr();
+	extern u8* xGetAlignedCallTarget();
 
 	extern JccComparisonType xInvertCond( JccComparisonType src );
 

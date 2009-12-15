@@ -371,7 +371,7 @@ static DynGenFunc* _DynGen_JITCompile()
 {
 	pxAssertMsg( DispatcherReg != NULL, "Please compile the DispatcherReg subroutine *before* JITComple.  Thanks." );
 
-	u8* retval = xGetPtr();
+	u8* retval = xGetAlignedCallTarget();
 	_DynGen_StackFrameCheck();
 
 	xMOV( ecx, &cpuRegs.pc );
@@ -388,7 +388,7 @@ static DynGenFunc* _DynGen_JITCompile()
 
 static DynGenFunc* _DynGen_JITCompileInBlock()
 {
-	u8* retval = xGetPtr();
+	u8* retval = xGetAlignedCallTarget();
 	xJMP( JITCompile );
 	return (DynGenFunc*)retval;
 }
@@ -396,7 +396,7 @@ static DynGenFunc* _DynGen_JITCompileInBlock()
 // called when jumping to variable pc address
 static DynGenFunc* _DynGen_DispatcherReg()
 {
-	u8* retval = xGetPtr();
+	u8* retval = xGetPtr();		// fallthrough target, can't align it!
 	_DynGen_StackFrameCheck();
 
 	xMOV( eax, &cpuRegs.pc );
@@ -410,7 +410,7 @@ static DynGenFunc* _DynGen_DispatcherReg()
 
 static DynGenFunc* _DynGen_EnterRecompiledCode()
 {
-	u8* retval = xGetPtr();
+	u8* retval = xGetAlignedCallTarget();
 
 	// "standard" frame pointer setup for aligned stack: Record the original
 	//   esp into ebp, and then align esp.  ebp references the original esp base
@@ -446,6 +446,8 @@ static DynGenFunc* _DynGen_EnterRecompiledCode()
 	xMOV( &s_store_ebp, ebp );
 
 	xJMP( ptr32[&DispatcherReg] );
+	
+	xAlignCallTarget();
 	imm = (uptr)xGetPtr();
 	ExitRecompiledCode = (DynGenFunc*)xGetPtr();
 
@@ -1254,7 +1256,7 @@ void recompileNextInstruction(int delayslot)
 //	_flushCachedRegs();
 //	g_cpuHasConstReg = 1;
 
-	if (!delayslot && x86Ptr - recPtr > 0x1000)
+	if (!delayslot && (xGetPtr() - recPtr > 0x1000) )
 		s_nEndBlock = pc;
 }
 
@@ -1335,9 +1337,8 @@ static void __fastcall recRecompile( const u32 startpc )
 		recResetEE();
 	}
 
-	x86SetPtr( recPtr );
-	x86Align(16);
-	recPtr = x86Ptr;
+	xSetPtr( recPtr );
+	recPtr = xGetAlignedCallTarget();
 
 	s_nBlockFF = false;
 	if (HWADDR(startpc) == 0x81fc0)
@@ -1718,14 +1719,14 @@ StartRecomp:
 		}
 	}
 
-	pxAssert( x86Ptr < recMem+REC_CACHEMEM );
+	pxAssert( xGetPtr() < recMem+REC_CACHEMEM );
 	pxAssert( recConstBufPtr < recConstBuf + RECCONSTBUF_SIZE );
 	pxAssert( x86FpuState == 0 );
 
-	pxAssert(x86Ptr - recPtr < 0x10000);
-	s_pCurBlockEx->x86size = x86Ptr - recPtr;
+	pxAssert(xGetPtr() - recPtr < 0x10000);
+	s_pCurBlockEx->x86size = xGetPtr() - recPtr;
 
-	recPtr = x86Ptr;
+	recPtr = xGetPtr();
 
 	pxAssert( (g_cpuHasConstReg&g_cpuFlushedConstReg) == g_cpuHasConstReg );
 

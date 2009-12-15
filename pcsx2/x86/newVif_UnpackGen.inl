@@ -85,8 +85,7 @@ struct VifUnpackIndexer
 	
 	void xSetCall( int packType ) const
 	{
-		xAlignPtr(16);
-		GetCall( packType ) = (nVifCall)xGetPtr();
+		GetCall( packType ) = (nVifCall)xGetAlignedCallTarget();
 	}
 
 	void xSetNullCall( int packType ) const

@@ -58,6 +58,11 @@ __forceinline void vif1FLUSH()
 
 void vif1Init()
 {
+#ifdef  newVif1
+	extern void initNewVif(int idx);
+	initNewVif(1);
+#endif
+
 	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
 }
 
@@ -313,19 +318,13 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 
 	return ret;
 }
-#ifdef  newVif1
-	extern void initNewVif(int idx);
-	extern int nVifUnpack(int idx, u32 *data);
-	static int testVif = 0;
-#endif
 static int  __fastcall Vif1TransUnpack(u32 *data)
 {
 #ifdef newVif1
-	if (!testVif) { initNewVif(1); testVif = 1; }
-	//int temp = nVifUnpack(1, data);
-	//if (temp >= 0) return temp;
+	extern int nVifUnpack(int idx, u32 *data);
 	return nVifUnpack(1, data);
 #endif
+
     XMMRegisters::Freeze();
 
 	if (vif1.vifpacketsize < vif1.tag.size)

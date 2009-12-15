@@ -26,7 +26,8 @@ struct nVifStruct {
 	u32				vuMemLimit; // Use for fast AND
 	BlockBuffer*	vifBlock;	// Block Buffer
 };
-nVifStruct nVif[2];
+
+static __aligned16 nVifStruct nVif[2];
 
 void initNewVif(int idx) {
 	nVif[idx].idx		= idx;
@@ -112,6 +113,7 @@ static void setMasks(const VIFregisters& v) {
 //  has a lot of setup code to establish which unpack function to call.  The best way to
 //  optimize this is to cache the unpack function's base (see fnbase below) and update it
 //  when the variables it depends on are modified: writes to vif->tag.cmd and vif->usn.
+//  Problem: vif->tag.cmd is modified a lot.  Like, constantly.  So won't work.
 //
 //  A secondary optimization would be adding special handlers for packets where vifRegs->num==1.
 //  (which would remove the loop, simplify the incVUptr code, etc).  But checking for it has
@@ -119,11 +121,13 @@ static void setMasks(const VIFregisters& v) {
 //   -- air
 
 
-template< int idx, bool doMode, bool isFill >
-__releaseinline void __fastcall _nVifUnpackLoop( u8 *data, u32 size )
+//template< int idx, bool doMode, bool isFill >
+//__releaseinline void __fastcall _nVifUnpackLoop( u8 *data, u32 size )
+__releaseinline void __fastcall _nVifUnpackLoop( int idx, u8 *data, u32 size )
 {
-	// Eh... template attempt, tho not sure it helped much.  There's too much setup code (see
-	// optimization note above) -- air
+	// comment out the following 2 lines to test templated version...
+	const bool	doMode	= !!vifRegs->mode;
+	const bool	isFill	= (vifRegs->cycle.cl < vifRegs->cycle.wl);
 
 	const int	usn		= !!(vif->usn);
 	const int	doMask	= !!(vif->tag.cmd & 0x10);
@@ -131,12 +135,13 @@ __releaseinline void __fastcall _nVifUnpackLoop( u8 *data, u32 size )
 	const u32&	vift	= nVifT[upkNum];
 
 	u8* dest					 = setVUptr(idx, vif->tag.addr);
-	const VIFUnpackFuncTable& ft = VIFfuncTable[vif->tag.cmd & 0xf];
-	UNPACKFUNCTYPE func			 = vif->usn ? ft.funcU : ft.funcS;
+	const VIFUnpackFuncTable& ft = VIFfuncTable[upkNum];
+	UNPACKFUNCTYPE func			 = usn ? ft.funcU : ft.funcS;
 
-	const nVifCall*	fnbase = &nVifUpk[
-		((usn*2*16) + (doMask*16) + (upkNum)) * (4*4)
-	];
+	// Did a bunch of work to make it so I could optimize this index lookup to outside
+	// the main loop but it was for naught -- too often the loop is only 1-2 iterations,
+	// so this setup code ends up being slower (1 iter) or same speed (2 iters).
+	const nVifCall*	fnbase = &nVifUpk[ ((usn*2*16) + (doMask*16) + (upkNum)) * (4*4) ];
 
 	const int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
 	const int blockSize = isFill ? vifRegs->cycle.wl : vifRegs->cycle.cl;
@@ -145,6 +150,11 @@ __releaseinline void __fastcall _nVifUnpackLoop( u8 *data, u32 size )
 		setMasks(*vifRegs);
 
 	if (vif->cl >= blockSize) {
+	
+		// This condition doesn't appear to ever occur, and really it never should.
+		// Normally it wouldn't matter, but even simple setup code matters here (see 
+		// optimization notes above) >_<
+
 		vif->cl  = 0;
 	}
 
@@ -167,7 +177,6 @@ __releaseinline void __fastcall _nVifUnpackLoop( u8 *data, u32 size )
 				vifRegs->num--;
 			}
 			else {
-			
 				//DevCon.WriteLn("SSE Unpack!");
 				int c = aMin((cycleSize - vif->cl), 3);
 				size -= vift * c;
@@ -185,10 +194,10 @@ __releaseinline void __fastcall _nVifUnpackLoop( u8 *data, u32 size )
 		}
 		incVUptr(idx, dest, 16);
 		
-		// Removing this modulo was a huge speedup for God of War. (62->73 fps)
-		// (GoW uses a lot of blockSize==1 packets, resulting in tons of loops -- so the biggest
-		//  factor in performance ends up being the top-level conditionals of the loop, and
-		//  also the loop prep code.) --air
+		// Removing this modulo was a huge speedup for God of War start menu. (62->73 fps)
+		// (GoW and tri-ace games both use a lot of blockSize==1 packets, resulting in tons
+		//  of loops -- so the biggest factor in performance ends up being the top-level
+		//  conditionals of the loop, and also the loop prep code.) --air
 
 		//vif->cl = (vif->cl+1) % blockSize;
 		if( ++vif->cl == blockSize ) vif->cl = 0;
@@ -202,8 +211,17 @@ void _nVifUnpack(int idx, u8 *data, u32 size) {
 		return;
 	}
 	else*/ { // filling write
+
 		vif        = nVif[idx].vif;
 		vifRegs    = nVif[idx].vifRegs;
+
+#if 1
+		_nVifUnpackLoop( idx, data, size );
+#else		
+		// Eh... template attempt, tho it didn't help much.  There's too much setup code,
+		// and the template only optimizes code inside the loop, which often times seems to
+		// only be run once or twice anyway.  Better to use recompilation than templating
+		// anyway, but I'll leave it in for now for reference. -- air
 
 		const bool	doMode	= !!vifRegs->mode;
 		const bool	isFill	= (vifRegs->cycle.cl < vifRegs->cycle.wl);
@@ -231,7 +249,7 @@ void _nVifUnpack(int idx, u8 *data, u32 size) {
 		{
 			pxFailDev( "No VIF0 support yet, sorry!" );
 		}
-		
+#endif
 		//if (isFill)
 		//DevCon.WriteLn("%s Write! [num = %d][%s]", (isFill?"Filling":"Skipping"), vifRegs->num, (vifRegs->num%3 ? "bad!" : "ok"));
 		//DevCon.WriteLn("%s Write! [mask = %08x][type = %02d][num = %d]", (isFill?"Filling":"Skipping"), vifRegs->mask, upkNum, vifRegs->num);

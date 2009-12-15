@@ -395,6 +395,32 @@ __emitinline void xAlignPtr( uint bytes )
 	x86Ptr = (u8*)( ( (uptr)x86Ptr + bytes - 1) & ~(bytes - 1) );
 }
 
+// Performs best-case alignment for the target CPU, for use prior to starting a new
+// function.  This is not meant to be used prior to jump targets, since it doesn't
+// add padding (additionally, speed benefit from jump alignment is minimal, and often
+// a loss).
+__emitinline void xAlignCallTarget()
+{
+	// Core2/i7 CPUs prefer unaligned addresses.  Checking for SSSE3 is a decent filter.
+	// (also align in debug modes for disasm convenience)
+	
+	if( IsDebugBuild || !x86caps.hasSupplementalStreamingSIMD3Extensions )
+	{
+		// - P4's and earlier prefer 16 byte alignment.
+		// - AMD Athlons and Phenoms prefer 8 byte alignment, but I don't have an easy
+		//   heuristic for it yet.
+		// - AMD Phenom IIs are unknown (either prefer 8 byte, or unaligned).
+
+		xAlignPtr( 16 );
+	}
+}
+
+__emitinline u8* xGetAlignedCallTarget()
+{
+	xAlignCallTarget();
+	return x86Ptr;
+}
+
 __emitinline void xAdvancePtr( uint bytes )
 {
 	if( IsDevBuild )
