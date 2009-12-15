@@ -313,15 +313,25 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 
 	return ret;
 }
-
+#ifdef  newVif1
+	extern void initNewVif(int idx);
+	extern int nVifUnpack(int idx, u32 *data);
+	static int testVif = 0;
+#endif
 static int  __fastcall Vif1TransUnpack(u32 *data)
 {
+#ifdef newVif1
+	if (!testVif) { initNewVif(1); testVif = 1; }
+	//int temp = nVifUnpack(1, data);
+	//if (temp >= 0) return temp;
+	return nVifUnpack(1, data);
+#endif
     XMMRegisters::Freeze();
 
 	if (vif1.vifpacketsize < vif1.tag.size)
 	{
 		int ret = vif1.tag.size;
-		/* size is less that the total size, transfer is  'in pieces' */
+		// size is less that the total size, transfer is  'in pieces'
 		if (vif1Regs->offset != 0 || vif1.cl != 0)
 		{
 			vif1.tag.size -= vif1.vifpacketsize - VIFalign<1>(data, &vif1.tag, vif1.vifpacketsize);

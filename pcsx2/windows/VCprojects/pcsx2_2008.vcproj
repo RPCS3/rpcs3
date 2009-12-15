@@ -836,6 +836,30 @@
 									>
 								</File>
 							</Filter>
+							<Filter
+								Name="newVif"
+								>
+								<File
+									RelativePath="..\..\x86\newVif.h"
+									>
+								</File>
+								<File
+									RelativePath="..\..\x86\newVif_BlockBuffer.h"
+									>
+								</File>
+								<File
+									RelativePath="..\..\x86\newVif_OldUnpack.inl"
+									>
+								</File>
+								<File
+									RelativePath="..\..\x86\newVif_Unpack.inl"
+									>
+								</File>
+								<File
+									RelativePath="..\..\x86\newVif_UnpackGen.inl"
+									>
+								</File>
+							</Filter>
 						</Filter>
 						<Filter
 							Name="SPR"
