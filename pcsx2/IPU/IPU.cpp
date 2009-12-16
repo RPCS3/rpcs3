@@ -13,6 +13,12 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// ----------------------------------------------------------------------------
+// PCH Warning!  This file, when compiled with PCH + Optimizations, fails in very curious
+// and unexpected ways (most obvious is a freeze in the middle of the New Game video of
+// Final Fantasy XII).  So make sure to force-disable PCH for this file at ALL times.
+// ----------------------------------------------------------------------------
+
 #include "PrecompiledHeader.h"
 #include "Common.h"
 

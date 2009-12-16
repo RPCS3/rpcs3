@@ -1225,6 +1225,30 @@
 					<File
 						RelativePath="..\..\Ipu\IPU.cpp"
 						>
+						<FileConfiguration
+							Name="Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Devel|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+							/>
+						</FileConfiguration>
 					</File>
 					<File
 						RelativePath="..\..\Ipu\IPU.h"
