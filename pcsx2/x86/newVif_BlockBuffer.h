@@ -20,19 +20,28 @@ private:
 	u32 mSize;  // Cur Size
 	u32 mSizeT; // Total Size
 	u8* mData;  // Data Ptr
-	void grow(u32 newSize) {
-		u8* temp = new u8[newSize];
-		memcpy(temp, mData, mSizeT);
-		safe_delete( mData );
-		mData = temp;
+	void alloc(int size) {
+		mData = SysMmapEx(NULL, size, 0, "nVif_BlockBuffer");
+		if (!mData) throw Exception::OutOfMemory("nVif Error: Failed to allocate recompiler memory!");
+		memset(mData, 0xcc, size);
+	}
+	void dealloc(u8* &dPtr, int size) {
+		if (dPtr) { HostSys::Munmap(dPtr, size); dPtr = NULL; }
 	}
 public:
-	BlockBuffer(u32 tSize) { mSizeT = tSize; mSize = 0; mData = new u8[mSizeT]; }
-	virtual ~BlockBuffer() { safe_delete(mData); }
+	BlockBuffer(u32 tSize)	{ mSizeT = tSize; mSize = 0; alloc(mSizeT); }
+	~BlockBuffer()			{ dealloc(mData, mSizeT); }
 	void append(void *addr, u32 size) {
 		if (mSize + size > mSizeT) grow(mSize*2 + size);
 		memcpy(&mData[mSize], addr, size);
 		mSize += size;
+	}
+	void grow(u32 newSize) {
+		u8* temp = mData;
+		alloc  (newSize);
+		memcpy (mData, temp, mSize);
+		dealloc(temp, mSizeT);
+		mSizeT = newSize;
 	}
 	void clear()    { mSize = 0; }
 	u32  getSize()  { return mSize; }

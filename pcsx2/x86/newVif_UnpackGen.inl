@@ -15,47 +15,22 @@
 
 #pragma once
 
-#define xMaskWrite(regX, x) {					\
-	if (x==0) xMOVAPS(xmm7, ptr32[ecx]);		\
-	if (x==1) xMOVAPS(xmm7, ptr32[ecx+0x10]);	\
-	if (x==2) xMOVAPS(xmm7, ptr32[ecx+0x20]);	\
-	int offX = aMin(curCycle+x, 4);				\
-	xPAND(regX, ptr32[nVifMask[0][offX]]);		\
-	xPAND(xmm7, ptr32[nVifMask[1][offX]]);		\
-	xPOR (regX, ptr32[nVifMask[2][offX]]);		\
-	xPOR (regX, xmm7);							\
-	if (x==0) xMOVAPS(ptr32[ecx],      regX);	\
-	if (x==1) xMOVAPS(ptr32[ecx+0x10], regX);	\
-	if (x==2) xMOVAPS(ptr32[ecx+0x20], regX);	\
+#define xMaskWrite(regX) {					\
+	xMOVAPS(xmm7, ptr32[ecx]);				\
+	int offX = aMin(curCycle, 4);			\
+	xPAND(regX, ptr32[nVifMask[0][offX]]);	\
+	xPAND(xmm7, ptr32[nVifMask[1][offX]]);	\
+	xPOR (regX, ptr32[nVifMask[2][offX]]);	\
+	xPOR (regX, xmm7);						\
+	xMOVAPS(ptr32[ecx], regX);				\
 }
-
-#define xMovDest(reg0) {						 \
-	if (mask==0) { xMOVAPS (ptr32[ecx], reg0); } \
-	else		 { xMaskWrite(reg0, 0); }		 \
+#define xMovDest(regX) {						 \
+	if (mask==0) { xMOVAPS (ptr32[ecx], regX); } \
+	else		 { xMaskWrite(regX); }			 \
 }
-
-// xmm2 gets result
-void convertRGB() {
-	xPSLL.D  (xmm1, 3);   // ABG|R5.000
-	xMOVAPS  (xmm2, xmm1);// R5.000 (garbage upper bits)
-	xPSRL.D	 (xmm1, 8);   // ABG
-	xPSLL.D  (xmm1, 3);   // AB|G5.000
-	xMOVAPS  (xmm3, xmm1);// G5.000 (garbage upper bits)
-	xPSRL.D	 (xmm1, 8);   // AB
-	xPSLL.D  (xmm1, 3);   // A|B5.000
-	xMOVAPS  (xmm4, xmm1);// B5.000 (garbage upper bits)
-	xPSRL.D	 (xmm1, 8);   // A
-	xPSLL.D  (xmm1, 7);   // A.0000000
-	
-	xPSHUF.D (xmm1, xmm1, _v0); // A|A|A|A
-	xPSHUF.D (xmm3, xmm3, _v0); // G|G|G|G
-	xPSHUF.D (xmm4, xmm4, _v0); // B|B|B|B
-	mVUmergeRegs(XMM2, XMM1, 0x3); // A|x|x|R
-	mVUmergeRegs(XMM2, XMM3, 0x4); // A|x|G|R
-	mVUmergeRegs(XMM2, XMM4, 0x2); // A|B|G|R
-
-	xPSLL.D  (xmm2, 24); // can optimize to
-	xPSRL.D	 (xmm2, 24); // single AND...
+#define xShiftR(regX, n) {			\
+	if (usn) { xPSRL.D(regX, n); }	\
+	else	 { xPSRA.D(regX, n); }	\
 }
 
 struct VifUnpackIndexer {
@@ -184,10 +159,27 @@ void nVifGen(int usn, int mask, int curCycle) {
 	// A | B5 | G5 | R5
 	// ..0.. A 0000000 | ..0.. B 000 | ..0.. G 000 | ..0.. R 000
 	indexer.xSetCall(0xf); // V4-5
-		xMOV16    (xmm0, ptr32[edx]);
-		xMOVAPS   (xmm1, xmm0);
-		convertRGB();
-		xMovDest  (xmm2);
+		xMOV16		(xmm0, ptr32[edx]);
+		xMOVAPS		(xmm1, xmm0);
+		xPSLL.D		(xmm1, 3);   // ABG|R5.000
+		xMOVAPS		(xmm2, xmm1);// R5.000 (garbage upper bits)
+		xPSRL.D		(xmm1, 8);   // ABG
+		xPSLL.D		(xmm1, 3);   // AB|G5.000
+		xMOVAPS		(xmm3, xmm1);// G5.000 (garbage upper bits)
+		xPSRL.D		(xmm1, 8);   // AB
+		xPSLL.D		(xmm1, 3);   // A|B5.000
+		xMOVAPS		(xmm4, xmm1);// B5.000 (garbage upper bits)
+		xPSRL.D		(xmm1, 8);   // A
+		xPSLL.D		(xmm1, 7);   // A.0000000
+		xPSHUF.D	(xmm1, xmm1, _v0); // A|A|A|A
+		xPSHUF.D	(xmm3, xmm3, _v0); // G|G|G|G
+		xPSHUF.D	(xmm4, xmm4, _v0); // B|B|B|B
+		mVUmergeRegs(XMM2, XMM1, 0x3); // A|x|x|R
+		mVUmergeRegs(XMM2, XMM3, 0x4); // A|x|G|R
+		mVUmergeRegs(XMM2, XMM4, 0x2); // A|B|G|R
+		xPSLL.D		(xmm2, 24); // can optimize to
+		xPSRL.D		(xmm2, 24); // single AND...
+		xMovDest	(xmm2);
 	xRET();
 
 	pxAssert( ((uptr)xGetPtr() - (uptr)nVifUpkExec) < sizeof(nVifUpkExec) );

@@ -13,19 +13,11 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// newVif! - author: cottonvibes(@gmail.com)
+// newVif!
+// authors: cottonvibes(@gmail.com)
+//			Jake.Stine (@gmail.com)
 
 #pragma once
-
-struct nVifStruct {
-	u32				idx;		// VIF0 or VIF1
-	vifStruct*		vif;		// Vif Struct ptr
-	VIFregisters*	vifRegs;	// Vif Regs   ptr
-	VURegs*			VU;			// VU  Regs   ptr
-	u8*				vuMemEnd;   // End of VU Memory
-	u32				vuMemLimit; // Use for fast AND
-	BlockBuffer*	vifBlock;	// Block Buffer
-};
 
 static __aligned16 nVifStruct nVif[2];
 
@@ -34,9 +26,9 @@ void initNewVif(int idx) {
 	nVif[idx].VU		= idx ? &VU1     : &VU0;
 	nVif[idx].vif		= idx ? &vif1    : &vif0;
 	nVif[idx].vifRegs	= idx ? vif1Regs : vif0Regs;
-	nVif[idx].vifBlock	= new BlockBuffer(0x2000); // 8kb Block Buffer
 	nVif[idx].vuMemEnd  = idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
 	nVif[idx].vuMemLimit= idx ? 0x3ff0 : 0xff0;
+	nVif[idx].vifCache	= NULL;
 
 	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
 	memset8<0xcc>( nVifUpkExec );
@@ -197,7 +189,7 @@ void _nVifUnpack(int idx, u8 *data, u32 size) {
 
 		vif				  =  nVif[idx].vif;
 		vifRegs			  =  nVif[idx].vifRegs;
-		const bool doMode = !!vifRegs->mode;
+		const bool doMode =   vifRegs->mode && !(vif->tag.cmd & 0x10);
 		const bool isFill =  (vifRegs->cycle.cl < vifRegs->cycle.wl);
 
 		//UnpackLoopTable[idx][doMode][isFill]( data, size );
@@ -219,18 +211,3 @@ void _nVifUnpack(int idx, u8 *data, u32 size) {
 		//DevCon.WriteLn("%s Write! [mask = %08x][type = %02d][num = %d]", (isFill?"Filling":"Skipping"), vifRegs->mask, upkNum, vifRegs->num);	
 	}
 }
-
-//data += ft.gsize;
-//size -= ft.gsize;
-//vifRegs->num--;
-//else {
-//	//DevCon.WriteLn("SSE Unpack!");
-//	int c = aMin((cycleSize - vif->cl), 3);
-//	size -= vift * c;
-//	//if (c>1)	  { DevCon.WriteLn("C > 1!"); }
-//	if (c<0||c>3) { DbgCon.WriteLn("C wtf!"); }
-//	if (size < 0) { DbgCon.WriteLn("Size Shit"); size+=vift*c;c=1;size-=vift*c;}
-//	fnbase[(aMin(vif->cl, 4) * 4) + c-1](dest, data);
-//	data += vift * c;
-//	vifRegs->num -= c;
-//}

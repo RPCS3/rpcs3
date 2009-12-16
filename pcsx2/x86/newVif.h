@@ -16,6 +16,7 @@
 #pragma once
 
 #ifdef newVif
+#include "newVif_BlockBuffer.h"
 #include "x86emitter/x86emitter.h"
 using namespace x86Emitter;
 extern void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0);
@@ -27,6 +28,7 @@ static __pagealigned u8 nVifUpkExec[__pagesize*16];
 static __aligned16 nVifCall nVifUpk[(2*2*16)*4]; // ([USN][Masking][Unpack Type]) [curCycle]
 static __aligned16 u32 nVifMask[3][4][4] = {0};  // [MaskNumber][CycleNumber][Vector]
 
+#define _1mb (0x100000)
 #define	_v0 0
 #define	_v1 0x55
 #define	_v2 0xaa
@@ -35,10 +37,25 @@ static __aligned16 u32 nVifMask[3][4][4] = {0};  // [MaskNumber][CycleNumber][Ve
 #define aMin(x, y) std::min(x,y)
 #define _f __forceinline
 
-#define xShiftR(regX, n) {			\
-	if (usn) { xPSRL.D(regX, n); }	\
-	else	 { xPSRA.D(regX, n); }	\
-}
+struct nVifBlock {
+	u8  upkType;  // Unpack Type
+	u8  num;	  // Num  Field
+	u8  mode;	  // Mode Field
+	u8  cl;		  // CL	  Field
+	u8  wl;		  // WL   Field
+	u32 mask;	  // Mask Field
+	u8* startPtr; // Start Ptr of RecGen Code
+};
+
+struct nVifStruct {
+	u32				idx;		// VIF0 or VIF1
+	vifStruct*		vif;		// Vif Struct ptr
+	VIFregisters*	vifRegs;	// Vif Regs   ptr
+	VURegs*			VU;			// VU  Regs   ptr
+	u8*				vuMemEnd;   // End of VU Memory
+	u32				vuMemLimit; // Use for fast AND
+	BlockBuffer*	vifCache;	// Block Buffer
+};
 
 static const u32 nVifT[16] = { 
 	4, // S-32
@@ -59,9 +76,10 @@ static const u32 nVifT[16] = {
 	2, // V4-5
 };
 
-#include "newVif_BlockBuffer.h"
 #include "newVif_OldUnpack.inl"
 #include "newVif_UnpackGen.inl"
 #include "newVif_Unpack.inl"
+
+//#include "newVif_Dynarec.inl"
 
 #endif
