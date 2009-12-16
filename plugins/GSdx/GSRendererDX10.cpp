@@ -48,7 +48,57 @@ void GSRendererDX10::VertexKick(bool skip)
 
 	if(tme && fst)
 	{
-		GSVector4::storel(&dst.ST, m_v.GetUV());
+		//GSVector4::storel(&dst.ST, m_v.GetUV());
+		int Udiff = 0;
+		int Vdiff = 0;
+		int Uadjust = 0;
+		int Vadjust = 0;
+		int multiplier = upscale_Multiplier(); 
+		
+		if (multiplier > 1) {
+			
+			Udiff = m_v.UV.U & 255;
+			Vdiff = m_v.UV.V & 255;
+
+			if (Udiff != 0){
+				if		(Udiff > 247)	Uadjust = -1; //Mana Khemia 2
+				else if (Udiff < 9)		Uadjust = 1; //Ar Tonelico 2
+				else 
+				{
+					//float jaja = (float)m_v.UV.U  / (float)(m_context->TEX0.TW*64);
+					//int test = (int)jaja ;
+					//float result = jaja-(float)test;
+					//
+					//if (result < 0.031251f || m_v.UV.U == 272 || m_v.UV.U == 400){
+					//	Uadjust = 16; //Wild Arms Engine, still problems with Odin Sphere 
+					//}
+					//else 
+						Uadjust = 0;
+				}
+			}
+			else Uadjust = 0;
+			
+			if (Vdiff != 0){
+				if		(Vdiff > 247)	Vadjust = -1;
+				else if	(Vdiff < 9)		Vadjust = 1;
+				else 
+				{
+					//float jaja = (float)m_v.UV.V  / (float)(m_context->TEX0.TH*64);
+					//int test = (int)jaja ;
+					//float result = jaja-(float)test;
+					//
+					//if (result < 0.031251f || m_v.UV.V == 272 || m_v.UV.V == 400){
+					//	Vadjust = 16; //Wild Arms Engine, still problems with Odin Sphere 
+					//}
+					//else 
+						Vadjust = 0;
+				}
+			}
+			else Vadjust = 0;
+		}
+		dst.ST.S = (float)m_v.UV.U - Uadjust;
+		dst.ST.T = (float)m_v.UV.V - Vadjust;	
+		
 	}
 
 	int count = 0;
