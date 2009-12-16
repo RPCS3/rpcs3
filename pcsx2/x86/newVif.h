@@ -24,8 +24,8 @@ extern void _nVifUnpack(int idx, u8 *data, u32 size);
 typedef u32 (__fastcall *nVifCall)(void*, void*);
 
 static __pagealigned u8 nVifUpkExec[__pagesize*16];
-static __aligned16 nVifCall nVifUpk[(2*2*16)*4*4];		// ([USN][Masking][Unpack Type]) [curCycle][CyclesToWrite-1]
-static __aligned16 u32 nVifMask[3][4][4] = {0};			// [MaskNumber][CycleNumber][Vector]
+static __aligned16 nVifCall nVifUpk[(2*2*16)*4]; // ([USN][Masking][Unpack Type]) [curCycle]
+static __aligned16 u32 nVifMask[3][4][4] = {0};  // [MaskNumber][CycleNumber][Vector]
 
 #define	_v0 0
 #define	_v1 0x55
