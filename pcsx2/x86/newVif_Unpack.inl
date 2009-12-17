@@ -20,6 +20,7 @@
 #pragma once
 
 static __aligned16 nVifStruct nVif[2];
+static _f void _nVifUnpack(int idx, u8 *data, u32 size);
 
 int nVifUnpack(int idx, u32 *data) {
 	XMMRegisters::Freeze();

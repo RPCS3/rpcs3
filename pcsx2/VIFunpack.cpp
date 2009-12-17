@@ -321,6 +321,10 @@ static void __fastcall fUNPACK_V4_5(u32 *dest, u32 *data)
 
 #define _upk (UNPACKFUNCTYPE)
 #define _odd (UNPACKFUNCTYPE_ODD)
+#define _unpk_s(bits) (UNPACKFUNCTYPE_S##bits)
+#define _odd_s(bits) (UNPACKFUNCTYPE_ODD_S##bits)
+#define _unpk_u(bits) (UNPACKFUNCTYPE_U##bits)
+#define _odd_u(bits) (UNPACKFUNCTYPE_ODD_U##bits)
 
 // --------------------------------------------------------------------------------------
 //  Main table for function unpacking. 
@@ -331,16 +335,16 @@ static void __fastcall fUNPACK_V4_5(u32 *dest, u32 *data)
 
 // 32-bits versions are unsigned-only!!
 #define UnpackFuncPair32( sizefac, vt, doMask ) \
-	_upk fUNPACK_##vt<doMask, sizefac, u32>, \
-	_upk fUNPACK_##vt<doMask, sizefac, u32>, \
-	_odd UNPACK_##vt<doMask, u32>, \
-	_odd UNPACK_##vt<doMask, u32>,
+	(UNPACKFUNCTYPE)_unpk_u(32) fUNPACK_##vt<doMask, sizefac, u32>, \
+	(UNPACKFUNCTYPE)_unpk_u(32) fUNPACK_##vt<doMask, sizefac, u32>, \
+	(UNPACKFUNCTYPE_ODD)_odd_u(32) UNPACK_##vt<doMask, u32>, \
+	(UNPACKFUNCTYPE_ODD)_odd_u(32) UNPACK_##vt<doMask, u32>,
 
 #define UnpackFuncPair( sizefac, vt, bits, doMask ) \
-	_upk fUNPACK_##vt<doMask, sizefac, u##bits>, \
-	_upk fUNPACK_##vt<doMask, sizefac, s##bits>, \
-	_odd UNPACK_##vt<doMask, u##bits>, \
-	_odd UNPACK_##vt<doMask, s##bits>,
+	(UNPACKFUNCTYPE)_unpk_u(bits) fUNPACK_##vt<doMask, sizefac, u##bits>, \
+	(UNPACKFUNCTYPE)_unpk_s(bits) fUNPACK_##vt<doMask, sizefac, s##bits>, \
+	(UNPACKFUNCTYPE_ODD)_odd_u(bits) UNPACK_##vt<doMask, u##bits>, \
+	(UNPACKFUNCTYPE_ODD)_odd_s(bits) UNPACK_##vt<doMask, s##bits>,
 
 #define UnpackFuncSet( doMask ) \
  	{	UnpackFuncPair32( 4, S, doMask )		/* 0x0 - S-32 */ \
@@ -374,8 +378,8 @@ static void __fastcall fUNPACK_V4_5(u32 *dest, u32 *data)
 	{	UnpackFuncPair	( 4, V4, 8, doMask )	/* 0xE - V4-8 */ \
 		12, 1, 4, 4 }, \
 	{										/* 0xF - V4-5 */ \
-		_upk fUNPACK_V4_5<doMask>,		_upk fUNPACK_V4_5<doMask>, \
-		_odd UNPACK_V4_5<doMask>,		_odd UNPACK_V4_5<doMask>, \
+		(UNPACKFUNCTYPE)_unpk_u(32) fUNPACK_V4_5<doMask>,		(UNPACKFUNCTYPE)_unpk_u(32) fUNPACK_V4_5<doMask>, \
+		(UNPACKFUNCTYPE_ODD)_odd_u(32) UNPACK_V4_5<doMask>,		(UNPACKFUNCTYPE_ODD)_odd_u(32) UNPACK_V4_5<doMask>, \
 		6, 2, 2, 4 },
 
 const __aligned16 VIFUnpackFuncTable VIFfuncTable[32] =

@@ -20,7 +20,6 @@
 #include "x86emitter/x86emitter.h"
 using namespace x86Emitter;
 extern void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0);
-extern void _nVifUnpack(int idx, u8 *data, u32 size);
 
 typedef u32 (__fastcall *nVifCall)(void*, void*);
 

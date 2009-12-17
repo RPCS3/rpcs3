@@ -33,13 +33,28 @@ typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, u32 *data);
 typedef void (__fastcall *UNPACKFUNCTYPE_ODD)(u32 *dest, u32 *data, int size);
 typedef int (*UNPACKPARTFUNCTYPESSE)(u32 *dest, u32 *data, int size);
 
+#define create_unpack_u_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_U##bits)(u32 *dest, u##bits *data);
+#define create_unpack_odd_u_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_ODD_U##bits)(u32 *dest, u##bits *data, int size);
+#define create_unpack_s_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_S##bits)(u32 *dest, s##bits *data);
+#define create_unpack_odd_s_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_ODD_S##bits)(u32 *dest, s##bits *data, int size);
+
+#define create_some_unpacks(bits) \
+    create_unpack_u_type(bits); \
+    create_unpack_odd_u_type(bits); \
+    create_unpack_s_type(bits); \
+    create_unpack_odd_s_type(bits);
+
+create_some_unpacks(32);
+create_some_unpacks(16);
+create_some_unpacks(8);
+
 struct VIFUnpackFuncTable
 {
-	UNPACKFUNCTYPE       funcU;
-	UNPACKFUNCTYPE       funcS;
+    UNPACKFUNCTYPE  funcU;
+    UNPACKFUNCTYPE  funcS;
 
-	UNPACKFUNCTYPE_ODD   oddU;		// needed for old-style vif only, remove when old vif is removed.
-	UNPACKFUNCTYPE_ODD   oddS;		// needed for old-style vif only, remove when old vif is removed.
+	UNPACKFUNCTYPE_ODD  oddU;		// needed for old-style vif only, remove when old vif is removed.
+	UNPACKFUNCTYPE_ODD  oddS;		// needed for old-style vif only, remove when old vif is removed.
 
 	u8 bsize; // currently unused
 	u8 dsize; // byte size of one channel
