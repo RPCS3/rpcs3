@@ -24,8 +24,8 @@ extern void _nVifUnpack(int idx, u8 *data, u32 size);
 
 typedef u32 (__fastcall *nVifCall)(void*, void*);
 
-static __pagealigned u8 nVifUpkExec[__pagesize*16];
-static __aligned16 nVifCall nVifUpk[(2*2*16)*4]; // ([USN][Masking][Unpack Type]) [curCycle]
+static __pagealigned u8 nVifUpkExec[__pagesize*4];
+static __aligned16 nVifCall nVifUpk[(2*2*16) *4 ]; // ([USN][Masking][Unpack Type]) [curCycle]
 static __aligned16 u32 nVifMask[3][4][4] = {0};  // [MaskNumber][CycleNumber][Vector]
 
 #define _1mb (0x100000)
@@ -57,7 +57,30 @@ struct nVifStruct {
 	BlockBuffer*	vifCache;	// Block Buffer
 };
 
-static const u32 nVifT[16] = { 
+// Contents of this table are doubled up for doMast(false) and doMask(true) lookups.
+// (note: currently unused, I'm using gsize in the interp tables instead since it
+//  seems to be faster for now, which may change when nVif isn't reliant on interpreted
+//  unpackers anymore --air)
+static const u32 nVifT[32] = { 
+	4, // S-32
+	2, // S-16
+	1, // S-8
+	0, // ----
+	8, // V2-32
+	4, // V2-16
+	2, // V2-8
+	0, // ----
+	12,// V3-32
+	6, // V3-16
+	3, // V3-8
+	0, // ----
+	16,// V4-32
+	8, // V4-16
+	4, // V4-8
+	2, // V4-5
+
+	// Second verse, same as the first!
+
 	4, // S-32
 	2, // S-16
 	1, // S-8
@@ -77,8 +100,8 @@ static const u32 nVifT[16] = {
 };
 
 #include "newVif_OldUnpack.inl"
-#include "newVif_UnpackGen.inl"
 #include "newVif_Unpack.inl"
+#include "newVif_UnpackGen.inl"
 
 //#include "newVif_Dynarec.inl"
 

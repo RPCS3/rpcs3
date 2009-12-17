@@ -311,6 +311,7 @@
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />
 		<Unit filename="../Utilities/folderdesc.txt" />
+		<Unit filename="../VIFunpack.cpp" />
 		<Unit filename="../VU.h" />
 		<Unit filename="../VU0.cpp" />
 		<Unit filename="../VU0micro.cpp" />

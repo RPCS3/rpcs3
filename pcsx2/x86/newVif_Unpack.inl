@@ -21,29 +21,6 @@
 
 static __aligned16 nVifStruct nVif[2];
 
-void initNewVif(int idx) {
-	nVif[idx].idx		= idx;
-	nVif[idx].VU		= idx ? &VU1     : &VU0;
-	nVif[idx].vif		= idx ? &vif1    : &vif0;
-	nVif[idx].vifRegs	= idx ? vif1Regs : vif0Regs;
-	nVif[idx].vuMemEnd  = idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
-	nVif[idx].vuMemLimit= idx ? 0x3ff0 : 0xff0;
-	nVif[idx].vifCache	= NULL;
-
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
-	memset8<0xcc>( nVifUpkExec );
-
-	xSetPtr( nVifUpkExec );
-
-	for (int a = 0; a < 2; a++) {
-	for (int b = 0; b < 2; b++) {
-	for (int c = 0; c < 4; c++) {
-		nVifGen(a, b, c);
-	}}}
-
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
-}
-
 int nVifUnpack(int idx, u32 *data) {
 	XMMRegisters::Freeze();
 	int ret = aMin(vif1.vifpacketsize, vif1.tag.size);
@@ -108,65 +85,76 @@ static void setMasks(int idx, const VIFregisters& v) {
 // ----------------------------------------------------------------------------
 //  Unpacking Optimization notes:
 // ----------------------------------------------------------------------------
-//  Some games send a LOT of small packets.  This is a problem because the new VIF unpacker
-//  has a lot of setup code to establish which unpack function to call.  The best way to
-//  optimize this is to cache the unpack function's base (see fnbase below) and update it
-//  when the variables it depends on are modified: writes to vif->tag.cmd and vif->usn.
-//  Problem: vif->tag.cmd is modified a lot.  Like, constantly.  So won't work.
+// Some games send a LOT of single-cycle packets (God of War, SotC, TriAce games, etc),
+// so we always need to be weary of keeping loop setup code optimized.  It's not always
+// a "win" to move code outside the loop, like normally in most other loop scenarios.
 //
-//  A secondary optimization would be adding special handlers for packets where vifRegs->num==1.
-//  (which would remove the loop, simplify the incVUptr code, etc).  But checking for it has
-//  to be simple enough that it doesn't offset the benefits (which I'm not sure is possible).
-//   -- air
+// The biggest bottleneck of the current code is the call/ret needed to invoke the SSE
+// unpackers.  A better option is to generate the entire vifRegs->num loop code as part
+// of the SSE template, and inline the SSE code into the heart of it.  This both avoids
+// the call/ret and opens the door for resolving some register dependency chains in the
+// current emitted functions.  (this is what zero's SSE does to get it's final bit of
+// speed advantage over the new vif). --air
+//
+// As a secondary optimization to above, special handlers could be generated for the
+// cycleSize==1 case, which is used frequently enough, and results in enough code
+// elimination that it would probably be a win in most cases (and for sure in many
+// "slow" games that need it most). --air
 
 template< int idx, bool doMode, bool isFill >
 __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 
-	const int	usn		= !!(vif->usn);
-	const int	doMask	= !!(vif->tag.cmd & 0x10);
-	const int	upkNum	= vif->tag.cmd & 0xf;
-	const u32&	vift	= nVifT[upkNum];
-
-	u8* dest					 = setVUptr(idx, vif->tag.addr);
-	const VIFUnpackFuncTable& ft = VIFfuncTable[upkNum];
-	UNPACKFUNCTYPE func			 = usn ? ft.funcU : ft.funcS;
-
-	// Did a bunch of work to make it so I could optimize this index lookup to outside
-	// the main loop but it was for naught -- too often the loop is only 1-2 iterations,
-	// so this setup code ends up being slower (1 iter) or same speed (2 iters).
-	const nVifCall*	fnbase = &nVifUpk[ ((usn*2*16) + (doMask*16) + (upkNum)) * (4*1) ];
-
 	const int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
 	const int blockSize = isFill ? vifRegs->cycle.wl : vifRegs->cycle.cl;
 	const int skipSize  = blockSize - cycleSize;
+
 	//if (skipSize > 2)
 	//DevCon.WriteLn("[num = %d][cl = %d][bl = %d][diff = %d]", vifRegs->num, vif->cl, blockSize, skipSize);
 
-	// This condition doesn't appear to ever occur, and really it never should.
-	// Normally it wouldn't matter, but even simple setup code matters here (see 
-	// optimization notes above) >_<
+	if (vif->cmd & 0x10) setMasks(idx, *vifRegs);
+
+	const int	usn		= !!(vif->usn);
+	const int	upkNum	= vif->cmd & 0x1f;
+	//const s8&	vift	= nVifT[upkNum];	// might be useful later when other SSE paths are finished.
+
+	// Recompiled Unpacker, used when doMode is false.
+	// Did a bunch of work to make it so I could optimize this index lookup to outside
+	// the main loop but it was for naught -- too often the loop is only 1-2 iterations,
+	// so this setup code ends up being slower (1 iter) or same speed (2 iters).
+	const nVifCall*	fnbase			= &nVifUpk[ ((usn*2*16) + upkNum) * (4*1) ];
+
+	// Interpreted Unpacker, used if doMode is true OR if isFill is true.  Lookup is
+	// always performed for now, due to ft.gsize reference (seems faster than using
+	// nVifT for now)
+	const VIFUnpackFuncTable& ft	= VIFfuncTable[upkNum];
+	UNPACKFUNCTYPE func				= usn ? ft.funcU : ft.funcS;
+
+	u8* dest = setVUptr(idx, vif->tag.addr);
+
 	if (vif->cl >= blockSize)  vif->cl = 0;
-	if (doMask) setMasks(idx, *vifRegs);
 
 	while (vifRegs->num /*&& size*/) {
 		if (vif->cl < cycleSize) { 
 			if (doMode /*|| doMask*/) {
 				//if (doMask)
 				//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);
-				func((u32*)dest, (u32*)data, ft.qsize);
+				func((u32*)dest, (u32*)data);
 			}
 			else {
 				//DevCon.WriteLn("SSE Unpack!");
-				fnbase[aMin(vif->cl, 4)](dest, data);
+				
+				// Opt note: removing this min check (which isn't needed right now?) is +1%
+				// or more.  Just something to keep in mind. :) --air
+				fnbase[0/*aMin(vif->cl, 4)*/](dest, data);
 			}
-			data += vift;
-			size -= vift;
+			data += ft.gsize;
+			size -= ft.gsize;
 			vifRegs->num--;
 			incVUptr(idx, dest, 16);
 			if (++vif->cl == blockSize) vif->cl = 0;
 		}
 		else if (isFill) {
-			func((u32*)dest, (u32*)data, ft.qsize);
+			func((u32*)dest, (u32*)data);
 			vifRegs->num--;
 			incVUptr(idx, dest, 16);
 			if (++vif->cl == blockSize) vif->cl = 0;
@@ -179,7 +167,24 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	//if (size > 0) DevCon.WriteLn("size = %d", size);
 }
 
-void _nVifUnpack(int idx, u8 *data, u32 size) {
+typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);
+
+static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] = 
+{
+	{
+		{ _nVifUnpackLoop<0,false,false>, _nVifUnpackLoop<0,false,true> },
+		{ _nVifUnpackLoop<0,true,false>, _nVifUnpackLoop<0,true,true> },
+	},
+
+	{
+		{ _nVifUnpackLoop<1,false,false>, _nVifUnpackLoop<1,false,true> },
+		{ _nVifUnpackLoop<1,true,false>, _nVifUnpackLoop<1,true,true> },
+	},
+	
+};
+
+
+static _f void _nVifUnpack(int idx, u8 *data, u32 size) {
 	/*if (nVif[idx].vifRegs->cycle.cl >= nVif[idx].vifRegs->cycle.wl) { // skipping write
 		if (!idx) VIFunpack<0>((u32*)data, &vif0.tag, size>>2);
 		else	  VIFunpack<1>((u32*)data, &vif1.tag, size>>2);
@@ -192,19 +197,7 @@ void _nVifUnpack(int idx, u8 *data, u32 size) {
 		const bool doMode =   vifRegs->mode && !(vif->tag.cmd & 0x10);
 		const bool isFill =  (vifRegs->cycle.cl < vifRegs->cycle.wl);
 
-		//UnpackLoopTable[idx][doMode][isFill]( data, size );
-
-		if (idx) {
-			if (doMode) {
-				if (isFill)	_nVifUnpackLoop<1,true,true>  (data, size);
-				else		_nVifUnpackLoop<1,true,false> (data, size);
-			}
-			else {
-				if (isFill) _nVifUnpackLoop<1,false,true> (data, size);
-				else		_nVifUnpackLoop<1,false,false>(data, size);
-			}
-		}
-		else pxFailDev( "No VIF0 support yet, sorry!" );
+		UnpackLoopTable[idx][doMode][isFill]( data, size );
 
 		//if (isFill)
 		//DevCon.WriteLn("%s Write! [num = %d][%s]", (isFill?"Filling":"Skipping"), vifRegs->num, (vifRegs->num%3 ? "bad!" : "ok"));

@@ -618,7 +618,6 @@ TraceLogFilters&			SetTraceConfig();
 #endif
 
 #define EE_CONST_PROP // rec2 - enables constant propagation (faster)
-//#define NON_SSE_UNPACKS  // Turns off SSE Unpacks (slower)
 
 // Uncomment this if working on getting PS1 emulation working.
 // This disables the exception normally caused by trying to load PS1

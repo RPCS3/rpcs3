@@ -16,7 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
-#include "VifDma.h"
 #include "VifDma_internal.h"
 #include "VUmicro.h"
 
@@ -32,52 +31,8 @@ extern "C"
 	extern u32* vifRow;
 }
 
-extern vifStruct *vif;
-
 int g_vifCycles = 0;
 u8 s_maskwrite[256];
-
-/* block size; data size; group size; qword size; */
-#define _UNPACK_TABLE32(name, bsize, dsize, gsize, qsize) \
-   { UNPACK_##name,         UNPACK_##name, \
-	 bsize, dsize, gsize, qsize },
-
-#define _UNPACK_TABLE(name, bsize, dsize, gsize, qsize) \
-   { UNPACK_##name##u,      UNPACK_##name##s, \
-	 bsize, dsize, gsize, qsize },
-
-// Main table for function unpacking
-const VIFUnpackFuncTable VIFfuncTable[16] =
-{
-	_UNPACK_TABLE32(S_32, 1, 4, 4, 4)		// 0x0 - S-32
-	_UNPACK_TABLE(S_16, 2, 2, 2, 4)			// 0x1 - S-16
-	_UNPACK_TABLE(S_8, 4, 1, 1, 4)			// 0x2 - S-8
-	{
-		NULL, NULL, 0, 0, 0, 0
-	}
-	,				// 0x3
-
-	_UNPACK_TABLE32(V2_32, 24, 4, 8, 2)		// 0x4 - V2-32
-	_UNPACK_TABLE(V2_16, 12, 2, 4, 2)		// 0x5 - V2-16
-	_UNPACK_TABLE(V2_8, 6, 1, 2, 2)			// 0x6 - V2-8
-	{
-		NULL, NULL, 0, 0, 0, 0
-	}
-	,	// 0x7
-
-	_UNPACK_TABLE32(V3_32, 36, 4, 12, 3)	// 0x8 - V3-32
-	_UNPACK_TABLE(V3_16, 18, 2, 6, 3)		// 0x9 - V3-16
-	_UNPACK_TABLE(V3_8, 9, 1, 3, 3)			// 0xA - V3-8
-	{
-		NULL, NULL, 0, 0, 0, 0
-	}
-	,				// 0xB
-
-	_UNPACK_TABLE32(V4_32, 48, 4, 16, 4)	// 0xC - V4-32
-	_UNPACK_TABLE(V4_16, 24, 2, 8, 4)		// 0xD - V4-16
-	_UNPACK_TABLE(V4_8, 12, 1, 4, 4)		// 0xE - V4-8
-	_UNPACK_TABLE32(V4_5, 6, 2, 2, 4)		// 0xF - V4-5
-};
 
 struct VIFSSEUnpackTable
 {
@@ -171,6 +126,9 @@ template<const u32 VIFdmanum> void ProcessMemSkip(u32 size, u32 unpackType)
 {
 	const VIFUnpackFuncTable *unpack;
 
+	// unpackType is only 0->0xf but that's ok, because the data we're using here is
+	// just duplicated in 0x10->0x1f.
+
 	unpack = &VIFfuncTable[ unpackType ];
 
 	switch (unpackType)
@@ -259,9 +217,6 @@ template u32 VIFalign<1>(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 {
 	u32 *dest;
-	u32 unpackType;
-	UNPACKFUNCTYPE func;
-	const VIFUnpackFuncTable *ft;
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
 
@@ -290,11 +245,8 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 	VIF_LOG("VIF%d UNPACK Align: Mode=%x, v->size=%d, size=%d, v->addr=%x v->num=%x",
 	        VIFdmanum, v->cmd & 0xf, v->size, size, v->addr, vifRegs->num);
 
-	// The unpack type
-	unpackType = v->cmd & 0xf;
-
-	ft = &VIFfuncTable[ unpackType ];
-	func = vif->usn ? ft->funcU : ft->funcS;
+	const VIFUnpackFuncTable& ft( VIFfuncTable[ v->cmd & 0x1f ] );
+	UNPACKFUNCTYPE func = vif->usn ? ft.funcU : ft.funcS;
 
 	size <<= 2;
 	memsize = size;
@@ -311,17 +263,17 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 
 		VIFUNPACK_LOG("Aligning packet size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 
-		if (((u32)size / (u32)ft->dsize) < ((u32)ft->qsize - vifRegs->offset))
+		if (((u32)size / (u32)ft.dsize) < ((u32)ft.qsize - vifRegs->offset))
 		{
-			DevCon.Error("Wasn't enough left size/dsize = %x left to write %x", (size / ft->dsize), (ft->qsize - vifRegs->offset));
+			DevCon.Error("Wasn't enough left size/dsize = %x left to write %x", (size / ft.dsize), (ft.qsize - vifRegs->offset));
 		}
-		unpacksize = min((size / ft->dsize), (ft->qsize - vifRegs->offset));
+		unpacksize = min((size / ft.dsize), (ft.qsize - vifRegs->offset));
 
 
-		VIFUNPACK_LOG("Increasing dest by %x from offset %x", (4 - ft->qsize) + unpacksize, vifRegs->offset);
+		VIFUNPACK_LOG("Increasing dest by %x from offset %x", (4 - ft.qsize) + unpacksize, vifRegs->offset);
 
-		func(dest, (u32*)cdata, unpacksize);
-		size -= unpacksize * ft->dsize;
+		(vif->usn ? ft.oddU : ft.oddS)(dest, (u32*)cdata, unpacksize);
+		size -= unpacksize * ft.dsize;
 
 		if(vifRegs->offset == 0)
 		{
@@ -339,13 +291,13 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 		{
 			if (vifRegs->cycle.cl != vifRegs->cycle.wl)
 			{
-				vif->tag.addr += (((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + ((4 - ft->qsize) + unpacksize)) * 4;
-				dest += ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + (4 - ft->qsize) + unpacksize;
+				vif->tag.addr += (((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + ((4 - ft.qsize) + unpacksize)) * 4;
+				dest += ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + (4 - ft.qsize) + unpacksize;
 			}
 			else
 			{
-				vif->tag.addr += ((4 - ft->qsize) + unpacksize) * 4;
-				dest += (4 - ft->qsize) + unpacksize;
+				vif->tag.addr += ((4 - ft.qsize) + unpacksize) * 4;
+				dest += (4 - ft.qsize) + unpacksize;
 			}
 
 			if (vif->tag.addr >= (u32)vif_size(VIFdmanum))
@@ -354,7 +306,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 				dest = (u32*)(VU->Mem + v->addr);
 			}
 
-			cdata += unpacksize * ft->dsize;
+			cdata += unpacksize * ft.dsize;
 			vif->cl = 0;
 			VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 			if ((size & 0xf) == 0) return size >> 2;
@@ -362,8 +314,8 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 		}
 		else
 		{
-			vif->tag.addr += ((4 - ft->qsize) + unpacksize) * 4;
-			dest += (4 - ft->qsize) + unpacksize;
+			vif->tag.addr += ((4 - ft.qsize) + unpacksize) * 4;
+			dest += (4 - ft.qsize) + unpacksize;
 
 			if (vif->tag.addr >= (u32)vif_size(VIFdmanum))
 			{
@@ -371,7 +323,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 				dest = (u32*)(VU->Mem + v->addr);
 			}
 
-			cdata += unpacksize * ft->dsize;
+			cdata += unpacksize * ft.dsize;
 			VIFUNPACK_LOG("Aligning packet done size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 		}
 	}
@@ -391,11 +343,11 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 			VIFUNPACK_LOG("Continuing last stream size = %d offset %d addr %x", size, vifRegs->offset, vif->tag.addr);
 			incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
 
-			while ((size >= ft->gsize) && (vifRegs->num > 0))
+			while ((size >= ft.gsize) && (vifRegs->num > 0))
 			{
-				func(dest, (u32*)cdata, ft->qsize);
-				cdata += ft->gsize;
-				size -= ft->gsize;
+				func(dest, (u32*)cdata);
+				cdata += ft.gsize;
+				size -= ft.gsize;
 
 				vifRegs->num--;
 				++vif->cl;
@@ -431,20 +383,20 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 			}
 
 		}
-		if (size >= ft->dsize && vifRegs->num > 0 && ((size & 0xf) != 0 || vif->cl != 0))
+		if (size >= ft.dsize && vifRegs->num > 0 && ((size & 0xf) != 0 || vif->cl != 0))
 		{
 			//VIF_LOG("warning, end with size = %d", size);
 			/* unpack one qword */
-			if(vif->tag.addr + ((size / ft->dsize) * 4)  >= (u32)vif_size(VIFdmanum))
+			if(vif->tag.addr + ((size / ft.dsize) * 4)  >= (u32)vif_size(VIFdmanum))
 			{
 				//DevCon.Warning("Overflow");
 				vif->tag.addr &= (u32)(vif_size(VIFdmanum) - 1);
 				dest = (u32*)(VU->Mem + v->addr);
 			}
 
-			vif->tag.addr += (size / ft->dsize) * 4;
+			vif->tag.addr += (size / ft.dsize) * 4;
 
-			func(dest, (u32*)cdata, size / ft->dsize);
+			(vif->usn ? ft.oddU : ft.oddS)(dest, (u32*)cdata, size / ft.dsize);
 			size = 0;
 
 			if(vifRegs->mode == 2)
@@ -468,9 +420,6 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 {
 	//DevCon.WriteLn("vif#%d, size = %d [%x]", VIFdmanum, size, data);
 	u32 *dest;
-	u32 unpackType;
-	UNPACKFUNCTYPE func;
-	const VIFUnpackFuncTable *ft;
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
 	u32 tempsize = 0;
@@ -507,13 +456,10 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 
 	VIFUNPACK_LOG("USN %x Masking %x Mask %x Mode %x CL %x WL %x Offset %x", vif->usn, (vifRegs->code & 0x10000000) >> 28, vifRegs->mask, vifRegs->mode, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->offset);
 
-	// The unpack type
-	unpackType = v->cmd & 0xf;
-
 	_mm_prefetch((char*)data + 128, _MM_HINT_NTA);
 
-	ft = &VIFfuncTable[ unpackType ];
-	func = vif->usn ? ft->funcU : ft->funcS;
+	const VIFUnpackFuncTable& ft( VIFfuncTable[ v->cmd & 0x1f ] );
+	UNPACKFUNCTYPE func = vif->usn ? ft.funcU : ft.funcS;
 
 	size <<= 2;
 
@@ -528,12 +474,12 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			dest = (u32*)(VU->Mem + v->addr);
 		}
 
-		size = min(size, (int)vifRegs->num * ft->gsize); //size will always be the same or smaller
+		size = std::min<u32>(size, vifRegs->num * ft.gsize); //size will always be the same or smaller
 
 		tempsize = vif->tag.addr + ((((vifRegs->num-1) / vifRegs->cycle.wl) *
 			(vifRegs->cycle.cl - vifRegs->cycle.wl)) * 16) + (vifRegs->num * 16);
 
-		/*tempsize = vif->tag.addr + (((size / (ft->gsize * vifRegs->cycle.wl)) *
+		/*tempsize = vif->tag.addr + (((size / (ft.gsize * vifRegs->cycle.wl)) *
 			(vifRegs->cycle.cl - vifRegs->cycle.wl)) * 16) + (vifRegs->num * 16);*/
 
 		//Sanity Check (memory overflow)
@@ -562,7 +508,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 #endif
 		}
 
-		if (size >= ft->gsize)
+		if (size >= ft.gsize)
 		{
 			const UNPACKPARTFUNCTYPESSE* pfn;
 			int writemask;
@@ -612,7 +558,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 				vifRegs->cycle.cl = vifRegs->cycle.wl = 1;
 			}
 
-			pfn = vif->usn ? VIFfuncTableSSE[unpackType].funcU : VIFfuncTableSSE[unpackType].funcS;
+			pfn = vif->usn ? VIFfuncTableSSE[v->cmd & 0xf].funcU : VIFfuncTableSSE[v->cmd & 0xf].funcS;
 			writemask = VIFdmanum ? g_vif1HasMask3[min(vifRegs->cycle.wl,(u8)3)] : g_vif0HasMask3[min(vifRegs->cycle.wl,(u8)3)];
 			writemask = pfn[(((vifRegs->code & 0x10000000)>>28)<<writemask)*3+vifRegs->mode](dest, (u32*)cdata, size);
 
@@ -630,20 +576,20 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			// if size is left over, update the src,dst pointers
 			if (writemask > 0)
 			{
-				int left = (size - writemask) / ft->gsize;
-				cdata += left * ft->gsize;
+				int left = (size - writemask) / ft.gsize;
+				cdata += left * ft.gsize;
 				dest = (u32*)((u8*)dest + ((left / vifRegs->cycle.wl) * vifRegs->cycle.cl + left % vifRegs->cycle.wl) * 16);
 				vifRegs->num -= left;
-				vif->cl = (size % (ft->gsize * vifRegs->cycle.wl)) / ft->gsize;
+				vif->cl = (size % (ft.gsize * vifRegs->cycle.wl)) / ft.gsize;
 				size = writemask;
 
-				if (size >= ft->dsize && vifRegs->num > 0)
+				if (size >= ft.dsize && vifRegs->num > 0)
 				{
 					VIF_LOG("warning, end with size = %d", size);
 
 					/* unpack one qword */
-					//vif->tag.addr += (size / ft->dsize) * 4;
-					func(dest, (u32*)cdata, size / ft->dsize);
+					//vif->tag.addr += (size / ft.dsize) * 4;
+					(vif->usn ? ft.oddU : ft.oddS)(dest, (u32*)cdata, size / ft.dsize);
 					size = 0;
 
 					if(vifRegs->mode == 2)
@@ -659,8 +605,8 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			}
 			else
 			{
-				vifRegs->num -= size / ft->gsize;
-				if (vifRegs->num > 0) vif->cl = (size % (ft->gsize * vifRegs->cycle.wl)) / ft->gsize;
+				vifRegs->num -= size / ft.gsize;
+				if (vifRegs->num > 0) vif->cl = (size % (ft.gsize * vifRegs->cycle.wl)) / ft.gsize;
 				size = 0;
 			}
 		}
@@ -669,11 +615,14 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			int incdest = ((vifRegs->cycle.cl - vifRegs->cycle.wl) << 2) + 4;
 			size = 0;
 			int addrstart = v->addr;
-			if((tempsize >> 2) != vif->tag.size) DevCon.Warning("split when size != tagsize");
+
+			#ifndef NON_SSE_UNPACKS		// spams pointlessly when SSE unpacks are disabled
+			//if((tempsize >> 2) != vif->tag.size) DevCon.Warning("split when size != tagsize");
+			#endif
 
 			VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, vif->tag.addr);
 
-			while ((tempsize >= ft->gsize) && (vifRegs->num > 0))
+			while ((tempsize >= ft.gsize) && (vifRegs->num > 0))
 			{
 				if(v->addr >= memlimit)
 				{
@@ -682,9 +631,9 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 					dest = (u32*)(VU->Mem + v->addr);
 				}
 
-				func(dest, (u32*)cdata, ft->qsize);
-				cdata += ft->gsize;
-				tempsize -= ft->gsize;
+				func(dest, (u32*)cdata);
+				cdata += ft.gsize;
+				tempsize -= ft.gsize;
 
 				vifRegs->num--;
 				++vif->cl;
@@ -721,13 +670,13 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			if(tempsize > 0) size = tempsize;
 		}
 		
-		if (size >= ft->dsize && vifRegs->num > 0) //Else write what we do have
+		if (size >= ft.dsize && vifRegs->num > 0) //Else write what we do have
 		{
 			VIF_LOG("warning, end with size = %d", size);
 
 			/* unpack one qword */
-			//vif->tag.addr += (size / ft->dsize) * 4;
-			func(dest, (u32*)cdata, size / ft->dsize);
+			//vif->tag.addr += (size / ft.dsize) * 4;
+			(vif->usn ? ft.oddU : ft.oddS)(dest, (u32*)cdata, size / ft.dsize);
 			size = 0;
 
 			if(vifRegs->mode == 2)
@@ -745,8 +694,8 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 	{
 
 		if(vifRegs->cycle.cl > 0) // Quicker and avoids zero division :P
-			if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num)
-			DevCon.Warning("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
+			if((u32)(((size / ft.gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num)
+			DevCon.Warning("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft.gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
 
 		//DevCon.Warning("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType, vif->tag.addr);
 		while (vifRegs->num > 0)
@@ -758,15 +707,16 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 
 			if (vif->cl < vifRegs->cycle.cl)   /* unpack one qword */
 			{
-				if(size < ft->gsize)
+				if(size < ft.gsize)
 				{
 					VIF_LOG("Out of Filling write data");
 					break;
 				}
 
-				func(dest, (u32*)cdata, ft->qsize);
-				cdata += ft->gsize;
-				size -= ft->gsize;
+				func(dest, (u32*)cdata);
+				cdata += ft.gsize;
+				size -= ft.gsize;
+
 				vif->cl++;
 				vifRegs->num--;
 
@@ -777,7 +727,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 			}
 			else
 			{
-				func(dest, (u32*)cdata, ft->qsize);
+				func(dest, (u32*)cdata);
 				vif->tag.addr += 16;
 				vifRegs->num--;
 				++vif->cl;

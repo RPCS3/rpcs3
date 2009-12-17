@@ -43,7 +43,7 @@ struct VifUnpackIndexer {
 		int packpart	= packType;
 		int curpart		= curCycle;
 
-		return nVifUpk[((usnpart+maskpart+packpart)*4) + (curpart)];
+		return nVifUpk[((usnpart+maskpart+packpart) * 4) + (curpart)];
 	}
 	
 	void xSetCall(int packType) const {
@@ -158,6 +158,12 @@ void nVifGen(int usn, int mask, int curCycle) {
 
 	// A | B5 | G5 | R5
 	// ..0.. A 0000000 | ..0.. B 000 | ..0.. G 000 | ..0.. R 000
+	
+	// Optimization: This function has a *really* long dependency chain.
+	// It would be better if the [edx] is loaded into multiple regs and
+	// then the regs are shifted each independently, instead of using the
+	// progressive shift->move pattern below. --air
+
 	indexer.xSetCall(0xf); // V4-5
 		xMOV16		(xmm0, ptr32[edx]);
 		xMOVAPS		(xmm1, xmm0);
@@ -183,4 +189,28 @@ void nVifGen(int usn, int mask, int curCycle) {
 	xRET();
 
 	pxAssert( ((uptr)xGetPtr() - (uptr)nVifUpkExec) < sizeof(nVifUpkExec) );
+}
+
+void initNewVif(int idx) {
+	nVif[idx].idx		= idx;
+	nVif[idx].VU		= idx ? &VU1     : &VU0;
+	nVif[idx].vif		= idx ? &vif1    : &vif0;
+	nVif[idx].vifRegs	= idx ? vif1Regs : vif0Regs;
+	nVif[idx].vuMemEnd  = idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
+	nVif[idx].vuMemLimit= idx ? 0x3ff0 : 0xff0;
+	nVif[idx].vifCache	= NULL;
+
+	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
+	memset8<0xcc>( nVifUpkExec );
+
+	xSetPtr( nVifUpkExec );
+
+	for (int a = 0; a < 2; a++) {
+		for (int b = 0; b < 2; b++) {
+			for (int c = 0; c < 4; c++) {
+				nVifGen(a, b, c);
+			}
+		}}
+
+	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
 }

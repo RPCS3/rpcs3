@@ -21,8 +21,6 @@ template void VIFunpack<0>(u32 *data, vifCode *v, u32 size);
 template void VIFunpack<1>(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 	//if (!VIFdmanum) DevCon.WriteLn("vif#%d, size = %d [%x]", VIFdmanum, size, data);
-	UNPACKFUNCTYPE func;
-	const VIFUnpackFuncTable *ft;
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
 	u32 tempsize = 0;
@@ -44,10 +42,10 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 	}
 
 	u32 *dest      = (u32*)(VU->Mem + v->addr);
-	u32 unpackType = v->cmd & 0xf;
 
-	ft     = &VIFfuncTable[ unpackType ];
-	func   = vif->usn ? ft->funcU : ft->funcS;
+	const VIFUnpackFuncTable& ft( VIFfuncTable[ v->cmd & 0x1f ] );
+	UNPACKFUNCTYPE func = vif->usn ? ft.funcU : ft.funcS;
+
 	size <<= 2;
 
 	if (vifRegs->cycle.cl >= vifRegs->cycle.wl) { // skipping write
@@ -57,7 +55,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 			dest = (u32*)(VU->Mem + v->addr);
 		}
 
-		size = min(size, (int)vifRegs->num * ft->gsize); //size will always be the same or smaller
+		size = std::min<u32>(size, vifRegs->num * ft.gsize); //size will always be the same or smaller
 
 		tempsize = v->addr + ((((vifRegs->num-1) / vifRegs->cycle.wl) *
 			 (vifRegs->cycle.cl - vifRegs->cycle.wl)) * 16) + (vifRegs->num * 16);
@@ -90,16 +88,16 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 
 			VIFUNPACK_LOG("sorting tempsize :p, size %d, vifnum %d, addr %x", tempsize, vifRegs->num, v->addr);
 
-			while ((tempsize >= ft->gsize) && (vifRegs->num > 0)) {
+			while ((tempsize >= ft.gsize) && (vifRegs->num > 0)) {
 				if(v->addr >= memlimit) {
 					DevCon.Warning("Mem limit overflow");
 					v->addr &= (memlimit - 1);
 					dest = (u32*)(VU->Mem + v->addr);
 				}
 
-				func(dest, (u32*)cdata, ft->qsize);
-				cdata    += ft->gsize;
-				tempsize -= ft->gsize;
+				func(dest, (u32*)cdata);
+				cdata    += ft.gsize;
+				tempsize -= ft.gsize;
 
 				vifRegs->num--;
 				vif->cl++;
@@ -122,32 +120,32 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 			if(tempsize > 0) size = tempsize;
 		}
 		
-		if (size >= ft->dsize && vifRegs->num > 0) { //Else write what we do have
+		if (size >= ft.dsize && vifRegs->num > 0) { //Else write what we do have
 			DevCon.Warning("huh!!!!!!!!!!!!!!!!!!!!!!");
 			VIF_LOG("warning, end with size = %d", size);
 			// unpack one qword
-			//v->addr += (size / ft->dsize) * 4;
-			func(dest, (u32*)cdata, size / ft->dsize);
+			//v->addr += (size / ft.dsize) * 4;
+			(vif->usn ? ft.oddU : ft.oddS)(dest, (u32*)cdata, size / ft.dsize);
 			size = 0;
 			VIFUNPACK_LOG("leftover done, size %d, vifnum %d, addr %x", size, vifRegs->num, v->addr);
 		}
 	}
 	else { // filling write
 		if(vifRegs->cycle.cl > 0) // Quicker and avoids zero division :P
-			if((u32)(((size / ft->gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num)
-			DevCon.Warning("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft->gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
+			if((u32)(((size / ft.gsize) / vifRegs->cycle.cl) * vifRegs->cycle.wl) < vifRegs->num)
+			DevCon.Warning("Filling write warning! %x < %x and CL = %x WL = %x", (size / ft.gsize), vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl);
 
-		DevCon.Warning("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, unpackType, vif->tag.addr);
+		DevCon.Warning("filling write %d cl %d, wl %d mask %x mode %x unpacktype %x addr %x", vifRegs->num, vifRegs->cycle.cl, vifRegs->cycle.wl, vifRegs->mask, vifRegs->mode, v->cmd & 0xf, vif->tag.addr);
 		while (vifRegs->num > 0) {
 			if (vif->cl == vifRegs->cycle.wl) {
 				vif->cl = 0;
 			}
 			// unpack one qword
 			if (vif->cl < vifRegs->cycle.cl) { 
-				if(size < ft->gsize) { DevCon.WriteLn("Out of Filling write data!"); break; }
-				func(dest, (u32*)cdata, ft->qsize);
-				cdata += ft->gsize;
-				size  -= ft->gsize;
+				if(size < ft.gsize) { DevCon.WriteLn("Out of Filling write data!"); break; }
+				func(dest, (u32*)cdata);
+				cdata += ft.gsize;
+				size  -= ft.gsize;
 				vif->cl++;
 				vifRegs->num--;
 				if (vif->cl == vifRegs->cycle.wl) {
@@ -155,7 +153,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 				}
 			}
 			else {
-				func(dest, (u32*)cdata, ft->qsize);
+				func(dest, (u32*)cdata);
 				v->addr += 16;
 				vifRegs->num--;
 				vif->cl++;

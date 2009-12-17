@@ -824,6 +824,10 @@
 								RelativePath="..\..\VifDma_internal.h"
 								>
 							</File>
+							<File
+								RelativePath="..\..\VIFunpack.cpp"
+								>
+							</File>
 							<Filter
 								Name="Dynarec"
 								>
