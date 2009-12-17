@@ -735,16 +735,9 @@ static void recExecute()
 
 static void recExecuteBiosStub()
 {
-	Console.WriteLn( Color_StrongGreen, "(R5900-32) Executing Bios Stub..." );
 	g_ExecBiosHack = true;
-
 	recExecute();
-	pxAssertDev( cpuRegs.pc == 0x00200008 || cpuRegs.pc == 0x00100008,
-		"Bios stub execution terminated on an abnormal address."
-	);
-
 	g_ExecBiosHack = false;
-	Console.WriteLn( Color_StrongGreen, "(R5900-32) Execute Bios Stub Complete");
 
 	// Reset the EErecs here, because the bios generates "slow" blocks that have
 	// g_ExecBiosHack checks in them.  This deletes them so that the recs replace them

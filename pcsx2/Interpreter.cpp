@@ -391,10 +391,17 @@ static void intExecute()
 static void intExecuteBiosStub()
 {
 	g_EEFreezeRegs = false;
-	Console.WriteLn( Color_StrongGreen, "(R5900-Interp) Executing Bios Stub..." );
-	while( (cpuRegs.pc != 0x00200008) && (cpuRegs.pc != 0x00100008) ) {
-		execI();
-	}
+
+	// We need to be weary of events that could occur during vsyncs, which means
+	// making sure to exit this function for ExitCpuExecute.  The calling function
+	// will update UI status, and then re-enter if the bios stub execution criteria
+	// wasn't met yet.
+
+	try {
+		while( (cpuRegs.pc != 0x00200008) && (cpuRegs.pc != 0x00100008) ) {
+			execI();
+		}
+	} catch( Exception::ExitCpuExecute& ) { }
 
 	// ... some maual bios injection hack from a century ago, me thinks.  Leaving the
 	// code intact for posterity. --air
@@ -409,8 +416,6 @@ static void intExecuteBiosStub()
 	//        fwrite(PS2MEM_PSX, 0x80000, 1, f);
 	//        fclose(f);
 	//    }
-
-	Console.WriteLn( Color_StrongGreen, "(R5900-Interp) Execute Bios Stub Complete");
 }
 
 static void intCheckExecutionState()

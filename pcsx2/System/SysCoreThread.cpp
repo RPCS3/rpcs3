@@ -249,7 +249,7 @@ void SysCoreThread::_reset_stuff_as_needed()
 	}
 
 	if( m_resetVsyncTimers )
-	{
+{
 		UpdateVSyncRate();
 		frameLimitReset();
 		m_resetVsyncTimers = false;
@@ -313,7 +313,19 @@ void SysCoreThread::CpuInitializeMess()
 		// effects).
 
 		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
-		Cpu->ExecuteBiosStub();
+
+		Console.WriteLn( Color_StrongGreen, "(PCSX2 Core) Executing Bios Stub..." );
+
+		do {
+			// Even the BiosStub invokes vsyncs, so we need to be weary of state
+			// changes and premature loop exits, and re-enter the stub executer until
+			// the critera is met.
+
+			StateCheckInThread();
+			Cpu->ExecuteBiosStub();
+		} while( cpuRegs.pc != 0x00200008 && cpuRegs.pc != 0x00100008 );
+
+		Console.WriteLn( Color_StrongGreen, "(PCSX2 Core) Execute Bios Stub Complete");
 		loadElfFile( elf_file );
 	}
 	
