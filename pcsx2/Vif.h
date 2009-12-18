@@ -223,8 +223,10 @@ extern "C"
 	extern u32* _vifCol;
 }
 
-#define vif0Regs ((VIFregisters*)&PS2MEM_HW[0x3800])
-#define vif1Regs ((VIFregisters*)&PS2MEM_HW[0x3c00])
+#define vif0RegsRef ((VIFregisters&)PS2MEM_HW[0x3800])
+#define vif1RegsRef ((VIFregisters&)PS2MEM_HW[0x3c00])
+#define vif0Regs (&vif0RegsRef)
+#define vif1Regs (&vif1RegsRef)
 
 extern void dmaVIF0();
 extern void dmaVIF1();

@@ -35,17 +35,24 @@ int nVifUnpack(int idx, u32 *data) {
 	return ret;
 }
 
-_f u8* setVUptr(int idx, int offset) {
-	return (u8*)(nVif[idx].VU->Mem + (offset & nVif[idx].vuMemLimit));
+_f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
+	return (u8*)(vuMemBase + ( offset & (vuidx ? 0x3ff0 : 0xff0) ));
 }
 
-_f void incVUptr(int idx, u8* &ptr, int amount) {
+_f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
+	pxAssert( ((uptr)ptr & 0xf) == 0 );		// alignment check
 	ptr += amount;
-	int diff = ptr - nVif[idx].vuMemEnd;
+	int diff = ptr - (vuMemBase + (vuidx ? 0x4000 : 0x1000));
 	if (diff >= 0) {
-		ptr = nVif[idx].VU->Mem + diff;
+		ptr = (u8*)(vuMemBase + diff);
 	}
-	if ((uptr)ptr & 0xf) DevCon.WriteLn("unaligned wtf :(");
+}
+
+_f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
+	pxAssert( ((uptr)ptr & 0xf) == 0 );	// alignment check
+	ptr += 16;
+	if( ptr == (vuMemBase + (vuidx ? 0x4000 : 0x1000)) )
+		ptr -= (vuidx ? 0x4000 : 0x1000);
 }
 
 static u32 oldMaskIdx = -1;
@@ -130,7 +137,10 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	const VIFUnpackFuncTable& ft	= VIFfuncTable[upkNum];
 	UNPACKFUNCTYPE func				= usn ? ft.funcU : ft.funcS;
 
-	u8* dest = setVUptr(idx, vif->tag.addr);
+	// Cache vuMemBase to a local var because the VU1's is a dereferenced pointer that
+	// mucks up compiler optimizations on the internal loops. >_< --air
+	const u8* vuMemBase	= (idx ? VU1 : VU0).Mem;
+	u8* dest			= setVUptr(idx, vuMemBase, vif->tag.addr);
 
 	if (vif->cl >= blockSize)  vif->cl = 0;
 
@@ -146,26 +156,27 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 				
 				// Opt note: removing this min check (which isn't needed right now?) is +1%
 				// or more.  Just something to keep in mind. :) --air
-				fnbase[0/*aMin(vif->cl, 4)*/](dest, data);
+				fnbase[aMin(vif->cl, 4)](dest, data);
 			}
 			data += ft.gsize;
-			size -= ft.gsize;
+			if( IsDevBuild ) size -= ft.gsize;		// only used below for assertion checking
+
 			vifRegs->num--;
-			incVUptr(idx, dest, 16);
+			incVUptrBy16(idx, dest, vuMemBase);
 			if (++vif->cl == blockSize) vif->cl = 0;
 		}
 		else if (isFill) {
 			func((u32*)dest, (u32*)data);
 			vifRegs->num--;
-			incVUptr(idx, dest, 16);
+			incVUptrBy16(idx, dest, vuMemBase);
 			if (++vif->cl == blockSize) vif->cl = 0;
 		}
 		else {
-			incVUptr(idx, dest, 16 * skipSize);
+			incVUptr(idx, dest, vuMemBase, 16 * skipSize);
 			vif->cl = 0;
 		}
 	}
-	//if (size > 0) DevCon.WriteLn("size = %d", size);
+	pxAssertDev( size == 0, "Mismatched VIFunpack size specified." );
 }
 
 typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);
