@@ -243,7 +243,7 @@ void GIFdma()
 			CPU_INT(2, gscycles * BIAS);
 			return;
 		}
-		else DevCon.WriteLn("GIFdma() case 1, but qwc = 0!"); //Don't do 0 GIFchain and then return
+		//else DevCon.WriteLn("GIFdma() case 1, but qwc = 0!"); //Don't do 0 GIFchain and then return
 	}
 
 	// Transfer Dn_QWC from Dn_MADR to GIF
@@ -261,7 +261,7 @@ void GIFdma()
 			CPU_INT(2, gscycles * BIAS);
 			return;
 		}
-		else DevCon.WriteLn("GIFdma() case 2, but qwc = 0!"); //Don't do 0 GIFchain and then return, fixes Dual Hearts
+		//else DevCon.WriteLn("GIFdma() case 2, but qwc = 0!"); //Don't do 0 GIFchain and then return, fixes Dual Hearts
 	}
 
 	if ((gif->chcr.MOD == CHAIN_MODE) && (!gspath3done)) // Chain Mode

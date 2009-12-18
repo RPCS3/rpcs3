@@ -139,6 +139,7 @@ namespace Implementations
 	void Sys_Suspend()
 	{
 		CoreThread.Suspend();
+		sMainFrame.SetFocus();
 	}
 
 	void Sys_Resume()
