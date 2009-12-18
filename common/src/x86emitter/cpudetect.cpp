@@ -321,13 +321,6 @@ void cpudetectInit()
 		}
 
 	}
-	else
-	{
-		Console.Warning(
-			"Notice: Could not allocate memory for SSE3/4 detection.\n"
-			"\tRelying on CPUID results. [this is not an error]"
-		);
-	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	// Establish MXCSR Mask...

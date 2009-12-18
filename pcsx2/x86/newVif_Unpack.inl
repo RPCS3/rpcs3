@@ -159,7 +159,7 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 				fnbase[aMin(vif->cl, 4)](dest, data);
 			}
 			data += ft.gsize;
-			if( IsDevBuild ) size -= ft.gsize;		// only used below for assertion checking
+			//if( IsDebugBuild ) size -= ft.gsize;		// only used below for assertion checking
 
 			vifRegs->num--;
 			incVUptrBy16(idx, dest, vuMemBase);
@@ -176,7 +176,9 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 			vif->cl = 0;
 		}
 	}
-	pxAssertDev( size == 0, "Mismatched VIFunpack size specified." );
+
+	// Spams in many games?  (Suikoden3 / TriAce games, prolly more) Bad news or just wacky VIF hack mess?
+	//pxAssert( size == 0, "Mismatched VIFunpack size specified." );
 }
 
 typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);

@@ -319,19 +319,26 @@ static void __fastcall fUNPACK_V4_5(u32 *dest, u32 *data)
 	UNPACK_V4_5<doMask>(dest, data, 0);		// size is ignored.
 }
 
-#define _upk (UNPACKFUNCTYPE)
-#define _odd (UNPACKFUNCTYPE_ODD)
-#define _unpk_s(bits) (UNPACKFUNCTYPE_S##bits)
-#define _odd_s(bits) (UNPACKFUNCTYPE_ODD_S##bits)
-#define _unpk_u(bits) (UNPACKFUNCTYPE_U##bits)
-#define _odd_u(bits) (UNPACKFUNCTYPE_ODD_U##bits)
-
 // --------------------------------------------------------------------------------------
 //  Main table for function unpacking. 
 // --------------------------------------------------------------------------------------
 // The extra data bsize/dsize/etc are all duplicated between the doMask enabled and
 // disabled versions.  This is probably simpler and more efficient than bothering
 // to generate separate tables.
+//
+// The double-cast function pointer nonsense is to appease GCC, which gives some rather
+// cryptic error about being unable to deduce the type parameters (I think it's a bug
+// relating to __fastcall, which I recall having some other places as well).  It's fixed
+// by explicitly casting the function to itself prior to casting it to what we need it
+// to be cast as. --air
+//
+
+#define _upk (UNPACKFUNCTYPE)
+#define _odd (UNPACKFUNCTYPE_ODD)
+#define _unpk_s(bits) (UNPACKFUNCTYPE_S##bits)
+#define _odd_s(bits) (UNPACKFUNCTYPE_ODD_S##bits)
+#define _unpk_u(bits) (UNPACKFUNCTYPE_U##bits)
+#define _odd_u(bits) (UNPACKFUNCTYPE_ODD_U##bits)
 
 // 32-bits versions are unsigned-only!!
 #define UnpackFuncPair32( sizefac, vt, doMask ) \
