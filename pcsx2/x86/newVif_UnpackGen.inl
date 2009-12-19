@@ -17,20 +17,28 @@
 
 #define xMaskWrite(regX) {					\
 	xMOVAPS(xmm7, ptr32[ecx]);				\
-	int offX = aMin(curCycle, 4);			\
+	int offX = aMin(curCycle, 3);			\
 	xPAND(regX, ptr32[nVifMask[0][offX]]);	\
 	xPAND(xmm7, ptr32[nVifMask[1][offX]]);	\
 	xPOR (regX, ptr32[nVifMask[2][offX]]);	\
 	xPOR (regX, xmm7);						\
 	xMOVAPS(ptr32[ecx], regX);				\
 }
-#define xMovDest(regX) {						 \
-	if (mask==0) { xMOVAPS (ptr32[ecx], regX); } \
-	else		 { xMaskWrite(regX); }			 \
+#define xMovDest(regX) {						\
+	if (!mask)	{ xMOVAPS (ptr32[ecx], regX); }	\
+	else		{ xMaskWrite(regX); }			\
 }
-#define xShiftR(regX, n) {			\
-	if (usn) { xPSRL.D(regX, n); }	\
-	else	 { xPSRA.D(regX, n); }	\
+#define xShiftR(regX, n) {						\
+	if (usn) { xPSRL.D(regX, n); }				\
+	else	 { xPSRA.D(regX, n); }				\
+}
+#define xPMOVXX8(regX, src) {					\
+	if (usn) xPMOVZX.BD(regX, src);				\
+	else	 xPMOVSX.BD(regX, src);				\
+}
+#define xPMOVXX16(regX, src) {					\
+	if (usn) xPMOVZX.WD(regX, src);				\
+	else	 xPMOVSX.WD(regX, src);				\
 }
 
 struct VifUnpackIndexer {
@@ -74,18 +82,28 @@ void nVifGen(int usn, int mask, int curCycle) {
 	xRET();
 
 	indexer.xSetCall(0x1); // S-16
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX16  (xmm0, ptr64[edx]);
+	}
+	else {
 		xMOV16     (xmm0, ptr32[edx]);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 16);
+	}
 		xPSHUF.D   (xmm1, xmm0, _v0);
 		xMovDest   (xmm1);
 	xRET();
 
 	indexer.xSetCall(0x2); // S-8
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX8   (xmm0, ptr32[edx]);
+	}
+	else {
 		xMOV8      (xmm0, ptr32[edx]);
 		xPUNPCK.LBW(xmm0, xmm0);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 24);
+	}
 		xPSHUF.D   (xmm1, xmm0, _v0);
 		xMovDest   (xmm1);
 	xRET();
@@ -98,17 +116,27 @@ void nVifGen(int usn, int mask, int curCycle) {
 	xRET();
 
 	indexer.xSetCall(0x5); // V2-16
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX16  (xmm0, ptr64[edx]);
+	}
+	else {
 		xMOV32     (xmm0, ptr32[edx]);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 16);
+	}
 		xMovDest   (xmm0);
 	xRET();
 
 	indexer.xSetCall(0x6); // V2-8
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX8   (xmm0, ptr32[edx]);
+	}
+	else {
 		xMOV16     (xmm0, ptr32[edx]);
 		xPUNPCK.LBW(xmm0, xmm0);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 24);
+	}
 		xMovDest   (xmm0);
 	xRET();
 
@@ -120,17 +148,27 @@ void nVifGen(int usn, int mask, int curCycle) {
 	xRET();
 
 	indexer.xSetCall(0x9); // V3-16
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX16  (xmm0, ptr64[edx]);
+	}
+	else {
 		xMOV64     (xmm0, ptr32[edx]);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 16);
+	}
 		xMovDest   (xmm0);
 	xRET();
 
 	indexer.xSetCall(0xa); // V3-8
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX8   (xmm0, ptr32[edx]);
+	}
+	else {
 		xMOV32     (xmm0, ptr32[edx]);
 		xPUNPCK.LBW(xmm0, xmm0);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 24);
+	}
 		xMovDest   (xmm0);
 	xRET();
 
@@ -142,17 +180,27 @@ void nVifGen(int usn, int mask, int curCycle) {
 	xRET();
 
 	indexer.xSetCall(0xd); // V4-16
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX16  (xmm0, ptr64[edx]);
+	}
+	else {
 		xMOV64     (xmm0, ptr32[edx]);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 16);
+	}
 		xMovDest   (xmm0);
 	xRET();
 
 	indexer.xSetCall(0xe); // V4-8
+	if (x86caps.hasStreamingSIMD4Extensions) {
+		xPMOVXX8   (xmm0, ptr32[edx]);
+	}
+	else {
 		xMOV32     (xmm0, ptr32[edx]);
 		xPUNPCK.LBW(xmm0, xmm0);
 		xPUNPCK.LWD(xmm0, xmm0);
 		xShiftR    (xmm0, 24);
+	}
 		xMovDest   (xmm0);
 	xRET();
 
@@ -189,28 +237,4 @@ void nVifGen(int usn, int mask, int curCycle) {
 	xRET();
 
 	pxAssert( ((uptr)xGetPtr() - (uptr)nVifUpkExec) < sizeof(nVifUpkExec) );
-}
-
-void initNewVif(int idx) {
-	nVif[idx].idx		= idx;
-	nVif[idx].VU		= idx ? &VU1     : &VU0;
-	nVif[idx].vif		= idx ? &vif1    : &vif0;
-	nVif[idx].vifRegs	= idx ? vif1Regs : vif0Regs;
-	nVif[idx].vuMemEnd  = idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
-	nVif[idx].vuMemLimit= idx ? 0x3ff0 : 0xff0;
-	nVif[idx].vifCache	= NULL;
-
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
-	memset8<0xcc>( nVifUpkExec );
-
-	xSetPtr( nVifUpkExec );
-
-	for (int a = 0; a < 2; a++) {
-		for (int b = 0; b < 2; b++) {
-			for (int c = 0; c < 4; c++) {
-				nVifGen(a, b, c);
-			}
-		}}
-
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
 }

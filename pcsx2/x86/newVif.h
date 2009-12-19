@@ -17,15 +17,21 @@
 
 #ifdef newVif
 #include "newVif_BlockBuffer.h"
+#include "newVif_HashBucket.h"
 #include "x86emitter/x86emitter.h"
 using namespace x86Emitter;
 extern void mVUmergeRegs(int dest, int src, int xyzw, bool modXYZW = 0);
+extern void  nVifGen(int usn, int mask, int curCycle);
+extern void _nVifUnpack (int idx, u8 *data, u32 size);
+extern void  dVifUnpack (int idx, u8 *data, u32 size);
+extern void  dVifInit   (int idx);
 
-typedef u32 (__fastcall *nVifCall)(void*, void*);
+typedef u32  (__fastcall *nVifCall)(void*, void*);
+typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
 
 static __pagealigned u8 nVifUpkExec[__pagesize*4];
-static __aligned16 nVifCall nVifUpk[(2*2*16) *4 ]; // ([USN][Masking][Unpack Type]) [curCycle]
-static __aligned16 u32 nVifMask[3][4][4] = {0};  // [MaskNumber][CycleNumber][Vector]
+static __aligned16 nVifCall nVifUpk[(2*2*16)  *4]; // ([USN][Masking][Unpack Type]) [curCycle]
+static __aligned16 u32 nVifMask[3][4][4] = {0};	   // [MaskNumber][CycleNumber][Vector]
 
 #define _1mb (0x100000)
 #define	_v0 0
@@ -35,28 +41,42 @@ static __aligned16 u32 nVifMask[3][4][4] = {0};  // [MaskNumber][CycleNumber][Ve
 #define aMax(x, y) std::max(x,y)
 #define aMin(x, y) std::min(x,y)
 #define _f __forceinline
+#define xmmCol0 xmm2
+#define xmmCol1 xmm3
+#define xmmCol2 xmm4
+#define xmmCol3 xmm5
+#define xmmRow  xmm6
+#define xmmTemp xmm7
 
-struct nVifBlock {
-	u8  upkType;  // Unpack Type
-	u8  num;	  // Num  Field
-	u8  mode;	  // Mode Field
-	u8  cl;		  // CL	  Field
-	u8  wl;		  // WL   Field
-	u32 mask;	  // Mask Field
-	u8* startPtr; // Start Ptr of RecGen Code
+struct nVifBlock { // Ordered for Hashing
+	u8   num;	   // Num  Field
+	u8   upkType;  // Unpack Type [usn*1:mask*1:upk*4]
+	u8   mode;	   // Mode Field
+	u8	 scl;	   // Start Cycle
+	u8   cl;	   // CL   Field
+	u8   wl;	   // WL   Field
+	u32  mask;	   // Mask Field
+	u8*  startPtr; // Start Ptr of RecGen Code
 };
 
+#define _hSize 0x4000 // [usn*1:mask*1:upk*4:num*8] hash...
+#define _cmpS  (sizeof(nVifBlock) - sizeof(uptr))
+#define _tParams nVifBlock, _hSize, _cmpS
 struct nVifStruct {
-	u32				idx;		// VIF0 or VIF1
-	vifStruct*		vif;		// Vif Struct ptr
-	VIFregisters*	vifRegs;	// Vif Regs   ptr
-	VURegs*			VU;			// VU  Regs   ptr
-	u8*				vuMemEnd;   // End of VU Memory
-	u32				vuMemLimit; // Use for fast AND
-	BlockBuffer*	vifCache;	// Block Buffer
+	u32						idx;		// VIF0 or VIF1
+	vifStruct*				vif;		// Vif Struct ptr
+	VIFregisters*			vifRegs;	// Vif Regs   ptr
+	VURegs*					VU;			// VU  Regs   ptr
+	u8*						vuMemEnd;   // End of VU Memory
+	u32						vuMemLimit; // Use for fast AND
+	u8*						recPtr;		// Cur Pos to recompile to
+	u8*						recEnd;		// End of Rec Cache
+	BlockBuffer*			vifCache;	// Block Buffer
+	HashBucket<_tParams>*	vifBlocks;	// Vif Blocks
+	nVifBlock*				vifBlock;	// Current Vif Block Ptr
 };
 
-// Contents of this table are doubled up for doMast(false) and doMask(true) lookups.
+// Contents of this table are doubled up for doMask(false) and doMask(true) lookups.
 // (note: currently unused, I'm using gsize in the interp tables instead since it
 //  seems to be faster for now, which may change when nVif isn't reliant on interpreted
 //  unpackers anymore --air)
@@ -98,10 +118,13 @@ static const u32 nVifT[32] = {
 	2, // V4-5
 };
 
+#define  useOldUnpack  0 // Use code in newVif_OldUnpack.inl
+#define  newVifDynaRec 1 // Use code in newVif_Dynarec.inl
 #include "newVif_OldUnpack.inl"
 #include "newVif_Unpack.inl"
 #include "newVif_UnpackGen.inl"
 
-//#include "newVif_Dynarec.inl"
+#include "newVif_Tables.inl"
+#include "newVif_Dynarec.inl"
 
 #endif

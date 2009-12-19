@@ -852,6 +852,10 @@
 									>
 								</File>
 								<File
+									RelativePath=".\newVif_HashBucket.h"
+									>
+								</File>
+								<File
 									RelativePath="..\..\x86\newVif_OldUnpack.inl"
 									>
 								</File>
@@ -863,6 +867,18 @@
 									RelativePath="..\..\x86\newVif_UnpackGen.inl"
 									>
 								</File>
+								<Filter
+									Name="Dynarec"
+									>
+									<File
+										RelativePath="..\..\x86\newVif_Dynarec.inl"
+										>
+									</File>
+									<File
+										RelativePath="..\..\x86\newVif_Tables.inl"
+										>
+									</File>
+								</Filter>
 							</Filter>
 						</Filter>
 						<Filter

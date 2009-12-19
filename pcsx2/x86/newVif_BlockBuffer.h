@@ -43,7 +43,8 @@ public:
 		dealloc(temp, mSizeT);
 		mSizeT = newSize;
 	}
-	void clear()    { mSize = 0; }
-	u32  getSize()  { return mSize; }
-	u8*  getBlock() { return mData; }
+	void clear()      { mSize = 0; }
+	u32  getCurSize() { return mSize;  }
+	u32  getSize()    { return mSizeT; }
+	u8*  getBlock()   { return mData;  }
 };

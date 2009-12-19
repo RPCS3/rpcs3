@@ -236,7 +236,7 @@ extern bool VIF1transfer(u32 *data, int size, bool istag);
 extern void vifMFIFOInterrupt();
 
 // --------------------------------------------------------------------------------------
-//  VIF SEE-optimized Masking Mess
+//  VIF SSE-optimized Masking Mess
 // --------------------------------------------------------------------------------------
 
 struct VifMaskTypes
@@ -245,7 +245,7 @@ struct VifMaskTypes
 	u32	Row1[4], Col1[4];
 };
 
-extern __aligned16 VifMaskTypes g_vifmask;
+extern __aligned16 VifMaskTypes g_vifmask; // This struct is used by newVif as well as oldVif code...
 
 extern void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask);
 
