@@ -21,4 +21,5 @@ EXPORTS
 	PADupdate
 	PADfreeze
 	PADsetSlot
+	PADsetSettingsDir
 	PADqueryMtap

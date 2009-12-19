@@ -45,6 +45,7 @@ class AppPluginManager : public PluginManager
 public:
 	AppPluginManager( const wxString (&folders)[PluginId_Count] ) : PluginManager( folders )
 	{
+		SetSettingsFolder( GetSettingsFolder().ToString() );
 	}
 
 	virtual ~AppPluginManager() throw()
@@ -55,6 +56,8 @@ public:
 
 	void Init()
 	{
+		SetSettingsFolder( GetSettingsFolder().ToString() );
+
 		_parent::Init();
 
 		PluginEventType pevt = PluginsEvt_Init;
@@ -79,6 +82,8 @@ public:
 	
 	void Open()
 	{
+		SetSettingsFolder( GetSettingsFolder().ToString() );
+
 		_parent::Open();
 
 		PluginEventType pevt = PluginsEvt_Open;

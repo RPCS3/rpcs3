@@ -34,6 +34,7 @@
 using namespace std;
 
 extern FILE *spu2Log;
+extern string s_strIniPath;
 
 // Prints most of the function names of the callbacks as they are called by pcsx2. 
 // I'm keeping the code in because I have a feeling it will come in handy.

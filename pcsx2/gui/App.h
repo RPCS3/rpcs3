@@ -20,19 +20,11 @@
 #include <wx/imaglist.h>
 #include <wx/apptrait.h>
 
-#include "Utilities/EventSource.h"
 #include "IniInterface.h"
 
-class MainEmuFrame;
-class GSFrame;
-class ConsoleLogFrame;
-class PipeRedirectionBase;
-class AppCoreThread;
-
 #include "Utilities/HashMap.h"
-#include "Utilities/wxGuiTools.h"
 
-#include "AppConfig.h"
+#include "AppCommon.h"
 #include "RecentIsoList.h"
 
 #include "System.h"
@@ -148,22 +140,6 @@ enum MenuIdentifiers
 	MenuId_Debug_MemoryDump,
 	MenuId_Debug_Logging,		// dialog for selection additional log options
 	MenuId_Config_ResetAll,
-};
-
-enum AppEventType
-{
-	// Maybe this will be expanded upon later..?
-	AppStatus_Exiting
-};
-
-enum PluginEventType
-{
-	PluginsEvt_Loaded,
-	PluginsEvt_Init,
-	PluginsEvt_Open,
-	PluginsEvt_Close,
-	PluginsEvt_Shutdown,
-	PluginsEvt_Unloaded,
 };
 
 

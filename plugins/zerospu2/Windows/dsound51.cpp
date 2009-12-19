@@ -26,7 +26,7 @@
 
 //4*48*73
 #define SOUNDSIZE 76800
-HWND hWMain;
+HWND hWMain = NULL;
 
 LPDIRECTSOUND lpDS;
 LPDIRECTSOUNDBUFFER lpDSBPRIMARY = NULL;
@@ -49,7 +49,7 @@ int SetupSound()
 	dsval = DirectSoundCreate(NULL,&lpDS,NULL);
 	if(dsval != DS_OK)  
 	{
-		MessageBox(NULL,"DirectSoundCreate!","Error",MB_OK);
+		MessageBox(hWMain,"DirectSoundCreate!","Error",MB_OK);
 		return -1;
 	}
 
@@ -57,7 +57,7 @@ int SetupSound()
 	{
 		if(DS_OK != IDirectSound_SetCooperativeLevel(lpDS,hWMain, DSSCL_NORMAL)) 
 		{
-			MessageBox(NULL,"SetCooperativeLevel!","Error",MB_OK);
+			MessageBox(hWMain,"SetCooperativeLevel!","Error",MB_OK);
 			return -1;
 		}
 	}
@@ -71,7 +71,7 @@ int SetupSound()
 	dsval = IDirectSound_CreateSoundBuffer(lpDS,&dsbd,&lpDSBPRIMARY,NULL);
 	if(dsval != DS_OK) 
 	{
-		MessageBox(NULL, "CreateSoundBuffer (Primary)", "Error",MB_OK);
+		MessageBox(hWMain, "CreateSoundBuffer (Primary)", "Error",MB_OK);
 		return -1;
 	}
 
@@ -89,7 +89,7 @@ int SetupSound()
 	dsval = IDirectSoundBuffer_SetFormat(lpDSBPRIMARY,&pcmwf);
 	if(dsval != DS_OK) 
 	{
-		MessageBox(NULL, "SetFormat!", "Error",MB_OK);
+		MessageBox(hWMain, "SetFormat!", "Error",MB_OK);
 		return -1;
 	}
 
@@ -112,7 +112,7 @@ int SetupSound()
 		dsval = IDirectSound_CreateSoundBuffer(lpDS,&dsbdesc,&lpDSBSECONDARY1,NULL);
 		if(dsval != DS_OK) 
 		{
-			MessageBox(NULL,"CreateSoundBuffer (Secondary1)", "Error",MB_OK);
+			MessageBox(hWMain,"CreateSoundBuffer (Secondary1)", "Error",MB_OK);
 			return -1;
 		}
 	}
@@ -120,14 +120,14 @@ int SetupSound()
 	dsval = IDirectSoundBuffer_Play(lpDSBPRIMARY,0,0,DSBPLAY_LOOPING);
 	if(dsval != DS_OK)
 	{
-		MessageBox(NULL,"Play (Primary)","Error",MB_OK);
+		MessageBox(hWMain,"Play (Primary)","Error",MB_OK);
 		return -1;
 	}
 
 	dsval = IDirectSoundBuffer_Play(lpDSBSECONDARY1,0,0,DSBPLAY_LOOPING);
 	if(dsval != DS_OK) 
 	{
-		MessageBox(NULL,"Play (Secondary1)","Error",MB_OK);
+		MessageBox(hWMain,"Play (Secondary1)","Error",MB_OK);
 		return -1;
 	}
 	

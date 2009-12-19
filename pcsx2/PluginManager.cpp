@@ -125,6 +125,7 @@ struct LegacyApi_OptMethod
 
 static s32  CALLBACK fallback_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
 static void CALLBACK fallback_keyEvent(keyEvent *ev) {}
+static void CALLBACK fallback_setSettingsDir(const char* dir) {}
 static void CALLBACK fallback_configure() {}
 static void CALLBACK fallback_about() {}
 static s32  CALLBACK fallback_test() { return 0; }
@@ -252,16 +253,17 @@ static s32 CALLBACK _hack_PADinit()
 //
 static const LegacyApi_CommonMethod s_MethMessCommon[] =
 {
-	{	"init",			NULL	},
-	{	"close",		NULL	},
-	{	"shutdown",		NULL	},
+	{	"init",				NULL	},
+	{	"close",			NULL	},
+	{	"shutdown",			NULL	},
 
-	{	"keyEvent",		(vMeth*)fallback_keyEvent },
+	{	"keyEvent",			(vMeth*)fallback_keyEvent },
+	{	"setSettingsDir",	(vMeth*)fallback_setSettingsDir },
 
-	{	"freeze",		(vMeth*)fallback_freeze	},
-	{	"test",			(vMeth*)fallback_test },
-	{	"configure",	fallback_configure	},
-	{	"about",		fallback_about	},
+	{	"freeze",			(vMeth*)fallback_freeze	},
+	{	"test",				(vMeth*)fallback_test },
+	{	"configure",		fallback_configure	},
+	{	"about",			fallback_about	},
 
 	{ NULL }
 
@@ -771,6 +773,8 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 	}
 
 	g_plugins = this;
+	
+	SendSettingsFolder();
 }
 
 PluginManager::~PluginManager() throw()
@@ -950,6 +954,8 @@ void PluginManager::Open()
 	if( pi->shortname == NULL ) return;
 
 	Console.WriteLn( Color_StrongBlue, "Opening plugins..." );
+
+	SendSettingsFolder();
 
 	pi = tbl_PluginInfo; do {
 		Open( pi->id );
@@ -1166,6 +1172,30 @@ bool PluginManager::KeyEvent( const keyEvent& evt )
 	} while( ++pi, pi->shortname != NULL );
 
 	return false;
+}
+
+void PluginManager::SendSettingsFolder()
+{
+	if( m_SettingsFolder.IsEmpty() ) return;
+
+	wxCharBuffer utf8buffer( m_SettingsFolder.ToUTF8() );
+
+	const PluginInfo* pi = tbl_PluginInfo; do {
+		m_info[pi->id].CommonBindings.SetSettingsDir( utf8buffer );
+	} while( ++pi, pi->shortname != NULL );
+}
+
+void PluginManager::SetSettingsFolder( const wxString& folder )
+{
+	wxString fixedfolder( folder );
+	if( !fixedfolder.IsEmpty() && (fixedfolder[fixedfolder.length()-1] != wxFileName::GetPathSeparator() ) )
+	{
+		fixedfolder += wxFileName::GetPathSeparator();
+	}
+	
+	if( m_SettingsFolder == fixedfolder ) return;
+	m_SettingsFolder = fixedfolder;
+	SendSettingsFolder();
 }
 
 void PluginManager::Configure( PluginsEnum_t pid )

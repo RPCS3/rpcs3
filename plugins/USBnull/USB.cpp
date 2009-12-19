@@ -1,5 +1,5 @@
-/*  USBlinuz
- *  Copyright (C) 2002-2005  USBlinuz Team
+/*  USBnull
+ *  Copyright (C) 2002-2009  PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ const unsigned char revision = 0;
 const unsigned char build    = 6;    // increase that with each version
 
 static char *libraryName     = "USBnull Driver";
-string s_strIniPath="inis/USBnull.ini";
+
 //void (*USBirq)();
 USBcallback USBirq;
 Config conf;

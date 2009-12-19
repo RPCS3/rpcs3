@@ -25,5 +25,27 @@
 #include "Utilities/pxStaticText.h"
 #include "Utilities/CheckedStaticBox.h"
 
+class MainEmuFrame;
+class GSFrame;
+class ConsoleLogFrame;
+class PipeRedirectionBase;
+class AppCoreThread;
+
+enum AppEventType
+{
+	// Maybe this will be expanded upon later..?
+	AppStatus_Exiting
+};
+
+enum PluginEventType
+{
+	PluginsEvt_Loaded,
+	PluginsEvt_Init,
+	PluginsEvt_Open,
+	PluginsEvt_Close,
+	PluginsEvt_Shutdown,
+	PluginsEvt_Unloaded,
+};
+
 #include "AppConfig.h"
 #include "Panels/BaseConfigPanel.h"

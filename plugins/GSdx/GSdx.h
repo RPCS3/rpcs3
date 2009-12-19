@@ -23,7 +23,7 @@
 
 class GSdxApp
 {
-	static const char* m_ini;
+	static std::string m_ini;
 	static const char* m_section;
 
 public:
@@ -35,6 +35,8 @@ public:
 	void SetConfig(const char* entry, const char* value);
 	int GetConfig(const char* entry, int value);
 	void SetConfig(const char* entry, int value);
+	
+	void SetConfigDir(const char* dir);
 };
 
 extern GSdxApp theApp;

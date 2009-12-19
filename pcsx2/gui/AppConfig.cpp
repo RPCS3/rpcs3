@@ -289,6 +289,21 @@ wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 	return Path::Combine( Folders.Plugins, BaseFilenames[pluginidx] );
 }
 
+// returns true if the filenames are quite absolutely the equivalent.  Works for all
+// types of filenames, relative and absolute.  Very important that you use this function
+// rather than any other type of more direct string comparison!
+bool AppConfig::FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto ) const
+{
+	wxFileName right( cmpto );
+	wxFileName left( FullpathTo(pluginId) );
+
+	left.MakeAbsolute();
+	right.MakeAbsolute();
+
+	return left == right;
+}
+
+
 wxDirName GetSettingsFolder()
 {
 	return UseDefaultSettingsFolder ? PathDefs::GetSettings() : SettingsFolder;

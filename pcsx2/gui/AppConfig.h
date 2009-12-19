@@ -187,7 +187,7 @@ public:
 	ConsoleLogOptions		Ps2ConBox;
 	FolderOptions			Folders;
 	FilenameOptions			BaseFilenames;
-	GSWindowOptions				GSWindow;
+	GSWindowOptions			GSWindow;
 	
 	// PCSX2-core emulation options, which are passed to the emu core prior to initiating
 	// an emulation session.  Note these are the options saved into the GUI ini file and
@@ -202,6 +202,8 @@ public:
 	wxString FullpathToMcd( uint port, uint slot ) const;
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
 
+	bool FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto ) const;
+	
 	void LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash );
 
 	void LoadSave( IniInterface& ini );

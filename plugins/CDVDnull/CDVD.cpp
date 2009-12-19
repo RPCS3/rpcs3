@@ -48,7 +48,7 @@ void SysMessage(const char *fmt, ...)
 	vsprintf(tmp, fmt, list);
 	va_end(list);
 
-	MessageBox(0, tmp, "CDVDnull Msg", 0);
+	MessageBox(GetActiveWindow(), tmp, "CDVDnull Msg", MB_SETFOREGROUND | MB_OK);
 }
 #endif
 

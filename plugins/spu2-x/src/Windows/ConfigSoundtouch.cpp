@@ -121,7 +121,7 @@ void SoundtouchCfg::OpenDialog( HWND hWnd )
 	ret = DialogBox( hInstance, MAKEINTRESOURCE(IDD_CONFIG_SOUNDTOUCH), hWnd, (DLGPROC)DialogProc );
 	if(ret==-1)
 	{
-		MessageBoxEx(GetActiveWindow(), L"Error Opening the Soundtouch advanced dialog.", L"OMG ERROR!", MB_OK, 0);
+		MessageBox(GetActiveWindow(), L"Error Opening the Soundtouch advanced dialog.", L"OMG ERROR!", MB_OK | MB_SETFOREGROUND);
 		return;
 	}
 	ReadSettings();

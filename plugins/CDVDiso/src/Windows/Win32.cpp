@@ -33,7 +33,7 @@ void SysMessage(char *fmt, ...)
 	va_start(list, fmt);
 	vsprintf(tmp, fmt, list);
 	va_end(list);
-	MessageBox(0, tmp, "CDVDiso Msg", 0);
+	MessageBox(GetActiveWindow(), tmp, "CDVDiso Msg", 0);
 }
 
 int _GetFile(char *out)

@@ -52,7 +52,6 @@ inline void * realloc(void *mem, size_t size);
 // Only needed for DBT_DEVNODES_CHANGED
 #include <Dbt.h>
 
-#include "PS2Etypes.h"
 #include "PS2Edefs.h"
 
 extern HINSTANCE hInst;

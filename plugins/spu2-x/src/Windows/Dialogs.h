@@ -47,6 +47,7 @@ extern void		AssignSliderValue( HWND hWnd, int idc, int editbox, int value );
 extern int		GetSliderValue( HWND hWnd, int idc );
 extern BOOL		DoHandleScrollMessage( HWND hwndDisplay, WPARAM wParam, LPARAM lParam );
 
+extern void		CfgSetSettingsDir( const char* dir );
 extern bool		CfgFindName( const TCHAR *Section, const TCHAR* Name);
 
 extern void		CfgWriteBool(const TCHAR* Section, const TCHAR* Name, bool Value);

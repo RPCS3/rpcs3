@@ -127,6 +127,11 @@ char bfr[2352];
 ///////////////////////////////////////////////////////////////////////////////
 // CDVD Pluin Interface                                                      //
 
+void CALLBACK CDVDsetSettingsDir(const char* dir)
+{
+	CfgSetSettingsDir(dir);
+}
+
 s32 CALLBACK CDVDinit() 
 {
 	return 0;

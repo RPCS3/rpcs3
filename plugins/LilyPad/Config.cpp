@@ -24,6 +24,11 @@ HWND hWndProp = 0;
 
 int selected = 0;
 
+// Older versions of PCSX2 don't always create the ini dir on startup, so LilyPad does it
+// for it.  But if PCSX2 sets the ini path with a call to setSettingsDir, then it means
+// we shouldn't make our own.
+bool createIniDir = true;
+
 HWND hWnds[2][4];
 HWND hWndGeneral = 0;
 
@@ -267,8 +272,15 @@ wchar_t *GetCommandStringW(u8 command, int port, int slot) {
 	return L"";
 }
 
-inline void GetSettingsFileName(wchar_t *out) {
-	wcscpy(out, L"inis\\LilyPad.ini");
+static wchar_t iniFile[MAX_PATH*2] = L"inis\\LilyPad.ini";
+
+void CALLBACK PADsetSettingsDir(wchar_t *dir)
+{
+	// emulator assures a trailing slash/backslash (yay!)
+	wcscpy(iniFile, (dir==NULL) ? L"inis\\" : dir);
+	wcscat(iniFile, L"LilyPad.ini");
+
+	createIniDir = false;
 }
 
 int GetBinding(int port, int slot, int index, Device *&dev, Binding *&b, ForceFeedbackBinding *&ffb);
@@ -701,18 +713,14 @@ void SetVolume(int volume) {
 	for (int i=waveOutGetNumDevs()-1; i>=0; i--) {
 		waveOutSetVolume((HWAVEOUT)i, val);
 	}
-	wchar_t ini[MAX_PATH+20];
-	GetSettingsFileName(ini);
-	WritePrivateProfileInt(L"General Settings", L"Volume", config.volume, ini);
+	WritePrivateProfileInt(L"General Settings", L"Volume", config.volume, iniFile);
 }
 
 int SaveSettings(wchar_t *file=0) {
-	wchar_t ini[MAX_PATH+20];
 
 	// Need this either way for saving path.
-	GetSettingsFileName(ini);
 	if (!file) {
-		file = ini;
+		file = iniFile;
 	}
 	else {
 		wchar_t *c = wcsrchr(file, '\\');
@@ -725,8 +733,8 @@ int SaveSettings(wchar_t *file=0) {
 	}
 	DeleteFileW(file);
 
-	WritePrivateProfileStringW(L"General Settings", L"Last Config Path", config.lastSaveConfigPath, ini);
-	WritePrivateProfileStringW(L"General Settings", L"Last Config Name", config.lastSaveConfigFileName, ini);
+	WritePrivateProfileStringW(L"General Settings", L"Last Config Path", config.lastSaveConfigPath, iniFile);
+	WritePrivateProfileStringW(L"General Settings", L"Last Config Name", config.lastSaveConfigFileName, iniFile);
 
 	// Just check first, last, and all pad bindings.  Should be more than enough.  No real need to check
 	// config path.
@@ -808,16 +816,20 @@ u8 GetPrivateProfileBool(wchar_t *s1, wchar_t *s2, int def, wchar_t *ini) {
 
 int LoadSettings(int force, wchar_t *file) {
 	if (dm && !force) return 0;
-	CreateDirectory(L"inis", 0);
+	
+	if( createIniDir )
+	{
+		CreateDirectory(L"inis", 0);
+		createIniDir = false;
+	}
+
 	// Could just do ClearDevices() instead, but if I ever add any extra stuff,
 	// this will still work.
 	UnloadConfigs();
 	dm = new InputDeviceManager();
 
-	wchar_t ini[MAX_PATH+20];
-	GetSettingsFileName(ini);
 	if (!file) {
-		file = ini;
+		file = iniFile;
 		GetPrivateProfileStringW(L"General Settings", L"Last Config Path", L"inis", config.lastSaveConfigPath, sizeof(config.lastSaveConfigPath), file);
 		GetPrivateProfileStringW(L"General Settings", L"Last Config Name", L"LilyPad.lily", config.lastSaveConfigFileName, sizeof(config.lastSaveConfigFileName), file);
 	}
@@ -828,8 +840,8 @@ int LoadSettings(int force, wchar_t *file) {
 			wcscpy(config.lastSaveConfigPath, file);
 			wcscpy(config.lastSaveConfigFileName, c+1);
 			*c = '\\';
-			WritePrivateProfileStringW(L"General Settings", L"Last Config Path", config.lastSaveConfigPath, ini);
-			WritePrivateProfileStringW(L"General Settings", L"Last Config Name", config.lastSaveConfigFileName, ini);
+			WritePrivateProfileStringW(L"General Settings", L"Last Config Path", config.lastSaveConfigPath, iniFile);
+			WritePrivateProfileStringW(L"General Settings", L"Last Config Name", config.lastSaveConfigFileName, iniFile);
 		}
 	}
 

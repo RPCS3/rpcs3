@@ -52,7 +52,7 @@ s32 s_buffers[NSSIZE][2]; // left and right buffers
 // mixer thread variables
 static bool s_bThreadExit = true;
 static s32 s_nDropPacket = 0;
-string s_strIniPath="inis/zerospu2.ini";
+string s_strIniPath( "inis/" );
 
 #ifdef _WIN32
 LARGE_INTEGER g_counterfreq;
@@ -202,6 +202,11 @@ void __LogToConsole(const char *fmt, ...)
 	va_end(list);
 }
 
+void CALLBACK SPU2setSettingsDir(const char* dir)
+{
+	s_strIniPath = (dir==NULL) ? "inis/" : dir;
+}
+
 s32 CALLBACK SPU2init()
 {
 	LOG_CALLBACK("SPU2init()\n");
@@ -213,11 +218,6 @@ s32 CALLBACK SPU2init()
 	
 #ifdef _WIN32
 	QueryPerformanceFrequency(&g_counterfreq);
-#else
-	char strcurdir[256];
-	getcwd(strcurdir, 256);
-	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/zerospu2.ini";
 #endif
 
 	spu2regs = (s8*)malloc(0x10000);

@@ -16,7 +16,7 @@
 #include "../GS.h"
 
 HINSTANCE HInst;
-HWND GShwnd;
+HWND GShwnd = NULL;
 
 LRESULT CALLBACK MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -50,13 +50,14 @@ int GSOpenWindow(void *pDsp, char *Title)
 		return -1;
 	}
 
-	if( pDsp != NULL ) *(int*)pDsp = (int)GShwnd;
+	if( pDsp != NULL ) *(uptr*)pDsp = (uptr)GShwnd;
 
 	return 0;
 }
 
 void GSCloseWindow()
 {
+	DestroyWindow( GShwnd );
 }
 
 void GSProcessMessages()

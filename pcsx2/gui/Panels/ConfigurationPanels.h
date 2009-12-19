@@ -337,8 +337,9 @@ namespace Panels
 		StandardPathsPanel( wxWindow* parent );
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
+	// --------------------------------------------------------------------------------------
+	//  BaseSelectorPanel
+	// --------------------------------------------------------------------------------------
 	class BaseSelectorPanel: public BaseApplicableConfigPanel
 	{
 	public:
@@ -355,8 +356,9 @@ namespace Panels
 		virtual bool ValidateEnumerationStatus()=0;
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
+	// --------------------------------------------------------------------------------------
+	//  BiosSelectorPanel
+	// --------------------------------------------------------------------------------------
 	class BiosSelectorPanel : public BaseSelectorPanel
 	{
 	protected:
@@ -375,24 +377,20 @@ namespace Panels
 		virtual bool ValidateEnumerationStatus();
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
+	// --------------------------------------------------------------------------------------
+	//  PluginSelectorPanel
+	// --------------------------------------------------------------------------------------
 	class PluginSelectorPanel: public BaseSelectorPanel
 	{
 	protected:
-		static const int NumPluginTypes = 7;
-
-		// ------------------------------------------------------------------------
-		// PluginSelectorPanel Subclasses
-		// ------------------------------------------------------------------------
-
+		// ----------------------------------------------------------------------------
 		class EnumeratedPluginInfo
 		{
 		public:
 			uint PassedTest;		// msk specifying which plugin types passed the mask test.
 			uint TypeMask;			// indicates which combo boxes it should be listed in
 			wxString Name;			// string to be pasted into the combo box
-			wxString Version[NumPluginTypes];
+			wxString Version[PluginId_Count];
 
 			EnumeratedPluginInfo()
 			{
@@ -401,6 +399,7 @@ namespace Panels
 			}
 		};
 
+		// ----------------------------------------------------------------------------
 		class EnumThread : public Threading::PersistentThread
 		{
 		public:
@@ -422,22 +421,29 @@ namespace Panels
 			void ExecuteTaskInThread();
 		};
 
+		// ----------------------------------------------------------------------------
 		// This panel contains all of the plugin combo boxes.  We stick them
 		// on a panel together so that we can hide/show the whole mess easily.
 		class ComboBoxPanel : public wxPanelWithHelpers
 		{
 		protected:
-			wxComboBox*		m_combobox[NumPluginTypes];
+			EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
+
+			wxComboBox*		m_combobox[PluginId_Count];
+			wxButton*		m_configbutton[PluginId_Count];
 			DirPickerPanel& m_FolderPicker;
 
 		public:
 			ComboBoxPanel( PluginSelectorPanel* parent );
-			wxComboBox& Get( int i ) { return *m_combobox[i]; }
+			wxComboBox& Get( PluginsEnum_t pid ) { return *m_combobox[pid]; }
+			wxButton& GetConfigButton( PluginsEnum_t pid ) { return *m_configbutton[pid]; }
 			wxDirName GetPluginsPath() const { return m_FolderPicker.GetPath(); }
 			DirPickerPanel& GetDirPicker() { return m_FolderPicker; }
 			void Reset();
+			
 		};
 
+		// ----------------------------------------------------------------------------
 		class StatusPanel : public wxPanelWithHelpers
 		{
 		protected:
@@ -455,7 +461,6 @@ namespace Panels
 
 	// ------------------------------------------------------------------------
 	//  PluginSelectorPanel Members
-	// ------------------------------------------------------------------------
 
 	protected:
 		StatusPanel*	m_StatusPanel;
@@ -465,6 +470,8 @@ namespace Panels
 		ScopedPtr<wxArrayString>	m_FileList;	// list of potential plugin files
 		ScopedPtr<EnumThread>		m_EnumeratorThread;
 
+		EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
+
 	public:
 		virtual ~PluginSelectorPanel() throw();
 		PluginSelectorPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
@@ -473,8 +480,12 @@ namespace Panels
 		void Apply();
 
 	protected:
+		static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
+		
 		void OnConfigure_Clicked( wxCommandEvent& evt );
 		void OnShowStatusBar( wxCommandEvent& evt );
+		void OnPluginSelected( wxCommandEvent& evt );
+
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 

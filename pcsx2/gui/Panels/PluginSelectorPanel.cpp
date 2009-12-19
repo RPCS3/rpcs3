@@ -45,8 +45,8 @@ DEFINE_EVENT_TYPE(pxEVT_EnumeratedNext)
 DEFINE_EVENT_TYPE(pxEVT_EnumerationFinished);
 DEFINE_EVENT_TYPE(pxEVT_ShowStatusBar);
 
-typedef s32		(CALLBACK* PluginTestFnptr)();
-typedef void	(CALLBACK* PluginConfigureFnptr)();
+typedef s32		(CALLBACK* TestFnptr)();
+typedef void	(CALLBACK* ConfigureFnptr)();
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -118,7 +118,7 @@ public:
 	bool Test( int pluginTypeIndex ) const
 	{
 		// all test functions use the same parameterless API, so just pick one arbitrarily (I pick PAD!)
-		PluginTestFnptr testfunc = (PluginTestFnptr)m_plugin.GetSymbol( fromUTF8( tbl_PluginInfo[pluginTypeIndex].shortname ) + L"test" );
+		TestFnptr testfunc = (TestFnptr)m_plugin.GetSymbol( fromUTF8( tbl_PluginInfo[pluginTypeIndex].shortname ) + L"test" );
 		if( testfunc == NULL ) return false;
 		return (testfunc() == 0);
 	}
@@ -179,31 +179,35 @@ void Panels::PluginSelectorPanel::StatusPanel::Reset()
 // Id for all Configure buttons (any non-negative arbitrary integer will do)
 static const int ButtonId_Configure = 51;
 
-// ------------------------------------------------------------------------
+// =====================================================================================================
+//  PluginSelectorPanel::ComboBoxPanel
+// =====================================================================================================
 Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent )
 	: wxPanelWithHelpers( parent, wxVERTICAL )
+	, m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 	, m_FolderPicker(	*new DirPickerPanel( this, FolderId_Plugins,
 		_("Plugins Search Path:"),
 		_("Select a folder with PCSX2 plugins") )
 	)
 {
-	wxFlexGridSizer& s_plugin( *new wxFlexGridSizer( NumPluginTypes, 3, 16, 10 ) );
+	wxFlexGridSizer& s_plugin( *new wxFlexGridSizer( PluginId_Count, 3, 16, 10 ) );
 	s_plugin.SetFlexibleDirection( wxHORIZONTAL );
 	s_plugin.AddGrowableCol( 1 );		// expands combo boxes to full width.
 
-	for( int i=0; i<NumPluginTypes; ++i )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		wxStaticText* text = new wxStaticText( this, wxID_ANY, tbl_PluginInfo[i].GetShortname() );
+		const PluginsEnum_t pid = pi->id;
+		wxStaticText* text = new wxStaticText( this, wxID_ANY, pi->GetShortname() );
 
-		m_combobox[i] = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+		m_combobox[pid] = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
 
-		wxButton* confButton = new wxButton( this, ButtonId_Configure, L"Configure..." );
-		confButton->SetClientData( (void*)(int)tbl_PluginInfo[i].id );
+		m_configbutton[pid] = new wxButton( this, ButtonId_Configure, L"Configure..." );
+		m_configbutton[pid]->SetClientData( (void*)(int)pid );
 
 		s_plugin	+= text				| wxSF.Border( wxTOP | wxLEFT, 2 );
-		s_plugin	+= m_combobox[i]	| wxSF.Expand();
-		s_plugin	+= confButton;
-	}
+		s_plugin	+= m_combobox[pid]	| wxSF.Expand();
+		s_plugin	+= m_configbutton[pid];
+	} while( ++pi, pi->shortname != NULL );
 
 	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder for PCSX2 plugins.") );
 
@@ -214,17 +218,38 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 
 void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 {
-	for( int i=0; i<NumPluginTypes; ++i )
+	for( int i=0; i<PluginId_Count; ++i )
 	{
 		m_combobox[i]->Clear();
 		m_combobox[i]->SetSelection( wxNOT_FOUND );
 		m_combobox[i]->SetValue( wxEmptyString );
+
+		m_configbutton[i]->Disable();
 	}
 }
 
-// ------------------------------------------------------------------------
+// =====================================================================================================
+//  PluginSelectorPanel
+// =====================================================================================================
+void __evt_fastcall Panels::PluginSelectorPanel::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
+{
+	if( obj == NULL ) return;
+	if( (evt != PluginsEvt_Loaded) && (evt != PluginsEvt_Unloaded) ) return;		// everything else we don't care about
+
+	PluginSelectorPanel& panel = *(PluginSelectorPanel*)obj;
+
+	const PluginInfo* pi = tbl_PluginInfo; do {
+		panel.m_ComponentBoxes->GetConfigButton(pi->id).Enable(
+			(panel.m_FileList==NULL) ? false :
+			g_Conf->FullpathMatchTest( pi->id, (*panel.m_FileList)[pi->id] )
+		);
+	} while( ++pi, pi->shortname != NULL );
+
+}
+
 Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWidth )
 	: BaseSelectorPanel( parent )
+	, m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 {
 	if( idealWidth != wxDefaultCoord ) m_idealWidth = idealWidth;
 
@@ -244,9 +269,11 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWid
 	//s_main.Add( refresh );
 	//Connect( refresh->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnRefresh ) );
 
-	Connect( pxEVT_EnumeratedNext,		wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
-	Connect( pxEVT_EnumerationFinished,	wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
-	Connect( pxEVT_ShowStatusBar,		wxCommandEventHandler( PluginSelectorPanel::OnShowStatusBar ) );
+	Connect( pxEVT_EnumeratedNext,				wxCommandEventHandler( PluginSelectorPanel::OnProgress ) );
+	Connect( pxEVT_EnumerationFinished,			wxCommandEventHandler( PluginSelectorPanel::OnEnumComplete ) );
+	Connect( pxEVT_ShowStatusBar,				wxCommandEventHandler( PluginSelectorPanel::OnShowStatusBar ) );
+	Connect( wxEVT_COMMAND_COMBOBOX_SELECTED,	wxCommandEventHandler( PluginSelectorPanel::OnPluginSelected ) );
+
 	Connect( ButtonId_Configure, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnConfigure_Clicked ) );
 
 	OnSettingsChanged();
@@ -278,12 +305,13 @@ void Panels::PluginSelectorPanel::Apply()
 
 	AppConfig curconf( *g_Conf );
 
-	for( int i=0; i<NumPluginTypes; ++i )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		int sel = m_ComponentBoxes->Get(i).GetSelection();
+		const PluginsEnum_t pid = pi->id;
+		int sel = m_ComponentBoxes->Get(pid).GetSelection();
 		if( sel == wxNOT_FOUND )
 		{
-			wxString plugname( tbl_PluginInfo[i].GetShortname() );
+			wxString plugname( pi->GetShortname() );
 
 			throw Exception::CannotApplySettings( this,
 				// English Log
@@ -294,8 +322,8 @@ void Panels::PluginSelectorPanel::Apply()
 			);
 		}
 
-		g_Conf->BaseFilenames.Plugins[tbl_PluginInfo[i].id] = GetFilename((int)m_ComponentBoxes->Get(i).GetClientData(sel));
-	}
+		g_Conf->BaseFilenames.Plugins[pid] = GetFilename((int)m_ComponentBoxes->Get(pid).GetClientData(sel));
+	} while( ++pi, pi->shortname != NULL );
 
 	// ----------------------------------------------------------------------------
 	// Make sure folders are up to date, and try to load/reload plugins if needed...
@@ -305,7 +333,7 @@ void Panels::PluginSelectorPanel::Apply()
 	// Need to unload the current emulation state if the user changed plugins, because
 	// the whole plugin system needs to be re-loaded.
 
-	const PluginInfo* pi = tbl_PluginInfo; do {
+	pi = tbl_PluginInfo; do {
 		if( g_Conf->FullpathTo( pi->id ) != curconf.FullpathTo( pi->id ) )
 			break;
 	} while( ++pi, pi->shortname != NULL );
@@ -440,20 +468,56 @@ bool Panels::PluginSelectorPanel::ValidateEnumerationStatus()
 	return validated;
 }
 
+void Panels::PluginSelectorPanel::OnPluginSelected( wxCommandEvent& evt )
+{
+	if( IsBeingDeleted() || m_ComponentBoxes->IsBeingDeleted() ) return;
+
+	const PluginInfo* pi = tbl_PluginInfo; do
+	{
+		wxComboBox& box = m_ComponentBoxes->Get(pi->id);
+		if( box.GetId() == evt.GetId() )
+		{
+			// Button is enabled if:
+			//   (a) plugins aren't even loaded yet.
+			//   (b) current selection matches exactly the currently configured/loaded plugin.
+
+			bool isSame = (g_plugins==NULL) || g_Conf->FullpathMatchTest( pi->id, (*m_FileList)[(int)box.GetClientData(box.GetSelection())] );
+			m_ComponentBoxes->GetConfigButton( pi->id ).Enable( isSame );
+			
+			if( !isSame ) evt.Skip();		// enabled Apply button! :D
+			return;
+		}
+	} while( ++pi, pi->shortname != NULL );
+}
+
 void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 {
+	if( IsBeingDeleted() ) return;
+
 	PluginsEnum_t pid = (PluginsEnum_t)(int)((wxEvtHandler*)evt.GetEventObject())->GetClientData();
 
 	int sel = m_ComponentBoxes->Get(pid).GetSelection();
 	if( sel == wxNOT_FOUND ) return;
-	wxDynamicLibrary dynlib( (*m_FileList)[(int)m_ComponentBoxes->Get(pid).GetClientData(sel)] );
 
-	if( PluginConfigureFnptr configfunc = (PluginConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
+	// Only allow configuration if the selected plugin matches exactly our currently loaded one.
+	// Otherwise who knows what sort of funny business could happen configuring a plugin while
+	// another instance/version is running. >_<
+
+	const wxString filename( (*m_FileList)[(int)m_ComponentBoxes->Get(pid).GetClientData(sel)] );
+
+	if( g_plugins != NULL && !g_Conf->FullpathMatchTest( pid, filename ) )
 	{
-		bool resume = CoreThread.Suspend();
+		Console.Warning( "(PluginSelector) Plugin name mismatch, configuration request ignored." );
+		return;
+	}
+
+	wxDynamicLibrary dynlib( filename );
+
+	if( ConfigureFnptr configfunc = (ConfigureFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"configure" ) )
+	{
 		wxWindowDisabler disabler;
-		configfunc();
-		if( resume ) CoreThread.Resume();
+		SaveSinglePluginHelper helper( pid );
+		g_plugins->Configure( pid );
 	}
 }
 
@@ -472,14 +536,18 @@ void Panels::PluginSelectorPanel::OnEnumComplete( wxCommandEvent& evt )
 	//  (for now we just force it to selection zero if nothing's selected)
 
 	int emptyBoxes = 0;
-	for( int i=0; i<NumPluginTypes; ++i )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		if( m_ComponentBoxes->Get(i).GetCount() <= 0 )
+		const PluginsEnum_t pid = pi->id;
+		if( m_ComponentBoxes->Get(pid).GetCount() <= 0 )
 			emptyBoxes++;
 
-		else if( m_ComponentBoxes->Get(i).GetSelection() == wxNOT_FOUND )
-			m_ComponentBoxes->Get(i).SetSelection( 0 );
-	}
+		else if( m_ComponentBoxes->Get(pid).GetSelection() == wxNOT_FOUND )
+		{
+			m_ComponentBoxes->Get(pid).SetSelection( 0 );
+			m_ComponentBoxes->GetConfigButton(pid).Enable( g_plugins == NULL );
+		}
+	} while( ++pi, pi->shortname != NULL );
 
 	m_ComponentBoxes->Show();
 	m_StatusPanel->Hide();
@@ -524,28 +592,26 @@ void Panels::PluginSelectorPanel::OnProgress( wxCommandEvent& evt )
 		Console.Error( L"Some kinda plugin failure: " + (*m_FileList)[evtidx] );
 	}
 
-	for( int i=0; i<NumPluginTypes; ++i )
+	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		if( result.TypeMask & tbl_PluginInfo[i].typemask )
+		const PluginsEnum_t pid = pi->id;
+		if( result.TypeMask & pi->typemask )
 		{
-			if( result.PassedTest & tbl_PluginInfo[i].typemask )
+			if( result.PassedTest & pi->typemask )
 			{
-				int sel = m_ComponentBoxes->Get(i).Append( wxsFormat( L"%s %s [%s]",
-					result.Name.c_str(), result.Version[i].c_str(), Path::GetFilenameWithoutExt( (*m_FileList)[evtidx] ).c_str() ),
+				int sel = m_ComponentBoxes->Get(pid).Append( wxsFormat( L"%s %s [%s]",
+					result.Name.c_str(), result.Version[pid].c_str(), Path::GetFilenameWithoutExt( (*m_FileList)[evtidx] ).c_str() ),
 					(void*)evtidx
 				);
 
-				wxFileName left( (*m_FileList)[evtidx] );
-				wxFileName right( g_Conf->FullpathTo(tbl_PluginInfo[i].id) );
-
-				left.MakeAbsolute();
-				right.MakeAbsolute();
-
-				if( left == right )
-					m_ComponentBoxes->Get(i).SetSelection( sel );
+				if( g_Conf->FullpathMatchTest( pid, (*m_FileList)[evtidx] ) )
+				{
+					m_ComponentBoxes->Get(pid).SetSelection( sel );
+					m_ComponentBoxes->GetConfigButton(pid).Enable();
+				}
 			}
 		}
-	}
+	} while( ++pi, pi->shortname != NULL );
 }
 
 
@@ -574,16 +640,16 @@ void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 		PluginEnumerator penum( m_master.GetFilename( curidx ) );
 
 		result.Name = penum.GetName();
-		for( int pidx=0; pidx<PluginId_Count; ++pidx )
+		const PluginInfo* pi = tbl_PluginInfo; do
 		{
-			const PluginsEnum_t pid = (PluginsEnum_t)pidx;
-			result.TypeMask |= tbl_PluginInfo[pid].typemask;
+			const PluginsEnum_t pid = pi->id;
+			result.TypeMask |= pi->typemask;
 			if( penum.CheckVersion( pid ) )
 			{
 				result.PassedTest |= tbl_PluginInfo[pid].typemask;
-				penum.GetVersionString( result.Version[pid], pidx );
+				penum.GetVersionString( result.Version[pid], pid );
 			}
-		}
+		} while( ++pi, pi->shortname != NULL );
 	}
 	catch( Exception::BadStream& ex )
 	{
@@ -600,8 +666,8 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 {
 	DevCon.WriteLn( "Plugin Enumeration Thread started..." );
 
-	Sleep( 15 );		// give the window some time to paint.
 	YieldToMain();
+	Sleep( 15 );		// give the window some time to paint.
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{

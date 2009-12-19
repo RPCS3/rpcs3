@@ -292,7 +292,7 @@ void configure()
 	ret = DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_CONFIG),GetActiveWindow(),(DLGPROC)ConfigProc,1);
 	if(ret==-1)
 	{
-		MessageBoxEx(GetActiveWindow(),L"Error Opening the config dialog.",L"OMG ERROR!",MB_OK,0);
+		MessageBox(GetActiveWindow(),L"Error Opening the config dialog.",L"OMG ERROR!",MB_OK | MB_SETFOREGROUND);
 		return;
 	}
 	ReadSettings();

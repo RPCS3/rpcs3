@@ -79,6 +79,11 @@ EXPORT_C GSsetBaseMem(uint8* mem)
 	}
 }
 
+EXPORT_C GSsetSettingsDir(const char* dir)
+{
+	theApp.SetConfigDir(dir);
+}
+
 EXPORT_C_(INT32) GSinit()
 {
 	if(!GSUtil::CheckSSE())

@@ -23,7 +23,6 @@
 #pragma warning(disable:4018)
 #endif
 
-#include "PS2Etypes.h"
 #include "PS2Edefs.h"
 #include "libiso.h"
 

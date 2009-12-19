@@ -24,6 +24,7 @@
 #include "resource.h"
 
 extern HINSTANCE hInst;
+extern HWND hWMain;
 /////////
 // GUI //
 /////////
@@ -38,7 +39,7 @@ void SysMessage(char *fmt, ...)
 	vsprintf_s(tmp,fmt,list);
 	va_end(list);
 	
-	MessageBox(0, tmp, "SPU2NULL Msg", 0);
+	MessageBox((hWMain==NULL) ? GetActiveWindow() : hWMain, tmp, "ZeroSPU2 Msg", MB_SETFOREGROUND | MB_OK);
 }
 
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) 
@@ -117,6 +118,7 @@ void CALLBACK SPU2about()
     DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUT), GetActiveWindow(), (DLGPROC)AboutDlgProc);
 }
 
+
  // DLL INIT
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD  dwReason, LPVOID lpReserved) 
 {
@@ -124,44 +126,32 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD  dwReason, LPVOID lpReserved)
 	return TRUE;                                          // very quick :)
 }
 
-void SaveConfig() 
+void SaveConfig()
 {
 	Config *Conf1 = &conf;
-	char *szTemp;
-	char szIniFile[256], szValue[256];
+	char szValue[256];
 
-	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
-	szTemp = strrchr(szIniFile, '\\');
+	string iniFile( s_strIniPath + "zerospu2.ini" );
 
-	if(!szTemp) return;
-	szTemp[0] = 0;		// this modifies szInitFile also.
-
-	strcat_s(szIniFile, "\\inis\\zerospu2.ini");
 	sprintf_s(szValue,"%u",Conf1->Log);
-	WritePrivateProfileString("Interface", "Logging",szValue,szIniFile);
+	WritePrivateProfileString("Interface", "Logging",szValue, iniFile.c_str());
 	sprintf_s(szValue,"%u",Conf1->options);
-	WritePrivateProfileString("Interface", "Options",szValue,szIniFile);
+	WritePrivateProfileString("Interface", "Options",szValue, iniFile.c_str());
 }
 
 void LoadConfig()
 {
 	FILE *fp;
 	Config *Conf1 = &conf;
-	char *szTemp;
-	char szIniFile[256], szValue[256];
+	char szValue[256];
   
-	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
-	szTemp = strrchr(szIniFile, '\\');
+	string iniFile( s_strIniPath + "zerospu2.ini" );
 
-	if(!szTemp) return ;
-	szTemp[0] = 0;
-
-	strcat_s(szIniFile, "\\inis\\zerospu2.ini");
-	fopen_s(&fp, "inis\\zerospu2.ini","rt");//check if zerospu2.ini really exists
+	fopen_s(&fp, iniFile.c_str(), "rt");//check if zerospu2.ini really exists
 
 	if (!fp)
 	{
-		CreateDirectory("inis",NULL); 
+		CreateDirectory(s_strIniPath.c_str(), NULL); 
 		memset(&conf, 0, sizeof(conf));
 		conf.Log = 0;//default value
 		conf.options = OPTION_TIMESTRETCH;
@@ -170,9 +160,9 @@ void LoadConfig()
 	}
 	fclose(fp);
 	
-	GetPrivateProfileString("Interface", "Logging", NULL, szValue, 20, szIniFile);
+	GetPrivateProfileString("Interface", "Logging", NULL, szValue, 20, iniFile.c_str());
 	Conf1->Log = strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Interface", "Options", NULL, szValue, 20, szIniFile);
+	GetPrivateProfileString("Interface", "Options", NULL, szValue, 20, iniFile.c_str());
 	Conf1->options = strtoul(szValue, NULL, 10);
 	return;
 

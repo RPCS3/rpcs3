@@ -948,7 +948,7 @@ s32 CALLBACK PADopen(void *pDsp) {
 		}
 		else {
 			openCount = 0;
-			MessageBoxA(0,
+			MessageBoxA(GetActiveWindow(),
 				"Invalid Window handle passed to LilyPad.\n"
 				"\n"
 				"Either your emulator or gs plugin is buggy,\n"

@@ -30,7 +30,6 @@ extern "C" {
 #include "zerospu2.h"
 
 extern char *libraryName;
-extern string s_strIniPath;
 
 // This is a bit ugly. I'll see if I can work out a better way to do this later.
 int SetupSound()
@@ -118,11 +117,6 @@ void SysMessage(char *fmt, ...)
 
 void CALLBACK SPU2configure() 
 {
-	char strcurdir[256];
-	getcwd(strcurdir, 256);
-	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/zerospu2.ini";
-	
 	LOG_CALLBACK("SPU2configure()\n");
 	ConfDlg = create_Config();
 	LoadConfig();
@@ -173,15 +167,12 @@ void CALLBACK SPU2about()
 
 void SaveConfig() 
 {
-	FILE *f;
-	char cfg[255];
-
-	strcpy(cfg, s_strIniPath.c_str());
+	string iniFile( s_strIniPath + "zerospu2.ini" );
 	
-	f = fopen(cfg,"w");
+	FILE* f = fopen(iniFile.c_str(),"w");
 	if (f == NULL) 
 	{
-		ERROR_LOG("Failed to open %s\n", s_strIniPath.c_str());
+		ERROR_LOG("Failed to open %s\n", iniFile.c_str());
 		return;
 	}
 	
@@ -196,20 +187,18 @@ void SaveConfig()
 	fclose(f);
 }
 
-void LoadConfig() 
+void LoadConfig()
 {
-	FILE *f;
-	char cfg[255];
 	int temp;
 
 	memset(&conf, 0, sizeof(conf));
 
-	strcpy(cfg, s_strIniPath.c_str());
+	string iniFile( s_strIniPath + "zerospu2.ini" );
 	
-	f = fopen(cfg, "r");
+	FILE* f = fopen(iniFile.c_str(), "r");
 	if (f == NULL) 
 	{
-		ERROR_LOG("Failed to open %s\n", s_strIniPath.c_str());
+		ERROR_LOG("Failed to open %s\n", iniFile.c_str());
 		conf.Log = 0;
 		conf.options = 0;
 		SaveConfig();//save and return

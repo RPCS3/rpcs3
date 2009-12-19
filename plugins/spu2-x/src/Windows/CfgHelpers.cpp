@@ -18,6 +18,10 @@
 #include "Global.h"
 #include "Dialogs.h"
 
+#include "Utilities/StringHelpers.h"
+
+extern uptr gsWindowHandle;
+
 void SysMessage(const char *fmt, ...)
 {
 	va_list list;
@@ -28,23 +32,31 @@ void SysMessage(const char *fmt, ...)
 	vsprintf_s(tmp,fmt,list);
 	va_end(list);
 	swprintf_s(wtmp, L"%S", tmp);
-	MessageBox( GetActiveWindow(), wtmp, L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
+	MessageBox( (!!gsWindowHandle) ? (HWND)gsWindowHandle : GetActiveWindow(), wtmp,
+		L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
 }
 
 void SysMessage(const wchar_t *fmt, ...)
 {
 	va_list list;
-	wchar_t wtmp[512];
-
 	va_start(list,fmt);
-	vswprintf_s(wtmp,fmt,list);
+	wxString wtmp;
+	wtmp.PrintfV( fmt, list );
 	va_end(list);
-	MessageBox( GetActiveWindow(), wtmp, L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
+	MessageBox( (!!gsWindowHandle) ? (HWND)gsWindowHandle : GetActiveWindow(), wtmp,
+		L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
 }
 
 //////
 
-const TCHAR CfgFile[] = L"inis\\SPU2-X.ini";
+#include "Utilities/Path.h"
+
+static wxString CfgFile( L"inis\\SPU2-X.ini" );
+
+void CfgSetSettingsDir( const char* dir )
+{
+	CfgFile = Path::Combine( (dir==NULL) ? wxString(L"inis") : fromUTF8(dir), L"SPU2-X.ini" );
+}
 
 
 /*| Config File Format: |¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*\

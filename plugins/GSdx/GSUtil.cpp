@@ -181,7 +181,7 @@ bool GSUtil::CheckSSE()
 	{
 		string s = format("This CPU does not support SSE %d.%02d", _M_SSE >> 8, _M_SSE & 0xff);
 		
-		MessageBox(NULL, s.c_str(), "GSdx", MB_OK);
+		MessageBox(GetActiveWindow(), s.c_str(), "GSdx", MB_OK);
 
 		return false;
 	}

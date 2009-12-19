@@ -171,20 +171,15 @@ struct LegacyPluginAPI_Common
 	void (CALLBACK* Shutdown)();
 
 	void (CALLBACK* KeyEvent)( keyEvent* evt );
+	void (CALLBACK* SetSettingsDir)( const char* dir );
 	s32  (CALLBACK* Freeze)(int mode, freezeData *data);
 	s32  (CALLBACK* Test)();
 	void (CALLBACK* Configure)();
 	void (CALLBACK* About)();
 
-	LegacyPluginAPI_Common() :
-		Init	( NULL )
-	,	Close	( NULL )
-	,	Shutdown( NULL )
-	,	Freeze	( NULL )
-	,	Test	( NULL )
-	,	Configure( NULL )
-	,	About	( NULL )
+	LegacyPluginAPI_Common()
 	{
+		memzero( *this );
 	}
 };
 
@@ -204,10 +199,9 @@ protected:
 	PS2E_ComponentAPI_Mcd* Mcd;
 
 public:
-	SysPluginBindings() :
-		Mcd( NULL )
+	SysPluginBindings()
 	{
-
+		Mcd = NULL;
 	}
 
 	bool McdIsPresent( uint port, uint slot );
@@ -280,18 +274,15 @@ protected:
 		LegacyPluginAPI_Common	CommonBindings;
 		wxDynamicLibrary		Lib;
 
-		PluginStatus_t() :
-			IsInitialized( false )
-		,	IsOpened( false )
-		,	CommonBindings()
-		,	Lib()
+		PluginStatus_t()
 		{
+			IsInitialized	= false;
+			IsOpened		= false;
 		}
 	};
 
-	bool m_initialized;
-
 	const PS2E_LibraryAPI*	m_mcdPlugin;
+	wxString m_SettingsFolder;
 
 public:		// hack until we unsuck plugins...
 	PluginStatus_t			m_info[PluginId_Count];
@@ -312,6 +303,8 @@ public:
 
 	bool KeyEvent( const keyEvent& evt );
 	void Configure( PluginsEnum_t pid );
+	void SetSettingsFolder( const wxString& folder );
+	void SendSettingsFolder();
 
 	const wxString& GetName( PluginsEnum_t pid ) const { return m_info[pid].Name; }
 	const wxString& GetVersion( PluginsEnum_t pid ) const { return m_info[pid].Version; }

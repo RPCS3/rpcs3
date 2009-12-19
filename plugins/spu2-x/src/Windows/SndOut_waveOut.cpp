@@ -277,7 +277,7 @@ public:
 		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_WAVEOUT), (HWND)parent, (DLGPROC)ConfigProc,1);
 		if(ret==-1)
 		{
-			MessageBoxEx((HWND)parent, L"Error Opening the config dialog.", L"OMG ERROR!", MB_OK, 0);
+			MessageBox((HWND)parent, L"Error Opening the config dialog.", L"OMG ERROR!", MB_OK | MB_SETFOREGROUND);
 			return;
 		}
 	}

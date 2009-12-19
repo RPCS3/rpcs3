@@ -72,7 +72,7 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 	panel += 6;
 	panel += m_dirpick_settings		| SubGroup();
 
-	panel += panel					| pxExpand;
+	*this += panel					| pxExpand;
 
 	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(FirstTimeWizard::UsermodePage::OnUsermodeChanged) );
 }

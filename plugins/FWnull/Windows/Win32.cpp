@@ -15,7 +15,7 @@ void SysMessage(char *fmt, ...) {
 	va_start(list,fmt);
 	vsprintf(tmp,fmt,list);
 	va_end(list);
-	MessageBox(0, tmp, "FW Plugin Msg", 0);
+	MessageBox(GetActiveWindow(), tmp, "FW Plugin Msg", MB_SETFOREGROUND | MB_OK);
 }
 
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {

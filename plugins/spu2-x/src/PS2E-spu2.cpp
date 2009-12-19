@@ -20,6 +20,8 @@
 #include "dma.h"
 #include "Dialogs.h"
 
+#include "x86emitter/tools.h"
+
 #ifdef _MSC_VER
 #	include "svnrev.h"
 #endif
@@ -41,8 +43,9 @@ HINSTANCE hInstance;
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
 	if( dwReason == DLL_PROCESS_ATTACH )
+	{
 		hInstance = hinstDLL;
-		
+	}	
 	else if( dwReason == DLL_PROCESS_DETACH )
 	{
 		// TODO : perform shutdown procedure, just in case PCSX2 itself failed
@@ -103,11 +106,16 @@ static void InitLibraryName()
 
 }
 
-#include "x86emitter/tools.h"
+static bool cpu_detected = false;
 
 static bool CheckSSE()
 {
-	cpudetectInit();
+	if( !cpu_detected )
+	{
+		cpudetectInit();
+		cpu_detected = true;
+	}
+
 	if( !x86caps.hasStreamingSIMDExtensions || !x86caps.hasStreamingSIMD2Extensions )
 	{
 		SysMessage( "Your CPU does not support SSE2 instructions.\nThe SPU2-X plugin requires SSE2 to run." );
@@ -180,6 +188,11 @@ EXPORT_C_(void) CALLBACK SPU2WriteMemAddr(int core,u32 value)
 EXPORT_C_(void) CALLBACK SPU2setDMABaseAddr(uptr baseaddr)
 {
    DMABaseAddr = (u16*)baseaddr;
+}
+
+EXPORT_C_(void) CALLBACK SPU2setSettingsDir(const char* dir)
+{
+	CfgSetSettingsDir( dir );
 }
 
 EXPORT_C_(void) CALLBACK SPU2readDMA4Mem(u16 *pMem, u32 size)	// size now in 16bit units
@@ -321,11 +334,18 @@ EXPORT_C_(s32) SPU2init()
 	return 0;
 }
 
+uptr gsWindowHandle = 0;
+
 EXPORT_C_(s32) SPU2open(void *pDsp)
 {
 	if( IsOpened ) return 0;
 
 	FileLog("[%10d] SPU2 Open\n",Cycles);
+	
+	if( pDsp != NULL )
+		gsWindowHandle = *(uptr*)pDsp;
+	else
+		gsWindowHandle = 0;
 
 	/*
 	if(debugDialogOpen==0)
@@ -345,8 +365,9 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 		DspLoadLibrary(dspPlugin,dspPluginModule);
 		WaveDump::Open();
 	}
-	catch( ... )
+	catch( std::exception& ex )
 	{
+		fprintf( stderr, "SPU2-X Error: Could not initialize device, or something.\nReason: %s", ex.what() );
 		SPU2close();
 		return -1;
 	}

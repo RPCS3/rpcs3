@@ -421,9 +421,12 @@ void AppApplySettings( const AppConfig* oldconf )
 
 	g_Conf->EmuOptions.BiosFilename = g_Conf->FullpathToBios();
 
-	RelocateLogfile();
-
 	ScopedCoreThreadSuspend suspend_core;
+
+	if( g_plugins != NULL )
+		g_plugins->SetSettingsFolder( GetSettingsFolder().ToString() );
+	
+	RelocateLogfile();
 
 	// Update the compression attribute on the Memcards folder.
 	// Memcards generally compress very well via NTFS compression.

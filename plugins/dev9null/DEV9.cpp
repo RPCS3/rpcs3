@@ -26,7 +26,6 @@ const unsigned char revision = 0;
 const unsigned char build = 4;    // increase that with each version
 
 const char *libraryName = "DEV9null Driver";
-string s_strIniPath="inis/DEV9null.ini";
 
 void (*DEV9irq)(int);
 FILE *dev9Log;

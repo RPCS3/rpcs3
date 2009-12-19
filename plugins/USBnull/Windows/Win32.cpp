@@ -14,7 +14,7 @@ void SysMessage(char *fmt, ...) {
 	va_start(list,fmt);
 	vsprintf(tmp,fmt,list);
 	va_end(list);
-	MessageBox(0, tmp, "USBnull Msg", 0);
+	MessageBox(GetActiveWindow(), tmp, "USBnull Msg", MB_SETFOREGROUND | MB_OK);
 }
 
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {

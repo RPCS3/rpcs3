@@ -41,7 +41,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
 GSdxApp theApp;
 
-const char* GSdxApp::m_ini = "inis/GSdx.ini";
+std::string GSdxApp::m_ini( "inis/GSdx.ini" );
 const char* GSdxApp::m_section = "Settings";
 
 GSdxApp::GSdxApp()
@@ -53,21 +53,40 @@ HMODULE GSdxApp::GetModuleHandle()
 	return s_hModule;
 }
 
+void GSdxApp::SetConfigDir(const char* dir)
+{
+	if( dir == NULL )
+	{
+		m_ini = "inis/GSdx.ini";
+	}
+	else
+	{
+		m_ini = dir;
+
+		if((m_ini[m_ini.length()-1] != '/') && (m_ini[m_ini.length()-1] != '\\'))
+		{
+			m_ini += '\\';
+		}
+		
+		m_ini += "GSdx.ini";
+	}
+}
+
 string GSdxApp::GetConfig(const char* entry, const char* value)
 {
 	char buff[4096] = {0};
-	GetPrivateProfileString(m_section, entry, value, buff, countof(buff), m_ini);
+	GetPrivateProfileString(m_section, entry, value, buff, countof(buff), m_ini.c_str());
 	return string(buff);
 }
 
 void GSdxApp::SetConfig(const char* entry, const char* value)
 {
-	WritePrivateProfileString(m_section, entry, value, m_ini);
+	WritePrivateProfileString(m_section, entry, value, m_ini.c_str());
 }
 
 int GSdxApp::GetConfig(const char* entry, int value)
 {
-	return GetPrivateProfileInt(m_section, entry, value, m_ini);
+	return GetPrivateProfileInt(m_section, entry, value, m_ini.c_str());
 }
 
 void GSdxApp::SetConfig(const char* entry, int value)

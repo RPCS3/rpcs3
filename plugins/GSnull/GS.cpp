@@ -37,7 +37,9 @@ Config conf;
 u32 GSKeyEvent = 0;
 bool GSShift = false, GSAlt = false;
 
-string s_strIniPath="inis/GSnull.ini";
+string s_strIniPath="inis";
+const char* s_iniFilename = "GSnull.ini";
+
 void (*GSirq)();
 
 EXPORT_C_(u32) PS2EgetLibType() 
@@ -111,11 +113,12 @@ EXPORT_C_(s32) GSinit()
 
 EXPORT_C_(void) GSshutdown()
 {
+	SysPrintf("Shutting down GSnull\n");
+	GSCloseWindow();
+
 #ifdef GS_LOG
 	if (gsLog) fclose(gsLog);
 #endif
-	
-	SysPrintf("Shutting down GSnull\n");
 }
 
 EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
@@ -135,7 +138,10 @@ EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 EXPORT_C_(void) GSclose()
 {
 	SysPrintf("Closing GSnull\n");
-	GSCloseWindow();
+
+	// Better to only close the window on Shutdown.  All the other plugins
+	// pretty much worked that way, and all old PCSX2 versions expect it as well.
+	//GSCloseWindow();
 }
 
 EXPORT_C_(void) GSirqCallback(void (*callback)()) 

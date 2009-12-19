@@ -137,6 +137,7 @@ s32 cdvdGetMediaType();
 
 void ReadSettings();
 void WriteSettings();
+void CfgSetSettingsDir( const char* dir );
 
 extern char csrc[];
 extern BOOL cdvd_is_open;

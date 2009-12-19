@@ -36,6 +36,7 @@ EXPORTS
 	GSsetFrameLimit		
 	GSsetVsync
 	GSsetExclusive
+	GSsetSettingsDir
 	GSgetLastTag
 	GSReplay
 	GSBenchmark

@@ -206,6 +206,8 @@ s32  CALLBACK GSinit();
 s32  CALLBACK GSopen(void *pDsp, char *Title, int multithread);
 void CALLBACK GSclose();
 void CALLBACK GSshutdown();
+void CALLBACK GSsetSettingsDir( const char* dir );
+
 void CALLBACK GSvsync(int field);
 void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr);
 void CALLBACK GSgifTransfer2(u32 *pMem, u32 size);
@@ -260,6 +262,8 @@ s32  CALLBACK PADinit(u32 flags);
 s32  CALLBACK PADopen(void *pDsp);
 void CALLBACK PADclose();
 void CALLBACK PADshutdown();
+void CALLBACK PADsetSettingsDir( const char* dir );
+
 // PADkeyEvent is called every vsync (return NULL if no event)
 keyEvent* CALLBACK PADkeyEvent();
 u8   CALLBACK PADstartPoll(int pad);
@@ -287,31 +291,6 @@ s32  CALLBACK PADtest();
 
 #endif
 
-/* SIO plugin API */
-
-// if this file is included with this define
-// the next api will not be skipped by the compiler
-#ifdef SIOdefs
-
-// basic funcs
-
-s32  CALLBACK SIOinit(u32 port, u32 slot, SIOchangeSlotCB f);
-s32  CALLBACK SIOopen(void *pDsp);
-void CALLBACK SIOclose();
-void CALLBACK SIOshutdown();
-u8   CALLBACK SIOstartPoll(u8 value);
-u8   CALLBACK SIOpoll(u8 value);
-// returns: SIO_TYPE_{PAD,MTAP,RM,MC}
-u32  CALLBACK SIOquery();
-
-// extended funcs
-
-void CALLBACK SIOconfigure();
-void CALLBACK SIOabout();
-s32  CALLBACK SIOtest();
-
-#endif
-
 /* SPU2 plugin API */
 
 // if this file is included with this define
@@ -324,6 +303,8 @@ s32  CALLBACK SPU2init();
 s32  CALLBACK SPU2open(void *pDsp);
 void CALLBACK SPU2close();
 void CALLBACK SPU2shutdown();
+void CALLBACK SPU2setSettingsDir( const char* dir );
+
 void CALLBACK SPU2write(u32 mem, u16 value);
 u16  CALLBACK SPU2read(u32 mem);
 void CALLBACK SPU2readDMA4Mem(u16 *pMem, int size);
@@ -370,6 +351,8 @@ s32  CALLBACK CDVDinit();
 s32  CALLBACK CDVDopen(const char* pTitleFilename);
 void CALLBACK CDVDclose();
 void CALLBACK CDVDshutdown();
+void CALLBACK CDVDsetSettingsDir( const char* dir );
+
 s32  CALLBACK CDVDreadTrack(u32 lsn, int mode);
 
 // return can be NULL (for async modes)
@@ -418,6 +401,8 @@ s32  CALLBACK DEV9init();
 s32  CALLBACK DEV9open(void *pDsp);
 void CALLBACK DEV9close();
 void CALLBACK DEV9shutdown();
+void CALLBACK DEV9setSettingsDir( const char* dir );
+
 u8   CALLBACK DEV9read8(u32 addr);
 u16  CALLBACK DEV9read16(u32 addr);
 u32  CALLBACK DEV9read32(u32 addr);
@@ -452,6 +437,8 @@ s32  CALLBACK USBinit();
 s32  CALLBACK USBopen(void *pDsp);
 void CALLBACK USBclose();
 void CALLBACK USBshutdown();
+void CALLBACK USBsetSettingsDir( const char* dir );
+
 u8   CALLBACK USBread8(u32 addr);
 u16  CALLBACK USBread16(u32 addr);
 u32  CALLBACK USBread32(u32 addr);
@@ -488,6 +475,8 @@ s32  CALLBACK FWinit();
 s32  CALLBACK FWopen(void *pDsp);
 void CALLBACK FWclose();
 void CALLBACK FWshutdown();
+void CALLBACK FWsetSettingsDir( const char* dir );
+
 u32  CALLBACK FWread32(u32 addr);
 void CALLBACK FWwrite32(u32 addr, u32 value);
 void CALLBACK FWirqCallback(void (*callback)());
@@ -551,19 +540,6 @@ typedef keyEvent* (CALLBACK* _PADkeyEvent)();
 typedef void (CALLBACK* _PADgsDriverInfo)(GSdriverInfo *info);
 typedef s32  (CALLBACK* _PADsetSlot)(u8 port, u8 slot);
 typedef s32  (CALLBACK* _PADqueryMtap)(u8 port);
-
-// SIO
-typedef s32  (CALLBACK* _SIOinit)(u32 port, u32 slot, SIOchangeSlotCB f);
-typedef s32  (CALLBACK* _SIOopen)(void *pDsp);
-typedef void (CALLBACK* _SIOclose)();
-typedef void (CALLBACK* _SIOshutdown)();
-typedef u8   (CALLBACK* _SIOstartPoll)(u8 value);
-typedef u8   (CALLBACK* _SIOpoll)(u8 value);
-typedef u32  (CALLBACK* _SIOquery)();
-
-typedef void (CALLBACK* _SIOconfigure)();
-typedef s32  (CALLBACK* _SIOtest)();
-typedef void (CALLBACK* _SIOabout)();
 
 // SPU2
 // NOTE: The read/write functions CANNOT use XMM/MMX regs
@@ -698,13 +674,6 @@ extern _PADkeyEvent       PADkeyEvent;
 extern _PADgsDriverInfo   PADgsDriverInfo;
 extern _PADsetSlot        PADsetSlot;
 extern _PADqueryMtap      PADqueryMtap;
-
-
-// SIO[2]
-extern _SIOopen           SIOopen[2][9];
-extern _SIOstartPoll      SIOstartPoll[2][9];
-extern _SIOpoll           SIOpoll[2][9];
-extern _SIOquery          SIOquery[2][9];
 
 // SPU2
 extern _SPU2open          SPU2open;

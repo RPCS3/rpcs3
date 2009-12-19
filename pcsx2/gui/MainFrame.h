@@ -129,12 +129,11 @@ public:
 	operator const wxMenu*() const { return &MyMenu; }
 };
 
+// --------------------------------------------------------------------------------------
+//  MainEmuFrame
+// --------------------------------------------------------------------------------------
 class MainEmuFrame : public wxFrame
 {
-// ------------------------------------------------------------------------
-//     MainEmuFrame Protected Variables
-// ------------------------------------------------------------------------
-
 protected:
     wxStatusBar&	m_statusbar;
     wxStaticBitmap	m_background;
@@ -160,10 +159,6 @@ protected:
 	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
 	EventListenerBinding<int>				m_Listener_SettingsApplied;
 	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
-
-// ------------------------------------------------------------------------
-//     MainEmuFrame Constructors and Member Methods
-// ------------------------------------------------------------------------
 
 public:
     MainEmuFrame(wxWindow* parent, const wxString& title);
