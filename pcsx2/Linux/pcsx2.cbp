@@ -345,8 +345,8 @@
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/ConsoleLogger.h" />
 		<Unit filename="../gui/Dialogs/AboutBoxDialog.cpp" />
-    <Unit filename="../gui/Dialogs/AssertionDialog.cpp" />
-    <Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
+		<Unit filename="../gui/Dialogs/AssertionDialog.cpp" />
+		<Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
 		<Unit filename="../gui/Dialogs/ConfirmationDialogs.cpp" />
 		<Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />
@@ -530,6 +530,14 @@
 		<Unit filename="../x86/microVU_Misc.inl" />
 		<Unit filename="../x86/microVU_Tables.inl" />
 		<Unit filename="../x86/microVU_Upper.inl" />
+		<Unit filename="../x86/newVif.h" />
+		<Unit filename="../x86/newVif_BlockBuffer.h" />
+		<Unit filename="../x86/newVif_Dynarec.inl" />
+		<Unit filename="../x86/newVif_HashBucket.h" />
+		<Unit filename="../x86/newVif_OldUnpack.inl" />
+		<Unit filename="../x86/newVif_Tables.inl" />
+		<Unit filename="../x86/newVif_Unpack.inl" />
+		<Unit filename="../x86/newVif_UnpackGen.inl" />
 		<Unit filename="../x86/sVU_Debug.h" />
 		<Unit filename="../x86/sVU_Lower.cpp" />
 		<Unit filename="../x86/sVU_Micro.cpp" />
