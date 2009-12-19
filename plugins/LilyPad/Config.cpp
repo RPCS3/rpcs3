@@ -274,10 +274,10 @@ wchar_t *GetCommandStringW(u8 command, int port, int slot) {
 
 static wchar_t iniFile[MAX_PATH*2] = L"inis\\LilyPad.ini";
 
-void CALLBACK PADsetSettingsDir(wchar_t *dir)
+void CALLBACK PADsetSettingsDir( const char *dir )
 {
 	// emulator assures a trailing slash/backslash (yay!)
-	wcscpy(iniFile, (dir==NULL) ? L"inis\\" : dir);
+	swprintf_s( iniFile, L"%S", (dir==NULL) ? "inis\\" : dir );
 	wcscat(iniFile, L"LilyPad.ini");
 
 	createIniDir = false;

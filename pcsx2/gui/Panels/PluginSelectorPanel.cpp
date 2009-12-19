@@ -184,7 +184,6 @@ static const int ButtonId_Configure = 51;
 // =====================================================================================================
 Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* parent )
 	: wxPanelWithHelpers( parent, wxVERTICAL )
-	, m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 	, m_FolderPicker(	*new DirPickerPanel( this, FolderId_Plugins,
 		_("Plugins Search Path:"),
 		_("Select a folder with PCSX2 plugins") )
@@ -237,11 +236,15 @@ void __evt_fastcall Panels::PluginSelectorPanel::OnCorePluginStatusChanged( void
 	if( (evt != PluginsEvt_Loaded) && (evt != PluginsEvt_Unloaded) ) return;		// everything else we don't care about
 
 	PluginSelectorPanel& panel = *(PluginSelectorPanel*)obj;
+	
+	if( panel.IsBeingDeleted() ) return;
 
-	const PluginInfo* pi = tbl_PluginInfo; do {
+	const PluginInfo* pi = tbl_PluginInfo; do
+	{
+		wxComboBox& box( panel.m_ComponentBoxes->Get(pi->id) );
 		panel.m_ComponentBoxes->GetConfigButton(pi->id).Enable(
-			(panel.m_FileList==NULL) ? false :
-			g_Conf->FullpathMatchTest( pi->id, (*panel.m_FileList)[pi->id] )
+			(panel.m_FileList==NULL || panel.m_FileList->Count() == 0) ? false :
+			g_Conf->FullpathMatchTest( pi->id, panel.m_FileList->at((int)box.GetClientData(box.GetSelection())) )
 		);
 	} while( ++pi, pi->shortname != NULL );
 
@@ -474,7 +477,7 @@ void Panels::PluginSelectorPanel::OnPluginSelected( wxCommandEvent& evt )
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		wxComboBox& box = m_ComponentBoxes->Get(pi->id);
+		wxComboBox& box( m_ComponentBoxes->Get(pi->id) );
 		if( box.GetId() == evt.GetId() )
 		{
 			// Button is enabled if:

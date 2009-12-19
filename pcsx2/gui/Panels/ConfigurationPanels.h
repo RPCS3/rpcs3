@@ -427,8 +427,6 @@ namespace Panels
 		class ComboBoxPanel : public wxPanelWithHelpers
 		{
 		protected:
-			EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
-
 			wxComboBox*		m_combobox[PluginId_Count];
 			wxButton*		m_configbutton[PluginId_Count];
 			DirPickerPanel& m_FolderPicker;
