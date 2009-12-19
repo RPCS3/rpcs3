@@ -20,7 +20,6 @@
 #pragma once
 
 static __aligned16 nVifStruct nVif[2];
-static _f void _nVifUnpack(int idx, u8 *data, u32 size);
 
 void initNewVif(int idx) {
 	nVif[idx].idx		= idx;
@@ -214,7 +213,7 @@ static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] =
 	
 };
 
-static _f void _nVifUnpack(int idx, u8 *data, u32 size) {
+_f void _nVifUnpack(int idx, u8 *data, u32 size) {
 
 	if (useOldUnpack) {
 		if (!idx) VIFunpack<0>((u32*)data, &vif0.tag, size>>2);
