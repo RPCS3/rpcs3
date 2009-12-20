@@ -15,9 +15,11 @@
 
 #pragma once
 
+extern __pagealigned u8 nVifMemCmp[__pagesize];
+
 // HashBucket is a container which uses a built-in hash function
 // to perform quick searches.
-// T is a struct data type.
+// T is a struct data type (note: size must be in multiples of 16 bytes!)
 // hSize determines the number of buckets HashBucket will use for sorting.
 // cmpSize is the size of data to consider 2 structs equal (see find())
 // The hash function is determined by taking the first bytes of data and
@@ -46,7 +48,8 @@ public:
 		int s = mSize[o];
 		T*  c = mChain[o];
 		for (int i = 0; i < s; i++) {
-			if (!memcmp(&c[i], dataPtr, cmpSize)) return &c[i];
+			//if (!memcmp(&c[i], dataPtr, cmpSize)) return &c[i];
+			if ((((nVifCall)((void*)nVifMemCmp))(&c[i], dataPtr))==0xf) return &c[i];
 		}
 		return NULL;
 	}
@@ -55,17 +58,17 @@ public:
 		int o = d % hSize;
 		int s = mSize[o]++;
 		T*  c = mChain[o];
-		T*  n = new T[s+1];
+		T*  n = (T*)_aligned_malloc(sizeof(T)*(s+1), 16);
 		if (s) { 
 			memcpy(n, c, sizeof(T) * s);
-			delete[]  c;
+			safe_aligned_free(c);
 		}
 		memcpy(&n[s], dataPtr, sizeof(T));
 		mChain[o] = n;
 	}
 	void clear() {
 		for (int i = 0; i < hSize; i++) {
-			safe_delete_array(mChain[i]);
+			safe_aligned_free(mChain[i]);
 			mSize[i] = 0;
 		}
 	}

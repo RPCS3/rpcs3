@@ -271,3 +271,18 @@ void writeBackRow(nVifStruct& v) {
 	DevCon.WriteLn("nVif: writing back row reg! [doMode = 2]");
 	// ToDo: Do we need to write back to vifregs.rX too!? :/
 }
+
+static __pagealigned u8 nVifMemCmp[__pagesize];
+
+void emitCustomCompare() {
+	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadWrite, false);
+	memset_8<0xcc,__pagesize>(nVifMemCmp);
+	xSetPtr(nVifMemCmp);
+
+	xMOVAPS  (xmm0, ptr32[ecx]);
+	xPCMP.EQD(xmm0, ptr32[edx]);
+	xMOVMSKPS(eax, xmm0);
+
+	xRET();
+	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadOnly, true);
+}

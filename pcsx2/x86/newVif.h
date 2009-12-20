@@ -48,19 +48,30 @@ static __aligned16 u32 nVifMask[3][4][4] = {0};	   // [MaskNumber][CycleNumber][
 #define xmmRow  xmm6
 #define xmmTemp xmm7
 
-struct nVifBlock { // Ordered for Hashing
-	u8   num;	   // Num  Field
-	u8   upkType;  // Unpack Type [usn*1:mask*1:upk*4]
-	u8   mode;	   // Mode Field
-	u8	 scl;	   // Start Cycle
-	u8   cl;	   // CL   Field
-	u8   wl;	   // WL   Field
-	u32  mask;	   // Mask Field
-	u8*  startPtr; // Start Ptr of RecGen Code
-};
+#ifdef _MSC_VER
+#	pragma pack(1)
+#	pragma warning(disable:4996) // 'function': was declared deprecated
+#endif
+
+struct __aligned16 nVifBlock { // Ordered for Hashing
+	u8   num;		// [00] Num  Field
+	u8   upkType;	// [01] Unpack Type [usn*1:mask*1:upk*4]
+	u8   mode;		// [02] Mode Field
+	u8	 scl;		// [03] Start Cycle
+	u8   cl;		// [04] CL   Field
+	u8   wl;		// [05] WL   Field
+	u32  mask;		// [06] Mask Field
+	u8	 padding[6];// [10] through [15]
+	uptr startPtr;	// [16] Start Ptr of RecGen Code
+	u8   end[12];	// [20] through [31]
+} __packed; // 32 bytes
+
+#ifdef _MSC_VER
+#	pragma pack()
+#endif
 
 #define _hSize 0x4000 // [usn*1:mask*1:upk*4:num*8] hash...
-#define _cmpS  (sizeof(nVifBlock) - sizeof(uptr))
+#define _cmpS  (sizeof(nVifBlock) - (16+6))
 #define _tParams nVifBlock, _hSize, _cmpS
 struct nVifStruct {
 	u32						idx;		// VIF0 or VIF1

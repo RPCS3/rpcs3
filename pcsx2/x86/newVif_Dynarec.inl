@@ -30,6 +30,7 @@ void dVifInit(int idx) {
 	nVif[idx].vifBlocks =  new HashBucket<_tParams>();
 	nVif[idx].recPtr	=  nVif[idx].vifCache->getBlock();
 	nVif[idx].recEnd	= &nVif[idx].recPtr[nVif[idx].vifCache->getSize()-(_1mb/4)]; // .25mb Safe Zone
+	emitCustomCompare();
 }
 
 _f void dVifRecLimit(int idx) {
@@ -75,7 +76,7 @@ void dVifRecompile(nVifStruct& v, nVifBlock* vB) {
 	v.vifBlock = vB;
 	xSetPtr(v.recPtr);
 	xAlignPtr(16);
-	vB->startPtr = xGetPtr();
+	vB->startPtr = (uptr)xGetPtr();
 	dVifSetMasks(v, doMask, doMode, cycleSize);
 	
 	while (vifRegs->num) {
@@ -107,7 +108,7 @@ void dVifRecompile(nVifStruct& v, nVifBlock* vB) {
 	vifRegs->num = backupNum;
 }
 
-static nVifBlock _vBlock = {0};
+static __aligned16 nVifBlock _vBlock = {0};
 
 _f u8* dVifsetVUptr(nVifStruct& v, int offset) {
 	u8* ptr	   = (u8*)(v.VU->Mem + (offset & v.vuMemLimit));
@@ -148,10 +149,8 @@ void dVifUnpack(int idx, u8 *data, u32 size) {
 	}
 	static int recBlockNum = 0;
 	DevCon.WriteLn("nVif: Recompiled Block! [%d]", recBlockNum++);
-	nVifBlock* vB = new nVifBlock();
-	memcpy(vB, &_vBlock, sizeof(nVifBlock));
-	dVifRecompile(v, vB);
-	v.vifBlocks->add(vB);
+	dVifRecompile(v, &_vBlock);
+	v.vifBlocks->add(&_vBlock);
 	dVifRecLimit(idx);
 	dVifUnpack(idx, data, size);
 }
