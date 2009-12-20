@@ -476,7 +476,7 @@ void ConsoleLogFrame::OnActivate( wxActivateEvent& evt )
 	// with it.  (wxWidgets appears to have no equivalent to this)
 
 	if( MainEmuFrame* mainframe = GetMainFramePtr() )
-		MSW_SetWindowAfter( mainframe->GetHWND(), GetHWND() );
+		MSW_SetWindowAfter( mainframe->GetHandle(), GetHandle() );
 
 	evt.Skip();
 }

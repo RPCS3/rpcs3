@@ -482,7 +482,9 @@ void Pcsx2App::CleanupMess()
 		Console.Indent().Error( ex.FormatDiagnosticMessage() );
 	}
 
+#ifdef __WXMSW__
 	pxDwm_Unload();
+#endif
 	
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.

@@ -21,12 +21,14 @@
 #	include <wx/msw/wrapwin.h>		// needed for OutputDebugString
 #endif
 
+#ifdef __WXMSW__
 void MSW_SetWindowAfter( WXHWND hwnd, WXHWND hwndAfter )
 {
-#ifndef __WXMSW__
 	SetWindowPos( (HWND)hwnd, (HWND)hwndAfter, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOMOVE );
-#endif
 }
+#else
+void MSW_SetWindowAfter( GtkWidget *widget, GtkWidget *widgetAfter ){}
+#endif
 
 // Writes text to the Visual Studio Output window (Microsoft Windows only).
 // On all other platforms this pipes to StdErr instead.

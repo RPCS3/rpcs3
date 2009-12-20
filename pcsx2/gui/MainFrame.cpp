@@ -456,7 +456,7 @@ void MainEmuFrame::OnActivate( wxActivateEvent& evt )
 	// window.  When one is clicked, the other is assured to be brought to the foreground
 	// with it.  (wxWidgets appears to have no equivalent to this)
 	if( ConsoleLogFrame* logframe = wxGetApp().GetProgramLog() )
-		MSW_SetWindowAfter( logframe->GetHWND(), GetHWND() );
+		MSW_SetWindowAfter( logframe->GetHandle(), GetHandle() );
 	
 	evt.Skip();
 }
