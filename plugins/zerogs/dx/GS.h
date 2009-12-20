@@ -743,4 +743,8 @@ inline float Clamp(float fx, float fmin, float fmax)
 	return fx > fmax ? fmax : fx;
 }
 
+#include <string>
+
+extern std::string s_strIniPath;
+
 #endif

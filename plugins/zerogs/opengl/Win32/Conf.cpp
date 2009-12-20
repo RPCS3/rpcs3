@@ -8,35 +8,25 @@ extern HINSTANCE hInst;
 
 void SaveConfig() {
 
-	char *szTemp;
-	char szIniFile[256], szValue[256];
-
-	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
-	szTemp = strrchr(szIniFile, '\\');
-
-	if(!szTemp) return;
-	strcpy(szTemp, "\\inis\\zerogs.ini");
+	char szValue[256];
+	const std::string iniFile( s_strIniPath + "zerogs.ini" );
 
 	sprintf(szValue,"%u",conf.interlace);
-	WritePrivateProfileString("Settings", "Interlace",szValue,szIniFile);
+	WritePrivateProfileString("Settings", "Interlace",szValue,iniFile.c_str());
 	sprintf(szValue,"%u",conf.aa);
-	WritePrivateProfileString("Settings", "Antialiasing",szValue,szIniFile);
+	WritePrivateProfileString("Settings", "Antialiasing",szValue,iniFile.c_str());
 	sprintf(szValue,"%u",conf.bilinear);
-	WritePrivateProfileString("Settings", "Bilinear",szValue,szIniFile);
+	WritePrivateProfileString("Settings", "Bilinear",szValue,iniFile.c_str());
 	sprintf(szValue,"%u",conf.options);
-	WritePrivateProfileString("Settings", "Options",szValue,szIniFile);
+	WritePrivateProfileString("Settings", "Options",szValue,iniFile.c_str());
 	sprintf(szValue,"%u",conf.gamesettings);
-	WritePrivateProfileString("Settings", "AdvancedOptions",szValue,szIniFile);
+	WritePrivateProfileString("Settings", "AdvancedOptions",szValue,iniFile.c_str());
 }
 
 void LoadConfig() {
 
-	FILE *fp;
-	char *szTemp;
-	char szIniFile[256], szValue[256];
-  
-	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
-	szTemp = strrchr(szIniFile, '\\');
+	char szValue[256];
+	const std::string iniFile( s_strIniPath + "zerogs.ini" );
 
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
@@ -46,26 +36,24 @@ void LoadConfig() {
 	conf.width = 640;
 	conf.height = 480;
 
-	if(!szTemp) return ;
-	strcpy(szTemp, "\\inis\\zerogs.ini");
-	fp=fopen("inis\\zerogs.ini","rt");
+	FILE *fp=fopen(iniFile.c_str(),"rt");
 	if (!fp)
 	{
-		CreateDirectory("inis",NULL);
+		CreateDirectory(s_strIniPath.c_str(),NULL);
 		SaveConfig();//save and return
 		return ;
 	}
 	fclose(fp);
 
-	GetPrivateProfileString("Settings", "Interlace", NULL, szValue, 20, szIniFile);
+	GetPrivateProfileString("Settings", "Interlace", NULL, szValue, 20, iniFile.c_str());
 	conf.interlace = (u8)strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Antialiasing", NULL, szValue, 20, szIniFile);
+	GetPrivateProfileString("Settings", "Antialiasing", NULL, szValue, 20, iniFile.c_str());
 	conf.aa = (u8)strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Options", NULL, szValue, 20, szIniFile);
+	GetPrivateProfileString("Settings", "Options", NULL, szValue, 20, iniFile.c_str());
 	conf.options = strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "AdvancedOptions", NULL, szValue, 20, szIniFile);
+	GetPrivateProfileString("Settings", "AdvancedOptions", NULL, szValue, 20, iniFile.c_str());
 	conf.gamesettings = strtoul(szValue, NULL, 10);
-	GetPrivateProfileString("Settings", "Bilinear", NULL, szValue, 20, szIniFile);
+	GetPrivateProfileString("Settings", "Bilinear", NULL, szValue, 20, iniFile.c_str());
 	conf.bilinear = strtoul(szValue, NULL, 10);
 
 	if( conf.aa < 0 || conf.aa > 2 ) conf.aa = 0;

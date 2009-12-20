@@ -24,18 +24,14 @@
 #include <string.h>
 #include "GS.h"
 
-extern string s_strIniPath;
-
 void SaveConfig() 
 {
-	FILE *f;
-	char cfg[255];
+	const std::string iniFile( s_strIniPath + "zerogs.ini" );
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg,"w");
+	FILE* f = fopen(iniFile.c_str(),"w");
 	if (f == NULL) 
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open %s\n", iniFile.c_str());
 		return;
 	}
 	
@@ -50,7 +46,6 @@ void SaveConfig()
 
 void LoadConfig() 
 {
-	FILE *f;
 	char cfg[255];
 
 	memset(&conf, 0, sizeof(conf));
@@ -62,11 +57,11 @@ void LoadConfig()
 	conf.height = 480;
 	conf.aa = 0;
 
-	strcpy(cfg, s_strIniPath.c_str());
-	f = fopen(cfg, "r");
+	const std::string iniFile( s_strIniPath + "zerogs.ini" );
+	FILE* f = fopen(iniFile.c_str(), "r");
 	if (f == NULL) 
 	{
-		printf("failed to open %s\n", s_strIniPath.c_str());
+		printf("failed to open %s\n", iniFile.c_str());
 		SaveConfig();//save and return
 		return;
 	}

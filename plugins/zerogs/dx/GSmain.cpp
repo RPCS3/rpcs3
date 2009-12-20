@@ -62,6 +62,8 @@ u8* g_pBasePS2Mem = NULL;
 int g_TransferredToGPU = 0;
 int g_GameSettings = 0;
 
+std::string s_strIniPath( "inis/" );
+
 static LARGE_INTEGER luPerfFreq;
 
 // statistics
@@ -153,6 +155,10 @@ void __LogToConsole(const char *fmt, ...) {
 		vfprintf(gsLog, fmt, list);
 	vprintf(fmt, list);
 	va_end(list);
+}
+
+void CALLBACK GSsetSettingsDir(const char* dir) {
+	s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
 void CALLBACK GSsetBaseMem(void* pmem) {

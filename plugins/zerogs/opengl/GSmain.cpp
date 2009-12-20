@@ -54,7 +54,7 @@ int g_GSMultiThreaded = 0;
 void (*GSirq)();
 u8* g_pBasePS2Mem = NULL;
 int g_TransferredToGPU = 0;
-string s_strIniPath="inis/zerogs.ini";
+std::string s_strIniPath("inis/");
 
 static BOOL g_bHidden = 0;
 int g_GameSettings = 0;
@@ -155,6 +155,10 @@ void __LogToConsole(const char *fmt, ...) {
 	printf("ZeroGS: ");
 	vprintf(fmt, list);
 	va_end(list);
+}
+
+void CALLBACK GSsetSettingsDir(const char* dir) {
+	s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
 void CALLBACK GSsetBaseMem(void* pmem) {

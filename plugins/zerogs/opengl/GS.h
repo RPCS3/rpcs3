@@ -64,6 +64,8 @@ extern "C" char* CALLBACK PS2EgetLibName(void);
 #include <string>
 using namespace std;
 
+extern std::string s_strIniPath;
+
 extern u32 THR_KeyEvent; // value for passing out key events beetwen threads
 extern bool THR_bShift;
 
