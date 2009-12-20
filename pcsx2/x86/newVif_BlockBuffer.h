@@ -15,6 +15,15 @@
 
 #pragma once
 
+// Allocates a Chunk of memory using SysMmapEx...
+// This memory can be used to write recompiled code to.
+// Its got basic resizing/growing ability too, but probably
+// won't be too useful since growing the block buffer will
+// invalidate any pointers pointing to the old block buffer.
+// (so remember to invalidate those block pointers :D)
+// It also deallocates itself on 'delete', so you can 
+// just use 'new' and 'delete' for initialization and 
+// deletion/cleanup respectfully...
 class BlockBuffer {
 private:
 	u32 mSize;  // Cur Size

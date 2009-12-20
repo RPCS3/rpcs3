@@ -852,7 +852,7 @@
 									>
 								</File>
 								<File
-									RelativePath=".\newVif_HashBucket.h"
+									RelativePath="..\..\x86\newVif_HashBucket.h"
 									>
 								</File>
 								<File
