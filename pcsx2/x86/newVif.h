@@ -61,17 +61,16 @@ struct __aligned16 nVifBlock { // Ordered for Hashing
 	u8   cl;		// [04] CL   Field
 	u8   wl;		// [05] WL   Field
 	u32  mask;		// [06] Mask Field
-	u8	 padding[6];// [10] through [15]
-	uptr startPtr;	// [16] Start Ptr of RecGen Code
-	u8   end[12];	// [20] through [31]
-} __packed; // 32 bytes
+	u8	 padding[2];// [10] through [11]
+	uptr startPtr;	// [12] Start Ptr of RecGen Code
+} __packed; // 16 bytes
 
 #ifdef _MSC_VER
 #	pragma pack()
 #endif
 
 #define _hSize 0x4000 // [usn*1:mask*1:upk*4:num*8] hash...
-#define _cmpS  (sizeof(nVifBlock) - (16+6))
+#define _cmpS  (sizeof(nVifBlock) - (4))
 #define _tParams nVifBlock, _hSize, _cmpS
 struct nVifStruct {
 	u32						idx;		// VIF0 or VIF1

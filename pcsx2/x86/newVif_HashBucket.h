@@ -49,7 +49,7 @@ public:
 		T*  c = mChain[o];
 		for (int i = 0; i < s; i++) {
 			//if (!memcmp(&c[i], dataPtr, cmpSize)) return &c[i];
-			if ((((nVifCall)((void*)nVifMemCmp))(&c[i], dataPtr))==0xf) return &c[i];
+			if ((((nVifCall)((void*)nVifMemCmp))(&c[i], dataPtr))==7) return &c[i];
 		}
 		return NULL;
 	}

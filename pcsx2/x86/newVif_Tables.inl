@@ -282,6 +282,7 @@ void emitCustomCompare() {
 	xMOVAPS  (xmm0, ptr32[ecx]);
 	xPCMP.EQD(xmm0, ptr32[edx]);
 	xMOVMSKPS(eax, xmm0);
+	xAND	 (eax, 0x7);
 
 	xRET();
 	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadOnly, true);
