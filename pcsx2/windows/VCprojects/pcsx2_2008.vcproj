@@ -1881,6 +1881,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\MSWstuff.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\Plugins.cpp"
 				>
 			</File>
@@ -1949,6 +1953,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Dialogs\ModalPopups.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\MSWstuff.h"
 					>
 				</File>
 				<File

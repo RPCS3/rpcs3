@@ -548,6 +548,7 @@ AppConfig::GSWindowOptions::GSWindowOptions()
 	DefaultToFullscreen		= false;
 	AlwaysHideMouse			= false;
 	DisableResizeBorders	= false;
+	DisableScreenSaver		= true;
 
 	AspectRatio				= AspectRatio_4_3;
 	
@@ -591,6 +592,7 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 	IniEntry( DefaultToFullscreen );
 	IniEntry( AlwaysHideMouse );
 	IniEntry( DisableResizeBorders );
+	IniEntry( DisableScreenSaver );
 	
 	IniEntry( WindowSize );
 	IniEntry( WindowPos );

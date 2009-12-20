@@ -16,8 +16,9 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "GS.h"
+#include "MSWstuff.h"
 
-#include "wx/utils.h"
+#include <wx/utils.h>
 
 
 void GSPanel::InitDefaultAccelerators()

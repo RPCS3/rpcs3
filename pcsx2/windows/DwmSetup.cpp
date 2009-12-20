@@ -1,15 +1,28 @@
+
 #include "PrecompiledHeader.h"
-#include <windows.h>
 #include "Utilities/Console.h"
+#include "MSWstuff.h"
+
+#include <wx/msw/wrapwin.h>
+#include <wx/dynlib.h>
+
+#include <dwmapi.h>
+
+typedef HRESULT WINAPI Fntype_DwmEnableMMCSS(DWORD enable);
+typedef HRESULT WINAPI Fntype_DwmSetPresentParameters( HWND hwnd, DWM_PRESENT_PARAMETERS *pPresentParams );
+
+static wxDynamicLibrary lib_dwmapi;
 
 // This could potentially reduce lag while running in Aero,
 // by telling the DWM the application requires
 // multimedia-class scheduling for smooth display.
-void SetupDwmStuff(WXHWND hMainWindow)
+void pxDwm_Load()
 {
-	HRESULT (WINAPI * pDwmEnableMMCSS)(DWORD);
+	wxDoNotLogInThisScope please;
 
-	OSVERSIONINFOEX info = {0};
+	// Version test is not needed since we're using LoadLibrary. --air
+	
+	/*OSVERSIONINFOEX info = {0};
 	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 	info.dwMajorVersion = 6;
 
@@ -22,27 +35,43 @@ void SetupDwmStuff(WXHWND hMainWindow)
 	//info
 	if(VerifyVersionInfo(&info,
 		VER_MAJORVERSION|VER_MINORVERSION|VER_SERVICEPACKMAJOR|VER_SERVICEPACKMINOR,
-		mask))
+		mask))*/
+
+	lib_dwmapi.Load( L"dwmapi.dll" );
+	if( !lib_dwmapi.IsLoaded() ) return;
+
+	if( Fntype_DwmEnableMMCSS* pDwmEnableMMCSS = (Fntype_DwmEnableMMCSS*)lib_dwmapi.GetSymbol(L"DwmEnableMMCSS") )
 	{
-		HMODULE hDwmapi = LoadLibrary(wxT("dwmapi.dll"));
-		if(hDwmapi)
-		{
-			pDwmEnableMMCSS = (HRESULT (WINAPI *)(DWORD))GetProcAddress(hDwmapi,"DwmEnableMMCSS");
-			if(pDwmEnableMMCSS)
-			{
-				if(FAILED(pDwmEnableMMCSS(TRUE)))
-				{
-					Console.WriteLn("Warning: DwmEnableMMCSS returned a failure code (not an error).");
-				}
-				else
-				{
-					Console.WriteLn("DwmEnableMMCSS successful.");
-				}
-			}
+		Console.WriteLn( "[Dwm] Desktop Window Manager detected." );
 
-			//DwmSetDxFrameDuration(hMainWindow,1);
-
-			FreeLibrary(hDwmapi);
-		}
+		if(FAILED(pDwmEnableMMCSS(TRUE)))
+			Console.WriteLn("[Dwm] DwmEnableMMCSS returned a failure code.");
 	}
+}
+
+// wnd - this parameter should be the GS display panel or the top level frame that holds it (not
+//       sure if it's supposed to be the actual gsPanel or the top level window/frame that the
+//       panel belongs to)
+//
+void pxDwm_SetPresentParams( WXWidget wnd )
+{
+	if( !lib_dwmapi.IsLoaded() ) return;
+	Fntype_DwmSetPresentParameters* pDwmSetPresentParameters = (Fntype_DwmSetPresentParameters*)lib_dwmapi.GetSymbol(L"DwmSetPresentParameters");
+
+	if( pDwmSetPresentParameters == NULL ) return;
+
+	DWM_PRESENT_PARAMETERS params;
+	
+	params.cbSize = sizeof(DWM_PRESENT_PARAMETERS);
+	params.fQueue = FALSE;
+
+	if(FAILED(pDwmSetPresentParameters( (HWND)wnd, &params )))
+		Console.WriteLn("[Dwm] DwmSetPresentParameters returned a failure code.");
+		
+	//DwmSetDxFrameDuration(hMainWindow,1);
+}
+
+void pxDwm_Unload()
+{
+	lib_dwmapi.Unload();
 }

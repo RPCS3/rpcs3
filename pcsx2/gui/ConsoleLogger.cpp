@@ -17,14 +17,12 @@
 #include "App.h"
 #include "MainFrame.h"
 #include "ConsoleLogger.h"
+#include "MSWstuff.h"
+
 #include "Utilities/Console.h"
 #include "DebugTools/Debug.h"
 
 #include <wx/textfile.h>
-
-#ifdef __WXMSW__
-#	include <wx/msw/wrapwin.h>		// needed for OutputDebugString
-#endif
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
@@ -54,21 +52,7 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 			{
 				wxString str;
 				TimeStamp( &str );
-				str += szString;
-
-				#if defined(__WXMSW__) && !defined(__WXMICROWIN__)
-					// don't prepend debug/trace here: it goes to the
-					// debug window anyhow
-					str += wxT("\r\n");
-					OutputDebugString(str);
-				#else
-					// send them to stderr
-					wxFprintf(stderr, wxT("[%s] %s\n"),
-							  level == wxLOG_Trace ? wxT("Trace")
-												   : wxT("Debug"),
-							  str.c_str());
-					fflush(stderr);
-				#endif
+				MSW_OutputDebugString( str + szString );
 			}
 		break;
 
@@ -87,15 +71,15 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 			// fallthrough!
 
 		case wxLOG_Message:
-			Console.WriteLn( wxString(L"wx > ") + szString );
+			Console.WriteLn( L"[wx] %s", szString );
 		break;
 
 		case wxLOG_Error:
-			Console.Error( wxString(L"wx > ") + szString );
+			Console.Error( L"[wx] %s", szString );
 		break;
 
 		case wxLOG_Warning:
-			Console.Warning( wxString(L"wx > ") + szString );
+			Console.Warning( L"[wx] %s", szString );
 		break;
     }
 }
@@ -490,10 +474,9 @@ void ConsoleLogFrame::OnActivate( wxActivateEvent& evt )
 	// Special implementation to "connect" the console log window with the main frame
 	// window.  When one is clicked, the other is assured to be brought to the foreground
 	// with it.  (wxWidgets appears to have no equivalent to this)
-#ifdef __WXMSW__
+
 	if( MainEmuFrame* mainframe = GetMainFramePtr() )
-		SetWindowPos( (HWND)mainframe->GetHWND(), (HWND)GetHWND(), 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOMOVE );
-#endif
+		MSW_SetWindowAfter( mainframe->GetHWND(), GetHWND() );
 
 	evt.Skip();
 }

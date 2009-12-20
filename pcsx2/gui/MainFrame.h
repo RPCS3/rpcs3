@@ -26,6 +26,8 @@
 // --------------------------------------------------------------------------------------
 class GSPanel : public wxWindow
 {
+	typedef wxWindow _parent;
+
 protected:
 	AcceleratorDictionary		m_Accels;
 	EventListenerBinding<int>	m_Listener_SettingsApplied;
@@ -42,6 +44,10 @@ public:
 
 protected:
 	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+
+#ifdef __WXMSW__
+	virtual WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam);
+#endif
 
 	void InitDefaultAccelerators();
 

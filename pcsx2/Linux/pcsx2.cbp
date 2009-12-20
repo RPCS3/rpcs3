@@ -361,7 +361,9 @@
 		<Unit filename="../gui/IniInterface.h" />
 		<Unit filename="../gui/IsoDropTarget.cpp" />
 		<Unit filename="../gui/IsoDropTarget.h" />
-		<Unit filename="../gui/MainFrame.cpp" />
+    <Unit filename="../gui/MSWstuff.cpp" />
+    <Unit filename="../gui/MSWstuff.h" />
+    <Unit filename="../gui/MainFrame.cpp" />
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
 		<Unit filename="../gui/MemoryCardFile.cpp" />

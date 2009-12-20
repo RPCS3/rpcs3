@@ -127,6 +127,7 @@ public:
 		bool		DefaultToFullscreen;
 		bool		AlwaysHideMouse;
 		bool		DisableResizeBorders;
+		bool		DisableScreenSaver;
 
 		AspectRatioType AspectRatio;
 

@@ -16,15 +16,12 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "ConsoleLogger.h"
+#include "MSWstuff.h"
 
 #include "Dialogs/ModalPopups.h"
 #include "IsoDropTarget.h"
 
 #include <wx/iconbndl.h>
-
-#ifdef __WXMSW__
-#	include <wx/msw/wrapwin.h>		// needed for SetWindowPos (OnActivate)
-#endif
 
 #if _MSC_VER
 #	include "svnrev.h"
@@ -458,10 +455,8 @@ void MainEmuFrame::OnActivate( wxActivateEvent& evt )
 	// Special implementation to "connect" the console log window with the main frame
 	// window.  When one is clicked, the other is assured to be brought to the foreground
 	// with it.  (wxWidgets appears to have no equivalent to this)
-#ifdef __WXMSW__
 	if( ConsoleLogFrame* logframe = wxGetApp().GetProgramLog() )
-		SetWindowPos( (HWND)logframe->GetHWND(), (HWND)GetHWND(), 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOMOVE );
-#endif
+		MSW_SetWindowAfter( logframe->GetHWND(), GetHWND() );
 	
 	evt.Skip();
 }

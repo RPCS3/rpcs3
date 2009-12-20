@@ -17,6 +17,8 @@
 #include "IniInterface.h"
 #include "MainFrame.h"
 #include "ConsoleLogger.h"
+#include "MSWstuff.h"
+
 #include "DebugTools/Debug.h"
 #include "Dialogs/ModalPopups.h"
 
@@ -347,8 +349,7 @@ bool Pcsx2App::OnInit()
 		AppApplySettings();
 
 #ifdef __WXMSW__
-		extern void SetupDwmStuff(WXHWND hMainWindow);
-		SetupDwmStuff(m_MainFrame->GetHWND());
+		pxDwm_Load();
 #endif
 
 		m_CoreAllocs = new SysCoreAllocations();
@@ -480,6 +481,8 @@ void Pcsx2App::CleanupMess()
 		Console.Error( L"Runtime exception handled during CleanupMess:\n" );
 		Console.Indent().Error( ex.FormatDiagnosticMessage() );
 	}
+
+	pxDwm_Unload();
 	
 	// Notice: deleting the plugin manager (unloading plugins) here causes Lilypad to crash,
 	// likely due to some pending message in the queue that references lilypad procs.

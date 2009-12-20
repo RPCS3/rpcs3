@@ -27,7 +27,7 @@
 #include "Utilities/HashMap.h"
 
 #ifdef __WXMSW__
-#	include <wx/msw/wrapwin.h>
+#	include <wx/msw/wrapwin.h>		// needed to implement the app!
 #endif
 
 IMPLEMENT_APP(Pcsx2App)
