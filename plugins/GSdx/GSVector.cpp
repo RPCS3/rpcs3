@@ -96,5 +96,12 @@ GSVector4i GSVector4i::fit(int preset) const
 		r = *this;
 	}
 
+#ifdef USE_UPSCALE_HACKS //don't show outermost pixels, they're often buggy
+	r.x-=1;
+	r.y-=1;
+	r.z+=1;
+	r.w+=1;
+#endif
+
 	return r;
 }

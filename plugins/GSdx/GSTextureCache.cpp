@@ -624,6 +624,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		GSVector4 dr(0, 0, w, h);
 
+#ifdef USE_UPSCALE_HACKS
 		float multiplier = (float) m_renderer->upscale_Multiplier()-1;
 		//dr += a few pixels, to fight blur/brightness layers beeing more offset the more we upscale
 		if(w > dstsize.x) 
@@ -643,7 +644,22 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			dr += GSVector4 (0.0f, 0.25f*multiplier, 0.0f, 0.25f*multiplier);
 		}
 		else dr += GSVector4 (0.0f, 0.5f*multiplier, 0.0f, 0.5f*multiplier);
+#else	
+		if(w > dstsize.x) 
+		{
+			scale.x = (float)dstsize.x / tw;
+			dr.z = (float)dstsize.x * scale.x / dst->m_texture->GetScale().x;
+			w = dstsize.x;
+		}
 		
+		if(h > dstsize.y) 
+		{
+			scale.y = (float)dstsize.y / th;
+			dr.w = (float)dstsize.y * scale.y / dst->m_texture->GetScale().y;
+			h = dstsize.y;
+		}
+#endif
+
 		GSVector4 sr(0, 0, w, h);
 
 		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;

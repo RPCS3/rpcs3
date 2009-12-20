@@ -123,6 +123,8 @@ typedef signed long long int64;
 
 #define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA)
 
+#define USE_UPSCALE_HACKS //Hacks intended to fix upscaling / rendering glitches in HW renderers
+
 // dxsdk beta missing these:
 #define D3D11_SHADER_MACRO D3D10_SHADER_MACRO
 #define ID3D11Blob ID3D10Blob

@@ -168,9 +168,10 @@ bool i18n_SetLanguage( int wxLangId )
 
 	if( !IsEnglish(wxLangId) && !locale->AddCatalog( L"pcsx2main" ) )
 	{
-		Console.Warning( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
+		/*Console.Warning( L"SetLanguage: Cannot find pcsx2main.mo file for language '%s' [%s]",
 			wxLocale::GetLanguageName( locale->GetLanguage() ).c_str(), locale->GetCanonicalName().c_str()
-		);
+		);*/
+		Console.Warning("SetLanguage is not implemented yet, using English.");
 		return false;
 	}
 
