@@ -23,6 +23,7 @@
 using namespace std;
 
 #include "USB.h"
+string s_strIniPath="inis/";
 
 const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
@@ -146,6 +147,11 @@ EXPORT_C_(void) USBsetRAM(void *mem)
 	USB_LOG("*Setting ram.\n");
 }
 
+EXPORT_C_(void) USBsetSettingsDir(const char* dir)
+{
+    s_strIniPath = (dir==NULL) ? "inis/" : dir;
+}
+ 	
 // extended funcs
 
 EXPORT_C_(s32) USBfreeze(int mode, freezeData *data)

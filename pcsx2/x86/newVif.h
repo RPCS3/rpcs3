@@ -16,6 +16,11 @@
 #pragma once
 
 #ifdef newVif
+
+// newVif_HashBucket.h uses this typedef, so it has to be decared first.
+typedef u32  (__fastcall *nVifCall)(void*, void*);
+typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
+
 #include "newVif_BlockBuffer.h"
 #include "newVif_HashBucket.h"
 #include "x86emitter/x86emitter.h"
@@ -25,9 +30,6 @@ extern void  nVifGen(int usn, int mask, int curCycle);
 extern void _nVifUnpack (int idx, u8 *data, u32 size);
 extern void  dVifUnpack (int idx, u8 *data, u32 size);
 extern void  dVifInit   (int idx);
-
-typedef u32  (__fastcall *nVifCall)(void*, void*);
-typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
 
 static __pagealigned u8 nVifUpkExec[__pagesize*4];
 static __aligned16 nVifCall nVifUpk[(2*2*16)  *4]; // ([USN][Masking][Unpack Type]) [curCycle]

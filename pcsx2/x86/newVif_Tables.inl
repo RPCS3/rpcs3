@@ -272,7 +272,7 @@ void writeBackRow(nVifStruct& v) {
 	// ToDo: Do we need to write back to vifregs.rX too!? :/
 }
 
-static __pagealigned u8 nVifMemCmp[__pagesize];
+ __pagealigned u8 nVifMemCmp[__pagesize];
 
 void emitCustomCompare() {
 	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadWrite, false);

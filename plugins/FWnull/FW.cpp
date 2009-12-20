@@ -22,6 +22,7 @@
 #include <string>
 using namespace std;
 
+
 #include "FW.h"
 
 const u8 version  = PS2E_FW_VERSION;
@@ -33,6 +34,7 @@ static char *libraryName = "FWnull Driver";
 s8 *fwregs;
 FILE *fwLog;
 Config conf;
+string s_strIniPath="inis/";
 
 void (*FWirq)();
 
@@ -139,6 +141,11 @@ EXPORT_C_(void) FWwrite32(u32 addr, u32 value)
 EXPORT_C_(void) FWirqCallback(void (*callback)()) 
 {
 	FWirq = callback;
+}
+
+EXPORT_C_(void) FWsetSettingsDir(const char* dir)
+{
+    s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
 EXPORT_C_(s32) FWfreeze(int mode, freezeData *data) 

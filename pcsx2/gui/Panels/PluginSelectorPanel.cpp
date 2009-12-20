@@ -244,7 +244,7 @@ void __evt_fastcall Panels::PluginSelectorPanel::OnCorePluginStatusChanged( void
 		wxComboBox& box( panel.m_ComponentBoxes->Get(pi->id) );
 		panel.m_ComponentBoxes->GetConfigButton(pi->id).Enable(
 			(panel.m_FileList==NULL || panel.m_FileList->Count() == 0) ? false :
-			g_Conf->FullpathMatchTest( pi->id, panel.m_FileList->at((int)box.GetClientData(box.GetSelection())) )
+			g_Conf->FullpathMatchTest( pi->id,(*panel.m_FileList)[((int)box.GetClientData(box.GetSelection()))] )
 		);
 	} while( ++pi, pi->shortname != NULL );
 

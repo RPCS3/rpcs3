@@ -30,6 +30,7 @@ const char *libraryName = "DEV9null Driver";
 void (*DEV9irq)(int);
 FILE *dev9Log;
 Config conf;
+string s_strIniPath="inis/";
 
 EXPORT_C_(u32) PS2EgetLibType() 
 {
@@ -141,6 +142,11 @@ EXPORT_C_(void) DEV9irqCallback(DEV9callback callback)
 EXPORT_C_(DEV9handler) DEV9irqHandler(void) 
 {
 	return NULL;
+}
+
+EXPORT_C_(void) DEV9setSettingsDir(const char* dir)
+{
+    s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
 // extended funcs
