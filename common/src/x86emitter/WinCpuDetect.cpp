@@ -88,8 +88,15 @@ SingleCoreAffinity::SingleCoreAffinity()
 		);
 	}
 	
-	// Force Windows to timeslice (hoping this fixes some affinity issues)
 	Sleep( 2 );
+
+	// Sleep Explained: I arbitrarily pick Core 0 to lock to for running the CPU test.  This
+	// means that the current thread will need to be switched to Core 0 if it's currently
+	// scheduled on a difference cpu/core.  However, Windows does not necessarily perform
+	// that scheduling immediately upon the call to SetThreadAffinityMask (seems dependent
+	// on version: XP does, Win7 does not).  So by issuing a Sleep here we give Win7 time
+	// to issue a timeslice and move our thread to Core 0.  Without this, it tends to move
+	// the thread during the cpuSpeed test instead, causing totally wacky results.
 };
 
 SingleCoreAffinity::~SingleCoreAffinity() throw()

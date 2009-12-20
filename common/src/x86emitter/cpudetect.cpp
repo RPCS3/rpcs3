@@ -34,7 +34,7 @@ static const char* bool_to_char( bool testcond )
 static s64 CPUSpeedHz( u64 time )
 {
 	u64 timeStart, timeStop;
-	s64 startTick, endTick;
+	s64 startCycle, endCycle;
 
 	if( ! x86caps.hasTimeStampCounter )
 		return 0;
@@ -49,18 +49,28 @@ static s64 CPUSpeedHz( u64 time )
 	do
 	{
 		timeStop = GetCPUTicks();
-		startTick = __rdtsc();
+		startCycle = __rdtsc();
 	} while( ( timeStop - timeStart ) == 0 );
 
 	timeStart = timeStop;
 	do
 	{
 		timeStop = GetCPUTicks();
-		endTick = __rdtsc();
+		endCycle = __rdtsc();
 	}
 	while( ( timeStop - timeStart ) < time );
 
-	return (s64)( endTick - startTick );
+	s64 cycleCount = endCycle - startCycle;
+	s64 timeCount = timeStop - timeStart;
+	s64 overrun = timeCount - time;
+	if( !overrun ) return cycleCount;
+
+	// interference could cause us to overshoot the target time, compensate:
+	
+	double cyclesPerTick = (double)cycleCount / (double)timeCount;
+	double newCycleCount = (double)cycleCount - (cyclesPerTick * overrun);
+
+	return (s64)newCycleCount;
 }
 
 // Recompiled code buffer for SSE and MXCSR feature testing.
