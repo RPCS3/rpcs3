@@ -87,6 +87,9 @@ SingleCoreAffinity::SingleCoreAffinity()
 			availProcCpus, availSysCpus, i
 		);
 	}
+	
+	// Force Windows to timeslice (hoping this fixes some affinity issues)
+	Sleep( 2 );
 };
 
 SingleCoreAffinity::~SingleCoreAffinity() throw()

@@ -83,8 +83,7 @@ DllMain (HINSTANCE hinstDll, DWORD fdwReason, LPVOID lpvReserved)
       (void) pthread_win32_thread_detach_np ();
       result = pthread_win32_process_detach_np ();
 
-	  if( ptw32_testcancel_enable != 0 )
-		assert(0);
+		assert(ptw32_testcancel_enable == 0);
 
       break;
     }
