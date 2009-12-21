@@ -148,10 +148,8 @@ int Pcsx2App::IssueModalDialog( const wxString& dlgName )
 	
 	if( wxWindow* window = wxFindWindowByName( dlgName ) )
 	{
-		if( wxIsKindOf( window, wxDialog ) )
+		if( wxDialog* dialog = wxDynamicCast( window, wxDialog ) )
 		{
-			wxDialog* dialog = (wxDialog*)window;
-
 			window->SetFocus();
 			
 			// It's legal to call ShowModal on a non-modal dialog, therefore making

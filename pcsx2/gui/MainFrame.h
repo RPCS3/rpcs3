@@ -191,6 +191,7 @@ protected:
 
 	void OnCloseWindow( wxCloseEvent& evt );
 	void OnMoveAround( wxMoveEvent& evt );
+	void OnFocus( wxFocusEvent& evt );
 	void OnActivate( wxActivateEvent& evt );
 
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);

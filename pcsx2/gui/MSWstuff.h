@@ -15,12 +15,7 @@
 
 #pragma once
 
-#ifdef __WXMSW__
 extern void MSW_SetWindowAfter( WXWidget hwnd, WXWidget hwndAfter );
-#else
-extern void MSW_SetWindowAfter( GtkWidget *widget, GtkWidget *widgetAfter );
-#endif
-
 extern void MSW_OutputDebugString( const wxString& text );
 
 extern void pxDwm_Load();

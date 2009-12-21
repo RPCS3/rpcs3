@@ -469,17 +469,31 @@ void ConsoleLogFrame::OnResize( wxSizeEvent& evt )
 	evt.Skip();
 }
 
+// ----------------------------------------------------------------------------
+// OnFocus / OnActivate : Special implementation to "connect" the console log window
+// with the main frame window.  When one is clicked, the other is assured to be brought
+// to the foreground with it.  (Currently only MSW only, as wxWidgets appears to have no
+// equivalent to this). We don't bother with OnFocus here because it doesn't propagate
+// up the window hierarchy anyway, so it always gets swallowed by the text control.
+// But no matter: the console doesn't have the same problem as the Main Window of missing
+// the initial activation event.
+
+/*void ConsoleLogFrame::OnFocus( wxFocusEvent& evt )
+{
+	if( MainEmuFrame* mainframe = GetMainFramePtr() )
+		MSW_SetWindowAfter( mainframe->GetHandle(), GetHandle() );
+
+	evt.Skip();
+}*/
+
 void ConsoleLogFrame::OnActivate( wxActivateEvent& evt )
 {
-	// Special implementation to "connect" the console log window with the main frame
-	// window.  When one is clicked, the other is assured to be brought to the foreground
-	// with it.  (wxWidgets appears to have no equivalent to this)
-
 	if( MainEmuFrame* mainframe = GetMainFramePtr() )
 		MSW_SetWindowAfter( mainframe->GetHandle(), GetHandle() );
 
 	evt.Skip();
 }
+// ----------------------------------------------------------------------------
 
 void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 {

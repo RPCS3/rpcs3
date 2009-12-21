@@ -282,8 +282,8 @@ void ModalButtonPanel::OnActionButtonClicked( wxCommandEvent& evt )
 {
 	evt.Skip();
 	wxWindow* toplevel = wxGetTopLevelParent( this );
-	if( toplevel != NULL && wxIsKindOf(toplevel, wxDialog) )
-		((wxDialog*)toplevel)->EndModal( evt.GetId() );
+	if( wxDialog* dialog = wxDynamicCast( toplevel, wxDialog ) )
+		dialog->EndModal( evt.GetId() );
 }
 
 void ModalButtonPanel::AddCustomButton( wxWindowID id, const wxString& label )

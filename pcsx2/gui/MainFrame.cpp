@@ -440,6 +440,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	ConnectMenus();
 	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
 	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
+
+	Connect( wxEVT_SET_FOCUS,		wxFocusEventHandler(MainEmuFrame::OnFocus) );
+
 	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler(MainEmuFrame::OnActivate) );
 
 	SetDropTarget( new IsoDropTarget( this ) );
@@ -450,16 +453,30 @@ MainEmuFrame::~MainEmuFrame() throw()
 	m_menuCDVD.Remove( MenuId_IsoSelector );
 }
 
+// ----------------------------------------------------------------------------
+// OnFocus / OnActivate : Special implementation to "connect" the console log window
+// with the main frame window.  When one is clicked, the other is assured to be brought
+// to the foreground with it.  (Currently only MSW only, as wxWidgets appears to have no
+// equivalent to this).  Both OnFocus and OnActivate are handled because Focus events do
+// not propagate up the window hierarchy, and on Activate events don't always get sent
+// on the first focusing event after PCSX2 starts.
+
+void MainEmuFrame::OnFocus( wxFocusEvent& evt )
+{
+	if( ConsoleLogFrame* logframe = wxGetApp().GetProgramLog() )
+		MSW_SetWindowAfter( logframe->GetHandle(), GetHandle() );
+
+	evt.Skip();
+}
+
 void MainEmuFrame::OnActivate( wxActivateEvent& evt )
 {
-	// Special implementation to "connect" the console log window with the main frame
-	// window.  When one is clicked, the other is assured to be brought to the foreground
-	// with it.  (wxWidgets appears to have no equivalent to this)
 	if( ConsoleLogFrame* logframe = wxGetApp().GetProgramLog() )
 		MSW_SetWindowAfter( logframe->GetHandle(), GetHandle() );
 	
 	evt.Skip();
 }
+// ----------------------------------------------------------------------------
 
 void MainEmuFrame::ApplyCoreStatus()
 {

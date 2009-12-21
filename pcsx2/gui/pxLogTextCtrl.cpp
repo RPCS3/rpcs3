@@ -49,7 +49,7 @@ void __evt_fastcall pxLogTextCtrl::OnCorePluginStatusChanged( void* obj, PluginE
 
 pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
 	: wxTextCtrl( parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		wxTE_MULTILINE | wxHSCROLL | wxTE_READONLY | wxTE_RICH2
+		wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2
 	)
 
 	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )

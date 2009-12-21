@@ -284,13 +284,6 @@ s32 CALLBACK GSinit()
 	GS_LOG("GSinit\n");
 #endif
 
-#ifdef __LINUX__
-	char strcurdir[256];
-	getcwd(strcurdir, 256);
-	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/zerogs.ini";
-#endif
-
 	GSreset();
 	GS_LOG("GSinit ok\n");
 	return 0;
