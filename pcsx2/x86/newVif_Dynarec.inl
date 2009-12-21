@@ -78,7 +78,7 @@ void dVifRecompile(nVifStruct& v, nVifBlock* vB) {
 	xAlignPtr(16);
 	vB->startPtr = (uptr)xGetPtr();
 	dVifSetMasks(v, doMask, doMode, cycleSize);
-	
+
 	while (vifRegs->num) {
 		if (vif->cl < cycleSize) { 
 			xUnpack[upkNum](&v, doMode<<1 | doMask);
@@ -123,9 +123,7 @@ _f u8* dVifsetVUptr(nVifStruct& v, int offset) {
 void dVifUnpack(int idx, u8 *data, u32 size) {
 
 	nVifStruct& v	  = nVif[idx];
-	vif				  = v.vif;
-	vifRegs			  = v.vifRegs;
-	const u8 upkType  = vif->tag.cmd & 0x1f | ((!!(vif->usn)) << 5);
+	const u8 upkType  = vif->cmd & 0x1f | ((!!(vif->usn)) << 5);
 
 	_vBlock.upkType   = upkType;
 	_vBlock.num		  = *(u8*)&vifRegs->num;

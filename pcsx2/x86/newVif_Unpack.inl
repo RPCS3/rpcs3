@@ -22,13 +22,14 @@
 static __aligned16 nVifStruct nVif[2];
 
 void initNewVif(int idx) {
-	nVif[idx].idx		= idx;
-	nVif[idx].VU		= idx ? &VU1     : &VU0;
-	nVif[idx].vif		= idx ? &vif1    : &vif0;
-	nVif[idx].vifRegs	= idx ? vif1Regs : vif0Regs;
-	nVif[idx].vuMemEnd  = idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
-	nVif[idx].vuMemLimit= idx ? 0x3ff0 : 0xff0;
-	nVif[idx].vifCache	= NULL;
+	nVif[idx].idx			= idx;
+	nVif[idx].VU			= idx ? &VU1     : &VU0;
+	nVif[idx].vif			= idx ? &vif1    : &vif0;
+	nVif[idx].vifRegs		= idx ? vif1Regs : vif0Regs;
+	nVif[idx].vuMemEnd		= idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
+	nVif[idx].vuMemLimit	= idx ? 0x3ff0 : 0xff0;
+	nVif[idx].vifCache		= NULL;
+	nVif[idx].partTransfer	= 0;
 
 	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
 	memset8<0xcc>( nVifUpkExec );
@@ -45,26 +46,12 @@ void initNewVif(int idx) {
 	if (newVifDynaRec)  dVifInit(idx);
 }
 
-int nVifUnpack(int idx, u32 *data) {
-	XMMRegisters::Freeze();
-	int ret = aMin(vif1.vifpacketsize, vif1.tag.size);
-	vif1.tag.size -= ret;
-	if (newVifDynaRec)	dVifUnpack(idx, (u8*)data, ret<<2);
-	else			   _nVifUnpack(idx, (u8*)data, ret<<2);
-	if (vif1.tag.size <= 0) {
-		vif1.tag.size  = 0;
-		vif1.cmd       = 0;
-	}
-	XMMRegisters::Thaw();
-	return ret;
-}
-
 _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
 	return (u8*)(vuMemBase + ( offset & (vuidx ? 0x3ff0 : 0xff0) ));
 }
 
 _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
-	pxAssert( ((uptr)ptr & 0xf) == 0 );		// alignment check
+	pxAssert( ((uptr)ptr & 0xf) == 0 ); // alignment check
 	ptr += amount;
 	int diff = ptr - (vuMemBase + (vuidx ? 0x4000 : 0x1000));
 	if (diff >= 0) {
@@ -79,14 +66,65 @@ _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
 		ptr -= (vuidx ? 0x4000 : 0x1000);
 }
 
-static u32 oldMaskIdx = -1;
-static u32 oldMask    =  0;
+int nVifUnpack(int idx, u8* data) {
+	XMMRegisters::Freeze();
+	nVifStruct& v = nVif[idx];
+	vif		 = v.vif;
+	vifRegs	 = v.vifRegs;
+	int ret  = aMin(vif->vifpacketsize, vif->tag.size);
+	s32 size = ret << 2;
+	u32 vifT = nVifT[vif->cmd & 0xf];
+
+	vif->tag.size -= ret;
+
+	if (v.partTransfer) { // Last transfer was a partial vector transfer...
+		const u8* vuMemBase			 = (idx ? VU1 : VU0).Mem;
+		const u8* dest				 = setVUptr(idx, vuMemBase, vif->tag.addr);
+		const u8  upkNum			 = vif->cmd & 0x1f;
+		const int usn				 = !!(vif->usn);
+		const VIFUnpackFuncTable& ft = VIFfuncTable[upkNum];
+		UNPACKFUNCTYPE func			 = usn ? ft.funcU : ft.funcS;
+		const int diff				 = ft.gsize - v.partTransfer;
+		memcpy(&v.partBuffer[v.partTransfer], data, diff);
+		func((u32*)dest, (u32*)v.partBuffer);
+		data += diff;
+		size -= diff;
+		vifRegs->num--;
+		vif->tag.addr  += 16;
+		v.partTransfer  =  0;
+		//DevCon.WriteLn("Diff = %d", diff);
+	}
+
+	u32 oldNum = vifRegs->num;
+
+	if (size > 0) {
+		if (newVifDynaRec)	dVifUnpack(idx, data, size);
+		else			   _nVifUnpack(idx, data, size);
+	}
+
+	u32 s	 =(size/vifT)  * vifT;
+	u32 d	 = size - s;
+	s32 temp = oldNum * vifT - s; // ToDo: Handle filling write partial logic
+	
+	if (temp > 0) {	 // Current transfer is partial
+		if (d > 0) { // Partial Vector Transfer
+			//DevCon.WriteLn("partial transfer!");
+			memcpy(v.partBuffer, &((u8*)data)[s], d);
+			v.partTransfer = d;
+		}
+		vifRegs->num  += temp / vifT;
+		vif->tag.addr +=(oldNum - vifRegs->num) * 16;
+	}
+	
+	if (vif->tag.size <= 0) {
+		vif->tag.size  = 0;
+		vif->cmd       = 0;
+	}
+	XMMRegisters::Thaw();
+	return ret;
+}
 
 static void setMasks(int idx, const VIFregisters& v) {
-	//if (idx == oldMaskIdx && oldMask == v.mask) return;
-	//oldMaskIdx = idx;
-	//oldMask	   = v.mask;
-	//DevCon.WriteLn("mask");
 	for (int i = 0; i < 16; i++) {
 		int m = (v.mask >> (i*2)) & 3;
 		switch (m) {
@@ -164,8 +202,8 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	const u8* vuMemBase	= (idx ? VU1 : VU0).Mem;
 	u8* dest			= setVUptr(idx, vuMemBase, vif->tag.addr);
 	if (vif->cl >= blockSize)  vif->cl = 0;
-
-	while (vifRegs->num && size) {
+	
+	while (vifRegs->num) {
 		if (vif->cl < cycleSize) { 
 			if (doMode) {
 				//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);
@@ -176,8 +214,6 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 				fnbase[aMin(vif->cl, 3)](dest, data);
 			}
 			data += ft.gsize;
-			//if( IsDebugBuild ) size -= ft.gsize; // only used below for assertion checking
-
 			vifRegs->num--;
 			incVUptrBy16(idx, dest, vuMemBase);
 			if (++vif->cl == blockSize) vif->cl = 0;
@@ -193,9 +229,6 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 			vif->cl = 0;
 		}
 	}
-
-	// Spams in many games?  (Suikoden3 / TriAce games, prolly more) Bad news or just wacky VIF hack mess?
-	//pxAssert( size == 0, "Mismatched VIFunpack size specified." );
 }
 
 typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);
@@ -221,8 +254,6 @@ _f void _nVifUnpack(int idx, u8 *data, u32 size) {
 		return;
 	}
 
-	vif				  =  nVif[idx].vif;
-	vifRegs			  =  nVif[idx].vifRegs;
 	const bool doMode =   vifRegs->mode && !(vif->tag.cmd & 0x10);
 	const bool isFill =  (vifRegs->cycle.cl < vifRegs->cycle.wl);
 

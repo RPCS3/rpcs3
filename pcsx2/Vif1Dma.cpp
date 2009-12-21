@@ -320,8 +320,8 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 static int  __fastcall Vif1TransUnpack(u32 *data)
 {
 #ifdef newVif1
-	extern int nVifUnpack(int idx, u32 *data);
-	return nVifUnpack(1, data);
+	extern int nVifUnpack(int idx, u8 *data);
+	return nVifUnpack(1, (u8*)data);
 #endif
 
     XMMRegisters::Freeze();

@@ -75,17 +75,19 @@ struct __aligned16 nVifBlock { // Ordered for Hashing
 #define _cmpS  (sizeof(nVifBlock) - (4))
 #define _tParams nVifBlock, _hSize, _cmpS
 struct nVifStruct {
-	u32						idx;		// VIF0 or VIF1
-	vifStruct*				vif;		// Vif Struct ptr
-	VIFregisters*			vifRegs;	// Vif Regs   ptr
-	VURegs*					VU;			// VU  Regs   ptr
-	u8*						vuMemEnd;   // End of VU Memory
-	u32						vuMemLimit; // Use for fast AND
-	u8*						recPtr;		// Cur Pos to recompile to
-	u8*						recEnd;		// End of Rec Cache
-	BlockBuffer*			vifCache;	// Block Buffer
-	HashBucket<_tParams>*	vifBlocks;	// Vif Blocks
-	nVifBlock*				vifBlock;	// Current Vif Block Ptr
+	u32						idx;			// VIF0 or VIF1
+	vifStruct*				vif;			// Vif Struct ptr
+	VIFregisters*			vifRegs;		// Vif Regs   ptr
+	VURegs*					VU;				// VU  Regs   ptr
+	u8*						vuMemEnd;		// End of VU Memory
+	u32						vuMemLimit;		// Use for fast AND
+	s32						partTransfer;	// Holds the size of partBuffer
+	u8						partBuffer[32];	// Buffer For Partial Transfers
+	u8*						recPtr;			// Cur Pos to recompile to
+	u8*						recEnd;			// End of Rec Cache
+	BlockBuffer*			vifCache;		// Block Buffer
+	HashBucket<_tParams>*	vifBlocks;		// Vif Blocks
+	nVifBlock*				vifBlock;		// Current Vif Block Ptr
 };
 
 // Contents of this table are doubled up for doMask(false) and doMask(true) lookups.
