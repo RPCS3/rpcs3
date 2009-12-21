@@ -46,27 +46,31 @@ static void
 _cleanup_testcancel_optimization( void* specific )
 {
 	ptw32_thread_t * sp = (ptw32_thread_t*)specific; //(ptw32_thread_t *)pthread_getspecific (ptw32_selfThreadKey);
-	if( (sp != NULL) )
+	if( sp == NULL ) return;
+
+	pthread_mutex_lock (&sp->cancelLock);
+	if(	sp->cancelType == PTHREAD_CANCEL_DEFERRED )
 	{
-		pthread_mutex_lock (&sp->cancelLock);
-		if(	(sp->cancelType == PTHREAD_CANCEL_DEFERRED) && (sp->state == PThreadStateCancelPending) )
+		if( sp->state == PThreadStateCancelPending || sp->state == PThreadStateCanceling )
 		{
 			int result = _InterlockedDecrement( &ptw32_testcancel_enable );
 			assert( result >= 0 );
 			sp->state = PThreadStateCanceling;
 		}
-		else
+		else if( sp->state == PThreadStateRunning )
 		{
 			// We need to prevent other threads, which may try to cancel this thread
 			// in parallel to it's cancellation here, from incrementing the cancel_enable flag.
 			// (and without clobbering the StateException, if that's already been set)
 
-			if( sp->state < PThreadStateCanceling )
-				sp->state = PThreadStateCanceling;
+			sp->state = PThreadStateLast;
 		}
-
-		pthread_mutex_unlock (&sp->cancelLock);
+		else
+		{
+			assert(0);
+		}
 	}
+	pthread_mutex_unlock (&sp->cancelLock);
 }
 
 #ifdef __CLEANUP_SEH
