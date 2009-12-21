@@ -34,4 +34,4 @@ EXPORTS
 	GSsetGameCRC		@36
 	GSgetLastTag		@37
 	GSsetupRecording	@38
-	GSsetSettingsDir	@38
+	GSsetSettingsDir	@39

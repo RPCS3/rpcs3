@@ -1,4 +1,4 @@
-LIBRARY      "PadSSSPSX"
+;LIBRARY      "PadSSSPSX"
 
 EXPORTS
     PSEgetLibType       @1
@@ -20,3 +20,4 @@ EXPORTS
     PADconfigure        @17
     PADtest             @18
     PADabout            @19
+	PADsetSettingsDir	@20

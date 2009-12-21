@@ -6,16 +6,39 @@
 #include <windowsx.h>
 #include <commctrl.h>
 #include <dinput.h>
+#include <string>
 
 #include "PadSSSPSX.h"
 
-static const char* LibraryName		= "SSSPSX PAD Plugin Pressure Mod";
+#ifdef _MSC_VER
+#	include "svnrev.h"
+#endif
+
 static const unsigned char version	= 0x0002;
 static const unsigned char revision	= 1;
 static const unsigned char build	= 6;
+static const unsigned char buildfix	= 1;
 
 HMODULE hInstance;
 HWND hTargetWnd;
+
+static std::string s_strIniPath( "inis/" );
+
+static CRITICAL_SECTION update_lock;
+
+struct EnterScopedSection
+{
+	CRITICAL_SECTION& m_cs;
+
+	EnterScopedSection( CRITICAL_SECTION& cs ) : m_cs( cs ) {
+		EnterCriticalSection( &m_cs );
+	}
+
+	~EnterScopedSection() {
+		LeaveCriticalSection( &m_cs );
+	}
+};
+
 
 static struct
 {
@@ -315,17 +338,20 @@ static bool GetKeyState (u8* keyboard)
 	return TRUE;
 }
 
-static void MakeConfigFileName (char* fname)
+static std::string MakeConfigFileName()
 {
-	GetModuleFileName (hInstance, fname, 256);
-	strcpy (fname + strlen (fname) - 3, "cfg");
+	//GetModuleFileName (hInstance, fname, 256);
+	//strcpy (fname + strlen (fname) - 3, "cfg");
+	
+	return s_strIniPath + "PadSSSPSX.cfg";
 }
 
 static void SaveConfig (void)
 {
-	char fname[256];
-	MakeConfigFileName (fname);
-	HANDLE hFile = CreateFile (fname, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+	const std::string fname( MakeConfigFileName() );
+	CreateDirectory( s_strIniPath.c_str(), NULL );
+
+	HANDLE hFile = CreateFile (fname.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 	if (hFile != INVALID_HANDLE_VALUE)
 	{
 		DWORD number_of_bytes;
@@ -336,9 +362,8 @@ static void SaveConfig (void)
 
 static void LoadConfig (void)
 {
-	char fname[256];
-	MakeConfigFileName (fname);
-	HANDLE hFile = CreateFile (fname, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+	const std::string fname( MakeConfigFileName() );
+	HANDLE hFile = CreateFile (fname.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 	if (hFile != INVALID_HANDLE_VALUE)
 	{
 		DWORD number_of_bytes;
@@ -421,7 +446,7 @@ static void UpdateState (const int pad)
 				if (GetKeyState (keystate) == FALSE)
 					return;
 			}
-			KeyPress (pad, index, keystate[key] & 0x80);
+			KeyPress (pad, index, !!(keystate[key] & 0x80));
 		}
 		else
 		{
@@ -434,7 +459,7 @@ static void UpdateState (const int pad)
 			}
 			if (key < 0x2000)
 			{
-				KeyPress (pad, index, global.JoyState[joypad].rgbButtons[key & 0xff]);
+				KeyPress (pad, index, !!(global.JoyState[joypad].rgbButtons[key & 0xff]));
 			}
 			else if (key < 0x3000)
 			{
@@ -644,6 +669,57 @@ static BOOL CALLBACK ConfigureDlgProc (const HWND hWnd, const UINT msg, const WP
 	return FALSE;
 }
 
+static char LibraryName[256];
+#define SSSPSX_NAME "SSSPSX PAD Pressure Mod"
+
+static void InitLibraryName()
+{
+#ifndef PCSX2_DEVBUILD
+
+	// Public Release!
+	// Output a simplified string that's just our name:
+
+	strcpy_s( LibraryName, SSSPSX_NAME );
+
+#else
+	#ifdef SVN_REV_UNKNOWN
+
+	// Unknown revision.
+	// Output a name that includes devbuild status but not
+	// subversion revision tags:
+
+	strcpy_s( LibraryName, SSSPSX_NAME
+	#ifdef PCSX2_DEBUG
+		"-Debug"
+	#elif defined( PCSX2_DEVBUILD )
+		"-Dev"
+	#else
+		""
+	#endif
+	);
+
+	#else
+
+	// Use TortoiseSVN's SubWCRev utility's output
+	// to label the specific revision:
+
+	sprintf_s( LibraryName, SSSPSX_NAME " r%d%s"
+	#ifdef PCSX2_DEBUG
+		"-Debug"
+	#elif defined( PCSX2_DEVBUILD )
+		"-Dev"
+	#else
+		""
+	#endif
+		,SVN_REV,
+		SVN_MODS ? "m" : ""
+	);
+	#endif
+#endif
+
+}
+
+
 u32 CALLBACK PS2EgetLibType (void)
 {
 	return 0x02;
@@ -651,12 +727,13 @@ u32 CALLBACK PS2EgetLibType (void)
 
 const char* CALLBACK PS2EgetLibName (void)
 {
+	InitLibraryName();
 	return LibraryName;
 }
 
 u32 CALLBACK PS2EgetLibVersion2 (u32 type)
 {
-	return (version << 16) | (revision << 8) | build;
+	return (version << 16) | (revision << 8) | build | (buildfix<<24);
 }
 
 u32 CALLBACK PSEgetLibType (void)
@@ -666,6 +743,7 @@ u32 CALLBACK PSEgetLibType (void)
 
 const char* CALLBACK PSEgetLibName (void)
 {
+	InitLibraryName();
 	return LibraryName;
 }
 
@@ -676,11 +754,13 @@ u32 CALLBACK PSEgetLibVersion (void)
 
 s32 CALLBACK PADinit (u32 flags)
 {
+	InitializeCriticalSection( &update_lock );
 	return 0;
 }
 
 void CALLBACK PADshutdown (void)
 {
+	DeleteCriticalSection( &update_lock );
 }
 
 static int n_open = 0;
@@ -778,6 +858,18 @@ static u8 get_pressure (const DWORD now, const DWORD press)
 	return 255;
 }
 
+// Should be called from the thread that owns our hwnd, but older versions of PCSX2
+// don't always follow that rule.  Supposedly DInput is happiest called from the 
+// thread that owns the hwnd, but on the other hand it doesn't really seem to care
+// in practice.  So a basic mutex lock should do the trick.
+void CALLBACK PADupdate (int pad)
+{
+	EnterScopedSection scoped_lock( update_lock );
+	UpdateState( 0 );
+	UpdateState( 1 );
+}
+
+// Called from the context of the EE thread.
 u8 CALLBACK PADpoll (const u8 value)
 {
 	const int pad = global.curPad;
@@ -799,7 +891,9 @@ u8 CALLBACK PADpoll (const u8 value)
 			return 0xf3;
 		case 0x42:
 		case 0x43:
-			if (value == 0x42) UpdateState (pad);
+		{
+			EnterScopedSection scoped_lock( update_lock );
+			//if (value == 0x42) UpdateState (pad);
 			global.cmdLen = 2 + 2 * (global.padID[pad] & 0x0f);
 			buf[1] = global.padModeC[pad] ? 0x00 : 0x5a;
 			*(u16*)&buf[2] = global.padStat[pad];
@@ -836,6 +930,7 @@ u8 CALLBACK PADpoll (const u8 value)
 				return (u8)global.padID[pad];
 			}
 			break;
+		}
 		case 0x44:
 			global.cmdLen = sizeof (cmd44);
 			memcpy (buf, cmd44, sizeof (cmd44));
@@ -862,13 +957,19 @@ u8 CALLBACK PADpoll (const u8 value)
 			memcpy (buf, cmd4d, sizeof (cmd4d));
 			return 0xf3;
 		case 0x4f:
+		{
+			EnterScopedSection scoped_lock( update_lock );
 			global.padID[pad] = 0x79;
 			global.padMode2[pad] = 1;
 			global.cmdLen = sizeof (cmd4f);
 			memcpy (buf, cmd4f, sizeof (cmd4f));
 			return 0xf3;
 		}
+		}
 	}
+
+	EnterScopedSection scoped_lock( update_lock );
+
 	switch (global.curCmd)
 	{
 	case 0x42:
@@ -1019,13 +1120,20 @@ void CALLBACK PADconfigure (void)
 
 void CALLBACK PADabout (void)
 {
-	MessageBox (0, "Copyright (C) 2004-2005 Nagisa", "SSSPSX PAD plugin", 0);
+	MessageBox (GetActiveWindow(), "Copyright (C) 2004-2005 Nagisa\nVersion 1.6.1\n\nModified by Jake Stine for PCSX2 0.9.7 compatibility.",
+		"SSSPSX PAD plugin", MB_OK | MB_SETFOREGROUND);
 }
 
 s32 CALLBACK PADtest (void)
 {
 	return 0;
 }
+
+void CALLBACK PADsetSettingsDir(const char* dir)
+{
+	s_strIniPath = (dir==NULL) ? "inis/" : dir;
+}
+
 //#ifdef _WIN64
 BOOL APIENTRY DllMain(HMODULE hInst, DWORD dwReason, LPVOID lpReserved)
 {
