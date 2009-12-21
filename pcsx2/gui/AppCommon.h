@@ -30,6 +30,7 @@ class GSFrame;
 class ConsoleLogFrame;
 class PipeRedirectionBase;
 class AppCoreThread;
+class pxPingEvent;
 
 enum AppEventType
 {

@@ -33,8 +33,12 @@ namespace Threading
 {
 	class PersistentThread;
 
-	PersistentThread* pxGetCurrentThread();
-	wxString pxGetCurrentThreadName();
+	extern PersistentThread* pxGetCurrentThread();
+	extern wxString pxGetCurrentThreadName();
+
+	// Yields the current thread and provides cancelation points if the thread is managed by
+	// PersistentThread.  Unmanaged threads use standard Sleep.
+	extern void pxYield( int ms );
 }
 
 namespace Exception
@@ -126,10 +130,6 @@ namespace Exception
 	};
 #endif
 }
-
-// Yields this thread against the main thread *if* the main thread's message pump has pending
-// messages.  If the main thread is idle then no yield is performed.
-extern void pxYieldToMain();
 
 namespace Threading
 {
@@ -348,6 +348,8 @@ namespace Threading
 	{
 		DeclareNoncopyableObject(PersistentThread);
 
+		friend void pxYield( int ms );
+
 	protected:
 		wxString	m_name;				// diagnostic name for our thread.
 
@@ -402,7 +404,6 @@ namespace Threading
 		virtual void ExecuteTaskInThread()=0;
 
 		void TestCancel() const;
-		void YieldToMain() const;
 
 		// Yields this thread to other threads and checks for cancellation.  A sleeping thread should
 		// always test for cancellation, however if you really don't want to, you can use Threading::Sleep()

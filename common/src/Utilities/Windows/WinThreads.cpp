@@ -52,26 +52,5 @@ __forceinline void Threading::DisableHiresScheduler()
 	timeEndPeriod( 1 );
 }
 
-void pxYieldToMain()
-{
-	// Windows Implementation Note:
-	//  wxWidgets has a wxEventLoop::Pending() function, however it uses PeekMessage internally
-	//  which is a multithreaded NO-NO.  So instead we must use GetQueueStatus.  This is ok
-	//  anyway since I get extra fancy and scale the sleep duration based on the type of messages
-	//  in the queue.  User input (key and mouse button) cue longer worker thread yields since
-	//  maintaining a responsive gui is typically a high priority.
-	
-	DWORD result = GetQueueStatus( QS_ALLEVENTS );
-	uint hiword = HIWORD( result );
-
-	if( hiword == 0 ) return;
-	
-	int sleepdur = 1;
-	if( (hiword & (QS_MOUSEBUTTON | QS_KEY)) != 0 )
-		sleepdur += 3;
-
-	Sleep( sleepdur );
-}
-
 #endif
 

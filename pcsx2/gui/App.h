@@ -39,6 +39,7 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_LoadPluginsComplete, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_CoreThreadStatus, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_FreezeThreadFinished, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_Ping, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // This is used when the GS plugin is handling its own window.  Messages from the PAD
@@ -327,8 +328,7 @@ public:
 class Pcsx2App : public wxApp
 {
 	// ----------------------------------------------------------------------------
-	//   Event Sources!
-	// ----------------------------------------------------------------------------
+	// Event Sources!
 	// These need to be at the top of the App class, because a lot of other things depend
 	// on them and they are, themselves, fairly self-contained.
 
@@ -345,7 +345,8 @@ public:
 	EventSource<AppEventType>& Source_AppStatus()	{ return m_evtsrc_AppStatus; }
 	EventSource<PluginEventType>& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
 	EventSource<IniInterface>& Source_SettingsLoadSave()	{ return m_evtsrc_SettingsLoadSave; }
-
+	// ----------------------------------------------------------------------------
+	
 public:
 	CommandDictionary				GlobalCommands;
 	AcceleratorDictionary			GlobalAccels;
@@ -353,7 +354,6 @@ public:
 protected:
 	ScopedPtr<PipeRedirectionBase>	m_StdoutRedirHandle;
 	ScopedPtr<PipeRedirectionBase>	m_StderrRedirHandle;
-
 	ScopedPtr<pxAppResources>		m_Resources;
 
 public:
@@ -363,13 +363,17 @@ public:
 protected:
 	// Note: Pointers to frames should not be scoped because wxWidgets handles deletion
 	// of these objects internally.
-	MainEmuFrame*		m_MainFrame;
-	GSFrame*			m_gsFrame;
-	ConsoleLogFrame*	m_ProgramLogBox;
+	MainEmuFrame*				m_MainFrame;
+	GSFrame*					m_gsFrame;
+	ConsoleLogFrame*			m_ProgramLogBox;
+
+	std::vector<Semaphore*>		m_PingWhenIdle;
 
 public:
 	Pcsx2App();
 	virtual ~Pcsx2App();
+
+	void Ping();
 
 	void PostPadKey( wxKeyEvent& evt );
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
@@ -441,7 +445,8 @@ protected:
 	bool TryOpenConfigCwd();
 	void CleanupMess();
 	void OpenWizardConsole();
-
+	void PingDispatch( const char* action );
+	
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const;
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
 
@@ -455,6 +460,9 @@ protected:
 
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void OnEmuKeyDown( wxKeyEvent& evt );
+
+	void OnIdleEvent( wxIdleEvent& evt );
+	void OnPingEvent( pxPingEvent& evt );
 
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior

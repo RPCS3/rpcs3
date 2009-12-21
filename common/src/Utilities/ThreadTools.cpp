@@ -92,6 +92,14 @@ wxString Threading::pxGetCurrentThreadName()
 	return L"Unknown";
 }
 
+void Threading::pxYield( int ms )
+{
+	if( PersistentThread* thr = pxGetCurrentThread() )
+		thr->Yield( ms );
+	else
+		Sleep( ms );
+}
+
 // (intended for internal use only)
 // Returns true if the Wait is recursive, or false if the Wait is safe and should be
 // handled via normal yielding methods.
@@ -463,12 +471,6 @@ void Threading::PersistentThread::TestCancel() const
 {
 	AffinityAssert_AllowFromSelf(pxDiagSpot);
 	pthread_testcancel();
-}
-
-void Threading::PersistentThread::YieldToMain() const
-{
-	pxYieldToMain();
-	TestCancel();
 }
 
 // Executes the virtual member method

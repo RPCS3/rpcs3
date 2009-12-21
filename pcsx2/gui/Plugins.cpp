@@ -130,7 +130,7 @@ LoadPluginsTask::~LoadPluginsTask() throw()
 
 void LoadPluginsTask::ExecuteTaskInThread()
 {
-	pxYieldToMain();
+	wxGetApp().Ping();
 
 	// This is for testing of the error handler... uncomment for fun?
 	//throw Exception::PluginError( PluginId_PAD, "This one is for testing the error handler!" );

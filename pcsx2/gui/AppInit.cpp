@@ -261,12 +261,16 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 }
 
 typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
+typedef void (wxEvtHandler::*pxPingEventFunction)(pxPingEvent&);
 
 // ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
 {
 #define pxMessageBoxEventThing(func) \
 	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
+
+#define pxPingEventHandler(func) \
+	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxPingEventFunction, &func )
 
 	Connect( pxEVT_MSGBOX,			pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
 	Connect( pxEVT_ASSERTION,		pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
@@ -290,6 +294,9 @@ bool Pcsx2App::OnInit()
 	Connect( pxEVT_LoadPluginsComplete,		wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
 	Connect( pxEVT_CoreThreadStatus,		wxCommandEventHandler( Pcsx2App::OnCoreThreadStatus ) );
 	Connect( pxEVT_FreezeThreadFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeThreadFinished ) );
+
+	Connect( pxEVT_Ping,			pxPingEventHandler( Pcsx2App::OnPingEvent ) );
+	Connect( wxEVT_IDLE,			wxIdleEventHandler( Pcsx2App::OnIdleEvent ) );
 
 	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
@@ -465,6 +472,8 @@ void Pcsx2App::CleanupMess()
 	try
 	{
 		sys_resume_lock += 10;
+
+		PingDispatch( "Cleanup" );
 		CoreThread.Cancel();
 
 		if( m_CorePlugins )

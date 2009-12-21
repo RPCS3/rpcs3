@@ -38,6 +38,7 @@ DEFINE_EVENT_TYPE( pxEVT_SysExecute );
 DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
 DEFINE_EVENT_TYPE( pxEVT_CoreThreadStatus );
 DEFINE_EVENT_TYPE( pxEVT_FreezeThreadFinished );
+DEFINE_EVENT_TYPE( pxEVT_Ping );
 
 #include "Utilities/EventSource.inl"
 EventSource_ImplementType( IniInterface );
@@ -81,6 +82,74 @@ void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 		m_MainFrame->GetEventHandler()->ProcessEvent( joe );
 	else
 		m_MainFrame->GetEventHandler()->AddPendingEvent( joe );
+}
+
+class pxPingEvent : public wxEvent
+{
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxPingEvent)
+
+protected:
+	Semaphore*	m_PostBack;
+
+public:
+	virtual ~pxPingEvent() throw() { }
+	virtual pxPingEvent *Clone() const { return new pxPingEvent(*this); }
+
+	explicit pxPingEvent( int msgtype, Semaphore* sema=NULL )
+		: wxEvent( 0, msgtype )
+	{
+		m_PostBack = sema;
+	}
+
+	explicit pxPingEvent( Semaphore* sema=NULL )
+		: wxEvent( 0, pxEVT_Ping )
+	{
+		m_PostBack = sema;
+	}
+	
+	pxPingEvent( const pxPingEvent& src )
+		: wxEvent( src )
+	{
+		m_PostBack = src.m_PostBack;
+	}
+	
+	Semaphore* GetSemaphore() { return m_PostBack; }
+};
+
+IMPLEMENT_DYNAMIC_CLASS( pxPingEvent, wxEvent )
+
+void Pcsx2App::OnPingEvent( pxPingEvent& evt )
+{
+	m_PingWhenIdle.push_back( evt.GetSemaphore() );
+}
+
+void Pcsx2App::PingDispatch( const char* action )
+{
+	size_t size = m_PingWhenIdle.size();
+	if( size == 0 ) return;
+
+	DbgCon.WriteLn( Color_Gray, "App Event Ping (%s) -> %u listeners.", action, size );
+
+	for( size_t i=0; i<size; ++i )
+	{
+		if( Semaphore* sema = m_PingWhenIdle[i] ) sema->Post();
+	}
+
+	m_PingWhenIdle.clear();
+}
+
+void Pcsx2App::OnIdleEvent( wxIdleEvent& evt )
+{
+	evt.Skip();
+	PingDispatch( "Idle" );
+}
+
+void Pcsx2App::Ping()
+{
+	Semaphore sema;
+	pxPingEvent evt( &sema );
+	AddPendingEvent( evt );
+	sema.WaitNoCancel();
 }
 
 void Pcsx2App::PostPadKey( wxKeyEvent& evt )

@@ -672,18 +672,18 @@ void Panels::PluginSelectorPanel::EnumThread::ExecuteTaskInThread()
 {
 	DevCon.WriteLn( "Plugin Enumeration Thread started..." );
 
-	YieldToMain();
-	Sleep( 15 );		// give the window some time to paint.
+	wxGetApp().Ping();
+	Sleep( 2 );
 
 	for( int curidx=0; curidx < m_master.FileCount(); ++curidx )
 	{
 		DoNextPlugin( curidx );
 
-		// speed isn't critical here, but the pretty status bar sure is.
-		// second try yield should give the status bars UI a "good" chance to refresh before we advance. :)
+		// speed isn't critical here, but the pretty status bar sure is.  Sleep off
+		// some brief cycles to give the status bar time to refresh.
 
-		YieldToMain();
-		YieldToMain();
+		Sleep( 2 );
+
 		//Sleep(150);		// uncomment this to slow down the selector, for debugging threading.
 	}
 

@@ -402,9 +402,9 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 			else
 			{
 				// give gui thread time to repaint and handle other pending messages.
-				// (those are prioritized lower than wxEvents, typically, which means we
-				// can't post a ping event since it'll still just starve out paint msgs.)
-				pxYieldToMain();
+
+				//pxYield( 1 );
+				wxGetApp().Ping();
 			}
 		}
 	}

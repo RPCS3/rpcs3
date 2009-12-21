@@ -51,17 +51,4 @@ __forceinline void Threading::DisableHiresScheduler()
 {
 }
 
-void pxYieldToMain()
-{
-	// Linux/GTK+ Implementation Notes:
-	//  I have no idea if wxEventLoop::Pending() is thread safe or not, nor do I have
-	//  any idea how to properly obtain the message queue status of GTK+.  So let's
-	//  just play dumb (and slow) and sleep for a couple milliseconds regardless, until
-	// a better fix is found. --air
-
-	// (FIXME : Find a more correct implementation for this?)
-	
-	Threading::Sleep( 2 );
-}
-
 #endif
