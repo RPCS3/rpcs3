@@ -39,6 +39,7 @@ DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
 DEFINE_EVENT_TYPE( pxEVT_CoreThreadStatus );
 DEFINE_EVENT_TYPE( pxEVT_FreezeThreadFinished );
 DEFINE_EVENT_TYPE( pxEVT_Ping );
+DEFINE_EVENT_TYPE( pxEVT_LogicalVsync );
 
 #include "Utilities/EventSource.inl"
 EventSource_ImplementType( IniInterface );
@@ -152,21 +153,70 @@ void Pcsx2App::Ping()
 	sema.WaitNoCancel();
 }
 
-void Pcsx2App::PostPadKey( wxKeyEvent& evt )
+#ifdef __WXGTK__
+extern int TranslateGDKtoWXK( u32 keysym );
+#endif
+
+void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 {
+	m_kevt.SetEventType( ( ev.evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
+	const bool isDown = (ev.evt == KEYPRESS);
+
+#ifdef __WXMSW__
+	const int vkey = wxCharCodeMSWToWX( ev.key );
+#elif defined( __WXGTK__ )
+	const int vkey = TranslateGDKtoWXK( ev.key );
+#else
+#	error Unsupported Target Platform.
+#endif
+
+	switch (vkey)
+	{
+		case WXK_SHIFT:		m_kevt.m_shiftDown		= isDown; return;
+		case WXK_CONTROL:	m_kevt.m_controlDown	= isDown; return;
+
+		case WXK_ALT:		// ALT/MENU are usually the same key?  I'm confused.
+		case WXK_MENU:		m_kevt.m_altDown		= isDown; return;
+	}
+
+	m_kevt.m_keyCode = vkey;
+
 	// HACK: Legacy PAD plugins expect PCSX2 to ignore keyboard messages on the
 	// GS window while the PAD plugin is open, so send messages to the APP handler
 	// only if *either* the GS or PAD plugins are in legacy mode.
 
 	if( m_gsFrame == NULL || (PADopen != NULL) )
 	{
-		evt.SetId( pxID_PadHandler_Keydown );
-		wxGetApp().AddPendingEvent( evt );
+		if( m_kevt.GetEventType() == wxEVT_KEY_DOWN )
+		{
+			m_kevt.SetId( pxID_PadHandler_Keydown );
+			wxGetApp().ProcessEvent( m_kevt );
+		}
 	}
 	else
 	{
-		evt.SetId( m_gsFrame->GetViewport()->GetId() );
-		m_gsFrame->AddPendingEvent( evt );
+		m_kevt.SetId( m_gsFrame->GetViewport()->GetId() );
+		m_gsFrame->ProcessEvent( m_kevt );
+	}
+}
+
+// OnLogicalVsync - Event received from the AppCoreThread (EEcore) for each vsync,
+// roughly 50/60 times a second when frame limiting is enabled, and up to 10,000 
+// times a second if not (ok, not quite, but you get the idea... I hope.)
+void Pcsx2App::OnLogicalVsync( wxCommandEvent& evt )
+{
+	if( !SysHasValidState() || g_plugins == NULL ) return;
+
+	if( PADupdate != NULL ) PADupdate(0);
+	const keyEvent* ev = PADkeyEvent();
+
+	if( (ev != NULL) && (ev->key != 0) )
+	{
+		// Give plugins first try to handle keys.  If none of them handles the key, it will
+		// be passed to the main user interface.
+
+		if( !g_plugins->KeyEvent( *ev ) )
+			PadKeyDispatch( *ev );
 	}
 }
 
@@ -180,6 +230,13 @@ void Pcsx2App::PostPadKey( wxKeyEvent& evt )
 // polling of the CoreThread rather than the belated status.
 void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 {
+	// Clear the sticky key statuses, because hell knows what'll change while the PAD
+	// plugin is suspended.
+
+	m_kevt.m_shiftDown		= false;
+	m_kevt.m_controlDown	= false;
+	m_kevt.m_altDown		= false;
+
 	m_evtsrc_CoreThreadStatus.Dispatch( evt );
 	ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 	CoreThread.RethrowException();

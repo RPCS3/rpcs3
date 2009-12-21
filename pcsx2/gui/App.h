@@ -40,6 +40,7 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEVT_CoreThreadStatus, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_FreezeThreadFinished, -1 )
 	DECLARE_EVENT_TYPE( pxEVT_Ping, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_LogicalVsync, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // This is used when the GS plugin is handling its own window.  Messages from the PAD
@@ -368,6 +369,7 @@ protected:
 	ConsoleLogFrame*			m_ProgramLogBox;
 
 	std::vector<Semaphore*>		m_PingWhenIdle;
+	wxKeyEvent					m_kevt;
 
 public:
 	Pcsx2App();
@@ -446,6 +448,7 @@ protected:
 	void CleanupMess();
 	void OpenWizardConsole();
 	void PingDispatch( const char* action );
+	void PadKeyDispatch( const keyEvent& ev );
 	
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const;
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
@@ -455,11 +458,11 @@ protected:
 	void OnLoadPluginsComplete( wxCommandEvent& evt );
 	void OnOpenModalDialog( wxCommandEvent& evt );
 	void OnCoreThreadStatus( wxCommandEvent& evt );
-
 	void OnFreezeThreadFinished( wxCommandEvent& evt );
 
 	void OnMessageBox( pxMessageBoxEvent& evt );
 	void OnEmuKeyDown( wxKeyEvent& evt );
+	void OnLogicalVsync( wxCommandEvent& evt );
 
 	void OnIdleEvent( wxIdleEvent& evt );
 	void OnPingEvent( pxPingEvent& evt );
@@ -497,9 +500,6 @@ class AppCoreThread : public SysCoreThread
 {
 	typedef SysCoreThread _parent;
 
-protected:
-	wxKeyEvent		m_kevt;
-
 public:
 	AppCoreThread();
 	virtual ~AppCoreThread() throw();
@@ -519,7 +519,7 @@ protected:
 	virtual void OnSuspendInThread();
 	virtual void OnCleanupInThread();
 	//virtual void VsyncInThread();
-	virtual void DispatchKeyEventToUI( const keyEvent& ev );
+	virtual void PostVsyncToUI();
 	virtual void ExecuteTaskInThread();
 };
 

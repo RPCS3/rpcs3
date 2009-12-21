@@ -332,9 +332,7 @@ void SysCoreThread::CpuInitializeMess()
 	sbcoe.Success();
 }
 
-// Called by the VsyncInThread() if a valid keyEvent is pending and is unhandled by other
-// PS2 core plugins.
-void SysCoreThread::DispatchKeyEventToUI( const keyEvent& evt )
+void SysCoreThread::PostVsyncToUI()
 {
 }
 
@@ -349,17 +347,7 @@ void SysCoreThread::DispatchKeyEventToUI( const keyEvent& evt )
 //
 void SysCoreThread::VsyncInThread()
 {
-	if( !pxAssert(g_plugins!=NULL) ) return;
-	const keyEvent* ev = PADkeyEvent();
-	if( ev != NULL && (ev->key != 0) )
-	{
-		// Give plugins first try to handle keys.  If none of them handles the key, it will
-		// be passed to the main user interface.
-
-		if( !g_plugins->KeyEvent( *ev ) )
-			DispatchKeyEventToUI( *ev );
-	}
-
+	PostVsyncToUI();
 	if (EmuConfig.EnablePatches) ApplyPatch();
 }
 

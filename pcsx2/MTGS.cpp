@@ -370,9 +370,6 @@ void SysMtgsThread::ExecuteTaskInThread()
 							GSvsync(tag.data[0]);
 							gsFrameSkip();
 
-							if( PADupdate != NULL )
-								PADupdate(0);
-
 							StateCheckInThread();
 						}
 						break;

@@ -59,13 +59,6 @@ bool AppCoreThread::Suspend( bool isBlocking )
 	if( !retval || isBlocking )
 		ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 
-	// Clear the sticky key statuses, because hell knows what'll change while the PAD
-	// plugin is suspended.
-
-	m_kevt.m_shiftDown		= false;
-	m_kevt.m_controlDown	= false;
-	m_kevt.m_altDown		= false;
-
 	return retval;
 }
 
@@ -169,34 +162,10 @@ void AppCoreThread::OnCleanupInThread()
 	_parent::OnCleanupInThread();
 }
 
-#ifdef __WXGTK__
-	extern int TranslateGDKtoWXK( u32 keysym );
-#endif
-
-void AppCoreThread::DispatchKeyEventToUI( const keyEvent& ev )
+void AppCoreThread::PostVsyncToUI()
 {
-	m_kevt.SetEventType( ( ev.evt == KEYPRESS ) ? wxEVT_KEY_DOWN : wxEVT_KEY_UP );
-	const bool isDown = (ev.evt == KEYPRESS);
-
-	#ifdef __WXMSW__
-		const int vkey = wxCharCodeMSWToWX( ev.key );
-	#elif defined( __WXGTK__ )
-		const int vkey = TranslateGDKtoWXK( ev.key );
-	#else
-	#	error Unsupported Target Platform.
-	#endif
-
-	switch (vkey)
-	{
-		case WXK_SHIFT:		m_kevt.m_shiftDown		= isDown; return;
-		case WXK_CONTROL:	m_kevt.m_controlDown	= isDown; return;
-
-		case WXK_ALT:		// ALT/MENU are usually the same key?  I'm confused.
-		case WXK_MENU:		m_kevt.m_altDown		= isDown; return;
-	}
-	
-	m_kevt.m_keyCode = vkey;
-	wxGetApp().PostPadKey( m_kevt );
+	wxCommandEvent evt( pxEVT_LogicalVsync );
+	wxGetApp().AddPendingEvent( evt );
 }
 
 void AppCoreThread::StateCheckInThread()

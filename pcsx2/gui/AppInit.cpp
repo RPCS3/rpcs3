@@ -288,15 +288,16 @@ bool Pcsx2App::OnInit()
 	m_StderrRedirHandle = NewPipeRedir(stderr);
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
-	Connect( pxEVT_ReloadPlugins,	wxCommandEventHandler( Pcsx2App::OnReloadPlugins ) );
-	Connect( pxEVT_SysExecute,		wxCommandEventHandler( Pcsx2App::OnSysExecute ) );
+	Connect( pxEVT_ReloadPlugins,			wxCommandEventHandler	(Pcsx2App::OnReloadPlugins) );
+	Connect( pxEVT_SysExecute,				wxCommandEventHandler	(Pcsx2App::OnSysExecute) );
 
-	Connect( pxEVT_LoadPluginsComplete,		wxCommandEventHandler( Pcsx2App::OnLoadPluginsComplete ) );
-	Connect( pxEVT_CoreThreadStatus,		wxCommandEventHandler( Pcsx2App::OnCoreThreadStatus ) );
-	Connect( pxEVT_FreezeThreadFinished,	wxCommandEventHandler( Pcsx2App::OnFreezeThreadFinished ) );
+	Connect( pxEVT_LoadPluginsComplete,		wxCommandEventHandler	(Pcsx2App::OnLoadPluginsComplete) );
+	Connect( pxEVT_CoreThreadStatus,		wxCommandEventHandler	(Pcsx2App::OnCoreThreadStatus) );
+	Connect( pxEVT_FreezeThreadFinished,	wxCommandEventHandler	(Pcsx2App::OnFreezeThreadFinished) );
+	Connect( pxEVT_LogicalVsync,			wxCommandEventHandler	(Pcsx2App::OnLogicalVsync) );
 
-	Connect( pxEVT_Ping,			pxPingEventHandler( Pcsx2App::OnPingEvent ) );
-	Connect( wxEVT_IDLE,			wxIdleEventHandler( Pcsx2App::OnIdleEvent ) );
+	Connect( pxEVT_Ping,					pxPingEventHandler		(Pcsx2App::OnPingEvent) );
+	Connect( wxEVT_IDLE,					wxIdleEventHandler		(Pcsx2App::OnIdleEvent) );
 
 	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
