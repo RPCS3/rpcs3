@@ -1,6 +1,6 @@
 SSSPSX Pad - An Open Source Pad plugin for PSX and PS2 emulators
 Author: Nagisa
-Homepage: http://www.asahi-net.or.jp/~bz7t-skmt/
+Homepage: (defunct)
 
 Overview:
 -Small executable program
@@ -46,3 +46,8 @@ v1.4: -Added timeout on settings dialog.If the countdown ends, the key will be s
       -Changed "ESC" key action on settings dialog.If you press the "ESC" key, the setting will keep the previous one.
       -Fixed silly bug. (dont ask me about it).
 v1.5: -Fixed 0x4D packet.
+v1.6: -I don't remember.
+v1.7: -Changed to DirectInput9.
+      -Fixed PADreadPort1/PADreadPort2 API.
+      -Fixed the confusion about PAD1/PAD2 settings.
+      -Added x64 DLL.

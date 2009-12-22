@@ -16,7 +16,7 @@
 
 static const unsigned char version	= 0x0002;
 static const unsigned char revision	= 1;
-static const unsigned char build	= 6;
+static const unsigned char build	= 7;
 static const unsigned char buildfix	= 1;
 
 HMODULE hInstance;
@@ -39,6 +39,13 @@ struct EnterScopedSection
 	}
 };
 
+
+
+static struct
+{
+	keyEvent ev;
+	u8 state[2][256];
+} save;
 
 static struct
 {
@@ -98,17 +105,15 @@ static bool ReleaseDirectInput (void)
 	int index = 4;
 	while (index--)
 	{
-		if (global.pDEffect[index][0])
+		int index2 = 2;
+		while (index2--)
 		{
-			global.pDEffect[index][0]->Unload();
-			global.pDEffect[index][0]->Release();
-			global.pDEffect[index][0] = NULL;
-		}
-		if (global.pDEffect[index][1])
-		{
-			global.pDEffect[index][1]->Unload();
-			global.pDEffect[index][1]->Release();
-			global.pDEffect[index][1] = NULL;
+			if (global.pDEffect[index][index2])
+			{
+				global.pDEffect[index][index2]->Unload();
+				global.pDEffect[index][index2]->Release();
+				global.pDEffect[index][index2] = NULL;
+			}
 		}
 		if (global.pDDevice[index])
 		{
@@ -235,18 +240,10 @@ static bool SetDeviceForceS (int pad, DWORD force)
 	InitDirectInput();
 	if (global.pDEffect[pad][0])
 	{
-		if ( force == 0) {
-			if (FAILED (global.pDEffect[pad][0]->Stop())) {
-				AcquireDevice (global.pDDevice[pad]);
-				if (FAILED (global.pDEffect[pad][0]->Stop()))
-					return ReleaseDirectInput();
-			}
-			return TRUE;
-		}
 		LONG rglDirection[2] = { 0, 0 };
 		DIPERIODIC per;
-		rglDirection[0] = force;
-		rglDirection[1] = force;
+		rglDirection[0] = 0;
+		rglDirection[1] = 1;
 		per.dwMagnitude = force;
 		per.dwPeriod = (DWORD) (0.01 * DI_SECONDS);
 		per.lOffset = 0;
@@ -261,6 +258,14 @@ static bool SetDeviceForceS (int pad, DWORD force)
 		eff.lpvTypeSpecificParams = &per;
 		if (FAILED (global.pDEffect[pad][0]->SetParameters (&eff, DIEP_DIRECTION | DIEP_TYPESPECIFICPARAMS | DIEP_START)))
 			return ReleaseDirectInput();
+		if (FAILED (global.pDEffect[pad][0]->Stop()))
+		{
+			AcquireDevice (global.pDDevice[pad]);
+			if (FAILED (global.pDEffect[pad][0]->Stop()))
+				return ReleaseDirectInput();
+		}
+		if (force == 0)
+			return TRUE;
 		if (FAILED (global.pDEffect[pad][0]->Start (1, 0)))
 		{
 			AcquireDevice (global.pDDevice[pad]);
@@ -277,18 +282,10 @@ static bool SetDeviceForceB (int pad, DWORD force)
 	InitDirectInput();
 	if (global.pDEffect[pad][1])
 	{
-		if ( force == 0) {
-			if (FAILED (global.pDEffect[pad][1]->Stop())) {
-				AcquireDevice (global.pDDevice[pad]);
-				if (FAILED (global.pDEffect[pad][1]->Stop()))
-					return ReleaseDirectInput();
-			}
-			return TRUE;
-		}
 		LONG rglDirection[2] = { 0, 0 };
 		DICONSTANTFORCE cf;
-		rglDirection[0] = force;
-		rglDirection[1] = force;
+		rglDirection[0] = 1;
+		rglDirection[1] = 0;
 		cf.lMagnitude = force;
 		DIEFFECT eff;
 		eff.dwSize = sizeof (DIEFFECT);
@@ -300,6 +297,14 @@ static bool SetDeviceForceB (int pad, DWORD force)
 		eff.lpvTypeSpecificParams = &cf;
 		if (FAILED (global.pDEffect[pad][1]->SetParameters (&eff, DIEP_DIRECTION | DIEP_TYPESPECIFICPARAMS | DIEP_START)))
 			return ReleaseDirectInput();
+		if (FAILED (global.pDEffect[pad][1]->Stop()))
+		{
+			AcquireDevice (global.pDDevice[pad]);
+			if (FAILED (global.pDEffect[pad][1]->Stop()))
+				return ReleaseDirectInput();
+		}
+		if (force == 0)
+			return TRUE;
 		if (FAILED (global.pDEffect[pad][1]->Start (1, 0)))
 		{
 			AcquireDevice (global.pDDevice[pad]);
@@ -450,7 +455,7 @@ static void UpdateState (const int pad)
 		}
 		else
 		{
-			const int joypad = ((key & 0xfff) / 100);
+			const int joypad = ((key & 0xfff) / 0x100);
 			if (flag_joypad[joypad] == FALSE)
 			{
 				flag_joypad[joypad] = TRUE;
@@ -485,7 +490,7 @@ static void UpdateState (const int pad)
 	}
 
 	/* Small Motor */
-	const int vib0 = global.padVibF[pad][0] ? 10000 : 0;
+	const int vib0 = global.padVibF[pad][0] ? 2000 : 0;
 	if ((global.padVibF[pad][2] != vib0) && (global.padVibC[pad] >= 0))
 	{
 		global.padVibF[pad][2] = vib0;
@@ -852,21 +857,21 @@ static u8 get_analog (const int key)
 
 static u8 get_pressure (const DWORD now, const DWORD press)
 {
-	/*if (press == 0)
+	if (press == 0)
 		return 0;
-	return (u8)((now - press > 2550) ? 255 : (now - press) / 10);*/
-	return 255;
+	return (u8)((now - press > 2550) ? 255 : (now - press) / 10);
 }
 
-// Should be called from the thread that owns our hwnd, but older versions of PCSX2
-// don't always follow that rule.  Supposedly DInput is happiest called from the 
-// thread that owns the hwnd, but on the other hand it doesn't really seem to care
-// in practice.  So a basic mutex lock should do the trick.
 void CALLBACK PADupdate (int pad)
 {
-	EnterScopedSection scoped_lock( update_lock );
-	UpdateState( 0 );
-	UpdateState( 1 );
+	// PADupdate should be called by the emulator from the thread that owns our hwnd, but
+	// older versions of PCSX2 don't always follow that rule.  I suspect this call was
+	// added to the PAD api because supposedly DInput is happiest called from the thread
+	// that owns the hwnd (although it doesn't seem to care in practice).
+
+	// [TODO] SSSPSX really should do all it's DInput pooling/updating here, instead of
+	// in PADpoll, just for the sake of obeying thread affinity suggested guidelines.
+	// I'm not quite sure how to do that and still have it work though. --air
 }
 
 // Called from the context of the EE thread.
@@ -892,11 +897,11 @@ u8 CALLBACK PADpoll (const u8 value)
 		case 0x42:
 		case 0x43:
 		{
-			EnterScopedSection scoped_lock( update_lock );
-			//if (value == 0x42) UpdateState (pad);
+			//EnterScopedSection scoped_lock( update_lock );
+			if (value == 0x42) UpdateState (pad);
 			global.cmdLen = 2 + 2 * (global.padID[pad] & 0x0f);
 			buf[1] = global.padModeC[pad] ? 0x00 : 0x5a;
-			*(u16*)&buf[2] = global.padStat[pad];
+			(u16&)buf[2] = global.padStat[pad];
 			if (value == 0x43 && global.padModeE[pad])
 			{
 				buf[4] = 0;
@@ -958,7 +963,7 @@ u8 CALLBACK PADpoll (const u8 value)
 			return 0xf3;
 		case 0x4f:
 		{
-			EnterScopedSection scoped_lock( update_lock );
+			//EnterScopedSection scoped_lock( update_lock );
 			global.padID[pad] = 0x79;
 			global.padMode2[pad] = 1;
 			global.cmdLen = sizeof (cmd4f);
@@ -968,7 +973,7 @@ u8 CALLBACK PADpoll (const u8 value)
 		}
 	}
 
-	EnterScopedSection scoped_lock( update_lock );
+	//EnterScopedSection scoped_lock( update_lock );
 
 	switch (global.curCmd)
 	{
@@ -1052,7 +1057,7 @@ typedef struct
 	unsigned char reserved[91];
 } PadDataS;
 
-long PADreadPort1 (PadDataS* pads)
+long CALLBACK PADreadPort1 (PadDataS* pads)
 {
 	memset (pads, 0, sizeof (PadDataS));
 	if ((global.padID[0] & 0xf0) == 0x40)
@@ -1069,7 +1074,7 @@ long PADreadPort1 (PadDataS* pads)
 	return 0;
 }
 
-long PADreadPort2 (PadDataS* pads)
+long CALLBACK PADreadPort2 (PadDataS* pads)
 {
 	memset (pads, 0, sizeof (PadDataS));
 	if ((global.padID[1] & 0xf0) == 0x40)
@@ -1088,19 +1093,18 @@ long PADreadPort2 (PadDataS* pads)
 
 keyEvent* CALLBACK PADkeyEvent (void)
 {
-	static keyEvent ev;
-	static u8 state[2][256];
 	if (n_open)
 	{
-		memcpy (state[0], state[1], sizeof (state[0]));
-		GetKeyState (state[1]);
+		memcpy (save.state[0], save.state[1], sizeof (save.state[0]));
+		GetKeyState (save.state[1]);
 		for (int cnt = 0; cnt < 256; cnt++)
 		{
-			if (~state[0][cnt] & state[1][cnt] & 0x80)
+			if ((~save.state[0][cnt] & save.state[1][cnt] & 0x80) ||
+				(save.state[0][cnt] & ~save.state[1][cnt] & 0x80))
 			{
-				ev.event = (state[1][cnt] & 0x80) ? 1 : 2;
-				ev.key = MapVirtualKey (cnt, 1);
-				return &ev;
+				save.ev.evt = (save.state[1][cnt] & 0x80) ? 1 : 2;
+				save.ev.key = MapVirtualKey (cnt, 1);
+				return &save.ev;
 			}
 		}
 	}
@@ -1120,7 +1124,7 @@ void CALLBACK PADconfigure (void)
 
 void CALLBACK PADabout (void)
 {
-	MessageBox (GetActiveWindow(), "Copyright (C) 2004-2005 Nagisa\nVersion 1.6.1\n\nModified by Jake Stine for PCSX2 0.9.7 compatibility.",
+	MessageBox (GetActiveWindow(), "Copyright (C) 2004-2006 Nagisa\nVersion 1.7.1\n\nModified by Jake Stine for PCSX2 0.9.7 compatibility.",
 		"SSSPSX PAD plugin", MB_OK | MB_SETFOREGROUND);
 }
 
@@ -1134,16 +1138,33 @@ void CALLBACK PADsetSettingsDir(const char* dir)
 	s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
-//#ifdef _WIN64
+// Returns 0 on success, -1 on error.
+s32 CALLBACK PADfreeze (int mode, freezeData *data)
+{
+	switch (mode)
+	{
+		case FREEZE_SIZE:
+			data->size = 0;
+		break;
+		
+		case FREEZE_LOAD:
+		break;
+		
+		case FREEZE_SAVE:
+		break;
+	}
+	
+	return 0;
+}
+
 BOOL APIENTRY DllMain(HMODULE hInst, DWORD dwReason, LPVOID lpReserved)
 {
 	hInstance = hInst;
 	return TRUE;
 }
-//#else
+
 BOOL APIENTRY EntryPoint (HMODULE hInst, DWORD dwReason, LPVOID lpReserved)
 {
 	hInstance = hInst;
 	return TRUE;
 }
-//#endif

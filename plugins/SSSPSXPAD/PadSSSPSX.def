@@ -20,4 +20,5 @@ EXPORTS
     PADconfigure        @17
     PADtest             @18
     PADabout            @19
-	PADsetSettingsDir	@20
+    ;PADfreeze			@20
+	PADsetSettingsDir	@21

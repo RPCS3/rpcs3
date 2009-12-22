@@ -20,6 +20,7 @@
 #define __PAD_H__
 
 #include "PadSSSPSXres.h"
+#include "PS2Edefs.h"
 
 typedef __int8	s8;
 typedef __int16 s16;
@@ -33,13 +34,8 @@ typedef unsigned __int64 u64;
 
 typedef struct
 {
-	u32 key;
-	u32 event;
-} keyEvent;
-
-typedef struct
-{
 	u32 keys[2][21];
 } Config;
+
 
 #endif
