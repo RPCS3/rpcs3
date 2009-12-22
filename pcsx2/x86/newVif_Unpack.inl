@@ -78,18 +78,15 @@ int nVifUnpack(int idx, u8* data) {
 	vif->tag.size -= ret;
 
 	if (v.partTransfer) { // Last transfer was a partial vector transfer...
-		const u8* vuMemBase			 = (idx ? VU1 : VU0).Mem;
-		const u8* dest				 = setVUptr(idx, vuMemBase, vif->tag.addr);
-		const u8  upkNum			 = vif->cmd & 0x1f;
-		const int usn				 = !!(vif->usn);
-		const VIFUnpackFuncTable& ft = VIFfuncTable[upkNum];
-		UNPACKFUNCTYPE func			 = usn ? ft.funcU : ft.funcS;
-		const int diff				 = ft.gsize - v.partTransfer;
+		const bool  doMode	=  vifRegs->mode && !(vif->tag.cmd & 0x10);
+		const bool  isFill	= (vifRegs->cycle.cl < vifRegs->cycle.wl);
+		const u8    upkNum	=  vif->cmd & 0x1f;
+		const VUFT& ft		=  VIFfuncTable[upkNum];
+		const int   diff	=  ft.gsize - v.partTransfer;
 		memcpy(&v.partBuffer[v.partTransfer], data, diff);
-		func((u32*)dest, (u32*)v.partBuffer);
+		UnpackSingleTable[idx][doMode][isFill]( v.partBuffer, size );
 		data += diff;
 		size -= diff;
-		vifRegs->num--;
 		vif->tag.addr  += 16;
 		v.partTransfer  =  0;
 		//DevCon.WriteLn("Diff = %d", diff);
@@ -171,7 +168,7 @@ static void setMasks(int idx, const VIFregisters& v) {
 // elimination that it would probably be a win in most cases (and for sure in many
 // "slow" games that need it most). --air
 
-template< int idx, bool doMode, bool isFill >
+template< int idx, bool doMode, bool isFill, bool singleUnpack >
 __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 
 	const int cycleSize = isFill ? vifRegs->cycle.cl : vifRegs->cycle.wl;
@@ -217,8 +214,10 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 			vifRegs->num--;
 			incVUptrBy16(idx, dest, vuMemBase);
 			if (++vif->cl == blockSize) vif->cl = 0;
+			if (singleUnpack) break;
 		}
 		else if (isFill) {
+			//DevCon.WriteLn("isFill!");
 			func((u32*)dest, (u32*)data);
 			vifRegs->num--;
 			incVUptrBy16(idx, dest, vuMemBase);
@@ -231,21 +230,6 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	}
 }
 
-typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);
-
-static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] = 
-{
-	{
-		{ _nVifUnpackLoop<0,false,false>, _nVifUnpackLoop<0,false,true> },
-		{ _nVifUnpackLoop<0,true, false>, _nVifUnpackLoop<0,true, true> },
-	},
-	{
-		{ _nVifUnpackLoop<1,false,false>, _nVifUnpackLoop<1,false,true> },
-		{ _nVifUnpackLoop<1,true, false>, _nVifUnpackLoop<1,true, true> },
-	},
-	
-};
-
 _f void _nVifUnpack(int idx, u8 *data, u32 size) {
 
 	if (useOldUnpack) {
@@ -254,12 +238,8 @@ _f void _nVifUnpack(int idx, u8 *data, u32 size) {
 		return;
 	}
 
-	const bool doMode =   vifRegs->mode && !(vif->tag.cmd & 0x10);
-	const bool isFill =  (vifRegs->cycle.cl < vifRegs->cycle.wl);
+	const bool doMode =  vifRegs->mode && !(vif->tag.cmd & 0x10);
+	const bool isFill = (vifRegs->cycle.cl < vifRegs->cycle.wl);
 
 	UnpackLoopTable[idx][doMode][isFill]( data, size );
-
-	//if (isFill)
-	//DevCon.WriteLn("%s Write! [num = %d][%s]", (isFill?"Filling":"Skipping"), vifRegs->num, (vifRegs->num%3 ? "bad!" : "ok"));
-	//DevCon.WriteLn("%s Write! [mask = %08x][type = %02d][num = %d]", (isFill?"Filling":"Skipping"), vifRegs->mask, upkNum, vifRegs->num);	
 }

@@ -35,8 +35,9 @@ void dVifInit(int idx) {
 
 _f void dVifRecLimit(int idx) {
 	if (nVif[idx].recPtr > nVif[idx].recEnd) {
-		nVif[idx].vifBlocks->clear();
 		DevCon.WriteLn("nVif Rec - Out of Rec Cache! [%x > %x]", nVif[idx].recPtr, nVif[idx].recEnd);
+		nVif[idx].vifBlocks->clear();
+		nVif[idx].recPtr = nVif[idx].vifCache->getBlock();
 	}
 }
 
