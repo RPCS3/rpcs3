@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="9.00"
 	Name="Padnull"
-	ProjectGUID="{3D0EB14D-32F3-4D82-9C6D-B806ADBB859C}"
+	ProjectGUID="{6BC4D85D-A399-407E-96A9-CD5416A54269}"
 	RootNamespace="Padnull"
 	Keyword="Win32Proj"
 	TargetFrameworkVersion="131072"
@@ -55,7 +55,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				ModuleDefinitionFile="FireWireNull.def"
+				ModuleDefinitionFile="PadNull.def"
 				RandomizedBaseAddress="1"
 				TargetMachine="1"
 			/>
