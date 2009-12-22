@@ -123,8 +123,9 @@ _f u8* dVifsetVUptr(nVifStruct& v, int offset) {
 
 void dVifUnpack(int idx, u8 *data, u32 size) {
 
-	nVifStruct& v	  = nVif[idx];
-	const u8 upkType  = vif->cmd & 0x1f | ((!!(vif->usn)) << 5);
+	nVifStruct& v			= nVif[idx];
+	const u8	upkType		= vif->cmd & 0x1f | ((!!(vif->usn)) << 5);
+	const int	doMask		= (upkType>>4)&1;
 
 	_vBlock.upkType   = upkType;
 	_vBlock.num		  = *(u8*)&vifRegs->num;
@@ -132,22 +133,29 @@ void dVifUnpack(int idx, u8 *data, u32 size) {
 	_vBlock.scl		  = vif->cl;
 	_vBlock.cl		  = vifRegs->cycle.cl;
 	_vBlock.wl		  = vifRegs->cycle.wl;
-	_vBlock.mask	  = vifRegs->mask;
+
+	// Zero out the mask parameter if it's unused -- games leave random junk
+	// values here which cause false recblock cache misses.
+	_vBlock.mask	  = doMask ? vifRegs->mask : 0x00;
 
 	if (nVifBlock* b = v.vifBlocks->find(&_vBlock)) {
-		u8* dest = dVifsetVUptr(v, vif->tag.addr);
-		if (!dest) {
-			//DevCon.WriteLn("Running Interpreter Block");
-			_nVifUnpack(idx, data, size);
-		}
-		else {
+		if( u8* dest = dVifsetVUptr(v, vif->tag.addr) ) {
 			//DevCon.WriteLn("Running Recompiled Block!");
 			((nVifrecCall)b->startPtr)((uptr)dest, (uptr)data);
+		}
+		else {
+			//DevCon.WriteLn("Running Interpreter Block");
+			_nVifUnpack(idx, data, size);
 		}
 		return;
 	}
 	static int recBlockNum = 0;
 	DevCon.WriteLn("nVif: Recompiled Block! [%d]", recBlockNum++);
+	DevCon.WriteLn(L"\t(num=0x%02x, upkType=0x%02x, mode=0x%02x, scl=0x%02x, cl=0x%x, wl=0x%x, mask=%s)",
+		_vBlock.num, _vBlock.upkType, _vBlock.mode, _vBlock.scl, _vBlock.cl, _vBlock.wl,
+		doMask ? wxsFormat( L"0x%08x", _vBlock.mask ).c_str() : L"ignored"
+	);
+
 	dVifRecompile(v, &_vBlock);
 	v.vifBlocks->add(&_vBlock);
 	dVifRecLimit(idx);

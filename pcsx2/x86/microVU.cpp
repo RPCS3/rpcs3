@@ -230,7 +230,7 @@ microVUf(int) mVUfindLeastUsedProg() {
 			mVU->prog.prog[i].isOld  = 0;
 			mVU->prog.prog[i].used	 = 1;
 			mVUsortProg(mVU, i);
-			Console.Warning("microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, i+1, mVU->prog.total+1);
+			Console.WriteLn( Color_Orange, "microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, i+1, mVU->prog.total+1);
 			return i;
 		}
 	}
@@ -247,7 +247,7 @@ microVUf(int) mVUfindLeastUsedProg() {
 	mVU->prog.prog[pIdx].isOld	= 0;
 	mVU->prog.prog[pIdx].used	= 1;
 	mVUsortProg(mVU, pIdx);
-	Console.Warning("microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, pIdx+1, mVU->prog.total+1);
+	Console.WriteLn( Color_Orange, "microVU%d: Cached MicroPrograms = [%03d] [%03d]", vuIndex, pIdx+1, mVU->prog.total+1);
 	return pIdx;
 }
 

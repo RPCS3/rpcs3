@@ -272,17 +272,15 @@ void writeBackRow(nVifStruct& v) {
 	// ToDo: Do we need to write back to vifregs.rX too!? :/
 }
 
- __pagealigned u8 nVifMemCmp[__pagesize];
-
 void emitCustomCompare() {
 	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadWrite, false);
-	memset_8<0xcc,__pagesize>(nVifMemCmp);
+	memset8<0xcc>(nVifMemCmp);
 	xSetPtr(nVifMemCmp);
 
 	xMOVAPS  (xmm0, ptr32[ecx]);
 	xPCMP.EQD(xmm0, ptr32[edx]);
 	xMOVMSKPS(eax, xmm0);
-	xAND	 (eax, 0x7);
+	xAND	 (eax, 0x7);		// ignore top 4 bytes (recBlock pointer)
 
 	xRET();
 	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadOnly, true);

@@ -15,7 +15,14 @@
 
 #pragma once
 
-extern __pagealigned u8 nVifMemCmp[__pagesize];
+static __pagealigned u8 nVifMemCmp[__pagesize];
+
+template< typename T >
+struct SizeChain
+{
+	int Size;
+	T*  Chain;
+};
 
 // HashBucket is a container which uses a built-in hash function
 // to perform quick searches.
@@ -27,49 +34,54 @@ extern __pagealigned u8 nVifMemCmp[__pagesize];
 // be in the first bytes of the struct. (hence why nVifBlock is specifically sorted)
 template<typename T, int hSize, int cmpSize>
 class HashBucket {
-private:
-	T*  mChain[hSize];
-	int mSize [hSize];
+protected:
+	SizeChain<T> mBucket[hSize];
+
 public:
 	HashBucket() { 
 		for (int i = 0; i < hSize; i++) {
-			mChain[i] = NULL;
-			mSize [i] = 0;
+			mBucket[i].Chain	= NULL;
+			mBucket[i].Size		= 0;
 		}
 	}
 	~HashBucket() { clear(); }
 	int quickFind(u32 data) {
-		int o = data % hSize;
-		return mSize[o];
+		return mBucket[data % hSize].Size;
 	}
-	T* find(T* dataPtr) {
+	__forceinline T* find(T* dataPtr) {
 		u32 d = *((u32*)dataPtr);
-		int o = d % hSize;
-		int s = mSize[o];
-		T*  c = mChain[o];
-		for (int i = 0; i < s; i++) {
-			//if (!memcmp(&c[i], dataPtr, cmpSize)) return &c[i];
-			if ((((nVifCall)((void*)nVifMemCmp))(&c[i], dataPtr))==7) return &c[i];
+		const SizeChain<T>& bucket( mBucket[d % hSize] );
+
+		for (int i=bucket.Size; i; --i) {
+			// This inline version seems about 1-2% faster in tests of games that average 1
+			// program per bucket.  Games that average more should see a bigger improvement --air
+			int result = _mm_movemask_ps( (__m128&)_mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) ) & 0x7;
+			if( result == 0x7 ) return &bucket.Chain[i];
+
+			// Dynamically generated function version, can't be inlined. :(
+			//if ((((nVifCall)((void*)nVifMemCmp))(&bucket.Chain[i], dataPtr))==7) return &bucket.Chain[i];
+
+			//if (!memcmp(&bucket.Chain[i], dataPtr, sizeof(T)-4)) return &c[i];	// old school version! >_<
 		}
+		if( bucket.Size > 3 ) DevCon.Warning( "recVifUnpk: Bucket 0x%04x has %d micro-programs", d % hSize, bucket.Size );
 		return NULL;
 	}
-	void add(T* dataPtr) {
+	__forceinline void add(T* dataPtr) {
 		u32 d = *(u32*)dataPtr;
-		int o = d % hSize;
-		int s = mSize[o]++;
-		T*  c = mChain[o];
-		T*  n = (T*)_aligned_malloc(sizeof(T)*(s+1), 16);
-		if (s) { 
-			memcpy(n, c, sizeof(T) * s);
-			safe_aligned_free(c);
+		SizeChain<T>& bucket( mBucket[d % hSize] );
+		
+		if( bucket.Chain = (T*)_aligned_realloc( bucket.Chain, sizeof(T)*(bucket.Size+1), 16), bucket.Chain==NULL ) {
+			throw Exception::OutOfMemory(
+				wxsFormat(L"Out of memory re-allocating hash bucket (bucket size=%d)", bucket.Size+1),
+				wxEmptyString
+			);
 		}
-		memcpy(&n[s], dataPtr, sizeof(T));
-		mChain[o] = n;
+		memcpy_fast(&bucket.Chain[bucket.Size++], dataPtr, sizeof(T));
 	}
 	void clear() {
 		for (int i = 0; i < hSize; i++) {
-			safe_aligned_free(mChain[i]);
-			mSize[i] = 0;
+			safe_aligned_free(mBucket[i].Chain);
+			mBucket[i].Size = 0;
 		}
 	}
 };
