@@ -25,6 +25,7 @@ HWND hTargetWnd;
 static std::string s_strIniPath( "inis/" );
 
 static CRITICAL_SECTION update_lock;
+static CRITICAL_SECTION init_lock;
 
 struct EnterScopedSection
 {
@@ -38,7 +39,6 @@ struct EnterScopedSection
 		LeaveCriticalSection( &m_cs );
 	}
 };
-
 
 
 static struct
@@ -139,6 +139,8 @@ static bool ReleaseDirectInput (void)
 
 static bool InitDirectInput (void)
 {
+	EnterScopedSection initlock( init_lock );
+	
 	if (global.pDInput)
 		return TRUE;
 	HRESULT result = DirectInput8Create (hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&global.pDInput, NULL);
@@ -760,12 +762,14 @@ u32 CALLBACK PSEgetLibVersion (void)
 s32 CALLBACK PADinit (u32 flags)
 {
 	InitializeCriticalSection( &update_lock );
+	InitializeCriticalSection( &init_lock );
 	return 0;
 }
 
 void CALLBACK PADshutdown (void)
 {
 	DeleteCriticalSection( &update_lock );
+	DeleteCriticalSection( &init_lock );
 }
 
 static int n_open = 0;
