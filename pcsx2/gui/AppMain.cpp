@@ -207,7 +207,11 @@ void Pcsx2App::OnLogicalVsync( wxCommandEvent& evt )
 {
 	if( !SysHasValidState() || g_plugins == NULL ) return;
 
-	if( PADupdate != NULL ) PADupdate(0);
+	// Only call PADupdate here if we're using GSopen2.  Legacy GSopen plugins have the
+	// GS window belonging to the MTGS thread.
+	if( (PADupdate != NULL) && (GSopen2 != NULL) && (m_gsFrame != NULL) )
+		PADupdate(0);
+
 	const keyEvent* ev = PADkeyEvent();
 
 	if( (ev != NULL) && (ev->key != 0) )
@@ -369,6 +373,12 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 			Console.Warning( "User canceled BIOS configuration." );
 	}
 	// ----------------------------------------------------------------------------
+	catch( Exception::SaveStateLoadError& ex)
+	{
+		// Saved state load failed.
+		Console.Warning( ex.FormatDiagnosticMessage() );
+		CoreThread.Resume();
+	}
 	catch( Exception::PluginInitError& ex )
 	{
 		if( m_CorePlugins ) m_CorePlugins->Shutdown();
@@ -430,14 +440,6 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	{
 		Console.Warning( ex.FormatDiagnosticMessage() );
 	}
-	// ----------------------------------------------------------------------------
-	catch( Exception::BadSavedState& ex)
-	{
-		// Saved state load failed.
-		Console.Warning( ex.FormatDiagnosticMessage() );
-		CoreThread.Resume();
-	}
-	// ----------------------------------------------------------------------------
 	catch( Exception::RuntimeError& ex )
 	{
 		// Runtime errors which have been unhandled should still be safe to recover from,

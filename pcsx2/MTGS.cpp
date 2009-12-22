@@ -370,6 +370,11 @@ void SysMtgsThread::ExecuteTaskInThread()
 							GSvsync(tag.data[0]);
 							gsFrameSkip();
 
+							// if we're not using GSOpen2, then the GS window is on this thread (MTGS thread),
+							// so we need to call PADupdate from here.
+							if( (GSopen2 == NULL) && (PADupdate != NULL) )
+								PADupdate(0);
+
 							StateCheckInThread();
 						}
 						break;

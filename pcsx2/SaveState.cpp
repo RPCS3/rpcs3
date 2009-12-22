@@ -27,6 +27,7 @@
 
 using namespace R5900;
 
+
 static void PreLoadPrep()
 {
 	SysClearExecutionCache();
@@ -45,14 +46,14 @@ wxString SaveStateBase::GetFilename( int slot )
 		wxsFormat( L"%8.8X.%3.3d", ElfCRC, slot )).GetFullPath();
 }
 
-SaveStateBase::SaveStateBase( SafeArray<u8>& memblock ) :
-	m_memory( memblock )
-,	m_version( g_SaveVersion )
-,	m_idx( 0 )
-,	m_sectid( FreezeId_Unknown )
-,	m_pid( PluginId_GS )
-,	m_DidBios( false )
+SaveStateBase::SaveStateBase( SafeArray<u8>& memblock )
+	: m_memory( memblock )
 {
+	m_version	= g_SaveVersion;
+	m_idx		= 0;
+	m_sectid	= FreezeId_Unknown;
+	m_pid		= PluginId_GS;
+	m_DidBios	= false;
 }
 
 void SaveStateBase::PrepBlock( int size )
@@ -63,7 +64,7 @@ void SaveStateBase::PrepBlock( int size )
 	else
 	{
 		if( m_memory.GetSizeInBytes() < end )
-			throw Exception::BadSavedState();
+			throw Exception::SaveStateLoadError();
 	}
 }
 
@@ -79,7 +80,7 @@ void SaveStateBase::FreezeTag( const char* src )
 	if( strcmp( m_tagspace, src ) != 0 )
 	{
 		pxFail( "Savestate data corruption detected while reading tag" );
-		throw Exception::BadSavedState(
+		throw Exception::SaveStateLoadError(
 			// Untranslated diagnostic msg (use default msg for translation)
 			L"Savestate data corruption detected while reading tag: " + fromUTF8(src)
 		);
@@ -205,7 +206,7 @@ void SaveStateBase::WritebackSectionLength( int seekpos, int sectlen, const wxCh
 	{
 		if( sectlen != realsectsize )		// if they don't match then we have a problem, jim.
 		{
-			throw Exception::BadSavedState( wxEmptyString,
+			throw Exception::SaveStateLoadError( wxEmptyString,
 				wxsFormat( L"Invalid size encountered on section '%s'.", sectname ),
 				_("The savestate data is invalid or corrupted.")
 			);
@@ -234,7 +235,7 @@ bool SaveStateBase::FreezeSection( int seek_section )
 
 			if( sectlen != 128 )
 			{
-				throw Exception::BadSavedState( wxEmptyString,
+				throw Exception::SaveStateLoadError( wxEmptyString,
 					L"Invalid size encountered on BiosVersion section.",
 					_("The savestate data is invalid or corrupted.")
 				);
@@ -257,7 +258,7 @@ bool SaveStateBase::FreezeSection( int seek_section )
 			Freeze( sectlen );
 			if( sectlen != MainMemorySizeInBytes )
 			{
-				throw Exception::BadSavedState( wxEmptyString,
+				throw Exception::SaveStateLoadError( wxEmptyString,
 					L"Invalid size encountered on MainMemory section.",
 					_("The savestate data is invalid or corrupted.")
 				);
@@ -302,7 +303,7 @@ bool SaveStateBase::FreezeSection( int seek_section )
 			else
 				g_plugins->Freeze( (PluginsEnum_t)m_pid, *this );
 
-			WritebackSectionLength( seekpos, sectlen, L"HardwareRegisters" );
+			WritebackSectionLength( seekpos, sectlen, L"Plugins" );
 
 			// following increments only affect Saving mode, which needs to be sure to save all
 			// plugins (order doesn't matter but sequential is easy enough. (ignored by Loading mode)
@@ -411,3 +412,42 @@ bool memLoadingState::SeekToSection( PluginsEnum_t pid )
 	return true;
 }
 
+// --------------------------------------------------------------------------------------
+//  SaveState Exception Messages
+// --------------------------------------------------------------------------------------
+
+wxString Exception::UnsupportedStateVersion::FormatDiagnosticMessage() const
+{
+	// Note: no stacktrace needed for this one...
+	return wxsFormat( L"Unknown or unsupported savestate version: 0x%x", Version );
+}
+
+wxString Exception::UnsupportedStateVersion::FormatDisplayMessage() const
+{
+	// m_message_user contains a recoverable savestate error which is helpful to the user.
+	return wxsFormat(
+		m_message_user + L"\n\n" +
+		wxsFormat( _("Cannot load savestate.  It is of an unknown or unsupported version."), Version )
+	);
+}
+
+wxString Exception::StateCrcMismatch::FormatDiagnosticMessage() const
+{
+	// Note: no stacktrace needed for this one...
+	return wxsFormat(
+		L"Game/CDVD does not match the savestate CRC.\n"
+		L"\tCdvd CRC: 0x%X\n\tGame CRC: 0x%X\n",
+		Crc_Savestate, Crc_Cdvd
+	);
+}
+
+wxString Exception::StateCrcMismatch::FormatDisplayMessage() const
+{
+	return wxsFormat(
+		m_message_user + L"\n\n" +
+		wxsFormat(
+			L"Savestate game/crc mismatch. Cdvd CRC: 0x%X Game CRC: 0x%X\n",
+			Crc_Savestate, Crc_Cdvd
+		)
+	);
+}

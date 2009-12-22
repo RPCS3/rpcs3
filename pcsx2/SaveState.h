@@ -50,6 +50,58 @@ enum FreezeSectionId
 	FreezeId_Unknown,
 };
 
+namespace Exception
+{
+	// ---------------------------------------------------------------------------------------
+	// Savestate Exceptions:
+	//   UnsupportedStateVersion / StateCrcMismatch
+	// ---------------------------------------------------------------------------------------
+
+	// thrown when the savestate being loaded isn't supported.
+	//
+	class UnsupportedStateVersion : public virtual SaveStateLoadError
+	{
+	public:
+		u32 Version;		// version number of the unsupported state.
+
+	public:
+		DEFINE_EXCEPTION_COPYTORS( UnsupportedStateVersion )
+
+		explicit UnsupportedStateVersion( int version, const wxString& objname=wxEmptyString )
+		{
+			StreamName = objname;
+			Version = version;
+		}
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
+	};
+
+	// A recoverable exception thrown when the CRC of the savestate does not match the
+	// CRC returned by the Cdvd driver.
+	// [feature not implemented yet]
+	//
+	class StateCrcMismatch : public virtual SaveStateLoadError
+	{
+	public:
+		u32 Crc_Savestate;
+		u32 Crc_Cdvd;
+
+	public:
+		DEFINE_EXCEPTION_COPYTORS( StateCrcMismatch )
+
+		explicit StateCrcMismatch( u32 crc_save, u32 crc_cdvd, const wxString& objname=wxEmptyString )
+		{
+			StreamName		= objname;
+			Crc_Savestate	= crc_save;
+			Crc_Cdvd		= crc_cdvd;
+		}
+
+		virtual wxString FormatDiagnosticMessage() const;
+		virtual wxString FormatDisplayMessage() const;
+	};
+}
+
 // --------------------------------------------------------------------------------------
 //  SaveStateBase class
 // --------------------------------------------------------------------------------------

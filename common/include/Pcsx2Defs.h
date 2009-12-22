@@ -287,20 +287,4 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 #endif
 
 
-///////////////////////////////////////////////////////////////////////////////////////
-
-typedef struct {
-	int size;
-	s8 *data;
-} freezeData;
-
-// event values:
-#define KEYPRESS	1
-#define KEYRELEASE	2
-
-typedef struct _keyEvent {
-	u32 key;
-	u32 evt;
-} keyEvent;
-
 #endif

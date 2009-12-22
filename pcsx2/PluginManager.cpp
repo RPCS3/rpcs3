@@ -123,7 +123,12 @@ struct LegacyApi_OptMethod
 };
 
 
-static s32  CALLBACK fallback_freeze(int mode, freezeData *data) { data->size = 0; return 0; }
+static s32  CALLBACK fallback_freeze(int mode, freezeData *data)
+{
+	if( mode == FREEZE_SIZE ) data->size = 0;
+	return 0;
+}
+
 static void CALLBACK fallback_keyEvent(keyEvent *ev) {}
 static void CALLBACK fallback_setSettingsDir(const char* dir) {}
 static void CALLBACK fallback_configure() {}

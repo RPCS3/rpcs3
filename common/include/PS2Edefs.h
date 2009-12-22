@@ -48,6 +48,29 @@
 
 #include "Pcsx2Defs.h"
 
+///////////////////////////////////////////////////////////////////////
+
+// freeze modes:
+#define FREEZE_LOAD			0
+#define FREEZE_SAVE			1
+#define FREEZE_SIZE			2
+
+// event values:
+#define KEYPRESS	1
+#define KEYRELEASE	2
+
+typedef struct {
+	int size;
+	s8 *data;
+} freezeData;
+
+typedef struct _keyEvent {
+	u32 key;
+	u32 evt;
+} keyEvent;
+
+///////////////////////////////////////////////////////////////////////
+
 #if defined(GSdefs)   || defined(PADdefs)  || defined(SIOdefs)  || \
     defined(SPU2defs) || defined(CDVDdefs) || defined(DEV9defs) || \
     defined(USBdefs)  || defined(FWdefs)
@@ -171,11 +194,6 @@ typedef int  (*DEV9handler)(void);
 
 typedef void (*USBcallback)(int cycles);
 typedef int  (*USBhandler)(void);
-
-// freeze modes:
-#define FREEZE_LOAD			0
-#define FREEZE_SAVE			1
-#define FREEZE_SIZE			2
 
 typedef struct _GSdriverInfo {
 	char name[8];

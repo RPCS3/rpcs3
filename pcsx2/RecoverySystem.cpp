@@ -37,6 +37,13 @@ int sys_resume_lock = 0;
 
 static FnType_OnThreadComplete* Callback_FreezeFinished = NULL;
 
+static bool StateCopy_ForceClear()
+{
+	sys_resume_lock = 0;
+	state_buffer_lock.Release();
+	state_buffer.Dispose();
+}
+
 static void __evt_fastcall StateThread_OnAppStatus( void* thr, AppEventType& stat )
 {
 	if( (thr == NULL) || (stat != AppStatus_Exiting) ) return;
@@ -378,43 +385,58 @@ void StateCopy_FreezeToMem()
 	(new StateThread_Freeze( OnFinished_Resume ))->Start();
 }
 
-static void _acquire_and_block()
+class Acquire_And_Block
 {
-	if( state_buffer_lock.TryAcquire() ) return;
+protected:
+	bool	m_DisposeWhenFinished;
+	bool	m_Acquired;
 
-	/*
-	// If the state buffer is locked and we're being called from the main thread then we need
-	// to cancel the current action.  This is needed because state_buffer_lock is only updated
-	// from events handled on the main thread.
-
-	if( wxThread::IsMain() )
-		throw Exception::CancelEvent( "Blocking ThawFromMem canceled due to existing state buffer lock." );
-	else*/
+public:
+	Acquire_And_Block( bool dispose )
 	{
-		pxAssume( current_state_thread != NULL );
-		do  {
+		m_DisposeWhenFinished	= dispose;
+		m_Acquired				= false;
+
+		/*
+		// If the state buffer is locked and we're being called from the main thread then we need
+		// to cancel the current action.  This is needed because state_buffer_lock is only updated
+		// from events handled on the main thread.
+
+		if( wxThread::IsMain() )
+			throw Exception::CancelEvent( "Blocking ThawFromMem canceled due to existing state buffer lock." );
+		else*/
+
+		while ( !state_buffer_lock.TryAcquire() )
+		{
+			pxAssume( current_state_thread != NULL );
 			current_state_thread->Block();
 			wxGetApp().ProcessPendingEvents();		// Trying this for now, may or may not work due to recursive pitfalls (see above)
-		} while ( !state_buffer_lock.TryAcquire() );
+		};
+
+		m_Acquired = true;
 	}
-}
+	
+	virtual ~Acquire_And_Block() throw()
+	{
+		if( m_DisposeWhenFinished )
+			state_buffer.Dispose();
+		
+		if( m_Acquired )
+			state_buffer_lock.Release();
+	}
+};
 
 void StateCopy_FreezeToMem_Blocking()
 {
-	_acquire_and_block();
-
+	Acquire_And_Block blocker( false );
 	memSavingState( state_buffer ).FreezeAll();
-	state_buffer_lock.Release();
 }
 
 // Copies the saved state into the active VM, and automatically free's the saved state data.
 void StateCopy_ThawFromMem_Blocking()
 {
-	_acquire_and_block();
-
+	Acquire_And_Block blocker( true );
 	memLoadingState( state_buffer ).FreezeAll();
-	state_buffer.Dispose();
-	state_buffer_lock.Release();
 }
 
 void StateCopy_Clear()
@@ -427,4 +449,3 @@ bool StateCopy_IsBusy()
 {
 	return state_buffer_lock.IsLocked();
 }
-   

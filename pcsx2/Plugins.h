@@ -23,6 +23,17 @@
 
 #include <wx/dynlib.h>
 
+#ifdef _MSC_VER
+
+// Disabling C4673: throwing 'Exception::Blah' the following types will not be considered at the catch site
+//   The warning is bugged, and happens even though we're properly inheriting classes with
+//   'virtual' qualifiers.  But since the warning is potentially useful elsewhere, I disable
+//   it only for the scope of these exceptions.
+
+#	pragma warning(push)
+#	pragma warning(disable:4673)
+#endif
+
 struct PluginInfo
 {
 	const char* shortname;
@@ -36,22 +47,18 @@ struct PluginInfo
 	}
 };
 
-#ifdef _MSC_VER
-
-// Disabling C4673: throwing 'Exception::Blah' the following types will not be considered at the catch site
-//   The warning is bugged, and happens even though we're properly inheriting classes with
-//   'virtual' qualifiers.  But since the warning is potentially useful elsewhere, I disable
-//   it only for the scope of these exceptions.
-
-#	pragma warning(push)
-#	pragma warning(disable:4673)
-#endif
-
 // --------------------------------------------------------------------------------------
 //  Plugin-related Exceptions
 // --------------------------------------------------------------------------------------
 namespace Exception
 {
+	// Exception thrown when a corrupted or truncated savestate is encountered.
+	class SaveStateLoadError : public virtual BadStream
+	{
+	public:
+		DEFINE_STREAM_EXCEPTION( SaveStateLoadError, wxLt("Savestate data is corrupted or incomplete.") )
+	};
+
 	class PluginError : public virtual RuntimeError
 	{
 	public:
@@ -137,7 +144,7 @@ namespace Exception
 		virtual wxString FormatDisplayMessage() const;
 	};
 
-	class ThawPluginFailure : public virtual PluginError, public virtual BadSavedState
+	class ThawPluginFailure : public virtual PluginError, public virtual SaveStateLoadError
 	{
 	public:
 		DEFINE_EXCEPTION_COPYTORS( ThawPluginFailure )
