@@ -129,9 +129,10 @@ void SndBuffer::UpdateTempoChange()
 
 	if( cTempo < 0.965f || cTempo > 1.060f ||
 		pctChange < -0.38f || pctChange > 0.54f ||
-		statusPct < -0.32f || statusPct > 0.39f ||
+		statusPct < -0.42f || statusPct > 0.49f ||
 		eTempo < 0.89f || eTempo > 1.19f )
 	{
+		//printf("Emergency stretch: cTempo = %f eTempo = %f pctChange = %f statusPct = %f\n",cTempo,eTempo,pctChange,statusPct);
 		emergencyAdj = ( pow( statusPct*statusWeight, 3.0f ) * statusRange);
 	}
 
