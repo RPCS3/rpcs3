@@ -518,7 +518,7 @@
 		<Unit filename="../x86/VpuUnpackSSE.cpp" />
 		<Unit filename="../x86/VpuUnpackSSE.h" />
 		<Unit filename="../x86/VpuUnpackSSE_Dynarec.cpp" />
-		<Unit filename="../x86/newVof_Unpack.cpp" />
+		<Unit filename="../x86/newVif_Unpack.cpp" />
 		<Unit filename="../x86/microVU.cpp" />
 		<Unit filename="../x86/microVU.h" />
 		<Unit filename="../x86/microVU_Alloc.inl" />

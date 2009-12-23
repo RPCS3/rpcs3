@@ -22,6 +22,7 @@
 #include "GS.h"
 #include "Gif.h"
 #include "VUmicro.h"
+#include "newVif.h"
 
 __aligned16 u32 g_vif1Masks[64];
 u32 g_vif1HasMask3[4] = {0};

@@ -13,6 +13,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "xmmintrin.h"
 #pragma once
 
 template< typename T >
@@ -53,7 +54,7 @@ public:
 		for (int i=bucket.Size; i; --i) {
 			// This inline version seems about 1-2% faster in tests of games that average 1
 			// program per bucket.  Games that average more should see a bigger improvement --air
-			int result = _mm_movemask_ps( (__m128&)_mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) ) & 0x7;
+			int result = _mm_movemask_ps( (__m128&) _mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) ) & 0x7;
 			if( result == 0x7 ) return &bucket.Chain[i];
 
 			// Dynamically generated function version, can't be inlined. :(
