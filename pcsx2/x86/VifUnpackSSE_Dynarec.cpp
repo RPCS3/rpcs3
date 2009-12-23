@@ -18,9 +18,9 @@
 //			Jake.Stine (@gmail.com)
 
 #include "PrecompiledHeader.h"
-#include "VpuUnpackSSE.h"
+#include "VifUnpackSSE.h"
 
-#ifdef newVif
+#if newVif
 
 static __aligned16 nVifBlock _vBlock = {0};
 static __pagealigned u8 nVifMemCmp[__pagesize];
@@ -77,7 +77,7 @@ static void loadRowCol(nVifStruct& v) {
 	xPSHUF.D(xmm5, xmm5, _v0);
 }
 
-VpuUnpackSSE_Dynarec::VpuUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlock& vifBlock_)
+VifUnpackSSE_Dynarec::VifUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlock& vifBlock_)
 	: v(vif_)
 	, vB(vifBlock_)
 {
@@ -91,7 +91,7 @@ VpuUnpackSSE_Dynarec::VpuUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlo
 	x = ((x&0x40)>>6) | ((x&0x10)>>3) | (x&4) | ((x&1)<<3);	\
 }
 
-_f void VpuUnpackSSE_Dynarec::SetMasks(int cS) const {
+_f void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 	u32 m0 = vB.mask;
 	u32 m1 =  m0 & 0xaaaaaaaa;
 	u32 m2 =(~m1>>1) &  m0;
@@ -109,7 +109,7 @@ _f void VpuUnpackSSE_Dynarec::SetMasks(int cS) const {
 	//if (mask||mode) loadRowCol(v);
 }
 
-void VpuUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
+void VifUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
 	pxAssumeDev(regX.Id <= 1, "Reg Overflow! XMM2 thru XMM6 are reserved for masking.");
 	int cc =  aMin(vCL, 3);
 	u32 m0 = (vB.mask >> (cc * 8)) & 0xff;
@@ -142,7 +142,7 @@ void VpuUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
 	xMOVAPS(ptr32[dstIndirect], regX);	
 }
 
-void VpuUnpackSSE_Dynarec::writeBackRow() const {
+void VifUnpackSSE_Dynarec::writeBackRow() const {
 	u32* row = (v.idx) ? g_vifmask.Row1 : g_vifmask.Row0;
 	xMOVAPS(ptr32[row], xmmRow);
 	DevCon.WriteLn("nVif: writing back row reg! [doMode = 2]");
@@ -164,7 +164,7 @@ static void ShiftDisplacementWindow( xAddressInfo& addr, const xRegister32& modR
 	if(addImm) xADD(modReg, addImm);
 }
 
-void VpuUnpackSSE_Dynarec::CompileRoutine() {
+void VifUnpackSSE_Dynarec::CompileRoutine() {
 	const int  upkNum		=  vB.upkType & 0xf;
 	const u8&  vift			=  nVifT[upkNum];
 	const int  cycleSize	=  isFill ?  vB.cl : vB.wl;
@@ -190,7 +190,7 @@ void VpuUnpackSSE_Dynarec::CompileRoutine() {
 		}
 		else if (isFill) {
 			DevCon.WriteLn("filling mode!");
-			VpuUnpackSSE_Dynarec::FillingWrite( *this ).xUnpack(upkNum);
+			VifUnpackSSE_Dynarec::FillingWrite( *this ).xUnpack(upkNum);
 			dstIndirect += 16;
 			vNum--;
 			if (++vCL == blockSize) vCL = 0;
@@ -269,7 +269,7 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	xSetPtr(v.recPtr);
 	_vBlock.startPtr = (uptr)xGetAlignedCallTarget();
 	v.vifBlocks->add(_vBlock);
-	VpuUnpackSSE_Dynarec( v, _vBlock ).CompileRoutine();
+	VifUnpackSSE_Dynarec( v, _vBlock ).CompileRoutine();
 	nVif[idx].recPtr = xGetPtr();
 
 	dVifRecLimit(idx);

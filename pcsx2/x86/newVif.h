@@ -21,7 +21,7 @@
 #include "x86emitter/x86emitter.h"
 using namespace x86Emitter;
 
-#ifdef newVif
+#if newVif
 
 // newVif_HashBucket.h uses this typedef, so it has to be decared first.
 typedef u32  (__fastcall *nVifCall)(void*, void*);
@@ -34,7 +34,7 @@ extern void  mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW = 0);
 extern void _nVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
 extern void  dVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
 extern void  dVifInit    (int idx);
-extern void  VpuUnpackSSE_Init();
+extern void  VifUnpackSSE_Init();
 
 #define VUFT VIFUnpackFuncTable
 #define _1mb (0x100000)

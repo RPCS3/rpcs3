@@ -515,9 +515,9 @@
 		<Unit filename="../x86/ix86-32/iR5900Shift.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900Templates.cpp" />
 		<Unit filename="../x86/ix86-32/recVTLB.cpp" />
-		<Unit filename="../x86/VpuUnpackSSE.cpp" />
-		<Unit filename="../x86/VpuUnpackSSE.h" />
-		<Unit filename="../x86/VpuUnpackSSE_Dynarec.cpp" />
+		<Unit filename="../x86/VifUnpackSSE.cpp" />
+		<Unit filename="../x86/VifUnpackSSE.h" />
+		<Unit filename="../x86/VifUnpackSSE_Dynarec.cpp" />
 		<Unit filename="../x86/newVif_Unpack.cpp" />
 		<Unit filename="../x86/microVU.cpp" />
 		<Unit filename="../x86/microVU.h" />

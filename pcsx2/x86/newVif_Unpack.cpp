@@ -22,7 +22,7 @@
 #include "VifDma_internal.h"
 #include "newVif.h"
 
-#ifdef newVif
+#if newVif
 #include "newVif_OldUnpack.inl"
 
 __aligned16 nVifStruct	nVif[2];
@@ -88,7 +88,7 @@ void initNewVif(int idx) {
 	nVif[idx].vifCache		= NULL;
 	nVif[idx].partTransfer	= 0;
 
-	VpuUnpackSSE_Init();
+	VifUnpackSSE_Init();
 	if (newVifDynaRec)  dVifInit(idx);
 }
 
@@ -97,7 +97,7 @@ static _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
 }
 
 static _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
-	pxAssert( ((uptr)ptr & 0xf) == 0 ); // alignment check
+	pxAssume( ((uptr)ptr & 0xf) == 0 );		// alignment check
 	ptr += amount;
 	int diff = ptr - (vuMemBase + (vuidx ? 0x4000 : 0x1000));
 	if (diff >= 0) {
@@ -106,7 +106,7 @@ static _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
 }
 
 static _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
-	pxAssert( ((uptr)ptr & 0xf) == 0 );	// alignment check
+	pxAssume( ((uptr)ptr & 0xf) == 0 );	// alignment check
 	ptr += 16;
 	if( ptr == (vuMemBase + (vuidx ? 0x4000 : 0x1000)) )
 		ptr -= (vuidx ? 0x4000 : 0x1000);

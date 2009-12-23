@@ -24,12 +24,12 @@
 
 using namespace x86Emitter;
 
-#ifdef newVif
+#if newVif
 
 // --------------------------------------------------------------------------------------
-//  VpuUnpackSSE_Base
+//  VifUnpackSSE_Base
 // --------------------------------------------------------------------------------------
-class VpuUnpackSSE_Base
+class VifUnpackSSE_Base
 {
 public:
 	bool			usn;			// unsigned flag
@@ -41,8 +41,8 @@ protected:
 	xAddressInfo	srcIndirect;
 
 public:
-	VpuUnpackSSE_Base();
-	virtual ~VpuUnpackSSE_Base() throw() {}
+	VifUnpackSSE_Base();
+	virtual ~VifUnpackSSE_Base() throw() {}
 
 	void xUnpack( int upktype );
 
@@ -74,29 +74,29 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
-//  VpuUnpackSSE_Simple
+//  VifUnpackSSE_Simple
 // --------------------------------------------------------------------------------------
-class VpuUnpackSSE_Simple : public VpuUnpackSSE_Base
+class VifUnpackSSE_Simple : public VifUnpackSSE_Base
 {
-	typedef VpuUnpackSSE_Base _parent;
+	typedef VifUnpackSSE_Base _parent;
 
 public:
 	int				curCycle;
 
 public:
-	VpuUnpackSSE_Simple(bool usn_, bool domask_, int curCycle_);
-	virtual ~VpuUnpackSSE_Simple() throw() {}
+	VifUnpackSSE_Simple(bool usn_, bool domask_, int curCycle_);
+	virtual ~VifUnpackSSE_Simple() throw() {}
 
 protected:
 	virtual void doMaskWrite(const xRegisterSSE& regX ) const;
 };
 
 // --------------------------------------------------------------------------------------
-//  VpuUnpackSSE_Dynarec
+//  VifUnpackSSE_Dynarec
 // --------------------------------------------------------------------------------------
-class VpuUnpackSSE_Dynarec : public VpuUnpackSSE_Base
+class VifUnpackSSE_Dynarec : public VifUnpackSSE_Base
 {
-	typedef VpuUnpackSSE_Base _parent;
+	typedef VifUnpackSSE_Base _parent;
 
 public:
 	bool			isFill;
@@ -107,8 +107,8 @@ protected:
 	int					vCL;		// internal copy of vif->cl
 
 public:
-	VpuUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlock& vifBlock_);
-	VpuUnpackSSE_Dynarec(const VpuUnpackSSE_Dynarec& src)	// copy constructor
+	VifUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlock& vifBlock_);
+	VifUnpackSSE_Dynarec(const VifUnpackSSE_Dynarec& src)	// copy constructor
 		: _parent(src)
 		, v(src.v)
 		, vB(src.vB)
@@ -117,7 +117,7 @@ public:
 		vCL		= src.vCL;
 	}
 
-	virtual ~VpuUnpackSSE_Dynarec() throw() {}
+	virtual ~VifUnpackSSE_Dynarec() throw() {}
 
 	void CompileRoutine();
 
@@ -126,9 +126,9 @@ protected:
 	void SetMasks(int cS) const;
 	void writeBackRow() const;
 	
-	static VpuUnpackSSE_Dynarec FillingWrite( const VpuUnpackSSE_Dynarec& src )
+	static VifUnpackSSE_Dynarec FillingWrite( const VifUnpackSSE_Dynarec& src )
 	{
-		VpuUnpackSSE_Dynarec fillingWrite( src );
+		VifUnpackSSE_Dynarec fillingWrite( src );
 		fillingWrite.doMask = true;
 		fillingWrite.doMode = 0;
 		return fillingWrite;

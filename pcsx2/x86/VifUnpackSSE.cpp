@@ -14,9 +14,9 @@
  */
 
 #include "PrecompiledHeader.h"
-#include "VpuUnpackSSE.h"
+#include "VifUnpackSSE.h"
 
-#ifdef newVif
+#if newVif
 
 #define xMOV8(regX, loc)	xMOVSSZX(regX, loc)
 #define xMOV16(regX, loc)	xMOVSSZX(regX, loc)
@@ -27,41 +27,41 @@
 static __pagealigned u8 nVifUpkExec[__pagesize*4];
 
 // =====================================================================================================
-//  VpuUnpackSSE_Base Section
+//  VifUnpackSSE_Base Section
 // =====================================================================================================
-VpuUnpackSSE_Base::VpuUnpackSSE_Base()
+VifUnpackSSE_Base::VifUnpackSSE_Base()
 	: dstIndirect(ecx)		// parameter 1 of __fastcall
 	, srcIndirect(edx)		// parameter 2 of __fastcall
 {
 }
 
-void VpuUnpackSSE_Base::xMovDest(const xRegisterSSE& srcReg) const {
+void VifUnpackSSE_Base::xMovDest(const xRegisterSSE& srcReg) const {
 	if (!doMode && !doMask)	{ xMOVAPS (ptr[dstIndirect], srcReg); }
 	else					{ doMaskWrite(srcReg); }
 }
 
-void VpuUnpackSSE_Base::xShiftR(const xRegisterSSE& regX, int n) const {
+void VifUnpackSSE_Base::xShiftR(const xRegisterSSE& regX, int n) const {
 	if (usn)	{ xPSRL.D(regX, n); }
 	else		{ xPSRA.D(regX, n); }
 }
 
-void VpuUnpackSSE_Base::xPMOVXX8(const xRegisterSSE& regX) const {
+void VifUnpackSSE_Base::xPMOVXX8(const xRegisterSSE& regX) const {
 	if (usn)	xPMOVZX.BD(regX, ptr32[srcIndirect]);
 	else		xPMOVSX.BD(regX, ptr32[srcIndirect]);
 }
 
-void VpuUnpackSSE_Base::xPMOVXX16(const xRegisterSSE& regX) const {
+void VifUnpackSSE_Base::xPMOVXX16(const xRegisterSSE& regX) const {
 	if (usn)	xPMOVZX.WD(regX, ptr64[srcIndirect]);
 	else		xPMOVSX.WD(regX, ptr64[srcIndirect]);
 }
 
-void VpuUnpackSSE_Base::xUPK_S_32() const {
+void VifUnpackSSE_Base::xUPK_S_32() const {
 	xMOV32     (xmm0, ptr32[srcIndirect]);
 	xPSHUF.D   (xmm1, xmm0, _v0);
 	xMovDest   (xmm1);
 }
 
-void VpuUnpackSSE_Base::xUPK_S_16() const {
+void VifUnpackSSE_Base::xUPK_S_16() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX16  (xmm0);
 }
@@ -74,7 +74,7 @@ else {
 	xMovDest   (xmm1);
 }
 
-void VpuUnpackSSE_Base::xUPK_S_8() const {
+void VifUnpackSSE_Base::xUPK_S_8() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX8   (xmm0);
 }
@@ -88,12 +88,12 @@ else {
 	xMovDest   (xmm1);
 }
 
-void VpuUnpackSSE_Base::xUPK_V2_32() const {
+void VifUnpackSSE_Base::xUPK_V2_32() const {
 	xMOV64     (xmm0, ptr32[srcIndirect]);
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V2_16() const {
+void VifUnpackSSE_Base::xUPK_V2_16() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX16  (xmm0);
 }
@@ -105,7 +105,7 @@ else {
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V2_8() const {
+void VifUnpackSSE_Base::xUPK_V2_8() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX8   (xmm0);
 }
@@ -118,12 +118,12 @@ else {
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V3_32() const {
+void VifUnpackSSE_Base::xUPK_V3_32() const {
 	xMOV128    (xmm0, ptr32[srcIndirect]);
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V3_16() const {
+void VifUnpackSSE_Base::xUPK_V3_16() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX16  (xmm0);
 }
@@ -135,7 +135,7 @@ else {
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V3_8() const {
+void VifUnpackSSE_Base::xUPK_V3_8() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX8   (xmm0);
 }
@@ -148,12 +148,12 @@ else {
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V4_32() const {
+void VifUnpackSSE_Base::xUPK_V4_32() const {
 	xMOV128    (xmm0, ptr32[srcIndirect]);
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V4_16() const {
+void VifUnpackSSE_Base::xUPK_V4_16() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX16  (xmm0);
 }
@@ -165,7 +165,7 @@ else {
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V4_8() const {
+void VifUnpackSSE_Base::xUPK_V4_8() const {
 if (x86caps.hasStreamingSIMD4Extensions) {
 	xPMOVXX8   (xmm0);
 }
@@ -178,7 +178,7 @@ else {
 	xMovDest   (xmm0);
 }
 
-void VpuUnpackSSE_Base::xUPK_V4_5() const {
+void VifUnpackSSE_Base::xUPK_V4_5() const {
 	xMOV16		(xmm0, ptr32[srcIndirect]);
 	xPSHUF.D	(xmm0, xmm0, _v0);
 	xPSLL.D		(xmm0, 3);			// ABG|R5.000
@@ -197,7 +197,7 @@ void VpuUnpackSSE_Base::xUPK_V4_5() const {
 	xMovDest	(xmm1);
 }
 
-void VpuUnpackSSE_Base::xUnpack( int upknum )
+void VifUnpackSSE_Base::xUnpack( int upknum )
 {
 	switch( upknum )
 	{
@@ -227,17 +227,17 @@ void VpuUnpackSSE_Base::xUnpack( int upknum )
 }
 
 // =====================================================================================================
-//  VpuUnpackSSE_Simple
+//  VifUnpackSSE_Simple
 // =====================================================================================================
 
-VpuUnpackSSE_Simple::VpuUnpackSSE_Simple(bool usn_, bool domask_, int curCycle_)
+VifUnpackSSE_Simple::VifUnpackSSE_Simple(bool usn_, bool domask_, int curCycle_)
 {
 	curCycle	= curCycle_;
 	usn			= usn_;
 	doMask		= domask_;
 }
 
-void VpuUnpackSSE_Simple::doMaskWrite(const xRegisterSSE& regX) const {
+void VifUnpackSSE_Simple::doMaskWrite(const xRegisterSSE& regX) const {
 	xMOVAPS(xmm7, ptr[dstIndirect]);
 	int offX = aMin(curCycle, 3);
 	xPAND(regX, ptr32[nVifMask[0][offX]]);
@@ -254,7 +254,7 @@ static void nVifGen(int usn, int mask, int curCycle) {
 	int maskpart	= mask*16;
 	int curpart		= curCycle;
 
-	VpuUnpackSSE_Simple vpugen( !!usn, !!mask, curCycle );
+	VifUnpackSSE_Simple vpugen( !!usn, !!mask, curCycle );
 
 	for( int i=0; i<16; ++i )
 	{
@@ -270,7 +270,7 @@ static void nVifGen(int usn, int mask, int curCycle) {
 	}
 }
 
-void VpuUnpackSSE_Init()
+void VifUnpackSSE_Init()
 {
 	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
 	memset8<0xcc>( nVifUpkExec );

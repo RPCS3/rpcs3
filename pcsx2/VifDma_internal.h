@@ -83,11 +83,13 @@ static __forceinline u32 vif_size(u8 num)
     return (num == 0) ? 0x1000 : 0x4000;
 }
 
-//#define newVif  // Enable 'newVif' Code (if the below macros are not defined, it will use old non-sse code)
-//#define newVif1 // Use New Code for Vif1 Unpacks (needs newVif defined)
-//#define newVif0 // Use New Code for Vif0 Unpacks (not implemented)
+// All defines are enabled with '1' or disabled with '0'
 
-#ifdef newVif
+#define newVif		1	// Enable 'newVif' Code (if the below macros are not defined, it will use old non-sse code)
+#define newVif1		1	// Use New Code for Vif1 Unpacks (needs newVif defined)
+#define newVif0		0	// Use New Code for Vif0 Unpacks (not implemented)
+
+#if newVif
 extern int nVifUnpack(int idx, u8 *data);
 #else
 //#	define NON_SSE_UNPACKS  // Turns off SSE Unpacks (slower)
