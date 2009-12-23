@@ -20,6 +20,8 @@
 #include "PrecompiledHeader.h"
 #include "VpuUnpackSSE.h"
 
+#ifdef newVif
+
 static __aligned16 nVifBlock _vBlock = {0};
 static __pagealigned u8 nVifMemCmp[__pagesize];
 
@@ -276,3 +278,5 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	// the interpreter unpacker though, so a recursive call is the safest way here...
 	dVifUnpack(idx, data, size, isFill);
 }
+
+#endif

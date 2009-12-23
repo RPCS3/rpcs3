@@ -16,6 +16,8 @@
 #include "PrecompiledHeader.h"
 #include "VpuUnpackSSE.h"
 
+#ifdef newVif
+
 #define xMOV8(regX, loc)	xMOVSSZX(regX, loc)
 #define xMOV16(regX, loc)	xMOVSSZX(regX, loc)
 #define xMOV32(regX, loc)	xMOVSSZX(regX, loc)
@@ -283,3 +285,5 @@ void VpuUnpackSSE_Init()
 
 	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
 }
+
+#endif
