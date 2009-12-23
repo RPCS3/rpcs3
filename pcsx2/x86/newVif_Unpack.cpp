@@ -17,9 +17,66 @@
 // authors: cottonvibes(@gmail.com)
 //			Jake.Stine (@gmail.com)
 
-#pragma once
+#include "PrecompiledHeader.h"
+#include "Common.h"
+#include "VifDma_internal.h"
+#include "newVif.h"
 
-static __aligned16 nVifStruct nVif[2];
+#ifdef newVif
+#include "newVif_OldUnpack.inl"
+
+__aligned16 nVifStruct	nVif[2];
+__aligned16 nVifCall	nVifUpk[(2*2*16)  *4];		// ([USN][Masking][Unpack Type]) [curCycle]
+__aligned16 u32			nVifMask[3][4][4] = {0};	// [MaskNumber][CycleNumber][Vector]
+
+// Contents of this table are doubled up for doMask(false) and doMask(true) lookups.
+// (note: currently unused, I'm using gsize in the interp tables instead since it
+//  seems to be faster for now, which may change when nVif isn't reliant on interpreted
+//  unpackers anymore --air)
+__aligned16 const u8 nVifT[32] = { 
+	4, // S-32
+	2, // S-16
+	1, // S-8
+	0, // ----
+	8, // V2-32
+	4, // V2-16
+	2, // V2-8
+	0, // ----
+	12,// V3-32
+	6, // V3-16
+	3, // V3-8
+	0, // ----
+	16,// V4-32
+	8, // V4-16
+	4, // V4-8
+	2, // V4-5
+
+	// Second verse, same as the first!
+	4,2,1,0,8,4,2,0,12,6,3,0,16,8,4,2
+};
+
+// ----------------------------------------------------------------------------
+template< int idx, bool doMode, bool isFill, bool singleUnpack >
+__releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size);
+
+typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);
+
+// Unpacks Until 'Num' is 0
+static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] = {
+	{{ _nVifUnpackLoop<0,0,0,0>, _nVifUnpackLoop<0,0,1,0> },
+	{  _nVifUnpackLoop<0,1,0,0>, _nVifUnpackLoop<0,1,1,0> },},
+	{{ _nVifUnpackLoop<1,0,0,0>, _nVifUnpackLoop<1,0,1,0> },
+	{ _nVifUnpackLoop<1,1,0,0>, _nVifUnpackLoop<1,1,1,0> },},
+};
+
+// Unpacks until 1 normal write cycle unpack has been written to VU mem
+static const __aligned16 Fnptr_VifUnpackLoop UnpackSingleTable[2][2][2] = {
+	{{ _nVifUnpackLoop<0,0,0,1>, _nVifUnpackLoop<0,0,1,1> },
+	{  _nVifUnpackLoop<0,1,0,1>, _nVifUnpackLoop<0,1,1,1> },},
+	{{ _nVifUnpackLoop<1,0,0,1>, _nVifUnpackLoop<1,0,1,1> },
+	{ _nVifUnpackLoop<1,1,0,1>, _nVifUnpackLoop<1,1,1,1> },},
+};
+// ----------------------------------------------------------------------------
 
 void initNewVif(int idx) {
 	nVif[idx].idx			= idx;
@@ -31,26 +88,15 @@ void initNewVif(int idx) {
 	nVif[idx].vifCache		= NULL;
 	nVif[idx].partTransfer	= 0;
 
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadWrite, false);
-	memset8<0xcc>( nVifUpkExec );
-
-	xSetPtr( nVifUpkExec );
-
-	for (int a = 0; a < 2; a++) {
-	for (int b = 0; b < 2; b++) {
-	for (int c = 0; c < 4; c++) {
-		nVifGen(a, b, c);
-	}}}
-
-	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
+	VpuUnpackSSE_Init();
 	if (newVifDynaRec)  dVifInit(idx);
 }
 
-_f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
+static _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
 	return (u8*)(vuMemBase + ( offset & (vuidx ? 0x3ff0 : 0xff0) ));
 }
 
-_f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
+static _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
 	pxAssert( ((uptr)ptr & 0xf) == 0 ); // alignment check
 	ptr += amount;
 	int diff = ptr - (vuMemBase + (vuidx ? 0x4000 : 0x1000));
@@ -59,7 +105,7 @@ _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
 	}
 }
 
-_f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
+static _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
 	pxAssert( ((uptr)ptr & 0xf) == 0 );	// alignment check
 	ptr += 16;
 	if( ptr == (vuMemBase + (vuidx ? 0x4000 : 0x1000)) )
@@ -73,16 +119,16 @@ int nVifUnpack(int idx, u8* data) {
 	vifRegs	 = v.vifRegs;
 	int ret  = aMin(vif->vifpacketsize, vif->tag.size);
 	s32 size = ret << 2;
-	u32 vifT = nVifT[vif->cmd & 0xf];
+	const u8& vifT = nVifT[vif->cmd & 0xf];
 
 	vif->tag.size -= ret;
 
+	const bool  isFill	= (vifRegs->cycle.cl < vifRegs->cycle.wl);
+
 	if (v.partTransfer) { // Last transfer was a partial vector transfer...
 		const bool  doMode	=  vifRegs->mode && !(vif->tag.cmd & 0x10);
-		const bool  isFill	= (vifRegs->cycle.cl < vifRegs->cycle.wl);
 		const u8    upkNum	=  vif->cmd & 0x1f;
-		const VUFT& ft		=  VIFfuncTable[upkNum];
-		const int   diff	=  ft.gsize - v.partTransfer;
+		const int   diff	=  vifT - v.partTransfer;
 		memcpy(&v.partBuffer[v.partTransfer], data, diff);
 		UnpackSingleTable[idx][doMode][isFill]( v.partBuffer, size );
 		data += diff;
@@ -95,8 +141,8 @@ int nVifUnpack(int idx, u8* data) {
 	u32 oldNum = vifRegs->num;
 
 	if (size > 0) {
-		if (newVifDynaRec)	dVifUnpack(idx, data, size);
-		else			   _nVifUnpack(idx, data, size);
+		if (newVifDynaRec)	dVifUnpack(idx, data, size, isFill);
+		else			   _nVifUnpack(idx, data, size, isFill);
 	}
 
 	u32 s	 =(size/vifT)  * vifT;
@@ -230,7 +276,7 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	}
 }
 
-_f void _nVifUnpack(int idx, u8 *data, u32 size) {
+_f void _nVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 
 	if (useOldUnpack) {
 		if (!idx) VIFunpack<0>((u32*)data, &vif0.tag, size>>2);
@@ -239,7 +285,6 @@ _f void _nVifUnpack(int idx, u8 *data, u32 size) {
 	}
 
 	const bool doMode =  vifRegs->mode && !(vif->tag.cmd & 0x10);
-	const bool isFill = (vifRegs->cycle.cl < vifRegs->cycle.wl);
-
 	UnpackLoopTable[idx][doMode][isFill]( data, size );
 }
+#endif

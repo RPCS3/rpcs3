@@ -99,15 +99,16 @@ extern pxDoAssertFnType* pxDoAssert;
 // rear ugly heads in optimized builds, this is one of the few tools we have.
 
 #define pxAssertRel(cond, msg)		( (likely(cond)) || (pxOnAssert(pxAssertSpot(cond), msg), false) )
-#define pxAssumeMsg(cond, msg)		((void) ( (!likely(cond)) && (pxOnAssert(pxAssertSpot(cond), msg), false) ))
+#define pxAssumeRel(cond, msg)		((void) ( (!likely(cond)) && (pxOnAssert(pxAssertSpot(cond), msg), false) ))
+#define pxFailRel(msg)				pxAssumeRel(false, msg)
 
 #if defined(PCSX2_DEBUG)
 
 #	define pxAssertMsg(cond, msg)	pxAssertRel(cond, msg)
 #	define pxAssertDev(cond, msg)	pxAssertMsg(cond, msg)
 
-#	define pxAssume(cond)			pxAssumeMsg(cond, wxNullChar)
-#	define pxAssumeDev(cond, msg)	pxAssumeMsg(cond, msg)
+#	define pxAssumeMsg(cond, msg)	pxAssumeRel(cond, msg)
+#	define pxAssumeDev(cond, msg)	pxAssumeRel(cond, msg)
 
 #	define pxFail(msg)				pxAssumeMsg(false, msg)
 #	define pxFailDev(msg)			pxAssumeDev(false, msg)
@@ -120,7 +121,7 @@ extern pxDoAssertFnType* pxDoAssert;
 #	define pxAssertMsg(cond, msg)	(likely(cond))
 #	define pxAssertDev(cond, msg)	pxAssertRel(cond, msg)
 
-#	define pxAssume(cond)			(__assume(cond))
+#	define pxAssumeMsg(cond, msg)	(__assume(cond))
 #	define pxAssumeDev(cond, msg)	pxAssumeMsg(cond, msg)
 
 #	define pxFail(msg)				(__assume(false))
@@ -134,7 +135,7 @@ extern pxDoAssertFnType* pxDoAssert;
 #	define pxAssertMsg(cond, msg)	(likely(cond))
 #	define pxAssertDev(cond, msg)	(likely(cond))
 
-#	define pxAssume(cond)			(__assume(cond))
+#	define pxAssumeMsg(cond, msg)	(__assume(cond))
 #	define pxAssumeDev(cond, msg)	(__assume(cond))
 
 #	define pxFail(msg)				(__assume(false))
@@ -143,6 +144,7 @@ extern pxDoAssertFnType* pxDoAssert;
 #endif
 
 #define pxAssert(cond)				pxAssertMsg(cond, wxNullChar)
+#define pxAssume(cond)				pxAssumeMsg(cond, wxNullChar)
 
 #define pxAssertRelease( cond, msg )
 

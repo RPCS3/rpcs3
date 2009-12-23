@@ -515,6 +515,10 @@
 		<Unit filename="../x86/ix86-32/iR5900Shift.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900Templates.cpp" />
 		<Unit filename="../x86/ix86-32/recVTLB.cpp" />
+		<Unit filename="../x86/VpuUnpackSSE.cpp" />
+		<Unit filename="../x86/VpuUnpackSSE.h" />
+		<Unit filename="../x86/VpuUnpackSSE_Dynarec.cpp" />
+		<Unit filename="../x86/newVof_Unpack.cpp" />
 		<Unit filename="../x86/microVU.cpp" />
 		<Unit filename="../x86/microVU.h" />
 		<Unit filename="../x86/microVU_Alloc.inl" />
@@ -534,12 +538,8 @@
 		<Unit filename="../x86/microVU_Upper.inl" />
 		<Unit filename="../x86/newVif.h" />
 		<Unit filename="../x86/newVif_BlockBuffer.h" />
-		<Unit filename="../x86/newVif_Dynarec.inl" />
 		<Unit filename="../x86/newVif_HashBucket.h" />
 		<Unit filename="../x86/newVif_OldUnpack.inl" />
-		<Unit filename="../x86/newVif_Tables.inl" />
-		<Unit filename="../x86/newVif_Unpack.inl" />
-		<Unit filename="../x86/newVif_UnpackGen.inl" />
 		<Unit filename="../x86/sVU_Debug.h" />
 		<Unit filename="../x86/sVU_Lower.cpp" />
 		<Unit filename="../x86/sVU_Micro.cpp" />

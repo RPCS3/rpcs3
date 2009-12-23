@@ -15,8 +15,6 @@
 
 #pragma once
 
-static __pagealigned u8 nVifMemCmp[__pagesize];
-
 template< typename T >
 struct SizeChain
 {
@@ -66,8 +64,8 @@ public:
 		if( bucket.Size > 3 ) DevCon.Warning( "recVifUnpk: Bucket 0x%04x has %d micro-programs", d % hSize, bucket.Size );
 		return NULL;
 	}
-	__forceinline void add(T* dataPtr) {
-		u32 d = *(u32*)dataPtr;
+	__forceinline void add(const T& dataPtr) {
+		u32 d = (u32&)dataPtr;
 		SizeChain<T>& bucket( mBucket[d % hSize] );
 		
 		if( bucket.Chain = (T*)_aligned_realloc( bucket.Chain, sizeof(T)*(bucket.Size+1), 16), bucket.Chain==NULL ) {
@@ -76,7 +74,7 @@ public:
 				wxEmptyString
 			);
 		}
-		memcpy_fast(&bucket.Chain[bucket.Size++], dataPtr, sizeof(T));
+		memcpy_fast(&bucket.Chain[bucket.Size++], &dataPtr, sizeof(T));
 	}
 	void clear() {
 		for (int i = 0; i < hSize; i++) {

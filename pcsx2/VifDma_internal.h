@@ -75,19 +75,21 @@ template<const u32 VIFdmanum> void ProcessMemSkip(u32 size, u32 unpackType);
 template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> void vuExecMicro(u32 addr);
-extern __forceinline void vif0FLUSH();
-extern __forceinline void vif1FLUSH();
+extern void vif0FLUSH();
+extern void vif1FLUSH();
 
 static __forceinline u32 vif_size(u8 num)
 {
     return (num == 0) ? 0x1000 : 0x4000;
 }
 
-//#define newVif  // Enable 'newVif' Code (if the below macros are not defined, it will use old non-sse code)
-//#define newVif1 // Use New Code for Vif1 Unpacks (needs newVif defined)
+#define newVif  // Enable 'newVif' Code (if the below macros are not defined, it will use old non-sse code)
+#define newVif1 // Use New Code for Vif1 Unpacks (needs newVif defined)
 //#define newVif0 // Use New Code for Vif0 Unpacks (not implemented)
 
-#ifndef newVif
+#ifdef newVif
+extern int nVifUnpack(int idx, u8 *data);
+#else
 //#	define NON_SSE_UNPACKS  // Turns off SSE Unpacks (slower)
 #endif
 

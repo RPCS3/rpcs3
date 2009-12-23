@@ -15,6 +15,12 @@
 
 #pragma once
 
+#include "Vif.h"
+#include "VU.h"
+
+#include "x86emitter/x86emitter.h"
+using namespace x86Emitter;
+
 #ifdef newVif
 
 // newVif_HashBucket.h uses this typedef, so it has to be decared first.
@@ -23,17 +29,12 @@ typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
 
 #include "newVif_BlockBuffer.h"
 #include "newVif_HashBucket.h"
-#include "x86emitter/x86emitter.h"
-using namespace x86Emitter;
-extern void  mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW = 0);
-extern void  nVifGen	 (int usn,  int mask, int curCycle);
-extern void _nVifUnpack  (int idx,  u8 *data, u32 size);
-extern void  dVifUnpack  (int idx,  u8 *data, u32 size);
-extern void  dVifInit    (int idx);
 
-static __pagealigned u8 nVifUpkExec[__pagesize*4];
-static __aligned16 nVifCall nVifUpk[(2*2*16)  *4]; // ([USN][Masking][Unpack Type]) [curCycle]
-static __aligned16 u32 nVifMask[3][4][4] = {0};	   // [MaskNumber][CycleNumber][Vector]
+extern void  mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW = 0);
+extern void _nVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
+extern void  dVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
+extern void  dVifInit    (int idx);
+extern void  VpuUnpackSSE_Init();
 
 #define VUFT VIFUnpackFuncTable
 #define _1mb (0x100000)
@@ -56,7 +57,10 @@ static __aligned16 u32 nVifMask[3][4][4] = {0};	   // [MaskNumber][CycleNumber][
 #	pragma warning(disable:4996) // 'function': was declared deprecated
 #endif
 
-struct __aligned16 nVifBlock { // Ordered for Hashing
+// nVifBlock - Ordered for Hashing; the 'num' field and the lower 6 bits of upkType are
+//             used as the hash bucke selector.
+//
+struct __aligned16 nVifBlock {
 	u8   num;		// [00] Num  Field
 	u8   upkType;	// [01] Unpack Type [usn*1:mask*1:upk*4]
 	u8   mode;		// [02] Mode Field
@@ -88,63 +92,14 @@ struct nVifStruct {
 	u8*						recEnd;			// End of Rec Cache
 	BlockBuffer*			vifCache;		// Block Buffer
 	HashBucket<_tParams>*	vifBlocks;		// Vif Blocks
-	nVifBlock*				vifBlock;		// Current Vif Block Ptr
 };
 
-// Contents of this table are doubled up for doMask(false) and doMask(true) lookups.
-// (note: currently unused, I'm using gsize in the interp tables instead since it
-//  seems to be faster for now, which may change when nVif isn't reliant on interpreted
-//  unpackers anymore --air)
-static const u32 nVifT[32] = { 
-	4, // S-32
-	2, // S-16
-	1, // S-8
-	0, // ----
-	8, // V2-32
-	4, // V2-16
-	2, // V2-8
-	0, // ----
-	12,// V3-32
-	6, // V3-16
-	3, // V3-8
-	0, // ----
-	16,// V4-32
-	8, // V4-16
-	4, // V4-8
-	2, // V4-5
+extern __aligned16 nVifStruct nVif[2];
+extern __aligned16 const u8 nVifT[32];
+extern __aligned16 nVifCall nVifUpk[(2*2*16)  *4];		// ([USN][Masking][Unpack Type]) [curCycle]
+extern __aligned16 u32		nVifMask[3][4][4];			// [MaskNumber][CycleNumber][Vector]
 
-	// Second verse, same as the first!
-	4,2,1,0,8,4,2,0,12,6,3,0,16,8,4,2
-};
-
-template< int idx, bool doMode, bool isFill, bool singleUnpack >
-__releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size);
-
-typedef void (__fastcall* Fnptr_VifUnpackLoop)(u8 *data, u32 size);
-
-// Unpacks Until 'Num' is 0
-static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] = {
-	{{ _nVifUnpackLoop<0,0,0,0>, _nVifUnpackLoop<0,0,1,0> },
-	{  _nVifUnpackLoop<0,1,0,0>, _nVifUnpackLoop<0,1,1,0> },},
-	{{ _nVifUnpackLoop<1,0,0,0>, _nVifUnpackLoop<1,0,1,0> },
-	 { _nVifUnpackLoop<1,1,0,0>, _nVifUnpackLoop<1,1,1,0> },},
-};
-
-// Unpacks until 1 normal write cycle unpack has been written to VU mem
-static const __aligned16 Fnptr_VifUnpackLoop UnpackSingleTable[2][2][2] = {
-	{{ _nVifUnpackLoop<0,0,0,1>, _nVifUnpackLoop<0,0,1,1> },
-	{  _nVifUnpackLoop<0,1,0,1>, _nVifUnpackLoop<0,1,1,1> },},
-	{{ _nVifUnpackLoop<1,0,0,1>, _nVifUnpackLoop<1,0,1,1> },
-	 { _nVifUnpackLoop<1,1,0,1>, _nVifUnpackLoop<1,1,1,1> },},
-};
-
-#define  useOldUnpack  0 // Use code in newVif_OldUnpack.inl
-#define  newVifDynaRec 1 // Use code in newVif_Dynarec.inl
-#include "newVif_OldUnpack.inl"
-#include "newVif_Unpack.inl"
-#include "newVif_UnpackGen.inl"
-
-#include "newVif_Tables.inl"
-#include "newVif_Dynarec.inl"
+static const bool useOldUnpack = false; // Use code in newVif_OldUnpack.inl
+static const bool newVifDynaRec = true; // Use code in newVif_Dynarec.inl
 
 #endif

@@ -25,7 +25,7 @@
 // just use 'new' and 'delete' for initialization and 
 // deletion/cleanup respectfully...
 class BlockBuffer {
-private:
+protected:
 	u32 mSize;  // Cur Size
 	u32 mSizeT; // Total Size
 	u8* mData;  // Data Ptr

@@ -860,7 +860,7 @@
 									>
 								</File>
 								<File
-									RelativePath="..\..\x86\newVif_Unpack.inl"
+									RelativePath="..\..\x86\newVif_Unpack.cpp"
 									>
 								</File>
 								<File
@@ -871,11 +871,19 @@
 									Name="Dynarec"
 									>
 									<File
-										RelativePath="..\..\x86\newVif_Dynarec.inl"
+										RelativePath="..\..\x86\newVif_Tables.inl"
 										>
 									</File>
 									<File
-										RelativePath="..\..\x86\newVif_Tables.inl"
+										RelativePath="..\..\x86\VpuUnpackSSE.cpp"
+										>
+									</File>
+									<File
+										RelativePath="..\..\x86\VpuUnpackSSE.h"
+										>
+									</File>
+									<File
+										RelativePath="..\..\x86\VpuUnpackSSE_Dynarec.cpp"
 										>
 									</File>
 								</Filter>

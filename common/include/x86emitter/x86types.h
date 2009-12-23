@@ -490,6 +490,11 @@ template< typename T > void xWrite( T val );
 		__forceinline xAddressInfo operator+( s32 imm ) const					{ return xAddressInfo( *this ).Add( imm ); }
 		__forceinline xAddressInfo operator-( s32 imm ) const					{ return xAddressInfo( *this ).Add( -imm ); }
 		__forceinline xAddressInfo operator+( const void* addr ) const			{ return xAddressInfo( *this ).Add( (uptr)addr ); }
+
+		__forceinline void operator+=( const xAddressReg& right )	{ Add( right ); }
+		__forceinline void operator+=( const xAddressInfo& right )	{ Add( right ); }
+		__forceinline void operator+=( s32 imm ) { Add( imm ); }
+		__forceinline void operator-=( s32 imm ) { Add( -imm ); }
 	};
 
 	extern const xRegisterSSE
