@@ -30,6 +30,10 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add directory="../Linux" />
+					<Add directory="../../opengl" />
+					<Add directory="../../../../common/include" />
+					<Add directory="../../../../3rdparty" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />

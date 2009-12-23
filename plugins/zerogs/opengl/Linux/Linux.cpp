@@ -35,9 +35,6 @@ extern "C" {
 
 #include <map>
 
-
-extern string s_strIniPath;
-
 GtkWidget *Conf, *Logging, *About;
 GList *fresl, *wresl, *cachesizel, *codecl, *filtersl;
 
@@ -194,8 +191,6 @@ void CALLBACK GSconfigure()
 
 	char strcurdir[256];
 	getcwd(strcurdir, 256);
-	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/zerogs.ini";
 	
 	if (!(conf.options & GSOPTION_LOADED)) LoadConfig();
 	Conf = create_Config();
