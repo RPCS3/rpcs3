@@ -16,6 +16,20 @@
 #include "xmmintrin.h"
 #pragma once
 
+// Create some typecast operators for SIMD operations.  For some reason MSVC needs a
+// handle/reference typecast to avoid error.  GCC (and presumably other compilers)
+// generate an error if the handle/ref is used.  Honestly neither makes sense, since
+// both typecasts should be perfectly valid >_<.  --air
+#ifdef _MSC_VER
+#	define cast_m128		__m128&
+#	define cast_m128i		__m128i&
+#	define cast_m128d		__m128d&
+#else // defined(__GNUC__)
+#	define cast_m128		__m128
+#	define cast_m128i		__m128i
+#	define cast_m128d		__m128d
+#endif
+
 template< typename T >
 struct SizeChain
 {
@@ -54,7 +68,7 @@ public:
 		for (int i=bucket.Size; i; --i) {
 			// This inline version seems about 1-2% faster in tests of games that average 1
 			// program per bucket.  Games that average more should see a bigger improvement --air
-			int result = _mm_movemask_ps( (__m128&) _mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) ) & 0x7;
+			int result = _mm_movemask_ps( (cast_m128) _mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) ) & 0x7;
 			if( result == 0x7 ) return &bucket.Chain[i];
 
 			// Dynamically generated function version, can't be inlined. :(

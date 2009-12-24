@@ -28,7 +28,7 @@ static const uint headsize = sizeof(AlignedMallocHeader);
 
 void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align)
 {
-	jASSUME( align < 0x10000 );
+	pxAssume( align < 0x10000 );
 
 	u8* p = (u8*)malloc(size+align+headsize);
 
@@ -47,15 +47,16 @@ void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align)
 
 void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align)
 {
-	if( handle == NULL ) return NULL;
-	jASSUME( align < 0x10000 );
-
-	AlignedMallocHeader* header = (AlignedMallocHeader*)((uptr)handle - headsize);
+	pxAssume( align < 0x10000 );
 
 	void* newbuf = pcsx2_aligned_malloc( size, align );
-	memcpy_fast( newbuf, handle, std::min( size, header->size ) );
 
-	free( header->baseptr );
+	if( handle != NULL )
+	{
+		AlignedMallocHeader* header = (AlignedMallocHeader*)((uptr)handle - headsize);
+		memcpy_fast( newbuf, handle, std::min( size, header->size ) );
+		free( header->baseptr );
+	}
 	return newbuf;
 }
 
@@ -74,7 +75,7 @@ __forceinline void pcsx2_aligned_free(void* pmem)
 // memzero_obj and stuff).
 __forceinline void _memset16_unaligned( void* dest, u16 data, size_t size )
 {
-	jASSUME( (size & 0x1) == 0 );
+	pxAssume( (size & 0x1) == 0 );
 
 	u16* dst = (u16*)dest;
 	for(int i=size; i; --i, ++dst )
