@@ -413,7 +413,7 @@ template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size)
 	return size>>2;
 }
 #include "newVif.h"
-#ifndef newVif
+#if !newVif
 template void VIFunpack<0>(u32 *data, vifCode *v, u32 size);
 template void VIFunpack<1>(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
@@ -738,7 +738,7 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size)
 		}
 	}
 }
-#endif // #ifndef newVif
+#endif // #if !newVif
 
 template void vuExecMicro<0>(u32 addr);
 template void vuExecMicro<1>(u32 addr);

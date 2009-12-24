@@ -36,8 +36,8 @@ VifUnpackSSE_Base::VifUnpackSSE_Base()
 }
 
 void VifUnpackSSE_Base::xMovDest(const xRegisterSSE& srcReg) const {
-	if (!doMode && !doMask)	{ xMOVAPS (ptr[dstIndirect], srcReg); }
-	else					{ doMaskWrite(srcReg); }
+	if (IsUnmaskedOp())	{ xMOVAPS (ptr[dstIndirect], srcReg); }
+	else				{ doMaskWrite(srcReg); }
 }
 
 void VifUnpackSSE_Base::xShiftR(const xRegisterSSE& regX, int n) const {
@@ -197,7 +197,7 @@ void VifUnpackSSE_Base::xUPK_V4_5() const {
 	xMovDest	(xmm1);
 }
 
-void VifUnpackSSE_Base::xUnpack( int upknum )
+void VifUnpackSSE_Base::xUnpack( int upknum ) const
 {
 	switch( upknum )
 	{
@@ -252,13 +252,12 @@ static void nVifGen(int usn, int mask, int curCycle) {
 
 	int usnpart		= usn*2*16;
 	int maskpart	= mask*16;
-	int curpart		= curCycle;
 
 	VifUnpackSSE_Simple vpugen( !!usn, !!mask, curCycle );
 
 	for( int i=0; i<16; ++i )
 	{
-		nVifCall& ucall( nVifUpk[((usnpart+maskpart+i) * 4) + (curpart)] );
+		nVifCall& ucall( nVifUpk[((usnpart+maskpart+i) * 4) + curCycle] );
 		ucall = NULL;
 		if( nVifT[i] == 0 ) continue;
 		

@@ -58,7 +58,7 @@ __forceinline void vif1FLUSH()
 
 void vif1Init()
 {
-#ifdef  newVif1
+#if newVif1
 	extern void initNewVif(int idx);
 	initNewVif(1);
 #endif
@@ -320,8 +320,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 }
 static int  __fastcall Vif1TransUnpack(u32 *data)
 {
-	if( newVif1 )
-		return nVifUnpack(1, (u8*)data);
+	#if newVif1
+	return nVifUnpack(1, (u8*)data);
+	#endif
 
     XMMRegisters::Freeze();
 
