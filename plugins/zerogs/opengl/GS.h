@@ -121,19 +121,32 @@ struct RECT
 	int right, bottom;
 };
 
-typedef struct {
-	Display *dpy;
-	int screen;
-	Window win;
-	GLXContext ctx;
-	XSetWindowAttributes attr;
-	Bool fs;
-	Bool doubleBuffered;
-	XF86VidModeModeInfo deskMode;
-	int x, y;
-	unsigned int width, height;
-	unsigned int depth;	
-} GLWindow;
+#define GL_X11_WINDOW
+
+class GLWindow
+{
+    private:
+#ifdef GL_X11_WINDOW
+        Display *glDisplay;
+        Window glWindow;
+        int glScreen;
+        GLXContext context;
+        XSetWindowAttributes attr;
+        XF86VidModeModeInfo deskMode;
+#endif
+        bool fullScreen, doubleBuffered;
+        s32 x, y;
+        u32 width, height, depth;	
+    
+    public:
+        void SwapBuffers();
+        void SetTitle(char *strtitle);
+        bool CreateWindow(void *pDisplay);
+        bool DestroyWindow();
+        void CloseWindow();
+        void DisplayWindow(int _width, int _height);
+        void ResizeCheck();
+};
 
 extern GLWindow GLWin;
 

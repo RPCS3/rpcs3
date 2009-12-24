@@ -592,13 +592,9 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 	LoadConfig();
 
 	strcpy(GStitle, Title);
-
-	GLWin.dpy = XOpenDisplay(0);
-	GLWin.screen = DefaultScreen(GLWin.dpy);
-
-	if( pDsp != NULL )
-		*(Display**)pDsp = GLWin.dpy;
-
+    
+    GLWin.CreateWindow(pDsp);
+    
 	ERROR_LOG("creating zerogs\n");
 	//if (conf.record) recOpen();
 	if( !ZeroGS::Create(conf.width, conf.height) )
@@ -630,16 +626,8 @@ s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
 
 void ProcessMessages()
 {
-	
-	XEvent event;
 	// check resizing
-	while(XCheckTypedEvent(GLWin.dpy, ConfigureNotify, &event)) {
-		if ((event.xconfigure.width != GLWin.width) || (event.xconfigure.height != GLWin.height)) {
-			ZeroGS::ChangeWindowSize(event.xconfigure.width, event.xconfigure.height);
-			GLWin.width = event.xconfigure.width;
-			GLWin.height = event.xconfigure.height;
-		}
-	}
+	GLWin.ResizeCheck();
 
 	if ( THR_KeyEvent ) { // This values was passed from GSKeyEvents witch could be in another thread
 		int my_KeyEvent = THR_KeyEvent;
@@ -673,10 +661,7 @@ void CALLBACK GSclose() {
 		GShwnd = NULL;
 	}
 #else
-	if( GLWin.dpy != NULL ) {
-		XCloseDisplay(GLWin.dpy);
-		GLWin.dpy = NULL;
-	}
+    GLWin.CloseWindow();
 #endif
 }
 
@@ -790,12 +775,8 @@ void CALLBACK GSvsync(int interlace)
 		if( !(conf.options&GSOPTION_FULLSCREEN) )
 			SetWindowText(GShwnd, strtitle);
 #else // linux
-		XTextProperty prop;
-		memset(&prop, 0, sizeof(prop));
-		char* ptitle = strtitle;
-		if( XStringListToTextProperty(&ptitle, 1, &prop) )
-			XSetWMName(GLWin.dpy, GLWin.win, &prop);
-		XFree(prop.value);
+		if (!(conf.options & GSOPTION_FULLSCREEN)) 
+            GLWin.SetTitle(strtitle);
 #endif
 
 		if( fFPS < 16 ) UPDATE_FRAMES = 4;
