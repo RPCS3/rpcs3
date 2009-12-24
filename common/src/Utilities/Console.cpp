@@ -15,8 +15,16 @@
 
 #include "PrecompiledHeader.h"
 #include "Threading.h"
+#include "TlsVariable.inl"
 
 using namespace Threading;
+
+// thread-local console indentation setting.
+static DeclareTls(int) conlog_Indent( 0 );
+
+// thread-local console color storage.
+static DeclareTls(ConsoleColors) conlog_Color( DefaultConsoleColor );
+
 
 static wxString	m_buffer;		// used by ConsoleBuffer
 static Mutex	m_bufferlock;	// used by ConsoleBuffer
@@ -363,12 +371,6 @@ static void format_that_unicode_mess( SafeArray<wxChar>& buffer, const wxChar* f
 	// performing an assertion or log of a truncated string is unsafe, so let's not; even
 	// though it'd be kinda nice if we did.
 }
-
-// thread-local console indentation setting.
-static __threadlocal int conlog_Indent = 0;
-
-// thread-local console color storage.
-static __threadlocal ConsoleColors conlog_Color = DefaultConsoleColor;
 
 static wxString ascii_format_string(const char* fmt, va_list argptr)
 {

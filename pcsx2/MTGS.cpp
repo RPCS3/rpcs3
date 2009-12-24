@@ -82,14 +82,6 @@ extern bool renderswitch;
 std::list<uint> ringposStack;
 #endif
 
-static __threadlocal SysMtgsThread* tls_mtgsThread = NULL;
-
-SysMtgsThread& SysMtgsThread::Get()
-{
-	pxAssertMsg( tls_mtgsThread != NULL, L"This function must be called from the context of a running SysMtgsThread." );
-	return *tls_mtgsThread;
-}
-
 SysMtgsThread::SysMtgsThread() :
 	SysThreadBase()
 #ifdef RINGBUF_DEBUG_STACK
@@ -268,8 +260,6 @@ public:
 
 void SysMtgsThread::ExecuteTaskInThread()
 {
-	tls_mtgsThread = this;
-
 #ifdef RINGBUF_DEBUG_STACK
 	PacketTagType prevCmd;
 #endif
@@ -513,7 +503,6 @@ void SysMtgsThread::OnResumeInThread( bool isSuspended )
 void SysMtgsThread::OnCleanupInThread()
 {
 	ClosePlugin();
-	tls_mtgsThread = NULL;
 	_parent::OnCleanupInThread();
 }
 

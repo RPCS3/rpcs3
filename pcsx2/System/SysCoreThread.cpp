@@ -23,6 +23,7 @@
 #include "PageFaultSource.h"
 #include "SysThreads.h"
 
+#include "Utilities/TlsVariable.inl"
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>
@@ -30,7 +31,7 @@
 
 #include <xmmintrin.h>
 
-static __threadlocal SysCoreThread* tls_coreThread = NULL;
+static DeclareTls(SysCoreThread*) tls_coreThread( NULL );
 
 // --------------------------------------------------------------------------------------
 //  SysCoreThread *External Thread* Implementations

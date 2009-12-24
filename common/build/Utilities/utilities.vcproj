@@ -224,10 +224,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Utilities\Mutex.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Utilities\PathUtils.cpp"
 				>
 			</File>
@@ -272,19 +268,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\Utilities\Semaphore.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\src\Utilities\StringHelpers.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\Utilities\ThreadingInternal.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\Utilities\ThreadTools.cpp"
 				>
 			</File>
 			<File
@@ -431,6 +415,26 @@
 					>
 				</File>
 			</Filter>
+			<Filter
+				Name="Threading"
+				>
+				<File
+					RelativePath="..\..\src\Utilities\Mutex.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\Utilities\Semaphore.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\Utilities\ThreadingInternal.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\src\Utilities\ThreadTools.cpp"
+					>
+				</File>
+			</Filter>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -526,10 +530,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\Utilities\Threading.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\include\Utilities\win_memzero.h"
 				>
 			</File>
@@ -541,6 +541,18 @@
 				RelativePath="..\..\include\Utilities\wxGuiTools.h"
 				>
 			</File>
+			<Filter
+				Name="Threading"
+				>
+				<File
+					RelativePath="..\..\include\Utilities\Threading.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\include\Utilities\TlsVariable.inl"
+					>
+				</File>
+			</Filter>
 		</Filter>
 	</Files>
 	<Globals>

@@ -96,6 +96,8 @@ void EstablishMXCSRmask()
 		MXCSR_Mask.bitmask = 0xFFFF;	// SSE2 features added
 	}
 
+	if( !CanEmitShit() ) return;
+
 	// the fxsave buffer must be 16-byte aligned to avoid GPF.  I just save it to an
 	// unused portion of recSSE, since it has plenty of room to spare.
 

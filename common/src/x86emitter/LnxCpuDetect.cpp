@@ -36,6 +36,13 @@ void CountLogicalCores( int LogicalCoresPerPhysicalCPU, int PhysicalCoresPerPhys
 	}
 }
 
+bool CanEmitShit()
+{
+	// In Linux I'm pretty sure TLS always works, none of the funny business that Windows
+	// has involving DLLs. >_<
+	return true;
+}
+
 bool CanTestInstructionSets()
 {
 	// Not implemented yet for linux.  (see cpudetect_internal.h for details)

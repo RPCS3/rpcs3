@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "Utilities/TlsVariable.inl"
 
 #include <wx/stackwalk.h>
 
@@ -105,7 +106,7 @@ static wxString pxGetStackTrace( const FnChar_t* calledFrom )
 
 #ifdef __WXDEBUG__
 
-static __threadlocal int _reentrant_lock = 0;
+static TlsVariable< int > _reentrant_lock( 0 );
 
 // This override of wx's implementation provides thread safe assertion message reporting.  If we aren't
 // on the main gui thread then the assertion message box needs to be passed off to the main gui thread

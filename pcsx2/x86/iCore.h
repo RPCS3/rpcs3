@@ -265,8 +265,8 @@ extern u32 g_cpuRegHasSignExt, g_cpuPrevRegHasSignExt;
 
 extern _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 
-extern __threadlocal u8  *j8Ptr[32];		// depreciated item.  use local u8* vars instead.
-extern __threadlocal u32 *j32Ptr[32];		// depreciated item.  use local u32* vars instead.
+extern __tls_emit u8  *j8Ptr[32];		// depreciated item.  use local u8* vars instead.
+extern __tls_emit u32 *j32Ptr[32];		// depreciated item.  use local u32* vars instead.
 
 extern u16 g_x86AllocCounter;
 extern u16 g_xmmAllocCounter;

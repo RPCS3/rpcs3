@@ -22,10 +22,26 @@
 #include "Pcsx2Defs.h"
 #include "ScopedPtr.h"
 
-#undef Yield		// release th burden of windows.h global namespace spam.
+#undef Yield		// release the burden of windows.h global namespace spam.
 
 #define AffinityAssert_AllowFromMain() \
 	pxAssertMsg( wxThread::IsMain(), "Thread affinity violation: Call allowed from main thread only." )
+
+// --------------------------------------------------------------------------------------
+//  PCSX2_THREAD_LOCAL - Defines platform/operating system support for Thread Local Storage
+// --------------------------------------------------------------------------------------
+// For complimentary support for TLS, include Utilities/TlsVariable.inl, and use the
+// DeclareTls macro in the place of __threadlocal.
+//
+//#define PCSX2_THREAD_LOCAL 0		// uncomment this line to force-disable native TLS (useful for testing TlsVariabel on windows/linux)
+
+#ifndef PCSX2_THREAD_LOCAL
+#	ifdef __WXMAC__
+#		define PCSX2_THREAD_LOCAL 0
+#	else
+#		define PCSX2_THREAD_LOCAL 1
+#	endif
+#endif
 
 class wxTimeSpan;
 
@@ -130,6 +146,7 @@ namespace Exception
 	};
 #endif
 }
+
 
 namespace Threading
 {

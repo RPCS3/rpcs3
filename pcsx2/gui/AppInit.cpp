@@ -518,6 +518,16 @@ Pcsx2App::Pcsx2App()
 
 	SetAppName( L"pcsx2" );
 	BuildCommandHash();
+
+#ifdef __WXMSW__
+	// This variable assignment ensures that MSVC links in the TLS setup stubs even in 
+	// full optimization builds.  Without it, DLLs that use TLS won't work because the
+	// FS segment register won't have been initialized by the main exe, due to tls_insurance
+	// being optimized away >_<  --air
+
+	static __threadlocal int	tls_insurance = 0;
+	tls_insurance = 1;
+#endif
 }
 
 Pcsx2App::~Pcsx2App()

@@ -51,5 +51,6 @@ public:
 // This secondary test fixes such cases (although apparently a CMOS reset does as well).
 //
 
+extern bool CanEmitShit();
 extern bool CanTestInstructionSets();
 extern bool _test_instruction( void* pfnCall );

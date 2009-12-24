@@ -37,8 +37,6 @@ const wxTimeSpan	Threading::def_yieldgui_interval( 0, 0, 0, 100 );
 // three second interval for deadlock protection on waitgui.
 const wxTimeSpan	Threading::def_deadlock_timeout( 0, 0, 3, 0 );
 
-//static __threadlocal PersistentThread* tls_current_thread = NULL;
-
 static pthread_key_t	curthread_key = NULL;
 static s32				total_key_count = 0;
 static Mutex			total_key_lock;

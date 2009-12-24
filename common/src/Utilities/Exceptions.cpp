@@ -17,6 +17,7 @@
 
 #include <wx/app.h>
 #include "Threading.h"
+#include "TlsVariable.inl"
 
 wxString GetEnglish( const char* msg )
 {
@@ -41,7 +42,7 @@ wxString GetTranslation( const char* msg )
 
 // Using a threadlocal assertion guard.  Separate threads can assert at the same time.
 // That's ok.  What we don't want is the *same* thread recurse-asserting.
-static __threadlocal int s_assert_guard = 0;
+static DeclareTls(int) s_assert_guard( 0 );
 
 pxDoAssertFnType* pxDoAssert = pxAssertImpl_LogIt;
 
