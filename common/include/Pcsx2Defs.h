@@ -16,6 +16,9 @@
 #ifndef __PCSX2DEFS_H__
 #define __PCSX2DEFS_H__
 
+// Indicate that this is the wx port to the plugins.
+#define WX_PCSX2
+
 #if defined (__linux__) && !defined(__LINUX__)  // some distributions are lower case
 #	define __LINUX__
 #endif

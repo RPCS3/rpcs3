@@ -19,6 +19,10 @@
 #include "Threading.h"
 #include "TlsVariable.inl"
 
+#if defined(__UNIX__)
+#include <signal.h>
+#endif
+
 wxString GetEnglish( const char* msg )
 {
 	return fromUTF8(msg);
