@@ -38,18 +38,20 @@ public:
 protected:
 	xAddressInfo	dstIndirect;
 	xAddressInfo	srcIndirect;
-
+	xRegisterSSE	workReg;
+	xRegisterSSE	destReg;
+	
 public:
 	VifUnpackSSE_Base();
 	virtual ~VifUnpackSSE_Base() throw() {}
 
 	virtual void xUnpack( int upktype ) const;
 	virtual bool IsUnmaskedOp() const=0;
+	virtual void xMovDest() const;
 
 protected:
 	virtual void doMaskWrite(const xRegisterSSE& regX ) const=0;
 
-	virtual void xMovDest(const xRegisterSSE& srcReg) const;
 	virtual void xShiftR(const xRegisterSSE& regX, int n) const;
 	virtual void xPMOVXX8(const xRegisterSSE& regX) const;
 	virtual void xPMOVXX16(const xRegisterSSE& regX) const;

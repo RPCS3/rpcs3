@@ -65,11 +65,11 @@ public:
 		u32 d = *((u32*)dataPtr);
 		const SizeChain<T>& bucket( mBucket[d % hSize] );
 
-		for (int i=bucket.Size; i; --i) {
+		for (int i=bucket.Size-1; i>0; --i) {
 			// This inline version seems about 1-2% faster in tests of games that average 1
 			// program per bucket.  Games that average more should see a bigger improvement --air
-			int result = _mm_movemask_ps( (cast_m128) _mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) ) & 0x7;
-			if( result == 0x7 ) return &bucket.Chain[i];
+			int result = _mm_movemask_ps( (cast_m128) _mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) );
+			if( (result&0x7) == 0x7 ) return &bucket.Chain[i];
 
 			// Dynamically generated function version, can't be inlined. :(
 			//if ((((nVifCall)((void*)nVifMemCmp))(&bucket.Chain[i], dataPtr))==7) return &bucket.Chain[i];

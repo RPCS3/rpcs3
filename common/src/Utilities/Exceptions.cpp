@@ -76,6 +76,26 @@ bool pxAssertImpl_LogIt( const DiagnosticOrigin& origin, const wxChar *msg )
 	return false;
 }
 
+// Because wxTrap isn't available on Linux builds of wxWidgets (non-Debug, typically)
+void pxTrap()
+{
+#if defined(__WXMSW__) && !defined(__WXMICROWIN__)
+    __debugbreak();
+#elif defined(__WXMAC__) && !defined(__DARWIN__)
+    #if __powerc
+        Debugger();
+    #else
+        SysBreak();
+    #endif
+#elif defined(_MSL_USING_MW_C_HEADERS) && _MSL_USING_MW_C_HEADERS
+    Debugger();
+#elif defined(__UNIX__)
+    raise(SIGTRAP);
+#else
+    // TODO
+#endif // Win/Unix
+}
+
 DEVASSERT_INLINE void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* msg )
 {
 	RecursionGuard guard( s_assert_guard );
@@ -98,7 +118,7 @@ DEVASSERT_INLINE void pxOnAssert( const DiagnosticOrigin& origin, const wxChar* 
 		trapit = pxDoAssert( origin, msg );
 	}
 
-	if( trapit ) { wxTrap(); }
+	if( trapit ) { pxTrap(); }
 }
 
 __forceinline void pxOnAssert( const DiagnosticOrigin& origin, const char* msg)

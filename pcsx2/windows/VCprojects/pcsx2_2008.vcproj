@@ -863,10 +863,6 @@
 									RelativePath="..\..\x86\newVif_Unpack.cpp"
 									>
 								</File>
-								<File
-									RelativePath="..\..\x86\newVif_UnpackGen.inl"
-									>
-								</File>
 								<Filter
 									Name="Dynarec"
 									>

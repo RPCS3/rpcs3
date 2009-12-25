@@ -356,6 +356,18 @@ template< typename T > void xWrite( T val );
 
 		bool operator==( const xRegisterSSE& src ) const	{ return this->Id == src.Id; }
 		bool operator!=( const xRegisterSSE& src ) const	{ return this->Id != src.Id; }
+		
+		xRegisterSSE& operator++()
+		{
+			++Id &= (iREGCNT_XMM-1);
+			return *this;
+		}
+
+		xRegisterSSE& operator--()
+		{
+			--Id &= (iREGCNT_XMM-1);
+			return *this;
+		}
 	};
 
 	class xRegisterCL : public xRegister8
