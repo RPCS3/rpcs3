@@ -65,16 +65,14 @@ public:
 		u32 d = *((u32*)dataPtr);
 		const SizeChain<T>& bucket( mBucket[d % hSize] );
 
-		for (int i=bucket.Size-1; i>0; --i) {
-			// This inline version seems about 1-2% faster in tests of games that average 1
-			// program per bucket.  Games that average more should see a bigger improvement --air
-			int result = _mm_movemask_ps( (cast_m128) _mm_cmpeq_epi32( _mm_load_si128((__m128i*)&bucket.Chain[i]), _mm_load_si128((__m128i*)dataPtr) ) );
-			if( (result&0x7) == 0x7 ) return &bucket.Chain[i];
+		const __m128i* endpos = (__m128i*)&bucket.Chain[bucket.Size];
+		const __m128i data128( _mm_load_si128((__m128i*)dataPtr) );
 
-			// Dynamically generated function version, can't be inlined. :(
-			//if ((((nVifCall)((void*)nVifMemCmp))(&bucket.Chain[i], dataPtr))==7) return &bucket.Chain[i];
+		for( const __m128i* chainpos = (__m128i*)bucket.Chain; chainpos<endpos; ++chainpos ) {
+			// This inline SSE code is generally faster than using emitter code, since it inlines nicely. --air
+			int result = _mm_movemask_ps( (cast_m128) _mm_cmpeq_epi32( data128, _mm_load_si128(chainpos) ) );
+			if( (result&0x7) == 0x7 ) return (T*)chainpos;
 
-			//if (!memcmp(&bucket.Chain[i], dataPtr, sizeof(T)-4)) return &c[i];	// old school version! >_<
 		}
 		if( bucket.Size > 3 ) DevCon.Warning( "recVifUnpk: Bucket 0x%04x has %d micro-programs", d % hSize, bucket.Size );
 		return NULL;
