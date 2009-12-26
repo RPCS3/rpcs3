@@ -21,6 +21,7 @@
 #include <X11/keysym.h>
 
 extern int GSOpenWindow(void *pDsp, char *Title);
+extern int GSOpenWindow2(void *pDsp, u32 flags);
 extern void GSCloseWindow();
 extern void GSProcessMessages();
 extern void HandleKeyEvent(keyEvent *ev);

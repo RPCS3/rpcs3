@@ -20,6 +20,7 @@
  */
 
 #include "linux.h"
+#include <gdk/gdkx.h>
 
 Display *GSdsp;
 
@@ -38,9 +39,25 @@ extern string KeyName(int pad, int key);
 
 s32  _PADopen(void *pDsp)
 {
-	GSdsp = *(Display**)pDsp;
-	SetAutoRepeat(false);
+    GtkScrolledWindow *win;
+    
+    win = *(GtkScrolledWindow**) pDsp;
+    PAD_LOG("It is a '%s'", GTK_OBJECT_TYPE_NAME(&win));
 
+	if (GTK_IS_WIDGET(win))
+	{
+	    // Since we have a GtkScrolledWindow, for now we'll grab whatever display
+	    // comes along instead. Later, we can fiddle with this, but I'm not sure the
+	    // best way to get a Display* out of a GtkScrolledWindow. A GtkWindow I might 
+	    // be able to manage... --arcum42
+        GSdsp = GDK_DISPLAY();
+	}
+	else
+	{
+        GSdsp = *(Display**)pDsp;
+	}
+	
+    SetAutoRepeat(false);
 	return 0;
 }
 

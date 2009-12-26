@@ -44,6 +44,7 @@ u16 status[2];
 int pressure;
 static keyEvent s_event;
 string s_strIniPath = "inis/OnePAD.ini";
+bool toggleAutoRepeat = true;
 
 const u32 version  = PS2E_PAD_VERSION;
 const u32 revision = 0;
@@ -118,10 +119,7 @@ u8 stdmodel[2][8] = {
 u8 *buf;
 int padID[2];
 int padMode[2];
-int curPad;
-int curByte;
-int curCmd;
-int cmdLen;
+int curPad, curByte, curCmd, cmdLen;
 int ds2mode = 0; // DS Mode at start
 FILE *padLog = NULL;
 
@@ -246,10 +244,10 @@ EXPORT_C_(s32) PADinit(u32 flags)
 	status[1] = 0xffff;
 
 #ifdef __LINUX__
-	char strcurdir[256];
+	/*char strcurdir[256];
 	getcwd(strcurdir, 256);
 	s_strIniPath = strcurdir;
-	s_strIniPath += "/inis/OnePAD.ini";
+	s_strIniPath += "/inis/OnePAD.ini";*/
 #endif
 
 	LoadConfig();

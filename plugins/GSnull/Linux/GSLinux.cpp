@@ -18,14 +18,26 @@
 
 Display *display;
 int screen;
+GtkScrolledWindow *win;
 
 int GSOpenWindow(void *pDsp, char *Title)
 {
 	display = XOpenDisplay(0);
 	screen = DefaultScreen(display);
 
-	if( pDsp != NULL )
+	if (pDsp != NULL)
 		*(Display**)pDsp = display;
+	else
+		return -1;
+
+	return 0;
+}
+
+int GSOpenWindow2(void *pDsp, u32 flags)
+{
+    GtkWidget *widget;
+	if (pDsp != NULL)
+		win = *(GtkScrolledWindow**)pDsp;
 	else
 		return -1;
 

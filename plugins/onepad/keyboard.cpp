@@ -50,21 +50,24 @@ char* KeysymToChar(int keysym)
 void PollForKeyboardInput(int pad)
 {
  #ifdef __LINUX__
-	PollForX11KeyboardInput(pad);
+        PollForX11KeyboardInput(pad);
 #endif
 }
 
 void SetAutoRepeat(bool autorep)
 {
  #ifdef __LINUX__
-	if (autorep)
-		XAutoRepeatOn(GSdsp);
-	else
-		XAutoRepeatOff(GSdsp);
+    if (toggleAutoRepeat)
+    {
+        if (autorep)
+            XAutoRepeatOn(GSdsp);
+        else
+            XAutoRepeatOff(GSdsp);
+    }
 #endif
 }
 
- #ifdef __LINUX__
+#ifdef __LINUX__
 void PollForX11KeyboardInput(int pad)
 {
 	XEvent E;

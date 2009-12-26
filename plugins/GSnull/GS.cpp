@@ -40,6 +40,11 @@ bool GSShift = false, GSAlt = false;
 string s_strIniPath="inis";
 const char* s_iniFilename = "GSnull.ini";
 
+// Because I haven't bothered to get GSOpen2 working in Windows yet in GSNull.
+#ifdef __LINUX__
+#define USE_GSOPEN2
+#endif
+
 void (*GSirq)();
 
 EXPORT_C_(u32) PS2EgetLibType() 
@@ -124,9 +129,7 @@ EXPORT_C_(void) GSshutdown()
 EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 {
 	int err = 0;
-#ifdef GS_LOG
 	GS_LOG("GS open\n");
-#endif
 	//assert( GSirq != NULL );
 	
 	err = GSOpenWindow(pDsp, Title);
@@ -134,6 +137,18 @@ EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 	SysPrintf("Opening GSnull\n");
 	return err;
 }
+
+#ifdef USE_GSOPEN2 
+EXPORT_C_(s32) GSopen2( void *pDsp, u32 flags )
+{
+	GS_LOG("GS open2\n");
+
+    GSOpenWindow2(pDsp, flags);
+
+	SysPrintf("Opening GSnull (2)\n");
+	return 0;
+}
+#endif
 
 EXPORT_C_(void) GSclose()
 {
