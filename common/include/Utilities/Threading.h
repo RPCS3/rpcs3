@@ -52,7 +52,7 @@ namespace Threading
 	extern PersistentThread* pxGetCurrentThread();
 	extern wxString pxGetCurrentThreadName();
 
-	// Yields the current thread and provides cancelation points if the thread is managed by
+	// Yields the current thread and provides cancellation points if the thread is managed by
 	// PersistentThread.  Unmanaged threads use standard Sleep.
 	extern void pxYield( int ms );
 }

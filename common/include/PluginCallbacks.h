@@ -18,32 +18,92 @@
 #define __PLUGINCALLBACKS_H__
 
 // --------------------------------------------------------------------------------------
+//  PS2E  -  Version 2.xx!
+// --------------------------------------------------------------------------------------
+// This header file defines the new PS2E interface, which is laid out to be a little more
+// efficient and easy to use, and boasts significantly improved APIs over the original
+// PS2E v1.xx, which was mostly a series of hacked additions on top of PS1E.  In summary:
+// this API is designed from the ground up to suit PS2 emulation, instead of being built
+// on top of a PS1 API.
+//
+// Design Philosophies:
+//
+//   1. Core APIs are established using a pair of DLL bindings (one for plugin callbacks
+//      and one for emulator callbacks), which pass structures of function pointers.
+//
+//   2. Plugin instance data should be attached to the end of the plugin's callback api
+//      data structure (see PS2E_ComponentAPI), and the PS2E_ComponentAPI struct is
+//      passed along with every callback defined in the structure.
+//
+//   3. All plugin callbacks use __fastcall calling convention (which passes the first
+//      two parameters int he ECX and EDX registers).  Most compilers support this, and
+//      register parameter passing is actually the standard convetion on x86/64.
+//
+// Rationale: This design improves code generation efficiency, especially when using
+// points 2 and 3 together (typically reduces 2 or 3 dereferences to 1 dereference).
+// The drawback is that not all compilers support x86/32 __fastcall, and such compilers
+// will be unable to create PS2Ev2 plugins.  GCC, MSVC, Intel, and Borland (as
+// __msfastcall) do support it, and Watcom as well using #pragma aux.  Anything else
+// we just don't care about.  Sorry. ;)
+//
+//   4. Emulation is restricted to a single instance per-process, which means that use of
+//      static/global instance variables by plugins is perfectly valid (however discouraged
+//      due to efficiency reasons, see 2 and 3).
+//
+// Rationale: Due to complexities in implementing an optimized PS2 emulator (dynamic
+// recompilation, memory protection, console pipe management, thread management, etc.)
+// it's really just better this way.  The drawback is that every geeks' dream of having
+// 6 different games emulating at once, with each output texture mapped to the side of
+// a rotating cube, will probably never come true.  Tsk.
+//
+
+// --------------------------------------------------------------------------------------
 //  <<< Important Notes to Plugin Authors >>>
 // --------------------------------------------------------------------------------------
-//  * C++ only: Exceptions thrown by plugins may not be handled correctly if allowed to
-//    escape the scope of the plugin, and could result in unexpected behavior or odd crashes.
-//    For C++ plugins this means ensuring that any code that uses 'new' or STL containers
-//    (string, list, vector, etc) are contained within a try{} block, since the STL can
-//    throw std::bad_alloc.
+//  * C++ only: C++ Exceptions must be confined to your plugin!  Exceptions thrown by plugins
+//    may not be handled correctly if allowed to escape the scope of the plugin, and could
+//    result in unexpected behavior or odd crashes (this especially true on non-Windows
+//    operating systems).  For C++ plugins this means ensuring that any code that uses
+//    'new' or STL containers (string, list, vector, etc) are contained within a try{}
+//    block, since the STL can throw std::bad_alloc.
+//
+//  * C++ on MSW only: SEH Exceptions must not be swallowed "blindly."  In simple terms this
+//    means do not use these without proper re-throws, as the emulator may rely on SEH
+//    for either PS2 VM cache validation or thread cancellation:
+//      - catch(...)
+//      - __except(EXCEPTION_EXECUTE_HANDLER)
 //
 //  * Many callbacks are optional, and have been marked as such. Any optional callback can be
 //    left NULL.  Any callback not marked optional and left NULL will cause the emulator to
 //    invalidate the plugin on either enumeration or initialization.
+//
 
 // --------------------------------------------------------------------------------------
 //  <<< Important Notes to All Developers >>>
 // --------------------------------------------------------------------------------------
 //  * Callback APIs cannot involve LIB-C or STL objects (such as FILE or std::string).  The
-//    internal layout of these structures can vary between versions of GLIB-C / MSVCRT.
+//    internal layout of these structures can vary between versions of GLIB-C / MSVCRT, and
+//    in the case of STL and other C++ objects, can vary based on seemingly mundane compiler
+//    switches.
 //
 //  * Callback APIs cannot alloc/free memory across dynamic library boundaries.  An object
-//    allocated by a plugin must be freed by that plugin.
+//    allocated by a plugin must be freed by that plugin, and cannot be freed by the emu.
 //
 //  * C++ exception handling cannot be used by either plugin callbacks or emulator callbacks.
 //    This includes the emulator's Console callbacks, for example, since the nature of C++
 //    ID-based RTTI could cause a C++ plugin with its own catch handlers to catch exceptions
 //    of mismatched types from the emulator.
 //
+//  * Addendum to Exception Handling: On most OS's, pthreads relies on C++ exceptions to
+//    cancel threads.  On Windows, this uses SEH so it works safely even across plugin stack
+//    frames.  On all other non-MSW platforms pthreads cancelation *must* be disabled in
+//    both emulator and plugin except for a single explicit cancelation point (usually
+//    provided during vsync).
+//
+//  * If following all these rules, then it shouldn't matter if you mix debug/release builds
+//    of plugins, SEH options (however it's recommended to ALWAYS have SEH enabled, as it
+//    hardly has any impact on performance on modern CPUs), compile with different versions
+//    of your MSVC/GCC compiler, or use different versions of LibC or MSVCRT. :)
 
 
 #ifndef BOOL
@@ -101,7 +161,8 @@
 #endif
 
 // Use fastcall by default, since under most circumstances the object-model approach of the
-// API will benefit considerably from it.
+// API will benefit considerably from it.  (Yes, this means that compilers that do not
+// support fastcall are basically unusable for plugin creation.  Too bad. :p
 #define PS2E_CALLBACK __fastcall
 
 
@@ -429,7 +490,7 @@ typedef struct _PS2E_EmulatorInfo
 	// brief name of the emulator (ex: "PCSX2") [required]
 	// Depending on the design of the emulator, this string may optionally include version
 	// information, however that is not recommended since it can inhibit backward support.
-	const char*	EmuName;
+	const char*			EmuName;
 
 	// Version information.  All fields besides the emulator's name are optional.
 	PS2E_VersionInfo	EmuVersion;
@@ -504,7 +565,8 @@ typedef struct _PS2E_EmulatorInfo
 	//
 	// Typically a plugin author should only use the OSD for infrequent notices that are
 	// potentially useful to users playing games (particularly at fullscreen).  Trouble-
-	// shooting and debug information is best dumped to console or to disk log.
+	// shooting and debug information is best dumped to console or to disk log, or displayed
+	// using a native popup window managed by the plugin.
 	//
 	// Parameters:
 	//  icon  - an icon identifier, typically from the PS2E_OSDIconTypes enumeration.  Specific
@@ -827,7 +889,7 @@ typedef struct _PS2E_LibraryAPI
 //  PS2E_ComponentAPI_GS
 // --------------------------------------------------------------------------------------
 // Thread Safety:
-//   All GS callbacks are issued from the GS thread only, and are always called synchronously
+//   Most GS callbacks are issued from the GS thread only, and are always called synchronously
 //   with all other component API functions.  No locks are needed, and DirectX-based GS
 //   plugins can safely disable DX multithreading support for speedup (unless the plugin
 //   utilizes multiple threads of its own internally).
@@ -843,9 +905,9 @@ typedef struct _PS2E_ComponentAPI_GS
 	// or any user-specified location).
 	//
 	// Thread Safety:
-	//   This function is only called from the GUI thread, however other threads are not
-	//   suspended.
-	//
+	//   This function may be called from either GUI thread or GS thread.  Emulators calling
+	//   it from non-GS threads must ensure mutex locking with TakeSnapshot (meaning the
+	//   plugin should be free to disregard threading concerns).
 	void (PS2E_CALLBACK* SetSnapshotsFolder)( PS2E_THISPTR thisptr, const char* folder );
 
 	// TakeSnapshot
@@ -857,25 +919,34 @@ typedef struct _PS2E_ComponentAPI_GS
 	// are considered indeterminate and will be ignored by the emu).
 	BOOL (PS2E_CALLBACK* TakeSnapshot)( PS2E_THISPTR thisptr, PS2E_Image* dest );
 
-	// OSD_SetTexture
-	// Uploads a new OSD texture to the GS.  Display of the OSD should be performed at
-	// the next soonest possible vsync.
-	void (PS2E_CALLBACK* OSD_SetTexture)( PS2E_THISPTR thisptr, PS2E_Image* src );
-
-	// OSD_SetAlpha
+	// OSD_QueueMessage
+	// Queues a message to the GS for display to the user.  The GS can print the message
+	// where-ever it pleases, though it's suggested that the messages be printed either
+	// near the top or the bottom of the window (and in the black/empty area if the
+	// game's display is letterboxed).
 	//
 	// Parameters:
-	//  alphOverall - Specifies the 'full' opacity of the OSD. The alphaFade setting
-	//     effectively slides from alphaOverall to 0.0.
+	//  message      - text to queue (UTF8 format); will always be a single line (emulator
+	//    is responsible for pre-processing linebreaks into multiple messages).  The pointer
+	//    will become invalid after this call retunrs, so be sure to make a local copy of the
+	//    text.
 	//
-	//  alphaFade   - Specifies the fadeout status of the OSD.  This value can be loosely
-	//     interpreted by the GS plugin.  The only requirement is that the GS plugin
-	//     honor the fade value of 0.0 (OSD is not displayed).
-	void (PS2E_CALLBACK* OSD_SetAlpha)( PS2E_THISPTR thisptr, float alphaOverall, float alphaFade );
+	//  timeout		 - Suggested timeout period, in milliseconds.  This is a hint and need
+	//    not be strictly adhered to by the GS.
+	//
+	void (PS2E_CALLBACK* OSD_QueueMessage)( PS2E_THISPTR thisptr, const char* msg, int timeout );
 
-	// OSD_SetPosition
-	// Self-explanatory.
-	void (PS2E_CALLBACK* OSD_SetPosition)( PS2E_THISPTR thisptr, int xpos, int ypos );
+	// OSD_IconStatus
+	// Sets the visibility status of an icon.  Icon placement can be determined by the GS,
+	// although it's recommended that the icon be displayed near a corner of the screen, and
+	// be displayed in the empty/black areas if present (letterboxing).
+	//
+	// Parameters:
+	//   iconId     - Icon status to change
+	//   alpha      - 0.0 is hdden, 1.0 is visible.  Other alpha values may be used as either
+	//     transparency or as a scrolling factor (ie, to scroll the icon in and out of view, in
+	//     any way the GS plugin sees fit).
+	void (PS2E_CALLBACK* OSD_IconStatus)( PS2E_THISPTR thisptr, OSDIconTypes iconId, float alpha );
 
 	// GSvsync
 	//
@@ -886,33 +957,54 @@ typedef struct _PS2E_ComponentAPI_GS
 	//
 	BOOL (PS2E_CALLBACK* GSvsync)(int field);
 
+	// GSwriteRegs
+	// Sends a GIFtag and associated register data.  This is the main transfer method for all
+	// GIF register data.  REGLIST mode is unpacked into the forat described below.
 	//
-	//
-	void (PS2E_CALLBACK* GSreadFIFO)(u128 *pMem, int qwc);
-
-	// GStransferTag
-	// Sends a set of GIFtags.  Note that SIGNAL, FINISH, and LABEL tags are handled
-	// internally by the emulator in a thread-safe manner -- the GS plugin can safely
-	// ignore the tags (and there is no guarantee the emulator will even bother to
-	// pass the tags onto the GS).
-	//
+	// Note that SIGNAL, FINISH, and LABEL tags are handled internally by the emulator in a
+	// thread-safe manner -- the GS plugin should ignore those tags when processing.
+	// 
 	// Returns FALSE if the plugin encountered a critical error while setting texture;
 	// indicating a device failure.
-	void (PS2E_CALLBACK* GStransferTags)(u128 *pMem, int tagcnt);
-
-	// GStransferPackedTag
-	// Sends a set of packed GIFtags. Note that SIGNAL, FINISH, and LABEL tags are handled
-	// internally by the emulator in a thread-safe manner -- the GS plugin can safely
-	// ignore the tags (and there is no guarantee the emulator will even bother to
-	// pass the tags onto the GS).
-	void (PS2E_CALLBACK* GStransferPackedTags)(u128 *pMem, int tagcnt);
-
-	// GStransferImage
-	// Uploads GIFtag image data.
 	//
-	// fixme: Make sure this is designed sufficiently to account for emulator-side texture
-	// caching.
-	void (PS2E_CALLBACK* GStransferImage)(u128 *pMem, u32 len_qwc);
+	// Parameters:
+	//   pMem    - pointer to source memory for the register descriptors and register data.
+	//      The first 128 bits (1 qwc) is the descriptors unrolled into 16x8 format.  The
+	//      following data is (regcnt x tagcnt) QWCs in length.
+	//
+	//   regcnt  - number of registers per loop packet (register descriptors are filled
+	//      low->high).  Valid range is 1->16, and will never be zero.
+	//
+	//   nloop   - number of loops of register data.  Valid range is 1->32767 (upper 17
+	//      bits are always zero).  This value will never be zero.
+	void (PS2E_CALLBACK* GSwriteRegs)(const u128 *pMem, int regcnt, int nloop);
+
+	// GSwritePrim
+	// Starts a new prim by sending the specified value to the PRIM register.  The emulator
+	// only posts this data to the GS s per the rules of GIFpath processing (note however
+	// that packed register data can also contain PRIM writes).
+	//
+	// Parameters:
+	//   primData    - value to write to the PRIM register.  Only the bottom 10 bits are
+	//      valid.  Upper bits are always zero.
+	void (PS2E_CALLBACK* GSwritePrim)(int primData);
+
+	// GSwriteImage
+	// Uploads new image data.  Data uploaded may be in any number of partial chunks, for
+	// which the GS is responsible for managing the state machine for writes to GS memory.
+	//
+	// Plugin authors: Note that it is valid for games to only modify a small portion of a
+	// larger texture buffer, or for games to modify several portions of a single large
+	// buffer, by using mid-transfer writes to TRXPOS and TRXDIR (TRXPOS writes only become
+	// effective once TRXDIR has been written).
+	void (PS2E_CALLBACK* GSwriteImage)(const u128 *pMem, int qwc_cnt);
+
+	// GSreadImage
+	// This special callback is for implementing the Read mode direction of the GIFpath.
+	// The GS plugin writes the texture data as requested by it's internally managed state
+	// values for TRXPOS/TRXREG to the buffer provided by pMem.  The buffer size is qwc_cnt
+	// and the GS must not write more than that.
+	void (PS2E_CALLBACK* GSreadImage)(u128 *pMem, int qwc_cnt);
 
 	void* reserved[8];
 
@@ -965,7 +1057,7 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	//
 	BOOL (PS2E_CALLBACK* McdSave)( PS2E_THISPTR thisptr, uint port, uint slot, const u8 *src, u32 adr, int size );
 
-	// McdErase
+	// McdEraseBlock
 	// Saves "cleared" data to the memorycard at the specified seek address.  Cleared data
 	// is a series of 0xff values (all bits set to 1).
 	// Writes *must* be performed synchronously (function cannot return until the write op
@@ -1049,6 +1141,10 @@ typedef struct _PS2E_ComponentAPI_Pad
 	// Returns:
 	//   First byte in response to the poll (Typically 0xff).
 	//
+	// Threading:
+	//   Called from the EEcore thread.  The emulator performs no locking of its own, so
+	//   calls to this may occur concurrently with calls to PadUpdate.
+	//
 	u8 (PS2E_CALLBACK* PadStartPoll)( PS2E_THISPTR thisptr, uint port, uint slot );
 
 	// PadPoll
@@ -1056,6 +1152,10 @@ typedef struct _PS2E_ComponentAPI_Pad
 	//
 	// Returns:
 	//   Next byte in response to the poll.
+	//
+	// Threading:
+	//   Called from the EEcore thread.  The emulator performs no locking of its own, so
+	//   calls to this may occur concurrently with calls to PadUpdate.
 	//
 	u8 (PS2E_CALLBACK* PadPoll)( PS2E_THISPTR thisptr, u8 value );
 
@@ -1066,7 +1166,23 @@ typedef struct _PS2E_ComponentAPI_Pad
 	//   PS2E_KeyEvent:  Key being pressed or released.  Should stay valid until next call to
 	//                   PadKeyEvent or plugin is closed with EmuClose.
 	//
-	typedef PS2E_KeyEvent* (CALLBACK* PadGetKeyEvent)();
+	// Threading:
+	//   May be called from any thread.  The emulator performs no locking of its own, so
+	//   calls to this may occur concurrently with calls to PadUpdate.
+	//
+	PS2E_KeyEvent* (PS2E_CALLBACK* PadGetKeyEvent)( PS2E_THISPTR thisptr );
+
+	// PadUpdate
+	// This callback is issued from the thread that owns the GSwindow, at roughly 50/60hz,
+	// allowing the Pad plugin to use it for update logic that expects thread affinity with
+	// the GSwindow.
+	//
+	// Threading:
+	//   Called from the same thread that owns the GSwindow (typically either a GUI thread
+	//   or an MTGS thread). The emulator performs no locking of its own, so calls to this
+	//   may occur concurrently with calls to PadKeyEvent and PadPoll.
+	//
+	void (PS2E_CALLBACK* PadUpdate)( PS2E_THISPTR thisptr );
 
 	void* reserved[8];
 

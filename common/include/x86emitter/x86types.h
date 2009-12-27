@@ -37,10 +37,17 @@ enum XMMSSEType
 
 #ifndef x86EMIT_MULTITHREADED
 #	define x86EMIT_MULTITHREADED	0
+#else
+#	if !PCSX2_THREAD_LOCAL
+		// No TLS support?  Force-clear the MT flag:
+#		pragma message("x86emitter: TLS not available, multithreaded emitter disabled.")		
+#		undef x86EMIT_MULTITHREADED
+#		define x86EMIT_MULTITHREADED	0
+#	endif
 #endif
 
 #ifndef __tls_emit
-#	if x86EMIT_MULTITHREADED && PCSX2_THREAD_LOCAL
+#	if x86EMIT_MULTITHREADED
 #		define __tls_emit	__threadlocal
 #	else
 		// Using TlsVariable is sub-optimal and could result in huge executables, so we
