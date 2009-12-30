@@ -175,14 +175,28 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 		int multiplier = m_renderer->upscale_Multiplier();
 		if (multiplier > 1) //it's limited to a maximum of 4 on reading the config
 		{
-			dst->m_texture->SetScale(GSVector2((float)multiplier, (float)multiplier));
+#if 0 //#ifdef USE_UPSCALE_HACKS //not happy with this yet..
+			float x = 1.0f;
+			float y = 1.0f;
+			
+			switch(multiplier)
+			{
+				case 2: x = 1.9375; y = 2.0f; break; // x res get's rid of vertical lines in many games
+				case 3: x = 2.9375f; y = 2.9375f; break; // not helping much
+				case 4: x = 3.875f; y = 3.875f; break; // not helping much
+				default: __assume(0);
+			}
+			dst->m_texture->SetScale( GSVector2(x, y) );
+#else
+			dst->m_texture->SetScale( GSVector2((float)multiplier, (float)multiplier) );
+#endif
 		}
 		else
 		{
 
 			GSVector4i fr = m_renderer->GetFrameRect();
 
-			int ww = (int)(fr.left + dst->m_TEX0.TBW * 64);
+			int ww = (int)(fr.left + m_renderer->GetDisplayRect().width());
 			int hh = (int)(fr.top + m_renderer->GetDisplayRect().height());
 
 			if(hh <= m_renderer->GetDeviceSize().y / 2)
