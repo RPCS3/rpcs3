@@ -435,7 +435,7 @@ bool GSRenderer::MakeSnapshot(const string& path)
 
 	return true;
 }
-int bla=0;
+
 void GSRenderer::KeyEvent(GSKeyEventData* e, int param)
 {
 	if(e->type == KEYPRESS)
@@ -450,8 +450,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e, int param)
 			m_interlace = (m_interlace + 7 + step) % 7;
 			return;
 		case VK_F6:
-			bla+=1;
-			//m_aspectratio = (m_aspectratio + 3 + step) % 3;
+			m_aspectratio = (m_aspectratio + 3 + step) % 3;
 			return;
 		case VK_F7:
 			m_shader = (m_shader + 3 + step) % 3;
