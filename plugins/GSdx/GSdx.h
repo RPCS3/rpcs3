@@ -29,7 +29,11 @@ class GSdxApp
 public:
 	GSdxApp();
 
-	HMODULE GetModuleHandle();
+#ifdef _WINDOWS
+ 	HMODULE GetModuleHandle();
+#else
+    void *GetModuleHandle();
+#endif
 
 	string GetConfig(const char* entry, const char* value);
 	void SetConfig(const char* entry, const char* value);

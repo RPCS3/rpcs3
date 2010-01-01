@@ -28,7 +28,7 @@
 
 class GSLocalMemory;
 
-__declspec(align(16)) class GSClut : public GSAlignedClass<16>
+__aligned16 class GSClut : public GSAlignedClass<16>
 {
 	GSLocalMemory* m_mem;
 
@@ -37,7 +37,7 @@ __declspec(align(16)) class GSClut : public GSAlignedClass<16>
 	uint32* m_buff32;
 	uint64* m_buff64;
 
-	__declspec(align(16)) struct WriteState
+	__aligned16 struct WriteState
 	{
 		GIFRegTEX0 TEX0;
 		GIFRegTEXCLUT TEXCLUT;
@@ -45,7 +45,7 @@ __declspec(align(16)) class GSClut : public GSAlignedClass<16>
 		bool IsDirty(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT);
 	} m_write;
 
-	__declspec(align(16)) struct ReadState
+	__aligned16 struct ReadState
 	{
 		GIFRegTEX0 TEX0;
 		GIFRegTEXA TEXA;

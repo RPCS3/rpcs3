@@ -1201,7 +1201,7 @@ public:
 
 		#else
 /*
-		__declspec(align(16)) uint32 block[8 * 8];
+		__aligned16 uint32 block[8 * 8];
 
 		UnpackBlock4HL(src, srcpitch, block);
 
@@ -1316,7 +1316,7 @@ public:
 
 		#else
 /*
-		__declspec(align(16)) uint32 block[8 * 8];
+		__aligned16 uint32 block[8 * 8];
 
 		UnpackBlock4HH(src, srcpitch, block);
 
@@ -1467,7 +1467,7 @@ public:
 
 		#else
 
-		__declspec(align(16)) uint8 block[16 * 16];
+		__aligned16 uint8 block[16 * 16];
 
 		ReadBlock8<true>(src, (uint8*)block, sizeof(block) / 16);
 
@@ -1542,7 +1542,7 @@ public:
 
 		#else
 
-		__declspec(align(16)) uint8 block[(32 / 2) * 16];
+		__aligned16 uint8 block[(32 / 2) * 16];
 
 		ReadBlock4<true>(src, (uint8*)block, sizeof(block) / 16);
 
@@ -1583,7 +1583,7 @@ public:
 
 		#else
 
-		__declspec(align(16)) uint32 block[8 * 8];
+		__aligned16 uint32 block[8 * 8];
 
 		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
 
@@ -1624,7 +1624,7 @@ public:
 
 		#else
 
-		__declspec(align(16)) uint32 block[8 * 8];
+		__aligned16 uint32 block[8 * 8];
 
 		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
 
@@ -1665,7 +1665,7 @@ public:
 
 		#else
 
-		__declspec(align(16)) uint32 block[8 * 8];
+		__aligned16 uint32 block[8 * 8];
 
 		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
 

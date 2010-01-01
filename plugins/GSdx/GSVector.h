@@ -1,3 +1,6 @@
+
+#include "stdafx.h"
+
 #pragma once
 
 // NOTE: x64 version of the _mm_set_* functions are terrible, first they store components into memory then reload in one piece (VS2008 SP1)
@@ -40,7 +43,7 @@ typedef GSVector2T<int> GSVector2i;
 
 class GSVector4;
 
-__declspec(align(16)) class GSVector4i
+__aligned16 class GSVector4i
 {
 public:
 	union 
@@ -2038,9 +2041,9 @@ public:
 		VECTOR4i_SHUFFLE_3(xs, xn, ys, yn, w, 3) \
 
 	#define VECTOR4i_SHUFFLE_1(xs, xn) \
-		GSVector4i xs##4##() const {return GSVector4i(_mm_shuffle_epi32(m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
-		GSVector4i xs##4##l() const {return GSVector4i(_mm_shufflelo_epi16(m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
-		GSVector4i xs##4##h() const {return GSVector4i(_mm_shufflehi_epi16(m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
+		GSVector4i xs##4() const {return GSVector4i(_mm_shuffle_epi32(m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
+		GSVector4i xs##4l() const {return GSVector4i(_mm_shufflelo_epi16(m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
+		GSVector4i xs##4h() const {return GSVector4i(_mm_shufflehi_epi16(m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
 		VECTOR4i_SHUFFLE_2(xs, xn, x, 0) \
 		VECTOR4i_SHUFFLE_2(xs, xn, y, 1) \
 		VECTOR4i_SHUFFLE_2(xs, xn, z, 2) \
@@ -2250,7 +2253,7 @@ public:
 	static GSVector4i xfffe(const GSVector4i& v) {return xffffffff(v).sll16( 1);}
 };
 
-__declspec(align(16)) class GSVector4
+__aligned16 class GSVector4
 {
 public:
 	union 
@@ -2860,8 +2863,8 @@ public:
 		VECTOR4_SHUFFLE_3(xs, xn, ys, yn, w, 3) \
 
 	#define VECTOR4_SHUFFLE_1(xs, xn) \
-		GSVector4 xs##4##() const {return GSVector4(_mm_shuffle_ps(m, m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
-		GSVector4 xs##4##(const GSVector4& v) const {return GSVector4(_mm_shuffle_ps(m, v.m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
+		GSVector4 xs##4() const {return GSVector4(_mm_shuffle_ps(m, m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
+		GSVector4 xs##4(const GSVector4& v) const {return GSVector4(_mm_shuffle_ps(m, v.m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
 		VECTOR4_SHUFFLE_2(xs, xn, x, 0) \
 		VECTOR4_SHUFFLE_2(xs, xn, y, 1) \
 		VECTOR4_SHUFFLE_2(xs, xn, z, 2) \

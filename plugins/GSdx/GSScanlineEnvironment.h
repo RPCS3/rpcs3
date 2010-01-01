@@ -99,7 +99,7 @@ union GSScanlineSelector
 	}
 };
 
-__declspec(align(16)) struct GSScanlineParam
+__aligned16 struct GSScanlineParam
 {
 	GSScanlineSelector sel;
 
@@ -115,7 +115,7 @@ __declspec(align(16)) struct GSScanlineParam
 	uint32 fm, zm;
 };
 
-__declspec(align(16)) struct GSScanlineEnvironment
+__aligned16 struct GSScanlineEnvironment
 {
 	void* vm;
 	const void* tex;

@@ -30,7 +30,7 @@ class GSDeviceDX : public GSDevice
 public:
 	#pragma pack(push, 1)
 
-	__declspec(align(16)) struct VSConstantBuffer
+	__aligned16 struct VSConstantBuffer
 	{
 		GSVector4 VertexScale;
 		GSVector4 VertexOffset;
@@ -85,7 +85,7 @@ public:
 		VSSelector() : key(0) {}
 	};
 
-	__declspec(align(16)) struct PSConstantBuffer
+	__aligned16 struct PSConstantBuffer
 	{
 		GSVector4 FogColor_AREF;
 		GSVector4 HalfTexel;

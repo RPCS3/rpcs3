@@ -23,9 +23,13 @@
 #include "GSdx.h"
 #include "GSUtil.h"
 #include "GPURendererSW.h"
+
+#ifdef _WINDOWS
 #include "GSDevice7.h"
 #include "GSDevice9.h"
 #include "GSDevice10.h"
+#endif
+
 #include "GPUSettingsDlg.h"
 
 #define PSE_LT_GPU 2

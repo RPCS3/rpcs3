@@ -25,7 +25,7 @@
 
 #pragma pack(push, 1)
 
-__declspec(align(16)) class GSDrawingEnvironment
+__aligned16 class GSDrawingEnvironment
 {
 public:
 	GIFRegPRIM			PRIM;

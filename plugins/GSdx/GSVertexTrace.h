@@ -31,7 +31,7 @@
 
 class GSState;
 
-__declspec(align(16)) class GSVertexTrace
+__aligned16 class GSVertexTrace
 {
 	struct Vertex {GSVector4i c; GSVector4 p, t;};
 	struct VertexAlpha {int min, max; bool valid;};

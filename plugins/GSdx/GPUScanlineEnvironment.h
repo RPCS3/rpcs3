@@ -56,7 +56,7 @@ union GPUScanlineSelector
 	operator uint32() {return key;}
 };
 
-__declspec(align(16)) struct GPUScanlineParam
+__aligned16 struct GPUScanlineParam
 {
 	GPUScanlineSelector sel;
 
@@ -64,7 +64,7 @@ __declspec(align(16)) struct GPUScanlineParam
 	const uint16* clut;
 };
 
-__declspec(align(16)) struct GPUScanlineEnvironment
+__aligned16 struct GPUScanlineEnvironment
 {
 	GPUScanlineSelector sel;
 

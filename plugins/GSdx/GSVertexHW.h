@@ -26,7 +26,7 @@
 
 #pragma pack(push, 1)
 
-__declspec(align(16)) union GSVertexHW9
+__aligned16 union GSVertexHW9
 {
 	struct
 	{
@@ -56,7 +56,7 @@ __declspec(align(16)) union GSVertexHW9
 	float GetQ() {return p.w;}
 };
 
-__declspec(align(16)) union GSVertexHW10
+__aligned16 union GSVertexHW10
 {
 	struct
 	{

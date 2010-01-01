@@ -26,7 +26,7 @@
 
 #pragma pack(push, 1)
 
-__declspec(align(16)) class GSDrawingContext
+__aligned16 class GSDrawingContext
 {
 public:
 	GIFRegXYOFFSET	XYOFFSET;
@@ -43,7 +43,7 @@ public:
 	GIFRegFRAME		FRAME;
 	GIFRegZBUF		ZBUF;
 
-	__declspec(align(16)) struct
+	__aligned16 struct
 	{
 		GSVector4i dx10;
 		GSVector4 dx9;

@@ -46,8 +46,8 @@
 
 #include <math.h>
 #include <time.h>
-#include <intrin.h>
 
+#include <cstring>
 #include <string>
 #include <vector>
 #include <list>
@@ -56,8 +56,14 @@
 #include <hash_set>
 #include <algorithm>
 
+// Let's take advantage of the work that's already been done on making things cross-platform by bringing this in.
+#include "Pcsx2Defs.h"
+
 using namespace std;
+
+#ifdef _WINDOWS
 using namespace stdext;
+#endif
 
 extern string format(const char* fmt, ...);
 
@@ -86,7 +92,7 @@ typedef signed long long int64;
 #define EXPORT_C extern "C" __declspec(dllexport) void __stdcall
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
 
-#define ALIGN_STACK(n) __declspec(align(n)) int __dummy;
+#define ALIGN_STACK(n) __aligned(n) int __dummy;
 
 #ifndef RESTRICT
 	#ifdef __INTEL_COMPILER
@@ -135,8 +141,8 @@ typedef signed long long int64;
 
 #include <GL/glew.h>
 #include <GL/glut.h>
-#include <CG/cg.h>
-#include <CG/cgGL.h>
+#include <Cg/cg.h>
+#include <Cg/cgGL.h>
 
 #ifdef _WINDOWS
 #include <GL/wglew.h>
@@ -144,7 +150,7 @@ typedef signed long long int64;
 
 // sse
 
-#if !defined(_M_SSE) && (defined(_M_AMD64) || defined(_M_IX86_FP) && _M_IX86_FP >= 2)
+#if !defined(_M_SSE) && (!defined(_WINDOWS) || defined(_M_AMD64) || defined(_M_IX86_FP) && _M_IX86_FP >= 2)
 
 	#define _M_SSE 0x200
 

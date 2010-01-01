@@ -30,7 +30,7 @@
 #include "pthread.h"
 #include "semaphore.h"
 
-__declspec(align(16)) class GSRasterizerData
+__aligned16 class GSRasterizerData
 {
 public:
 	GSVector4i scissor;
