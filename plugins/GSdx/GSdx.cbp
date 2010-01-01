@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="GSdx" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug SSE2 Linux">
+				<Option output="bin/Debug/GSdx" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release SSE2 Linux">
+				<Option output="bin/Release/GSdx" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="Cg" />
+				</Linker>
+			</Target>
+			<Environment>
+				<Variable name="SvnRootDir" value="../../" />
+			</Environment>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-Wno-format" />
+			<Add option="-Wno-unused-parameter" />
+			<Add option="-Wno-unused-value" />
+			<Add option="-Wunused-variable" />
+			<Add option="-fno-guess-branch-probability" />
+			<Add option="-fno-dse" />
+			<Add option="-fno-tree-dse" />
+			<Add option="-fno-strict-aliasing" />
+			<Add option="-pipe -msse -msse2" />
+			<Add option="-m32" />
+			<Add directory="$(SvnRootDir)/common/include" />
+		</Compiler>
+		<Unit filename="GPU.cpp" />
+		<Unit filename="GPU.h" />
+		<Unit filename="GPUDrawScanline.cpp" />
+		<Unit filename="GPUDrawScanline.h" />
+		<Unit filename="GPUDrawScanlineCodeGenerator.cpp" />
+		<Unit filename="GPUDrawScanlineCodeGenerator.h" />
+		<Unit filename="GPUDrawingEnvironment.h" />
+		<Unit filename="GPULocalMemory.cpp" />
+		<Unit filename="GPULocalMemory.h" />
+		<Unit filename="GPURenderer.cpp" />
+		<Unit filename="GPURenderer.h" />
+		<Unit filename="GPURendererSW.cpp" />
+		<Unit filename="GPURendererSW.h" />
+		<Unit filename="GPUScanlineEnvironment.h" />
+		<Unit filename="GPUSettingsDlg.cpp" />
+		<Unit filename="GPUSettingsDlg.h" />
+		<Unit filename="GPUSetupPrimCodeGenerator.cpp" />
+		<Unit filename="GPUSetupPrimCodeGenerator.h" />
+		<Unit filename="GPUState.cpp" />
+		<Unit filename="GPUState.h" />
+		<Unit filename="GPUVertex.h" />
+		<Unit filename="GS.cpp" />
+		<Unit filename="GS.h" />
+		<Unit filename="GSAlignedClass.cpp" />
+		<Unit filename="GSAlignedClass.h" />
+		<Unit filename="GSBlock.cpp" />
+		<Unit filename="GSBlock.h" />
+		<Unit filename="GSCapture.cpp" />
+		<Unit filename="GSCapture.h" />
+		<Unit filename="GSCaptureDlg.cpp" />
+		<Unit filename="GSCaptureDlg.h" />
+		<Unit filename="GSClut.cpp" />
+		<Unit filename="GSClut.h" />
+		<Unit filename="GSCodeBuffer.cpp" />
+		<Unit filename="GSCodeBuffer.h" />
+		<Unit filename="GSCrc.cpp" />
+		<Unit filename="GSCrc.h" />
+		<Unit filename="GSDevice.cpp" />
+		<Unit filename="GSDevice.h" />
+		<Unit filename="GSDevice10.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="GSDevice10.h" />
+		<Unit filename="GSDevice11.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="GSDevice11.h" />
+		<Unit filename="GSDevice7.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="GSDevice7.h" />
+		<Unit filename="GSDevice9.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+			<Option target="&lt;{~None~}&gt;" />
+		</Unit>
+		<Unit filename="GSDevice9.h" />
+		<Unit filename="GSDeviceDX.h" />
+		<Unit filename="GSDeviceNull.cpp" />
+		<Unit filename="GSDeviceNull.h" />
+		<Unit filename="GSDeviceOGL.cpp" />
+		<Unit filename="GSDeviceOGL.h" />
+		<Unit filename="GSDialog.cpp" />
+		<Unit filename="GSDialog.h" />
+		<Unit filename="GSDirtyRect.cpp" />
+		<Unit filename="GSDirtyRect.h" />
+		<Unit filename="GSDrawScanline.cpp" />
+		<Unit filename="GSDrawScanline.h" />
+		<Unit filename="GSDrawScanlineCodeGenerator.cpp" />
+		<Unit filename="GSDrawScanlineCodeGenerator.h" />
+		<Unit filename="GSDrawingContext.h" />
+		<Unit filename="GSDrawingEnvironment.h" />
+		<Unit filename="GSDump.cpp" />
+		<Unit filename="GSDump.h" />
+		<Unit filename="GSFunctionMap.cpp" />
+		<Unit filename="GSFunctionMap.h" />
+		<Unit filename="GSLocalMemory.cpp" />
+		<Unit filename="GSLocalMemory.h" />
+		<Unit filename="GSPerfMon.cpp" />
+		<Unit filename="GSPerfMon.h" />
+		<Unit filename="GSRasterizer.cpp" />
+		<Unit filename="GSRasterizer.h" />
+		<Unit filename="GSRenderer.cpp" />
+		<Unit filename="GSRenderer.h" />
+		<Unit filename="GSRendererDX.cpp" />
+		<Unit filename="GSRendererDX.h" />
+		<Unit filename="GSRendererDX10.cpp" />
+		<Unit filename="GSRendererDX10.h" />
+		<Unit filename="GSRendererDX11.cpp" />
+		<Unit filename="GSRendererDX11.h" />
+		<Unit filename="GSRendererDX9.cpp" />
+		<Unit filename="GSRendererDX9.h" />
+		<Unit filename="GSRendererHW.cpp" />
+		<Unit filename="GSRendererHW.h" />
+		<Unit filename="GSRendererNull.cpp" />
+		<Unit filename="GSRendererNull.h" />
+		<Unit filename="GSRendererOGL.cpp" />
+		<Unit filename="GSRendererOGL.h" />
+		<Unit filename="GSRendererSW.cpp" />
+		<Unit filename="GSRendererSW.h" />
+		<Unit filename="GSScanlineEnvironment.h" />
+		<Unit filename="GSSetting.cpp" />
+		<Unit filename="GSSetting.h" />
+		<Unit filename="GSSettingsDlg.cpp" />
+		<Unit filename="GSSettingsDlg.h" />
+		<Unit filename="GSSetupPrimCodeGenerator.cpp" />
+		<Unit filename="GSSetupPrimCodeGenerator.h" />
+		<Unit filename="GSState.cpp" />
+		<Unit filename="GSState.h" />
+		<Unit filename="GSTables.cpp" />
+		<Unit filename="GSTables.h" />
+		<Unit filename="GSTexture.cpp" />
+		<Unit filename="GSTexture.h" />
+		<Unit filename="GSTexture10.cpp" />
+		<Unit filename="GSTexture10.h" />
+		<Unit filename="GSTexture11.cpp" />
+		<Unit filename="GSTexture11.h" />
+		<Unit filename="GSTexture7.cpp" />
+		<Unit filename="GSTexture7.h" />
+		<Unit filename="GSTexture9.cpp" />
+		<Unit filename="GSTexture9.h" />
+		<Unit filename="GSTextureCache.cpp" />
+		<Unit filename="GSTextureCache.h" />
+		<Unit filename="GSTextureCache10.cpp" />
+		<Unit filename="GSTextureCache10.h" />
+		<Unit filename="GSTextureCache11.cpp" />
+		<Unit filename="GSTextureCache11.h" />
+		<Unit filename="GSTextureCache9.cpp" />
+		<Unit filename="GSTextureCache9.h" />
+		<Unit filename="GSTextureCacheOGL.cpp" />
+		<Unit filename="GSTextureCacheOGL.h" />
+		<Unit filename="GSTextureCacheSW.cpp" />
+		<Unit filename="GSTextureCacheSW.h" />
+		<Unit filename="GSTextureFX.cpp" />
+		<Unit filename="GSTextureFX10.cpp" />
+		<Unit filename="GSTextureFX11.cpp" />
+		<Unit filename="GSTextureFX9.cpp" />
+		<Unit filename="GSTextureNull.cpp" />
+		<Unit filename="GSTextureNull.h" />
+		<Unit filename="GSTextureOGL.cpp" />
+		<Unit filename="GSTextureOGL.h" />
+		<Unit filename="GSThread.cpp" />
+		<Unit filename="GSThread.h" />
+		<Unit filename="GSUtil.cpp" />
+		<Unit filename="GSUtil.h" />
+		<Unit filename="GSVector.cpp" />
+		<Unit filename="GSVector.h" />
+		<Unit filename="GSVertex.h" />
+		<Unit filename="GSVertexHW.h" />
+		<Unit filename="GSVertexList.cpp" />
+		<Unit filename="GSVertexList.h" />
+		<Unit filename="GSVertexSW.cpp" />
+		<Unit filename="GSVertexSW.h" />
+		<Unit filename="GSVertexTrace.cpp" />
+		<Unit filename="GSVertexTrace.h" />
+		<Unit filename="GSWnd.cpp" />
+		<Unit filename="GSWnd.h" />
+		<Unit filename="GSdx.cpp" />
+		<Unit filename="GSdx.h" />
+		<Unit filename="resource.h" />
+		<Unit filename="stdafx.cpp" />
+		<Unit filename="stdafx.h" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
