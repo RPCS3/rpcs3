@@ -292,7 +292,8 @@ void SysCoreThread::CpuInitializeMess()
 				throw Exception::RuntimeError( wxLt("Fast Boot failed: CDVD image is not a PS1 or PS2 game.") );
 
 			case 1:
-				throw Exception::RuntimeError( wxLt("Fast Boot failed: PCSX2 does not support emulation of PS1 games.") );
+				if (!ENABLE_LOADING_PS1_GAMES)
+                    throw Exception::RuntimeError( wxLt("Fast Boot failed: PCSX2 does not support emulation of PS1 games.") );
 
 			case 2:
 				// PS2 game.  Valid!
@@ -310,7 +311,7 @@ void SysCoreThread::CpuInitializeMess()
 		//   injects the cpuRegs.pc with the address of the execution start point.
 		//
 		// This hack is necessary for non-CD ELF files, and is optional for game CDs as a
-		// fast bott up option. (though not recommended for games because of rare ill side
+		// fast boot up option. (though not recommended for games because of rare ill side
 		// effects).
 
 		SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );

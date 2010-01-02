@@ -164,7 +164,7 @@ typedef void (*TdisR5900F)DisFInterface;
 
 struct sSymbol {
 	u32 addr;
-	char name[64];
+	char name[256];
 };
 
 static sSymbol *dSyms = NULL;
@@ -186,7 +186,7 @@ void disR5900AddSym(u32 addr, const char *name) {
 
 	if (dSyms == NULL) return;
 	dSyms[nSyms].addr = addr;
-	strncpy(dSyms[nSyms].name, name, 64);
+	strncpy(dSyms[nSyms].name, name, 256);
 	nSyms++;
 }
 

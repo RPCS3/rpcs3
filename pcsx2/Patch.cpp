@@ -420,7 +420,6 @@ void inifile_command( const wxString& cmd )
 // Then sends the command to be parsed.
 void inifile_process(wxTextFile &f1 )
 {
-    Console.WriteLn("inifile_process");
     for (uint i = 0; i < f1.GetLineCount(); i++)
     {
         inifile_trim(f1[i]);

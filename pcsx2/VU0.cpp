@@ -336,8 +336,15 @@ void VXITOP()  { VU0.code = cpuRegs.code; _vuXITOP(&VU0); }
 // fixme: Shouldn't anything calling this function be calling vu0WaitMicro instead?
 // Meaning that this function stalls, but doesn't increment the cpuRegs.cycle like
 // you would think it should.
+
+// Well, we can always test that out...
+//#define USE_WAIT_MICRO
+
 void vu0Finish()
 {
+#ifdef USE_WAIT_MICRO
+    _vu0WaitMicro();
+#else
 	if( (VU0.VI[REG_VPU_STAT].UL & 0x1) ) {
 		int i = 0;
 
@@ -352,4 +359,5 @@ void vu0Finish()
 			//Console.Warning("vu0Finish > stall aborted by force.");
 		}
 	}
+#endif
 }

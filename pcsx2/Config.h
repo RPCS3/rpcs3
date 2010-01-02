@@ -619,11 +619,11 @@ TraceLogFilters&			SetTraceConfig();
 
 #define EE_CONST_PROP // rec2 - enables constant propagation (faster)
 
-// Uncomment this if working on getting PS1 emulation working.
+// Change to 1 if working on getting PS1 emulation working.
 // This disables the exception normally caused by trying to load PS1
 // games. Note: currently PS1 games will error out even without this
 // commented, so this is for development purposes only.
-//#define ENABLE_LOADING_PS1_GAMES
+#define ENABLE_LOADING_PS1_GAMES 0
 
 // Change to 1 to enable SIF wakeup hack:
 #define IOP_ENABLE_SIF_HACK 0

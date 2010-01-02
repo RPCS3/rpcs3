@@ -180,14 +180,20 @@ isoFile *isoOpen(const char *filename)
 		_seekfile(iso->handle, 0, SEEK_END);
 		iso->blocks = (u32)((_tellfile(iso->handle) - iso->offset) / (iso->blocksize));
 	}
-
-	Console.WriteLn("isoOpen: %s ok", iso->filename);
-	Console.WriteLn("offset = %d", iso->offset);
-	Console.WriteLn("blockofs = %d", iso->blockofs);
-	Console.WriteLn("blocksize = %u", iso->blocksize);
-	Console.WriteLn("blocks = %u", iso->blocks);
-	Console.WriteLn("type = %u", iso->type);
-
+	
+    switch(iso->type)
+    {
+        case ISOTYPE_CD: Console.Write("isoOpen(CD): "); break;
+        case ISOTYPE_DVD: Console.Write("isoOpen(DVD): "); break;
+        case ISOTYPE_AUDIO: Console.Write("isoOpen(Audio CD): "); break;
+        case ISOTYPE_DVDDL: Console.Write("isoOpen(DVDDL): "); break;
+        case ISOTYPE_ILLEGAL: 
+        default: Console.Write("isoOpen(illegal media): "); break;
+    }
+	Console.WriteLn("%s ok.", iso->filename);
+	Console.WriteLn("The iso has %u blocks (size %u).", iso->blocks, iso->blocksize);
+    Console.WriteLn("The isos offset is %d, and the block offset is %d.", iso->offset, iso->blockofs);
+    
 	return iso;
 }
 

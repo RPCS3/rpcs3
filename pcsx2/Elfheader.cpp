@@ -17,112 +17,12 @@
 #include "Common.h"
 
 #include "GS.h"			// for sending game crc to mtgs
-
-#include "CDVD/IsoFS/IsoFSCDVD.h"
-#include "CDVD/IsoFS/IsoFS.h"
+#include "Elfheader.h"
 
 using namespace std;
 extern void InitPatch(const wxString& crc);
 
 u32 ElfCRC;
-
-struct ELF_HEADER {
-	u8	e_ident[16];	//0x7f,"ELF"  (ELF file identifier)
-	u16	e_type;			//ELF type: 0=NONE, 1=REL, 2=EXEC, 3=SHARED, 4=CORE
-	u16	e_machine;      //Processor: 8=MIPS R3000
-	u32	e_version;      //Version: 1=current
-	u32	e_entry;        //Entry point address
-	u32	e_phoff;        //Start of program headers (offset from file start)
-	u32	e_shoff;        //Start of section headers (offset from file start)
-	u32	e_flags;        //Processor specific flags = 0x20924001 noreorder, mips
-	u16	e_ehsize;       //ELF header size (0x34 = 52 bytes)
-	u16	e_phentsize;    //Program headers entry size
-	u16	e_phnum;        //Number of program headers
-	u16	e_shentsize;    //Section headers entry size
-	u16	e_shnum;        //Number of section headers
-	u16	e_shstrndx;     //Section header stringtable index
-};
-
-struct ELF_PHR {
-	u32 p_type;         //see notes1
-	u32 p_offset;       //Offset from file start to program segment.
-	u32 p_vaddr;        //Virtual address of the segment
-	u32 p_paddr;        //Physical address of the segment
-	u32 p_filesz;       //Number of bytes in the file image of the segment
-	u32 p_memsz;        //Number of bytes in the memory image of the segment
-	u32 p_flags;        //Flags for segment
-	u32 p_align;        //Alignment. The address of 0x08 and 0x0C must fit this alignment. 0=no alignment
-};
-
-/*
-notes1
-------
-0=Inactive
-1=Load the segment into memory, no. of bytes specified by 0x10 and 0x14
-2=Dynamic linking
-3=Interpreter. The array element must specify a path name
-4=Note. The array element must specify the location and size of aux. info
-5=reserved
-6=The array element must specify location and size of the program header table.
-*/
-
-struct ELF_SHR {
-	u32	sh_name;        //No. to the index of the Section header stringtable index
-	u32	sh_type;        //See notes2
-	u32	sh_flags;       //see notes3
-	u32	sh_addr;        //Section start address
-	u32	sh_offset;      //Offset from start of file to section
-	u32	sh_size;        //Size of section
-	u32	sh_link;        //Section header table index link
-	u32	sh_info;        //Info
-	u32	sh_addralign;   //Alignment. The adress of 0x0C must fit this alignment. 0=no alignment.
-	u32	sh_entsize;     //Fixed size entries.
-};
-
-/*
-notes 2
--------
-Type:
-0=Inactive
-1=PROGBITS
-2=SYMTAB symbol table
-3=STRTAB string table
-4=RELA relocation entries
-5=HASH hash table
-6=DYNAMIC dynamic linking information
-7=NOTE
-8=NOBITS
-9=REL relocation entries
-10=SHLIB
-0x70000000=LOPROC processor specifc
-0x7fffffff=HIPROC
-0x80000000=LOUSER lower bound
-0xffffffff=HIUSER upper bound
-
-notes 3
--------
-Section Flags:  (1 bit, you may combine them like 3 = alloc & write permission)
-1=Write section contains data the is be writeable during execution.
-2=Alloc section occupies memory during execution
-4=Exec section contains executable instructions
-0xf0000000=Mask bits processor-specific
-*/
-
-struct Elf32_Sym {
-	u32	st_name;
-	u32	st_value;
-	u32	st_size;
-	u8	st_info;
-	u8	st_other;
-	u16	st_shndx;
-};
-
-#define ELF32_ST_TYPE(i) ((i)&0xf)
-
-struct Elf32_Rel {
-	u32	r_offset;
-	u32	r_info;
-};
 
 #if 0
 // fixme: ELF command line option system.
@@ -238,280 +138,301 @@ static uint parseCommandLine( const wxString& filename )
 #endif
 //---------------
 
-struct ElfObject
+// All of ElfObjects functions.
+ElfObject::ElfObject(const wxString& srcfile, IsoFile isofile)
+    : filename( srcfile )
+		
+    , data( wxULongLong(isofile.getLength()).GetLo(), L"ELF headers" )
+    , header( *(ELF_HEADER*)data.GetPtr() )
+    , proghead( NULL )
+    , secthead( NULL )
 {
-	wxString filename;
-	SafeArray<u8> data;
-	ELF_HEADER& header;
-	ELF_PHR* proghead;
-	ELF_SHR* secthead;
+    isCdvd = true;
+    checkElfSize(data.GetSizeInBytes());
+    readIso(isofile);
+    initElfHeaders();
+}
+    
+ElfObject::ElfObject( const wxString& srcfile, uint hdrsize )
+    : filename( srcfile )
+    , data( wxULongLong(hdrsize).GetLo(), L"ELF headers" )
+    , header( *(ELF_HEADER*)data.GetPtr() )
+    , proghead( NULL )
+    , secthead( NULL )
+{
+    isCdvd = false;
+    checkElfSize(data.GetSizeInBytes());
+    readFile();
+    initElfHeaders();
+}
+	
+void ElfObject::initElfHeaders()
+{
+    Console.WriteLn( L"Initializing Elf: %d bytes", data.GetSizeInBytes());
+    
+    if ( header.e_phnum > 0 )
+        proghead = (ELF_PHR*)&data[header.e_phoff];
 
-	// Destructor!
-	// C++ does all the cleanup automagically for us.
-	virtual ~ElfObject() throw() { }
+    if ( header.e_shnum > 0 )
+        secthead = (ELF_SHR*)&data[header.e_shoff];
 
-	ElfObject( const wxString& srcfile, uint hdrsize )
-		: filename( srcfile )
-		, data( hdrsize, L"ELF headers" )
-		, header( *(ELF_HEADER*)data.GetPtr() )
-		, proghead( NULL )
-		, secthead( NULL )
-	{
-		readFile();
+    if ( ( header.e_shnum > 0 ) && ( header.e_shentsize != sizeof(ELF_SHR) ) )
+        Console.Error( "(ELF) Size of section headers is not standard" );
 
-		if( header.e_phnum > 0 )
-			proghead = (ELF_PHR*)&data[header.e_phoff];
+    if ( ( header.e_phnum > 0 ) && ( header.e_phentsize != sizeof(ELF_PHR) ) )
+        Console.Error( "(ELF) Size of program headers is not standard" );
 
-		if( header.e_shnum > 0 )
-			secthead = (ELF_SHR*)&data[header.e_shoff];
+    const char* elftype = NULL;
+    switch( header.e_type )
+    {
+        default:
+            ELF_LOG( "type:      unknown = %x", header.e_type );
+            break;
 
-		if ( ( header.e_shnum > 0 ) && ( header.e_shentsize != sizeof(ELF_SHR) ) )
-			Console.Error( "(ELF) Size of section headers is not standard" );
+        case 0x0: elftype = "no file type";	break;
+        case 0x1: elftype = "relocatable";	break;
+        case 0x2: elftype = "executable";	break;
+    }
+    
+    if (elftype != NULL) ELF_LOG( "type:      %s", elftype );
 
-		if ( ( header.e_phnum > 0 ) && ( header.e_phentsize != sizeof(ELF_PHR) ) )
-			Console.Error( "(ELF) Size of program headers is not standard" );
+    const char* machine = NULL;
+    
+    switch(header.e_machine)
+    {
+        case 1: machine = "AT&T WE 32100";	break;
+        case 2: machine = "SPARC";			break;
+        case 3: machine = "Intel 80386";	break;
+        case 4: machine = "Motorola 68000";	break;
+        case 5: machine = "Motorola 88000";	break;
+        case 7: machine = "Intel 80860";	break;
+        case 8: machine = "mips_rs3000";	break;
 
-		const char* elftype = NULL;
-		switch( header.e_type )
-		{
-			default:
-				ELF_LOG( "type:      unknown = %x", header.e_type );
+        default:
+            ELF_LOG( "machine:  unknown = %x", header.e_machine );
 			break;
+    }
 
-			case 0x0: elftype = "no file type";	break;
-			case 0x1: elftype = "relocatable";	break;
-			case 0x2: elftype = "executable";	break;
-		}
-		if( elftype != NULL ) ELF_LOG( "type:      %s", elftype );
+    if (machine != NULL) ELF_LOG( "machine:  %s", machine );
 
-		const char* machine = NULL;
-		switch ( header.e_machine )
-		{
-			case 1: machine = "AT&T WE 32100";	break;
-			case 2: machine = "SPARC";			break;
-			case 3: machine = "Intel 80386";	break;
-			case 4: machine = "Motorola 68000";	break;
-			case 5: machine = "Motorola 88000";	break;
-			case 7: machine = "Intel 80860";	break;
-			case 8: machine = "mips_rs3000";	break;
+    ELF_LOG("version:   %d",header.e_version);
+    ELF_LOG("entry:     %08x",header.e_entry);
+    ELF_LOG("flags:     %08x",header.e_flags);
+    ELF_LOG("eh size:   %08x",header.e_ehsize);
+    ELF_LOG("ph off:    %08x",header.e_phoff);
+    ELF_LOG("ph entsiz: %08x",header.e_phentsize);
+    ELF_LOG("ph num:    %08x",header.e_phnum);
+    ELF_LOG("sh off:    %08x",header.e_shoff);
+    ELF_LOG("sh entsiz: %08x",header.e_shentsize);
+    ELF_LOG("sh num:    %08x",header.e_shnum);
+    ELF_LOG("sh strndx: %08x",header.e_shstrndx);
 
-			default:
-				ELF_LOG( "machine:  unknown = %x", header.e_machine );
-			break;
-		}
+    ELF_LOG("\n");
+}
+    
+bool ElfObject::hasProgramHeaders() { return (proghead != NULL); }
+bool ElfObject::hasSectionHeaders() { return (secthead != NULL); }
+bool ElfObject::hasHeaders() { return (hasProgramHeaders() && hasSectionHeaders()); }
+    
+void ElfObject::readIso(IsoFile file)
+{
+    int rsize = file.read(data.GetPtr(), data.GetSizeInBytes());
+    if (rsize < data.GetSizeInBytes()) throw Exception::EndOfStream( filename );
+}
+    
+void ElfObject::readFile()
+{
+    int rsize = 0;
+    FILE *f;
+            
+    f = fopen( filename.ToUTF8(), "rb" );
+    if (f == NULL) Exception::FileNotFound( filename );
+		
+    fseek(f, 0, SEEK_SET);
+    rsize = fread(data.GetPtr(), 1, data.GetSizeInBytes(), f);
+    fclose( f );
 
-		if( machine != NULL )
-			ELF_LOG( "machine:  %s", machine );
+    if (rsize < data.GetSizeInBytes()) throw Exception::EndOfStream( filename );
+}
 
-		ELF_LOG("version:   %d",header.e_version);
-		ELF_LOG("entry:     %08x",header.e_entry);
-		ELF_LOG("flags:     %08x",header.e_flags);
-		ELF_LOG("eh size:   %08x",header.e_ehsize);
-		ELF_LOG("ph off:    %08x",header.e_phoff);
-		ELF_LOG("ph entsiz: %08x",header.e_phentsize);
-		ELF_LOG("ph num:    %08x",header.e_phnum);
-		ELF_LOG("sh off:    %08x",header.e_shoff);
-		ELF_LOG("sh entsiz: %08x",header.e_shentsize);
-		ELF_LOG("sh num:    %08x",header.e_shnum);
-		ELF_LOG("sh strndx: %08x",header.e_shstrndx);
+void ElfObject::checkElfSize(s64 elfsize)
+{
+    if (elfsize > 0xfffffff)
+        throw Exception::BadStream( filename, wxLt("Illegal ELF file size, over 2GB!") );
 
-		ELF_LOG("\n");
-	}
+    if (elfsize == -1)
+        throw Exception::BadStream( filename, wxLt("Elf file does not exist! ") );
 
-	void readFile()
-	{
-		int rsize = 0;
-		const wxCharBuffer work( filename.ToUTF8() );
-		if ((strnicmp( work, "cdrom:",  strlen("cdrom:" )) == 0) ||
-			(strnicmp( work, "cdrom0:", strlen("cdromN:")) == 0) ||
-			(strnicmp( work, "cdrom1:", strlen("cdromN:")) == 0))
-		{
-			IsoFSCDVD isofs;
-			IsoFile file( isofs, fromUTF8(work) );
+    if (elfsize == 0)
+        throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
+}
+    
+u32 ElfObject::getCRC() const
+{
+    u32 CRC = 0;
 
-			//int size = file.getLength();
-			rsize = file.read(data.GetPtr(), data.GetSizeInBytes());
-		}
-		else
-		{
-			FILE *f;
+    const u32* srcdata = (u32*)data.GetPtr();
+    for(u32 i=data.GetSizeInBytes()/4; i; --i, ++srcdata)
+        CRC ^= *srcdata;
 
-			f = fopen( work.data(), "rb" );
-			if( f == NULL ) Exception::FileNotFound( filename );
+    return CRC;
+}
 
-			fseek( f, 0, SEEK_SET );
-			rsize = fread( data.GetPtr(), 1, data.GetSizeInBytes(), f );
-			fclose( f );
-		}
+void ElfObject::loadProgramHeaders()
+{
+    if (proghead == NULL) return;
 
-		if( rsize < data.GetSizeInBytes() ) throw Exception::EndOfStream( filename );
-	}
+    for( int i = 0 ; i < header.e_phnum ; i++ )
+    {
+        ELF_LOG( "Elf32 Program Header" );
+        ELF_LOG( "type:      " );
 
-	u32 GetCRC() const
-	{
-		u32 CRC = 0;
-
-		const  u32* srcdata = (u32*)data.GetPtr();
-		for(u32 i=data.GetSizeInBytes()/4; i; --i, ++srcdata)
-			CRC ^= *srcdata;
-
-		return CRC;
-	}
-
-
-	void loadProgramHeaders()
-	{
-		if ( proghead == NULL )
-			return;
-
-		for( int i = 0 ; i < header.e_phnum ; i++ )
-		{
-			ELF_LOG( "Elf32 Program Header" );
-			ELF_LOG( "type:      " );
-
-			switch ( proghead[ i ].p_type ) {
-				default:
-					ELF_LOG( "unknown %x", (int)proghead[ i ].p_type );
+        switch(proghead[ i ].p_type) 
+        {
+            default:
+                ELF_LOG( "unknown %x", (int)proghead[ i ].p_type );
 				break;
 
-				case 0x1:
-				{
-					ELF_LOG("load");
-					const uint elfsize = data.GetLength();
+            case 0x1:
+            {
+                ELF_LOG("load");
+                const uint elfsize = data.GetLength();
 
-					if (proghead[ i ].p_offset < elfsize) {
-						int size;
+                if (proghead[ i ].p_offset < elfsize) 
+                {
+                    int size;
 
-						if ((proghead[ i ].p_filesz + proghead[ i ].p_offset) > elfsize)
-							size = elfsize - proghead[ i ].p_offset;
-						else
-							size = proghead[ i ].p_filesz;
+                    if ((proghead[ i ].p_filesz + proghead[ i ].p_offset) > elfsize)
+                        size = elfsize - proghead[ i ].p_offset;
+                    else
+                        size = proghead[ i ].p_filesz;
 
-						if( proghead[ i ].p_vaddr != proghead[ i ].p_paddr )
-							Console.Warning( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x",
-								proghead[ i ].p_paddr, proghead[ i ].p_vaddr);
+                    if (proghead[ i ].p_vaddr != proghead[ i ].p_paddr)
+                        Console.Warning( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x",
+                            proghead[ i ].p_paddr, proghead[ i ].p_vaddr);
 
-						// used to be paddr
-						memcpy_fast(
-							&PS2MEM_BASE[proghead[ i ].p_vaddr & 0x1ffffff],
-							data.GetPtr(proghead[ i ].p_offset), size
-						);
+                    // used to be paddr
+                    memcpy_fast(
+                        &PS2MEM_BASE[proghead[ i ].p_vaddr & 0x1ffffff],
+                        data.GetPtr(proghead[ i ].p_offset), size
+                    );
 
-						ELF_LOG("\t*LOADED*");
-					}
-				}
-				break;
-			}
+                    ELF_LOG("\t*LOADED*");
+                }
+            }
+            break;
+        }
 
-			ELF_LOG("\n");
-			ELF_LOG("offset:    %08x",proghead[i].p_offset);
-			ELF_LOG("vaddr:     %08x",proghead[i].p_vaddr);
-			ELF_LOG("paddr:     %08x",proghead[i].p_paddr);
-			ELF_LOG("file size: %08x",proghead[i].p_filesz);
-			ELF_LOG("mem size:  %08x",proghead[i].p_memsz);
-			ELF_LOG("flags:     %08x",proghead[i].p_flags);
-			ELF_LOG("palign:    %08x",proghead[i].p_align);
-			ELF_LOG("\n");
-		}
-	}
+        ELF_LOG("\n");
+        ELF_LOG("offset:    %08x",proghead[i].p_offset);
+        ELF_LOG("vaddr:     %08x",proghead[i].p_vaddr);
+        ELF_LOG("paddr:     %08x",proghead[i].p_paddr);
+        ELF_LOG("file size: %08x",proghead[i].p_filesz);
+        ELF_LOG("mem size:  %08x",proghead[i].p_memsz);
+        ELF_LOG("flags:     %08x",proghead[i].p_flags);
+        ELF_LOG("palign:    %08x",proghead[i].p_align);
+        ELF_LOG("\n");
+    }
+}
 
-	void loadSectionHeaders()
-	{
-		if( secthead == NULL || header.e_shoff > (u32)data.GetLength() )
-			return;
+void ElfObject::loadSectionHeaders()
+{
+    if (secthead == NULL || header.e_shoff > (u32)data.GetLength()) return;
 
-		const u8* sections_names = data.GetPtr( secthead[ (header.e_shstrndx == 0xffff ? 0 : header.e_shstrndx) ].sh_offset );
+    const u8* sections_names = data.GetPtr( secthead[ (header.e_shstrndx == 0xffff ? 0 : header.e_shstrndx) ].sh_offset );
 
-		int i_st = -1;
-		int i_dt = -1;
+    int i_st = -1, i_dt = -1;
 
-		for( int i = 0 ; i < header.e_shnum ; i++ )
-		{
-			ELF_LOG( "ELF32 Section Header [%x] %s", i, &sections_names[ secthead[ i ].sh_name ] );
+    for( int i = 0 ; i < header.e_shnum ; i++ )
+    {
+        ELF_LOG( "ELF32 Section Header [%x] %s", i, &sections_names[ secthead[ i ].sh_name ] );
 
-			// used by parseCommandLine
-			//if ( secthead[i].sh_flags & 0x2 )
-			//	args_ptr = min( args_ptr, secthead[ i ].sh_addr & 0x1ffffff );
+        // used by parseCommandLine
+        //if ( secthead[i].sh_flags & 0x2 )
+        //	args_ptr = min( args_ptr, secthead[ i ].sh_addr & 0x1ffffff );
 
-			ELF_LOG("\n");
+        ELF_LOG("\n");
 
-			const char* sectype = NULL;
-			switch ( secthead[ i ].sh_type )
-			{
-				case 0x0: sectype = "null";		break;
-				case 0x1: sectype = "progbits";	break;
-				case 0x2: sectype = "symtab";	break;
-				case 0x3: sectype = "strtab";	break;
-				case 0x4: sectype = "rela";		break;
-				case 0x8: sectype = "no bits";	break;
-				case 0x9: sectype = "rel";		break;
+        const char* sectype = NULL;
+        switch(secthead[ i ].sh_type)
+        {
+            case 0x0: sectype = "null";		break;
+            case 0x1: sectype = "progbits";	break;
+            case 0x2: sectype = "symtab";	break;
+            case 0x3: sectype = "strtab";	break;
+            case 0x4: sectype = "rela";		break;
+            case 0x8: sectype = "no bits";	break;
+            case 0x9: sectype = "rel";		break;
 
-				default:
-					ELF_LOG("type:      unknown %08x",secthead[i].sh_type);
-				break;
-			}
+            default:
+                ELF_LOG("type:      unknown %08x",secthead[i].sh_type);
+            break;
+        }
 
-			ELF_LOG("type:      %s", sectype);
-			ELF_LOG("flags:     %08x", secthead[i].sh_flags);
-			ELF_LOG("addr:      %08x", secthead[i].sh_addr);
-			ELF_LOG("offset:    %08x", secthead[i].sh_offset);
-			ELF_LOG("size:      %08x", secthead[i].sh_size);
-			ELF_LOG("link:      %08x", secthead[i].sh_link);
-			ELF_LOG("info:      %08x", secthead[i].sh_info);
-			ELF_LOG("addralign: %08x", secthead[i].sh_addralign);
-			ELF_LOG("entsize:   %08x", secthead[i].sh_entsize);
-			// dump symbol table
+        ELF_LOG("type:      %s", sectype);
+        ELF_LOG("flags:     %08x", secthead[i].sh_flags);
+        ELF_LOG("addr:      %08x", secthead[i].sh_addr);
+        ELF_LOG("offset:    %08x", secthead[i].sh_offset);
+        ELF_LOG("size:      %08x", secthead[i].sh_size);
+        ELF_LOG("link:      %08x", secthead[i].sh_link);
+        ELF_LOG("info:      %08x", secthead[i].sh_info);
+        ELF_LOG("addralign: %08x", secthead[i].sh_addralign);
+        ELF_LOG("entsize:   %08x", secthead[i].sh_entsize);
+        // dump symbol table
 
-			if( secthead[ i ].sh_type == 0x02 )
-			{
-				i_st = i;
-				i_dt = secthead[i].sh_link;
-			}
-		}
+        if (secthead[ i ].sh_type == 0x02)
+        {
+            i_st = i;
+            i_dt = secthead[i].sh_link;
+        }
+    }
 
-		if( ( i_st >= 0 ) && ( i_dt >= 0 ) )
-		{
-			const char * SymNames;
-			Elf32_Sym * eS;
+    if ((i_st >= 0) && (i_dt >= 0))
+    {
+        const char * SymNames;
+        Elf32_Sym * eS;
 
-			SymNames = (char*)data.GetPtr( secthead[ i_dt ].sh_offset );
-			eS = (Elf32_Sym*)data.GetPtr( secthead[ i_st ].sh_offset );
-			Console.WriteLn("found %d symbols", secthead[ i_st ].sh_size / sizeof( Elf32_Sym ));
+        SymNames = (char*)data.GetPtr(secthead[i_dt].sh_offset);
+        eS = (Elf32_Sym*)data.GetPtr(secthead[i_st].sh_offset);
+        Console.WriteLn("found %d symbols", secthead[i_st].sh_size / sizeof(Elf32_Sym));
 
-			for( uint i = 1; i < ( secthead[ i_st ].sh_size / sizeof( Elf32_Sym ) ); i++ ) {
-				if ( ( eS[ i ].st_value != 0 ) && ( ELF32_ST_TYPE( eS[ i ].st_info ) == 2 ) ) {
-					R5900::disR5900AddSym( eS[i].st_value, &SymNames[ eS[ i ].st_name ] );
-				}
-			}
-		}
-	}
-};
+        for(uint i = 1; i < (secthead[i_st].sh_size / sizeof(Elf32_Sym)); i++) {
+            if ((eS[i].st_value != 0) && (ELF32_ST_TYPE(eS[i].st_info) == 2)) 
+            {
+                R5900::disR5900AddSym(eS[i].st_value, &SymNames[eS[i].st_name]);
+            }
+        }
+    }
+}
+
+void ElfObject::loadHeaders()
+{
+    loadProgramHeaders();
+    loadSectionHeaders();
+}
 
 void ElfApplyPatches()
 {
 	wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
 
 	// if patches found the following status msg will be overwritten
-	Console.SetTitle( wxsFormat( _("Game running [CRC=%s]"), filename.c_str() ) );
+	Console.SetTitle(L"Game running [CRC=" + filename +L"]");
 
-	if( !EmuConfig.EnablePatches ) return;
-
-    InitPatch(filename);
+	if (EmuConfig.EnablePatches) InitPatch(filename);
 }
 
 // Fetches the CRC of the game bound to the CDVD plugin.
-u32 loadElfCRC( const char* filename )
+u32 loadElfCRC( const wxString filename )
 {
+    // Note: calling loadElfFile here causes bad things to happen.
 	u32 crcval = 0;
-	Console.WriteLn("loadElfCRC: %s", filename);
 
-	IsoFSCDVD isofs;
-	const int filesize = IsoDirectory(isofs).GetFileSize( fromUTF8(filename) );
-
-	DevCon.WriteLn( "loadElfFile: %d bytes", filesize );
-	crcval = ElfObject( fromUTF8(filename), filesize ).GetCRC();
-	Console.WriteLn( "loadElfFile: %s; CRC = %8.8X", filename, crcval );
-
+    IsoFSCDVD isofs;
+    IsoFile file(isofs, filename);
+		
+    crcval = ElfObject(filename, file).getCRC();
+	
+	Console.WriteLn(wxsFormat(L"loadElfCRC(" + filename + L") = %8.8X", crcval));
 	return crcval;
 }
 
@@ -525,54 +446,39 @@ u32 loadElfCRC( const char* filename )
 // If the specified filename is empty then no action is taken (PS2 will continue booting
 // normally as if it has no CD.
 //
-// Throws exception on error:
+// Throws exceptions on errors. Not called if not skipping the bios.
 //
 void loadElfFile(const wxString& filename)
 {
-	if( filename.IsEmpty() ) return;
+    ElfObject *elfptr;
 
-	s64 elfsize;
+	if (filename.IsEmpty()) return;
+
 	Console.WriteLn( L"loadElfFile: " + filename );
 
-	const wxCharBuffer fnptr( filename.ToUTF8() );
-	bool useCdvdSource = false;
-
-#ifndef ENABLE_LOADING_PS1_GAMES
-	if( filename.StartsWith( L"cdrom:" ) )
+	if (filename.StartsWith(L"cdrom:") && !ENABLE_LOADING_PS1_GAMES)
 		throw Exception::RuntimeError( wxLt("This is not a Ps2 disc. (And we don't currently emulate PS1 games)") );
-#endif
 	
-	if( !filename.StartsWith( L"cdrom:" ) && !filename.StartsWith( L"cdrom0:" ) && !filename.StartsWith( L"cdrom1:" ) )
+	if (filename.StartsWith(L"cdrom:") || filename.StartsWith(L"cdrom0:") || filename.StartsWith(L"cdrom1:"))
 	{
-		DevCon.WriteLn("Loading from a file (or non-cd image)");
-		elfsize = Path::GetFileSize( filename );
+	    // It's a game disc.
+		DevCon.WriteLn(L"Loading from a CD rom or CD image.");
+		
+		IsoFSCDVD isofs;
+		IsoFile file(isofs, filename);
+		
+        elfptr = new ElfObject(filename, file);
 	}
 	else
 	{
-		DevCon.WriteLn("Loading from a CD rom or CD image");
-		useCdvdSource = true;
-
-		Console.WriteLn(L"loadElfCRC: " + filename);
-		IsoFSCDVD isofs;
-		elfsize = IsoDirectory( isofs ).GetFileSize( fromUTF8(fnptr) );
+	    // It's an elf file.
+		DevCon.WriteLn("Loading from a file (or non-cd image)");
+        elfptr = new ElfObject(filename, Path::GetFileSize(filename));
 	}
 
-	if( elfsize > 0xfffffff )
-		throw Exception::BadStream( filename, wxLt("Illegal ELF file size, over 2GB!") );
-	
-	if( elfsize == -1 )
-		throw Exception::BadStream( filename, wxLt("Elf file does not exist! ") );
-
-	if( elfsize == 0 )
-		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
-
-	Console.WriteLn( L"loadElfFile: %d bytes", wxULongLong(elfsize).GetLo() );
-
-	ElfObject elfobj( filename, wxULongLong(elfsize).GetLo() );
-
-	if( elfobj.proghead == NULL )
+	if (!elfptr->hasProgramHeaders())
 	{
-		throw Exception::BadStream( filename, useCdvdSource ?
+		throw Exception::BadStream( filename, elfptr->isCdvd ?
 			wxLt("Invalid ELF file header.  The CD-Rom may be damaged, or the ISO image corrupted.") :
 			wxLt("Invalid ELF file.")
 		);
@@ -581,10 +487,9 @@ void loadElfFile(const wxString& filename)
 	//2002-09-19 (Florin)
 	//args_ptr = 0xFFFFFFFF;	//big value, searching for minimum [used by parseCommandLine]
 
-	elfobj.loadProgramHeaders();
-	elfobj.loadSectionHeaders();
+	elfptr->loadHeaders();
 
-	cpuRegs.pc = elfobj.header.e_entry; //set pc to proper place
+	cpuRegs.pc = elfptr->header.e_entry; //set pc to proper place
 	ELF_LOG( "PC set to: %8.8lx", cpuRegs.pc );
 
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
@@ -595,11 +500,11 @@ void loadElfFile(const wxString& filename)
 	{
 		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
 		{
-			strcpy( (char*)PSM( i ), fnptr );
-			DevCon.WriteLn( "loadElfFile: addr %x \"%s\" -> \"%s\"", i, "rom0:OSDSYS", fnptr.data() );
+			strcpy( (char*)PSM( i ), filename.ToUTF8() );
+			DevCon.WriteLn( wxsFormat(L"loadElfFile: addr %x \"rom0:OSDSYS\" -> \"" + filename + L"\"", i));
 		}
 	}
-	ElfCRC = elfobj.GetCRC();
+	ElfCRC = elfptr->getCRC();
 	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
 	ElfApplyPatches();
 	GetMTGS().SendGameCRC( ElfCRC );
@@ -613,6 +518,8 @@ void loadElfFile(const wxString& filename)
 //   2 - PS2 CD
 int GetPS2ElfName( wxString& name )
 {
+    int retype = 0;
+    
 	try {
 		IsoFSCDVD isofs;
 		IsoFile file( isofs, L"SYSTEM.CNF;1");
@@ -620,7 +527,6 @@ int GetPS2ElfName( wxString& name )
 		int size = file.getLength();
 		if( size == 0 ) return 0;
 
-		int retype = 0;
 
 		while( !file.eof() )
 		{
@@ -696,6 +602,6 @@ int GetPS2ElfName( wxString& name )
 	}
 	fclose(fp);
 #endif
-
-	return 2;
+    
+	return retype;
 }

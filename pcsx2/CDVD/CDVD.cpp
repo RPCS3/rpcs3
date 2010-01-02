@@ -305,30 +305,50 @@ s32 cdvdWriteConfig(const u8* config)
 
 static MutexLockRecursive Mutex_NewDiskCB;
 
-static void reloadElfInfo(const char* str)
+static __forceinline void _reloadElfInfo(wxString str)
 {
 	// Now's a good time to reload the ELF info...
-	if (ElfCRC == 0)
-	{
-		ScopedLock locker( Mutex_NewDiskCB );
-
-		ElfCRC = loadElfCRC( str );
-		ElfApplyPatches();
-		GetMTGS().SendGameCRC( ElfCRC );
-	}
+    ScopedLock locker( Mutex_NewDiskCB );
+        
+    ElfCRC = loadElfCRC(str);
+            
+    ElfApplyPatches();
+    GetMTGS().SendGameCRC(ElfCRC);
 }
 
-void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
-	wxString fname;
-	char exeName[12];
+static __forceinline void reloadElfInfo(u32 discType, wxString str)
+{
+    if (ElfCRC == 0)
+    {
+        switch (discType)
+        {
+            case 2: // Is a PS2 disc.
+                _reloadElfInfo(str);
+                break;
+            case 1: // Is a PS1 disc.
+                if (ENABLE_LOADING_PS1_GAMES) _reloadElfInfo(str);
+                break;
+            default: // Isn't a disc we recognise.
+                break;
+        }
+    }
+}
+
+void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) 
+{
 	s32 numbers, letters;
 	u32 key_0_3;
 	u8 key_4, key_14;
 
-	// get main elf name
-	bool IsPs2 = (GetPS2ElfName(fname) == 2);
+	wxString fname;
+	char exeName[12];
+	
+	// Get the main elf name.
+	u32 discType = GetPS2ElfName(fname);
+	
 	const wxCharBuffer crap( fname.To8BitData() );
 	const char* str = crap.data();
+	
 	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
 	DevCon.Warning("exeName = %s", &str[8]);
 
@@ -390,7 +410,7 @@ void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) {
 	Console.WriteLn( "CDVD.KEY = %02X,%02X,%02X,%02X,%02X,%02X,%02X", 
 		cdvd.Key[0],cdvd.Key[1],cdvd.Key[2],cdvd.Key[3],cdvd.Key[4],cdvd.Key[14],cdvd.Key[15] );
 
-    if (IsPs2) reloadElfInfo(str);
+    reloadElfInfo(discType, fname);
 }
 
 s32 cdvdGetToc(void* toc)
@@ -512,12 +532,10 @@ void SaveStateBase::cdvdFreeze()
 
 static void cdvdDetectDisk()
 {
-	cdvd.Type = DoCDVDdetectDiskType();
-
 	wxString str;
-	bool IsPs2 = (GetPS2ElfName(str) == 2);
-
-    if (IsPs2) reloadElfInfo( str.ToUTF8() );
+	cdvd.Type = DoCDVDdetectDiskType();
+	
+    reloadElfInfo(GetPS2ElfName(str), str);
 }
 
 void cdvdNewDiskCB()
