@@ -12,7 +12,7 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
-
+	
 #ifndef __ELF_H__
 #define __ELF_H__
 
@@ -28,29 +28,29 @@ extern unsigned int args_ptr;
 struct ELF_HEADER {
 	u8	e_ident[16];	//0x7f,"ELF"  (ELF file identifier)
 	u16	e_type;			//ELF type: 0=NONE, 1=REL, 2=EXEC, 3=SHARED, 4=CORE
-	u16	e_machine;      //Processor: 8=MIPS R3000
-	u32	e_version;      //Version: 1=current
-	u32	e_entry;        //Entry point address
-	u32	e_phoff;        //Start of program headers (offset from file start)
-	u32	e_shoff;        //Start of section headers (offset from file start)
-	u32	e_flags;        //Processor specific flags = 0x20924001 noreorder, mips
-	u16	e_ehsize;       //ELF header size (0x34 = 52 bytes)
-	u16	e_phentsize;    //Program headers entry size
-	u16	e_phnum;        //Number of program headers
-	u16	e_shentsize;    //Section headers entry size
-	u16	e_shnum;        //Number of section headers
-	u16	e_shstrndx;     //Section header stringtable index
+	u16	e_machine;	  //Processor: 8=MIPS R3000
+	u32	e_version;	  //Version: 1=current
+	u32	e_entry;		//Entry point address
+	u32	e_phoff;		//Start of program headers (offset from file start)
+	u32	e_shoff;		//Start of section headers (offset from file start)
+	u32	e_flags;		//Processor specific flags = 0x20924001 noreorder, mips
+	u16	e_ehsize;	   //ELF header size (0x34 = 52 bytes)
+	u16	e_phentsize;	//Program headers entry size
+	u16	e_phnum;		//Number of program headers
+	u16	e_shentsize;	//Section headers entry size
+	u16	e_shnum;		//Number of section headers
+	u16	e_shstrndx;	 //Section header stringtable index
 };
 
 struct ELF_PHR {
-	u32 p_type;         //see notes1
-	u32 p_offset;       //Offset from file start to program segment.
-	u32 p_vaddr;        //Virtual address of the segment
-	u32 p_paddr;        //Physical address of the segment
-	u32 p_filesz;       //Number of bytes in the file image of the segment
-	u32 p_memsz;        //Number of bytes in the memory image of the segment
-	u32 p_flags;        //Flags for segment
-	u32 p_align;        //Alignment. The address of 0x08 and 0x0C must fit this alignment. 0=no alignment
+	u32 p_type;		 //see notes1
+	u32 p_offset;	   //Offset from file start to program segment.
+	u32 p_vaddr;		//Virtual address of the segment
+	u32 p_paddr;		//Physical address of the segment
+	u32 p_filesz;	   //Number of bytes in the file image of the segment
+	u32 p_memsz;		//Number of bytes in the memory image of the segment
+	u32 p_flags;		//Flags for segment
+	u32 p_align;		//Alignment. The address of 0x08 and 0x0C must fit this alignment. 0=no alignment
 };
 
 /*
@@ -66,16 +66,16 @@ notes1
 */
 
 struct ELF_SHR {
-	u32	sh_name;        //No. to the index of the Section header stringtable index
-	u32	sh_type;        //See notes2
-	u32	sh_flags;       //see notes3
-	u32	sh_addr;        //Section start address
-	u32	sh_offset;      //Offset from start of file to section
-	u32	sh_size;        //Size of section
-	u32	sh_link;        //Section header table index link
-	u32	sh_info;        //Info
+	u32	sh_name;		//No. to the index of the Section header stringtable index
+	u32	sh_type;		//See notes2
+	u32	sh_flags;	   //see notes3
+	u32	sh_addr;		//Section start address
+	u32	sh_offset;	  //Offset from start of file to section
+	u32	sh_size;		//Size of section
+	u32	sh_link;		//Section header table index link
+	u32	sh_info;		//Info
 	u32	sh_addralign;   //Alignment. The adress of 0x0C must fit this alignment. 0=no alignment.
-	u32	sh_entsize;     //Fixed size entries.
+	u32	sh_entsize;	 //Fixed size entries.
 };
 
 /*
@@ -125,37 +125,37 @@ struct Elf32_Rel {
 
 class ElfObject
 {
-    private:
-        SafeArray<u8> data;
-        ELF_PHR* proghead;
-        ELF_SHR* secthead;
-        wxString filename;
+	private:
+		SafeArray<u8> data;
+		ELF_PHR* proghead;
+		ELF_SHR* secthead;
+		wxString filename;
 
-        void initElfHeaders();
-        void readIso(IsoFile file);
-        void readFile();
-        void checkElfSize(s64 elfsize);
-        
+		void initElfHeaders();
+		void readIso(IsoFile file);
+		void readFile();
+		void checkElfSize(s64 elfsize);
+		
 	public:
-        bool isCdvd;
-        ELF_HEADER& header;
+		bool isCdvd;
+		ELF_HEADER& header;
 
-        // Destructor!
-        // C++ does all the cleanup automagically for us.
-        virtual ~ElfObject() throw() { }
-        
-        ElfObject(const wxString& srcfile, IsoFile isofile);
-        ElfObject( const wxString& srcfile, uint hdrsize );
-        
-        void loadProgramHeaders();
-        void loadSectionHeaders();
-        void loadHeaders();
-        
-        bool hasProgramHeaders();
-        bool hasSectionHeaders();
-        bool hasHeaders();
-        
-        u32 getCRC() const;
+		// Destructor!
+		// C++ does all the cleanup automagically for us.
+		virtual ~ElfObject() throw() { }
+		
+		ElfObject(const wxString& srcfile, IsoFile isofile);
+		ElfObject( const wxString& srcfile, uint hdrsize );
+		
+		void loadProgramHeaders();
+		void loadSectionHeaders();
+		void loadHeaders();
+		
+		bool hasProgramHeaders();
+		bool hasSectionHeaders();
+		bool hasHeaders();
+		
+		u32 getCRC() const;
 };
 
 //-------------------
