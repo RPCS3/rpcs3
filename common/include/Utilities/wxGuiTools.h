@@ -26,6 +26,7 @@
 class pxStaticText;
 class pxStaticHeading;
 class pxCheckBox;
+class wxSpinCtrl;
 
 #define wxSF		wxSizerFlags()
 

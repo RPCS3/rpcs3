@@ -246,6 +246,7 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	label->SetName(L"OutputDisabledLabel");
 	label->SetFont( *new wxFont( 20, wxDEFAULT, wxNORMAL, wxBOLD ) );
 	label->SetForegroundColour( *wxWHITE );
+	label->Show( !EmuConfig.GS.DisableOutput );
 
 	m_gspanel = new GSPanel( this );
 
