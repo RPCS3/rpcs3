@@ -44,12 +44,14 @@ public:
 
 protected:
 	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
-
+	
 #ifdef __WXMSW__
 	virtual WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam);
 #endif
 
 	void InitDefaultAccelerators();
+
+	void DoSettingsApplied();
 
 	void OnCloseWindow( wxCloseEvent& evt );
 	void OnResize(wxSizeEvent& event);
@@ -66,7 +68,9 @@ protected:
 class GSFrame : public wxFrame
 {
 protected:
+	EventListenerBinding<int>	m_Listener_SettingsApplied;
 	GSPanel*					m_gspanel;
+	wxStaticText*				m_label_Disabled;
 
 public:
 	GSFrame(wxWindow* parent, const wxString& title);
@@ -79,7 +83,9 @@ protected:
 	void OnResize( wxSizeEvent& evt );
 	void OnActivate( wxActivateEvent& evt );
 
-	void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+	void DoSettingsApplied();
+
+	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
 };
 
 struct PluginMenuAddition
@@ -195,6 +201,7 @@ protected:
 	void OnActivate( wxActivateEvent& evt );
 
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);
+	void Menu_AppSettings_Click(wxCommandEvent &event);
 	void Menu_SelectBios_Click(wxCommandEvent &event);
 
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
@@ -212,6 +219,7 @@ protected:
 
 	void Menu_SuspendResume_Click(wxCommandEvent &event);
 	void Menu_SysReset_Click(wxCommandEvent &event);
+	void Menu_SysShutdown_Click(wxCommandEvent &event);
 
 	void Menu_ConfigPlugin_Click(wxCommandEvent &event);
 

@@ -523,7 +523,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	{
 		wxWindowDisabler disabler;
 		SaveSinglePluginHelper helper( pid );
-		g_plugins->Configure( pid );
+		configfunc();
 	}
 }
 

@@ -338,6 +338,7 @@ void gsIrq() {
 
 __forceinline void gsFrameSkip()
 {
+	
 	if( !EmuConfig.GS.FrameSkipEnable ) return;
 
 	static int consec_skipped = 0;
@@ -349,7 +350,7 @@ __forceinline void gsFrameSkip()
 	if( isSkipping )
 	{
 		++consec_skipped;
-		if( consec_skipped >= EmuConfig.GS.ConsecutiveSkip )
+		if( consec_skipped >= EmuConfig.GS.FramesToSkip )
 		{
 			consec_skipped = 0;
 			isSkipping = false;
@@ -358,7 +359,7 @@ __forceinline void gsFrameSkip()
 	else
 	{
 		++consec_drawn;
-		if( consec_drawn >= EmuConfig.GS.ConsecutiveFrames )
+		if( consec_drawn >= EmuConfig.GS.FramesToDraw )
 		{
 			consec_drawn = 0;
 			isSkipping = true;

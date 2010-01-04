@@ -24,11 +24,11 @@
 using namespace Panels;
 using namespace pxSizerFlags;
 
-template< typename T >
-static T& MakeWizWidget( int pageid, wxWizardPage* src )
+IMPLEMENT_DYNAMIC_CLASS(ApplicableWizardPage, wxWizardPageSimple)
+
+ApplicableWizardPage::ApplicableWizardPage( wxWizard* parent, wxWizardPage* prev, wxWizardPage* next, const wxBitmap& bitmap )
+	: wxWizardPageSimple( parent, prev, next, bitmap )
 {
-	g_ApplyState.SetCurrentPage( pageid );
-	return *new T( src, 640 );
 }
 
 // ----------------------------------------------------------------------------
@@ -53,7 +53,7 @@ Panels::SettingsDirPickerPanel::SettingsDirPickerPanel( wxWindow* parent ) :
 
 // ----------------------------------------------------------------------------
 FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
-	wxWizardPageSimple( (g_ApplyState.SetCurrentPage( 0 ), parent) )
+	ApplicableWizardPage( parent )
 {
 	SetSizer( new wxBoxSizer( wxVERTICAL ) );
 
@@ -86,13 +86,13 @@ void FirstTimeWizard::UsermodePage::OnUsermodeChanged( wxCommandEvent& evt )
 
 // ----------------------------------------------------------------------------
 FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
-	: wxWizard( (g_ApplyState.StartWizard(), parent), wxID_ANY, _("PCSX2 First Time Configuration") )
-	, m_page_usermode( *new UsermodePage( this ) )
-	, m_page_plugins( *new wxWizardPageSimple( this, &m_page_usermode ) )
-	, m_page_bios( *new wxWizardPageSimple( this, &m_page_plugins ) )
+	: wxWizard( parent, wxID_ANY, _("PCSX2 First Time Configuration") )
+	, m_page_usermode	( *new UsermodePage( this ) )
+	, m_page_plugins	( *new ApplicableWizardPage( this, &m_page_usermode ) )
+	, m_page_bios		( *new ApplicableWizardPage( this, &m_page_plugins ) )
 
-	, m_panel_PluginSel	( MakeWizWidget<PluginSelectorPanel>( 1, &m_page_plugins ) )
-	, m_panel_BiosSel	( MakeWizWidget<BiosSelectorPanel>( 2, &m_page_bios ) )
+	, m_panel_PluginSel	( *new PluginSelectorPanel( &m_page_plugins ) )
+	, m_panel_BiosSel	( *new BiosSelectorPanel( &m_page_bios ) )
 {
 	// Page 2 - Plugins Panel
 	// Page 3 - Bios Panel
@@ -104,14 +104,14 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	m_page_bios		+= m_panel_BiosSel			| StdExpand();
 
 	// Assign page indexes as client data
-	m_page_usermode.SetClientData	( (void*)0 );
-	m_page_plugins.SetClientData	( (void*)1 );
-	m_page_bios.SetClientData		( (void*)2 );
+	m_page_usermode	.SetClientData( (void*)0 );
+	m_page_plugins	.SetClientData( (void*)1 );
+	m_page_bios		.SetClientData( (void*)2 );
 
 	// Build the forward chain:
 	//  (backward chain is built during initialization above)
-	m_page_usermode.SetNext	( &m_page_plugins );
-	m_page_plugins.SetNext	( &m_page_bios );
+	m_page_usermode	.SetNext( &m_page_plugins );
+	m_page_plugins	.SetNext( &m_page_bios );
 
 	GetPageAreaSizer() += m_page_usermode;
 	GetPageAreaSizer() += m_page_plugins;
@@ -122,14 +122,14 @@ FirstTimeWizard::FirstTimeWizard( wxWindow* parent )
 	Fit();
 	CenterOnScreen();
 
-	Connect( wxEVT_WIZARD_PAGE_CHANGED,		wxWizardEventHandler( FirstTimeWizard::OnPageChanged ) );
-	Connect( wxEVT_WIZARD_PAGE_CHANGING,	wxWizardEventHandler( FirstTimeWizard::OnPageChanging ) );
-	Connect( wxEVT_COMMAND_LISTBOX_DOUBLECLICKED, wxCommandEventHandler(FirstTimeWizard::OnDoubleClicked) );
+	Connect( wxEVT_WIZARD_PAGE_CHANGED,				wxWizardEventHandler	(FirstTimeWizard::OnPageChanged) );
+	Connect( wxEVT_WIZARD_PAGE_CHANGING,			wxWizardEventHandler	(FirstTimeWizard::OnPageChanging) );
+	Connect( wxEVT_COMMAND_LISTBOX_DOUBLECLICKED,	wxCommandEventHandler	(FirstTimeWizard::OnDoubleClicked) );
 }
 
 FirstTimeWizard::~FirstTimeWizard() throw()
 {
-	g_ApplyState.DoCleanup();
+
 }
 
 void FirstTimeWizard::OnDoubleClicked( wxCommandEvent& evt )
@@ -155,10 +155,13 @@ void FirstTimeWizard::OnPageChanging( wxWizardEvent& evt )
 
 		if( page >= 0 )
 		{
-			if( !g_ApplyState.ApplyPage( page ) )
+			if( ApplicableWizardPage* page = wxDynamicCast( GetCurrentPage(), ApplicableWizardPage ) )
 			{
-				evt.Veto();
-				return;
+				if( !page->GetApplyState().ApplyAll() )
+				{
+					evt.Veto();
+					return;
+				}
 			}
 		}
 

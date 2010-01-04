@@ -26,9 +26,8 @@
 #include <wx/spinctrl.h>
 
 #include "AppCommon.h"
+#include "ApplyState.h"
 
-class wxDirPickerCtrl;
-class wxFileDirPickerEvent;
 
 // --------------------------------------------------------------------------------------
 //  pxUniformTable
@@ -159,7 +158,27 @@ namespace Panels
 		void OnSettingsChanged();
 	};
 
+	// --------------------------------------------------------------------------------------
+	//  FrameSkipPanel
+	// --------------------------------------------------------------------------------------
+	class FrameSkipPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		wxSpinCtrl*		m_spin_FramesToSkip;
+		wxSpinCtrl*		m_spin_FramesToDraw;
+		//pxCheckBox*		m_check_EnableSkip;
+		//pxCheckBox*		m_check_EnableSkipOnTurbo;
+		
+		pxRadioPanel*	m_radio_SkipMode;
 
+	public:
+		FrameSkipPanel( wxWindow* parent );
+		virtual	~FrameSkipPanel() throw() {}
+		
+		void Apply();
+		void OnSettingsChanged();
+	};
+	
 	// --------------------------------------------------------------------------------------
 	//  FramelimiterPanel
 	// --------------------------------------------------------------------------------------
@@ -178,12 +197,10 @@ namespace Panels
 		wxCheckBox*		m_TurboSkipEnable;
 		wxSpinCtrl*		m_spin_SkipThreshold;
 
-		wxSpinCtrl*		m_spin_FramesToSkip;
-		wxSpinCtrl*		m_spin_FramesToDraw;
-
 	public:
 		FramelimiterPanel( wxWindow* parent );
 		virtual ~FramelimiterPanel() throw() {}
+
 		void Apply();
 		void OnSettingsChanged();
 	};
@@ -200,8 +217,9 @@ namespace Panels
 		pxCheckBox*		m_check_SizeLock;
 		pxCheckBox*		m_check_VsyncEnable;
 		pxCheckBox*		m_check_Fullscreen;
+		pxCheckBox*		m_check_ExclusiveFS;
 		pxCheckBox*		m_check_HideMouse;
-		
+
 		wxTextCtrl*		m_text_WindowWidth;
 		wxTextCtrl*		m_text_WindowHeight;
 		
@@ -216,12 +234,18 @@ namespace Panels
 	{
 	protected:
 		pxCheckBox*		m_check_SynchronousGS;
+		pxCheckBox*		m_check_DisableOutput;
+
+		wxButton*		m_button_OpenWindowSettings;
 
 	public:
 		VideoPanel( wxWindow* parent );
 		virtual ~VideoPanel() throw() {}
 		void Apply();
 		void OnSettingsChanged();
+
+	protected:
+		void OnOpenWindowSettings( wxCommandEvent& evt );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -325,8 +349,6 @@ namespace Panels
 		BasePathsPanel( wxWindow* parent );
 
 	protected:
-		DirPickerPanel& AddDirPicker( wxSizer& sizer, FoldersEnum_t folderid,
-			const wxString& label, const wxString& popupLabel );
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////

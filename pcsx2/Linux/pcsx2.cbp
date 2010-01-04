@@ -341,12 +341,16 @@
 		<Unit filename="../gui/AppInit.cpp" />
 		<Unit filename="../gui/AppMain.cpp" />
 		<Unit filename="../gui/AppRes.cpp" />
+		<Unit filename="../gui/ApplyState.h" />
 		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/ConsoleLogger.h" />
 		<Unit filename="../gui/Dialogs/AboutBoxDialog.cpp" />
+		<Unit filename="../gui/Dialogs/AppConfigDialog.cpp" />
 		<Unit filename="../gui/Dialogs/AssertionDialog.cpp" />
-		<Unit filename="../gui/Dialogs/ConfigurationDialog.cpp" />
+		<Unit filename="../gui/Dialogs/BaseConfigurationDialog.cpp" />
+		<Unit filename="../gui/Dialogs/BaseConfigurationDialog.inl" />
+		<Unit filename="../gui/Dialogs/BiosSelectorDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
 		<Unit filename="../gui/Dialogs/ConfirmationDialogs.cpp" />
 		<Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />
@@ -355,6 +359,7 @@
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.h" />
 		<Unit filename="../gui/Dialogs/ModalPopups.h" />
 		<Unit filename="../gui/Dialogs/PickUserModeDialog.cpp" />
+		<Unit filename="../gui/Dialogs/SysConfigDialog.cpp" />
 		<Unit filename="../gui/FrameForGS.cpp" />
 		<Unit filename="../gui/GlobalCommands.cpp" />
 		<Unit filename="../gui/IniInterface.cpp" />
@@ -375,6 +380,7 @@
 		<Unit filename="../gui/Panels/CpuPanel.cpp" />
 		<Unit filename="../gui/Panels/DirPickerPanel.cpp" />
 		<Unit filename="../gui/Panels/GameFixesPanel.cpp" />
+		<Unit filename="../gui/Panels/GSWindowPanel.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.h" />
 		<Unit filename="../gui/Panels/MiscPanelStuff.cpp" />

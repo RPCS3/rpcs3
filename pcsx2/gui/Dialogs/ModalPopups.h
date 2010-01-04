@@ -16,6 +16,7 @@
 #pragma once
 
 #include "App.h"
+#include "ConfigurationDialog.h"
 #include "Panels/ConfigurationPanels.h"
 
 #include <wx/image.h>
@@ -26,7 +27,7 @@ static const wxWindowID pxID_CUSTOM = wxID_LOWEST - 1;
 class FirstTimeWizard : public wxWizard
 {
 protected:
-	class UsermodePage : public wxWizardPageSimple
+	class UsermodePage : public ApplicableWizardPage
 	{
 	protected:
 		Panels::DirPickerPanel*			m_dirpick_settings;
@@ -170,7 +171,7 @@ namespace Dialogs
 	};
 
 	
-	class PickUserModeDialog : public wxDialogWithHelpers
+	class PickUserModeDialog : public BaseApplicableDialog
 	{
 	protected:
 		Panels::UsermodeSelectionPanel* m_panel_usersel;

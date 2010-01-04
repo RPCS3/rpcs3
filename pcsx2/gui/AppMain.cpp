@@ -63,10 +63,10 @@ static bool HandlePluginError( Exception::PluginError& ex )
 
 	if( result )
 	{
-		g_Conf->SettingsTabName = L"Plugins";
+		g_Conf->SysSettingsTabName = L"Plugins";
 
 		// fixme: Send a message to the panel to select the failed plugin.
-		if( wxGetApp().IssueModalDialog( Dialogs::ConfigurationDialog::GetNameStatic() ) == wxID_CANCEL )
+		if( wxGetApp().IssueModalDialog( Dialogs::SysConfigDialog::GetNameStatic() ) == wxID_CANCEL )
 			return false;
 	}
 	return result;
@@ -298,8 +298,10 @@ int Pcsx2App::IssueModalDialog( const wxString& dlgName )
 	{
 		using namespace Dialogs;
 
-		if( dlgName == ConfigurationDialog::GetNameStatic() )
-			return ConfigurationDialog().ShowModal();
+		if( dlgName == SysConfigDialog::GetNameStatic() )
+			return SysConfigDialog().ShowModal();
+		if( dlgName == AppConfigDialog::GetNameStatic() )
+			return AppConfigDialog().ShowModal();
 		if( dlgName == BiosSelectorDialog::GetNameStatic() )
 			return BiosSelectorDialog().ShowModal();
 		if( dlgName == LogOptionsDialog::GetNameStatic() )
@@ -608,11 +610,12 @@ void AppSaveSettings()
 
 void Pcsx2App::OpenGsFrame()
 {
-	if( m_gsFrame != NULL ) return;
-
-	m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
-	m_gsFrame->SetFocus();
-	pDsp = (uptr)m_gsFrame->GetViewport()->GetHandle();
+	if( m_gsFrame == NULL )
+	{
+		m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
+		m_gsFrame->SetFocus();
+		pDsp = (uptr)m_gsFrame->GetViewport()->GetHandle();
+	}
 	m_gsFrame->Show();
 
 	// The "in the main window" quickie hack...

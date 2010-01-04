@@ -1924,7 +1924,15 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\Dialogs\ConfigurationDialog.cpp"
+					RelativePath="..\..\gui\Dialogs\BaseConfigurationDialog.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Dialogs\BaseConfigurationDialog.inl"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Dialogs\BiosSelectorDialog.cpp"
 					>
 				</File>
 				<File
@@ -1961,6 +1969,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Dialogs\PickUserModeDialog.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Dialogs\SysConfigDialog.cpp"
 					>
 				</File>
 			</Filter>
@@ -2460,10 +2472,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\gui\Panels\BaseConfigPanel.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\gui\Panels\BiosSelectorPanel.cpp"
 					>
 				</File>
@@ -2481,6 +2489,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Panels\GameFixesPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\GSWindowPanel.cpp"
 					>
 				</File>
 				<File
@@ -2525,6 +2537,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\AppConfig.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\ApplyState.h"
 					>
 				</File>
 				<File

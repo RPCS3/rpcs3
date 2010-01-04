@@ -85,9 +85,10 @@ enum MenuIdentifiers
 	MenuId_SkipBiosToggle,		// enables the Bios Skip speedhack
 
 
-	MenuId_Sys_SuspendResume,			// suspends/resumes active emulation, retains plugin states
+	MenuId_Sys_SuspendResume,	// suspends/resumes active emulation, retains plugin states
 	MenuId_Sys_Close,			// Closes the emulator (states are preserved)
-	MenuId_Sys_Reset,			// Issues a complete reset (wipes preserved states)
+	MenuId_Sys_Reset,			// Issues a complete VM reset (wipes preserved states)
+	MenuId_Sys_Shutdown,		// Closes virtual machine, shuts down plugins, wipes states.
 	MenuId_Sys_LoadStates,		// Opens load states submenu
 	MenuId_Sys_SaveStates,		// Opens save states submenu
 	MenuId_EnablePatches,
@@ -102,7 +103,8 @@ enum MenuIdentifiers
 	MenuId_State_EndSlotSection = MenuId_State_Save01+20,
 
 	// Config Subsection
-	MenuId_Config_Settings,
+	MenuId_Config_SysSettings,
+	MenuId_Config_AppSettings,
 	MenuId_Config_BIOS,
 
 	// Plugin ID order is important.  Must match the order in tbl_PluginInfo.
@@ -562,6 +564,18 @@ DECLARE_APP(Pcsx2App)
 // bar, the command will run, otherwise it will be silently ignored. :)
 #define sMenuBar \
 	if( wxMenuBar* __menubar_ = GetMenuBar() ) (*__menubar_)
+
+// --------------------------------------------------------------------------------------
+//  AppOpenDialog
+// --------------------------------------------------------------------------------------
+template<typename DialogType>
+void AppOpenDialog( wxWindow* parent )
+{
+	if( wxWindow* window = wxFindWindowByName( DialogType::GetNameStatic() ) )
+		window->SetFocus();
+	else
+		(new DialogType( parent ))->Show();
+}
 
 // --------------------------------------------------------------------------------------
 //  SaveSinglePluginHelper

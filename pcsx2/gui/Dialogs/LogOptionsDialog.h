@@ -16,6 +16,7 @@
 #pragma once
 
 #include "App.h"
+#include "ConfigurationDialog.h"
 
 #include "Utilities/wxGuiTools.h"
 #include "Utilities/CheckedStaticBox.h"
@@ -25,7 +26,7 @@ using namespace HashTools;
 
 namespace Dialogs {
 
-class LogOptionsDialog: public wxDialogWithHelpers
+class LogOptionsDialog : public BaseApplicableDialog
 {
 public:
 	LogOptionsDialog( wxWindow* parent=NULL );

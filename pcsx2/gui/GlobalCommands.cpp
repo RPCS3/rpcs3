@@ -70,7 +70,7 @@ namespace Implementations
 		SetGSConfig().FrameSkipEnable = g_Conf->EmuOptions.GS.FrameSkipEnable;
 		
 		if( EmuConfig.GS.FrameSkipEnable )
-			Console.WriteLn( "(FrameSkipping) Enabled : FrameDraws=%d, FrameSkips=%d", g_Conf->EmuOptions.GS.ConsecutiveFrames, g_Conf->EmuOptions.GS.ConsecutiveSkip );
+			Console.WriteLn( "(FrameSkipping) Enabled : FrameDraws=%d, FrameSkips=%d", g_Conf->EmuOptions.GS.FramesToDraw, g_Conf->EmuOptions.GS.FramesToSkip );
 		else
 			Console.WriteLn( "(FrameSkipping) Disabled." );
 	}
@@ -88,14 +88,14 @@ namespace Implementations
 		{
 			GSsetVsync( g_Conf->EmuOptions.GS.VsyncEnable );
 			g_LimiterMode = Limit_Nominal;
-			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.NominalScalar;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.NominalScalar;
 			Console.WriteLn("(FrameLimiter) Turbo DISABLED." );
 		}
 		else
 		{
 			GSsetVsync( false );
 			g_LimiterMode = Limit_Turbo;
-			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.TurboScalar;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.TurboScalar;
 			Console.WriteLn("(FrameLimiter) Turbo ENABLED." );
 		}
 		pauser.Resume();
@@ -114,13 +114,13 @@ namespace Implementations
 		if( g_LimiterMode == Limit_Slomo )
 		{
 			g_LimiterMode = Limit_Nominal;
-			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.NominalScalar;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.NominalScalar;
 			Console.WriteLn("(FrameLimiter) SlowMotion DISABLED." );
 		}
 		else
 		{
 			g_LimiterMode = Limit_Slomo;
-			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->GSWindow.SlomoScalar;
+			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.SlomoScalar;
 			Console.WriteLn("(FrameLimiter) SlowMotion ENABLED." );
 			g_Conf->EmuOptions.GS.FrameLimitEnable = true;
 		}

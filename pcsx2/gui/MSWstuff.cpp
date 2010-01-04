@@ -16,9 +16,12 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "MSWstuff.h"
+#include <wx/listbook.h>
+#include <wx/listctrl.h>
 
 #ifdef __WXMSW__
 #	include <wx/msw/wrapwin.h>		// needed for OutputDebugString
+#	include <commctrl.h>
 #endif
 
 void MSW_SetWindowAfter( WXWidget hwnd, WXWidget hwndAfter )
@@ -40,6 +43,19 @@ void MSW_OutputDebugString( const wxString& text )
 	// send them to stderr
 	wxFprintf(stderr, L"%s\n", text.c_str());
 	fflush(stderr);
+#endif
+}
+
+void MSW_ListView_SetIconSpacing( wxListbook& listbook, int width )
+{
+#ifdef __WXMSW__
+	// Depending on Windows version and user appearance settings, the default icon spacing can be
+	// way over generous.  This little bit of Win32-specific code ensures proper icon spacing, scaled
+	// to the size of the frame's ideal width.
+
+	ListView_SetIconSpacing( (HWND)listbook.GetListView()->GetHWND(),
+		(width / listbook.GetPageCount()) - 6, g_Conf->Listbook_ImageSize+32		// y component appears to be ignored
+	);
 #endif
 }
 

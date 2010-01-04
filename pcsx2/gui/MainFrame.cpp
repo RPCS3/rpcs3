@@ -132,7 +132,8 @@ void MainEmuFrame::ConnectMenus()
 	#define ConnectMenuRange( id_start, inc, handler ) \
 		Connect( id_start, id_start + inc, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainEmuFrame::handler) )
 
-	ConnectMenu( MenuId_Config_Settings,	Menu_ConfigSettings_Click );
+	ConnectMenu( MenuId_Config_SysSettings,	Menu_ConfigSettings_Click );
+	ConnectMenu( MenuId_Config_AppSettings,	Menu_AppSettings_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
 
 	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
@@ -153,6 +154,7 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( MenuId_Sys_SuspendResume,	Menu_SuspendResume_Click );
 	ConnectMenu( MenuId_Sys_Reset,			Menu_SysReset_Click );
+	ConnectMenu( MenuId_Sys_Shutdown,		Menu_SysShutdown_Click );
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
 
@@ -167,7 +169,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Debug_Logging,		Menu_Debug_Logging_Click );
 
 	ConnectMenu( MenuId_Console,			Menu_ShowConsole );
-	ConnectMenu( MenuId_Console_Stdio,			Menu_ShowConsole_Stdio );
+	ConnectMenu( MenuId_Console_Stdio,		Menu_ShowConsole_Stdio );
 	ConnectMenu( MenuId_CDVD_Info,			Menu_PrintCDVD_Info );
 
 	ConnectMenu( MenuId_About,				Menu_ShowAboutBox );
@@ -333,7 +335,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	// has been set/fit.
 
 	InitLogBoxPosition( g_Conf->ProgLogBox );
-	InitLogBoxPosition( g_Conf->Ps2ConBox );
 
 	// ------------------------------------------------------------------------
 
@@ -381,11 +382,15 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	m_menuSys.AppendSeparator();
 	m_menuSys.Append(MenuId_Sys_Reset,		_("Reset"),
-		_("Resets emulation state and re-runs current image"));
+		_("Resets the VM state and re-runs current CDVD image."));
+
+	m_menuSys.Append(MenuId_Sys_Shutdown,	_("Shutdown"),
+		_("Wipes all internal VM states and shuts down plugins."));
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(MenuId_Config_Settings,	_("General &Settings") );
+	m_menuConfig.Append(MenuId_Config_SysSettings,	_("System &Settings") );
+	m_menuConfig.Append(MenuId_Config_AppSettings,	_("App Settings") );
 	m_menuConfig.AppendSeparator();
 
 
@@ -505,7 +510,8 @@ void MainEmuFrame::ApplyCoreStatus()
 		susres.SetHelp( _("No emulation state is active; cannot suspend or resume.") );
 	}
 
-	menubar.Enable( MenuId_Sys_Reset, SysHasValidState() || (g_plugins!=NULL) );
+	menubar.Enable( MenuId_Sys_Reset, true );
+	menubar.Enable( MenuId_Sys_Shutdown, SysHasValidState() || (g_plugins!=NULL) );
 }
 
 void MainEmuFrame::ApplyPluginStatus()

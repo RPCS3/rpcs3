@@ -84,11 +84,11 @@ int pxStaticText::GetIdealWidth() const
 	wxWindow* millrun = this->GetParent();
 	while( (idealWidth == wxDefaultCoord) && millrun != NULL )
 	{
-		if( wxIsKindOf( millrun, wxPanelWithHelpers ) )
-			idealWidth = ((wxPanelWithHelpers*)millrun)->GetIdealWidth();
+		if( wxPanelWithHelpers* panel = wxDynamicCast( millrun, wxPanelWithHelpers ) )
+			idealWidth = panel->GetIdealWidth();
 
-		else if( wxIsKindOf( millrun, wxDialogWithHelpers ) )
-			idealWidth = ((wxDialogWithHelpers*)millrun)->GetIdealWidth();
+		else if( wxDialogWithHelpers* dialog = wxDynamicCast( millrun, wxDialogWithHelpers ) )
+			idealWidth = dialog->GetIdealWidth();
 
 		millrun = millrun->GetParent();
 	}

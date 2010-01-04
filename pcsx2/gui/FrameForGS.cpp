@@ -213,10 +213,16 @@ void __evt_fastcall GSPanel::OnSettingsApplied( void* obj, int& evt )
 {
 	if( obj == NULL ) return;
 	GSPanel* panel = (GSPanel*)obj;
-	
-	if( panel->IsBeingDeleted() ) return;
-	panel->DoResize();
-	panel->DoShowMouse();
+
+	panel->DoSettingsApplied();
+}
+
+void GSPanel::DoSettingsApplied()
+{
+	if( IsBeingDeleted() ) return;
+	DoResize();
+	DoShowMouse();
+	Show( !EmuConfig.GS.DisableOutput );
 }
 
 // --------------------------------------------------------------------------------------
@@ -229,12 +235,19 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 		(g_Conf->GSWindow.DisableResizeBorders ? 0 : wxRESIZE_BORDER) | wxCAPTION | wxCLIP_CHILDREN |
 			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX
 	)
+	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>	( this, OnSettingsApplied ) )
 {
 	SetIcons( wxGetApp().GetIconBundle() );
 
 	SetClientSize( g_Conf->GSWindow.WindowSize );
+	SetBackgroundColour( *wxBLACK );
 
-	m_gspanel	= new GSPanel( this );
+	wxStaticText* label = new wxStaticText( this, wxID_ANY, _("GS Output is Disabled!") );
+	label->SetName(L"OutputDisabledLabel");
+	label->SetFont( *new wxFont( 20, wxDEFAULT, wxNORMAL, wxBOLD ) );
+	label->SetForegroundColour( *wxWHITE );
+
+	m_gspanel = new GSPanel( this );
 
 	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(GSFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler		(GSFrame::OnMove) );
@@ -251,8 +264,17 @@ void __evt_fastcall GSFrame::OnSettingsApplied( void* obj, int& evt )
 	if( obj == NULL ) return;
 	GSFrame* frame = (GSFrame*)obj;
 
-	if( frame->IsBeingDeleted() ) return;
+	frame->DoSettingsApplied();
+}
+
+void GSFrame::DoSettingsApplied()
+{
+	if( IsBeingDeleted() ) return;
 	ShowFullScreen( g_Conf->GSWindow.DefaultToFullscreen );
+	Show( !g_Conf->GSWindow.CloseOnEsc || ((g_plugins==NULL) || !SysHasValidState()) );
+
+	if( wxStaticText* label = (wxStaticText*)FindWindowByName(L"OutputDisabledLabel") )
+		label->Show( !EmuConfig.GS.DisableOutput );
 }
 
 wxWindow* GSFrame::GetViewport()
@@ -289,8 +311,15 @@ void GSFrame::OnMove( wxMoveEvent& evt )
 
 void GSFrame::OnResize( wxSizeEvent& evt )
 {
+	if( IsBeingDeleted() ) return;
+
 	if( !IsMaximized() && IsVisible() )
+	{
 		g_Conf->GSWindow.WindowSize	= GetClientSize();
+	}
+
+	if( wxStaticText* label = (wxStaticText*)FindWindowByName(L"OutputDisabledLabel") )
+		label->CentreOnParent();
 
 	if( GSPanel* gsPanel = (GSPanel*)FindWindowByName(L"GSPanel") )
 	{

@@ -280,6 +280,12 @@ void SysMtgsThread::ExecuteTaskInThread()
 		// ever be modified by this thread.
 		while( m_RingPos != volatize(m_WritePos))
 		{
+			if( EmuConfig.GS.DisableOutput )
+			{
+				m_RingPos = m_WritePos;
+				continue;
+			}
+
 			pxAssert( m_RingPos < RingBufferSize );
 
 			const PacketTagType& tag = (PacketTagType&)RingBuffer[m_RingPos];

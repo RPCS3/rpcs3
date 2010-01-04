@@ -14,37 +14,37 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "App.h"
 #include "ConfigurationPanels.h"
 
-#include "App.h"
+#include "Dialogs/ConfigurationDialog.h"
 
 #include "ps2/BiosTools.h"
 
 #include <wx/stdpaths.h>
 #include <wx/bookctrl.h>
 
-
-Panels::StaticApplyState Panels::g_ApplyState;
+using namespace Dialogs;
 
 // -----------------------------------------------------------------------
 // This method should be called by the parent dalog box of a configuration
 // on dialog destruction.  It asserts if the ApplyList hasn't been cleaned up
 // and then cleans it up forcefully.
 //
-void Panels::StaticApplyState::DoCleanup() throw()
+void ApplyStateStruct::DoCleanup() throw()
 {
 	pxAssertMsg( PanelList.size() != 0, L"PanelList list hasn't been cleaned up." );
 	PanelList.clear();
 	ParentBook = NULL;
 }
 
-void Panels::StaticApplyState::StartBook( wxBookCtrlBase* book )
+void ApplyStateStruct::StartBook( wxBookCtrlBase* book )
 {
 	pxAssertDev( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
 	ParentBook = book;
 }
 
-void Panels::StaticApplyState::StartWizard()
+void ApplyStateStruct::StartWizard()
 {
 	pxAssertDev( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
 }
@@ -58,7 +58,7 @@ void Panels::StaticApplyState::StartWizard()
 // Returns false if one of the panels fails input validation (in which case dialogs
 // should not be closed, etc).
 //
-bool Panels::StaticApplyState::ApplyPage( int pageid )
+bool ApplyStateStruct::ApplyPage( int pageid )
 {
 	bool retval = true;
 
@@ -120,7 +120,7 @@ bool Panels::StaticApplyState::ApplyPage( int pageid )
 
 // Returns false if one of the panels fails input validation (in which case dialogs
 // should not be closed, etc).
-bool Panels::StaticApplyState::ApplyAll()
+bool ApplyStateStruct::ApplyAll()
 {
 	return ApplyPage( -1 );
 }
@@ -128,39 +128,60 @@ bool Panels::StaticApplyState::ApplyAll()
 // --------------------------------------------------------------------------------------
 //  BaseApplicableConfigPanel Implementations
 // --------------------------------------------------------------------------------------
-Panels::BaseApplicableConfigPanel::~BaseApplicableConfigPanel() throw()
+IApplyState* BaseApplicableConfigPanel::FindApplyStateManager() const
 {
-	g_ApplyState.PanelList.remove( this );
+	wxWindow* millrun = this->GetParent();
+	while( millrun != NULL )
+	{
+		if( BaseApplicableDialog* dialog = wxDynamicCast( millrun, BaseApplicableDialog ) )
+			return (IApplyState*)dialog;
+
+		if( ApplicableWizardPage* wizpage = wxDynamicCast( millrun, ApplicableWizardPage ) )
+			return (IApplyState*)wizpage;
+
+		millrun = millrun->GetParent();
+	}
+	return NULL;
 }
 
-Panels::BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient )
+BaseApplicableConfigPanel::~BaseApplicableConfigPanel() throw()
+{
+	if( IApplyState* iapp = FindApplyStateManager() )
+		iapp->GetApplyState().PanelList.remove( this );
+}
+
+BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient )
 	: wxPanelWithHelpers( parent, orient )
 	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
 {
 	Init();
 }
 
-Panels::BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
+BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
 	: wxPanelWithHelpers( parent, orient, staticLabel )
 	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
 {
 	Init();
 }
 
-void Panels::BaseApplicableConfigPanel::SetFocusToMe()
+void BaseApplicableConfigPanel::SetFocusToMe()
 {
 	if( (m_OwnerBook == NULL) || (m_OwnerPage == wxID_NONE) ) return;
 	m_OwnerBook->SetSelection( m_OwnerPage );
 }
 
-void Panels::BaseApplicableConfigPanel::Init()
+void BaseApplicableConfigPanel::Init()
 {
-	m_OwnerPage = g_ApplyState.CurOwnerPage;
-	m_OwnerBook = g_ApplyState.ParentBook;
-	g_ApplyState.PanelList.push_back( this );
+	if( IApplyState* iapp = FindApplyStateManager() )
+	{
+		ApplyStateStruct& applyState( iapp->GetApplyState() );
+		m_OwnerPage = applyState.CurOwnerPage;
+		m_OwnerBook = applyState.ParentBook;
+		applyState.PanelList.push_back( this );
+	}
 }
 
-void __evt_fastcall Panels::BaseApplicableConfigPanel::OnSettingsApplied( void* obj, int& ini )
+void __evt_fastcall BaseApplicableConfigPanel::OnSettingsApplied( void* obj, int& ini )
 {
 	if( obj == NULL ) return;
 	((BaseApplicableConfigPanel*)obj)->OnSettingsChanged();

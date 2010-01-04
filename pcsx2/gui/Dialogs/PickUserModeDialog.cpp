@@ -21,7 +21,7 @@
 using namespace Panels;
 
 Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent )
-	: wxDialogWithHelpers( parent, _("PCSX2 First Time configuration"), wxVERTICAL )
+	: BaseApplicableDialog( parent, _("PCSX2 First Time configuration"), wxVERTICAL )
 {
 	m_panel_usersel = new UsermodeSelectionPanel( this, false );
 	m_panel_langsel = new LanguageSelectionPanel( this );
@@ -38,7 +38,7 @@ Dialogs::PickUserModeDialog::PickUserModeDialog( wxWindow* parent )
 
 void Dialogs::PickUserModeDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll() )
+	if( m_ApplyState.ApplyAll() )
 	{
 		Close();
 		evt.Skip();

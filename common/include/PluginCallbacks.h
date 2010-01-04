@@ -908,7 +908,7 @@ typedef struct _PS2E_ComponentAPI_GS
 	//   This function may be called from either GUI thread or GS thread.  Emulators calling
 	//   it from non-GS threads must ensure mutex locking with TakeSnapshot (meaning the
 	//   plugin should be free to disregard threading concerns).
-	void (PS2E_CALLBACK* SetSnapshotsFolder)( PS2E_THISPTR thisptr, const char* folder );
+	void (PS2E_CALLBACK* GsSetSnapshotsFolder)( PS2E_THISPTR thisptr, const char* folder );
 
 	// TakeSnapshot
 	// The GS plugin is to save the current frame into the given target image.  This
@@ -917,7 +917,7 @@ typedef struct _PS2E_ComponentAPI_GS
 	//
 	// Returns TRUE if the snapshot succeeded, or FALSE if it failed (contents of dest
 	// are considered indeterminate and will be ignored by the emu).
-	BOOL (PS2E_CALLBACK* TakeSnapshot)( PS2E_THISPTR thisptr, PS2E_Image* dest );
+	BOOL (PS2E_CALLBACK* GsTakeSnapshot)( PS2E_THISPTR thisptr, PS2E_Image* dest );
 
 	// OSD_QueueMessage
 	// Queues a message to the GS for display to the user.  The GS can print the message
@@ -955,7 +955,7 @@ typedef struct _PS2E_ComponentAPI_GS
 	// (if any critical errors accumulated during GStransferTags or GStransferImage, they
 	//  should also be handled here by returning FALSE)
 	//
-	BOOL (PS2E_CALLBACK* GSvsync)(int field);
+	BOOL (PS2E_CALLBACK* GsVsync)(int field);
 
 	// GSwriteRegs
 	// Sends a GIFtag and associated register data.  This is the main transfer method for all
@@ -977,7 +977,7 @@ typedef struct _PS2E_ComponentAPI_GS
 	//
 	//   nloop   - number of loops of register data.  Valid range is 1->32767 (upper 17
 	//      bits are always zero).  This value will never be zero.
-	void (PS2E_CALLBACK* GSwriteRegs)(const u128 *pMem, int regcnt, int nloop);
+	void (PS2E_CALLBACK* GsWriteRegs)(const u128 *pMem, int regcnt, int nloop);
 
 	// GSwritePrim
 	// Starts a new prim by sending the specified value to the PRIM register.  The emulator
@@ -987,7 +987,7 @@ typedef struct _PS2E_ComponentAPI_GS
 	// Parameters:
 	//   primData    - value to write to the PRIM register.  Only the bottom 10 bits are
 	//      valid.  Upper bits are always zero.
-	void (PS2E_CALLBACK* GSwritePrim)(int primData);
+	void (PS2E_CALLBACK* GsWritePrim)(int primData);
 
 	// GSwriteImage
 	// Uploads new image data.  Data uploaded may be in any number of partial chunks, for
@@ -997,14 +997,14 @@ typedef struct _PS2E_ComponentAPI_GS
 	// larger texture buffer, or for games to modify several portions of a single large
 	// buffer, by using mid-transfer writes to TRXPOS and TRXDIR (TRXPOS writes only become
 	// effective once TRXDIR has been written).
-	void (PS2E_CALLBACK* GSwriteImage)(const u128 *pMem, int qwc_cnt);
+	void (PS2E_CALLBACK* GsWriteImage)(const u128 *pMem, int qwc_cnt);
 
 	// GSreadImage
 	// This special callback is for implementing the Read mode direction of the GIFpath.
 	// The GS plugin writes the texture data as requested by it's internally managed state
 	// values for TRXPOS/TRXREG to the buffer provided by pMem.  The buffer size is qwc_cnt
 	// and the GS must not write more than that.
-	void (PS2E_CALLBACK* GSreadImage)(u128 *pMem, int qwc_cnt);
+	void (PS2E_CALLBACK* GsReadImage)(u128 *pMem, int qwc_cnt);
 
 	void* reserved[8];
 
@@ -1113,7 +1113,7 @@ typedef struct _PS2E_KeyEvent
 //  PS2E_ComponentAPI_Pad
 // --------------------------------------------------------------------------------------
 // Thread Safety:
-//  * Thread affinity is not guaranteed.  Even PadKeyEvent may be called from a thrad not
+//  * Thread affinity is not guaranteed.  Even PadKeyEvent may be called from a thread not
 //    belonging to the active window (the window where the GA is output).  Other calls may
 //    be made from either the main emu thread or an EE/IOP/GS child thread (if the emulator
 //    uses them).

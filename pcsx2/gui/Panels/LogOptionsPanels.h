@@ -16,6 +16,7 @@
 #pragma once
 
 #include "AppCommon.h"
+#include "ApplyState.h"
 
 namespace Panels
 {

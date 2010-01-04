@@ -665,7 +665,7 @@ void SaveStateBase::sioFreeze()
 	{
 		for( int port=0; port<2; ++port )
 		{
-			for( int slot=0; slot<8; ++slot )
+			for( int slot=0; slot<4; ++slot )
 				m_mcdCRCs[port][slot] = SysPlugins.McdGetCRC( port, slot );
 		}
 	}
@@ -688,7 +688,7 @@ void SaveStateBase::sioFreeze()
 
 		for( int port=0; port<2; ++port )
 		{
-			for( int slot=0; slot<8; ++slot )
+			for( int slot=0; slot<4; ++slot )
 			{
 				u64 newCRC = SysPlugins.McdGetCRC( port, slot );
 				if( newCRC != m_mcdCRCs[port][slot] )

@@ -20,22 +20,38 @@
 #include <wx/propdlg.h>
 
 #include "AppCommon.h"
-
-class wxListbook;
+#include "ApplyState.h"
 
 namespace Dialogs
 {
-	class ConfigurationDialog : public wxDialogWithHelpers
+	class BaseApplicableDialog : public wxDialogWithHelpers, public IApplyState
 	{
-	protected:
-		wxListbook&		m_listbook;
-		wxArrayString	m_labels;
+		DECLARE_DYNAMIC_CLASS_NO_COPY(BaseApplicableDialog)
 
 	public:
-		virtual ~ConfigurationDialog() throw();
-		ConfigurationDialog(wxWindow* parent=NULL);
+		BaseApplicableDialog() {}
 
-		static const wxChar* GetNameStatic() { return L"Dialog:CoreSettings"; }
+	protected:
+		BaseApplicableDialog(wxWindow* parent, const wxString& title );
+		BaseApplicableDialog(wxWindow* parent, const wxString& title, wxOrientation sizerOrient );
+
+	public:
+		virtual ~BaseApplicableDialog() throw();
+		//ApplyStateStruct& GetApplyState() { return m_ApplyState; }
+	};
+
+	// --------------------------------------------------------------------------------------
+	//  BaseConfigurationDialog
+	// --------------------------------------------------------------------------------------
+	class BaseConfigurationDialog : public BaseApplicableDialog
+	{
+	protected:
+		wxListbook&			m_listbook;
+		wxArrayString		m_labels;
+
+	public:
+		virtual ~BaseConfigurationDialog() throw();
+		BaseConfigurationDialog(wxWindow* parent, const wxString& title, wxImageList& bookicons, int idealWidth);
 
 	protected:
 		template< typename T >
@@ -45,20 +61,39 @@ namespace Dialogs
 		void OnCancel_Click( wxCommandEvent& evt );
 		void OnApply_Click( wxCommandEvent& evt );
 		void OnScreenshot_Click( wxCommandEvent& evt );
-		
 		void OnCloseWindow( wxCloseEvent& evt );
 
-		virtual void OnSomethingChanged( wxCommandEvent& evt )
-		{
-			evt.Skip();
-			if( (evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY) )
-			{
-				FindWindow( wxID_APPLY )->Enable();
-			}
-		}
+		virtual void OnSomethingChanged( wxCommandEvent& evt );
+		virtual wxString& GetConfSettingsTabName() const=0;
 	};
 
-	class BiosSelectorDialog : public wxDialogWithHelpers
+	class SysConfigDialog : public BaseConfigurationDialog
+	{
+	protected:
+	
+	public:
+		virtual ~SysConfigDialog() throw() {}
+		SysConfigDialog(wxWindow* parent=NULL);
+		static const wxChar* GetNameStatic() { return L"Dialog:CoreSettings"; }
+
+	protected:
+		virtual wxString& GetConfSettingsTabName() const { return g_Conf->SysSettingsTabName; }
+	};
+
+	class AppConfigDialog : public BaseConfigurationDialog
+	{
+	protected:
+
+	public:
+		virtual ~AppConfigDialog() throw() {}
+		AppConfigDialog(wxWindow* parent=NULL);
+		static const wxChar* GetNameStatic() { return L"Dialog:AppSettings"; }
+
+	protected:
+		virtual wxString& GetConfSettingsTabName() const { return g_Conf->AppSettingsTabName; }
+	};
+
+	class BiosSelectorDialog : public BaseApplicableDialog
 	{
 	protected:
 

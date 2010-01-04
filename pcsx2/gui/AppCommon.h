@@ -32,6 +32,14 @@ class PipeRedirectionBase;
 class AppCoreThread;
 class pxPingEvent;
 
+// wxWidgets forward declarations
+
+class wxDirPickerCtrl;
+class wxFileDirPickerEvent;
+class wxListBox;
+class wxListbook;
+class wxBookCtrlBase;
+
 enum AppEventType
 {
 	// Maybe this will be expanded upon later..?
@@ -49,4 +57,3 @@ enum PluginEventType
 };
 
 #include "AppConfig.h"
-#include "Panels/BaseConfigPanel.h"

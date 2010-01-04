@@ -14,45 +14,13 @@
  */
 
 #include "PrecompiledHeader.h"
+#include "App.h"
+#include "Dialogs/ConfigurationDialog.h"
 #include "ConfigurationPanels.h"
 
 #include <wx/spinctrl.h>
 
 using namespace pxSizerFlags;
-
-template< typename WinType >
-WinType* FitToDigits( WinType* win, int digits )
-{
-	int ex;
-	win->GetTextExtent( wxString( L'0', digits+1 ), &ex, NULL );
-	win->SetMinSize( wxSize( ex+10, wxDefaultCoord ) );		// +10 for text control borders/insets and junk.
-	return win;
-}
-
-template<>
-wxSpinCtrl* FitToDigits<wxSpinCtrl>( wxSpinCtrl* win, int digits )
-{
-	// HACK!!  The better way would be to create a pxSpinCtrl class that extends wxSpinCtrl and thus
-	// have access to wxSpinButton::DoGetBestSize().  But since I don't want to do that, we'll just
-	// make/fake it with a value it's pretty common to Win32/GTK/Mac:
-
-	static const int MagicSpinnerSize = 18;
-
-	int ex;
-	win->GetTextExtent( wxString( L'0', digits+1 ), &ex, NULL );
-	win->SetMinSize( wxSize( ex+10+MagicSpinnerSize, wxDefaultCoord ) );		// +10 for text control borders/insets and junk.
-	return win;
-}
-
-// Creates a text control which is right-justified and has it's minimum width configured to suit the
-// number of digits requested.
-wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits )
-{
-	wxTextCtrl* ctrl = new wxTextCtrl( parent, wxID_ANY );
-	ctrl->SetWindowStyleFlag( wxTE_RIGHT );
-	FitToDigits( ctrl, digits );
-	return ctrl;
-}
 
 // --------------------------------------------------------------------------------------
 //  FramelimiterPanel Implementations
@@ -69,9 +37,9 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 		L"be available either."
 	) );
 
-	m_spin_NominalPct	= FitToDigits( new wxSpinCtrl( this ), 6 );
-	m_spin_SlomoPct		= FitToDigits( new wxSpinCtrl( this ), 6 );
-	m_spin_TurboPct		= FitToDigits( new wxSpinCtrl( this ), 6 );
+	pxFitToDigits( m_spin_NominalPct	= new wxSpinCtrl( this ), 6 );
+	pxFitToDigits( m_spin_SlomoPct		= new wxSpinCtrl( this ), 6 );
+	pxFitToDigits( m_spin_TurboPct		= new wxSpinCtrl( this ), 6 );
 
 	m_text_BaseNtsc		= CreateNumericalTextCtrl( this, 7 );
 	m_text_BasePal		= CreateNumericalTextCtrl( this, 7 );
@@ -82,11 +50,6 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 	// ------------------------------------------------------------
 	// Sizers and Layouts
-
-	*this += new pxStaticHeading( this, pxE( ".Framelimiter:Heading",
-		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
-		L"percentages of the default region-based framerate, which can also be configured below." )
-	);
 
 	*this += m_check_LimiterDisable;
 
@@ -134,193 +97,28 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 	*this	+= s_spins	| pxExpand;
 	*this	+= s_fps	| pxExpand;
-	
-	OnSettingsChanged();
-}
 
-// --------------------------------------------------------------------------------------
-//  GSWindowSetting Implementation
-// --------------------------------------------------------------------------------------
+	*this	+= 5;
 
-Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
-{
-	const wxString aspect_ratio_labels[] =
-	{
-		_("Fit to Window/Screen"),
-		_("Standard (4:3)"),
-		_("Widescreen (16:9)")
-	};
-
-	m_combo_AspectRatio	= new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		ArraySize(aspect_ratio_labels), aspect_ratio_labels, wxCB_READONLY );
-
-	m_text_WindowWidth	= CreateNumericalTextCtrl( this, 5 );
-	m_text_WindowHeight	= CreateNumericalTextCtrl( this, 5 );
-
-	m_check_SizeLock	= new pxCheckBox( this, _("Disable window resize border") );
-	m_check_HideMouse	= new pxCheckBox( this, _("Always hide mouse cursor") );
-	m_check_CloseGS		= new pxCheckBox( this, _("Hide window on suspend") );
-	m_check_Fullscreen	= new pxCheckBox( this, _("Default to Fullscreen") );
-	m_check_VsyncEnable	= new pxCheckBox( this, _("Vsync Enable") );
-	
-	m_check_VsyncEnable->SetToolTip( pxE( ".Tooltips:Video:Vsync",
-		L"Vsync eliminates screen tearing but typically has a big performance hit. "
-		L"It usually only applies to fullscreen mode, and may not work with all GS plugins."
-	) );
-	
-	m_check_HideMouse->SetToolTip( pxE( ".Tooltips:Video:HideMouse",
-		L"Check this to force the mouse cursor invisible inside the GS window; useful if using "
-		L"the mouse as a primary control device for gaming.  By default the mouse auto-hides after "
-		L"3 seconds of inactivity."
-	) );
-
-	m_check_Fullscreen->SetToolTip( pxE( ".Tooltips:Video:Fullscreen",
-		L"Enables automatic mode switch to fullscreen when starting or resuming emulation. "
-		L"You can still toggle fullscreen display at any time using alt-enter."
-	) );
-
-	m_check_CloseGS->SetToolTip( pxE( ".Tooltips:Video:HideGS",
-		L"Completely closes the often large and bulky GS window when pressing "
-		L"ESC or suspending the emulator."
-	) );
-	
-	// ----------------------------------------------------------------------------
-	//  Layout and Positioning
-
-	wxBoxSizer& s_customsize( *new wxBoxSizer( wxHORIZONTAL ) );
-	s_customsize	+= m_text_WindowWidth;
-	s_customsize	+= Text( L"x" );
-	s_customsize	+= m_text_WindowHeight;
-
-	wxFlexGridSizer& s_AspectRatio( *new wxFlexGridSizer( 2, StdPadding, StdPadding ) );
-	//s_AspectRatio.AddGrowableCol( 0 );
-	s_AspectRatio.AddGrowableCol( 1 );
-
-	s_AspectRatio += Text(_("Aspect Ratio:"))		| pxMiddle;
-	s_AspectRatio += m_combo_AspectRatio			| pxExpand;
-	s_AspectRatio += Text(_("Custom Window Size:"))	| pxMiddle;
-	s_AspectRatio += s_customsize					| pxAlignRight;
-
-	*this += s_AspectRatio | StdExpand();
-	*this += m_check_SizeLock;
-	*this += new wxStaticLine( this ) | StdExpand();
-
-	*this += m_check_Fullscreen;
-	*this += m_check_VsyncEnable;
-	*this += m_check_HideMouse;
-	*this += m_check_CloseGS;
-
-	OnSettingsChanged();
-}
-
-// --------------------------------------------------------------------------------------
-//  VideoPanel Implementation
-// --------------------------------------------------------------------------------------
-
-Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
-	BaseApplicableConfigPanel( parent )
-{
-	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
-	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
-	left->SetIdealWidth( (left->GetIdealWidth()-12) / 2 );
-	right->SetIdealWidth( (right->GetIdealWidth()-12) / 2 );
-
-	m_check_SynchronousGS = new pxCheckBox( left, _("Synchronized MTGS"),
-		_("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
+	*this	+= Heading( pxE( ".Framelimiter:Heading",
+		L"The internal framelimiter regulates the speed of the virtual machine. Adjustment values below are in "
+		L"percentages of the default region-based framerate, which can also be configured below." )
 	);
 	
-	m_check_SynchronousGS->SetToolTip(_("Enable this if you think the MTGS is causing crashes or graphical errors."));
-
-	GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
-	winpan->AddFrame(_("Display/Window"));
-
-	FramelimiterPanel* fpan = new FramelimiterPanel( right );
-	fpan->AddFrame(_("Framelimiter"));
-		
-	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
-	s_table->AddGrowableCol( 0 );
-	s_table->AddGrowableCol( 1 );
-
-	*left		+= winpan	| pxExpand;
-	*right		+= fpan		| pxExpand;
-
-	*left		+= 5;
-	*left		+= m_check_SynchronousGS;
-	
-	*s_table	+= left		| StdExpand();
-	*s_table	+= right	| StdExpand();
-
-	*this		+= s_table	| pxExpand;
-
 	OnSettingsChanged();
 }
-
-void Panels::VideoPanel::Apply()
-{
-	g_Conf->EmuOptions.GS.SynchronousMTGS = m_check_SynchronousGS->GetValue();
-}
-
-void Panels::VideoPanel::OnSettingsChanged()
-{
-	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
-}
-
-void Panels::GSWindowSettingsPanel::OnSettingsChanged()
-{
-	const AppConfig::GSWindowOptions& conf( g_Conf->GSWindow );
-
-	m_check_CloseGS		->SetValue( conf.CloseOnEsc );
-	m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
-	m_check_HideMouse	->SetValue( conf.AlwaysHideMouse );
-	m_check_SizeLock	->SetValue( conf.DisableResizeBorders );
-
-	m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
-
-	m_check_VsyncEnable	->SetValue( g_Conf->EmuOptions.GS.VsyncEnable );
-
-	m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
-	m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
-
-}
-
-void Panels::GSWindowSettingsPanel::Apply()
-{
-	AppConfig::GSWindowOptions& appconf( g_Conf->GSWindow );
-	Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
-
-	appconf.CloseOnEsc				= m_check_CloseGS	->GetValue();
-	appconf.DefaultToFullscreen		= m_check_Fullscreen->GetValue();
-	appconf.AlwaysHideMouse			= m_check_HideMouse	->GetValue();
-	appconf.DisableResizeBorders	= m_check_SizeLock	->GetValue();
-
-	appconf.AspectRatio		= (AspectRatioType)m_combo_AspectRatio->GetSelection();
-
-	gsconf.VsyncEnable		= m_check_VsyncEnable->GetValue();
-
-	long xr, yr;
-
-	if( !m_text_WindowWidth->GetValue().ToLong( &xr ) || !m_text_WindowHeight->GetValue().ToLong( &yr ) )
-		throw Exception::CannotApplySettings( this,
-			L"User submitted non-numeric window size parameters!",
-			_("Invalid window dimensions specified: Size cannot contain non-numeric digits! >_<")
-		);
-
-	appconf.WindowSize.x	= xr;
-	appconf.WindowSize.y	= yr;
-}
-
 
 void Panels::FramelimiterPanel::OnSettingsChanged()
 {
-	const AppConfig::GSWindowOptions& appconf( g_Conf->GSWindow );
+	const AppConfig::GSWindowOptions& appwin( g_Conf->GSWindow );
+	const AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
 	const Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
 
 	m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
 
-	m_spin_NominalPct	->SetValue( appconf.NominalScalar.Raw );
-	m_spin_TurboPct		->SetValue( appconf.TurboScalar.Raw );
-	m_spin_SlomoPct		->SetValue( appconf.SlomoScalar.Raw );
+	m_spin_NominalPct	->SetValue( appfps.NominalScalar.Raw );
+	m_spin_TurboPct		->SetValue( appfps.TurboScalar.Raw );
+	m_spin_SlomoPct		->SetValue( appfps.SlomoScalar.Raw );
 	
 	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
 	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
@@ -328,14 +126,14 @@ void Panels::FramelimiterPanel::OnSettingsChanged()
 
 void Panels::FramelimiterPanel::Apply()
 {
-	AppConfig::GSWindowOptions& appconf( g_Conf->GSWindow );
+	AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
 	Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
 
 	gsconf.FrameLimitEnable	= !m_check_LimiterDisable->GetValue();
 
-	appconf.NominalScalar.Raw	= m_spin_NominalPct	->GetValue();
-	appconf.TurboScalar.Raw		= m_spin_TurboPct	->GetValue();
-	appconf.SlomoScalar.Raw		= m_spin_SlomoPct	->GetValue();
+	appfps.NominalScalar.Raw	= m_spin_NominalPct	->GetValue();
+	appfps.TurboScalar.Raw		= m_spin_TurboPct	->GetValue();
+	appfps.SlomoScalar.Raw		= m_spin_SlomoPct	->GetValue();
 	
 	try {
 		gsconf.FramerateNTSC	= Fixed100::FromString( m_text_BaseNtsc->GetValue() );
@@ -347,6 +145,211 @@ void Panels::FramelimiterPanel::Apply()
 			wxLt("Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics.")
 		);
 	}
+
+	appfps.SanityCheck();
+}
+
+// --------------------------------------------------------------------------------------
+//  FrameSkipPanel Implementations
+// --------------------------------------------------------------------------------------
+
+Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
+{
+	/*m_check_EnableSkipOnTurbo = new pxCheckBox( this, _("Use Frameskip for Turbo") );
+
+	m_check_EnableSkip = new pxCheckBox( this, _("Use Frameskip"),
+		_(".") );
 	
-	appconf.SanityCheck();
+	m_check_EnableSkip->SetToolTip( pxE( ".Tooltip:Frameskip:Disable",
+		L""
+		L""
+	) );
+
+	m_check_EnableSkipOnTurbo->SetToolTip( pxE( ".Tooltip:Framelimiter:UseForTurbo",
+		L"Recommended option! Since frameskipping glitches typically aren't as annoying when you're "
+		L" just trying to speed through stuff."
+	) );*/
+
+	const RadioPanelItem FrameskipOptions[] = 
+	{
+		RadioPanelItem(
+			_("Disabled [default]")
+		),
+
+		RadioPanelItem(
+			_("Skip when on Turbo only")
+		),
+
+		RadioPanelItem(
+			_("Constant skipping"),
+			wxEmptyString,
+			_("Normal and Turbo limit rates skip frames.  Slow motion mode will still disable frameskipping.")
+		),
+	};
+	
+	m_radio_SkipMode = new pxRadioPanel( this, FrameskipOptions );
+	//m_radio_SkipMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
+	m_radio_SkipMode->Realize();
+
+	pxFitToDigits( m_spin_FramesToDraw	= new wxSpinCtrl( this ), 6 );
+	pxFitToDigits( m_spin_FramesToSkip	= new wxSpinCtrl( this ), 6 );
+
+	// Set tooltips for spinners.
+
+
+	// ------------------------------------------------------------
+	// Sizers and Layouts
+
+	//*this += m_check_EnableSkipOnTurbo;
+	//*this += m_check_EnableSkip;
+	
+	*this += m_radio_SkipMode;
+
+	wxFlexGridSizer& s_spins( *new wxFlexGridSizer( 4 ) );
+	//s_spins.AddGrowableCol( 0 );
+
+	s_spins += m_spin_FramesToDraw		| wxSF.Border(wxTOP, 3);
+	s_spins += 10;
+	s_spins += Text(_("Frames to Draw"));
+	s_spins += 10;
+
+	s_spins += m_spin_FramesToSkip		| wxSF.Border(wxTOP, 3);
+	s_spins += 10;
+	s_spins += Text(_("Frames to Skip"));
+	s_spins += 10;
+
+	*this	+= s_spins	| StdExpand();
+
+	*this	+= Heading( pxE( ".FrameSkip:Heading",
+		L"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
+		L"Enabling it will cause severe graphical errors in some games, and so it should be considered a speedhack." )
+	);
+
+	OnSettingsChanged();
+}
+
+void Panels::FrameSkipPanel::OnSettingsChanged()
+{
+	const AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
+	const Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
+
+	//m_check_EnableSkip			->SetValue( !appfps.SkipOnLimit );
+	//m_check_EnableSkipOnTurbo	->SetValue( !appfps.SkipOnTurbo );
+	
+	m_radio_SkipMode	->SetSelection( appfps.SkipOnLimit ? 2 : (appfps.SkipOnTurbo ? 1 : 0) );
+	
+	m_spin_FramesToDraw	->SetValue( gsconf.FramesToDraw );
+	m_spin_FramesToSkip	->SetValue( gsconf.FramesToSkip );
+}
+
+void Panels::FrameSkipPanel::Apply()
+{
+	AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
+	Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
+
+	gsconf.FramesToDraw = m_spin_FramesToDraw->GetValue();
+	gsconf.FramesToSkip = m_spin_FramesToSkip->GetValue();
+
+	switch( m_radio_SkipMode->GetSelection() )
+	{
+		case 0:
+			appfps.SkipOnLimit = false;
+			appfps.SkipOnTurbo = false;
+		break;
+
+		case 1:
+			appfps.SkipOnLimit = false;
+			appfps.SkipOnTurbo = true;
+		break;
+
+		case 2:
+			appfps.SkipOnLimit = true;
+			appfps.SkipOnTurbo = true;
+		break;
+	}
+
+	appfps.SanityCheck();
+}
+
+// --------------------------------------------------------------------------------------
+//  VideoPanel Implementation
+// --------------------------------------------------------------------------------------
+
+Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
+	BaseApplicableConfigPanel( parent )
+{
+	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
+	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
+	left->SetIdealWidth( (left->GetIdealWidth()) / 2 );
+	right->SetIdealWidth( (right->GetIdealWidth()-24) / 2 );
+
+	m_check_SynchronousGS = new pxCheckBox( right, _("Use Synchronized MTGS"),
+		_("For troubleshooting potential bugs in the MTGS only, as it is potentially very slow.")
+	);
+
+	m_check_DisableOutput = new pxCheckBox( right, _("Disable all GS output"),
+		_("Completely disables all GS plugin activity; ideal for benchmarking EEcore components.")
+	);
+
+	m_check_SynchronousGS->SetToolTip(_("Enable this if you think MTGS thread sync is causing crashes or graphical errors."));
+	m_check_DisableOutput->SetToolTip( pxE( ".Tooltip:Video:DisableOutput",
+		L"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This option is best used in conjunction with savestates: "
+		L"save a state at an ideal scene, enable this option, and re-load the savestate.\n\n"
+		L"Warning: This option can be enabled on-the-fly but typically cannot be disabled on-the-fly (video will typically be garbage)."
+	) );
+
+	m_button_OpenWindowSettings = new wxButton( left, wxID_ANY, _("Open Window Settings...") );
+
+	pxSetToolTip( m_button_OpenWindowSettings, _("For editing GS window position, aspect ratio, and other display options.") );
+	
+	//GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
+	//winpan->AddFrame(_("Display/Window"));
+
+	FrameSkipPanel* span = new FrameSkipPanel( right );
+	span->AddFrame(_("Frame Skipping"));
+
+	FramelimiterPanel* fpan = new FramelimiterPanel( left );
+	fpan->AddFrame(_("Framelimiter"));
+		
+	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
+	s_table->AddGrowableCol( 0 );
+	s_table->AddGrowableCol( 1 );
+
+	*right		+= span		| pxExpand;
+	*right		+= 5;
+	*right		+= m_check_SynchronousGS;
+	*right		+= m_check_DisableOutput;
+
+	*left		+= fpan		| pxExpand;
+	*left		+= 5;
+	*left		+= m_button_OpenWindowSettings;
+	
+	*s_table	+= left		| StdExpand();
+	*s_table	+= right	| StdExpand();
+
+	*this		+= s_table	| pxExpand;
+
+	Connect( m_button_OpenWindowSettings->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(VideoPanel::OnOpenWindowSettings) );
+
+	OnSettingsChanged();
+}
+
+void Panels::VideoPanel::OnOpenWindowSettings( wxCommandEvent& evt )
+{
+	AppOpenDialog<Dialogs::AppConfigDialog>( this );
+
+	// don't evt.skip, this prevents the Apply button from being activated. :)
+}
+
+void Panels::VideoPanel::Apply()
+{
+	g_Conf->EmuOptions.GS.SynchronousMTGS	= m_check_SynchronousGS->GetValue();
+	g_Conf->EmuOptions.GS.DisableOutput		= m_check_DisableOutput->GetValue();
+}
+
+void Panels::VideoPanel::OnSettingsChanged()
+{
+	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
+	m_check_DisableOutput->SetValue( g_Conf->EmuOptions.GS.DisableOutput );
 }

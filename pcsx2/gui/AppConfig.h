@@ -135,12 +135,23 @@ public:
 		wxPoint		WindowPos;
 		bool		IsMaximized;
 
+		GSWindowOptions();
+
+		void LoadSave( IniInterface& conf );
+		void SanityCheck();
+	};
+
+	struct FramerateOptions
+	{
+		bool		SkipOnLimit;
+		bool		SkipOnTurbo;
+
 		Fixed100	NominalScalar;
 		Fixed100	TurboScalar;
 		Fixed100	SlomoScalar;
 
-		GSWindowOptions();
-
+		FramerateOptions();
+		
 		void LoadSave( IniInterface& conf );
 		void SanityCheck();
 	};
@@ -150,7 +161,8 @@ public:
 
 	// Because remembering the last used tab on the settings panel is cool (tab is remembered
 	// by it's UTF/ASCII name).
-	wxString	SettingsTabName;
+	wxString	SysSettingsTabName;
+	wxString	AppSettingsTabName;
 
 	// Current language in use (correlates to a wxWidgets wxLANGUAGE specifier)
 	wxLanguage	LanguageId;
@@ -185,10 +197,10 @@ public:
 
 	McdOptions				Mcd[2][4];
 	ConsoleLogOptions		ProgLogBox;
-	ConsoleLogOptions		Ps2ConBox;
 	FolderOptions			Folders;
 	FilenameOptions			BaseFilenames;
 	GSWindowOptions			GSWindow;
+	FramerateOptions		Framerate;
 	
 	// PCSX2-core emulation options, which are passed to the emu core prior to initiating
 	// an emulation session.  Note these are the options saved into the GUI ini file and

@@ -28,15 +28,6 @@
 
 using namespace Dialogs;
 
-template<typename DialogType>
-void AppOpenDialog( wxWindow* parent )
-{
-	if( wxWindow* window = wxFindWindowByName( DialogType::GetNameStatic() ) )
-		window->SetFocus();
-	else
-		(new DialogType( parent ))->Show();
-}
-
 extern wxString GetMsg_ConfirmSysReset();
 
 void MainEmuFrame::SaveEmuOptions()
@@ -50,7 +41,12 @@ void MainEmuFrame::SaveEmuOptions()
 
 void MainEmuFrame::Menu_ConfigSettings_Click(wxCommandEvent &event)
 {
-	AppOpenDialog<ConfigurationDialog>( this );
+	AppOpenDialog<SysConfigDialog>( this );
+}
+
+void MainEmuFrame::Menu_AppSettings_Click(wxCommandEvent &event)
+{
+	AppOpenDialog<AppConfigDialog>( this );
 }
 
 void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
@@ -73,7 +69,7 @@ void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 	CoreThread.ChangeCdvdSource( newSource );
 }
 
-// Returns FALSE if the user cancelled the action.
+// Returns FALSE if the user canceled the action.
 bool MainEmuFrame::_DoSelectIsoBrowser( wxString& result )
 {
 	static const wxChar* isoFilterTypes =
@@ -258,17 +254,17 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 {
-	if( !SysHasValidState() ) return;
-	bool resume = CoreThread.Suspend();
-
+	//if( !SysHasValidState() ) return;
 	sApp.SysReset();
+	sApp.SysExecute();
+	//GetMenuBar()->Enable( MenuId_Sys_Reset, true );
+}
 
-	if( resume )
-	{
-		sApp.SysExecute();
-	}
-
-	GetMenuBar()->Enable( MenuId_Sys_Reset, resume );
+void MainEmuFrame::Menu_SysShutdown_Click(wxCommandEvent &event)
+{
+	if( !SysHasValidState() ) return;
+	sApp.SysReset();
+	GetMenuBar()->Enable( MenuId_Sys_Shutdown, false );
 }
 
 void MainEmuFrame::Menu_ConfigPlugin_Click(wxCommandEvent &event)

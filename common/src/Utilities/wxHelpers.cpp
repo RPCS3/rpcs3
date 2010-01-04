@@ -20,22 +20,49 @@
 
 #include <wx/cshelp.h>
 #include <wx/tooltip.h>
+#include <wx/spinctrl.h>
 
 using namespace pxSizerFlags;
 
+// Creates a text control which is right-justified and has it's minimum width configured to suit
+// the number of digits requested.
+wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits )
+{
+	wxTextCtrl* ctrl = new wxTextCtrl( parent, wxID_ANY );
+	ctrl->SetWindowStyleFlag( wxTE_RIGHT );
+	pxFitToDigits( ctrl, digits );
+	return ctrl;
+}
 
-// =====================================================================================================
-//  wxDialogWithHelpers Class Implementations
-// =====================================================================================================
+void pxFitToDigits( wxWindow* win, int digits )
+{
+	int ex;
+	win->GetTextExtent( wxString( L'0', digits+1 ), &ex, NULL );
+	win->SetMinSize( wxSize( ex+10, wxDefaultCoord ) );		// +10 for text control borders/insets and junk.
+}
+
+void pxFitToDigits( wxSpinCtrl* win, int digits )
+{
+	// HACK!!  The better way would be to create a pxSpinCtrl class that extends wxSpinCtrl and thus
+	// have access to wxSpinButton::DoGetBestSize().  But since I don't want to do that, we'll just
+	// make/fake it with a value it's pretty common to Win32/GTK/Mac:
+
+	static const int MagicSpinnerSize = 18;
+
+	int ex;
+	win->GetTextExtent( wxString( L'0', digits+1 ), &ex, NULL );
+	win->SetMinSize( wxSize( ex+10+MagicSpinnerSize, wxDefaultCoord ) );		// +10 for text control borders/insets and junk.
+}
 
 bool pxDialogExists( const wxString& name )
 {
 	return wxFindWindowByName( name ) != NULL;
 }
 
-// --------------------------------------------------------------------------------------
-//  wxDialogWithHelpers Implementation
-// --------------------------------------------------------------------------------------
+// =====================================================================================================
+//  wxDialogWithHelpers Class Implementations
+// =====================================================================================================
+
 IMPLEMENT_DYNAMIC_CLASS(wxDialogWithHelpers, wxDialog)
 
 wxDialogWithHelpers::wxDialogWithHelpers()

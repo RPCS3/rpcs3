@@ -293,7 +293,7 @@ static __forceinline void gsHandler(const u8* pMem)
 	if (pMem>=vuMemEnd) pMem -= 0x4000;	\
 } while(false)
 
-#define aMin(x, y)   ((x < y) ? (x)   : (y))
+#define aMin(x, y)   std::min( x, y )
 #define subVal(x, y) ((x > y) ? (x-y) :  0 )
 
 // Parameters:

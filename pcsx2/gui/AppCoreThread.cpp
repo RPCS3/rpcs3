@@ -59,6 +59,11 @@ bool AppCoreThread::Suspend( bool isBlocking )
 	if( !retval || isBlocking )
 		ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 
+	if( g_Conf->GSWindow.CloseOnEsc )
+	{
+		sGSFrame.Hide();
+	}
+
 	return retval;
 }
 
@@ -127,7 +132,9 @@ void AppCoreThread::OnResumeReady()
 	AppSaveSettings();
 
 	if( GSopen2 != NULL )
-		wxGetApp().OpenGsFrame();
+	{
+		sApp.OpenGsFrame();
+	}
 
 	_parent::OnResumeReady();
 }

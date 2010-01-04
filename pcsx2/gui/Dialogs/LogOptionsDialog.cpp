@@ -22,19 +22,16 @@
 using namespace Panels;
 
 Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent )
-	: wxDialogWithHelpers( parent, _("Trace Logging"), true )
+	: BaseApplicableDialog( parent, _("Trace Logging"), wxVERTICAL )
 {
 	SetName( GetNameStatic() );
 
 	m_idealWidth = 480;
 
-	wxBoxSizer& mainsizer = *new wxBoxSizer( wxVERTICAL );
-	mainsizer.Add( new LogOptionsPanel( this ) );
+	*this += new LogOptionsPanel( this );
 
-	AddOkCancel( mainsizer, true );
+	AddOkCancel( *GetSizer(), true );
 	FindWindow( wxID_APPLY )->Disable();
-
-	SetSizerAndFit( &mainsizer, true );
 
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogOptionsDialog::OnOk_Click ) );
 	Connect( wxID_APPLY,	wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( LogOptionsDialog::OnApply_Click ) );
@@ -42,7 +39,7 @@ Dialogs::LogOptionsDialog::LogOptionsDialog( wxWindow* parent )
 
 void Dialogs::LogOptionsDialog::OnOk_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll() )
+	if( m_ApplyState.ApplyAll() )
 	{
 		FindWindow( wxID_APPLY )->Disable();
 		AppSaveSettings();
@@ -54,7 +51,7 @@ void Dialogs::LogOptionsDialog::OnOk_Click( wxCommandEvent& evt )
 
 void Dialogs::LogOptionsDialog::OnApply_Click( wxCommandEvent& evt )
 {
-	if( g_ApplyState.ApplyAll() )
+	if( m_ApplyState.ApplyAll() )
 		FindWindow( wxID_APPLY )->Disable();
 
 	AppSaveSettings();

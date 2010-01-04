@@ -208,12 +208,13 @@ Pcsx2Config::GSOptions::GSOptions()
 {
 	FrameLimitEnable		= true;
 	FrameSkipEnable			= false;
-	
+
 	SynchronousMTGS			= false;
+	DisableOutput			= false;
 	
 	DefaultRegionMode		= Region_NTSC;
-	ConsecutiveFrames		= 2;
-	ConsecutiveSkip			= 2;
+	FramesToDraw			= 2;
+	FramesToSkip			= 2;
 
 	LimitScalar				= 1.0;
 	FramerateNTSC			= 59.94;
@@ -224,6 +225,9 @@ void Pcsx2Config::GSOptions::LoadSave( IniInterface& ini )
 {
 	GSOptions defaults;
 	IniScopedGroup path( ini, L"GS" );
+
+	IniEntry( SynchronousMTGS );
+	IniEntry( DisableOutput );
 
 	IniEntry( FrameLimitEnable );
 	IniEntry( FrameSkipEnable );
@@ -236,8 +240,8 @@ void Pcsx2Config::GSOptions::LoadSave( IniInterface& ini )
 	static const wxChar * const ntsc_pal_str[2] =  { L"ntsc", L"pal" };
 	ini.EnumEntry( L"DefaultRegionMode", DefaultRegionMode, ntsc_pal_str, defaults.DefaultRegionMode );
 
-	IniEntry( ConsecutiveFrames );
-	IniEntry( ConsecutiveSkip );
+	IniEntry( FramesToDraw );
+	IniEntry( FramesToSkip );
 }
 
 void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )

@@ -323,7 +323,8 @@ wxString AppConfig::FullpathToMcd( uint port, uint slot ) const
 
 AppConfig::AppConfig()
 	: MainGuiPosition( wxDefaultPosition )
-	, SettingsTabName( L"Cpu" )
+	, SysSettingsTabName( L"Cpu" )
+	, AppSettingsTabName( L"GS Window" )
 	, DeskTheme( L"default" )
 {
 	LanguageId			= wxLANGUAGE_DEFAULT;
@@ -391,7 +392,8 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	AppConfig defaults;
 
 	IniEntry( MainGuiPosition );
-	IniEntry( SettingsTabName );
+	IniEntry( SysSettingsTabName );
+	IniEntry( AppSettingsTabName );
 	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
 	IniEntry( RecentIsoCount );
 	IniEntry( DeskTheme );
@@ -415,30 +417,30 @@ void AppConfig::LoadSave( IniInterface& ini )
 
 	// Process various sub-components:
 	ProgLogBox		.LoadSave( ini, L"ProgramLog" );
-	Ps2ConBox		.LoadSave( ini, L"Ps2Console" );
 
 	Folders			.LoadSave( ini );
 	BaseFilenames	.LoadSave( ini );
 	GSWindow		.LoadSave( ini );
-
+	Framerate		.LoadSave( ini );
+	
 	// Load Emulation options and apply some defaults overtop saved items, which are regulated
 	// by the PCSX2 UI.
 
 	EmuOptions.LoadSave( ini );
 	if( ini.IsLoading() )
-		EmuOptions.GS.LimitScalar = GSWindow.NominalScalar;
+		EmuOptions.GS.LimitScalar = Framerate.NominalScalar;
 
 	ini.Flush();
 }
 
 // ------------------------------------------------------------------------
 AppConfig::ConsoleLogOptions::ConsoleLogOptions()
-	: Visible( false )
-	, AutoDock( true )
-	, DisplayPosition( wxDefaultPosition )
+	: DisplayPosition( wxDefaultPosition )
 	, DisplaySize( wxSize( 680, 560 ) )
-	, FontSize( 8 )
 {
+	Visible		= false;
+	AutoDock	= true;
+	FontSize	= 8;
 }
 
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* logger )
@@ -540,10 +542,6 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 // ------------------------------------------------------------------------
 AppConfig::GSWindowOptions::GSWindowOptions()
 {
-	NominalScalar			= 1.0;
-	TurboScalar				= 3.0;
-	SlomoScalar				= 0.33;
-
 	CloseOnEsc				= true;
 	DefaultToFullscreen		= false;
 	AlwaysHideMouse			= false;
@@ -561,19 +559,16 @@ void AppConfig::GSWindowOptions::SanityCheck()
 {
 	// Ensure Conformation of various options...
 
-	NominalScalar	.ConfineTo( 0.05, 10.0 );
-	TurboScalar		.ConfineTo( 0.05, 10.0 );
-	SlomoScalar		.ConfineTo( 0.05, 10.0 );
-
 	WindowSize.x = std::max( WindowSize.x, 8 );
 	WindowSize.x = std::min( WindowSize.x, wxGetDisplayArea().GetWidth()-16 );
 
 	WindowSize.y = std::max( WindowSize.y, 8 );
 	WindowSize.y = std::min( WindowSize.y, wxGetDisplayArea().GetHeight()-48 );
 
-	if( !wxGetDisplayArea().Contains( wxRect( WindowPos, WindowSize ) ) )
+	// Make sure the upper left corner of the window is visible enought o grab and
+	// move into view:
+	if( !wxGetDisplayArea().Contains( wxRect( WindowPos, wxSize( 48,48 ) ) ) )
 		WindowPos = wxDefaultPosition;
-
 
 	if( (uint)AspectRatio >= (uint)AspectRatio_MaxCount )
 		AspectRatio = AspectRatio_4_3;
@@ -583,10 +578,6 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 {
 	IniScopedGroup path( ini, L"GSWindow" );
 	GSWindowOptions defaults;
-
-	IniEntry( NominalScalar );
-	IniEntry( TurboScalar );
-	IniEntry( SlomoScalar );
 
 	IniEntry( CloseOnEsc );
 	IniEntry( DefaultToFullscreen );
@@ -603,11 +594,46 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 		L"4:3",
 		L"16:9",
 	};
-		
+
 	ini.EnumEntry( L"AspectRatio", AspectRatio, AspectRatioNames, defaults.AspectRatio );
 
 	if( ini.IsLoading() ) SanityCheck();
 }
+
+// ----------------------------------------------------------------------------
+AppConfig::FramerateOptions::FramerateOptions()
+{
+	NominalScalar			= 1.0;
+	TurboScalar				= 3.0;
+	SlomoScalar				= 0.33;
+	
+	SkipOnLimit				= false;
+	SkipOnTurbo				= false;
+}
+
+void AppConfig::FramerateOptions::SanityCheck()
+{
+	// Ensure Conformation of various options...
+
+	NominalScalar	.ConfineTo( 0.05, 10.0 );
+	TurboScalar		.ConfineTo( 0.05, 10.0 );
+	SlomoScalar		.ConfineTo( 0.05, 10.0 );
+}
+
+
+void AppConfig::FramerateOptions::LoadSave( IniInterface& ini )
+{
+	IniScopedGroup path( ini, L"Framerate" );
+	FramerateOptions defaults;
+
+	IniEntry( NominalScalar );
+	IniEntry( TurboScalar );
+	IniEntry( SlomoScalar );
+	
+	IniEntry( SkipOnLimit );
+	IniEntry( SkipOnTurbo );
+}
+
 
 wxFileConfig* OpenFileConfig( const wxString& filename )
 {

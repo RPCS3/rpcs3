@@ -386,6 +386,7 @@ struct Pcsx2Config
 		// forces the MTGS to execute tags/tasks in fully blocking/synchronous
 		// style.  Useful for debugging potential bugs in the MTGS pipeline.
 		bool	SynchronousMTGS;
+		bool	DisableOutput;
 
 		bool	FrameLimitEnable;
 		bool	FrameSkipEnable;
@@ -396,8 +397,8 @@ struct Pcsx2Config
 		// proper audio playback speed).
 		int		DefaultRegionMode;	// 0=NTSC and 1=PAL
 
-		int		ConsecutiveFrames;	// number of consecutive frames (fields) to render
-		int		ConsecutiveSkip;	// number of consecutive frames (fields) to skip
+		int		FramesToDraw;	// number of consecutive frames (fields) to render
+		int		FramesToSkip;	// number of consecutive frames (fields) to skip
 
 		Fixed100	LimitScalar;
 		Fixed100	FramerateNTSC;
@@ -410,6 +411,7 @@ struct Pcsx2Config
 		{
 			return
 				OpEqu( SynchronousMTGS )		&&
+				OpEqu( DisableOutput )			&&
 				OpEqu( FrameSkipEnable )		&&
 				OpEqu( FrameLimitEnable )		&&
 				OpEqu( VsyncEnable )			&&
@@ -419,8 +421,8 @@ struct Pcsx2Config
 				OpEqu( FrameratePAL )			&&
 
 				OpEqu( DefaultRegionMode )		&&
-				OpEqu( ConsecutiveFrames )		&&
-				OpEqu( ConsecutiveSkip );
+				OpEqu( FramesToDraw )			&&
+				OpEqu( FramesToSkip );
 		}
 
 		bool operator !=( const GSOptions& right ) const

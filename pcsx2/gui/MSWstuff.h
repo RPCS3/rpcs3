@@ -15,8 +15,11 @@
 
 #pragma once
 
+class wxListbook;
+
 extern void MSW_SetWindowAfter( WXWidget hwnd, WXWidget hwndAfter );
 extern void MSW_OutputDebugString( const wxString& text );
+extern void MSW_ListView_SetIconSpacing( wxListbook& listbook, int width );
 
 extern void pxDwm_Load();
 extern void pxDwm_Unload();

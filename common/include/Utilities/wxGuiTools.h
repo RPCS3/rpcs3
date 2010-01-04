@@ -297,9 +297,9 @@ class wxDialogWithHelpers : public wxDialog
 	DECLARE_DYNAMIC_CLASS_NO_COPY(wxDialogWithHelpers)
 
 protected:
-	bool		m_hasContextHelp;
-	int			m_idealWidth;
-	wxBoxSizer*	m_extraButtonSizer;
+	bool				m_hasContextHelp;
+	int					m_idealWidth;
+	wxBoxSizer*			m_extraButtonSizer;
 
 public:
 	wxDialogWithHelpers();
@@ -493,6 +493,17 @@ public:
 	static void SetManualBusyCursor( BusyCursorType busytype );
 };
 
+// --------------------------------------------------------------------------------------
+//  pxFitToDigits
+// --------------------------------------------------------------------------------------
+// Fits a given text or spinner control to the number of digits requested, since by default
+// they're usually way over-sized.
+
+extern void pxFitToDigits( wxWindow* win, int digits );
+extern void pxFitToDigits( wxSpinCtrl* win, int digits );
+extern wxTextCtrl* CreateNumericalTextCtrl( wxWindow* parent, int digits );
+
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 extern bool pxDialogExists( const wxString& name );
@@ -502,7 +513,6 @@ extern wxRect wxGetDisplayArea();
 extern wxString pxFormatToolTipText( wxWindow* wind, const wxString& src );
 extern void pxSetToolTip( wxWindow* wind, const wxString& src );
 extern void pxSetToolTip( wxWindow& wind, const wxString& src );
-
 extern wxFont pxGetFixedFont( int ptsize=8, int weight=wxNORMAL );
 
 
