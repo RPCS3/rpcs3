@@ -15,14 +15,11 @@
 
 #pragma once
 
-#include <wx/wx.h>
+#include "wxAppWithHelpers.h"
+
 #include <wx/fileconf.h>
 #include <wx/imaglist.h>
 #include <wx/apptrait.h>
-
-#include "IniInterface.h"
-
-#include "Utilities/HashMap.h"
 
 #include "AppCommon.h"
 #include "RecentIsoList.h"
@@ -30,17 +27,25 @@
 #include "System.h"
 #include "System/SysThreads.h"
 
+#include "Utilities/HashMap.h"
+
+class Pcsx2App;
+
 typedef void FnType_OnThreadComplete(const wxCommandEvent& evt);
+typedef void (Pcsx2App::*FnType_AppMethod)();
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE( pxEVT_OpenModalDialog, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_SysExecute, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_LoadPluginsComplete, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_CoreThreadStatus, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_FreezeThreadFinished, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_Ping, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_LogicalVsync, -1 )
+	/*DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
+	DECLARE_EVENT_TYPE( pxEVT_OpenGsPanel, -1 )*/
+
+	DECLARE_EVENT_TYPE( pxEvt_FreezeThreadFinished, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_CoreThreadStatus, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_LoadPluginsComplete, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_PluginStatus, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_SysExecute, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_OpenModalDialog, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_InvokeMethod, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_LogicalVsync, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // This is used when the GS plugin is handling its own window.  Messages from the PAD
@@ -297,39 +302,13 @@ struct pxAppResources
 	~pxAppResources() throw() { }
 };
 
-struct MsgboxEventResult
-{
-	Semaphore	WaitForMe;
-	int			result;
-
-	MsgboxEventResult()
-	{
-		result = 0;
-	}
-};
-
-// --------------------------------------------------------------------------------------
-//  AppIniSaver / AppIniLoader
-// --------------------------------------------------------------------------------------
-class AppIniSaver : public IniSaver
-{
-public:
-	AppIniSaver();
-	virtual ~AppIniSaver() {}
-};
-
-class AppIniLoader : public IniLoader
-{
-public:
-	AppIniLoader();
-	virtual ~AppIniLoader() {}
-};
-
 // =====================================================================================================
 //  Pcsx2App  -  main wxApp class
 // =====================================================================================================
-class Pcsx2App : public wxApp
+class Pcsx2App : public wxAppWithHelpers
 {
+	typedef wxAppWithHelpers _parent;
+
 	// ----------------------------------------------------------------------------
 	// Event Sources!
 	// These need to be at the top of the App class, because a lot of other things depend
@@ -343,11 +322,11 @@ protected:
 	EventSource<AppEventType>	m_evtsrc_AppStatus;
 
 public:
-	CmdEvt_Source& Source_CoreThreadStatus()		{ return m_evtsrc_CoreThreadStatus; }
-	EventSource<int>& Source_SettingsApplied()		{ return m_evtsrc_SettingsApplied; }
-	EventSource<AppEventType>& Source_AppStatus()	{ return m_evtsrc_AppStatus; }
-	EventSource<PluginEventType>& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
-	EventSource<IniInterface>& Source_SettingsLoadSave()	{ return m_evtsrc_SettingsLoadSave; }
+	CmdEvt_Source& Source_CoreThreadStatus()				{ AffinityAssert_AllowFromMain(); return m_evtsrc_CoreThreadStatus; }
+	EventSource<int>& Source_SettingsApplied()				{ AffinityAssert_AllowFromMain(); return m_evtsrc_SettingsApplied; }
+	EventSource<AppEventType>& Source_AppStatus()			{ AffinityAssert_AllowFromMain(); return m_evtsrc_AppStatus; }
+	EventSource<PluginEventType>& Source_CorePluginStatus()	{ AffinityAssert_AllowFromMain(); return m_evtsrc_CorePluginStatus; }
+	EventSource<IniInterface>& Source_SettingsLoadSave()	{ AffinityAssert_AllowFromMain(); return m_evtsrc_SettingsLoadSave; }
 	// ----------------------------------------------------------------------------
 	
 public:
@@ -370,16 +349,13 @@ protected:
 	GSFrame*					m_gsFrame;
 	ConsoleLogFrame*			m_ProgramLogBox;
 
-	std::vector<Semaphore*>		m_PingWhenIdle;
 	wxKeyEvent					m_kevt;
 
 public:
 	Pcsx2App();
 	virtual ~Pcsx2App();
 
-	void Ping();
-
-	void PostPadKey( wxKeyEvent& evt );
+	void PostPluginStatus( PluginEventType pevt );
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	int  IssueModalDialog( const wxString& dlgName );
 
@@ -388,6 +364,7 @@ public:
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void SysReset();
+	void ReloadPlugins();
 
 	GSFrame&		GetGSFrame() const;
 	GSFrame*		GetGSFramePtr() const	{ return m_gsFrame; }
@@ -396,7 +373,8 @@ public:
 	MainEmuFrame*	GetMainFramePtr() const	{ return m_MainFrame; }
 	bool HasMainFrame() const	{ return m_MainFrame != NULL; }
 
-	void OpenGsFrame();
+	void OpenGsPanel();
+	void CloseGsPanel();
 	void OnGsFrameClosed();
 	void OnMainFrameClosed();
 
@@ -443,31 +421,30 @@ public:
 	void OnProgramLogClosed();
 
 protected:
+	bool SelfPostMethod( FnType_AppMethod method );
+
 	void InitDefaultGlobalAccelerators();
 	void BuildCommandHash();
 	void ReadUserModeSettings();
 	bool TryOpenConfigCwd();
 	void CleanupMess();
 	void OpenWizardConsole();
-	void PingDispatch( const char* action );
 	void PadKeyDispatch( const keyEvent& ev );
 	
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const;
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
 
 	void OnSysExecute( wxCommandEvent& evt );
-	void OnReloadPlugins( wxCommandEvent& evt );
 	void OnLoadPluginsComplete( wxCommandEvent& evt );
+	void OnPluginStatus( wxCommandEvent& evt );
 	void OnOpenModalDialog( wxCommandEvent& evt );
 	void OnCoreThreadStatus( wxCommandEvent& evt );
 	void OnFreezeThreadFinished( wxCommandEvent& evt );
 
-	void OnMessageBox( pxMessageBoxEvent& evt );
 	void OnEmuKeyDown( wxKeyEvent& evt );
 	void OnLogicalVsync( wxCommandEvent& evt );
 
-	void OnIdleEvent( wxIdleEvent& evt );
-	void OnPingEvent( pxPingEvent& evt );
+	void OnInvokeMethod( pxInvokeMethodEvent& evt );
 
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior

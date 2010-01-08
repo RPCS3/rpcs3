@@ -105,13 +105,8 @@ extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
 // responded to the prompt.
 //
 
-class pxMessageBoxEvent;
-class pxAssertionEvent;
-
 namespace Msgbox
 {
-	extern void OnEvent( pxMessageBoxEvent& evt );
-
 	extern bool Alert( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_EXCLAMATION );
 	extern bool OkCancel( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=0 );
 	extern bool YesNo( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_QUESTION );
@@ -119,7 +114,3 @@ namespace Msgbox
 	extern int  Assertion( const wxString& text, const wxString& stacktrace );
 }
 
-BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE( pxEVT_MSGBOX, -1 )
-	DECLARE_EVENT_TYPE( pxEVT_ASSERTION, -1 )
-END_DECLARE_EVENT_TYPES()

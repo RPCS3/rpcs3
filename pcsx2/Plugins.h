@@ -248,7 +248,9 @@ public:
 	virtual void Open() { }
 	virtual void Open( PluginsEnum_t pid ) { pxFail( "Null PluginManager!" ); }
 	virtual void Close( PluginsEnum_t pid ) {}
-	virtual void Close( bool closegs=true ) {}
+	virtual void Close() {}
+	
+	virtual bool IsOpen( PluginsEnum_t pid ) const { return false; }
 
 	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state ) { pxFail( "Null PluginManager!" ); }
 	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data )
@@ -298,20 +300,25 @@ public:
 	PluginManager( const wxString (&folders)[PluginId_Count] );
 	virtual ~PluginManager() throw();
 
-	void Init();
-	void Shutdown();
-	void Open();
-	void Open( PluginsEnum_t pid );
-	void Close( PluginsEnum_t pid );
-	void Close( bool closegs=true );
+	virtual void Init();
+	virtual void Shutdown();
+	virtual void Open();
+	virtual void Open( PluginsEnum_t pid );
+	virtual void Close( PluginsEnum_t pid );
+	virtual void Close();
 
-	void Freeze( PluginsEnum_t pid, SaveStateBase& state );
-	bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data );
+	virtual bool IsOpen( PluginsEnum_t pid ) const { return m_info[pid].IsOpened; }
+	
+	virtual bool NeedsClose() const;
+	virtual bool NeedsOpen() const;
+	
+	virtual void Freeze( PluginsEnum_t pid, SaveStateBase& state );
+	virtual bool DoFreeze( PluginsEnum_t pid, int mode, freezeData* data );
 
-	bool KeyEvent( const keyEvent& evt );
-	void Configure( PluginsEnum_t pid );
-	void SetSettingsFolder( const wxString& folder );
-	void SendSettingsFolder();
+	virtual bool KeyEvent( const keyEvent& evt );
+	virtual void Configure( PluginsEnum_t pid );
+	virtual void SetSettingsFolder( const wxString& folder );
+	virtual void SendSettingsFolder();
 
 	const wxString& GetName( PluginsEnum_t pid ) const { return m_info[pid].Name; }
 	const wxString& GetVersion( PluginsEnum_t pid ) const { return m_info[pid].Version; }
@@ -322,6 +329,16 @@ protected:
 	void BindCommon( PluginsEnum_t pid );
 	void BindRequired( PluginsEnum_t pid );
 	void BindOptional( PluginsEnum_t pid );
+	
+	virtual bool OpenPlugin_GS();
+	virtual bool OpenPlugin_CDVD();
+	virtual bool OpenPlugin_PAD();
+	virtual bool OpenPlugin_SPU2();
+	virtual bool OpenPlugin_DEV9();
+	virtual bool OpenPlugin_USB();
+	virtual bool OpenPlugin_FW();
+	
+	virtual void ClosePlugin_GS();
 
 	friend class SysMtgsThread;
 };

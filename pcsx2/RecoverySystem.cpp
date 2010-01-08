@@ -107,11 +107,7 @@ protected:
 
 	void SendFinishEvent( int type )
 	{
-		wxCommandEvent evt( pxEVT_FreezeThreadFinished );
-		evt.SetClientData( this );
-		evt.SetInt( type );
-		evt.SetExtraLong( m_resume_when_done );
-		wxGetApp().AddPendingEvent( evt );
+		wxGetApp().PostCommand( this, pxEvt_FreezeThreadFinished, type, m_resume_when_done );
 	}
 
 };

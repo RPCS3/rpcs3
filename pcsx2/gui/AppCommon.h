@@ -30,7 +30,7 @@ class GSFrame;
 class ConsoleLogFrame;
 class PipeRedirectionBase;
 class AppCoreThread;
-class pxPingEvent;
+class pxInvokeMethodEvent;
 
 // wxWidgets forward declarations
 
@@ -50,8 +50,10 @@ enum PluginEventType
 {
 	PluginsEvt_Loaded,
 	PluginsEvt_Init,
-	PluginsEvt_Open,
-	PluginsEvt_Close,
+	PluginsEvt_Opening,		// dispatched prior to plugins being opened
+	PluginsEvt_Opened,		// dispatched after plugins are opened
+	PluginsEvt_Closing,		// dispatched prior to plugins being closed
+	PluginsEvt_Closed,		// dispatched after plugins are closed
 	PluginsEvt_Shutdown,
 	PluginsEvt_Unloaded,
 };

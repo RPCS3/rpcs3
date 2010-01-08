@@ -875,18 +875,23 @@ extern void spu2DMA4Irq();
 extern void spu2DMA7Irq();
 extern void spu2Irq();
 
-static bool OpenPlugin_GS()
+bool PluginManager::OpenPlugin_CDVD()
+{
+	return DoCDVDopen();
+}
+
+bool PluginManager::OpenPlugin_GS()
 {
 	GetMTGS().Resume();
 	return true;
 }
 
-static bool OpenPlugin_PAD()
+bool PluginManager::OpenPlugin_PAD()
 {
 	return !PADopen( (void*)&pDsp );
 }
 
-static bool OpenPlugin_SPU2()
+bool PluginManager::OpenPlugin_SPU2()
 {
 	if( SPU2open((void*)&pDsp) ) return false;
 
@@ -896,7 +901,7 @@ static bool OpenPlugin_SPU2()
 	return true;
 }
 
-static bool OpenPlugin_DEV9()
+bool PluginManager::OpenPlugin_DEV9()
 {
 	dev9Handler = NULL;
 
@@ -906,7 +911,7 @@ static bool OpenPlugin_DEV9()
 	return true;
 }
 
-static bool OpenPlugin_USB()
+bool PluginManager::OpenPlugin_USB()
 {
 	usbHandler = NULL;
 
@@ -918,7 +923,7 @@ static bool OpenPlugin_USB()
 	return true;
 }
 
-static bool OpenPlugin_FW()
+bool PluginManager::OpenPlugin_FW()
 {
 	if( FWopen((void*)&pDsp) ) return false;
 	FWirqCallback( fwIrq );
@@ -936,7 +941,7 @@ void PluginManager::Open( PluginsEnum_t pid )
 	bool result = true;
 	switch( pid )
 	{
-		case PluginId_CDVD:	result = DoCDVDopen();		break;
+		case PluginId_CDVD:	result = OpenPlugin_CDVD();	break;
 		case PluginId_GS:	result = OpenPlugin_GS();	break;
 		case PluginId_PAD:	result = OpenPlugin_PAD();	break;
 		case PluginId_SPU2:	result = OpenPlugin_SPU2();	break;
@@ -951,21 +956,33 @@ void PluginManager::Open( PluginsEnum_t pid )
 	m_info[pid].IsOpened = true;
 }
 
-void PluginManager::Open()
+bool PluginManager::NeedsOpen() const
 {
-	// Spam stopper:  If all plugins are already opened, then return before writing any logs. >_<
-
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		if( !m_info[pi->id].IsOpened ) break;
 	} while( ++pi, pi->shortname != NULL );
 
-	if( pi->shortname == NULL ) return;
+	return pi->shortname != NULL;
+}
+
+bool PluginManager::NeedsClose() const
+{
+	const PluginInfo* pi = tbl_PluginInfo; do {
+		if( m_info[pi->id].IsOpened ) break;
+	} while( ++pi, pi->shortname != NULL );
+
+	return pi->shortname != NULL;
+}
+
+void PluginManager::Open()
+{
+	if( !NeedsOpen() ) return;		// Spam stopper:  returns before writing any logs. >_<
 
 	Console.WriteLn( Color_StrongBlue, "Opening plugins..." );
 
 	SendSettingsFolder();
 
-	pi = tbl_PluginInfo; do {
+	const PluginInfo* pi = tbl_PluginInfo; do {
 		Open( pi->id );
 		// If GS doesn't support GSopen2, need to wait until call to GSopen
 		// returns to populate pDsp.  If it does, can initialize other plugins
@@ -978,17 +995,21 @@ void PluginManager::Open()
 	Console.WriteLn( Color_StrongBlue, "Plugins opened successfully." );
 }
 
+void PluginManager::ClosePlugin_GS()
+{
+	// force-close PAD before GS, because the PAD depends on the GS window.
+
+	Close( PluginId_PAD );
+	GetMTGS().Suspend();
+}
+
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
 	Console.Indent().WriteLn( "Closing %s", tbl_PluginInfo[pid].shortname );
 
 	if( pid == PluginId_GS )
-	{
-		// force-close PAD before GS, because the PAD depends on the GS window.
-		Close( PluginId_PAD );
-		GetMTGS().Suspend();
-	}
+		ClosePlugin_GS();
 	else if( pid == PluginId_CDVD )
 		DoCDVDclose();
 	else
@@ -997,25 +1018,16 @@ void PluginManager::Close( PluginsEnum_t pid )
 	m_info[pid].IsOpened = false;
 }
 
-void PluginManager::Close( bool closegs )
+void PluginManager::Close()
 {
-	// Spam stopper:  If all plugins are already closed, then return before writing any logs. >_<
-
-	const PluginInfo* pi = tbl_PluginInfo; do {
-		if( m_info[pi->id].IsOpened && (closegs || (pi->id != PluginId_GS)) ) break;
-	} while( ++pi, pi->shortname != NULL );
-
-	if( pi->shortname == NULL ) return;
-
-	DbgCon.WriteLn( Color_StrongBlue, "Closing plugins..." );
+	if( !NeedsClose() ) return;	// Spam stopper; returns before writing any logs. >_<
 
 	// Close plugins in reverse order of the initialization procedure.
 
+	DbgCon.WriteLn( Color_StrongBlue, "Closing plugins..." );
+
 	for( int i=PluginId_Count-1; i>=0; --i )
-	{
-		if( closegs || (tbl_PluginInfo[i].id != PluginId_GS) )
-			Close( tbl_PluginInfo[i].id );
-	}
+		Close( tbl_PluginInfo[i].id );
 
 	DbgCon.WriteLn( Color_StrongBlue, "Plugins closed successfully." );
 }

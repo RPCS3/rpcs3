@@ -260,21 +260,15 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 	return true;
 }
 
-typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
-typedef void (wxEvtHandler::*pxPingEventFunction)(pxPingEvent&);
+typedef void (wxEvtHandler::*pxInvokeMethodEventFunction)(pxInvokeMethodEvent&);
 
 // ------------------------------------------------------------------------
 bool Pcsx2App::OnInit()
 {
-#define pxMessageBoxEventThing(func) \
-	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
+#define pxMethodEventHandler(func) \
+	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxInvokeMethodEventFunction, &func )
 
-#define pxPingEventHandler(func) \
-	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxPingEventFunction, &func )
-
-	Connect( pxEVT_MSGBOX,			pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-	Connect( pxEVT_ASSERTION,		pxMessageBoxEventThing( Pcsx2App::OnMessageBox ) );
-	Connect( pxEVT_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
+	Connect( pxEvt_OpenModalDialog,	wxCommandEventHandler( Pcsx2App::OnOpenModalDialog ) );
 
 	pxDoAssert = AppDoAssert;
 
@@ -282,22 +276,23 @@ bool Pcsx2App::OnInit()
 	EnableAllLogging();
 
     wxInitAllImageHandlers();
-	if( !wxApp::OnInit() ) return false;
+	if( !_parent::OnInit() ) return false;
 
 	m_StdoutRedirHandle = NewPipeRedir(stdout);
 	m_StderrRedirHandle = NewPipeRedir(stderr);
 	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
 
-	Connect( pxEVT_ReloadPlugins,			wxCommandEventHandler	(Pcsx2App::OnReloadPlugins) );
-	Connect( pxEVT_SysExecute,				wxCommandEventHandler	(Pcsx2App::OnSysExecute) );
+	/*Connect( pxEVT_ReloadPlugins,			wxCommandEventHandler	(Pcsx2App::OnReloadPlugins) );
 
-	Connect( pxEVT_LoadPluginsComplete,		wxCommandEventHandler	(Pcsx2App::OnLoadPluginsComplete) );
-	Connect( pxEVT_CoreThreadStatus,		wxCommandEventHandler	(Pcsx2App::OnCoreThreadStatus) );
-	Connect( pxEVT_FreezeThreadFinished,	wxCommandEventHandler	(Pcsx2App::OnFreezeThreadFinished) );
 	Connect( pxEVT_LogicalVsync,			wxCommandEventHandler	(Pcsx2App::OnLogicalVsync) );
+	Connect( pxEVT_OpenGsPanel,				wxCommandEventHandler	(Pcsx2App::OpenGsPanel) );*/
 
-	Connect( pxEVT_Ping,					pxPingEventHandler		(Pcsx2App::OnPingEvent) );
-	Connect( wxEVT_IDLE,					wxIdleEventHandler		(Pcsx2App::OnIdleEvent) );
+	Connect( pxEvt_FreezeThreadFinished,	wxCommandEventHandler	(Pcsx2App::OnFreezeThreadFinished) );
+	Connect( pxEvt_CoreThreadStatus,		wxCommandEventHandler	(Pcsx2App::OnCoreThreadStatus) );
+	Connect( pxEvt_LoadPluginsComplete,		wxCommandEventHandler	(Pcsx2App::OnLoadPluginsComplete) );
+	Connect( pxEvt_PluginStatus,			wxCommandEventHandler	(Pcsx2App::OnPluginStatus) );
+	Connect( pxEvt_SysExecute,				wxCommandEventHandler	(Pcsx2App::OnSysExecute) );
+	Connect( pxEvt_InvokeMethod,			pxMethodEventHandler	(Pcsx2App::OnInvokeMethod) );
 
 	Connect( pxID_PadHandler_Keydown, wxEVT_KEY_DOWN, wxKeyEventHandler( Pcsx2App::OnEmuKeyDown ) );
 
@@ -518,16 +513,6 @@ Pcsx2App::Pcsx2App()
 
 	SetAppName( L"pcsx2" );
 	BuildCommandHash();
-
-#ifdef __WXMSW__
-	// This variable assignment ensures that MSVC links in the TLS setup stubs even in 
-	// full optimization builds.  Without it, DLLs that use TLS won't work because the
-	// FS segment register won't have been initialized by the main exe, due to tls_insurance
-	// being optimized away >_<  --air
-
-	static __threadlocal int	tls_insurance = 0;
-	tls_insurance = 1;
-#endif
 }
 
 Pcsx2App::~Pcsx2App()

@@ -247,8 +247,6 @@ public:
 	SysMtgsThread();
 	virtual ~SysMtgsThread() throw();
 
-	static SysMtgsThread& Get();
-
 	// Waits for the GS to empty out the entire ring buffer contents.
 	// Used primarily for plugin startup/shutdown.
 	void WaitGS();
@@ -268,6 +266,8 @@ public:
 	u8* GetDataPacketPtr() const;
 	void SetEvent();
 	void PostVsyncEnd();
+
+	bool IsPluginOpened() const { return m_PluginOpened; }
 
 protected:
 	void OpenPlugin();

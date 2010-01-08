@@ -97,6 +97,7 @@ bool SysThreadBase::Suspend( bool isBlocking )
 
 			case ExecMode_Pausing:
 			case ExecMode_Paused:
+				if( !isBlocking ) return retval;
 				throw Exception::CancelEvent( "Another thread is pausing the VM state." );
 	
 			case ExecMode_Opened:

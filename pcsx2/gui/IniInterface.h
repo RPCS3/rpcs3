@@ -99,7 +99,7 @@ public:
 class IniLoader : public IniInterface
 {
 public:
-	virtual ~IniLoader();
+	virtual ~IniLoader() throw();
 	explicit IniLoader();
 	explicit IniLoader( wxConfigBase& config );
 

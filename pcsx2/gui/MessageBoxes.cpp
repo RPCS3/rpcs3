@@ -17,9 +17,6 @@
 #include "App.h"
 #include "Dialogs/ModalPopups.h"
 
-DEFINE_EVENT_TYPE( pxEVT_MSGBOX );
-DEFINE_EVENT_TYPE( pxEVT_ASSERTION );
-
 using namespace Threading;
 using namespace pxSizerFlags;
 
@@ -43,205 +40,151 @@ static int pxMessageDialog( const wxString& caption, const wxString& content, co
 	return pxIssueConfirmation( dialog, buttons );
 }
 
-class BaseMessageBoxEvent : public wxEvent
-{
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(BaseMessageBoxEvent)
-
-protected:
-	MsgboxEventResult*	m_Instdata;
-	wxString			m_Content;
-
-public:
-	explicit BaseMessageBoxEvent( int msgtype=pxEVT_MSGBOX, const wxString& content=wxEmptyString )
-		: wxEvent( 0, msgtype )
-		, m_Content( content )
-	{
-		m_Instdata = NULL;
-	}
-
-	virtual ~BaseMessageBoxEvent() throw() { }
-	virtual BaseMessageBoxEvent *Clone() const { return new BaseMessageBoxEvent(*this); }
-
-	BaseMessageBoxEvent( MsgboxEventResult& instdata, const wxString& content )
-		: wxEvent( 0, pxEVT_MSGBOX )
-		, m_Instdata( &instdata )
-		, m_Content( content )
-	{
-	}
-
-	BaseMessageBoxEvent( const wxString& content )
-		: wxEvent( 0, pxEVT_MSGBOX )
-		, m_Instdata( NULL )
-		, m_Content( content )
-	{
-	}
-
-	BaseMessageBoxEvent( const BaseMessageBoxEvent& event )
-		: wxEvent( event )
-		, m_Instdata( event.m_Instdata )
-		, m_Content( event.m_Content )
-	{
-	}
-
-	BaseMessageBoxEvent& SetInstData( MsgboxEventResult& instdata )
-	{
-		m_Instdata = &instdata;
-		return *this;
-	}
-
-	// Thread Safety: Must be called from the GUI thread ONLY.
-	virtual void IssueDialog()
-	{
-		AffinityAssert_AllowFromMain();
-
-		int result = _DoDialog();
-
-		if( m_Instdata != NULL )
-		{
-			m_Instdata->result = result;
-			m_Instdata->WaitForMe.Post();
-		}
-	}
-
-protected:
-	virtual int _DoDialog() const
-	{
-		pxFailDev( "Abstract Base MessageBox Event." );
-		return wxID_CANCEL;
-	}
-};
-
 // --------------------------------------------------------------------------------------
-//  pxMessageBoxEvent
+//  BaseMessageBoxEvent Implementation
 // --------------------------------------------------------------------------------------
-// This event type is used to transfer message boxes to the main UI thread, and return the
-// result of the box.  It's the only way a message box can be issued from non-main threads
-// with complete safety in wx2.8.
-//
-// For simplicity sake this message box only supports two basic designs.  The main design
-// is a generic message box with confirmation buttons of your choosing.  Additionally you
-// can specify a "scrollableContent" text string, which is added into a read-only richtext
-// control similar to the console logs and such.
-//
-// Future consideration: If wxWidgets 3.0 has improved thread safety, then it should probably
-// be reasonable for it to work with a more flexable model where the dialog can be created
-// on a child thread, passed to the main thread, where ShowModal() is run (keeping the nested
-// message pumps on the main thread where they belong).  But so far this is not possible,
-// because of various subtle issues in wx2.8 design.
-//
-class pxMessageBoxEvent : public BaseMessageBoxEvent
-{
-	typedef BaseMessageBoxEvent _parent;
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxMessageBoxEvent)
-
-protected:
-	wxString			m_Title;
-	MsgButtons			m_Buttons;
-	
-public:
-	pxMessageBoxEvent( int msgtype=pxEVT_MSGBOX )
-		: BaseMessageBoxEvent( msgtype )
-	{
-	}
-
-	virtual ~pxMessageBoxEvent() throw() { }
-	virtual pxMessageBoxEvent *Clone() const { return new pxMessageBoxEvent(*this); }
-
-	pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, const MsgButtons& buttons )
-		: BaseMessageBoxEvent( instdata, content )
-		, m_Title( title )
-		, m_Buttons( buttons )
-	{
-	}
-
-	pxMessageBoxEvent( const wxString& title, const wxString& content, const MsgButtons& buttons )
-		: BaseMessageBoxEvent( content )
-		, m_Title( title )
-		, m_Buttons( buttons )
-	{
-	}
-
-	pxMessageBoxEvent( const pxMessageBoxEvent& event )
-		: BaseMessageBoxEvent( event )
-		, m_Title( event.m_Title )
-		, m_Buttons( event.m_Buttons )
-	{
-	}
-
-	pxMessageBoxEvent& SetInstData( MsgboxEventResult& instdata )
-	{
-		_parent::SetInstData( instdata );
-		return *this;
-	}
-
-protected:
-	virtual int _DoDialog() const
-	{
-		return pxMessageDialog( m_Content, m_Title, m_Buttons );
-	}
-};
-
-// --------------------------------------------------------------------------------------
-//  pxAssertionEvent
-// --------------------------------------------------------------------------------------
-class pxAssertionEvent : public BaseMessageBoxEvent
-{
-	typedef BaseMessageBoxEvent _parent;
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN( pxAssertionEvent )
-
-protected:
-	wxString	m_Stacktrace;
-
-public:
-	pxAssertionEvent()
-		: BaseMessageBoxEvent( pxEVT_ASSERTION )
-	{
-	}
-	
-	virtual ~pxAssertionEvent() throw() { }
-
-	virtual pxAssertionEvent *Clone() const { return new pxAssertionEvent(*this); }
-
-	pxAssertionEvent( MsgboxEventResult& instdata, const wxString& content, const wxString& trace )
-		: BaseMessageBoxEvent( pxEVT_ASSERTION )
-		, m_Stacktrace( trace )
-	{
-	}
-
-	pxAssertionEvent( const wxString& content, const wxString& trace )
-		: BaseMessageBoxEvent( pxEVT_ASSERTION, content )
-		, m_Stacktrace( trace )
-	{
-	}
-
-	pxAssertionEvent( const pxAssertionEvent& event )
-		: BaseMessageBoxEvent( event )
-		, m_Stacktrace( event.m_Stacktrace )
-	{
-	}
-
-	pxAssertionEvent& SetInstData( MsgboxEventResult& instdata )
-	{
-		_parent::SetInstData( instdata );
-		return *this;
-	}
-
-	pxAssertionEvent& SetStacktrace( const wxString& trace )
-	{
-		m_Stacktrace = trace;
-		return *this;
-	}
-
-protected:
-	virtual int _DoDialog() const
-	{
-		return Dialogs::AssertionDialog( m_Content, m_Stacktrace ).ShowModal();
-	}
-};
-
 IMPLEMENT_DYNAMIC_CLASS( BaseMessageBoxEvent, wxEvent )
+
+BaseMessageBoxEvent::BaseMessageBoxEvent( int msgtype, const wxString& content )
+	: wxEvent( 0, msgtype )
+	, m_Content( content )
+{
+	m_Instdata = NULL;
+}
+
+BaseMessageBoxEvent::BaseMessageBoxEvent( MsgboxEventResult& instdata, const wxString& content )
+	: wxEvent( 0, pxEvt_MessageBox )
+	, m_Instdata( &instdata )
+	, m_Content( content )
+{
+}
+
+BaseMessageBoxEvent::BaseMessageBoxEvent( const wxString& content )
+	: wxEvent( 0, pxEvt_MessageBox )
+	, m_Instdata( NULL )
+	, m_Content( content )
+{
+}
+
+BaseMessageBoxEvent::BaseMessageBoxEvent( const BaseMessageBoxEvent& event )
+	: wxEvent( event )
+	, m_Instdata( event.m_Instdata )
+	, m_Content( event.m_Content )
+{
+}
+
+BaseMessageBoxEvent& BaseMessageBoxEvent::SetInstData( MsgboxEventResult& instdata )
+{
+	m_Instdata = &instdata;
+	return *this;
+}
+
+// Thread Safety: Must be called from the GUI thread ONLY.
+void BaseMessageBoxEvent::IssueDialog()
+{
+	AffinityAssert_AllowFromMain();
+
+	int result = _DoDialog();
+
+	if( m_Instdata != NULL )
+	{
+		m_Instdata->result = result;
+		m_Instdata->WaitForMe.Post();
+	}
+}
+
+int BaseMessageBoxEvent::_DoDialog() const
+{
+	pxFailDev( "Abstract Base MessageBox Event." );
+	return wxID_CANCEL;
+}
+
+// --------------------------------------------------------------------------------------
+//  pxMessageBoxEvent Implementation
+// --------------------------------------------------------------------------------------
 IMPLEMENT_DYNAMIC_CLASS( pxMessageBoxEvent, BaseMessageBoxEvent )
+
+pxMessageBoxEvent::pxMessageBoxEvent( int msgtype )
+	: BaseMessageBoxEvent( msgtype )
+{
+}
+
+pxMessageBoxEvent::pxMessageBoxEvent( MsgboxEventResult& instdata, const wxString& title, const wxString& content, const MsgButtons& buttons )
+	: BaseMessageBoxEvent( instdata, content )
+	, m_Title( title )
+	, m_Buttons( buttons )
+{
+}
+
+pxMessageBoxEvent::pxMessageBoxEvent( const wxString& title, const wxString& content, const MsgButtons& buttons )
+	: BaseMessageBoxEvent( content )
+	, m_Title( title )
+	, m_Buttons( buttons )
+{
+}
+
+pxMessageBoxEvent::pxMessageBoxEvent( const pxMessageBoxEvent& event )
+	: BaseMessageBoxEvent( event )
+	, m_Title( event.m_Title )
+	, m_Buttons( event.m_Buttons )
+{
+}
+
+pxMessageBoxEvent& pxMessageBoxEvent::SetInstData( MsgboxEventResult& instdata )
+{
+	_parent::SetInstData( instdata );
+	return *this;
+}
+
+int pxMessageBoxEvent::_DoDialog() const
+{
+	return pxMessageDialog( m_Content, m_Title, m_Buttons );
+}
+
+// --------------------------------------------------------------------------------------
+//  pxAssertionEvent Implementation
+// --------------------------------------------------------------------------------------
 IMPLEMENT_DYNAMIC_CLASS( pxAssertionEvent, BaseMessageBoxEvent )
+
+pxAssertionEvent::pxAssertionEvent()
+	: BaseMessageBoxEvent( pxEvt_Assertion )
+{
+}
+
+pxAssertionEvent::pxAssertionEvent( MsgboxEventResult& instdata, const wxString& content, const wxString& trace )
+	: BaseMessageBoxEvent( pxEvt_Assertion )
+	, m_Stacktrace( trace )
+{
+}
+
+pxAssertionEvent::pxAssertionEvent( const wxString& content, const wxString& trace )
+	: BaseMessageBoxEvent( pxEvt_Assertion, content )
+	, m_Stacktrace( trace )
+{
+}
+
+pxAssertionEvent::pxAssertionEvent( const pxAssertionEvent& event )
+	: BaseMessageBoxEvent( event )
+	, m_Stacktrace( event.m_Stacktrace )
+{
+}
+
+pxAssertionEvent& pxAssertionEvent::SetInstData( MsgboxEventResult& instdata )
+{
+	_parent::SetInstData( instdata );
+	return *this;
+}
+
+pxAssertionEvent& pxAssertionEvent::SetStacktrace( const wxString& trace )
+{
+	m_Stacktrace = trace;
+	return *this;
+}
+
+int pxAssertionEvent::_DoDialog() const
+{
+	return Dialogs::AssertionDialog( m_Content, m_Stacktrace ).ShowModal();
+}
 
 namespace Msgbox
 {
@@ -324,9 +267,4 @@ namespace Msgbox
 		pxAssertionEvent tevt( text, stacktrace );
 		return ThreadedMessageBox( tevt );
 	}
-}
-
-void Pcsx2App::OnMessageBox( pxMessageBoxEvent& evt )
-{
-	evt.IssueDialog();
 }

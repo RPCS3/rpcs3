@@ -45,10 +45,7 @@ void AppCoreThread::Reset()
 	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
 
 	_parent::Reset();
-
-	wxCommandEvent evt( pxEVT_CoreThreadStatus );
-	evt.SetInt( CoreStatus_Reset );
-	wxGetApp().AddPendingEvent( evt );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Reset );
 }
 
 bool AppCoreThread::Suspend( bool isBlocking )
@@ -92,9 +89,7 @@ void AppCoreThread::Resume()
 		// Resume failed for some reason, so update GUI statuses and post a message to
 		// try again on the resume.
 
-		wxCommandEvent evt( pxEVT_CoreThreadStatus );
-		evt.SetInt( CoreStatus_Suspended );
-		wxGetApp().AddPendingEvent( evt );
+		wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Suspended );
 
 		if( (m_ExecMode != ExecMode_Closing) || (m_ExecMode != ExecMode_Pausing) )
 		{
@@ -131,30 +126,19 @@ void AppCoreThread::OnResumeReady()
 
 	AppSaveSettings();
 
-	if( GSopen2 != NULL )
-	{
-		sApp.OpenGsFrame();
-	}
-
 	_parent::OnResumeReady();
 }
 
 void AppCoreThread::OnResumeInThread( bool isSuspended )
 {
 	_parent::OnResumeInThread( isSuspended );
-
-	wxCommandEvent evt( pxEVT_CoreThreadStatus );
-	evt.SetInt( CoreStatus_Resumed );
-	wxGetApp().AddPendingEvent( evt );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Resumed );
 }
 
 void AppCoreThread::OnSuspendInThread()
 {
 	_parent::OnSuspendInThread();
-
-	wxCommandEvent evt( pxEVT_CoreThreadStatus );
-	evt.SetInt( CoreStatus_Suspended );
-	wxGetApp().AddPendingEvent( evt );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Suspended );
 }
 
 // Called whenever the thread has terminated, for either regular or irregular reasons.
@@ -163,16 +147,13 @@ void AppCoreThread::OnSuspendInThread()
 // the new (lack of) thread status, so this posts a message to the App to do so.
 void AppCoreThread::OnCleanupInThread()
 {
-	wxCommandEvent evt( pxEVT_CoreThreadStatus );
-	evt.SetInt( CoreStatus_Stopped );
-	wxGetApp().AddPendingEvent( evt );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Stopped );
 	_parent::OnCleanupInThread();
 }
 
 void AppCoreThread::PostVsyncToUI()
 {
-	wxCommandEvent evt( pxEVT_LogicalVsync );
-	wxGetApp().AddPendingEvent( evt );
+	wxGetApp().PostCommand( pxEvt_LogicalVsync );
 }
 
 void AppCoreThread::StateCheckInThread()

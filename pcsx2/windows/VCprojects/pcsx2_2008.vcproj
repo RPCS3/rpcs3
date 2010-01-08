@@ -1904,6 +1904,10 @@
 				RelativePath="..\..\gui\Saveslots.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\gui\wxAppWithHelpers.cpp"
+				>
+			</File>
 			<Filter
 				Name="Dialogs"
 				>
@@ -2569,6 +2573,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\RecentIsoList.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\wxAppWithHelpers.h"
 					>
 				</File>
 			</Filter>

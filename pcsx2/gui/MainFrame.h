@@ -67,6 +67,8 @@ protected:
 // --------------------------------------------------------------------------------------
 class GSFrame : public wxFrame
 {
+	typedef wxFrame _parent;
+
 protected:
 	EventListenerBinding<int>	m_Listener_SettingsApplied;
 	GSPanel*					m_gspanel;
@@ -77,6 +79,8 @@ public:
 	virtual ~GSFrame() throw();
 
 	wxWindow* GetViewport();
+
+	bool Show( bool shown=true );
 
 protected:
 	void OnMove( wxMoveEvent& evt );

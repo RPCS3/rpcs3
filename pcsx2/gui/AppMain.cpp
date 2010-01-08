@@ -32,14 +32,17 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
-DEFINE_EVENT_TYPE( pxEVT_OpenModalDialog );
-DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
-DEFINE_EVENT_TYPE( pxEVT_SysExecute );
-DEFINE_EVENT_TYPE( pxEVT_LoadPluginsComplete );
-DEFINE_EVENT_TYPE( pxEVT_CoreThreadStatus );
-DEFINE_EVENT_TYPE( pxEVT_FreezeThreadFinished );
-DEFINE_EVENT_TYPE( pxEVT_Ping );
-DEFINE_EVENT_TYPE( pxEVT_LogicalVsync );
+/*DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
+DEFINE_EVENT_TYPE( pxEVT_OpenGsPanel );*/
+
+DEFINE_EVENT_TYPE( pxEvt_FreezeThreadFinished );
+DEFINE_EVENT_TYPE( pxEvt_CoreThreadStatus );
+DEFINE_EVENT_TYPE( pxEvt_LoadPluginsComplete );
+DEFINE_EVENT_TYPE( pxEvt_PluginStatus );
+DEFINE_EVENT_TYPE( pxEvt_SysExecute );
+DEFINE_EVENT_TYPE( pxEvt_OpenModalDialog );
+DEFINE_EVENT_TYPE( pxEvt_InvokeMethod );
+DEFINE_EVENT_TYPE( pxEvt_LogicalVsync );
 
 #include "Utilities/EventSource.inl"
 EventSource_ImplementType( IniInterface );
@@ -85,72 +88,66 @@ void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 		m_MainFrame->GetEventHandler()->AddPendingEvent( joe );
 }
 
-class pxPingEvent : public wxEvent
+// --------------------------------------------------------------------------------------
+//  pxInvokeMethodEvent
+// --------------------------------------------------------------------------------------
+// Unlike pxPingEvent, the Semaphore belonging to this event is typically posted when the
+// invoked method is completed.  If the method can be executed in non-blocking fashion then
+// it should leave the semaphore postback NULL.
+//
+class pxInvokeMethodEvent : public pxPingEvent
 {
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxPingEvent)
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxInvokeMethodEvent)
 
 protected:
-	Semaphore*	m_PostBack;
+	FnType_AppMethod	m_Method;
 
 public:
-	virtual ~pxPingEvent() throw() { }
-	virtual pxPingEvent *Clone() const { return new pxPingEvent(*this); }
+	virtual ~pxInvokeMethodEvent() throw() { }
+	virtual pxInvokeMethodEvent *Clone() const { return new pxInvokeMethodEvent(*this); }
 
-	explicit pxPingEvent( int msgtype, Semaphore* sema=NULL )
-		: wxEvent( 0, msgtype )
+	explicit pxInvokeMethodEvent( int msgtype, FnType_AppMethod method=NULL, Semaphore* sema=NULL )
+		: pxPingEvent( msgtype, sema )
 	{
-		m_PostBack = sema;
+		m_Method = method;
 	}
 
-	explicit pxPingEvent( Semaphore* sema=NULL )
-		: wxEvent( 0, pxEVT_Ping )
+	explicit pxInvokeMethodEvent( FnType_AppMethod method=NULL, Semaphore* sema=NULL )
+		: pxPingEvent( pxEvt_InvokeMethod, sema )
 	{
-		m_PostBack = sema;
+		m_Method = method;
+	}
+
+	explicit pxInvokeMethodEvent( FnType_AppMethod method, Semaphore& sema )
+		: pxPingEvent( pxEvt_InvokeMethod, &sema )
+	{
+		m_Method = method;
 	}
 	
-	pxPingEvent( const pxPingEvent& src )
-		: wxEvent( src )
+	pxInvokeMethodEvent( const pxInvokeMethodEvent& src )
+		: pxPingEvent( src )
 	{
-		m_PostBack = src.m_PostBack;
+		m_Method = src.m_Method;
+	}
+
+	void Invoke() const
+	{
+		if( m_Method ) (wxGetApp().*m_Method)();
+		if( m_PostBack ) m_PostBack->Post();
 	}
 	
-	Semaphore* GetSemaphore() { return m_PostBack; }
+	void SetMethod( FnType_AppMethod method )
+	{
+		m_Method = method;
+	}
 };
 
-IMPLEMENT_DYNAMIC_CLASS( pxPingEvent, wxEvent )
 
-void Pcsx2App::OnPingEvent( pxPingEvent& evt )
+IMPLEMENT_DYNAMIC_CLASS( pxInvokeMethodEvent, pxPingEvent )
+
+void Pcsx2App::OnInvokeMethod( pxInvokeMethodEvent& evt )
 {
-	m_PingWhenIdle.push_back( evt.GetSemaphore() );
-}
-
-void Pcsx2App::PingDispatch( const char* action )
-{
-	size_t size = m_PingWhenIdle.size();
-	if( size == 0 ) return;
-
-	DbgCon.WriteLn( Color_Gray, "App Event Ping (%s) -> %u listeners.", action, size );
-
-	for( size_t i=0; i<size; ++i )
-	{
-		if( Semaphore* sema = m_PingWhenIdle[i] ) sema->Post();
-	}
-
-	m_PingWhenIdle.clear();
-}
-
-void Pcsx2App::OnIdleEvent( wxIdleEvent& evt )
-{
-	evt.Skip();
-	PingDispatch( "Idle" );
-}
-
-void Pcsx2App::Ping()
-{
-	Semaphore sema;
-	pxPingEvent evt( &sema );
-	AddPendingEvent( evt );
-	sema.WaitNoCancel();
+	evt.Invoke();		// wow this is easy!
 }
 
 #ifdef __WXGTK__
@@ -268,10 +265,7 @@ int Pcsx2App::IssueModalDialog( const wxString& dlgName )
 	if( !wxThread::IsMain() )
 	{
 		MsgboxEventResult result;
-		wxCommandEvent joe( pxEVT_OpenModalDialog );
-		joe.SetString( dlgName );
-		joe.SetClientData( &result );
-		AddPendingEvent( joe );
+		PostCommand( &result, pxEvt_OpenModalDialog, 0, 0, dlgName );
 		result.WaitForMe.WaitNoCancel();
 		return result.result;
 	}
@@ -608,18 +602,53 @@ void AppSaveSettings()
 	wxGetApp().Source_SettingsLoadSave().Dispatch( saver );
 }
 
-void Pcsx2App::OpenGsFrame()
+// This function works something like setjmp/longjmp, in that the return value indicates if the
+// function actually executed the specified method or not.
+//
+// Returns:
+//   FALSE if the method was not posted to the main thread (meaning this IS the main thread!)
+//   TRUE if the method was posted.
+//
+bool Pcsx2App::SelfPostMethod( FnType_AppMethod method )
 {
+	if( wxThread::IsMain() ) return false;
+	
+	Semaphore sem;
+	pxInvokeMethodEvent evt( method, sem );
+	AddPendingEvent( evt );
+	sem.Wait();
+
+	return true;
+}
+
+void Pcsx2App::OpenGsPanel()
+{
+	if( SelfPostMethod( &Pcsx2App::OpenGsPanel ) ) return;
+
 	if( m_gsFrame == NULL )
 	{
 		m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
 		m_gsFrame->SetFocus();
-		pDsp = (uptr)m_gsFrame->GetViewport()->GetHandle();
 	}
+	
+	pxAssumeDev( !GetPluginManager().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
+
 	m_gsFrame->Show();
+	pDsp = (uptr)m_gsFrame->GetViewport()->GetHandle();
 
 	// The "in the main window" quickie hack...
 	//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
+}
+
+void Pcsx2App::CloseGsPanel()
+{
+	if( SelfPostMethod( &Pcsx2App::CloseGsPanel ) ) return;
+
+	if( m_gsFrame != NULL )
+	{
+		if( GSPanel* woot = (GSPanel*)m_gsFrame->FindWindowByName(L"GSPanel") )
+			woot->Destroy();
+	}
 }
 
 void Pcsx2App::OnGsFrameClosed()
@@ -659,10 +688,7 @@ static void _sendmsg_SysExecute()
 	}
 
 	AppSaveSettings();
-
-	wxCommandEvent execevt( pxEVT_SysExecute );
-	execevt.SetInt( _sysexec_cdvdsrc_type );
-	wxGetApp().AddPendingEvent( execevt );
+	wxGetApp().PostCommand( pxEvt_SysExecute, _sysexec_cdvdsrc_type );
 }
 
 static void OnSysExecuteAfterPlugins( const wxCommandEvent& loadevt )
@@ -683,6 +709,8 @@ void Pcsx2App::SysExecute()
 		LoadPluginsPassive( OnSysExecuteAfterPlugins );
 		return;
 	}
+
+	DbgCon.WriteLn( Color_Gray, "(SysExecute) Queuing request to re-execute existing VM state." );
 	_sendmsg_SysExecute();
 }
 
@@ -699,6 +727,8 @@ void Pcsx2App::SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override
 		LoadPluginsPassive( OnSysExecuteAfterPlugins );
 		return;
 	}
+
+	DbgCon.WriteLn( Color_Gray, "(SysExecute) Queuing request for new VM state." );
 	_sendmsg_SysExecute();
 }
 
@@ -718,6 +748,8 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 	// if something unloaded plugins since this messages was queued then it's best to ignore
 	// it, because apparently too much stuff is going on and the emulation states are wonky.
 	if( !m_CorePlugins ) return;
+
+	DbgCon.WriteLn( Color_Gray, "(MainThread) SysExecute received." );
 
 	if( evt.GetInt() != -1 ) CoreThread.Reset(); else CoreThread.Suspend();
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );

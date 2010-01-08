@@ -50,51 +50,73 @@ public:
 
 	virtual ~AppPluginManager() throw()
 	{
-		PluginEventType pevt = PluginsEvt_Unloaded;
-		sApp.Source_CorePluginStatus().Dispatch( pevt );
+		sApp.PostPluginStatus( PluginsEvt_Unloaded );
 	}
 
 	void Init()
 	{
 		SetSettingsFolder( GetSettingsFolder().ToString() );
-
 		_parent::Init();
-
-		PluginEventType pevt = PluginsEvt_Init;
-		sApp.Source_CorePluginStatus().Dispatch( pevt );
+		sApp.PostPluginStatus( PluginsEvt_Init );
 	}
 	
 	void Shutdown()
 	{
 		_parent::Shutdown();
-
-		PluginEventType pevt = PluginsEvt_Shutdown;
-		sApp.Source_CorePluginStatus().Dispatch( pevt );
+		sApp.PostPluginStatus( PluginsEvt_Shutdown );
 	}
 
 	void Close()
 	{
+		if( !NeedsClose() ) return;
+
+		sApp.PostPluginStatus( PluginsEvt_Closing );
 		_parent::Close();
-		
-		PluginEventType pevt = PluginsEvt_Close;
-		sApp.Source_CorePluginStatus().Dispatch( pevt );
+		sApp.PostPluginStatus( PluginsEvt_Closed );
 	}
 	
 	void Open()
 	{
 		SetSettingsFolder( GetSettingsFolder().ToString() );
 
-		_parent::Open();
+		if( !NeedsOpen() ) return;
 
-		PluginEventType pevt = PluginsEvt_Open;
-		sApp.Source_CorePluginStatus().Dispatch( pevt );
+		sApp.PostPluginStatus( PluginsEvt_Opening );
+		_parent::Open();
+		sApp.PostPluginStatus( PluginsEvt_Opened );
 	}
+
+	bool OpenPlugin_GS()
+	{
+		if( GSopen2 != NULL )
+		{
+			sApp.OpenGsPanel();
+		}
+
+		return _parent::OpenPlugin_GS();
+	}
+
+	void ClosePlugin_GS()
+	{
+		_parent::ClosePlugin_GS();
+		sApp.CloseGsPanel();
+	}
+
+
+	/*void Open( PluginsEnum_t pid )
+	{
+		_parent::Open( pid );
+	}
+	
+	void Close( PluginsEnum_t pid )
+	{
+	}*/
 };
 
 // --------------------------------------------------------------------------------------
 //  LoadPluginsTask
 // --------------------------------------------------------------------------------------
-// On completion the thread sends a pxEVT_LoadPluginsComplete message, which contains a
+// On completion the thread sends a pxEvt_LoadPluginsComplete message, which contains a
 // handle to this thread object.  If the load is successful, the Result var is set to
 // non-NULL.  If NULL, an error occurred and the thread loads the exception into either
 // Ex_PluginError or Ex_RuntimeError.
@@ -140,10 +162,7 @@ void LoadPluginsTask::ExecuteTaskInThread()
 
 void LoadPluginsTask::OnCleanupInThread()
 {
-	wxCommandEvent evt( pxEVT_LoadPluginsComplete );
-	evt.SetClientData( this );
-	wxGetApp().AddPendingEvent( evt );
-
+	wxGetApp().PostCommand( this, pxEvt_LoadPluginsComplete );
 	_parent::OnCleanupInThread();
 }
 
@@ -225,8 +244,10 @@ void ConvertPluginFilenames( wxString (&passins)[PluginId_Count] )
 // boolean lock modified from the main thread only...
 static bool plugin_load_lock = false;
 
-void Pcsx2App::OnReloadPlugins( wxCommandEvent& evt )
+void Pcsx2App::ReloadPlugins()
 {
+	if( SelfPostMethod( &Pcsx2App::ReloadPlugins ) ) return;
+
 	if( plugin_load_lock ) return;
 	CoreThread.Cancel();
 	m_CorePlugins	= NULL;
@@ -268,9 +289,24 @@ void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 	
 	if( fn_tmp != NULL ) fn_tmp( evt );
 
-	PluginEventType pevt = PluginsEvt_Loaded;
-	sApp.Source_CorePluginStatus().Dispatch( pevt );
-	Source_CorePluginStatus().Dispatch( pevt );
+	PostPluginStatus( PluginsEvt_Loaded );
+}
+
+void Pcsx2App::PostPluginStatus( PluginEventType pevt )
+{
+	if( !wxThread::IsMain() )
+	{
+		PostCommand( pxEvt_PluginStatus, pevt );
+	}
+	else
+	{
+		sApp.Source_CorePluginStatus().Dispatch( pevt );
+	}
+}
+
+void Pcsx2App::OnPluginStatus( wxCommandEvent& evt )
+{
+	PostPluginStatus( (PluginEventType)evt.GetInt() );
 }
 
 // Posts a message to the App to reload plugins.  Plugins are loaded via a background thread
@@ -282,15 +318,14 @@ void LoadPluginsPassive( FnType_OnThreadComplete* onComplete )
 	// Plugins already loaded?
 	if( wxGetApp().m_CorePlugins )
 	{
-		if( onComplete ) onComplete( wxCommandEvent( pxEVT_LoadPluginsComplete ) );
+		if( onComplete ) onComplete( wxCommandEvent( pxEvt_LoadPluginsComplete ) );
 		return;
 	}
 
 	if( onComplete )
 		Callback_PluginsLoadComplete = onComplete;
 
-	wxCommandEvent evt( pxEVT_ReloadPlugins );
-	wxGetApp().AddPendingEvent( evt );
+	wxGetApp().ReloadPlugins();
 }
 
 // Performs a blocking load of plugins.  If the emulation thread is active, it is shut down

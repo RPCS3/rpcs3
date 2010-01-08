@@ -78,7 +78,7 @@ IniLoader::IniLoader( wxConfigBase& config ) : IniInterface( config )
 }
 
 IniLoader::IniLoader() : IniInterface() {}
-IniLoader::~IniLoader() {}
+IniLoader::~IniLoader() throw() {}
 
 
 void IniLoader::Entry( const wxString& var, wxString& value, const wxString& defvalue )

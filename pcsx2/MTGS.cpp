@@ -998,6 +998,7 @@ void SysMtgsThread::WaitForOpen()
 
 void SysMtgsThread::Freeze( int mode, MTGS_FreezeData& data )
 {
+	GetPluginManager().Open( PluginId_GS );
 	SendPointerPacket( GS_RINGTYPE_FREEZE, mode, &data );
 	Resume();
 	WaitGS();

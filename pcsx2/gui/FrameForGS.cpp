@@ -47,7 +47,7 @@ void GSPanel::InitDefaultAccelerators()
 
 GSPanel::GSPanel( wxWindow* parent )
 	: wxWindow()
-	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>	( this, OnSettingsApplied ) )
+	, m_Listener_SettingsApplied	( wxGetApp().Source_SettingsApplied(),	EventListener<int>				( this, OnSettingsApplied ) )
 	, m_HideMouseTimer( this )
 {
 	m_CursorShown	= true;
@@ -66,29 +66,29 @@ GSPanel::GSPanel( wxWindow* parent )
 		m_CursorShown = false;
 	}
 
-	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler	(GSPanel::OnCloseWindow) );
-	Connect( wxEVT_SIZE,			wxSizeEventHandler	(GSPanel::OnResize) );
-	Connect( wxEVT_KEY_DOWN,		wxKeyEventHandler	(GSPanel::OnKeyDown) );
+	Connect(wxEVT_CLOSE_WINDOW,		wxCloseEventHandler	(GSPanel::OnCloseWindow));
+	Connect(wxEVT_SIZE,				wxSizeEventHandler	(GSPanel::OnResize));
+	Connect(wxEVT_KEY_DOWN,			wxKeyEventHandler	(GSPanel::OnKeyDown));
 
-	Connect( wxEVT_SET_FOCUS,		wxFocusEventHandler(GSPanel::OnFocus) );
-	Connect( wxEVT_KILL_FOCUS,		wxFocusEventHandler(GSPanel::OnFocusLost) );
+	Connect(wxEVT_SET_FOCUS,		wxFocusEventHandler	(GSPanel::OnFocus));
+	Connect(wxEVT_KILL_FOCUS,		wxFocusEventHandler	(GSPanel::OnFocusLost));
 
-	Connect(wxEVT_MIDDLE_DOWN,		wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_MIDDLE_UP,		wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_RIGHT_DOWN,		wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_RIGHT_UP,			wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_MOTION,			wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_LEFT_DCLICK,		wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_MIDDLE_DCLICK,	wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_RIGHT_DCLICK,		wxMouseEventHandler(GSPanel::OnShowMouse) );
-	Connect(wxEVT_MOUSEWHEEL,		wxMouseEventHandler(GSPanel::OnShowMouse) );
+	Connect(wxEVT_MIDDLE_DOWN,		wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_MIDDLE_UP,		wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_RIGHT_DOWN,		wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_RIGHT_UP,			wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_MOTION,			wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_LEFT_DCLICK,		wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_MIDDLE_DCLICK,	wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_RIGHT_DCLICK,		wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_MOUSEWHEEL,		wxMouseEventHandler	(GSPanel::OnShowMouse));
 
 	Connect(m_HideMouseTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(GSPanel::OnHideMouseTimeout) );
 }
 
 GSPanel::~GSPanel() throw()
 {
-	CoreThread.Suspend();		// Just in case...!
+	CoreThread.Suspend( false );		// Just in case...!
 }
 
 void GSPanel::DoShowMouse()
@@ -246,9 +246,10 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	label->SetName(L"OutputDisabledLabel");
 	label->SetFont( *new wxFont( 20, wxDEFAULT, wxNORMAL, wxBOLD ) );
 	label->SetForegroundColour( *wxWHITE );
-	label->Show( !EmuConfig.GS.DisableOutput );
+	label->Show( EmuConfig.GS.DisableOutput );
 
-	m_gspanel = new GSPanel( this );
+	m_gspanel = new GSPanel( this );		// TODO : give this an id instead of using FindByName
+	m_gspanel->Show( !EmuConfig.GS.DisableOutput );
 
 	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(GSFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler		(GSFrame::OnMove) );
@@ -258,6 +259,24 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 
 GSFrame::~GSFrame() throw()
 {
+}
+
+// overrides base Show behavior.
+bool GSFrame::Show( bool shown )
+{
+	if( shown )
+	{
+		if( FindWindowByName(L"GSPanel") == NULL )
+		{
+			m_gspanel = new GSPanel( this );
+			m_gspanel->Show( !EmuConfig.GS.DisableOutput );
+		}
+
+		m_gspanel->DoResize();
+		m_gspanel->SetFocus();
+	}
+
+	return _parent::Show( shown );
 }
 
 void __evt_fastcall GSFrame::OnSettingsApplied( void* obj, int& evt )
@@ -280,7 +299,7 @@ void GSFrame::DoSettingsApplied()
 
 wxWindow* GSFrame::GetViewport()
 {
-	return m_gspanel;
+	return FindWindowByName(L"GSPanel");
 }
 
 void GSFrame::OnActivate( wxActivateEvent& evt )
