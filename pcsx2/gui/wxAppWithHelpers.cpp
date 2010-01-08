@@ -121,11 +121,8 @@ bool wxAppWithHelpers::OnInit()
 	Connect( pxEvt_MessageBox,		pxMessageBoxEventThing	(wxAppWithHelpers::OnMessageBox) );
 	Connect( pxEvt_Assertion,		pxMessageBoxEventThing	(wxAppWithHelpers::OnMessageBox) );
 	Connect( pxEvt_Ping,			pxPingEventHandler		(wxAppWithHelpers::OnPingEvent) );
-#ifdef __LINUX__
 	Connect( wxEVT_IDLE,			wxIdleEventHandler		(wxAppWithHelpers::OnIdleEvent) );
-#else
-	Connect( wxEvt_Idle,			wxIdleEventHandler		(wxAppWithHelpers::OnIdleEvent) );
-#endif
+
 	Connect( m_PingTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(wxAppWithHelpers::OnPingTimeout) );
 
 	return _parent::OnInit();

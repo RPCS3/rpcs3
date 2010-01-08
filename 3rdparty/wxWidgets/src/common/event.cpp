@@ -157,7 +157,7 @@ const wxEventType wxEVT_FIRST = 10000;
 const wxEventType wxEVT_USER_FIRST = wxEVT_FIRST + 2000;
 
 DEFINE_EVENT_TYPE(wxEVT_NULL)
-DEFINE_EVENT_TYPE(wxEvt_Idle)
+DEFINE_EVENT_TYPE(wxEVT_IDLE)
 DEFINE_EVENT_TYPE(wxEVT_SOCKET)
 
 #endif // !WXWIN_COMPATIBILITY_EVENT_TYPES
@@ -1248,10 +1248,10 @@ bool wxEvtHandler::TryParent(wxEvent& event)
 {
     if ( wxTheApp && (this != wxTheApp) )
     {
-        // Special case: don't pass wxEvt_Idle to wxApp, since it'll always
-        // swallow it. wxEvt_Idle is sent explicitly to wxApp so it will be
+        // Special case: don't pass wxEVT_IDLE to wxApp, since it'll always
+        // swallow it. wxEVT_IDLE is sent explicitly to wxApp so it will be
         // processed appropriately via SearchEventTable.
-        if ( event.GetEventType() != wxEvt_Idle )
+        if ( event.GetEventType() != wxEVT_IDLE )
         {
             if ( wxTheApp->ProcessEvent(event) )
                 return true;

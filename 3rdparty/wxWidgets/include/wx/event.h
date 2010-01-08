@@ -260,7 +260,7 @@ BEGIN_DECLARE_EVENT_TYPES()
     DECLARE_EVENT_TYPE(wxEVT_MEASURE_ITEM, 436)
     DECLARE_EVENT_TYPE(wxEVT_COMPARE_ITEM, 437)
     DECLARE_EVENT_TYPE(wxEVT_INIT_DIALOG, 438)
-    DECLARE_EXPORTED_EVENT_TYPE(WXDLLIMPEXP_BASE, wxEvt_Idle, 439)
+    DECLARE_EXPORTED_EVENT_TYPE(WXDLLIMPEXP_BASE, wxEVT_IDLE, 439)
     DECLARE_EVENT_TYPE(wxEVT_UPDATE_UI, 440)
     DECLARE_EVENT_TYPE(wxEVT_SIZING, 441)
     DECLARE_EVENT_TYPE(wxEVT_MOVING, 442)
@@ -2127,7 +2127,7 @@ private:
 
 // Idle event
 /*
- wxEvt_Idle
+ wxEVT_IDLE
  */
 
 // Whether to always send idle events to windows, or
@@ -2148,7 +2148,7 @@ class WXDLLIMPEXP_CORE wxIdleEvent : public wxEvent
 {
 public:
     wxIdleEvent()
-        : wxEvent(0, wxEvt_Idle),
+        : wxEvent(0, wxEVT_IDLE),
           m_requestMore(false)
         { }
     wxIdleEvent(const wxIdleEvent & event)
@@ -3069,7 +3069,7 @@ typedef void (wxEvtHandler::*wxClipboardTextEventFunction)(wxClipboardTextEvent&
     EVT_JOY_ZMOVE(func)
 
 // Idle event
-#define EVT_IDLE(func) wx__DECLARE_EVT0(wxEvt_Idle, wxIdleEventHandler(func))
+#define EVT_IDLE(func) wx__DECLARE_EVT0(wxEVT_IDLE, wxIdleEventHandler(func))
 
 // Update UI event
 #define EVT_UPDATE_UI(winid, func) wx__DECLARE_EVT1(wxEVT_UPDATE_UI, winid, wxUpdateUIEventHandler(func))
