@@ -45,9 +45,9 @@ DEFINE_EVENT_TYPE( pxEvt_InvokeMethod );
 DEFINE_EVENT_TYPE( pxEvt_LogicalVsync );
 
 #include "Utilities/EventSource.inl"
-EventSource_ImplementType( IniInterface );
-EventSource_ImplementType( AppEventType );
-EventSource_ImplementType( PluginEventType );
+template class EventSource< IniInterface >;
+template class EventSource< AppEventType >;
+template class EventSource< PluginEventType >;
 
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
@@ -202,7 +202,7 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 // times a second if not (ok, not quite, but you get the idea... I hope.)
 void Pcsx2App::LogicalVsync()
 {
-	if( !SelfMethodPost( &Pcsx2App::LogicalVsync ) ) return;
+	if( SelfMethodPost( &Pcsx2App::LogicalVsync ) ) return;
 
 	if( !SysHasValidState() || g_plugins == NULL ) return;
 

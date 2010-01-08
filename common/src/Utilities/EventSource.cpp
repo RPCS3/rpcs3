@@ -19,5 +19,5 @@
 
 #include <wx/event.h>
 
-EventSource_ImplementType( wxCommandEvent );
-EventSource_ImplementType( int );
+template class EventSource< wxCommandEvent >;
+template class EventSource< int >;

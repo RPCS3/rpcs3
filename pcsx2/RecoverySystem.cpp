@@ -86,8 +86,8 @@ public:
 	}
 
 protected:
-	_BaseStateThread( const char* name, FnType_OnThreadComplete* onFinished ) :
-		m_bind_OnExit( wxGetApp().Source_AppStatus(), EventListener<AppEventType>( this, StateThread_OnAppStatus ) )
+	_BaseStateThread( const char* name, FnType_OnThreadComplete* onFinished )
+		: m_bind_OnExit( wxGetApp().Source_AppStatus(), EventListener<AppEventType>( this, StateThread_OnAppStatus ) )
 	{
 		Callback_FreezeFinished = onFinished;
 		m_name					= L"StateThread::" + fromUTF8(name);
@@ -366,7 +366,7 @@ void StateCopy_LoadFromSlot( uint slot )
 
 bool StateCopy_IsValid()
 {
-return !state_buffer.IsDisposed();
+	return !state_buffer.IsDisposed();
 }
 
 const SafeArray<u8>* StateCopy_GetBuffer()

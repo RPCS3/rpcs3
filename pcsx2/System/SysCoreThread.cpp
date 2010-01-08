@@ -250,7 +250,7 @@ void SysCoreThread::_reset_stuff_as_needed()
 	}
 
 	if( m_resetVsyncTimers )
-{
+	{
 		UpdateVSyncRate();
 		frameLimitReset();
 		m_resetVsyncTimers = false;

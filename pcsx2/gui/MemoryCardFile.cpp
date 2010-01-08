@@ -30,7 +30,7 @@ struct Component_FileMcd;
 #	include "svnrev.h"
 #endif
 
-#include <wx/file.h>
+#include <wx/ffile.h>
 
 static const int MCD_SIZE = 1024 *  8  * 16;
 static const int MC2_SIZE = 1024 * 528 * 16;
@@ -43,13 +43,13 @@ static const int MC2_SIZE = 1024 * 528 * 16;
 class FileMemoryCard
 {
 protected:
-	wxFile			m_file[2][4];
+	wxFFile			m_file[2][4];
 	u8				m_effeffs[528*16];
 	SafeArray<u8>	m_currentdata;
 
 public:
 	FileMemoryCard();
-	virtual ~FileMemoryCard() {}
+	virtual ~FileMemoryCard() throw() {}
 
 	void Lock();
 	void Unlock();
@@ -61,7 +61,7 @@ public:
 	u64 GetCRC( uint port, uint slot );
 
 protected:
-	bool Seek( wxFile& f, u32 adr );
+	bool Seek( wxFFile& f, u32 adr );
 	bool Create( const wxString& mcdFile );
 
 	wxString GetDisabledMessage( uint port, uint slot ) const
@@ -104,7 +104,7 @@ FileMemoryCard::FileMemoryCard()
 
 			NTFS_CompressFile( str, g_Conf->McdEnableNTFS );
 
-			if( !m_file[port][slot].Open( str.c_str(), wxFile::read_write ) )
+			if( !m_file[port][slot].Open( str.c_str(), L"r+b" ) )
 			{
 				// Translation note: detailed description should mention that the memory card will be disabled
 				// for the duration of this session.
@@ -118,7 +118,7 @@ FileMemoryCard::FileMemoryCard()
 }
 
 // Returns FALSE if the seek failed (is outside the bounds of the file).
-bool FileMemoryCard::Seek( wxFile& f, u32 adr )
+bool FileMemoryCard::Seek( wxFFile& f, u32 adr )
 {
 	const u32 size = f.Length();
 
@@ -137,7 +137,7 @@ bool FileMemoryCard::Seek( wxFile& f, u32 adr )
 		// perform sanity checks here?
 	}
 
-	return wxInvalidOffset != f.Seek( adr + offset );
+	return f.Seek( adr + offset );
 }
 
 // returns FALSE if an error occurred (either permission denied or disk full)
@@ -145,7 +145,7 @@ bool FileMemoryCard::Create( const wxString& mcdFile )
 {
 	//int enc[16] = {0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0,0,0,0};
 
-	wxFile fp( mcdFile, wxFile::write );
+	wxFFile fp( mcdFile, L"wb" );
 	if( !fp.IsOpened() ) return false;
 
 	for( uint i=0; i<MC2_SIZE/sizeof(m_effeffs); i++ )
@@ -163,7 +163,7 @@ s32 FileMemoryCard::IsPresent( uint port, uint slot )
 
 s32 FileMemoryCard::Read( uint port, uint slot, u8 *dest, u32 adr, int size )
 {
-	wxFile& mcfp( m_file[port][slot] );
+	wxFFile& mcfp( m_file[port][slot] );
 	if( !mcfp.IsOpened() )
 	{
 		DevCon.Error( "MemoryCard: Ignoring attempted read from disabled card." );
@@ -176,7 +176,7 @@ s32 FileMemoryCard::Read( uint port, uint slot, u8 *dest, u32 adr, int size )
 
 s32 FileMemoryCard::Save( uint port, uint slot, const u8 *src, u32 adr, int size )
 {
-	wxFile& mcfp( m_file[port][slot] );
+	wxFFile& mcfp( m_file[port][slot] );
 
 	if( !mcfp.IsOpened() )
 	{
@@ -201,7 +201,7 @@ s32 FileMemoryCard::Save( uint port, uint slot, const u8 *src, u32 adr, int size
 
 s32 FileMemoryCard::EraseBlock( uint port, uint slot, u32 adr )
 {
-	wxFile& mcfp( m_file[port][slot] );
+	wxFFile& mcfp( m_file[port][slot] );
 
 	if( !mcfp.IsOpened() )
 	{
@@ -215,7 +215,7 @@ s32 FileMemoryCard::EraseBlock( uint port, uint slot, u32 adr )
 
 u64 FileMemoryCard::GetCRC( uint port, uint slot )
 {
-	wxFile& mcfp( m_file[port][slot] );
+	wxFFile& mcfp( m_file[port][slot] );
 	if( !mcfp.IsOpened() ) return 0;
 
 	if( !Seek( mcfp, 0 ) ) return 0;
@@ -272,6 +272,8 @@ static u64 PS2E_CALLBACK FileMcd_GetCRC( PS2E_THISPTR thisptr, uint port, uint s
 
 Component_FileMcd::Component_FileMcd()
 {
+	memzero( api );
+
 	api.McdIsPresent	= FileMcd_IsPresent;
 	api.McdRead			= FileMcd_Read;
 	api.McdSave			= FileMcd_Save;

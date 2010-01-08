@@ -16,6 +16,7 @@
 #pragma once
 
 #include <list>
+#include "Threading.h"
 
 class wxCommandEvent;
 
@@ -85,6 +86,8 @@ protected:
 	// Translation: The dispatcher uses this copy instead, to avoid iterator invalidation.
 	ListenerList	m_cache_copy;
 	bool			m_cache_valid;
+	
+	Threading::Mutex m_listeners_lock;
 
 public:
 	EventSource() : m_cache_valid( false )
@@ -93,34 +96,12 @@ public:
 
 	virtual ~EventSource() throw() {}
 
-	virtual void Remove( const ListenerType& listener )
-	{
-		m_cache_valid = false;
-		m_listeners.remove( listener );
-	}
+	virtual void Remove( const ListenerType& listener );
+	virtual void Remove( const Handle& listenerHandle );
 
-	virtual void Remove( const Handle& listenerHandle )
-	{
-		m_cache_valid = false;
-		m_listeners.erase( listenerHandle );
-	}
-
-	virtual Handle AddFast( const ListenerType& listener )
-	{
-		m_cache_valid = false;
-		m_listeners.push_front( listener );
-		return m_listeners.begin();
-	}
-
-	void Add( void* objhandle, typename ListenerType::FuncType* fnptr )
-	{
-		Add( ListenerType( objhandle, fnptr ) );
-	}
-
-	void Remove( void* objhandle, typename ListenerType::FuncType* fnptr )
-	{
-		Remove( ListenerType( objhandle, fnptr ) );
-	}
+	Handle AddFast( const ListenerType& listener );
+	void Add( void* objhandle, typename ListenerType::FuncType* fnptr );
+	void Remove( void* objhandle, typename ListenerType::FuncType* fnptr );
 
 	// Checks for duplicates before adding the event.
 	virtual void Add( const ListenerType& listener );
@@ -128,6 +109,7 @@ public:
 	void Dispatch( EvtType& evt );
 
 protected:
+	virtual Handle _AddFast_without_lock( const ListenerType& listener );
 	inline void _DispatchRaw( ConstIterator iter, const ConstIterator& iend, EvtType& evt );
 };
 
@@ -150,10 +132,10 @@ protected:
 	bool						m_attached;
 
 public:
-	EventListenerBinding( EventSource<EvtType>& source, const ListenerHandle& listener, bool autoAttach=true ) :
-		m_source( source )
-	,	m_listener( listener )
-	,	m_attached( false )
+	EventListenerBinding( EventSource<EvtType>& source, const ListenerHandle& listener, bool autoAttach=true )
+		: m_source( source )
+		, m_listener( listener )
+		, m_attached( false )
 	{
 		// If you want to assert on null pointers, you'll need to do the check yourself.  There's
 		// too many cases where silently ignoring null pointers is the desired behavior.
@@ -185,8 +167,4 @@ typedef EventSource<wxCommandEvent>				CmdEvt_Source;
 typedef EventListener<wxCommandEvent>			CmdEvt_Listener;
 typedef EventListenerBinding<wxCommandEvent>	CmdEvt_ListenerBinding;
 
-#define EventSource_ImplementType( tname ) \
-	template void EventSource<tname>::Add(const EventSource<tname>::ListenerType &listener); \
-	template void EventSource<tname>::RemoveObject(const void* object); \
-	template void EventSource<tname>::Dispatch(tname& evt); \
-	template void EventSource<tname>::_DispatchRaw( EventSource<tname>::ConstIterator iter, const EventSource<tname>::ConstIterator& iend, tname& evt );
+#define EventSource_ImplementType( tname )	template class EventSource<tname>

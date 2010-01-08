@@ -22,7 +22,7 @@
 #include "System/PageFaultSource.h"
 #include "Utilities/EventSource.inl"
 
-EventSource_ImplementType( PageFaultInfo );
+template class EventSource< PageFaultInfo >;
 
 SrcType_PageFault Source_PageFault;
 

@@ -322,11 +322,11 @@ protected:
 	EventSource<AppEventType>	m_evtsrc_AppStatus;
 
 public:
-	CmdEvt_Source& Source_CoreThreadStatus()				{ AffinityAssert_AllowFromMain(); return m_evtsrc_CoreThreadStatus; }
-	EventSource<int>& Source_SettingsApplied()				{ AffinityAssert_AllowFromMain(); return m_evtsrc_SettingsApplied; }
-	EventSource<AppEventType>& Source_AppStatus()			{ AffinityAssert_AllowFromMain(); return m_evtsrc_AppStatus; }
-	EventSource<PluginEventType>& Source_CorePluginStatus()	{ AffinityAssert_AllowFromMain(); return m_evtsrc_CorePluginStatus; }
-	EventSource<IniInterface>& Source_SettingsLoadSave()	{ AffinityAssert_AllowFromMain(); return m_evtsrc_SettingsLoadSave; }
+	CmdEvt_Source& Source_CoreThreadStatus()				{ return m_evtsrc_CoreThreadStatus; }
+	EventSource<int>& Source_SettingsApplied()				{ return m_evtsrc_SettingsApplied; }
+	EventSource<AppEventType>& Source_AppStatus()			{ return m_evtsrc_AppStatus; }
+	EventSource<PluginEventType>& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
+	EventSource<IniInterface>& Source_SettingsLoadSave()	{ return m_evtsrc_SettingsLoadSave; }
 	// ----------------------------------------------------------------------------
 	
 public:

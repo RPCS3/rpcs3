@@ -237,6 +237,9 @@ protected:
 	wxString	m_Stacktrace;
 
 public:
+	virtual ~pxAssertionEvent() throw() { }
+	virtual pxAssertionEvent *Clone() const { return new pxAssertionEvent(*this); }
+
 	pxAssertionEvent();
 	pxAssertionEvent( MsgboxEventResult& instdata, const wxString& content, const wxString& trace );
 	pxAssertionEvent( const wxString& content, const wxString& trace );
@@ -244,7 +247,6 @@ public:
 
 	pxAssertionEvent& SetInstData( MsgboxEventResult& instdata );
 	pxAssertionEvent& SetStacktrace( const wxString& trace );
-	~pxAssertionEvent() throw() { }
 
 protected:
 	virtual int _DoDialog() const;
