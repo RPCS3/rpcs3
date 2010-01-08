@@ -365,6 +365,7 @@ public:
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
 	void SysReset();
 	void ReloadPlugins();
+	void LogicalVsync();
 
 	GSFrame&		GetGSFrame() const;
 	GSFrame*		GetGSFramePtr() const	{ return m_gsFrame; }
@@ -421,7 +422,8 @@ public:
 	void OnProgramLogClosed();
 
 protected:
-	bool SelfPostMethod( FnType_AppMethod method );
+	bool SelfMethodInvoke( FnType_AppMethod method );
+	bool SelfMethodPost( FnType_AppMethod method );
 
 	void InitDefaultGlobalAccelerators();
 	void BuildCommandHash();
@@ -442,7 +444,6 @@ protected:
 	void OnFreezeThreadFinished( wxCommandEvent& evt );
 
 	void OnEmuKeyDown( wxKeyEvent& evt );
-	void OnLogicalVsync( wxCommandEvent& evt );
 
 	void OnInvokeMethod( pxInvokeMethodEvent& evt );
 

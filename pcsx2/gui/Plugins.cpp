@@ -246,7 +246,7 @@ static bool plugin_load_lock = false;
 
 void Pcsx2App::ReloadPlugins()
 {
-	if( SelfPostMethod( &Pcsx2App::ReloadPlugins ) ) return;
+	if( SelfMethodInvoke( &Pcsx2App::ReloadPlugins ) ) return;
 
 	if( plugin_load_lock ) return;
 	CoreThread.Cancel();

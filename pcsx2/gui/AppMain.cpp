@@ -200,8 +200,10 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 // OnLogicalVsync - Event received from the AppCoreThread (EEcore) for each vsync,
 // roughly 50/60 times a second when frame limiting is enabled, and up to 10,000 
 // times a second if not (ok, not quite, but you get the idea... I hope.)
-void Pcsx2App::OnLogicalVsync( wxCommandEvent& evt )
+void Pcsx2App::LogicalVsync()
 {
+	if( !SelfMethodPost( &Pcsx2App::LogicalVsync ) ) return;
+
 	if( !SysHasValidState() || g_plugins == NULL ) return;
 
 	// Only call PADupdate here if we're using GSopen2.  Legacy GSopen plugins have the
@@ -609,10 +611,10 @@ void AppSaveSettings()
 //   FALSE if the method was not posted to the main thread (meaning this IS the main thread!)
 //   TRUE if the method was posted.
 //
-bool Pcsx2App::SelfPostMethod( FnType_AppMethod method )
+bool Pcsx2App::SelfMethodInvoke( FnType_AppMethod method )
 {
 	if( wxThread::IsMain() ) return false;
-	
+
 	Semaphore sem;
 	pxInvokeMethodEvent evt( method, sem );
 	AddPendingEvent( evt );
@@ -621,9 +623,17 @@ bool Pcsx2App::SelfPostMethod( FnType_AppMethod method )
 	return true;
 }
 
+bool Pcsx2App::SelfMethodPost( FnType_AppMethod method )
+{
+	if( wxThread::IsMain() ) return false;
+	pxInvokeMethodEvent evt( method );
+	AddPendingEvent( evt );
+	return true;
+}
+
 void Pcsx2App::OpenGsPanel()
 {
-	if( SelfPostMethod( &Pcsx2App::OpenGsPanel ) ) return;
+	if( SelfMethodInvoke( &Pcsx2App::OpenGsPanel ) ) return;
 
 	if( m_gsFrame == NULL )
 	{
@@ -642,7 +652,7 @@ void Pcsx2App::OpenGsPanel()
 
 void Pcsx2App::CloseGsPanel()
 {
-	if( SelfPostMethod( &Pcsx2App::CloseGsPanel ) ) return;
+	if( SelfMethodInvoke( &Pcsx2App::CloseGsPanel ) ) return;
 
 	if( m_gsFrame != NULL )
 	{

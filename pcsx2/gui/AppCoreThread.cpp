@@ -153,7 +153,7 @@ void AppCoreThread::OnCleanupInThread()
 
 void AppCoreThread::PostVsyncToUI()
 {
-	wxGetApp().PostCommand( pxEvt_LogicalVsync );
+	wxGetApp().LogicalVsync();
 }
 
 void AppCoreThread::StateCheckInThread()
