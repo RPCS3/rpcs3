@@ -78,7 +78,7 @@ MEMCPY_AMD.CPP
 extern "C" {
 #include "PS2Etypes.h"
 
-#if defined(_MSC_VER) && !defined(__x86_64__)
+#if defined(_MSC_VER)
 
 void * memcpy_amd(void *dest, const void *src, size_t n)
 {
@@ -461,7 +461,7 @@ End:
 }
 
 #else // _MSC_VER
-// assume gcc or mingw or win x64
+// assume gcc
 
 #include <memory.h>
 #include <string.h>

@@ -244,9 +244,11 @@ public:
 
 	pxAssertionEvent& SetInstData( MsgboxEventResult& instdata );
 	pxAssertionEvent& SetStacktrace( const wxString& trace );
+	~pxAssertionEvent() throw() { }
 
 protected:
 	virtual int _DoDialog() const;
+	
 };
 
 // --------------------------------------------------------------------------------------

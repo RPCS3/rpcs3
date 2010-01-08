@@ -23,11 +23,7 @@
 typedef void (__fastcall *GIFRegHandler)(u32* data);
 #else
 
-#ifdef __x86_64__
-typedef void (*GIFRegHandler)(u32* data);
-#else
 typedef void (__fastcall *GIFRegHandler)(u32* data);
-#endif
 
 #endif
 

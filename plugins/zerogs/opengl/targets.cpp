@@ -1602,10 +1602,6 @@ inline list<CMemoryTarget>::iterator ZeroGS::CMemoryTargetMngr::DestroyTargetIte
 	return it;
 }
 
-#if defined(_MSC_VER) && defined(__x86_64__)
-extern "C" void UnswizzleZ16Target(void* dst, void* src, int iters);
-#endif
-
 ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info& tex0, int forcevalidate)
 {
 	int nbStart, nbEnd;
@@ -1915,9 +1911,6 @@ ZeroGS::CMemoryTarget* ZeroGS::CMemoryTargetMngr::GetMemoryTarget(const tex0Info
 
 #if defined(_MSC_VER) 
 			
-#if defined(__x86_64__)
-			UnswizzleZ16Target(dst, src, iters);
-#else
 			__asm {
 				mov edx, iters
 				pxor xmm7, xmm7
@@ -1966,7 +1959,6 @@ Z16Loop:
 				sub edx, 1
 				jne Z16Loop
 			}
-#endif // __x86_64__
 #else // _MSC_VER
 
 			__asm__(".intel_syntax\n"

@@ -359,11 +359,8 @@ static __forceinline void writePixel32_0(void* pmem, int x, int y, u32 pixel, u3
 static __forceinline void writePixel24_0(void* pmem, int x, int y, u32 pixel, u32 bw) {
 	u8 *buf = (u8*)&((u32*)pmem)[getPixelAddress32_0(x, y, bw)];
 	u8 *pix = (u8*)&pixel;
-#if defined(_MSC_VER) && defined(__x86_64__)
-	memcpy(buf, pix, 3);
-#else
+
 	buf[0] = pix[0]; buf[1] = pix[1]; buf[2] = pix[2];
-#endif
 }
 
 static __forceinline void writePixel16_0(void* pmem, int x, int y, u32 pixel, u32 bw) {
@@ -406,11 +403,7 @@ static __forceinline void writePixel32Z_0(void* pmem, int x, int y, u32 pixel, u
 static __forceinline void writePixel24Z_0(void* pmem, int x, int y, u32 pixel, u32 bw) {
 	u8 *buf = (u8*)pmem + 4*getPixelAddress32Z_0(x, y, bw);
 	u8 *pix = (u8*)&pixel;
-#if defined(_MSC_VER) && defined(__x86_64__)
-	memcpy(buf, pix, 3);
-#else
 	buf[0] = pix[0]; buf[1] = pix[1]; buf[2] = pix[2];
-#endif
 }
 
 static __forceinline void writePixel16Z_0(void* pmem, int x, int y, u32 pixel, u32 bw) {

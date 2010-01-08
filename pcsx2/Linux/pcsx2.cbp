@@ -366,9 +366,9 @@
 		<Unit filename="../gui/IniInterface.h" />
 		<Unit filename="../gui/IsoDropTarget.cpp" />
 		<Unit filename="../gui/IsoDropTarget.h" />
-    <Unit filename="../gui/MSWstuff.cpp" />
-    <Unit filename="../gui/MSWstuff.h" />
-    <Unit filename="../gui/MainFrame.cpp" />
+		<Unit filename="../gui/MSWstuff.cpp" />
+		<Unit filename="../gui/MSWstuff.h" />
+		<Unit filename="../gui/MainFrame.cpp" />
 		<Unit filename="../gui/MainFrame.h" />
 		<Unit filename="../gui/MainMenuClicks.cpp" />
 		<Unit filename="../gui/MemoryCardFile.cpp" />
@@ -379,8 +379,8 @@
 		<Unit filename="../gui/Panels/ConfigurationPanels.h" />
 		<Unit filename="../gui/Panels/CpuPanel.cpp" />
 		<Unit filename="../gui/Panels/DirPickerPanel.cpp" />
-		<Unit filename="../gui/Panels/GameFixesPanel.cpp" />
 		<Unit filename="../gui/Panels/GSWindowPanel.cpp" />
+		<Unit filename="../gui/Panels/GameFixesPanel.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.h" />
 		<Unit filename="../gui/Panels/MiscPanelStuff.cpp" />
@@ -468,6 +468,8 @@
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
 		<Unit filename="../gui/pxLogTextCtrl.cpp" />
+		<Unit filename="../gui/wxAppWithHelpers.cpp" />
+		<Unit filename="../gui/wxAppWithHelpers.h" />
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
 		<Unit filename="../ps2/GIFpath.cpp" />
@@ -478,6 +480,9 @@
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />
 		<Unit filename="../x86/BaseblockEx.h" />
+		<Unit filename="../x86/VifUnpackSSE.cpp" />
+		<Unit filename="../x86/VifUnpackSSE.h" />
+		<Unit filename="../x86/VifUnpackSSE_Dynarec.cpp" />
 		<Unit filename="../x86/aVUzerorec.S" />
 		<Unit filename="../x86/aVif.S" />
 		<Unit filename="../x86/iCOP0.cpp" />
@@ -521,10 +526,6 @@
 		<Unit filename="../x86/ix86-32/iR5900Shift.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900Templates.cpp" />
 		<Unit filename="../x86/ix86-32/recVTLB.cpp" />
-		<Unit filename="../x86/VifUnpackSSE.cpp" />
-		<Unit filename="../x86/VifUnpackSSE.h" />
-		<Unit filename="../x86/VifUnpackSSE_Dynarec.cpp" />
-		<Unit filename="../x86/newVif_Unpack.cpp" />
 		<Unit filename="../x86/microVU.cpp" />
 		<Unit filename="../x86/microVU.h" />
 		<Unit filename="../x86/microVU_Alloc.inl" />
@@ -546,6 +547,7 @@
 		<Unit filename="../x86/newVif_BlockBuffer.h" />
 		<Unit filename="../x86/newVif_HashBucket.h" />
 		<Unit filename="../x86/newVif_OldUnpack.inl" />
+		<Unit filename="../x86/newVif_Unpack.cpp" />
 		<Unit filename="../x86/sVU_Debug.h" />
 		<Unit filename="../x86/sVU_Lower.cpp" />
 		<Unit filename="../x86/sVU_Micro.cpp" />
