@@ -28,7 +28,7 @@
 //
 // Design Philosophies:
 //
-//   1. Core APIs are established using a pair of DLL bindings (one for plugin callbacks
+//   1. Core APIs are established using a pair of DLL/library bindings (one for plugin callbacks
 //      and one for emulator callbacks), which pass structures of function pointers.
 //
 //   2. Plugin instance data should be attached to the end of the plugin's callback api
@@ -37,7 +37,7 @@
 //
 //   3. All plugin callbacks use __fastcall calling convention (which passes the first
 //      two parameters int he ECX and EDX registers).  Most compilers support this, and
-//      register parameter passing is actually the standard convetion on x86/64.
+//      register parameter passing is actually the standard convention on x86/64.
 //
 // Rationale: This design improves code generation efficiency, especially when using
 // points 2 and 3 together (typically reduces 2 or 3 dereferences to 1 dereference).
@@ -208,7 +208,10 @@ enum OSDIconTypes
 	// [TODO] -- dunno.  What else?
 
 	// Emulators implementing their own custom non-standard icon extensions should do so
-	// somewhere after OSD_Icon_ReserveEnd.  All values below this are
+	// somewhere after OSD_Icon_ReserveEnd.  All values below this are reserved.
+	// .
+	// .
+	// .
 	OSD_Icon_ReserveEnd = 0x1000
 };
 
@@ -252,10 +255,10 @@ typedef struct _PS2E_ConsoleWriterAPI
 	// Appends an automatic newline to the specified formatted output.
 	void (PS2E_CALLBACK* WriteLn)( const char* fmt, ... );
 
-	// This function always appends a newline
+	// This function always appends a newline.
 	void (PS2E_CALLBACK* Error)( const char* fmt, ... );
 
-	// This function always appends a newline
+	// This function always appends a newline.
 	void (PS2E_CALLBACK* Warning)( const char* fmt, ... );
 
 	void* reserved[4];
@@ -281,10 +284,10 @@ typedef struct _PS2E_ConsoleWriterWideAPI
 	// Appends an automatic newline to the specified formatted output.
 	void (PS2E_CALLBACK* WriteLn)( const wchar_t* fmt, ... );
 
-	// This function always appends a newline
+	// This function always appends a newline.
 	void (PS2E_CALLBACK* Error)( const wchar_t* fmt, ... );
 
-	// This function always appends a newline
+	// This function always appends a newline.
 	void (PS2E_CALLBACK* Warning)( const wchar_t* fmt, ... );
 
 	void* reserved[4];
@@ -323,7 +326,7 @@ typedef struct _PS2E_MenuItemInfo
 
 	// Specifies the style of the menu, either Normal, Checked, Radio, or Separator.
 	// This option is overridden if the SubMenu field is non-NULL (in such case the
-	// menu assumes submenu mode)
+	// menu assumes submenu mode).
 	PS2E_MenuItemStyle	Style;
 
 	// Specifies the handle of a sub menu to bind to this menu.  If NULL, the menu is
@@ -333,7 +336,7 @@ typedef struct _PS2E_MenuItemInfo
 	
 	// Menu that this item is attached to.  When this struct is passed into AddMenuItem,
 	// the menu item will be automatically appended to the menu specified in this field
-	// if the field is non-NULL (if the field is NULL then no action is taken).
+	// if the field is non-NULL (if the field is NULL, then no action is taken).
 	PS2E_MenuHandle		OwnerMenu;
 
 	// When FALSE the menu item will appear grayed out to the user, and unselectable.
@@ -353,7 +356,7 @@ typedef struct _PS2E_MenuItemInfo
 // --------------------------------------------------------------------------------------
 typedef struct _PS2E_MenuItemAPI
 {
-	// Allocates a new MenuItem and returns it's handle.  The returned item can be added to any
+	// Allocates a new MenuItem and returns its handle.  The returned item can be added to any
 	// menu.
 	PS2E_MenuItemHandle (PS2E_CALLBACK* MenuItem_Create)( PS2E_THISPTR thisptr );
 
@@ -399,13 +402,13 @@ typedef struct _PS2E_MenuItemAPI
 
 	// Assigns a pointer value that the plugin can use to attach user-defined data to
 	// specific menu items.  The value can be any integer typecast if you don't actually
-	// eed more than an integer's worth of data.
+	// need more than an integers worth of data.
 	void (PS2E_CALLBACK* MenuItem_SetUserData)( PS2E_MenuItemHandle mitem, void* dataptr );
 
 	// Assigns a submenu to the menu item, causing it to open the sub menu in cascade
 	// fashion.  When a submenu is assigned, the Style attribute of the menu will be
 	// ignored.  Passing NULL into this function will clear the submenu and return the
-	// menu item to whatever it's current Style attribute is set to.
+	// menu item to whatever its current Style attribute is set to.
 	void (PS2E_CALLBACK* MenuItem_SetSubMenu)( PS2E_MenuItemHandle mitem, PS2E_MenuHandle submenu );
 
 	// Assigns the callback function for this menu (important!).  If passed NULL, the menu
@@ -487,7 +490,7 @@ typedef struct _PS2E_SessionInfo
 //
 typedef struct _PS2E_EmulatorInfo
 {
-	// brief name of the emulator (ex: "PCSX2") [required]
+	// Brief name of the emulator (ex: "PCSX2") [required]
 	// Depending on the design of the emulator, this string may optionally include version
 	// information, however that is not recommended since it can inhibit backward support.
 	const char*			EmuName;
@@ -591,7 +594,7 @@ typedef struct _PS2E_EmulatorInfo
 	// Deletes the specified menu and frees its allocated memory resources.  NULL pointers are
 	// safely ignored.  Any menu items also attached to this menu will be deleted.  Even if you
 	// do not explicitly delete your plugin's menu resources, the emulator will do automatic
-	// cleanup after the plugin's instance is free'd.
+	// cleanup after the plugin's instance is freed.
 	void (PS2E_CALLBACK* Menu_Delete)( PS2E_MenuHandle handle );
 
 	// Adds the specified menu item to this menu. Menu items can only belong to one menu at a
@@ -1030,7 +1033,7 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	// has its status polled - so its overhead should be minimal when possible.
 	//
 	// Returns:
-	//   0 if the card is not available, or 1 if it is available.
+	//   False if the card is not available, or True if it is available.
 	//
 	BOOL (PS2E_CALLBACK* McdIsPresent)( PS2E_THISPTR thisptr, uint port, uint slot );
 
@@ -1041,7 +1044,7 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	// read op has finished).
 	//
 	// Returns:
-	//   0 on failure, and 1 on success.  Emulator may use GetLastError to retrieve additional
+	//   False on failure, and True on success.  Emulator may use GetLastError to retrieve additional
 	//   information for logging or displaying to the user.
 	//
 	BOOL (PS2E_CALLBACK* McdRead)( PS2E_THISPTR thisptr, uint port, uint slot, u8 *dest, u32 adr, int size );
@@ -1052,7 +1055,7 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	// has finished).  Write cache flushing is optional.
 	//
 	// Returns:
-	//   0 on failure, and 1 on success.  Emulator may use GetLastError to retrieve additional
+	//   False on failure, and True on success.  Emulator may use GetLastError to retrieve additional
 	//   information for logging or displaying to the user.
 	//
 	BOOL (PS2E_CALLBACK* McdSave)( PS2E_THISPTR thisptr, uint port, uint slot, const u8 *src, u32 adr, int size );
@@ -1064,7 +1067,7 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	// has finished).  Write cache flushing is optional.
 	//
 	// Returns:
-	//   0 on failure, and 1 on success.  Emulator may use GetLastError to retrieve additional
+	//   False on failure, and True on success.  Emulator may use GetLastError to retrieve additional
 	//   information for logging or displaying to the user.
 	//
 	BOOL (PS2E_CALLBACK* McdEraseBlock)( PS2E_THISPTR thisptr, uint port, uint slot, u32 adr );
@@ -1086,9 +1089,12 @@ enum PS2E_KeyEventTypes
 	PS2E_KEY_DOWN
 };
 
-#define PS2E_SHIFT		1
-#define PS2E_CONTROL	2
-#define PS2E_ALT		4
+enum PS2E_KeyModifiers
+{
+	PS2E_SHIFT = 1,
+	PS2E_CONTROL = 2,
+	PS2E_ALT = 4
+};
 
 // --------------------------------------------------------------------------------------
 //  PS2E_KeyEvent
@@ -1131,7 +1137,7 @@ typedef struct _PS2E_ComponentAPI_Pad
 	// A plugin should behave reasonably when a pad that's not plugged in is polled.
 	//
 	// Returns:
-	//   0 if the card/pad is not available, or 1 if it is available.
+	//   False if the card/pad is not available, or True if it is available.
 	//
 	BOOL (PS2E_CALLBACK* PadIsPresent)( PS2E_THISPTR thisptr, uint port, uint slot );
 
