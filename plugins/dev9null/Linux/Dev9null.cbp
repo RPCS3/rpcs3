@@ -49,7 +49,6 @@
 		<Unit filename="../Config.h" />
 		<Unit filename="../DEV9.cpp" />
 		<Unit filename="../DEV9.h" />
-		<Unit filename="dev9.glade" />
 		<Unit filename="../ReadMe.txt" />
 		<Extensions>
 			<code_completion />

@@ -63,11 +63,8 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 }
 
 EXPORT_C_(s32) DEV9init() 
-{
-	// We don't have a Windows version of LoadConfig. That needs correcting.
-#ifdef __LINUX__		
+{		
 	LoadConfig();
-#endif
 	
 	Dev9Log.WriteToConsole = true;
 	Dev9Log.WriteToFile = true;

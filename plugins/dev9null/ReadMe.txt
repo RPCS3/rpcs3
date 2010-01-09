@@ -12,6 +12,10 @@ Usage:
 
 Changes:
 -------
+ v0.5:
+ *Converted over to use the "PS2Eext.h" file.
+ v0.4:
+ *Mass plugin cleanup.
  v0.3:
 *added vsnet2005beta1 project files. 64bit dll should work now (not tested!)
 
