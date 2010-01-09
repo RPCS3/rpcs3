@@ -1,5 +1,5 @@
 /*  DEV9null
- *  Copyright (C) 2002-2009  PCSX2 Dev Team
+ *  Copyright (C) 2002-2010  PCSX2 Dev Team
  * 
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
@@ -13,6 +13,17 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Note: I was using MegaDev9, dev9ghzdrk, and dev9linuz  for reference on memory locations.
+// The ones I included were just some of the more important ones, so you may want to look
+// at the plugins I mentioned if trying to create your own dev9 plugin.
+
+// Additionally, there is a lot of information in the ps2drv drivers by Marcus R. Brown, so 
+// looking through its code would be a good starting point.
+
+// Look under tags/plugins in svn for any older plugins that aren't included in pcsx2 any more.
+// --arcum42
+
+
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -23,14 +34,18 @@ using namespace std;
 
 const unsigned char version  = PS2E_DEV9_VERSION;
 const unsigned char revision = 0;
-const unsigned char build = 4;    // increase that with each version
+const unsigned char build = 5;    // increase that with each version
 
 const char *libraryName = "DEV9null Driver";
 
+// Our IRQ call.
 void (*DEV9irq)(int);
-FILE *dev9Log;
+
+__aligned16 s8 dev9regs[0x10000];
+
+string s_strIniPath = "inis/";
+PluginLog Dev9Log;
 Config conf;
-string s_strIniPath="inis/";
 
 EXPORT_C_(u32) PS2EgetLibType() 
 {
@@ -47,106 +62,183 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 	return (version<<16) | (revision<<8) | build;
 }
 
-void __Log(char *fmt, ...)
-{
-	va_list list;
-
-	if (!conf.Log || dev9Log == NULL) return;
-
-	va_start(list, fmt);
-	vfprintf(dev9Log, fmt, list);
-	va_end(list);
-}
-
 EXPORT_C_(s32) DEV9init() 
 {
-#ifdef __LINUX__		// for until we get a win32 version sorted out / implemented...
+	// We don't have a Windows version of LoadConfig. That needs correcting.
+#ifdef __LINUX__		
 	LoadConfig();
 #endif
-
-#ifdef DEV9_LOG
-	dev9Log = fopen("logs/dev9Log.txt", "w");
-	if (dev9Log) setvbuf(dev9Log, NULL,  _IONBF, 0);
-	 DEV9_LOG("dev9null plugin version %d,%d\n", revision, build);
-	 DEV9_LOG("DEV9init\n");
-#endif
-
+	
+	Dev9Log.WriteToConsole = true;
+	Dev9Log.WriteToFile = true;
+	
+	Dev9Log.Open("logs/dev9null.log");
+	Dev9Log.WriteLn("dev9null plugin version %d,%d", revision, build);
+	Dev9Log.WriteLn("Initializing dev9null");
+	// Initialize anything that needs to be initialized.
+	memset(dev9regs, 0, sizeof(dev9regs));
 	return 0;
 }
 
 EXPORT_C_(void) DEV9shutdown() 
 {
-#ifdef DEV9_LOG
-	if (dev9Log) fclose(dev9Log);
-#endif
+	Dev9Log.WriteLn("Shutting down Dev9null.");
+	Dev9Log.Close();
 }
 
 EXPORT_C_(s32) DEV9open(void *pDsp)
 {
+	Dev9Log.WriteLn("Opening Dev9null.");
+	// Get anything ready we need to. Opening and creating hard
+	// drive files, for example.
 	return 0;
 }
 
 EXPORT_C_(void) DEV9close() 
 {
-	
+	Dev9Log.WriteLn("Closing Dev9null.");
+	// Close files opened.
 }
 
 EXPORT_C_(u8) DEV9read8(u32 addr) 
 {
-	DEV9_LOG("*Unknown 8bit read at address %lx ", addr);
-	return 0;
+    u8 value = 0;
+    
+    switch(addr)
+    {
+//        case 0x1F80146E:		// DEV9 hardware type (0x32 for an expansion bay)
+        case 0x10000038: value = dev9Ru8(addr); break; // We need to have at least one case to avoid warnings.
+        default: 
+            value = dev9Ru8(addr); 
+            Dev9Log.WriteLn("*Unknown 8 bit read at address %lx", addr);
+            break;
+    }
+	return value;
 }
 
-EXPORT_C_(u16 ) DEV9read16(u32 addr) 
+EXPORT_C_(u16) DEV9read16(u32 addr) 
 {
-	DEV9_LOG("*Unknown 16bit read at address %lx ", addr);
-	return 0;
+    u16 value = 0;
+    
+    switch(addr)
+    {
+		// Addresses you may want to catch here include:
+//			case 0x1F80146E:		// DEV9 hardware type (0x32 for an expansion bay)
+//			case 0x10000002:		// The Smart Chip revision. Should be 0x11
+//			case 0x10000004:		// More type info: bit 0 - smap; bit 1 - hd; bit 5 - flash 
+//			case 0x1000000E:		// Similar to the last; bit 1 should be set if a hd is hooked up.
+//			case 0x10000028:			// intr_stat
+//			case 0x10000038:			// hard drives seem to like reading and writing the max dma size per transfer here.
+//			case 0x1000002A:			// intr_mask
+//			case 0x10000040:			// pio_data
+//			case 0x10000044:			// nsector
+//			case 0x10000046:			// sector
+//			case 0x10000048:			// lcyl
+//			case 0x1000004A:			// hcyl
+//			case 0x1000004C:			// select
+//			case 0x1000004E:			// status
+//			case 0x1000005C:			// status
+//			case 0x10000064:			// if_ctrl
+        case 0x10000038: value = dev9Ru16(addr); break;
+        default: 
+            value = dev9Ru16(addr); 
+            Dev9Log.WriteLn("*Unknown 16 bit read at address %lx", addr);
+            break;
+    }
+	
+	return value;
 }
 
 EXPORT_C_(u32 ) DEV9read32(u32 addr) 
 {
-	DEV9_LOG("*Unknown 32bit read at address %lx ", addr);
-	return 0;
+    u32 value = 0;
+    
+    switch(addr)
+    {
+        case 0x10000038: value = dev9Ru32(addr); break;
+        default: 
+            value = dev9Ru32(addr); 
+            Dev9Log.WriteLn("*Unknown 32 bit read at address %lx", addr);
+          break;
+    }
+	
+	return value;
 }
 
 EXPORT_C_(void) DEV9write8(u32 addr,  u8 value) 
 {
-	DEV9_LOG("*Unknown 8bit write at address %lx value %x\n", addr, value);
+    switch(addr)
+    {
+        case 0x10000038: dev9Ru8(addr) = value; break;
+        default: 
+			Dev9Log.WriteLn("*Unknown 8 bit write; address %lx = %x", addr, value);
+			dev9Ru8(addr) = value;
+          break;
+    }
 }
 
 EXPORT_C_(void) DEV9write16(u32 addr, u16 value) 
 {
-	DEV9_LOG("*Unknown 16bit write at address %lx value %x\n", addr, value);
+    switch(addr)
+    {
+    	// Remember that list on DEV9read16? You'll want to write to a
+    	// lot of them, too.
+        case 0x10000038: dev9Ru16(addr) = value; break;
+        default: 
+			Dev9Log.WriteLn("*Unknown 16 bit write; address %lx = %x", addr, value);
+            dev9Ru16(addr) = value;
+          break;
+    }
 }
 
 EXPORT_C_(void) DEV9write32(u32 addr, u32 value) 
 {
-	DEV9_LOG("*Unknown 32bit write at address %lx value %x\n", addr, value);
+    switch(addr)
+    {
+        case 0x10000038: dev9Ru32(addr) = value; break;
+        default: 
+			Dev9Log.WriteLn("*Unknown 32 bit write; address %lx = %x", addr, value);
+            dev9Ru32(addr) = value;
+          break;
+    }
 }
 
 EXPORT_C_(void) DEV9readDMA8Mem(u32 *pMem, int size) 
 {
-	DEV9_LOG("Reading DMA8 Mem.");
+	// You'll want to but your own DMA8 reading code here.
+	// Time to interact with your fake (or real) hardware.
+	Dev9Log.WriteLn("Reading DMA8 Mem.");
 }
 
 EXPORT_C_(void) DEV9writeDMA8Mem(u32* pMem, int size) 
 {
-	DEV9_LOG("Writing DMA8 Mem.");
+	// See above.
+	Dev9Log.WriteLn("Writing DMA8 Mem.");
 }
 
 EXPORT_C_(void) DEV9irqCallback(DEV9callback callback) 
 {
+	// Setting our callback. You will call it with DEV9irq(cycles),
+	// Where cycles is the number of cycles till the irq is triggered.
 	DEV9irq = callback;
+}
+
+int _DEV9irqHandler(void)
+{
+	// And this gets called when the irq is triggered.
+	return 0;
 }
 
 EXPORT_C_(DEV9handler) DEV9irqHandler(void) 
 {
-	return NULL;
+	// Pass it to pcsx2.
+	return (DEV9handler)_DEV9irqHandler;
 }
 
 EXPORT_C_(void) DEV9setSettingsDir(const char* dir)
 {
-    s_strIniPath = (dir==NULL) ? "inis/" : dir;
+	// Grab the ini directory.
+    s_strIniPath = (dir == NULL) ? "inis/" : dir;
 }
 
 // extended funcs
@@ -156,33 +248,24 @@ EXPORT_C_(s32) DEV9test()
 	return 0;
 }
 
-#ifdef _WIN32
-EXPORT_C_(void) DEV9configure()
+EXPORT_C_(s32) DEV9freeze(int mode, freezeData *data)
 {
-	SysMessage("Nothing to Configure?!");
+	// This should store or retrieve any information, for if emulation 
+	// gets suspended, or for savestates.
+	switch(mode)
+	{
+		case FREEZE_LOAD:
+			// Load previously saved data.
+			break;
+		case FREEZE_SAVE:
+			// Save data.
+			break;
+		case FREEZE_SIZE:
+			// return the size of the data.
+			break;
+	}
+	return 0;
 }
 
-EXPORT_C_(void) DEV9about()
-{
-}
-
-HINSTANCE hInst;
-
-void SysMessage(const char *fmt, ...) 
-{
-	va_list list;
-	char tmp[512];
-	va_start(list,fmt);
-	vsprintf(tmp,fmt,list);
-	va_end(list);
-	MessageBox( GetActiveWindow(), tmp, "DEV9null Msg", MB_SETFOREGROUND | MB_OK );
-}
-
-BOOL APIENTRY DllMain(HANDLE hModule,                  // DLL INIT
-                      DWORD  dwReason, 
-                      LPVOID lpReserved) {
-	hInst = (HINSTANCE)hModule;
-	return TRUE;                                          // very quick :)
-}
-
-#endif
+/* For operating systems that need an entry point for a dll/library, here it is. Defined in PS2Eext.h. */
+ENTRY_POINT;

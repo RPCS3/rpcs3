@@ -160,12 +160,20 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Config.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\dev9null.def"
 				>
 			</File>
 		</Filter>
 		<File
 			RelativePath="..\DEV9.h"
+			>
+		</File>
+		<File
+			RelativePath="..\Config.h"
 			>
 		</File>
 	</Files>

@@ -1,5 +1,5 @@
 /*  dev9null
- *  Copyright (C) 2002-2009 pcsx2 Team
+ *  Copyright (C) 2002-2010 pcsx2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,33 +23,13 @@
 
 #define DEV9defs
 #include "PS2Edefs.h"
-
-#ifdef __LINUX__
-#include <gtk/gtk.h>
-#else
-#include <windows.h>
-#include <windowsx.h>
-#include <commctrl.h>
-#endif
+#include "PS2Eext.h"
 
 typedef struct {
-  int Log;
+  s32 Log;
 } Config;
 
 extern Config conf;
-#define DEV9_LOG __Log
-
-/*#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif*/
-
-#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif
 
 extern const unsigned char version;
 extern const unsigned char revision;
@@ -61,10 +41,13 @@ void SaveConfig();
 void LoadConfig();
 
 extern void (*DEV9irq)(int);
-extern void SysMessage(const char *fmt, ...);
 
-extern FILE *dev9Log;
-void __Log(char *fmt, ...);
-
+extern __aligned16 s8 dev9regs[0x10000];
+#define dev9Rs8(mem)	dev9regs[(mem) & 0xffff]
+#define dev9Rs16(mem)	(*(s16*)&dev9regs[(mem) & 0xffff])
+#define dev9Rs32(mem)	(*(s32*)&dev9regs[(mem) & 0xffff])
+#define dev9Ru8(mem)	(*(u8*) &dev9regs[(mem) & 0xffff])
+#define dev9Ru16(mem)	(*(u16*)&dev9regs[(mem) & 0xffff])
+#define dev9Ru32(mem)	(*(u32*)&dev9regs[(mem) & 0xffff])
 
 #endif
