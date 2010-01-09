@@ -43,9 +43,8 @@
 		</Linker>
 		<Unit filename="../FW.cpp" />
 		<Unit filename="../FW.h" />
-		<Unit filename="Config.cpp" />
-		<Unit filename="Config.h" />
-		<Unit filename="firewire.glade" />
+		<Unit filename="../Config.cpp" />
+		<Unit filename="../Config.h" />
 		<Unit filename="../ReadMe.txt" />
 		<Extensions>
 			<code_completion />
