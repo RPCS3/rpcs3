@@ -50,4 +50,6 @@ extern __aligned16 s8 dev9regs[0x10000];
 #define dev9Ru16(mem)	(*(u16*)&dev9regs[(mem) & 0xffff])
 #define dev9Ru32(mem)	(*(u32*)&dev9regs[(mem) & 0xffff])
 
+extern void setLoggingState();
+
 #endif

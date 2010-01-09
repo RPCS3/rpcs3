@@ -1,5 +1,5 @@
-/*  DEV9null
- *  Copyright (C) 2002-2010  Pcsx2 Team
+/*  FWnull
+ *  Copyright (C) 2004-2009 PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,63 +15,71 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <gtk/gtk.h>
+#include <signal.h>
 #include <string>
 using namespace std;
 
+#include "FW.h"
 #include "Config.h"
-#include "DEV9.h"
 
 extern string s_strIniPath;
-extern PluginLog Dev9Log;
+extern PluginLog FWLog;
 PluginConf Ini;
 
 void setLoggingState()
 {
 	if (conf.Log)
 	{
-		Dev9Log.WriteToConsole = true;
-		Dev9Log.WriteToFile = true;
+		FWLog.WriteToConsole = true;
+		FWLog.WriteToFile = true;
 	}
 	else
 	{
-		Dev9Log.WriteToConsole = false;
-		Dev9Log.WriteToFile = false;
+		FWLog.WriteToConsole = false;
+		FWLog.WriteToFile = false;
 	}
 }
 
-EXPORT_C_(void) DEV9about() 
+EXPORT_C_(void) FWabout() 
 {
-	SysMessage("Dev9null: A simple null plugin.");
+	SysMessage("FWnull: A simple null plugin.");
 }
 
-EXPORT_C_(void) DEV9configure() 
+EXPORT_C_(void) FWconfigure() 
 {
 	LoadConfig();
 	PluginNullConfigure("Since this is a null plugin, all that is really configurable is logging.", conf.Log);
 	SaveConfig();
-} 
+}
 
 void LoadConfig() 
 {
-	string IniPath = s_strIniPath + "/Dev9null.ini";
+	string IniPath = s_strIniPath + "/FWnull.ini";
 	if (!Ini.Open(IniPath, READ_FILE))
 	{
-		Dev9Log.WriteLn("Failed to open %s", IniPath.c_str());
+		FWLog.WriteLn("Failed to open %s", IniPath.c_str());
 		SaveConfig();
 		return;
 	}
 	
 	conf.Log = Ini.ReadInt("logging");
+	setLoggingState();
 	Ini.Close();
 }
 
 void SaveConfig() 
 {
-	string IniPath = s_strIniPath + "/Dev9null.ini";
+	string IniPath = s_strIniPath + "/FWnull.ini";
 	if (!Ini.Open(IniPath, WRITE_FILE))
 	{
-		Dev9Log.WriteLn("Failed to open %s", IniPath.c_str());
+		FWLog.WriteLn("Failed to open %s\n", IniPath.c_str());
 		return;
 	}
 	

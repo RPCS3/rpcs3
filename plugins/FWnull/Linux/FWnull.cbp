@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../../bin/plugins/libFWnull.so.0.5.0" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../bin/plugins/libFWnull.so.0.6.0" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -45,16 +45,7 @@
 		<Unit filename="../FW.h" />
 		<Unit filename="Config.cpp" />
 		<Unit filename="Config.h" />
-		<Unit filename="callbacks.h" />
 		<Unit filename="firewire.glade" />
-		<Unit filename="interface.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="interface.h" />
-		<Unit filename="support.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="support.h" />
 		<Unit filename="../ReadMe.txt" />
 		<Extensions>
 			<code_completion />

@@ -23,53 +23,29 @@
 
 #define USBdefs
 #include "PS2Edefs.h"
-
-#ifdef _WIN32
-
-#define usleep(x)	Sleep(x / 1000)
-#include <windows.h>
-#include <windowsx.h>
-
-#else
-
-#include <gtk/gtk.h>
-#include <X11/Xlib.h>
-
-#define __inline inline
-
-#endif
-
-#define USB_LOG __Log
+#include "PS2Eext.h"
 
 typedef struct {
   int Log;
 } Config;
 
-//extern void (*USBirq)();
 extern USBcallback USBirq;
 extern Config conf;
-extern FILE *usbLog;
 
-/*#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif*/
+// Previous USB plugins have needed this in ohci.
+static const s64 PSXCLK = 36864000;	/* 36.864 Mhz */
 
-#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif
+extern s8 *usbregs, *ram;
 
-#define PSXCLK	36864000	/* 36.864 Mhz */
+#define usbRs8(mem)		usbregs[(mem) & 0xffff]
+#define usbRs16(mem)	(*(s16*)&usbregs[(mem) & 0xffff])
+#define usbRs32(mem)	(*(s32*)&usbregs[(mem) & 0xffff])
+#define usbRu8(mem)		(*(u8*) &usbregs[(mem) & 0xffff])
+#define usbRu16(mem)	(*(u16*)&usbregs[(mem) & 0xffff])
+#define usbRu32(mem)	(*(u32*)&usbregs[(mem) & 0xffff])
 
-
-void SaveConfig();
-void LoadConfig();
-
-void __Log(char *fmt, ...);
-
-void SysMessage(char *fmt, ...);
+extern void SaveConfig();
+extern void LoadConfig();
+extern void setLoggingState();
 
 #endif

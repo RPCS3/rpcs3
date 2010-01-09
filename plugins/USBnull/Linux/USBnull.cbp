@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../../bin/plugins/libUSBnull.so.0.6.0" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../bin/plugins/libUSBnull.so.0.7.0" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -18,7 +18,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="../../../bin/plugins/libUSBnull.so.0.6" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../bin/plugins/libUSBnull" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -45,20 +45,8 @@
 			<Add option="`pkg-config gtk+-2.0 --libs`" />
 			<Add option="-shared" />
 		</Linker>
-		<Unit filename="Config.cpp" />
-		<Unit filename="Config.h" />
-		<Unit filename="Linux.cpp" />
-		<Unit filename="Linux.h" />
-		<Unit filename="callbacks.h" />
-		<Unit filename="interface.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="interface.h" />
-		<Unit filename="support.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="support.h" />
-		<Unit filename="usbnull.glade" />
+		<Unit filename="../Config.cpp" />
+		<Unit filename="../Config.h" />
 		<Unit filename="../ReadMe.txt" />
 		<Unit filename="../USB.cpp" />
 		<Unit filename="../USB.h" />

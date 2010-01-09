@@ -65,9 +65,7 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 EXPORT_C_(s32) DEV9init() 
 {		
 	LoadConfig();
-	
-	Dev9Log.WriteToConsole = true;
-	Dev9Log.WriteToFile = true;
+	setLoggingState();
 	
 	Dev9Log.Open("logs/dev9null.log");
 	Dev9Log.WriteLn("dev9null plugin version %d,%d", revision, build);

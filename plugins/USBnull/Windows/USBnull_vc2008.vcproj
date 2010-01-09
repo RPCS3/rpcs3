@@ -151,24 +151,20 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm"
 			>
 			<File
-				RelativePath=".\Config.cpp"
+				RelativePath="..\Config.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\USB.cpp"
 				>
-			</File>
-			<File
-				RelativePath=".\Win32.cpp"
-				>
-			</File>
+			</File> 
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc"
 			>
 			<File
-				RelativePath="resource.h"
+				RelativePath="..\Config.h"
 				>
 			</File>
 			<File
@@ -182,10 +178,6 @@
 			>
 			<File
 				RelativePath="USBnull.def"
-				>
-			</File>
-			<File
-				RelativePath="USBnull.rc"
 				>
 			</File>
 		</Filter>

@@ -17,8 +17,6 @@
  */
 
 #include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 #include <string>
 using namespace std;
 
@@ -27,14 +25,15 @@ string s_strIniPath="inis/";
 
 const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
-const unsigned char build    = 6;    // increase that with each version
+const unsigned char build    = 7;    // increase that with each version
 
 static char *libraryName     = "USBnull Driver";
 
-//void (*USBirq)();
 USBcallback USBirq;
 Config conf;
-FILE *usbLog;
+PluginLog USBLog;
+
+s8 *usbregs, *ram;
 
 EXPORT_C_(u32) PS2EgetLibType()
 {
@@ -51,104 +50,161 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 	return (version << 16) | (revision << 8) | build;
 }
 
-void __Log(char *fmt, ...)
-{
-	va_list list;
-
-	if (!conf.Log || usbLog == NULL) return;
-
-	va_start(list, fmt);
-	vfprintf(usbLog, fmt, list);
-	va_end(list);
-}
-
 EXPORT_C_(s32) USBinit()
 {
 	LoadConfig();
+	setLoggingState();
+	USBLog.Open("logs/USBnull.log");
+	USBLog.WriteLn("USBnull plugin version %d,%d", revision, build);
+	USBLog.WriteLn("Initializing USBnull");
 
-#ifdef USB_LOG
-	usbLog = fopen("logs/usbLog.txt", "w");
-	if (usbLog) setvbuf(usbLog, NULL,  _IONBF, 0);
-	USB_LOG("usbnull plugin version %d,%d\n", revision, build);
-	USB_LOG("USBinit\n");
-#endif
-
+	// Initialize memory structures here.
+	usbregs = (s8*)malloc(0x10000);
+	
+	if (usbregs == NULL) 
+	{
+		USBLog.Message("Error allocating memory"); 
+		return -1;
+	}
+	
+	memset(usbregs, 0, 0x10000);
 	return 0;
 }
 
 EXPORT_C_(void) USBshutdown()
 {
-#ifdef USB_LOG
-	if (usbLog) fclose(usbLog);
-#endif
+	// Yes, we close things in the Shutdown routine, and
+	// don't do anything in the close routine.
+	USBLog.Close();
 }
 
 EXPORT_C_(s32) USBopen(void *pDsp)
 {
-	USB_LOG("USBopen\n");
-
+	USBLog.WriteLn("Opening USBnull.");
+	
+	// Take care of anything else we need on opening, other then initialization.
 	return 0;
 }
 
 EXPORT_C_(void) USBclose()
 {
+	USBLog.WriteLn("Closing USBnull.");
 }
 
-EXPORT_C_(u8 ) USBread8(u32 addr)
+// Note: actually uncommenting the read/write functions I provided here
+// caused uLauncher.elf to hang on startup, so careful when experimenting.
+EXPORT_C_(u8) USBread8(u32 addr)
 {
-	USB_LOG("*Unknown 8bit read at address %lx ", addr);
-	return 0;
+	u8 value = 0;
+	
+	switch(addr)
+	{
+		// Handle any appropriate addresses here.
+		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit read at address %lx", addr); break;
+		default:
+			//value = usbRu8(addr);
+			USBLog.WriteLn("*Unknown 8 bit read at address %lx", addr);
+			break;
+	}
+	return value;
 }
 
 EXPORT_C_(u16) USBread16(u32 addr)
 {
-	USB_LOG("*Unknown 16bit read at address %lx", addr);
-	return 0;
+	u16 value = 0;
+	
+	switch(addr)
+	{
+		// Handle any appropriate addresses here.
+		case 0x1f801600: USBLog.WriteLn("*Unknown 16 bit read at address %lx", addr); break;
+		default:
+			//value = usbRu16(addr);
+			USBLog.WriteLn("*Unknown 16 bit read at address %lx", addr);
+	}
+	return value;
 }
 
 EXPORT_C_(u32) USBread32(u32 addr)
 {
-	USB_LOG("*Unknown 32bit read at address %lx", addr);
-	return 0;
+	u32 value = 0;
+	
+	switch(addr)
+	{
+		// Handle any appropriate addresses here.
+		case 0x1f801600: USBLog.WriteLn("*Unknown 32 bit read at address %lx", addr); break;
+		default:
+			//value = usbRu32(addr);
+			USBLog.WriteLn("*Unknown 32 bit read at address %lx", addr);
+	}
+	return value;
 }
 
 EXPORT_C_(void) USBwrite8(u32 addr,  u8 value)
 {
-	USB_LOG("*Unknown 8bit write at address %lx value %x\n", addr, value);
+	switch(addr)
+	{
+		// Handle any appropriate addresses here.
+		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value); break;
+		default:
+			//usbRu8(addr) = value;
+			USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value);
+	}
 }
 
 EXPORT_C_(void) USBwrite16(u32 addr, u16 value)
 {
-	USB_LOG("*Unknown 16bit write at address %lx value %x\n", addr, value);
+	switch(addr)
+	{
+		// Handle any appropriate addresses here.
+		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value); break;
+		default:
+			//usbRu16(addr) = value;
+			USBLog.WriteLn("*Unknown 16 bit write at address %lx value %x", addr, value);
+	}
 }
 
 EXPORT_C_(void) USBwrite32(u32 addr, u32 value)
 {
-	USB_LOG("*Unknown 32bit write at address %lx value %lx\n", addr, value);
+	switch(addr)
+	{
+		// Handle any appropriate addresses here.
+		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value); break;
+		default:
+			//usbRu32(addr) = value;
+			USBLog.WriteLn("*Unknown 32 bit write at address %lx value %x", addr, value);
+	}
 }
 
 EXPORT_C_(void) USBirqCallback(USBcallback callback) 
 {
-        USBirq = callback;
+	// Register USBirq, so we can trigger an interrupt with it later.
+	// It will be called as USBirq(cycles); where cycles is the number
+	// of cycles before the irq is triggered.
+	USBirq = callback;
 }
 
 EXPORT_C_(int) _USBirqHandler(void)
 {
+	// This is our USB irq handler, so if an interrupt gets triggered, 
+	// deal with it here.
 	return 0;
 }
 
 EXPORT_C_(USBhandler) USBirqHandler(void)
 {
+	// Pass our handler to pcsx2.
 	return (USBhandler)_USBirqHandler;
 }
 
 EXPORT_C_(void) USBsetRAM(void *mem)
 {
-	USB_LOG("*Setting ram.\n");
+	ram = (s8*)mem;
+	USBLog.WriteLn("*Setting ram.");
 }
 
 EXPORT_C_(void) USBsetSettingsDir(const char* dir)
 {
+	// Get the path to the ini directory.
     s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
  	
@@ -156,12 +212,33 @@ EXPORT_C_(void) USBsetSettingsDir(const char* dir)
 
 EXPORT_C_(s32) USBfreeze(int mode, freezeData *data)
 {
+	// This should store or retrieve any information, for if emulation 
+	// gets suspended, or for savestates.
+	switch(mode)
+	{
+		case FREEZE_LOAD:
+			// Load previously saved data.
+			break;
+		case FREEZE_SAVE:
+			// Save data.
+			break;
+		case FREEZE_SIZE:
+			// return the size of the data.
+			break;
+	}
 	return 0;
 }
 
+/*EXPORT_C_(void) USBasync(u32 cycles)
+{
+	// Optional function: Called in IopCounter.cpp.
+}*/
 
 EXPORT_C_(s32) USBtest()
 {
+	// 0 if the plugin works, non-0 if it doesn't.
 	return 0;
 }
 
+/* For operating systems that need an entry point for a dll/library, here it is. Defined in PS2Eext.h. */
+ENTRY_POINT;

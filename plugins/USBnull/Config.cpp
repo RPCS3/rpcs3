@@ -1,5 +1,5 @@
-/*  DEV9null
- *  Copyright (C) 2002-2010  Pcsx2 Team
+/*  USBnull
+ *  Copyright (C) 2002-2009  USBnull Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -15,63 +15,64 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 #include <string>
 using namespace std;
 
+#include "USB.h"
 #include "Config.h"
-#include "DEV9.h"
 
 extern string s_strIniPath;
-extern PluginLog Dev9Log;
+extern PluginLog USBLog;
 PluginConf Ini;
 
 void setLoggingState()
 {
 	if (conf.Log)
 	{
-		Dev9Log.WriteToConsole = true;
-		Dev9Log.WriteToFile = true;
+		USBLog.WriteToConsole = true;
+		USBLog.WriteToFile = true;
 	}
 	else
 	{
-		Dev9Log.WriteToConsole = false;
-		Dev9Log.WriteToFile = false;
+		USBLog.WriteToConsole = false;
+		USBLog.WriteToFile = false;
 	}
 }
 
-EXPORT_C_(void) DEV9about() 
+EXPORT_C_(void) USBabout()
 {
-	SysMessage("Dev9null: A simple null plugin.");
+	SysMessage("USBnull: A simple null plugin.");
 }
 
-EXPORT_C_(void) DEV9configure() 
+EXPORT_C_(void) USBconfigure()
 {
 	LoadConfig();
 	PluginNullConfigure("Since this is a null plugin, all that is really configurable is logging.", conf.Log);
 	SaveConfig();
-} 
+}
 
-void LoadConfig() 
+void LoadConfig()
 {
-	string IniPath = s_strIniPath + "/Dev9null.ini";
+	string IniPath = s_strIniPath + "/USBnull.ini";
 	if (!Ini.Open(IniPath, READ_FILE))
 	{
-		Dev9Log.WriteLn("Failed to open %s", IniPath.c_str());
+		USBLog.WriteLn("Failed to open %s", IniPath.c_str());
 		SaveConfig();
 		return;
 	}
 	
 	conf.Log = Ini.ReadInt("logging");
+	setLoggingState();
 	Ini.Close();
 }
 
-void SaveConfig() 
+void SaveConfig()
 {
-	string IniPath = s_strIniPath + "/Dev9null.ini";
+	string IniPath = s_strIniPath + "/USBnull.ini";
 	if (!Ini.Open(IniPath, WRITE_FILE))
 	{
-		Dev9Log.WriteLn("Failed to open %s", IniPath.c_str());
+		USBLog.WriteLn("Failed to open %s", IniPath.c_str());
 		return;
 	}
 	

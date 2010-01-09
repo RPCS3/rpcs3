@@ -151,15 +151,11 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm"
 			>
 			<File
-				RelativePath=".\Config.cpp"
+				RelativePath="..\Config.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\FW.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\Win32.cpp"
 				>
 			</File>
 		</Filter>
@@ -172,7 +168,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\resource.h"
+				RelativePath="..\Config.h"
 				>
 			</File>
 		</Filter>
@@ -182,10 +178,6 @@
 			>
 			<File
 				RelativePath=".\FireWireNull.def"
-				>
-			</File>
-			<File
-				RelativePath=".\FireWireNull.rc"
 				>
 			</File>
 		</Filter>

@@ -23,33 +23,10 @@
 
 #define FWdefs
 #include "PS2Edefs.h"
+#include "PS2Eext.h"
 
-#ifdef _WIN32
-
-#include <windows.h>
-#include <windowsx.h>
-
-#else
-
-#include <gtk/gtk.h>
-#include <X11/Xlib.h>
-
-#endif
-
-/*#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif*/
-
-#ifdef _MSC_VER
-#define EXPORT_C_(type) extern "C" type CALLBACK
-#else
-#define EXPORT_C_(type) extern "C" type
-#endif
-
-#define FW_LOG __Log
-
+// Our main memory storage, and defines for accessing it.
+extern s8 *fwregs;
 #define fwRs32(mem)	(*(s32*)&fwregs[(mem) & 0xffff])
 #define fwRu32(mem)	(*(u32*)&fwregs[(mem) & 0xffff])
 
@@ -59,13 +36,11 @@ typedef struct
 } Config;
 
 extern Config conf;
-extern FILE *fwLog;
 
 extern void (*FWirq)();
 
-extern void __Log(char *fmt, ...);
-extern void SysMessage(char *fmt, ...);
 extern void SaveConfig();
 extern void LoadConfig();
+extern void setLoggingState();
 
 #endif

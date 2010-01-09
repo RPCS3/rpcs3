@@ -1,5 +1,5 @@
-/*  FWnull
- *  Copyright (C) 2004-2009 PCSX2 Team
+/*  USBnull
+ *  Copyright (C) 2002-2009  USBnull Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,9 +16,5 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-void SaveConf();
-void LoadConf();
-void SysMessage(char *fmt, ...);
-
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name))))
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
+void SaveConfig();
+void LoadConfig();
