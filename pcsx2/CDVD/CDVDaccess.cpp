@@ -96,11 +96,21 @@ static int CheckDiskTypeFS(int baseType)
 	{
 	}
 
-	if( rootdir.IsFile(L"PSX.EXE;1") )
+	try {
+		IsoFile file( rootdir, L"PSX.EXE;1");
 		return CDVD_TYPE_PSCD;
+	}
+	catch( Exception::FileNotFound& )
+	{
+	}
 
-	if( rootdir.IsFile(L"VIDEO_TS/VIDEO_TS.IFO;1") )
+	try {
+		IsoFile file( rootdir, L"VIDEO_TS/VIDEO_TS.IFO;1");
 		return CDVD_TYPE_DVDV;
+	}
+	catch( Exception::FileNotFound& )
+	{
+	}
 
 	return CDVD_TYPE_ILLEGAL; // << Only for discs which aren't ps2 at all.
 }
