@@ -2545,11 +2545,14 @@ bool GSState::IsBadFrame(int& skip, int gamefix_skipdraw)
 				}
 			}
 
-			// depth textures (bully, mgs3s1 intro)
+			// depth textures (bully, mgs3s1 intro, Front Mission 5 (needs skip = 2, therefore the gamefix))
 
 			if(fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S)
 			{
-				skip = 1;
+				if (gamefix_skipdraw > 0) {
+					skip = gamefix_skipdraw;
+				}
+				else skip = 1; // Remove, once the gui part is done
 			}
 		}
 	}

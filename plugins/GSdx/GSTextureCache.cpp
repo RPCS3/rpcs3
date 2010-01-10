@@ -629,7 +629,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
 			{
 				delete src;
-				return false;
+				return NULL;
 			}
 		}
 		// width/height conversion
