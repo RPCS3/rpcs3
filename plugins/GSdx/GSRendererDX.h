@@ -29,8 +29,7 @@ class GSRendererDX : public GSRendererHW<Vertex>
 	GSVector2 m_pixelcenter;
 	bool m_logz;
 	bool m_fba;
-	int m_pixoff_x;
-	int m_pixoff_y;
+	bool UserHacks_HalfPixelOffset;
 
 protected:
 	int m_topology;
@@ -45,8 +44,7 @@ public:
 	{
 		m_logz = !!theApp.GetConfig("logz", 0);
 		m_fba = !!theApp.GetConfig("fba", 1);
-		m_pixoff_x = theApp.GetConfig("pixoff_x", 0);
-		m_pixoff_y = theApp.GetConfig("pixoff_y", 0);
+		UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
 	}
 
 	virtual ~GSRendererDX()
@@ -192,11 +190,25 @@ public:
 
 		float sx = 2.0f * rt->GetScale().x / (rt->GetWidth() << 4);
 		float sy = 2.0f * rt->GetScale().y / (rt->GetHeight() << 4);
-		float ox = (float)(int)context->XYOFFSET.OFX + m_pixoff_x;
-		float oy = (float)(int)context->XYOFFSET.OFY + m_pixoff_y;
+		float ox = (float)(int)context->XYOFFSET.OFX;
+		float oy = (float)(int)context->XYOFFSET.OFY;
 		float ox2 = 2.0f * m_pixelcenter.x / rt->GetWidth();
 		float oy2 = 2.0f * m_pixelcenter.y / rt->GetHeight();
-
+		
+		//This hack subtracts around half a pixel from OFX and OFY. (Cannot do this directly,
+		//because DX10 and DX9 have a different pixel center.)
+		//
+		//The resulting shifted output aligns better with common blending / corona / blurring effects,
+		//but introduces a few bad pixels on the edges.
+		if (UserHacks_HalfPixelOffset == true)
+		{
+			//DX9 has pixelcenter set to 0.0, so give it some value here
+			if (m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = oy2 = -0.00035f; } 
+			
+			if (ox != 0) { ox2 *= upscale_Multiplier(); }
+			if (oy != 0) { oy2 *= upscale_Multiplier(); } 
+		}
+		
 		vs_cb.VertexScale  = GSVector4(sx, -sy, 1.0f / UINT_MAX, 0.0f);
 		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
 		// gs
