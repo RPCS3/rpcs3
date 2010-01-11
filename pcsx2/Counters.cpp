@@ -32,11 +32,9 @@ using namespace Threading;
 extern u8 psxhblankgate;
 
 static const uint EECNT_FUTURE_TARGET = 0x10000000;
+static int gates = 0;
 
-u64 profile_starttick = 0;
-u64 profile_totalticks = 0;
-
-int gates = 0;
+uint g_FrameCount = 0;
 
 // Counter 4 takes care of scanlines - hSync/hBlanks
 // Counter 5 takes care of vSync/vBlanks
@@ -46,6 +44,7 @@ SyncCounter vsyncCounter;
 
 u32 nextsCounter;	// records the cpuRegs.cycle value of the last call to rcntUpdate()
 s32 nextCounter;	// delta from nextsCounter, in cycles, until the next rcntUpdate()
+
 
 void rcntReset(int index) {
 	counters[index].count = 0;
@@ -125,6 +124,8 @@ void rcntInit()
 {
 	int i;
 
+	g_FrameCount = 0;
+
 	memzero(counters);
 
 	for (i=0; i<4; i++) {
@@ -148,9 +149,6 @@ void rcntInit()
 	cpuRcntSet();
 }
 
-// debug code, used for stats
-int g_nhsyncCounter;
-static uint iFrame = 0;
 
 #ifndef _WIN32
 #include <sys/time.h>
@@ -344,12 +342,12 @@ static __forceinline void VSyncStart(u32 sCycle)
 	Cpu->CheckExecutionState();
 	GetCoreThread().VsyncInThread();
 
-	EECNT_LOG( "/////////  EE COUNTER VSYNC START (frame: %6d) \\\\\\\\\\\\\\\\\\\\ ", iFrame );
+	EECNT_LOG( "/////////  EE COUNTER VSYNC START (frame: %6d)  \\\\\\\\\\\\\\\\\\\\ ", g_FrameCount );
 
 	// EE Profiling and Debug code.
 	// FIXME: should probably be moved to VsyncInThread, and handled
 	// by UI implementations.  (ie, AppCoreThread in PCSX2-wx interface).
-	vSyncDebugStuff( iFrame );
+	vSyncDebugStuff( g_FrameCount );
 
 	CpuVU0->Vsync();
 	CpuVU1->Vsync();
@@ -390,9 +388,9 @@ static __forceinline void VSyncStart(u32 sCycle)
 
 static __forceinline void VSyncEnd(u32 sCycle)
 {
-	EECNT_LOG( "/////////  EE COUNTER VSYNC END  \\\\\\\\\\\\\\\\\\\\  (frame: %d)", iFrame );
+	EECNT_LOG( "/////////  EE COUNTER VSYNC END (frame: %d)  \\\\\\\\\\\\\\\\\\\\", g_FrameCount );
 
-	iFrame++;
+	g_FrameCount++;
 
 	gsPostVsyncEnd();
 

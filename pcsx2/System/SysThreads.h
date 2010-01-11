@@ -220,6 +220,7 @@ protected:
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnCleanupInThread();
 	virtual void ExecuteTaskInThread();
+	virtual void DoCpuReset();
 	
 	void _StateCheckThrows();
 };

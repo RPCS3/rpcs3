@@ -57,6 +57,11 @@ static const int pxID_PadHandler_Keydown = 8030;
 // single for-loop to create them.
 static const int PluginMenuId_Interval = 0x10;
 
+// Forces the Interface to destroy the GS viewport window when the GS plugin is
+// destroyed.  This has the side effect of forcing all plugins to close and re-open
+// along with the GS, since the GS viewport window handle will have changed.
+static const bool CloseViewportWithPlugins = false;
+
 // ------------------------------------------------------------------------
 // All Menu Options for the Main Window! :D
 // ------------------------------------------------------------------------
@@ -302,6 +307,31 @@ struct pxAppResources
 	~pxAppResources() throw() { }
 };
 
+// --------------------------------------------------------------------------------------
+//  FramerateManager
+// --------------------------------------------------------------------------------------
+class FramerateManager
+{
+public:
+	static const uint FramerateQueueDepth = 64;
+
+protected:
+	u64 m_fpsqueue[FramerateQueueDepth];
+	u64 m_fpsqueue_tally;
+	u64 m_ticks_lastframe;
+	int m_fpsqueue_writepos;
+
+	uint m_FrameCounter;
+
+public:
+	virtual ~FramerateManager() throw() {}
+
+	void Reset();
+	void Resume();
+	void DoFrame();
+	double GetFramerate() const;
+};
+
 // =====================================================================================================
 //  Pcsx2App  -  main wxApp class
 // =====================================================================================================
@@ -330,6 +360,7 @@ public:
 	// ----------------------------------------------------------------------------
 	
 public:
+	FramerateManager				FpsManager;
 	CommandDictionary				GlobalCommands;
 	AcceleratorDictionary			GlobalAccels;
 
@@ -470,6 +501,7 @@ protected:
 enum CoreThreadStatus
 {
 	CoreStatus_Indeterminate,
+	CoreStatus_Started,
 	CoreStatus_Resumed,
 	CoreStatus_Suspended,
 	CoreStatus_Reset,
@@ -494,13 +526,13 @@ public:
 
 protected:
 	virtual void OnResumeReady();
-
 	virtual void OnResumeInThread( bool IsSuspended );
 	virtual void OnSuspendInThread();
 	virtual void OnCleanupInThread();
 	//virtual void VsyncInThread();
 	virtual void PostVsyncToUI();
 	virtual void ExecuteTaskInThread();
+	virtual void DoCpuReset();
 };
 
 DECLARE_APP(Pcsx2App)

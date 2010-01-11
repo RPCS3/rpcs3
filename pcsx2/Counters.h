@@ -130,6 +130,7 @@ extern SyncCounter vsyncCounter;
 
 extern s32 nextCounter;		// delta until the next counter event (must be signed)
 extern u32 nextsCounter;
+extern uint g_FrameCount;
 
 extern void rcntUpdate_hScanline();
 extern void rcntUpdate_vSync();

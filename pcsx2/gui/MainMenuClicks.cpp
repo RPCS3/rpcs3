@@ -174,6 +174,7 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 		// (useful for disc swapping)
 
 		SysUpdateIsoSrcFile( result );
+		AppSaveSettings();
 	}
 
 	core.Resume();

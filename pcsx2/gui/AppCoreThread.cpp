@@ -43,9 +43,7 @@ void AppCoreThread::Cancel( bool isBlocking )
 void AppCoreThread::Reset()
 {
 	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
-
 	_parent::Reset();
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Reset );
 }
 
 bool AppCoreThread::Suspend( bool isBlocking )
@@ -112,6 +110,12 @@ void AppCoreThread::ChangeCdvdSource( CDVD_SourceType type )
 	sMainFrame.UpdateIsoSrcSelection();
 
 	// TODO: Add a listener for CDVDsource changes?  Or should we bother?
+}
+
+void AppCoreThread::DoCpuReset()
+{
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Reset );
+	_parent::DoCpuReset();
 }
 
 void AppCoreThread::OnResumeReady()
@@ -185,6 +189,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
 void AppCoreThread::ExecuteTaskInThread()
 {
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Started );
 	_parent::ExecuteTaskInThread();
 
 	// ----------------------------------------------------------------------------
@@ -200,3 +205,4 @@ void AppCoreThread::ExecuteTaskInThread()
 		}
 	}*/
 }
+

@@ -21,6 +21,15 @@
 
 #include "App.h"
 
+enum LimiterModeType
+{
+	Limit_Nominal,
+	Limit_Turbo,
+	Limit_Slomo,
+};
+
+extern LimiterModeType g_LimiterMode;
+
 // --------------------------------------------------------------------------------------
 //  GSPanel
 // --------------------------------------------------------------------------------------
@@ -71,14 +80,15 @@ class GSFrame : public wxFrame
 
 protected:
 	EventListenerBinding<int>	m_Listener_SettingsApplied;
-	GSPanel*					m_gspanel;
+	wxTimer						m_timer_UpdateTitle;
+	wxWindowID					m_gspanel_id;
 	wxStaticText*				m_label_Disabled;
 
 public:
 	GSFrame(wxWindow* parent, const wxString& title);
 	virtual ~GSFrame() throw();
 
-	wxWindow* GetViewport();
+	GSPanel* GetViewport();
 
 	bool Show( bool shown=true );
 
@@ -86,6 +96,7 @@ protected:
 	void OnMove( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
 	void OnActivate( wxActivateEvent& evt );
+	void OnUpdateTitle( wxTimerEvent& evt );
 
 	void DoSettingsApplied();
 

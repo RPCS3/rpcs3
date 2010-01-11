@@ -244,7 +244,7 @@ void SysCoreThread::_reset_stuff_as_needed()
 
 	if( m_resetVirtualMachine )
 	{
-		cpuReset();
+		DoCpuReset();
 		m_resetVirtualMachine	= false;
 		m_resetRecompilers		= true;
 	}
@@ -257,6 +257,12 @@ void SysCoreThread::_reset_stuff_as_needed()
 	}
 	
 	SetCPUState( EmuConfig.Cpu.sseMXCSR, EmuConfig.Cpu.sseVUMXCSR );
+}
+
+void SysCoreThread::DoCpuReset()
+{
+	AffinityAssert_AllowFromSelf( pxDiagSpot );
+	cpuReset();
 }
 
 void SysCoreThread::CpuInitializeMess()

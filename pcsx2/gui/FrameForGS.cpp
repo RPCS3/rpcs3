@@ -20,7 +20,6 @@
 
 #include <wx/utils.h>
 
-
 void GSPanel::InitDefaultAccelerators()
 {
 	typedef KeyAcceleratorCode AAC;
@@ -73,6 +72,11 @@ GSPanel::GSPanel( wxWindow* parent )
 	Connect(wxEVT_SET_FOCUS,		wxFocusEventHandler	(GSPanel::OnFocus));
 	Connect(wxEVT_KILL_FOCUS,		wxFocusEventHandler	(GSPanel::OnFocusLost));
 
+	Connect(m_HideMouseTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(GSPanel::OnHideMouseTimeout) );
+
+	// Any and all events which should result in the mouse cursor being made visible
+	// are connected here.  If I missed one, feel free to add it in! --air
+
 	Connect(wxEVT_MIDDLE_DOWN,		wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_MIDDLE_UP,		wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_RIGHT_DOWN,		wxMouseEventHandler	(GSPanel::OnShowMouse));
@@ -82,8 +86,6 @@ GSPanel::GSPanel( wxWindow* parent )
 	Connect(wxEVT_MIDDLE_DCLICK,	wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_RIGHT_DCLICK,		wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_MOUSEWHEEL,		wxMouseEventHandler	(GSPanel::OnShowMouse));
-
-	Connect(m_HideMouseTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(GSPanel::OnHideMouseTimeout) );
 }
 
 GSPanel::~GSPanel() throw()
@@ -226,7 +228,7 @@ void GSPanel::DoSettingsApplied()
 }
 
 // --------------------------------------------------------------------------------------
-//  GSFrame
+//  GSFrame Implementation
 // --------------------------------------------------------------------------------------
 
 GSFrame::GSFrame(wxWindow* parent, const wxString& title)
@@ -236,6 +238,7 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX
 	)
 	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>	( this, OnSettingsApplied ) )
+	, m_timer_UpdateTitle( this )
 {
 	SetIcons( wxGetApp().GetIconBundle() );
 
@@ -248,13 +251,16 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	label->SetForegroundColour( *wxWHITE );
 	label->Show( EmuConfig.GS.DisableOutput );
 
-	m_gspanel = new GSPanel( this );		// TODO : give this an id instead of using FindByName
-	m_gspanel->Show( !EmuConfig.GS.DisableOutput );
+	GSPanel* gsPanel = new GSPanel( this );
+	gsPanel->Show( !EmuConfig.GS.DisableOutput );
+	m_gspanel_id = gsPanel->GetId();
 
 	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(GSFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler		(GSFrame::OnMove) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler		(GSFrame::OnResize) );
 	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler	(GSFrame::OnActivate) );
+
+	Connect(m_timer_UpdateTitle.GetId(), wxEVT_TIMER, wxTimerEventHandler(GSFrame::OnUpdateTitle) );
 }
 
 GSFrame::~GSFrame() throw()
@@ -266,14 +272,23 @@ bool GSFrame::Show( bool shown )
 {
 	if( shown )
 	{
-		if( FindWindowByName(L"GSPanel") == NULL )
+		GSPanel* gsPanel = GetViewport();
+
+		if( gsPanel == NULL || gsPanel->IsBeingDeleted() )
 		{
-			m_gspanel = new GSPanel( this );
-			m_gspanel->Show( !EmuConfig.GS.DisableOutput );
+			gsPanel = new GSPanel( this );
+			m_gspanel_id = gsPanel->GetId();
 		}
 
-		m_gspanel->DoResize();
-		m_gspanel->SetFocus();
+		gsPanel->Show( !EmuConfig.GS.DisableOutput );
+		gsPanel->DoResize();
+		gsPanel->SetFocus();
+		
+		m_timer_UpdateTitle.Start( 333 );
+	}
+	else
+	{
+		m_timer_UpdateTitle.Stop();
 	}
 
 	return _parent::Show( shown );
@@ -297,9 +312,35 @@ void GSFrame::DoSettingsApplied()
 		label->Show( !EmuConfig.GS.DisableOutput );
 }
 
-wxWindow* GSFrame::GetViewport()
+GSPanel* GSFrame::GetViewport()
 {
-	return FindWindowByName(L"GSPanel");
+	return (GSPanel*)FindWindowById( m_gspanel_id );
+}
+
+void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
+{
+	double fps = wxGetApp().FpsManager.GetFramerate();
+	
+	char gsDest[128];
+	GSgetTitleInfo( gsDest );
+
+	const wxChar* limiterStr = L"None";
+
+	if( g_Conf->EmuOptions.GS.FrameLimitEnable )
+	{
+		switch( g_LimiterMode )
+		{
+			case Limit_Nominal:	limiterStr = L"Normal"; break;
+			case Limit_Turbo:	limiterStr = L"Turbo"; break;
+			case Limit_Slomo:	limiterStr = L"Slomo"; break;
+		}
+	}
+
+	SetTitle( wxsFormat( L"%s | Limiter: %s | fps: %2.02f",
+		fromUTF8(gsDest).c_str(), limiterStr, fps )
+	);
+
+	//States_GetCurrentSlot()
 }
 
 void GSFrame::OnActivate( wxActivateEvent& evt )
@@ -307,7 +348,7 @@ void GSFrame::OnActivate( wxActivateEvent& evt )
 	if( IsBeingDeleted() ) return;
 
 	evt.Skip();
-	if( wxWindow* gsPanel = FindWindowByName(L"GSPanel") ) gsPanel->SetFocus();
+	if( wxWindow* gsPanel = GetViewport() ) gsPanel->SetFocus();
 }
 
 void GSFrame::OnMove( wxMoveEvent& evt )
@@ -341,7 +382,7 @@ void GSFrame::OnResize( wxSizeEvent& evt )
 	if( wxStaticText* label = (wxStaticText*)FindWindowByName(L"OutputDisabledLabel") )
 		label->CentreOnParent();
 
-	if( GSPanel* gsPanel = (GSPanel*)FindWindowByName(L"GSPanel") )
+	if( GSPanel* gsPanel = GetViewport() )
 	{
 		gsPanel->DoResize();
 		gsPanel->SetFocus();

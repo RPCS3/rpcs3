@@ -145,6 +145,7 @@ _GSgifSoftReset    GSgifSoftReset;
 _GSreadFIFO        GSreadFIFO;
 _GSreadFIFO2       GSreadFIFO2;
 _GSchangeSaveState GSchangeSaveState;
+_GSgetTitleInfo    GSgetTitleInfo;
 _GSmakeSnapshot	   GSmakeSnapshot;
 _GSmakeSnapshot2   GSmakeSnapshot2;
 _GSirqCallback 	   GSirqCallback;
@@ -176,6 +177,14 @@ static void CALLBACK GS_printf(int timeout, char *fmt, ...)
 
 	Console.WriteLn(msg);
 }
+
+void CALLBACK GS_getTitleInfo( char dest[128] )
+{
+	dest[0] = 'G';
+	dest[1] = 'S';
+	dest[2] = 0;
+}
+
 
 // PAD
 _PADinit           PADinit;
@@ -297,6 +306,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 	{	"GSsetVsync",		(vMeth**)&GSsetVsync,		(vMeth*)GS_setVsync	},
 	{	"GSsetExclusive",	(vMeth**)&GSsetExclusive,	(vMeth*)GS_setExclusive	},
 	{	"GSchangeSaveState",(vMeth**)&GSchangeSaveState,(vMeth*)GS_changeSaveState },
+	{	"GSgetTitleInfo",	(vMeth**)&GSgetTitleInfo,	(vMeth*)GS_getTitleInfo },
 	{ NULL }
 };
 
@@ -941,9 +951,9 @@ void PluginManager::Open( PluginsEnum_t pid )
 	bool result = true;
 	switch( pid )
 	{
-		case PluginId_CDVD:	result = OpenPlugin_CDVD();	break;
 		case PluginId_GS:	result = OpenPlugin_GS();	break;
 		case PluginId_PAD:	result = OpenPlugin_PAD();	break;
+		case PluginId_CDVD:	result = OpenPlugin_CDVD();	break;
 		case PluginId_SPU2:	result = OpenPlugin_SPU2();	break;
 		case PluginId_USB:	result = OpenPlugin_USB();	break;
 		case PluginId_FW:	result = OpenPlugin_FW();	break;
@@ -1003,17 +1013,54 @@ void PluginManager::ClosePlugin_GS()
 	GetMTGS().Suspend();
 }
 
+void PluginManager::ClosePlugin_CDVD()
+{
+	DoCDVDclose();
+}
+
+void PluginManager::ClosePlugin_PAD()
+{
+	m_info[PluginId_PAD].CommonBindings.Close();
+}
+
+void PluginManager::ClosePlugin_SPU2()
+{
+	m_info[PluginId_SPU2].CommonBindings.Close();
+}
+
+void PluginManager::ClosePlugin_DEV9()
+{
+	m_info[PluginId_DEV9].CommonBindings.Close();
+}
+
+void PluginManager::ClosePlugin_USB()
+{
+	m_info[PluginId_USB].CommonBindings.Close();
+}
+
+void PluginManager::ClosePlugin_FW()
+{
+	m_info[PluginId_FW].CommonBindings.Close();
+}
+
+
 void PluginManager::Close( PluginsEnum_t pid )
 {
 	if( !m_info[pid].IsOpened ) return;
 	Console.Indent().WriteLn( "Closing %s", tbl_PluginInfo[pid].shortname );
 
-	if( pid == PluginId_GS )
-		ClosePlugin_GS();
-	else if( pid == PluginId_CDVD )
-		DoCDVDclose();
-	else
-		m_info[pid].CommonBindings.Close();
+	switch( pid )
+	{
+		case PluginId_GS:	ClosePlugin_GS();	break;
+		case PluginId_PAD:	ClosePlugin_PAD();	break;
+		case PluginId_CDVD:	ClosePlugin_CDVD();	break;
+		case PluginId_SPU2:	ClosePlugin_SPU2();	break;
+		case PluginId_USB:	ClosePlugin_USB();	break;
+		case PluginId_FW:	ClosePlugin_FW();	break;
+		case PluginId_DEV9:	ClosePlugin_DEV9();	break;
+		
+		jNO_DEFAULT;
+	}
 
 	m_info[pid].IsOpened = false;
 }
@@ -1022,7 +1069,8 @@ void PluginManager::Close()
 {
 	if( !NeedsClose() ) return;	// Spam stopper; returns before writing any logs. >_<
 
-	// Close plugins in reverse order of the initialization procedure.
+	// Close plugins in reverse order of the initialization procedure, which
+	// ensures the GS gets closed last.
 
 	DbgCon.WriteLn( Color_StrongBlue, "Closing plugins..." );
 

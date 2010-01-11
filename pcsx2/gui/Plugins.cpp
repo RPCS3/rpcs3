@@ -86,6 +86,7 @@ public:
 		sApp.PostPluginStatus( PluginsEvt_Opened );
 	}
 
+	// Yay, this plugin is guaranteed to always be opened first and closed last.
 	bool OpenPlugin_GS()
 	{
 		if( GSopen2 != NULL )
@@ -96,8 +97,20 @@ public:
 		return _parent::OpenPlugin_GS();
 	}
 
+	// Yay, this plugin is guaranteed to always be opened first and closed last.
 	void ClosePlugin_GS()
 	{
+		if( GSopen2 == NULL || CloseViewportWithPlugins )
+		{
+			// All other plugins must be closed before the GS, because they all rely on
+			// the GS window handle being valid.  The recursion guard will protect this
+			// function from being called a million times. ;)
+
+			static int _guard;
+			RecursionGuard mess( _guard );
+			if( !mess.IsReentrant() ) Close();
+		}
+
 		_parent::ClosePlugin_GS();
 		sApp.CloseGsPanel();
 	}
@@ -110,6 +123,7 @@ public:
 	
 	void Close( PluginsEnum_t pid )
 	{
+		_parent::Close( pid );
 	}*/
 };
 

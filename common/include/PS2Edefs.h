@@ -256,11 +256,8 @@ void CALLBACK GSsetFrameSkip(int frameskip);
 int CALLBACK GSsetupRecording(int start, void* pData);
 
 void CALLBACK GSreset();
+void CALLBACK GSgetTitleInfo( char dest[128] );
 void CALLBACK GSwriteCSR(u32 value);
-void CALLBACK GSgetDriverInfo(GSdriverInfo *info);
-#ifdef _WIN32
-s32  CALLBACK GSsetWindowInfo(winInfo *info);
-#endif
 s32  CALLBACK GSfreeze(int mode, freezeData *data);
 void CALLBACK GSconfigure();
 void CALLBACK GSabout();
@@ -528,6 +525,7 @@ typedef void (CALLBACK* _GSreadFIFO)(u64 *pMem);
 typedef void (CALLBACK* _GSreadFIFO2)(u64 *pMem, int qwc);
 
 typedef void (CALLBACK* _GSchangeSaveState)(int, const char* filename);
+typedef void (CALLBACK* _GSgetTitleInfo)(char dest[128]);
 typedef void (CALLBACK* _GSirqCallback)(void (*callback)());
 typedef void (CALLBACK* _GSprintf)(int timeout, char *fmt, ...);
 typedef void (CALLBACK* _GSsetBaseMem)(void*);
@@ -669,6 +667,7 @@ extern _GSreadFIFO        GSreadFIFO;
 extern _GSreadFIFO2       GSreadFIFO2;
 
 extern _GSchangeSaveState GSchangeSaveState;
+extern _GSgetTitleInfo    GSgetTitleInfo;
 extern _GSmakeSnapshot	  GSmakeSnapshot;
 extern _GSmakeSnapshot2   GSmakeSnapshot2;
 extern _GSirqCallback 	  GSirqCallback;

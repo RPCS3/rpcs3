@@ -339,6 +339,12 @@ protected:
 	virtual bool OpenPlugin_FW();
 	
 	virtual void ClosePlugin_GS();
+	virtual void ClosePlugin_CDVD();
+	virtual void ClosePlugin_PAD();
+	virtual void ClosePlugin_SPU2();
+	virtual void ClosePlugin_DEV9();
+	virtual void ClosePlugin_USB();
+	virtual void ClosePlugin_FW();
 
 	friend class SysMtgsThread;
 };

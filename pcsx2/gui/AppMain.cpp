@@ -197,7 +197,42 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 	}
 }
 
-// OnLogicalVsync - Event received from the AppCoreThread (EEcore) for each vsync,
+void FramerateManager::Reset()
+{
+	memzero( m_fpsqueue );
+	m_fpsqueue_tally = 0;
+	m_fpsqueue_writepos = 0;
+	Resume();
+}
+
+// 
+void FramerateManager::Resume()
+{
+	m_ticks_lastframe = GetCPUTicks();
+}
+
+void FramerateManager::DoFrame()
+{
+	++m_FrameCounter;
+
+	u64 curtime = GetCPUTicks();
+	u64 elapsed_time = curtime - m_ticks_lastframe;
+	m_ticks_lastframe = curtime;
+
+	m_fpsqueue_tally += elapsed_time;
+	m_fpsqueue_tally -= m_fpsqueue[m_fpsqueue_writepos];
+
+	m_fpsqueue[m_fpsqueue_writepos] = elapsed_time;
+	m_fpsqueue_writepos = (m_fpsqueue_writepos + 1) % FramerateQueueDepth;
+}
+
+double FramerateManager::GetFramerate() const
+{
+	u32 ticks_per_frame = m_fpsqueue_tally / FramerateQueueDepth;
+	return (double)GetTickFrequency() / (double)ticks_per_frame;
+}
+
+// LogicalVsync - Event received from the AppCoreThread (EEcore) for each vsync,
 // roughly 50/60 times a second when frame limiting is enabled, and up to 10,000 
 // times a second if not (ok, not quite, but you get the idea... I hope.)
 void Pcsx2App::LogicalVsync()
@@ -205,6 +240,10 @@ void Pcsx2App::LogicalVsync()
 	if( SelfMethodPost( &Pcsx2App::LogicalVsync ) ) return;
 
 	if( !SysHasValidState() || g_plugins == NULL ) return;
+
+	// Update / Calculate framerate!
+
+	FpsManager.DoFrame();
 
 	// Only call PADupdate here if we're using GSopen2.  Legacy GSopen plugins have the
 	// GS window belonging to the MTGS thread.
@@ -233,6 +272,22 @@ void Pcsx2App::LogicalVsync()
 // polling of the CoreThread rather than the belated status.
 void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 {
+	CoreThreadStatus status = (CoreThreadStatus)evt.GetInt();
+	
+	switch( status )
+	{
+		case CoreStatus_Started:
+		case CoreStatus_Reset:
+		case CoreStatus_Stopped:
+			FpsManager.Reset();
+		break;
+
+		case CoreStatus_Resumed:
+		case CoreStatus_Suspended:
+			FpsManager.Resume();
+		break;
+	}
+
 	// Clear the sticky key statuses, because hell knows what'll change while the PAD
 	// plugin is suspended.
 
@@ -421,8 +476,10 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		
 		if( result == pxID_CUSTOM )
 		{
-			// fastest way to kill the process!
-			// (note: SIGTERM is a "handled" kill that performs shutdown stuff, which typically juse crashes anyway)
+			// fastest way to kill the process! (works in Linux and win32, thanks to windows having very
+			// limited Posix Signals support)
+			//
+			// (note: SIGTERM is a "handled" kill that performs shutdown stuff, which typically just crashes anyway)
 			wxKill( wxGetProcessId(), wxSIGKILL );
 		}
 		else if( result == wxID_CANCEL )
@@ -654,9 +711,9 @@ void Pcsx2App::CloseGsPanel()
 {
 	if( SelfMethodInvoke( &Pcsx2App::CloseGsPanel ) ) return;
 
-	if( m_gsFrame != NULL )
+	if( m_gsFrame != NULL && CloseViewportWithPlugins )
 	{
-		if( GSPanel* woot = (GSPanel*)m_gsFrame->FindWindowByName(L"GSPanel") )
+		if( GSPanel* woot = m_gsFrame->GetViewport() )
 			woot->Destroy();
 	}
 }
@@ -820,7 +877,7 @@ bool HasMainFrame()
 // frame has been closed).  In most cases you'll want to use HasMainFrame() to test
 // for gui validity first, or use GetMainFramePtr() and manually check for NULL (choice
 // is a matter of programmer preference).
-MainEmuFrame&	GetMainFrame()
+MainEmuFrame& GetMainFrame()
 {
 	return wxGetApp().GetMainFrame();
 }
@@ -828,7 +885,7 @@ MainEmuFrame&	GetMainFrame()
 // Returns a pointer to the main frame of the GUI (frame may be hidden from view), or
 // NULL if no main frame exists (NoGUI mode and/or the frame has been destroyed).  If
 // the wxApp is NULL then this will also return NULL.
-MainEmuFrame*	GetMainFramePtr()
+MainEmuFrame* GetMainFramePtr()
 {
 	return wxTheApp ? wxGetApp().GetMainFramePtr() : NULL;
 }

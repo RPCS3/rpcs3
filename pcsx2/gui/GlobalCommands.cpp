@@ -53,14 +53,7 @@ wxString KeyAcceleratorCode::ToString() const
 	).ToString();
 }
 
-enum LimiterModeType
-{
-	Limit_Nominal,
-	Limit_Turbo,
-	Limit_Slomo,
-};
-
-static LimiterModeType g_LimiterMode = Limit_Nominal;
+LimiterModeType g_LimiterMode = Limit_Nominal;
 
 namespace Implementations
 {
