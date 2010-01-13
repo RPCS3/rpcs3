@@ -180,9 +180,9 @@ void memMapPhy()
 	// "Secret" IOP HW mappings - Used by EE Bios Kernel during boot and generally
 	// left untouched after that, as per EE/IOP thread safety rules.
 	
-	vtlb_MapHandler(hw_by_page[0x1], 0x1f801000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x3], 0x1f803000, 0x01000);
-	vtlb_MapHandler(hw_by_page[0x8], 0x1f808000, 0x01000);
+	vtlb_MapHandler(iopHw_by_page_01, 0x1f801000, 0x01000);
+	vtlb_MapHandler(iopHw_by_page_03, 0x1f803000, 0x01000);
+	vtlb_MapHandler(iopHw_by_page_08, 0x1f808000, 0x01000);
 
 }
 

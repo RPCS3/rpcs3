@@ -203,7 +203,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 	// ------------------------------------------------------------------------
 	// USB, with both 16 and 32 bit interfaces
 	//
-	else if( masked_addr >= pgmsk(HW_USB_START) && masked_addr < pgmsk(HW_USB_END) )
+	else if( (masked_addr >= pgmsk(HW_USB_START)) && (masked_addr < pgmsk(HW_USB_END)) )
 	{
 		ret = (sizeof(T) == 2) ? USBread16( addr ) : USBread32( addr );
 	}
