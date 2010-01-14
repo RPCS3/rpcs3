@@ -62,7 +62,7 @@ void LoadConfig()
 		return;
 	}
 	
-	conf.Log = Ini.ReadInt("logging");
+	conf.Log = Ini.ReadInt("logging", 0);
 	setLoggingState();
 	Ini.Close();
 }

@@ -135,9 +135,9 @@ struct PluginConf
         fclose(ConfFile);
     }
 
-    int ReadInt(std::string item)
+    int ReadInt(const std::string& item, int defval)
     {
-        int value = -1;
+        int value = defval;
         std::string buf = item + " = %d\n";
 
         if (ConfFile) fscanf(ConfFile, buf.c_str(), &value);

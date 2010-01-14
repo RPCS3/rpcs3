@@ -100,10 +100,13 @@ EXPORT_C_(u8) USBread8(u32 addr)
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
-		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit read at address %lx", addr); break;
+		case 0x1f801600:
+			USBLog.WriteLn("(USBnull) 8 bit read at address %lx", addr);
+		break;
+
 		default:
 			//value = usbRu8(addr);
-			USBLog.WriteLn("*Unknown 8 bit read at address %lx", addr);
+			USBLog.WriteLn("*(USBnull) 8 bit read at address %lx", addr);
 			break;
 	}
 	return value;
@@ -116,10 +119,13 @@ EXPORT_C_(u16) USBread16(u32 addr)
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
-		case 0x1f801600: USBLog.WriteLn("*Unknown 16 bit read at address %lx", addr); break;
+		case 0x1f801600:
+			USBLog.WriteLn("(USBnull) 16 bit read at address %lx", addr);
+		break;
+
 		default:
 			//value = usbRu16(addr);
-			USBLog.WriteLn("*Unknown 16 bit read at address %lx", addr);
+			USBLog.WriteLn("(USBnull) 16 bit read at address %lx", addr);
 	}
 	return value;
 }
@@ -131,10 +137,13 @@ EXPORT_C_(u32) USBread32(u32 addr)
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
-		case 0x1f801600: USBLog.WriteLn("*Unknown 32 bit read at address %lx", addr); break;
+		case 0x1f801600:
+			USBLog.WriteLn("(USBnull) 32 bit read at address %lx", addr);
+		break;
+
 		default:
 			//value = usbRu32(addr);
-			USBLog.WriteLn("*Unknown 32 bit read at address %lx", addr);
+			USBLog.WriteLn("(USBnull) 32 bit read at address %lx", addr);
 	}
 	return value;
 }
@@ -144,10 +153,13 @@ EXPORT_C_(void) USBwrite8(u32 addr,  u8 value)
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
-		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value); break;
+		case 0x1f801600:
+			USBLog.WriteLn("(USBnull) 8 bit write at address %lx value %x", addr, value);
+		break;
+
 		default:
 			//usbRu8(addr) = value;
-			USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value);
+			USBLog.WriteLn("(USBnull) 8 bit write at address %lx value %x", addr, value);
 	}
 }
 
@@ -156,10 +168,13 @@ EXPORT_C_(void) USBwrite16(u32 addr, u16 value)
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
-		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value); break;
+		case 0x1f801600:
+			USBLog.WriteLn("(USBnull) 16 bit write at address %lx value %x", addr, value);
+		break;
+
 		default:
 			//usbRu16(addr) = value;
-			USBLog.WriteLn("*Unknown 16 bit write at address %lx value %x", addr, value);
+			USBLog.WriteLn("(USBnull) 16 bit write at address %lx value %x", addr, value);
 	}
 }
 
@@ -168,10 +183,13 @@ EXPORT_C_(void) USBwrite32(u32 addr, u32 value)
 	switch(addr)
 	{
 		// Handle any appropriate addresses here.
-		case 0x1f801600: USBLog.WriteLn("*Unknown 8 bit write at address %lx value %x", addr, value); break;
+		case 0x1f801600:
+			USBLog.WriteLn("(USBnull) 16 bit write at address %lx value %x", addr, value);
+		break;
+
 		default:
 			//usbRu32(addr) = value;
-			USBLog.WriteLn("*Unknown 32 bit write at address %lx value %x", addr, value);
+			USBLog.WriteLn("(USBnull) 32 bit write at address %lx value %x", addr, value);
 	}
 }
 
