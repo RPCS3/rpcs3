@@ -178,9 +178,9 @@ void OnCompress()
 
 	for (lsn = 0; lsn < src->blocks; lsn++)
 	{
-		printf("block %d ", lsn);
-		putchar(13);
-		fflush(stdout);
+		//printf("block %d ", lsn);
+		//putchar(13);
+		//fflush(stdout);
 		ret = isoReadBlock(src, cdbuff, lsn);
 		if (ret == -1) break;
 		ret = isoWriteBlock(dst, cdbuff, lsn);
