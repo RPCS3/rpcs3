@@ -169,8 +169,8 @@ __forceinline void PSX_INT( IopEventId n, s32 ecycle )
 	// code to help trap those sort of things.
 
 	// Exception: IRQ16 - SIO - it drops ints like crazy when handling PAD stuff.
-	//if( /*n!=16 &&*/ psxRegs.interrupt & (1<<n) )
-	//	Console.WriteLn( "***** IOP > Twice-thrown int on IRQ %d", n );
+	if( /*n!=16 &&*/ psxRegs.interrupt & (1<<n) )
+		DevCon.Warning( "***** IOP > Twice-thrown int on IRQ %d", n );
 
 	psxRegs.interrupt |= 1 << n;
 
