@@ -165,7 +165,7 @@ static void ShiftDisplacementWindow( xAddressInfo& addr, const xRegister32& modR
 }
 static bool UsesTwoRegs[] = 
 {
-	true, true, true, true,
+	true,  true,  true,  true,
 	false, false, false, false,
 	false, false, false, false,
 	false, false, false, true,
@@ -221,15 +221,22 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 	}
 
 	if (doMode==2) writeBackRow();
-	xMOV(ptr32[&v.vif->cl],	   vCL);
+	xMOV(ptr32[&v.vif->cl],	     vCL);
 	xMOV(ptr32[&v.vifRegs->num], vNum);
 	xRET();
 }
 
-static _f u8* dVifsetVUptr(const nVifStruct& v, int offset) {
-	u8* ptr	   = (u8*)(v.VU->Mem + (offset & v.vuMemLimit));
-	u8* endPtr = ptr + _vBlock.num * 16;
-	if (endPtr > v.vuMemEnd) {
+static _f u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
+	u8* endPtr; // Check if we need to wrap around VU memory
+	u8* ptr = (u8*)(v.VU->Mem + (v.vif->tag.addr & v.vuMemLimit));
+	if (!isFill) { // Account for skip-cycles
+		int skipSize  = cl - wl;
+		int blocks    = _vBlock.num / wl;
+		int skips	  = (blocks * skipSize + _vBlock.num) * 16;
+		endPtr = ptr + skips;
+	}
+	else endPtr  = ptr + (_vBlock.num * 16);
+	if ( endPtr >= v.vuMemEnd ) {
 		DevCon.WriteLn("nVif - VU Mem Ptr Overflow; falling back to interpreter.");
 		ptr = NULL; // Fall Back to Interpreters which have wrap-around logic
 	}
@@ -266,10 +273,10 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 
 	// Zero out the mask parameter if it's unused -- games leave random junk
 	// values here which cause false recblock cache misses.
-	_vBlock.mask	  = (doMask || ((_vBlock.mode&3)!=0) ) ? v.vifRegs->mask : 0x00;
+	_vBlock.mask	  = (doMask || (_vBlock.mode&3)) ? v.vifRegs->mask : 0;
 
 	if (nVifBlock* b = v.vifBlocks->find(&_vBlock)) {
-		if( u8* dest = dVifsetVUptr(v, v.vif->tag.addr) ) {
+		if (u8* dest = dVifsetVUptr(v, cycle_cl, cycle_wl, isFill)) {
 			//DevCon.WriteLn("Running Recompiled Block!");
 			((nVifrecCall)b->startPtr)((uptr)dest, (uptr)data);
 		}
@@ -281,10 +288,10 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	}
 	static int recBlockNum = 0;
 	DevCon.WriteLn("nVif: Recompiled Block! [%d]", recBlockNum++);
-	DevCon.WriteLn(L"\t(num=0x%02x, upkType=0x%02x, mode=0x%02x, scl=0x%02x, cl/wl=0x%x/0x%x, mask=%s)",
-		_vBlock.num, _vBlock.upkType, _vBlock.mode, _vBlock.scl, _vBlock.cl, _vBlock.wl,
-		doMask ? wxsFormat( L"0x%08x", _vBlock.mask ).c_str() : L"ignored"
-	);
+	//DevCon.WriteLn(L"\t(num=0x%02x, upkType=0x%02x, mode=0x%02x, scl=0x%02x, cl/wl=0x%x/0x%x, mask=%s)",
+	//	_vBlock.num, _vBlock.upkType, _vBlock.mode, _vBlock.scl, _vBlock.cl, _vBlock.wl,
+	//	doMask ? wxsFormat( L"0x%08x", _vBlock.mask ).c_str() : L"ignored"
+	//);
 
 	xSetPtr(v.recPtr);
 	_vBlock.startPtr = (uptr)xGetAlignedCallTarget();

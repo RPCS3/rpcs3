@@ -66,7 +66,7 @@ static const __aligned16 Fnptr_VifUnpackLoop UnpackLoopTable[2][2][2] = {
 	{{ _nVifUnpackLoop<0,0,0,0>, _nVifUnpackLoop<0,0,1,0> },
 	{  _nVifUnpackLoop<0,1,0,0>, _nVifUnpackLoop<0,1,1,0> },},
 	{{ _nVifUnpackLoop<1,0,0,0>, _nVifUnpackLoop<1,0,1,0> },
-	{ _nVifUnpackLoop<1,1,0,0>, _nVifUnpackLoop<1,1,1,0> },},
+	{  _nVifUnpackLoop<1,1,0,0>, _nVifUnpackLoop<1,1,1,0> },},
 };
 
 // Unpacks until 1 normal write cycle unpack has been written to VU mem
@@ -74,7 +74,7 @@ static const __aligned16 Fnptr_VifUnpackLoop UnpackSingleTable[2][2][2] = {
 	{{ _nVifUnpackLoop<0,0,0,1>, _nVifUnpackLoop<0,0,1,1> },
 	{  _nVifUnpackLoop<0,1,0,1>, _nVifUnpackLoop<0,1,1,1> },},
 	{{ _nVifUnpackLoop<1,0,0,1>, _nVifUnpackLoop<1,0,1,1> },
-	{ _nVifUnpackLoop<1,1,0,1>, _nVifUnpackLoop<1,1,1,1> },},
+	{  _nVifUnpackLoop<1,1,0,1>, _nVifUnpackLoop<1,1,1,1> },},
 };
 // ----------------------------------------------------------------------------
 
@@ -98,71 +98,58 @@ static _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
 
 static _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
 	pxAssume( ((uptr)ptr & 0xf) == 0 );		// alignment check
-	ptr += amount;
+	ptr			  += amount;
+	vif->tag.addr += amount;
 	int diff = ptr - (vuMemBase + (vuidx ? 0x4000 : 0x1000));
 	if (diff >= 0) {
 		ptr = (u8*)(vuMemBase + diff);
+		DevCon.WriteLn("wrap!");
 	}
 }
 
 static _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
 	pxAssume( ((uptr)ptr & 0xf) == 0 );	// alignment check
-	ptr += 16;
-	if( ptr == (vuMemBase + (vuidx ? 0x4000 : 0x1000)) )
+	ptr			  += 16;
+	vif->tag.addr += 16;
+	if( ptr == (vuMemBase + (vuidx ? 0x4000 : 0x1000)) ) {
 		ptr -= (vuidx ? 0x4000 : 0x1000);
+		DevCon.WriteLn("wrap!");
+	}
 }
 
 int nVifUnpack(int idx, u8* data) {
 	XMMRegisters::Freeze();
 	nVifStruct& v = nVif[idx];
-	vif		 = v.vif;
-	vifRegs	 = v.vifRegs;
-	int ret  = aMin(vif->vifpacketsize, vif->tag.size);
-	s32 size = ret << 2;
-	const u8& vifT = nVifT[vif->cmd & 0xf];
+	vif		= v.vif;
+	vifRegs = v.vifRegs;
 
-	vif->tag.size -= ret;
+	const int  ret    = aMin(vif->vifpacketsize, vif->tag.size);
+	const bool isFill = (vifRegs->cycle.cl < vifRegs->cycle.wl);
+	s32		   size   = ret << 2;
 
-	const bool  isFill	= (vifRegs->cycle.cl < vifRegs->cycle.wl);
-
-	if (v.partTransfer) { // Last transfer was a partial vector transfer...
-		const bool  doMode	=  vifRegs->mode && !(vif->tag.cmd & 0x10);
-		const u8    upkNum	=  vif->cmd & 0x1f;
-		const int   diff	=  vifT - v.partTransfer;
+    if (v.partTransfer) { // Last transfer was a partial vector transfer...
+		const u8&	vifT	= nVifT[vif->cmd & 0xf];
+		const bool  doMode	= vifRegs->mode && !(vif->tag.cmd & 0x10);
+		const u8    upkNum	= vif->cmd & 0x1f;
+		const int   diff	= vifT - v.partTransfer;
 		memcpy(&v.partBuffer[v.partTransfer], data, diff);
-		UnpackSingleTable[idx][doMode][isFill]( v.partBuffer, size );
+		UnpackSingleTable[idx][doMode][isFill](v.partBuffer, size);
+		//DevCon.WriteLn("Diff = %d; vifT = %d; size = %d", diff, vifT, size);
 		data += diff;
 		size -= diff;
-		vif->tag.addr  += 16;
-		v.partTransfer  =  0;
-		//DevCon.WriteLn("Diff = %d", diff);
+		v.partTransfer = 0;
+    }
+
+	if (ret == v.vif->tag.size) { // Full Transfer
+		dVifUnpack(idx, data, size, isFill);
+		vif->tag.size = 0;
+		vif->cmd = 0; 
+	}
+	else { // Partial Transfer	
+		_nVifUnpack(idx, data, size, isFill);
+		vif->tag.size -= ret;
 	}
 
-	u32 oldNum = vifRegs->num;
-
-	if (size > 0) {
-		if (newVifDynaRec)	dVifUnpack(idx, data, size, isFill);
-		else			   _nVifUnpack(idx, data, size, isFill);
-	}
-
-	u32 s	 =(size/vifT)  * vifT;
-	u32 d	 = size - s;
-	s32 temp = oldNum * vifT - s; // ToDo: Handle filling write partial logic
-	
-	if (temp > 0) {	 // Current transfer is partial
-		if (d > 0) { // Partial Vector Transfer
-			//DevCon.WriteLn("partial transfer!");
-			memcpy(v.partBuffer, &((u8*)data)[s], d);
-			v.partTransfer = d;
-		}
-		vifRegs->num  += temp / vifT;
-		vif->tag.addr +=(oldNum - vifRegs->num) * 16;
-	}
-	
-	if (vif->tag.size <= 0) {
-		vif->tag.size  = 0;
-		vif->cmd       = 0;
-	}
 	XMMRegisters::Thaw();
 	return ret;
 }
@@ -176,12 +163,12 @@ static void setMasks(int idx, const VIFregisters& v) {
 				nVifMask[1][i/4][i%4] = 0;
 				nVifMask[2][i/4][i%4] = 0;
 				break;
-			case 1: // Row
+			case 1: // Row // todo: use g_vifmask
 				nVifMask[0][i/4][i%4] = 0;
 				nVifMask[1][i/4][i%4] = 0;
 				nVifMask[2][i/4][i%4] = ((u32*)&v.r0)[(i%4)*4];
 				break;
-			case 2: // Col
+			case 2: // Col // todo: use g_vifmask
 				nVifMask[0][i/4][i%4] = 0;
 				nVifMask[1][i/4][i%4] = 0;
 				nVifMask[2][i/4][i%4] = ((u32*)&v.c0)[(i/4)*4];
@@ -226,27 +213,17 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 
 	const int	usn		= !!(vif->usn);
 	const int	upkNum	= vif->cmd & 0x1f;
-	//const s8&	vift	= nVifT[upkNum];	// might be useful later when other SSE paths are finished.
-
-	// Recompiled Unpacker, used when doMode is false.
-	// Did a bunch of work to make it so I could optimize this index lookup to outside
-	// the main loop but it was for naught -- too often the loop is only 1-2 iterations,
-	// so this setup code ends up being slower (1 iter) or same speed (2 iters).
+	//const s8&	vift	= nVifT[upkNum]; // might be useful later when other SSE paths are finished.
+	
 	const nVifCall*	fnbase			= &nVifUpk[ ((usn*2*16) + upkNum) * (4*1) ];
-
-	// Interpreted Unpacker, used if doMode is true OR if isFill is true.  Lookup is
-	// always performed for now, due to ft.gsize reference (seems faster than using
-	// nVifT for now)
 	const VIFUnpackFuncTable& ft	= VIFfuncTable[upkNum];
 	UNPACKFUNCTYPE func				= usn ? ft.funcU : ft.funcS;
-
-	// Cache vuMemBase to a local var because the VU1's is a dereferenced pointer that
-	// mucks up compiler optimizations on the internal loops. >_< --air
+	
 	const u8* vuMemBase	= (idx ? VU1 : VU0).Mem;
 	u8* dest			= setVUptr(idx, vuMemBase, vif->tag.addr);
 	if (vif->cl >= blockSize)  vif->cl = 0;
 	
-	while (vifRegs->num) {
+	while (vifRegs->num && (size >= ft.gsize)) {
 		if (vif->cl < cycleSize) { 
 			if (doMode) {
 				//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);
@@ -257,10 +234,11 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 				fnbase[aMin(vif->cl, 3)](dest, data);
 			}
 			data += ft.gsize;
+			size -= ft.gsize;
 			vifRegs->num--;
 			incVUptrBy16(idx, dest, vuMemBase);
 			if (++vif->cl == blockSize) vif->cl = 0;
-			if (singleUnpack) break;
+			if (singleUnpack) return;
 		}
 		else if (isFill) {
 			//DevCon.WriteLn("isFill!");
@@ -274,6 +252,12 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 			vif->cl = 0;
 		}
 	}
+
+	if (vifRegs->num && ((s32)size > 0)) { // Partial Vector Transfer
+        //DevCon.WriteLn("partial transfer! [%d]", size);
+        memcpy(nVif[idx].partBuffer, data, size);
+        nVif[idx].partTransfer = size;
+    }
 }
 
 _f void _nVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
