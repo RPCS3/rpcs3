@@ -106,7 +106,7 @@ _f void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 		if ((cS>=4) && (m3&0xff000000)) xPSHUF.D(xmmCol3, xmmCol0, _v3);
 		if ((cS>=1) && (m3&0x000000ff)) xPSHUF.D(xmmCol0, xmmCol0, _v0);
 	}
-	//if (mask||mode) loadRowCol(v);
+	//if (doMask||doMode) loadRowCol((nVifStruct&)v);
 }
 
 void VifUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
@@ -173,14 +173,14 @@ static bool UsesTwoRegs[] =
 };
 
 void VifUnpackSSE_Dynarec::CompileRoutine() {
-	const int  upkNum		=  v.vif->cmd & 0xf;
-	const u8&  vift			=  nVifT[upkNum];
-	const int  cycleSize	=  isFill ?  vB.cl : vB.wl;
-	const int  blockSize	=  isFill ?  vB.wl : vB.cl;
-	const int  skipSize		=  blockSize - cycleSize;
+	const int  upkNum	 = v.vif->cmd & 0xf;
+	const u8&  vift		 = nVifT[upkNum];
+	const int  cycleSize = isFill ? vB.cl : vB.wl;
+	const int  blockSize = isFill ? vB.wl : vB.cl;
+	const int  skipSize	 = blockSize - cycleSize;
 
-	int  vNum	=  v.vifRegs->num;
-	vCL	=  v.vif->cl;
+	int vNum = v.vifRegs->num;
+	vCL		 = v.vif->cl;
 
 	SetMasks(cycleSize);
 
@@ -256,6 +256,7 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	const nVifStruct& v		= nVif[idx];
 	const u8	upkType		= v.vif->cmd & 0x1f | ((!!v.vif->usn) << 5);
 	const int	doMask		= v.vif->cmd & 0x10;
+	const int	doMode		= (doMask) ? 0 : (u8&)v.vifRegs->mode;
 
 	const int	cycle_cl	= v.vifRegs->cycle.cl;
 	const int	cycle_wl	= v.vifRegs->cycle.wl;
@@ -265,8 +266,8 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	if (v.vif->cl >= blockSize)  v.vif->cl = 0;
 
 	_vBlock.upkType   = upkType;
-	_vBlock.num		  = *(u8*)&v.vifRegs->num;
-	_vBlock.mode	  = *(u8*)&v.vifRegs->mode;
+	_vBlock.num		  = (u8&)v.vifRegs->num;
+	_vBlock.mode	  = doMode;
 	_vBlock.scl		  = v.vif->cl;
 	_vBlock.cl		  = cycle_cl;
 	_vBlock.wl		  = cycle_wl;
