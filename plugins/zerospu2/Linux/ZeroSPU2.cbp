@@ -56,10 +56,8 @@
 			<Add library="stdc++" />
 			<Add library="dl" />
 		</Linker>
-		<Unit filename="Alsa.cpp" />
 		<Unit filename="Linux.cpp" />
 		<Unit filename="Linux.h" />
-		<Unit filename="OSS.cpp" />
 		<Unit filename="callbacks.h" />
 		<Unit filename="interface.c">
 			<Option compilerVar="CC" />
@@ -69,6 +67,12 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="support.h" />
+		<Unit filename="../Targets/Alsa.cpp" />
+		<Unit filename="../Targets/Alsa.h" />
+		<Unit filename="../Targets/OSS.cpp" />
+		<Unit filename="../Targets/OSS.h" />
+		<Unit filename="../Targets/SoundTargets.cpp" />
+		<Unit filename="../Targets/SoundTargets.h" />
 		<Unit filename="../misc.h" />
 		<Unit filename="../reg.h" />
 		<Unit filename="../voices.cpp" />
