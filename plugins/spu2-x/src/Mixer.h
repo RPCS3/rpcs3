@@ -67,6 +67,13 @@ struct StereoOut32
 	{
 		return StereoOut32( Left / src, Right / src );
 	}
+
+	void ResampleFrom( const StereoOut32& src )
+	{
+		this->Left = src.Left << 2;
+		this->Right = src.Right << 2;
+	}
+
 };
 
 

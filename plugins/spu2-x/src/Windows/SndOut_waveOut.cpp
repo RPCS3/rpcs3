@@ -292,7 +292,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() const
+	int GetEmptySampleCount() 
 	{
 		int result = 0;
 		for(int i=0;i<MAX_BUFFER_COUNT;i++)

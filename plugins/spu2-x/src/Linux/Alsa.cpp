@@ -205,7 +205,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() const
+	int GetEmptySampleCount() 
 	{
 		if(handle == NULL) return 0;
 

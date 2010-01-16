@@ -476,7 +476,7 @@ public:
 
 	// Returns the number of empty samples in the output buffer.
 	// (which is effectively the amount of data played since the last update)
-	virtual int GetEmptySampleCount() const=0;
+	virtual int GetEmptySampleCount() =0;
 };
 
 
@@ -486,6 +486,7 @@ extern SndOutModule* WaveOut;
 extern SndOutModule* DSoundOut;
 extern SndOutModule* XAudio2Out;
 #endif
+extern SndOutModule* PortaudioOut;
 
 extern SndOutModule* mods[];
 

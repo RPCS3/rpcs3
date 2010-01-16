@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="SPU2-X"
 	ProjectGUID="{5307BBB7-EBB9-4AA4-8CB6-A94EC473C8C4}"
 	RootNamespace="spu2x"
@@ -48,7 +48,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="$(SolutionDir)\3rdparty\portaudio\include\portaudio\include\"
 				PreprocessorDefinitions="FLOAT_SAMPLES;NDEBUG;_USRDLL"
 				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="2"
@@ -70,8 +70,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib portaudio_x86.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dev.dll"
+				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
 				RandomizedBaseAddress="1"
 				TargetMachine="1"
@@ -132,6 +133,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="$(SolutionDir)\3rdparty\portaudio\include\portaudio\include\"
 				PreprocessorDefinitions="FLOAT_SAMPLES;_USRDLL"
 				ExceptionHandling="2"
 				UsePrecompiledHeader="2"
@@ -150,8 +152,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib portaudio_x86.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
+				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
 				RandomizedBaseAddress="1"
 				SupportUnloadOfDelayLoadedDLL="false"
@@ -212,6 +215,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="$(SolutionDir)\3rdparty\portaudio\include\portaudio\include\"
 				PreprocessorDefinitions="FLOAT_SAMPLES;NDEBUG;_USRDLL"
 				ExceptionHandling="2"
 				EnableEnhancedInstructionSet="2"
@@ -233,9 +237,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib portaudio_x86.lib"
 				OutputFile="$(OutDir)\$(ProjectName).dll"
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
 				StripPrivateSymbols=""
@@ -298,7 +303,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=""
+				AdditionalIncludeDirectories="$(SolutionDir)\3rdparty\portaudio\include\portaudio\include\"
 				PreprocessorDefinitions="wxUSE_GUI=0;FLOAT_SAMPLES;DEBUG_FAST;_USRDLL"
 				ExceptionHandling="2"
 				UsePrecompiledHeader="2"
@@ -318,9 +323,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib"
+				AdditionalDependencies="rpcrt4.lib winmm.lib dsound.lib comctl32.lib soundtouch.lib x86emitter.lib utilities.lib portaudio_x86.lib"
 				OutputFile="$(OutDir)\$(ProjectName)-dbg.dll"
 				LinkIncremental="2"
+				AdditionalLibraryDirectories="$(SolutionDir)\3rdparty\portaudio"
 				ModuleDefinitionFile=".\Spu2-X.def"
 				RandomizedBaseAddress="1"
 				SupportUnloadOfDelayLoadedDLL="false"
@@ -699,6 +705,14 @@
 					</File>
 					<File
 						RelativePath="..\Linux\Alsa.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="Crossplatform"
+					>
+					<File
+						RelativePath="..\SndOut_Portaudio.cpp"
 						>
 					</File>
 				</Filter>

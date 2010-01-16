@@ -58,7 +58,7 @@ public:
 	s32  Test() const { return 0; }
 	void Configure(uptr parent)  { }
 	bool Is51Out() const { return false; }
-	int GetEmptySampleCount() const { return 0; }
+	int GetEmptySampleCount()  { return 0; }
 	
 	const wchar_t* GetIdent() const
 	{
@@ -88,6 +88,7 @@ SndOutModule* mods[]=
 	DSoundOut,
 	WaveOut,
 #endif
+	PortaudioOut,
 	NULL		// signals the end of our list
 };
 

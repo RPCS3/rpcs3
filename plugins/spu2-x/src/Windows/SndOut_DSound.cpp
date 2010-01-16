@@ -429,7 +429,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() const
+	int GetEmptySampleCount() 
 	{
 		DWORD play, write;
 		buffer->GetCurrentPosition( &play, &write );

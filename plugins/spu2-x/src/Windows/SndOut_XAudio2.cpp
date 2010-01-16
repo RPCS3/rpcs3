@@ -85,7 +85,7 @@ private:
 		CRITICAL_SECTION cs;
 
 	public:
-		int GetEmptySampleCount() const
+		int GetEmptySampleCount() 
 		{
 			XAUDIO2_VOICE_STATE state;
 			pSourceVoice->GetState( &state );
@@ -364,7 +364,7 @@ public:
 		return 0;
 	}
 
-	int GetEmptySampleCount() const
+	int GetEmptySampleCount() 
 	{
 		if( voiceContext == NULL ) return 0;
 		return voiceContext->GetEmptySampleCount();
