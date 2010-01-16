@@ -16,24 +16,35 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
- // Modified by arcum42@gmail.com
- 
- #ifndef __LINUX_H__
- #define __LINUX_H__
- 
-#include <assert.h>
-#include <stdlib.h>
+#ifndef ALSA_H_INCLUDED
+#define ALSA_H_INCLUDED
 
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <sys/soundcard.h>
-#include <unistd.h>
+#include "SoundTargets.h"
 
-#include <zerospu2.h>
-#include "Targets/SoundTargets.h"
+#include <alsa/asoundlib.h>
+#define ALSA_MEM_DEF
 
-// Make it easier to check and set checkmarks in the gui
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)))) 
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
+#define ALSA_PCM_NEW_HW_PARAMS_API
+#define ALSA_PCM_NEW_SW_PARAMS_API
 
-#endif // __LINUX_H__
+#ifdef ALSA_MEM_DEF
+#define ALSA_MEM_EXTERN
+#else
+#define ALSA_MEM_EXTERN extern
+#endif
+
+extern int AlsaSetupSound();
+extern void AlsaRemoveSound();
+extern int AlsaSoundGetBytesBuffered();
+extern void AlsaSoundFeedVoiceData(unsigned char* pSound,long lBytes);
+
+// Pull in from Alsa.cpp
+static SoundCallbacks AlsaCmds =
+{
+	(intFunction)AlsaSetupSound,
+	(voidFunction)AlsaRemoveSound,
+	(intFunction)AlsaSoundGetBytesBuffered,
+	(soundFeedFunction)AlsaSoundFeedVoiceData
+};
+
+#endif // ALSA_H_INCLUDED

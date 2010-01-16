@@ -1,5 +1,5 @@
 /*  ZeroSPU2
- *  Copyright (C) 2006-2007 zerofrog
+ *  Copyright (C) 2006-2010 zerofrog
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,12 +18,8 @@
  
  // Modified by arcum42@gmail.com
  
- #ifndef ZEROSPU2_OSS
-
 // ALSA
-#include <alsa/asoundlib.h>
-
-#define ALSA_MEM_DEF
+#include "Alsa.h"
 #include "Linux.h"
 
 static snd_pcm_t *handle = NULL;
@@ -136,7 +132,10 @@ void AlsaRemoveSound()
 
 int AlsaSoundGetBytesBuffered()
 {
-	int l;
+	unsigned long l = snd_pcm_avail_update(handle); 
+	if (MaxBuffer == 0) MaxBuffer = l; 
+	return MaxBuffer - l;	
+	/*int l;
 	
 	// failed to open?
 	if(handle == NULL) return SOUNDSIZE; 
@@ -150,7 +149,7 @@ int AlsaSoundGetBytesBuffered()
 	else 
 		l=0;                                           // -> else go on
     
-	return l;
+	return l;*/
 }
 
 void AlsaSoundFeedVoiceData(unsigned char* pSound,long lBytes)
@@ -161,5 +160,3 @@ void AlsaSoundFeedVoiceData(unsigned char* pSound,long lBytes)
 		snd_pcm_prepare(handle);
 	snd_pcm_writei(handle,pSound, lBytes/4);
 }
-
-#endif

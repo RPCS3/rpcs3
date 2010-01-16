@@ -16,24 +16,22 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
- // Modified by arcum42@gmail.com
- 
- #ifndef __LINUX_H__
- #define __LINUX_H__
- 
-#include <assert.h>
-#include <stdlib.h>
+#ifndef OSS_H_INCLUDED
+#define OSS_H_INCLUDED
 
-#include <sys/ioctl.h>
-#include <fcntl.h>
-#include <sys/soundcard.h>
-#include <unistd.h>
+#define OSS_MODE_STEREO	1
 
-#include <zerospu2.h>
-#include "Targets/SoundTargets.h"
+extern int OSSSetupSound();
+extern void OSSRemoveSound();
+extern int OSSSoundGetBytesBuffered();
+extern void OSSSoundFeedVoiceData(unsigned char* pSound,long lBytes);
 
-// Make it easier to check and set checkmarks in the gui
-#define is_checked(main_widget, widget_name) (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)))) 
-#define set_checked(main_widget,widget_name, state) gtk_toggle_button_set_state(GTK_TOGGLE_BUTTON(lookup_widget(main_widget, widget_name)), state)
+static SoundCallbacks OSSCmds =
+{
+	(intFunction)OSSSetupSound,
+	(voidFunction)OSSRemoveSound,
+	(intFunction)OSSSoundGetBytesBuffered,
+	(soundFeedFunction)OSSSoundFeedVoiceData
+};
 
-#endif // __LINUX_H__
+#endif // OSS_H_INCLUDED

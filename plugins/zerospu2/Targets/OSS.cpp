@@ -1,5 +1,5 @@
 /*  ZeroSPU2
- *  Copyright (C) 2006-2007 zerofrog
+ *  Copyright (C) 2006-2010 zerofrog
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,9 +18,8 @@
  
  // Modified by arcum42@gmail.com
  
-#ifdef ZEROSPU2_OSS
-
 #include "Linux.h"
+#include "OSS.h"
 
 static int oss_audio_fd = -1;
 extern int errno;
@@ -81,7 +80,7 @@ int OSSSetupSound()
 	}
     
 	err = ioctl(oss_audio_fd,SNDCTL_DSP_SPEED,&oss_speed);
-	if ((err == -1) || (oss_speed!=pspeed) 
+	if ((err == -1) || (oss_speed!=pspeed))
 	{
 		ERROR_LOG("Sound frequency not supported\n");
 		return -1;
@@ -123,5 +122,3 @@ void OSSSoundFeedVoiceData(unsigned char* pSound,long lBytes)
 	if(oss_audio_fd == -1) return;
 	write(oss_audio_fd,pSound,lBytes);
 }
-
-#endif

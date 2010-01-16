@@ -24,6 +24,6 @@ libZeroSPU2_LDADD=$(libZeroSPU2_a_OBJECTS) libSoundTouch.a
 
 libZeroSPU2_a_SOURCES = zerospu2.cpp voices.cpp zerodma.cpp
 libZeroSPU2_a_SOURCES += zerospu2.h reg.h misc.h
-libZeroSPU2_a_SOURCES += Linux/interface.c Linux/Linux.cpp Linux/Alsa.cpp Linux/OSS.cpp Linux/support.c
+libZeroSPU2_a_SOURCES += Linux/interface.c Linux/Linux.cpp Targets/Alsa.cpp Targets/OSS.cpp Targets/SoundTargets.cpp Linux/support.c
 
 #SUBDIRS = ../../3rdparty/SoundTouch

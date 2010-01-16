@@ -1,5 +1,5 @@
 /*  ZeroSPU2
- *  Copyright (C) 2006-2007 zerofrog
+ *  Copyright (C) 2006-2010 zerofrog
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,14 +16,17 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifdef _WIN32
+#include "svnrev.h"
+	u32 MaxBuffer = 80000; // Until I put this in properly, avoid breaking Windows.
+#else
+#include "Targets/SoundTargets.h"
+#endif 
+
 #include "zerospu2.h"
 
 #include <assert.h>
 #include <stdlib.h>
-
-#ifdef _WIN32
-#include "svnrev.h"
-#endif 
 
 #include "SoundTouch/SoundTouch.h"
 #include "SoundTouch/WavFile.h"
@@ -218,6 +221,14 @@ s32 CALLBACK SPU2init()
 	
 #ifdef _WIN32
 	QueryPerformanceFrequency(&g_counterfreq);
+#else
+
+#if defined(ZEROSPU2_ALSA)
+	InitAlsa();
+#elif defined(ZEROSPU2_OSS)
+	InitOSS();
+#endif
+
 #endif
 
 	spu2regs = (s8*)malloc(0x10000);
@@ -908,10 +919,10 @@ void* SPU2ThreadProc(void* lpParam)
 		{
 
 			s32 bytesbuf = SoundGetBytesBuffered();
-			if ( bytesbuf < 8000 )
+			if ( bytesbuf < MaxBuffer / 10 )
 				NewSamples += 1000;
 			// check the current timestamp, if too far apart, speed up audio
-			else if ( bytesbuf > 40000 ) 
+			else if ( bytesbuf > MaxBuffer / 2 ) 
 			{
 				//WARN_LOG("making faster %d\n", timeGetTime() - s_pAudioBuffers[nReadBuf].timestamp);
 				NewSamples -= (bytesbuf-40000)/10;//*(ps2delay-NewSamples*8/1000);

@@ -1,5 +1,5 @@
 /*  ZeroSPU2
- *  Copyright (C) 2006-2007 zerofrog
+ *  Copyright (C) 2006-2010 zerofrog
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,40 +30,6 @@ extern "C" {
 #include "zerospu2.h"
 
 extern char *libraryName;
-
-// This is a bit ugly. I'll see if I can work out a better way to do this later.
-int SetupSound()
-{	
-#ifdef ZEROSPU2_OSS
-	return OSSSetupSound();
-#else
-	return AlsaSetupSound();
-#endif
-}
-void RemoveSound()
-{
-#ifdef ZEROSPU2_OSS
-	OSSRemoveSound();
-#else
-	AlsaRemoveSound();
-#endif
-}
-int SoundGetBytesBuffered()
-{
-#ifdef ZEROSPU2_OSS
-	return OSSSoundGetBytesBuffered();
-#else
-	return AlsaSoundGetBytesBuffered();
-#endif
-}
-void SoundFeedVoiceData(unsigned char* pSound,long lBytes)
-{
-#ifdef ZEROSPU2_OSS
-	OSSSoundFeedVoiceData(pSound, lBytes);
-#else
-	AlsaSoundFeedVoiceData(pSound, lBytes);
-#endif
-}
 
 GtkWidget *MsgDlg, *ConfDlg;
 
