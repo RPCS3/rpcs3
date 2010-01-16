@@ -103,6 +103,7 @@ namespace Panels
 
 		pxCheckBox*			m_masterEnabler;
 		pxCheckBox*			m_SIF;
+		pxCheckBox*			m_Elf;
 		pxCheckBox*			m_VIFunpack;
 		pxCheckBox*			m_GIFtag;
 

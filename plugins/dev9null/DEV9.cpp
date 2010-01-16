@@ -102,9 +102,9 @@ EXPORT_C_(u8) DEV9read8(u32 addr)
     switch(addr)
     {
 //        case 0x1F80146E:		// DEV9 hardware type (0x32 for an expansion bay)
-        case 0x10000038: value = dev9Ru8(addr); break; // We need to have at least one case to avoid warnings.
+        case 0x10000038: /*value = dev9Ru8(addr);*/ break; // We need to have at least one case to avoid warnings.
         default: 
-            value = dev9Ru8(addr); 
+            //value = dev9Ru8(addr); 
             Dev9Log.WriteLn("*Unknown 8 bit read at address %lx", addr);
             break;
     }
@@ -134,9 +134,9 @@ EXPORT_C_(u16) DEV9read16(u32 addr)
 //			case 0x1000004E:			// status
 //			case 0x1000005C:			// status
 //			case 0x10000064:			// if_ctrl
-        case 0x10000038: value = dev9Ru16(addr); break;
+        case 0x10000038: /*value = dev9Ru16(addr);*/ break;
         default: 
-            value = dev9Ru16(addr); 
+            //value = dev9Ru16(addr); 
             Dev9Log.WriteLn("*Unknown 16 bit read at address %lx", addr);
             break;
     }
@@ -150,9 +150,9 @@ EXPORT_C_(u32 ) DEV9read32(u32 addr)
     
     switch(addr)
     {
-        case 0x10000038: value = dev9Ru32(addr); break;
+        case 0x10000038: /*value = dev9Ru32(addr);*/ break;
         default: 
-            value = dev9Ru32(addr); 
+            //value = dev9Ru32(addr); 
             Dev9Log.WriteLn("*Unknown 32 bit read at address %lx", addr);
           break;
     }
@@ -164,10 +164,10 @@ EXPORT_C_(void) DEV9write8(u32 addr,  u8 value)
 {
     switch(addr)
     {
-        case 0x10000038: dev9Ru8(addr) = value; break;
+        case 0x10000038: /*dev9Ru8(addr) = value;*/ break;
         default: 
 			Dev9Log.WriteLn("*Unknown 8 bit write; address %lx = %x", addr, value);
-			dev9Ru8(addr) = value;
+			//dev9Ru8(addr) = value;
           break;
     }
 }
@@ -178,10 +178,10 @@ EXPORT_C_(void) DEV9write16(u32 addr, u16 value)
     {
     	// Remember that list on DEV9read16? You'll want to write to a
     	// lot of them, too.
-        case 0x10000038: dev9Ru16(addr) = value; break;
+        case 0x10000038: /*dev9Ru16(addr) = value;*/ break;
         default: 
 			Dev9Log.WriteLn("*Unknown 16 bit write; address %lx = %x", addr, value);
-            dev9Ru16(addr) = value;
+            //dev9Ru16(addr) = value;
           break;
     }
 }
@@ -190,10 +190,10 @@ EXPORT_C_(void) DEV9write32(u32 addr, u32 value)
 {
     switch(addr)
     {
-        case 0x10000038: dev9Ru32(addr) = value; break;
+        case 0x10000038: /*dev9Ru32(addr) = value;*/ break;
         default: 
 			Dev9Log.WriteLn("*Unknown 32 bit write; address %lx = %x", addr, value);
-            dev9Ru32(addr) = value;
+            //dev9Ru32(addr) = value;
           break;
     }
 }

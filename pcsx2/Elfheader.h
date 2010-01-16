@@ -155,13 +155,12 @@ class ElfObject
 		bool hasSectionHeaders();
 		bool hasHeaders();
 		
-		u32 getCRC() const;
+		void getCRC();
+		void applyPatches();
 };
 
 //-------------------
 extern void loadElfFile(const wxString& filename);
-extern u32  loadElfCRC(const wxString filename);
-extern void ElfApplyPatches();
 extern int  GetPS2ElfName( wxString& dest );
 
 

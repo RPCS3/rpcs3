@@ -169,7 +169,7 @@ ElfObject::ElfObject( const wxString& srcfile, uint hdrsize )
 void ElfObject::initElfHeaders()
 {
 	Console.WriteLn( L"Initializing Elf: %d bytes", data.GetSizeInBytes());
-	
+
 	if ( header.e_phnum > 0 )
 		proghead = (ELF_PHR*)&data[header.e_phoff];
 
@@ -181,7 +181,9 @@ void ElfObject::initElfHeaders()
 
 	if ( ( header.e_phnum > 0 ) && ( header.e_phentsize != sizeof(ELF_PHR) ) )
 		Console.Error( "(ELF) Size of program headers is not standard" );
-
+	
+	//getCRC();
+	
 	const char* elftype = NULL;
 	switch( header.e_type )
 	{
@@ -228,6 +230,8 @@ void ElfObject::initElfHeaders()
 	ELF_LOG("sh strndx: %08x",header.e_shstrndx);
 
 	ELF_LOG("\n");
+	
+	//applyPatches();
 }
 	
 bool ElfObject::hasProgramHeaders() { return (proghead != NULL); }
@@ -267,7 +271,7 @@ void ElfObject::checkElfSize(s64 elfsize)
 		throw Exception::BadStream( filename, wxLt("Unexpected end of ELF file: ") );
 }
 	
-u32 ElfObject::getCRC() const
+void ElfObject::getCRC()
 {
 	u32 CRC = 0;
 
@@ -275,7 +279,7 @@ u32 ElfObject::getCRC() const
 	for(u32 i=data.GetSizeInBytes()/4; i; --i, ++srcdata)
 		CRC ^= *srcdata;
 
-	return CRC;
+	ElfCRC = CRC;
 }
 
 void ElfObject::loadProgramHeaders()
@@ -411,7 +415,7 @@ void ElfObject::loadHeaders()
 	loadSectionHeaders();
 }
 
-void ElfApplyPatches()
+void ElfObject::applyPatches()
 {
 	wxString filename( wxsFormat( L"%8.8x", ElfCRC ) );
 
@@ -419,21 +423,7 @@ void ElfApplyPatches()
 	Console.SetTitle(L"Game running [CRC=" + filename +L"]");
 
 	if (EmuConfig.EnablePatches) InitPatch(filename);
-}
-
-// Fetches the CRC of the game bound to the CDVD plugin.
-u32 loadElfCRC( const wxString filename )
-{
-	// Note: calling loadElfFile here causes bad things to happen.
-	u32 crcval = 0;
-
-	IsoFSCDVD isofs;
-	IsoFile file(isofs, filename);
-		
-	crcval = ElfObject(filename, file).getCRC();
-	
-	Console.WriteLn(wxsFormat(L"loadElfCRC(" + filename + L") = %8.8X", crcval));
-	return crcval;
+    GetMTGS().SendGameCRC(ElfCRC);
 }
 
 // Loads the elf binary data from the specified file into PS2 memory, and injects the ELF's
@@ -504,10 +494,9 @@ void loadElfFile(const wxString& filename)
 			DevCon.WriteLn( wxsFormat(L"loadElfFile: addr %x \"rom0:OSDSYS\" -> \"" + filename + L"\"", i));
 		}
 	}
-	ElfCRC = elfptr->getCRC();
+	elfptr->getCRC();
 	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
-	ElfApplyPatches();
-	GetMTGS().SendGameCRC( ElfCRC );
+	elfptr->applyPatches();
 
 	return;
 }

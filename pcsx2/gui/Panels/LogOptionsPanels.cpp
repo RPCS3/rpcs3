@@ -200,10 +200,12 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	m_SIF		= new pxCheckBox( this, L"SIF (EE<->IOP)" );
 	m_VIFunpack	= new pxCheckBox( this, L"VIFunpack" );
 	m_GIFtag	= new pxCheckBox( this, L"GIFtag" );
+	m_Elf		= new pxCheckBox( this, L"Elves" );
 
 	m_SIF		->SetToolTip(_("Enables logging of both SIF DMAs and SIF Register activity.") );
 	m_VIFunpack	->SetToolTip(_("Special detailed logs of VIF packed data handling (does not include VIF control, status, or hwRegs)"));
 	m_GIFtag	->SetToolTip(_("(not implemented yet)"));
+	m_Elf		->SetToolTip(_("Logging of Elf headers."));
 
 
 	wxBoxSizer& topSizer			= *new wxBoxSizer( wxHORIZONTAL );
@@ -215,6 +217,7 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 	s_misc		+= m_SIF;
 	s_misc		+= m_VIFunpack;
 	s_misc		+= m_GIFtag;
+	s_misc		+= m_Elf;
 
 	*this		+= m_masterEnabler						| StdSpace();
 	*this		+= new wxStaticLine( this, wxID_ANY )	| StdExpand().Border(wxLEFT | wxRIGHT, 20);
@@ -233,6 +236,7 @@ void Panels::LogOptionsPanel::OnSettingsChanged()
 
 	m_masterEnabler->SetValue( conf.Enabled );
 	m_SIF->SetValue( conf.SIF );
+	m_Elf->SetValue( g_Conf->EmuOptions.Log.ELF );
 	
 	SetCheckValue( EE, VIFunpack );
 	SetCheckValue( EE, GIFtag );
@@ -248,6 +252,7 @@ void Panels::LogOptionsPanel::OnUpdateEnableAll()
 	bool enabled( m_masterEnabler->GetValue() );
 
 	m_SIF->Enable( enabled );
+	m_Elf->Enable( enabled );
 	m_VIFunpack->Enable( enabled );
 	m_GIFtag->Enable( enabled );
 
@@ -265,9 +270,10 @@ void Panels::LogOptionsPanel::OnCheckBoxClicked(wxCommandEvent &evt)
 void Panels::LogOptionsPanel::Apply()
 {
 	if( !m_IsDirty ) return;
-
+	
 	g_Conf->EmuOptions.Trace.Enabled	= m_masterEnabler->GetValue();
 	g_Conf->EmuOptions.Trace.SIF		= m_SIF->GetValue();
+	g_Conf->EmuOptions.Log.ELF			= m_Elf->GetValue();
 
 	g_Conf->EmuOptions.Trace.EE.m_VIFunpack	= m_VIFunpack->GetValue();
 	g_Conf->EmuOptions.Trace.EE.m_GIFtag	= m_GIFtag->GetValue();

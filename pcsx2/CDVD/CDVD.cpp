@@ -305,15 +305,30 @@ s32 cdvdWriteConfig(const u8* config)
 
 static MutexLockRecursive Mutex_NewDiskCB;
 
+// Sets ElfCRC to the CRC of the game bound to the CDVD plugin.
+static __forceinline ElfObject *loadElfCRC( const wxString filename )
+{
+	// Note: calling loadElfFile here causes bad things to happen.
+	IsoFSCDVD isofs;
+	IsoFile file(isofs, filename);
+	ElfObject *elfptr;
+	
+	elfptr = new ElfObject(filename, file);
+	elfptr->getCRC();
+	
+	Console.WriteLn(wxsFormat(L"loadElfCRC(" + filename + L") = %8.8X", ElfCRC));
+	return elfptr;
+}
+
 static __forceinline void _reloadElfInfo(wxString str)
 {
+	ElfObject *elfptr;
+	
 	// Now's a good time to reload the ELF info...
     ScopedLock locker( Mutex_NewDiskCB );
         
-    ElfCRC = loadElfCRC(str);
-            
-    ElfApplyPatches();
-    GetMTGS().SendGameCRC(ElfCRC);
+    elfptr = loadElfCRC(str);
+	elfptr->applyPatches();
 }
 
 static __forceinline void reloadElfInfo(u32 discType, wxString str)
@@ -334,31 +349,30 @@ static __forceinline void reloadElfInfo(u32 discType, wxString str)
     }
 }
 
+static __forceinline s32 StrToS32(const wxString& str, int base = 10)
+{
+    long l;
+    str.ToLong(&l, base);
+    return l;
+}
+
 void cdvdReadKey(u8 arg0, u16 arg1, u32 arg2, u8* key) 
 {
 	s32 numbers, letters;
 	u32 key_0_3;
 	u8 key_4, key_14;
 
-	wxString fname;
-	char exeName[12];
+	wxString fname, exeName;
 	
 	// Get the main elf name.
 	u32 discType = GetPS2ElfName(fname);
 	
-	const wxCharBuffer crap( fname.To8BitData() );
-	const char* str = crap.data();
+	exeName = fname(8, 11);
+	DevCon.Warning(L"exeName = " + exeName);
+
+	// convert the number characters to a real 32 bit number
+	numbers = StrToS32(exeName(5,3) + exeName(9,2));
 	
-	sprintf(exeName, "%c%c%c%c%c%c%c%c%c%c%c",str[8],str[9],str[10],str[11],str[12],str[13],str[14],str[15],str[16],str[17],str[18]);
-	DevCon.Warning("exeName = %s", &str[8]);
-
-	// convert the number characters to a real 32bit number
-	numbers =	((((exeName[5] - '0'))*10000)	+
-				(((exeName[ 6] - '0'))*1000)	+
-				(((exeName[ 7] - '0'))*100)		+
-				(((exeName[ 9] - '0'))*10)		+
-				(((exeName[10] - '0'))*1)		);
-
 	// combine the lower 7 bits of each char
 	// to make the 4 letters fit into a single u32
 	letters =	(s32)((exeName[3]&0x7F)<< 0) |
