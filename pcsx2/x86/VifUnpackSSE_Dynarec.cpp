@@ -235,8 +235,8 @@ static _f u8* dVifsetVUptr(const nVifStruct& v, int cl, int wl, bool isFill) {
 		int skips	  = (blocks * skipSize + _vBlock.num) * 16;
 		endPtr = ptr + skips;
 	}
-	else endPtr  = ptr + (_vBlock.num * 16);
-	if ( endPtr >= v.vuMemEnd ) {
+	else endPtr = ptr + (_vBlock.num * 16);
+	if ( endPtr > v.vuMemEnd ) {
 		DevCon.WriteLn("nVif - VU Mem Ptr Overflow; falling back to interpreter.");
 		ptr = NULL; // Fall Back to Interpreters which have wrap-around logic
 	}
