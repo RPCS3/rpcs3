@@ -92,7 +92,7 @@ void __fastcall iopHwWrite8_Page1( u32 addr, mem8_t val )
 				DevCon.Warning( "HwWrite8 to Counter32 [ignored], addr 0x%08x = 0x%02x", addr, psxHu8(addr) );
 				psxHu8( addr ) = val;
 			}
-			else if( masked_addr >= pgmsk(HW_USB_START) && masked_addr < pgmsk(HW_USB_END) )
+			else if( (masked_addr >= pgmsk(HW_USB_START)) && (masked_addr < pgmsk(HW_USB_END)) )
 			{
 				USBwrite8( addr, val );
 			}

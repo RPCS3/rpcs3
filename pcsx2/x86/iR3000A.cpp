@@ -662,7 +662,7 @@ void psxRecompileCodeConst1(R3000AFNPTR constcode, R3000AFNPTR_INFO noconstcode)
     if ( ! _Rt_ ) {
         if( (psxRegs.code>>26) == 9 ) {
             //ADDIU, call bios
-			if( IsDebugBuild )
+			if( IsDevBuild )
 			{
 				MOV32ItoM( (uptr)&psxRegs.code, psxRegs.code );
 				MOV32ItoM( (uptr)&psxRegs.pc, psxpc );

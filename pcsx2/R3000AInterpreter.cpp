@@ -196,7 +196,6 @@ const char* intrname[]={
 
 void zeroEx()
 {
-#ifdef PCSX2_DEVBUILD
 	u32 pc;
 	u32 code;
 	const char *lib;
@@ -243,16 +242,21 @@ void zeroEx()
 		psxRegs.pc = psxRegs.GPR.n.ra;
 	}
 
-	if (!strncmp(lib, "loadcore", 8) && code == 6) {
-		DevCon.WriteLn( Color_Gray, "loadcore RegisterLibraryEntries (%x): %8.8s", psxRegs.pc, iopVirtMemR<char>(psxRegs.GPR.n.a0+12));
-	}
+	{
+		// these three can be pretty spammy at times, and so we might want to attach a
+		// log source toggle to them.
 
-	if (!strncmp(lib, "intrman", 7) && code == 4) {
-		DevCon.WriteLn( Color_Gray, "intrman RegisterIntrHandler (%x): intr %s, handler %x", psxRegs.pc, intrname[psxRegs.GPR.n.a0], psxRegs.GPR.n.a2);
-	}
+		if (!strncmp(lib, "loadcore", 8) && code == 6) {
+			DbgCon.WriteLn( Color_Gray, "loadcore RegisterLibraryEntries (%x): %8.8s", psxRegs.pc, iopVirtMemR<char>(psxRegs.GPR.n.a0+12));
+		}
 
-	if (!strncmp(lib, "sifcmd", 6) && code == 17) {
-		DevCon.WriteLn( Color_Gray, "sifcmd sceSifRegisterRpc (%x): rpc_id %x", psxRegs.pc, psxRegs.GPR.n.a1);
+		if (!strncmp(lib, "intrman", 7) && code == 4) {
+			DbgCon.WriteLn( Color_Gray, "intrman RegisterIntrHandler (%x): intr %s, handler %x", psxRegs.pc, intrname[psxRegs.GPR.n.a0], psxRegs.GPR.n.a2);
+		}
+
+		if (!strncmp(lib, "sifcmd", 6) && code == 17) {
+			DbgCon.WriteLn( Color_Gray, "sifcmd sceSifRegisterRpc (%x): rpc_id %x", psxRegs.pc, psxRegs.GPR.n.a1);
+		}
 	}
 
 	if (!strncmp(lib, "sysclib", 8))
