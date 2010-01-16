@@ -132,9 +132,10 @@ int nVifUnpack(int idx, u8* data) {
 		const bool  doMode	= vifRegs->mode && !(vif->tag.cmd & 0x10);
 		const u8    upkNum	= vif->cmd & 0x1f;
 		const int   diff	= vifT - v.partTransfer;
+		if (size < diff) DevCon.WriteLn("newVif: Still not enough data for unpack!");
 		memcpy(&v.partBuffer[v.partTransfer], data, diff);
-		UnpackSingleTable[idx][doMode][isFill](v.partBuffer, size);
-		//DevCon.WriteLn("Diff = %d; vifT = %d; size = %d", diff, vifT, size);
+		UnpackSingleTable[idx][doMode][isFill](v.partBuffer, size + v.partTransfer);
+		//DevCon.WriteLn("[Diff=%d][size=%d][vifT=%d][pTrans=%d]", diff, size, vifT, v.partTransfer);
 		data += diff;
 		size -= diff;
 		v.partTransfer = 0;
@@ -145,7 +146,7 @@ int nVifUnpack(int idx, u8* data) {
 		vif->tag.size = 0;
 		vif->cmd = 0; 
 	}
-	else { // Partial Transfer	
+	else { // Partial Transfer
 		_nVifUnpack(idx, data, size, isFill);
 		vif->tag.size -= ret;
 	}

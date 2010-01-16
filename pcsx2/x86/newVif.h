@@ -58,7 +58,7 @@ extern void  VifUnpackSSE_Init();
 #endif
 
 // nVifBlock - Ordered for Hashing; the 'num' field and the lower 6 bits of upkType are
-//             used as the hash bucke selector.
+//             used as the hash bucket selector.
 //
 struct __aligned16 nVifBlock {
 	u8   num;		// [00] Num  Field
