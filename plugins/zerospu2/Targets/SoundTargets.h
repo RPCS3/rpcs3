@@ -40,12 +40,16 @@ extern s32 MaxBuffer;
 
 // Target List
 #ifdef __LINUX__
+
+#if (!defined(ZEROSPU2_ALSA) && !defined(ZEROSPU2_OSS) && !defined(ZEROSPU2_PORTAUDIO))
 #define ZEROSPU2_ALSA // Comment if Alsa isn't on the system.
-#define ZEROSPU2_OSS // Comment if OSS isn't on the system.
-#else
-#define ZEROSPU2_DS
 #endif
-//#define ZEROSPU2_PORTAUDIO
+
+#else
+
+#define ZEROSPU2_DS
+
+#endif
 
 #ifdef ZEROSPU2_OSS
 #include "OSS.h"

@@ -6,8 +6,8 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug">
-				<Option output="../../../bin/plugins/libZeroSPU2.so.0.1.0" prefix_auto="0" extension_auto="0" />
+			<Target title="Alsa - Debug">
+				<Option output="../../../bin/plugins/libZeroSPU2d-alsa.so.0.4.6" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -15,13 +15,14 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-g" />
+					<Add option="-DZEROSPU2_ALSA" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../deps/debug/libsoundtouch-dbg.a" />
 				</Linker>
 			</Target>
-			<Target title="Release">
-				<Option output="../../../bin/plugins/libZeroSPU2.so.0.1.0" prefix_auto="0" extension_auto="0" />
+			<Target title="Alsa - Release">
+				<Option output="../../../bin/plugins/libZeroSPU2-alsa.so.0.4.6" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -29,10 +30,77 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-DZEROSPU2_ALSA" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
 					<Add library="../../../deps/libsoundtouch.a" />
+				</Linker>
+			</Target>
+			<Target title="PortAudio - Debug">
+				<Option output="../../../bin/plugins/libZeroSPU2d-pa.so.0.4.6" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DZEROSPU2_PORTAUDIO" />
+				</Compiler>
+				<Linker>
+					<Add library="../../../deps/debug/libsoundtouch-dbg.a" />
+					<Add library="portaudio" />
+				</Linker>
+			</Target>
+			<Target title="PortAudio - Release">
+				<Option output="../../../bin/plugins/libZeroSPU2-pa.so.0.4.6" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-DZEROSPU2_PORTAUDIO" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="../../../deps/libsoundtouch.a" />
+					<Add library="portaudio" />
+				</Linker>
+			</Target>
+			<Target title="OSS - Debug">
+				<Option output="../../../bin/plugins/libZeroSPU2d-oss.so.0.4.6" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DZEROSPU2_OSS" />
+				</Compiler>
+				<Linker>
+					<Add library="../../../deps/debug/libsoundtouch-dbg.a" />
+					<Add library="portaudio" />
+				</Linker>
+			</Target>
+			<Target title="OSS - Release">
+				<Option output="../../../bin/plugins/libZeroSPU2-oss.so.0.4.6" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-DZEROSPU2_OSS" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="../../../deps/libsoundtouch.a" />
+					<Add library="portaudio" />
 				</Linker>
 			</Target>
 		</Build>
@@ -71,6 +139,16 @@
 		<Unit filename="../Targets/Alsa.h" />
 		<Unit filename="../Targets/OSS.cpp" />
 		<Unit filename="../Targets/OSS.h" />
+		<Unit filename="../Targets/PortAudio.cpp">
+			<Option target="PortAudio - Debug" />
+			<Option target="PortAudio - Release" />
+			<Option target="OSS - Release" />
+			<Option target="OSS - Debug" />
+		</Unit>
+		<Unit filename="../Targets/PortAudio.h">
+			<Option target="Alsa - Debug" />
+			<Option target="Alsa - Release" />
+		</Unit>
 		<Unit filename="../Targets/SoundTargets.cpp" />
 		<Unit filename="../Targets/SoundTargets.h" />
 		<Unit filename="../misc.h" />

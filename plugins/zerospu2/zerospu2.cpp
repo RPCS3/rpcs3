@@ -220,6 +220,8 @@ void InitApi()
 	InitAlsa();
 #elif defined(ZEROSPU2_OSS)
 	InitOSS();
+#elif defined(ZEROSPU2_PORTAUDIO)
+	InitPortAudio();
 #endif
 #endif
 }

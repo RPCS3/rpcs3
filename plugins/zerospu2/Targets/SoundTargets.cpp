@@ -23,11 +23,9 @@ u32 SOUNDSIZE;
 s32 MaxBuffer;
 
 #ifdef __LINUX__
-
 #include "Linux.h"
 
 #ifdef ZEROSPU2_ALSA
-#include "Alsa.h"
 void InitAlsa()
 {
 	SoundCmds = &AlsaCmds;
@@ -37,8 +35,6 @@ void InitAlsa()
 #endif
 
 #ifdef ZEROSPU2_OSS
-#include "OSS.h"
-#endif
 
 void InitOSS()
 {
@@ -46,6 +42,8 @@ void InitOSS()
 	SOUNDSIZE = 76800;
 	MaxBuffer = 80000;
 }
+#endif
+
 #else
 #include "dsound51.h"
 
@@ -57,13 +55,15 @@ void InitDSound()
 }
 #endif
 
-/*#include "PortAudio.h"
+#ifdef ZEROSPU2_PORTAUDIO
+#include "PortAudio.h"
 
 void InitPortAudio()
 {
 	SoundCmds = &PACmds;
 	SOUNDSIZE = 4096;
-}*/
+}
+#endif
 
 int SetupSound()
 {
