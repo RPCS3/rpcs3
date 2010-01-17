@@ -2170,6 +2170,38 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath="..\..\include\pa_asio.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\pa_jack.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\pa_linux_alsa.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\pa_mac_core.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\pa_win_ds.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\pa_win_waveformat.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\pa_win_wmme.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\portaudio.h"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>
