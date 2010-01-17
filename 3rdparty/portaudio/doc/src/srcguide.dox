@@ -1,0 +1,43 @@
+/*
+ define all of the file groups used to structure the documentation.
+*/
+
+/**
+ @defgroup public_header Public API definitions for users of PortAudio 
+*/
+
+/**
+ @defgroup common_src Source code common to all implementations
+*/
+
+/**
+ @defgroup win_src Source code common to all Windows implementations
+*/
+
+/**
+ @defgroup unix_src Source code common to all Unix implementations
+*/
+
+/**
+ @defgroup macosx_src Source code common to all Macintosh implementations
+*/
+
+/**
+ @defgroup hostapi_src Source code for specific Host APIs
+*/
+
+/**
+ @defgroup test_src Test and example programs
+*/
+
+/**
+ @page srcguide A guide to the PortAudio sources.
+
+ - \ref public_header
+ - \ref common_src
+ - \ref win_src
+ - \ref unix_src
+ - \ref macosx_src
+ - \ref hostapi_src
+ - \ref test_src
+*/
