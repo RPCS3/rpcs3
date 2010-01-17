@@ -36,22 +36,39 @@ struct SoundCallbacks
 
 extern SoundCallbacks *SoundCmds;
 extern u32 SOUNDSIZE;
-extern u32 MaxBuffer;
+extern s32 MaxBuffer;
 
 // Target List
+#ifdef __LINUX__
 #define ZEROSPU2_ALSA // Comment if Alsa isn't on the system.
 #define ZEROSPU2_OSS // Comment if OSS isn't on the system.
+#else
+#define ZEROSPU2_DS
+#endif
+//#define ZEROSPU2_PORTAUDIO
 
 #ifdef ZEROSPU2_OSS
-#include "Targets/OSS.h"
+#include "OSS.h"
 
 extern void InitOSS();
 #endif
 
 #ifdef ZEROSPU2_ALSA
-#include "Targets/Alsa.h"
+#include "Alsa.h"
 
 extern void InitAlsa();
+#endif
+
+#ifdef ZEROSPU2_DS
+#include "dsound51.h"
+
+extern void InitDSound();
+#endif
+
+#ifdef ZEROSPU2_PORTAUDIO
+#include "PortAudio.h"
+
+extern void InitPortAudio();
 #endif
 
 extern int SetupSound();

@@ -20,7 +20,7 @@
 
 SoundCallbacks *SoundCmds;
 u32 SOUNDSIZE;
-u32 MaxBuffer;
+s32 MaxBuffer;
 
 #ifdef __LINUX__
 
@@ -47,19 +47,19 @@ void InitOSS()
 	MaxBuffer = 80000;
 }
 #else
-/*#include "dsound51.h"
+#include "dsound51.h"
 
 void InitDSound()
 {
 	SoundCmds = &DSCmds;
 	SOUNDSIZE = 76800;
 	MaxBuffer = 80000;
-}*/
+}
 #endif
 
-/*#include "PulseAudio.h"
+/*#include "PortAudio.h"
 
-void InitPulseAudio()
+void InitPortAudio()
 {
 	SoundCmds = &PACmds;
 	SOUNDSIZE = 4096;

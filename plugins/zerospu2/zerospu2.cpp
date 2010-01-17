@@ -16,14 +16,13 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "zerospu2.h"
+
 #ifdef _WIN32
 #include "svnrev.h"
-	u32 MaxBuffer = 80000; // Until I put this in properly, avoid breaking Windows.
-#else
-#include "Targets/SoundTargets.h"
 #endif 
 
-#include "zerospu2.h"
+#include "Targets/SoundTargets.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -210,6 +209,21 @@ void CALLBACK SPU2setSettingsDir(const char* dir)
 	s_strIniPath = (dir==NULL) ? "inis/" : dir;
 }
 
+void InitApi()
+{
+	// This is a placeholder till there is actually some way to choose Apis. For the moment, just
+	// Modify this so it does whichever one you want to use.
+#ifdef _WIN32
+	InitDSound();
+#else
+#if defined(ZEROSPU2_ALSA)
+	InitAlsa();
+#elif defined(ZEROSPU2_OSS)
+	InitOSS();
+#endif
+#endif
+}
+
 s32 CALLBACK SPU2init()
 {
 	LOG_CALLBACK("SPU2init()\n");
@@ -221,15 +235,9 @@ s32 CALLBACK SPU2init()
 	
 #ifdef _WIN32
 	QueryPerformanceFrequency(&g_counterfreq);
-#else
-
-#if defined(ZEROSPU2_ALSA)
-	InitAlsa();
-#elif defined(ZEROSPU2_OSS)
-	InitOSS();
 #endif
-
-#endif
+	
+	InitApi();
 
 	spu2regs = (s8*)malloc(0x10000);
 	spu2mem = (u16*)malloc(0x200000); // 2Mb
