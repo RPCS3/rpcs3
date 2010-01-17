@@ -234,32 +234,8 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\Targets\Alsa.cpp"
-				>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\Targets\dsound51.cpp"
 				>
-			</File>
-			<File
-				RelativePath="..\Targets\OSS.cpp"
-				>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\Targets\SoundTargets.cpp"
@@ -288,36 +264,12 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\Targets\Alsa.h"
-				>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\Targets\dsound51.h"
 				>
 			</File>
 			<File
 				RelativePath="..\misc.h"
 				>
-			</File>
-			<File
-				RelativePath="..\Targets\OSS.h"
-				>
-				<FileConfiguration
-					Name="Devel|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\reg.h"
