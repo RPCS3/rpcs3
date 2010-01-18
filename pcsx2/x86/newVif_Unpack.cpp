@@ -130,7 +130,7 @@ int nVifUnpack(int idx, u8* data) {
 
     if (v.partTransfer) { // Last transfer was a partial vector transfer...
 		const u8&	vifT	= nVifT[vif->cmd & 0xf];
-		const bool  doMode	= vifRegs->mode && !(vif->tag.cmd & 0x10);
+		const bool  doMode	= !!vifRegs->mode;
 		const int   diff	= vifT - v.partTransfer;
 		if (size < diff) DevCon.WriteLn("newVif: Still not enough data for unpack!");
 		memcpy(&v.partBuffer[v.partTransfer], data, diff);
@@ -142,10 +142,12 @@ int nVifUnpack(int idx, u8* data) {
     }
 
 	if (ret == v.vif->tag.size) { // Full Transfer
-		if (newVifDynaRec)  dVifUnpack(idx, data, size, isFill);
-		else			   _nVifUnpack(idx, data, size, isFill);
+		if (size > 0) {
+			if (newVifDynaRec)  dVifUnpack(idx, data, size, isFill);
+			else			   _nVifUnpack(idx, data, size, isFill);
+		}	else if (isFill)   _nVifUnpack(idx, data, size, isFill);
 		vif->tag.size = 0;
-		vif->cmd = 0; 
+		vif->cmd = 0;
 	}
 	else { // Partial Transfer
 		_nVifUnpack(idx, data, size, isFill);
@@ -227,8 +229,9 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 	u8* dest			= setVUptr(idx, vuMemBase, vif->tag.addr);
 	if (vif->cl >= blockSize)  vif->cl = 0;
 	
-	while (vifRegs->num && (size >= ft.gsize)) {
+	while (vifRegs->num) {
 		if (vif->cl < cycleSize) { 
+			if (size < ft.gsize) break;
 			if (doMode) {
 				//DevCon.WriteLn("Non SSE; unpackNum = %d", upkNum);
 				func((u32*)dest, (u32*)data);
@@ -272,7 +275,7 @@ _f void _nVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 		return;
 	}
 
-	const bool doMode =  vifRegs->mode && !(vif->tag.cmd & 0x10);
+	const bool doMode = !!vifRegs->mode;
 	UnpackLoopTable[idx][doMode][isFill]( data, size );
 }
 #endif
