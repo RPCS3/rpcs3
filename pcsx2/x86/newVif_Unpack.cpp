@@ -89,8 +89,11 @@ void initNewVif(int idx) {
 	nVif[idx].partTransfer	= 0;
 
 	VifUnpackSSE_Init();
-	if (newVifDynaRec)  dVifInit(idx);
+	if (newVifDynaRec) dVifInit(idx);
 }
+
+void closeNewVif(int idx) { if (newVifDynaRec) dVifClose(idx);  }
+void resetNewVif(int idx) { closeNewVif(idx); initNewVif(idx); }
 
 static _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
 	return (u8*)(vuMemBase + ( offset & (vuidx ? 0x3ff0 : 0xff0) ));
@@ -103,7 +106,6 @@ static _f void incVUptr(int vuidx, u8* &ptr, const u8* vuMemBase, int amount) {
 	int diff = ptr - (vuMemBase + (vuidx ? 0x4000 : 0x1000));
 	if (diff >= 0) {
 		ptr = (u8*)(vuMemBase + diff);
-		DevCon.WriteLn("wrap!");
 	}
 }
 
@@ -113,7 +115,6 @@ static _f void incVUptrBy16(int vuidx, u8* &ptr, const u8* vuMemBase) {
 	vif->tag.addr += 16;
 	if( ptr == (vuMemBase + (vuidx ? 0x4000 : 0x1000)) ) {
 		ptr -= (vuidx ? 0x4000 : 0x1000);
-		DevCon.WriteLn("wrap!");
 	}
 }
 

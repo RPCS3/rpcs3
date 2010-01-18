@@ -25,32 +25,18 @@
 static __aligned16 nVifBlock _vBlock = {0};
 static __pagealigned u8 nVifMemCmp[__pagesize];
 
-static void emitCustomCompare() {
-	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadWrite, false);
-	memset8<0xcc>(nVifMemCmp);
-	xSetPtr(nVifMemCmp);
-
-	xMOVAPS  (xmm0, ptr32[ecx]);
-	xPCMP.EQD(xmm0, ptr32[edx]);
-	xMOVMSKPS(eax, xmm0);
-	xAND	 (eax, 0x7);		// ignore top 4 bytes (recBlock pointer)
-
-	xRET();
-	HostSys::MemProtectStatic(nVifMemCmp, Protect_ReadOnly, true);
-}
-
 void dVifInit(int idx) {
-	nVif[idx].idx		=  idx;
-	nVif[idx].VU		=  idx ? &VU1     : &VU0;
-	nVif[idx].vif		=  idx ? &vif1    : &vif0;
-	nVif[idx].vifRegs	=  idx ? vif1Regs : vif0Regs;
-	nVif[idx].vuMemEnd  =  idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
-	nVif[idx].vuMemLimit=  idx ? 0x3ff0 : 0xff0;
+	nVif[idx].numBlocks =  0;
 	nVif[idx].vifCache	=  new BlockBuffer(_1mb*4); // 4mb Rec Cache
 	nVif[idx].vifBlocks =  new HashBucket<_tParams>();
 	nVif[idx].recPtr	=  nVif[idx].vifCache->getBlock();
 	nVif[idx].recEnd	= &nVif[idx].recPtr[nVif[idx].vifCache->getSize()-(_1mb/4)]; // .25mb Safe Zone
-	//emitCustomCompare();
+}
+
+void dVifClose(int idx) {
+	nVif[idx].numBlocks = 0;
+	safe_delete(nVif[idx].vifCache);
+	safe_delete(nVif[idx].vifBlocks);
 }
 
 // Loads Row/Col Data from vifRegs instead of g_vifmask
@@ -287,8 +273,7 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 		}
 		return;
 	}
-	static int recBlockNum = 0;
-	DevCon.WriteLn("nVif: Recompiled Block! [%d]", recBlockNum++);
+	DevCon.WriteLn("nVif: Recompiled Block! [%d]", nVif[idx].numBlocks++);
 	//DevCon.WriteLn(L"[num=% 3d][upkType=0x%02x][scl=%d][cl=%d][wl=%d][mode=%d][m=%d][mask=%s]",
 	//	_vBlock.num, _vBlock.upkType, _vBlock.scl, _vBlock.cl, _vBlock.wl, _vBlock.mode,
 	//	doMask >> 4, doMask ? wxsFormat( L"0x%08x", _vBlock.mask ).c_str() : L"ignored"

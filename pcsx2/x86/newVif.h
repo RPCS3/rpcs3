@@ -34,6 +34,7 @@ extern void  mVUmergeRegs(int dest, int src,  int xyzw, bool modXYZW = 0);
 extern void _nVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
 extern void  dVifUnpack  (int idx,  u8 *data, u32 size, bool isFill);
 extern void  dVifInit    (int idx);
+extern void  dVifClose   (int idx);
 extern void  VifUnpackSSE_Init();
 
 #define VUFT VIFUnpackFuncTable
@@ -92,6 +93,7 @@ struct nVifStruct {
 	u8*						recEnd;			// End of Rec Cache
 	BlockBuffer*			vifCache;		// Block Buffer
 	HashBucket<_tParams>*	vifBlocks;		// Vif Blocks
+	int						numBlocks;		// # of Blocks Recompiled
 };
 
 extern __aligned16 nVifStruct nVif[2];

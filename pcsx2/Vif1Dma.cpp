@@ -1187,6 +1187,11 @@ void vif1Reset()
 
 	vif1.done = true;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
+
+#if newVif1
+	extern void resetNewVif(int idx);
+	resetNewVif(1);
+#endif
 }
 
 void SaveStateBase::vif1Freeze()
