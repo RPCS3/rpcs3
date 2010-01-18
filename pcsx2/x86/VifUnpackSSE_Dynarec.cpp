@@ -111,28 +111,29 @@ _f void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 
 void VifUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
 	pxAssumeDev(regX.Id <= 1, "Reg Overflow! XMM2 thru XMM6 are reserved for masking.");
+	int t  =  regX.Id ? 0 : 1; // Get Temp Reg
 	int cc =  aMin(vCL, 3);
 	u32 m0 = (vB.mask >> (cc * 8)) & 0xff;
-	u32 m1 =  m0 & 0xaaaa;
+	u32 m1 =  m0 & 0xaa;
 	u32 m2 =(~m1>>1) &  m0;
 	u32 m3 = (m1>>1) & ~m0;
 	u32 m4 = (m1>>1) &  m0;
 	makeMergeMask(m2);
 	makeMergeMask(m3);
 	makeMergeMask(m4);
-	if (doMask&&m4) { xMOVAPS(xmmTemp, ptr[dstIndirect]);		 } // Load Write Protect
-	if (doMask&&m2) { mVUmergeRegs(regX.Id, xmmRow.Id,		m2); } // Merge Row
-	if (doMask&&m3) { mVUmergeRegs(regX.Id, xmmCol0.Id+cc,	m3); } // Merge Col
-	if (doMask&&m4) { mVUmergeRegs(regX.Id, xmmTemp.Id,		m4); } // Merge Write Protect
+	if (doMask&&m4) { xMOVAPS(xmmTemp, ptr[dstIndirect]);			} // Load Write Protect
+	if (doMask&&m2) { mergeVectors(regX.Id, xmmRow.Id,		t, m2); } // Merge Row
+	if (doMask&&m3) { mergeVectors(regX.Id, xmmCol0.Id+cc,	t, m3); } // Merge Col
+	if (doMask&&m4) { mergeVectors(regX.Id, xmmTemp.Id,		t, m4); } // Merge Write Protect
 	if (doMode) {
 		u32 m5 = (~m1>>1) & ~m0;
 		if (!doMask)  m5 = 0xf;
 		else		  makeMergeMask(m5);
 		if (m5 < 0xf) {
 			xPXOR(xmmTemp, xmmTemp);
-			mVUmergeRegs(xmmTemp.Id, xmmRow.Id, m5);
+			mergeVectors(xmmTemp.Id, xmmRow.Id, t, m5);
 			xPADD.D(regX, xmmTemp);
-			if (doMode==2) mVUmergeRegs(xmmRow.Id, regX.Id, m5);
+			if (doMode==2) mergeVectors(xmmRow.Id, regX.Id, t, m5);
 		}
 		else if (m5 == 0xf) {
 			xPADD.D(regX, xmmRow);

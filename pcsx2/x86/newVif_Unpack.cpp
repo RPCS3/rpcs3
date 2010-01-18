@@ -141,7 +141,8 @@ int nVifUnpack(int idx, u8* data) {
     }
 
 	if (ret == v.vif->tag.size) { // Full Transfer
-		dVifUnpack(idx, data, size, isFill);
+		if (newVifDynaRec)  dVifUnpack(idx, data, size, isFill);
+		else			   _nVifUnpack(idx, data, size, isFill);
 		vif->tag.size = 0;
 		vif->cmd = 0; 
 	}

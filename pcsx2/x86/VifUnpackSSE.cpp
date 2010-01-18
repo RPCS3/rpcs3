@@ -26,6 +26,18 @@
 
 static __pagealigned u8 nVifUpkExec[__pagesize*4];
 
+// Merges xmm vectors without modifying source reg
+void mergeVectors(int dest, int src, int temp, int xyzw) {
+	if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15) 
+	|| (xyzw==12) || (xyzw==11) || (xyzw==8) || (xyzw==3)) {
+		mVUmergeRegs(dest, src, xyzw);
+	}
+	else {
+		SSE_MOVAPS_XMM_to_XMM(temp, src);
+		mVUmergeRegs(dest, temp, xyzw);
+	}
+}
+
 // =====================================================================================================
 //  VifUnpackSSE_Base Section
 // =====================================================================================================

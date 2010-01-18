@@ -26,6 +26,8 @@ using namespace x86Emitter;
 
 #if newVif
 
+extern void mergeVectors(int dest, int src, int temp, int xyzw);
+
 // --------------------------------------------------------------------------------------
 //  VifUnpackSSE_Base
 // --------------------------------------------------------------------------------------
