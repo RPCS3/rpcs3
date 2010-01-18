@@ -68,12 +68,6 @@ void recSLLs_(int info, int sa)
 		rtreg = EEREC_T;
 		rdreg = EEREC_D;
 	}
-	else if( g_pCurInstInfo->regs[_Rd_]&EEINST_MMX ) {
-		_addNeededMMXreg(MMX_GPR+_Rd_);
-		rtreg = rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
-		MOVDMtoMMX(rtreg, (u32)&cpuRegs.GPR.r[_Rt_].UL[0]);
-	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 		if ( sa != 0 )
@@ -142,12 +136,6 @@ void recSRLs_(int info, int sa)
 		rtreg = EEREC_T;
 		rdreg = EEREC_D;
 	}
-	else if( (g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) || (g_pCurInstInfo->regs[_Rd_]&EEINST_MMX) ) {
-		_addNeededMMXreg(MMX_GPR+_Rd_);
-		rtreg = rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
-		MOVDMtoMMX(rtreg, (u32)&cpuRegs.GPR.r[_Rt_].UL[0]);
-	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 		if ( sa != 0 ) SHR32ItoR( EAX, sa);
@@ -215,12 +203,6 @@ void recSRAs_(int info, int sa)
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
 		rdreg = EEREC_D;
-	}
-	else if( (g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) || (g_pCurInstInfo->regs[_Rd_]&EEINST_MMX) ) {
-		_addNeededMMXreg(MMX_GPR+_Rd_);
-		rtreg = rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
-		MOVDMtoMMX(rtreg, (u32)&cpuRegs.GPR.r[_Rt_].UL[0]);
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
@@ -422,13 +404,6 @@ void recDSLL32s_(int info, int sa)
 		rtreg = EEREC_T;
 		rdreg = EEREC_D;
 	}
-	else if( (g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) || (g_pCurInstInfo->regs[_Rd_]&EEINST_MMX) ) {
-		_addNeededMMXreg(MMX_GPR+_Rt_);
-		_addNeededMMXreg(MMX_GPR+_Rd_);
-		rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_READ);
-		rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
-	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 		if ( sa != 0 )
@@ -466,13 +441,6 @@ void recDSRL32s_(int info, int sa)
 		rtreg = EEREC_T;
 		rdreg = EEREC_D;
 	}
-	else if( (g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) || (g_pCurInstInfo->regs[_Rd_]&EEINST_MMX) ) {
-		_addNeededMMXreg(MMX_GPR+_Rt_);
-		_addNeededMMXreg(MMX_GPR+_Rd_);
-		rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_READ);
-		rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
-	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 		if ( sa != 0 ) SHR32ItoR( EAX, sa );
@@ -508,13 +476,6 @@ void recDSRA32s_(int info, int sa)
 	if( info & PROCESS_EE_MMX ) {
 		rtreg = EEREC_T;
 		rdreg = EEREC_D;
-	}
-	else if( (g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) || (g_pCurInstInfo->regs[_Rd_]&EEINST_MMX) ) {
-		_addNeededMMXreg(MMX_GPR+_Rt_);
-		_addNeededMMXreg(MMX_GPR+_Rd_);
-		rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_READ);
-		rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
@@ -612,7 +573,7 @@ int recSetShiftV(int info, int* rsreg, int* rtreg, int* rdreg, int* rstemp, int 
 			mmxregs[EEREC_S].inuse = 0;
 		}
 	}
-	else if( forcemmx || (g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) || (g_pCurInstInfo->regs[_Rd_]&EEINST_MMX) ) {
+	else if( forcemmx ) {
 		_addNeededMMXreg(MMX_GPR+_Rt_);
 		_addNeededMMXreg(MMX_GPR+_Rd_);
 		*rtreg = _allocMMXreg(-1, MMX_GPR+_Rt_, MODE_READ);

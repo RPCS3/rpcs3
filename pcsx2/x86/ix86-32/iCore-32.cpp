@@ -515,10 +515,8 @@ int  _getFreeMMXreg()
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].needed) continue;
 		if (MMX_ISGPR(mmxregs[i].reg)) {
-			if( !(g_pCurInstInfo->regs[mmxregs[i].reg] & EEINST_MMX) ) {
-				_freeMMXreg(i);
-				return i;
-			}
+			_freeMMXreg(i);
+			return i;
 		}
 	}
 
@@ -900,27 +898,13 @@ int _signExtendGPRMMXtoMMX(x86MMXRegType to, u32 gprreg, x86MMXRegType from, u32
 	// from is free for use
 	SetMMXstate();
 
-	if( g_pCurInstInfo->regs[gprreg] & EEINST_MMX ) {
-
-		if( EEINST_ISLIVE64(gprfromreg) ) {
-			_freeMMXreg(from);
-		}
-
-		MOVQRtoR(to, from);
-		PSRADItoR(from, 31);
-		PUNPCKLDQRtoR(to, from);
-		return to;
-	}
-	else {
-		MOVQRtoR(to, from);
-		MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[0], from);
-		PSRADItoR(from, 31);
-		MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[1], from);
-		mmxregs[to].inuse = 0;
-		return -1;
-	}
-
-	pxAssert( false );
+	MOVQRtoR(to, from);
+	MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[0], from);
+	PSRADItoR(from, 31);
+	MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[1], from);
+	mmxregs[to].inuse = 0;
+	
+	return -1;
 }
 
 int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift)
@@ -934,48 +918,17 @@ int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift)
 
 	SetMMXstate();
 
-	if( g_pCurInstInfo->regs[gprreg] & EEINST_MMX ) {
-		if( _hasFreeMMXreg() ) {
-			int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-			MOVQRtoR(t0reg, to);
-			PSRADItoR(to, 31);
-			if( shift > 0 ) PSRADItoR(t0reg, shift);
-			PUNPCKLDQRtoR(t0reg, to);
-
-			// swap mmx regs.. don't ask
-			mmxregs[t0reg] = mmxregs[to];
-			mmxregs[to].inuse = 0;
-			return t0reg;
-		}
-		else {
-			// will be used in the future as mmx
-			if( shift > 0 ) PSRADItoR(to, shift);
-			MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[0], to);
-			PSRADItoR(to, 31);
-			MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[1], to);
-
-			// read again
-			MOVQMtoR(to, (u32)&cpuRegs.GPR.r[gprreg].UL[0]);
-			mmxregs[to].mode &= ~MODE_WRITE;
-			return to;
-		}
-	}
-	else {
-		if( shift > 0 ) PSRADItoR(to, shift);
-		MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[0], to);
-		PSRADItoR(to, 31);
-		MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[1], to);
-		mmxregs[to].inuse = 0;
-		return -1;
-	}
-
-	pxAssert( false );
+	if( shift > 0 ) PSRADItoR(to, shift);
+	MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[0], to);
+	PSRADItoR(to, 31);
+	MOVDMMXtoM((u32)&cpuRegs.GPR.r[gprreg].UL[1], to);
+	mmxregs[to].inuse = 0;
+	
+	return -1;
 }
 
 int _allocCheckGPRtoMMX(EEINST* pinst, int reg, int mode)
 {
-	if( pinst->regs[reg] & EEINST_MMX ) return _allocMMXreg(-1, MMX_GPR+reg, mode);
-
 	return _checkMMXreg(MMX_GPR+reg, mode);
 }
 

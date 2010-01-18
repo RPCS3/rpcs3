@@ -86,14 +86,7 @@ void recWritebackHILO(int info, int writed, int upper)
 		_eeOnWriteReg(_Rd_, 1);
 
 		regd = -1;
-		if( g_pCurInstInfo->regs[_Rd_] & EEINST_MMX ) {
-
-			if( savedlo ) {
-				regd = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-				MOVQMtoR(regd, loaddr);
-			}
-		}
-		else if( g_pCurInstInfo->regs[_Rd_] & EEINST_XMM ) {
+		if( g_pCurInstInfo->regs[_Rd_] & EEINST_XMM ) {
 			if( savedlo ) {
 				regd = _checkXMMreg(XMMTYPE_GPRREG, _Rd_, MODE_WRITE|MODE_READ);
 				if( regd >= 0 ) {

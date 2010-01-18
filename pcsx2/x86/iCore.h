@@ -201,8 +201,7 @@ static const int MEM_XMMTAG = 0x8000;	// mmreg is xmmreg
 #define EEINST_LIVE1	2	// if cur var's next 32 bits are needed
 #define EEINST_LIVE2	4	// if cur var's next 64 bits are needed
 #define EEINST_LASTUSE	8	// if var isn't written/read anymore
-//#define EEINST_MMX		0x10	// var will be used in mmx ops (disabled, see below)
-#define EEINST_XMM		0x20	// var will be used in xmm ops (takes precedence
+#define EEINST_XMM		0x20	// var will be used in xmm ops
 #define EEINST_USED		0x40
 
 // MMX is disabled by setting this to 0, which seems a general speedup and fixes several
@@ -219,7 +218,7 @@ struct EEINST
 {
 	u8 regs[34]; // includes HI/LO (HI=32, LO=33)
 	u8 fpuregs[33]; // ACC=32
-	u8 info; // extra info, if 1 inst is COP1, 2 inst is COP2. Also uses EEINST_MMX|EEINST_XMM
+	u8 info; // extra info, if 1 inst is COP1, 2 inst is COP2. Also uses EEINST_XMM
 
 	// uses XMMTYPE_ flags; if type == XMMTYPE_TEMP, not used
 	u8 writeType[3], writeReg[3]; // reg written in this inst, 0 if no reg

@@ -81,14 +81,14 @@ void BSCPropagate::rpropSetRead( int reg, int mask )
 		pinst.regs[reg] |= EEINST_LASTUSE;
 	prev.regs[reg] |= EEINST_LIVE0|(mask)|EEINST_USED;
 	pinst.regs[reg] |= EEINST_USED;
-	if( reg ) pinst.info = ((mask)&(EEINST_MMX|EEINST_XMM));
+	if( reg ) pinst.info = ((mask)&EEINST_XMM);
 	_recFillRegister(pinst, XMMTYPE_GPRREG, reg, 0);
 }
 
 template< int live >
 void BSCPropagate::rpropSetWrite0( int reg, int mask )
 {
-	prev.regs[reg] &= ~((mask)|live|EEINST_XMM|EEINST_MMX);
+	prev.regs[reg] &= ~((mask)|live|EEINST_XMM);
 	if( !(pinst.regs[reg] & EEINST_USED) )
 		pinst.regs[reg] |= EEINST_LASTUSE;
 	pinst.regs[reg] |= EEINST_USED;
@@ -127,7 +127,7 @@ void BSCPropagate::rpropSetFPURead( int reg, int mask )
 		pinst.fpuregs[reg] |= EEINST_LASTUSE;
 	prev.fpuregs[reg] |= EEINST_LIVE0|(mask)|EEINST_USED;
 	pinst.fpuregs[reg] |= EEINST_USED;
-	if( reg ) pinst.info = ((mask)&(EEINST_MMX|EEINST_XMM));
+	if( reg ) pinst.info = ((mask)&EEINST_XMM);
 	if( reg == XMMFPU_ACC ) _recFillRegister(pinst, XMMTYPE_FPACC, 0, 0);
 	else _recFillRegister(pinst, XMMTYPE_FPREG, reg, 0);
 }
@@ -135,7 +135,7 @@ void BSCPropagate::rpropSetFPURead( int reg, int mask )
 template< int live >
 void BSCPropagate::rpropSetFPUWrite0( int reg, int mask )
 {
-	prev.fpuregs[reg] &= ~((mask)|live|EEINST_XMM|EEINST_MMX);
+	prev.fpuregs[reg] &= ~((mask)|live|EEINST_XMM);
 	if( !(pinst.fpuregs[reg] & EEINST_USED) )
 		pinst.fpuregs[reg] |= EEINST_LASTUSE;
 	pinst.fpuregs[reg] |= EEINST_USED;
@@ -168,15 +168,12 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 2: // SRL
 		case 3: // SRA
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rt_, EEINST_MMX);
 			break;
 
 		case 4: // sllv
 		case 6: // srlv
 		case 7: // srav
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_MMX);
-			rpropSetRead(_Rt_, EEINST_MMX);
 			break;
 
 		case 8: // JR
@@ -193,7 +190,6 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 			rpropSetRead(_Rs_, EEINST_LIVE1);
 			rpropSetRead(_Rt_, EEINST_LIVE1);
 			rpropSetRead(_Rd_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			_recFillRegister(pinst, XMMTYPE_GPRREG, _Rd_, 1);
 			break;
 
@@ -207,7 +203,7 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 
 		case 16: // mfhi
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(XMMGPR_HI, (pinst.regs[_Rd_]&(EEINST_MMX|EEINST_REALXMM))|EEINST_LIVE1);
+			rpropSetRead(XMMGPR_HI, (pinst.regs[_Rd_]&EEINST_REALXMM)|EEINST_LIVE1);
 			break;
 		case 17: // mthi
 			rpropSetWrite(XMMGPR_HI, EEINST_LIVE1);
@@ -215,7 +211,7 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 			break;
 		case 18: // mflo
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(XMMGPR_LO, (pinst.regs[_Rd_]&(EEINST_MMX|EEINST_REALXMM))|EEINST_LIVE1);
+			rpropSetRead(XMMGPR_LO, (pinst.regs[_Rd_]&EEINST_REALXMM)|EEINST_LIVE1);
 			break;
 		case 19: // mtlo
 			rpropSetWrite(XMMGPR_LO, EEINST_LIVE1);
@@ -226,15 +222,14 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 22: // dsrlv
 		case 23: // dsrav
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_MMX);
-			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_MMX);
+			rpropSetRead(_Rt_, EEINST_LIVE1);
 			break;
 
 		//case 24: // mult
 		//	// can do unsigned mult only if HI isn't used
 
 		//	//using this allocation for temp causes the emu to crash
-		//	//temp = (pinst.regs[XMMGPR_HI]&(EEINST_LIVE0|EEINST_LIVE1))?0:EEINST_MMX;
+		//	//temp = 0;
 		//	temp = 0;
 		//	rpropSetWrite(XMMGPR_LO, EEINST_LIVE1);
 		//	rpropSetWrite(XMMGPR_HI, EEINST_LIVE1);
@@ -252,9 +247,6 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		//	rpropSetWrite(XMMGPR_LO, EEINST_LIVE1);
 		//	rpropSetWrite(XMMGPR_HI, EEINST_LIVE1);
 		//	rpropSetWrite(_Rd_, EEINST_LIVE1);
-		//	rpropSetRead(_Rs_, EEINST_MMX);
-		//	rpropSetRead(_Rt_, EEINST_MMX);
-		//	pinst.info |= EEINST_MMX;
 		//	break;
 
 		
@@ -276,7 +268,7 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 			rpropSetWrite(XMMGPR_HI, EEINST_LIVE1);
 			rpropSetRead(_Rs_, 0);
 			rpropSetRead(_Rt_, 0);
-			//pinst.info |= EEINST_REALXMM|EEINST_MMX;
+			//pinst.info |= EEINST_REALXMM;
 			break;
 
 		case 32: // add
@@ -286,7 +278,6 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
 			if( _Rs_ ) rpropSetRead(_Rs_, EEINST_LIVE1);
 			if( _Rt_ ) rpropSetRead(_Rt_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			break;
 
 		case 36: // and
@@ -295,29 +286,27 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 39: // nor
 			// if rd == rs or rt, keep live1
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, (pinst.regs[_Rd_]&EEINST_LIVE1)|EEINST_MMX);
-			rpropSetRead(_Rt_, (pinst.regs[_Rd_]&EEINST_LIVE1)|EEINST_MMX);
+			rpropSetRead(_Rs_, (pinst.regs[_Rd_]&EEINST_LIVE1));
+			rpropSetRead(_Rt_, (pinst.regs[_Rd_]&EEINST_LIVE1));
 			break;
 
 		case 40: // mfsa
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
 			break;
 		case 41: // mtsa
-			rpropSetRead(_Rs_, EEINST_LIVE1|EEINST_MMX);
+			rpropSetRead(_Rs_, EEINST_LIVE1);
 			break;
 
 		case 42: // slt
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
 			rpropSetRead(_Rs_, EEINST_LIVE1);
 			rpropSetRead(_Rt_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			break;
 
 		case 43: // sltu
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
 			rpropSetRead(_Rs_, EEINST_LIVE1);
 			rpropSetRead(_Rt_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			break;
 
 		case 44: // dadd
@@ -325,16 +314,8 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 46: // dsub
 		case 47: // dsubu
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			if( _Rs_ == 0 || _Rt_ == 0 ) {
-				// just a copy, so don't force mmx
-				rpropSetRead(_Rs_, (pinst.regs[_Rd_]&EEINST_LIVE1));
-				rpropSetRead(_Rt_, (pinst.regs[_Rd_]&EEINST_LIVE1));
-			}
-			else {
-				rpropSetRead(_Rs_, (pinst.regs[_Rd_]&EEINST_LIVE1)|EEINST_MMX);
-				rpropSetRead(_Rt_, (pinst.regs[_Rd_]&EEINST_LIVE1)|EEINST_MMX);
-			}
-			pinst.info |= EEINST_MMX;
+			rpropSetRead(_Rs_, (pinst.regs[_Rd_]&EEINST_LIVE1));
+			rpropSetRead(_Rt_, (pinst.regs[_Rd_]&EEINST_LIVE1));
 			break;
 
 		// traps
@@ -349,20 +330,17 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 62: // dsrl32
 		case 63: // dsra32
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_MMX);
-			pinst.info |= EEINST_MMX;
+			rpropSetRead(_Rt_, EEINST_LIVE1);
 			break;
 
 		case 60: // dsll32
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rt_, EEINST_MMX);
-			pinst.info |= EEINST_MMX;
 			break;
 
 		default:
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_LIVE1|EEINST_MMX);
-			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_MMX);
+			rpropSetRead(_Rs_, EEINST_LIVE1);
+			rpropSetRead(_Rt_, EEINST_LIVE1);
 			break;
 	}
 }
@@ -377,7 +355,6 @@ __forceinline void BSCPropagate::rpropREGIMM()
 		case 0: // bltz
 		case 1: // bgez
 			rpropSetRead(_Rs_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			pinst.info |= EEINST_REALXMM;
 			break;
 
@@ -387,7 +364,6 @@ __forceinline void BSCPropagate::rpropREGIMM()
 			_recClearInst(&prev);
 			prev.info = 0;
 			rpropSetRead(_Rs_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			pinst.info |= EEINST_REALXMM;
 			break;
 
@@ -469,14 +445,14 @@ __forceinline void BSCPropagate::rpropCP1()
 			rpropSetFPURead(_Fs_, EEINST_REALXMM);
 			break;
 		case 2: // cfc1
-			rpropSetWrite(_Rt_, EEINST_LIVE1|EEINST_REALXMM|EEINST_MMX);
+			rpropSetWrite(_Rt_, EEINST_LIVE1|EEINST_REALXMM);
 			break;
 		case 4: // mtc1
 			rpropSetFPUWrite(_Fs_, EEINST_REALXMM);
 			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_REALXMM);
 			break;
 		case 6: // ctc1
-			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_REALXMM|EEINST_MMX);
+			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_REALXMM);
 			break;
 		case 8: // bc1
 			// reset since don't know which path to go
@@ -609,7 +585,7 @@ __forceinline void BSCPropagate::rpropMMI()
 		case 16: // mfhi1
 		{
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			int temp = ((pinst.regs[_Rd_]&(EEINST_MMX|EEINST_REALXMM))?EEINST_MMX:EEINST_REALXMM);
+			int temp = ((pinst.regs[_Rd_]&(EEINST_REALXMM))?0:EEINST_REALXMM);
 			rpropSetRead(XMMGPR_HI, temp|EEINST_LIVE2);
 			break;
 		}
@@ -620,7 +596,7 @@ __forceinline void BSCPropagate::rpropMMI()
 		case 18: // mflo1
 		{
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			int temp = ((pinst.regs[_Rd_]&(EEINST_MMX|EEINST_REALXMM))?EEINST_MMX:EEINST_REALXMM);
+			int temp = ((pinst.regs[_Rd_]&(EEINST_REALXMM))?0:EEINST_REALXMM);
 			rpropSetRead(XMMGPR_LO, temp|EEINST_LIVE2);
 			break;
 		}
@@ -631,22 +607,15 @@ __forceinline void BSCPropagate::rpropMMI()
 
 		case 24: // mult1
 		{
-			int temp = (pinst.regs[XMMGPR_HI]&(EEINST_LIVE2))?0:EEINST_MMX;
 			rpropSetWrite0<0>(XMMGPR_LO, EEINST_LIVE2);
 			rpropSetWrite0<0>(XMMGPR_HI, EEINST_LIVE2);
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, temp);
-			rpropSetRead(_Rt_, temp);
-			pinst.info |= temp;
 			break;
 		}
 		case 25: // multu1
 			rpropSetWrite0<0>(XMMGPR_LO, EEINST_LIVE2);
 			rpropSetWrite0<0>(XMMGPR_HI, EEINST_LIVE2);
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_MMX);
-			rpropSetRead(_Rt_, EEINST_MMX);
-			pinst.info |= EEINST_MMX;
 			break;
 
 		case 26: // div1
@@ -655,7 +624,7 @@ __forceinline void BSCPropagate::rpropMMI()
 			rpropSetWrite0<0>(XMMGPR_HI, EEINST_LIVE2);
 			rpropSetRead(_Rs_, 0);
 			rpropSetRead(_Rt_, 0);
-			//pinst.info |= EEINST_REALXMM|EEINST_MMX;
+			//pinst.info |= EEINST_REALXMM;
 			break;
 
 		case 32: // madd1
@@ -887,7 +856,7 @@ void BSCPropagate::rprop()
 		case 5: // bne
 			rpropSetRead(_Rs_, EEINST_LIVE1);
 			rpropSetRead(_Rt_, EEINST_LIVE1);
-			pinst.info |= EEINST_REALXMM|EEINST_MMX;
+			pinst.info |= EEINST_REALXMM;
 			break;
 
 		case 20: // beql
@@ -897,7 +866,7 @@ void BSCPropagate::rprop()
 			prev.info = 0;
 			rpropSetRead(_Rs_, EEINST_LIVE1);
 			rpropSetRead(_Rt_, EEINST_LIVE1);
-			pinst.info |= EEINST_REALXMM|EEINST_MMX;
+			pinst.info |= EEINST_REALXMM;
 			break;
 
 		case 6: // blez
@@ -916,41 +885,34 @@ void BSCPropagate::rprop()
 		case 24: // daddi
 		case 25: // daddiu
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_LIVE1 | (_Rs_!=0?EEINST_MMX:0)); // This looks like what ZeroFrog wanted; ToDo: Needs checking! (cottonvibes)
+			rpropSetRead(_Rs_, EEINST_LIVE1);
 			break;
 
 		case 8: // addi
 		case 9: // addiu
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
 			rpropSetRead(_Rs_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			break;
 
 		case 10: // slti
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
 			rpropSetRead(_Rs_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			break;
 		case 11: // sltiu
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
 			rpropSetRead(_Rs_, EEINST_LIVE1);
-			pinst.info |= EEINST_MMX;
 			break;
 
 		case 12: // andi
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, (_Rs_!=_Rt_?EEINST_MMX:0));
-			pinst.info |= EEINST_MMX;
 			break;
 		case 13: // ori
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_LIVE1|(_Rs_!=_Rt_?EEINST_MMX:0));
-			pinst.info |= EEINST_MMX;
+			rpropSetRead(_Rs_, EEINST_LIVE1);
 			break;
 		case 14: // xori
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_LIVE1|(_Rs_!=_Rt_?EEINST_MMX:0));
-			pinst.info |= EEINST_MMX;
+			rpropSetRead(_Rs_, EEINST_LIVE1);
 			break;
 
 		case 15: // lui
@@ -982,14 +944,12 @@ void BSCPropagate::rprop()
 		case 30: // lq
 			rpropSetWrite(_Rt_, EEINST_LIVE1|EEINST_LIVE2);
 			rpropSetRead(_Rs_, 0);
-			pinst.info |= EEINST_MMX;
 			pinst.info |= EEINST_REALXMM;
 			break;
 
 		case 31: // sq
 			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_LIVE2|EEINST_REALXMM);
 			rpropSetRead(_Rs_, 0);
-			pinst.info |= EEINST_MMX;
 			pinst.info |= EEINST_REALXMM;
 			break;
 
@@ -997,14 +957,13 @@ void BSCPropagate::rprop()
 		case 40: case 41: case 42: case 43: case 46:
 			rpropSetRead(_Rt_, 0);
 			rpropSetRead(_Rs_, 0);
-			pinst.info |= EEINST_MMX;
 			pinst.info |= EEINST_REALXMM;
 			break;
 
 		case 44: // sdl
 		case 45: // sdr
 		case 63: // sd
-			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_MMX|EEINST_REALXMM);
+			rpropSetRead(_Rt_, EEINST_LIVE1|EEINST_REALXMM);
 			rpropSetRead(_Rs_, 0);
 			break;
 
@@ -1025,7 +984,7 @@ void BSCPropagate::rprop()
 
 		default:
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
-			rpropSetRead(_Rs_, EEINST_LIVE1|(_Rs_!=0?EEINST_MMX:0));
+			rpropSetRead(_Rs_, EEINST_LIVE1);
 			break;
 	}
 }	// End namespace OpcodeImpl

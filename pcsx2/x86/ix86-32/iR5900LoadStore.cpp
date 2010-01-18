@@ -750,7 +750,7 @@ void recLQ( void )
 		assert( (g_cpuConstRegs[_Rs_].UL[0]+_Imm_) % 16 == 0 );
 
 		if( _Rt_ ) {
-			if( (g_pCurInstInfo->regs[_Rt_]&EEINST_XMM) || !(g_pCurInstInfo->regs[_Rt_]&EEINST_MMX) ) {
+			if(g_pCurInstInfo->regs[_Rt_]&EEINST_XMM) {
 				_deleteMMXreg(MMX_GPR+_Rt_, 2);
 				_eeOnWriteReg(_Rt_, 0);
 				mmreg = _allocGPRtoXMMreg(-1, _Rt_, MODE_WRITE);
