@@ -310,7 +310,6 @@ void recMULT_const()
 void recMULTUsuper(int info, int upper, int process);
 void recMULTsuper(int info, int upper, int process)
 {
-	pxAssert( !(info&PROCESS_EE_MMX) );
 	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
@@ -333,7 +332,7 @@ void recMULTsuper(int info, int upper, int process)
 
 //void recMULT_process(int info, int process)
 //{
-//	if( EEINST_ISLIVE64(XMMGPR_HI) || !(info&PROCESS_EE_MMX) ) {
+//	if( EEINST_ISLIVE64(XMMGPR_HI) ) {
 //		recMULTsuper(info, 0, process);
 //	}
 //	else {
@@ -376,28 +375,19 @@ void recMULTsuper(int info, int upper, int process)
 void recMULT_(int info)
 {
 	//recMULT_process(info, 0);
-	if( (g_pCurInstInfo->regs[XMMGPR_HI]&EEINST_LIVE2) || !(info&PROCESS_EE_MMX) ) {
-		recMULTsuper(info, 0, 0);
-	}
-	else recMULTUsuper(info, 0, 0);
+	recMULTsuper(info, 0, 0);
 }
 
 void recMULT_consts(int info)
 {
 	//recMULT_process(info, PROCESS_CONSTS);
-	if( (g_pCurInstInfo->regs[XMMGPR_HI]&EEINST_LIVE2) || !(info&PROCESS_EE_MMX) ) {
-		recMULTsuper(info, 0, PROCESS_CONSTS);
-	}
-	else recMULTUsuper(info, 0, PROCESS_CONSTS);
+	recMULTsuper(info, 0, PROCESS_CONSTS);
 }
 
 void recMULT_constt(int info)
 {
 	//recMULT_process(info, PROCESS_CONSTT);
-	if( (g_pCurInstInfo->regs[XMMGPR_HI]&EEINST_LIVE2) || !(info&PROCESS_EE_MMX) ) {
-		recMULTsuper(info, 0, PROCESS_CONSTT);
-	}
-	else recMULTUsuper(info, 0, PROCESS_CONSTT);
+	recMULTsuper(info, 0, PROCESS_CONSTT);
 }
 
 // don't set XMMINFO_WRITED|XMMINFO_WRITELO|XMMINFO_WRITEHI
@@ -417,82 +407,17 @@ void recMULTUsuper(int info, int upper, int process)
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rt_);
 
-	if( (info & PROCESS_EE_MMX) ) {
-
-		if( !_Rd_ ) {
-			// need some temp reg
-			int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-			pxAssert( EEREC_D == 0 );
-			info |= PROCESS_EE_SET_D(t0reg);
-		}
-
-		if( process & PROCESS_CONSTS ) {
-			u32* ptempmem = _eeGetConstReg(_Rs_);
-			if( EEREC_D != EEREC_T ) MOVQRtoR(EEREC_D, EEREC_T);
-			PMULUDQMtoR(EEREC_D, (u32)ptempmem);
-		}
-		else if( process & PROCESS_CONSTT ) {
-			u32* ptempmem = _eeGetConstReg(_Rt_);
-			if( EEREC_D != EEREC_S ) MOVQRtoR(EEREC_D, EEREC_S);
-			PMULUDQMtoR(EEREC_D, (u32)ptempmem);
-		}
-		else {
-			if( EEREC_D == EEREC_S ) PMULUDQRtoR(EEREC_D, EEREC_T);
-			else if( EEREC_D == EEREC_T ) PMULUDQRtoR(EEREC_D, EEREC_S);
-			else {
-				MOVQRtoR(EEREC_D, EEREC_S);
-				PMULUDQRtoR(EEREC_D, EEREC_T);
-			}
-		}
-
-		recWritebackHILOMMX(info, EEREC_D, 1, upper);
-
-		if( !_Rd_ ) _freeMMXreg(EEREC_D);
-		return;
-	}
-
-	if( info & PROCESS_EE_MMX ) {
-		if( info & PROCESS_EE_MODEWRITES ) {
-			MOVQRtoM((u32)&cpuRegs.GPR.r[_Rs_].UL[0], EEREC_S);
-			if( mmxregs[EEREC_S].reg == MMX_GPR+_Rs_ ) mmxregs[EEREC_S].mode &= ~MODE_WRITE;
-		}
-		if( info & PROCESS_EE_MODEWRITET ) {
-			MOVQRtoM((u32)&cpuRegs.GPR.r[_Rt_].UL[0], EEREC_T);
-			if( mmxregs[EEREC_T].reg == MMX_GPR+_Rt_ ) mmxregs[EEREC_T].mode &= ~MODE_WRITE;
-		}
-		_deleteMMXreg(MMX_GPR+_Rd_, 0);
-	}
-
 	if( process & PROCESS_CONSTS ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rs_].UL[0] );
-
-		if( info & PROCESS_EE_MMX ) {
-			MOVD32MMXtoR(EDX, EEREC_T);
-			MUL32R(EDX);
-		}
-		else
-			MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
+		MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	}
 	else if( process & PROCESS_CONSTT) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rt_].UL[0] );
-
-		if( info & PROCESS_EE_MMX ) {
-			MOVD32MMXtoR(EDX, EEREC_S);
-			MUL32R(EDX);
-		}
-		else
-			MUL32M( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		MUL32M( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 	}
 	else {
-		if( info & PROCESS_EE_MMX ) {
-			MOVD32MMXtoR(EAX, EEREC_S);
-			MOVD32MMXtoR(EDX, EEREC_T);
-			MUL32R(EDX);
-		}
-		else {
-			MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-			MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-		}
+		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	}
 
 	recWritebackHILO(info, 1, upper);
@@ -526,26 +451,17 @@ void recMULT1_const()
 
 void recMULT1_(int info)
 {
-	if( (g_pCurInstInfo->regs[XMMGPR_HI]&EEINST_LIVE2) || !(info&PROCESS_EE_MMX) ) {
-		recMULTsuper(info, 1, 0);
-	}
-	else recMULTUsuper(info, 1, 0);
+	recMULTsuper(info, 1, 0);
 }
 
 void recMULT1_consts(int info)
 {
-	if( (g_pCurInstInfo->regs[XMMGPR_HI]&EEINST_LIVE2) || !(info&PROCESS_EE_MMX) ) {
-		recMULTsuper(info, 1, PROCESS_CONSTS);
-	}
-	else recMULTUsuper(info, 1, PROCESS_CONSTS);
+	recMULTsuper(info, 1, PROCESS_CONSTS);
 }
 
 void recMULT1_constt(int info)
 {
-	if( (g_pCurInstInfo->regs[XMMGPR_HI]&EEINST_LIVE2) || !(info&PROCESS_EE_MMX) ) {
-		recMULTsuper(info, 1, PROCESS_CONSTT);
-	}
-	else recMULTUsuper(info, 1, PROCESS_CONSTT);
+	recMULTsuper(info, 1, PROCESS_CONSTT);
 }
 
 EERECOMPILE_CODE0(MULT1, XMMINFO_READS|XMMINFO_READT|(_Rd_?XMMINFO_WRITED:0) );

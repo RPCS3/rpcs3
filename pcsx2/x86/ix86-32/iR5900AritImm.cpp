@@ -59,24 +59,6 @@ void recADDI_(int info)
 	EEINST_SETSIGNEXT(_Rt_);
 	EEINST_SETSIGNEXT(_Rs_);
 
-	if ( info & PROCESS_EE_MMX ) {
-		if ( _Imm_ != 0 ) {
-			if ( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-			PADDDMtoR(EEREC_T, (uptr)recGetImm64(0, _Imm_));
-			if ( EEINST_ISLIVE1(_Rt_) ) _signExtendGPRtoMMX(EEREC_T, _Rt_, 0);
-			else EEINST_RESETHASLIVE1(_Rt_);
-		}
-		else {
-			// just move and sign extend
-			if ( !EEINST_HASLIVE1(_Rs_) ) {
-				if ( EEINST_ISLIVE1(_Rt_) ) _signExtendGPRMMXtoMMX(EEREC_T, _Rt_, EEREC_S, _Rs_);
-				else EEINST_RESETHASLIVE1(_Rt_);
-			}
-			else if ( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-		}
-		return;
-	}
-
 	if ( _Rt_ == _Rs_ ) {
 		if ( EEINST_ISLIVE1(_Rt_) )
 		{
@@ -124,18 +106,6 @@ void recDADDI_const( void )
 void recDADDI_(int info) 
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
-
-	if( info & PROCESS_EE_MMX ) {
-
-		if( _Imm_ != 0 ) {
-			if( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-			PADDQMtoR(EEREC_T, (uptr)recGetImm64(-(_Imm_ < 0), _Imm_));
-		}
-		else {
-			if( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-		}
-		return;
-	}
 	
 	if( _Rt_ == _Rs_ ) {
 		ADD32ItoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], _Imm_);
@@ -184,22 +154,7 @@ extern u32 s_sltone;
 
 void recSLTIU_(int info)
 {
-	if( info & PROCESS_EE_MMX ) {
-		if( EEINST_ISSIGNEXT(_Rs_) ) {
-			recSLTmemconstt(EEREC_T, EEREC_S, (uptr)recGetImm64(0, ((s32)_Imm_)^0x80000000), 0);
-			EEINST_SETSIGNEXT(_Rt_);
-			return;
-		}
-
-		if( info & PROCESS_EE_MODEWRITES ) {
-			MOVQRtoM((u32)&cpuRegs.GPR.r[_Rs_], EEREC_S);
-			if( mmxregs[EEREC_S].reg == MMX_GPR+_Rs_ ) mmxregs[EEREC_S].mode &= ~MODE_WRITE;
-		}
-		mmxregs[EEREC_T].mode |= MODE_WRITE; // in case EEREC_T==EEREC_S
-	}
-
-	if( info & PROCESS_EE_MMX ) MOVDMtoMMX(EEREC_T, (u32)&s_sltone);
-	else MOV32ItoR(EAX, 1);
+	MOV32ItoR(EAX, 1);
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ], _Imm_ >= 0 ? 0 : 0xffffffff);
 	j8Ptr[0] = JB8( 0 );
@@ -209,17 +164,15 @@ void recSLTIU_(int info)
 	j8Ptr[1] = JB8(0);
 	
 	x86SetJ8(j8Ptr[2]);
-	if( info & PROCESS_EE_MMX ) PXORRtoR(EEREC_T, EEREC_T);
-	else XOR32RtoR(EAX, EAX);
+	XOR32RtoR(EAX, EAX);
 	
 	x86SetJ8(j8Ptr[0]);
 	x86SetJ8(j8Ptr[1]);
 
-	if( !(info & PROCESS_EE_MMX) ) {
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		if( EEINST_ISLIVE1(_Rt_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
-		else EEINST_RESETHASLIVE1(_Rt_);
-	}
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
+	if( EEINST_ISLIVE1(_Rt_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
+	else EEINST_RESETHASLIVE1(_Rt_);
+	
 	EEINST_SETSIGNEXT(_Rt_);
 }
 
@@ -233,24 +186,8 @@ void recSLTI_const()
 
 void recSLTI_(int info)
 {
-	if( info & PROCESS_EE_MMX) {
-		
-		if( EEINST_ISSIGNEXT(_Rs_) ) {
-			recSLTmemconstt(EEREC_T, EEREC_S, (uptr)recGetImm64(0, _Imm_), 1);
-			EEINST_SETSIGNEXT(_Rt_);
-			return;
-		}
-
-		if( info & PROCESS_EE_MODEWRITES ) {
-			MOVQRtoM((u32)&cpuRegs.GPR.r[_Rs_], EEREC_S);
-			if( mmxregs[EEREC_S].reg == MMX_GPR+_Rs_ ) mmxregs[EEREC_S].mode &= ~MODE_WRITE;
-		}
-		mmxregs[EEREC_T].mode |= MODE_WRITE; // in case EEREC_T==EEREC_S
-	}
-
 	// test silent hill if modding
-	if( info & PROCESS_EE_MMX ) MOVDMtoMMX(EEREC_T, (u32)&s_sltone);
-	else MOV32ItoR(EAX, 1);
+	MOV32ItoR(EAX, 1);
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ], _Imm_ >= 0 ? 0 : 0xffffffff);
 	j8Ptr[0] = JL8( 0 );
@@ -260,17 +197,15 @@ void recSLTI_(int info)
 	j8Ptr[1] = JB8(0);
 	
 	x86SetJ8(j8Ptr[2]);
-	if( info & PROCESS_EE_MMX ) PXORRtoR(EEREC_T, EEREC_T);
-	else XOR32RtoR(EAX, EAX);
+	XOR32RtoR(EAX, EAX);
 	
 	x86SetJ8(j8Ptr[0]);
 	x86SetJ8(j8Ptr[1]);
 	
-	if( !(info & PROCESS_EE_MMX) ) {
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		if( EEINST_ISLIVE1(_Rt_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
-		else EEINST_RESETHASLIVE1(_Rt_);
-	}
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
+	if( EEINST_ISLIVE1(_Rt_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
+	else EEINST_RESETHASLIVE1(_Rt_);
+	
 	EEINST_SETSIGNEXT(_Rt_);
 }
 
@@ -284,21 +219,6 @@ void recANDI_const()
 
 void recLogicalOpI(int info, int op)
 {
-	if( info & PROCESS_EE_MMX ) {
-		SetMMXstate();
-
-		if( _ImmU_ != 0 ) {
-			if( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-			LogicalOpMtoR(EEREC_T, (uptr)recGetImm64(0, _ImmU_), op);
-		}
-		else {
-			if( op == 0 ) PXORRtoR(EEREC_T, EEREC_T);
-			else if( EEREC_T != EEREC_S ) MOVQRtoR(EEREC_T, EEREC_S);
-		}
-		return;
-	}
-
-	
 	if ( _ImmU_ != 0 )
 	{
 		if( _Rt_ == _Rs_ ) {

@@ -58,76 +58,7 @@ REC_SYS_DEL(BGEZALL, 31);
 
 void recSetBranchEQ(int info, int bne, int process)
 {
-	if( info & PROCESS_EE_MMX ) {
-		int t0reg;
-
-		SetMMXstate();
-
-		if( process & PROCESS_CONSTS ) {
-			if( (g_pCurInstInfo->regs[_Rt_] & EEINST_LASTUSE) || !EEINST_ISLIVE64(_Rt_) ) {
-				_deleteMMXreg(_Rt_, 1);
-				mmxregs[EEREC_T].inuse = 0;
-				t0reg = EEREC_T;
-			}
-			else {
-				t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRtoR(t0reg, EEREC_T);
-			}
-		
-			_flushConstReg(_Rs_);
-			PCMPEQDMtoR(t0reg, (u32)&cpuRegs.GPR.r[_Rs_].UL[0]);
-			
-			if( t0reg != EEREC_T ) _freeMMXreg(t0reg);
-		}
-		else if( process & PROCESS_CONSTT ) {
-			if( (g_pCurInstInfo->regs[_Rs_] & EEINST_LASTUSE) || !EEINST_ISLIVE64(_Rs_) ) {
-				_deleteMMXreg(_Rs_, 1);
-				mmxregs[EEREC_S].inuse = 0;
-				t0reg = EEREC_S;
-			}
-			else {
-				t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRtoR(t0reg, EEREC_S);
-			}
-		
-			_flushConstReg(_Rt_);
-			PCMPEQDMtoR(t0reg, (u32)&cpuRegs.GPR.r[_Rt_].UL[0]);
-
-			if( t0reg != EEREC_S ) _freeMMXreg(t0reg);
-		}
-		else {
-			
-			if( (g_pCurInstInfo->regs[_Rs_] & EEINST_LASTUSE) || !EEINST_ISLIVE64(_Rs_) ) {
-				_deleteMMXreg(_Rs_, 1);
-				mmxregs[EEREC_S].inuse = 0;
-				t0reg = EEREC_S;
-				PCMPEQDRtoR(t0reg, EEREC_T);
-			}
-			else if( (g_pCurInstInfo->regs[_Rt_] & EEINST_LASTUSE) || !EEINST_ISLIVE64(_Rt_) ) {
-				_deleteMMXreg(_Rt_, 1);
-				mmxregs[EEREC_T].inuse = 0;
-				t0reg = EEREC_T;
-				PCMPEQDRtoR(t0reg, EEREC_S);
-			}
-			else {
-				t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
-				MOVQRtoR(t0reg, EEREC_S);
-				PCMPEQDRtoR(t0reg, EEREC_T);
-			}
-
-			if( t0reg != EEREC_S && t0reg != EEREC_T ) _freeMMXreg(t0reg);
-		}
-
-		PMOVMSKBMMXtoR(EAX, t0reg);
-
-		_eeFlushAllUnused();
-
-		CMP8ItoR( EAX, 0xff );
-
-		if( bne ) j32Ptr[ 1 ] = JE32( 0 );
-		else j32Ptr[ 0 ] = j32Ptr[ 1 ] = JNE32( 0 );
-	}
-	else if( info & PROCESS_EE_XMM ) {
+	if( info & PROCESS_EE_XMM ) {
 		int t0reg;
 
 		if( process & PROCESS_CONSTS ) {

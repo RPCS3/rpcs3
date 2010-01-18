@@ -35,7 +35,7 @@
 #define MODE_NOFRAME	0x40	// when allocating x86regs, don't use ebp reg
 #define MODE_8BITREG	0x80	// when allocating x86regs, use only eax, ecx, edx, and ebx
 
-#define PROCESS_EE_MMX 0x01
+//#define PROCESS_EE_MMX 0x01 // removed
 #define PROCESS_EE_XMM 0x02
 
 // currently only used in FPU
@@ -201,18 +201,12 @@ static const int MEM_XMMTAG = 0x8000;	// mmreg is xmmreg
 #define EEINST_LIVE1	2	// if cur var's next 32 bits are needed
 #define EEINST_LIVE2	4	// if cur var's next 64 bits are needed
 #define EEINST_LASTUSE	8	// if var isn't written/read anymore
+//#define EEINST_MMX		0x10 // removed
 #define EEINST_XMM		0x20	// var will be used in xmm ops
 #define EEINST_USED		0x40
 
-// MMX is disabled by setting this to 0, which seems a general speedup and fixes several
-// random tlb miss problems.
-#define EEINST_MMX		0
-
-
 #define EEINSTINFO_COP1		1
 #define EEINSTINFO_COP2		2
-#define EEINSTINFO_MMX		EEINST_MMX
-#define EEINSTINFO_XMM		EEINST_XMM
 
 struct EEINST
 {
