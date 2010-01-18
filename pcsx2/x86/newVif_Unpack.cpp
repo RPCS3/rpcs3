@@ -130,7 +130,6 @@ int nVifUnpack(int idx, u8* data) {
     if (v.partTransfer) { // Last transfer was a partial vector transfer...
 		const u8&	vifT	= nVifT[vif->cmd & 0xf];
 		const bool  doMode	= vifRegs->mode && !(vif->tag.cmd & 0x10);
-		const u8    upkNum	= vif->cmd & 0x1f;
 		const int   diff	= vifT - v.partTransfer;
 		if (size < diff) DevCon.WriteLn("newVif: Still not enough data for unpack!");
 		memcpy(&v.partBuffer[v.partTransfer], data, diff);

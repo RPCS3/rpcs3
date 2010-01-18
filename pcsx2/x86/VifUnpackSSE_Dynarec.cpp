@@ -181,6 +181,7 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 
 	int vNum = v.vifRegs->num;
 	vCL		 = v.vif->cl;
+	doMode	 = upkNum == 0xf ? 0 : doMode;
 
 	SetMasks(cycleSize);
 
@@ -256,25 +257,23 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	const nVifStruct& v		= nVif[idx];
 	const u8	upkType		= v.vif->cmd & 0x1f | ((!!v.vif->usn) << 5);
 	const int	doMask		= v.vif->cmd & 0x10;
-	const int	doMode		= (doMask) ? 0 : (u8&)v.vifRegs->mode;
-
 	const int	cycle_cl	= v.vifRegs->cycle.cl;
 	const int	cycle_wl	= v.vifRegs->cycle.wl;
 	const int	cycleSize	= isFill ? cycle_cl : cycle_wl;
 	const int	blockSize	= isFill ? cycle_wl : cycle_cl;
 
-	if (v.vif->cl >= blockSize)  v.vif->cl = 0;
+	if (v.vif->cl >= blockSize) v.vif->cl = 0;
 
-	_vBlock.upkType   = upkType;
-	_vBlock.num		  = (u8&)v.vifRegs->num;
-	_vBlock.mode	  = doMode;
-	_vBlock.scl		  = v.vif->cl;
-	_vBlock.cl		  = cycle_cl;
-	_vBlock.wl		  = cycle_wl;
+	_vBlock.upkType = upkType;
+	_vBlock.num		= (u8&)v.vifRegs->num;
+	_vBlock.mode	= (u8&)v.vifRegs->mode;
+	_vBlock.scl		= v.vif->cl;
+	_vBlock.cl		= cycle_cl;
+	_vBlock.wl		= cycle_wl;
 
 	// Zero out the mask parameter if it's unused -- games leave random junk
 	// values here which cause false recblock cache misses.
-	_vBlock.mask	  = (doMask || (_vBlock.mode&3)) ? v.vifRegs->mask : 0;
+	_vBlock.mask	= doMask ? v.vifRegs->mask : 0;
 
 	if (nVifBlock* b = v.vifBlocks->find(&_vBlock)) {
 		if (u8* dest = dVifsetVUptr(v, cycle_cl, cycle_wl, isFill)) {
@@ -289,9 +288,9 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	}
 	static int recBlockNum = 0;
 	DevCon.WriteLn("nVif: Recompiled Block! [%d]", recBlockNum++);
-	//DevCon.WriteLn(L"\t(num=0x%02x, upkType=0x%02x, mode=0x%02x, scl=0x%02x, cl/wl=0x%x/0x%x, mask=%s)",
-	//	_vBlock.num, _vBlock.upkType, _vBlock.mode, _vBlock.scl, _vBlock.cl, _vBlock.wl,
-	//	doMask ? wxsFormat( L"0x%08x", _vBlock.mask ).c_str() : L"ignored"
+	//DevCon.WriteLn(L"[num=% 3d][upkType=0x%02x][scl=%d][cl=%d][wl=%d][mode=%d][m=%d][mask=%s]",
+	//	_vBlock.num, _vBlock.upkType, _vBlock.scl, _vBlock.cl, _vBlock.wl, _vBlock.mode,
+	//	doMask >> 4, doMask ? wxsFormat( L"0x%08x", _vBlock.mask ).c_str() : L"ignored"
 	//);
 
 	xSetPtr(v.recPtr);
