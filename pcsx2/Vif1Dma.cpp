@@ -58,12 +58,10 @@ __forceinline void vif1FLUSH()
 
 void vif1Init()
 {
+	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
 #if newVif1
-	extern void initNewVif(int idx);
 	initNewVif(1);
 #endif
-
-	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
 }
 
 static __forceinline void vif1UNPACK(u32 *data)
@@ -320,9 +318,9 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 }
 static int  __fastcall Vif1TransUnpack(u32 *data)
 {
-	#if newVif1
+#if newVif1
 	return nVifUnpack(1, (u8*)data);
-	#endif
+#endif
 
     XMMRegisters::Freeze();
 
@@ -1189,7 +1187,6 @@ void vif1Reset()
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 
 #if newVif1
-	extern void resetNewVif(int idx);
 	resetNewVif(1);
 #endif
 }

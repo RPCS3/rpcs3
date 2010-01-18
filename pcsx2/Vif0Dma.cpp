@@ -49,6 +49,10 @@ void vif0Init()
 	}
 
 	SetNewMask(g_vif0Masks, g_vif0HasMask3, 0, 0xffffffff);
+
+#if newVif0
+	initNewVif(0);
+#endif
 }
 
 static __forceinline void vif0UNPACK(u32 *data)
@@ -222,6 +226,10 @@ static int __fastcall Vif0TransMPG(u32 *data)  // MPG
 
 static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 {
+#if newVif0
+	return nVifUnpack(0, (u8*)data);
+#endif
+
 	int ret;
 
     XMMRegisters::Freeze();
@@ -786,6 +794,10 @@ void vif0Reset()
 	vif0Regs->stat.FQC = 0;
 
 	vif0.done = true;
+
+#if newVif0
+	resetNewVif(0);
+#endif
 }
 
 void SaveStateBase::vif0Freeze()
