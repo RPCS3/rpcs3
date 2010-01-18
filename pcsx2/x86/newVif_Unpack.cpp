@@ -157,6 +157,8 @@ int nVifUnpack(int idx, u8* data) {
 }
 
 static void setMasks(int idx, const VIFregisters& v) {
+	u32* row = idx ? g_vifmask.Row1 : g_vifmask.Row0;
+	u32* col = idx ? g_vifmask.Col1 : g_vifmask.Col0;
 	for (int i = 0; i < 16; i++) {
 		int m = (v.mask >> (i*2)) & 3;
 		switch (m) {
@@ -165,15 +167,15 @@ static void setMasks(int idx, const VIFregisters& v) {
 				nVifMask[1][i/4][i%4] = 0;
 				nVifMask[2][i/4][i%4] = 0;
 				break;
-			case 1: // Row // todo: use g_vifmask
+			case 1: // Row
 				nVifMask[0][i/4][i%4] = 0;
 				nVifMask[1][i/4][i%4] = 0;
-				nVifMask[2][i/4][i%4] = ((u32*)&v.r0)[(i%4)*4];
+				nVifMask[2][i/4][i%4] = newVifDynaRec ? row[i%4] : ((u32*)&v.r0)[(i%4)*4];
 				break;
-			case 2: // Col // todo: use g_vifmask
+			case 2: // Col
 				nVifMask[0][i/4][i%4] = 0;
 				nVifMask[1][i/4][i%4] = 0;
-				nVifMask[2][i/4][i%4] = ((u32*)&v.c0)[(i/4)*4];
+				nVifMask[2][i/4][i%4] = newVifDynaRec ? col[i/4] : ((u32*)&v.c0)[(i/4)*4];
 				break;
 			case 3: // Write Protect
 				nVifMask[0][i/4][i%4] = 0;
