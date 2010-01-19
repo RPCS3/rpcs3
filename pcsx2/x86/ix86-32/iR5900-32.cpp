@@ -1485,9 +1485,11 @@ StartRecomp:
 		for(i = s_nEndBlock; i > startpc; i -= 4 ) {
 			cpuRegs.code = *(int *)PSM(i-4);
 			pcur[-1] = pcur[0];
-
-			BSCPropagate bsc( pcur[-1], pcur[0] );
-			bsc.rprop();
+			
+			// Backward propagation entry point. Since it doesn't work right it's disabled for now
+			//BSCPropagate bsc( pcur[-1], pcur[0] );
+			//bsc.rprop();
+			
 			pcur--;
 		}
 	}

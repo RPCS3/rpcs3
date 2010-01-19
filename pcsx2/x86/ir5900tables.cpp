@@ -168,12 +168,15 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 2: // SRL
 		case 3: // SRA
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
+			rpropSetRead(_Rt_, 0);
 			break;
 
 		case 4: // sllv
 		case 6: // srlv
 		case 7: // srav
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
+			rpropSetRead(_Rs_, 0);
+			rpropSetRead(_Rt_, 0);
 			break;
 
 		case 8: // JR
@@ -222,34 +225,10 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 		case 22: // dsrlv
 		case 23: // dsrav
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
+			rpropSetRead(_Rs_, 0);
 			rpropSetRead(_Rt_, EEINST_LIVE1);
 			break;
 
-		//case 24: // mult
-		//	// can do unsigned mult only if HI isn't used
-
-		//	//using this allocation for temp causes the emu to crash
-		//	//temp = 0;
-		//	temp = 0;
-		//	rpropSetWrite(XMMGPR_LO, EEINST_LIVE1);
-		//	rpropSetWrite(XMMGPR_HI, EEINST_LIVE1);
-		//	rpropSetWrite(_Rd_, EEINST_LIVE1);
-		//
-		//	// fixme - temp is always 0, so I doubt the next three lines are right. (arcum42)
-
-		//	// Yep, its wrong. Using always 0 causes the wrong damage calculations in Soul Nomad.
-		//	rpropSetRead(_Rs_, temp);
-		//	rpropSetRead(_Rt_, temp);
-		//	pinst.info |= temp;
-		//	break;
-
-		//case 25: // multu
-		//	rpropSetWrite(XMMGPR_LO, EEINST_LIVE1);
-		//	rpropSetWrite(XMMGPR_HI, EEINST_LIVE1);
-		//	rpropSetWrite(_Rd_, EEINST_LIVE1);
-		//	break;
-
-		
 		case 24: // mult
 		case 25: // multu
 			rpropSetWrite(XMMGPR_LO, EEINST_LIVE1);
@@ -335,6 +314,7 @@ __forceinline void BSCPropagate::rpropSPECIAL()
 
 		case 60: // dsll32
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
+			rpropSetRead(_Rt_, 0);
 			break;
 
 		default:
@@ -610,12 +590,16 @@ __forceinline void BSCPropagate::rpropMMI()
 			rpropSetWrite0<0>(XMMGPR_LO, EEINST_LIVE2);
 			rpropSetWrite0<0>(XMMGPR_HI, EEINST_LIVE2);
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
+			rpropSetRead(_Rs_, 0);
+			rpropSetRead(_Rt_, 0);
 			break;
 		}
 		case 25: // multu1
 			rpropSetWrite0<0>(XMMGPR_LO, EEINST_LIVE2);
 			rpropSetWrite0<0>(XMMGPR_HI, EEINST_LIVE2);
 			rpropSetWrite(_Rd_, EEINST_LIVE1);
+			rpropSetRead(_Rs_, 0);
+			rpropSetRead(_Rt_, 0);
 			break;
 
 		case 26: // div1
@@ -905,6 +889,7 @@ void BSCPropagate::rprop()
 
 		case 12: // andi
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
+			rpropSetRead(_Rs_, 0);
 			break;
 		case 13: // ori
 			rpropSetWrite(_Rt_, EEINST_LIVE1);
