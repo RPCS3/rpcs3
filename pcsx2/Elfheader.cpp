@@ -441,6 +441,7 @@ void ElfObject::applyPatches()
 void loadElfFile(const wxString& filename)
 {
 	ElfObject *elfptr;
+	bool iscdvd;
 
 	if (filename.IsEmpty()) return;
 
@@ -449,7 +450,8 @@ void loadElfFile(const wxString& filename)
 	if (filename.StartsWith(L"cdrom:") && !ENABLE_LOADING_PS1_GAMES)
 		throw Exception::RuntimeError( wxLt("This is not a Ps2 disc. (And we don't currently emulate PS1 games)") );
 	
-	if (filename.StartsWith(L"cdrom:") || filename.StartsWith(L"cdrom0:") || filename.StartsWith(L"cdrom1:"))
+	iscdvd = (filename.StartsWith(L"cdrom:") || filename.StartsWith(L"cdrom0:") || filename.StartsWith(L"cdrom1:"));
+	if (iscdvd)
 	{
 		// It's a game disc.
 		DevCon.WriteLn(L"Loading from a CD rom or CD image.");
@@ -490,7 +492,18 @@ void loadElfFile(const wxString& filename)
 	{
 		if( memcmp( "rom0:OSDSYS", (char*)PSM( i ), 11 ) == 0 )
 		{
-			strcpy( (char*)PSM( i ), filename.ToUTF8() );
+			// All right, this is not likely to be right. It's fine if it is a cd, but
+			// We really do not want to pass the elf file with full path and drive letter
+			// into pcsx2 memory, like this.
+			strcpy((char*)PSM(i), filename.ToUTF8());
+			
+			// We could test and only do it if (iscdvd) is true, or we could do something 
+			// like this if it isn't a cdvd:
+			// strcpy((char*)PSM(i), wxsFormat(L"rom0:"+Path::GetFilename(filename)).ToUTF8());
+			
+			// Though the question is what device name to pass if we do that...
+			// Not sure, so I'm leaving it the known incorrect way for now. --arcum42
+			
 			DevCon.WriteLn( wxsFormat(L"loadElfFile: addr %x \"rom0:OSDSYS\" -> \"" + filename + L"\"", i));
 		}
 	}
