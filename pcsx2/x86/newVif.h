@@ -97,7 +97,7 @@ struct nVifStruct {
 };
 
 extern __aligned16 nVifStruct nVif[2];
-extern __aligned16 const u8 nVifT[32];
+extern __aligned16 const u8 nVifT[16];
 extern __aligned16 nVifCall nVifUpk[(2*2*16)*4]; // ([USN][Masking][Unpack Type]) [curCycle]
 extern __aligned16 u32		nVifMask[3][4][4];	 // [MaskNumber][CycleNumber][Vector]
 

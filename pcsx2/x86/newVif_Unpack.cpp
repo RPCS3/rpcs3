@@ -29,11 +29,7 @@ __aligned16 nVifStruct	nVif[2];
 __aligned16 nVifCall	nVifUpk[(2*2*16)  *4];		// ([USN][Masking][Unpack Type]) [curCycle]
 __aligned16 u32			nVifMask[3][4][4] = {0};	// [MaskNumber][CycleNumber][Vector]
 
-// Contents of this table are doubled up for doMask(false) and doMask(true) lookups.
-// (note: currently unused, I'm using gsize in the interp tables instead since it
-//  seems to be faster for now, which may change when nVif isn't reliant on interpreted
-//  unpackers anymore --air)
-__aligned16 const u8 nVifT[32] = { 
+__aligned16 const u8 nVifT[16] = { 
 	4, // S-32
 	2, // S-16
 	1, // S-8
@@ -50,9 +46,6 @@ __aligned16 const u8 nVifT[32] = {
 	8, // V4-16
 	4, // V4-8
 	2, // V4-5
-
-	// Second verse, same as the first!
-	4,2,1,0,8,4,2,0,12,6,3,0,16,8,4,2
 };
 
 // ----------------------------------------------------------------------------
@@ -92,7 +85,7 @@ void initNewVif(int idx) {
 	if (newVifDynaRec) dVifInit(idx);
 }
 
-void closeNewVif(int idx) { if (newVifDynaRec) dVifClose(idx);  }
+void closeNewVif(int idx) { if (newVifDynaRec) dVifClose(idx); }
 void resetNewVif(int idx) { closeNewVif(idx); initNewVif(idx); }
 
 static _f u8* setVUptr(int vuidx, const u8* vuMemBase, int offset) {
