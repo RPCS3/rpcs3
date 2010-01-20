@@ -733,7 +733,7 @@ void recBLTZAL( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (int)BLTZAL );
+	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZAL );
 	branch = 2;    
 }
 
@@ -743,7 +743,7 @@ void recBGEZAL( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (int)BGEZAL );
+	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZAL );
 	branch = 2; 
 }
 
@@ -753,7 +753,7 @@ void recBLTZALL( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (int)BLTZALL );
+	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZALL );
 	branch = 2; 
 }
 
@@ -763,7 +763,7 @@ void recBGEZALL( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (int)BGEZALL );
+	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZALL );
 	branch = 2; 
 }
 
@@ -993,7 +993,7 @@ void recBLTZ( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (int)BLTZ );
+	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZ );
 	branch = 2;    
 }
 
@@ -1002,7 +1002,7 @@ void recBGEZ( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (int)BGEZ );
+	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZ );
 	branch = 2;    
 }
 
@@ -1011,7 +1011,7 @@ void recBLTZL( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (int)BLTZL );
+	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZL );
 	branch = 2;    
 }
 
@@ -1020,7 +1020,7 @@ void recBGEZL( void )
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	MOV32ItoM( (int)&cpuRegs.pc, pc );
 	iFlushCall(FLUSH_EVERYTHING);
-    CALLFunc( (int)BGEZL );
+    CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZL );
 	branch = 2;    
 }
 
