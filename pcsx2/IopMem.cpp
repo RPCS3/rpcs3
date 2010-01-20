@@ -32,6 +32,10 @@ static const uint m_psxMemSize =
 	0x00010000 +		// psxP
 	0x00000100 ;		// psxS
 
+// TODO: move to a header
+void Pcsx2HostFSwrite32(u32 addr, u32 value);
+u32 Pcsx2HostFSread32(u32 addr);
+
 void psxMemAlloc()
 {
 	if( m_psxAllMem == NULL )
@@ -238,7 +242,7 @@ u32 __fastcall iopMemRead32(u32 mem)
 			if (t == 0x1d00)
 			{
 				u32 ret;
-				switch(mem & 0xF0)
+				switch(mem & 0x8F0)
 				{
 				case 0x00:
 					ret= psHu32(SBUS_F200);
@@ -258,6 +262,9 @@ u32 __fastcall iopMemRead32(u32 mem)
 				case 0x60:
 					ret = 0;
 					break;
+				case 0x800:
+					return Pcsx2HostFSread32(mem);
+
 				default:
 					ret = psxHu32(mem);
 					break;
@@ -353,7 +360,7 @@ void __fastcall iopMemWrite16(u32 mem, u16 value)
 		{
 			if (t == 0x1d00)
 			{
-				switch (mem & 0xf0)
+				switch (mem & 0x8f0)
 				{
 					case 0x10:
 						// write to ps2 mem
@@ -379,7 +386,6 @@ void __fastcall iopMemWrite16(u32 mem, u16 value)
 					case 0x60:
 						psHu32(SBUS_F260) = 0;
 						return;
-
 				}
 				psxSu16(mem) = value; return;
 			}
@@ -425,7 +431,7 @@ void __fastcall iopMemWrite32(u32 mem, u32 value)
 			if (t == 0x1d00)
 			{
 				MEM_LOG("iop Sif reg write %x value %x", mem, value);
-				switch (mem & 0xf0)
+				switch (mem & 0x8f0)
 				{
 					case 0x00:		// EE write path (EE/IOP readable)
 						return;		// this is the IOP, so read-only (do nothing)
@@ -462,6 +468,11 @@ void __fastcall iopMemWrite32(u32 mem, u32 value)
 					case 0x60:
 						psHu32(SBUS_F260) = 0;
 					return;
+
+					case 0x800:
+						Pcsx2HostFSwrite32(mem, value);
+						return;
+
 				}
 				psxSu32(mem) = value; 
 
