@@ -181,13 +181,14 @@ void recMTSAH( void )
 	*
 	**********************************************************/
 
+	// Suikoden 3 uses it a lot
 	void recCACHE()
 	{
-	   MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code );
-	   MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc );
-	   iFlushCall(FLUSH_EVERYTHING);
-	   CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::CACHE );
-	   branch = 2;
+	   //MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code );
+	   //MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc );
+	   //iFlushCall(FLUSH_EVERYTHING);
+	   //CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::CACHE );
+	   //branch = 2;
 	}
 
 	void recTGE( void ) 
