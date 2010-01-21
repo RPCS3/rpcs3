@@ -5263,7 +5263,7 @@ Return:
 		"jmp Start\n"
 "Return:\n"
 		"emms\n"
-		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "b"(entries) : "eax", "memory"); // Breaks -fPIC
+		".att_syntax\n" : "=m"(bRet) : "c"(dst), "d"(src), "S"(entries) : "eax", "memory"); // Breaks -fPIC
 
 #endif // _WIN32
 
