@@ -103,7 +103,7 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 	memcpy_aligned(pgsmem, pMem, size<<4);
 
 	GetMTGS().SendDataPacket();
-	return size;
+	return size>>2;
 }
 
 static u32 WRITERING_DMA(tDMA_TAG *pMem, u32 qwc)
