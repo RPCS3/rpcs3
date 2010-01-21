@@ -24,24 +24,20 @@ template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size) {
 	VURegs * VU;
 	u8 *cdata = (u8*)data;
 	u32 tempsize = 0;
-	const u32 memlimit = vif_size(VIFdmanum);
+	const u32 memlimit = (VIFdmanum == 0) ? 0x1000 : 0x4000;
 
 	if (VIFdmanum == 0) {
 		VU = &VU0;
 		vifRegs = vif0Regs;
-		vifMaskRegs = g_vif0Masks;
 		vif = &vif0;
-		vifRow = g_vifmask.Row0;
 	}
 	else {
 		VU = &VU1;
 		vifRegs = vif1Regs;
-		vifMaskRegs = g_vif1Masks;
 		vif = &vif1;
-		vifRow = g_vifmask.Row1;
 	}
 
-	u32 *dest      = (u32*)(VU->Mem + v->addr);
+	u32 *dest = (u32*)(VU->Mem + v->addr);
 
 	const VIFUnpackFuncTable& ft( VIFfuncTable[ v->cmd & 0x1f ] );
 	UNPACKFUNCTYPE func = vif->usn ? ft.funcU : ft.funcS;

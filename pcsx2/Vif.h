@@ -58,8 +58,8 @@ enum vif1_stat_flags
 // for occassions where we don't neccessarily know which we are using.
 enum vif_stat_flags
 {
-	VIF_STAT_VPS_W 	= (1),
-	VIF_STAT_VPS_D 	= (2),
+	VIF_STAT_VPS_W		= (1),
+	VIF_STAT_VPS_D		= (2),
 	VIF_STAT_VPS_T		= (3),
 	VIF_STAT_VPS 		= (3),
 	VIF_STAT_VEW		= (1<<2),
@@ -75,9 +75,9 @@ enum vif_stat_flags
 
 enum vif_status
 {
-    VPS_IDLE = 0,
-    VPS_WAITING = 1,
-    VPS_DECODING = 2,
+    VPS_IDLE		 = 0,
+    VPS_WAITING		 = 1,
+    VPS_DECODING	 = 2,
     VPS_TRANSFERRING = 3 // And decompressing.
 };
 
@@ -96,7 +96,7 @@ union tVIF_STAT {
 		u32 VFS : 1; // Stopped by ForceBreak
 		u32 VIS : 1; // Vif Interrupt Stall
 		u32 INT : 1; // Intereupt by the i bit.
-		u32 ER0 : 1;  // DmaTag Mismatch error.
+		u32 ER0 : 1; // DmaTag Mismatch error.
 		u32 ER1 : 1; // VifCode error
 		u32 reserved2 : 9;
 		u32 FDR : 1; // VIF/FIFO transfer direction. (false - memory -> Vif, true - Vif -> memory)
@@ -104,13 +104,12 @@ union tVIF_STAT {
 	};
 	u32 _u32;
 
-	tVIF_STAT(u32 val) { _u32 = val; }
-	
-	bool test(u32 flags) { return !!(_u32 & flags); }
-	void set_flags(u32 flags) { _u32 |= flags; }
+	tVIF_STAT(u32 val)			{ _u32 = val; }
+	bool test(u32 flags)		{ return !!(_u32 & flags); }
+	void set_flags	(u32 flags)	{ _u32 |=  flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
-	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Stat: 0x%x", _u32); }
+	void reset()				{ _u32 = 0; }
+	wxString desc()				{ return wxsFormat(L"Stat: 0x%x", _u32); }
 };
 
 #define VIF_STAT(value) ((tVIF_STAT)(value))
@@ -125,13 +124,12 @@ union tVIF_FBRST {
 	};
 	u32 _u32;
 	
-	tVIF_FBRST(u32 val) { _u32 = val; }
-	
-	bool test(u32 flags) { return !!(_u32 & flags); }
-	void set_flags(u32 flags) { _u32 |= flags; }
+	tVIF_FBRST(u32 val)			{ _u32 = val; }
+	bool test		(u32 flags)	{ return !!(_u32 & flags); }
+	void set_flags	(u32 flags) { _u32 |=  flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
-	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Fbrst: 0x%x", _u32); }
+	void reset()				{ _u32 = 0; }
+	wxString desc()				{ return wxsFormat(L"Fbrst: 0x%x", _u32); }
 };
 
 #define FBRST(value) ((tVIF_FBRST)(value))
@@ -145,14 +143,13 @@ union tVIF_ERR {
 	};
 	u32 _u32;
 	
-	tVIF_ERR(u32 val) { _u32 = val; }
-	
-	void write(u32 val) { _u32 = val; }
-	bool test(u32 flags) { return !!(_u32 & flags); }
-	void set_flags(u32 flags) { _u32 |= flags; }
+	tVIF_ERR  (u32 val)			{ _u32 = val; }
+	void write(u32 val)			{ _u32 = val; }
+	bool test		(u32 flags) { return !!(_u32 & flags); }
+	void set_flags	(u32 flags) { _u32 |=  flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
-	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Err: 0x%x", _u32); }
+	void reset()				{ _u32 = 0; }
+	wxString desc()				{ return wxsFormat(L"Err: 0x%x", _u32); }
 };
 
 struct vifCycle 
@@ -214,14 +211,7 @@ struct VIFregisters {
 	u32 addr;
 };
 
-extern "C"
-{
-	// these use cdecl for Asm code references.
-	extern VIFregisters *vifRegs;
-	extern u32* vifMaskRegs;
-	extern u32* vifRow;
-	extern u32* _vifCol;
-}
+extern VIFregisters *vifRegs;
 
 #define vif0RegsRef ((VIFregisters&)PS2MEM_HW[0x3800])
 #define vif1RegsRef ((VIFregisters&)PS2MEM_HW[0x3c00])
@@ -236,7 +226,7 @@ extern bool VIF1transfer(u32 *data, int size, bool istag);
 extern void vifMFIFOInterrupt();
 
 // --------------------------------------------------------------------------------------
-//  VIF SSE-optimized Masking Mess
+//  newVif SSE-optimized Row/Col Structs
 // --------------------------------------------------------------------------------------
 
 struct VifMaskTypes
@@ -245,19 +235,6 @@ struct VifMaskTypes
 	u32	Row1[4], Col1[4];
 };
 
-extern __aligned16 VifMaskTypes g_vifmask; // This struct is used by newVif as well as oldVif code...
-
-extern void __fastcall SetNewMask(u32* vif1masks, u32* hasmask, u32 mask, u32 oldmask);
-
-#define XMM_R0			xmm0
-#define XMM_R1			xmm1
-#define XMM_R2			xmm2
-#define XMM_WRITEMASK	xmm3
-#define XMM_ROWMASK		xmm4
-#define XMM_ROWCOLMASK	xmm5
-#define XMM_ROW			xmm6
-#define XMM_COL			xmm7
-
-#define XMM_R3			XMM_COL
+extern __aligned16 VifMaskTypes g_vifmask; // This struct is used by newVif
 
 #endif /* __VIF_H__ */

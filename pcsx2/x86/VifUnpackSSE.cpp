@@ -16,8 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "VifUnpackSSE.h"
 
-#if newVif
-
 #define xMOV8(regX, loc)	xMOVSSZX(regX, loc)
 #define xMOV16(regX, loc)	xMOVSSZX(regX, loc)
 #define xMOV32(regX, loc)	xMOVSSZX(regX, loc)
@@ -36,6 +34,30 @@ void mergeVectors(int dest, int src, int temp, int xyzw) {
 		SSE_MOVAPS_XMM_to_XMM(temp, src);
 		mVUmergeRegs(dest, temp, xyzw);
 	}
+}
+
+// Loads Row/Col Data from vifRegs instead of g_vifmask
+// Useful for testing vifReg and g_vifmask inconsistency.
+void loadRowCol(nVifStruct& v) {
+	xMOVAPS(xmm0, ptr32[&v.vifRegs->r0]);
+	xMOVAPS(xmm1, ptr32[&v.vifRegs->r1]);
+	xMOVAPS(xmm2, ptr32[&v.vifRegs->r2]);
+	xMOVAPS(xmm6, ptr32[&v.vifRegs->r3]);
+	xPSHUF.D(xmm0, xmm0, _v0);
+	xPSHUF.D(xmm1, xmm1, _v0);
+	xPSHUF.D(xmm2, xmm2, _v0);
+	xPSHUF.D(xmm6, xmm6, _v0);
+	mVUmergeRegs(XMM6, XMM0, 8);
+	mVUmergeRegs(XMM6, XMM1, 4);
+	mVUmergeRegs(XMM6, XMM2, 2);
+	xMOVAPS(xmm2, ptr32[&v.vifRegs->c0]);
+	xMOVAPS(xmm3, ptr32[&v.vifRegs->c1]);
+	xMOVAPS(xmm4, ptr32[&v.vifRegs->c2]);
+	xMOVAPS(xmm5, ptr32[&v.vifRegs->c3]);
+	xPSHUF.D(xmm2, xmm2, _v0);
+	xPSHUF.D(xmm3, xmm3, _v0);
+	xPSHUF.D(xmm4, xmm4, _v0);
+	xPSHUF.D(xmm5, xmm5, _v0);
 }
 
 // =====================================================================================================
@@ -286,5 +308,3 @@ void VifUnpackSSE_Init()
 
 	HostSys::MemProtectStatic(nVifUpkExec, Protect_ReadOnly, true);
 }
-
-#endif

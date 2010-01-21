@@ -47,8 +47,6 @@ extern vifStruct vif0, vif1;
 extern u8 schedulepath3msk;
 static const int VifCycleVoodoo = 4;
 
-extern void vifDmaInit();
-
 extern void vif0Init();
 extern void vif0Interrupt();
 extern void vif0Write32(u32 mem, u32 value);

@@ -65,36 +65,16 @@ struct VIFUnpackFuncTable
 
 extern const __aligned16 VIFUnpackFuncTable VIFfuncTable[32];
 
-extern __aligned16 u32 g_vif0Masks[64], g_vif1Masks[64];
-extern u32 g_vif0HasMask3[4], g_vif1HasMask3[4];
 extern int g_vifCycles;
-extern u8 s_maskwrite[256];
 extern vifStruct *vif;
 
-template<const u32 VIFdmanum> void ProcessMemSkip(u32 size, u32 unpackType);
-template<const u32 VIFdmanum> u32 VIFalign(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size);
 template<const u32 VIFdmanum> void vuExecMicro(u32 addr);
 extern void vif0FLUSH();
 extern void vif1FLUSH();
 
-static __forceinline u32 vif_size(u8 num)
-{
-    return (num == 0) ? 0x1000 : 0x4000;
-}
-
-// All defines are enabled with '1' or disabled with '0'
-
-#define newVif		1	// Enable 'newVif' Code (if the below macros are not defined, it will use old non-sse code)
-#define newVif1		1	// Use New Code for Vif1 Unpacks (needs newVif defined)
-#define newVif0		1	// Use New Code for Vif0 Unpacks (needs newVif defined)
-
-#if newVif
 extern int  nVifUnpack (int idx, u8 *data);
 extern void initNewVif (int idx);
 extern void resetNewVif(int idx);
-#else
-//#	define NON_SSE_UNPACKS  // Turns off SSE Unpacks (slower)
-#endif
 
 #endif

@@ -23,8 +23,6 @@
 #include "VifDma.h"
 
 VIFregisters *vifRegs;
-u32* vifRow = NULL;
-u32* vifMaskRegs = NULL;
 vifStruct *vif;
 u16 vifqwc = 0;
 

@@ -31,7 +31,6 @@ void hwInit()
 	gsInit();
 	vif0Init();
 	vif1Init();
-	vifDmaInit();
 	sifInit();
 	sprInit();
 	ipuInit();

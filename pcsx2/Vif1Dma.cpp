@@ -24,9 +24,6 @@
 #include "VUmicro.h"
 #include "newVif.h"
 
-__aligned16 u32 g_vif1Masks[64];
-u32 g_vif1HasMask3[4] = {0};
-
 extern void (*Vif1CMDTLB[82])();
 extern int (__fastcall *Vif1TransTLB[128])(u32 *data);
 
@@ -58,10 +55,7 @@ __forceinline void vif1FLUSH()
 
 void vif1Init()
 {
-	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
-#if newVif1
 	initNewVif(1);
-#endif
 }
 
 static __forceinline void vif1UNPACK(u32 *data)
@@ -136,7 +130,6 @@ static int __fastcall Vif1TransNull(u32 *data)  // Shouldnt go here
 
 static int __fastcall Vif1TransSTMask(u32 *data)  // STMASK
 {
-	SetNewMask(g_vif1Masks, g_vif1HasMask3, data[0], vif1Regs->mask);
 	vif1Regs->mask = data[0];
 	VIF_LOG("STMASK == %x", vif1Regs->mask);
 
@@ -318,57 +311,7 @@ static int __fastcall Vif1TransDirectHL(u32 *data)
 }
 static int  __fastcall Vif1TransUnpack(u32 *data)
 {
-#if newVif1
 	return nVifUnpack(1, (u8*)data);
-#endif
-
-    XMMRegisters::Freeze();
-
-	if (vif1.vifpacketsize < vif1.tag.size)
-	{
-		int ret = vif1.tag.size;
-		// size is less that the total size, transfer is  'in pieces'
-		if (vif1Regs->offset != 0 || vif1.cl != 0)
-		{
-			vif1.tag.size -= vif1.vifpacketsize - VIFalign<1>(data, &vif1.tag, vif1.vifpacketsize);
-			ret = ret - vif1.tag.size;
-			data += ret;
-			if ((vif1.vifpacketsize - ret) > 0) VIFunpack<1>(data, &vif1.tag, vif1.vifpacketsize - ret);
-			ProcessMemSkip<1>((vif1.vifpacketsize - ret) << 2, (vif1.cmd & 0xf));
-			vif1.tag.size -= (vif1.vifpacketsize - ret);
-		}
-		else
-        {
-            VIFunpack<1>(data, &vif1.tag, vif1.vifpacketsize);
-
-            ProcessMemSkip<1>(vif1.vifpacketsize << 2, (vif1.cmd & 0xf));
-            vif1.tag.size -= vif1.vifpacketsize;
-		}
-
-        XMMRegisters::Thaw();
-		return vif1.vifpacketsize;
-	}
-	else
-	{
-		int ret = vif1.tag.size;
-
-		if (vif1Regs->offset != 0 || vif1.cl != 0)
-		{
-			vif1.tag.size = VIFalign<1>(data, &vif1.tag, vif1.tag.size);
-			data += ret - vif1.tag.size;
-			if (vif1.tag.size > 0) VIFunpack<1>(data, &vif1.tag, vif1.tag.size);
-		}
-		else
-		{
-			/* we got all the data, transfer it fully */
-			VIFunpack<1>(data, &vif1.tag, vif1.tag.size);
-		}
-
-        vif1.tag.size = 0;
-        vif1.cmd = 0;
-        XMMRegisters::Thaw();
-        return ret;
-	}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1175,7 +1118,6 @@ void vif1Reset()
 	/* Reset the whole VIF, meaning the internal pcsx2 vars, and all the registers */
 	memzero(vif1);
 	memzero(*vif1Regs);
-	SetNewMask(g_vif1Masks, g_vif1HasMask3, 0, 0xffffffff);
 
 	psHu64(VIF1_FIFO) = 0;
 	psHu64(VIF1_FIFO + 8) = 0;
@@ -1186,15 +1128,15 @@ void vif1Reset()
 	vif1.done = true;
 	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 
-#if newVif1
 	resetNewVif(1);
-#endif
 }
 
 void SaveStateBase::vif1Freeze()
 {
+	static u32 g_vif1Masks[64];   // Dummy Var for saved state compatibility
+	static u32 g_vif1HasMask3[4]; // Dummy Var for saved state compatibility
 	Freeze(vif1);
 
-	Freeze(g_vif1HasMask3);
-	Freeze(g_vif1Masks);
+	Freeze(g_vif1HasMask3);	// Not Used Anymore
+	Freeze(g_vif1Masks);	// Not Used Anymore
 }

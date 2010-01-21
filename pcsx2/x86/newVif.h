@@ -21,8 +21,6 @@
 #include "x86emitter/x86emitter.h"
 using namespace x86Emitter;
 
-#if newVif
-
 // newVif_HashBucket.h uses this typedef, so it has to be decared first.
 typedef u32  (__fastcall *nVifCall)(void*, void*);
 typedef void (__fastcall *nVifrecCall)(uptr dest, uptr src);
@@ -104,4 +102,3 @@ extern __aligned16 u32		nVifMask[3][4][4];	 // [MaskNumber][CycleNumber][Vector]
 static const bool useOldUnpack  = 0; // Use code in newVif_OldUnpack.inl
 static const bool newVifDynaRec = 1; // Use code in newVif_Dynarec.inl
 
-#endif

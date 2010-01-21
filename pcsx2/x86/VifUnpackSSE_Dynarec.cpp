@@ -20,8 +20,6 @@
 #include "PrecompiledHeader.h"
 #include "VifUnpackSSE.h"
 
-#if newVif
-
 static __aligned16 nVifBlock _vBlock = {0};
 static __pagealigned u8 nVifMemCmp[__pagesize];
 
@@ -37,30 +35,6 @@ void dVifClose(int idx) {
 	nVif[idx].numBlocks = 0;
 	safe_delete(nVif[idx].vifCache);
 	safe_delete(nVif[idx].vifBlocks);
-}
-
-// Loads Row/Col Data from vifRegs instead of g_vifmask
-// Useful for testing vifReg and g_vifmask inconsistency.
-static void loadRowCol(nVifStruct& v) {
-	xMOVAPS(xmm0, ptr32[&v.vifRegs->r0]);
-	xMOVAPS(xmm1, ptr32[&v.vifRegs->r1]);
-	xMOVAPS(xmm2, ptr32[&v.vifRegs->r2]);
-	xMOVAPS(xmm6, ptr32[&v.vifRegs->r3]);
-	xPSHUF.D(xmm0, xmm0, _v0);
-	xPSHUF.D(xmm1, xmm1, _v0);
-	xPSHUF.D(xmm2, xmm2, _v0);
-	xPSHUF.D(xmm6, xmm6, _v0);
-	mVUmergeRegs(XMM6, XMM0, 8);
-	mVUmergeRegs(XMM6, XMM1, 4);
-	mVUmergeRegs(XMM6, XMM2, 2);
-	xMOVAPS(xmm2, ptr32[&v.vifRegs->c0]);
-	xMOVAPS(xmm3, ptr32[&v.vifRegs->c1]);
-	xMOVAPS(xmm4, ptr32[&v.vifRegs->c2]);
-	xMOVAPS(xmm5, ptr32[&v.vifRegs->c3]);
-	xPSHUF.D(xmm2, xmm2, _v0);
-	xPSHUF.D(xmm3, xmm3, _v0);
-	xPSHUF.D(xmm4, xmm4, _v0);
-	xPSHUF.D(xmm5, xmm5, _v0);
 }
 
 VifUnpackSSE_Dynarec::VifUnpackSSE_Dynarec(const nVifStruct& vif_, const nVifBlock& vifBlock_)
@@ -291,5 +265,3 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	// the interpreter unpacker though, so a recursive call is the safest way here...
 	dVifUnpack(idx, data, size, isFill);
 }
-
-#endif

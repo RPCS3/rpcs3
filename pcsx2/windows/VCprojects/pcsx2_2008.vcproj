@@ -829,18 +829,6 @@
 								>
 							</File>
 							<Filter
-								Name="Dynarec"
-								>
-								<File
-									RelativePath="..\..\x86\ix86-32\aVif_proc-32.asm"
-									>
-								</File>
-								<File
-									RelativePath="..\..\x86\iVif.cpp"
-									>
-								</File>
-							</Filter>
-							<Filter
 								Name="newVif"
 								>
 								<File

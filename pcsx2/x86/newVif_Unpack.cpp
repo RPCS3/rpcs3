@@ -21,8 +21,6 @@
 #include "Common.h"
 #include "VifDma_internal.h"
 #include "newVif.h"
-
-#if newVif
 #include "newVif_OldUnpack.inl"
 
 __aligned16 nVifStruct	nVif[2];
@@ -271,4 +269,4 @@ _f void _nVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	const bool doMode = !!vifRegs->mode;
 	UnpackLoopTable[idx][doMode][isFill]( data, size );
 }
-#endif
+

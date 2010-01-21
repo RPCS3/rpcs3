@@ -24,9 +24,8 @@
 
 using namespace x86Emitter;
 
-#if newVif
-
 extern void mergeVectors(int dest, int src, int temp, int xyzw);
+extern void loadRowCol(nVifStruct& v);
 
 // --------------------------------------------------------------------------------------
 //  VifUnpackSSE_Base
@@ -143,4 +142,4 @@ protected:
 		return fillingWrite;
 	}
 };
-#endif
+
