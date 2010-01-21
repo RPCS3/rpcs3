@@ -38,6 +38,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\&quot;"
 				PreprocessorDefinitions="GLEW_STATIC"
 			/>
 			<Tool
@@ -92,6 +93,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\&quot;"
 				PreprocessorDefinitions="GLEW_STATIC"
 				WarningLevel="3"
 			/>
@@ -147,6 +149,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="&quot;$(SvnRootDir)\3rdparty\&quot;"
 				PreprocessorDefinitions="GLEW_STATIC"
 				WarningLevel="3"
 			/>
