@@ -17,7 +17,10 @@
 #include "PrecompiledHeader.h"
 #include "IopCommon.h"
 #include "Utilities/Console.h"
+
+#ifndef __LINUX__
 #include <io.h>
+#endif
 
 #pragma optimize("", off)
 
@@ -105,7 +108,11 @@ int pcsx2fio_remove(char *name)
 
 int pcsx2fio_mkdir(char *name, int mode)
 {
+#ifdef __LINUX__
+	return mkdir(name,mode);
+#else
 	return mkdir(name);
+#endif
 }
 
 int pcsx2fio_rmdir(char *name)
@@ -132,7 +139,7 @@ int pcsx2fio_write_tty(const char* text, int length)
 {
 	wxString s = wxString::FromUTF8(text,length);
 
-	return printf("%s",s.ToAscii());
+	return printf("%s",s.ToAscii().data());
 }
 
 #define PARAM(offset,type) (*(type*)(buffer+(offset)))

@@ -470,6 +470,7 @@
 		<Unit filename="../gui/pxLogTextCtrl.cpp" />
 		<Unit filename="../gui/wxAppWithHelpers.cpp" />
 		<Unit filename="../gui/wxAppWithHelpers.h" />
+		<Unit filename="../pcsx2hostfs.cpp" />
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />
 		<Unit filename="../ps2/GIFpath.cpp" />
@@ -484,7 +485,6 @@
 		<Unit filename="../x86/VifUnpackSSE.h" />
 		<Unit filename="../x86/VifUnpackSSE_Dynarec.cpp" />
 		<Unit filename="../x86/aVUzerorec.S" />
-		<Unit filename="../x86/aVif.S" />
 		<Unit filename="../x86/iCOP0.cpp" />
 		<Unit filename="../x86/iCOP0.h" />
 		<Unit filename="../x86/iCOP2.cpp" />
@@ -510,9 +510,6 @@
 		<Unit filename="../x86/iR5900MultDiv.h" />
 		<Unit filename="../x86/iR5900Shift.h" />
 		<Unit filename="../x86/iVU1micro.cpp" />
-		<Unit filename="../x86/iVif.cpp">
-			<Option compiler="gcc" use="0" buildCommand="gcc $options -S $includes -c $file -o $object" />
-		</Unit>
 		<Unit filename="../x86/ir5900tables.cpp" />
 		<Unit filename="../x86/ix86-32/iCore-32.cpp" />
 		<Unit filename="../x86/ix86-32/iR5900-32.cpp" />
