@@ -32,7 +32,7 @@ Dialogs::StuckThreadDialog::StuckThreadDialog( wxWindow* parent, StuckThreadActi
 			L"The thread '%s' is not responding.  It could be deadlocked, or it might "
 			L"just be running *really* slowly."
 		),
-		stuck_thread.GetName()
+		stuck_thread.GetName().data()
 	) );
 
 

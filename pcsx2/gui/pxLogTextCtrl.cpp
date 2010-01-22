@@ -100,6 +100,10 @@ void pxLogTextCtrl::OnThumbRelease(wxScrollWinEvent& evt)
 	evt.Skip();
 }
 
+pxLogTextCtrl::~pxLogTextCtrl() throw()
+{
+}
+
 void pxLogTextCtrl::ConcludeIssue( int lines )
 {
 	if( HasWriteLock() ) return;

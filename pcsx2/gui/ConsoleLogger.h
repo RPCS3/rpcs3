@@ -101,6 +101,7 @@ protected:
 
 public:
 	pxLogTextCtrl(wxWindow* parent);
+	~pxLogTextCtrl() throw();
 
 	bool HasWriteLock() const { return m_FreezeWrites; }
 	void ConcludeIssue( int lines );

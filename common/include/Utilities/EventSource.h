@@ -83,7 +83,7 @@ template< typename ListenerType >
 class EventListenerBinding
 {
 public:
-	typedef typename EventSource<ListenerType>							EventSourceType;
+	typedef typename EventSource<ListenerType>::EventSourceType			EventSourceType;
 	typedef typename EventSource<ListenerType>::ListenerIterator		ListenerIterator;
 
 protected:
