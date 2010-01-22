@@ -29,6 +29,9 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add directory="../Linux" />
+					<Add directory="../../SPU2null" />
+					<Add directory="../../../common/include" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />

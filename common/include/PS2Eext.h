@@ -224,6 +224,8 @@ static void __forceinline PluginNullAbout(const char *aboutText)
 
 #else
 
+#define usleep(x)	Sleep(x / 1000)
+
 static void __forceinline SysMessage(const char *fmt, ...)
 {
     va_list list;
