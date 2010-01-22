@@ -293,8 +293,7 @@ static __forceinline void gsHandler(const u8* pMem)
 	if (pMem>=vuMemEnd) pMem -= 0x4000;	\
 } while(false)
 
-#define aMin(x, y)   std::min( x, y )
-#define subVal(x, y) ((x > y) ? (x-y) :  0 )
+#define aMin(x, y) std::min(x, y)
 
 // Parameters:
 //   size (path1)   - difference between the end of VU memory and pMem.
@@ -342,8 +341,8 @@ __forceinline int GIFPath::ParseTag(GIF_PATH pathidx, const u8* pMem, u32 size)
 				case GIF_FLG_IMAGE2:
 				{
 					int len = aMin(size, nloop);
-					incTag((len * 16), len);
-					nloop -=  len;
+					incTag(( len * 16 ), len);
+					nloop -= len;
 				}
 				break;
 			}

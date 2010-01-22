@@ -607,9 +607,9 @@ static u32 ringtx_inf[32][32];
 static u32 ringtx_inf_s[32];
 #endif
 
-// returns the amount of giftag data not processed (in simd128 values).
-// Return value is used by VU1 XGKICK to hack-fix data packets which are too
-// large for VU1 memory.
+// Returns the amount of giftag data processed (in simd128 values).
+// Return value is used by VU1's XGKICK instruction to wrap the data 
+// around VU memory instead of having buffer overflow...
 // Parameters:
 //  size - size of the packet data, in smd128's
 int SysMtgsThread::PrepDataPacket( GIF_PATH pathidx, const u8* srcdata, u32 size )
