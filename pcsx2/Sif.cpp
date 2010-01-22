@@ -23,8 +23,7 @@
 
 DMACh *sif0ch, *sif1ch, *sif2ch;
 
-static _sif0 sif0;
-static _sif1 sif1;
+static _sif sif0, sif1;
 
 bool eesifbusy[2] = { false, false };
 extern bool iopsifbusy[2];
@@ -35,58 +34,6 @@ void sifInit()
 	memzero(sif1);
 	memzero(eesifbusy);
 	memzero(iopsifbusy);
-}
-
-static __forceinline void SIF0write(u32 *from, int words)
-{
-	const int wP0 = min((FIFO_SIF0_W - sif0.fifoWritePos), words);
-	const int wP1 = words - wP0;
-
-	memcpy(&sif0.fifoData[sif0.fifoWritePos], from, wP0 << 2);
-	memcpy(&sif0.fifoData[0], &from[wP0], wP1 << 2);
-
-	sif0.fifoWritePos = (sif0.fifoWritePos + words) & (FIFO_SIF0_W - 1);
-	sif0.fifoSize += words;
-	SIF_LOG("  SIF0 + %d = %d (pos=%d)", words, sif0.fifoSize, sif0.fifoWritePos);
-}
-
-static __forceinline void SIF0read(u32 *to, int words)
-{
-	const int wP0 = min((FIFO_SIF0_W - sif0.fifoReadPos), words);
-	const int wP1 = words - wP0;
-
-	memcpy(to, &sif0.fifoData[sif0.fifoReadPos], wP0 << 2);
-	memcpy(&to[wP0], &sif0.fifoData[0], wP1 << 2);
-
-	sif0.fifoReadPos = (sif0.fifoReadPos + words) & (FIFO_SIF0_W - 1);
-	sif0.fifoSize -= words;
-	SIF_LOG("  SIF0 - %d = %d (pos=%d)", words, sif0.fifoSize, sif0.fifoReadPos);
-}
-
-__forceinline void SIF1write(u32 *from, int words)
-{
-	const int wP0 = min((FIFO_SIF1_W - sif1.fifoWritePos), words);
-	const int wP1 = words - wP0;
-
-	memcpy(&sif1.fifoData[sif1.fifoWritePos], from, wP0 << 2);
-	memcpy(&sif1.fifoData[0], &from[wP0], wP1 << 2);
-
-	sif1.fifoWritePos = (sif1.fifoWritePos + words) & (FIFO_SIF1_W - 1);
-	sif1.fifoSize += words;
-	SIF_LOG("  SIF1 + %d = %d (pos=%d)", words, sif1.fifoSize, sif1.fifoWritePos);
-}
-
-static __forceinline void SIF1read(u32 *to, int words)
-{
-	const int wP0 = min((FIFO_SIF1_W - sif1.fifoReadPos), words);
-	const int wP1 = words - wP0;
-
-	memcpy(to, &sif1.fifoData[sif1.fifoReadPos], wP0 << 2);
-	memcpy(&to[wP0], &sif1.fifoData[0], wP1 << 2);
-
-	sif1.fifoReadPos = (sif1.fifoReadPos + words) & (FIFO_SIF1_W - 1);
-	sif1.fifoSize -= words;
-	SIF_LOG("  SIF1 - %d = %d (pos=%d)", words, sif1.fifoSize, sif1.fifoReadPos);
 }
 
 __forceinline void SIF0Dma()
@@ -132,7 +79,8 @@ __forceinline void SIF0Dma()
 
 					sif0.sifData.words = (sif0.sifData.words + 3) & 0xfffffffc; // Round up to nearest 4.
 
-					SIF0write((u32*)iopPhysMem(HW_DMA9_TADR + 8), 4);
+					//SIF0write((u32*)iopPhysMem(HW_DMA9_TADR + 8), 4);
+					sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_TADR + 8), 4);
 
 					HW_DMA9_TADR += 16; ///HW_DMA9_MADR + 16 + sif0.sifData.words << 2;
 					HW_DMA9_MADR = sif0.sifData.data & 0xFFFFFF;
@@ -151,11 +99,11 @@ __forceinline void SIF0Dma()
 			}
 			else // There's some data ready to transfer into the fifo..
 			{
-				int wTransfer = min(sif0.counter, FIFO_SIF0_W - sif0.fifoSize); // HW_DMA9_BCR >> 16;
+				int wTransfer = min(sif0.counter, FIFO_SIF_W - sif0.fifo.size); // HW_DMA9_BCR >> 16;
 
 				SIF_LOG("+++++++++++ %lX of %lX", wTransfer, sif0.counter /*(HW_DMA9_BCR >> 16)*/);
 
-				SIF0write((u32*)iopPhysMem(HW_DMA9_MADR), wTransfer);
+				sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_MADR), wTransfer);
 				HW_DMA9_MADR += wTransfer << 2;
 				psxCycles += (wTransfer / 4) * BIAS;		// fixme : should be / 16
 				sif0.counter -= wTransfer;
@@ -171,7 +119,7 @@ __forceinline void SIF0Dma()
 			}
 			if (size > 0) // If we're reading something continue to do so
 			{
-				int readSize = min(size, (sif0.fifoSize >> 2));
+				int readSize = min(size, (sif0.fifo.size >> 2));
 
 				//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
 				SIF_LOG("----------- %lX of %lX", readSize << 2, size << 2);
@@ -179,7 +127,7 @@ __forceinline void SIF0Dma()
 				ptag = safeDmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
 				if (ptag == NULL) return;
 
-				SIF0read((u32*)ptag, readSize << 2);
+				sif0.fifo.read((u32*)ptag, readSize << 2);
 
 				// Clearing handled by vtlb memory protection and manual blocks.
 				//Cpu->Clear(sif0dma->madr, readSize*4);
@@ -204,11 +152,11 @@ __forceinline void SIF0Dma()
 					eesifbusy[0] = false;
 					done = true;
 				}
-				else if (sif0.fifoSize >= 4) // Read a tag
+				else if (sif0.fifo.size >= 4) // Read a tag
 				{
 					static __aligned16 u32 tag[4];
 					
-					SIF0read((u32*)&tag[0], 4); // Tag
+					sif0.fifo.read((u32*)&tag[0], 4); // Tag
 					SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
                     sif0dma->unsafeTransfer(((tDMA_TAG*)(tag)));
@@ -284,7 +232,7 @@ __forceinline void SIF1Dma()
 					if (sif1dma->chcr.TTE)
 					{
 						Console.WriteLn("SIF1 TTE");
-						SIF1write((u32*)ptag + 2, 2);
+						sif1.fifo.write((u32*)ptag + 2, 2);
 					}
 
 					if (sif1dma->chcr.TIE && ptag->IRQ)
@@ -342,10 +290,10 @@ __forceinline void SIF1Dma()
 				data = safeDmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
 				if (data == NULL) return;
 
-				if (qwTransfer > (FIFO_SIF1_W - sif1.fifoSize) / 4) // Copy part of sif1dma into FIFO
-					qwTransfer = (FIFO_SIF1_W - sif1.fifoSize) / 4;
+				if (qwTransfer > (FIFO_SIF_W - sif1.fifo.size) / 4) // Copy part of sif1dma into FIFO
+					qwTransfer = (FIFO_SIF_W - sif1.fifo.size) / 4;
 
-				SIF1write((u32*)data, qwTransfer << 2);
+				sif1.fifo.write((u32*)data, qwTransfer << 2);
 
 				sif1dma->madr += qwTransfer << 4;
 				cycles += qwTransfer;		// fixme : BIAS is factored in above
@@ -361,11 +309,11 @@ __forceinline void SIF1Dma()
 			{
 				int readSize = size;
 
-				if (readSize > sif1.fifoSize) readSize = sif1.fifoSize;
+				if (readSize > sif1.fifo.size) readSize = sif1.fifo.size;
 
 				SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
-				SIF1read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
+				sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
 				psxCpu->Clear(HW_DMA10_MADR, readSize);
 				psxCycles += readSize / 4;		// fixme: should be / 16
 				sif1.counter = size - readSize;
@@ -391,10 +339,10 @@ __forceinline void SIF1Dma()
 					sif1.tagMode = 0;
 					done = true;
 				}
-				else if (sif1.fifoSize >= 4) // Read a tag
+				else if (sif1.fifo.size >= 4) // Read a tag
 				{
 				    struct sifData d;
-					SIF1read((u32*)&d, 4);
+					sif1.fifo.read((u32*)&d, 4);
 					SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", d.data & 0xffffff, d.words, DMA_TAG(d.data).ID, DMA_TAG(d.data).IRQ);
 					HW_DMA10_MADR = d.data & 0xffffff;
 					sif1.counter = d.words;
@@ -436,7 +384,7 @@ __forceinline void dmaSIF0()
 	SIF_LOG("EE: dmaSIF0 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
 	        sif0dma->chcr._u32, sif0dma->madr, sif0dma->qwc, sif0dma->tadr);
 
-	if (sif0.fifoReadPos != sif0.fifoWritePos)
+	if (sif0.fifo.readPos != sif0.fifo.writePos)
 	{
 		SIF_LOG("warning, sif0.fifoReadPos != sif0.fifoWritePos");
 	}
@@ -460,7 +408,7 @@ __forceinline void dmaSIF1()
 	SIF_LOG("EE: dmaSIF1 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
 	        sif1dma->chcr._u32, sif1dma->madr, sif1dma->qwc, sif1dma->tadr);
 
-	if (sif1.fifoReadPos != sif1.fifoWritePos)
+	if (sif1.fifo.readPos != sif1.fifo.writePos)
 	{
 		SIF_LOG("warning, sif1.fifoReadPos != sif1.fifoWritePos");
 	}
