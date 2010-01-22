@@ -103,7 +103,7 @@ static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
 	memcpy_aligned(pgsmem, pMem, size<<4);
 
 	GetMTGS().SendDataPacket();
-	return size>>2;
+	return size;
 }
 
 static u32 WRITERING_DMA(tDMA_TAG *pMem, u32 qwc)
@@ -136,7 +136,9 @@ static __forceinline void GIFchain()
 {
 	Registers::Freeze();
 	// qwc check now done outside this function
-	/*if (gif->qwc)*/ gscycles+= _GIFchain(); /* guessing */
+	// Voodoocycles
+	// >> 2 so Drakan and Tekken 5 don't mess up in some PATH3 transfer. Cycles to interrupt were getting huge..
+	/*if (gif->qwc)*/ gscycles+= ( _GIFchain() >> 2 ); /* guessing */
 	Registers::Thaw();
 }
 
