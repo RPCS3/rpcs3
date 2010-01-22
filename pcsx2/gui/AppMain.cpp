@@ -816,12 +816,18 @@ void Pcsx2App::OpenGsPanel()
 		// This is an attempt to hackfix a bug in nvidia's 195.xx drivers: When using
 		// Aero and DX10, the driver fails to update the window after the device has changed,
 		// until some event like a hide/show or resize event is posted to the window.
-		// Presumably this forces the driver to re-cache the visibility info.  I'm not sure
-		// if an immediate hide/show will work, or if I need to post these through the event
-		// loop for it to take effect.  Trying this first... -- air.
+		// Presumably this forces the driver to re-cache the visibility info.
+		// Notes:
+		//   Doing an immediate hide/show didn't work.  So now I'm trying a resize.  Because
+		//   wxWidgets is "clever" (grr!) it optimizes out just force-setting the same size
+		//   over again, so instead I resize it to size-1 and then back to the original size.
+		
+		const wxSize oldsize( gsFrame->GetSize() );
+		wxSize newsize( oldsize );
+		newsize.DecBy(1);
 
-		gsFrame->GetViewport()->Hide();
-		gsFrame->GetViewport()->Show();
+		gsFrame->SetSize( newsize );
+		gsFrame->SetSize( oldsize );
 	}
 	
 	pxAssumeDev( !GetPluginManager().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
