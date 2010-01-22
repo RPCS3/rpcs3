@@ -20,11 +20,8 @@
 #include "IopCommon.h"
 
 #include "Sif.h"
-#include "Sifcmd.h"
 
-DMACh *sif0ch;
-DMACh *sif1ch;
-DMACh *sif2ch;
+DMACh *sif0ch, *sif1ch, *sif2ch;
 
 static _sif0 sif0;
 static _sif1 sif1;

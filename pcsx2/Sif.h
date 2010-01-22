@@ -52,9 +52,7 @@ struct _sif1
 	s32 counter;
 	struct sifData sifData;
 };
-extern DMACh *sif0ch;
-extern DMACh *sif1ch;
-extern DMACh *sif2ch;
+extern DMACh *sif0ch, *sif1ch, *sif2ch;
 
 extern void sifInit();
 extern void SIF0Dma();

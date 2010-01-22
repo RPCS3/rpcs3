@@ -732,7 +732,6 @@ void MOVN() {
 * Format:  OP                                            *
 *********************************************************/
 
-#include "Sifcmd.h"
 /*
 int __Deci2Call(int call, u32 *addr);
 */
@@ -821,6 +820,8 @@ int __Deci2Call(int call, u32 *addr)
 	return 0;
 }
 
+// This function is the only one that uses Sifcmd.h in Pcsx2.
+#include "Sifcmd.h"
 
 void SYSCALL()
 {
@@ -841,7 +842,8 @@ void SYSCALL()
 			__Deci2Call( cpuRegs.GPR.n.a0.UL[0], (u32*)PSM(cpuRegs.GPR.n.a1.UL[0]) );
 	}
 
-	if (call == 0x77)
+	// The only thing this code is used for is the one log message, so don't execute it if we aren't logging bios messages.
+	if (macTrace.EE.Bios() && (call == 0x77))
 	{
 		t_sif_dma_transfer *dmat;
 		//struct t_sif_cmd_header	*hdr;
