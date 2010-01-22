@@ -338,6 +338,9 @@
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />
 		<Unit filename="../gui/AppCoreThread.cpp" />
+		<Unit filename="../gui/AppEventListeners.cpp" />
+		<Unit filename="../gui/AppEventSources.cpp" />
+		<Unit filename="../gui/AppForwardDefs.h" />
 		<Unit filename="../gui/AppInit.cpp" />
 		<Unit filename="../gui/AppMain.cpp" />
 		<Unit filename="../gui/AppRes.cpp" />
@@ -359,6 +362,7 @@
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.h" />
 		<Unit filename="../gui/Dialogs/ModalPopups.h" />
 		<Unit filename="../gui/Dialogs/PickUserModeDialog.cpp" />
+		<Unit filename="../gui/Dialogs/StuckThreadDialog.cpp" />
 		<Unit filename="../gui/Dialogs/SysConfigDialog.cpp" />
 		<Unit filename="../gui/FrameForGS.cpp" />
 		<Unit filename="../gui/GlobalCommands.cpp" />
@@ -468,8 +472,6 @@
 		<Unit filename="../gui/i18n.cpp" />
 		<Unit filename="../gui/i18n.h" />
 		<Unit filename="../gui/pxLogTextCtrl.cpp" />
-		<Unit filename="../gui/wxAppWithHelpers.cpp" />
-		<Unit filename="../gui/wxAppWithHelpers.h" />
 		<Unit filename="../pcsx2hostfs.cpp" />
 		<Unit filename="../ps2/BiosTools.cpp" />
 		<Unit filename="../ps2/BiosTools.h" />

@@ -156,6 +156,7 @@
 		<Unit filename="../../include/Utilities/HashMap.h" />
 		<Unit filename="../../include/Utilities/MemcpyFast.h" />
 		<Unit filename="../../include/Utilities/Path.h" />
+		<Unit filename="../../include/Utilities/PersistentThread.h" />
 		<Unit filename="../../include/Utilities/RedtapeWindows.h" />
 		<Unit filename="../../include/Utilities/SafeArray.h" />
 		<Unit filename="../../include/Utilities/ScopedPtr.h" />
@@ -168,6 +169,7 @@
 		<Unit filename="../../include/Utilities/pxStaticText.h" />
 		<Unit filename="../../include/Utilities/win_memzero.h" />
 		<Unit filename="../../include/Utilities/wxBaseTools.h" />
+		<Unit filename="../../include/Utilities/wxAppWithHelpers.h" />
 		<Unit filename="../../include/Utilities/wxGuiTools.h" />
 		<Unit filename="../../include/Utilities/wxHelpers.h" />
 		<Unit filename="../../include/intrin_x86.h" />
@@ -192,6 +194,7 @@
 		<Unit filename="../../src/Utilities/pxRadioPanel.cpp" />
 		<Unit filename="../../src/Utilities/pxStaticText.cpp" />
 		<Unit filename="../../src/Utilities/vssprintf.cpp" />
+		<Unit filename="../../src/Utilities/wxAppWithHelpers.cpp" />
 		<Unit filename="../../src/Utilities/wxGuiTools.cpp" />
 		<Unit filename="../../src/Utilities/wxHelpers.cpp" />
 		<Unit filename="../../src/Utilities/x86/MemcpyFast.S" />
