@@ -203,14 +203,12 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 	else
 	{
 		// There's some data ready to transfer into the fifo..
-		int qwTransfer = sif1dma->qwc;
 		tDMA_TAG *pTag;
-				
+		
+		const int qwTransfer = min((s32)sif1dma->qwc, (FIFO_SIF_W - sif1.fifo.size) / 4);
+	
 		pTag = safeDmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
 		if (pTag == NULL) return;
-
-		if (qwTransfer > (FIFO_SIF_W - sif1.fifo.size) / 4) // Copy part of sif1dma into FIFO
-			qwTransfer = (FIFO_SIF_W - sif1.fifo.size) / 4;
 
 		sif1.fifo.write((u32*)pTag, qwTransfer << 2);
 
@@ -303,7 +301,9 @@ __forceinline void SIF1IOPDma(int &cycles, int &psxCycles, bool &done)
 
 	if (sif1.counter <= 0)
 	{
-		if ((sif1.tagMode & 0x80) || (sif1.tagMode & 0x40))  // Stop on tag IRQ or END
+		// Stop on tag IRQ or END
+		
+		if ((sif1.tagMode & 0x80) || (sif1.tagMode & 0x40))
 		{
 			if (sif1.tagMode & 0x40)
 				SIF_LOG(" IOP SIF end");
@@ -322,12 +322,14 @@ __forceinline void SIF1IOPDma(int &cycles, int &psxCycles, bool &done)
 		}
 		else if (sif1.fifo.size >= 4) // Read a tag
 		{
-			struct sifData d;
-			sif1.fifo.read((u32*)&d, 4);
-			SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", d.data & 0xffffff, d.words, DMA_TAG(d.data).ID, DMA_TAG(d.data).IRQ);
-			HW_DMA10_MADR = d.data & 0xffffff;
-			sif1.counter = d.words;
-			sif1.tagMode = (d.data >> 24) & 0xFF;
+			sif1.fifo.read((u32*)&sif1.data, 4);
+			SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
+				sif1.data.data & 0xffffff, sif1.data.words, DMA_TAG(sif1.data.data).ID, 
+				DMA_TAG(sif1.data.data).IRQ);
+				
+			HW_DMA10_MADR = sif1.data.data & 0xffffff;
+			sif1.counter = sif1.data.words;
+			sif1.tagMode = (sif1.data.data >> 24) & 0xFF;
 			done = false;
 		}
 	}

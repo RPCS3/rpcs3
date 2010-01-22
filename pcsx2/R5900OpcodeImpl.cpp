@@ -843,6 +843,7 @@ void SYSCALL()
 	}
 
 	// The only thing this code is used for is the one log message, so don't execute it if we aren't logging bios messages.
+#ifdef PCSX2_DEVBUILD
 	if (macTrace.EE.Bios() && (call == 0x77))
 	{
 		t_sif_dma_transfer *dmat;
@@ -865,6 +866,7 @@ void SYSCALL()
 				dmat->dest, dmat->src);
 		}
 	}
+#endif
 
 	cpuRegs.pc -= 4;
 	cpuException(0x20, cpuRegs.branch);
