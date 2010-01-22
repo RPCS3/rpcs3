@@ -54,7 +54,7 @@ static __forceinline u8* iopPhysMem( u32 addr )
 	return &psxM[addr & 0x1fffff];
 }
 
-#define psxSs8(mem)		psxS[(mem) & 0xffff]
+#define psxSs8(mem)		psxS[(mem) & 0x00ff]
 #define psxSs16(mem)	(*(s16*)&psxS[(mem) & 0x00ff])
 #define psxSs32(mem)	(*(s32*)&psxS[(mem) & 0x00ff])
 #define psxSu8(mem)		(*(u8*) &psxS[(mem) & 0x00ff])

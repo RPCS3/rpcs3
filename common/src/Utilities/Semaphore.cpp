@@ -80,7 +80,7 @@ bool Threading::Semaphore::WaitWithoutYield( const wxTimeSpan& timeout )
 // called from another thread, no message pumping is performed.
 //
 // Exceptions:
-//   ThreadTimedOut - See description of ThreadTimedOut for details
+//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 void Threading::Semaphore::Wait()
 {
@@ -93,7 +93,7 @@ void Threading::Semaphore::Wait()
 	{
 		ScopedBusyCursor hourglass( Cursor_ReallyBusy );
 		if( !WaitWithoutYield(def_yieldgui_interval) )	// default is 4 seconds
-			throw Exception::ThreadTimedOut();
+			throw Exception::ThreadDeadlock();
 	}
 	else
 	{
@@ -116,7 +116,7 @@ void Threading::Semaphore::Wait()
 //   reached prior to timeout.
 //
 // Exceptions:
-//   ThreadTimedOut - See description of ThreadTimedOut for details
+//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 {
@@ -131,7 +131,7 @@ bool Threading::Semaphore::Wait( const wxTimeSpan& timeout )
 		if( timeout > def_deadlock_timeout )
 		{
 			if( WaitWithoutYield(def_deadlock_timeout) ) return true;
-			throw Exception::ThreadTimedOut();
+			throw Exception::ThreadDeadlock();
 		}
 		return WaitWithoutYield( timeout );
 	}

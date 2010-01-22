@@ -30,12 +30,11 @@ static void SysPageFaultSignalFilter( int signal, siginfo_t *siginfo, void * )
 	// Note: Use of most stdio functions isn't safe here.  Avoid console logs,
 	// assertions, file logs, or just about anything else useful.
 
-	PageFaultInfo pfinfo( (uptr)siginfo->si_addr & ~m_pagemask );
-	Source_PageFault.DispatchException( pfinfo );
+	Source_PageFault.Dispatch( PageFaultInfo( (uptr)siginfo->si_addr & ~m_pagemask ) );
 
 	// resumes execution right where we left off (re-executes instruction that
 	// caused the SIGSEGV).
-	if( pfinfo.handled ) return;
+	if( Source_PageFault.WasHandled() ) return;
 
 	// Bad mojo!  Completely invalid address.
 	// Instigate a trap if we're in a debugger, and if not then do a SIGKILL.

@@ -1821,6 +1821,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\AppEventSources.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\AppInit.cpp"
 				>
 			</File>
@@ -1896,10 +1900,6 @@
 				RelativePath="..\..\gui\Saveslots.cpp"
 				>
 			</File>
-			<File
-				RelativePath="..\..\gui\wxAppWithHelpers.cpp"
-				>
-			</File>
 			<Filter
 				Name="Dialogs"
 				>
@@ -1965,6 +1965,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Dialogs\PickUserModeDialog.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Dialogs\StuckThreadDialog.cpp"
 					>
 				</File>
 				<File
@@ -2536,6 +2540,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\AppEventListeners.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\AppForwardDefs.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\ApplyState.h"
 					>
 				</File>
@@ -2565,10 +2577,6 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\RecentIsoList.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\gui\wxAppWithHelpers.h"
 					>
 				</File>
 			</Filter>

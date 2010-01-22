@@ -105,10 +105,10 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	*centerSizer += GetSizer()	| pxCenter;
 	SetSizer( centerSizer, false );
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
-void Panels::GSWindowSettingsPanel::OnSettingsChanged()
+void Panels::GSWindowSettingsPanel::AppStatusEvent_OnSettingsApplied()
 {
 	const AppConfig::GSWindowOptions& conf( g_Conf->GSWindow );
 

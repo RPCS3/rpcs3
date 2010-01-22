@@ -152,14 +152,14 @@ BaseApplicableConfigPanel::~BaseApplicableConfigPanel() throw()
 
 BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient )
 	: wxPanelWithHelpers( parent, orient )
-	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
+	, m_AppStatusHelper( this )
 {
 	Init();
 }
 
 BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
 	: wxPanelWithHelpers( parent, orient, staticLabel )
-	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
+	, m_AppStatusHelper( this )
 {
 	Init();
 }
@@ -181,12 +181,7 @@ void BaseApplicableConfigPanel::Init()
 	}
 }
 
-void __evt_fastcall BaseApplicableConfigPanel::OnSettingsApplied( void* obj, int& ini )
-{
-	if( obj == NULL ) return;
-	((BaseApplicableConfigPanel*)obj)->OnSettingsChanged();
-}
-
+void BaseApplicableConfigPanel::AppStatusEvent_OnSettingsApplied() {}
 
 // -----------------------------------------------------------------------
 Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime )
@@ -226,7 +221,7 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 	*this	+= m_radio_UserMode | pxSizerFlags::StdExpand();
 	*this	+= 4;
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::UsermodeSelectionPanel::Apply()
@@ -234,7 +229,7 @@ void Panels::UsermodeSelectionPanel::Apply()
 	UseAdminMode = (m_radio_UserMode->GetSelection() == 1);
 }
 
-void Panels::UsermodeSelectionPanel::OnSettingsChanged()
+void Panels::UsermodeSelectionPanel::AppStatusEvent_OnSettingsApplied()
 {
 	m_radio_UserMode->SetSelection( (int)UseAdminMode );
 }
@@ -267,7 +262,7 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 	*this	+= m_picker | pxSizerFlags::StdSpace();
 
 	m_picker->SetSelection( cursel );
-	//OnSettingsChanged();
+	//AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::LanguageSelectionPanel::Apply()
@@ -289,7 +284,7 @@ void Panels::LanguageSelectionPanel::Apply()
 	}
 }
 
-void Panels::LanguageSelectionPanel::OnSettingsChanged()
+void Panels::LanguageSelectionPanel::AppStatusEvent_OnSettingsApplied()
 {
 	m_picker->SetSelection( g_Conf->LanguageId );
 }

@@ -17,12 +17,50 @@
 #include "HashMap.h"
 #include "wxGuiTools.h"
 #include "pxStaticText.h"
+#include "Threading.h"
 
 #include <wx/cshelp.h>
 #include <wx/tooltip.h>
 #include <wx/spinctrl.h>
 
 using namespace pxSizerFlags;
+
+// --------------------------------------------------------------------------------------
+//  IDeletableObject Implementation
+// --------------------------------------------------------------------------------------
+// This code probably deserves a better home.  It's general purpose non-GUI code (the single
+// wxApp/Gui dependency is in wxGuiTools.cpp for now).
+//
+bool IDeletableObject::MarkForDeletion()
+{
+	return !_InterlockedExchange( &m_IsBeingDeleted, true );
+}
+
+void IDeletableObject::DeleteSelf()
+{
+	if( MarkForDeletion() )
+		DoDeletion();
+}
+
+IDeletableObject::IDeletableObject()
+{
+	#ifdef _MSC_VER
+	// Bleh, this fails because _CrtIsValidHeapPointer calls HeapValidate on the
+	// pointer, but the pointer is a virtual base class, so it's not a valid block. >_<
+	//pxAssertDev( _CrtIsValidHeapPointer( this ), "IDeletableObject types cannot be created on the stack or as temporaries!" );
+	#endif
+
+	m_IsBeingDeleted = false;
+}
+
+IDeletableObject::~IDeletableObject() throw()
+{
+	AffinityAssert_AllowFromMain();
+}
+
+
+// --------------------------------------------------------------------------------------
+
 
 // Creates a text control which is right-justified and has it's minimum width configured to suit
 // the number of digits requested.

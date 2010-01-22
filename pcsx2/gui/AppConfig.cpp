@@ -683,15 +683,10 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 			throw Exception::AccessDenied( "Failed to overwrite settings; permission to file was denied." );
 	}
 
-	//if( GetAppConfig() != NULL )
-	//	wxGetApp().Source_SettingsChanged().Dispatch( SettingsEvt_IniClosing );
-
 	// Bind into wxConfigBase to allow wx to use our config internally, and delete whatever
 	// comes out (cleans up prev config, if one).
 	delete wxConfigBase::Set( OpenFileConfig( iniFilename ) );
 	GetAppConfig()->SetRecordDefaults();
-
-	//wxGetApp().Source_SettingsChanged().Dispatch( SettingsEvt_IniOpening );
 
 	if( !overwrite )
 		AppLoadSettings();

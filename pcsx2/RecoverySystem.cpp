@@ -44,11 +44,20 @@ static bool StateCopy_ForceClear()
 	state_buffer.Dispose();
 }
 
-static void __evt_fastcall StateThread_OnAppStatus( void* thr, AppEventType& stat )
+class EventListener_AppExiting : public IEventListener_AppStatus
 {
-	if( (thr == NULL) || (stat != AppStatus_Exiting) ) return;
-	((PersistentThread*)thr)->Cancel();
-}
+protected:
+	PersistentThread&		m_thread;
+
+public:
+	EventListener_AppExiting( PersistentThread& thr )
+		: m_thread( thr )
+	{
+	}
+
+	virtual ~EventListener_AppExiting() throw() {}
+
+};
 
 enum
 {
@@ -59,17 +68,17 @@ enum
 	StateThreadAction_UnzipFromDisk,
 };
 
-class _BaseStateThread : public PersistentThread
+class _BaseStateThread : public PersistentThread,
+	public virtual IEventListener_AppStatus,
+	public virtual IDeletableObject
 {
 	typedef PersistentThread _parent;
 
 protected:
-	EventListenerBinding<AppEventType> m_bind_OnExit;
-
 	bool	m_isStarted;
 
 	// Holds the pause/suspend state of the emulator when the state load/stave chain of action is started,
-	// so that the proper state can be restoed automatically on completion.
+	// so that the proper state can be restored automatically on completion.
 	bool	m_resume_when_done;
 
 public:
@@ -87,7 +96,6 @@ public:
 
 protected:
 	_BaseStateThread( const char* name, FnType_OnThreadComplete* onFinished )
-		: m_bind_OnExit( wxGetApp().Source_AppStatus(), EventListener<AppEventType>( this, StateThread_OnAppStatus ) )
 	{
 		Callback_FreezeFinished = onFinished;
 		m_name					= L"StateThread::" + fromUTF8(name);
@@ -110,6 +118,14 @@ protected:
 		wxGetApp().PostCommand( this, pxEvt_FreezeThreadFinished, type, m_resume_when_done );
 	}
 
+	void AppStatusEvent_OnExit()
+	{
+		Cancel();
+
+		Pcsx2App& myapp( wxGetApp() );
+		myapp.RemoveListener( *this );
+		myapp.DeleteObject( *this );
+	}
 };
 
 // --------------------------------------------------------------------------------------

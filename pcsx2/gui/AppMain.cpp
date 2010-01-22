@@ -32,22 +32,16 @@
 
 IMPLEMENT_APP(Pcsx2App)
 
-/*DEFINE_EVENT_TYPE( pxEVT_ReloadPlugins );
-DEFINE_EVENT_TYPE( pxEVT_OpenGsPanel );*/
-
 DEFINE_EVENT_TYPE( pxEvt_FreezeThreadFinished );
 DEFINE_EVENT_TYPE( pxEvt_CoreThreadStatus );
 DEFINE_EVENT_TYPE( pxEvt_LoadPluginsComplete );
 DEFINE_EVENT_TYPE( pxEvt_PluginStatus );
 DEFINE_EVENT_TYPE( pxEvt_SysExecute );
-DEFINE_EVENT_TYPE( pxEvt_OpenModalDialog );
 DEFINE_EVENT_TYPE( pxEvt_InvokeMethod );
 DEFINE_EVENT_TYPE( pxEvt_LogicalVsync );
 
-#include "Utilities/EventSource.inl"
-template class EventSource< IniInterface >;
-template class EventSource< AppEventType >;
-template class EventSource< PluginEventType >;
+DEFINE_EVENT_TYPE( pxEvt_OpenModalDialog );
+//DEFINE_EVENT_TYPE( pxEvt_OpenDialog_StuckThread );
 
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
@@ -69,7 +63,7 @@ static bool HandlePluginError( Exception::PluginError& ex )
 		g_Conf->SysSettingsTabName = L"Plugins";
 
 		// fixme: Send a message to the panel to select the failed plugin.
-		if( wxGetApp().IssueModalDialog( Dialogs::SysConfigDialog::GetNameStatic() ) == wxID_CANCEL )
+		if( wxGetApp().IssueDialogAsModal( Dialogs::SysConfigDialog::GetNameStatic() ) == wxID_CANCEL )
 			return false;
 	}
 	return result;
@@ -79,13 +73,14 @@ static bool HandlePluginError( Exception::PluginError& ex )
 // And it's Thread Safe!
 void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 {
-	if( m_MainFrame == NULL ) return;
+	MainEmuFrame* mainFrame = GetMainFramePtr();
+	if( mainFrame == NULL ) return;
 
 	wxCommandEvent joe( wxEVT_COMMAND_MENU_SELECTED, menu_id );
 	if( wxThread::IsMain() )
-		m_MainFrame->GetEventHandler()->ProcessEvent( joe );
+		mainFrame->GetEventHandler()->ProcessEvent( joe );
 	else
-		m_MainFrame->GetEventHandler()->AddPendingEvent( joe );
+		mainFrame->GetEventHandler()->AddPendingEvent( joe );
 }
 
 // --------------------------------------------------------------------------------------
@@ -100,25 +95,25 @@ class pxInvokeMethodEvent : public pxPingEvent
 	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxInvokeMethodEvent)
 
 protected:
-	FnType_AppMethod	m_Method;
+	FnPtr_AppMethod	m_Method;
 
 public:
 	virtual ~pxInvokeMethodEvent() throw() { }
 	virtual pxInvokeMethodEvent *Clone() const { return new pxInvokeMethodEvent(*this); }
 
-	explicit pxInvokeMethodEvent( int msgtype, FnType_AppMethod method=NULL, Semaphore* sema=NULL )
+	explicit pxInvokeMethodEvent( int msgtype, FnPtr_AppMethod method=NULL, Semaphore* sema=NULL )
 		: pxPingEvent( msgtype, sema )
 	{
 		m_Method = method;
 	}
 
-	explicit pxInvokeMethodEvent( FnType_AppMethod method=NULL, Semaphore* sema=NULL )
+	explicit pxInvokeMethodEvent( FnPtr_AppMethod method=NULL, Semaphore* sema=NULL )
 		: pxPingEvent( pxEvt_InvokeMethod, sema )
 	{
 		m_Method = method;
 	}
 
-	explicit pxInvokeMethodEvent( FnType_AppMethod method, Semaphore& sema )
+	explicit pxInvokeMethodEvent( FnPtr_AppMethod method, Semaphore& sema )
 		: pxPingEvent( pxEvt_InvokeMethod, &sema )
 	{
 		m_Method = method;
@@ -136,7 +131,7 @@ public:
 		if( m_PostBack ) m_PostBack->Post();
 	}
 	
-	void SetMethod( FnType_AppMethod method )
+	void SetMethod( FnPtr_AppMethod method )
 	{
 		m_Method = method;
 	}
@@ -182,7 +177,9 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 	// GS window while the PAD plugin is open, so send messages to the APP handler
 	// only if *either* the GS or PAD plugins are in legacy mode.
 
-	if( m_gsFrame == NULL || (PADopen != NULL) )
+	GSFrame* gsFrame = wxGetApp().GetGsFramePtr();
+
+	if( gsFrame == NULL || (PADopen != NULL) )
 	{
 		if( m_kevt.GetEventType() == wxEVT_KEY_DOWN )
 		{
@@ -192,14 +189,15 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 	}
 	else
 	{
-		m_kevt.SetId( m_gsFrame->GetViewport()->GetId() );
-		m_gsFrame->ProcessEvent( m_kevt );
+		m_kevt.SetId( gsFrame->GetViewport()->GetId() );
+		gsFrame->ProcessEvent( m_kevt );
 	}
 }
 
 void FramerateManager::Reset()
 {
 	memzero( m_fpsqueue );
+	m_initpause = FramerateQueueDepth;
 	m_fpsqueue_tally = 0;
 	m_fpsqueue_writepos = 0;
 	Resume();
@@ -224,11 +222,13 @@ void FramerateManager::DoFrame()
 
 	m_fpsqueue[m_fpsqueue_writepos] = elapsed_time;
 	m_fpsqueue_writepos = (m_fpsqueue_writepos + 1) % FramerateQueueDepth;
+	if( m_initpause > 0 ) --m_initpause;
 }
 
 double FramerateManager::GetFramerate() const
 {
-	u32 ticks_per_frame = m_fpsqueue_tally / FramerateQueueDepth;
+	if( m_initpause > (FramerateQueueDepth/2) ) return 0.0;
+	u32 ticks_per_frame = m_fpsqueue_tally / (FramerateQueueDepth-m_initpause);
 	return (double)GetTickFrequency() / (double)ticks_per_frame;
 }
 
@@ -237,7 +237,7 @@ double FramerateManager::GetFramerate() const
 // times a second if not (ok, not quite, but you get the idea... I hope.)
 void Pcsx2App::LogicalVsync()
 {
-	if( SelfMethodPost( &Pcsx2App::LogicalVsync ) ) return;
+	if( PostMethodToMainThread( &Pcsx2App::LogicalVsync ) ) return;
 
 	if( !SysHasValidState() || g_plugins == NULL ) return;
 
@@ -247,8 +247,8 @@ void Pcsx2App::LogicalVsync()
 
 	// Only call PADupdate here if we're using GSopen2.  Legacy GSopen plugins have the
 	// GS window belonging to the MTGS thread.
-	if( (PADupdate != NULL) && (GSopen2 != NULL) && (m_gsFrame != NULL) )
-		PADupdate(0);
+	if( (PADupdate != NULL) && (GSopen2 != NULL) && (wxGetApp().GetGsFramePtr() != NULL) )
+ 		PADupdate(0);
 
 	const keyEvent* ev = PADkeyEvent();
 
@@ -295,7 +295,7 @@ void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 	m_kevt.m_controlDown	= false;
 	m_kevt.m_altDown		= false;
 
-	m_evtsrc_CoreThreadStatus.Dispatch( evt );
+	m_evtsrc_CoreThreadStatus.Dispatch( status );
 	ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 	CoreThread.RethrowException();
 }
@@ -306,7 +306,7 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 
 	MsgboxEventResult* evtres = (MsgboxEventResult*)evt.GetClientData();
 
-	wxWindowID result = IssueModalDialog( evt.GetString() );
+	wxWindowID result = IssueDialogAsModal( evt.GetString() );
 
 	if( evtres != NULL )
 	{
@@ -315,7 +315,34 @@ void Pcsx2App::OnOpenModalDialog( wxCommandEvent& evt )
 	}
 }
 
-int Pcsx2App::IssueModalDialog( const wxString& dlgName )
+void Pcsx2App::OnOpenDialog_StuckThread( wxCommandEvent& evt )
+{
+	if( !pxAssert( evt.GetClientData() != NULL ) ) return;
+	DoStuckThread( *(PersistentThread*)evt.GetClientData() );
+}
+
+bool Pcsx2App::DoStuckThread( PersistentThread& stuck_thread )
+{
+	if( !wxThread::IsMain() )
+	{
+		//PostCommand( &stuck_thread, pxEvt_OpenDialog_StuckThread );
+	}
+
+	// Parent the dialog to the GS window if it belongs to PCSX2.  If not
+	// we should bind it to the Main window, and if that's not around, use NULL.
+
+	wxWindow* parent = GetGsFramePtr();
+	if( parent == NULL )
+		parent = GetMainFramePtr();
+
+	pxStuckThreadEvent evt( stuck_thread );
+	return Msgbox::ShowModal( evt );
+}
+
+// Opens the specified standard dialog as a modal dialog, or forces the an existing
+// instance of the dialog (ie, it's already open) to be modal.  This is needed for
+// items which are 
+int Pcsx2App::IssueDialogAsModal( const wxString& dlgName )
 {
 	if( dlgName.IsEmpty() ) return wxID_CANCEL;
 	
@@ -409,6 +436,12 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		(handler->*func)(event);
 	}
 	// ----------------------------------------------------------------------------
+	catch( Exception::StartupAborted& ex )		// user-aborted, no popups needed.
+	{
+		Console.Warning( ex.FormatDiagnosticMessage() );
+		Exit();
+	}
+	// ----------------------------------------------------------------------------
 	catch( Exception::BiosLoadFailed& ex )
 	{
 		wxDialogWithHelpers dialog( NULL, _("PS2 BIOS Error"), wxVERTICAL );
@@ -418,7 +451,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		if( dialog.ShowModal() == wxID_CANCEL )
 			Console.Warning( "User denied option to re-configure BIOS." );
 
-		if( IssueModalDialog( Dialogs::BiosSelectorDialog::GetNameStatic() ) != wxID_CANCEL )
+		if( IssueDialogAsModal( Dialogs::BiosSelectorDialog::GetNameStatic() ) != wxID_CANCEL )
 		{
 			SysExecute();
 		}
@@ -455,7 +488,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		}
 	}
 	// ----------------------------------------------------------------------------
-	catch( Exception::ThreadTimedOut& ex )
+	catch( Exception::ThreadDeadlock& ex )
 	{
 		// [TODO]  Bind a listener to the CoreThread status, and automatically close the dialog
 		// if the thread starts responding while we're waiting (not hard in fact, but I'm getting
@@ -505,14 +538,19 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	}
 }
 
-static void __evt_fastcall OnStateSaveFinished( void* obj, wxCommandEvent& evt )
+class CancelCoreThreadWhenSaveStateDone : public IEventListener_CoreThread,
+	public IDeletableObject
 {
-	if( evt.GetInt() == CoreStatus_Resumed )
+public:
+	virtual ~CancelCoreThreadWhenSaveStateDone() throw() {}
+
+	void OnCoreStatus_Resumed()
 	{
-		wxGetApp().PostMenuAction( MenuId_Exit );
-		wxGetApp().Source_CoreThreadStatus().Remove( NULL, OnStateSaveFinished );
+		Pcsx2App& myapp( wxGetApp() );
+		myapp.DeleteObject( this );
+		myapp.PostMenuAction( MenuId_Exit );
 	}
-}
+};
 
 // Common exit handler which can be called from any event (though really it should
 // be called only from CloseWindow handlers since that's the more appropriate way
@@ -524,12 +562,14 @@ bool Pcsx2App::PrepForExit( bool canCancel )
 {
 	// If a savestate is saving, we should wait until it finishes.  Otherwise the user
 	// might lose data.
-	
+
 	if( StateCopy_IsBusy() )
 	{
-		Source_CoreThreadStatus().Add( NULL, OnStateSaveFinished );
-		throw Exception::CancelEvent( "Savestate in progress, cannot close program (close event delayed)" );
+		new CancelCoreThreadWhenSaveStateDone();
+		throw Exception::CancelEvent( "Savestate in progress, close event delayed until action is complete." );
 	}
+
+	CancelLoadingPlugins();
 
 	/*
 	if( canCancel )
@@ -548,25 +588,14 @@ bool Pcsx2App::PrepForExit( bool canCancel )
 		}
 	}*/
 
-	AppEventType toSend = AppStatus_Exiting;
-	m_evtsrc_AppStatus.Dispatch( toSend );
-	CleanupMess();
+	DispatchEvent( AppStatus_Exiting );
+
+	// This should be called by OnExit(), but sometimes wxWidgets fails to call OnExit(), so
+	// do it here just in case (no harm anyway -- OnExit is the next logical step after
+	// CloseWindow returns true from the TopLevel window).
+	CleanupRestartable();
 
 	return true;
-}
-
-int Pcsx2App::OnExit()
-{
-	CleanupMess();
-
-	if( g_Conf )
-		AppSaveSettings();
-
-	sMainFrame.RemoveEventHandler( &GetRecentIsoList() );
-
-	m_Resources = NULL;
-
-	return wxApp::OnExit();
 }
 
 // This method generates debug assertions if the MainFrame handle is NULL (typically
@@ -576,16 +605,21 @@ int Pcsx2App::OnExit()
 // is a matter of programmer preference).
 MainEmuFrame& Pcsx2App::GetMainFrame() const
 {
-	pxAssume( ((uptr)GetTopWindow()) == ((uptr)m_MainFrame) );
-	pxAssume( m_MainFrame != NULL );
-	return *m_MainFrame;
+	MainEmuFrame* mainFrame = GetMainFramePtr();
+
+	pxAssume( mainFrame != NULL );
+	pxAssume( ((uptr)GetTopWindow()) == ((uptr)mainFrame) );
+	return *mainFrame;
 }
 
-GSFrame& Pcsx2App::GetGSFrame() const
+GSFrame& Pcsx2App::GetGsFrame() const
 {
-	pxAssume( m_gsFrame != NULL );
-	return *m_gsFrame;
+	GSFrame* gsFrame = (GSFrame*)wxWindow::FindWindowById( m_id_GsFrame );
+
+	pxAssume( gsFrame != NULL );
+	return *gsFrame;
 }
+
 
 void AppApplySettings( const AppConfig* oldconf )
 {
@@ -626,12 +660,67 @@ void AppApplySettings( const AppConfig* oldconf )
 		}
 	}
 
-	int toSend = 0;
-	sApp.Source_SettingsApplied().Dispatch( toSend );
+	sApp.DispatchEvent( AppStatus_SettingsApplied );
 	suspend_core.Resume();
 }
 
-static wxFileConfig _dud_config;
+class pxDudConfig : public wxConfigBase
+{
+protected:
+	wxString	m_empty;
+
+public:
+	virtual ~pxDudConfig() {}
+
+	virtual void SetPath(const wxString& ) {}
+	virtual const wxString& GetPath() const { return m_empty; }
+
+	virtual bool GetFirstGroup(wxString& , long& ) const { return false; }
+	virtual bool GetNextGroup (wxString& , long& ) const { return false; }
+	virtual bool GetFirstEntry(wxString& , long& ) const { return false; }
+	virtual bool GetNextEntry (wxString& , long& ) const { return false; }
+	virtual size_t GetNumberOfEntries(bool ) const  { return 0; }
+	virtual size_t GetNumberOfGroups(bool ) const  { return 0; }
+
+	virtual bool HasGroup(const wxString& ) const { return false; }
+	virtual bool HasEntry(const wxString& ) const { return false; }
+
+	virtual bool Flush(bool ) { return false; }
+
+	virtual bool RenameEntry(const wxString&, const wxString& ) { return false; }
+
+	virtual bool RenameGroup(const wxString&, const wxString& ) { return false; }
+
+	virtual bool DeleteEntry(const wxString&, bool bDeleteGroupIfEmpty = true) { return false; }
+	virtual bool DeleteGroup(const wxString& ) { return false; }
+	virtual bool DeleteAll() { return false; }
+
+protected:
+	virtual bool DoReadString(const wxString& , wxString *) const  { return false; }
+	virtual bool DoReadLong(const wxString& , long *) const  { return false; }
+
+	virtual bool DoWriteString(const wxString& , const wxString& )  { return false; }
+	virtual bool DoWriteLong(const wxString& , long )  { return false; }
+};
+
+static pxDudConfig _dud_config;
+
+// --------------------------------------------------------------------------------------
+//  AppIniSaver / AppIniLoader
+// --------------------------------------------------------------------------------------
+class AppIniSaver : public IniSaver
+{
+public:
+	AppIniSaver();
+	virtual ~AppIniSaver() throw() {}
+};
+
+class AppIniLoader : public IniLoader
+{
+public:
+	AppIniLoader();
+	virtual ~AppIniLoader() throw() {}
+};
 
 AppIniSaver::AppIniSaver()
 	: IniSaver( (GetAppConfig() != NULL) ? *GetAppConfig() : _dud_config )
@@ -649,7 +738,7 @@ void AppLoadSettings()
 
 	AppIniLoader loader;
 	g_Conf->LoadSave( loader );
-	wxGetApp().Source_SettingsLoadSave().Dispatch( loader );
+	sApp.DispatchEvent( loader );
 }
 
 void AppSaveSettings()
@@ -658,9 +747,13 @@ void AppSaveSettings()
 
 	AppIniSaver saver;
 	g_Conf->LoadSave( saver );
-	wxGetApp().Source_SettingsLoadSave().Dispatch( saver );
+	sApp.DispatchEvent( saver );
 }
 
+// Invokes the specified Pcsx2App method, or posts the method to the main thread if the calling
+// thread is not Main.  Action is blocking.  For non-blocking method execution, use
+// PostMethodToMainThread.
+//
 // This function works something like setjmp/longjmp, in that the return value indicates if the
 // function actually executed the specified method or not.
 //
@@ -668,7 +761,7 @@ void AppSaveSettings()
 //   FALSE if the method was not posted to the main thread (meaning this IS the main thread!)
 //   TRUE if the method was posted.
 //
-bool Pcsx2App::SelfMethodInvoke( FnType_AppMethod method )
+bool Pcsx2App::InvokeMethodOnMainThread( FnPtr_AppMethod method )
 {
 	if( wxThread::IsMain() ) return false;
 
@@ -680,7 +773,18 @@ bool Pcsx2App::SelfMethodInvoke( FnType_AppMethod method )
 	return true;
 }
 
-bool Pcsx2App::SelfMethodPost( FnType_AppMethod method )
+// Invokes the specified Pcsx2App method, or posts the method to the main thread if the calling
+// thread is not Main.  Action is non-blocking.  For blocking method execution, use
+// InvokeMethodOnMainThread.
+//
+// This function works something like setjmp/longjmp, in that the return value indicates if the
+// function actually executed the specified method or not.
+//
+// Returns:
+//   FALSE if the method was not posted to the main thread (meaning this IS the main thread!)
+//   TRUE if the method was posted.
+//
+bool Pcsx2App::PostMethodToMainThread( FnPtr_AppMethod method )
 {
 	if( wxThread::IsMain() ) return false;
 	pxInvokeMethodEvent evt( method );
@@ -688,20 +792,30 @@ bool Pcsx2App::SelfMethodPost( FnType_AppMethod method )
 	return true;
 }
 
+// Posts a method to the main thread; non-blocking.  Post occurs even when called from the
+// main thread.
+void Pcsx2App::PostMethod( FnPtr_AppMethod method )
+{
+	pxInvokeMethodEvent evt( method );
+	AddPendingEvent( evt );
+}
+
 void Pcsx2App::OpenGsPanel()
 {
-	if( SelfMethodInvoke( &Pcsx2App::OpenGsPanel ) ) return;
+	if( InvokeMethodOnMainThread( &Pcsx2App::OpenGsPanel ) ) return;
 
-	if( m_gsFrame == NULL )
+	GSFrame* gsFrame = GetGsFramePtr();
+	if( gsFrame == NULL )
 	{
-		m_gsFrame = new GSFrame( m_MainFrame, L"PCSX2" );
-		m_gsFrame->SetFocus();
+		gsFrame = new GSFrame( GetMainFramePtr(), L"PCSX2" );
+		gsFrame->SetFocus();
+		m_id_GsFrame = gsFrame->GetId();
 	}
 	
 	pxAssumeDev( !GetPluginManager().IsOpen( PluginId_GS ), "GS Plugin must be closed prior to opening a new Gs Panel!" );
 
-	m_gsFrame->Show();
-	pDsp = (uptr)m_gsFrame->GetViewport()->GetHandle();
+	gsFrame->Show();
+	pDsp = (uptr)gsFrame->GetViewport()->GetHandle();
 
 	// The "in the main window" quickie hack...
 	//pDsp = (uptr)m_MainFrame->m_background.GetHandle();
@@ -709,11 +823,12 @@ void Pcsx2App::OpenGsPanel()
 
 void Pcsx2App::CloseGsPanel()
 {
-	if( SelfMethodInvoke( &Pcsx2App::CloseGsPanel ) ) return;
+	if( InvokeMethodOnMainThread( &Pcsx2App::CloseGsPanel ) ) return;
 
-	if( m_gsFrame != NULL && CloseViewportWithPlugins )
+	GSFrame* gsFrame = GetGsFramePtr();
+	if( (gsFrame != NULL) && CloseViewportWithPlugins )
 	{
-		if( GSPanel* woot = m_gsFrame->GetViewport() )
+		if( GSPanel* woot = gsFrame->GetViewport() )
 			woot->Destroy();
 	}
 }
@@ -721,22 +836,22 @@ void Pcsx2App::CloseGsPanel()
 void Pcsx2App::OnGsFrameClosed()
 {
 	CoreThread.Suspend();
-	m_gsFrame = NULL;
+	m_id_GsFrame = wxID_ANY;
 }
 
 void Pcsx2App::OnProgramLogClosed()
 {
-	if( m_ProgramLogBox == NULL ) return;
+	if( m_id_ProgramLogBox == wxID_ANY ) return;
+	m_id_ProgramLogBox = wxID_ANY;
 	DisableWindowLogging();
-	m_ProgramLogBox = NULL;
 }
 
 void Pcsx2App::OnMainFrameClosed()
 {
 	// Nothing threaded depends on the mainframe (yet) -- it all passes through the main wxApp
 	// message handler.  But that might change in the future.
-	if( m_MainFrame == NULL ) return;
-	m_MainFrame = NULL;
+	//if( m_id_MainFrame == wxID_ANY ) return;
+	m_id_MainFrame = wxID_ANY;
 }
 
 // --------------------------------------------------------------------------------------
@@ -904,3 +1019,39 @@ SysCoreAllocations& GetSysCoreAlloc()
 {
 	return *wxGetApp().m_CoreAllocs;
 }
+
+// --------------------------------------------------------------------------------------
+//  pxStuckThreadEvent Implementation
+// --------------------------------------------------------------------------------------
+IMPLEMENT_DYNAMIC_CLASS( pxStuckThreadEvent, BaseMessageBoxEvent )
+
+pxStuckThreadEvent::pxStuckThreadEvent()
+	: BaseMessageBoxEvent()
+	, m_Thread( *(PersistentThread*)NULL )
+{
+}
+
+pxStuckThreadEvent::pxStuckThreadEvent( MsgboxEventResult& instdata, PersistentThread& thr )
+	: BaseMessageBoxEvent( instdata, wxEmptyString )
+	, m_Thread( thr )
+{
+}
+
+pxStuckThreadEvent::pxStuckThreadEvent( PersistentThread& thr )
+	: BaseMessageBoxEvent()
+	, m_Thread( thr )
+{
+}
+
+pxStuckThreadEvent::pxStuckThreadEvent( const pxStuckThreadEvent& src )
+	: BaseMessageBoxEvent( src )
+	, m_Thread( src.m_Thread )
+{
+}
+
+int pxStuckThreadEvent::_DoDialog() const
+{
+	return 1;
+	//return Dialogs::StuckThreadDialog( m_Thread ).ShowModal();
+}
+

@@ -18,63 +18,17 @@
 #include <list>
 #include "Threading.h"
 
-class wxCommandEvent;
-
-// __evt_fastcall : Work-around for a GCC 4.3 compilation bug.  The templated FuncType
-// throws type mismatches if we have a __fastcall qualifier. >_< --air
-
-#if defined( __GNUC__ ) && (__GNUC__ < 4 ) || ((__GNUC__ == 4) && ( __GNUC_MINOR__ <= 3 ))
-#	define __evt_fastcall
-#else
-#	define __evt_fastcall __fastcall
-#endif
-
-// --------------------------------------------------------------------------------------
-//  EventListener< typename EvtType >
-// --------------------------------------------------------------------------------------
-
-template< typename EvtType >
-struct EventListener
-{
-	typedef void __evt_fastcall FuncType( void* object, EvtType& evt );
-
-	void*		object;
-	FuncType*	OnEvent;
-
-	EventListener( FuncType* fnptr )
-	{
-		object	= NULL;
-		OnEvent	= fnptr;
-	}
-
-	EventListener( void* objhandle, FuncType* fnptr )
-	{
-		object	= objhandle;
-		OnEvent	= fnptr;
-	}
-
-	bool operator ==( const EventListener& right ) const
-	{
-		return (object == right.object) && (OnEvent == right.OnEvent);
-	}
-
-	bool operator !=( const EventListener& right ) const
-	{
-		return this->operator ==(right);
-	}
-};
-
 // --------------------------------------------------------------------------------------
 //  EventSource< template EvtType >
 // --------------------------------------------------------------------------------------
 
-template< typename EvtType >
+template< typename ListenerType >
 class EventSource
 {
 public:
-	typedef EventListener< EvtType >				ListenerType;
-	typedef typename std::list< ListenerType >		ListenerList;
-	typedef typename ListenerList::iterator			Handle;
+	typedef typename ListenerType::EvtParams		EvtParams;
+	typedef typename std::list< ListenerType* >		ListenerList;
+	typedef typename ListenerList::iterator			ListenerIterator;
 
 protected:
 	typedef typename ListenerList::const_iterator	ConstIterator;
@@ -90,27 +44,34 @@ protected:
 	Threading::Mutex m_listeners_lock;
 
 public:
-	EventSource() : m_cache_valid( false )
+	EventSource()
 	{
+		m_cache_valid = false;
 	}
 
 	virtual ~EventSource() throw() {}
 
-	virtual void Remove( const ListenerType& listener );
-	virtual void Remove( const Handle& listenerHandle );
+	virtual ListenerIterator Add( ListenerType& listener );
+	virtual void Remove( ListenerType& listener );
+	virtual void Remove( const ListenerIterator& listenerHandle );
+	
+	void Add( ListenerType* listener )
+	{
+		if( listener == NULL ) return;
+		Add( *listener );
+	}
+	
+	void Remove( ListenerType* listener )
+	{
+		if( listener == NULL ) return;
+		Remove( *listener );
+	}
 
-	Handle AddFast( const ListenerType& listener );
-	void Add( void* objhandle, typename ListenerType::FuncType* fnptr );
-	void Remove( void* objhandle, typename ListenerType::FuncType* fnptr );
-
-	// Checks for duplicates before adding the event.
-	virtual void Add( const ListenerType& listener );
-	virtual void RemoveObject( const void* object );
-	void Dispatch( EvtType& evt );
+	void Dispatch( const EvtParams& params );
 
 protected:
-	virtual Handle _AddFast_without_lock( const ListenerType& listener );
-	inline void _DispatchRaw( ConstIterator iter, const ConstIterator& iend, EvtType& evt );
+	virtual ListenerIterator _AddFast_without_lock( ListenerType& listener );
+	virtual void _DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const EvtParams& params );
 };
 
 // --------------------------------------------------------------------------------------
@@ -118,25 +79,26 @@ protected:
 // --------------------------------------------------------------------------------------
 // Encapsulated event listener binding, provides the "benefits" of object unwinding.
 //
-template< typename EvtType >
+template< typename ListenerType >
 class EventListenerBinding
 {
 public:
-	typedef typename EventSource<EvtType>::ListenerType	ListenerHandle;
-	typedef typename EventSource<EvtType>::Handle		ConstIterator;
+	typedef typename EventSource<ListenerType>							EventSourceType;
+	typedef typename EventSource<ListenerType>::ListenerIterator		ListenerIterator;
 
 protected:
-	EventSource<EvtType>&		m_source;
-	const ListenerHandle		m_listener;
-	ConstIterator				m_iter;
-	bool						m_attached;
+	EventSourceType&	m_source;
+	const ListenerType	m_listener;
+	ListenerIterator	m_iter;
+	bool				m_attached;
 
 public:
-	EventListenerBinding( EventSource<EvtType>& source, const ListenerHandle& listener, bool autoAttach=true )
+	EventListenerBinding( EventSourceType& source, ListenerType& listener, bool autoAttach=true )
 		: m_source( source )
 		, m_listener( listener )
-		, m_attached( false )
 	{
+		m_attached = false;
+
 		// If you want to assert on null pointers, you'll need to do the check yourself.  There's
 		// too many cases where silently ignoring null pointers is the desired behavior.
 		//if( !pxAssertDev( listener.OnEvent != NULL, "NULL listener callback function." ) ) return;
@@ -158,13 +120,24 @@ public:
 	void Attach()
 	{
 		if( m_attached || (m_listener.OnEvent == NULL) ) return;
-		m_iter = m_source.AddFast( m_listener );
+		m_iter = m_source.Add( m_listener );
 		m_attached = true;
 	}
 };
 
-typedef EventSource<wxCommandEvent>				CmdEvt_Source;
-typedef EventListener<wxCommandEvent>			CmdEvt_Listener;
-typedef EventListenerBinding<wxCommandEvent>	CmdEvt_ListenerBinding;
+// --------------------------------------------------------------------------------------
+//  IEventDispatcher
+// --------------------------------------------------------------------------------------
+// This class is used as a base interface for EventListeners.  It allows the listeners to do
+// customized dispatching of several event types into "user friendly" function overrides.
+//
+template< typename EvtParams >
+class IEventDispatcher
+{
+protected:
+	IEventDispatcher() {}
 
-#define EventSource_ImplementType( tname )	template class EventSource<tname>
+public:
+	virtual ~IEventDispatcher() throw() {}
+	virtual void DispatchEvent( const EvtParams& params )=0;
+};

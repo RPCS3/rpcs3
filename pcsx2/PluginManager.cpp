@@ -748,7 +748,7 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 				wxsFormat( L"Plugin Test failure, return code: %d", testres ),
 				_( "The plugin reports that your hardware or software/drivers are not supported." )
 			);
-			
+
 		pxYield( 2 );
 
 	} while( ++pi, pi->shortname != NULL );

@@ -74,7 +74,7 @@ namespace Panels
 		UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime = true );
 
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +90,7 @@ namespace Panels
 		LanguageSelectionPanel( wxWindow* parent );
 
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -104,7 +104,7 @@ namespace Panels
 	public:
 		CpuPanelEE( wxWindow* parent );
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	class CpuPanelVU : public BaseApplicableConfigPanel
@@ -116,7 +116,7 @@ namespace Panels
 	public:
 		CpuPanelVU( wxWindow* parent );
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	class BaseAdvancedCpuOptions : public BaseApplicableConfigPanel
@@ -146,7 +146,7 @@ namespace Panels
 		AdvancedOptionsFPU( wxWindow* parent );
 		virtual ~AdvancedOptionsFPU() throw() { }
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	class AdvancedOptionsVU : public BaseAdvancedCpuOptions
@@ -155,7 +155,7 @@ namespace Panels
 		AdvancedOptionsVU( wxWindow* parent );
 		virtual ~AdvancedOptionsVU() throw() { }
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -176,7 +176,7 @@ namespace Panels
 		virtual	~FrameSkipPanel() throw() {}
 		
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 	
 	// --------------------------------------------------------------------------------------
@@ -202,7 +202,7 @@ namespace Panels
 		virtual ~FramelimiterPanel() throw() {}
 
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 	
 	// --------------------------------------------------------------------------------------
@@ -227,7 +227,7 @@ namespace Panels
 		GSWindowSettingsPanel( wxWindow* parent );
 		virtual ~GSWindowSettingsPanel() throw() {}
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	class VideoPanel : public BaseApplicableConfigPanel
@@ -242,7 +242,7 @@ namespace Panels
 		VideoPanel( wxWindow* parent );
 		virtual ~VideoPanel() throw() {}
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 
 	protected:
 		void OnOpenWindowSettings( wxCommandEvent& evt );
@@ -273,8 +273,8 @@ namespace Panels
 		SpeedHacksPanel( wxWindow* parent );
 		void Apply();
 		void EnableStuff();
-		void OnSettingsChanged();
-		void OnSettingsChanged( const Pcsx2Config::SpeedhackOptions& opt );
+		void AppStatusEvent_OnSettingsApplied();
+		void AppStatusEvent_OnSettingsApplied( const Pcsx2Config::SpeedhackOptions& opt );
 
 	protected:
 		const wxChar* GetEEcycleSliderMsg( int val );
@@ -299,7 +299,7 @@ namespace Panels
 	public:
 		GameFixesPanel( wxWindow* parent );
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	//////////////////////////////////////////////////////////////////////////////////////////
@@ -319,7 +319,7 @@ namespace Panels
 		virtual ~DirPickerPanel() throw() { }
 
 		void Apply();
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 
 		void Reset();
 		wxDirName GetPath() const;
@@ -394,7 +394,7 @@ namespace Panels
 
 	protected:
 		virtual void Apply();
-		virtual void OnSettingsChanged();
+		virtual void AppStatusEvent_OnSettingsApplied();
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
 	};
@@ -402,7 +402,8 @@ namespace Panels
 	// --------------------------------------------------------------------------------------
 	//  PluginSelectorPanel
 	// --------------------------------------------------------------------------------------
-	class PluginSelectorPanel: public BaseSelectorPanel
+	class PluginSelectorPanel: public BaseSelectorPanel,
+		public IEventListener_Plugins
 	{
 	protected:
 		// ----------------------------------------------------------------------------
@@ -490,8 +491,6 @@ namespace Panels
 		ScopedPtr<wxArrayString>	m_FileList;	// list of potential plugin files
 		ScopedPtr<EnumThread>		m_EnumeratorThread;
 
-		EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
-
 	public:
 		virtual ~PluginSelectorPanel() throw();
 		PluginSelectorPanel( wxWindow* parent, int idealWidth=wxDefaultCoord );
@@ -500,7 +499,7 @@ namespace Panels
 		void Apply();
 
 	protected:
-		static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
+		void DispatchEvent( const PluginEventType& evt );
 		
 		void OnConfigure_Clicked( wxCommandEvent& evt );
 		void OnShowStatusBar( wxCommandEvent& evt );
@@ -509,7 +508,7 @@ namespace Panels
 		virtual void OnProgress( wxCommandEvent& evt );
 		virtual void OnEnumComplete( wxCommandEvent& evt );
 
-		virtual void OnSettingsChanged();
+		virtual void AppStatusEvent_OnSettingsApplied();
 
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();

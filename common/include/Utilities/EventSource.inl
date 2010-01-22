@@ -17,116 +17,81 @@
 
 using Threading::ScopedLock;
 
-template< typename EvtType >
-class PredicatesAreTheThingsOfNightmares
-{
-	typedef EventListener< EvtType >	ListenerType;
-
-protected:
-	const void* const m_object_match;
-
-public:
-	PredicatesAreTheThingsOfNightmares( const void* objmatch ) : m_object_match( objmatch ) { }
-
-	bool operator()( const ListenerType& src ) const
-	{
-		return src.object == m_object_match;
-	}
-};
-
-// Checks for duplicates before adding the event.
-template< typename EvtType >
-void EventSource<EvtType>::Add( const ListenerType& listener )
+template< typename ListenerType >
+typename EventSource<ListenerType>::ListenerIterator EventSource<ListenerType>::Add( ListenerType& listener )
 {
 	ScopedLock locker( m_listeners_lock );
 
-	if( !pxAssertDev( listener.OnEvent != NULL, "NULL listener callback function." ) ) return;
-
-	Handle iter = m_listeners.begin();
-	while( iter != m_listeners.end() )
+	// Check for duplicates before adding the event.
+	if( IsDebugBuild )
 	{
-		if( *iter == listener ) return;
-		++iter;
+		ListenerIterator iter = m_listeners.begin();
+		while( iter != m_listeners.end() )
+		{
+			if( (*iter) == &listener ) return iter;
+			++iter;
+		}
 	}
-	_AddFast_without_lock( listener );
+	return _AddFast_without_lock( listener );
 }
 
-template< typename EvtType >
-void EventSource<EvtType>::Remove( const ListenerType& listener )
+template< typename ListenerType >
+void EventSource<ListenerType>::Remove( ListenerType& listener )
 {
 	ScopedLock locker( m_listeners_lock );
 	m_cache_valid = false;
-	m_listeners.remove( listener );
+	m_listeners.remove( &listener );
 }
 
-template< typename EvtType >
-void EventSource<EvtType>::Remove( const Handle& listenerHandle )
+template< typename ListenerType >
+void EventSource<ListenerType>::Remove( const ListenerIterator& listenerHandle )
 {
 	ScopedLock locker( m_listeners_lock );
 	m_cache_valid = false;
 	m_listeners.erase( listenerHandle );
 }
 
-template< typename EvtType >
-typename EventSource<EvtType>::Handle EventSource<EvtType>::AddFast( const ListenerType& listener )
-{
-	ScopedLock locker( m_listeners_lock );
-	return _AddFast_without_lock( listener );
-}
-
-template< typename EvtType >
-typename EventSource<EvtType>::Handle EventSource<EvtType>::_AddFast_without_lock( const ListenerType& listener )
+template< typename ListenerType >
+typename EventSource<ListenerType>::ListenerIterator EventSource<ListenerType>::_AddFast_without_lock( ListenerType& listener )
 {
 	m_cache_valid = false;
-	m_listeners.push_front( listener );
+	m_listeners.push_front( &listener );
 	return m_listeners.begin();
 }
 
-template< typename EvtType >
-void EventSource<EvtType>::Add( void* objhandle, typename ListenerType::FuncType* fnptr )
-{
-	Add( ListenerType( objhandle, fnptr ) );
-}
 
-template< typename EvtType >
-void EventSource<EvtType>::Remove( void* objhandle, typename ListenerType::FuncType* fnptr )
-{
-	Remove( ListenerType( objhandle, fnptr ) );
-}
-
-
-// removes all listeners which reference the given object.  Use for assuring object deletion.
-template< typename EvtType >
-void EventSource<EvtType>::RemoveObject( const void* object )
-{
-	m_cache_valid = false;
-	m_listeners.remove_if( PredicatesAreTheThingsOfNightmares<EvtType>( object ) );
-}
-
-template< typename EvtType >
-__forceinline void EventSource<EvtType>::_DispatchRaw( ConstIterator iter, const ConstIterator& iend, EvtType& evt )
+template< typename ListenerType >
+__forceinline void EventSource<ListenerType>::_DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const EvtParams& evtparams )
 {
 	while( iter != iend )
 	{
-		try
-		{
-			iter->OnEvent( iter->object, evt );
+		try	{
+			(*iter)->DispatchEvent( evtparams );
 		}
 		catch( Exception::RuntimeError& ex )
 		{
-			Console.Error( L"Ignoring runtime error thrown from event listener: " + ex.FormatDiagnosticMessage() );
+			if( IsDevBuild ) {
+				pxFailDev( L"Ignoring runtime error thrown from event listener (event listeners should not throw exceptions!): " + ex.FormatDiagnosticMessage() );
+			}
+			else {
+				Console.Error( L"Ignoring runtime error thrown from event listener: " + ex.FormatDiagnosticMessage() );
+			}
 		}
 		catch( Exception::BaseException& ex )
 		{
-			if( IsDevBuild ) throw;
+			if( IsDevBuild )
+			{
+				ex.DiagMsg() = L"Non-runtime BaseException thrown from event listener .. " + ex.DiagMsg();
+				throw;
+			}
 			Console.Error( L"Ignoring non-runtime BaseException thrown from event listener: " + ex.FormatDiagnosticMessage() );
 		}
 		++iter;
 	}
 }
 
-template< typename EvtType >
-void EventSource<EvtType>::Dispatch( EvtType& evt )
+template< typename ListenerType >
+void EventSource<ListenerType>::Dispatch( const EvtParams& evtparams )
 {
 	if( !m_cache_valid )
 	{
@@ -134,5 +99,6 @@ void EventSource<EvtType>::Dispatch( EvtType& evt )
 		m_cache_valid = true;
 	}
 
-	_DispatchRaw( m_cache_copy.begin(), m_cache_copy.end(), evt );
+	if( m_cache_copy.empty() ) return;
+	_DispatchRaw( m_cache_copy.begin(), m_cache_copy.end(), evtparams );
 }

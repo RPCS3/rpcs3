@@ -24,7 +24,6 @@
 #include <wx/filepicker.h>
 #include <wx/listbox.h>
 
-
 // ------------------------------------------------------------------------
 Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL )
@@ -127,7 +126,7 @@ void Panels::BiosSelectorPanel::Apply()
 	g_Conf->BaseFilenames.Bios = (*m_BiosList)[(int)m_ComboBox.GetClientData(sel)];
 }
 
-void Panels::BiosSelectorPanel::OnSettingsChanged()
+void Panels::BiosSelectorPanel::AppStatusEvent_OnSettingsApplied()
 {
 }
 

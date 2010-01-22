@@ -15,6 +15,20 @@
 
 #pragma once
 
+// This macro is actually useful for about any and every possible application of C++
+// equality operators.
+#define OpEqu( field )		(field == right.field)
+
+// Macro used for removing some of the redtape involved in defining bitfield/union helpers.
+//
+#define BITFIELD32()	\
+	union {				\
+		u32 bitset;		\
+		struct {
+
+#define BITFIELD_END	}; };
+
+
 // ----------------------------------------------------------------------------------------
 //  RecursionGuard  -  Basic protection against function recursion
 // ----------------------------------------------------------------------------------------
@@ -39,6 +53,54 @@ public:
 	bool IsReentrant() const { return Counter > 1; }
 };
 
+// --------------------------------------------------------------------------------------
+//  IDeletableObject
+// --------------------------------------------------------------------------------------
+// Oh the fruits and joys of multithreaded C++ coding conundrums!  This class provides a way
+// to be deleted from arbitraty threads, or to delete themselves (which is considered unsafe
+// in C++, though it does typically work).  It also gives objects a second recourse for
+// doing fully virtualized cleanup, something C++ also makes impossible because of how it
+// implements it's destructor hierarchy.
+//
+// To utilize virtual destruction, override DoDeletion() and be sure to invoke the base class
+// implementation of DoDeletion().
+//
+// Assertions:
+//   This class generates an assertion of the destructor is called from anything other than
+//   the main/gui thread.
+//
+// Rationale:
+//   wxWidgets provides a pending deletion feature, but it's specific to wxCore (not wxBase)
+//   which means it requires wxApp and all that, which is bad for plugins and the possibility
+//   of linking PCSX2 core against a non-WX gui in the future.  It's also not thread safe
+//   (sigh).  And, finally, it requires quite a bit of red tape to implement wxObjects because
+//   of the wx-custom runtime type information.  So I made my own.
+//
+class IDeletableObject
+{
+protected:
+	volatile long	m_IsBeingDeleted;
+
+public:
+	IDeletableObject();
+	virtual ~IDeletableObject() throw();
+
+	void DeleteSelf();
+	bool IsBeingDeleted() { return !!m_IsBeingDeleted; }
+
+	// Returns FALSE if the object is already marked for deletion, or TRUE if the app
+	// should schedule the object for deletion.  Only schedule if TRUE is returned, otherwise
+	// the object could get deleted twice if two threads try to schedule it at the same time.
+	bool MarkForDeletion();
+
+protected:
+	// This function is GUI implementation dependent!  It's implemented by PCSX2's AppHost,
+	// but if the SysCore is being linked to another front end, you'll need to implement this
+	// yourself.  Most GUIs have built in message pumps.  If a platform lacks one then you'll
+	// need to implement one yourself (yay?).
+	virtual void DoDeletion();
+};
+
 
 enum PageProtectionMode
 {
@@ -47,11 +109,11 @@ enum PageProtectionMode
 	Protect_ReadWrite
 };
 
-//////////////////////////////////////////////////////////////////////////////////////////
-// HostSys - Namespace housing general system-level implementations relating to loading
-// plugins and allocating memory.  For now, these functions are all accessed via Sys*
-// versions defined in System.h/cpp.
-//
+// --------------------------------------------------------------------------------------
+//  HostSys
+// --------------------------------------------------------------------------------------
+// (this namespace name sucks, and is a throw-back to an older attempt to make things cross
+// platform prior to wxWidgets .. it should prolly be removed -- air)
 namespace HostSys
 {
 	// Maps a block of memory for use as a recompiled code buffer.
@@ -72,9 +134,6 @@ namespace HostSys
 		MemProtect( arr, size, mode, allowExecution );
 	}
 }
-
-
-//////////////////////////////////////////////////////////////////////////////////////////
 
 
 extern void InitCPUTicks();

@@ -89,12 +89,9 @@ public:
 // --------------------------------------------------------------------------------------
 //  pxLogTextCtrl
 // --------------------------------------------------------------------------------------
-class pxLogTextCtrl : public wxTextCtrl
+class pxLogTextCtrl : public wxTextCtrl, public IEventListener_CoreThread, public IEventListener_Plugins
 {
 protected:
-	CmdEvt_ListenerBinding					m_Listener_CoreThreadStatus;
-	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
-
 #ifdef __WXMSW__
 	int		m_win32_LinesPerPage;
 	int		m_win32_LinesPerScroll;
@@ -116,9 +113,9 @@ protected:
 	virtual void OnThumbTrack(wxScrollWinEvent& event);
 	virtual void OnThumbRelease(wxScrollWinEvent& event);
 	virtual void OnResize( wxSizeEvent& evt );
-
-	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
-	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
+	
+	void DispatchEvent( const CoreThreadStatus& status );
+	void DispatchEvent( const PluginEventType& evt );
 };
 
 // --------------------------------------------------------------------------------------

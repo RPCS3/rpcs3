@@ -292,7 +292,7 @@ protected:
 // apps or DLLs to reference their own instance of SysMtgsThread (also allowing them 
 // to extend the class and override virtual methods).
 //
-SysMtgsThread& GetMTGS();
+extern SysMtgsThread& GetMTGS();
 
 /////////////////////////////////////////////////////////////////////////////
 // Generalized GS Functions and Stuff

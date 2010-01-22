@@ -37,19 +37,6 @@ enum PluginsEnum_t
 	PluginId_Mcd
 };
 
-// This macro is actually useful for about any and every possible application of C++
-// equality operators.
-#define OpEqu( field )		(field == right.field)
-
-// Macro used for removing some of the redtape involved in defining bitfield/union helpers.
-//
-#define BITFIELD32()	\
-	union {				\
-		u32 bitset;		\
-		struct {
-
-#define BITFIELD_END	}; };
-
 //------------ DEFAULT sseMXCSR VALUES ---------------
 #define DEFAULT_sseMXCSR	0xffc0 //FPU rounding > DaZ, FtZ, "chop"
 #define DEFAULT_sseVUMXCSR	0xffc0 //VU  rounding > DaZ, FtZ, "chop"

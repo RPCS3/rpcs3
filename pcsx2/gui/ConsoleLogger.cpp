@@ -695,14 +695,19 @@ void ConsoleLogFrame::DoFlushQueue()
 
 ConsoleLogFrame* Pcsx2App::GetProgramLog()
 {
-	return m_ProgramLogBox;
+	return (ConsoleLogFrame*) wxWindow::FindWindowById( m_id_ProgramLogBox );
+}
+
+const ConsoleLogFrame* Pcsx2App::GetProgramLog() const
+{
+	return (const ConsoleLogFrame*) wxWindow::FindWindowById( m_id_ProgramLogBox );
 }
 
 void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 {
 	// New console log object model makes this check obsolete:
 	//if( m_ProgramLogBox == NULL ) return;
-	m_ProgramLogBox->GetEventHandler()->AddPendingEvent( evt );
+	GetProgramLog()->GetEventHandler()->AddPendingEvent( evt );
 }
 
 // --------------------------------------------------------------------------------------
@@ -828,17 +833,20 @@ static const IConsoleWriter	ConsoleWriter_WindowAndFile =
 
 void Pcsx2App::EnableAllLogging() const
 {
+	const bool logBoxOpen = (GetProgramLog() != NULL);
+
 	if( emuLog )
-		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_WindowAndFile : (IConsoleWriter&)ConsoleWriter_File );
+		Console_SetActiveHandler( logBoxOpen ? (IConsoleWriter&)ConsoleWriter_WindowAndFile : (IConsoleWriter&)ConsoleWriter_File );
 	else
-		Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
+		Console_SetActiveHandler( logBoxOpen ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
 }
 
 // Used to disable the emuLog disk logger, typically used when disabling or re-initializing the
 // emuLog file handle.  Call SetConsoleLogging to re-enable the disk logger when finished.
 void Pcsx2App::DisableDiskLogging() const
 {
-	Console_SetActiveHandler( (m_ProgramLogBox!=NULL) ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
+	const bool logBoxOpen = (GetProgramLog() != NULL);
+	Console_SetActiveHandler( logBoxOpen ? (IConsoleWriter&)ConsoleWriter_Window : (IConsoleWriter&)ConsoleWriter_Stdout );
 
 	// Semi-hack: It's possible, however very unlikely, that a secondary thread could attempt
 	// to write to the logfile just before we disable logging, and would thus have a pending write

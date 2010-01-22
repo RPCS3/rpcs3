@@ -565,7 +565,13 @@ void memClearPageAddr(u32 vaddr)
 ///////////////////////////////////////////////////////////////////////////
 // PS2 Memory Init / Reset / Shutdown
 
-static void __evt_fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info );
+class mmap_PageFaultHandler : public IEventListener_PageFault
+{
+protected:
+	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );
+};
+
+mmap_PageFaultHandler mmap_faultHandler;
 
 static const uint m_allMemSize =
 		Ps2MemSize::Rom + Ps2MemSize::Rom1 + Ps2MemSize::Rom2 + Ps2MemSize::ERom +
@@ -590,12 +596,12 @@ void memAlloc()
 	psH = curpos; curpos += Ps2MemSize::Hardware;
 	psS = curpos; //curpos += Ps2MemSize::Scratch;
 	
-	Source_PageFault.Add( EventListener<PageFaultInfo>((void*)psM, mmap_OnPageFault) );
+	Source_PageFault.Add( mmap_faultHandler );
 }
 
 void memShutdown()
 {
-	Source_PageFault.Remove( EventListener<PageFaultInfo>((void*)psM, mmap_OnPageFault) );
+	Source_PageFault.Remove( mmap_faultHandler );
 
 	vtlb_free( m_psAllMem, m_allMemSize );
 	m_psAllMem = NULL;
@@ -885,14 +891,14 @@ static __forceinline void mmap_ClearCpuBlock( uint offset )
 	Cpu->Clear( m_PageProtectInfo[rampage].ReverseRamMap, 0x400 );
 }
 
-static void __evt_fastcall mmap_OnPageFault( void* basemem, PageFaultInfo& info )
+void mmap_PageFaultHandler::OnPageFaultEvent( const PageFaultInfo& info, bool& handled )
 {
 	// get bad virtual address
-	uptr offset = info.addr - (uptr)basemem;
+	uptr offset = info.addr - (uptr)psM;
 	if( offset >= Ps2MemSize::Base ) return;
 
 	mmap_ClearCpuBlock( offset );
-	info.handled = true;
+	handled = true;
 }
 
 // Clears all block tracking statuses, manual protection flags, and write protection.

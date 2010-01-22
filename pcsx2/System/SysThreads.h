@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "Utilities/Threading.h"
+#include "Utilities/PersistentThread.h"
 #include "x86emitter/tools.h"
 
 using namespace Threading;
@@ -123,7 +123,11 @@ public:
 	virtual bool AcquireResumeLock() { return m_ResumeProtection.TryAcquire(); }
 	virtual void ReleaseResumeLock() { m_ResumeProtection.Release(); }
 
+	virtual wxTimeSpan GetDeadlockTimeout() const;
+	virtual void ThrowDeadlockException();
+
 protected:
+	virtual void DoThreadDeadlocked();
 	virtual void OnStart();
 
 	// This function is called by Resume immediately prior to releasing the suspension of

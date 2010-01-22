@@ -276,6 +276,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\Utilities\wxAppWithHelpers.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\wxGuiTools.cpp"
 				>
 			</File>
@@ -498,6 +502,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\Utilities\PersistentThread.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\Utilities\PrecompiledHeader.h"
 				>
 			</File>
@@ -531,6 +539,10 @@
 			</File>
 			<File
 				RelativePath="..\..\include\Utilities\win_memzero.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\Utilities\wxAppWithHelpers.h"
 				>
 			</File>
 			<File

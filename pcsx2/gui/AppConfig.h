@@ -15,12 +15,9 @@
 
 #pragma once
 
+#include "AppForwardDefs.h"
 #include "PathDefs.h"
 #include "CDVD/CDVDaccess.h"
-
-class IniInterface;
-class wxConfigBase;
-class wxFileConfig;
 
 extern bool			UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
 extern wxDirName	SettingsFolder;			// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.

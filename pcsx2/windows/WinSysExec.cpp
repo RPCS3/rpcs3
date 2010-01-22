@@ -25,13 +25,8 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )
 		return EXCEPTION_CONTINUE_SEARCH;
 
-	PageFaultInfo info( (uptr)eps->ExceptionRecord->ExceptionInformation[1] );
-
-	Source_PageFault.DispatchException( info );
-
-	if( info.handled ) return EXCEPTION_CONTINUE_EXECUTION;
-	
-	return EXCEPTION_CONTINUE_SEARCH;
+	Source_PageFault.Dispatch( PageFaultInfo( (uptr)eps->ExceptionRecord->ExceptionInformation[1] ) );
+	return Source_PageFault.WasHandled() ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 }
 
 void InstallSignalHandler()

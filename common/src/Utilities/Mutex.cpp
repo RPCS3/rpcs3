@@ -140,7 +140,7 @@ bool Threading::Mutex::TryAcquire()
 // and messages *if* the lock is performed from the main GUI thread.
 //
 // Exceptions:
-//   ThreadTimedOut - See description of ThreadTimedOut for details
+//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 void Threading::Mutex::Acquire()
 {
@@ -152,7 +152,7 @@ void Threading::Mutex::Acquire()
 	else if( _WaitGui_RecursionGuard( "Mutex::Acquire" ) )
 	{
 		if( !AcquireWithoutYield(def_deadlock_timeout) )
-			throw Exception::ThreadTimedOut();
+			throw Exception::ThreadDeadlock();
 	}
 	else
 	{
@@ -165,7 +165,7 @@ void Threading::Mutex::Acquire()
 }
 
 // Exceptions:
-//   ThreadTimedOut - See description of ThreadTimedOut for details
+//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 {
@@ -181,7 +181,7 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 		if( timeout > def_deadlock_timeout )
 		{
 			if( AcquireWithoutYield(def_deadlock_timeout) ) return true;
-			throw Exception::ThreadTimedOut();
+			throw Exception::ThreadDeadlock();
 		}
 		return AcquireWithoutYield( timeout );
 	}
@@ -200,7 +200,7 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 	}
 
 	// Looks like a potential deadlock; throw an exception!
-	throw Exception::ThreadTimedOut();
+	throw Exception::ThreadDeadlock();
 
 #else
 	return AcquireWithoutYield();
@@ -215,7 +215,7 @@ bool Threading::Mutex::Acquire( const wxTimeSpan& timeout )
 // Implemented internally as a simple Acquire/Release pair.
 //
 // Exceptions:
-//   ThreadTimedOut - See description of ThreadTimedOut for details
+//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 void Threading::Mutex::Wait()
 {
@@ -231,7 +231,7 @@ void Threading::Mutex::Wait()
 //   and the mutex is still locked by another thread.
 //
 // Exceptions:
-//   ThreadTimedOut - See description of ThreadTimedOut for details
+//   ThreadDeadlock - See description of ThreadDeadlock for details
 //
 bool Threading::Mutex::Wait( const wxTimeSpan& timeout )
 {

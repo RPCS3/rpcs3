@@ -107,10 +107,10 @@ extern void NTFS_CompressFile( const wxString& file, bool compressStatus=true );
 
 namespace Msgbox
 {
-	extern bool Alert( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_EXCLAMATION );
-	extern bool OkCancel( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=0 );
-	extern bool YesNo( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_QUESTION );
+	extern bool	Alert( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_EXCLAMATION );
+	extern bool	OkCancel( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=0 );
+	extern bool	YesNo( const wxString& text, const wxString& caption=L"PCSX2 Message", int icon=wxICON_QUESTION );
 
-	extern int  Assertion( const wxString& text, const wxString& stacktrace );
+	extern int	Assertion( const wxString& text, const wxString& stacktrace );
 }
 

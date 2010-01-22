@@ -33,13 +33,12 @@ extern LimiterModeType g_LimiterMode;
 // --------------------------------------------------------------------------------------
 //  GSPanel
 // --------------------------------------------------------------------------------------
-class GSPanel : public wxWindow
+class GSPanel : public wxWindow, public IEventListener_AppStatus
 {
 	typedef wxWindow _parent;
 
 protected:
 	AcceleratorDictionary		m_Accels;
-	EventListenerBinding<int>	m_Listener_SettingsApplied;
 	wxTimer						m_HideMouseTimer;
 	bool						m_CursorShown;
 	bool						m_HasFocus;
@@ -52,15 +51,13 @@ public:
 	void DoShowMouse();
 
 protected:
-	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+	void AppStatusEvent_OnSettingsApplied();
 	
 #ifdef __WXMSW__
 	virtual WXLRESULT MSWWindowProc(WXUINT message, WXWPARAM wParam, WXLPARAM lParam);
 #endif
 
 	void InitDefaultAccelerators();
-
-	void DoSettingsApplied();
 
 	void OnCloseWindow( wxCloseEvent& evt );
 	void OnResize(wxSizeEvent& event);
@@ -74,15 +71,16 @@ protected:
 // --------------------------------------------------------------------------------------
 //  GSFrame
 // --------------------------------------------------------------------------------------
-class GSFrame : public wxFrame
+class GSFrame : public wxFrame, public IEventListener_AppStatus
 {
 	typedef wxFrame _parent;
 
 protected:
-	EventListenerBinding<int>	m_Listener_SettingsApplied;
 	wxTimer						m_timer_UpdateTitle;
-	wxWindowID					m_gspanel_id;
+	wxWindowID					m_id_gspanel;
+	wxWindowID					m_id_OutputDisabled;
 	wxStaticText*				m_label_Disabled;
+	wxStatusBar*				m_statusbar;
 
 public:
 	GSFrame(wxWindow* parent, const wxString& title);
@@ -91,6 +89,7 @@ public:
 	GSPanel* GetViewport();
 
 	bool Show( bool shown=true );
+	wxStaticText* GetLabel_OutputDisabled() const;
 
 protected:
 	void OnMove( wxMoveEvent& evt );
@@ -98,9 +97,7 @@ protected:
 	void OnActivate( wxActivateEvent& evt );
 	void OnUpdateTitle( wxTimerEvent& evt );
 
-	void DoSettingsApplied();
-
-	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+	void AppStatusEvent_OnSettingsApplied();
 };
 
 struct PluginMenuAddition
@@ -159,9 +156,14 @@ public:
 // --------------------------------------------------------------------------------------
 //  MainEmuFrame
 // --------------------------------------------------------------------------------------
-class MainEmuFrame : public wxFrame
+class MainEmuFrame : public wxFrame,
+	public virtual IEventListener_Plugins,
+	public virtual IEventListener_CoreThread,
+	public virtual IEventListener_AppStatus
 {
 protected:
+	bool			m_RestartEmuOnDelete;
+
     wxStatusBar&	m_statusbar;
     wxStaticBitmap	m_background;
 
@@ -182,10 +184,10 @@ protected:
 
 	PerPluginMenuInfo	m_PluginMenuPacks[PluginId_Count];
 
-	CmdEvt_ListenerBinding					m_Listener_CoreThreadStatus;
-	EventListenerBinding<PluginEventType>	m_Listener_CorePluginStatus;
-	EventListenerBinding<int>				m_Listener_SettingsApplied;
-	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
+	virtual void DispatchEvent( const PluginEventType& plugin_evt );
+	virtual void DispatchEvent( const CoreThreadStatus& status );
+	virtual void AppStatusEvent_OnSettingsLoadSave();
+	virtual void AppStatusEvent_OnSettingsApplied();
 
 public:
     MainEmuFrame(wxWindow* parent, const wxString& title);
@@ -197,11 +199,6 @@ public:
 	void UpdateIsoSrcSelection();
 
 protected:
-	static void __evt_fastcall OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt );
-	static void __evt_fastcall OnCorePluginStatusChanged( void* obj, PluginEventType& evt );
-	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
-	static void __evt_fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
-
 	void ApplySettings();
 	void ApplyCoreStatus();
 	void ApplyPluginStatus();
@@ -218,6 +215,7 @@ protected:
 	void Menu_ConfigSettings_Click(wxCommandEvent &event);
 	void Menu_AppSettings_Click(wxCommandEvent &event);
 	void Menu_SelectBios_Click(wxCommandEvent &event);
+	void Menu_ResetAllSettings_Click(wxCommandEvent &event);
 
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
 	void Menu_SkipBiosToggle_Click(wxCommandEvent &event);

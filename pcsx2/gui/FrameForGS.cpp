@@ -22,6 +22,9 @@
 
 void GSPanel::InitDefaultAccelerators()
 {
+	// Note!  These don't really work yet due to some hacks to get things working for
+	// old legacy PAD plugins.  (the global accelerator tables are used instead) --air
+
 	typedef KeyAcceleratorCode AAC;
 
 	m_Accels.Map( AAC( WXK_F1 ),				"States_FreezeCurrentSlot" );
@@ -46,7 +49,6 @@ void GSPanel::InitDefaultAccelerators()
 
 GSPanel::GSPanel( wxWindow* parent )
 	: wxWindow()
-	, m_Listener_SettingsApplied	( wxGetApp().Source_SettingsApplied(),	EventListener<int>				( this, OnSettingsApplied ) )
 	, m_HideMouseTimer( this )
 {
 	m_CursorShown	= true;
@@ -211,15 +213,7 @@ void GSPanel::OnFocusLost( wxFocusEvent& evt )
 	DoShowMouse();
 }
 
-void __evt_fastcall GSPanel::OnSettingsApplied( void* obj, int& evt )
-{
-	if( obj == NULL ) return;
-	GSPanel* panel = (GSPanel*)obj;
-
-	panel->DoSettingsApplied();
-}
-
-void GSPanel::DoSettingsApplied()
+void GSPanel::AppStatusEvent_OnSettingsApplied()
 {
 	if( IsBeingDeleted() ) return;
 	DoResize();
@@ -237,7 +231,6 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 		(g_Conf->GSWindow.DisableResizeBorders ? 0 : wxRESIZE_BORDER) | wxCAPTION | wxCLIP_CHILDREN |
 			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX
 	)
-	, m_Listener_SettingsApplied( wxGetApp().Source_SettingsApplied(), EventListener<int>	( this, OnSettingsApplied ) )
 	, m_timer_UpdateTitle( this )
 {
 	SetIcons( wxGetApp().GetIconBundle() );
@@ -246,14 +239,18 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	SetBackgroundColour( *wxBLACK );
 
 	wxStaticText* label = new wxStaticText( this, wxID_ANY, _("GS Output is Disabled!") );
-	label->SetName(L"OutputDisabledLabel");
+	m_id_OutputDisabled = label->GetId();
 	label->SetFont( *new wxFont( 20, wxDEFAULT, wxNORMAL, wxBOLD ) );
 	label->SetForegroundColour( *wxWHITE );
 	label->Show( EmuConfig.GS.DisableOutput );
 
 	GSPanel* gsPanel = new GSPanel( this );
 	gsPanel->Show( !EmuConfig.GS.DisableOutput );
-	m_gspanel_id = gsPanel->GetId();
+	m_id_gspanel = gsPanel->GetId();
+	
+	// TODO -- Implement this GS window status window!  Whee.
+	// (main concern is retaining proper client window sizes when closing/re-opening the window).
+	//m_statusbar = CreateStatusBar( 2 );
 
 	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(GSFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler		(GSFrame::OnMove) );
@@ -267,6 +264,11 @@ GSFrame::~GSFrame() throw()
 {
 }
 
+wxStaticText* GSFrame::GetLabel_OutputDisabled() const
+{
+	return (wxStaticText*)FindWindowById( m_id_OutputDisabled );
+}
+
 // overrides base Show behavior.
 bool GSFrame::Show( bool shown )
 {
@@ -277,12 +279,15 @@ bool GSFrame::Show( bool shown )
 		if( gsPanel == NULL || gsPanel->IsBeingDeleted() )
 		{
 			gsPanel = new GSPanel( this );
-			m_gspanel_id = gsPanel->GetId();
+			m_id_gspanel = gsPanel->GetId();
 		}
 
 		gsPanel->Show( !EmuConfig.GS.DisableOutput );
 		gsPanel->DoResize();
 		gsPanel->SetFocus();
+
+		if( wxStaticText* label = GetLabel_OutputDisabled() )
+			label->Show( !EmuConfig.GS.DisableOutput );
 		
 		m_timer_UpdateTitle.Start( 333 );
 	}
@@ -294,27 +299,19 @@ bool GSFrame::Show( bool shown )
 	return _parent::Show( shown );
 }
 
-void __evt_fastcall GSFrame::OnSettingsApplied( void* obj, int& evt )
-{
-	if( obj == NULL ) return;
-	GSFrame* frame = (GSFrame*)obj;
-
-	frame->DoSettingsApplied();
-}
-
-void GSFrame::DoSettingsApplied()
+void GSFrame::AppStatusEvent_OnSettingsApplied()
 {
 	if( IsBeingDeleted() ) return;
 	ShowFullScreen( g_Conf->GSWindow.DefaultToFullscreen );
 	Show( !g_Conf->GSWindow.CloseOnEsc || ((g_plugins==NULL) || !SysHasValidState()) );
 
-	if( wxStaticText* label = (wxStaticText*)FindWindowByName(L"OutputDisabledLabel") )
+	if( wxStaticText* label = GetLabel_OutputDisabled() )
 		label->Show( !EmuConfig.GS.DisableOutput );
 }
 
 GSPanel* GSFrame::GetViewport()
 {
-	return (GSPanel*)FindWindowById( m_gspanel_id );
+	return (GSPanel*)FindWindowById( m_id_gspanel );
 }
 
 void GSFrame::OnUpdateTitle( wxTimerEvent& evt )

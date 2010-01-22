@@ -29,6 +29,10 @@ using namespace Threading;
 
 static FnType_OnThreadComplete* Callback_PluginsLoadComplete = NULL;
 
+// The GS plugin needs to be opened to save/load the state during plugin configuration, but
+// the window shouldn't. This blocks it. :)
+static bool s_DisableGsWindow = false;
+
 // --------------------------------------------------------------------------------------
 //  AppPluginManager
 // --------------------------------------------------------------------------------------
@@ -89,7 +93,7 @@ public:
 	// Yay, this plugin is guaranteed to always be opened first and closed last.
 	bool OpenPlugin_GS()
 	{
-		if( GSopen2 != NULL )
+		if( GSopen2 != NULL && !s_DisableGsWindow )
 		{
 			sApp.OpenGsPanel();
 		}
@@ -187,6 +191,8 @@ void LoadPluginsTask::OnCleanupInThread()
 SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid )
 	: m_plugstore( L"PluginConf Savestate" )
 {
+	s_DisableGsWindow = true;
+
 	m_whereitsat	= NULL;
 	m_resume		= false;
 	m_pid			= pid;
@@ -210,14 +216,24 @@ SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid )
 
 SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 {
-	if( m_validstate )
+	try
 	{
-		Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
-		memLoadingState load( *m_whereitsat );
-		if( m_plugstore.IsDisposed() ) load.SeekToSection( m_pid );
-		g_plugins->Freeze( m_pid, load );
+		if( m_validstate )
+		{
+			Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
+			memLoadingState load( *m_whereitsat );
+			if( m_plugstore.IsDisposed() ) load.SeekToSection( m_pid );
+			g_plugins->Freeze( m_pid, load );
+			g_plugins->Close( m_pid );
+		}
+	}
+	catch( Exception::BaseException& ex )
+	{
+		s_DisableGsWindow = false;
+		throw;
 	}
 
+	s_DisableGsWindow = false;
 	if( m_resume ) CoreThread.Resume();
 }
 
@@ -256,15 +272,14 @@ void ConvertPluginFilenames( wxString (&passins)[PluginId_Count] )
 }
 
 // boolean lock modified from the main thread only...
-static bool plugin_load_lock = false;
+static LoadPluginsTask* plugin_load_lock = NULL;
 
 void Pcsx2App::ReloadPlugins()
 {
-	if( SelfMethodInvoke( &Pcsx2App::ReloadPlugins ) ) return;
+	if( InvokeMethodOnMainThread( &Pcsx2App::ReloadPlugins ) ) return;
 
 	if( plugin_load_lock ) return;
-	CoreThread.Cancel();
-	m_CorePlugins	= NULL;
+	UnloadPlugins();
 
 	wxString passins[PluginId_Count];
 
@@ -276,27 +291,29 @@ void Pcsx2App::ReloadPlugins()
 			passins[pi->id] = g_Conf->FullpathTo( pi->id );
 	} while( ++pi, pi->shortname != NULL );
 
-	(new LoadPluginsTask( passins ))->Start();
-	// ...  and when it finishes it posts up a OnLoadPluginsComplete().  Bye. :)
+	plugin_load_lock = new LoadPluginsTask(passins);
+	plugin_load_lock->Start();
 
-	plugin_load_lock = true;
+	// ...  and when it finishes it posts up a OnLoadPluginsComplete().  Bye. :)
 }
 
-// Note: If the ClientData paremeter of wxCommandEvt is NULL, this message simply dispatches
+// Note: If the ClientData parameter of wxCommandEvt is NULL, this message simply dispatches
 // the plugged in listeners.
 void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 {
-	plugin_load_lock = false;
-
 	FnType_OnThreadComplete* fn_tmp = Callback_PluginsLoadComplete;
 	
-	if( evt.GetClientData() != NULL )
+	if( LoadPluginsTask* pluginthread = (LoadPluginsTask*)evt.GetClientData() )
 	{
+		// scoped ptr ensures the thread object is cleaned up even on exception:
+		ScopedPtr<LoadPluginsTask> killTask( pluginthread );
+
+		pxAssume( plugin_load_lock == pluginthread );
+		plugin_load_lock = NULL;
+
 		if( !pxAssertDev( !m_CorePlugins, "LoadPlugins thread just finished, but CorePlugins state != NULL (odd!)." ) )
 			m_CorePlugins = NULL;
 
-		// scoped ptr ensures the thread object is cleaned up even on exception:
-		ScopedPtr<LoadPluginsTask> killTask( (LoadPluginsTask*)evt.GetClientData() );
 		killTask->RethrowException();
 		m_CorePlugins = killTask->Result;
 	}
@@ -304,6 +321,12 @@ void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 	if( fn_tmp != NULL ) fn_tmp( evt );
 
 	PostPluginStatus( PluginsEvt_Loaded );
+}
+
+void Pcsx2App::CancelLoadingPlugins()
+{
+	if( plugin_load_lock )
+		plugin_load_lock->Cancel();
 }
 
 void Pcsx2App::PostPluginStatus( PluginEventType pevt )
@@ -314,7 +337,7 @@ void Pcsx2App::PostPluginStatus( PluginEventType pevt )
 	}
 	else
 	{
-		sApp.Source_CorePluginStatus().Dispatch( pevt );
+		sApp.DispatchEvent( pevt );
 	}
 }
 

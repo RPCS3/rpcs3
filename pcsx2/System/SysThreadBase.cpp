@@ -58,6 +58,27 @@ void SysThreadBase::OnStart()
 	_parent::OnStart();
 }
 
+// (overridable) Timeout period before a thread is considered potentially
+// deadlocked.  SysThreadBase default is 4 seconds.
+// 
+wxTimeSpan SysThreadBase::GetDeadlockTimeout() const
+{
+	return wxTimeSpan( 0, 0, 4, 0 );
+}
+
+void SysThreadBase::DoThreadDeadlocked()
+{
+	
+}
+
+void SysThreadBase::ThrowDeadlockException()
+{
+	throw Exception::ThreadDeadlock( *this,
+		wxsFormat(L"Unhandled deadlock while suspending thread '%s'", m_name.c_str()),
+		wxsFormat(L"'%s' thread is not responding to suspend requests.  It may be deadlocked or just running *really* slow.", m_name.c_str())
+	);
+}
+
 // Suspends emulation and closes the emulation state (including plugins) at the next PS2 vsync,
 // and returns control to the calling thread; or does nothing if the core is already suspended.
 //
@@ -76,6 +97,9 @@ void SysThreadBase::OnStart()
 //      actions that pause emulation typically rely on plugins remaining loaded/active,
 //      Suspension must cansel itself forcefully or risk crashing whatever other action is
 //      in progress.
+//
+//   ThreadDeadlock - thrown if isBlocking is true and the thread to suspend fails to
+//      respond within the timeout period returned by GetDeadlockTimeout().
 //
 bool SysThreadBase::Suspend( bool isBlocking )
 {
@@ -112,15 +136,9 @@ bool SysThreadBase::Suspend( bool isBlocking )
 
 	if( isBlocking )
 	{
-		if( !m_RunningLock.Wait( wxTimeSpan( 0,0,3,0 ) ) )
+		if( !m_RunningLock.Wait( GetDeadlockTimeout() ) )
 		{
-			// [TODO] : Implement proper deadlock handler here that lets the user continue
-			// to wait, or issue a cancel to the thread.
-
-			throw Exception::ThreadTimedOut( *this,
-				wxsFormat(L"Possible deadlock while suspending thread '%s'", m_name.c_str()),
-				wxsFormat(L"'%s' thread is not responding to suspend requests.  It may be deadlocked or just running *really* slow.", m_name.c_str())
-			);
+			DoThreadDeadlocked();
 		}
 	}
 	return retval;

@@ -124,7 +124,8 @@ class BaseApplicableConfigPanel : public wxPanelWithHelpers
 protected:
 	int				m_OwnerPage;
 	wxBookCtrlBase*	m_OwnerBook;
-	EventListenerBinding<int>	m_Listener_SettingsApplied;
+
+	EventListenerHelper_AppStatus<BaseApplicableConfigPanel>	m_AppStatusHelper;
 
 public:
 	virtual ~BaseApplicableConfigPanel() throw();
@@ -148,13 +149,16 @@ public:
 	// If no exceptions are thrown, then the operation is assumed a success. :)
 	virtual void Apply()=0;
 
-	// This method is bound to the ApplySettings event from the PCSX2 app manager.
+	// Mandatory override: As a rule for proper interface design, all deriving classes need
+	// to implement this function.  There's no implementation of an options/settings panel
+	// that does not heed the changes of application status/settings changes. ;)
+	//
 	// Note: This method *will* be called automatically after a successful Apply, but will not
 	// be called after a failed Apply (canceled due to error).
-	virtual void OnSettingsChanged()=0;
+	virtual void AppStatusEvent_OnSettingsApplied()=0;
 
-protected:
-	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+	virtual void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& ) {}
+	virtual void AppStatusEvent_OnExit() {}
 
 	void Init();
 };

@@ -18,7 +18,8 @@
 // --------------------------------------------------------------------------------------
 //  RecentIsoManager
 // --------------------------------------------------------------------------------------
-class RecentIsoManager : public wxEvtHandler
+class RecentIsoManager : public wxEvtHandler,
+	public IEventListener_AppStatus
 {
 protected:
 	struct RecentItem
@@ -43,9 +44,6 @@ protected:
 	
 	wxMenuItem* m_Separator;
 
-	EventListenerBinding<IniInterface>		m_Listener_SettingsLoadSave;
-	EventListenerBinding<int>				m_Listener_SettingsApplied;
-
 public:
 	RecentIsoManager( wxMenu* menu );
 	virtual ~RecentIsoManager() throw();
@@ -56,11 +54,9 @@ public:
 	
 protected:
 	void InsertIntoMenu( int id );
-	void DoSettingsLoadSave( IniInterface& ini );
-	void DoSettingsApplied( int& val );
 	void OnChangedSelection( wxCommandEvent& evt );
 
-	static void __evt_fastcall OnSettingsLoadSave( void* obj, IniInterface& evt );
-	static void __evt_fastcall OnSettingsApplied( void* obj, int& evt );
+	void AppEvent_OnSettingsLoadSave( const AppSettingsEventInfo& ini );
+	void AppEvent_OnSettingsApplied();
 };
 

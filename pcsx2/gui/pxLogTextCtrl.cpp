@@ -21,29 +21,20 @@
 #	include <wx/msw/wrapwin.h>		// needed for windows-specific rich text messages to make scrolling not lame
 #endif
 
-void __evt_fastcall pxLogTextCtrl::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
+void pxLogTextCtrl::DispatchEvent( const CoreThreadStatus& status )
 {
 #ifdef __WXMSW__
-	if( obj == NULL ) return;
-	pxLogTextCtrl* mframe = (pxLogTextCtrl*)obj;
-
 	// See ConcludeIssue for details on WM_VSCROLL
-
-	if( mframe->HasWriteLock() ) return;
-	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+	if( HasWriteLock() ) return;
+	::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
 #endif
 }
 
-void __evt_fastcall pxLogTextCtrl::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
+void pxLogTextCtrl::DispatchEvent( const PluginEventType& evt )
 {
 #ifdef __WXMSW__
-	if( obj == NULL ) return;
-	pxLogTextCtrl* mframe = (pxLogTextCtrl*)obj;
-
-	// See ConcludeIssue for details on WM_VSCROLL
-
-	if( mframe->HasWriteLock() ) return;
-	::SendMessage((HWND)mframe->GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+	if( HasWriteLock() ) return;
+	::SendMessage((HWND)GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
 #endif
 }
 
@@ -51,9 +42,6 @@ pxLogTextCtrl::pxLogTextCtrl( wxWindow* parent )
 	: wxTextCtrl( parent, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2
 	)
-
-	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )
-	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 {
 #ifdef __WXMSW__
 	m_win32_LinesPerScroll	= 10;

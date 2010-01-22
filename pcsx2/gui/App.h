@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "wxAppWithHelpers.h"
+#include "Utilities/wxAppWithHelpers.h"
 
 #include <wx/fileconf.h>
 #include <wx/imaglist.h>
@@ -32,7 +32,7 @@
 class Pcsx2App;
 
 typedef void FnType_OnThreadComplete(const wxCommandEvent& evt);
-typedef void (Pcsx2App::*FnType_AppMethod)();
+typedef void (Pcsx2App::*FnPtr_AppMethod)();
 
 BEGIN_DECLARE_EVENT_TYPES()
 	/*DECLARE_EVENT_TYPE( pxEVT_ReloadPlugins, -1 )
@@ -43,9 +43,11 @@ BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEvt_LoadPluginsComplete, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_PluginStatus, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_SysExecute, -1 )
-	DECLARE_EVENT_TYPE( pxEvt_OpenModalDialog, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_InvokeMethod, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_LogicalVsync, -1 )
+
+	DECLARE_EVENT_TYPE( pxEvt_OpenModalDialog, -1 )
+	//DECLARE_EVENT_TYPE( pxEvt_StuckThread, -1 )
 END_DECLARE_EVENT_TYPES()
 
 // This is used when the GS plugin is handling its own window.  Messages from the PAD
@@ -156,6 +158,25 @@ enum MenuIdentifiers
 	MenuId_Config_ResetAll,
 };
 
+namespace Exception
+{
+	// --------------------------------------------------------------------------
+	// Exception used to perform an "errorless" termination of the app during OnInit
+	// procedures.  This happens when a user cancels out of startup prompts/wizards.
+	//
+	class StartupAborted : public BaseException
+	{
+	public:
+		DEFINE_EXCEPTION_COPYTORS( StartupAborted )
+
+		StartupAborted( const wxString& msg_eng=L"Startup initialization was aborted by the user." )
+		{
+			// english messages only for this exception.
+			BaseException::InitBaseEx( msg_eng, msg_eng );
+		}
+	};
+
+}
 
 // --------------------------------------------------------------------------------------
 //  KeyAcceleratorCode
@@ -320,10 +341,12 @@ protected:
 	u64 m_fpsqueue_tally;
 	u64 m_ticks_lastframe;
 	int m_fpsqueue_writepos;
+	uint m_initpause;
 
 	uint m_FrameCounter;
 
 public:
+	FramerateManager() { Reset(); }
 	virtual ~FramerateManager() throw() {}
 
 	void Reset();
@@ -345,18 +368,89 @@ class Pcsx2App : public wxAppWithHelpers
 	// on them and they are, themselves, fairly self-contained.
 
 protected:
-	EventSource<PluginEventType>m_evtsrc_CorePluginStatus;
-	CmdEvt_Source				m_evtsrc_CoreThreadStatus;
-	EventSource<int>			m_evtsrc_SettingsApplied;
-	EventSource<IniInterface>	m_evtsrc_SettingsLoadSave;
-	EventSource<AppEventType>	m_evtsrc_AppStatus;
-
+	EventSource<IEventListener_Plugins>		m_evtsrc_CorePluginStatus;
+	EventSource<IEventListener_CoreThread>	m_evtsrc_CoreThreadStatus;
+	EventSource<IEventListener_AppStatus>	m_evtsrc_AppStatus;
+	
 public:
-	CmdEvt_Source& Source_CoreThreadStatus()				{ return m_evtsrc_CoreThreadStatus; }
-	EventSource<int>& Source_SettingsApplied()				{ return m_evtsrc_SettingsApplied; }
-	EventSource<AppEventType>& Source_AppStatus()			{ return m_evtsrc_AppStatus; }
-	EventSource<PluginEventType>& Source_CorePluginStatus()	{ return m_evtsrc_CorePluginStatus; }
-	EventSource<IniInterface>& Source_SettingsLoadSave()	{ return m_evtsrc_SettingsLoadSave; }
+	void AddListener( IEventListener_Plugins& listener )
+	{
+		m_evtsrc_CorePluginStatus.Add( listener );	
+	}
+
+	void AddListener( IEventListener_CoreThread& listener )
+	{
+		m_evtsrc_CoreThreadStatus.Add( listener );
+	}
+
+	void AddListener( IEventListener_AppStatus& listener )
+	{
+		m_evtsrc_AppStatus.Add( listener );
+	}
+
+	void RemoveListener( IEventListener_Plugins& listener )
+	{
+		m_evtsrc_CorePluginStatus.Remove( listener );	
+	}
+
+	void RemoveListener( IEventListener_CoreThread& listener )
+	{
+		m_evtsrc_CoreThreadStatus.Remove( listener );
+	}
+
+	void RemoveListener( IEventListener_AppStatus& listener )
+	{
+		m_evtsrc_AppStatus.Remove( listener );
+	}
+
+	void AddListener( IEventListener_Plugins* listener )
+	{
+		m_evtsrc_CorePluginStatus.Add( listener );	
+	}
+
+	void AddListener( IEventListener_CoreThread* listener )
+	{
+		m_evtsrc_CoreThreadStatus.Add( listener );
+	}
+
+	void AddListener( IEventListener_AppStatus* listener )
+	{
+		m_evtsrc_AppStatus.Add( listener );
+	}
+
+	void RemoveListener( IEventListener_Plugins* listener )
+	{
+		m_evtsrc_CorePluginStatus.Remove( listener );	
+	}
+
+	void RemoveListener( IEventListener_CoreThread* listener )
+	{
+		m_evtsrc_CoreThreadStatus.Remove( listener );
+	}
+
+	void RemoveListener( IEventListener_AppStatus* listener )
+	{
+		m_evtsrc_AppStatus.Remove( listener );
+	}
+	
+	void DispatchEvent( PluginEventType evt )
+	{
+		if( !AffinityAssert_AllowFromMain() ) return;
+		m_evtsrc_CorePluginStatus.Dispatch( evt );
+	}
+
+	void DispatchEvent( AppEventType evt )
+	{
+		if( !AffinityAssert_AllowFromMain() ) return;
+		m_evtsrc_AppStatus.Dispatch( AppEventInfo( evt ) );
+	}
+
+	void DispatchEvent( IniInterface& ini )
+	{
+		if( !AffinityAssert_AllowFromMain() ) return;
+		m_evtsrc_AppStatus.Dispatch( AppSettingsEventInfo( ini ) );
+	}
+
 	// ----------------------------------------------------------------------------
 	
 public:
@@ -374,13 +468,11 @@ public:
 	ScopedPtr<PluginManager>		m_CorePlugins;
 
 protected:
-	// Note: Pointers to frames should not be scoped because wxWidgets handles deletion
-	// of these objects internally.
-	MainEmuFrame*				m_MainFrame;
-	GSFrame*					m_gsFrame;
-	ConsoleLogFrame*			m_ProgramLogBox;
+	wxWindowID			m_id_MainFrame;
+	wxWindowID			m_id_GsFrame;
+	wxWindowID			m_id_ProgramLogBox;
 
-	wxKeyEvent					m_kevt;
+	wxKeyEvent			m_kevt;
 
 public:
 	Pcsx2App();
@@ -388,9 +480,9 @@ public:
 
 	void PostPluginStatus( PluginEventType pevt );
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
-	int  IssueModalDialog( const wxString& dlgName );
-
-	bool PrepForExit( bool canCancel );
+	int  IssueDialogAsModal( const wxString& dlgName );
+	void PostMethod( FnPtr_AppMethod method );
+	bool DoStuckThread( PersistentThread& stuck_thread );
 
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );
@@ -398,17 +490,32 @@ public:
 	void ReloadPlugins();
 	void LogicalVsync();
 
-	GSFrame&		GetGSFrame() const;
-	GSFrame*		GetGSFramePtr() const	{ return m_gsFrame; }
-
+	GSFrame&		GetGsFrame() const;
 	MainEmuFrame&	GetMainFrame() const;
-	MainEmuFrame*	GetMainFramePtr() const	{ return m_MainFrame; }
-	bool HasMainFrame() const	{ return m_MainFrame != NULL; }
+
+	GSFrame*		GetGsFramePtr() const	{ return (GSFrame*)wxWindow::FindWindowById( m_id_GsFrame ); }
+	MainEmuFrame*	GetMainFramePtr() const	{ return (MainEmuFrame*)wxWindow::FindWindowById( m_id_MainFrame ); }
+
+	bool HasMainFrame() const	{ return GetMainFramePtr() != NULL; }
 
 	void OpenGsPanel();
 	void CloseGsPanel();
 	void OnGsFrameClosed();
 	void OnMainFrameClosed();
+
+	// --------------------------------------------------------------------------
+	//  Startup / Shutdown Helpers
+	// --------------------------------------------------------------------------
+
+	void DetectCpuAndUserMode();
+	void OpenConsoleLog();
+	void OpenMainFrame();
+	bool PrepForExit( bool canCancel );
+	void CleanupRestartable();
+	void CleanupResources();
+	void WipeUserModeSettings();
+	void ReadUserModeSettings();
+
 
 	// --------------------------------------------------------------------------
 	//  App-wide Resources
@@ -446,6 +553,7 @@ public:
 	//   Console / Program Logging Helpers
 	// ----------------------------------------------------------------------------
 	ConsoleLogFrame* GetProgramLog();
+	const ConsoleLogFrame* GetProgramLog() const;
 	void ProgramLog_PostEvent( wxEvent& evt );
 	void EnableAllLogging() const;
 	void DisableWindowLogging() const;
@@ -453,16 +561,17 @@ public:
 	void OnProgramLogClosed();
 
 protected:
-	bool SelfMethodInvoke( FnType_AppMethod method );
-	bool SelfMethodPost( FnType_AppMethod method );
+	bool InvokeMethodOnMainThread( FnPtr_AppMethod method );
+	bool PostMethodToMainThread( FnPtr_AppMethod method );
 
+	void AllocateCoreStuffs();
 	void InitDefaultGlobalAccelerators();
 	void BuildCommandHash();
-	void ReadUserModeSettings();
 	bool TryOpenConfigCwd();
-	void CleanupMess();
+	void CleanupOnExit();
 	void OpenWizardConsole();
 	void PadKeyDispatch( const keyEvent& ev );
+	void CancelLoadingPlugins();
 	
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event) const;
 	void HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent& event);
@@ -470,9 +579,11 @@ protected:
 	void OnSysExecute( wxCommandEvent& evt );
 	void OnLoadPluginsComplete( wxCommandEvent& evt );
 	void OnPluginStatus( wxCommandEvent& evt );
-	void OnOpenModalDialog( wxCommandEvent& evt );
 	void OnCoreThreadStatus( wxCommandEvent& evt );
 	void OnFreezeThreadFinished( wxCommandEvent& evt );
+
+	void OnOpenModalDialog( wxCommandEvent& evt );
+	void OnOpenDialog_StuckThread( wxCommandEvent& evt );
 
 	void OnEmuKeyDown( wxKeyEvent& evt );
 
@@ -497,17 +608,6 @@ protected:
 // --------------------------------------------------------------------------------------
 //  AppCoreThread class
 // --------------------------------------------------------------------------------------
-
-enum CoreThreadStatus
-{
-	CoreStatus_Indeterminate,
-	CoreStatus_Started,
-	CoreStatus_Resumed,
-	CoreStatus_Suspended,
-	CoreStatus_Reset,
-	CoreStatus_Stopped,
-};
-
 class AppCoreThread : public SysCoreThread
 {
 	typedef SysCoreThread _parent;
@@ -533,6 +633,8 @@ protected:
 	virtual void PostVsyncToUI();
 	virtual void ExecuteTaskInThread();
 	virtual void DoCpuReset();
+
+	virtual void DoThreadDeadlocked();
 };
 
 DECLARE_APP(Pcsx2App)
@@ -568,7 +670,7 @@ DECLARE_APP(Pcsx2App)
 	if( MainEmuFrame* __frame_ = GetMainFramePtr() ) (*__frame_)
 
 #define sGSFrame \
-	if( GSFrame* __gsframe_ = wxGetApp().GetGSFramePtr() ) (*__gsframe_)
+	if( GSFrame* __gsframe_ = wxGetApp().GetGsFramePtr() ) (*__gsframe_)
 
 // Use this within the scope of a wxWindow (wxDialog or wxFrame).  If the window has a valid menu
 // bar, the command will run, otherwise it will be silently ignored. :)

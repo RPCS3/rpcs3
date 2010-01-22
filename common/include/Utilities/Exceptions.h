@@ -238,7 +238,7 @@ namespace Exception
 	class HardwareDeficiency : public virtual RuntimeError
 	{
 	public:
-		DEFINE_RUNTIME_EXCEPTION( HardwareDeficiency, wxLt("Your machine's hardware is incapable of running Pcsx2.  Sorry dood.") );
+		DEFINE_RUNTIME_EXCEPTION( HardwareDeficiency, wxLt("Your machine's hardware is incapable of running PCSX2.  Sorry dood.") );
 	};
 
 	// ---------------------------------------------------------------------------------------

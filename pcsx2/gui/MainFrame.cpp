@@ -111,7 +111,8 @@ void MainEmuFrame::OnMoveAround( wxMoveEvent& evt )
 	if( g_Conf->ProgLogBox.AutoDock )
 	{
 		g_Conf->ProgLogBox.DisplayPosition = GetRect().GetTopRight();
-		wxGetApp().GetProgramLog()->SetPosition( g_Conf->ProgLogBox.DisplayPosition );
+		if( ConsoleLogFrame* proglog = wxGetApp().GetProgramLog() )
+			proglog->SetPosition( g_Conf->ProgLogBox.DisplayPosition );
 	}
 
 	//evt.Skip();
@@ -135,6 +136,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Config_SysSettings,	Menu_ConfigSettings_Click );
 	ConnectMenu( MenuId_Config_AppSettings,	Menu_AppSettings_Click );
 	ConnectMenu( MenuId_Config_BIOS,		Menu_SelectBios_Click );
+	ConnectMenu( MenuId_Config_ResetAll,	Menu_ResetAllSettings_Click );
 
 	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
 	ConnectMenu( MenuId_Config_Multitap1Toggle,	Menu_MultitapToggle_Click );
@@ -193,42 +195,28 @@ void MainEmuFrame::InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf )
 	}
 }
 
-void __evt_fastcall MainEmuFrame::OnCoreThreadStatusChanged( void* obj, wxCommandEvent& evt )
+void MainEmuFrame::DispatchEvent( const PluginEventType& plugin_evt )
 {
-	if( obj == NULL ) return;
-	MainEmuFrame* mframe = (MainEmuFrame*)obj;
-	if( !pxAssertMsg( mframe->GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
+	if( !pxAssertMsg( GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
 
-	mframe->ApplyCoreStatus();
+	//ApplyCoreStatus();
+	ApplyPluginStatus();
 }
 
-void __evt_fastcall MainEmuFrame::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
+void MainEmuFrame::DispatchEvent( const CoreThreadStatus& status )
 {
-	if( obj == NULL ) return;
-	if( (evt != PluginsEvt_Loaded) && (evt != PluginsEvt_Unloaded) ) return;		// everything else we don't care about
-
-	MainEmuFrame& mframe = *(MainEmuFrame*)obj;
-	if( !pxAssertMsg( mframe.GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
-
-	//mframe.ApplyCoreStatus();
-	mframe.ApplyPluginStatus();
+	if( !pxAssertMsg( GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
+	ApplyCoreStatus();
 }
 
-void __evt_fastcall MainEmuFrame::OnSettingsApplied( void* obj, int& evt )
+void MainEmuFrame::AppStatusEvent_OnSettingsLoadSave()
 {
-	if( obj == NULL ) return;
-	MainEmuFrame* mframe = (MainEmuFrame*)obj;
-	if( !pxAssertMsg( mframe->GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
-
-	mframe->ApplySettings();
-}
-
-void __evt_fastcall MainEmuFrame::OnSettingsLoadSave( void* obj, IniInterface& evt )
-{
-	if( obj == NULL ) return;
-	//MainEmuFrame* mframe = (MainEmuFrame*)obj;
-
 	// nothing to do here right now.
+}
+
+void MainEmuFrame::AppStatusEvent_OnSettingsApplied()
+{
+	ApplySettings();
 }
 
 static int GetPluginMenuId_Settings( PluginsEnum_t pid )
@@ -265,11 +253,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, L"Show Console", wxEmptyString, wxITEM_CHECK ) )
 	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, L"Console to Stdio", wxEmptyString, wxITEM_CHECK ) )
 
-	, m_Listener_CoreThreadStatus	( wxGetApp().Source_CoreThreadStatus(), CmdEvt_Listener					( this, OnCoreThreadStatusChanged ) )
-	, m_Listener_CorePluginStatus	( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
-	, m_Listener_SettingsApplied	( wxGetApp().Source_SettingsApplied(), EventListener<int>				( this, OnSettingsApplied ) )
-	, m_Listener_SettingsLoadSave	( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>		( this, OnSettingsLoadSave ) )
 {
+	m_RestartEmuOnDelete = false;
+
 	for( int i=0; i<PluginId_Count; ++i )
 		m_PluginMenuPacks[i].Populate( (PluginsEnum_t)i );
 
@@ -410,7 +396,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuConfig.Append(MenuId_Config_Multitap1Toggle,	_("Multitap 2"),	wxEmptyString, wxITEM_CHECK );
 
 	m_menuConfig.AppendSeparator();
-	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Reset all..."),
+	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Clear all settings..."),
 		_("Clears all PCSX2 settings and re-runs the startup wizard."));
 
 	// ------------------------------------------------------------------------
@@ -456,6 +442,13 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 MainEmuFrame::~MainEmuFrame() throw()
 {
 	m_menuCDVD.Remove( MenuId_IsoSelector );
+	
+	if( m_RestartEmuOnDelete )
+	{
+		sApp.SetExitOnFrameDelete( false );
+		sApp.PostMethod( &Pcsx2App::DetectCpuAndUserMode );
+		sApp.WipeUserModeSettings();
+	}
 }
 
 // ----------------------------------------------------------------------------

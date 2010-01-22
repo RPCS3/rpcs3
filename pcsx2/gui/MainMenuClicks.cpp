@@ -54,6 +54,87 @@ void MainEmuFrame::Menu_SelectBios_Click(wxCommandEvent &event)
 	AppOpenDialog<BiosSelectorDialog>( this );
 }
 
+
+static void WipeSettings()
+{
+	UnloadPlugins();
+	wxGetApp().CleanupRestartable();
+	wxGetApp().CleanupResources();
+	
+	wxRemoveFile( GetSettingsFilename() );
+	
+	// FIXME: wxRmdir doesn't seem to work here for some reason (possible file sharing issue
+	// with a plugin that leaves a file handle dangling maybe?).  But deleting the inis folder
+	// manually from explorer does work.  Can't think of a good work-around at the moment. --air
+
+	//wxRmdir( GetSettingsFolder().ToString() );
+}
+
+class RestartEverything_WhenCoreThreadStops : public IEventListener_CoreThread,
+	public virtual IDeletableObject
+{
+public:
+	RestartEverything_WhenCoreThreadStops() {}
+	virtual ~RestartEverything_WhenCoreThreadStops() throw() {}
+
+protected:
+	virtual void OnCoreStatus_Stopped()
+	{
+		wxGetApp().DeleteObject( this );
+		WipeSettings();
+	}
+};
+
+class CancelCoreThread_WhenSaveStateDone : public IEventListener_CoreThread,
+	public IDeletableObject
+{
+public:
+	virtual ~CancelCoreThread_WhenSaveStateDone() throw() {}
+
+	void OnCoreStatus_Resumed()
+	{
+		wxGetApp().DeleteObject( this );
+		CoreThread.Cancel();
+	}
+};
+
+
+void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
+{
+	if( IsBeingDeleted() || m_RestartEmuOnDelete ) return;
+
+	ScopedCoreThreadSuspend suspender;
+	if( !Msgbox::OkCancel(
+		pxE( ".Popup Warning:DeleteSettings",
+			L"WARNING!!  This option will delete *ALL* settings for PCSX2 and force PCSX2 to restart, losing any current emulation progress.  Are you absolutely sure?"
+			L"\n\n(note: settings for plugins are unaffected)"
+		),
+		_("Reset all settings?") ) )
+	{
+		suspender.Resume();
+		return;
+	}
+
+	m_RestartEmuOnDelete = true;
+	Destroy();
+
+	if( CoreThread.IsRunning() )
+	{
+		new RestartEverything_WhenCoreThreadStops();
+
+		if( StateCopy_IsBusy() )
+		{
+			new CancelCoreThread_WhenSaveStateDone();
+			throw Exception::CancelEvent( "Savestate in progress, app restart event delayed until action is complete." );
+		}
+		CoreThread.Cancel();
+	}
+	else
+	{
+		WipeSettings();
+	}
+}
+
 void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
 {
 	CDVD_SourceType newSource = CDVDsrc_NoDisc;

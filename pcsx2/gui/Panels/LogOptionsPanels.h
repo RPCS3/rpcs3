@@ -111,7 +111,7 @@ namespace Panels
 		LogOptionsPanel( wxWindow* parent );
 		virtual ~LogOptionsPanel() throw() {}
 
-		void OnSettingsChanged();
+		void AppStatusEvent_OnSettingsApplied();
 		void OnUpdateEnableAll();
 		void OnCheckBoxClicked(wxCommandEvent &event);
 		void Apply();

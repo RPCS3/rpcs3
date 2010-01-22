@@ -17,9 +17,8 @@
 
 #include <wx/wx.h>
 
-#include "IniInterface.h"
-#include "Utilities/Threading.h"
-#include "Utilities/wxGuiTools.h"
+#include "Threading.h"
+#include "wxGuiTools.h"
 
 using namespace Threading;
 
@@ -29,25 +28,9 @@ class pxMessageBoxEvent;
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEvt_Ping, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_MessageBox, -1 )
-	DECLARE_EVENT_TYPE( pxEvt_Assertion, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_DeleteObject, -1 )
+	//DECLARE_EVENT_TYPE( pxEvt_Assertion, -1 )
 END_DECLARE_EVENT_TYPES()
-
-// --------------------------------------------------------------------------------------
-//  AppIniSaver / AppIniLoader
-// --------------------------------------------------------------------------------------
-class AppIniSaver : public IniSaver
-{
-public:
-	AppIniSaver();
-	virtual ~AppIniSaver() throw() {}
-};
-
-class AppIniLoader : public IniLoader
-{
-public:
-	AppIniLoader();
-	virtual ~AppIniLoader() throw() {}
-};
 
 struct MsgboxEventResult
 {
@@ -84,7 +67,7 @@ protected:
 	wxString m_CustomLabel;
 
 public:
-	MsgButtons() : bitset( 0 ) { }
+	MsgButtons() { bitset = 0; }
 
 	MsgButtons& OK()		{ m_OK			= true; return *this; }
 	MsgButtons& Cancel()	{ m_Cancel		= true; return *this; }
@@ -254,6 +237,30 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
+//  pxStuckThreadEvent
+// --------------------------------------------------------------------------------------
+class pxStuckThreadEvent : public BaseMessageBoxEvent
+{
+	typedef BaseMessageBoxEvent _parent;
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN( pxStuckThreadEvent )
+
+protected:
+	Threading::PersistentThread&	m_Thread;
+
+public:
+	virtual ~pxStuckThreadEvent() throw() { }
+	virtual pxStuckThreadEvent *Clone() const { return new pxStuckThreadEvent(*this); }
+
+	pxStuckThreadEvent();
+	pxStuckThreadEvent( PersistentThread& thr );
+	pxStuckThreadEvent( MsgboxEventResult& instdata, PersistentThread& thr );
+	pxStuckThreadEvent( const pxStuckThreadEvent& src);
+
+protected:
+	virtual int _DoDialog() const;
+};
+
+// --------------------------------------------------------------------------------------
 //  pxPingEvent
 // --------------------------------------------------------------------------------------
 class pxPingEvent : public wxEvent
@@ -274,33 +281,56 @@ public:
 	Semaphore* GetSemaphore() { return m_PostBack; }
 };
 
+typedef void FnType_VoidMethod();
+
 // --------------------------------------------------------------------------------------
 //  wxAppWithHelpers
 // --------------------------------------------------------------------------------------
 class wxAppWithHelpers : public wxApp
 {
 	typedef wxApp _parent;
+	
+	DECLARE_DYNAMIC_CLASS(wxAppWithHelpers)
 
 protected:
-	std::vector<Semaphore*>		m_PingWhenIdle;
-	wxTimer						m_PingTimer;
+	std::vector<Semaphore*>			m_PingWhenIdle;
+	std::vector<IDeletableObject*>	m_DeleteWhenIdle;
+	Threading::Mutex				m_DeleteIdleLock;
+	wxTimer							m_PingTimer;
 
 public:
 	wxAppWithHelpers();
 	virtual ~wxAppWithHelpers() {}
 
+	void CleanUp();
+	
+	void DeleteObject( IDeletableObject& obj );
+	void DeleteObject( IDeletableObject* obj )
+	{
+		if( obj == NULL ) return;
+		DeleteObject( *obj );
+	}
+
 	void PostCommand( void* clientData, int evtType, int intParam=0, long longParam=0, const wxString& stringParam=wxEmptyString );
 	void PostCommand( int evtType, int intParam=0, long longParam=0, const wxString& stringParam=wxEmptyString );
+	void PostMethod( FnType_VoidMethod* method );
 
 	void Ping();
-	void PingDispatch( const char* action );
-
 	bool OnInit();
 	//int  OnExit();
 
 protected:
+	void PingDispatcher( const char* action );
+	void DeletionDispatcher();
+
 	void OnIdleEvent( wxIdleEvent& evt );
 	void OnPingEvent( pxPingEvent& evt );
 	void OnPingTimeout( wxTimerEvent& evt );
-	void OnMessageBox( pxMessageBoxEvent& evt );
+	void OnMessageBox( BaseMessageBoxEvent& evt );
+	void OnDeleteObject( wxCommandEvent& evt );
 };
+
+namespace Msgbox
+{
+	extern int	ShowModal( BaseMessageBoxEvent& evt );
+}

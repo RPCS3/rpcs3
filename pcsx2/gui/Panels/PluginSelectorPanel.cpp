@@ -230,24 +230,21 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 // =====================================================================================================
 //  PluginSelectorPanel
 // =====================================================================================================
-void __evt_fastcall Panels::PluginSelectorPanel::OnCorePluginStatusChanged( void* obj, PluginEventType& evt )
+void Panels::PluginSelectorPanel::DispatchEvent( const PluginEventType& evt )
 {
-	if( obj == NULL ) return;
 	if( (evt != PluginsEvt_Loaded) && (evt != PluginsEvt_Unloaded) ) return;		// everything else we don't care about
 
-	PluginSelectorPanel& panel = *(PluginSelectorPanel*)obj;
-	
-	if( panel.IsBeingDeleted() ) return;
+	if( IsBeingDeleted() ) return;
 
 	const PluginInfo* pi = tbl_PluginInfo; do
 	{
-		wxComboBox& box( panel.m_ComponentBoxes->Get(pi->id) );
+		wxComboBox& box( m_ComponentBoxes->Get(pi->id) );
 		int sel = box.GetSelection();
 		if( sel == wxNOT_FOUND ) continue;
 
-		panel.m_ComponentBoxes->GetConfigButton(pi->id).Enable(
-			(panel.m_FileList==NULL || panel.m_FileList->Count() == 0) ? false :
-			g_Conf->FullpathMatchTest( pi->id,(*panel.m_FileList)[((int)box.GetClientData(sel))] )
+		m_ComponentBoxes->GetConfigButton(pi->id).Enable(
+			(m_FileList==NULL || m_FileList->Count() == 0) ? false :
+			g_Conf->FullpathMatchTest( pi->id,(*m_FileList)[((int)box.GetClientData(sel))] )
 		);
 	} while( ++pi, pi->shortname != NULL );
 
@@ -255,7 +252,6 @@ void __evt_fastcall Panels::PluginSelectorPanel::OnCorePluginStatusChanged( void
 
 Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWidth )
 	: BaseSelectorPanel( parent )
-	, m_Listener_CorePluginStatus( wxGetApp().Source_CorePluginStatus(), EventListener<PluginEventType>	( this, OnCorePluginStatusChanged ) )
 {
 	if( idealWidth != wxDefaultCoord ) m_idealWidth = idealWidth;
 
@@ -282,7 +278,7 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent, int idealWid
 
 	Connect( ButtonId_Configure, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnConfigure_Clicked ) );
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 Panels::PluginSelectorPanel::~PluginSelectorPanel() throw()
@@ -290,7 +286,7 @@ Panels::PluginSelectorPanel::~PluginSelectorPanel() throw()
 	CancelRefresh();		// in case the enumeration thread is currently refreshing...
 }
 
-void Panels::PluginSelectorPanel::OnSettingsChanged()
+void Panels::PluginSelectorPanel::AppStatusEvent_OnSettingsApplied()
 {
 	m_ComponentBoxes->GetDirPicker().Reset();
 }

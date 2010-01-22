@@ -17,7 +17,7 @@
 
 #include "Utilities/SafeArray.h"
 #include "Utilities/EventSource.h"
-#include "Utilities/Threading.h"
+#include "Utilities/PersistentThread.h"
 
 #include "Utilities/wxGuiTools.h"
 #include "Utilities/pxRadioPanel.h"
@@ -25,37 +25,6 @@
 #include "Utilities/pxStaticText.h"
 #include "Utilities/CheckedStaticBox.h"
 
-class MainEmuFrame;
-class GSFrame;
-class ConsoleLogFrame;
-class PipeRedirectionBase;
-class AppCoreThread;
-class pxInvokeMethodEvent;
-
-// wxWidgets forward declarations
-
-class wxDirPickerCtrl;
-class wxFileDirPickerEvent;
-class wxListBox;
-class wxListbook;
-class wxBookCtrlBase;
-
-enum AppEventType
-{
-	// Maybe this will be expanded upon later..?
-	AppStatus_Exiting
-};
-
-enum PluginEventType
-{
-	PluginsEvt_Loaded,
-	PluginsEvt_Init,
-	PluginsEvt_Opening,		// dispatched prior to plugins being opened
-	PluginsEvt_Opened,		// dispatched after plugins are opened
-	PluginsEvt_Closing,		// dispatched prior to plugins being closed
-	PluginsEvt_Closed,		// dispatched after plugins are closed
-	PluginsEvt_Shutdown,
-	PluginsEvt_Unloaded,
-};
-
+#include "AppForwardDefs.h"
 #include "AppConfig.h"
+#include "AppEventListeners.h"

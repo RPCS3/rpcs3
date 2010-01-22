@@ -18,7 +18,16 @@
 
 DEFINE_EVENT_TYPE( pxEvt_Ping );
 DEFINE_EVENT_TYPE( pxEvt_MessageBox );
-DEFINE_EVENT_TYPE( pxEvt_Assertion );
+DEFINE_EVENT_TYPE( pxEvt_DeleteObject );
+//DEFINE_EVENT_TYPE( pxEvt_Assertion );
+
+
+void IDeletableObject::DoDeletion()
+{
+	wxAppWithHelpers* app = wxDynamicCast( wxApp::GetInstance(), wxAppWithHelpers );
+	pxAssume( app != NULL );
+	app->DeleteObject( *this );
+}
 
 // --------------------------------------------------------------------------------------
 //  pxPingEvent Implementations
@@ -44,6 +53,11 @@ pxPingEvent::pxPingEvent( const pxPingEvent& src )
 	m_PostBack = src.m_PostBack;
 }
 
+// --------------------------------------------------------------------------------------
+//  wxAppWithHelpers Implementation
+// --------------------------------------------------------------------------------------
+IMPLEMENT_DYNAMIC_CLASS( wxAppWithHelpers, wxApp )
+
 void wxAppWithHelpers::OnPingEvent( pxPingEvent& evt )
 {
 	// Ping events are dispatched during the idle event handler, which ensures
@@ -54,7 +68,13 @@ void wxAppWithHelpers::OnPingEvent( pxPingEvent& evt )
 	m_PingTimer.Start( 200, true );
 }
 
-void wxAppWithHelpers::PingDispatch( const char* action )
+void wxAppWithHelpers::CleanUp()
+{
+	DeletionDispatcher();
+	_parent::CleanUp();
+}
+
+void wxAppWithHelpers::PingDispatcher( const char* action )
 {
 	size_t size = m_PingWhenIdle.size();
 	if( size == 0 ) return;
@@ -69,16 +89,26 @@ void wxAppWithHelpers::PingDispatch( const char* action )
 	m_PingWhenIdle.clear();
 }
 
+void wxAppWithHelpers::DeletionDispatcher()
+{
+	ScopedLock lock( m_DeleteIdleLock );
+
+	size_t size = m_DeleteWhenIdle.size();
+	if( size == 0 ) return;
+
+	DbgCon.WriteLn( Color_Gray, "App Idle Delete -> %u objects.", size );
+}
+
 void wxAppWithHelpers::OnIdleEvent( wxIdleEvent& evt )
 {
 	evt.Skip();
 	m_PingTimer.Stop();
-	PingDispatch( "Idle" );
+	PingDispatcher( "Idle" );
 }
 
 void wxAppWithHelpers::OnPingTimeout( wxTimerEvent& evt )
 {
-	PingDispatch( "Timeout" );
+	PingDispatcher( "Timeout" );
 }
 
 void wxAppWithHelpers::Ping()
@@ -106,21 +136,29 @@ void wxAppWithHelpers::PostCommand( int evtType, int intParam, long longParam, c
 	PostCommand( NULL, evtType, intParam, longParam, stringParam );
 }
 
+void wxAppWithHelpers::DeleteObject( IDeletableObject& obj )
+{
+	pxAssume( obj.IsBeingDeleted() );
+	ScopedLock lock( m_DeleteIdleLock );
+	m_DeleteWhenIdle.push_back( &obj );
+}
 
-typedef void (wxEvtHandler::*pxMessageBoxEventFunction)(pxMessageBoxEvent&);
+typedef void (wxEvtHandler::*BaseMessageBoxEventFunction)(BaseMessageBoxEvent&);
 typedef void (wxEvtHandler::*pxPingEventFunction)(pxPingEvent&);
 
 bool wxAppWithHelpers::OnInit()
 {
 #define pxMessageBoxEventThing(func) \
-	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxMessageBoxEventFunction, &func )
+	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(BaseMessageBoxEventFunction, &func )
 
 #define pxPingEventHandler(func) \
 	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxPingEventFunction, &func )
 
+
 	Connect( pxEvt_MessageBox,		pxMessageBoxEventThing	(wxAppWithHelpers::OnMessageBox) );
-	Connect( pxEvt_Assertion,		pxMessageBoxEventThing	(wxAppWithHelpers::OnMessageBox) );
+	//Connect( pxEvt_Assertion,		pxMessageBoxEventThing	(wxAppWithHelpers::OnMessageBox) );
 	Connect( pxEvt_Ping,			pxPingEventHandler		(wxAppWithHelpers::OnPingEvent) );
+	Connect( pxEvt_DeleteObject,	wxCommandEventHandler	(wxAppWithHelpers::OnDeleteObject) );
 	Connect( wxEVT_IDLE,			wxIdleEventHandler		(wxAppWithHelpers::OnIdleEvent) );
 
 	Connect( m_PingTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(wxAppWithHelpers::OnPingTimeout) );
@@ -128,9 +166,15 @@ bool wxAppWithHelpers::OnInit()
 	return _parent::OnInit();
 }
 
-void wxAppWithHelpers::OnMessageBox( pxMessageBoxEvent& evt )
+void wxAppWithHelpers::OnMessageBox( BaseMessageBoxEvent& evt )
 {
 	evt.IssueDialog();
+}
+
+void wxAppWithHelpers::OnDeleteObject( wxCommandEvent& evt )
+{
+	if( evt.GetClientData() == NULL ) return;
+	delete (IDeletableObject*)evt.GetClientData();
 }
 
 wxAppWithHelpers::wxAppWithHelpers()

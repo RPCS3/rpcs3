@@ -67,6 +67,7 @@ protected:
 	virtual void OnDoubleClicked( wxCommandEvent& evt );
 };
 
+
 namespace Dialogs
 {
 	class AboutBoxDialog: public wxDialogWithHelpers
@@ -114,8 +115,41 @@ namespace Dialogs
 	public:
 		AssertionDialog( const wxString& text, const wxString& stacktrace );
 		virtual ~AssertionDialog() throw() {}
+	};
+
+	// There are two types of stuck threads:
+	//  * Threads stuck on any action that is not a cancellation.
+	//  * Threads stuck trying to cancel.
+	//
+	// The former means we can provide a "cancel" action for the user, which would itself
+	// open a new dialog in the latter category.  The latter means that there's really nothing
+	// we can do, since pthreads API provides no good way for killing threads.  The only
+	// valid options for the user in that case is to either wait (boring!) or kill the 
+	// process (awesome!).
+
+	enum StuckThreadActionType
+	{
+		// Allows the user to attempt a cancellation of a stuck thread.  This should only be
+		// used on threads which are not already stuck during a cancellation action (ie, suspension
+		// or other job requests).  Also, if the running thread is known to not have any
+		// cancellation points then this shouldn't be used either.
+		StacT_TryCancel,
+
+		// Allows the user to kill the entire process for a stuck thread.  Use this for any
+		// thread which has failed to cancel in a reasonable timeframe, or for any stuck action
+		// if the thread is known to have no cancellation points.
+		StacT_KillProcess,
+	};
+
+	class StuckThreadDialog : public wxDialogWithHelpers,
+		public EventListener_Thread
+	{
+	public:
+		StuckThreadDialog( wxWindow* parent, StuckThreadActionType action, Threading::PersistentThread& stuck_thread );
+		virtual ~StuckThreadDialog() throw() {}
 		
-		
+	protected:
+		void OnThreadCleanup();
 	};
 }
 

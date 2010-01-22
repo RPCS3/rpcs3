@@ -106,7 +106,7 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 
@@ -121,7 +121,7 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
@@ -175,7 +175,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
 	*this	+= new AdvancedOptionsFPU( this )	| StdExpand();
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
@@ -221,7 +221,7 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
 	*this	+= new AdvancedOptionsVU( this )	| StdExpand();
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::CpuPanelEE::Apply()
@@ -231,7 +231,7 @@ void Panels::CpuPanelEE::Apply()
 	recOps.EnableIOP	= !!m_panel_RecIOP->GetSelection();
 }
 
-void Panels::CpuPanelEE::OnSettingsChanged()
+void Panels::CpuPanelEE::AppStatusEvent_OnSettingsApplied()
 {
 	m_panel_RecEE->Enable( x86caps.hasStreamingSIMD2Extensions );
 	
@@ -253,7 +253,7 @@ void Panels::CpuPanelVU::Apply()
 	recOps.UseMicroVU1	= m_panel_VU1->GetSelection() == 1;
 }
 
-void Panels::CpuPanelVU::OnSettingsChanged()
+void Panels::CpuPanelVU::AppStatusEvent_OnSettingsApplied()
 {
 	m_panel_VU0->Enable( x86caps.hasStreamingSIMD2Extensions );
 	m_panel_VU1->Enable( x86caps.hasStreamingSIMD2Extensions );
@@ -300,7 +300,7 @@ void Panels::AdvancedOptionsFPU::Apply()
 	cpuOps.ApplySanityCheck();
 }
 
-void Panels::AdvancedOptionsFPU::OnSettingsChanged()
+void Panels::AdvancedOptionsFPU::AppStatusEvent_OnSettingsApplied()
 {
 	const Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
@@ -333,7 +333,7 @@ void Panels::AdvancedOptionsVU::Apply()
 	cpuOps.ApplySanityCheck();
 }
 
-void Panels::AdvancedOptionsVU::OnSettingsChanged()
+void Panels::AdvancedOptionsVU::AppStatusEvent_OnSettingsApplied()
 {
 	const Pcsx2Config::CpuOptions& cpuOps( g_Conf->EmuOptions.Cpu );
 	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );

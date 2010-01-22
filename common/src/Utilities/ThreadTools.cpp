@@ -24,11 +24,14 @@
 #	include <signal.h>		// for pthread_kill, which is in pthread.h on w32-pthreads
 #endif
 
-#include "Threading.h"
+#include "PersistentThread.h"
 #include "wxBaseTools.h"
 #include "ThreadingInternal.h"
+#include "EventSource.inl"
 
 using namespace Threading;
+
+template class EventSource< EventListener_Thread >;
 
 // 100ms interval for waitgui (issued from blocking semaphore waits on the main thread,
 // to avoid gui deadlock).
@@ -160,7 +163,7 @@ Threading::PersistentThread::~PersistentThread() throw()
 		Threading::Sleep( 1 );
 		Detach();
 	}
-	catch( Exception::ThreadTimedOut& ex )
+	catch( Exception::ThreadDeadlock& ex )
 	{
 		// Windows allows for a thread to be terminated forcefully, but it's not really
 		// a safe thing to do since typically threads are acquiring and releasing locks
@@ -351,6 +354,12 @@ bool Threading::PersistentThread::IsSelf() const
 bool Threading::PersistentThread::IsRunning() const
 {
     return !!m_running;
+}
+
+void Threading::PersistentThread::AddListener( EventListener_Thread& evt )
+{
+	evt.SetThread( this );
+	m_evtsrc_OnDelete.Add( evt );
 }
 
 // Throws an exception if the thread encountered one.  Uses the BaseException's Rethrow() method,

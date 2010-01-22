@@ -147,18 +147,18 @@ int pxMessageBoxEvent::_DoDialog() const
 IMPLEMENT_DYNAMIC_CLASS( pxAssertionEvent, BaseMessageBoxEvent )
 
 pxAssertionEvent::pxAssertionEvent()
-	: BaseMessageBoxEvent( pxEvt_Assertion )
+	: BaseMessageBoxEvent( )
 {
 }
 
 pxAssertionEvent::pxAssertionEvent( MsgboxEventResult& instdata, const wxString& content, const wxString& trace )
-	: BaseMessageBoxEvent( pxEvt_Assertion )
+	: BaseMessageBoxEvent( instdata, content )
 	, m_Stacktrace( trace )
 {
 }
 
 pxAssertionEvent::pxAssertionEvent( const wxString& content, const wxString& trace )
-	: BaseMessageBoxEvent( pxEvt_Assertion, content )
+	: BaseMessageBoxEvent( content )
 	, m_Stacktrace( trace )
 {
 }
@@ -188,7 +188,7 @@ int pxAssertionEvent::_DoDialog() const
 
 namespace Msgbox
 {
-	static int ThreadedMessageBox( BaseMessageBoxEvent& evt )
+	int ShowModal( BaseMessageBoxEvent& evt )
 	{
 		MsgboxEventResult instdat;
 		evt.SetInstData( instdat );
@@ -207,7 +207,7 @@ namespace Msgbox
 		return instdat.result;
 	}
 
-	static int ThreadedMessageBox( const wxString& title, const wxString& content, const MsgButtons& buttons )
+	static int ShowModal( const wxString& title, const wxString& content, const MsgButtons& buttons )
 	{
 		// must pass the message to the main gui thread, and then stall this thread, to avoid
 		// threaded chaos where our thread keeps running while the popup is awaiting input.
@@ -228,7 +228,7 @@ namespace Msgbox
 		if( wxThread::IsMain() )
 			pxMessageDialog( caption, text, buttons );
 		else
-			ThreadedMessageBox( caption, text, buttons );
+			ShowModal( caption, text, buttons );
 		return false;
 	}
 
@@ -244,7 +244,7 @@ namespace Msgbox
 		}
 		else
 		{
-			return wxID_OK == ThreadedMessageBox( caption, text, buttons );
+			return wxID_OK == ShowModal( caption, text, buttons );
 		}
 	}
 
@@ -258,13 +258,13 @@ namespace Msgbox
 		}
 		else
 		{
-			return wxID_YES == ThreadedMessageBox( caption, text, buttons );
+			return wxID_YES == ShowModal( caption, text, buttons );
 		}
 	}
 
 	int Assertion( const wxString& text, const wxString& stacktrace )
 	{
 		pxAssertionEvent tevt( text, stacktrace );
-		return ThreadedMessageBox( tevt );
+		return ShowModal( tevt );
 	}
 }

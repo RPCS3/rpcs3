@@ -26,37 +26,57 @@
 struct PageFaultInfo
 {
 	uptr	addr;
-	bool	handled;
 
 	PageFaultInfo( uptr address )
 	{
 		addr = address;
-		handled = false;
 	}
 };
 
-class SrcType_PageFault : public EventSource<PageFaultInfo>
+// --------------------------------------------------------------------------------------
+//  IEventListener_PageFault
+// --------------------------------------------------------------------------------------
+class IEventListener_PageFault : public IEventDispatcher<PageFaultInfo>
 {
+public:
+	typedef PageFaultInfo EvtParams;
+
+public:
+	IEventListener_PageFault();
+	virtual ~IEventListener_PageFault() throw();
+
+	virtual void DispatchEvent( const PageFaultInfo& evtinfo, bool& handled )
+	{
+		OnPageFaultEvent( evtinfo, handled );
+	}
+
+	virtual void DispatchEvent( const PageFaultInfo& evtinfo )
+	{
+		pxFailRel( "Don't call me, damnit.  Use DispatchException instead." );
+	}
+
+protected:	
+	virtual void OnPageFaultEvent( const PageFaultInfo& evtinfo, bool& handled ) {}
+};
+
+class SrcType_PageFault : public EventSource<IEventListener_PageFault>
+{
+protected:
+	typedef EventSource<IEventListener_PageFault> _parent;
+
+protected:
+	bool	m_handled;
+
 public:
 	SrcType_PageFault() {}
 	virtual ~SrcType_PageFault() throw() { }
 
-	void DispatchException( PageFaultInfo& evt )
-	{
-		if( m_listeners.empty() ) return;
+	bool WasHandled() const { return m_handled; }
+	virtual void Dispatch( const PageFaultInfo& params );
 
-		ConstIterator iter( m_listeners.begin() );
-		const ConstIterator iend( m_listeners.end() );
-
-		do {
-			iter->OnEvent( iter->object, evt );
-		} while( (++iter != iend) && !evt.handled );
-	}
+protected:
+	virtual void _DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const PageFaultInfo& evt );
 };
-
-extern SrcType_PageFault Source_PageFault;
-
-extern void InstallSignalHandler();
 
 #ifdef __LINUX__
 
@@ -65,8 +85,8 @@ extern void InstallSignalHandler();
 
 #elif defined( _WIN32 )
 
-	struct _EXCEPTION_POINTERS;
-	extern int SysPageFaultExceptionFilter(struct _EXCEPTION_POINTERS* eps);
+struct _EXCEPTION_POINTERS;
+extern int SysPageFaultExceptionFilter(struct _EXCEPTION_POINTERS* eps);
 
 #	define PCSX2_PAGEFAULT_PROTECT		__try
 #	define PCSX2_PAGEFAULT_EXCEPT		__except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}
@@ -74,3 +94,8 @@ extern void InstallSignalHandler();
 #else
 #	error PCSX2 - Unsupported operating system platform.
 #endif
+
+
+extern void InstallSignalHandler();
+
+extern SrcType_PageFault Source_PageFault;

@@ -22,9 +22,33 @@
 #include "System/PageFaultSource.h"
 #include "Utilities/EventSource.inl"
 
-template class EventSource< PageFaultInfo >;
+template class EventSource< IEventListener_PageFault >;
 
 SrcType_PageFault Source_PageFault;
+
+IEventListener_PageFault::IEventListener_PageFault()
+{
+	Source_PageFault.Add( *this );
+}
+
+IEventListener_PageFault::~IEventListener_PageFault() throw()
+{
+	Source_PageFault.Remove( *this );
+}
+
+void SrcType_PageFault::Dispatch( const PageFaultInfo& params )
+{
+	m_handled = false;
+	_parent::Dispatch( params );
+}
+
+void SrcType_PageFault::_DispatchRaw( ListenerIterator iter, const ListenerIterator& iend, const PageFaultInfo& evt )
+{
+	do {
+		(*iter)->DispatchEvent( evt, m_handled );
+	} while( (++iter != iend) && !m_handled );
+}
+
 
 #if _MSC_VER
 #	include "svnrev.h"

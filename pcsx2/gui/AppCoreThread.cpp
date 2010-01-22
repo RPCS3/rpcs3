@@ -33,10 +33,10 @@ AppCoreThread::~AppCoreThread() throw()
 
 void AppCoreThread::Cancel( bool isBlocking )
 {
-	if( !_parent::Cancel( wxTimeSpan( 0,0,1,0 ) ) )
+	if( !_parent::Cancel( wxTimeSpan( 0, 0, 2, 0 ) ) )
 	{
 		// Possible deadlock!
-		throw Exception::ThreadTimedOut( this );
+		throw Exception::ThreadDeadlock( this );
 	}
 }
 
@@ -46,11 +46,18 @@ void AppCoreThread::Reset()
 	_parent::Reset();
 }
 
+void AppCoreThread::DoThreadDeadlocked()
+{
+	//wxGetApp().PostCommand(  );
+	wxGetApp().DoStuckThread( *this );
+}
+
 bool AppCoreThread::Suspend( bool isBlocking )
 {
 	ScopedBusyCursor::SetDefault( Cursor_KindaBusy );
-	bool retval = _parent::Suspend( isBlocking );
 
+	bool retval = _parent::Suspend( false );
+	
 	if( !retval || isBlocking )
 		ScopedBusyCursor::SetDefault( Cursor_NotBusy );
 

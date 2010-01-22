@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
-
+#include "IniInterface.h"
 
 // FIXME : This needs to handle removed/missing ISOs somehow, although I'm not sure the
 // best approach.  I think I'd prefer for missing entries to only be removed when they
@@ -27,8 +27,6 @@
 RecentIsoManager::RecentIsoManager( wxMenu* menu )
 	: m_Menu( menu )
 	, m_MaxLength( g_Conf->RecentIsoCount )
-	, m_Listener_SettingsLoadSave	( wxGetApp().Source_SettingsLoadSave(), EventListener<IniInterface>( this, OnSettingsLoadSave ) )
-	, m_Listener_SettingsApplied	( wxGetApp().Source_SettingsApplied(), EventListener<int>( this, OnSettingsApplied ) )
 {
 	m_cursel	= 0;
 	m_Separator	= NULL;
@@ -139,13 +137,15 @@ void RecentIsoManager::InsertIntoMenu( int id )
 		curitem.ItemPtr->Check();
 }
 
-void RecentIsoManager::DoSettingsApplied( int& ini )
+void RecentIsoManager::AppEvent_OnSettingsApplied()
 {
 	// TODO : Implement application of Recent Iso List "maximum" history option
 }
 
-void RecentIsoManager::DoSettingsLoadSave( IniInterface& ini )
+void RecentIsoManager::AppEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evt )
 {
+	IniInterface& ini( evt.GetIni() );
+
 	ini.GetConfig().SetRecordDefaults( false );
 
 	if( ini.IsSaving() )
@@ -178,16 +178,4 @@ void RecentIsoManager::DoSettingsLoadSave( IniInterface& ini )
 	}
 
 	ini.GetConfig().SetRecordDefaults( true );
-}
-
-void __evt_fastcall RecentIsoManager::OnSettingsLoadSave( void* obj, IniInterface& ini )
-{
-	if( obj == NULL ) return;
-	((RecentIsoManager*)obj)->DoSettingsLoadSave( ini );
-}
-
-void __evt_fastcall RecentIsoManager::OnSettingsApplied( void* obj, int& ini )
-{
-	if( obj == NULL ) return;
-	((RecentIsoManager*)obj)->DoSettingsApplied( ini );
 }

@@ -227,10 +227,10 @@ Panels::LogOptionsPanel::LogOptionsPanel(wxWindow* parent )
 
 	Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(LogOptionsPanel::OnCheckBoxClicked) );
 	
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
-void Panels::LogOptionsPanel::OnSettingsChanged()
+void Panels::LogOptionsPanel::AppStatusEvent_OnSettingsApplied()
 {
 	TraceLogFilters& conf( g_Conf->EmuOptions.Trace );
 

@@ -265,7 +265,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( SpeedHacksPanel::OnEnable_Toggled ) );
 	Connect( wxID_DEFAULT,					wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( SpeedHacksPanel::Defaults_Click ) );
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::SpeedHacksPanel::EnableStuff()
@@ -282,12 +282,12 @@ void Panels::SpeedHacksPanel::EnableStuff()
 	}
 }
 
-void Panels::SpeedHacksPanel::OnSettingsChanged()
+void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()
 {
-	OnSettingsChanged( g_Conf->EmuOptions.Speedhacks );
+	AppStatusEvent_OnSettingsApplied( g_Conf->EmuOptions.Speedhacks );
 }
 
-void Panels::SpeedHacksPanel::OnSettingsChanged( const Pcsx2Config::SpeedhackOptions& opts )
+void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Config::SpeedhackOptions& opts )
 {
 	const bool enabled = g_Conf->EnableSpeedHacks;
 	
@@ -335,7 +335,7 @@ void Panels::SpeedHacksPanel::OnEnable_Toggled( wxCommandEvent& evt )
 
 void Panels::SpeedHacksPanel::Defaults_Click( wxCommandEvent& evt )
 {
-	OnSettingsChanged( Pcsx2Config::SpeedhackOptions() );
+	AppStatusEvent_OnSettingsApplied( Pcsx2Config::SpeedhackOptions() );
 	evt.Skip();
 }
 

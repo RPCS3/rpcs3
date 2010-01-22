@@ -105,10 +105,10 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 		L"percentages of the default region-based framerate, which can also be configured below." )
 	);
 	
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
-void Panels::FramelimiterPanel::OnSettingsChanged()
+void Panels::FramelimiterPanel::AppStatusEvent_OnSettingsApplied()
 {
 	const AppConfig::GSWindowOptions& appwin( g_Conf->GSWindow );
 	const AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
@@ -226,10 +226,10 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 		L"Enabling it will cause severe graphical errors in some games, and so it should be considered a speedhack." )
 	);
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
-void Panels::FrameSkipPanel::OnSettingsChanged()
+void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 {
 	const AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
 	const Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
@@ -332,7 +332,7 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 
 	Connect( m_button_OpenWindowSettings->GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(VideoPanel::OnOpenWindowSettings) );
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::VideoPanel::OnOpenWindowSettings( wxCommandEvent& evt )
@@ -348,7 +348,7 @@ void Panels::VideoPanel::Apply()
 	g_Conf->EmuOptions.GS.DisableOutput		= m_check_DisableOutput->GetValue();
 }
 
-void Panels::VideoPanel::OnSettingsChanged()
+void Panels::VideoPanel::AppStatusEvent_OnSettingsApplied()
 {
 	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
 	m_check_DisableOutput->SetValue( g_Conf->EmuOptions.GS.DisableOutput );

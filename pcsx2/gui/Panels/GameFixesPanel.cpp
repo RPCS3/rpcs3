@@ -76,7 +76,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		L"will need to turn off fixes manually when changing games."
 	));
 
-	OnSettingsChanged();
+	AppStatusEvent_OnSettingsApplied();
 }
 
 // I could still probably get rid of the for loop, but I think this is clearer.
@@ -92,7 +92,7 @@ void Panels::GameFixesPanel::Apply()
     }
 }
 
-void Panels::GameFixesPanel::OnSettingsChanged()
+void Panels::GameFixesPanel::AppStatusEvent_OnSettingsApplied()
 {
 	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
 	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
