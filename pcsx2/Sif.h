@@ -67,7 +67,7 @@ struct _sif
 	s32 end;
 	s32 tagMode;
 	s32 counter;
-	struct sifData sifData;
+	struct sifData data;
 };
 extern DMACh *sif0ch, *sif1ch, *sif2ch;
 
