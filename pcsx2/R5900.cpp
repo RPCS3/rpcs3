@@ -539,7 +539,9 @@ __forceinline void CPU_INT( u32 n, s32 ecycle)
 		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );
 	}
 
-	//if (ecycle > 8192) DevCon.Warning( "EE cycles high: %d, n %d", ecycle, n );
+	//if (ecycle > 8192 && n != DMAC_TO_IPU && n != DMAC_FROM_IPU) {
+	//	DevCon.Warning( "EE cycles high: %d, n %d", ecycle, n );
+	//}
 
 	cpuRegs.interrupt|= 1 << n;
 	cpuRegs.sCycle[n] = cpuRegs.cycle;

@@ -130,10 +130,10 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 			eesifbusy[1] = false;
 			done = true;
 			
-			// Voodoocycles : 4 cycles always, stops games from throwing double interrupts.
-			// Edit: Ok, one game (Okami) wants bad timing aparently, so revert this until I know which values it likes.
-			//CPU_INT(6, 4);
-			CPU_INT(6, cycles*BIAS);
+			// Voodoocycles : Okami wants around 100 cycles when booting up
+			// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
+			// (Cause of double interrupts on the EE)
+			CPU_INT(6, min( (int)(cycles*BIAS), 384 ) );
 			sif1.end = 0;
 		}
 		else

@@ -173,7 +173,8 @@ __forceinline void PSX_INT( IopEventId n, s32 ecycle )
 		DevCon.Warning( "***** IOP > Twice-thrown int on IRQ %d", n );
 	
 	// 19 is CDVD read int, it's supposed to be high.
-	//if (ecycle > 8192 && n != 19) DevCon.Warning( "IOP cycles high: %d, n %d", ecycle, n );
+	//if (ecycle > 8192 && n != 19) 
+	//	DevCon.Warning( "IOP cycles high: %d, n %d", ecycle, n );
 	
 	psxRegs.interrupt |= 1 << n;
 
