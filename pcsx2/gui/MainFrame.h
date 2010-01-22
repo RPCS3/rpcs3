@@ -157,11 +157,15 @@ public:
 //  MainEmuFrame
 // --------------------------------------------------------------------------------------
 class MainEmuFrame : public wxFrame,
-	public virtual IEventListener_Plugins,
-	public virtual IEventListener_CoreThread,
-	public virtual IEventListener_AppStatus
+	public IEventListener_Plugins,
+	public IEventListener_CoreThread,
+	public IEventListener_AppStatus
 {
 protected:
+// 	EventListenerHelper_Plugins<MainEmuFrame>		m_listener_plugins;
+// 	EventListenerHelper_CoreThread<MainEmuFrame>	m_listener_corethread;
+// 	EventListenerHelper_AppStatus<MainEmuFrame>		m_listener_appstatus;
+
 	bool			m_RestartEmuOnDelete;
 
     wxStatusBar&	m_statusbar;

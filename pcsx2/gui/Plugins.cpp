@@ -216,6 +216,7 @@ SaveSinglePluginHelper::SaveSinglePluginHelper( PluginsEnum_t pid )
 
 SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 {
+	
 	try
 	{
 		if( m_validstate )
@@ -226,15 +227,13 @@ SaveSinglePluginHelper::~SaveSinglePluginHelper() throw()
 			g_plugins->Freeze( m_pid, load );
 			g_plugins->Close( m_pid );
 		}
-	}
-	catch( Exception::BaseException& ex )
-	{
+
 		s_DisableGsWindow = false;
-		throw;
+		if( m_resume ) CoreThread.Resume();
 	}
+	DESTRUCTOR_CATCHALL;
 
 	s_DisableGsWindow = false;
-	if( m_resume ) CoreThread.Resume();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

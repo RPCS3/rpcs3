@@ -233,6 +233,10 @@ static int GetPluginMenuId_Name( PluginsEnum_t pid )
 MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
     : wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) )
 
+// 	, m_listener_plugins	( this )
+// 	, m_listener_corethread	( this )
+// 	, m_listener_appstatus	( this )
+
 	, m_statusbar( *CreateStatusBar(2, 0) )
 	, m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() )
 

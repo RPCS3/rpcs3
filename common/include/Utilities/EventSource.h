@@ -75,57 +75,6 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
-//  EventListenerBinding< typename EvtType >
-// --------------------------------------------------------------------------------------
-// Encapsulated event listener binding, provides the "benefits" of object unwinding.
-//
-template< typename ListenerType >
-class EventListenerBinding
-{
-public:
-	typedef typename EventSource<ListenerType>::EventSourceType			EventSourceType;
-	typedef typename EventSource<ListenerType>::ListenerIterator		ListenerIterator;
-
-protected:
-	EventSourceType&	m_source;
-	const ListenerType	m_listener;
-	ListenerIterator	m_iter;
-	bool				m_attached;
-
-public:
-	EventListenerBinding( EventSourceType& source, ListenerType& listener, bool autoAttach=true )
-		: m_source( source )
-		, m_listener( listener )
-	{
-		m_attached = false;
-
-		// If you want to assert on null pointers, you'll need to do the check yourself.  There's
-		// too many cases where silently ignoring null pointers is the desired behavior.
-		//if( !pxAssertDev( listener.OnEvent != NULL, "NULL listener callback function." ) ) return;
-		if( autoAttach ) Attach();
-	}
-
-	virtual ~EventListenerBinding() throw()
-	{
-		Detach();
-	}
-
-	void Detach()
-	{
-		if( !m_attached ) return;
-		m_source.Remove( m_iter );
-		m_attached = false;
-	}
-
-	void Attach()
-	{
-		if( m_attached || (m_listener.OnEvent == NULL) ) return;
-		m_iter = m_source.Add( m_listener );
-		m_attached = true;
-	}
-};
-
-// --------------------------------------------------------------------------------------
 //  IEventDispatcher
 // --------------------------------------------------------------------------------------
 // This class is used as a base interface for EventListeners.  It allows the listeners to do

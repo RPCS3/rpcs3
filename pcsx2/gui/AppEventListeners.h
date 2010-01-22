@@ -171,6 +171,78 @@ protected:
 // handler implementations.
 //
 template< typename TypeToDispatchTo >
+class EventListenerHelper_CoreThread : public IEventListener_CoreThread
+{
+public:
+	TypeToDispatchTo&	Owner;
+
+public:
+	EventListenerHelper_CoreThread( TypeToDispatchTo& dispatchTo )
+		: Owner( dispatchTo ) { }
+
+	EventListenerHelper_CoreThread( TypeToDispatchTo* dispatchTo )
+		: Owner( *dispatchTo )
+	{
+		pxAssume(dispatchTo != NULL);
+	}
+
+	virtual ~EventListenerHelper_CoreThread() throw() {}
+
+protected:
+	void OnCoreStatus_Indeterminate()	{ Owner.OnCoreStatus_Indeterminate(); }
+	void OnCoreStatus_Started()			{ Owner.OnCoreStatus_Started(); }
+	void OnCoreStatus_Resumed()			{ Owner.OnCoreStatus_Resumed(); }
+	void OnCoreStatus_Suspended()		{ Owner.OnCoreStatus_Suspended(); }
+	void OnCoreStatus_Reset()			{ Owner.OnCoreStatus_Reset(); }
+	void OnCoreStatus_Stopped()			{ Owner.OnCoreStatus_Stopped(); }
+};
+
+// --------------------------------------------------------------------------------------
+//  EventListenerHelper_AppStatus
+// --------------------------------------------------------------------------------------
+// Welcome to the awkward world of C++ multi-inheritence.  wxWidgets' Connect() system is
+// incompatible because of limitations in C++ class member function pointers, so we need
+// this second layer class to act as a bridge between the event system and the class's
+// handler implementations.
+//
+template< typename TypeToDispatchTo >
+class EventListenerHelper_Plugins : public IEventListener_Plugins
+{
+public:
+	TypeToDispatchTo&	Owner;
+
+public:
+	EventListenerHelper_Plugins( TypeToDispatchTo& dispatchTo )
+		: Owner( dispatchTo ) { }
+
+	EventListenerHelper_Plugins( TypeToDispatchTo* dispatchTo )
+		: Owner( *dispatchTo )
+	{
+		pxAssume(dispatchTo != NULL);
+	}
+
+	virtual ~EventListenerHelper_Plugins() throw() {}
+
+protected:
+	void OnPluginsEvt_Loaded()		{ Owner.OnPluginsEvt_Loaded(); }
+	void OnPluginsEvt_Init()		{ Owner.OnPluginsEvt_Init(); }
+	void OnPluginsEvt_Opening()		{ Owner.OnPluginsEvt_Opening(); }
+	void OnPluginsEvt_Opened()		{ Owner.OnPluginsEvt_Opened(); }
+	void OnPluginsEvt_Closing()		{ Owner.OnPluginsEvt_Closing(); }
+	void OnPluginsEvt_Closed()		{ Owner.OnPluginsEvt_Closed(); }
+	void OnPluginsEvt_Shutdown()	{ Owner.OnPluginsEvt_Shutdown(); }
+	void OnPluginsEvt_Unloaded()	{ Owner.OnPluginsEvt_Unloaded(); }
+};
+
+// --------------------------------------------------------------------------------------
+//  EventListenerHelper_AppStatus
+// --------------------------------------------------------------------------------------
+// Welcome to the awkward world of C++ multi-inheritence.  wxWidgets' Connect() system is
+// incompatible because of limitations in C++ class member function pointers, so we need
+// this second layer class to act as a bridge between the event system and the class's
+// handler implementations.
+//
+template< typename TypeToDispatchTo >
 class EventListenerHelper_AppStatus : public IEventListener_AppStatus
 {
 public:
@@ -178,9 +250,7 @@ public:
 
 public:
 	EventListenerHelper_AppStatus( TypeToDispatchTo& dispatchTo )
-		: Owner( dispatchTo )
-	{
-	}
+		: Owner( dispatchTo ) { }
 
 	EventListenerHelper_AppStatus( TypeToDispatchTo* dispatchTo )
 		: Owner( *dispatchTo )

@@ -287,7 +287,7 @@ bool GSFrame::Show( bool shown )
 		gsPanel->SetFocus();
 
 		if( wxStaticText* label = GetLabel_OutputDisabled() )
-			label->Show( !EmuConfig.GS.DisableOutput );
+			label->Show( EmuConfig.GS.DisableOutput );
 		
 		m_timer_UpdateTitle.Start( 333 );
 	}
@@ -376,7 +376,7 @@ void GSFrame::OnResize( wxSizeEvent& evt )
 		g_Conf->GSWindow.WindowSize	= GetClientSize();
 	}
 
-	if( wxStaticText* label = (wxStaticText*)FindWindowByName(L"OutputDisabledLabel") )
+	if( wxStaticText* label = GetLabel_OutputDisabled() )
 		label->CentreOnParent();
 
 	if( GSPanel* gsPanel = GetViewport() )
