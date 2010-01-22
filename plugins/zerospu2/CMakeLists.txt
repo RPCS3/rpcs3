@@ -3,6 +3,24 @@
 # plugin name
 set(zerospu2Name zerospu2)
 
+# Debug - Build
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+	# add defines
+	add_definitions(-Wall -fPIC -m32 -msse2 -g)
+endif(CMAKE_BUILD_TYPE STREQUAL Debug)
+
+# Devel - Build
+if(CMAKE_BUILD_TYPE STREQUAL Devel)
+	# add defines
+	add_definitions(-Wall -fPIC -m32 -msse2 -O2)
+endif(CMAKE_BUILD_TYPE STREQUAL Devel)
+
+# Release - Build
+if(CMAKE_BUILD_TYPE STREQUAL Release)
+	# add defines
+	add_definitions(-Wall -fPIC -m32 -msse2 -O2 -s)
+endif(CMAKE_BUILD_TYPE STREQUAL Release)
+
 # zerospu2 sources
 set(zerospu2Sources
 	voices.cpp
@@ -49,6 +67,11 @@ set(zerospu2WindowsHeaders
 	resources.h
 	Targets/dsound51.h)
 
+# add additional include directories
+include_directories(.
+					Linux
+					Targets)
+
 # add library
 add_library(${zerospu2Name} SHARED 
 			${zerospu2Sources}
@@ -60,36 +83,18 @@ add_library(${zerospu2Name} SHARED
 set_target_properties(${zerospu2Name} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
-# Debug - Build
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -g)
-endif(CMAKE_BUILD_TYPE STREQUAL Debug)
-
-# Devel - Build
-if(CMAKE_BUILD_TYPE STREQUAL Devel)
-	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -O2)
-endif(CMAKE_BUILD_TYPE STREQUAL Devel)
-
-# Release - Build
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-	# add defines
-	add_definitions(-Wall -fPIC -m32 -msse2 -O2 -s)
-endif(CMAKE_BUILD_TYPE STREQUAL Release)
-
 # link target with ALSA
 target_link_libraries(${zerospu2Name} ${ALSA_LIBRARIES})
 
-# link target with SoundTouch
-if(localSoundTouch)
-	target_link_libraries(${zerospu2Name} SoundTouch)
-else(localSoundTouch)
-	target_link_libraries(${zerospu2Name} ${SOUNDTOUCH_LIBRARIES})
-endif(localSoundTouch)
+if(PORTAUDIO_FOUND)
+	# link target with PortAudio
+	#target_link_libraries(${zerospu2Name} ${PORTAUDIO_LIBRARIES})
+endif(PORTAUDIO_FOUND)
 
-# add additional include directories
-include_directories(.
-				./Target
-				./Linux
-					../../../common/include)
+# link target with SoundTouch
+if(projectSoundTouch)
+	target_link_libraries(${zerospu2Name} SoundTouch)
+else(projectSoundTouch)
+	target_link_libraries(${zerospu2Name} ${SOUNDTOUCH_LIBRARIES})
+endif(projectSoundTouch)
+

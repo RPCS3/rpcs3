@@ -3,6 +3,24 @@
 # library name
 set(SoundTouchName SoundTouch)
 
+# Debug - Build
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+	# add defines
+	add_definitions(-g -O0 -march=athlon-xp -march=prescott)
+endif(CMAKE_BUILD_TYPE STREQUAL Debug)
+
+# Devel - Build
+if(CMAKE_BUILD_TYPE STREQUAL Devel)
+	# add defines
+	add_definitions(-O1 -g -W -march=athlon-xp -march=prescott)
+endif(CMAKE_BUILD_TYPE STREQUAL Devel)
+
+# Release - Build
+if(CMAKE_BUILD_TYPE STREQUAL Release)
+	# add defines
+	add_definitions(-fexpensive-optimizations -O3 -Os -W -march=athlon-xp -march=prescott)
+endif(CMAKE_BUILD_TYPE STREQUAL Release)
+
 # variable with all sources of this library
 set(SoundTouchSources
 	AAFilter.cpp
@@ -24,30 +42,12 @@ set(SoundTouchHeaders
 	FIFOSamplePipe.h
 	FIRFilter.h
 	RateTransposer.h
-	SITypes.h
+	STTypes.h
 	SoundTouch.h
 	TDStretch.h
 	WavFile.h
 	cpu_detect.h)
 
 # add library
-add_library(${SoundTouchName} STATIC ${SoundTouchSources})
-
-# Debug - Build
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	set(CMAKE_C_FLAGS_DEBUG "-g -O0 -march=athlon-xp -march=prescott")
-	set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -march=athlon-xp -march=prescott")
-endif(CMAKE_BUILD_TYPE STREQUAL Debug)
-
-# Devel - Build
-if(CMAKE_BUILD_TYPE STREQUAL Devel)
-	set(CMAKE_C_FLAGS_DEVEL "-O1 -g -W -march=athlon-xp -march=prescott")
-	set(CMAKE_CXX_FLAGS_DEVEL "-O1 -g -W -march=athlon-xp -march=prescott")
-endif(CMAKE_BUILD_TYPE STREQUAL Devel)
-
-# Release - Build
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-	set(CMAKE_C_FLAGS_RELEASE "-fexpensive-optimizations -O3 -Os -W -march=athlon-xp -march=prescott")
-	set(CMAKE_CXX_FLAGS_RELEASE "-fexpensive-optimizations -O3 -Os -W -march=athlon-xp -march=prescott")
-endif(CMAKE_BUILD_TYPE STREQUAL Release)
+add_library(${SoundTouchName} STATIC ${SoundTouchSources} ${SoundTouchHeaders})
 

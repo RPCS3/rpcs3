@@ -1,18 +1,18 @@
 
 # make bzip2
-# build local bzip2
-if(localBZip2)
+# build project bzip2
+if(projectBZip2)
 	add_subdirectory(bzip2)
-endif(localBZip2)
+endif(projectBZip2)
 
 # make zlib
-# build local zlib
-if(localZLIB)
+# build project zlib
+if(projectZLIB)
 	add_subdirectory(zlib)
-endif(localZLIB)
+endif(projectZLIB)
 
 # make SoundTouch
-if(localSoundTouch)
+if(projectSoundTouch)
 	add_subdirectory(SoundTouch)
-endif(localSoundTouch)
+endif(projectSoundTouch)
 

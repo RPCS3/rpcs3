@@ -3,8 +3,23 @@
 # plugin name
 set(zerogsName zerogs)
 
-include(${PROJECT_SOURCE_DIR}/cmake/FindGlew.cmake)
-include(${PROJECT_SOURCE_DIR}/cmake/FindCg.cmake)
+# Debug - Build
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
+	# add defines
+	add_definitions(-Wall -m32 -g)
+endif(CMAKE_BUILD_TYPE STREQUAL Debug)
+
+# Devel - Build
+if(CMAKE_BUILD_TYPE STREQUAL Devel)
+	# add defines
+	add_definitions(-Wall -m32 -O2)
+endif(CMAKE_BUILD_TYPE STREQUAL Devel)
+
+# Release - Build
+if(CMAKE_BUILD_TYPE STREQUAL Release)
+	# add defines
+	add_definitions(-Wall -m32 -O2 -s)
+endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # zerogs sources
 set(zerogsSources
@@ -80,6 +95,9 @@ set(zerogsWindowsHeaders
 # change language of .S-files to c++
 set_source_files_properties(${zerogsSSources} PROPERTIES LANGUAGE CXX)
 
+# add additional include directories
+include_directories(.)
+
 # add library
 add_library(${zerogsName} SHARED 
 			${zerogsSources}
@@ -93,39 +111,22 @@ add_library(${zerogsName} SHARED
 set_target_properties(${zerogsName} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
-# Debug - Build
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	set(CMAKE_C_FLAGS_DEBUG "-Wall -m32 -g")
-	set(CMAKE_CXX_FLAGS_DEBUG "-Wall -m32 -g")
-	
-	# add defines
-	add_definitions()
-endif(CMAKE_BUILD_TYPE STREQUAL Debug)
+# copy ps2hw.dat to plugins folder
+add_custom_command(TARGET ${zerogsName} POST_BUILD
+				   COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/plugins/zerogs/opengl/Win32/ps2hw.dat ${PROJECT_SOURCE_DIR}/bin/plugins)
 
-# Devel - Build
-if(CMAKE_BUILD_TYPE STREQUAL Devel)
-	set(CMAKE_C_FLAGS_DEVEL "-Wall -m32 -O2")
-	set(CMAKE_CXX_FLAGS_DEVEL "-Wall -m32 -O2")
-	
-	# add defines
-	add_definitions()
-endif(CMAKE_BUILD_TYPE STREQUAL Devel)
+# link target with Cg
+target_link_libraries(${zerogsName} ${CG_LIBRARIES})
 
-# Release - Build
-if(CMAKE_BUILD_TYPE STREQUAL Release)
-	set(CMAKE_C_FLAGS_RELEASE "-Wall -m32 -O2 -s")
-	set(CMAKE_CXX_FLAGS_RELEASE "-Wall -m32 -O2 -s")
-	
-	# add defines
-	add_definitions()
-endif(CMAKE_BUILD_TYPE STREQUAL Release)
+# link target with glew
+target_link_libraries(${zerogsName} ${GLEW_LIBRARY})
 
-# link target with
-target_link_libraries(${zerogsName} ${GLEW_LIBRARY} ${CG_LIBRARIES})
+# link target with opengl
+target_link_libraries(${zerogsName} ${OPENGL_LIBRARIES})
 
-# add additional include directories
-include_directories(.
-					${GLEW_INCLUDE_PATH}
-					${CG_INCLUDE_DIRS}
-					../../../common/include)
+# link target with X11
+target_link_libraries(${zerogsName} ${X11_LIBRARIES})
+
+# link target with X11 videomod
+target_link_libraries(${zerogsName} ${X11_Xxf86vm_LIB})
 

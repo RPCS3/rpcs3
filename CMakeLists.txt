@@ -42,8 +42,8 @@ add_subdirectory(plugins)
 #-------------------------------------------------------------------------------
 #								Resources
 #-------------------------------------------------------------------------------
-# This target is used to convert all binary Resources to c/c++-Header files.
-# It is always considered as out-of-date, so it is build every time.
+# Specify all binary images to convert them into c/c++ header files.
+#
 #-------------------------------------------------------------------------------
 # add resources here
 set(resourceList AppIcon16.png

@@ -14,7 +14,10 @@ detectOperatingSystem()
 #-------------------------------------------------------------------------------
 #									FindStuff
 #-------------------------------------------------------------------------------
-if(Linux)
+#----------------------------------------
+#						Required
+#----------------------------------------
+if(Linux)			# Linux only
 	# gtk required
 	find_package(GTK2 REQUIRED gtk)
 
@@ -24,8 +27,9 @@ if(Linux)
 		include_directories(${GTK2_INCLUDE_DIRS})
 	#else(GTK2_FOUND)
 	#	message(FATAL_ERROR "GTK2 libraries and include files not found. 
-	#			 Please install GTK2 version ${minimal_GTK2_version} or higher.")
+	#			Please install GTK2 version ${minimal_GTK2_version} or higher.")
 	endif(GTK2_FOUND)
+
 endif(Linux)
 
 #------------------------------------------------------------
@@ -44,17 +48,48 @@ endif(wxWidgets_FOUND)
 
 #------------------------------------------------------------
 
-# zlib required
+# zlib required (no require flag, because we can use project one as fallback)
 find_package(ZLIB)
 
-# if we found zlib on the system, use it else use local one
+# if we found zlib on the system, use it else use project one
 if(ZLIB_FOUND)
 	# add zlib include directories
 	include_directories(${ZLIB_INCLUDE_DIRS})
 else(ZLIB_FOUND)
-	# use locale one
-	set(localZLIB TRUE)
+	# use project one
+	set(projectZLIB TRUE)
 endif(ZLIB_FOUND)
+
+#------------------------------------------------------------
+
+
+#----------------------------------------
+#						Optional
+#----------------------------------------
+if(Linux)			# Linux only
+	# x11 optional
+	find_package(X11)
+
+	# x11 found
+	if(X11_FOUND)
+		# add x11 include directories
+		include_directories(${X11_INCLUDE_DIR})
+	#else(X11_FOUND)
+	#	message(FATAL_ERROR "X11 libraries and include files not found. 
+	#			Please install X11.")
+	endif(X11_FOUND)
+endif(Linux)
+
+#------------------------------------------------------------
+
+# ALSA optional
+find_package(ALSA)
+
+# ALSA found
+if(ALSA_FOUND)
+	# add ALSA include directories
+	include_directories(${ALSA_INCLUDE_DIRS})
+endif(ALSA_FOUND)
 
 #------------------------------------------------------------
 
@@ -62,14 +97,36 @@ endif(ZLIB_FOUND)
 find_package(BZip2)
 
 # if we found bzip2 on the system,
-# use it else use local one
+# use it else use project one
 if(BZIP2_FOUND)
 	# add zlib include directories
 	include_directories(${BZIP2_INCLUDE_DIR})
 else(BZIP2_FOUND)
-	# use locale one
-	set(localBZip2 TRUE)
+	# use project one
+	set(projectBZip2 TRUE)
 endif(BZIP2_FOUND)
+
+#------------------------------------------------------------
+
+# Cg optional
+include(${PROJECT_SOURCE_DIR}/cmake/FindCg.cmake)
+
+# found Cg
+if(CG_FOUND)
+	# add Cg include directories
+	include_directories(${CG_INCLUDE_DIR})
+endif(CG_FOUND)
+
+#------------------------------------------------------------
+
+# GLEW optional
+include(${PROJECT_SOURCE_DIR}/cmake/FindGlew.cmake)
+
+# found GLEW
+if(GLEW_FOUND)
+	# add GLEW include directories
+	include_directories(${GLEW_INCLUDE_PATH})
+endif(GLEW_FOUND)
 
 #------------------------------------------------------------
 
@@ -84,6 +141,17 @@ endif(OPENGL_FOUND)
 
 #------------------------------------------------------------
 
+# PortAudio optional
+include(${PROJECT_SOURCE_DIR}/cmake/FindPortAudio.cmake)
+
+# found PortAudio
+if(PORTAUDIO_FOUND)
+	# add PortAudio include directories
+	include_directories(${PORTAUDIO_INCLUDE_DIR})
+endif(PORTAUDIO_FOUND)
+
+#------------------------------------------------------------
+
 # SDL optional
 find_package(SDL)
 
@@ -95,15 +163,16 @@ endif(SDL_FOUND)
 
 #------------------------------------------------------------
 
-include(${PROJECT_SOURCE_DIR}/cmake/FindSoundTouch.cmake)
+# SoundTouch optional
+#include(${PROJECT_SOURCE_DIR}/cmake/FindSoundTouch.cmake)
 
 # found SoundTouch	
 if(SOUNDTOUCH_FOUND)
 	# add SoundTouch include directories
-	include_directories(${SoundTouch_INCLUDE_DIR})
+	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
 else(SOUNDTOUCH_FOUND)
-	# use local one
-	set(localSoundTouch TRUE)
+	# use project one
+	set(projectSoundTouch TRUE)
 
 	# found
 	set(SOUNDTOUCH_FOUND TRUE)
@@ -111,26 +180,15 @@ endif(SOUNDTOUCH_FOUND)
 
 #------------------------------------------------------------
 
-include(${PROJECT_SOURCE_DIR}/cmake/FindCg.cmake)
+# Subversion optional
+find_package(Subversion)
 
-# found Cg
-if(CG_FOUND)
-	# add Cg include directories
-	include_directories(${CG_INCLUDE_DIR})
-endif(CG_FOUND)
-
-#------------------------------------------------------------
-
-# ALSA optional
-find_package(ALSA)
-
-# ALSA found
-if(ALSA_FOUND)
-	# add ALSA include directories
-	include_directories(${ALSA_INCLUDE_DIRS})
-endif(ALSA_FOUND)
-
-#------------------------------------------------------------
+# subversion found
+if(Subversion_FOUND)
+	set(SVN TRUE)
+else(Subversion_FOUND)
+	set(SVN FALSE)
+endif(Subversion_FOUND)
 
 #-------------------------------------------------------------------------------
 #								Plugins
@@ -185,7 +243,7 @@ set(USBnull TRUE)
 #---------------------------------------
 #			onepad
 #---------------------------------------
-# requires: SDL
+# requires: -SDL
 #---------------------------------------
 if(SDL_FOUND)
 	set(onepad TRUE)
@@ -197,7 +255,7 @@ endif(SDL_FOUND)
 #---------------------------------------
 #			spu2-x
 #---------------------------------------
-# requires: SoundTouch
+# requires: -SoundTouch
 #---------------------------------------
 if(SOUNDTOUCH_FOUND)
 	set(spu2-x TRUE)
@@ -209,20 +267,23 @@ endif(SOUNDTOUCH_FOUND)
 #---------------------------------------
 #			zerogs
 #---------------------------------------
-# requires:OpenGL
+# requires: -GLEW
+#			-OpenGL
+#			-X11
 #---------------------------------------
-if(OPENGL_FOUND)
+if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND)
 	set(zerogs TRUE)
-else(OPENGL_FOUND)
+else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND)
 	set(zerogs FALSE)
-endif(OPENGL_FOUND)
+endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND)
 #---------------------------------------
 
 #---------------------------------------
 #			zerospu2
 #---------------------------------------
-# requires: SoundTouch
-#			ALSA
+# requires: -SoundTouch
+#			-ALSA
+#			-PortAudio
 #---------------------------------------
 if(SOUNDTOUCH_FOUND AND ALSA_FOUND)
 	set(zerospu2 TRUE)

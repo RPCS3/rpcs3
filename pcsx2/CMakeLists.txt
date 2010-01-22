@@ -89,7 +89,7 @@ if(CMAKE_BUILD_TYPE STREQUAL Devel)
 	set(pcsx2Name pcsx2-dev)
 	
 	# add defines
-	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DPCSX2_DEBUG -DWX_PRECOMP)
+	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DPCSX2_DEVEL -DWX_PRECOMP)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
@@ -104,6 +104,18 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 	# add defines
 	add_definitions(${CommonFlags} ${OptimizationFlags} ${LinkerFlags} -DWX_PRECOMP)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
+
+# get svn revision and generate svnrev.h
+if(SVN)
+	# execute subversion
+	Subversion_WC_INFO(${CMAKE_SOURCE_DIR} tmpvar)
+	
+	# write svnrev.h
+	file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV ${tmpvar_WC_REVISION} \n#define SVN_MODS 0")
+else(SVN)
+	# write svnrev.h
+	file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV 0 \n#define SVN_MODS 0")
+endif(SVN)
 
 # variable with sources of this executable
 set(pcsx2Sources
@@ -515,9 +527,6 @@ set(pcsx2SSources
 	IPU/acoroutine.S
 	x86/aVUzerorec.S)
 
-# set runtime output directory
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-
 # change language of .S-files to c++
 set_source_files_properties(${pcsx2SSources} PROPERTIES LANGUAGE CXX)
 
@@ -564,15 +573,19 @@ if(MacOSX)
 		)
 endif(MacOSX)	
 
+# additonal include directories
+include_directories(.
+					gui
+					x86
+					${CMAKE_BINARY_DIR}/pcsx2)
+
+# set runtime output directory
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+
 # add executable
 add_executable(${pcsx2Name}
 			   ${Common}
 			   ${Platform})
-
-# additonal include directories
-include_directories(.
-					gui
-					x86)
 
 # add dependencies
 add_dependencies(${pcsx2Name} Resources)
@@ -589,9 +602,9 @@ if(Linux)
 endif(Linux)
 
 # link target with zlib
-if(localZLIB)
+if(projectZLIB)
 	target_link_libraries(${pcsx2Name} zlib)
-else(localZLIB)
+else(projectZLIB)
 	target_link_libraries(${pcsx2Name} ${ZLIB_LIBRARIES})
-endif(localZLIB)
+endif(projectZLIB)
 
