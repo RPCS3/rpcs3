@@ -56,7 +56,7 @@ protected:
 	void InsertIntoMenu( int id );
 	void OnChangedSelection( wxCommandEvent& evt );
 
-	void AppEvent_OnSettingsLoadSave( const AppSettingsEventInfo& ini );
-	void AppEvent_OnSettingsApplied();
+	void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& ini );
+	void AppStatusEvent_OnSettingsApplied();
 };
 

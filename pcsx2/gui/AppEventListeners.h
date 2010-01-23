@@ -163,13 +163,14 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------
-//  EventListenerHelper_AppStatus
+//  EventListenerHelpers (CoreThread / Plugins / AppStatus)
 // --------------------------------------------------------------------------------------
 // Welcome to the awkward world of C++ multi-inheritence.  wxWidgets' Connect() system is
 // incompatible because of limitations in C++ class member function pointers, so we need
 // this second layer class to act as a bridge between the event system and the class's
 // handler implementations.
 //
+
 template< typename TypeToDispatchTo >
 class EventListenerHelper_CoreThread : public IEventListener_CoreThread
 {
@@ -197,14 +198,6 @@ protected:
 	void OnCoreStatus_Stopped()			{ Owner.OnCoreStatus_Stopped(); }
 };
 
-// --------------------------------------------------------------------------------------
-//  EventListenerHelper_AppStatus
-// --------------------------------------------------------------------------------------
-// Welcome to the awkward world of C++ multi-inheritence.  wxWidgets' Connect() system is
-// incompatible because of limitations in C++ class member function pointers, so we need
-// this second layer class to act as a bridge between the event system and the class's
-// handler implementations.
-//
 template< typename TypeToDispatchTo >
 class EventListenerHelper_Plugins : public IEventListener_Plugins
 {
@@ -234,14 +227,6 @@ protected:
 	void OnPluginsEvt_Unloaded()	{ Owner.OnPluginsEvt_Unloaded(); }
 };
 
-// --------------------------------------------------------------------------------------
-//  EventListenerHelper_AppStatus
-// --------------------------------------------------------------------------------------
-// Welcome to the awkward world of C++ multi-inheritence.  wxWidgets' Connect() system is
-// incompatible because of limitations in C++ class member function pointers, so we need
-// this second layer class to act as a bridge between the event system and the class's
-// handler implementations.
-//
 template< typename TypeToDispatchTo >
 class EventListenerHelper_AppStatus : public IEventListener_AppStatus
 {

@@ -89,9 +89,14 @@ public:
 // --------------------------------------------------------------------------------------
 //  pxLogTextCtrl
 // --------------------------------------------------------------------------------------
-class pxLogTextCtrl : public wxTextCtrl, public IEventListener_CoreThread, public IEventListener_Plugins
+class pxLogTextCtrl : public wxTextCtrl,
+	public IEventListener_CoreThread,
+	public IEventListener_Plugins
 {
 protected:
+	//EventListenerHelper_CoreThread<pxLogTextCtrl>	m_listener_CoreThread;
+	//EventListenerHelper_Plugins<pxLogTextCtrl>		m_listener_Plugins;
+
 #ifdef __WXMSW__
 	int		m_win32_LinesPerPage;
 	int		m_win32_LinesPerScroll;
@@ -101,7 +106,7 @@ protected:
 
 public:
 	pxLogTextCtrl(wxWindow* parent);
-	~pxLogTextCtrl() throw();
+	virtual ~pxLogTextCtrl() throw();
 
 	bool HasWriteLock() const { return m_FreezeWrites; }
 	void ConcludeIssue( int lines );

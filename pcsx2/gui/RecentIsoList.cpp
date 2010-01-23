@@ -137,12 +137,12 @@ void RecentIsoManager::InsertIntoMenu( int id )
 		curitem.ItemPtr->Check();
 }
 
-void RecentIsoManager::AppEvent_OnSettingsApplied()
+void RecentIsoManager::AppStatusEvent_OnSettingsApplied()
 {
 	// TODO : Implement application of Recent Iso List "maximum" history option
 }
 
-void RecentIsoManager::AppEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evt )
+void RecentIsoManager::AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evt )
 {
 	IniInterface& ini( evt.GetIni() );
 
