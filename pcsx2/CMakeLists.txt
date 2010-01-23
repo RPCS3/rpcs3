@@ -164,10 +164,13 @@ set(pcsx2Sources
 	SPR.cpp
 	Stats.cpp
 	System.cpp
-	Vif0Dma.cpp
-	Vif1Dma.cpp
+	Vif0_Commands.cpp
+	Vif0_Dma.cpp
+	Vif1_Commands.cpp
+	Vif1_Dma.cpp
+	Vif1_MFIFO.cpp
 	Vif.cpp
-	VifDma.cpp
+	Vif_Commands.cpp
 	Vif_Unpack.cpp
 	Vif_Unpack.inl
 	vtlb.cpp
@@ -225,8 +228,7 @@ set(pcsx2Headers
 	Stats.h
 	StringUtils.h
 	System.h
-	VifDma.h
-	VifDma_internal.h
+	Vif_Dma.h
 	Vif.h
 	Vif_Unpack.h
 	vtlb.h
