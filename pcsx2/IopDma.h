@@ -25,21 +25,22 @@
 typedef s32(* DmaHandler)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 typedef void (* DmaIHandler)(s32 channel);
 
-struct DmaHandlerInfo
+class DmaHandlerInfo
 {
+public:
 	const char* Name;
+	u32 DmacRegisterBase;
 	DmaHandler  Read;
 	DmaHandler  Write;
 	DmaIHandler Interrupt;
-};
 
-struct DmaStatusInfo
-{
-	u32 Control;
-	u32 Width;		// bytes/word, for timing purposes
-	u32 MemAddr;
-	s32 ByteCount;
-	s32 Target;
+	// runtime variables
+	u32 ByteCount;
+	u32 Target;
+
+	u32& REG_MADR(void);
+	u32& REG_BCR(void);
+	u32& REG_CHCR(void);
 };
 
 // FIXME: Dummy constants, to be "filled in" with proper values later
@@ -48,9 +49,7 @@ struct DmaStatusInfo
 
 #define DMA_CHANNEL_MAX		16 /* ? */
 
-extern DmaStatusInfo  IopChannels[DMA_CHANNEL_MAX];
-
-extern void IopDmaStart(int channel, u32 chcr, u32 madr, u32 bcr);
+extern void IopDmaStart(int channel);
 extern void IopDmaUpdate(u32 elapsed);
 
 // external dma handlers

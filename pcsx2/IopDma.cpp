@@ -305,26 +305,38 @@ extern void sio2DmaInterrupt(s32 channel);
 s32 errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 
-DmaStatusInfo  IopChannels[DMA_CHANNEL_MAX]; // I dont' knwo how many there are, 10?
+//DmaStatusInfo  IopChannels[DMA_CHANNEL_MAX];
+
+#define MEM_BASE1 0x1f801080
+#define MEM_BASE2 0x1f801500
+
+#define CHANNEL_BASE1(ch) (MEM_BASE1 + ((ch)<<4))
+#define CHANNEL_BASE2(ch) (MEM_BASE1 + ((ch)<<4))
+
+
+u32& DmaHandlerInfo::REG_MADR(void) { return psxHu32(DmacRegisterBase + 0x0); }
+u32& DmaHandlerInfo::REG_BCR(void)  { return psxHu32(DmacRegisterBase + 0x4); }
+u32& DmaHandlerInfo::REG_CHCR(void) { return psxHu32(DmacRegisterBase + 0xC); }
+
 
 DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 {
 	// First DMAC, same as PS1
-	{"Ps1 Mdec",       0}, //0
-	{"Ps1 Mdec",       0}, //1
-	{"Ps1 Gpu",        0}, //2
-	{"CDVD",           cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
-	{"SPU2 Core0",     spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu Core0
-	{"?",              0}, //5
-	{"OT",             0}, //6: OT?
+	{"Ps1 Mdec",       CHANNEL_BASE1(0), 0}, //0
+	{"Ps1 Mdec",       CHANNEL_BASE1(1), 0}, //1
+	{"Ps1 Gpu",        CHANNEL_BASE1(2), 0}, //2
+	{"CDVD",           CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
+	{"SPU2 Core0",     CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu Core0
+	{"?",              CHANNEL_BASE1(5), 0}, //5
+	{"OT",             CHANNEL_BASE1(6), 0}, //6: OT?
 
 	// Second DMAC, new in PS2 IOP
-	{"SPU2 Core1",     spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu Core1
-	{"Dev9",		   0},//dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
-	{"Sif0",           0},//sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
-	{"Sif1",           0},//sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
-	{"Sio2 (writes)",  errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
-	{"Sio2 (reads)",   sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
+	{"SPU2 Core1",     CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu Core1
+	{"Dev9",		   CHANNEL_BASE2(1), 0},//dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
+	{"Sif0",           CHANNEL_BASE2(2), 0},//sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
+	{"Sif1",           CHANNEL_BASE2(3), 0},//sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
+	{"Sio2 (writes)",  CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
+	{"Sio2 (reads)",   CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
 	{"?",              0}, //13
 	// if each dmac has 7 channels, the list would end here, but i made it 16 cos I'm not sure :p
 	{"?",              0}, //14
@@ -347,15 +359,15 @@ void RaiseDmaIrq(u32 channel)
 		psxDmaInterrupt2(channel-7);
 }
 
-void IopDmaStart(int channel, u32 chcr, u32 madr, u32 bcr)
+void IopDmaStart(int channel)
 {
 	// I dont' really understand this, but it's used above. Is this BYTES OR WHAT?
+	int bcr = IopDmaHandlers[channel].REG_BCR();
 	int size = 4* (bcr >> 16) * (bcr & 0xFFFF);
 
-	IopChannels[channel].Control = chcr | DMA_CTRL_ACTIVE;
-	IopChannels[channel].MemAddr = madr;
-	IopChannels[channel].ByteCount = size;
-	IopChannels[channel].Target=0;
+	IopDmaHandlers[channel].REG_CHCR() |= DMA_CTRL_ACTIVE;
+	IopDmaHandlers[channel].ByteCount = size;
+	IopDmaHandlers[channel].Target=0;
 
 	//SetDmaUpdateTarget(1);
 	{
@@ -379,9 +391,9 @@ void IopDmaUpdate(u32 elapsed)
 
 		for (int i = 0;i < DMA_CHANNEL_MAX;i++)
 		{
-			DmaStatusInfo *ch = IopChannels + i;
+			DmaHandlerInfo *ch = IopDmaHandlers + i;
 
-			if (ch->Control&DMA_CTRL_ACTIVE)
+			if (ch->REG_CHCR()&DMA_CTRL_ACTIVE)
 			{
 				ch->Target -= elapsed;
 				if (ch->Target <= 0)
@@ -390,20 +402,20 @@ void IopDmaUpdate(u32 elapsed)
 					{
 						ch->Target = 0x7fffffff;
 
-						ch->Control &= ~DMA_CTRL_ACTIVE;
+						ch->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
 						RaiseDmaIrq(i);
 						IopDmaHandlers[i].Interrupt(i);
 					}
 					else
 					{
-						DmaHandler handler = (ch->Control & DMA_CTRL_DIRECTION) ? IopDmaHandlers[i].Write : IopDmaHandlers[i].Read;
+						DmaHandler handler = (ch->REG_CHCR() & DMA_CTRL_DIRECTION) ? IopDmaHandlers[i].Write : IopDmaHandlers[i].Read;
 
 						u32 BCount = 0;
-						s32 Target = (handler) ? handler(i, (u32*)iopPhysMem(ch->MemAddr), ch->ByteCount, &BCount) : 0;
+						s32 Target = (handler) ? handler(i, (u32*)iopPhysMem(ch->REG_MADR()), ch->ByteCount, &BCount) : 0;
 
 						if(BCount>0)
 						{
-							psxCpu->Clear(ch->MemAddr, BCount/4);
+							psxCpu->Clear(ch->REG_MADR(), BCount/4);
 						}
 
 						int TTarget = 100;
@@ -413,7 +425,7 @@ void IopDmaUpdate(u32 elapsed)
 						}
 						else if (BCount > 0)
 						{
-							ch->MemAddr   += BCount;
+							ch->REG_MADR()+= BCount;
 							ch->ByteCount -= BCount;
 
 							TTarget = BCount/4; // / ch->Width;

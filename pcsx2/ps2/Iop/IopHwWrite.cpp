@@ -321,18 +321,14 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 			// as asinine as that may seem).
 			//
 			mcase(0x1f8010C0):
-#ifdef ENABLE_NEW_IOPDMA_SPU2
-				IopChannels[4].MemAddr = val;
-#else
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 				SPU2WriteMemAddr( 0, val );
 #endif
 				HW_DMA4_MADR = val;
 			break;
 
 			mcase(0x1f801500):
-#ifdef ENABLE_NEW_IOPDMA_SPU2
-				IopChannels[7].MemAddr = val;
-#else
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 				SPU2WriteMemAddr( 1, val );
 #endif
 				HW_DMA7_MADR = val;
