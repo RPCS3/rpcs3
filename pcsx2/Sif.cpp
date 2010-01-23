@@ -40,7 +40,7 @@ static __forceinline bool SifEERead(int &cycles)
 {
 	tDMA_TAG *ptag;
 	int readSize = min((s32)sif0dma->qwc, (sif0.fifo.size >> 2));
-
+	if (readSize == 0) { /*Console.Warning("SifEERead readSize is 0"); return false;*/}
 	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
 	SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
 
@@ -64,7 +64,7 @@ static __forceinline bool SifEEWrite(int &cycles)
 	tDMA_TAG *pTag;
 		
 	const int writeSize = min((s32)sif1dma->qwc, (FIFO_SIF_W - sif1.fifo.size) / 4);
-	
+	if (writeSize == 0) { /*Console.Warning("SifEEWrite writeSize is 0"); return false;*/ }
 	pTag = safeDmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
 	if (pTag == NULL) return false;
 
@@ -80,7 +80,7 @@ static __forceinline void SifIOPWrite(int &psxCycles)
 {
 	// There's some data ready to transfer into the fifo..
 	int writeSize = min(sif0.counter, FIFO_SIF_W - sif0.fifo.size);
-
+	if (writeSize == 0) { /*Console.Warning("SifIOPWrite writeSize is 0"); return;*/ }
 	SIF_LOG("+++++++++++ %lX of %lX", writeSize, sif0.counter);
 
 	sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_MADR), writeSize);
@@ -93,7 +93,7 @@ static __forceinline void SifIOPRead(int &psxCycles)
 {
 	// If we're reading something, continue to do so.
 	const int readSize = min (sif1.counter, sif1.fifo.size);
-		
+	if (readSize == 0) { /*Console.Warning("SifIOPRead readSize is 0"); return;*/ }
 	SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
 	sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
@@ -150,7 +150,7 @@ static __forceinline void SIF0EEDma(int &cycles, bool &done)
 
 			eesifbusy[0] = false;
 			done = true;
-
+			if (cycles == 0) DevCon.Warning("EESIF0cycles = 0");
 			CPU_INT(5, cycles*BIAS);
 		}
 		else if (sif0.fifo.size >= 4) // Read a tag
@@ -220,6 +220,7 @@ static __forceinline void SIF1EEDma(int &cycles, bool &done)
 			// Voodoocycles : Okami wants around 100 cycles when booting up
 			// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
 			// (Cause of double interrupts on the EE)
+			if (cycles == 0) DevCon.Warning("EESIF1cycles  = 0");
 			CPU_INT(6, min( (int)(cycles*BIAS), 384 ) );
 		}
 		else
@@ -318,6 +319,7 @@ static __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 			// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
 			// So when we're all done, the equation looks like thus:
 			//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
+			if (psxCycles == 0) DevCon.Warning("IOPSIF0cycles = 0");
 			PSX_INT(IopEvt_SIF0, psxCycles);
 		}
 		else  // Chain mode
@@ -376,6 +378,7 @@ static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 			//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
 			//Greater than *35 break rebooting when trying to play Tekken5 arcade history
 			//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
+			if (psxCycles == 0) DevCon.Warning("IOPSIF1cycles = 0");
 			PSX_INT(IopEvt_SIF1, min ( (psxCycles * 24), 1024) );
 		}
 		else if (sif1.fifo.size >= 4)
