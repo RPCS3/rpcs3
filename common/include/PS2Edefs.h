@@ -16,6 +16,15 @@
 #ifndef __PS2EDEFS_H__
 #define __PS2EDEFS_H__
 
+
+//#define ENABLE_NEW_IOPDMA
+
+#ifdef ENABLE_NEW_IOPDMA
+//#define ENABLE_NEW_IOPDMA_SPU2
+//#define ENABLE_NEW_IOPDMA_SIO
+//#define ENABLE_NEW_IOPDMA_CDVD
+#endif
+
 /*
  *  PS2E Definitions v0.6.2 (beta)
  *
@@ -90,7 +99,11 @@ typedef struct _keyEvent {
 // PS2EgetLibVersion2 (high 16 bits)
 #define PS2E_GS_VERSION   0x0006
 #define PS2E_PAD_VERSION  0x0002	// -=[ OBSOLETE ]=-
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+#define PS2E_SPU2_VERSION 0x0006
+#else
 #define PS2E_SPU2_VERSION 0x0005
+#endif
 #define PS2E_CDVD_VERSION 0x0005
 #define PS2E_DEV9_VERSION 0x0003
 #define PS2E_USB_VERSION  0x0003
@@ -322,6 +335,15 @@ void CALLBACK SPU2setSettingsDir( const char* dir );
 
 void CALLBACK SPU2write(u32 mem, u16 value);
 u16  CALLBACK SPU2read(u32 mem);
+
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+s32  CALLBACK SPU2dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+s32  CALLBACK SPU2dmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+void CALLBACK SPU2dmaInterrupt(s32 channel);
+
+// dma irq callbacks not needed anymore, they are handled by the dmac
+void CALLBACK SPU2irqCallback(void (*SPU2callback)());
+#else
 void CALLBACK SPU2readDMA4Mem(u16 *pMem, int size);
 void CALLBACK SPU2writeDMA4Mem(u16 *pMem, int size);
 void CALLBACK SPU2interruptDMA4();
@@ -333,9 +355,12 @@ void CALLBACK SPU2writeDMA7Mem(u16 *pMem, int size);
 void CALLBACK SPU2setDMABaseAddr(uptr baseaddr);
 
 void CALLBACK SPU2interruptDMA7();
+
 u32 CALLBACK SPU2ReadMemAddr(int core);
 void CALLBACK SPU2WriteMemAddr(int core,u32 value);
+
 void CALLBACK SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)());
+#endif
 
 // extended funcs
 // if start is 1, starts recording spu2 data, else stops
@@ -563,6 +588,15 @@ typedef s32  (CALLBACK* _PADqueryMtap)(u8 port);
 typedef s32  (CALLBACK* _SPU2open)(void *pDsp);
 typedef void (CALLBACK* _SPU2write)(u32 mem, u16 value);
 typedef u16  (CALLBACK* _SPU2read)(u32 mem);
+
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+typedef s32  (CALLBACK* _SPU2dmaRead)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+typedef s32  (CALLBACK* _SPU2dmaWrite)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+typedef void (CALLBACK* _SPU2dmaInterrupt)(s32 channel);
+
+// dma irq callbacks not needed anymore, they are handled by the dmac
+typedef void (CALLBACK* _SPU2irqCallback)(void (*SPU2callback)());
+#else
 typedef void (CALLBACK* _SPU2readDMA4Mem)(u16 *pMem, int size);
 typedef void (CALLBACK* _SPU2writeDMA4Mem)(u16 *pMem, int size);
 typedef void (CALLBACK* _SPU2interruptDMA4)();
@@ -571,13 +605,15 @@ typedef void (CALLBACK* _SPU2writeDMA7Mem)(u16 *pMem, int size);
 typedef void (CALLBACK* _SPU2setDMABaseAddr)(uptr baseaddr);
 typedef void (CALLBACK* _SPU2interruptDMA7)();
 typedef void (CALLBACK* _SPU2irqCallback)(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)());
+typedef u32  (CALLBACK* _SPU2ReadMemAddr)(int core);
+typedef void (CALLBACK* _SPU2WriteMemAddr)(int core,u32 value);
+#endif
+
 typedef int (CALLBACK* _SPU2setupRecording)(int, void*);
 
 typedef void (CALLBACK* _SPU2setClockPtr)(u32*ptr);
 typedef void (CALLBACK* _SPU2setTimeStretcher)(short int enable);
 
-typedef u32 (CALLBACK* _SPU2ReadMemAddr)(int core);
-typedef void (CALLBACK* _SPU2WriteMemAddr)(int core,u32 value);
 typedef void (CALLBACK* _SPU2async)(u32 cycles);
 
 
@@ -696,6 +732,12 @@ extern _PADqueryMtap      PADqueryMtap;
 extern _SPU2open          SPU2open;
 extern _SPU2write         SPU2write;
 extern _SPU2read          SPU2read;
+
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+extern _SPU2dmaRead       SPU2dmaRead;
+extern _SPU2dmaWrite      SPU2dmaWrite;
+extern _SPU2dmaInterrupt  SPU2dmaInterrupt;
+#else
 extern _SPU2readDMA4Mem   SPU2readDMA4Mem;
 extern _SPU2writeDMA4Mem  SPU2writeDMA4Mem;
 extern _SPU2interruptDMA4 SPU2interruptDMA4;
@@ -707,6 +749,11 @@ extern _SPU2ReadMemAddr   SPU2ReadMemAddr;
 extern _SPU2setupRecording SPU2setupRecording;
 extern _SPU2WriteMemAddr   SPU2WriteMemAddr;
 extern _SPU2irqCallback   SPU2irqCallback;
+#endif
+
+extern _SPU2irqCallback   SPU2irqCallback;
+
+extern _SPU2setupRecording SPU2setupRecording;
 
 extern _SPU2setClockPtr   SPU2setClockPtr;
 extern _SPU2setTimeStretcher SPU2setTimeStretcher;

@@ -203,6 +203,11 @@ static void PAD_update( u32 padslot ) { }
 _SPU2open          SPU2open;
 _SPU2write         SPU2write;
 _SPU2read          SPU2read;
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+_SPU2dmaRead	   SPU2dmaRead;
+_SPU2dmaWrite      SPU2dmaWrite;
+_SPU2dmaInterrupt  SPU2dmaInterrupt;
+#else
 _SPU2readDMA4Mem   SPU2readDMA4Mem;
 _SPU2writeDMA4Mem  SPU2writeDMA4Mem;
 _SPU2interruptDMA4 SPU2interruptDMA4;
@@ -211,8 +216,9 @@ _SPU2writeDMA7Mem  SPU2writeDMA7Mem;
 _SPU2setDMABaseAddr SPU2setDMABaseAddr;
 _SPU2interruptDMA7 SPU2interruptDMA7;
 _SPU2ReadMemAddr   SPU2ReadMemAddr;
-_SPU2setupRecording SPU2setupRecording;
 _SPU2WriteMemAddr   SPU2WriteMemAddr;
+#endif
+_SPU2setupRecording SPU2setupRecording;
 _SPU2irqCallback   SPU2irqCallback;
 
 _SPU2setClockPtr   SPU2setClockPtr;
@@ -468,6 +474,11 @@ static const LegacyApi_ReqMethod s_MethMessReq_SPU2[] =
 	{	"SPU2open",				(vMeth**)&SPU2open,			NULL },
 	{	"SPU2write",			(vMeth**)&SPU2write,		NULL },
 	{	"SPU2read",				(vMeth**)&SPU2read,			NULL },
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	{	"SPU2dmaRead",			(vMeth**)&SPU2dmaRead,		NULL },
+	{	"SPU2dmaWrite",			(vMeth**)&SPU2dmaWrite,		NULL },
+	{	"SPU2dmaInterrupt",		(vMeth**)&SPU2dmaInterrupt, NULL },
+#else
 	{	"SPU2readDMA4Mem",		(vMeth**)&SPU2readDMA4Mem,	NULL },
 	{	"SPU2readDMA7Mem",		(vMeth**)&SPU2readDMA7Mem,	NULL },
 	{	"SPU2writeDMA4Mem",		(vMeth**)&SPU2writeDMA4Mem,	NULL },
@@ -475,6 +486,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_SPU2[] =
 	{	"SPU2interruptDMA4",	(vMeth**)&SPU2interruptDMA4,NULL },
 	{	"SPU2interruptDMA7",	(vMeth**)&SPU2interruptDMA7,NULL },
 	{	"SPU2ReadMemAddr",		(vMeth**)&SPU2ReadMemAddr,	NULL },
+#endif
 	{	"SPU2irqCallback",		(vMeth**)&SPU2irqCallback,	NULL },
 
 	{ NULL }
@@ -484,8 +496,10 @@ static const LegacyApi_OptMethod s_MethMessOpt_SPU2[] =
 {
 	{	"SPU2setClockPtr",		(vMeth**)&SPU2setClockPtr	},
 	{	"SPU2async",			(vMeth**)&SPU2async			},
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 	{	"SPU2WriteMemAddr",		(vMeth**)&SPU2WriteMemAddr	},
 	{	"SPU2setDMABaseAddr",	(vMeth**)&SPU2setDMABaseAddr},
+#endif
 	{	"SPU2setupRecording",	(vMeth**)&SPU2setupRecording},
 
 	{ NULL }
@@ -905,8 +919,12 @@ bool PluginManager::OpenPlugin_SPU2()
 {
 	if( SPU2open((void*)&pDsp) ) return false;
 
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	SPU2irqCallback( spu2Irq );
+#else
 	SPU2irqCallback( spu2Irq, spu2DMA4Irq, spu2DMA7Irq );
 	if( SPU2setDMABaseAddr != NULL ) SPU2setDMABaseAddr((uptr)psxM);
+#endif
 	if( SPU2setClockPtr != NULL ) SPU2setClockPtr(&psxRegs.cycle);
 	return true;
 }

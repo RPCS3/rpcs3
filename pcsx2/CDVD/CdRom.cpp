@@ -937,6 +937,7 @@ void psxDma3(u32 madr, u32 bcr, u32 chcr) {
 #ifdef ENABLE_NEW_IOPDMA
 s32 cdvdDmaRead(s32 channel, u32* data, u32 wordsLeft, u32* wordsProcessed)
 {
+#ifdef ENABLE_NEW_IOPDMA_CDVD
 	// hacked up from the code above
 
 	if (cdr.Readed == 0) 
@@ -951,13 +952,16 @@ s32 cdvdDmaRead(s32 channel, u32* data, u32 wordsLeft, u32* wordsProcessed)
 	cdr.pTransfer+=wordsLeft;
 	*wordsProcessed = wordsLeft;
 
-	Console.Status("New IOP DMA handled CDVD DMA: channel %d, data %p, remaining %08x, processed %08x.", channel,data,wordsLeft, *wordsProcessed);
+	Console.WriteLn(Color_Black,"New IOP DMA handled CDVD DMA: channel %d, data %p, remaining %08x, processed %08x.", channel,data,wordsLeft, *wordsProcessed);
+#endif
 	return 0;
 }
 
 void cdvdDmaInterrupt(s32 channel)
 {
+#ifdef ENABLE_NEW_IOPDMA_CDVD
 	cdrInterrupt();
+#endif
 }
 
 #endif
