@@ -15,8 +15,8 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "AppSaveStates.h"
 #include "Plugins.h"
-#include "SaveState.h"
 #include "Utilities/ScopedPtr.h"
 #include "ConfigurationPanels.h"
 #include "Dialogs/ModalPopups.h"
@@ -232,7 +232,7 @@ void Panels::PluginSelectorPanel::ComboBoxPanel::Reset()
 // =====================================================================================================
 void Panels::PluginSelectorPanel::DispatchEvent( const PluginEventType& evt )
 {
-	if( (evt != PluginsEvt_Loaded) && (evt != PluginsEvt_Unloaded) ) return;		// everything else we don't care about
+	if( (evt != CorePlugins_Loaded) && (evt != CorePlugins_Unloaded) ) return;		// everything else we don't care about
 
 	if( IsBeingDeleted() ) return;
 

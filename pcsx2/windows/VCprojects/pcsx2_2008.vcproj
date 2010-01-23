@@ -2560,6 +2560,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\AppSaveStates.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\ConsoleLogger.h"
 					>
 				</File>

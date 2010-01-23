@@ -68,9 +68,11 @@ static void WipeSettings()
 	// manually from explorer does work.  Can't think of a good work-around at the moment. --air
 
 	//wxRmdir( GetSettingsFolder().ToString() );
+	
+	g_Conf = new AppConfig();
 }
 
-class RestartEverything_WhenCoreThreadStops : public IEventListener_CoreThread,
+class RestartEverything_WhenCoreThreadStops : public EventListener_CoreThread,
 	public virtual IDeletableObject
 {
 public:
@@ -78,20 +80,21 @@ public:
 	virtual ~RestartEverything_WhenCoreThreadStops() throw() {}
 
 protected:
-	virtual void OnCoreStatus_Stopped()
+	virtual void CoreThread_OnStopped()
 	{
 		wxGetApp().DeleteObject( this );
 		WipeSettings();
 	}
 };
 
-class CancelCoreThread_WhenSaveStateDone : public IEventListener_CoreThread,
+class CancelCoreThread_WhenSaveStateDone :
+	public EventListener_CoreThread,
 	public IDeletableObject
 {
 public:
 	virtual ~CancelCoreThread_WhenSaveStateDone() throw() {}
 
-	void OnCoreStatus_Resumed()
+	void CoreThread_OnResumed()
 	{
 		wxGetApp().DeleteObject( this );
 		CoreThread.Cancel();
@@ -336,7 +339,8 @@ void MainEmuFrame::Menu_SuspendResume_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 {
-	//if( !SysHasValidState() ) return;
+	if( StateCopy_InvokeOnCopyComplete( new InvokeAction_MenuCommand(MenuId_Sys_Reset) ) ) return;
+
 	sApp.SysReset();
 	sApp.SysExecute();
 	//GetMenuBar()->Enable( MenuId_Sys_Reset, true );
@@ -344,7 +348,9 @@ void MainEmuFrame::Menu_SysReset_Click(wxCommandEvent &event)
 
 void MainEmuFrame::Menu_SysShutdown_Click(wxCommandEvent &event)
 {
-	if( !SysHasValidState() ) return;
+	if( !SysHasValidState() && g_plugins == NULL ) return;
+	if( StateCopy_InvokeOnCopyComplete( new InvokeAction_MenuCommand(MenuId_Sys_Shutdown) ) ) return;
+
 	sApp.SysReset();
 	GetMenuBar()->Enable( MenuId_Sys_Shutdown, false );
 }

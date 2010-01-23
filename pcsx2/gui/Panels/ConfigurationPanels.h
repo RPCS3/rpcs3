@@ -403,7 +403,7 @@ namespace Panels
 	//  PluginSelectorPanel
 	// --------------------------------------------------------------------------------------
 	class PluginSelectorPanel: public BaseSelectorPanel,
-		public IEventListener_Plugins
+		public EventListener_Plugins
 	{
 	protected:
 		// ----------------------------------------------------------------------------

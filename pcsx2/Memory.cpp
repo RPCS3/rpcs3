@@ -565,7 +565,7 @@ void memClearPageAddr(u32 vaddr)
 ///////////////////////////////////////////////////////////////////////////
 // PS2 Memory Init / Reset / Shutdown
 
-class mmap_PageFaultHandler : public IEventListener_PageFault
+class mmap_PageFaultHandler : public EventListener_PageFault
 {
 protected:
 	void OnPageFaultEvent( const PageFaultInfo& info, bool& handled );

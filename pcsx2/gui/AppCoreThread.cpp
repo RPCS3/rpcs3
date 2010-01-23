@@ -48,7 +48,6 @@ void AppCoreThread::Reset()
 
 void AppCoreThread::DoThreadDeadlocked()
 {
-	//wxGetApp().PostCommand(  );
 	wxGetApp().DoStuckThread( *this );
 }
 
@@ -94,7 +93,7 @@ void AppCoreThread::Resume()
 		// Resume failed for some reason, so update GUI statuses and post a message to
 		// try again on the resume.
 
-		wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Suspended );
+		wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Suspended );
 
 		if( (m_ExecMode != ExecMode_Closing) || (m_ExecMode != ExecMode_Pausing) )
 		{
@@ -121,7 +120,7 @@ void AppCoreThread::ChangeCdvdSource( CDVD_SourceType type )
 
 void AppCoreThread::DoCpuReset()
 {
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Reset );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Reset );
 	_parent::DoCpuReset();
 }
 
@@ -143,13 +142,13 @@ void AppCoreThread::OnResumeReady()
 void AppCoreThread::OnResumeInThread( bool isSuspended )
 {
 	_parent::OnResumeInThread( isSuspended );
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Resumed );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Resumed );
 }
 
 void AppCoreThread::OnSuspendInThread()
 {
 	_parent::OnSuspendInThread();
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Suspended );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Suspended );
 }
 
 // Called whenever the thread has terminated, for either regular or irregular reasons.
@@ -158,7 +157,7 @@ void AppCoreThread::OnSuspendInThread()
 // the new (lack of) thread status, so this posts a message to the App to do so.
 void AppCoreThread::OnCleanupInThread()
 {
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Stopped );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Stopped );
 	_parent::OnCleanupInThread();
 }
 
@@ -194,9 +193,30 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	_parent::ApplySettings( fixup );
 }
 
+void AppCoreThread::CpuInitializeMess()
+{
+	if( m_hasValidState ) return;
+
+	if( StateCopy_IsValid() )
+	{
+		// Automatic recovery system if a state exists in memory.  This is executed here
+		// in order to ensure the plugins are in the proper (loaded/opened) state.
+
+		SysClearExecutionCache();
+		StateCopy_ThawFromMem_Blocking();
+
+		m_hasValidState			= true;
+		m_resetVirtualMachine	= false;
+		return;
+	}
+	
+	_parent::CpuInitializeMess();
+}
+
+
 void AppCoreThread::ExecuteTaskInThread()
 {
-	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreStatus_Started );
+	wxGetApp().PostCommand( pxEvt_CoreThreadStatus, CoreThread_Started );
 	_parent::ExecuteTaskInThread();
 
 	// ----------------------------------------------------------------------------

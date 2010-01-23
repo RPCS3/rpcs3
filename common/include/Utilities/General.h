@@ -53,6 +53,13 @@ public:
 	bool IsReentrant() const { return Counter > 1; }
 };
 
+class IActionInvocation
+{
+public:
+	virtual ~IActionInvocation() throw() {}
+	virtual void InvokeAction()=0;
+};
+
 // --------------------------------------------------------------------------------------
 //  IDeletableObject
 // --------------------------------------------------------------------------------------

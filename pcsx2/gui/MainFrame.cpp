@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
+#include "AppSaveStates.h"
 #include "ConsoleLogger.h"
 #include "MSWstuff.h"
 
@@ -70,6 +71,8 @@ void MainEmuFrame::UpdateIsoSrcSelection()
 //
 void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 {
+	CoreThread.Suspend();
+
 	bool isClosing = false;
 
 	if( !evt.CanVeto() )
@@ -79,9 +82,19 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 	}
 	else
 	{
-		isClosing = wxGetApp().PrepForExit( evt.CanVeto() );
-		if( !isClosing ) evt.Veto( true );
+		// TODO : Add confirmation prior to exit here!
+		// Problem: Suspend is often slow because it needs to wait until the current EE frame
+		// has finished processing (if the GS or logging has incurred severe overhead this makes
+		// closing PCSX2 difficult).  A non-blocking suspend with modal dialog might suffice
+		// however. --air
+
+		if( StateCopy_InvokeOnSaveComplete( new InvokeAction_MenuCommand( MenuId_Exit ) ) ) return;
 	}
+
+	if( isClosing )
+		wxGetApp().PrepForExit();
+	else
+		evt.Veto( true );
 
 	sApp.OnMainFrameClosed();
 

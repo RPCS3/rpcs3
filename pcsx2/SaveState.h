@@ -15,7 +15,6 @@
 
 #pragma once
 
-// This shouldn't break Win compiles, but it does.
 #include "PS2Edefs.h"
 #include "System.h"
 
@@ -253,17 +252,3 @@ public:
 	bool IsFinished() const { return m_idx >= m_memory.GetSizeInBytes(); }
 };
 
-extern bool StateCopy_IsValid();
-
-extern void StateCopy_FreezeToMem();
-extern void StateCopy_FreezeToMem_Blocking();
-extern void StateCopy_ThawFromMem_Blocking();
-
-extern void StateCopy_SaveToFile( const wxString& file );
-extern void StateCopy_LoadFromFile( const wxString& file );
-extern void StateCopy_SaveToSlot( uint num );
-extern void StateCopy_LoadFromSlot( uint slot );
-extern void StateCopy_Clear();
-extern bool StateCopy_IsBusy();
-
-extern const SafeArray<u8>* StateCopy_GetBuffer();

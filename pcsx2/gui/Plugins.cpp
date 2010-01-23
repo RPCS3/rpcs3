@@ -54,29 +54,29 @@ public:
 
 	virtual ~AppPluginManager() throw()
 	{
-		sApp.PostPluginStatus( PluginsEvt_Unloaded );
+		sApp.PostPluginStatus( CorePlugins_Unloaded );
 	}
 
 	void Init()
 	{
 		SetSettingsFolder( GetSettingsFolder().ToString() );
 		_parent::Init();
-		sApp.PostPluginStatus( PluginsEvt_Init );
+		sApp.PostPluginStatus( CorePlugins_Init );
 	}
 	
 	void Shutdown()
 	{
 		_parent::Shutdown();
-		sApp.PostPluginStatus( PluginsEvt_Shutdown );
+		sApp.PostPluginStatus( CorePlugins_Shutdown );
 	}
 
 	void Close()
 	{
 		if( !NeedsClose() ) return;
 
-		sApp.PostPluginStatus( PluginsEvt_Closing );
+		sApp.PostPluginStatus( CorePlugins_Closing );
 		_parent::Close();
-		sApp.PostPluginStatus( PluginsEvt_Closed );
+		sApp.PostPluginStatus( CorePlugins_Closed );
 	}
 	
 	void Open()
@@ -85,9 +85,9 @@ public:
 
 		if( !NeedsOpen() ) return;
 
-		sApp.PostPluginStatus( PluginsEvt_Opening );
+		sApp.PostPluginStatus( CorePlugins_Opening );
 		_parent::Open();
-		sApp.PostPluginStatus( PluginsEvt_Opened );
+		sApp.PostPluginStatus( CorePlugins_Opened );
 	}
 
 	// Yay, this plugin is guaranteed to always be opened first and closed last.
@@ -319,7 +319,7 @@ void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 	
 	if( fn_tmp != NULL ) fn_tmp( evt );
 
-	PostPluginStatus( PluginsEvt_Loaded );
+	PostPluginStatus( CorePlugins_Loaded );
 }
 
 void Pcsx2App::CancelLoadingPlugins()

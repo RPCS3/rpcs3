@@ -269,19 +269,6 @@ void SysCoreThread::CpuInitializeMess()
 {
 	if( m_hasValidState ) return;
 
-	if( StateCopy_IsValid() )
-	{
-		// Automatic recovery system if a state exists in memory.  This is executed here
-		// in order to ensure the plugins are in the proper (loaded/opened) state.
-
-		SysClearExecutionCache();
-		StateCopy_ThawFromMem_Blocking();
-
-		m_hasValidState			= true;
-		m_resetVirtualMachine	= false;
-		return;
-	}
-
 	_reset_stuff_as_needed();
 
 	ScopedBool_ClearOnError sbcoe( m_hasValidState );

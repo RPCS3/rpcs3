@@ -510,7 +510,7 @@ public:
 	void DetectCpuAndUserMode();
 	void OpenConsoleLog();
 	void OpenMainFrame();
-	bool PrepForExit( bool canCancel );
+	void PrepForExit();
 	void CleanupRestartable();
 	void CleanupResources();
 	void WipeUserModeSettings();
@@ -635,6 +635,8 @@ protected:
 	virtual void DoCpuReset();
 
 	virtual void DoThreadDeadlocked();
+	
+	virtual void CpuInitializeMess();
 };
 
 DECLARE_APP(Pcsx2App)

@@ -215,9 +215,9 @@ public:
 	virtual void ChangeCdvdSource( CDVD_SourceType type );
 
 protected:
-	void CpuInitializeMess();
 	void _reset_stuff_as_needed();
 
+	virtual void CpuInitializeMess();
 	virtual void Start();
 	virtual void OnSuspendInThread();
 	virtual void OnPauseInThread() {}

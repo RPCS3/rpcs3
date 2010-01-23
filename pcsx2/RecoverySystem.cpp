@@ -19,8 +19,13 @@
 
 #include "App.h"
 #include "HostGui.h"
+#include "AppSaveStates.h"
+#include "Utilities/EventSource.inl"
 
 class _BaseStateThread;
+
+template EventSource<IEventListener_SaveStateThread>;
+static EventSource<IEventListener_SaveStateThread>		m_evtsrc_SaveState;
 
 // Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
 static SafeArray<u8> state_buffer;
@@ -29,6 +34,10 @@ _BaseStateThread* current_state_thread = NULL;
 
 // Simple lock boolean for the state buffer being in use by a thread.
 static NonblockingMutex state_buffer_lock;
+
+// This boolean tracks if a savestate is actively saving.  When a state is saving we
+// typically delay program termination to allow th state time to finish it's work.
+static bool state_is_saving = false;
 
 // This boolean is to keep the system from resuming emulation until the current state has completely
 // uploaded or downloaded itself.  It is only modified from the main thread, and should only be read
@@ -44,32 +53,8 @@ static bool StateCopy_ForceClear()
 	state_buffer.Dispose();
 }
 
-class EventListener_AppExiting : public IEventListener_AppStatus
-{
-protected:
-	PersistentThread&		m_thread;
-
-public:
-	EventListener_AppExiting( PersistentThread& thr )
-		: m_thread( thr )
-	{
-	}
-
-	virtual ~EventListener_AppExiting() throw() {}
-
-};
-
-enum
-{
-	StateThreadAction_None = 0,
-	StateThreadAction_Create,
-	StateThreadAction_Restore,
-	StateThreadAction_ZipToDisk,
-	StateThreadAction_UnzipFromDisk,
-};
-
 class _BaseStateThread : public PersistentThread,
-	public virtual IEventListener_AppStatus,
+	public virtual EventListener_AppStatus,
 	public virtual IDeletableObject
 {
 	typedef PersistentThread _parent;
@@ -93,6 +78,8 @@ public:
 		current_state_thread = NULL;
 		state_buffer_lock.Release();		// just in case;
 	}
+	
+	virtual bool IsFreezing() const=0;
 
 protected:
 	_BaseStateThread( const char* name, FnType_OnThreadComplete* onFinished )
@@ -121,10 +108,7 @@ protected:
 	void AppStatusEvent_OnExit()
 	{
 		Cancel();
-
-		Pcsx2App& myapp( wxGetApp() );
-		myapp.RemoveListener( *this );
-		myapp.DeleteObject( *this );
+		wxGetApp().DeleteObject( this );
 	}
 };
 
@@ -142,6 +126,8 @@ public:
 			throw Exception::RuntimeError( L"Cannot complete state freeze request; the virtual machine state is reset.", _("You'll need to start a new virtual machine before you can save its state.") );
 	}
 
+	bool IsFreezing() const { return true; }
+
 protected:
 	void OnStart()
 	{
@@ -157,7 +143,7 @@ protected:
 
 	void OnCleanupInThread()
 	{
-		SendFinishEvent( StateThreadAction_Create );
+		SendFinishEvent( SaveStateAction_CreateFinished );
 		_parent::OnCleanupInThread();
 	}
 };
@@ -186,6 +172,8 @@ public:
 	{
 		if( m_gzfp != NULL ) gzclose( m_gzfp );
 	}
+	
+	bool IsFreezing() const { return true; }	
 
 protected:
 	void OnStart()
@@ -208,13 +196,15 @@ protected:
 			if( gzwrite( m_gzfp, state_buffer.GetPtr(curidx), thisBlockSize ) < thisBlockSize )
 				throw Exception::BadStream( m_filename );
 			curidx += thisBlockSize;
-			Yield( 1 );
+			Yield( 10 );
 		} while( curidx < state_buffer.GetSizeInBytes() );
+		
+		Console.WriteLn( "State saved to disk without error." );
 	}
 	
 	void OnCleanupInThread()
 	{
-		SendFinishEvent( StateThreadAction_ZipToDisk );
+		SendFinishEvent( SaveStateAction_ZipToDiskFinished );
 		_parent::OnCleanupInThread();
 	}
 };
@@ -250,6 +240,8 @@ public:
 		if( m_gzfp != NULL ) gzclose( m_gzfp );
 	}
 
+	bool IsFreezing() const { return false; }
+
 protected:
 	void OnStart()
 	{
@@ -281,10 +273,11 @@ protected:
 
 	void OnCleanupInThread()
 	{
-		SendFinishEvent( StateThreadAction_UnzipFromDisk );
+		SendFinishEvent( SaveStateAction_UnzipFromDiskFinished );
 		_parent::OnCleanupInThread();
 	}
 };
+
 
 void Pcsx2App::OnFreezeThreadFinished( wxCommandEvent& evt )
 {
@@ -296,8 +289,13 @@ void Pcsx2App::OnFreezeThreadFinished( wxCommandEvent& evt )
 	{
 		ScopedPtr<PersistentThread> thr( (PersistentThread*)evt.GetClientData() );
 		if( !pxAssertDev( thr != NULL, "NULL thread handle on freeze finished?" ) ) return;
+
+		current_state_thread = NULL;
 		state_buffer_lock.Release();
 		--sys_resume_lock;
+
+		m_evtsrc_SaveState.Dispatch( (SaveStateActionType)evt.GetInt() );
+		
 		thr->RethrowException();
 	}
 	
@@ -314,7 +312,7 @@ static wxString zip_dest_filename;
 
 static void OnFinished_ZipToDisk( const wxCommandEvent& evt )
 {
-	if( !pxAssertDev( evt.GetInt() == StateThreadAction_Create, "Unexpected StateThreadAction value, aborting save." ) ) return;
+	if( !pxAssertDev( evt.GetInt() == SaveStateAction_CreateFinished, "Unexpected StateThreadAction value, aborting save." ) ) return;
 
 	if( zip_dest_filename.IsEmpty() )
 	{
@@ -328,10 +326,79 @@ static void OnFinished_ZipToDisk( const wxCommandEvent& evt )
 	CoreThread.Resume();
 }
 
+class InvokeAction_WhenSaveComplete :
+	public IEventListener_SaveStateThread,
+	public IDeletableObject
+{
+protected:
+	IActionInvocation*	m_action;
+
+public:
+	InvokeAction_WhenSaveComplete( IActionInvocation* action )
+	{
+		m_action = action;
+	}
+
+	virtual ~InvokeAction_WhenSaveComplete() throw() {}
+
+	void SaveStateAction_OnZipToDiskFinished()
+	{
+		if( m_action )
+		{
+			m_action->InvokeAction();
+			safe_delete( m_action );
+		}
+		wxGetApp().DeleteObject( this );
+	}
+};
+
+class InvokeAction_WhenStateCopyComplete : public InvokeAction_WhenSaveComplete
+{
+public:
+	InvokeAction_WhenStateCopyComplete( IActionInvocation* action )
+		: InvokeAction_WhenSaveComplete( action )
+	{
+	}
+
+	virtual ~InvokeAction_WhenStateCopyComplete() throw() {}
+
+	void SaveStateAction_OnCreateFinished()
+	{
+		SaveStateAction_OnZipToDiskFinished();
+	}
+};
 
 // =====================================================================================================
 //  StateCopy Public Interface
 // =====================================================================================================
+
+bool StateCopy_InvokeOnSaveComplete( IActionInvocation* sst )
+{
+	AffinityAssert_AllowFromMain();
+
+	if( current_state_thread == NULL || !current_state_thread->IsFreezing() )
+	{
+		delete sst;
+		return false;
+	}
+
+	m_evtsrc_SaveState.Add( new InvokeAction_WhenSaveComplete( sst ) );
+	return true;
+}
+
+bool StateCopy_InvokeOnCopyComplete( IActionInvocation* sst )
+{
+	AffinityAssert_AllowFromMain();
+
+	if( current_state_thread == NULL || !current_state_thread->IsFreezing() )
+	{
+		delete sst;
+		return false;
+	}
+
+	m_evtsrc_SaveState.Add( new InvokeAction_WhenStateCopyComplete( sst ) );
+	return true;
+}
 
 void StateCopy_SaveToFile( const wxString& file )
 {

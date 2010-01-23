@@ -54,7 +54,6 @@ public:
 
 extern StartupParams g_Startup;
 
-extern void States_Save( const wxString& file );
 extern bool States_isSlotUsed(int num);
 
 extern void States_FreezeCurrentSlot();

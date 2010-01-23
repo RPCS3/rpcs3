@@ -90,8 +90,8 @@ public:
 //  pxLogTextCtrl
 // --------------------------------------------------------------------------------------
 class pxLogTextCtrl : public wxTextCtrl,
-	public IEventListener_CoreThread,
-	public IEventListener_Plugins
+	public EventListener_CoreThread,
+	public EventListener_Plugins
 {
 protected:
 	//EventListenerHelper_CoreThread<pxLogTextCtrl>	m_listener_CoreThread;

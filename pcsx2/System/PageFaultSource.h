@@ -42,8 +42,7 @@ public:
 	typedef PageFaultInfo EvtParams;
 
 public:
-	IEventListener_PageFault();
-	virtual ~IEventListener_PageFault() throw();
+	virtual ~IEventListener_PageFault() throw() {}
 
 	virtual void DispatchEvent( const PageFaultInfo& evtinfo, bool& handled )
 	{
@@ -57,6 +56,13 @@ public:
 
 protected:	
 	virtual void OnPageFaultEvent( const PageFaultInfo& evtinfo, bool& handled ) {}
+};
+
+class EventListener_PageFault : public IEventListener_PageFault
+{
+public:
+	EventListener_PageFault();
+	virtual ~EventListener_PageFault() throw();
 };
 
 class SrcType_PageFault : public EventSource<IEventListener_PageFault>

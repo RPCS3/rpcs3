@@ -17,7 +17,7 @@
 #include "IniInterface.h"
 #include "MainFrame.h"
 #include "Plugins.h"
-#include "SaveState.h"
+#include "AppSaveStates.h"
 #include "ps2/BiosTools.h"
 
 #include "Dialogs/ModalPopups.h"
@@ -41,7 +41,6 @@ DEFINE_EVENT_TYPE( pxEvt_InvokeMethod );
 DEFINE_EVENT_TYPE( pxEvt_LogicalVsync );
 
 DEFINE_EVENT_TYPE( pxEvt_OpenModalDialog );
-//DEFINE_EVENT_TYPE( pxEvt_OpenDialog_StuckThread );
 
 bool					UseAdminMode = false;
 wxDirName				SettingsFolder;
@@ -276,14 +275,14 @@ void Pcsx2App::OnCoreThreadStatus( wxCommandEvent& evt )
 	
 	switch( status )
 	{
-		case CoreStatus_Started:
-		case CoreStatus_Reset:
-		case CoreStatus_Stopped:
+		case CoreThread_Started:
+		case CoreThread_Reset:
+		case CoreThread_Stopped:
 			FpsManager.Reset();
 		break;
 
-		case CoreStatus_Resumed:
-		case CoreStatus_Suspended:
+		case CoreThread_Resumed:
+		case CoreThread_Suspended:
 			FpsManager.Resume();
 		break;
 	}
@@ -538,55 +537,15 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 	}
 }
 
-class CancelCoreThreadWhenSaveStateDone : public IEventListener_CoreThread,
-	public IDeletableObject
-{
-public:
-	virtual ~CancelCoreThreadWhenSaveStateDone() throw() {}
-
-	void OnCoreStatus_Resumed()
-	{
-		Pcsx2App& myapp( wxGetApp() );
-		myapp.DeleteObject( this );
-		myapp.PostMenuAction( MenuId_Exit );
-	}
-};
-
 // Common exit handler which can be called from any event (though really it should
 // be called only from CloseWindow handlers since that's the more appropriate way
 // to handle cancelable window closures)
 //
 // returns true if the app can close, or false if the close event was canceled by
 // the glorious user, whomever (s)he-it might be.
-bool Pcsx2App::PrepForExit( bool canCancel )
+void Pcsx2App::PrepForExit()
 {
-	// If a savestate is saving, we should wait until it finishes.  Otherwise the user
-	// might lose data.
-
-	if( StateCopy_IsBusy() )
-	{
-		new CancelCoreThreadWhenSaveStateDone();
-		throw Exception::CancelEvent( "Savestate in progress, close event delayed until action is complete." );
-	}
-
 	CancelLoadingPlugins();
-
-	/*
-	if( canCancel )
-	{
-		// TODO: Confirm with the user?
-		// Problem: Suspend is often slow because it needs to wait until the current EE frame
-		// has finished processing (if the GS or logging has incurred severe overhead this makes
-		// closing PCSX2 difficult).  A non-blocking suspend with modal dialog might suffice
-		// however. --air
-		
-		bool resume = CoreThread.Suspend();
-		if( false )
-		{
-			if(resume) CoreThread.Resume();
-			return false;
-		}
-	}*/
 
 	DispatchEvent( AppStatus_Exiting );
 
@@ -594,8 +553,6 @@ bool Pcsx2App::PrepForExit( bool canCancel )
 	// do it here just in case (no harm anyway -- OnExit is the next logical step after
 	// CloseWindow returns true from the TopLevel window).
 	CleanupRestartable();
-
-	return true;
 }
 
 // This method generates debug assertions if the MainFrame handle is NULL (typically
@@ -968,8 +925,8 @@ void Pcsx2App::OnSysExecute( wxCommandEvent& evt )
 void Pcsx2App::SysReset()
 {
 	StateCopy_Clear();
-
 	CoreThread.Reset();
+	CoreThread.Cancel();
 	CoreThread.ReleaseResumeLock();
 	m_CorePlugins = NULL;
 }

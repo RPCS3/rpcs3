@@ -19,12 +19,12 @@
 
 enum CoreThreadStatus
 {
-	CoreStatus_Indeterminate,
-	CoreStatus_Started,
-	CoreStatus_Resumed,
-	CoreStatus_Suspended,
-	CoreStatus_Reset,
-	CoreStatus_Stopped,
+	CoreThread_Indeterminate,
+	CoreThread_Started,
+	CoreThread_Resumed,
+	CoreThread_Suspended,
+	CoreThread_Reset,
+	CoreThread_Stopped,
 };
 
 enum AppEventType
@@ -37,14 +37,14 @@ enum AppEventType
 
 enum PluginEventType
 {
-	PluginsEvt_Loaded,
-	PluginsEvt_Init,
-	PluginsEvt_Opening,		// dispatched prior to plugins being opened
-	PluginsEvt_Opened,		// dispatched after plugins are opened
-	PluginsEvt_Closing,		// dispatched prior to plugins being closed
-	PluginsEvt_Closed,		// dispatched after plugins are closed
-	PluginsEvt_Shutdown,
-	PluginsEvt_Unloaded,
+	CorePlugins_Loaded,
+	CorePlugins_Init,
+	CorePlugins_Opening,		// dispatched prior to plugins being opened
+	CorePlugins_Opened,		// dispatched after plugins are opened
+	CorePlugins_Closing,		// dispatched prior to plugins being closed
+	CorePlugins_Closed,		// dispatched after plugins are closed
+	CorePlugins_Shutdown,
+	CorePlugins_Unloaded,
 };
 
 struct AppEventInfo
@@ -78,29 +78,23 @@ public:
 	typedef CoreThreadStatus EvtParams;
 
 public:
-	IEventListener_CoreThread();
-	virtual ~IEventListener_CoreThread() throw();
+	virtual ~IEventListener_CoreThread() throw() {}
 
-	virtual void DispatchEvent( const CoreThreadStatus& status )
-	{
-		switch( status )
-		{
-			case CoreStatus_Indeterminate:	OnCoreStatus_Indeterminate();	break;
-			case CoreStatus_Started:		OnCoreStatus_Started();			break;
-			case CoreStatus_Resumed:		OnCoreStatus_Resumed();			break;
-			case CoreStatus_Suspended:		OnCoreStatus_Suspended();		break;
-			case CoreStatus_Reset:			OnCoreStatus_Reset();			break;
-			case CoreStatus_Stopped:		OnCoreStatus_Stopped();			break;
-		}
-	}
+	virtual void DispatchEvent( const CoreThreadStatus& status );
 
 protected:
-	virtual void OnCoreStatus_Indeterminate() {}
-	virtual void OnCoreStatus_Started() {}
-	virtual void OnCoreStatus_Resumed() {}
-	virtual void OnCoreStatus_Suspended() {}
-	virtual void OnCoreStatus_Reset() {}
-	virtual void OnCoreStatus_Stopped() {}
+	virtual void CoreThread_OnStarted() {}
+	virtual void CoreThread_OnResumed() {}
+	virtual void CoreThread_OnSuspended() {}
+	virtual void CoreThread_OnReset() {}
+	virtual void CoreThread_OnStopped() {}
+};
+
+class EventListener_CoreThread : public IEventListener_CoreThread
+{
+public:
+	EventListener_CoreThread();
+	virtual ~EventListener_CoreThread() throw();
 };
 
 // --------------------------------------------------------------------------------------
@@ -112,34 +106,26 @@ public:
 	typedef PluginEventType EvtParams;
 
 public:
-	IEventListener_Plugins();
-	virtual ~IEventListener_Plugins() throw();
+	virtual ~IEventListener_Plugins() throw() {}
 
-	virtual void DispatchEvent( const PluginEventType& pevt )
-	{
-		switch( pevt )
-		{
-			case PluginsEvt_Loaded:		OnPluginsEvt_Loaded();		break;
-			case PluginsEvt_Init:		OnPluginsEvt_Init();		break;
-			case PluginsEvt_Opening:	OnPluginsEvt_Opening();		break;
-			case PluginsEvt_Opened:		OnPluginsEvt_Opened();		break;
-			case PluginsEvt_Closing:	OnPluginsEvt_Closing();		break;
-			case PluginsEvt_Closed:		OnPluginsEvt_Closed();		break;
-			case PluginsEvt_Shutdown:	OnPluginsEvt_Shutdown();	break;
-			case PluginsEvt_Unloaded:	OnPluginsEvt_Unloaded();	break;
-		}
-	}
+	virtual void DispatchEvent( const PluginEventType& pevt );
 
 protected:
-	virtual void OnPluginsEvt_Loaded() {}
-	virtual void OnPluginsEvt_Init() {}
-	virtual void OnPluginsEvt_Opening() {}		// dispatched prior to plugins being opened
-	virtual void OnPluginsEvt_Opened() {}		// dispatched after plugins are opened
-	virtual void OnPluginsEvt_Closing() {}		// dispatched prior to plugins being closed
-	virtual void OnPluginsEvt_Closed() {}		// dispatched after plugins are closed
-	virtual void OnPluginsEvt_Shutdown() {}
-	virtual void OnPluginsEvt_Unloaded() {}
+	virtual void CorePlugins_OnLoaded() {}
+	virtual void CorePlugins_OnInit() {}
+	virtual void CorePlugins_OnOpening() {}		// dispatched prior to plugins being opened
+	virtual void CorePlugins_OnOpened() {}		// dispatched after plugins are opened
+	virtual void CorePlugins_OnClosing() {}		// dispatched prior to plugins being closed
+	virtual void CorePlugins_OnClosed() {}		// dispatched after plugins are closed
+	virtual void CorePlugins_OnShutdown() {}
+	virtual void CorePlugins_OnUnloaded() {}
+};
 
+class EventListener_Plugins : public IEventListener_Plugins
+{
+public:
+	EventListener_Plugins();
+	virtual ~EventListener_Plugins() throw();
 };
 
 // --------------------------------------------------------------------------------------
@@ -151,8 +137,7 @@ public:
 	typedef AppEventInfo EvtParams;
 
 public:
-	IEventListener_AppStatus();
-	virtual ~IEventListener_AppStatus() throw();
+	virtual ~IEventListener_AppStatus() throw() {}
 
 	virtual void DispatchEvent( const AppEventInfo& evtinfo );
 
@@ -160,6 +145,13 @@ protected:
 	virtual void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) {}
 	virtual void AppStatusEvent_OnSettingsApplied() {}
 	virtual void AppStatusEvent_OnExit() {}
+};
+
+class EventListener_AppStatus : public IEventListener_AppStatus
+{
+public:
+	EventListener_AppStatus();
+	virtual ~EventListener_AppStatus() throw();
 };
 
 // --------------------------------------------------------------------------------------
@@ -172,7 +164,7 @@ protected:
 //
 
 template< typename TypeToDispatchTo >
-class EventListenerHelper_CoreThread : public IEventListener_CoreThread
+class EventListenerHelper_CoreThread : public EventListener_CoreThread
 {
 public:
 	TypeToDispatchTo&	Owner;
@@ -190,16 +182,16 @@ public:
 	virtual ~EventListenerHelper_CoreThread() throw() {}
 
 protected:
-	void OnCoreStatus_Indeterminate()	{ Owner.OnCoreStatus_Indeterminate(); }
-	void OnCoreStatus_Started()			{ Owner.OnCoreStatus_Started(); }
-	void OnCoreStatus_Resumed()			{ Owner.OnCoreStatus_Resumed(); }
-	void OnCoreStatus_Suspended()		{ Owner.OnCoreStatus_Suspended(); }
-	void OnCoreStatus_Reset()			{ Owner.OnCoreStatus_Reset(); }
-	void OnCoreStatus_Stopped()			{ Owner.OnCoreStatus_Stopped(); }
+	void OnCoreThread_Indeterminate()	{ Owner.OnCoreThread_Indeterminate(); }
+	void CoreThread_OnStarted()			{ Owner.OnCoreThread_Started(); }
+	void CoreThread_OnResumed()			{ Owner.OnCoreThread_Resumed(); }
+	void CoreThread_OnSuspended()		{ Owner.OnCoreThread_Suspended(); }
+	void CoreThread_OnReset()			{ Owner.OnCoreThread_Reset(); }
+	void CoreThread_OnStopped()			{ Owner.OnCoreThread_Stopped(); }
 };
 
 template< typename TypeToDispatchTo >
-class EventListenerHelper_Plugins : public IEventListener_Plugins
+class EventListenerHelper_Plugins : public EventListener_Plugins
 {
 public:
 	TypeToDispatchTo&	Owner;
@@ -217,18 +209,18 @@ public:
 	virtual ~EventListenerHelper_Plugins() throw() {}
 
 protected:
-	void OnPluginsEvt_Loaded()		{ Owner.OnPluginsEvt_Loaded(); }
-	void OnPluginsEvt_Init()		{ Owner.OnPluginsEvt_Init(); }
-	void OnPluginsEvt_Opening()		{ Owner.OnPluginsEvt_Opening(); }
-	void OnPluginsEvt_Opened()		{ Owner.OnPluginsEvt_Opened(); }
-	void OnPluginsEvt_Closing()		{ Owner.OnPluginsEvt_Closing(); }
-	void OnPluginsEvt_Closed()		{ Owner.OnPluginsEvt_Closed(); }
-	void OnPluginsEvt_Shutdown()	{ Owner.OnPluginsEvt_Shutdown(); }
-	void OnPluginsEvt_Unloaded()	{ Owner.OnPluginsEvt_Unloaded(); }
+	void CorePlugins_OnLoaded()		{ Owner.OnCorePlugins_Loaded(); }
+	void CorePlugins_OnInit()		{ Owner.OnCorePlugins_Init(); }
+	void CorePlugins_OnOpening()		{ Owner.OnCorePlugins_Opening(); }
+	void CorePlugins_OnOpened()		{ Owner.OnCorePlugins_Opened(); }
+	void CorePlugins_OnClosing()		{ Owner.OnCorePlugins_Closing(); }
+	void CorePlugins_OnClosed()		{ Owner.OnCorePlugins_Closed(); }
+	void CorePlugins_OnShutdown()	{ Owner.OnCorePlugins_Shutdown(); }
+	void CorePlugins_OnUnloaded()	{ Owner.OnCorePlugins_Unloaded(); }
 };
 
 template< typename TypeToDispatchTo >
-class EventListenerHelper_AppStatus : public IEventListener_AppStatus
+class EventListenerHelper_AppStatus : public EventListener_AppStatus
 {
 public:
 	TypeToDispatchTo&	Owner;

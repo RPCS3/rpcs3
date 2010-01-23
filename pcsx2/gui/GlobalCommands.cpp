@@ -16,7 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "HostGui.h"
-#include "SaveState.h"
+#include "AppSaveStates.h"
 #include "GS.h"
 
 #include "Dump.h"

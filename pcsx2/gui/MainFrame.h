@@ -20,6 +20,7 @@
 #include <wx/docview.h>
 
 #include "App.h"
+#include "AppSaveStates.h"
 
 enum LimiterModeType
 {
@@ -33,7 +34,7 @@ extern LimiterModeType g_LimiterMode;
 // --------------------------------------------------------------------------------------
 //  GSPanel
 // --------------------------------------------------------------------------------------
-class GSPanel : public wxWindow, public IEventListener_AppStatus
+class GSPanel : public wxWindow, public EventListener_AppStatus
 {
 	typedef wxWindow _parent;
 
@@ -71,7 +72,7 @@ protected:
 // --------------------------------------------------------------------------------------
 //  GSFrame
 // --------------------------------------------------------------------------------------
-class GSFrame : public wxFrame, public IEventListener_AppStatus
+class GSFrame : public wxFrame, public EventListener_AppStatus
 {
 	typedef wxFrame _parent;
 
@@ -153,13 +154,30 @@ public:
 	operator const wxMenu*() const { return &MyMenu; }
 };
 
+class InvokeAction_MenuCommand : public IActionInvocation
+{
+protected:
+	MenuIdentifiers		m_menu_cmd;
+
+public:
+	InvokeAction_MenuCommand( MenuIdentifiers menu_command )
+	{
+		m_menu_cmd = menu_command;
+	}
+
+	virtual void InvokeAction()
+	{
+		wxGetApp().PostMenuAction( m_menu_cmd );
+	}
+};
+
 // --------------------------------------------------------------------------------------
 //  MainEmuFrame
 // --------------------------------------------------------------------------------------
 class MainEmuFrame : public wxFrame,
-	public IEventListener_Plugins,
-	public IEventListener_CoreThread,
-	public IEventListener_AppStatus
+	public EventListener_Plugins,
+	public EventListener_CoreThread,
+	public EventListener_AppStatus
 {
 protected:
 // 	EventListenerHelper_Plugins<MainEmuFrame>		m_listener_plugins;

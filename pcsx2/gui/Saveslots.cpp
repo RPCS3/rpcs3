@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
+#include "AppSaveStates.h"
 
 #include "Common.h"
 #include "HostGui.h"
@@ -23,12 +24,6 @@
 #include "Elfheader.h"
 
 StartupParams g_Startup;
-
-// Save state save-to-file (or slot) helpers.
-void States_Save( const wxString& file )
-{
-	StateCopy_SaveToFile( file );
-}
 
 // --------------------------------------------------------------------------------------
 //  Saveslot Section

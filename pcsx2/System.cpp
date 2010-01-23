@@ -26,12 +26,12 @@ template class EventSource< IEventListener_PageFault >;
 
 SrcType_PageFault Source_PageFault;
 
-IEventListener_PageFault::IEventListener_PageFault()
+EventListener_PageFault::EventListener_PageFault()
 {
 	Source_PageFault.Add( *this );
 }
 
-IEventListener_PageFault::~IEventListener_PageFault() throw()
+EventListener_PageFault::~EventListener_PageFault() throw()
 {
 	Source_PageFault.Remove( *this );
 }

@@ -19,7 +19,7 @@
 //  RecentIsoManager
 // --------------------------------------------------------------------------------------
 class RecentIsoManager : public wxEvtHandler,
-	public IEventListener_AppStatus
+	public EventListener_AppStatus
 {
 protected:
 	struct RecentItem

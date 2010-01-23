@@ -28,32 +28,63 @@ AppSettingsEventInfo::AppSettingsEventInfo( IniInterface& ini )
 {
 }
 
-IEventListener_CoreThread::IEventListener_CoreThread()
+EventListener_CoreThread::EventListener_CoreThread()
 {
 	wxGetApp().AddListener( this );
 }
 
-IEventListener_CoreThread::~IEventListener_CoreThread() throw()
+EventListener_CoreThread::~EventListener_CoreThread() throw()
 {
 	wxGetApp().RemoveListener( this );
 }
 
-IEventListener_Plugins::IEventListener_Plugins()
+void IEventListener_CoreThread::DispatchEvent( const CoreThreadStatus& status )
+{
+	switch( status )
+	{
+		case CoreThread_Started:	CoreThread_OnStarted();			break;
+		case CoreThread_Resumed:	CoreThread_OnResumed();			break;
+		case CoreThread_Suspended:	CoreThread_OnSuspended();		break;
+		case CoreThread_Reset:		CoreThread_OnReset();			break;
+		case CoreThread_Stopped:	CoreThread_OnStopped();			break;
+		
+		jNO_DEFAULT;
+	}
+}
+
+EventListener_Plugins::EventListener_Plugins()
 {
 	wxGetApp().AddListener( this );
 }
 
-IEventListener_Plugins::~IEventListener_Plugins() throw()
+EventListener_Plugins::~EventListener_Plugins() throw()
 {
 	wxGetApp().RemoveListener( this );
 }
 
-IEventListener_AppStatus::IEventListener_AppStatus()
+void IEventListener_Plugins::DispatchEvent( const PluginEventType& pevt )
+{
+	switch( pevt )
+	{
+		case CorePlugins_Loaded:		CorePlugins_OnLoaded();		break;
+		case CorePlugins_Init:		CorePlugins_OnInit();		break;
+		case CorePlugins_Opening:	CorePlugins_OnOpening();	break;
+		case CorePlugins_Opened:		CorePlugins_OnOpened();		break;
+		case CorePlugins_Closing:	CorePlugins_OnClosing();	break;
+		case CorePlugins_Closed:		CorePlugins_OnClosed();		break;
+		case CorePlugins_Shutdown:	CorePlugins_OnShutdown();	break;
+		case CorePlugins_Unloaded:	CorePlugins_OnUnloaded();	break;
+		
+		jNO_DEFAULT;
+	}
+}
+
+EventListener_AppStatus::EventListener_AppStatus()
 {
 	wxGetApp().AddListener( this );
 }
 
-IEventListener_AppStatus::~IEventListener_AppStatus() throw()
+EventListener_AppStatus::~EventListener_AppStatus() throw()
 {
 	wxGetApp().RemoveListener( this );
 }
@@ -68,6 +99,6 @@ void IEventListener_AppStatus::DispatchEvent( const AppEventInfo& evtinfo )
 		break;
 
 		case AppStatus_SettingsApplied:	AppStatusEvent_OnSettingsApplied();	break;
-		case AppStatus_Exiting:			AppStatusEvent_OnExit();				break;
+		case AppStatus_Exiting:			AppStatusEvent_OnExit();			break;
 	}
 }
