@@ -63,9 +63,9 @@ struct sifFifo
 struct _sif
 {
 	sifFifo fifo;
-	s32 chain;
+	s32 chain; // Not used.
 	s32 end;
-	s32 tagMode;
+	s32 tagMode; // No longer used.
 	s32 counter;
 	struct sifData data;
 };

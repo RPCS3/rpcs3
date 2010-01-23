@@ -55,24 +55,30 @@ void sifInit()
 //
 // This is, of course, simplified, and more study of these functions is needed.
 
-__forceinline void SIF0EEDma(int &cycles, int &psxCycles, bool &done)
+__forceinline void SIF0EEDma(int &cycles, bool &done)
 {
+#ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STS == STS_SIF0)
 	{
 		SIF_LOG("SIF0 stall control");
 	}
+#endif
 	
 	if (sif0dma->qwc <= 0)
 	{
+		tDMA_TAG sTag(sif0dma->chcr._u32);
+		
 		// Stop if TIE & the IRQ are set, or at the end.
 		// Remind me to look closer at this. (the IRQ tag of a chcr?)
-		if ((sif0dma->chcr.TIE && DMA_TAG(sif0dma->chcr._u32).IRQ) || sif0.end)
+		if ((sif0dma->chcr.TIE && sTag.IRQ) || sif0.end)
 		{
+#ifdef PCSX2_DEVBUILD
 			if (sif0.end)
 				SIF_LOG(" EE SIF end"); 
 			else
 				SIF_LOG(" EE SIF interrupt");
-				
+#endif
+
 			eesifbusy[0] = false;
 			done = true;
 
@@ -81,16 +87,18 @@ __forceinline void SIF0EEDma(int &cycles, int &psxCycles, bool &done)
 		else if (sif0.fifo.size >= 4) // Read a tag
 		{
 			static __aligned16 u32 tag[4];
-					
+			
 			sif0.fifo.read((u32*)&tag[0], 4); // Tag
 			SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
 			sif0dma->unsafeTransfer(((tDMA_TAG*)(tag)));
 			sif0dma->madr = tag[1];
+			tDMA_TAG pTag(tag[0]);
 
-			SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", sif0dma->madr, sif0dma->qwc, (tag[0] >> 28)&3, (tag[0] >> 31)&1, tag[1], tag[0]);
+			SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", 
+				sif0dma->madr, sif0dma->qwc, pTag.ID, pTag.IRQ, tag[1], tag[0]);
 					
-			switch (DMA_TAG(tag[0]).ID)
+			switch (pTag.ID)
 			{
 				case TAG_REFE:
 					sif0.end = 1;
@@ -134,12 +142,14 @@ __forceinline void SIF0EEDma(int &cycles, int &psxCycles, bool &done)
 	}
 }
 
-__forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
+__forceinline void SIF1EEDma(int &cycles, bool &done)
 {
+#ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_SIF1)
 	{
 		SIF_LOG("SIF1 stall control"); // STD == fromSIF1
 	}
+#endif
 
 	// If there's no more to transfer.
 	if (sif1dma->qwc <= 0)
@@ -241,19 +251,20 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 	}
 }
 
-__forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
+// Note: Test any changes in this function against Grandia III.
+__forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 {
 	if (sif0.counter <= 0) // If there's no more to transfer
 	{
-		// What this is supposed to do is stop DMA if it is the end of a chain, an interrupt is called, or in normal mode.
-		// It currently doesn't check for normal mode.
-		// (Further note: I'm not sure that it needs to check for normal mode.)
+		tDMA_TAG sTag(sif0.data.data);
+		
+		// Stop DMA if it is the end of a chain or if irq is set.
+		// Theoretically also if in normal mode, but I'm not sure that is neccessary.
 		//
-		// The old code for this was:
-		// if (sif0.sifData.data & 0xC0000000) 
-		// which checks if the tag type is refe or end, or if the irq flag is set.
-		// If the tag is refe or end, sif0.end gets set, so I'm replacing it with something easier to read: --arcum42
-		if (/*(sif0dma->chcr.MOD == NORMAL_MODE) ||*/ sif0.end || DMA_TAG(sif0.data.data).IRQ)
+		// This used to check if the tag in sif0.sifData.data was refe or end, and the irq.
+		// sif0.end gets set if that's true, though, so we check that instead.
+		// --arcum42
+		if (sif0.end || sTag.IRQ /* || (sTag.ID & 4) */)
 		{
 			SIF_LOG(" IOP SIF Stopped");
 
@@ -279,13 +290,15 @@ __forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
 			sif0.counter = sif0.data.words & 0xFFFFFF;
 
 			SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.data.words, sif0.data.data);
-					
+
+#ifdef PCSX2_DEVBUILD
 			u32 tagId = DMA_TAG(sif0.data.data).ID;
 			if ((tagId == TAG_REFE) || (tagId == TAG_END))
 				SIF_LOG("   END");
 			else
 				SIF_LOG("   CNT %08X, %08X", sif0.data.data, sif0.data.words);
-					
+#endif
+
 			done = false;
 		}
 	}
@@ -305,21 +318,24 @@ __forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
 }
 
 
-__forceinline void SIF1IOPDma(int &cycles, int &psxCycles, bool &done)
+__forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 {
 	if (sif1.counter <= 0)
 	{
+		tDMA_TAG sTag(sif1.data.data);
 		// Stop on tag IRQ or END
 		
-		if ((sif1.tagMode & 0x80) || (sif1.tagMode & 0x40))
+		//if ((sif1.tagMode & 0x80) || (sif1.tagMode & 0x40))
+		if (/*sif1.end ||*/ sTag.IRQ  || (sTag.ID & 4))
 		{
-			if (sif1.tagMode & 0x40)
+#ifdef PCSX2_DEVBUILD
+			if (sTag.ID & 4)
 				SIF_LOG(" IOP SIF end");
 			else
 				SIF_LOG(" IOP SIF interrupt");
-				
+#endif
 			// Stop & signal interrupts on IOP
-			sif1.tagMode = 0;
+			sif1.data.data = 0;
 			iopsifbusy[1] = false;
 			done = true;
 
@@ -339,7 +355,6 @@ __forceinline void SIF1IOPDma(int &cycles, int &psxCycles, bool &done)
 				
 			HW_DMA10_MADR = sif1.data.data & 0xffffff;
 			sif1.counter = sif1.data.words;
-			sif1.tagMode = (sif1.data.data >> 24) & 0xFF;
 			done = false;
 		}
 	}
@@ -371,13 +386,13 @@ __forceinline void SIF0Dma()
 		if (iopsifbusy[0])
 		{
 			// If EE SIF0 is enabled.
-			SIF0IOPDma(cycles, psxCycles, done);
+			SIF0IOPDma(psxCycles, done);
 		}
 
 		if (eesifbusy[0])
 		{
 			// If EE SIF enabled and there's something to transfer.
-			SIF0EEDma(cycles, psxCycles, done);
+			SIF0EEDma(cycles, done);
 		}
 	}
 	while (!done);
@@ -392,13 +407,13 @@ __forceinline void SIF1Dma()
 		if (eesifbusy[1])
 		{
 			// If EE SIF1 is enabled.
-			SIF1EEDma(cycles, psxCycles, done);
+			SIF1EEDma(cycles, done);
 		}
 
 		if (iopsifbusy[1])
 		{
 			// If IOP SIF enabled and there's something to transfer.
-			SIF1IOPDma(cycles, psxCycles, done);
+			SIF1IOPDma(psxCycles, done);
 		}
 	}
 	while (!done);
