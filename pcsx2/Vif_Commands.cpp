@@ -21,10 +21,11 @@
 #include "newVif.h"
 #include "VUmicro.h"
 
-#define _vifT		template <int idx>
-#define  vifX		(idx ? vif1 : vif0)
-#define  vifXRegs	(idx ? (vif1Regs) : (vif0Regs))
-#define  vif1Only()	{ if (!idx) { vifCMD_Null<idx>(); return; } }
+#define _vifT		 template <int idx>
+#define  vifX		 (idx ? vif1 : vif0)
+#define  vifXRegs	 (idx ? (vif1Regs) : (vif0Regs))
+#define  vif1Only()	 { if (!idx) { vifCMD_Null<idx>(); return;	    } }
+#define  vif1Only_() { if (!idx) { return vifTrans_Null<idx>(NULL); } }
 
 _vifT void vifCMD_Null();
 
@@ -87,17 +88,223 @@ void Vif1MskPath3() {
 }
 
 //------------------------------------------------------------------
+// Vif0/Vif1 Data Transfer Commands
+//------------------------------------------------------------------
+
+_vifT int __fastcall vifTrans_Null(u32 *data)
+{
+	Console.WriteLn("VIF%d Shouldn't go here CMD = %x", idx, vifXRegs->code);
+	vifX.cmd = 0;
+	return 0;
+}
+
+_vifT int __fastcall vifTrans_STMask(u32 *data)
+{
+	vifXRegs->mask = data[0];
+	VIF_LOG("STMASK == %x", vifXRegs->mask);
+
+	vifX.tag.size = 0;
+	vifX.cmd = 0;
+	return 1;
+}
+
+_vifT int __fastcall vifTrans_STRow(u32 *data)
+{
+	int ret;
+	u32* rows  = idx ? g_vifmask.Row1 : g_vifmask.Row0;
+	u32* pmem  = &vifXRegs->r0 + (vifX.tag.addr << 2);
+	u32* pmem2 = rows		   +  vifX.tag.addr;
+
+	ret = min(4 - vifX.tag.addr,  vifX.vifpacketsize);
+	pxAssume(vifX.tag.addr < 4);
+	pxAssume(ret > 0);
+
+	switch (ret) {
+		case 4:
+			pmem[12] = data[3];
+			pmem2[3] = data[3];
+		case 3:
+			pmem[8]  = data[2];
+			pmem2[2] = data[2];
+		case 2:
+			pmem[4]  = data[1];
+			pmem2[1] = data[1];
+		case 1:
+			pmem[0]  = data[0];
+			pmem2[0] = data[0];
+			break;
+		jNO_DEFAULT
+	}
+
+	vifX.tag.addr += ret;
+	vifX.tag.size -= ret;
+	if (!vifX.tag.size) vifX.cmd = 0;
+
+	return ret;
+}
+
+_vifT int __fastcall vifTrans_STCol(u32 *data)
+{
+	int ret;
+	u32* cols  = idx ? g_vifmask.Col1 : g_vifmask.Col0;
+	u32* pmem  = &vifXRegs->c0 + (vifX.tag.addr << 2);
+	u32* pmem2 = cols		   +  vifX.tag.addr;
+	ret = min(4 - vifX.tag.addr,  vifX.vifpacketsize);
+
+	switch (ret) {
+		case 4:
+			pmem[12] = data[3];
+			pmem2[3] = data[3];
+		case 3:
+			pmem[8]  = data[2];
+			pmem2[2] = data[2];
+		case 2:
+			pmem[4]  = data[1];
+			pmem2[1] = data[1];
+		case 1:
+			pmem[0]  = data[0];
+			pmem2[0] = data[0];
+			break;
+		jNO_DEFAULT
+	}
+
+	vifX.tag.addr += ret;
+	vifX.tag.size -= ret;
+	if (!vifX.tag.size) vifX.cmd = 0;
+	return ret;
+}
+
+_f void _vifTrans_MPG(int idx, u32 addr, u32 *data, int size) 
+{
+	VURegs& VUx = idx ? VU1 : VU0;
+	pxAssume(VUx.Micro > 0);
+
+	if (memcmp(VUx.Micro + addr, data, size << 2)) {
+		if (!idx)  CpuVU0->Clear(addr, size << 2); // Clear before writing!
+		else	   CpuVU1->Clear(addr, size << 2); // Clear before writing!
+		memcpy_fast(VUx.Micro + addr, data, size << 2);
+	}
+}
+
+_vifT int __fastcall vifTrans_MPG(u32 *data)
+{
+	if (vifX.vifpacketsize < vifX.tag.size) {
+		if((vifX.tag.addr +  vifX.vifpacketsize) > (idx ? 0x4000 : 0x1000)) {
+			DevCon.Warning("Vif%d MPG Split Overflow", idx);
+		}
+		_vifTrans_MPG(idx,   vifX.tag.addr, data, vifX.vifpacketsize);
+		vifX.tag.addr   +=   vifX.vifpacketsize << 2;
+		vifX.tag.size   -=   vifX.vifpacketsize;
+		return vifX.vifpacketsize;
+	}
+	else {
+		int ret;
+		if((vifX.tag.addr + vifX.tag.size) > (idx ? 0x4000 : 0x1000)) {
+			DevCon.Warning("Vif%d MPG Split Overflow", idx);
+		}
+		_vifTrans_MPG(idx,  vifX.tag.addr, data, vifX.tag.size);
+		ret = vifX.tag.size;
+		vifX.tag.size = 0;
+		vifX.cmd = 0;
+		return ret;
+	}
+}
+
+_vifT int __fastcall vifTrans_Unpack(u32 *data)
+{
+	return nVifUnpack(idx, (u8*)data);
+}
+
+// Dummy GIF-TAG Packet to Guarantee Count = 1
+extern __aligned16 u32 nloop0_packet[4];
+static __aligned16 u32 splittransfer[4];
+static u32 splitptr = 0;
+
+_vifT int __fastcall vifTrans_DirectHL(u32 *data)
+{
+	vif1Only_();
+	int ret = 0;
+
+	if ((vif1.cmd & 0x7f) == 0x51) {
+		if (gif->chcr.STR && (!vif1Regs->mskpath3 && (Path3progress == IMAGE_MODE))) {
+			vif1Regs->stat.VGW = true; // PATH3 is in image mode, so wait for end of transfer
+			return 0;
+		}
+	}
+
+	gifRegs->stat.APATH |= GIF_APATH2;
+	gifRegs->stat.OPH = true;
+	
+	if (splitptr > 0) { // Leftover data from the last packet, filling the rest and sending to the GS
+
+		if ((splitptr < 4) && (vif1.vifpacketsize >= (4 - splitptr))) {
+			while (splitptr < 4) {
+				splittransfer[splitptr++] = (u32)data++;
+				ret++;
+				vif1.tag.size--;
+			}
+		}
+
+        Registers::Freeze();
+		// copy 16 bytes the fast way:
+		const u64* src = (u64*)splittransfer[0];
+		GetMTGS().PrepDataPacket(GIF_PATH_2, nloop0_packet, 1);
+		u64* dst = (u64*)GetMTGS().GetDataPacketPtr();
+		dst[0] = src[0];
+		dst[1] = src[1];
+
+		GetMTGS().SendDataPacket();
+        Registers::Thaw();
+
+		if (vif1.tag.size == 0) vif1.cmd = 0;
+		splitptr = 0;
+		return ret;
+	}
+
+	if (vif1.vifpacketsize < vif1.tag.size) {
+		if (vif1.vifpacketsize < 4 && splitptr != 4) {
+			ret = vif1.vifpacketsize;
+			while (ret > 0) { // Not a full QW left in the buffer, saving left over data
+				splittransfer[splitptr++] = (u32)data++;
+				vif1.tag.size--;
+				ret--;
+			}
+			return vif1.vifpacketsize;
+		}
+		vif1.tag.size -= vif1.vifpacketsize;
+		ret = vif1.vifpacketsize;
+	}
+	else {
+		gifRegs->stat.clear_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
+		ret = vif1.tag.size;
+		vif1.tag.size = 0;
+		vif1.cmd = 0;
+	}
+
+	// ToDo: ret is guaranteed to be qword aligned ?
+	Registers::Freeze();
+
+	// Round ret up, just in case it's not 128bit aligned.
+	const uint count = GetMTGS().PrepDataPacket(GIF_PATH_2, data, (ret + 3) >> 2);
+	memcpy_fast(GetMTGS().GetDataPacketPtr(), data, count << 4);
+	GetMTGS().SendDataPacket();
+
+	Registers::Thaw();
+	return ret;
+}
+
+//------------------------------------------------------------------
 // Vif0/Vif1 Commands (VifCodes)
 //------------------------------------------------------------------
 
-_vifT void vifCMD_Base()  // BASE
+_vifT void vifCMD_Base()
 {
 	vif1Only();
 	vif1Regs->base = vif1Regs->code & 0x3ff;
 	vif1.cmd &= ~0x7f;
 }
 
-_vifT void vifCMD_DirectHL()  // DIRECT/HL
+_vifT void vifCMD_DirectHL()
 {
 	vif1Only();
 	int vifImm = (u16)vif1Regs->code;
@@ -192,7 +399,7 @@ _vifT void vifCMD_Null() // invalid opcode
 	// if ME1, then force the vif to interrupt
 	if (!(vifXRegs->err.ME1)) //Ignore vifcode and tag mismatch error
 	{
-		Console.WriteLn("UNKNOWN VifCmd: %x", vifX.cmd);
+		Console.WriteLn("Vif%d: Unknown VifCmd! [%x]", idx, vifX.cmd);
 		vifXRegs->stat.ER1 = true;
 		vifX.irq++;
 	}
@@ -232,6 +439,48 @@ _vifT void vifCMD_STRowCol() // STROW / STCOL
 	vifX.tag.addr = 0;
 	vifX.tag.size = 4;
 }
+
+//------------------------------------------------------------------
+// Vif0/Vif1 Data Transfer Tables
+//------------------------------------------------------------------
+
+int (__fastcall *Vif0TransTLB[128])(u32 *data) = {
+	vifTrans_Null<0>	, vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x00*/
+	vifTrans_Null<0>	, vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x08*/
+	vifTrans_Null<0>	, vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>	, vifTrans_Null<0>,   /*0x10*/
+	vifTrans_Null<0>	, vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x18*/
+	vifTrans_STMask<0>  , vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>	, vifTrans_Null<0>,   /*0x20*/
+	vifTrans_Null<0>    , vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>	, vifTrans_Null<0>,   /*0x28*/
+	vifTrans_STRow<0>	, vifTrans_STCol<0>	  , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>	, vifTrans_Null<0>,   /*0x30*/
+	vifTrans_Null<0>    , vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x38*/
+	vifTrans_Null<0>    , vifTrans_Null<0>    , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x40*/
+	vifTrans_Null<0>    , vifTrans_Null<0>    , vifTrans_MPG<0>		, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x48*/
+	vifTrans_DirectHL<0>, vifTrans_DirectHL<0>, vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>	  , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x50*/
+	vifTrans_Null<0>	, vifTrans_Null<0>	  , vifTrans_Null<0>	, vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>   , vifTrans_Null<0>,   /*0x58*/
+	vifTrans_Unpack<0>  , vifTrans_Unpack<0>  , vifTrans_Unpack<0>	, vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Null<0>,   /*0x60*/
+	vifTrans_Unpack<0>  , vifTrans_Unpack<0>  , vifTrans_Unpack<0>	, vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0>, /*0x68*/
+	vifTrans_Unpack<0>  , vifTrans_Unpack<0>  , vifTrans_Unpack<0>	, vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Null<0>,   /*0x70*/
+	vifTrans_Unpack<0>  , vifTrans_Unpack<0>  , vifTrans_Unpack<0>	, vifTrans_Null<0>   , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0> , vifTrans_Unpack<0>  /*0x78*/
+};
+
+int (__fastcall *Vif1TransTLB[128])(u32 *data) = {
+	vifTrans_Null<1>	, vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x00*/
+	vifTrans_Null<1>	, vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x08*/
+	vifTrans_Null<1>	, vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>	, vifTrans_Null<1>,   /*0x10*/
+	vifTrans_Null<1>	, vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x18*/
+	vifTrans_STMask<1>  , vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>	, vifTrans_Null<1>,   /*0x20*/
+	vifTrans_Null<1>    , vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>	, vifTrans_Null<1>,   /*0x28*/
+	vifTrans_STRow<1>	, vifTrans_STCol<1>	  , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>	, vifTrans_Null<1>,   /*0x30*/
+	vifTrans_Null<1>    , vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x38*/
+	vifTrans_Null<1>    , vifTrans_Null<1>    , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x40*/
+	vifTrans_Null<1>    , vifTrans_Null<1>    , vifTrans_MPG<1>		, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x48*/
+	vifTrans_DirectHL<1>, vifTrans_DirectHL<1>, vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>	  , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x50*/
+	vifTrans_Null<1>	, vifTrans_Null<1>	  , vifTrans_Null<1>	, vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>   , vifTrans_Null<1>,   /*0x58*/
+	vifTrans_Unpack<1>  , vifTrans_Unpack<1>  , vifTrans_Unpack<1>	, vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Null<1>,   /*0x60*/
+	vifTrans_Unpack<1>  , vifTrans_Unpack<1>  , vifTrans_Unpack<1>	, vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1>, /*0x68*/
+	vifTrans_Unpack<1>  , vifTrans_Unpack<1>  , vifTrans_Unpack<1>	, vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Null<1>,   /*0x70*/
+	vifTrans_Unpack<1>  , vifTrans_Unpack<1>  , vifTrans_Unpack<1>	, vifTrans_Null<1>   , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1> , vifTrans_Unpack<1>  /*0x78*/
+};
 
 //------------------------------------------------------------------
 // Vif0/Vif1 CMD Tables

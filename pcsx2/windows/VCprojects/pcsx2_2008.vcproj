@@ -805,15 +805,7 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\Vif0_Commands.cpp"
-								>
-							</File>
-							<File
 								RelativePath="..\..\Vif0_Dma.cpp"
-								>
-							</File>
-							<File
-								RelativePath="..\..\Vif1_Commands.cpp"
 								>
 							</File>
 							<File
