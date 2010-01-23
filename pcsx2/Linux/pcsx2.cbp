@@ -325,9 +325,7 @@
 		<Unit filename="../VUops.h" />
 		<Unit filename="../Vif.cpp" />
 		<Unit filename="../Vif.h" />
-		<Unit filename="../Vif0_Commands.cpp" />
 		<Unit filename="../Vif0_Dma.cpp" />
-		<Unit filename="../Vif1_Commands.cpp" />
 		<Unit filename="../Vif1_Dma.cpp" />
 		<Unit filename="../Vif1_MFIFO.cpp" />
 		<Unit filename="../Vif_Commands.cpp" />
@@ -348,6 +346,7 @@
 		<Unit filename="../gui/AppInit.cpp" />
 		<Unit filename="../gui/AppMain.cpp" />
 		<Unit filename="../gui/AppRes.cpp" />
+		<Unit filename="../gui/AppSaveStates.h" />
 		<Unit filename="../gui/ApplyState.h" />
 		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
