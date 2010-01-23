@@ -311,7 +311,6 @@
 		<Unit filename="../Utilities/AsciiFile.h" />
 		<Unit filename="../Utilities/FileUtils.cpp" />
 		<Unit filename="../Utilities/folderdesc.txt" />
-		<Unit filename="../VIFunpack.cpp" />
 		<Unit filename="../VU.h" />
 		<Unit filename="../VU0.cpp" />
 		<Unit filename="../VU0micro.cpp" />
@@ -331,6 +330,9 @@
 		<Unit filename="../VifDma.cpp" />
 		<Unit filename="../VifDma.h" />
 		<Unit filename="../VifDma_internal.h" />
+		<Unit filename="../Vif_Unpack.cpp" />
+		<Unit filename="../Vif_Unpack.h" />
+		<Unit filename="../Vif_Unpack.inl" />
 		<Unit filename="../gui/AdvancedDialog.cpp" />
 		<Unit filename="../gui/AdvancedDialog.h" />
 		<Unit filename="../gui/App.h" />
@@ -338,7 +340,7 @@
 		<Unit filename="../gui/AppConfig.cpp" />
 		<Unit filename="../gui/AppConfig.h" />
 		<Unit filename="../gui/AppCoreThread.cpp" />
-		<Unit filename="../gui/AppEventListeners.cpp" />
+		<Unit filename="../gui/AppEventListeners.h" />
 		<Unit filename="../gui/AppEventSources.cpp" />
 		<Unit filename="../gui/AppForwardDefs.h" />
 		<Unit filename="../gui/AppInit.cpp" />
@@ -483,9 +485,6 @@
 		<Unit filename="../vtlb.h" />
 		<Unit filename="../x86/BaseblockEx.cpp" />
 		<Unit filename="../x86/BaseblockEx.h" />
-		<Unit filename="../x86/VifUnpackSSE.cpp" />
-		<Unit filename="../x86/VifUnpackSSE.h" />
-		<Unit filename="../x86/VifUnpackSSE_Dynarec.cpp" />
 		<Unit filename="../x86/aVUzerorec.S" />
 		<Unit filename="../x86/iCOP0.cpp" />
 		<Unit filename="../x86/iCOP0.h" />
@@ -544,9 +543,11 @@
 		<Unit filename="../x86/microVU_Upper.inl" />
 		<Unit filename="../x86/newVif.h" />
 		<Unit filename="../x86/newVif_BlockBuffer.h" />
+		<Unit filename="../x86/newVif_Dynarec.cpp" />
 		<Unit filename="../x86/newVif_HashBucket.h" />
-		<Unit filename="../x86/newVif_OldUnpack.inl" />
 		<Unit filename="../x86/newVif_Unpack.cpp" />
+		<Unit filename="../x86/newVif_UnpackSSE.cpp" />
+		<Unit filename="../x86/newVif_UnpackSSE.h" />
 		<Unit filename="../x86/sVU_Debug.h" />
 		<Unit filename="../x86/sVU_Lower.cpp" />
 		<Unit filename="../x86/sVU_Micro.cpp" />

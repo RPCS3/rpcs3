@@ -168,7 +168,8 @@ set(pcsx2Sources
 	Vif1Dma.cpp
 	Vif.cpp
 	VifDma.cpp
-	VIFunpack.cpp
+	Vif_Unpack.cpp
+	Vif_Unpack.inl
 	vtlb.cpp
 	VU0.cpp
 	VU0micro.cpp
@@ -227,6 +228,7 @@ set(pcsx2Headers
 	VifDma.h
 	VifDma_internal.h
 	Vif.h
+	Vif_Unpack.h
 	vtlb.h
 	VUflags.h
 	VUmicro.h
@@ -281,6 +283,8 @@ set(pcsx2GuiSources
 	gui/AppAssert.cpp
 	gui/AppConfig.cpp
 	gui/AppCoreThread.cpp
+	gui/AppEventListeners.cpp
+	gui/AppEventSources.cpp
 	gui/AppInit.cpp
 	gui/AppMain.cpp
 	gui/AppRes.cpp
@@ -295,8 +299,9 @@ set(pcsx2GuiSources
 	gui/Dialogs/FirstTimeWizard.cpp
 	gui/Dialogs/ImportSettingsDialog.cpp
 	gui/Dialogs/LogOptionsDialog.cpp
-	gui/Dialogs/SysConfigDialog.cpp
 	gui/Dialogs/PickUserModeDialog.cpp
+	gui/Dialogs/StuckThreadDialog.cpp
+	gui/Dialogs/SysConfigDialog.cpp
 	gui/FrameForGS.cpp
 	gui/GlobalCommands.cpp
 	gui/i18n.cpp
@@ -323,7 +328,7 @@ set(pcsx2GuiSources
 	gui/pxLogTextCtrl.cpp
 	gui/RecentIsoList.cpp
 	gui/Saveslots.cpp
-	gui/wxAppWithHelpers.cpp)
+	)
 
 # gui headers
 set(pcsx2GuiHeaders
@@ -332,6 +337,7 @@ set(pcsx2GuiHeaders
 	gui/ApplyState.h
 	gui/AppCommon.h
 	gui/AppConfig.h
+	gui/AppForwardDefs.h
 	gui/ConsoleLogger.h
 	gui/Dialogs/ConfigurationDialog.h
 	gui/Dialogs/LogOptionsDialog.h
@@ -344,7 +350,7 @@ set(pcsx2GuiHeaders
 	gui/Panels/ConfigurationPanels.h
 	gui/Panels/LogOptionsPanels.h
 	gui/RecentIsoList.h
-	gui/wxAppWithHelpers.h)
+	)
 
 # IPU sources
 set(pcsx2IPUSources
@@ -479,14 +485,14 @@ set(pcsx2x86Sources
 	x86/microVU_Misc.inl
 	x86/microVU_Tables.inl
 	x86/microVU_Upper.inl
-	x86/newVif_OldUnpack.inl
+	x86/newVif_Dynarec.cpp
 	x86/newVif_Unpack.cpp
+	x86/newVif_UnpackSSE.cpp
 	x86/sVU_Lower.cpp
 	x86/sVU_Micro.cpp
 	x86/sVU_Upper.cpp
 	x86/sVU_zerorec.cpp
-	x86/VifUnpackSSE.cpp
-	x86/VifUnpackSSE_Dynarec.cpp)
+	)
 
 # x86 headers
 set(pcsx2x86Headers
@@ -508,13 +514,14 @@ set(pcsx2x86Headers
 	x86/microVU.h
 	x86/microVU_IR.h
 	x86/microVU_Misc.h
-	x86/newVif_BlockBuffer.h
 	x86/newVif.h
+	x86/newVif_BlockBuffer.h
 	x86/newVif_HashBucket.h
+	x86/newVif_UnpackSSE.h
 	x86/sVU_Debug.h
 	x86/sVU_Micro.h
 	x86/sVU_zerorec.h
-	x86/VifUnpackSSE.h)
+	)
 
 # colect .asm files
 set(pcsx2AsmFiles
