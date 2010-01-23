@@ -172,7 +172,10 @@ protected:
 protected:
 	ConLogConfig&	m_conf;
 	pxLogTextCtrl&	m_TextCtrl;
+	wxTimer			m_timer_FlushLimiter;
 	ColorArray		m_ColorTable;
+	
+	int				m_flushevent_counter;
 
 	// this int throttles freeze/thaw of the display, by cycling from -2 to 4, roughly.
 	// (negative values force thaw, positive values indicate thaw is disabled.  This is
@@ -268,6 +271,7 @@ protected:
 	void OnSetTitle( wxCommandEvent& event );
 	void OnDockedMove( wxCommandEvent& event );
 	void OnIdleEvent( wxIdleEvent& event );
+	void OnFlushLimiterTimer( wxTimerEvent& evt );
 	void OnFlushEvent( wxCommandEvent& event );
 
 	// common part of OnClose() and OnCloseWindow()

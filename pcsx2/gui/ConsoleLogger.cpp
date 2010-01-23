@@ -232,12 +232,15 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	: wxFrame(parent, wxID_ANY, title)
 	, m_conf( options )
 	, m_TextCtrl( *new pxLogTextCtrl(this) )
+	, m_timer_FlushLimiter( this )
 	, m_ColorTable( options.FontSize )
 
 	, m_QueueColorSection( L"ConsoleLog::QueueColorSection" )
 	, m_QueueBuffer( L"ConsoleLog::QueueBuffer" )
 	, m_threadlogger( EnableThreadedLoggingTest ? new ConsoleTestThread() : NULL )
 {
+	m_flushevent_counter		= 0;
+
 	m_CurQueuePos				= 0;
 	m_pendingFlushes			= 0;
 	m_WaitingThreadsForFlush	= 0;
@@ -318,16 +321,17 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( m_item_StdoutEE->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
 	Connect( m_item_StdoutIOP->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
 
-	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(ConsoleLogFrame::OnCloseWindow) );
-	Connect( wxEVT_MOVE,			wxMoveEventHandler(ConsoleLogFrame::OnMoveAround) );
-	Connect( wxEVT_SIZE,			wxSizeEventHandler(ConsoleLogFrame::OnResize) );
-	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler(ConsoleLogFrame::OnActivate) );
+	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(ConsoleLogFrame::OnCloseWindow) );
+	Connect( wxEVT_MOVE,			wxMoveEventHandler		(ConsoleLogFrame::OnMoveAround) );
+	Connect( wxEVT_SIZE,			wxSizeEventHandler		(ConsoleLogFrame::OnResize) );
+	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler	(ConsoleLogFrame::OnActivate) );
 
-	Connect( wxEVT_SetTitleText,	wxCommandEventHandler(ConsoleLogFrame::OnSetTitle) );
-	Connect( wxEVT_DockConsole,		wxCommandEventHandler(ConsoleLogFrame::OnDockedMove) );
-	Connect( wxEVT_FlushQueue,		wxCommandEventHandler(ConsoleLogFrame::OnFlushEvent) );
+	Connect( wxEVT_SetTitleText,	wxCommandEventHandler	(ConsoleLogFrame::OnSetTitle) );
+	Connect( wxEVT_DockConsole,		wxCommandEventHandler	(ConsoleLogFrame::OnDockedMove) );
+	Connect( wxEVT_FlushQueue,		wxCommandEventHandler	(ConsoleLogFrame::OnFlushEvent) );
 
-	//Connect( wxEVT_IDLE,			wxIdleEventHandler(ConsoleLogFrame::OnIdleEvent) );
+	Connect( wxEVT_IDLE,			wxIdleEventHandler		(ConsoleLogFrame::OnIdleEvent) );
+	Connect( wxEVT_TIMER,			wxTimerEventHandler		(ConsoleLogFrame::OnFlushLimiterTimer) );
 	
 	m_item_Deci2		->Check( g_Conf->EmuOptions.Log.Deci2 );
 	m_item_StdoutEE		->Check( g_Conf->EmuOptions.Log.StdoutEE );
@@ -588,24 +592,52 @@ void ConsoleLogFrame::OnSetTitle( wxCommandEvent& event )
 	SetTitle( event.GetString() );
 }
 
-void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& evt )
+void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& )
 {
-	// bah, wx's Idle Events are the most worthless crap.
-	//::SendMessage((HWND)m_TextCtrl.GetHWND(), WM_VSCROLL, SB_BOTTOM, (LPARAM)NULL);
+	// When the GUI is idle then it's a safe bet we can resume suspended console log
+	// flushing, on the theory that the user's had a good chance to field user input.
+	m_flushevent_counter = 0;
+	m_timer_FlushLimiter.Stop();
+	
+	wxCommandEvent sendevt( wxEVT_FlushQueue );
+	GetEventHandler()->AddPendingEvent( sendevt );
 }
 
-void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& evt )
+void ConsoleLogFrame::OnFlushLimiterTimer( wxTimerEvent& )
+{
+	m_flushevent_counter = 0;
+
+	wxCommandEvent sendevt( wxEVT_FlushQueue );
+	GetEventHandler()->AddPendingEvent( sendevt );
+}
+
+void ConsoleLogFrame::OnFlushEvent( wxCommandEvent& )
 {
 	ScopedLock locker( m_QueueLock );
 	m_pendingFlushMsg = false;
 
-	// recursion guard needed due to Mutex lock/acquire code below.
+	// recursion guard needed due to Mutex lock/acquire code below, which can end up yielding
+	// to the gui and attempting to process more messages (which in turn would result in re-
+	// entering this handler).
+
 	static int recursion_counter = 0;
 	RecursionGuard recguard( recursion_counter );
 	if( recguard.IsReentrant() ) return;
 
 	if( m_CurQueuePos != 0 )
 	{
+		if( !m_timer_FlushLimiter.IsRunning() )
+		{
+			m_timer_FlushLimiter.Start( 500, true );
+			m_flushevent_counter = 0;
+		}
+		else
+		{
+			if( m_flushevent_counter >= 1000 )
+				return;
+			++m_flushevent_counter;
+		}
+
 		if( m_ThreadedLogInQueue && (m_pendingFlushes < 20) )
 		{
 			// Hacky Speedup -->

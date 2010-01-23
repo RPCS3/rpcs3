@@ -188,7 +188,7 @@ protected:
 	{
 		Yield( 3 );
 
-		static const int BlockSize = 0x10000;
+		static const int BlockSize = 0x20000;
 		int curidx = 0;
 		do
 		{
@@ -196,7 +196,7 @@ protected:
 			if( gzwrite( m_gzfp, state_buffer.GetPtr(curidx), thisBlockSize ) < thisBlockSize )
 				throw Exception::BadStream( m_filename );
 			curidx += thisBlockSize;
-			Yield( 10 );
+			Yield( 1 );
 		} while( curidx < state_buffer.GetSizeInBytes() );
 		
 		Console.WriteLn( "State saved to disk without error." );

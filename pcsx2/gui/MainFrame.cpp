@@ -71,6 +71,8 @@ void MainEmuFrame::UpdateIsoSrcSelection()
 //
 void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 {
+	if( IsBeingDeleted() ) return;
+
 	CoreThread.Suspend();
 
 	bool isClosing = false;
@@ -88,14 +90,12 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 		// closing PCSX2 difficult).  A non-blocking suspend with modal dialog might suffice
 		// however. --air
 
+		//evt.Veto( true );
+
 		if( StateCopy_InvokeOnSaveComplete( new InvokeAction_MenuCommand( MenuId_Exit ) ) ) return;
 	}
 
-	if( isClosing )
-		wxGetApp().PrepForExit();
-	else
-		evt.Veto( true );
-
+	wxGetApp().PrepForExit();
 	sApp.OnMainFrameClosed();
 
 	evt.Skip();
