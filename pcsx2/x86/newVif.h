@@ -101,4 +101,3 @@ extern __aligned16 u32		nVifMask[3][4][4];	 // [MaskNumber][CycleNumber][Vector]
 
 static const bool useOldUnpack  = 0; // Use code in newVif_OldUnpack.inl
 static const bool newVifDynaRec = 1; // Use code in newVif_Dynarec.inl
-

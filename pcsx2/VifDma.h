@@ -12,8 +12,9 @@
  *  You should have received a copy of the GNU General Public License along with PCSX2.
  *  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __VIFDMA_H__
-#define __VIFDMA_H__
+
+#pragma once
+#include "Vif_Unpack.h"
 
 struct vifCode {
    u32 addr;
@@ -43,9 +44,10 @@ struct vifStruct {
 	u8 dmamode;
 };
 
-extern vifStruct vif0, vif1;
-extern u8 schedulepath3msk;
-static const int VifCycleVoodoo = 4;
+extern vifStruct* vif;
+extern vifStruct  vif0, vif1;
+extern u8		  schedulepath3msk;
+static const int  VifCycleVoodoo = 4;
 
 extern void vif0Init();
 extern void vif0Interrupt();
@@ -63,4 +65,20 @@ __forceinline static int _limit(int a, int max)
 	return ((a > max) ? max : a);
 }
 
-#endif
+enum VifModes
+{
+	VIF_NORMAL_TO_MEM_MODE = 0,
+	VIF_NORMAL_FROM_MEM_MODE = 1,
+	VIF_CHAIN_MODE = 2
+};
+
+// Generic constants
+static const unsigned int VIF0intc = 4;
+static const unsigned int VIF1intc = 5;
+
+extern int g_vifCycles;
+
+template<const u32 VIFdmanum> void vuExecMicro(u32 addr);
+extern void vif0FLUSH();
+extern void vif1FLUSH();
+

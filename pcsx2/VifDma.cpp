@@ -16,7 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
-#include "VifDma_internal.h"
+#include "VifDma.h"
 #include "VUmicro.h"
 
 int g_vifCycles = 0;

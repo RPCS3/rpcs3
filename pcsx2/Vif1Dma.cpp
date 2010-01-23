@@ -16,9 +16,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-
-#include "VifDma_internal.h"
-
+#include "VifDma.h"
 #include "GS.h"
 #include "Gif.h"
 #include "VUmicro.h"

@@ -19,9 +19,9 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "VifDma_internal.h"
+#include "VifDma.h"
 #include "newVif.h"
-#include "newVif_OldUnpack.inl"
+#include "Vif_Unpack.inl"
 
 __aligned16 nVifStruct	nVif[2];
 __aligned16 nVifCall	nVifUpk[(2*2*16)  *4];		// ([USN][Masking][Unpack Type]) [curCycle]

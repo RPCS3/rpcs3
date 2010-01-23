@@ -820,52 +820,56 @@
 								RelativePath="..\..\VifDma.h"
 								>
 							</File>
-							<File
-								RelativePath="..\..\VifDma_internal.h"
-								>
-							</File>
-							<File
-								RelativePath="..\..\VIFunpack.cpp"
-								>
-							</File>
 							<Filter
-								Name="newVif"
+								Name="Unpack"
 								>
 								<File
-									RelativePath="..\..\x86\newVif.h"
+									RelativePath="..\..\Vif_Unpack.cpp"
 									>
 								</File>
 								<File
-									RelativePath="..\..\x86\newVif_BlockBuffer.h"
+									RelativePath="..\..\Vif_Unpack.h"
 									>
 								</File>
 								<File
-									RelativePath="..\..\x86\newVif_HashBucket.h"
-									>
-								</File>
-								<File
-									RelativePath="..\..\x86\newVif_OldUnpack.inl"
-									>
-								</File>
-								<File
-									RelativePath="..\..\x86\newVif_Unpack.cpp"
+									RelativePath="..\..\Vif_Unpack.inl"
 									>
 								</File>
 								<Filter
-									Name="Dynarec"
+									Name="newVif"
 									>
 									<File
-										RelativePath="..\..\x86\VifUnpackSSE.cpp"
+										RelativePath="..\..\x86\newVif.h"
 										>
 									</File>
 									<File
-										RelativePath="..\..\x86\VifUnpackSSE.h"
+										RelativePath="..\..\x86\newVif_BlockBuffer.h"
 										>
 									</File>
 									<File
-										RelativePath="..\..\x86\VifUnpackSSE_Dynarec.cpp"
+										RelativePath="..\..\x86\newVif_HashBucket.h"
 										>
 									</File>
+									<File
+										RelativePath="..\..\x86\newVif_Unpack.cpp"
+										>
+									</File>
+									<Filter
+										Name="Dynarec"
+										>
+										<File
+											RelativePath="..\..\x86\newVif_Dynarec.cpp"
+											>
+										</File>
+										<File
+											RelativePath="..\..\x86\newVif_UnpackSSE.cpp"
+											>
+										</File>
+										<File
+											RelativePath="..\..\x86\newVif_UnpackSSE.h"
+											>
+										</File>
+									</Filter>
 								</Filter>
 							</Filter>
 						</Filter>

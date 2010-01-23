@@ -13,68 +13,8 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
  
-#ifndef __VIFDMA_INTERNAL_H__
-#define __VIFDMA_INTERNAL_H__
+#pragma once
 
 #include "VifDma.h"
 
-enum VifModes
-{
-	VIF_NORMAL_TO_MEM_MODE = 0,
-	VIF_NORMAL_FROM_MEM_MODE = 1,
-	VIF_CHAIN_MODE = 2
-};
 
-// Generic constants
-static const unsigned int VIF0intc = 4;
-static const unsigned int VIF1intc = 5;
-
-typedef void (__fastcall *UNPACKFUNCTYPE)(u32 *dest, u32 *data);
-typedef void (__fastcall *UNPACKFUNCTYPE_ODD)(u32 *dest, u32 *data, int size);
-typedef int (*UNPACKPARTFUNCTYPESSE)(u32 *dest, u32 *data, int size);
-
-#define create_unpack_u_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_U##bits)(u32 *dest, u##bits *data);
-#define create_unpack_odd_u_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_ODD_U##bits)(u32 *dest, u##bits *data, int size);
-#define create_unpack_s_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_S##bits)(u32 *dest, s##bits *data);
-#define create_unpack_odd_s_type(bits) typedef void (__fastcall *UNPACKFUNCTYPE_ODD_S##bits)(u32 *dest, s##bits *data, int size);
-
-#define create_some_unpacks(bits) \
-    create_unpack_u_type(bits); \
-    create_unpack_odd_u_type(bits); \
-    create_unpack_s_type(bits); \
-    create_unpack_odd_s_type(bits);
-
-create_some_unpacks(32);
-create_some_unpacks(16);
-create_some_unpacks(8);
-
-struct VIFUnpackFuncTable
-{
-    UNPACKFUNCTYPE  funcU;
-    UNPACKFUNCTYPE  funcS;
-
-	UNPACKFUNCTYPE_ODD  oddU;		// needed for old-style vif only, remove when old vif is removed.
-	UNPACKFUNCTYPE_ODD  oddS;		// needed for old-style vif only, remove when old vif is removed.
-
-	u8 bsize; // currently unused
-	u8 dsize; // byte size of one channel
-	u8 gsize; // size of data in bytes used for each write cycle
-	u8 qsize; // used for unpack parts, num of vectors that
-	// will be decompressed from data for 1 cycle
-};
-
-extern const __aligned16 VIFUnpackFuncTable VIFfuncTable[32];
-
-extern int g_vifCycles;
-extern vifStruct *vif;
-
-template<const u32 VIFdmanum> void VIFunpack(u32 *data, vifCode *v, u32 size);
-template<const u32 VIFdmanum> void vuExecMicro(u32 addr);
-extern void vif0FLUSH();
-extern void vif1FLUSH();
-
-extern int  nVifUnpack (int idx, u8 *data);
-extern void initNewVif (int idx);
-extern void resetNewVif(int idx);
-
-#endif
