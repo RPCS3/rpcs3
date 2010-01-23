@@ -311,32 +311,32 @@ s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 #define MEM_BASE2 0x1f801500
 
 #define CHANNEL_BASE1(ch) (MEM_BASE1 + ((ch)<<4))
-#define CHANNEL_BASE2(ch) (MEM_BASE1 + ((ch)<<4))
+#define CHANNEL_BASE2(ch) (MEM_BASE2 + ((ch)<<4))
 
 
 u32& DmaHandlerInfo::REG_MADR(void) { return psxHu32(DmacRegisterBase + 0x0); }
 u32& DmaHandlerInfo::REG_BCR(void)  { return psxHu32(DmacRegisterBase + 0x4); }
-u32& DmaHandlerInfo::REG_CHCR(void) { return psxHu32(DmacRegisterBase + 0xC); }
-
+u32& DmaHandlerInfo::REG_CHCR(void) { return psxHu32(DmacRegisterBase + 0x8); }
+u32& DmaHandlerInfo::REG_TADR(void) { return psxHu32(DmacRegisterBase + 0xC); }
 
 DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 {
 	// First DMAC, same as PS1
-	{"Ps1 Mdec",       CHANNEL_BASE1(0), 0}, //0
-	{"Ps1 Mdec",       CHANNEL_BASE1(1), 0}, //1
-	{"Ps1 Gpu",        CHANNEL_BASE1(2), 0}, //2
-	{"CDVD",           CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
-	{"SPU2 Core0",     CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu Core0
-	{"?",              CHANNEL_BASE1(5), 0}, //5
-	{"OT",             CHANNEL_BASE1(6), 0}, //6: OT?
+	{"Ps1 Mdec",       0}, //0
+	{"Ps1 Mdec",       0}, //1
+	{"Ps1 Gpu",        0}, //2
+	{"CDVD",           2, CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
+	{"SPU2 Core0",     3, CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu Core0
+	{"?",              0}, //5
+	{"OT",             0}, //6: OT?
 
 	// Second DMAC, new in PS2 IOP
-	{"SPU2 Core1",     CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu Core1
-	{"Dev9",		   CHANNEL_BASE2(1), 0},//dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
-	{"Sif0",           CHANNEL_BASE2(2), 0},//sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
-	{"Sif1",           CHANNEL_BASE2(3), 0},//sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
-	{"Sio2 (writes)",  CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
-	{"Sio2 (reads)",   CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
+	{"SPU2 Core1",     3, CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu Core1
+	{"Dev9",		   0},// CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
+	{"Sif0",           0},// CHANNEL_BASE2(2), sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
+	{"Sif1",           0},// CHANNEL_BASE2(3), sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
+	{"Sio2 (writes)",  2, CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
+	{"Sio2 (reads)",   1, CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
 	{"?",              0}, //13
 	// if each dmac has 7 channels, the list would end here, but i made it 16 cos I'm not sure :p
 	{"?",              0}, //14
@@ -363,11 +363,30 @@ void IopDmaStart(int channel)
 {
 	// I dont' really understand this, but it's used above. Is this BYTES OR WHAT?
 	int bcr = IopDmaHandlers[channel].REG_BCR();
-	int size = 4* (bcr >> 16) * (bcr & 0xFFFF);
+	int bcr_size = (bcr & 0xFFFF);
+	int bcr_count = (bcr >> 16);
+	int size = 4* bcr_count * bcr_size;
+
+	int chcr = IopDmaHandlers[channel].REG_CHCR();
+	int dirf = IopDmaHandlers[channel].DirectionFlags&3;
+
+	if(dirf != 3)
+	{
+		bool ok = (chcr & DMA_CTRL_DIRECTION)? (dirf==2) : (dirf==1);
+		if(!ok)
+		{
+			// hack?!
+			IopDmaHandlers[channel].REG_CHCR() &= ~DMA_CTRL_ACTIVE;
+			return;
+		}
+	}
+
+	Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d dir=%d", channel, size, chcr&DMA_CTRL_DIRECTION);
 
 	IopDmaHandlers[channel].REG_CHCR() |= DMA_CTRL_ACTIVE;
 	IopDmaHandlers[channel].ByteCount = size;
-	IopDmaHandlers[channel].Target=0;
+	IopDmaHandlers[channel].Target = 0;
+	IopDmaHandlers[channel].Activated = true;
 
 	//SetDmaUpdateTarget(1);
 	{
@@ -386,6 +405,7 @@ void IopDmaUpdate(u32 elapsed)
 {
 	s32 MinDelay=0;
 	
+	int doNotHang=10;
 	do {
 		MinDelay = 0x7FFFFFFF;
 
@@ -393,7 +413,7 @@ void IopDmaUpdate(u32 elapsed)
 		{
 			DmaHandlerInfo *ch = IopDmaHandlers + i;
 
-			if (ch->REG_CHCR()&DMA_CTRL_ACTIVE)
+			if ((ch->Activated) && (ch->REG_CHCR()&DMA_CTRL_ACTIVE))
 			{
 				ch->Target -= elapsed;
 				if (ch->Target <= 0)
@@ -408,7 +428,9 @@ void IopDmaUpdate(u32 elapsed)
 					}
 					else
 					{
-						DmaHandler handler = (ch->REG_CHCR() & DMA_CTRL_DIRECTION) ? IopDmaHandlers[i].Write : IopDmaHandlers[i].Read;
+						int chcr = ch->REG_CHCR();
+
+						DmaHandler handler = (chcr & DMA_CTRL_DIRECTION) ? IopDmaHandlers[i].Write : IopDmaHandlers[i].Read;
 
 						u32 BCount = 0;
 						s32 Target = (handler) ? handler(i, (u32*)iopPhysMem(ch->REG_MADR()), ch->ByteCount, &BCount) : 0;
@@ -422,6 +444,9 @@ void IopDmaUpdate(u32 elapsed)
 						if (Target < 0)
 						{
 							// TODO: ... What to do if the handler gives an error code? :P
+							ch->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
+							RaiseDmaIrq(i);
+							IopDmaHandlers[i].Interrupt(i);
 						}
 						else if (BCount > 0)
 						{
@@ -453,7 +478,7 @@ void IopDmaUpdate(u32 elapsed)
 		}
 		elapsed=0;
 	}
-	while(MinDelay <= 0);
+	while(MinDelay <= 0 && (doNotHang-->0));
 
 	if(MinDelay<0x7FFFFFFF)
 		SetDmaUpdateTarget(MinDelay);
@@ -463,7 +488,7 @@ void IopDmaUpdate(u32 elapsed)
 
 s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
-	Console.Error("ERROR: Tried to read using DMA %d (%s). Ignoring.", 0, channel, IopDmaHandlers[channel]);
+	Console.Error("ERROR: Tried to read using DMA %d (%s). Ignoring.", channel, IopDmaHandlers[channel]);
 
 	*bytesProcessed = bytesLeft;
 	return 0;
@@ -471,7 +496,7 @@ s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 s32 errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
-	Console.Error("ERROR: Tried to write using DMA %d (%s). Ignoring.", 0, channel, IopDmaHandlers[channel]);
+	Console.Error("ERROR: Tried to write using DMA %d (%s). Ignoring.", channel, IopDmaHandlers[channel]);
 
 	*bytesProcessed = bytesLeft;
 	return 0;
