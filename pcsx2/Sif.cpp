@@ -34,35 +34,35 @@ void sifInit()
 	memzero(iopsifbusy);
 }
 
+//General format of all the SIF#(EE/IOP)Dma functions is this:
+//First, SIF#Dma does a while loop, calling SIF#EEDma if EE is active,
+//and then calling SIF#IOPDma if IOP is active.
+//
+//What the EE function does is the following:
+//Check if qwc <= 0. If it is, check if we have any data left to pull.
+//If we don't, set EE not to be active, call CPU_INT, and get out of the loop.
+//If we do, pass data from fifo to ee if sif 0, and to ee from fifo if sif 1.
+//And if qwc > 0, we do much the same thing.
+//
+//The IOP function is similar:
+//We check if counter <= 0. If it is, check if we have data left to pull.
+//If we don't, set IOP not to be active, call PSX_INT, and get out of the loop.
+//If we do, pass data from fifo to iop if sif 0, and to iop from fifo if sif 1.
+//And if qwc > 0, we do much the same thing.
+//
+// And with the IOP function, counter would be 0 initially, so the initialization
+// is done in the same section of code as the exit, which is odd.
+//
+// This is, of course, simplified, and more study of these functions is needed.
+
 __forceinline void SIF0EEDma(int &cycles, int &psxCycles, bool &done)
 {
-	int size = sif0dma->qwc;
 	if (dmacRegs->ctrl.STS == STS_SIF0)
 	{
 		SIF_LOG("SIF0 stall control");
 	}
-	if (size > 0) // If we're reading something continue to do so
-	{
-		tDMA_TAG *ptag;
-		int readSize = min(size, (sif0.fifo.size >> 2));
-
-		//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
-		SIF_LOG("----------- %lX of %lX", readSize << 2, size << 2);
-
-		ptag = safeDmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
-		if (ptag == NULL) return;
-
-		sif0.fifo.read((u32*)ptag, readSize << 2);
-
-		// Clearing handled by vtlb memory protection and manual blocks.
-		//Cpu->Clear(sif0dma->madr, readSize*4);
-
-		cycles += readSize;	// fixme : BIAS is factored in below
-		sif0dma->qwc -= readSize;
-		sif0dma->madr += readSize << 4;
-	}
-
-	if (sif0dma->qwc == 0)
+	
+	if (sif0dma->qwc <= 0)
 	{
 		// Stop if TIE & the IRQ are set, or at the end.
 		// Remind me to look closer at this. (the IRQ tag of a chcr?)
@@ -72,10 +72,11 @@ __forceinline void SIF0EEDma(int &cycles, int &psxCycles, bool &done)
 				SIF_LOG(" EE SIF end"); 
 			else
 				SIF_LOG(" EE SIF interrupt");
-
-			CPU_INT(5, cycles*BIAS);
+				
 			eesifbusy[0] = false;
 			done = true;
+
+			CPU_INT(5, cycles*BIAS);
 		}
 		else if (sif0.fifo.size >= 4) // Read a tag
 		{
@@ -110,6 +111,27 @@ __forceinline void SIF0EEDma(int &cycles, int &psxCycles, bool &done)
 			done = false;
 		}
 	}
+	
+	if (sif0dma->qwc > 0) // If we're reading something continue to do so
+	{
+		tDMA_TAG *ptag;
+		int readSize = min((s32)sif0dma->qwc, (sif0.fifo.size >> 2));
+
+		//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
+		SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
+
+		ptag = safeDmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
+		if (ptag == NULL) return;
+
+		sif0.fifo.read((u32*)ptag, readSize << 2);
+
+		// Clearing handled by vtlb memory protection and manual blocks.
+		//Cpu->Clear(sif0dma->madr, readSize*4);
+
+		cycles += readSize;	// fixme : BIAS is factored in below
+		sif0dma->qwc -= readSize;
+		sif0dma->madr += readSize << 4;
+	}
 }
 
 __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
@@ -120,13 +142,15 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 	}
 
 	// If there's no more to transfer.
-	if (sif1dma->qwc == 0)
+	if (sif1dma->qwc <= 0)
 	{
 		// If NORMAL mode or end of CHAIN then stop DMA.
 		if ((sif1dma->chcr.MOD == NORMAL_MODE) || sif1.end)
 		{
-			// Stop & signal interrupts on EE
 			SIF_LOG("EE SIF1 End %x", sif1.end);
+			
+			// Stop & signal interrupts on EE
+			sif1.end = 0;
 			eesifbusy[1] = false;
 			done = true;
 			
@@ -134,7 +158,6 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 			// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
 			// (Cause of double interrupts on the EE)
 			CPU_INT(6, min( (int)(cycles*BIAS), 384 ) );
-			sif1.end = 0;
 		}
 		else
 		{
@@ -200,7 +223,8 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 			}
 		}
 	}
-	else
+	
+	if (sif1dma->qwc > 0)
 	{
 		// There's some data ready to transfer into the fifo..
 		tDMA_TAG *pTag;
@@ -220,10 +244,11 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 
 __forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
 {
-	if (sif0.counter == 0) // If there's no more to transfer
+	if (sif0.counter <= 0) // If there's no more to transfer
 	{
 		// What this is supposed to do is stop DMA if it is the end of a chain, an interrupt is called, or in normal mode.
 		// It currently doesn't check for normal mode.
+		// (Further note: I'm not sure that it needs to check for normal mode.)
 		//
 		// The old code for this was:
 		// if (sif0.sifData.data & 0xC0000000) 
@@ -234,15 +259,14 @@ __forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
 			SIF_LOG(" IOP SIF Stopped");
 
 			// Stop & signal interrupts on IOP
+			sif0.data.data = 0;
 			iopsifbusy[0] = false;
+			done = true;
 					
 			// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
 			// So when we're all done, the equation looks like thus:
 			//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
 			PSX_INT(IopEvt_SIF0, psxCycles);
-
-			sif0.data.data = 0;
-			done = true;
 		}
 		else  // Chain mode
 		{
@@ -266,8 +290,10 @@ __forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
 			done = false;
 		}
 	}
-	else // There's some data ready to transfer into the fifo..
+	
+	if (sif0.counter > 0)
 	{
+		// There's some data ready to transfer into the fifo..
 		int wTransfer = min(sif0.counter, FIFO_SIF_W - sif0.fifo.size); // HW_DMA9_BCR >> 16;
 
 		SIF_LOG("+++++++++++ %lX of %lX", wTransfer, sif0.counter /*(HW_DMA9_BCR >> 16)*/);
@@ -282,23 +308,6 @@ __forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
 
 __forceinline void SIF1IOPDma(int &cycles, int &psxCycles, bool &done)
 {
-	int size = sif1.counter;
-
-	if (size > 0) // If we're reading something, continue to do so.
-	{
-		int readSize = size;
-
-		if (readSize > sif1.fifo.size) readSize = sif1.fifo.size;
-
-		SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
-
-		sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
-		psxCpu->Clear(HW_DMA10_MADR, readSize);
-		psxCycles += readSize / 4;		// fixme: should be / 16
-		sif1.counter = size - readSize;
-		HW_DMA10_MADR += readSize << 2;
-	}
-
 	if (sif1.counter <= 0)
 	{
 		// Stop on tag IRQ or END
@@ -309,19 +318,21 @@ __forceinline void SIF1IOPDma(int &cycles, int &psxCycles, bool &done)
 				SIF_LOG(" IOP SIF end");
 			else
 				SIF_LOG(" IOP SIF interrupt");
-					
+				
+			// Stop & signal interrupts on IOP
+			sif1.tagMode = 0;
 			iopsifbusy[1] = false;
+			done = true;
 
 			//Fixme ( voodoocycles ):
 			//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
 			//Greater than *35 break rebooting when trying to play Tekken5 arcade history
 			//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
 			PSX_INT(IopEvt_SIF1, min ( (psxCycles * 24), 1024) );
-			sif1.tagMode = 0;
-			done = true;
 		}
-		else if (sif1.fifo.size >= 4) // Read a tag
+		else if (sif1.fifo.size >= 4)
 		{
+			// Read a tag.
 			sif1.fifo.read((u32*)&sif1.data, 4);
 			SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
 				sif1.data.data & 0xffffff, sif1.data.words, DMA_TAG(sif1.data.data).ID, 
@@ -332,6 +343,20 @@ __forceinline void SIF1IOPDma(int &cycles, int &psxCycles, bool &done)
 			sif1.tagMode = (sif1.data.data >> 24) & 0xFF;
 			done = false;
 		}
+	}
+	
+	if (sif1.counter > 0)
+	{
+		// If we're reading something, continue to do so.
+		const int readSize = min (sif1.counter, sif1.fifo.size);
+		
+		SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
+
+		sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
+		psxCpu->Clear(HW_DMA10_MADR, readSize);
+		psxCycles += readSize / 4;		// fixme: should be / 16
+		sif1.counter -= readSize;
+		HW_DMA10_MADR += readSize << 2;
 	}
 }
 
