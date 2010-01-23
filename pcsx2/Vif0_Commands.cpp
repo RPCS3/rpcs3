@@ -150,94 +150,7 @@ static int __fastcall Vif0TransUnpack(u32 *data)	// UNPACK
 }
 
 //------------------------------------------------------------------
-// Vif0 CMD Base Commands
-//------------------------------------------------------------------
-
-static void Vif0CMDNop()  // NOP
-{
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDSTCycl()  // STCYCL
-{
-	vif0Regs->cycle.cl = (u8)vif0Regs->code;
-	vif0Regs->cycle.wl = (u8)(vif0Regs->code >> 8);
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDITop()  // ITOP
-{
-	vif0Regs->itops = vif0Regs->code & 0x3ff;
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDSTMod()  // STMOD
-{
-	vif0Regs->mode = vif0Regs->code & 0x3;
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDMark()  // MARK
-{
-	vif0Regs->mark = (u16)vif0Regs->code;
-	vif0Regs->stat.MRK = true;
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDFlushE()  // FLUSHE
-{
-	vif0FLUSH();
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDMSCALF()  //MSCAL/F
-{
-	vuExecMicro<0>((u16)(vif0Regs->code) << 3);
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDMSCNT()  // MSCNT
-{
-	vuExecMicro<0>(-1);
-	vif0.cmd &= ~0x7f;
-}
-
-static void Vif0CMDSTMask()  // STMASK
-{
-	vif0.tag.size = 1;
-}
-
-static void Vif0CMDSTRowCol() // STROW / STCOL
-{
-	vif0.tag.addr = 0;
-	vif0.tag.size = 4;
-}
-
-static void Vif0CMDMPGTransfer()  // MPG
-{
-	int vifNum;
-	vif0FLUSH();
-	vifNum = (u8)(vif0Regs->code >> 16);
-	if (vifNum == 0) vifNum = 256;
-	vif0.tag.addr = (u16)((vif0Regs->code) << 3) & 0xfff;
-	vif0.tag.size = vifNum * 2;
-}
-
-static void Vif0CMDNull()  // invalid opcode
-{
-	// if ME1, then force the vif to interrupt
-	if (!(vif0Regs->err.ME1))    //Ignore vifcode and tag mismatch error
-	{
-		Console.WriteLn("UNKNOWN VifCmd: %x", vif0.cmd);
-		vif0Regs->stat.ER1 = true;
-		vif0.irq++;
-	}
-	vif0.cmd &= ~0x7f;
-}
-
-
-//------------------------------------------------------------------
-// Vif0 Data Transfer / Vif0 CMD Tables
+// Vif0 Data Transfer Table
 //------------------------------------------------------------------
  
 int (__fastcall *Vif0TransTLB[128])(u32 *data) =
@@ -258,18 +171,4 @@ int (__fastcall *Vif0TransTLB[128])(u32 *data) =
 	Vif0TransUnpack  , Vif0TransUnpack  , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , /*0x6F*/
 	Vif0TransUnpack  , Vif0TransUnpack  , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , Vif0TransNull   , /*0x77*/
 	Vif0TransUnpack  , Vif0TransUnpack  , Vif0TransUnpack , Vif0TransNull   , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack , Vif0TransUnpack   /*0x7F*/
-};
-
-void (*Vif0CMDTLB[75])() =
-{
-	Vif0CMDNop	   , Vif0CMDSTCycl  , Vif0CMDNull		, Vif0CMDNull , Vif0CMDITop  , Vif0CMDSTMod , Vif0CMDNull, Vif0CMDMark , /*0x7*/
-	Vif0CMDNull	   , Vif0CMDNull    , Vif0CMDNull		, Vif0CMDNull , Vif0CMDNull  , Vif0CMDNull  , Vif0CMDNull    , Vif0CMDNull , /*0xF*/
-	Vif0CMDFlushE   , Vif0CMDNull   , Vif0CMDNull		, Vif0CMDNull, Vif0CMDMSCALF, Vif0CMDMSCALF, Vif0CMDNull	, Vif0CMDMSCNT, /*0x17*/
-	Vif0CMDNull    , Vif0CMDNull    , Vif0CMDNull		, Vif0CMDNull , Vif0CMDNull  , Vif0CMDNull  , Vif0CMDNull    , Vif0CMDNull , /*0x1F*/
-	Vif0CMDSTMask  , Vif0CMDNull    , Vif0CMDNull		, Vif0CMDNull , Vif0CMDNull  , Vif0CMDNull  , Vif0CMDNull	, Vif0CMDNull , /*0x27*/
-	Vif0CMDNull    , Vif0CMDNull    , Vif0CMDNull		, Vif0CMDNull , Vif0CMDNull  , Vif0CMDNull  , Vif0CMDNull	, Vif0CMDNull , /*0x2F*/
-	Vif0CMDSTRowCol, Vif0CMDSTRowCol, Vif0CMDNull		, Vif0CMDNull , Vif0CMDNull  , Vif0CMDNull  , Vif0CMDNull	, Vif0CMDNull , /*0x37*/
-	Vif0CMDNull    , Vif0CMDNull    , Vif0CMDNull		, Vif0CMDNull , Vif0CMDNull  , Vif0CMDNull  , Vif0CMDNull    , Vif0CMDNull , /*0x3F*/
-	Vif0CMDNull    , Vif0CMDNull    , Vif0CMDNull		, Vif0CMDNull , Vif0CMDNull  , Vif0CMDNull  , Vif0CMDNull    , Vif0CMDNull , /*0x47*/
-	Vif0CMDNull    , Vif0CMDNull    , Vif0CMDMPGTransfer
 };

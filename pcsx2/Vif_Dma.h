@@ -78,7 +78,6 @@ static const unsigned int VIF1intc = 5;
 
 extern int g_vifCycles;
 
-template<const u32 VIFdmanum> void vuExecMicro(u32 addr);
 extern void vif0FLUSH();
 extern void vif1FLUSH();
 
