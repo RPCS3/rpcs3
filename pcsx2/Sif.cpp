@@ -223,7 +223,6 @@ __forceinline void SIF1EEDma(int &cycles, int &psxCycles, bool &done)
 			}
 		}
 	}
-	
 	if (sif1dma->qwc > 0)
 	{
 		// There's some data ready to transfer into the fifo..
@@ -290,8 +289,8 @@ __forceinline void SIF0IOPDma(int &cycles, int &psxCycles, bool &done)
 			done = false;
 		}
 	}
-	
-	if (sif0.counter > 0)
+	//if (sif0.counter > 0)
+	else
 	{
 		// There's some data ready to transfer into the fifo..
 		int wTransfer = min(sif0.counter, FIFO_SIF_W - sif0.fifo.size); // HW_DMA9_BCR >> 16;

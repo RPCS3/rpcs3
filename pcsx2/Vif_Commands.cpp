@@ -26,6 +26,8 @@
 #define  vifXRegs	(idx ? (vif1Regs) : (vif0Regs))
 #define  vif1Only()	{ if (!idx) { vifCMD_Null<idx>(); return; } }
 
+_vifT void vifCMD_Null();
+
 _f void vuExecMicro(int idx, u32 addr) {
 	VURegs* VU = nVif[idx].VU;
 	if (!idx)	vif0FLUSH();
