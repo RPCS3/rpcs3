@@ -244,6 +244,16 @@ struct DMACh {
         chcrTransfer(ptag);
         qwcTransfer(ptag);
 	}
+	
+	wxString cmq_to_str()
+	{
+		return wxsFormat(L"chcr = %lx, madr = %lx, qwc  = %lx", chcr._u32, madr, qwc);
+	}
+	
+	wxString cmqt_to_str()
+	{
+		return wxsFormat(L"chcr = %lx, madr = %lx, qwc  = %lx, tadr = %1x", chcr._u32, madr, qwc, tadr);
+	}
 };
 
 enum INTCIrqs

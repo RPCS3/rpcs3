@@ -23,6 +23,7 @@
 DMACh *sif0ch, *sif1ch, *sif2ch;
 static _sif sif0, sif1;
 
+
 bool eesifbusy[2] = { false, false };
 extern bool iopsifbusy[2];
 
@@ -32,6 +33,74 @@ void sifInit()
 	memzero(sif1);
 	memzero(eesifbusy);
 	memzero(iopsifbusy);
+}
+
+// Various read/write functions. Could probably be reduced.
+static __forceinline bool SifEERead(int &cycles)
+{
+	tDMA_TAG *ptag;
+	int readSize = min((s32)sif0dma->qwc, (sif0.fifo.size >> 2));
+
+	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
+	SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
+
+	ptag = safeDmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
+	if (ptag == NULL) return false;
+
+	sif0.fifo.read((u32*)ptag, readSize << 2);
+
+	// Clearing handled by vtlb memory protection and manual blocks.
+	//Cpu->Clear(sif0dma->madr, readSize*4);
+
+	sif0dma->madr += readSize << 4;
+	cycles += readSize;	// fixme : BIAS is factored in above
+	sif0dma->qwc -= readSize;
+	return true;
+}
+
+static __forceinline bool SifEEWrite(int &cycles)
+{
+	// There's some data ready to transfer into the fifo..
+	tDMA_TAG *pTag;
+		
+	const int writeSize = min((s32)sif1dma->qwc, (FIFO_SIF_W - sif1.fifo.size) / 4);
+	
+	pTag = safeDmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
+	if (pTag == NULL) return false;
+
+	sif1.fifo.write((u32*)pTag, writeSize << 2);
+
+	sif1dma->madr += writeSize << 4;
+	cycles += writeSize;		// fixme : BIAS is factored in above
+	sif1dma->qwc -= writeSize;
+	return true;
+}
+
+static __forceinline void SifIOPWrite(int &psxCycles)
+{
+	// There's some data ready to transfer into the fifo..
+	int writeSize = min(sif0.counter, FIFO_SIF_W - sif0.fifo.size);
+
+	SIF_LOG("+++++++++++ %lX of %lX", writeSize, sif0.counter);
+
+	sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_MADR), writeSize);
+	HW_DMA9_MADR += writeSize << 2;
+	psxCycles += (writeSize / 4) * BIAS;		// fixme : should be / 16
+	sif0.counter -= writeSize;
+}
+
+static __forceinline void SifIOPRead(int &psxCycles)
+{
+	// If we're reading something, continue to do so.
+	const int readSize = min (sif1.counter, sif1.fifo.size);
+		
+	SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
+
+	sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
+	psxCpu->Clear(HW_DMA10_MADR, readSize);
+	HW_DMA10_MADR += readSize << 2;
+	psxCycles += readSize / 4;		// fixme: should be / 16
+	sif1.counter -= readSize;
 }
 
 //General format of all the SIF#(EE/IOP)Dma functions is this:
@@ -55,7 +124,7 @@ void sifInit()
 //
 // This is, of course, simplified, and more study of these functions is needed.
 
-__forceinline void SIF0EEDma(int &cycles, bool &done)
+static __forceinline void SIF0EEDma(int &cycles, bool &done)
 {
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STS == STS_SIF0)
@@ -122,27 +191,11 @@ __forceinline void SIF0EEDma(int &cycles, bool &done)
 	
 	if (sif0dma->qwc > 0) // If we're reading something continue to do so
 	{
-		tDMA_TAG *ptag;
-		int readSize = min((s32)sif0dma->qwc, (sif0.fifo.size >> 2));
-
-		//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
-		SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
-
-		ptag = safeDmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
-		if (ptag == NULL) return;
-
-		sif0.fifo.read((u32*)ptag, readSize << 2);
-
-		// Clearing handled by vtlb memory protection and manual blocks.
-		//Cpu->Clear(sif0dma->madr, readSize*4);
-
-		cycles += readSize;	// fixme : BIAS is factored in below
-		sif0dma->qwc -= readSize;
-		sif0dma->madr += readSize << 4;
+		SifEERead(cycles);
 	}
 }
 
-__forceinline void SIF1EEDma(int &cycles, bool &done)
+static __forceinline void SIF1EEDma(int &cycles, bool &done)
 {
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_SIF1)
@@ -235,24 +288,13 @@ __forceinline void SIF1EEDma(int &cycles, bool &done)
 	}
 	if (sif1dma->qwc > 0)
 	{
-		// There's some data ready to transfer into the fifo..
-		tDMA_TAG *pTag;
+		SifEEWrite(cycles);
 		
-		const int qwTransfer = min((s32)sif1dma->qwc, (FIFO_SIF_W - sif1.fifo.size) / 4);
-	
-		pTag = safeDmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
-		if (pTag == NULL) return;
-
-		sif1.fifo.write((u32*)pTag, qwTransfer << 2);
-
-		sif1dma->madr += qwTransfer << 4;
-		cycles += qwTransfer;		// fixme : BIAS is factored in above
-		sif1dma->qwc -= qwTransfer;
 	}
 }
 
 // Note: Test any changes in this function against Grandia III.
-__forceinline void SIF0IOPDma(int &psxCycles, bool &done)
+static __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 {
 	if (sif0.counter <= 0) // If there's no more to transfer
 	{
@@ -305,20 +347,11 @@ __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 	//if (sif0.counter > 0)
 	else
 	{
-		// There's some data ready to transfer into the fifo..
-		int wTransfer = min(sif0.counter, FIFO_SIF_W - sif0.fifo.size); // HW_DMA9_BCR >> 16;
-
-		SIF_LOG("+++++++++++ %lX of %lX", wTransfer, sif0.counter /*(HW_DMA9_BCR >> 16)*/);
-
-		sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_MADR), wTransfer);
-		HW_DMA9_MADR += wTransfer << 2;
-		psxCycles += (wTransfer / 4) * BIAS;		// fixme : should be / 16
-		sif0.counter -= wTransfer;
+		SifIOPWrite(psxCycles);
 	}
 }
 
-
-__forceinline void SIF1IOPDma(int &psxCycles, bool &done)
+static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 {
 	if (sif1.counter <= 0)
 	{
@@ -361,62 +394,92 @@ __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 	
 	if (sif1.counter > 0)
 	{
-		// If we're reading something, continue to do so.
-		const int readSize = min (sif1.counter, sif1.fifo.size);
-		
-		SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
-
-		sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
-		psxCpu->Clear(HW_DMA10_MADR, readSize);
-		psxCycles += readSize / 4;		// fixme: should be / 16
-		sif1.counter -= readSize;
-		HW_DMA10_MADR += readSize << 2;
+		SifIOPRead(psxCycles);
 	}
 }
 
+// Tests if iop & ee are busy before the while statement,
+// instead of during it, on the premise that anything that 
+// changes the busy state in here also ends the while statement.
+//
+// Mostly works, but breaks the Mana Khemia opening movie.
+// Not sure if it's worth keeping yet.
+//#define NO_BUSY_TEST
 __forceinline void SIF0Dma()
 {
 	bool done = false;
 	int cycles = 0, psxCycles = 0;
 
 	SIF_LOG("SIF0 DMA start...");
-
+	
+#ifdef NO_BUSY_TEST	
+	if ((iopsifbusy[0]) && (eesifbusy[0]))
+	{
+		do
+		{
+			SIF0IOPDma(psxCycles, done);
+			SIF0EEDma(cycles, done);
+		} while (!done);
+	}
+	else if (iopsifbusy[0])
+	{
+		do
+		{
+			SIF0IOPDma(psxCycles, done);
+		} while (!done);
+	}
+	else
+	{
+		do
+		{
+			SIF0EEDma(cycles, done);
+		} while (!done);
+	}
+#else
 	do
 	{
-		if (iopsifbusy[0])
-		{
-			// If EE SIF0 is enabled.
-			SIF0IOPDma(psxCycles, done);
-		}
-
-		if (eesifbusy[0])
-		{
-			// If EE SIF enabled and there's something to transfer.
-			SIF0EEDma(cycles, done);
-		}
-	}
-	while (!done);
+		if (iopsifbusy[0]) SIF0IOPDma(psxCycles, done);
+		if (eesifbusy[0]) SIF0EEDma(cycles, done);
+	} while (!done);
+#endif
 }
 
 __forceinline void SIF1Dma()
 {
 	bool done = false;
 	int cycles = 0, psxCycles = 0;
+
+#ifdef NO_BUSY_TEST	
+	if ((iopsifbusy[1]) && (eesifbusy[1]))
+	{
+		do
+		{
+			SIF1EEDma(cycles, done);
+			SIF1IOPDma(psxCycles, done);
+		} while (!done);
+	}
+	else if (iopsifbusy[1])
+	{
+		do
+		{
+			SIF1IOPDma(psxCycles, done);
+		} while (!done);
+	}
+	else
+	{
+		do
+		{
+			SIF1EEDma(cycles, done);
+		} while (!done);
+	}
+#else
 	do
 	{
-		if (eesifbusy[1])
-		{
-			// If EE SIF1 is enabled.
-			SIF1EEDma(cycles, done);
-		}
+		if (eesifbusy[1]) SIF1EEDma(cycles, done);
+		if (iopsifbusy[1]) SIF1IOPDma(psxCycles, done);
 
-		if (iopsifbusy[1])
-		{
-			// If IOP SIF enabled and there's something to transfer.
-			SIF1IOPDma(psxCycles, done);
-		}
-	}
-	while (!done);
+	} while (!done);
+#endif
 }
 
 __forceinline void  sif0Interrupt()
@@ -445,9 +508,8 @@ __forceinline void  EEsif1Interrupt()
 
 __forceinline void dmaSIF0()
 {
-	SIF_LOG("EE: dmaSIF0 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
-	        sif0dma->chcr._u32, sif0dma->madr, sif0dma->qwc, sif0dma->tadr);
-
+	SIF_LOG(wxString(L"dmaSIF0" + sif0dma->cmqt_to_str()).To8BitData());
+	
 	if (sif0.fifo.readPos != sif0.fifo.writePos)
 	{
 		SIF_LOG("warning, sif0.fifoReadPos != sif0.fifoWritePos");
@@ -469,8 +531,7 @@ __forceinline void dmaSIF0()
 
 __forceinline void dmaSIF1()
 {
-	SIF_LOG("EE: dmaSIF1 chcr = %lx, madr = %lx, qwc  = %lx, tadr = %lx",
-	        sif1dma->chcr._u32, sif1dma->madr, sif1dma->qwc, sif1dma->tadr);
+	SIF_LOG(wxString(L"dmaSIF1" + sif1dma->cmqt_to_str()).To8BitData());
 
 	if (sif1.fifo.readPos != sif1.fifo.writePos)
 	{
@@ -494,8 +555,7 @@ __forceinline void dmaSIF1()
 
 __forceinline void dmaSIF2()
 {
-	SIF_LOG("dmaSIF2 chcr = %lx, madr = %lx, qwc  = %lx",
-	        sif2dma->chcr._u32, sif2dma->madr, sif2dma->qwc);
+	SIF_LOG(wxString(L"dmaSIF2" + sif2dma->cmq_to_str()).To8BitData());
 
 	sif2dma->chcr.STR = false;
 	hwDmacIrq(DMAC_SIF2);
