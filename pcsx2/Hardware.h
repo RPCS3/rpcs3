@@ -25,6 +25,6 @@
 #include "Gif.h"
 #include "Sif.h"
 #include "Vif.h"
-#include "VifDma.h"
+#include "Vif_Dma.h"
 
 #endif

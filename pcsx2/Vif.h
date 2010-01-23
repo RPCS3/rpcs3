@@ -13,8 +13,7 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __VIF_H__
-#define __VIF_H__
+#pragma once
 
 enum vif0_stat_flags
 {
@@ -225,16 +224,3 @@ extern bool VIF0transfer(u32 *data, int size, bool istag);
 extern bool VIF1transfer(u32 *data, int size, bool istag);
 extern void vifMFIFOInterrupt();
 
-// --------------------------------------------------------------------------------------
-//  newVif SSE-optimized Row/Col Structs
-// --------------------------------------------------------------------------------------
-
-struct VifMaskTypes
-{
-	u32	Row0[4], Col0[4];
-	u32	Row1[4], Col1[4];
-};
-
-extern __aligned16 VifMaskTypes g_vifmask; // This struct is used by newVif
-
-#endif /* __VIF_H__ */

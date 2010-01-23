@@ -17,7 +17,7 @@
 #include "Common.h"
 #include "GS.h"
 #include "Gif.h"
-#include "VifDma.h"
+#include "Vif_Dma.h"
 
 // --------------------------------------------------------------------------------------
 //  GIFpath -- the GIFtag Parser

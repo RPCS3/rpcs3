@@ -805,19 +805,31 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\Vif0Dma.cpp"
+								RelativePath="..\..\Vif0_Commands.cpp"
 								>
 							</File>
 							<File
-								RelativePath="..\..\Vif1Dma.cpp"
+								RelativePath="..\..\Vif0_Dma.cpp"
 								>
 							</File>
 							<File
-								RelativePath="..\..\VifDma.cpp"
+								RelativePath="..\..\Vif1_Commands.cpp"
 								>
 							</File>
 							<File
-								RelativePath="..\..\VifDma.h"
+								RelativePath="..\..\Vif1_Dma.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\Vif1_MFIFO.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\Vif_Commands.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\Vif_Dma.h"
 								>
 							</File>
 							<Filter

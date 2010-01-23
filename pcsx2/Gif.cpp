@@ -18,7 +18,7 @@
 
 #include "GS.h"
 #include "Gif.h"
-#include "VifDma.h"
+#include "Vif_Dma.h"
 
 #include "iR5900.h"
 

@@ -13,296 +13,72 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "PrecompiledHeader.h"
 #include "Common.h"
-
-#include <cmath>
-
 #include "Vif.h"
-#include "VifDma.h"
+#include "Vif_Dma.h"
 
-VIFregisters *vifRegs;
-vifStruct *vif;
-u16 vifqwc = 0;
+void vif0Init() { initNewVif(0); }
+void vif1Init() { initNewVif(1); }
 
-__aligned16 VifMaskTypes g_vifmask;
-
-extern int g_vifCycles;
-
-static __forceinline bool mfifoVIF1rbTransfer()
+void vif0Reset()
 {
-	u32 maddr = dmacRegs->rbor.ADDR;
-	u32 msize = dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK + 16;
-	u16 mfifoqwc = std::min(vif1ch->qwc, vifqwc);
-	u32 *src;
-	bool ret;
+	/* Reset the whole VIF, meaning the internal pcsx2 vars and all the registers */
+	memzero(vif0);
+	memzero(*vif0Regs);
 
-	/* Check if the transfer should wrap around the ring buffer */
-	if ((vif1ch->madr + (mfifoqwc << 4)) > (msize))
-	{
-		int s1 = ((msize) - vif1ch->madr) >> 2;
+	psHu64(VIF0_FIFO) = 0;
+	psHu64(VIF0_FIFO + 8) = 0;
+	
+	vif0Regs->stat.VPS = VPS_IDLE;
+	vif0Regs->stat.FQC = 0;
 
-		SPR_LOG("Split MFIFO");
+	vif0.done = true;
 
-		/* it does, so first copy 's1' bytes from 'addr' to 'data' */
-		src = (u32*)PSM(vif1ch->madr);
-		if (src == NULL) return false;
-
-		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset, false);
-		else
-			ret = VIF1transfer(src, s1, false);
-
-		if (ret)
-		{
-            /* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
-            vif1ch->madr = maddr;
-
-            src = (u32*)PSM(maddr);
-            if (src == NULL) return false;
-            VIF1transfer(src, ((mfifoqwc << 2) - s1), false);
-		}
-	}
-	else
-	{
-		SPR_LOG("Direct MFIFO");
-
-		/* it doesn't, so just transfer 'qwc*4' words */
-		src = (u32*)PSM(vif1ch->madr);
-		if (src == NULL) return false;
-
-		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset, false);
-		else
-			ret = VIF1transfer(src, mfifoqwc << 2, false);
-	}
-	return ret;
+	resetNewVif(0);
 }
 
-static __forceinline bool mfifo_VIF1chain()
+void vif1Reset()
 {
-    bool ret;
-    
-	/* Is QWC = 0? if so there is nothing to transfer */
-	if ((vif1ch->qwc == 0) && (!vif1.vifstalled))
-	{
-		vif1.inprogress &= ~1;
-		return true;
-	}
+	/* Reset the whole VIF, meaning the internal pcsx2 vars, and all the registers */
+	memzero(vif1);
+	memzero(*vif1Regs);
 
-	if (vif1ch->madr >= dmacRegs->rbor.ADDR &&
-	        vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
-	{
-		u16 startqwc = vif1ch->qwc;
-		ret = mfifoVIF1rbTransfer();
-		vifqwc -= startqwc - vif1ch->qwc;
-	}
-	else
-	{
-		tDMA_TAG *pMem = dmaGetAddr(vif1ch->madr);
-		SPR_LOG("Non-MFIFO Location");
+	psHu64(VIF1_FIFO) = 0;
+	psHu64(VIF1_FIFO + 8) = 0;
 
-		if (pMem == NULL) return false;
+	vif1Regs->stat.VPS = VPS_IDLE;
+	vif1Regs->stat.FQC = 0; // FQC=0
 
-		if (vif1.vifstalled)
-			ret = VIF1transfer((u32*)pMem + vif1.irqoffset, vif1ch->qwc * 4 - vif1.irqoffset, false);
-		else
-			ret = VIF1transfer((u32*)pMem, vif1ch->qwc << 2, false);
-	}
-	return ret;
+	vif1.done = true;
+	cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
+
+	resetNewVif(1);
 }
 
-static u32 qwctag(u32 mask)
+void SaveStateBase::vif0Freeze()
 {
-	return (dmacRegs->rbor.ADDR + (mask & dmacRegs->rbsr.RMSK));
+	static u32 g_vif0Masks[64];   // Dummy Var for saved state compatibility
+	static u32 g_vif0HasMask3[4]; // Dummy Var for saved state compatibility
+	FreezeTag("VIFdma");
+
+	// Dunno if this one is needed, but whatever, it's small. :)
+	Freeze(g_vifCycles);
+
+	// mask settings for VIF0 and VIF1
+	Freeze(g_vifmask);
+
+	Freeze(vif0);
+	Freeze(g_vif0HasMask3);	// Not Used Anymore
+	Freeze(g_vif0Masks);	// Not Used Anymore
 }
 
-void mfifoVIF1transfer(int qwc)
+void SaveStateBase::vif1Freeze()
 {
-	tDMA_TAG *ptag;
+	static u32 g_vif1Masks[64];   // Dummy Var for saved state compatibility
+	static u32 g_vif1HasMask3[4]; // Dummy Var for saved state compatibility
+	Freeze(vif1);
 
-	g_vifCycles = 0;
-
-	if (qwc > 0)
-	{
-		vifqwc += qwc;
-		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vifqwc, vif1ch->chcr._u32, vif1.vifstalled, vif1.done);
-		if (vif1.inprogress & 0x10)
-		{
-			if (vif1ch->madr >= dmacRegs->rbor.ADDR && vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK))
-				CPU_INT(10, 0);
-			else
-				CPU_INT(10, vif1ch->qwc * BIAS);
-
-			vif1Regs->stat.FQC = 0x10; // FQC=16
-		}
-		vif1.inprogress &= ~0x10;
-
-		return;
-	}
-
-	if (vif1ch->qwc == 0 && vifqwc > 0)
-	{
-		ptag = dmaGetAddr(vif1ch->tadr);
-
-		if (vif1ch->chcr.TTE)
-		{
-            bool ret;
-
-			if (vif1.stallontag)
-				ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset, true);  //Transfer Tag on Stall
-			else
-				ret = VIF1transfer((u32*)ptag + 2, 2, true);  //Transfer Tag
-
-			if (!(ret))
-			{
-				VIF_LOG("MFIFO Stall on tag");
-				vif1.stallontag	= true;
-				return;        //IRQ set by VIFTransfer
-			}
-		}
-
-        vif1ch->unsafeTransfer(ptag);
-
-		vif1ch->madr = ptag[1]._u32;
-		vifqwc--;
-
-		SPR_LOG("dmaChain %8.8x_%8.8x size=%d, id=%d, madr=%lx, tadr=%lx mfifo qwc = %x spr0 madr = %x",
-        ptag[1]._u32, ptag[0]._u32, vif1ch->qwc, ptag->ID, vif1ch->madr, vif1ch->tadr, vifqwc, spr0->madr);
-
-		switch (ptag->ID)
-		{
-			case TAG_REFE: // Refe - Transfer Packet According to ADDR field
-				vif1ch->tadr = qwctag(vif1ch->tadr + 16);
-				vif1.done = true;										//End Transfer
-				break;
-
-			case TAG_CNT: // CNT - Transfer QWC following the tag.
-				vif1ch->madr = qwctag(vif1ch->tadr + 16);						//Set MADR to QW after Tag
-				vif1ch->tadr = qwctag(vif1ch->madr + (vif1ch->qwc << 4));			//Set TADR to QW following the data
-				vif1.done = false;
-				break;
-
-			case TAG_NEXT: // Next - Transfer QWC following tag. TADR = ADDR
-			{
-				int temp = vif1ch->madr;								//Temporarily Store ADDR
-				vif1ch->madr = qwctag(vif1ch->tadr + 16); 					  //Set MADR to QW following the tag
-				vif1ch->tadr = temp;								//Copy temporarily stored ADDR to Tag
-				if ((temp & dmacRegs->rbsr.RMSK) != dmacRegs->rbor.ADDR) Console.WriteLn("Next tag = %x outside ring %x size %x", temp, psHu32(DMAC_RBOR), psHu32(DMAC_RBSR));
-				vif1.done = false;
-				break;
-			}
-
-			case TAG_REF: // Ref - Transfer QWC from ADDR field
-			case TAG_REFS: // Refs - Transfer QWC from ADDR field (Stall Control)
-				vif1ch->tadr = qwctag(vif1ch->tadr + 16);							//Set TADR to next tag
-				vif1.done = false;
-				break;
-
-			case TAG_END: // End - Transfer QWC following the tag
-				vif1ch->madr = qwctag(vif1ch->tadr + 16);		//Set MADR to data following the tag
-				vif1ch->tadr = qwctag(vif1ch->madr + (vif1ch->qwc << 4));			//Set TADR to QW following the data
-				vif1.done = true;										//End Transfer
-				break;
-		}
-
-		if (vif1ch->chcr.TIE && ptag->IRQ)
-		{
-			VIF_LOG("dmaIrq Set");
-			vif1.done = true;
-		}
-	}
-
-	vif1.inprogress |= 1;
-
-	SPR_LOG("mfifoVIF1transfer end %x madr %x, tadr %x vifqwc %x", vif1ch->chcr._u32, vif1ch->madr, vif1ch->tadr, vifqwc);
-}
-
-void vifMFIFOInterrupt()
-{
-	g_vifCycles = 0;
-
-	if (schedulepath3msk) Vif1MskPath3();
-
-	if ((vif1Regs->stat.VGW))
-	{
-		if (gif->chcr.STR)
-		{
-			CPU_INT(10, 16);
-			return;
-		}
-		else
-		{
-			vif1Regs->stat.VGW = false;
-		}
-
-	}
-
-	if ((spr0->chcr.STR) && (spr0->qwc == 0))
-	{
-		spr0->chcr.STR = false;
-		hwDmacIrq(DMAC_FROM_SPR);
-	}
-
-	if (vif1.irq && vif1.tag.size == 0)
-	{
-		vif1Regs->stat.INT = true;
-		hwIntcIrq(INTC_VIF1);
-		--vif1.irq;
-
-		if (vif1Regs->stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS))
-		{
-			vif1Regs->stat.FQC = 0; // FQC=0
-			vif1ch->chcr.STR = false;
-			return;
-		}
-	}
-
-	if (vif1.done == false || vif1ch->qwc)
-	{
-		switch(vif1.inprogress & 1)
-		{
-			case 0: //Set up transfer
-                if (vif1ch->tadr == spr0->madr)
-				{
-				//	Console.WriteLn("Empty 1");
-					vifqwc = 0;
-					vif1.inprogress |= 0x10;
-					vif1Regs->stat.FQC = 0;
-					hwDmacIrq(DMAC_MFIFO_EMPTY);
-					return;
-				}
-
-                mfifoVIF1transfer(0);
-                if ((vif1ch->madr >= dmacRegs->rbor.ADDR) && (vif1ch->madr <= (dmacRegs->rbor.ADDR + dmacRegs->rbsr.RMSK)))
-                    CPU_INT(10, 0);
-                else
-					CPU_INT(10, vif1ch->qwc * BIAS);
-
-				return;
-
-			case 1: //Transfer data
-				mfifo_VIF1chain();
-				CPU_INT(10, 0);
-				return;
-		}
-		return;
-	}
-
-	/*if (vifqwc <= 0)
-	{
-		//Console.WriteLn("Empty 2");
-		//vif1.inprogress |= 0x10;
-		vif1Regs->stat.FQC = 0; // FQC=0
-		hwDmacIrq(DMAC_MFIFO_EMPTY);
-	}*/
-
-	vif1.done = 1;
-	g_vifCycles = 0;
-	vif1ch->chcr.STR = false;
-	hwDmacIrq(DMAC_VIF1);
-	VIF_LOG("vif mfifo dma end");
-
-	vif1Regs->stat.FQC = 0;
+	Freeze(g_vif1HasMask3);	// Not Used Anymore
+	Freeze(g_vif1Masks);	// Not Used Anymore
 }

@@ -19,7 +19,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "VifDma.h"
+#include "Vif_Dma.h"
 #include "newVif.h"
 #include "Vif_Unpack.inl"
 

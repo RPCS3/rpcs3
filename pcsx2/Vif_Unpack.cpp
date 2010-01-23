@@ -16,7 +16,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "Vif.h"
-#include "VifDma.h"
+#include "Vif_Dma.h"
 
 enum UnpackOffset {
 	OFFSET_X = 0,
