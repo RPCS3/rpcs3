@@ -112,6 +112,190 @@ static __forceinline void SifIOPRead(int &psxCycles)
 	sif1.counter -= readSize;
 }
 
+static __forceinline bool SIF0EEReadTag()
+{
+	static __aligned16 u32 tag[4];
+			
+	sif0.fifo.read((u32*)&tag[0], 4); // Tag
+	SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
+
+	sif0dma->unsafeTransfer(((tDMA_TAG*)(tag)));
+	sif0dma->madr = tag[1];
+	tDMA_TAG pTag(tag[0]);
+
+	SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", 
+		sif0dma->madr, sif0dma->qwc, pTag.ID, pTag.IRQ, tag[1], tag[0]);
+					
+	switch (pTag.ID)
+	{
+		case TAG_REFE:
+			sif0.end = 1;
+			if (dmacRegs->ctrl.STS != NO_STS) 
+				dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
+				break;
+                            
+		case TAG_REFS:
+			if (dmacRegs->ctrl.STS != NO_STS) 
+				dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
+				break;
+
+		case TAG_END:
+			sif0.end = 1;
+			break;
+	}
+	return true;
+}
+
+static __forceinline bool SIF1EEWriteTag()
+{
+	// Chain mode
+	tDMA_TAG *ptag;
+			
+	// Process DMA tag at sif1dma->tadr
+	ptag = sif1dma->DMAtransfer(sif1dma->tadr, DMAC_SIF1);
+	if (ptag == NULL)
+	{
+		Console.WriteLn("SIF1EEDma: ptag = NULL");
+		return false;
+	}
+
+	if (sif1dma->chcr.TTE)
+	{
+		Console.WriteLn("SIF1 TTE");
+		sif1.fifo.write((u32*)ptag + 2, 2);
+	}
+
+	if (sif1dma->chcr.TIE && ptag->IRQ)
+	{
+		Console.WriteLn("SIF1 TIE");
+		sif1.end = 1;
+	}
+
+	switch (ptag->ID)
+	{
+		case TAG_REFE: // refe
+			SIF_LOG("   REFE %08X", ptag[1]._u32);
+			sif1.end = 1;
+			sif1dma->madr = ptag[1]._u32;
+			sif1dma->tadr += 16;
+			break;
+
+		case TAG_CNT: // cnt
+			SIF_LOG("   CNT");
+			sif1dma->madr = sif1dma->tadr + 16;
+			sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
+			break;
+
+		case TAG_NEXT: // next
+			SIF_LOG("   NEXT %08X", ptag[1]._u32);
+			sif1dma->madr = sif1dma->tadr + 16;
+			sif1dma->tadr = ptag[1]._u32;
+			break;
+
+		case TAG_REF: // ref
+		case TAG_REFS: // refs
+			SIF_LOG("   REF %08X", ptag[1]._u32);
+			sif1dma->madr = ptag[1]._u32;
+			sif1dma->tadr += 16;
+			break;
+
+		case TAG_END: // end
+			SIF_LOG("   END");
+			sif1.end = 1;
+			sif1dma->madr = sif1dma->tadr + 16;
+			sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
+			break;
+
+		default:
+			Console.WriteLn("Bad addr1 source chain");
+	}
+	return true;
+}
+
+static __forceinline bool SIF0IOPWriteTag()
+{
+	// Process DMA tag at HW_DMA9_TADR
+	sif0.data = *(sifData *)iopPhysMem(HW_DMA9_TADR);
+	sif0.data.words = (sif0.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
+	sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_TADR + 8), 4);
+
+	HW_DMA9_TADR += 16; ///HW_DMA9_MADR + 16 + sif0.sifData.words << 2;
+	HW_DMA9_MADR = sif0.data.data & 0xFFFFFF;
+	sif0.counter = sif0.data.words & 0xFFFFFF;
+
+	SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.data.words, sif0.data.data);
+
+#ifdef PCSX2_DEVBUILD
+	u32 tagId = DMA_TAG(sif0.data.data).ID;
+	if ((tagId == TAG_REFE) || (tagId == TAG_END))
+		SIF_LOG("   END");
+	else
+		SIF_LOG("   CNT %08X, %08X", sif0.data.data, sif0.data.words);
+#endif
+
+	return true;
+}
+
+static __forceinline bool SIF1IOPWriteTag()
+{
+	// Read a tag.
+	sif1.fifo.read((u32*)&sif1.data, 4);
+	SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
+		sif1.data.data & 0xffffff, sif1.data.words, DMA_TAG(sif1.data.data).ID, 
+		DMA_TAG(sif1.data.data).IRQ);
+				
+	HW_DMA10_MADR = sif1.data.data & 0xffffff;
+	sif1.counter = sif1.data.words;
+	return true;
+}
+
+static __forceinline void SIF0EEend(int &cycles)
+{
+	eesifbusy[0] = false;
+	if (cycles == 0) DevCon.Warning("EESIF0cycles = 0");
+	CPU_INT(5, cycles*BIAS);
+}
+
+static __forceinline void SIF1EEend(int &cycles)
+{
+	// Stop & signal interrupts on EE
+	sif1.end = 0;
+	eesifbusy[1] = false;
+			
+	// Voodoocycles : Okami wants around 100 cycles when booting up
+	// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
+	// (Cause of double interrupts on the EE)
+	if (cycles == 0) DevCon.Warning("EESIF1cycles  = 0");
+	CPU_INT(6, min((int)(cycles*BIAS), 384));
+}
+
+static __forceinline void SIF0IOPend(int &psxCycles)
+{
+	// Stop & signal interrupts on IOP
+	sif0.data.data = 0;
+	iopsifbusy[0] = false;
+					
+	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
+	// So when we're all done, the equation looks like thus:
+	//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
+	if (psxCycles == 0) DevCon.Warning("IOPSIF0cycles = 0");
+	PSX_INT(IopEvt_SIF0, psxCycles);
+}
+
+static __forceinline void SIF1IOPend(int &psxCycles)
+{
+	// Stop & signal interrupts on IOP
+	sif1.data.data = 0;
+	iopsifbusy[1] = false;
+
+	//Fixme ( voodoocycles ):
+	//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
+	//Greater than *35 break rebooting when trying to play Tekken5 arcade history
+	//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
+	if (psxCycles == 0) DevCon.Warning("IOPSIF1cycles = 0");
+	PSX_INT(IopEvt_SIF1, min((psxCycles * 24), 1024));
+}
+
 //General format of all the SIF#(EE/IOP)Dma functions is this:
 //First, SIF#Dma does a while loop, calling SIF#EEDma if EE is active,
 //and then calling SIF#IOPDma if IOP is active.
@@ -157,44 +341,13 @@ static __forceinline void SIF0EEDma(int &cycles, bool &done)
 				SIF_LOG(" EE SIF interrupt");
 #endif
 
-			eesifbusy[0] = false;
 			done = true;
-			if (cycles == 0) DevCon.Warning("EESIF0cycles = 0");
-			CPU_INT(5, cycles*BIAS);
+			SIF0EEend(cycles);
 		}
 		else if (sif0.fifo.size >= 4) // Read a tag
 		{
-			static __aligned16 u32 tag[4];
-			
-			sif0.fifo.read((u32*)&tag[0], 4); // Tag
-			SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
-
-			sif0dma->unsafeTransfer(((tDMA_TAG*)(tag)));
-			sif0dma->madr = tag[1];
-			tDMA_TAG pTag(tag[0]);
-
-			SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", 
-				sif0dma->madr, sif0dma->qwc, pTag.ID, pTag.IRQ, tag[1], tag[0]);
-					
-			switch (pTag.ID)
-			{
-				case TAG_REFE:
-					sif0.end = 1;
-					if (dmacRegs->ctrl.STS != NO_STS) 
-						dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
-					break;
-                            
-				case TAG_REFS:
-					if (dmacRegs->ctrl.STS != NO_STS) 
-						dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
-					break;
-
-				case TAG_END:
-					sif0.end = 1;
-					break;
-			}
-					
 			done = false;
+			SIF0EEReadTag();
 		}
 	}
 	
@@ -221,87 +374,18 @@ static __forceinline void SIF1EEDma(int &cycles, bool &done)
 		{
 			SIF_LOG("EE SIF1 End %x", sif1.end);
 			
-			// Stop & signal interrupts on EE
-			sif1.end = 0;
-			eesifbusy[1] = false;
 			done = true;
-			
-			// Voodoocycles : Okami wants around 100 cycles when booting up
-			// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
-			// (Cause of double interrupts on the EE)
-			if (cycles == 0) DevCon.Warning("EESIF1cycles  = 0");
-			CPU_INT(6, min( (int)(cycles*BIAS), 384 ) );
+			SIF1EEend(cycles);
 		}
 		else
 		{
-			// Chain mode
-			tDMA_TAG *ptag;
-			
-			// Process DMA tag at sif1dma->tadr
 			done = false;
-			ptag = sif1dma->DMAtransfer(sif1dma->tadr, DMAC_SIF1);
-			if (ptag == NULL)
-			{
-				DevCon.Warning("SIF1EEDma: ptag == NULL");
-				 return;
-			}
-
-			if (sif1dma->chcr.TTE)
-			{
-				Console.WriteLn("SIF1 TTE");
-				sif1.fifo.write((u32*)ptag + 2, 2);
-			}
-
-			if (sif1dma->chcr.TIE && ptag->IRQ)
-			{
-				Console.WriteLn("SIF1 TIE");
-				sif1.end = 1;
-			}
-
-			switch (ptag->ID)
-			{
-				case TAG_REFE: // refe
-					SIF_LOG("   REFE %08X", ptag[1]._u32);
-					sif1.end = 1;
-					sif1dma->madr = ptag[1]._u32;
-					sif1dma->tadr += 16;
-					break;
-
-				case TAG_CNT: // cnt
-					SIF_LOG("   CNT");
-					sif1dma->madr = sif1dma->tadr + 16;
-					sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
-					break;
-
-				case TAG_NEXT: // next
-					SIF_LOG("   NEXT %08X", ptag[1]._u32);
-					sif1dma->madr = sif1dma->tadr + 16;
-					sif1dma->tadr = ptag[1]._u32;
-					break;
-
-				case TAG_REF: // ref
-				case TAG_REFS: // refs
-					SIF_LOG("   REF %08X", ptag[1]._u32);
-					sif1dma->madr = ptag[1]._u32;
-					sif1dma->tadr += 16;
-					break;
-
-				case TAG_END: // end
-					SIF_LOG("   END");
-					sif1.end = 1;
-					sif1dma->madr = sif1dma->tadr + 16;
-					sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
-					break;
-
-				default:
-					Console.WriteLn("Bad addr1 source chain");
-			}
+			if (!SIF1EEWriteTag()) return;
 		}
 	}
-	if (sif1dma->qwc > 0)
+	else
 	{
 		SifEEWrite(cycles);
-		
 	}
 }
 
@@ -321,43 +405,16 @@ static __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 		if (sif0.end || sTag.IRQ /* || (sTag.ID & 4) */)
 		{
 			SIF_LOG(" IOP SIF Stopped");
-
-			// Stop & signal interrupts on IOP
-			sif0.data.data = 0;
-			iopsifbusy[0] = false;
+			
 			done = true;
-					
-			// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
-			// So when we're all done, the equation looks like thus:
-			//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
-			if (psxCycles == 0) DevCon.Warning("IOPSIF0cycles = 0");
-			PSX_INT(IopEvt_SIF0, psxCycles);
+			SIF0IOPend(psxCycles);
 		}
 		else  // Chain mode
 		{
-			// Process DMA tag at HW_DMA9_TADR
-			sif0.data = *(sifData *)iopPhysMem(HW_DMA9_TADR);
-			sif0.data.words = (sif0.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
-			sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_TADR + 8), 4);
-
-			HW_DMA9_TADR += 16; ///HW_DMA9_MADR + 16 + sif0.sifData.words << 2;
-			HW_DMA9_MADR = sif0.data.data & 0xFFFFFF;
-			sif0.counter = sif0.data.words & 0xFFFFFF;
-
-			SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.data.words, sif0.data.data);
-
-#ifdef PCSX2_DEVBUILD
-			u32 tagId = DMA_TAG(sif0.data.data).ID;
-			if ((tagId == TAG_REFE) || (tagId == TAG_END))
-				SIF_LOG("   END");
-			else
-				SIF_LOG("   CNT %08X, %08X", sif0.data.data, sif0.data.words);
-#endif
-
 			done = false;
+			SIF0IOPWriteTag();
 		}
 	}
-	//if (sif0.counter > 0)
 	else
 	{
 		SifIOPWrite(psxCycles);
@@ -376,7 +433,6 @@ static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 		tDMA_TAG sTag(sif1.data.data);
 		// Stop on tag IRQ or END
 		
-		//if ((sif1.tagMode & 0x80) || (sif1.tagMode & 0x40))
 		if (/*sif1.end ||*/ sTag.IRQ  || (sTag.ID & 4))
 		{
 #ifdef PCSX2_DEVBUILD
@@ -385,29 +441,14 @@ static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 			else
 				SIF_LOG(" IOP SIF interrupt");
 #endif
-			// Stop & signal interrupts on IOP
-			sif1.data.data = 0;
-			iopsifbusy[1] = false;
 			done = true;
-
-			//Fixme ( voodoocycles ):
-			//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
-			//Greater than *35 break rebooting when trying to play Tekken5 arcade history
-			//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
-			if (psxCycles == 0) DevCon.Warning("IOPSIF1cycles = 0");
-			PSX_INT(IopEvt_SIF1, min ( (psxCycles * 24), 1024) );
+			SIF1IOPend(psxCycles);
 		}
 		else if (sif1.fifo.size >= 4)
 		{
-			// Read a tag.
-			sif1.fifo.read((u32*)&sif1.data, 4);
-			SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
-				sif1.data.data & 0xffffff, sif1.data.words, DMA_TAG(sif1.data.data).ID, 
-				DMA_TAG(sif1.data.data).IRQ);
-				
-			HW_DMA10_MADR = sif1.data.data & 0xffffff;
-			sif1.counter = sif1.data.words;
+			
 			done = false;
+			SIF1IOPWriteTag();
 		}
 	}
 }
