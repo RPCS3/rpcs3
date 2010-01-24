@@ -426,7 +426,8 @@ void vif0Write32(u32 mem, u32 value)
 		case VIF0_R2:
 		case VIF0_R3:
 			pxAssume((mem&0xf) == 0);
-			g_vifmask.Row0[(mem>>4) & 3] = value;
+			g_vifmask.Row0		 [ (mem>>4)&3 ]	  = value;
+			((u32*)&vif0Regs->r0)[((mem>>4)&3)*4] = value;
 			break;
 
 		case VIF0_C0:
@@ -434,7 +435,8 @@ void vif0Write32(u32 mem, u32 value)
 		case VIF0_C2:
 		case VIF0_C3:
 			pxAssume((mem&0xf) == 0);
-			g_vifmask.Col0[(mem>>4) & 3] = value;
+			g_vifmask.Col0		 [ (mem>>4)&3 ]	  = value;
+			((u32*)&vif0Regs->c0)[((mem>>4)&3)*4] = value;
 			break;
 
 		default:
