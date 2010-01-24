@@ -72,7 +72,9 @@ protected:
 // --------------------------------------------------------------------------------------
 //  GSFrame
 // --------------------------------------------------------------------------------------
-class GSFrame : public wxFrame, public EventListener_AppStatus
+class GSFrame : public wxFrame,
+	public EventListener_AppStatus,
+	public EventListener_CoreThread
 {
 	typedef wxFrame _parent;
 
@@ -99,6 +101,8 @@ protected:
 	void OnUpdateTitle( wxTimerEvent& evt );
 
 	void AppStatusEvent_OnSettingsApplied();
+	void CoreThread_OnResumed();
+	void CoreThread_OnSuspended();
 };
 
 struct PluginMenuAddition

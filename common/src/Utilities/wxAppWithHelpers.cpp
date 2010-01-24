@@ -101,7 +101,6 @@ void wxAppWithHelpers::DeletionDispatcher()
 
 void wxAppWithHelpers::OnIdleEvent( wxIdleEvent& evt )
 {
-	evt.Skip();
 	m_PingTimer.Stop();
 	PingDispatcher( "Idle" );
 }

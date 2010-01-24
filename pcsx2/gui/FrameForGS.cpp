@@ -269,6 +269,18 @@ wxStaticText* GSFrame::GetLabel_OutputDisabled() const
 	return (wxStaticText*)FindWindowById( m_id_OutputDisabled );
 }
 
+void GSFrame::CoreThread_OnResumed()
+{
+	m_timer_UpdateTitle.Start( 333 );
+}
+
+void GSFrame::CoreThread_OnSuspended()
+{
+	// Could stop the timer outright here, tho no harm in having an occasional
+	// update here or there, just in case some state info changes while emu is suspended.
+	m_timer_UpdateTitle.Start( 2000 );
+}
+
 // overrides base Show behavior.
 bool GSFrame::Show( bool shown )
 {

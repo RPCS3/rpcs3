@@ -596,15 +596,21 @@ void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& )
 {
 	// When the GUI is idle then it's a safe bet we can resume suspended console log
 	// flushing, on the theory that the user's had a good chance to field user input.
-	m_flushevent_counter = 0;
-	m_timer_FlushLimiter.Stop();
 	
-	wxCommandEvent sendevt( wxEVT_FlushQueue );
-	GetEventHandler()->AddPendingEvent( sendevt );
+	if( m_flushevent_counter > 0 )
+	{
+		m_flushevent_counter = 0;
+		m_timer_FlushLimiter.Stop();
+
+		wxCommandEvent sendevt( wxEVT_FlushQueue );
+		GetEventHandler()->AddPendingEvent( sendevt );
+	}
 }
 
 void ConsoleLogFrame::OnFlushLimiterTimer( wxTimerEvent& )
 {
+	if( m_flushevent_counter == 0 ) return;
+
 	m_flushevent_counter = 0;
 
 	wxCommandEvent sendevt( wxEVT_FlushQueue );
