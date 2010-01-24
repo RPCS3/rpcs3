@@ -20,9 +20,7 @@
 #include "IopCommon.h"
 #include "Sif.h"
 
-DMACh *sif0ch, *sif1ch, *sif2ch;
 static _sif sif0, sif1;
-
 
 bool eesifbusy[2] = { false, false };
 extern bool iopsifbusy[2];

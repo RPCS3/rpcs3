@@ -53,6 +53,7 @@ set(resourceList AppIcon16.png
 				 ButtonIcon_Camera.png
 				 ConfigIcon_Cpu.png
 				 ConfigIcon_Gamefixes.png
+				 ConfigIcon_MemoryCard.png
 				 ConfigIcon_Paths.png
 				 ConfigIcon_Plugins.png
 				 ConfigIcon_Speedhacks.png

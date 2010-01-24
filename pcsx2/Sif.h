@@ -69,7 +69,6 @@ struct _sif
 	s32 counter;
 	struct sifData data;
 };
-extern DMACh *sif0ch, *sif1ch, *sif2ch;
 
 extern void sifInit();
 
@@ -86,5 +85,7 @@ extern void EEsif1Interrupt();
 extern void sif0Interrupt();
 extern void sif1Interrupt();
 
+#define sif0_tag DMA_TAG(sif0.data.data)
+#define sif1_tag DMA_TAG(sif1.data.data)
 
 #endif /* __SIF_H__ */

@@ -99,9 +99,23 @@ union tDMA_TAG {
 	tDMA_TAG(u32 val) { _u32 = val; }
 	u16 upper() { return (_u32 >> 16); }
 	u16 lower() { return (u16)_u32; }
+	wxString tag_to_str()
+	{
+		switch(ID)
+		{
+			case TAG_REFE: return wxsFormat(L"REFE %08X", _u32); break;
+			case TAG_CNT: return L"CNT"; break;
+			case TAG_NEXT: return wxsFormat(L"NEXT %08X", _u32); break;
+			case TAG_REF: return wxsFormat(L"REF %08X", _u32); break;
+			case TAG_REFS: return wxsFormat(L"REFS %08X", _u32); break;
+			case TAG_CALL: return L"CALL"; break;
+			case TAG_RET: return L"RET"; break;
+			case TAG_END: return L"END"; break;
+			default: return L"????"; break;
+		}
+	}
 	void reset() { _u32 = 0; }
 };
-
 #define DMA_TAG(value) ((tDMA_TAG)(value))
 
 union tDMA_CHCR {

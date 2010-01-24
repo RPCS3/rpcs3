@@ -390,6 +390,7 @@
 		<Unit filename="../gui/Panels/GameFixesPanel.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.cpp" />
 		<Unit filename="../gui/Panels/LogOptionsPanels.h" />
+		<Unit filename="../gui/Panels/MemoryCardsPanel.cpp" />
 		<Unit filename="../gui/Panels/MiscPanelStuff.cpp" />
 		<Unit filename="../gui/Panels/PathsPanel.cpp" />
 		<Unit filename="../gui/Panels/PluginSelectorPanel.cpp" />
@@ -436,6 +437,12 @@
 		</Unit>
 		<Unit filename="../gui/Resources/ConfigIcon_Gamefixes.h" />
 		<Unit filename="../gui/Resources/ConfigIcon_Gamefixes.png">
+			<Option compile="1" />
+			<Option weight="0" />
+			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
+		</Unit>
+		<Unit filename="../gui/Resources/ConfigIcon_MemoryCard.h" />
+		<Unit filename="../gui/Resources/ConfigIcon_MemoryCard.png">
 			<Option compile="1" />
 			<Option weight="0" />
 			<Option compiler="gcc" use="1" buildCommand="$(SvnRootDir)/tools/bin2app.sh $(SvnRootDir) $file" />
