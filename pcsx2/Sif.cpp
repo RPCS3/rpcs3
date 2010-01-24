@@ -44,8 +44,12 @@ static __forceinline bool SifEERead(int &cycles)
 	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
 	SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
 
-	ptag = safeDmaGetAddr(sif0dma, sif0dma->madr, DMAC_SIF0);
-	if (ptag == NULL) return false;
+	ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
+	if (ptag == NULL)
+	{
+		DevCon.Warning("SIFEERead: ptag == NULL");
+		 return false;
+	}
 
 	sif0.fifo.read((u32*)ptag, readSize << 2);
 
@@ -61,14 +65,19 @@ static __forceinline bool SifEERead(int &cycles)
 static __forceinline bool SifEEWrite(int &cycles)
 {
 	// There's some data ready to transfer into the fifo..
-	tDMA_TAG *pTag;
+	tDMA_TAG *ptag;
 		
 	const int writeSize = min((s32)sif1dma->qwc, (FIFO_SIF_W - sif1.fifo.size) / 4);
 	if (writeSize == 0) { /*Console.Warning("SifEEWrite writeSize is 0"); return false;*/ }
-	pTag = safeDmaGetAddr(sif1dma, sif1dma->madr, DMAC_SIF1);
-	if (pTag == NULL) return false;
+	
+	ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1);
+	if (ptag == NULL) 
+	{
+		DevCon.Warning("SIFEEWrite: ptag == NULL");
+		return false;
+	}
 
-	sif1.fifo.write((u32*)pTag, writeSize << 2);
+	sif1.fifo.write((u32*)ptag, writeSize << 2);
 
 	sif1dma->madr += writeSize << 4;
 	cycles += writeSize;		// fixme : BIAS is factored in above
@@ -230,10 +239,12 @@ static __forceinline void SIF1EEDma(int &cycles, bool &done)
 			
 			// Process DMA tag at sif1dma->tadr
 			done = false;
-			ptag = safeDmaGetAddr(sif1dma, sif1dma->tadr, DMAC_SIF1);
-			if (ptag == NULL) return;
-					
-			sif1dma->unsafeTransfer(ptag);
+			ptag = sif1dma->DMAtransfer(sif1dma->tadr, DMAC_SIF1);
+			if (ptag == NULL)
+			{
+				DevCon.Warning("SIF1EEDma: ptag == NULL");
+				 return;
+			}
 
 			if (sif1dma->chcr.TTE)
 			{
@@ -355,6 +366,11 @@ static __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 
 static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 {
+	if (sif1.counter > 0)
+	{
+		SifIOPRead(psxCycles);
+	}
+	
 	if (sif1.counter <= 0)
 	{
 		tDMA_TAG sTag(sif1.data.data);
@@ -393,11 +409,6 @@ static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 			sif1.counter = sif1.data.words;
 			done = false;
 		}
-	}
-	
-	if (sif1.counter > 0)
-	{
-		SifIOPRead(psxCycles);
 	}
 }
 

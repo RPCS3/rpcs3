@@ -196,7 +196,8 @@ union tDMA_QWC {
 	void reset() { _u32 = 0; }
 	wxString desc() { return wxsFormat(L"QWC: 0x%x", _u32); }
 };
-
+static __forceinline void setDmacStat(u32 num);
+static __forceinline tDMA_TAG *dmaGetAddr(u32 addr);
 static __forceinline void throwBusError(const char *s);
 
 struct DMACh {
@@ -226,8 +227,6 @@ struct DMACh {
 	
 	bool transfer(const char *s, tDMA_TAG* ptag)
 	{
-	    //chcrTransfer(ptag);
-	    
 		if (ptag == NULL)  					 // Is ptag empty?
 		{
 			throwBusError(s);
@@ -243,6 +242,35 @@ struct DMACh {
 	{
         chcrTransfer(ptag);
         qwcTransfer(ptag);
+	}
+	
+	tDMA_TAG *getAddr(u32 addr, u32 num)
+	{
+		tDMA_TAG *ptr = dmaGetAddr(addr);
+		if (ptr == NULL)
+		{
+			throwBusError("dmaGetAddr");
+			setDmacStat(num);
+			chcr.STR = false;
+		}
+
+		return ptr;
+	}
+	
+	tDMA_TAG *DMAtransfer(u32 addr, u32 num)
+	{
+		tDMA_TAG *tag = getAddr(addr, num);
+		
+		if (tag == NULL) return NULL;
+		
+	    chcrTransfer(tag);
+        qwcTransfer(tag);
+        return tag;
+	}
+	
+	tDMA_TAG dma_tag()
+	{
+		return DMA_TAG(chcr._u32);
 	}
 	
 	wxString cmq_to_str()
@@ -543,7 +571,7 @@ struct INTCregisters
 	u32 padding[3];
 	tINTC_MASK  mask;
 };
-    
+
 #define dmacRegs ((DMACregisters*)(PS2MEM_HW+0xE000))
 #define intcRegs ((INTCregisters*)(PS2MEM_HW+0xF000))
 
@@ -552,6 +580,13 @@ static __forceinline void throwBusError(const char *s)
     Console.Error("%s BUSERR", s);
     dmacRegs->stat.BEIS = true;
 }
+
+static __forceinline void setDmacStat(u32 num)
+{
+	dmacRegs->stat.set_flags(1 << num);
+}
+
+			
 
 static __forceinline bool inScratchpad(u32 addr) 
 {
@@ -582,22 +617,6 @@ static __forceinline tDMA_TAG *dmaGetAddr(u32 addr)
     }
     return ptr;
 } 
-
-static __forceinline tDMA_TAG *safeDmaGetAddr(DMACh *dma, u32 addr, u32 num)
-{
-	tDMA_TAG *ptr = dmaGetAddr(addr);
-	if (ptr == NULL)
-	{
-		// DMA Error
-		dmacRegs->stat.BEIS = true; // BUS Error
-
-		// DMA End
-		dmacRegs->stat.set_flags(1 << num);
-		dma->chcr.STR = false;
-	}
-
-	return ptr;
-}
 
 void hwIntcIrq(int n);
 void hwDmacIrq(int n);
