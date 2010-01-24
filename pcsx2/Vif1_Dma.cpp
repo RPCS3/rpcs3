@@ -93,7 +93,12 @@ bool VIF1transfer(u32 *data, int size, bool istag)
 {
 	int ret;
 	int transferred = vif1.vifstalled ? vif1.irqoffset : 0; // irqoffset necessary to add up the right qws, or else will spin (spiderman)
-
+	
+	// Fixme:
+	// VIF1 chain mode seems to be pretty buggy. Keep it in synch with a INTC (page 28, ee user manual) fixes Transformers.
+	// Test chain mode with Harry Potter, Def Jam Fight for New York (+many others, look for flickering graphics).
+	// Mentioned games break by doing this, but they barely work anyway 
+	// if ( vif1.vifstalled ) hwIntcIrq(VIF1intc);
 	VIF_LOG("VIF1transfer: size %x (vif1.cmd %x)", size, vif1.cmd);
 
 	vif1.irqoffset = 0;
@@ -156,8 +161,9 @@ bool VIF1transfer(u32 *data, int size, bool istag)
 
 			if (!(vif1Regs->err.MII)) //i bit on vifcode and not masked by VIF1_ERR
 			{
+				// Fixme: This seems to be an important part of the VIF1 chain mode issue (see Fixme above :p )
+				//Console.Warning("Interrupt on VIFcmd: %x (INTC_MASK = %x)", vif1.cmd, psHu32(INTC_MASK));
 				VIF_LOG("Interrupt on VIFcmd: %x (INTC_MASK = %x)", vif1.cmd, psHu32(INTC_MASK));
-
 				++vif1.irq;
 
 				if (istag && vif1.tag.size <= vif1.vifpacketsize) vif1.stallontag = true;
