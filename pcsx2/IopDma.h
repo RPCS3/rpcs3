@@ -25,7 +25,30 @@
 typedef s32(* DmaHandler)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 typedef void (* DmaIHandler)(s32 channel);
 
-class DmaHandlerInfo
+// unused for now
+class DmaBcrReg
+{
+public:
+	union {
+		struct {
+			u32 size:16;
+			u32 count:16;
+		};
+		u32 whole;
+	};
+
+	DmaBcrReg(u32& value)
+	{
+		whole=value;
+	}
+
+	u32 Bytes()
+	{
+		return 4*size*count;
+	}
+};
+
+struct DmaHandlerInfo
 {
 public:
 	const char* Name;

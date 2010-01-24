@@ -239,7 +239,7 @@ s32 sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 		}
 	}
 
-	//PSX_INT(IopEvt_Dma12,read/2);	// Interrupts should always occur at the end
+	PSX_INT(IopEvt_Dma12,read/4);	// Interrupts should always occur at the end
 
 	*bytesProcessed = read;
 #endif
@@ -261,19 +261,29 @@ s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 
 	int written = 0;
 
-	for(int i = 0; i < bytesLeft; i++)
+	// FIXME: temp code, might need to implement properly
+	int bs = 0x24;
+	int bc = bytesLeft / (bs*4);
+	int ts = bc * bs * 4;
+
+	assert(ts == bytesLeft);
+
+	for(int j=0;j<bc;j++)
 	{
 		sio.count = 1;
-		sio2_fifoIn(*(data++));
-		written++;
-		if((sio2.packet.sendSize == BUFSIZE))
+		for(int i=0;i<(bs*4);i++)
 		{
-			//written = bytesLeft;
-			break;
+			sio2_fifoIn(*(data++));
+			written++;
+			if((sio2.packet.sendSize == BUFSIZE))
+			{
+				//written = bytesLeft;
+				break;
+			}
 		}
 	}
 
-	//PSX_INT(IopEvt_Dma11,written/2);	// Interrupts should always occur at the end
+	PSX_INT(IopEvt_Dma11,written/4);	// Interrupts should always occur at the end
 
 	*bytesProcessed = written;
 #endif

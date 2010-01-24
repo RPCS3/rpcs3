@@ -381,7 +381,7 @@ void IopDmaStart(int channel)
 		}
 	}
 
-	Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d dir=%d", channel, size, chcr&DMA_CTRL_DIRECTION);
+	Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d(0x%08x), dir=%d", channel, size, bcr, chcr&DMA_CTRL_DIRECTION);
 
 	IopDmaHandlers[channel].REG_CHCR() |= DMA_CTRL_ACTIVE;
 	IopDmaHandlers[channel].ByteCount = size;
@@ -452,7 +452,7 @@ void IopDmaUpdate(u32 elapsed)
 							ch->REG_MADR()+= ProcessedBytes;
 							ch->ByteCount -= ProcessedBytes;
 
-							NextUpdateDelay = ProcessedBytes/4; // / ch->Width;
+							NextUpdateDelay = ProcessedBytes/2; // / ch->Width;
 						}
 
 						if (RequestedDelay != 0) NextUpdateDelay = RequestedDelay;
