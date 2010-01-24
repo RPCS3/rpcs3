@@ -87,7 +87,7 @@ public:
 				wxEmptyString
 			);
 		}
-		memcpy_fast(&bucket.Chain[bucket.Size++], &dataPtr, sizeof(T));
+		memcpy_const(&bucket.Chain[bucket.Size++], &dataPtr, sizeof(T));
 	}
 	void clear() {
 		for (int i = 0; i < hSize; i++) {

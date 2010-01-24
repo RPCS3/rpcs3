@@ -62,9 +62,9 @@ public:
 			listI++;
 			blockEnd->block = (microBlock*)_aligned_malloc(sizeof(microBlock), 16);
 			blockEnd->next  = new microBlockLink;
-			memcpy_fast(blockEnd->block, pBlock, sizeof(microBlock));
-			thisBlock = blockEnd->block;
-			blockEnd  = blockEnd->next;
+			memcpy_const(blockEnd->block, pBlock, sizeof(microBlock));
+			thisBlock =  blockEnd->block;
+			blockEnd  =  blockEnd->next;
 		}
 		return thisBlock;
 	}

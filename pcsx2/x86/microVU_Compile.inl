@@ -110,8 +110,8 @@ microVUt(void) startLoop(mV) {
 	if (curI & _Mbit_)	{ Console.WriteLn(Color_Green, "microVU%d: M-bit set!", getIndex); }
 	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set!", getIndex); }
 	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set!", getIndex); }
-	memset(&mVUinfo,	 0, sizeof(mVUinfo));
-	memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));
+	memzero(mVUinfo);
+	memzero(mVUregsTemp);
 }
 
 microVUt(void) doIbit(mV) { 
@@ -316,7 +316,9 @@ microVUt(void) mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
 	mVUcycles				= 0;	// Skips "M" phase, and starts counting cycles at "T" stage
 	mVU->p					= 0;	// All blocks start at p index #0
 	mVU->q					= 0;	// All blocks start at q index #0
-	memcpy_fast(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo)); // Loads up Pipeline State Info
+	if ((uptr)&mVUregs != pState) {	// Loads up Pipeline State Info
+		memcpy_const(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo));
+	}
 	mVUblock.x86ptrStart	= thisPtr;
 	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
 	mVUregs.blockType		= 0;

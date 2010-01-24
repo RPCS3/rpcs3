@@ -201,7 +201,8 @@ microVUf(void) mVUclearProg(int progIndex) {
 // Caches Micro Program
 microVUf(void) mVUcacheProg(int progIndex) {
 	microVU* mVU = mVUx;
-	memcpy_fast(mVU->prog.prog[progIndex].data, mVU->regs->Micro, mVU->microMemSize);
+	if (!vuIndex) memcpy_const(mVU->prog.prog[progIndex].data, mVU->regs->Micro, 0x1000);
+	else		  memcpy_const(mVU->prog.prog[progIndex].data, mVU->regs->Micro, 0x4000);
 	mVUdumpProg(progIndex);
 }
 

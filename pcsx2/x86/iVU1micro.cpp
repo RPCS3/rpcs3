@@ -130,17 +130,17 @@ namespace VU1micro
         XMMRegisters::Freeze();
 
 		runCount++;
-		memcpy_fast((u8*)backVUregs, (u8*)&VU1,		sizeof(VURegs));
-		memcpy_fast((u8*)backVUmem,	 (u8*)VU1.Mem,	0x4000);
+		memcpy_const((u8*)backVUregs, (u8*)&VU1,		sizeof(VURegs));
+		memcpy_const((u8*)backVUmem,	 (u8*)VU1.Mem,	0x4000);
 
 		do { // while loop needed since not always will return finished
 			SuperVUExecuteProgram(VU1.VI[ REG_TPC ].UL & 0x3fff, 1);
 		} while( VU0.VI[ REG_VPU_STAT ].UL&0x100 );
 
-		memcpy_fast((u8*)cmpVUregs,	(u8*)&VU1,			sizeof(VURegs));
-		memcpy_fast((u8*)cmpVUmem,	(u8*)VU1.Mem,		0x4000);
-		memcpy_fast((u8*)&VU1,		(u8*)backVUregs,	sizeof(VURegs));
-		memcpy_fast((u8*)VU1.Mem,	(u8*)backVUmem,		0x4000);
+		memcpy_const((u8*)cmpVUregs,	(u8*)&VU1,			sizeof(VURegs));
+		memcpy_const((u8*)cmpVUmem,	(u8*)VU1.Mem,		0x4000);
+		memcpy_const((u8*)&VU1,		(u8*)backVUregs,	sizeof(VURegs));
+		memcpy_const((u8*)VU1.Mem,	(u8*)backVUmem,		0x4000);
 
 		//Currently breaking mVU execution is disabled. Check mVUtestCycles<vuIndex>() in microVU_Compile.inl
 		runVUrec(VU1.VI[REG_TPC].UL, 300000 /*0x7fffffff*/, 1);
@@ -231,8 +231,8 @@ namespace VU1micro
 			if (mVUdebugNow) {
 
 				resetVUrec(1);
-				memcpy_fast((u8*)&VU1,		(u8*)backVUregs,	sizeof(VURegs));
-				memcpy_fast((u8*)VU1.Mem,	(u8*)backVUmem,		0x4000);
+				memcpy_const((u8*)&VU1,		(u8*)backVUregs,	sizeof(VURegs));
+				memcpy_const((u8*)VU1.Mem,	(u8*)backVUmem,		0x4000);
 
 				runVUrec(VU1.VI[REG_TPC].UL, 300000 /*0x7fffffff*/, 1);
 

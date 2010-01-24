@@ -98,7 +98,7 @@ void normBranchCompile(microVU* mVU, u32 branchPC) {
 }
 
 void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
-	memcpy_fast(&mVUpBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
+	memcpy_const(&mVUpBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 	mVUsetupBranch(mVU, mFC);
 	mVUbackupRegs(mVU);
 
@@ -155,7 +155,7 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 			s32* ajmp = xJcc32((JccComparisonType)JMPcc); 
 			u32 bPC = iPC; // mVUcompile can modify iPC, mVUpBlock, and mVUregs so back them up
 			microBlock* pBlock = mVUpBlock;
-			memcpy_fast(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
+			memcpy_const(&pBlock->pStateEnd, &mVUregs, sizeof(microRegInfo));
 
 			incPC2(1);  // Get PC for branch not-taken
 			mVUcompile(mVU, xPC, (uptr)&mVUregs);
