@@ -355,7 +355,7 @@ void GSFrame::OnMove( wxMoveEvent& evt )
 	evt.Skip();
 
 	// evt.GetPosition() returns the client area position, not the window frame position.
-	if( !IsMaximized() && IsVisible() )
+	if( !IsFullScreen() && !IsMaximized() && IsVisible() )
 		g_Conf->GSWindow.WindowPos	= GetScreenPosition();
 
 	// wxGTK note: X sends gratuitous amounts of OnMove messages for various crap actions
@@ -371,7 +371,7 @@ void GSFrame::OnResize( wxSizeEvent& evt )
 {
 	if( IsBeingDeleted() ) return;
 
-	if( !IsMaximized() && IsVisible() )
+	if( !IsFullScreen() && !IsMaximized() && IsVisible() )
 	{
 		g_Conf->GSWindow.WindowSize	= GetClientSize();
 	}

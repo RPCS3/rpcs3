@@ -105,6 +105,9 @@ namespace Panels
 		CpuPanelEE( wxWindow* parent );
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
+
+	protected:
+		void OnRestoreDefaults( wxCommandEvent& evt );
 	};
 
 	class CpuPanelVU : public BaseApplicableConfigPanel
@@ -117,6 +120,9 @@ namespace Panels
 		CpuPanelVU( wxWindow* parent );
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
+
+	protected:
+		void OnRestoreDefaults( wxCommandEvent& evt );
 	};
 
 	class BaseAdvancedCpuOptions : public BaseApplicableConfigPanel
@@ -134,6 +140,8 @@ namespace Panels
 	public:
 		BaseAdvancedCpuOptions( wxWindow* parent );
 		virtual ~BaseAdvancedCpuOptions() throw() { }
+
+		void RestoreDefaults();
 
 	protected:
 		void OnRestoreDefaults( wxCommandEvent& evt );

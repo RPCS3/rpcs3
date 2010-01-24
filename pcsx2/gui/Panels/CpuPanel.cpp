@@ -68,8 +68,6 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 	s_daz	+= m_Option_FTZ;
 	s_daz	+= m_Option_DAZ;
 	s_daz	+= 4;
-	s_daz	+= 22;
-	s_daz	+= new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ) | pxCenter;
 
 	*s_round+= m_RoundModePanel		| StdExpand();
 	*s_clamp+= m_ClampModePanel		| StdExpand();
@@ -80,24 +78,27 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 	grid	+= &s_daz				| pxExpand;
 
 	*this	+= grid					| StdExpand();
-
-	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BaseAdvancedCpuOptions::OnRestoreDefaults ) );
 }
 
-void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent &evt)
+void Panels::BaseAdvancedCpuOptions::OnRestoreDefaults(wxCommandEvent& evt)
+{
+	RestoreDefaults();
+	evt.Skip();
+}
+
+void Panels::BaseAdvancedCpuOptions::RestoreDefaults()
 {
 	m_RoundModePanel->SetSelection( 3 );		// Roundmode chop
 	m_ClampModePanel->SetSelection( 1 );		// clamp mode normal
 
 	m_Option_DAZ->SetValue(true);
 	m_Option_FTZ->SetValue(true);
-	
-	evt.Skip();
 }
 
 Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
 	: BaseAdvancedCpuOptions( parent )
 {
+	SetName( L"AdvancedOptionsFPU" );
 	AddFrame(_("EE/FPU Advanced Recompiler Options"));
 
 	m_ClampModePanel->Append(_("Extra + Preserve Sign"));
@@ -113,6 +114,7 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
 Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 	: BaseAdvancedCpuOptions( parent )
 {
+	SetName( L"AdvancedOptionsVU" );
 	AddFrame(_("VU0 / VU1 Advanced Recompiler Options"));
 
 	m_ClampModePanel->Append(_("Extra"));
@@ -175,6 +177,11 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
 	*this	+= new AdvancedOptionsFPU( this )	| StdExpand();
 
+	*this	+= 12;
+	*this	+= new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ) | StdButton();
+
+	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CpuPanelEE::OnRestoreDefaults ) );
+
 	AppStatusEvent_OnSettingsApplied();
 }
 
@@ -221,6 +228,11 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
 	*this	+= new AdvancedOptionsVU( this )	| StdExpand();
 
+	*this	+= 12;
+	*this	+= new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ) | StdButton();
+
+	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CpuPanelVU::OnRestoreDefaults ) );
+
 	AppStatusEvent_OnSettingsApplied();
 }
 
@@ -242,6 +254,18 @@ void Panels::CpuPanelEE::AppStatusEvent_OnSettingsApplied()
 	m_panel_RecEE->SetSelection( (int)recOps.EnableEE );
 	m_panel_RecIOP->SetSelection( (int)recOps.EnableIOP );
 }
+
+void Panels::CpuPanelEE::OnRestoreDefaults(wxCommandEvent &evt)
+{
+	m_panel_RecEE->SetSelection( m_panel_RecEE->GetButton(1)->IsEnabled() ? 1 : 0 );
+	m_panel_RecIOP->SetSelection( m_panel_RecIOP->GetButton(1)->IsEnabled() ? 1 : 0 );
+
+	if( BaseAdvancedCpuOptions* opts = (BaseAdvancedCpuOptions*)FindWindowByName(L"AdvancedOptionsFPU") )
+		opts->RestoreDefaults();
+
+	evt.Skip();
+}
+
 
 void Panels::CpuPanelVU::Apply()
 {
@@ -274,6 +298,17 @@ void Panels::CpuPanelVU::AppStatusEvent_OnSettingsApplied()
 		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 1 : 0 );
 	else
 		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 2 : 0 );
+}
+
+void Panels::CpuPanelVU::OnRestoreDefaults(wxCommandEvent &evt)
+{
+	m_panel_VU0->SetSelection( m_panel_VU0->GetButton(1)->IsEnabled() ? 1 : 0 );
+	m_panel_VU1->SetSelection( m_panel_VU1->GetButton(1)->IsEnabled() ? 1 : 0 );
+
+	if( BaseAdvancedCpuOptions* opts = (BaseAdvancedCpuOptions*)FindWindowByName(L"AdvancedOptionsVU") )
+		opts->RestoreDefaults();
+
+	evt.Skip();
 }
 
 void Panels::BaseAdvancedCpuOptions::ApplyRoundmode( SSE_MXCSR& mxcsr )

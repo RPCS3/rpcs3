@@ -405,6 +405,7 @@ void MainEmuFrame::Menu_ShowConsole_Stdio(wxCommandEvent &event)
 void MainEmuFrame::Menu_PrintCDVD_Info(wxCommandEvent &event)
 {
 	g_Conf->EmuOptions.CdvdVerboseReads = GetMenuBar()->IsChecked( MenuId_CDVD_Info );
+	const_cast<Pcsx2Config&>(EmuConfig).CdvdVerboseReads = true;		// read-only in core thread, so it's safe to modify.
 	SaveEmuOptions();
 }
 

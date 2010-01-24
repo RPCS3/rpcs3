@@ -279,7 +279,7 @@ void operator+=( wxSizer* target, const pxWindowAndFlags<WinType>& src )
 
 namespace pxSizerFlags
 {
-	static const int StdPadding = 6;
+	static const int StdPadding = 5;
 	
 	extern wxSizerFlags StdSpace();
 	extern wxSizerFlags StdCenter();

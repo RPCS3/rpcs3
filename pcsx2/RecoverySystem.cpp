@@ -30,7 +30,7 @@ static EventSource<IEventListener_SaveStateThread>		m_evtsrc_SaveState;
 // Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
 static SafeArray<u8> state_buffer;
 
-_BaseStateThread* current_state_thread = NULL;
+static _BaseStateThread* current_state_thread = NULL;
 
 // Simple lock boolean for the state buffer being in use by a thread.
 static NonblockingMutex state_buffer_lock;

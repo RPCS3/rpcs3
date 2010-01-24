@@ -210,31 +210,31 @@ wxWindowID pxRadioPanel::GetSelectionId() const
 
 bool pxRadioPanel::IsSelected( int idx ) const
 {
-	if( VerifyRealizedState() ) return false;
+	if( !VerifyRealizedState() ) return false;
 	pxAssert( m_objects[idx].LabelObj != NULL );
 	return m_objects[idx].LabelObj->GetValue();
 }
 
 wxStaticText* pxRadioPanel::GetSubText( int idx )
 {
-	if( VerifyRealizedState() ) return NULL;
+	if( !VerifyRealizedState() ) return NULL;
 	return m_objects[idx].SubTextObj;
 }
 
 const wxStaticText* pxRadioPanel::GetSubText( int idx ) const
 {
-	if( VerifyRealizedState() ) return NULL;
+	if( !VerifyRealizedState() ) return NULL;
 	return m_objects[idx].SubTextObj;
 }
 
 wxRadioButton* pxRadioPanel::GetButton( int idx )
 {
-	if( VerifyRealizedState() ) return NULL;
+	if( !VerifyRealizedState() ) return NULL;
 	return m_objects[idx].LabelObj;
 }
 
 const wxRadioButton* pxRadioPanel::GetButton( int idx ) const
 {
-	if( VerifyRealizedState() ) return NULL;
+	if( !VerifyRealizedState() ) return NULL;
 	return m_objects[idx].LabelObj;
 }
