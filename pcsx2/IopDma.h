@@ -40,7 +40,7 @@ public:
 				 // and serves as a signal that the channel shoudl be handled by the loop.
 				 // temporary until I code a better method
 	u32 ByteCount;
-	s32 Target;
+	s32 NextUpdate;
 
 	u32& REG_MADR(void);
 	u32& REG_BCR(void);

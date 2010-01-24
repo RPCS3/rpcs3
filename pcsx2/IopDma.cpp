@@ -385,7 +385,7 @@ void IopDmaStart(int channel)
 
 	IopDmaHandlers[channel].REG_CHCR() |= DMA_CTRL_ACTIVE;
 	IopDmaHandlers[channel].ByteCount = size;
-	IopDmaHandlers[channel].Target = 0;
+	IopDmaHandlers[channel].NextUpdate = 0;
 	IopDmaHandlers[channel].Activated = true;
 
 	//SetDmaUpdateTarget(1);
@@ -405,9 +405,8 @@ void IopDmaUpdate(u32 elapsed)
 {
 	s32 MinDelay=0;
 	
-	int doNotHang=10;
 	do {
-		MinDelay = 0x7FFFFFFF;
+		MinDelay = 0x7FFFFFFF; // max possible value
 
 		for (int i = 0;i < DMA_CHANNEL_MAX;i++)
 		{
@@ -415,12 +414,12 @@ void IopDmaUpdate(u32 elapsed)
 
 			if ((ch->Activated) && (ch->REG_CHCR()&DMA_CTRL_ACTIVE))
 			{
-				ch->Target -= elapsed;
-				if (ch->Target <= 0)
+				ch->NextUpdate -= elapsed;
+				if (ch->NextUpdate <= 0)
 				{
 					if (ch->ByteCount <= 0)
 					{
-						ch->Target = 0x7fffffff;
+						ch->NextUpdate = 0x7fffffff;
 
 						ch->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
 						RaiseDmaIrq(i);
@@ -432,58 +431,59 @@ void IopDmaUpdate(u32 elapsed)
 
 						DmaHandler handler = (chcr & DMA_CTRL_DIRECTION) ? IopDmaHandlers[i].Write : IopDmaHandlers[i].Read;
 
-						u32 BCount = 0;
-						s32 Target = (handler) ? handler(i, (u32*)iopPhysMem(ch->REG_MADR()), ch->ByteCount, &BCount) : 0;
+						u32 ProcessedBytes = 0;
+						s32 RequestedDelay = (handler) ? handler(i, (u32*)iopPhysMem(ch->REG_MADR()), ch->ByteCount, &ProcessedBytes) : 0;
 
-						if(BCount>0)
+						if(ProcessedBytes>0)
 						{
-							psxCpu->Clear(ch->REG_MADR(), BCount/4);
+							psxCpu->Clear(ch->REG_MADR(), ProcessedBytes/4);
 						}
 
-						int TTarget = 100;
-						if (Target < 0)
+						int NextUpdateDelay = 100;
+						if (RequestedDelay < 0) // error code
 						{
 							// TODO: ... What to do if the handler gives an error code? :P
 							ch->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
 							RaiseDmaIrq(i);
 							IopDmaHandlers[i].Interrupt(i);
 						}
-						else if (BCount > 0)
+						else if (ProcessedBytes > 0) // if not an error, continue transfer
 						{
-							ch->REG_MADR()+= BCount;
-							ch->ByteCount -= BCount;
+							ch->REG_MADR()+= ProcessedBytes;
+							ch->ByteCount -= ProcessedBytes;
 
-							TTarget = BCount/4; // / ch->Width;
+							NextUpdateDelay = ProcessedBytes/4; // / ch->Width;
 						}
 
-						if (Target != 0) TTarget = Target;
+						if (RequestedDelay != 0) NextUpdateDelay = RequestedDelay;
 
-						ch->Target += TTarget;
-						
-						TTarget = ch->Target;
-						if(TTarget < 0)
-							TTarget = 0;
-
-						if (TTarget<MinDelay)
-							MinDelay = TTarget;
+						ch->NextUpdate += NextUpdateDelay;
 					}
 				}
-				else
-				{
-					int TTarget = ch->Target;
-					if (TTarget<MinDelay)
-						MinDelay = TTarget;
-				}
+
+				int nTarget = ch->NextUpdate;
+				if(nTarget < 0) nTarget = 0;
+
+				if (nTarget<MinDelay)
+					MinDelay = nTarget;
 			}
 		}
+
+		// reset elapsed time in case we loop
 		elapsed=0;
 	}
-	while(MinDelay <= 0 && (doNotHang-->0));
+	while(MinDelay <= 0);
 
 	if(MinDelay<0x7FFFFFFF)
+	{
+		// tell the iop when to call this function again
 		SetDmaUpdateTarget(MinDelay);
+	}
 	else
+	{
+		// bogus value so the function gets called again, not sure if it's necessary anymore
 		SetDmaUpdateTarget(10000);
+	}
 }
 
 s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)

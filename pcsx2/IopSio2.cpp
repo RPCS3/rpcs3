@@ -224,6 +224,9 @@ s32 sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 
 	int read = 0;
 
+	// limit the burst length to avoid problems
+	//if(bytesLeft>2048) bytesLeft = 2048;
+
 	while (bytesLeft > 0) 
 	{
 		(*(data++)) = sio2_fifoOut();
@@ -252,6 +255,9 @@ s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 		return -1;
 
 	//int available = sio2_getFifoInFree();
+
+	// limit the burst length to avoid problems
+	//if(bytesLeft>2048) bytesLeft = 2048;
 
 	int written = 0;
 
