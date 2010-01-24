@@ -381,7 +381,7 @@ void IopDmaStart(int channel)
 		}
 	}
 
-	Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d(0x%08x), dir=%d", channel, size, bcr, chcr&DMA_CTRL_DIRECTION);
+	//Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d(0x%08x), dir=%d", channel, size, bcr, chcr&DMA_CTRL_DIRECTION);
 
 	IopDmaHandlers[channel].REG_CHCR() |= DMA_CTRL_ACTIVE;
 	IopDmaHandlers[channel].ByteCount = size;
@@ -443,17 +443,21 @@ void IopDmaUpdate(u32 elapsed)
 						if (RequestedDelay < 0) // error code
 						{
 							// TODO: ... What to do if the handler gives an error code? :P
+							DevCon.Warning("ERROR on channel %d",i);
 							ch->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
 							RaiseDmaIrq(i);
 							IopDmaHandlers[i].Interrupt(i);
 						}
 						else if (ProcessedBytes > 0) // if not an error, continue transfer
 						{
+							//DevCon.WriteLn("Transfer channel %d, ProcessedBytes = %d",i,ProcessedBytes);
 							ch->REG_MADR()+= ProcessedBytes;
 							ch->ByteCount -= ProcessedBytes;
 
 							NextUpdateDelay = ProcessedBytes/2; // / ch->Width;
 						}
+						else 
+							DevCon.Warning("What now? :p");
 
 						if (RequestedDelay != 0) NextUpdateDelay = RequestedDelay;
 
