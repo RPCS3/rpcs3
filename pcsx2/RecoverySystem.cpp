@@ -24,9 +24,7 @@
 
 class _BaseStateThread;
 
-#ifndef __LINUX__
-template EventSource<IEventListener_SaveStateThread>;
-#endif
+template class EventSource<IEventListener_SaveStateThread>;
 static EventSource<IEventListener_SaveStateThread>		m_evtsrc_SaveState;
 
 // Used to hold the current state backup (fullcopy of PS2 memory and plugin states).
