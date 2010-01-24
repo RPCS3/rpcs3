@@ -28,6 +28,7 @@
 #include "Resources/ConfigIcon_Gamefixes.h"
 #include "Resources/ConfigIcon_Paths.h"
 #include "Resources/ConfigIcon_Plugins.h"
+#include "Resources/ConfigIcon_MemoryCard.h"
 
 #include "Resources/AppIcon16.h"
 #include "Resources/AppIcon32.h"
@@ -168,6 +169,7 @@ wxImageList& Pcsx2App::GetImgList_Config()
 		FancyLoadMacro( Plugins );
 		FancyLoadMacro( Gamefixes );
 		FancyLoadMacro( Speedhacks );
+		FancyLoadMacro( MemoryCard );
 		FancyLoadMacro( Video );
 		FancyLoadMacro( Cpu );
 	}

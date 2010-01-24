@@ -34,6 +34,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
+	AddPage<MemoryCardsPanel>	( wxLt("MemoryCards"),	cfgid.MemoryCard );
 	AddPage<CpuPanelEE>			( wxLt("EE/IOP"),		cfgid.Cpu );
 	AddPage<CpuPanelVU>			( wxLt("VUs"),			cfgid.Cpu );
 	AddPage<VideoPanel>			( wxLt("GS"),			cfgid.Video );

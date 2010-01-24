@@ -276,6 +276,7 @@ struct AppImageIds
 			Plugins,
 			Speedhacks,
 			Gamefixes,
+			MemoryCard,
 			Video,
 			Cpu;
 
@@ -283,7 +284,8 @@ struct AppImageIds
 		{
 			Paths		= Plugins	=
 			Speedhacks	= Gamefixes	=
-			Video		= Cpu		= -1;
+			Video		= Cpu		= 
+			MemoryCard	= -1;
 		}
 	} Config;
 

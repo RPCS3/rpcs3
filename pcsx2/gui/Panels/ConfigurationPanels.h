@@ -256,8 +256,9 @@ namespace Panels
 		void OnOpenWindowSettings( wxCommandEvent& evt );
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
+	// --------------------------------------------------------------------------------------
+	//  SpeedHacksPanel
+	// --------------------------------------------------------------------------------------
 	class SpeedHacksPanel : public BaseApplicableConfigPanel
 	{
 	protected:
@@ -297,15 +298,31 @@ namespace Panels
 		void VUCycleRate_Scroll(wxScrollEvent &event);
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
-	class GameFixesPanel: public BaseApplicableConfigPanel
+	// --------------------------------------------------------------------------------------
+	//  GameFixesPanel
+	// --------------------------------------------------------------------------------------
+	class GameFixesPanel : public BaseApplicableConfigPanel
 	{
 	protected:
 		pxCheckBox*			m_checkbox[NUM_OF_GAME_FIXES];
 
 	public:
 		GameFixesPanel( wxWindow* parent );
+		virtual ~GameFixesPanel() throw() { }
+		void Apply();
+		void AppStatusEvent_OnSettingsApplied();
+	};
+
+	// --------------------------------------------------------------------------------------
+	//  MemoryCardsPanel
+	// --------------------------------------------------------------------------------------
+	class MemoryCardsPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+
+	public:
+		MemoryCardsPanel( wxWindow* parent );
+		virtual ~MemoryCardsPanel() throw() { }
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
 	};

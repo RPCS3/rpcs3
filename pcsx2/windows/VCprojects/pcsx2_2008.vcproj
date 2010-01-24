@@ -2226,6 +2226,40 @@
 					</FileConfiguration>
 				</File>
 				<File
+					RelativePath="..\..\gui\Resources\ConfigIcon_MemoryCard.png"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description=""
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Devel|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling Bitmap Resource..."
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						>
+						<Tool
+							Name="VCCustomBuildTool"
+							Description="Compiling Bitmap Resource..."
+							CommandLine="&quot;$(InputDir)\bin2cpp.cmd&quot; $(InputFileName)&#x0D;&#x0A;"
+							Outputs="&quot;$(InputDir)\$(InputName).h"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
 					RelativePath="..\..\gui\Resources\ConfigIcon_Paths.png"
 					>
 					<FileConfiguration
@@ -2431,46 +2465,6 @@
 					RelativePath=".\..\wxResources.rc"
 					>
 				</File>
-				<Filter
-					Name="Include"
-					>
-					<File
-						RelativePath="..\..\gui\Resources\AppIcon.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\BackgroundLogo.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\ConfigIcon_Cpu.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\ConfigIcon_Gamefixes.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\ConfigIcon_Paths.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\ConfigIcon_Plugins.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\ConfigIcon_Speedhacks.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\ConfigIcon_Video.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\gui\Resources\Dualshock.h"
-						>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="Panels"
@@ -2509,6 +2503,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Panels\LogOptionsPanels.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\MemoryCardsPanel.cpp"
 					>
 				</File>
 				<File
