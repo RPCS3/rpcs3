@@ -482,7 +482,7 @@ public:
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	int  IssueDialogAsModal( const wxString& dlgName );
 	void PostMethod( FnPtr_AppMethod method );
-	bool DoStuckThread( PersistentThread& stuck_thread );
+	int  DoStuckThread( PersistentThread& stuck_thread );
 
 	void SysExecute();
 	void SysExecute( CDVD_SourceType cdvdsrc, const wxString& elf_override=wxEmptyString );

@@ -320,7 +320,7 @@ void Pcsx2App::OnOpenDialog_StuckThread( wxCommandEvent& evt )
 	DoStuckThread( *(PersistentThread*)evt.GetClientData() );
 }
 
-bool Pcsx2App::DoStuckThread( PersistentThread& stuck_thread )
+int Pcsx2App::DoStuckThread( PersistentThread& stuck_thread )
 {
 	if( !wxThread::IsMain() )
 	{
