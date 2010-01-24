@@ -239,8 +239,6 @@ s32 sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 		}
 	}
 
-	PSX_INT(IopEvt_Dma12,read/4);	// Interrupts should always occur at the end
-
 	*bytesProcessed = read;
 #endif
 	return 0;
@@ -283,8 +281,6 @@ s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 		}
 	}
 
-	PSX_INT(IopEvt_Dma11,written/4);	// Interrupts should always occur at the end
-
 	*bytesProcessed = written;
 #endif
 	return 0;
@@ -293,6 +289,11 @@ s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 void sio2DmaInterrupt(s32 channel)
 {
 #ifdef ENABLE_NEW_IOPDMA_SIO
+	switch(channel)	// Interrupts should always occur at the end
+	{
+	case 11: PSX_INT(IopEvt_Dma11,0); break;
+	case 12: PSX_INT(IopEvt_Dma12,0); break;
+	}
 #endif
 }
 
