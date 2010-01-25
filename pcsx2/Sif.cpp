@@ -250,8 +250,8 @@ static __forceinline void SIF0EEend(int &cycles)
 	// Stop & signal interrupts on EE
 	sif0.end = 0;
 	eesifbusy[0] = false;
-	if (cycles == 0) DevCon.Warning("EESIF0cycles = 0");
-	CPU_INT(5, cycles*BIAS);
+	if (cycles == 0) DevCon.Warning("EESIF0cycles = 0"); // No transfer happened
+	else CPU_INT(5, cycles*BIAS); // Hence no Interrupt
 }
 
 static __forceinline void SIF1EEend(int &cycles)
@@ -263,8 +263,8 @@ static __forceinline void SIF1EEend(int &cycles)
 	// Voodoocycles : Okami wants around 100 cycles when booting up
 	// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
 	// (Cause of double interrupts on the EE)
-	if (cycles == 0) DevCon.Warning("EESIF1cycles  = 0");
-	CPU_INT(6, min((int)(cycles*BIAS), 384));
+	if (cycles == 0) DevCon.Warning("EESIF1cycles  = 0"); // No transfer happened
+	else CPU_INT(6, min((int)(cycles*BIAS), 384)); // Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
 }
 
 static __forceinline void SIF0IOPend(int &psxCycles)
@@ -276,8 +276,8 @@ static __forceinline void SIF0IOPend(int &psxCycles)
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
 	// So when we're all done, the equation looks like thus:
 	//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
-	if (psxCycles == 0) DevCon.Warning("IOPSIF0cycles = 0");
-	PSX_INT(IopEvt_SIF0, psxCycles);
+	if (psxCycles == 0) DevCon.Warning("IOPSIF0cycles = 0"); // No transfer happened
+	else PSX_INT(IopEvt_SIF0, psxCycles); // Hence no Interrupt
 }
 
 static __forceinline void SIF1IOPend(int &psxCycles)
@@ -290,8 +290,8 @@ static __forceinline void SIF1IOPend(int &psxCycles)
 	//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
 	//Greater than *35 break rebooting when trying to play Tekken5 arcade history
 	//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
-	if (psxCycles == 0) DevCon.Warning("IOPSIF1cycles = 0");
-	PSX_INT(IopEvt_SIF1, min((psxCycles * 24), 1024));
+	if (psxCycles == 0) DevCon.Warning("IOPSIF1cycles = 0"); // No transfer happened
+	else PSX_INT(IopEvt_SIF1, min((psxCycles * 26), 1024)); // Hence no Interrupt
 }
 
 //General format of all the SIF#(EE/IOP)Dma functions is this:
