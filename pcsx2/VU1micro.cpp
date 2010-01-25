@@ -44,8 +44,7 @@ static int count;
 
 void __fastcall vu1ExecMicro(u32 addr)
 {
-	while(VU0.VI[REG_VPU_STAT].UL & 0x100)
-	{
+	while(VU0.VI[REG_VPU_STAT].UL & 0x100) {
 		VUM_LOG("vu1ExecMicro > Stalling until current microprogram finishes");
 		CpuVU1->ExecuteBlock();
 	}
@@ -53,10 +52,11 @@ void __fastcall vu1ExecMicro(u32 addr)
 	VUM_LOG("vu1ExecMicro %x", addr);
 	VUM_LOG("vu1ExecMicro %x (count=%d)", addr, count++);
 
-	VU0.VI[REG_VPU_STAT].UL|= 0x100;
-	VU0.VI[REG_VPU_STAT].UL&= ~0x7E000;
+	VU0.VI[REG_VPU_STAT].UL &= ~0xFF00;
+	VU0.VI[REG_VPU_STAT].UL |=  0x0100;
+
 	vif1Regs->stat.VEW = true;
-	if (addr != -1) VU1.VI[REG_TPC].UL = addr;
+	if ((s32)addr != -1) VU1.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU1);
 
 	CpuVU1->ExecuteBlock();

@@ -29,10 +29,14 @@
 
 _vifT void vifCMD_Null();
 
+_f void vifFlush(int idx) {
+	if (!idx) vif0FLUSH();
+	else	  vif1FLUSH();
+}
+
 _f void vuExecMicro(int idx, u32 addr) {
 	VURegs* VU = nVif[idx].VU;
-	if (!idx)	vif0FLUSH();
-	else		vif1FLUSH();
+	vifFlush(idx);
 
 	if (VU->vifRegs->itops  > (idx ? 0x3ffu : 0xffu)) {
 		Console.WriteLn("VIF%d ITOP overrun! %x", idx, VU->vifRegs->itops);
@@ -60,11 +64,6 @@ _f void vuExecMicro(int idx, u32 addr) {
 
 	if (!idx) vu0ExecMicro(addr);
 	else	  vu1ExecMicro(addr);
-}
-
-_f void vifFlush(int idx) {
-	if (!idx) vif0FLUSH();
-	else	  vif1FLUSH();
 }
 
 u8 schedulepath3msk = 0;
@@ -354,7 +353,7 @@ _vifT void vifCMD_Mark()
 
 _vifT void vifCMD_MPG()
 {
-	if (!idx) vifFlush(idx); // Only Vif0 Flush!?
+	vifFlush(idx);
 	int vifNum = (u8)(vifXRegs->code >> 16);
 	if(!vifNum) vifNum = 256;
 
@@ -364,7 +363,6 @@ _vifT void vifCMD_MPG()
 
 _vifT void vifCMD_MSCALF()
 {
-	if (idx) vif1FLUSH(); // Only Vif1 Flush!?
 	vuExecMicro(idx, (u16)(vifXRegs->code) << 3);
 	vifX.cmd &= ~0x7f;
 }
@@ -410,9 +408,9 @@ _vifT void vifCMD_Null() // invalid opcode
 _vifT void vifCMD_Offset()
 {
 	vif1Only();
-	vif1Regs->ofst  = vif1Regs->code & 0x3ff;
-	vif1Regs->stat.DBF = false;
-	vif1Regs->tops  = vif1Regs->base;
+	vif1Regs->stat.DBF	= false;
+	vif1Regs->ofst		= vif1Regs->code & 0x3ff;
+	vif1Regs->tops		= vif1Regs->base;
 	vif1.cmd &= ~0x7f;
 }
 

@@ -31,14 +31,9 @@ __forceinline void vif1FLUSH()
 {
 	int _cycles = VU1.cycle;
 
-	// fixme: Same as above, is this a "stalling" offense?  I think the cycles should
-	// be added to cpuRegs.cycle instead of g_vifCycles, but not sure (air)
-
-	if (VU0.VI[REG_VPU_STAT].UL & 0x100)
-	{
-		do
-		{
-			CpuVU1->ExecuteBlock();
+	if (VU0.VI[REG_VPU_STAT].UL & 0x100) {
+		do { 
+			CpuVU1->ExecuteBlock(); 
 		}
 		while (VU0.VI[REG_VPU_STAT].UL & 0x100);
 

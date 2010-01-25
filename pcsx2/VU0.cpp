@@ -60,7 +60,7 @@ void COP2_Unknown()
 
 //****************************************************************************
 
-__forceinline void _vu0run(bool breakOnMbit) {
+__forceinline void _vu0run(bool breakOnMbit, bool addCycles) {
 	
 	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
@@ -70,19 +70,20 @@ __forceinline void _vu0run(bool breakOnMbit) {
 	do {
 		// knockout kings 2002 loops here with sVU
 		if (breakOnMbit && (VU0.cycle-startcycle > 0x1000)) {
-			Console.Warning("VU0 perma-stall, breaking execution...");
-			break; // mVU will never get here (it handles mBit internally)
+			Console.Warning("VU0 stuck in infinite loop? Breaking execution!");
+			break; // Do games still need this?
 		}
 		CpuVU0->ExecuteBlock();
 	} while ((VU0.VI[REG_VPU_STAT].UL & 1)						// E-bit Termination
 	  &&	(!breakOnMbit || !(VU0.flags & VUFLAG_MFLAGSET)));	// M-bit Break
 
-	//NEW
-	cpuRegs.cycle += (VU0.cycle-startcycle)*2;
+	// Add cycles if called from EE's COP2
+	if (addCycles) cpuRegs.cycle += (VU0.cycle-startcycle)*2;
 }
 
-void _vu0WaitMicro()   { _vu0run(1); } // Runs VU0 Micro Until E-bit or M-Bit End
-void _vu0FinishMicro() { _vu0run(0); } // Runs VU0 Micro Until E-Bit End
+void _vu0WaitMicro()   { _vu0run(1, 1); } // Runs VU0 Micro Until E-bit or M-Bit End
+void _vu0FinishMicro() { _vu0run(0, 1); } // Runs VU0 Micro Until E-Bit End
+void vu0Finish()	   { _vu0run(0, 0); } // Runs VU0 Micro Until E-Bit End (doesn't stall EE)
 
 namespace R5900 {
 namespace Interpreter{
@@ -333,31 +334,3 @@ void VFCSET()  { VU0.code = cpuRegs.code; _vuFCSET(&VU0); }
 void VFCGET()  { VU0.code = cpuRegs.code; _vuFCGET(&VU0); }
 void VXITOP()  { VU0.code = cpuRegs.code; _vuXITOP(&VU0); }
 
-// fixme: Shouldn't anything calling this function be calling vu0WaitMicro instead?
-// Meaning that this function stalls, but doesn't increment the cpuRegs.cycle like
-// you would think it should.
-
-// Well, we can always test that out...
-//#define USE_WAIT_MICRO
-
-void vu0Finish()
-{
-#ifdef USE_WAIT_MICRO
-    _vu0WaitMicro();
-#else
-	if( (VU0.VI[REG_VPU_STAT].UL & 0x1) ) {
-		int i = 0;
-
-		while(i++ < 32) {
-			CpuVU0->ExecuteBlock();
-			if(!(VU0.VI[REG_VPU_STAT].UL & 0x1))
-				break;
-		}
-		if(VU0.VI[REG_VPU_STAT].UL & 0x1) {
-			VU0.VI[REG_VPU_STAT].UL &= ~1;
-			// this log tends to spam a lot (MGS3)
-			//Console.Warning("vu0Finish > stall aborted by force.");
-		}
-	}
-#endif
-}

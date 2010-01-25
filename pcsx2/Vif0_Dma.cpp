@@ -26,10 +26,8 @@ vifStruct vif0;
 __forceinline void vif0FLUSH()
 {
 	int _cycles = VU0.cycle;
-
-	// fixme: this code should call _vu0WaitMicro instead?  I'm not sure if
-	// it's purposefully ignoring ee cycles or not (see below for more)
-
+	// Run VU0 until finish, don't add cycles to EE
+	// because its vif stalling not the EE core...
 	vu0Finish();
 	g_vifCycles += (VU0.cycle - _cycles) * BIAS;
 }

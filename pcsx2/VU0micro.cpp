@@ -50,11 +50,11 @@ void __fastcall vu0ExecMicro(u32 addr) {
 		DevCon.Warning("vu0ExecMicro > Stalling for previous microprogram to finish");
 		vu0Finish();
 	}
-	VU0.VI[REG_VPU_STAT].UL|= 0x1;
-	VU0.VI[REG_VPU_STAT].UL&= ~0xAE;
 
-	// If an unsigned variable isn't -1? --arcum42
-	if (addr != (u32)-1) VU0.VI[REG_TPC].UL = addr;
+	VU0.VI[REG_VPU_STAT].UL &= ~0xFF;
+	VU0.VI[REG_VPU_STAT].UL |=  0x01;
+
+	if ((s32)addr != -1) VU0.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU0);
 	CpuVU0->ExecuteBlock();
 
