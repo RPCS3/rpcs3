@@ -337,4 +337,24 @@ namespace Exception
 	public:
 		DEFINE_STREAM_EXCEPTION( EndOfStream, wxLt("Unexpected end of file or stream.") );
 	};
+
+#ifdef __WXMSW__
+	// --------------------------------------------------------------------------------------
+	//  Exception::WinApiError
+	// --------------------------------------------------------------------------------------
+	class WinApiError : public RuntimeError
+	{
+	public:
+		int		ErrorId;
+
+	public:
+		DEFINE_EXCEPTION_COPYTORS( WinApiError )
+
+			WinApiError( const char* msg="" );
+
+		wxString GetMsgFromWindows() const;
+		virtual wxString FormatDisplayMessage() const;
+		virtual wxString FormatDiagnosticMessage() const;
+	};
+#endif
 }

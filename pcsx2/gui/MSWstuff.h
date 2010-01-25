@@ -24,4 +24,3 @@ extern void MSW_ListView_SetIconSpacing( wxListbook& listbook, int width );
 extern void pxDwm_Load();
 extern void pxDwm_Unload();
 extern void pxDwm_SetPresentParams( WXWidget wnd );
-

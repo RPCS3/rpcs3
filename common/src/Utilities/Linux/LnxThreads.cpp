@@ -15,7 +15,7 @@
 
 
 #include "../PrecompiledHeader.h"
-#include "Threading.h"
+#include "PersistentThread.h"
 #include "x86emitter/tools.h"
 
 #if !defined(__LINUX__) && !defined(__WXMAC__)
@@ -49,6 +49,47 @@ __forceinline void Threading::EnableHiresScheduler()
 
 __forceinline void Threading::DisableHiresScheduler()
 {
+}
+
+u64 Threading::GetThreadTicksPerSecond()
+{
+	// Returning 0 is like saying "I'm not supported yet!"
+	return 0;
+}
+
+u64 Threading::GetThreadCpuTime()
+{
+	// Get the cpu time for the current thread.  Should be a measure of total time the
+	// thread has used on the CPU (scaled by the value returned by GetThreadTicksPerSecond(),
+	// which typically would be an OS-provided scalar or some sort).
+	
+	return 0;
+}
+
+u64 Threading::PersistentThread::GetCpuTime() const
+{
+	// Get the cpu time for the thread belonging to this object.  Use m_native_id and/or
+	// m_native_handle to implement it. Return value should be a measure of total time the
+	// thread has used on the CPU (scaled by the value returned by GetThreadTicksPerSecond(),
+	// which typically would be an OS-provided scalar or some sort).
+
+	return 0;
+}
+
+void Threading::PersistentThread::_platform_specific_OnStartInThread()
+{
+	// Obtain linux-specific thread IDs or Handles here, which can be used to query
+	// kernel scheduler performance information.
+}
+
+void Threading::PersistentThread::_platform_specific_OnCleanupInThread()
+{
+	// Cleanup handles here, which were opened above.
+}
+
+void Threading::PersistentThread::_DoSetThreadName( const char* name )
+{
+	// dunno if linux has a feature for naming threads ...?
 }
 
 #endif

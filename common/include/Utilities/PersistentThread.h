@@ -116,8 +116,10 @@ namespace Threading
 
 	protected:
 		wxString	m_name;				// diagnostic name for our thread.
-
 		pthread_t	m_thread;
+		uptr		m_native_id;		// typically an id, but implementing platforms can do whatever.
+		uptr		m_native_handle;	// typically a pointer/handle, but implementing platforms can do whatever.
+
 		Semaphore	m_sem_event;		// general wait event that's needed by most threads
 		Semaphore	m_sem_startup;		// startup sync tool
 		Mutex		m_lock_InThread;		// used for canceling and closing threads in a deadlock-safe manner
@@ -131,6 +133,7 @@ namespace Threading
 		ScopedPtr<Exception::BaseException> m_except;
 
 		EventSource<EventListener_Thread> m_evtsrc_OnDelete;
+		
 
 	public:
 		virtual ~PersistentThread() throw();
@@ -138,6 +141,7 @@ namespace Threading
 		PersistentThread( const char* name );
 
 		pthread_t GetId() const { return m_thread; }
+		u64 GetCpuTime() const;
 
 		virtual void Start();
 		virtual void Cancel( bool isBlocking = true );
@@ -204,6 +208,8 @@ namespace Threading
 		// ----------------------------------------------------------------------------
 		// Section of methods for internal use only.
 
+		void _platform_specific_OnStartInThread();
+		void _platform_specific_OnCleanupInThread();
 		bool _basecancel();
 		void _selfRunningTest( const wxChar* name ) const;
 		void _DoSetThreadName( const wxString& name );

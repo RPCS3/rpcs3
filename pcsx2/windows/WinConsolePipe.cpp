@@ -19,50 +19,33 @@
 #include "App.h"
 #include "ConsoleLogger.h"
 
-
-// --------------------------------------------------------------------------------------
-//  Exception::Win32Error
-// --------------------------------------------------------------------------------------
-
-namespace Exception
+Exception::WinApiError::WinApiError( const char* msg )
 {
-	class Win32Error : public RuntimeError
-	{
-	public:
-		int		ErrorId;
-	
-	public:
-		DEFINE_EXCEPTION_COPYTORS( Win32Error )
+	ErrorId = GetLastError();
+	BaseException::InitBaseEx( msg );
+}
 
-		Win32Error( const char* msg="" )
-		{
-			ErrorId = GetLastError();
-			BaseException::InitBaseEx( msg );
-		}
-		
-		wxString GetMsgFromWindows() const
-		{
-			if (!ErrorId)
-				return wxString();
+wxString Exception::WinApiError::GetMsgFromWindows() const
+{
+	if (!ErrorId)
+		return wxString();
 
-			const DWORD BUF_LEN = 2048;
-			TCHAR t_Msg[BUF_LEN];
-			if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ErrorId, 0, t_Msg, BUF_LEN, 0))
-				return wxsFormat( L"Win32 Error #%d: %s", ErrorId, t_Msg );
+	const DWORD BUF_LEN = 2048;
+	TCHAR t_Msg[BUF_LEN];
+	if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, ErrorId, 0, t_Msg, BUF_LEN, 0))
+		return wxsFormat( L"Win32 Error #%d: %s", ErrorId, t_Msg );
 
-			return wxsFormat( L"Win32 Error #%d (no text msg available)", ErrorId );
-		}
+	return wxsFormat( L"Win32 Error #%d (no text msg available)", ErrorId );
+}
 
-		virtual wxString FormatDisplayMessage() const
-		{
-			return m_message_user + L"\n\n" + GetMsgFromWindows();
-		}
+wxString Exception::WinApiError::FormatDisplayMessage() const
+{
+	return m_message_user + L"\n\n" + GetMsgFromWindows();
+}
 
-		virtual wxString FormatDiagnosticMessage() const
-		{
-			return m_message_diag + L"\n\t" + GetMsgFromWindows();
-		}
-	};
+wxString Exception::WinApiError::FormatDiagnosticMessage() const
+{
+	return m_message_diag + L"\n\t" + GetMsgFromWindows();
 }
 
 // --------------------------------------------------------------------------------------
@@ -119,7 +102,7 @@ protected:
 						continue;
 					}
 
-					throw Exception::Win32Error( "ReadFile from pipe failed." );
+					throw Exception::WinApiError( "ReadFile from pipe failed." );
 				}
 
 				if( u32_Read <= 3 )
@@ -137,7 +120,7 @@ protected:
 					{
 						Yield();
 						if( !PeekNamedPipe(m_outpipe, 0, 0, 0, &u32_avail, 0) )
-							throw Exception::Win32Error( "Error peeking Pipe." );
+							throw Exception::WinApiError( "Error peeking Pipe." );
 
 						if( u32_avail == 0 ) break;
 						
@@ -207,10 +190,10 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 	try
 	{
 		if( 0 == CreatePipe( &m_readpipe, &m_writepipe, NULL, 0 ) )
-			throw Exception::Win32Error( "CreatePipe failed." );
+			throw Exception::WinApiError( "CreatePipe failed." );
 
 		if( 0 == SetStdHandle( m_stdhandle, m_writepipe ) )
-			throw Exception::Win32Error( "SetStdHandle failed." );
+			throw Exception::WinApiError( "SetStdHandle failed." );
 
 		// Note: Don't use GetStdHandle to "confirm" the handle.
 		//

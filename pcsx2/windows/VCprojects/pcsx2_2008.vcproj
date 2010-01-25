@@ -1849,6 +1849,42 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\CpuUsageProvider.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\gui\CpuUsageProviderLnx.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Devel|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\gui\CpuUsageProviderMSW.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\FrameForGS.cpp"
 				>
 			</File>
@@ -2563,6 +2599,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\ConsoleLogger.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\CpuUsageProvider.h"
 					>
 				</File>
 				<File

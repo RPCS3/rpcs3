@@ -21,6 +21,7 @@
 
 #include "App.h"
 #include "AppSaveStates.h"
+#include "CpuUsageProvider.h"
 
 enum LimiterModeType
 {
@@ -79,11 +80,13 @@ class GSFrame : public wxFrame,
 	typedef wxFrame _parent;
 
 protected:
-	wxTimer						m_timer_UpdateTitle;
-	wxWindowID					m_id_gspanel;
-	wxWindowID					m_id_OutputDisabled;
-	wxStaticText*				m_label_Disabled;
-	wxStatusBar*				m_statusbar;
+	wxTimer					m_timer_UpdateTitle;
+	wxWindowID				m_id_gspanel;
+	wxWindowID				m_id_OutputDisabled;
+	wxStaticText*			m_label_Disabled;
+	wxStatusBar*			m_statusbar;
+
+	CpuUsageProvider		m_CpuUsage;
 
 public:
 	GSFrame(wxWindow* parent, const wxString& title);

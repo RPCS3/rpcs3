@@ -16,10 +16,6 @@
 
 #include "PrecompiledHeader.h"
 
-#ifdef _WIN32
-#	include <wx/msw/wrapwin.h>	// for thread renaming features
-#endif
-
 #ifdef __LINUX__
 #	include <signal.h>		// for pthread_kill, which is in pthread.h on w32-pthreads
 #endif
@@ -66,7 +62,6 @@ static void unmake_curthread_key()
 
 	curthread_key = NULL;
 }
-
 
 // Returns a handle to the current persistent thread.  If the current thread does not belong
 // to the PersistentThread table, NULL is returned.  Since the main/ui thread is not created
@@ -131,15 +126,15 @@ void Threading::PersistentThread::_pt_callback_cleanup( void* handle )
 	((PersistentThread*)handle)->_ThreadCleanup();
 }
 
+
 Threading::PersistentThread::PersistentThread()
 	: m_name( L"PersistentThread" )
-	, m_thread()
-	, m_sem_event()
-	, m_lock_InThread()
-	, m_lock_start()
 {
 	m_detached	= true;		// start out with m_thread in detached/invalid state
 	m_running	= false;
+	
+	m_native_id		= 0;
+	m_native_handle	= NULL;
 }
 
 // This destructor performs basic "last chance" cleanup, which is a blocking join
@@ -564,6 +559,8 @@ void Threading::PersistentThread::OnStartInThread()
 {
 	m_detached	= false;
 	m_running	= true;
+	
+	_platform_specific_OnStartInThread();
 }
 
 void Threading::PersistentThread::_internal_execute()
@@ -585,6 +582,9 @@ void Threading::PersistentThread::_internal_execute()
 // running thread has been canceled or detached.
 void Threading::PersistentThread::OnStart()
 {
+	m_native_handle	= NULL;
+	m_native_id		= 0;
+
 	FrankenMutex( m_lock_InThread );
 	m_sem_event.Reset();
 	m_sem_startup.Reset();
@@ -600,6 +600,11 @@ void Threading::PersistentThread::OnCleanupInThread()
 		pthread_setspecific( curthread_key, NULL );
 
 	unmake_curthread_key();
+
+	_platform_specific_OnCleanupInThread();
+
+	m_native_handle = NULL;
+	m_native_id		= 0;
 }
 
 // passed into pthread_create, and is used to dispatch the thread's object oriented
@@ -618,40 +623,6 @@ void* Threading::PersistentThread::_internal_callback( void* itsme )
 void Threading::PersistentThread::_DoSetThreadName( const wxString& name )
 {
 	_DoSetThreadName( name.ToUTF8() );
-}
-
-void Threading::PersistentThread::_DoSetThreadName( const char* name )
-{
-	// This feature needs Windows headers and MSVC's SEH support:
-
-#if defined(_WINDOWS_) && defined (_MSC_VER)
-
-	// This code sample was borrowed form some obscure MSDN article.
-	// In a rare bout of sanity, it's an actual Microsoft-published hack
-	// that actually works!
-
-	static const int MS_VC_EXCEPTION = 0x406D1388;
-
-	#pragma pack(push,8)
-	struct THREADNAME_INFO
-	{
-		DWORD dwType;		// Must be 0x1000.
-		LPCSTR szName;		// Pointer to name (in user addr space).
-		DWORD dwThreadID;	// Thread ID (-1=caller thread).
-		DWORD dwFlags;		// Reserved for future use, must be zero.
-	};
-	#pragma pack(pop)
-
-	THREADNAME_INFO info;
-	info.dwType		= 0x1000;
-	info.szName		= name;
-	info.dwThreadID	= GetCurrentThreadId();
-	info.dwFlags	= 0;
-
-	__try {
-		RaiseException( MS_VC_EXCEPTION, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info );
-	} __except(EXCEPTION_EXECUTE_HANDLER) { }
-#endif
 }
 
 // --------------------------------------------------------------------------------------

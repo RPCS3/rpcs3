@@ -326,6 +326,7 @@ GSPanel* GSFrame::GetViewport()
 	return (GSPanel*)FindWindowById( m_id_gspanel );
 }
 
+
 void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 {
 	double fps = wxGetApp().FpsManager.GetFramerate();
@@ -345,8 +346,15 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 		}
 	}
 
-	SetTitle( wxsFormat( L"%s | Limiter: %s | fps: %2.02f",
-		fromUTF8(gsDest).c_str(), limiterStr, fps )
+	wxString cpuUsage;
+	if( m_CpuUsage.IsImplemented() )
+	{
+		m_CpuUsage.UpdateStats();
+		cpuUsage = wxsFormat( L" | EE: %d%% | GS: %d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct() );
+	}
+
+	SetTitle( wxsFormat( L"%s | Limiter: %s | fps: %2.02f%s",
+		fromUTF8(gsDest).c_str(), limiterStr, fps, cpuUsage.c_str() )
 	);
 
 	//States_GetCurrentSlot()
