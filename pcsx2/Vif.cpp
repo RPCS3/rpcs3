@@ -151,7 +151,7 @@ _f void vif0FBRST(u32 value) {
 					_VIF0chain();
 
 				vif0ch->chcr.STR = true;
-				CPU_INT(0, g_vifCycles); // Gets the timing right - Flatout
+				CPU_INT(DMAC_VIF0, g_vifCycles); // Gets the timing right - Flatout
 			}
 		}
 	}
@@ -173,7 +173,7 @@ _f void vif1FBRST(u32 value) {
 		{
 			vif1Regs->mskpath3 = 0;
 			gifRegs->stat.IMT = false;
-			if (gif->chcr.STR) CPU_INT(2, 4);
+			if (gif->chcr.STR) CPU_INT(DMAC_GIF, 4);
 		}
 
 		vif1Regs->err.reset();
@@ -232,7 +232,7 @@ _f void vif1FBRST(u32 value) {
                     case MFD_RESERVED:
                     case MFD_GIF: // Wonder if this should be with VIF?
                         // Gets the timing right - Flatout
-                        CPU_INT(1, vif1ch->qwc * BIAS);
+                        CPU_INT(DMAC_VIF1, vif1ch->qwc * BIAS);
                         break;
 				}
 				

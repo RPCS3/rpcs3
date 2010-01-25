@@ -81,7 +81,7 @@ void Vif1MskPath3() {
 		//Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
 		Path3progress = TRANSFER_MODE;
 		gifRegs->stat.IMT = false;
-		CPU_INT(2, 4);
+		CPU_INT(DMAC_GIF, 4);
 	}
 
 	schedulepath3msk = 0;
@@ -333,7 +333,7 @@ _vifT void vifCMD_FlushA()
 	// Gif is already transferring so wait for it.
 	if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr.STR) { 
 		vif1Regs->stat.VGW = true;
-		CPU_INT(2, 4);
+		CPU_INT(DMAC_GIF, 4);
 	}
 
 	vifX.cmd &= ~0x7f;

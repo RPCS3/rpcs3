@@ -251,7 +251,7 @@ static __forceinline void SIF0EEend(int &cycles)
 	sif0.end = 0;
 	eesifbusy[0] = false;
 	if (cycles == 0) DevCon.Warning("EESIF0cycles = 0"); // No transfer happened
-	else CPU_INT(5, cycles*BIAS); // Hence no Interrupt
+	else CPU_INT(DMAC_SIF0, cycles*BIAS); // Hence no Interrupt
 }
 
 static __forceinline void SIF1EEend(int &cycles)
@@ -264,7 +264,7 @@ static __forceinline void SIF1EEend(int &cycles)
 	// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
 	// (Cause of double interrupts on the EE)
 	if (cycles == 0) DevCon.Warning("EESIF1cycles  = 0"); // No transfer happened
-	else CPU_INT(6, min((int)(cycles*BIAS), 384)); // Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
+	else CPU_INT(DMAC_SIF1, min((int)(cycles*BIAS), 384)); // Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
 }
 
 static __forceinline void SIF0IOPend(int &psxCycles)

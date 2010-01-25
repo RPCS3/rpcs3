@@ -72,7 +72,7 @@ __forceinline void gsInterrupt()
 		{
 			Console.Warning("gs dma masked, re-scheduling...");
 			// re-raise the int shortly in the future
-			CPU_INT( 2, 64 );
+			CPU_INT( DMAC_GIF, 64 );
 			return;
 		}
 
@@ -196,7 +196,7 @@ void GIFdma()
 
 		if ((gif->madr + (gif->qwc * 16)) > dmacRegs->stadr.ADDR)
 		{
-			CPU_INT(2, gscycles);
+			CPU_INT(DMAC_GIF, gscycles);
 			gscycles = 0;
 			return;
 		}
@@ -213,7 +213,7 @@ void GIFdma()
 	{
 	    // We are in image mode doing DIRECTHL, Path 1 is in queue, and in intermittant mode.
 		GIF_LOG("Waiting VU %x, PATH2 %x, GIFMODE %x Progress %x", gifRegs->stat.P1Q, (vif1.cmd & 0x7f), gifRegs->mode._u32, Path3progress);
-		CPU_INT(2, 16);
+		CPU_INT(DMAC_GIF, 16);
 		return;
 	}
 
@@ -235,14 +235,14 @@ void GIFdma()
 		if (Path3progress == STOPPED_MODE) /*|| (vif1Regs->stat._u32 |= VIF1_STAT_VGW) == 0*/
 		{
 			vif1Regs->stat.VGW = false;
-			if (gif->qwc == 0) CPU_INT(2, 16);
+			if (gif->qwc == 0) CPU_INT(DMAC_GIF, 16);
 			return;
 		}
 		
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
 			GIFchain();
-			CPU_INT(2, gscycles * BIAS);
+			CPU_INT(DMAC_GIF, gscycles * BIAS);
 			return;
 		}
 		//else DevCon.WriteLn("GIFdma() case 1, but qwc = 0!"); //Don't do 0 GIFchain and then return
@@ -260,7 +260,7 @@ void GIFdma()
 		//Check with Path3 masking games
 		if (gif->qwc > 0) {
 			GIFchain();	//Transfers the data set by the switch
-			CPU_INT(2, gscycles * BIAS);
+			CPU_INT(DMAC_GIF, gscycles * BIAS);
 			return;
 		}
 		//else DevCon.WriteLn("GIFdma() case 2, but qwc = 0!"); //Don't do 0 GIFchain and then return, fixes Dual Hearts
@@ -283,7 +283,7 @@ void GIFdma()
 				prevcycles = gscycles;
 				gif->tadr -= 16;
 				hwDmacIrq(DMAC_STALL_SIS);
-				CPU_INT(2, gscycles);
+				CPU_INT(DMAC_GIF, gscycles);
 				gscycles = 0;
 				return;
 			}
@@ -305,11 +305,11 @@ void GIFdma()
 		checkTieBit(ptag);
 
 		GIF_LOG("gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx", ptag[1]._u32, ptag[0]._u32, gif->qwc, ptag->ID, gif->madr);
-		CPU_INT(2, gscycles * BIAS);
+		CPU_INT(DMAC_GIF, gscycles * BIAS);
 	}
 	else
 	{
-		CPU_INT(2, gscycles * BIAS);
+		CPU_INT(DMAC_GIF, gscycles * BIAS);
 		gscycles = 0;
 	}
 }

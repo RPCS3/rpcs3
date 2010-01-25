@@ -227,7 +227,7 @@ void vif1TransferFromMemory()
 
 		vif1ch->qwc = 0;
 		vif1.done = true;
-		CPU_INT(1, 0);
+		CPU_INT(DMAC_VIF1, 0);
 		return;						   //An error has occurred.
 	}
 
@@ -391,7 +391,7 @@ __forceinline void vif1Interrupt()
 	{
 		if (gif->chcr.STR)
 		{
-			CPU_INT(1, gif->qwc * BIAS);
+			CPU_INT(DMAC_VIF1, gif->qwc * BIAS);
 			return;
 		}
 		else
@@ -420,14 +420,14 @@ __forceinline void vif1Interrupt()
 			if (vif1.stallontag)
 				vif1SetupTransfer();
 			else
-				_VIF1chain();//CPU_INT(13, vif1ch->qwc * BIAS);
+				_VIF1chain();//CPU_INT(DMAC_STALL_SIS, vif1ch->qwc * BIAS);
 		}
 	}
 
 	if (vif1.inprogress & 0x1)
 	{
 		_VIF1chain();
-		CPU_INT(1, /*g_vifCycles*/ VifCycleVoodoo);
+		CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
@@ -442,13 +442,13 @@ __forceinline void vif1Interrupt()
 
 		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
 
-		CPU_INT(1, /*g_vifCycles*/ VifCycleVoodoo);
+		CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
 	if (vif1.vifstalled && vif1.irq)
 	{
-		CPU_INT(1, 0);
+		CPU_INT(DMAC_VIF1, 0);
 		return; //Dont want to end if vif is stalled.
 	}
 #ifdef PCSX2_DEVBUILD

@@ -291,6 +291,8 @@ set(pcsx2GuiSources
 	gui/AppMain.cpp
 	gui/AppRes.cpp
 	gui/ConsoleLogger.cpp
+	gui/CpuUsageProvider.cpp
+	gui/CpuUsageProviderLnx.cpp
 	gui/Dialogs/AboutBoxDialog.cpp
 	gui/Dialogs/AppConfigDialog.cpp
 	gui/Dialogs/AssertionDialog.cpp
@@ -342,6 +344,7 @@ set(pcsx2GuiHeaders
 	gui/AppConfig.h
 	gui/AppForwardDefs.h
 	gui/ConsoleLogger.h
+	gui/CpuUsageProvider.h
 	gui/Dialogs/ConfigurationDialog.h
 	gui/Dialogs/LogOptionsDialog.h
 	gui/Dialogs/ModalPopups.h

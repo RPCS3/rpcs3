@@ -351,6 +351,9 @@
 		<Unit filename="../gui/CheckedStaticBox.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/ConsoleLogger.h" />
+		<Unit filename="../gui/CpuUsageProvider.cpp" />
+		<Unit filename="../gui/CpuUsageProvider.h" />
+		<Unit filename="../gui/CpuUsageProviderLnx.cpp" />
 		<Unit filename="../gui/Dialogs/AboutBoxDialog.cpp" />
 		<Unit filename="../gui/Dialogs/AppConfigDialog.cpp" />
 		<Unit filename="../gui/Dialogs/AssertionDialog.cpp" />

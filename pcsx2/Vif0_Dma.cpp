@@ -270,7 +270,7 @@ void vif0Interrupt()
 			else
 				_VIF0chain();
 
-			CPU_INT(0, /*g_vifCycles*/ VifCycleVoodoo);
+			CPU_INT(DMAC_VIF0, /*g_vifCycles*/ VifCycleVoodoo);
 			return;
 		}
 	}
@@ -291,7 +291,7 @@ void vif0Interrupt()
 		else
 			_chainVIF0();
 
-		CPU_INT(0, /*g_vifCycles*/ VifCycleVoodoo);
+		CPU_INT(DMAC_VIF0, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
@@ -325,11 +325,11 @@ void dmaVIF0()
 		}
 
 		vif0.done = true;
-		CPU_INT(0, /*g_vifCycles*/ VifCycleVoodoo);
+		CPU_INT(DMAC_VIF0, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
 	// Chain Mode
 	vif0.done = false;
-	CPU_INT(0, 0);
+	CPU_INT(DMAC_VIF0, 0);
 }

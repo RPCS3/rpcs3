@@ -17,7 +17,11 @@
 
 #include "CpuUsageProvider.h"
 #include "System.h"
+
+#ifndef __LINUX__
 #include "SysThreads.h"
+#endif
+
 #include "GS.h"
 
 DefaultCpuUsageProvider::DefaultCpuUsageProvider()

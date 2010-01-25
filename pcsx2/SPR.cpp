@@ -202,7 +202,7 @@ static __forceinline void _dmaSPR0()
 			if (!done)
 			{
 				ptag = (tDMA_TAG*)&psSu32(spr0->sadr);		//Set memory pointer to SADR
-				CPU_INT(8, ptag[0].QWC / BIAS); // the lower 16bits of the tag / BIAS);
+				CPU_INT(DMAC_FROM_SPR, ptag[0].QWC / BIAS); // the lower 16bits of the tag / BIAS);
 				return;
 			}
 			SPR_LOG("spr0 dmaChain complete %8.8x_%8.8x size=%d, id=%d, addr=%lx spr=%lx",
@@ -264,13 +264,13 @@ void dmaSPR0()   // fromSPR
 	{
 		tDMA_TAG *ptag;
 		ptag = (tDMA_TAG*)&psSu32(spr0->sadr);		//Set memory pointer to SADR
-		CPU_INT(8, ptag[0].QWC / BIAS);
+		CPU_INT(DMAC_FROM_SPR, ptag[0].QWC / BIAS);
 		return;
 	}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
-	CPU_INT(8, spr0->qwc / BIAS);
+	CPU_INT(DMAC_FROM_SPR, spr0->qwc / BIAS);
 }
 
 __forceinline static void SPR1transfer(u32 *data, int size)
@@ -387,7 +387,7 @@ void _dmaSPR1()   // toSPR work function
 			if (!done)
 			{
 				ptag = dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
-				CPU_INT(9, (ptag[0].QWC / BIAS));// the lower 16 bits of the tag / BIAS);
+				CPU_INT(DMAC_TO_SPR, (ptag[0].QWC / BIAS));// the lower 16 bits of the tag / BIAS);
 			}
 			break;
 		}
@@ -411,13 +411,13 @@ void dmaSPR1()   // toSPR
 	{
 		tDMA_TAG *ptag;
 		ptag = dmaGetAddr(spr1->tadr);		//Set memory pointer to TADR
-		CPU_INT(9, ptag[0].QWC / BIAS);
+		CPU_INT(DMAC_TO_SPR, ptag[0].QWC / BIAS);
 		return;
 	}
 	// COMPLETE HACK!!! For now at least..  FFX Videos dont rely on interrupts or reading DMA values
 	// It merely assumes that the last one has finished then starts another one (broke with the DMA fix)
 	// This "shouldn't" cause any problems as SPR is generally faster than the other DMAS anyway. (Refraction)
-	CPU_INT(9, spr1->qwc / BIAS);
+	CPU_INT(DMAC_TO_SPR, spr1->qwc / BIAS);
 }
 
 void SPRTOinterrupt()
