@@ -121,9 +121,7 @@ tDMAC_QUEUE QueuedDMA(0);
 
 void hwWrite8(u32 mem, u8 value)
 {
-	if ((mem >= VIF0_STAT) && (mem < VIF0_FIFO)) 
-	{
-		DevCon.WriteLn("vif write8!"); // Is this ever called?
+	if ((mem >= VIF0_STAT) && (mem < VIF0_FIFO)) {
 		u32 bytemod = mem & 0x3;
 		u32 bitpos  = 8 * bytemod;
 		u32 oldval  = ~(0xff  << bitpos) & psHu32(mem);

@@ -21,13 +21,14 @@
 #include "newVif.h"
 #include "VUmicro.h"
 
-#define _vifT		 template <int idx>
-#define  vifX		 (idx ? vif1 : vif0)
-#define  vifXRegs	 (idx ? (vif1Regs) : (vif0Regs))
 #define  vif1Only()	 { if (!idx) { vifCMD_Null<idx>(); return;	    } }
 #define  vif1Only_() { if (!idx) { return vifTrans_Null<idx>(NULL); } }
 
 _vifT void vifCMD_Null();
+
+//------------------------------------------------------------------
+// Vif0/Vif1 Misc Functions
+//------------------------------------------------------------------
 
 _f void vifFlush(int idx) {
 	if (!idx) vif0FLUSH();

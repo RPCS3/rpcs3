@@ -217,6 +217,11 @@ extern VIFregisters *vifRegs;
 #define vif0Regs (&vif0RegsRef)
 #define vif1Regs (&vif1RegsRef)
 
+#define _vifT		 template <int idx>
+#define  vifX		 (idx ? vif1 : vif0)
+#define  vifXRegs	 (idx ? (vif1Regs) : (vif0Regs))
+#define _f			 __forceinline
+
 extern void dmaVIF0();
 extern void dmaVIF1();
 extern void mfifoVIF1transfer(int qwc);
