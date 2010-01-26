@@ -280,6 +280,21 @@ EXPORT_C_(s32) CDVDgetTD(u8 Track, cdvdTD *Buffer)
 }
 
 static s32 layer1start = -1;
+
+static bool testForPartitionInfo( const u8 (&tempbuffer)[CD_FRAMESIZE_RAW] )
+{
+	const int off	= iso->blockofs;
+
+	// test for: CD001
+	return (
+		(tempbuffer[off+1] == 0x43) &&
+		(tempbuffer[off+2] == 0x44) &&
+		(tempbuffer[off+3] == 0x30) &&
+		(tempbuffer[off+4] == 0x30) &&
+		(tempbuffer[off+5] == 0x31)
+	);
+}
+
 EXPORT_C_(s32) CDVDgetTOC(void* toc)
 {
 	u8 type = CDVDgetDiskType();
@@ -296,7 +311,6 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 		if (layer1start != -2 && iso->blocks >= 0x300000)
 		{
 			int off = iso->blockofs;
-			u8* tempbuffer;
 
 			// dual sided
 			tocBuff[ 0] = 0x24;
@@ -317,7 +331,8 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 			if (layer1start == -1)
 			{
 				printf("CDVD: searching for layer1...");
-				tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW * 10);
+
+				/*tempbuffer = (u8*)malloc(CD_FRAMESIZE_RAW * 10);
 				for (layer1start = (iso->blocks / 2 - 0x10) & ~0xf; layer1start < 0x200010; layer1start += 16)
 				{
 					isoReadBlock(iso, tempbuffer, layer1start);
@@ -329,11 +344,39 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 						tempbuffer[off+5] == 0x31)
 						break;
 				}
-				free(tempbuffer);
+				free(tempbuffer);*/
+				
+				uint midsector = (iso->blocks / 2) & ~0xf;
+				uint deviation = 0;
 
-				if (layer1start == 0x200010)
+				while( (layer1start == -1) && (deviation < midsector-16) )
 				{
-					printf("Couldn't find second layer on dual layer... ignoring\n");
+					u8 tempbuffer[CD_FRAMESIZE_RAW];
+					isoReadBlock(iso, tempbuffer, midsector-deviation);
+
+					if(testForPartitionInfo( tempbuffer ))
+						layer1start = midsector-deviation;
+					else
+					{
+						isoReadBlock(iso, tempbuffer, midsector+deviation);
+						if( testForPartitionInfo( tempbuffer ) )
+							layer1start = midsector+deviation;
+					}
+
+					if( layer1start != -1 )
+					{
+						if( tempbuffer[iso->blockofs] != 0x01 )
+						{
+							fprintf( stderr, "(LinuzCDVDiso): Invalid partition type on layer 1!? (type=0x%x)", tempbuffer[iso->blockofs] );
+						}
+					}
+					deviation += 16;
+				}
+
+
+				if (layer1start == -1)
+				{
+					printf("(LinuzCDVDiso): Couldn't find second layer on dual layer... ignoring\n");
 					// fake it
 					tocBuff[ 0] = 0x04;
 					tocBuff[ 1] = 0x02;
@@ -350,7 +393,7 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 					return 0;
 				}
 
-				printf("found at 0x%8.8x\n", layer1start);
+				printf("(LinuzCDVDiso): found at 0x%8.8x\n", layer1start);
 				layer1start = layer1start + 0x30000 - 1;
 			}
 
