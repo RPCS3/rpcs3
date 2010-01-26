@@ -24,17 +24,35 @@
 
 #include "GS.h"
 
+void AllThreeThreads::LoadWithCurrentTimes()
+{
+	ee		= GetCoreThread().GetCpuTime();
+	gs		= GetMTGS().GetCpuTime();
+	ui		= GetThreadCpuTime();
+	update	= GetCPUTicks();
+}
+
+AllThreeThreads AllThreeThreads::operator-( const AllThreeThreads& right ) const
+{
+	AllThreeThreads retval;
+
+	retval.ee		= ee - right.ee;
+	retval.gs		= gs - right.gs;
+	retval.ui		= ui - right.ui;
+	retval.update	= update - right.update;
+	
+	return retval;
+}
+
 DefaultCpuUsageProvider::DefaultCpuUsageProvider()
 {
-	m_lasttime_ee	= GetCoreThread().GetCpuTime();
-	m_lasttime_gs	= GetMTGS().GetCpuTime();
-	m_lasttime_ui	= GetThreadCpuTime();
-
-	m_lasttime_update	= GetCPUTicks();
-	
 	m_pct_ee = 0;
 	m_pct_gs = 0;
 	m_pct_ui = 0;
+	m_writepos = 0;
+
+	for( int i=0; i<QueueDepth; ++i )
+		m_queue[i].LoadWithCurrentTimes();
 }
 
 bool DefaultCpuUsageProvider::IsImplemented() const
@@ -44,25 +62,19 @@ bool DefaultCpuUsageProvider::IsImplemented() const
 
 void DefaultCpuUsageProvider::UpdateStats()
 {
-	u64 curtime		= GetCPUTicks();
-	u64 delta		= curtime - m_lasttime_update;
-	if( delta < (GetTickFrequency() / 16) ) return;
+	// Measure deltas between the first and last positions in the ring buffer:
 
-	u64 curtime_ee	= GetCoreThread().GetCpuTime();
-	u64 curtime_gs	= GetMTGS().GetCpuTime();
-	u64 curtime_ui	= GetThreadCpuTime();
-
+	AllThreeThreads& newone( m_queue[m_writepos] );
+	newone.LoadWithCurrentTimes();
+	m_writepos = (m_writepos+1) & (QueueDepth-1);
+	const AllThreeThreads deltas( newone - m_queue[m_writepos] );
+	
 	// get the real time passed, scaled to the Thread's tick frequency.
-	u64 timepass	= (delta * GetThreadTicksPerSecond()) / GetTickFrequency();
+	u64 timepass	= (deltas.update * GetThreadTicksPerSecond()) / GetTickFrequency();
 
-	m_pct_ee = ((curtime_ee - m_lasttime_ee) * 100) / timepass;
-	m_pct_gs = ((curtime_gs - m_lasttime_gs) * 100) / timepass;
-	m_pct_ui = ((curtime_ui - m_lasttime_ui) * 100) / timepass;
-
-	m_lasttime_update	= curtime;
-	m_lasttime_ee		= curtime_ee;
-	m_lasttime_gs		= curtime_gs;
-	m_lasttime_ui		= curtime_ui;
+	m_pct_ee = (deltas.ee * 100) / timepass;
+	m_pct_gs = (deltas.gs * 100) / timepass;
+	m_pct_ui = (deltas.ui * 100) / timepass;
 }
 
 int DefaultCpuUsageProvider::GetEEcorePct() const

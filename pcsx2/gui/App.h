@@ -327,7 +327,7 @@ struct pxAppResources
 	ScopedPtr<RecentIsoManager>	RecentIsoList;
 
 	pxAppResources();
-	~pxAppResources() throw() { }
+	virtual ~pxAppResources() throw() { }
 };
 
 // --------------------------------------------------------------------------------------
@@ -340,8 +340,6 @@ public:
 
 protected:
 	u64 m_fpsqueue[FramerateQueueDepth];
-	u64 m_fpsqueue_tally;
-	u64 m_ticks_lastframe;
 	int m_fpsqueue_writepos;
 	uint m_initpause;
 

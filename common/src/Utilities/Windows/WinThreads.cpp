@@ -64,7 +64,7 @@ u64 Threading::GetThreadCpuTime()
 {
 	FileTimeSucks user, kernel;
 	FILETIME dummy;
-	GetThreadTimes( GetCurrentThread(), &dummy, &dummy, &user.filetime, &kernel.filetime );
+	GetThreadTimes( GetCurrentThread(), &dummy, &dummy, &kernel.filetime, &user.filetime );
 	return user.u64time + kernel.u64time;
 }
 
@@ -80,10 +80,7 @@ u64 Threading::PersistentThread::GetCpuTime() const
 	FileTimeSucks user, kernel;
 	FILETIME dummy;
 
-	// Note: Vista and Win7 need only THREAD_QUERY_LIMITED_INFORMATION (XP and 2k need more),
-	// however we own our process threads, so shouldn't matter in any case...
-
-	if( GetThreadTimes( (HANDLE)m_native_handle, &dummy, &dummy, &user.filetime, &kernel.filetime ) )
+	if( GetThreadTimes( (HANDLE)m_native_handle, &dummy, &dummy, &kernel.filetime, &user.filetime ) )
 		return user.u64time + kernel.u64time;
 	
 	return 0;	// thread prolly doesn't exist anymore.
@@ -91,6 +88,9 @@ u64 Threading::PersistentThread::GetCpuTime() const
 
 void Threading::PersistentThread::_platform_specific_OnStartInThread()
 {
+	// OpenThread Note: Vista and Win7 need only THREAD_QUERY_LIMITED_INFORMATION (XP and 2k need more),
+	// however we own our process threads, so shouldn't matter in any case...
+
 	m_native_id		= (uptr)GetCurrentThreadId();
 	m_native_handle	= (uptr)OpenThread( THREAD_QUERY_INFORMATION, false, (DWORD)m_native_id );
 

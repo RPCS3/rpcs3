@@ -271,14 +271,14 @@ wxStaticText* GSFrame::GetLabel_OutputDisabled() const
 
 void GSFrame::CoreThread_OnResumed()
 {
-	m_timer_UpdateTitle.Start( 333 );
+	m_timer_UpdateTitle.Start( 275 );
 }
 
 void GSFrame::CoreThread_OnSuspended()
 {
 	// Could stop the timer outright here, tho no harm in having an occasional
 	// update here or there, just in case some state info changes while emu is suspended.
-	m_timer_UpdateTitle.Start( 2000 );
+	m_timer_UpdateTitle.Start( 333 );
 }
 
 // overrides base Show behavior.
@@ -301,7 +301,7 @@ bool GSFrame::Show( bool shown )
 		if( wxStaticText* label = GetLabel_OutputDisabled() )
 			label->Show( EmuConfig.GS.DisableOutput );
 		
-		m_timer_UpdateTitle.Start( 333 );
+		m_timer_UpdateTitle.Start( 275 );
 	}
 	else
 	{
@@ -350,7 +350,7 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 	if( m_CpuUsage.IsImplemented() )
 	{
 		m_CpuUsage.UpdateStats();
-		cpuUsage = wxsFormat( L" | EE: %d%% | GS: %d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct() );
+		cpuUsage = wxsFormat( L" | EE: %d%% | GS: %d%% | UI: %d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct(), m_CpuUsage.GetGuiPct() );
 	}
 
 	SetTitle( wxsFormat( L"%s | Limiter: %s | fps: %2.02f%s",

@@ -45,15 +45,24 @@ public:
 	virtual int GetGuiPct() const		{ return m_Implementation->GetGuiPct(); }
 };
 
+struct AllThreeThreads
+{
+	u64		ee, gs, ui;
+	u64		update;
+	
+	void LoadWithCurrentTimes();
+	AllThreeThreads operator-( const AllThreeThreads& right ) const;
+};
+
 class DefaultCpuUsageProvider : public BaseCpuUsageProvider
 {
+public:
+	static const uint QueueDepth = 4;
+
 protected:
-	u64		m_lasttime_ee;
-	u64		m_lasttime_gs;
-	u64		m_lasttime_ui;
+	AllThreeThreads m_queue[QueueDepth];
 
-	u64		m_lasttime_update;
-
+	uint	m_writepos;
 	u32		m_pct_ee;
 	u32		m_pct_gs;
 	u32		m_pct_ui;

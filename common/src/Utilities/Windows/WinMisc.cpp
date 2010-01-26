@@ -20,7 +20,7 @@
 
 #include <ShTypes.h>
 
-static LARGE_INTEGER lfreq;
+static __aligned16 LARGE_INTEGER lfreq;
 
 void InitCPUTicks()
 {

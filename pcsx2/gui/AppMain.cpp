@@ -195,39 +195,38 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 
 void FramerateManager::Reset()
 {
-	memzero( m_fpsqueue );
+	//memzero( m_fpsqueue );
 	m_initpause = FramerateQueueDepth;
-	m_fpsqueue_tally = 0;
 	m_fpsqueue_writepos = 0;
+
+	for( int i=0; i<FramerateQueueDepth; ++i )
+		m_fpsqueue[i] = GetCPUTicks();
+
 	Resume();
 }
 
 // 
 void FramerateManager::Resume()
 {
-	m_ticks_lastframe = GetCPUTicks();
 }
 
 void FramerateManager::DoFrame()
 {
 	++m_FrameCounter;
 
-	u64 curtime = GetCPUTicks();
-	u64 elapsed_time = curtime - m_ticks_lastframe;
-	m_ticks_lastframe = curtime;
-
-	m_fpsqueue_tally += elapsed_time;
-	m_fpsqueue_tally -= m_fpsqueue[m_fpsqueue_writepos];
-
-	m_fpsqueue[m_fpsqueue_writepos] = elapsed_time;
 	m_fpsqueue_writepos = (m_fpsqueue_writepos + 1) % FramerateQueueDepth;
-	if( m_initpause > 0 ) --m_initpause;
+	m_fpsqueue[m_fpsqueue_writepos] = GetCPUTicks();
+
+	// intentionally leave 1 on the counter here, since ultimately we want to divide the 
+	// final result (in GetFramerate() by QueueDepth-1.
+	if( m_initpause > 1 ) --m_initpause;
 }
 
 double FramerateManager::GetFramerate() const
 {
 	if( m_initpause > (FramerateQueueDepth/2) ) return 0.0;
-	u32 ticks_per_frame = m_fpsqueue_tally / (FramerateQueueDepth-m_initpause);
+	const u64 delta = m_fpsqueue[m_fpsqueue_writepos] - m_fpsqueue[(m_fpsqueue_writepos + 1) % FramerateQueueDepth];
+	const u32 ticks_per_frame = (u32)(delta / (FramerateQueueDepth-m_initpause));
 	return (double)GetTickFrequency() / (double)ticks_per_frame;
 }
 
