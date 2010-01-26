@@ -761,15 +761,11 @@ u32 CALLBACK PSEgetLibVersion (void)
 
 s32 CALLBACK PADinit (u32 flags)
 {
-	InitializeCriticalSection( &update_lock );
-	InitializeCriticalSection( &init_lock );
 	return 0;
 }
 
 void CALLBACK PADshutdown (void)
 {
-	DeleteCriticalSection( &update_lock );
-	DeleteCriticalSection( &init_lock );
 }
 
 static int n_open = 0;
@@ -1163,12 +1159,23 @@ s32 CALLBACK PADfreeze (int mode, freezeData *data)
 
 BOOL APIENTRY DllMain(HMODULE hInst, DWORD dwReason, LPVOID lpReserved)
 {
-	hInstance = hInst;
+
+	if( dwReason == DLL_PROCESS_ATTACH )
+	{
+		hInstance = hInst;
+		InitializeCriticalSection( &update_lock );
+		InitializeCriticalSection( &init_lock );
+	}	
+	else if( dwReason == DLL_PROCESS_DETACH )
+	{
+		DeleteCriticalSection( &update_lock );
+		DeleteCriticalSection( &init_lock );
+	}
+
 	return TRUE;
 }
 
 BOOL APIENTRY EntryPoint (HMODULE hInst, DWORD dwReason, LPVOID lpReserved)
 {
-	hInstance = hInst;
-	return TRUE;
+	return DllMain( hInst, dwReason, lpReserved );
 }
