@@ -47,9 +47,11 @@ class AppPluginManager : public PluginManager
 	typedef PluginManager _parent;
 
 public:
-	AppPluginManager( const wxString (&folders)[PluginId_Count] ) : PluginManager( folders )
+	AppPluginManager( const wxString (&folders)[PluginId_Count] )
+		: PluginManager( folders )
 	{
 		SetSettingsFolder( GetSettingsFolder().ToString() );
+		wxGetApp().PostPluginStatus( CorePlugins_Loaded );
 	}
 
 	virtual ~AppPluginManager() throw()
@@ -98,7 +100,12 @@ public:
 			sApp.OpenGsPanel();
 		}
 
-		return _parent::OpenPlugin_GS();
+		bool retval = _parent::OpenPlugin_GS();
+
+		if( g_LimiterMode == Limit_Turbo )
+			GSsetVsync( false );
+			
+		return retval;
 	}
 
 	// Yay, this plugin is guaranteed to always be opened first and closed last.
@@ -318,8 +325,6 @@ void Pcsx2App::OnLoadPluginsComplete( wxCommandEvent& evt )
 	}
 	
 	if( fn_tmp != NULL ) fn_tmp( evt );
-
-	PostPluginStatus( CorePlugins_Loaded );
 }
 
 void Pcsx2App::CancelLoadingPlugins()
@@ -382,7 +387,6 @@ void LoadPluginsImmediate()
 	wxString passins[PluginId_Count];
 	ConvertPluginFilenames( passins );
 	wxGetApp().m_CorePlugins = new AppPluginManager( passins );
-
 }
 
 void UnloadPlugins()

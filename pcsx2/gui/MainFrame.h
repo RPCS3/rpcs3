@@ -230,7 +230,6 @@ public:
 protected:
 	void ApplySettings();
 	void ApplyCoreStatus();
-	void ApplyPluginStatus();
 
 	void SaveEmuOptions();
 

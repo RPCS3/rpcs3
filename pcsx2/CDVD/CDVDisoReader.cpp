@@ -200,7 +200,6 @@ static bool FindLayer1Start()
 		uint midsector = (iso->blocks / 2) & ~0xf;
 		uint deviation = 0;
 
-		//for( uint sector=searchstart; (layer1start==-1) && (sector<=searchend); sector += 16)
 		while( (layer1start == -1) && (deviation < midsector-16) )
 		{
 			u8 tempbuffer[CD_FRAMESIZE_RAW];

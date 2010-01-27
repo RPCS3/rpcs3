@@ -51,6 +51,11 @@ DefaultCpuUsageProvider::DefaultCpuUsageProvider()
 	m_pct_ui = 0;
 	m_writepos = 0;
 
+	Reset();
+}
+
+void DefaultCpuUsageProvider::Reset()
+{
 	for( int i=0; i<QueueDepth; ++i )
 		m_queue[i].LoadWithCurrentTimes();
 }
@@ -66,7 +71,7 @@ void DefaultCpuUsageProvider::UpdateStats()
 
 	AllThreeThreads& newone( m_queue[m_writepos] );
 	newone.LoadWithCurrentTimes();
-	m_writepos = (m_writepos+1) & (QueueDepth-1);
+	m_writepos = (m_writepos+1) % QueueDepth;
 	const AllThreeThreads deltas( newone - m_queue[m_writepos] );
 	
 	// get the real time passed, scaled to the Thread's tick frequency.

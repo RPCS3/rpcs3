@@ -213,7 +213,23 @@ void MainEmuFrame::DispatchEvent( const PluginEventType& plugin_evt )
 	if( !pxAssertMsg( GetMenuBar()!=NULL, "Mainframe menu bar is NULL!" ) ) return;
 
 	//ApplyCoreStatus();
-	ApplyPluginStatus();
+
+	if( plugin_evt == CorePlugins_Unloaded )
+	{
+		for( int i=0; i<PluginId_Count; ++i )
+			m_PluginMenuPacks[i].OnUnloaded();
+	}
+	else if( plugin_evt == CorePlugins_Loaded )
+	{
+		if( !pxAssertDev( g_plugins!=NULL, wxNullChar ) ) return;
+
+		for( int i=0; i<PluginId_Count; ++i )
+			m_PluginMenuPacks[i].OnLoaded();
+
+		// bleh this makes the menu too cluttered. --air
+		//m_menuCDVD.SetLabel( MenuId_Src_Plugin, wxsFormat( L"%s (%s)", _("Plugin"),
+		//	g_plugins->GetName( PluginId_CDVD ).c_str() ) );
+	}
 }
 
 void MainEmuFrame::DispatchEvent( const CoreThreadStatus& status )
@@ -259,8 +275,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	, m_menuBoot	( *new wxMenu() )
 	, m_menuCDVD	( *new wxMenu() )
-	, m_menuSys	( *new wxMenu() )
-	, m_menuConfig( *new wxMenu() )
+	, m_menuSys		( *new wxMenu() )
+	, m_menuConfig	( *new wxMenu() )
 	, m_menuMisc	( *new wxMenu() )
 	, m_menuDebug	( *new wxMenu() )
 
@@ -522,24 +538,6 @@ void MainEmuFrame::ApplyCoreStatus()
 
 	menubar.Enable( MenuId_Sys_Reset, true );
 	menubar.Enable( MenuId_Sys_Shutdown, SysHasValidState() || (g_plugins!=NULL) );
-}
-
-void MainEmuFrame::ApplyPluginStatus()
-{
-	if( g_plugins == NULL )
-	{
-		for( int i=0; i<PluginId_Count; ++i )
-			m_PluginMenuPacks[i].OnUnloaded();
-	}
-	else
-	{
-		for( int i=0; i<PluginId_Count; ++i )
-			m_PluginMenuPacks[i].OnLoaded();
-
-		// bleh this makes the menu too cluttered. --air
-		//m_menuCDVD.SetLabel( MenuId_Src_Plugin, wxsFormat( L"%s (%s)", _("Plugin"),
-		//	g_plugins->GetName( PluginId_CDVD ).c_str() ) );
-	}
 }
 
 void MainEmuFrame::ApplySettings()

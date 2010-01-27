@@ -16,9 +16,30 @@
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
 
+// --------------------------------------------------------------------------------------
+//  SingleCardPanel Implementations
+// --------------------------------------------------------------------------------------
+Panels::MemoryCardsPanel::SingleCardPanel::SingleCardPanel( wxWindow* parent, uint portidx, uint slotidx )
+	: BaseApplicableConfigPanel( parent, wxVERTICAL, wxsFormat( L"Port %u / Slot %u", portidx, slotidx ) )
+{
+}
+
+void Panels::MemoryCardsPanel::SingleCardPanel::Apply()
+{
+}
+
+void Panels::MemoryCardsPanel::SingleCardPanel::AppStatusEvent_OnSettingsApplied()
+{
+}
+
+// --------------------------------------------------------------------------------------
+//  MemoryCardsPanel Implementations
+// --------------------------------------------------------------------------------------
 Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
+	
+
 	AppStatusEvent_OnSettingsApplied();
 }
 

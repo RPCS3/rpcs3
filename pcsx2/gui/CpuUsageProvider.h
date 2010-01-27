@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "AppEventListeners.h"
+
 class BaseCpuUsageProvider
 {
 public:
@@ -54,7 +56,9 @@ struct AllThreeThreads
 	AllThreeThreads operator-( const AllThreeThreads& right ) const;
 };
 
-class DefaultCpuUsageProvider : public BaseCpuUsageProvider
+class DefaultCpuUsageProvider :
+	public BaseCpuUsageProvider,
+	public EventListener_CoreThread
 {
 public:
 	static const uint QueueDepth = 4;
@@ -72,8 +76,12 @@ public:
 	virtual ~DefaultCpuUsageProvider() throw() {}
 
 	bool IsImplemented() const;
+	void Reset();
 	void UpdateStats();
 	int GetEEcorePct() const;
 	int GetGsPct() const;
 	int GetGuiPct() const;
+	
+protected:
+	void CoreThread_OnResumed() { Reset(); }
 };

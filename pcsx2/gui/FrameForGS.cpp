@@ -225,6 +225,8 @@ void GSPanel::AppStatusEvent_OnSettingsApplied()
 //  GSFrame Implementation
 // --------------------------------------------------------------------------------------
 
+static const uint TitleBarUpdateMs = 333;
+
 GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	: wxFrame(parent, wxID_ANY, title,
 		g_Conf->GSWindow.WindowPos, wxSize( 640, 480 ), 
@@ -271,14 +273,14 @@ wxStaticText* GSFrame::GetLabel_OutputDisabled() const
 
 void GSFrame::CoreThread_OnResumed()
 {
-	m_timer_UpdateTitle.Start( 275 );
+	m_timer_UpdateTitle.Start( TitleBarUpdateMs );
 }
 
 void GSFrame::CoreThread_OnSuspended()
 {
 	// Could stop the timer outright here, tho no harm in having an occasional
 	// update here or there, just in case some state info changes while emu is suspended.
-	m_timer_UpdateTitle.Start( 333 );
+	m_timer_UpdateTitle.Start( TitleBarUpdateMs );
 }
 
 // overrides base Show behavior.
@@ -301,7 +303,7 @@ bool GSFrame::Show( bool shown )
 		if( wxStaticText* label = GetLabel_OutputDisabled() )
 			label->Show( EmuConfig.GS.DisableOutput );
 		
-		m_timer_UpdateTitle.Start( 275 );
+		m_timer_UpdateTitle.Start( TitleBarUpdateMs );
 	}
 	else
 	{

@@ -318,8 +318,24 @@ namespace Panels
 	// --------------------------------------------------------------------------------------
 	class MemoryCardsPanel : public BaseApplicableConfigPanel
 	{
+		class SingleCardPanel : public BaseApplicableConfigPanel
+		{
+		protected:
+			
+		
+		public:
+			SingleCardPanel( wxWindow* parent, uint portidx, uint slotidx );
+			virtual ~SingleCardPanel() throw() { }
+			void Apply();
+			void AppStatusEvent_OnSettingsApplied();
+		};
+	
 	protected:
-
+		wxCheckBox*		m_checkbox_NtfsCompress;
+		wxCheckBox*		m_checkbox_Ejection;
+		wxCheckBox*		m_checkbox_Multitap1;
+		wxCheckBox*		m_checkbox_Multitap2;
+		
 	public:
 		MemoryCardsPanel( wxWindow* parent );
 		virtual ~MemoryCardsPanel() throw() { }
