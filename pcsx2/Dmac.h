@@ -97,9 +97,9 @@ union tDMA_TAG {
 	u32 _u32;
 	
 	tDMA_TAG(u32 val) { _u32 = val; }
-	u16 upper() { return (_u32 >> 16); }
-	u16 lower() { return (u16)_u32; }
-	wxString tag_to_str()
+	u16 upper() const { return (_u32 >> 16); }
+	u16 lower() const { return (u16)_u32; }
+	wxString tag_to_str() const
 	{
 		switch(ID)
 		{
@@ -134,14 +134,14 @@ union tDMA_CHCR {
 	
 	tDMA_CHCR( u32 val) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set(u32 value) { _u32 = value; }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
-	u16 upper() { return (_u32 >> 16); }
-	u16 lower() { return (u16)_u32; }
-	wxString desc() { return wxsFormat(L"Chcr: 0x%x", _u32); }
+	u16 upper() const { return (_u32 >> 16); }
+	u16 lower() const { return (u16)_u32; }
+	wxString desc() const { return wxsFormat(L"Chcr: 0x%x", _u32); }
 };
 
 #define CHCR(value) ((tDMA_CHCR)(value))
@@ -156,7 +156,7 @@ union tDMA_SADR {
 	tDMA_SADR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Sadr: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Sadr: 0x%x", _u32); }
 };
 
 union tDMA_MADR {
@@ -169,7 +169,7 @@ union tDMA_MADR {
 	tDMA_MADR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Madr: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Madr: 0x%x", _u32); }
 };
 
 union tDMA_TADR {
@@ -182,7 +182,7 @@ union tDMA_TADR {
 	tDMA_TADR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Tadr: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Tadr: 0x%x", _u32); }
 };
 
 union tDMA_ASR { // The Address Stack Register
@@ -195,7 +195,7 @@ union tDMA_ASR { // The Address Stack Register
 	tDMA_ASR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Asr: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Asr: 0x%x", _u32); }
 };
 
 union tDMA_QWC {
@@ -208,7 +208,7 @@ union tDMA_QWC {
 	tDMA_QWC(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"QWC: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"QWC: 0x%x", _u32); }
 };
 static __forceinline void setDmacStat(u32 num);
 static __forceinline tDMA_TAG *dmaGetAddr(u32 addr);
@@ -282,17 +282,17 @@ struct DMACh {
         return tag;
 	}
 	
-	tDMA_TAG dma_tag()
+	tDMA_TAG dma_tag() const
 	{
 		return DMA_TAG(chcr._u32);
 	}
 	
-	wxString cmq_to_str()
+	wxString cmq_to_str() const
 	{
 		return wxsFormat(L"chcr = %lx, madr = %lx, qwc  = %lx", chcr._u32, madr, qwc);
 	}
 	
-	wxString cmqt_to_str()
+	wxString cmqt_to_str() const
 	{
 		return wxsFormat(L"chcr = %lx, madr = %lx, qwc  = %lx, tadr = %1x", chcr._u32, madr, qwc, tadr);
 	}
@@ -385,7 +385,7 @@ union tDMAC_QUEUE
 	
 	tDMAC_QUEUE(u16 val) { _u16 = val; }
 	void reset() { _u16 = 0; }
-	bool empty() { return (_u16 == 0); }
+	bool empty() const { return (_u16 == 0); }
 };
 
 static __forceinline const wxChar* ChcrName(u32 addr)
@@ -420,11 +420,11 @@ union tDMAC_CTRL {
 	
 	tDMAC_CTRL(u32 val) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Ctrl: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Ctrl: 0x%x", _u32); }
 };
 
 union tDMAC_STAT {
@@ -444,11 +444,11 @@ union tDMAC_STAT {
 	
 	tDMAC_STAT(u32 val) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Stat: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Stat: 0x%x", _u32); }
 };
 
 union tDMAC_PCR {
@@ -463,11 +463,11 @@ union tDMAC_PCR {
 	
 	tDMAC_PCR(u32 val) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Pcr: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Pcr: 0x%x", _u32); }
 };
 
 union tDMAC_SQWC {
@@ -481,11 +481,11 @@ union tDMAC_SQWC {
 	
 	tDMAC_SQWC(u32 val) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Sqwc: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Sqwc: 0x%x", _u32); }
 };
 
 union tDMAC_RBSR {
@@ -498,7 +498,7 @@ union tDMAC_RBSR {
 	tDMAC_RBSR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Rbsr: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Rbsr: 0x%x", _u32); }
 };
 
 union tDMAC_RBOR {
@@ -511,7 +511,7 @@ union tDMAC_RBOR {
 	tDMAC_RBOR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Rbor: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Rbor: 0x%x", _u32); }
 };
 
 union tDMAC_STADR {
@@ -524,7 +524,7 @@ union tDMAC_STADR {
 	tDMAC_STADR(u32 val) { _u32 = val; }
 	
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Stadr: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Stadr: 0x%x", _u32); }
 };
 
 
@@ -556,11 +556,11 @@ union tINTC_STAT {
 	
 	tINTC_STAT(u32 val) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Stat: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Stat: 0x%x", _u32); }
 };
 
 union tINTC_MASK {
@@ -572,11 +572,11 @@ union tINTC_MASK {
 	
 	tINTC_MASK(u32 val) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
-	wxString desc() { return wxsFormat(L"Mask: 0x%x", _u32); }
+	wxString desc() const { return wxsFormat(L"Mask: 0x%x", _u32); }
 };
 
 struct INTCregisters
@@ -642,43 +642,3 @@ extern void intcInterrupt();
 extern void dmacInterrupt();
 
 #endif
-
-
-// Everything after this comment is obsolete, and can be ignored.
-#ifdef PCSX2_VIRTUAL_MEM
-
-#define dmaGetAddrBase(addr) (((addr) & 0x80000000) ? (void*)&PS2MEM_SCRATCH[(addr) & 0x3ff0] : (void*)(PS2MEM_BASE+TRANSFORM_ADDR(addr)))
-
-#ifdef _WIN32
-extern PSMEMORYMAP* memLUT;
-#endif
-
-// VM-version of dmaGetAddr -- Left in for references purposes for now (air)
-static __forceinline u8* dmaGetAddr(u32 mem)
-{
-	u8* p, *pbase;
-	mem &= ~0xf;
-
-	if( (mem&0xffff0000) == 0x50000000 ) {// reserved scratch pad mem
-		Console.WriteLn("dmaGetAddr: reserved scratch pad mem");
-		return NULL;//(u8*)&PS2MEM_SCRATCH[(mem) & 0x3ff0];
-	}
-
-	p = (u8*)dmaGetAddrBase(mem);
-
-#ifdef _WIN32
-	// do manual LUT since IPU/SPR seems to use addrs 0x3000xxxx quite often
-	// linux doesn't suffer from this because it has better vm support
-	if( memLUT[ (p-PS2MEM_BASE)>>12 ].aPFNs == NULL ) {
-		Console.WriteLn("dmaGetAddr: memLUT PFN warning");
-		return NULL;//p;
-	}
-
-	pbase = (u8*)memLUT[ (p-PS2MEM_BASE)>>12 ].aVFNs[0];
-	if( pbase != NULL ) p = pbase + ((u32)p&0xfff);
-#endif
-
-	return p;
-}
-#endif
-

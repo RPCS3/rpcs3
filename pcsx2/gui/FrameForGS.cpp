@@ -336,6 +336,7 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 	char gsDest[128];
 	GSgetTitleInfo( gsDest );
 
+	
 	const wxChar* limiterStr = L"None";
 
 	if( g_Conf->EmuOptions.GS.FrameLimitEnable )
@@ -352,11 +353,16 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 	if( m_CpuUsage.IsImplemented() )
 	{
 		m_CpuUsage.UpdateStats();
-		cpuUsage = wxsFormat( L" | EE: %d%% | GS: %d%% | UI: %d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct(), m_CpuUsage.GetGuiPct() );
+		cpuUsage = wxsFormat( L" | EE: %3d%% | GS: %3d%% | UI: %3d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct(), m_CpuUsage.GetGuiPct() );
 	}
+	
+	const u64& smode2 = *(u64*)PS2GS_BASE(GS_SMODE2);
 
-	SetTitle( wxsFormat( L"%s | Limiter: %s | fps: %2.02f%s",
-		fromUTF8(gsDest).c_str(), limiterStr, fps, cpuUsage.c_str() )
+	SetTitle( wxsFormat( L"%s | %s (%s) | Limiter: %s | fps: %6.02f%s",
+		fromUTF8(gsDest).c_str(),
+		(smode2 & 1) ? L"Interlaced" : L"Progressive",
+		(smode2 & 2) ? L"frame" : L"field",
+		limiterStr, fps, cpuUsage.c_str() )
 	);
 
 	//States_GetCurrentSlot()

@@ -246,6 +246,23 @@ enum GSRegisterAddresses
 	GS_SIGLBLID		=	0x12001080
 };
 
+// bleh, I'm graindead -- air
+union tGS_SMODE2
+{
+	struct  
+	{
+		u32 INT:1;
+		u32 FFMD:1;
+		u32 DPMS:2;
+		u32 _PAD2:28;
+		u32 _PAD3:32;
+	};
+
+	u64 _u64;
+
+	bool IsInterlaced() const { return INT; }
+};
+
 void hwReset();
 
 // hw read functions

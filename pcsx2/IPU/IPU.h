@@ -83,7 +83,7 @@ union tIPU_CTRL {
     // minus the reserved bits. (18-19; 27-29) [0x47f30000]
 	void write(u32 value) { _u32 = (value & 0x47f30000) | (_u32 & 0x8000ffff); }
 
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
@@ -119,7 +119,7 @@ union tIPU_CMD_IDEC
 
 	tIPU_CMD_IDEC( u32 val ) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
@@ -142,7 +142,7 @@ union tIPU_CMD_BDEC
 
 	tIPU_CMD_BDEC( u32 val ) { _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
@@ -162,7 +162,7 @@ union tIPU_CMD_CSC
 
 	tIPU_CMD_CSC( u32 val ){ _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
@@ -186,7 +186,7 @@ union tIPU_DMA
 	
 	tIPU_DMA( u32 val ){ _u32 = val; }
 	
-	bool test(u32 flags) { return !!(_u32 & flags); }
+	bool test(u32 flags) const { return !!(_u32 & flags); }
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
@@ -258,11 +258,11 @@ extern u8 __fastcall getBits8(u8 *address, u32 advance);
 extern int __fastcall getBits(u8 *address, u32 size, u32 advance);
 
 // returns number of qw read
-int FIFOfrom_write(const u32 * value, int size);
-void FIFOfrom_read(void *value,int size);
-int FIFOto_read(void *value);
-int FIFOto_write(u32* pMem, int size);
-void FIFOto_clear();
-void FIFOfrom_clear();
+extern int FIFOfrom_write(const u32 * value, int size);
+extern void FIFOfrom_read(void *value,int size);
+extern int FIFOto_read(void *value);
+extern int FIFOto_write(u32* pMem, int size);
+extern void FIFOto_clear();
+extern void FIFOfrom_clear();
 
 #endif
