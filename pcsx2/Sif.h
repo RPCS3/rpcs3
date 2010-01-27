@@ -33,29 +33,40 @@ struct sifFifo
 	s32 writePos;
 	s32 size;
 	
+	s32 free()
+	{
+		return FIFO_SIF_W - size;
+	}
+	
 	void write(u32 *from, int words)
 	{
-		const int wP0 = min((FIFO_SIF_W - writePos), words);
-		const int wP1 = words - wP0;
+		if (words > 0)
+		{
+			const int wP0 = min((FIFO_SIF_W - writePos), words);
+			const int wP1 = words - wP0;
 
-		memcpy_fast(&data[writePos], from, wP0 << 2);
-		memcpy_fast(&data[0], &from[wP0], wP1 << 2);
+			memcpy_fast(&data[writePos], from, wP0 << 2);
+			memcpy_fast(&data[0], &from[wP0], wP1 << 2);
 
-		writePos = (writePos + words) & (FIFO_SIF_W - 1);
-		size += words;
+			writePos = (writePos + words) & (FIFO_SIF_W - 1);
+			size += words;
+		}
 		SIF_LOG("  SIF + %d = %d (pos=%d)", words, size, writePos);
 	}
 	
 	void read(u32 *to, int words)
 	{
-		const int wP0 = min((FIFO_SIF_W - readPos), words);
-		const int wP1 = words - wP0;
+		if (words > 0)
+		{
+			const int wP0 = min((FIFO_SIF_W - readPos), words);
+			const int wP1 = words - wP0;
 
-		memcpy_fast(to, &data[readPos], wP0 << 2);
-		memcpy_fast(&to[wP0], &data[0], wP1 << 2);
+			memcpy_fast(to, &data[readPos], wP0 << 2);
+			memcpy_fast(&to[wP0], &data[0], wP1 << 2);
 
-		readPos = (readPos + words) & (FIFO_SIF_W - 1);
-		size -= words;
+			readPos = (readPos + words) & (FIFO_SIF_W - 1);
+			size -= words;
+		}
 		SIF_LOG("  SIF - %d = %d (pos=%d)", words, size, readPos);
 	}
 };

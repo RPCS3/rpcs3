@@ -36,81 +36,113 @@ void sifInit()
 // Various read/write functions. Could probably be reduced.
 static __forceinline bool SifEERead(int &cycles)
 {
-	tDMA_TAG *ptag;
-	int readSize = min((s32)sif0dma->qwc, (sif0.fifo.size >> 2));
-	if (readSize == 0) { /*Console.Warning("SifEERead readSize is 0"); return false;*/}
-	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
-	SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
+	const int readSize = min((s32)sif0dma->qwc, sif0.fifo.size >> 2);
+	//if (readSize <= 0)
+	//{
+		tDMA_TAG *ptag;
+		
+		//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
+		SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
 
-	ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
-	if (ptag == NULL)
-	{
-		DevCon.Warning("SIFEERead: ptag == NULL");
-		 return false;
-	}
+		ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
+		if (ptag == NULL)
+		{
+			DevCon.Warning("SIFEERead: ptag == NULL");
+			return false;
+		}
 
-	sif0.fifo.read((u32*)ptag, readSize << 2);
+		sif0.fifo.read((u32*)ptag, readSize << 2);
 
-	// Clearing handled by vtlb memory protection and manual blocks.
-	//Cpu->Clear(sif0dma->madr, readSize*4);
+		// Clearing handled by vtlb memory protection and manual blocks.
+		//Cpu->Clear(sif0dma->madr, readSize*4);
 
-	sif0dma->madr += readSize << 4;
-	cycles += readSize;	// fixme : BIAS is factored in above
-	sif0dma->qwc -= readSize;
+		sif0dma->madr += readSize << 4;
+		cycles += readSize;	// fixme : BIAS is factored in above
+		sif0dma->qwc -= readSize;
+	//}
+	//else
+	//{
+		//DevCon.Warning("SifEERead readSize is 0");
+	//	return false;
+	//}
 	return true;
 }
 
 static __forceinline bool SifEEWrite(int &cycles)
 {
 	// There's some data ready to transfer into the fifo..
-	tDMA_TAG *ptag;
 		
-	const int writeSize = min((s32)sif1dma->qwc, (FIFO_SIF_W - sif1.fifo.size) / 4);
-	if (writeSize == 0) { /*Console.Warning("SifEEWrite writeSize is 0"); return false;*/ }
-	
-	ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1);
-	if (ptag == NULL) 
-	{
-		DevCon.Warning("SIFEEWrite: ptag == NULL");
-		return false;
-	}
+	const int writeSize = min((s32)sif1dma->qwc, sif1.fifo.free() >> 2);
+	//if (writeSize <= 0)
+	//{
+		//DevCon.Warning("SifEEWrite writeSize is 0");
+	//	return false;
+	//}
+	//else
+	//{
+		tDMA_TAG *ptag;
+		
+		ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1);
+		if (ptag == NULL) 
+		{
+			DevCon.Warning("SIFEEWrite: ptag == NULL");
+			return false;
+		}
 
-	sif1.fifo.write((u32*)ptag, writeSize << 2);
+		sif1.fifo.write((u32*)ptag, writeSize << 2);
 
-	sif1dma->madr += writeSize << 4;
-	cycles += writeSize;		// fixme : BIAS is factored in above
-	sif1dma->qwc -= writeSize;
+		sif1dma->madr += writeSize << 4;
+		cycles += writeSize;		// fixme : BIAS is factored in above
+		sif1dma->qwc -= writeSize;
+	//}
 	return true;
 }
 
-static __forceinline void SifIOPWrite(int &psxCycles)
+static __forceinline bool SifIOPWrite(int &psxCycles)
 {
 	// There's some data ready to transfer into the fifo..
-	int writeSize = min(sif0.counter, FIFO_SIF_W - sif0.fifo.size);
-	if (writeSize == 0) { /*Console.Warning("SifIOPWrite writeSize is 0"); return;*/ }
+	const int writeSize = min(sif0.counter, sif0.fifo.free());
+	
+	//if (writeSize <= 0)
+	//{
+		//DevCon.Warning("SifIOPWrite writeSize is 0"); 
+	//	return false;
+	//}
+	//else
+	//{
 	SIF_LOG("+++++++++++ %lX of %lX", writeSize, sif0.counter);
 
 	sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_MADR), writeSize);
 	HW_DMA9_MADR += writeSize << 2;
-	psxCycles += (writeSize / 4) * BIAS;		// fixme : should be / 16
+	psxCycles += (writeSize >> 2) * BIAS;		// fixme : should be >> 4
 	sif0.counter -= writeSize;
+	//}
+	return true;
 }
 
-static __forceinline void SifIOPRead(int &psxCycles)
+static __forceinline bool SifIOPRead(int &psxCycles)
 {
 	// If we're reading something, continue to do so.
 	const int readSize = min (sif1.counter, sif1.fifo.size);
-	if (readSize == 0) { /*Console.Warning("SifIOPRead readSize is 0"); return;*/ }
-	SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
+	//if (readSize <= 0)
+	//{
+		//DevCon.Warning("SifIOPRead readSize is 0");
+	//	return false;
+	//}
+	//else
+	//{
+		SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
-	sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
-	psxCpu->Clear(HW_DMA10_MADR, readSize);
-	HW_DMA10_MADR += readSize << 2;
-	psxCycles += readSize / 4;		// fixme: should be / 16
-	sif1.counter -= readSize;
+		sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
+		psxCpu->Clear(HW_DMA10_MADR, readSize);
+		HW_DMA10_MADR += readSize << 2;
+		psxCycles += readSize >> 2;		// fixme: should be / 16
+		sif1.counter -= readSize;
+	//}
+	return true;
 }
 
-static __forceinline bool SIF0EEReadTag()
+static __forceinline bool SIFEEReadTag()
 {
 	static __aligned16 u32 tag[4];
 			
@@ -150,7 +182,7 @@ static __forceinline bool SIF0EEReadTag()
 	return true;
 }
 
-static __forceinline bool SIF1EEWriteTag()
+static __forceinline bool SIFEEWriteTag()
 {
 	// Chain mode
 	tDMA_TAG *ptag;
@@ -216,7 +248,7 @@ static __forceinline bool SIF1EEWriteTag()
 	return true;
 }
 
-static __forceinline bool SIF0IOPWriteTag()
+static __forceinline bool SIFIOPWriteTag()
 {
 	// Process DMA tag at HW_DMA9_TADR
 	sif0.data = *(sifData *)iopPhysMem(HW_DMA9_TADR);
@@ -232,7 +264,7 @@ static __forceinline bool SIF0IOPWriteTag()
 	return true;
 }
 
-static __forceinline bool SIF1IOPWriteTag()
+static __forceinline bool SIFIOPReadTag()
 {
 	// Read a tag.
 	sif1.fifo.read((u32*)&sif1.data, 4);
@@ -334,7 +366,7 @@ static __forceinline void SIF0EEDma(int &cycles, bool &done)
 		else if (sif0.fifo.size >= 4) // Read a tag
 		{
 			done = false;
-			SIF0EEReadTag();
+			SIFEEReadTag();
 		}
 	}
 	
@@ -365,7 +397,7 @@ static __forceinline void SIF1EEDma(int &cycles, bool &done)
 		else
 		{
 			done = false;
-			if (!SIF1EEWriteTag()) return;
+			if (!SIFEEWriteTag()) return;
 		}
 	}
 	else
@@ -387,7 +419,7 @@ static __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 		else  // Chain mode
 		{
 			done = false;
-			SIF0IOPWriteTag();
+			SIFIOPWriteTag();
 		}
 	}
 	else
@@ -414,7 +446,7 @@ static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 		{
 			
 			done = false;
-			SIF1IOPWriteTag();
+			SIFIOPReadTag();
 		}
 	}
 }
