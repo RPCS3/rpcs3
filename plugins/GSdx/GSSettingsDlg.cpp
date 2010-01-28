@@ -167,7 +167,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 	{
 		INT_PTR data;
 
-		if(ComboBoxGetSelData(IDC_RESOLUTION, data))
+		if(!m_IsOpen2 && ComboBoxGetSelData(IDC_RESOLUTION, data))
 		{
 			const D3DDISPLAYMODE* mode = (D3DDISPLAYMODE*)data;
 
