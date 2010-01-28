@@ -43,6 +43,8 @@ static bool s_framelimit = true;
 static bool s_vsync = false;
 static bool s_exclusive = true;
 
+static bool s_IsGsOpen2 = false;		// boolean to remove some stuff from the config panel in new PCSX2's/
+
 EXPORT_C_(uint32) PS2EgetLibType()
 {
 	return PS2E_LT_GS;
@@ -59,6 +61,11 @@ EXPORT_C_(uint32) PS2EgetLibVersion2(uint32 type)
 	const uint32 build = 1;
 
 	return (build << 0) | (revision << 8) | (PS2E_GS_VERSION << 16) | (PLUGIN_VERSION << 24);
+}
+
+EXPORT_C_(void) PS2EsetEmuVersion(const char* emuId, uint32 version)
+{
+	s_IsGsOpen2 = true;
 }
 
 EXPORT_C_(uint32) PS2EgetCpuPlatform()
@@ -386,7 +393,7 @@ EXPORT_C GSconfigure()
 {
 	if( !GSUtil::CheckSSE() ) return;
 
-	if( GSSettingsDlg().DoModal() == IDOK )
+	if( GSSettingsDlg( s_IsGsOpen2 ).DoModal() == IDOK )
 	{
 		if( s_gs != NULL && s_gs->m_wnd.IsManaged() )
 		{
@@ -460,6 +467,11 @@ EXPORT_C GSsetGameCRC(uint32 crc, int options)
 EXPORT_C GSgetLastTag(uint32* tag)
 {
 	s_gs->GetLastTag(tag);
+}
+
+EXPORT_C GSgetTitleInfo(char dest[128])
+{
+	//s_gs->GetWindowTitle
 }
 
 EXPORT_C GSsetFrameSkip(int frameskip)

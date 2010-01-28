@@ -27,7 +27,8 @@
 class GSSettingsDlg : public GSDialog
 {
 	list<D3DDISPLAYMODE> m_modes;
-
+	bool m_IsOpen2;
+	
 	void UpdateControls();
 
 protected:
@@ -35,7 +36,7 @@ protected:
 	bool OnCommand(HWND hWnd, UINT id, UINT code);
 
 public:
-	GSSettingsDlg();
+	GSSettingsDlg( bool isOpen2 );
 
 	static GSSetting g_renderers[];
 	static GSSetting g_interlace[];

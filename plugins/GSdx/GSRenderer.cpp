@@ -308,7 +308,7 @@ void GSRenderer::VSync(int field)
 
 	// osd 
 
-	if((m_perfmon.GetFrame() & 0x1f) == 0)
+	if((m_perfmon.GetFrame() & 0x1f) == 0 && m_wnd.IsManaged())
 	{
 		m_perfmon.Update();
 
@@ -344,12 +344,13 @@ void GSRenderer::VSync(int field)
 			s += " | Recording...";
 		}
 
-		if( !m_wnd.SetWindowText(s.c_str()) )
-		{
-			// [TODO]
-			// We don't have window title rights, or the window has no title,
-			// so let's use actual OSD!
-		}
+		m_wnd.SetWindowText(s.c_str());
+	}
+	else
+	{
+		// [TODO]
+		// We don't have window title rights, or the window has no title,
+		// so let's use actual OSD!
 	}
 
 	if(m_frameskip)

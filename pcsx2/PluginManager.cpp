@@ -701,6 +701,8 @@ static void PS2E_CALLBACK pcsx2_OSD_WriteLn( int icon, const char* msg )
 
 PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 {
+	wxDoNotLogInThisScope please;
+	
 	Console.WriteLn( Color_StrongBlue, "Loading plugins..." );
 
 	const PluginInfo* pi = tbl_PluginInfo; do
@@ -734,12 +736,16 @@ PluginManager::PluginManager( const wxString (&folders)[PluginId_Count] )
 		
 		_PS2EgetLibName		GetLibName		= (_PS2EgetLibName)		m_info[pid].Lib.GetSymbol( L"PS2EgetLibName" );
 		_PS2EgetLibVersion2	GetLibVersion2	= (_PS2EgetLibVersion2)	m_info[pid].Lib.GetSymbol( L"PS2EgetLibVersion2" );
+		_PS2EsetEmuVersion	SetEmuVersion	= (_PS2EsetEmuVersion)	m_info[pid].Lib.GetSymbol( L"PS2EsetEmuVersion" );
 
 		if( GetLibName == NULL || GetLibVersion2 == NULL )
 			throw Exception::PluginLoadError( pid, m_info[pid].Filename,
 				L"\nMethod binding failure on GetLibName or GetLibVersion2.\n",
 				_( "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2." )
 			);
+
+		if( SetEmuVersion != NULL )
+			SetEmuVersion( "PCSX2", (0ul << 24) | (9ul<<16) | (7ul<<8) | 0 );
 
 		m_info[pid].Name = fromUTF8( GetLibName() );
 		int version = GetLibVersion2( tbl_PluginInfo[pid].typemask );

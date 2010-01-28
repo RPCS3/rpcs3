@@ -71,8 +71,9 @@ GSSetting GSSettingsDlg::g_upscale_multiplier[] =
 	{4, "4x", NULL},
 };
 
-GSSettingsDlg::GSSettingsDlg()
-	: GSDialog(IDD_CONFIG)
+GSSettingsDlg::GSSettingsDlg( bool isOpen2 )
+	: GSDialog(isOpen2 ? IDD_CONFIG2 : IDD_CONFIG)
+	, m_IsOpen2(isOpen2)
 {
 }
 
@@ -82,6 +83,7 @@ void GSSettingsDlg::OnInit()
 
 	m_modes.clear();
 
+	if(!m_IsOpen2)
 	{
 		D3DDISPLAYMODE mode;
 		memset(&mode, 0, sizeof(mode));

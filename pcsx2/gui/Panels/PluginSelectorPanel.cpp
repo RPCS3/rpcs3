@@ -83,9 +83,8 @@ public:
 	//   BadStream				- thrown if the provided file is simply not a loadable DLL.
 	//   NotEnumerablePlugin	- thrown if the DLL is not a PCSX2 plugin, or if it's of an unsupported version.
 	//
-	PluginEnumerator( const wxString& plugpath ) :
-		m_plugpath( plugpath )
-	,	m_plugin()
+	PluginEnumerator( const wxString& plugpath )
+		: m_plugpath( plugpath )
 	{
 		if( !m_plugin.Load( m_plugpath ) )
 			throw Exception::BadStream( m_plugpath, "File is not a valid dynamic library." );
@@ -95,7 +94,7 @@ public:
 		m_GetLibName		= (_PS2EgetLibName)m_plugin.GetSymbol( L"PS2EgetLibName" );
 		m_GetLibVersion2	= (_PS2EgetLibVersion2)m_plugin.GetSymbol( L"PS2EgetLibVersion2" );
 
-		if( m_GetLibType == NULL || m_GetLibName == NULL || m_GetLibVersion2 == NULL )
+		if( m_GetLibType == NULL || m_GetLibName == NULL || m_GetLibVersion2 == NULL)
 			throw Exception::NotEnumerablePlugin( m_plugpath );
 
 		m_type = m_GetLibType();

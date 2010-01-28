@@ -536,6 +536,8 @@ typedef u32  (CALLBACK* _PS2EgetLibType)(void);
 typedef u32  (CALLBACK* _PS2EgetLibVersion2)(u32 type);
 typedef char*(CALLBACK* _PS2EgetLibName)(void);
 
+typedef void (CALLBACK* _PS2EsetEmuVersion)(const char* emuId, u32 version);		// HACK to let some plugins know it's 0.9.7 PCSX2 --air
+
 // GS
 // NOTE: GSreadFIFOX/GSwriteCSR functions CANNOT use XMM/MMX regs
 // If you want to use them, need to save and restore current ones
