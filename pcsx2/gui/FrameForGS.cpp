@@ -148,7 +148,7 @@ void GSPanel::OnResize(wxSizeEvent& event)
 
 void GSPanel::OnCloseWindow(wxCloseEvent& evt)
 {
-	wxGetApp().OnGsFrameClosed();
+	CoreThread.Suspend();
 	evt.Skip();		// and close it.
 }
 
@@ -254,7 +254,7 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	// (main concern is retaining proper client window sizes when closing/re-opening the window).
 	//m_statusbar = CreateStatusBar( 2 );
 
-	//Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(GSFrame::OnCloseWindow) );
+	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(GSFrame::OnCloseWindow) );
 	Connect( wxEVT_MOVE,			wxMoveEventHandler		(GSFrame::OnMove) );
 	Connect( wxEVT_SIZE,			wxSizeEventHandler		(GSFrame::OnResize) );
 	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler	(GSFrame::OnActivate) );
@@ -265,6 +265,13 @@ GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 GSFrame::~GSFrame() throw()
 {
 }
+
+void GSFrame::OnCloseWindow(wxCloseEvent& evt)
+{
+	sApp.OnGsFrameClosed();
+	evt.Skip();		// and close it.
+}
+
 
 wxStaticText* GSFrame::GetLabel_OutputDisabled() const
 {

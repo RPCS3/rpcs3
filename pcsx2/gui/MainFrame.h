@@ -98,6 +98,7 @@ public:
 	wxStaticText* GetLabel_OutputDisabled() const;
 
 protected:
+	void OnCloseWindow( wxCloseEvent& evt );
 	void OnMove( wxMoveEvent& evt );
 	void OnResize( wxSizeEvent& evt );
 	void OnActivate( wxActivateEvent& evt );
