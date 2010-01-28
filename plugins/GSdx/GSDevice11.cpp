@@ -278,8 +278,10 @@ bool GSDevice11::Reset(int w, int h)
 		m_swapchain->ResizeBuffers(scd.BufferCount, w, h, scd.BufferDesc.Format, 0);
 		
 		CComPtr<ID3D11Texture2D> backbuffer;
-		m_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer);
-		m_backbuffer = new GSTexture11(backbuffer);
+		if(!FAILED(m_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer)))
+		{
+			m_backbuffer = new GSTexture11(backbuffer);
+		}
 	}
 
 	return true;
