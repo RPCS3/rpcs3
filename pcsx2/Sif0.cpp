@@ -30,7 +30,7 @@ static __forceinline void Sif0Init()
 	done = false;
 	cycles = 0;
 	psxCycles = 0;
-	memzero(sif0);
+	//memzero(sif0);
 	//sif0.end = 0;
 	//sif0.data.data = 0;
 }
@@ -157,6 +157,7 @@ static __forceinline bool ProcessIOPTag()
 static __forceinline void EndEE()
 {
 	SIF_LOG("Sif0: End EE");
+	sif0.end = 0;
 	eesifbusy[0] = false;
 	if (cycles == 0) DevCon.Warning("SIF0 EE: cycles = 0"); // No transfer happened
 	else CPU_INT(DMAC_SIF0, cycles*BIAS); // Hence no Interrupt
@@ -166,6 +167,7 @@ static __forceinline void EndEE()
 static __forceinline void EndIOP()
 {
 	SIF_LOG("Sif0: End IOP");
+	sif0.data.data = 0;
 	iopsifbusy[0] = false;
 					
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)

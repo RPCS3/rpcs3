@@ -30,7 +30,7 @@ static __forceinline void Sif1Init()
 	done = false;
 	cycles = 0;
 	psxCycles = 0;
-	memzero(sif1);
+	//memzero(sif1);
 	//sif1.end = 0;
 	//sif1.data.data = 0;
 }
@@ -177,6 +177,7 @@ static __forceinline bool SIFIOPReadTag()
 // Stop processing EE, and signal an interrupt.
 static __forceinline void EndEE()
 {
+	sif1.end = 0;
 	eesifbusy[1] = false;
 	SIF_LOG("Sif 1: End EE");
 	
@@ -198,6 +199,7 @@ static __forceinline void EndEE()
 // Stop processing IOP, and signal an interrupt.
 static __forceinline void EndIOP()
 {
+	sif1.data.data = 0;
 	iopsifbusy[1] = false;
 	SIF_LOG("Sif 1: End IOP");
 
