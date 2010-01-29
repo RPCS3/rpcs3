@@ -80,6 +80,10 @@ struct _sif
 	s32 counter;
 	struct sifData data;
 };
+extern _sif sif0, sif1;
+
+extern bool eesifbusy[2];
+extern bool iopsifbusy[2];
 
 extern void sifInit();
 

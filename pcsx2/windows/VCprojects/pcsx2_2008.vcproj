@@ -785,6 +785,14 @@
 								>
 							</File>
 							<File
+								RelativePath="..\..\Sif0.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\Sif1.cpp"
+								>
+							</File>
+							<File
 								RelativePath="..\..\Sif.h"
 								>
 							</File>

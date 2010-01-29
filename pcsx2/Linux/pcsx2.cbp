@@ -295,6 +295,8 @@
 		<Unit filename="../ShiftJisToUnicode.cpp" />
 		<Unit filename="../Sif.cpp" />
 		<Unit filename="../Sif.h" />
+		<Unit filename="../Sif0.cpp" />
+		<Unit filename="../Sif1.cpp" />
 		<Unit filename="../Sifcmd.h" />
 		<Unit filename="../Sio.cpp" />
 		<Unit filename="../Sio.h" />

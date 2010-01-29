@@ -159,6 +159,8 @@ set(pcsx2Sources
 	SaveState.cpp
 	ShiftJisToUnicode.cpp
 	Sif.cpp
+	Sif0.cpp
+	Sif1.cpp
 	Sio.cpp
 	SourceLog.cpp
 	SPR.cpp

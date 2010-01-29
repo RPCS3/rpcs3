@@ -222,6 +222,8 @@
     <ClCompile Include="..\..\Saveslots.cpp" />
     <ClCompile Include="..\..\SaveState.cpp" />
     <ClCompile Include="..\..\Sif.cpp" />
+    <ClCompile Include="..\..\Sif0.cpp" />
+    <ClCompile Include="..\..\Sif1.cpp" />
     <ClCompile Include="..\..\Sio.cpp" />
     <ClCompile Include="..\..\SourceLog.cpp" />
     <ClCompile Include="..\..\SPR.cpp" />
