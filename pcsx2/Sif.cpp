@@ -20,8 +20,7 @@
 #include "IopCommon.h"
 #include "Sif.h"
 
-_sif sif0, sif1;
-
+extern _sif sif0, sif1;
 bool eesifbusy[2] = { false, false };
 extern bool iopsifbusy[2];
 

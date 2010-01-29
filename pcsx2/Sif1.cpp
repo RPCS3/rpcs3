@@ -20,7 +20,23 @@
 #include "IopCommon.h"
 #include "Sif.h"
 
-static __forceinline bool SifEEWrite(int &cycles)
+_sif sif1;
+
+static bool done = false;
+static int cycles = 0, psxCycles = 0;
+	
+static __forceinline void Sif1Init()
+{
+	done = false;
+	cycles = 0;
+	psxCycles = 0;
+	memzero(sif1);
+	//sif1.end = 0;
+	//sif1.data.data = 0;
+}
+
+// Write from the EE to Fifo.
+static __forceinline bool SifEEWrite()
 {
 	// There's some data ready to transfer into the fifo..
 		
@@ -50,7 +66,8 @@ static __forceinline bool SifEEWrite(int &cycles)
 	return true;
 }
 
-static __forceinline bool SifIOPRead(int &psxCycles)
+// Read from the fifo and write to IOP
+static __forceinline bool SifIOPRead()
 {
 	// If we're reading something, continue to do so.
 	const int readSize = min (sif1.counter, sif1.fifo.size);
@@ -72,6 +89,7 @@ static __forceinline bool SifIOPRead(int &psxCycles)
 	return true;
 }
 
+// Get a tag and process it.
 static __forceinline bool SIFEEWriteTag()
 {
 	// Chain mode
@@ -138,6 +156,7 @@ static __forceinline bool SIFEEWriteTag()
 	return true;
 }
 
+// Write fifo to data, and put it in IOP.
 static __forceinline bool SIFIOPReadTag()
 {
 	// Read a tag.
@@ -151,10 +170,9 @@ static __forceinline bool SIFIOPReadTag()
 	return true;
 }
 
-static __forceinline void SIF1EEend(int &cycles)
+// Stop processing EE, and signal an interrupt.
+static __forceinline void SIF1EEend()
 {
-	// Stop & signal interrupts on EE
-	sif1.end = 0;
 	eesifbusy[1] = false;
 			
 	// Voodoocycles : Okami wants around 100 cycles when booting up
@@ -164,10 +182,9 @@ static __forceinline void SIF1EEend(int &cycles)
 	else CPU_INT(DMAC_SIF1, min((int)(cycles*BIAS), 384)); // Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
 }
 
-static __forceinline void SIF1IOPend(int &psxCycles)
+// Stop processing IOP, and signal an interrupt.
+static __forceinline void SIF1IOPend()
 {
-	// Stop & signal interrupts on IOP
-	sif1.data.data = 0;
 	iopsifbusy[1] = false;
 
 	//Fixme ( voodoocycles ):
@@ -178,7 +195,8 @@ static __forceinline void SIF1IOPend(int &psxCycles)
 	else PSX_INT(IopEvt_SIF1, min((psxCycles * 26), 1024)); // Hence no Interrupt
 }
 
-static __forceinline void SIF1EEDma(int &cycles, bool &done)
+// Handle the EE transfer.
+static __forceinline void SIF1EEDma()
 {
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_SIF1)
@@ -194,7 +212,7 @@ static __forceinline void SIF1EEDma(int &cycles, bool &done)
 		if ((sif1dma->chcr.MOD == NORMAL_MODE) || sif1.end)
 		{
 			done = true;
-			SIF1EEend(cycles);
+			SIF1EEend();
 		}
 		else
 		{
@@ -204,15 +222,16 @@ static __forceinline void SIF1EEDma(int &cycles, bool &done)
 	}
 	else
 	{
-		SifEEWrite(cycles);
+		SifEEWrite();
 	}
 }
 
-static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
+// Handle the IOP transfer.
+static __forceinline void SIF1IOPDma()
 {
 	if (sif1.counter > 0)
 	{
-		SifIOPRead(psxCycles);
+		SifIOPRead();
 	}
 	
 	if (sif1.counter <= 0)
@@ -220,7 +239,7 @@ static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 		if (sif1_tag.IRQ  || (sif1_tag.ID & 4))
 		{
 			done = true;
-			SIF1IOPend(psxCycles);
+			SIF1IOPend();
 		}
 		else if (sif1.fifo.size >= 4)
 		{
@@ -231,17 +250,25 @@ static __forceinline void SIF1IOPDma(int &psxCycles, bool &done)
 	}
 }
 
+static __forceinline void Sif1End()
+{
+}
+
+// Transfer EE to IOP, putting data in the fifo as an intermediate step.
 __forceinline void SIF1Dma()
 {
-	bool done = false;
-	int cycles = 0, psxCycles = 0;
-
+	SIF_LOG("SIF1 DMA start...");
+	Sif1Init();
+	
 	do
 	{
-		if (eesifbusy[1]) SIF1EEDma(cycles, done);
-		if (iopsifbusy[1]) SIF1IOPDma(psxCycles, done);
+		if (eesifbusy[1]) SIF1EEDma();
+		if (iopsifbusy[1]) SIF1IOPDma();
 
 	} while (!done);
+	
+	SIF_LOG("SIF0 DMA end...");
+	Sif1End();
 }
 
 __forceinline void  sif1Interrupt()
@@ -256,6 +283,8 @@ __forceinline void  EEsif1Interrupt()
 	sif1dma->chcr.STR = false;
 }
 
+// Do almost exactly the same thing as psxDma10 in IopDma.cpp.
+// Main difference is this checks for iop, where psxDma10 checks for ee.
 __forceinline void dmaSIF1()
 {
 	SIF_LOG(wxString(L"dmaSIF1" + sif1dma->cmqt_to_str()).To8BitData());

@@ -20,7 +20,23 @@
 #include "IopCommon.h"
 #include "Sif.h"
 
-static __forceinline bool SifEERead(int &cycles)
+_sif sif0;
+
+static bool done = false;
+static int cycles = 0, psxCycles = 0;
+
+static __forceinline void Sif0Init()
+{
+	done = false;
+	cycles = 0;
+	psxCycles = 0;
+	memzero(sif0);
+	//sif0.end = 0;
+	//sif0.data.data = 0;
+}
+
+// Write from Fifo to EE.
+static __forceinline bool SifEERead()
 {
 	const int readSize = min((s32)sif0dma->qwc, sif0.fifo.size >> 2);
 	//if (readSize <= 0)
@@ -54,7 +70,8 @@ static __forceinline bool SifEERead(int &cycles)
 	return true;
 }
 
-static __forceinline bool SifIOPWrite(int &psxCycles)
+// Write IOP to Fifo.
+static __forceinline bool SifIOPWrite()
 {
 	// There's some data ready to transfer into the fifo..
 	const int writeSize = min(sif0.counter, sif0.fifo.free());
@@ -76,6 +93,7 @@ static __forceinline bool SifIOPWrite(int &psxCycles)
 	return true;
 }
 
+// Read Fifo into an ee tag, transfer it to sif0dma, and process it.
 static __forceinline bool SIFEEReadTag()
 {
 	static __aligned16 u32 tag[4];
@@ -116,14 +134,17 @@ static __forceinline bool SIFEEReadTag()
 	return true;
 }
 
+// Read Fifo into an ee tag, and transfer it to hw_dma(9). And presumably process it.
 static __forceinline bool SIFIOPWriteTag()
 {
-	// Process DMA tag at HW_DMA9_TADR
+	// Process DMA tag at hw_dma(9).tadr
 	sif0.data = *(sifData *)iopPhysMem(hw_dma(9).tadr);
 	sif0.data.words = (sif0.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
 	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).tadr + 8), 4);
 
 	hw_dma(9).tadr += 16; ///hw_dma(9).madr + 16 + sif0.sifData.words << 2;
+	
+	// Looks like we are only copying the first 24 bits.
 	hw_dma(9).madr = sif0.data.data & 0xFFFFFF;
 	sif0.counter = sif0.data.words & 0xFFFFFF;
 
@@ -132,19 +153,17 @@ static __forceinline bool SIFIOPWriteTag()
 	return true;
 }
 
-static __forceinline void SIF0EEend(int &cycles)
+// Stop transferring ee, and signal an interrupt.
+static __forceinline void SIF0EEend()
 {
-	// Stop & signal interrupts on EE
-	sif0.end = 0;
 	eesifbusy[0] = false;
 	if (cycles == 0) DevCon.Warning("EESIF0cycles = 0"); // No transfer happened
 	else CPU_INT(DMAC_SIF0, cycles*BIAS); // Hence no Interrupt
 }
 
-static __forceinline void SIF0IOPend(int &psxCycles)
+// Stop transferring iop, and signal an interrupt.
+static __forceinline void SIF0IOPend()
 {
-	// Stop & signal interrupts on IOP
-	sif0.data.data = 0;
 	iopsifbusy[0] = false;
 					
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
@@ -154,7 +173,8 @@ static __forceinline void SIF0IOPend(int &psxCycles)
 	else PSX_INT(IopEvt_SIF0, psxCycles); // Hence no Interrupt
 }
 
-static __forceinline void SIF0EEDma(int &cycles, bool &done)
+// Handle the EE transfer.
+static __forceinline void SIF0EEDma()
 {
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STS == STS_SIF0)
@@ -168,7 +188,7 @@ static __forceinline void SIF0EEDma(int &cycles, bool &done)
 		if ((sif0dma->chcr.MOD == NORMAL_MODE) || sif0.end)
 		{
 			done = true;
-			SIF0EEend(cycles);
+			SIF0EEend();
 		}
 		else if (sif0.fifo.size >= 4) // Read a tag
 		{
@@ -179,19 +199,20 @@ static __forceinline void SIF0EEDma(int &cycles, bool &done)
 	
 	if (sif0dma->qwc > 0) // If we're reading something continue to do so
 	{
-		SifEERead(cycles);
+		SifEERead();
 	}
 }
 
+// Handle the IOP transfer.
 // Note: Test any changes in this function against Grandia III.
-static __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
+static __forceinline void SIF0IOPDma()
 {
 	if (sif0.counter <= 0) // If there's no more to transfer
 	{
 		if (sif0_tag.IRQ  || (sif0_tag.ID & 4))
 		{
 			done = true;
-			SIF0IOPend(psxCycles);
+			SIF0IOPend();
 		}
 		else  // Chain mode
 		{
@@ -201,22 +222,28 @@ static __forceinline void SIF0IOPDma(int &psxCycles, bool &done)
 	}
 	else
 	{
-		SifIOPWrite(psxCycles);
+		SifIOPWrite();
 	}
 }
 
+static __forceinline void Sif0End()
+{
+}
+
+// Transfer IOP to EE, putting data in the fifo as an intermediate step.
 __forceinline void SIF0Dma()
 {
-	bool done = false;
-	int cycles = 0, psxCycles = 0;
-
 	SIF_LOG("SIF0 DMA start...");
+	Sif0Init();
 	
 	do
 	{
-		if (iopsifbusy[0]) SIF0IOPDma(psxCycles, done);
-		if (eesifbusy[0]) SIF0EEDma(cycles, done);
+		if (iopsifbusy[0]) SIF0IOPDma();
+		if (eesifbusy[0]) SIF0EEDma();
 	} while (!done);
+	
+	SIF_LOG("SIF0 DMA end...");
+	Sif0End();
 }
 
 __forceinline void  sif0Interrupt()
