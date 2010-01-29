@@ -205,6 +205,53 @@ enum IOPCountRegs
 }
 #endif
 
+struct dma_mbc
+{
+	u32 madr;
+	u32 bcr;
+	u32 chcr;
+	
+	u16 bcr_lower() const
+	{
+		return (u16)(bcr);
+	}
+	u16 bcr_upper() const
+	{
+		return (bcr >> 16);
+	}
+};
+
+struct dma_mbct
+{
+	u32 madr;
+	u32 bcr;
+	u32 chcr;
+	u32 tadr;
+	
+	u16 bcr_lower() const
+	{
+		return (u16)(bcr);
+	}
+	u16 bcr_upper() const
+	{
+		return (bcr >> 16);
+	}
+};
+
+#define hw_dma0		(*(dma_mbc*) &psxH[0x1080])
+#define hw_dma1		(*(dma_mbc*) &psxH[0x1090])
+#define hw_dma2		(*(dma_mbct*)&psxH[0x10a0])
+#define hw_dma3		(*(dma_mbc*) &psxH[0x10b0])
+#define hw_dma4		(*(dma_mbct*)&psxH[0x10c0])
+#define hw_dma6		(*(dma_mbc*) &psxH[0x10e0])
+#define hw_dma7		(*(dma_mbc*) &psxH[0x1500])
+#define hw_dma8		(*(dma_mbc*) &psxH[0x1510])
+#define hw_dma9		(*(dma_mbct*)&psxH[0x1520])
+#define hw_dma10	(*(dma_mbc*) &psxH[0x1530])
+#define hw_dma11	(*(dma_mbc*) &psxH[0x1540])
+#define hw_dma12	(*(dma_mbc*) &psxH[0x1550])
+#define hw_dma(x)	hw_dma##x
+
 #define HW_DMA0_MADR (psxHu32(0x1080)) // MDEC in DMA
 #define HW_DMA0_BCR  (psxHu32(0x1084))
 #define HW_DMA0_CHCR (psxHu32(0x1088))

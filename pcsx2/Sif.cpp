@@ -112,8 +112,8 @@ static __forceinline bool SifIOPWrite(int &psxCycles)
 	//{
 	SIF_LOG("+++++++++++ %lX of %lX", writeSize, sif0.counter);
 
-	sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_MADR), writeSize);
-	HW_DMA9_MADR += writeSize << 2;
+	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).madr), writeSize);
+	hw_dma(9).madr += writeSize << 2;
 	psxCycles += (writeSize >> 2) * BIAS;		// fixme : should be >> 4
 	sif0.counter -= writeSize;
 	//}
@@ -133,9 +133,9 @@ static __forceinline bool SifIOPRead(int &psxCycles)
 	//{
 		SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
-		sif1.fifo.read((u32*)iopPhysMem(HW_DMA10_MADR), readSize);
-		psxCpu->Clear(HW_DMA10_MADR, readSize);
-		HW_DMA10_MADR += readSize << 2;
+		sif1.fifo.read((u32*)iopPhysMem(hw_dma(10).madr), readSize);
+		psxCpu->Clear(hw_dma(10).madr, readSize);
+		hw_dma(10).madr += readSize << 2;
 		psxCycles += readSize >> 2;		// fixme: should be / 16
 		sif1.counter -= readSize;
 	//}
@@ -251,12 +251,12 @@ static __forceinline bool SIFEEWriteTag()
 static __forceinline bool SIFIOPWriteTag()
 {
 	// Process DMA tag at HW_DMA9_TADR
-	sif0.data = *(sifData *)iopPhysMem(HW_DMA9_TADR);
+	sif0.data = *(sifData *)iopPhysMem(hw_dma(9).tadr);
 	sif0.data.words = (sif0.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
-	sif0.fifo.write((u32*)iopPhysMem(HW_DMA9_TADR + 8), 4);
+	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).tadr + 8), 4);
 
-	HW_DMA9_TADR += 16; ///HW_DMA9_MADR + 16 + sif0.sifData.words << 2;
-	HW_DMA9_MADR = sif0.data.data & 0xFFFFFF;
+	hw_dma(9).tadr += 16; ///hw_dma(9).madr + 16 + sif0.sifData.words << 2;
+	hw_dma(9).madr = sif0.data.data & 0xFFFFFF;
 	sif0.counter = sif0.data.words & 0xFFFFFF;
 
 	SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.data.words, sif0.data.data);
@@ -272,7 +272,7 @@ static __forceinline bool SIFIOPReadTag()
 		sif1.data.data & 0xffffff, sif1.data.words, DMA_TAG(sif1.data.data).ID, 
 		DMA_TAG(sif1.data.data).IRQ);
 				
-	HW_DMA10_MADR = sif1.data.data & 0xffffff;
+	hw_dma(10).madr = sif1.data.data & 0xffffff;
 	sif1.counter = sif1.data.words;
 	return true;
 }
