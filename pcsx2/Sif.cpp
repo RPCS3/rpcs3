@@ -22,7 +22,7 @@
 
 extern _sif sif0, sif1;
 bool eesifbusy[2] = { false, false };
-extern bool iopsifbusy[2];
+bool iopsifbusy[2] = { false, false };
 
 void sifInit()
 {

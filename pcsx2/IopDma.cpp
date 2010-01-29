@@ -25,9 +25,6 @@ using namespace R3000A;
 // Dma8     in PsxSpd.c
 // Dma11/12 in PsxSio2.c
 
-bool iopsifbusy[2] = { false, false };
-extern bool eesifbusy[2];
-
 #ifndef ENABLE_NEW_IOPDMA_SPU2
 static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _SPU2writeDMA4Mem spu2WriteFunc, _SPU2readDMA4Mem spu2ReadFunc)
 {
@@ -201,7 +198,7 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 	}
 }
 
-/* psxDma11 & psxDma 12 are in IopSio2,cpp, along with the appropriate interrupt functions. */
+/* psxDma11 & psxDma 12 are in IopSio2.cpp, along with the appropriate interrupt functions. */
 
 void dev9Interrupt()
 {

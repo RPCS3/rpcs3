@@ -36,14 +36,14 @@ static __forceinline void Sif1Init()
 }
 
 // Write from the EE to Fifo.
-static __forceinline bool SifEEWrite()
+static __forceinline bool WriteEEtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
 		
 	const int writeSize = min((s32)sif1dma->qwc, sif1.fifo.free() >> 2);
 	//if (writeSize <= 0)
 	//{
-		//DevCon.Warning("SifEEWrite writeSize is 0");
+		//DevCon.Warning("WriteEEtoFifo: writeSize is 0");
 	//	return false;
 	//}
 	//else
@@ -53,7 +53,7 @@ static __forceinline bool SifEEWrite()
 		ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1);
 		if (ptag == NULL) 
 		{
-			DevCon.Warning("SIFEEWrite: ptag == NULL");
+			DevCon.Warning("WriteEEtoFifo: ptag == NULL");
 			return false;
 		}
 
@@ -67,13 +67,13 @@ static __forceinline bool SifEEWrite()
 }
 
 // Read from the fifo and write to IOP
-static __forceinline bool SifIOPRead()
+static __forceinline bool WriteFifoToIOP()
 {
 	// If we're reading something, continue to do so.
 	const int readSize = min (sif1.counter, sif1.fifo.size);
 	//if (readSize <= 0)
 	//{
-		//DevCon.Warning("SifIOPRead readSize is 0");
+		//DevCon.Warning("WriteFifoToIOP: readSize is 0");
 	//	return false;
 	//}
 	//else
@@ -90,7 +90,7 @@ static __forceinline bool SifIOPRead()
 }
 
 // Get a tag and process it.
-static __forceinline bool SIFEEWriteTag()
+static __forceinline bool ProcessEETag()
 {
 	// Chain mode
 	tDMA_TAG *ptag;
@@ -99,7 +99,7 @@ static __forceinline bool SIFEEWriteTag()
 	ptag = sif1dma->DMAtransfer(sif1dma->tadr, DMAC_SIF1);
 	if (ptag == NULL)
 	{
-		Console.WriteLn("SIF1EEDma: ptag = NULL");
+		Console.WriteLn("ProcessEETag: ptag = NULL");
 		return false;
 	}
 
@@ -171,19 +171,19 @@ static __forceinline bool SIFIOPReadTag()
 }
 
 // Stop processing EE, and signal an interrupt.
-static __forceinline void SIF1EEend()
+static __forceinline void EndEE()
 {
 	eesifbusy[1] = false;
 			
 	// Voodoocycles : Okami wants around 100 cycles when booting up
 	// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
 	// (Cause of double interrupts on the EE)
-	if (cycles == 0) DevCon.Warning("EESIF1cycles  = 0"); // No transfer happened
+	if (cycles == 0) DevCon.Warning("SIF1 EE: cycles = 0"); // No transfer happened
 	else CPU_INT(DMAC_SIF1, min((int)(cycles*BIAS), 384)); // Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
 }
 
 // Stop processing IOP, and signal an interrupt.
-static __forceinline void SIF1IOPend()
+static __forceinline void EndIOP()
 {
 	iopsifbusy[1] = false;
 
@@ -191,12 +191,12 @@ static __forceinline void SIF1IOPend()
 	//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
 	//Greater than *35 break rebooting when trying to play Tekken5 arcade history
 	//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
-	if (psxCycles == 0) DevCon.Warning("IOPSIF1cycles = 0"); // No transfer happened
+	if (psxCycles == 0) DevCon.Warning("SIF1 IOP: cycles = 0"); // No transfer happened
 	else PSX_INT(IopEvt_SIF1, min((psxCycles * 26), 1024)); // Hence no Interrupt
 }
 
 // Handle the EE transfer.
-static __forceinline void SIF1EEDma()
+static __forceinline void HandleEETransfer()
 {
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STD == STD_SIF1)
@@ -212,26 +212,26 @@ static __forceinline void SIF1EEDma()
 		if ((sif1dma->chcr.MOD == NORMAL_MODE) || sif1.end)
 		{
 			done = true;
-			SIF1EEend();
+			EndEE();
 		}
 		else
 		{
 			done = false;
-			if (!SIFEEWriteTag()) return;
+			if (!ProcessEETag()) return;
 		}
 	}
 	else
 	{
-		SifEEWrite();
+		WriteEEtoFifo();
 	}
 }
 
 // Handle the IOP transfer.
-static __forceinline void SIF1IOPDma()
+static __forceinline void HandleIOPTransfer()
 {
 	if (sif1.counter > 0)
 	{
-		SifIOPRead();
+		WriteFifoToIOP();
 	}
 	
 	if (sif1.counter <= 0)
@@ -239,7 +239,7 @@ static __forceinline void SIF1IOPDma()
 		if (sif1_tag.IRQ  || (sif1_tag.ID & 4))
 		{
 			done = true;
-			SIF1IOPend();
+			EndIOP();
 		}
 		else if (sif1.fifo.size >= 4)
 		{
@@ -262,8 +262,8 @@ __forceinline void SIF1Dma()
 	
 	do
 	{
-		if (eesifbusy[1]) SIF1EEDma();
-		if (iopsifbusy[1]) SIF1IOPDma();
+		if (eesifbusy[1]) HandleEETransfer();
+		if (iopsifbusy[1]) HandleIOPTransfer();
 
 	} while (!done);
 	

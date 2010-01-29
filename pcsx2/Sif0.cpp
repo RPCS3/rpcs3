@@ -36,7 +36,7 @@ static __forceinline void Sif0Init()
 }
 
 // Write from Fifo to EE.
-static __forceinline bool SifEERead()
+static __forceinline bool WriteFifoToEE()
 {
 	const int readSize = min((s32)sif0dma->qwc, sif0.fifo.size >> 2);
 	//if (readSize <= 0)
@@ -49,7 +49,7 @@ static __forceinline bool SifEERead()
 		ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
 		if (ptag == NULL)
 		{
-			DevCon.Warning("SIFEERead: ptag == NULL");
+			DevCon.Warning("WriteFifoToEE: ptag == NULL");
 			return false;
 		}
 
@@ -64,21 +64,21 @@ static __forceinline bool SifEERead()
 	//}
 	//else
 	//{
-		//DevCon.Warning("SifEERead readSize is 0");
+		//DevCon.Warning("WriteFifoToEE: readSize is 0");
 	//	return false;
 	//}
 	return true;
 }
 
 // Write IOP to Fifo.
-static __forceinline bool SifIOPWrite()
+static __forceinline bool WriteIOPtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
 	const int writeSize = min(sif0.counter, sif0.fifo.free());
 	
 	//if (writeSize <= 0)
 	//{
-		//DevCon.Warning("SifIOPWrite writeSize is 0"); 
+		//DevCon.Warning("WriteIOPtoFifo: writeSize is 0"); 
 	//	return false;
 	//}
 	//else
@@ -94,7 +94,7 @@ static __forceinline bool SifIOPWrite()
 }
 
 // Read Fifo into an ee tag, transfer it to sif0dma, and process it.
-static __forceinline bool SIFEEReadTag()
+static __forceinline bool ProcessEETag()
 {
 	static __aligned16 u32 tag[4];
 			
@@ -134,8 +134,8 @@ static __forceinline bool SIFEEReadTag()
 	return true;
 }
 
-// Read Fifo into an ee tag, and transfer it to hw_dma(9). And presumably process it.
-static __forceinline bool SIFIOPWriteTag()
+// Read Fifo into an iop tag, and transfer it to hw_dma(9). And presumably process it.
+static __forceinline bool ProcessIOPTag()
 {
 	// Process DMA tag at hw_dma(9).tadr
 	sif0.data = *(sifData *)iopPhysMem(hw_dma(9).tadr);
@@ -154,7 +154,7 @@ static __forceinline bool SIFIOPWriteTag()
 }
 
 // Stop transferring ee, and signal an interrupt.
-static __forceinline void SIF0EEend()
+static __forceinline void EndEE()
 {
 	eesifbusy[0] = false;
 	if (cycles == 0) DevCon.Warning("EESIF0cycles = 0"); // No transfer happened
@@ -162,7 +162,7 @@ static __forceinline void SIF0EEend()
 }
 
 // Stop transferring iop, and signal an interrupt.
-static __forceinline void SIF0IOPend()
+static __forceinline void EndIOP()
 {
 	iopsifbusy[0] = false;
 					
@@ -174,7 +174,7 @@ static __forceinline void SIF0IOPend()
 }
 
 // Handle the EE transfer.
-static __forceinline void SIF0EEDma()
+static __forceinline void HandleEETransfer()
 {
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs->ctrl.STS == STS_SIF0)
@@ -187,42 +187,50 @@ static __forceinline void SIF0EEDma()
 	{
 		if ((sif0dma->chcr.MOD == NORMAL_MODE) || sif0.end)
 		{
+			// Stop transferring ee, and signal an interrupt.
 			done = true;
-			SIF0EEend();
+			EndEE();
 		}
 		else if (sif0.fifo.size >= 4) // Read a tag
 		{
+			// Read Fifo into an ee tag, transfer it to sif0dma
+			// and process it.
 			done = false;
-			SIFEEReadTag();
+			ProcessEETag();
 		}
 	}
 	
 	if (sif0dma->qwc > 0) // If we're reading something continue to do so
 	{
-		SifEERead();
+		// Write from Fifo to EE.
+		WriteFifoToEE();
 	}
 }
 
 // Handle the IOP transfer.
 // Note: Test any changes in this function against Grandia III.
-static __forceinline void SIF0IOPDma()
+static __forceinline void HandleIOPTransfer()
 {
 	if (sif0.counter <= 0) // If there's no more to transfer
 	{
 		if (sif0_tag.IRQ  || (sif0_tag.ID & 4))
 		{
+			// Stop transferring iop, and signal an interrupt.
 			done = true;
-			SIF0IOPend();
+			EndIOP();
 		}
-		else  // Chain mode
+		else
 		{
+			// Read Fifo into an iop tag, and transfer it to hw_dma(9). 
+			// And presumably process it.
 			done = false;
-			SIFIOPWriteTag();
+			ProcessIOPTag();
 		}
 	}
 	else
 	{
-		SifIOPWrite();
+		// Write IOP to Fifo.
+		WriteIOPtoFifo();
 	}
 }
 
@@ -238,8 +246,8 @@ __forceinline void SIF0Dma()
 	
 	do
 	{
-		if (iopsifbusy[0]) SIF0IOPDma();
-		if (eesifbusy[0]) SIF0EEDma();
+		if (iopsifbusy[0]) HandleIOPTransfer();
+		if (eesifbusy[0]) HandleEETransfer();
 	} while (!done);
 	
 	SIF_LOG("SIF0 DMA end...");
