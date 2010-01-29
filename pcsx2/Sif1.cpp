@@ -39,7 +39,8 @@ static __forceinline void Sif1Init()
 static __forceinline bool WriteEEtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
-		
+	
+	SIF_LOG("Sif 1: Write EE to Fifo");
 	const int writeSize = min((s32)sif1dma->qwc, sif1.fifo.free() >> 2);
 	//if (writeSize <= 0)
 	//{
@@ -53,7 +54,7 @@ static __forceinline bool WriteEEtoFifo()
 		ptag = sif1dma->getAddr(sif1dma->madr, DMAC_SIF1);
 		if (ptag == NULL) 
 		{
-			DevCon.Warning("WriteEEtoFifo: ptag == NULL");
+			DevCon.Warning("Write EE to Fifo: ptag == NULL");
 			return false;
 		}
 
@@ -70,6 +71,8 @@ static __forceinline bool WriteEEtoFifo()
 static __forceinline bool WriteFifoToIOP()
 {
 	// If we're reading something, continue to do so.
+	
+	SIF_LOG("Sif1: Write Fifo to IOP");
 	const int readSize = min (sif1.counter, sif1.fifo.size);
 	//if (readSize <= 0)
 	//{
@@ -78,12 +81,12 @@ static __forceinline bool WriteFifoToIOP()
 	//}
 	//else
 	//{
-		SIF_LOG(" IOP SIF doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
+		SIF_LOG("Sif 1 IOP doing transfer %04X to %08X", readSize, HW_DMA10_MADR);
 
 		sif1.fifo.read((u32*)iopPhysMem(hw_dma(10).madr), readSize);
 		psxCpu->Clear(hw_dma(10).madr, readSize);
 		hw_dma(10).madr += readSize << 2;
-		psxCycles += readSize >> 2;		// fixme: should be / 16
+		psxCycles += readSize >> 2;		// fixme: should be >> 4
 		sif1.counter -= readSize;
 	//}
 	return true;
@@ -94,12 +97,13 @@ static __forceinline bool ProcessEETag()
 {
 	// Chain mode
 	tDMA_TAG *ptag;
+	SIF_LOG("Sif1: ProcessEETag");
 			
 	// Process DMA tag at sif1dma->tadr
 	ptag = sif1dma->DMAtransfer(sif1dma->tadr, DMAC_SIF1);
 	if (ptag == NULL)
 	{
-		Console.WriteLn("ProcessEETag: ptag = NULL");
+		Console.WriteLn("Sif1 ProcessEETag: ptag = NULL");
 		return false;
 	}
 
@@ -161,7 +165,7 @@ static __forceinline bool SIFIOPReadTag()
 {
 	// Read a tag.
 	sif1.fifo.read((u32*)&sif1.data, 4);
-	SIF_LOG(" IOP SIF dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
+	SIF_LOG("SIF 1 IOP: dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
 		sif1.data.data & 0xffffff, sif1.data.words, DMA_TAG(sif1.data.data).ID, 
 		DMA_TAG(sif1.data.data).IRQ);
 				
@@ -174,25 +178,43 @@ static __forceinline bool SIFIOPReadTag()
 static __forceinline void EndEE()
 {
 	eesifbusy[1] = false;
-			
+	SIF_LOG("Sif 1: End EE");
+	
 	// Voodoocycles : Okami wants around 100 cycles when booting up
 	// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
 	// (Cause of double interrupts on the EE)
-	if (cycles == 0) DevCon.Warning("SIF1 EE: cycles = 0"); // No transfer happened
-	else CPU_INT(DMAC_SIF1, min((int)(cycles*BIAS), 384)); // Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
+	if (cycles == 0) 
+	{
+		// No transfer happened
+		DevCon.Warning("SIF1 EE: cycles = 0");
+	}
+	else 
+	{
+		// Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
+		CPU_INT(DMAC_SIF1, min((int)(cycles*BIAS), 384)); 
+	}
 }
 
 // Stop processing IOP, and signal an interrupt.
 static __forceinline void EndIOP()
 {
 	iopsifbusy[1] = false;
+	SIF_LOG("Sif 1: End IOP");
 
 	//Fixme ( voodoocycles ):
 	//The *24 are needed for ecco the dolphin (CDVD hangs) and silver surfer (Pad not detected)
 	//Greater than *35 break rebooting when trying to play Tekken5 arcade history
 	//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
-	if (psxCycles == 0) DevCon.Warning("SIF1 IOP: cycles = 0"); // No transfer happened
-	else PSX_INT(IopEvt_SIF1, min((psxCycles * 26), 1024)); // Hence no Interrupt
+	if (psxCycles == 0) 
+	{
+		// No transfer happened
+		DevCon.Warning("SIF1 IOP: cycles = 0"); 
+	}
+	else 
+	{
+		// Hence no Interrupt
+		PSX_INT(IopEvt_SIF1, min((psxCycles * 26), 1024)); 
+	}
 }
 
 // Handle the EE transfer.
@@ -264,10 +286,9 @@ __forceinline void SIF1Dma()
 	{
 		if (eesifbusy[1]) HandleEETransfer();
 		if (iopsifbusy[1]) HandleIOPTransfer();
-
 	} while (!done);
 	
-	SIF_LOG("SIF0 DMA end...");
+	SIF_LOG("SIF1 DMA end...");
 	Sif1End();
 }
 

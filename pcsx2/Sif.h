@@ -80,13 +80,31 @@ struct sifFifo
 
 struct _sif
 {
-	sifFifo fifo;
+	sifFifo fifo; // Used in both.
 	s32 chain; // Not used.
-	s32 end;
+	s32 end; // Only used for EE.
 	s32 tagMode; // No longer used.
-	s32 counter;
-	struct sifData data;
+	s32 counter; // Used to keep track of how much is left in IOP.
+	struct sifData data; // Only used in IOP.
 };
+
+/*struct _sif
+{
+	sifFifo fifo; // Used in both.
+	struct ee
+	{
+		bool end; // Only used for EE.
+		bool busy;
+	}
+	struct iop
+	{
+		bool end;
+		bool busy;
+		
+		s32 counter; // Used to keep track of how much is left in IOP.
+		struct sifData data; // Only used in IOP.
+	}
+};*/
 
 extern bool eesifbusy[2], iopsifbusy[2];
 

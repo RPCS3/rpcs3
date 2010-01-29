@@ -44,12 +44,12 @@ static __forceinline bool WriteFifoToEE()
 		tDMA_TAG *ptag;
 		
 		//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
-		SIF_LOG("----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
+		SIF_LOG("Write Fifo to EE: ----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
 
 		ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
 		if (ptag == NULL)
 		{
-			DevCon.Warning("WriteFifoToEE: ptag == NULL");
+			DevCon.Warning("Write Fifo to EE: ptag == NULL");
 			return false;
 		}
 
@@ -64,7 +64,7 @@ static __forceinline bool WriteFifoToEE()
 	//}
 	//else
 	//{
-		//DevCon.Warning("WriteFifoToEE: readSize is 0");
+		//DevCon.Warning("Write Fifo to EE: readSize is 0");
 	//	return false;
 	//}
 	return true;
@@ -78,12 +78,12 @@ static __forceinline bool WriteIOPtoFifo()
 	
 	//if (writeSize <= 0)
 	//{
-		//DevCon.Warning("WriteIOPtoFifo: writeSize is 0"); 
+		//DevCon.Warning("Write IOP to Fifo: writeSize is 0"); 
 	//	return false;
 	//}
 	//else
 	//{
-	SIF_LOG("+++++++++++ %lX of %lX", writeSize, sif0.counter);
+	SIF_LOG("Write IOP to Fifo: +++++++++++ %lX of %lX", writeSize, sif0.counter);
 
 	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).madr), writeSize);
 	hw_dma(9).madr += writeSize << 2;
@@ -99,13 +99,13 @@ static __forceinline bool ProcessEETag()
 	static __aligned16 u32 tag[4];
 			
 	sif0.fifo.read((u32*)&tag[0], 4); // Tag
-	SIF_LOG(" EE SIF read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
+	SIF_LOG("SIF0 EE read tag: %x %x %x %x", tag[0], tag[1], tag[2], tag[3]);
 
 	sif0dma->unsafeTransfer(((tDMA_TAG*)(tag)));
 	sif0dma->madr = tag[1];
 	tDMA_TAG ptag(tag[0]);
 
-	SIF_LOG(" EE SIF dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", 
+	SIF_LOG("SIF0 EE dest chain tag madr:%08X qwc:%04X id:%X irq:%d(%08X_%08X)", 
 		sif0dma->madr, sif0dma->qwc, ptag.ID, ptag.IRQ, tag[1], tag[0]);
 	
 	if (sif0dma->chcr.TIE && ptag.IRQ)
@@ -148,7 +148,7 @@ static __forceinline bool ProcessIOPTag()
 	hw_dma(9).madr = sif0.data.data & 0xFFFFFF;
 	sif0.counter = sif0.data.words & 0xFFFFFF;
 
-	SIF_LOG(" SIF0 Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.data.words, sif0.data.data);
+	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.data.words, sif0.data.data);
 
 	return true;
 }
@@ -156,20 +156,22 @@ static __forceinline bool ProcessIOPTag()
 // Stop transferring ee, and signal an interrupt.
 static __forceinline void EndEE()
 {
+	SIF_LOG("Sif0: End EE");
 	eesifbusy[0] = false;
-	if (cycles == 0) DevCon.Warning("EESIF0cycles = 0"); // No transfer happened
+	if (cycles == 0) DevCon.Warning("SIF0 EE: cycles = 0"); // No transfer happened
 	else CPU_INT(DMAC_SIF0, cycles*BIAS); // Hence no Interrupt
 }
 
 // Stop transferring iop, and signal an interrupt.
 static __forceinline void EndIOP()
 {
+	SIF_LOG("Sif0: End IOP");
 	iopsifbusy[0] = false;
 					
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
 	// So when we're all done, the equation looks like thus:
 	//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
-	if (psxCycles == 0) DevCon.Warning("IOPSIF0cycles = 0"); // No transfer happened
+	if (psxCycles == 0) DevCon.Warning("SIF0 IOP: cycles = 0"); // No transfer happened
 	else PSX_INT(IopEvt_SIF0, psxCycles); // Hence no Interrupt
 }
 
@@ -195,7 +197,6 @@ static __forceinline void HandleEETransfer()
 		{
 			// Read Fifo into an ee tag, transfer it to sif0dma
 			// and process it.
-			done = false;
 			ProcessEETag();
 		}
 	}
@@ -209,6 +210,33 @@ static __forceinline void HandleEETransfer()
 
 // Handle the IOP transfer.
 // Note: Test any changes in this function against Grandia III.
+// What currently happens is this:
+// SIF0 DMA start...
+// SIF + 4 = 4 (pos=4)
+// SIF0 IOP Tag: madr=19870, tadr=179cc, counter=8 (00000008_80019870)
+// SIF - 4 = 0 (pos=4)
+// SIF0 EE read tag: 90000002 935c0 0 0
+// SIF0 EE dest chain tag madr:000935C0 qwc:0002 id:1 irq:1(000935C0_90000002)
+// Write Fifo to EE: ----------- 0 of 8
+// SIF - 0 = 0 (pos=4)
+// Write IOP to Fifo: +++++++++++ 8 of 8
+// SIF + 8 = 8 (pos=12)
+// Write Fifo to EE: ----------- 8 of 8
+// SIF - 8 = 0 (pos=12)
+// Sif0: End IOP
+// Sif0: End EE
+// SIF0 DMA end...
+
+// What happens if (sif0.counter > 0) is handled first is this
+
+// SIF0 DMA start...
+// ...
+// SIF + 8 = 8 (pos=12)
+// Sif0: End IOP
+// Write Fifo to EE: ----------- 8 of 8
+// SIF - 8 = 0 (pos=12)
+// SIF0 DMA end...
+
 static __forceinline void HandleIOPTransfer()
 {
 	if (sif0.counter <= 0) // If there's no more to transfer
@@ -223,7 +251,6 @@ static __forceinline void HandleIOPTransfer()
 		{
 			// Read Fifo into an iop tag, and transfer it to hw_dma(9). 
 			// And presumably process it.
-			done = false;
 			ProcessIOPTag();
 		}
 	}
@@ -248,7 +275,7 @@ __forceinline void SIF0Dma()
 	{
 		if (iopsifbusy[0]) HandleIOPTransfer();
 		if (eesifbusy[0]) HandleEETransfer();
-	} while (!done);
+	} while (!done); // Substituting (iopsifbusy[0] || eesifbusy[0]) breaks things.
 	
 	SIF_LOG("SIF0 DMA end...");
 	Sif0End();
