@@ -362,7 +362,7 @@ void IopDmaStart(int channel)
 
 	int pcr = (channel>=7)?(HW_DMA_PCR2 & (8 << ((channel-7) * 4))):(HW_DMA_PCR & (8 << (channel * 4)));
 
-	if ( !(chcr & 0x01000000) || pcr)
+	if ( !(chcr & 0x01000000) || !pcr)
 		return;
 
 	// I dont' really understand this, but it's used above. Is this BYTES OR WHAT?
