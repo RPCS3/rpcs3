@@ -278,7 +278,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 			//
 			mcase(0x1f8010C0):
 #ifdef ENABLE_NEW_IOPDMA_SPU2
-				ret = IopChannels[4].MemAddr;
+				ret = psxHu32(addr);
 #else
 				ret = SPU2ReadMemAddr(0);
 #endif
@@ -286,7 +286,7 @@ static __forceinline T _HwRead_16or32_Page1( u32 addr )
 
 			mcase(0x1f801500):
 #ifdef ENABLE_NEW_IOPDMA_SPU2
-				ret = IopChannels[7].MemAddr;
+				ret = psxHu32(addr);
 #else
 				ret = SPU2ReadMemAddr(1);
 #endif

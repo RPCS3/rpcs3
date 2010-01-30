@@ -358,13 +358,19 @@ void RaiseDmaIrq(u32 channel)
 
 void IopDmaStart(int channel)
 {
+	int chcr = IopDmaHandlers[channel].REG_CHCR();
+
+	int pcr = (channel>=7)?(HW_DMA_PCR2 & (8 << ((channel-7) * 4))):(HW_DMA_PCR & (8 << (channel * 4)));
+
+	if ( !(chcr & 0x01000000) || pcr)
+		return;
+
 	// I dont' really understand this, but it's used above. Is this BYTES OR WHAT?
 	int bcr = IopDmaHandlers[channel].REG_BCR();
 	int bcr_size = (bcr & 0xFFFF);
 	int bcr_count = (bcr >> 16);
 	int size = 4* bcr_count * bcr_size;
 
-	int chcr = IopDmaHandlers[channel].REG_CHCR();
 	int dirf = IopDmaHandlers[channel].DirectionFlags&3;
 
 	if(dirf != 3)
