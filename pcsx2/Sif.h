@@ -18,12 +18,17 @@
 
 #define FIFO_SIF_W 128
 
+// I'm not sure if removing the top 8 bits is correct or not, so this define lets me test it a bit.
+// It doesn't seem like word has anything in the first 8 bits anyways, but data does (IRQ and tag id),
+// so I'll have to play with it.
+#define CHOP_OFF_DATA
+
 struct sifData
 {
 	s32 data;
 	s32 words;
-	s32 count;
-	s32 addr;
+	s32 count; // I think this is unused.
+	s32 addr; // This too.
 };
 
 struct sifFifo
@@ -88,22 +93,25 @@ struct _sif
 	struct sifData data; // Only used in IOP.
 };
 
-/*struct _sif
+/*
+struct sif_ee
+{
+	bool end; // Only used for EE.
+	bool busy;
+};
+struct sif_iop
+{
+	bool end;
+	bool busy;
+		
+	s32 counter; // Used to keep track of how much is left in IOP.
+	struct sifData data; // Only used in IOP.
+};
+struct _sif
 {
 	sifFifo fifo; // Used in both.
-	struct ee
-	{
-		bool end; // Only used for EE.
-		bool busy;
-	}
-	struct iop
-	{
-		bool end;
-		bool busy;
-		
-		s32 counter; // Used to keep track of how much is left in IOP.
-		struct sifData data; // Only used in IOP.
-	}
+	sif_ee ee;
+	sif_iop iop;
 };*/
 
 extern bool eesifbusy[2], iopsifbusy[2];
@@ -123,7 +131,7 @@ extern void EEsif1Interrupt();
 extern void sif0Interrupt();
 extern void sif1Interrupt();
 
-#define sif0_tag DMA_TAG(sif0.data.data)
-#define sif1_tag DMA_TAG(sif1.data.data)
+#define sif0tag DMA_TAG(sif0.data.data)
+#define sif1tag DMA_TAG(sif1.data.data)
 
 #endif /* __SIF_H__ */

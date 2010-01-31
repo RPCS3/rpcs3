@@ -167,11 +167,16 @@ static __forceinline bool SIFIOPReadTag()
 	// Read a tag.
 	sif1.fifo.read((u32*)&sif1.data, 4);
 	SIF_LOG("SIF 1 IOP: dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
-		sif1.data.data & 0xffffff, sif1.data.words, DMA_TAG(sif1.data.data).ID, 
-		DMA_TAG(sif1.data.data).IRQ);
-				
+		sif1.data.data & 0xffffff, sif1.data.words, sif1tag.ID, sif1tag.IRQ);
+		
+#ifdef CHOP_OFF_DATA
 	hw_dma(10).madr = sif1.data.data & 0xffffff;
+#else
+	hw_dma(10).madr = sif1.data.data;
+#endif
 	sif1.counter = sif1.data.words;
+	//if (sif1.data.words != ( sif1.data.words & 0xFFFFFF)) DevCon.WriteLn("sif1.data.words more then 24 bit.");
+
 	return true;
 }
 
@@ -216,6 +221,7 @@ static __forceinline void EndIOP()
 	else 
 	{
 		// Hence no Interrupt
+		// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
 		PSX_INT(IopEvt_SIF1, min((psxCycles * 26), 1024)); 
 	}
 }
@@ -261,7 +267,7 @@ static __forceinline void HandleIOPTransfer()
 	
 	if (sif1.counter <= 0)
 	{
-		if (sif1_tag.IRQ  || (sif1_tag.ID & 4))
+		if (sif1tag.IRQ  || (sif1tag.ID & 4))
 		{
 			done = true;
 			EndIOP();

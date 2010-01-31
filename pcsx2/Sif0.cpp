@@ -88,6 +88,8 @@ static __forceinline bool WriteIOPtoFifo()
 
 	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).madr), writeSize);
 	hw_dma(9).madr += writeSize << 2;
+	
+	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords).
 	psxCycles += (writeSize >> 2) * BIAS;		// fixme : should be >> 4
 	sif0.counter -= writeSize;
 	//}
@@ -146,11 +148,15 @@ static __forceinline bool ProcessIOPTag()
 	hw_dma(9).tadr += 16; ///hw_dma(9).madr + 16 + sif0.sifData.words << 2;
 	
 	// Looks like we are only copying the first 24 bits.
+#ifdef CHOP_OFF_DATA
 	hw_dma(9).madr = sif0.data.data & 0xFFFFFF;
-	sif0.counter = sif0.data.words & 0xFFFFFF;
-
-	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", HW_DMA9_MADR, HW_DMA9_TADR, sif0.counter, sif0.data.words, sif0.data.data);
-
+#else
+	hw_dma(9).madr = sif0.data.data;
+#endif
+	sif0.counter = sif0.data.words;
+	//if (sif0.data.words != ( sif0.data.words & 0xFFFFFF)) DevCon.WriteLn("sif0.data.words more then 24 bit.");
+	
+	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", hw_dma(9).madr, hw_dma(9).tadr, sif0.counter, sif0.data.words, sif0.data.data);
 	return true;
 }
 
@@ -160,8 +166,16 @@ static __forceinline void EndEE()
 	SIF_LOG("Sif0: End EE");
 	sif0.end = 0;
 	eesifbusy[0] = false;
-	if (cycles == 0) DevCon.Warning("SIF0 EE: cycles = 0"); // No transfer happened
-	else CPU_INT(DMAC_SIF0, cycles*BIAS); // Hence no Interrupt
+	if (cycles == 0) 
+	{
+		 // No transfer happened,
+		DevCon.Warning("SIF0 EE: cycles = 0");
+	}
+	else 
+	{
+		// hence no Interrupt.
+		CPU_INT(DMAC_SIF0, cycles*BIAS); 
+	}
 }
 
 // Stop transferring iop, and signal an interrupt.
@@ -171,11 +185,19 @@ static __forceinline void EndIOP()
 	sif0.data.data = 0;
 	iopsifbusy[0] = false;
 					
-	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
-	// So when we're all done, the equation looks like thus:
-	//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
-	if (psxCycles == 0) DevCon.Warning("SIF0 IOP: cycles = 0"); // No transfer happened
-	else PSX_INT(IopEvt_SIF0, psxCycles); // Hence no Interrupt
+	if (psxCycles == 0) 
+	{
+		// No transfer happened,
+		DevCon.Warning("SIF0 IOP: cycles = 0"); 
+	}
+	else 
+	{
+		 // hence no Interrupt.
+		// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
+		// So when we're all done, the equation looks like thus:
+		//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
+		PSX_INT(IopEvt_SIF0, psxCycles);
+	}
 }
 
 // Handle the EE transfer.
@@ -204,7 +226,7 @@ static __forceinline void HandleEETransfer()
 		}
 	}
 	
-	if (sif0dma->qwc > 0) // If we're reading something continue to do so
+	if (sif0dma->qwc > 0) // If we're writing something, continue to do so.
 	{
 		// Write from Fifo to EE.
 		WriteFifoToEE();
@@ -244,7 +266,7 @@ static __forceinline void HandleIOPTransfer()
 {
 	if (sif0.counter <= 0) // If there's no more to transfer
 	{
-		if (sif0_tag.IRQ  || (sif0_tag.ID & 4))
+		if (sif0tag.IRQ  || (sif0tag.ID & 4))
 		{
 			// Stop transferring iop, and signal an interrupt.
 			done = true;
