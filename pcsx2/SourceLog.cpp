@@ -61,6 +61,9 @@ void __Log( const char* fmt, ... )
 		fputs( "\n", emuLog );
 		fflush( emuLog );
 	}
+#if LOG_TO_CONSOLE
+	Console.WriteLn(tmp);
+#endif
 #endif
 }
 
@@ -91,6 +94,9 @@ static __forceinline void _vSourceLog( u16 protocol, u8 source, u32 cpuPc, u32 c
 		fputs( "\n", emuLog );
 		fflush( emuLog );
 	}
+#if LOG_TO_CONSOLE
+	Console.WriteLn(tmp);
+#endif
 #endif
 }
 

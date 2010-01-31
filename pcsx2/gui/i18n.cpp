@@ -76,7 +76,7 @@ static void i18n_DoPackageCheck( wxLanguage wxLangId, LangPackList& langs )
 // database.  Anything which hasn't been installed will fail to load.
 //
 // Because loading and hashing the entire pcsx2 translation for every possible language would
-// assinine and slow, I've decided to use a two-file translation system.  One file (pcsx2ident.mo)
+// asinine and slow, I've decided to use a two-file translation system.  One file (pcsx2ident.mo)
 // is very small and simply contains the name of the language in the language native.  The
 // second file (pcsx2.mo) is loaded only if the user picks the language (or if it's the default
 // language of the user's OS installation).

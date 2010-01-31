@@ -30,6 +30,7 @@ static __forceinline void Sif0Init()
 	done = false;
 	cycles = 0;
 	psxCycles = 0;
+	//if (sif0.end == 1) SIF_LOG("Starting with sif0.end set.");
 	//memzero(sif0);
 	//sif0.end = 0;
 	//sif0.data.data = 0;

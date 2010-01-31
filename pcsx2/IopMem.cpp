@@ -200,7 +200,7 @@ u16 __fastcall iopMemRead16(u32 mem)
 					ret = psxHu16(mem);
 					break;
 				}
-				SIF_LOG("Sif reg read %x value %x", mem, ret);
+				//SIF_LOG("Sif reg read %x value %x", mem, ret);
 				return ret;
 			}
 			return *(const u16 *)(p + (mem & 0xffff));
@@ -269,7 +269,7 @@ u32 __fastcall iopMemRead32(u32 mem)
 					ret = psxHu32(mem);
 					break;
 				}
-				SIF_LOG("Sif reg read %x value %x", mem, ret);
+				//SIF_LOG("Sif reg read %x value %x", mem, ret);
 				return ret;
 			}
 			return *(const u32 *)(p + (mem & 0xffff));

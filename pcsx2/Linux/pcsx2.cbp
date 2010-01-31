@@ -364,6 +364,7 @@
 		<Unit filename="../gui/Dialogs/BiosSelectorDialog.cpp" />
 		<Unit filename="../gui/Dialogs/ConfigurationDialog.h" />
 		<Unit filename="../gui/Dialogs/ConfirmationDialogs.cpp" />
+		<Unit filename="../gui/Dialogs/CreateMemoryCardDialog.cpp" />
 		<Unit filename="../gui/Dialogs/FirstTimeWizard.cpp" />
 		<Unit filename="../gui/Dialogs/ImportSettingsDialog.cpp" />
 		<Unit filename="../gui/Dialogs/LogOptionsDialog.cpp" />

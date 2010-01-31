@@ -30,6 +30,7 @@ static __forceinline void Sif1Init()
 	done = false;
 	cycles = 0;
 	psxCycles = 0;
+	//if (sif1.end == 1) SIF_LOG("Starting with sif1.end set.");
 	//memzero(sif1);
 	//sif1.end = 0;
 	//sif1.data.data = 0;
@@ -121,33 +122,33 @@ static __forceinline bool ProcessEETag()
 
 	switch (ptag->ID)
 	{
-		case TAG_REFE: // refe
+		case TAG_REFE:
 			SIF_LOG("   REFE %08X", ptag[1]._u32);
 			sif1.end = 1;
 			sif1dma->madr = ptag[1]._u32;
 			sif1dma->tadr += 16;
 			break;
 
-		case TAG_CNT: // cnt
+		case TAG_CNT:
 			SIF_LOG("   CNT");
 			sif1dma->madr = sif1dma->tadr + 16;
 			sif1dma->tadr = sif1dma->madr + (sif1dma->qwc << 4);
 			break;
 
-		case TAG_NEXT: // next
+		case TAG_NEXT:
 			SIF_LOG("   NEXT %08X", ptag[1]._u32);
 			sif1dma->madr = sif1dma->tadr + 16;
 			sif1dma->tadr = ptag[1]._u32;
 			break;
 
-		case TAG_REF: // ref
-		case TAG_REFS: // refs
+		case TAG_REF:
+		case TAG_REFS:
 			SIF_LOG("   REF %08X", ptag[1]._u32);
 			sif1dma->madr = ptag[1]._u32;
 			sif1dma->tadr += 16;
 			break;
 
-		case TAG_END: // end
+		case TAG_END:
 			SIF_LOG("   END");
 			sif1.end = 1;
 			sif1dma->madr = sif1dma->tadr + 16;
