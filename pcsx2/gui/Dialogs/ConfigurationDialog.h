@@ -67,6 +67,9 @@ namespace Dialogs
 		virtual wxString& GetConfSettingsTabName() const=0;
 	};
 
+	// --------------------------------------------------------------------------------------
+	//  SysConfigDialog
+	// --------------------------------------------------------------------------------------
 	class SysConfigDialog : public BaseConfigurationDialog
 	{
 	protected:
@@ -80,6 +83,9 @@ namespace Dialogs
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->SysSettingsTabName; }
 	};
 
+	// --------------------------------------------------------------------------------------
+	//  AppConfigDialog
+	// --------------------------------------------------------------------------------------
 	class AppConfigDialog : public BaseConfigurationDialog
 	{
 	protected:
@@ -93,6 +99,9 @@ namespace Dialogs
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->AppSettingsTabName; }
 	};
 
+	// --------------------------------------------------------------------------------------
+	//  BiosSelectorDialog
+	// --------------------------------------------------------------------------------------
 	class BiosSelectorDialog : public BaseApplicableDialog
 	{
 	protected:
@@ -102,6 +111,30 @@ namespace Dialogs
 		BiosSelectorDialog( wxWindow* parent=NULL );
 
 		static const wxChar* GetNameStatic() { return L"Dialog:BiosSelector"; }
+
+	protected:
+		void OnOk_Click( wxCommandEvent& evt );
+		void OnDoubleClicked( wxCommandEvent& evt );
+	};
+	
+	// --------------------------------------------------------------------------------------
+	//  CreateMemoryCardDialog
+	// --------------------------------------------------------------------------------------
+	class CreateMemoryCardDialog : public BaseApplicableDialog
+	{
+	protected:
+		wxFilePickerCtrl*	m_filepicker;
+		pxRadioPanel*		m_radio_CardSize;
+
+	#ifdef __WXMSW__
+		pxCheckBox*			m_check_CompressNTFS;
+	#endif		
+		
+	public:
+		virtual ~CreateMemoryCardDialog()  throw() {}
+		CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath=wxEmptyString );
+
+		static const wxChar* GetNameStatic() { return L"Dialog:CreateMemoryCard"; }
 
 	protected:
 		void OnOk_Click( wxCommandEvent& evt );

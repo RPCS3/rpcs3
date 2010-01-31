@@ -408,7 +408,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
     // ------------------------------------------------------------------------
 
-	m_menuConfig.Append(MenuId_Config_SysSettings,	_("System &Settings") );
+	m_menuConfig.Append(MenuId_Config_SysSettings,	_("Emulation &Settings") );
 	m_menuConfig.Append(MenuId_Config_AppSettings,	_("App Settings") );
 	m_menuConfig.AppendSeparator();
 

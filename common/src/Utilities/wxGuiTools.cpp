@@ -104,6 +104,11 @@ wxSizerFlags pxProportion::Apply( wxSizerFlags flags ) const
 	return flags.Proportion( intval );
 }
 
+wxSizerFlags pxBorder::Apply( wxSizerFlags flags ) const
+{
+	return flags.Border( direction, padding );
+}
+
 wxSizerFlags operator& ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
 {
 	//return align.Apply( _flgs );

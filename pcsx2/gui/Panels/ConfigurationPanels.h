@@ -93,8 +93,9 @@ namespace Panels
 		void AppStatusEvent_OnSettingsApplied();
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
+	// --------------------------------------------------------------------------------------
+	//  CpuPanelEE / CpuPanelVU
+	// --------------------------------------------------------------------------------------
 	class CpuPanelEE : public BaseApplicableConfigPanel
 	{
 	protected:
@@ -125,12 +126,12 @@ namespace Panels
 		void OnRestoreDefaults( wxCommandEvent& evt );
 	};
 
+	// --------------------------------------------------------------------------------------
+	//  BaseAdvancedCpuOptions
+	// --------------------------------------------------------------------------------------
 	class BaseAdvancedCpuOptions : public BaseApplicableConfigPanel
 	{
 	protected:
-		//wxStaticBoxSizer& s_round;
-		//wxStaticBoxSizer& s_clamp;
-
 		pxRadioPanel*	m_RoundModePanel;
 		pxRadioPanel*	m_ClampModePanel;
 
@@ -148,6 +149,9 @@ namespace Panels
 		void ApplyRoundmode( SSE_MXCSR& mxcsr );
 	};
 
+	// --------------------------------------------------------------------------------------
+	//  AdvancedOptionsFPU / AdvancedOptionsVU
+	// --------------------------------------------------------------------------------------
 	class AdvancedOptionsFPU : public BaseAdvancedCpuOptions
 	{
 	public:
@@ -321,30 +325,47 @@ namespace Panels
 		class SingleCardPanel : public BaseApplicableConfigPanel
 		{
 		protected:
-			
-		
+			uint					m_port, m_slot;
+
+			wxFilePickerCtrl*		m_filepicker;
+			wxCheckBox*				m_check_Disable;
+			wxButton*				m_button_Recreate;
+
+			// Displays card status:  Size, Formatted, etc.
+			wxStaticText*			m_label_Status;
+
 		public:
 			SingleCardPanel( wxWindow* parent, uint portidx, uint slotidx );
 			virtual ~SingleCardPanel() throw() { }
 			void Apply();
+
+			bool UpdateStatusLine( const wxFileName& mcdfilename );
+
+		protected:
 			void AppStatusEvent_OnSettingsApplied();
+			void OnFileChanged( wxCommandEvent& evt );
+			void OnRecreate_Clicked( wxCommandEvent& evt );
 		};
 	
 	protected:
-		wxCheckBox*		m_checkbox_NtfsCompress;
-		wxCheckBox*		m_checkbox_Ejection;
-		wxCheckBox*		m_checkbox_Multitap1;
-		wxCheckBox*		m_checkbox_Multitap2;
+		pxCheckBox*			m_check_Ejection;
+		pxCheckBox*			m_check_Multitap[2];
+		
+		SingleCardPanel*	m_CardPanel[2][4];
 		
 	public:
 		MemoryCardsPanel( wxWindow* parent );
 		virtual ~MemoryCardsPanel() throw() { }
 		void Apply();
+
+	protected:
+		void OnMultitapChecked( wxCommandEvent& evt );
 		void AppStatusEvent_OnSettingsApplied();
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	// DirPickerPanel
+	// --------------------------------------------------------------------------------------
+	//  DirPickerPanel
+	// --------------------------------------------------------------------------------------
 	// A simple panel which provides a specialized configurable directory picker with a
 	// "[x] Use Default setting" option, which enables or disables the panel.
 	//

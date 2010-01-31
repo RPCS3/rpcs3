@@ -112,11 +112,37 @@ struct pxStretchType
 
 class pxProportion
 {
+public:
 	int intval;
 
 	pxProportion( int prop )
 	{
 		intval = prop;
+	}
+
+	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
+
+	wxSizerFlags operator& ( const wxSizerFlags& _flgs ) const
+	{
+		return Apply( _flgs );
+	}
+
+	operator wxSizerFlags() const
+	{
+		return Apply();
+	}
+};
+
+class pxBorder
+{
+public:
+	int		direction;
+	int		padding;
+
+	pxBorder( int dir, int pad )
+	{
+		direction	= dir;
+		padding		= pad;
 	}
 
 	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;

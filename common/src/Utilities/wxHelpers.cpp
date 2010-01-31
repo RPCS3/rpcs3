@@ -296,12 +296,14 @@ void wxPanelWithHelpers::Init()
 	
 	if( guess != NULL )
 	{
-		int top=0, others=0;
 		if( wxIsKindOf( guess, wxStaticBoxSizer ) )
+		{
+			int top=0, others=0;
 			((wxStaticBoxSizer*)guess)->GetStaticBox()->GetBordersForSizer( &top, &others );
-
-		m_idealWidth -= (others*2);
-		m_idealWidth -= 2;				// generic padding compensation (no exact sciences to be found here)
+			m_idealWidth -= others*2;
+		}
+		else
+			m_idealWidth -= 2;				// generic padding compensation (no exact sciences to be found here)
 	}
 }
 

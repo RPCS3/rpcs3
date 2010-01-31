@@ -237,7 +237,6 @@ void Panels::UsermodeSelectionPanel::AppStatusEvent_OnSettingsApplied()
 // -----------------------------------------------------------------------
 Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent, wxHORIZONTAL )
-	, m_langs()
 {
 	m_picker = NULL;
 	i18n_EnumeratePackages( m_langs );

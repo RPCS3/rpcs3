@@ -86,6 +86,9 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 	#define ConnectSomethingChanged( command ) \
 		Connect( wxEVT_COMMAND_##command,	wxCommandEventHandler( BaseConfigurationDialog::OnSomethingChanged ) );
 
+	ConnectSomethingChanged( TEXT_UPDATED );
+	ConnectSomethingChanged( TEXT_ENTER );
+
 	ConnectSomethingChanged( RADIOBUTTON_SELECTED );
 	ConnectSomethingChanged( COMBOBOX_SELECTED );
 	ConnectSomethingChanged( CHECKBOX_CLICKED );

@@ -43,7 +43,7 @@ void pxCheckBox::Init(const wxString& label, const wxString& subtext)
 
 		wxBoxSizer& spaced( *new wxBoxSizer( wxHORIZONTAL ) );
 		spaced += Indentation;
-		spaced += m_subtext | wxSF.Border( wxBOTTOM, 9 );
+		spaced += m_subtext | pxBorder( wxBOTTOM, 9 );
 		spaced += pxSizerFlags::StdPadding;
 
 		*this += &spaced;
@@ -74,15 +74,15 @@ bool pxCheckBox::GetValue() const
 void operator+=( wxSizer& target, pxCheckBox* src )
 {
 	if( !pxAssert( src != NULL ) ) return;
-	target.Add( src, wxSF.Expand() );
+	target.Add( src, pxExpand );
 }
 
 void operator+=( wxSizer& target, pxCheckBox& src )
 {
-	target.Add( &src, wxSF.Expand() );
+	target.Add( &src, pxExpand );
 }
 
 void operator+=( wxSizer* target, pxCheckBox& src )
 {
-	target->Add( &src, wxSF.Expand() );
+	target->Add( &src, pxExpand );
 }

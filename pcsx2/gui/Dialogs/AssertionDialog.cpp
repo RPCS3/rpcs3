@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "App.h"
-#include "Dialogs/ModalPopups.h"
+#include "ModalPopups.h"
 
 using namespace pxSizerFlags;
 

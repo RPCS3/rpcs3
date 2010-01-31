@@ -191,10 +191,18 @@ struct FixedInt
 	
 	static bool TryFromString( FixedInt<Precision>& dest, const wxString& parseFrom )
 	{
-		long whole, frac;
-		wxString afterFirst( parseFrom.AfterFirst( L'.' ).Mid(0, 5) );
-		if( !parseFrom.BeforeFirst( L'.' ).ToLong( &whole ) || !afterFirst.ToLong( &frac ) )
-			return false;
+		long whole=0, frac=0;
+		const wxString beforeFirst( parseFrom.BeforeFirst( L'.' ) );
+		const wxString afterFirst( parseFrom.AfterFirst( L'.' ).Mid(0, 5) );
+		bool success = true;
+
+		if( !beforeFirst.IsEmpty() )
+			success = success && beforeFirst.ToLong( &whole );
+
+		if( !afterFirst.IsEmpty() )
+			success = success && afterFirst.ToLong( &frac );
+
+		if( !success ) return false;
 
 		dest.SetWhole( whole );
 

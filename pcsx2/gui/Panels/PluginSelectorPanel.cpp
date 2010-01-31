@@ -48,8 +48,6 @@ DEFINE_EVENT_TYPE(pxEVT_ShowStatusBar);
 typedef s32		(CALLBACK* TestFnptr)();
 typedef void	(CALLBACK* ConfigureFnptr)();
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
 namespace Exception
 {
 	class NotEnumerablePlugin : public BadStream
@@ -152,7 +150,7 @@ Panels::PluginSelectorPanel::StatusPanel::StatusPanel( wxWindow* parent )
 	m_gauge.SetToolTip( _("I'm givin' her all she's got, Captain!") );
 
 	*this	+= new pxStaticHeading( this, _( "Enumerating available plugins..." ) );
-	*this	+= m_gauge	| wxSF.Expand().Border( wxLEFT | wxRIGHT, 32 );
+	*this	+= m_gauge	| pxExpand.Border( wxLEFT | wxRIGHT, 32 );
 	*this	+= m_label	| StdExpand();
 
 	Fit();
@@ -202,14 +200,14 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 		m_configbutton[pid] = new wxButton( this, ButtonId_Configure, L"Configure..." );
 		m_configbutton[pid]->SetClientData( (void*)(int)pid );
 
-		s_plugin	+= text				| wxSF.Border( wxTOP | wxLEFT, 2 );
-		s_plugin	+= m_combobox[pid]	| wxSF.Expand();
+		s_plugin	+= text				| pxBorder( wxTOP | wxLEFT, 2 );
+		s_plugin	+= m_combobox[pid]	| pxExpand;
 		s_plugin	+= m_configbutton[pid];
 	} while( ++pi, pi->shortname != NULL );
 
 	m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder for PCSX2 plugins.") );
 
-	*this	+= s_plugin			| wxSF.Expand();
+	*this	+= s_plugin			| pxExpand;
 	*this	+= 6;
 	*this	+= m_FolderPicker	| StdExpand();
 }

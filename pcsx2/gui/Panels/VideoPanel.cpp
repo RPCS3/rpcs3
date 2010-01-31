@@ -58,19 +58,19 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 	s_spins += Text(_("Base Framerate Adjust:"));
 	s_spins += 5;
-	s_spins += m_spin_NominalPct	| wxSF.Border(wxTOP, 3);
+	s_spins += m_spin_NominalPct	| pxBorder(wxTOP, 3);
 	s_spins += Text(L"%" );
 	s_spins += 5;
 
 	s_spins += Text(_("Slow Motion Adjust:"));
 	s_spins += 5;
-	s_spins += m_spin_SlomoPct		| wxSF.Border(wxTOP, 3);
+	s_spins += m_spin_SlomoPct		| pxBorder(wxTOP, 3);
 	s_spins += Text(L"%" );
 	s_spins += 5;
 
 	s_spins	+= Text(_("Turbo Adjust:"));
 	s_spins	+= 5;
-	s_spins	+= m_spin_TurboPct		| wxSF.Border(wxTOP, 3);
+	s_spins	+= m_spin_TurboPct		| pxBorder(wxTOP, 3);
 	s_spins	+= Text(L"%" );
 	s_spins	+= 5;
 
@@ -209,12 +209,12 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 	wxFlexGridSizer& s_spins( *new wxFlexGridSizer( 4 ) );
 	//s_spins.AddGrowableCol( 0 );
 
-	s_spins += m_spin_FramesToDraw		| wxSF.Border(wxTOP, 3);
+	s_spins += m_spin_FramesToDraw		| pxBorder(wxTOP, 3);
 	s_spins += 10;
 	s_spins += Text(_("Frames to Draw"));
 	s_spins += 10;
 
-	s_spins += m_spin_FramesToSkip		| wxSF.Border(wxTOP, 3);
+	s_spins += m_spin_FramesToSkip		| pxBorder(wxTOP, 3);
 	s_spins += 10;
 	s_spins += Text(_("Frames to Skip"));
 	s_spins += 10;

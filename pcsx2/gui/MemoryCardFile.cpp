@@ -32,8 +32,8 @@ struct Component_FileMcd;
 
 #include <wx/ffile.h>
 
-static const int MCD_SIZE = 1024 *  8  * 16;
-static const int MC2_SIZE = 1024 * 528 * 16;
+static const int MCD_SIZE = 1024 *  8  * 16;		// Legacy PSX card default size
+static const int MC2_SIZE = 1024 * 528 * 16;		// PS2 card default size.
 
 // --------------------------------------------------------------------------------------
 //  FileMemoryCard 
@@ -123,8 +123,8 @@ bool FileMemoryCard::Seek( wxFFile& f, u32 adr )
 	const u32 size = f.Length();
 
 	// If anyone knows why this filesize logic is here (it appears to be related to legacy PSX
-	// cards, perhaps hacked support for some special memcard formats that had header info?),
-	// then please replace this comment with something useful.  Thanks!  -- air
+	// cards, perhaps hacked support for some special emulator-specific memcard formats that 
+	// had header info?), then please replace this comment with something useful.  Thanks!  -- air
 
 	u32 offset = 0;
 	

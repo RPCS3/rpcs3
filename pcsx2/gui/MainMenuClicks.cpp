@@ -264,26 +264,29 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 	core.Resume();
 }
 
-void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent &event )
+void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.MultitapPort0_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap0Toggle );
 	g_Conf->EmuOptions.MultitapPort1_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap1Toggle );
-	AppSaveSettings();
+	AppApplySettings();
+	SaveEmuOptions();
+	
+	//evt.Skip();
 }
 
-void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent &event )
+void MainEmuFrame::Menu_SkipBiosToggle_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.SkipBiosSplash = GetMenuBar()->IsChecked( MenuId_SkipBiosToggle );
 	SaveEmuOptions();
 }
 
-void MainEmuFrame::Menu_EnablePatches_Click( wxCommandEvent &event )
+void MainEmuFrame::Menu_EnablePatches_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.EnablePatches = GetMenuBar()->IsChecked( MenuId_EnablePatches );
     SaveEmuOptions();
 }
 
-void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent &event)
+void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent&)
 {
 	bool resume = CoreThread.Suspend();
 	if( _DoSelectELFBrowser() )

@@ -1992,6 +1992,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Dialogs\CreateMemoryCardDialog.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Dialogs\FirstTimeWizard.cpp"
 					>
 				</File>

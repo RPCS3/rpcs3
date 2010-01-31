@@ -174,7 +174,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	s_recs	+= s_iop			| SubGroup();
 
 	*this	+= &s_recs							| StdExpand();
-	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
+	*this	+= new wxStaticLine( this )			| pxExpand.Border(wxALL, 18);
 	*this	+= new AdvancedOptionsFPU( this )	| StdExpand();
 
 	*this	+= 12;
@@ -225,7 +225,7 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	s_recs	+= s_vu1		| SubGroup();
 
 	*this	+= &s_recs							| StdExpand();
-	*this	+= new wxStaticLine( this )			| wxSF.Border(wxALL, 18).Expand();
+	*this	+= new wxStaticLine( this )			| pxExpand.Border(wxALL, 18);
 	*this	+= new AdvancedOptionsVU( this )	| StdExpand();
 
 	*this	+= 12;

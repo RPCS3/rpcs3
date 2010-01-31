@@ -38,6 +38,7 @@ class IniInterface;
 class wxConfigBase;
 class wxFileConfig;
 class wxDirPickerCtrl;
+class wxFilePickerCtrl;
 class wxFileDirPickerEvent;
 class wxListBox;
 class wxListbook;
