@@ -89,9 +89,8 @@ void Panels::MemoryCardsPanel::SingleCardPanel::Apply()
 {
 	AppConfig::McdOptions& mcd( g_Conf->Mcd[m_port][m_slot] );
 
-	mcd.Enabled		= m_check_Disable->GetValue();
-
-	mcd.Filename	= m_filepicker->GetPath();
+	//mcd.Enabled		= m_check_Disable->GetValue();
+	//mcd.Filename	= m_filepicker->GetPath();
 }
 
 void Panels::MemoryCardsPanel::SingleCardPanel::AppStatusEvent_OnSettingsApplied()
@@ -209,16 +208,14 @@ Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 		*s_table += columns[port] | StdExpand();
 	}
 	
-	*this += s_table | pxExpand;
 
 	wxBoxSizer* s_checks = new wxBoxSizer( wxVERTICAL );
-
-	*this += s_checks | StdExpand();
-
 	*s_checks += m_check_Ejection;
 
+	*this += s_table	| pxExpand;
+	*this += s_checks	| StdExpand();
+
 	AppStatusEvent_OnSettingsApplied();
-	
 	Disable();		// it's all broken right now, so disable it
 }
 
