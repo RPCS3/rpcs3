@@ -48,34 +48,10 @@ public:
 	}
 };
 
-struct DmaHandlerInfo
-{
-public:
-	const char* Name;
-	u32 DirectionFlags;
-	u32 DmacRegisterBase;
-	DmaHandler  Read;
-	DmaHandler  Write;
-	DmaIHandler Interrupt;
-
-	// runtime variables
-	bool Activated; // this is turned on when the channel is first handled,
-				 // and serves as a signal that the channel shoudl be handled by the loop.
-				 // temporary until I code a better method
-	u32 ByteCount;
-	s32 NextUpdate;
-
-	u32& REG_MADR(void);
-	u32& REG_BCR(void);
-	u32& REG_CHCR(void);
-	u32& REG_TADR(void);
-};
-
-// FIXME: Dummy constants, to be "filled in" with proper values later
 #define DMA_CTRL_ACTIVE		0x01000000
 #define DMA_CTRL_DIRECTION	0x00000001
 
-#define DMA_CHANNEL_MAX		16 /* ? */
+#define DMA_CHANNEL_MAX		14 /* ? */
 
 extern void IopDmaStart(int channel);
 extern void IopDmaUpdate(u32 elapsed);

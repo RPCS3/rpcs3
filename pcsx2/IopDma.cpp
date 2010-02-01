@@ -302,7 +302,23 @@ extern void sio2DmaInterrupt(s32 channel);
 s32 errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 
-//DmaStatusInfo  IopChannels[DMA_CHANNEL_MAX];
+// constants
+struct DmaHandlerInfo
+{
+	const char* Name;
+
+	// doubles as a "disable" flag
+	u32 DirectionFlags;
+	u32 DmacRegisterBase;
+	DmaHandler  Read;
+	DmaHandler  Write;
+	DmaIHandler Interrupt;
+
+	__forceinline u32& REG_MADR(void) const { return psxHu32(DmacRegisterBase + 0x0); }
+	__forceinline u32& REG_BCR(void)  const { return psxHu32(DmacRegisterBase + 0x4); }
+	__forceinline u32& REG_CHCR(void) const { return psxHu32(DmacRegisterBase + 0x8); }
+	__forceinline u32& REG_TADR(void) const { return psxHu32(DmacRegisterBase + 0xC); }
+};
 
 #define MEM_BASE1 0x1f801080
 #define MEM_BASE2 0x1f801500
@@ -310,35 +326,45 @@ s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 #define CHANNEL_BASE1(ch) (MEM_BASE1 + ((ch)<<4))
 #define CHANNEL_BASE2(ch) (MEM_BASE2 + ((ch)<<4))
 
+// channel disabled
+#define _D__ 0
+#define _D_W 1
+#define _DR_ 2
+#define _DRW 3
+// channel enabled
+#define _E__ 4
+#define _E_W 5
+#define _ER_ 6
+#define _ERW 7
 
-u32& DmaHandlerInfo::REG_MADR(void) { return psxHu32(DmacRegisterBase + 0x0); }
-u32& DmaHandlerInfo::REG_BCR(void)  { return psxHu32(DmacRegisterBase + 0x4); }
-u32& DmaHandlerInfo::REG_CHCR(void) { return psxHu32(DmacRegisterBase + 0x8); }
-u32& DmaHandlerInfo::REG_TADR(void) { return psxHu32(DmacRegisterBase + 0xC); }
-
-DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
+const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 {
 	// First DMAC, same as PS1
-	{"Ps1 Mdec",       0}, //0
-	{"Ps1 Mdec",       0}, //1
-	{"Ps1 Gpu",        0}, //2
-	{"CDVD",           2, CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
-	{"SPU2 Core0",     3, CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu Core0
-	{"?",              0}, //5
-	{"OT",             0}, //6: OT?
+	{"Ps1 Mdec",       _D__}, //0
+	{"Ps1 Mdec",       _D__}, //1
+	{"Ps1 Gpu",        _D__}, //2
+	{"CDVD",           _DR_, CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
+	{"SPU2 Core0",     _DRW, CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu Core0
+	{"?",              _D__}, //5
+	{"OT",             _D__}, //6: OT?
 
 	// Second DMAC, new in PS2 IOP
-	{"SPU2 Core1",     3, CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu Core1
-	{"Dev9",		   0},// CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
-	{"Sif0",           0},// CHANNEL_BASE2(2), sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
-	{"Sif1",           0},// CHANNEL_BASE2(3), sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
-	{"Sio2 (writes)",  2, CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
-	{"Sio2 (reads)",   1, CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
-	{"?",              0}, //13
-	// if each dmac has 7 channels, the list would end here, but i made it 16 cos I'm not sure :p
-	{"?",              0}, //14
-	{"?",              0}, //15
+	{"SPU2 Core1",     _DRW, CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu Core1
+	{"Dev9",		   _DRW},// CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
+	{"Sif0",           _DRW},// CHANNEL_BASE2(2), sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
+	{"Sif1",           _DRW},// CHANNEL_BASE2(3), sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
+	{"Sio2 (writes)",  _E_W, CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
+	{"Sio2 (reads)",   _ER_, CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
+	{"?",              _D__}, //13
+	// if each dmac has 7 channels, the list would end here, but I'm not sure :p
 };
+
+// runtime variables
+struct DmaChannelInfo
+{
+	u32 ByteCount;
+	s32 NextUpdate;
+} IopDmaChannels[DMA_CHANNEL_MAX] = {0};
 
 // Prototypes. To be implemented later (or in other parts of the emulator)
 void SetDmaUpdateTarget(u32 delay)
@@ -358,6 +384,9 @@ void RaiseDmaIrq(u32 channel)
 
 void IopDmaStart(int channel)
 {
+	if(!(IopDmaHandlers[channel].DirectionFlags&_E__)) 
+		return;
+
 	int chcr = IopDmaHandlers[channel].REG_CHCR();
 
 	int pcr = (channel>=7)?(HW_DMA_PCR2 & (8 << ((channel-7) * 4))):(HW_DMA_PCR & (8 << (channel * 4)));
@@ -375,7 +404,7 @@ void IopDmaStart(int channel)
 
 	if(dirf != 3)
 	{
-		bool ok = (chcr & DMA_CTRL_DIRECTION)? (dirf==2) : (dirf==1);
+		bool ok = (chcr & DMA_CTRL_DIRECTION)? (dirf==_D_W) : (dirf==_DR_);
 		if(!ok)
 		{
 			// hack?!
@@ -387,9 +416,8 @@ void IopDmaStart(int channel)
 	//Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d(0x%08x), dir=%d", channel, size, bcr, chcr&DMA_CTRL_DIRECTION);
 
 	IopDmaHandlers[channel].REG_CHCR() |= DMA_CTRL_ACTIVE;
-	IopDmaHandlers[channel].ByteCount = size;
-	IopDmaHandlers[channel].NextUpdate = 0;
-	IopDmaHandlers[channel].Activated = true;
+	IopDmaChannels[channel].ByteCount = size;
+	IopDmaChannels[channel].NextUpdate = 0;
 
 	//SetDmaUpdateTarget(1);
 	{
@@ -404,6 +432,77 @@ void IopDmaStart(int channel)
 	}
 }
 
+template<int channel>
+static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
+{
+	// Hopefully the compiler would be able to optimize the whole function away if this doesn't pass.
+	if(!(IopDmaHandlers[channel].DirectionFlags&_E__)) 
+		return;
+
+	DmaChannelInfo *ch = IopDmaChannels + channel;
+	const DmaHandlerInfo *hh = IopDmaHandlers + channel;
+
+	if (hh->REG_CHCR()&DMA_CTRL_ACTIVE)
+	{
+		ch->NextUpdate -= elapsed;
+		if (ch->NextUpdate <= 0)
+		{
+			if (ch->ByteCount <= 0)
+			{
+				ch->NextUpdate = 0x7fffffff;
+
+				hh->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
+				RaiseDmaIrq(channel);
+				hh->Interrupt(channel);
+			}
+			else
+			{
+				int chcr = hh->REG_CHCR();
+
+				DmaHandler handler = (chcr & DMA_CTRL_DIRECTION) ? hh->Write : hh->Read;
+
+				u32 ProcessedBytes = 0;
+				s32 RequestedDelay = (handler) ? handler(channel, (u32*)iopPhysMem(hh->REG_MADR()), ch->ByteCount, &ProcessedBytes) : 0;
+
+				if(ProcessedBytes>0)
+				{
+					psxCpu->Clear(hh->REG_MADR(), ProcessedBytes/4);
+				}
+
+				int NextUpdateDelay = 100;
+				if (RequestedDelay < 0) // error code
+				{
+					// TODO: ... What to do if the handler gives an error code? :P
+					DevCon.Warning("ERROR on channel %d",channel);
+					hh->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
+					RaiseDmaIrq(channel);
+					hh->Interrupt(channel);
+				}
+				else if (ProcessedBytes > 0) // if not an error, continue transfer
+				{
+					//DevCon.WriteLn("Transfer channel %d, ProcessedBytes = %d",i,ProcessedBytes);
+					hh->REG_MADR()+= ProcessedBytes;
+					ch->ByteCount -= ProcessedBytes;
+
+					NextUpdateDelay = ProcessedBytes/2; // / ch->Width;
+				}
+				else 
+					DevCon.Warning("What now? :p");
+
+				if (RequestedDelay != 0) NextUpdateDelay = RequestedDelay;
+
+				ch->NextUpdate += NextUpdateDelay;
+			}
+		}
+
+		int nTarget = ch->NextUpdate;
+		if(nTarget < 0) nTarget = 0;
+
+		if (nTarget<MinDelay)
+			MinDelay = nTarget;
+	}
+}
+
 void IopDmaUpdate(u32 elapsed)
 {
 	s32 MinDelay=0;
@@ -411,70 +510,21 @@ void IopDmaUpdate(u32 elapsed)
 	do {
 		MinDelay = 0x7FFFFFFF; // max possible value
 
-		for (int i = 0;i < DMA_CHANNEL_MAX;i++)
-		{
-			DmaHandlerInfo *ch = IopDmaHandlers + i;
-
-			if ((ch->Activated) && (ch->REG_CHCR()&DMA_CTRL_ACTIVE))
-			{
-				ch->NextUpdate -= elapsed;
-				if (ch->NextUpdate <= 0)
-				{
-					if (ch->ByteCount <= 0)
-					{
-						ch->NextUpdate = 0x7fffffff;
-
-						ch->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
-						RaiseDmaIrq(i);
-						IopDmaHandlers[i].Interrupt(i);
-					}
-					else
-					{
-						int chcr = ch->REG_CHCR();
-
-						DmaHandler handler = (chcr & DMA_CTRL_DIRECTION) ? IopDmaHandlers[i].Write : IopDmaHandlers[i].Read;
-
-						u32 ProcessedBytes = 0;
-						s32 RequestedDelay = (handler) ? handler(i, (u32*)iopPhysMem(ch->REG_MADR()), ch->ByteCount, &ProcessedBytes) : 0;
-
-						if(ProcessedBytes>0)
-						{
-							psxCpu->Clear(ch->REG_MADR(), ProcessedBytes/4);
-						}
-
-						int NextUpdateDelay = 100;
-						if (RequestedDelay < 0) // error code
-						{
-							// TODO: ... What to do if the handler gives an error code? :P
-							DevCon.Warning("ERROR on channel %d",i);
-							ch->REG_CHCR() &= ~DMA_CTRL_ACTIVE;
-							RaiseDmaIrq(i);
-							IopDmaHandlers[i].Interrupt(i);
-						}
-						else if (ProcessedBytes > 0) // if not an error, continue transfer
-						{
-							//DevCon.WriteLn("Transfer channel %d, ProcessedBytes = %d",i,ProcessedBytes);
-							ch->REG_MADR()+= ProcessedBytes;
-							ch->ByteCount -= ProcessedBytes;
-
-							NextUpdateDelay = ProcessedBytes/2; // / ch->Width;
-						}
-						else 
-							DevCon.Warning("What now? :p");
-
-						if (RequestedDelay != 0) NextUpdateDelay = RequestedDelay;
-
-						ch->NextUpdate += NextUpdateDelay;
-					}
-				}
-
-				int nTarget = ch->NextUpdate;
-				if(nTarget < 0) nTarget = 0;
-
-				if (nTarget<MinDelay)
-					MinDelay = nTarget;
-			}
-		}
+		// Unrolled
+		//IopDmaProcessChannel<0>(elapsed, MinDelay);
+		//IopDmaProcessChannel<1>(elapsed, MinDelay);
+		//IopDmaProcessChannel<2>(elapsed, MinDelay);
+		IopDmaProcessChannel<3>(elapsed, MinDelay);
+		IopDmaProcessChannel<4>(elapsed, MinDelay);
+		//IopDmaProcessChannel<5>(elapsed, MinDelay);
+		//IopDmaProcessChannel<6>(elapsed, MinDelay);
+		IopDmaProcessChannel<7>(elapsed, MinDelay);
+		IopDmaProcessChannel<8>(elapsed, MinDelay);
+		IopDmaProcessChannel<9>(elapsed, MinDelay);
+		IopDmaProcessChannel<10>(elapsed, MinDelay);
+		IopDmaProcessChannel<11>(elapsed, MinDelay);
+		IopDmaProcessChannel<12>(elapsed, MinDelay);
+		//IopDmaProcessChannel<13>(elapsed, MinDelay);
 
 		// reset elapsed time in case we loop
 		elapsed=0;
