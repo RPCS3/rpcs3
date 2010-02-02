@@ -109,7 +109,10 @@ V_Core::~V_Core() throw()
 
 void V_Core::Reset( int index )
 {
-	memset( this, 0, sizeof(V_Core) );
+	// Clearing the whole core seems to delete some important stuff as well.
+	// Not doing it fixes SH Shattered Memories and Silver Surfer audio.
+	// Shouldn't have any negative side effects.
+	//memset( this, 0, sizeof(V_Core) );
 
 	const int c = Index = index;
 
