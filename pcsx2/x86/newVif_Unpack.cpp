@@ -118,7 +118,7 @@ int nVifUnpack(int idx, u8* data) {
 	const int  ret    = aMin(vif->vifpacketsize, vif->tag.size);
 	const bool isFill = (vifRegs->cycle.cl < vifRegs->cycle.wl);
 	s32		   size   = ret << 2;
-
+/*
     if (v.partTransfer) { // Last transfer was a partial vector transfer...
 		const u8&	vifT	= nVifT[vif->cmd & 0xf];
 		const bool  doMode	= !!vifRegs->mode;
@@ -131,17 +131,29 @@ int nVifUnpack(int idx, u8* data) {
 		size -= diff;
 		v.partTransfer = 0;
     }
+*/
+	static u8  buffer[2][0x4000] = {0};
+	static int bSize [2]		 = {0};
 
 	if (ret == v.vif->tag.size) { // Full Transfer
+		if (bSize) {
+			memcpy(&buffer[idx][bSize[idx]], data, size);
+			bSize[idx] += size;
+			data = buffer[idx];
+			size = bSize [idx];
+		}
 		if (size > 0) {
 			if (newVifDynaRec)  dVifUnpack(idx, data, size, isFill);
 			else			   _nVifUnpack(idx, data, size, isFill);
 		}	else if (isFill)   _nVifUnpack(idx, data, size, isFill);
 		vif->tag.size = 0;
 		vif->cmd = 0;
+		bSize[idx] = 0;
 	}
 	else { // Partial Transfer
-		_nVifUnpack(idx, data, size, isFill);
+		//_nVifUnpack(idx, data, size, isFill);
+		memcpy(&buffer[idx][bSize[idx]], data, size);
+		bSize[idx]	  += size;
 		vif->tag.size -= ret;
 	}
 
@@ -251,11 +263,11 @@ __releaseinline void __fastcall _nVifUnpackLoop(u8 *data, u32 size) {
 		}
 	}
 
-	if (vifRegs->num && ((s32)size > 0)) { // Partial Vector Transfer
-        //DevCon.WriteLn("partial transfer! [%d]", size);
-        memcpy(nVif[idx].partBuffer, data, size);
-        nVif[idx].partTransfer = size;
-    }
+	//if (vifRegs->num && ((s32)size > 0)) { // Partial Vector Transfer
+	//	//DevCon.WriteLn("partial transfer! [%d]", size);
+	//	memcpy(nVif[idx].partBuffer, data, size);
+	//	nVif[idx].partTransfer = size;
+	//}
 }
 
 _f void _nVifUnpack(int idx, u8 *data, u32 size, bool isFill) {

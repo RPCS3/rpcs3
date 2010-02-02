@@ -29,12 +29,11 @@ vifStruct vif1;
 
 __forceinline void vif1FLUSH()
 {
-	int _cycles = VU1.cycle;
+	if (VU0.VI[REG_VPU_STAT].UL & 0x100) 
+	{
+		int _cycles = VU1.cycle;
 
-	if (VU0.VI[REG_VPU_STAT].UL & 0x100) {
-		do { 
-			CpuVU1->ExecuteBlock(); 
-		}
+		do { CpuVU1->ExecuteBlock(); }
 		while (VU0.VI[REG_VPU_STAT].UL & 0x100);
 
 		g_vifCycles += (VU1.cycle - _cycles) * BIAS;
