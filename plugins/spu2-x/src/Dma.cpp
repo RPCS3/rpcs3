@@ -183,7 +183,8 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 // IRQAs are tested).  Very few games use DMA reads tho, so it could just be a case of "works
 // by the grace of not being used."
 //
-#define NO_BIOS_HACKFIX   0			// set to 1 to disable the hackfix
+// Update: This hack is no longer needed when we don't do a core reset. Guess the null pc was in spu2 memory?
+#define NO_BIOS_HACKFIX   1			// set to 1 to disable the hackfix
 
 
 void V_Core::PlainDMAWrite(u16 *pMem, u32 size)

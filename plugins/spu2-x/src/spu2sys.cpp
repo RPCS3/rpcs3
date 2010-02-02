@@ -109,11 +109,9 @@ V_Core::~V_Core() throw()
 
 void V_Core::Reset( int index )
 {
-	// Clearing the whole core seems to delete some important stuff as well.
-	// Not doing it fixes SH Shattered Memories and Silver Surfer audio.
-	// Shouldn't have any negative side effects.
-	//memset( this, 0, sizeof(V_Core) );
-
+	ConLog( " * SPU2: RESET SPU2 core%d \n", index );
+	memset( this, 0, sizeof(V_Core) );
+	
 	const int c = Index = index;
 
 	Regs.STATX		= 0;
@@ -310,7 +308,8 @@ __forceinline void TimeUpdate(u32 cClocks)
 			if(_irqcallback) _irqcallback();
 		}
 
-		if(Cores[0].InitDelay>0)
+		// Part of the no core resets hack. See fixme in RegWrite_Core.
+		/*if(Cores[0].InitDelay>0)
 		{
 			Cores[0].InitDelay--;
 			if(Cores[0].InitDelay==0)
@@ -326,7 +325,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 			{
 				Cores[1].Reset(1);
 			}
-		}
+		}*/
 
 		//Update DMA4 interrupt delay counter
 		if(Cores[0].DMAICounter>0)
@@ -852,8 +851,12 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				// When we have exact cycle update info from the Pcsx2 IOP unit, then use
 				// the more accurate delayed initialization system.
-
-				if(cyclePtr != NULL)
+				ConLog( " * SPU2: Runtime core%d reset requested, (but ignored. Hack.). \n", core );
+				// Fixme:
+				// Not initializing a core reset here fixes SH Shattered Memories and Silver Surfer audio.
+				// This is a hack, but better than clearing the wrong bits.
+				// Also check the commented out code in TimeUpdate() above.
+				/*if(cyclePtr != NULL)
 				{
 					thiscore.InitDelay  = 1;
 					thiscore.Regs.STATX = 0;
@@ -861,7 +864,7 @@ static void __fastcall RegWrite_Core( u16 value )
 				else
 				{
 					thiscore.Reset(thiscore.Index);
-				}
+				}*/
 			}
 
 			thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
