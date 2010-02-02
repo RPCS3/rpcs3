@@ -511,7 +511,7 @@ void InputDeviceManager::CopyBindings(int numOldDevices, Device **oldDevices) {
 				if (!id1 || !id2) {
 					continue;
 				}
-				if (!wcsicmp(devices[j]->instanceID, oldDevices[i]->instanceID)) {
+				if (!wcsicmp(id1, id2)) {
 					matches[j] = i;
 					oldMatches[i] = j;
 					break;

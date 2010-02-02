@@ -385,8 +385,7 @@ void CapSum(ButtonSum *sum) {
 
 // Counter similar to stateUpdated for each pad, except used for PADkeyEvent instead.
 // Only matters when GS thread updates is disabled (Just like summed pad values
-// for pads beyond the first slot).  Also, it's set to 4 and decremented by 1 on each read,
-// so it's less likely I'll control state on a PADkeyEvent call.
+// for pads beyond the first slot).
 
 // Values, in order, correspond to PADkeyEvent, PADupdate(0), PADupdate(1), and
 // WndProc(WMA_FORCE_UPDATE).  Last is always 0.
@@ -1033,7 +1032,7 @@ void CALLBACK PADclose() {
 u8 CALLBACK PADstartPoll(int port) {
 	DEBUG_NEW_SET();
 	port--;
-	if ((unsigned int)port <= 1) {
+	if ((unsigned int)port <= 1 && pads[port][slots[port]].enabled) {
 		query.queryDone = 0;
 		query.port = port;
 		query.slot = slots[port];
@@ -1509,7 +1508,8 @@ s32 CALLBACK PADsetSlot(u8 port, u8 slot) {
 	// Even if no pad there, record the slot, as it is the active slot regardless.
 	slots[port] = slot;
 	// First slot always allowed.
-	return pads[port][slot].enabled | !slot;
+	// return pads[port][slot].enabled | !slot;
+	return 1;
 }
 
 // Little funkiness to handle rounding floating points to ints without the C runtime.

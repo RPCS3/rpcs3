@@ -1709,8 +1709,8 @@ void UpdatePadList(HWND hWnd) {
 			item.iSubItem = 1;
 			if (2 < (unsigned int)config.padConfigs[port][slot].type) config.padConfigs[port][slot].type = Dualshock2Pad;
 			item.pszText = padTypes[config.padConfigs[port][slot].type];
-			if (!slot && !config.padConfigs[port][slot].type)
-				item.pszText = L"Unplugged (Kinda)";
+			//if (!slot && !config.padConfigs[port][slot].type)
+			//	item.pszText = L"Unplugged (Kinda)";
 
 			ListView_SetItem(hWndList, &item);
 
