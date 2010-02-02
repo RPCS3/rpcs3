@@ -85,8 +85,6 @@ struct nVifStruct {
 	VURegs*					VU;				// VU  Regs   ptr
 	u8*						vuMemEnd;		// End of VU Memory
 	u32						vuMemLimit;		// Use for fast AND
-	s32						partTransfer;	// Holds the size of partBuffer
-	u8						partBuffer[32];	// Buffer For Partial Transfers
 	u8*						recPtr;			// Cur Pos to recompile to
 	u8*						recEnd;			// End of Rec Cache
 	BlockBuffer*			vifCache;		// Block Buffer
