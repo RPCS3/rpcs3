@@ -426,7 +426,10 @@ __forceinline void vif1Interrupt()
 	if (vif1.inprogress & 0x1)
 	{
 		_VIF1chain();
-		CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
+		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation. 
+		// Timesplitters 2 depends on this beeing a bit higher than 128.
+		if (vif1.dmamode == VIF_NORMAL_FROM_MEM_MODE ) CPU_INT(DMAC_VIF1, 1024);
+		else CPU_INT(DMAC_VIF1, /*g_vifCycles*/ VifCycleVoodoo);
 		return;
 	}
 
