@@ -244,6 +244,12 @@ s32 sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 	return 0;
 }
 
+int sioBs = 0x24;
+void sio2DmaSetBs(int bs)
+{
+	sioBs = bs;
+}
+
 s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 {
 #ifdef ENABLE_NEW_IOPDMA_SIO
@@ -260,11 +266,19 @@ s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 	int written = 0;
 
 	// FIXME: temp code, might need to implement properly
-	int bs = 0x24;
+	int bs = sioBs;
 	int bc = bytesLeft / (bs*4);
 	int ts = bc * bs * 4;
 
-	assert(ts == bytesLeft);
+	// HACK!
+	if(ts != bytesLeft)
+	{
+		bs = bytesLeft;
+		bc = 1;
+
+	}
+
+	//assert(ts == bytesLeft);
 
 	for(int j=0;j<bc;j++)
 	{

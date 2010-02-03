@@ -375,7 +375,7 @@ const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 // runtime variables
 struct DmaChannelInfo
 {
-	u32 ByteCount;
+	s32 ByteCount;
 	s32 NextUpdate;
 } IopDmaChannels[DMA_CHANNEL_MAX] = {0};
 
@@ -425,6 +425,12 @@ void IopDmaStart(int channel)
 			return;
 		}
 	}
+
+	// hack!
+	extern void sio2DmaSetBs(int bs);
+	if(channel==11 || channel==12)
+		sio2DmaSetBs(bcr_size);
+
 
 	//Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d(0x%08x), dir=%d", channel, size, bcr, chcr&DMA_CTRL_DIRECTION);
 
@@ -477,7 +483,7 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 				u32 ProcessedBytes = 0;
 				s32 RequestedDelay = (handler) ? handler(channel, (u32*)iopPhysMem(hh->REG_MADR()), ch->ByteCount, &ProcessedBytes) : 0;
 
-				if(ProcessedBytes>0)
+				if(ProcessedBytes>0 && (!(chcr & DMA_CTRL_DIRECTION)))
 				{
 					psxCpu->Clear(hh->REG_MADR(), ProcessedBytes/4);
 				}

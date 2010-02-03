@@ -535,7 +535,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 		if(DmaStarting)
 		{
-			ConLog(" * SPU2: AutoDMA transfer starting on core %d: %d bytes\n", Index, bytesLeft);
+			if(MsgAutoDMA()) ConLog(" * SPU2: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
+				GetDmaIndexChar(), bytesLeft<<1, TSA, DMABits, AutoDMACtrl, (~Regs.ATTR)&0x7fff);
 		}
 
 		u32 processed = 0;
