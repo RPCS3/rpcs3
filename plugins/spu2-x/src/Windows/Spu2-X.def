@@ -29,13 +29,18 @@ EXPORTS
 	SPU2close			@8
 	SPU2write			@9
 	SPU2read			@10
-    SPU2readDMA4Mem     @11
-    SPU2writeDMA4Mem    @12
-    SPU2readDMA7Mem     @13
-    SPU2writeDMA7Mem    @14
-    SPU2async           @15
+    SPU2async           @11
+
+    SPU2readDMA4Mem     @12
+    SPU2writeDMA4Mem    @13
+    SPU2readDMA7Mem     @14
+    SPU2writeDMA7Mem    @15
     SPU2interruptDMA4   @16
     SPU2interruptDMA7   @17
+    SPU2dmaRead
+    SPU2dmaWrite
+    SPU2dmaInterrupt
+    
 	SPU2irqCallback		@18
 
 	SPU2setupRecording  @19

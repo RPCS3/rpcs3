@@ -327,6 +327,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 			}
 		}*/
 
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 		//Update DMA4 interrupt delay counter
 		if(Cores[0].DMAICounter>0)
 		{
@@ -357,6 +358,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 				Cores[1].MADR+=TickInterval<<1;
 			}
 		}
+#endif
 
 		dClocks -= TickInterval;
 		lClocks += TickInterval;

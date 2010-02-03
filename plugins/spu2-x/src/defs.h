@@ -391,7 +391,8 @@ struct V_Core
 	u16				AutoDMACtrl;	// AutoDMA Status
 	s32				DMAICounter;	// DMA Interrupt Counter
 	u32				InputDataLeft;	// Input Buffer
-	u32				InputPos;
+	u32				InputPosRead;
+	u32				InputPosWrite;
 	u32				InputDataProgress;
 
 	V_Reverb		Revb;			// Reverb Registers
@@ -419,6 +420,11 @@ struct V_Core
 	u8				AttrBit4;
 	u8				AttrBit5;
 
+	// new dma only
+	bool			DmaStarted;
+	u32				AutoDmaFree;
+
+	// old dma only
 	u16*			DMAPtr;
 	u32				MADR;
 	u32				TADR;
@@ -493,7 +499,12 @@ struct V_Core
 	}
 
 	void LogAutoDMA( FILE* fp );
-	
+
+	s32  NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed);
+	s32  NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed);
+	void NewDmaInterrupt();
+
+	// old dma only
 	void DoDMAwrite(u16* pMem, u32 size);
 	void DoDMAread(u16* pMem, u32 size);
 

@@ -85,7 +85,8 @@ void V_Core::LogAutoDMA( FILE* fp )
 
 void V_Core::AutoDMAReadBuffer(int mode) //mode: 0= split stereo; 1 = do not split stereo
 {
-	int spos = ((InputPos+0xff)&0x100); //starting position of the free buffer
+#ifndef ENABLE_NEW_IOPDMA_SPU2
+	int spos = ((InputPosRead+0xff)&0x100); //starting position of the free buffer
 
 	LogAutoDMA( Index ? ADMA7LogFile : ADMA4LogFile );
 
@@ -119,10 +120,12 @@ void V_Core::AutoDMAReadBuffer(int mode) //mode: 0= split stereo; 1 = do not spl
 	}
 	// See ReadInput at mixer.cpp for explanation on the commented out lines
 	//
+#endif
 }
 
 void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 {
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 	int size = (sz)&(~511);
 
 	if(MsgAutoDMA()) ConLog(" * SPU2: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
@@ -150,7 +153,7 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 			}
 #else
 			if( ((PlayMode&4)==4) && (Index==0) )
-				Cores[0].InputPos=0;
+				Cores[0].InputPosRead=0;
 
 			AutoDMAReadBuffer(0);
 #endif
@@ -167,6 +170,7 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 		DMAICounter		= 1;
 	}
 	TADR = MADR + (size<<1);
+#endif
 }
 
 // HACKFIX: The BIOS breaks if we check the IRQA for both cores when issuing DMA writes.  The
@@ -185,7 +189,6 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 //
 // Update: This hack is no longer needed when we don't do a core reset. Guess the null pc was in spu2 memory?
 #define NO_BIOS_HACKFIX   1			// set to 1 to disable the hackfix
-
 
 void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 {
@@ -322,6 +325,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 void V_Core::DoDMAread(u16* pMem, u32 size) 
 {
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 	TSA &= 0xffff8;
 
 	u32 buff1end = TSA + size;
@@ -387,10 +391,12 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 	Regs.STATX &= ~0x80;
 	//Regs.ATTR |= 0x30;
 	TADR		= MADR + (size<<1);
+#endif
 }
 
 void V_Core::DoDMAwrite(u16* pMem, u32 size) 
 {
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 	DMAPtr = pMem;
 
 	if(size<2) {
@@ -420,4 +426,184 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 	}
 	Regs.STATX &= ~0x80;
 	//Regs.ATTR |= 0x30;
+#endif
+}
+
+s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	bool DmaStarting = !DmaStarted;
+	DmaStarted = true;
+
+	TSA &= 0xffff8;
+
+	u16* pMem = (u16*)data;
+
+	u32 buff1end = TSA + bytesLeft;
+	u32 buff2end = 0;
+	if( buff1end > 0x100000 )
+	{
+		buff2end = buff1end - 0x100000;
+		buff1end = 0x100000;
+	}
+
+	const u32 buff1size = (buff1end-TSA);
+	memcpy( pMem, GetMemPtr( TSA ), buff1size*2 );
+
+	// Note on TSA's position after our copy finishes:
+	// IRQA should be measured by the end of the writepos+0x20.  But the TDA
+	// should be written back at the precise endpoint of the xfer.
+
+	if( buff2end > 0 )
+	{
+		// second branch needs cleared:
+		// It starts at the beginning of memory and moves forward to buff2end
+
+		memcpy( &pMem[buff1size], GetMemPtr( 0 ), buff2end*2 );
+
+		TDA = (buff2end+0x20) & 0xfffff;
+
+		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+		// Important: Test both core IRQ settings for either DMA!
+		// Note: Because this buffer wraps, we use || instead of &&
+
+		for( int i=0; i<2; i++ )
+		{
+			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
+			{
+				Spdif.Info = 4 << i;
+				SetIrqCall();
+			}
+		}
+	}
+	else
+	{
+		// Buffer doesn't wrap/overflow!
+		// Just set the TDA and check for an IRQ...
+
+		TDA = (buff1end + 0x20) & 0xfffff;
+
+		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+		// Important: Test both core IRQ settings for either DMA!
+
+		for( int i=0; i<2; i++ )
+		{
+			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
+			{
+				Spdif.Info = 4 << i;
+				SetIrqCall();
+			}
+		}
+	}
+
+	TSA = TDA & 0xFFFFF;
+
+	Regs.STATX &= ~0x80;
+	//Regs.ATTR |= 0x30;
+
+#endif
+	*bytesProcessed = bytesLeft;
+	return 0;
+}
+
+s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	bool DmaStarting = !DmaStarted;
+	DmaStarted = true;
+
+	if(bytesLeft<2) 
+	{
+		// execute interrupt code early
+		NewDmaInterrupt();
+
+		*bytesProcessed = bytesLeft;
+		return 0;
+	}
+
+	if( IsDevBuild )
+		DebugCores[Index].lastsize = bytesLeft;
+
+	TSA &= ~7;
+
+	bool adma_enable = ((AutoDMACtrl&(Index+1))==(Index+1));
+
+	if(adma_enable)
+	{
+		TSA&=0x1fff;
+		//Console.Error(" * SPU2: AutoDMA transfers not supported yet! (core %d)\n", Index);
+
+		if(DmaStarting)
+		{
+			ConLog(" * SPU2: AutoDMA transfer starting on core %d: %d bytes\n", Index, bytesLeft);
+		}
+
+		u32 processed = 0;
+		while((AutoDmaFree>0)&&(bytesLeft>=0x400))
+		{
+			// copy block
+
+			LogAutoDMA( Index ? ADMA7LogFile : ADMA4LogFile );
+
+			// HACKFIX!! DMAPtr can be invalid after a savestate load, so the savestate just forces it
+			// to NULL and we ignore it here.  (used to work in old VM editions of PCSX2 with fixed
+			// addressing, but new PCSX2s have dynamic memory addressing).
+
+			s16* mptr = (s16*)data;
+
+			if(false)//(mode)
+			{		
+				memcpy((ADMATempBuffer+(InputPosWrite<<1)),mptr,0x400);
+				mptr+=0x200;
+			}
+			else
+			{
+				memcpy((ADMATempBuffer+InputPosWrite),mptr,0x200);
+				//memcpy((spu2mem+0x2000+(core<<10)+InputPosWrite),mptr,0x200);
+				mptr+=0x100;
+
+				memcpy((ADMATempBuffer+InputPosWrite+0x200),mptr,0x200);
+				//memcpy((spu2mem+0x2200+(core<<10)+InputPosWrite),mptr,0x200);
+				mptr+=0x100;
+			}
+			// See ReadInput at mixer.cpp for explanation on the commented out lines
+			//
+
+			InputPosWrite = (InputPosWrite + 0x100) & 0x1ff;
+			AutoDmaFree -= 0x200;
+			processed += 0x400;
+			bytesLeft -= 0x400;
+		}
+
+		if(processed==0)
+		{
+			*bytesProcessed = 0;
+			return 768*15; // pause a bit
+		}
+		else
+		{
+			*bytesProcessed = processed;
+			return 0; // auto pause
+		}
+	}
+	else
+	{
+		// TODO: Sliced transfers?
+		PlainDMAWrite((u16*)data,bytesLeft);
+	}
+	Regs.STATX &= ~0x80;
+	//Regs.ATTR |= 0x30;
+#endif
+	*bytesProcessed = bytesLeft;
+	return 0;
+}
+
+void V_Core::NewDmaInterrupt()
+{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	FileLog("[%10d] SPU2 interruptDMA4\n",Cycles);
+	Regs.STATX |= 0x80;
+	//Regs.ATTR &= ~0x30;
+	DmaStarted = false;
+#endif
 }

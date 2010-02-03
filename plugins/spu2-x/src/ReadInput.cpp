@@ -18,6 +18,8 @@
 #include "Global.h"
 #include "dma.h"
 
+#include "PS2E-spu2.h"	// required for ENABLE_NEW_IOPDMA_SPU2 define
+
 // Core 0 Input is "SPDIF mode" - Source audio is AC3 compressed.
 
 // Core 1 Input is "CDDA mode" - Source audio data is 32 bits.
@@ -29,17 +31,17 @@
 //
 StereoOut32 V_Core::ReadInput_HiFi()
 {
-	InputPos &= ~1;
+	InputPosRead &= ~1;
 
 #ifdef PCM24_S1_INTERLEAVE
 	StereoOut32 retval(
-		*((s32*)(ADMATempBuffer+(InputPos<<1))),
-		*((s32*)(ADMATempBuffer+(InputPos<<1)+2))
+		*((s32*)(ADMATempBuffer+(InputPosRead<<1))),
+		*((s32*)(ADMATempBuffer+(InputPosRead<<1)+2))
 	);
 #else
 	StereoOut32 retval( 
-		(s32&)(ADMATempBuffer[InputPos]),
-		(s32&)(ADMATempBuffer[InputPos+0x200])
+		(s32&)(ADMATempBuffer[InputPosRead]),
+		(s32&)(ADMATempBuffer[InputPosRead+0x200])
 	);
 #endif
 
@@ -53,13 +55,17 @@ StereoOut32 V_Core::ReadInput_HiFi()
 		retval.Right	>>= 4;
 	}
 
-	InputPos += 2;
+	InputPosRead += 2;
 
 	// Why does CDDA mode check for InputPos == 0x100? In the old code, SPDIF mode did not but CDDA did.
 	//  One of these seems wrong, they should be the same.  Since standard ADMA checks too I'm assuming that as default. -- air
 
-	if( (InputPos==0x100) || (InputPos>=0x200) )
+	if( (InputPosRead==0x100) || (InputPosRead>=0x200) )
 	{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+		// WARNING: Assumes this to be in the same thread as the dmas
+		AutoDmaFree += 0x200;
+#else
 		AdmaInProgress = 0;
 		if(InputDataLeft >= 0x200)
 		{
@@ -70,7 +76,7 @@ StereoOut32 V_Core::ReadInput_HiFi()
 #endif
 			AdmaInProgress = 1;
 
-			TSA = (Index<<10) + InputPos;
+			TSA = (Index<<10) + InputPosRead;
 
 			if (InputDataLeft < 0x200) 
 			{
@@ -87,7 +93,8 @@ StereoOut32 V_Core::ReadInput_HiFi()
 				DMAICounter		= 1;
 			}
 		}
-		InputPos &= 0x1ff;
+#endif
+		InputPosRead &= 0x1ff;
 	}
 	return retval;
 }
@@ -106,14 +113,18 @@ StereoOut32 V_Core::ReadInput()
 		//*PData.Right = (s32)*(s16*)(spu2mem+0x2200+(core<<10)+InputPos);
 
 		retval = StereoOut32(
-			(s32)ADMATempBuffer[InputPos],
-			(s32)ADMATempBuffer[InputPos+0x200]
+			(s32)ADMATempBuffer[InputPosRead],
+			(s32)ADMATempBuffer[InputPosRead+0x200]
 		);
 	}
 
-	InputPos++;
-	if( (InputPos==0x100) || (InputPos>=0x200) )
+	InputPosRead++;
+	if( (InputPosRead==0x100) || (InputPosRead>=0x200) )
 	{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+		// WARNING: Assumes this to be in the same thread as the dmas
+		AutoDmaFree += 0x200;
+#else
 		AdmaInProgress = 0;
 		if(InputDataLeft >= 0x200)
 		{
@@ -122,7 +133,7 @@ StereoOut32 V_Core::ReadInput()
 			AutoDMAReadBuffer(0);
 
 			AdmaInProgress	= 1;
-			TSA			= (Index<<10) + InputPos;
+			TSA			= (Index<<10) + InputPosRead;
 
 			if (InputDataLeft < 0x200)
 			{
@@ -141,7 +152,8 @@ StereoOut32 V_Core::ReadInput()
 				DMAICounter   = 1;
 			}
 		}
-		InputPos&=0x1ff;
+#endif
+		InputPosRead&=0x1ff;
 	}
 	return retval;
 }

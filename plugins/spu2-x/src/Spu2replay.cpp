@@ -103,12 +103,16 @@ void dummy1()
 
 void dummy4()
 {
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 	SPU2interruptDMA4();
+#endif
 }
 
 void dummy7()
 {
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 	SPU2interruptDMA7();
+#endif
 }
 
 #define Cread(a,b,c,d) if(fread(a,b,c,d)<b) break;
@@ -117,6 +121,7 @@ void dummy7()
 #include "Windows/Dialogs.h"
 EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow)
 {
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 	// load file
 	FILE *file=fopen(filename,"rb");
 
@@ -190,5 +195,6 @@ EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdS
 	fclose(file);
 
 	replay_mode=false;
+#endif
 }
 #endif

@@ -195,6 +195,44 @@ EXPORT_C_(void) CALLBACK SPU2setSettingsDir(const char* dir)
 	CfgSetSettingsDir( dir );
 }
 
+EXPORT_C_(s32)  SPU2dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+	if(channel==4)
+		return Cores[0].NewDmaRead(data,bytesLeft, bytesProcessed);
+	else
+		return Cores[1].NewDmaRead(data,bytesLeft, bytesProcessed);
+}
+
+EXPORT_C_(s32)  SPU2dmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+	if(channel==4)
+		return Cores[0].NewDmaWrite(data,bytesLeft, bytesProcessed);
+	else
+		return Cores[1].NewDmaWrite(data,bytesLeft, bytesProcessed);
+}
+
+EXPORT_C_(void) SPU2dmaInterrupt(s32 channel)
+{
+	if(channel==4)
+		return Cores[0].NewDmaInterrupt();
+	else
+		return Cores[1].NewDmaInterrupt();
+}
+
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)())
+{
+	_irqcallback = SPU2callback;
+}
+#else
+EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)())
+{
+	_irqcallback = SPU2callback;
+	dma4callback = DMA4callback;
+	dma7callback = DMA7callback;
+}
+#endif
+
 EXPORT_C_(void) CALLBACK SPU2readDMA4Mem(u16 *pMem, u32 size)	// size now in 16bit units
 {
 	if( cyclePtr != NULL ) TimeUpdate( *cyclePtr );
@@ -222,6 +260,13 @@ EXPORT_C_(void) CALLBACK SPU2interruptDMA4()
 	//Cores[0].Regs.ATTR &= ~0x30;
 }
 
+EXPORT_C_(void) CALLBACK SPU2interruptDMA7()
+{
+	FileLog("[%10d] SPU2 interruptDMA7\n",Cycles);
+	Cores[1].Regs.STATX |= 0x80;
+	//Cores[1].Regs.ATTR &= ~0x30;
+}
+
 EXPORT_C_(void) CALLBACK SPU2readDMA7Mem(u16* pMem, u32 size)
 {
 	if( cyclePtr != NULL ) TimeUpdate( *cyclePtr );
@@ -240,13 +285,6 @@ EXPORT_C_(void) CALLBACK SPU2writeDMA7Mem(u16* pMem, u32 size)
 		s2r_writedma7(Cycles,pMem,size);
 #endif
 	Cores[1].DoDMAwrite(pMem,size);
-}
-
-EXPORT_C_(void) CALLBACK SPU2interruptDMA7()
-{
-	FileLog("[%10d] SPU2 interruptDMA7\n",Cycles);
-	Cores[1].Regs.STATX |= 0x80;
-	//Cores[1].Regs.ATTR &= ~0x30;
 }
 
 EXPORT_C_(s32) SPU2init() 
@@ -450,13 +488,6 @@ EXPORT_C_(void) SPU2async(u32 cycles)
 		pClocks += cycles;
 		TimeUpdate( pClocks );
 	}
-}
-
-EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)())
-{
-	_irqcallback = SPU2callback;
-	dma4callback = DMA4callback;
-	dma7callback = DMA7callback;
 }
 
 EXPORT_C_(u16) SPU2read(u32 rmem) 

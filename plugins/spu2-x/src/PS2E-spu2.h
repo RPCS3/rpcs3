@@ -37,20 +37,28 @@ EXPORT_C_(void) SPU2close();
 EXPORT_C_(void) SPU2shutdown();
 EXPORT_C_(void) SPU2write(u32 mem, u16 value);
 EXPORT_C_(u16)  SPU2read(u32 mem);
+
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+EXPORT_C_(s32)  SPU2dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+EXPORT_C_(s32)  SPU2dmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+EXPORT_C_(void) SPU2dmaInterrupt(s32 channel);
+
+// dma irq callbacks not needed anymore, they are handled by the dmac
+EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)());
+#else
 EXPORT_C_(void) SPU2readDMA4Mem(u16 *pMem, u32 size);
 EXPORT_C_(void) SPU2writeDMA4Mem(u16 *pMem, u32 size);
 EXPORT_C_(void) SPU2interruptDMA4();
 EXPORT_C_(void) SPU2readDMA7Mem(u16* pMem, u32 size);
 EXPORT_C_(void) SPU2writeDMA7Mem(u16 *pMem, u32 size);
+EXPORT_C_(void) SPU2interruptDMA7();
 
 // all addresses passed by dma will be pointers to the array starting at baseaddr
 // This function is necessary to successfully save and reload the spu2 state
-EXPORT_C_(void) SPU2setDMABaseAddr(uptr baseaddr);
-
-EXPORT_C_(void) SPU2interruptDMA7();
 EXPORT_C_(u32)  SPU2ReadMemAddr(int core);
 EXPORT_C_(void) SPU2WriteMemAddr(int core,u32 value);
 EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)());
+#endif
 
 // extended funcs
 // if start is 1, starts recording spu2 data, else stops
@@ -71,13 +79,16 @@ EXPORT_C_(s32)  SPU2test();
 extern u8 callirq;
 
 extern void (* _irqcallback)();
+
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 extern void (* dma4callback)();
 extern void (* dma7callback)();
 
-extern double srate_pv;
-
 extern s16 *input_data;
 extern u32 input_data_ptr;
+#endif
+
+extern double srate_pv;
 
 extern int recording;
 extern u32 lClocks;

@@ -344,17 +344,30 @@ const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 	{"Ps1 Mdec",       _D__}, //1
 	{"Ps1 Gpu",        _D__}, //2
 	{"CDVD",           _DR_, CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
-	{"SPU2 Core0",     _DRW, CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu Core0
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	{"SPU2 Core0",     _ERW, CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu/Spu2 Core0
+#else
+	{"SPU2 Core0",     _D__}, //4:  Spu/Spu2 Core0
+#endif
 	{"?",              _D__}, //5
 	{"OT",             _D__}, //6: OT?
 
 	// Second DMAC, new in PS2 IOP
-	{"SPU2 Core1",     _DRW, CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu Core1
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	{"SPU2 Core1",     _ERW, CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu2 Core1
+#else
+	{"SPU2 Core1",     _D__}, //7:  Spu2 Core1
+#endif
 	{"Dev9",		   _DRW},// CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
 	{"Sif0",           _DRW},// CHANNEL_BASE2(2), sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
 	{"Sif1",           _DRW},// CHANNEL_BASE2(3), sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
+#ifdef ENABLE_NEW_IOPDMA_SIO
 	{"Sio2 (writes)",  _E_W, CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
 	{"Sio2 (reads)",   _ER_, CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
+#else
+	{"Sio2 (writes)",  _D__}, //11: Sio2
+	{"Sio2 (reads)",   _D__}, //12: Sio2
+#endif
 	{"?",              _D__}, //13
 	// if each dmac has 7 channels, the list would end here, but I'm not sure :p
 };
@@ -486,8 +499,8 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 
 					NextUpdateDelay = ProcessedBytes/2; // / ch->Width;
 				}
-				else 
-					DevCon.Warning("What now? :p");
+				else if(RequestedDelay==0)
+					DevCon.Warning("What now? :p"); // its ok as long as there's a delay requeste, autodma requires this.
 
 				if (RequestedDelay != 0) NextUpdateDelay = RequestedDelay;
 
