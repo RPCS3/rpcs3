@@ -166,6 +166,7 @@ static __forceinline bool SIFIOPReadTag()
 {
 	// Read a tag.
 	sif1.fifo.read((u32*)&sif1.data, 4);
+	//sif1.data.words = (sif1.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
 	SIF_LOG("SIF 1 IOP: dest chain tag madr:%08X wc:%04X id:%X irq:%d", 
 		sif1.data.data & 0xffffff, sif1.data.words, sif1tag.ID, sif1tag.IRQ);
 		

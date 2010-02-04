@@ -29,9 +29,6 @@ using namespace R5900;
 //#define TEST_BROKEN_DUMP_ROUTINES
 
 #ifdef TEST_BROKEN_DUMP_ROUTINES
-//extern u32 psxdump;
-//extern int rdram_devices;	// put 8 for TOOL and 2 for PS2 and PSX
-//extern int rdram_sdevid;
 extern tIPU_BP g_BP;
 
 #define VF_VAL(x) ((x==0x80000000)?0:(x))
@@ -45,7 +42,7 @@ extern u32 s_nEndBlock; // what pc the current block ends
 
 void iDumpPsxRegisters(u32 startpc, u32 temp)
 {
-// [TODO] fixme : thie code is broken and has no labels.  Needs a rewrite to be useful.
+// [TODO] fixme : this code is broken and has no labels.  Needs a rewrite to be useful.
 
 #ifdef TEST_BROKEN_DUMP_ROUTINES
 	int i;
@@ -56,22 +53,22 @@ void iDumpPsxRegisters(u32 startpc, u32 temp)
 
 	for(i = 0; i < 34; i+=2) __Log("%spsx%s: %x %x", pstr, disRNameGPR[i], psxRegs.GPR.r[i], psxRegs.GPR.r[i+1]);
 
-	__Log("%scycle: %x %x %x; counters %x %x", pstr, psxRegs.cycle, g_psxNextBranchCycle, EEsCycle,
+	DbgCon.WriteLn("%scycle: %x %x %x; counters %x %x", pstr, psxRegs.cycle, g_psxNextBranchCycle, EEsCycle,
 		psxNextsCounter, psxNextCounter);
 
-	__Log("psxdma%d c%x b%x m%x t%x", 2, HW_DMA2_CHCR, HW_DMA2_BCR, HW_DMA2_MADR, HW_DMA2_TADR);
-	__Log("psxdma%d c%x b%x m%x", 3, HW_DMA3_CHCR, HW_DMA3_BCR, HW_DMA3_MADR);
-	__Log("psxdma%d c%x b%x m%x t%x", 4, HW_DMA4_CHCR, HW_DMA4_BCR, HW_DMA4_MADR, HW_DMA4_TADR);
-	__Log("psxdma%d c%x b%x m%x", 6, HW_DMA6_CHCR, HW_DMA6_BCR, HW_DMA6_MADR);
-	__Log("psxdma%d c%x b%x m%x", 7, HW_DMA7_CHCR, HW_DMA7_BCR, HW_DMA7_MADR);
-	__Log("psxdma%d c%x b%x m%x", 8, HW_DMA8_CHCR, HW_DMA8_BCR, HW_DMA8_MADR);
-	__Log("psxdma%d c%x b%x m%x t%x", 9, HW_DMA9_CHCR, HW_DMA9_BCR, HW_DMA9_MADR, HW_DMA9_TADR);
-	__Log("psxdma%d c%x b%x m%x", 10, HW_DMA10_CHCR, HW_DMA10_BCR, HW_DMA10_MADR);
-	__Log("psxdma%d c%x b%x m%x", 11, HW_DMA11_CHCR, HW_DMA11_BCR, HW_DMA11_MADR);
-	__Log("psxdma%d c%x b%x m%x", 12, HW_DMA12_CHCR, HW_DMA12_BCR, HW_DMA12_MADR);
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 2) + hw_dma(2).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 3) + hw_dma(3).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 4) + hw_dma(4).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 6) + hw_dma(6).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 7) + hw_dma(7).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 8) + hw_dma(8).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 9) + hw_dma(9).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 10) + hw_dma(10).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 11) + hw_dma(11).desc());
+	DbgCon.WriteLn(wxsFormat(L"psxdma%d ", 12) + hw_dma(12).desc());
 
 	for(i = 0; i < 7; ++i)
-		__Log("%scounter%d: mode %x count %I64x rate %x scycle %x target %I64x", pstr, i, psxCounters[i].mode, psxCounters[i].count, psxCounters[i].rate, psxCounters[i].sCycleT, psxCounters[i].target);
+		DbgCon.WriteLn("%scounter%d: mode %x count %I64x rate %x scycle %x target %I64x", pstr, i, psxCounters[i].mode, psxCounters[i].count, psxCounters[i].rate, psxCounters[i].sCycleT, psxCounters[i].target);
 #endif
 }
 

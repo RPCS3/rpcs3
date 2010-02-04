@@ -20,6 +20,7 @@
 #include "GS.h"
 #include "Vif.h"
 #include "IPU/IPU.h"
+#include "IPU/IPU_Fifo.h"
 
 //////////////////////////////////////////////////////////////////////////
 /////////////////////////// Quick & dirty FIFO :D ////////////////////////
@@ -92,13 +93,13 @@ void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
 		{
 			out[0] = *(u64*)(g_pIPU0Pointer);
 			out[1] = *(u64*)(g_pIPU0Pointer+8);
-			FOreadpos = (FOreadpos + 4) & 31;
+			ipu_fifo.out.readpos = (ipu_fifo.out.readpos + 4) & 31;
 			g_nIPU0Data--;
 			g_pIPU0Pointer += 16;
 		}
 	}
 	else
-		FIFOfrom_readsingle((void*)out);
+		ipu_fifo.out.readsingle((void*)out);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -177,7 +178,7 @@ void __fastcall WriteFIFO_page_7(u32 mem, const mem128_t *value)
 			mem/16, ((u32*)value)[3], ((u32*)value)[2], ((u32*)value)[1], ((u32*)value)[0]);
 
 		//committing every 16 bytes
-		while( FIFOto_write((u32*)value, 1) == 0 )
+		while( ipu_fifo.in.write((u32*)value, 1) == 0 )
 		{
 			Console.WriteLn("IPU sleeping");
 			Threading::Timeslice();

@@ -128,6 +128,7 @@
     <ClCompile Include="..\..\IopSio2.cpp" />
     <ClCompile Include="..\..\IPU\coroutine.cpp" />
     <ClCompile Include="..\..\Ipu\IPU.cpp" />
+    <ClCompile Include="..\..\Ipu\IPU_Fifo.cpp" />
     <ClCompile Include="..\..\Ipu\mpeg2lib\Idct.cpp" />
     <ClCompile Include="..\..\Ipu\mpeg2lib\Mpeg.cpp" />
     <ClCompile Include="..\..\Ipu\yuv2rgb.cpp" />
@@ -611,6 +612,7 @@
     <ClInclude Include="..\..\IopSio2.h" />
     <ClInclude Include="..\..\IPU\coroutine.h" />
     <ClInclude Include="..\..\Ipu\IPU.h" />
+    <ClInclude Include="..\..\Ipu\IPU_Fifo.h" />
     <ClInclude Include="..\..\Ipu\mpeg2lib\Mpeg.h" />
     <ClInclude Include="..\..\Ipu\mpeg2lib\Vlc.h" />
     <ClInclude Include="..\..\Ipu\yuv2rgb.h" />

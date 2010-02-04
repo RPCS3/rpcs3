@@ -21,7 +21,7 @@
 #include "newVif_UnpackSSE.h"
 
 static __aligned16 nVifBlock _vBlock = {0};
-static __pagealigned u8 nVifMemCmp[__pagesize];
+//static __pagealigned u8 nVifMemCmp[__pagesize];
 
 void dVifInit(int idx) {
 	nVif[idx].numBlocks =  0;
@@ -124,14 +124,14 @@ static void ShiftDisplacementWindow( xAddressInfo& addr, const xRegister32& modR
 	}
 	if(addImm) xADD(modReg, addImm);
 }
-static bool UsesTwoRegs[] = 
+/*static bool UsesTwoRegs[] = 
 {
 	true,  true,  true,  true,
 	false, false, false, false,
 	false, false, false, false,
 	false, false, false, true,
 
-};
+};*/
 
 void VifUnpackSSE_Dynarec::CompileRoutine() {
 	const int  upkNum	 = v.vif->cmd & 0xf;
@@ -220,7 +220,7 @@ _f void dVifUnpack(int idx, u8 *data, u32 size, bool isFill) {
 	const int	doMask		= v.vif->cmd & 0x10;
 	const int	cycle_cl	= v.vifRegs->cycle.cl;
 	const int	cycle_wl	= v.vifRegs->cycle.wl;
-	const int	cycleSize	= isFill ? cycle_cl : cycle_wl;
+//	const int	cycleSize	= isFill ? cycle_cl : cycle_wl;
 	const int	blockSize	= isFill ? cycle_wl : cycle_cl;
 
 	if (v.vif->cl >= blockSize) v.vif->cl = 0;

@@ -1279,7 +1279,39 @@
 						</FileConfiguration>
 					</File>
 					<File
+						RelativePath="..\..\Ipu\IPU_Fifo.cpp"
+						>
+						<FileConfiguration
+							Name="Debug|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Devel|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+							/>
+						</FileConfiguration>
+						<FileConfiguration
+							Name="Release|Win32"
+							>
+							<Tool
+								Name="VCCLCompilerTool"
+								UsePrecompiledHeader="0"
+							/>
+						</FileConfiguration>
+					</File>
+					<File
 						RelativePath="..\..\Ipu\IPU.h"
+						>
+					</File>
+					<File
+						RelativePath="..\..\Ipu\IPU_Fifo.h"
 						>
 					</File>
 					<File

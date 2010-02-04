@@ -56,11 +56,6 @@ u8* g_pIPU0Pointer = NULL;
 int g_nCmdPos[2] = {0}, g_nCmdIndex = 0;
 int ipuCurCmd = 0xffffffff;
 
-int FOreadpos = 0, FOwritepos = 0;
-static int FIreadpos = 0, FIwritepos = 0;
-__aligned16 u32 fifo_input[32];
-__aligned16 u32 fifo_output[32];
-
 void ReorderBitstream();
 
 // the BP doesn't advance and returns -1 if there is no data to be read
@@ -70,8 +65,6 @@ static int s_RoutineDone = 0;
 static u32 s_tempstack[0x4000]; // 64k
 
 void IPUWorker();
-int IPU0dma();
-int IPU1dma();
 
 // Color conversion stuff, the memory layout is a total hack
 // convert_data_buffer is a pointer to the internal rgb struct (the first param in convert_init_t)
@@ -146,7 +139,7 @@ int ipuInit()
 	memzero(g_BP);
 	init_g_decoder();
 	g_nDMATransfer.reset();
-
+	ipu_fifo.init();
 	return 0;
 }
 
@@ -163,10 +156,8 @@ void ipuShutdown()
 void ReportIPU()
 {
 	Console.WriteLn("g_nDMATransfer = 0x%x.", g_nDMATransfer._u32);
-	Console.WriteLn("FIreadpos = 0x%x, FIwritepos = 0x%x.", FIreadpos, FIwritepos);
-	Console.WriteLn("fifo_input = 0x%x.", fifo_input);
-	Console.WriteLn("FOreadpos = 0x%x, FOwritepos = 0x%x.", FOreadpos, FOwritepos);
-	Console.WriteLn("fifo_output = 0x%x.", fifo_output);
+	ipu_fifo.in.print();
+	ipu_fifo.out.print();
 	Console.WriteLn("g_BP = 0x%x.", g_BP);
 	Console.WriteLn("niq = 0x%x, iq = 0x%x.", niq, iq);
 	Console.WriteLn("vqclut = 0x%x.", vqclut);
@@ -193,12 +184,13 @@ void SaveStateBase::ipuFreeze()
 	//FreezeMem(ipuRegs, sizeof(IPUregisters));
 
 	Freeze(g_nDMATransfer._u32);
-	Freeze(FIreadpos);
-	Freeze(FIwritepos);
-	Freeze(fifo_input);
-	Freeze(FOreadpos);
-	Freeze(FOwritepos);
-	Freeze(fifo_output);
+	//Freeze(ipu_fifo);
+	Freeze(ipu_fifo.in.readpos);
+	Freeze(ipu_fifo.in.writepos);
+	Freeze(ipu_fifo.in.data);
+	Freeze(ipu_fifo.out.readpos);
+	Freeze(ipu_fifo.out.writepos);
+	Freeze(ipu_fifo.out.data);
 	Freeze(g_BP);
 	Freeze(niq);
 	Freeze(iq);
@@ -302,8 +294,8 @@ __forceinline u64 ipuRead64(u32 mem)
 void ipuSoftReset()
 {
 	mpeg2_init();
-	FIFOto_clear();
-	FIFOfrom_clear();
+	ipu_fifo.in.clear();
+	ipu_fifo.out.clear();
 
 	coded_block_pattern = 0;
 
@@ -389,7 +381,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 
 static void ipuBCLR(u32 val)
 {
-	FIFOto_clear();
+	ipu_fifo.in.clear();
 
 	g_BP.BP = val & 0x7F;
 	g_BP.FP = 0;
@@ -684,7 +676,7 @@ static BOOL __fastcall ipuCSC(u32 val)
 		{
 			while (g_nCmdPos[1] < 32)
 			{
-				g_nCmdPos[1] += FIFOfrom_write(((u32*) & rgb16) + 4 * g_nCmdPos[1], 32 - g_nCmdPos[1]);
+				g_nCmdPos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * g_nCmdPos[1], 32 - g_nCmdPos[1]);
 
 				if (g_nCmdPos[1] <= 0) return FALSE;
 			}
@@ -693,7 +685,7 @@ static BOOL __fastcall ipuCSC(u32 val)
 		{
 			while (g_nCmdPos[1] < 64)
 			{
-				g_nCmdPos[1] += FIFOfrom_write(((u32*) & rgb32) + 4 * g_nCmdPos[1], 64 - g_nCmdPos[1]);
+				g_nCmdPos[1] += ipu_fifo.out.write(((u32*) & rgb32) + 4 * g_nCmdPos[1], 64 - g_nCmdPos[1]);
 
 				if (g_nCmdPos[1] <= 0) return FALSE;
 			}
@@ -738,13 +730,13 @@ static BOOL ipuPACK(u32 val)
 
 		if (csc.OFM)
 		{
-			g_nCmdPos[1] += FIFOfrom_write(((u32*) & rgb16) + 4 * g_nCmdPos[1], 32 - g_nCmdPos[1]);
+			g_nCmdPos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * g_nCmdPos[1], 32 - g_nCmdPos[1]);
 
 			if (g_nCmdPos[1] < 32) return FALSE;
 		}
 		else
 		{
-			g_nCmdPos[1] += FIFOfrom_write(((u32*)indx4) + 4 * g_nCmdPos[1], 8 - g_nCmdPos[1]);
+			g_nCmdPos[1] += ipu_fifo.out.write(((u32*)indx4) + 4 * g_nCmdPos[1], 8 - g_nCmdPos[1]);
 
 			if (g_nCmdPos[1] < 8) return FALSE;
 		}
@@ -1023,14 +1015,14 @@ u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size)
 {
 	if (g_BP.FP == 0)
 	{
-		if (FIFOto_read(next_readbits()) == 0) return 0;
+		if (ipu_fifo.in.read(next_readbits()) == 0) return 0;
 
 		inc_readbits();
 		g_BP.FP = 1;
 	}
 	else if ((g_BP.FP < 2) && (*(int*)pointer + size) >= 128)
 	{
-		if (FIFOto_read(next_readbits())) g_BP.FP += 1;
+		if (ipu_fifo.in.read(next_readbits())) g_BP.FP += 1;
 	}
 
 	if (*(int*)pointer >= 128)
@@ -1298,59 +1290,6 @@ void __fastcall ipu_copy(const macroblock_8 *mb8, macroblock_16 *mb16)
 	for (i = 0; i < 64; i++) *d++ = *s++;		//Cb bias	- 128
 }
 
-///////////////////// IPU DMA ////////////////////////
-void FIFOto_clear()
-{
-	memzero(fifo_input);
-	g_BP.IFC = 0;
-	ipuRegs->ctrl.IFC = 0;
-	FIreadpos = 0;
-	FIwritepos = 0;
-}
-
-int FIFOto_read(void *value)
-{
-	// wait until enough data
-	if (g_BP.IFC == 0)
-	{
-		// This is the only spot that wants a return value for IPU1dma.
-		if (IPU1dma() == 0) return 0;
-		pxAssert(g_BP.IFC > 0);
-	}
-
-	// transfer 1 qword, split into two transfers
-	for (int i = 0; i <= 3; i++)
-	{
-		((u32*)value)[i] = fifo_input[FIreadpos + i];
-		fifo_input[FIreadpos + i] = 0;
-	}
-
-	FIreadpos = (FIreadpos + 4) & 31;
-	g_BP.IFC--;
-	return 1;
-}
-
-int FIFOto_write(u32* pMem, int size)
-{
-	int transsize;
-	int firsttrans = min(size, 8 - (int)g_BP.IFC);
-
-	g_BP.IFC += firsttrans;
-	transsize = firsttrans;
-
-	while (transsize-- > 0)
-	{
-		for (int i = 0; i <= 3; i++)
-		{
-			fifo_input[FIwritepos + i] = pMem[i];
-		}
-		FIwritepos = (FIwritepos + 4) & 31;
-		pMem += 4;
-	}
-
-	return firsttrans;
-}
-
 static __forceinline bool IPU1chain(int &totalqwc)
 {
 	if (ipu1dma->qwc > 0)
@@ -1366,7 +1305,7 @@ static __forceinline bool IPU1chain(int &totalqwc)
 			return true;
 		}
 
-		qwc = FIFOto_write((u32*)pMem, qwc);
+		qwc = ipu_fifo.in.write((u32*)pMem, qwc);
 		ipu1dma->madr += qwc<< 4;
 		ipu1dma->qwc -= qwc;
 		totalqwc += qwc;
@@ -1452,6 +1391,15 @@ int IPU1dma()
 	bool done = false;
 	int ipu1cycles = 0, totalqwc = 0;
 
+	// Note: pad is the padding right above qwc, so we're testing whether qwc
+	// has overflowed into pad.
+//	if (ipu1dma->pad != 0) 
+//	{
+//	    DevCon.Warning(L"IPU1dma's upper 16 bits set to %x\n", ipu1dma->pad);
+//		//ipu1dma->qwc = ipu1dma->pad = 0;
+//		return 0;
+//	}
+	
 	pxAssert(!ipu1dma->chcr.TTE);
 
 	if (!(ipu1dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_TO_IPU))) return 0;
@@ -1590,77 +1538,21 @@ int IPU1dma()
 	return totalqwc;
 }
 
-void FIFOfrom_clear()
-{
-	memzero(fifo_output);
-	ipuRegs->ctrl.OFC = 0;
-	FOreadpos = 0;
-	FOwritepos = 0;
-}
-
-int FIFOfrom_write(const u32 *value, int size)
-{
-	int transsize, firsttrans;
-
-	if ((int)ipuRegs->ctrl.OFC >= 8) IPU0dma();
-
-	transsize = min(size, 8 - (int)ipuRegs->ctrl.OFC);
-	firsttrans = transsize;
-
-	while (transsize-- > 0)
-	{
-		for (int i = 0; i <= 3; i++)
-		{
-			fifo_output[FOwritepos + i] = ((u32*)value)[i];
-		}
-		FOwritepos = (FOwritepos + 4) & 31;
-		value += 4;
-	}
-
-	ipuRegs->ctrl.OFC += firsttrans;
-	IPU0dma();
-	//Console.WriteLn("Written %d qwords, %d", firsttrans,ipuRegs->ctrl.OFC);
-
-	return firsttrans;
-}
-
-static __forceinline void _FIFOfrom_readsingle(void *value)
-{
-	// transfer 1 qword, split into two transfers
-	for (int i = 0; i <= 3; i++)
-	{
-		((u32*)value)[i] = fifo_output[FOreadpos + i];
-		fifo_output[FOreadpos + i] = 0;
-	}
-	FOreadpos = (FOreadpos + 4) & 31;
-}
-
-void FIFOfrom_readsingle(void *value)
-{
-	if (ipuRegs->ctrl.OFC > 0)
-	{
-		ipuRegs->ctrl.OFC--;
-		_FIFOfrom_readsingle(value);
-	}
-}
-
-void FIFOfrom_read(void *value, int size)
-{
-	ipuRegs->ctrl.OFC -= size;
-	while (size > 0)
-	{
-		_FIFOfrom_readsingle(value);
-		value = (u32*)value + 4;
-		size--;
-	}
-}
-
 int IPU0dma()
 {
 	int readsize;
 	static int totalsize = 0;
 	tDMA_TAG* pMem;
 
+	// Note: pad is the padding right above qwc, so we're testing whether qwc
+	// has overflowed into pad.
+//	if (ipu0dma->pad != 0) 
+//	{
+//	    DevCon.Warning(L"IPU0dma's upper 16 bits set to %x\n", ipu0dma->pad);
+//		//ipu0dma->qwc = ipu0dma->pad = 0;
+//		return 0;
+//	}
+	
 	if ((!(ipu0dma->chcr.STR) || (cpuRegs.interrupt & (1 << DMAC_FROM_IPU))) || (ipu0dma->qwc == 0))
 		return 0;
 
@@ -1675,7 +1567,7 @@ int IPU0dma()
 
 	readsize = min(ipu0dma->qwc, (u16)ipuRegs->ctrl.OFC);
 	totalsize+=readsize;
-	FIFOfrom_read(pMem, readsize);
+	ipu_fifo.out.read(pMem, readsize);
 
 	ipu0dma->madr += readsize << 4;
 	ipu0dma->qwc -= readsize; // note: qwc is u16

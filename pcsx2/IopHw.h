@@ -208,6 +208,7 @@ struct dma_mbc
 	{
 		return (bcr >> 16);
 	}
+	wxString desc() const { return wxsFormat(L"madr: 0x%x bcr: 0x%x chcr: 0x%x", madr, bcr, chcr); }
 };
 
 struct dma_mbct
@@ -225,6 +226,7 @@ struct dma_mbct
 	{
 		return (bcr >> 16);
 	}
+	wxString desc() const { return wxsFormat(L"madr: 0x%x bcr: 0x%x chcr: 0x%x tadr: 0x%x", madr, bcr, chcr, tadr); }
 };
 
 #define hw_dma0		(*(dma_mbc*) &psxH[0x1080])

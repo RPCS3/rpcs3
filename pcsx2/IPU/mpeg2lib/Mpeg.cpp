@@ -1213,7 +1213,7 @@ void mpeg2sliceIDEC(void* pdone)
 
 				while (g_nIPU0Data > 0)
 				{
-					read = FIFOfrom_write((u32*)g_pIPU0Pointer, g_nIPU0Data);
+					read = ipu_fifo.out.write((u32*)g_pIPU0Pointer, g_nIPU0Data);
 
 					if (read == 0)
 					{
@@ -1389,7 +1389,7 @@ void mpeg2_slice(void* pdone)
 
 	while (g_nIPU0Data > 0)
 	{
-		size = FIFOfrom_write((u32*)g_pIPU0Pointer, g_nIPU0Data);
+		size = ipu_fifo.out.write((u32*)g_pIPU0Pointer, g_nIPU0Data);
 
 		if (size == 0)
 		{

@@ -1275,7 +1275,9 @@ static void printfn()
 	}
 }
 
+#ifdef PCSX2_DEBUG
 static u32 s_recblocks[] = {0};
+#endif
 
 // Called when a block under manual protection fails it's pre-execution integrity check.
 void __fastcall dyna_block_discard(u32 start,u32 sz)

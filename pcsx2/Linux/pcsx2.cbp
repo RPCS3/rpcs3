@@ -237,6 +237,8 @@
 		<Unit filename="../HwWrite.cpp" />
 		<Unit filename="../IPU/IPU.cpp" />
 		<Unit filename="../IPU/IPU.h" />
+		<Unit filename="../IPU/IPU_Fifo.cpp" />
+		<Unit filename="../IPU/IPU_Fifo.h" />
 		<Unit filename="../IPU/acoroutine.S" />
 		<Unit filename="../IPU/coroutine.cpp" />
 		<Unit filename="../IPU/coroutine.h" />

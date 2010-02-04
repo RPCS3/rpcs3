@@ -18,6 +18,7 @@
 
 #include "mpeg2lib/Mpeg.h"
 #include "coroutine.h"
+#include "IPU_Fifo.h"
 
 // IPU_INLINE_IRQS
 // Scheduling ints into the future is a purist approach to emulation, and
@@ -224,8 +225,6 @@ extern tIPU_BP g_BP;
 extern int coded_block_pattern;
 extern int g_nIPU0Data; // or 0x80000000 whenever transferring
 extern u8* g_pIPU0Pointer;
-extern int FOreadpos;
-extern void FIFOfrom_readsingle(void *value);
 
 // The IPU can only do one task at once and never uses other buffers so these
 // should be made available to functions in other modules to save registers.
@@ -251,18 +250,14 @@ extern void ipu1Interrupt();
 
 extern void dmaIPU0();
 extern void dmaIPU1();
+extern int IPU0dma();
+extern int IPU1dma();
+
 extern u16 __fastcall FillInternalBuffer(u32 * pointer, u32 advance, u32 size);
 extern u8 __fastcall getBits32(u8 *address, u32 advance);
 extern u8 __fastcall getBits16(u8 *address, u32 advance);
 extern u8 __fastcall getBits8(u8 *address, u32 advance);
 extern int __fastcall getBits(u8 *address, u32 size, u32 advance);
 
-// returns number of qw read
-extern int FIFOfrom_write(const u32 * value, int size);
-extern void FIFOfrom_read(void *value,int size);
-extern int FIFOto_read(void *value);
-extern int FIFOto_write(u32* pMem, int size);
-extern void FIFOto_clear();
-extern void FIFOfrom_clear();
 
 #endif
