@@ -836,7 +836,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				if(Cores[i].IRQEnable && (Cores[i].IRQA == thiscore.TSA))
 				{
-					Spdif.Info = 4 << i;
+					Spdif.Info |= 4 << i;
 					SetIrqCall();
 				}
 			}
@@ -894,7 +894,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				ConLog(" * SPU2: IRQ %s\n",((thiscore.IRQEnable==0)?"disabled":"enabled"));
 				if(!thiscore.IRQEnable)
-					Spdif.Info=0;
+					Spdif.Info &= ~(4 << thiscore.Index);
 			}
 
 		}

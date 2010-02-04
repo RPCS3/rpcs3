@@ -274,14 +274,14 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info = 4 << i;
+				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
 		}
 #else
 		if( IRQEnable && (IRQA >= TSA) || (IRQA < TDA) )
 		{
-			Spdif.Info = 4 << Index;
+			Spdif.Info |= 4 << Index;
 			SetIrqCall();
 		}
 #endif
@@ -303,14 +303,14 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info = 4 << i;
+				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
 		}
 #else
 		if( IRQEnable && (IRQA >= TSA) && (IRQA < TDA) )
 		{
-			Spdif.Info = 4 << Index;
+			Spdif.Info |= 4 << Index;
 			SetIrqCall();
 		}
 #endif
@@ -358,7 +358,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 		{
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info = 4 << i;
+				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
 		}
@@ -377,7 +377,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 		{
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info = 4 << i;
+				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
 		}
@@ -472,7 +472,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		{
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info = 4 << i;
+				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
 		}
@@ -491,7 +491,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		{
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
-				Spdif.Info = 4 << i;
+				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
 		}
@@ -554,16 +554,62 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 			{		
 				memcpy((ADMATempBuffer+(InputPosWrite<<1)),mptr,0x400);
 				mptr+=0x200;
+
+				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+				// Important: Test both core IRQ settings for either DMA!
+
+				int dummyTSA = 0x2000+(Index<<10)+InputPosWrite;
+				int dummyTDA = 0x2000+(Index<<10)+InputPosWrite+0x200;
+
+				for( int i=0; i<2; i++ )
+				{
+					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
+					{
+						Spdif.Info |= 4 << i;
+						SetIrqCall();
+					}
+				}
 			}
 			else
 			{
 				memcpy((ADMATempBuffer+InputPosWrite),mptr,0x200);
-				//memcpy((spu2mem+0x2000+(core<<10)+InputPosWrite),mptr,0x200);
+				//memcpy((spu2mem+0x2000+(Index<<10)+InputPosWrite),mptr,0x200);
 				mptr+=0x100;
 
+				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+				// Important: Test both core IRQ settings for either DMA!
+
+				int dummyTSA = 0x2000+(Index<<10)+InputPosWrite;
+				int dummyTDA = 0x2000+(Index<<10)+InputPosWrite+0x100;
+
+				for( int i=0; i<2; i++ )
+				{
+					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
+					{
+						Spdif.Info |= 4 << i;
+						SetIrqCall();
+					}
+				}
+
 				memcpy((ADMATempBuffer+InputPosWrite+0x200),mptr,0x200);
-				//memcpy((spu2mem+0x2200+(core<<10)+InputPosWrite),mptr,0x200);
+				//memcpy((spu2mem+0x2200+(Index<<10)+InputPosWrite),mptr,0x200);
 				mptr+=0x100;
+
+				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
+				// Important: Test both core IRQ settings for either DMA!
+
+				dummyTSA = 0x2200+(Index<<10)+InputPosWrite;
+				dummyTDA = 0x2200+(Index<<10)+InputPosWrite+0x100;
+
+				for( int i=0; i<2; i++ )
+				{
+					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
+					{
+						Spdif.Info |= 4 << i;
+						SetIrqCall();
+					}
+				}
+
 			}
 			// See ReadInput at mixer.cpp for explanation on the commented out lines
 			//

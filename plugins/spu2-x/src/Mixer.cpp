@@ -155,7 +155,7 @@ static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 			if( IsDevBuild )
 				ConLog(" * SPU2 Core %d: IRQ Called (IRQ passed).\n", i);
 
-			Spdif.Info = 4 << i;
+			Spdif.Info |= 4 << i;
 			SetIrqCall();
 		}
 	}
