@@ -590,7 +590,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	else
 	{
 		// TODO: Sliced transfers?
-		PlainDMAWrite((u16*)data,bytesLeft);
+		PlainDMAWrite((u16*)data,bytesLeft/2);
 	}
 	Regs.STATX &= ~0x80;
 	//Regs.ATTR |= 0x30;
