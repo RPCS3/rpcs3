@@ -421,7 +421,7 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 	else
 	{
 		if(MsgDMA()) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x).\n",
-			GetDmaIndexChar(),bytesLeft,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff);
+			GetDmaIndexChar(),size<<1,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff);
 
 		PlainDMAWrite(pMem,size);
 	}
