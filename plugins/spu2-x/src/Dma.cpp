@@ -216,8 +216,6 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 	else
 		DMA7LogWrite(pMem,size<<1);
 
-	if(MsgDMA()) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x).\n",GetDmaIndexChar(),size<<1,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff);
-
 	TSA &= 0xfffff;
 
 	u32 buff1end = TSA + size;
@@ -422,6 +420,9 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 	}
 	else
 	{
+		if(MsgDMA()) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x).\n",
+			GetDmaIndexChar(),bytesLeft,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff);
+
 		PlainDMAWrite(pMem,size);
 	}
 	Regs.STATX &= ~0x80;
@@ -533,11 +534,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		TSA&=0x1fff;
 		//Console.Error(" * SPU2: AutoDMA transfers not supported yet! (core %d)\n", Index);
 
-		if(DmaStarting)
-		{
-			if(MsgAutoDMA()) ConLog(" * SPU2: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
-				GetDmaIndexChar(), bytesLeft<<1, TSA, DMABits, AutoDMACtrl, (~Regs.ATTR)&0x7fff);
-		}
+		if(MsgAutoDMA() && DmaStarting) ConLog(" * SPU2: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
+			GetDmaIndexChar(), bytesLeft<<1, TSA, DMABits, AutoDMACtrl, (~Regs.ATTR)&0x7fff);
 
 		u32 processed = 0;
 		while((AutoDmaFree>0)&&(bytesLeft>=0x400))
@@ -589,6 +587,12 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	}
 	else
 	{
+		if(MsgDMA() && DmaStarting) ConLog(" * SPU2: DMA%c Transfer of %d bytes to %x (%02x %x %04x).\n",
+			GetDmaIndexChar(),bytesLeft,TSA,DMABits,AutoDMACtrl,(~Regs.ATTR)&0x7fff);
+
+		if(bytesLeft> 2048)
+			bytesLeft = 2048;
+
 		// TODO: Sliced transfers?
 		PlainDMAWrite((u16*)data,bytesLeft/2);
 	}
