@@ -15,8 +15,9 @@
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "Spu2.h"
+#include "Global.h"
 #include "Dialogs.h"
+#include "Config.h"
 
 bool DebugEnabled=false;
 bool _MsgToConsole=false;

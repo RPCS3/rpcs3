@@ -16,7 +16,7 @@
  */
 
 #include "Global.h"
-#include "dma.h"
+#include "Dma.h"
 
 #include "PS2E-spu2.h"	// required for ENABLE_NEW_IOPDMA_SPU2 define
 

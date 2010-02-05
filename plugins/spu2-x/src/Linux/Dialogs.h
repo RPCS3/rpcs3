@@ -18,6 +18,7 @@
 #ifndef DIALOG_H_INCLUDED
 #define DIALOG_H_INCLUDED
 
-#include "../Spu2.h"
+#include "../Config.h"
+#include "../Global.h"
 
 #endif

@@ -45,6 +45,7 @@ namespace soundtouch
 using std::string;
 using std::wstring;
 
+#include "Pcsx2Defs.h"
 #include "Pcsx2Types.h"
 
 namespace VersionInfo

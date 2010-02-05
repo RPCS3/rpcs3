@@ -20,6 +20,7 @@
 #include <alsa/asoundlib.h>
 
 #define ALSA_MEM_DEF
+#include "Global.h"
 #include "Alsa.h"
 #include "SndOut.h"
 

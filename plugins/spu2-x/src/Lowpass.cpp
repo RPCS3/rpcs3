@@ -16,6 +16,7 @@
  */
 
 #include "Lowpass.h"
+#include "Global.h"
 #include <math.h>
 #include <float.h>
 

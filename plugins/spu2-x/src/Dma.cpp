@@ -16,7 +16,7 @@
  */
 
 #include "Global.h"
-#include "dma.h"
+#include "Dma.h"
 
 #include "PS2E-spu2.h"	// temporary until I resolve cyclePtr/TimeUpdate dependencies.
 

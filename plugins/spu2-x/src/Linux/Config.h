@@ -38,7 +38,7 @@ extern bool _CoresDump;
 extern bool _MemDump;
 extern bool _RegDump;
 
-static __forceinline bool MsgToConsole() { return _MsgToConsole & DebugEnabled; }
+/*static __forceinline bool MsgToConsole() { return _MsgToConsole & DebugEnabled; }
 
 static __forceinline bool MsgKeyOnOff() { return _MsgKeyOnOff & MsgToConsole(); }
 static __forceinline bool MsgVoiceOff() { return _MsgVoiceOff & MsgToConsole(); }
@@ -53,7 +53,7 @@ static __forceinline bool WaveLog() { return _WaveLog & DebugEnabled; }
 
 static __forceinline bool CoresDump() { return _CoresDump & DebugEnabled; }
 static __forceinline bool MemDump() { return _MemDump & DebugEnabled; }
-static __forceinline bool RegDump() { return _RegDump & DebugEnabled; }
+static __forceinline bool RegDump() { return _RegDump & DebugEnabled; }*/
 
 
 extern wchar_t AccessLogFileName[255];
@@ -80,7 +80,7 @@ extern bool	dspPluginEnabled;
 extern bool timeStretchDisabled;
 extern bool StereoExpansionEnabled;
 
-class SoundtouchCfg
+namespace SoundtouchCfg
 {
 	// Timestretch Slider Bounds, Min/Max
 	static const int SequenceLen_Min = 30;
@@ -92,16 +92,14 @@ class SoundtouchCfg
 	static const int Overlap_Min = 3;
 	static const int Overlap_Max = 15;
 
-public:
-	static int SequenceLenMS;
-	static int SeekWindowMS;
-	static int OverlapMS;
+	static int SequenceLenMS = 63;
+	static int SeekWindowMS = 16;
+	static int OverlapMS = 7;
 
 	static void ReadSettings();
 	static void WriteSettings();
 	static void OpenDialog( uptr hWnd );
 	
-protected:
 	static void ClampValues();
 };
 

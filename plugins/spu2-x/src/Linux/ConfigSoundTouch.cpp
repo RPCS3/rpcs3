@@ -19,20 +19,20 @@
  * 
  */
 
+#include "Global.h"
 #include "Dialogs.h"
+#include "Config.h"
 
-int SoundtouchCfg::SequenceLenMS = 63;
-int SoundtouchCfg::SeekWindowMS = 16;
-int SoundtouchCfg::OverlapMS = 7;
-
-void SoundtouchCfg::ClampValues()
+namespace SoundtouchCfg
+{
+void ClampValues()
 {
 	Clampify( SequenceLenMS, SequenceLen_Min, SequenceLen_Max );
 	Clampify( SeekWindowMS, SeekWindow_Min, SeekWindow_Max );
 	Clampify( OverlapMS, Overlap_Min, Overlap_Max );
 }
 
-void SoundtouchCfg::ReadSettings()
+void ReadSettings()
 {
 	//SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 63 );
 	//SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 16 );
@@ -41,7 +41,7 @@ void SoundtouchCfg::ReadSettings()
 	ClampValues();		
 }
 
-void SoundtouchCfg::WriteSettings()
+void WriteSettings()
 {
 	//CfgWriteInt( L"SOUNDTOUCH", L"SequenceLengthMS", SequenceLenMS );
 	//CfgWriteInt( L"SOUNDTOUCH", L"SeekWindowMS", SeekWindowMS );
@@ -52,6 +52,7 @@ void SoundtouchCfg::WriteSettings()
 {
 }*/
 
-void SoundtouchCfg::OpenDialog( uptr hWnd )
+void OpenDialog( uptr hWnd )
 {
+}
 }
