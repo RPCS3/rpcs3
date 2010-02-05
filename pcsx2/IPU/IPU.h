@@ -124,6 +124,31 @@ union tIPU_CMD_IDEC
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	void log()
+	{
+		IPU_LOG("IPU IDEC command.");
+
+		if (FB) IPU_LOG(" Skip %d	bits.", FB);
+		IPU_LOG(" Quantizer step code=0x%X.", QSC);
+
+		if (DTD == 0)
+			IPU_LOG(" Does not decode DT.");
+		else
+			IPU_LOG(" Decodes DT.");
+
+		if (SGN == 0)
+			IPU_LOG(" No bias.");
+		else
+			IPU_LOG(" Bias=128.");
+
+		if (DTE == 1) IPU_LOG(" Dither Enabled.");
+		if (OFM == 0)
+			IPU_LOG(" Output format is RGB32.");
+		else
+			IPU_LOG(" Output format is RGB16.");
+
+		IPU_LOG("");
+	}
 };
 
 union tIPU_CMD_BDEC
@@ -147,6 +172,28 @@ union tIPU_CMD_BDEC
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	void log(int s_bdec)
+	{
+		IPU_LOG("IPU BDEC(macroblock decode) command %x, num: 0x%x", cpuRegs.pc, s_bdec);
+		if (FB) IPU_LOG(" Skip 0x%X bits.", FB);
+
+		if (MBI)
+			IPU_LOG(" Intra MB.");
+		else
+			IPU_LOG(" Non-intra MB.");
+
+		if (DCR)
+			IPU_LOG(" Resets DC prediction value.");
+		else
+			IPU_LOG(" Doesn't reset DC prediction value.");
+
+		if (DT)
+			IPU_LOG(" Use field DCT.");
+		else
+			IPU_LOG(" Use frame DCT.");
+
+		IPU_LOG(" Quantizer step=0x%X", QSC);
+	}
 };
 
 union tIPU_CMD_CSC
@@ -221,6 +268,20 @@ struct IPUregisters {
 
 #define ipuRegs ((IPUregisters*)(PS2MEM_HW+0x2000))
 
+struct tIPU_cmd
+{
+	int index;
+	int pos[2];
+	int current;
+	void clear()
+	{
+		memzero(pos);
+		index = 0;
+		current = 0xffffffff;
+	}
+};
+
+//extern tIPU_cmd ipu_cmd;
 extern tIPU_BP g_BP;
 extern int coded_block_pattern;
 extern int g_nIPU0Data; // or 0x80000000 whenever transferring

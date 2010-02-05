@@ -46,15 +46,13 @@
 #endif
 
 static tIPU_DMA g_nDMATransfer(0);
+static tIPU_cmd ipu_cmd;
 
 // FIXME - g_nIPU0Data and Pointer are not saved in the savestate, which breaks savestates for some
 // FMVs at random (if they get saved during the half frame of a 30fps rate).  The fix is complicated
 // since coroutine is such a pita.  (air)
-
 int g_nIPU0Data = 0; // data left to transfer
 u8* g_pIPU0Pointer = NULL;
-int g_nCmdPos[2] = {0}, g_nCmdIndex = 0;
-int ipuCurCmd = 0xffffffff;
 
 void ReorderBitstream();
 
@@ -140,6 +138,7 @@ int ipuInit()
 	init_g_decoder();
 	g_nDMATransfer.reset();
 	ipu_fifo.init();
+	ipu_cmd.clear();
 	return 0;
 }
 
@@ -165,9 +164,9 @@ void ReportIPU()
 	Console.WriteLn("coded_block_pattern = 0x%x.", coded_block_pattern);
 	Console.WriteLn("g_decoder = 0x%x.", g_decoder);
 	Console.WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", mpeg2_scan_norm, mpeg2_scan_alt);
-	Console.WriteLn("g_nCmdPos = 0x%x.", g_nCmdPos);
-	Console.WriteLn("g_nCmdIndex = 0x%x.", g_nCmdIndex);
-	Console.WriteLn("ipuCurCmd = 0x%x.", ipuCurCmd);
+	Console.WriteLn("g_nCmdPos = 0x%x.", ipu_cmd.pos);
+	Console.WriteLn("g_nCmdIndex = 0x%x.", ipu_cmd.index);
+	Console.WriteLn("ipuCurCmd = 0x%x.", ipu_cmd.current);
 	Console.WriteLn("_readbits = 0x%x.", _readbits);
 	Console.WriteLn("temp will equal 0x%x.", readbits - _readbits);
 	Console.WriteLn("");
@@ -200,9 +199,10 @@ void SaveStateBase::ipuFreeze()
 	Freeze(g_decoder);
 	Freeze(mpeg2_scan_norm);
 	Freeze(mpeg2_scan_alt);
-	Freeze(g_nCmdPos);
-	Freeze(g_nCmdIndex);
-	Freeze(ipuCurCmd);
+	//Freeze(ipu_cmd);
+	Freeze(ipu_cmd.pos);
+	Freeze(ipu_cmd.index);
+	Freeze(ipu_cmd.current);
 
 	Freeze(_readbits);
 
@@ -219,7 +219,7 @@ void SaveStateBase::ipuFreeze()
 
 bool ipuCanFreeze()
 {
-	return (ipuCurCmd == -1);
+	return (ipu_cmd.current == -1);
 }
 
 __forceinline u32 ipuRead32(u32 mem)
@@ -301,15 +301,11 @@ void ipuSoftReset()
 
 	ipuRegs->ctrl.reset();
 	ipuRegs->top = 0;
-	ipuCurCmd = 0xffffffff;
+	ipu_cmd.clear();
 
 	g_BP.BP = 0;
 	g_BP.FP = 0;
 	g_BP.bufferhasnew = 0;
-
-	g_nCmdIndex = 0;
-	g_nCmdPos[0] = 0;
-	g_nCmdPos[1] = 0;
 }
 
 __forceinline void ipuWrite32(u32 mem, u32 value)
@@ -395,30 +391,8 @@ static void ipuBCLR(u32 val)
 static __forceinline BOOL ipuIDEC(u32 val)
 {
 	tIPU_CMD_IDEC idec(val);
-
-	IPU_LOG("IPU IDEC command.");
-
-	if (idec.FB) IPU_LOG(" Skip %d	bits.", idec.FB);
-	IPU_LOG(" Quantizer step code=0x%X.", idec.QSC);
-
-	if (idec.DTD == 0)
-		IPU_LOG(" Does not decode DT.");
-	else
-		IPU_LOG(" Decodes DT.");
-
-	if (idec.SGN == 0)
-		IPU_LOG(" No bias.");
-	else
-		IPU_LOG(" Bias=128.");
-
-	if (idec.DTE == 1) IPU_LOG(" Dither Enabled.");
-	if (idec.OFM == 0)
-		IPU_LOG(" Output format is RGB32.");
-	else
-		IPU_LOG(" Output format is RGB16.");
-
-	IPU_LOG("");
-
+	
+	idec.log();
 	g_BP.BP += idec.FB;//skip FB bits
 	//from IPU_CTRL
 	ipuRegs->ctrl.PCT = I_TYPE; //Intra DECoding;)
@@ -452,29 +426,9 @@ static int s_bdec = 0;
 static __forceinline BOOL ipuBDEC(u32 val)
 {
 	tIPU_CMD_BDEC bdec(val);
-
-	IPU_LOG("IPU BDEC(macroblock decode) command %x, num: 0x%x", cpuRegs.pc, s_bdec);
-	if (bdec.FB) IPU_LOG(" Skip 0x%X bits.", bdec.FB);
-
-	if (bdec.MBI)
-		IPU_LOG(" Intra MB.");
-	else
-		IPU_LOG(" Non-intra MB.");
-
-	if (bdec.DCR)
-		IPU_LOG(" Resets DC prediction value.");
-	else
-		IPU_LOG(" Doesn't reset DC prediction value.");
-
-	if (bdec.DT)
-		IPU_LOG(" Use field DCT.");
-	else
-		IPU_LOG(" Use frame DCT.");
-
-	IPU_LOG(" Quantizer step=0x%X", bdec.QSC);
-
-	if( IsDebugBuild )
-		s_bdec++;
+	
+	bdec.log(s_bdec);
+	if (IsDebugBuild) s_bdec++;
 
 	g_BP.BP += bdec.FB;//skip FB bits
 	g_decoder.coding_type = I_TYPE;
@@ -504,7 +458,7 @@ static __forceinline BOOL ipuBDEC(u32 val)
 
 static BOOL __fastcall ipuVDEC(u32 val)
 {
-	switch (g_nCmdPos[0])
+	switch (ipu_cmd.pos[0])
 	{
 		case 0:
 			ipuRegs->cmd.DATA = 0;
@@ -551,7 +505,7 @@ static BOOL __fastcall ipuVDEC(u32 val)
 		case 1:
 			if (!getBits32((u8*)&ipuRegs->top, 0))
 			{
-				g_nCmdPos[0] = 1;
+				ipu_cmd.pos[0] = 1;
 				return FALSE;
 			}
 
@@ -586,7 +540,7 @@ static __forceinline BOOL ipuSETIQ(u32 val)
 
 	if ((val >> 27) & 1)
 	{
-		g_nCmdPos[0] += getBits((u8*)niq + g_nCmdPos[0], 512 - 8 * g_nCmdPos[0], 1); // 8*8*8
+		ipu_cmd.pos[0] += getBits((u8*)niq + ipu_cmd.pos[0], 512 - 8 * ipu_cmd.pos[0], 1); // 8*8*8
 
 		IPU_LOG("Read non-intra quantization matrix from IPU FIFO.");
 		for (i = 0; i < 8; i++)
@@ -598,7 +552,7 @@ static __forceinline BOOL ipuSETIQ(u32 val)
 	}
 	else
 	{
-		g_nCmdPos[0] += getBits((u8*)iq + 8 * g_nCmdPos[0], 512 - 8 * g_nCmdPos[0], 1);
+		ipu_cmd.pos[0] += getBits((u8*)iq + 8 * ipu_cmd.pos[0], 512 - 8 * ipu_cmd.pos[0], 1);
 
 		IPU_LOG("Read intra quantization matrix from IPU FIFO.");
 		for (i = 0; i < 8; i++)
@@ -609,14 +563,14 @@ static __forceinline BOOL ipuSETIQ(u32 val)
 		}
 	}
 
-	return g_nCmdPos[0] == 64;
+	return ipu_cmd.pos[0] == 64;
 }
 
 static __forceinline BOOL ipuSETVQ(u32 val)
 {
-	g_nCmdPos[0] += getBits((u8*)vqclut + g_nCmdPos[0], 256 - 8 * g_nCmdPos[0], 1); // 16*2*8
+	ipu_cmd.pos[0] += getBits((u8*)vqclut + ipu_cmd.pos[0], 256 - 8 * ipu_cmd.pos[0], 1); // 16*2*8
 
-	if (g_nCmdPos[0] == 32)
+	if (ipu_cmd.pos[0] == 32)
 	{
 		IPU_LOG("IPU SETVQ command.\nRead VQCLUT table from IPU FIFO.");
 		IPU_LOG(
@@ -642,7 +596,7 @@ static __forceinline BOOL ipuSETVQ(u32 val)
 		    vqclut[15] >> 10, (vqclut[15] >> 5) & 0x1F, vqclut[15] & 0x1F);
 	}
 
-	return g_nCmdPos[0] == 32;
+	return ipu_cmd.pos[0] == 32;
 }
 
 // IPU Transfers are split into 8Qwords so we need to send ALL the data
@@ -659,14 +613,14 @@ static BOOL __fastcall ipuCSC(u32 val)
 	if (csc.DTE) IPU_LOG("Dithering enabled.");
 
 	//Console.WriteLn("CSC");
-	for (;g_nCmdIndex < (int)csc.MBC; g_nCmdIndex++)
+	for (;ipu_cmd.index < (int)csc.MBC; ipu_cmd.index++)
 	{
 
-		if (g_nCmdPos[0] < 3072 / 8)
+		if (ipu_cmd.pos[0] < 3072 / 8)
 		{
-			g_nCmdPos[0] += getBits((u8*) & mb8 + g_nCmdPos[0], 3072 - 8 * g_nCmdPos[0], 1);
+			ipu_cmd.pos[0] += getBits((u8*) & mb8 + ipu_cmd.pos[0], 3072 - 8 * ipu_cmd.pos[0], 1);
 
-			if (g_nCmdPos[0] < 3072 / 8) return FALSE;
+			if (ipu_cmd.pos[0] < 3072 / 8) return FALSE;
 
 			ipu_csc(&mb8, &rgb32, 0);
 			if (csc.OFM) ipu_dither(&rgb32, &rgb16, csc.DTE);
@@ -674,25 +628,25 @@ static BOOL __fastcall ipuCSC(u32 val)
 
 		if (csc.OFM)
 		{
-			while (g_nCmdPos[1] < 32)
+			while (ipu_cmd.pos[1] < 32)
 			{
-				g_nCmdPos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * g_nCmdPos[1], 32 - g_nCmdPos[1]);
+				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
 
-				if (g_nCmdPos[1] <= 0) return FALSE;
+				if (ipu_cmd.pos[1] <= 0) return FALSE;
 			}
 		}
 		else
 		{
-			while (g_nCmdPos[1] < 64)
+			while (ipu_cmd.pos[1] < 64)
 			{
-				g_nCmdPos[1] += ipu_fifo.out.write(((u32*) & rgb32) + 4 * g_nCmdPos[1], 64 - g_nCmdPos[1]);
+				ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & rgb32) + 4 * ipu_cmd.pos[1], 64 - ipu_cmd.pos[1]);
 
-				if (g_nCmdPos[1] <= 0) return FALSE;
+				if (ipu_cmd.pos[1] <= 0) return FALSE;
 			}
 		}
 
-		g_nCmdPos[0] = 0;
-		g_nCmdPos[1] = 0;
+		ipu_cmd.pos[0] = 0;
+		ipu_cmd.pos[1] = 0;
 	}
 
 	return TRUE;
@@ -714,13 +668,13 @@ static BOOL ipuPACK(u32 val)
 
 	IPU_LOG("Number of macroblocks to be converted: %d", csc.MBC);
 
-	for (;g_nCmdIndex < (int)csc.MBC; g_nCmdIndex++)
+	for (;ipu_cmd.index < (int)csc.MBC; ipu_cmd.index++)
 	{
-		if (g_nCmdPos[0] < 512)
+		if (ipu_cmd.pos[0] < 512)
 		{
-			g_nCmdPos[0] += getBits((u8*) & mb8 + g_nCmdPos[0], 512 - 8 * g_nCmdPos[0], 1);
+			ipu_cmd.pos[0] += getBits((u8*) & mb8 + ipu_cmd.pos[0], 512 - 8 * ipu_cmd.pos[0], 1);
 
-			if (g_nCmdPos[0] < 64) return FALSE;
+			if (ipu_cmd.pos[0] < 64) return FALSE;
 
 			ipu_csc(&mb8, &rgb32, 0);
 			ipu_dither(&rgb32, &rgb16, csc.DTE);
@@ -730,19 +684,19 @@ static BOOL ipuPACK(u32 val)
 
 		if (csc.OFM)
 		{
-			g_nCmdPos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * g_nCmdPos[1], 32 - g_nCmdPos[1]);
+			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*) & rgb16) + 4 * ipu_cmd.pos[1], 32 - ipu_cmd.pos[1]);
 
-			if (g_nCmdPos[1] < 32) return FALSE;
+			if (ipu_cmd.pos[1] < 32) return FALSE;
 		}
 		else
 		{
-			g_nCmdPos[1] += ipu_fifo.out.write(((u32*)indx4) + 4 * g_nCmdPos[1], 8 - g_nCmdPos[1]);
+			ipu_cmd.pos[1] += ipu_fifo.out.write(((u32*)indx4) + 4 * ipu_cmd.pos[1], 8 - ipu_cmd.pos[1]);
 
-			if (g_nCmdPos[1] < 8) return FALSE;
+			if (ipu_cmd.pos[1] < 8) return FALSE;
 		}
 
-		g_nCmdPos[0] = 0;
-		g_nCmdPos[1] = 0;
+		ipu_cmd.pos[0] = 0;
+		ipu_cmd.pos[1] = 0;
 	}
 
 	return TRUE;
@@ -771,7 +725,7 @@ void IPUCMD_WRITE(u32 val)
 	ipuRegs->ctrl.ECD = 0;
 	ipuRegs->ctrl.SCD = 0; //clear ECD/SCD
 	ipuRegs->cmd.DATA = val;
-	g_nCmdPos[0] = 0;
+	ipu_cmd.pos[0] = 0;
 
 	switch (ipuRegs->cmd.CMD)
 	{
@@ -817,8 +771,8 @@ void IPUCMD_WRITE(u32 val)
 			break;
 
 		case SCE_IPU_CSC:
-			g_nCmdPos[1] = 0;
-			g_nCmdIndex = 0;
+			ipu_cmd.pos[1] = 0;
+			ipu_cmd.index = 0;
 
 			if (ipuCSC(ipuRegs->cmd.DATA))
 			{
@@ -828,8 +782,8 @@ void IPUCMD_WRITE(u32 val)
 			break;
 
 		case SCE_IPU_PACK:
-			g_nCmdPos[1] = 0;
-			g_nCmdIndex = 0;
+			ipu_cmd.pos[1] = 0;
+			ipu_cmd.index = 0;
 			if (ipuPACK(ipuRegs->cmd.DATA)) return;
 			break;
 
@@ -842,7 +796,7 @@ void IPUCMD_WRITE(u32 val)
 			}
 			ipuRegs->topbusy = 0x80000000;
 			// have to resort to the thread
-			ipuCurCmd = val >> 28;
+			ipu_cmd.current = val >> 28;
 			ipuRegs->ctrl.BUSY = 1;
 			return;
 
@@ -854,13 +808,13 @@ void IPUCMD_WRITE(u32 val)
 				return;
 			}
 			ipuRegs->topbusy = 0x80000000;
-			ipuCurCmd = val >> 28;
+			ipu_cmd.current = val >> 28;
 			ipuRegs->ctrl.BUSY = 1;
 			return;
 	}
 
 	// have to resort to the thread
-	ipuCurCmd = val >> 28;
+	ipu_cmd.current = val >> 28;
 	ipuRegs->ctrl.BUSY = 1;
 	hwIntcIrq(INTC_IPU);
 }
@@ -869,7 +823,7 @@ void IPUWorker()
 {
 	pxAssert(ipuRegs->ctrl.BUSY);
 
-	switch (ipuCurCmd)
+	switch (ipu_cmd.current)
 	{
 		case SCE_IPU_VDEC:
 			if (!ipuVDEC(ipuRegs->cmd.DATA))
@@ -936,7 +890,7 @@ void IPUWorker()
 			ipuRegs->ctrl.BUSY = 0;
 			ipuRegs->topbusy = 0;
 			ipuRegs->cmd.BUSY = 0;
-			ipuCurCmd = 0xffffffff;
+			ipu_cmd.current = 0xffffffff;
 
 			// CHECK!: IPU0dma remains when IDEC is done, so we need to clear it
 			if (ipu0dma->qwc > 0 && ipu0dma->chcr.STR) IPU_INT0_FROM();
@@ -954,7 +908,7 @@ void IPUWorker()
 			ipuRegs->ctrl.BUSY = 0;
 			ipuRegs->topbusy = 0;
 			ipuRegs->cmd.BUSY = 0;
-			ipuCurCmd = 0xffffffff;
+			ipu_cmd.current = 0xffffffff;
 
 			if (ipu0dma->qwc > 0 && ipu0dma->chcr.STR) IPU_INT0_FROM();
 			s_routine = NULL;
@@ -968,7 +922,7 @@ void IPUWorker()
 
 	// success
 	ipuRegs->ctrl.BUSY = 0;
-	ipuCurCmd = 0xffffffff;
+	ipu_cmd.current = 0xffffffff;
 }
 
 /////////////////

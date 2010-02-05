@@ -19,6 +19,7 @@
 
 #include "PrecompiledHeader.h"
 
+#include "Common.h"
 #include "IPU.h"
 #include "yuv2rgb.h"
 
