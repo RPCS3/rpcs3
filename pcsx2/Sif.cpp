@@ -53,7 +53,7 @@ void SaveStateBase::sifFreeze()
 	iop_busy[1] = sif1.iop.busy;
 	
 	old_sif0.end = (sif0.ee.end) ? 1 : 0;
-	old_sif1.end = (sif1.iop.end) ? 1 : 0;
+	old_sif1.end = (sif1.ee.end) ? 1 : 0;
 	
 	old_sif0.counter = sif0.iop.counter;
 	old_sif1.counter = sif1.iop.counter;
