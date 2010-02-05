@@ -23,17 +23,12 @@
 _sif sif0;
 
 static bool done = false;
-static int cycles = 0, psxCycles = 0;
 
 static __forceinline void Sif0Init()
 {
 	done = false;
-	cycles = 0;
-	psxCycles = 0;
-	//if (sif0.end == 1) SIF_LOG("Starting with sif0.end set.");
-	//memzero(sif0);
-	//sif0.end = 0;
-	//sif0.data.data = 0;
+	sif0.ee.cycles = 0;
+	sif0.iop.cycles = 0;
 }
 
 // Write from Fifo to EE.
@@ -60,7 +55,7 @@ static __forceinline bool WriteFifoToEE()
 		//Cpu->Clear(sif0dma->madr, readSize*4);
 
 		sif0dma->madr += readSize << 4;
-		cycles += readSize;	// fixme : BIAS is factored in above
+		sif0.ee.cycles += readSize;	// fixme : BIAS is factored in above
 		sif0dma->qwc -= readSize;
 	//}
 	//else
@@ -75,7 +70,7 @@ static __forceinline bool WriteFifoToEE()
 static __forceinline bool WriteIOPtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
-	const int writeSize = min(sif0.counter, sif0.fifo.free());
+	const int writeSize = min(sif0.iop.counter, sif0.fifo.free());
 	
 	//if (writeSize <= 0)
 	//{
@@ -84,14 +79,14 @@ static __forceinline bool WriteIOPtoFifo()
 	//}
 	//else
 	//{
-	SIF_LOG("Write IOP to Fifo: +++++++++++ %lX of %lX", writeSize, sif0.counter);
+	SIF_LOG("Write IOP to Fifo: +++++++++++ %lX of %lX", writeSize, sif0.iop.counter);
 
 	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).madr), writeSize);
 	hw_dma(9).madr += writeSize << 2;
 	
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords).
-	psxCycles += (writeSize >> 2) * BIAS;		// fixme : should be >> 4
-	sif0.counter -= writeSize;
+	sif0.iop.cycles += (writeSize >> 2) * BIAS;		// fixme : should be >> 4
+	sif0.iop.counter -= writeSize;
 	//}
 	return true;
 }
@@ -114,13 +109,13 @@ static __forceinline bool ProcessEETag()
 	if (sif0dma->chcr.TIE && ptag.IRQ)
 	{
 		//Console.WriteLn("SIF0 TIE");
-		sif0.end = 1;
+		sif0.ee.end = true;
 	}
 					
 	switch (ptag.ID)
 	{
 		case TAG_REFE:
-			sif0.end = 1;
+			sif0.ee.end = true;
 			if (dmacRegs->ctrl.STS != NO_STS) 
 				dmacRegs->stadr.ADDR = sif0dma->madr + (sif0dma->qwc * 16);
 				break;
@@ -131,7 +126,7 @@ static __forceinline bool ProcessEETag()
 				break;
 
 		case TAG_END:
-			sif0.end = 1;
+			sif0.ee.end = true;
 			break;
 	}
 	return true;
@@ -141,22 +136,23 @@ static __forceinline bool ProcessEETag()
 static __forceinline bool ProcessIOPTag()
 {
 	// Process DMA tag at hw_dma(9).tadr
-	sif0.data = *(sifData *)iopPhysMem(hw_dma(9).tadr);
-	sif0.data.words = (sif0.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
+	sif0.iop.data = *(sifData *)iopPhysMem(hw_dma(9).tadr);
+	sif0.iop.data.words = (sif0.iop.data.words + 3) & 0xfffffffc; // Round up to nearest 4.
 	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).tadr + 8), 4);
 
 	hw_dma(9).tadr += 16; ///hw_dma(9).madr + 16 + sif0.sifData.words << 2;
 	
 	// Looks like we are only copying the first 24 bits.
 #ifdef CHOP_OFF_DATA
-	hw_dma(9).madr = sif0.data.data & 0xFFFFFF;
+	hw_dma(9).madr = sif0data & 0xFFFFFF;
 #else
-	hw_dma(9).madr = sif0.data.data;
+	hw_dma(9).madr = sif0data;
 #endif
-	sif0.counter = sif0.data.words;
-	//if (sif0.data.words != ( sif0.data.words & 0xFFFFFF)) DevCon.WriteLn("sif0.data.words more then 24 bit.");
+	sif0.iop.counter = sif0words;
+	//if (sif0words != ( sif0words & 0xFFFFFF)) DevCon.WriteLn("sif0words more then 24 bit.");
 	
-	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", hw_dma(9).madr, hw_dma(9).tadr, sif0.counter, sif0.data.words, sif0.data.data);
+	if (sif0tag.IRQ  || (sif0tag.ID & 4)) sif0.iop.end = true;
+	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", hw_dma(9).madr, hw_dma(9).tadr, sif0.iop.counter, sif0words, sif0data);
 	return true;
 }
 
@@ -164,9 +160,9 @@ static __forceinline bool ProcessIOPTag()
 static __forceinline void EndEE()
 {
 	SIF_LOG("Sif0: End EE");
-	sif0.end = 0;
-	eesifbusy[0] = false;
-	if (cycles == 0) 
+	sif0.ee.end = false;
+	sif0.ee.busy = false;
+	if (sif0.ee.cycles == 0) 
 	{
 		 // No transfer happened,
 		DevCon.Warning("SIF0 EE: cycles = 0");
@@ -174,7 +170,7 @@ static __forceinline void EndEE()
 	else 
 	{
 		// hence no Interrupt.
-		CPU_INT(DMAC_SIF0, cycles*BIAS); 
+		CPU_INT(DMAC_SIF0, sif0.ee.cycles*BIAS); 
 	}
 }
 
@@ -182,10 +178,11 @@ static __forceinline void EndEE()
 static __forceinline void EndIOP()
 {
 	SIF_LOG("Sif0: End IOP");
-	sif0.data.data = 0;
-	iopsifbusy[0] = false;
+	sif0data = 0;
+	sif0.iop.end = false;
+	sif0.iop.busy = false;
 					
-	if (psxCycles == 0) 
+	if (sif0.iop.cycles == 0) 
 	{
 		// No transfer happened,
 		DevCon.Warning("SIF0 IOP: cycles = 0"); 
@@ -195,8 +192,8 @@ static __forceinline void EndIOP()
 		 // hence no Interrupt.
 		// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
 		// So when we're all done, the equation looks like thus:
-		//PSX_INT(IopEvt_SIF0, ( ( psxCycles*BIAS ) / 4 ) / 8);
-		PSX_INT(IopEvt_SIF0, psxCycles);
+		//PSX_INT(IopEvt_SIF0, ( ( sif0.iop.cycles*BIAS ) / 4 ) / 8);
+		PSX_INT(IopEvt_SIF0, sif0.iop.cycles);
 	}
 }
 
@@ -212,7 +209,7 @@ static __forceinline void HandleEETransfer()
 	
 	if (sif0dma->qwc <= 0)
 	{
-		if ((sif0dma->chcr.MOD == NORMAL_MODE) || sif0.end)
+		if ((sif0dma->chcr.MOD == NORMAL_MODE) || sif0.ee.end)
 		{
 			// Stop transferring ee, and signal an interrupt.
 			done = true;
@@ -252,7 +249,7 @@ static __forceinline void HandleEETransfer()
 // Sif0: End EE
 // SIF0 DMA end...
 
-// What happens if (sif0.counter > 0) is handled first is this
+// What happens if (sif0.iop.counter > 0) is handled first is this
 
 // SIF0 DMA start...
 // ...
@@ -264,9 +261,9 @@ static __forceinline void HandleEETransfer()
 
 static __forceinline void HandleIOPTransfer()
 {
-	if (sif0.counter <= 0) // If there's no more to transfer
+	if (sif0.iop.counter <= 0) // If there's no more to transfer
 	{
-		if (sif0tag.IRQ  || (sif0tag.ID & 4))
+		if (sif0.iop.end)
 		{
 			// Stop transferring iop, and signal an interrupt.
 			done = true;
@@ -298,9 +295,9 @@ __forceinline void SIF0Dma()
 	
 	do
 	{
-		if (iopsifbusy[0]) HandleIOPTransfer();
-		if (eesifbusy[0]) HandleEETransfer();
-	} while (!done); // Substituting (iopsifbusy[0] || eesifbusy[0]) breaks things.
+		if (sif0.iop.busy) HandleIOPTransfer();
+		if (sif0.ee.busy) HandleEETransfer();
+	} while (!done); // Substituting (sif0.ee.busy || sif0.iop.busy) breaks things.
 	
 	SIF_LOG("SIF0 DMA end...");
 	Sif0End();
@@ -328,9 +325,9 @@ __forceinline void dmaSIF0()
 	}
 
 	psHu32(SBUS_F240) |= 0x2000;
-	eesifbusy[0] = true;
+	sif0.ee.busy = true;
 	
-	if (iopsifbusy[0])
+	if (sif0.iop.busy)
 	{
         XMMRegisters::Freeze();
 		hwIntcIrq(INTC_SBUS);

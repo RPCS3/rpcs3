@@ -20,16 +20,10 @@
 #include "IopCommon.h"
 #include "Sif.h"
 
-extern _sif sif0, sif1;
-bool eesifbusy[2] = { false, false };
-bool iopsifbusy[2] = { false, false };
-
 void sifInit()
 {
 	memzero(sif0);
 	memzero(sif1);
-	memzero(eesifbusy);
-	memzero(iopsifbusy);
 }
 
 __forceinline void dmaSIF2()
@@ -46,9 +40,34 @@ void SaveStateBase::sifFreeze()
 {
 	FreezeTag("SIFdma");
 
-	Freeze(sif0);
-	Freeze(sif1);
-
-	Freeze(eesifbusy);
-	Freeze(iopsifbusy);
+	// Nasty backwards compatability stuff.
+	old_sif_structure old_sif0, old_sif1;
+	bool ee_busy[2], iop_busy[2];
+	
+	old_sif0.fifo = sif0.fifo;
+	old_sif1.fifo = sif1.fifo;
+	
+	ee_busy[0] = sif0.ee.busy;
+	ee_busy[1] = sif1.ee.busy;
+	iop_busy[0] = sif0.iop.busy;
+	iop_busy[1] = sif1.iop.busy;
+	
+	old_sif0.end = (sif0.ee.end) ? 1 : 0;
+	old_sif1.end = (sif1.iop.end) ? 1 : 0;
+	
+	old_sif0.counter = sif0.iop.counter;
+	old_sif1.counter = sif1.iop.counter;
+	
+	old_sif0.data = sif0.iop.data;
+	old_sif1.data = sif1.iop.data;
+	
+	Freeze(old_sif0);
+	Freeze(old_sif1);
+	Freeze(ee_busy);
+	Freeze(iop_busy);
+	
+	// When we break save state, switch to just freezing sif0 & sif1.
+	
+//	Freeze(sif0);
+//	Freeze(sif1);
 }

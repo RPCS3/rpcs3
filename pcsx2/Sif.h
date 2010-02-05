@@ -83,7 +83,7 @@ struct sifFifo
 	}
 };
 
-struct _sif
+struct old_sif_structure
 {
 	sifFifo fifo; // Used in both.
 	s32 chain; // Not used.
@@ -93,17 +93,20 @@ struct _sif
 	struct sifData data; // Only used in IOP.
 };
 
-/*
 struct sif_ee
 {
 	bool end; // Only used for EE.
 	bool busy;
+	
+	s32 cycles;
 };
 struct sif_iop
 {
 	bool end;
 	bool busy;
-		
+	
+	s32 cycles;
+	
 	s32 counter; // Used to keep track of how much is left in IOP.
 	struct sifData data; // Only used in IOP.
 };
@@ -112,9 +115,9 @@ struct _sif
 	sifFifo fifo; // Used in both.
 	sif_ee ee;
 	sif_iop iop;
-};*/
+};
 
-extern bool eesifbusy[2], iopsifbusy[2];
+extern _sif sif0, sif1;
 
 extern void sifInit();
 
@@ -131,7 +134,13 @@ extern void EEsif1Interrupt();
 extern void sif0Interrupt();
 extern void sif1Interrupt();
 
-#define sif0tag DMA_TAG(sif0.data.data)
-#define sif1tag DMA_TAG(sif1.data.data)
+#define sif0data sif0.iop.data.data
+#define sif1data sif1.iop.data.data
+
+#define sif0words sif0.iop.data.words
+#define sif1words sif1.iop.data.words
+
+#define sif0tag DMA_TAG(sif0data)
+#define sif1tag DMA_TAG(sif1data)
 
 #endif /* __SIF_H__ */
