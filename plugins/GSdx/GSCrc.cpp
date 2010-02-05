@@ -148,9 +148,15 @@ CRC::Game CRC::m_games[] =
 	{0x774DE8E2, ValkyrieProfile2, JP, 0},
 	{0x04CCB600, ValkyrieProfile2, EU, 0},
 	{0x47B9B2FD, RadiataStories, US, 0},
-	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear}, // saves/reloads z buffer around shadow drawing
-	{0xD7273511, SMTDDS1, US, ZWriteMustNotClear},     // saves/reloads z buffer around shadow drawing
-	{0x1683A6BE, SMTDDS1, EU, ZWriteMustNotClear},     // saves/reloads z buffer around shadow drawing
+	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear},	// saves/reloads z buffer around shadow drawing, same issue with all the SMT games following
+	{0xF0A31EE3, SMTNocturne, EU, ZWriteMustNotClear},	// SMTNocturne (Lucifers Call in EU)
+	{0xD60DA6D4, SMTNocturne, JP, ZWriteMustNotClear},	// SMTNocturne
+	{0x0e762e8d, SMTNocturne, JP, ZWriteMustNotClear},	// SMTNocturne Maniacs
+	{0x47BA9034, SMTNocturne, JP, ZWriteMustNotClear},	// SMTNocturne Maniacs Chronicle 
+	{0xD7273511, SMTDDS1, US, ZWriteMustNotClear},		// SMT Digital Devil Saga
+	{0x1683A6BE, SMTDDS1, EU, ZWriteMustNotClear},		// SMT Digital Devil Saga
+	{0x44865CE1, SMTDDS1, JP, ZWriteMustNotClear},		// SMT Digital Devil Saga
+	//{0xE47C1A9C, SMTDDS2, JP, ZWriteMustNotClear},		// SMTDDS2  (not yet confirmed as needing it)
 	{0x0B8AB37B, RozenMaidenGebetGarden, JP, 0},
 };
 
