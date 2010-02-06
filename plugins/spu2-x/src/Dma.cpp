@@ -500,7 +500,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	TSA = TDA & 0xFFFFF;
 
 	Regs.STATX &= ~0x80;
-	//Regs.ATTR |= 0x30;
+	Regs.STATX |= 0x400;
 
 #endif
 	*bytesProcessed = bytesLeft;
@@ -558,8 +558,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
 				// Important: Test both core IRQ settings for either DMA!
 
-				int dummyTSA = 0x2000+(Index<<10)+InputPosWrite;
-				int dummyTDA = 0x2000+(Index<<10)+InputPosWrite+0x200;
+				u32 dummyTSA = 0x2000+(Index<<10)+InputPosWrite;
+				u32 dummyTDA = 0x2000+(Index<<10)+InputPosWrite+0x200;
 
 				for( int i=0; i<2; i++ )
 				{
@@ -579,8 +579,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 				// Flag interrupt?  If IRQA occurs between start and dest, flag it.
 				// Important: Test both core IRQ settings for either DMA!
 
-				int dummyTSA = 0x2000+(Index<<10)+InputPosWrite;
-				int dummyTDA = 0x2000+(Index<<10)+InputPosWrite+0x100;
+				u32 dummyTSA = 0x2000+(Index<<10)+InputPosWrite;
+				u32 dummyTDA = 0x2000+(Index<<10)+InputPosWrite+0x100;
 
 				for( int i=0; i<2; i++ )
 				{
@@ -643,7 +643,8 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		PlainDMAWrite((u16*)data,bytesLeft/2);
 	}
 	Regs.STATX &= ~0x80;
-	//Regs.ATTR |= 0x30;
+	Regs.STATX |= 0x400;
+
 #endif
 	*bytesProcessed = bytesLeft;
 	return 0;
@@ -654,6 +655,7 @@ void V_Core::NewDmaInterrupt()
 #ifdef ENABLE_NEW_IOPDMA_SPU2
 	FileLog("[%10d] SPU2 interruptDMA4\n",Cycles);
 	Regs.STATX |= 0x80;
+	Regs.STATX &= ~0x400;
 	//Regs.ATTR &= ~0x30;
 	DmaStarted = false;
 #endif

@@ -417,8 +417,7 @@ struct V_Core
 	u8				CoreEnabled;
 
 	u8				AttrBit0;
-	u8				AttrBit4;
-	u8				AttrBit5;
+	u8				DmaMode;
 
 	// new dma only
 	bool			DmaStarted;

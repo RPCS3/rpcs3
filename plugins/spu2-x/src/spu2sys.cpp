@@ -847,7 +847,7 @@ static void __fastcall RegWrite_Core( u16 value )
 		{
 			bool irqe = thiscore.IRQEnable;
 			int bit0 = thiscore.AttrBit0;
-			//int bit4 = thiscore.AttrBit4;
+			u8 oldDmaMode = thiscore.DmaMode;
 
 			if( ((value>>15)&1) && (!thiscore.CoreEnabled) && (thiscore.InitDelay==0) ) // on init/reset
 			{
@@ -871,8 +871,7 @@ static void __fastcall RegWrite_Core( u16 value )
 
 			thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
 			thiscore.DMABits	=(value>> 1) & 0x07; //3 bits
-			thiscore.AttrBit4   =(value>> 4) & 0x01; //1 bit
-			thiscore.AttrBit5   =(value>> 5) & 0x01; //1 bit
+			thiscore.DmaMode    =(value>> 4) & 0x03; //2 bit (not necessary, we get the direction from the iop)
 			thiscore.IRQEnable  =(value>> 6) & 0x01; //1 bit
 			thiscore.FxEnable   =(value>> 7) & 0x01; //1 bit
 			thiscore.NoiseClk   =(value>> 8) & 0x3f; //6 bits
@@ -880,6 +879,12 @@ static void __fastcall RegWrite_Core( u16 value )
 			thiscore.Mute=0;
 			thiscore.CoreEnabled=(value>>15) & 0x01; //1 bit
 			thiscore.Regs.ATTR  =value&0x7fff;
+
+			if(oldDmaMode != thiscore.DmaMode)
+			{
+				// FIXME... maybe: if this mode was cleared in the middle of a DMA, should we interrupt it?
+				thiscore.Regs.STATX &= ~0x400; // ready to transfer
+			}
 
 			if(value&0x000E)
 			{
