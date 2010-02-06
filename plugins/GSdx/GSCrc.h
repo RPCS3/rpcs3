@@ -77,6 +77,7 @@ public:
 		RadiataStories,
 		SMTNocturne,
 		SMTDDS1,
+		SMTDDS2,
 		RozenMaidenGebetGarden,
 		TitleCount,
 	};

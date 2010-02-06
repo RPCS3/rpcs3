@@ -65,12 +65,12 @@ const wxChar* Panels::SpeedHacksPanel::GetVUcycleSliderMsg( int val )
 
 		case 1:
 			return pxE( ".Panels:Speedhacks:VUCycleSteal1",
-				L"1 - Mild VU Cycle Stealing.  High compatibility with some speedup for most games."
+				L"1 - Mild VU Cycle Stealing.  Lower compatibility, but some speedup for most games."
 			);
 
 		case 2:
 			return pxE( ".Panels:Speedhacks:VUCycleSteal2",
-				L"2 - Moderate VU Cycle Stealing.  Moderate compatibility with significant speedups in some games."
+				L"2 - Moderate VU Cycle Stealing.  Even lower compatibility, but significant speedups in some games."
 			);
 
 		case 3:
@@ -106,7 +106,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 		L"If you have issues, always try disabling these hacks first."
 	) );
 
-	m_check_Enable = new pxCheckBox( this, _("Enable speedhacks") );
+	m_check_Enable = new pxCheckBox( this, _("Enable speedhacks"),
+		_("(Warning, can cause false FPS readings and many bugs!)"));
 	m_check_Enable->SetToolTip(_("The safest way to make sure that all speedhacks are completely disabled."));
 	
 	m_button_Defaults = new wxButton( this, wxID_DEFAULT, _("Restore Defaults") );

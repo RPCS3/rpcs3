@@ -129,6 +129,7 @@ CRC::Game CRC::m_games[] =
 	{0x44A8A22A, GodOfWar2, EU, 0},
 	{0x4340C7C6, GodOfWar2, Unknown, 0},
 	{0xF8CD3DF6, GodOfWar2, Unknown, 0},
+	{0x0B82BFF7, GodOfWar2, Unknown, 0},
 	{0x5D482F18, JackieChanAdv, Unknown, 0},
 	{0xf0a6d880, HarvestMoon, US, 0},
 	{0x75c01a04, NamcoXCapcom, US, 0},
@@ -156,7 +157,7 @@ CRC::Game CRC::m_games[] =
 	{0xD7273511, SMTDDS1, US, ZWriteMustNotClear},		// SMT Digital Devil Saga
 	{0x1683A6BE, SMTDDS1, EU, ZWriteMustNotClear},		// SMT Digital Devil Saga
 	{0x44865CE1, SMTDDS1, JP, ZWriteMustNotClear},		// SMT Digital Devil Saga
-	//{0xE47C1A9C, SMTDDS2, JP, ZWriteMustNotClear},		// SMTDDS2  (not yet confirmed as needing it)
+	{0xE47C1A9C, SMTDDS2, JP, ZWriteMustNotClear},		// SMT Digital Devil Saga 2
 	{0x0B8AB37B, RozenMaidenGebetGarden, JP, 0},
 };
 
