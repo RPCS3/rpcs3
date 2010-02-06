@@ -182,14 +182,22 @@ void SaveStateBase::ipuFreeze()
 	// old versions saved the IPU regs, but they're already saved as part of HW!
 	//FreezeMem(ipuRegs, sizeof(IPUregisters));
 
-	Freeze(g_nDMATransfer._u32);
-	//Freeze(ipu_fifo);
-	Freeze(ipu_fifo.in.readpos);
-	Freeze(ipu_fifo.in.writepos);
-	Freeze(ipu_fifo.in.data);
-	Freeze(ipu_fifo.out.readpos);
-	Freeze(ipu_fifo.out.writepos);
-	Freeze(ipu_fifo.out.data);
+	if (GetVersion() <= 3)
+	{
+		Freeze(g_nDMATransfer._u32);
+		
+		Freeze(ipu_fifo.in.readpos);
+		Freeze(ipu_fifo.in.writepos);
+		Freeze(ipu_fifo.in.data);
+		Freeze(ipu_fifo.out.readpos);
+		Freeze(ipu_fifo.out.writepos);
+		Freeze(ipu_fifo.out.data);
+	}
+	else
+	{
+		Freeze(g_nDMATransfer);
+		Freeze(ipu_fifo);
+	}
 	Freeze(g_BP);
 	Freeze(niq);
 	Freeze(iq);
@@ -199,11 +207,16 @@ void SaveStateBase::ipuFreeze()
 	Freeze(g_decoder);
 	Freeze(mpeg2_scan_norm);
 	Freeze(mpeg2_scan_alt);
-	//Freeze(ipu_cmd);
-	Freeze(ipu_cmd.pos);
-	Freeze(ipu_cmd.index);
-	Freeze(ipu_cmd.current);
-
+	if (GetVersion() <= 3)
+	{
+		Freeze(ipu_cmd.pos);
+		Freeze(ipu_cmd.index);
+		Freeze(ipu_cmd.current);
+	}
+	else
+	{
+		Freeze(ipu_cmd);
+	}
 	Freeze(_readbits);
 
 	int temp = readbits - _readbits;

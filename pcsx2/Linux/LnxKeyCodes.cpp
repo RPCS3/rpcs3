@@ -6,7 +6,7 @@
 #include <gdk/gdkkeysyms.h>
 #include <gdk/gdkx.h>
 
-// Returns a WXK_* keycode, given osome kinda GKT input mess!
+// Returns a WXK_* keycode, given some kinda GDK input mess!
 int TranslateGDKtoWXK( u32 keysym )
 {
     int key_code;
