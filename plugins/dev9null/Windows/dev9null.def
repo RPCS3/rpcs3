@@ -31,3 +31,6 @@ EXPORTS
 	DEV9about			@19
 	DEV9irqCallback     @20
 	DEV9irqHandler      @21
+	DEV9dmaRead
+	DEV9dmaWrite
+	DEV9dmaInterrupt
