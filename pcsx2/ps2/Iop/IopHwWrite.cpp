@@ -379,7 +379,11 @@ static __forceinline void _HwWrite_16or32_Page1( u32 addr, T val )
 
 			mcase(0x1f801518):	// DMA8 CHCR -- DEV9
 				psxHu(addr) = val;
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+				DmaExecNew2(8);
+#else
 				DmaExec2(8);
+#endif
 			break;
 
 			mcase(0x1f801528):	// DMA9 CHCR -- SIF0

@@ -65,10 +65,14 @@ extern void cdvdDmaInterrupt(s32 channel);
 
 extern void psxDma2(u32 madr, u32 bcr, u32 chcr);
 extern void psxDma3(u32 madr, u32 bcr, u32 chcr);
-extern void psxDma4(u32 madr, u32 bcr, u32 chcr);
 extern void psxDma6(u32 madr, u32 bcr, u32 chcr);
+#ifndef ENABLE_NEW_IOPDMA_SPU2
+extern void psxDma4(u32 madr, u32 bcr, u32 chcr);
 extern void psxDma7(u32 madr, u32 bcr, u32 chcr);
+#endif
+#ifndef ENABLE_NEW_IOPDMA_DEV9
 extern void psxDma8(u32 madr, u32 bcr, u32 chcr);
+#endif
 extern void psxDma9(u32 madr, u32 bcr, u32 chcr);
 extern void psxDma10(u32 madr, u32 bcr, u32 chcr);
 

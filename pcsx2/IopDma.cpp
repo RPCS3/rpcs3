@@ -141,6 +141,7 @@ int psxDma7Interrupt()
 }
 #endif
 
+#ifndef ENABLE_NEW_IOPDMA_DEV9
 void psxDma8(u32 madr, u32 bcr, u32 chcr)
 {
 	const int size = (bcr >> 16) * (bcr & 0xFFFF) * 8;
@@ -164,6 +165,7 @@ void psxDma8(u32 madr, u32 bcr, u32 chcr)
 	HW_DMA8_CHCR &= ~0x01000000;
 	psxDmaInterrupt2(1);
 }
+#endif
 
 void psxDma9(u32 madr, u32 bcr, u32 chcr)
 {
@@ -281,6 +283,7 @@ s32  spu2DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 #ifdef ENABLE_NEW_IOPDMA_SPU2
 	return SPU2dmaWrite(channel,data,bytesLeft,bytesProcessed);
 #else
+	*bytesProcessed=0;
 	return 0;
 #endif
 }
@@ -289,6 +292,32 @@ void spu2DmaInterrupt(s32 channel)
 {
 #ifdef ENABLE_NEW_IOPDMA_SPU2
 	SPU2dmaInterrupt(channel);
+#endif
+}
+
+s32  dev9DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	return DEV9dmaRead(channel,data,bytesLeft,bytesProcessed);
+#else
+	*bytesProcessed=0;
+	return 0;
+#endif
+}
+
+s32  dev9DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	return DEV9dmaWrite(channel,data,bytesLeft,bytesProcessed);
+#else
+	return 0;
+#endif
+}
+
+void dev9DmaInterrupt(s32 channel)
+{
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	DEV9dmaInterrupt(channel);
 #endif
 }
 
@@ -358,7 +387,11 @@ const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 #else
 	{"SPU2 Core1",     _D__}, //7:  Spu2 Core1
 #endif
-	{"Dev9",		   _DRW},// CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	{"Dev9",		   _ERW, CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
+#else
+	{"Dev9",		   _D__}, //8:  Dev9
+#endif
 	{"Sif0",           _DRW},// CHANNEL_BASE2(2), sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
 	{"Sif1",           _DRW},// CHANNEL_BASE2(3), sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
 #ifdef ENABLE_NEW_IOPDMA_SIO

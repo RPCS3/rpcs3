@@ -233,8 +233,14 @@ _DEV9read32        DEV9read32;
 _DEV9write8        DEV9write8;
 _DEV9write16       DEV9write16;
 _DEV9write32       DEV9write32;
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+_DEV9dmaRead       DEV9dmaRead;
+_DEV9dmaWrite      DEV9dmaWrite;
+_DEV9dmaInterrupt  DEV9dmaInterrupt;
+#else
 _DEV9readDMA8Mem   DEV9readDMA8Mem;
 _DEV9writeDMA8Mem  DEV9writeDMA8Mem;
+#endif
 _DEV9irqCallback   DEV9irqCallback;
 _DEV9irqHandler    DEV9irqHandler;
 
@@ -517,8 +523,14 @@ static const LegacyApi_ReqMethod s_MethMessReq_DEV9[] =
 	{	"DEV9write8",		(vMeth**)&DEV9write8,		NULL },
 	{	"DEV9write16",		(vMeth**)&DEV9write16,		NULL },
 	{	"DEV9write32",		(vMeth**)&DEV9write32,		NULL },
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	{	"DEV9dmaRead",		(vMeth**)&DEV9dmaRead,	NULL },
+	{	"DEV9dmaWrite",		(vMeth**)&DEV9dmaWrite,	NULL },
+	{	"DEV9dmaInterrupt",	(vMeth**)&DEV9dmaInterrupt,	NULL },
+#else
 	{	"DEV9readDMA8Mem",	(vMeth**)&DEV9readDMA8Mem,	NULL },
 	{	"DEV9writeDMA8Mem",	(vMeth**)&DEV9writeDMA8Mem,	NULL },
+#endif
 	{	"DEV9irqCallback",	(vMeth**)&DEV9irqCallback,	NULL },
 	{	"DEV9irqHandler",	(vMeth**)&DEV9irqHandler,	NULL },
 
