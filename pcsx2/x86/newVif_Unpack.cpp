@@ -77,6 +77,8 @@ void initNewVif(int idx) {
 	nVif[idx].vuMemEnd		= idx ? ((u8*)(VU1.Mem + 0x4000)) : ((u8*)(VU0.Mem + 0x1000));
 	nVif[idx].vuMemLimit	= idx ? 0x3ff0 : 0xff0;
 	nVif[idx].vifCache		= NULL;
+	nVif[idx].bSize			= 0;
+	memzero(nVif[idx].buffer);
 
 	VifUnpackSSE_Init();
 	if (newVifDynaRec) dVifInit(idx);
@@ -118,15 +120,12 @@ int nVifUnpack(int idx, u8* data) {
 	const bool isFill = (vifRegs->cycle.cl < vifRegs->cycle.wl);
 	s32		   size   = ret << 2;
 
-	static u8  buffer[2][0x4000] = {0};
-	static int bSize [2]		 = {0};
-
 	if (ret == v.vif->tag.size) { // Full Transfer
-		if (bSize) { // Last transfer was partial
-			memcpy(&buffer[idx][bSize[idx]], data, size);
-			bSize[idx] += size;
-			data = buffer[idx];
-			size = bSize [idx];
+		if (v.bSize) { // Last transfer was partial
+			memcpy(&v.buffer[v.bSize], data, size);
+			v.bSize += size;
+			data = v.buffer;
+			size = v.bSize;
 		}
 		if (size > 0) {
 			if (newVifDynaRec)  dVifUnpack(idx, data, size, isFill);
@@ -134,11 +133,11 @@ int nVifUnpack(int idx, u8* data) {
 		}	else if (isFill)   _nVifUnpack(idx, data, size, isFill);
 		vif->tag.size = 0;
 		vif->cmd = 0;
-		bSize[idx] = 0;
+		v.bSize  = 0;
 	}
 	else { // Partial Transfer
-		memcpy(&buffer[idx][bSize[idx]], data, size);
-		bSize[idx]	  += size;
+		memcpy(&v.buffer[v.bSize], data, size);
+		v.bSize		  += size;
 		vif->tag.size -= ret;
 	}
 
