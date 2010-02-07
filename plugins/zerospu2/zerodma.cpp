@@ -155,7 +155,7 @@ int ADMASWrite(int core)
 		return 1;
 }
 
-void CALLBACK SPU2writeDMAMem(u16* pMem, int size, int core)
+void SPU2writeDMAMem(u16* pMem, int size, int core)
 {
 	u32 spuaddr;
 	ADMA *Adma;
@@ -226,6 +226,27 @@ void CALLBACK SPU2writeDMAMem(u16* pMem, int size, int core)
 	interrupt |= (1 << (core + 1));
 }
 
+void CALLBACK SPU2interruptDMA(int dma)
+{
+	s32 core, offset;
+	
+	if (dma == 4)
+	{
+		core = 0;
+		offset = 0;
+	}
+	else
+	{
+		core = 1;
+		offset = 0x0400;
+	}
+	
+	SPU2_LOG("SPU2 interruptDMA%d\n", dma);
+	spu2Rs16(REG_C0_CTRL + offset) &= ~0x30;
+	spu2Ru16(REG_C0_SPUSTAT + offset) |= 0x80;
+}
+
+#ifndef ENABLE_NEW_IOPDMA_SPU2
 void CALLBACK SPU2writeDMA4Mem(u16* pMem, int size)
 {
 	LOG_CALLBACK("SPU2writeDMA4Mem()\n");
@@ -238,34 +259,33 @@ void CALLBACK SPU2writeDMA7Mem(u16* pMem, int size)
 	SPU2writeDMAMem(pMem, size, 1);
 }
 
-void CALLBACK SPU2interruptDMA(int core)
-{
-	s32 dma, offset;
-	
-	if (core == 0)
-	{
-		dma = 4;
-		offset = 0;
-	}
-	else
-	{
-		dma = 7;
-		offset = 0x0400;
-	}
-	
-	SPU2_LOG("SPU2 interruptDMA%d\n", dma);
-	spu2Rs16(REG_C0_CTRL + offset) &= ~0x30;
-	spu2Ru16(REG_C0_SPUSTAT + offset) |= 0x80;
-}
-
 void CALLBACK SPU2interruptDMA4()
 {
 	LOG_CALLBACK("SPU2interruptDMA4()\n");
-	SPU2interruptDMA(0);
+	SPU2interruptDMA(4);
 }
 
 void CALLBACK SPU2interruptDMA7()
 {
 	LOG_CALLBACK("SPU2interruptDMA7()\n");
-	SPU2interruptDMA(1);
+	SPU2interruptDMA(7);
 }
+#else
+s32 CALLBACK SPU2dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+	// Needs implementation.
+	return 0;
+}
+ 	
+s32 CALLBACK SPU2dmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+{
+	// Needs implementation.
+	return 0;
+ }
+ 
+void CALLBACK SPU2dmaInterrupt(s32 channel)
+ {
+	LOG_CALLBACK("SPU2dmaInterruptDMA()\n");
+	SPU2interruptDMA(channel);
+ }
+#endif
