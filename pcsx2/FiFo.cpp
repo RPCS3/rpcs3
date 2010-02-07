@@ -87,7 +87,7 @@ void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
 	// All addresses in this page map to 0x7000 and 0x7010:
 	mem &= 0x10;
 
-	if( mem == 0 )
+	if( mem == 0 ) // IPUout_FIFO
 	{
 		if( g_nIPU0Data > 0 )
 		{
@@ -98,7 +98,7 @@ void __fastcall ReadFIFO_page_7(u32 mem, u64 *out)
 			g_pIPU0Pointer += 16;
 		}
 	}
-	else
+	else // IPUin_FIFO
 		ipu_fifo.out.readsingle((void*)out);
 }
 

@@ -46,18 +46,21 @@
 //
 // Bitfield Structures
 //
-union tIPU_CMD {
-	struct {
-		u32 OPTION : 28;	// VDEC decoded value
-		u32 CMD : 4;	// last command
-		u32 _BUSY;
-	};
-	struct {
-		u32 DATA;
-		u32 BUSY;
-	};
-};
 
+struct tIPU_CMD 
+{
+	union 
+	{
+		struct 
+		{
+			u32 OPTION : 28;	// VDEC decoded value
+			u32 CMD : 4;	// last command
+		};
+		u32 DATA;
+	};
+	u32 BUSY;
+};
+			
 union tIPU_CTRL {
 	struct {
 		u32 IFC : 4;	// Input FIFO counter
@@ -94,7 +97,11 @@ struct tIPU_BP {
 	u32 BP;		// Bit stream point
 	u16 IFC;	// Input FIFO counter
 	u8 FP;		// FIFO point
-	u8 bufferhasnew;
+	u8 bufferhasnew; // Always 0.
+	wxString desc() const
+	{
+		return wxsFormat(L"Ipu BP: bp = 0x%x, IFC = 0x%x, FP = 0x%x.", BP, IFC, FP);
+	}
 };
 
 #ifdef _WIN32
@@ -214,6 +221,29 @@ union tIPU_CMD_CSC
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	void log_from_YCbCr()
+	{
+		IPU_LOG("IPU CSC(Colorspace conversion from YCbCr) command (%d).", MBC);
+		if (OFM)
+			IPU_LOG("Output format is RGB16. ");
+		else
+			IPU_LOG("Output format is RGB32. ");
+
+		if (DTE) IPU_LOG("Dithering enabled.");
+	}
+	void log_from_RGB32()
+	{
+		IPU_LOG("IPU PACK (Colorspace conversion from RGB32) command.");
+
+		if (OFM)
+			IPU_LOG("Output format is RGB16. ");
+		else
+			IPU_LOG("Output format is INDX4. ");
+
+		if (DTE) IPU_LOG("Dithering enabled.");
+
+		IPU_LOG("Number of macroblocks to be converted: %d", MBC);
+	}
 };
 
 union tIPU_DMA
@@ -238,6 +268,23 @@ union tIPU_DMA
 	void set_flags(u32 flags) { _u32 |= flags; }
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
+	wxString desc() const
+	{
+		wxString temp(L"g_nDMATransfer[");
+		
+		if (GIFSTALL) temp += L" GIFSTALL ";
+		if (TIE0) temp += L" TIE0 ";
+		if (TIE1) temp += L" TIE1 ";
+		if (ACTV1) temp += L" ACTV1 ";
+		if (DOTIE1) temp += L" DOTIE1 ";
+		if (FIREINT0) temp += L" FIREINT0 ";
+		if (FIREINT1) temp += L" FIREINT1 ";
+		if (VIFSTALL) temp += L" VIFSTALL ";
+		if (SIFSTALL) temp += L" SIFSTALL ";
+		
+		temp += L"]";
+		return temp;
+	}
 };
 
 enum SCE_IPU
@@ -278,6 +325,11 @@ struct tIPU_cmd
 		memzero(pos);
 		index = 0;
 		current = 0xffffffff;
+	}
+	wxString desc() const
+	{
+		return wxsFormat(L"Ipu cmd: index = 0x%x, current = 0x%x, pos[0] = 0x%x, pos[1] = 0x%x",
+			index, current, pos[0], pos[1]);
 	}
 };
 

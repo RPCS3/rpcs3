@@ -26,7 +26,7 @@ class IPU_Fifo_Input
 	int write(u32* pMem, int size);
 	int read(void *value);
 	void clear();
-	void print();
+	wxString desc() const;
 };
 
 class IPU_Fifo_Output
@@ -41,7 +41,7 @@ class IPU_Fifo_Output
 	void read(void *value,int size);
 	void readsingle(void *value);
 	void clear();
-	void print();
+	wxString desc() const;
 	private:
 	void _readsingle(void *value);
 };
@@ -53,6 +53,7 @@ class IPU_Fifo
 	IPU_Fifo_Output out;
 	
 	void init();
+	void clear();
 };
 
 extern IPU_Fifo ipu_fifo;

@@ -154,22 +154,20 @@ void ipuShutdown()
 
 void ReportIPU()
 {
-	Console.WriteLn("g_nDMATransfer = 0x%x.", g_nDMATransfer._u32);
-	ipu_fifo.in.print();
-	ipu_fifo.out.print();
-	Console.WriteLn("g_BP = 0x%x.", g_BP);
+	Console.WriteLn(g_nDMATransfer.desc());
+	Console.WriteLn(ipu_fifo.in.desc());
+	Console.WriteLn(ipu_fifo.out.desc());
+	Console.WriteLn(g_BP.desc());
 	Console.WriteLn("niq = 0x%x, iq = 0x%x.", niq, iq);
 	Console.WriteLn("vqclut = 0x%x.", vqclut);
 	Console.WriteLn("s_thresh = 0x%x.", s_thresh);
 	Console.WriteLn("coded_block_pattern = 0x%x.", coded_block_pattern);
 	Console.WriteLn("g_decoder = 0x%x.", g_decoder);
-	Console.WriteLn("mpeg2_scan_norm = 0x%x, mpeg2_scan_alt = 0x%x.", mpeg2_scan_norm, mpeg2_scan_alt);
-	Console.WriteLn("g_nCmdPos = 0x%x.", ipu_cmd.pos);
-	Console.WriteLn("g_nCmdIndex = 0x%x.", ipu_cmd.index);
-	Console.WriteLn("ipuCurCmd = 0x%x.", ipu_cmd.current);
-	Console.WriteLn("_readbits = 0x%x.", _readbits);
-	Console.WriteLn("temp will equal 0x%x.", readbits - _readbits);
-	Console.WriteLn("");
+	Console.WriteLn("mpeg2: scan_norm = 0x%x, alt = 0x%x.", mpeg2_scan_norm, mpeg2_scan_alt);
+	Console.WriteLn(ipu_cmd.desc());
+	Console.WriteLn("_readbits = 0x%x. readbits - _readbits, which is also frozen, is 0x%x.", 
+		_readbits, readbits - _readbits);
+	Console.Newline();
 }
 // fixme - ipuFreeze looks fairly broken. Should probably take a closer look at some point.
 
@@ -177,6 +175,8 @@ void SaveStateBase::ipuFreeze()
 {
 	IPUProcessInterrupt();
 
+	// Get a report of the status of the ipu variables when saving and loading savestates.
+	//ReportIPU();
 	FreezeTag("IPU");
 
 	// old versions saved the IPU regs, but they're already saved as part of HW!
@@ -259,7 +259,7 @@ __forceinline u32 ipuRead32(u32 mem)
 		ipucase(IPU_BP): // IPU_BP
 			ipuRegs->ipubp = g_BP.BP & 0x7f;
 			ipuRegs->ipubp |= g_BP.IFC << 8;
-			ipuRegs->ipubp |= (g_BP.FP + g_BP.bufferhasnew) << 16;
+			ipuRegs->ipubp |= (g_BP.FP /*+ g_BP.bufferhasnew*/) << 16;
 
 			IPU_LOG("Ipu read32: IPU_BP=0x%08X", *(u32*)&g_BP);
 			return ipuRegs->ipubp;
@@ -307,8 +307,7 @@ __forceinline u64 ipuRead64(u32 mem)
 void ipuSoftReset()
 {
 	mpeg2_init();
-	ipu_fifo.in.clear();
-	ipu_fifo.out.clear();
+	ipu_fifo.clear();
 
 	coded_block_pattern = 0;
 
@@ -318,7 +317,7 @@ void ipuSoftReset()
 
 	g_BP.BP = 0;
 	g_BP.FP = 0;
-	g_BP.bufferhasnew = 0;
+	//g_BP.bufferhasnew = 0;
 }
 
 __forceinline void ipuWrite32(u32 mem, u32 value)
@@ -394,7 +393,7 @@ static void ipuBCLR(u32 val)
 
 	g_BP.BP = val & 0x7F;
 	g_BP.FP = 0;
-	g_BP.bufferhasnew = 0;
+	//g_BP.bufferhasnew = 0;
 	ipuRegs->ctrl.BUSY = 0;
 	ipuRegs->cmd.BUSY = 0;
 	memzero_ptr<80>(readbits);
@@ -616,16 +615,8 @@ static __forceinline BOOL ipuSETVQ(u32 val)
 static BOOL __fastcall ipuCSC(u32 val)
 {
 	tIPU_CMD_CSC csc(val);
-
-	IPU_LOG("IPU CSC(Colorspace conversion from YCbCr) command (%d).", csc.MBC);
-	if (csc.OFM)
-		IPU_LOG("Output format is RGB16. ");
-	else
-		IPU_LOG("Output format is RGB32. ");
-
-	if (csc.DTE) IPU_LOG("Dithering enabled.");
-
-	//Console.WriteLn("CSC");
+	csc.log_from_YCbCr();
+	
 	for (;ipu_cmd.index < (int)csc.MBC; ipu_cmd.index++)
 	{
 
@@ -669,17 +660,7 @@ static BOOL __fastcall ipuCSC(u32 val)
 static BOOL ipuPACK(u32 val)
 {
 	tIPU_CMD_CSC  csc(val);
-
-	IPU_LOG("IPU PACK (Colorspace conversion from RGB32) command.");
-
-	if (csc.OFM)
-		IPU_LOG("Output format is RGB16. ");
-	else
-		IPU_LOG("Output format is INDX4. ");
-
-	if (csc.DTE) IPU_LOG("Dithering enabled.");
-
-	IPU_LOG("Number of macroblocks to be converted: %d", csc.MBC);
+	csc.log_from_RGB32();
 
 	for (;ipu_cmd.index < (int)csc.MBC; ipu_cmd.index++)
 	{

@@ -199,16 +199,16 @@ EXPORT_C_(void) DEV9write32(u32 addr, u32 value)
 }
 
 //#ifdef ENABLE_NEW_IOPDMA_DEV9
-EXPORT_C_(s32)  DEV9dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+EXPORT_C_(s32) DEV9dmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
-	// You'll want to but your own DMA8 reading code here.
+	// You'll want to put your own DMA8 reading code here.
 	// Time to interact with your fake (or real) hardware.
 	Dev9Log.WriteLn("Reading DMA8 Mem.");
 	*bytesProcessed = bytesLeft;
 	return 0;
 }
 
-EXPORT_C_(s32)  DEV9dmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+EXPORT_C_(s32) DEV9dmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
 	// See above.
 	Dev9Log.WriteLn("Writing DMA8 Mem.");
@@ -223,7 +223,7 @@ EXPORT_C_(void) DEV9dmaInterrupt(s32 channel)
 //#else
 EXPORT_C_(void) DEV9readDMA8Mem(u32 *pMem, int size) 
 {
-	// You'll want to but your own DMA8 reading code here.
+	// You'll want to put your own DMA8 reading code here.
 	// Time to interact with your fake (or real) hardware.
 	Dev9Log.WriteLn("Reading DMA8 Mem.");
 }
