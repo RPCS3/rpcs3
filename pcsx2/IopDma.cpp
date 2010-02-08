@@ -76,17 +76,7 @@ static void __fastcall psxDmaGeneric(u32 madr, u32 bcr, u32 chcr, u32 spuCore, _
 			break;
 	}
 }
-#endif
 
-void psxDma2(u32 madr, u32 bcr, u32 chcr)		// GPU
-{
-	HW_DMA2_CHCR &= ~0x01000000;
-	psxDmaInterrupt(2);
-}
-
-/*  psxDma3 is in CdRom.cpp */
-
-#ifndef ENABLE_NEW_IOPDMA_SPU2
 void psxDma4(u32 madr, u32 bcr, u32 chcr)		// SPU2's Core 0
 {
 	psxDmaGeneric(madr, bcr, chcr, 0, SPU2writeDMA4Mem, SPU2readDMA4Mem);
@@ -99,7 +89,42 @@ int psxDma4Interrupt()
 	iopIntcIrq(9);
 	return 1;
 }
+
+void spu2DMA4Irq()
+{
+	SPU2interruptDMA4();
+	HW_DMA4_CHCR &= ~0x01000000;
+	psxDmaInterrupt(4);
+}
+
+void psxDma7(u32 madr, u32 bcr, u32 chcr)		// SPU2's Core 1
+{
+	psxDmaGeneric(madr, bcr, chcr, 1, SPU2writeDMA7Mem, SPU2readDMA7Mem);
+}
+
+int psxDma7Interrupt()
+{
+	HW_DMA7_CHCR &= ~0x01000000;
+	psxDmaInterrupt2(0);
+	return 1;
+
+}
+
+void spu2DMA7Irq()
+{
+	SPU2interruptDMA7();
+	HW_DMA7_CHCR &= ~0x01000000;
+	psxDmaInterrupt2(0);
+}
+
 #endif
+
+#ifndef DISABLE_PSX_GPU_DMAS
+void psxDma2(u32 madr, u32 bcr, u32 chcr)		// GPU
+{
+	HW_DMA2_CHCR &= ~0x01000000;
+	psxDmaInterrupt(2);
+}
 
 void psxDma6(u32 madr, u32 bcr, u32 chcr)
 {
@@ -124,20 +149,6 @@ void psxDma6(u32 madr, u32 bcr, u32 chcr)
 	}
 	HW_DMA6_CHCR &= ~0x01000000;
 	psxDmaInterrupt(6);
-}
-
-#ifndef ENABLE_NEW_IOPDMA_SPU2
-void psxDma7(u32 madr, u32 bcr, u32 chcr)		// SPU2's Core 1
-{
-	psxDmaGeneric(madr, bcr, chcr, 1, SPU2writeDMA7Mem, SPU2readDMA7Mem);
-}
-
-int psxDma7Interrupt()
-{
-	HW_DMA7_CHCR &= ~0x01000000;
-	psxDmaInterrupt2(0);
-	return 1;
-
 }
 #endif
 
@@ -202,66 +213,6 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 
 /* psxDma11 & psxDma 12 are in IopSio2.cpp, along with the appropriate interrupt functions. */
 
-void dev9Interrupt()
-{
-	if ((dev9Handler != NULL) && (dev9Handler() != 1)) return;
-
-	iopIntcIrq(13);
-	hwIntcIrq(INTC_SBUS);
-}
-
-void dev9Irq(int cycles)
-{
-	PSX_INT(IopEvt_DEV9, cycles);
-}
-
-void usbInterrupt()
-{
-	if (usbHandler != NULL && (usbHandler() != 1)) return;
-
-	iopIntcIrq(22);
-	hwIntcIrq(INTC_SBUS);
-}
-
-void usbIrq(int cycles)
-{
-	PSX_INT(IopEvt_USB, cycles);
-}
-
-void fwIrq()
-{
-	iopIntcIrq(24);
-	hwIntcIrq(INTC_SBUS);
-}
-
-#ifndef ENABLE_NEW_IOPDMA_SPU2
-void spu2DMA4Irq()
-{
-	SPU2interruptDMA4();
-	HW_DMA4_CHCR &= ~0x01000000;
-	psxDmaInterrupt(4);
-}
-
-void spu2DMA7Irq()
-{
-	SPU2interruptDMA7();
-	HW_DMA7_CHCR &= ~0x01000000;
-	psxDmaInterrupt2(0);
-}
-#endif
-
-void spu2Irq()
-{
-	iopIntcIrq(9);
-	hwIntcIrq(INTC_SBUS);
-}
-
-void iopIntcIrq(uint irqType)
-{
-	psxHu32(0x1070) |= 1 << irqType;
-	iopTestIntc();
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Gigaherz's "Improved DMA Handling" Engine WIP...
@@ -269,67 +220,17 @@ void iopIntcIrq(uint irqType)
 
 #ifdef ENABLE_NEW_IOPDMA
 
-s32  spu2DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
-{
-#ifdef ENABLE_NEW_IOPDMA_SPU2
-	return SPU2dmaRead(channel,data,bytesLeft,bytesProcessed);
-#else
-	return 0;
-#endif
-}
+//////////////////////////////////////////////////////////////////////////////////////////////
+// Local Declarations
 
-s32  spu2DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
-{
-#ifdef ENABLE_NEW_IOPDMA_SPU2
-	return SPU2dmaWrite(channel,data,bytesLeft,bytesProcessed);
-#else
-	*bytesProcessed=0;
-	return 0;
-#endif
-}
+// in IopSio2.cpp
+extern s32 CALLBACK sio2DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+extern s32 CALLBACK sio2DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+extern void CALLBACK sio2DmaInterrupt(s32 channel);
 
-void spu2DmaInterrupt(s32 channel)
-{
-#ifdef ENABLE_NEW_IOPDMA_SPU2
-	SPU2dmaInterrupt(channel);
-#endif
-}
-
-s32  dev9DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
-{
-#ifdef ENABLE_NEW_IOPDMA_DEV9
-	return DEV9dmaRead(channel,data,bytesLeft,bytesProcessed);
-#else
-	*bytesProcessed=0;
-	return 0;
-#endif
-}
-
-s32  dev9DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
-{
-#ifdef ENABLE_NEW_IOPDMA_DEV9
-	return DEV9dmaWrite(channel,data,bytesLeft,bytesProcessed);
-#else
-	return 0;
-#endif
-}
-
-void dev9DmaInterrupt(s32 channel)
-{
-#ifdef ENABLE_NEW_IOPDMA_DEV9
-	DEV9dmaInterrupt(channel);
-#endif
-}
-
-//typedef s32(* DmaHandler)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
-//typedef void (* DmaIHandler)(s32 channel);
-
-extern s32 sio2DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
-extern s32 sio2DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
-extern void sio2DmaInterrupt(s32 channel);
-
-s32 errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
-s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+// implemented below
+s32 CALLBACK errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+s32 CALLBACK errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 
 // constants
 struct DmaHandlerInfo
@@ -366,34 +267,46 @@ struct DmaHandlerInfo
 #define _ER_ 6
 #define _ERW 7
 
+//////////////////////////////////////////////////////////////////////////////////////////////
+// Dma channel definitions
+
 const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 {
 	// First DMAC, same as PS1
-	{"Ps1 Mdec",       _D__}, //0
-	{"Ps1 Mdec",       _D__}, //1
+	{"Ps1 Mdec in",    _D__}, //0
+	{"Ps1 Mdec out",   _D__}, //1
 	{"Ps1 Gpu",        _D__}, //2
-	{"CDVD",           _DR_, CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
+#ifdef ENABLE_NEW_IOPDMA_CDVD
+	{"CDVD",           _ER_, CHANNEL_BASE1(3), cdvdDmaRead, errDmaWrite,  cdvdDmaInterrupt}, //3:  CDVD
+#else
+	{"CDVD",           _D__}, //3:  CDVD
+#endif
 #ifdef ENABLE_NEW_IOPDMA_SPU2
-	{"SPU2 Core0",     _ERW, CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu/Spu2 Core0
+	{"SPU2 Core0",     _ERW, CHANNEL_BASE1(4), SPU2dmaRead, SPU2dmaWrite, SPU2dmaInterrupt}, //4:  Spu/Spu2 Core0
 #else
 	{"SPU2 Core0",     _D__}, //4:  Spu/Spu2 Core0
 #endif
-	{"?",              _D__}, //5
-	{"OT",             _D__}, //6: OT?
+	{"Ps1 PIO",            _D__}, //5: PIO
+	{"Ps1 OTC",             _D__}, //6: "reverse clear OT" - PSX GPU related
 
 	// Second DMAC, new in PS2 IOP
 #ifdef ENABLE_NEW_IOPDMA_SPU2
-	{"SPU2 Core1",     _ERW, CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu2 Core1
+	{"SPU2 Core1",     _ERW, CHANNEL_BASE2(0), SPU2dmaRead, SPU2dmaWrite, SPU2dmaInterrupt}, //7:  Spu2 Core1
 #else
 	{"SPU2 Core1",     _D__}, //7:  Spu2 Core1
 #endif
 #ifdef ENABLE_NEW_IOPDMA_DEV9
-	{"Dev9",		   _ERW, CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
+	{"Dev9",		   _ERW, CHANNEL_BASE2(1), DEV9dmaRead, DEV9dmaWrite, DEV9dmaInterrupt}, //8:  Dev9
 #else
 	{"Dev9",		   _D__}, //8:  Dev9
 #endif
-	{"Sif0",           _DRW},// CHANNEL_BASE2(2), sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
-	{"Sif1",           _DRW},// CHANNEL_BASE2(3), sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
+#ifdef ENABLE_NEW_IOPDMA_SIF
+	{"Sif0",           _ERW, CHANNEL_BASE2(2), sif0DmaRead, sif0DmaWrite, sif0DmaInterrupt}, //9:  SIF0
+	{"Sif1",           _ERW, CHANNEL_BASE2(3), sif1DmaRead, sif1DmaWrite, sif1DmaInterrupt}, //10: SIF1
+#else
+	{"Sif0",           _D__}, //9:  SIF0
+	{"Sif1",           _D__}, //10: SIF1
+#endif
 #ifdef ENABLE_NEW_IOPDMA_SIO
 	{"Sio2 (writes)",  _E_W, CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
 	{"Sio2 (reads)",   _ER_, CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
@@ -412,7 +325,9 @@ struct DmaChannelInfo
 	s32 NextUpdate;
 } IopDmaChannels[DMA_CHANNEL_MAX] = {0};
 
-// Prototypes. To be implemented later (or in other parts of the emulator)
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// Tool functions
 void SetDmaUpdateTarget(u32 delay)
 {
 	psxCounters[8].CycleT = delay;
@@ -427,6 +342,9 @@ void RaiseDmaIrq(u32 channel)
 	else
 		psxDmaInterrupt2(channel-7);
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// IopDmaStart: Called from IopHwWrite to test and possibly start a dma transfer
 
 void IopDmaStart(int channel)
 {
@@ -484,6 +402,9 @@ void IopDmaStart(int channel)
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////
+// IopDmaProcessChannel: Called from IopDmaUpdate (below) to process a dma channel
+
 template<int channel>
 static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 {
@@ -497,9 +418,9 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 	if (hh->REG_CHCR()&DMA_CTRL_ACTIVE)
 	{
 		ch->NextUpdate -= elapsed;
-		if (ch->NextUpdate <= 0)
+		if (ch->NextUpdate <= 0) // Refresh target passed
 		{
-			if (ch->ByteCount <= 0)
+			if (ch->ByteCount <= 0) // No more data left, finish dma
 			{
 				ch->NextUpdate = 0x7fffffff;
 
@@ -507,7 +428,7 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 				RaiseDmaIrq(channel);
 				hh->Interrupt(channel);
 			}
-			else
+			else // let the handlers transfer more data
 			{
 				int chcr = hh->REG_CHCR();
 
@@ -555,6 +476,9 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////
+// IopDmaProcessChannel: Called regularly to update the active channels
+
 void IopDmaUpdate(u32 elapsed)
 {
 	s32 MinDelay=0;
@@ -595,7 +519,10 @@ void IopDmaUpdate(u32 elapsed)
 	}
 }
 
-s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+//////////////////////////////////////////////////////////////////////////////////////////////
+// Error functions: dummy functions for unsupported dma "directions"
+
+s32 CALLBACK errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
 	Console.Error("ERROR: Tried to read using DMA %d (%s). Ignoring.", channel, IopDmaHandlers[channel]);
 
@@ -603,7 +530,7 @@ s32 errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 	return 0;
 }
 
-s32 errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
+s32 CALLBACK errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
 	Console.Error("ERROR: Tried to write using DMA %d (%s). Ignoring.", channel, IopDmaHandlers[channel]);
 

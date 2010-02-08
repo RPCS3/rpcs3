@@ -935,7 +935,7 @@ void psxDma3(u32 madr, u32 bcr, u32 chcr) {
 }
 
 #ifdef ENABLE_NEW_IOPDMA
-s32 cdvdDmaRead(s32 channel, u32* data, u32 wordsLeft, u32* wordsProcessed)
+s32 CALLBACK cdvdDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed)
 {
 #ifdef ENABLE_NEW_IOPDMA_CDVD
 	// hacked up from the code above
@@ -957,7 +957,7 @@ s32 cdvdDmaRead(s32 channel, u32* data, u32 wordsLeft, u32* wordsProcessed)
 	return 0;
 }
 
-void cdvdDmaInterrupt(s32 channel)
+void CALLBACK cdvdDmaInterrupt(s32 channel)
 {
 #ifdef ENABLE_NEW_IOPDMA_CDVD
 	cdrInterrupt();

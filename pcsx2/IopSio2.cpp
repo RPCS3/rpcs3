@@ -212,7 +212,7 @@ void SaveStateBase::sio2Freeze()
 /////////////////////////////////////////////////
 #ifdef ENABLE_NEW_IOPDMA
 
-s32 sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
+s32 CALLBACK sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 {
 #ifdef ENABLE_NEW_IOPDMA_SIO
 	u8* data = (u8*)tdata;
@@ -250,7 +250,7 @@ void sio2DmaSetBs(int bs)
 	sioBs = bs;
 }
 
-s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
+s32 CALLBACK sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 {
 #ifdef ENABLE_NEW_IOPDMA_SIO
 	u8* data = (u8*)tdata;
@@ -300,7 +300,7 @@ s32 sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 	return 0;
 }
 
-void sio2DmaInterrupt(s32 channel)
+void CALLBACK sio2DmaInterrupt(s32 channel)
 {
 #ifdef ENABLE_NEW_IOPDMA_SIO
 	switch(channel)	// Interrupts should always occur at the end

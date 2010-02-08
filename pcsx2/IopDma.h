@@ -22,8 +22,8 @@
 
 #ifdef ENABLE_NEW_IOPDMA
 
-typedef s32(* DmaHandler)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
-typedef void (* DmaIHandler)(s32 channel);
+typedef s32(CALLBACK * DmaHandler)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+typedef void (CALLBACK * DmaIHandler)(s32 channel);
 
 // unused for now
 class DmaBcrReg
@@ -57,8 +57,8 @@ extern void IopDmaStart(int channel);
 extern void IopDmaUpdate(u32 elapsed);
 
 // external dma handlers
-extern s32 cdvdDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
-extern void cdvdDmaInterrupt(s32 channel);
+extern s32 CALLBACK cdvdDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+extern void CALLBACK cdvdDmaInterrupt(s32 channel);
 
 //#else
 #endif
