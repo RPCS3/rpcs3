@@ -212,6 +212,13 @@ void SaveStateBase::sio2Freeze()
 /////////////////////////////////////////////////
 #ifdef ENABLE_NEW_IOPDMA
 
+static int dmaBlockSize = 0x24;
+s32 CALLBACK sio2DmaStart(s32 channel, u32 madr, u32 bcr, u32 chcr)
+{
+	dmaBlockSize = bcr & 0xFFFF;
+	return 0; // continue
+}
+
 s32 CALLBACK sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 {
 #ifdef ENABLE_NEW_IOPDMA_SIO
@@ -244,12 +251,6 @@ s32 CALLBACK sio2DmaRead(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProce
 	return 0;
 }
 
-int sioBs = 0x24;
-void sio2DmaSetBs(int bs)
-{
-	sioBs = bs;
-}
-
 s32 CALLBACK sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProcessed)
 {
 #ifdef ENABLE_NEW_IOPDMA_SIO
@@ -265,18 +266,8 @@ s32 CALLBACK sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProc
 
 	int written = 0;
 
-	// FIXME: temp code, might need to implement properly
-	int bs = sioBs;
-	int bc = bytesLeft / (bs*4);
-	int ts = bc * bs * 4;
-
-	// HACK!
-	if(ts != bytesLeft)
-	{
-		bs = bytesLeft;
-		bc = 1;
-
-	}
+	int bs = dmaBlockSize * 4;
+	int bc = bytesLeft / bs;
 
 	//assert(ts == bytesLeft);
 

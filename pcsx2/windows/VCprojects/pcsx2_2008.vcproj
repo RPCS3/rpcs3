@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="pcsx2"
 	ProjectGUID="{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	RootNamespace="pcsx2"
@@ -785,15 +785,15 @@
 								>
 							</File>
 							<File
+								RelativePath="..\..\Sif.h"
+								>
+							</File>
+							<File
 								RelativePath="..\..\Sif0.cpp"
 								>
 							</File>
 							<File
 								RelativePath="..\..\Sif1.cpp"
-								>
-							</File>
-							<File
-								RelativePath="..\..\Sif.h"
 								>
 							</File>
 							<File
@@ -1103,6 +1103,10 @@
 						>
 					</File>
 					<File
+						RelativePath="..\..\IopIrq.cpp"
+						>
+					</File>
+					<File
 						RelativePath="..\..\IopMem.cpp"
 						>
 					</File>
@@ -1279,6 +1283,10 @@
 						</FileConfiguration>
 					</File>
 					<File
+						RelativePath="..\..\Ipu\IPU.h"
+						>
+					</File>
+					<File
 						RelativePath="..\..\Ipu\IPU_Fifo.cpp"
 						>
 						<FileConfiguration
@@ -1305,10 +1313,6 @@
 								UsePrecompiledHeader="0"
 							/>
 						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\Ipu\IPU.h"
-						>
 					</File>
 					<File
 						RelativePath="..\..\Ipu\IPU_Fifo.h"

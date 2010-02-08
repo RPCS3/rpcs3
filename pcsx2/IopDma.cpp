@@ -224,13 +224,19 @@ void psxDma10(u32 madr, u32 bcr, u32 chcr)
 // Local Declarations
 
 // in IopSio2.cpp
-extern s32 CALLBACK sio2DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
-extern s32 CALLBACK sio2DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+extern s32  CALLBACK sio2DmaStart(s32 channel, u32 madr, u32 bcr, u32 chcr);
+extern s32  CALLBACK sio2DmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+extern s32  CALLBACK sio2DmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 extern void CALLBACK sio2DmaInterrupt(s32 channel);
 
 // implemented below
 s32 CALLBACK errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
 s32 CALLBACK errDmaRead(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+
+// pointer types
+typedef s32  (CALLBACK * DmaHandler)(s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed);
+typedef void (CALLBACK * DmaIHandler)(s32 channel);
+typedef s32  (CALLBACK * DmaSHandler)(s32 channel, u32 madr, u32 bcr, u32 chcr);
 
 // constants
 struct DmaHandlerInfo
@@ -243,6 +249,7 @@ struct DmaHandlerInfo
 	DmaHandler  Read;
 	DmaHandler  Write;
 	DmaIHandler Interrupt;
+	DmaSHandler Start;
 
 	__forceinline u32& REG_MADR(void) const { return psxHu32(DmacRegisterBase + 0x0); }
 	__forceinline u32& REG_BCR(void)  const { return psxHu32(DmacRegisterBase + 0x4); }
@@ -308,8 +315,8 @@ const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 	{"Sif1",           _D__}, //10: SIF1
 #endif
 #ifdef ENABLE_NEW_IOPDMA_SIO
-	{"Sio2 (writes)",  _E_W, CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt}, //11: Sio2
-	{"Sio2 (reads)",   _ER_, CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt}, //12: Sio2
+	{"Sio2 (writes)",  _E_W, CHANNEL_BASE2(4), errDmaRead, sio2DmaWrite, sio2DmaInterrupt, sio2DmaStart}, //11: Sio2
+	{"Sio2 (reads)",   _ER_, CHANNEL_BASE2(5), sio2DmaRead, errDmaWrite, sio2DmaInterrupt, sio2DmaStart}, //12: Sio2
 #else
 	{"Sio2 (writes)",  _D__}, //11: Sio2
 	{"Sio2 (reads)",   _D__}, //12: Sio2
@@ -377,11 +384,18 @@ void IopDmaStart(int channel)
 		}
 	}
 
-	// hack!
-	extern void sio2DmaSetBs(int bs);
-	if(channel==11 || channel==12)
-		sio2DmaSetBs(bcr_size);
-
+	if(IopDmaHandlers[channel].Start)
+	{
+		int ret = IopDmaHandlers[channel].Start(channel,
+									IopDmaHandlers[channel].REG_MADR(),
+									IopDmaHandlers[channel].REG_BCR(),
+									IopDmaHandlers[channel].REG_CHCR());
+		if(ret < 0)
+		{
+			IopDmaHandlers[channel].REG_CHCR() &= ~DMA_CTRL_ACTIVE;
+			return;
+		}
+	}
 
 	//Console.WriteLn(Color_StrongOrange,"Starting NewDMA ch=%d, size=%d(0x%08x), dir=%d", channel, size, bcr, chcr&DMA_CTRL_DIRECTION);
 
