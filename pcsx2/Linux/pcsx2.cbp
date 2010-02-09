@@ -258,6 +258,7 @@
 		<Unit filename="../IopDma.h" />
 		<Unit filename="../IopHw.cpp" />
 		<Unit filename="../IopHw.h" />
+		<Unit filename="../IopIrq.cpp" />
 		<Unit filename="../IopMem.cpp" />
 		<Unit filename="../IopMem.h" />
 		<Unit filename="../IopSio2.cpp" />

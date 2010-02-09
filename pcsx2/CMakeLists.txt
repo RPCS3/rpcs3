@@ -138,6 +138,7 @@ set(pcsx2Sources
 	IopCounters.cpp
 	IopDma.cpp
 	IopHw.cpp
+	IopIrq.cpp
 	IopMem.cpp
 	IopSio2.cpp
 #	Mdec.cpp
