@@ -274,7 +274,7 @@ s32 CALLBACK sio2DmaWrite(s32 channel, u32* tdata, u32 bytesLeft, u32* bytesProc
 	for(int j=0;j<bc;j++)
 	{
 		sio.count = 1;
-		for(int i=0;i<(bs*4);i++)
+		for(int i=0;i<bs;i++)
 		{
 			sio2_fifoIn(*(data++));
 			written++;
