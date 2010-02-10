@@ -277,12 +277,59 @@ struct DmaHandlerInfo
 //////////////////////////////////////////////////////////////////////////////////////////////
 // Plugin interface accessors
 
-s32  CALLBACK spu2DmaRead  (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return SPU2dmaRead(channel,data,bytesLeft,bytesProcessed); }
-s32  CALLBACK spu2DmaWrite (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return SPU2dmaWrite(channel,data,bytesLeft,bytesProcessed); }
-void CALLBACK spu2DmaInterrupt (s32 channel) { SPU2dmaInterrupt(channel); }
-s32  CALLBACK dev9DmaRead  (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return DEV9dmaRead(channel,data,bytesLeft,bytesProcessed); }
-s32  CALLBACK dev9DmaWrite (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return DEV9dmaWrite(channel,data,bytesLeft,bytesProcessed); }
-void CALLBACK dev9DmaInterrupt (s32 channel) { DEV9dmaInterrupt(channel); }
+s32  CALLBACK spu2DmaRead  (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) 
+{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	return SPU2dmaRead(channel,data,bytesLeft,bytesProcessed); 
+#else
+	*bytesProcessed = bytesLeft;
+	return 0;
+#endif
+}
+
+s32  CALLBACK spu2DmaWrite (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) 
+{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	return SPU2dmaWrite(channel,data,bytesLeft,bytesProcessed); 
+#else
+	*bytesProcessed = bytesLeft;
+	return 0;
+#endif
+}
+
+void CALLBACK spu2DmaInterrupt (s32 channel) 
+{
+#ifdef ENABLE_NEW_IOPDMA_SPU2
+	SPU2dmaInterrupt(channel); 
+#endif
+}
+
+s32  CALLBACK dev9DmaRead  (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) 
+{
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	return DEV9dmaRead(channel,data,bytesLeft,bytesProcessed); 
+#else
+	*bytesProcessed = bytesLeft;
+	return 0;
+#endif
+}
+
+s32  CALLBACK dev9DmaWrite (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) 
+{
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	return DEV9dmaWrite(channel,data,bytesLeft,bytesProcessed); 
+#else
+	*bytesProcessed = bytesLeft;
+	return 0;
+#endif
+}
+
+void CALLBACK dev9DmaInterrupt (s32 channel) 
+{
+#ifdef ENABLE_NEW_IOPDMA_DEV9
+	DEV9dmaInterrupt(channel); 
+#endif
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // Dma channel definitions
