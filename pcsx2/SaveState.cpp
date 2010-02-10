@@ -184,6 +184,9 @@ void SaveStateBase::FreezeRegisters()
 	// Fifth Block - iop-related systems
 	// ---------------------------------
 	FreezeTag( "IOP-Subsystems" );
+#ifdef ENABLE_NEW_IOPDMA
+	iopDmacFreeze();
+#endif
 	psxRcntFreeze();
 	sioFreeze();
 	sio2Freeze();

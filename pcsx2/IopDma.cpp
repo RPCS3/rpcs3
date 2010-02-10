@@ -574,5 +574,16 @@ s32 CALLBACK errDmaWrite(s32 channel, u32* data, u32 bytesLeft, u32* bytesProces
 	return 0;
 }
 
+void SaveStateBase::iopDmacFreeze()
+{
+	FreezeTag("iopDmac");
+
+	Freeze(IopDmaChannels);
+	
+	if( IsLoading() )
+	{
+		SetDmaUpdateTarget(10000); // Might be needed to kickstart the main updater :p
+	}
+}
 
 #endif
