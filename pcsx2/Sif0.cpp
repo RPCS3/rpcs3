@@ -35,7 +35,7 @@ static __forceinline void Sif0Init()
 static __forceinline bool WriteFifoToEE()
 {
 	const int readSize = min((s32)sif0dma->qwc, sif0.fifo.size >> 2);
-	//if (readSize <= 0)
+	//if (readSize > 0)
 	//{
 		tDMA_TAG *ptag;
 		
