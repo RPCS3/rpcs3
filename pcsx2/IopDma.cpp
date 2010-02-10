@@ -275,6 +275,16 @@ struct DmaHandlerInfo
 #define _ERW 7
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+// Plugin interface accessors
+
+s32  CALLBACK spu2DmaRead  (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return SPU2dmaRead(channel,data,bytesLeft,bytesProcessed); }
+s32  CALLBACK spu2DmaWrite (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return SPU2dmaWrite(channel,data,bytesLeft,bytesProcessed); }
+void CALLBACK spu2DmaInterrupt (s32 channel) { SPU2dmaInterrupt(channel); }
+s32  CALLBACK dev9DmaRead  (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return DEV9dmaRead(channel,data,bytesLeft,bytesProcessed); }
+s32  CALLBACK dev9DmaWrite (s32 channel, u32* data, u32 bytesLeft, u32* bytesProcessed) { return DEV9dmaWrite(channel,data,bytesLeft,bytesProcessed); }
+void CALLBACK dev9DmaInterrupt (s32 channel) { DEV9dmaInterrupt(channel); }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 // Dma channel definitions
 
 const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
@@ -289,7 +299,7 @@ const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 	{"CDVD",           _D__}, //3:  CDVD
 #endif
 #ifdef ENABLE_NEW_IOPDMA_SPU2
-	{"SPU2 Core0",     _ERW, CHANNEL_BASE1(4), SPU2dmaRead, SPU2dmaWrite, SPU2dmaInterrupt}, //4:  Spu/Spu2 Core0
+	{"SPU2 Core0",     _ERW, CHANNEL_BASE1(4), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //4:  Spu/Spu2 Core0
 #else
 	{"SPU2 Core0",     _D__}, //4:  Spu/Spu2 Core0
 #endif
@@ -298,12 +308,12 @@ const DmaHandlerInfo IopDmaHandlers[DMA_CHANNEL_MAX] =
 
 	// Second DMAC, new in PS2 IOP
 #ifdef ENABLE_NEW_IOPDMA_SPU2
-	{"SPU2 Core1",     _ERW, CHANNEL_BASE2(0), SPU2dmaRead, SPU2dmaWrite, SPU2dmaInterrupt}, //7:  Spu2 Core1
+	{"SPU2 Core1",     _ERW, CHANNEL_BASE2(0), spu2DmaRead, spu2DmaWrite, spu2DmaInterrupt}, //7:  Spu2 Core1
 #else
 	{"SPU2 Core1",     _D__}, //7:  Spu2 Core1
 #endif
 #ifdef ENABLE_NEW_IOPDMA_DEV9
-	{"Dev9",		   _ERW, CHANNEL_BASE2(1), DEV9dmaRead, DEV9dmaWrite, DEV9dmaInterrupt}, //8:  Dev9
+	{"Dev9",		   _ERW, CHANNEL_BASE2(1), dev9DmaRead, dev9DmaWrite, dev9DmaInterrupt}, //8:  Dev9
 #else
 	{"Dev9",		   _D__}, //8:  Dev9
 #endif
