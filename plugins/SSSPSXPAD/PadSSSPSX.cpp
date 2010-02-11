@@ -140,7 +140,7 @@ static bool ReleaseDirectInput (void)
 static bool InitDirectInput (void)
 {
 	EnterScopedSection initlock( init_lock );
-	
+
 	if (global.pDInput)
 		return TRUE;
 	HRESULT result = DirectInput8Create (hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&global.pDInput, NULL);
@@ -349,7 +349,7 @@ static std::string MakeConfigFileName()
 {
 	//GetModuleFileName (hInstance, fname, 256);
 	//strcpy (fname + strlen (fname) - 3, "cfg");
-	
+
 	return s_strIniPath + "PadSSSPSX.cfg";
 }
 
@@ -852,7 +852,12 @@ static u8 get_analog (const int key)
 {
 	const int pad = ((key & 0xf00) / 0x100);
 	const int pos = ((key & 0x0ff) /2);
-	return (u8)(((int*)&global.JoyState[pad].lX)[pos] + 128);
+	int value = (((int*)&global.JoyState[pad].lX)[pos] + 0x7F);
+	if (value >= 0xC0) value++;
+	if (value <     0) value = 0;
+	// Don't think this happens, but just in case...
+	if (value >  0xFF) value = 0xFF;
+	return (u8)value;
 }
 
 static u8 get_pressure (const DWORD now, const DWORD press)
@@ -1146,14 +1151,14 @@ s32 CALLBACK PADfreeze (int mode, freezeData *data)
 		case FREEZE_SIZE:
 			data->size = 0;
 		break;
-		
+
 		case FREEZE_LOAD:
 		break;
-		
+
 		case FREEZE_SAVE:
 		break;
 	}
-	
+
 	return 0;
 }
 
@@ -1165,7 +1170,7 @@ BOOL APIENTRY DllMain(HMODULE hInst, DWORD dwReason, LPVOID lpReserved)
 		hInstance = hInst;
 		InitializeCriticalSection( &update_lock );
 		InitializeCriticalSection( &init_lock );
-	}	
+	}
 	else if( dwReason == DLL_PROCESS_DETACH )
 	{
 		DeleteCriticalSection( &update_lock );
