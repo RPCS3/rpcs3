@@ -33,7 +33,7 @@ static int m_PostSavestateCards[2] = { 0, 0 };
 
 #ifdef SIO_INLINE_IRQS
 #define SIO_INT() sioInterrupt()
-#define SIO_FORCEINLINE
+#define SIO_FORCEINLINE __forceinline
 #else
 __forceinline void SIO_INT()
 {

@@ -15,6 +15,10 @@
 
 #pragma once
 
+// Let's enable this to free the IOP event handler of some considerable load.
+// Games are highly unlikely to need timed IRQ's for PAD and MemoryCard handling anyway (rama).
+#define SIO_INLINE_IRQS
+
 struct _sio
 {
 	u16 StatReg;

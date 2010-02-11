@@ -222,7 +222,9 @@ static __forceinline void _psxTestInterrupts()
 {
 	IopTestEvent(IopEvt_SIF0,		sif0Interrupt);	// SIF0
 	IopTestEvent(IopEvt_SIF1,		sif1Interrupt);	// SIF1
+#ifndef SIO_INLINE_IRQS
 	IopTestEvent(IopEvt_SIO,		sioInterrupt);
+#endif
 	IopTestEvent(IopEvt_CdvdRead,	cdvdReadInterrupt);
 
 #if IOP_ENABLE_SIF_HACK
