@@ -54,3 +54,6 @@ extern const __aligned16 VIFUnpackFuncTable VIFfuncTable[32];
 extern int  nVifUnpack (int idx, u8 *data);
 extern void initNewVif (int idx);
 extern void resetNewVif(int idx);
+
+extern __forceinline void vif0UnpackSetup(u32 *data); 
+extern __forceinline void vif1UnpackSetup(u32 *data);

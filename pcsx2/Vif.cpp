@@ -21,6 +21,10 @@
 #include "GS.h"
 #include "Gif.h"
 
+vifStruct  vif0;
+vifStruct  vif1;
+Path3Modes Path3progress = STOPPED_MODE;
+
 void vif0Init() { initNewVif(0); }
 void vif1Init() { initNewVif(1); }
 

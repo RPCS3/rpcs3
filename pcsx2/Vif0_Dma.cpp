@@ -19,10 +19,6 @@
 #include "VUmicro.h"
 #include "newVif.h"
 
-extern int (__fastcall *Vif0TransTLB[128])(u32 *data);
-extern void (*Vif0CMDTLB[75])();
-vifStruct vif0;
-
 __forceinline void vif0FLUSH()
 {
 	int _cycles = VU0.cycle;
@@ -30,42 +26,6 @@ __forceinline void vif0FLUSH()
 	// because its vif stalling not the EE core...
 	vu0Finish();
 	g_vifCycles += (VU0.cycle - _cycles) * BIAS;
-}
-
-static __forceinline void vif0UNPACK(u32 *data)
-{
-	int vifNum;
-
-	if ((vif0Regs->cycle.wl == 0) && (vif0Regs->cycle.wl < vif0Regs->cycle.cl))
-	{
-		Console.WriteLn("Vif0 CL %d, WL %d", vif0Regs->cycle.cl, vif0Regs->cycle.wl);
-		vif0.cmd &= ~0x7f;
-		return;
-	}
-
-	vif0FLUSH();
-
-	vif0.tag.addr = (vif0Regs->code & 0xff) << 4;
-	vif0.usn = (vif0Regs->code >> 14) & 0x1;
-	vifNum = (vif0Regs->code >> 16) & 0xff;
-	if (vifNum == 0) vifNum = 256;
-	vif0Regs->num = vifNum;
-
-	if (vif0Regs->cycle.wl <= vif0Regs->cycle.cl)
-	{
-		vif0.tag.size = ((vifNum * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
-	}
-	else
-	{
-		int n = vif0Regs->cycle.cl * (vifNum / vif0Regs->cycle.wl) +
-		        _limit(vifNum % vif0Regs->cycle.wl, vif0Regs->cycle.cl);
-
-		vif0.tag.size = ((n * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
-	}
-
-	vif0.cl = 0;
-	vif0.tag.cmd = vif0.cmd;
-	vif0Regs->offset = 0;
 }
 
 bool VIF0transfer(u32 *data, int size, bool istag)
@@ -103,7 +63,7 @@ bool VIF0transfer(u32 *data, int size, bool istag)
 
 		if ((vif0.cmd & 0x60) == 0x60)
 		{
-			vif0UNPACK(data);
+			vif0UnpackSetup(data);
 		}
 		else
 		{
@@ -173,9 +133,9 @@ bool VIF0transfer(u32 *data, int size, bool istag)
 
 	if (!istag)
 	{
-		transferred = transferred >> 2;
-		vif0ch->madr += (transferred << 4);
-		vif0ch->qwc -= transferred;
+		transferred   = transferred >> 2;
+		vif0ch->madr +=(transferred << 4);
+		vif0ch->qwc  -= transferred;
 	}
 
 	return true;

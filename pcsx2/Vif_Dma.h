@@ -60,6 +60,11 @@ extern void Vif1MskPath3();
 extern void vif1Write32(u32 mem, u32 value);
 extern void vif1Reset();
 
+extern void (*Vif0CMDTLB[82])();
+extern void (*Vif1CMDTLB[82])();
+extern int (__fastcall *Vif0TransTLB[128])(u32 *data);
+extern int (__fastcall *Vif1TransTLB[128])(u32 *data);
+
 __forceinline static int _limit(int a, int max)
 {
 	return ((a > max) ? max : a);

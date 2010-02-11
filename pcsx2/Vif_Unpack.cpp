@@ -293,3 +293,47 @@ const __aligned16 VIFUnpackFuncTable VIFfuncTable[32] =
 	UnpackFuncSet( false )
 	UnpackFuncSet( true )
 };
+
+//----------------------------------------------------------------------------
+// Unpack Setup Code
+//----------------------------------------------------------------------------
+
+_vifT void vifUnpackSetup(u32 *data) {
+
+	if ((vifXRegs->cycle.wl == 0) && (vifXRegs->cycle.wl < vifXRegs->cycle.cl)) {
+        Console.WriteLn("Vif%d CL %d, WL %d", idx, vifXRegs->cycle.cl, vifXRegs->cycle.wl);
+		vifX.cmd &= ~0x7f;
+        return; // Skipping write and 0 write-cycles, so do nothing!
+	}
+
+	if (!idx) vif0FLUSH(); // Only VU0?
+
+	vifX.usn   = (vifXRegs->code >> 14) & 0x01;
+	int vifNum = (vifXRegs->code >> 16) & 0xff;
+	
+	if (vifNum == 0) vifNum = 256;
+	vifXRegs->num =  vifNum;
+
+	if (vifXRegs->cycle.wl <= vifXRegs->cycle.cl) {
+		if (!idx) vif0.tag.size = ((vifNum * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
+		else	  vif1.tag.size = ((vifNum * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
+	}
+	else {
+		int n = vifXRegs->cycle.cl * (vifNum / vifXRegs->cycle.wl) +
+		        _limit(vifNum % vifXRegs->cycle.wl, vifXRegs->cycle.cl);
+
+		if (!idx) vif0.tag.size = ((n * VIFfuncTable[ vif0.cmd & 0xf ].gsize) + 3) >> 2;
+		else	  vif1.tag.size = ((n * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
+	}
+
+	u32 addr = vifXRegs->code;
+	if (idx && ((addr>>15)&1)) addr += vif1Regs->tops;
+	vifX.tag.addr = (addr<<4) & (idx ? 0x3ff0 : 0xff0);
+
+	vifX.cl			 = 0;
+	vifX.tag.cmd	 = vifX.cmd;
+	vifXRegs->offset = 0;
+}
+
+void vif0UnpackSetup(u32 *data) { vifUnpackSetup<0>(data); }
+void vif1UnpackSetup(u32 *data) { vifUnpackSetup<1>(data); }

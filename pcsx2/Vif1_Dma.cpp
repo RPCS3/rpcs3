@@ -21,12 +21,6 @@
 #include "VUmicro.h"
 #include "newVif.h"
 
-extern void (*Vif1CMDTLB[82])();
-extern int (__fastcall *Vif1TransTLB[128])(u32 *data);
-
-Path3Modes Path3progress = STOPPED_MODE;
-vifStruct vif1;
-
 __forceinline void vif1FLUSH()
 {
 	if (VU0.VI[REG_VPU_STAT].UL & 0x100) 
@@ -38,49 +32,6 @@ __forceinline void vif1FLUSH()
 
 		g_vifCycles += (VU1.cycle - _cycles) * BIAS;
 	}
-}
-
-static __forceinline void vif1UNPACK(u32 *data)
-{
-	int vifNum;
-
-	if ((vif1Regs->cycle.wl == 0) && (vif1Regs->cycle.wl < vif1Regs->cycle.cl))
-    {
-        Console.WriteLn("Vif1 CL %d, WL %d", vif1Regs->cycle.cl, vif1Regs->cycle.wl);
-		vif1.cmd &= ~0x7f;
-        return;
-	}
-
-	//vif1FLUSH();
-
-	vif1.usn = (vif1Regs->code >> 14) & 0x1;
-	vifNum = (vif1Regs->code >> 16) & 0xff;
-
-	if (vifNum == 0) vifNum = 256;
-	vif1Regs->num = vifNum;
-
-	if (vif1Regs->cycle.wl <= vif1Regs->cycle.cl)
-	{
-		vif1.tag.size = ((vifNum * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
-	}
-	else
-	{
-		int n = vif1Regs->cycle.cl * (vifNum / vif1Regs->cycle.wl) +
-		        _limit(vifNum % vif1Regs->cycle.wl, vif1Regs->cycle.cl);
-
-		vif1.tag.size = ((n * VIFfuncTable[ vif1.cmd & 0xf ].gsize) + 3) >> 2;
-	}
-
-	if ((vif1Regs->code >> 15) & 0x1)
-		vif1.tag.addr = (vif1Regs->code + vif1Regs->tops) & 0x3ff;
-	else
-		vif1.tag.addr = vif1Regs->code & 0x3ff;
-
-	vif1Regs->offset = 0;
-	vif1.cl = 0;
-	vif1.tag.addr <<= 4;
-	vif1.tag.cmd  = vif1.cmd;
-
 }
 
 bool VIF1transfer(u32 *data, int size, bool istag)
@@ -127,7 +78,7 @@ bool VIF1transfer(u32 *data, int size, bool istag)
 
 		if ((vif1.cmd & 0x60) == 0x60)
 		{
-			vif1UNPACK(data);
+			vif1UnpackSetup(data);
 		}
 		else
 		{
@@ -200,9 +151,9 @@ bool VIF1transfer(u32 *data, int size, bool istag)
 
 	if (!istag)
 	{
-		transferred = transferred >> 2;
-		vif1ch->madr += (transferred << 4);
-		vif1ch->qwc -= transferred;
+		transferred   = transferred >> 2;
+		vif1ch->madr +=(transferred << 4);
+		vif1ch->qwc  -= transferred;
 	}
 
 	if (vif1Regs->stat.VGW) vif1.vifstalled = true;
