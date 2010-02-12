@@ -48,6 +48,8 @@ void WndProcEater::Release() {
 	RemoveProp( hWndEaten, L"LilyHaxxor" );
 	if (hWndEaten && IsWindow(hWndEaten)) {
 		SetWindowLongPtr(hWndEaten, GWLP_WNDPROC, (LONG_PTR)eatenWndProc);
+		hWndEaten = 0;
+		eatenWndProc = 0;
 	}
 }
 
