@@ -35,18 +35,15 @@ void WndProcEater::ReleaseExtraProc(ExtraWndProc proc) {
 	if (!numExtraProcs && eatenWndProc) {
 		free(extraProcs);
 		extraProcs = 0;
-		if (hWndEaten && IsWindow(hWndEaten)) {
-			SetWindowLongPtr(hWndEaten, GWLP_WNDPROC, (LONG_PTR)eatenWndProc);
-		}
-		hWndEaten = 0;
-		eatenWndProc = 0;
+		// As numExtraProcs is 0, won't cause recursion if called from Release().
+		Release();
 	}
 }
 
 void WndProcEater::Release() {
 	while (numExtraProcs) ReleaseExtraProc(extraProcs[0].proc);
-	RemoveProp( hWndEaten, L"LilyHaxxor" );
 	if (hWndEaten && IsWindow(hWndEaten)) {
+		RemoveProp(hWndEaten, L"LilyHaxxor");
 		SetWindowLongPtr(hWndEaten, GWLP_WNDPROC, (LONG_PTR)eatenWndProc);
 		hWndEaten = 0;
 		eatenWndProc = 0;
