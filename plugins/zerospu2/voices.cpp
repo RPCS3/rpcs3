@@ -26,9 +26,9 @@
 
 
 // VOICE_PROCESSED definitions
-SPU_CONTROL_* VOICE_PROCESSED::GetCtrl()
+tSPU_ATTR* VOICE_PROCESSED::GetCtrl()
 {
-	return ((SPU_CONTROL_*)(spu2regs+memoffset+REG_C0_CTRL));
+	return &spu2attr(memchannel);
 }
 
 void VOICE_PROCESSED::SetVolume(s32 iProcessRight)
@@ -216,7 +216,7 @@ static void __forceinline GetNoiseValues(s32& VD)
 		"XOR %%eax,%%ebx\n"
 		"ROR %%eax,3\n"
 		"MOV %0,%%eax\n"
-		".att_syntax\n" : "r="(Seed) :"r"(Seed));
+		".att_syntax\n" : "=r"(Seed) :"r"(Seed));
 #endif
 }
 
@@ -281,6 +281,14 @@ s32 VOICE_PROCESSED::iGetInterpolationVal()
 
 	fa=SB[29];
 	return fa;
+}
+
+s32 VOICE_PROCESSED::iGetVal()
+{
+	if (bNoise)
+		return iGetNoiseVal();
+	else
+		return iGetInterpolationVal();
 }
 
 void VOICE_PROCESSED::Stop()

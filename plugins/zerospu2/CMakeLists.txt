@@ -25,13 +25,16 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 set(zerospu2Sources
 	voices.cpp
 	zerodma.cpp
-	zerospu2.cpp)
+	zerospu2.cpp
+	zeroworker.cpp)
 	
 # zerospu2 headers
 set(zerospu2Headers
 	misc.h
 	reg.h
-	zerospu2.h)
+	zerodma.h
+	zerospu2.h
+	zeroworker.h)
 
 # zerospu2 Linux sources
 set(zerospu2LinuxSources

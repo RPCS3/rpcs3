@@ -105,7 +105,7 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-Wall" />
+			<Add option="-W" />
 			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="-fPIC" />
 			<Add option="-m32" />
@@ -155,8 +155,11 @@
 		<Unit filename="../reg.h" />
 		<Unit filename="../voices.cpp" />
 		<Unit filename="../zerodma.cpp" />
+		<Unit filename="../zerodma.h" />
 		<Unit filename="../zerospu2.cpp" />
 		<Unit filename="../zerospu2.h" />
+		<Unit filename="../zeroworker.cpp" />
+		<Unit filename="../zeroworker.h" />
 		<Extensions>
 			<code_completion />
 			<debugger />

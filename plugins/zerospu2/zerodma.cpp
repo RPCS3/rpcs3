@@ -17,6 +17,7 @@
  */
 
 #include "zerospu2.h"
+#include "zerodma.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -24,34 +25,20 @@
 #include "SoundTouch/SoundTouch.h"
 #include "SoundTouch/WavFile.h"
 
-void CALLBACK SPU2readDMAMem(u16 *pMem, int size, int core)
+void CALLBACK SPU2readDMAMem(u16 *pMem, int size, int channel)
 {
-	u32 spuaddr;
-	s32 i, dma, offset;
+	u32 spuaddr = C_SPUADDR(channel);
 	
-	if ( core == 0)
-	{
-		dma = 4;
-		offset = 0;
-	}
-	else
-	{
-		dma = 7;
-		offset = 0x0400;
-	}	
+	SPU2_LOG("SPU2 readDMAMem(%d) size %x, addr: %x\n", channel,  size, pMem);
 
-	spuaddr = C_SPUADDR(core);
-	
-	SPU2_LOG("SPU2 readDMA%dMem size %x, addr: %x\n", dma,  size, pMem);
-
-	for (i = 0; i < size; i++)
+	for (u32 i = 0; i < size; i++)
 	{
 		*pMem++ = *(u16*)(spu2mem + spuaddr);
-		if ((spu2Rs16(REG_C0_CTRL + offset) & 0x40) && (C_IRQA(core) == spuaddr))
+		if (spu2attr(channel).irq && (C_IRQA(channel) == spuaddr))
 		{
-			C_SPUADDR_SET(spuaddr, core);
-			IRQINFO |= (4 * (core + 1));
-			SPU2_LOG("SPU2readDMA%dMem:interrupt\n", dma);
+			C_SPUADDR_SET(spuaddr, channel);
+			IRQINFO |= (4 * (channel + 1));
+			SPU2_LOG("SPU2readDMAMem(%d):interrupt\n", channel);
 			irqCallbackSPU2();
 		}
 
@@ -60,13 +47,13 @@ void CALLBACK SPU2readDMAMem(u16 *pMem, int size, int core)
 	}
 
 	spuaddr += 19; //Transfer Local To Host TSAH/L + Data Size + 20 (already +1'd)
-	C_SPUADDR_SET(spuaddr, core);
+	C_SPUADDR_SET(spuaddr, channel);
 
 	 // DMA complete
-	spu2Ru16(REG_C0_SPUSTAT + offset) &= ~0x80;									
-	SPUStartCycle[core] = SPUCycles;
-	SPUTargetCycle[core] = size;
-	interrupt |=  (1 << (1 + core));
+	spu2stat_clear_80(channel);
+	SPUStartCycle[channel] = SPUCycles;
+	SPUTargetCycle[channel] = size;
+	interrupt |=  (1 << (1 + channel));
 }
 
 void CALLBACK SPU2readDMA4Mem(u16 *pMem, int size)
@@ -90,108 +77,73 @@ void CALLBACK SPU2readDMA7Mem(u16* pMem, int size)
 // short-words for right ) has been transferred. Another interrupt occurs at 
 // the end of the transfer.
 
-int ADMASWrite(int core)
+int ADMASWrite(int channel)
 {
 	u32 spuaddr;
-	ADMA *Adma;
-	s32 dma, offset;
-	
-	if (core == 0)
-	{
-		Adma = &Adma4;
-		dma = 4;
-		offset = 0;
-	}
-	else
-	{
-		Adma = &Adma7;
-		dma = 7;
-		offset = 0x0400;
-	}
-	
+	ADMA *Adma = &adma[channel];
 	
 	if (interrupt & 0x2)
 	{
-		WARN_LOG("%d returning for interrupt\n", dma);
+		WARN_LOG("ADMASWrite(%d) returning for interrupt\n", channel);
 		return 0;
 	}
+	
 	if (Adma->AmountLeft <= 0)
 	{
-		WARN_LOG("%d amount left is 0\n", dma);
+		WARN_LOG("ADMASWrite(%d) amount left is 0\n", channel);
 		return 1;
 	}
 
 	assert( Adma->AmountLeft >= 512 );
-	spuaddr = C_SPUADDR(core);
+	spuaddr = C_SPUADDR(channel);
+	u32 left_addr = spuaddr + 0x2000 + c_offset(channel);
+	u32 right_addr = left_addr + 0x200;
 	
 	// SPU2 Deinterleaves the Left and Right Channels
-	memcpy((s16*)(spu2mem + spuaddr + 0x2000 + offset),(s16*)Adma->MemAddr,512);
+	memcpy((s16*)(spu2mem + left_addr),(s16*)Adma->MemAddr,512);
 	Adma->MemAddr += 256;
-	memcpy((s16*)(spu2mem + spuaddr + 0x2200 + offset),(s16*)Adma->MemAddr,512);
+	memcpy((s16*)(spu2mem + right_addr),(s16*)Adma->MemAddr,512);
 	Adma->MemAddr += 256;
 	
-	if ((spu2Ru16(REG_C0_CTRL + offset) & 0x40) && ((spuaddr + 0x2400) <= C_IRQA(core) &&  (spuaddr + 0x2400 + 256) >= C_IRQA(core)))
+	if (spu2attr(channel).irq && (irq_test1(channel, spuaddr) || irq_test2(channel, spuaddr)))
 	{
-		IRQINFO |= (4 * (core + 1));
-		WARN_LOG("ADMA %d Mem access:interrupt\n", dma);
-		irqCallbackSPU2();
-	}
-	
-	if ((spu2Ru16(REG_C0_CTRL + offset) & 0x40) && ((spuaddr + 0x2600) <= C_IRQA(core) &&  (spuaddr + 0x2600 + 256) >= C_IRQA(core)))
-	{
-		IRQINFO |= (4 * (core + 1));
-		WARN_LOG("ADMA %d Mem access:interrupt\n", dma);
+		IRQINFO |= (4 * (channel + 1));
+		WARN_LOG("ADMAMem access(%d): interrupt\n", channel);
 		irqCallbackSPU2();
 	}
 
 	spuaddr = (spuaddr + 256) & 511;
-	C_SPUADDR_SET(spuaddr, core);
+	C_SPUADDR_SET(spuaddr, channel);
 	
 	Adma->AmountLeft -= 512;
 
-	if (Adma->AmountLeft > 0) 
-		return 0;
-	else 
-		return 1;
+	return (Adma->AmountLeft <= 0);
 }
 
-void SPU2writeDMAMem(u16* pMem, int size, int core)
+void SPU2writeDMAMem(u16* pMem, int size, int channel)
 {
 	u32 spuaddr;
-	ADMA *Adma;
-	s32 dma, offset;
-	
-	if (core == 0)
-	{
-		Adma = &Adma4;
-		dma = 4;
-		offset = 0;
-	}
-	else
-	{
-		Adma = &Adma7;
-		dma = 7;
-		offset = 0x0400;
-	}
+	ADMA *Adma = &adma[channel];
+	s32 offset = (channel == 0) ? 0 : 0x400;
 
-	SPU2_LOG("SPU2 writeDMA%dMem size %x, addr: %x(spu2:%x), ctrl: %x, adma: %x\n", \
-	dma, size, pMem, C_SPUADDR(core), spu2Ru16(REG_C0_CTRL + offset), spu2Ru16(REG_C0_ADMAS + offset));
+	SPU2_LOG("SPU2 writeDMAMem size %x, addr: %x(spu2:%x)"/*, ctrl: %x, adma: %x\n"*/, \
+	size, pMem, C_SPUADDR(channel)/*, spu2Ru16(REG_C0_CTRL + offset), spu2Ru16(REG_C0_ADMAS + offset)*/);
 
-	if ((spu2Ru16(REG_C0_ADMAS + offset) & 0x1 * (core + 1)) && ((spu2Ru16(REG_C0_CTRL + offset) & 0x30) == 0) && size)
+	if (spu2admas(channel) && (spu2attr(channel).dma == 0) && size)
 	{
 		if (!Adma->Enabled ) Adma->Index = 0;
 	
 		Adma->MemAddr = pMem;
 		Adma->AmountLeft = size;
-		SPUTargetCycle[core] = size;
-		spu2Ru16(REG_C0_SPUSTAT + offset) &= ~0x80;
+		SPUTargetCycle[channel] = size;
+		spu2stat_clear_80(channel);
 		if (!Adma->Enabled || (Adma->Index > 384)) 
 		{
-			C_SPUADDR_SET(0, core);
-			if (ADMASWrite(core))
+			C_SPUADDR_SET(0, channel);
+			if (ADMASWrite(channel))
 			{
-				SPUStartCycle[core] = SPUCycles;
-				interrupt |= (1 << (1 + core));
+				SPUStartCycle[channel] = SPUCycles;
+				interrupt |= (1 << (1 + channel));
 			}
 		}
 		Adma->Enabled = 1;
@@ -200,50 +152,37 @@ void SPU2writeDMAMem(u16* pMem, int size, int core)
 	}
 
 #ifdef ZEROSPU2_DEVBUILD
-	if ((conf.Log && conf.options & OPTION_RECORDING) && (core == 1))
+	if ((conf.Log && conf.options & OPTION_RECORDING) && (channel == 1))
 		LogPacketSound(pMem, 0x8000);
 #endif
 
-	spuaddr = C_SPUADDR(core);
+	spuaddr = C_SPUADDR(channel);
 	memcpy((u8*)(spu2mem + spuaddr),(u8*)pMem,size << 1);
 	spuaddr += size;
-	C_SPUADDR_SET(spuaddr, core);
+	C_SPUADDR_SET(spuaddr, channel);
 	
-	if ((spu2Ru16(REG_C0_CTRL + offset)&0x40) && (spuaddr < C_IRQA(core) && (C_IRQA(core) <= (spuaddr+0x20))))
+	if (spu2attr(channel).irq && (spuaddr < C_IRQA(channel) && (C_IRQA(channel) <= (spuaddr + 0x20))))
 	{
-		IRQINFO |= 4 * (core + 1);
-		SPU2_LOG("SPU2writeDMA%dMem:interrupt\n", dma);
+		IRQINFO |= 4 * (channel + 1);
+		SPU2_LOG("SPU2writeDMAMem:interrupt\n");
 		irqCallbackSPU2();
 	}
 	
 	if (spuaddr > 0xFFFFE) spuaddr = 0x2800;
-	C_SPUADDR_SET(spuaddr, core);
+	C_SPUADDR_SET(spuaddr, channel);
 
-	MemAddr[core] += size << 1;
-	spu2Ru16(REG_C0_SPUSTAT + offset) &= ~0x80;
-	SPUStartCycle[core] = SPUCycles;
-	SPUTargetCycle[core] = size;
-	interrupt |= (1 << (core + 1));
+	MemAddr[channel] += size << 1;
+	spu2stat_clear_80(channel);
+	SPUStartCycle[channel] = SPUCycles;
+	SPUTargetCycle[channel] = size;
+	interrupt |= (1 << (channel + 1));
 }
 
-void CALLBACK SPU2interruptDMA(int dma)
+void CALLBACK SPU2interruptDMA(int channel)
 {
-	s32 core, offset;
-	
-	if (dma == 4)
-	{
-		core = 0;
-		offset = 0;
-	}
-	else
-	{
-		core = 1;
-		offset = 0x0400;
-	}
-	
-	SPU2_LOG("SPU2 interruptDMA%d\n", dma);
-	spu2Rs16(REG_C0_CTRL + offset) &= ~0x30;
-	spu2Ru16(REG_C0_SPUSTAT + offset) |= 0x80;
+	SPU2_LOG("SPU2 interruptDMA(%d)\n", channel);
+	spu2attr(channel).dma = 0;
+	spu2stat_set_80(channel);
 }
 
 #ifndef ENABLE_NEW_IOPDMA_SPU2

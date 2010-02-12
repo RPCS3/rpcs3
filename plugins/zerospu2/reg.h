@@ -157,6 +157,67 @@ R_MIX_DEST_B1       			 = 0x0338,
  // NOTE: SPDIF_COPY is defined in Linux kernel headers as 0x0004.
 };			
 
+// Not sure if this is a good idea, but I don't feel like retyping it, so I'll leave it in for now.
+ /*struct core_registers
+ {
+	 u16 pad[179];
+	 
+	 u16 fmod1; u16 pad1;
+	 u16 fmod2; u16 pad2;
+	 u16 s_non; u16 pad3[3];
+	 u16 vmix_l1; u16 pad4;
+	 u16 vmix_l2; u16 pad5;
+	 u16 vmixel; u16 pad6[3];
+	 u16 vmixr1; u16 pad7;
+	 u16 vmixr2; u16 pad8;
+	 u16 vmixer; u16 pad9[3];
+	 u16 mmix; u16 pad10;
+	 u16 attr; u16 pad11;
+	 u16 irqa_hi; u16 pad12;
+	 u16 irqa_lo; u16 pad13;
+	 u16 spu_on_1; u16 pad14;
+	 u16 spu_on_2; u16 pad15;
+	 u16 spu_off_1; u16 pad16;
+	 u16 spu_off_2; u16 pad17;
+	 u16 spu_addr_hi; u16 pad18;
+	 u16 spu_addr_lo; u16 pad19;
+	 u16 spu_data; u16 pad20;
+	 u16 dma_ctrl; u16 pad21;
+	 u16 admas; u16 pad22[16]; 
+	 
+	 // Not complete past this point (not padded properly)
+	 u16 va_ssa; u16 pad23[3];	//0x01C0, // Waveform data starting address
+ 	 u16 va_lsax; u16 pad24[3];	//0x01C4, // Loop point address
+ 	 u16 va_nax; u16 pad25;		//0x01C8, // Waveform data that should be read next
+	 u16  a_esa; u16 pad26;		//0x02E0, //Address: Top address of working area for effects processing
+	 u16  fb_src_a; u16 pad27;	//0x02E4, // Feedback Source A
+	 u16  fb_sra_b; u16 pad28;	//0x02E8, // Feedback Source B
+	 u16 iir_dest_a0; u16 pad29;	//0x02EC,
+	 u16 iir_dest_a1; u16 pad30;	//0x02F0,
+	 u16 acc_src_a0; u16 pad31;	//0x02F4,
+	 u16 acc_src_a1; u16 pad32;	//0x02F8,
+	 u16 acc_src_b0; u16 pad33;	//0x02FC,
+	 u16 acc_src_b1; u16 pad34;	//0x0300,
+	 u16 iir_src_a0; u16 pad35;	//0x0304,
+	 u16 iir_src_a1; u16 pad36;	//0x0308,
+	 u16 iir_dest_b0; u16 pad37;	//0x030C,
+	 u16 iir_dest_b1; u16 pad38; 	//0x0310,
+	 u16 acc_src_c0; u16 pad39;	//0x0314,
+	 u16 acc_src_c1; u16 pad40;	//0x0318,
+	 u16 acc_src_d0; u16 pad41;	//0x031C,
+	 u16 acc_src_d1; u16 pad42;	// 0x0320,
+	 u16 iir_src_b1; u16 pad43;	//0x0324,
+	 u16 iir_src_b0; u16 pad44;	//0x0328,
+	 u16 mix_dest_a0; u16 pad45;	//0x032C,
+	 u16 mix_dest_a1; u16 pad46;	//0x0330,
+	 u16 mix_dest_b0; u16 pad47;	//0x0334,
+	 u16 mix_dest_b1;  u16 pad48;	// 0x0338,
+ 	 u16 a_eea; u16 pad49;	//0x033C, 
+	 u16 end1; u16 pad 50;	//0x0340, // End Point passed flag
+	 u16 end2; u16 pad 51; 	//0x0342,
+	 u16 statx; //0x0344, // Status register?
+ };*/
+ 
 // These SPDIF defines aren't used yet - swiped from spu2ghz, like a number of the registers I added in.
 // -- arcum42
 #define SPDIF_OUT_OFF        0x0000		//no spdif output

@@ -257,6 +257,10 @@
 				RelativePath="..\zerospu2.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\zeroworker.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -284,7 +288,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\zerodma.h"
+				>
+			</File>
+			<File
 				RelativePath="..\zerospu2.h"
+				>
+			</File>
+			<File
+				RelativePath="..\zeroworker.h"
 				>
 			</File>
 		</Filter>

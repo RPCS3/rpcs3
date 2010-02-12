@@ -46,6 +46,7 @@ extern string s_strIniPath;
 #define LOG_CALLBACK 0&&
 #endif
 
+#define ZEROSPU2_DEVBUILD
 #ifdef ZEROSPU2_DEVBUILD
 #define SPU2_LOG __Log  //dev mode
 #else
@@ -60,36 +61,43 @@ extern string s_strIniPath;
 #define  SPU2_BUILD	4	// increase that with each version
 #define SPU2_MINOR 6
 
-#define OPTION_TIMESTRETCH 1 // stretches samples without changing pitch to reduce cracking
-#define OPTION_REALTIME 2 // sync to real time instead of ps2 time
-#define OPTION_MUTE 4   // don't output anything
-#define OPTION_RECORDING 8
+enum zerospu2_options
+{
+	OPTION_TIMESTRETCH = 1, // stretches samples without changing pitch to reduce cracking
+	OPTION_REALTIME = 2, // sync to real time instead of ps2 time
+	OPTION_MUTE = 4,   // don't output anything
+	OPTION_RECORDING = 8
+};
 
 // ADSR constants
-#define ATTACK_MS	  494L
-#define DECAYHALF_MS   286L
-#define DECAY_MS	   572L
-#define SUSTAIN_MS	 441L
-#define RELEASE_MS	 437L
+enum adsr_ms
+{
+	ATTACK_MS 		= 494L,
+	DECAYHALF_MS 	= 286L,
+	DECAY_MS 		= 572L,
+	SUSTAIN_MS		= 441L,
+	RELEASE_MS		= 437L
+};
 
-#define CYCLES_PER_MS (36864000/1000)
+const s32 CYCLES_PER_MS = 36864000 / 1000;
 
-#define AUDIO_BUFFER 2048
+const u32 AUDIO_BUFFER = 2048;
 
-#define NSSIZE	  48	  // ~ 1 ms of data
-#define NSFRAMES	16	  // gather at least NSFRAMES of NSSIZE before submitting
-#define NSPACKETS 24
+const u32 NSSIZE = 48;	  // ~ 1 ms of data
+const u32 NSFRAMES = 16;	  // gather at least NSFRAMES of NSSIZE before submitting
+const u32 NSPACKETS = 24;
+const u32 NS_TOTAL_SIZE = NSSIZE * NSFRAMES;
 
-#define SPU_NUMBER_VOICES	   48
+const u32 SPU_NUMBER_VOICES = 48;
 
-#define SAMPLE_RATE 48000L
+const u32 SAMPLE_RATE = 48000L;
 #define RECORD_FILENAME "zerospu2.wav"
 
 extern s8 *spu2regs;
 extern u16* spu2mem;
 extern s32 iFMod[NSSIZE];
 extern u32 MemAddr[2];
-extern u32   dwNoiseVal;						  // global noise generator
+extern u32 dwNoiseVal;						  // global noise generator
 
 // functions of main emu, called on spu irq
 extern void (*irqCallbackSPU2)();
@@ -115,11 +123,11 @@ void SaveConfig();
 void LoadConfig();
 void SysMessage(char *fmt, ...);
 
-void LogRawSound(void* pleft, int leftstride, void* pright, int rightstride, int numsamples);
-void LogPacketSound(void* packet, int memsize);
+extern void LogRawSound(void* pleft, int leftstride, void* pright, int rightstride, int numsamples);
+extern void LogPacketSound(void* packet, int memsize);
 
 // simulate SPU2 for 1ms
-void SPU2Worker();
+extern void SPU2Worker();
 
 // hardware sound functions
 int SetupSound(); // if successful, returns 0
@@ -128,95 +136,25 @@ int SoundGetBytesBuffered();
 // returns 0 is successful, else nonzero
 void SoundFeedVoiceData(unsigned char* pSound,long lBytes);
 
-#define clamp16(dest) \
-{ \
-			if ( dest < -32768L ) \
-				dest = -32768L; \
-			else if ( dest > 32767L )  \
-				dest = 32767L; \
-}
-
-#define clampandwrite16(dest,value) \
-{ \
-			if ( value < -32768 ) \
-				dest = -32768; \
-			else if ( value > 32767 )  \
-				dest = 32767; \
-			else  \
-				dest = (s16)value; \
-}
-
-#define spu2Rs16(mem)	(*(s16*)&spu2regs[(mem) & 0xffff])
-#define spu2Ru16(mem)	(*(u16*)&spu2regs[(mem) & 0xffff])
-
-#define IRQINFO spu2Ru16(REG_IRQINFO)
-
-static __forceinline u32 SPU2_GET32BIT(u32 lo, u32 hi)
+static __forceinline void clamp16(s32 &dest)
 {
-	return (((u32)(spu2Ru16(hi) & 0x3f) << 16) | (u32)spu2Ru16(lo));
+	if (dest < -32768L)
+		dest = -32768L;
+	else if (dest > 32767L) 
+		dest = 32767L;
 }
 
-static __forceinline void SPU2_SET32BIT(u32 value, u32 lo, u32 hi)
+static __forceinline void clampandwrite16(s16 &dest, s32 &value)
 {
-	spu2Ru16(hi) = ((value) >> 16) & 0x3f;
-	spu2Ru16(lo) = (value) & 0xffff;
+	if (value < -32768)
+		dest = -32768;
+	else if (value > 32767) 
+		dest = 32767;
+	else 
+		dest = (s16)value;
 }
 
-static __forceinline u32 C0_IRQA()
-{
-	return SPU2_GET32BIT(REG_C0_IRQA_LO, REG_C0_IRQA_HI);
-}
-
-static __forceinline u32 C1_IRQA()
-{
-	return SPU2_GET32BIT(REG_C1_IRQA_LO, REG_C1_IRQA_HI);
-}
-
-static __forceinline u32 C_IRQA(s32 c)
-{
-	if (c == 0)
-		return C0_IRQA();
-	else
-		return C1_IRQA();
-}
-
-static __forceinline u32 C0_SPUADDR()
-{
-	return SPU2_GET32BIT(REG_C0_SPUADDR_LO, REG_C0_SPUADDR_HI);
-}
-
-static __forceinline u32 C1_SPUADDR()
-{
-	return SPU2_GET32BIT(REG_C1_SPUADDR_LO, REG_C1_SPUADDR_HI);
-}
-
-static __forceinline u32 C_SPUADDR(s32 c)
-{
-	if (c == 0)
-		return C0_SPUADDR();
-	else
-		return C1_SPUADDR();
-}
-
-static __forceinline void C0_SPUADDR_SET(u32 value)
-{
-	SPU2_SET32BIT(value, REG_C0_SPUADDR_LO, REG_C0_SPUADDR_HI);
-}
-
-static __forceinline void C1_SPUADDR_SET(u32 value)
-{
-	SPU2_SET32BIT(value, REG_C1_SPUADDR_LO, REG_C1_SPUADDR_HI);
-}
-
-static __forceinline void C_SPUADDR_SET(u32 value, s32 c)
-{
-	if (c == 0)
-		C0_SPUADDR_SET(value);
-	else
-		C1_SPUADDR_SET(value);
-}
-
-struct SPU_CONTROL_
+struct tSPU_ATTR
 {
 	u16 extCd : 1;
 	u16 extAudio : 1;
@@ -229,6 +167,99 @@ struct SPU_CONTROL_
 	u16 spuUnmute : 1;
 	u16 spuon : 1;
 };
+#define channel_test(channel) ((channel == 4) || (channel == 0))
+#define spu2Rs16(mem)	(*(s16*)&spu2regs[(mem) & 0xffff])
+#define spu2Ru16(mem)	(*(u16*)&spu2regs[(mem) & 0xffff])
+#define spu2attr0	(*(tSPU_ATTR*)&spu2regs[REG_C0_CTRL])
+#define spu2attr1	(*(tSPU_ATTR*)&spu2regs[REG_C1_CTRL])
+
+static __forceinline u16 c_offset(u32 ch)
+{
+	return channel_test(ch) ? 0x0 : 0x400;
+}
+
+static __forceinline tSPU_ATTR spu2attr(u32 channel)
+{
+	return channel_test(channel) ? spu2attr0 : spu2attr1;
+}
+
+static __forceinline bool spu2admas(u32 channel)
+{
+	return channel_test(channel) ? !!(spu2Ru16(REG_C0_ADMAS) & 0x1) : !!(spu2Ru16(REG_C1_ADMAS) & 0x2);
+}
+
+static __forceinline u16 spu2mmix(u32 channel)
+{
+	return channel_test(channel) ? spu2Ru16(REG_C0_MMIX) : spu2Ru16(REG_C1_MMIX);
+}
+
+static __forceinline u16 spu2stat(u32 channel)
+{
+	return channel_test(channel) ? spu2Ru16(REG_C0_SPUSTAT) : spu2Ru16(REG_C1_SPUSTAT);
+}
+
+static __forceinline void spu2stat_clear_80(u32 channel)
+{
+	if channel_test(channel)
+		spu2Ru16(REG_C0_SPUSTAT) &= ~0x80;
+	else
+		spu2Ru16(REG_C1_SPUSTAT) &= ~0x80;
+}
+
+static __forceinline void spu2stat_set_80(u32 channel)
+{
+	if channel_test(channel)
+		spu2Ru16(REG_C0_SPUSTAT) |= 0x80;
+	else
+		spu2Ru16(REG_C1_SPUSTAT) |= 0x80;
+}
+
+#define IRQINFO spu2Ru16(REG_IRQINFO)
+
+#define spu2_core_regs_0	(*(core_registers*)&spu2regs[0x0])
+#define spu2_core_regs_1	(*(core_registers*)&spu2regs[0x400])
+
+static __forceinline u32 SPU2_GET32BIT(u32 lo, u32 hi)
+{
+	return (((u32)(spu2Ru16(hi) & 0x3f) << 16) | (u32)spu2Ru16(lo));
+}
+
+static __forceinline void SPU2_SET32BIT(u32 value, u32 lo, u32 hi)
+{
+	spu2Ru16(hi) = ((value) >> 16) & 0x3f;
+	spu2Ru16(lo) = (value) & 0xffff;
+}
+
+#define C0_IRQA() C_IRQA(0)
+#define C1_IRQA() C_IRQA(1)
+#define C0_SPUADDR() C_SPUADDR(0)
+#define C1_SPUADDR() C_SPUADDR(1)
+#define C0_SPUADDR_SET(val) C_SPUADDR_SET(val, 0)
+#define C1_SPUADDR_SET(val) C_SPUADDR_SET(val, 1)
+
+static __forceinline u32 C_IRQA(s32 c)
+{
+	if (c == 0) 
+		SPU2_GET32BIT(REG_C0_IRQA_LO, REG_C0_IRQA_HI);
+	else
+		SPU2_GET32BIT(REG_C1_IRQA_LO, REG_C1_IRQA_HI);
+}
+
+static __forceinline u32 C_SPUADDR(s32 c)
+{
+	if (c == 0)
+		return SPU2_GET32BIT(REG_C0_SPUADDR_LO, REG_C0_SPUADDR_HI);
+	else
+		return SPU2_GET32BIT(REG_C1_SPUADDR_LO, REG_C1_SPUADDR_HI);
+}
+
+static __forceinline void C_SPUADDR_SET(u32 value, s32 c)
+{
+	if (c == 0)
+		SPU2_SET32BIT(value, REG_C0_SPUADDR_LO, REG_C0_SPUADDR_HI);
+	else
+		SPU2_SET32BIT(value, REG_C1_SPUADDR_LO, REG_C1_SPUADDR_HI);
+}
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -313,9 +344,10 @@ struct VOICE_PROCESSED
 	s32 iGetNoiseVal();
 	void StoreInterpolationVal(int fa);
 	s32 iGetInterpolationVal();
+	s32 iGetVal();
 	void Stop();
 
-	SPU_CONTROL_* GetCtrl();
+	tSPU_ATTR* GetCtrl();
 
 	// start save state
 	s32 leftvol, rightvol;	 // left right volumes
@@ -326,11 +358,9 @@ struct VOICE_PROCESSED
 	s32 sinc;
 
 	s32 iIrqDone;						   // debug irq done flag
-	s32 s_1;								// last decoding infos
-	s32 s_2;
+	s32 s_1, s_2;								// last decoding infos
 	s32 iOldNoise;						  // old noise val for this channel   
-	s32			   iActFreq;						   // current psx pitch
-	s32			   iUsedFreq;						  // current pc pitch
+	s32 iActFreq, iUsedFreq;			// current psx pitch & pc pitch
 
 	s32 iStartAddr, iLoopAddr, iNextAddr;
 	s32 bFMod;
@@ -351,6 +381,27 @@ struct VOICE_PROCESSED
 	u8* pLoop, *pCurr;
 
 	_SPU_VOICE* pvoice;
+	u32 memchannel;
+	void init(s32 i)
+	{
+		chanid = i;
+		
+		if (chanid > 23)
+		{
+			memoffset = 0x400;
+			memchannel = 1;
+		}
+		else
+		{
+			memoffset = 0x0;
+			memchannel = 0;
+		}
+		
+		pLoop = pStart = pCurr = (u8*)spu2mem;
+
+		pvoice = (_SPU_VOICE*)((u8*)spu2regs + memoffset) + (i % 24);
+		ADSRX.SustainLevel = 1024;				// -> init sustain
+	}
 };
 
 struct AUDIOBUFFER
@@ -374,8 +425,7 @@ struct ADMA
 	// used to make sure that ADMA doesn't get interrupted with a writeDMA call
 };
 
-extern ADMA Adma4;
-extern ADMA Adma7;
+extern ADMA adma[2];
 
 struct SPU2freezeData
 {
@@ -389,7 +439,7 @@ struct SPU2freezeData
 	s32 iFMod[NSSIZE];
 	u32 MemAddr[2];
 	ADMA adma[2];
-	u32 Adma4MemAddr, Adma7MemAddr;
+	u32 AdmaMemAddr[2];
 
 	s32 SPUCycles, SPUWorkerCycles;
 	s32 SPUStartCycle[2];

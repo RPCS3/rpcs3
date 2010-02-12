@@ -20,7 +20,8 @@
 
 #include <gtk/gtk.h>
 
-extern "C" {
+extern "C" 
+{
 #include "interface.h"
 #include "support.h"
 #include "callbacks.h"
