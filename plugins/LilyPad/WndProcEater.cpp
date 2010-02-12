@@ -46,6 +46,9 @@ void WndProcEater::ReleaseExtraProc(ExtraWndProc proc) {
 void WndProcEater::Release() {
 	while (numExtraProcs) ReleaseExtraProc(extraProcs[0].proc);
 	RemoveProp( hWndEaten, L"LilyHaxxor" );
+	if (hWndEaten && IsWindow(hWndEaten)) {
+		SetWindowLongPtr(hWndEaten, GWLP_WNDPROC, (LONG_PTR)eatenWndProc);
+	}
 }
 
 LRESULT WndProcEater::_OverrideWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

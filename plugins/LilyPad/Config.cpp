@@ -1533,6 +1533,8 @@ INT_PTR CALLBACK DialogProc(HWND hWnd, unsigned int msg, WPARAM wParam, LPARAM l
 				UnselectAll(hWndList);
 			}
 			else if (cmd == ID_TEST) {
+				// Just in case...
+				if (selected) break;
 				Device *dev;
 				Binding *b;
 				ForceFeedbackBinding *ffb = 0;
