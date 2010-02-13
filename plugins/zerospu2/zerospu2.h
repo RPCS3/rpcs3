@@ -240,9 +240,9 @@ static __forceinline void SPU2_SET32BIT(u32 value, u32 lo, u32 hi)
 static __forceinline u32 C_IRQA(s32 c)
 {
 	if (c == 0) 
-		SPU2_GET32BIT(REG_C0_IRQA_LO, REG_C0_IRQA_HI);
+		return SPU2_GET32BIT(REG_C0_IRQA_LO, REG_C0_IRQA_HI);
 	else
-		SPU2_GET32BIT(REG_C1_IRQA_LO, REG_C1_IRQA_HI);
+		return SPU2_GET32BIT(REG_C1_IRQA_LO, REG_C1_IRQA_HI);
 }
 
 static __forceinline u32 C_SPUADDR(s32 c)
