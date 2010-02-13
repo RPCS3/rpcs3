@@ -1,0 +1,4 @@
+gametitle=God of War [???]
+comment=prafull's highly experimental patch
+// Skips parts of FMV's allowing you to get past some freezes/hangs
+patch=0,EE,00276a14,word,00000000
