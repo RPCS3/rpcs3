@@ -16,7 +16,6 @@
 #include <malloc.h>
 #include <string.h>
 #include "debug.h"
-#include "cd.h"
 #include "hostlink.h"
 #include "excepHandler.h"
 #include "stdio.h"
@@ -74,6 +73,8 @@ int boot;
 static void loadModules(void);
 static void pkoLoadModule(char *path, int argc, char *argv);
 static void getIpConfig(void);
+
+extern int pkoExecEE(pko_pkt_execee_req *cmd);
 
 ////////////////////////////////////////////////////////////////////////
 #define IPCONF_MAX_LEN 1024
@@ -788,20 +789,48 @@ main(int argc, char *argv[])
     sio_printf("Ready\n");
 	nprintf("Ready\n");
 
-	char test[101];
-	int fd = open("host:/I:/test_atom.xml", O_RDONLY);
-	if(fd>=0)
+	const char elfFile[PS2E_FIO_MAX_PATH];
+
+	if(argc<2 || strlen(argv[1]) == 0)
 	{
-		int rd = read(fd,test,100);
-		close(fd);
+		nprintf("No elf specified. Trying PS2E Hack.\n");
 
-		if(rd>0)
-			test[rd]=0;
-		test[100]=0;
+		char* params_ptr = (char*)0x1FFFC00;
+		int*  params_magic = params_ptr + 0;
+		int*  params_argc  = params_ptr + 4;
+		char* params_argv  = params_ptr + 8;
 
-		nprintf("Reading returned %d: %s",rd,test);
+		nprintf("Magic = %c%c%c%c, argc=%d, argv[0]=%s\n", params_ptr[0], params_ptr[1], params_ptr[2], params_ptr[3], *params_argc, params_argv );
+		
+		if(params_ptr[0] == 'E' && params_ptr[1] == '2' && params_ptr[2] == 'S' && params_ptr[3] == 'P')
+		{
+			int i;
+			argc = *params_argc;
+			for(i=0;i<=argc;i++)
+			{
+				argv[i] = params_argv;
+				params_argv += strlen(params_argv)+1;
+			}
+		}
+		else
+		{
+			nprintf("No elf to run. Looping infinitely.\n");
+			for(;;);
+		}
 	}
-	else printf("Test failed.");
+
+	strcpy(elfFile,"host0:");
+	strcat(elfFile,argv[1]);
+
+	nprintf("Loading elf '%s'...", elfFile);
+
+	pko_pkt_execee_req cmd;
+	
+	cmd.argc = 1;
+	strcpy(cmd.argv, elfFile);
+	cmd.argv[strlen(cmd.argv)+1] = 0; // second null char to end argv
+
+	pkoExecEE(&cmd);
 
 //    SleepThread();
     ExitDeleteThread();

@@ -24,6 +24,9 @@ extern void InitPatch(const wxString& crc);
 
 u32 ElfCRC;
 
+// uncomment this to enable pcsx2hostfs loading when using "load elf"
+//#define USE_HOSTFS
+
 #if 0
 // fixme: ELF command line option system.
 // It parses a command line and pastes it into PS2 memory, and then points the a0 register at it.
@@ -438,10 +441,19 @@ void ElfObject::applyPatches()
 //
 // Throws exceptions on errors. Not called if not skipping the bios.
 //
+#ifdef USE_HOSTFS
+void loadElfFile(const wxString& _filename)
+#else
 void loadElfFile(const wxString& filename)
+#endif
 {
 	ElfObject *elfptr;
 	bool iscdvd;
+
+#ifdef USE_HOSTFS
+	wxString filename = _filename;
+	wxString parameters = _filename; // 
+#endif
 
 	if (filename.IsEmpty()) return;
 
@@ -464,8 +476,15 @@ void loadElfFile(const wxString& filename)
 	else
 	{
 		// It's an elf file.
-		DevCon.WriteLn("Loading from a file (or non-cd image)");
+		DevCon.WriteLn("Loading from a file (or non-cd image).");
+#ifdef USE_HOSTFS
+		parameters = filename;
+		filename = wxT("PCSX2HOSTFS_LDR.ELF");
+#endif
 		elfptr = new ElfObject(filename, Path::GetFileSize(filename));
+#ifdef USE_HOSTFS
+		filename = wxT("host:PCSX2HOSTFS_LDR.ELF");
+#endif
 	}
 
 	if (!elfptr->hasProgramHeaders())
@@ -487,6 +506,23 @@ void loadElfFile(const wxString& filename)
 	cpuRegs.GPR.n.sp.UL[0] = 0x81f00000;
 	cpuRegs.GPR.n.gp.UL[0] = 0x81f80000; // might not be 100% ok
 	//cpuRegs.GPR.n.a0.UL[0] = parseCommandLine( filename );		// see #ifdef'd out parseCommendLine for details.
+#ifdef USE_HOSTFS
+
+	//HACK!!!!!!!!!!!!!
+	uptr params_addr = 0x1FFFC00; // elf loader will check this address for params
+	s8*  params_ptr  = (s8*)PSM(params_addr);
+	s8*  params_magic = params_ptr + 0;
+	s8*  params_argc = params_ptr + 4;
+	s8*  params_argv = params_ptr + 8;
+	*(u32*)params_magic = 'PS2E';
+	*(u32*)params_argc = 2;
+	strcpy(params_argv,filename.ToAscii());
+	params_argv += strlen(params_argv)+1;
+	strcpy(params_argv,parameters.ToAscii());
+	params_argv += strlen(params_argv)+1;
+	strcpy(params_argv,"");
+
+#endif
 
 	for( uint i = 0; i < 0x100000; i++ )
 	{

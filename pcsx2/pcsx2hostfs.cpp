@@ -20,6 +20,9 @@
 
 #ifndef __LINUX__
 #include <io.h>
+//#include "dirent.h"
+#else
+#include <dirent.h>
 #endif
 
 #pragma optimize("", off)
@@ -56,19 +59,18 @@ u32 returnValue;
 
 int pcsx2fio_open_file(char *path, int flags)
 {
-	path++;
-	int mode = 0;
+	int mode = O_BINARY;
 
 	switch(flags&IOP_RDWR)
 	{
 	case IOP_RDONLY:
-		mode = O_RDONLY;
+		mode |= O_RDONLY;
 		break;
 	case IOP_WRONLY:
-		mode = O_WRONLY;
+		mode |= O_WRONLY;
 		break;
 	case IOP_RDWR:
-		mode = O_RDWR;
+		mode |= O_RDWR;
 		break;
 	}
 	if(flags&IOP_CREAT)

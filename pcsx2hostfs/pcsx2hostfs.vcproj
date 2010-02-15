@@ -222,6 +222,10 @@
 				Name="ee"
 				>
 				<File
+					RelativePath=".\ee\cmdHandler.c"
+					>
+				</File>
+				<File
 					RelativePath=".\ee\excepHandler.c"
 					>
 				</File>

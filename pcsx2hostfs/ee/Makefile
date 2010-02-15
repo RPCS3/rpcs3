@@ -1,5 +1,5 @@
 EE_BIN  = pcsx2hostfs_ldr.elf
-EE_OBJS = ps2link.o excepHandler.o exceptions.o
+EE_OBJS = ps2link.o excepHandler.o exceptions.o cmdHandler.o
 EE_INCS += -I../include
 
 # This is for the sbv patch
@@ -45,11 +45,6 @@ endif
 # This is to enable the debug mode into ps2link
 ifeq ($(DEBUG),1)
 EE_CFLAGS += -DDEBUG -g
-endif
-
-# Enable screenshot functionality
-ifeq ($(SCREENSHOTS),1)
-EE_CFLAGS += -DSCREENSHOTS
 endif
 
 LDPARAMS := -Wl,--defsym -Wl,_stack_size=0x8000 -Wl,--defsym -Wl,_stack=$(STACKADDR)
