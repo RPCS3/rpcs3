@@ -48,6 +48,10 @@ u32 paramsAddress;
 u32 paramsLength;
 u32 returnValue;
 
+#ifndef O_BINARY
+# define O_BINARY 0
+#endif
+
 #define IOP_RDONLY	0x0001
 #define IOP_WRONLY	0x0002
 #define IOP_RDWR	0x0003
