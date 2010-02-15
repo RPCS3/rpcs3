@@ -1,10 +1,10 @@
 # Compilation variables
 
 # Set this to 1 to enable debug mode
-DEBUG = 1
+DEBUG = 0
 
 # Set this to 1 to build a highloading version, 0 for normal low version
-LOADHIGH = 0
+LOADHIGH = 1
 
 # Set this to 1 to build ps2link with all the needed IRX builtins
 BUILTIN_IRXS = 1
