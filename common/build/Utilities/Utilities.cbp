@@ -162,16 +162,14 @@
 		<Unit filename="../../include/Utilities/ScopedPtr.h" />
 		<Unit filename="../../include/Utilities/StringHelpers.h" />
 		<Unit filename="../../include/Utilities/Threading.h" />
-		<Unit filename="../../include/Utilities/TlsVariable.h" />
 		<Unit filename="../../include/Utilities/lnx_memzero.h" />
 		<Unit filename="../../include/Utilities/pxCheckBox.h" />
 		<Unit filename="../../include/Utilities/pxRadioPanel.h" />
 		<Unit filename="../../include/Utilities/pxStaticText.h" />
 		<Unit filename="../../include/Utilities/win_memzero.h" />
-		<Unit filename="../../include/Utilities/wxBaseTools.h" />
 		<Unit filename="../../include/Utilities/wxAppWithHelpers.h" />
+		<Unit filename="../../include/Utilities/wxBaseTools.h" />
 		<Unit filename="../../include/Utilities/wxGuiTools.h" />
-		<Unit filename="../../include/Utilities/wxHelpers.h" />
 		<Unit filename="../../include/intrin_x86.h" />
 		<Unit filename="../../src/Utilities/AlignedMalloc.cpp" />
 		<Unit filename="../../src/Utilities/CheckedStaticBox.cpp" />

@@ -36,6 +36,7 @@ else(WIN32) # Unix based OS
 	find_program(CG_COMPILER cgc PATHS
 				 /usr/bin
 				 /usr/local/bin
+				/opt/nvidia-cg-toolkit/bin
 				 DOC "Path to the Cg compiler.")
 	
 	# find Cg include
@@ -49,15 +50,15 @@ else(WIN32) # Unix based OS
 	# Cg library
 	find_library(CG_LIBRARY NAMES Cg PATHS
 				 /usr/include
-				 /usr/local/include
-				 /opt/nvidia-cg-toolkit/include	
+				 /usr/local/lib
+				 /opt/nvidia-cg-toolkit/lib	
 				 DOC "Path to the Cg library.")
 
 	# Cg GL library
 	find_library(CG_GL_LIBRARY NAMES CgGL PATHS
 				 /usr/include
-				 /usr/local/include
-				 /opt/nvidia-cg-toolkit/include	
+				 /usr/local/lib
+				 /opt/nvidia-cg-toolkit/lib
 				 DOC "Path to the CgGL library.")
 
 	set(CG_LIBRARIES ${CG_LIBRARY} ${CG_GL_LIBRARY})

@@ -167,9 +167,8 @@ set(pcsx2Sources
 	SPR.cpp
 	Stats.cpp
 	System.cpp
-	Vif0_Commands.cpp
+	Vif_Commands.cpp
 	Vif0_Dma.cpp
-	Vif1_Commands.cpp
 	Vif1_Dma.cpp
 	Vif1_MFIFO.cpp
 	Vif.cpp
@@ -288,7 +287,6 @@ set(pcsx2GuiSources
 	gui/AppAssert.cpp
 	gui/AppConfig.cpp
 	gui/AppCoreThread.cpp
-	gui/AppEventListeners.cpp
 	gui/AppEventSources.cpp
 	gui/AppInit.cpp
 	gui/AppMain.cpp
@@ -346,6 +344,7 @@ set(pcsx2GuiHeaders
 	gui/ApplyState.h
 	gui/AppCommon.h
 	gui/AppConfig.h
+	gui/AppEventListeners.h
 	gui/AppForwardDefs.h
 	gui/ConsoleLogger.h
 	gui/CpuUsageProvider.h

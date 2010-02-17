@@ -102,7 +102,6 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 # variable with all sources of this library
 set(UtilitiesSources
 	../../include/Utilities/EventSource.inl
-	../../include/Utilities/TlsVariable.inl
 	AlignedMalloc.cpp
 	CheckedStaticBox.cpp
 	Console.cpp
@@ -122,6 +121,7 @@ set(UtilitiesSources
 	StringHelpers.cpp
 	ThreadTools.cpp
 	vssprintf.cpp
+	wxAppWithHelpers.cpp
 	wxGuiTools.cpp
 	wxHelpers.cpp
 #	x86/MemcpyFast.cpp
@@ -153,6 +153,7 @@ set(UtilitiesHeaders
 	../../include/Utilities/ScopedPtr.h
 	../../include/Utilities/StringHelpers.h
 	../../include/Utilities/Threading.h
+	../../include/Utilities/wxAppWithHelpers.h
 	../../include/Utilities/wxBaseTools.h
 	../../include/Utilities/wxGuiTools.h
 	PrecompiledHeader.h)
