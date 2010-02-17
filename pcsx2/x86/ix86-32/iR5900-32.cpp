@@ -1221,9 +1221,16 @@ void recompileNextInstruction(int delayslot)
 				return;
 		}
 	}
-	//If the COP0 DIE bit is disabled, double the cycles. Happens rarely.
-	s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
-	opcode.recompile();
+	// Check for NOP
+	if (cpuRegs.code == 0x00000000) { 
+		// Note: Tests on a ps2 suggested more like 5 cycles for a NOP. But there's many factors in this..
+		s_nBlockCycles +=9 * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
+	}
+	else {
+		//If the COP0 DIE bit is disabled, cycles should be doubled.
+		s_nBlockCycles += opcode.cycles * (2 - ((cpuRegs.CP0.n.Config >> 18) & 0x1));
+		opcode.recompile();
+	}
 
 	if( !delayslot ) {
 		if( s_bFlushReg ) {
