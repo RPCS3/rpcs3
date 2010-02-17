@@ -90,7 +90,9 @@ StereoOut32 V_Core::ReadInput_HiFi()
 					}
 				}
 				InputDataLeft	= 0;
-				DMAICounter		= 1;
+				//DMAICounter		= 1;
+				if(Index == 0)	{ if(dma4callback) dma4callback(); }
+				else			{ if(dma7callback) dma7callback(); }
 			}
 		}
 #endif
@@ -149,7 +151,9 @@ StereoOut32 V_Core::ReadInput()
 				}
 
 				InputDataLeft = 0;
-				DMAICounter   = 1;
+				//DMAICounter   = 1;
+				if(Index == 0)	{ if(dma4callback) dma4callback(); }
+				else			{ if(dma7callback) dma7callback(); }
 			}
 		}
 #endif
