@@ -90,6 +90,7 @@ StereoOut32 V_Core::ReadInput_HiFi()
 					}
 				}
 				InputDataLeft	= 0;
+				// Hack, kinda. We call the interrupt early here, since PCSX2 doesn't like them delayed.
 				//DMAICounter		= 1;
 				if(Index == 0)	{ if(dma4callback) dma4callback(); }
 				else			{ if(dma7callback) dma7callback(); }
@@ -151,6 +152,7 @@ StereoOut32 V_Core::ReadInput()
 				}
 
 				InputDataLeft = 0;
+				// Hack, kinda. We call the interrupt early here, since PCSX2 doesn't like them delayed.
 				//DMAICounter   = 1;
 				if(Index == 0)	{ if(dma4callback) dma4callback(); }
 				else			{ if(dma7callback) dma7callback(); }

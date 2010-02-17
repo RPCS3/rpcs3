@@ -512,7 +512,15 @@ static void __releaseinline IopDmaProcessChannel(int elapsed, int& MinDelay)
 
 				if (RequestedDelay != 0) NextUpdateDelay = RequestedDelay;
 
-				ch->NextUpdate += NextUpdateDelay;
+				// SPU2 adma early interrupts. PCSX2 likes those better currently.
+				if((channel==4 || channel==7) && (ch->ByteCount<=0) && (ProcessedBytes <= 1024))
+				{
+				 	ch->NextUpdate = 0;
+	 			}
+				else 
+					ch->NextUpdate += NextUpdateDelay;
+
+				//ch->NextUpdate += NextUpdateDelay;
 			}
 		}
 
