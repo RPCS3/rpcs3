@@ -32,3 +32,6 @@ static const s64 PSXCLK = 36864000;	/* 36.864 Mhz */
 //#define PSXCLK	 9216000	/* 36.864 Mhz */
 //#define PSXCLK	186864000	/* 36.864 Mhz */
 
+// Uncomment to make pcsx2 print each spu2 interrupt it receives
+//#define SPU2IRQTEST
+

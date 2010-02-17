@@ -1198,7 +1198,7 @@ void recompileNextInstruction(int delayslot)
 	const OPCODE& opcode = GetCurrentInstruction();
 
  	//pxAssert( !(g_pCurInstInfo->info & EEINSTINFO_NOREC) );
-
+	//Console.Warning("opcode name = %s, it's cycles = %d\n",opcode.Name,opcode.cycles);
 	// if this instruction is a jump or a branch, exit right away
 	if( delayslot ) {
 		switch(_Opcode_) {

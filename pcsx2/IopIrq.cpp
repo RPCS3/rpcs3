@@ -52,6 +52,9 @@ void fwIrq()
 
 void spu2Irq()
 {
+	#ifdef SPU2IRQTEST
+		Console.Warning("spu2Irq");
+	#endif
 	iopIntcIrq(9);
 	hwIntcIrq(INTC_SBUS);
 }

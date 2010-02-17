@@ -84,6 +84,9 @@ void psxDma4(u32 madr, u32 bcr, u32 chcr)		// SPU2's Core 0
 
 int psxDma4Interrupt()
 {
+	#ifdef SPU2IRQTEST
+		Console.Warning("psxDma4Interrupt()");
+	#endif
 	HW_DMA4_CHCR &= ~0x01000000;
 	psxDmaInterrupt(4);
 	iopIntcIrq(9);
@@ -92,6 +95,9 @@ int psxDma4Interrupt()
 
 void spu2DMA4Irq()
 {
+	#ifdef SPU2IRQTEST
+		Console.Warning("spu2DMA4Irq()");
+	#endif
 	SPU2interruptDMA4();
 	HW_DMA4_CHCR &= ~0x01000000;
 	psxDmaInterrupt(4);
@@ -104,6 +110,9 @@ void psxDma7(u32 madr, u32 bcr, u32 chcr)		// SPU2's Core 1
 
 int psxDma7Interrupt()
 {
+	#ifdef SPU2IRQTEST
+		Console.Warning("psxDma7Interrupt()");
+	#endif
 	HW_DMA7_CHCR &= ~0x01000000;
 	psxDmaInterrupt2(0);
 	return 1;
@@ -112,6 +121,9 @@ int psxDma7Interrupt()
 
 void spu2DMA7Irq()
 {
+	#ifdef SPU2IRQTEST
+		Console.Warning("spu2DMA7Irq()");
+	#endif
 	SPU2interruptDMA7();
 	HW_DMA7_CHCR &= ~0x01000000;
 	psxDmaInterrupt2(0);

@@ -1429,6 +1429,15 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 
 __forceinline void SPU2_FastWrite( u32 rmem, u16 value )
 {
+	// Check for these 2 adresses and schedule an interrupt when they get written with 0x3fff.
+	// This is what peops spu2 does, and it helps silent hill origins start a bit more stuff.
+	if (value == 0x3fff && (rmem == 0x1f900500 || rmem == 0x1f900400) ) {
+		// no idea which core ><
+		Spdif.Info |= 4 << 0; 
+		SetIrqCall();
+		ConLog( "SPU2-X: Schedule IRQ for odd register write. rmem = %x , value = %x \n", rmem, value);
+	}
+
 	tbl_reg_writes[(rmem&0x7ff)/2]( value );
 }
 
