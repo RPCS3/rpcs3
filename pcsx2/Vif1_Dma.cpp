@@ -36,6 +36,9 @@ __forceinline void vif1FLUSH()
 
 bool VIF1transfer(u32 *data, int size, bool istag)
 {
+	extern bool vif1Transfer_(u32 *data, int size, bool istag);
+	return vif1Transfer_(data, size, istag);
+
 	int ret;
 	int transferred = vif1.vifstalled ? vif1.irqoffset : 0; // irqoffset necessary to add up the right qws, or else will spin (spiderman)
 	

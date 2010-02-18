@@ -122,7 +122,7 @@ int nVifUnpack(int idx, u8* data) {
 
 	if (ret == v.vif->tag.size) { // Full Transfer
 		if (v.bSize) { // Last transfer was partial
-			memcpy(&v.buffer[v.bSize], data, size);
+			memcpy_fast(&v.buffer[v.bSize], data, size);
 			v.bSize += size;
 			data = v.buffer;
 			size = v.bSize;
@@ -136,7 +136,7 @@ int nVifUnpack(int idx, u8* data) {
 		v.bSize  = 0;
 	}
 	else { // Partial Transfer
-		memcpy(&v.buffer[v.bSize], data, size);
+		memcpy_fast(&v.buffer[v.bSize], data, size);
 		v.bSize		  += size;
 		vif->tag.size -= ret;
 	}
