@@ -172,6 +172,7 @@ set(pcsx2Sources
 	Vif1_Dma.cpp
 	Vif1_MFIFO.cpp
 	Vif.cpp
+	Vif_Codes.cpp
 	Vif_Commands.cpp
 	Vif_Unpack.cpp
 	Vif_Unpack.inl

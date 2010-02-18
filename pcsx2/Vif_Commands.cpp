@@ -30,12 +30,12 @@ _vifT void vifCMD_Null();
 // Vif0/Vif1 Misc Functions
 //------------------------------------------------------------------
 
-_f void vifFlush(int idx) {
+static _f void vifFlush(int idx) {
 	if (!idx) vif0FLUSH();
 	else	  vif1FLUSH();
 }
 
-_f void vuExecMicro(int idx, u32 addr) {
+static _f void vuExecMicro(int idx, u32 addr) {
 	VURegs* VU = nVif[idx].VU;
 	vifFlush(idx);
 

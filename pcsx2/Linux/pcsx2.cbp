@@ -333,6 +333,7 @@
 		<Unit filename="../Vif0_Dma.cpp" />
 		<Unit filename="../Vif1_Dma.cpp" />
 		<Unit filename="../Vif1_MFIFO.cpp" />
+		<Unit filename="../Vif_Codes.cpp" />
 		<Unit filename="../Vif_Commands.cpp" />
 		<Unit filename="../Vif_Dma.h" />
 		<Unit filename="../Vif_Unpack.cpp" />
