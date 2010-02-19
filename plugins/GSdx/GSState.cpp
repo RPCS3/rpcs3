@@ -2472,7 +2472,7 @@ bool GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
-bool GSState::IsBadFrame(int& skip, int gamefix_skipdraw)
+bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
 
@@ -2534,25 +2534,18 @@ bool GSState::IsBadFrame(int& skip, int gamefix_skipdraw)
 		return false;
 	}
 
-	if(skip == 0)
+	if(skip == 0 && (UserHacks_SkipDraw > 0) )
 	{
 		if(fi.TME)
 		{
 			if(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
 			{
-				if (gamefix_skipdraw > 0) {
-					skip = gamefix_skipdraw;
-				}
+				skip = UserHacks_SkipDraw;
 			}
-
 			// depth textures (bully, mgs3s1 intro, Front Mission 5 (needs skip = 2, therefore the gamefix))
-
 			if(fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S)
 			{
-				if (gamefix_skipdraw > 0) {
-					skip = gamefix_skipdraw;
-				}
-				else skip = 1; // Remove, once the gui part is done
+				skip = UserHacks_SkipDraw;
 			}
 		}
 	}

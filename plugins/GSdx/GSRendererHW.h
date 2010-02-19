@@ -33,7 +33,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 	int m_width;
 	int m_height;
 	int m_upscale_multiplier;
-	int m_gamefix_skipdraw;
+	int m_UserHacks_SkipDraw;
 	int m_skip;
 	bool m_reset;
 
@@ -532,7 +532,7 @@ protected:
 
 	void Draw()
 	{
-		if(IsBadFrame(m_skip, m_gamefix_skipdraw)) return;
+		if(IsBadFrame(m_skip, m_UserHacks_SkipDraw)) return;
 		
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
@@ -714,7 +714,7 @@ public:
 		, m_upscale_multiplier(1)
 		, m_skip(0)
 		, m_reset(false)
-		, m_gamefix_skipdraw (0)
+		, m_UserHacks_SkipDraw (0)
 	{
 		if(!m_nativeres)
 		{
@@ -728,7 +728,7 @@ public:
 				m_height = 512 * m_upscale_multiplier; //448 is also common, but this is not always detected right.
 			}
 		}
-		m_gamefix_skipdraw = theApp.GetConfig("gamefix_skipdraw", m_gamefix_skipdraw);
+		m_UserHacks_SkipDraw = theApp.GetConfig("UserHacks_SkipDraw", m_UserHacks_SkipDraw);
 	}
 
 	virtual ~GSRendererHW()

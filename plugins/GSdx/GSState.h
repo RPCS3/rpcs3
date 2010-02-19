@@ -130,7 +130,7 @@ class GSState : public GSAlignedClass<16>
 	void FlushWrite();
 
 protected:
-	bool IsBadFrame(int& skip, int gamefix_skipdraw);
+	bool IsBadFrame(int& skip, int UserHacks_SkipDraw);
 
 	typedef void (GSState::*VertexKickPtr)(bool skip);
 
