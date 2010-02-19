@@ -40,7 +40,6 @@ GSRenderer::GSRenderer()
 	else if (m_upscale_multiplier > 4) m_upscale_multiplier = 1;
 
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
-	m_blur = !!theApp.GetConfig("blur", 0);
 
 	if(m_nativeres) m_filter = 2;
 
@@ -218,7 +217,7 @@ bool GSRenderer::Merge(int field)
 
 		//
 
-		if(m_blur && blurdetected && i == 1)
+		if(blurdetected && i == 1)
 		{
 			r += GSVector4i(0, 1).xyxy();
 		}
@@ -462,9 +461,6 @@ void GSRenderer::KeyEvent(GSKeyEventData* e, int param)
 			return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;
-			return;
-		case VK_END:
-			m_blur = !m_blur;
 			return;
 		}
 	}

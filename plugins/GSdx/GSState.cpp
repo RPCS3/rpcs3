@@ -2538,12 +2538,10 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 	{
 		if(fi.TME)
 		{
-			if(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
-			{
-				skip = UserHacks_SkipDraw;
-			}
-			// depth textures (bully, mgs3s1 intro, Front Mission 5 (needs skip = 2, therefore the gamefix))
-			if(fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S)
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
 			{
 				skip = UserHacks_SkipDraw;
 			}

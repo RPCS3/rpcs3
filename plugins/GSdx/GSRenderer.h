@@ -45,7 +45,6 @@ protected:
 	bool m_vsync;
 	bool m_nativeres;
 	bool m_aa1;
-	bool m_blur;
 	bool m_framelimit;
 
 	uint8* m_tex_buff;

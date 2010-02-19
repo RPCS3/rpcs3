@@ -15,6 +15,7 @@
 #define IDC_AA1                         2011
 #define IDC_SWTHREADS_EDIT              2012
 #define IDC_CUSTOM1                     2013
+#define IDC_MSAAEDIT                    2013
 #define IDC_CHECK4                      2014
 #define IDC_FILTER                      2015
 #define IDC_DITHERING                   2016
@@ -22,6 +23,7 @@
 #define IDC_RESX                        2018
 #define IDC_RESY                        2019
 #define IDD_CONFIG                      2020
+#define IDC_MSAA                        2020
 #define IDB_LOGO9                       2021
 #define IDB_LOGO10                      2022
 #define IDC_FBA                         2023
