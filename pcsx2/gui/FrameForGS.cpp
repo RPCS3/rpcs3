@@ -116,7 +116,12 @@ void GSPanel::DoResize()
 	switch( g_Conf->GSWindow.AspectRatio )
 	{
 		case AspectRatio_Stretch:
-			// just default to matching client size.
+			// Default to matching client size.
+			// Add a few pixels here, so the outermost pixels of the GS plugin output are "hidden".
+			// This avoids issues with flashing pixels on the edges, especially when Anti Aliasing is used.
+			// Note: Tests in FFX showed we need at least 5 pixels. So using 6 for good measure :p
+			viewport.x+=6;
+			viewport.y+=6;
 		break;
 
 		case AspectRatio_4_3:

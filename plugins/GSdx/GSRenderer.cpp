@@ -215,12 +215,12 @@ bool GSRenderer::Merge(int field)
 			r.bottom = r.top + y;
 		}
 
-		//
-
-		if(blurdetected && i == 1)
+		// Breaks the blur filter, and actually makes games blurry again.
+		// This might have to do with earlier changes to device size detection.
+		/*if(blurdetected && i == 1)
 		{
 			r += GSVector4i(0, 1).xyxy();
-		}
+		}*/
 
 		GSVector4 scale = GSVector4(tex[i]->GetScale()).xyxy();
 
