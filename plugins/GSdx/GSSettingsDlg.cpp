@@ -76,7 +76,7 @@ GSSettingsDlg::GSSettingsDlg( bool isOpen2 )
 	, m_IsOpen2(isOpen2)
 {
 }
-
+bool allowHacks = false;
 void GSSettingsDlg::OnInit()
 {
 	__super::OnInit();
@@ -232,6 +232,9 @@ void GSSettingsDlg::UpdateControls()
 {
 	INT_PTR i;
 
+	// Simple check only
+	bool allowHacks = !!theApp.GetConfig("allowHacks", 0);
+
 	if(ComboBoxGetSelData(IDC_RENDERER, i))
 	{
 		bool dx9 = i >= 0 && i <= 2;
@@ -261,5 +264,12 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS), sw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAA), hw);
+
+		EnableWindow(GetDlgItem(m_hWnd, IDC_ALPHAHACK), allowHacks && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_OFFSETHACK), allowHacks && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACKEDIT), allowHacks && hw);
 	}
 }
