@@ -479,11 +479,11 @@ void loadElfFile(const wxString& filename)
 		DevCon.WriteLn("Loading from a file (or non-cd image).");
 #ifdef USE_HOSTFS
 		parameters = filename;
-		filename = wxT("PCSX2HOSTFS_LDR.ELF");
+		filename = wxT("pcsx2hostfs_ldr.elf");
 #endif
 		elfptr = new ElfObject(filename, Path::GetFileSize(filename));
 #ifdef USE_HOSTFS
-		filename = wxT("host:PCSX2HOSTFS_LDR.ELF");
+		filename = wxT("host:pcsx2hostfs_ldr.elf");
 #endif
 	}
 
