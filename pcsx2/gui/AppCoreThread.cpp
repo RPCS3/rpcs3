@@ -173,7 +173,7 @@ void AppCoreThread::StateCheckInThread()
 
 // To simplify settings application rules and re-entry conditions, the main App's implementation
 // of ApplySettings requires that the caller manually ensure that the thread has been properly
-// suspended.  If the thread has mot been suspended, this call will fail *silently*.
+// suspended.  If the thread has not been suspended, this call will fail *silently*.
 void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 {
 	//if( m_ExecMode != ExecMode_Closed ) return;
@@ -181,6 +181,8 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	Pcsx2Config fixup( src );
 	if( !g_Conf->EnableSpeedHacks )
 		fixup.Speedhacks = Pcsx2Config::SpeedhackOptions();
+	if( !g_Conf->EnableGameFixes )
+		fixup.Gamefixes = Pcsx2Config::GamefixOptions();
 	
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is

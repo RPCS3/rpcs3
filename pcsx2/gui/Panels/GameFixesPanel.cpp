@@ -19,6 +19,7 @@
 Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 	BaseApplicableConfigPanel( parent )
 {
+        	
 	*this	+= new pxStaticHeading( this, _("Some games need special settings.\nEnable them here."));
 
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("PCSX2 Gamefixes") );
@@ -68,33 +69,63 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent ) :
 		groupSizer += (m_checkbox[i] = new pxCheckBox( this, check_text[i].label ));
 		m_checkbox[i]->SetToolTip( check_text[i].tooltip );
 	}
-
+	
+	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
+		_("(Warning, can cause compatibility or performance issues!)"));
+	m_check_Enable->SetToolTip(_("The safest way to make sure that all game fixes are completely disabled."));
+	m_check_Enable		->SetValue( g_Conf->EnableGameFixes );
+	
 	*this	+= groupSizer	| wxSF.Centre();
 
+	*this	+= m_check_Enable;
 	*this	+= new pxStaticHeading( this, pxE( ".Panels:Gamefixes:Compat Warning",
 		L"Enabling game fixes can cause compatibility or performance issues in other games.  You "
 		L"will need to turn off fixes manually when changing games."
 	));
-
+	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( GameFixesPanel::OnEnable_Toggled ) );
+	EnableStuff();
+	
 	AppStatusEvent_OnSettingsApplied();
 }
 
 // I could still probably get rid of the for loop, but I think this is clearer.
 void Panels::GameFixesPanel::Apply()
 {
+	g_Conf->EnableGameFixes = m_check_Enable->GetValue();
+	
 	Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
     for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
     {
         if (m_checkbox[i]->GetValue())
+        {
             opts.bitset |= (1 << i);
+        }
         else
+        {
             opts.bitset &= ~(1 << i);
+        }
     }
+}
+
+void Panels::GameFixesPanel::EnableStuff()
+{
+    for (int i = 0; i < NUM_OF_GAME_FIXES; i++)
+    {
+    	m_checkbox[i]->Enable(m_check_Enable->GetValue());
+    }
+}
+
+void Panels::GameFixesPanel::OnEnable_Toggled( wxCommandEvent& evt )
+{
+	EnableStuff();
+	evt.Skip();
 }
 
 void Panels::GameFixesPanel::AppStatusEvent_OnSettingsApplied()
 {
 	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
 	for( int i=0; i<NUM_OF_GAME_FIXES; ++i )
+	{
 		m_checkbox[i]->SetValue( !!(opts.bitset & (1 << i)) );
+	}
 }

@@ -707,7 +707,7 @@ void ZeroGS::VB::CheckFrame(int tbp)
 			f.fbh = prndr->fbh;
 			f.psm = zbuf.psm;
 			
-			if( zbuf.psm == 0x31 ) f.fbm = 0xff000000;
+			if( zbuf.psm == PSMT24Z ) f.fbm = 0xff000000;
 			else f.fbm = 0;
 			CDepthTarget* pnewdepth = (CDepthTarget*)s_DepthRTs.GetTarg(f, CRenderTargetMngr::TO_DepthBuffer|CRenderTargetMngr::TO_StrictHeight|
 				(zbuf.zmsk?CRenderTargetMngr::TO_Virtual:0), GET_MAXHEIGHT(zbuf.zbp, gsfb.fbw, 0));

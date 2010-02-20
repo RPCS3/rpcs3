@@ -392,7 +392,7 @@ static void intExecuteBiosStub()
 {
 	g_EEFreezeRegs = false;
 
-	// We need to be weary of events that could occur during vsyncs, which means
+	// We need to be wary of events that could occur during vsyncs, which means
 	// making sure to exit this function for ExitCpuExecute.  The calling function
 	// will update UI status, and then re-enter if the bios stub execution criteria
 	// wasn't met yet.

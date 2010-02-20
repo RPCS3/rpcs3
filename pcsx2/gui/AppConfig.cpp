@@ -335,6 +335,7 @@ AppConfig::AppConfig()
 
 	McdEnableNTFS		= true;
 	EnableSpeedHacks	= false;
+	EnableGameFixes		= false;
 
 	CdvdSource			= CDVDsrc_Iso;
 
@@ -405,6 +406,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( CurrentELF );
 
 	IniEntry( EnableSpeedHacks );
+	IniEntry( EnableGameFixes );
 
 	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
 }

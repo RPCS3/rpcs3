@@ -485,22 +485,26 @@ extern int g_GameSettings;
 extern GSconf conf;
 extern int ppf;
 
-#define PSMCT32		0
-#define PSMCT24		1
-#define PSMCT16		2
-#define PSMCT16S	10
-#define PSMT8		19
-#define PSMT4		20
-#define PSMT8H		27
-#define PSMT4HL		36
-#define PSMT4HH		44
-#define PSMT32Z		48
-#define PSMT24Z		49
-#define PSMT16Z		50
-#define PSMT16SZ	58
+// PSM values
+// PSM types == Texture Storage Format
+enum PSM_value{
+	PSMCT32		= 0,		// 000000
+	PSMCT24		= 1,		// 000001
+	PSMCT16		= 2,		// 000010
+	PSMCT16S	= 10,		// 001010
+	PSMT8		= 19,		// 010011
+	PSMT4		= 20,		// 010100
+	PSMT8H		= 27,		// 011011
+	PSMT4HL		= 36,		// 100100
+	PSMT4HH		= 44,		// 101100
+	PSMT32Z		= 48,		// 110000
+	PSMT24Z		= 49,		// 110001
+	PSMT16Z		= 50,		// 110010
+	PSMT16SZ	= 58,		// 111010
+};
 
-#define PSMT_ISCLUT(psm) (((psm)&0x7)>2)
-#define PSMT_IS16BIT(psm) (((psm)&7)==2||((psm)&7)==10)
+static __forceinline bool PSMT_ISCLUT(u32 psm) { return ((psm & 0x7) > 2);}
+static __forceinline bool PSMT_IS16BIT(u32 psm) { return ((psm & 0x7) == 2);}
 
 typedef struct {
 	int nloop;

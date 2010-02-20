@@ -112,7 +112,7 @@ __forceinline mem16_t hwRead16(u32 mem)
 	u16 ret;
 
 	// TODO re-implement this warning along with a *complete* logging of all hw activity.
-	// (implementation should be modelled after thee iopHWRead/iopHwWrite files)
+	// (implementation should be modelled after the iopHWRead/iopHwWrite files)
 	if( mem >= IPU_CMD && mem < D0_CHCR ) return psHu8(mem);
 	//	Console.Warning("Unexpected hwRead16 from 0x%x", mem);
 
@@ -143,7 +143,7 @@ __forceinline mem16_t hwRead16(u32 mem)
 				{
 					case SBUS_F240: 
 						ret = psHu16(mem) | 0x0102;
-						psHu32(mem) &= ~0x4000; // not commented out like in  bit mode?
+						psHu32(mem) &= ~0x4000; // not commented out like in bit mode?
 						break;
 					
 					case SBUS_F260:

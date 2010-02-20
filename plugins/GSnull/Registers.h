@@ -140,8 +140,12 @@ union name			\
 {					\
 	u64 _u64;		\
 	u32 _u32[2];	\
+	/*void operator = (const GSVector4i& v) {GSVector4i::storel(this, v);} \
+	bool operator == (const union name& r) const {return ((GSVector4i)r).eq(*this);} \
+	bool operator != (const union name& r) const {return !((GSVector4i)r).eq(*this);} \
+	operator GSVector4i() const {return GSVector4i::loadl(this);}*/ \
 	struct {		\
-
+	
 #define REG128(name)\
 union name			\
 {					\
@@ -411,14 +415,8 @@ REG_SET_END
 #define SET_GIF_REG(gifTag, iRegNo, uiValue) \
 	{((GIFTag*)&gifTag)->u64[1] |= (((uiValue) & 0xf) << ((iRegNo) << 2));}
 
-#ifdef _M_AMD64
-#define GET_GIF_REG(tag, reg) \
-	(((tag).u64[1] >> ((reg) << 2)) & 0xf)
-#else
 #define GET_GIF_REG(tag, reg) \
 	(((tag).u32[2 + ((reg) >> 3)] >> (((reg) & 7) << 2)) & 0xf)
-#endif
-
 //
 // GIFTag
 

@@ -309,10 +309,13 @@ namespace Panels
 	{
 	protected:
 		pxCheckBox*			m_checkbox[NUM_OF_GAME_FIXES];
+		pxCheckBox*			m_check_Enable;
 
 	public:
 		GameFixesPanel( wxWindow* parent );
 		virtual ~GameFixesPanel() throw() { }
+		void EnableStuff();
+		void OnEnable_Toggled( wxCommandEvent& evt );
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
 	};

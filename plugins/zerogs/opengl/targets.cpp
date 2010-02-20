@@ -793,7 +793,7 @@ bool ZeroGS::CDepthTarget::Create(const frameInfo& frame)
 	if( !CRenderTarget::Create(frame) )
 		return false;
 
-	if( psm == 0x31 ) fbm = 0xff000000;
+	if( psm == PSMT24Z ) fbm = 0xff000000;
 	else fbm = 0;
 
 	assert( glGetError() == GL_NO_ERROR );
