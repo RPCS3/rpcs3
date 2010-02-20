@@ -217,10 +217,12 @@ extern VIFregisters *vifRegs;
 #define vif0Regs (&vif0RegsRef)
 #define vif1Regs (&vif1RegsRef)
 
-#define _vifT		 template <int idx>
-#define  vifX		 (idx ? vif1 : vif0)
-#define  vifXRegs	 (idx ? (vif1Regs) : (vif0Regs))
-#define _f			 __forceinline
+#define _vifT		template <int idx>
+#define  vifX		(idx ? (vif1)     : (vif0))
+#define  vifXch		(idx ? (vif1ch)   : (vif0ch))
+#define  vifXRegs	(idx ? (vif1Regs) : (vif0Regs))
+#define  vifXCode	(idx ? (vif1Code) : (vif0Code))
+#define _f			__forceinline
 
 extern void dmaVIF0();
 extern void dmaVIF1();
@@ -229,3 +231,5 @@ extern bool VIF0transfer(u32 *data, int size, bool istag);
 extern bool VIF1transfer(u32 *data, int size, bool istag);
 extern void vifMFIFOInterrupt();
 
+extern bool vifTransfer0(u32 *data, int size, bool isTag);
+extern bool vifTransfer1(u32 *data, int size, bool isTag);
