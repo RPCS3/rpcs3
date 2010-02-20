@@ -123,7 +123,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 			gifRegs->stat.clear_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
 		}
 		else { // Partial Transfer
-			DevCon.WriteLn("DirectHL: Partial Transfer1 [%d]", size);
+			//DevCon.WriteLn("DirectHL: Partial Transfer [%d]", size);
 			gifRegs->stat.set_flags(GIF_STAT_APATH2 | GIF_STAT_OPH);
 			memcpy_fast(&v.buffer[v.bSize], data, size);
 			v.bSize		  += size;
@@ -160,7 +160,9 @@ vifOp(vifCode_FlushA) {
 	pass1 {
 		// Gif is already transferring so wait for it.
 		if (((Path3progress != STOPPED_MODE) || !vif1Regs->mskpath3) && gif->chcr.STR) { 
+			DevCon.WriteLn("FlushA path3 Wait!");
 			vif1Regs->stat.VGW = true;
+			vifX.vifstalled    = true;
 			CPU_INT(DMAC_GIF, 4);
 		}
 		vifFlush(idx);
@@ -382,7 +384,7 @@ vifOp(vifCode_STCycl) {
 
 vifOp(vifCode_STMask) {
 	pass1 { vifX.tag.size = 1; }
-	pass2 { vifXRegs->mask = data[0]; vifX.cmd = 0; }
+	pass2 { vifXRegs->mask = data[0]; vifX.tag.size = 0; vifX.cmd = 0; }
 	pass3 { DevCon.WriteLn("vifCode_STMask"); }
 	return 1;
 }
@@ -465,7 +467,7 @@ bool analyzeIbit(u32* &data, int iBit, bool isTag) {
 		//DevCon.WriteLn("Vif I-Bit IRQ");
 		vif1.irq++;
 		if (isTag) {
-			DevCon.WriteLn("Vif isTag Hack!?");
+			//DevCon.WriteLn("Vif isTag Hack!?");
 			vif1.stallontag = true;
 		}
 		runMark(data);
