@@ -434,6 +434,7 @@ static __forceinline BOOL ipuIDEC(u32 val)
 }
 
 static int s_bdec = 0;
+static int g_ipu_dma_error = 0;
 
 static __forceinline BOOL ipuBDEC(u32 val)
 {
@@ -830,7 +831,8 @@ void IPUWorker()
 			break;
 
 		case SCE_IPU_FDEC:
-			if (!ipuFDEC(ipuRegs->cmd.DATA))
+			g_ipu_dma_error = 0; // if g_ipu_dma_error is set, then continue processing. Fixes GoWs white screens of death.
+			if (!ipuFDEC(ipuRegs->cmd.DATA) && !g_ipu_dma_error)
 			{
 				hwIntcIrq(INTC_IPU);
 				return;
@@ -1413,7 +1415,12 @@ int IPU1dma()
 	// Normal Mode & qwc is finished
 	if ((ipu1dma->chcr.MOD == NORMAL_MODE) && (ipu1dma->qwc == 0))
 	{
-		//Console.WriteLn("ipu1 normal empty qwc?");
+		Console.Warning("ipu1 normal empty qwc?");
+		// returning totalqwc here is not enough. It seems to be an error,
+		// which may cause hangs, especially in God of War.
+		// Always zero is returned here, what is covered up by other return paths in this function.
+		// Thus, additional variable is set to indicate from where totalqwc comes.
+		g_ipu_dma_error = -1; // saves an error of the ipu1 DMA.
 		return totalqwc;
 	}
 
