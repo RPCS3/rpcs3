@@ -579,48 +579,49 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		if(dst->m_TEX0.TBW != TEX0.TBW) // && dst->m_TEX0.PSM == TEX0.PSM
 		{
-			//Better not do the code below, "fixes" like every game that ever gets here..
-			//Edit: Ratchet and Clank needs this to show most of it's graphics at all.
-			//Someone else fix this please, I can't :p
-			//delete src; return NULL;
+			// This is so broken :p
+			////Better not do the code below, "fixes" like every game that ever gets here..
+			////Edit: Ratchet and Clank needs this to show most of it's graphics at all.
+			////Someone else fix this please, I can't :p
+			////delete src; return NULL;
 
-			// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
+			//// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
 
-			ASSERT(dst->m_TEX0.TBW > TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
+			//ASSERT(dst->m_TEX0.TBW > TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
 
-			src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
+			//src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
 
-			GSVector4 size = GSVector4(dstsize).xyxy();
-			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy();
+			//GSVector4 size = GSVector4(dstsize).xyxy();
+			//GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy();
 
-			int blockWidth  = 64;
-			int blockHeight = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
+			//int blockWidth  = 64;
+			//int blockHeight = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
 
-			GSVector4i br(0, 0, blockWidth, blockHeight);
+			//GSVector4i br(0, 0, blockWidth, blockHeight);
 
-			int sw = (int)dst->m_TEX0.TBW << 6;
+			//int sw = (int)dst->m_TEX0.TBW << 6;
 
-			int dw = (int)TEX0.TBW << 6;
-			int dh = 1 << TEX0.TH;
+			//int dw = (int)TEX0.TBW << 6;
+			//int dh = 1 << TEX0.TH;
 
-			if(sw != 0)
-			for(int dy = 0; dy < dh; dy += blockHeight)
-			{
-				for(int dx = 0; dx < dw; dx += blockWidth)
-				{
-					int o = dy * dw / blockHeight + dx;
+			//if(sw != 0)
+			//for(int dy = 0; dy < dh; dy += blockHeight)
+			//{
+			//	for(int dx = 0; dx < dw; dx += blockWidth)
+			//	{
+			//		int o = dy * dw / blockHeight + dx;
 
-					int sx = o % sw;
-					int sy = o / sw;
+			//		int sx = o % sw;
+			//		int sy = o / sw;
 
-					GSVector4 sr = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
-					GSVector4 dr = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
+			//		GSVector4 sr = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
+			//		GSVector4 dr = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
 
-					m_renderer->m_dev->StretchRect(dst->m_texture, sr, src->m_texture, dr);
+			//		m_renderer->m_dev->StretchRect(dst->m_texture, sr, src->m_texture, dr);
 
-					// TODO: this is quite a lot of StretchRect, do it with one Draw
-				}
-			}
+			//		// TODO: this is quite a lot of StretchRect, do it with one Draw
+			//	}
+			//}
 		}
 		else if(tw < tp)
 		{
