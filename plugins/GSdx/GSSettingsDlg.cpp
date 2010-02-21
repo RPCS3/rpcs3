@@ -267,9 +267,12 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAA), hw);
 
-		EnableWindow(GetDlgItem(m_hWnd, IDC_ALPHAHACK), allowHacks && hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_OFFSETHACK), allowHacks && hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACKEDIT), allowHacks && hw);
+		ShowWindow(GetDlgItem(m_hWnd, IDC_USERHACKS), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_ALPHAHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_OFFSETHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACKEDIT), allowHacks && hw)?SW_SHOW:SW_HIDE;	
+		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC10), allowHacks && hw)?SW_SHOW:SW_HIDE;	
+		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;	
+
 	}
 }
