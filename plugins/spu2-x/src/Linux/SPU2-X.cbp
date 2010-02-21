@@ -97,14 +97,16 @@
 		<Unit filename="../Dma.cpp" />
 		<Unit filename="../Dma.h" />
 		<Unit filename="../Global.h" />
+		<Unit filename="AboutBox.cpp" />
 		<Unit filename="Alsa.cpp" />
 		<Unit filename="Alsa.h" />
+		<Unit filename="CfgHelpers.cpp" />
 		<Unit filename="Config.cpp" />
 		<Unit filename="Config.h" />
+		<Unit filename="ConfigDebug.cpp" />
 		<Unit filename="ConfigSoundTouch.cpp" />
 		<Unit filename="Dialogs.cpp" />
 		<Unit filename="Dialogs.h" />
-		<Unit filename="Linux.h" />
 		<Unit filename="../Lowpass.cpp" />
 		<Unit filename="../Lowpass.h" />
 		<Unit filename="../Mixer.cpp" />
