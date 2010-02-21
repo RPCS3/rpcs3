@@ -16,3 +16,59 @@
  */
  
  // To be continued...
+ 
+ #include "Dialogs.h"
+#include <gtk/gtk.h>
+#include <cstring>
+
+void CfgWriteStr(const wchar_t* Section, const wchar_t* Name, const wstring& Data)
+{
+}
+
+void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wstring& Data, int DataSize, const wchar_t* Default)
+{
+}
+
+
+void __forceinline SysMessage(const char *fmt, ...)
+{
+    va_list list;
+    char msg[512];
+
+    va_start(list, fmt);
+    vsprintf(msg, fmt, list);
+    va_end(list);
+
+    if (msg[strlen(msg)-1] == '\n') msg[strlen(msg)-1] = 0;
+
+    GtkWidget *dialog;
+    dialog = gtk_message_dialog_new (NULL,
+                                     GTK_DIALOG_DESTROY_WITH_PARENT,
+                                     GTK_MESSAGE_INFO,
+                                     GTK_BUTTONS_OK,
+                                     "%s", msg);
+    gtk_dialog_run (GTK_DIALOG (dialog));
+    gtk_widget_destroy (dialog);
+}
+
+void SysMessage(wchar_t const*, ...)
+{
+}
+
+void DspUpdate()
+{
+}
+
+s32 DspLoadLibrary(wchar_t* fileName, int modnum)
+{
+	return 0;
+}
+
+void AboutBox()
+{
+	SysMessage("Yay: Aboutbox.");
+}
+
+void CfgSetSettingsDir(const char* dir)
+{
+}

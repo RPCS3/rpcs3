@@ -18,7 +18,18 @@
 #ifndef DIALOG_H_INCLUDED
 #define DIALOG_H_INCLUDED
 
-#include "../Config.h"
 #include "../Global.h"
+#include "../Config.h"
+
+extern void CfgSetSettingsDir(const char* dir);
+
+//extern void		CfgWriteBool(const wchar_t* Section, const wchar_t* Name, bool Value);
+//extern void		CfgWriteInt(const wchar_t* Section, const wchar_t* Name, int Value);
+extern void		CfgWriteStr(const wchar_t* Section, const wchar_t* Name, const wstring& Data);
+
+//extern bool		CfgReadBool(const wchar_t *Section,const wchar_t* Name, bool Default);
+extern void		CfgReadStr(const wchar_t* Section, const wchar_t* Name, wstring& Data, int DataSize, const wchar_t* Default);
+//extern void		CfgReadStr(const wchar_t* Section, const wchar_t* Name, wchar_t* Data, int DataSize, const wchar_t* Default);
+//extern int		CfgReadInt(const wchar_t* Section, const wchar_t* Name,int Default);
 
 #endif

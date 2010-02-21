@@ -22,6 +22,7 @@
 #include "Global.h"
 #include "Dialogs.h"
 #include "Config.h"
+#include "SoundTouch/SoundTouch.h"
 
 namespace SoundtouchCfg
 {
@@ -30,6 +31,13 @@ void ClampValues()
 	Clampify( SequenceLenMS, SequenceLen_Min, SequenceLen_Max );
 	Clampify( SeekWindowMS, SeekWindow_Min, SeekWindow_Max );
 	Clampify( OverlapMS, Overlap_Min, Overlap_Max );
+}
+
+void ApplySettings( soundtouch::SoundTouch& sndtouch )
+{
+	sndtouch.setSetting( SETTING_SEQUENCE_MS,	SequenceLenMS );
+	sndtouch.setSetting( SETTING_SEEKWINDOW_MS,	SeekWindowMS );
+	sndtouch.setSetting( SETTING_OVERLAP_MS,	OverlapMS );
 }
 
 void ReadSettings()

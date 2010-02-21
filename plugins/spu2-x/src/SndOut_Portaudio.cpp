@@ -22,6 +22,14 @@
 
 #include "portaudio/include/portaudio.h"
 
+#ifdef __LINUX__
+int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
+	unsigned long framesPerBuffer,
+	const PaStreamCallbackTimeInfo* timeInfo,
+	PaStreamCallbackFlags statusFlags,
+	void *userData );
+#endif
+				
 class Portaudio : public SndOutModule
 {
 private:
@@ -46,17 +54,19 @@ private:
 	
 	bool started;
 	PaStream* stream;
-
-	static int PaCallback( const void *inputBuffer, void *outputBuffer,
-		unsigned long framesPerBuffer,
-		const PaStreamCallbackTimeInfo* timeInfo,
-		PaStreamCallbackFlags statusFlags,
-		void *userData )
-	{
-		return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
-	}
-
-
+	
+#ifndef __LINUX__
+        static int PaCallback( const void *inputBuffer, void *outputBuffer,
+                unsigned long framesPerBuffer,
+                const PaStreamCallbackTimeInfo* timeInfo,
+                PaStreamCallbackFlags statusFlags,
+                void *userData )
+        {
+                return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
+        }
+#endif
+	
+public:
 	int ActualPaCallback( const void *inputBuffer, void *outputBuffer,
 		unsigned long framesPerBuffer,
 		const PaStreamCallbackTimeInfo* timeInfo,
@@ -74,8 +84,7 @@ private:
 
 		return 0;
 	}
-
-public:
+	
 	Portaudio()
 	{
 		m_ApiId=-1;
@@ -114,7 +123,10 @@ public:
 				MultiByteToWideChar(CP_UTF8,0,info->name,strlen(info->name),buffer,999);
 				buffer[999]=0;
 #else
-#	error TODO
+//#	error TODO
+				static wchar_t buffer [1000];
+				//MultiByteToWideChar(CP_UTF8,0,info->name,strlen(info->name),buffer,999);
+				buffer[999]=0;
 #endif
 
 				if(m_Device == buffer)
@@ -138,7 +150,7 @@ public:
 				}
 			}
 		}
-
+		
 		if(deviceIndex>=0)
 		{
 			PaStreamParameters outParams = {
@@ -153,20 +165,30 @@ public:
 				paInt32,
 				0, //?
 				NULL
-
 			};
-
+			
 			err = Pa_OpenStream(&stream,
 				NULL, &outParams, SampleRate,
 				SndOutPacketSize,
-				paNoFlag, PaCallback, NULL);
+				paNoFlag, 
+#ifndef __LINUX__
+				PaCallback, 
+#else
+				PaLinuxCallback, 
+#endif
+				NULL);
 		}
 		else
 		{
 			err = Pa_OpenDefaultStream( &stream,
 				0, 2, paInt32, 48000,
 				SndOutPacketSize,
-				PaCallback, NULL );
+#ifndef __LINUX__
+				PaCallback, 
+#else
+				PaLinuxCallback, 
+#endif
+				NULL );
 		}
 		if( err != paNoError )
 		{
@@ -301,5 +323,16 @@ public:
 	}
 
 } static PA;
+
+#ifdef __LINUX__
+	int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
+		unsigned long framesPerBuffer,
+		const PaStreamCallbackTimeInfo* timeInfo,
+		PaStreamCallbackFlags statusFlags,
+		void *userData )
+	{
+		return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
+	}
+#endif
 
 SndOutModule *PortaudioOut = &PA;

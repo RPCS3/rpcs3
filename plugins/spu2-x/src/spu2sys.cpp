@@ -23,7 +23,7 @@
 
 
 #include "Global.h"
-#include "dma.h"
+#include "Dma.h"
 
 #include "PS2E-spu2.h"		// needed until I figure out a nice solution for irqcallback dependencies.
 

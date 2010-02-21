@@ -17,10 +17,12 @@
 
 #include "Global.h"
 #include "PS2E-spu2.h"
-#include "dma.h"
+#include "Dma.h"
 #include "Dialogs.h"
 
+#ifndef __LINUX__
 #include "x86emitter/tools.h"
+#endif
 
 #ifdef _MSC_VER
 #	include "svnrev.h"
@@ -110,6 +112,8 @@ static bool cpu_detected = false;
 
 static bool CheckSSE()
 {
+// I'll worry about checking sse2 in Linux later.
+#ifndef __LINUX__
 	if( !cpu_detected )
 	{
 		cpudetectInit();
@@ -121,6 +125,7 @@ static bool CheckSSE()
 		SysMessage( "Your CPU does not support SSE2 instructions.\nThe SPU2-X plugin requires SSE2 to run." );
 		return false;
 	}
+#endif
 	return true;
 }
 

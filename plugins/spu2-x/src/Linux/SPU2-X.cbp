@@ -13,7 +13,6 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=yes --cflags`" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../../deps/debug/libsoundtouch-dbg.a" />
@@ -26,7 +25,6 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O2" />
-					<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --debug=no --cflags`" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -37,6 +35,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
+			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="-fPIC" />
 			<Add option="-m32" />
 			<Add option="-liconv" />
@@ -48,12 +47,15 @@
 			<Add directory="../../../../common/include" />
 			<Add directory="../../../../3rdparty/SoundTouch" />
 			<Add directory="../../../../3rdparty" />
+			<Add directory="../../../../common/src/x86emitter" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --libs`" />
+			<Add option="`pkg-config gtk+-2.0 --libs`" />
 			<Add option="-shared" />
 			<Add library="asound" />
 			<Add library="stdc++" />
+			<Add library="portaudio" />
 		</Linker>
 		<Unit filename="../3rdparty/liba52/a52.h" />
 		<Unit filename="../3rdparty/liba52/a52_internal.h" />
@@ -81,14 +83,20 @@
 		<Unit filename="../3rdparty/liba52/tables.h" />
 		<Unit filename="../3rdparty/liba52/tendra.h" />
 		<Unit filename="../ADSR.cpp" />
+		<Unit filename="../Config.h" />
 		<Unit filename="../ConvertUTF.cpp" />
 		<Unit filename="../ConvertUTF.h" />
 		<Unit filename="../DPLII.h" />
 		<Unit filename="../Debug.cpp" />
 		<Unit filename="../Debug.h" />
+		<Unit filename="../DecodeDPLII.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Unit filename="../Decoder.cpp" />
 		<Unit filename="../Dma.cpp" />
 		<Unit filename="../Dma.h" />
+		<Unit filename="../Global.h" />
 		<Unit filename="Alsa.cpp" />
 		<Unit filename="Alsa.h" />
 		<Unit filename="Config.cpp" />
@@ -100,20 +108,90 @@
 		<Unit filename="../Lowpass.cpp" />
 		<Unit filename="../Lowpass.h" />
 		<Unit filename="../Mixer.cpp" />
+		<Unit filename="../Mixer.h" />
+		<Unit filename="../PS2E-spu2.cpp" />
+		<Unit filename="../PS2E-spu2.h" />
+		<Unit filename="../PrecompiledHeader.cpp" />
 		<Unit filename="../ReadInput.cpp" />
 		<Unit filename="../RegLog.cpp" />
 		<Unit filename="../RegTable.cpp" />
 		<Unit filename="../Reverb.cpp" />
 		<Unit filename="../SndOut.cpp" />
 		<Unit filename="../SndOut.h" />
+		<Unit filename="../SndOut_Portaudio.cpp" />
 		<Unit filename="../Spu2replay.cpp" />
 		<Unit filename="../Spu2replay.h" />
 		<Unit filename="../Timestretcher.cpp" />
 		<Unit filename="../Wavedump_wav.cpp" />
+		<Unit filename="../Windows/AboutBox.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/CfgHelpers.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/Config.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/ConfigDebug.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/ConfigSoundtouch.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/Dialogs.h" />
+		<Unit filename="../Windows/Dsound51.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/Hyperlinks.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/Hyperlinks.h" />
+		<Unit filename="../Windows/RealtimeDebugger.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/SndOut_DSound.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/SndOut_XAudio2.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/SndOut_waveOut.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/Spu2-X.def" />
+		<Unit filename="../Windows/Spu2-X.rc">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/Spu2-X_vs2008.vcproj" />
+		<Unit filename="../Windows/UIHelpers.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/WinConfig.h" />
+		<Unit filename="../Windows/dsp.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../Windows/dsp.h" />
+		<Unit filename="../Windows/resource.h" />
 		<Unit filename="../defs.h" />
 		<Unit filename="../iconvert.cpp" />
 		<Unit filename="../regs.h" />
 		<Unit filename="../spdif.h" />
+		<Unit filename="../spu2freeze.cpp" />
+		<Unit filename="../spu2sys.cpp" />
 		<Unit filename="../utf8.cpp" />
 		<Unit filename="../utf8.h" />
 		<Extensions>
