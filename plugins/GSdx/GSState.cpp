@@ -2547,6 +2547,18 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 			}
 		}
 	}
+	// Mimic old GSdx behavior (skipping all depth textures with a skip value of 1), to avoid floods of bug reports
+	// that games are broken, when the user hasn't found the skiphack yet. (God of War, sigh...)
+	else if (skip == 0)
+	{
+		if(fi.TME)
+		{
+			if(fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S)
+			{
+				skip = 1;
+			}
+		}
+	}
 
 	if(skip > 0)
 	{
