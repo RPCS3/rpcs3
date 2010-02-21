@@ -68,7 +68,6 @@
 		</Unit>
 		<Unit filename="../3rdparty/liba52/bitstream.h" />
 		<Unit filename="../3rdparty/liba52/config.h" />
-		<Unit filename="../3rdparty/liba52/configure.incl" />
 		<Unit filename="../3rdparty/liba52/downmix.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -171,12 +170,6 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="../Windows/Spu2-X.def" />
-		<Unit filename="../Windows/Spu2-X.rc">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
-		<Unit filename="../Windows/Spu2-X_vs2008.vcproj" />
 		<Unit filename="../Windows/UIHelpers.cpp">
 			<Option compile="0" />
 			<Option link="0" />

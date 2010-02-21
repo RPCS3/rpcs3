@@ -36,8 +36,6 @@ bool _CoresDump=false;
 bool _MemDump=false;
 bool _RegDump=false;
 
-
-
 wchar_t AccessLogFileName[255];
 wchar_t WaveLogFileName[255];
 
@@ -73,7 +71,7 @@ bool EffectsDisabled = false;
 int SndOutLatencyMS = 160;
 bool timeStretchDisabled = false;
 
-u32 OutputModule = 0;
+u32 OutputModule = FindOutputModuleById( PortaudioOut->GetIdent() );
 
 CONFIG_DSOUNDOUT Config_DSoundOut;
 CONFIG_WAVEOUT Config_WaveOut;
