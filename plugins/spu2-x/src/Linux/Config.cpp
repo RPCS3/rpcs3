@@ -64,7 +64,7 @@ int Interpolation = 1;
 		1. linear interpolation
 		2. cubic interpolation
 */
-
+int ReverbBoost = 0;
 bool EffectsDisabled = false;
 
 // OUTPUT

@@ -65,7 +65,7 @@ extern wchar_t MemDumpFileName[255];
 extern wchar_t RegDumpFileName[255];
 
 extern int Interpolation;
-
+extern int ReverbBoost;
 extern bool EffectsDisabled;
 
 extern int AutoDMAPlayRate[2];

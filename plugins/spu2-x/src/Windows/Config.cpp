@@ -33,7 +33,7 @@ int Interpolation = 1;
 		1. linear interpolation
 		2. cubic interpolation
 */
-
+int ReverbBoost = 0;
 bool EffectsDisabled = false;
 
 // OUTPUT
@@ -57,6 +57,7 @@ bool StereoExpansionEnabled = false;
 void ReadSettings()
 {
 	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
+	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
 
 	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
@@ -102,6 +103,7 @@ void ReadSettings()
 void WriteSettings()
 {
 	CfgWriteInt(L"MIXING",L"Interpolation",Interpolation);
+	CfgWriteInt(L"MIXING",L"Reverb_Boost",ReverbBoost);
 
 	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
 
@@ -141,6 +143,13 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"1 - Linear (recommended)" );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"2 - Cubic (slower/maybe better)" );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_SETCURSEL,Interpolation,0 ); 
+			
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_RESETCONTENT,0,0 ); 
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"1X - Normal Reverb Volume" );
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"2X - Reverb Volume * 2" );
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"4X - Reverb Volume * 4" );
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_ADDSTRING,0,(LPARAM) L"8X - Reverb Volume * 8" );
+			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_SETCURSEL,ReverbBoost,0 ); 
 
 			SendDialogMsg( hWnd, IDC_OUTPUT, CB_RESETCONTENT,0,0 );
 			
@@ -185,6 +194,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					Clampify( SndOutLatencyMS, LATENCY_MIN, LATENCY_MAX );
 
 					Interpolation = (int)SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_GETCURSEL,0,0 );
+					ReverbBoost = (int)SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_GETCURSEL,0,0 );
 					OutputModule  = (int)SendDialogMsg( hWnd, IDC_OUTPUT, CB_GETCURSEL,0,0 );
 
 					WriteSettings();

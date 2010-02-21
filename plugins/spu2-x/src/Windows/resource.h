@@ -22,6 +22,7 @@
 #define IDC_DEBUG                       1010
 #define IDC_DEBUG_ENABLE                1010
 #define IDC_INTERPOLATE                 1011
+#define IDC_REVERB_BOOST                1012
 #define IDC_OUTPUT                      1013
 #define IDC_BUFFERS_SLIDER              1014
 #define IDC_MSGKEY                      1020

@@ -52,7 +52,7 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x0
 BEGIN
     PUSHBUTTON      "OK",IDOK,200,256,54,15,NOT WS_TABSTOP
     PUSHBUTTON      "Cancel",IDCANCEL,259,256,54,15,NOT WS_TABSTOP
-    GROUPBOX        "Mixing Settings",IDC_STATIC,6,5,130,99
+    GROUPBOX        "Mixing Settings",IDC_STATIC,6,5,130,115
     GROUPBOX        "Output Settings",IDC_STATIC,142,5,172,247
     COMBOBOX        IDC_OUTPUT,164,26,126,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Configure...",IDC_OUTCONF,236,40,54,12
@@ -64,17 +64,19 @@ BEGIN
     LTEXT           "Latency:",IDC_STATIC,181,62,33,9,NOT WS_GROUP
     LTEXT           "Interpolation:",IDC_STATIC,12,16,55,10,NOT WS_GROUP
     LTEXT           "Module:",IDC_STATIC,161,16,50,9,NOT WS_GROUP
-    LTEXT           "(speedup!) Skips reverb and stereo delay effects processing, but won't sound as good in most games.",IDC_STATIC,26,60,104,36
+    LTEXT           "(speedup!) Skips reverb effects processing, but won't sound as good in most games.",IDC_STATIC,26,60,104,36
     LTEXT           "(currently requires manual configuration via the ini file)",IDC_STATIC,162,229,146,20
     CTEXT           "100 ms (avg)",IDC_LATENCY_LABEL,215,62,58,9
     LTEXT           "Timestretching helps reduce latency and usually eliminates audio skips.",IDC_STATIC,162,109,146,20
     CONTROL         116,IDC_STATIC,"Static",SS_BITMAP,7,196,117,52,WS_EX_CLIENTEDGE
     PUSHBUTTON      "Advanced...",IDC_OPEN_CONFIG_SOUNDTOUCH,219,130,84,12
-    PUSHBUTTON      "Configure Debug Options...",IDC_OPEN_CONFIG_DEBUG,14,131,108,14
-    CHECKBOX        "Enable Debug Options",IDC_DEBUG_ENABLE,14,117,104,10,NOT WS_TABSTOP
-    GROUPBOX        "",IDC_STATIC,6,107,129,46
+    PUSHBUTTON      "Configure Debug Options...",IDC_OPEN_CONFIG_DEBUG,14,167,108,14
+    CHECKBOX        "Enable Debug Options",IDC_DEBUG_ENABLE,14,153,104,10,NOT WS_TABSTOP
+    GROUPBOX        "",IDC_STATIC,6,143,129,46
     CONTROL         "Enable Audio Expansion",IDC_EXPANSION_ENABLE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,150,152,135,10
     LTEXT           "Audio expansion to 5.1. Currently for XAudio2 only. WIP.",IDC_STATIC,162,164,146,44
+    COMBOBOX        IDC_REVERB_BOOST,14,99,114,84,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Reverb Boost Factor",IDC_STATIC,12,88,75,10,NOT WS_GROUP
 END
 
 IDD_DEBUG DIALOGEX 0, 0, 326, 525
