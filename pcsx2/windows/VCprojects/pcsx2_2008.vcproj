@@ -829,11 +829,11 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\Vif_Commands.cpp"
+								RelativePath="..\..\Vif_Dma.h"
 								>
 							</File>
 							<File
-								RelativePath="..\..\Vif_Dma.h"
+								RelativePath="..\..\Vif_Transfer.cpp"
 								>
 							</File>
 							<Filter

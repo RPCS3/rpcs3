@@ -69,6 +69,24 @@ static _f void vuExecMicro(int idx, u32 addr) {
 	else	  vu1ExecMicro(addr);
 }
 
+u8 schedulepath3msk = 0;
+
+void Vif1MskPath3() {
+
+	vif1Regs->mskpath3 = schedulepath3msk & 0x1;
+	//Console.WriteLn("VIF MSKPATH3 %x", vif1Regs->mskpath3);
+
+	if (!vif1Regs->mskpath3) {
+		//Let the Gif know it can transfer again (making sure any vif stall isnt unset prematurely)
+		Path3progress = TRANSFER_MODE;
+		gifRegs->stat.IMT  = false;
+		CPU_INT(DMAC_GIF, 4);
+	}
+	else gifRegs->stat.M3P = true;
+
+	schedulepath3msk = 0;
+}
+
 //------------------------------------------------------------------
 // Vif0/Vif1 Code Implementations
 //------------------------------------------------------------------
@@ -80,7 +98,6 @@ vifOp(vifCode_Base) {
 	return 0;
 }
 
-template<int idx> int __fastcall vifTrans_DirectHL(u32 *data);
 template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 	pass1 {
 		vif1Only();
@@ -447,107 +464,3 @@ int (__fastcall *vif1Code[128])(int pass, u32 *data) = {
 	vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Null<1>,   /*0x70*/
 	vifCode_Unpack<1>  , vifCode_Unpack<1>  , vifCode_Unpack<1>	, vifCode_Null<1>   , vifCode_Unpack<1> , vifCode_Unpack<1> , vifCode_Unpack<1>  , vifCode_Unpack<1>  /*0x78*/
 };
-
-//------------------------------------------------------------------
-// Vif0/Vif1 Code Transfer Interpreter
-//------------------------------------------------------------------
-
-// Runs the next vifCode if its the Mark command
-_vifT void runMark(u32* &data) {
-	if (vifX.vifpacketsize && (((data[0]>>24)&0x7f)==7)) {
-		vifX.vifpacketsize--;
-		vifXCode[7](0, data++);
-		DevCon.WriteLn("Vif%d: Running Mark on I-bit", idx);
-	}
-}
-
-// Returns 1 if i-bit && finished vifcode && i-bit not masked && next vifcode != MARK
-_vifT bool analyzeIbit(u32* &data, int iBit, bool isTag) {
-	if (iBit && !vifX.cmd && !vifXRegs->err.MII) {
-		//DevCon.WriteLn("Vif I-Bit IRQ");
-		vifX.irq++;
-		if (isTag) {
-			//DevCon.WriteLn("Vif isTag Hack!?");
-			vifX.stallontag = true;
-		}
-		runMark<idx>(data);
-		return 1;
-	}
-	return 0;
-}
-
-// Interprets packet
-_vifT void vifTransferLoop(u32* &data, bool isTag) {
-	u32& tSize = vifX.tag.size;
-	u32& pSize = vifX.vifpacketsize;
-	int  iBit  = vifX.cmd >> 7;
-
-	vifXRegs->stat.VPS |= VPS_TRANSFERRING;
-	vifXRegs->stat.ER1  = false;
-
-	while (pSize > 0 && !vifX.vifstalled) {
-
-		if(!vifX.cmd) { // Get new VifCode
-			vifXRegs->code = data[0];
-			vifX.cmd	   = data[0] >> 24;
-			iBit		   = data[0] >> 31;
-
-			vifXCode[vifX.cmd & 0x7f](0, data);
-			data++; pSize--;
-			if (analyzeIbit<idx>(data, iBit, isTag)) break;
-			continue;
-		}
-		
-		int ret = vifXCode[vifX.cmd & 0x7f](1, data);
-		data   += ret;
-		pSize  -= ret;
-		if (analyzeIbit<idx>(data, iBit, isTag)) break;
-	}
-	if (vifX.cmd) vifXRegs->stat.VPS = VPS_WAITING;
-	else		  vifXRegs->stat.VPS = VPS_IDLE;
-}
-
-_vifT _f bool vifTransfer(u32 *data, int size, bool isTag) {
-	// irqoffset necessary to add up the right qws, or else will spin (spiderman)
-	int transferred = vifX.vifstalled ? vifX.irqoffset : 0;
-
-	vifX.irqoffset  = 0;
-	vifX.vifstalled = false;
-	vifX.stallontag = false;
-	vifX.vifpacketsize = size;
-
-	vifTransferLoop<idx>(data, isTag);
-
-	transferred   += size - vifX.vifpacketsize;
-	g_vifCycles   +=(transferred >> 2) * BIAS; /* guessing */
-	vifX.irqoffset = transferred % 4; // cannot lose the offset
-
-	if (!isTag) {
-		transferred   = transferred >> 2;
-		vifXch->madr +=(transferred << 4);
-		vifXch->qwc  -= transferred;
-	}
-
-	if (!vifXch->qwc && (!vifX.irqoffset || isTag)) vifX.inprogress &= ~0x1;
-
-	if (vifX.irq && vifX.cmd == 0) {
-		//DevCon.WriteLn("Vif IRQ!");
-		vifX.vifstalled    = true;
-		vifXRegs->stat.VIS = true; // Note: commenting this out fixes WALL-E?
-
-		// spiderman doesn't break on qw boundaries
-		if (isTag) return false;
-
-		if (!vifXch->qwc && !vifX.irqoffset) vifX.inprogress = 0;
-		return false;
-	}
-
-	return !vifX.vifstalled;
-}
-
-bool vifTransfer0(u32 *data, int size, bool isTag) {
-	return vifTransfer<0>(data, size, isTag);
-}
-bool vifTransfer1(u32 *data, int size, bool isTag) {
-	return vifTransfer<1>(data, size, isTag);
-}

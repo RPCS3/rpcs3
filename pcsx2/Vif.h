@@ -230,6 +230,3 @@ extern void mfifoVIF1transfer(int qwc);
 extern bool VIF0transfer(u32 *data, int size, bool istag);
 extern bool VIF1transfer(u32 *data, int size, bool istag);
 extern void vifMFIFOInterrupt();
-
-extern bool vifTransfer0(u32 *data, int size, bool isTag);
-extern bool vifTransfer1(u32 *data, int size, bool isTag);
