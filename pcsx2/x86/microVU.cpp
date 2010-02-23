@@ -365,7 +365,7 @@ void recMicroVU0::ExecuteBlock() {
 	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
 	XMMRegisters::Freeze();
-	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, 0x300);
+	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, 0x3000);
 	XMMRegisters::Thaw();
 }
 
