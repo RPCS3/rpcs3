@@ -2873,8 +2873,10 @@ void SuperVUTestVU0Condition(u32 incstack)
 {
 	if (s_vu && !SUPERVU_CHECKCONDITION) return;  // vu0 only
 
-	CMP32ItoM((uptr)&s_TotalVUCycles, 512);	// sometimes games spin on vu0, so be careful with this value
+	// sometimes games spin on vu0, so be careful with this value
 	// woody hangs if too high
+	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
+	CMP32ItoM((uptr)&s_TotalVUCycles, 512*12);	
 
 	if (incstack)
 	{

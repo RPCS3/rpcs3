@@ -365,7 +365,10 @@ void recMicroVU0::ExecuteBlock() {
 	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
 	XMMRegisters::Freeze();
-	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, 0x3000);
+	// sometimes games spin on vu0, so be careful with this value
+	// woody hangs if too high
+	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
+	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, 512*12);
 	XMMRegisters::Thaw();
 }
 
