@@ -16,8 +16,6 @@
 #ifdef CHECK_MACROVU0
 
 #pragma once
-#include "iR5900.h"
-#include "R5900OpcodeTables.h"
 
 extern void _vu0WaitMicro();
 extern void _vu0FinishMicro();
@@ -338,7 +336,7 @@ static void recCTC2() {
 			// sVU's COP2 has a comment that "Donald Duck" needs this too...
 			if (_Rd_) _eeMoveGPRtoM((uptr)&microVU0.regs->VI[_Rd_].UL, _Rt_);
 			xMOV(ecx, (uptr)CpuVU0);
-			xCALL(BaseCpuProvider::ExecuteBlockFromRecs);
+			xCALL(BaseCpuProvider::ExecuteBlockJIT);
 			break;
 	}
 }

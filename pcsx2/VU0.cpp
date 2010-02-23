@@ -73,7 +73,7 @@ __forceinline void _vu0run(bool breakOnMbit, bool addCycles) {
 			Console.Warning("VU0 stuck in infinite loop? Breaking execution!");
 			break; // Do games still need this?
 		}
-		CpuVU0->ExecuteBlock();
+		CpuVU0->ExecuteBlock(vu0RunCycles);
 	} while ((VU0.VI[REG_VPU_STAT].UL & 1)						// E-bit Termination
 	  &&	(!breakOnMbit || !(VU0.flags & VUFLAG_MFLAGSET)));	// M-bit Break
 

@@ -4628,7 +4628,7 @@ void recSuperVU0::Reset()
 	SuperVUReset( 0 );
 }
 
-void recSuperVU0::ExecuteBlock()
+void recSuperVU0::ExecuteBlock(u32 cycles)
 {
 	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
@@ -4666,7 +4666,7 @@ void recSuperVU1::Reset()
 	SuperVUReset( 1 );
 }
 
-void recSuperVU1::ExecuteBlock()
+void recSuperVU1::ExecuteBlock(u32 cycles)
 {
 	if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
 	pxAssert( (VU1.VI[REG_TPC].UL&7) == 0 );

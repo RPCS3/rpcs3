@@ -56,7 +56,7 @@ void __fastcall vu0ExecMicro(u32 addr) {
 
 	if ((s32)addr != -1) VU0.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU0);
-	CpuVU0->ExecuteBlock();
+	CpuVU0->ExecuteBlock(vu0RunCycles);
 
 	// If the VU0 program didn't finish then we'll want to finish it up
 	// pretty soon.  This fixes vmhacks in some games (Naruto Ultimate Ninja 2)

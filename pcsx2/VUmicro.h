@@ -16,6 +16,9 @@
 #pragma once
 #include "VU.h"
 #include "VUops.h"
+#define vuRunCycles  (512*12)  // Cycles to run ExecuteBlockJIT() for (called from within recs)
+#define vu0RunCycles (512*12)  // Cycles to run vu0 for whenever ExecuteBlock() is called
+#define vu1RunCycles (3000000) // mVU1 uses this for inf loop detection on dev builds
 
 // --------------------------------------------------------------------------------------
 //  BaseCpuProvider
@@ -61,15 +64,15 @@ public:
 	virtual void Reset()=0;
 
 	virtual void Step()=0;
-	virtual void ExecuteBlock()=0;
+	virtual void ExecuteBlock(u32 cycles)=0;
 	virtual void Clear(u32 Addr, u32 Size)=0;
 	
 	// C++ Calling Conventions are unstable, and some compilers don't even allow us to take the
 	// address of C++ methods.  We need to use a wrapper function to invoke the ExecuteBlock from
 	// recompiled code.
-	static void __fastcall ExecuteBlockFromRecs( BaseCpuProvider* cpu )
+	static void __fastcall ExecuteBlockJIT( BaseCpuProvider* cpu )
 	{
-		cpu->ExecuteBlock();
+		cpu->ExecuteBlock(vuRunCycles);
 	}
 };
 
@@ -126,7 +129,7 @@ public:
 	void Reset() { }
 
 	void Step();
-	void ExecuteBlock();
+	void ExecuteBlock(u32 cycles);
 	void Clear(u32 addr, u32 size) {}
 };
 
@@ -144,7 +147,7 @@ public:
 	void Reset() { }
 
 	void Step();
-	void ExecuteBlock();
+	void ExecuteBlock(u32 cycles);
 	void Clear(u32 addr, u32 size) {}
 };
 
@@ -164,7 +167,7 @@ public:
 	void Shutdown() throw();
 
 	void Reset();
-	void ExecuteBlock();
+	void ExecuteBlock(u32 cycles);
 	void Clear(u32 addr, u32 size);
 	void Vsync() throw();
 };
@@ -181,7 +184,7 @@ public:
 	void Allocate();
 	void Shutdown() throw();
 	void Reset();
-	void ExecuteBlock();
+	void ExecuteBlock(u32 cycles);
 	void Clear(u32 addr, u32 size);
 	void Vsync() throw();
 };

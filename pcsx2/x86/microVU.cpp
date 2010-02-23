@@ -19,8 +19,8 @@
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
-#include "x86emitter/x86emitter.h"
-using namespace x86Emitter;
+#include "iR5900.h"
+#include "R5900OpcodeTables.h"
 #include "microVU.h"
 
 //------------------------------------------------------------------
@@ -375,7 +375,7 @@ void recMicroVU1::Reset() {
 	mVUreset(&microVU1);
 }
 
-void recMicroVU0::ExecuteBlock() {
+void recMicroVU0::ExecuteBlock(u32 cycles) {
 	pxAssert(mvu0_allocated); // please allocate me first! :|
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
@@ -384,16 +384,16 @@ void recMicroVU0::ExecuteBlock() {
 	// sometimes games spin on vu0, so be careful with this value
 	// woody hangs if too high on sVU (untested on mVU)
 	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
-	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, 512*12);
+	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
 	XMMRegisters::Thaw();
 }
-void recMicroVU1::ExecuteBlock() {
+void recMicroVU1::ExecuteBlock(u32 cycles) {
 	pxAssert(mvu1_allocated); // please allocate me first! :|
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
 
 	XMMRegisters::Freeze();
-	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, 3000000);
+	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, cycles);
 	XMMRegisters::Thaw();
 }
 

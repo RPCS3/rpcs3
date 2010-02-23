@@ -18,7 +18,8 @@
 //#define mVUlogProg	// Dumps MicroPrograms to \logs\*.html
 
 class AsciiFile;
-
+#include "x86emitter/x86emitter.h"
+using namespace x86Emitter;
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
 

@@ -203,7 +203,7 @@ void InterpVU0::Step()
 	vu0Exec( &VU0 );
 }
 
-void InterpVU0::ExecuteBlock()
+void InterpVU0::ExecuteBlock(u32 cycles)
 {
 	for (int i = 128; i--;)
 	{

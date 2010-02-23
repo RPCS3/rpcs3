@@ -186,7 +186,7 @@ void InterpVU1::Step()
 	vu1Exec( &VU1 );
 }
 
-void InterpVU1::ExecuteBlock()
+void InterpVU1::ExecuteBlock(u32 cycles)
 {
 	for (int i = 128; i--;)
 	{

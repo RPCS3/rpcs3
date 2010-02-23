@@ -53,7 +53,7 @@ public:
 	void Allocate();
 	void Shutdown() throw();
 	void Reset();
-	void ExecuteBlock();
+	void ExecuteBlock(u32 cycles);
 	void Clear(u32 Addr, u32 Size);
 };
 
@@ -68,6 +68,6 @@ public:
 	void Allocate();
 	void Shutdown() throw();
 	void Reset();
-	void ExecuteBlock();
+	void ExecuteBlock(u32 cycles);
 	void Clear(u32 Addr, u32 Size);
 };
