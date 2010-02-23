@@ -168,10 +168,10 @@ _f void mVUclose(mV) {
 
 // Clears Block Data in specified range
 _f void mVUclear(mV, u32 addr, u32 size) {
-	//if (!mVU->prog.cleared) {
-		//memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
-		mVU->prog.cleared = 1; // Next execution searches/creates a new microprogram
-	//}
+	if (!mVU->prog.cleared) {
+		memzero(mVU->prog.lpState); // Clear pipeline state
+		mVU->prog.cleared = 1;		// Next execution searches/creates a new microprogram
+	}
 }
 
 //------------------------------------------------------------------
@@ -324,108 +324,84 @@ _mVUt _f int mVUsearchProg() {
 	return 1; // If !cleared, then we're still on the same program as last-time ;)
 }
 
+//------------------------------------------------------------------
+// recMicroVU0 / recMicroVU1
+//------------------------------------------------------------------
+
 static u32 mvu0_allocated = 0;
 static u32 mvu1_allocated = 0;
 
-// --------------------------------------------------------------------------------------
-//  recMicroVU0
-// --------------------------------------------------------------------------------------
-
-recMicroVU0::recMicroVU0() {
-	IsInterpreter = false;
-}
+recMicroVU0::recMicroVU0()		  { IsInterpreter = false; }
+recMicroVU1::recMicroVU1()		  { IsInterpreter = false; }
+void recMicroVU0::Vsync() throw() { mVUvsyncUpdate(&microVU0); }
+void recMicroVU1::Vsync() throw() { mVUvsyncUpdate(&microVU1); }
 
 void recMicroVU0::Allocate() {
-	if( m_AllocCount == 0 )
-	{
-		++m_AllocCount;
-		if( AtomicExchange( mvu0_allocated, 1 ) == 0 )
-			mVUinit( &VU0, 0 );
+	if(!m_AllocCount) {
+		m_AllocCount++;
+		if (AtomicExchange(mvu0_allocated, 1) == 0) 
+			mVUinit(&VU0, 0);
+	}
+}
+void recMicroVU1::Allocate() {
+	if(!m_AllocCount) {
+		m_AllocCount++;
+		if (AtomicExchange(mvu1_allocated, 1) == 0) 
+			mVUinit(&VU1, 1);
 	}
 }
 
 void recMicroVU0::Shutdown() throw() {
-	if( m_AllocCount > 0 )
-	{
-		--m_AllocCount;
-		if( AtomicExchange( mvu0_allocated, 0 ) == 1 )
+	if (m_AllocCount > 0) {
+		m_AllocCount--;
+		if (AtomicExchange(mvu0_allocated, 0) == 1)
 			mVUclose(&microVU0);
 	}
 }
-
-void recMicroVU0::Reset() {
-	if( !pxAssertDev( m_AllocCount, "MicroVU0 CPU Provider has not been allocated prior to reset!" ) ) return;
-	mVUreset(&microVU0);
-}
-
-void recMicroVU0::ExecuteBlock() {
-	pxAssert( m_AllocCount );		// please allocate me first! :|
-
-	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
-
-	XMMRegisters::Freeze();
-	// sometimes games spin on vu0, so be careful with this value
-	// woody hangs if too high
-	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
-	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, 512*12);
-	XMMRegisters::Thaw();
-}
-
-void recMicroVU0::Clear(u32 addr, u32 size) {
-	pxAssert( mvu0_allocated );		// please allocate me first! :|
-	mVUclear(&microVU0, addr, size); 
-}
-
-void recMicroVU0::Vsync() throw() {
-	mVUvsyncUpdate(&microVU0);
-}
-
-// --------------------------------------------------------------------------------------
-//  recMicroVU1
-// --------------------------------------------------------------------------------------
-recMicroVU1::recMicroVU1() {
-	IsInterpreter = false;
-}
-
-void recMicroVU1::Allocate() {
-	if( m_AllocCount == 0 )
-	{
-		++m_AllocCount;
-		if( AtomicExchange( mvu1_allocated, 1 ) == 0 )
-			mVUinit( &VU1, 1 );
-	}
-}
-
 void recMicroVU1::Shutdown() throw() {
-	if( m_AllocCount > 0 )
-	{
-		--m_AllocCount;
-		if( AtomicExchange( mvu1_allocated, 0 ) == 1 )
+	if (m_AllocCount > 0) {
+		m_AllocCount--;
+		if (AtomicExchange(mvu1_allocated, 0) == 1)
 			mVUclose(&microVU1);
 	}
 }
 
+void recMicroVU0::Reset() {
+	if(!pxAssertDev(m_AllocCount, "MicroVU0 CPU Provider has not been allocated prior to reset!")) return;
+	mVUreset(&microVU0);
+}
 void recMicroVU1::Reset() {
-	if( !pxAssertDev( m_AllocCount, "MicroVU1 CPU Provider has not been allocated prior to reset!" ) ) return;
+	if(!pxAssertDev(m_AllocCount, "MicroVU1 CPU Provider has not been allocated prior to reset!")) return;
 	mVUreset(&microVU1);
 }
 
-void recMicroVU1::ExecuteBlock() {
-	pxAssert( mvu1_allocated );		// please allocate me first! :|
+void recMicroVU0::ExecuteBlock() {
+	pxAssert(mvu0_allocated); // please allocate me first! :|
 
-	if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
-	pxAssert( (VU1.VI[REG_TPC].UL&7) == 0 );
+	if(!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
+
+	XMMRegisters::Freeze();
+	// sometimes games spin on vu0, so be careful with this value
+	// woody hangs if too high on sVU (untested on mVU)
+	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
+	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, 512*12);
+	XMMRegisters::Thaw();
+}
+void recMicroVU1::ExecuteBlock() {
+	pxAssert(mvu1_allocated); // please allocate me first! :|
+
+	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
 
 	XMMRegisters::Freeze();
 	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, 3000000);
 	XMMRegisters::Thaw();
 }
 
-void recMicroVU1::Clear(u32 addr, u32 size) {
-	pxAssert( m_AllocCount );		// please allocate me first! :|
-	mVUclear(&microVU1, addr, size); 
+void recMicroVU0::Clear(u32 addr, u32 size) {
+	pxAssert(mvu0_allocated); // please allocate me first! :|
+	mVUclear(&microVU0, addr, size); 
 }
-
-void recMicroVU1::Vsync() throw() {
-	mVUvsyncUpdate(&microVU1);
+void recMicroVU1::Clear(u32 addr, u32 size) {
+	pxAssert(mvu1_allocated); // please allocate me first! :|
+	mVUclear(&microVU1, addr, size); 
 }

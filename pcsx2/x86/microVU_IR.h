@@ -27,7 +27,6 @@ union regInfo {
 
 #ifdef _MSC_VER
 #	pragma pack(1)
-#	pragma warning(disable:4996)		// 'function': was declared deprecated
 #endif
 
 struct __aligned16 microRegInfo { // Ordered for Faster Compares

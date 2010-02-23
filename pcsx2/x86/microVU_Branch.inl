@@ -15,12 +15,16 @@
 
 #pragma once
 
-_f void  mVUincCycles(mV, int x);
-_r void* mVUcompile(microVU* mVU, u32 startPC, uptr pState);
+_f bool  doEarlyExit (microVU* mVU);
+_f void  mVUincCycles(microVU* mVU, int x);
+_r void* mVUcompile  (microVU* mVU, u32 startPC, uptr pState);
 
 #define blockCreate(addr) { if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
 #define sI ((mVUpBlock->pState.needExactMatch & 1) ? 3 : ((mVUpBlock->pState.flags >> 0) & 3))
 #define cI ((mVUpBlock->pState.needExactMatch & 4) ? 3 : ((mVUpBlock->pState.flags >> 2) & 3))
+
+void mVU0clearlpStateJIT() { if (!microVU0.prog.cleared) memzero(microVU0.prog.lpState); }
+void mVU1clearlpStateJIT() { if (!microVU1.prog.cleared) memzero(microVU1.prog.lpState); }
 
 _f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 
@@ -33,8 +37,8 @@ _f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 
 	if (isEbit) {
 		mVUprint("mVUcompile ebit");
-		memset(&mVUinfo,	 0, sizeof(mVUinfo));
-		memset(&mVUregsTemp, 0, sizeof(mVUregsTemp));
+		memzero(mVUinfo);
+		memzero(mVUregsTemp);
 		mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 		mVUcycles -= 100;
 		qInst = mVU->q;
@@ -45,6 +49,10 @@ _f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 			mVUdivSet(mVU);
 		}
 		if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
+		if (doEarlyExit(mVU)) {
+			if (!isVU1) xCALL(mVU0clearlpStateJIT);
+			else		xCALL(mVU1clearlpStateJIT);
+		}
 	}
 
 	// Save P/Q Regs

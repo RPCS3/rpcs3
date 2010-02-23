@@ -281,17 +281,31 @@ void __fastcall mVUwarning1(mV)		{ Console.Error("microVU1 Warning: Exiting from
 void __fastcall mVUprintPC1(u32 PC) { Console.Write("Block PC [%04x] ", PC); }
 void __fastcall mVUprintPC2(u32 PC) { Console.Write("[%04x]\n", PC); }
 
-_f void mVUtestCycles(mV) {
+// vu0 is allowed to exit early, so are dev builds (for inf loops)
+_f bool doEarlyExit(microVU* mVU) {
+	return IsDevBuild || !isVU1;
+}
+
+// Saves Pipeline State for resuming from early exits
+_f void mVUsavePipelineState(microVU* mVU) {
+	u32* lpS = (u32*)&mVU->prog.lpState.vi15;
+	for (int i = 0; i < (sizeof(microRegInfo)-4)/4; i++, lpS++) {
+		MOV32ItoM((uptr)lpS, lpS[0]);
+	}
+}
+
+_f void mVUtestCycles(microVU* mVU) {
 	//u32* vu0jmp;
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
 	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
-	if (IsDevBuild || !isVU1) {
+	if (doEarlyExit(mVU)) {
 		u32* jmp32 = JG32(0);
 		//if (!isVU1) { TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); vu0jmp = JZ32(0); }
 			MOV32ItoR(gprT2, (uptr)mVU);
 			if (isVU1)  CALLFunc((uptr)mVUwarning1);
 			//else		CALLFunc((uptr)mVUwarning0); // VU0 is allowed early exit for COP2 Interlock Simulation
+			mVUsavePipelineState(mVU);
 			mVUendProgram(mVU, NULL, 0);
 		//if (!isVU1) x86SetJ32(vu0jmp);
 		x86SetJ32(jmp32);
@@ -317,7 +331,10 @@ _f void mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
 	mVU->p					= 0;	// All blocks start at p index #0
 	mVU->q					= 0;	// All blocks start at q index #0
 	if ((uptr)&mVUregs != pState) {	// Loads up Pipeline State Info
-		memcpy_const(&mVUregs, (microRegInfo*)pState, sizeof(microRegInfo));
+		memcpy_const((u8*)&mVUregs, (u8*)pState, sizeof(microRegInfo));
+	}
+	if (doEarlyExit(mVU) && ((uptr)&mVU->prog.lpState != pState)) {
+		memcpy_const((u8*)&mVU->prog.lpState, (u8*)pState, sizeof(microRegInfo));
 	}
 	mVUblock.x86ptrStart	= thisPtr;
 	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
