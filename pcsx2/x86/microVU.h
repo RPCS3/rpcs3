@@ -182,12 +182,12 @@ extern __aligned16 microVU microVU1;
 extern int mVUdebugNow;
 
 // Main Functions
-microVUt(void) mVUinit(VURegs*, int);
-microVUt(void) mVUreset(mV);
-microVUt(void) mVUclose(mV);
-microVUt(void) mVUclear(mV, u32, u32);
-microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
-microVUx(void*) __fastcall mVUcompileJIT(u32 startPC, uptr pState);
+_f void  mVUinit(VURegs*, int);
+_f void  mVUreset(mV);
+_f void  mVUclose(mV);
+_f void  mVUclear(mV, u32, u32);
+_f void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
+_mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr pState);
 
 // Prototypes for Linux
 void  __fastcall mVUcleanUpVU0();
@@ -196,13 +196,13 @@ mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-microVUt(void)		mVUsortProg(mV, int progIndex);
-microVUf(void)		mVUclearProg(int progIndex);
-microVUf(int)		mVUfindLeastUsedProg(microVU* mVU);
-microVUf(int)		mVUsearchProg();
-microVUf(void)		mVUcacheProg(int progIndex);
-void* __fastcall	mVUexecuteVU0(u32 startPC, u32 cycles);
-void* __fastcall	mVUexecuteVU1(u32 startPC, u32 cycles);
+	  _f void	mVUsortProg(mV, int progIndex);
+_mVUt _f void	mVUclearProg(int progIndex);
+_mVUt _f void	mVUcacheProg(int progIndex);
+_mVUt _f int	mVUfindLeastUsedProg(microVU* mVU);
+_mVUt _f int	mVUsearchProg();
+void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);
+void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 
 // recCall Function Pointer
 typedef void (__fastcall *mVUrecCall)(u32, u32);

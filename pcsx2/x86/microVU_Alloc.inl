@@ -50,18 +50,18 @@
 	x86SetJ8(pjmp);			 \
 }
 
-microVUt(void) mVUallocSFLAGa(int reg, int fInstance) {
+_f void mVUallocSFLAGa(int reg, int fInstance) {
 	getFlagReg(fInstance, fInstance);
 	MOV32RtoR(reg, fInstance);
 }
 
-microVUt(void) mVUallocSFLAGb(int reg, int fInstance) {
+_f void mVUallocSFLAGb(int reg, int fInstance) {
 	getFlagReg(fInstance, fInstance);
 	MOV32RtoR(fInstance, reg);
 }
 
 // Normalize Status Flag
-microVUt(void) mVUallocSFLAGc(int reg, int regT, int fInstance) {
+_f void mVUallocSFLAGc(int reg, int regT, int fInstance) {
 	u8 *pjmp;
 	XOR32RtoR(reg, reg);
 	mVUallocSFLAGa(regT, fInstance);
@@ -75,7 +75,7 @@ microVUt(void) mVUallocSFLAGc(int reg, int regT, int fInstance) {
 }
 
 // Denormalizes Status Flag
-microVUt(void) mVUallocSFLAGd(uptr memAddr, bool setAllflags) {
+_f void mVUallocSFLAGd(uptr memAddr, bool setAllflags) {
 
 	// Cannot use EBP (gprF1) here; as this function is used by mVU0 macro and
 	// the EErec needs EBP preserved.
@@ -105,22 +105,22 @@ microVUt(void) mVUallocSFLAGd(uptr memAddr, bool setAllflags) {
 	}
 }
 
-microVUt(void) mVUallocMFLAGa(mV, int reg, int fInstance) {
+_f void mVUallocMFLAGa(mV, int reg, int fInstance) {
 	MOVZX32M16toR(reg, (uptr)&mVU->macFlag[fInstance]);
 }
 
-microVUt(void) mVUallocMFLAGb(mV, int reg, int fInstance) {
+_f void mVUallocMFLAGb(mV, int reg, int fInstance) {
 	//AND32ItoR(reg, 0xffff);
 	if (fInstance < 4) MOV32RtoM((uptr)&mVU->macFlag[fInstance], reg);			// microVU
 	else			   MOV32RtoM((uptr)&mVU->regs->VI[REG_MAC_FLAG].UL, reg);	// macroVU
 }
 
-microVUt(void) mVUallocCFLAGa(mV, int reg, int fInstance) {
+_f void mVUallocCFLAGa(mV, int reg, int fInstance) {
 	if (fInstance < 4) MOV32MtoR(reg, (uptr)&mVU->clipFlag[fInstance]);			// microVU
 	else			   MOV32MtoR(reg, (uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL);	// macroVU
 }
 
-microVUt(void) mVUallocCFLAGb(mV, int reg, int fInstance) {
+_f void mVUallocCFLAGb(mV, int reg, int fInstance) {
 	if (fInstance < 4) MOV32RtoM((uptr)&mVU->clipFlag[fInstance], reg);			// microVU
 	else			   MOV32RtoM((uptr)&mVU->regs->VI[REG_CLIP_FLAG].UL, reg);	// macroVU
 }
@@ -129,12 +129,12 @@ microVUt(void) mVUallocCFLAGb(mV, int reg, int fInstance) {
 // VI Reg Allocators
 //------------------------------------------------------------------
 
-microVUt(void) mVUallocVIa(mV, int GPRreg, int _reg_) {
+_f void mVUallocVIa(mV, int GPRreg, int _reg_) {
 	if (!_reg_)	{ XOR32RtoR(GPRreg, GPRreg); }
 	else		{ MOVZX32M16toR(GPRreg, (uptr)&mVU->regs->VI[_reg_].UL); }
 }
 
-microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
+_f void mVUallocVIb(mV, int GPRreg, int _reg_) {
 	if (mVUlow.backupVI) { // Backs up reg to memory (used when VI is modified b4 a branch)
 		MOVZX32M16toR(gprT3, (uptr)&mVU->regs->VI[_reg_].UL);
 		MOV32RtoM((uptr)&mVU->VIbackup, gprT3);
@@ -147,17 +147,17 @@ microVUt(void) mVUallocVIb(mV, int GPRreg, int _reg_) {
 // I/P/Q Reg Allocators
 //------------------------------------------------------------------
 
-microVUt(void) getPreg(mV, int reg) {
+_f void getPreg(mV, int reg) {
 	mVUunpack_xyzw(reg, xmmPQ, (2 + mVUinfo.readP));
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2(reg, xmmT1, 15);*/
 }
 
-microVUt(void) getQreg(int reg, int qInstance) {
+_f void getQreg(int reg, int qInstance) {
 	mVUunpack_xyzw(reg, xmmPQ, qInstance);
 	/*if (CHECK_VU_EXTRA_OVERFLOW) mVUclamp2<vuIndex>(reg, xmmT1, 15);*/
 }
 
-microVUt(void) writeQreg(int reg, int qInstance) {
+_f void writeQreg(int reg, int qInstance) {
 	if (qInstance) {
 		if (!x86caps.hasStreamingSIMD4Extensions) {
 			SSE2_PSHUFD_XMM_to_XMM(xmmPQ, xmmPQ, 0xe1);

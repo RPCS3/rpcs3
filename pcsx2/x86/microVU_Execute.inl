@@ -100,7 +100,7 @@ void mVUdispatcherB(mV) {
 //------------------------------------------------------------------
 
 // Executes for number of cycles
-microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
+_mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
 	mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
@@ -117,7 +117,7 @@ microVUx(void*) __fastcall mVUexecute(u32 startPC, u32 cycles) {
 // Cleanup Functions
 //------------------------------------------------------------------
 
-microVUx(void) mVUcleanUp() {
+_mVUt void mVUcleanUp() {
 	microVU* mVU = mVUx;
 	//mVUprint("microVU: Program exited successfully!");
 	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", mVU->regs->VF[0].UL[0], mVU->regs->VF[0].UL[1], mVU->regs->VF[0].UL[2], mVU->regs->VF[0].UL[3]);

@@ -32,7 +32,7 @@
 //------------------------------------------------------------------
 
 // Used by mVUsetupRange
-microVUt(void) mVUcheckIsSame(mV) {
+_f void mVUcheckIsSame(mV) {
 
 	if (mVU->prog.isSame == -1) {
 		mVU->prog.isSame = !memcmp_mmx((u8*)mVUcurProg.data, mVU->regs->Micro, mVU->microMemSize);
@@ -45,7 +45,7 @@ microVUt(void) mVUcheckIsSame(mV) {
 }
 
 // Sets up microProgram PC ranges based on whats been recompiled
-microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
+_f void mVUsetupRange(mV, s32 pc, bool isStartPC) {
 
 	if (isStartPC || !(mVUrange[1] == -1)) {
 		for (int i = 0; i <= mVUcurProg.ranges.total; i++) {
@@ -106,7 +106,7 @@ microVUt(void) mVUsetupRange(mV, s32 pc, bool isStartPC) {
 	}
 }
 
-microVUt(void) startLoop(mV) {
+_f void startLoop(mV) {
 	if (curI & _Mbit_)	{ Console.WriteLn(Color_Green, "microVU%d: M-bit set!", getIndex); }
 	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set!", getIndex); }
 	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set!", getIndex); }
@@ -114,7 +114,7 @@ microVUt(void) startLoop(mV) {
 	memzero(mVUregsTemp);
 }
 
-microVUt(void) doIbit(mV) { 
+_f void doIbit(mV) { 
 	if (mVUup.iBit) { 
 		incPC(-1);
 		u32 tempI;
@@ -131,7 +131,7 @@ microVUt(void) doIbit(mV) {
 	} 
 }
 
-microVUt(void) doSwapOp(mV) { 
+_f void doSwapOp(mV) { 
 	if (mVUinfo.backupVF && !mVUlow.noWriteVF) {
 		DevCon.WriteLn(Color_Green, "microVU%d: Backing Up VF Reg [%04x]", getIndex, xPC);
 		int t1 = mVU->regAlloc->allocReg(mVUlow.VF_write.reg);
@@ -154,7 +154,7 @@ microVUt(void) doSwapOp(mV) {
 	else { mVUopL(mVU, 1); incPC(1); doUpperOp(); }
 }
 
-microVUt(void) branchWarning(mV) {
+_f void branchWarning(mV) {
 	incPC(-2);
 	if (mVUup.eBit && mVUbranch) {
 		incPC(2);
@@ -170,14 +170,14 @@ microVUt(void) branchWarning(mV) {
 	}
 }
 
-microVUt(void) eBitPass1(mV, int& branch) {
+_f void eBitPass1(mV, int& branch) {
 	if (mVUregs.blockType != 1) {
 		branch = 1; 
 		mVUup.eBit = 1;
 	}
 }
 
-microVUt(void) eBitWarning(mV) {
+_f void eBitWarning(mV) {
 	if (mVUpBlock->pState.blockType == 1) Console.Error("microVU%d Warning: Branch, E-bit, Branch! [%04x]",  mVU->index, xPC);
 	if (mVUpBlock->pState.blockType == 2) Console.Error("microVU%d Warning: Branch, Branch, Branch! [%04x]", mVU->index, xPC);
 	incPC(2);
@@ -189,7 +189,7 @@ microVUt(void) eBitWarning(mV) {
 }
 
 // Optimizes the End Pipeline State Removing Unnecessary Info
-microVUt(void) mVUoptimizePipeState(mV) {
+_f void mVUoptimizePipeState(mV) {
 	for (int i = 0; i < 32; i++) {
 		optimizeReg(mVUregs.VF[i].x);
 		optimizeReg(mVUregs.VF[i].y);
@@ -204,7 +204,7 @@ microVUt(void) mVUoptimizePipeState(mV) {
 	mVUregs.r = 0; // There are no stalls on the R-reg, so its Safe to discard info
 }
 
-microVUt(void) mVUincCycles(mV, int x) {
+_f void mVUincCycles(mV, int x) {
 	mVUcycles += x;
 	for (int z = 31; z > 0; z--) {
 		calcCycles(mVUregs.VF[z].x, x);
@@ -241,7 +241,7 @@ microVUt(void) mVUincCycles(mV, int x) {
 	}										\
 }
 
-microVUt(void) mVUsetCycles(mV) {
+_f void mVUsetCycles(mV) {
 	mVUincCycles(mVU, mVUstall);
 	// If upper Op && lower Op write to same VF reg:
 	if ((mVUregsTemp.VFreg[0] == mVUregsTemp.VFreg[1]) && mVUregsTemp.VFreg[0]) {
@@ -281,7 +281,7 @@ void __fastcall mVUwarning1(mV)		{ Console.Error("microVU1 Warning: Exiting from
 void __fastcall mVUprintPC1(u32 PC) { Console.Write("Block PC [%04x] ", PC); }
 void __fastcall mVUprintPC2(u32 PC) { Console.Write("[%04x]\n", PC); }
 
-microVUt(void) mVUtestCycles(mV) {
+_f void mVUtestCycles(mV) {
 	//u32* vu0jmp;
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
@@ -299,7 +299,7 @@ microVUt(void) mVUtestCycles(mV) {
 }
 
 // Initialize VI Constants (vi15 propagates through blocks)
-microVUt(void) mVUinitConstValues(microVU* mVU) {
+_f void mVUinitConstValues(microVU* mVU) {
 	for (int i = 0; i < 16; i++) {
 		mVUconstReg[i].isValid	= 0;
 		mVUconstReg[i].regValue	= 0;
@@ -309,7 +309,7 @@ microVUt(void) mVUinitConstValues(microVU* mVU) {
 }
 
 // Initialize Variables
-microVUt(void) mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
+_f void mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
 	mVUstartPC				= iPC;	// Block Start PC
 	mVUbranch				= 0;	// Branch Type
 	mVUcount				= 0;	// Number of instructions ran
@@ -333,7 +333,7 @@ microVUt(void) mVUinitFirstPass(microVU* mVU, uptr pState, u8* thisPtr) {
 // Recompiler
 //------------------------------------------------------------------
 
-microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
+_r void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	
 	microFlagCycles mFC;
 	u8*				thisPtr  = x86Ptr;
@@ -412,7 +412,7 @@ microVUr(void*) mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 }
 
  // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
-microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
+_f void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
 	if (startPC > mVU->microMemSize-8) { DevCon.Error("microVU%d: invalid startPC [%04x]", mVU->index, startPC); }
 	startPC &= mVU->microMemSize-8;
@@ -424,6 +424,6 @@ microVUt(void*) mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 }
 
 // mVUcompileJIT() - Called By JR/JALR during execution
-microVUx(void*) __fastcall mVUcompileJIT(u32 startPC, uptr pState) {
+_mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr pState) {
 	return mVUblockFetch(mVUx, startPC, pState);
 }

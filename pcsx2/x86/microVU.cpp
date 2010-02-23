@@ -67,8 +67,7 @@ const __aligned(32) mVU_Globals mVUglob = {
 // Micro VU - Main Functions
 //------------------------------------------------------------------
 
-microVUt(void) mVUthrowHardwareDeficiency( const wxChar* extFail, int vuIndex )
-{
+_f void mVUthrowHardwareDeficiency(const wxChar* extFail, int vuIndex) {
 	throw Exception::HardwareDeficiency(
 		wxsFormat( L"microVU%d recompiler init failed: %s is not available.", vuIndex, extFail),
 		wxsFormat(_("%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."), extFail )
@@ -76,7 +75,7 @@ microVUt(void) mVUthrowHardwareDeficiency( const wxChar* extFail, int vuIndex )
 }
 
 // Only run this once per VU! ;)
-microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
+_f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 
 	if(!x86caps.hasMultimediaExtensions)		mVUthrowHardwareDeficiency( L"MMX", vuIndex );
 	if(!x86caps.hasStreamingSIMDExtensions)		mVUthrowHardwareDeficiency( L"SSE", vuIndex );
@@ -118,7 +117,7 @@ microVUt(void) mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 }
 
 // Resets Rec Data
-microVUt(void) mVUreset(mV) {
+_f void mVUreset(mV) {
 
 	mVUprint((mVU->index) ? "microVU1: reset" : "microVU0: reset");
 
@@ -148,7 +147,7 @@ microVUt(void) mVUreset(mV) {
 }
 
 // Free Allocated Resources
-microVUt(void) mVUclose(mV) {
+_f void mVUclose(mV) {
 
 	mVUprint((mVU->index) ? "microVU1: close" : "microVU0: close");
 
@@ -168,7 +167,7 @@ microVUt(void) mVUclose(mV) {
 }
 
 // Clears Block Data in specified range
-microVUt(void) mVUclear(mV, u32 addr, u32 size) {
+_f void mVUclear(mV, u32 addr, u32 size) {
 	//if (!mVU->prog.cleared) {
 		//memset(&mVU->prog.lpState, 0, sizeof(mVU->prog.lpState));
 		mVU->prog.cleared = 1; // Next execution searches/creates a new microprogram
@@ -180,7 +179,7 @@ microVUt(void) mVUclear(mV, u32 addr, u32 size) {
 //------------------------------------------------------------------
 
 // Clears program data
-microVUf(void) mVUclearProg(int progIndex) {
+_mVUt _f void mVUclearProg(int progIndex) {
 	microVU* mVU = mVUx;
 	microProgram& program = mVU->prog.prog[progIndex];
 
@@ -199,7 +198,7 @@ microVUf(void) mVUclearProg(int progIndex) {
 }
 
 // Caches Micro Program
-microVUf(void) mVUcacheProg(int progIndex) {
+_mVUt _f void mVUcacheProg(int progIndex) {
 	microVU* mVU = mVUx;
 	if (!vuIndex) memcpy_const(mVU->prog.prog[progIndex].data, mVU->regs->Micro, 0x1000);
 	else		  memcpy_const(mVU->prog.prog[progIndex].data, mVU->regs->Micro, 0x4000);
@@ -207,7 +206,7 @@ microVUf(void) mVUcacheProg(int progIndex) {
 }
 
 // Sorts the program list (Moves progIndex to Beginning of ProgList)
-microVUt(void) mVUsortProg(mV, int progIndex) {
+_f void mVUsortProg(mV, int progIndex) {
 	int* temp  = new int[mVU->prog.max+1];
 	int offset = 0;
 	for (int i = 0; i <= (mVU->prog.max-1); i++) {
@@ -220,7 +219,7 @@ microVUt(void) mVUsortProg(mV, int progIndex) {
 }
 
 // Finds the least used program, (if program list full clears and returns an old program; if not-full, returns free program)
-microVUf(int) mVUfindLeastUsedProg() {
+_mVUt _f int mVUfindLeastUsedProg() {
 	microVU* mVU = mVUx;
 
 	for (int i = 0; i <= mVU->prog.max; i++) {
@@ -253,7 +252,7 @@ microVUf(int) mVUfindLeastUsedProg() {
 }
 
 // Finds and Ages/Kills Programs if they haven't been used in a while.
-microVUt(void) mVUvsyncUpdate(mV) {
+_f void mVUvsyncUpdate(mV) {
 	for (int i = 0; i <= mVU->prog.max; i++) {
 		if (mVU->prog.prog[i].isDead) continue;
 		if (mVU->prog.prog[i].used) {
@@ -274,7 +273,7 @@ microVUt(void) mVUvsyncUpdate(mV) {
 	mVU->prog.curFrame++;
 }
 
-microVUf(bool) mVUcmpPartial(int progIndex) {
+_mVUt _f bool mVUcmpPartial(int progIndex) {
 	microVU* mVU = mVUx;
 	for (int i = 0; i <= mVUprogI.ranges.total; i++) {
 		if ((mVUprogI.ranges.range[i][0] < 0)
@@ -287,7 +286,7 @@ microVUf(bool) mVUcmpPartial(int progIndex) {
 }
 
 // Compare Cached microProgram to mVU->regs->Micro
-microVUf(bool) mVUcmpProg(int progIndex, const bool checkOld, const bool cmpWholeProg) {
+_mVUt _f bool mVUcmpProg(int progIndex, const bool checkOld, const bool cmpWholeProg) {
 	microVU* mVU = mVUx;
 	if (!mVUprogI.isDead && (checkOld == mVUprogI.isOld)) {
 		if ((cmpWholeProg && !memcmp_mmx((u8*)mVUprogI.data, mVU->regs->Micro, mVU->microMemSize))
@@ -304,7 +303,7 @@ microVUf(bool) mVUcmpProg(int progIndex, const bool checkOld, const bool cmpWhol
 }
 
 // Searches for Cached Micro Program and sets prog.cur to it (returns 1 if program found, else returns 0)
-microVUf(int) mVUsearchProg() {
+_mVUt _f int mVUsearchProg() {
 	microVU* mVU = mVUx;
 	if (mVU->prog.cleared) { // If cleared, we need to search for new program
 		for (int i = mVU->prog.max; i >= 0; i--) {

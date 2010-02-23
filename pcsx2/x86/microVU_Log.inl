@@ -18,7 +18,7 @@
 #include "Utilities/AsciiFile.h"
 
 // writes text directly to mVU->logFile, no newlines appended.
-microVUx(void) __mVULog(const char* fmt, ...) {
+_mVUt void __mVULog(const char* fmt, ...) {
 
 	microVU* mVU = mVUx;
 	if (!mVU->logFile) return;
@@ -39,7 +39,7 @@ microVUx(void) __mVULog(const char* fmt, ...) {
 
 #include "AppConfig.h"
 
-microVUx(void) __mVUdumpProgram(int progIndex) {
+_mVUt void __mVUdumpProgram(int progIndex) {
 	microVU* mVU = mVUx;
 	bool bitX[7];
 	int	delay = 0;

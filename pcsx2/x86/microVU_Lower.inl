@@ -157,7 +157,7 @@ mVUop(mVU_RSQRT) {
 }
 
 // ToDo: Can Be Optimized Further? (takes approximately (~115 cycles + mem access time) on a c2d)
-microVUt(void) mVU_EATAN_(mV, int PQ, int Fs, int t1, int t2) {
+_f void mVU_EATAN_(mV, int PQ, int Fs, int t1, int t2) {
 	SSE_MOVSS_XMM_to_XMM (PQ, Fs);
 	SSE_MULSS_M32_to_XMM (PQ, (uptr)mVUglob.T1);
 	SSE_MOVAPS_XMM_to_XMM(t2, Fs);
@@ -273,7 +273,7 @@ mVUop(mVU_EEXP) {
 }
 
 // sumXYZ(): PQ.x = x ^ 2 + y ^ 2 + z ^ 2
-microVUt(void) mVU_sumXYZ(mV, int PQ, int Fs) {
+_f void mVU_sumXYZ(mV, int PQ, int Fs) {
 	if( x86caps.hasStreamingSIMD4Extensions ) {
 		SSE4_DPPS_XMM_to_XMM(Fs, Fs, 0x71);
 		SSE_MOVSS_XMM_to_XMM(PQ, Fs);
@@ -1008,7 +1008,7 @@ mVUop(mVU_RINIT) {
 	pass3 { mVUlog("RINIT R, vf%02d%s", _Fs_, _Fsf_String); }
 }
 
-microVUt(void) mVU_RGET_(mV, int Rreg) {
+_f void mVU_RGET_(mV, int Rreg) {
 	if (!mVUlow.noWriteVF) {
 		int Ft = mVU->regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		SSE2_MOVD_R_to_XMM(Ft, Rreg);
@@ -1124,7 +1124,7 @@ void __fastcall mVU_XGKICK_(u32 addr) {
 	GetMTGS().SendDataPacket();
 }
 
-microVUt(void) mVU_XGKICK_DELAY(mV, bool memVI) {
+_f void mVU_XGKICK_DELAY(mV, bool memVI) {
 	mVUbackupRegs(mVU);
 	if (memVI)	MOV32MtoR(gprT2, (uptr)&mVU->VIxgkick);
 	else		mVUallocVIa(mVU, gprT2, _Is_);
