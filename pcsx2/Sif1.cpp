@@ -185,14 +185,10 @@ static __forceinline void EndEE()
 	// (Cause of double interrupts on the EE)
 	if (sif1.ee.cycles == 0) 
 	{
-		// No transfer happened
 		DevCon.Warning("SIF1 EE: cycles = 0");
+		sif1.ee.cycles = 1;
 	}
-	else 
-	{
-		// Hence no Interrupt (fixes Eternal Poison reboot when selecting new game)
-		CPU_INT(DMAC_SIF1, min((int)(sif1.ee.cycles*BIAS), 384)); 
-	}
+	CPU_INT(DMAC_SIF1, min((int)(sif1.ee.cycles*BIAS), 384)); 
 }
 
 // Stop processing IOP, and signal an interrupt.
@@ -209,15 +205,11 @@ static __forceinline void EndIOP()
 	//Total cycles over 1024 makes SIF too slow to keep up the sound stream in so3...
 	if (sif1.iop.cycles == 0) 
 	{
-		// No transfer happened
-		DevCon.Warning("SIF1 IOP: cycles = 0"); 
+		DevCon.Warning("SIF1 IOP: cycles = 0");
+		sif1.iop.cycles = 1;
 	}
-	else 
-	{
-		// Hence no Interrupt
-		// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
-		PSX_INT(IopEvt_SIF1, min((sif1.iop.cycles * 26), 1024)); 
-	}
+	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
+	PSX_INT(IopEvt_SIF1, min((sif1.iop.cycles * 26), 1024)); 
 }
 
 // Handle the EE transfer.

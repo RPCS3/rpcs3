@@ -164,14 +164,10 @@ static __forceinline void EndEE()
 	sif0.ee.busy = false;
 	if (sif0.ee.cycles == 0) 
 	{
-		 // No transfer happened,
 		DevCon.Warning("SIF0 EE: cycles = 0");
+		sif0.ee.cycles = 1;
 	}
-	else 
-	{
-		// hence no Interrupt.
-		CPU_INT(DMAC_SIF0, sif0.ee.cycles*BIAS); 
-	}
+	CPU_INT(DMAC_SIF0, sif0.ee.cycles*BIAS); 
 }
 
 // Stop transferring iop, and signal an interrupt.
@@ -184,17 +180,13 @@ static __forceinline void EndIOP()
 					
 	if (sif0.iop.cycles == 0) 
 	{
-		// No transfer happened,
-		DevCon.Warning("SIF0 IOP: cycles = 0"); 
+		DevCon.Warning("SIF0 IOP: cycles = 0");
+		sif0.iop.cycles = 1;
 	}
-	else 
-	{
-		 // hence no Interrupt.
-		// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
-		// So when we're all done, the equation looks like thus:
-		//PSX_INT(IopEvt_SIF0, ( ( sif0.iop.cycles*BIAS ) / 4 ) / 8);
-		PSX_INT(IopEvt_SIF0, sif0.iop.cycles);
-	}
+	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
+	// So when we're all done, the equation looks like thus:
+	//PSX_INT(IopEvt_SIF0, ( ( sif0.iop.cycles*BIAS ) / 4 ) / 8);
+	PSX_INT(IopEvt_SIF0, sif0.iop.cycles);
 }
 
 // Handle the EE transfer.
