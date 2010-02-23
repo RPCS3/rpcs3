@@ -88,18 +88,66 @@ bool StereoExpansionEnabled = false;
 
 void ReadSettings()
 {
+	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
+	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
+
+	timeStretchDisabled = CfgReadBool( L"OUTPUT", L"Disable_Timestretch", false );
+	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
+
+	StereoExpansionEnabled = CfgReadBool( L"OUTPUT", L"Enable_StereoExpansion", false );
+	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
+
+	wchar_t omodid[128];
+	//CfgReadStr( L"OUTPUT", L"Output_Module", omodid, 127, PortaudioOut->GetIdent() );
+
+	// find the driver index of this module:
+	//OutputModule = FindOutputModuleById( omodid );
+
+	// Read DSOUNDOUT and WAVEOUT configs:
+	CfgReadStr( L"WAVEOUT", L"Device", Config_WaveOut.Device, 254, L"default" );
+	Config_WaveOut.NumBuffers = CfgReadInt( L"WAVEOUT", L"Buffer_Count", 4 );
+
+	PortaudioOut->ReadSettings();
+
+	SoundtouchCfg::ReadSettings();
+	//DebugConfig::ReadSettings();
+
+	// Sanity Checks
+	// -------------
+
+	Clampify( SndOutLatencyMS, LATENCY_MIN, LATENCY_MAX );
+	
+	WriteSettings();
 }
 
 /*****************************************************************************/
 
 void WriteSettings()
 {
+	CfgWriteInt(L"MIXING",L"Interpolation",Interpolation);
+	CfgWriteInt(L"MIXING",L"Reverb_Boost",ReverbBoost);
+
+	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
+
+	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
+	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
+	CfgWriteBool(L"OUTPUT",L"Disable_Timestretch", timeStretchDisabled);
+	CfgWriteBool(L"OUTPUT",L"Enable_StereoExpansion", StereoExpansionEnabled);
+
+	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = L"default";
+	CfgWriteStr(L"WAVEOUT",L"Device",Config_WaveOut.Device);
+	CfgWriteInt(L"WAVEOUT",L"Buffer_Count",Config_WaveOut.NumBuffers);
+
+	PortaudioOut->WriteSettings();	
+	SoundtouchCfg::WriteSettings();
+	//DebugConfig::WriteSettings();
 }
 
 
 void configure()
 {
 	ReadSettings();
+	WriteSettings();
 }
 
 void MessageBox(char const*, ...)

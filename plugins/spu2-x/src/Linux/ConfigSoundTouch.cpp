@@ -42,18 +42,19 @@ void ApplySettings( soundtouch::SoundTouch& sndtouch )
 
 void ReadSettings()
 {
-	//SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 63 );
-	//SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 16 );
-	//OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 7 );
+	SequenceLenMS	= CfgReadInt( L"SOUNDTOUCH", L"SequenceLengthMS", 63 );
+	SeekWindowMS	= CfgReadInt( L"SOUNDTOUCH", L"SeekWindowMS", 16 );
+	OverlapMS		= CfgReadInt( L"SOUNDTOUCH", L"OverlapMS", 7 );
 
-	ClampValues();		
+	ClampValues();
+	WriteSettings();		
 }
 
 void WriteSettings()
 {
-	//CfgWriteInt( L"SOUNDTOUCH", L"SequenceLengthMS", SequenceLenMS );
-	//CfgWriteInt( L"SOUNDTOUCH", L"SeekWindowMS", SeekWindowMS );
-	//CfgWriteInt( L"SOUNDTOUCH", L"OverlapMS", OverlapMS );
+	CfgWriteInt( L"SOUNDTOUCH", L"SequenceLengthMS", SequenceLenMS );
+	CfgWriteInt( L"SOUNDTOUCH", L"SeekWindowMS", SeekWindowMS );
+	CfgWriteInt( L"SOUNDTOUCH", L"OverlapMS", OverlapMS );
 }
 
 /*bool CALLBACK SoundtouchCfg::DialogProc(uptr hWnd,u32 uMsg,uptr wParam,uptr lParam)
@@ -62,5 +63,7 @@ void WriteSettings()
 
 void OpenDialog( uptr hWnd )
 {
+	ReadSettings();
+	WriteSettings();
 }
 }

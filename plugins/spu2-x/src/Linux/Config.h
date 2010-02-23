@@ -96,9 +96,10 @@ namespace SoundtouchCfg
 	static int SeekWindowMS = 16;
 	static int OverlapMS = 7;
 
-	static void ReadSettings();
-	static void WriteSettings();
-	static void OpenDialog( uptr hWnd );
+	/*static*/ void ReadSettings();
+	/*static*/ void WriteSettings();
+	/*static*/ void OpenDialog( uptr hWnd );
+
 	
 	static void ClampValues();
 };

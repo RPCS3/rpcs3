@@ -16,15 +16,91 @@
  */
  
  #include "Dialogs.h"
+ #include <wx/fileconf.h>
+ 
+ wxConfigBase *oldConfig;
+ wxString path;
+ 
+ wxFileConfig *setIni(const wchar_t* Section)
+ { 
+ 	wxConfig *tempConfig;
+ 	
+	oldConfig = wxConfigBase::Get(false);
+	
+	tempConfig = new wxFileConfig(L"", L"", path, L"", wxCONFIG_USE_LOCAL_FILE);
+	wxConfigBase::Set(tempConfig);
+	tempConfig->SetPath(L"/");
+	tempConfig->SetPath(Section);
+	return tempConfig;
+ }
+ 
+ void writeIni(wxFileConfig *tempConfig)
+ {
+ 	tempConfig->Flush();
+ 	
+	if (oldConfig != NULL) wxConfigBase::Set(oldConfig);
+	delete tempConfig;
+ }
  
 void CfgSetSettingsDir(const char* dir)
 {
+	path = wxString::FromAscii(dir) + L"spu2-x.ini";
+	
+}
+
+void CfgWriteBool(const wchar_t* Section, const wchar_t* Name, bool Value)
+{
+	wxConfig *config = setIni(Section);
+	config->Write(Name, Value);
+	writeIni(config);
+}
+
+void CfgWriteInt(const wchar_t* Section, const wchar_t* Name, int Value)
+{
+	wxConfig *config = setIni(Section);
+	config->Write(Name, Value);
+	writeIni(config);
 }
 
 void CfgWriteStr(const wchar_t* Section, const wchar_t* Name, const wstring& Data)
 {
+	wxConfig *config = setIni(Section);
+	config->Write(Name, Data);
+	writeIni(config);
+}
+
+bool CfgReadBool(const wchar_t *Section,const wchar_t* Name, bool Default)
+{
+	bool ret;
+	
+	wxConfig *config = setIni(Section);	
+	config->Read(Name, &ret, Default);
+	writeIni(config);
+	
+	return ret;
+}
+
+int CfgReadInt(const wchar_t* Section, const wchar_t* Name,int Default)
+{
+	int ret;
+	
+	wxConfig *config = setIni(Section);		
+	config->Read(Name, &ret, Default);
+	writeIni(config);
+	
+	return ret;
+}
+
+void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wxString& Data, int DataSize, const wchar_t* Default)
+{
+	wxConfig *config = setIni(Section);
+	Data = config->Read(Name, Default);
+	writeIni(config);
 }
 
 void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wstring& Data, int DataSize, const wchar_t* Default)
 {
+	wxString temp;
+	CfgReadStr(Section, Name, temp, DataSize, Default);
+	Data = temp.c_str();
 }
