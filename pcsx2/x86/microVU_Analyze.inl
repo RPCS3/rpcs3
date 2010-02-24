@@ -428,7 +428,7 @@ _f void mVUanalyzeNormBranch(mV, int It, bool isBAL) {
 _f void mVUanalyzeJump(mV, int Is, int It, bool isJALR) {
 	mVUbranchCheck(mVU);
 	mVUlow.branch = (isJALR) ? 10 : 9;
-	if (mVUconstReg[Is].isValid && !CHECK_VU_CONSTHACK) {
+	if (mVUconstReg[Is].isValid && CHECK_VU_CONSTPROP) {
 		mVUlow.constJump.isValid  = 1;
 		mVUlow.constJump.regValue = mVUconstReg[Is].regValue;
 		//DevCon.Status("microVU%d: Constant JR/JALR Address Optimization", mVU->index);

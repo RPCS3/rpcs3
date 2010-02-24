@@ -236,8 +236,13 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 // Reg Alloc
 #define doRegAlloc 1 // Set to 0 to flush every 64bit Instruction (Turns off regAlloc)
 
+// Constant Propagation
+#define CHECK_VU_CONSTPROP 0 
+// Enables Constant Propagation for Jumps based on vi15
+// allowing us to know many indirect jump target addresses.
+// Makes GoW a lot slower due to extra recompilation time!
+
 // Speed Hacks
-#define CHECK_VU_CONSTHACK	1 // Disables Constant Propagation for Jumps
 #define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack) // (Can cause Infinite loops, SPS, etc...)
 #define CHECK_VU_MINMAXHACK	(EmuConfig.Speedhacks.vuMinMax)	  // (Can cause SPS, Black Screens,  etc...)
 

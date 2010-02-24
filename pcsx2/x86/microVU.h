@@ -81,7 +81,7 @@ public:
 			for (int i = 0; i <= listI; i++) {
 				if ((linkI->block->pState.q			== pState->q)
 				&&  (linkI->block->pState.p			== pState->p)
-				&&	(linkI->block->pState.vi15		== pState->vi15)
+				&& ((linkI->block->pState.vi15		== pState->vi15) || !CHECK_VU_CONSTPROP)
 				&&  (linkI->block->pState.flags		== pState->flags)
 				&&  (linkI->block->pState.xgkick	== pState->xgkick)
 				&&  (linkI->block->pState.viBackUp	== pState->viBackUp)

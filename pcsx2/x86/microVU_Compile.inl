@@ -384,7 +384,7 @@ _r void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	}
 
 	// Fix up vi15 const info for propagation through blocks
-	mVUregs.vi15 = (mVUconstReg[15].isValid && !CHECK_VU_CONSTHACK) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
+	mVUregs.vi15 = (mVUconstReg[15].isValid && CHECK_VU_CONSTPROP) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
 	
 	mVUsetFlags(mVU, mFC);	   // Sets Up Flag instances
 	mVUoptimizePipeState(mVU); // Optimize the End Pipeline State for nicer Block Linking
