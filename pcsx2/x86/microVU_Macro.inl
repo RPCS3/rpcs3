@@ -13,8 +13,6 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef CHECK_MACROVU0
-
 #pragma once
 
 extern void _vu0WaitMicro();
@@ -432,5 +430,3 @@ namespace OpcodeImpl { void recCOP2() { recCOP2t[_Rs_](); }}}}
 void recCOP2_BC2  () { recCOP2_BC2t[_Rt_](); }
 void recCOP2_SPEC1() { recCOP2SPECIAL1t[_Funct_](); }
 void recCOP2_SPEC2() { recCOP2SPECIAL2t[(cpuRegs.code&3)|((cpuRegs.code>>4)&0x7c)](); }
-
-#endif // CHECK_MACROVU0

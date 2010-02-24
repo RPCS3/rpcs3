@@ -4610,6 +4610,7 @@ void recVUunknown(VURegs* VU, s32 info)
 // --------------------------------------------------------------------------------------
 recSuperVU0::recSuperVU0()
 {
+	m_Idx = 0;
 	IsInterpreter = false;
 }
 	
@@ -4628,7 +4629,7 @@ void recSuperVU0::Reset()
 	SuperVUReset( 0 );
 }
 
-void recSuperVU0::ExecuteBlock(u32 cycles)
+void recSuperVU0::Execute(u32 cycles)
 {
 	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
@@ -4648,6 +4649,7 @@ void recSuperVU0::Clear(u32 Addr, u32 Size)
 // --------------------------------------------------------------------------------------
 recSuperVU1::recSuperVU1()
 {
+	m_Idx = 1;
 	IsInterpreter = false;
 }
 
@@ -4666,7 +4668,7 @@ void recSuperVU1::Reset()
 	SuperVUReset( 1 );
 }
 
-void recSuperVU1::ExecuteBlock(u32 cycles)
+void recSuperVU1::Execute(u32 cycles)
 {
 	if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0) return;
 	pxAssert( (VU1.VI[REG_TPC].UL&7) == 0 );

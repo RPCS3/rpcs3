@@ -65,15 +65,11 @@ __forceinline void _vu0run(bool breakOnMbit, bool addCycles) {
 	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 
 	int startcycle = VU0.cycle;
-	VU0.flags &= ~VUFLAG_MFLAGSET;
-
-	do {
-		// knockout kings 2002 loops here with sVU
-		if (breakOnMbit && (VU0.cycle-startcycle > 0x1000)) {
-			Console.Warning("VU0 stuck in infinite loop? Breaking execution!");
-			break; // Do games still need this?
-		}
-		CpuVU0->ExecuteBlock(vu0RunCycles);
+	u32 runCycles  = breakOnMbit ? vu0RunCycles : 0x7fffffff;
+	VU0.flags	  &= ~VUFLAG_MFLAGSET;
+		
+	do { // Run VU until it finishes or M-Bit
+		CpuVU0->Execute(runCycles);
 	} while ((VU0.VI[REG_VPU_STAT].UL & 1)						// E-bit Termination
 	  &&	(!breakOnMbit || !(VU0.flags & VUFLAG_MFLAGSET)));	// M-bit Break
 

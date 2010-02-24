@@ -550,7 +550,6 @@ TraceLogFilters&			SetTraceConfig();
 
 // ------------ CPU / Recompiler Options ---------------
 
-#define CHECK_MACROVU0				// If defined uses mVU for VU Macro (COP2), else uses sVU
 #define CHECK_MICROVU0				(EmuConfig.Cpu.Recompiler.UseMicroVU0)
 #define CHECK_MICROVU1				(EmuConfig.Cpu.Recompiler.UseMicroVU1)
 #define CHECK_EEREC					(EmuConfig.Cpu.Recompiler.EnableEE && GetSysCoreAlloc().IsRecAvailable_EE())

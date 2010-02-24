@@ -298,8 +298,8 @@ _f void mVUtestCycles(microVU* mVU) {
 	//u32* vu0jmp;
 	iPC = mVUstartPC;
 	mVUdebugNOW(0);
-	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 	if (doEarlyExit(mVU)) {
+		CMP32ItoM((uptr)&mVU->cycles, 0);
 		u32* jmp32 = JG32(0);
 		//if (!isVU1) { TEST32ItoM((uptr)&mVU->regs->flags, VUFLAG_MFLAGSET); vu0jmp = JZ32(0); }
 			MOV32ItoR(gprT2, (uptr)mVU);
@@ -310,6 +310,7 @@ _f void mVUtestCycles(microVU* mVU) {
 		//if (!isVU1) x86SetJ32(vu0jmp);
 		x86SetJ32(jmp32);
 	}
+	SUB32ItoM((uptr)&mVU->cycles, mVUcycles);
 }
 
 // Initialize VI Constants (vi15 propagates through blocks)

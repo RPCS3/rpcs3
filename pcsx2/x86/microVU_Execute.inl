@@ -42,7 +42,7 @@ void mVUdispatcherA(mV) {
 	xLDMXCSR(g_sseVUMXCSR);
 
 	// Load Regs
-#ifdef CHECK_MACROVU0
+#if 1 // CHECK_MACROVU0 - Always on now
 	MOV32MtoR(gprF0, (uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL);
 	MOV32RtoR(gprF1, gprF0);
 	MOV32RtoR(gprF2, gprF0);

@@ -16,6 +16,7 @@
 #pragma once
 #include "VU.h"
 #include "VUops.h"
+#include "R5900.h"
 #define vuRunCycles  (512*12)  // Cycles to run ExecuteBlockJIT() for (called from within recs)
 #define vu0RunCycles (512*12)  // Cycles to run vu0 for whenever ExecuteBlock() is called
 #define vu1RunCycles (3000000) // mVU1 uses this for inf loop detection on dev builds
@@ -47,7 +48,7 @@ public:
 public:
 	BaseCpuProvider()
 	{
-		m_AllocCount = 0;
+		m_AllocCount   = 0;
 	}
 
 	virtual ~BaseCpuProvider() throw()
@@ -62,17 +63,18 @@ public:
 	virtual void Allocate()=0;
 	virtual void Shutdown()=0;
 	virtual void Reset()=0;
+	virtual void Execute(u32 cycles)=0;
+	virtual void ExecuteBlock(bool startUp)=0; 
 
 	virtual void Step()=0;
-	virtual void ExecuteBlock(u32 cycles)=0;
 	virtual void Clear(u32 Addr, u32 Size)=0;
-	
+
 	// C++ Calling Conventions are unstable, and some compilers don't even allow us to take the
 	// address of C++ methods.  We need to use a wrapper function to invoke the ExecuteBlock from
 	// recompiled code.
-	static void __fastcall ExecuteBlockJIT( BaseCpuProvider* cpu )
+	static void __fastcall ExecuteBlockJIT( BaseCpuProvider* cpu ) 
 	{
-		cpu->ExecuteBlock(vuRunCycles);
+		cpu->Execute(vuRunCycles);
 	}
 };
 
@@ -82,8 +84,15 @@ public:
 // Layer class for possible future implementation (currently is nothing more than a type-safe
 // type define).
 //
-class BaseVUmicroCPU : public BaseCpuProvider
-{
+class BaseVUmicroCPU : public BaseCpuProvider {
+protected:
+	u32 m_lastEEcycles;
+	int m_Idx;
+	BaseVUmicroCPU() {
+		m_Idx		   = 0;
+		m_lastEEcycles = 0;
+	}
+	virtual ~BaseVUmicroCPU() throw() {}
 public:
 
 	// Called by the PS2 VM's event manager for every internal vertical sync (occurs at either
@@ -99,16 +108,63 @@ public:
 	//
 	virtual void Vsync() throw() { }
 
-	virtual void Step()
-	{
+	virtual void Step() {
 		// Ideally this would fall back on interpretation for executing single instructions
 		// for all CPU types, but due to VU complexities and large discrepancies between
 		// clamping in recs and ints, it's not really worth bothering with yet.
 	}
 
-protected:
-	BaseVUmicroCPU() {}
-	virtual ~BaseVUmicroCPU() throw() {}
+	// Execute VU for the number of VU cycles (recs might go over 0~30 cycles)
+	//virtual void Execute(u32 cycles)=0;
+	
+	// Executes a Block based on static preset cycles
+	virtual void ExecuteBlock(bool startUp=0) {
+		const int vuRunning = m_Idx ? 0x100 : 1;
+		if (!(VU0.VI[REG_VPU_STAT].UL & vuRunning)) return;
+		if (startUp) { // Start Executing a microprogram
+			Execute(vu0RunCycles); // Kick start VU
+			// If the VU0 program didn't finish then we'll want to finish it up
+			// pretty soon.  This fixes vmhacks in some games (Naruto Ultimate Ninja 2)
+			if(VU0.VI[REG_VPU_STAT].UL & 0x1)
+				cpuSetNextBranchDelta( 192 ); // fixme : ideally this should be higher, like 512 or so.
+		}
+		else {
+			Execute(vu0RunCycles);
+			DevCon.Warning("VU0 running when in BranchTest");
+			// This helps keep the EE and VU0 in sync.
+			// Check Silver Surfer. Currently has SPS varying with different branch deltas set below.
+			if(VU0.VI[REG_VPU_STAT].UL & 0x1)
+				cpuSetNextBranchDelta( 768 );
+		}
+	}
+
+	// Executes a Block based on EE delta time
+	/*virtual void ExecuteBlock(bool startUp=0) {
+		const int vuRunning = m_Idx ? 0x100 : 1;
+		const int c = 1024;
+		if (!(VU0.VI[REG_VPU_STAT].UL & vuRunning)) return;
+		if (startUp) {  // Start Executing a microprogram
+			Execute(c); // Kick start VU
+			m_lastEEcycles = cpuRegs.cycle + (c*2);
+			if (VU0.VI[REG_VPU_STAT].UL & vuRunning)
+				cpuSetNextBranchDelta(c*4); // Let VUs run behind EE instead of ahead		
+		}
+		else { // Continue Executing (VU roughly half the mhz of EE)
+			s32 delta = (s32)(u32)(cpuRegs.cycle - m_lastEEcycles);
+			if (delta > 0) {
+				delta>>=1;
+				DevCon.WriteLn("Event Test1: Running VU0 for %d cycles", delta);
+				Execute(delta);
+				m_lastEEcycles = cpuRegs.cycle;
+				if (VU0.VI[REG_VPU_STAT].UL & vuRunning)
+					cpuSetNextBranchDelta(c*2); // Let VUs run behind EE instead of in front
+			}
+			else {
+				cpuSetNextBranchDelta(-delta);
+				DevCon.WriteLn("Event Test2: Running VU0 for %d cycles", delta/2);
+			}
+		}
+	}*/
 };
 
 
@@ -129,7 +185,7 @@ public:
 	void Reset() { }
 
 	void Step();
-	void ExecuteBlock(u32 cycles);
+	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size) {}
 };
 
@@ -147,7 +203,7 @@ public:
 	void Reset() { }
 
 	void Step();
-	void ExecuteBlock(u32 cycles);
+	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size) {}
 };
 
@@ -167,7 +223,7 @@ public:
 	void Shutdown() throw();
 
 	void Reset();
-	void ExecuteBlock(u32 cycles);
+	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size);
 	void Vsync() throw();
 };
@@ -184,9 +240,43 @@ public:
 	void Allocate();
 	void Shutdown() throw();
 	void Reset();
-	void ExecuteBlock(u32 cycles);
+	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size);
 	void Vsync() throw();
+};
+
+// --------------------------------------------------------------------------------------
+//  recSuperVU0 / recSuperVU1
+// --------------------------------------------------------------------------------------
+
+class recSuperVU0 : public BaseVUmicroCPU 
+{
+public:
+	recSuperVU0();
+
+	const char* GetShortName() const	{ return "sVU0"; }
+	wxString GetLongName() const		{ return L"SuperVU0 Recompiler"; }
+
+	void Allocate();
+	void Shutdown() throw();
+	void Reset();
+	void Execute(u32 cycles);
+	void Clear(u32 Addr, u32 Size);
+};
+
+class recSuperVU1 : public BaseVUmicroCPU 
+{
+public:
+	recSuperVU1();
+
+	const char* GetShortName() const	{ return "sVU1"; }
+	wxString GetLongName() const		{ return L"SuperVU1 Recompiler"; }
+
+	void Allocate();
+	void Shutdown() throw();
+	void Reset();
+	void Execute(u32 cycles);
+	void Clear(u32 Addr, u32 Size);
 };
 
 extern BaseVUmicroCPU* CpuVU0;

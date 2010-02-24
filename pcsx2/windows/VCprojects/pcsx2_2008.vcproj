@@ -933,10 +933,6 @@
 								>
 							</File>
 							<File
-								RelativePath="..\..\x86\iCOP2.cpp"
-								>
-							</File>
-							<File
 								RelativePath="..\..\x86\iFPU.cpp"
 								>
 							</File>

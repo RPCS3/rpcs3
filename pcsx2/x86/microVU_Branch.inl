@@ -64,7 +64,7 @@ _f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 	}
 
 	// Save Flag Instances
-#ifdef CHECK_MACROVU0
+#if 1 // CHECK_MACROVU0 - Always on now
 	getFlagReg(fStatus, fStatus);
 	MOV32RtoM((uptr)&mVU->regs->VI[REG_STATUS_FLAG].UL,	fStatus);
 #else

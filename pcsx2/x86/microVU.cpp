@@ -331,8 +331,8 @@ _mVUt _f int mVUsearchProg() {
 static u32 mvu0_allocated = 0;
 static u32 mvu1_allocated = 0;
 
-recMicroVU0::recMicroVU0()		  { IsInterpreter = false; }
-recMicroVU1::recMicroVU1()		  { IsInterpreter = false; }
+recMicroVU0::recMicroVU0()		  { m_Idx = 0; IsInterpreter = false; }
+recMicroVU1::recMicroVU1()		  { m_Idx = 1; IsInterpreter = false; }
 void recMicroVU0::Vsync() throw() { mVUvsyncUpdate(&microVU0); }
 void recMicroVU1::Vsync() throw() { mVUvsyncUpdate(&microVU1); }
 
@@ -375,7 +375,7 @@ void recMicroVU1::Reset() {
 	mVUreset(&microVU1);
 }
 
-void recMicroVU0::ExecuteBlock(u32 cycles) {
+void recMicroVU0::Execute(u32 cycles) {
 	pxAssert(mvu0_allocated); // please allocate me first! :|
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
@@ -387,13 +387,13 @@ void recMicroVU0::ExecuteBlock(u32 cycles) {
 	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
 	XMMRegisters::Thaw();
 }
-void recMicroVU1::ExecuteBlock(u32 cycles) {
+void recMicroVU1::Execute(u32 cycles) {
 	pxAssert(mvu1_allocated); // please allocate me first! :|
 
 	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
 
 	XMMRegisters::Freeze();
-	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, cycles);
+	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, vu1RunCycles);
 	XMMRegisters::Thaw();
 }
 

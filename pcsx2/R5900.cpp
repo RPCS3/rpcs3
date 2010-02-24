@@ -422,20 +422,9 @@ __forceinline void _cpuBranchTest_Shared()
 	}
 
 	// ---- VU0 -------------
-
-	if (VU0.VI[REG_VPU_STAT].UL & 0x1)
-	{
-		// We're in a BranchTest.  All dynarec registers are flushed
-		// so there is no need to freeze registers here.
-		CpuVU0->ExecuteBlock(vu0RunCycles);
-		DevCon.Warning("VU0 running when in BranchTest");
-		// This might be needed to keep the EE and VU0 in sync.
-		// A better fix will require hefty changes to the VU recs. -_-
-		// Fixme:
-		// Check Silver Surfer. Currently has SPS varying with different branch deltas set below.
-		if(VU0.VI[REG_VPU_STAT].UL & 0x1)
-			cpuSetNextBranchDelta( 768 );
-	}
+	// We're in a BranchTest.  All dynarec registers are flushed
+	// so there is no need to freeze registers here.
+	CpuVU0->ExecuteBlock();
 
 	// Note:  We don't update the VU1 here because it runs it's micro-programs in
 	// one shot always.  That is, when a program is executed the VU1 doesn't even

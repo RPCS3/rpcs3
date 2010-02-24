@@ -195,6 +195,7 @@ void vu0Exec(VURegs* VU)
 // --------------------------------------------------------------------------------------
 InterpVU0::InterpVU0()
 {
+	m_Idx = 0;
 	IsInterpreter = true;
 }
 
@@ -203,7 +204,7 @@ void InterpVU0::Step()
 	vu0Exec( &VU0 );
 }
 
-void InterpVU0::ExecuteBlock(u32 cycles)
+void InterpVU0::Execute(u32 cycles)
 {
 	for (int i = 128; i--;)
 	{
