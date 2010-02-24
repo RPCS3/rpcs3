@@ -506,7 +506,6 @@
 		<Unit filename="../x86/aVUzerorec.S" />
 		<Unit filename="../x86/iCOP0.cpp" />
 		<Unit filename="../x86/iCOP0.h" />
-		<Unit filename="../x86/iCOP2.cpp" />
 		<Unit filename="../x86/iCore.cpp" />
 		<Unit filename="../x86/iCore.h" />
 		<Unit filename="../x86/iFPU.cpp" />

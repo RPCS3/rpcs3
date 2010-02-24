@@ -459,7 +459,6 @@ set(pcsx2WindowsHeaders
 set(pcsx2x86Sources
 	x86/BaseblockEx.cpp
 	x86/iCOP0.cpp
-	x86/iCOP2.cpp
 	x86/iCore.cpp
 	x86/iFPU.cpp
 	x86/iFPUd.cpp
