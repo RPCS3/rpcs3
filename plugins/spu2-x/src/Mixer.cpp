@@ -522,8 +522,15 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	}
 	else
 	{
-		// Write-back of raw voice data (some zeros since the voice is "dead")
+		// Continue processing voice, even if it's "off". Or else we miss interrupts! (Fatal Frame engine died because of this.)
+		// Slow, complete version
+		UpdatePitch(coreidx, voiceidx);
+			while (vc.SP > 0) { 
+				GetNextDataBuffered(thiscore, voiceidx); 
+				vc.SP -= 4096;
+		}
 
+		// Write-back of raw voice data (some zeros since the voice is "dead")
 		if (voiceidx==1)      spu2M_WriteFast( 0x400 + (coreidx<<12) + OutPos, 0 );
 		else if (voiceidx==3) spu2M_WriteFast( 0x600 + (coreidx<<12) + OutPos, 0 );
 
