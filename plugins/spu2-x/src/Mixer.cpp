@@ -257,6 +257,39 @@ _Increment:
 	return vc.SBuffer[vc.SCurrent++];
 }
 
+static __forceinline void __fastcall GetNextDataDummy(V_Core& thiscore, uint voiceidx)
+{
+	V_Voice& vc( thiscore.Voices[voiceidx] );
+
+	if( vc.SCurrent == 28 )
+	{
+		if(vc.LoopFlags & XAFLAG_LOOP_END)
+		{
+			thiscore.Regs.ENDX |= (1 << voiceidx);
+
+			if( vc.LoopFlags & XAFLAG_LOOP )
+				vc.NextA = vc.LoopStartA;
+			else
+				vc.Stop();
+		}
+
+		vc.LoopFlags = *GetMemPtr(vc.NextA&0xFFFFF) >> 8;	// grab loop flags from the upper byte.
+
+		vc.SCurrent = 0;
+		if( (vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode )
+			vc.LoopStartA = vc.NextA;
+
+		goto _Increment;
+	}
+
+	if( (vc.SCurrent&3) == 3 )
+	{
+_Increment:
+		IncrementNextA( thiscore, vc );
+	}
+	vc.SCurrent++;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                     //
@@ -523,11 +556,10 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	else
 	{
 		// Continue processing voice, even if it's "off". Or else we miss interrupts! (Fatal Frame engine died because of this.)
-		// Slow, complete version
 		UpdatePitch(coreidx, voiceidx);
-			while (vc.SP > 0) { 
-				GetNextDataBuffered(thiscore, voiceidx); 
-				vc.SP -= 4096;
+		while (vc.SP > 0) {
+			GetNextDataDummy(thiscore, voiceidx); // Dummy is enough
+			vc.SP -= 4096;
 		}
 
 		// Write-back of raw voice data (some zeros since the voice is "dead")
