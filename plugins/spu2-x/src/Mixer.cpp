@@ -554,11 +554,13 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	else
 	{
 		// Continue processing voice, even if it's "off". Or else we miss interrupts! (Fatal Frame engine died because of this.)
-		UpdatePitch(coreidx, voiceidx);
+		if ((vc.LoopFlags & 3) != 3 || vc.LoopStartA != (vc.NextA & ~7)) {
+			UpdatePitch(coreidx, voiceidx);
 
-		while (vc.SP > 0) {
-			GetNextDataDummy(thiscore, voiceidx); // Dummy is enough
-			vc.SP -= 16384;
+			while (vc.SP > 0) {
+				GetNextDataDummy(thiscore, voiceidx); // Dummy is enough
+				vc.SP -= 16384;
+			}
 		}
 
 		// Write-back of raw voice data (some zeros since the voice is "dead")
