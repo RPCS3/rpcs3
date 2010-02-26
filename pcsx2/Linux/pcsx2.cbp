@@ -324,6 +324,7 @@
 		<Unit filename="../VU1microInterp.cpp" />
 		<Unit filename="../VUflags.cpp" />
 		<Unit filename="../VUflags.h" />
+		<Unit filename="../VUmicro.cpp" />
 		<Unit filename="../VUmicro.h" />
 		<Unit filename="../VUmicroMem.cpp" />
 		<Unit filename="../VUops.cpp" />

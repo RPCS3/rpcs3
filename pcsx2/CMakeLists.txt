@@ -178,6 +178,7 @@ set(pcsx2Sources
 	Vif_Unpack.inl
 	vtlb.cpp
 	VU0.cpp
+	VUmicro.cpp
 	VU0micro.cpp
 	VU0microInterp.cpp
 	VU1micro.cpp
