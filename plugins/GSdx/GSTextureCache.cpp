@@ -423,9 +423,18 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 			}
 			else
 			{
-				m_dst[RenderTarget].erase(j);
-
-				delete t;
+				if (psm == PSM_PSMT4HH && t->m_TEX0.PSM == PSM_PSMCT32) 
+				{
+					// Silent Hill Origins shadows: Read 8 bit using only the HIGH bits (4 bit) texture as 32 bit.
+					Read(t, r.rintersect(t->m_valid));
+					return;
+				}
+				else
+				{
+					//printf("Trashing render target. We have a %d type texture and we are trying to write into a %d type texture\n", t->m_TEX0.PSM, psm);
+					m_dst[RenderTarget].erase(j);
+					delete t;
+				}
 			}
 		}
 	}

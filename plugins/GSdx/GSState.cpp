@@ -1896,6 +1896,7 @@ struct GSFrameInfo
 	uint32 FBMSK;
 	uint32 TBP0;
 	uint32 TPSM;
+	uint32 TZTST;
 	bool TME;
 };
 
@@ -2290,9 +2291,10 @@ bool GSC_GodOfWar(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 1; // blur
 		}
-	}
-	else
-	{
+		else if(fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8 && ((fi.TZTST == 2 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 1 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 3 && fi.FBMSK == 0xFF000000)))
+		{
+			skip = 1; // wall of fog
+		}
 	}
 
 	return true;
@@ -2482,6 +2484,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 	fi.TME = PRIM->TME;
 	fi.TBP0 = m_context->TEX0.TBP0;
 	fi.TPSM = m_context->TEX0.PSM;
+	fi.TZTST = m_context->TEST.ZTST;
 
 	static GetSkipCount map[CRC::TitleCount];
 	static bool inited = false;
