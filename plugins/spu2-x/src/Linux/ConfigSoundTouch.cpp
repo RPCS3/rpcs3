@@ -57,13 +57,75 @@ void WriteSettings()
 	CfgWriteInt( L"SOUNDTOUCH", L"OverlapMS", OverlapMS );
 }
 
-/*bool CALLBACK SoundtouchCfg::DialogProc(uptr hWnd,u32 uMsg,uptr wParam,uptr lParam)
-{
-}*/
+static GtkWidget *seq_label, *seek_label, *over_label;
+static GtkWidget *seq_slide, *seek_slide, *over_slide;
 
-void OpenDialog( uptr hWnd )
+void restore_defaults()
 {
+    gtk_range_set_value(GTK_RANGE(seq_slide), 63);
+    gtk_range_set_value(GTK_RANGE(seek_slide), 16);
+    gtk_range_set_value(GTK_RANGE(over_slide), 7);
+}
+
+void DisplayDialog()
+{
+	int return_value;
+    GtkWidget *dialog, *main_label;
+    GtkWidget *default_button;
+	
 	ReadSettings();
+	
+    /* Create the widgets */
+    dialog = gtk_dialog_new_with_buttons (
+		"Advanced Settings",
+		NULL, /* parent window*/
+		(GtkDialogFlags)(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+		GTK_STOCK_OK,
+			GTK_RESPONSE_ACCEPT,
+		GTK_STOCK_CANCEL,
+			GTK_RESPONSE_REJECT,
+		NULL);
+		
+    main_label = gtk_label_new ("These are advanced configuration options fine tuning time stretching behavior. Larger values are better for slowdown, while smaller values are better for speedup (more then 60 fps.). All options are in microseconds.");
+    gtk_label_set_line_wrap (GTK_LABEL(main_label), true);
+    
+	default_button = gtk_button_new_with_label("Reset to Defaults");
+	
+	seq_label = gtk_label_new("Sequence Length");
+    seq_slide = gtk_hscale_new_with_range(SequenceLen_Min, SequenceLen_Max, 2);
+    gtk_range_set_value(GTK_RANGE(seq_slide), SequenceLenMS);
+    
+    seek_label = gtk_label_new("Seek Window Size");
+    seek_slide = gtk_hscale_new_with_range(SeekWindow_Min, SeekWindow_Max, 1);
+    gtk_range_set_value(GTK_RANGE(seek_slide), SeekWindowMS);
+    
+    over_label = gtk_label_new("Overlap");
+    over_slide = gtk_hscale_new_with_range(Overlap_Min, Overlap_Max, 1);
+    gtk_range_set_value(GTK_RANGE(over_slide), OverlapMS);
+    
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_label);
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), default_button);
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seq_label);
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seq_slide);
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seek_label);
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seek_slide);
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), over_label);
+	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), over_slide);
+    gtk_widget_show_all (dialog);
+    
+    g_signal_connect_swapped(GTK_OBJECT (default_button), "clicked", G_CALLBACK(restore_defaults), default_button);
+    
+    return_value = gtk_dialog_run (GTK_DIALOG (dialog));
+    
+    if (return_value == GTK_RESPONSE_ACCEPT)
+    {
+    	SequenceLenMS = gtk_range_get_value(GTK_RANGE(seq_slide));;
+    	SeekWindowMS = gtk_range_get_value(GTK_RANGE(seek_slide));;
+    	OverlapMS = gtk_range_get_value(GTK_RANGE(over_slide));;
+    }
+    
+    gtk_widget_destroy (dialog);
+    
 	WriteSettings();
 }
 }

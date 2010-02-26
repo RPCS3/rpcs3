@@ -18,6 +18,7 @@
 #ifndef CONFIG_H_INCLUDED
 #define CONFIG_H_INCLUDED
 
+#include <gtk/gtk.h>
 #include <string>
 
 extern bool DebugEnabled;
@@ -96,66 +97,18 @@ namespace SoundtouchCfg
 	static int SeekWindowMS = 16;
 	static int OverlapMS = 7;
 
-	/*static*/ void ReadSettings();
-	/*static*/ void WriteSettings();
-	/*static*/ void OpenDialog( uptr hWnd );
+	void ReadSettings();
+	void WriteSettings();
+	void DisplayDialog();
 
 	
 	static void ClampValues();
 };
 
-
-// *** BEGIN DRIVER-SPECIFIC CONFIGURATION ***
-// -------------------------------------------
-
-// DSOUND
-struct CONFIG_XAUDIO2
-{
-	std::wstring Device;
-	s8 NumBuffers;
-
-	CONFIG_XAUDIO2() :
-		Device(),
-		NumBuffers( 2 )
-	{
-	}
-};
-
-// DSOUND
-struct CONFIG_DSOUNDOUT
-{
-	std::wstring Device;
-	s8 NumBuffers;
-
-	CONFIG_DSOUNDOUT() :
-		Device(),
-		NumBuffers( 3 )
-	{
-	}
-};
-
-// WAVEOUT
-struct CONFIG_WAVEOUT
-{
-	std::wstring Device;
-	s8 NumBuffers;
-
-	CONFIG_WAVEOUT() :
-		Device(),
-		NumBuffers( 4 )
-	{
-	}
-};
-
-/*extern CONFIG_DSOUNDOUT Config_DSoundOut;
-extern CONFIG_WAVEOUT Config_WaveOut;
-extern CONFIG_XAUDIO2 Config_XAudio2;*/
-
-//////
-
 void ReadSettings();
 void WriteSettings();
 void configure();
 void AboutBox();
+extern void advanced_dialog();
 
 #endif // CONFIG_H_INCLUDED

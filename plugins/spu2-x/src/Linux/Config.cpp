@@ -18,7 +18,6 @@
 #include "Global.h"
 #include "Dialogs.h"
 #include "Config.h"
-#include <gtk/gtk.h>
 
 #ifdef PCSX2_DEVBUILD
 static const int LATENCY_MAX = 3000;
@@ -29,10 +28,6 @@ static const int LATENCY_MAX = 750;
 static const int LATENCY_MIN = 40;
 
 int AutoDMAPlayRate[2] = {0,0};
-
-CONFIG_DSOUNDOUT Config_DSoundOut;
-CONFIG_WAVEOUT Config_WaveOut;
-CONFIG_XAUDIO2 Config_XAudio2;
 
 // Default settings.
 
@@ -95,16 +90,12 @@ void WriteSettings()
 	//DebugConfig::WriteSettings();
 }
 
-void displayDialog();
-
-void configure()
+void advanced_dialog()
 {
-	ReadSettings();
-	displayDialog();
-	WriteSettings();
+	SoundtouchCfg::DisplayDialog();
 }
 
-void displayDialog()
+void DisplayDialog()
 {
     GtkWidget *dialog, *main_label;
     int return_value;
@@ -170,14 +161,12 @@ void displayDialog()
 	else
 		gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), 1);
 	
-    
-    // latency slider
     latency_slide = gtk_hscale_new_with_range(LATENCY_MIN, LATENCY_MAX, 5);
     gtk_range_set_value(GTK_RANGE(latency_slide), SndOutLatencyMS);
     
     time_check = gtk_check_button_new_with_label("Disable Time Stretch");
     
-    // Advanced button
+	advanced_button = gtk_button_new_with_label("Advanced...");
     
     mixing_vbox = gtk_vbox_new(false, 5);
     output_vbox = gtk_vbox_new(false, 5);
@@ -194,6 +183,7 @@ void displayDialog()
 	gtk_container_add(GTK_CONTAINER(output_vbox), mod_label);
 	gtk_container_add(GTK_CONTAINER(output_vbox), mod_box);
 	gtk_container_add(GTK_CONTAINER(output_vbox), latency_slide);
+	gtk_container_add(GTK_CONTAINER(output_vbox), advanced_button);
 	gtk_container_add(GTK_CONTAINER(output_vbox), time_check);
 	
 	gtk_container_add(GTK_CONTAINER(main_hbox), mixing_vbox);
@@ -206,6 +196,8 @@ void displayDialog()
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_label);
     gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_hbox);
     gtk_widget_show_all (dialog);
+    
+    g_signal_connect_swapped(GTK_OBJECT (advanced_button), "clicked", G_CALLBACK(advanced_dialog), advanced_button);
     
     return_value = gtk_dialog_run (GTK_DIALOG (dialog));
     
@@ -230,4 +222,11 @@ void displayDialog()
     
     gtk_widget_destroy (dialog);
     
+}
+
+void configure()
+{
+	ReadSettings();
+	DisplayDialog();
+	WriteSettings();
 }
