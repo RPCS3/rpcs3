@@ -55,7 +55,7 @@ void SysMessage(const wchar_t *fmt, ...)
                                      GTK_DIALOG_DESTROY_WITH_PARENT,
                                      GTK_MESSAGE_INFO,
                                      GTK_BUTTONS_OK,
-                                     "%s", msg);
+                                     "%s", msg.ToUTF8().data());
     gtk_dialog_run (GTK_DIALOG (dialog));
     gtk_widget_destroy (dialog);
 }

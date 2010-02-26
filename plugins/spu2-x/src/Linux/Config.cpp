@@ -63,7 +63,7 @@ void ReadSettings()
 
 	PortaudioOut->ReadSettings();
 	SoundtouchCfg::ReadSettings();
-	//DebugConfig::ReadSettings();
+	DebugConfig::ReadSettings();
 
 	// Sanity Checks
 	// -------------
@@ -87,7 +87,7 @@ void WriteSettings()
 
 	PortaudioOut->WriteSettings();	
 	SoundtouchCfg::WriteSettings();
-	//DebugConfig::WriteSettings();
+	DebugConfig::WriteSettings();
 }
 
 void advanced_dialog()

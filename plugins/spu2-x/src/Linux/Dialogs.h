@@ -21,6 +21,13 @@
 #include "../Global.h"
 #include "../Config.h"
 
+namespace DebugConfig
+{
+	extern void ReadSettings();
+	extern void WriteSettings();
+	extern void DisplayDialog();
+}
+
 extern void CfgSetSettingsDir(const char* dir);
 
 extern void		CfgWriteBool(const wchar_t* Section, const wchar_t* Name, bool Value);
