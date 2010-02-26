@@ -95,28 +95,30 @@ void advanced_dialog()
 	SoundtouchCfg::DisplayDialog();
 }
 
+void debug_dialog()
+{
+	DebugConfig::DisplayDialog();
+}
+
 void DisplayDialog()
 {
-    GtkWidget *dialog, *main_label;
     int return_value;
     
-    GtkWidget *mixing_label;
+    GtkWidget *dialog;
+    GtkWidget *main_frame, *main_box;
     
+    GtkWidget *mixing_frame, *mixing_box;
     GtkWidget *int_label, *int_box;
-    
     GtkWidget *effects_check;
-    
     GtkWidget *reverb_label, *reverb_box;
+    GtkWidget *debug_check;
+    GtkWidget *debug_button;
     
-    GtkWidget *output_label;
-    
+    GtkWidget *output_frame, *output_box;
     GtkWidget *mod_label, *mod_box;
-    
     GtkWidget *latency_slide;
     GtkWidget *time_check;
     GtkWidget *advanced_button;
-    
-    GtkWidget *mixing_vbox, *output_vbox, *main_hbox;
 	
     /* Create the widgets */
     dialog = gtk_dialog_new_with_buttons (
@@ -128,10 +130,6 @@ void DisplayDialog()
 		GTK_STOCK_CANCEL,
 			GTK_RESPONSE_REJECT,
 		NULL);
-		
-    main_label = gtk_label_new ("Spu2-X Config");
-    
-    mixing_label = gtk_label_new ("Mixing Settings:");
     
     int_label = gtk_label_new ("Interpolation:");
     int_box = gtk_combo_box_new_text ();
@@ -150,8 +148,9 @@ void DisplayDialog()
     gtk_combo_box_append_text(GTK_COMBO_BOX(reverb_box), "8X - Reverb Volume x 8");
     gtk_combo_box_set_active(GTK_COMBO_BOX(reverb_box), ReverbBoost);
     
-    output_label = gtk_label_new ("Output Settings:");
-    
+    debug_check = gtk_check_button_new_with_label("Enable Debug Options");
+	debug_button = gtk_button_new_with_label("Debug...");
+
     mod_label = gtk_label_new ("Module:");
     mod_box = gtk_combo_box_new_text ();
     gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "0 - No Sound (emulate SPU2 only)");
@@ -168,41 +167,50 @@ void DisplayDialog()
     
 	advanced_button = gtk_button_new_with_label("Advanced...");
     
-    mixing_vbox = gtk_vbox_new(false, 5);
-    output_vbox = gtk_vbox_new(false, 5);
-    main_hbox = gtk_hbox_new(false, 5);
+    main_box = gtk_hbox_new(false, 5);
+    main_frame = gtk_frame_new ("Spu2-X Config");
+    gtk_container_add (GTK_CONTAINER(main_frame), main_box);
     
-	gtk_container_add(GTK_CONTAINER(mixing_vbox), mixing_label);
-	gtk_container_add(GTK_CONTAINER(mixing_vbox), int_label);
-	gtk_container_add(GTK_CONTAINER(mixing_vbox), int_box);
-	gtk_container_add(GTK_CONTAINER(mixing_vbox), effects_check);
-	gtk_container_add(GTK_CONTAINER(mixing_vbox), reverb_label);
-	gtk_container_add(GTK_CONTAINER(mixing_vbox), reverb_box);
+    mixing_box = gtk_vbox_new(false, 5);
+    mixing_frame = gtk_frame_new ("Mixing Settings:");
+    gtk_container_add (GTK_CONTAINER(mixing_frame), mixing_box);
+    
+    output_box = gtk_vbox_new(false, 5);
+    output_frame = gtk_frame_new ("Output Settings:");
+    gtk_container_add (GTK_CONTAINER(output_frame), output_box);
+    
+	gtk_container_add(GTK_CONTAINER(mixing_box), int_label);
+	gtk_container_add(GTK_CONTAINER(mixing_box), int_box);
+	gtk_container_add(GTK_CONTAINER(mixing_box), effects_check);
+	gtk_container_add(GTK_CONTAINER(mixing_box), reverb_label);
+	gtk_container_add(GTK_CONTAINER(mixing_box), reverb_box);
+	gtk_container_add(GTK_CONTAINER(mixing_box), debug_check);
+	gtk_container_add(GTK_CONTAINER(mixing_box), debug_button);
 	
-	gtk_container_add(GTK_CONTAINER(output_vbox), output_label);
-	gtk_container_add(GTK_CONTAINER(output_vbox), mod_label);
-	gtk_container_add(GTK_CONTAINER(output_vbox), mod_box);
-	gtk_container_add(GTK_CONTAINER(output_vbox), latency_slide);
-	gtk_container_add(GTK_CONTAINER(output_vbox), advanced_button);
-	gtk_container_add(GTK_CONTAINER(output_vbox), time_check);
+	gtk_container_add(GTK_CONTAINER(output_box), mod_label);
+	gtk_container_add(GTK_CONTAINER(output_box), mod_box);
+	gtk_container_add(GTK_CONTAINER(output_box), latency_slide);
+	gtk_container_add(GTK_CONTAINER(output_box), advanced_button);
+	gtk_container_add(GTK_CONTAINER(output_box), time_check);
 	
-	gtk_container_add(GTK_CONTAINER(main_hbox), mixing_vbox);
-	gtk_container_add(GTK_CONTAINER(main_hbox), output_vbox);
+	gtk_container_add(GTK_CONTAINER(main_box), mixing_frame);
+	gtk_container_add(GTK_CONTAINER(main_box), output_frame);
 	
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(effects_check), EffectsDisabled);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(debug_check), DebugEnabled);
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(time_check), timeStretchDisabled);
     
-    /* Add all our widgets, and show everything we've added to the dialog. */
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_label);
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_hbox);
+    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     gtk_widget_show_all (dialog);
     
     g_signal_connect_swapped(GTK_OBJECT (advanced_button), "clicked", G_CALLBACK(advanced_dialog), advanced_button);
+    g_signal_connect_swapped(GTK_OBJECT (debug_button), "clicked", G_CALLBACK(debug_dialog), debug_button);
     
     return_value = gtk_dialog_run (GTK_DIALOG (dialog));
     
     if (return_value == GTK_RESPONSE_ACCEPT)
     {
+		DebugEnabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(debug_check));
     	if (gtk_combo_box_get_active(GTK_COMBO_BOX(int_box)) != -1) 
     		Interpolation = gtk_combo_box_get_active(GTK_COMBO_BOX(int_box));
     		

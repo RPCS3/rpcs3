@@ -70,7 +70,7 @@ void restore_defaults()
 void DisplayDialog()
 {
 	int return_value;
-    GtkWidget *dialog, *main_label;
+    GtkWidget *dialog, *main_label, *main_frame, *main_box;
     GtkWidget *default_button;
 	
 	ReadSettings();
@@ -103,14 +103,20 @@ void DisplayDialog()
     over_slide = gtk_hscale_new_with_range(Overlap_Min, Overlap_Max, 1);
     gtk_range_set_value(GTK_RANGE(over_slide), OverlapMS);
     
+    main_box = gtk_vbox_new(false, 5);
+    main_frame = gtk_frame_new ("Spu2-X Config");
+    
+	gtk_container_add(GTK_CONTAINER (main_box), default_button);
+	gtk_container_add(GTK_CONTAINER (main_box), seq_label);
+	gtk_container_add(GTK_CONTAINER (main_box), seq_slide);
+	gtk_container_add(GTK_CONTAINER (main_box), seek_label);
+	gtk_container_add(GTK_CONTAINER (main_box), seek_slide);
+	gtk_container_add(GTK_CONTAINER (main_box), over_label);
+	gtk_container_add(GTK_CONTAINER (main_box), over_slide);
+    gtk_container_add (GTK_CONTAINER(main_frame), main_box);
+    
 	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_label);
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), default_button);
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seq_label);
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seq_slide);
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seek_label);
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), seek_slide);
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), over_label);
-	gtk_container_add(GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), over_slide);
+    gtk_container_add (GTK_CONTAINER (GTK_DIALOG(dialog)->vbox), main_frame);
     gtk_widget_show_all (dialog);
     
     g_signal_connect_swapped(GTK_OBJECT (default_button), "clicked", G_CALLBACK(restore_defaults), default_button);

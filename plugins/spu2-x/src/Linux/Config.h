@@ -109,6 +109,5 @@ void ReadSettings();
 void WriteSettings();
 void configure();
 void AboutBox();
-extern void advanced_dialog();
 
 #endif // CONFIG_H_INCLUDED
