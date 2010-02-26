@@ -610,6 +610,10 @@
 							>
 						</File>
 						<File
+							RelativePath="..\..\VUmicro.cpp"
+							>
+						</File>
+						<File
 							RelativePath="..\..\VUmicro.h"
 							>
 						</File>

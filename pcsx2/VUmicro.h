@@ -74,7 +74,7 @@ public:
 	// recompiled code.
 	static void __fastcall ExecuteBlockJIT( BaseCpuProvider* cpu ) 
 	{
-		cpu->Execute(vuRunCycles);
+		cpu->Execute(1024);
 	}
 };
 
@@ -85,15 +85,15 @@ public:
 // type define).
 //
 class BaseVUmicroCPU : public BaseCpuProvider {
-protected:
-	u32 m_lastEEcycles;
+public:
 	int m_Idx;
+	u32 m_lastEEcycles;
+
 	BaseVUmicroCPU() {
 		m_Idx		   = 0;
 		m_lastEEcycles = 0;
 	}
 	virtual ~BaseVUmicroCPU() throw() {}
-public:
 
 	// Called by the PS2 VM's event manager for every internal vertical sync (occurs at either
 	// 50hz (pal) or 59.94hz (NTSC).
@@ -115,56 +115,13 @@ public:
 	}
 
 	// Execute VU for the number of VU cycles (recs might go over 0~30 cycles)
-	//virtual void Execute(u32 cycles)=0;
-	
-	// Executes a Block based on static preset cycles
-	virtual void ExecuteBlock(bool startUp=0) {
-		const int vuRunning = m_Idx ? 0x100 : 1;
-		if (!(VU0.VI[REG_VPU_STAT].UL & vuRunning)) return;
-		if (startUp) { // Start Executing a microprogram
-			Execute(vu0RunCycles); // Kick start VU
-			// If the VU0 program didn't finish then we'll want to finish it up
-			// pretty soon.  This fixes vmhacks in some games (Naruto Ultimate Ninja 2)
-			if(VU0.VI[REG_VPU_STAT].UL & vuRunning)
-				cpuSetNextBranchDelta( 192 ); // fixme : ideally this should be higher, like 512 or so.
-		}
-		else {
-			Execute(vu0RunCycles);
-			DevCon.Warning("VU0 running when in BranchTest");
-			// This helps keep the EE and VU0 in sync.
-			// Check Silver Surfer. Currently has SPS varying with different branch deltas set below.
-			if(VU0.VI[REG_VPU_STAT].UL & vuRunning)
-				cpuSetNextBranchDelta( 768 );
-		}
-	}
+	// virtual void Execute(u32 cycles)=0;
 
-	// Executes a Block based on EE delta time
-	/*virtual void ExecuteBlock(bool startUp=0) {
-		const int vuRunning = m_Idx ? 0x100 : 1;
-		const int c = 1024;
-		if (!(VU0.VI[REG_VPU_STAT].UL & vuRunning)) return;
-		if (startUp) {  // Start Executing a microprogram
-			Execute(c); // Kick start VU
-			m_lastEEcycles = cpuRegs.cycle + (c*2);
-			if (VU0.VI[REG_VPU_STAT].UL & vuRunning)
-				cpuSetNextBranchDelta(c*4); // Let VUs run behind EE instead of ahead		
-		}
-		else { // Continue Executing (VU roughly half the mhz of EE)
-			s32 delta = (s32)(u32)(cpuRegs.cycle - m_lastEEcycles);
-			if (delta > 0) {
-				delta>>=1;
-				DevCon.WriteLn("Event Test1: Running VU0 for %d cycles", delta);
-				Execute(delta);
-				m_lastEEcycles = cpuRegs.cycle;
-				if (VU0.VI[REG_VPU_STAT].UL & vuRunning)
-					cpuSetNextBranchDelta(c*2); // Let VUs run behind EE instead of in front
-			}
-			else {
-				cpuSetNextBranchDelta(-delta);
-				DevCon.WriteLn("Event Test2: Running VU0 for %d cycles", delta/2);
-			}
-		}
-	}*/
+	// Executes a Block based on static preset cycles OR
+	// Executes a Block based on EE delta time (see VUmicro.cpp)
+	virtual void ExecuteBlock(bool startUp=0);
+
+	static void __fastcall ExecuteBlockJIT(BaseVUmicroCPU* cpu);
 };
 
 
