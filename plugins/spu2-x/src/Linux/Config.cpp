@@ -165,7 +165,11 @@ void displayDialog()
     mod_box = gtk_combo_box_new_text ();
     gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "0 - No Sound (emulate SPU2 only)");
     gtk_combo_box_append_text(GTK_COMBO_BOX(mod_box), "1 - PortAudio (cross-platform)");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), 1);
+    if (OutputModule == 0) 
+		gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), 0);
+	else
+		gtk_combo_box_set_active(GTK_COMBO_BOX(mod_box), 1);
+	
     
     // latency slider
     latency_slide = gtk_hscale_new_with_range(LATENCY_MIN, LATENCY_MAX, 5);
