@@ -479,44 +479,20 @@ void GSDevice9::ClearRenderTarget(GSTexture* rt, uint32 c)
 
 void GSDevice9::ClearDepth(GSTexture* t, float c)
 {
-	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight(), t->IsMSAA());
-
-	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
-
-	m_dev->GetRenderTarget(0, &rtsurface);
 	m_dev->GetDepthStencilSurface(&dssurface);
-
-	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
 	m_dev->SetDepthStencilSurface(*(GSTexture9*)t);
-
 	m_dev->Clear(0, NULL, D3DCLEAR_ZBUFFER, 0, c, 0);
-
-	m_dev->SetRenderTarget(0, rtsurface);
 	m_dev->SetDepthStencilSurface(dssurface);
-
-	Recycle(rt);
 }
 
 void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 {
-	GSTexture* rt = CreateRenderTarget(t->GetWidth(), t->GetHeight(), t->IsMSAA());
-
-	CComPtr<IDirect3DSurface9> rtsurface;
 	CComPtr<IDirect3DSurface9> dssurface;
-
-	m_dev->GetRenderTarget(0, &rtsurface);
 	m_dev->GetDepthStencilSurface(&dssurface);
-
-	m_dev->SetRenderTarget(0, *(GSTexture9*)rt);
 	m_dev->SetDepthStencilSurface(*(GSTexture9*)t);
-
 	m_dev->Clear(0, NULL, D3DCLEAR_STENCIL, 0, 0, c);
-
-	m_dev->SetRenderTarget(0, rtsurface);
 	m_dev->SetDepthStencilSurface(dssurface);
-
-	Recycle(rt);
 }
 
 GSTexture* GSDevice9::Create(int type, int w, int h, bool msaa, int format)
@@ -650,7 +626,7 @@ GSTexture* GSDevice9::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, 
 
 void GSDevice9::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 {
-	m_dev->StretchRect(*(GSTexture9*)st, r, *(GSTexture9*)dt, r, D3DTEXF_POINT);
+	m_dev->StretchRect(*(GSTexture9*)st, r, *(GSTexture9*)dt, r, D3DTEXF_NONE);
 }
 
 void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
