@@ -125,7 +125,7 @@ public:
 			Execute(vu0RunCycles); // Kick start VU
 			// If the VU0 program didn't finish then we'll want to finish it up
 			// pretty soon.  This fixes vmhacks in some games (Naruto Ultimate Ninja 2)
-			if(VU0.VI[REG_VPU_STAT].UL & 0x1)
+			if(VU0.VI[REG_VPU_STAT].UL & vuRunning)
 				cpuSetNextBranchDelta( 192 ); // fixme : ideally this should be higher, like 512 or so.
 		}
 		else {
@@ -133,7 +133,7 @@ public:
 			DevCon.Warning("VU0 running when in BranchTest");
 			// This helps keep the EE and VU0 in sync.
 			// Check Silver Surfer. Currently has SPS varying with different branch deltas set below.
-			if(VU0.VI[REG_VPU_STAT].UL & 0x1)
+			if(VU0.VI[REG_VPU_STAT].UL & vuRunning)
 				cpuSetNextBranchDelta( 768 );
 		}
 	}

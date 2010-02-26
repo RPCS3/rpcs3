@@ -206,24 +206,14 @@ void InterpVU0::Step()
 
 void InterpVU0::Execute(u32 cycles)
 {
-	for (int i = 128; i--;)
-	{
-		if ((VU0.VI[REG_VPU_STAT].UL & 0x1) == 0)
-		{
-			// Okey.... It apparenly runs an extra instruction on branches or ebits, but
-			// *only* if the microprogram is longer than 128 instructions. This has got
-			// to be some kind of random gamefix hack. --air
-		
-			if( (i < 0) && (VU0.branch || VU0.ebit) )
-			{
-				// execute one more
-				vu0Exec(&VU0);
+	for (int i = (int)cycles; i > 0 ; i--) {
+		if (!(VU0.VI[REG_VPU_STAT].UL & 0x1)) {
+			if (VU0.branch || VU0.ebit) {
+				vu0Exec(&VU0); // run branch delay slot?
 			}
 			break;
 		}
-
 		vu0Exec(&VU0);
 	}
-
 }
 

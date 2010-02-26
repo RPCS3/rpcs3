@@ -111,7 +111,7 @@ struct microRange {
 	s32 range[mMaxRanges][2];
 };
 
-#define mProgSize 0x4000/4
+#define mProgSize (0x4000/4)
 struct microProgram {
 	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
 	microBlockManager* block[mProgSize/2]; // Array of Block Managers
@@ -122,7 +122,7 @@ struct microProgram {
 	bool isOld;		// Program is Old? (Program hasn't been used in a while)
 };
 
-#define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember' (For n = 1, 2, 4, 8, 16, etc...)
+#define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember'
 struct microProgManager {
 	microIR<mProgSize>	IRinfo;			// IR information
 	microProgram*		prog;			// Store MicroPrograms in memory

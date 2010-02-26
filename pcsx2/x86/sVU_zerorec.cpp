@@ -50,8 +50,8 @@ extern void iDumpVU1Registers();
 
 // SuperVURec optimization options, uncomment only for debugging purposes
 #define SUPERVU_CACHING			// vu programs are saved and queried via memcompare (should be no reason to disable this)
-#define SUPERVU_WRITEBACKS			// don't flush the writebacks after every block
-#define SUPERVU_VIBRANCHDELAY  		 // when integers are modified right before a branch that uses the integer,
+#define SUPERVU_WRITEBACKS		// don't flush the writebacks after every block
+#define SUPERVU_VIBRANCHDELAY	// when integers are modified right before a branch that uses the integer,
 								// the old integer value is used in the branch, fixes kh2
 
 #define SUPERVU_PROPAGATEFLAGS  // the correct behavior of VUs, for some reason superman breaks gfx with it on...
@@ -62,7 +62,7 @@ extern void iDumpVU1Registers();
 //#define SUPERVU_X86CACHING
 
 
-// registers won't be flushed at block boundaries (faster) (nothing noticable speed-wise, causes SPS in Ratchet and clank (Nneeve) )
+// registers won't be flushed at block boundaries (faster) (nothing noticeable speed-wise, causes SPS in Ratchet and clank (Nneeve) )
 #ifndef PCSX2_DEBUG
 //#define SUPERVU_INTERCACHING
 #endif
@@ -104,7 +104,7 @@ extern void (*recVU_LOWER_OPCODE[128])(VURegs* VU, s32 info);
 
 // Let's tempt fate by defining two different constants with almost identical names
 #define INST_DUMMY_			0x8000
-#define INST_DUMMY				0x83c0
+#define INST_DUMMY			0x83c0
 
 #define VFFREE_INVALID0     0x80000000 // (vffree[i]&0xf) is invalid
 
@@ -2869,19 +2869,23 @@ void SuperVUFreeXMMregs(u32* livevars)
 	//_freeXMMregs();
 }
 
+static u32 runCycles = 0; // Cycles to Compare to for early exit
+static u32 backupEAX = 0; // Backup EAX (not sure if this is needed)
 void SuperVUTestVU0Condition(u32 incstack)
 {
 	if (s_vu && !SUPERVU_CHECKCONDITION) return;  // vu0 only
 
-	// sometimes games spin on vu0, so be careful with this value
-	// woody hangs if too high
+	// sometimes games spin on vu0, so be careful with 
+	// runCycles value... woody hangs if too high
 	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
-	CMP32ItoM((uptr)&s_TotalVUCycles, 512*12);	
-
+	MOV32RtoM((uptr)&backupEAX, EAX);
+	MOV32MtoR(EAX, (uptr)&s_TotalVUCycles);
+	CMP32MtoR(EAX, (uptr)&runCycles);
+	MOV32MtoR(EAX, (uptr)&backupEAX);
+	
 	if (incstack)
 	{
 		u8* ptr = JB8(0);
-
 		ADD32ItoR(ESP, incstack);
 		//CALLFunc((u32)timeout);
 		JMP32((uptr)SuperVUEndProgram - ((uptr)x86Ptr + 5));
@@ -4634,6 +4638,7 @@ void recSuperVU0::Execute(u32 cycles)
 	if ((VU0.VI[REG_VPU_STAT].UL & 1) == 0) return;
 
 	XMMRegisters::Freeze();
+	runCycles = cycles;
 	SuperVUExecuteProgram(VU0.VI[REG_TPC].UL & 0xfff, 0);
 	XMMRegisters::Thaw();
 }
@@ -4676,7 +4681,7 @@ void recSuperVU1::Execute(u32 cycles)
 	// [TODO] Debugging pre- and post- hooks?
 
 	XMMRegisters::Freeze();
-
+	
 	if (VU1.VI[REG_TPC].UL >= VU1.maxmicro) {
 		Console.Error("VU1 memory overflow!!: %x", VU1.VI[REG_TPC].UL); 
 	}

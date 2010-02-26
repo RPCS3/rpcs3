@@ -187,24 +187,15 @@ void InterpVU1::Step()
 	vu1Exec( &VU1 );
 }
 
-void InterpVU1::Execute(u32 cycles)
+void InterpVU1::Execute(u32 cycles) 
 {
-	for (int i = 128; i--;)
-	{
-		if ((VU0.VI[REG_VPU_STAT].UL & 0x100) == 0)
-		{
-			// See VU0Interp's version for details.  Or just read the comment below
-			// that simply reads "execute one more" and wonder: Why? Really... WHY?
-			// --air
-
-			if( (i < 0) && (VU1.branch || VU1.ebit) )
-			{
-				// execute one more
-				vu1Exec(&VU1);
+	for (int i = (int)cycles; i > 0 ; i--) {
+		if (!(VU0.VI[REG_VPU_STAT].UL & 0x100)) {
+			if (VU1.branch || VU1.ebit) {
+				vu1Exec(&VU1); // run branch delay slot?
 			}
 			break;
 		}
-
 		vu1Exec(&VU1);
 	}
 }
