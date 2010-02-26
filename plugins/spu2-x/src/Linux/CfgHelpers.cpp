@@ -91,6 +91,13 @@ int CfgReadInt(const wchar_t* Section, const wchar_t* Name,int Default)
 	return ret;
 }
 
+void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wchar_t* Data, int DataSize, const wchar_t* Default)
+{
+	wxConfig *config = setIni(Section);
+	wcscpy(Data, config->Read(Name, Default));
+	writeIni(config);
+}
+
 void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wxString& Data, int DataSize, const wchar_t* Default)
 {
 	wxConfig *config = setIni(Section);
@@ -104,3 +111,4 @@ void CfgReadStr(const wchar_t* Section, const wchar_t* Name, wstring& Data, int 
 	CfgReadStr(Section, Name, temp, DataSize, Default);
 	Data = temp.c_str();
 }
+

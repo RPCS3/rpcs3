@@ -67,13 +67,15 @@ extern bool EffectsDisabled;
 
 extern u32 OutputModule;
 extern int SndOutLatencyMS;
+extern bool timeStretchDisabled;
 
+#ifndef __LINUX__
 extern wchar_t dspPlugin[];
 extern int  dspPluginModule;
 
 extern bool	dspPluginEnabled;
-extern bool timeStretchDisabled;
 extern bool StereoExpansionEnabled;
+#endif
 
 namespace SoundtouchCfg
 {

@@ -405,7 +405,9 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	{
 		SndBuffer::Init();
 		spdif_init();
+#ifndef __LINUX__
 		DspLoadLibrary(dspPlugin,dspPluginModule);
+#endif
 		WaveDump::Open();
 	}
 	catch( std::exception& ex )

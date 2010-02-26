@@ -325,7 +325,7 @@ static s32 __forceinline GetNoiseValues()
 		"XOR %%eax,%%ebx\n"
 		"ROR %%eax,3\n"
 		"MOV %0,%%eax\n"
-		".att_syntax\n" : "r="(Seed) :"r"(Seed));
+		".att_syntax\n" : "=r"(Seed) :"r"(Seed));
 #endif
 	return retval;
 }
