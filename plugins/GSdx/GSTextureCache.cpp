@@ -398,85 +398,76 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 {
 	uint32 bp = o->bp;
 	uint32 psm = o->psm;
+	uint32 bw = o->bw;
 
+	// No depth handling please.
+	if (psm == PSM_PSMZ32 || psm == PSM_PSMZ24 || psm == PSM_PSMZ16 || psm == PSM_PSMZ16S)
+		return;
+
+	GSTextureCache::Target* rt2 = NULL;
+	int ymin = INT_MAX;
 	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
 	{
 		list<Target*>::iterator j = i++;
 
 		Target* t = *j;
 
-		if(GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
+		if (t->m_TEX0.PSM != PSM_PSMZ32 && t->m_TEX0.PSM != PSM_PSMZ24 && t->m_TEX0.PSM != PSM_PSMZ16 && t->m_TEX0.PSM != PSM_PSMZ16S)
 		{
-			if(GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
+			if(GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 			{
-				Read(t, r.rintersect(t->m_valid));
-
-				return;
-			}
-			else if(psm == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S)) 
-			{
-				// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
-
-				Read(t, GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid));
-
-				return;
-			}
-			else
-			{
-				if (psm == PSM_PSMT4HH && t->m_TEX0.PSM == PSM_PSMCT32) 
+				if(GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
 				{
-					// Silent Hill Origins shadows: Read 8 bit using only the HIGH bits (4 bit) texture as 32 bit.
 					Read(t, r.rintersect(t->m_valid));
+					return;
+				}
+				else if(psm == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S)) 
+				{
+					// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
+					Read(t, GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid));
 					return;
 				}
 				else
 				{
-					//printf("Trashing render target. We have a %d type texture and we are trying to write into a %d type texture\n", t->m_TEX0.PSM, psm);
-					m_dst[RenderTarget].erase(j);
-					delete t;
+					if (psm == PSM_PSMT4HH && t->m_TEX0.PSM == PSM_PSMCT32) 
+					{
+						// Silent Hill Origins shadows: Read 8 bit using only the HIGH bits (4 bit) texture as 32 bit.
+						Read(t, r.rintersect(t->m_valid));
+						return;
+					}
+					else
+					{
+						//printf("Trashing render target. We have a %d type texture and we are trying to write into a %d type texture\n", t->m_TEX0.PSM, psm);
+						m_dst[RenderTarget].erase(j);
+						delete t;
+					}
 				}
 			}
-		}
-	}
-/*
-	// no good, ffx does a lot of readback after exiting menu, at 0x02f00 this wrongly finds rt 0x02100 (0,448 - 512,480)
 
-	GSRenderTarget* rt2 = NULL;
-	int ymin = INT_MAX;
-
-	pos = m_rt.GetHeadPosition();
-
-	while(pos)
-	{
-		GSRenderTarget* rt = m_rt.GetNext(pos);
-
-		if(HasSharedBits(BITBLTBUF.SPSM, rt->m_TEX0.PSM) && BITBLTBUF.SBP > rt->m_TEX0.TBP0)
-		{
-			// ffx2 pause screen background
-
-			uint32 rowsize = BITBLTBUF.SBW * 8192;
-			uint32 offset = (uint32)((BITBLTBUF.SBP - rt->m_TEX0.TBP0) * 256);
-
-			if(rowsize > 0 && offset % rowsize == 0)
+			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && bp > t->m_TEX0.TBP0)
 			{
-				int y = GSLocalMemory::m_psm[BITBLTBUF.SPSM].pgs.y * offset / rowsize;
+				uint32 rowsize = bw * 8192;
+				uint32 offset = (uint32)((bp - t->m_TEX0.TBP0) * 256);
 
-				if(y < ymin && y < 512)
+				if(rowsize > 0 && offset % rowsize == 0)
 				{
-					rt2 = rt;
-					ymin = y;
+					int y = GSLocalMemory::m_psm[psm].pgs.y * offset / rowsize;
+
+					if(y < ymin && y < 512)
+					{
+						rt2 = t;
+						ymin = y;
+					}
 				}
 			}
 		}
 	}
-
 	if(rt2)
 	{
-		rt2->Read(GSVector4i(r.left, r.top + ymin, r.right, r.bottom + ymin));
+		Read(rt2, GSVector4i(r.left, r.top + ymin, r.right, r.bottom + ymin));
 	}
 
 	// TODO: ds
-*/
 }
 
 void GSTextureCache::IncAge()
