@@ -58,9 +58,9 @@ void BaseVUmicroCPU::ExecuteBlock(bool startUp) {
 void __fastcall BaseVUmicroCPU::ExecuteBlockJIT(BaseVUmicroCPU* cpu) {
 	const u32& stat	= VU0.VI[REG_VPU_STAT].UL;
 	const int  test = cpu->m_Idx ? 0x100 : 1;
-	const int c = 1024*1; // VU Execution Cycles
-	if (stat & test) {	  // VU is running
-		cpu->Execute(c);  // Execute VU
+	const int  c	= 128;	// VU Execution Cycles
+	if (stat & test) {		// VU is running
+		cpu->Execute(c);	// Execute VU
 		if (stat & test) {
 			cpu->m_lastEEcycles+=(c*2);
 			cpuSetNextBranchDelta(c*2);
@@ -96,7 +96,7 @@ void BaseVUmicroCPU::ExecuteBlock(bool startUp) {
 // This function is called by VU0 Macro (COP2) after transferring
 // EE data to a VU0 register...
 void __fastcall BaseVUmicroCPU::ExecuteBlockJIT(BaseVUmicroCPU* cpu) {
-	cpu->Execute(1024);
+	cpu->Execute(128);
 }
 
 #endif
