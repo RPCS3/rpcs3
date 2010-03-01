@@ -47,7 +47,11 @@ struct VS_OUTPUT
 
 struct PS_INPUT
 {
+#if SHADER_MODEL < 0x300
+	float4 p : TEXCOORD1;
+#else
 	float4 p : VPOS;
+#endif
 	float2 t : TEXCOORD0;
 };
 
