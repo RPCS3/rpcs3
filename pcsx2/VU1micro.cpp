@@ -40,14 +40,17 @@ void vu1ResetRegs()
 	vif1Regs->stat.VEW = false;
 }
 
-static int count;
-
-void __fastcall vu1ExecMicro(u32 addr)
-{
-	while(VU0.VI[REG_VPU_STAT].UL & 0x100) {
+void vu1Finish() {
+	while (VU0.VI[REG_VPU_STAT].UL & 0x100) {
 		VUM_LOG("vu1ExecMicro > Stalling until current microprogram finishes");
 		CpuVU1->Execute(vu1RunCycles);
 	}
+}
+
+void __fastcall vu1ExecMicro(u32 addr)
+{
+	static int count = 0;
+	vu1Finish();
 
 	VUM_LOG("vu1ExecMicro %x", addr);
 	VUM_LOG("vu1ExecMicro %x (count=%d)", addr, count++);

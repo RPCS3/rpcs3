@@ -111,6 +111,13 @@ struct microRange {
 	s32 range[mMaxRanges][2];
 };
 
+enum microProgramAge {
+	isYoung = 0,
+	isAged  = 1,
+	isOld   = 2,
+	isDead  = 3
+};
+
 #define mProgSize (0x4000/4)
 struct microProgram {
 	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
@@ -118,8 +125,7 @@ struct microProgram {
 	microRange		   ranges;			   // The ranges of the microProgram that have already been recompiled
 	u32  frame;		// Frame # the program was last used on
 	u32  used;		// Program was used this frame?
-	bool isDead;	// Program is Dead?
-	bool isOld;		// Program is Old? (Program hasn't been used in a while)
+	int  age;		// Program age... Young, Aged, Old, or Dead...
 };
 
 #define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember'

@@ -294,6 +294,7 @@ extern void vu0Finish();
 extern void recResetVU0( void );
 
 // VU1
+extern void vu1Finish();
 extern void vu1ResetRegs();
 extern void __fastcall vu1ExecMicro(u32 addr);
 extern void vu1Exec(VURegs* VU);

@@ -19,11 +19,12 @@
 #include "VUmicro.h"
 #include "newVif.h"
 
-__forceinline void vif0FLUSH()
+// Run VU0 until finish, don't add cycles to EE
+// because its vif stalling not the EE core...
+__forceinline void vif0FLUSH() 
 {
+	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 	int _cycles = VU0.cycle;
-	// Run VU0 until finish, don't add cycles to EE
-	// because its vif stalling not the EE core...
 	vu0Finish();
 	g_vifCycles += (VU0.cycle - _cycles) * BIAS;
 }

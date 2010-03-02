@@ -21,17 +21,12 @@
 #include "VUmicro.h"
 #include "newVif.h"
 
-__forceinline void vif1FLUSH()
+__forceinline void vif1FLUSH() 
 {
-	if (VU0.VI[REG_VPU_STAT].UL & 0x100) 
-	{
-		int _cycles = VU1.cycle;
-
-		do { CpuVU1->Execute(vu1RunCycles); }
-		while (VU0.VI[REG_VPU_STAT].UL & 0x100);
-
-		g_vifCycles += (VU1.cycle - _cycles) * BIAS;
-	}
+	if (!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
+	int _cycles = VU1.cycle;
+	vu1Finish();
+	g_vifCycles += (VU1.cycle - _cycles) * BIAS;
 }
 
 void vif1TransferFromMemory()
