@@ -363,7 +363,10 @@ EXPORT_C GSvsync(int field)
 
 EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 {
-	return s_gs->MakeSnapshot(string(path) + "gsdx");
+	string str = string(path);
+	if (str[str.length()] != '\\')
+		str = str + "\\";
+	return s_gs->MakeSnapshot(str + "gsdx");
 }
 
 EXPORT_C GSkeyEvent(GSKeyEventData* e)

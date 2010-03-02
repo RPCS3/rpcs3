@@ -386,6 +386,8 @@ void Pcsx2App::InitDefaultGlobalAccelerators()
 	
 	GlobalAccels.Map( AAC( WXK_ESCAPE ),		"Sys_Suspend");
 	GlobalAccels.Map( AAC( WXK_F8 ),			"Sys_TakeSnapshot");
+	GlobalAccels.Map( AAC( WXK_F8 ).Shift(),	"Sys_TakeSnapshot");
+	GlobalAccels.Map( AAC( WXK_F8 ).Shift().Cmd(),"Sys_TakeSnapshot");
 	GlobalAccels.Map( AAC( WXK_F9 ),			"Sys_RenderswitchToggle");
 
 	GlobalAccels.Map( AAC( WXK_F10 ),			"Sys_LoggingToggle");
