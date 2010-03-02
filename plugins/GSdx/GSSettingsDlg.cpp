@@ -69,6 +69,8 @@ GSSetting GSSettingsDlg::g_upscale_multiplier[] =
 	{2, "2x", NULL},
 	{3, "3x", NULL},
 	{4, "4x", NULL},
+	{5, "5x", NULL},
+	{6, "6x", NULL},
 };
 
 GSSettingsDlg::GSSettingsDlg( bool isOpen2 )

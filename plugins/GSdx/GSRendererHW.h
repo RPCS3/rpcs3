@@ -721,7 +721,7 @@ public:
 			m_width = theApp.GetConfig("resx", m_width);
 			m_height = theApp.GetConfig("resy", m_height);
 			m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", m_upscale_multiplier);
-			if (m_upscale_multiplier > 4) m_upscale_multiplier = 1; //use the normal upscale math
+			if (m_upscale_multiplier > 6) m_upscale_multiplier = 1; //use the normal upscale math
 			if (m_upscale_multiplier > 1) 
 			{
 				m_width  = 640 * m_upscale_multiplier; //512 is also common, but this is not always detected right.

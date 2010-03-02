@@ -37,7 +37,7 @@ GSRenderer::GSRenderer()
 	
 	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
 	if(m_nativeres) m_upscale_multiplier = 1;
-	else if (m_upscale_multiplier > 4) m_upscale_multiplier = 1;
+	else if (m_upscale_multiplier > 6) m_upscale_multiplier = 1;
 
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 
