@@ -110,7 +110,9 @@ void RecordStart()
 
 void RecordStop()
 {
-	safe_delete( m_wavrecord );
+	WavOutFile* t = m_wavrecord;
+	m_wavrecord = NULL;
+	delete t;
 }
 
 void RecordWrite( const StereoOut16& sample )
