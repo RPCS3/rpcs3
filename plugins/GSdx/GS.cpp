@@ -364,7 +364,7 @@ EXPORT_C GSvsync(int field)
 EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 {
 	string str = string(path);
-	if (str[str.length()] != '\\')
+	if (str[str.length() - 1] != '\\')
 		str = str + "\\";
 	return s_gs->MakeSnapshot(str + "gsdx");
 }
@@ -627,7 +627,6 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 		fclose(fp);
 	}
-	PostQuitMessage(0);
 }
 
 EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
