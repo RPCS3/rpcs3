@@ -444,8 +444,11 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 				}
 			}
 
-			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && bp > t->m_TEX0.TBP0)
+			// Grandia3, FFX, FFX-2 pause menus. t->m_TEX0.TBP0 magic number checks because otherwise kills xs2 videos
+			if( (GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && (bp > t->m_TEX0.TBP0) ) 
+				&& ((t->m_TEX0.TBP0 == 0) || (t->m_TEX0.TBP0==3328) || (t->m_TEX0.TBP0==3584) ))
 			{
+				//printf("first : %d-%d child : %d-%d\n", psm, bp, t->m_TEX0.PSM, t->m_TEX0.TBP0);
 				uint32 rowsize = bw * 8192;
 				uint32 offset = (uint32)((bp - t->m_TEX0.TBP0) * 256);
 
