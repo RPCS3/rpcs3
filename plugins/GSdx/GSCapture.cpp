@@ -434,16 +434,26 @@ bool GSCapture::BeginCapture(int fps)
 
 	m_src = new GSSource(m_size.x, m_size.y, fps, NULL, hr);
 
-	if(FAILED(hr = m_graph->AddFilter(m_src, L"Source"))
-	|| FAILED(hr = m_graph->AddFilter(dlg.m_enc, L"Encoder")))
+	if (dlg.m_enc==0)
 	{
-		return false;
+		if (FAILED(hr = m_graph->AddFilter(m_src, L"Source")))
+			return false;
+		if (FAILED(hr = m_graph->ConnectDirect(GetFirstPin(m_src, PINDIR_OUTPUT), GetFirstPin(mux, PINDIR_INPUT), NULL)))
+			return false;
 	}
-
-	if(FAILED(hr = m_graph->ConnectDirect(GetFirstPin(m_src, PINDIR_OUTPUT), GetFirstPin(dlg.m_enc, PINDIR_INPUT), NULL))
-	|| FAILED(hr = m_graph->ConnectDirect(GetFirstPin(dlg.m_enc, PINDIR_OUTPUT), GetFirstPin(mux, PINDIR_INPUT), NULL)))
+	else
 	{
-		return false;
+		if(FAILED(hr = m_graph->AddFilter(m_src, L"Source"))
+		|| FAILED(hr = m_graph->AddFilter(dlg.m_enc, L"Encoder")))
+		{
+			return false;
+		}
+
+		if(FAILED(hr = m_graph->ConnectDirect(GetFirstPin(m_src, PINDIR_OUTPUT), GetFirstPin(dlg.m_enc, PINDIR_INPUT), NULL))
+		|| FAILED(hr = m_graph->ConnectDirect(GetFirstPin(dlg.m_enc, PINDIR_OUTPUT), GetFirstPin(mux, PINDIR_INPUT), NULL)))
+		{
+			return false;
+		}
 	}
 
 	BeginEnumFilters(m_graph, pEF, pBF)

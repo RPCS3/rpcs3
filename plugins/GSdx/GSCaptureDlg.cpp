@@ -68,6 +68,7 @@ void GSCaptureDlg::OnInit()
 
 	ComboBoxAppend(IDC_CODECS, "Uncompressed", 0, true);
 
+	CoInitialize(0);
 	BeginEnumSysDev(CLSID_VideoCompressorCategory, moniker)
 	{
 		Codec c;
@@ -179,7 +180,8 @@ bool GSCaptureDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 
 		Codec c;
 
-		if(GetSelCodec(c) == 0)
+		int ris = GetSelCodec(c);
+		if(ris == 0)
 		{
 			return false;
 		}
@@ -190,9 +192,15 @@ bool GSCaptureDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		theApp.SetConfig("CaptureHeight", m_height);
 		theApp.SetConfig("CaptureFileName", m_filename.c_str());
 
-		wstring s = wstring(c.DisplayName.m_str);
-
-		theApp.SetConfig("CaptureVideoCodecDisplayName", string(s.begin(), s.end()).c_str());
+		if (ris != 2)
+		{
+			wstring s = wstring(c.DisplayName.m_str);
+			theApp.SetConfig("CaptureVideoCodecDisplayName", string(s.begin(), s.end()).c_str());
+		}
+		else
+		{
+			theApp.SetConfig("CaptureVideoCodecDisplayName", "");
+		}
 	}
 
 	return __super::OnCommand(hWnd, id, code);
