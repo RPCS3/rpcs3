@@ -106,6 +106,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/D_SCL_SECURE_NO_WARNINGS"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="include"
@@ -115,6 +116,7 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="4"
 				DebugInformationFormat="3"
+				DisableSpecificWarnings="4127;4355"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
