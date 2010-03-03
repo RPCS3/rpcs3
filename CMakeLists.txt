@@ -13,6 +13,11 @@ if(CMAKE_COMPILER_IS_GNUCC)
   set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra -pedantic -Wno-long-long ${CMAKE_CXX_FLAGS}")
 endif(CMAKE_COMPILER_IS_GNUCC)
 
+if(MSVC)
+  set(LIB_TYPE) # I can't figure out how CMake handles Windows shared libraries
+  set(CMAKE_CXX_FLAGS "/W3 /wd4127 /wd4355 /D_SCL_SECURE_NO_WARNINGS ${CMAKE_CXX_FLAGS}")
+endif(MSVC)
+
 set(YAML_CPP_VERSION_MAJOR "0")
 set(YAML_CPP_VERSION_MINOR "2")
 set(YAML_CPP_VERSION_PATCH "4")

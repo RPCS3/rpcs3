@@ -20,7 +20,7 @@ namespace YAML
 	class Content;
 	class Scanner;
 	class Emitter;
-	class ParserState;
+	struct ParserState;
 
 	enum CONTENT_TYPE { CT_NONE, CT_SCALAR, CT_SEQUENCE, CT_MAP };
 

@@ -23,7 +23,8 @@ namespace YAML
 	inline bool Convert(const std::string& input, T& output, typename enable_if<is_numeric<T> >::type * = 0) {
 		std::stringstream stream(input);
 		stream.unsetf(std::ios::dec);
-		return stream >> output;
+		stream >> output;
+		return !!stream;
 	}
 }
 

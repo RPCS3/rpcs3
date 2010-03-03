@@ -39,6 +39,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				AdditionalOptions="/D_SCL_SECURE_NO_WARNINGS"
 				Optimization="0"
 				AdditionalIncludeDirectories="include"
 				MinimalRebuild="true"
@@ -46,6 +47,7 @@
 				RuntimeLibrary="3"
 				WarningLevel="3"
 				DebugInformationFormat="4"
+				DisableSpecificWarnings="4127;4355"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

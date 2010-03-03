@@ -15,7 +15,7 @@
 namespace YAML
 {
 	class Scanner;
-	class ParserState;
+	struct ParserState;
 	struct Token;
 
 	class Parser: private noncopyable
