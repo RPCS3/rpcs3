@@ -492,6 +492,8 @@ extern SndOutModule* mods[];
 
 // =====================================================================================================
 
+extern bool WavRecordEnabled;
+
 extern void RecordStart();
 extern void RecordStop();
 extern void RecordWrite( const StereoOut16& sample );

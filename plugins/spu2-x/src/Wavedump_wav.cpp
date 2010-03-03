@@ -91,32 +91,43 @@ namespace WaveDump
 	}
 }
 
-WavOutFile* m_wavrecord = NULL;
+#include "Utilities/Threading.h"
+
+using namespace Threading;
+
+bool WavRecordEnabled = false;
+
+static WavOutFile*		m_wavrecord = NULL;
+static Mutex			WavRecordMutex;
 
 void RecordStart()
 {
-	safe_delete( m_wavrecord );
+	WavRecordEnabled = false;
 
 	try
 	{
+		ScopedLock lock( WavRecordMutex );
+		safe_delete( m_wavrecord );
 		m_wavrecord = new WavOutFile( "recording.wav", 48000, 16, 2 );
+		WavRecordEnabled = true;
 	}
 	catch( std::runtime_error& )
 	{
+		m_wavrecord = NULL;		// not needed, but what the heck. :)
 		SysMessage("SPU2-X couldn't open file for recording: %s.\nRecording to wavfile disabled.", "recording.wav");
-		m_wavrecord = NULL;	
 	}
 }
 
 void RecordStop()
 {
-	WavOutFile* t = m_wavrecord;
-	m_wavrecord = NULL;
-	delete t;
+	WavRecordEnabled = false;
+	ScopedLock lock( WavRecordMutex );
+	safe_delete( m_wavrecord );
 }
 
 void RecordWrite( const StereoOut16& sample )
 {
+	ScopedLock lock( WavRecordMutex );
 	if( m_wavrecord == NULL ) return;
 	m_wavrecord->write( (s16*)&sample, 2 );
 }

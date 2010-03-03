@@ -310,7 +310,7 @@ void SndBuffer::Write( const StereoOut32& Sample )
 	// Log final output to wavefile.
 	WaveDump::WriteCore( 1, CoreSrc_External, Sample.DownSample() );
 
-	RecordWrite( Sample.DownSample() );
+	if( WavRecordEnabled ) RecordWrite( Sample.DownSample() );
 
 	if(mods[OutputModule] == &NullOut) // null output doesn't need buffering or stretching! :p
 		return;
