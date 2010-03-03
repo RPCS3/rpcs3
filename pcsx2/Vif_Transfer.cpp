@@ -31,15 +31,11 @@ _vifT void runMark(u32* &data) {
 	}
 }
 
-// Returns 1 if i-bit && finished vifcode && i-bit not masked && next vifcode != MARK
-_vifT bool analyzeIbit(u32* &data, int iBit, bool isTag) {
+// Returns 1 if i-bit && finished vifcode && i-bit not masked
+_vifT bool analyzeIbit(u32* &data, int iBit) {
 	if (iBit && !vifX.cmd && !vifXRegs->err.MII) {
 		//DevCon.WriteLn("Vif I-Bit IRQ");
 		vifX.irq++;
-		if (isTag) {
-			//DevCon.WriteLn("Vif isTag Hack!?");
-			vifX.stallontag = true;
-		}
 		runMark<idx>(data);
 		return 1;
 	}
@@ -47,7 +43,7 @@ _vifT bool analyzeIbit(u32* &data, int iBit, bool isTag) {
 }
 
 // Interprets packet
-_vifT void vifTransferLoop(u32* &data, bool isTag) {
+_vifT void vifTransferLoop(u32* &data) {
 	u32& tSize = vifX.tag.size;
 	u32& pSize = vifX.vifpacketsize;
 	int  iBit  = vifX.cmd >> 7;
@@ -64,20 +60,21 @@ _vifT void vifTransferLoop(u32* &data, bool isTag) {
 
 			vifXCode[vifX.cmd & 0x7f](0, data);
 			data++; pSize--;
-			if (analyzeIbit<idx>(data, iBit, isTag)) break;
+			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;
 		}
 		
 		int ret = vifXCode[vifX.cmd & 0x7f](1, data);
 		data   += ret;
 		pSize  -= ret;
-		if (analyzeIbit<idx>(data, iBit, isTag)) break;
+		if (analyzeIbit<idx>(data, iBit)) break;
 	}
 	if (vifX.cmd) vifXRegs->stat.VPS = VPS_WAITING;
 	else		  vifXRegs->stat.VPS = VPS_IDLE;
+	if (pSize)	  vifX.vifstalled	 = true;
 }
 
-_vifT _f bool vifTransfer(u32 *data, int size, bool isTag) {
+_vifT _f bool vifTransfer(u32 *data, int size) {
 	// irqoffset necessary to add up the right qws, or else will spin (spiderman)
 	int transferred = vifX.vifstalled ? vifX.irqoffset : 0;
 
@@ -86,27 +83,22 @@ _vifT _f bool vifTransfer(u32 *data, int size, bool isTag) {
 	vifX.stallontag = false;
 	vifX.vifpacketsize = size;
 
-	vifTransferLoop<idx>(data, isTag);
+	vifTransferLoop<idx>(data);
 
 	transferred   += size - vifX.vifpacketsize;
 	g_vifCycles   +=(transferred >> 2) * BIAS; /* guessing */
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
-	if (!isTag) {
-		transferred   = transferred >> 2;
-		vifXch->madr +=(transferred << 4);
-		vifXch->qwc  -= transferred;
-	}
+	transferred   = transferred >> 2;
+	vifXch->madr +=(transferred << 4);
+	vifXch->qwc  -= transferred;
 
-	if (!vifXch->qwc && (!vifX.irqoffset || isTag)) vifX.inprogress &= ~0x1;
+	if (!vifXch->qwc && !vifX.irqoffset) vifX.inprogress &= ~0x1;
 
 	if (vifX.irq && vifX.cmd == 0) {
 		//DevCon.WriteLn("Vif IRQ!");
 		vifX.vifstalled    = true;
 		vifXRegs->stat.VIS = true; // Note: commenting this out fixes WALL-E?
-
-		// spiderman doesn't break on qw boundaries
-		if (isTag) return false;
 
 		if (!vifXch->qwc && !vifX.irqoffset) vifX.inprogress = 0;
 		return false;
@@ -116,8 +108,8 @@ _vifT _f bool vifTransfer(u32 *data, int size, bool isTag) {
 }
 
 bool VIF0transfer(u32 *data, int size, bool istag) {
-	return vifTransfer<0>(data, size, istag);
+	return vifTransfer<0>(data, size);
 }
 bool VIF1transfer(u32 *data, int size, bool istag) {
-	return vifTransfer<1>(data, size, istag);
+	return vifTransfer<1>(data, size);
 }
