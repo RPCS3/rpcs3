@@ -6,12 +6,15 @@ using Reflection = System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Diagnostics;
+using GSDumpGUI.Properties;
 
 namespace GSDumpGUI
 {
     static class Program
     {
         static public GSDumpGUI frmMain;
+
+        static private Boolean ChangeIcon;
 
         [STAThread]
         static void Main(String[] args)
@@ -22,6 +25,15 @@ namespace GSDumpGUI
                 {
                     while (true)
                     {
+                        if (ChangeIcon)
+                        {
+                            IntPtr pt = Process.GetCurrentProcess().MainWindowHandle;
+                            if (pt.ToInt64() != 0)
+                            {
+                                NativeMethods.SetClassLong(pt, -14, Resources.AppIcon.Handle.ToInt64());
+                                ChangeIcon = false;
+                            }
+                        }
                         Int32 tmp = NativeMethods.GetAsyncKeyState(0x1b) & 0xf;
                         if (tmp != 0)
                             Process.GetCurrentProcess().Kill();
@@ -37,32 +49,19 @@ namespace GSDumpGUI
                 String Operation = args[2];
                 Int32 Renderer = Convert.ToInt32(args[3]);
 
-                // Try to load the DLL in memory
-                IntPtr hmod = NativeMethods.LoadLibrary(DLLPath);
-                if (hmod.ToInt64() > 0)
+                GSDXWrapper wrap = new GSDXWrapper();
+                wrap.Load(DLLPath);
+                if (Operation == "GSReplay")
                 {
-                    // Search if the DLL has the requested operation
-                    IntPtr funcaddr = NativeMethods.GetProcAddress(hmod, Operation);
-                    if (funcaddr.ToInt64() > 0)
-                    {
-                        // Execute the appropriate function pointer by casting it to a delegate.
-                        if (Operation == "GSReplay")
-                        {
-                            GSDXImport.GSReplay dg = (GSDXImport.GSReplay)Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(GSDXImport.GSReplay));
-                            if (Renderer != -1)
-                                dg.Invoke(new IntPtr(0), new IntPtr(0), Renderer + " " + DumpPath, false);
-                            else
-                                dg.Invoke(new IntPtr(0), new IntPtr(0), DumpPath, false);
-                        }
-                        else
-                        {
-                            GSDXImport.GSConfigure dg = (GSDXImport.GSConfigure)Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(GSDXImport.GSConfigure));
-                            dg.Invoke();
-                        }
-                    }
-                    // Unload the library.
-                    NativeMethods.FreeLibrary(hmod);
+                    ChangeIcon = true;
+                    if (Renderer != -1)
+                        wrap.GSReplayDump(Renderer + " " + DumpPath);
+                    else
+                        wrap.GSReplayDump(DumpPath);
                 }
+                else
+                    wrap.GSConfig();
+                wrap.Unload();
             }
             else
             {

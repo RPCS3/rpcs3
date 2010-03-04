@@ -50,7 +50,7 @@
     <Compile Include="Forms\frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="Library\GSDXImport.cs" />
+    <Compile Include="Library\GSDXWrapper.cs" />
     <Compile Include="Library\NativeMethods.cs" />
     <Compile Include="Core\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

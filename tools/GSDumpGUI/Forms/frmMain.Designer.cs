@@ -129,7 +129,6 @@
             this.lstGSDX.Name = "lstGSDX";
             this.lstGSDX.Size = new System.Drawing.Size(301, 225);
             this.lstGSDX.TabIndex = 1;
-            this.lstGSDX.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lstGSDX_KeyDown);
             // 
             // lstDumps
             // 
@@ -139,7 +138,6 @@
             this.lstDumps.Size = new System.Drawing.Size(301, 225);
             this.lstDumps.TabIndex = 0;
             this.lstDumps.SelectedIndexChanged += new System.EventHandler(this.lstDumps_SelectedIndexChanged);
-            this.lstDumps.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lstDumps_KeyDown);
             // 
             // lblDumps
             // 
@@ -229,9 +227,10 @@
             this.rdaDX9HW.Name = "rdaDX9HW";
             this.rdaDX9HW.Size = new System.Drawing.Size(68, 17);
             this.rdaDX9HW.TabIndex = 18;
+            this.rdaDX9HW.Tag = "1";
             this.rdaDX9HW.Text = "DX9 HW";
             this.rdaDX9HW.UseVisualStyleBackColor = true;
-            this.rdaDX9HW.CheckedChanged += new System.EventHandler(this.rdaDX9HW_CheckedChanged);
+            this.rdaDX9HW.CheckedChanged += new System.EventHandler(this.rda_CheckedChanged);
             // 
             // rdaDX10HW
             // 
@@ -240,9 +239,10 @@
             this.rdaDX10HW.Name = "rdaDX10HW";
             this.rdaDX10HW.Size = new System.Drawing.Size(74, 17);
             this.rdaDX10HW.TabIndex = 19;
+            this.rdaDX10HW.Tag = "2";
             this.rdaDX10HW.Text = "DX10 HW";
             this.rdaDX10HW.UseVisualStyleBackColor = true;
-            this.rdaDX10HW.CheckedChanged += new System.EventHandler(this.rdaDX10HW_CheckedChanged);
+            this.rdaDX10HW.CheckedChanged += new System.EventHandler(this.rda_CheckedChanged);
             // 
             // rdaDX9SW
             // 
@@ -251,9 +251,10 @@
             this.rdaDX9SW.Name = "rdaDX9SW";
             this.rdaDX9SW.Size = new System.Drawing.Size(67, 17);
             this.rdaDX9SW.TabIndex = 20;
+            this.rdaDX9SW.Tag = "3";
             this.rdaDX9SW.Text = "DX9 SW";
             this.rdaDX9SW.UseVisualStyleBackColor = true;
-            this.rdaDX9SW.CheckedChanged += new System.EventHandler(this.rdaDX9SW_CheckedChanged);
+            this.rdaDX9SW.CheckedChanged += new System.EventHandler(this.rda_CheckedChanged);
             // 
             // rdaDX10SW
             // 
@@ -262,9 +263,10 @@
             this.rdaDX10SW.Name = "rdaDX10SW";
             this.rdaDX10SW.Size = new System.Drawing.Size(73, 17);
             this.rdaDX10SW.TabIndex = 21;
+            this.rdaDX10SW.Tag = "4";
             this.rdaDX10SW.Text = "DX10 SW";
             this.rdaDX10SW.UseVisualStyleBackColor = true;
-            this.rdaDX10SW.CheckedChanged += new System.EventHandler(this.rdaDX10SW_CheckedChanged);
+            this.rdaDX10SW.CheckedChanged += new System.EventHandler(this.rda_CheckedChanged);
             // 
             // lblOverride
             // 
@@ -284,9 +286,10 @@
             this.rdaNone.Size = new System.Drawing.Size(51, 17);
             this.rdaNone.TabIndex = 23;
             this.rdaNone.TabStop = true;
+            this.rdaNone.Tag = "0";
             this.rdaNone.Text = "None";
             this.rdaNone.UseVisualStyleBackColor = true;
-            this.rdaNone.CheckedChanged += new System.EventHandler(this.rdaNone_CheckedChanged);
+            this.rdaNone.CheckedChanged += new System.EventHandler(this.rda_CheckedChanged);
             // 
             // GSDumpGUI
             // 

@@ -47,10 +47,18 @@ namespace GSDumpGUI
             }
         }
 
+        private Bitmap NoImage;
+
         public GSDumpGUI()
         {
             InitializeComponent();
             Processes = new List<Process>();
+
+            NoImage = new Bitmap(320, 240, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            Graphics g = Graphics.FromImage(NoImage);
+            g.FillRectangle(new SolidBrush(Color.Black), new Rectangle(0, 0, 320, 240));
+            g.DrawString("No Image", new Font(FontFamily.GenericSansSerif, 48, FontStyle.Regular), new SolidBrush(Color.White), new PointF(0, 70));
+            g.Dispose();
         }
 
         public void ReloadGSDXs()
@@ -65,36 +73,16 @@ namespace GSDumpGUI
             {
                 String[] File = Directory.GetFiles(txtGSDXDirectory.Text, "*.dll", SearchOption.TopDirectoryOnly);
 
-                NativeMethods.SetErrorMode(0x8007);
+                GSDXWrapper wrap = new GSDXWrapper();
                 foreach (var itm in File)
                 {
-                    IntPtr hmod = NativeMethods.LoadLibrary(itm);
-                    if (hmod.ToInt64() > 0)
+                    if (GSDXWrapper.IsValidGSDX(itm))
                     {
-                        IntPtr funcaddr = NativeMethods.GetProcAddress(hmod, "GSReplay");
-                        if (funcaddr.ToInt64() > 0)
-                        {
-                            IntPtr funcaddrN = NativeMethods.GetProcAddress(hmod, "PSEgetLibName");
-                            if (funcaddrN.ToInt64() > 0)
-                            {
-                                GSDXImport.PSEgetLibName ps = (GSDXImport.PSEgetLibName)Marshal.GetDelegateForFunctionPointer(funcaddrN, typeof(GSDXImport.PSEgetLibName));
-                                lstGSDX.Items.Add(Path.GetFileName(itm) + " | " + Marshal.PtrToStringAnsi(ps.Invoke()));
-                            }
-                        }
-                        else
-                        {
-                            Int32 id = NativeMethods.GetLastError();
-                            System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "test.txt", itm + " failed to load. Error " + id + Environment.NewLine);
-                        }
-                        NativeMethods.FreeLibrary(hmod);
-                    }
-                    else
-                    {
-                        Int32 id = NativeMethods.GetLastError();
-                        System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "test.txt", itm + " failed to load. Error " + id);
+                        wrap.Load(itm);
+                        lstGSDX.Items.Add(Path.GetFileName(itm) + " | " + wrap.PSEGetLibName());
+                        wrap.Unload();
                     }
                 }
-                NativeMethods.SetErrorMode(0x0000);
 
                 String[] Dumps = Directory.GetFiles(txtDumpsDirectory.Text, "*.gs", SearchOption.TopDirectoryOnly);
 
@@ -103,7 +91,7 @@ namespace GSDumpGUI
                     BinaryReader br = new BinaryReader(System.IO.File.Open(itm, FileMode.Open));
                     Int32 CRC = br.ReadInt32();
                     br.Close();
-                    lstDumps.Items.Add(Path.GetFileName(itm) +  " | CRC : " + CRC.ToString("x"));
+                    lstDumps.Items.Add(Path.GetFileName(itm) +  " | CRC : " + CRC.ToString("X"));
                 }
             }
         }
@@ -288,12 +276,7 @@ namespace GSDumpGUI
                 }
                 else
                 {
-                    Bitmap bt = new Bitmap(320, 240, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-                    Graphics g = Graphics.FromImage(bt);
-                    g.FillRectangle(new SolidBrush(Color.Black), new Rectangle(0, 0, 320, 240));
-                    g.DrawString("No Image", new Font(FontFamily.GenericSansSerif, 48, FontStyle.Regular), new SolidBrush(Color.White), new PointF(0,70));
-                    g.Dispose();
-                    pctBox.Image = bt;
+                    pctBox.Image = NoImage;
                     pctBox.Cursor = Cursors.Default;
                 }
             }
@@ -303,73 +286,44 @@ namespace GSDumpGUI
         {
             if (pctBox.Cursor == Cursors.Hand)
             {
-                String Filename = Path.GetDirectoryName(Properties.Settings.Default.DumpDir + "\\") + "\\" + Path.GetFileNameWithoutExtension(lstDumps.SelectedItem.ToString()) + ".bmp";
+                String DumpFileName = lstDumps.SelectedItem.ToString().Split(new char[] { '|' })[0];
+                String Filename = Path.GetDirectoryName(Properties.Settings.Default.DumpDir + "\\") +
+                                  "\\" + Path.GetFileNameWithoutExtension(DumpFileName) + ".bmp";
                 Process.Start(Filename);
             }
         }
 
-        private void lstDumps_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Return)
-                cmdStart_Click(sender, e);
-            if (e.KeyCode == Keys.F1)
-                cmdConfigGSDX_Click(sender, e);
-        }
-
-        private void lstGSDX_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Return)
-                cmdStart_Click(sender, e);
-            if (e.KeyCode == Keys.F1)
-                cmdConfigGSDX_Click(sender, e);
-        }
-
         private void GSDumpGUI_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.KeyCode == Keys.Return)
+                cmdStart_Click(sender, e);
+
+            if (e.KeyCode == Keys.F1)
+                cmdConfigGSDX_Click(sender, e);
+
             if ((e.KeyCode == Keys.Down))
             {
                 e.Handled = true;
                 if (lstDumps.Items.Count > lstDumps.SelectedIndex + 1)
                     lstDumps.SelectedIndex++;
             }
+
             if ((e.KeyCode == Keys.Up))
             {
                 e.Handled = true;
                 if (lstDumps.SelectedIndex > 0)
                     lstDumps.SelectedIndex--;
             }
+
             if ((e.KeyCode == Keys.F2))
                 SelectedRad++;
         }
 
-        private void rdaDX9HW_CheckedChanged(object sender, EventArgs e)
+        private void rda_CheckedChanged(object sender, EventArgs e)
         {
-            if (rdaDX9HW.Checked == true)
-                SelectedRad = 1;
-        }
-
-        private void rdaNone_CheckedChanged(object sender, EventArgs e)
-        {
-            if (rdaNone.Checked == true)
-                SelectedRad = 0;
-        }
-
-        private void rdaDX10HW_CheckedChanged(object sender, EventArgs e)
-        {
-            if (rdaDX10HW.Checked == true)
-                SelectedRad = 2;
-        }
-
-        private void rdaDX9SW_CheckedChanged(object sender, EventArgs e)
-        {
-            if (rdaDX9SW.Checked == true)
-                SelectedRad = 3;
-        }
-
-        private void rdaDX10SW_CheckedChanged(object sender, EventArgs e)
-        {
-            if (rdaDX10SW.Checked == true)
-                SelectedRad = 4;
+            RadioButton itm = ((RadioButton)(sender));
+            if (itm.Checked == true)
+                SelectedRad = Convert.ToInt32(itm.Tag);
         }
     }
 }
