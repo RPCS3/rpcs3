@@ -131,6 +131,7 @@ namespace GSDumpGUI
 
         private void ExecuteFunction(String Function)
         {
+            txtLog.Text = "";
             String GSDXName = lstGSDX.SelectedItem.ToString().Split(new char[] { '|' })[0];
 
             CreateDirs(GSDXName);
@@ -188,7 +189,11 @@ namespace GSDumpGUI
         void p_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
             // Write the log.
-            txtLog.Invoke(new Action<object>(delegate(object o) { txtLog.Text += e.Data + Environment.NewLine; }), new object[] { null });
+            txtLog.Invoke(new Action<object>(delegate(object o) 
+                { 
+                    txtLog.Text += e.Data + Environment.NewLine; 
+                    txtLog.SelectionStart = txtLog.Text.Length - 1; 
+                }), new object[] { null });
         }
 
         private void cmdConfigGSDX_Click(object sender, EventArgs e)
