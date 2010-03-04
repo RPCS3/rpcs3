@@ -16,7 +16,7 @@ namespace GSDumpGUI
         [STAThread]
         static void Main(String[] args)
         {
-            if (args.Length == 3)
+            if (args.Length == 4)
             {
                 Thread thd = new Thread(new ThreadStart(delegate
                 {
@@ -35,6 +35,7 @@ namespace GSDumpGUI
                 String DLLPath = args[0];
                 String DumpPath = args[1];
                 String Operation = args[2];
+                Int32 Renderer = Convert.ToInt32(args[3]);
 
                 // Try to load the DLL in memory
                 IntPtr hmod = NativeMethods.LoadLibrary(DLLPath);
@@ -48,7 +49,10 @@ namespace GSDumpGUI
                         if (Operation == "GSReplay")
                         {
                             GSDXImport.GSReplay dg = (GSDXImport.GSReplay)Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(GSDXImport.GSReplay));
-                            dg.Invoke(new IntPtr(0), new IntPtr(0), DumpPath, false);
+                            if (Renderer != -1)
+                                dg.Invoke(new IntPtr(0), new IntPtr(0), Renderer + " " + DumpPath, false);
+                            else
+                                dg.Invoke(new IntPtr(0), new IntPtr(0), DumpPath, false);
                         }
                         else
                         {

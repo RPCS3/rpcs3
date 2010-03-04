@@ -17,6 +17,36 @@ namespace GSDumpGUI
     {
         public List<Process> Processes;
 
+        private Int32 _selected;
+        public Int32 SelectedRad
+        {
+            get { return _selected; }
+            set
+            {
+                if (value > 4)
+                    value = 0;
+                _selected = value;
+                switch (_selected)
+                {
+                    case 0:
+                        rdaNone.Checked = true;
+                        break;
+                    case 1:
+                        rdaDX9HW.Checked = true;
+                        break;
+                    case 2:
+                        rdaDX10HW.Checked = true;
+                        break;
+                    case 3:
+                        rdaDX9SW.Checked = true;
+                        break;
+                    case 4:
+                        rdaDX10SW.Checked = true;
+                        break;
+                }
+            }
+        }
+
         public GSDumpGUI()
         {
             InitializeComponent();
@@ -69,7 +99,12 @@ namespace GSDumpGUI
                 String[] Dumps = Directory.GetFiles(txtDumpsDirectory.Text, "*.gs", SearchOption.TopDirectoryOnly);
 
                 foreach (var itm in Dumps)
-                    lstDumps.Items.Add(Path.GetFileName(itm));
+                {
+                    BinaryReader br = new BinaryReader(System.IO.File.Open(itm, FileMode.Open));
+                    Int32 CRC = br.ReadInt32();
+                    br.Close();
+                    lstDumps.Items.Add(Path.GetFileName(itm) +  " | CRC : " + CRC.ToString("x"));
+                }
             }
         }
 
@@ -139,8 +174,28 @@ namespace GSDumpGUI
             // Set the Arguments to pass to the child
             String DLLPath = Properties.Settings.Default.GSDXDir + "\\" + GSDXName;
             String DumpPath = "";
+            String SelectedRenderer = "";
+            switch (SelectedRad)
+            {
+                case 0:
+                    SelectedRenderer = "-1";
+                    break;
+                case 1:
+                    SelectedRenderer = "0";
+                    break;
+                case 2:
+                    SelectedRenderer = "3";
+                    break;
+                case 3:
+                    SelectedRenderer = "1";
+                    break;
+                case 4:
+                    SelectedRenderer = "4";
+                    break;
+            }
             if (lstDumps.SelectedItem != null)
-                DumpPath = Properties.Settings.Default.DumpDir + "\\" + lstDumps.SelectedItem.ToString();
+                DumpPath = Properties.Settings.Default.DumpDir + "\\" + 
+                           lstDumps.SelectedItem.ToString().Split(new char[] { '|' })[0];
 
             // Start the child and link the events.
             ProcessStartInfo psi = new ProcessStartInfo();
@@ -149,7 +204,7 @@ namespace GSDumpGUI
             psi.RedirectStandardError = false;
             psi.CreateNoWindow = true;
             psi.FileName = AppDomain.CurrentDomain.BaseDirectory + "GsDumpGUI.exe";
-            psi.Arguments = "\"" + DLLPath + "\"" + " \"" + DumpPath + "\"" + " \"" + Function + "\"";
+            psi.Arguments = "\"" + DLLPath + "\"" + " \"" + DumpPath + "\"" + " \"" + Function + "\"" + " " + SelectedRenderer;
             Process p = Process.Start(psi);
             p.OutputDataReceived += new DataReceivedEventHandler(p_OutputDataReceived);
             p.BeginOutputReadLine();
@@ -192,7 +247,8 @@ namespace GSDumpGUI
             txtLog.Invoke(new Action<object>(delegate(object o) 
                 { 
                     txtLog.Text += e.Data + Environment.NewLine; 
-                    txtLog.SelectionStart = txtLog.Text.Length - 1; 
+                    txtLog.SelectionStart = txtLog.Text.Length - 1;
+                    txtLog.ScrollToCaret();
                 }), new object[] { null });
         }
 
@@ -222,7 +278,9 @@ namespace GSDumpGUI
         {
             if (lstDumps.SelectedIndex != -1)
             {
-                String Filename = Path.GetDirectoryName(Properties.Settings.Default.DumpDir + "\\") + "\\" + Path.GetFileNameWithoutExtension(lstDumps.SelectedItem.ToString()) + ".bmp";
+                String DumpFileName = lstDumps.SelectedItem.ToString().Split(new char[] { '|' })[0];
+                String Filename = Path.GetDirectoryName(Properties.Settings.Default.DumpDir + "\\") + 
+                                  "\\" + Path.GetFileNameWithoutExtension(DumpFileName) + ".bmp";
                 if (File.Exists(Filename))
                 {
                     pctBox.Image = Image.FromFile(Filename);
@@ -280,6 +338,38 @@ namespace GSDumpGUI
                 if (lstDumps.SelectedIndex > 0)
                     lstDumps.SelectedIndex--;
             }
+            if ((e.KeyCode == Keys.F2))
+                SelectedRad++;
+        }
+
+        private void rdaDX9HW_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rdaDX9HW.Checked == true)
+                SelectedRad = 1;
+        }
+
+        private void rdaNone_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rdaNone.Checked == true)
+                SelectedRad = 0;
+        }
+
+        private void rdaDX10HW_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rdaDX10HW.Checked == true)
+                SelectedRad = 2;
+        }
+
+        private void rdaDX9SW_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rdaDX9SW.Checked == true)
+                SelectedRad = 3;
+        }
+
+        private void rdaDX10SW_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rdaDX10SW.Checked == true)
+                SelectedRad = 4;
         }
     }
 }
