@@ -22,6 +22,8 @@ class AsciiFile;
 using namespace x86Emitter;
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
+using namespace std;
+#include <deque>
 
 struct microBlockLink {
 	microBlock*		block;
@@ -119,6 +121,7 @@ enum microProgramAge {
 };
 
 #define mProgSize (0x4000/4)
+#define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember'
 struct microProgram {
 	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
 	microBlockManager* block[mProgSize/2]; // Array of Block Managers
@@ -126,23 +129,32 @@ struct microProgram {
 	u32  frame;		// Frame # the program was last used on
 	u32  used;		// Program was used this frame?
 	int  age;		// Program age... Young, Aged, Old, or Dead...
+	int  idx;		// Program idx in array[mMaxProg]
+	u32  startPC;	// Start PC of this program
 };
 
-#define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember'
+struct microProgramList { 
+	deque<microProgram*>* list;	 // List of microPrograms who start with the same startPC value
+	microBlockManager*    quick; // Quick reference to valid microBlockManager for current startPC
+	int quickIdx;				 // Index of the microProgram who is the owner of 'quick'
+	int size;					 // Current size of the list...
+};
+
 struct microProgManager {
-	microIR<mProgSize>	IRinfo;			// IR information
-	microProgram*		prog;			// Store MicroPrograms in memory
-	int*				progList;		// List of program indexes ordered by age (ordered from newest to oldest)
-	int					max;			// Max Number of MicroPrograms minus 1
-	int					total;			// Total Number of valid MicroPrograms minus 1
-	int					cur;			// Index to Current MicroProgram thats running (-1 = uncached)
-	int					isSame;			// Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
-	int					cleared;		// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
-	u32					curFrame;		// Frame Counter
-	u8*					x86ptr;			// Pointer to program's recompilation code
-	u8*					x86start;		// Start of program's rec-cache
-	u8*					x86end;			// Limit of program's rec-cache
-	microRegInfo		lpState;		// Pipeline state from where program left off (useful for continuing execution)
+	microIR<mProgSize>	IRinfo;				// IR information
+	microProgram*		prog;				// Cache MicroPrograms in memory (indirect jumps are treated as new programs)
+	microProgramList	list[mProgSize/2];	// List of microProgram references indexed by startPC values
+	//int*				progList;			// List of program indexes ordered by age (ordered from newest to oldest)
+	int					max;				// Max Number of MicroPrograms minus 1
+	int					total;				// Total Number of valid MicroPrograms minus 1
+	int					cur;				// Index to Current MicroProgram thats running (-1 = uncached)
+	int					isSame;				// Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
+	int					cleared;			// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
+	u32					curFrame;			// Frame Counter
+	u8*					x86ptr;				// Pointer to program's recompilation code
+	u8*					x86start;			// Start of program's rec-cache
+	u8*					x86end;				// Limit of program's rec-cache
+	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
 #define mVUcacheSize ((mMaxProg < 20) ? (_1mb * 10) : (mMaxProg * (_1mb * 0.5))) // 0.5mb per program
@@ -203,11 +215,10 @@ mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-	  _f void	mVUsortProg(mV, int progIndex);
-_mVUt _f void	mVUclearProg(int progIndex);
-_mVUt _f void	mVUcacheProg(int progIndex);
-_mVUt _f int	mVUfindLeastUsedProg(microVU* mVU);
-_mVUt _f int	mVUsearchProg();
+_mVUt _f void	mVUclearProg(microProgram& prog);
+_mVUt _f void	mVUcacheProg(microProgram& prog);
+_mVUt _f int    mVUfindLeastUsedProg();
+_mVUt _f int	mVUsearchProg(u32 startPC);
 void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 

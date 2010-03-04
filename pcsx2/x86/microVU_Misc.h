@@ -190,7 +190,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define branchAddr	 ((xPC + 8  + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define branchAddrN	 ((xPC + 16 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
-#define cmpOffset(x) ((u8*)&(((u8*)x)[mVUprogI.ranges.range[i][0]]))
+#define cmpOffset(x) ((u8*)&(((u8*)x)[prog.ranges.range[i][0]]))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))

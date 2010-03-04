@@ -31,42 +31,14 @@
 // Helper Functions
 //------------------------------------------------------------------
 
-// Used by checkIfSibling below...
-bool cmpSibling(mV, int progIndex) {
-	if (mVUprogI.age == isDead) return 0;
-	for (int i = 0; i <= mVUprogI.ranges.total; i++) {
-		if ((mVUprogI.ranges.range[i][0] < 0)
-		||  (mVUprogI.ranges.range[i][1] < 0)) { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, i, mVUprogI.ranges.total); }
-		if (memcmp_mmx(cmpOffset(mVUprogI.data), cmpOffset(mVU->regs->Micro), ((mVUprogI.ranges.range[i][1] + 8) - mVUprogI.ranges.range[i][0]))) {
-			return 0;
-		}
-	}
-	return 1;
-}
-
-// Since we use partial-program comparisons to search cached microPrograms, 
-// it is possible that another cached microProgram we have also would've 
-// passed the comparison check. This function checks how often this happens...
-_f void checkIfSibling(mV) {
-	if (mVU->prog.isSame != -1) return;
-	for (int i = mVU->prog.max; i >= 0; i--) {
-		if (i != mVU->prog.cur && cmpSibling(mVU, i)) {
-			if (mVU->prog.prog[i].block[iPC/2] != NULL) {
-				DevCon.WriteLn("mVU: microProgram Sibling Detected! [%d][%d]", mVU->prog.cur, i);
-			}
-		}
-	}
-}
-
 // Used by mVUsetupRange
 _f void mVUcheckIsSame(mV) {
-	if (0) checkIfSibling(mVU);
 	if (mVU->prog.isSame == -1) {
 		mVU->prog.isSame = !memcmp_mmx((u8*)mVUcurProg.data, mVU->regs->Micro, mVU->microMemSize);
 	}
 	if (mVU->prog.isSame == 0) {
-		if (!isVU1)	mVUcacheProg<0>(mVU->prog.cur);
-		else		mVUcacheProg<1>(mVU->prog.cur);
+		if (!isVU1)	mVUcacheProg<0>(mVU->prog.prog[mVU->prog.cur]);
+		else		mVUcacheProg<1>(mVU->prog.prog[mVU->prog.cur]);
 		mVU->prog.isSame = 1;
 	}
 }
@@ -456,19 +428,26 @@ _r void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 	return thisPtr;
 }
 
+// Returns the entry point of the block (compiles it if not found)
+_f void* mVUentryGet(microVU* mVU, microBlockManager* block, u32 startPC, uptr pState) {
+	microBlock* pBlock = block->search((microRegInfo*)pState);
+	if (pBlock) return pBlock->x86ptrStart;
+	else	    return mVUcompile(mVU, startPC, pState);
+}
+
  // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
 _f void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
 	if (startPC > mVU->microMemSize-8) { DevCon.Error("microVU%d: invalid startPC [%04x]", mVU->index, startPC); }
-	startPC &= mVU->microMemSize-8;
-	
+	startPC    &= mVU->microMemSize-8;
+
 	blockCreate(startPC/8);
-	microBlock* pBlock = mVUblocks[startPC/8]->search((microRegInfo*)pState);
-	if (pBlock) { return pBlock->x86ptrStart; }
-	else		{ return mVUcompile(mVU, startPC, pState); }
+	return mVUentryGet(mVU, mVUblocks[startPC/8], startPC, pState);
 }
 
 // mVUcompileJIT() - Called By JR/JALR during execution
 _mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr pState) {
-	return mVUblockFetch(mVUx, startPC, pState);
+	//DevCon.WriteLn("JR/JALR!");
+	//return mVUblockFetch(mVUx, startPC, pState);
+	return mVUsearchProg<vuIndex>(startPC, pState); // Find and set correct program
 }
