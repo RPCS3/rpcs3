@@ -121,22 +121,28 @@ void Pcsx2App::ReadUserModeSettings()
 		hackedVersion.ShowModal();
 	}
 
-	if( m_ForceWizard || !conf_usermode->HasGroup( groupname ) )
+	bool hasGroup = conf_usermode->HasGroup( groupname );
+	bool forceWiz = m_ForceWizard || !hasGroup || !conf_usermode->HasEntry( L"DocumentsFolderMode" );
+
+	if( forceWiz )
 	{
 		// Pre-Alpha Warning!  Why didn't I think to add this sooner?!
-		
-		wxDialogWithHelpers preAlpha( NULL, _("It might devour your kittens! - PCSX2 0.9.7 Pre-Alpha"), wxVERTICAL );
 
-		preAlpha.SetSizer( new wxBoxSizer( wxVERTICAL ) );
-		preAlpha += new pxStaticText( &preAlpha,
-			L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
-			L"user interface, and many parts of the program have *NOT* been implemented yet.  Options will be missing.  "
-			L"Some things may crash or hang without warning.  Other things will seem plainly stupid and the product of incompetent "
-			L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER
-		);
-		
-		preAlpha += new wxButton( &preAlpha, wxID_OK ) | pxSizerFlags::StdCenter();
-		preAlpha.ShowModal();
+		if( !hasGroup )
+		{
+			wxDialogWithHelpers preAlpha( NULL, _("It might devour your kittens! - PCSX2 0.9.7 Pre-Alpha"), wxVERTICAL );
+
+			preAlpha.SetSizer( new wxBoxSizer( wxVERTICAL ) );
+			preAlpha += new pxStaticText( &preAlpha,
+				L"NOTICE!!  This is a *PRE-ALPHA* developer build of PCSX2 0.9.7.  We are in the middle of major rewrites of the " 
+				L"user interface, and many parts of the program have *NOT* been implemented yet.  Options will be missing.  "
+				L"Some things may crash or hang without warning.  Other things will seem plainly stupid and the product of incompetent "
+				L"programmers.  This is normal.  We're working on it.\n\nYou have been warned!", wxALIGN_CENTER
+			);
+			
+			preAlpha += new wxButton( &preAlpha, wxID_OK ) | pxSizerFlags::StdCenter();
+			preAlpha.ShowModal();
+		}
 	
 		// first time startup, so give the user the choice of user mode:
 		OpenWizardConsole();
@@ -152,8 +158,8 @@ void Pcsx2App::ReadUserModeSettings()
 	}
 	else
 	{
-		// usermode.ini exists -- assume User Documents mode, unless the ini explicitly
-		// specifies otherwise.
+		// usermode.ini exists and is populated with valid data -- assume User Documents mode,
+		// unless the ini explicitly specifies otherwise.
 
 		DocsFolderMode = DocsFolder_User;
 

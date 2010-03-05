@@ -70,34 +70,16 @@ void SaveStateBase::vif0Freeze()
 	Freeze(g_vifmask);	 // mask settings for VIF0 and VIF1
 	Freeze(vif0);
 
-	if (GetVersion() <= 3) {
-		static u32 g_vif0Masks[64];   // Dummy Var for saved state compatibility
-		static u32 g_vif0HasMask3[4]; // Dummy Var for saved state compatibility
-		Freeze(g_vif0HasMask3);	// Not Used Anymore
-		Freeze(g_vif0Masks);	// Not Used Anymore
-		nVif[0].bSize = 0;
-	}
-	else {
-		Freeze(nVif[0].bSize);
-		FreezeMem(nVif[0].buffer, nVif[0].bSize);
-	}
+	Freeze(nVif[0].bSize);
+	FreezeMem(nVif[0].buffer, nVif[0].bSize);
 }
 
 void SaveStateBase::vif1Freeze()
 {
 	Freeze(vif1);
 
-	if (GetVersion() <= 3) {
-		static u32 g_vif1Masks[64];   // Dummy Var for saved state compatibility
-		static u32 g_vif1HasMask3[4]; // Dummy Var for saved state compatibility
-		Freeze(g_vif1HasMask3);	// Not Used Anymore
-		Freeze(g_vif1Masks);	// Not Used Anymore
-		nVif[1].bSize = 0;
-	}
-	else {
-		Freeze(nVif[1].bSize);
-		FreezeMem(nVif[1].buffer, nVif[1].bSize);
-	}
+	Freeze(nVif[1].bSize);
+	FreezeMem(nVif[1].buffer, nVif[1].bSize);
 }
 
 //------------------------------------------------------------------

@@ -652,14 +652,7 @@ void SaveStateBase::sioFreeze()
 	u64 m_mcdCRCs[2][8];
 
 	FreezeTag( "sio" );
-	if (GetVersion() == 0) {
-		FreezeMem( &sio, sizeof( sio ) - 4);
-		memset(sio.activePadSlot, 0, sizeof(sio.activePadSlot));
-		memset(sio.activeMemcardSlot, 0, sizeof(sio.activeMemcardSlot));
-	}
-	else {
-	    Freeze( sio );
-	}
+    Freeze( sio );
 
 	if( IsSaving() )
 	{

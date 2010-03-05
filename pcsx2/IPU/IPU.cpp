@@ -182,22 +182,9 @@ void SaveStateBase::ipuFreeze()
 	// old versions saved the IPU regs, but they're already saved as part of HW!
 	//FreezeMem(ipuRegs, sizeof(IPUregisters));
 
-	if (GetVersion() <= 3)
-	{
-		Freeze(g_nDMATransfer._u32);
-		
-		Freeze(ipu_fifo.in.readpos);
-		Freeze(ipu_fifo.in.writepos);
-		Freeze(ipu_fifo.in.data);
-		Freeze(ipu_fifo.out.readpos);
-		Freeze(ipu_fifo.out.writepos);
-		Freeze(ipu_fifo.out.data);
-	}
-	else
-	{
-		Freeze(g_nDMATransfer);
-		Freeze(ipu_fifo);
-	}
+	Freeze(g_nDMATransfer);
+	Freeze(ipu_fifo);
+
 	Freeze(g_BP);
 	Freeze(niq);
 	Freeze(iq);
@@ -207,16 +194,9 @@ void SaveStateBase::ipuFreeze()
 	Freeze(g_decoder);
 	Freeze(mpeg2_scan_norm);
 	Freeze(mpeg2_scan_alt);
-	if (GetVersion() <= 3)
-	{
-		Freeze(ipu_cmd.pos);
-		Freeze(ipu_cmd.index);
-		Freeze(ipu_cmd.current);
-	}
-	else
-	{
-		Freeze(ipu_cmd);
-	}
+
+	Freeze(ipu_cmd);
+
 	Freeze(_readbits);
 
 	int temp = readbits - _readbits;
@@ -240,7 +220,7 @@ __forceinline u32 ipuRead32(u32 mem)
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
 
-	jASSUME((mem & ~0xff) == 0x10002000);
+	pxAssert((mem & ~0xff) == 0x10002000);
 	mem &= 0xff;	// ipu repeats every 0x100
 
 	IPUProcessInterrupt();
@@ -273,7 +253,7 @@ __forceinline u64 ipuRead64(u32 mem)
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
 
-	jASSUME((mem & ~0xff) == 0x10002000);
+	pxAssert((mem & ~0xff) == 0x10002000);
 	mem &= 0xff;	// ipu repeats every 0x100
 
 	IPUProcessInterrupt();
@@ -325,7 +305,7 @@ __forceinline void ipuWrite32(u32 mem, u32 value)
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
 
-	jASSUME((mem & ~0xfff) == 0x10002000);
+	pxAssert((mem & ~0xfff) == 0x10002000);
 	mem &= 0xfff;
 
 	IPUProcessInterrupt();
@@ -364,7 +344,7 @@ __forceinline void ipuWrite64(u32 mem, u64 value)
 	// Note: It's assumed that mem's input value is always in the 0x10002000 page
 	// of memory (if not, it's probably bad code).
 
-	jASSUME((mem & ~0xfff) == 0x10002000);
+	pxAssert((mem & ~0xfff) == 0x10002000);
 	mem &= 0xfff;
 
 	IPUProcessInterrupt();
