@@ -210,7 +210,8 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 	mVUcacheProg<vuIndex>(*prog); // Cache Micro Program
 	float cacheSize = (float)(u32)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
 	float cacheStat =((float)(u32)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
-	Console.WriteLn(Color_Orange, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %f%%)", 
+	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
+	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %f%%)", 
 					vuIndex, mVU->prog.total, startPC, mVU->prog.prog[startPC].list->size()+1, cacheStat);
 	return prog;
 }
@@ -243,8 +244,8 @@ _f void mVUvsyncUpdate(mV) {
 			//elif(diff >= (60  *  1)) { mVU->prog.prog[i].age = isOld;  }
 			//elif(diff >= (20  *  1)) { mVU->prog.prog[i].age = isAged; }
 		}
-	}*/
-	mVU->prog.curFrame++;
+	}
+	mVU->prog.curFrame++;*/
 }
 
 _mVUt _f bool mVUcmpPartial(microProgram& prog) {
@@ -303,8 +304,8 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 	}
 	mVU->prog.isSame	 = -1;
 	mVU->prog.cur		 =  quick.prog;
-	mVU->prog.cur->used  =  1;
-	mVU->prog.cur->age   =  isYoung;
+	//mVU->prog.cur->used  =  1;
+	//mVU->prog.cur->age   =  isYoung;
 	return mVUentryGet(mVU, quick.block, startPC, pState); // If list.quick, then we've already found and recompiled the program ;)
 }
 
