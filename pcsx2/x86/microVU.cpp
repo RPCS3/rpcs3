@@ -93,7 +93,6 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 	mVU->cache			= NULL;
 	mVU->cacheSize		= mVUcacheSize;
 	mVU->regAlloc		= new microRegAlloc(mVU->regs);
-	mVUprint((vuIndex) ? "microVU1: init" : "microVU0: init");
 
 	// Give SysMmapEx a NULL and let the OS pick the memory for us: mVU can work with any
 	// address the operating system gives us, and unlike the EE/IOP there's not much convenience
@@ -118,8 +117,6 @@ _f void mVUinit(VURegs* vuRegsPtr, int vuIndex) {
 
 // Resets Rec Data
 _f void mVUreset(mV) {
-
-	mVUprint((mVU->index) ? "microVU1: reset" : "microVU0: reset");
 
 	// Clear All Program Data
 	//memset(&mVU->prog, 0, sizeof(mVU->prog));
@@ -147,8 +144,6 @@ _f void mVUreset(mV) {
 
 // Free Allocated Resources
 _f void mVUclose(mV) {
-
-	mVUprint((mVU->index) ? "microVU1: close" : "microVU0: close");
 
 	if (mVU->cache) { HostSys::Munmap(mVU->cache, mVU->cacheSize); mVU->cache = NULL; }
 
@@ -221,7 +216,7 @@ _mVUt _f void mVUcacheProg(microProgram& prog) {
 	microVU* mVU = mVUx;
 	if (!vuIndex) memcpy_const(prog.data, mVU->regs->Micro, 0x1000);
 	else		  memcpy_const(prog.data, mVU->regs->Micro, 0x4000);
-	mVUdumpProg(prog.idx);
+	mVUdumpProg(prog);
 }
 
 // Finds and Ages/Kills Programs if they haven't been used in a while.

@@ -36,7 +36,6 @@ _f void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 	mVU->regAlloc->flushAll();
 
 	if (isEbit) {
-		mVUprint("mVUcompile ebit");
 		memzero(mVUinfo);
 		memzero(mVUregsTemp);
 		mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)

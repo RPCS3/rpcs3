@@ -39,7 +39,7 @@ _mVUt void __mVULog(const char* fmt, ...) {
 
 #include "AppConfig.h"
 
-_mVUt void __mVUdumpProgram(int progIndex) {
+_mVUt void __mVUdumpProgram(microProgram& prog) {
 	microVU* mVU = mVUx;
 	bool bitX[7];
 	int	delay = 0;
@@ -48,8 +48,8 @@ _mVUt void __mVUdumpProgram(int progIndex) {
 	int bPC		= iPC;
 	mVUbranch	= 0;
 
-	const wxString logname( wxsFormat( L"microVU%d prog - %02d.html", vuIndex, progIndex) );
-	mVU->logFile = new AsciiFile( Path::Combine( g_Conf->Folders.Logs, logname), L"w" );
+	const wxString logname(wxsFormat(L"microVU%d prog - %02d.html", vuIndex, prog.idx));
+	mVU->logFile = new AsciiFile(Path::Combine(g_Conf->Folders.Logs, logname), L"w");
 
 	mVUlog("<html>\n");
 	mVUlog("<title>microVU%d MicroProgram Log</title>\n", vuIndex);
@@ -57,16 +57,16 @@ _mVUt void __mVUdumpProgram(int progIndex) {
 	mVUlog("<font face=\"Courier New\" color=\"#ffffff\">\n");
 
 	mVUlog("<font size=\"5\" color=\"#7099ff\">");
-	mVUlog("*********************\n<br>",		progIndex);
-	mVUlog("* Micro-Program #%02d *\n<br>",		progIndex);
-	mVUlog("*********************\n\n<br><br>",	progIndex);
+	mVUlog("*********************\n<br>",		prog.idx);
+	mVUlog("* Micro-Program #%02d *\n<br>",		prog.idx);
+	mVUlog("*********************\n\n<br><br>",	prog.idx);
 	mVUlog("</font>");
 
 	for (u32 i = 0; i < mVU->progSize; i+=2) {
 
 		if (delay)		{ delay--; mVUlog("</font>"); if (!delay) mVUlog("<hr/>"); }
 		if (mVUbranch)	{ delay = 1; mVUbranch = 0; }
-		mVU->code = mVU->prog.prog[progIndex].data[i+1];
+		mVU->code = prog.data[i+1];
 
 		bitX[0] = 0;
 		bitX[1] = 0;
@@ -101,7 +101,7 @@ _mVUt void __mVUdumpProgram(int progIndex) {
 		}
 
 		iPC = i;
-		mVU->code = mVU->prog.prog[progIndex].data[i];
+		mVU->code = prog.data[i];
 
 		if(bitX[0]) {
 			mVUlog("<br>\n<font color=\"#FF7000\">");

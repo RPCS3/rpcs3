@@ -14,16 +14,16 @@
  */
  
 #pragma once
-//#define mVUdebug		// Prints Extra Info to Console
-//#define mVUlogProg	// Dumps MicroPrograms to \logs\*.html
+//#define mVUlogProg // Dumps MicroPrograms to \logs\*.html
 
 class AsciiFile;
+
+#include <deque>
 #include "x86emitter/x86emitter.h"
 using namespace x86Emitter;
+using namespace std;
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
-using namespace std;
-#include <deque>
 
 struct microBlockLink {
 	microBlock*		block;

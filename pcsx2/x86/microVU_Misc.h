@@ -217,20 +217,13 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define mVUlogQ()	 { mVUlog(", Q"); }
 #define mVUlogCLIP() { mVUlog("w.xyz vf%02d, vf%02dw", _Fs_, _Ft_); }
 
-// Debug Stuff...
-#ifdef mVUdebug
-#define mVUprint Console.WriteLn
-#else
-#define mVUprint 0&&
-#endif
-
 // Program Logging...
 #ifdef mVUlogProg
 #define mVUlog		((isVU1) ? __mVULog<1> : __mVULog<0>)
 #define mVUdumpProg __mVUdumpProgram<vuIndex>
 #else
-#define mVUlog 0&&
-#define mVUdumpProg 0&&
+#define mVUlog(...)		 if (0) {}
+#define mVUdumpProg(...) if (0) {}
 #endif
 
 // Reg Alloc

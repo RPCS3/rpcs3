@@ -103,14 +103,12 @@ void mVUdispatcherB(mV) {
 _mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
-	mVUprint("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
+	//DevCon.WriteLn("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
 	
-	//mVUsearchProg<vuIndex>(startPC, 0); // Find and set correct program
 	mVU->cycles		 = cycles;
 	mVU->totalCycles = cycles;
 
 	xSetPtr(mVU->prog.x86ptr); // Set x86ptr to where last program left off
-	//return mVUblockFetch(mVU, startPC, (uptr)&mVU->prog.lpState);
 	return mVUsearchProg<vuIndex>(startPC, (uptr)&mVU->prog.lpState); // Find and set correct program
 }
 

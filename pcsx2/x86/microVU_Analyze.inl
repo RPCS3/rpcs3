@@ -192,7 +192,6 @@ _f void mVUanalyzeMR32(mV, int Fs, int Ft) {
 //------------------------------------------------------------------
 
 _f void mVUanalyzeFDIV(mV, int Fs, int Fsf, int Ft, int Ftf, u8 xCycles) {
-	mVUprint("microVU: DIV Opcode");
 	analyzeReg5(Fs, Fsf, mVUlow.VF_read[0]);
 	analyzeReg5(Ft, Ftf, mVUlow.VF_read[1]);
 	analyzeQreg(xCycles);
@@ -203,13 +202,11 @@ _f void mVUanalyzeFDIV(mV, int Fs, int Fsf, int Ft, int Ftf, u8 xCycles) {
 //------------------------------------------------------------------
 
 _f void mVUanalyzeEFU1(mV, int Fs, int Fsf, u8 xCycles) {
-	mVUprint("microVU: EFU Opcode");
 	analyzeReg5(Fs, Fsf, mVUlow.VF_read[0]);
 	analyzePreg(xCycles);
 }
 
 _f void mVUanalyzeEFU2(mV, int Fs, u8 xCycles) {
-	mVUprint("microVU: EFU Opcode");
 	analyzeReg1(Fs, mVUlow.VF_read[0]);
 	analyzePreg(xCycles);
 }
