@@ -122,7 +122,14 @@ void Pcsx2App::ReadUserModeSettings()
 	}
 
 	bool hasGroup = conf_usermode->HasGroup( groupname );
-	bool forceWiz = m_ForceWizard || !hasGroup || !conf_usermode->HasEntry( L"DocumentsFolderMode" );
+	bool forceWiz = m_ForceWizard || !hasGroup;
+	
+	if( forceWiz )
+	{
+		conf_usermode->SetPath( groupname );
+		forceWiz = !conf_usermode->HasEntry( L"DocumentsFolderMode" );
+		conf_usermode->SetPath( L".." );
+	}
 
 	if( forceWiz )
 	{
