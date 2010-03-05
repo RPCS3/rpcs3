@@ -218,7 +218,7 @@ mVUop(mVUopL);
 _mVUt _f void	mVUclearProg(microProgram& prog);
 _mVUt _f void	mVUcacheProg(microProgram& prog);
 _mVUt _f int    mVUfindLeastUsedProg();
-_mVUt _f int	mVUsearchProg(u32 startPC);
+_mVUt _f void* mVUsearchProg(u32 startPC, uptr pState);
 void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 
