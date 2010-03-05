@@ -156,9 +156,8 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 
 // Misc Macros...
 #define __four(val)	{ val, val, val, val }
-#define mVUprogI	 mVU->prog.prog[progIndex]
-#define mVUcurProg	 mVU->prog.prog[mVU->prog.cur]
-#define mVUblocks	 mVU->prog.prog[mVU->prog.cur].block
+#define mVUcurProg   mVU->prog.cur[0]
+#define mVUblocks	 mVU->prog.cur->block
 #define mVUir		 mVU->prog.IRinfo
 #define mVUbranch	 mVU->prog.IRinfo.branch
 #define mVUcycles	 mVU->prog.IRinfo.cycles

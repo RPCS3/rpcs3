@@ -121,7 +121,6 @@ enum microProgramAge {
 };
 
 #define mProgSize (0x4000/4)
-#define mMaxProg ((mVU->index)?400:8) // The amount of Micro Programs Recs will 'remember'
 struct microProgram {
 	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
 	microBlockManager* block[mProgSize/2]; // Array of Block Managers
@@ -134,20 +133,20 @@ struct microProgram {
 };
 
 struct microProgramList { 
-	deque<microProgram*>* list;	 // List of microPrograms who start with the same startPC value
-	microBlockManager*    quick; // Quick reference to valid microBlockManager for current startPC
-	int quickIdx;				 // Index of the microProgram who is the owner of 'quick'
-	int size;					 // Current size of the list...
+	deque<microProgram*>* list;  // List of microPrograms who start with the same startPC value
+};
+
+struct microProgramQuick {
+	microBlockManager*    block; // Quick reference to valid microBlockManager for current startPC
+	microProgram*		  prog;	 // The microProgram who is the owner of 'block'
 };
 
 struct microProgManager {
 	microIR<mProgSize>	IRinfo;				// IR information
-	microProgram*		prog;				// Cache MicroPrograms in memory (indirect jumps are treated as new programs)
-	microProgramList	list[mProgSize/2];	// List of microProgram references indexed by startPC values
-	//int*				progList;			// List of program indexes ordered by age (ordered from newest to oldest)
-	int					max;				// Max Number of MicroPrograms minus 1
-	int					total;				// Total Number of valid MicroPrograms minus 1
-	int					cur;				// Index to Current MicroProgram thats running (-1 = uncached)
+	microProgramList	prog [mProgSize/2];	// List of microPrograms indexed by startPC values
+	microProgramQuick	quick[mProgSize/2];	// Quick reference to valid microPrograms for current execution
+	microProgram*		cur;				// Pointer to currently running MicroProgram
+	int					total;				// Total Number of valid MicroPrograms
 	int					isSame;				// Current cached microProgram is Exact Same program as mVU->regs->Micro (-1 = unknown, 0 = No, 1 = Yes)
 	int					cleared;			// Micro Program is Indeterminate so must be searched for (and if no matches are found then recompile a new one)
 	u32					curFrame;			// Frame Counter
@@ -157,7 +156,7 @@ struct microProgManager {
 	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
-#define mVUcacheSize ((mMaxProg < 20) ? (_1mb * 10) : (mMaxProg * (_1mb * 0.5))) // 0.5mb per program
+#define mVUcacheSize ((mVU->index) ? (_1mb * 20) : (_1mb * 5))
 struct microVU {
 
 	__aligned16 u32 macFlag[4];  // 4 instances of mac  flag (used in execution)
@@ -215,10 +214,10 @@ mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-_mVUt _f void	mVUclearProg(microProgram& prog);
-_mVUt _f void	mVUcacheProg(microProgram& prog);
-_mVUt _f int    mVUfindLeastUsedProg();
+_mVUt _f void  mVUclearProg(microProgram& prog, bool deleteBlocks = 1);
+_mVUt _f void  mVUcacheProg(microProgram& prog);
 _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState);
+_mVUt _f microProgram* mVUfindLeastUsedProg();
 void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);
 void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 

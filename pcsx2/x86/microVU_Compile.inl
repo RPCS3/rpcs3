@@ -37,8 +37,8 @@ _f void mVUcheckIsSame(mV) {
 		mVU->prog.isSame = !memcmp_mmx((u8*)mVUcurProg.data, mVU->regs->Micro, mVU->microMemSize);
 	}
 	if (mVU->prog.isSame == 0) {
-		if (!isVU1)	mVUcacheProg<0>(mVU->prog.prog[mVU->prog.cur]);
-		else		mVUcacheProg<1>(mVU->prog.prog[mVU->prog.cur]);
+		if (!isVU1)	mVUcacheProg<0>(*mVU->prog.cur);
+		else		mVUcacheProg<1>(*mVU->prog.cur);
 		mVU->prog.isSame = 1;
 	}
 }
@@ -447,7 +447,6 @@ _f void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
 // mVUcompileJIT() - Called By JR/JALR during execution
 _mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr pState) {
-	//DevCon.WriteLn("JR/JALR!");
 	//return mVUblockFetch(mVUx, startPC, pState);
 	return mVUsearchProg<vuIndex>(startPC, pState); // Find and set correct program
 }
