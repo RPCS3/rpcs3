@@ -147,7 +147,7 @@ template<int idx> _f int _vifCode_Direct(int pass, u8* data, bool isDirectHL) {
 			vif1.tag.size -= ret;
 		}
 
-		Registers::Freeze();
+		Registers::Thaw();
 		return ret;
 	}
 	return 0;
