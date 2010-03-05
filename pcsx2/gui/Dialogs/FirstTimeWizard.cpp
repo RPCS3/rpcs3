@@ -20,6 +20,7 @@
 #include "ModalPopups.h"
 #include "Panels/ConfigurationPanels.h"
 #include <wx/file.h>
+#include <wx/filepicker.h>
 
 using namespace Panels;
 using namespace pxSizerFlags;
@@ -74,14 +75,22 @@ FirstTimeWizard::UsermodePage::UsermodePage( wxWizard* parent ) :
 
 	*this += panel					| pxExpand;
 
-	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(FirstTimeWizard::UsermodePage::OnUsermodeChanged) );
+	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED,	wxCommandEventHandler(UsermodePage::OnUsermodeChanged) );
+
+	Connect( m_panel_UserSel->GetDirPickerId(), wxEVT_COMMAND_DIRPICKER_CHANGED,		wxCommandEventHandler(UsermodePage::OnCustomDirChanged) );
 }
 
 void FirstTimeWizard::UsermodePage::OnUsermodeChanged( wxCommandEvent& evt )
 {
+	evt.Skip();
 	m_panel_UserSel->Apply();
 	g_Conf->Folders.ApplyDefaults();
 	m_dirpick_settings->Reset();
+}
+
+void FirstTimeWizard::UsermodePage::OnCustomDirChanged( wxCommandEvent& evt )
+{
+	OnUsermodeChanged( evt );
 }
 
 // ----------------------------------------------------------------------------

@@ -227,16 +227,17 @@ public:
 
 	bool IsPaused() const { return GetMenuBar()->IsChecked( MenuId_Sys_SuspendResume ); }
 	void UpdateIsoSrcSelection();
+	void RemoveCdvdMenu();
 
 protected:
 	void ApplySettings();
 	void ApplyCoreStatus();
-
 	void SaveEmuOptions();
 
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
 	void OnCloseWindow( wxCloseEvent& evt );
+	void OnDestroyWindow( wxWindowDestroyEvent& evt );
 	void OnMoveAround( wxMoveEvent& evt );
 	void OnFocus( wxFocusEvent& evt );
 	void OnActivate( wxActivateEvent& evt );

@@ -18,7 +18,7 @@
 #include "App.h"
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE(wxEVT_DockConsole, -1)
+	DECLARE_EVENT_TYPE(pxEvt_DockConsole, -1)
 END_DECLARE_EVENT_TYPES()
 
 static const bool EnableThreadedLoggingTest = false; //true;
@@ -267,6 +267,7 @@ protected:
 	void OnLogSourceChanged(wxCommandEvent& event);
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
+	virtual void OnDestroyWindow(wxWindowDestroyEvent& event);
 
 	void OnSetTitle( wxCommandEvent& event );
 	void OnDockedMove( wxCommandEvent& event );

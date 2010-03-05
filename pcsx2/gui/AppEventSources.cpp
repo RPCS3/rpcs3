@@ -66,12 +66,12 @@ void IEventListener_Plugins::DispatchEvent( const PluginEventType& pevt )
 {
 	switch( pevt )
 	{
-		case CorePlugins_Loaded:		CorePlugins_OnLoaded();		break;
+		case CorePlugins_Loaded:	CorePlugins_OnLoaded();		break;
 		case CorePlugins_Init:		CorePlugins_OnInit();		break;
 		case CorePlugins_Opening:	CorePlugins_OnOpening();	break;
-		case CorePlugins_Opened:		CorePlugins_OnOpened();		break;
+		case CorePlugins_Opened:	CorePlugins_OnOpened();		break;
 		case CorePlugins_Closing:	CorePlugins_OnClosing();	break;
-		case CorePlugins_Closed:		CorePlugins_OnClosed();		break;
+		case CorePlugins_Closed:	CorePlugins_OnClosed();		break;
 		case CorePlugins_Shutdown:	CorePlugins_OnShutdown();	break;
 		case CorePlugins_Unloaded:	CorePlugins_OnUnloaded();	break;
 		

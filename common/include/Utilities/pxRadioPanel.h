@@ -121,7 +121,7 @@ public:
 	wxRadioButton* GetButton( int idx );
 	const wxRadioButton* GetButton( int idx ) const;
 
-	int GetPaddingHoriz() const		{ return m_padding.GetHeight(); }
+	int GetPaddingVert() const		{ return m_padding.GetHeight(); }
 	int GetIndentation() const		{ return m_Indentation; }
 
 	pxRadioPanel& SetPaddingHoriz( int newpad )

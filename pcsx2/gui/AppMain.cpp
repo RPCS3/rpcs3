@@ -42,8 +42,9 @@ DEFINE_EVENT_TYPE( pxEvt_LogicalVsync );
 
 DEFINE_EVENT_TYPE( pxEvt_OpenModalDialog );
 
-bool					UseAdminMode = false;
+DocsModeType			DocsFolderMode = DocsFolder_User;
 wxDirName				SettingsFolder;
+wxDirName				CustomDocumentsFolder;
 bool					UseDefaultSettingsFolder = true;
 
 ScopedPtr<AppConfig>	g_Conf;
@@ -83,42 +84,42 @@ void Pcsx2App::PostMenuAction( MenuIdentifiers menu_id ) const
 }
 
 // --------------------------------------------------------------------------------------
-//  pxInvokeMethodEvent
+//  pxInvokeAppMethodEvent
 // --------------------------------------------------------------------------------------
 // Unlike pxPingEvent, the Semaphore belonging to this event is typically posted when the
 // invoked method is completed.  If the method can be executed in non-blocking fashion then
 // it should leave the semaphore postback NULL.
 //
-class pxInvokeMethodEvent : public pxPingEvent
+class pxInvokeAppMethodEvent : public pxPingEvent
 {
-	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxInvokeMethodEvent)
+	DECLARE_DYNAMIC_CLASS_NO_ASSIGN(pxInvokeAppMethodEvent)
 
 protected:
 	FnPtr_AppMethod	m_Method;
 
 public:
-	virtual ~pxInvokeMethodEvent() throw() { }
-	virtual pxInvokeMethodEvent *Clone() const { return new pxInvokeMethodEvent(*this); }
+	virtual ~pxInvokeAppMethodEvent() throw() { }
+	virtual pxInvokeAppMethodEvent *Clone() const { return new pxInvokeAppMethodEvent(*this); }
 
-	explicit pxInvokeMethodEvent( int msgtype, FnPtr_AppMethod method=NULL, Semaphore* sema=NULL )
+	explicit pxInvokeAppMethodEvent( int msgtype, FnPtr_AppMethod method=NULL, Semaphore* sema=NULL )
 		: pxPingEvent( msgtype, sema )
 	{
 		m_Method = method;
 	}
 
-	explicit pxInvokeMethodEvent( FnPtr_AppMethod method=NULL, Semaphore* sema=NULL )
+	explicit pxInvokeAppMethodEvent( FnPtr_AppMethod method=NULL, Semaphore* sema=NULL )
 		: pxPingEvent( pxEvt_InvokeMethod, sema )
 	{
 		m_Method = method;
 	}
 
-	explicit pxInvokeMethodEvent( FnPtr_AppMethod method, Semaphore& sema )
+	explicit pxInvokeAppMethodEvent( FnPtr_AppMethod method, Semaphore& sema )
 		: pxPingEvent( pxEvt_InvokeMethod, &sema )
 	{
 		m_Method = method;
 	}
 	
-	pxInvokeMethodEvent( const pxInvokeMethodEvent& src )
+	pxInvokeAppMethodEvent( const pxInvokeAppMethodEvent& src )
 		: pxPingEvent( src )
 	{
 		m_Method = src.m_Method;
@@ -137,9 +138,9 @@ public:
 };
 
 
-IMPLEMENT_DYNAMIC_CLASS( pxInvokeMethodEvent, pxPingEvent )
+IMPLEMENT_DYNAMIC_CLASS( pxInvokeAppMethodEvent, pxPingEvent )
 
-void Pcsx2App::OnInvokeMethod( pxInvokeMethodEvent& evt )
+void Pcsx2App::OnInvokeMethod( pxInvokeAppMethodEvent& evt )
 {
 	evt.Invoke();		// wow this is easy!
 }
@@ -722,7 +723,7 @@ bool Pcsx2App::InvokeMethodOnMainThread( FnPtr_AppMethod method )
 	if( wxThread::IsMain() ) return false;
 
 	Semaphore sem;
-	pxInvokeMethodEvent evt( method, sem );
+	pxInvokeAppMethodEvent evt( method, sem );
 	AddPendingEvent( evt );
 	sem.Wait();
 
@@ -743,7 +744,7 @@ bool Pcsx2App::InvokeMethodOnMainThread( FnPtr_AppMethod method )
 bool Pcsx2App::PostMethodToMainThread( FnPtr_AppMethod method )
 {
 	if( wxThread::IsMain() ) return false;
-	pxInvokeMethodEvent evt( method );
+	pxInvokeAppMethodEvent evt( method );
 	AddPendingEvent( evt );
 	return true;
 }
@@ -752,8 +753,16 @@ bool Pcsx2App::PostMethodToMainThread( FnPtr_AppMethod method )
 // main thread.
 void Pcsx2App::PostMethod( FnPtr_AppMethod method )
 {
-	pxInvokeMethodEvent evt( method );
+	pxInvokeAppMethodEvent evt( method );
 	AddPendingEvent( evt );
+}
+
+// Posts a method to the main thread; non-blocking.  Post occurs even when called from the
+// main thread.
+void Pcsx2App::PostIdleMethod( FnPtr_AppMethod method )
+{
+	pxInvokeAppMethodEvent evt( method );
+	OnAddEventToIdleQueue( evt );
 }
 
 void Pcsx2App::OpenGsPanel()
@@ -813,18 +822,18 @@ void Pcsx2App::OnGsFrameClosed()
 	m_id_GsFrame = wxID_ANY;
 }
 
-void Pcsx2App::OnProgramLogClosed()
+void Pcsx2App::OnProgramLogClosed( wxWindowID id )
 {
-	if( m_id_ProgramLogBox == wxID_ANY ) return;
+	if( (m_id_ProgramLogBox == wxID_ANY) || (m_id_ProgramLogBox != id) ) return;
 	m_id_ProgramLogBox = wxID_ANY;
 	DisableWindowLogging();
 }
 
-void Pcsx2App::OnMainFrameClosed()
+void Pcsx2App::OnMainFrameClosed( wxWindowID id )
 {
 	// Nothing threaded depends on the mainframe (yet) -- it all passes through the main wxApp
 	// message handler.  But that might change in the future.
-	//if( m_id_MainFrame == wxID_ANY ) return;
+	if( m_id_MainFrame != id ) return;
 	m_id_MainFrame = wxID_ANY;
 }
 

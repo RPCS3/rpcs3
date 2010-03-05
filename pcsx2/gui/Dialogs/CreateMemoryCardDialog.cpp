@@ -21,8 +21,20 @@
 
 using namespace pxSizerFlags;
 
-// defined in MemoryCardsPanel.cpp
-extern wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, uint slotidx, const wxString& filename=wxEmptyString );
+wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, uint slotidx, const wxString& filename=wxEmptyString )
+{
+	return new wxFilePickerCtrl( parent, wxID_ANY, filename,
+		wxsFormat(_("Select memorycard for Port %u / Slot %u"), portidx+1, slotidx+1),	// picker window title
+		L"*.ps2",	// default wildcard
+		wxDefaultPosition, wxDefaultSize,
+		wxFLP_DEFAULT_STYLE & ~wxFLP_FILE_MUST_EXIST
+	);
+
+}
+
+	/*pxSetToolTip( m_button_Recreate, pxE( ".Tooltip:MemoryCard:Recreate",
+		L"Deletes the existing memory card and creates a new one.  All existing card contents will be lost."
+	) );*/
 
 Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath )
 	: BaseApplicableDialog( parent, _("Create a new MemoryCard..."), wxVERTICAL )

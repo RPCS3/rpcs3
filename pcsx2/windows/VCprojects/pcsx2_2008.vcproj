@@ -2562,6 +2562,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\..\gui\Panels\BaseApplicableConfigPanel.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\gui\Panels\BiosSelectorPanel.cpp"
 					>
 				</File>
@@ -2591,6 +2595,14 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Panels\LogOptionsPanels.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\MemoryCardListPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\MemoryCardListView.h"
 					>
 				</File>
 				<File

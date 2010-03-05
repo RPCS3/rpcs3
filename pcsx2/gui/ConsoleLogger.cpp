@@ -25,17 +25,15 @@
 #include <wx/textfile.h>
 
 BEGIN_DECLARE_EVENT_TYPES()
-	DECLARE_EVENT_TYPE(wxEVT_LOG_Write, -1)
-	DECLARE_EVENT_TYPE(wxEVT_LOG_Newline, -1)
-	DECLARE_EVENT_TYPE(wxEVT_SetTitleText, -1)
-	DECLARE_EVENT_TYPE(wxEVT_FlushQueue, -1)
+	DECLARE_EVENT_TYPE(pxEvt_LogWrite, -1)
+	DECLARE_EVENT_TYPE(pxEvt_SetTitleText, -1)
+	DECLARE_EVENT_TYPE(pxEvt_FlushQueue, -1)
 END_DECLARE_EVENT_TYPES()
 
-DEFINE_EVENT_TYPE(wxEVT_LOG_Write)
-DEFINE_EVENT_TYPE(wxEVT_LOG_Newline)
-DEFINE_EVENT_TYPE(wxEVT_SetTitleText)
-DEFINE_EVENT_TYPE(wxEVT_DockConsole)
-DEFINE_EVENT_TYPE(wxEVT_FlushQueue)
+DEFINE_EVENT_TYPE(pxEvt_LogWrite)
+DEFINE_EVENT_TYPE(pxEvt_SetTitleText)
+DEFINE_EVENT_TYPE(pxEvt_DockConsole)
+DEFINE_EVENT_TYPE(pxEvt_FlushQueue)
 
 // C++ requires abstract destructors to exist, even though they're abstract.
 PipeRedirectionBase::~PipeRedirectionBase() throw() {}
@@ -321,14 +319,15 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( m_item_StdoutEE->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
 	Connect( m_item_StdoutIOP->GetId(),	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnLogSourceChanged ) );
 
-	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler		(ConsoleLogFrame::OnCloseWindow) );
-	Connect( wxEVT_MOVE,			wxMoveEventHandler		(ConsoleLogFrame::OnMoveAround) );
-	Connect( wxEVT_SIZE,			wxSizeEventHandler		(ConsoleLogFrame::OnResize) );
-	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler	(ConsoleLogFrame::OnActivate) );
+	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler			(ConsoleLogFrame::OnCloseWindow) );
+	Connect( wxEVT_DESTROY,			wxWindowDestroyEventHandler	(ConsoleLogFrame::OnDestroyWindow) );
+	Connect( wxEVT_MOVE,			wxMoveEventHandler			(ConsoleLogFrame::OnMoveAround) );
+	Connect( wxEVT_SIZE,			wxSizeEventHandler			(ConsoleLogFrame::OnResize) );
+	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler		(ConsoleLogFrame::OnActivate) );
 
-	Connect( wxEVT_SetTitleText,	wxCommandEventHandler	(ConsoleLogFrame::OnSetTitle) );
-	Connect( wxEVT_DockConsole,		wxCommandEventHandler	(ConsoleLogFrame::OnDockedMove) );
-	Connect( wxEVT_FlushQueue,		wxCommandEventHandler	(ConsoleLogFrame::OnFlushEvent) );
+	Connect( pxEvt_SetTitleText,	wxCommandEventHandler	(ConsoleLogFrame::OnSetTitle) );
+	Connect( pxEvt_DockConsole,		wxCommandEventHandler	(ConsoleLogFrame::OnDockedMove) );
+	Connect( pxEvt_FlushQueue,		wxCommandEventHandler	(ConsoleLogFrame::OnFlushEvent) );
 
 	Connect( wxEVT_IDLE,			wxIdleEventHandler		(ConsoleLogFrame::OnIdleEvent) );
 	Connect( wxEVT_TIMER,			wxTimerEventHandler		(ConsoleLogFrame::OnFlushLimiterTimer) );
@@ -343,7 +342,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 
 ConsoleLogFrame::~ConsoleLogFrame()
 {
-	wxGetApp().OnProgramLogClosed();
+	wxGetApp().OnProgramLogClosed( GetId() );
 }
 
 // Implementation note:  Calls SetColor and Write( text ).  Override those virtuals
@@ -379,7 +378,7 @@ void ConsoleLogFrame::Write( ConsoleColors color, const wxString& text )
 
 	if( !m_pendingFlushMsg )
 	{
-		wxCommandEvent evt( wxEVT_FlushQueue );
+		wxCommandEvent evt( pxEvt_FlushQueue );
 		evt.SetInt( 0 );
 		GetEventHandler()->AddPendingEvent( evt );
 		m_pendingFlushMsg = true;
@@ -506,9 +505,15 @@ void ConsoleLogFrame::OnCloseWindow(wxCloseEvent& event)
 	else
 	{
 		m_threadlogger = NULL;
-		wxGetApp().OnProgramLogClosed();
+		wxGetApp().OnProgramLogClosed( GetId() );
 		event.Skip();
 	}
+}
+
+void ConsoleLogFrame::OnDestroyWindow(wxWindowDestroyEvent& event)
+{
+	m_threadlogger = NULL;
+	wxGetApp().OnProgramLogClosed( GetId() );
 }
 
 void ConsoleLogFrame::OnOpen(wxCommandEvent& WXUNUSED(event))
@@ -602,7 +607,7 @@ void ConsoleLogFrame::OnIdleEvent( wxIdleEvent& )
 		m_flushevent_counter = 0;
 		m_timer_FlushLimiter.Stop();
 
-		wxCommandEvent sendevt( wxEVT_FlushQueue );
+		wxCommandEvent sendevt( pxEvt_FlushQueue );
 		GetEventHandler()->AddPendingEvent( sendevt );
 	}
 }
@@ -613,7 +618,7 @@ void ConsoleLogFrame::OnFlushLimiterTimer( wxTimerEvent& )
 
 	m_flushevent_counter = 0;
 
-	wxCommandEvent sendevt( wxEVT_FlushQueue );
+	wxCommandEvent sendevt( pxEvt_FlushQueue );
 	GetEventHandler()->AddPendingEvent( sendevt );
 }
 
@@ -743,9 +748,8 @@ const ConsoleLogFrame* Pcsx2App::GetProgramLog() const
 
 void Pcsx2App::ProgramLog_PostEvent( wxEvent& evt )
 {
-	// New console log object model makes this check obsolete:
-	//if( m_ProgramLogBox == NULL ) return;
-	GetProgramLog()->GetEventHandler()->AddPendingEvent( evt );
+	if( ConsoleLogFrame* proglog = GetProgramLog() )
+		proglog->GetEventHandler()->AddPendingEvent( evt );
 }
 
 // --------------------------------------------------------------------------------------
@@ -811,7 +815,7 @@ template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_SetTitle( const wxString& title )
 {
     secondary.SetTitle(title);
-	wxCommandEvent evt( wxEVT_SetTitleText );
+	wxCommandEvent evt( pxEvt_SetTitleText );
 	evt.SetString( title );
 	wxGetApp().ProgramLog_PostEvent( evt );
 }

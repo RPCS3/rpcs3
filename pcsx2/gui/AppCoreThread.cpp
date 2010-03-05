@@ -131,7 +131,7 @@ void AppCoreThread::OnResumeReady()
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )
 		g_Conf->CurrentIso.Clear();
 
-	sApp.GetRecentIsoList().Add( g_Conf->CurrentIso );
+	sApp.GetRecentIsoManager().Add( g_Conf->CurrentIso );
 	CDVDsys_SetFile( CDVDsrc_Iso, g_Conf->CurrentIso );
 
 	AppSaveSettings();

@@ -39,6 +39,7 @@ protected:
 
 	protected:
 		void OnUsermodeChanged( wxCommandEvent& evt );
+		void OnCustomDirChanged( wxCommandEvent& evt );
 	};
 	
 protected:

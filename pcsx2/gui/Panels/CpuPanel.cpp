@@ -106,8 +106,6 @@ Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
 
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
-
-	AppStatusEvent_OnSettingsApplied();
 }
 
 
@@ -122,8 +120,6 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 
 	m_RoundModePanel->Realize();
 	m_ClampModePanel->Realize();
-
-	AppStatusEvent_OnSettingsApplied();
 }
 
 Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
@@ -181,8 +177,6 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	*this	+= new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ) | StdButton();
 
 	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CpuPanelEE::OnRestoreDefaults ) );
-
-	AppStatusEvent_OnSettingsApplied();
 }
 
 Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
@@ -232,8 +226,6 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	*this	+= new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ) | StdButton();
 
 	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CpuPanelVU::OnRestoreDefaults ) );
-
-	AppStatusEvent_OnSettingsApplied();
 }
 
 void Panels::CpuPanelEE::Apply()
@@ -246,7 +238,7 @@ void Panels::CpuPanelEE::Apply()
 void Panels::CpuPanelEE::AppStatusEvent_OnSettingsApplied()
 {
 	m_panel_RecEE->Enable( x86caps.hasStreamingSIMD2Extensions );
-	
+
 	// IOP rec should work fine on any CPU. :D
 	//m_panel_RecIOP->Enable( x86caps.hasStreamingSIMD2Extensions );
 

@@ -58,8 +58,6 @@ void pxRadioPanel::Reset()
 
 void pxRadioPanel::Realize()
 {
-	//if(  )
-
 	const int numbuttons = m_buttonStrings.size();
 	if( numbuttons == 0 ) return;
 	if( m_IsRealized ) return;
@@ -88,15 +86,15 @@ void pxRadioPanel::Realize()
 	}
 
 	pxAssert( GetSizer() != NULL );
-	wxSizer& sizer( *GetSizer() );
+
 	for( int i=0; i<numbuttons; ++i )
 	{
-		sizer.Add( m_objects[i].LabelObj, pxSizerFlags::StdExpand() );
+		*this += m_objects[i].LabelObj	| pxSizerFlags::StdExpand();
 	
 		if( wxStaticText* subobj = m_objects[i].SubTextObj )
 		{
-			sizer.Add( subobj, wxSizerFlags().Border( wxLEFT, m_Indentation ) );
-			sizer.AddSpacer( 9 + m_padding.GetHeight() );
+			*this += subobj	| pxBorder( wxLEFT, m_Indentation );
+			*this += 9 + m_padding.GetHeight();
 		}
 		if( !m_buttonStrings[i].ToolTip.IsEmpty() )
 			_setToolTipImmediate( i, m_buttonStrings[i].ToolTip );

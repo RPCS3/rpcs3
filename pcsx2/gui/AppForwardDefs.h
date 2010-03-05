@@ -30,7 +30,7 @@ class GSFrame;
 class ConsoleLogFrame;
 class PipeRedirectionBase;
 class AppCoreThread;
-class pxInvokeMethodEvent;
+class pxInvokeAppMethodEvent;
 class IniInterface;
 
 // wxWidgets forward declarations
@@ -41,5 +41,10 @@ class wxDirPickerCtrl;
 class wxFilePickerCtrl;
 class wxFileDirPickerEvent;
 class wxListBox;
+class wxListCtrl;
+class wxListView;
 class wxListbook;
+class wxSpinCtrl;
 class wxBookCtrlBase;
+
+class wxListEvent;

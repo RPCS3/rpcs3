@@ -17,6 +17,7 @@
 #include "wxAppWithHelpers.h"
 
 DEFINE_EVENT_TYPE( pxEvt_Ping );
+DEFINE_EVENT_TYPE( pxEvt_IdleEventQueue );
 DEFINE_EVENT_TYPE( pxEvt_MessageBox );
 DEFINE_EVENT_TYPE( pxEvt_DeleteObject );
 //DEFINE_EVENT_TYPE( pxEvt_Assertion );
@@ -56,7 +57,18 @@ pxPingEvent::pxPingEvent( const pxPingEvent& src )
 // --------------------------------------------------------------------------------------
 //  wxAppWithHelpers Implementation
 // --------------------------------------------------------------------------------------
+//
+// TODO : Ping dispatch and IdleEvent dispatch can be unified into a single dispatch, which
+// would mean checking only one list of events per idle event, instead of two.  (ie, ping
+// events can be appended to the idle event list, instead of into their own custom list).
+//
 IMPLEMENT_DYNAMIC_CLASS( wxAppWithHelpers, wxApp )
+
+void wxAppWithHelpers::CleanUp()
+{
+	DeletionDispatcher();
+	_parent::CleanUp();
+}
 
 void wxAppWithHelpers::OnPingEvent( pxPingEvent& evt )
 {
@@ -64,14 +76,29 @@ void wxAppWithHelpers::OnPingEvent( pxPingEvent& evt )
 	// the ping is posted only after all other pending messages behind the ping
 	// are also processed.
 
+	if( m_PingWhenIdle.size() == 0 ) m_PingTimer.Start( 200, true );
 	m_PingWhenIdle.push_back( evt.GetSemaphore() );
-	m_PingTimer.Start( 200, true );
 }
 
-void wxAppWithHelpers::CleanUp()
+void wxAppWithHelpers::OnAddEventToIdleQueue( wxEvent& evt )
 {
-	DeletionDispatcher();
-	_parent::CleanUp();
+	if( m_IdleEventQueue.size() == 0 ) m_IdleEventTimer.Start( 100, true );
+	m_IdleEventQueue.push_back( evt.Clone() );
+}
+
+void wxAppWithHelpers::IdleEventDispatcher( const char* action )
+{
+	size_t size = m_IdleEventQueue.size();
+	if( size == 0 ) return;
+
+	DbgCon.WriteLn( Color_Gray, "App IdleQueue (%s) -> %u events.", action, size );
+
+	for( size_t i=0; i<size; ++i )
+	{
+		ProcessEvent( *m_IdleEventQueue[i] );
+	}
+
+	m_IdleEventQueue.clear();
 }
 
 void wxAppWithHelpers::PingDispatcher( const char* action )
@@ -102,12 +129,19 @@ void wxAppWithHelpers::DeletionDispatcher()
 void wxAppWithHelpers::OnIdleEvent( wxIdleEvent& evt )
 {
 	m_PingTimer.Stop();
+	m_IdleEventTimer.Stop();
 	PingDispatcher( "Idle" );
+	IdleEventDispatcher( "Idle" );
 }
 
 void wxAppWithHelpers::OnPingTimeout( wxTimerEvent& evt )
 {
 	PingDispatcher( "Timeout" );
+}
+
+void wxAppWithHelpers::OnIdleEventTimeout( wxTimerEvent& evt )
+{
+	IdleEventDispatcher( "Timeout" );
 }
 
 void wxAppWithHelpers::Ping()
@@ -157,10 +191,12 @@ bool wxAppWithHelpers::OnInit()
 	Connect( pxEvt_MessageBox,		pxMessageBoxEventThing	(wxAppWithHelpers::OnMessageBox) );
 	//Connect( pxEvt_Assertion,		pxMessageBoxEventThing	(wxAppWithHelpers::OnMessageBox) );
 	Connect( pxEvt_Ping,			pxPingEventHandler		(wxAppWithHelpers::OnPingEvent) );
+	Connect( pxEvt_IdleEventQueue,	wxEventHandler			(wxAppWithHelpers::OnAddEventToIdleQueue) );
 	Connect( pxEvt_DeleteObject,	wxCommandEventHandler	(wxAppWithHelpers::OnDeleteObject) );
 	Connect( wxEVT_IDLE,			wxIdleEventHandler		(wxAppWithHelpers::OnIdleEvent) );
 
-	Connect( m_PingTimer.GetId(), wxEVT_TIMER, wxTimerEventHandler(wxAppWithHelpers::OnPingTimeout) );
+	Connect( m_PingTimer.GetId(),		wxEVT_TIMER, wxTimerEventHandler(wxAppWithHelpers::OnPingTimeout) );
+	Connect( m_IdleEventTimer.GetId(),	wxEVT_TIMER, wxTimerEventHandler(wxAppWithHelpers::OnIdleEventTimeout) );
 
 	return _parent::OnInit();
 }
@@ -178,6 +214,7 @@ void wxAppWithHelpers::OnDeleteObject( wxCommandEvent& evt )
 
 wxAppWithHelpers::wxAppWithHelpers()
 	: m_PingTimer( this )
+	, m_IdleEventTimer( this )
 {
 #ifdef __WXMSW__
 	// This variable assignment ensures that MSVC links in the TLS setup stubs even in 

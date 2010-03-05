@@ -22,168 +22,13 @@
 #include "ps2/BiosTools.h"
 
 #include <wx/stdpaths.h>
-#include <wx/bookctrl.h>
 
 using namespace Dialogs;
-
-// -----------------------------------------------------------------------
-// This method should be called by the parent dalog box of a configuration
-// on dialog destruction.  It asserts if the ApplyList hasn't been cleaned up
-// and then cleans it up forcefully.
-//
-void ApplyStateStruct::DoCleanup() throw()
-{
-	pxAssertMsg( PanelList.size() != 0, L"PanelList list hasn't been cleaned up." );
-	PanelList.clear();
-	ParentBook = NULL;
-}
-
-void ApplyStateStruct::StartBook( wxBookCtrlBase* book )
-{
-	pxAssertDev( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
-	ParentBook = book;
-}
-
-void ApplyStateStruct::StartWizard()
-{
-	pxAssertDev( ParentBook == NULL, "An ApplicableConfig session is already in progress." );
-}
-
-// -----------------------------------------------------------------------
-//
-// Parameters:
-//  pageid - identifier of the page to apply settings for.  All other pages will be
-//     skipped.  If pageid is negative (-1) then all pages are applied.
-//
-// Returns false if one of the panels fails input validation (in which case dialogs
-// should not be closed, etc).
-//
-bool ApplyStateStruct::ApplyPage( int pageid )
-{
-	bool retval = true;
-
-	// Save these settings so we can restore them if the Apply fails.
-
-	bool		oldAdminMode		= UseAdminMode;
-	wxDirName	oldSettingsFolder	= SettingsFolder;
-	bool		oldUseDefSet		= UseDefaultSettingsFolder;
-
-	AppConfig confcopy( *g_Conf );
-
-	try
-	{
-		PanelApplyList_t::iterator yay = PanelList.begin();
-		while( yay != PanelList.end() )
-		{
-			//DbgCon.Status( L"Writing settings for: " + (*yay)->GetLabel() );
-			if( (pageid < 0) || (*yay)->IsOnPage( pageid ) )
-				(*yay)->Apply();
-			yay++;
-		}
-
-		// If an exception is thrown above, this code below won't get run.
-		// (conveniently skipping any option application! :D)
-
-		// Note: apply first, then save -- in case the apply fails.
-
-		AppApplySettings( &confcopy );
-	}
-	catch( Exception::CannotApplySettings& ex )
-	{
-		UseAdminMode = oldAdminMode;
-		SettingsFolder = oldSettingsFolder;
-		UseDefaultSettingsFolder = oldUseDefSet;
-		*g_Conf = confcopy;
-
-		if( ex.IsVerbose )
-		{
-			wxMessageBox( ex.FormatDisplayMessage(), _("Cannot apply settings...") );
-
-			if( ex.GetPanel() != NULL )
-				ex.GetPanel()->SetFocusToMe();
-		}
-
-		retval = false;
-	}
-	catch( ... )
-	{
-		UseAdminMode = oldAdminMode;
-		SettingsFolder = oldSettingsFolder;
-		UseDefaultSettingsFolder = oldUseDefSet;
-		*g_Conf = confcopy;
-
-		throw;
-	}
-
-	return retval;
-}
-
-// Returns false if one of the panels fails input validation (in which case dialogs
-// should not be closed, etc).
-bool ApplyStateStruct::ApplyAll()
-{
-	return ApplyPage( -1 );
-}
+using namespace pxSizerFlags;
 
 // --------------------------------------------------------------------------------------
-//  BaseApplicableConfigPanel Implementations
+//  UsermodeSelectionPanel
 // --------------------------------------------------------------------------------------
-IApplyState* BaseApplicableConfigPanel::FindApplyStateManager() const
-{
-	wxWindow* millrun = this->GetParent();
-	while( millrun != NULL )
-	{
-		if( BaseApplicableDialog* dialog = wxDynamicCast( millrun, BaseApplicableDialog ) )
-			return (IApplyState*)dialog;
-
-		if( ApplicableWizardPage* wizpage = wxDynamicCast( millrun, ApplicableWizardPage ) )
-			return (IApplyState*)wizpage;
-
-		millrun = millrun->GetParent();
-	}
-	return NULL;
-}
-
-BaseApplicableConfigPanel::~BaseApplicableConfigPanel() throw()
-{
-	if( IApplyState* iapp = FindApplyStateManager() )
-		iapp->GetApplyState().PanelList.remove( this );
-}
-
-BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient )
-	: wxPanelWithHelpers( parent, orient )
-	, m_AppStatusHelper( this )
-{
-	Init();
-}
-
-BaseApplicableConfigPanel::BaseApplicableConfigPanel( wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
-	: wxPanelWithHelpers( parent, orient, staticLabel )
-	, m_AppStatusHelper( this )
-{
-	Init();
-}
-
-void BaseApplicableConfigPanel::SetFocusToMe()
-{
-	if( (m_OwnerBook == NULL) || (m_OwnerPage == wxID_NONE) ) return;
-	m_OwnerBook->SetSelection( m_OwnerPage );
-}
-
-void BaseApplicableConfigPanel::Init()
-{
-	if( IApplyState* iapp = FindApplyStateManager() )
-	{
-		ApplyStateStruct& applyState( iapp->GetApplyState() );
-		m_OwnerPage = applyState.CurOwnerPage;
-		m_OwnerBook = applyState.ParentBook;
-		applyState.PanelList.push_back( this );
-	}
-}
-
-void BaseApplicableConfigPanel::AppStatusEvent_OnSettingsApplied() {}
-
-// -----------------------------------------------------------------------
 Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool isFirstTime )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL, _("Usermode Selection") )
 {
@@ -211,30 +56,56 @@ Panels::UsermodeSelectionPanel::UsermodeSelectionPanel( wxWindow* parent, bool i
 			_("Location: ") + wxGetCwd(),
 			_("This setting requires administration privileges from your operating system.")
 		),
-	};
-	
-	m_radio_UserMode = new pxRadioPanel( this, UsermodeOptions );
-	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingHoriz() + 4 );
-	m_radio_UserMode->Realize();
 
-	*this	+= Text( (isFirstTime ? usermodeExplained : usermodeWarning) );
-	*this	+= m_radio_UserMode | pxSizerFlags::StdExpand();
+		RadioPanelItem(
+			_("Custom folder:"),
+			wxEmptyString,
+			_("This setting may require administration privileges from your operating system, depending on how your system is configured.")
+		)
+	};
+
+	m_radio_UserMode = new pxRadioPanel( this, UsermodeOptions );
+	m_radio_UserMode->SetPaddingHoriz( m_radio_UserMode->GetPaddingVert() + 4 );
+	m_radio_UserMode->Realize();
+	
+	m_dirpicker_custom = new DirPickerPanel( this, FolderId_Documents, _("Select a document root for PCSX2") );
+
+	*this	+= Text( isFirstTime ? usermodeExplained : usermodeWarning );
+	*this	+= m_radio_UserMode		| StdExpand();
+	*this	+= m_dirpicker_custom	| pxExpand.Border( wxLEFT, StdPadding + m_radio_UserMode->GetIndentation() );
 	*this	+= 4;
 
 	AppStatusEvent_OnSettingsApplied();
+	
+	Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler(UsermodeSelectionPanel::OnRadioChanged) );
 }
 
 void Panels::UsermodeSelectionPanel::Apply()
 {
-	UseAdminMode = (m_radio_UserMode->GetSelection() == 1);
+	DocsFolderMode			= (DocsModeType) m_radio_UserMode->GetSelection();
+	CustomDocumentsFolder	= m_dirpicker_custom->GetPath();
 }
 
 void Panels::UsermodeSelectionPanel::AppStatusEvent_OnSettingsApplied()
 {
-	m_radio_UserMode->SetSelection( (int)UseAdminMode );
+	if( m_radio_UserMode ) m_radio_UserMode->SetSelection( DocsFolderMode );
+
+	if( m_dirpicker_custom ) m_dirpicker_custom->Enable( DocsFolderMode == DocsFolder_Custom );
 }
 
-// -----------------------------------------------------------------------
+void Panels::UsermodeSelectionPanel::OnRadioChanged( wxCommandEvent& evt )
+{
+	evt.Skip();
+
+	if( !m_radio_UserMode ) return;
+
+	if( m_dirpicker_custom )
+		m_dirpicker_custom->Enable( m_radio_UserMode->GetSelection() == (int)DocsFolder_Custom );	
+}
+
+// --------------------------------------------------------------------------------------
+//  LanguageSelectionPanel
+// --------------------------------------------------------------------------------------
 Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent, wxHORIZONTAL )
 {
@@ -266,6 +137,8 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 
 void Panels::LanguageSelectionPanel::Apply()
 {
+	if( !m_picker ) return;
+
 	// The combo box's order is sorted and may not match our m_langs order, so
 	// we have to do a string comparison to find a match:
 
@@ -285,5 +158,5 @@ void Panels::LanguageSelectionPanel::Apply()
 
 void Panels::LanguageSelectionPanel::AppStatusEvent_OnSettingsApplied()
 {
-	m_picker->SetSelection( g_Conf->LanguageId );
+	if( m_picker ) m_picker->SetSelection( g_Conf->LanguageId );
 }

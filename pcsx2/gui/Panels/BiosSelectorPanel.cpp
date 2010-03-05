@@ -24,15 +24,33 @@
 #include <wx/filepicker.h>
 #include <wx/listbox.h>
 
-// ------------------------------------------------------------------------
+// =====================================================================================================
+//  BaseSelectorPanel
+// =====================================================================================================
 Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL )
 {
-	Connect( wxEVT_COMMAND_DIRPICKER_CHANGED,	wxFileDirPickerEventHandler(PluginSelectorPanel::OnFolderChanged), NULL, this );
+	Connect( wxEVT_COMMAND_DIRPICKER_CHANGED,	wxFileDirPickerEventHandler	(BaseSelectorPanel::OnFolderChanged) );
+	//Connect( wxEVT_ACTIVATE,					wxActivateEventHandler		(BaseSelectorPanel::OnActivate) );
+	Connect( wxEVT_SHOW,						wxShowEventHandler			(BaseSelectorPanel::OnShow) );
 }
 
 Panels::BaseSelectorPanel::~BaseSelectorPanel() throw()
 {
+}
+
+void Panels::BaseSelectorPanel::OnActivate(wxActivateEvent& evt)
+{
+	evt.Skip();
+	if( !evt.GetActive() ) return;
+	OnShown();
+}
+
+void Panels::BaseSelectorPanel::OnShow(wxShowEvent& evt)
+{
+	evt.Skip();
+	if( !evt.GetShow() ) return;
+	OnShown();
 }
 
 void Panels::BaseSelectorPanel::OnShown()
@@ -61,7 +79,9 @@ void Panels::BaseSelectorPanel::OnFolderChanged( wxFileDirPickerEvent& evt )
 	OnShown();
 }
 
-// ----------------------------------------------------------------------------
+// =====================================================================================================
+//  BiosSelectorPanel
+// =====================================================================================================
 Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent, int idealWidth )
 	: BaseSelectorPanel( parent )
 	, m_ComboBox( *new wxListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_SINGLE | wxLB_SORT | wxLB_NEEDED_SB ) )
@@ -87,25 +107,6 @@ Panels::BiosSelectorPanel::~BiosSelectorPanel() throw ()
 {
 }
 
-bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
-{
-	bool validated = true;
-
-	// Impl Note: ScopedPtr used so that resources get cleaned up if an exception
-	// occurs during file enumeration.
-	ScopedPtr<wxArrayString> bioslist( new wxArrayString() );
-
-	if( m_FolderPicker.GetPath().Exists() )
-		wxDir::GetAllFiles( m_FolderPicker.GetPath().ToString(), bioslist, L"*.*", wxDIR_FILES );
-
-	if( !m_BiosList || (*bioslist != *m_BiosList) )
-		validated = false;
-
-	m_BiosList.SwapPtr( bioslist );
-
-	return validated;
-}
-
 void Panels::BiosSelectorPanel::Apply()
 {
 	int sel = m_ComboBox.GetSelection();
@@ -128,6 +129,25 @@ void Panels::BiosSelectorPanel::Apply()
 
 void Panels::BiosSelectorPanel::AppStatusEvent_OnSettingsApplied()
 {
+}
+
+bool Panels::BiosSelectorPanel::ValidateEnumerationStatus()
+{
+	bool validated = true;
+
+	// Impl Note: ScopedPtr used so that resources get cleaned up if an exception
+	// occurs during file enumeration.
+	ScopedPtr<wxArrayString> bioslist( new wxArrayString() );
+
+	if( m_FolderPicker.GetPath().Exists() )
+		wxDir::GetAllFiles( m_FolderPicker.GetPath().ToString(), bioslist, L"*.*", wxDIR_FILES );
+
+	if( !m_BiosList || (*bioslist != *m_BiosList) )
+		validated = false;
+
+	m_BiosList.SwapPtr( bioslist );
+
+	return validated;
 }
 
 void Panels::BiosSelectorPanel::DoRefresh()

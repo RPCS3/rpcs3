@@ -95,9 +95,17 @@ void MainEmuFrame::OnCloseWindow(wxCloseEvent& evt)
 		if( StateCopy_InvokeOnSaveComplete( new InvokeAction_MenuCommand( MenuId_Exit ) ) ) return;
 	}
 
-	wxGetApp().PrepForExit();
-	sApp.OnMainFrameClosed();
+	m_menuCDVD.Remove( MenuId_IsoSelector );
+	//m_menuCDVD.Delete( MenuId_IsoSelector );
 
+	wxGetApp().PrepForExit();
+	sApp.OnMainFrameClosed( GetId() );
+
+	evt.Skip();
+}
+
+void MainEmuFrame::OnDestroyWindow( wxWindowDestroyEvent& evt )
+{
 	evt.Skip();
 }
 
@@ -462,20 +470,19 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_MenuItem_Console.Check( g_Conf->ProgLogBox.Visible );
 
 	ConnectMenus();
-	Connect( wxEVT_MOVE,			wxMoveEventHandler (MainEmuFrame::OnMoveAround) );
-	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler(MainEmuFrame::OnCloseWindow) );
+	Connect( wxEVT_MOVE,			wxMoveEventHandler			(MainEmuFrame::OnMoveAround) );
+	Connect( wxEVT_CLOSE_WINDOW,	wxCloseEventHandler			(MainEmuFrame::OnCloseWindow) );
+	Connect( wxEVT_DESTROY,			wxWindowDestroyEventHandler	(MainEmuFrame::OnDestroyWindow) );
 
-	Connect( wxEVT_SET_FOCUS,		wxFocusEventHandler(MainEmuFrame::OnFocus) );
+	Connect( wxEVT_SET_FOCUS,		wxFocusEventHandler			(MainEmuFrame::OnFocus) );
 
-	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler(MainEmuFrame::OnActivate) );
+	Connect( wxEVT_ACTIVATE,		wxActivateEventHandler		(MainEmuFrame::OnActivate) );
 
 	SetDropTarget( new IsoDropTarget( this ) );
 }
 
 MainEmuFrame::~MainEmuFrame() throw()
 {
-	m_menuCDVD.Remove( MenuId_IsoSelector );
-	
 	if( m_RestartEmuOnDelete )
 	{
 		sApp.SetExitOnFrameDelete( false );

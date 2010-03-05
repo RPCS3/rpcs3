@@ -15,135 +15,176 @@
 
 #include "PrecompiledHeader.h"
 #include "ConfigurationPanels.h"
+#include "MemoryCardListView.h"
+
 #include "Dialogs/ConfigurationDialog.h"
 
 #include <wx/filepicker.h>
 #include <wx/ffile.h>
+#include <wx/dir.h>
 
 using namespace pxSizerFlags;
+using namespace Panels;
 
-wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, uint slotidx, const wxString& filename=wxEmptyString )
+
+enum McdColumnType
 {
-	return new wxFilePickerCtrl( parent, wxID_ANY, filename,
-		wxsFormat(_("Select memorycard for Port %u / Slot %u"), portidx+1, slotidx+1),	// picker window title
-		L"*.ps2",	// default wildcard
-		wxDefaultPosition, wxDefaultSize,
-		wxFLP_DEFAULT_STYLE & ~wxFLP_FILE_MUST_EXIST
-	);
+	McdCol_Filename,
+	McdCol_Mounted,
+	McdCol_Size,
+	McdCol_Formatted,
+	McdCol_DateModified,
+	McdCol_DateCreated,
+	McdCol_Path,
+	McdCol_Count
+};
 
+void MemoryCardListView::CreateColumns()
+{
+	struct ColumnInfo
+	{
+		wxString			name;
+		wxListColumnFormat	align;
+	};
+
+	const ColumnInfo columns[] =
+	{
+		{ _("Filename"),		wxLIST_FORMAT_LEFT },
+		{ _("Mounted"),			wxLIST_FORMAT_CENTER },
+		{ _("Size"),			wxLIST_FORMAT_LEFT },
+		{ _("Formatted"),		wxLIST_FORMAT_CENTER },
+		{ _("Last Modified"),	wxLIST_FORMAT_LEFT },
+		{ _("Created On"),		wxLIST_FORMAT_LEFT },
+		{ _("Path"),			wxLIST_FORMAT_LEFT }
+	};
+
+	for( int i=0; i<McdCol_Count; ++i )
+		InsertColumn( i, columns[i].name, columns[i].align, -1 );
 }
 
-// --------------------------------------------------------------------------------------
-//  SingleCardPanel Implementations
-// --------------------------------------------------------------------------------------
-Panels::MemoryCardsPanel::SingleCardPanel::SingleCardPanel( wxWindow* parent, uint portidx, uint slotidx )
-	: BaseApplicableConfigPanel( parent, wxVERTICAL /*, wxsFormat(_("Port %u / Slot %u"), portidx+1, slotidx+1)*/ )
+void MemoryCardListView::AssignCardsList( McdList* knownCards, int length )
 {
-	m_port = portidx;
-	m_slot = slotidx;
+	if( knownCards == NULL ) length = 0;
+	m_KnownCards = knownCards;
 
-	m_filepicker = CreateMemoryCardFilePicker( this, portidx, slotidx );
+	SetItemCount( length );
+	RefreshItems( 0, length );
+}
 
-	m_check_Disable		= new wxCheckBox	( this, wxID_ANY, _("Disable this card") );
-	m_button_Recreate	= new wxButton		( this, wxID_ANY, _("Re-create") );
-	m_label_Status		= new wxStaticText	( this, wxID_ANY, _("Status: ") );
+MemoryCardListView::MemoryCardListView( wxWindow* parent )
+	: wxListView( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL )
+{
+	m_KnownCards = NULL;
+	CreateColumns();
+
+	//m_KnownCards;
+	Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG,	wxListEventHandler(MemoryCardListView::OnListDrag));
+}
+
+void Panels::MemoryCardListView::OnListDrag(wxListEvent& evt)
+{
+	evt.Skip();
+
+	wxFileDataObject my_data;
+	my_data.AddFile( (*m_KnownCards)[ GetItemData(GetFirstSelected()) ].Filename.GetFullPath() );
+
+	wxDropSource dragSource( this );
+	dragSource.SetData( my_data );
+	wxDragResult result = dragSource.DoDragDrop();
+}
+
+// return the text for the given column of the given item
+wxString Panels::MemoryCardListView::OnGetItemText(long item, long column) const
+{
+	if( m_KnownCards == NULL ) return _parent::OnGetItemText(item, column);
+
+	const McdListItem& it( (*m_KnownCards)[item] );
+
+	switch( column )
+	{
+		case McdCol_Mounted:
+		{
+			if( (it.Port == -1) && (it.Slot == -1) ) return L"No";
+			return wxsFormat( L"%u / %u", it.Port+1, it.Slot+1);
+		}
+
+		case McdCol_Filename:		return it.Filename.GetName();
+		case McdCol_Size:			return wxsFormat( L"%u MB", it.SizeInMB );
+		case McdCol_Formatted:		return it.IsFormatted ? L"Yes" : L"No";
+		case McdCol_DateModified:	return it.DateModified.FormatDate();
+		case McdCol_DateCreated:	return it.DateModified.FormatDate();
+		case McdCol_Path:			return it.Filename.GetPath();
+	}
+
+	pxFail( "Unknown column index in MemoryCardListView -- returning an empty string." );
+	return wxEmptyString;
+}
+
+// return the icon for the given item. In report view, OnGetItemImage will
+// only be called for the first column. See OnGetItemColumnImage for
+// details.
+int Panels::MemoryCardListView::OnGetItemImage(long item) const
+{
+	return _parent::OnGetItemImage( item );
+}
+
+// return the icon for the given item and column.
+int Panels::MemoryCardListView::OnGetItemColumnImage(long item, long column) const
+{
+	return _parent::OnGetItemColumnImage( item, column );
+}
+
+// return the attribute for the item (may return NULL if none)
+wxListItemAttr* Panels::MemoryCardListView::OnGetItemAttr(long item) const
+{
+	wxListItemAttr* retval = _parent::OnGetItemAttr(item);
+	//const McdListItem& it( (*m_KnownCards)[item] );
+	return retval;
+}
+
+
+// =====================================================================================================
+//  MemoryCardInfoPanel
+// =====================================================================================================
+MemoryCardInfoPanel::MemoryCardInfoPanel( wxWindow* parent, uint port, uint slot )
+	: BaseApplicableConfigPanel( parent, wxVERTICAL ) //, wxEmptyString )
+{
+	m_port = port;
+	m_slot = slot;
+
+	SetMinSize( wxSize(128, 48) );
+
+	Connect( wxEVT_PAINT, wxPaintEventHandler(MemoryCardInfoPanel::paintEvent) );
 	
-	pxSetToolTip( m_check_Disable, pxE( ".Tooltip:MemoryCard:Enable",
-		L"When disabled, the card slot is reported as being empty to the emulator."
-	) );
-	
-	pxSetToolTip( m_button_Recreate, pxE( ".Tooltip:MemoryCard:Recreate",
-		L"Deletes the existing memory card and creates a new one.  All existing card contents will be lost."
-	) );
-
-	wxFlexGridSizer& s_status( *new wxFlexGridSizer( 4 ) );
-	s_status.AddGrowableCol( 1 );
-
-	s_status += StdPadding;
-	s_status += m_label_Status		| pxMiddle;
-	s_status += m_button_Recreate;
-	s_status += StdPadding;
-
-	*this += m_check_Disable	| pxBorder( wxLEFT, StdPadding );
-	*this += m_filepicker		| StdExpand();
-	*this += s_status			| pxExpand;
-
-	Connect( m_filepicker->GetId(),			wxEVT_COMMAND_FILEPICKER_CHANGED,	wxCommandEventHandler(SingleCardPanel::OnFileChanged) );
-	Connect( m_button_Recreate->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,		wxCommandEventHandler(SingleCardPanel::OnRecreate_Clicked) );
-
 	AppStatusEvent_OnSettingsApplied();
 }
 
-void Panels::MemoryCardsPanel::SingleCardPanel::OnFileChanged( wxCommandEvent& evt )
+void MemoryCardInfoPanel::paintEvent(wxPaintEvent & evt)
 {
-	if( UpdateStatusLine(m_filepicker->GetPath()) ) evt.Skip();
-}
+	wxPaintDC dc( this );
 
-void Panels::MemoryCardsPanel::SingleCardPanel::OnRecreate_Clicked( wxCommandEvent& evt )
-{
-	if( !wxFileName( m_filepicker->GetPath() ).IsOk() ) return;
-	Dialogs::CreateMemoryCardDialog( this, m_port, m_slot, m_filepicker->GetPath() ).ShowModal();
-}
-
-void Panels::MemoryCardsPanel::SingleCardPanel::Apply()
-{
-	AppConfig::McdOptions& mcd( g_Conf->Mcd[m_port][m_slot] );
-
-	//mcd.Enabled		= m_check_Disable->GetValue();
-	//mcd.Filename	= m_filepicker->GetPath();
-}
-
-void Panels::MemoryCardsPanel::SingleCardPanel::AppStatusEvent_OnSettingsApplied()
-{
-	const AppConfig::McdOptions& mcd( g_Conf->Mcd[m_port][m_slot] );
-	const wxString mcdFilename( g_Conf->FullpathToMcd( m_port, m_slot ) );
-
-	m_filepicker->SetPath( mcdFilename );
-	UpdateStatusLine( mcdFilename );
-	m_check_Disable->SetValue( !mcd.Enabled );
-}
-
-bool Panels::MemoryCardsPanel::SingleCardPanel::UpdateStatusLine( const wxFileName& mcdfilename )
-{
-	if( !mcdfilename.IsOk() )
-	{
-		m_label_Status->SetLabel(_("Invalid filename or path."));
-		m_button_Recreate->SetLabel(_("Create"));
-		m_button_Recreate->Disable();
-
-		return false;
-	}
+	wxFont woot( dc.GetFont() );
+	woot.SetWeight( wxBOLD );
+	dc.SetFont( woot );
 	
-	m_button_Recreate->Enable();
-	
-	if( !mcdfilename.FileExists() )
-	{
-		m_label_Status->SetLabel(_("Status: File does not exist."));
-		m_button_Recreate->SetLabel(_("Create"));
-		
-		return false;
-	}
-	else
-	{
-		m_button_Recreate->SetLabel(_("Re-create"));
+	wxString msg;
+	msg = _("No Card (empty)");
 
-		// TODO: Add formatted/unformatted check here.
-		
-		wxFFile mcdFile( mcdfilename.GetFullPath() );
-		if( !mcdFile.IsOpened() )
-		{
-			m_label_Status->SetLabel(_("Status: Permission denied."));
-		}
-		else
-		{
-			const uint size = (uint)(mcdFile.Length() / (1024 * 528 * 2));
-			m_label_Status->SetLabel( wxsFormat(_("Status: %u MB"), size) );
-		}
+	int tWidth, tHeight;
+	dc.GetTextExtent( msg, &tWidth, &tHeight );
 
-		return true;
-	}
-	
+	dc.DrawText( msg, (dc.GetSize().GetWidth() - tWidth) / 2, 0 );
+	//dc.DrawCircle( dc.GetSize().GetWidth()/2, 24, dc.GetSize().GetWidth()/4 );
 }
+
+void MemoryCardInfoPanel::Apply()
+{
+}
+
+void MemoryCardInfoPanel::AppStatusEvent_OnSettingsApplied()
+{
+}
+
 
 // --------------------------------------------------------------------------------------
 //  MemoryCardsPanel Implementations
@@ -151,7 +192,7 @@ bool Panels::MemoryCardsPanel::SingleCardPanel::UpdateStatusLine( const wxFileNa
 Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent )
 {
-	wxPanelWithHelpers* columns[2];
+	m_panel_AllKnownCards = new MemoryCardListPanel( this );
 
 	m_idealWidth -= 48;
 	m_check_Ejection = new pxCheckBox( this,
@@ -161,23 +202,25 @@ Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 			L"loading from savestates.  May not be compatible with all games (Guitar Hero)."
 		)
 	);
-
 	m_idealWidth += 48;
+
+	wxPanelWithHelpers* columns[2];
 
 	for( uint port=0; port<2; ++port )
 	{
 		columns[port] = new wxPanelWithHelpers( this, wxVERTICAL );
 		columns[port]->SetIdealWidth( (columns[port]->GetIdealWidth()-12) / 2 );
 
-		m_check_Multitap[port] = new pxCheckBox( columns[port], wxsFormat(_("Enable Multitap on Port %u"), port+1) );
+		/*m_check_Multitap[port] = new pxCheckBox( columns[port], wxsFormat(_("Enable Multitap on Port %u"), port+1) );
 		m_check_Multitap[port]->SetClientData( (void*) port );
+		m_check_Multitap[port]->SetFont( wxFont( m_check_Multitap[port]->GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );*/
 
-		for( uint slot=0; slot<4; ++slot )
+		for( uint slot=0; slot<1; ++slot )
 		{
-			m_CardPanel[port][slot] = new SingleCardPanel( columns[port], port, slot );
+			m_panel_cardinfo[port][slot] = new MemoryCardInfoPanel( columns[port], port, slot );
 		}
 
-		Connect( m_check_Multitap[port]->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(MemoryCardsPanel::OnMultitapChecked));
+		//Connect( m_check_Multitap[port]->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(MemoryCardsPanel::OnMultitapChecked));
 	}
 
 	// ------------------------------------
@@ -194,29 +237,30 @@ Panels::MemoryCardsPanel::MemoryCardsPanel( wxWindow* parent )
 
 		*columns[port] += portSizer | SubGroup();
 
-		for( uint slot=0; slot<4; ++slot )
-		{
-			portSizer += m_CardPanel[port][slot] | pxExpand;
-			
-			if( slot == 0 )
-			{
-				portSizer += new wxStaticLine( columns[port] )	| pxExpand.Border( wxTOP, StdPadding );
-				portSizer += m_check_Multitap[port]				| pxCenter.Border( wxBOTTOM, StdPadding );
-			}
-		}
+		portSizer += m_panel_cardinfo[port][0]			| SubGroup();
+		//portSizer += new wxStaticLine( columns[port] )	| pxExpand.Border( wxTOP, StdPadding );
+		//portSizer += m_check_Multitap[port]				| pxCenter.Border( wxBOTTOM, StdPadding );
 
-		*s_table += columns[port] | StdExpand();
+		/*for( uint slot=1; slot<4; ++slot )
+		{
+			//portSizer += new wxStaticText( columns[port], wxID_ANY, wxsFormat(_("Slot #%u"), slot+1) ); // | pxCenter;
+			wxStaticBoxSizer& staticbox( *new wxStaticBoxSizer( wxVERTICAL, columns[port] ) );
+			staticbox += m_panel_cardinfo[port][slot]	| pxExpand;
+			portSizer += staticbox | SubGroup();
+
+		}*/
+
+		*s_table += columns[port]	| StdExpand();
 	}
 	
+	wxBoxSizer& s_checks( *new wxBoxSizer( wxVERTICAL ) );
+	s_checks += m_check_Ejection;
 
-	wxBoxSizer* s_checks = new wxBoxSizer( wxVERTICAL );
-	*s_checks += m_check_Ejection;
-
-	*this += s_table	| pxExpand;
-	*this += s_checks	| StdExpand();
+	*this += s_table				| pxExpand;
+	*this += m_panel_AllKnownCards	| StdExpand();
+	*this += s_checks				| StdExpand();
 
 	AppStatusEvent_OnSettingsApplied();
-	Disable();		// it's all broken right now, so disable it
 }
 
 void Panels::MemoryCardsPanel::OnMultitapChecked( wxCommandEvent& evt )
@@ -227,7 +271,7 @@ void Panels::MemoryCardsPanel::OnMultitapChecked( wxCommandEvent& evt )
 
 		for( uint slot=1; slot<4; ++slot )
 		{
-			m_CardPanel[port][slot]->Enable( m_check_Multitap[port]->IsChecked() && g_Conf->Mcd[port][slot].Enabled );
+			//m_panel_cardinfo[port][slot]->Enable( m_check_Multitap[port]->IsChecked() );
 		}
 	}
 }
@@ -241,10 +285,9 @@ void Panels::MemoryCardsPanel::AppStatusEvent_OnSettingsApplied()
 	const Pcsx2Config& emuconf( g_Conf->EmuOptions );
 
 	for( uint port=0; port<2; ++port )
-	for( uint slot=0; slot<4; ++slot )
+	for( uint slot=1; slot<4; ++slot )
 	{
-		m_CardPanel[port][slot]->Enable( g_Conf->Mcd[port][slot].Enabled && ((slot == 0) || emuconf.MultitapEnabled(port)) );
+		//m_panel_cardinfo[port][slot]->Enable( emuconf.MultitapEnabled(port) );
 	}
-	
-	
 }
+

@@ -70,7 +70,15 @@ static void WipeSettings()
 	//wxRmdir( GetSettingsFolder().ToString() );
 	
 	g_Conf = new AppConfig();
+	sMainFrame.RemoveCdvdMenu();
 }
+
+void MainEmuFrame::RemoveCdvdMenu()
+{
+	if( wxMenuItem* item = m_menuCDVD.FindItem(MenuId_IsoSelector) )
+		m_menuCDVD.Remove( item );
+}
+
 
 class RestartEverything_WhenCoreThreadStops : public EventListener_CoreThread,
 	public virtual IDeletableObject

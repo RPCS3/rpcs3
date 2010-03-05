@@ -489,7 +489,7 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	{
 		m_except = new Exception::RuntimeError(
 			// Diagnostic message:
-			wxsFormat( L"(thread: %s) STL Runtime Error: %s\n\t%s",
+			wxsFormat( L"(thread: %s) STL Runtime Error: %s",
 				GetName().c_str(), fromUTF8( ex.what() ).c_str()
 			),
 
@@ -513,13 +513,13 @@ void Threading::PersistentThread::_try_virtual_invoke( void (PersistentThread::*
 	// the MSVC debugger (or by silent random annoying fail on debug-less linux).
 	/*catch( std::logic_error& ex )
 	{
-		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL Logic Error: %s\n\t%s",
+		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL Logic Error: %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}
 	catch( std::exception& ex )
 	{
-		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL exception: %s\n\t%s",
+		throw Exception::BaseException( wxsFormat( L"(thread: %s) STL exception: %s",
 			GetName().c_str(), fromUTF8( ex.what() ).c_str() )
 		);
 	}*/

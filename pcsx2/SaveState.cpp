@@ -359,8 +359,8 @@ void SaveStateBase::FreezeAll()
 //////////////////////////////////////////////////////////////////////////////////
 // uncompressed to/from memory state saves implementation
 
-memSavingState::memSavingState( SafeArray<u8>& save_to ) :
-	SaveStateBase( save_to )
+memSavingState::memSavingState( SafeArray<u8>& save_to )
+	: SaveStateBase( save_to )
 {
 }
 
@@ -381,12 +381,12 @@ void memSavingState::FreezeAll()
 	_parent::FreezeAll();
 }
 
-memLoadingState::memLoadingState( const SafeArray<u8>& load_from ) :
-	SaveStateBase( const_cast<SafeArray<u8>&>(load_from) )
+memLoadingState::memLoadingState( const SafeArray<u8>& load_from )
+	: SaveStateBase( const_cast<SafeArray<u8>&>(load_from) )
 {
 }
 
-memLoadingState::~memLoadingState() { }
+memLoadingState::~memLoadingState() throw() { }
 
 // Loading of state data
 void memLoadingState::FreezeMem( void* data, int size )

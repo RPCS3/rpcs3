@@ -99,16 +99,6 @@ wxSizerFlags pxStretchType::Apply( wxSizerFlags flags ) const
 	return flags;
 }
 
-wxSizerFlags pxProportion::Apply( wxSizerFlags flags ) const
-{
-	return flags.Proportion( intval );
-}
-
-wxSizerFlags pxBorder::Apply( wxSizerFlags flags ) const
-{
-	return flags.Border( direction, padding );
-}
-
 wxSizerFlags operator& ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
 {
 	//return align.Apply( _flgs );
@@ -124,6 +114,9 @@ wxSizerFlags operator& ( const wxSizerFlags& _flgs, const wxSizerFlags& _flgs2 )
 	
 	// Compounding borders is probably a fair approach:
 	retval.Border( allflags & wxALL, _flgs.GetBorderInPixels() + _flgs2.GetBorderInPixels() );
+
+	// Compounding proportions works as well, I figure.
+	retval.Proportion( _flgs.GetProportion() + _flgs2.GetProportion() );
 
 	return retval;
 }
@@ -155,6 +148,24 @@ void operator+=( wxSizer& target, int spacer )
 {
 	target.AddSpacer( spacer );
 }
+
+void operator+=( wxSizer& target, const pxStretchSpacer& spacer )
+{
+	target.AddStretchSpacer( spacer.proportion );
+}
+
+void operator+=( wxWindow& target, int spacer )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	target.GetSizer()->AddSpacer( spacer );
+}
+
+void operator+=( wxWindow& target, const pxStretchSpacer& spacer )
+{
+	if( !pxAssert( target.GetSizer() != NULL ) ) return;
+	target.GetSizer()->AddStretchSpacer( spacer.proportion );
+}
+
 // ----------------------------------------------------------------------------
 // Pointer versions!  (note that C++ requires one of the two operator params be a
 // "poper" object type (non-pointer), so that's why there's only a couple of these.
@@ -172,12 +183,6 @@ void operator+=( wxSizer* target, wxSizer& src )
 }
 
 // ----------------------------------------------------------------------------
-
-void operator+=( wxWindow& target, int spacer )
-{
-	if( !pxAssert( target.GetSizer() != NULL ) ) return;
-	target.GetSizer()->AddSpacer( spacer );
-}
 
 // Returns FALSE if the window position is considered invalid, which means that it's title
 // bar is most likely not easily grabble.  Such a window should be moved to a valid or

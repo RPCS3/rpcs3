@@ -23,51 +23,61 @@
 
 #include <wx/image.h>
 #include <wx/statline.h>
-#include <wx/spinctrl.h>
+#include <wx/dnd.h>
 
 #include "AppCommon.h"
 #include "ApplyState.h"
 
 
-// --------------------------------------------------------------------------------------
-//  pxUniformTable
-// --------------------------------------------------------------------------------------
-// TODO : Move this class to the common Utilities lib, if it proves useful. :)
-/*
-class pxUniformTable : public wxFlexGridSizer
-{
-protected:	
-	int								m_curcell;
-	SafeArray<wxPanelWithHelpers*>	m_panels;
-
-public:
-	pxUniformTable( wxWindow* parent, int numcols, int numrows, const wxString* staticBoxLabels=NULL );
-	virtual ~pxUniformTable() throw() {}
-
-	int GetCellCount() const
-	{
-		return m_panels.GetLength();
-	}
-
-	wxPanelWithHelpers* operator()( int col, int row )
-	{
-		return m_panels[(col*GetCols()) + row];
-	}
-
-	wxPanelWithHelpers* operator[]( int cellidx )
-	{
-		return m_panels[cellidx];
-	}
-};
-*/
 namespace Panels
 {
-	//////////////////////////////////////////////////////////////////////////////////////////
+	// --------------------------------------------------------------------------------------
+	//  DirPickerPanel
+	// --------------------------------------------------------------------------------------
+	// A simple panel which provides a specialized configurable directory picker with a
+	// "[x] Use Default setting" option, which enables or disables the panel.
 	//
+	class DirPickerPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		FoldersEnum_t		m_FolderId;
+		wxDirPickerCtrl*	m_pickerCtrl;
+		pxCheckBox*			m_checkCtrl;
+
+	public:
+		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
+		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& dialogLabel );
+		virtual ~DirPickerPanel() throw() { }
+
+		void Apply();
+		void AppStatusEvent_OnSettingsApplied();
+
+		void Reset();
+		wxDirName GetPath() const;
+		void SetPath( const wxString& src );
+
+		DirPickerPanel& SetStaticDesc( const wxString& msg );
+		DirPickerPanel& SetToolTip( const wxString& tip );
+		
+		wxWindowID GetId() const;
+		wxWindowID GetPanelId() const { return m_windowId; }
+
+	protected:
+		void Init( FoldersEnum_t folderid, const wxString& dialogLabel, bool isCompact );
+		
+		void UseDefaultPath_Click( wxCommandEvent &event );
+		void Explore_Click( wxCommandEvent &event );
+		void UpdateCheckStatus( bool someNoteworthyBoolean );
+	};
+ 
+	// --------------------------------------------------------------------------------------
+	//  UsermodeSelectionPanel / LanguageSelectionPanel
+	// --------------------------------------------------------------------------------------
 	class UsermodeSelectionPanel : public BaseApplicableConfigPanel
 	{
 	protected:
 		pxRadioPanel*	m_radio_UserMode;
+		DirPickerPanel*	m_dirpicker_custom;
 
 	public:
 		virtual ~UsermodeSelectionPanel() throw() { }
@@ -75,10 +85,12 @@ namespace Panels
 
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
+		wxWindowID GetDirPickerId() const { return m_dirpicker_custom ? m_dirpicker_custom->GetId() : 0; }
+		
+	protected:
+		void OnRadioChanged( wxCommandEvent& evt );
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
 	class LanguageSelectionPanel : public BaseApplicableConfigPanel
 	{
 	protected:
@@ -104,6 +116,8 @@ namespace Panels
 
 	public:
 		CpuPanelEE( wxWindow* parent );
+		virtual ~CpuPanelEE() throw() {}
+
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
 
@@ -119,6 +133,8 @@ namespace Panels
 
 	public:
 		CpuPanelVU( wxWindow* parent );
+		virtual ~CpuPanelVU() throw() {}
+
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
 
@@ -283,6 +299,7 @@ namespace Panels
 		pxCheckBox*		m_check_vuMinMax;
 
 	public:
+		virtual ~SpeedHacksPanel() throw() {}
 		SpeedHacksPanel( wxWindow* parent );
 		void Apply();
 		void EnableStuff();
@@ -320,94 +337,15 @@ namespace Panels
 		void AppStatusEvent_OnSettingsApplied();
 	};
 
-	// --------------------------------------------------------------------------------------
-	//  MemoryCardsPanel
-	// --------------------------------------------------------------------------------------
-	class MemoryCardsPanel : public BaseApplicableConfigPanel
-	{
-		class SingleCardPanel : public BaseApplicableConfigPanel
-		{
-		protected:
-			uint					m_port, m_slot;
-
-			wxFilePickerCtrl*		m_filepicker;
-			wxCheckBox*				m_check_Disable;
-			wxButton*				m_button_Recreate;
-
-			// Displays card status:  Size, Formatted, etc.
-			wxStaticText*			m_label_Status;
-
-		public:
-			SingleCardPanel( wxWindow* parent, uint portidx, uint slotidx );
-			virtual ~SingleCardPanel() throw() { }
-			void Apply();
-
-			bool UpdateStatusLine( const wxFileName& mcdfilename );
-
-		protected:
-			void AppStatusEvent_OnSettingsApplied();
-			void OnFileChanged( wxCommandEvent& evt );
-			void OnRecreate_Clicked( wxCommandEvent& evt );
-		};
-	
-	protected:
-		pxCheckBox*			m_check_Ejection;
-		pxCheckBox*			m_check_Multitap[2];
-		
-		SingleCardPanel*	m_CardPanel[2][4];
-		
-	public:
-		MemoryCardsPanel( wxWindow* parent );
-		virtual ~MemoryCardsPanel() throw() { }
-		void Apply();
-
-	protected:
-		void OnMultitapChecked( wxCommandEvent& evt );
-		void AppStatusEvent_OnSettingsApplied();
-	};
-
-	// --------------------------------------------------------------------------------------
-	//  DirPickerPanel
-	// --------------------------------------------------------------------------------------
-	// A simple panel which provides a specialized configurable directory picker with a
-	// "[x] Use Default setting" option, which enables or disables the panel.
-	//
-	class DirPickerPanel : public BaseApplicableConfigPanel
-	{
-	protected:
-		FoldersEnum_t		m_FolderId;
-		wxDirPickerCtrl*	m_pickerCtrl;
-		pxCheckBox*			m_checkCtrl;
-
-	public:
-		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
-		virtual ~DirPickerPanel() throw() { }
-
-		void Apply();
-		void AppStatusEvent_OnSettingsApplied();
-
-		void Reset();
-		wxDirName GetPath() const;
-
-		DirPickerPanel& SetStaticDesc( const wxString& msg );
-		DirPickerPanel& SetToolTip( const wxString& tip );
-
-	protected:
-		void UseDefaultPath_Click( wxCommandEvent &event );
-		void Explore_Click( wxCommandEvent &event );
-		void UpdateCheckStatus( bool someNoteworthyBoolean );
-	};
-
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
 	class SettingsDirPickerPanel : public DirPickerPanel
 	{
 	public:
 		SettingsDirPickerPanel( wxWindow* parent );
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
+	// --------------------------------------------------------------------------------------
+	//  BasePathsPanel / StandardPathsPanel
+	// --------------------------------------------------------------------------------------
 	class BasePathsPanel : public wxPanelWithHelpers
 	{
 	public:
@@ -416,8 +354,6 @@ namespace Panels
 	protected:
 	};
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-	//
 	class StandardPathsPanel : public BasePathsPanel
 	{
 	public:
@@ -429,6 +365,8 @@ namespace Panels
 	// --------------------------------------------------------------------------------------
 	class BaseSelectorPanel: public BaseApplicableConfigPanel
 	{
+		typedef BaseApplicableConfigPanel _parent;
+
 	public:
 		virtual ~BaseSelectorPanel() throw();
 		BaseSelectorPanel( wxWindow* parent );
@@ -441,6 +379,8 @@ namespace Panels
 	protected:
 		virtual void DoRefresh()=0;
 		virtual bool ValidateEnumerationStatus()=0;
+		void OnActivate(wxActivateEvent& evt);
+		void OnShow(wxShowEvent& evt);
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -462,6 +402,32 @@ namespace Panels
 		virtual void AppStatusEvent_OnSettingsApplied();
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
+	};
+
+	class MemoryCardListPanel;
+	class MemoryCardInfoPanel;
+
+	// --------------------------------------------------------------------------------------
+	//  MemoryCardsPanel
+	// --------------------------------------------------------------------------------------
+	class MemoryCardsPanel : public BaseApplicableConfigPanel
+	{
+	protected:
+		MemoryCardListPanel*	m_panel_AllKnownCards;
+		MemoryCardInfoPanel*	m_panel_cardinfo[2][4];
+		pxCheckBox*				m_check_Ejection;
+		pxCheckBox*				m_check_Multitap[2];
+
+		uint					m_Bindings[2][4];
+
+	public:
+		MemoryCardsPanel( wxWindow* parent );
+		virtual ~MemoryCardsPanel() throw() { }
+		void Apply();
+
+	protected:
+		void OnMultitapChecked( wxCommandEvent& evt );
+		void AppStatusEvent_OnSettingsApplied();
 	};
 
 	// --------------------------------------------------------------------------------------

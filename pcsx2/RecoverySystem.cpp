@@ -95,9 +95,10 @@ protected:
 		if( !state_buffer_lock.TryAcquire() )
 			throw Exception::CancelEvent( m_name + L"request ignored: state copy buffer is already locked!" );
 
+		_parent::OnStart();
+
 		current_state_thread = this;
 		m_isStarted = true;
-		_parent::OnStart();
 	}
 
 	void SendFinishEvent( int type )
@@ -131,9 +132,18 @@ public:
 protected:
 	void OnStart()
 	{
-		_parent::OnStart();
-		++sys_resume_lock;
-		m_resume_when_done = CoreThread.Pause();
+		try
+		{
+			++sys_resume_lock;
+			m_resume_when_done = CoreThread.Pause();
+
+			_parent::OnStart();
+		}
+		catch( ... )
+		{
+			wxGetApp().DeleteObject( this );
+			throw;
+		}
 	}
 
 	void ExecuteTaskInThread()
@@ -147,6 +157,10 @@ protected:
 		_parent::OnCleanupInThread();
 	}
 };
+
+
+static const char SavestateIdentString[] = "PCSX2 Savestate";
+static const uint SavestateIdentLen = sizeof(SavestateIdentString);
 
 // --------------------------------------------------------------------------------------
 //   StateThread_ZipToDisk
@@ -178,10 +192,19 @@ public:
 protected:
 	void OnStart()
 	{
-		_parent::OnStart();
-		m_gzfp = gzopen( m_filename.ToUTF8(), "wb" );
-		if(	m_gzfp == NULL )
-			throw Exception::CreateStream( m_filename, "Cannot create savestate file for writing." );
+		try
+		{
+			m_gzfp = gzopen( m_filename.ToUTF8(), "wb" );
+			if(	m_gzfp == NULL )
+				throw Exception::CreateStream( m_filename, "Cannot create savestate file for writing." );
+
+			_parent::OnStart();
+		}
+		catch( ... )
+		{
+			wxGetApp().DeleteObject( this );
+			throw;
+		}
 	}
 
 	void ExecuteTaskInThread()
@@ -190,6 +213,10 @@ protected:
 
 		static const int BlockSize = 0x20000;
 		int curidx = 0;
+		
+		gzwrite(m_gzfp, SavestateIdentString, sizeof( SavestateIdentString ));
+		gzwrite(m_gzfp, &g_SaveVersion, sizeof( g_SaveVersion ));
+
 		do
 		{
 			int thisBlockSize = std::min( BlockSize, state_buffer.GetSizeInBytes() - curidx );
@@ -245,13 +272,51 @@ public:
 protected:
 	void OnStart()
 	{
-		_parent::OnStart();
+		try
+		{
+			m_gzfp = gzopen( m_filename.ToUTF8(), "rb" );
+			if(	m_gzfp == NULL )
+				throw Exception::CreateStream( m_filename, "Cannot open savestate file for reading." );
 
-		m_gzfp = gzopen( m_filename.ToUTF8(), "rb" );
-		if(	m_gzfp == NULL )
-			throw Exception::CreateStream( m_filename, "Cannot open savestate file for reading." );
+			char ident[SavestateIdentLen] = {0};
+
+			int result = gzread(m_gzfp, ident, SavestateIdentLen);
+			if( result == -1 )
+				throw Exception::SaveStateLoadError( m_filename, "Unable to read any data from the gzip archive." );
+
+			if( result < SavestateIdentLen )
+				throw Exception::SaveStateLoadError( m_filename );
+
+			if( strcmp(SavestateIdentString, ident) )
+				throw Exception::SaveStateLoadError( m_filename,
+					wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
+					_("File is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2.")
+				);
+
+			u32 savever;
+			gzread(m_gzfp, &savever, sizeof(g_SaveVersion));
+			
+			if( (savever >> 16) != (g_SaveVersion >> 16) )
+				throw Exception::SaveStateLoadError( m_filename,
+					wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
+					_("File is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2.")
+				);
+			
+			if( savever > g_SaveVersion )
+				throw Exception::SaveStateLoadError( m_filename,
+					wxsFormat( L"Unrecognized file signature while loading savestate: %s", ident ),
+					_("File is not a valid PCSX2 savestate, or is from an older unsupported version of PCSX2.")
+				);
+
+			_parent::OnStart();
+		}
+		catch( ... )
+		{
+			wxGetApp().DeleteObject( this );
+			throw;
+		}
 	}
-
+	
 	void ExecuteTaskInThread()
 	{
 		// fixme: should start initially with the file size, and then grow from there.

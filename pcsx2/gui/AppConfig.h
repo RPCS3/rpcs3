@@ -19,9 +19,22 @@
 #include "PathDefs.h"
 #include "CDVD/CDVDaccess.h"
 
-extern bool			UseAdminMode;			// dictates if the program uses /home/user or /cwd for the program data
-extern wxDirName	SettingsFolder;			// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
-extern bool			UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the UseAdminMode
+enum DocsModeType
+{
+	// uses /home/user or /cwd for the program data
+	DocsFolder_User,
+	
+	// uses the current working directory for program data
+	DocsFolder_CWD,
+	
+	// uses a custom location for program data
+	DocsFolder_Custom,
+};
+
+extern DocsModeType		DocsFolderMode;				// 
+extern wxDirName		SettingsFolder;				// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
+extern wxDirName		CustomDocumentsFolder;		// allows the specification of a custom home folder for PCSX2 documents files.
+extern bool				UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the UseAdminMode
 
 wxDirName GetSettingsFolder();
 wxString  GetSettingsFilename();
@@ -189,9 +202,9 @@ public:
 	bool		EnableSpeedHacks;
 	bool		EnableGameFixes;
 
-	wxString		CurrentIso;
-	wxString		CurrentELF;
-	CDVD_SourceType CdvdSource;
+	wxString				CurrentIso;
+	wxString				CurrentELF;
+	CDVD_SourceType			CdvdSource;
 
 	McdOptions				Mcd[2][4];
 	ConsoleLogOptions		ProgLogBox;

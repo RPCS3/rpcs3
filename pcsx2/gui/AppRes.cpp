@@ -64,30 +64,40 @@ const wxImage& LoadImageAny(
 	return dest = onFail.Get();
 }
 
+RecentIsoList::RecentIsoList()
+{
+	Menu = new wxMenu();
+	Menu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
+	Manager = new RecentIsoManager( Menu );
+}
+
 pxAppResources::pxAppResources()
 {
-	// RecentIsoList and Menu must be created immediately, since they depend on listening for App configuration
-	// events that can be thrown very early ni program execution.
-	RecentIsoMenu = new wxMenu();
-	RecentIsoMenu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
-	RecentIsoList = new RecentIsoManager( RecentIsoMenu );
 }
 
 wxMenu& Pcsx2App::GetRecentIsoMenu()
 {
-	pxAssert( !!m_Resources->RecentIsoMenu );
-	return *m_Resources->RecentIsoMenu;
+	pxAssert( !!m_RecentIsoList->Menu );
+	return *m_RecentIsoList->Menu;
 }
 
-RecentIsoManager& Pcsx2App::GetRecentIsoList()
+RecentIsoManager& Pcsx2App::GetRecentIsoManager()
 {
-	pxAssert( !!m_Resources->RecentIsoList );
-	return *m_Resources->RecentIsoList;
+	pxAssert( !!m_RecentIsoList->Manager );
+	return *m_RecentIsoList->Manager;
+}
+
+pxAppResources& Pcsx2App::GetResourceCache()
+{
+	if( !m_Resources )
+		m_Resources = new pxAppResources();
+	
+	return *m_Resources;
 }
 
 const wxIconBundle& Pcsx2App::GetIconBundle()
 {
-	ScopedPtr<wxIconBundle>& bundle( m_Resources->IconBundle );
+	ScopedPtr<wxIconBundle>& bundle( GetResourceCache().IconBundle );
 	if( !bundle )
 	{
 		bundle = new wxIconBundle();
@@ -102,7 +112,7 @@ const wxIconBundle& Pcsx2App::GetIconBundle()
 // ------------------------------------------------------------------------
 const wxBitmap& Pcsx2App::GetLogoBitmap()
 {
-	ScopedPtr<wxBitmap>& logo( m_Resources->Bitmap_Logo );
+	ScopedPtr<wxBitmap>& logo( GetResourceCache().Bitmap_Logo );
 	if( logo ) return *logo;
 
 	wxFileName mess;
@@ -138,7 +148,7 @@ const wxBitmap& Pcsx2App::GetLogoBitmap()
 // ------------------------------------------------------------------------
 wxImageList& Pcsx2App::GetImgList_Config()
 {
-	ScopedPtr<wxImageList>& images( m_Resources->ConfigImages );
+	ScopedPtr<wxImageList>& images( GetResourceCache().ConfigImages );
 	if( !images )
 	{
 		images = new wxImageList(32, 32);
@@ -176,10 +186,9 @@ wxImageList& Pcsx2App::GetImgList_Config()
 	return *images;
 }
 
-// ------------------------------------------------------------------------
 wxImageList& Pcsx2App::GetImgList_Toolbars()
 {
-	ScopedPtr<wxImageList>& images( m_Resources->ToolbarImages );
+	ScopedPtr<wxImageList>& images( GetResourceCache().ToolbarImages );
 
 	if( !images )
 	{

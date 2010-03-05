@@ -47,7 +47,8 @@ Dialogs::AssertionDialog::AssertionDialog( const wxString& text, const wxString&
 
 		traceArea->WriteText( stacktrace );
 		traceArea->SetMinSize( wxSize( GetIdealWidth()-24, (fonty+1)*18 ) );
-		traceArea->ShowPosition(0);
+		traceArea->SetInsertionPoint( 0 );
+		traceArea->ShowPosition( 0 );
 	}
 
 	*this += Heading( text );

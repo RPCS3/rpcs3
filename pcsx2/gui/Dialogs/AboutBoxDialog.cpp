@@ -107,9 +107,9 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	AuthLogoSizer	+= 7;
 	AuthLogoSizer	+= contribs;
 
-	ContribSizer.AddStretchSpacer( 1 );
+	ContribSizer	+= pxStretchSpacer( 1 );
 	ContribSizer	+= m_bitmap_dualshock	| StdSpace();
-	ContribSizer.AddStretchSpacer( 1 );
+	ContribSizer	+= pxStretchSpacer( 1 );
 
 	// Main (top-level) layout 
 

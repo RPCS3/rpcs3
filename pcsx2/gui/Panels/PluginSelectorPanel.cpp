@@ -629,7 +629,7 @@ Panels::PluginSelectorPanel::EnumThread::EnumThread( PluginSelectorPanel& master
 
 void Panels::PluginSelectorPanel::EnumThread::DoNextPlugin( int curidx )
 {
-	DbgCon.Indent().WriteLn( L"Enumerating Plugin: " + m_master.GetFilename( curidx ) );
+	DbgCon.Indent().WriteLn( L"Plugin: " + m_master.GetFilename( curidx ) );
 
 	try
 	{

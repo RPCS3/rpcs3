@@ -110,51 +110,24 @@ struct pxStretchType
 	}
 };
 
-class pxProportion
+static __forceinline wxSizerFlags pxProportion( int prop )
+{
+	return wxSizerFlags( prop );
+}
+
+static __forceinline wxSizerFlags pxBorder( int dir, int pad )
+{
+	return wxSizerFlags().Border( dir, pad );
+}
+
+class pxStretchSpacer
 {
 public:
-	int intval;
-
-	pxProportion( int prop )
+	int proportion;
+	
+	pxStretchSpacer( int prop=0 )
 	{
-		intval = prop;
-	}
-
-	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
-
-	wxSizerFlags operator& ( const wxSizerFlags& _flgs ) const
-	{
-		return Apply( _flgs );
-	}
-
-	operator wxSizerFlags() const
-	{
-		return Apply();
-	}
-};
-
-class pxBorder
-{
-public:
-	int		direction;
-	int		padding;
-
-	pxBorder( int dir, int pad )
-	{
-		direction	= dir;
-		padding		= pad;
-	}
-
-	wxSizerFlags Apply( wxSizerFlags flags=wxSizerFlags() ) const;
-
-	wxSizerFlags operator& ( const wxSizerFlags& _flgs ) const
-	{
-		return Apply( _flgs );
-	}
-
-	operator wxSizerFlags() const
-	{
-		return Apply();
+		proportion = prop;
 	}
 };
 
@@ -235,6 +208,8 @@ extern void operator+=( wxSizer* target, wxSizer& src );
 
 extern void operator+=( wxSizer& target, int spacer );
 extern void operator+=( wxWindow& target, int spacer );
+extern void operator+=( wxSizer& target, const pxStretchSpacer& spacer );
+extern void operator+=( wxWindow& target, const pxStretchSpacer& spacer );
 
 // ----------------------------------------------------------------------------
 // Important: This template is needed in order to retain window type information and

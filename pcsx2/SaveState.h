@@ -24,7 +24,7 @@
 //  the lower 16 bit value.  IF the change is breaking of all compatibility with old
 //  states, increment the upper 16 bit value, and clear the lower 16 bits to 0.
 
-static const u32 g_SaveVersion = 0x8b410004;
+static const u32 g_SaveVersion = 0x8b420000;
 
 // this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
@@ -231,9 +231,9 @@ protected:
 	static const int MemoryBaseAllocSize = 0x02b00000;  // 45 meg base alloc
 
 public:
-	virtual ~memSavingState() { }
+	virtual ~memSavingState() throw() { }
 	memSavingState( SafeArray<u8>& save_to );
-	
+
 	// Saving of state data to a memory buffer
 	void FreezeMem( void* data, int size );
 	void FreezeAll();
@@ -244,7 +244,7 @@ public:
 class memLoadingState : public SaveStateBase
 {
 public:
-	virtual ~memLoadingState();
+	virtual ~memLoadingState() throw();
 	memLoadingState( const SafeArray<u8>& load_from );
 
 	// Loading of state data from a memory buffer...

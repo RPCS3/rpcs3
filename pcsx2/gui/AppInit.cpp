@@ -152,9 +152,10 @@ void Pcsx2App::ReadUserModeSettings()
 	}
 	else
 	{
-		// usermode.ini exists -- assume Documents mode, unless the ini explicitly
+		// usermode.ini exists -- assume User Documents mode, unless the ini explicitly
 		// specifies otherwise.
-		UseAdminMode = false;
+
+		DocsFolderMode = DocsFolder_User;
 
 		IniLoader loader( *conf_usermode );
 		g_Conf->LoadSaveUserMode( loader, groupname );
@@ -208,13 +209,14 @@ void Pcsx2App::OpenMainFrame()
 
 	MainEmuFrame* mainFrame = new MainEmuFrame( NULL, L"PCSX2" );
 	m_id_MainFrame = mainFrame->GetId();
-	mainFrame->PushEventHandler( &GetRecentIsoList() );
+	mainFrame->PushEventHandler( &GetRecentIsoManager() );
 
 	if( wxWindow* deleteme = GetProgramLog() )
 	{
 		deleteme->Destroy();
 		g_Conf->ProgLogBox.Visible = true;
-		PostMethod( &Pcsx2App::OpenConsoleLog );
+		m_id_ProgramLogBox = wxID_ANY;
+		PostIdleMethod( &Pcsx2App::OpenConsoleLog );
 	}
 
 	SetTopWindow( mainFrame );		// not really needed...
@@ -235,85 +237,87 @@ void Pcsx2App::AllocateCoreStuffs()
 	SysLogMachineCaps();
 	AppApplySettings();
 
-	if( m_CoreAllocs ) return;
-	m_CoreAllocs = new SysCoreAllocations();
-
-	if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
+	if( !m_CoreAllocs )
 	{
-		// HadSomeFailures only returns 'true' if an *enabled* cpu type fails to init.  If
-		// the user already has all interps configured, for example, then no point in
-		// popping up this dialog.
-		
-		wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)"), wxVERTICAL );
+		m_CoreAllocs = new SysCoreAllocations();
 
-		exconf += 12;
-		exconf += exconf.Heading( pxE( ".Error:RecompilerInit",
-			L"Warning: Some of the configured PS2 recompilers failed to initialize and will not be available for this session:\n" )
-		);
-
-		wxTextCtrl* scrollableTextArea = new wxTextCtrl(
-			&exconf, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-			wxTE_READONLY | wxTE_MULTILINE | wxTE_WORDWRAP
-		);
-
-		exconf += scrollableTextArea	| pxSizerFlags::StdExpand();
-		
-		if( !m_CoreAllocs->IsRecAvailable_EE() )
+		if( m_CoreAllocs->HadSomeFailures( g_Conf->EmuOptions.Cpu.Recompiler ) )
 		{
-			scrollableTextArea->AppendText( L"* R5900 (EE)\n\n" );
+			// HadSomeFailures only returns 'true' if an *enabled* cpu type fails to init.  If
+			// the user already has all interps configured, for example, then no point in
+			// popping up this dialog.
+			
+			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)"), wxVERTICAL );
 
-			g_Conf->EmuOptions.Recompiler.EnableEE = false;
+			exconf += 12;
+			exconf += exconf.Heading( pxE( ".Error:RecompilerInit",
+				L"Warning: Some of the configured PS2 recompilers failed to initialize and will not be available for this session:\n" )
+			);
+
+			wxTextCtrl* scrollableTextArea = new wxTextCtrl(
+				&exconf, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+				wxTE_READONLY | wxTE_MULTILINE | wxTE_WORDWRAP
+			);
+
+			exconf += scrollableTextArea	| pxSizerFlags::StdExpand();
+			
+			if( !m_CoreAllocs->IsRecAvailable_EE() )
+			{
+				scrollableTextArea->AppendText( L"* R5900 (EE)\n\n" );
+
+				g_Conf->EmuOptions.Recompiler.EnableEE = false;
+			}
+
+			if( !m_CoreAllocs->IsRecAvailable_IOP() )
+			{
+				scrollableTextArea->AppendText( L"* R3000A (IOP)\n\n" );
+				g_Conf->EmuOptions.Recompiler.EnableIOP = false;
+			}
+
+			if( !m_CoreAllocs->IsRecAvailable_MicroVU0() )
+			{
+				scrollableTextArea->AppendText( L"* microVU0\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= false;
+				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && m_CoreAllocs->IsRecAvailable_SuperVU0();
+			}
+
+			if( !m_CoreAllocs->IsRecAvailable_MicroVU1() )
+			{
+				scrollableTextArea->AppendText( L"* microVU1\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= false;
+				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && m_CoreAllocs->IsRecAvailable_SuperVU1();
+			}
+
+			if( !m_CoreAllocs->IsRecAvailable_SuperVU0() )
+			{
+				scrollableTextArea->AppendText( L"* SuperVU0\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU0	= m_CoreAllocs->IsRecAvailable_MicroVU0();
+				g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && g_Conf->EmuOptions.Recompiler.UseMicroVU0;
+			}
+
+			if( !m_CoreAllocs->IsRecAvailable_SuperVU1() )
+			{
+				scrollableTextArea->AppendText( L"* SuperVU1\n\n" );
+				g_Conf->EmuOptions.Recompiler.UseMicroVU1	= m_CoreAllocs->IsRecAvailable_MicroVU1();
+				g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && g_Conf->EmuOptions.Recompiler.UseMicroVU1;
+			}
+
+			exconf += new ModalButtonPanel( &exconf, MsgButtons().OK() ) | pxSizerFlags::StdCenter();
+
+			exconf.ShowModal();
+
+			// Failures can be SSE-related OR memory related.  Should do per-cpu error reports instead...
+
+			/*message += pxE( ".Popup Error:EmuCore:MemoryForRecs",
+				L"These errors are the result of memory allocation failures (see the program log for details). "
+				L"Closing out some memory hogging background tasks may resolve this error.\n\n"
+				L"These recompilers have been disabled and interpreters will be used in their place.  "
+				L"Interpreters can be very slow, so don't get too excited.  Press OK to continue or CANCEL to close PCSX2."
+			);*/
+
+			//if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
+			//	return false;
 		}
-
-		if( !m_CoreAllocs->IsRecAvailable_IOP() )
-		{
-			scrollableTextArea->AppendText( L"* R3000A (IOP)\n\n" );
-			g_Conf->EmuOptions.Recompiler.EnableIOP = false;
-		}
-
-		if( !m_CoreAllocs->IsRecAvailable_MicroVU0() )
-		{
-			scrollableTextArea->AppendText( L"* microVU0\n\n" );
-			g_Conf->EmuOptions.Recompiler.UseMicroVU0	= false;
-			g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && m_CoreAllocs->IsRecAvailable_SuperVU0();
-		}
-
-		if( !m_CoreAllocs->IsRecAvailable_MicroVU1() )
-		{
-			scrollableTextArea->AppendText( L"* microVU1\n\n" );
-			g_Conf->EmuOptions.Recompiler.UseMicroVU1	= false;
-			g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && m_CoreAllocs->IsRecAvailable_SuperVU1();
-		}
-
-		if( !m_CoreAllocs->IsRecAvailable_SuperVU0() )
-		{
-			scrollableTextArea->AppendText( L"* SuperVU0\n\n" );
-			g_Conf->EmuOptions.Recompiler.UseMicroVU0	= m_CoreAllocs->IsRecAvailable_MicroVU0();
-			g_Conf->EmuOptions.Recompiler.EnableVU0		= g_Conf->EmuOptions.Recompiler.EnableVU0 && g_Conf->EmuOptions.Recompiler.UseMicroVU0;
-		}
-
-		if( !m_CoreAllocs->IsRecAvailable_SuperVU1() )
-		{
-			scrollableTextArea->AppendText( L"* SuperVU1\n\n" );
-			g_Conf->EmuOptions.Recompiler.UseMicroVU1	= m_CoreAllocs->IsRecAvailable_MicroVU1();
-			g_Conf->EmuOptions.Recompiler.EnableVU1		= g_Conf->EmuOptions.Recompiler.EnableVU1 && g_Conf->EmuOptions.Recompiler.UseMicroVU1;
-		}
-
-		exconf += new ModalButtonPanel( &exconf, MsgButtons().OK() ) | pxSizerFlags::StdCenter();
-
-		exconf.ShowModal();
-
-		// Failures can be SSE-related OR memory related.  Should do per-cpu error reports instead...
-
-		/*message += pxE( ".Popup Error:EmuCore:MemoryForRecs",
-			L"These errors are the result of memory allocation failures (see the program log for details). "
-			L"Closing out some memory hogging background tasks may resolve this error.\n\n"
-			L"These recompilers have been disabled and interpreters will be used in their place.  "
-			L"Interpreters can be very slow, so don't get too excited.  Press OK to continue or CANCEL to close PCSX2."
-		);*/
-
-		//if( !Msgbox::OkCancel( message, _("PCSX2 Initialization Error"), wxICON_ERROR ) )
-		//	return false;
 	}
 
 	LoadPluginsPassive( NULL );
@@ -397,7 +401,7 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 	return true;
 }
 
-typedef void (wxEvtHandler::*pxInvokeMethodEventFunction)(pxInvokeMethodEvent&);
+typedef void (wxEvtHandler::*pxInvokeMethodEventFunction)(pxInvokeAppMethodEvent&);
 typedef void (wxEvtHandler::*pxStuckThreadEventHandler)(pxMessageBoxEvent&);
 
 bool Pcsx2App::OnInit()
@@ -444,7 +448,7 @@ bool Pcsx2App::OnInit()
 		InitDefaultGlobalAccelerators();
 		delete wxLog::SetActiveTarget( new pxLogConsole() );
 
-		m_Resources = new pxAppResources();
+		m_RecentIsoList = new RecentIsoList();
 
 #ifdef __WXMSW__
 		pxDwm_Load();
@@ -503,7 +507,7 @@ void Pcsx2App::CleanupRestartable()
 	if( g_Conf )
 		AppSaveSettings();
 
-	sMainFrame.RemoveEventHandler( &GetRecentIsoList() );
+	sMainFrame.RemoveEventHandler( &GetRecentIsoManager() );
 }
 
 // This cleanup handler can be called from OnExit (it doesn't need a running message pump),
@@ -517,6 +521,7 @@ void Pcsx2App::CleanupOnExit()
 	try
 	{
 		CleanupRestartable();
+		CleanupResources();
 	}
 	catch( Exception::ThreadDeadlock& )		{ throw; }
 	catch( Exception::CancelEvent& )		{ throw; }
@@ -552,13 +557,13 @@ void Pcsx2App::CleanupResources()
 
 	while( wxGetLocale() != NULL )
 		delete wxGetLocale();
+
+	m_Resources = NULL;
 }
 
 int Pcsx2App::OnExit()
 {
 	CleanupOnExit();
-	CleanupResources();
-	m_Resources = NULL;
 
 	return wxApp::OnExit();
 }
@@ -577,9 +582,14 @@ Pcsx2App::Pcsx2App()
 Pcsx2App::~Pcsx2App()
 {
 	pxDoAssert = pxAssertImpl_LogIt;
+}
 
+void Pcsx2App::CleanUp()
+{
 	CleanupResources();
-	m_Resources = NULL;
+	m_Resources		= NULL;
+	m_RecentIsoList	= NULL;
+
 	DisableDiskLogging();
 
 	if( emuLog != NULL )
@@ -587,6 +597,8 @@ Pcsx2App::~Pcsx2App()
 		fclose( emuLog );
 		emuLog = NULL;
 	}
+
+	_parent::CleanUp();
 }
 
 

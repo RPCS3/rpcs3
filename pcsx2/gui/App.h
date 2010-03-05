@@ -323,11 +323,20 @@ struct pxAppResources
 	ScopedPtr<wxIconBundle>		IconBundle;
 	ScopedPtr<wxBitmap>			Bitmap_Logo;
 
-	ScopedPtr<wxMenu>			RecentIsoMenu;
-	ScopedPtr<RecentIsoManager>	RecentIsoList;
-
 	pxAppResources();
 	virtual ~pxAppResources() throw() { }
+};
+
+// --------------------------------------------------------------------------------------
+//  RecentIsoList
+// --------------------------------------------------------------------------------------
+struct RecentIsoList
+{
+	ScopedPtr<RecentIsoManager>		Manager;
+	ScopedPtr<wxMenu>				Menu;
+
+	RecentIsoList();
+	virtual ~RecentIsoList() throw() { }
 };
 
 // --------------------------------------------------------------------------------------
@@ -461,6 +470,8 @@ public:
 protected:
 	ScopedPtr<PipeRedirectionBase>	m_StdoutRedirHandle;
 	ScopedPtr<PipeRedirectionBase>	m_StderrRedirHandle;
+
+	ScopedPtr<RecentIsoList>		m_RecentIsoList;
 	ScopedPtr<pxAppResources>		m_Resources;
 
 public:
@@ -482,6 +493,7 @@ public:
 	void PostMenuAction( MenuIdentifiers menu_id ) const;
 	int  IssueDialogAsModal( const wxString& dlgName );
 	void PostMethod( FnPtr_AppMethod method );
+	void PostIdleMethod( FnPtr_AppMethod method );
 	int  DoStuckThread( PersistentThread& stuck_thread );
 
 	void SysExecute();
@@ -501,7 +513,7 @@ public:
 	void OpenGsPanel();
 	void CloseGsPanel();
 	void OnGsFrameClosed();
-	void OnMainFrameClosed();
+	void OnMainFrameClosed( wxWindowID id );
 
 	// --------------------------------------------------------------------------
 	//  Startup / Shutdown Helpers
@@ -524,7 +536,9 @@ public:
 	// memory until the program exits.
 
 	wxMenu&				GetRecentIsoMenu();
-	RecentIsoManager&	GetRecentIsoList();
+	RecentIsoManager&	GetRecentIsoManager();
+
+	pxAppResources&		GetResourceCache();
 	const wxIconBundle&	GetIconBundle();
 	const wxBitmap&		GetLogoBitmap();
 	wxImageList&		GetImgList_Config();
@@ -540,6 +554,7 @@ public:
 	// --------------------------------------------------------------------------
 	bool OnInit();
 	int  OnExit();
+	void CleanUp();
 
 	void OnInitCmdLine( wxCmdLineParser& parser );
 	bool OnCmdLineParsed( wxCmdLineParser& parser );
@@ -558,7 +573,7 @@ public:
 	void EnableAllLogging() const;
 	void DisableWindowLogging() const;
 	void DisableDiskLogging() const;
-	void OnProgramLogClosed();
+	void OnProgramLogClosed( wxWindowID id );
 
 protected:
 	bool InvokeMethodOnMainThread( FnPtr_AppMethod method );
@@ -587,7 +602,7 @@ protected:
 
 	void OnEmuKeyDown( wxKeyEvent& evt );
 
-	void OnInvokeMethod( pxInvokeMethodEvent& evt );
+	void OnInvokeMethod( pxInvokeAppMethodEvent& evt );
 
 	// ----------------------------------------------------------------------------
 	//      Override wx default exception handling behavior

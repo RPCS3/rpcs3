@@ -27,6 +27,7 @@ class pxMessageBoxEvent;
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEvt_Ping, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_IdleEventQueue, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_MessageBox, -1 )
 	DECLARE_EVENT_TYPE( pxEvt_DeleteObject, -1 )
 	//DECLARE_EVENT_TYPE( pxEvt_Assertion, -1 )
@@ -295,8 +296,10 @@ class wxAppWithHelpers : public wxApp
 protected:
 	std::vector<Semaphore*>			m_PingWhenIdle;
 	std::vector<IDeletableObject*>	m_DeleteWhenIdle;
+	std::vector<wxEvent*>			m_IdleEventQueue;
 	Threading::Mutex				m_DeleteIdleLock;
 	wxTimer							m_PingTimer;
+	wxTimer							m_IdleEventTimer;
 
 public:
 	wxAppWithHelpers();
@@ -320,12 +323,15 @@ public:
 	//int  OnExit();
 
 protected:
+	void IdleEventDispatcher( const char* action );
 	void PingDispatcher( const char* action );
 	void DeletionDispatcher();
 
 	void OnIdleEvent( wxIdleEvent& evt );
 	void OnPingEvent( pxPingEvent& evt );
+	void OnAddEventToIdleQueue( wxEvent& evt );
 	void OnPingTimeout( wxTimerEvent& evt );
+	void OnIdleEventTimeout( wxTimerEvent& evt );
 	void OnMessageBox( BaseMessageBoxEvent& evt );
 	void OnDeleteObject( wxCommandEvent& evt );
 };

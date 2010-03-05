@@ -56,7 +56,7 @@ namespace Exception
 	class SaveStateLoadError : public virtual BadStream
 	{
 	public:
-		DEFINE_STREAM_EXCEPTION( SaveStateLoadError, wxLt("Savestate data is corrupted or incomplete.") )
+		DEFINE_STREAM_EXCEPTION( SaveStateLoadError, wxLt("Load failed: The savestate appears to be corrupt or incomplete.") )
 	};
 
 	class PluginError : public virtual RuntimeError

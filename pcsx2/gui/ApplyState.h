@@ -149,6 +149,8 @@ public:
 	// If no exceptions are thrown, then the operation is assumed a success. :)
 	virtual void Apply()=0;
 
+	void Init();
+	
 	// Mandatory override: As a rule for proper interface design, all deriving classes need
 	// to implement this function.  There's no implementation of an options/settings panel
 	// that does not heed the changes of application status/settings changes. ;)
@@ -160,7 +162,8 @@ public:
 	virtual void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& ) {}
 	virtual void AppStatusEvent_OnExit() {}
 
-	void Init();
+protected:
+	virtual void OnSettingsApplied( wxCommandEvent& evt );
 };
 
 class ApplicableWizardPage : public wxWizardPageSimple, public IApplyState

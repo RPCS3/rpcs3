@@ -24,6 +24,9 @@ enum FoldersEnum_t
 	FolderId_Savestates,
 	FolderId_MemoryCards,
 	FolderId_Logs,
+	
+	FolderId_Documents,
+	
 	FolderId_COUNT
 };
 

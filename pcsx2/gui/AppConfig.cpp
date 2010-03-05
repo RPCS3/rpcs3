@@ -95,10 +95,16 @@ namespace PathDefs
 	// share with other programs: screenshots, memory cards, and savestates.
 	wxDirName GetDocuments()
 	{
-		if( UseAdminMode )
-			return (wxDirName)wxGetCwd();
-		else
-			return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
+		switch( DocsFolderMode )
+		{
+			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), wxGetApp().GetAppName() );
+			case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
+			case DocsFolder_Custom: return CustomDocumentsFolder;
+			
+			jNO_DEFAULT
+		}
+		
+		return wxDirName();
 	}
 
 	wxDirName GetSnapshots()
@@ -152,6 +158,8 @@ namespace PathDefs
 			case FolderId_Savestates:	return GetSavestates();
 			case FolderId_MemoryCards:	return GetMemoryCards();
 			case FolderId_Logs:			return GetLogs();
+			
+			case FolderId_Documents:	return CustomDocumentsFolder;
 
 			jNO_DEFAULT
 		}
@@ -170,6 +178,8 @@ wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 		case FolderId_Savestates:	return Savestates;
 		case FolderId_MemoryCards:	return MemoryCards;
 		case FolderId_Logs:			return Logs;
+		
+		case FolderId_Documents:	return CustomDocumentsFolder;
 
 		jNO_DEFAULT
 	}
@@ -192,6 +202,8 @@ bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
 		case FolderId_Savestates:	return UseDefaultSavestates;
 		case FolderId_MemoryCards:	return UseDefaultMemoryCards;
 		case FolderId_Logs:			return UseDefaultLogs;
+
+		case FolderId_Documents:	return false;
 
 		jNO_DEFAULT
 	}
@@ -235,6 +247,10 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 		case FolderId_Logs:
 			Logs = src;
 			UseDefaultLogs = useDefault;
+		break;
+		
+		case FolderId_Documents:
+			CustomDocumentsFolder = src;
 		break;
 
 		jNO_DEFAULT
@@ -303,7 +319,6 @@ bool AppConfig::FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto
 	return left == right;
 }
 
-
 wxDirName GetSettingsFolder()
 {
 	return UseDefaultSettingsFolder ? PathDefs::GetSettings() : SettingsFolder;
@@ -363,9 +378,18 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 
 	ini.GetConfig().Write( L"Timestamp", timestamp_now );*/
 
-	ini.Entry( L"UseAdminMode", UseAdminMode, false );
-	ini.Entry( L"UseDefaultSettingsFolder", UseDefaultSettingsFolder, true );
-	ini.Entry( L"SettingsFolder", SettingsFolder, PathDefs::GetSettings() );
+	static const wxChar* DocsFolderModeNames[] =
+	{
+		L"User",
+		L"CWD",
+		L"Custom",
+	};
+
+	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, DocsFolder_User );
+
+	ini.Entry( L"UseDefaultSettingsFolder", UseDefaultSettingsFolder,	true );
+	ini.Entry( L"CustomDocumentsFolder",	CustomDocumentsFolder,		wxDirName() );
+	ini.Entry( L"SettingsFolder",			SettingsFolder,				PathDefs::GetSettings() );
 
 	ini.Flush();
 }
@@ -514,7 +538,7 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	{
 		ApplyDefaults();
 
-		if( !UseAdminMode )
+		if( DocsFolderMode != DocsFolder_CWD )
 		{
 			for( int i=0; i<FolderId_COUNT; ++i )
 				operator[]( (FoldersEnum_t)i ).Normalize();
@@ -672,7 +696,7 @@ void RelocateLogfile()
 //
 void AppConfig_OnChangedSettingsFolder( bool overwrite )
 {
-	if( !UseAdminMode )
+	if( DocsFolderMode != DocsFolder_CWD )
 		PathDefs::GetDocuments().Mkdir();
 
 	GetSettingsFolder().Mkdir();
