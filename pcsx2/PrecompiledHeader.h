@@ -42,6 +42,7 @@
 #include <vector>
 #include <string>
 #include <list>
+#include <deque>
 #include <sstream>
 #include <cstring>		// string.h under c++
 #include <cstdio>		// stdio.h under c++

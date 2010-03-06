@@ -44,7 +44,6 @@ _vifT bool analyzeIbit(u32* &data, int iBit) {
 
 // Interprets packet
 _vifT void vifTransferLoop(u32* &data) {
-	//u32& tSize = vifX.tag.size;
 	u32& pSize = vifX.vifpacketsize;
 	int  iBit  = vifX.cmd >> 7;
 

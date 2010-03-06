@@ -17,11 +17,14 @@
 //#define mVUlogProg // Dumps MicroPrograms to \logs\*.html
 
 class AsciiFile;
-
-#include <deque>
-#include "x86emitter/x86emitter.h"
-using namespace x86Emitter;
 using namespace std;
+using namespace x86Emitter;
+
+#include "VU.h"
+#include "GS.h"
+#include "iR5900.h"
+#include "R5900OpcodeTables.h"
+#include "x86emitter/x86emitter.h"
 #include "microVU_IR.h"
 #include "microVU_Misc.h"
 

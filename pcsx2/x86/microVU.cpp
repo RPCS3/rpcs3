@@ -17,10 +17,6 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "VU.h"
-#include "GS.h"
-#include "iR5900.h"
-#include "R5900OpcodeTables.h"
 #include "microVU.h"
 
 //------------------------------------------------------------------
@@ -203,11 +199,11 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 	prog->idx	  = mVU->prog.total++;
 	prog->startPC = startPC;
 	mVUcacheProg<vuIndex>(*prog); // Cache Micro Program
-	float cacheSize = (float)(u32)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
-	float cacheStat =((float)(u32)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
+	float cacheSize = (float)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
+	float cacheUsed =((float)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
 	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
 	Console.WriteLn(c, "microVU%d: Cached MicroPrograms = [%03d] [PC=%04x] [List=%02d] (Cache = %f%%)", 
-					vuIndex, mVU->prog.total, startPC, mVU->prog.prog[startPC].list->size()+1, cacheStat);
+					vuIndex, mVU->prog.total, startPC, mVU->prog.prog[startPC].list->size()+1, cacheUsed);
 	return prog;
 }
 
