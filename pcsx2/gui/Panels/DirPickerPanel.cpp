@@ -209,7 +209,11 @@ void Panels::DirPickerPanel::Apply()
 
 wxDirName Panels::DirPickerPanel::GetPath() const
 {
-	return wxDirName( m_pickerCtrl ? m_pickerCtrl->GetPath() : wxEmptyString );
+	// The (x) ? y : z construct doesn't like y and z to be different types in gcc.
+	if (m_pickerCtrl)
+		return wxDirName(m_pickerCtrl->GetPath());
+	else
+		return wxDirName(wxEmptyString);
 }
 
 void Panels::DirPickerPanel::SetPath( const wxString& newPath )

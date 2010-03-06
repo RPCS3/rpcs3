@@ -299,6 +299,7 @@ set(pcsx2GuiSources
 	gui/Dialogs/AboutBoxDialog.cpp
 	gui/Dialogs/AppConfigDialog.cpp
 	gui/Dialogs/AssertionDialog.cpp
+	gui/Panels/BaseApplicableConfigPanel.cpp
 	gui/Dialogs/BaseConfigurationDialog.cpp
 	gui/Dialogs/BaseConfigurationDialog.inl
 	gui/Dialogs/BiosSelectorDialog.cpp
@@ -318,6 +319,8 @@ set(pcsx2GuiSources
 	gui/MainFrame.cpp
 	gui/MainMenuClicks.cpp
 	gui/MemoryCardFile.cpp
+	gui/Panels/MemoryCardListPanel.cpp
+	gui/Panels/MemoryCardListView.h
 	gui/MessageBoxes.cpp
 	gui/MSWstuff.cpp
 	gui/Panels/AudioPanel.cpp
