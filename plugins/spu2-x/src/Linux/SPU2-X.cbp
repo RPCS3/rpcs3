@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../../../bin/plugins/SPU2-X.so" prefix_auto="0" extension_auto="0" />
+				<Option output="../../../../bin/plugins/libspu2-xd.so" prefix_auto="0" extension_auto="0" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
@@ -16,19 +16,22 @@
 				</Compiler>
 				<Linker>
 					<Add library="../../../../deps/debug/libsoundtouch-dbg.a" />
+					<Add library="../../../../deps/debug/libUtilities.a" />
+					<Add library="../../../../deps/debug/libx86emitter.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
-				<Option output="../../../../bin/plugins/SPU2-X.so" prefix_auto="0" extension_auto="0" />
-				<Option object_output="obj/Release/" />
+				<Option output="../../../../bin/plugins/libspu2-x.so" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-g" />
 				</Compiler>
 				<Linker>
-					<Add option="-s" />
 					<Add library="../../../../deps/libsoundtouch.a" />
+					<Add library="../../../../deps/debug/libUtilities.a" />
+					<Add library="../../../../deps/debug/libx86emitter.a" />
 				</Linker>
 			</Target>
 		</Build>
@@ -48,6 +51,9 @@
 			<Add directory="../../../../3rdparty/SoundTouch" />
 			<Add directory="../../../../3rdparty" />
 			<Add directory="../../../../common/src/x86emitter" />
+			<Add directory="../../../../common/include/Utilities" />
+			<Add directory="../../../../common/src" />
+			<Add directory="../../../../common/src/Utilities" />
 		</Compiler>
 		<Linker>
 			<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --libs`" />

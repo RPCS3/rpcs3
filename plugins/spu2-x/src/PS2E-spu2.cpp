@@ -14,15 +14,13 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with SPU2-X.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+ 
 #include "Global.h"
 #include "PS2E-spu2.h"
 #include "Dma.h"
 #include "Dialogs.h"
 
-#ifndef __LINUX__
 #include "x86emitter/tools.h"
-#endif
 
 #ifdef _MSC_VER
 #	include "svnrev.h"
@@ -119,7 +117,6 @@ static bool CheckSSE()
 		cpudetectInit();
 		cpu_detected = true;
 	}
-
 	if( !x86caps.hasStreamingSIMDExtensions || !x86caps.hasStreamingSIMD2Extensions )
 	{
 		SysMessage( "Your CPU does not support SSE2 instructions.\nThe SPU2-X plugin requires SSE2 to run." );
