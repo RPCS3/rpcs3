@@ -90,6 +90,10 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 			s32 data = ((*blockbytes)<<28) & 0xF0000000;
 			pcm = data>>shift;
 			pcm+=((pred1*prev1)+(pred2*prev2))>>6;
+
+			if(pcm> 32767) ConLog("pcm too high, is %d\n",pcm);
+			else if(pcm<-32768) ConLog("pcm too low, is %d\n",pcm);
+
 			if(pcm> 32767) pcm= 32767;
 			else if(pcm<-32768) pcm=-32768;
 			*(buffer++) = pcm;
@@ -102,6 +106,10 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 			s32 data = ((*blockbytes)<<24) & 0xF0000000;
 			pcm2 = data>>shift;
 			pcm2+=((pred1*pcm)+(pred2*prev1))>>6;
+
+			if(pcm2> 32767) ConLog("pcm2 too high, is %d\n",pcm2);
+			else if(pcm2<-32768) ConLog("pcm2 too low, is %d\n",pcm2);
+
 			if(pcm2> 32767) pcm2= 32767;
 			else if(pcm2<-32768) pcm2=-32768;
 			*(buffer++) = pcm2;
@@ -238,7 +246,9 @@ static __forceinline s32 __fastcall GetNextDataBuffered( V_Core& thiscore, uint 
 					g_counter_cache_misses++;
 			}
 
-			XA_decode_block_unsaturated( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
+			// The unsaturated version causes clipping artefacts. TODO: Fix it :)
+			//XA_decode_block_unsaturated( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
+			XA_decode_block( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
 		}
 
 		vc.SCurrent = 0;
