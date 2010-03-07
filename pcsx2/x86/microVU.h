@@ -128,11 +128,8 @@ struct microProgram {
 	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
 	microBlockManager* block[mProgSize/2]; // Array of Block Managers
 	microRange		   ranges;			   // The ranges of the microProgram that have already been recompiled
-	u32  frame;		// Frame # the program was last used on
-	u32  used;		// Program was used this frame?
-	int  age;		// Program age... Young, Aged, Old, or Dead...
-	int  idx;		// Program idx in array[mMaxProg]
-	u32  startPC;	// Start PC of this program
+	u32 startPC; // Start PC of this program
+	int idx;	 // Program index
 };
 
 struct microProgramList { 
@@ -217,7 +214,7 @@ mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-_mVUt _f void  mVUclearProg(microProgram& prog, bool deleteBlocks = 1);
+_mVUt _f void  mVUclearProg(microProgram& prog, u32 startPC = -1, bool deleteBlocks = 1);
 _mVUt _f void  mVUcacheProg(microProgram& prog);
 _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState);
 _mVUt _f microProgram* mVUfindLeastUsedProg();
