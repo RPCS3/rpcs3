@@ -233,7 +233,7 @@ static const char* _getModeStr( u32 mode )
 // Generates a tlbMiss Exception
 static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 {
-	//Console.Error( "vtlb miss : addr 0x%X, mode %d [%s]", addr, mode, _getModeStr(mode) );
+	Console.Error( "vtlb miss : addr 0x%X, mode %d [%s]", addr, mode, _getModeStr(mode) );
 	//verify(false);
 	throw R5900Exception::TLBMiss( addr, !!mode );
 }
@@ -242,7 +242,7 @@ static __forceinline void vtlb_Miss(u32 addr,u32 mode)
 // Eventually should generate a BusError exception.
 static __forceinline void vtlb_BusError(u32 addr,u32 mode)
 {
-	//Console.Error( "vtlb bus error : addr 0x%X, mode %d\n", addr, _getModeStr(mode) );
+	Console.Error( "vtlb bus error : addr 0x%X, mode %d\n", addr, _getModeStr(mode) );
 	//verify(false);
 	throw R5900Exception::BusError( addr, !!mode );
 }

@@ -974,14 +974,14 @@ void SysMtgsThread::WaitForOpen()
 
 	// Two-phase timeout on MTGS opening, so that possible errors are handled
 	// in a timely fashion.  We check for errors after 2 seconds, and then give it
-	// another 4 seconds if no errors occurred (this might seem long, but sometimes a
+	// another 12 seconds if no errors occurred (this might seem long, but sometimes a
 	// GS plugin can be very stubborned, especially in debug mode builds).
 
 	if( !m_sem_OpenDone.Wait( wxTimeSpan(0, 0, 2, 0) ) )
 	{
 		RethrowException();
 
-		if( !m_sem_OpenDone.Wait( wxTimeSpan(0, 0, 4, 0) ) )
+		if( !m_sem_OpenDone.Wait( wxTimeSpan(0, 0, 12, 0) ) )
 		{
 			RethrowException();
 

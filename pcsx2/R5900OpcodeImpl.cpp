@@ -914,12 +914,12 @@ void TLTU() { Console.Warning("TLTU Trap"); if (cpuRegs.GPR.r[_Rs_].UD[0] <  cpu
 void TEQ()  { Console.Warning("TEQ Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] == cpuRegs.GPR.r[_Rt_].SD[0]) throw R5900Exception::Trap(_TrapCode_); }
 void TNE()  { Console.Warning("TNE Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] != cpuRegs.GPR.r[_Rt_].SD[0]) throw R5900Exception::Trap(_TrapCode_); }
 #else
-void TGE()  { Console.Warning("TGE Trap"); }
-void TGEU() { Console.Warning("TGEU Trap"); }
-void TLT()  { Console.Warning("TLT Trap"); }
-void TLTU() { Console.Warning("TLTU Trap"); }
-void TEQ()  { Console.Warning("TEQ Trap"); }
-void TNE()  { Console.Warning("TNE Trap"); }
+void TGE()  { }
+void TGEU() { }
+void TLT()  { }
+void TLTU() { }
+void TEQ()  { }
+void TNE()  { }
 #endif
 
 /*********************************************************
@@ -934,12 +934,12 @@ void TNEI()  { Console.Warning("TNEI Trap"); if (cpuRegs.GPR.r[_Rs_].SD[0] != _I
 void TGEIU() { Console.Warning("TGEIU Trap"); if (cpuRegs.GPR.r[_Rs_].UD[0] >= (u64)_Imm_) throw R5900Exception::Trap(); }
 void TLTIU() { Console.Warning("TLTIU Trap"); if (cpuRegs.GPR.r[_Rs_].UD[0] <  (u64)_Imm_) throw R5900Exception::Trap(); }
 #else
-void TGEI()  { Console.Warning("TGEI Trap"); }
-void TLTI()  { Console.Warning("TLTI Trap"); }
-void TEQI()  { Console.Warning("TEQI Trap"); }
-void TNEI()  { Console.Warning("TNEI Trap"); }
-void TGEIU() { Console.Warning("TGEIU Trap"); }
-void TLTIU() { Console.Warning("TLTIU Trap"); }
+void TGEI()  { }
+void TLTI()  { }
+void TEQI()  { }
+void TNEI()  { }
+void TGEIU() { }
+void TLTIU() { }
 #endif
 
 /*********************************************************
