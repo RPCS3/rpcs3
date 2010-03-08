@@ -509,6 +509,16 @@ static s32 __forceinline __fastcall GetNoiseValues( V_Core& thiscore, uint voice
 // of the SPU2 (between 0x0000 and SPU2_DYN_MEMLINE)
 static __forceinline void spu2M_WriteFast( u32 addr, s16 value )
 {
+	// Fixes some of the oldest hangs in pcsx2's history! :p
+	for( int i=0; i<2; i++ )
+	{
+		if( Cores[i].IRQEnable && Cores[i].IRQA == addr )
+		{
+			//printf("Core %d special write IRQ Called (IRQ passed). IRQA = %x\n",i,addr);
+			Spdif.Info |= 4 << i;
+			SetIrqCall();
+		}
+	}
 	// throw an assertion if the memory range is invalid:
 #ifndef DEBUG_FAST
 	jASSUME( addr < SPU2_DYN_MEMLINE );
