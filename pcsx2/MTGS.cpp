@@ -382,7 +382,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 
 						case GS_RINGTYPE_MEMWRITE8:
 							MTGS_LOG( "(MTGS Packet Read) ringtype=Write8, addr=0x%08x, data=0x%02x", tag.data[0], (u8)tag.data[1] );
-							RingBuffer.Regs[tag.data[0]] = (u8)tag.data[1];
+							*(u8*)RingBuffer.Regs[tag.data[0]] = (u8)tag.data[1];
 						break;
 						
 						case GS_RINGTYPE_MEMWRITE16:
