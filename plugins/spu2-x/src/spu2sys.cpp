@@ -727,7 +727,8 @@ static void __fastcall RegWrite_VoiceParams( u16 value )
 			if (value & 0x8000)		// +Lin/-Lin/+Exp/-Exp
 			{
 				thisvol.Mode = (value & 0xF000)>>12;
-				thisvol.Increment = (value & 0x3F);
+				thisvol.Increment = (value & 0x7F);
+				//printf("slides Mode = %x, Increment = %x\n",thisvol.Mode,thisvol.Increment);
 			}
 			else
 			{
@@ -1083,10 +1084,11 @@ static void __fastcall RegWrite_CoreExt( u16 value )
 		{
 			V_VolumeSlide& thisvol = (addr==REG_P_MVOLL) ? thiscore.MasterVol.Left : thiscore.MasterVol.Right;
 
-			if( value & 0x8000 )	// +Lin/-Lin/+Exp/-Exp
+			if (value & 0x8000)		// +Lin/-Lin/+Exp/-Exp
 			{
-				thisvol.Mode = (value & 0xE000) / 0x2000;
-				thisvol.Increment = (value & 0x7F); // | ((value & 0x800)/0x10);
+				thisvol.Mode = (value & 0xF000)>>12;
+				thisvol.Increment = (value & 0x7F);
+				//printf("slides Mode = %x, Increment = %x\n",thisvol.Mode,thisvol.Increment);
 			}
 			else
 			{

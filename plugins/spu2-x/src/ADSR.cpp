@@ -193,6 +193,8 @@ void V_VolumeSlide::Update()
 		
 	// Volume slides use the same basic logic as ADSR, but simplified (single-stage
 	// instead of multi-stage)
+	
+	if( Increment == 0x7f ) return;
 
 	if (Mode & VOLFLAG_DECREMENT)
 	{
@@ -204,7 +206,7 @@ void V_VolumeSlide::Update()
 			Value -= PsxRates[(Increment^0x7f)-0x1b+off+32];
 		}
 		else
-			Value -= Increment<<8;
+			Value -= PsxRates[(Increment^0x7f)-0xf+32];
 
 		if (Value < 0)
 		{
@@ -221,7 +223,8 @@ void V_VolumeSlide::Update()
 		if( (Mode & VOLFLAG_EXPONENTIAL) && (Value>=0x60000000))
 			Value += PsxRates[(Increment^0x7f)-0x18+32];
 		else
-			Value += Increment<<8;
+			// linear / Pseudo below 75% (they're the same)
+			Value += PsxRates[(Increment^0x7f)-0x10+32];
 
 		if( Value < 0 )		// wrapped around the "top"?
 		{
