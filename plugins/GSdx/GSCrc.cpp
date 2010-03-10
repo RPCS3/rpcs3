@@ -146,6 +146,7 @@ CRC::Game CRC::m_games[] =
 	{0xD71B57F4, Genji, Unknown, 0},
 	{0x23A97857, StarOcean3, US, 0},
 	{0xBEC32D49, StarOcean3, JP, 0},
+	{0x8192A241, StarOcean3, JP, 0}, //NTSC JP special directors cut limited extra sugar on top edition (the special one :p)
 	{0x23A97857, StarOcean3, JPUNDUB, 0},
 	{0xCC96CE93, ValkyrieProfile2, US, 0},
 	{0x774DE8E2, ValkyrieProfile2, JP, 0},
