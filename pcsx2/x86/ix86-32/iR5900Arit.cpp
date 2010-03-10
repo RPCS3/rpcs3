@@ -65,7 +65,8 @@ void recADD_constv(int info, int creg, int vreg)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
 
-	if(!g_cpuConstRegs[ creg ].UL[0]) {
+	// Fixme: MMX problem
+	if(0/*!g_cpuConstRegs[ creg ].UL[0]*/) {
 		int mmreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 		SetMMXstate();
 
@@ -200,7 +201,8 @@ void recDADD_constv(int info, int creg, int vreg)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
 
-	if( g_cpuConstRegs[ creg ].UL[0] == 0 && g_cpuConstRegs[ creg ].UL[1] == 0 && _hasFreeMMXreg() ) {
+	// Fixme: MMX problem
+	if(0/* g_cpuConstRegs[ creg ].UL[0] == 0 && g_cpuConstRegs[ creg ].UL[1] == 0 && _hasFreeMMXreg() */) {
 		// copy
 		int mmreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 		if( EEINST_ISLIVE1(_Rd_) ) MOVQMtoR(mmreg, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
@@ -342,7 +344,8 @@ void recSUB_constt(int info)
 	EEINST_SETSIGNEXT(_Rs_);
 	EEINST_SETSIGNEXT(_Rd_);
 
-	if(!g_cpuConstRegs[_Rt_].UL[0]) {
+	// Fixme: MMX problem
+	if(0/*!g_cpuConstRegs[_Rt_].UL[0]*/) {
 		int mmreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 		SetMMXstate();
 
@@ -675,7 +678,8 @@ void recOR_constv(int info, int creg, int vreg)
 {
 	pxAssert( !(info & PROCESS_EE_XMM) );
 
-	if(_Rd_ != vreg && _hasFreeMMXreg()) {
+	// Fixme: MMX problem
+	if(0/*_Rd_ != vreg && _hasFreeMMXreg()*/) {
 		int rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 		SetMMXstate();
 
@@ -738,7 +742,8 @@ void recXOR_constv(int info, int creg, int vreg)
 {
 	pxAssert( !(info & PROCESS_EE_XMM) );
 
-	if(_Rd_ != vreg && _hasFreeMMXreg()) {
+	// Fixme: MMX problem
+	if(0/*_Rd_ != vreg && _hasFreeMMXreg()*/) {
 		int rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 		SetMMXstate();
 		MOVQMtoR(rdreg, (u32)&cpuRegs.GPR.r[vreg].UL[0] );
@@ -800,7 +805,8 @@ void recNOR_constv(int info, int creg, int vreg)
 {
 	pxAssert( !(info & PROCESS_EE_XMM) );
 
-	if(_Rd_ != vreg && _hasFreeMMXreg()) {
+	// Fixme: MMX problem
+	if(0/*_Rd_ != vreg && _hasFreeMMXreg()*/) {
 		int rdreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
 		int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
 

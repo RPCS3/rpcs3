@@ -442,7 +442,8 @@ void recMOVZtemp_consts(int info)
 
 void recMOVZtemp_constt(int info)
 {
-	if( _hasFreeXMMreg() ) {
+	// Fixme: MMX problem
+	if(0/* _hasFreeXMMreg() */) {
 		int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
 		MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
 		MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
@@ -460,7 +461,8 @@ void recMOVZtemp_(int info)
 {
 	int t0reg = -1;
 
-	if( _hasFreeXMMreg() )
+	// Fixme: MMX problem
+	if(0/* _hasFreeXMMreg() */)
 		t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
 
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
@@ -519,7 +521,8 @@ void recMOVNtemp_consts(int info)
 
 void recMOVNtemp_constt(int info)
 {
-	if( _hasFreeXMMreg() ) {
+	// Fixme: MMX problem
+	if(0/* _hasFreeXMMreg() */) {
 		int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
 		MOVQMtoR(t0reg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
 		MOVQRtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], t0reg);
@@ -537,7 +540,8 @@ void recMOVNtemp_(int info)
 {
 	int t0reg=-1;
 
-	if( _hasFreeXMMreg() )
+	// Fixme: MMX problem
+	if(0/* _hasFreeXMMreg() */)
 		t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
 
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );

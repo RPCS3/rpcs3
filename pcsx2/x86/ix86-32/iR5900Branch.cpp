@@ -192,9 +192,10 @@ void recSetBranchEQ(int info, int bne, int process)
 
 void recSetBranchL(int ltz)
 {
-	int regs = _checkMMXreg(MMX_GPR+_Rs_, MODE_READ);
+	// Fixme: MMX problem
+	int regs;/* = _checkMMXreg(MMX_GPR+_Rs_, MODE_READ);*/
 
-	if( regs >= 0 ) {
+	/*if( regs >= 0 ) {
 
 		int t0reg = _allocMMXreg(-1, MMX_TEMP, 0);
 
@@ -213,7 +214,7 @@ void recSetBranchL(int ltz)
 		else j32Ptr[ 0 ] = JNZ32( 0 );
 
 		return;
-	}
+	}*/
 	
 	regs = _checkXMMreg(XMMTYPE_GPRREG, _Rs_, MODE_READ);
 
