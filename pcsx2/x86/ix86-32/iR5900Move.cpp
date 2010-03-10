@@ -165,13 +165,9 @@ void recMFHILO(int hi)
 				else {
 					_deleteEEreg(_Rd_, 0);
 					MOV32MtoR( EAX, hi ? (int)&cpuRegs.HI.UL[ 0 ] : (int)&cpuRegs.LO.UL[ 0 ]);
-					if( EEINST_ISLIVE1(_Rd_) )
-						MOV32MtoR( EDX, hi ? (int)&cpuRegs.HI.UL[ 1 ] : (int)&cpuRegs.LO.UL[ 1 ]);
+					MOV32MtoR( EDX, hi ? (int)&cpuRegs.HI.UL[ 1 ] : (int)&cpuRegs.LO.UL[ 1 ]);
 					MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-					if( EEINST_ISLIVE1(_Rd_) )
-						MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-					else
-						EEINST_RESETHASLIVE1(_Rd_);
+					MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 				}
 			}
 		}

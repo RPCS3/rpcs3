@@ -20,6 +20,7 @@
 #include "R5900OpcodeTables.h"
 #include "iR5900.h"
 
+using namespace x86Emitter;
 
 namespace R5900 {
 namespace Dynarec {
@@ -31,8 +32,7 @@ namespace OpcodeImpl
 * Format:  OP rd, rs, rt                                 *
 *********************************************************/
 
-// NOTE: The reason ADD/SUB/etc are so large is because they are very commonly
-// used and recompiler needs to cover ALL possible usages to minimize code size (zerofrog)
+// TODO: overflow checks
 
 #ifndef ARITHMETIC_RECOMPILE
 
@@ -65,61 +65,15 @@ void recADD_constv(int info, int creg, int vreg)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
 
-	// Fixme: MMX problem
-	if(0/*!g_cpuConstRegs[ creg ].UL[0]*/) {
-		int mmreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
+	s32 cval = g_cpuConstRegs[creg].SL[0];
 
-		if( EEINST_HASLIVE1(vreg) && EEINST_ISLIVE1(_Rd_) ) {
-			MOVQMtoR(mmreg, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
-		}
-		else {
-			if( g_cpuConstRegs[creg].UL[0] ) {
-				MOVDMtoMMX(mmreg, (u32)_eeGetConstReg(creg));
-				PADDDMtoR(mmreg, (u32)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
-			}
-			else {
-				if( EEINST_ISLIVE1(_Rd_) ) {
-					_signExtendMtoMMX(mmreg, (u32)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
-				}
-				else {
-					MOVDMtoMMX(mmreg, (u32)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
-					EEINST_RESETHASLIVE1(_Rd_);
-				}
-			}
-		}
-	}
-	else {
-		if( _Rd_ == vreg ) {
-			if( EEINST_ISLIVE1(_Rd_) )
-			{
-				// must perform the ADD unconditionally, to maintain flags status:
-				ADD32ItoM((int)&cpuRegs.GPR.r[_Rd_].UL[ 0 ], g_cpuConstRegs[creg].UL[0]);
-				_signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
-			}
-			else
-			{
-				if( g_cpuConstRegs[creg].UL[0] )
-					ADD32ItoM((int)&cpuRegs.GPR.r[_Rd_].UL[ 0 ], g_cpuConstRegs[creg].UL[0]);
-				EEINST_RESETHASLIVE1(_Rd_);
-			}
-		}
-		else {
-			MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ] );
-			if( g_cpuConstRegs[ creg ].UL[0] )
-				ADD32ItoR( EAX, g_cpuConstRegs[ creg ].UL[0] );
-
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				CDQ( );
-				MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-				MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-			}
-			else {
-				EEINST_RESETHASLIVE1(_Rd_);
-				MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-			}
-		}
-	}
+	xMOV(eax, ptr32[&cpuRegs.GPR.r[vreg].SL[0]]);
+	if (cval)
+		xADD(eax, cval);
+	if (_Rd_ != vreg || cval)
+		xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[0]], eax);
+	xCDQ();
+	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[1]], edx);
 }
 
 // s is constant
@@ -146,33 +100,24 @@ void recADD_(int info)
 			ADD32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], ECX);
 		}
 
-		if( EEINST_ISLIVE1(_Rd_) ) _signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
-		else EEINST_RESETHASLIVE1(_Rd_);
+		_signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
 
 		return;
 	}
 	else if( _Rd_ == _Rt_ ) {
-		EEINST_RESETHASLIVE1(_Rd_);
 		MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
 		ADD32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], ECX);
 
-		if( EEINST_ISLIVE1(_Rd_) ) _signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
-		else EEINST_RESETHASLIVE1(_Rd_);
+		_signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 		if( _Rs_ != _Rt_ ) ADD32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 		else SHL32ItoR(EAX, 1); // mult by 2
 
-		if( EEINST_ISLIVE1(_Rd_) ) {
-			CDQ( );
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-		}
-		else {
-			EEINST_RESETHASLIVE1(_Rd_);
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		}
+		CDQ( );
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 }
 
@@ -198,45 +143,26 @@ void recDADD_constv(int info, int creg, int vreg)
 	if(0/* g_cpuConstRegs[ creg ].UL[0] == 0 && g_cpuConstRegs[ creg ].UL[1] == 0 && _hasFreeMMXreg() */) {
 		// copy
 		int mmreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		if( EEINST_ISLIVE1(_Rd_) ) MOVQMtoR(mmreg, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
-		else {
-			MOVDMtoMMX(mmreg, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
-			EEINST_RESETHASLIVE1(_Rd_);
-		}
+		MOVQMtoR(mmreg, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ]);
 	}
 	else {
-
 		if( _Rd_ == vreg ) {
-
-			if( EEINST_ISLIVE1(_Rd_) && (g_cpuConstRegs[ creg ].UL[ 0 ] || g_cpuConstRegs[ creg ].UL[ 1 ]) ) {
-				ADD32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[ creg ].UL[ 0 ] );
-				ADC32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[ creg ].UL[ 1 ] );
-			}
-			else if( g_cpuConstRegs[ creg ].UL[ 0 ] ) {
-				EEINST_RESETHASLIVE1(_Rd_);
-				ADD32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[ creg ].UL[ 0 ] );
-			}
+			ADD32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[ creg ].UL[ 0 ] );
+			ADC32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[ creg ].UL[ 1 ] );
 
 			return;
 		}
 
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ] );
-
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 1 ] );
+		MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 1 ] );
 
 		if( g_cpuConstRegs[ creg ].UL[0] || g_cpuConstRegs[ creg ].UL[1] ) {
 			ADD32ItoR( EAX, g_cpuConstRegs[ creg ].UL[ 0 ] );
-			if( EEINST_ISLIVE1(_Rd_) )
-				ADC32ItoR( EDX, g_cpuConstRegs[ creg ].UL[ 1 ] );
+			ADC32ItoR( EDX, g_cpuConstRegs[ creg ].UL[ 1 ] );
 		}
 		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
 
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-
-		if( !EEINST_ISLIVE1(_Rd_) )
-			EEINST_RESETHASLIVE1(_Rd_);
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 }
 
@@ -257,27 +183,17 @@ void recDADD_(int info)
 	if( _Rd_ == _Rs_ || _Rd_ == _Rt_ ) {
 		int vreg = _Rd_ == _Rs_ ? _Rt_ : _Rs_;
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 1 ] );
+		MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ vreg ].UL[ 1 ] );
 		ADD32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX);
-		if( EEINST_ISLIVE1(_Rd_) )
-			ADC32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX);
-		else
-			EEINST_RESETHASLIVE1(_Rd_);
+		ADC32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX);
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
+		MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
 		ADD32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			ADC32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
+		ADC32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-
-		if( !EEINST_ISLIVE1(_Rd_) )
-			EEINST_RESETHASLIVE1(_Rd_);
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 }
 
@@ -304,8 +220,7 @@ void recSUB_consts(int info)
 		if( g_cpuConstRegs[ _Rs_ ].UL[ 0 ] ) SUB32ItoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], g_cpuConstRegs[ _Rs_ ].UL[ 0 ]);
 		NEG32M((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ]);
 
-		if( EEINST_ISLIVE1(_Rd_) ) _signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
-		else EEINST_RESETHASLIVE1(_Rd_);
+		_signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
 	}
 	else {
 		if( g_cpuConstRegs[ _Rs_ ].UL[ 0 ] ) {
@@ -317,15 +232,9 @@ void recSUB_consts(int info)
 			NEG32R(EAX);
 		}
 
-		if( EEINST_ISLIVE1(_Rd_) ) {
-			CDQ( );
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-		}
-		else {
-			EEINST_RESETHASLIVE1(_Rd_);
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		}
+		CDQ( );
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 }
 
@@ -333,54 +242,21 @@ void recSUB_constt(int info)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
 
-	// Fixme: MMX problem
-	if(0/*!g_cpuConstRegs[_Rt_].UL[0]*/) {
-		int mmreg = _allocMMXreg(-1, MMX_GPR+_Rd_, MODE_WRITE);
-		SetMMXstate();
+	if( _Rd_ == _Rs_ ) {
+		if( g_cpuConstRegs[ _Rt_ ].UL[ 0 ] ) {
+			SUB32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], g_cpuConstRegs[ _Rt_ ].UL[ 0 ]);
 
-		if( EEINST_HASLIVE1(_Rs_) && EEINST_ISLIVE1(_Rd_) ) {
-			MOVQMtoR(mmreg, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-		}
-		else {
-			if( g_cpuConstRegs[_Rt_].UL[0] ) {
-				MOVDMtoMMX(mmreg, (u32)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-				PSUBDMtoR(mmreg, (u32)_eeGetConstReg(_Rt_));
-			}
-			else {
-				if( EEINST_ISLIVE1(_Rd_) ) {
-					_signExtendMtoMMX(mmreg, (u32)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-				}
-				else {
-					MOVDMtoMMX(mmreg, (u32)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ]);
-					EEINST_RESETHASLIVE1(_Rd_);
-				}
-			}
+			_signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
 		}
 	}
 	else {
-		if( _Rd_ == _Rs_ ) {
-			if( g_cpuConstRegs[ _Rt_ ].UL[ 0 ] ) {
-				SUB32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], g_cpuConstRegs[ _Rt_ ].UL[ 0 ]);
+		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		if( g_cpuConstRegs[ _Rt_ ].UL[ 0 ] )
+			SUB32ItoR( EAX, g_cpuConstRegs[ _Rt_ ].UL[ 0 ] );
 
-				if( EEINST_ISLIVE1(_Rd_) ) _signExtendSFtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ]);
-				else EEINST_RESETHASLIVE1(_Rd_);
-			}
-		}
-		else {
-			MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-			if( g_cpuConstRegs[ _Rt_ ].UL[ 0 ] )
-				SUB32ItoR( EAX, g_cpuConstRegs[ _Rt_ ].UL[ 0 ] );
-
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				CDQ( );
-				MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-				MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-			}
-			else {
-				EEINST_RESETHASLIVE1(_Rd_);
-				MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-			}
-		}
+		CDQ( );
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 }
 
@@ -388,27 +264,12 @@ void recSUB_(int info)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
 
-	if( !EEINST_ISLIVE1(_Rd_) ) {
-		if( _Rd_ == _Rs_) {
-			EEINST_RESETHASLIVE1(_Rd_);
-			MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-			SUB32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-			return;
-		}
-	}
-
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 	SUB32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 
-	if( EEINST_ISLIVE1(_Rd_) ) {
-		CDQ( );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	}
-	else {
-		EEINST_RESETHASLIVE1(_Rd_);
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	}
+	CDQ( );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
 EERECOMPILE_CODE0(SUB, XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED);
@@ -431,54 +292,33 @@ void recDSUB_consts(int info)
 
 	if( g_cpuConstRegs[ _Rs_ ].UL[ 0 ] || g_cpuConstRegs[ _Rs_ ].UL[ 1 ] ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[ _Rs_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32ItoR( EDX, g_cpuConstRegs[ _Rs_ ].UL[ 1 ] );
+		MOV32ItoR( EDX, g_cpuConstRegs[ _Rs_ ].UL[ 1 ] );
 		SUB32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			SBB32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-
-		if( !EEINST_ISLIVE1(_Rd_) )
-			EEINST_RESETHASLIVE1(_Rd_);
+		SBB32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 	}
 	else {
 
 		if( _Rd_ == _Rt_ ) {
 			// negate _Rt_ all in memory
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-				NEG32M((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
-				ADC32ItoR(EDX, 0);
-				NEG32R(EDX);
-				MOV32RtoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX);
-			}
-			else {
-				EEINST_RESETHASLIVE1(_Rd_);
-				NEG32M((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ]);
-			}
+			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
+			NEG32M((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
+			ADC32ItoR(EDX, 0);
+			NEG32R(EDX);
+			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX);
 			return;
 		}
 
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
+		MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 		// take negative of 64bit number
 		NEG32R(EAX);
 
-		if( EEINST_ISLIVE1(_Rd_) ) {
-			ADC32ItoR(EDX, 0);
-			NEG32R(EDX);
-		}
-		else {
-			EEINST_RESETHASLIVE1(_Rd_);
-		}
+		ADC32ItoR(EDX, 0);
+		NEG32R(EDX);
 	}
 
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	if( EEINST_ISLIVE1(_Rd_) )
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	else {
-		EEINST_RESETHASLIVE1(_Rd_);
-	}
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
 void recDSUB_constt(int info) 
@@ -486,31 +326,20 @@ void recDSUB_constt(int info)
 	pxAssert( !(info&PROCESS_EE_XMM) );
 
 	if( _Rd_ == _Rs_ ) {
-		if( EEINST_ISLIVE1(_Rd_) && (g_cpuConstRegs[ _Rt_ ].UL[ 0 ] || g_cpuConstRegs[ _Rt_ ].UL[ 1 ]) ) {
-			SUB32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[ _Rt_ ].UL[ 0 ] );
-			SBB32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[ _Rt_ ].UL[ 1 ] );
-		}
-		else if( g_cpuConstRegs[ _Rt_ ].UL[ 0 ] ) {
-			EEINST_RESETHASLIVE1(_Rd_);
-			SUB32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[ _Rt_ ].UL[ 0 ] );
-		}
+		SUB32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[0], g_cpuConstRegs[ _Rt_ ].UL[ 0 ] );
+		SBB32ItoM( (u32)&cpuRegs.GPR.r[_Rd_].UL[1], g_cpuConstRegs[ _Rt_ ].UL[ 1 ] );
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );	
+		MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );	
 
 		if( g_cpuConstRegs[ _Rt_ ].UL[ 0 ] || g_cpuConstRegs[ _Rt_ ].UL[ 1 ] ) {		
 			SUB32ItoR( EAX, g_cpuConstRegs[ _Rt_ ].UL[ 0 ] );
-			if( EEINST_ISLIVE1(_Rd_) )
-				SBB32ItoR( EDX, g_cpuConstRegs[ _Rt_ ].UL[ 1 ] );
+			SBB32ItoR( EDX, g_cpuConstRegs[ _Rt_ ].UL[ 1 ] );
 		}
 
 		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-		else
-			EEINST_RESETHASLIVE1(_Rd_);
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 }
 
@@ -520,26 +349,17 @@ void recDSUB_(int info)
 
 	if( _Rd_ == _Rs_ ) {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
+		MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 		SUB32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		if( EEINST_ISLIVE1(_Rd_) )
-			SBB32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-		else
-			EEINST_RESETHASLIVE1(_Rd_);
+		SBB32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 	else {
 		MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
+		MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
 		SUB32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-		if( EEINST_ISLIVE1(_Rd_) )
-			SBB32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
+		SBB32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
 		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-		else
-			EEINST_RESETHASLIVE1(_Rd_);
+		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 	}
 
 }
@@ -566,32 +386,20 @@ void recAND_constv(int info, int creg, int vreg)
 
 		if( _Rd_ == vreg ) {
 			AND32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[0], g_cpuConstRegs[creg].UL[0]);
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				if( g_cpuConstRegs[creg].UL[1] != 0xffffffff ) AND32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], g_cpuConstRegs[creg].UL[1]);
-			}
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			if( g_cpuConstRegs[creg].UL[1] != 0xffffffff ) AND32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], g_cpuConstRegs[creg].UL[1]);
 		}
 		else {
 			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ vreg ]);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
+			MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
 			AND32ItoR(EAX, g_cpuConstRegs[ creg ].UL[0]);
-			if( EEINST_ISLIVE1(_Rd_) )
-				AND32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
+			AND32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
 			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
 		}
 	}
 	else {
 		MOV32ItoM((int)&cpuRegs.GPR.r[ _Rd_ ], 0);
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32ItoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, 0);
-		else
-			EEINST_RESETHASLIVE1(_Rd_);
+		MOV32ItoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, 0);
 	}
 }
 
@@ -612,38 +420,28 @@ void recLogicalOp(int info, int op)
 	if( _Rd_ == _Rs_ || _Rd_ == _Rt_ ) {
 		int vreg = _Rd_ == _Rs_ ? _Rt_ : _Rs_;
 		MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ vreg ]);
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR(EDX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
+		MOV32MtoR(EDX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
 		LogicalOp32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX, op );
-		if( EEINST_ISLIVE1(_Rd_) )
-			LogicalOp32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ] + 4, EDX, op );
+		LogicalOp32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ] + 4, EDX, op );
 		if( op == 3 ) {
 			NOT32M((int)&cpuRegs.GPR.r[ _Rd_ ]);
-			if( EEINST_ISLIVE1(_Rd_) )
-				NOT32M((int)&cpuRegs.GPR.r[ _Rd_ ]+4);
+			NOT32M((int)&cpuRegs.GPR.r[ _Rd_ ]+4);
 		}
 
-		if( !EEINST_ISLIVE1(_Rd_) ) EEINST_RESETHASLIVE1(_Rd_);
 	}
 	else {
 		MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rs_ ]);
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ _Rs_ ] + 4 );
+		MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ _Rs_ ] + 4 );
 		LogicalOp32MtoR(EAX, (int)&cpuRegs.GPR.r[ _Rt_ ], op );
-		if( EEINST_ISLIVE1(_Rd_) )
-			LogicalOp32MtoR(ECX, (int)&cpuRegs.GPR.r[ _Rt_ ] + 4, op );
+		LogicalOp32MtoR(ECX, (int)&cpuRegs.GPR.r[ _Rt_ ] + 4, op );
 
 		if( op == 3 ) {
 			NOT32R(EAX);
-			if( EEINST_ISLIVE1(_Rd_) )
-				NOT32R(ECX);
+			NOT32R(ECX);
 		}
 
 		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX);
-		if( EEINST_ISLIVE1(_Rd_) )
-			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
-		else
-			EEINST_RESETHASLIVE1(_Rd_);
+		MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
 	}
 }
 
@@ -678,25 +476,17 @@ void recOR_constv(int info, int creg, int vreg)
 	else {
 		if( _Rd_ == vreg ) {
 			OR32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[0], g_cpuConstRegs[creg].UL[0]);
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				if( g_cpuConstRegs[creg].UL[1] ) OR32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], g_cpuConstRegs[creg].UL[1]);
-			}
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			if( g_cpuConstRegs[creg].UL[1] ) OR32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], g_cpuConstRegs[creg].UL[1]);
 		}
 		else {
 			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ vreg ]);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
+			MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
 
 			if( g_cpuConstRegs[ creg ].UL[0] ) OR32ItoR(EAX, g_cpuConstRegs[ creg ].UL[0]);
-			if( g_cpuConstRegs[ creg ].UL[1] && EEINST_ISLIVE1(_Rd_) ) OR32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
+			if( g_cpuConstRegs[ creg ].UL[1] ) OR32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
 
 			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
 		}
 	}
 }
@@ -741,25 +531,17 @@ void recXOR_constv(int info, int creg, int vreg)
 	else {
 		if( _Rd_ == vreg ) {
 			XOR32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[0], g_cpuConstRegs[creg].UL[0]);
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				if( g_cpuConstRegs[creg].UL[1] ) XOR32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], g_cpuConstRegs[creg].UL[1]);
-			}
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			if( g_cpuConstRegs[creg].UL[1] ) XOR32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], g_cpuConstRegs[creg].UL[1]);
 		}
 		else {
 			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ vreg ]);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
+			MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
 
 			if( g_cpuConstRegs[ creg ].UL[0] ) XOR32ItoR(EAX, g_cpuConstRegs[ creg ].UL[0]);
-			if( g_cpuConstRegs[ creg ].UL[1] && EEINST_ISLIVE1(_Rd_) ) XOR32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
+			if( g_cpuConstRegs[ creg ].UL[1] ) XOR32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
 
 			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
 		}
 	}
 }
@@ -810,29 +592,20 @@ void recNOR_constv(int info, int creg, int vreg)
 	else {
 		if( _Rd_ == vreg ) {
 			NOT32M((int)&cpuRegs.GPR.r[ vreg ].UL[0]);
-			if( EEINST_ISLIVE1(_Rd_) ) NOT32M((int)&cpuRegs.GPR.r[ vreg ].UL[1]);
+			NOT32M((int)&cpuRegs.GPR.r[ vreg ].UL[1]);
 
 			if( g_cpuConstRegs[creg].UL[0] ) AND32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[0], ~g_cpuConstRegs[creg].UL[0]);
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				if( g_cpuConstRegs[creg].UL[1] ) AND32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], ~g_cpuConstRegs[creg].UL[1]);
-			}
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			if( g_cpuConstRegs[creg].UL[1] ) AND32ItoM((int)&cpuRegs.GPR.r[ vreg ].UL[1], ~g_cpuConstRegs[creg].UL[1]);
 		}
 		else {
 			MOV32MtoR(EAX, (int)&cpuRegs.GPR.r[ vreg ]);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
+			MOV32MtoR(ECX, (int)&cpuRegs.GPR.r[ vreg ] + 4 );
 			if( g_cpuConstRegs[ creg ].UL[0] ) OR32ItoR(EAX, g_cpuConstRegs[ creg ].UL[0]);
-			if( g_cpuConstRegs[ creg ].UL[1] && EEINST_ISLIVE1(_Rd_) ) OR32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
+			if( g_cpuConstRegs[ creg ].UL[1] ) OR32ItoR(ECX, g_cpuConstRegs[ creg ].UL[1]);
 			NOT32R(EAX);
-			if( EEINST_ISLIVE1(_Rd_) )
-				NOT32R(ECX);
+			NOT32R(ECX);
 			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ], EAX);
-			if( EEINST_ISLIVE1(_Rd_) )
-				MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
-			else
-				EEINST_RESETHASLIVE1(_Rd_);
+			MOV32RtoM((int)&cpuRegs.GPR.r[ _Rd_ ]+4, ECX);
 		}
 	}
 }
@@ -890,9 +663,7 @@ void recSLTs_consts(int info, int sign)
 	x86SetJ8(j8Ptr[1]);
 
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	if( EEINST_ISLIVE1(_Rd_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );
-	else EEINST_RESETHASLIVE1(_Rd_);
-	
+	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );
 }
 
 // SLT with one operand coming from mem (compares only low 32 bits)
@@ -976,9 +747,7 @@ void recSLTs_constt(int info, int sign)
 	x86SetJ8(j8Ptr[1]);
 
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	if( EEINST_ISLIVE1(_Rd_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );
-	else EEINST_RESETHASLIVE1(_Rd_);
-	
+	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );
 }
 
 void recSLTs_(int info, int sign)
@@ -1008,8 +777,7 @@ void recSLTs_(int info, int sign)
 	x86SetJ8(j8Ptr[1]);
 
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	if( EEINST_ISLIVE1(_Rd_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );
-	else EEINST_RESETHASLIVE1(_Rd_);
+	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );
 }
 
 void recSLT_consts(int info)

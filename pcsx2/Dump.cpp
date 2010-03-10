@@ -224,8 +224,8 @@ void iDumpBlock( int startpc, u8 * ptr )
 
 	// write the instruction info
 
-	eff.Printf( "\n\nlive0 - %x, live1 - %x, live2 - %x, lastuse - %x\nxmm - %x, used - %x\n",
-		EEINST_LIVE0, EEINST_LIVE1, EEINST_LIVE2, EEINST_LASTUSE, EEINST_XMM, EEINST_USED
+	eff.Printf( "\n\nlive0 - %x, live2 - %x, lastuse - %x\nxmm - %x, used - %x\n",
+		EEINST_LIVE0, EEINST_LIVE2, EEINST_LASTUSE, EEINST_XMM, EEINST_USED
 	);
 
 	memzero(used);

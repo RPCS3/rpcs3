@@ -69,15 +69,9 @@ void recSLLs_(int info, int sa)
 		SHL32ItoR( EAX, sa );
 	}
 
-	if( EEINST_ISLIVE1(_Rd_) ) {
-		CDQ( );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	}
-	else {
-		EEINST_RESETHASLIVE1(_Rd_);
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	}
+	CDQ( );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
 void recSLL_(int info)
@@ -100,15 +94,9 @@ void recSRLs_(int info, int sa)
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	if ( sa != 0 ) SHR32ItoR( EAX, sa);
 
-	if( EEINST_ISLIVE1(_Rd_) ) {
-		CDQ( );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	}
-	else {
-		EEINST_RESETHASLIVE1(_Rd_);
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	}
+	CDQ( );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
 void recSRL_(int info) 
@@ -131,15 +119,9 @@ void recSRAs_(int info, int sa)
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	if ( sa != 0 ) SAR32ItoR( EAX, sa);
 
-	if( EEINST_ISLIVE1(_Rd_) ) {
-		CDQ();
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	}
-	else {
-		EEINST_RESETHASLIVE1(_Rd_);
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	}
+	CDQ();
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
 void recSRA_(int info) 
@@ -224,12 +206,6 @@ void recDSRAs_(int info, int sa)
 	
 	if( rtreg != rdreg ) MOVQRtoR(rdreg, rtreg);
 
-	if( !EEINST_ISLIVE1(_Rd_) ) {
-		EEINST_RESETHASLIVE1(_Rd_);
-		PSRLQItoR(rdreg, sa);
-		return;
-	}
-
     if ( sa != 0 ) {
 		t0reg = _allocMMXreg(-1, MMX_TEMP, 0);	
 		MOVQRtoR(t0reg, rtreg);
@@ -294,8 +270,7 @@ void recDSRL32s_(int info, int sa)
 	if ( sa != 0 ) SHR32ItoR( EAX, sa );
 
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	if( EEINST_ISLIVE1(_Rd_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );  
-	else EEINST_RESETHASLIVE1(_Rd_);	
+	MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], 0 );
 }
 
 void recDSRL32_(int info)
@@ -320,8 +295,7 @@ void recDSRA32s_(int info, int sa)
 	if ( sa != 0 ) SAR32ItoR( EAX, sa );
 
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	if( EEINST_ISLIVE1(_Rd_) ) MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );  
-	else EEINST_RESETHASLIVE1(_Rd_);
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 		
 }
 
@@ -376,15 +350,9 @@ void recSetConstShiftV(int info, int* rsreg, int* rdreg, int* rstemp, int shift6
 
 void recMoveSignToRd(int info)
 {
-	if( EEINST_ISLIVE1(_Rd_) ) {
-		CDQ();
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	}
-	else {
-		EEINST_RESETHASLIVE1(_Rd_);
-		MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	}
+	CDQ();
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
+	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 }
 
 //// SLLV

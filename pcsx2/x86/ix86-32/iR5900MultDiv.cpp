@@ -99,13 +99,9 @@ void recWritebackHILO(int info, int writed, int upper)
 		if( regd < 0 ) {
 			_deleteEEreg(_Rd_, 0);
 
-			if( EEINST_ISLIVE1(_Rd_) && !savedlo ) CDQ();
+			if( !savedlo ) CDQ();
 			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-
-			if( EEINST_ISLIVE1(_Rd_) ) {
-				MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-			}
-			else EEINST_RESETHASLIVE1(_Rd_);
+			MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
 		}
 	}
 

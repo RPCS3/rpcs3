@@ -500,7 +500,7 @@ int  _getFreeMMXreg()
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].needed) continue;
 		if (MMX_ISGPR(mmxregs[i].reg)) {
-			if( !(g_pCurInstInfo->regs[mmxregs[i].reg-MMX_GPR] & (EEINST_LIVE0|EEINST_LIVE1)) ) {
+			if( !(g_pCurInstInfo->regs[mmxregs[i].reg-MMX_GPR] & (EEINST_LIVE0)) ) {
 				_freeMMXreg(i);
 				return i;
 			}
@@ -881,11 +881,6 @@ int _signExtendMtoMMX(x86MMXRegType to, u32 mem)
 int _signExtendGPRMMXtoMMX(x86MMXRegType to, u32 gprreg, x86MMXRegType from, u32 gprfromreg)
 {
 	pxAssert( to >= 0 && from >= 0 );
-	if( !EEINST_ISLIVE1(gprreg) ) {
-		EEINST_RESETHASLIVE1(gprreg);
-		if( to != from ) MOVQRtoR(to, from);
-		return to;
-	}
 
 	if( to == from ) return _signExtendGPRtoMMX(to, gprreg, 0);
 	if( !(g_pCurInstInfo->regs[gprfromreg]&EEINST_LASTUSE) ) {
@@ -910,11 +905,6 @@ int _signExtendGPRMMXtoMMX(x86MMXRegType to, u32 gprreg, x86MMXRegType from, u32
 int _signExtendGPRtoMMX(x86MMXRegType to, u32 gprreg, int shift)
 {
 	pxAssert( to >= 0 && shift >= 0 );
-	if( !EEINST_ISLIVE1(gprreg) ) {
-		if( shift > 0 ) PSRADItoR(to, shift);
-		EEINST_RESETHASLIVE1(gprreg);
-		return to;
-	}
 
 	SetMMXstate();
 

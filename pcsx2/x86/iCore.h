@@ -198,7 +198,6 @@ static const int MEM_XMMTAG = 0x8000;	// mmreg is xmmreg
 // Instruction Info //
 //////////////////////
 #define EEINST_LIVE0	1	// if var is ever used (read or write)
-#define EEINST_LIVE1	2	// if cur var's next 32 bits are needed
 #define EEINST_LIVE2	4	// if cur var's next 64 bits are needed
 #define EEINST_LASTUSE	8	// if var isn't written/read anymore
 //#define EEINST_MMX		0x10 // removed
@@ -234,22 +233,14 @@ extern u32 _recIsRegWritten(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern u32 _recIsRegUsed(EEINST* pinst, int size, u8 xmmtype, u8 reg);
 extern void _recFillRegister(EEINST& pinst, int type, int reg, int write);
 
-static __forceinline bool EEINST_ISLIVE64(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1)); }
-static __forceinline bool EEINST_ISLIVEXMM(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2)); }
-static __forceinline bool EEINST_ISLIVE1(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE1); }
+static __forceinline bool EEINST_ISLIVE64(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0)); }
+static __forceinline bool EEINST_ISLIVEXMM(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & (EEINST_LIVE0|EEINST_LIVE2)); }
 static __forceinline bool EEINST_ISLIVE2(u32 reg)	{ return !!(g_pCurInstInfo->regs[reg] & EEINST_LIVE2); }
 
 static __forceinline bool FPUINST_ISLIVE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LIVE0); }
 static __forceinline bool FPUINST_LASTUSE(u32 reg)	{ return !!(g_pCurInstInfo->fpuregs[reg] & EEINST_LASTUSE); }
 
-// if set, then the variable at this inst really has its upper 32 bits valid
-// The difference between EEINST_LIVE1 is that the latter is used in back propagation
-// The former is set at recompile time.
-#define EEINST_RESETHASLIVE1(reg) { if( (reg) < 32 ) g_cpuRegHasLive1 &= ~(1<<(reg)); }
-#define EEINST_HASLIVE1(reg) (g_cpuPrevRegHasLive1&(1<<(reg)))
-
 extern u32 g_recWriteback; // used for jumps (VUrec mess!)
-extern u32 g_cpuRegHasLive1, g_cpuPrevRegHasLive1;
 
 extern _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 

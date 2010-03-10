@@ -124,17 +124,9 @@ void recCFC1(void)
 		OR32ItoR(EAX,  0x01000001); //set always-one bits
 	}
 
-	if(EEINST_ISLIVE1(_Rt_)) 
-	{
-		CDQ( );
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-	}
-	else 
-	{
-		EEINST_RESETHASLIVE1(_Rt_);
-		MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-	}
+	CDQ( );
+	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
+	MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
 }
 
 void recCTC1( void )
@@ -198,23 +190,11 @@ void recMFC1(void)
 		if( regt >= 0 ) 
 		{
 			SSE2_MOVDQ2Q_XMM_to_MM(regt, regs);
-
-			if(EEINST_ISLIVE1(_Rt_)) 
-				_signExtendGPRtoMMX(regt, _Rt_, 0);
-			else 
-				EEINST_RESETHASLIVE1(_Rt_);
+			_signExtendGPRtoMMX(regt, _Rt_, 0);
 		}
 		else 
 		{
-			if(EEINST_ISLIVE1(_Rt_)) 
-			{
-				_signExtendXMMtoM((uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], regs, 0);
-			}
-			else 
-			{
-				EEINST_RESETHASLIVE1(_Rt_);
-				SSE_MOVSS_XMM_to_M32((uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], regs);
-			}
+			_signExtendXMMtoM((uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], regs, 0);
 		}
 	}
 	else 
@@ -244,17 +224,9 @@ void recMFC1(void)
 			_deleteEEreg(_Rt_, 0);
 			MOV32MtoR( EAX, (uptr)&fpuRegs.fpr[ _Fs_ ].UL );
             
-			if(EEINST_ISLIVE1(_Rt_)) 
-			{
-				CDQ( );
-				MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-				MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-			}
-			else 
-			{
-				EEINST_RESETHASLIVE1(_Rt_);
-				MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-			}
+			CDQ( );
+			MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
+			MOV32RtoM( (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
 		}
 	}
 }

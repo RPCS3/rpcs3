@@ -30,9 +30,6 @@ u16 g_xmmAllocCounter = 0;
 
 EEINST* g_pCurInstInfo = NULL;
 
-u32 g_cpuRegHasLive1 = 0, g_cpuPrevRegHasLive1 = 0; // set if upper 32 bits are live
-u32 g_cpuRegHasSignExt = 0, g_cpuPrevRegHasSignExt = 0; // set if upper 32 bits are the sign extension of the lower integer
-
 // used to make sure regs don't get changed while in recompiler
 // use FreezeMMXRegs, FreezeXMMRegs
 u32 g_recWriteback = 0;
@@ -1028,7 +1025,7 @@ int _allocCheckGPRtoX86(EEINST* pinst, int gprreg, int mode)
 void _recClearInst(EEINST* pinst)
 {
 	memzero( *pinst );
-	memset8<EEINST_LIVE0|EEINST_LIVE1|EEINST_LIVE2>( pinst->regs );
+	memset8<EEINST_LIVE0|EEINST_LIVE2>( pinst->regs );
 	memset8<EEINST_LIVE0>( pinst->fpuregs );
 }
 

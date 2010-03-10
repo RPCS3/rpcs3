@@ -77,7 +77,7 @@ static bool s_nBlockFF;
 // save states for branches
 GPR_reg64 s_saveConstRegs[32];
 static u16 s_savex86FpuState;
-static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0, s_saveRegHasLive1 = 0;
+static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0;
 static EEINST* s_psaveInstInfo = NULL;
 
 static u32 s_savenBlockCycles = 0;
@@ -291,6 +291,35 @@ u32* recGetImm64(u32 hi, u32 lo)
 	//Console.Warning("Consts allocated: %d of %u", (recConstBufPtr - recConstBuf) / 2, count);
 
 	return imm64;
+}
+
+// Use this to call into interpreter functions that require an immediate branchtest
+// to be done afterward (anything that throws an exception or enables interrupts, etc).
+void recBranchCall( void (*func)() )
+{
+	// In order to make sure a branch test is performed, the nextBranchCycle is set
+	// to the current cpu cycle.
+
+	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
+	MOV32MtoR( EAX, (uptr)&cpuRegs.cycle );
+	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
+	MOV32RtoM( (uptr)&g_nextBranchCycle, EAX );
+
+	// Might as well flush everything -- it'll all get flushed when the
+	// recompiler inserts the branchtest anyway.
+	iFlushCall(FLUSH_EVERYTHING);
+	CALLFunc( (uptr)func );
+	branch = 2;
+}
+
+void recCall( void (*func)(), int delreg )
+{
+	MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
+	MOV32ItoM( (uptr)&cpuRegs.pc, pc );
+
+	iFlushCall(FLUSH_EVERYTHING);
+	if( delreg > 0 ) _deleteEEreg(delreg, 0);
+	CALLFunc( (uptr)func );
 }
 
 // =====================================================================================================
@@ -961,7 +990,6 @@ void SaveBranchState()
 	s_saveHasConstReg = g_cpuHasConstReg;
 	s_saveFlushedConstReg = g_cpuFlushedConstReg;
 	s_psaveInstInfo = g_pCurInstInfo;
-	s_saveRegHasLive1 = g_cpuRegHasLive1;
 
 	// save all mmx regs
 	memcpy_const(s_saveMMXregs, mmxregs, sizeof(mmxregs));
@@ -977,7 +1005,6 @@ void LoadBranchState()
 	g_cpuHasConstReg = s_saveHasConstReg;
 	g_cpuFlushedConstReg = s_saveFlushedConstReg;
 	g_pCurInstInfo = s_psaveInstInfo;
-	g_cpuRegHasLive1 = g_cpuPrevRegHasLive1 = s_saveRegHasLive1;
 
 	// restore all mmx regs
 	memcpy_const(mmxregs, s_saveMMXregs, sizeof(mmxregs));
@@ -1363,7 +1390,6 @@ static void __fastcall recRecompile( const u32 startpc )
 	pc = startpc;
 	x86FpuState = FPU_STATE;
 	g_cpuHasConstReg = g_cpuFlushedConstReg = 1;
-	g_cpuPrevRegHasLive1 = g_cpuRegHasLive1 = 0xffffffff;
 	pxAssume( g_cpuConstRegs[0].UD[0] == 0 );
 
 	_initX86regs();
@@ -1491,11 +1517,6 @@ StartRecomp:
 		for(i = s_nEndBlock; i > startpc; i -= 4 ) {
 			cpuRegs.code = *(int *)PSM(i-4);
 			pcur[-1] = pcur[0];
-			
-			// Backward propagation entry point. Since it doesn't work right it's disabled for now
-			//BSCPropagate bsc( pcur[-1], pcur[0] );
-			//bsc.rprop();
-			
 			pcur--;
 		}
 	}

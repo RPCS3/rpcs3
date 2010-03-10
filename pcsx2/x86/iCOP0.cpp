@@ -135,8 +135,6 @@ REC_SYS( MTC0 );
 
 void recMFC0( void )
 {
-	int mmreg;
-
 	if( _Rd_ == 9 )
 	{
 		// This case needs to be handled even if the write-back is ignored (_Rt_ == 0 )
@@ -155,11 +153,8 @@ void recMFC0( void )
 		_deleteEEreg(_Rt_, 0);
 		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
 
-		if(EEINST_ISLIVE1(_Rt_)) {
-			CDQ();
-			MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
-		}
-		else EEINST_RESETHASLIVE1(_Rt_);
+		CDQ();
+		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
 		return;
 	}
 
@@ -187,11 +182,8 @@ void recMFC0( void )
 		_deleteEEreg(_Rt_, 0);
 		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
 
-		if(EEINST_ISLIVE1(_Rt_)) {
-			CDQ();
-			MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
-		}
-		else EEINST_RESETHASLIVE1(_Rt_);
+		CDQ();
+		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
 
 		return;
 	}
@@ -200,49 +192,11 @@ void recMFC0( void )
         return;
 	}
 	_eeOnWriteReg(_Rt_, 1);
-
-	if( EEINST_ISLIVE1(_Rt_) ) {
-		_deleteEEreg(_Rt_, 0);
-		MOV32MtoR(EAX, (uptr)&cpuRegs.CP0.r[ _Rd_ ]);
-		CDQ();
-		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0], EAX);
-		MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
-	}
-	else {
-		EEINST_RESETHASLIVE1(_Rt_);
-
-		if( (mmreg = _allocCheckGPRtoMMX(g_pCurInstInfo, _Rt_, MODE_WRITE)) >= 0 ) {
-			MOVDMtoMMX(mmreg, (uptr)&cpuRegs.CP0.r[ _Rd_ ]);
-			SetMMXstate();
-		}
-		else if( (mmreg = _checkXMMreg(XMMTYPE_GPRREG, _Rt_, MODE_READ)) >= 0) {
-
-			if( EEINST_ISLIVE2(_Rt_) ) {
-				if( xmmregs[mmreg].mode & MODE_WRITE ) {
-					SSE_MOVHPS_XMM_to_M64((uptr)&cpuRegs.GPR.r[_Rt_].UL[2], mmreg);
-				}
-				xmmregs[mmreg].inuse = 0;
-
-				MOV32MtoR(EAX, (uptr)&cpuRegs.CP0.r[ _Rd_ ]);
-				MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
-			}
-			else {
-				SSE_MOVLPS_M64_to_XMM(mmreg, (uptr)&cpuRegs.CP0.r[ _Rd_ ]);
-			}
-		}
-		else {
-			MOV32MtoR(EAX, (uptr)&cpuRegs.CP0.r[ _Rd_ ]);
-			if(_Rd_ == 12) AND32ItoR(EAX, 0xf0c79c1f);
-			MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0],EAX);
-			if(EEINST_ISLIVE1(_Rt_)) {
-				CDQ();
-				MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
-			}
-			else {
-				EEINST_RESETHASLIVE1(_Rt_);
-			}
-		}
-	}
+	_deleteEEreg(_Rt_, 0);
+	MOV32MtoR(EAX, (uptr)&cpuRegs.CP0.r[ _Rd_ ]);
+	CDQ();
+	MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[0], EAX);
+	MOV32RtoM((uptr)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
 }
 
 void recMTC0()
