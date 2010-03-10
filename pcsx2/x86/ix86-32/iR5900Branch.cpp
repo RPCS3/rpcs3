@@ -54,8 +54,6 @@ REC_SYS_DEL(BGEZALL, 31);
 
 #else
 
-#if defined(EE_CONST_PROP)
-
 void recSetBranchEQ(int info, int bne, int process)
 {
 	if( info & PROCESS_EE_XMM ) {
@@ -577,198 +575,6 @@ void recBGEZALL( void )
 	SetBranchImm(pc);
 }
 
-#else
-
-
-////////////////////////////////////////////////////
-void recBEQ( void ) 
-{
-	u32 branchTo = ((s32)_Imm_ * 4) + pc;
-
-	if ( _Rs_ == _Rt_ )
-	{
-		_clearNeededMMXregs();
-		_clearNeededXMMregs();
-		recompileNextInstruction(1);
-		SetBranchImm( branchTo );
-	}
-	else
-	{
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-		CMP32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-		j32Ptr[ 0 ] = JNE32( 0 );
-
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
-		CMP32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-		j32Ptr[ 1 ] = JNE32( 0 );
-		
-		_clearNeededMMXregs();
-		_clearNeededXMMregs();
-
-		SaveBranchState();
-		recompileNextInstruction(1);
-
-		SetBranchImm(branchTo);
-
-		x86SetJ32( j32Ptr[ 0 ] ); 
-		x86SetJ32( j32Ptr[ 1 ] );
-
-		// recopy the next inst
-		pc -= 4;
-		LoadBranchState();
-		recompileNextInstruction(1);
-
-		SetBranchImm(pc);
-	}
-}
-
-////////////////////////////////////////////////////
-void recBNE( void ) 
-{
-	u32 branchTo = ((s32)_Imm_ * 4) + pc;
-
-	if ( _Rs_ == _Rt_ )
-	{
-		_clearNeededMMXregs();
-		_clearNeededXMMregs();
-		recompileNextInstruction(1);
-		SetBranchImm(pc);
-		return;
-	}
-
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	CMP32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	j32Ptr[ 0 ] = JNE32( 0 );
-
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
-	CMP32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-	j32Ptr[ 1 ] = JE32( 0 );
-
-	x86SetJ32( j32Ptr[ 0 ] ); 
-
-	_clearNeededMMXregs();
-	_clearNeededXMMregs();
-
-	SaveBranchState();
-	recompileNextInstruction(1);
-	
-	SetBranchImm(branchTo);
-
-	x86SetJ32( j32Ptr[ 1 ] );
-
-	// recopy the next inst
-	pc -= 4;
-	LoadBranchState();
-	recompileNextInstruction(1);
-
-	SetBranchImm(pc);
-}
-
-////////////////////////////////////////////////////
-void recBEQL( void ) 
-{
-	u32 branchTo = ((s32)_Imm_ * 4) + pc;
-
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	CMP32RtoR( ECX, EDX );
-	j32Ptr[ 0 ] = JNE32( 0 );
-
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
-	MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-	CMP32RtoR( ECX, EDX );
-	j32Ptr[ 1 ] = JNE32( 0 );
-
-	_clearNeededMMXregs();
-	_clearNeededXMMregs();
-
-	SaveBranchState();
-	recompileNextInstruction(1);
-	SetBranchImm(branchTo);
-
-	x86SetJ32( j32Ptr[ 0 ] ); 
-	x86SetJ32( j32Ptr[ 1 ] );
-	
-	LoadBranchState();
-	SetBranchImm(pc);
-}
-
-////////////////////////////////////////////////////
-void recBNEL( void ) 
-{
-	u32 branchTo = ((s32)_Imm_ * 4) + pc;
-
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	CMP32RtoR( ECX, EDX );
-	j32Ptr[ 0 ] = JNE32( 0 );
-
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ] );
-	MOV32MtoR( EDX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-	CMP32RtoR( ECX, EDX );
-	j32Ptr[ 1 ] = JNE32( 0 );
-
-	_clearNeededMMXregs();
-	_clearNeededXMMregs();
-
-	SaveBranchState();
-	SetBranchImm(pc+4);
-
-	x86SetJ32( j32Ptr[ 0 ] ); 
-	x86SetJ32( j32Ptr[ 1 ] );
-
-	// recopy the next inst
-	LoadBranchState();
-	recompileNextInstruction(1);
-	SetBranchImm(branchTo);
-}
-
-/*********************************************************
-* Register branch logic                                  *
-* Format:  OP rs, offset                                 *
-*********************************************************/
-
-////////////////////////////////////////////////////
-void recBLTZAL( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZAL );
-	branch = 2;    
-}
-
-////////////////////////////////////////////////////
-void recBGEZAL( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZAL );
-	branch = 2; 
-}
-
-////////////////////////////////////////////////////
-void recBLTZALL( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZALL );
-	branch = 2; 
-}
-
-////////////////////////////////////////////////////
-void recBGEZALL( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZALL );
-	branch = 2; 
-}
-
-#endif
 
 //// BLEZ
 void recBLEZ( void ) 
@@ -863,7 +669,6 @@ void recBGTZ( void )
 }
 
 ////////////////////////////////////////////////////
-#ifdef EE_CONST_PROP
 void recBLTZ() 
 {
 	u32 branchTo = ((s32)_Imm_ * 4) + pc;
@@ -988,44 +793,6 @@ void recBGEZL( void )
 	SetBranchImm(pc);
 }
 
-#else
-void recBLTZ( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZ );
-	branch = 2;    
-}
-
-void recBGEZ( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZ );
-	branch = 2;    
-}
-
-void recBLTZL( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-	CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BLTZL );
-	branch = 2;    
-}
-
-void recBGEZL( void ) 
-{
-	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
-	MOV32ItoM( (int)&cpuRegs.pc, pc );
-	iFlushCall(FLUSH_EVERYTHING);
-    CALLFunc( (uptr)R5900::Interpreter::OpcodeImpl::BGEZL );
-	branch = 2;    
-}
-
-#endif
 
 
 

@@ -48,7 +48,7 @@ REC_FUNC_DEL( MADDU  , _Rd_);
 REC_FUNC_DEL( MADD1  , _Rd_);
 REC_FUNC_DEL( MADDU1 , _Rd_ );
 
-#elif defined(EE_CONST_PROP)
+#else
 
 // if upper is 1, write in upper 64 bits of LO/HI
 void recWritebackHILO(int info, int writed, int upper)
@@ -949,115 +949,6 @@ void recMADDU1()
 	MOV32RtoM( (int)&cpuRegs.HI.UL[3], EDX );
 }
 
-
-#else
-
-////////////////////////////////////////////////////
-void recMULT( void ) 
-{
-	   MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	   IMUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-
-	   MOV32RtoR( ECX, EDX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 0 ], EAX );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 1 ], EDX );
-	   if ( _Rd_ )
-	   {
-		   MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		   MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	   }
-	   MOV32RtoR( EAX, ECX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 0 ], EAX );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 1 ], EDX );
-   
-}
-
-////////////////////////////////////////////////////
-void recMULTU( void ) 
-{
-      MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	   MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-
-	   MOV32RtoR( ECX, EDX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 0 ], EAX );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 1 ], EDX );
-	   if ( _Rd_ != 0 )
-	   {
-		   MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-		   MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-	   }
-	   MOV32RtoR( EAX, ECX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 0 ], ECX );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 1 ], EDX );
-   
-}
-
-////////////////////////////////////////////////////
-void recDIV( void ) 
-{
-
-      MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	   OR32RtoR( ECX, ECX );
-	   j8Ptr[ 0 ] = JE8( 0 );
-   	
-	   MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-//   	XOR32RtoR( EDX,EDX );
-	   CDQ();
-	   IDIV32R( ECX );
-   	
-	   MOV32RtoR( ECX, EDX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 0 ], EAX );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 1 ], EDX );
-   	
-	   MOV32RtoR( EAX, ECX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 0 ], ECX );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 1 ], EDX );
-
-	   x86SetJ8( j8Ptr[ 0 ] );
-   
-}
-
-////////////////////////////////////////////////////
-void recDIVU( void ) 
-{
-
-	   MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-	   OR32RtoR( ECX, ECX );
-	   j8Ptr[ 0 ] = JE8( 0 );
-   	
-	   MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
-	   XOR32RtoR( EDX, EDX );
-	   //	CDQ();
-	   DIV32R( ECX );
-   	
-	   MOV32RtoR( ECX, EDX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 0 ], EAX );
-	   MOV32RtoM( (int)&cpuRegs.LO.UL[ 1 ], EDX );
-   	
-	   MOV32RtoR( EAX,ECX );
-	   CDQ( );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 0 ], ECX );
-	   MOV32RtoM( (int)&cpuRegs.HI.UL[ 1 ], EDX );
-	   x86SetJ8( j8Ptr[ 0 ] );
-   
-}
-
-REC_FUNC_DEL( MULT1, _Rd_ );
-REC_FUNC_DEL( MULTU1, _Rd_ );
-REC_FUNC_DEL( DIV1, _Rd_ );
-REC_FUNC_DEL( DIVU1, _Rd_ );
-
-REC_FUNC_DEL( MADD, _Rd_ );
-REC_FUNC_DEL( MADDU, _Rd_ );
-REC_FUNC_DEL( MADD1, _Rd_ );
-REC_FUNC_DEL( MADDU1, _Rd_ );
 
 #endif
 

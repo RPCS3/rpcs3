@@ -605,7 +605,7 @@ TraceLogFilters&			SetTraceConfig();
 #undef ARITHMETICIMM_RECOMPILE
 #endif
 
-#define EE_CONST_PROP // rec2 - enables constant propagation (faster)
+#define EE_CONST_PROP 1 // rec2 - enables constant propagation (faster)
 
 // Change to 1 if working on getting PS1 emulation working.
 // This disables the exception normally caused by trying to load PS1
