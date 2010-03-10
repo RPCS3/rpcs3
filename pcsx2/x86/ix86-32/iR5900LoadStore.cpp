@@ -116,7 +116,6 @@ void recLoad64( u32 bits, bool sign )
 	if( GPR_IS_CONST1( _Rs_ ) )
 	{
 		_eeOnLoadWrite(_Rt_);
-		EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
 		_deleteEEreg(_Rt_, 0);
 		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
 		if( bits == 128 ) srcadr &= ~0x0f;
@@ -132,7 +131,6 @@ void recLoad64( u32 bits, bool sign )
 			AND32ItoR(ECX,~0x0F);	// emitter automatically encodes this as an 8-bit sign-extended imm8
 
 		_eeOnLoadWrite(_Rt_);
-		EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
 		_deleteEEreg(_Rt_, 0);
 
 		vtlb_DynGenRead64(bits);
@@ -337,7 +335,6 @@ void recLDL( void )
 {
 	_deleteEEreg(_Rs_, 1);
 	_eeOnLoadWrite(_Rt_);
-	EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
 	_deleteEEreg(_Rt_, 1);
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	//MOV32ItoM( (int)&cpuRegs.pc, pc );
@@ -349,7 +346,6 @@ void recLDR( void )
 {
 	_deleteEEreg(_Rs_, 1);
 	_eeOnLoadWrite(_Rt_);
-	EEINST_RESETSIGNEXT(_Rt_); // remove the sign extension
 	_deleteEEreg(_Rt_, 1);
 	MOV32ItoM( (int)&cpuRegs.code, cpuRegs.code );
 	//MOV32ItoM( (int)&cpuRegs.pc, pc );

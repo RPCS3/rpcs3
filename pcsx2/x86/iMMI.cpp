@@ -203,7 +203,6 @@ void recPMFHL()
 
 		case 0x02: // SLW
 			// fall to interp
-			EEINST_SETSIGNEXT(_Rd_);
 			MOV32ItoM( (uptr)&cpuRegs.code, cpuRegs.code );
 			MOV32ItoM( (uptr)&cpuRegs.pc, pc );
 			_flushCachedRegs();
@@ -1726,9 +1725,6 @@ REC_FUNC_DEL( PROT3W, _Rd_ );
 ////////////////////////////////////////////////////
 void recPMADDW()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
 	if( !x86caps.hasStreamingSIMD4Extensions ) {
 		recCall( Interp::PMADDW, _Rd_ );
 		return;
@@ -1777,7 +1773,6 @@ void recPSLLVW()
 {
 	if ( ! _Rd_ ) return;
 
-	EEINST_SETSIGNEXT(_Rd_);
 	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
@@ -1844,7 +1839,6 @@ void recPSRLVW()
 {
 	if ( ! _Rd_ ) return;
 
-	EEINST_SETSIGNEXT(_Rd_);
 	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
@@ -1909,9 +1903,6 @@ void recPSRLVW()
 ////////////////////////////////////////////////////
 void recPMSUBW()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
 	if( !x86caps.hasStreamingSIMD4Extensions ) {
 		recCall( Interp::PMSUBW, _Rd_ );
 		return;
@@ -1963,9 +1954,6 @@ void recPMSUBW()
 ////////////////////////////////////////////////////
 void recPMULTW()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
 	if( !x86caps.hasStreamingSIMD4Extensions ) {
 		recCall( Interp::PMULTW, _Rd_ );
 		return;
@@ -2007,8 +1995,6 @@ void recPMULTW()
 ////////////////////////////////////////////////////
 void recPDIVW()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
 	recCall( Interp::PDIVW, _Rd_ );
 }
 
@@ -2422,7 +2408,6 @@ void recPSRAVW()
 {
 	if ( ! _Rd_ ) return;
 
-	EEINST_SETSIGNEXT(_Rd_);
 	int info = eeRecompileCodeXMM( (_Rs_?XMMINFO_READS:0)|(_Rt_?XMMINFO_READT:0)|XMMINFO_WRITED );
 	if( _Rs_ == 0 ) {
 		if( _Rt_ == 0 ) {
@@ -2542,9 +2527,6 @@ void recPINTEH()
 ////////////////////////////////////////////////////
 void recPMULTUW()
 {
-	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
 	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI );
 	if( !_Rs_ || !_Rt_ ) {
 		if( _Rd_ ) SSE2_PXOR_XMM_to_XMM(EEREC_D, EEREC_D);
@@ -2591,9 +2573,6 @@ void recPMULTUW()
 ////////////////////////////////////////////////////
 void recPMADDUW()
 {
-	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
 	int info = eeRecompileCodeXMM( (((_Rs_)&&(_Rt_))?XMMINFO_READS:0)|(((_Rs_)&&(_Rt_))?XMMINFO_READT:0)|(_Rd_?XMMINFO_WRITED:0)|XMMINFO_WRITELO|XMMINFO_WRITEHI|XMMINFO_READLO|XMMINFO_READHI );
 	SSE_SHUFPS_XMM_to_XMM(EEREC_LO, EEREC_HI, 0x88);
 	SSE2_PSHUFD_XMM_to_XMM(EEREC_LO, EEREC_LO, 0xd8); // LO = {LO[0], HI[0], LO[2], HI[2]}
@@ -2643,11 +2622,8 @@ void recPMADDUW()
 }
 
 ////////////////////////////////////////////////////
-//do EEINST_SETSIGNEXT
 void recPDIVUW()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
 	recCall( Interp::PDIVUW, _Rd_ );
 }
 

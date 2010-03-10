@@ -310,10 +310,6 @@ void recMULT_const()
 void recMULTUsuper(int info, int upper, int process);
 void recMULTsuper(int info, int upper, int process)
 {
-	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-
 	if( process & PROCESS_CONSTS ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rs_].UL[0] );
 		IMUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
@@ -403,10 +399,6 @@ void recMULTU_const()
 
 void recMULTUsuper(int info, int upper, int process)
 {
-	if( _Rd_ ) EEINST_SETSIGNEXT(_Rd_);
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-
 	if( process & PROCESS_CONSTS ) {
 		MOV32ItoR( EAX, g_cpuConstRegs[_Rs_].UL[0] );
 		MUL32M( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
@@ -521,9 +513,6 @@ void recDIV_const()
 
 void recDIVsuper(int info, int sign, int upper, int process)
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-
 	if( process & PROCESS_CONSTT ) 
 		MOV32ItoR( ECX, g_cpuConstRegs[_Rt_].UL[0] );
 	else 
@@ -682,9 +671,6 @@ EERECOMPILE_CODE0(DIVU1, XMMINFO_READS|XMMINFO_READT);
 
 void recMADD()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-
 	if( GPR_IS_CONST2(_Rs_, _Rt_) ) {
 		u64 result = ((s64)g_cpuConstRegs[_Rs_].SL[0] * (s64)g_cpuConstRegs[_Rt_].SL[0]);
 		_deleteEEreg(XMMGPR_LO, 1);
@@ -757,9 +743,6 @@ void recMADD()
 
 void recMADDU()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-
 	if( GPR_IS_CONST2(_Rs_, _Rt_) ) {
 		u64 result = ((u64)g_cpuConstRegs[_Rs_].UL[0] * (u64)g_cpuConstRegs[_Rt_].UL[0]);
 		_deleteEEreg(XMMGPR_LO, 1);
@@ -830,9 +813,6 @@ void recMADDU()
 
 void recMADD1()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-
 	if( GPR_IS_CONST2(_Rs_, _Rt_) ) {
 		u64 result = ((s64)g_cpuConstRegs[_Rs_].SL[0] * (s64)g_cpuConstRegs[_Rt_].SL[0]);
 		_deleteEEreg(XMMGPR_LO, 1);
@@ -905,9 +885,6 @@ void recMADD1()
 
 void recMADDU1()
 {
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-
 	if( GPR_IS_CONST2(_Rs_, _Rt_) ) {
 		u64 result = ((u64)g_cpuConstRegs[_Rs_].UL[0] * (u64)g_cpuConstRegs[_Rt_].UL[0]);
 		_deleteEEreg(XMMGPR_LO, 1);

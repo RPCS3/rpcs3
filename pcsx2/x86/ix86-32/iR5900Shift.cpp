@@ -83,7 +83,6 @@ void recSLLs_(int info, int sa)
 void recSLL_(int info)
 {
 	recSLLs_(info, _Sa_);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 EERECOMPILE_CODEX(eeRecompileCode2, SLL);
@@ -115,7 +114,6 @@ void recSRLs_(int info, int sa)
 void recSRL_(int info) 
 {
 	recSRLs_(info, _Sa_);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 EERECOMPILE_CODEX(eeRecompileCode2, SRL);
@@ -147,7 +145,6 @@ void recSRAs_(int info, int sa)
 void recSRA_(int info) 
 {
 	recSRAs_(info, _Sa_);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 EERECOMPILE_CODEX(eeRecompileCode2, SRA);
@@ -226,11 +223,6 @@ void recDSRAs_(int info, int sa)
 	SetMMXstate();
 	
 	if( rtreg != rdreg ) MOVQRtoR(rdreg, rtreg);
-
-	if( EEINST_ISSIGNEXT(_Rt_) && EEINST_HASLIVE1(_Rt_) ) {
-		PSRADItoR(rdreg, sa);
-		return;
-	}
 
 	if( !EEINST_ISLIVE1(_Rd_) ) {
 		EEINST_RESETHASLIVE1(_Rd_);
@@ -404,7 +396,6 @@ void recSLLV_const()
 void recSLLV_consts(int info)
 {
 	recSLLs_(info, g_cpuConstRegs[_Rs_].UL[0]&0x1f);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSLLV_constt(int info)
@@ -416,13 +407,10 @@ void recSLLV_constt(int info)
 	SHL32CLtoR( EAX );
 
 	recMoveSignToRd(info);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSLLV_(int info)
 {
-	EEINST_SETSIGNEXT(_Rd_);
-
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	if ( _Rs_ != 0 )	
 	{
@@ -446,7 +434,6 @@ void recSRLV_const()
 void recSRLV_consts(int info)
 { 
 	recSRLs_(info, g_cpuConstRegs[_Rs_].UL[0]&0x1f);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSRLV_constt(int info)
@@ -458,13 +445,10 @@ void recSRLV_constt(int info)
 	SHR32CLtoR( EAX );
 
 	recMoveSignToRd(info);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSRLV_(int info)
 { 
-	EEINST_SETSIGNEXT(_Rd_);
-
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	if ( _Rs_ != 0 )	
 	{
@@ -488,7 +472,6 @@ void recSRAV_const()
 void recSRAV_consts(int info)
 {
 	recSRAs_(info, g_cpuConstRegs[_Rs_].UL[0]&0x1f);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSRAV_constt(int info)
@@ -500,13 +483,10 @@ void recSRAV_constt(int info)
 	SAR32CLtoR( EAX );
 	
 	recMoveSignToRd(info);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSRAV_(int info)
 {
-	EEINST_SETSIGNEXT(_Rd_);
-
 	MOV32MtoR( EAX, (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
 	if ( _Rs_ != 0 )
 	{

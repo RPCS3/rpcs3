@@ -248,13 +248,8 @@ static __forceinline bool FPUINST_LASTUSE(u32 reg)	{ return !!(g_pCurInstInfo->f
 #define EEINST_RESETHASLIVE1(reg) { if( (reg) < 32 ) g_cpuRegHasLive1 &= ~(1<<(reg)); }
 #define EEINST_HASLIVE1(reg) (g_cpuPrevRegHasLive1&(1<<(reg)))
 
-#define EEINST_SETSIGNEXT(reg) { if( (reg) < 32 ) g_cpuRegHasSignExt |= (1<<(reg)); }
-#define EEINST_RESETSIGNEXT(reg) { if( (reg) < 32 ) g_cpuRegHasSignExt &= ~(1<<(reg)); }
-#define EEINST_ISSIGNEXT(reg) (g_cpuPrevRegHasSignExt&(1<<(reg)))
-
 extern u32 g_recWriteback; // used for jumps (VUrec mess!)
 extern u32 g_cpuRegHasLive1, g_cpuPrevRegHasLive1;
-extern u32 g_cpuRegHasSignExt, g_cpuPrevRegHasSignExt;
 
 extern _xmmregs xmmregs[iREGCNT_XMM], s_saveXMMregs[iREGCNT_XMM];
 

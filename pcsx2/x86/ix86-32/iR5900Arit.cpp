@@ -126,25 +126,18 @@ void recADD_constv(int info, int creg, int vreg)
 void recADD_consts(int info)
 {
 	recADD_constv(info, _Rs_, _Rt_);
-	EEINST_SETSIGNEXT(_Rd_);
-	EEINST_SETSIGNEXT(_Rt_);
 }
 
 // t is constant
 void recADD_constt(int info)
 {
 	recADD_constv(info, _Rt_, _Rs_);
-	EEINST_SETSIGNEXT(_Rd_);
-	EEINST_SETSIGNEXT(_Rs_);
 }
 
 // nothing is constant
 void recADD_(int info)
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
-	EEINST_SETSIGNEXT(_Rd_);
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
 
 	if( _Rd_ == _Rs_ ) {
 		if( _Rd_ == _Rt_ ) SHL32ItoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], 1); // mult by 2
@@ -306,8 +299,6 @@ void recSUB_const()
 void recSUB_consts(int info) 
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
-	EEINST_SETSIGNEXT(_Rt_);
-	EEINST_SETSIGNEXT(_Rd_);
 
 	if( _Rd_ == _Rt_ ) {
 		if( g_cpuConstRegs[ _Rs_ ].UL[ 0 ] ) SUB32ItoM((int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], g_cpuConstRegs[ _Rs_ ].UL[ 0 ]);
@@ -341,8 +332,6 @@ void recSUB_consts(int info)
 void recSUB_constt(int info) 
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rd_);
 
 	// Fixme: MMX problem
 	if(0/*!g_cpuConstRegs[_Rt_].UL[0]*/) {
@@ -398,9 +387,6 @@ void recSUB_constt(int info)
 void recSUB_(int info) 
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
-	EEINST_SETSIGNEXT(_Rs_);
-	EEINST_SETSIGNEXT(_Rt_);
-	EEINST_SETSIGNEXT(_Rd_);
 
 	if( !EEINST_ISLIVE1(_Rd_) ) {
 		if( _Rd_ == _Rs_) {
@@ -1054,19 +1040,16 @@ void recSLTU_const()
 void recSLTU_consts(int info)
 {
 	recSLTs_consts(info, 0);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSLTU_constt(int info)
 {
 	recSLTs_constt(info, 0);
-	EEINST_SETSIGNEXT(_Rd_);
 }
 
 void recSLTU_(int info)
 {
 	pxAssert( !(info & PROCESS_EE_XMM) );
-	EEINST_SETSIGNEXT(_Rd_);
 
 	recSLTs_(info, 0);
 }

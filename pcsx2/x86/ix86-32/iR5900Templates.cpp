@@ -38,15 +38,6 @@ void _eeProcessHasLive(int reg, int signext)
 {
 	g_cpuPrevRegHasLive1 = g_cpuRegHasLive1;
 	g_cpuRegHasLive1 |= 1<<reg;
-
-	g_cpuPrevRegHasSignExt = g_cpuRegHasSignExt;
-
-	if( signext ) {
-		EEINST_SETSIGNEXT(reg);
-	}
-	else {
-		EEINST_RESETSIGNEXT(reg);
-	}
 }
 
 void _eeOnWriteReg(int reg, int signext)
@@ -93,7 +84,6 @@ void eeRecompileCode0(R5900FNPTR constcode, R5900FNPTR_INFO constscode, R5900FNP
 
 	if( xmminfo&XMMINFO_WRITED) {
 		_eeProcessHasLive(_Rd_, 0);
-		EEINST_RESETSIGNEXT(_Rd_);
 	}
 
 	if( GPR_IS_CONST2(_Rs_, _Rt_) ) {
@@ -274,7 +264,6 @@ void eeRecompileCode1(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
 	if ( ! _Rt_ ) return;
 
 	_eeProcessHasLive(_Rt_, 0);
-	EEINST_RESETSIGNEXT(_Rt_);
 
 	if( GPR_IS_CONST1(_Rs_) ) {
 		_deleteMMXreg(MMX_GPR+_Rt_, 2);
@@ -336,7 +325,6 @@ void eeRecompileCode2(R5900FNPTR constcode, R5900FNPTR_INFO noconstcode)
 	if ( ! _Rd_ ) return;
 
 	_eeProcessHasLive(_Rd_, 0);
-	EEINST_RESETSIGNEXT(_Rd_);
 
 	if( GPR_IS_CONST1(_Rt_) ) {
 		_deleteMMXreg(MMX_GPR+_Rd_, 2);
@@ -540,7 +528,6 @@ int eeRecompileCodeXMM(int xmminfo)
 	// save state
 	if( xmminfo & XMMINFO_WRITED ) {
 		_eeProcessHasLive(_Rd_, 0);
-		EEINST_RESETSIGNEXT(_Rd_);
 	}
 
 	// flush consts

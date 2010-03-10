@@ -56,8 +56,6 @@ void recADDI_const( void )
 void recADDI_(int info) 
 {
 	pxAssert( !(info&PROCESS_EE_XMM) );
-	EEINST_SETSIGNEXT(_Rt_);
-	EEINST_SETSIGNEXT(_Rs_);
 
 	if ( _Rt_ == _Rs_ ) {
 		if ( EEINST_ISLIVE1(_Rt_) )
@@ -172,8 +170,6 @@ void recSLTIU_(int info)
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
 	if( EEINST_ISLIVE1(_Rt_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
 	else EEINST_RESETHASLIVE1(_Rt_);
-	
-	EEINST_SETSIGNEXT(_Rt_);
 }
 
 EERECOMPILE_CODEX(eeRecompileCode1, SLTIU);
@@ -205,8 +201,6 @@ void recSLTI_(int info)
 	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
 	if( EEINST_ISLIVE1(_Rt_) ) MOV32ItoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], 0 );
 	else EEINST_RESETHASLIVE1(_Rt_);
-	
-	EEINST_SETSIGNEXT(_Rt_);
 }
 
 EERECOMPILE_CODEX(eeRecompileCode1, SLTI);

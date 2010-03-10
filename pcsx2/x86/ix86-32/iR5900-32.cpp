@@ -77,7 +77,7 @@ static bool s_nBlockFF;
 // save states for branches
 GPR_reg64 s_saveConstRegs[32];
 static u16 s_savex86FpuState;
-static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0, s_saveRegHasLive1 = 0, s_saveRegHasSignExt = 0;
+static u32 s_saveHasConstReg = 0, s_saveFlushedConstReg = 0, s_saveRegHasLive1 = 0;
 static EEINST* s_psaveInstInfo = NULL;
 
 static u32 s_savenBlockCycles = 0;
@@ -962,7 +962,6 @@ void SaveBranchState()
 	s_saveFlushedConstReg = g_cpuFlushedConstReg;
 	s_psaveInstInfo = g_pCurInstInfo;
 	s_saveRegHasLive1 = g_cpuRegHasLive1;
-	s_saveRegHasSignExt = g_cpuRegHasSignExt;
 
 	// save all mmx regs
 	memcpy_const(s_saveMMXregs, mmxregs, sizeof(mmxregs));
@@ -979,7 +978,6 @@ void LoadBranchState()
 	g_cpuFlushedConstReg = s_saveFlushedConstReg;
 	g_pCurInstInfo = s_psaveInstInfo;
 	g_cpuRegHasLive1 = g_cpuPrevRegHasLive1 = s_saveRegHasLive1;
-	g_cpuRegHasSignExt = g_cpuPrevRegHasSignExt = s_saveRegHasSignExt;
 
 	// restore all mmx regs
 	memcpy_const(mmxregs, s_saveMMXregs, sizeof(mmxregs));
@@ -1366,7 +1364,6 @@ static void __fastcall recRecompile( const u32 startpc )
 	x86FpuState = FPU_STATE;
 	g_cpuHasConstReg = g_cpuFlushedConstReg = 1;
 	g_cpuPrevRegHasLive1 = g_cpuRegHasLive1 = 0xffffffff;
-	g_cpuPrevRegHasSignExt = g_cpuRegHasSignExt = 0;
 	pxAssume( g_cpuConstRegs[0].UD[0] == 0 );
 
 	_initX86regs();
