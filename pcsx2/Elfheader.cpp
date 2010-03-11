@@ -447,7 +447,7 @@ void loadElfFile(const wxString& _filename)
 void loadElfFile(const wxString& filename)
 #endif
 {
-	ElfObject *elfptr;
+	ScopedPtr<ElfObject> elfptr;
 	bool iscdvd;
 
 #ifdef USE_HOSTFS
@@ -546,7 +546,8 @@ void loadElfFile(const wxString& filename)
 	elfptr->getCRC();
 	Console.WriteLn( L"loadElfFile: %s; CRC = %8.8X", filename.c_str(), ElfCRC );
 	elfptr->applyPatches();
-
+	elfptr.Delete();
+	
 	return;
 }
 

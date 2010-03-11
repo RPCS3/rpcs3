@@ -322,13 +322,14 @@ static __forceinline ElfObject *loadElfCRC( const wxString filename )
 
 static __forceinline void _reloadElfInfo(wxString str)
 {
-	ElfObject *elfptr;
+	ScopedPtr<ElfObject> elfptr;
 	
 	// Now's a good time to reload the ELF info...
     ScopedLock locker( Mutex_NewDiskCB );
         
     elfptr = loadElfCRC(str);
 	elfptr->applyPatches();
+	elfptr.Delete();
 }
 
 static __forceinline void reloadElfInfo(u32 discType, wxString str)

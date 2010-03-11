@@ -22,6 +22,9 @@
 #include "System/PageFaultSource.h"
 #include "Utilities/EventSource.inl"
 
+extern void closeNewVif(int idx);
+extern void resetNewVif(int idx);
+
 template class EventSource< IEventListener_PageFault >;
 
 SrcType_PageFault Source_PageFault;
@@ -309,6 +312,8 @@ void SysCoreAllocations::CleanupMess() throw()
 		recCpu.Shutdown();
 
 		vuMicroMemShutdown();
+		closeNewVif(0);
+		closeNewVif(1);
 		psxMemShutdown();
 		memShutdown();
 		vtlb_Core_Shutdown();
@@ -366,6 +371,9 @@ void SysClearExecutionCache()
 
 	Cpu->Reset();
 	psxCpu->Reset();
+	
+	resetNewVif(0);
+	resetNewVif(1);
 
 	CpuVU0->Reset();
 	CpuVU1->Reset();
