@@ -109,25 +109,16 @@ public:
 	}
 };
 
-#define mMaxRanges 128
 struct microRange { 
-	static const int max = mMaxRanges - 1;
-	int total;
-	s32 range[mMaxRanges][2];
-};
-
-enum microProgramAge {
-	isYoung = 0,
-	isAged  = 1,
-	isOld   = 2,
-	isDead  = 3
+	s32 start; // Start PC (The opcode the block starts at)
+	s32 end;   // End PC   (The opcode the block ends with)
 };
 
 #define mProgSize (0x4000/4)
 struct microProgram {
 	u32				   data [mProgSize];   // Holds a copy of the VU microProgram
 	microBlockManager* block[mProgSize/2]; // Array of Block Managers
-	microRange		   ranges;			   // The ranges of the microProgram that have already been recompiled
+	deque<microRange>* ranges;			   // The ranges of the microProgram that have already been recompiled
 	u32 startPC; // Start PC of this program
 	int idx;	 // Program index
 };
@@ -214,8 +205,8 @@ mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-_mVUt _f void  mVUclearProg(microProgram& prog, u32 startPC = -1, bool deleteBlocks = 1);
-_mVUt _f void  mVUcacheProg(microProgram& prog);
+_mVUt _f void  mVUcacheProg (microProgram&  prog);
+_mVUt _f void  mVUdeleteProg(microProgram*& prog);
 _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState);
 _mVUt _f microProgram* mVUfindLeastUsedProg();
 void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);

@@ -44,64 +44,54 @@ _f void mVUcheckIsSame(mV) {
 }
 
 // Sets up microProgram PC ranges based on whats been recompiled
-_f void mVUsetupRange(mV, s32 pc, bool isStartPC) {
+_f void mVUsetupRange(microVU* mVU, s32 pc, bool isStartPC) {
+	deque<microRange>*& ranges = mVUcurProg.ranges;
+	pc &= mVU->microMemSize - 8;
 
-	if (isStartPC || !(mVUrange[1] == -1)) {
-		for (int i = 0; i <= mVUcurProg.ranges.total; i++) {
-			if ((pc >= mVUcurProg.ranges.range[i][0])
-			&&	(pc <= mVUcurProg.ranges.range[i][1])) { return; }
+	if (isStartPC) { // Check if startPC is already within a block we've recompiled
+		deque<microRange>::const_iterator it = ranges->begin();
+		for ( ; it != ranges->end(); it++) {
+			if ((pc >= it[0].start) && (pc <= it[0].end)) {
+				if (it[0].start != it[0].end)
+					return; // Last case makes sure its not a 1-opcode EvilBlock
+			}
 		}
 	}
+	elif (mVUrange.end != -1) return; // Above case was true
 
 	mVUcheckIsSame(mVU);
 
 	if (isStartPC) {
-		if (mVUcurProg.ranges.total < mVUcurProg.ranges.max) {
-			mVUcurProg.ranges.total++;
-			mVUrange[0] = pc;
+		microRange mRange = {pc, -1};
+		ranges->push_front(mRange);
+		return;
+	}
+	if (mVUrange.start <= pc) {
+		mVUrange.end = pc;
+		bool mergedRange = 0;
+		s32  rStart = mVUrange.start;
+		s32  rEnd   = mVUrange.end;
+		deque<microRange>::iterator it = ranges->begin();
+		for (it++; it != ranges->end(); it++) {
+			if((it[0].start >= rStart) && (it[0].start <= rEnd)) {
+				it[0].end   = aMax(it[0].end, rEnd);
+				mergedRange = 1;
+			}
+			elif((it[0].end >= rStart) && (it[0].end <= rEnd)) {
+				it[0].start = aMin(it[0].start, rStart);
+				mergedRange = 1;
+			}
 		}
-		else {
-			mVUcurProg.ranges.total = 0;
-			mVUrange[0] = 0;
-			mVUrange[1] = mVU->microMemSize - 8;
-			DevCon.Warning("microVU%d: Prog Range List Full", mVU->index);
+		if (mergedRange) {
+			//DevCon.WriteLn(Color_Green, "microVU%d: Prog Range Merging", mVU->index);
+			ranges->erase(ranges->begin());
 		}
 	}
 	else {
-		if (mVUrange[0] <= pc) {
-			mVUrange[1] = pc;
-			bool mergedRange = 0;
-			for (int i = 0; i <= (mVUcurProg.ranges.total-1); i++) {
-				int rStart = (mVUrange[0] < 8) ? 0 : (mVUrange[0] - 8);
-				int rEnd   = pc;
-				if((mVUcurProg.ranges.range[i][1] >= rStart)
-				&& (mVUcurProg.ranges.range[i][1] <= rEnd)){
-					mVUcurProg.ranges.range[i][1] = pc;
-					mergedRange = 1;
-					//DevCon.Status("microVU%d: Prog Range Merging", mVU->index);
-				}
-			}
-			if (mergedRange) {
-				mVUrange[0] = -1;
-				mVUrange[1] = -1;
-				mVUcurProg.ranges.total--;
-			}
-		}
-		else {
-			DevCon.WriteLn("microVU%d: Prog Range Wrap [%04x] [%d]", mVU->index, mVUrange[0], mVUrange[1]);
-			mVUrange[1] = mVU->microMemSize - 8;
-			if (mVUcurProg.ranges.total < mVUcurProg.ranges.max) {
-				mVUcurProg.ranges.total++;
-				mVUrange[0] = 0;
-				mVUrange[1] = pc;
-			}
-			else {
-				mVUcurProg.ranges.total = 0;
-				mVUrange[0] = 0;
-				mVUrange[1] = mVU->microMemSize - 8;
-				DevCon.Warning("microVU%d: Prog Range List Full", mVU->index);
-			}
-		}
+		//DevCon.WriteLn(Color_Green, "microVU%d: Prog Range Wrap [%04x] [%d]", mVU->index, mVUrange.start, mVUrange.end);
+		mVUrange.end = mVU->microMemSize;
+		microRange mRange = {0, pc};
+		ranges->push_front(mRange);
 	}
 }
 

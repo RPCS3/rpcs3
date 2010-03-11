@@ -177,7 +177,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define sFLAG		 mVUinfo.sFlag
 #define mFLAG		 mVUinfo.mFlag
 #define cFLAG		 mVUinfo.cFlag
-#define mVUrange	 mVUcurProg.ranges.range[mVUcurProg.ranges.total]
+#define mVUrange     (mVUcurProg.ranges[0])[0]
 #define isEvilBlock	 (mVUpBlock->pState.blockType == 2)
 #define isBadOrEvil  (mVUlow.badBranch || mVUlow.evilBranch)
 #define xPC			 ((iPC / 2) * 8)
@@ -189,7 +189,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define branchAddr	 ((xPC + 8  + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define branchAddrN	 ((xPC + 16 + (_Imm11_ * 8)) & (mVU->microMemSize-8))
 #define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
-#define cmpOffset(x) ((u8*)&(((u8*)x)[prog.ranges.range[i][0]]))
+#define cmpOffset(x) ((u8*)&(((u8*)x)[it[0].start]))
 #define Rmem		 (uptr)&mVU->regs->VI[REG_R].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))

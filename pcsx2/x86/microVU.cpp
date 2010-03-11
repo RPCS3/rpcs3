@@ -132,6 +132,11 @@ _f void mVUreset(mV) {
 	mVU->prog.x86end	= (u8*)((uptr)z + (uptr)(mVU->cacheSize - (_1mb * 3))); // 3mb "Safe Zone"
 
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
+		deque<microProgram*>::iterator it = mVU->prog.prog[i].list->begin();
+		for ( ; it != mVU->prog.prog[i].list->end(); it++) {
+			if (!isVU1) mVUdeleteProg<0>(it[0]);
+			else	    mVUdeleteProg<1>(it[0]);
+		}
 		mVU->prog.prog[i].list->clear();
 		mVU->prog.quick[i].block = NULL;
 		mVU->prog.quick[i].prog  = NULL;
@@ -147,7 +152,8 @@ _f void mVUclose(mV) {
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
 		deque<microProgram*>::iterator it = mVU->prog.prog[i].list->begin();
 		for ( ; it != mVU->prog.prog[i].list->end(); it++) {
-			safe_aligned_free(it[0]);
+			if (!isVU1) mVUdeleteProg<0>(it[0]);
+			else	    mVUdeleteProg<1>(it[0]);
 		}
 		safe_delete(mVU->prog.prog[i].list);
 	}
@@ -176,18 +182,14 @@ _f void mVUvsyncUpdate(mV) {
 	//mVU->prog.curFrame++;
 }
 
-// Clears program data
-_mVUt _f void mVUclearProg(microProgram& program, u32 startPC, bool deleteBlocks) {
+// Deletes a program
+_mVUt _f void mVUdeleteProg(microProgram*& prog) {
 	microVU* mVU = mVUx;
-	program.startPC = startPC;
-	for (int j = 0; j <= program.ranges.max; j++) {
-		program.ranges.range[j][0]	= -1; // Set range to 
-		program.ranges.range[j][1]	= -1; // indeterminable status
-		program.ranges.total		= -1;
-	}
 	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
-		if (deleteBlocks) safe_delete(program.block[i]);
+		safe_delete(prog->block[i]);
 	}
+	safe_delete(prog->ranges);
+	safe_aligned_free(prog);
 }
 
 // Creates a new Micro Program
@@ -195,8 +197,9 @@ _mVUt _f microProgram* mVUcreateProg(int startPC) {
 	microVU* mVU = mVUx;
 	microProgram* prog = (microProgram*)_aligned_malloc(sizeof(microProgram), 64);
 	memzero_ptr<sizeof(microProgram)>(prog);
-	prog->idx = mVU->prog.total++;
-	mVUclearProg<vuIndex>(*prog, startPC);
+	prog->idx     = mVU->prog.total++;
+	prog->ranges  = new deque<microRange>();
+	prog->startPC = startPC;
 	mVUcacheProg<vuIndex>(*prog); // Cache Micro Program
 	float cacheSize = (float)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
 	float cacheUsed =((float)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
@@ -217,10 +220,10 @@ _mVUt _f void mVUcacheProg(microProgram& prog) {
 // Compare partial program by only checking compiled ranges...
 _mVUt _f bool mVUcmpPartial(microProgram& prog) {
 	microVU* mVU = mVUx;
-	for (int i = 0; i <= prog.ranges.total; i++) {
-		if((prog.ranges.range[i][0] < 0)
-		|| (prog.ranges.range[i][1] < 0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, i, prog.ranges.total); }
-		if (memcmp_mmx(cmpOffset(prog.data), cmpOffset(mVU->regs->Micro), ((prog.ranges.range[i][1] + 8) - prog.ranges.range[i][0]))) {
+	deque<microRange>::const_iterator it = prog.ranges->begin();
+	for ( ; it != prog.ranges->end(); it++) {
+		if((it[0].start<0)||(it[0].end<0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, it[0].start, it[0].end); }
+		if (memcmp_mmx(cmpOffset(prog.data), cmpOffset(mVU->regs->Micro), ((it[0].end + 8)  -  it[0].start))) {
 			return 0;
 		}
 	}
@@ -246,7 +249,7 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 	microProgramQuick& quick = mVU->prog.quick[startPC/8];
 	microProgramList&  list  = mVU->prog.prog [startPC/8];
 	if(!quick.prog) { // If null, we need to search for new program
-		deque<microProgram*>::iterator it = list.list->begin();
+		deque<microProgram*>::const_iterator it = list.list->begin();
 		for ( ; it != list.list->end(); it++) {
 			if (mVUcmpProg<vuIndex>(*it[0], 0)) { 
 				quick.block = it[0]->block[startPC/8];

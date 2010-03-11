@@ -144,7 +144,7 @@ _f void mVUallocVIb(mV, int GPRreg, int _reg_) {
 }
 
 //------------------------------------------------------------------
-// I/P/Q Reg Allocators
+// P/Q Reg Allocators
 //------------------------------------------------------------------
 
 _f void getPreg(mV, int reg) {
