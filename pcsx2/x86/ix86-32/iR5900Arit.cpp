@@ -70,10 +70,7 @@ void recADD_constv(int info, int creg, int vreg)
 	xMOV(eax, ptr32[&cpuRegs.GPR.r[vreg].SL[0]]);
 	if (cval)
 		xADD(eax, cval);
-	if (_Rd_ != vreg || cval)
-		xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[0]], eax);
-	xCDQ();
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[1]], edx);
+	eeSignExtendTo(_Rd_, _Rd_ == vreg && !cval);
 }
 
 // s is constant
@@ -98,9 +95,7 @@ void recADD_(int info)
 		xADD(eax, eax);
 	else
 		xADD(eax, ptr32[&cpuRegs.GPR.r[_Rt_].SL[0]]);
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[0]], eax);
-	xCDQ();
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[1]], edx);
+	eeSignExtendTo(_Rd_);
 }
 
 EERECOMPILE_CODE0(ADD, XMMINFO_WRITED|XMMINFO_READS|XMMINFO_READT);
@@ -207,9 +202,7 @@ void recSUB_consts(int info)
 
 	xMOV(eax, sval);
 	xSUB(eax, ptr32[&cpuRegs.GPR.r[_Rt_].SL[0]]);
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[0]], eax);
-	xCDQ();
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[1]], edx);
+	eeSignExtendTo(_Rd_);
 }
 
 void recSUB_constt(int info)
@@ -221,10 +214,7 @@ void recSUB_constt(int info)
 	xMOV(eax, ptr32[&cpuRegs.GPR.r[_Rs_].SL[0]]);
 	if (tval)
 		xSUB(eax, tval);
-	if (_Rd_ != _Rs_ || tval)
-		xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[0]], eax);
-	xCDQ();
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[1]], edx);
+	eeSignExtendTo(_Rd_, _Rd_ == _Rs_ && !tval);
 }
 
 void recSUB_(int info)
@@ -239,9 +229,7 @@ void recSUB_(int info)
 
 	xMOV(eax, ptr32[&cpuRegs.GPR.r[_Rs_].SL[0]]);
 	xSUB(eax, ptr32[&cpuRegs.GPR.r[_Rt_].SL[0]]);
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[0]], eax);
-	xCDQ();
-	xMOV(ptr32[&cpuRegs.GPR.r[_Rd_].SL[1]], edx);
+	eeSignExtendTo(_Rd_);
 }
 
 EERECOMPILE_CODE0(SUB, XMMINFO_READS|XMMINFO_READT|XMMINFO_WRITED);
@@ -292,7 +280,7 @@ void recDSUB_constt(int info)
 
 	GPR_reg64 tval = g_cpuConstRegs[_Rt_];
 
-	if( _Rd_ == _Rs_ ) {
+	if (_Rd_ == _Rs_) {
 		xSUB(ptr32[&cpuRegs.GPR.r[_Rd_].SL[0]], tval.SL[0]);
 		xSBB(ptr32[&cpuRegs.GPR.r[_Rd_].SL[1]], tval.SL[1]);
 	} else {
@@ -605,7 +593,7 @@ void recSLTs_const(int info, int sign, int st)
 		xForwardJump<u8> fail(st ? (sign ? Jcc_Greater : Jcc_Above) : (sign ? Jcc_Less : Jcc_Below));
 		{
 			xCMP(ptr32[&cpuRegs.GPR.r[st ? _Rs_ : _Rt_].UL[0]], cval.UL[0]);
-			xForwardJump<u8> pass2(st ? (sign ? Jcc_Less : Jcc_Below) : (sign ? Jcc_Greater : Jcc_Above));
+			xForwardJump<u8> pass2(st ? Jcc_Below : Jcc_Above);
 
 			fail.SetTarget();
 			xMOV(eax, 0);
@@ -630,7 +618,7 @@ void recSLTs_(int info, int sign)
 		{
 			xMOV(edx, ptr32[&cpuRegs.GPR.r[_Rs_].UL[0]]);
 			xCMP(edx, ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]]);
-			xForwardJump<u8> pass2(sign ? Jcc_Less : Jcc_Below);
+			xForwardJump<u8> pass2(Jcc_Below);
 
 			fail.SetTarget();
 			xMOV(eax, 0);

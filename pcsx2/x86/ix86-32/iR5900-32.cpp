@@ -196,6 +196,14 @@ void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr)
 	}
 }
 
+void eeSignExtendTo(int gpr, bool onlyupper)
+{
+	xCDQ();
+	if (!onlyupper)
+		xMOV(ptr32[&cpuRegs.GPR.r[gpr].UL[0]], eax);
+	xMOV(ptr32[&cpuRegs.GPR.r[gpr].UL[1]], edx);
+}
+
 int _flushXMMunused()
 {
 	int i;

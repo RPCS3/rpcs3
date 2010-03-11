@@ -348,13 +348,6 @@ void recSetConstShiftV(int info, int* rsreg, int* rdreg, int* rstemp, int shift6
 	_flushConstReg(_Rt_);
 }
 
-void recMoveSignToRd(int info)
-{
-	CDQ();
-	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 0 ], EAX );
-	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rd_ ].UL[ 1 ], EDX );
-}
-
 //// SLLV
 void recSLLV_const()
 {
@@ -374,7 +367,7 @@ void recSLLV_constt(int info)
 	AND32ItoR( ECX, 0x1f );
 	SHL32CLtoR( EAX );
 
-	recMoveSignToRd(info);
+	eeSignExtendTo(_Rd_);
 }
 
 void recSLLV_(int info)
@@ -412,7 +405,7 @@ void recSRLV_constt(int info)
 	AND32ItoR( ECX, 0x1f );
 	SHR32CLtoR( EAX );
 
-	recMoveSignToRd(info);
+	eeSignExtendTo(_Rd_);
 }
 
 void recSRLV_(int info)
@@ -450,7 +443,7 @@ void recSRAV_constt(int info)
 	AND32ItoR( ECX, 0x1f );
 	SAR32CLtoR( EAX );
 	
-	recMoveSignToRd(info);
+	eeSignExtendTo(_Rd_);
 }
 
 void recSRAV_(int info)

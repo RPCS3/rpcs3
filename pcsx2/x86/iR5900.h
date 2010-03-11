@@ -123,6 +123,7 @@ u32* _eeGetConstReg(int reg);
 void _eeMoveGPRtoR(x86IntRegType to, int fromgpr);
 void _eeMoveGPRtoM(u32 to, int fromgpr);
 void _eeMoveGPRtoRm(x86IntRegType to, int fromgpr);
+void eeSignExtendTo(int gpr, bool onlyupper=false);
 
 void _eeFlushAllUnused();
 void _eeOnWriteReg(int reg, int signext);
