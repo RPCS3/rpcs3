@@ -22,6 +22,7 @@
 #include "stdafx.h"
 #include "GSDevice10.h"
 #include "resource.h"
+#include "GSTables.h"
 
 bool GSDevice10::CreateTextureFX()
 {
@@ -345,112 +346,23 @@ void GSDevice10::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 
 		if(bsel.abe)
 		{
-			// (A:Cs/Cd/0 - B:Cs/Cd/0) * C:As/Ad/FIX + D:Cs/Cd/0
-
-			static const struct {int bogus; D3D10_BLEND_OP op; D3D10_BLEND src, dst;} map[3*3*3*3] =
-			{
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 0000: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 0001: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 0002: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 0010: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 0011: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 0012: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 0020: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 0021: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 0022: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{1, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_SRC1_ALPHA},		// * 0100: (Cs - Cd)*As + Cs ==> Cs*(As + 1) - Cd*As
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_INV_SRC1_ALPHA},		// 0101: (Cs - Cd)*As + Cd ==> Cs*As + Cd*(1 - As)
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_SRC1_ALPHA},		// 0102: (Cs - Cd)*As + 0 ==> Cs*As - Cd*As
-				{1, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_DEST_ALPHA},		// * 0110: (Cs - Cd)*Ad + Cs ==> Cs*(Ad + 1) - Cd*Ad
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_INV_DEST_ALPHA},		// 0111: (Cs - Cd)*Ad + Cd ==> Cs*Ad + Cd*(1 - Ad)
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_DEST_ALPHA},			// 0112: (Cs - Cd)*Ad + 0 ==> Cs*Ad - Cd*Ad
-				{1, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_BLEND_FACTOR},	// * 0120: (Cs - Cd)*F + Cs ==> Cs*(F + 1) - Cd*F
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_INV_BLEND_FACTOR},	// 0121: (Cs - Cd)*F + Cd ==> Cs*F + Cd*(1 - F)
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_BLEND_FACTOR},	// 0122: (Cs - Cd)*F + 0 ==> Cs*F - Cd*F
-				{1, D3D10_BLEND_OP_ADD, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_ZERO},					// * 0200: (Cs - 0)*As + Cs ==> Cs*(As + 1)
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_ONE},					// 0201: (Cs - 0)*As + Cd ==> Cs*As + Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_ZERO},					// 0202: (Cs - 0)*As + 0 ==> Cs*As
-				{1, D3D10_BLEND_OP_ADD, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_ZERO},					// * 0210: (Cs - 0)*Ad + Cs ==> Cs*(Ad + 1)
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_ONE},					// 0211: (Cs - 0)*Ad + Cd ==> Cs*Ad + Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_ZERO},					// 0212: (Cs - 0)*Ad + 0 ==> Cs*Ad
-				{1, D3D10_BLEND_OP_ADD, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_ZERO},				// * 0220: (Cs - 0)*F + Cs ==> Cs*(F + 1)
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_ONE},					// 0221: (Cs - 0)*F + Cd ==> Cs*F + Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_ZERO},				// 0222: (Cs - 0)*F + 0 ==> Cs*F
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_INV_SRC1_ALPHA, D3D10_BLEND_SRC1_ALPHA},		// 1000: (Cd - Cs)*As + Cs ==> Cd*As + Cs*(1 - As)
-				{1, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_SRC1_ALPHA},	// * 1001: (Cd - Cs)*As + Cd ==> Cd*(As + 1) - Cs*As
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_SRC1_ALPHA},	// 1002: (Cd - Cs)*As + 0 ==> Cd*As - Cs*As
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_INV_DEST_ALPHA, D3D10_BLEND_DEST_ALPHA},		// 1010: (Cd - Cs)*Ad + Cs ==> Cd*Ad + Cs*(1 - Ad)
-				{1, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_DEST_ALPHA},	// * 1011: (Cd - Cs)*Ad + Cd ==> Cd*(Ad + 1) - Cs*Ad
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_DEST_ALPHA},	// 1012: (Cd - Cs)*Ad + 0 ==> Cd*Ad - Cs*Ad
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_INV_BLEND_FACTOR, D3D10_BLEND_BLEND_FACTOR},	// 1020: (Cd - Cs)*F + Cs ==> Cd*F + Cs*(1 - F)
-				{1, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_BLEND_FACTOR},// * 1021: (Cd - Cs)*F + Cd ==> Cd*(F + 1) - Cs*F
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_BLEND_FACTOR},// 1022: (Cd - Cs)*F + 0 ==> Cd*F - Cs*F
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 1100: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 1101: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 1102: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 1110: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 1111: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 1112: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 1120: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 1121: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 1122: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_SRC1_ALPHA},					// 1200: (Cd - 0)*As + Cs ==> Cs + Cd*As
-				{2, D3D10_BLEND_OP_ADD, D3D10_BLEND_DEST_COLOR, D3D10_BLEND_SRC1_ALPHA},			// ** 1201: (Cd - 0)*As + Cd ==> Cd*(1 + As)  // ffxii main menu background glow effect
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_SRC1_ALPHA},					// 1202: (Cd - 0)*As + 0 ==> Cd*As
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_DEST_ALPHA},					// 1210: (Cd - 0)*Ad + Cs ==> Cs + Cd*Ad
-				{2, D3D10_BLEND_OP_ADD, D3D10_BLEND_DEST_COLOR, D3D10_BLEND_DEST_ALPHA},			// ** 1211: (Cd - 0)*Ad + Cd ==> Cd*(1 + Ad)
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_DEST_ALPHA},					// 1212: (Cd - 0)*Ad + 0 ==> Cd*Ad
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_BLEND_FACTOR},					// 1220: (Cd - 0)*F + Cs ==> Cs + Cd*F
-				{2, D3D10_BLEND_OP_ADD, D3D10_BLEND_DEST_COLOR, D3D10_BLEND_BLEND_FACTOR},			// ** 1221: (Cd - 0)*F + Cd ==> Cd*(1 + F)
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_BLEND_FACTOR},				// 1222: (Cd - 0)*F + 0 ==> Cd*F
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_INV_SRC1_ALPHA, D3D10_BLEND_ZERO},				// 2000: (0 - Cs)*As + Cs ==> Cs*(1 - As)
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_ONE},			// 2001: (0 - Cs)*As + Cd ==> Cd - Cs*As
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_SRC1_ALPHA, D3D10_BLEND_ZERO},			// 2002: (0 - Cs)*As + 0 ==> 0 - Cs*As
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_INV_DEST_ALPHA, D3D10_BLEND_ZERO},				// 2010: (0 - Cs)*Ad + Cs ==> Cs*(1 - Ad)
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_ONE},			// 2011: (0 - Cs)*Ad + Cd ==> Cd - Cs*Ad
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_DEST_ALPHA, D3D10_BLEND_ZERO},			// 2012: (0 - Cs)*Ad + 0 ==> 0 - Cs*Ad
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_INV_BLEND_FACTOR, D3D10_BLEND_ZERO},			// 2020: (0 - Cs)*F + Cs ==> Cs*(1 - F)
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_ONE},		// 2021: (0 - Cs)*F + Cd ==> Cd - Cs*F
-				{0, D3D10_BLEND_OP_REV_SUBTRACT, D3D10_BLEND_BLEND_FACTOR, D3D10_BLEND_ZERO},		// 2022: (0 - Cs)*F + 0 ==> 0 - Cs*F
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_ONE, D3D10_BLEND_SRC1_ALPHA},				// 2100: (0 - Cd)*As + Cs ==> Cs - Cd*As
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_INV_SRC1_ALPHA},				// 2101: (0 - Cd)*As + Cd ==> Cd*(1 - As)
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_ZERO, D3D10_BLEND_SRC1_ALPHA},				// 2102: (0 - Cd)*As + 0 ==> 0 - Cd*As
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_ONE, D3D10_BLEND_DEST_ALPHA},				// 2110: (0 - Cd)*Ad + Cs ==> Cs - Cd*Ad
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_INV_DEST_ALPHA},				// 2111: (0 - Cd)*Ad + Cd ==> Cd*(1 - Ad)
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_ONE, D3D10_BLEND_DEST_ALPHA},				// 2112: (0 - Cd)*Ad + 0 ==> 0 - Cd*Ad
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_ONE, D3D10_BLEND_BLEND_FACTOR},			// 2120: (0 - Cd)*F + Cs ==> Cs - Cd*F
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_INV_BLEND_FACTOR},			// 2121: (0 - Cd)*F + Cd ==> Cd*(1 - F)
-				{0, D3D10_BLEND_OP_SUBTRACT, D3D10_BLEND_ONE, D3D10_BLEND_BLEND_FACTOR},			// 2122: (0 - Cd)*F + 0 ==> 0 - Cd*F
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 2200: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 2201: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 2202: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 2210: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 2211: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 2212: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ONE, D3D10_BLEND_ZERO},							// 2220: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cs ==> Cs
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ONE},							// 2221: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + Cd ==> Cd
-				{0, D3D10_BLEND_OP_ADD, D3D10_BLEND_ZERO, D3D10_BLEND_ZERO},						// 2222: (Cs/Cd/0 - Cs/Cd/0)*As/Ad/F + 0 ==> 0
-			};
-
-			// bogus: 0100, 0110, 0120, 0200, 0210, 0220, 1001, 1011, 1021
-
-			// tricky: 1201, 1211, 1221
-			//
-			// Source.rgb = float3(1, 1, 1);
-			// 1201 Cd*(1 + As) => Source * Dest color + Dest * Source1 alpha
-			// 1211 Cd*(1 + Ad) => Source * Dest color + Dest * Dest alpha
-			// 1221 Cd*(1 + F) => Source * Dest color + Dest * Factor
-
 			int i = ((bsel.a * 3 + bsel.b) * 3 + bsel.c) * 3 + bsel.d;
 
-			bd.BlendOp = map[i].op;
-			bd.SrcBlend = map[i].src;
-			bd.DestBlend = map[i].dst;
+			bd.BlendOp = (D3D10_BLEND_OP)blendMapD3D9[i].op;
+			bd.SrcBlend = (D3D10_BLEND)blendMapD3D9[i].src;
+			bd.DestBlend = (D3D10_BLEND)blendMapD3D9[i].dst;
 			bd.BlendOpAlpha = D3D10_BLEND_OP_ADD;
 			bd.SrcBlendAlpha = D3D10_BLEND_ONE;
 			bd.DestBlendAlpha = D3D10_BLEND_ZERO;
 
-			if(map[i].bogus == 1)
+			// SRC* -> SRC1*
+			// Yes, this casting mess really is needed.  I want to go back to C
+			if (bd.SrcBlend >= 3 && bd.SrcBlend <= 6)
+				bd.SrcBlend = (D3D10_BLEND)((int)bd.SrcBlend + 13);
+			if (bd.DestBlend >= 3 && bd.DestBlend <= 6)
+				bd.DestBlend = (D3D10_BLEND)((int)bd.DestBlend + 13);
+
+			if(blendMapD3D9[i].bogus == 1)
 			{
 				ASSERT(0);
 
