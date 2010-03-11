@@ -51,7 +51,7 @@ using std::wstring;
 namespace VersionInfo
 {
 	static const u8 Release  = 1;
-	static const u8 Revision = 3;	// increase that with each version
+	static const u8 Revision = 4;	// increase that with each version
 }
 
 //////////////////////////////////////////////////////////////////////////
