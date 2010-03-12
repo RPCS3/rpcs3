@@ -80,6 +80,13 @@ void RecentIsoManager::RemoveAllFromMenu()
 	}
 }
 
+void RecentIsoManager::Clear()
+{
+	RemoveAllFromMenu();
+	m_Items.clear();
+	Repopulate();
+}
+
 void RecentIsoManager::Repopulate()
 {
 	int cnt = m_Items.size();

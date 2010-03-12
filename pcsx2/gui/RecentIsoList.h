@@ -50,6 +50,7 @@ public:
 
 	void RemoveAllFromMenu();
 	void Repopulate();
+	void Clear();
 	void Add( const wxString& src );
 	
 protected:

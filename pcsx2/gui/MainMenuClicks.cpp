@@ -69,6 +69,7 @@ static void WipeSettings()
 
 	//wxRmdir( GetSettingsFolder().ToString() );
 	
+	wxGetApp().GetRecentIsoManager().Clear();
 	g_Conf = new AppConfig();
 	sMainFrame.RemoveCdvdMenu();
 }
@@ -252,6 +253,7 @@ void MainEmuFrame::Menu_BootCdvd_Click( wxCommandEvent &event )
 		}
 	}
 	
+	sApp.SysReset();
 	sApp.SysReset();
 	sApp.SysExecute( g_Conf->CdvdSource );
 }
