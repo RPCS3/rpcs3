@@ -792,6 +792,9 @@ void GSState::GIFRegHandlerCOLCLAMP(GIFReg* r)
 	}
 
 	m_env.COLCLAMP = (GSVector4i)r->COLCLAMP;
+#ifdef DISABLE_COLCLAMP
+	m_env.COLCLAMP.CLAMP = 1;
+#endif
 }
 
 template<int i> void GSState::GIFRegHandlerTEST(GIFReg* r)
@@ -839,6 +842,9 @@ template<int i> void GSState::GIFRegHandlerFRAME(GIFReg* r)
 	}
 
 	m_env.CTXT[i].FRAME = (GSVector4i)r->FRAME;
+#ifdef DISABLE_BITMASKING
+	m_env.CTXT[i].FRAME.FBMSK = GSVector4i::store(GSVector4i::load((int)m_env.CTXT[i].FRAME.FBMSK).eq8(GSVector4i::xffffffff()));
+#endif
 }
 
 template<int i> void GSState::GIFRegHandlerZBUF(GIFReg* r)

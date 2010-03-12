@@ -31,6 +31,9 @@
 #define MAX_PAGES 512
 #define MAX_BLOCKS 16384
 
+#define DISABLE_BITMASKING
+#define DISABLE_COLCLAMP
+
 #include "GSVector.h"
 
 #pragma pack(push, 1)
