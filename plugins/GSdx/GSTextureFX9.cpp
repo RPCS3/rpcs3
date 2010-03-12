@@ -144,7 +144,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 
 	if(i == m_ps.end())
 	{
-		string str[12];
+		string str[13];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -158,6 +158,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 		str[9] = format("%d", sel.clr1);
 		str[10] = format("%d", sel.rt);
 		str[11] = format("%d", sel.ltf);
+		str[12] = format("%d", sel.colclip);
 
 		D3DXMACRO macro[] =
 		{
@@ -173,6 +174,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 			{"PS_CLR1", str[9].c_str()},
 			{"PS_RT", str[10].c_str()},
 			{"PS_LTF", str[11].c_str()},
+			{"PS_COLCLIP", str[12].c_str()},
 			{NULL, NULL},
 		};
 
@@ -289,6 +291,16 @@ void GSDevice9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint
 			bs->BlendOpAlpha = D3DBLENDOP_ADD;
 			bs->SrcBlendAlpha = D3DBLEND_ONE;
 			bs->DestBlendAlpha = D3DBLEND_ZERO;
+
+			// Not very good but I don't wanna write another 81 row table
+			if (bsel.negative) {
+				if (bs->BlendOp == D3DBLENDOP_ADD)
+					bs->BlendOp = D3DBLENDOP_REVSUBTRACT;
+				else if (bs->BlendOp == D3DBLENDOP_REVSUBTRACT)
+					bs->BlendOp = D3DBLENDOP_ADD;
+				else
+					; // god knows, best just not to mess with it for now
+			}
 
 			if(blendMapD3D9[i].bogus == 1)
 			{

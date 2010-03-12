@@ -226,6 +226,11 @@ public:
 		GSDeviceDX::PSSamplerSelector ps_ssel;
 		GSDeviceDX::PSConstantBuffer ps_cb;
 
+		if (env.COLCLAMP.CLAMP == 0) {
+			ps_sel.colclip = 1;
+			ps_cb.ChannelMask = GSVector4((float)om_bsel.wr, (float)om_bsel.wg, (float)om_bsel.wb, (float)om_bsel.wa);
+		}
+
 		ps_sel.clr1 = om_bsel.IsCLR1();
 		ps_sel.fba = context->FBA.FBA;
 		ps_sel.aout = context->FRAME.PSM == PSM_PSMCT16 || context->FRAME.PSM == PSM_PSMCT16S || (context->FRAME.FBMSK & 0xff000000) == 0x7f000000 ? 1 : 0;
@@ -325,6 +330,20 @@ public:
 		if(context->TEST.DoFirstPass())
 		{
 			dev.DrawPrimitive();
+
+			if (env.COLCLAMP.CLAMP == 0)
+			{
+				GSDeviceDX::OMBlendSelector om_bselneg(om_bsel);
+				GSDeviceDX::PSSelector ps_selneg(ps_sel);
+
+				om_bselneg.negative = 1;
+				ps_selneg.colclip = 2;
+
+				dev.SetupOM(om_dssel, om_bselneg, afix);
+				dev.SetupPS(ps_selneg, &ps_cb, ps_ssel);
+
+				dev.DrawPrimitive();
+			}
 		}
 
 		if(context->TEST.DoSecondPass())
@@ -376,6 +395,20 @@ public:
 				dev.SetupOM(om_dssel, om_bsel, afix);
 
 				dev.DrawPrimitive();
+
+				if (env.COLCLAMP.CLAMP == 0)
+				{
+					GSDeviceDX::OMBlendSelector om_bselneg(om_bsel);
+					GSDeviceDX::PSSelector ps_selneg(ps_sel);
+
+					om_bselneg.negative = 1;
+					ps_selneg.colclip = 2;
+
+					dev.SetupOM(om_dssel, om_bselneg, afix);
+					dev.SetupPS(ps_selneg, &ps_cb, ps_ssel);
+
+					dev.DrawPrimitive();
+				}
 			}
 		}
 

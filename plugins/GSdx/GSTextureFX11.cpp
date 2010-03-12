@@ -181,7 +181,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 
 	if(i == m_ps.end())
 	{
-		string str[13];
+		string str[14];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -196,6 +196,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 		str[10] = format("%d", sel.fba);
 		str[11] = format("%d", sel.aout);
 		str[12] = format("%d", sel.ltf);
+		str[13] = format("%d", sel.colclip);
 
 		D3D11_SHADER_MACRO macro[] =
 		{
@@ -212,6 +213,7 @@ void GSDevice11::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSe
 			{"PS_FBA", str[10].c_str()},
 			{"PS_AOUT", str[11].c_str()},
 			{"PS_LTF", str[12].c_str()},
+			{"PS_COLCLIP", str[13].c_str()},
 			{NULL, NULL},
 		};
 
@@ -357,6 +359,16 @@ void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 				bd.RenderTarget[0].SrcBlend = (D3D11_BLEND)((int)bd.RenderTarget[0].SrcBlend + 13);
 			if (bd.RenderTarget[0].DestBlend >= 3 && bd.RenderTarget[0].DestBlend <= 6)
 				bd.RenderTarget[0].DestBlend = (D3D11_BLEND)((int)bd.RenderTarget[0].DestBlend + 13);
+
+			// Not very good but I don't wanna write another 81 row table
+			if (bsel.negative) {
+				if (bd.RenderTarget[0].BlendOp == D3D11_BLEND_OP_ADD)
+					bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_REV_SUBTRACT;
+				else if (bd.RenderTarget[0].BlendOp == D3D11_BLEND_OP_REV_SUBTRACT)
+					bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+				else
+					; // god knows, best just not to mess with it for now
+			}
 
 			if(blendMapD3D9[i].bogus == 1)
 			{
