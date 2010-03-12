@@ -31,6 +31,22 @@ static const s32 tbl_XA_Factor[5][2] =
 	{  122, -60 }
 };
 
+static double   K0[4] =
+{
+	0.0,
+	0.9375,
+	1.796875,
+	1.53125
+};
+
+static double   K1[4] =
+{
+	0.0,
+	0.0,
+	-0.8125,
+	-0.859375
+};
+
 
 // Performs a 64-bit multiplication between two values and returns the
 // high 32 bits as a result (discarding the fractional 32 bits).
@@ -77,59 +93,42 @@ StereoOut32 clamp_mix( const StereoOut32& sample, u8 bitshift )
 static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
 	const s32 header = *block;
-	const s32 shift =  ((header>> 0)&0xF)+16;
+	const s32 shift =  (header&0xF)+16;
 	const s32 pred1 = tbl_XA_Factor[(header>> 4)&0xF][0];
 	const s32 pred2 = tbl_XA_Factor[(header>> 4)&0xF][1];
 
-	const s8* blockbytes = (s8*)&block[1];
+	const s8* blockbytes	= (s8*)&block[1];
+	const s8* blockend		= &blockbytes[13];
 
-	for(int i=0; i<14; i++, blockbytes++)
+	for(; blockbytes<=blockend; ++blockbytes)
 	{
-		s32 pcm, pcm2;
-		{
-			s32 data = ((*blockbytes)<<28) & 0xF0000000;
-			pcm = data>>shift;
-			pcm+=((pred1*prev1)+(pred2*prev2))>>6;
+		s32 data	= ((*blockbytes)<<28) & 0xF0000000;
+		s32 pcm		= (data >> shift) + (((pred1*prev1)+(pred2*prev2)) >> 6);
 
-			if(pcm> 32767) ConLog("pcm too high, is %d\n",pcm);
-			else if(pcm<-32768) ConLog("pcm too low, is %d\n",pcm);
+		Clampify( pcm, -0x8000, 0x7fff );
+		*(buffer++) = pcm;
 
-			if(pcm> 32767) pcm= 32767;
-			else if(pcm<-32768) pcm=-32768;
-			*(buffer++) = pcm;
-		}
+		data		= ((*blockbytes)<<24) & 0xF0000000;
+		s32 pcm2	= (data >> shift) + (((pred1*pcm)+(pred2*prev1)) >> 6);
 
-		//prev2=prev1;
-		//prev1=pcm;
+		Clampify( pcm2, -0x8000, 0x7fff );
+		*(buffer++) = pcm2;
 
-		{
-			s32 data = ((*blockbytes)<<24) & 0xF0000000;
-			pcm2 = data>>shift;
-			pcm2+=((pred1*pcm)+(pred2*prev1))>>6;
-
-			if(pcm2> 32767) ConLog("pcm2 too high, is %d\n",pcm2);
-			else if(pcm2<-32768) ConLog("pcm2 too low, is %d\n",pcm2);
-
-			if(pcm2> 32767) pcm2= 32767;
-			else if(pcm2<-32768) pcm2=-32768;
-			*(buffer++) = pcm2;
-		}
-
-		prev2=pcm;
-		prev1=pcm2;
+		prev2 = pcm;
+		prev1 = pcm2;
 	}
 }
 
 static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* block, s32& prev1, s32& prev2)
 {
 	const u8 header = *(u8*)block;
-	s32 shift =  (header&0xF) + 16;
-	s32 pred1 = tbl_XA_Factor[header>>4][0];
-	s32 pred2 = tbl_XA_Factor[header>>4][1];
+	const s32 shift =  (header&0xF) + 16;
+	const s32 pred1 = tbl_XA_Factor[header>>4][0];
+	const s32 pred2 = tbl_XA_Factor[header>>4][1];
 
 	const s8* blockbytes = (s8*)&block[1];
 
-	for(int i=0; i<14; i++, blockbytes++)
+	for(uint i=0; i<14; i++, blockbytes++)
 	{
 		s32 pcm, pcm2;
 		{
@@ -150,6 +149,7 @@ static void __forceinline XA_decode_block_unsaturated(s16* buffer, const s16* bl
 		prev1 = pcm2;
 	}
 }
+
 
 static void __forceinline IncrementNextA( const V_Core& thiscore, V_Voice& vc )
 {
@@ -451,28 +451,36 @@ static s32 __forceinline GetVoiceValues_Cubic( V_Core& thiscore, uint voiceidx )
 		vc.PV2 = vc.PV1;
 
 		vc.PV1 = GetNextDataBuffered( thiscore, voiceidx );
-		vc.PV1 <<= 2;
-		vc.SPc = vc.SP&4095;	// just the fractional part, please!
+		//vc.PV1 <<= 2;
+		//vc.SPc = vc.SP&4095;	// just the fractional part, please!
 		vc.SP -= 4096;
 	}
 
 	CalculateADSR( thiscore, voiceidx );
 
-	s32 z0 = vc.PV3 - vc.PV4 + vc.PV1 - vc.PV2;
-	s32 z1 = (vc.PV4 - vc.PV3 - z0);
-	s32 z2 = (vc.PV2 - vc.PV4);
+	/*mu2 = mu*mu;
+	a0 = y3 - y2 - y0 + y1; //p
+	a1 = y0 - y1 - a0;
+	a2 = y2 - y0;
+	a3 = y1;
 
-	s32 mu = vc.SPc;
+	return ( a0*mu*mu2 + a1*mu2 + a2*mu + a3 );*/
+
+	const s32 z0 = vc.PV4 - vc.PV3 - vc.PV1 + vc.PV2;
+	const s32 z1 = vc.PV1 - vc.PV2 - z0;
+	const s32 z2 = vc.PV3 - vc.PV1;
+
+	const s32 mu = vc.SP;
 
 	s32 val = (z0 * mu) >> 12;
 	val = ((val + z1) * mu) >> 12;
 	val = ((val + z2) * mu) >> 12;
-	val += vc.PV3;
+	val += vc.PV2;
 
 	// Note!  It's very important that ADSR stay as accurate as possible.  By the way
 	// it is used, various sound effects can end prematurely if we truncate more than
 	// one or two bits.  (or maybe it's better with no truncation at all?)
-	return MulShr32( val>>1, vc.ADSR.Value );
+	return MulShr32( val, vc.ADSR.Value );
 }
 
 // Noise values need to be mixed without going through interpolation, since it
