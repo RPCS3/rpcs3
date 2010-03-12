@@ -128,7 +128,7 @@ void WriteSettings()
 
 void DisplayDialog()
 {
-    GtkWidget *dialog, *main_label;
+    GtkWidget *dialog;
     int return_value;
     
     GtkWidget *msg_box, *log_box, *dump_box, *main_box;

@@ -131,7 +131,7 @@ StereoOut32 V_Core::ReadInput()
 		AdmaInProgress = 0;
 		if(InputDataLeft >= 0x200)
 		{
-			u8 k=InputDataLeft>=InputDataProgress;
+			//u8 k=InputDataLeft>=InputDataProgress;
 
 			AutoDMAReadBuffer(0);
 

@@ -54,7 +54,7 @@ REC_FUNC_DEL( PSLLW, _Rd_ );
 
 void recPLZCW()
 {
-	int regd = -1;
+	//int regd = -1;
 	int regs = 0;
 
 	if ( ! _Rd_ ) return;

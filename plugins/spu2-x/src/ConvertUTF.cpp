@@ -133,7 +133,7 @@ namespace Unicode
 			unsigned short bytesToWrite = 0;
 			const UTF32 byteMask = 0xBF;
 			const UTF32 byteMark = 0x80; 
-			const UTF16* oldSource = source; /* In case we have to back up because of target overflow. */
+			//const UTF16* oldSource = source; /* In case we have to back up because of target overflow. */
 
 			ch = *source++;
 

@@ -293,7 +293,7 @@ EXPORT_C_(s32) SPU2init()
 {
 	assert( regtable[0x400] == NULL );
 
-	s32 c=0,v=0;
+	//s32 c=0,v=0;
 	ReadSettings();
 
 #ifdef SPU2_LOG

@@ -272,14 +272,14 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 		{
 			// Note: (start is inclusive, dest exclusive -- fixes DMC1 FMVs)
 
-			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
+			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
 			{
 				Spdif.Info |= 4 << i;
 				SetIrqCall();
 			}
 		}
 #else
-		if( IRQEnable && (IRQA >= TSA) || (IRQA < TDA) )
+		if ((IRQEnable && (IRQA >= TSA)) || (IRQA < TDA))
 		{
 			Spdif.Info |= 4 << Index;
 			SetIrqCall();
@@ -356,7 +356,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 
 		for( int i=0; i<2; i++ )
 		{
-			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
+			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
 			{
 				Spdif.Info |= 4 << i;
 				SetIrqCall();

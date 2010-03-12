@@ -19,12 +19,11 @@
 // Indicate that this is the wx port to the plugins.
 #define WX_PCSX2
 
-#if defined (__linux__) && !defined(__LINUX__)  // some distributions are lower case
+// some distributions are lower case
+#if defined (__linux__) || defined(__CYGWIN__)
+#if !defined(__LINUX__)
 #	define __LINUX__
 #endif
-
-#ifdef __CYGWIN__
-#	define __LINUX__
 #endif
 
 #include "Pcsx2Types.h"

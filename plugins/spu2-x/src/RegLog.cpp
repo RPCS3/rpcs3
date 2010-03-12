@@ -20,7 +20,7 @@
 const char *ParamNames[8]={"VOLL","VOLR","PITCH","ADSR1","ADSR2","ENVX","VOLXL","VOLXR"};
 const char *AddressNames[6]={"SSAH","SSAL","LSAH","LSAL","NAXH","NAXL"};
 
-__forceinline void _RegLog_( const char* action, int level, char *RName, u32 mem, u32 core, u16 value ) 
+__forceinline void _RegLog_( const char* action, int level, const char *RName, u32 mem, u32 core, u16 value ) 
 {
 	if( level > 1 )
 		FileLog("[%10d] SPU2 %s mem %08x (core %d, register %s) value %04x\n",
@@ -33,7 +33,8 @@ void SPU2writeLog( const char* action, u32 rmem, u16 value )
 {
 	if( !IsDevBuild ) return;
 	
-	u32 vx=0, vc=0, core=0, omem, mem;
+	//u32 vx=0, vc=0;
+	u32 core=0, omem, mem;
 	omem=mem=rmem & 0x7FF; //FFFF;
 	if (mem & 0x400) { omem^=0x400; core=1; }
 

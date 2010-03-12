@@ -44,7 +44,7 @@ protected:
 	void _InternalCallback()
 	{
 		snd_pcm_sframes_t avail;
-		int err;
+		//int err;
 
 		avail = snd_pcm_avail_update( handle );
 		while (avail >= period_time )
