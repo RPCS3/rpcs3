@@ -68,7 +68,7 @@ class GSDevice9 : public GSDeviceDX
 
 	//
 
-	DDCAPS m_ddcaps;
+	//DDCAPS m_ddcaps; // Unreferenced
 	D3DCAPS9 m_d3dcaps;
 	D3DPRESENT_PARAMETERS m_pp;
 	CComPtr<IDirect3D9> m_d3d;

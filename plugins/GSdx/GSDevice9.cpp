@@ -30,7 +30,7 @@ GSDevice9::GSDevice9()
 	m_rbswapped = true;
 
 	memset(&m_pp, 0, sizeof(m_pp));
-	memset(&m_ddcaps, 0, sizeof(m_ddcaps));
+	//memset(&m_ddcaps, 0, sizeof(m_ddcaps)); // Unreferenced
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
 
 	memset(&m_state, 0, sizeof(m_state));
@@ -61,7 +61,8 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	// dd
 
-	CComPtr<IDirectDraw7> dd; 
+	// Unreferenced
+	/*CComPtr<IDirectDraw7> dd; 
 
 	hr = DirectDrawCreateEx(0, (void**)&dd, IID_IDirectDraw7, 0);
 
@@ -75,7 +76,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	if(FAILED(hr)) return false;
 
-	dd = NULL;
+	dd = NULL;*/
 
 	// d3d
 

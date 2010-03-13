@@ -138,7 +138,7 @@ void EnableControls( HWND hWnd )
 static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {
 	int wmId,wmEvent;
-	wchar_t temp[384]={0};
+	//wchar_t temp[384]={0};
 
 	switch(uMsg)
 	{

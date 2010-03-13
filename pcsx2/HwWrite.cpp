@@ -955,7 +955,7 @@ void __fastcall hwWrite32_generic( u32 mem, u32 value )
 			} 
 			else 
 			{
-			    cpuRegs.interrupt &= ~(1<<10) | ~(1<<1); //Tekken tag seems to stop vif and start it again in normal, so we will cancel the mfifo loop
+			    cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Tekken tag seems to stop vif and start it again in normal, so we will cancel the mfifo loop
 			}
 			
 			DmaExec(dmaVIF1, mem, value);
