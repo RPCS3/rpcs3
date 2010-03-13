@@ -27,12 +27,14 @@ using namespace R5900;
 // dark cloud2 uses 8 bit DMAs register writes
 static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 {
+	Registers::Freeze();
 	u32 qwcRegister = (mem | 0x20) & ~0x1;  //Need to remove the lower bit else we end up clearing TADR
 
 	//It's invalid for the hardware to write a DMA while it is active, not without Suspending the DMAC
 	if ((value & 0x1) && ((psHu8(mem) & 0x1) == 0x1) && dmacRegs->ctrl.DMAE) {
 		DevCon.Warning(L"DMAExec8 Attempt to run DMA while one is already active in %s(%x)", ChcrName(mem), mem);
 		func();
+		Registers::Thaw();
 		return;
 	}
 
@@ -49,10 +51,13 @@ static __forceinline void DmaExec8( void (*func)(), u32 mem, u8 value )
 		/*Console.WriteLn("Running DMA 8 %x", psHu32(mem & ~0x1));*/
 		func();
 	}
+	Registers::Thaw();
 }
 
 static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 {
+	Registers::Freeze();
+
     DMACh *reg = &psH_DMACh(mem);
     tDMA_CHCR chcr(value);
 
@@ -60,6 +65,7 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 	if (chcr.STR && reg->chcr.STR && dmacRegs->ctrl.DMAE) {
 		DevCon.Warning(L"DMAExec16 Attempt to run DMA while one is already active in %s(%x)", ChcrName(mem), mem );
 		func();
+		Registers::Thaw();	
 		return;
 	}
 
@@ -78,10 +84,13 @@ static __forceinline void DmaExec16( void (*func)(), u32 mem, u16 value )
 		//Console.WriteLn("16bit DMA Start");
 		func();
 	}
+	Registers::Thaw();
 }
 
 static void DmaExec( void (*func)(), u32 mem, u32 value )
 {
+	Registers::Freeze();
+
     DMACh *reg = &psH_DMACh(mem);
     tDMA_CHCR chcr(value);
 	
@@ -91,6 +100,7 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 		// When DMA is active only STR field is writable, so we just
 		// call the dma transfer function w/o modifying CHCR contents...
 		func();
+		Registers::Thaw();
 		return; // Test with Gust games and fatal frame
 	}
 
@@ -111,6 +121,8 @@ static void DmaExec( void (*func)(), u32 mem, u32 value )
 		reg->chcr.set(value);
 		
 	if (reg->chcr.STR && dmacRegs->ctrl.DMAE) func();
+	
+	Registers::Thaw();
 }
 
 /////////////////////////////////////////////////////////////////////////
