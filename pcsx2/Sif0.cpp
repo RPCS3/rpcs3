@@ -26,6 +26,7 @@ static bool done = false;
 
 static __forceinline void Sif0Init()
 {
+	SIF_LOG("SIF0 DMA start...");
 	done = false;
 	sif0.ee.cycles = 0;
 	sif0.iop.cycles = 0;
@@ -35,34 +36,28 @@ static __forceinline void Sif0Init()
 static __forceinline bool WriteFifoToEE()
 {
 	const int readSize = min((s32)sif0dma->qwc, sif0.fifo.size >> 2);
-	//if (readSize > 0)
-	//{
-		tDMA_TAG *ptag;
+	
+	tDMA_TAG *ptag;
 		
-		//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
-		SIF_LOG("Write Fifo to EE: ----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
+	//SIF_LOG(" EE SIF doing transfer %04Xqw to %08X", readSize, sif0dma->madr);
+	SIF_LOG("Write Fifo to EE: ----------- %lX of %lX", readSize << 2, sif0dma->qwc << 2);
 
-		ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
-		if (ptag == NULL)
-		{
-			DevCon.Warning("Write Fifo to EE: ptag == NULL");
-			return false;
-		}
+	ptag = sif0dma->getAddr(sif0dma->madr, DMAC_SIF0);
+	if (ptag == NULL)
+	{
+		DevCon.Warning("Write Fifo to EE: ptag == NULL");
+		return false;
+	}
 
-		sif0.fifo.read((u32*)ptag, readSize << 2);
+	sif0.fifo.read((u32*)ptag, readSize << 2);
 
-		// Clearing handled by vtlb memory protection and manual blocks.
-		//Cpu->Clear(sif0dma->madr, readSize*4);
+	// Clearing handled by vtlb memory protection and manual blocks.
+	//Cpu->Clear(sif0dma->madr, readSize*4);
 
-		sif0dma->madr += readSize << 4;
-		sif0.ee.cycles += readSize;	// fixme : BIAS is factored in above
-		sif0dma->qwc -= readSize;
-	//}
-	//else
-	//{
-		//DevCon.Warning("Write Fifo to EE: readSize is 0");
-	//	return false;
-	//}
+	sif0dma->madr += readSize << 4;
+	sif0.ee.cycles += readSize;	// fixme : BIAS is factored in above
+	sif0dma->qwc -= readSize;
+		
 	return true;
 }
 
@@ -72,13 +67,6 @@ static __forceinline bool WriteIOPtoFifo()
 	// There's some data ready to transfer into the fifo..
 	const int writeSize = min(sif0.iop.counter, sif0.fifo.free());
 	
-	//if (writeSize <= 0)
-	//{
-		//DevCon.Warning("Write IOP to Fifo: writeSize is 0"); 
-	//	return false;
-	//}
-	//else
-	//{
 	SIF_LOG("Write IOP to Fifo: +++++++++++ %lX of %lX", writeSize, sif0.iop.counter);
 
 	sif0.fifo.write((u32*)iopPhysMem(hw_dma(9).madr), writeSize);
@@ -87,7 +75,7 @@ static __forceinline bool WriteIOPtoFifo()
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords).
 	sif0.iop.cycles += (writeSize >> 2) * BIAS;		// fixme : should be >> 4
 	sif0.iop.counter -= writeSize;
-	//}
+	
 	return true;
 }
 
@@ -142,17 +130,13 @@ static __forceinline bool ProcessIOPTag()
 
 	hw_dma(9).tadr += 16; ///hw_dma(9).madr + 16 + sif0.sifData.words << 2;
 	
-	// Looks like we are only copying the first 24 bits.
-#ifdef CHOP_OFF_DATA
+	// We're only copying the first 24 bits.
 	hw_dma(9).madr = sif0data & 0xFFFFFF;
-#else
-	hw_dma(9).madr = sif0data;
-#endif
 	sif0.iop.counter = sif0words;
-	//if (sif0words != ( sif0words & 0xFFFFFF)) DevCon.WriteLn("sif0words more then 24 bit.");
 	
 	if (sif0tag.IRQ  || (sif0tag.ID & 4)) sif0.iop.end = true;
 	SIF_LOG("SIF0 IOP Tag: madr=%lx, tadr=%lx, counter=%lx (%08X_%08X)", hw_dma(9).madr, hw_dma(9).tadr, sif0.iop.counter, sif0words, sif0data);
+	
 	return true;
 }
 
@@ -164,7 +148,7 @@ static __forceinline void EndEE()
 	sif0.ee.busy = false;
 	if (sif0.ee.cycles == 0) 
 	{
-		DevCon.Warning("SIF0 EE: cycles = 0");
+		SIF_LOG("SIF0 EE: cycles = 0");
 		sif0.ee.cycles = 1;
 	}
 	CPU_INT(DMAC_SIF0, sif0.ee.cycles*BIAS); 
@@ -180,7 +164,7 @@ static __forceinline void EndIOP()
 					
 	if (sif0.iop.cycles == 0) 
 	{
-		DevCon.Warning("SIF0 IOP: cycles = 0");
+		SIF_LOG("SIF0 IOP: cycles = 0");
 		sif0.iop.cycles = 1;
 	}
 	// iop is 1/8th the clock rate of the EE and psxcycles is in words (not quadwords)
@@ -218,7 +202,10 @@ static __forceinline void HandleEETransfer()
 	if (sif0dma->qwc > 0) // If we're writing something, continue to do so.
 	{
 		// Write from Fifo to EE.
-		WriteFifoToEE();
+		if (sif0.fifo.size > 0)
+		{
+			WriteFifoToEE();
+		}
 	}
 }
 
@@ -271,18 +258,21 @@ static __forceinline void HandleIOPTransfer()
 	else
 	{
 		// Write IOP to Fifo.
-		WriteIOPtoFifo();
+		if (sif0.fifo.free() > 0)
+		{
+			WriteIOPtoFifo();
+		}
 	}
 }
 
 static __forceinline void Sif0End()
 {
+	SIF_LOG("SIF0 DMA end...");
 }
 
 // Transfer IOP to EE, putting data in the fifo as an intermediate step.
 __forceinline void SIF0Dma()
 {
-	SIF_LOG("SIF0 DMA start...");
 	Sif0Init();
 	
 	do
@@ -291,7 +281,6 @@ __forceinline void SIF0Dma()
 		if (sif0.ee.busy) HandleEETransfer();
 	} while (!done); // Substituting (sif0.ee.busy || sif0.iop.busy) breaks things.
 	
-	SIF_LOG("SIF0 DMA end...");
 	Sif0End();
 }
 

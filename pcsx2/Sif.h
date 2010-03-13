@@ -18,11 +18,6 @@
 
 #define FIFO_SIF_W 128
 
-// I'm not sure if removing the top 8 bits is correct or not, so this define lets me test it a bit.
-// It doesn't seem like word has anything in the first 8 bits anyways, but data does (IRQ and tag id),
-// so I'll have to play with it.
-#define CHOP_OFF_DATA
-
 struct sifData
 {
 	s32 data;
