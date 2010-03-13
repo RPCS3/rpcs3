@@ -249,11 +249,7 @@ _mVUt _f void* mVUsearchProg(u32 startPC, uptr pState) {
 	microProgramQuick& quick = mVU->prog.quick[startPC/8];
 	microProgramList&  list  = mVU->prog.prog [startPC/8];
 	if(!quick.prog) { // If null, we need to search for new program
-#ifdef __LINUX__
 		deque<microProgram*>::iterator it = list.list->begin();
-#else
-		deque<microProgram*>::const_iterator it = list.list->begin();
-#endif
 		for ( ; it != list.list->end(); it++) {
 			if (mVUcmpProg<vuIndex>(*it[0], 0)) { 
 				quick.block = it[0]->block[startPC/8];
