@@ -93,7 +93,6 @@ public:
 		GSVector4 MinMax;
 		GSVector4 MinF_TA;
 		GSVector4i MskFix;
-		GSVector4 ChannelMask;
 
 		struct PSConstantBuffer() 
 		{
@@ -103,7 +102,6 @@ public:
 			MinMax = GSVector4::zero();
 			MinF_TA = GSVector4::zero();
 			MskFix = GSVector4i::zero();
-			ChannelMask = GSVector4(1,1,1,1);
 		}
 
 		__forceinline bool Update(const PSConstantBuffer* cb)

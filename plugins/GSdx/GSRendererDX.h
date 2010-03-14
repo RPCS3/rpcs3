@@ -228,7 +228,6 @@ public:
 
 		if (env.COLCLAMP.CLAMP == 0) {
 			ps_sel.colclip = 1;
-			ps_cb.ChannelMask = GSVector4((float)om_bsel.wr, (float)om_bsel.wg, (float)om_bsel.wb, (float)om_bsel.wa);
 		}
 
 		ps_sel.clr1 = om_bsel.IsCLR1();

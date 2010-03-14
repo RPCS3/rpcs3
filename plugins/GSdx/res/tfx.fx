@@ -88,7 +88,6 @@ cbuffer cb1
 	float2 MinF;
 	float2 TA;
 	uint4 MskFix;
-	float4 ChannelMask;
 };
 
 float4 sample_c(float2 uv)
@@ -167,7 +166,6 @@ float4 ps_params[7];
 #define MinMax		ps_params[3]
 #define MinF		ps_params[4].xy
 #define TA			ps_params[4].zw
-#define ChannelMask	ps_params[6]
 
 float4 sample_c(float2 uv)
 {
@@ -515,10 +513,6 @@ float4 ps_color(PS_INPUT input)
 	}
 	if (PS_COLCLIP > 0)
 	{
-		//clip(128./255. - c.rgb * ChannelMask.rgb);
-		c.rgb *= ChannelMask.rgb;
-		if (all(c.rgb >= 128./255))
-			clip(-1);
 		c.rgb *= c.rgb < 128./255;
 	}
 

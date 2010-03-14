@@ -310,9 +310,9 @@ void GSDevice9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint
 			}
 		}
 
-		if(bsel.wr) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_RED;
+		if(bsel.wr) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_BLUE;
 		if(bsel.wg) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_GREEN;
-		if(bsel.wb) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_BLUE;
+		if(bsel.wb) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_RED;
 		if(bsel.wa) bs->RenderTargetWriteMask |= D3DCOLORWRITEENABLE_ALPHA;
 
 		m_om_bs[bsel] = bs;
