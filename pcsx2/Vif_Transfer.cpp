@@ -36,8 +36,10 @@ _vifT bool analyzeIbit(u32* &data, int iBit) {
 	if (iBit && !vifX.cmd && !vifXRegs->err.MII) {
 		//DevCon.WriteLn("Vif I-Bit IRQ");
 		vifX.irq++;
-		runMark<idx>(data);
-		return 1;
+		// On i-bit, the command is run, vif stalls etc, 
+		// however if the vifcode is MASK, you do NOT stall, just send IRQ. - Max Payne shows this up.
+		if((vifX.cmd & 0x7f) == 0x7) return 0;
+		else return 1;
 	}
 	return 0;
 }
