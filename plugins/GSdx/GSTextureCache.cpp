@@ -26,6 +26,7 @@ GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
 {
 	m_paltex = !!theApp.GetConfig("paltex", 0);
+	UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
 }
 
 GSTextureCache::~GSTextureCache()
@@ -516,8 +517,6 @@ void GSTextureCache::IncAge()
 }
 
 //Fixme: Several issues in here. Not handling depth stencil, pitch conversion doesnt work.
-//The alternative version isn't much better though :p
-#if 1
 GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
 {
 	Source* src = new Source(m_renderer);
@@ -528,6 +527,8 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	int tw = 1 << TEX0.TW;
 	int th = 1 << TEX0.TH;
 	int tp = (int)TEX0.TW << 6;
+	
+	bool hack = false;
 
 	if(dst == NULL)
 	{
@@ -554,9 +555,8 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		if(dst->m_type != RenderTarget) 
 		{
 			// TODO
-
+			src = NULL;
 			delete src;
-
 			return NULL; 
 		}
 
@@ -629,9 +629,10 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		else if(tw < tp)
 		{
 			// FIXME: timesplitters blurs the render target by blending itself over a couple of times
-
+			hack = true;
 			if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
 			{
+				src = NULL;
 				delete src;
 				return NULL;
 			}
@@ -657,6 +658,23 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		}
 
 		GSVector4 sr(0, 0, w, h);
+		
+		if (UserHacks_HalfPixelOffset && hack)
+		{
+			int multiplier = m_renderer->upscale_Multiplier();
+			float modx;
+			float mody;
+			switch (multiplier)
+			{
+				case 2: modx = 1.0f; mody = 0.8f; break;
+				case 3: modx = 1.7f; mody = 1.5f; break;
+				case 4: modx = 2.5f; mody = 2.3f; break;
+				case 5: modx = 3.5f; mody = 3.2f; break;
+				case 6: modx = 4.3f; mody = 4.0f; break;
+				default: modx = 0.0f; mody = 0.0f; break;
+			}
+			sr -= GSVector4 (0.0f, 0.0f, modx, mody);
+		}
 
 		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
 		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
@@ -735,7 +753,8 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	if(src->m_texture == NULL)
 	{
 		ASSERT(0);
-
+		src = NULL;
+		delete src;
 		return NULL;
 	}
 
@@ -750,278 +769,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 	return src;
 }
-#else
-			//WIP fog / blur / depth of field handling. 
-GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
-{
-	Source* src = new Source(m_renderer);
 
-	src->m_TEX0 = TEX0;
-	src->m_TEXA = TEXA;
-
-	int tw = 1 << TEX0.TW;
-	int th = 1 << TEX0.TH;
-	int tp = (int)TEX0.TW << 6;
-
-	if(dst == NULL)
-	{
-		if(m_paltex && GSLocalMemory::m_psm[TEX0.PSM].pal > 0)
-		{
-			src->m_fmt = FMT_8;
-
-			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-		}
-		else
-		{
-			src->m_fmt = FMT_32;
-
-			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th);
-		}
-	}
-	else
-	{
-		// TODO: clean up this mess
-
-		src->m_target = true;
-
-		dst->Update();
-
-		if(dst->m_type != RenderTarget) 
-		{
-			//src->m_target = false;  //no idea what depth stencil needs ><
-			//printf("type stencil\n");
-		}
-
-		GSTexture* tmp = NULL;
-		
-		if(dst->m_texture->IsMSAA()) 
-		{
-			tmp = dst->m_texture;
-
-			dst->m_texture = m_renderer->m_dev->Resolve(dst->m_texture);
-		}
-
-		// do not round here!!! if edge becomes a black pixel and addressing mode is clamp => everything outside the clamped area turns into black (kh2 shadows)
-
-		int w = (int)(dst->m_texture->GetScale().x * tw);
-		int h = (int)(dst->m_texture->GetScale().y * th); 
-
-		GSVector2i dstsize = dst->m_texture->GetSize();
-		
-		//Hacked up to figure out how fog / depth / blur effects are done. Works in Xenosaga 3.
-		if ((tw == 1024 && th == 1024) && dst->m_TEX0.TBW != TEX0.TBW){
-			
-			if(dst->m_type != RenderTarget) 
-			{
-				src->m_texture = m_renderer->m_dev->CreateDepthStencil(dstsize.x, dstsize.y, false);
-			}
-			else{
-				src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
-			}
-
-			GSVector4 size  = GSVector4(dstsize).xyxy()*2 ; // * 2 to force the effect overlay into the right position
-			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy(); //Not needed right now, but good for testing
-
-			GSVector4 br (0.0f, 0.0f, 1024.0f, 1024.0f); // entire RT
-			GSVector4 sr =  br * scale / size;
-			GSVector4 dr =  br * scale;
-
-			m_renderer->m_dev->StretchRect(dst->m_texture, sr, src->m_texture, dr);
-			
-		}
-			// pitch conversion
-		else if(dst->m_TEX0.TBW != TEX0.TBW) // && dst->m_TEX0.PSM == TEX0.PSM 
-		{
-			// sfex3 uses this trick (bw: 10 -> 5, wraps the right side below the left)
-
-			// ASSERT(dst->m_TEX0.TBW > TEX0.TBW); // otherwise scale.x need to be reduced to make the larger texture fit (TODO)
-				
-			if(dst->m_type != RenderTarget) 
-			{
-				src->m_texture = m_renderer->m_dev->CreateDepthStencil(dstsize.x, dstsize.y, false);
-			}
-			else{
-				src->m_texture = m_renderer->m_dev->CreateRenderTarget(dstsize.x, dstsize.y, false);
-			}
-
-			GSVector4 size = GSVector4(dstsize).xyxy();
-			GSVector4 scale = GSVector4(dst->m_texture->GetScale()).xyxy();
-			
-			if (dst->m_TEX0.TBW < TEX0.TBW) // otherwise scale.x need to be reduced to make the larger texture fit
-			{
-				scale.x = ((float)dst->m_TEX0.TBW / (float)TEX0.TBW) ;
-				//printf("scale.x = %f \n", scale.x);
-			}
-
-			int blockWidth  = 64;
-			int blockHeight = TEX0.PSM == PSM_PSMCT32 || TEX0.PSM == PSM_PSMCT24 ? 32 : 64;
-
-			GSVector4i br(0, 0, blockWidth, blockHeight);
-
-			int sw = (int)dst->m_TEX0.TBW << 6;
-
-			int dw = (int)TEX0.TBW << 6;
-			int dh = 1 << TEX0.TH;
-
-			if(sw != 0)
-			for(int dy = 0; dy < dh; dy += blockHeight)
-			{
-				for(int dx = 0; dx < dw; dx += blockWidth)
-				{
-					int o = dy * dw / blockHeight + dx;
-
-					int sx = o % sw;
-					int sy = o / sw;
-					//printf("sx = %d ,sy = %d ,sw = %d ,o = %d \n",sx,sy,sw,o);
-					GSVector4 sr = GSVector4(GSVector4i(sx, sy).xyxy() + br) * scale / size;
-					GSVector4 dr = GSVector4(GSVector4i(dx, dy).xyxy() + br) * scale;
-
-					m_renderer->m_dev->StretchRect(dst->m_texture, sr, src->m_texture, dr);
-
-					// TODO: this is quite a lot of StretchRect, do it with one Draw
-				}
-			}
-		}
-		else if(tw < tp)
-		{
-			// FIXME: timesplitters blurs the render target by blending itself over a couple of times
-
-			if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
-			{
-				delete src;
-				return false;
-			}
-		}
-
-		// width/height conversion
-
-		GSVector2 scale = dst->m_texture->GetScale();
-
-		GSVector4 dr(0, 0, w, h);
-
-		//if(dst->m_type != RenderTarget) {
-			if(w > dstsize.x) 
-			{
-				scale.x = (float)dstsize.x / tw;
-				dr.z = (float)dstsize.x * scale.x / dst->m_texture->GetScale().x;
-				w = dstsize.x;
-			}
-		
-			if(h > dstsize.y) 
-			{
-				scale.y = (float)dstsize.y / th;
-				dr.w = (float)dstsize.y * scale.y / dst->m_texture->GetScale().y;
-				h = dstsize.y;
-			}
-		//}
-
-		GSVector4 sr(0, 0, w, h);
-		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
-		GSTexture* dt;
-		if(dst->m_type == RenderTarget) dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
-		else							dt = m_renderer->m_dev->CreateDepthStencil(w, h, false);
-
-		if(!src->m_texture)
-		{
-			src->m_texture = dt;
-		}
-
-		if((sr == dr).alltrue())
-		{
-			m_renderer->m_dev->CopyRect(st, dt, GSVector4i(0, 0, w, h));
-		}
-		else
-		{
-			sr.z /= st->GetWidth();
-			sr.w /= st->GetHeight();
-
-			m_renderer->m_dev->StretchRect(st, sr, dt, dr);
-		}
-
-		if(dt != src->m_texture)
-		{
-			m_renderer->m_dev->Recycle(src->m_texture);
-
-			src->m_texture = dt;
-		}
-
-		src->m_texture->SetScale(scale);
-
-		switch(TEX0.PSM)
-		{
-		default:
-			// Unhandled texture format
-			ASSERT(0);
-		case PSM_PSMCT32:
-			src->m_fmt = FMT_32;
-			break;
-		case PSM_PSMCT24:
-			src->m_fmt = FMT_24;
-			break;
-		case PSM_PSMCT16:
-		case PSM_PSMCT16S:
-			src->m_fmt = FMT_16;
-			break;
-		
-		case PSM_PSMZ32:
-			src->m_fmt = FMT_32;
-			break;	
-		case PSM_PSMZ24:
-			src->m_fmt = FMT_24;
-			break;	
-		case PSM_PSMZ16:
-			src->m_fmt = FMT_16;
-			break;
-		
-		case PSM_PSMT8H:
-			src->m_fmt = FMT_8H;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-			break;
-		case PSM_PSMT8: 
-				//Not sure, this wasn't handled at all. 
-				//Xenosaga 2 and 3 use it, Tales of Legendia as well.
-				//It's always used for fog like effects.
-			src->m_fmt = FMT_8;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-			break;
-		case PSM_PSMT4HL:
-			src->m_fmt = FMT_4HL;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-			break;
-		case PSM_PSMT4HH:
-			src->m_fmt = FMT_4HH;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-			break;
-		}
-
-		if(tmp != NULL)
-		{
-			m_renderer->m_dev->Recycle(dst->m_texture);
-
-			dst->m_texture = tmp;
-		}
-	}
-
-	if(src->m_texture == NULL)
-	{
-		ASSERT(0);
-
-		return NULL;
-	}
-
-	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
-
-	if(psm.pal > 0)
-	{
-		memcpy(src->m_clut, (const uint32*)m_renderer->m_mem.m_clut, psm.pal * sizeof(uint32));
-	}
-
-	m_src.Add(src, TEX0, m_renderer->m_context->offset.tex);
-
-	return src;
-}
-#endif
 GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int w, int h, int type)
 {
 	Target* t = new Target(m_renderer);
@@ -1046,7 +794,8 @@ GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int
 	if(t->m_texture == NULL)
 	{
 		ASSERT(0);
-
+		t = NULL;
+		delete t;
 		return NULL;
 	}
 

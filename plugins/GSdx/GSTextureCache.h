@@ -138,4 +138,5 @@ public:
 	void InvalidateLocalMem(const GSOffset* o, const GSVector4i& r);
 
 	void IncAge();
+	bool UserHacks_HalfPixelOffset;
 };
