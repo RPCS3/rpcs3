@@ -555,7 +555,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		if(dst->m_type != RenderTarget) 
 		{
 			// TODO
-			src = NULL;
 			delete src;
 			return NULL; 
 		}
@@ -632,7 +631,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			hack = true;
 			if(tw == 256 && th == 128 && tp == 512 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
 			{
-				src = NULL;
 				delete src;
 				return NULL;
 			}
@@ -753,7 +751,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	if(src->m_texture == NULL)
 	{
 		ASSERT(0);
-		src = NULL;
 		delete src;
 		return NULL;
 	}
@@ -794,7 +791,6 @@ GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int
 	if(t->m_texture == NULL)
 	{
 		ASSERT(0);
-		t = NULL;
 		delete t;
 		return NULL;
 	}
