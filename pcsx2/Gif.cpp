@@ -530,7 +530,7 @@ void mfifoGIFtransfer(int qwc)
 
 void gifMFIFOInterrupt()
 {
-    Console.WriteLn("gifMFIFOInterrupt");
+    //Console.WriteLn("gifMFIFOInterrupt");
 	mfifocycles = 0;
 
 	if (Path3progress == STOPPED_MODE)
