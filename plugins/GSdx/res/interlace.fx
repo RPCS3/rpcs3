@@ -1,3 +1,4 @@
+#ifdef SHADER_MODEL // make safe to include in resource file to enforce dependency
 #if SHADER_MODEL >= 0x400
 
 Texture2D Texture;
@@ -80,4 +81,5 @@ float4 ps_main3(float2 tex : TEXCOORD0) : COLOR
 	return tex2D(s0, tex);
 }
 
+#endif
 #endif

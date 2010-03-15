@@ -34,14 +34,15 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""afxres.h""\r\n"
-    "\0"
+    "#include ""afxres.h""\r\0"
 END
 
 3 TEXTINCLUDE 
 BEGIN
-    "\r\n"
-    "\0"
+    "#include ""res/tfx.fx""\r\n"
+    "#include ""res/convert.fx""\r\n"
+    "#include ""res/interlace.fx""\r\n"
+    "#include ""res/merge.fx""\r\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -301,7 +302,10 @@ END
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
-
+#include "res/tfx.fx"
+#include "res/convert.fx"
+#include "res/interlace.fx"
+#include "res/merge.fx"
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED

@@ -1,3 +1,4 @@
+#ifdef SHADER_MODEL // make safe to include in resource file to enforce dependency
 #if SHADER_MODEL >= 0x400
 
 Texture2D Texture;
@@ -55,4 +56,5 @@ float4 ps_main1(PS_INPUT input) : COLOR
 	return c.bgra;
 }
 
+#endif
 #endif

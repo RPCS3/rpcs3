@@ -1,3 +1,4 @@
+#ifdef SHADER_MODEL // make safe to include in resource file to enforce dependency
 #define FMT_32 0
 #define FMT_24 1
 #define FMT_16 2
@@ -726,4 +727,5 @@ float4 ps_main(PS_INPUT input) : COLOR
 	return c;
 }
 
+#endif
 #endif

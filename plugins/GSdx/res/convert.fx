@@ -1,3 +1,4 @@
+#ifdef SHADER_MODEL // make safe to include in resource file to enforce dependency
 #if SHADER_MODEL >= 0x400
 
 struct VS_INPUT
@@ -237,4 +238,5 @@ PS_OUTPUT ps_main6(PS_INPUT input) // diagonal
 	return output;
 }
 
+#endif
 #endif
